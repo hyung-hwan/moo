@@ -32,15 +32,8 @@
 typedef unsigned char      stix_uint8_t;
 typedef unsigned short int stix_uint16_t;
 /*typedef unsigned int       stix_uint32_t;*/
-#if defined(__MWERKS__) && defined(macintosh)
-	/* the metrowerks codewarrior compiler produces the 'illegal bitfield declaration'
-	 * if a non-int type is used in the bit-field declaration */
-	typedef unsigned int stix_uintptr_t;
-	typedef unsigned int stix_size_t;
-#else
-	typedef unsigned long int stix_uintptr_t;
-	typedef unsigned long int stix_size_t;
-#endif
+typedef unsigned long int stix_uintptr_t;
+typedef unsigned long int stix_size_t;
 
 typedef unsigned short int stix_char_t; /* TODO ... wchar_t??? */
 
@@ -70,6 +63,16 @@ typedef unsigned short int stix_char_t; /* TODO ... wchar_t??? */
 #	define STIX_NULL ((void*)0)
 #endif
 
+
+/* make a low bit mask that can mask off low n bits*/
+#define STIX_LBMASK(type,n) (~(~((type)0) << (n))) 
+
+/* get 'length' bits starting from the bit at the 'offset' */
+#define STIX_GETBITS(type,value,offset,length) \
+	(((value) >> (offset)) & STIX_LBMASK(type,length))
+
+#define STIX_SETBITS(type,value,offset,length,bits) \
+	(value = ((value) | (((bits) & STIX_LBMASK(type,length)) << (offset))))
 
 typedef struct stix_mmgr_t stix_mmgr_t;
 
@@ -447,11 +450,6 @@ struct stix_t
 /*
  * Object structure
  */
-#define STIX_OBJ_TYPE_BITS  6
-#define STIX_OBJ_FLAG_BITS  5
-#define STIX_OBJ_EXTRA_BITS 1
-#define STIX_OBJ_UNIT_BITS  4
-
 enum stix_obj_type_t
 {
 	STIX_OBJ_TYPE_OOP,
@@ -471,27 +469,22 @@ enum stix_obj_type_t
 };
 typedef enum stix_obj_type_t stix_obj_type_t;
 
-
-/* KERNEL indicates that the object is known to the virtual
- * machine. VM doesn't allow layout changes of such objects. */
-enum stix_obj_flag_t
-{
-	STIX_OBJ_FLAG_KERNEL = (1 << 0),
-	STIX_OBJ_FLAG_HYBRID = (1 << 1),
-	STIX_OBJ_FLAG_MOVED  = (1 << 2)
-};
-typedef enum stix_obj_flag_t stix_obj_flag_t;
-
 /* -------------------------------------------------------------------------
- * type: the type of a payload item. 
- *       one of STIX_OBJ_TYPE_OOP, STIX_OBJ_TYPE_CHAR, 
- *              STIX_OBJ_TYPE_UINT8, STIX_OBJ_TYPE_UINT16
- * flags: bitwise-ORed of stix_obj_flag_t
- * extra: 0 or 1. 1 indicates that the payload contains 1 more
- *        item than the value of the size field. mostly used for a 
- *        terminating null in a variable-char object.
- * unit: the size of a payload item in bytes.
- * size: the number of payload items in an object.
+ * Object header structure 
+ * 
+ * _flags:
+ *   type: the type of a payload item. 
+ *         one of STIX_OBJ_TYPE_OOP, STIX_OBJ_TYPE_CHAR, 
+ *                STIX_OBJ_TYPE_UINT8, STIX_OBJ_TYPE_UINT16
+ *   unit: the size of a payload item in bytes. 
+ *   extra: 0 or 1. 1 indicates that the payload contains 1 more
+ *          item than the value of the size field. mostly used for a 
+ *          terminating null in a variable-char object.
+ *   kernel: 0 or 1. indicates that the object is a kernel object.
+ *           VM disallows layout changes of a kernel object.
+ *   moved: 0 or 1. used by GC.
+ *
+ * _size: the number of payload items in an object.
  *       it doesn't include the header size.
  * 
  * The total number of bytes occupied by an object can be calculated
@@ -512,12 +505,38 @@ typedef enum stix_obj_flag_t stix_obj_flag_t;
  * size calculation and the access to the payload fields become more complex. 
  * Therefore, i've dropped the idea.
  * ------------------------------------------------------------------------- */
+#define STIX_OBJ_FLAGS_TYPE_BITS   6
+#define STIX_OBJ_FLAGS_UNIT_BITS   4
+#define STIX_OBJ_FLAGS_EXTRA_BITS  1
+#define STIX_OBJ_FLAGS_KERNEL_BITS 1
+#define STIX_OBJ_FLAGS_MOVED_BITS  1
+
+#define STIX_OBJ_GET_FLAGS_TYPE(oop)     STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_UNIT_BITS + STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS), STIX_OBJ_FLAGS_TYPE_BITS)
+#define STIX_OBJ_GET_FLAGS_UNIT(oop)     STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS),                            STIX_OBJ_FLAGS_UNIT_BITS)
+#define STIX_OBJ_GET_FLAGS_EXTRA(oop)    STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS),                                                        STIX_OBJ_FLAGS_EXTRA_BITS)
+#define STIX_OBJ_GET_FLAGS_KERNEL(oop)   STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_UNIT_BITS),                                                                                            STIX_OBJ_FLAGS_KERNEL_BITS)
+#define STIX_OBJ_GET_FLAGS_MOVED(oop)    STIX_GETBITS(stix_oow_t, (oop)->_flags, 0,                                                                                                               STIX_OBJ_FLAGS_MOVED_BITS)
+
+#define STIX_OBJ_SET_FLAGS_TYPE(oop,v)   STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_UNIT_BITS + STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS), STIX_OBJ_FLAGS_TYPE_BITS,   v)
+#define STIX_OBJ_SET_FLAGS_UNIT(oop,v)   STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS),                            STIX_OBJ_FLAGS_UNIT_BITS,   v)
+#define STIX_OBJ_SET_FLAGS_EXTRA(oop,v)  STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS),                                                        STIX_OBJ_FLAGS_EXTRA_BITS,  v)
+#define STIX_OBJ_SET_FLAGS_KERNEL(oop,v) STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_UNIT_BITS),                                                                                            STIX_OBJ_FLAGS_KERNEL_BITS, v)
+#define STIX_OBJ_SET_FLAGS_MOVED(oop,v)  STIX_SETBITS(stix_oow_t, (oop)->_flags, 0,                                                                                                               STIX_OBJ_FLAGS_MOVED_BITS,  v)
+
+/* this macro doesn't check the range of the actual value.
+ * make sure that the value of each bit fields given fall within the number
+ * of defined bits */
+#define STIX_OBJ_MAKE_FLAGS(t,u,e,k,m) ( \
+	(((stix_oow_t)(t)) << (STIX_OBJ_FLAGS_UNIT_BITS + STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS)) | \
+	(((stix_oow_t)(u)) << (STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS)) | \
+	(((stix_oow_t)(e)) << (STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS)) | \
+	(((stix_oow_t)(k)) << (STIX_OBJ_FLAGS_MOVED_BITS)) | \
+	(((stix_oow_t)(m)) << 0) \
+)
+
 #define STIX_OBJ_HEADER \
-	stix_oow_t type: STIX_OBJ_TYPE_BITS; \
-	stix_oow_t flags: STIX_OBJ_FLAG_BITS; \
-	stix_oow_t extra: STIX_OBJ_EXTRA_BITS; \
-	stix_oow_t unit: STIX_OBJ_UNIT_BITS; \
-	stix_oow_t size; \
+	stix_oow_t _flags; \
+	stix_oow_t _size; \
 	stix_oop_t _class
 
 struct stix_obj_t
@@ -761,6 +780,15 @@ STIX_EXPORT stix_oop_t stix_instantiate (
 	stix_oop_t       _class,
 	const void*      vptr,
 	stix_oow_t       vlen
+);
+
+
+
+/**
+ * The stix_ignite() function creates key initial objects.
+ */
+STIX_EXPORT int stix_ignite (
+	stix_t* stix
 );
 
 #if defined(__cplusplus)

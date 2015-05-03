@@ -87,7 +87,7 @@ static stix_oop_t move_one (stix_t* stix, stix_oop_t oop)
 {
 	STIX_ASSERT (STIX_OOP_IS_POINTER(oop));
 
-	if (oop->flags & STIX_OBJ_FLAG_MOVED)
+	if (STIX_OBJ_GET_FLAGS_MOVED(oop))
 	{
 		/* this object has migrated to the new heap. 
 		 * the class field has been updated to the new object
@@ -101,12 +101,11 @@ static stix_oop_t move_one (stix_t* stix, stix_oop_t oop)
 		stix_oop_t tmp;
 
 		/* calculate the payload size in bytes */
-		nbytes = (oop->size + oop->extra) * oop->unit;
+		nbytes = (oop->_size + STIX_OBJ_GET_FLAGS_EXTRA(oop)) * STIX_OBJ_GET_FLAGS_UNIT(oop);
 		nbytes_aligned = STIX_ALIGN (nbytes, STIX_SIZEOF(stix_oop_t));
 
 		/* allocate space in the new heap */
-		tmp = stix_allocheapmem (
-			stix, stix->newheap, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
+		tmp = stix_allocheapmem (stix, stix->newheap, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
 
 		/* allocation here must not fail because
 		 * i'm allocating the new space in a new heap for 
@@ -121,7 +120,7 @@ static stix_oop_t move_one (stix_t* stix, stix_oop_t oop)
 		STIX_MEMCPY (tmp, oop, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
 
 		/* mark the old object that it has migrated to the new heap */
-		oop->flags |= STIX_OBJ_FLAG_MOVED;
+		STIX_OBJ_SET_FLAGS_MOVED(oop, 1);
 
 		/* let the class field of the old object point to the new 
 		 * object allocated in the new heap. it is returned in 
@@ -142,17 +141,17 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 		stix_oop_t oop;
 
 		oop = (stix_oop_t)ptr;
-		nbytes = (oop->size + oop->extra) * oop->unit;
+		nbytes = (oop->_size + STIX_OBJ_GET_FLAGS_EXTRA(oop)) * STIX_OBJ_GET_FLAGS_UNIT(oop);
 		nbytes_aligned = STIX_ALIGN (nbytes, STIX_SIZEOF(stix_oop_t));
 
 		oop->_class = move_one (stix, oop->_class);
-		
-		if (oop->type == STIX_OBJ_TYPE_OOP)
+
+		if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_OOP)
 		{
 			stix_obj_oop_t* xtmp;
 
 			xtmp = (stix_oop_oop_t)oop;
-			for (i = 0; i < oop->size; i++)
+			for (i = 0; i < oop->_size; i++)
 			{
 				if (STIX_OOP_IS_POINTER(xtmp->slot[i]))
 					xtmp->slot[i] = move_one (stix, xtmp->slot[i]);

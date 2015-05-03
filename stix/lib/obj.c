@@ -26,7 +26,7 @@
 
 #include "stix-prv.h"
 
-static void* alloc_bytes (stix_t* stix, stix_size_t size)
+void* stix_allocbytes (stix_t* stix, stix_size_t size)
 {
 	stix_uint8_t* ptr;
 
@@ -35,6 +35,8 @@ static void* alloc_bytes (stix_t* stix, stix_size_t size)
 	{
 		stix_gc (stix);
 		ptr = stix_allocheapmem (stix, stix->curheap, size);
+
+/* TODO: grow heap if ptr is still null. */
 	}
 
 	return ptr;
@@ -55,14 +57,11 @@ stix_oop_t stix_allocoopobj (stix_t* stix, stix_oow_t size)
 	 * STIX_SIZEOF(stix_oop_t) will guarantee the starting address
 	 * of the allocated space to be an even number. 
 	 * see STIX_OOP_IS_NUMERIC() and STIX_OOP_IS_POINTER() */
-	hdr = alloc_bytes (stix, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
+	hdr = stix_allocbytes (stix, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
 	if (!hdr) return STIX_NULL;
 
-	hdr->flags = 0;
-	hdr->type = STIX_OBJ_TYPE_OOP;
-	hdr->extra = 0;
-	hdr->unit = STIX_SIZEOF(stix_oop_t);  
-	hdr->size = size;
+	hdr->_flags = STIX_OBJ_MAKE_FLAGS(STIX_OBJ_TYPE_OOP, STIX_SIZEOF(stix_oop_t), 0, 0, 0);
+	hdr->_size = size;
 	hdr->_class = stix->_nil;
 
 	while (size > 0) hdr->slot[--size] = stix->_nil;
@@ -88,14 +87,11 @@ static stix_oop_t alloc_numeric_array (stix_t* stix, const void* ptr, stix_oow_t
 	 * STIX_SIZEOF(stix_oop_t) will guarantee the starting address
 	 * of the allocated space to be an even number. 
 	 * see STIX_OOP_IS_NUMERIC() and STIX_OOP_IS_POINTER() */
-	hdr = alloc_bytes (stix, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
+	hdr = stix_allocbytes (stix, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
 	if (!hdr) return STIX_NULL;
 
-	hdr->flags = 0;
-	hdr->type = type;
-	hdr->extra = extra;
-	hdr->unit = unit;
-	hdr->size = len;
+	hdr->_flags = STIX_OBJ_MAKE_FLAGS(type, unit, extra, 0, 0);
+	hdr->_size = len;
 	hdr->_class = stix->_nil;
 
 	if (ptr)
@@ -133,8 +129,8 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 {
 	stix_oop_t oop;
 	stix_oow_t spec;
-	stix_oow_t fixed;
-	stix_obj_type_t vtype;
+	stix_oow_t named_instvar;
+	stix_obj_type_t indexed_type;
 
 	STIX_ASSERT (stix->_nil != STIX_NULL);
 
@@ -144,57 +140,64 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 	STIX_ASSERT (STIX_OOP_IS_SMINT(((stix_oop_class_t)_class)->spec));
 	spec = STIX_OOP_TO_SMINT(((stix_oop_class_t)_class)->spec);
 
-	fixed = STIX_CLASS_SPEC_FIXED(spec); /* size of the fixed part */
+	named_instvar = STIX_CLASS_SPEC_NAMED_INSTVAR(spec); /* size of the named_instvar part */
 
-	if (!STIX_CLASS_SPEC_ISVAR(spec)) 
+	if (STIX_CLASS_SPEC_IS_INDEXED(spec)) 
 	{
-		/* named instance variables only. treat it as if it is a 
-		 * variable-pointer class with no variable data */
-		vtype = STIX_OBJ_TYPE_OOP;
-		vlen = 0;
+		indexed_type = STIX_CLASS_SPEC_INDEXED_TYPE(spec);
+
+		if (indexed_type == STIX_OBJ_TYPE_OOP)
+		{
+			if (named_instvar > STIX_MAX_NAMED_INSTVAR ||
+			    vlen > STIX_MAX_INDEXED_COUNT(named_instvar))
+			{
+				goto einval;
+			}
+		}
+		else
+		{
+			/* a non-pointer indexed class can't have named instance variables */
+			if (named_instvar > 0) goto einval;
+		}
 	}
 	else
 	{
-		vtype = STIX_CLASS_SPEC_VTYPE(spec);
-		if (vtype != STIX_OBJ_TYPE_OOP && fixed > 0)
-		{
-			/* a variable-non-pointer class can't have named instance variables */
-			stix->errnum = STIX_EINVAL;
-			return STIX_NULL;
-		}
+		/* named instance variables only. treat it as if it is an
+		 * indexable class with no variable data */
+		indexed_type = STIX_OBJ_TYPE_OOP;
+		vlen = 0;
+
+		if (named_instvar > STIX_MAX_NAMED_INSTVAR) goto einval;
 	}
 
-	switch (vtype)
+	switch (indexed_type)
 	{
 		case STIX_OBJ_TYPE_OOP:
 			/* class for a variable object. 
-			 * both the fixed-sized part and the variable part are allowed. */
-			oop = stix_allocoopobj(stix, fixed + vlen);
+			 * both the named_instvar-sized part and the variable part are allowed. */
+			oop = stix_allocoopobj(stix, named_instvar + vlen);
 			if (!oop) return STIX_NULL;
 
 			if (vlen > 0)
 			{
 				stix_oop_oop_t hdr = (stix_oop_oop_t)oop;
-				STIX_MEMCPY (&hdr->slot[fixed], vptr, vlen * STIX_SIZEOF(stix_oop_t));
+				STIX_MEMCPY (&hdr->slot[named_instvar], vptr, vlen * STIX_SIZEOF(stix_oop_t));
 			}
 			break;
 
 		case STIX_OBJ_TYPE_CHAR:
 			/* variable-char class can't have instance variables */
-			STIX_ASSERT (fixed == 0);
 			oop = stix_alloccharobj(stix, vptr, vlen);
 			if (!oop) return STIX_NULL;
 			break;
 
 		case STIX_OBJ_TYPE_UINT8:
 			/* variable-byte class can't have instance variables */
-			STIX_ASSERT (fixed == 0);
 			oop = stix_allocuint8obj(stix, vptr, vlen);
 			if (!oop) return STIX_NULL;
 			break;
 
 		case STIX_OBJ_TYPE_UINT16:
-			STIX_ASSERT (fixed == 0);
 			oop = stix_allocuint16obj(stix, vptr, vlen);
 			if (!oop) return STIX_NULL;
 			break;
@@ -206,4 +209,9 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 
 	oop->_class = _class;
 	return oop;
+
+
+einval:
+	stix->errnum = STIX_EINVAL;
+	return STIX_NULL;
 }
