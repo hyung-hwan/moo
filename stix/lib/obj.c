@@ -148,8 +148,8 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 
 		if (indexed_type == STIX_OBJ_TYPE_OOP)
 		{
-			if (named_instvar > STIX_MAX_NAMED_INSTVAR ||
-			    vlen > STIX_MAX_INDEXED_COUNT(named_instvar))
+			if (named_instvar > STIX_MAX_NAMED_INSTVARS ||
+			    vlen > STIX_MAX_INDEXED_INSTVARS(named_instvar))
 			{
 				goto einval;
 			}
@@ -167,7 +167,7 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 		indexed_type = STIX_OBJ_TYPE_OOP;
 		vlen = 0;
 
-		if (named_instvar > STIX_MAX_NAMED_INSTVAR) goto einval;
+		if (named_instvar > STIX_MAX_NAMED_INSTVARS) goto einval;
 	}
 
 	switch (indexed_type)

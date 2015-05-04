@@ -69,10 +69,21 @@ typedef unsigned short int stix_char_t; /* TODO ... wchar_t??? */
 
 /* get 'length' bits starting from the bit at the 'offset' */
 #define STIX_GETBITS(type,value,offset,length) \
-	(((value) >> (offset)) & STIX_LBMASK(type,length))
+	((((type)(value)) >> (offset)) & STIX_LBMASK(type,length))
 
 #define STIX_SETBITS(type,value,offset,length,bits) \
-	(value = ((value) | (((bits) & STIX_LBMASK(type,length)) << (offset))))
+	(value = (((type)(value)) | (((bits) & STIX_LBMASK(type,length)) << (offset))))
+
+
+/** 
+ * The STIX_BITS_MAX() macros calculates the maximum value that the 'nbits'
+ * bits of an unsigned integer of the given 'type' can hold.
+ * \code
+ * printf ("%u", STIX_BITS_MAX(unsigned int, 5));
+ * \endcode
+ */
+/*#define STIX_BITS_MAX(type,nbits) ((((type)1) << (nbits)) - 1)*/
+#define STIX_BITS_MAX(type,nbits) ((~(type)0) >> (STIX_SIZEOF(type) * 8 - (nbits)))
 
 typedef struct stix_mmgr_t stix_mmgr_t;
 
@@ -205,6 +216,9 @@ typedef struct stix_obj_oop_t*    stix_oop_oop_t;
 typedef struct stix_obj_char_t*   stix_oop_char_t;
 typedef struct stix_obj_uint8_t*  stix_oop_uint8_t;
 typedef struct stix_obj_uint16_t* stix_oop_uint16_t;
+
+#define STIX_OOW_BITS (STIX_SIZEOF(stix_oow_t) * 8)
+#define STIX_OOP_BITS (STIX_SIZEOF(stix_oop_t) * 8)
 
 /*
  * The Smalltalk-80 Bytecodes
@@ -433,19 +447,19 @@ struct stix_t
  * of a real OOP are always 0s.
  */
 
-#define STIX_OOP_TYPE_BITS 2
-#define STIX_OOP_TYPE_SMINT 1
-#define STIX_OOP_TYPE_CHAR 2
+#define STIX_OOP_TAG_BITS  2
+#define STIX_OOP_TAG_SMINT 1
+#define STIX_OOP_TAG_CHAR  2
 
-#define STIX_OOP_IS_NUMERIC(oop) (((stix_oow_t)oop) & (STIX_OOP_TYPE_SMINT | STIX_OOP_TYPE_CHAR))
+#define STIX_OOP_IS_NUMERIC(oop) (((stix_oow_t)oop) & (STIX_OOP_TAG_SMINT | STIX_OOP_TAG_CHAR))
 #define STIX_OOP_IS_POINTER(oop) (!STIX_OOP_IS_NUMERIC(oop))
 
-#define STIX_OOP_IS_SMINT(oop) (((stix_oow_t)oop) & STIX_OOP_TYPE_SMINT)
-#define STIX_OOP_IS_CHAR(oop) (((stix_oow_t)oop) & STIX_OOP_TYPE_CHAR)
-#define STIX_OOP_FROM_SMINT(num) ((stix_oop_t)(((num) << STIX_OOP_TYPE_BITS) | STIX_OOP_TYPE_SMINT))
-#define STIX_OOP_TO_SMINT(oop) (((stix_oow_t)oop) >> STIX_OOP_TYPE_BITS)
-#define STIX_OOP_FROM_CHAR(num) ((stix_oop_t)(((num) << STIX_OOP_TYPE_BITS) | STIX_OOP_TYPE_CHAR))
-#define STIX_OOP_TO_CHAR(oop) (((stix_oow_t)oop) >> STIX_OOP_TYPE_BITS)
+#define STIX_OOP_IS_SMINT(oop) (((stix_oow_t)oop) & STIX_OOP_TAG_SMINT)
+#define STIX_OOP_IS_CHAR(oop) (((stix_oow_t)oop) & STIX_OOP_TAG_CHAR)
+#define STIX_OOP_FROM_SMINT(num) ((stix_oop_t)((((stix_oow_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_SMINT))
+#define STIX_OOP_TO_SMINT(oop) (((stix_oow_t)oop) >> STIX_OOP_TAG_BITS)
+#define STIX_OOP_FROM_CHAR(num) ((stix_oop_t)((((stix_oow_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_CHAR))
+#define STIX_OOP_TO_CHAR(oop) (((stix_oow_t)oop) >> STIX_OOP_TAG_BITS)
 
 /*
  * Object structure
@@ -506,7 +520,7 @@ typedef enum stix_obj_type_t stix_obj_type_t;
  * Therefore, i've dropped the idea.
  * ------------------------------------------------------------------------- */
 #define STIX_OBJ_FLAGS_TYPE_BITS   6
-#define STIX_OBJ_FLAGS_UNIT_BITS   4
+#define STIX_OBJ_FLAGS_UNIT_BITS   5
 #define STIX_OBJ_FLAGS_EXTRA_BITS  1
 #define STIX_OBJ_FLAGS_KERNEL_BITS 1
 #define STIX_OBJ_FLAGS_MOVED_BITS  1
