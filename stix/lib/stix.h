@@ -188,7 +188,9 @@ typedef enum stix_errnum_t stix_errnum_t;
 
 enum stix_option_t
 {
-	STIX_TRAIT
+	STIX_TRAIT,
+	STIX_DEFAULT_SYMTAB_SIZE,
+	STIX_DEFAULT_SYSDIC_SIZE
 };
 typedef enum stix_option_t stix_option_t;
 
@@ -383,53 +385,6 @@ enum stix_code_t
 typedef enum stix_code_t stix_code_t;
 
 
-typedef struct stix_heap_t stix_heap_t;
-
-struct stix_heap_t
-{
-	stix_uint8_t* base;  /* start of a heap */
-	stix_uint8_t* limit; /* end of a heap */
-	stix_uint8_t* ptr;   /* next allocation pointer */
-};
-
-typedef struct stix_t stix_t;
-
-struct stix_t
-{
-	stix_mmgr_t*  mmgr;
-	stix_errnum_t errnum;
-
-	struct
-	{
-		int trait;
-	} option;
-
-	/* ========================= */
-
-	stix_heap_t* permheap;
-	stix_heap_t* curheap;
-	stix_heap_t* newheap;
-
-	/* ========================= */
-
-	stix_oop_t _nil;  /* pointer to the nil object */
-	stix_oop_t _true;
-	stix_oop_t _false;
-
-	stix_oop_oop_t root; /* pointer to the system dictionary */
-	stix_oop_oop_t symtab; /* system-wide symbol table */
-
-	struct
-	{
-		stix_oop_oop_t array;
-		stix_oop_oop_t association;
-		/*stix_oop_oop_t metaclass;*/
-		stix_oop_oop_t string;
-		stix_oop_oop_t symbol;
-		stix_oop_oop_t sysdic;
-		stix_oop_oop_t numeric[2]; /* [0]: smint [1]: character */
-	} cc; /* common kernel classes */
-};
 
 
 /* 
@@ -453,6 +408,7 @@ struct stix_t
 
 #define STIX_OOP_IS_NUMERIC(oop) (((stix_oow_t)oop) & (STIX_OOP_TAG_SMINT | STIX_OOP_TAG_CHAR))
 #define STIX_OOP_IS_POINTER(oop) (!STIX_OOP_IS_NUMERIC(oop))
+#define STIX_OOP_GET_TAG(oop) (((stix_oow_t)oop) & STIX_LBMASK(stix_oow_t, STIX_OOP_TAG_BITS))
 
 #define STIX_OOP_IS_SMINT(oop) (((stix_oow_t)oop) & STIX_OOP_TAG_SMINT)
 #define STIX_OOP_IS_CHAR(oop) (((stix_oow_t)oop) & STIX_OOP_TAG_CHAR)
@@ -499,7 +455,7 @@ typedef enum stix_obj_type_t stix_obj_type_t;
  *   moved: 0 or 1. used by GC.
  *
  * _size: the number of payload items in an object.
- *       it doesn't include the header size.
+ *        it doesn't include the header size.
  * 
  * The total number of bytes occupied by an object can be calculated
  * with this fomula:
@@ -528,14 +484,18 @@ typedef enum stix_obj_type_t stix_obj_type_t;
 #define STIX_OBJ_GET_FLAGS_TYPE(oop)     STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_UNIT_BITS + STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS), STIX_OBJ_FLAGS_TYPE_BITS)
 #define STIX_OBJ_GET_FLAGS_UNIT(oop)     STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS),                            STIX_OBJ_FLAGS_UNIT_BITS)
 #define STIX_OBJ_GET_FLAGS_EXTRA(oop)    STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS),                                                        STIX_OBJ_FLAGS_EXTRA_BITS)
-#define STIX_OBJ_GET_FLAGS_KERNEL(oop)   STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_UNIT_BITS),                                                                                            STIX_OBJ_FLAGS_KERNEL_BITS)
+#define STIX_OBJ_GET_FLAGS_KERNEL(oop)   STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_MOVED_BITS),                                                                                     STIX_OBJ_FLAGS_KERNEL_BITS)
 #define STIX_OBJ_GET_FLAGS_MOVED(oop)    STIX_GETBITS(stix_oow_t, (oop)->_flags, 0,                                                                                                               STIX_OBJ_FLAGS_MOVED_BITS)
 
 #define STIX_OBJ_SET_FLAGS_TYPE(oop,v)   STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_UNIT_BITS + STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS), STIX_OBJ_FLAGS_TYPE_BITS,   v)
 #define STIX_OBJ_SET_FLAGS_UNIT(oop,v)   STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS),                            STIX_OBJ_FLAGS_UNIT_BITS,   v)
 #define STIX_OBJ_SET_FLAGS_EXTRA(oop,v)  STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS),                                                        STIX_OBJ_FLAGS_EXTRA_BITS,  v)
-#define STIX_OBJ_SET_FLAGS_KERNEL(oop,v) STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_UNIT_BITS),                                                                                            STIX_OBJ_FLAGS_KERNEL_BITS, v)
+#define STIX_OBJ_SET_FLAGS_KERNEL(oop,v) STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_MOVED_BITS),                                                                                     STIX_OBJ_FLAGS_KERNEL_BITS, v)
 #define STIX_OBJ_SET_FLAGS_MOVED(oop,v)  STIX_SETBITS(stix_oow_t, (oop)->_flags, 0,                                                                                                               STIX_OBJ_FLAGS_MOVED_BITS,  v)
+
+#define STIX_OBJ_GET_SIZE(oop) ((oop)->_size)
+#define STIX_OBJ_GET_CLASS(oop) ((oop)->_class)
+#define STIX_OBJ_SET_CLASS(oop,c) ((oop)->_class = (c))
 
 /* this macro doesn't check the range of the actual value.
  * make sure that the value of each bit fields given fall within the number
@@ -582,8 +542,48 @@ struct stix_obj_uint16_t
 	stix_uint16_t slot[1];
 };
 
-#if 0
+#define STIX_CLASS_NAMED_INSTVARS 8
+struct stix_class_t
+{
+	STIX_OBJ_HEADER;
 
+	stix_oop_t      spec;         /* SmallInteger */
+	stix_oop_t      superclass;   /* Another class */
+	stix_oop_t      subclasses;   /* Array of subclasses */
+	stix_oop_char_t name;         /* Symbol */
+	stix_oop_char_t instvars;     /* String or Array? */
+	stix_oop_char_t classvars;    /* String or Array? */
+
+	stix_oop_oop_t  instmthds;    /* instance methods, MethodDictionary */
+	stix_oop_oop_t  classmthds;   /* class methods, MethodDictionary */
+
+	/* indexed part afterwards */
+	stix_oop_t      classvar[1];  /* most classes have not class variables. better to be 0 */
+};
+typedef struct stix_class_t stix_class_t;
+typedef struct stix_class_t* stix_oop_class_t;
+
+#define STIX_SET_NAMED_INSTVARS 2
+struct stix_set_t
+{
+	STIX_OBJ_HEADER;
+	stix_oop_t     tally;  /* SmallInteger */
+	stix_oop_oop_t bucket; /* Array */
+};
+typedef struct stix_set_t stix_set_t;
+typedef struct stix_set_t* stix_oop_set_t;
+
+#define STIX_ASSOCIATION_NAMED_INSTVARS 2
+struct stix_association_t
+{
+	STIX_OBJ_HEADER;
+	stix_oop_t key;
+	stix_oop_t value;
+};
+typedef struct stix_association_t stix_association_t;
+typedef struct stix_association_t* stix_oop_association_t;
+
+#if 0
 /* -----------------------------------------
  * class structures for classes known to VM  
  * ----------------------------------------- */
@@ -653,61 +653,74 @@ enum stix_class_desc_t
 	STIX_SYSDIC_BUCKET = STIX_DICTIONARY_BUCKET,
 	STIX_SYSDIC_SIZE = STIX_DICTIONARY_SIZE
 };
-
-
-
-struct stix_kcinfo_t
-{
-	const stix_char_t* name;
-	int          super;
-	int          fixed; /* the number of fixed fields */
-	int          vtype; /* variable class type */
-
-	int          nivars;    /* instance variables */
-	stix_cstr_t    ivars[10];
-
-	int          ncvars;    /* class variables */
-	stix_cstr_t    cvars[10];
-
-	int          ncivars;   /* class instance variables */
-	stix_cstr_t    civars[10];
-};
-
-typedef struct stix_kcinfo_t stix_kcinfo_t;
-
-enum stix_kc_t
-{
-	STIX_VM_KC_OBJECT,
-	STIX_VM_KC_UNDEFINED_OBJECT,
-	STIX_VM_KC_BEHAVIOR,
-	STIX_VM_KC_CLASS,
-	STIX_VM_KC_METACLASS,
-	STIX_VM_KC_BLOCK,
-	STIX_VM_KC_BOOLEAN,
-	STIX_VM_KC_TRUE,
-	STIX_VM_KC_FALSE,
-	STIX_VM_KC_CONTEXT,
-	STIX_VM_KC_METHOD,
-	STIX_VM_KC_MAGNITUDE,
-	STIX_VM_KC_ASSOCIATION,
-	STIX_VM_KC_CHARACTER,
-	STIX_VM_KC_NUMBER,
-	STIX_VM_KC_INTEGER,
-	STIX_VM_KC_SMALL_INTEGER,
-	STIX_VM_KC_LARGE_INTEGER,
-	STIX_VM_KC_COLLECTION,
-	STIX_VM_KC_INDEXED_COLLECTION,
-	STIX_VM_KC_ARRAY,
-	STIX_VM_KC_BYTE_ARRAY,
-	STIX_VM_KC_SYMBOL_TABLE,
-	STIX_VM_KC_DICTIONARY,
-	STIX_VM_KC_SYSTEM_DICTIONARY,
-	STIX_VM_KC_STRING,
-	STIX_VM_KC_SYMBOL,
-
-	STIX_VM_KC_MAX /* indicate the number of kernel classes */
-};
 #endif
+
+#define STIX_CLASSOF(stix,oop) ( \
+	STIX_OOP_IS_SMINT(oop)? (stix)->_small_integer: \
+	STIX_OOP_IS_CHAR(oop)? (stix)->_character: (oop)->_class \
+)
+
+/*
+#define STIX_BYTESOF(stix,oop) \
+	(STIX_OOP_IS_NUMERIC(oop)? \
+		(STIX_SIZEOF(stix_oow_t)): \
+		(STIX_SIZEOF(stix_obj_t) + STIX_ALIGN(((oop)->size + (oop)->extra) * (oop)->unit), STIX_SIZEOF(stix_oop_t)) \
+	)
+*/
+
+typedef struct stix_heap_t stix_heap_t;
+
+struct stix_heap_t
+{
+	stix_uint8_t* base;  /* start of a heap */
+	stix_uint8_t* limit; /* end of a heap */
+	stix_uint8_t* ptr;   /* next allocation pointer */
+};
+
+typedef struct stix_t stix_t;
+
+struct stix_t
+{
+	stix_mmgr_t*  mmgr;
+	stix_errnum_t errnum;
+
+	struct
+	{
+		int trait;
+		stix_oow_t default_symtab_size;
+		stix_oow_t default_sysdic_size;
+	} option;
+
+	/* ========================= */
+
+	stix_heap_t* permheap; /* TODO: put kernel objects to here */
+	stix_heap_t* curheap;
+	stix_heap_t* newheap;
+
+	/* ========================= */
+	stix_oop_t _nil;  /* pointer to the nil object */
+	stix_oop_t _true;
+	stix_oop_t _false;
+
+	stix_oop_t _stix; /* Stix */
+	stix_oop_t _nil_object; /* NilObject */
+	stix_oop_t _class; /* Class */
+	stix_oop_t _object; /* Object */
+	stix_oop_t _symbol; /* Symbol */
+	stix_oop_t _array; /* Array */
+	stix_oop_t _symbol_set; /* SymbolSet */
+	stix_oop_t _system_dictionary; /* SystemDictionary */
+	stix_oop_t _association; /* Association */
+	stix_oop_t _character; /* Character */
+	stix_oop_t _small_integer; /* SmallInteger */
+
+	stix_oop_set_t symtab; /* system-wide symbol table. instance of SymbolSet */
+	stix_oop_set_t sysdic; /* system dictionary. instance of SystemDictionary */
+
+	stix_oop_t* tmp_stack[100]; /* stack for temporaries */
+	stix_oow_t tmp_count;
+};
+
 
 #if defined(__cplusplus)
 extern "C" {
@@ -796,13 +809,29 @@ STIX_EXPORT stix_oop_t stix_instantiate (
 	stix_oow_t       vlen
 );
 
-
-
 /**
  * The stix_ignite() function creates key initial objects.
  */
 STIX_EXPORT int stix_ignite (
 	stix_t* stix
+);
+
+
+/**
+ * Temporary OOP management 
+ */
+STIX_EXPORT void stix_pushtmp (
+	stix_t*     stix,
+	stix_oop_t* oop_ptr
+);
+
+STIX_EXPORT void stix_poptmp (
+	stix_t*     stix
+);
+
+STIX_EXPORT void stix_poptmps (
+	stix_t*     stix,
+	stix_oow_t  count
 );
 
 #if defined(__cplusplus)

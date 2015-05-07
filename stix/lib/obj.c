@@ -30,6 +30,10 @@ void* stix_allocbytes (stix_t* stix, stix_size_t size)
 {
 	stix_uint8_t* ptr;
 
+#if defined(STIX_DEBUG_GC_1)
+stix_gc (stix);
+#endif
+
 	ptr = stix_allocheapmem (stix, stix->curheap, size);
 	if (!ptr && !(stix->option.trait & STIX_NOGC))
 	{
@@ -135,7 +139,7 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 	STIX_ASSERT (stix->_nil != STIX_NULL);
 
 	STIX_ASSERT (STIX_OOP_IS_POINTER(_class));
-	/*STIX_ASSERT (STIX_CLASSOF(_class) == stix->_class); */
+	STIX_ASSERT (STIX_CLASSOF(stix, _class) == stix->_class); 
 
 	STIX_ASSERT (STIX_OOP_IS_SMINT(((stix_oop_class_t)_class)->spec));
 	spec = STIX_OOP_TO_SMINT(((stix_oop_class_t)_class)->spec);
@@ -170,15 +174,17 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 		if (named_instvar > STIX_MAX_NAMED_INSTVARS) goto einval;
 	}
 
+	stix_pushtmp (stix, &_class);
+
 	switch (indexed_type)
 	{
 		case STIX_OBJ_TYPE_OOP:
-			/* class for a variable object. 
-			 * both the named_instvar-sized part and the variable part are allowed. */
+			/* both the fixed part(named instance variables) and 
+			 * the variable part(indexed instance variables) are allowed. */
 			oop = stix_allocoopobj(stix, named_instvar + vlen);
 			if (!oop) return STIX_NULL;
 
-			if (vlen > 0)
+			if (vptr && vlen > 0)
 			{
 				stix_oop_oop_t hdr = (stix_oop_oop_t)oop;
 				STIX_MEMCPY (&hdr->slot[named_instvar], vptr, vlen * STIX_SIZEOF(stix_oop_t));
@@ -186,13 +192,11 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 			break;
 
 		case STIX_OBJ_TYPE_CHAR:
-			/* variable-char class can't have instance variables */
 			oop = stix_alloccharobj(stix, vptr, vlen);
 			if (!oop) return STIX_NULL;
 			break;
 
 		case STIX_OBJ_TYPE_UINT8:
-			/* variable-byte class can't have instance variables */
 			oop = stix_allocuint8obj(stix, vptr, vlen);
 			if (!oop) return STIX_NULL;
 			break;
@@ -207,7 +211,9 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 			return STIX_NULL;
 	}
 
-	oop->_class = _class;
+	STIX_OBJ_SET_CLASS (oop, _class);
+	stix_poptmp (stix);
+
 	return oop;
 
 

@@ -29,6 +29,12 @@
 
 #include "stix.h"
 
+/* this is useful for debugging. stix_gc() can be called 
+ * while stix has not been fully initialized when this is defined*/
+#define STIX_SUPPORT_GC_DURING_IGNITION
+#define STIX_DEBUG_GC_1
+
+
 #include <stdio.h> /* TODO: delete these header inclusion lines */
 #include <string.h>
 #include <assert.h>
@@ -40,31 +46,9 @@
 #define STIX_ALIGN(x,y) ((((x) + (y) - 1) / (y)) * (y))
 
 
-
 /* ========================================================================= */
-/* CLASS                                                                     */
+/* CLASS SPEC ENCODING                                                       */
 /* ========================================================================= */
-
-/* The stix_class_t type defines the internal structure of a class object. */
-struct stix_class_t
-{
-	STIX_OBJ_HEADER;
-
-	stix_oow_t      spec;         /* SmallInteger */
-	stix_oop_oop_t  instmthds;    /* instance methods, MethodDictionary */
-	stix_oop_oop_t  classmthds;   /* class methods, MethodDictionary */
-	stix_oop_oop_t  superclass;   /* Another class */
-
-	stix_oop_char_t name;         /* Symbol */
-	stix_oop_char_t instvars;     /* String or Array? */
-	stix_oop_char_t classvars;    /* String or Array? */
-
-	/* indexed part afterwards */
-};
-
-
-typedef struct stix_class_t stix_class_t;
-typedef struct stix_class_t* stix_oop_class_t;
 
 /*
  * The spec field of a class object encodes the number of the fixed part
@@ -138,20 +122,6 @@ typedef struct stix_class_t* stix_oop_class_t;
  */
 #define STIX_MAX_INDEXED_INSTVARS(named_instvar) ((~(stix_oow_t)0) - named_instvar)
 
-
-#define STIX_CLASSOF(stix,oop) \
-	(STIX_OOP_IS_NUMERIC(oop)? \
-		((stix_oop_t)(stix)->cc.numeric[((stix_oow_t)oop&3)-1]): \
-		(oop)->_class)
-
-/*
-#define STIX_BYTESOF(stix,oop) \
-	(STIX_OOP_IS_NUMERIC(oop)? \
-		(STIX_SIZEOF(stix_oow_t)): \
-		(STIX_SIZEOF(stix_obj_t) + STIX_ALIGN(((oop)->size + (oop)->extra) * (oop)->unit), STIX_SIZEOF(stix_oop_t)) \
-	)
-*/
-
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -192,6 +162,19 @@ void* stix_allocheapmem (
 
 
 /* ========================================================================= */
+/* stix.c                                                                    */
+/* ========================================================================= */
+stix_oow_t stix_hashbytes (
+	const stix_uint8_t* ptr,
+	stix_oow_t          len
+);
+
+stix_oow_t stix_hashchars (
+	const stix_char_t* ptr,
+	stix_size_t        len
+);
+
+/* ========================================================================= */
 /* obj.c                                                                     */
 /* ========================================================================= */
 void* stix_allocbytes (
@@ -199,6 +182,10 @@ void* stix_allocbytes (
 	stix_size_t size
 );
 
+/**
+ * The stix_allocoopobj() function allocates a raw object composed of \a size
+ * pointer fields excluding the header.
+ */
 stix_oop_t stix_allocoopobj (
 	stix_t*    stix,
 	stix_oow_t size
@@ -222,6 +209,34 @@ stix_oop_t stix_allocuint16obj (
 	stix_oow_t           len
 );
 
+/* ========================================================================= */
+/* sym.c                                                                     */
+/* ========================================================================= */
+stix_oop_t stix_makesymbol (
+	stix_t*            stix,
+	const stix_char_t* ptr,
+	stix_oow_t         len
+);
+
+stix_oop_t stix_findsymbol (
+	stix_t*            stix,
+	const stix_char_t* ptr,
+	stix_oow_t         len
+);
+
+/* ========================================================================= */
+/* dic.c                                                                     */
+/* ========================================================================= */
+stix_oop_t stix_putatsysdic (
+	stix_t*     stix,
+	stix_oop_t  key,
+	stix_oop_t  value
+);
+
+stix_oop_t stix_getatsysdic (
+	stix_t*     stix,
+	stix_oop_t  key
+);
 
 #if defined(__cplusplus)
 }
