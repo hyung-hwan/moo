@@ -1,3 +1,29 @@
+/*
+ * $Id$
+ *
+    Copyright (c) 2014-2015 Chung, Hyung-Hwan. All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+
+    THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR
+    IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+    OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+    IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+    NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+    THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+    THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include "stix-prv.h"
 
 #include <stdio.h>
@@ -69,7 +95,7 @@ int main (int argc, char* argv[])
 		(unsigned long int)STIX_CLASS_SPEC_INDEXED_TYPE(x));
 	}
 
-	stix = stix_open (&sys_mmgr, 0, 1000000lu, STIX_NULL);
+	stix = stix_open (&sys_mmgr, 0, 512000lu, STIX_NULL);
 	if (!stix)
 	{
 		printf ("cannot open stix\n");
@@ -78,8 +104,8 @@ int main (int argc, char* argv[])
 
 	{
 		stix_oow_t symtab_size = 5000;
-		stix_setoption (stix, STIX_DEFAULT_SYMTAB_SIZE, &symtab_size);
-		stix_setoption (stix, STIX_DEFAULT_SYSDIC_SIZE, &symtab_size);
+		stix_setoption (stix, STIX_DFL_SYMTAB_SIZE, &symtab_size);
+		stix_setoption (stix, STIX_DFL_SYSDIC_SIZE, &symtab_size);
 	}
 
 	if (stix_ignite(stix) <= -1)
@@ -88,6 +114,7 @@ int main (int argc, char* argv[])
 		stix_close (stix);
 		return -1;
 	}
+
 
 {
 stix_char_t x[] = { 'S', 't', 'r', 'i', 'n', 'g', '\0' };
@@ -98,18 +125,17 @@ a = stix_makesymbol (stix, x, 6);
 b = stix_makesymbol (stix, y, 6);
 
 printf ("%p %p\n", a, b);
-}
+
 
 	dump_symbol_table (stix);
+
+
 stix_gc (stix);
+a = stix_findsymbol (stix, x, 6);
+printf ("%p\n", a);
 	dump_symbol_table (stix);
-
+}
 	stix_close (stix);
-
-#if defined(__BORLANDC__)
-	printf ("Press the enter key...\n");
-	getchar ();
-#endif
 
 	return 0;
 }

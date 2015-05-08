@@ -26,7 +26,7 @@
 
 #include "stix-prv.h"
 
-static void cleanup_symbols_for_gc (stix_t* stix, stix_oop_t _nil)
+static void compact_symbol_table (stix_t* stix, stix_oop_t _nil)
 {
 	stix_oop_char_t symbol;
 	stix_oow_t tally, index, i, x, y, z;
@@ -107,12 +107,11 @@ static stix_oop_t move_one (stix_t* stix, stix_oop_t oop)
 	}
 	else
 	{
-		stix_oow_t nbytes, nbytes_aligned;
+		stix_oow_t nbytes_aligned;
 		stix_oop_t tmp;
 
 		/* calculate the payload size in bytes */
-		nbytes = (oop->_size + STIX_OBJ_GET_FLAGS_EXTRA(oop)) * STIX_OBJ_GET_FLAGS_UNIT(oop);
-		nbytes_aligned = STIX_ALIGN (nbytes, STIX_SIZEOF(stix_oop_t));
+		nbytes_aligned = STIX_ALIGN (STIX_OBJ_BYTESOF(oop), STIX_SIZEOF(stix_oop_t));
 
 		/* allocate space in the new heap */
 		tmp = stix_allocheapmem (stix, stix->newheap, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
@@ -144,15 +143,15 @@ static stix_oop_t move_one (stix_t* stix, stix_oop_t oop)
 
 static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 {
-	while (ptr < stix->newheap->ptr)
+	/*while (ptr < stix->newheap->ptr)*/
+	while (STIX_LTPTR(stix_uint8_t, ptr, stix->newheap->ptr))
 	{
 		stix_oow_t i;
-		stix_oow_t nbytes, nbytes_aligned;
+		stix_oow_t nbytes_aligned;
 		stix_oop_t oop;
 
 		oop = (stix_oop_t)ptr;
-		nbytes = (STIX_OBJ_GET_SIZE(oop) + STIX_OBJ_GET_FLAGS_EXTRA(oop)) * STIX_OBJ_GET_FLAGS_UNIT(oop);
-		nbytes_aligned = STIX_ALIGN (nbytes, STIX_SIZEOF(stix_oop_t));
+		nbytes_aligned = STIX_ALIGN (STIX_OBJ_BYTESOF(oop), STIX_SIZEOF(stix_oop_t));
 
 		STIX_OBJ_SET_CLASS (oop, move_one(stix, STIX_OBJ_GET_CLASS(oop)));
 		if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_OOP)
@@ -167,8 +166,8 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 			}
 		}
 
-/*wprintf (L"ptr in gc => %p size => %d, aligned size => %d\n", ptr, (int)nbytes, (int)nbytes_aligned);*/
-		ptr = ptr + STIX_SIZEOF(stix_obj_t) + nbytes_aligned;
+		/*ptr = ptr + STIX_SIZEOF(stix_obj_t) + nbytes_aligned;*/
+		ptr = STIX_INCPTR (stix_uint8_t, ptr, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
 	}
 
 	/* return the pointer to the beginning of the free space in the heap */
@@ -188,6 +187,8 @@ void stix_gc (stix_t* stix)
 	stix_oop_t old_nil;
 	stix_oow_t i;
 
+printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
+	stix->curheap->base, stix->curheap->ptr, stix->newheap->base, stix->newheap->ptr);
 	/* TODO: allocate common objects like _nil and the root dictionary 
 	 *       in the permanant heap.  minimize moving around */
 	old_nil = stix->_nil;
@@ -226,7 +227,7 @@ void stix_gc (stix_t* stix)
 	 * if the symbol has not moved to the new heap, the symbol
 	 * is not referenced by any other objects than the symbol 
 	 * table itself */
-	cleanup_symbols_for_gc (stix, old_nil);
+	compact_symbol_table (stix, old_nil);
 
 	/* move the symbol table itself */
 	stix->symtab = (stix_oop_set_t)move_one (stix, (stix_oop_t)stix->symtab);
@@ -235,6 +236,11 @@ void stix_gc (stix_t* stix)
 	 * the previous scan to move referenced objects by 
 	 * the symbol table. */
 	ptr = scan_new_heap (stix, ptr);
+
+	/* the contents of the current heap is not needed any more.
+	 * reset the upper bound to the base. don't forget to align the heap
+	 * pointer to the OOP size. See stix_makeheap() also */
+	stix->curheap->ptr = (stix_uint8_t*)STIX_ALIGN(((stix_uintptr_t)stix->curheap->base), STIX_SIZEOF(stix_oop_t));
 
 	/* swap the current heap and old heap */
 	tmp = stix->curheap;

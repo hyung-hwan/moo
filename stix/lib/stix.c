@@ -92,11 +92,11 @@ int stix_setoption (stix_t* stix, stix_option_t id, const void* value)
 			stix->option.trait = *(const int*)value;
 			return 0;
 
-		case STIX_DEFAULT_SYMTAB_SIZE:
-			stix->option.default_symtab_size = *(stix_oow_t*)value;
+		case STIX_DFL_SYMTAB_SIZE:
+			stix->option.dfl_symtab_size = *(stix_oow_t*)value;
 
-		case STIX_DEFAULT_SYSDIC_SIZE:
-			stix->option.default_sysdic_size = *(stix_oow_t*)value;
+		case STIX_DFL_SYSDIC_SIZE:
+			stix->option.dfl_sysdic_size = *(stix_oow_t*)value;
 	}
 
 	stix->errnum = STIX_EINVAL;
@@ -111,11 +111,11 @@ int stix_getoption (stix_t* stix, stix_option_t id, void* value)
 			*(int*)value = stix->option.trait;
 			return 0;
 
-		case STIX_DEFAULT_SYMTAB_SIZE:
-			*(stix_oow_t*)value = stix->option.default_symtab_size;
+		case STIX_DFL_SYMTAB_SIZE:
+			*(stix_oow_t*)value = stix->option.dfl_symtab_size;
 
-		case STIX_DEFAULT_SYSDIC_SIZE:
-			*(stix_oow_t*)value = stix->option.default_sysdic_size;
+		case STIX_DFL_SYSDIC_SIZE:
+			*(stix_oow_t*)value = stix->option.dfl_sysdic_size;
 	};
 
 	stix->errnum = STIX_EINVAL;
@@ -134,9 +134,20 @@ stix_oow_t stix_hashbytes (const stix_uint8_t* ptr, stix_oow_t len)
 	return h;
 }
 
-stix_oow_t stix_hashchars (const stix_char_t* ptr, stix_size_t len)
+stix_oow_t stix_hashchars (const stix_char_t* ptr, stix_oow_t len)
 {
 	return stix_hashbytes ((const stix_uint8_t *)ptr, len * STIX_SIZEOF(*ptr));
 }
 
+int stix_equalchars (const stix_char_t* str1, const stix_char_t* str2, stix_oow_t len)
+{
+	stix_oow_t i;
+
+	for (i = 0; i < len; i++)
+	{
+		if (str1[i] != str2[i]) return 0;
+	}
+
+	return 1;
+}
 

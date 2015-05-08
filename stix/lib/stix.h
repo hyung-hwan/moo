@@ -27,6 +27,26 @@
 #ifndef _STIX_H_
 #define _STIX_H_
 
+#if defined(__MSDOS__)
+#	define STIX_INCPTR(type,base,inc)  (((type __huge*)base) + (inc))
+#	define STIX_DECPTR(type,base,inc)  (((type __huge*)base) - (inc))
+#	define STIX_GTPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) > ((type __huge*)ptr2))
+#	define STIX_GEPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) >= ((type __huge*)ptr2))
+#	define STIX_LTPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) < ((type __huge*)ptr2))
+#	define STIX_LEPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) <= ((type __huge*)ptr2))
+#	define STIX_EQPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) == ((type __huge*)ptr2))
+#	define STIX_SUBPTR(type,ptr1,ptr2) (((type __huge*)ptr1) - ((type __huge*)ptr2))
+#else
+#	define STIX_INCPTR(type,base,inc)  (((type*)base) + (inc))
+#	define STIX_DECPTR(type,base,inc)  (((type*)base) - (inc))
+#	define STIX_GTPTR(type,ptr1,ptr2)  (((type*)ptr1) > ((type*)ptr2))
+#	define STIX_GEPTR(type,ptr1,ptr2)  (((type*)ptr1) >= ((type*)ptr2))
+#	define STIX_LTPTR(type,ptr1,ptr2)  (((type*)ptr1) < ((type*)ptr2))
+#	define STIX_LEPTR(type,ptr1,ptr2)  (((type*)ptr1) <= ((type*)ptr2))
+#	define STIX_EQPTR(type,ptr1,ptr2)  (((type*)ptr1) == ((type*)ptr2))
+#	define STIX_SUBPTR(type,ptr1,ptr2) (((type*)ptr1) - ((type*)ptr2))
+#endif
+
 /* ========================================================================== */
 /* TODO: define these types and macros using autoconf */
 typedef unsigned char      stix_uint8_t;
@@ -189,8 +209,8 @@ typedef enum stix_errnum_t stix_errnum_t;
 enum stix_option_t
 {
 	STIX_TRAIT,
-	STIX_DEFAULT_SYMTAB_SIZE,
-	STIX_DEFAULT_SYSDIC_SIZE
+	STIX_DFL_SYMTAB_SIZE,
+	STIX_DFL_SYSDIC_SIZE
 };
 typedef enum stix_option_t stix_option_t;
 
@@ -495,7 +515,11 @@ typedef enum stix_obj_type_t stix_obj_type_t;
 
 #define STIX_OBJ_GET_SIZE(oop) ((oop)->_size)
 #define STIX_OBJ_GET_CLASS(oop) ((oop)->_class)
+
+#define STIX_OBJ_SET_SIZE(oop,v) ((oop)->_size = (v))
 #define STIX_OBJ_SET_CLASS(oop,c) ((oop)->_class = (c))
+
+#define STIX_OBJ_BYTESOF(oop) ((STIX_OBJ_GET_SIZE(oop) + STIX_OBJ_GET_FLAGS_EXTRA(oop)) * STIX_OBJ_GET_FLAGS_UNIT(oop))
 
 /* this macro doesn't check the range of the actual value.
  * make sure that the value of each bit fields given fall within the number
@@ -655,18 +679,22 @@ enum stix_class_desc_t
 };
 #endif
 
+/**
+ * The STIX_CLASSOF() macro return the class of an object including a numeric
+ * object encoded into a pointer.
+ */
 #define STIX_CLASSOF(stix,oop) ( \
 	STIX_OOP_IS_SMINT(oop)? (stix)->_small_integer: \
-	STIX_OOP_IS_CHAR(oop)? (stix)->_character: (oop)->_class \
+	STIX_OOP_IS_CHAR(oop)? (stix)->_character: STIX_OBJ_GET_CLASS(oop) \
 )
 
-/*
+/**
+ * The STIX_BYTESOF() macro returns the size of the payload of
+ * an object in bytes. If the pointer given encodes a numeric value, 
+ * it returns the size of #stix_oow_t in bytes.
+ */
 #define STIX_BYTESOF(stix,oop) \
-	(STIX_OOP_IS_NUMERIC(oop)? \
-		(STIX_SIZEOF(stix_oow_t)): \
-		(STIX_SIZEOF(stix_obj_t) + STIX_ALIGN(((oop)->size + (oop)->extra) * (oop)->unit), STIX_SIZEOF(stix_oop_t)) \
-	)
-*/
+	(STIX_OOP_IS_NUMERIC(oop)? STIX_SIZEOF(stix_oow_t): STIX_OBJ_BYTESOF(oop))
 
 typedef struct stix_heap_t stix_heap_t;
 
@@ -687,8 +715,8 @@ struct stix_t
 	struct
 	{
 		int trait;
-		stix_oow_t default_symtab_size;
-		stix_oow_t default_sysdic_size;
+		stix_oow_t dfl_symtab_size;
+		stix_oow_t dfl_sysdic_size;
 	} option;
 
 	/* ========================= */

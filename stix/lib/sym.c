@@ -79,18 +79,12 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_char_t* ptr, sti
 		symbol = (stix_oop_char_t)stix->symtab->bucket->slot[index];
 		STIX_ASSERT (STIX_CLASSOF(stix,symbol) == (stix_oop_t)stix->_symbol);
 
-		if (len == STIX_OBJ_GET_SIZE(symbol))
+		if (len == STIX_OBJ_GET_SIZE(symbol) &&
+		    stix_equalchars (ptr, symbol->slot, len))
 		{
-			stix_oow_t i;
-
-			for (i = 0; i < len; i++)
-			{
-				if (ptr[i] != symbol->slot[i]) goto not_equal;
-			}
 			return (stix_oop_t)symbol;
 		}
 
-	not_equal:
 		index = (index + 1) % STIX_OBJ_GET_SIZE(stix->symtab->bucket);
 	}
 

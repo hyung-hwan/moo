@@ -60,7 +60,7 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t old_bucket)
 	return new_bucket;
 }
 
-stix_oop_t find_or_insert (stix_t* stix, stix_oop_char_t key, stix_oop_t value)
+static stix_oop_t find_or_insert (stix_t* stix, stix_oop_char_t key, stix_oop_t value)
 {
 	stix_oow_t index, tally;
 	stix_oop_association_t ass;
@@ -81,18 +81,12 @@ stix_oop_t find_or_insert (stix_t* stix, stix_oop_char_t key, stix_oop_t value)
 		STIX_ASSERT (STIX_CLASSOF(stix,ass) == stix->_association);
 		STIX_ASSERT (STIX_CLASSOF(stix,ass->key) == stix->_symbol);
 
-		if (STIX_OBJ_GET_SIZE(key) == STIX_OBJ_GET_SIZE(ass->key))
+		if (STIX_OBJ_GET_SIZE(key) == STIX_OBJ_GET_SIZE(ass->key) &&
+		    stix_equalchars (key->slot, ((stix_oop_char_t)ass->key)->slot, STIX_OBJ_GET_SIZE(key))) 
 		{
-			stix_oow_t i;
-
-			for (i = 0; i < STIX_OBJ_GET_SIZE(key); i++)
-			{
-				if (key->slot[i] != ((stix_oop_char_t)ass->key)->slot[i]) goto not_equal;
-			}
 			return (stix_oop_t)ass;
 		}
 
-	not_equal:
 		index = (index + 1) % STIX_OBJ_GET_SIZE(stix->sysdic->bucket);
 	}
 

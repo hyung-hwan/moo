@@ -31,7 +31,7 @@ void* stix_allocbytes (stix_t* stix, stix_size_t size)
 	stix_uint8_t* ptr;
 
 #if defined(STIX_DEBUG_GC_1)
-stix_gc (stix);
+	stix_gc (stix);
 #endif
 
 	ptr = stix_allocheapmem (stix, stix->curheap, size);
@@ -65,8 +65,8 @@ stix_oop_t stix_allocoopobj (stix_t* stix, stix_oow_t size)
 	if (!hdr) return STIX_NULL;
 
 	hdr->_flags = STIX_OBJ_MAKE_FLAGS(STIX_OBJ_TYPE_OOP, STIX_SIZEOF(stix_oop_t), 0, 0, 0);
-	hdr->_size = size;
-	hdr->_class = stix->_nil;
+	STIX_OBJ_SET_SIZE (hdr, size);
+	STIX_OBJ_SET_CLASS (hdr, stix->_nil);
 
 	while (size > 0) hdr->slot[--size] = stix->_nil;
 
@@ -85,7 +85,7 @@ static stix_oop_t alloc_numeric_array (stix_t* stix, const void* ptr, stix_oow_t
 	 * it's useful to store a string with a terminating null */
 	nbytes = extra? xbytes + len: xbytes; 
 	nbytes_aligned = STIX_ALIGN(nbytes, STIX_SIZEOF(stix_oop_t));
-	/* TODO: check overflow in size calculation*/
+/* TODO: check overflow in size calculation*/
 
 	/* making the number of bytes to allocate a multiple of
 	 * STIX_SIZEOF(stix_oop_t) will guarantee the starting address
@@ -96,7 +96,8 @@ static stix_oop_t alloc_numeric_array (stix_t* stix, const void* ptr, stix_oow_t
 
 	hdr->_flags = STIX_OBJ_MAKE_FLAGS(type, unit, extra, 0, 0);
 	hdr->_size = len;
-	hdr->_class = stix->_nil;
+	STIX_OBJ_SET_SIZE (hdr, len);
+	STIX_OBJ_SET_CLASS (hdr, stix->_nil);
 
 	if (ptr)
 	{
@@ -135,11 +136,12 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 	stix_oow_t spec;
 	stix_oow_t named_instvar;
 	stix_obj_type_t indexed_type;
+	stix_oow_t tmp_count = 0;
 
 	STIX_ASSERT (stix->_nil != STIX_NULL);
 
 	STIX_ASSERT (STIX_OOP_IS_POINTER(_class));
-	STIX_ASSERT (STIX_CLASSOF(stix, _class) == stix->_class); 
+	STIX_ASSERT (STIX_CLASSOF(stix, _class) == stix->_class);
 
 	STIX_ASSERT (STIX_OOP_IS_SMINT(((stix_oop_class_t)_class)->spec));
 	spec = STIX_OOP_TO_SMINT(((stix_oop_class_t)_class)->spec);
@@ -174,7 +176,7 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 		if (named_instvar > STIX_MAX_NAMED_INSTVARS) goto einval;
 	}
 
-	stix_pushtmp (stix, &_class);
+	stix_pushtmp (stix, &_class); tmp_count++;
 
 	switch (indexed_type)
 	{
@@ -182,9 +184,8 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 			/* both the fixed part(named instance variables) and 
 			 * the variable part(indexed instance variables) are allowed. */
 			oop = stix_allocoopobj(stix, named_instvar + vlen);
-			if (!oop) return STIX_NULL;
 
-			if (vptr && vlen > 0)
+			if (oop && vptr && vlen > 0)
 			{
 				stix_oop_oop_t hdr = (stix_oop_oop_t)oop;
 				STIX_MEMCPY (&hdr->slot[named_instvar], vptr, vlen * STIX_SIZEOF(stix_oop_t));
@@ -193,29 +194,25 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 
 		case STIX_OBJ_TYPE_CHAR:
 			oop = stix_alloccharobj(stix, vptr, vlen);
-			if (!oop) return STIX_NULL;
 			break;
 
 		case STIX_OBJ_TYPE_UINT8:
 			oop = stix_allocuint8obj(stix, vptr, vlen);
-			if (!oop) return STIX_NULL;
 			break;
 
 		case STIX_OBJ_TYPE_UINT16:
 			oop = stix_allocuint16obj(stix, vptr, vlen);
-			if (!oop) return STIX_NULL;
 			break;
 
 		default:
 			stix->errnum = STIX_EINTERN;
-			return STIX_NULL;
+			oop = STIX_NULL;
+			break;
 	}
 
-	STIX_OBJ_SET_CLASS (oop, _class);
-	stix_poptmp (stix);
-
+	if (oop) STIX_OBJ_SET_CLASS (oop, _class);
+	stix_poptmps (stix, tmp_count);
 	return oop;
-
 
 einval:
 	stix->errnum = STIX_EINVAL;

@@ -171,7 +171,13 @@ stix_oow_t stix_hashbytes (
 
 stix_oow_t stix_hashchars (
 	const stix_char_t* ptr,
-	stix_size_t        len
+	stix_oow_t         len
+);
+
+int stix_equalchars (
+	const stix_char_t* str1,
+	const stix_char_t* str2,
+	stix_oow_t         len
 );
 
 /* ========================================================================= */

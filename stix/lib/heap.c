@@ -42,9 +42,11 @@ stix_heap_t* stix_makeheap (stix_t* stix, stix_size_t size)
 	heap->base = (stix_uint8_t*)(heap + 1);
 	/* adjust the initial allocation pointer to a multiple of the oop size */
 	heap->ptr = (stix_uint8_t*)STIX_ALIGN(((stix_uintptr_t)heap->base), STIX_SIZEOF(stix_oop_t));
-	heap->limit = heap->base + size;
+	heap->limit = STIX_INCPTR(stix_uint8_t, heap->base, size); /*heap->base + size;*/
 
 	STIX_ASSERT (heap->ptr >= heap->base);
+	STIX_ASSERT (STIX_GTPTR(stix_uint8_t, heap->limit, heap->base)); /* heap->limit >= heap->base */
+	STIX_ASSERT (STIX_SUBPTR(stix_uint8_t, heap->limit, heap->base) == size);
 
 	/* if size is too small, heap->ptr may go past heap->limit even at 
 	 * this moment depending on the alignment of heap->base. subsequent
@@ -64,7 +66,9 @@ void* stix_allocheapmem (stix_t* stix, stix_heap_t* heap, stix_size_t size)
 	stix_uint8_t* ptr;
 
 	/* check the heap size limit */
-	if (heap->ptr >= heap->limit || heap->limit - heap->ptr < size)
+	/*if (heap->ptr >= heap->limit || heap->limit - heap->ptr < size)*/
+	if (STIX_GEPTR(stix_uint8_t, heap->ptr, heap->limit) || 
+	    STIX_SUBPTR(stix_uint8_t, heap->limit, heap->ptr) < size)
 	{
 		stix->errnum = STIX_ENOMEM;
 		return STIX_NULL;
@@ -72,7 +76,7 @@ void* stix_allocheapmem (stix_t* stix, stix_heap_t* heap, stix_size_t size)
 
 	/* allocation is as simple as moving the heap pointer */
 	ptr = heap->ptr;
-	heap->ptr += size;
+	heap->ptr = STIX_INCPTR (stix_uint8_t, heap->ptr, size); /*heap->ptr += size;*/
 
 	return ptr;
 }

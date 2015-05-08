@@ -180,7 +180,12 @@ static int ignite_2 (stix_t* stix)
 	if (!stix->symtab) return -1;
 
 	stix->symtab->tally = STIX_OOP_FROM_SMINT(0);
-	arr = (stix_oop_oop_t)stix_instantiate (stix, stix->_array, STIX_NULL, stix->option.default_symtab_size);
+	/* It's important to assign the result of stix_instantiate() to a temporary
+	 * variable first and then assign it to stix->symtab->bucket. 
+	 * The pointer 'stix->symtab; can change in stix_instantiate() and the 
+	 * target address of assignment may get set before stix_instantiate()
+	 * is called. */
+	arr = (stix_oop_oop_t)stix_instantiate (stix, stix->_array, STIX_NULL, stix->option.dfl_symtab_size);
 	if (!arr) return -1;
 	stix->symtab->bucket = arr;
 
@@ -189,7 +194,7 @@ static int ignite_2 (stix_t* stix)
 	if (!stix->sysdic) return -1;
 
 	stix->sysdic->tally = STIX_OOP_FROM_SMINT(0);
-	arr = (stix_oop_oop_t)stix_instantiate (stix, stix->_array, STIX_NULL, stix->option.default_sysdic_size);
+	arr = (stix_oop_oop_t)stix_instantiate (stix, stix->_array, STIX_NULL, stix->option.dfl_sysdic_size);
 	if (!arr) return -1;
 	stix->sysdic->bucket = arr;
 
