@@ -26,41 +26,6 @@
 
 #include "stix-prv.h"
 
-
-#if 0
-stix_oop_t stix_addclass (stix_t* stix, name, spec, ...)
-{
-/* convert name to the internal encoding... */
-
-/* returned value must be also registered in the system dictionary. 
- * so it doesn't get GCed. */
-	return -1;
-}
-
-int stix_delclass (stix_t* stix, stix_oop_t _class)
-{
-	stix_oop_class_t c = (stix_oop_class_t)_class;
-
-	if (c->name)
-	{
-		/* delete c->name from system dictionary. it'll get GCed if it's not referenced */
-	}
-
-	return -1;
-}
-
-stix_oop_t stix_findclass (stix_t* stix, const char* name)
-{
-	/* find a class object by name */
-	return STIX_NULL;
-}
-
-int stix_addmethod (stix_t* stix, stix_oop_t _class, const char* name, const bytecode)
-{
-
-}
-#endif
-
 /*
  *    Stix .....................
  *    ^ ^ ^                    :   .......
@@ -155,6 +120,8 @@ static int ignite_1 (stix_t* stix)
 	stix->_symbol_set        = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_SET_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 	stix->_system_dictionary = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_SET_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 	stix->_association       = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_ASSOCIATION_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
+	stix->_true_class        = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
+	stix->_false_class       = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 
 	/* TOOD: what is a proper spec for Character and SmallInteger?
  	 *       If the fixed part is  0, its instance must be an object of 0 payload fields.
@@ -165,8 +132,8 @@ static int ignite_1 (stix_t* stix)
 	if (!stix->_stix              || !stix->_nil_object    || !stix->_object ||
 	    !stix->_array             || !stix->_symbol        || !stix->_symbol_set ||
 	    !stix->_system_dictionary || !stix->_association   || 
+	    !stix->_true_class        || !stix->_false_class   ||
 	    !stix->_character         || !stix->_small_integer) return -1;
-
 	STIX_OBJ_SET_CLASS (stix->_nil, stix->_nil_object);
 	return 0;
 }
@@ -174,6 +141,11 @@ static int ignite_1 (stix_t* stix)
 static int ignite_2 (stix_t* stix)
 {
 	stix_oop_oop_t arr;
+
+	/* Create 'true' and 'false objects */
+	stix->_true = stix_instantiate (stix, stix->_true_class, STIX_NULL, 0);
+	stix->_false = stix_instantiate (stix, stix->_false_class, STIX_NULL, 0);
+	if (!stix->_true || !stix->_false) return -1;
 
 	/* Create the symbol table */
 	stix->symtab = (stix_oop_set_t)stix_instantiate (stix, stix->_symbol_set, STIX_NULL, 0);
@@ -204,31 +176,47 @@ static int ignite_2 (stix_t* stix)
 	return 0;
 }
 
-#if 0
+static int ignite_3 (stix_t* stix)
+{
+	/* Register kernel classes manually created so far to the system dictionary */
 
-/*
-	stix_oop_class_t c;
+	static struct symbol_name_t
+	{
+		stix_oow_t len;
+		stix_char_t str[16];
+	} symnames[] = {
+		{  4, { 'S','t','i','x'                                                  } },
+		{  6, { 'O','b','j','e','c','t'                                          } },
+		{  5, { 'C','l','a','s','s'                                              } },
+		{  6, { 'S','y','m','b','o','l'                                          } },
+		{  5, { 'A','r','r','a','y'                                              } },
+		{  9, { 'S','y','m','b','o','l','S','e','t'                              } },
+		{ 16, { 'S','y','s','t','e','m','D','i','c','t','i','o','n','a','r','y'  } },
+		{ 11, { 'A','s','s','o','c','i','a','t','i','o','n'                      } },
+		{  4, { 'T','r','u','e'                                                  } },
+		{  5, { 'F','a','l','s','e'                                              } },
+		{  9, { 'C','h','a','r','a','c','t','e','r'                              } },
+		{ 12, { 'S','m','a','l','l','I','n','t','e','g','e','r'                  } }
+	};
 
-	c = (stix_oop_class_t)stix->_stix;
-	c->classvar[0] = stix->_nil;
-*/
-	/* Set subclasses */
+	stix_oow_t i;
+	stix_oop_t sym;
+	stix_oop_t* stix_ptr;
 
-	/*
-  	Set Names.
-	stix->_stix_object->name = new_symbol ("ProtoObject");
-	stix->_nil_object->name = new_symbol ("NilObject");
-	stix->_class->name = new_symbol ("Class");
-	*/
+	stix_ptr = &stix->_stix;
+	for (i = 0; i < STIX_COUNTOF(symnames); i++)
+	{
+		sym = stix_makesymbol (stix, symnames[i].str, symnames[i].len);
+		//sym = stix_makesymbol (stix, symnames[0].str, symnames[0].len);
+		if (!sym) return -1;
 
-	/*
-	_class->instvars = make_string or make_array('spec instmthds classmthds superclass name instvars');
-	*/
+		if (!stix_putatsysdic (stix, sym, *stix_ptr)) return -1;
 
-	/*register 'Stix', 'NilObject' and 'Class' into the system dictionary.*/
-	
-#endif
+		stix_ptr++;
+	}
 
+	return 0;
+}
 
 int stix_ignite (stix_t* stix)
 {
@@ -240,14 +228,7 @@ int stix_ignite (stix_t* stix)
 	stix->_nil->_flags = STIX_OBJ_MAKE_FLAGS (STIX_OBJ_TYPE_OOP, STIX_SIZEOF(stix_oop_t), 0, 1, 0);
 	stix->_nil->_size = 0;
 
-	if (ignite_1(stix) <= -1 || ignite_2(stix) <= -1) return -1;
-
-/*stix_addclass (stix, "True", spec, "Boolean");*/
-	/*stix->_true = stix_instantiate (stix, stix->_true_class, STIX_NULL, 0);
-	stix->_false = stix_instantiate (stix, stix->_false_class STIX_NULL, 0);
-
-	if (!stix->_true || !stix->_false) return -1;*/
-
+	if (ignite_1(stix) <= -1 || ignite_2(stix) <= -1 || ignite_3(stix)) return -1;
 
 	return 0;
 }

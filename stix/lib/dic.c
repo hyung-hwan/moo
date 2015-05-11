@@ -74,6 +74,13 @@ static stix_oop_t find_or_insert (stix_t* stix, stix_oop_char_t key, stix_oop_t 
 
 	index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(stix->sysdic->bucket);
 
+{
+int i;
+printf ("FINDING IN SYSDIC [");
+for (i = 0; i < STIX_OBJ_GET_SIZE(key); i++) printf ("%c", key->slot[i]);
+printf ("]\n");
+}
+
 	while (stix->sysdic->bucket->slot[index] != stix->_nil) 
 	{
 		ass = (stix_oop_association_t)stix->sysdic->bucket->slot[index];
@@ -130,11 +137,10 @@ static stix_oop_t find_or_insert (stix_t* stix, stix_oop_char_t key, stix_oop_t 
 	/* create a new assocation of a key and a value since 
 	 * the key isn't found in the root dictionary */
 	ass = (stix_oop_association_t)stix_instantiate (stix, stix->_association, STIX_NULL, 0);
-	if (!ass)
-	{
-		ass->key = (stix_oop_t)key;
-		ass->value = value;
-	}
+	if (!ass) goto oops;
+	
+	ass->key = (stix_oop_t)key;
+	ass->value = value;
 
 	stix->sysdic->tally = STIX_OOP_FROM_SMINT(tally + 1);
 	stix->sysdic->bucket->slot[index] = (stix_oop_t)ass;

@@ -730,6 +730,7 @@ struct stix_t
 	stix_oop_t _true;
 	stix_oop_t _false;
 
+	/* == NEVER CHANGE THE ORDER OF FIELDS BELOW == */
 	stix_oop_t _stix; /* Stix */
 	stix_oop_t _nil_object; /* NilObject */
 	stix_oop_t _class; /* Class */
@@ -739,8 +740,11 @@ struct stix_t
 	stix_oop_t _symbol_set; /* SymbolSet */
 	stix_oop_t _system_dictionary; /* SystemDictionary */
 	stix_oop_t _association; /* Association */
+	stix_oop_t _true_class; /* True */
+	stix_oop_t _false_class; /* False */
 	stix_oop_t _character; /* Character */
 	stix_oop_t _small_integer; /* SmallInteger */
+	/* == NEVER CHANGE THE ORDER OF FIELDS ABOVE == */
 
 	stix_oop_set_t symtab; /* system-wide symbol table. instance of SymbolSet */
 	stix_oop_set_t sysdic; /* system dictionary. instance of SystemDictionary */

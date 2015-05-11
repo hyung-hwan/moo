@@ -208,6 +208,8 @@ printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
 	stix->_symbol_set        = move_one (stix, stix->_symbol_set);
 	stix->_system_dictionary = move_one (stix, stix->_system_dictionary);
 	stix->_association       = move_one (stix, stix->_association);
+	stix->_true_class        = move_one (stix, stix->_true_class);
+	stix->_false_class       = move_one (stix, stix->_false_class);
 	stix->_character         = move_one (stix, stix->_character);
 	stix->_small_integer     = move_one (stix, stix->_small_integer);
 

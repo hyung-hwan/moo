@@ -103,7 +103,7 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_char_t* ptr, sti
 		stix_oop_oop_t bucket;
 
 		/* TODO: make the growth policy configurable instead of growing
-			     it just before it gets full. The polcy can be grow it	
+			     it just before it gets full. The polcy can be grow it
 			     if it's 70% full */
 
 		/* Enlarge the symbol table before it gets full to
@@ -142,4 +142,3 @@ stix_oop_t stix_findsymbol (stix_t* stix, const stix_char_t* ptr, stix_oow_t len
 {
 	return find_or_make_symbol (stix, ptr, len, 0);
 }
-
