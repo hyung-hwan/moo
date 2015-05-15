@@ -90,11 +90,8 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_char_t* ptr, sti
 
 	if (!create) 
 	{
-		/*
 		stix->errnum = STIX_ENOENT;
 		return STIX_NULL;
-		*/
-		return stix->_nil;
 	}
 
 	tally = STIX_OOP_TO_SMINT(stix->symtab->tally);

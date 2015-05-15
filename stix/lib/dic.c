@@ -74,13 +74,6 @@ static stix_oop_t find_or_insert (stix_t* stix, stix_oop_char_t key, stix_oop_t 
 
 	index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(stix->sysdic->bucket);
 
-{
-int i;
-printf ("FINDING IN SYSDIC [");
-for (i = 0; i < STIX_OBJ_GET_SIZE(key); i++) printf ("%c", key->slot[i]);
-printf ("]\n");
-}
-
 	while (stix->sysdic->bucket->slot[index] != stix->_nil) 
 	{
 		ass = (stix_oop_association_t)stix->sysdic->bucket->slot[index];
@@ -99,11 +92,9 @@ printf ("]\n");
 
 	if (value == STIX_NULL)
 	{
-		/*
+		/* when value is STIX_NULL, perform no insertion */
 		stix->errnum = STIX_ENOENT;
 		return STIX_NULL;
-		*/
-		return stix->_nil;
 	}
 
 	stix_pushtmp (stix, (stix_oop_t*)&key); tmp_count++;

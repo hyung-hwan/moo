@@ -84,6 +84,27 @@ void stix_fini (stix_t* stix)
 	stix_killheap (stix, stix->permheap);
 }
 
+stix_mmgr_t* stix_getmmgr (stix_t* stix)
+{
+	return stix->mmgr;
+}
+
+void* stix_getxtn (stix_t* stix)
+{
+	return (void*)(stix + 1);
+}
+
+
+stix_errnum_t stix_geterrnum (stix_t* stix)
+{
+	return stix->errnum;
+}
+
+void stix_seterrnum (stix_t* stix, stix_errnum_t errnum)
+{
+	stix->errnum = errnum;
+}
+
 int stix_setoption (stix_t* stix, stix_option_t id, const void* value)
 {
 	switch (id)
@@ -151,3 +172,27 @@ int stix_equalchars (const stix_char_t* str1, const stix_char_t* str2, stix_oow_
 	return 1;
 }
 
+
+void* stix_allocmem (stix_t* stix, stix_size_t size)
+{
+	void* ptr;
+
+	ptr = STIX_MMGR_ALLOC (stix->mmgr, size);
+	if (ptr == STIX_NULL) stix->errnum = STIX_ENOMEM;
+	return ptr;
+}
+
+void* stix_callocmem (stix_t* stix, stix_size_t size)
+{
+	void* ptr;
+
+	ptr = STIX_MMGR_ALLOC (stix->mmgr, size);
+	if (ptr == STIX_NULL) stix->errnum = STIX_ENOMEM;
+	else STIX_MEMSET (ptr, 0, size);
+	return ptr;
+}
+
+void stix_freemem (stix_t* stix, void* ptr)
+{
+	STIX_MMGR_FREE (stix->mmgr, ptr);
+}

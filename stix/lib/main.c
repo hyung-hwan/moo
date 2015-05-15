@@ -29,6 +29,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
+typedef struct xtn_t xtn_t;
+struct xtn_t
+{
+	char source_path[1024];
+};
+
+
 static void* sys_alloc (stix_mmgr_t* mmgr, stix_size_t size)
 {
 	return malloc (size);
@@ -51,6 +59,69 @@ static stix_mmgr_t sys_mmgr =
 	sys_free,
 	STIX_NULL
 };
+
+
+static STIX_INLINE stix_oow_t open_input (stix_t* stix, stix_ioarg_t* arg)
+{
+	if (arg->includer)
+	{
+		/* includee */
+		xtn_t* xtn = stix_getxtn(stix);
+
+		arg->handle = fopen (xtn->source_path, "r");
+		if (!arg->handle)
+		{
+			stix_seterrnum (stix, STIX_EIOERR);
+			return -1;
+		}
+	}
+	else
+	{
+		/* main stream */
+		/*char tmp[PATH_MAX];*/
+	}
+}
+
+
+static STIX_INLINE stix_oow_t read_input (stix_t* stix, stix_ioarg_t* arg)
+{
+	STIX_ASSERT (arg->handle != STIX_NULL);
+	if (fread (arg->buf, STIX_SIZEOF(arg->buf[0]), STIX_COUNTOF(arg->buf), arg->handle) == 0)
+	{
+		if (ferror(arg->handle))
+		{
+		}
+	}
+
+	return 0;
+}
+
+static STIX_INLINE stix_oow_t close_input (stix_t* stix, stix_ioarg_t* arg)
+{
+	STIX_ASSERT (arg->handle != STIX_NULL);
+	fclose (arg->handle);
+	return 0;
+}
+/* TODO: IMPLEMENT PROPER INPUT HANDLER */
+
+static stix_oow_t input_handler (stix_t* stix, stix_iocmd_t cmd, stix_ioarg_t* arg)
+{
+	switch (cmd)
+	{
+		case STIX_IO_OPEN:
+			return open_input (stix, arg);
+			
+		case STIX_IO_CLOSE:
+			return close_input (stix, arg);
+
+		case STIX_IO_READ:
+			return read_input (stix, arg);
+
+		default:
+			stix->errnum = STIX_EINTERN;
+			return -1;
+	}
+}
 
 static void dump_symbol_table (stix_t* stix)
 {
@@ -95,7 +166,7 @@ int main (int argc, char* argv[])
 		(unsigned long int)STIX_CLASS_SPEC_INDEXED_TYPE(x));
 	}
 
-	stix = stix_open (&sys_mmgr, 0, 512000lu, STIX_NULL);
+	stix = stix_open (&sys_mmgr, STIX_SIZEOF(xtn_t), 512000lu, STIX_NULL);
 	if (!stix)
 	{
 		printf ("cannot open stix\n");
@@ -108,13 +179,12 @@ int main (int argc, char* argv[])
 		stix_setoption (stix, STIX_DFL_SYSDIC_SIZE, &symtab_size);
 	}
 
-	if (stix_ignite(stix) <= -1)
+	if (stix_ignite (stix) <= -1)
 	{
 		printf ("cannot ignite stix\n");
 		stix_close (stix);
 		return -1;
 	}
-
 
 {
 stix_char_t x[] = { 'S', 't', 'r', 'i', 'n', 'g', '\0' };
@@ -135,6 +205,15 @@ a = stix_findsymbol (stix, x, 6);
 printf ("%p\n", a);
 	dump_symbol_table (stix);
 }
+
+
+	if (stix_compile (stix, input_handler) <= -1)
+	{
+		printf ("cannot compile code\n");
+		stix_close (stix);
+		return -1;
+	}
+
 	stix_close (stix);
 
 	return 0;

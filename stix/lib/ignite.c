@@ -204,14 +204,15 @@ static int ignite_3 (stix_t* stix)
 	stix_oop_t* stix_ptr;
 
 	stix_ptr = &stix->_stix;
+	/* The loop here repies on the proper order of fields in stix_t.
+	 * Be sure to keep in sync the order of items in symnames and 
+	 * the releated fields of stix_t */
 	for (i = 0; i < STIX_COUNTOF(symnames); i++)
 	{
 		sym = stix_makesymbol (stix, symnames[i].str, symnames[i].len);
-		//sym = stix_makesymbol (stix, symnames[0].str, symnames[0].len);
 		if (!sym) return -1;
 
 		if (!stix_putatsysdic (stix, sym, *stix_ptr)) return -1;
-
 		stix_ptr++;
 	}
 

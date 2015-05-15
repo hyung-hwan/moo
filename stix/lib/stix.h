@@ -27,6 +27,10 @@
 #ifndef _STIX_H_
 #define _STIX_H_
 
+
+/* TODO: move this macro out to the build files.... */
+#define STIX_INCLUDE_COMPILER
+
 #if defined(__MSDOS__)
 #	define STIX_INCPTR(type,base,inc)  (((type __huge*)base) + (inc))
 #	define STIX_DECPTR(type,base,inc)  (((type __huge*)base) - (inc))
@@ -51,11 +55,16 @@
 /* TODO: define these types and macros using autoconf */
 typedef unsigned char      stix_uint8_t;
 typedef unsigned short int stix_uint16_t;
-/*typedef unsigned int       stix_uint32_t;*/
+#if defined(__MSDOS__)
+	typedef unsigned long int stix_uint32_t;
+#else
+	typedef unsigned int stix_uint32_t;
+#endif
 typedef unsigned long int stix_uintptr_t;
 typedef unsigned long int stix_size_t;
 
 typedef unsigned short int stix_char_t; /* TODO ... wchar_t??? */
+typedef char               stix_iochar_t;
 
 #define STIX_SIZEOF(x) (sizeof(x))
 #define STIX_COUNTOF(x) (sizeof(x) / sizeof(x[0]))
@@ -202,7 +211,8 @@ enum stix_errnum_t
 	STIX_EINTERN, /**< internal error */
 	STIX_ENOMEM,  /**< insufficient memory */
 	STIX_EINVAL,  /**< invalid parameter or data */
-	STIX_ENOENT   /**< no matching entry */
+	STIX_ENOENT,  /**< no matching entry */
+	STIX_EIOERR   /**< I/O error */
 };
 typedef enum stix_errnum_t stix_errnum_t;
 
@@ -405,8 +415,6 @@ enum stix_code_t
 typedef enum stix_code_t stix_code_t;
 
 
-
-
 /* 
  * OOP encoding
  * An object pointer(OOP) is an ordinary pointer value to an object.
@@ -607,77 +615,7 @@ struct stix_association_t
 typedef struct stix_association_t stix_association_t;
 typedef struct stix_association_t* stix_oop_association_t;
 
-#if 0
-/* -----------------------------------------
- * class structures for classes known to VM  
- * ----------------------------------------- */
-enum stix_class_desc_t
-{
-	/* STIX_XXX_SIZE represents the size of the class. other 
-	 * enumerators represent the index of instance variables of 
-	 * the class */
 
-	STIX_ASSOCIATION_KEY = 0,
-	STIX_ASSOCIATION_VALUE,
-	STIX_ASSOCIATION_SIZE,
- 
-	STIX_DICTIONARY_TALLY = 0,
-	STIX_DICTIONARY_BUCKET,
-	STIX_DICTIONARY_SIZE,
-
-	STIX_BEHAVIOR_SPEC = 0,
-	STIX_BEHAVIOR_METHODS,
-	STIX_BEHAVIOR_SUPERCLASS,
-	STIX_BEHAVIOR_SUBCLASSES,
-	STIX_BEHAVIOR_SIZE,
-
-	STIX_CLASS_SPEC = 0,
-	STIX_CLASS_METHODS,
-	STIX_CLASS_SUPERCLASS,
-	STIX_CLASS_SUBCLASSES,
-	STIX_CLASS_NAME,
-	STIX_CLASS_INSTANCE_VARIABLES,
-	STIX_CLASS_CLASS_VARIABLES,
-	STIX_CLASS_POOL_DICTIONARIES,
-	STIX_CLASS_SIZE,
-
-	STIX_METACLASS_SPEC = 0,
-	STIX_METACLASS_METHODS,
-	STIX_METACLASS_SUPERCLASS,
-	STIX_METACLASS_SUBCLASSES,
-	STIX_METACLASS_INSTANCE_CLASS,
-	STIX_METACLASS_INSTANCE_VARIABLES,
-	STIX_METACLASS_SIZE,
-
-	STIX_BLOCK_CONTEXT = 0,
-	STIX_BLOCK_ARG_COUNT,
-	STIX_BLOCK_ARG_LOC,
-	STIX_BLOCK_BYTE_POINTER,
-	STIX_BLOCK_SIZE,
-
-	STIX_CONTEXT_STACK = 0,
-	STIX_CONTEXT_STACK_TOP,
-	STIX_CONTEXT_RECEIVER,
-	STIX_CONTEXT_PC,
-	STIX_CONTEXT_METHOD,
-	STIX_CONTEXT_SIZE,
-
-	STIX_METHOD_TEXT = 0,
-	STIX_METHOD_SELECTOR,
-	STIX_METHOD_BYTECODES,
-	STIX_METHOD_TMPCOUNT,
-	STIX_METHOD_ARGCOUNT,
-	STIX_METHOD_SIZE,
-
-	STIX_SYMTAB_TALLY = 0,
-	STIX_SYMTAB_BUCKET,
-	STIX_SYMTAB_SIZE,
-
-	STIX_SYSDIC_TALLY = STIX_DICTIONARY_TALLY,
-	STIX_SYSDIC_BUCKET = STIX_DICTIONARY_BUCKET,
-	STIX_SYSDIC_SIZE = STIX_DICTIONARY_SIZE
-};
-#endif
 
 /**
  * The STIX_CLASSOF() macro return the class of an object including a numeric
@@ -705,6 +643,10 @@ struct stix_heap_t
 	stix_uint8_t* ptr;   /* next allocation pointer */
 };
 
+#if defined(STIX_INCLUDE_COMPILER)
+typedef struct stix_compiler_t stix_compiler_t;
+#endif
+
 typedef struct stix_t stix_t;
 
 struct stix_t
@@ -731,6 +673,7 @@ struct stix_t
 	stix_oop_t _false;
 
 	/* == NEVER CHANGE THE ORDER OF FIELDS BELOW == */
+	/* stix_ignite() assumes this order */
 	stix_oop_t _stix; /* Stix */
 	stix_oop_t _nil_object; /* NilObject */
 	stix_oop_t _class; /* Class */
@@ -751,6 +694,10 @@ struct stix_t
 
 	stix_oop_t* tmp_stack[100]; /* stack for temporaries */
 	stix_oow_t tmp_count;
+
+#if defined(STIX_INCLUDE_COMPILER)
+	stix_compiler_t* c;
+#endif
 };
 
 
@@ -777,6 +724,25 @@ STIX_EXPORT int stix_init (
 
 STIX_EXPORT void stix_fini (
 	stix_t* vm
+);
+
+
+STIX_EXPORT stix_mmgr_t* stix_getmmgr (
+	stix_t* stix
+);
+
+STIX_EXPORT void* stix_getxtn (
+	stix_t* stix
+);
+
+
+STIX_EXPORT stix_errnum_t stix_geterrnum (
+	stix_t* stix
+);
+
+STIX_EXPORT void stix_seterrnum (
+	stix_t*       stix,
+	stix_errnum_t errnum
 );
 
 /**
@@ -849,9 +815,7 @@ STIX_EXPORT int stix_ignite (
 );
 
 
-/**
- * Temporary OOP management 
- */
+/* Temporary OOP management  */
 STIX_EXPORT void stix_pushtmp (
 	stix_t*     stix,
 	stix_oop_t* oop_ptr
@@ -864,6 +828,24 @@ STIX_EXPORT void stix_poptmp (
 STIX_EXPORT void stix_poptmps (
 	stix_t*     stix,
 	stix_oow_t  count
+);
+
+
+/* Memory allocation/deallocation functions using stix's MMGR */
+
+STIX_EXPORT void* stix_allocmem (
+	stix_t* stix,
+	stix_size_t size
+);
+
+STIX_EXPORT void* stix_callocmem (
+	stix_t* stix,
+	stix_size_t size
+);
+
+STIX_EXPORT void stix_freemem (
+	stix_t* stix,
+	void*   ptr
 );
 
 #if defined(__cplusplus)

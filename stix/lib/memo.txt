@@ -1,0 +1,620 @@
+
+/*
+ * Multi-Process within a single threaded-process.
+ * How to embed in a single threaded web server
+ *
+* 
+* stix_exec
+*    VM(shceduler) ---> Context1(obj1,method1)
+*                  ---> Context2(obj2,method2)
+*                  ---> Context3(obj3,method3)
+* 
+* all functions must be asynchronous
+* blocking functions will block scheduler.
+ */
+
+
+
+
+
+class Stix::Stix                    # Namespace name is indicated by ::
+{
+}
+
+class Stix::Array
+{
+	+ makeSymbol: aString
+	{
+		| s |
+
+		s := Symbol new: aString.     # Symbol belongs to the Stix namespace.
+		^s.
+	}
+}
+
+
+A name space is stored in the namespace table of Stix.Namespaces.
+
+
+Stix.Symbols - symbols are global. not affected by namespaces.
+Stix.Sysdict -
+	(#QSE => Namespace( Another Sysdict))
+	(
+
+class Stix::Namespace
+{
+}
+
+class Stix::Class
+{
+}
+
+Stix.Namespaces is a system dictionary
+
+class QSE::Array 
+{
+}
+
+class QSE::Tiara::Array
+{
+	
+}
+
+
+Stix.Namespaces -> 'QSE'
+                   'QSE::Tiara'
+
+
+
+------------------------------------------------------------
+
+ARRAY CONSTANT TO ALLOW DYNAMIC VALUES.
+
+#( ...... ) array literal
+in original smalltalk, a block can't be placed inside the array literal
+   arrayConstant  := '#' array
+   array := "("  { number | string | symbol | array | characterConstant }* ")".
+So #(1 2 [^20]) is illegal.
+
+if a block is there, treat it as a valid stix expression and evaluate it.
+
+#(1 2 [1 + 2] 5)
+t = Array new: 4.
+t at: 1 put: 1.
+t at: 2 put: 2.
+t at: 3 put: (1 + 2).
+t at: 4 put: 5.
+
+Evaluate the expressions in the array first
+Create an array
+Put the right element.
+
+-----------------------------------------------
+command line
+
+libstix.a
+
+stix stix.im Class1.st Class2.st Main.st Main
+ --> load the image, compile Class1.st, compile Class2.st compile Main.st
+ --> 
+
+
+stix stix.im 
+  --> load the image
+
+-------------------------------------------------------------------------
+
+#!/usr/bin/stix
+
+###################################
+## Main.st
+###################################
+
+#include 'Class1.st'
+#include 'Class2.st'
+
+#class(#byte) Association(Magnitude) 
+{
+	declare a, b, c.
+	declare(#class_instance) x.
+	declare(#class) MAX_SIZE.
+
+	function(#class) initialize
+	{
+		MAX_SIZE := 20.
+
+		true whileTrue: [ 
+			Stdout print: 10.
+		].
+	}
+
+	function(#class) new: anInteger
+	{
+		Stix error: 'invalid message'.
+	}
+}
+
+#main
+	| a |
+
+	a := Class1 new.
+	Stdout format: #( 1 2 [a toInteger] ) with: '%.5d %.6d\n'.
+	^0.
+
+-------------------------------------------------------------------------
+The statements after the #main directives are compiled as a class method of Stix.
+That is, 'Stix::main'. It becomes the entry point.
+
+-------------------------------------------------------------------------
+
+If no #main directive is found, there is no official entry point.
+However, if you have the initialize class method, it's invoked when a class
+is compiled, the statement in the class is executed before #main.
+if the statement creates a certain loop, it can act as a entry point as well.
+
+--------------------------------------------------------------------------
+
+Top level directive
+#main, #class, #include, 
+
+#include is avaialble everywheren. It doesn't have  to be in the top level.
+Do i need #import?
+
+
+---------------------------------------------------------------------------
+
+if there are multiple #main, do i need to concatenate all?
+or disallow only 1 #main??
+
+---------------------------------------------------------------------------
+
+#namespace directive?
+
+#namespace Stix::Compiler
+
+naming convention for multiple ?? . conflicts with the statement terminator.
+:: is ok a single : is used for various purpose but more than 1 is illegal in smalltalk.
+so use :: as a namespace separator.
+
+
+Relative naming and absoluate naming?
+	Stix::Compiler <- is Stix the absolute top or a subname class under the current space?
+	::Stix::Compiler <- i don't like this
+
+----------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"
+    Stix
+       Class
+       NilObject
+       Object
+          NilObject
+          Collection
+             IndexedCollection
+                FixedSizedCollection
+                   Array
+                   ByteArray
+                      String
+                         Symbol
+             Set
+                Dictionary
+                   SystemDictionary
+                SymbolSet
+          Magnitude
+             Association
+             Character
+             Number
+                Integer
+                   SmallInteger
+                   LargeInteger
+"
+
+
+class Stix
+{
+
+
+	+ alloc
+	{
+		<primitive: 1>
+	}
+
+	+ new
+	{
+		^self alloc init.
+	}
+
+	- init
+	{
+		^self.
+	}
+
+	- finalize
+	{
+	}
+
+	+ findClass: aString
+	{
+
+		| a b c |
+	}
+
+	
+}
+
+class Class extends Stix
+{
+}
+
+class NilObject extends Stix
+{
+}
+
+class Object extends Stix
+{
+}
+
+
+
+-----------------------------------------
+class variable
+and class instance variable
+-----------------------------------------
+
+A  CV  X Y
+   CIV x y
+
+B CV Z
+  civ z
+
+C civ q
+
+
+A: getX
+	return x (return instance variable 1)
+
+B getX
+     return A'X (return invance variable 3)
+
+x is index 1.
+y is index 2.
+z is index 3.
+X is index 3 of A.
+Y is index 3 of A.
+Z is index 2 of B.
+q is index 4 of C.
+
+
+A has x y X Y
+B has x y z Z
+C has x y z q
+
+place class intance variables before class variables.
+
+-------------------------------------------
+
+
+class Magnitude extends Stix
+{
+}
+
+%include 'Association.st'
+
+%class Association(Magnitude)
+{
+%category(Association class)
+
+%constant
+	ABC := XXX
+	BCD := KKK
+	TTT := 20
+
+%self(private)
+
+
+%self(instance creation)
+
+	| Key Value |                   "class variables"  <--- index
+	| xxx yyy | "class instance variables"   <--- index
+	
+	key: aKey
+	{
+		^self key: aKey value: nil.
+	}
+
+	key: aKey value: aValue
+	{
+		| ass |
+		ass := self new.
+		ass key: aKey value: aValue.
+		^ass.
+	}
+
+%instance(initialization)
+	| key value |  "instance variables"
+
+	key: aKey value: aValue
+	{
+		key := aKey.
+		value := aValue.
+	}
+
+	key
+	{
+		^key
+	}
+
+	value
+	{
+		^value
+	}
+
+	value: value
+	{
+		self->value := aValue
+	}
+
+	= anAssociation
+	{
+		^self->key = anAssociation key.
+	}
+
+	hash
+	{
+		^self->key hash
+	}
+}
+
+
+
+"Creates a new class Association inheriting nil"
+%class Association(nil)
+{
+	%func more
+	{
+		^self
+	}
+}
+
+
+"Extends an existing Association class"
+%class Association
+{
+}
+
+
+class Character extends Magnitude
+{
+}
+
+class Number extends Magnitude
+{
+}
+
+class Integer extends Number
+{
+}
+
+class SmallInteger extends Integer
+{
+}
+
+class LargeInteger extends Integer
+{
+
+}
+
+
+
+Association
+{
+%class
+	| x y z |
+
+	value: xxx
+	{
+	}
+}
+
+Association: Magnitude
+{
+}
+
+Association: <- for extending
+{
+}
+
+Association: 
+{
+}
+
+Association key: xxx
+{
+}
+
+Association key: xxx
+{
+}
+
+
+
+
+----------------------------------------------------------------
+class ByteArray(FixedSizeCollection): #byte
+{
+	fun at: anIndex put: aValue
+	{
+		^self basicAt: anIndex put: aValue.
+	}
+}
+
+class(#byte) ByteArray(FixedSizedCollection)
+{
+}
+
+class(#byte) ByteArray(Stix)
+{
+}
+
+class Association(Magnitude) -> new Association inheriting Magnitude
+class Association() -> new Association inheriting Stix
+class(#byte) Association() -> new Association class inheriting Stix, but it's byte indexed.
+class(#word) Association() -> new Association class inheriting Stix, but it's word indexed.
+class(#oop) Association() -> new Association class inheriting Stix, but it's oop indexed. (it can have the variable part on top of the fixed part. response to the 'new: aSize' message)
+class(#word) Association(Magnitude) -> new Association class inheriting Magnitude, but it's word indexed.
+
+class Association -> revisit the Association class defined previsously. Revisiting can add new methods.
+
+#include 'Magnitude.st'
+
+#class(#byte) Association(Magnitude)
+{
+## class variables can be accessed by class methods and instance methods.
+## methods of subclasses can also access them.
+	declare(#class) a b c.
+
+## class instance variable can be accessed inside the class method only.
+
+	declare(#class_instance) d, e, f
+
+## All instance variables are protected by default.
+	declare key, value.
+
+
+##
+##	declare(#class) a, b, c.   ## class variables
+##	declare(#class_instance) a, b, c. ## class instance variables
+##	declare(#instance) a, b, c. ## isntance variables
+##	declare a,b, c. ## instance variables
+
+##   function(#class)      ## class method
+##   function(#instance)   ## instance method
+##   function              ## instance method
+
+## var and fun are not keywords. they can be a method name or a variable name.
+## Casing is not used to differentiate variable kinds like global local temporary etc.
+
+## other modifiers (EXPERIMENTAL. JUST THINKING).
+## declare(#class,#public,#rw) x. x can be accessed by other classes in read-write mode.
+## function(#private) xxx xxx is a private method
+## function(#class,#private) xxx xxx is private class method.
+
+	function(#class) initialize
+	{
+		## This is the initilizer for the class object.
+		## executed when this class is added to the system.
+		## initialize the class variables and class instance variables.
+		SIZE := 20.
+	}
+
+	function(#class) key: aKey
+	{
+		^self key: aKey value: nil.
+	}
+
+	function(#class) key: aKey value: aValue
+	{
+		| ass |
+		ass := self new.
+		ass key: aKey value: aValue.
+		^ass.
+	}
+
+	function key: aKey value: aValue
+	{
+		key := aKey.
+		value := aValue.
+	}
+
+	function key
+	{
+		^key
+	}
+
+	function value
+	{
+		^value
+	}
+
+	function value: value
+	{
+		self->value := aValue
+	}
+
+	function = anAssociation
+	{
+		^self->key = anAssociation key.
+	}
+
+	function hash
+	{
+		^self->key hash
+	}
+
+	function value: aBlock
+	{
+		|a | 
+
+		a := [ :t1 | t1 value ] with: 10.
+		^a + 10.
+	}
+}
+
+
+;  message cascading
+. steatement terminator or flaoting point if in number and followed by a digit.
+^ return
+[ ] block
+# symbol or array
+() grouping
+$ character constant
+|  temporary variable or end of block arguments.
+
+"" comment
+'' string
+: at the of the keyword  or before block argument name.
+
+-------------------
+avaialbel
+' !  
+
+--------------------------------------------------
+#! for comment
+## for comment
+-----------------------------
+
+@ binarySelector for coordianate number @ number.
+
+----------------------------------------------------------------------------
+
+Single line comment
+## comment text
+#! comment text (easy handling to skip hash bang)
+
+Multi-line comments - double quoted as in smalltalk
+" comment text "

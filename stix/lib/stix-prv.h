@@ -122,6 +122,96 @@
  */
 #define STIX_MAX_INDEXED_INSTVARS(named_instvar) ((~(stix_oow_t)0) - named_instvar)
 
+
+#if defined(STIX_INCLUDE_COMPILER)
+
+/* ========================================================================= */
+/* SOURCE CODE I/O FOR COMPILER                                              */
+/* ========================================================================= */
+
+enum stix_iocmd_t
+{
+	STIX_IO_OPEN,
+	STIX_IO_CLOSE,
+	STIX_IO_READ
+};
+typedef enum stix_iocmd_t stix_iocmd_t;
+
+typedef struct stix_iolxc_t stix_iolxc_t;
+struct stix_iolxc_t
+{
+	stix_char_t        c;    /**< character */
+	unsigned long      line; /**< line */
+	unsigned long      colm; /**< column */
+	const stix_char_t* file; /**< file specified in #include */
+};
+
+enum stix_ioarg_flag_t
+{
+	STIX_IO_INCLUDED = (1 << 0)
+};
+typedef enum stix_ioarg_flag_t stix_ioarg_flag_t;
+
+typedef struct stix_ioarg_t stix_ioarg_t;
+struct stix_ioarg_t
+{
+	/** 
+	 * [IN] I/O object name.
+	 * It is #STIX_NULL for the main stream and points to a non-NULL string
+	 * for an included stream.
+	 */
+	const stix_char_t* name;   
+
+	/** 
+	 * [OUT] I/O handle set by a handler. 
+	 * The source stream handler can set this field when it opens a stream.
+	 * All subsequent operations on the stream see this field as set
+	 * during opening.
+	 */
+	void* handle;
+
+	/**
+	 * [OUT] place data here 
+	 */
+	stix_char_t buf[1024];
+
+	/**
+	 * [IN] points to the data of the includer. It is #STIX_NULL for the
+	 * main stream.
+	 */
+	stix_ioarg_t* includer;
+
+	/*-----------------------------------------------------------------*/
+	/*----------- from here down, internal use only -------------------*/
+	struct
+	{
+		int pos, len;
+	} b;
+
+	stix_oow_t line;
+	stix_oow_t colm;
+
+	stix_iolxc_t lxc;
+	/*-----------------------------------------------------------------*/
+};
+
+typedef stix_oow_t (*stix_ioimpl_t) (
+	stix_t*       stix,
+	stix_iocmd_t  cmd,
+	stix_ioarg_t* arg
+);
+
+struct stix_compiler_t
+{
+	stix_ioimpl_t impl;   /* input handler */
+	stix_iolxc_t  lxc;
+	stix_ioarg_t  arg;    /* static top-level data */
+	stix_ioarg_t* curinp;  /* pointer to the current data */
+};
+
+#endif
+
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -242,6 +332,16 @@ stix_oop_t stix_putatsysdic (
 stix_oop_t stix_getatsysdic (
 	stix_t*     stix,
 	stix_oop_t  key
+);
+
+
+
+/* ========================================================================= */
+/* comp.c                                                                    */
+/* ========================================================================= */
+int stix_compile (
+	stix_t*       stix,
+	stix_ioimpl_t io
 );
 
 #if defined(__cplusplus)
