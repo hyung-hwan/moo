@@ -33,9 +33,12 @@
 typedef struct xtn_t xtn_t;
 struct xtn_t
 {
-	char source_path[1024];
-};
+	const char* source_path;
 
+	char bchar_buf[1024];
+	stix_size_t bchar_pos;
+	stix_size_t bchar_len;
+};
 
 static void* sys_alloc (stix_mmgr_t* mmgr, stix_size_t size)
 {
@@ -82,18 +85,36 @@ static STIX_INLINE stix_oow_t open_input (stix_t* stix, stix_ioarg_t* arg)
 	}
 }
 
-
 static STIX_INLINE stix_oow_t read_input (stix_t* stix, stix_ioarg_t* arg)
 {
+	xtn_t* xtn = stix_getxtn(stix);
+	stix_size_t n, bcslen, cslen;
+	int x;
+
 	STIX_ASSERT (arg->handle != STIX_NULL);
-	if (fread (arg->buf, STIX_SIZEOF(arg->buf[0]), STIX_COUNTOF(arg->buf), arg->handle) == 0)
+	n = fread (&xtn->bchar_buf[xtn->bchar_len], STIX_SIZEOF(xtn->bchar_buf[0]), STIX_COUNTOF(xtn->bchar_buf) - xtn->bchar_len, arg->handle);
+	if (n == 0)
 	{
 		if (ferror(arg->handle))
 		{
+			stix_seterrnum (stix, STIX_EIOERR);
+			return -1;
 		}
+
+		
 	}
 
-	return 0;
+	xtn->bchar_len += n;
+	bcslen = xtn->bchar_len;
+	cslen = STIX_COUNTOF(arg->buf);
+	x = stix_utf8toucs (xtn->bchar_buf, &bcslen, arg->buf, &cslen);
+	if (x == -2)
+	{
+		/* buffer to small */
+	}
+	if (x <= -1)
+	{
+	}
 }
 
 static STIX_INLINE stix_oow_t close_input (stix_t* stix, stix_ioarg_t* arg)
@@ -151,8 +172,17 @@ static void dump_symbol_table (stix_t* stix)
 int main (int argc, char* argv[])
 {
 	stix_t* stix;
+	xtn_t* xtn;
+
 	printf ("Stix 1.0.0 - max named %lu max indexed %lu\n", 
 		(unsigned long int)STIX_MAX_NAMED_INSTVARS, (unsigned long int)STIX_MAX_INDEXED_INSTVARS(STIX_MAX_NAMED_INSTVARS));
+
+
+	if (argc != 2)
+	{
+		fprintf (stderr, "Usage: %s filename\n", argv[0]);
+		return -1;
+	}
 
 
 	{
@@ -206,7 +236,8 @@ printf ("%p\n", a);
 	dump_symbol_table (stix);
 }
 
-
+	xtn = stix_getxtn (stix);
+	xtn->source_path = argv[1];
 	if (stix_compile (stix, input_handler) <= -1)
 	{
 		printf ("cannot compile code\n");

@@ -31,27 +31,9 @@
 /* TODO: move this macro out to the build files.... */
 #define STIX_INCLUDE_COMPILER
 
-#if defined(__MSDOS__)
-#	define STIX_INCPTR(type,base,inc)  (((type __huge*)base) + (inc))
-#	define STIX_DECPTR(type,base,inc)  (((type __huge*)base) - (inc))
-#	define STIX_GTPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) > ((type __huge*)ptr2))
-#	define STIX_GEPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) >= ((type __huge*)ptr2))
-#	define STIX_LTPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) < ((type __huge*)ptr2))
-#	define STIX_LEPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) <= ((type __huge*)ptr2))
-#	define STIX_EQPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) == ((type __huge*)ptr2))
-#	define STIX_SUBPTR(type,ptr1,ptr2) (((type __huge*)ptr1) - ((type __huge*)ptr2))
-#else
-#	define STIX_INCPTR(type,base,inc)  (((type*)base) + (inc))
-#	define STIX_DECPTR(type,base,inc)  (((type*)base) - (inc))
-#	define STIX_GTPTR(type,ptr1,ptr2)  (((type*)ptr1) > ((type*)ptr2))
-#	define STIX_GEPTR(type,ptr1,ptr2)  (((type*)ptr1) >= ((type*)ptr2))
-#	define STIX_LTPTR(type,ptr1,ptr2)  (((type*)ptr1) < ((type*)ptr2))
-#	define STIX_LEPTR(type,ptr1,ptr2)  (((type*)ptr1) <= ((type*)ptr2))
-#	define STIX_EQPTR(type,ptr1,ptr2)  (((type*)ptr1) == ((type*)ptr2))
-#	define STIX_SUBPTR(type,ptr1,ptr2) (((type*)ptr1) - ((type*)ptr2))
-#endif
-
-/* ========================================================================== */
+/* =========================================================================
+ * PRIMITIVE TYPE DEFINTIONS
+ * ========================================================================= */
 /* TODO: define these types and macros using autoconf */
 typedef unsigned char      stix_uint8_t;
 typedef unsigned short int stix_uint16_t;
@@ -64,8 +46,11 @@ typedef unsigned long int stix_uintptr_t;
 typedef unsigned long int stix_size_t;
 
 typedef unsigned short int stix_char_t; /* TODO ... wchar_t??? */
-typedef char               stix_iochar_t;
+typedef char               stix_bchar_t;
 
+/* =========================================================================
+ * PRIMITIVE MACROS
+ * ========================================================================= */
 #define STIX_SIZEOF(x) (sizeof(x))
 #define STIX_COUNTOF(x) (sizeof(x) / sizeof(x[0]))
 
@@ -92,7 +77,6 @@ typedef char               stix_iochar_t;
 #	define STIX_NULL ((void*)0)
 #endif
 
-
 /* make a low bit mask that can mask off low n bits*/
 #define STIX_LBMASK(type,n) (~(~((type)0) << (n))) 
 
@@ -114,16 +98,43 @@ typedef char               stix_iochar_t;
 /*#define STIX_BITS_MAX(type,nbits) ((((type)1) << (nbits)) - 1)*/
 #define STIX_BITS_MAX(type,nbits) ((~(type)0) >> (STIX_SIZEOF(type) * 8 - (nbits)))
 
+/* =========================================================================
+ * POINTER MANIPULATION MACROS
+ * ========================================================================= */
+
+#if defined(__MSDOS__)
+#	define STIX_INCPTR(type,base,inc)  (((type __huge*)base) + (inc))
+#	define STIX_DECPTR(type,base,inc)  (((type __huge*)base) - (inc))
+#	define STIX_GTPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) > ((type __huge*)ptr2))
+#	define STIX_GEPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) >= ((type __huge*)ptr2))
+#	define STIX_LTPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) < ((type __huge*)ptr2))
+#	define STIX_LEPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) <= ((type __huge*)ptr2))
+#	define STIX_EQPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) == ((type __huge*)ptr2))
+#	define STIX_SUBPTR(type,ptr1,ptr2) (((type __huge*)ptr1) - ((type __huge*)ptr2))
+#else
+#	define STIX_INCPTR(type,base,inc)  (((type*)base) + (inc))
+#	define STIX_DECPTR(type,base,inc)  (((type*)base) - (inc))
+#	define STIX_GTPTR(type,ptr1,ptr2)  (((type*)ptr1) > ((type*)ptr2))
+#	define STIX_GEPTR(type,ptr1,ptr2)  (((type*)ptr1) >= ((type*)ptr2))
+#	define STIX_LTPTR(type,ptr1,ptr2)  (((type*)ptr1) < ((type*)ptr2))
+#	define STIX_LEPTR(type,ptr1,ptr2)  (((type*)ptr1) <= ((type*)ptr2))
+#	define STIX_EQPTR(type,ptr1,ptr2)  (((type*)ptr1) == ((type*)ptr2))
+#	define STIX_SUBPTR(type,ptr1,ptr2) (((type*)ptr1) - ((type*)ptr2))
+#endif
+
+/* =========================================================================
+ * MMGR
+ * ========================================================================= */
 typedef struct stix_mmgr_t stix_mmgr_t;
 
 /** 
  * allocate a memory chunk of the size \a n.
- * @return pointer to a memory chunk on success, #STIX_NULL on failure.
+ * \return pointer to a memory chunk on success, #STIX_NULL on failure.
  */
 typedef void* (*stix_mmgr_alloc_t)   (stix_mmgr_t* mmgr, stix_size_t n);
 /** 
  * resize a memory chunk pointed to by \a ptr to the size \a n.
- * @return pointer to a memory chunk on success, #STIX_NULL on failure.
+ * \return pointer to a memory chunk on success, #STIX_NULL on failure.
  */
 typedef void* (*stix_mmgr_realloc_t) (stix_mmgr_t* mmgr, void* ptr, stix_size_t n);
 /**
@@ -167,6 +178,41 @@ struct stix_mmgr_t
  */
 #define STIX_MMGR_FREE(mmgr,ptr) ((mmgr)->free(mmgr,ptr))
 
+
+/* =========================================================================
+ * CMGR
+ * =========================================================================*/
+
+typedef struct stix_cmgr_t stix_cmgr_t;
+
+typedef stix_size_t (*stix_cmgr_bctoc_t) (
+	const stix_bchar_t* mb, 
+	stix_size_t         size,
+	stix_char_t*        wc
+);
+
+typedef stix_size_t (*stix_cmgr_ctobc_t) (
+	stix_char_t  wc,
+	stix_bchar_t* mb,
+	stix_size_t   size
+);
+
+/**
+ * The stix_cmgr_t type defines the character-level interface to 
+ * multibyte/wide-character conversion. This interface doesn't 
+ * provide any facility to store conversion state in a context
+ * independent manner. This leads to the limitation that it can
+ * handle a stateless multibyte encoding only.
+ */
+struct stix_cmgr_t
+{
+	stix_cmgr_bctoc_t bctoc;
+	stix_cmgr_ctobc_t ctobc;
+};
+
+/* =========================================================================
+ * MACROS THAT CHANGES THE BEHAVIORS OF THE C COMPILER/LINKER
+ * =========================================================================*/
 
 #if defined(_WIN32) || defined(__WATCOMC__)
 #	define STIX_IMPORT __declspec(dllimport)
@@ -467,7 +513,7 @@ enum stix_obj_type_t
 };
 typedef enum stix_obj_type_t stix_obj_type_t;
 
-/* -------------------------------------------------------------------------
+/* =========================================================================
  * Object header structure 
  * 
  * _flags:
@@ -502,7 +548,7 @@ typedef enum stix_obj_type_t stix_obj_type_t;
  * class can have normal instance variables. On the contrary, the actual byte
  * size calculation and the access to the payload fields become more complex. 
  * Therefore, i've dropped the idea.
- * ------------------------------------------------------------------------- */
+ * ========================================================================= */
 #define STIX_OBJ_FLAGS_TYPE_BITS   6
 #define STIX_OBJ_FLAGS_UNIT_BITS   5
 #define STIX_OBJ_FLAGS_EXTRA_BITS  1

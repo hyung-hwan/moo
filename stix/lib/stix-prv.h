@@ -334,7 +334,55 @@ stix_oop_t stix_getatsysdic (
 	stix_oop_t  key
 );
 
+/* ========================================================================= */
+/* utf8.c                                                                    */
+/* ========================================================================= */
+stix_size_t stix_uctoutf8 (
+	stix_char_t   uc,
+	stix_bchar_t* utf8,
+	stix_size_t   size
+);
 
+stix_size_t stix_utf8touc (
+	const stix_bchar_t* utf8,
+	stix_size_t         size,
+	stix_char_t*        uc
+);
+
+
+int stix_ucstoutf8 (
+	const stix_char_t*   ucs,
+	stix_size_t*         ucslen,
+	stix_bchar_t*        bcs,
+	stix_size_t*         bcslen
+);
+
+/**
+ * The stix_utf8toucs() function converts a UTF8 string to a uncide string.
+ *
+ * It never returns -2 if \a ucs is #STIX_NULL.
+ *
+ * \code
+ *  const stix_bchar_t* bcs = "a multibyte string";
+ *  stix_char_t ucs[100];
+ *  qse_size_t ucslen = STIX_COUNTOF(buf), n;
+ *  qse_size_t bcslen = strlen(bcs);
+ *  int n;
+ *  n = qse_bcstoucs (bcs, &bcslen, ucs, &ucslen);
+ *  if (n <= -1) { invalid/incomplenete sequence or buffer to small }
+ * \endcode
+ *
+ * \return 0 on success.
+ *         -1 if \a bcs contains an illegal character.
+ *         -2 if the wide-character string buffer is too small.
+ *         -3 if \a bcs is not a complete sequence.
+ */
+int stix_utf8toucs (
+	const stix_bchar_t* bcs,
+	stix_size_t*        bcslen,
+	stix_char_t*        ucs,
+	stix_size_t*        ucslen
+);
 
 /* ========================================================================= */
 /* comp.c                                                                    */
