@@ -183,7 +183,7 @@ static int ignite_3 (stix_t* stix)
 	static struct symbol_name_t
 	{
 		stix_oow_t len;
-		stix_char_t str[16];
+		stix_uch_t str[16];
 	} symnames[] = {
 		{  4, { 'S','t','i','x'                                                  } },
 		{  6, { 'O','b','j','e','c','t'                                          } },

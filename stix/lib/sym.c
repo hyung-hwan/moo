@@ -57,7 +57,7 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t old_bucket)
 	return new_bucket;
 }
 
-static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_char_t* ptr, stix_oow_t len, int create)
+static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_uch_t* ptr, stix_oow_t len, int create)
 {
 	stix_oow_t index, tally;
 	stix_oop_char_t symbol;
@@ -130,12 +130,12 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_char_t* ptr, sti
 	return (stix_oop_t)symbol;
 }
 
-stix_oop_t stix_makesymbol (stix_t* stix, const stix_char_t* ptr, stix_oow_t len)
+stix_oop_t stix_makesymbol (stix_t* stix, const stix_uch_t* ptr, stix_oow_t len)
 {
 	return find_or_make_symbol (stix, ptr, len, 1);
 }
 
-stix_oop_t stix_findsymbol (stix_t* stix, const stix_char_t* ptr, stix_oow_t len)
+stix_oop_t stix_findsymbol (stix_t* stix, const stix_uch_t* ptr, stix_oow_t len)
 {
 	return find_or_make_symbol (stix, ptr, len, 0);
 }

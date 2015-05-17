@@ -617,4 +617,5 @@ Single line comment
 #! comment text (easy handling to skip hash bang)
 
 Multi-line comments - double quoted as in smalltalk
-" comment text "
+" comment text 설명이라지요. "
+

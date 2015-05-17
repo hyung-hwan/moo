@@ -140,10 +140,10 @@ typedef enum stix_iocmd_t stix_iocmd_t;
 typedef struct stix_iolxc_t stix_iolxc_t;
 struct stix_iolxc_t
 {
-	stix_char_t        c;    /**< character */
-	unsigned long      line; /**< line */
-	unsigned long      colm; /**< column */
-	const stix_char_t* file; /**< file specified in #include */
+	stix_uch_t        c;    /**< character */
+	unsigned long     line; /**< line */
+	unsigned long     colm; /**< column */
+	const stix_uch_t* file; /**< file specified in #include */
 };
 
 enum stix_ioarg_flag_t
@@ -160,7 +160,7 @@ struct stix_ioarg_t
 	 * It is #STIX_NULL for the main stream and points to a non-NULL string
 	 * for an included stream.
 	 */
-	const stix_char_t* name;   
+	const stix_uch_t* name;   
 
 	/** 
 	 * [OUT] I/O handle set by a handler. 
@@ -173,7 +173,7 @@ struct stix_ioarg_t
 	/**
 	 * [OUT] place data here 
 	 */
-	stix_char_t buf[1024];
+	stix_uch_t buf[1024];
 
 	/**
 	 * [IN] points to the data of the includer. It is #STIX_NULL for the
@@ -195,7 +195,7 @@ struct stix_ioarg_t
 	/*-----------------------------------------------------------------*/
 };
 
-typedef stix_oow_t (*stix_ioimpl_t) (
+typedef stix_ssize_t (*stix_ioimpl_t) (
 	stix_t*       stix,
 	stix_iocmd_t  cmd,
 	stix_ioarg_t* arg
@@ -260,13 +260,13 @@ stix_oow_t stix_hashbytes (
 );
 
 stix_oow_t stix_hashchars (
-	const stix_char_t* ptr,
+	const stix_uch_t*  ptr,
 	stix_oow_t         len
 );
 
 int stix_equalchars (
-	const stix_char_t* str1,
-	const stix_char_t* str2,
+	const stix_uch_t*  str1,
+	const stix_uch_t*  str2,
 	stix_oow_t         len
 );
 
@@ -289,7 +289,7 @@ stix_oop_t stix_allocoopobj (
 
 stix_oop_t stix_alloccharobj (
 	stix_t*            stix,
-	const stix_char_t* ptr,
+	const stix_uch_t* ptr,
 	stix_oow_t         len
 );
 
@@ -310,13 +310,13 @@ stix_oop_t stix_allocuint16obj (
 /* ========================================================================= */
 stix_oop_t stix_makesymbol (
 	stix_t*            stix,
-	const stix_char_t* ptr,
+	const stix_uch_t*  ptr,
 	stix_oow_t         len
 );
 
 stix_oop_t stix_findsymbol (
 	stix_t*            stix,
-	const stix_char_t* ptr,
+	const stix_uch_t*  ptr,
 	stix_oow_t         len
 );
 
@@ -338,22 +338,21 @@ stix_oop_t stix_getatsysdic (
 /* utf8.c                                                                    */
 /* ========================================================================= */
 stix_size_t stix_uctoutf8 (
-	stix_char_t   uc,
-	stix_bchar_t* utf8,
+	stix_uch_t    uc,
+	stix_bch_t*   utf8,
 	stix_size_t   size
 );
 
 stix_size_t stix_utf8touc (
-	const stix_bchar_t* utf8,
-	stix_size_t         size,
-	stix_char_t*        uc
+	const stix_bch_t* utf8,
+	stix_size_t       size,
+	stix_uch_t*       uc
 );
 
-
 int stix_ucstoutf8 (
-	const stix_char_t*   ucs,
+	const stix_uch_t*    ucs,
 	stix_size_t*         ucslen,
-	stix_bchar_t*        bcs,
+	stix_bch_t*          bcs,
 	stix_size_t*         bcslen
 );
 
@@ -363,14 +362,22 @@ int stix_ucstoutf8 (
  * It never returns -2 if \a ucs is #STIX_NULL.
  *
  * \code
- *  const stix_bchar_t* bcs = "a multibyte string";
- *  stix_char_t ucs[100];
+ *  const stix_bch_t* bcs = "test string";
+ *  stix_uch_t ucs[100];
  *  qse_size_t ucslen = STIX_COUNTOF(buf), n;
- *  qse_size_t bcslen = strlen(bcs);
+ *  qse_size_t bcslen = 11;
  *  int n;
  *  n = qse_bcstoucs (bcs, &bcslen, ucs, &ucslen);
  *  if (n <= -1) { invalid/incomplenete sequence or buffer to small }
  * \endcode
+ *
+ * For a null-terminated string, you can specify ~(stix_size_t)0 in
+ * \a bcslen. The destination buffer \a ucs also must be large enough to
+ * store a terminating null. Otherwise, -2 is returned.
+ * 
+ * The resulting \a ucslen can still be greater than 0 even if the return
+ * value is negative. The value indiates the number of characters converted
+ * before the error has occurred.
  *
  * \return 0 on success.
  *         -1 if \a bcs contains an illegal character.
@@ -378,11 +385,22 @@ int stix_ucstoutf8 (
  *         -3 if \a bcs is not a complete sequence.
  */
 int stix_utf8toucs (
-	const stix_bchar_t* bcs,
+	const stix_bch_t*   bcs,
 	stix_size_t*        bcslen,
-	stix_char_t*        ucs,
+	stix_uch_t*         ucs,
 	stix_size_t*        ucslen
 );
+
+
+/**
+ * The stix_ucslen() function returns the number of characters before 
+ * a terminating null.
+ */
+/*
+stix_size_t stix_ucslen (
+	const stix_uch_t* ucs
+);
+*/
 
 /* ========================================================================= */
 /* comp.c                                                                    */

@@ -44,9 +44,26 @@ typedef unsigned short int stix_uint16_t;
 #endif
 typedef unsigned long int stix_uintptr_t;
 typedef unsigned long int stix_size_t;
+typedef long int          stix_ssize_t;
 
-typedef unsigned short int stix_char_t; /* TODO ... wchar_t??? */
-typedef char               stix_bchar_t;
+typedef unsigned short int stix_uch_t; /* TODO ... wchar_t??? */
+typedef char               stix_bch_t;
+
+
+struct stix_ucs_t
+{
+	stix_uch_t* ptr;
+	stix_size_t len;
+};
+
+struct stix_bcs_t
+{
+	stix_bch_t* ptr;
+	stix_size_t len;
+};
+
+typedef struct stix_ucs_t stix_ucs_t;
+typedef struct stix_bcs_t stix_bcs_t;
 
 /* =========================================================================
  * PRIMITIVE MACROS
@@ -185,15 +202,15 @@ struct stix_mmgr_t
 
 typedef struct stix_cmgr_t stix_cmgr_t;
 
-typedef stix_size_t (*stix_cmgr_bctoc_t) (
-	const stix_bchar_t* mb, 
+typedef stix_size_t (*stix_cmgr_bctouc_t) (
+	const stix_bch_t*   mb, 
 	stix_size_t         size,
-	stix_char_t*        wc
+	stix_uch_t*         wc
 );
 
-typedef stix_size_t (*stix_cmgr_ctobc_t) (
-	stix_char_t  wc,
-	stix_bchar_t* mb,
+typedef stix_size_t (*stix_cmgr_uctobc_t) (
+	stix_uch_t    wc,
+	stix_bch_t*   mb,
 	stix_size_t   size
 );
 
@@ -206,8 +223,8 @@ typedef stix_size_t (*stix_cmgr_ctobc_t) (
  */
 struct stix_cmgr_t
 {
-	stix_cmgr_bctoc_t bctoc;
-	stix_cmgr_ctobc_t ctobc;
+	stix_cmgr_bctouc_t bctouc;
+	stix_cmgr_uctobc_t uctobc;
 };
 
 /* =========================================================================
@@ -258,7 +275,8 @@ enum stix_errnum_t
 	STIX_ENOMEM,  /**< insufficient memory */
 	STIX_EINVAL,  /**< invalid parameter or data */
 	STIX_ENOENT,  /**< no matching entry */
-	STIX_EIOERR   /**< I/O error */
+	STIX_EIOERR,  /**< I/O error */
+	STIX_EECERR   /**< encoding conversion error */
 };
 typedef enum stix_errnum_t stix_errnum_t;
 
@@ -605,7 +623,7 @@ struct stix_obj_oop_t
 struct stix_obj_char_t
 {
 	STIX_OBJ_HEADER;
-	stix_char_t slot[1];
+	stix_uch_t slot[1];
 };
 
 struct stix_obj_uint8_t
@@ -832,7 +850,7 @@ STIX_EXPORT void stix_gc (
  */
 STIX_EXPORT int stix_findclass (
 	stix_t*            vm,
-	const stix_char_t* name,
+	const stix_uch_t* name,
 	stix_oop_t*        oop
 );
 

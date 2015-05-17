@@ -219,7 +219,7 @@ static STIX_INLINE int is_closing_char (stix_cint_t c)
 #define ADD_TOKEN_STR(fsc,s) \
 	do { if (add_token_str (fsc, s) == -1) return -1; } while (0)
 
-static STIX_INLINE int add_token_char (stix_t* fsc, stix_char_t c)
+static STIX_INLINE int add_token_char (stix_t* fsc, stix_uch_t c)
 {
 	if (fsc->tok.name.len >= STIX_COUNTOF(fsc->tok.buf) - 1)
 	{
@@ -232,7 +232,7 @@ static STIX_INLINE int add_token_char (stix_t* fsc, stix_char_t c)
 	return 0;
 }
 
-static STIX_INLINE int add_token_str (stix_t* fsc, const stix_char_t* str)
+static STIX_INLINE int add_token_str (stix_t* fsc, const stix_uch_t* str)
 {
 	stix_size_t len;
 
@@ -247,49 +247,52 @@ static STIX_INLINE int add_token_str (stix_t* fsc, const stix_char_t* str)
 	fsc->tok.name.len += stix_strcpy (&fsc->tok.buf[fsc->tok.name.len], str);
 	return 0;
 }
+#endif
 
-static int get_char (stix_t* fsc)
+static int get_char (stix_t* stix)
 {
 	stix_ssize_t n;
 
-	if (fsc->sio.inp->b.pos >= fsc->sio.inp->b.len)
+	if (stix->c->curinp->b.pos >= stix->c->curinp->b.len)
 	{
-		n = fsc->sio.impl (fsc, STIX_FSC_IO_READ, fsc->sio.inp);
+		n = stix->c->impl (stix, STIX_IO_READ, stix->c->curinp);
 		if (n <= -1) return -1;
 
 		if (n == 0)
 		{
-			fsc->sio.inp->lxc.c = STIX_CHAR_EOF;
-			fsc->sio.inp->lxc.line = fsc->sio.inp->line;
-			fsc->sio.inp->lxc.colm = fsc->sio.inp->colm;
-			fsc->sio.inp->lxc.file = fsc->sio.inp->name;
-			fsc->sio.lxc = fsc->sio.inp->lxc;
-			return 0;
+//			stix->c->curinp->lxc.c = STIX_CHAR_EOF;
+			stix->c->curinp->lxc.c = 0;
+			stix->c->curinp->lxc.line = stix->c->curinp->line;
+			stix->c->curinp->lxc.colm = stix->c->curinp->colm;
+			stix->c->curinp->lxc.file = stix->c->curinp->name;
+			stix->c->lxc = stix->c->curinp->lxc;
+			return 0; /* indicate that EOF has been read */
 		}
 
-		fsc->sio.inp->b.pos = 0;
-		fsc->sio.inp->b.len = n;	
+		stix->c->curinp->b.pos = 0;
+		stix->c->curinp->b.len = n;
 	}
 
-	if (fsc->sio.inp->lxc.c == STIX_T('\n'))
+	if (stix->c->curinp->lxc.c == '\n')
 	{
 		/* if the previous charater was a newline,
 		 * increment the line counter and reset column to 1.
 		 * incrementing it line number here instead of
 		 * updating inp->lxc causes the line number for
 		 * TOK_EOF to be the same line as the lxc newline. */
-		fsc->sio.inp->line++;
-		fsc->sio.inp->colm = 1;
+		stix->c->curinp->line++;
+		stix->c->curinp->colm = 1;
 	}
-	
-	fsc->sio.inp->lxc.c = fsc->sio.inp->buf[fsc->sio.inp->b.pos++];
-	fsc->sio.inp->lxc.line = fsc->sio.inp->line;
-	fsc->sio.inp->lxc.colm = fsc->sio.inp->colm++;
-	fsc->sio.inp->lxc.file = fsc->sio.inp->name;
-	fsc->sio.lxc = fsc->sio.inp->lxc;
-	return 0;
+
+	stix->c->curinp->lxc.c = stix->c->curinp->buf[stix->c->curinp->b.pos++];
+	stix->c->curinp->lxc.line = stix->c->curinp->line;
+	stix->c->curinp->lxc.colm = stix->c->curinp->colm++;
+	stix->c->curinp->lxc.file = stix->c->curinp->name;
+	stix->c->lxc = stix->c->curinp->lxc;
+	return 1; /* indicate that a normal character has been read */
 }
 
+#if 0
 static int skip_spaces (stix_t* fsc)
 {
 	while (STIX_ISSPACE(fsc->sio.lxc.c)) GET_CHAR (fsc);
@@ -653,9 +656,9 @@ retry:
 			else 
 			{
 				stix_cstr_t ea;
-				stix_char_t cc;
+				stix_uch_t cc;
 
-				cc = (stix_char_t)c;
+				cc = (stix_uch_t)c;
 				ea.ptr = &cc;
 				ea.len = 1;
 
@@ -685,17 +688,17 @@ static int begin_include (stix_t* fsc)
 	stix_ioarg_t* arg;
 	stix_link_t* link;
 
-	link = (stix_link_t*) stix_callocmem (fsc, STIX_SIZEOF(*link) + STIX_SIZEOF(stix_char_t) * (fsc->tok.name.len + 1));
+	link = (stix_link_t*) stix_callocmem (fsc, STIX_SIZEOF(*link) + STIX_SIZEOF(stix_uch_t) * (fsc->tok.name.len + 1));
 	if (link == STIX_NULL) goto oops;
 
-	stix_strcpy ((stix_char_t*)(link + 1), fsc->tok.name.ptr); 
+	stix_strcpy ((stix_uch_t*)(link + 1), fsc->tok.name.ptr); 
 	link->link = fsc->sio_names;
 	fsc->sio_names = link;
 
 	arg = (stix_ioarg_t*) stix_callocmem (fsc, STIX_SIZEOF(*arg));
 	if (arg == STIX_NULL) goto oops;
 
-	arg->name = (const stix_char_t*)(link + 1);
+	arg->name = (const stix_uch_t*)(link + 1);
 	arg->line = 1;
 	arg->colm = 1;
 	arg->prev = fsc->sio.inp;
@@ -777,7 +780,7 @@ static STIX_INLINE int is_tok_pseudovar (stix_t* fsc)
 	        stix_strequal(fsc->tok.name.ptr, STIX_T("false")));
 }
 
-static STIX_INLINE int is_tok_binsel (stix_t* fsc, const stix_char_t* sel)
+static STIX_INLINE int is_tok_binsel (stix_t* fsc, const stix_uch_t* sel)
 {
 	return fsc->tok.type == STIX_FSC_TOK_BINSEL && 
 	       stix_strequal (fsc->tok.name.ptr, sel);
@@ -848,7 +851,7 @@ static STIX_INLINE int is_tok_binsel (stix_t* fsc, const stix_char_t* sel)
 #endif
 
 static STIX_INLINE int emit_code_test (
-	stix_t* fsc, const stix_char_t* high, const stix_char_t* low)
+	stix_t* fsc, const stix_uch_t* high, const stix_uch_t* low)
 {
 wprintf (L"CODE: %s %s\n", high, low);
 	return 0;
@@ -1037,7 +1040,7 @@ static int __add_literal (stix_t* fsc, stix_word_t literal)
 	return fsc->literal_count - 1;
 }
 
-static int __add_character_literal (stix_t* fsc, stix_char_t ch)
+static int __add_character_literal (stix_t* fsc, stix_uch_t ch)
 {
 	stix_word_t i, c, literal;
 	stix_vm_t* stx = fsc->stx;
@@ -1056,7 +1059,7 @@ static int __add_character_literal (stix_t* fsc, stix_char_t ch)
 }
 
 static int __add_string_literal (
-	stix_t* fsc, const stix_char_t* str, stix_word_t size)
+	stix_t* fsc, const stix_uch_t* str, stix_word_t size)
 {
 	stix_word_t i, c, literal;
 	stix_vm_t* stx = fsc->stx;
@@ -1077,7 +1080,7 @@ static int __add_string_literal (
 }
 
 static int __add_symbol_literal (
-	stix_t* fsc, const stix_char_t* str, stix_word_t size)
+	stix_t* fsc, const stix_uch_t* str, stix_word_t size)
 {
 	stix_vm_t* stx = fsc->stx;
 	return __add_literal (fsc, stix_new_symbolx(stx, str, size));
@@ -1210,7 +1213,7 @@ static int parse_expression (stix_t* fsc)
 	stix_vm_t* stx = fsc->stx;
 
 	if (fsc->tok.type == STIX_FSC_TOK_IDENT) {
-		stix_char_t* ident = stix_tok_yield (&fsc->tok, 0);
+		stix_uch_t* ident = stix_tok_yield (&fsc->tok, 0);
 		if (ident == STIX_NULL) {
 			fsc->errnum = STIX_FSC_ERROR_MEMORY;
 			return -1;
@@ -1242,7 +1245,7 @@ static int parse_expression (stix_t* fsc)
 }
 
 static int parse_basic_expression (
-	stix_t* fsc, const stix_char_t* ident)
+	stix_t* fsc, const stix_uch_t* ident)
 {
 	/*
 	 * <basic expression> ::= <primary> [<messages> <cascaded messages>]
@@ -1259,7 +1262,7 @@ static int parse_basic_expression (
 }
 
 static int parse_assignment (
-	stix_t* fsc, const stix_char_t* target)
+	stix_t* fsc, const stix_uch_t* target)
 {
 	/*
 	 * <assignment> ::= <assignment target> assignmentOperator <expression>
@@ -1304,7 +1307,7 @@ static int parse_assignment (
 }
 
 static int parse_primary (
-	stix_t* fsc, const stix_char_t* ident, int* is_super)
+	stix_t* fsc, const stix_uch_t* ident, int* is_super)
 {
 	/*
 	 * <primary> ::=
@@ -1389,7 +1392,7 @@ static int parse_primary (
 }
 
 static int parse_primary_ident (
-	stix_t* fsc, const stix_char_t* ident, int* is_super)
+	stix_t* fsc, const stix_uch_t* ident, int* is_super)
 {
 	stix_word_t i;
 	stix_vm_t* stx = fsc->stx;
@@ -1616,7 +1619,7 @@ static int parse_binary_message (stix_t* fsc, int is_super)
 
 	while (fsc->tok.type == STIX_FSC_TOK_BINSEL) 
 	{
-		stix_char_t* op = stix_tok_yield (&fsc->tok, 0);
+		stix_uch_t* op = stix_tok_yield (&fsc->tok, 0);
 		if (op == STIX_NULL) {
 			fsc->errnum = STIX_FSC_ERROR_MEMORY;
 			return -1;
@@ -1707,11 +1710,11 @@ static int parse_method (stix_t* fsc, stix_word_t method_class, void* input)
 
 #endif
 
-static int get_class_type (const stix_char_t* str, class_type_t* type)
+static int get_class_type (const stix_uch_t* str, class_type_t* type)
 {
 	static struct 
 	{
-		stix_char_t* word;
+		stix_uch_t* word;
 		class_type_t type;
 	} tab[] = 
 	{
@@ -1735,11 +1738,11 @@ static int get_class_type (const stix_char_t* str, class_type_t* type)
 	return -1;
 }
 
-static int get_vardef_type (const stix_char_t* str, vardef_type_t* type)
+static int get_vardef_type (const stix_uch_t* str, vardef_type_t* type)
 {
 	static struct 
 	{
-		stix_char_t* word;
+		stix_uch_t* word;
 		class_type_t type;
 	} tab[] = 
 	{
@@ -2254,13 +2257,20 @@ int stix_compile (stix_t* stix, stix_ioimpl_t io)
 	stix->c->arg.line = 1;
 	stix->c->arg.colm = 1;
 	stix->c->curinp = &stix->c->arg;
-	clear_sio_names (stix);
+//	clear_sio_names (stix);
 
 	/* open the top-level stream */
 	n = stix->c->impl (stix, STIX_IO_OPEN, stix->c->curinp);
 	if (n <= -1) return -1;
 
-	if (compile_stream (stix) <= -1) goto oops;
+//	if (compile_stream (stix) <= -1) goto oops;
+	while (get_char(stix) > 0)
+	{
+		stix_bch_t buf[16];
+		stix_size_t len;
+		len = stix_uctoutf8 (stix->c->curinp->lxc.c, buf, STIX_COUNTOF(buf));
+		printf ("%.*s", (int)len, buf);
+	}
 
 	/* close the stream */
 	STIX_ASSERT (stix->c->curinp == &stix->c->arg);

@@ -155,12 +155,12 @@ stix_oow_t stix_hashbytes (const stix_uint8_t* ptr, stix_oow_t len)
 	return h;
 }
 
-stix_oow_t stix_hashchars (const stix_char_t* ptr, stix_oow_t len)
+stix_oow_t stix_hashchars (const stix_uch_t* ptr, stix_oow_t len)
 {
 	return stix_hashbytes ((const stix_uint8_t *)ptr, len * STIX_SIZEOF(*ptr));
 }
 
-int stix_equalchars (const stix_char_t* str1, const stix_char_t* str2, stix_oow_t len)
+int stix_equalchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_oow_t len)
 {
 	stix_oow_t i;
 

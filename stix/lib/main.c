@@ -28,7 +28,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <string.h>
 
 typedef struct xtn_t xtn_t;
 struct xtn_t
@@ -64,31 +64,41 @@ static stix_mmgr_t sys_mmgr =
 };
 
 
-static STIX_INLINE stix_oow_t open_input (stix_t* stix, stix_ioarg_t* arg)
+static STIX_INLINE stix_ssize_t open_input (stix_t* stix, stix_ioarg_t* arg)
 {
 	if (arg->includer)
 	{
 		/* includee */
-		xtn_t* xtn = stix_getxtn(stix);
+		stix_bch_t bcs[1024]; /* TODO: right buffer size */
+		stix_size_t bcslen = STIX_COUNTOF(bcs);
+		stix_size_t ucslen = ~(stix_size_t)0;
 
-		arg->handle = fopen (xtn->source_path, "r");
-		if (!arg->handle)
+		if (stix_ucstoutf8 (arg->name, &ucslen, bcs, &bcslen) <= -1)
 		{
-			stix_seterrnum (stix, STIX_EIOERR);
+			stix_seterrnum (stix, STIX_EECERR);
 			return -1;
 		}
 	}
 	else
 	{
 		/* main stream */
-		/*char tmp[PATH_MAX];*/
+		xtn_t* xtn = stix_getxtn(stix);
+		arg->handle = fopen (xtn->source_path, "r");
 	}
+
+	if (!arg->handle)
+	{
+		stix_seterrnum (stix, STIX_EIOERR);
+		return -1;
+	}
+
+	return 0;
 }
 
-static STIX_INLINE stix_oow_t read_input (stix_t* stix, stix_ioarg_t* arg)
+static STIX_INLINE stix_ssize_t read_input (stix_t* stix, stix_ioarg_t* arg)
 {
 	xtn_t* xtn = stix_getxtn(stix);
-	stix_size_t n, bcslen, cslen;
+	stix_size_t n, bcslen, ucslen, remlen;
 	int x;
 
 	STIX_ASSERT (arg->handle != STIX_NULL);
@@ -100,32 +110,32 @@ static STIX_INLINE stix_oow_t read_input (stix_t* stix, stix_ioarg_t* arg)
 			stix_seterrnum (stix, STIX_EIOERR);
 			return -1;
 		}
-
-		
 	}
 
 	xtn->bchar_len += n;
 	bcslen = xtn->bchar_len;
-	cslen = STIX_COUNTOF(arg->buf);
-	x = stix_utf8toucs (xtn->bchar_buf, &bcslen, arg->buf, &cslen);
-	if (x == -2)
+	ucslen = STIX_COUNTOF(arg->buf);
+	x = stix_utf8toucs (xtn->bchar_buf, &bcslen, arg->buf, &ucslen);
+	if (x <= -1 && ucslen <= 0)
 	{
-		/* buffer to small */
+		stix_seterrnum (stix, STIX_EECERR);
+		return -1;
 	}
-	if (x <= -1)
-	{
-	}
+
+	remlen = xtn->bchar_len - bcslen;
+	if (remlen > 0) memmove (xtn->bchar_buf, &xtn->bchar_buf[bcslen], remlen);
+	xtn->bchar_len = remlen;
+	return ucslen;
 }
 
-static STIX_INLINE stix_oow_t close_input (stix_t* stix, stix_ioarg_t* arg)
+static STIX_INLINE stix_ssize_t close_input (stix_t* stix, stix_ioarg_t* arg)
 {
 	STIX_ASSERT (arg->handle != STIX_NULL);
 	fclose (arg->handle);
 	return 0;
 }
-/* TODO: IMPLEMENT PROPER INPUT HANDLER */
 
-static stix_oow_t input_handler (stix_t* stix, stix_iocmd_t cmd, stix_ioarg_t* arg)
+static stix_ssize_t input_handler (stix_t* stix, stix_iocmd_t cmd, stix_ioarg_t* arg)
 {
 	switch (cmd)
 	{
@@ -217,8 +227,8 @@ int main (int argc, char* argv[])
 	}
 
 {
-stix_char_t x[] = { 'S', 't', 'r', 'i', 'n', 'g', '\0' };
-stix_char_t y[] = { 'S', 'y', 'm', 'b', 'o', 'l', '\0' };
+stix_uch_t x[] = { 'S', 't', 'r', 'i', 'n', 'g', '\0' };
+stix_uch_t y[] = { 'S', 'y', 'm', 'b', 'o', 'l', '\0' };
 stix_oop_t a, b;
 
 a = stix_makesymbol (stix, x, 6);
