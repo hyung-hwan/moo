@@ -105,7 +105,7 @@ static STIX_INLINE stix_ssize_t read_input (stix_t* stix, stix_ioarg_t* arg)
 	n = fread (&xtn->bchar_buf[xtn->bchar_len], STIX_SIZEOF(xtn->bchar_buf[0]), STIX_COUNTOF(xtn->bchar_buf) - xtn->bchar_len, arg->handle);
 	if (n == 0)
 	{
-		if (ferror(arg->handle))
+		if (ferror((FILE*)arg->handle))
 		{
 			stix_seterrnum (stix, STIX_EIOERR);
 			return -1;
@@ -131,7 +131,7 @@ static STIX_INLINE stix_ssize_t read_input (stix_t* stix, stix_ioarg_t* arg)
 static STIX_INLINE stix_ssize_t close_input (stix_t* stix, stix_ioarg_t* arg)
 {
 	STIX_ASSERT (arg->handle != STIX_NULL);
-	fclose (arg->handle);
+	fclose ((FILE*)arg->handle);
 	return 0;
 }
 
@@ -186,7 +186,8 @@ static char* syntax_error_msg[] =
 	"comment not closed",
 	"string not closed",
 	"no character after $",
-	"no valid character after #"
+	"no valid character after #",
+	"missing colon"
 };
 
 int main (int argc, char* argv[])

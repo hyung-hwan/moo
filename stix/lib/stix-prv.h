@@ -253,6 +253,7 @@ enum stix_synerrnum_t
 	STIX_SYNERR_STRNC, /* string not closed */
 	STIX_SYNERR_CLTNT, /* character literal not terminated */
 	STIX_SYNERR_HLTNT, /* hased literal not terminated */
+	STIX_SYNERR_CLNMS, /* colon missing */
 };
 typedef enum stix_synerrnum_t stix_synerrnum_t;
 

@@ -204,12 +204,8 @@ static STIX_INLINE int add_token_str (stix_t* stix, const stix_uch_t* ptr, stix_
 
 		i = STIX_ALIGN(i, TOKEN_NAME_ALIGN);
 
-		tmp = STIX_MMGR_REALLOC (stix->mmgr, stix->c->tok.name.ptr, STIX_SIZEOF(*ptr) * (i + 1));
-		if (!tmp) 
-		{
-			stix->errnum = STIX_ENOERR;
-			return -1;
-		}
+		tmp = stix_reallocmem (stix, stix->c->tok.name.ptr, STIX_SIZEOF(*ptr) * (i + 1));
+		if (!tmp)  return -1;
 
 		stix->c->tok.name.ptr = tmp;
 		stix->c->tok.name_capa = i;
@@ -642,7 +638,9 @@ retry:
 					}
 					else if (is_alphachar(c))
 					{
-					keyword:
+						int colon_required = 0;
+
+					nextword:
 						do 
 						{
 							ADD_TOKEN_CHAR (stix, c);
@@ -655,7 +653,16 @@ retry:
 							ADD_TOKEN_CHAR (stix, c);
 							GET_CHAR_TO (stix, c);
 
-							if (is_alphachar(c)) goto keyword;
+							if (is_alphachar(c)) 
+							{
+								colon_required =1;
+								goto nextword;
+							}
+						}
+						else if (colon_required)
+						{
+							set_syntax_error (stix, STIX_SYNERR_CLNMS, &stix->c->lxc.l, STIX_NULL);
+							return -1;
 						}
 					}
 					else

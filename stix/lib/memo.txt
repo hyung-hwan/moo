@@ -516,6 +516,11 @@ class Association -> revisit the Association class defined previsously. Revisiti
 ##   function(#instance)   ## instance method
 ##   function              ## instance method
 
+##   dcl(#class) a, b, c. ## short form
+##   dcl(#classinst) a, b, c
+##   fun(#class) 
+
+
 ## var and fun are not keywords. they can be a method name or a variable name.
 ## Casing is not used to differentiate variable kinds like global local temporary etc.
 
