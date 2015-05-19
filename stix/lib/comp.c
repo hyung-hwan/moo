@@ -26,6 +26,9 @@
 
 #include "stix-prv.h"
 
+#define TOKEN_NAME_CAPA 128
+#define TOKEN_NAME_ALIGN 256
+
 #if 0
 enum class_type_t
 {
@@ -60,112 +63,65 @@ enum stix_stack_operand_t
 };
 typedef enum stix_stack_operand_t stix_stack_operand_t;
 
-static void clear_sio_names (stix_t* fsc);
+#endif
+
 static int begin_include (stix_t* fsc);
 static int end_include (stix_t* fsc);
 
-stix_t* stix_open (stix_mmgr_t* mmgr, stix_size_t xtnsize, stix_size_t vmheapsize)
+static void set_syntax_error (stix_t* stix, stix_synerrnum_t num, const stix_ioloc_t* loc, const stix_ucs_t* tgt)
 {
-	stix_t* fsc;
-
-	fsc = STIX_MMGR_ALLOC (mmgr, STIX_SIZEOF(*fsc) + xtnsize);
-	if (fsc)
+	stix->errnum = STIX_ESYNTAX;
+	stix->c->synerr.num = num;
+	stix->c->synerr.loc = loc? *loc: stix->c->tok.loc;
+	if (tgt) stix->c->synerr.tgt = *tgt;
+	else 
 	{
-		if (stix_init (fsc, mmgr, vmheapsize) <= -1)
-		{
-			STIX_MMGR_FREE (mmgr, fsc);
-			fsc = STIX_NULL;
-		}
-		else STIX_MEMSET (fsc + 1, 0, xtnsize);
+		stix->c->synerr.tgt.ptr = STIX_NULL;
+		stix->c->synerr.tgt.len = 0;
 	}
-
-	return fsc;
-}
-
-void stix_close (stix_t* fsc)
-{
-	stix_fini (fsc);
-	STIX_MMGR_FREE (fsc->mmgr, fsc);
-}
-
-int stix_init (stix_t* fsc, stix_mmgr_t* mmgr, stix_size_t vmheapsize)
-{
-	int trait;
-
-	STIX_MEMSET (fsc, 0, STIX_SIZEOF(*fsc));
-	fsc->mmgr = mmgr;
-	fsc->errstr = stix_dflerrstr;
-
-	fsc->vm = stix_vm_open (mmgr, 0, vmheapsize);
-	if (fsc->vm == STIX_NULL) 
-	{
-		fsc->errnum = STIX_FSC_ENOMEM;
-		return -1;
-	}
-
-	/* turn off garbage collection by force */
-	stix_vm_getopt (fsc->vm, STIX_VM_TRAIT, &trait);
-	trait |= STIX_VM_NOGC;
-	stix_vm_setopt (fsc->vm, STIX_VM_TRAIT, &trait);
-
-	if (stix_vm_boom (fsc->vm) <= -1)
-	{
-		/* TODO: translate vm error to fsc error */
-fsc->errnum = STIX_FSC_ENOMEM;
-		stix_vm_close (fsc->vm);
-		return -1;
-	}
-
-#if 0
-	if (stix_tok_open (&fsc->tok, 0) == STIX_NULL) 
-	{
-		if (fsc->__dynamic) stix_free (fsc);
-		return STIX_NULL;
-	}
-
-	if (stix_arr_open (
-		&fsc->bcd, 256, 
-		stix_sizeof(stix_uint8_t), STIX_NULL) == STIX_NULL) 
-	{
-		stix_tok_close (&fsc->tok);
-		if (fsc->__dynamic) stix_free (fsc);
-		return STIX_NULL;
-	}
-
-	fsc->stx = stx;
-	fsc->errnum = STIX_FSC_ERROR_NONE;
-
-	fsc->met.tmpr.count = 0;
-	fsc->met.tmpr.nargs = 0;
-	fsc->literal_count = 0;
-
-	fsc->sio.lxc.c = STIX_CHAR_EOF;
-	fsc->ungotc_count = 0;
-
-	fsc->input_owner = STIX_NULL;
-	fsc->input_func = STIX_NULL;
-	return fsc;
-#endif
-
-	return 0;
-}
-
-void stix_fini (stix_t* fsc)
-{
-	stix_vm_close (fsc->vm);
-
-#if 0
-	stix_arr_close (&fsc->bcd);
-#endif
-
-	clear_sio_names (fsc);
 }
 
 /* ---------------------------------------------------------------------
  * Tokenizer 
  * --------------------------------------------------------------------- */
 
-static STIX_INLINE int is_binselchar (stix_cint_t c)
+static STIX_INLINE int is_spacechar (stix_uci_t c)
+{
+	/* TODO: handle other space unicode characters */
+	switch (c)
+	{
+		case ' ':
+		case '\f': /* formfeed */
+		case '\n': /* linefeed */
+		case '\r': /* carriage return */
+		case '\t': /* horizon tab */
+		case '\v': /* vertical tab */
+			return 1;
+
+		default:
+			return 0;
+	}
+}
+
+static STIX_INLINE int is_alphachar (stix_uci_t c)
+{
+/* TODO: support full unicode */
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+static STIX_INLINE int is_digitchar (stix_uci_t c)
+{
+/* TODO: support full unicode */
+	return (c >= '0' && c <= '9');
+}
+
+static STIX_INLINE int is_alnumchar (stix_uci_t c)
+{
+/* TODO: support full unicode */
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+}
+
+static STIX_INLINE int is_binselchar (stix_uci_t c)
 {
 	/*
 	 * binarySelectorCharacter ::=
@@ -176,82 +132,120 @@ static STIX_INLINE int is_binselchar (stix_cint_t c)
 
 	switch (c)
 	{
-		case STIX_T('!'):
-		case STIX_T('%'):
-		case STIX_T('&'):
-		case STIX_T('*'):
-		case STIX_T('+'):
-		case STIX_T(','):
-		case STIX_T('/'): 
-		case STIX_T('<'):
-		case STIX_T('>'):
-		case STIX_T('='):
-		case STIX_T('?'):
-		case STIX_T('@'):
-		case STIX_T('\\'):
-		case STIX_T('|'):
-		case STIX_T('~'):
-		case STIX_T('-'):
+		case '!':
+		case '%':
+		case '&':
+		case '*':
+		case '+':
+		case ',':
+		case '/': 
+		case '<':
+		case '>':
+		case '=':
+		case '?':
+		case '@':
+		case '\\':
+		case '|':
+		case '~':
+		case '-':
 			return 1;
-		
+
 		default:
 			return 0;
 	}
 }
 
-static STIX_INLINE int is_closing_char (stix_cint_t c)
+static STIX_INLINE int is_closing_char (stix_uci_t c)
 {
-	return 
-		c == STIX_T('.') || c == STIX_T(']') ||
-		c == STIX_T(')') || c == STIX_T(';') ||
-		c == STIX_T('\"') || c == STIX_T('\'');
+	switch (c)
+	{
+		case '.':
+		case ']':
+		case ')':
+		case ';':
+		case '\"':
+		case '\'':
+			return 1;
+	
+		default:
+			return 0;
+	}
 }
 
-#define GET_CHAR(fsc) \
-	do { if (get_char (fsc) == -1) return -1; } while (0)
+#define GET_CHAR(stix) \
+	do { if (get_char(stix) <= -1) return -1; } while (0)
 
-#define GET_TOKEN(fsc) \
-	do { if (get_token (fsc) == -1) return -1; } while (0)
+#define GET_CHAR_TO(stix,c) \
+	do { \
+		if (get_char(stix) <= -1) return -1; \
+		c = (stix)->c->lxc.c; \
+	} while(0)
 
-#define ADD_TOKEN_CHAR(fsc,c) \
-	do { if (add_token_char (fsc, c) == -1) return -1; } while (0)
 
-#define ADD_TOKEN_STR(fsc,s) \
-	do { if (add_token_str (fsc, s) == -1) return -1; } while (0)
+#define GET_TOKEN(stix) \
+	do { if (get_token(stix) <= -1) return -1; } while (0)
 
-static STIX_INLINE int add_token_char (stix_t* fsc, stix_uch_t c)
+#define ADD_TOKEN_STR(stix,s,l) \
+	do { if (add_token_str(stix, s, l) <= -1) return -1; } while (0)
+
+#define ADD_TOKEN_CHAR(stix,c) \
+	do { if (add_token_char(stix, c) <= -1) return -1; } while (0)
+
+
+
+static STIX_INLINE int add_token_str (stix_t* stix, const stix_uch_t* ptr, stix_size_t len)
 {
-	if (fsc->tok.name.len >= STIX_COUNTOF(fsc->tok.buf) - 1)
+	stix_size_t i;
+
+	i = stix->c->tok.name.len + len;
+	if (i > stix->c->tok.name_capa)
 	{
-		/* the tok buffer is full. cannot add more characters to it */
-		fsc->errnum = STIX_FSC_ETOKTL;
-		return -1;
+		stix_uch_t* tmp;
+
+		i = STIX_ALIGN(i, TOKEN_NAME_ALIGN);
+
+		tmp = STIX_MMGR_REALLOC (stix->mmgr, stix->c->tok.name.ptr, STIX_SIZEOF(*ptr) * (i + 1));
+		if (!tmp) 
+		{
+			stix->errnum = STIX_ENOERR;
+			return -1;
+		}
+
+		stix->c->tok.name.ptr = tmp;
+		stix->c->tok.name_capa = i;
 	}
-	fsc->tok.buf[fsc->tok.name.len++] = c;
-	fsc->tok.buf[fsc->tok.name.len] = STIX_T('\0');
+
+	for (i = 0; i < len; i++)
+	{
+		stix->c->tok.name.ptr[stix->c->tok.name.len++] = ptr[i];
+	}
+	stix->c->tok.name.ptr[stix->c->tok.name.len] = '\0';
+
 	return 0;
 }
 
-static STIX_INLINE int add_token_str (stix_t* fsc, const stix_uch_t* str)
+static STIX_INLINE int add_token_char (stix_t* stix, stix_uch_t c)
 {
-	stix_size_t len;
-
-	len = stix_strlen (str);
-	if (fsc->tok.name.len + len >= STIX_COUNTOF(fsc->tok.buf) - 1)
-	{
-		/* the tok buffer is full. cannot add more characters to it */
-		fsc->errnum = STIX_FSC_ETOKTL;
-		return -1;
-	}
-
-	fsc->tok.name.len += stix_strcpy (&fsc->tok.buf[fsc->tok.name.len], str);
-	return 0;
+	return add_token_str (stix, &c, 1);
 }
-#endif
+
+static STIX_INLINE void unget_char (stix_t* stix, const stix_iolxc_t* c)
+{
+	/* Make sure that the unget buffer is large enough */
+	STIX_ASSERT (stix->c->nungots < STIX_COUNTOF(stix->c->ungot));
+	stix->c->ungot[stix->c->nungots++] = *c;
+}
 
 static int get_char (stix_t* stix)
 {
 	stix_ssize_t n;
+
+	if (stix->c->nungots > 0)
+	{
+		/* something in the unget buffer */
+		stix->c->lxc = stix->c->ungot[--stix->c->nungots];
+		return 0;
+	}
 
 	if (stix->c->curinp->b.pos >= stix->c->curinp->b.len)
 	{
@@ -260,20 +254,21 @@ static int get_char (stix_t* stix)
 
 		if (n == 0)
 		{
-//			stix->c->curinp->lxc.c = STIX_CHAR_EOF;
-			stix->c->curinp->lxc.c = 0;
-			stix->c->curinp->lxc.line = stix->c->curinp->line;
-			stix->c->curinp->lxc.colm = stix->c->curinp->colm;
-			stix->c->curinp->lxc.file = stix->c->curinp->name;
+			stix->c->curinp->lxc.c = STIX_UCI_EOF;
+			stix->c->curinp->lxc.l.line = stix->c->curinp->line;
+			stix->c->curinp->lxc.l.colm = stix->c->curinp->colm;
+			stix->c->curinp->lxc.l.file = stix->c->curinp->name;
 			stix->c->lxc = stix->c->curinp->lxc;
-			return 0; /* indicate that EOF has been read */
+
+			/* indicate that EOF has been read. lxc.c is also set to EOF. */
+			return 0; 
 		}
 
 		stix->c->curinp->b.pos = 0;
 		stix->c->curinp->b.len = n;
 	}
 
-	if (stix->c->curinp->lxc.c == '\n')
+	if (stix->c->curinp->lxc.c == STIX_UCI_NL)
 	{
 		/* if the previous charater was a newline,
 		 * increment the line counter and reset column to 1.
@@ -285,57 +280,109 @@ static int get_char (stix_t* stix)
 	}
 
 	stix->c->curinp->lxc.c = stix->c->curinp->buf[stix->c->curinp->b.pos++];
-	stix->c->curinp->lxc.line = stix->c->curinp->line;
-	stix->c->curinp->lxc.colm = stix->c->curinp->colm++;
-	stix->c->curinp->lxc.file = stix->c->curinp->name;
+	stix->c->curinp->lxc.l.line = stix->c->curinp->line;
+	stix->c->curinp->lxc.l.colm = stix->c->curinp->colm++;
+	stix->c->curinp->lxc.l.file = stix->c->curinp->name;
 	stix->c->lxc = stix->c->curinp->lxc;
+
 	return 1; /* indicate that a normal character has been read */
 }
 
-#if 0
-static int skip_spaces (stix_t* fsc)
+static int skip_spaces (stix_t* stix)
 {
-	while (STIX_ISSPACE(fsc->sio.lxc.c)) GET_CHAR (fsc);
+	while (is_spacechar(stix->c->curinp->lxc.c)) GET_CHAR (stix);
 	return 0;
 }
 
-static int skip_comment (stix_t* fsc)
+static int skip_comment (stix_t* stix)
 {
-	/* comment is a double quoted string */
-	while (fsc->sio.lxc.c != STIX_T('"')) GET_CHAR (fsc);
-	GET_CHAR (fsc); /* skip the closing quote */
+	stix_uci_t c = stix->c->lxc.c;
+	stix_iolxc_t lc;
+
+	if (c == '"')
+	{
+		/* skip up to the closing " */
+		do 
+		{
+			GET_CHAR_TO (stix, c); 
+			if (c == STIX_UCI_EOF)
+			{
+				/* unterminated comment */
+				set_syntax_error (stix, STIX_SYNERR_CMTNC, &stix->c->lxc.l, STIX_NULL);
+				return -1;
+			}
+		}
+		while (c != '"');
+
+		if (c == '"') GET_CHAR (stix);
+		return 1; /* double-quoted comment */
+	}
+
+	/* handle #! or ## */
+	if (c != '#') return 0; /* not a comment */
+
+	/* save the last character */
+	lc = stix->c->lxc;
+	/* read a new character */
+	GET_CHAR_TO (stix, c);
+
+	if (c == '!' || c == '#') 
+	{
+		do 
+		{
+			GET_CHAR_TO (stix, c);
+			if (c == STIX_UCI_EOF)
+			{
+				break;
+			}
+			else if (c == STIX_UCI_NL)
+			{
+				GET_CHAR (stix);
+				break;
+			}
+		} 
+		while (1);
+
+		return 1; /* single line comment led by ## or #! */
+	}
+
+	/* unget '#' */
+	unget_char (stix, &stix->c->lxc);
+	/* restore the previous state */
+	stix->c->lxc = lc;
+
 	return 0;
 }
 
-static int get_ident (stix_t* fsc)
+static int get_ident (stix_t* stix)
 {
 	/*
 	 * identifier ::= letter (letter | digit)*
 	 * keyword ::= identifier ':'
 	 */
 
-	stix_cint_t c = fsc->sio.lxc.c;
-	fsc->tok.type = STIX_FSC_TOK_IDENT;
+	stix_uci_t c = stix->c->lxc.c;
+	stix->c->tok.type = STIX_IOTOK_IDENT;
 
 	do 
 	{
-		ADD_TOKEN_CHAR(fsc, c);
-		GET_CHAR (fsc);
-		c = fsc->sio.lxc.c;
+		ADD_TOKEN_CHAR (stix, c);
+		GET_CHAR (stix);
+		c = stix->c->lxc.c;
 	} 
-	while (STIX_ISALPHA(c) || STIX_ISDIGIT(c));
+	while (is_alnumchar(c));
 
-	if (c == STIX_T(':')) 
+	if (c == ':') 
 	{
-		ADD_TOKEN_CHAR (fsc, c);
-		fsc->tok.type = STIX_FSC_TOK_KEYWORD;
-		GET_CHAR (fsc);
+		ADD_TOKEN_CHAR (stix, c);
+		stix->c->tok.type = STIX_IOTOK_KEYWORD;
+		GET_CHAR (stix);
 	}
 
 	return 0;
 }
 
-static int get_numlit (stix_t* fsc, int negated)
+static int get_numlit (stix_t* stix, int negated)
 {
 	/* 
 	 * <number literal> ::= ['-'] <number>
@@ -355,42 +402,43 @@ static int get_numlit (stix_t* fsc, int negated)
 	 * fractionalDigits ::= decimalInteger
 	 */
 
-	stix_cint_t c = fsc->sio.lxc.c;
-	fsc->tok.type = STIX_FSC_TOK_NUMLIT;
+	stix_uci_t c = stix->c->lxc.c;
+	stix->c->tok.type = STIX_IOTOK_NUMLIT;
 
+/*TODO: support complext numeric literals */
 	do 
 	{
-		ADD_TOKEN_CHAR(fsc, c);
-		GET_CHAR (fsc);
-		c = fsc->sio.lxc.c;
+		ADD_TOKEN_CHAR(stix, c);
+		GET_CHAR (stix);
+		c = stix->c->lxc.c;
 	} 
-	while (STIX_ISALPHA(c) || STIX_ISDIGIT(c));
+	while (is_digitchar(c));
 
 	/* TODO; more */
 	return 0;
 }
 
-static int get_charlit (stix_t* fsc)
+static int get_charlit (stix_t* stix)
 {
 	/* 
 	 * character_literal ::= '$' character
 	 * character ::= "Any character in the implementation-defined character set"
 	 */
 
-	stix_cint_t c = fsc->sio.lxc.c; /* even a new-line or white space would be taken */
-	if (c == STIX_CHAR_EOF) 
+	stix_uci_t c = stix->c->lxc.c; /* even a new-line or white space would be taken */
+	if (c == STIX_UCI_EOF) 
 	{
-		stix_seterrnum (fsc, STIX_FSC_ECHRNT, STIX_NULL);
+		set_syntax_error (stix, STIX_SYNERR_CLTNT, &stix->c->lxc.l, STIX_NULL);
 		return -1;
-	}	
+	}
 
-	fsc->tok.type = STIX_FSC_TOK_CHRLIT;
-	ADD_TOKEN_CHAR(fsc, c);
-	GET_CHAR (fsc);
+	stix->c->tok.type = STIX_IOTOK_CHRLIT;
+	ADD_TOKEN_CHAR(stix, c);
+	GET_CHAR (stix);
 	return 0;
 }
 
-static int get_strlit (stix_t* fsc)
+static int get_strlit (stix_t* stix)
 {
 	/* 
 	 * string_literal ::= stringDelimiter stringBody stringDelimiter
@@ -400,322 +448,319 @@ static int get_strlit (stix_t* fsc)
 
 	/* TODO: C-like string */
 
-	stix_cint_t c = fsc->sio.lxc.c;
-	fsc->tok.type = STIX_FSC_TOK_STRLIT;
+	stix_uci_t c = stix->c->lxc.c;
+	stix->c->tok.type = STIX_IOTOK_STRLIT;
 
 	do 
 	{
 		do 
 		{
-			ADD_TOKEN_CHAR (fsc, c);
-			GET_CHAR (fsc);
-			c = fsc->sio.lxc.c;
+			ADD_TOKEN_CHAR (stix, c);
+			GET_CHAR (stix);
+			c = stix->c->lxc.c;
 
-			if (c == STIX_CHAR_EOF) 
+			if (c == STIX_UCI_EOF) 
 			{
-				stix_seterrnum (fsc, STIX_FSC_ESTRNT, STIX_NULL);
+				/* string not closed */
+				set_syntax_error (stix, STIX_SYNERR_STRNC, &stix->c->lxc.l, STIX_NULL);
 				return -1;
 			}
 		} 
-		while (c != STIX_T('\''));
+		while (c != '\'');
 
-		GET_CHAR (fsc);
-		c = fsc->sio.lxc.c;
+		GET_CHAR (stix);
+		c = stix->c->lxc.c;
 	} 
-	while (c == STIX_T('\''));
+	while (c == '\'');
 
 	return 0;
 }
 
-static int get_binsel (stix_t* fsc)
+static int get_binsel (stix_t* stix)
 {
 	/* 
 	 * binarySelector ::= binarySelectorCharacter+
 	 */
+	stix_uci_t oc;
 
-	ADD_TOKEN_CHAR (fsc, fsc->sio.lxc.c);
+	oc = stix->c->lxc.c;
+	ADD_TOKEN_CHAR (stix, oc);
 
-	if (fsc->sio.lxc.c == STIX_T('-')) 
-	{
-		/* special case if a minus is followed by a digit immediately */
-		GET_CHAR (fsc);
-		if (STIX_ISDIGIT(fsc->sio.lxc.c)) return get_numlit (fsc, 1);
-	}
-	else GET_CHAR (fsc);
+	GET_CHAR (stix);
+	/* special case if a minus is followed by a digit immediately */
+	if (oc == '-' && is_digitchar(stix->c->lxc.c)) return get_numlit (stix, 1);
 
 	/* up to 2 characters only */
-	if (is_binselchar (fsc->sio.lxc.c)) 
+	if (is_binselchar (stix->c->lxc.c)) 
 	{
-		ADD_TOKEN_CHAR (fsc, fsc->sio.lxc.c);
-		GET_CHAR (fsc);
+		ADD_TOKEN_CHAR (stix, stix->c->lxc.c);
+		GET_CHAR (stix);
 	}
 
 	/* or up to any occurrences */
 	/*
-	while (is_binselchar(fsc->sio.lxc.c)) 
+	while (is_binselchar(stix->c->lxc.c)) 
 	{
-		ADD_TOKEN_CHAR (fsc, c);
-		GET_CHAR (fsc);
+		ADD_TOKEN_CHAR (stix, c);
+		GET_CHAR (stix);
 	}
 	*/
 
-	fsc->tok.type = STIX_FSC_TOK_BINSEL;
+	stix->c->tok.type = STIX_IOTOK_BINSEL;
 	return 0;
 }
 
-static int get_token (stix_t* fsc)
+static int get_token (stix_t* stix)
 {
-	stix_cint_t c;
+	stix_uci_t c;
+	int n;
 
 retry:
 	do 
 	{
-		if (skip_spaces(fsc) <= -1) return -1;
-		if (fsc->sio.lxc.c != STIX_T('"')) break;
-
-		GET_CHAR (fsc);
-		if (skip_comment(fsc) <= -1) return -1;
+		if (skip_spaces(stix) <= -1) return -1;
+		if ((n = skip_comment(stix)) <= -1) return -1;
 	} 
-	while (1);
+	while (n >= 1);
 
 	/* clear the token resetting its location */
-	fsc->tok.type = 0; 
-	fsc->tok.buf[0] = STIX_T('\0'); 
-	fsc->tok.name.len = 0;
-	fsc->tok.name.ptr = fsc->tok.buf;
-	fsc->tok.loc.file = fsc->sio.lxc.file;
-	fsc->tok.loc.line = fsc->sio.lxc.line;
-	fsc->tok.loc.colm = fsc->sio.lxc.colm;
-	c = fsc->sio.lxc.c;
+	stix->c->tok.type = STIX_IOTOK_EOF;  /* is it correct? */
+
+	stix->c->tok.name.len = 0;
+	stix->c->tok.name.ptr[0] = '\0';
+
+	stix->c->tok.loc = stix->c->lxc.l;
+	c = stix->c->lxc.c;
 
 	switch (c)
 	{
-		case STIX_CHAR_EOF:
+		case STIX_UCI_EOF:
 		{
+			static stix_uch_t _eof_str[] = { '<', 'E', 'O', 'F', '>' };
 			int n;
 
-			n = end_include (fsc);
+			n = end_include (stix);
 			if (n <= -1) return -1;
 			if (n >= 1) goto retry;
 
-			fsc->tok.type = STIX_FSC_TOK_EOF;
-			ADD_TOKEN_STR(fsc, STIX_T("<EOF>"));
+			stix->c->tok.type = STIX_IOTOK_EOF;
+			ADD_TOKEN_STR(stix, _eof_str, 5);
 			break;
 		}
 
-		case STIX_T('$'): /* character literal */
-			GET_CHAR (fsc);
-			if (get_charlit(fsc) == -1) return -1;
+		case '$': /* character literal */
+			GET_CHAR (stix);
+			if (get_charlit(stix) <= -1) return -1;
 			break;
 
-		case STIX_T('\''): /* string literal */
-			GET_CHAR (fsc);
-			if (get_strlit(fsc) == -1) return -1;
+		case '\'': /* string literal */
+			GET_CHAR (stix);
+			if (get_strlit(stix) <= -1) return -1;
 			break;
 
-		case STIX_T(':'):
-			fsc->tok.type = STIX_FSC_TOK_COLON;
-			ADD_TOKEN_CHAR(fsc, c);
-			GET_CHAR (fsc);
+		case ':':
+			stix->c->tok.type = STIX_IOTOK_COLON;
+			ADD_TOKEN_CHAR(stix, c);
+			GET_CHAR (stix);
 
-			c = fsc->sio.lxc.c;
-			if (c == STIX_T('=')) 
+			c = stix->c->lxc.c;
+			if (c == '=') 
 			{
-				fsc->tok.type = STIX_FSC_TOK_ASSIGN;
-				ADD_TOKEN_CHAR(fsc, c);
-				GET_CHAR (fsc);
+				stix->c->tok.type = STIX_IOTOK_ASSIGN;
+				ADD_TOKEN_CHAR(stix, c);
+				GET_CHAR (stix);
 			}
 			break;
 
-		case STIX_T('^'):
-		case STIX_T('{'): /* extension */
-		case STIX_T('}'): /* extension */
-		case STIX_T('['):
-		case STIX_T(']'): 
-		case STIX_T('('):
-		case STIX_T(')'):
-		case STIX_T('.'):
-		case STIX_T(';'):
-		case STIX_T('#'):
-			switch (c) 
-			{
-				case STIX_T('^'):
-					fsc->tok.type = STIX_FSC_TOK_RETURN;
-					break;
+		case '^':
+			stix->c->tok.type = STIX_IOTOK_RETURN;
+			goto single_char_token;
+		case '{': /* extension */
+			stix->c->tok.type = STIX_IOTOK_LBRACE;
+			goto single_char_token;
+		case '}': /* extension */
+			stix->c->tok.type = STIX_IOTOK_RBRACE;
+			goto single_char_token;
+		case '[':
+			stix->c->tok.type = STIX_IOTOK_LBRACK;
+			goto single_char_token;
+		case ']': 
+			stix->c->tok.type = STIX_IOTOK_RBRACK;
+			goto single_char_token;
+		case '(':
+			stix->c->tok.type = STIX_IOTOK_LPAREN;
+			goto single_char_token;
+		case ')':
+			stix->c->tok.type = STIX_IOTOK_RPAREN;
+			goto single_char_token;
+		case '.':
+			stix->c->tok.type = STIX_IOTOK_PERIOD;
+			goto single_char_token;
+		case ';':
+			stix->c->tok.type = STIX_IOTOK_SEMICOLON;
+			goto single_char_token;
 
-				case STIX_T('{'):
-					fsc->tok.type = STIX_FSC_TOK_LBRACE;
-					break;
-		
-				case STIX_T('}'): 
-					fsc->tok.type = STIX_FSC_TOK_RBRACE;
-					break;
-		
-				case STIX_T('['):
-					fsc->tok.type = STIX_FSC_TOK_LBRACK;
-					break;
-		
-				case STIX_T(']'): 
-					fsc->tok.type = STIX_FSC_TOK_RBRACK;
-					break;
-
-				case STIX_T('('):
-					fsc->tok.type = STIX_FSC_TOK_LPAREN;
-					break;
-		
-				case STIX_T(')'):
-					fsc->tok.type = STIX_FSC_TOK_RPAREN;
-					break;
-
-				case STIX_T('.'):
-					fsc->tok.type = STIX_FSC_TOK_PERIOD;
-					break;
-		
-				case STIX_T(';'):
-					fsc->tok.type = STIX_FSC_TOK_SEMICOLON;
-					break;
-
-				case STIX_T('#'):
-					fsc->tok.type = STIX_FSC_TOK_HASH;
-					break;
-			}
-
-			ADD_TOKEN_CHAR(fsc, c);
-			GET_CHAR (fsc);
-			break;
-
-#if 0
-		case STIX_T('#'):  
-			/*ADD_TOKEN_CHAR(fsc, c);*/
-			GET_CHAR (fsc);
-
-			c = fsc->sio.lxc.c;
+		case '#':  
+			/*ADD_TOKEN_CHAR(stix, c);*/
+			GET_CHAR_TO (stix, c);
 			switch (c)
 			{
-				case STIX_CHAR_EOF:
-					fsc->errnum = STIX_FSC_ELITNT;
+				case STIX_UCI_EOF:
+					set_syntax_error (stix, STIX_SYNERR_HLTNT, &stix->c->lxc.l, STIX_NULL);
 					return -1;
 				
-				case STIX_T('('):
+				case '(':
 					/* #( */
-					ADD_TOKEN_CHAR(fsc, c);
-					fsc->tok.type = STIX_FSC_TOK_APAREN;
-					GET_CHAR (fsc);
+					ADD_TOKEN_CHAR(stix, c);
+					stix->c->tok.type = STIX_IOTOK_APAREN;
+					GET_CHAR (stix);
 					break;
 
-				case STIX_T('\''):
+				case '\'':
 					/* #' - quoted symbol literal */
-					GET_CHAR (fsc);
-					if (get_strlit(fsc) <= -1) return -1;
-					fsc->tok.type = STIX_FSC_TOK_SYMLIT;
+					GET_CHAR (stix);
+					if (get_strlit(stix) <= -1) return -1;
+					stix->c->tok.type = STIX_IOTOK_SYMLIT;
 					break;
 
-				case STIX_T('['):
+				case '[':
 					/* #[ - byte array literal */
 					/* TODO */
 					break;
 
 				default:
 					/* unquoted symbol literal */
-					if (is_closing_char(c) || STIX_ISSPACE(c))
+
+					if (is_binselchar(c))
 					{
-						fsc->errnum = STIX_FSC_ELITNT;
+						do 
+						{
+							ADD_TOKEN_CHAR (stix, c);
+							GET_CHAR_TO (stix, c);
+						} 
+						while (is_binselchar(c));
+					}
+					else if (is_alphachar(c))
+					{
+					keyword:
+						do 
+						{
+							ADD_TOKEN_CHAR (stix, c);
+							GET_CHAR_TO (stix, c);
+						} 
+						while (is_alnumchar(c));
+
+						if (c == ':')
+						{
+							ADD_TOKEN_CHAR (stix, c);
+							GET_CHAR_TO (stix, c);
+
+							if (is_alphachar(c)) goto keyword;
+						}
+					}
+					else
+					{
+						set_syntax_error (stix, STIX_SYNERR_HLTNT, &stix->c->lxc.l, STIX_NULL);
 						return -1;
 					}
 
-					do 
-					{
-						ADD_TOKEN_CHAR(fsc, c);
-						GET_CHAR (fsc);
-						c = fsc->sio.lxc.c;
-					} 
-					while (!is_closing_char(c) && !STIX_ISSPACE(c));
-
-					fsc->tok.type = STIX_FSC_TOK_SYMLIT;
+					stix->c->tok.type = STIX_IOTOK_SYMLIT;
 					break;
 			}
 				
 			break;
-#endif
 
-				
 		default:
-			if (STIX_ISALPHA (c)) 
+			if (is_alphachar(c)) 
 			{
-				if (get_ident (fsc) <= -1) return -1;
+				if (get_ident (stix) <= -1) return -1;
 			}
-			else if (STIX_ISDIGIT (c)) 
+			else if (is_digitchar(c)) 
 			{
-				if (get_numlit (fsc, 0) <= -1) return -1;
+				if (get_numlit (stix, 0) <= -1) return -1;
 			}
-			else if (is_binselchar (c)) 
+			else if (is_binselchar(c)) 
 			{
 				/* binary selector */
-				if (get_binsel (fsc) <= -1) return -1;
+				if (get_binsel (stix) <= -1) return -1;
 			}
 			else 
 			{
-				stix_cstr_t ea;
-				stix_uch_t cc;
-
-				cc = (stix_uch_t)c;
-				ea.ptr = &cc;
-				ea.len = 1;
-
-				stix_seterrnum (fsc, STIX_FSC_EILCHR, &ea);
+				stix->c->ilchr = (stix_uch_t)c;
+				set_syntax_error (stix, STIX_SYNERR_ILCHR, &stix->c->lxc.l, &stix->c->ilchr_ucs);
 				return -1;
 			}
 			break;
+
+		single_char_token:
+			ADD_TOKEN_CHAR(stix, c);
+			GET_CHAR (stix);
+			break;
 	}
 
-wprintf (L"TOK: %S\n", fsc->tok.name.ptr);
+/*wprintf (L"TOK: %S\n", stix->c->tok.name.ptr);*/
 	return 0;
 }
 
-static void clear_sio_names (stix_t* fsc)
+
+static void clear_io_names (stix_t* stix)
 {
-	stix_link_t* cur;
-	while (fsc->sio_names)
+	stix_iolink_t* cur;
+	while (stix->c->io_names)
 	{
-		cur = fsc->sio_names;
-		fsc->sio_names = cur->link;
-		stix_freemem (fsc, cur);
+		cur = stix->c->io_names;
+		stix->c->io_names = cur->link;
+		stix_freemem (stix, cur);
 	}
 }
 
-static int begin_include (stix_t* fsc)
+static const stix_uch_t* add_io_name (stix_t* stix, const stix_ucs_t* name)
+{
+	stix_iolink_t* link;
+	stix_uch_t* ptr;
+	stix_size_t i;
+
+	link = (stix_iolink_t*) stix_callocmem (stix, STIX_SIZEOF(*link) + STIX_SIZEOF(stix_uch_t) * (name->len + 1));
+	if (!link) return STIX_NULL;
+
+	ptr = (stix_uch_t*)(link + 1);
+	for (i = 0; i < stix->c->tok.name.len; i++) ptr[i] = stix->c->tok.name.ptr[i];
+	ptr[i] = '\0';
+	link->link = stix->c->io_names;
+	stix->c->io_names = link;
+
+	return ptr;
+}
+
+static int begin_include (stix_t* stix)
 {
 	stix_ioarg_t* arg;
-	stix_link_t* link;
+	const stix_uch_t* io_name;
 
-	link = (stix_link_t*) stix_callocmem (fsc, STIX_SIZEOF(*link) + STIX_SIZEOF(stix_uch_t) * (fsc->tok.name.len + 1));
-	if (link == STIX_NULL) goto oops;
+	io_name = add_io_name (stix, &stix->c->tok.name);
+	if (!io_name) goto oops;
 
-	stix_strcpy ((stix_uch_t*)(link + 1), fsc->tok.name.ptr); 
-	link->link = fsc->sio_names;
-	fsc->sio_names = link;
+	arg = (stix_ioarg_t*) stix_callocmem (stix, STIX_SIZEOF(*arg));
+	if (!arg) goto oops;
 
-	arg = (stix_ioarg_t*) stix_callocmem (fsc, STIX_SIZEOF(*arg));
-	if (arg == STIX_NULL) goto oops;
-
-	arg->name = (const stix_uch_t*)(link + 1);
+	arg->name = io_name;
 	arg->line = 1;
 	arg->colm = 1;
-	arg->prev = fsc->sio.inp;
+	arg->includer = stix->c->curinp;
 
-	if (fsc->sio.impl (fsc, STIX_FSC_IO_OPEN, arg) <= -1) goto oops;
+	if (stix->c->impl (stix, STIX_IO_OPEN, arg) <= -1) goto oops;
 
-	fsc->sio.inp = arg;
-	/* fsc->parse.depth.incl++; */
+	stix->c->curinp = arg;
+	/* stix->c->depth.incl++; */
 
 	/* read in the first character in the included file. 
 	 * so the next call to get_token() sees the character read
 	 * from this file. */
-	if (get_char (fsc) <= -1 || get_token (fsc) <= -1) 
+	if (get_char(stix) <= -1 || get_token(stix) <= -1) 
 	{
-		end_include (fsc); 
+		end_include (stix); 
 		/* i don't jump to oops since i've called 
-		 * end_include() where fsc->sio.inp/arg is freed. */
+		 * end_include() where stix->c->curinp/arg is freed. */
 		return -1;
 	}
 
@@ -723,36 +768,36 @@ static int begin_include (stix_t* fsc)
 
 oops:
 	/* i don't need to free 'link' since it's linked to
-	 * fsc->sio_names that's freed at the beginning of stix_read()
+	 * stix->c->io_names that's freed at the beginning of stix_read()
 	 * or by stix_fini() */
-	if (arg) stix_freemem (fsc, arg);
+	if (arg) stix_freemem (stix, arg);
 	return -1;
 }
 
-static int end_include (stix_t* fsc)
+static int end_include (stix_t* stix)
 {
 	int x;
 	stix_ioarg_t* cur;
 
-	if (fsc->sio.inp == &fsc->sio.arg) return 0; /* no include */
+	if (stix->c->curinp == &stix->c->arg) return 0; /* no include */
 
 	/* if it is an included file, close it and
 	 * retry to read a character from an outer file */
 
-	x = fsc->sio.impl (fsc, STIX_FSC_IO_CLOSE, fsc->sio.inp);
+	x = stix->c->impl (stix, STIX_IO_CLOSE, stix->c->curinp);
 
 	/* if closing has failed, still destroy the
 	 * sio structure first as normal and return
 	 * the failure below. this way, the caller 
-	 * does not call STIX_FSC_SIO_CLOSE on 
-	 * fsc->sio.inp again. */
+	 * does not call STIX_IO_CLOSE on 
+	 * stix->c->curinp again. */
 
-	cur = fsc->sio.inp;
-	fsc->sio.inp = fsc->sio.inp->prev;
+	cur = stix->c->curinp;
+	stix->c->curinp = stix->c->curinp->includer;
 
 	STIX_ASSERT (cur->name != STIX_NULL);
-	stix_freemem (fsc, cur);
-	/* fsc->parse.depth.incl--; */
+	stix_freemem (stix, cur);
+	/* stix->parse.depth.incl--; */
 
 	if (x != 0)
 	{
@@ -760,18 +805,19 @@ static int end_include (stix_t* fsc)
 		return -1;
 	}
 
-	fsc->sio.lxc = fsc->sio.inp->lxc;
+	stix->c->lxc = stix->c->curinp->lxc;
 	return 1; /* ended the included file successfully */
 }
 
 
+#if 0
 /* ---------------------------------------------------------------------
  * Parser and Code Generator 
  * --------------------------------------------------------------------- */
 
 static STIX_INLINE int is_tok_pseudovar (stix_t* fsc)
 {
-	return fsc->tok.type == STIX_FSC_TOK_IDENT &&
+	return fsc->tok.type == STIX_IOTOK_IDENT &&
 	       (stix_strequal(fsc->tok.name.ptr, STIX_T("self")) ||
 	        stix_strequal(fsc->tok.name.ptr, STIX_T("super")) ||
 	        stix_strequal(fsc->tok.name.ptr, STIX_T("thisContext")) ||
@@ -782,7 +828,7 @@ static STIX_INLINE int is_tok_pseudovar (stix_t* fsc)
 
 static STIX_INLINE int is_tok_binsel (stix_t* fsc, const stix_uch_t* sel)
 {
-	return fsc->tok.type == STIX_FSC_TOK_BINSEL && 
+	return fsc->tok.type == STIX_IOTOK_BINSEL && 
 	       stix_strequal (fsc->tok.name.ptr, sel);
 }
 
@@ -820,7 +866,7 @@ static STIX_INLINE int is_tok_binsel (stix_t* fsc, const stix_uch_t* sel)
 	do { \
 		if (emit_stack_positional ( \
 			fsc, STORE_RECEIVER_VARIABLE, pos) == -1) return -1; \
-	} while (0)	
+	} while (0)
 
 #define EMIT_STORE_TEMPORARY_LOCATION(fsc,pos) \
 	do { \
@@ -1147,17 +1193,17 @@ static int parse_statements (stix_t* fsc)
 	 * 	<statement> ['. [<statements>]]
 	 */
 
-	while (fsc->tok.type != STIX_FSC_TOK_EOF) 
+	while (fsc->tok.type != STIX_IOTOK_EOF) 
 	{
 		if (parse_statement (fsc) == -1) return -1;
 
-		if (fsc->tok.type == STIX_FSC_TOK_PERIOD) 
+		if (fsc->tok.type == STIX_IOTOK_PERIOD) 
 		{
 			GET_TOKEN (fsc);
 			continue;
 		}
 
-		if (fsc->tok.type != STIX_FSC_TOK_EOF) 
+		if (fsc->tok.type != STIX_IOTOK_EOF) 
 		{
 			fsc->errnum = STIX_FSC_ERROR_NO_PERIOD;
 			return -1;
@@ -1170,11 +1216,11 @@ static int parse_statements (stix_t* fsc)
 
 static int parse_block_statements (stix_t* fsc)
 {
-	while (fsc->tok.type != STIX_FSC_TOK_RBRACK && 
-	       fsc->tok.type != STIX_FSC_TOK_EOF) {
+	while (fsc->tok.type != STIX_IOTOK_RBRACK && 
+	       fsc->tok.type != STIX_IOTOK_EOF) {
 
 		if (parse_statement(fsc) == -1) return -1;
-		if (fsc->tok.type != STIX_FSC_TOK_PERIOD) break;
+		if (fsc->tok.type != STIX_IOTOK_PERIOD) break;
 		GET_TOKEN (fsc);
 	}
 
@@ -1189,7 +1235,7 @@ static int parse_statement (stix_t* fsc)
 	 * returnOperator ::= '^'
 	 */
 
-	if (fsc->tok.type == STIX_FSC_TOK_RETURN) {
+	if (fsc->tok.type == STIX_IOTOK_RETURN) {
 		GET_TOKEN (fsc);
 		if (parse_expression(fsc) == -1) return -1;
 		EMIT_RETURN_FROM_MESSAGE (fsc);
@@ -1212,7 +1258,7 @@ static int parse_expression (stix_t* fsc)
 	 */
 	stix_vm_t* stx = fsc->stx;
 
-	if (fsc->tok.type == STIX_FSC_TOK_IDENT) {
+	if (fsc->tok.type == STIX_IOTOK_IDENT) {
 		stix_uch_t* ident = stix_tok_yield (&fsc->tok, 0);
 		if (ident == STIX_NULL) {
 			fsc->errnum = STIX_FSC_ERROR_MEMORY;
@@ -1220,7 +1266,7 @@ static int parse_expression (stix_t* fsc)
 		}
 
 		GET_TOKEN (fsc);
-		if (fsc->tok.type == STIX_FSC_TOK_ASSIGN) {
+		if (fsc->tok.type == STIX_IOTOK_ASSIGN) {
 			GET_TOKEN (fsc);
 			if (parse_assignment(fsc, ident) == -1) {
 				stix_free (ident);
@@ -1253,8 +1299,8 @@ static int parse_basic_expression (
 	int is_super;
 
 	if (parse_primary(fsc, ident, &is_super) == -1) return -1;
-	if (fsc->tok.type != STIX_FSC_TOK_EOF &&
-	    fsc->tok.type != STIX_FSC_TOK_PERIOD) 
+	if (fsc->tok.type != STIX_IOTOK_EOF &&
+	    fsc->tok.type != STIX_IOTOK_PERIOD) 
 	{
 		if (parse_message_continuation(fsc, is_super) == -1) return -1;
 	}
@@ -1324,27 +1370,27 @@ static int parse_primary (
 
 		*is_super = stix_false;
 
-		if (fsc->tok.type == STIX_FSC_TOK_IDENT) 
+		if (fsc->tok.type == STIX_IOTOK_IDENT) 
 		{
 			if (parse_primary_ident(fsc, 
 				fsc->tok.name.buffer, is_super) == -1) return -1;
 			GET_TOKEN (fsc);
 		}
-		else if (fsc->tok.type == STIX_FSC_TOK_CHRLIT) {
+		else if (fsc->tok.type == STIX_IOTOK_CHRLIT) {
 			pos = __add_character_literal(
 				fsc, fsc->tok.name.buffer[0]);
 			if (pos == -1) return -1;
 			EMIT_PUSH_LITERAL_CONSTANT (fsc, pos);
 			GET_TOKEN (fsc);
 		}
-		else if (fsc->tok.type == STIX_FSC_TOK_STRLIT) {
+		else if (fsc->tok.type == STIX_IOTOK_STRLIT) {
 			pos = __add_string_literal (fsc,
 				fsc->tok.name.buffer, fsc->tok.name.size);
 			if (pos == -1) return -1;
 			EMIT_PUSH_LITERAL_CONSTANT (fsc, pos);
 			GET_TOKEN (fsc);
 		}
-		else if (fsc->tok.type == STIX_FSC_TOK_NUMLIT) 
+		else if (fsc->tok.type == STIX_IOTOK_NUMLIT) 
 		{
 			/* TODO: other types of numbers, negative numbers, etc */
 			stix_word_t tmp;
@@ -1355,24 +1401,24 @@ static int parse_primary (
 			EMIT_PUSH_LITERAL_CONSTANT (fsc, pos);
 			GET_TOKEN (fsc);
 		}
-		else if (fsc->tok.type == STIX_FSC_TOK_SYMLIT) {
+		else if (fsc->tok.type == STIX_IOTOK_SYMLIT) {
 			pos = __add_symbol_literal (fsc,
 				fsc->tok.name.buffer, fsc->tok.name.size);
 			if (pos == -1) return -1;
 			EMIT_PUSH_LITERAL_CONSTANT (fsc, pos);
 			GET_TOKEN (fsc);
 		}
-		else if (fsc->tok.type == STIX_FSC_TOK_LBRACK) {
+		else if (fsc->tok.type == STIX_IOTOK_LBRACK) {
 			GET_TOKEN (fsc);
 			if (parse_block_constructor(fsc) == -1) return -1;
 		}
-		else if (fsc->tok.type == STIX_FSC_TOK_APAREN) {
+		else if (fsc->tok.type == STIX_IOTOK_APAREN) {
 			/* TODO: array literal */
 		}
-		else if (fsc->tok.type == STIX_FSC_TOK_LPAREN) {
+		else if (fsc->tok.type == STIX_IOTOK_LPAREN) {
 			GET_TOKEN (fsc);
 			if (parse_expression(fsc) == -1) return -1;
-			if (fsc->tok.type != STIX_FSC_TOK_RPAREN) {
+			if (fsc->tok.type != STIX_IOTOK_RPAREN) {
 				fsc->errnum = STIX_FSC_ERROR_NO_RPAREN;
 				return -1;
 			}
@@ -1473,13 +1519,13 @@ static int parse_block_constructor (stix_t* fsc)
 	 * <block argument> ::= ':'  identifier
 	 */
 
-	if (fsc->tok.type == STIX_FSC_TOK_COLON) 
+	if (fsc->tok.type == STIX_IOTOK_COLON) 
 	{
 		do 
 		{
 			GET_TOKEN (fsc);
 
-			if (fsc->tok.type != STIX_FSC_TOK_IDENT) 
+			if (fsc->tok.type != STIX_IOTOK_IDENT) 
 			{
 				fsc->errnum = STIX_FSC_ERROR_BLOCK_ARGUMENT_NAME;
 				return -1;
@@ -1488,7 +1534,7 @@ static int parse_block_constructor (stix_t* fsc)
 			/* TODO : store block arguments */
 			GET_TOKEN (fsc);
 		} 
-		while (fsc->tok.type == STIX_FSC_TOK_COLON);
+		while (fsc->tok.type == STIX_IOTOK_COLON);
 			
 		if (!is_vbar_tok(&fsc->tok)) 
 		{
@@ -1503,7 +1549,7 @@ static int parse_block_constructor (stix_t* fsc)
 	if (parse_method_temporaries(fsc) == -1) return -1;
 	if (parse_block_statements(fsc) == -1) return -1;
 
-	if (fsc->tok.type != STIX_FSC_TOK_RBRACK) 
+	if (fsc->tok.type != STIX_IOTOK_RBRACK) 
 	{
 		fsc->errnum = STIX_FSC_ERROR_BLOCK_NOT_CLOSED;
 		return -1;
@@ -1528,7 +1574,7 @@ static int parse_message_continuation (
 	 */
 	if (parse_keyword_message(fsc, is_super) == -1) return -1;
 
-	while (fsc->tok.type == STIX_FSC_TOK_SEMICOLON) 
+	while (fsc->tok.type == STIX_IOTOK_SEMICOLON) 
 	{
 		EMIT_CODE_TEST (fsc, STIX_T("DoSpecial(DUP_RECEIVER(CASCADE))"), STIX_T(""));
 		GET_TOKEN (fsc);
@@ -1553,7 +1599,7 @@ static int parse_keyword_message (stix_t* fsc, int is_super)
 	int nargs = 0, n;
 
 	if (parse_binary_message (fsc, is_super) == -1) return -1;
-	if (fsc->tok.type != STIX_FSC_TOK_KEYWORD) return 0;
+	if (fsc->tok.type != STIX_IOTOK_KEYWORD) return 0;
 
 	if (stix_name_open(&name, 0) == STIX_NULL) {
 		fsc->errnum = STIX_FSC_ERROR_MEMORY;
@@ -1585,7 +1631,7 @@ static int parse_keyword_message (stix_t* fsc, int is_super)
 		nargs++;
 		/* TODO: check if it has too many arguments.. */
 	} 
-	while (fsc->tok.type == STIX_FSC_TOK_KEYWORD);
+	while (fsc->tok.type == STIX_IOTOK_KEYWORD);
 
 	pos = __add_symbol_literal (fsc, name.buffer, name.size);
 	if (pos == -1) 
@@ -1617,7 +1663,7 @@ static int parse_binary_message (stix_t* fsc, int is_super)
 
 	if (parse_unary_message (fsc, is_super) == -1) return -1;
 
-	while (fsc->tok.type == STIX_FSC_TOK_BINSEL) 
+	while (fsc->tok.type == STIX_IOTOK_BINSEL) 
 	{
 		stix_uch_t* op = stix_tok_yield (&fsc->tok, 0);
 		if (op == STIX_NULL) {
@@ -1663,7 +1709,7 @@ static int parse_unary_message (stix_t* fsc, int is_super)
 	stix_word_t pos;
 	int n;
 
-	while (fsc->tok.type == STIX_FSC_TOK_IDENT) 
+	while (fsc->tok.type == STIX_IOTOK_IDENT) 
 	{
 		pos = __add_symbol_literal (fsc,
 			fsc->tok.name.buffer, fsc->tok.name.size);
@@ -1807,7 +1853,7 @@ static int parse_binary_pattern (stix_t* fsc)
 	GET_TOKEN (fsc);
 
 	/* collect the argument name */
-	if (fsc->tok.type != STIX_FSC_TOK_IDENT) 
+	if (fsc->tok.type != STIX_IOTOK_IDENT) 
 	{
 		stix_seterror (fsc, STIX_FSC_EILARGN, &fsc->tok.name, &fsc->tok.loc);
 		return -1;
@@ -1856,7 +1902,7 @@ static int parse_keyword_pattern (stix_t* fsc)
 		fsc->met.name.len += stix_strcpy (&fsc->met.name.buf[fsc->met.name.len], fsc->tok.name.ptr);
 
 		GET_TOKEN (fsc);
-		if (fsc->tok.type != STIX_FSC_TOK_IDENT || is_tok_pseudovar(fsc)) 
+		if (fsc->tok.type != STIX_IOTOK_IDENT || is_tok_pseudovar(fsc)) 
 		{
 			stix_seterror (fsc, STIX_FSC_EILARGN, &fsc->tok.name, &fsc->tok.loc);
 			return -1;
@@ -1881,7 +1927,7 @@ static int parse_keyword_pattern (stix_t* fsc)
 
 		GET_TOKEN (fsc);
 	} 
-	while (fsc->tok.type == STIX_FSC_TOK_KEYWORD);
+	while (fsc->tok.type == STIX_IOTOK_KEYWORD);
 
 	/* TODO: check if the method name exists */
 	/* if it exists, collapse arguments */
@@ -1903,15 +1949,15 @@ static int parse_method_name_pattern (stix_t* fsc)
 
 	switch (fsc->tok.type)
 	{
-		case STIX_FSC_TOK_IDENT:
+		case STIX_IOTOK_IDENT:
 			n = parse_unary_pattern (fsc);
 			break;
 
-		case STIX_FSC_TOK_BINSEL:
+		case STIX_IOTOK_BINSEL:
 			n = parse_binary_pattern (fsc);
 			break;
 
-		case STIX_FSC_TOK_KEYWORD:
+		case STIX_IOTOK_KEYWORD:
 			n = parse_keyword_pattern (fsc);
 			break;
 
@@ -1936,7 +1982,7 @@ static int parse_method_temporaries (stix_t* fsc)
 	if (!is_tok_binsel (fsc, STIX_T("|"))) return 0;
 
 	GET_TOKEN (fsc);
-	while (fsc->tok.type == STIX_FSC_TOK_IDENT) 
+	while (fsc->tok.type == STIX_IOTOK_IDENT) 
 	{
 		if (fsc->met.tmpr.count >= STIX_COUNTOF(fsc->met.tmpr.names)) 
 		{
@@ -1985,7 +2031,7 @@ static int parse_method_primitive (stix_t* fsc)
 	if (!is_tok_binsel (fsc, STIX_T("<"))) return 0;
 
 	GET_TOKEN (fsc);
-	if (fsc->tok.type != STIX_FSC_TOK_KEYWORD ||
+	if (fsc->tok.type != STIX_IOTOK_KEYWORD ||
 	    !stix_strequal (fsc->tok.name.ptr, STIX_T("primitive:"))) 
 	{
 		fsc->errnum = STIX_FSC_ERROR_PRIMITIVE_KEYWORD;
@@ -1993,7 +2039,7 @@ static int parse_method_primitive (stix_t* fsc)
 	}
 
 	GET_TOKEN (fsc); /* TODO: only integer */
-	if (fsc->tok.type != STIX_FSC_TOK_NUMLIT) 
+	if (fsc->tok.type != STIX_IOTOK_NUMLIT) 
 	{
 		fsc->errnum = STIX_FSC_ERROR_PRIMITIVE_NUMBER;
 		return -1;
@@ -2039,7 +2085,7 @@ static int compile_method (stix_t* fsc, int instance)
 
 	if (parse_method_name_pattern (fsc) <= -1) return -1;
 
-	if (fsc->tok.type != STIX_FSC_TOK_LBRACE)
+	if (fsc->tok.type != STIX_IOTOK_LBRACE)
 	{
 		/* { expected */
 		stix_seterror (fsc, STIX_FSC_ELBRACE, &fsc->tok.name, &fsc->tok.loc);
@@ -2052,7 +2098,7 @@ static int compile_method (stix_t* fsc, int instance)
 	    parse_statements (fsc) <= -1 ||
 	    finish_method (fsc) <= -1*/) return -1; 
 
-	if (fsc->tok.type != STIX_FSC_TOK_RBRACE)
+	if (fsc->tok.type != STIX_IOTOK_RBRACE)
 	{
 		/* } expected */
 		stix_seterror (fsc, STIX_FSC_ERBRACE, &fsc->tok.name, &fsc->tok.loc);
@@ -2069,7 +2115,7 @@ static int compile_classdef (stix_t* fsc, class_type_t class_type)
 	stix_oop_t oop1, oop2;
 	int extend;
 
-	if (fsc->tok.type != STIX_FSC_TOK_IDENT)
+	if (fsc->tok.type != STIX_IOTOK_IDENT)
 	{
 		/* class name expected. */
 		stix_seterror (fsc, STIX_FSC_ECLSNAM, &fsc->tok.name, &fsc->tok.loc);
@@ -2080,11 +2126,11 @@ static int compile_classdef (stix_t* fsc, class_type_t class_type)
 	{
 		/* this class is a new class. you can only extend an existing class */
 		GET_TOKEN (fsc);
-		if (fsc->tok.type == STIX_FSC_TOK_IDENT && 
+		if (fsc->tok.type == STIX_IOTOK_IDENT && 
 		    stix_strequal (fsc->tok.name.ptr, STIX_T("extend")))
 		{
 			GET_TOKEN (fsc);
-			if (fsc->tok.type != STIX_FSC_TOK_IDENT)
+			if (fsc->tok.type != STIX_IOTOK_IDENT)
 			{
 				stix_seterror (fsc, STIX_FSC_ECLSNAM, &fsc->tok.name, &fsc->tok.loc);
 				return -1;
@@ -2112,7 +2158,7 @@ static int compile_classdef (stix_t* fsc, class_type_t class_type)
 	}
 
 	GET_TOKEN (fsc);
-	if (fsc->tok.type != STIX_FSC_TOK_LBRACE)
+	if (fsc->tok.type != STIX_IOTOK_LBRACE)
 	{
 		/* { expected */
 		stix_seterror (fsc, STIX_FSC_ELBRACE, &fsc->tok.name, &fsc->tok.loc);
@@ -2131,7 +2177,7 @@ static int compile_classdef (stix_t* fsc, class_type_t class_type)
 			 * <category: ...>
 			 * <comment: ...>
 			 */
-			if (fsc->tok.type == STIX_FSC_TOK_BINSEL &&
+			if (fsc->tok.type == STIX_IOTOK_BINSEL &&
 			    get_vardef_type (fsc->tok.name.ptr, &vardef_type) >= 0)
 			{
 				if (compile_vardef (fsc, vardef_type) <= -1) return -1;
@@ -2165,7 +2211,7 @@ static int compile_classdef (stix_t* fsc, class_type_t class_type)
 		}	
 	}
 
-	if (fsc->tok.type != STIX_FSC_TOK_RBRACE)
+	if (fsc->tok.type != STIX_IOTOK_RBRACE)
 	{
 		/* TODO: } expected */
 		stix_seterror (fsc, STIX_FSC_ERBRACE, &fsc->tok.name, &fsc->tok.loc);
@@ -2179,7 +2225,7 @@ static int compile_classdef (stix_t* fsc, class_type_t class_type)
 
 static int compile_directive (stix_t* fsc)
 {
-	if (fsc->tok.type == STIX_FSC_TOK_IDENT)
+	if (fsc->tok.type == STIX_IOTOK_IDENT)
 	{
 		class_type_t class_type;
 
@@ -2192,7 +2238,7 @@ static int compile_directive (stix_t* fsc)
 		{
 			if (get_token (fsc) <= -1) return -1;
 
-			if (fsc->tok.type != STIX_FSC_TOK_STRLIT)
+			if (fsc->tok.type != STIX_IOTOK_STRLIT)
 			{
 				stix_seterror (fsc, STIX_FSC_ESTRLIT, &fsc->tok.name, &fsc->tok.loc);
 				return -1;
@@ -2214,30 +2260,61 @@ static int compile_directive (stix_t* fsc)
 
 	return 0;
 }
+#endif
 
-static int compile_stream (stix_t* fsc)
+static int compile_stream (stix_t* stix)
 {
-	GET_CHAR (fsc);
-	GET_TOKEN (fsc);
 
-	while (fsc->tok.type != STIX_FSC_TOK_EOF)
+
+/*
+	while (get_char(stix) > 0)
 	{
-		if (is_tok_binsel (fsc, STIX_T("@")))
+		stix_bch_t buf[16];
+		stix_size_t len;
+		len = stix_uctoutf8 (stix->c->curinp->lxc.c, buf, STIX_COUNTOF(buf));
+		printf ("%.*s", (int)len, buf);
+	}
+*/
+
+	GET_CHAR (stix);
+	GET_TOKEN (stix);
+
+	while (stix->c->tok.type != STIX_IOTOK_EOF)
+	{
+		stix_size_t i;
+		printf ("%d [", stix->c->tok.type);
+		for (i = 0; i < stix->c->tok.name.len; i++)
+			printf ("%c", stix->c->tok.name.ptr[i]);
+		printf ("]\n");
+		GET_TOKEN (stix);
+#if 0
+		if (is_tok_binsel (stix, STIX_T("@")))
 		{
-			GET_TOKEN (fsc);
-			if (compile_directive (fsc) <= -1) return -1;
+			GET_TOKEN (stix);
+			if (compile_directive (stix) <= -1) return -1;
 		}
 		/* TODO: normal smalltalk message sending expressions */
 		else 
 		{
-			stix_seterror (fsc, STIX_FSC_EILTTOK, &fsc->tok.name, &fsc->tok.loc);
+			stix_seterror (stix, STIX_FSC_EILTTOK, &stix->tok.name, &stix->tok.loc);
 			return -1;
 		}
+#endif
 	}
 
 	return 0;
 }
-#endif
+
+static void fini_compiler (stix_t* stix)
+{
+	if (stix->c)
+	{
+		clear_io_names (stix);
+		stix_freemem (stix, stix->c->tok.name.ptr);
+		stix_freemem (stix, stix->c);
+		stix->c = STIX_NULL;
+	}
+}
 
 int stix_compile (stix_t* stix, stix_ioimpl_t io)
 {
@@ -2249,35 +2326,52 @@ int stix_compile (stix_t* stix, stix_ioimpl_t io)
 		return -1;
 	}
 
-	STIX_ASSERT (stix->c == STIX_NULL);
+	if (!stix->c)
+	{
+		stix_cb_t cb, * cbp;
+		STIX_MEMSET (&cb, 0, STIX_SIZEOF(cb));
+		cb.fini = fini_compiler;
+		cbp = stix_regcb (stix, &cb);
+		if (!cbp) return -1;
 
-	stix->c = stix_callocmem (stix, STIX_SIZEOF(*stix->c));
-	if (!stix->c) return -1;
+		stix->c = stix_callocmem (stix, STIX_SIZEOF(*stix->c));
+		if (!stix->c) 
+		{
+			stix_deregcb (stix, cbp);
+			return -1;
+		}
+
+		stix->c->tok.name.ptr = stix_allocmem (stix, (TOKEN_NAME_CAPA + 1) * STIX_SIZEOF(stix_uch_t));
+		if (!stix->c->tok.name.ptr)
+		{
+			stix_deregcb (stix, cbp);
+			stix_freemem (stix, stix->c);
+			return -1;
+		}
+		stix->c->tok.name.ptr[0] = '\0';
+		stix->c->tok.name.len = 0;
+		stix->c->tok.name_capa = TOKEN_NAME_CAPA;
+
+		stix->c->ilchr_ucs.ptr = &stix->c->ilchr;
+		stix->c->ilchr_ucs.len = 1;
+	}
+
 	stix->c->impl = io;
 	stix->c->arg.line = 1;
 	stix->c->arg.colm = 1;
 	stix->c->curinp = &stix->c->arg;
-//	clear_sio_names (stix);
+	clear_io_names (stix);
 
 	/* open the top-level stream */
 	n = stix->c->impl (stix, STIX_IO_OPEN, stix->c->curinp);
 	if (n <= -1) return -1;
 
-//	if (compile_stream (stix) <= -1) goto oops;
-	while (get_char(stix) > 0)
-	{
-		stix_bch_t buf[16];
-		stix_size_t len;
-		len = stix_uctoutf8 (stix->c->curinp->lxc.c, buf, STIX_COUNTOF(buf));
-		printf ("%.*s", (int)len, buf);
-	}
+	if (compile_stream (stix) <= -1) goto oops;
 
 	/* close the stream */
 	STIX_ASSERT (stix->c->curinp == &stix->c->arg);
 	stix->c->impl (stix, STIX_IO_CLOSE, stix->c->curinp);
-	
-	stix_freemem (stix, stix->c);
-	stix->c = STIX_NULL;
+
 	return 0;
 
 oops:
@@ -2298,11 +2392,12 @@ oops:
 	}
 
 	stix->c->impl (stix, STIX_IO_CLOSE, stix->c->curinp);
-
-	stix_freemem (stix, stix->c);
-	stix->c = STIX_NULL;
 	return -1;
 }
 
+void stix_getsynerr (stix_t* stix, stix_synerr_t* synerr)
+{
+	STIX_ASSERT (stix->c != STIX_NULL);
 
-
+	if (synerr) *synerr = stix->c->synerr;
+}

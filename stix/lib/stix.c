@@ -79,9 +79,20 @@ oops:
 
 void stix_fini (stix_t* stix)
 {
+	stix_cb_t* cb;
+
+	for (cb = stix->cblist; cb; cb = cb->next)
+	{
+		if (cb->fini) cb->fini (stix);
+	}
+
 	stix_killheap (stix, stix->newheap);
 	stix_killheap (stix, stix->curheap);
 	stix_killheap (stix, stix->permheap);
+
+
+	/* deregister all callbacks */
+	while (stix->cblist) stix_deregcb (stix, stix->cblist);
 }
 
 stix_mmgr_t* stix_getmmgr (stix_t* stix)
@@ -144,6 +155,37 @@ int stix_getoption (stix_t* stix, stix_option_t id, void* value)
 }
 
 
+stix_cb_t* stix_regcb (stix_t* stix, stix_cb_t* tmpl)
+{
+	stix_cb_t* actual;
+
+	actual = stix_allocmem (stix, STIX_SIZEOF(*actual));
+	if (!actual) return STIX_NULL;
+
+	*actual = *tmpl;
+	actual->next = stix->cblist;
+	actual->prev = STIX_NULL;
+	stix->cblist = actual;
+
+	return actual;
+}
+
+void stix_deregcb (stix_t* stix, stix_cb_t* cb)
+{
+	if (cb == stix->cblist)
+	{
+		stix->cblist = stix->cblist->next;
+		if (stix->cblist) stix->cblist->prev = STIX_NULL;
+	}
+	else
+	{
+		if (cb->next) cb->next->prev = cb->prev;
+		if (cb->prev) cb->prev->next = cb->next;
+	}
+
+	stix_freemem (stix, cb);
+}
+
 stix_oow_t stix_hashbytes (const stix_uint8_t* ptr, stix_oow_t len)
 {
 	stix_oow_t h = 0;
@@ -178,7 +220,7 @@ void* stix_allocmem (stix_t* stix, stix_size_t size)
 	void* ptr;
 
 	ptr = STIX_MMGR_ALLOC (stix->mmgr, size);
-	if (ptr == STIX_NULL) stix->errnum = STIX_ENOMEM;
+	if (!ptr) stix->errnum = STIX_ENOMEM;
 	return ptr;
 }
 
@@ -187,8 +229,15 @@ void* stix_callocmem (stix_t* stix, stix_size_t size)
 	void* ptr;
 
 	ptr = STIX_MMGR_ALLOC (stix->mmgr, size);
-	if (ptr == STIX_NULL) stix->errnum = STIX_ENOMEM;
+	if (!ptr) stix->errnum = STIX_ENOMEM;
 	else STIX_MEMSET (ptr, 0, size);
+	return ptr;
+}
+
+void* stix_reallocmem (stix_t* stix, void* ptr, stix_size_t size)
+{
+	ptr = STIX_MMGR_REALLOC (stix->mmgr, ptr, size);
+	if (!ptr) stix->errnum = STIX_ENOMEM;
 	return ptr;
 }
 

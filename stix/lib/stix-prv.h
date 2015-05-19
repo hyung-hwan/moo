@@ -137,14 +137,20 @@ enum stix_iocmd_t
 };
 typedef enum stix_iocmd_t stix_iocmd_t;
 
-typedef struct stix_iolxc_t stix_iolxc_t;
-struct stix_iolxc_t
+struct stix_ioloc_t
 {
-	stix_uch_t        c;    /**< character */
 	unsigned long     line; /**< line */
 	unsigned long     colm; /**< column */
 	const stix_uch_t* file; /**< file specified in #include */
 };
+typedef struct stix_ioloc_t stix_ioloc_t;
+
+struct stix_iolxc_t
+{
+	stix_uci_t    c; /**< character */
+	stix_ioloc_t  l; /**< location */
+};
+typedef struct stix_iolxc_t stix_iolxc_t;
 
 enum stix_ioarg_flag_t
 {
@@ -188,8 +194,8 @@ struct stix_ioarg_t
 		int pos, len;
 	} b;
 
-	stix_oow_t line;
-	stix_oow_t colm;
+	unsigned long line;
+	unsigned long colm;
 
 	stix_iolxc_t lxc;
 	/*-----------------------------------------------------------------*/
@@ -201,12 +207,101 @@ typedef stix_ssize_t (*stix_ioimpl_t) (
 	stix_ioarg_t* arg
 );
 
+
+
+
+struct stix_iotok_t
+{
+	enum
+	{
+		 STIX_IOTOK_EOF,
+		 STIX_IOTOK_CHRLIT,
+		 STIX_IOTOK_STRLIT,
+		 STIX_IOTOK_SYMLIT,
+		 STIX_IOTOK_NUMLIT,
+		 STIX_IOTOK_IDENT,
+		 STIX_IOTOK_BINSEL,
+		 STIX_IOTOK_KEYWORD,
+		 STIX_IOTOK_PRIMITIVE,
+		 STIX_IOTOK_ASSIGN,
+		 STIX_IOTOK_COLON,
+		 STIX_IOTOK_RETURN,
+		 STIX_IOTOK_LBRACE,
+		 STIX_IOTOK_RBRACE,
+		 STIX_IOTOK_LBRACK,
+		 STIX_IOTOK_RBRACK,
+		 STIX_IOTOK_LPAREN,
+		 STIX_IOTOK_RPAREN,
+		 STIX_IOTOK_APAREN, /* #( */
+		 STIX_IOTOK_BPAREN, /* #[ */
+		 STIX_IOTOK_PERIOD,
+		 STIX_IOTOK_SEMICOLON
+	} type;
+
+	stix_ucs_t name;
+	stix_size_t name_capa;
+
+	stix_ioloc_t loc;
+};
+typedef struct stix_iotok_t stix_iotok_t;
+
+enum stix_synerrnum_t
+{
+	STIX_SYNERR_NOERR,
+	STIX_SYNERR_ILCHR, /* illegal character */
+	STIX_SYNERR_CMTNC, /* comment not closed */
+	STIX_SYNERR_STRNC, /* string not closed */
+	STIX_SYNERR_CLTNT, /* character literal not terminated */
+	STIX_SYNERR_HLTNT, /* hased literal not terminated */
+};
+typedef enum stix_synerrnum_t stix_synerrnum_t;
+
+typedef struct stix_iolink_t stix_iolink_t;
+struct stix_iolink_t
+{
+	stix_iolink_t* link;
+};
+
+struct stix_synerr_t
+{
+	stix_synerrnum_t num;
+	stix_ioloc_t     loc;
+	stix_ucs_t       tgt;
+};
+typedef struct stix_synerr_t stix_synerr_t;
+
 struct stix_compiler_t
 {
-	stix_ioimpl_t impl;   /* input handler */
+	/* input handler */
+	stix_ioimpl_t impl;
+
+	/* information about the last meaningful character read.
+	 * this is a copy of curinp->lxc if no ungetting is performed.
+	 * if there is something in the unget buffer, this is overwritten
+	 * by a value from the buffer when the request to read a character
+	 * is served */
 	stix_iolxc_t  lxc;
-	stix_ioarg_t  arg;    /* static top-level data */
-	stix_ioarg_t* curinp;  /* pointer to the current data */
+
+	/* unget buffer */
+	stix_iolxc_t  ungot[10];
+	int           nungots;
+
+	/* static input data buffer */
+	stix_ioarg_t  arg;    
+
+	/* pointer to the current input data. initially, it points to &arg */
+	stix_ioarg_t* curinp;
+
+	/* the last token read */
+	stix_iotok_t  tok;
+
+	stix_iolink_t* io_names;
+
+	stix_synerr_t synerr;
+
+	/* temporary space to handle an illegal character */
+	stix_uch_t ilchr;
+	stix_ucs_t ilchr_ucs;
 };
 
 #endif
@@ -408,6 +503,11 @@ stix_size_t stix_ucslen (
 int stix_compile (
 	stix_t*       stix,
 	stix_ioimpl_t io
+);
+
+void stix_getsynerr (
+	stix_t* stix,
+	stix_synerr_t* synerr
 );
 
 #if defined(__cplusplus)

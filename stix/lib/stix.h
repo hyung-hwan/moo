@@ -36,18 +36,27 @@
  * ========================================================================= */
 /* TODO: define these types and macros using autoconf */
 typedef unsigned char      stix_uint8_t;
+typedef signed char        stix_int8_t;
+
 typedef unsigned short int stix_uint16_t;
+typedef signed short int stix_int16_t;
+
 #if defined(__MSDOS__)
 	typedef unsigned long int stix_uint32_t;
+	typedef signed long int stix_int32_t;
 #else
 	typedef unsigned int stix_uint32_t;
+	typedef signed int stix_int32_t;
 #endif
+
 typedef unsigned long int stix_uintptr_t;
 typedef unsigned long int stix_size_t;
-typedef long int          stix_ssize_t;
+typedef signed long int   stix_ssize_t;
 
-typedef unsigned short int stix_uch_t; /* TODO ... wchar_t??? */
-typedef char               stix_bch_t;
+typedef stix_uint16_t stix_uch_t; /* TODO ... wchar_t??? */
+typedef stix_int32_t  stix_uci_t;
+
+typedef char          stix_bch_t;
 
 
 struct stix_ucs_t
@@ -55,19 +64,15 @@ struct stix_ucs_t
 	stix_uch_t* ptr;
 	stix_size_t len;
 };
-
-struct stix_bcs_t
-{
-	stix_bch_t* ptr;
-	stix_size_t len;
-};
-
 typedef struct stix_ucs_t stix_ucs_t;
-typedef struct stix_bcs_t stix_bcs_t;
 
 /* =========================================================================
  * PRIMITIVE MACROS
  * ========================================================================= */
+#define STIX_UCI_EOF ((stix_uci_t)-1)
+#define STIX_UCI_NL  ((stix_uci_t)'\n')
+
+
 #define STIX_SIZEOF(x) (sizeof(x))
 #define STIX_COUNTOF(x) (sizeof(x) / sizeof(x[0]))
 
@@ -105,6 +110,7 @@ typedef struct stix_bcs_t stix_bcs_t;
 	(value = (((type)(value)) | (((bits) & STIX_LBMASK(type,length)) << (offset))))
 
 
+#define STIX
 /** 
  * The STIX_BITS_MAX() macros calculates the maximum value that the 'nbits'
  * bits of an unsigned integer of the given 'type' can hold.
@@ -276,7 +282,11 @@ enum stix_errnum_t
 	STIX_EINVAL,  /**< invalid parameter or data */
 	STIX_ENOENT,  /**< no matching entry */
 	STIX_EIOERR,  /**< I/O error */
-	STIX_EECERR   /**< encoding conversion error */
+	STIX_EECERR,  /**< encoding conversion error */
+
+#if defined(STIX_INCLUDE_COMPILER)
+	STIX_ESYNTAX /** < syntax error */
+#endif
 };
 typedef enum stix_errnum_t stix_errnum_t;
 
@@ -707,11 +717,24 @@ struct stix_heap_t
 	stix_uint8_t* ptr;   /* next allocation pointer */
 };
 
+
+
+
+typedef struct stix_t stix_t;
+
+typedef void (*stix_cbimpl_t) (stix_t* stix);
+
+typedef struct stix_cb_t stix_cb_t;
+struct stix_cb_t
+{
+	stix_cbimpl_t fini;
+	stix_cb_t*    prev;
+	stix_cb_t*    next;
+};
+
 #if defined(STIX_INCLUDE_COMPILER)
 typedef struct stix_compiler_t stix_compiler_t;
 #endif
-
-typedef struct stix_t stix_t;
 
 struct stix_t
 {
@@ -724,6 +747,8 @@ struct stix_t
 		stix_oow_t dfl_symtab_size;
 		stix_oow_t dfl_sysdic_size;
 	} option;
+
+	stix_cb_t* cblist;
 
 	/* ========================= */
 
@@ -816,7 +841,7 @@ STIX_EXPORT void stix_seterrnum (
  * \return 0 on success, -1 on failure
  */
 STIX_EXPORT int stix_getoption (
-	stix_t*        vm,
+	stix_t*        stix,
 	stix_option_t  id,
 	void*          value
 );
@@ -828,9 +853,20 @@ STIX_EXPORT int stix_getoption (
  * \return 0 on success, -1 on failure
  */
 STIX_EXPORT int stix_setoption (
-	stix_t*       vm,
+	stix_t*       stix,
 	stix_option_t id,
 	const void*   value
+);
+
+
+STIX_EXPORT stix_cb_t* stix_regcb (
+	stix_t*    stix,
+	stix_cb_t* tmpl
+);
+
+STIX_EXPORT void stix_deregcb (
+	stix_t*    stix,
+	stix_cb_t* cb
 );
 
 /**
@@ -838,7 +874,7 @@ STIX_EXPORT int stix_setoption (
  * It is not affected by #STIX_NOGC.
  */
 STIX_EXPORT void stix_gc (
-	stix_t* vm
+	stix_t* stix
 );
 
 /**
@@ -898,12 +934,18 @@ STIX_EXPORT void stix_poptmps (
 /* Memory allocation/deallocation functions using stix's MMGR */
 
 STIX_EXPORT void* stix_allocmem (
-	stix_t* stix,
+	stix_t*     stix,
 	stix_size_t size
 );
 
 STIX_EXPORT void* stix_callocmem (
-	stix_t* stix,
+	stix_t*     stix,
+	stix_size_t size
+);
+
+STIX_EXPORT void* stix_reallocmem (
+	stix_t*     stix,
+	void*       ptr,
 	stix_size_t size
 );
 

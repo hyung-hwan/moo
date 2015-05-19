@@ -179,6 +179,16 @@ static void dump_symbol_table (stix_t* stix)
 	printf ("--------------------------------------------\n");
 }
 
+static char* syntax_error_msg[] = 
+{
+	"no error",
+	"illegal character",
+	"comment not closed",
+	"string not closed",
+	"no character after $",
+	"no valid character after #"
+};
+
 int main (int argc, char* argv[])
 {
 	stix_t* stix;
@@ -250,7 +260,31 @@ printf ("%p\n", a);
 	xtn->source_path = argv[1];
 	if (stix_compile (stix, input_handler) <= -1)
 	{
-		printf ("cannot compile code\n");
+		if (stix->errnum == STIX_ESYNTAX)
+		{
+			stix_synerr_t synerr;
+			stix_getsynerr (stix, &synerr);
+			printf ("ERROR: syntax error at line %lu column %lu - %s", 
+				(unsigned long int)synerr.loc.line, (unsigned long int)synerr.loc.colm,
+				syntax_error_msg[synerr.num]);
+			if (synerr.tgt.len > 0)
+			{
+				stix_bch_t bcs[1024]; /* TODO: right buffer size */
+				stix_size_t bcslen = STIX_COUNTOF(bcs);
+				stix_size_t ucslen = synerr.tgt.len;
+
+				if (stix_ucstoutf8 (synerr.tgt.ptr, &ucslen, bcs, &bcslen) >= 0)
+				{
+					printf (" [%.*s]", (int)bcslen, bcs);
+				}
+
+			}
+			printf ("\n");
+		}
+		else
+		{
+			printf ("ERROR: cannot compile code\n");
+		}
 		stix_close (stix);
 		return -1;
 	}
