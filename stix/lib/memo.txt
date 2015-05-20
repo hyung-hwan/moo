@@ -116,7 +116,7 @@ stix stix.im
 #class(#byte) Association(Magnitude) 
 {
 	declare a, b, c.
-	declare(#class_instance) x.
+	declare(#classinst) x.
 	declare(#class) MAX_SIZE.
 
 	function(#class) initialize
@@ -500,7 +500,7 @@ class Association -> revisit the Association class defined previsously. Revisiti
 
 ## class instance variable can be accessed inside the class method only.
 
-	declare(#class_instance) d, e, f
+	declare(#classinst) d, e, f
 
 ## All instance variables are protected by default.
 	declare key, value.
@@ -508,7 +508,7 @@ class Association -> revisit the Association class defined previsously. Revisiti
 
 ##
 ##	declare(#class) a, b, c.   ## class variables
-##	declare(#class_instance) a, b, c. ## class instance variables
+##	declare(#classinst) a, b, c. ## class instance variables
 ##	declare(#instance) a, b, c. ## isntance variables
 ##	declare a,b, c. ## instance variables
 
@@ -525,9 +525,9 @@ class Association -> revisit the Association class defined previsously. Revisiti
 ## Casing is not used to differentiate variable kinds like global local temporary etc.
 
 ## other modifiers (EXPERIMENTAL. JUST THINKING).
-## declare(#class,#public,#rw) x. x can be accessed by other classes in read-write mode.
+## declare(#class #public #rw) x. x can be accessed by other classes in read-write mode.
 ## function(#private) xxx xxx is a private method
-## function(#class,#private) xxx xxx is private class method.
+## function(#class #private) xxx xxx is private class method.
 
 	function(#class) initialize
 	{

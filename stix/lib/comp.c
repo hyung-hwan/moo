@@ -2169,9 +2169,10 @@ wprintf (L"METHOD NAME ==> [%S] temporaries => %d\n", fsc->met.name.buf, fsc->me
 
 enum class_mod_t
 {
-	BYTE_INDEXED    = (1 << 0),
-	WORD_INDEXED    = (1 << 1),
-	POINTER_INDEXED = (1 << 2)
+	CLASS_BYTE_INDEXED    = (1 << 0),
+	CLASS_WORD_INDEXED    = (1 << 1),
+	CLASS_POINTER_INDEXED = (1 << 2),
+	CLASS_EXTEND          = (1 << 3)
 };
 
 enum dcl_mod_t
@@ -2209,6 +2210,10 @@ static int compile_class_declare (stix_t* stix)
 				/* #dcl(#instance) */
 				dcl_mod &= ~(DCL_CLASS | DCL_CLASSINST);
 			}
+			else
+			{
+				break;
+			}
 		}
 		while (1);
 
@@ -2217,6 +2222,8 @@ static int compile_class_declare (stix_t* stix)
 			set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
 		}
+
+		GET_TOKEN (stix);
 	}
 
 	do
@@ -2272,20 +2279,20 @@ static int compile_class_definition (stix_t* stix)
 			if (is_token_ksym(stix, KSYM_BYTE))
 			{
 				/* #class(#byte) */
-				class_mod &= ~(BYTE_INDEXED | WORD_INDEXED | POINTER_INDEXED);
-				class_mod |= BYTE_INDEXED;
+				class_mod &= ~(CLASS_BYTE_INDEXED | CLASS_WORD_INDEXED | CLASS_POINTER_INDEXED);
+				class_mod |= CLASS_BYTE_INDEXED;
 			}
 			else if (is_token_ksym(stix, KSYM_WORD))
 			{
 				/* #class(#word) */
-				class_mod &= ~(BYTE_INDEXED | WORD_INDEXED | POINTER_INDEXED);
-				class_mod |= WORD_INDEXED;
+				class_mod &= ~(CLASS_BYTE_INDEXED | CLASS_WORD_INDEXED | CLASS_POINTER_INDEXED);
+				class_mod |= CLASS_WORD_INDEXED;
 			}
 			else if (is_token_ksym(stix, KSYM_POINTER))
 			{
 				/* #class(#pointer) */
-				class_mod &= ~(BYTE_INDEXED | WORD_INDEXED | POINTER_INDEXED);
-				class_mod |= POINTER_INDEXED;
+				class_mod &= ~(CLASS_BYTE_INDEXED | CLASS_WORD_INDEXED | CLASS_POINTER_INDEXED);
+				class_mod |= CLASS_POINTER_INDEXED;
 			}
 			/* place other modifiers here */
 			else 
@@ -2315,19 +2322,45 @@ static int compile_class_definition (stix_t* stix)
 
 	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
 	{
-		/* superclass is specified */
+		/* superclass is specified. new class defintion.
+		 * #class Class(Object) 
+		 */
+		GET_TOKEN (stix);
+
+		/* TODO: multiple inheritance */
+
+		if (stix->c->tok.type != STIX_IOTOK_IDENT)
+		{
+			/* superclass name expected */
+			set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+
+		GET_TOKEN (stix);
+		if (stix->c->tok.type != STIX_IOTOK_RPAREN)
+		{
+			set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+
+		GET_TOKEN (stix);
 	}
-	
+	else
+	{
+		/* extending class */
+		class_mod |= CLASS_EXTEND;
+	}
+
 	if (stix->c->tok.type != STIX_IOTOK_LBRACE)
 	{
 		set_syntax_error (stix, STIX_SYNERR_LBRACE, &stix->c->tok.loc, &stix->c->tok.name);
 		return -1;
 	}
 
+	GET_TOKEN (stix);
+
 	while (1)
 	{
-		GET_TOKEN (stix);
-
 		if (is_token_ksym(stix, KSYM_DCL) || is_token_ksym(stix, KSYM_DECLARE))
 		{
 			/* variable definition. #dcl or #declare */

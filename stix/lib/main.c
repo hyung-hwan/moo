@@ -190,7 +190,13 @@ static char* syntax_error_msg[] =
 	"no character after $",
 	"no valid character after #",
 	"missing colon",
-	"string expected" /* string expected in place of ${1} */
+	"string expected", /* string expected in place of ${1} */
+	"{ expected",
+	"} expected",
+	") expected",
+	". expected",
+	"wrong class modifier",
+	"identifier expected"
 };
 
 int main (int argc, char* argv[])
@@ -267,15 +273,30 @@ printf ("%p\n", a);
 		if (stix->errnum == STIX_ESYNTAX)
 		{
 			stix_synerr_t synerr;
+			stix_bch_t bcs[1024]; /* TODO: right buffer size */
+			stix_size_t bcslen, ucslen;
+
 			stix_getsynerr (stix, &synerr);
-			printf ("ERROR: syntax error at line %lu column %lu - %s", 
+
+			printf ("ERROR: ");
+			if (synerr.loc.file)
+			{
+				bcslen = STIX_COUNTOF(bcs);
+				ucslen = ~(stix_size_t)0;
+				if (stix_ucstoutf8 (synerr.loc.file, &ucslen, bcs, &bcslen) >= 0)
+				{
+					printf ("%.*s ", (int)bcslen, bcs);
+				}
+			}
+
+
+			printf ("syntax error at line %lu column %lu - %s", 
 				(unsigned long int)synerr.loc.line, (unsigned long int)synerr.loc.colm,
 				syntax_error_msg[synerr.num]);
 			if (synerr.tgt.len > 0)
 			{
-				stix_bch_t bcs[1024]; /* TODO: right buffer size */
-				stix_size_t bcslen = STIX_COUNTOF(bcs);
-				stix_size_t ucslen = synerr.tgt.len;
+				bcslen = STIX_COUNTOF(bcs);
+				ucslen = synerr.tgt.len;
 
 				if (stix_ucstoutf8 (synerr.tgt.ptr, &ucslen, bcs, &bcslen) >= 0)
 				{
