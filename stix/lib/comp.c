@@ -2165,41 +2165,220 @@ wprintf (L"METHOD NAME ==> [%S] temporaries => %d\n", fsc->met.name.buf, fsc->me
 	return 0;
 }
 
-static int compile_classdef (stix_t* fsc, class_type_t class_type)
-{
-	stix_oop_t oop1, oop2;
-	int extend;
+#endif
 
-	if (fsc->tok.type != STIX_IOTOK_IDENT)
+enum class_mod_t
+{
+	BYTE_INDEXED    = (1 << 0),
+	WORD_INDEXED    = (1 << 1),
+	POINTER_INDEXED = (1 << 2)
+};
+
+enum dcl_mod_t
+{
+	DCL_CLASS     = (1 << 0),
+	DCL_CLASSINST = (1 << 1)
+};
+
+
+static int compile_class_declare (stix_t* stix)
+{
+	int dcl_mod = 0;
+
+	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
 	{
-		/* class name expected. */
-		stix_seterror (fsc, STIX_FSC_ECLSNAM, &fsc->tok.name, &fsc->tok.loc);
+		/* variable modifier */
+		do
+		{
+			GET_TOKEN (stix);
+
+			if (is_token_ksym(stix, KSYM_CLASS))
+			{
+				/* #dcl(#class) */
+				dcl_mod &= ~(DCL_CLASS | DCL_CLASSINST);
+				dcl_mod |= DCL_CLASS;
+			}
+			else if (is_token_ksym(stix, KSYM_CLASSINST))
+			{
+				/* #dcl(#classinst) */
+				dcl_mod &= ~(DCL_CLASS | DCL_CLASSINST);
+				dcl_mod |= DCL_CLASSINST;
+			}
+			else if (is_token_ksym(stix, KSYM_INSTANCE))
+			{
+				/* #dcl(#instance) */
+				dcl_mod &= ~(DCL_CLASS | DCL_CLASSINST);
+			}
+		}
+		while (1);
+
+		if (stix->c->tok.type != STIX_IOTOK_RPAREN)
+		{
+			set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+	}
+
+	do
+	{
+		if (stix->c->tok.type == STIX_IOTOK_IDENT)
+		{
+			/* TODO: ADD IT TO THE CLASS */
+		}
+		else
+		{
+			break;
+		}
+
+		GET_TOKEN (stix);
+	}
+	while (1);
+
+	if (stix->c->tok.type != STIX_IOTOK_PERIOD)
+	{
+		set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
 		return -1;
 	}
 
-	if (stix_vm_findclass (fsc->vm, fsc->tok.name.ptr, &oop1) <= -1)
+	GET_TOKEN (stix);
+	return 0;
+}
+
+static int compile_class_function (stix_t* stix)
+{
+	return 0;
+}
+
+static int compile_class_definition (stix_t* stix)
+{
+	/* class-def := #class [class-mod] "{" class-def-body "}"
+	 * class-mod := "(" (#byte | #word | #pointer)* ")"
+	 * class-def-body := (var-def | fun-def)*
+	 * var-def := #dcl [var-mod] identifier+ "."
+	 * var-mod := "(" (#class | #classinst | #instance)* ")"
+	 * fun-def := #fun [fun-mod] message-definition
+	 */
+
+	stix_oop_t oop1, oop2;
+	int class_mod = 0;
+
+	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
+	{
+		/* process class modifiers */
+		do
+		{
+			GET_TOKEN (stix);
+
+			if (is_token_ksym(stix, KSYM_BYTE))
+			{
+				/* #class(#byte) */
+				class_mod &= ~(BYTE_INDEXED | WORD_INDEXED | POINTER_INDEXED);
+				class_mod |= BYTE_INDEXED;
+			}
+			else if (is_token_ksym(stix, KSYM_WORD))
+			{
+				/* #class(#word) */
+				class_mod &= ~(BYTE_INDEXED | WORD_INDEXED | POINTER_INDEXED);
+				class_mod |= WORD_INDEXED;
+			}
+			else if (is_token_ksym(stix, KSYM_POINTER))
+			{
+				/* #class(#pointer) */
+				class_mod &= ~(BYTE_INDEXED | WORD_INDEXED | POINTER_INDEXED);
+				class_mod |= POINTER_INDEXED;
+			}
+			/* place other modifiers here */
+			else 
+			{
+				break;
+			}
+		} 
+		while (1);
+
+		if (stix->c->tok.type != STIX_IOTOK_RPAREN)
+		{
+			set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+
+		GET_TOKEN (stix);
+	}
+
+	if (stix->c->tok.type != STIX_IOTOK_IDENT)
+	{
+		/* class name expected. */
+		set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	GET_TOKEN (stix);
+
+	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
+	{
+		/* superclass is specified */
+	}
+	
+	if (stix->c->tok.type != STIX_IOTOK_LBRACE)
+	{
+		set_syntax_error (stix, STIX_SYNERR_LBRACE, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	while (1)
+	{
+		GET_TOKEN (stix);
+
+		if (is_token_ksym(stix, KSYM_DCL) || is_token_ksym(stix, KSYM_DECLARE))
+		{
+			/* variable definition. #dcl or #declare */
+			GET_TOKEN (stix);
+			if (compile_class_declare(stix) <= -1) return -1;
+		}
+		else if (is_token_ksym(stix, KSYM_FUN) || is_token_ksym(stix, KSYM_FUNCTION))
+		{
+			/* function definition. #fun or #function */
+			GET_TOKEN (stix);
+			if (compile_class_function(stix) <= -1) return -1;
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	if (stix->c->tok.type != STIX_IOTOK_RBRACE)
+	{
+		set_syntax_error (stix, STIX_SYNERR_RBRACE, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	GET_TOKEN (stix);
+	return 0;
+
+#if 0
+	if (stix_vm_findclass (stix->vm, stix->tok.name.ptr, &oop1) <= -1)
 	{
 		/* this class is a new class. you can only extend an existing class */
-		GET_TOKEN (fsc);
-		if (fsc->tok.type == STIX_IOTOK_IDENT && 
-		    stix_strequal (fsc->tok.name.ptr, STIX_T("extend")))
+		GET_TOKEN (stix);
+		if (stix->tok.type == STIX_IOTOK_IDENT && 
+		    stix_strequal (stix->tok.name.ptr, STIX_T("extend")))
 		{
-			GET_TOKEN (fsc);
-			if (fsc->tok.type != STIX_IOTOK_IDENT)
+			GET_TOKEN (stix);
+			if (stix->tok.type != STIX_IOTOK_IDENT)
 			{
-				stix_seterror (fsc, STIX_FSC_ECLSNAM, &fsc->tok.name, &fsc->tok.loc);
+				stix_seterror (stix, STIX_FSC_ECLSNAM, &stix->tok.name, &stix->tok.loc);
 				return -1;
 			}
 
-			if (stix_vm_findclass (fsc->vm, fsc->tok.name.ptr, &oop2) <= -1)
+			if (stix_vm_findclass (stix->vm, stix->tok.name.ptr, &oop2) <= -1)
 			{
-				stix_seterror (fsc, STIX_FSC_EILBCLS, &fsc->tok.name, &fsc->tok.loc);
+				stix_seterror (stix, STIX_FSC_EILBCLS, &stix->tok.name, &stix->tok.loc);
 				return -1;
 			}
 		}
 		else
 		{
-			stix_seterror (fsc, STIX_FSC_EEXTEND, &fsc->tok.name, &fsc->tok.loc);
+			stix_seterror (stix, STIX_FSC_EEXTEND, &stix->tok.name, &stix->tok.loc);
 			return -1;
 		}
 
@@ -2212,15 +2391,15 @@ static int compile_classdef (stix_t* fsc, class_type_t class_type)
 		extend = 0;
 	}
 
-	GET_TOKEN (fsc);
-	if (fsc->tok.type != STIX_IOTOK_LBRACE)
+	GET_TOKEN (stix);
+	if (stix->tok.type != STIX_IOTOK_LBRACE)
 	{
 		/* { expected */
-		stix_seterror (fsc, STIX_FSC_ELBRACE, &fsc->tok.name, &fsc->tok.loc);
+		stix_seterror (stix, STIX_FSC_ELBRACE, &stix->tok.name, &stix->tok.loc);
 		return -1;
 	}
 
-	GET_TOKEN (fsc);
+	GET_TOKEN (stix);
 
 	if (!extend)
 	{
@@ -2232,10 +2411,10 @@ static int compile_classdef (stix_t* fsc, class_type_t class_type)
 			 * <category: ...>
 			 * <comment: ...>
 			 */
-			if (fsc->tok.type == STIX_IOTOK_BINSEL &&
-			    get_vardef_type (fsc->tok.name.ptr, &vardef_type) >= 0)
+			if (stix->tok.type == STIX_IOTOK_BINSEL &&
+			    get_vardef_type (stix->tok.name.ptr, &vardef_type) >= 0)
 			{
-				if (compile_vardef (fsc, vardef_type) <= -1) return -1;
+				if (compile_vardef (stix, vardef_type) <= -1) return -1;
 			}
 			else
 			{
@@ -2250,15 +2429,15 @@ static int compile_classdef (stix_t* fsc, class_type_t class_type)
 		 * <category: ...>
 		 * <comment: ...>
 		 */
-		if (is_tok_binsel (fsc, STIX_T("-"))) 
+		if (is_tok_binsel (stix, STIX_T("-"))) 
 		{
-			GET_TOKEN (fsc);
-			if (compile_method (fsc, 1) <= -1) return -1;
+			GET_TOKEN (stix);
+			if (compile_method (stix, 1) <= -1) return -1;
 		}
-		else if (is_tok_binsel (fsc, STIX_T("+")))
+		else if (is_tok_binsel (stix, STIX_T("+")))
 		{
-			GET_TOKEN (fsc);
-			if (compile_method (fsc, 0) <= -1) return -1;
+			GET_TOKEN (stix);
+			if (compile_method (stix, 0) <= -1) return -1;
 		}
 		else
 		{
@@ -2266,31 +2445,20 @@ static int compile_classdef (stix_t* fsc, class_type_t class_type)
 		}	
 	}
 
-	if (fsc->tok.type != STIX_IOTOK_RBRACE)
+	if (stix->tok.type != STIX_IOTOK_RBRACE)
 	{
 		/* TODO: } expected */
-		stix_seterror (fsc, STIX_FSC_ERBRACE, &fsc->tok.name, &fsc->tok.loc);
+		set_syntax_error (stix, STIX_SYNERR_RBRACE, &stix->c->tok.loc, &stix->c->tok.name);
 		return -1;
 	}
 
-	GET_TOKEN (fsc);
+	GET_TOKEN (stix);
 	return 0;
-}
 #endif
+}
+
 static int compile_stream (stix_t* stix)
 {
-
-
-/*
-	while (get_char(stix) > 0)
-	{
-		stix_bch_t buf[16];
-		stix_size_t len;
-		len = stix_uctoutf8 (stix->c->curinp->lxc.c, buf, STIX_COUNTOF(buf));
-		printf ("%.*s", (int)len, buf);
-	}
-*/
-
 	GET_CHAR (stix);
 	GET_TOKEN (stix);
 
@@ -2300,20 +2468,19 @@ static int compile_stream (stix_t* stix)
 		{
 			/* #include 'xxxx' */
 			GET_TOKEN (stix);
-
 			if (stix->c->tok.type != STIX_IOTOK_STRLIT)
 			{
-				set_syntax_error (stix, STIX_SYNERR_STREX, &stix->c->tok.loc, &stix->c->tok.name);
+				set_syntax_error (stix, STIX_SYNERR_STRING, &stix->c->tok.loc, &stix->c->tok.name);
 				return -1;
 			}
-
 			if (begin_include(stix) <= -1) return -1;
 		}
-
-/*
 		else if (is_token_ksym(stix, KSYM_CLASS))
 		{
+			GET_TOKEN (stix);
+			if (compile_class_definition(stix) <= -1) return -1;
 		}
+/*
 		else if (is_token_ksym(stix, KSYM_MAIN))
 		{
 		}

@@ -248,13 +248,19 @@ typedef struct stix_iotok_t stix_iotok_t;
 enum stix_synerrnum_t
 {
 	STIX_SYNERR_NOERR,
-	STIX_SYNERR_ILCHR,   /* illegal character */
-	STIX_SYNERR_CMTNC,   /* comment not closed */
-	STIX_SYNERR_STRNC,   /* string not closed */
-	STIX_SYNERR_CLTNT,   /* character literal not terminated */
-	STIX_SYNERR_HLTNT,   /* hased literal not terminated */
-	STIX_SYNERR_CLNMS,   /* colon missing */
-	STIX_SYNERR_STREX    /* string expected */
+	STIX_SYNERR_ILCHR,    /* illegal character */
+	STIX_SYNERR_CMTNC,    /* comment not closed */
+	STIX_SYNERR_STRNC,    /* string not closed */
+	STIX_SYNERR_CLTNT,    /* character literal not terminated */
+	STIX_SYNERR_HLTNT,    /* hased literal not terminated */
+	STIX_SYNERR_CLNMS,    /* colon missing */
+	STIX_SYNERR_STRING,   /* string expected */
+	STIX_SYNERR_LBRACE,   /* { expected */
+	STIX_SYNERR_RBRACE,   /* } expected */
+	STIX_SYNERR_RPAREN,   /* ) expected */
+	STIX_SYNERR_PERIOD,   /* . expected */
+	STIX_SYNERR_CLASSMOD, /* wrong class modifier */
+	STIX_SYNERR_IDENT,    /* identifier expected */
 };
 typedef enum stix_synerrnum_t stix_synerrnum_t;
 
