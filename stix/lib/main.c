@@ -78,6 +78,8 @@ static STIX_INLINE stix_ssize_t open_input (stix_t* stix, stix_ioarg_t* arg)
 			stix_seterrnum (stix, STIX_EECERR);
 			return -1;
 		}
+
+		arg->handle = fopen (bcs, "r");
 	}
 	else
 	{
@@ -187,7 +189,8 @@ static char* syntax_error_msg[] =
 	"string not closed",
 	"no character after $",
 	"no valid character after #",
-	"missing colon"
+	"missing colon",
+	"string expected" /* string expected in place of ${1} */
 };
 
 int main (int argc, char* argv[])

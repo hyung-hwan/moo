@@ -485,7 +485,7 @@ class Association(Magnitude) -> new Association inheriting Magnitude
 class Association() -> new Association inheriting Stix
 class(#byte) Association() -> new Association class inheriting Stix, but it's byte indexed.
 class(#word) Association() -> new Association class inheriting Stix, but it's word indexed.
-class(#oop) Association() -> new Association class inheriting Stix, but it's oop indexed. (it can have the variable part on top of the fixed part. response to the 'new: aSize' message)
+class(#pointer) Association() -> new Association class inheriting Stix, but it's oop indexed. (it can have the variable part on top of the fixed part. response to the 'new: aSize' message)
 class(#word) Association(Magnitude) -> new Association class inheriting Magnitude, but it's word indexed.
 
 class Association -> revisit the Association class defined previsously. Revisiting can add new methods.

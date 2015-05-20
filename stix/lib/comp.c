@@ -124,7 +124,7 @@ static STIX_INLINE int is_alnumchar (stix_uci_t c)
 static STIX_INLINE int is_binselchar (stix_uci_t c)
 {
 	/*
-	 * binarySelectorCharacter ::=
+	 * binary-selector-character :=
 	 * 	'!' | '%' | '&' | '*' | '+' | ',' | 
 	 * 	'/' | '<' | '>' | '=' | '?' | '@' | 
 	 * 	'\' | '~' | '|' | '-'
@@ -353,8 +353,8 @@ static int skip_comment (stix_t* stix)
 static int get_ident (stix_t* stix)
 {
 	/*
-	 * identifier ::= letter (letter | digit)*
-	 * keyword ::= identifier ':'
+	 * identifier := alpha-char (alpha-char | digit-char)*
+	 * keyword := identifier ":"
 	 */
 
 	stix_uci_t c = stix->c->lxc.c;
@@ -381,27 +381,27 @@ static int get_ident (stix_t* stix)
 static int get_numlit (stix_t* stix, int negated)
 {
 	/* 
-	 * <number literal> ::= ['-'] <number>
-	 * <number> ::= integer | float | scaledDecimal
-	 * integer ::= decimalInteger  | radixInteger
-	 * decimalInteger ::= digits
-	 * digits ::= digit+
-	 * radixInteger ::= radixSpecifier  'r' radixDigits
-	 * radixSpecifier := digits
-	 * radixDigits ::= (digit | uppercaseAlphabetic)+
-	 * float ::=  mantissa [exponentLetter exponent]
-	 * mantissa ::= digits'.' digits
-	 * exponent ::= ['-']decimalInteger
-	 * exponentLetter ::= 'e' | 'd' | 'q'
-	 * scaledDecimal ::= scaledMantissa 's' [fractionalDigits]
-	 * scaledMantissa ::= decimalInteger | mantissa
-	 * fractionalDigits ::= decimalInteger
+	 * number-literal := number | ("-" number)
+	 * number := integer | float | scaledDecimal
+	 * integer := decimal-integer  | radix-integer
+	 * decimal-integer := digit-char+
+	 * radix-integer := radix-specifier "r" radix-digit+
+	 * radix-specifier := digit-char+
+	 * radix-digit := digit-char | upper-alpha-char
+	 *
+	 * float :=  mantissa [exponentLetter exponent]
+	 * mantissa := digit-char+ "." digit-char+
+	 * exponent := ['-'] decimal-integer
+	 * exponentLetter := 'e' | 'd' | 'q'
+	 * scaledDecimal := scaledMantissa 's' [fractionalDigits]
+	 * scaledMantissa := decimal-integer | mantissa
+	 * fractionalDigits := decimal-integer
 	 */
 
 	stix_uci_t c = stix->c->lxc.c;
 	stix->c->tok.type = STIX_IOTOK_NUMLIT;
 
-/*TODO: support complext numeric literals */
+/*TODO: support a complex numeric literal */
 	do 
 	{
 		ADD_TOKEN_CHAR(stix, c);
@@ -417,8 +417,8 @@ static int get_numlit (stix_t* stix, int negated)
 static int get_charlit (stix_t* stix)
 {
 	/* 
-	 * character_literal ::= '$' character
-	 * character ::= "Any character in the implementation-defined character set"
+	 * character-literal := "$" character
+	 * character := normal-character | "'"
 	 */
 
 	stix_uci_t c = stix->c->lxc.c; /* even a new-line or white space would be taken */
@@ -437,9 +437,10 @@ static int get_charlit (stix_t* stix)
 static int get_strlit (stix_t* stix)
 {
 	/* 
-	 * string_literal ::= stringDelimiter stringBody stringDelimiter
-	 * stringBody ::= (nonStringDelimiter | (stringDelimiter stringDelimiter)*)
-	 * stringDelimiter ::= '''    "a single quote"
+	 * string-literal := single-quote string-character* single-quote
+	 * string-character := normal-character | (single-quote single-quote)
+	 * single-quote := "'"
+	 * normal-character := character-except-single-quote
 	 */
 
 	/* TODO: C-like string */
@@ -452,20 +453,18 @@ static int get_strlit (stix_t* stix)
 		do 
 		{
 			ADD_TOKEN_CHAR (stix, c);
-			GET_CHAR (stix);
-			c = stix->c->lxc.c;
+			GET_CHAR_TO (stix, c);
 
 			if (c == STIX_UCI_EOF) 
 			{
 				/* string not closed */
-				set_syntax_error (stix, STIX_SYNERR_STRNC, &stix->c->lxc.l, STIX_NULL);
+				set_syntax_error (stix, STIX_SYNERR_STRNC, &stix->c->tok.loc /*&stix->c->lxc.l*/, STIX_NULL);
 				return -1;
 			}
 		} 
 		while (c != '\'');
 
-		GET_CHAR (stix);
-		c = stix->c->lxc.c;
+		GET_CHAR_TO (stix, c);
 	} 
 	while (c == '\'');
 
@@ -475,7 +474,7 @@ static int get_strlit (stix_t* stix)
 static int get_binsel (stix_t* stix)
 {
 	/* 
-	 * binarySelector ::= binarySelectorCharacter+
+	 * binary-selector := binary-selector-character+
 	 */
 	stix_uci_t oc;
 
@@ -597,7 +596,9 @@ retry:
 			goto single_char_token;
 
 		case '#':  
-			/*ADD_TOKEN_CHAR(stix, c);*/
+			/*
+			 * The hash sign is not the part of the token name.
+			 * ADD_TOKEN_CHAR(stix, c); */
 			GET_CHAR_TO (stix, c);
 			switch (c)
 			{
@@ -612,21 +613,26 @@ retry:
 					GET_CHAR (stix);
 					break;
 
+				case '[':
+					/* #[ - byte array literal */
+					ADD_TOKEN_CHAR(stix, c);
+					stix->c->tok.type = STIX_IOTOK_BPAREN;
+					GET_CHAR (stix);
+					break;
+
 				case '\'':
-					/* #' - quoted symbol literal */
+					/* quoted symbol literal */
 					GET_CHAR (stix);
 					if (get_strlit(stix) <= -1) return -1;
 					stix->c->tok.type = STIX_IOTOK_SYMLIT;
 					break;
 
-				case '[':
-					/* #[ - byte array literal */
-					/* TODO */
-					break;
-
 				default:
-					/* unquoted symbol literal */
+					/* symbol-literal := "#" symbol-body
+					 * symbol-body := identifier | keyword+ | binary-selector | string-literal
+					 */ 
 
+					/* unquoted symbol literal */
 					if (is_binselchar(c))
 					{
 						do 
@@ -705,7 +711,6 @@ retry:
 			break;
 	}
 
-/*wprintf (L"TOK: %S\n", stix->c->tok.name.ptr);*/
 	return 0;
 }
 
@@ -745,7 +750,7 @@ static int begin_include (stix_t* stix)
 	const stix_uch_t* io_name;
 
 	io_name = add_io_name (stix, &stix->c->tok.name);
-	if (!io_name) goto oops;
+	if (!io_name) return -1;
 
 	arg = (stix_ioarg_t*) stix_callocmem (stix, STIX_SIZEOF(*arg));
 	if (!arg) goto oops;
@@ -774,9 +779,6 @@ static int begin_include (stix_t* stix)
 	return 0;
 
 oops:
-	/* i don't need to free 'link' since it's linked to
-	 * stix->c->io_names that's freed at the beginning of stix_read()
-	 * or by stix_fini() */
 	if (arg) stix_freemem (stix, arg);
 	return -1;
 }
@@ -817,10 +819,55 @@ static int end_include (stix_t* stix)
 }
 
 
+static struct ksym_t
+{
+	stix_oow_t len;
+	stix_uch_t str[10];
+} ksyms[] = {
+	{  4, { 'b','y','t','e'                                               } },
+	{  5, { 'c','l','a','s','s'                                           } },
+	{  9, { 'c','l','a','s','s','i','n','s','t'                           } },
+	{  3, { 'd','c','l'                                                   } },
+	{  7, { 'd','e','c','l','a','r','e'                                   } },
+	{  3, { 'f','u','n'                                                   } },
+	{  8, { 'f','u','n','c','t','i','o','n'                               } },
+	{  7, { 'i','n','c','l','u','d','e'                                   } },
+	{  8, { 'i','n','s','t','a','n','c','e'                               } },
+	{  4, { 'm','a','i','n'                                               } },
+	{  7, { 'p','o','i','n','t','e','r'                                   } },
+	{  4, { 'w','o','r','d'                                               } }
+};
+
+enum ksym_id_t
+{
+	KSYM_BYTE,
+	KSYM_CLASS,
+	KSYM_CLASSINST,
+	KSYM_DCL,
+	KSYM_DECLARE,
+	KSYM_FUN,
+	KSYM_FUNCTION,
+	KSYM_INCLUDE,
+	KSYM_INSTANCE,
+	KSYM_MAIN,
+	KSYM_POINTER,
+	KSYM_WORD
+};
+typedef enum ksym_id_t ksym_id_t;
+
+static int is_token_ksym (stix_t* stix, ksym_id_t id)
+{
+	return stix->c->tok.type == STIX_IOTOK_SYMLIT &&
+	       stix->c->tok.name.len == ksyms[id].len &&
+	       stix_equalchars(stix->c->tok.name.ptr, ksyms[id].str, ksyms[id].len);
+}
+
 #if 0
 /* ---------------------------------------------------------------------
  * Parser and Code Generator 
  * --------------------------------------------------------------------- */
+
+
 
 static STIX_INLINE int is_tok_pseudovar (stix_t* fsc)
 {
@@ -838,6 +885,7 @@ static STIX_INLINE int is_tok_binsel (stix_t* fsc, const stix_uch_t* sel)
 	return fsc->tok.type == STIX_IOTOK_BINSEL && 
 	       stix_strequal (fsc->tok.name.ptr, sel);
 }
+
 
 #if 0
 
@@ -1193,10 +1241,10 @@ static int finish_method (stix_t* fsc)
 static int parse_statements (stix_t* fsc)
 {
 	/*
-	 * <statements> ::= (ORIGINAL->maybe wrong)
+	 * <statements> := (ORIGINAL->maybe wrong)
 	 * 	(<return statement> ['.'] ) |
 	 * 	(<expression> ['.' [<statements>]])
-	 * <statements> ::= (REVISED->correct?)
+	 * <statements> := (REVISED->correct?)
 	 * 	<statement> ['. [<statements>]]
 	 */
 
@@ -1237,9 +1285,9 @@ static int parse_block_statements (stix_t* fsc)
 static int parse_statement (stix_t* fsc)
 {
 	/* 
-	 * <statement> ::= <return statement> | <expression>
-	 * <return statement> ::= returnOperator <expression> 
-	 * returnOperator ::= '^'
+	 * <statement> := <return statement> | <expression>
+	 * <return statement> := returnOperator <expression> 
+	 * returnOperator := '^'
 	 */
 
 	if (fsc->tok.type == STIX_IOTOK_RETURN) {
@@ -1257,11 +1305,11 @@ static int parse_statement (stix_t* fsc)
 static int parse_expression (stix_t* fsc)
 {
 	/*
-	 * <expression> ::= <assignment> | <basic expression>
-	 * <assignment> ::= <assignment target> assignmentOperator <expression>
-	 * <basic expression> ::= <primary> [<messages> <cascaded messages>]
-	 * <assignment target> ::= identifier
-	 * assignmentOperator ::=  ':='
+	 * <expression> := <assignment> | <basic expression>
+	 * <assignment> := <assignment target> assignmentOperator <expression>
+	 * <basic expression> := <primary> [<messages> <cascaded messages>]
+	 * <assignment target> := identifier
+	 * assignmentOperator :=  ':='
 	 */
 	stix_vm_t* stx = fsc->stx;
 
@@ -1301,7 +1349,7 @@ static int parse_basic_expression (
 	stix_t* fsc, const stix_uch_t* ident)
 {
 	/*
-	 * <basic expression> ::= <primary> [<messages> <cascaded messages>]
+	 * <basic expression> := <primary> [<messages> <cascaded messages>]
 	 */
 	int is_super;
 
@@ -1318,7 +1366,7 @@ static int parse_assignment (
 	stix_t* fsc, const stix_uch_t* target)
 {
 	/*
-	 * <assignment> ::= <assignment target> assignmentOperator <expression>
+	 * <assignment> := <assignment target> assignmentOperator <expression>
 	 */
 
 	stix_word_t i;
@@ -1363,7 +1411,7 @@ static int parse_primary (
 	stix_t* fsc, const stix_uch_t* ident, int* is_super)
 {
 	/*
-	 * <primary> ::=
+	 * <primary> :=
 	 * 	identifier | <literal> | 
 	 * 	<block constructor> | ( '('<expression>')' )
 	 */
@@ -1495,7 +1543,7 @@ static int parse_primary_ident (
 	{
 		EMIT_PUSH_RECEIVER_VARIABLE (fsc, i);
 		return 0;
-	}	
+	}
 
 	/* TODO: what is the best way to look up a class variable? */
 	/* 1. Use the class containing it and using its position */
@@ -1520,10 +1568,10 @@ static int parse_primary_ident (
 static int parse_block_constructor (stix_t* fsc)
 {
 	/*
-	 * <block constructor> ::= '[' <block body> ']'
-	 * <block body> ::= [<block argument>* '|']
+	 * <block constructor> := '[' <block body> ']'
+	 * <block body> := [<block argument>* '|']
 	 * 	[<temporaries>] [<statements>]
-	 * <block argument> ::= ':'  identifier
+	 * <block argument> := ':'  identifier
 	 */
 
 	if (fsc->tok.type == STIX_IOTOK_COLON) 
@@ -1573,11 +1621,11 @@ static int parse_message_continuation (
 	stix_t* fsc, int is_super)
 {
 	/*
-	 * <messages> ::=
+	 * <messages> :=
 	 * 	(<unary message>+ <binary message>* [<keyword message>] ) |
 	 * 	(<binary message>+ [<keyword message>] ) |
 	 * 	<keyword message>
-	 * <cascaded messages> ::= (';' <messages>)*
+	 * <cascaded messages> := (';' <messages>)*
 	 */
 	if (parse_keyword_message(fsc, is_super) == -1) return -1;
 
@@ -1596,8 +1644,8 @@ static int parse_message_continuation (
 static int parse_keyword_message (stix_t* fsc, int is_super)
 {
 	/*
-	 * <keyword message> ::= (keyword <keyword argument> )+
-	 * <keyword argument> ::= <primary> <unary message>* <binary message>*
+	 * <keyword message> := (keyword <keyword argument> )+
+	 * <keyword argument> := <primary> <unary message>* <binary message>*
 	 */
 
 	stix_name_t name;
@@ -1661,8 +1709,8 @@ static int parse_keyword_message (stix_t* fsc, int is_super)
 static int parse_binary_message (stix_t* fsc, int is_super)
 {
 	/*
-	 * <binary message> ::= binarySelector <binary argument>
-	 * <binary argument> ::= <primary> <unary message>*
+	 * <binary message> := binary-selector <binary argument>
+	 * <binary argument> := <primary> <unary message>*
 	 */
 	stix_word_t pos;
 	int is_super2;
@@ -1711,7 +1759,7 @@ static int parse_binary_message (stix_t* fsc, int is_super)
 
 static int parse_unary_message (stix_t* fsc, int is_super)
 {
-	/* <unary message> ::= unarySelector */
+	/* <unary message> := unarySelector */
 
 	stix_word_t pos;
 	int n;
@@ -1735,7 +1783,7 @@ static int parse_unary_message (stix_t* fsc, int is_super)
 static int parse_method (stix_t* fsc, stix_word_t method_class, void* input)
 {
 	/*
-	 * <method definition> ::= 
+	 * <method definition> := 
 	 * 	<message pattern> [<temporaries>] [<primitive>] [<statements>]
 	 */
 
@@ -1945,10 +1993,10 @@ static int parse_keyword_pattern (stix_t* fsc)
 static int parse_method_name_pattern (stix_t* fsc)
 {
 	/* 
-	 * <message pattern> ::= <unary pattern> | <binary pattern> | <keyword pattern>
-	 * <unary pattern> ::= unarySelector
-	 * <binary pattern> ::= binarySelector <method argument>
-	 * <keyword pattern> ::= (keyword  <method argument>)+
+	 * <message pattern> := <unary pattern> | <binary pattern> | <keyword pattern>
+	 * <unary pattern> := unarySelector
+	 * <binary pattern> := binary-selector <method argument>
+	 * <keyword pattern> := (keyword  <method argument>)+
 	 */
 	int n;
 
@@ -1982,8 +2030,8 @@ static int parse_method_name_pattern (stix_t* fsc)
 static int parse_method_temporaries (stix_t* fsc)
 {
 	/* 
-	 * <temporaries> ::= '|' <temporary variable list> '|'
-	 * <temporary variable list> ::= identifier*
+	 * <temporaries> := '|' <temporary variable list> '|'
+	 * <temporary variable list> := identifier*
 	 */
 
 	if (!is_tok_binsel (fsc, STIX_T("|"))) return 0;
@@ -2030,7 +2078,7 @@ static int parse_method_temporaries (stix_t* fsc)
 static int parse_method_primitive (stix_t* fsc)
 {
 	/* 
-	 * <primitive> ::= '<' 'primitive:' number '>'
+	 * <primitive> := '<' 'primitive:' number '>'
 	 */
 
 	int prim_no;
@@ -2228,47 +2276,7 @@ static int compile_classdef (stix_t* fsc, class_type_t class_type)
 	GET_TOKEN (fsc);
 	return 0;
 }
-
-
-static int compile_directive (stix_t* fsc)
-{
-	if (fsc->tok.type == STIX_IOTOK_IDENT)
-	{
-		class_type_t class_type;
-
-		if (get_class_type (fsc->tok.name.ptr, &class_type) >= 0)
-		{
-			if (get_token (fsc) <= -1) return -1;
-			return compile_classdef (fsc, class_type);
-		}
-		else if (stix_strequal (fsc->tok.name.ptr, STIX_T("include")))
-		{
-			if (get_token (fsc) <= -1) return -1;
-
-			if (fsc->tok.type != STIX_IOTOK_STRLIT)
-			{
-				stix_seterror (fsc, STIX_FSC_ESTRLIT, &fsc->tok.name, &fsc->tok.loc);
-				return -1;
-			}
-
-			if (begin_include (fsc) <= -1) return -1;
-		}
-		else
-		{
-			stix_seterror (fsc, STIX_FSC_EILDIR, &fsc->tok.name, &fsc->tok.loc);
-			return -1;
-		}
-	}
-	else
-	{
-		stix_seterror (fsc, STIX_FSC_EILDIR, &fsc->tok.name, &fsc->tok.loc);
-		return -1;
-	}
-
-	return 0;
-}
 #endif
-
 static int compile_stream (stix_t* stix)
 {
 
@@ -2288,25 +2296,39 @@ static int compile_stream (stix_t* stix)
 
 	while (stix->c->tok.type != STIX_IOTOK_EOF)
 	{
-		stix_size_t i;
-		printf ("%d [", stix->c->tok.type);
-		for (i = 0; i < stix->c->tok.name.len; i++)
-			printf ("%c", stix->c->tok.name.ptr[i]);
-		printf ("]\n");
-		GET_TOKEN (stix);
-#if 0
-		if (is_tok_binsel (stix, STIX_T("@")))
+		if (is_token_ksym(stix, KSYM_INCLUDE))
 		{
+			/* #include 'xxxx' */
 			GET_TOKEN (stix);
-			if (compile_directive (stix) <= -1) return -1;
+
+			if (stix->c->tok.type != STIX_IOTOK_STRLIT)
+			{
+				set_syntax_error (stix, STIX_SYNERR_STREX, &stix->c->tok.loc, &stix->c->tok.name);
+				return -1;
+			}
+
+			if (begin_include(stix) <= -1) return -1;
 		}
-		/* TODO: normal smalltalk message sending expressions */
-		else 
+
+/*
+		else if (is_token_ksym(stix, KSYM_CLASS))
 		{
-			stix_seterror (stix, STIX_FSC_EILTTOK, &stix->tok.name, &stix->tok.loc);
-			return -1;
 		}
-#endif
+		else if (is_token_ksym(stix, KSYM_MAIN))
+		{
+		}
+*/
+
+		else
+		{
+			/* TODO: error */
+			stix_size_t i;
+			printf ("%d [", stix->c->tok.type);
+			for (i = 0; i < stix->c->tok.name.len; i++)
+				printf ("%c", stix->c->tok.name.ptr[i]);
+			printf ("]\n");
+			GET_TOKEN (stix);
+		}
 	}
 
 	return 0;
