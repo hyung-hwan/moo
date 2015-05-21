@@ -487,6 +487,8 @@ class(#byte) Association() -> new Association class inheriting Stix, but it's by
 class(#word) Association() -> new Association class inheriting Stix, but it's word indexed.
 class(#pointer) Association() -> new Association class inheriting Stix, but it's oop indexed. (it can have the variable part on top of the fixed part. response to the 'new: aSize' message)
 class(#word) Association(Magnitude) -> new Association class inheriting Magnitude, but it's word indexed.
+class(#character) Association(Magnitude)
+
 
 class Association -> revisit the Association class defined previsously. Revisiting can add new methods.
 
@@ -622,5 +624,14 @@ Single line comment
 #! comment text (easy handling to skip hash bang)
 
 Multi-line comments - double quoted as in smalltalk
-" comment text 설명이라지요. "
+" comment text "
 
+
+
+#class X(Y)
+{
+	#dcl a b c.
+	#fun print
+	{
+	}
+}

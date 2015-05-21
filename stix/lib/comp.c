@@ -28,6 +28,7 @@
 
 #define TOKEN_NAME_CAPA 128
 #define TOKEN_NAME_ALIGN 256
+#define FUNCTION_NAME_ALIGN 256
 
 #if 0
 enum class_type_t
@@ -64,6 +65,72 @@ enum stix_stack_operand_t
 typedef enum stix_stack_operand_t stix_stack_operand_t;
 
 #endif
+
+
+static struct ksym_t
+{
+	stix_oow_t len;
+	stix_uch_t str[11];
+} ksyms[] = {
+	{  4, { 'b','y','t','e'                                               } },
+	{  9, { 'c','h','a','r','a','c','t','e','r'                           } },
+	{  5, { 'c','l','a','s','s'                                           } },
+	{  9, { 'c','l','a','s','s','i','n','s','t'                           } },
+	{  3, { 'd','c','l'                                                   } },
+	{  7, { 'd','e','c','l','a','r','e'                                   } },
+	{  5, { 'f','a','l','s','e'                                           } },
+	{  3, { 'f','u','n'                                                   } },
+	{  8, { 'f','u','n','c','t','i','o','n'                               } },
+	{  7, { 'i','n','c','l','u','d','e'                                   } },
+	{  8, { 'i','n','s','t','a','n','c','e'                               } },
+	{  4, { 'm','a','i','n'                                               } },
+	{  7, { 'p','o','i','n','t','e','r'                                   } },
+	{  4, { 's','e','l','f'                                               } },
+	{  5, { 's','u','p','e','r'                                           } },
+	{ 11, { 't','h','i','s','C','o','n','t','e','x','t'                   } },
+	{  4, { 't','r','u','e'                                               } },
+	{  4, { 'w','o','r','d'                                               } }
+};
+
+enum ksym_id_t
+{
+	KSYM_BYTE,
+	KSYM_CHARACTER,
+	KSYM_CLASS,
+	KSYM_CLASSINST,
+	KSYM_DCL,
+	KSYM_DECLARE,
+	KSYM_FALSE,
+	KSYM_FUN,
+	KSYM_FUNCTION,
+	KSYM_INCLUDE,
+	KSYM_INSTANCE,
+	KSYM_MAIN,
+	KSYM_POINTER,
+	KSYM_SELF,
+	KSYM_SUPER,
+	KSYM_THIS_CONTEXT,
+	KSYM_TRUE,
+	KSYM_WORD
+};
+typedef enum ksym_id_t ksym_id_t;
+
+static STIX_INLINE int does_token_name_match (stix_t* stix, ksym_id_t id)
+{
+	return stix->c->tok.name.len == ksyms[id].len &&
+	       stix_equalchars(stix->c->tok.name.ptr, ksyms[id].str, ksyms[id].len);
+}
+
+static STIX_INLINE int is_token_ksym (stix_t* stix, ksym_id_t id)
+{
+	return stix->c->tok.type == STIX_IOTOK_SYMLIT && does_token_name_match(stix, id);
+}
+
+static STIX_INLINE int is_token_ident (stix_t* stix, ksym_id_t id)
+{
+	return stix->c->tok.type == STIX_IOTOK_IDENT && does_token_name_match(stix, id);
+}
+
 
 static int begin_include (stix_t* fsc);
 static int end_include (stix_t* fsc);
@@ -211,10 +278,8 @@ static STIX_INLINE int add_token_str (stix_t* stix, const stix_uch_t* ptr, stix_
 		stix->c->tok.name_capa = i;
 	}
 
-	for (i = 0; i < len; i++)
-	{
-		stix->c->tok.name.ptr[stix->c->tok.name.len++] = ptr[i];
-	}
+	stix_copychars (&stix->c->tok.name.ptr[stix->c->tok.name.len], ptr, len);
+	stix->c->tok.name.len += len;
 	stix->c->tok.name.ptr[stix->c->tok.name.len] = '\0';
 
 	return 0;
@@ -373,6 +438,30 @@ static int get_ident (stix_t* stix)
 		ADD_TOKEN_CHAR (stix, c);
 		stix->c->tok.type = STIX_IOTOK_KEYWORD;
 		GET_CHAR (stix);
+	}
+	else
+	{
+		/* handle reserved words */
+		if (is_token_ident(stix, KSYM_SELF))
+		{
+			stix->c->tok.type = STIX_IOTOK_SELF;
+		}
+		else if (is_token_ident(stix, KSYM_SUPER))
+		{
+			stix->c->tok.type = STIX_IOTOK_SUPER;
+		}
+		else if (is_token_ident(stix, KSYM_TRUE))
+		{
+			stix->c->tok.type = STIX_IOTOK_TRUE;
+		}
+		else if (is_token_ident(stix, KSYM_FALSE))
+		{
+			stix->c->tok.type = STIX_IOTOK_FALSE;
+		}
+		else if (is_token_ident(stix, KSYM_THIS_CONTEXT))
+		{
+			stix->c->tok.type = STIX_IOTOK_THIS_CONTEXT;
+		}
 	}
 
 	return 0;
@@ -730,14 +819,15 @@ static const stix_uch_t* add_io_name (stix_t* stix, const stix_ucs_t* name)
 {
 	stix_iolink_t* link;
 	stix_uch_t* ptr;
-	stix_size_t i;
 
 	link = (stix_iolink_t*) stix_callocmem (stix, STIX_SIZEOF(*link) + STIX_SIZEOF(stix_uch_t) * (name->len + 1));
 	if (!link) return STIX_NULL;
 
 	ptr = (stix_uch_t*)(link + 1);
-	for (i = 0; i < stix->c->tok.name.len; i++) ptr[i] = stix->c->tok.name.ptr[i];
-	ptr[i] = '\0';
+
+	stix_copychars (ptr, name->ptr, name->len);
+	ptr[name->len] = '\0';
+
 	link->link = stix->c->io_names;
 	stix->c->io_names = link;
 
@@ -819,48 +909,7 @@ static int end_include (stix_t* stix)
 }
 
 
-static struct ksym_t
-{
-	stix_oow_t len;
-	stix_uch_t str[10];
-} ksyms[] = {
-	{  4, { 'b','y','t','e'                                               } },
-	{  5, { 'c','l','a','s','s'                                           } },
-	{  9, { 'c','l','a','s','s','i','n','s','t'                           } },
-	{  3, { 'd','c','l'                                                   } },
-	{  7, { 'd','e','c','l','a','r','e'                                   } },
-	{  3, { 'f','u','n'                                                   } },
-	{  8, { 'f','u','n','c','t','i','o','n'                               } },
-	{  7, { 'i','n','c','l','u','d','e'                                   } },
-	{  8, { 'i','n','s','t','a','n','c','e'                               } },
-	{  4, { 'm','a','i','n'                                               } },
-	{  7, { 'p','o','i','n','t','e','r'                                   } },
-	{  4, { 'w','o','r','d'                                               } }
-};
 
-enum ksym_id_t
-{
-	KSYM_BYTE,
-	KSYM_CLASS,
-	KSYM_CLASSINST,
-	KSYM_DCL,
-	KSYM_DECLARE,
-	KSYM_FUN,
-	KSYM_FUNCTION,
-	KSYM_INCLUDE,
-	KSYM_INSTANCE,
-	KSYM_MAIN,
-	KSYM_POINTER,
-	KSYM_WORD
-};
-typedef enum ksym_id_t ksym_id_t;
-
-static int is_token_ksym (stix_t* stix, ksym_id_t id)
-{
-	return stix->c->tok.type == STIX_IOTOK_SYMLIT &&
-	       stix->c->tok.name.len == ksyms[id].len &&
-	       stix_equalchars(stix->c->tok.name.ptr, ksyms[id].str, ksyms[id].len);
-}
 
 #if 0
 /* ---------------------------------------------------------------------
@@ -1811,67 +1860,6 @@ static int parse_method (stix_t* fsc, stix_word_t method_class, void* input)
 
 #endif
 
-static int get_class_type (const stix_uch_t* str, class_type_t* type)
-{
-	static struct 
-	{
-		stix_uch_t* word;
-		class_type_t type;
-	} tab[] = 
-	{
-		{ STIX_T("class"),             CLASS_NORMAL },
-		{ STIX_T("variableClass"),     CLASS_VARIABLE },
-		{ STIX_T("variableByteClass"), CLASS_VARIABLE_BYTE },
-		{ STIX_T("variableCharClass"), CLASS_VARIABLE_CHAR }
-	};
-
-	int i;
-
-	for (i = 0; i < STIX_COUNTOF(tab); i++)
-	{
-		if (stix_strequal(str, tab[i].word)) 
-		{
-			*type = tab[i].type;
-			return 0;
-		}
-	}
-
-	return -1;
-}
-
-static int get_vardef_type (const stix_uch_t* str, vardef_type_t* type)
-{
-	static struct 
-	{
-		stix_uch_t* word;
-		class_type_t type;
-	} tab[] = 
-	{
-		{ STIX_T("|-"), VARDEF_INSTANCE },
-		{ STIX_T("|+"), VARDEF_CLASS_INSTANCE },
-		{ STIX_T("|*"), VARDEF_CLASS }
-		/* TODO: shared pools */
-	};
-
-	int i;
-
-	for (i = 0; i < STIX_COUNTOF(tab); i++)
-	{
-		if (stix_strequal(str, tab[i].word)) 
-		{
-			*type = tab[i].type;
-			return 0;
-		}
-	}
-
-	return -1;
-}
-
-static int compile_vardef (stix_t* fsc, vardef_type_t vardef_type)
-{
-	return -1;
-}
-
 static int parse_unary_pattern (stix_t* fsc)
 {
 	STIX_ASSERT (fsc->met.name.len == 0);
@@ -1990,42 +1978,6 @@ static int parse_keyword_pattern (stix_t* fsc)
 	return 0;
 }
 
-static int parse_method_name_pattern (stix_t* fsc)
-{
-	/* 
-	 * <message pattern> := <unary pattern> | <binary pattern> | <keyword pattern>
-	 * <unary pattern> := unarySelector
-	 * <binary pattern> := binary-selector <method argument>
-	 * <keyword pattern> := (keyword  <method argument>)+
-	 */
-	int n;
-
-	STIX_ASSERT (fsc->met.tmpr.count == 0);
-
-	switch (fsc->tok.type)
-	{
-		case STIX_IOTOK_IDENT:
-			n = parse_unary_pattern (fsc);
-			break;
-
-		case STIX_IOTOK_BINSEL:
-			n = parse_binary_pattern (fsc);
-			break;
-
-		case STIX_IOTOK_KEYWORD:
-			n = parse_keyword_pattern (fsc);
-			break;
-
-		default:
-			stix_seterror (fsc, STIX_FSC_EILMETN, &fsc->tok.name, &fsc->tok.loc);
-			n = -1;
-	}
-
-	/* the total number of temporaries is equal to the number of arguments
-	 * after having processed the message pattern */
-	fsc->met.tmpr.count = fsc->met.tmpr.nargs;
-	return n;
-}
 
 static int parse_method_temporaries (stix_t* fsc)
 {
@@ -2169,10 +2121,11 @@ wprintf (L"METHOD NAME ==> [%S] temporaries => %d\n", fsc->met.name.buf, fsc->me
 
 enum class_mod_t
 {
-	CLASS_BYTE_INDEXED    = (1 << 0),
-	CLASS_WORD_INDEXED    = (1 << 1),
-	CLASS_POINTER_INDEXED = (1 << 2),
-	CLASS_EXTEND          = (1 << 3)
+	CLASS_BYTE_INDEXED      = (1 << 0),
+	CLASS_CHARACTER_INDEXED = (1 << 1),
+	CLASS_WORD_INDEXED      = (1 << 2),
+	CLASS_POINTER_INDEXED   = (1 << 3),
+	CLASS_EXTEND            = (1 << 4)
 };
 
 enum dcl_mod_t
@@ -2251,19 +2204,237 @@ static int compile_class_declare (stix_t* stix)
 	return 0;
 }
 
+
+static int compile_unary_function_name (stix_t* stix)
+{
+	stix_size_t len;
+
+	STIX_ASSERT (stix->c->fun.name.len == 0);
+	STIX_ASSERT (stix->c->fun.tmpr_nargs == 0);
+
+/* TODO: check if the method name exists */
+	len = STIX_ALIGN (stix->c->tok.name.len, FUNCTION_NAME_ALIGN);
+	if (len > stix->c->tok.name_capa)
+	{
+		stix_uch_t* tmp;
+
+		tmp = stix_reallocmem (stix, stix->c->tok.name.ptr, len);
+		if (!tmp) return -1;
+
+		stix->c->fun.name.ptr = tmp;
+	}
+
+	/* collect the method name */
+	stix_copychars (stix->c->fun.name.ptr, stix->c->tok.name.ptr, stix->c->tok.name.len);
+	stix->c->fun.name.len = stix->c->tok.name.len;
+
+
+	GET_TOKEN (stix);
+	return 0;
+}
+
+static int compile_binary_function_name (stix_t* stix)
+{
+	stix_size_t len;
+
+	STIX_ASSERT (stix->c->fun.name.len == 0);
+	STIX_ASSERT (stix->c->fun.tmpr_nargs == 0);
+
+/* TODO: check if the method name exists */
+	len = STIX_ALIGN (stix->c->tok.name.len, FUNCTION_NAME_ALIGN);
+	if (len > stix->c->tok.name_capa)
+	{
+		stix_uch_t* tmp;
+
+		tmp = stix_reallocmem (stix, stix->c->tok.name.ptr, len);
+		if (!tmp) return -1;
+
+		stix->c->fun.name.ptr = tmp;
+	}
+	
+	/* collect the method name */
+	stix_copychars (stix->c->fun.name.ptr, stix->c->tok.name.ptr, stix->c->tok.name.len);
+	stix->c->fun.name.len = stix->c->tok.name.len;
+
+	GET_TOKEN (stix);
+
+	/* collect the argument name */
+	if (stix->c->tok.type != STIX_IOTOK_IDENT) 
+	{
+		/* wrong argument name. identifier expected */
+		set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	STIX_ASSERT (stix->c->fun.tmpr_nargs == 0);
+	/*
+	 * check if there are too many arguments defined.
+	 * however, in this function, this condition will never be met.
+	 * so let me just comment out the check.
+	 *
+	if (stix->c->fun.tmpr_nargs >= STIX_COUNTOF(stix->c->fun.tmpr_names)) 
+	{
+		stix_seterror (stix, STIX_FSC_ETMARGS, &stix->c->tok.name, &stix->c->tok.loc);
+		return -1;
+	}
+	*/
+
+/* TODO: check for duplicate entries...in instvars */
+
+	if (stix->c->tok.name.len >= STIX_COUNTOF(stix->c->fun.tmpr.names[stix->c->fun.tmpr.count]))
+	{
+		/* argument name is too long */
+		stix_seterror (stix, STIX_FSC_EARGNTL, &stix->c->tok.name, &stix->c->tok.loc);
+		return -1;
+	}
+
+	stix_strcpy (stix->c->fun.tmpr.names[stix->c->fun.tmpr.nargs], stix->c->tok.name.ptr);
+	stix->c->fun.tmpr_nargs++;
+
+	GET_TOKEN (stix);
+	return 0;
+}
+
+static int compile_keyword_function_name (stix_t* stix)
+{
+#if 0
+	STIX_ASSERT (stix->c->fun.name.len == 0);
+	STIX_ASSERT (stix->c->fun.tmpr_nargs == 0);
+
+	do 
+	{
+		if (stix->c->tok.name.len + stix->c->fun.name.len >= STIX_COUNTOF(stix->c->fun.name.buf))
+		{
+			stix_seterror (stix, STIX_FSC_EMETNTL, &stix->c->tok.name, &stix->c->tok.loc);
+			return -1;
+		}
+		stix->c->fun.name.len += stix_strcpy (&stix->c->fun.name.buf[stix->c->fun.name.len], stix->c->tok.name.ptr);
+
+		GET_TOKEN (stix);
+		if (stix->c->tok.type != STIX_IOTOK_IDENT || is_tok_pseudovar(stix)) 
+		{
+			stix_seterror (stix, STIX_FSC_EILARGN, &stix->c->tok.name, &stix->c->tok.loc);
+			return -1;
+		}
+
+		if (stix->c->fun.tmpr.nargs >= STIX_COUNTOF(stix->c->fun.tmpr.names)) 
+		{
+			/* too many arguments */
+			stix_seterror (stix, STIX_FSC_ETMARGS, &stix->c->tok.name, &stix->c->tok.loc);
+			return -1;
+		}
+
+/* TODO: check for duplicate entries...in instvars/arguments */
+		if (stix->c->tok.name.len >= STIX_COUNTOF(stix->c->fun.tmpr.names[stix->c->fun.tmpr.nargs]))
+		{
+			/* argument name is too long */
+			stix_seterror (stix, STIX_FSC_EARGNTL, &stix->c->tok.name, &stix->c->tok.loc);
+			return -1;
+		}
+		stix_strcpy (stix->c->fun.tmpr.names[stix->c->fun.tmpr.nargs], stix->c->tok.name.ptr);
+		stix->c->fun.tmpr.nargs++;
+
+		GET_TOKEN (stix);
+	} 
+	while (stix->c->tok.type == STIX_IOTOK_KEYWORD);
+
+	/* TODO: check if the method name exists */
+	/* if it exists, collapse arguments */
+#endif
+	return 0;
+}
+
+
+static int compile_function_name (stix_t* stix)
+{
+	/* 
+	 * function-name := unary-function-name | binary-function-name | keyword-function-name
+	 * unary-function-name := unary-selector
+	 * binary-function-name := binary-selector selector-argument
+	 * keyword-function-name := (keyword selector-argument)+
+	 * selector-argument := identifier
+	 * unary-selector := identifier
+	 */
+	int n;
+
+	STIX_ASSERT (stix->c->fun.tmpr_count == 0);
+
+	switch (stix->c->tok.type)
+	{
+		case STIX_IOTOK_IDENT:
+			n = compile_unary_function_name(stix);
+			break;
+
+		case STIX_IOTOK_BINSEL:
+			n = compile_binary_function_name(stix);
+			break;
+
+		case STIX_IOTOK_KEYWORD:
+			n = compile_keyword_function_name(stix);
+			break;
+
+		default:
+			/* illegal function name pattern */
+			set_syntax_error (stix, STIX_SYNERR_FUNNAME, &stix->c->tok.loc, &stix->c->tok.name);
+			n = -1;
+	}
+
+	/* the total number of temporaries is equal to the number of 
+	 * arguments after having processed the message pattern. it's because
+	 * stix treats arguments the same as temporaries */
+	stix->c->fun.tmpr_count = stix->c->fun.tmpr_nargs;
+	return n;
+}
+
 static int compile_class_function (stix_t* stix)
 {
+	/* clear data required to compile a method */
+	stix->c->fun.tmpr_count = 0;
+	stix->c->fun.tmpr_nargs = 0;
+
+#if 0
+	/* clear the byte-code buffer */
+	stix->bcd.len = 0;
+#endif
+
+	if (compile_function_name(stix) <= -1) return -1;
+
+	if (stix->c->tok.type != STIX_IOTOK_LBRACE)
+	{
+		/* { expected */
+		set_syntax_error (stix, STIX_SYNERR_LBRACE, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	GET_TOKEN (stix);
+
+#if 0
+	if (parse_method_temporaries(stix) <= -1 ||
+	    parse_method_primitive(stix) <= -1 /*||
+	    parse_statements(stix) <= -1 ||
+	    finish_method(stix) <= -1*/) return -1; 
+#endif
+
+	if (stix->c->tok.type != STIX_IOTOK_RBRACE)
+	{
+		/* } expected */
+		set_syntax_error (stix, STIX_SYNERR_RBRACE, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+	GET_TOKEN (stix);
+
+//wprintf (L"METHOD NAME ==> [%S] temporaries => %d\n", stix->c->fun.name.buf, stix->c->fun.tmpr.count);
 	return 0;
 }
 
 static int compile_class_definition (stix_t* stix)
 {
-	/* class-def := #class [class-mod] "{" class-def-body "}"
-	 * class-mod := "(" (#byte | #word | #pointer)* ")"
+	/* class-def := #class class-mod? "{" class-def-body "}"
+	 * class-mod := "(" (#byte | #character | #word | #pointer)* ")"
 	 * class-def-body := (var-def | fun-def)*
-	 * var-def := #dcl [var-mod] identifier+ "."
+	 * var-def := #dcl var-mod? identifier+ "."
 	 * var-mod := "(" (#class | #classinst | #instance)* ")"
-	 * fun-def := #fun [fun-mod] message-definition
+	 * fun-def := #fun fun-mod? message-definition
 	 */
 
 	stix_oop_t oop1, oop2;
@@ -2279,19 +2450,25 @@ static int compile_class_definition (stix_t* stix)
 			if (is_token_ksym(stix, KSYM_BYTE))
 			{
 				/* #class(#byte) */
-				class_mod &= ~(CLASS_BYTE_INDEXED | CLASS_WORD_INDEXED | CLASS_POINTER_INDEXED);
+				class_mod &= ~(CLASS_BYTE_INDEXED | CLASS_CHARACTER_INDEXED | CLASS_WORD_INDEXED | CLASS_POINTER_INDEXED);
 				class_mod |= CLASS_BYTE_INDEXED;
+			}
+			else if (is_token_ksym(stix, KSYM_CHARACTER))
+			{
+				/* #class(#character) */
+				class_mod &= ~(CLASS_BYTE_INDEXED | CLASS_CHARACTER_INDEXED | CLASS_WORD_INDEXED | CLASS_POINTER_INDEXED);
+				class_mod |= CLASS_CHARACTER_INDEXED;
 			}
 			else if (is_token_ksym(stix, KSYM_WORD))
 			{
 				/* #class(#word) */
-				class_mod &= ~(CLASS_BYTE_INDEXED | CLASS_WORD_INDEXED | CLASS_POINTER_INDEXED);
+				class_mod &= ~(CLASS_BYTE_INDEXED | CLASS_CHARACTER_INDEXED | CLASS_WORD_INDEXED | CLASS_POINTER_INDEXED);
 				class_mod |= CLASS_WORD_INDEXED;
 			}
 			else if (is_token_ksym(stix, KSYM_POINTER))
 			{
 				/* #class(#pointer) */
-				class_mod &= ~(CLASS_BYTE_INDEXED | CLASS_WORD_INDEXED | CLASS_POINTER_INDEXED);
+				class_mod &= ~(CLASS_BYTE_INDEXED | CLASS_CHARACTER_INDEXED | CLASS_WORD_INDEXED | CLASS_POINTER_INDEXED);
 				class_mod |= CLASS_POINTER_INDEXED;
 			}
 			/* place other modifiers here */

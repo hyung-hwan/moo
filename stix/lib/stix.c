@@ -186,9 +186,9 @@ void stix_deregcb (stix_t* stix, stix_cb_t* cb)
 	stix_freemem (stix, cb);
 }
 
-stix_oow_t stix_hashbytes (const stix_uint8_t* ptr, stix_oow_t len)
+stix_size_t stix_hashbytes (const stix_uint8_t* ptr, stix_size_t len)
 {
-	stix_oow_t h = 0;
+	stix_size_t h = 0;
 	const stix_uint8_t* bp, * be;
 
 	bp = ptr; be = bp + len;
@@ -197,14 +197,14 @@ stix_oow_t stix_hashbytes (const stix_uint8_t* ptr, stix_oow_t len)
 	return h;
 }
 
-stix_oow_t stix_hashchars (const stix_uch_t* ptr, stix_oow_t len)
+stix_size_t stix_hashchars (const stix_uch_t* ptr, stix_size_t len)
 {
 	return stix_hashbytes ((const stix_uint8_t *)ptr, len * STIX_SIZEOF(*ptr));
 }
 
-int stix_equalchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_oow_t len)
+int stix_equalchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_size_t len)
 {
-	stix_oow_t i;
+	stix_size_t i;
 
 	for (i = 0; i < len; i++)
 	{
@@ -214,6 +214,11 @@ int stix_equalchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_oow_t 
 	return 1;
 }
 
+void stix_copychars (stix_uch_t* dst, const stix_uch_t* src, stix_size_t len)
+{
+	stix_size_t i;
+	for (i = 0; i < len; i++) dst[i] = src[i];
+}
 
 void* stix_allocmem (stix_t* stix, stix_size_t size)
 {

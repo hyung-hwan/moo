@@ -214,28 +214,34 @@ struct stix_iotok_t
 {
 	enum
 	{
-		 STIX_IOTOK_EOF,
-		 STIX_IOTOK_CHRLIT,
-		 STIX_IOTOK_STRLIT,
-		 STIX_IOTOK_SYMLIT,
-		 STIX_IOTOK_NUMLIT,
-		 STIX_IOTOK_IDENT,
-		 STIX_IOTOK_BINSEL,
-		 STIX_IOTOK_KEYWORD,
-		 STIX_IOTOK_PRIMITIVE,
-		 STIX_IOTOK_ASSIGN,
-		 STIX_IOTOK_COLON,
-		 STIX_IOTOK_RETURN,
-		 STIX_IOTOK_LBRACE,
-		 STIX_IOTOK_RBRACE,
-		 STIX_IOTOK_LBRACK,
-		 STIX_IOTOK_RBRACK,
-		 STIX_IOTOK_LPAREN,
-		 STIX_IOTOK_RPAREN,
-		 STIX_IOTOK_APAREN, /* #( */
-		 STIX_IOTOK_BPAREN, /* #[ */
-		 STIX_IOTOK_PERIOD,
-		 STIX_IOTOK_SEMICOLON
+		STIX_IOTOK_EOF,
+		STIX_IOTOK_CHRLIT,
+		STIX_IOTOK_STRLIT,
+		STIX_IOTOK_SYMLIT,
+		STIX_IOTOK_NUMLIT,
+		STIX_IOTOK_NIL,
+		STIX_IOTOK_SELF,
+		STIX_IOTOK_SUPER,
+		STIX_IOTOK_TRUE,
+		STIX_IOTOK_FALSE,
+		STIX_IOTOK_THIS_CONTEXT,
+		STIX_IOTOK_IDENT,
+		STIX_IOTOK_BINSEL,
+		STIX_IOTOK_KEYWORD,
+		STIX_IOTOK_PRIMITIVE,
+		STIX_IOTOK_ASSIGN,
+		STIX_IOTOK_COLON,
+		STIX_IOTOK_RETURN,
+		STIX_IOTOK_LBRACE,
+		STIX_IOTOK_RBRACE,
+		STIX_IOTOK_LBRACK,
+		STIX_IOTOK_RBRACK,
+		STIX_IOTOK_LPAREN,
+		STIX_IOTOK_RPAREN,
+		STIX_IOTOK_APAREN, /* #( */
+		STIX_IOTOK_BPAREN, /* #[ */
+		STIX_IOTOK_PERIOD,
+		STIX_IOTOK_SEMICOLON
 	} type;
 
 	stix_ucs_t name;
@@ -310,6 +316,20 @@ struct stix_compiler_t
 	/* temporary space to handle an illegal character */
 	stix_uch_t ilchr;
 	stix_ucs_t ilchr_ucs;
+
+
+	/* information about a function begin comipled */
+	struct
+	{
+		stix_ucs_t name;
+		stix_size_t name_capa;
+
+		int tmpr_count; /* total number of temporaries including arguments */
+		int tmpr_nargs;
+
+		/* literals */
+		int literal_count;
+	} fun; 
 };
 
 #endif
@@ -357,21 +377,28 @@ void* stix_allocheapmem (
 /* ========================================================================= */
 /* stix.c                                                                    */
 /* ========================================================================= */
-stix_oow_t stix_hashbytes (
+stix_size_t stix_hashbytes (
 	const stix_uint8_t* ptr,
-	stix_oow_t          len
+	stix_size_t          len
 );
 
-stix_oow_t stix_hashchars (
+stix_size_t stix_hashchars (
 	const stix_uch_t*  ptr,
-	stix_oow_t         len
+	stix_size_t         len
 );
 
 int stix_equalchars (
 	const stix_uch_t*  str1,
 	const stix_uch_t*  str2,
-	stix_oow_t         len
+	stix_size_t         len
 );
+
+void stix_copychars (
+	stix_uch_t*       dst,
+	const stix_uch_t* src,
+	stix_size_t len
+);
+
 
 /* ========================================================================= */
 /* obj.c                                                                     */
