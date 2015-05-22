@@ -195,8 +195,14 @@ static char* syntax_error_msg[] =
 	"} expected",
 	") expected",
 	". expected",
+	"| expected",
+	"> expected",
+	"identifier expected",
+	"integer expected",
+	"primitive: expected",
 	"wrong class modifier",
-	"identifier expected"
+	"wrong function name",
+	"duplicate argument name"
 };
 
 int main (int argc, char* argv[])

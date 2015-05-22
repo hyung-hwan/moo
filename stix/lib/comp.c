@@ -28,25 +28,10 @@
 
 #define TOKEN_NAME_CAPA 128
 #define TOKEN_NAME_ALIGN 256
-#define FUNCTION_NAME_ALIGN 256
+#define FUNCTION_NAME_ALIGN 8 /* 256 */
+#define TEMPORARIES_ALIGN 8 /* 256 */
 
 #if 0
-enum class_type_t
-{
-	CLASS_NORMAL = 0,
-	CLASS_VARIABLE,
-	CLASS_VARIABLE_BYTE,
-	CLASS_VARIABLE_CHAR
-};
-typedef enum class_type_t class_type_t;
-
-enum vardef_type_t
-{
-	VARDEF_INSTANCE,
-	VARDEF_CLASS_INSTANCE,
-	VARDEF_CLASS
-};
-typedef enum vardef_type_t vardef_type_t;
 
 enum stix_send_target_t
 {
@@ -67,6 +52,21 @@ typedef enum stix_stack_operand_t stix_stack_operand_t;
 #endif
 
 
+enum class_mod_t
+{
+	CLASS_BYTE_INDEXED      = (1 << 0),
+	CLASS_CHARACTER_INDEXED = (1 << 1),
+	CLASS_WORD_INDEXED      = (1 << 2),
+	CLASS_POINTER_INDEXED   = (1 << 3),
+	CLASS_EXTEND            = (1 << 4)
+};
+
+enum dcl_mod_t
+{
+	DCL_CLASS     = (1 << 0),
+	DCL_CLASSINST = (1 << 1)
+};
+
 static struct ksym_t
 {
 	stix_oow_t len;
@@ -85,11 +85,15 @@ static struct ksym_t
 	{  8, { 'i','n','s','t','a','n','c','e'                               } },
 	{  4, { 'm','a','i','n'                                               } },
 	{  7, { 'p','o','i','n','t','e','r'                                   } },
+	{ 10, { 'p','r','i','m','i','t','i','v','e',':'                       } },
 	{  4, { 's','e','l','f'                                               } },
 	{  5, { 's','u','p','e','r'                                           } },
 	{ 11, { 't','h','i','s','C','o','n','t','e','x','t'                   } },
 	{  4, { 't','r','u','e'                                               } },
-	{  4, { 'w','o','r','d'                                               } }
+	{  4, { 'w','o','r','d'                                               } },
+	{  1, { '|'                                                           } },
+	{  1, { '>'                                                           } },
+	{  1, { '<'                                                           } }
 };
 
 enum ksym_id_t
@@ -107,11 +111,16 @@ enum ksym_id_t
 	KSYM_INSTANCE,
 	KSYM_MAIN,
 	KSYM_POINTER,
+	KSYM_PRIMITIVE_COLON,
 	KSYM_SELF,
 	KSYM_SUPER,
 	KSYM_THIS_CONTEXT,
 	KSYM_TRUE,
-	KSYM_WORD
+	KSYM_WORD,
+
+	KSYM_VBAR,
+	KSYM_GT,
+	KSYM_LT
 };
 typedef enum ksym_id_t ksym_id_t;
 
@@ -131,6 +140,15 @@ static STIX_INLINE int is_token_ident (stix_t* stix, ksym_id_t id)
 	return stix->c->tok.type == STIX_IOTOK_IDENT && does_token_name_match(stix, id);
 }
 
+static STIX_INLINE int is_token_binsel (stix_t* stix, ksym_id_t id)
+{
+	return stix->c->tok.type == STIX_IOTOK_BINSEL && does_token_name_match(stix, id);
+}
+
+static STIX_INLINE int is_token_keyword (stix_t* stix, ksym_id_t id)
+{
+	return stix->c->tok.type == STIX_IOTOK_KEYWORD && does_token_name_match(stix, id);
+}
 
 static int begin_include (stix_t* fsc);
 static int end_include (stix_t* fsc);
@@ -915,67 +933,46 @@ static int end_include (stix_t* stix)
 /* ---------------------------------------------------------------------
  * Parser and Code Generator 
  * --------------------------------------------------------------------- */
-
-
-
-static STIX_INLINE int is_tok_pseudovar (stix_t* fsc)
-{
-	return fsc->tok.type == STIX_IOTOK_IDENT &&
-	       (stix_strequal(fsc->tok.name.ptr, STIX_T("self")) ||
-	        stix_strequal(fsc->tok.name.ptr, STIX_T("super")) ||
-	        stix_strequal(fsc->tok.name.ptr, STIX_T("thisContext")) ||
-	        stix_strequal(fsc->tok.name.ptr, STIX_T("nil")) ||
-	        stix_strequal(fsc->tok.name.ptr, STIX_T("true")) ||
-	        stix_strequal(fsc->tok.name.ptr, STIX_T("false")));
-}
-
-static STIX_INLINE int is_tok_binsel (stix_t* fsc, const stix_uch_t* sel)
-{
-	return fsc->tok.type == STIX_IOTOK_BINSEL && 
-	       stix_strequal (fsc->tok.name.ptr, sel);
-}
-
-
 #if 0
 
 #define EMIT_CODE_TEST(fsc,high,low) \
-	do { if (emit_code_test(fsc,high,low) == -1) return -1; } while (0)
+	do { if (emit_code_test(fsc,high,low) <= -1) return -1; } while (0)
 
 #define EMIT_PUSH_RECEIVER_VARIABLE(fsc,pos) \
 	do {  \
 		if (emit_stack_positional ( \
-			fsc, PUSH_RECEIVER_VARIABLE, pos) == -1) return -1; \
+			fsc, PUSH_RECEIVER_VARIABLE, pos) <= -1) return -1; \
 	} while (0)
 
 #define EMIT_PUSH_TEMPORARY_LOCATION(fsc,pos) \
 	do {  \
 		if (emit_stack_positional ( \
-			fsc, PUSH_TEMPORARY_LOCATION, pos) == -1) return -1; \
+			fsc, PUSH_TEMPORARY_LOCATION, pos) <= -1) return -1; \
 	} while (0)
 
 #define EMIT_PUSH_LITERAL_CONSTANT(fsc,pos) \
 	do { \
 		if (emit_stack_positional ( \
-			fsc, PUSH_LITERAL_CONSTANT, pos) == -1) return -1; \
+			fsc, PUSH_LITERAL_CONSTANT, pos) <= -1) return -1; \
 	} while (0)
 
 
 #define EMIT_PUSH_LITERAL_VARIABLE(fsc,pos) \
 	do { \
 		if (emit_stack_positional ( \
-			fsc, PUSH_LITERAL_VARIABLE, pos) == -1) return -1; \
+			fsc, PUSH_LITERAL_VARIABLE, pos) <= -1) return -1; \
 	} while (0)
 
 #define EMIT_STORE_RECEIVER_VARIABLE(fsc,pos) \
 	do { \
 		if (emit_stack_positional ( \
-			fsc, STORE_RECEIVER_VARIABLE, pos) == -1) return -1; \
+			fsc, STORE_RECEIVER_VARIABLE, pos) <= -1) return -1; \
 	} while (0)
 
 #define EMIT_STORE_TEMPORARY_LOCATION(fsc,pos) \
 	do { \
 		if (emit_stack_positional ( \
-			fsc, STORE_TEMPORARY_LOCATION, pos) == -1) return -1; \
+			fsc, STORE_TEMPORARY_LOCATION, pos) <= -1) return -1; \
 	} while (0)
 
 
@@ -987,16 +984,16 @@ static STIX_INLINE int is_tok_binsel (stix_t* fsc, const stix_uch_t* sel)
 
 #define EMIT_SEND_TO_SELF(fsc,nargs,selector) \
 	do { \
-		if (emit_send_to_self(fsc,nargs,selector) == -1) return -1; \
+		if (emit_send_to_self(fsc,nargs,selector) <= -1) return -1; \
 	} while (0)
 
 #define EMIT_SEND_TO_SUPER(fsc,nargs,selector) \
 	do { \
-		if (emit_send_to_super(fsc,nargs,selector) == -1) return -1; \
+		if (emit_send_to_super(fsc,nargs,selector) <= -1) return -1; \
 	} while (0)
 
 #define EMIT_DO_PRIMITIVE(fsc,no) \
-	do { if (emit_do_primitive(fsc,no) == -1) return -1; } while(0)
+	do { if (emit_do_primitive(fsc,no) <= -1) return -1; } while(0)
 
 #endif
 
@@ -1154,7 +1151,7 @@ static int emit_send_message (stix_t* fsc, stix_send_target_t target, int select
 	return emit_code (fsc, code, len);
 }
 
-static int emit_do_primitive (stix_t* fsc, int no)
+static int emit_do_primitive (stix_t* stix, int no)
 {
 	stix_uint8_t code[2];
 	int len = 0;
@@ -1164,7 +1161,7 @@ static int emit_do_primitive (stix_t* fsc, int no)
 	code[len++] = STIX_DO_PRIMITIVE;
 	code[len++] = no;
 
-	return emit_code (fsc, code, len);
+	return emit_code (stix, code, len);
 }
 
 #if 0
@@ -1286,66 +1283,14 @@ static int finish_method (stix_t* fsc)
 
 
 #if 0
-
-static int parse_statements (stix_t* fsc)
-{
-	/*
-	 * <statements> := (ORIGINAL->maybe wrong)
-	 * 	(<return statement> ['.'] ) |
-	 * 	(<expression> ['.' [<statements>]])
-	 * <statements> := (REVISED->correct?)
-	 * 	<statement> ['. [<statements>]]
-	 */
-
-	while (fsc->tok.type != STIX_IOTOK_EOF) 
-	{
-		if (parse_statement (fsc) == -1) return -1;
-
-		if (fsc->tok.type == STIX_IOTOK_PERIOD) 
-		{
-			GET_TOKEN (fsc);
-			continue;
-		}
-
-		if (fsc->tok.type != STIX_IOTOK_EOF) 
-		{
-			fsc->errnum = STIX_FSC_ERROR_NO_PERIOD;
-			return -1;
-		}
-	}
-
-	EMIT_CODE (fsc, RETURN_RECEIVER);
-	return 0;
-}
-
 static int parse_block_statements (stix_t* fsc)
 {
 	while (fsc->tok.type != STIX_IOTOK_RBRACK && 
-	       fsc->tok.type != STIX_IOTOK_EOF) {
-
-		if (parse_statement(fsc) == -1) return -1;
+	       fsc->tok.type != STIX_IOTOK_EOF) 
+	{
+		if (parse_statement(fsc) <= -1) return -1;
 		if (fsc->tok.type != STIX_IOTOK_PERIOD) break;
 		GET_TOKEN (fsc);
-	}
-
-	return 0;
-}
-
-static int parse_statement (stix_t* fsc)
-{
-	/* 
-	 * <statement> := <return statement> | <expression>
-	 * <return statement> := returnOperator <expression> 
-	 * returnOperator := '^'
-	 */
-
-	if (fsc->tok.type == STIX_IOTOK_RETURN) {
-		GET_TOKEN (fsc);
-		if (parse_expression(fsc) == -1) return -1;
-		EMIT_RETURN_FROM_MESSAGE (fsc);
-	}
-	else {
-		if (parse_expression(fsc) == -1) return -1;
 	}
 
 	return 0;
@@ -1362,23 +1307,29 @@ static int parse_expression (stix_t* fsc)
 	 */
 	stix_vm_t* stx = fsc->stx;
 
-	if (fsc->tok.type == STIX_IOTOK_IDENT) {
+	if (fsc->tok.type == STIX_IOTOK_IDENT) 
+	{
 		stix_uch_t* ident = stix_tok_yield (&fsc->tok, 0);
-		if (ident == STIX_NULL) {
+		if (ident == STIX_NULL) 
+		{
 			fsc->errnum = STIX_FSC_ERROR_MEMORY;
 			return -1;
 		}
 
 		GET_TOKEN (fsc);
-		if (fsc->tok.type == STIX_IOTOK_ASSIGN) {
+		if (fsc->tok.type == STIX_IOTOK_ASSIGN) 
+		{
 			GET_TOKEN (fsc);
-			if (parse_assignment(fsc, ident) == -1) {
+			if (parse_assignment(fsc, ident) <= -1) 
+			{
 				stix_free (ident);
 				return -1;
 			}
 		}
-		else {
-			if (parse_basic_expression(fsc, ident) == -1) {
+		else 
+		{
+			if (parse_basic_expression(fsc, ident) <= -1) 
+			{
 				stix_free (ident);
 				return -1;
 			}
@@ -1388,14 +1339,13 @@ static int parse_expression (stix_t* fsc)
 	}
 	else 
 	{
-		if (parse_basic_expression(fsc, STIX_NULL) == -1) return -1;
+		if (parse_basic_expression(fsc, STIX_NULL) <= -1) return -1;
 	}
 
 	return 0;
 }
 
-static int parse_basic_expression (
-	stix_t* fsc, const stix_uch_t* ident)
+static int parse_basic_expression (stix_t* fsc, const stix_uch_t* ident)
 {
 	/*
 	 * <basic expression> := <primary> [<messages> <cascaded messages>]
@@ -1403,7 +1353,8 @@ static int parse_basic_expression (
 	int is_super;
 
 	if (parse_primary(fsc, ident, &is_super) == -1) return -1;
-	if (fsc->tok.type != STIX_IOTOK_EOF &&
+	if (fsc->tok.type != STIX_IOTOK_EOF && 
+	    fsc->tok.type != STIX_IOTOK_RBRACE && 
 	    fsc->tok.type != STIX_IOTOK_PERIOD) 
 	{
 		if (parse_message_continuation(fsc, is_super) == -1) return -1;
@@ -1411,8 +1362,7 @@ static int parse_basic_expression (
 	return 0;
 }
 
-static int parse_assignment (
-	stix_t* fsc, const stix_uch_t* target)
+static int parse_assignment (stix_t* fsc, const stix_uch_t* target)
 {
 	/*
 	 * <assignment> := <assignment target> assignmentOperator <expression>
@@ -1456,8 +1406,7 @@ static int parse_assignment (
 	return -1;
 }
 
-static int parse_primary (
-	stix_t* fsc, const stix_uch_t* ident, int* is_super)
+static int parse_primary (stix_t* fsc, const stix_uch_t* ident, int* is_super)
 {
 	/*
 	 * <primary> :=
@@ -1541,8 +1490,7 @@ static int parse_primary (
 	return 0;
 }
 
-static int parse_primary_ident (
-	stix_t* fsc, const stix_uch_t* ident, int* is_super)
+static int parse_primary_ident (stix_t* fsc, const stix_uch_t* ident, int* is_super)
 {
 	stix_word_t i;
 	stix_vm_t* stx = fsc->stx;
@@ -1829,310 +1777,12 @@ static int parse_unary_message (stix_t* fsc, int is_super)
 	return 0;
 }
 
-static int parse_method (stix_t* fsc, stix_word_t method_class, void* input)
-{
-	/*
-	 * <method definition> := 
-	 * 	<message pattern> [<temporaries>] [<primitive>] [<statements>]
-	 */
+#endif
 
-	GET_CHAR (fsc);
-	GET_TOKEN (fsc);
-
-	stix_name_clear (&fsc->method_name);
-	stix_arr_clear (&fsc->bcd);
-
-	while (fsc->met.tmpr.count > 0) 
-	{
-		stix_free (fsc->met.tmpr.names[--fsc->met.tmpr.count]);
-	}
-	fsc->met.tmpr.nargs = 0;
-	fsc->literal_count = 0;
-
-	if (parse_method_name_pattern(fsc) <= -1 ||
-	    parse_method_temporaries(fsc) <= -1 ||
-	    parse_method_primitive(fsc) <= -1 ||
-	    parse_statements(fsc) <= -1 ||
-	    finish_method (fsc) <= -1) return -1;
-
-	return 0;
-}
 
 #endif
 
-static int parse_unary_pattern (stix_t* fsc)
-{
-	STIX_ASSERT (fsc->met.name.len == 0);
-	STIX_ASSERT (fsc->met.tmpr.nargs == 0);
 
-/* TODO: check if the method name exists */
-
-	if (fsc->tok.name.len >= STIX_COUNTOF(fsc->met.name.buf))
-	{
-		stix_seterror (fsc, STIX_FSC_EMETNTL, &fsc->tok.name, &fsc->tok.loc);
-		return -1;
-	}
-
-	/* collect the method name */
-	fsc->met.name.len = stix_strcpy (fsc->met.name.buf, fsc->tok.name.ptr);
-	GET_TOKEN (fsc);
-	return 0;
-}
-
-static int parse_binary_pattern (stix_t* fsc)
-{
-	STIX_ASSERT (fsc->met.name.len == 0);
-	STIX_ASSERT (fsc->met.tmpr.nargs == 0);
-
-/* TODO: check if the method name exists */
-	if (fsc->tok.name.len >= STIX_COUNTOF(fsc->met.name.buf))
-	{
-		stix_seterror (fsc, STIX_FSC_EMETNTL, &fsc->tok.name, &fsc->tok.loc);
-		return -1;
-	}
-
-	/* collect the method name */
-	fsc->met.name.len = stix_strcpy (fsc->met.name.buf, fsc->tok.name.ptr);
-	GET_TOKEN (fsc);
-
-	/* collect the argument name */
-	if (fsc->tok.type != STIX_IOTOK_IDENT) 
-	{
-		stix_seterror (fsc, STIX_FSC_EILARGN, &fsc->tok.name, &fsc->tok.loc);
-		return -1;
-	}
-
-	STIX_ASSERT (fsc->met.tmpr.nargs == 0);
-	/*
-	 * check if there are too many arguments defined.
-	 * however, in this function, this condition will never be met.
-	 * so let me just comment out the check.
-	 *
-	if (fsc->met.tmpr.nargs >= STIX_COUNTOF(fsc->met.tmpr.names)) 
-	{
-		stix_seterror (fsc, STIX_FSC_ETMARGS, &fsc->tok.name, &fsc->tok.loc);
-		return -1;
-	}
-	*/
-
-/* TODO: check for duplicate entries...in instvars */
-
-	if (fsc->tok.name.len >= STIX_COUNTOF(fsc->met.tmpr.names[fsc->met.tmpr.count]))
-	{
-		/* argument name is too long */
-		stix_seterror (fsc, STIX_FSC_EARGNTL, &fsc->tok.name, &fsc->tok.loc);
-		return -1;
-	}
-	stix_strcpy (fsc->met.tmpr.names[fsc->met.tmpr.nargs], fsc->tok.name.ptr);
-	fsc->met.tmpr.nargs++;
-
-	GET_TOKEN (fsc);
-	return 0;
-}
-
-static int parse_keyword_pattern (stix_t* fsc)
-{
-	STIX_ASSERT (fsc->met.name.len == 0);
-	STIX_ASSERT (fsc->met.tmpr.nargs == 0);
-
-	do 
-	{
-		if (fsc->tok.name.len + fsc->met.name.len >= STIX_COUNTOF(fsc->met.name.buf))
-		{
-			stix_seterror (fsc, STIX_FSC_EMETNTL, &fsc->tok.name, &fsc->tok.loc);
-			return -1;
-		}
-		fsc->met.name.len += stix_strcpy (&fsc->met.name.buf[fsc->met.name.len], fsc->tok.name.ptr);
-
-		GET_TOKEN (fsc);
-		if (fsc->tok.type != STIX_IOTOK_IDENT || is_tok_pseudovar(fsc)) 
-		{
-			stix_seterror (fsc, STIX_FSC_EILARGN, &fsc->tok.name, &fsc->tok.loc);
-			return -1;
-		}
-
-		if (fsc->met.tmpr.nargs >= STIX_COUNTOF(fsc->met.tmpr.names)) 
-		{
-			/* too many arguments */
-			stix_seterror (fsc, STIX_FSC_ETMARGS, &fsc->tok.name, &fsc->tok.loc);
-			return -1;
-		}
-
-/* TODO: check for duplicate entries...in instvars/arguments */
-		if (fsc->tok.name.len >= STIX_COUNTOF(fsc->met.tmpr.names[fsc->met.tmpr.nargs]))
-		{
-			/* argument name is too long */
-			stix_seterror (fsc, STIX_FSC_EARGNTL, &fsc->tok.name, &fsc->tok.loc);
-			return -1;
-		}
-		stix_strcpy (fsc->met.tmpr.names[fsc->met.tmpr.nargs], fsc->tok.name.ptr);
-		fsc->met.tmpr.nargs++;
-
-		GET_TOKEN (fsc);
-	} 
-	while (fsc->tok.type == STIX_IOTOK_KEYWORD);
-
-	/* TODO: check if the method name exists */
-	/* if it exists, collapse arguments */
-
-	return 0;
-}
-
-
-static int parse_method_temporaries (stix_t* fsc)
-{
-	/* 
-	 * <temporaries> := '|' <temporary variable list> '|'
-	 * <temporary variable list> := identifier*
-	 */
-
-	if (!is_tok_binsel (fsc, STIX_T("|"))) return 0;
-
-	GET_TOKEN (fsc);
-	while (fsc->tok.type == STIX_IOTOK_IDENT) 
-	{
-		if (fsc->met.tmpr.count >= STIX_COUNTOF(fsc->met.tmpr.names)) 
-		{
-			stix_seterror (fsc, STIX_FSC_ETMTMPS, &fsc->tok.name, &fsc->tok.loc);
-			return -1;
-		}
-
-		if (is_tok_pseudovar(fsc)) 
-		{
-			stix_seterror (fsc, STIX_FSC_EILTMPN, &fsc->tok.name, &fsc->tok.loc);
-			return -1;
-		}
-
-/* TODO: check for duplicate entries...in instvars/arguments/temporaries */
-
-		if (fsc->tok.name.len >= STIX_COUNTOF(fsc->met.tmpr.names[fsc->met.tmpr.count]))
-		{
-			/* temporary variable name is too long */
-			stix_seterror (fsc, STIX_FSC_ETMPNTL, &fsc->tok.name, &fsc->tok.loc);
-			return -1;
-		}
-		stix_strcpy (fsc->met.tmpr.names[fsc->met.tmpr.count], fsc->tok.name.ptr);
-		fsc->met.tmpr.count++;
-
-		GET_TOKEN (fsc);
-	}
-
-	if (!is_tok_binsel (fsc, STIX_T("|"))) return 0;
-	{
-		stix_seterror (fsc, STIX_FSC_EVRTBAR, &fsc->tok.name, &fsc->tok.loc);
-		return -1;
-	}
-
-	GET_TOKEN (fsc);
-	return 0;
-}
-
-static int parse_method_primitive (stix_t* fsc)
-{
-	/* 
-	 * <primitive> := '<' 'primitive:' number '>'
-	 */
-
-	int prim_no;
-
-	if (!is_tok_binsel (fsc, STIX_T("<"))) return 0;
-
-	GET_TOKEN (fsc);
-	if (fsc->tok.type != STIX_IOTOK_KEYWORD ||
-	    !stix_strequal (fsc->tok.name.ptr, STIX_T("primitive:"))) 
-	{
-		fsc->errnum = STIX_FSC_ERROR_PRIMITIVE_KEYWORD;
-		return -1;
-	}
-
-	GET_TOKEN (fsc); /* TODO: only integer */
-	if (fsc->tok.type != STIX_IOTOK_NUMLIT) 
-	{
-		fsc->errnum = STIX_FSC_ERROR_PRIMITIVE_NUMBER;
-		return -1;
-	}
-
-/*TODO: more checks the validity of the primitive number */
-	if (!stix_stristype(fsc->tok.name.buffer, stix_isdigit)) 
-	{
-		fsc->errnum = STIX_FSC_ERROR_PRIMITIVE_NUMBER;
-		return -1;
-	}
-
-	STIX_STRTOI (prim_no, fsc->tok.name.buffer, STIX_NULL, 10);
-	if (prim_no < 0 || prim_no > 0xFF) 
-	{
-		fsc->errnum = STIX_FSC_ERROR_PRIMITIVE_NUMBER_RANGE;
-		return -1;
-	}
-
-	EMIT_DO_PRIMITIVE (fsc, prim_no);
-
-	GET_TOKEN (fsc);
-	if (!is_tok_binsel (fsc, STIX_T(">"))) return 0;
-	{
-		stix_seterror (fsc, STIX_FSC_ERABRCK, &fsc->tok.name, &fsc->tok.loc);
-		return -1;
-	}
-
-	GET_TOKEN (fsc);
-	return 0;
-}
-
-
-static int compile_method (stix_t* fsc, int instance)
-{
-	/* clear data required to compile a method */
-	STIX_MEMSET (&fsc->met, 0, STIX_SIZEOF(fsc->met));
-
-#if 0
-	/* clear the byte-code buffer */
-	fsc->bcd.len = 0;
-#endif
-
-	if (parse_method_name_pattern (fsc) <= -1) return -1;
-
-	if (fsc->tok.type != STIX_IOTOK_LBRACE)
-	{
-		/* { expected */
-		stix_seterror (fsc, STIX_FSC_ELBRACE, &fsc->tok.name, &fsc->tok.loc);
-		return -1;
-	}
-	GET_TOKEN (fsc);
-
-	if (parse_method_temporaries (fsc) <= -1 ||
-	    parse_method_primitive (fsc) <= -1 /*||
-	    parse_statements (fsc) <= -1 ||
-	    finish_method (fsc) <= -1*/) return -1; 
-
-	if (fsc->tok.type != STIX_IOTOK_RBRACE)
-	{
-		/* } expected */
-		stix_seterror (fsc, STIX_FSC_ERBRACE, &fsc->tok.name, &fsc->tok.loc);
-		return -1;
-	}
-	GET_TOKEN (fsc);
-
-wprintf (L"METHOD NAME ==> [%S] temporaries => %d\n", fsc->met.name.buf, fsc->met.tmpr.count);
-	return 0;
-}
-
-#endif
-
-enum class_mod_t
-{
-	CLASS_BYTE_INDEXED      = (1 << 0),
-	CLASS_CHARACTER_INDEXED = (1 << 1),
-	CLASS_WORD_INDEXED      = (1 << 2),
-	CLASS_POINTER_INDEXED   = (1 << 3),
-	CLASS_EXTEND            = (1 << 4)
-};
-
-enum dcl_mod_t
-{
-	DCL_CLASS     = (1 << 0),
-	DCL_CLASSINST = (1 << 1)
-};
 
 
 static int compile_class_declare (stix_t* stix)
@@ -2183,6 +1833,7 @@ static int compile_class_declare (stix_t* stix)
 	{
 		if (stix->c->tok.type == STIX_IOTOK_IDENT)
 		{
+			/* TODO: check duplicate names */
 			/* TODO: ADD IT TO THE CLASS */
 		}
 		else
@@ -2205,57 +1856,125 @@ static int compile_class_declare (stix_t* stix)
 }
 
 
-static int compile_unary_function_name (stix_t* stix)
+static int append_function_name (stix_t* stix, const stix_ucs_t* name)
 {
-	stix_size_t len;
+	/* function name segments are concatenated without any delimiters */
+	stix_size_t i;
 
-	STIX_ASSERT (stix->c->fun.name.len == 0);
-	STIX_ASSERT (stix->c->fun.tmpr_nargs == 0);
-
-/* TODO: check if the method name exists */
-	len = STIX_ALIGN (stix->c->tok.name.len, FUNCTION_NAME_ALIGN);
-	if (len > stix->c->tok.name_capa)
+	i = stix->c->fun.name.len + name->len;
+	if (i > stix->c->fun.name_capa)
 	{
 		stix_uch_t* tmp;
 
-		tmp = stix_reallocmem (stix, stix->c->tok.name.ptr, len);
-		if (!tmp) return -1;
+		i = STIX_ALIGN(i, TEMPORARIES_ALIGN);
+
+		tmp = stix_reallocmem (stix, stix->c->fun.name.ptr, STIX_SIZEOF(*tmp) * i);
+		if (!tmp)  return -1;
 
 		stix->c->fun.name.ptr = tmp;
+		stix->c->fun.name_capa = i;
 	}
 
-	/* collect the method name */
-	stix_copychars (stix->c->fun.name.ptr, stix->c->tok.name.ptr, stix->c->tok.name.len);
-	stix->c->fun.name.len = stix->c->tok.name.len;
+	stix_copychars (&stix->c->fun.name.ptr[stix->c->fun.name.len], name->ptr, name->len);
+	stix->c->fun.name.len += name->len;
+	return 0;
+}
 
+static int append_temporary (stix_t* stix, const stix_ucs_t* name)
+{
+	/* temporary variable names are added to the string with leading
+	 * space if it's not the first variable */
 
+	stix_size_t i;
+
+	i = stix->c->fun.tmprs.len + name->len;
+	if (stix->c->fun.tmprs.len > 0) i++;
+
+	if (i > stix->c->fun.tmprs_capa)
+	{
+		stix_uch_t* tmp;
+
+		i = STIX_ALIGN(i, TEMPORARIES_ALIGN);
+
+		tmp = stix_reallocmem (stix, stix->c->fun.tmprs.ptr, STIX_SIZEOF(*tmp) * i);
+		if (!tmp)  return -1;
+
+		stix->c->fun.tmprs.ptr = tmp;
+		stix->c->fun.tmprs_capa = i;
+	}
+
+	if (stix->c->fun.tmprs.len > 0) 
+	{
+		stix->c->fun.tmprs.ptr[stix->c->fun.tmprs.len] = ' ';
+		stix->c->fun.tmprs.len++;
+	}
+
+	stix_copychars (&stix->c->fun.tmprs.ptr[stix->c->fun.tmprs.len], name->ptr, name->len);
+	stix->c->fun.tmprs.len += name->len;
+
+	return 0;
+}
+
+static stix_ssize_t find_temporary (stix_t* stix, const stix_ucs_t* name)
+{
+	/* this function is inefficient. but considering the typical number
+	 * of arguments and temporary variables, the inefficiency can be 
+	 * ignored in my opinion. the overhead to maintain the reverse lookup
+	 * table from a name to an index should be greater than this simple
+	 * inefficient lookup */
+
+	stix_uch_t* t, * e;
+	stix_ssize_t index;
+	stix_size_t i;
+
+	t = stix->c->fun.tmprs.ptr;
+	e = t + stix->c->fun.tmprs.len;
+	index = 0;
+
+	while (t < e)
+	{
+		while (t < e && is_spacechar(*t)) t++;
+
+		for (i = 0; i < name->len; i++)
+		{
+			if (t >= e || name->ptr[i] != *t) goto unmatched;
+			t++;
+		}
+		if (t >= e || is_spacechar(*t)) return index;
+
+	unmatched:
+		while (t < e)
+		{
+			if (is_spacechar(*t))
+			{
+				t++;
+				break;
+			}
+			t++;
+		}
+
+		index++;
+	}
+
+	return -1;
+}
+
+static int compile_unary_function_name (stix_t* stix)
+{
+	STIX_ASSERT (stix->c->fun.name.len == 0);
+	STIX_ASSERT (stix->c->fun.tmpr_nargs == 0);
+
+	if (append_function_name (stix, &stix->c->tok.name) <= -1) return -1;
 	GET_TOKEN (stix);
 	return 0;
 }
 
 static int compile_binary_function_name (stix_t* stix)
 {
-	stix_size_t len;
-
 	STIX_ASSERT (stix->c->fun.name.len == 0);
 	STIX_ASSERT (stix->c->fun.tmpr_nargs == 0);
 
-/* TODO: check if the method name exists */
-	len = STIX_ALIGN (stix->c->tok.name.len, FUNCTION_NAME_ALIGN);
-	if (len > stix->c->tok.name_capa)
-	{
-		stix_uch_t* tmp;
-
-		tmp = stix_reallocmem (stix, stix->c->tok.name.ptr, len);
-		if (!tmp) return -1;
-
-		stix->c->fun.name.ptr = tmp;
-	}
-	
-	/* collect the method name */
-	stix_copychars (stix->c->fun.name.ptr, stix->c->tok.name.ptr, stix->c->tok.name.len);
-	stix->c->fun.name.len = stix->c->tok.name.len;
-
+	if (append_function_name (stix, &stix->c->tok.name) <= -1) return -1;
 	GET_TOKEN (stix);
 
 	/* collect the argument name */
@@ -2267,28 +1986,11 @@ static int compile_binary_function_name (stix_t* stix)
 	}
 
 	STIX_ASSERT (stix->c->fun.tmpr_nargs == 0);
-	/*
-	 * check if there are too many arguments defined.
-	 * however, in this function, this condition will never be met.
-	 * so let me just comment out the check.
-	 *
-	if (stix->c->fun.tmpr_nargs >= STIX_COUNTOF(stix->c->fun.tmpr_names)) 
-	{
-		stix_seterror (stix, STIX_FSC_ETMARGS, &stix->c->tok.name, &stix->c->tok.loc);
-		return -1;
-	}
-	*/
 
-/* TODO: check for duplicate entries...in instvars */
-
-	if (stix->c->tok.name.len >= STIX_COUNTOF(stix->c->fun.tmpr.names[stix->c->fun.tmpr.count]))
-	{
-		/* argument name is too long */
-		stix_seterror (stix, STIX_FSC_EARGNTL, &stix->c->tok.name, &stix->c->tok.loc);
-		return -1;
-	}
-
-	stix_strcpy (stix->c->fun.tmpr.names[stix->c->fun.tmpr.nargs], stix->c->tok.name.ptr);
+	/* no duplication check is performed against instance variable names or
+	 * class variable names. a duplcate name will shade a previsouly defined
+	 * variable. */
+	if (append_temporary(stix, &stix->c->tok.name) <= -1) return -1;
 	stix->c->fun.tmpr_nargs++;
 
 	GET_TOKEN (stix);
@@ -2297,53 +1999,36 @@ static int compile_binary_function_name (stix_t* stix)
 
 static int compile_keyword_function_name (stix_t* stix)
 {
-#if 0
 	STIX_ASSERT (stix->c->fun.name.len == 0);
 	STIX_ASSERT (stix->c->fun.tmpr_nargs == 0);
 
 	do 
 	{
-		if (stix->c->tok.name.len + stix->c->fun.name.len >= STIX_COUNTOF(stix->c->fun.name.buf))
-		{
-			stix_seterror (stix, STIX_FSC_EMETNTL, &stix->c->tok.name, &stix->c->tok.loc);
-			return -1;
-		}
-		stix->c->fun.name.len += stix_strcpy (&stix->c->fun.name.buf[stix->c->fun.name.len], stix->c->tok.name.ptr);
+		if (append_function_name(stix, &stix->c->tok.name) <= -1) return -1;
 
 		GET_TOKEN (stix);
-		if (stix->c->tok.type != STIX_IOTOK_IDENT || is_tok_pseudovar(stix)) 
+		if (stix->c->tok.type != STIX_IOTOK_IDENT) 
 		{
-			stix_seterror (stix, STIX_FSC_EILARGN, &stix->c->tok.name, &stix->c->tok.loc);
+			/* wrong argument name. identifier is expected */
+			set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
 		}
 
-		if (stix->c->fun.tmpr.nargs >= STIX_COUNTOF(stix->c->fun.tmpr.names)) 
+		if (find_temporary(stix, &stix->c->tok.name) >= 0)
 		{
-			/* too many arguments */
-			stix_seterror (stix, STIX_FSC_ETMARGS, &stix->c->tok.name, &stix->c->tok.loc);
+			set_syntax_error (stix, STIX_SYNERR_DUPARGNAME, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
 		}
 
-/* TODO: check for duplicate entries...in instvars/arguments */
-		if (stix->c->tok.name.len >= STIX_COUNTOF(stix->c->fun.tmpr.names[stix->c->fun.tmpr.nargs]))
-		{
-			/* argument name is too long */
-			stix_seterror (stix, STIX_FSC_EARGNTL, &stix->c->tok.name, &stix->c->tok.loc);
-			return -1;
-		}
-		stix_strcpy (stix->c->fun.tmpr.names[stix->c->fun.tmpr.nargs], stix->c->tok.name.ptr);
-		stix->c->fun.tmpr.nargs++;
+		if (append_temporary(stix, &stix->c->tok.name) <= -1) return -1;
+		stix->c->fun.tmpr_nargs++;
 
 		GET_TOKEN (stix);
 	} 
 	while (stix->c->tok.type == STIX_IOTOK_KEYWORD);
 
-	/* TODO: check if the method name exists */
-	/* if it exists, collapse arguments */
-#endif
 	return 0;
 }
-
 
 static int compile_function_name (stix_t* stix)
 {
@@ -2374,9 +2059,14 @@ static int compile_function_name (stix_t* stix)
 			break;
 
 		default:
-			/* illegal function name pattern */
+			/* illegal function name  */
 			set_syntax_error (stix, STIX_SYNERR_FUNNAME, &stix->c->tok.loc, &stix->c->tok.name);
 			n = -1;
+	}
+
+	if (n >= 0)
+	{
+/* TODO: check if the current function name collected conflicts with a previously defined function name */
 	}
 
 	/* the total number of temporaries is equal to the number of 
@@ -2386,16 +2076,171 @@ static int compile_function_name (stix_t* stix)
 	return n;
 }
 
+static int compile_class_function_temporaries (stix_t* stix)
+{
+	/* 
+	 * function-temporaries := "|" variable-list "|"
+	 * variable-list := identifier*
+	 */
+
+	if (!is_token_binsel(stix, KSYM_VBAR)) 
+	{
+		/* return without doing anything if | is not found.
+		 * this is not an error condition */
+		return 0;
+	}
+
+	GET_TOKEN (stix);
+	while (stix->c->tok.type == STIX_IOTOK_IDENT) 
+	{
+		if (find_temporary(stix, &stix->c->tok.name) >= 0)
+		{
+			set_syntax_error (stix, STIX_SYNERR_DUPARGNAME, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+
+		if (append_temporary(stix, &stix->c->tok.name) <= -1) return -1;
+		stix->c->fun.tmpr_count++;
+
+		GET_TOKEN (stix);
+	}
+
+	if (!is_token_binsel(stix, KSYM_VBAR)) 
+	{
+		set_syntax_error (stix, STIX_SYNERR_VBAR, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	GET_TOKEN (stix);
+	return 0;
+}
+
+static int compile_class_function_primitive (stix_t* stix)
+{
+	/* 
+	 * function-primitive := "<"  "primitive:" integer ">"
+	 */
+
+	int prim_no;
+
+	if (!is_token_binsel(stix, KSYM_LT)) 
+	{
+		/* return if < is not seen. it is not an error condition */
+		return 0;
+	}
+
+	GET_TOKEN (stix);
+	if (!is_token_keyword(stix, KSYM_PRIMITIVE_COLON))
+	{
+		set_syntax_error (stix, STIX_SYNERR_PRIMITIVE, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+/* TODO: other modifiers? 
+ * <primitive: 10>
+ * <some-other-modifier: xxxx>
+ */
+
+	GET_TOKEN (stix); /* TODO: only integer */
+	if (stix->c->tok.type != STIX_IOTOK_NUMLIT) 
+	{
+		set_syntax_error (stix, STIX_SYNERR_INTEGER, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+/*TODO: more checks the validity of the primitive number */
+#if 0
+	if (!stix_stristype(stix->tok.name.buffer, stix_isdigit)) 
+	{
+		stix->errnum = STIX_FSC_ERROR_PRIMITIVE_NUMBER;
+		return -1;
+	}
+
+	STIX_STRTOI (prim_no, stix->tok.name.buffer, STIX_NULL, 10);
+	if (prim_no < 0 || prim_no > 0xFF) 
+	{
+		stix->errnum = STIX_FSC_ERROR_PRIMITIVE_NUMBER_RANGE;
+		return -1;
+	}
+
+	EMIT_DO_PRIMITIVE (stix, prim_no); 
+#endif
+
+	GET_TOKEN (stix);
+	if (!is_token_binsel(stix, KSYM_GT)) 
+	{
+		set_syntax_error (stix, STIX_SYNERR_GT, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	GET_TOKEN (stix);
+	return 0;
+}
+
+
+static int compile_class_function_statement (stix_t* stix)
+{
+	if (stix->c->tok.type == STIX_IOTOK_RETURN) 
+	{
+		GET_TOKEN (stix);
+		if (compile_class_function_expression(stix) <= -1) return -1;
+#if 0
+		EMIT_RETURN_FROM_MESSAGE (stix);
+#endif
+	}
+	else 
+	{
+		if (compile_class_function_expression(stix) <= -1) return -1;
+	}
+
+	return 0;
+}
+
+
+static int compile_class_function_statements (stix_t* stix)
+{
+	/*
+	 * function-statements := function-statement ("." | ("." function-statements))*
+	 * function-statement := function-return | function-expression
+	 * function-return := "^" function-expression
+	 * function-expression := ...
+	 */
+
+	if (stix->c->tok.type != STIX_IOTOK_EOF &&
+	    stix->c->tok.type != STIX_IOTOK_RBRACE)
+	{
+		do
+		{
+			if (compile_class_function_statement(stix) <= -1) return -1;
+
+			if (stix->c->tok.type == STIX_IOTOK_PERIOD) 
+			{
+				/* period after a statement */
+				GET_TOKEN (stix);
+				if (stix->c->tok.type == STIX_IOTOK_EOF && stix->c->tok.type == STIX_IOTOK_RBRACE) break;
+			}
+			else 
+			{
+				if (stix->c->tok.type == STIX_IOTOK_EOF && stix->c->tok.type == STIX_IOTOK_RBRACE) break;
+				set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
+			}
+		}
+		while (1);
+	}
+
+#if 0
+	EMIT_CODE (stix, RETURN_RECEIVER);
+#endif
+	return 0;
+}
+
 static int compile_class_function (stix_t* stix)
 {
 	/* clear data required to compile a method */
+	stix->c->fun.name.len = 0;
+	stix->c->fun.tmprs.len = 0;
 	stix->c->fun.tmpr_count = 0;
 	stix->c->fun.tmpr_nargs = 0;
-
-#if 0
-	/* clear the byte-code buffer */
-	stix->bcd.len = 0;
-#endif
+	stix->c->fun.code.len = 0;
 
 	if (compile_function_name(stix) <= -1) return -1;
 
@@ -2408,12 +2253,11 @@ static int compile_class_function (stix_t* stix)
 
 	GET_TOKEN (stix);
 
-#if 0
-	if (parse_method_temporaries(stix) <= -1 ||
-	    parse_method_primitive(stix) <= -1 /*||
-	    parse_statements(stix) <= -1 ||
+
+	if (compile_class_function_temporaries(stix) <= -1 ||
+	    compile_class_function_primitive(stix) <= -1 ||
+	    compile_class_function_statements(stix) <= -1 /*|| 
 	    finish_method(stix) <= -1*/) return -1; 
-#endif
 
 	if (stix->c->tok.type != STIX_IOTOK_RBRACE)
 	{
@@ -2423,18 +2267,23 @@ static int compile_class_function (stix_t* stix)
 	}
 	GET_TOKEN (stix);
 
-//wprintf (L"METHOD NAME ==> [%S] temporaries => %d\n", stix->c->fun.name.buf, stix->c->fun.tmpr.count);
 	return 0;
 }
 
 static int compile_class_definition (stix_t* stix)
 {
-	/* class-def := #class class-mod? "{" class-def-body "}"
-	 * class-mod := "(" (#byte | #character | #word | #pointer)* ")"
-	 * class-def-body := (var-def | fun-def)*
-	 * var-def := #dcl var-mod? identifier+ "."
-	 * var-mod := "(" (#class | #classinst | #instance)* ")"
-	 * fun-def := #fun fun-mod? message-definition
+	/* 
+	 * class-definition := #class class-modifier? "{" class-body "}"
+	 * class-modifier := "(" (#byte | #character | #word | #pointer)* ")"
+	 * class-body := (variable-definition | function-definition)*
+	 * 
+	 * variable-definition := (#dcl | #declare) variable-modifier? variable-list "."
+	 * variable-modifier := "(" (#class | #classinst | #instance)* ")"
+	 * variable-list := identifier*
+	 *
+	 * function-definition := (#fun | #function) function-modifier? function-actual-definition
+	 * function-modifier := "(" (#class | #instance) ")"
+	 * function-actual-definition := function-name "{" function-tempraries? function-primitive? function-statements* "}"
 	 */
 
 	stix_oop_t oop1, oop2;
@@ -2716,7 +2565,12 @@ static void fini_compiler (stix_t* stix)
 	if (stix->c)
 	{
 		clear_io_names (stix);
-		stix_freemem (stix, stix->c->tok.name.ptr);
+
+		if (stix->c->tok.name.ptr) stix_freemem (stix, stix->c->tok.name.ptr);
+		if (stix->c->fun.tmprs.ptr) stix_freemem (stix, stix->c->fun.tmprs.ptr);
+		if (stix->c->fun.name.ptr) stix_freemem (stix, stix->c->fun.name.ptr);
+		if (stix->c->fun.code.ptr) stix_freemem (stix, stix->c->fun.code.ptr);
+
 		stix_freemem (stix, stix->c);
 		stix->c = STIX_NULL;
 	}
