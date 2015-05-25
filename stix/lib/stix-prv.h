@@ -268,6 +268,7 @@ enum stix_synerrnum_t
 	STIX_SYNERR_IDENT,       /* identifier expected */
 	STIX_SYNERR_INTEGER,     /* integer expected */
 	STIX_SYNERR_PRIMITIVE,   /* primitive: expected */
+	STIX_SYNERR_DIRECTIVE,   /* wrong directive */
 	STIX_SYNERR_CLASSMOD,    /* wrong class modifier */
 	STIX_SYNERR_CLASSUNDEF,  /* undefined class */
 	STIX_SYNERR_CLASSDUP,    /* duplicate class */

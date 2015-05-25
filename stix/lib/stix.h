@@ -491,18 +491,21 @@ struct stix_class_t
 {
 	STIX_OBJ_HEADER;
 
-	stix_oop_t      spec;         /* SmallInteger */
-	stix_oop_t      superclass;   /* Another class */
-	stix_oop_t      subclasses;   /* Array of subclasses */
-	stix_oop_char_t name;         /* Symbol */
-	stix_oop_char_t instvars;     /* String */
-	stix_oop_char_t classvars;    /* String */
+	stix_oop_t      spec;          /* SmallInteger */
 
-	stix_oop_oop_t  instmthds;    /* instance methods, MethodDictionary */
-	stix_oop_oop_t  classmthds;   /* class methods, MethodDictionary */
+	stix_oop_t      superclass;    /* Another class */
+	stix_oop_t      subclasses;    /* Array of subclasses */
+
+	stix_oop_char_t name;          /* Symbol */
+	stix_oop_char_t instvars;      /* String */
+	stix_oop_char_t classvars;     /* String */
+	stix_oop_char_t classinstvars; /* String */
+
+	stix_oop_oop_t  instfuns;      /* instance methods, MethodDictionary */
+	stix_oop_oop_t  classfuns;     /* class methods, MethodDictionary */
 
 	/* indexed part afterwards */
-	stix_oop_t      classvar[1];  /* most classes have no class variables. better to be 0 */
+	stix_oop_t      classvar[1];   /* most classes have no class variables. better to be 0 */
 };
 typedef struct stix_class_t stix_class_t;
 typedef struct stix_class_t* stix_oop_class_t;

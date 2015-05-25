@@ -201,6 +201,7 @@ static char* syntax_error_msg[] =
 	"identifier expected",
 	"integer expected",
 	"primitive: expected",
+	"wrong directive",
 	"wrong class modifier",
 	"undefined class",
 	"duplicate class",

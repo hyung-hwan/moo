@@ -1834,28 +1834,38 @@ static stix_ssize_t find_class_level_variable (stix_t* stix, int index, const st
 	stix_ucs_t hs;
 
 /* TODO: find it in other types of variables */
+/* THIS FUNCTION IS NOT COMPLETE */
 	pos = find_word_in_string(&stix->c->_class.vars[index], name);
-	if (pos <= -1)
+	super = stix->c->_class.super_oop;
+	if (pos >= 0) goto done;
+
+	while (super != stix->_nil)
 	{
-		super = stix->c->_class.super_oop;
-		while (super != stix->_nil)
-		{
-			v = ((stix_class_t*)super)->instvars;
-			hs.ptr = v->slot;
-			hs.len = STIX_OBJ_GET_SIZE(v);
+		STIX_ASSERT (STIX_CLASSOF(stix, super) == stix->_class);
 
-			pos = find_word_in_string(&hs, name);
-			if (pos <= -1)
-			{
+		v = ((stix_class_t*)super)->instvars;
+/* TODO: v = ((stix_class_t*)super)->classvars; */
+		hs.ptr = v->slot;
+		hs.len = STIX_OBJ_GET_SIZE(v);
 
-
-			}
-
-			super = ((stix_class_t*)super)->superclass;
-		}
+		pos = find_word_in_string(&hs, name);
+		super = ((stix_class_t*)super)->superclass;
+		if (pos >= 0) goto done;
 	}
 
 	return -1;
+
+done:
+	if (super != stix->_nil)
+	{
+		stix_oow_t spec;
+
+		STIX_ASSERT (STIX_CLASSOF(stix, super) == stix->_class);
+		spec = STIX_OOP_TO_SMINT(((stix_class_t*)super)->spec);
+		pos += STIX_CLASS_SPEC_NAMED_INSTVAR(spec);
+	}
+
+	return pos;
 }
 
 static int append_function_name (stix_t* stix, const stix_ucs_t* name)
@@ -2592,24 +2602,23 @@ static int compile_stream (stix_t* stix)
 		}
 		else if (is_token_ksym(stix, KSYM_CLASS))
 		{
+			/* #class Selfclass(Superclass) { } */
 			GET_TOKEN (stix);
 			if (compile_class_definition(stix) <= -1) return -1;
 		}
-/*
+#if 0
 		else if (is_token_ksym(stix, KSYM_MAIN))
 		{
+			/* #main */
+			/* TODO: implement this */
+			
 		}
-*/
+#endif
 
 		else
 		{
-			/* TODO: error */
-			stix_size_t i;
-			printf ("%d [", stix->c->tok.type);
-			for (i = 0; i < stix->c->tok.name.len; i++)
-				printf ("%c", stix->c->tok.name.ptr[i]);
-			printf ("]\n");
-			GET_TOKEN (stix);
+			set_syntax_error(stix, STIX_SYNERR_DIRECTIVE, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
 		}
 	}
 
@@ -2622,6 +2631,7 @@ static void gc_compiler (stix_t* stix)
 	{
 		if (stix->c->_class.self_oop) 
 			stix->c->_class.self_oop = stix_moveoop (stix, stix->c->_class.self_oop);
+
 		if (stix->c->_class.super_oop)
 			stix->c->_class.super_oop = stix_moveoop (stix, stix->c->_class.super_oop);
 	}
@@ -2631,12 +2641,19 @@ static void fini_compiler (stix_t* stix)
 {
 	if (stix->c)
 	{
+		stix_size_t i;
+
 		clear_io_names (stix);
 
 		if (stix->c->tok.name.ptr) stix_freemem (stix, stix->c->tok.name.ptr);
 
 		if (stix->c->_class.name.ptr) stix_freemem (stix, stix->c->_class.name.ptr);
 		if (stix->c->_class.supername.ptr) stix_freemem (stix, stix->c->_class.supername.ptr);
+
+		for (i = 0; i < STIX_COUNTOF(stix->c->_class.vars); i++)
+		{
+			if (stix->c->_class.vars[i].ptr) stix_freemem (stix, stix->c->_class.vars[i].ptr);
+		}
 
 		if (stix->c->fun.tmprs.ptr) stix_freemem (stix, stix->c->fun.tmprs.ptr);
 		if (stix->c->fun.name.ptr) stix_freemem (stix, stix->c->fun.name.ptr);
