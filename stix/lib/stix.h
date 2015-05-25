@@ -418,7 +418,7 @@ typedef enum stix_obj_type_t stix_obj_type_t;
 #define STIX_OBJ_FLAGS_TYPE_BITS   6
 #define STIX_OBJ_FLAGS_UNIT_BITS   5
 #define STIX_OBJ_FLAGS_EXTRA_BITS  1
-#define STIX_OBJ_FLAGS_KERNEL_BITS 1
+#define STIX_OBJ_FLAGS_KERNEL_BITS 2
 #define STIX_OBJ_FLAGS_MOVED_BITS  1
 
 #define STIX_OBJ_GET_FLAGS_TYPE(oop)     STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_UNIT_BITS + STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS), STIX_OBJ_FLAGS_TYPE_BITS)
@@ -495,14 +495,14 @@ struct stix_class_t
 	stix_oop_t      superclass;   /* Another class */
 	stix_oop_t      subclasses;   /* Array of subclasses */
 	stix_oop_char_t name;         /* Symbol */
-	stix_oop_char_t instvars;     /* String or Array? */
-	stix_oop_char_t classvars;    /* String or Array? */
+	stix_oop_char_t instvars;     /* String */
+	stix_oop_char_t classvars;    /* String */
 
 	stix_oop_oop_t  instmthds;    /* instance methods, MethodDictionary */
 	stix_oop_oop_t  classmthds;   /* class methods, MethodDictionary */
 
 	/* indexed part afterwards */
-	stix_oop_t      classvar[1];  /* most classes have not class variables. better to be 0 */
+	stix_oop_t      classvar[1];  /* most classes have no class variables. better to be 0 */
 };
 typedef struct stix_class_t stix_class_t;
 typedef struct stix_class_t* stix_oop_class_t;
@@ -555,9 +555,6 @@ struct stix_heap_t
 	stix_uint8_t* ptr;   /* next allocation pointer */
 };
 
-
-
-
 typedef struct stix_t stix_t;
 
 typedef void (*stix_cbimpl_t) (stix_t* stix);
@@ -565,6 +562,7 @@ typedef void (*stix_cbimpl_t) (stix_t* stix);
 typedef struct stix_cb_t stix_cb_t;
 struct stix_cb_t
 {
+	stix_cbimpl_t gc;
 	stix_cbimpl_t fini;
 	stix_cb_t*    prev;
 	stix_cb_t*    next;

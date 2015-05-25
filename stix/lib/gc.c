@@ -89,7 +89,7 @@ wprintf (L">> DISPOSING %d [%S] from the symbol table\n", (int)index, sym->slot)
 	stix->symtab->tally = STIX_OOP_FROM_SMINT(tally);
 }
 
-static stix_oop_t move_one (stix_t* stix, stix_oop_t oop)
+stix_oop_t stix_moveoop (stix_t* stix, stix_oop_t oop)
 {
 #if defined(STIX_SUPPORT_GC_DURING_IGNITION)
 	if (!oop) return oop;
@@ -153,7 +153,7 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 		oop = (stix_oop_t)ptr;
 		nbytes_aligned = STIX_ALIGN (STIX_OBJ_BYTESOF(oop), STIX_SIZEOF(stix_oop_t));
 
-		STIX_OBJ_SET_CLASS (oop, move_one(stix, STIX_OBJ_GET_CLASS(oop)));
+		STIX_OBJ_SET_CLASS (oop, stix_moveoop(stix, STIX_OBJ_GET_CLASS(oop)));
 		if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_OOP)
 		{
 			stix_obj_oop_t* xtmp;
@@ -162,7 +162,7 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 			for (i = 0; i < oop->_size; i++)
 			{
 				if (STIX_OOP_IS_POINTER(xtmp->slot[i]))
-					xtmp->slot[i] = move_one (stix, xtmp->slot[i]);
+					xtmp->slot[i] = stix_moveoop (stix, xtmp->slot[i]);
 			}
 		}
 
@@ -186,6 +186,7 @@ void stix_gc (stix_t* stix)
 	stix_heap_t* tmp;
 	stix_oop_t old_nil;
 	stix_oow_t i;
+	stix_cb_t* cb;
 
 printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
 	stix->curheap->base, stix->curheap->ptr, stix->newheap->base, stix->newheap->ptr);
@@ -194,31 +195,36 @@ printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
 	old_nil = stix->_nil;
 
 	/* move _nil and the root object table */
-	stix->_nil               = move_one (stix, stix->_nil);
-	stix->_true              = move_one (stix, stix->_true);
-	stix->_false             = move_one (stix, stix->_false);
+	stix->_nil               = stix_moveoop (stix, stix->_nil);
+	stix->_true              = stix_moveoop (stix, stix->_true);
+	stix->_false             = stix_moveoop (stix, stix->_false);
 
 /*printf ("BEFORE GC = %p %p %p %p %p %p %p %p %p %p\n", stix->_array, stix->_class, stix->_nil_object, stix->_object, stix->_symbol, stix->_symbol_set, stix->_system_dictionary, stix->_association, stix->_character, stix->_small_integer);*/
-	stix->_stix              = move_one (stix, stix->_stix);
-	stix->_class             = move_one (stix, stix->_class);
-	stix->_nil_object        = move_one (stix, stix->_nil_object);
-	stix->_object            = move_one (stix, stix->_object);
-	stix->_array             = move_one (stix, stix->_array);
-	stix->_symbol            = move_one (stix, stix->_symbol);
-	stix->_symbol_set        = move_one (stix, stix->_symbol_set);
-	stix->_system_dictionary = move_one (stix, stix->_system_dictionary);
-	stix->_association       = move_one (stix, stix->_association);
-	stix->_true_class        = move_one (stix, stix->_true_class);
-	stix->_false_class       = move_one (stix, stix->_false_class);
-	stix->_character         = move_one (stix, stix->_character);
-	stix->_small_integer     = move_one (stix, stix->_small_integer);
+	stix->_stix              = stix_moveoop (stix, stix->_stix);
+	stix->_class             = stix_moveoop (stix, stix->_class);
+	stix->_nil_object        = stix_moveoop (stix, stix->_nil_object);
+	stix->_object            = stix_moveoop (stix, stix->_object);
+	stix->_array             = stix_moveoop (stix, stix->_array);
+	stix->_symbol            = stix_moveoop (stix, stix->_symbol);
+	stix->_symbol_set        = stix_moveoop (stix, stix->_symbol_set);
+	stix->_system_dictionary = stix_moveoop (stix, stix->_system_dictionary);
+	stix->_association       = stix_moveoop (stix, stix->_association);
+	stix->_true_class        = stix_moveoop (stix, stix->_true_class);
+	stix->_false_class       = stix_moveoop (stix, stix->_false_class);
+	stix->_character         = stix_moveoop (stix, stix->_character);
+	stix->_small_integer     = stix_moveoop (stix, stix->_small_integer);
 
 /*printf ("AFTER GC = %p %p %p %p %p %p %p %p %p %p\n", stix->_array, stix->_class, stix->_nil_object, stix->_object, stix->_symbol, stix->_symbol_set, stix->_system_dictionary, stix->_association, stix->_character, stix->_small_integer);*/
-	stix->sysdic = (stix_oop_set_t) move_one (stix, (stix_oop_t)stix->sysdic);
+	stix->sysdic = (stix_oop_set_t) stix_moveoop (stix, (stix_oop_t)stix->sysdic);
 
 	for (i = 0; i < stix->tmp_count; i++)
 	{
-		*stix->tmp_stack[i] = move_one (stix, *stix->tmp_stack[i]);
+		*stix->tmp_stack[i] = stix_moveoop (stix, *stix->tmp_stack[i]);
+	}
+
+	for (cb = stix->cblist; cb; cb = cb->next)
+	{
+		if (cb->gc) cb->gc (stix);
 	}
 
 	/* scan the new heap to move referenced objects */
@@ -232,7 +238,7 @@ printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
 	compact_symbol_table (stix, old_nil);
 
 	/* move the symbol table itself */
-	stix->symtab = (stix_oop_set_t)move_one (stix, (stix_oop_t)stix->symtab);
+	stix->symtab = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->symtab);
 
 	/* scan the new heap again from the end position of
 	 * the previous scan to move referenced objects by 

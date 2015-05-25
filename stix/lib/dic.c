@@ -155,3 +155,38 @@ stix_oop_t stix_getatsysdic (stix_t* stix, stix_oop_t key)
 	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
 	return find_or_insert (stix, (stix_oop_char_t)key, STIX_NULL);
 }
+
+
+stix_oop_t stix_lookupsysdic (stix_t* stix, const stix_ucs_t* name)
+{
+	/* this is special version of stix_getatsysdic() that performs
+	 * lookup using a plain string specified */
+
+	stix_oow_t index;
+	stix_oop_association_t ass;
+
+	STIX_ASSERT (STIX_CLASSOF(stix,stix->sysdic->tally) == stix->_small_integer);
+	STIX_ASSERT (STIX_CLASSOF(stix,stix->sysdic->bucket) == stix->_array);
+
+	index = stix_hashchars(name->ptr, name->len) % STIX_OBJ_GET_SIZE(stix->sysdic->bucket);
+
+	while (stix->sysdic->bucket->slot[index] != stix->_nil) 
+	{
+		ass = (stix_oop_association_t)stix->sysdic->bucket->slot[index];
+
+		STIX_ASSERT (STIX_CLASSOF(stix,ass) == stix->_association);
+		STIX_ASSERT (STIX_CLASSOF(stix,ass->key) == stix->_symbol);
+
+		if (name->len == STIX_OBJ_GET_SIZE(ass->key) &&
+		    stix_equalchars(name->ptr, ((stix_oop_char_t)ass->key)->slot, name->len)) 
+		{
+			return (stix_oop_t)ass;
+		}
+
+		index = (index + 1) % STIX_OBJ_GET_SIZE(stix->sysdic->bucket);
+	}
+
+	/* when value is STIX_NULL, perform no insertion */
+	stix->errnum = STIX_ENOENT;
+	return STIX_NULL;
+}

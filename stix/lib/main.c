@@ -193,6 +193,7 @@ static char* syntax_error_msg[] =
 	"string expected", /* string expected in place of ${1} */
 	"{ expected",
 	"} expected",
+	"( expected",
 	") expected",
 	". expected",
 	"| expected",
@@ -201,8 +202,13 @@ static char* syntax_error_msg[] =
 	"integer expected",
 	"primitive: expected",
 	"wrong class modifier",
+	"undefined class",
+	"duplicate class",
+	"#dcl not allowed",
 	"wrong function name",
-	"duplicate argument name"
+	"duplicate argument name",
+	"duplicate temporary variable name",
+	"duplicate variable name"
 };
 
 int main (int argc, char* argv[])

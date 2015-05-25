@@ -251,25 +251,31 @@ typedef struct stix_iotok_t stix_iotok_t;
 enum stix_synerrnum_t
 {
 	STIX_SYNERR_NOERR,
-	STIX_SYNERR_ILCHR,      /* illegal character */
-	STIX_SYNERR_CMTNC,      /* comment not closed */
-	STIX_SYNERR_STRNC,      /* string not closed */
-	STIX_SYNERR_CLTNT,      /* character literal not terminated */
-	STIX_SYNERR_HLTNT,      /* hased literal not terminated */
-	STIX_SYNERR_CLNMS,      /* colon missing */
-	STIX_SYNERR_STRING,     /* string expected */
-	STIX_SYNERR_LBRACE,     /* { expected */
-	STIX_SYNERR_RBRACE,     /* } expected */
-	STIX_SYNERR_RPAREN,     /* ) expected */
-	STIX_SYNERR_PERIOD,     /* . expected */
-	STIX_SYNERR_VBAR,       /* | expected */
-	STIX_SYNERR_GT,         /* > expected */
-	STIX_SYNERR_IDENT,      /* identifier expected */
-	STIX_SYNERR_INTEGER,    /* integer expected */
-	STIX_SYNERR_PRIMITIVE,  /* primitive: expected */
-	STIX_SYNERR_CLASSMOD,   /* wrong class modifier */
-	STIX_SYNERR_FUNNAME,    /* wrong function name */
-	STIX_SYNERR_DUPARGNAME  /* duplicate argument name */
+	STIX_SYNERR_ILCHR,       /* illegal character */
+	STIX_SYNERR_CMTNC,       /* comment not closed */
+	STIX_SYNERR_STRNC,       /* string not closed */
+	STIX_SYNERR_CLTNT,       /* character literal not terminated */
+	STIX_SYNERR_HLTNT,       /* hased literal not terminated */
+	STIX_SYNERR_CLNMS,       /* colon missing */
+	STIX_SYNERR_STRING,      /* string expected */
+	STIX_SYNERR_LBRACE,      /* { expected */
+	STIX_SYNERR_RBRACE,      /* } expected */
+	STIX_SYNERR_LPAREN,      /* ( expected */
+	STIX_SYNERR_RPAREN,      /* ) expected */
+	STIX_SYNERR_PERIOD,      /* . expected */
+	STIX_SYNERR_VBAR,        /* | expected */
+	STIX_SYNERR_GT,          /* > expected */
+	STIX_SYNERR_IDENT,       /* identifier expected */
+	STIX_SYNERR_INTEGER,     /* integer expected */
+	STIX_SYNERR_PRIMITIVE,   /* primitive: expected */
+	STIX_SYNERR_CLASSMOD,    /* wrong class modifier */
+	STIX_SYNERR_CLASSUNDEF,  /* undefined class */
+	STIX_SYNERR_CLASSDUP,    /* duplicate class */
+	STIX_SYNERR_DCLBANNED,   /* #dcl not allowed */
+	STIX_SYNERR_FUNNAME,     /* wrong function name */
+	STIX_SYNERR_ARGNAMEDUP,  /* duplicate argument name */
+	STIX_SYNERR_TMPRNAMEDUP, /* duplicate temporary variable name */
+	STIX_SYNERR_VARNAMEDUP   /* duplicate variable name */
 };
 typedef enum stix_synerrnum_t stix_synerrnum_t;
 
@@ -491,9 +497,31 @@ struct stix_compiler_t
 	stix_ucs_t ilchr_ucs;
 
 
-	/* information about a function begin comipled */
+	/* information about a class being compiled */
 	struct
 	{
+		int flags;
+
+		stix_oop_t self_oop;
+		stix_oop_t super_oop;
+
+		stix_ucs_t name;
+		stix_size_t name_capa;
+
+		stix_ucs_t supername;
+		stix_size_t supername_capa;
+
+		/* instance variable, class variable, class instance variable */
+		stix_ucs_t vars[3]; 
+		stix_size_t vars_capa[3];
+		stix_size_t var_count[3];
+	} _class;
+
+	/* information about a function being comipled */
+	struct
+	{
+		int flags;
+
 		stix_ucs_t name;
 		stix_size_t name_capa;
 
@@ -506,6 +534,8 @@ struct stix_compiler_t
 
 		/* literals */
 		int literal_count;
+
+		stix_oow_t prim_no; /* primitive number */
 
 		stix_code_t code;
 		stix_size_t code_capa;
@@ -579,6 +609,13 @@ void stix_copychars (
 	stix_size_t len
 );
 
+/* ========================================================================= */
+/* gc.c                                                                     */
+/* ========================================================================= */
+stix_oop_t stix_moveoop (
+	stix_t*     stix,
+	stix_oop_t  oop
+);
 
 /* ========================================================================= */
 /* obj.c                                                                     */
@@ -642,6 +679,11 @@ stix_oop_t stix_putatsysdic (
 stix_oop_t stix_getatsysdic (
 	stix_t*     stix,
 	stix_oop_t  key
+);
+
+stix_oop_t stix_lookupsysdic (
+	stix_t*           stix,
+	const stix_ucs_t* name
 );
 
 /* ========================================================================= */
