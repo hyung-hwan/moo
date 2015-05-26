@@ -107,7 +107,7 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_uch_t* ptr, stix
 		 * make sure that it has at least one free slot left
 		 * after having added a new symbol. this is to help
 		 * traversal end at a _nil slot if no entry is found. */
-		bucket = expand_bucket (stix, stix->symtab->bucket);
+		bucket = expand_bucket(stix, stix->symtab->bucket);
 		if (!bucket) return STIX_NULL;
 
 		stix->symtab->bucket = bucket;
@@ -120,7 +120,7 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_uch_t* ptr, stix
 	}
 
 	/* create a new symbol since it isn't found in the symbol table */
-	symbol = (stix_oop_char_t)stix_instantiate (stix, stix->_symbol, ptr, len);
+	symbol = (stix_oop_char_t)stix_instantiate(stix, stix->_symbol, ptr, len);
 	if (symbol)
 	{
 		stix->symtab->tally = STIX_OOP_FROM_SMINT(tally + 1);
@@ -138,4 +138,9 @@ stix_oop_t stix_makesymbol (stix_t* stix, const stix_uch_t* ptr, stix_oow_t len)
 stix_oop_t stix_findsymbol (stix_t* stix, const stix_uch_t* ptr, stix_oow_t len)
 {
 	return find_or_make_symbol (stix, ptr, len, 0);
+}
+
+stix_oop_t stix_makestring (stix_t* stix, const stix_uch_t* ptr, stix_oow_t len)
+{
+	return stix_instantiate (stix, stix->_string, ptr, len);
 }

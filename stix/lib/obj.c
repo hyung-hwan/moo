@@ -119,15 +119,15 @@ stix_oop_t stix_alloccharobj (stix_t* stix, const stix_uch_t* ptr, stix_oow_t le
 	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_CHAR, STIX_SIZEOF(stix_uch_t), 1);
 }
 
-stix_oop_t stix_allocuint8obj (stix_t* stix, const stix_uint8_t* ptr, stix_oow_t len)
+stix_oop_t stix_allocbyteobj (stix_t* stix, const stix_byte_t* ptr, stix_oow_t len)
 {
 
-	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_UINT8, STIX_SIZEOF(stix_uint8_t), 0);
+	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_BYTE, STIX_SIZEOF(stix_byte_t), 0);
 }
 
-stix_oop_t stix_allocuint16obj (stix_t* stix, const stix_uint16_t* ptr, stix_oow_t len)
+stix_oop_t stix_allocwordobj (stix_t* stix, const stix_oow_t* ptr, stix_oow_t len)
 {
-	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_UINT16, STIX_SIZEOF(stix_uint16_t), 0);
+	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_WORD, STIX_SIZEOF(stix_oow_t), 0);
 }
 
 stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, stix_oow_t vlen)
@@ -196,12 +196,12 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 			oop = stix_alloccharobj(stix, vptr, vlen);
 			break;
 
-		case STIX_OBJ_TYPE_UINT8:
-			oop = stix_allocuint8obj(stix, vptr, vlen);
+		case STIX_OBJ_TYPE_BYTE:
+			oop = stix_allocbyteobj(stix, vptr, vlen);
 			break;
 
-		case STIX_OBJ_TYPE_UINT16:
-			oop = stix_allocuint16obj(stix, vptr, vlen);
+		case STIX_OBJ_TYPE_WORD:
+			oop = stix_allocwordobj(stix, vptr, vlen);
 			break;
 
 		default:

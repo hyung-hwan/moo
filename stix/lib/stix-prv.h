@@ -45,7 +45,6 @@
 
 #define STIX_ALIGN(x,y) ((((x) + (y) - 1) / (y)) * (y))
 
-
 /* ========================================================================= */
 /* CLASS SPEC ENCODING                                                       */
 /* ========================================================================= */
@@ -122,6 +121,15 @@
  */
 #define STIX_MAX_INDEXED_INSTVARS(named_instvar) ((~(stix_oow_t)0) - named_instvar)
 
+
+#define STIX_CLASS_SELFSPEC_MAKE(class_var,classinst_var) \
+	(((stix_oow_t)class_var) << ((STIX_OOW_BITS - STIX_OOP_TAG_BITS) / 2)) | ((stix_oow_t)classinst_var)
+
+#define STIX_CLASS_SELFSPEC_CLASSVAR(spec) ((stix_oow_t)spec >> ((STIX_OOW_BITS - STIX_OOP_TAG_BITS) / 2))
+#define STIX_CLASS_SELFSPEC_CLASSINSTVAR(spec) (((stix_oow_t)spec) & STIX_LBMASK(stix_oow_t, (STIX_OOW_BITS - STIX_OOP_TAG_BITS) / 2))
+
+#define STIX_MAX_CLASSVARS      STIX_BITS_MAX(stix_oow_t, (STIX_OOW_BITS - STIX_OOP_TAG_BITS) / 2)
+#define STIX_MAX_CLASSINSTVARS  STIX_BITS_MAX(stix_oow_t, (STIX_OOW_BITS - STIX_OOP_TAG_BITS) / 2)
 
 #if defined(STIX_INCLUDE_COMPILER)
 
@@ -270,6 +278,7 @@ enum stix_synerrnum_t
 	STIX_SYNERR_PRIMITIVE,   /* primitive: expected */
 	STIX_SYNERR_DIRECTIVE,   /* wrong directive */
 	STIX_SYNERR_CLASSMOD,    /* wrong class modifier */
+	STIX_SYNERR_CLASSMODDUP, /* duplicate class modifier */
 	STIX_SYNERR_CLASSUNDEF,  /* undefined class */
 	STIX_SYNERR_CLASSDUP,    /* duplicate class */
 	STIX_SYNERR_DCLBANNED,   /* #dcl not allowed */
@@ -502,9 +511,10 @@ struct stix_compiler_t
 	struct
 	{
 		int flags;
+		int indexed_type;
 
-		stix_oop_t self_oop;
-		stix_oop_t super_oop;
+		stix_oop_class_t self_oop;
+		stix_oop_t super_oop; /* this may be nil. so the type is stix_oop_t */
 
 		stix_ucs_t name;
 		stix_size_t name_capa;
@@ -515,6 +525,8 @@ struct stix_compiler_t
 		/* instance variable, class variable, class instance variable */
 		stix_ucs_t vars[3]; 
 		stix_size_t vars_capa[3];
+
+		/* var_count, unlike vars above, includes superclass counts as well.*/
 		stix_size_t var_count[3];
 	} _class;
 
@@ -589,8 +601,8 @@ void* stix_allocheapmem (
 /* stix.c                                                                    */
 /* ========================================================================= */
 stix_size_t stix_hashbytes (
-	const stix_uint8_t* ptr,
-	stix_size_t          len
+	const stix_byte_t* ptr,
+	stix_size_t        len
 );
 
 stix_size_t stix_hashchars (
@@ -653,6 +665,12 @@ stix_oop_t stix_allocuint16obj (
 	stix_oow_t           len
 );
 
+stix_oop_t stix_allocuint32obj (
+	stix_t*              stix,
+	const stix_uint32_t* ptr,
+	stix_oow_t           len
+);
+
 /* ========================================================================= */
 /* sym.c                                                                     */
 /* ========================================================================= */
@@ -665,6 +683,12 @@ stix_oop_t stix_makesymbol (
 stix_oop_t stix_findsymbol (
 	stix_t*            stix,
 	const stix_uch_t*  ptr,
+	stix_oow_t         len
+);
+
+stix_oop_t stix_makestring (
+	stix_t*            stix, 
+	const stix_uch_t*  ptr, 
 	stix_oow_t         len
 );
 

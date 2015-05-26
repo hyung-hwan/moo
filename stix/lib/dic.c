@@ -156,7 +156,6 @@ stix_oop_t stix_getatsysdic (stix_t* stix, stix_oop_t key)
 	return find_or_insert (stix, (stix_oop_char_t)key, STIX_NULL);
 }
 
-
 stix_oop_t stix_lookupsysdic (stix_t* stix, const stix_ucs_t* name)
 {
 	/* this is special version of stix_getatsysdic() that performs

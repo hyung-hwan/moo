@@ -77,7 +77,8 @@ static stix_oop_t alloc_kernel_class (stix_t* stix, stix_oow_t indexed, stix_oow
 
 	STIX_OBJ_SET_FLAGS_KERNEL (c, 1);
 	STIX_OBJ_SET_CLASS (c, stix->_class);
-	c->spec = STIX_OOP_FROM_SMINT(spec);
+	c->spec = STIX_OOP_FROM_SMINT(spec); 
+	c->selfspec = STIX_OOP_FROM_SMINT(STIX_CLASS_SELFSPEC_MAKE(indexed, 0));
 
 	return (stix_oop_t)c;
 }
@@ -96,7 +97,7 @@ static int ignite_1 (stix_t* stix)
 	 * The instance of Class can have indexed instance variables 
 	 * which are actually class variables.
 	 * -------------------------------------------------------------- */
-	stix->_class = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE (STIX_CLASS_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
+	stix->_class = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CLASS_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 	if (!stix->_class) return -1;
 
 	STIX_ASSERT (STIX_OBJ_GET_CLASS(stix->_class) == STIX_NULL);
@@ -106,6 +107,7 @@ static int ignite_1 (stix_t* stix)
 	 * Stix      - proto-object with 1 class variable.
 	 * NilObject - class for the nil object.
 	 * Object    - top of all ordinary objects.
+	 * String
 	 * Symbol
 	 * Array
 	 * SymbolSet
@@ -116,6 +118,7 @@ static int ignite_1 (stix_t* stix)
 	stix->_nil_object        = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_object            = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_array             = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_OOP));
+	stix->_string            = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_CHAR));
 	stix->_symbol            = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_CHAR));
 	stix->_symbol_set        = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_SET_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 	stix->_system_dictionary = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_SET_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
@@ -129,10 +132,10 @@ static int ignite_1 (stix_t* stix)
 	stix->_character         = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_small_integer     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 
-	if (!stix->_stix              || !stix->_nil_object    || !stix->_object ||
-	    !stix->_array             || !stix->_symbol        || !stix->_symbol_set ||
-	    !stix->_system_dictionary || !stix->_association   || 
-	    !stix->_true_class        || !stix->_false_class   ||
+	if (!stix->_stix              || !stix->_nil_object        || !stix->_object ||
+	    !stix->_array             || !stix->_string            || !stix->_symbol ||
+	    !stix->_symbol_set        || !stix->_system_dictionary || !stix->_association   || 
+	    !stix->_true_class        || !stix->_false_class       ||
 	    !stix->_character         || !stix->_small_integer) return -1;
 	STIX_OBJ_SET_CLASS (stix->_nil, stix->_nil_object);
 	return 0;
@@ -186,8 +189,10 @@ static int ignite_3 (stix_t* stix)
 		stix_uch_t str[16];
 	} symnames[] = {
 		{  4, { 'S','t','i','x'                                                  } },
-		{  6, { 'O','b','j','e','c','t'                                          } },
+		{  9, { 'N','i','l','O','b','j','e','c','t'                              } },
 		{  5, { 'C','l','a','s','s'                                              } },
+		{  6, { 'O','b','j','e','c','t'                                          } },
+		{  6, { 'S','t','r','i','n','g'                                          } },
 		{  6, { 'S','y','m','b','o','l'                                          } },
 		{  5, { 'A','r','r','a','y'                                              } },
 		{  9, { 'S','y','m','b','o','l','S','e','t'                              } },

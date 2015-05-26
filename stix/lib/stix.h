@@ -53,11 +53,10 @@ typedef unsigned long int stix_uintptr_t;
 typedef unsigned long int stix_size_t;
 typedef signed long int   stix_ssize_t;
 
+typedef stix_uint8_t  stix_byte_t;
 typedef stix_uint16_t stix_uch_t; /* TODO ... wchar_t??? */
 typedef stix_int32_t  stix_uci_t;
-
 typedef char          stix_bch_t;
-
 
 struct stix_ucs_t
 {
@@ -364,8 +363,14 @@ enum stix_obj_type_t
 {
 	STIX_OBJ_TYPE_OOP,
 	STIX_OBJ_TYPE_CHAR,
-	STIX_OBJ_TYPE_UINT8, 
-	STIX_OBJ_TYPE_UINT16
+	STIX_OBJ_TYPE_BYTE,
+	STIX_OBJ_TYPE_WORD,
+
+/*
+	STIX_OBJ_TYPE_UINT8,
+	STIX_OBJ_TYPE_UINT16,
+	STIX_OBJ_TYPE_UINT32,
+*/
 
 /* NOTE: you can have STIX_OBJ_SHORT, STIX_OBJ_INT
  * STIX_OBJ_LONG, STIX_OBJ_FLOAT, STIX_OBJ_DOUBLE, etc 
@@ -385,7 +390,7 @@ typedef enum stix_obj_type_t stix_obj_type_t;
  * _flags:
  *   type: the type of a payload item. 
  *         one of STIX_OBJ_TYPE_OOP, STIX_OBJ_TYPE_CHAR, 
- *                STIX_OBJ_TYPE_UINT8, STIX_OBJ_TYPE_UINT16
+ *                STIX_OBJ_TYPE_BYTE, STIX_OBJ_TYPE_WORD
  *   unit: the size of a payload item in bytes. 
  *   extra: 0 or 1. 1 indicates that the payload contains 1 more
  *          item than the value of the size field. mostly used for a 
@@ -486,12 +491,13 @@ struct stix_obj_uint16_t
 	stix_uint16_t slot[1];
 };
 
-#define STIX_CLASS_NAMED_INSTVARS 8
+#define STIX_CLASS_NAMED_INSTVARS 10
 struct stix_class_t
 {
 	STIX_OBJ_HEADER;
 
-	stix_oop_t      spec;          /* SmallInteger */
+	stix_oop_t      spec;          /* SmallInteger. instance specification */
+	stix_oop_t      selfspec;      /* SmallInteger. specification of the class object itself */
 
 	stix_oop_t      superclass;    /* Another class */
 	stix_oop_t      subclasses;    /* Array of subclasses */
@@ -606,6 +612,7 @@ struct stix_t
 	stix_oop_t _nil_object; /* NilObject */
 	stix_oop_t _class; /* Class */
 	stix_oop_t _object; /* Object */
+	stix_oop_t _string; /* String */
 	stix_oop_t _symbol; /* Symbol */
 	stix_oop_t _array; /* Array */
 	stix_oop_t _symbol_set; /* SymbolSet */

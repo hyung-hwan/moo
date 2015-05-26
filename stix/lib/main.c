@@ -181,6 +181,36 @@ static void dump_symbol_table (stix_t* stix)
 	printf ("--------------------------------------------\n");
 }
 
+void dump_system_dictionary (stix_t* stix)
+{
+	stix_oow_t i, j;
+	stix_oop_association_t ass;
+
+	printf ("--------------------------------------------\n");
+	printf ("Stix System Dictionary %lu\n", (unsigned long int)STIX_OBJ_GET_SIZE(stix->sysdic->bucket));
+	printf ("--------------------------------------------\n");
+
+	for (i = 0; i < STIX_OBJ_GET_SIZE(stix->sysdic->bucket); i++)
+	{
+		ass = (stix_oop_association_t)stix->sysdic->bucket->slot[i];
+		if ((stix_oop_t)ass != stix->_nil)
+		{
+			printf (" %lu [", (unsigned long int)i);
+			for (j = 0; j < STIX_OBJ_GET_SIZE(ass->key); j++)
+			{
+				printf ("%c", ((stix_oop_char_t)ass->key)->slot[j]);
+			}
+			printf ("]\n");
+		}
+	}
+	printf ("--------------------------------------------\n");
+}
+
+void print_ucs (const stix_ucs_t* name)
+{
+	stix_size_t i;
+	for (i = 0; i < name->len; i++) printf ("%c", name->ptr[i]);
+}
 static char* syntax_error_msg[] = 
 {
 	"no error",
@@ -203,6 +233,7 @@ static char* syntax_error_msg[] =
 	"primitive: expected",
 	"wrong directive",
 	"wrong class modifier",
+	"duplicate class modifier",
 	"undefined class",
 	"duplicate class",
 	"#dcl not allowed",
@@ -217,8 +248,11 @@ int main (int argc, char* argv[])
 	stix_t* stix;
 	xtn_t* xtn;
 
-	printf ("Stix 1.0.0 - max named %lu max indexed %lu\n", 
-		(unsigned long int)STIX_MAX_NAMED_INSTVARS, (unsigned long int)STIX_MAX_INDEXED_INSTVARS(STIX_MAX_NAMED_INSTVARS));
+	printf ("Stix 1.0.0 - max named %lu max indexed %lu max class %lu max classinst %lu\n", 
+		(unsigned long int)STIX_MAX_NAMED_INSTVARS, 
+		(unsigned long int)STIX_MAX_INDEXED_INSTVARS(STIX_MAX_NAMED_INSTVARS),
+		(unsigned long int)STIX_MAX_CLASSVARS,
+		(unsigned long int)STIX_MAX_CLASSINSTVARS);
 
 
 	if (argc != 2)
@@ -226,7 +260,6 @@ int main (int argc, char* argv[])
 		fprintf (stderr, "Usage: %s filename\n", argv[0]);
 		return -1;
 	}
-
 
 	{
 	stix_oow_t x;
@@ -252,9 +285,9 @@ int main (int argc, char* argv[])
 		stix_setoption (stix, STIX_DFL_SYSDIC_SIZE, &symtab_size);
 	}
 
-	if (stix_ignite (stix) <= -1)
+	if (stix_ignite(stix) <= -1)
 	{
-		printf ("cannot ignite stix\n");
+		printf ("cannot ignite stix - %d\n", stix_geterrnum(stix));
 		stix_close (stix);
 		return -1;
 	}
@@ -277,6 +310,9 @@ stix_gc (stix);
 a = stix_findsymbol (stix, x, 6);
 printf ("%p\n", a);
 	dump_symbol_table (stix);
+
+
+	dump_system_dictionary (stix);
 }
 
 	xtn = stix_getxtn (stix);
@@ -321,12 +357,13 @@ printf ("%p\n", a);
 		}
 		else
 		{
-			printf ("ERROR: cannot compile code\n");
+			printf ("ERROR: cannot compile code - %d\n", stix_geterrnum(stix));
 		}
 		stix_close (stix);
 		return -1;
 	}
 
+dump_system_dictionary(stix);
 	stix_close (stix);
 
 	return 0;
