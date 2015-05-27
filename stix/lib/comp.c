@@ -1970,6 +1970,12 @@ static int append_method_name (stix_t* stix, const stix_ucs_t* name)
 	return copy_string_to (stix, name, &stix->c->mth.name, &stix->c->mth.name_capa, 1, '\0');
 }
 
+static stix_ssize_t find_method_name (stix_t* stix, stix_oop_class_t self, const stix_ucs_t* name)
+{
+	/* TODO: .................... */
+	return 0;
+}
+
 static int append_temporary (stix_t* stix, const stix_ucs_t* name)
 {
 	/* temporary variable names are added to the string with leading
@@ -2027,38 +2033,6 @@ printf ("duplicate variable name type %d pos %lu\n", var.type, var.pos);
 				return -1;
 			}
 
-
-			if (stix->c->cls.self_oop)
-			{
-				stix_oow_t spec, limit;
-
-				/* it is an internally defined kernel class object */ 
-				switch (dcl_type)
-				{
-					case VAR_INSTANCE:
-						spec = STIX_OOP_TO_SMINT(stix->c->cls.self_oop->spec);
-						limit = STIX_CLASS_SPEC_NAMED_INSTVAR(spec);
-						break;
-
-					case VAR_CLASS:
-						spec = STIX_OOP_TO_SMINT(stix->c->cls.self_oop->selfspec);
-						limit = STIX_CLASS_SELFSPEC_CLASSVAR(spec);
-						break;
-
-					case VAR_CLASSINST:
-						spec = STIX_OOP_TO_SMINT(stix->c->cls.self_oop->selfspec);
-						limit = STIX_CLASS_SELFSPEC_CLASSINSTVAR(spec);
-						break;
-				}
-
-				if (stix->c->cls.var_count[dcl_type] >= limit)
-				{
-/* THIS IS NOT QUITE RIGHT... Do differetn calculation.... */
-printf ("TOO MANY XXXXXXXXXXXXXXXXXXXXXXXXX duplicate variable name type %d pos %lu\n", var.type, var.pos);
-					return -1;
-				}
-			}
-
 			if (append_class_level_variable(stix, dcl_type, &stix->c->tok.name) <= -1) return -1;
 		}
 		else
@@ -2108,9 +2082,8 @@ static int compile_binary_method_name (stix_t* stix)
 
 	STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
 
-	/* no duplication check is performed against instance variable names or
-	 * class variable names. a duplcate name will shade a previsouly defined
-	 * variable. */
+	/* no duplication check is performed against class-level variable names.
+	 * a duplcate name will shade a previsouly defined variable. */
 	if (append_temporary(stix, &stix->c->tok.name) <= -1) return -1;
 	stix->c->mth.tmpr_nargs++;
 
@@ -2162,9 +2135,11 @@ static int compile_method_name (stix_t* stix)
 	 * unary-selector := identifier
 	 */
 	int n;
+	stix_ioloc_t mth_loc;
 
 	STIX_ASSERT (stix->c->mth.tmpr_count == 0);
 
+	mth_loc = stix->c->tok.loc;
 	switch (stix->c->tok.type)
 	{
 		case STIX_IOTOK_IDENT:
@@ -2187,7 +2162,11 @@ static int compile_method_name (stix_t* stix)
 
 	if (n >= 0)
 	{
-/* TODO: check if the current function name collected conflicts with a previously defined function name */
+		if (find_method_name(stix, stix->c->cls.self_oop, &stix->c->mth.name) >= 0) 
+ 		{
+			set_syntax_error (stix, STIX_SYNERR_MTHNAMEDUP, &mth_loc, &stix->c->mth.name);
+			return -1;
+ 		}
 	}
 
 	/* the total number of temporaries is equal to the number of 
@@ -2469,13 +2448,13 @@ static int make_defined_class (stix_t* stix)
 	int just_made = 0;
 
 
-	spec = STIX_CLASS_SPEC_MAKE (stix->c->cls.var_count[0],  
+	spec = STIX_CLASS_SPEC_MAKE (stix->c->cls.var_count[VAR_INSTANCE],  
 	                             ((stix->c->cls.flags & CLASS_INDEXED)? 1: 0),
 	                             stix->c->cls.indexed_type);
-	self_spec = STIX_CLASS_SELFSPEC_MAKE(stix->c->cls.var_count[1], stix->c->cls.var_count[2]);
+	self_spec = STIX_CLASS_SELFSPEC_MAKE(stix->c->cls.var_count[VAR_CLASS], stix->c->cls.var_count[VAR_CLASSINST]);
 
 print_ucs (&stix->c->cls.name);
-printf (" instvars %d classvars %d classinstvars %d\n", (int)stix->c->cls.var_count[0], (int)stix->c->cls.var_count[1], (int)stix->c->cls.var_count[2]);
+printf (" instvars %d classvars %d classinstvars %d\n", (int)stix->c->cls.var_count[VAR_INSTANCE], (int)stix->c->cls.var_count[VAR_CLASS], (int)stix->c->cls.var_count[VAR_CLASSINST]);
 
 	if (stix->c->cls.self_oop)
 	{
@@ -2485,7 +2464,7 @@ printf (" instvars %d classvars %d classinstvars %d\n", (int)stix->c->cls.var_co
 		if (spec != STIX_OOP_TO_SMINT(stix->c->cls.self_oop->spec) ||
 		    self_spec != STIX_OOP_TO_SMINT(stix->c->cls.self_oop->selfspec))
 		{
-			/* it conflicts with internal defintion */
+			/* it conflicts with internal definition */
 printf (" DDDDDDDDDD CONFLICTING CLASS DEFINITION DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD %lu %lu %lu %lu\n", 
 		(unsigned long)spec, (unsigned long)self_spec,
 		(unsigned long)STIX_OOP_TO_SMINT(stix->c->cls.self_oop->spec), (unsigned long)STIX_OOP_TO_SMINT(stix->c->cls.self_oop->selfspec)
@@ -2499,7 +2478,7 @@ printf (" DDDDDDDDDD CONFLICTING CLASS DEFINITION DDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
 		/* the class variables and class instance variables are placed
 		 * inside the class object after the fixed part. */
 		tmp = stix_instantiate (stix, stix->_class, STIX_NULL,
-		                        stix->c->cls.var_count[1] + stix->c->cls.var_count[2]);
+		                        stix->c->cls.var_count[VAR_CLASSINST] + stix->c->cls.var_count[VAR_CLASS]);
 		if (!tmp) return -1;
 	
 		just_made = 1;
@@ -2757,8 +2736,8 @@ printf ("\n");
 		c = (stix_oop_class_t)stix->c->cls.super_oop;
 		spec = STIX_OOP_TO_SMINT(c->spec);
 		self_spec = STIX_OOP_TO_SMINT(c->selfspec);
-		stix->c->cls.var_count[0] = STIX_CLASS_SPEC_NAMED_INSTVAR(spec);
-		stix->c->cls.var_count[2] = STIX_CLASS_SELFSPEC_CLASSINSTVAR(self_spec);
+		stix->c->cls.var_count[VAR_INSTANCE] = STIX_CLASS_SPEC_NAMED_INSTVAR(spec);
+		stix->c->cls.var_count[VAR_CLASSINST] = STIX_CLASS_SELFSPEC_CLASSINSTVAR(self_spec);
 	}
 
 	GET_TOKEN (stix);

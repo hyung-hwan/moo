@@ -280,7 +280,8 @@ enum stix_synerrnum_t
 	STIX_SYNERR_CLASSUNDEF,    /* undefined class */
 	STIX_SYNERR_CLASSDUP,      /* duplicate class */
 	STIX_SYNERR_DCLBANNED,     /* #dcl not allowed */
-	STIX_SYNERR_MTHNAME,       /* wrong function name */
+	STIX_SYNERR_MTHNAME,       /* wrong method name */
+	STIX_SYNERR_MTHNAMEDUP,    /* duplicate method name */
 	STIX_SYNERR_ARGNAMEDUP,    /* duplicate argument name */
 	STIX_SYNERR_TMPRNAMEDUP,   /* duplicate temporary variable name */
 	STIX_SYNERR_VARNAMEDUP     /* duplicate variable name */

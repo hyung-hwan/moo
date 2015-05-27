@@ -235,7 +235,8 @@ static char* syntax_error_msg[] =
 	"undefined class",
 	"duplicate class",
 	"#dcl not allowed",
-	"wrong function name",
+	"wrong method name",
+	"duplicate method name",
 	"duplicate argument name",
 	"duplicate temporary variable name",
 	"duplicate variable name"
