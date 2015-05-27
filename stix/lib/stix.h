@@ -503,9 +503,12 @@ struct stix_class_t
 	stix_oop_t      subclasses;    /* Array of subclasses */
 
 	stix_oop_char_t name;          /* Symbol */
+
+	/* == NEVER CHANGE THIS ORDER OF 3 ITEMS BELOW == */
 	stix_oop_char_t instvars;      /* String */
 	stix_oop_char_t classvars;     /* String */
 	stix_oop_char_t classinstvars; /* String */
+	/* == NEVER CHANGE THE ORDER OF 3 ITEMS ABOVE == */
 
 	stix_oop_oop_t  instfuns;      /* instance methods, MethodDictionary */
 	stix_oop_oop_t  classfuns;     /* class methods, MethodDictionary */

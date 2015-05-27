@@ -52,15 +52,30 @@ typedef enum stix_stack_operand_t stix_stack_operand_t;
 
 enum class_mod_t
 {
-	CLASS_INDEXED           = (1 << 0),
-	CLASS_EXTEND            = (1 << 1)
+	CLASS_INDEXED   = (1 << 0),
+	CLASS_EXTENDED  = (1 << 1)
 };
 
-enum dcl_mod_t
+enum mth_mod_t
 {
-	DCL_CLASS     = (1 << 0),
-	DCL_CLASSINST = (1 << 1)
+	MTH_CLASS    = (1 << 0)
 };
+
+enum var_type_t
+{
+	VAR_INSTANCE,
+	VAR_CLASS,
+	VAR_CLASSINST
+};
+typedef enum var_type_t var_type_t;
+
+struct var_info_t
+{
+	var_type_t type;
+	stix_size_t pos;
+	stix_oop_class_t cls; /* useful if type is VAR_CLASS. note STIX_NULL indicates the self class. */
+};
+typedef struct var_info_t var_info_t;
 
 static struct ksym_t
 {
@@ -74,11 +89,10 @@ static struct ksym_t
 	{  3, { 'd','c','l'                                                   } },
 	{  7, { 'd','e','c','l','a','r','e'                                   } },
 	{  5, { 'f','a','l','s','e'                                           } },
-	{  3, { 'f','u','n'                                                   } },
-	{  8, { 'f','u','n','c','t','i','o','n'                               } },
 	{  7, { 'i','n','c','l','u','d','e'                                   } },
-	{  8, { 'i','n','s','t','a','n','c','e'                               } },
 	{  4, { 'm','a','i','n'                                               } },
+	{  6, { 'm','e','t','h','o','d'                                       } },
+	{  3, { 'm','t','h'                                                   } },
 	{  3, { 'n','i','l'                                                   } },
 	{  7, { 'p','o','i','n','t','e','r'                                   } },
 	{ 10, { 'p','r','i','m','i','t','i','v','e',':'                       } },
@@ -101,11 +115,10 @@ enum ksym_id_t
 	KSYM_DCL,
 	KSYM_DECLARE,
 	KSYM_FALSE,
-	KSYM_FUN,
-	KSYM_FUNCTION,
 	KSYM_INCLUDE,
-	KSYM_INSTANCE,
 	KSYM_MAIN,
+	KSYM_METHOD,
+	KSYM_MTH,
 	KSYM_NIL,
 	KSYM_POINTER,
 	KSYM_PRIMITIVE_COLON,
@@ -215,7 +228,7 @@ static STIX_INLINE int does_token_name_match (stix_t* stix, ksym_id_t id)
 	       stix_equalchars(stix->c->tok.name.ptr, ksyms[id].str, ksyms[id].len);
 }
 
-static STIX_INLINE int is_token_ksym (stix_t* stix, ksym_id_t id)
+static STIX_INLINE int is_token_symbol (stix_t* stix, ksym_id_t id)
 {
 	return stix->c->tok.type == STIX_IOTOK_SYMLIT && does_token_name_match(stix, id);
 }
@@ -1804,133 +1817,193 @@ static int parse_unary_message (stix_t* fsc, int is_super)
 
 static STIX_INLINE int set_class_name (stix_t* stix, const stix_ucs_t* name)
 {
-	return copy_string_to (stix, name, &stix->c->_class.name, &stix->c->_class.name_capa, 0, '\0');
+	return copy_string_to (stix, name, &stix->c->cls.name, &stix->c->cls.name_capa, 0, '\0');
 }
 
 static STIX_INLINE int set_superclass_name (stix_t* stix, const stix_ucs_t* name)
 {
-	return copy_string_to (stix, name, &stix->c->_class.supername, &stix->c->_class.supername_capa, 0, '\0');
+	return copy_string_to (stix, name, &stix->c->cls.supername, &stix->c->cls.supername_capa, 0, '\0');
 }
 
-static STIX_INLINE int append_class_level_variable (stix_t* stix, int index, const stix_ucs_t* name)
+static STIX_INLINE int append_class_level_variable (stix_t* stix, var_type_t index, const stix_ucs_t* name)
 {
 	int n;
 
-	n =  copy_string_to (stix, name, &stix->c->_class.vars[index], &stix->c->_class.vars_capa[index], 1, ' ');
+	n =  copy_string_to (stix, name, &stix->c->cls.vars[index], &stix->c->cls.vars_capa[index], 1, ' ');
 
 	if (n >= 0) 
 	{
-		stix->c->_class.var_count[index]++;
+		stix->c->cls.var_count[index]++;
 		/* TODO: check if it exceeds STIX_MAX_NAMED_INSTVARS, STIX_MAX_CLASSVARS, STIX_MAX_CLASSINSTVARS */
 	}
 
 	return n;
 }
 
-static stix_ssize_t find_class_level_variable (stix_t* stix, int index, const stix_ucs_t* name)
+static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t self, const stix_ucs_t* name, var_info_t* var)
 {
-	/* this function is called when the compiler compiles a new class 
-	 * definition. so the current class object being compile doesn't
-	 * exsist in the system dictionary (except the partially defined kernel
-	 * objects). 
-	 */
 	stix_ssize_t pos;
 	stix_oop_t super;
 	stix_oop_char_t v;
+	stix_oop_char_t* vv;
 	stix_ucs_t hs;
+	int index;
 
-/* TODO: find it in other types of variables */
-/* THIS FUNCTION IS NOT COMPLETE */
-	pos = find_word_in_string(&stix->c->_class.vars[index], name);
-	super = stix->c->_class.super_oop;
-	if (pos >= 0) goto done;
+	if (self)
+	{
+		STIX_ASSERT (STIX_CLASSOF(stix, self) == stix->_class);
+
+		/* NOTE the loop here assumes the right order of
+		 *    instvars
+		 *    classvars
+		 *    classinstvars
+		 */
+		vv = &self->instvars;
+		for (index = VAR_INSTANCE; index <= VAR_CLASSINST; index++)
+		{
+			v = vv[index];
+			hs.ptr = v->slot;
+			hs.len = STIX_OBJ_GET_SIZE(v);
+
+			pos = find_word_in_string(&hs, name);
+			if (pos >= 0) 
+			{
+				super = self->superclass;
+				goto done;
+			}
+		}
+
+		super = self->superclass;
+	}
+	else
+	{
+		/* the class definition is not available yet */
+		for (index = VAR_INSTANCE; index <= VAR_CLASSINST; index++)
+		{
+			pos = find_word_in_string(&stix->c->cls.vars[index], name);
+
+			if (pos >= 0) 
+			{
+				super = stix->c->cls.super_oop;
+				goto done;
+			}
+		}
+		super = stix->c->cls.super_oop;
+	}
 
 	while (super != stix->_nil)
 	{
 		STIX_ASSERT (STIX_CLASSOF(stix, super) == stix->_class);
 
-		v = ((stix_oop_class_t)super)->instvars;
-/* TODO: v = ((stix_oop_class_t)super)->classvars; */
-		hs.ptr = v->slot;
-		hs.len = STIX_OBJ_GET_SIZE(v);
+		/* NOTE the loop here assumes the right order of
+		 *    instvars
+		 *    classvars
+		 *    classinstvars
+		 */
+		vv = &((stix_oop_class_t)super)->instvars;
+		for (index = VAR_INSTANCE; index <= VAR_CLASSINST; index++)
+		{
+			v = vv[index];
+			hs.ptr = v->slot;
+			hs.len = STIX_OBJ_GET_SIZE(v);
 
-		pos = find_word_in_string(&hs, name);
+			pos = find_word_in_string(&hs, name);
+			if (pos >= 0) 
+			{
+				super = ((stix_oop_class_t)super)->superclass;
+				goto done;
+			}
+		}
+
 		super = ((stix_oop_class_t)super)->superclass;
-		if (pos >= 0) goto done;
 	}
 
 	return -1;
 
 done:
+	/* 'self' may be STIX_NULL if STIX_NULL has been given for it.
+	 * the caller must take good care when interpreting the meaning of 
+	 * this field */
+	var->cls = self; 
+
 	if (super != stix->_nil)
 	{
 		stix_oow_t spec;
 
 		STIX_ASSERT (STIX_CLASSOF(stix, super) == stix->_class);
-		spec = STIX_OOP_TO_SMINT(((stix_oop_class_t)super)->spec);
-		pos += STIX_CLASS_SPEC_NAMED_INSTVAR(spec);
+		switch (index)
+		{
+			case VAR_INSTANCE:
+				/* each class has the number of named instance variables 
+				 * accumulated for inheritance. the position found in the
+				 * local variable string can be adjusted by adding the
+				 * number in the superclass */
+				spec = STIX_OOP_TO_SMINT(((stix_oop_class_t)super)->spec);
+				pos += STIX_CLASS_SPEC_NAMED_INSTVAR(spec);
+				break;
+
+			case VAR_CLASS:
+				/* no adjustment is needed.
+				 * a class object is composed of three parts.
+				 *  fixed-part | classinst-variables | class-variabes 
+				 * the position returned here doesn't consider 
+				 * class instance variables that can be potentially
+				 * placed before the class variables. */
+				var->cls = (stix_oop_class_t)super;
+				break;
+
+			case VAR_CLASSINST:
+				spec = STIX_OOP_TO_SMINT(((stix_oop_class_t)super)->selfspec);
+				pos += STIX_CLASS_SELFSPEC_CLASSINSTVAR(spec);
+				break;
+		}
 	}
 
+	var->type = index;
+	var->pos = pos;
 	return pos;
 }
 
-static int append_function_name (stix_t* stix, const stix_ucs_t* name)
+static int append_method_name (stix_t* stix, const stix_ucs_t* name)
 {
-	/* function name segments are concatenated without any delimiters */
-	return copy_string_to (stix, name, &stix->c->fun.name, &stix->c->fun.name_capa, 1, '\0');
+	/* method name segments are concatenated without any delimiters */
+	return copy_string_to (stix, name, &stix->c->mth.name, &stix->c->mth.name_capa, 1, '\0');
 }
 
 static int append_temporary (stix_t* stix, const stix_ucs_t* name)
 {
 	/* temporary variable names are added to the string with leading
 	 * space if it's not the first variable */
-	return copy_string_to (stix, name, &stix->c->fun.tmprs, &stix->c->fun.tmprs_capa, 1, ' ');
+	return copy_string_to (stix, name, &stix->c->mth.tmprs, &stix->c->mth.tmprs_capa, 1, ' ');
 }
 
 static STIX_INLINE stix_ssize_t find_temporary (stix_t* stix, const stix_ucs_t* name)
 {
-	return find_word_in_string(&stix->c->fun.tmprs, name);
+	return find_word_in_string(&stix->c->mth.tmprs, name);
 }
 
 
 static int compile_class_level_variables (stix_t* stix)
 {
-	int dcl_mod = 0;
-	int dcl_index = 0;
+	var_type_t dcl_type = VAR_INSTANCE;
 
 	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
 	{
-		/* variable modifier */
-		do
-		{
-			GET_TOKEN (stix);
+		/* process variable modifiers */
+		GET_TOKEN (stix);
 
-			if (is_token_ksym(stix, KSYM_CLASS))
-			{
-				/* #dcl(#class) */
-				dcl_mod &= ~(DCL_CLASS | DCL_CLASSINST);
-				dcl_mod |= DCL_CLASS;
-				dcl_index = 1;
-			}
-			else if (is_token_ksym(stix, KSYM_CLASSINST))
-			{
-				/* #dcl(#classinst) */
-				dcl_mod &= ~(DCL_CLASS | DCL_CLASSINST);
-				dcl_mod |= DCL_CLASSINST;
-				dcl_index = 2;
-			}
-			else if (is_token_ksym(stix, KSYM_INSTANCE))
-			{
-				/* #dcl(#instance) */
-				dcl_mod &= ~(DCL_CLASS | DCL_CLASSINST);
-				dcl_index = 0;
-			}
-			else
-			{
-				break;
-			}
+		if (is_token_symbol(stix, KSYM_CLASS))
+		{
+			/* #dcl(#class) */
+			dcl_type = VAR_CLASS;
+			GET_TOKEN (stix);
 		}
-		while (1);
+		else if (is_token_symbol(stix, KSYM_CLASSINST))
+		{
+			/* #dcl(#classinst) */
+			dcl_type = VAR_CLASSINST;
+			GET_TOKEN (stix);
+		}
 
 		if (stix->c->tok.type != STIX_IOTOK_RPAREN)
 		{
@@ -1945,18 +2018,48 @@ static int compile_class_level_variables (stix_t* stix)
 	{
 		if (stix->c->tok.type == STIX_IOTOK_IDENT)
 		{
-			if (find_class_level_variable(stix, dcl_index, &stix->c->tok.name) >= 0)
+			var_info_t var;
+
+			if (find_class_level_variable(stix, STIX_NULL, &stix->c->tok.name, &var) >= 0)
 			{
+printf ("duplicate variable name type %d pos %lu\n", var.type, var.pos);
 				set_syntax_error (stix, STIX_SYNERR_VARNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
 				return -1;
 			}
 
-			if (append_class_level_variable(stix, dcl_index, &stix->c->tok.name) <= -1) return -1;
 
-			/* TODO 
-			if (stix->c->_class->self_oop => is kernel object, and 
-			check the number of instance variable??? class variable??/ class instance variable ?
-			 */
+			if (stix->c->cls.self_oop)
+			{
+				stix_oow_t spec, limit;
+
+				/* it is an internally defined kernel class object */ 
+				switch (dcl_type)
+				{
+					case VAR_INSTANCE:
+						spec = STIX_OOP_TO_SMINT(stix->c->cls.self_oop->spec);
+						limit = STIX_CLASS_SPEC_NAMED_INSTVAR(spec);
+						break;
+
+					case VAR_CLASS:
+						spec = STIX_OOP_TO_SMINT(stix->c->cls.self_oop->selfspec);
+						limit = STIX_CLASS_SELFSPEC_CLASSVAR(spec);
+						break;
+
+					case VAR_CLASSINST:
+						spec = STIX_OOP_TO_SMINT(stix->c->cls.self_oop->selfspec);
+						limit = STIX_CLASS_SELFSPEC_CLASSINSTVAR(spec);
+						break;
+				}
+
+				if (stix->c->cls.var_count[dcl_type] >= limit)
+				{
+/* THIS IS NOT QUITE RIGHT... Do differetn calculation.... */
+printf ("TOO MANY XXXXXXXXXXXXXXXXXXXXXXXXX duplicate variable name type %d pos %lu\n", var.type, var.pos);
+					return -1;
+				}
+			}
+
+			if (append_class_level_variable(stix, dcl_type, &stix->c->tok.name) <= -1) return -1;
 		}
 		else
 		{
@@ -1977,22 +2080,22 @@ static int compile_class_level_variables (stix_t* stix)
 	return 0;
 }
 
-static int compile_unary_function_name (stix_t* stix)
+static int compile_unary_method_name (stix_t* stix)
 {
-	STIX_ASSERT (stix->c->fun.name.len == 0);
-	STIX_ASSERT (stix->c->fun.tmpr_nargs == 0);
+	STIX_ASSERT (stix->c->mth.name.len == 0);
+	STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
 
-	if (append_function_name (stix, &stix->c->tok.name) <= -1) return -1;
+	if (append_method_name (stix, &stix->c->tok.name) <= -1) return -1;
 	GET_TOKEN (stix);
 	return 0;
 }
 
-static int compile_binary_function_name (stix_t* stix)
+static int compile_binary_method_name (stix_t* stix)
 {
-	STIX_ASSERT (stix->c->fun.name.len == 0);
-	STIX_ASSERT (stix->c->fun.tmpr_nargs == 0);
+	STIX_ASSERT (stix->c->mth.name.len == 0);
+	STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
 
-	if (append_function_name (stix, &stix->c->tok.name) <= -1) return -1;
+	if (append_method_name (stix, &stix->c->tok.name) <= -1) return -1;
 	GET_TOKEN (stix);
 
 	/* collect the argument name */
@@ -2003,26 +2106,26 @@ static int compile_binary_function_name (stix_t* stix)
 		return -1;
 	}
 
-	STIX_ASSERT (stix->c->fun.tmpr_nargs == 0);
+	STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
 
 	/* no duplication check is performed against instance variable names or
 	 * class variable names. a duplcate name will shade a previsouly defined
 	 * variable. */
 	if (append_temporary(stix, &stix->c->tok.name) <= -1) return -1;
-	stix->c->fun.tmpr_nargs++;
+	stix->c->mth.tmpr_nargs++;
 
 	GET_TOKEN (stix);
 	return 0;
 }
 
-static int compile_keyword_function_name (stix_t* stix)
+static int compile_keyword_method_name (stix_t* stix)
 {
-	STIX_ASSERT (stix->c->fun.name.len == 0);
-	STIX_ASSERT (stix->c->fun.tmpr_nargs == 0);
+	STIX_ASSERT (stix->c->mth.name.len == 0);
+	STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
 
 	do 
 	{
-		if (append_function_name(stix, &stix->c->tok.name) <= -1) return -1;
+		if (append_method_name(stix, &stix->c->tok.name) <= -1) return -1;
 
 		GET_TOKEN (stix);
 		if (stix->c->tok.type != STIX_IOTOK_IDENT) 
@@ -2039,7 +2142,7 @@ static int compile_keyword_function_name (stix_t* stix)
 		}
 
 		if (append_temporary(stix, &stix->c->tok.name) <= -1) return -1;
-		stix->c->fun.tmpr_nargs++;
+		stix->c->mth.tmpr_nargs++;
 
 		GET_TOKEN (stix);
 	} 
@@ -2048,37 +2151,37 @@ static int compile_keyword_function_name (stix_t* stix)
 	return 0;
 }
 
-static int compile_function_name (stix_t* stix)
+static int compile_method_name (stix_t* stix)
 {
 	/* 
-	 * function-name := unary-function-name | binary-function-name | keyword-function-name
-	 * unary-function-name := unary-selector
-	 * binary-function-name := binary-selector selector-argument
-	 * keyword-function-name := (keyword selector-argument)+
+	 * method-name := unary-method-name | binary-method-name | keyword-method-name
+	 * unary-method-name := unary-selector
+	 * binary-method-name := binary-selector selector-argument
+	 * keyword-method-name := (keyword selector-argument)+
 	 * selector-argument := identifier
 	 * unary-selector := identifier
 	 */
 	int n;
 
-	STIX_ASSERT (stix->c->fun.tmpr_count == 0);
+	STIX_ASSERT (stix->c->mth.tmpr_count == 0);
 
 	switch (stix->c->tok.type)
 	{
 		case STIX_IOTOK_IDENT:
-			n = compile_unary_function_name(stix);
+			n = compile_unary_method_name(stix);
 			break;
 
 		case STIX_IOTOK_BINSEL:
-			n = compile_binary_function_name(stix);
+			n = compile_binary_method_name(stix);
 			break;
 
 		case STIX_IOTOK_KEYWORD:
-			n = compile_keyword_function_name(stix);
+			n = compile_keyword_method_name(stix);
 			break;
 
 		default:
-			/* illegal function name  */
-			set_syntax_error (stix, STIX_SYNERR_FUNNAME, &stix->c->tok.loc, &stix->c->tok.name);
+			/* illegal method name  */
+			set_syntax_error (stix, STIX_SYNERR_MTHNAME, &stix->c->tok.loc, &stix->c->tok.name);
 			n = -1;
 	}
 
@@ -2090,14 +2193,14 @@ static int compile_function_name (stix_t* stix)
 	/* the total number of temporaries is equal to the number of 
 	 * arguments after having processed the message pattern. it's because
 	 * stix treats arguments the same as temporaries */
-	stix->c->fun.tmpr_count = stix->c->fun.tmpr_nargs;
+	stix->c->mth.tmpr_count = stix->c->mth.tmpr_nargs;
 	return n;
 }
 
-static int compile_class_function_temporaries (stix_t* stix)
+static int compile_class_method_temporaries (stix_t* stix)
 {
 	/* 
-	 * function-temporaries := "|" variable-list "|"
+	 * method-temporaries := "|" variable-list "|"
 	 * variable-list := identifier*
 	 */
 
@@ -2118,7 +2221,7 @@ static int compile_class_function_temporaries (stix_t* stix)
 		}
 
 		if (append_temporary(stix, &stix->c->tok.name) <= -1) return -1;
-		stix->c->fun.tmpr_count++;
+		stix->c->mth.tmpr_count++;
 
 		GET_TOKEN (stix);
 	}
@@ -2133,10 +2236,10 @@ static int compile_class_function_temporaries (stix_t* stix)
 	return 0;
 }
 
-static int compile_class_function_primitive (stix_t* stix)
+static int compile_class_method_primitive (stix_t* stix)
 {
 	/* 
-	 * function-primitive := "<"  "primitive:" integer ">"
+	 * method-primitive := "<"  "primitive:" integer ">"
 	 */
 
 	if (!is_token_binsel(stix, KSYM_LT)) 
@@ -2171,7 +2274,7 @@ static int compile_class_function_primitive (stix_t* stix)
 		return -1;
 	}
 
-	STIX_STRTOI (stix->c->fun.prim_no, stix->tok.name.buffer, STIX_NULL, 10);
+	STIX_STRTOI (stix->c->mth.prim_no, stix->tok.name.buffer, STIX_NULL, 10);
 	if (prim_no < 0 || prim_no > 0xFF) 
 	{
 		stix->errnum = STIX_FSC_ERROR_PRIMITIVE_NUMBER_RANGE;
@@ -2192,11 +2295,11 @@ static int compile_class_function_primitive (stix_t* stix)
 	return 0;
 }
 
-static int compile_class_function_expression (stix_t* stix)
+static int compile_class_method_expression (stix_t* stix)
 {
 	/*
-	 * function-expression := assignment-expression | basic-expression
-	 * assignment-expression := identifier ":=" function-expression
+	 * method-expression := assignment-expression | basic-expression
+	 * assignment-expression := identifier ":=" method-expression
 	 * basic-expression := expression-primary (message cascaded-message)?
 	 */
 
@@ -2242,32 +2345,32 @@ static int compile_class_function_expression (stix_t* stix)
 	return -1;
 }
 
-static int compile_class_function_statement (stix_t* stix)
+static int compile_class_method_statement (stix_t* stix)
 {
 	if (stix->c->tok.type == STIX_IOTOK_RETURN) 
 	{
 		GET_TOKEN (stix);
-		if (compile_class_function_expression(stix) <= -1) return -1;
+		if (compile_class_method_expression(stix) <= -1) return -1;
 #if 0
 		EMIT_RETURN_FROM_MESSAGE (stix);
 #endif
 	}
 	else 
 	{
-		if (compile_class_function_expression(stix) <= -1) return -1;
+		if (compile_class_method_expression(stix) <= -1) return -1;
 	}
 
 	return 0;
 }
 
 
-static int compile_class_function_statements (stix_t* stix)
+static int compile_class_method_statements (stix_t* stix)
 {
 	/*
-	 * function-statements := function-statement ("." | ("." function-statements))*
-	 * function-statement := function-return | function-expression
-	 * function-return := "^" function-expression
-	 * function-expression := ...
+	 * method-statements := method-statement ("." | ("." method-statements))*
+	 * method-statement := method-return | method-expression
+	 * method-return := "^" method-expression
+	 * method-expression := ...
 	 */
 
 	if (stix->c->tok.type != STIX_IOTOK_EOF &&
@@ -2275,7 +2378,7 @@ static int compile_class_function_statements (stix_t* stix)
 	{
 		do
 		{
-			if (compile_class_function_statement(stix) <= -1) return -1;
+			if (compile_class_method_statement(stix) <= -1) return -1;
 
 			if (stix->c->tok.type == STIX_IOTOK_PERIOD) 
 			{
@@ -2298,16 +2401,39 @@ static int compile_class_function_statements (stix_t* stix)
 	return 0;
 }
 
-static int compile_class_function (stix_t* stix)
+static int compile_class_method (stix_t* stix)
 {
 	/* clear data required to compile a method */
-	stix->c->fun.name.len = 0;
-	stix->c->fun.tmprs.len = 0;
-	stix->c->fun.tmpr_count = 0;
-	stix->c->fun.tmpr_nargs = 0;
-	stix->c->fun.code.len = 0;
+	stix->c->mth.flags = 0;
+	stix->c->mth.name.len = 0;
+	stix->c->mth.tmprs.len = 0;
+	stix->c->mth.tmpr_count = 0;
+	stix->c->mth.tmpr_nargs = 0;
+	stix->c->mth.code.len = 0;
 
-	if (compile_function_name(stix) <= -1) return -1;
+	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
+	{
+		/* process method modifiers  */
+		GET_TOKEN (stix);
+
+		if (is_token_symbol(stix, KSYM_CLASS))
+		{
+			/* #method(#class) */
+			stix->c->mth.flags |= MTH_CLASS;
+			GET_TOKEN (stix);
+		}
+
+		if (stix->c->tok.type != STIX_IOTOK_RPAREN)
+		{
+			/* ) expected */
+			set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+
+		GET_TOKEN (stix);
+	}
+
+	if (compile_method_name(stix) <= -1) return -1;
 
 	if (stix->c->tok.type != STIX_IOTOK_LBRACE)
 	{
@@ -2318,10 +2444,9 @@ static int compile_class_function (stix_t* stix)
 
 	GET_TOKEN (stix);
 
-
-	if (compile_class_function_temporaries(stix) <= -1 ||
-	    compile_class_function_primitive(stix) <= -1 ||
-	    compile_class_function_statements(stix) <= -1 /*|| 
+	if (compile_class_method_temporaries(stix) <= -1 ||
+	    compile_class_method_primitive(stix) <= -1 ||
+	    compile_class_method_statements(stix) <= -1 /*|| 
 	    finish_method(stix) <= -1*/) return -1; 
 
 	if (stix->c->tok.type != STIX_IOTOK_RBRACE)
@@ -2344,26 +2469,26 @@ static int make_defined_class (stix_t* stix)
 	int just_made = 0;
 
 
-	spec = STIX_CLASS_SPEC_MAKE (stix->c->_class.var_count[0],  
-	                             ((stix->c->_class.flags & CLASS_INDEXED)? 1: 0),
-	                             stix->c->_class.indexed_type);
-	self_spec = STIX_CLASS_SELFSPEC_MAKE(stix->c->_class.var_count[1], stix->c->_class.var_count[2]);
+	spec = STIX_CLASS_SPEC_MAKE (stix->c->cls.var_count[0],  
+	                             ((stix->c->cls.flags & CLASS_INDEXED)? 1: 0),
+	                             stix->c->cls.indexed_type);
+	self_spec = STIX_CLASS_SELFSPEC_MAKE(stix->c->cls.var_count[1], stix->c->cls.var_count[2]);
 
-print_ucs (&stix->c->_class.name);
-printf (" instvars %d classvars %d classinstvars %d\n", (int)stix->c->_class.var_count[0], (int)stix->c->_class.var_count[1], (int)stix->c->_class.var_count[2]);
+print_ucs (&stix->c->cls.name);
+printf (" instvars %d classvars %d classinstvars %d\n", (int)stix->c->cls.var_count[0], (int)stix->c->cls.var_count[1], (int)stix->c->cls.var_count[2]);
 
-	if (stix->c->_class.self_oop)
+	if (stix->c->cls.self_oop)
 	{
-		STIX_ASSERT (STIX_CLASSOF(stix, stix->c->_class.self_oop) == stix->_class);
-		STIX_ASSERT (STIX_OBJ_GET_FLAGS_KERNEL (stix->c->_class.self_oop) == 1);
+		STIX_ASSERT (STIX_CLASSOF(stix, stix->c->cls.self_oop) == stix->_class);
+		STIX_ASSERT (STIX_OBJ_GET_FLAGS_KERNEL (stix->c->cls.self_oop) == 1);
 
-		if (spec != STIX_OOP_TO_SMINT(stix->c->_class.self_oop->spec) ||
-		    self_spec != STIX_OOP_TO_SMINT(stix->c->_class.self_oop->selfspec))
+		if (spec != STIX_OOP_TO_SMINT(stix->c->cls.self_oop->spec) ||
+		    self_spec != STIX_OOP_TO_SMINT(stix->c->cls.self_oop->selfspec))
 		{
 			/* it conflicts with internal defintion */
 printf (" DDDDDDDDDD CONFLICTING CLASS DEFINITION DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD %lu %lu %lu %lu\n", 
 		(unsigned long)spec, (unsigned long)self_spec,
-		(unsigned long)STIX_OOP_TO_SMINT(stix->c->_class.self_oop->spec), (unsigned long)STIX_OOP_TO_SMINT(stix->c->_class.self_oop->selfspec)
+		(unsigned long)STIX_OOP_TO_SMINT(stix->c->cls.self_oop->spec), (unsigned long)STIX_OOP_TO_SMINT(stix->c->cls.self_oop->selfspec)
 );
 /* TODO: set syntax error */
 			return -1;
@@ -2374,42 +2499,42 @@ printf (" DDDDDDDDDD CONFLICTING CLASS DEFINITION DDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
 		/* the class variables and class instance variables are placed
 		 * inside the class object after the fixed part. */
 		tmp = stix_instantiate (stix, stix->_class, STIX_NULL,
-		                        stix->c->_class.var_count[1] + stix->c->_class.var_count[2]);
+		                        stix->c->cls.var_count[1] + stix->c->cls.var_count[2]);
 		if (!tmp) return -1;
 	
 		just_made = 1;
-		stix->c->_class.self_oop = (stix_oop_class_t)tmp;
+		stix->c->cls.self_oop = (stix_oop_class_t)tmp;
 
-		STIX_ASSERT (STIX_CLASSOF(stix, stix->c->_class.self_oop) == stix->_class);
+		STIX_ASSERT (STIX_CLASSOF(stix, stix->c->cls.self_oop) == stix->_class);
 
-		stix->c->_class.self_oop->spec = STIX_OOP_FROM_SMINT(spec);
-		stix->c->_class.self_oop->selfspec = STIX_OOP_FROM_SMINT(self_spec);
+		stix->c->cls.self_oop->spec = STIX_OOP_FROM_SMINT(spec);
+		stix->c->cls.self_oop->selfspec = STIX_OOP_FROM_SMINT(self_spec);
 	}
 
-	STIX_OBJ_SET_FLAGS_KERNEL (stix->c->_class.self_oop, 2);
+	STIX_OBJ_SET_FLAGS_KERNEL (stix->c->cls.self_oop, 2);
 
-	tmp = stix_makesymbol(stix, stix->c->_class.name.ptr, stix->c->_class.name.len);
+	tmp = stix_makesymbol(stix, stix->c->cls.name.ptr, stix->c->cls.name.len);
 	if (!tmp) return -1;
-	stix->c->_class.self_oop->name = (stix_oop_char_t)tmp;
+	stix->c->cls.self_oop->name = (stix_oop_char_t)tmp;
 
-	tmp = stix_makestring(stix, stix->c->_class.vars[0].ptr, stix->c->_class.vars[0].len);
+	tmp = stix_makestring(stix, stix->c->cls.vars[0].ptr, stix->c->cls.vars[0].len);
 	if (!tmp) return -1;
-	stix->c->_class.self_oop->instvars = (stix_oop_char_t)tmp;
+	stix->c->cls.self_oop->instvars = (stix_oop_char_t)tmp;
 
-	tmp = stix_makestring(stix, stix->c->_class.vars[1].ptr, stix->c->_class.vars[1].len);
+	tmp = stix_makestring(stix, stix->c->cls.vars[1].ptr, stix->c->cls.vars[1].len);
 	if (!tmp) return -1;
-	stix->c->_class.self_oop->classvars = (stix_oop_char_t)tmp;
+	stix->c->cls.self_oop->classvars = (stix_oop_char_t)tmp;
 
-	tmp = stix_makestring(stix, stix->c->_class.vars[2].ptr, stix->c->_class.vars[2].len);
+	tmp = stix_makestring(stix, stix->c->cls.vars[2].ptr, stix->c->cls.vars[2].len);
 	if (!tmp) return -1;
-	stix->c->_class.self_oop->classinstvars = (stix_oop_char_t)tmp;
+	stix->c->cls.self_oop->classinstvars = (stix_oop_char_t)tmp;
 
-/* TODO: initialize more fields??? method_dictionary. function dictionary */
+/* TODO: initialize more fields??? method_dictionary. */
 
 	if (just_made)
 	{
 		/* register the class to the system dictionary */
-		if (!stix_putatsysdic(stix, (stix_oop_t)stix->c->_class.self_oop->name, (stix_oop_t)stix->c->_class.self_oop)) return -1;
+		if (!stix_putatsysdic(stix, (stix_oop_t)stix->c->cls.self_oop->name, (stix_oop_t)stix->c->cls.self_oop)) return -1;
 	}
 
 	return 0;
@@ -2419,16 +2544,16 @@ static int __compile_class_definition (stix_t* stix)
 {
 	/* 
 	 * class-definition := #class class-modifier? "{" class-body "}"
-	 * class-modifier := "(" (#byte | #character | #word | #pointer)* ")"
-	 * class-body := (variable-definition | function-definition)*
+	 * class-modifier := "(" (#byte | #character | #word | #pointer)? ")"
+	 * class-body := variable-definition* method-definition*
 	 * 
 	 * variable-definition := (#dcl | #declare) variable-modifier? variable-list "."
-	 * variable-modifier := "(" (#class | #classinst | #instance)* ")"
+	 * variable-modifier := "(" (#class | #classinst)? ")"
 	 * variable-list := identifier*
 	 *
-	 * function-definition := (#fun | #function) function-modifier? function-actual-definition
-	 * function-modifier := "(" (#class | #instance) ")"
-	 * function-actual-definition := function-name "{" function-tempraries? function-primitive? function-statements* "}"
+	 * method-definition := (#mth | #method) method-modifier? method-actual-definition
+	 * method-modifier := "(" (#class | #instance)? ")"
+	 * method-actual-definition := method-name "{" method-tempraries? method-primitive? method-statements* "}"
 	 */
 	stix_ioloc_t class_name_loc;
 	stix_oop_association_t ass;
@@ -2437,52 +2562,36 @@ static int __compile_class_definition (stix_t* stix)
 	{
 		/* process class modifiers */
 
-		do
+		GET_TOKEN (stix);
+
+		if (is_token_symbol(stix, KSYM_BYTE))
 		{
-			int this_flag = 0;
-
+			/* #class(#byte) */
+			stix->c->cls.flags |= CLASS_INDEXED;
+			stix->c->cls.indexed_type = STIX_OBJ_TYPE_BYTE;
 			GET_TOKEN (stix);
-
-/* TODO: should i check if #byte, #character, #word, #pointer have already been specified? */
-			if (is_token_ksym(stix, KSYM_BYTE))
-			{
-				/* #class(#byte) */
-				this_flag = CLASS_INDEXED;
-				stix->c->_class.indexed_type = STIX_OBJ_TYPE_BYTE;
-			}
-			else if (is_token_ksym(stix, KSYM_CHARACTER))
-			{
-				/* #class(#character) */
-				this_flag = CLASS_INDEXED;
-				stix->c->_class.indexed_type = STIX_OBJ_TYPE_CHAR;
-			}
-			else if (is_token_ksym(stix, KSYM_WORD))
-			{
-				/* #class(#word) */
-				this_flag = CLASS_INDEXED;
-				stix->c->_class.indexed_type = STIX_OBJ_TYPE_WORD;
-			}
-			else if (is_token_ksym(stix, KSYM_POINTER))
-			{
-				/* #class(#pointer) */
-				this_flag = CLASS_INDEXED;
-				stix->c->_class.indexed_type = STIX_OBJ_TYPE_OOP;
-			}
-			/* place other modifiers here */
-			else 
-			{
-				break;
-			}
-
-			STIX_ASSERT (this_flag != 0);
-			if (stix->c->_class.flags & this_flag)
-			{
-				set_syntax_error (stix, STIX_SYNERR_CLASSMODDUP, &stix->c->tok.loc, &stix->c->tok.name);
-				return -1;
-			}
-			stix->c->_class.flags |= this_flag;
-		} 
-		while (1);
+		}
+		else if (is_token_symbol(stix, KSYM_CHARACTER))
+		{
+			/* #class(#character) */
+			stix->c->cls.flags |= CLASS_INDEXED;
+			stix->c->cls.indexed_type = STIX_OBJ_TYPE_CHAR;
+			GET_TOKEN (stix);
+		}
+		else if (is_token_symbol(stix, KSYM_WORD))
+		{
+			/* #class(#word) */
+			stix->c->cls.flags |= CLASS_INDEXED;
+			stix->c->cls.indexed_type = STIX_OBJ_TYPE_WORD;
+			GET_TOKEN (stix);
+		}
+		else if (is_token_symbol(stix, KSYM_POINTER))
+		{
+			/* #class(#pointer) */
+			stix->c->cls.flags |= CLASS_INDEXED;
+			stix->c->cls.indexed_type = STIX_OBJ_TYPE_OOP;
+			GET_TOKEN (stix);
+		}
 
 		if (stix->c->tok.type != STIX_IOTOK_RPAREN)
 		{
@@ -2510,9 +2619,9 @@ static int __compile_class_definition (stix_t* stix)
 printf ("DEFININING..\n");
 {
 int i;
-for (i = 0; i < stix->c->_class.name.len; i++)
+for (i = 0; i < stix->c->cls.name.len; i++)
 {
-printf ("%c", stix->c->_class.name.ptr[i]);
+printf ("%c", stix->c->cls.name.ptr[i]);
 }
 printf ("\n");
 }
@@ -2549,10 +2658,7 @@ printf ("\n");
 
 		GET_TOKEN (stix);
 
-printf ("FINDING......................["); print_ucs (&stix->c->_class.name); printf ("]\n");
-dump_system_dictionary(stix);
-		ass = (stix_oop_association_t)stix_lookupsysdic(stix, &stix->c->_class.name);
-printf ("FINDING dONE.........................\n");
+		ass = (stix_oop_association_t)stix_lookupsysdic(stix, &stix->c->cls.name);
 		if (ass)
 		{
 			if (STIX_CLASSOF(stix, ass->value) != stix->_class  ||
@@ -2561,33 +2667,33 @@ printf ("FINDING dONE.........................\n");
 				/* the object found with the name is not a class object 
 				 * or the the class object found is a fully defined kernel 
 				 * class object */
-				set_syntax_error (stix, STIX_SYNERR_CLASSDUP, &class_name_loc, &stix->c->_class.name);
+				set_syntax_error (stix, STIX_SYNERR_CLASSDUP, &class_name_loc, &stix->c->cls.name);
 				return -1;
 			}
 			
-			stix->c->_class.self_oop = (stix_oop_class_t)ass->value;
+			stix->c->cls.self_oop = (stix_oop_class_t)ass->value;
 		}
 		else
 		{
 			/* no class of such a name is found. it's a new definition,
 			 * which is normal for most new classes. */
-			STIX_ASSERT (stix->c->_class.self_oop == STIX_NULL);
+			STIX_ASSERT (stix->c->cls.self_oop == STIX_NULL);
 		}
 
 		if (super_is_nil)
 		{
-			stix->c->_class.super_oop = stix->_nil;
+			stix->c->cls.super_oop = stix->_nil;
 		}
 		else
 		{
-			ass = (stix_oop_association_t)stix_lookupsysdic(stix, &stix->c->_class.supername);
+			ass = (stix_oop_association_t)stix_lookupsysdic(stix, &stix->c->cls.supername);
 			if (ass &&
 			    STIX_CLASSOF(stix, ass->value) == stix->_class &&
 			    STIX_OBJ_GET_FLAGS_KERNEL(ass->value) != 1) 
 			{
 				/* the value found must be a class and it must not be 
 				 * an incomplete internal class object */
-				stix->c->_class.super_oop = ass->value;
+				stix->c->cls.super_oop = ass->value;
 			}
 			else
 			{
@@ -2595,7 +2701,7 @@ printf ("FINDING dONE.........................\n");
 				 * the object found with the name is not a class object. or,
 				 * the class object found is a internally defined kernel
 				 * class object. */
-				set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &superclass_name_loc, &stix->c->_class.supername);
+				set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &superclass_name_loc, &stix->c->cls.supername);
 				return -1;
 			}
 		}
@@ -2603,7 +2709,7 @@ printf ("FINDING dONE.........................\n");
 	else
 	{
 		/* extending class */
-		if (stix->c->_class.flags != 0)
+		if (stix->c->cls.flags != 0)
 		{
 			/* the class definition specified with modifiers cannot extend 
 			 * an existing class. the superclass must be specified enclosed
@@ -2613,26 +2719,26 @@ printf ("FINDING dONE.........................\n");
 			return -1;
 		}
 
-		stix->c->_class.flags |= CLASS_EXTEND;
+		stix->c->cls.flags |= CLASS_EXTENDED;
 
-		ass = (stix_oop_association_t)stix_lookupsysdic(stix, &stix->c->_class.name);
+		ass = (stix_oop_association_t)stix_lookupsysdic(stix, &stix->c->cls.name);
 		if (ass && 
 		    STIX_CLASSOF(stix, ass->value) != stix->_class &&
 		    STIX_OBJ_GET_FLAGS_KERNEL(ass->value) != 1)
 		{
-			stix->c->_class.self_oop = (stix_oop_class_t)ass->value;
+			stix->c->cls.self_oop = (stix_oop_class_t)ass->value;
 		}
 		else
 		{
 			/* only an existing class can be extended. */
-			set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &class_name_loc, &stix->c->_class.name);
+			set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &class_name_loc, &stix->c->cls.name);
 			return -1;
 		}
 
-		stix->c->_class.super_oop = stix->c->_class.self_oop->superclass;
+		stix->c->cls.super_oop = stix->c->cls.self_oop->superclass;
 
-		STIX_ASSERT ((stix_oop_t)stix->c->_class.super_oop == stix->_nil || 
-		             STIX_CLASSOF(stix, stix->c->_class.super_oop) == stix->_class);
+		STIX_ASSERT ((stix_oop_t)stix->c->cls.super_oop == stix->_nil || 
+		             STIX_CLASSOF(stix, stix->c->cls.super_oop) == stix->_class);
 	}
 
 	if (stix->c->tok.type != STIX_IOTOK_LBRACE)
@@ -2641,39 +2747,26 @@ printf ("FINDING dONE.........................\n");
 		return -1;
 	}
 
-	if (stix->c->_class.super_oop != stix->_nil)
+	if (stix->c->cls.super_oop != stix->_nil)
 	{
 		/* adjust the instance variable count and the class instance variable
 		 * count to include that of a superclass */
 		stix_oop_class_t c;
 		stix_oow_t spec, self_spec;
 
-		c = (stix_oop_class_t)stix->c->_class.super_oop;
+		c = (stix_oop_class_t)stix->c->cls.super_oop;
 		spec = STIX_OOP_TO_SMINT(c->spec);
 		self_spec = STIX_OOP_TO_SMINT(c->selfspec);
-		stix->c->_class.var_count[0] = STIX_CLASS_SPEC_NAMED_INSTVAR(spec);
-		stix->c->_class.var_count[2] = STIX_CLASS_SELFSPEC_CLASSINSTVAR(self_spec);
+		stix->c->cls.var_count[0] = STIX_CLASS_SPEC_NAMED_INSTVAR(spec);
+		stix->c->cls.var_count[2] = STIX_CLASS_SELFSPEC_CLASSINSTVAR(self_spec);
 	}
 
 	GET_TOKEN (stix);
 
-	while (is_token_ksym(stix, KSYM_DCL) || is_token_ksym(stix, KSYM_DECLARE))
+	if (stix->c->cls.flags & CLASS_EXTENDED)
 	{
-		if (stix->c->_class.flags & CLASS_EXTEND)
-		{
-			/* you cannot specify variables when extending a class */
-			set_syntax_error (stix, STIX_SYNERR_DCLBANNED, &stix->c->tok.loc, STIX_NULL);
-			return -1;
-		}
-
-		/* variable definition. #dcl or #declare */
-		GET_TOKEN (stix);
-		if (compile_class_level_variables(stix) <= -1) return -1;
-	}
-
-	if (stix->c->_class.flags & CLASS_EXTEND)
-	{
-		if (is_token_ksym(stix, KSYM_DCL) || is_token_ksym(stix, KSYM_DECLARE))
+		/* when a class is extended, a new variable cannot be added */
+		if (is_token_symbol(stix, KSYM_DCL) || is_token_symbol(stix, KSYM_DECLARE))
 		{
 			set_syntax_error (stix, STIX_SYNERR_DCLBANNED, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
@@ -2682,7 +2775,7 @@ printf ("FINDING dONE.........................\n");
 	else
 	{
 		/* a new class including an internally defined class object */
-		while (is_token_ksym(stix, KSYM_DCL) || is_token_ksym(stix, KSYM_DECLARE))
+		while (is_token_symbol(stix, KSYM_DCL) || is_token_symbol(stix, KSYM_DECLARE))
 		{
 			/* variable definition. #dcl or #declare */
 			GET_TOKEN (stix);
@@ -2692,11 +2785,11 @@ printf ("FINDING dONE.........................\n");
 		if (make_defined_class(stix) <= -1) return -1;
 	}
 
-	while (is_token_ksym(stix, KSYM_FUN) || is_token_ksym(stix, KSYM_FUNCTION))
+	while (is_token_symbol(stix, KSYM_MTH) || is_token_symbol(stix, KSYM_METHOD))
 	{
-		/* function definition. #fun or #function */
+		/* method definition. #mth or #method */
 		GET_TOKEN (stix);
-		if (compile_class_function(stix) <= -1) return -1;
+		if (compile_class_method(stix) <= -1) return -1;
 	}
 	
 	if (stix->c->tok.type != STIX_IOTOK_RBRACE)
@@ -2715,21 +2808,21 @@ static int compile_class_definition (stix_t* stix)
 	stix_size_t i;
 
 	/* reset the structure to hold information about a class to be compiled */
-	stix->c->_class.flags = 0;
-	stix->c->_class.name.len = 0;
-	stix->c->_class.supername.len = 0;
-	for (i = 0; i < STIX_COUNTOF(stix->c->_class.var_count); i++) 
-		stix->c->_class.var_count[i] = 0;
+	stix->c->cls.flags = 0;
+	stix->c->cls.name.len = 0;
+	stix->c->cls.supername.len = 0;
+	for (i = 0; i < STIX_COUNTOF(stix->c->cls.var_count); i++) 
+		stix->c->cls.var_count[i] = 0;
 
-	stix->c->_class.self_oop = STIX_NULL;
-	stix->c->_class.super_oop = STIX_NULL;
+	stix->c->cls.self_oop = STIX_NULL;
+	stix->c->cls.super_oop = STIX_NULL;
 
 	/* do main compilation work */
 	n = __compile_class_definition (stix);
 
 	/* reset these oops not to confuse gc_compiler() */
-	stix->c->_class.self_oop = STIX_NULL;
-	stix->c->_class.super_oop = STIX_NULL;
+	stix->c->cls.self_oop = STIX_NULL;
+	stix->c->cls.super_oop = STIX_NULL;
 
 	return n;
 }
@@ -2741,7 +2834,7 @@ static int compile_stream (stix_t* stix)
 
 	while (stix->c->tok.type != STIX_IOTOK_EOF)
 	{
-		if (is_token_ksym(stix, KSYM_INCLUDE))
+		if (is_token_symbol(stix, KSYM_INCLUDE))
 		{
 			/* #include 'xxxx' */
 			GET_TOKEN (stix);
@@ -2752,14 +2845,14 @@ static int compile_stream (stix_t* stix)
 			}
 			if (begin_include(stix) <= -1) return -1;
 		}
-		else if (is_token_ksym(stix, KSYM_CLASS))
+		else if (is_token_symbol(stix, KSYM_CLASS))
 		{
 			/* #class Selfclass(Superclass) { } */
 			GET_TOKEN (stix);
 			if (compile_class_definition(stix) <= -1) return -1;
 		}
 #if 0
-		else if (is_token_ksym(stix, KSYM_MAIN))
+		else if (is_token_symbol(stix, KSYM_MAIN))
 		{
 			/* #main */
 			/* TODO: implement this */
@@ -2782,11 +2875,11 @@ static void gc_compiler (stix_t* stix)
 	/* called when garbage collection is performed */
 	if (stix->c)
 	{
-		if (stix->c->_class.self_oop) 
-			stix->c->_class.self_oop = (stix_oop_class_t)stix_moveoop (stix, (stix_oop_t)stix->c->_class.self_oop);
+		if (stix->c->cls.self_oop) 
+			stix->c->cls.self_oop = (stix_oop_class_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.self_oop);
 
-		if (stix->c->_class.super_oop)
-			stix->c->_class.super_oop = stix_moveoop (stix, stix->c->_class.super_oop);
+		if (stix->c->cls.super_oop)
+			stix->c->cls.super_oop = stix_moveoop (stix, stix->c->cls.super_oop);
 	}
 }
 
@@ -2801,17 +2894,17 @@ static void fini_compiler (stix_t* stix)
 
 		if (stix->c->tok.name.ptr) stix_freemem (stix, stix->c->tok.name.ptr);
 
-		if (stix->c->_class.name.ptr) stix_freemem (stix, stix->c->_class.name.ptr);
-		if (stix->c->_class.supername.ptr) stix_freemem (stix, stix->c->_class.supername.ptr);
+		if (stix->c->cls.name.ptr) stix_freemem (stix, stix->c->cls.name.ptr);
+		if (stix->c->cls.supername.ptr) stix_freemem (stix, stix->c->cls.supername.ptr);
 
-		for (i = 0; i < STIX_COUNTOF(stix->c->_class.vars); i++)
+		for (i = 0; i < STIX_COUNTOF(stix->c->cls.vars); i++)
 		{
-			if (stix->c->_class.vars[i].ptr) stix_freemem (stix, stix->c->_class.vars[i].ptr);
+			if (stix->c->cls.vars[i].ptr) stix_freemem (stix, stix->c->cls.vars[i].ptr);
 		}
 
-		if (stix->c->fun.tmprs.ptr) stix_freemem (stix, stix->c->fun.tmprs.ptr);
-		if (stix->c->fun.name.ptr) stix_freemem (stix, stix->c->fun.name.ptr);
-		if (stix->c->fun.code.ptr) stix_freemem (stix, stix->c->fun.code.ptr);
+		if (stix->c->mth.tmprs.ptr) stix_freemem (stix, stix->c->mth.tmprs.ptr);
+		if (stix->c->mth.name.ptr) stix_freemem (stix, stix->c->mth.name.ptr);
+		if (stix->c->mth.code.ptr) stix_freemem (stix, stix->c->mth.code.ptr);
 
 		stix_freemem (stix, stix->c);
 		stix->c = STIX_NULL;

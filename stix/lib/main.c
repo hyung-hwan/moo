@@ -232,8 +232,6 @@ static char* syntax_error_msg[] =
 	"integer expected",
 	"primitive: expected",
 	"wrong directive",
-	"wrong class modifier",
-	"duplicate class modifier",
 	"undefined class",
 	"duplicate class",
 	"#dcl not allowed",
