@@ -515,6 +515,7 @@ struct stix_compiler_t
 
 		stix_oop_class_t self_oop;
 		stix_oop_t super_oop; /* this may be nil. so the type is stix_oop_t */
+		stix_oop_set_t mthdic_oop;
 
 		stix_ucs_t name;
 		stix_size_t name_capa;
@@ -655,26 +656,20 @@ stix_oop_t stix_allocoopobj (
 
 stix_oop_t stix_alloccharobj (
 	stix_t*            stix,
-	const stix_uch_t* ptr,
+	const stix_uch_t*  ptr,
 	stix_oow_t         len
 );
 
-stix_oop_t stix_allocuint8obj (
-	stix_t*             stix,
-	const stix_uint8_t* ptr,
-	stix_oow_t          len
+stix_oop_t stix_allocbyteobj (
+	stix_t*            stix,
+	const stix_byte_t* ptr,
+	stix_oow_t         len
 );
 
-stix_oop_t stix_allocuint16obj (
-	stix_t*              stix,
-	const stix_uint16_t* ptr,
-	stix_oow_t           len
-);
-
-stix_oop_t stix_allocuint32obj (
-	stix_t*              stix,
-	const stix_uint32_t* ptr,
-	stix_oow_t           len
+stix_oop_t stix_allocwordobj (
+	stix_t*            stix,
+	const stix_oow_t*  ptr,
+	stix_oow_t         len
 );
 
 /* ========================================================================= */
@@ -715,6 +710,31 @@ stix_oop_t stix_getatsysdic (
 stix_oop_t stix_lookupsysdic (
 	stix_t*           stix,
 	const stix_ucs_t* name
+);
+
+stix_oop_t stix_putatdic (
+	stix_t*        stix,
+	stix_oop_set_t dic,
+	stix_oop_t     key,
+	stix_oop_t     value
+);
+
+stix_oop_t stix_getatdic (
+	stix_t*        stix,
+	stix_oop_set_t dic,
+	stix_oop_t     key
+);
+
+stix_oop_t stix_lookupdic (
+	stix_t*           stix,
+	stix_oop_set_t    dic,
+	const stix_ucs_t* name
+);
+
+stix_oop_set_t stix_makedic (
+	stix_t*    stix,
+	stix_oop_t cls,
+	stix_oow_t size
 );
 
 /* ========================================================================= */

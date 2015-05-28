@@ -255,11 +255,13 @@ int main (int argc, char* argv[])
 		(unsigned long int)STIX_MAX_CLASSINSTVARS);
 
 
+#if !defined(macintosh)
 	if (argc != 2)
 	{
 		fprintf (stderr, "Usage: %s filename\n", argv[0]);
 		return -1;
 	}
+#endif
 
 	{
 	stix_oow_t x;
@@ -280,9 +282,12 @@ int main (int argc, char* argv[])
 	}
 
 	{
-		stix_oow_t symtab_size = 5000;
-		stix_setoption (stix, STIX_DFL_SYMTAB_SIZE, &symtab_size);
-		stix_setoption (stix, STIX_DFL_SYSDIC_SIZE, &symtab_size);
+		stix_oow_t tab_size;
+
+		tab_size = 5000;
+		stix_setoption (stix, STIX_DFL_SYMTAB_SIZE, &tab_size);
+		tab_size = 5000;
+		stix_setoption (stix, STIX_DFL_SYSDIC_SIZE, &tab_size);
 	}
 
 	if (stix_ignite(stix) <= -1)
@@ -316,7 +321,11 @@ printf ("%p\n", a);
 }
 
 	xtn = stix_getxtn (stix);
+#if !defined(macintosh)
 	xtn->source_path = argv[1];
+#else
+	xtn->source_path = "test.st";
+#endif
 	if (stix_compile (stix, input_handler) <= -1)
 	{
 		if (stix->errnum == STIX_ESYNTAX)

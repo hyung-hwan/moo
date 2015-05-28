@@ -1,0 +1,62 @@
+
+literal := number-literal | string-literal | character-literal | symbol-literal
+
+string-literal := single-quote string-character* single-quote
+string-character := normal-character | (single-quote single-quote)
+single-quote := "'"
+normal-character := character-except-single-quote
+
+character-literal := "$" character
+character := normal-character | "'"
+
+symbol-literal := "#" symbol-body
+symbol-body := identifier | keyword+ | binary-selector | string
+
+unary-selector := identifier
+binary-selector := binary-selector-character+
+binary-selector-character := "+" | "/" | "\" |  ...
+selector-argument := identifier
+
+identifier := alpha-char (alpha-char | digit-char)*
+keyword := identifier ":"
+
+
+
+class-definition := #class class-modifier? "{" class-body "}"
+class-modifier := "(" (#byte | #character | #word | #pointer)? ")"
+class-body := variable-definition* method-definition*
+ 
+variable-definition := (#dcl | #declare) variable-modifier? variable-list "."
+variable-modifier := "(" (#class | #classinst)? ")"
+variable-list := identifier*
+
+method-definition := (#mth | #method) method-modifier? method-actual-definition
+method-modifier := "(" (#class | #instance) ")"
+method-actual-definition := method-name "{" method-tempraries? method-primitive? method-statements* "}"
+
+method-name := unary-method-name | binary-method-name | keyword-method-name
+unary-method-name := unary-selector
+binary-method-name := binary-selector selector-argument
+keyword-method-name := (keyword selector-argument)+
+
+method-temporaries := "|" variable-list "|"
+method-primitive := "<"  "primitive:" integer ">"
+method-statements := method-statement ("." | ("." method-statements))*
+method-statement := method-return | method-expression
+method-return := "^" method-expression
+
+
+method-expression := assignment-expression | basic-expression
+assignment-expression := identifier ":=" method-expression
+basic-expression := expression-primary (message cascaded-message)?
+
+----------------------------------------------------------
+
+#include '....'.
+
+#class Test(Object) 
+{
+}
+
+#main
+

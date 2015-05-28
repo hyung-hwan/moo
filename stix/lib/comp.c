@@ -2451,10 +2451,11 @@ static int make_defined_class (stix_t* stix)
 	                             stix->c->cls.indexed_type);
 	self_spec = STIX_CLASS_SELFSPEC_MAKE(stix->c->cls.var_count[VAR_CLASS], stix->c->cls.var_count[VAR_CLASSINST]);
 
+#if 0
 printf ("MAKING ... ");
 print_ucs (&stix->c->cls.name);
 printf (" instvars %d classvars %d classinstvars %d\n", (int)stix->c->cls.var_count[VAR_INSTANCE], (int)stix->c->cls.var_count[VAR_CLASS], (int)stix->c->cls.var_count[VAR_CLASSINST]);
-
+#endif
 	if (stix->c->cls.self_oop)
 	{
 		STIX_ASSERT (STIX_CLASSOF(stix, stix->c->cls.self_oop) == stix->_class);
@@ -2466,11 +2467,12 @@ printf (" instvars %d classvars %d classinstvars %d\n", (int)stix->c->cls.var_co
 			/* it conflicts with internal definition */
 
 
+#if 0
 printf (" CONFLICTING CLASS DEFINITION %lu %lu %lu %lu\n", 
 		(unsigned long)spec, (unsigned long)self_spec,
 		(unsigned long)STIX_OOP_TO_SMINT(stix->c->cls.self_oop->spec), (unsigned long)STIX_OOP_TO_SMINT(stix->c->cls.self_oop->selfspec)
 );
-
+#endif
 			set_syntax_error (stix, STIX_SYNERR_CLASSCONTRA, &stix->c->cls.name_loc, &stix->c->cls.name);
 			return -1;
 		}
@@ -2510,7 +2512,10 @@ printf (" CONFLICTING CLASS DEFINITION %lu %lu %lu %lu\n",
 	if (!tmp) return -1;
 	stix->c->cls.self_oop->classinstvars = (stix_oop_char_t)tmp;
 
-/* TODO: initialize more fields??? method_dictionary. */
+	tmp = stix_instantiate(stix, stix->_method_dictionary, STIX_NULL, 0);
+	if (!tmp) return -1;
+	stix->c->cls.mthdic_oop = (stix_oop_set_t)tmp;
+/* TODO: initialize more fields??? whatelse. */
 
 	if (just_made)
 	{
@@ -2596,6 +2601,8 @@ static int __compile_class_definition (stix_t* stix)
 
 	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
 	{
+		int super_is_nil = 0;
+
 printf ("DEFININING..\n");
 {
 int i;
@@ -2605,7 +2612,6 @@ printf ("%c", stix->c->cls.name.ptr[i]);
 }
 printf ("\n");
 }
-		int super_is_nil = 0;
 
 		/* superclass is specified. new class defintion.
 		 * for example, #class Class(Stix) 
@@ -2799,6 +2805,7 @@ static int compile_class_definition (stix_t* stix)
 
 	stix->c->cls.self_oop = STIX_NULL;
 	stix->c->cls.super_oop = STIX_NULL;
+	stix->c->cls.mthdic_oop = STIX_NULL;
 
 	/* do main compilation work */
 	n = __compile_class_definition (stix);
@@ -2806,6 +2813,7 @@ static int compile_class_definition (stix_t* stix)
 	/* reset these oops not to confuse gc_compiler() */
 	stix->c->cls.self_oop = STIX_NULL;
 	stix->c->cls.super_oop = STIX_NULL;
+	stix->c->cls.mthdic_oop = STIX_NULL;
 
 	return n;
 }

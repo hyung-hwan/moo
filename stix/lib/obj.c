@@ -121,7 +121,6 @@ stix_oop_t stix_alloccharobj (stix_t* stix, const stix_uch_t* ptr, stix_oow_t le
 
 stix_oop_t stix_allocbyteobj (stix_t* stix, const stix_byte_t* ptr, stix_oow_t len)
 {
-
 	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_BYTE, STIX_SIZEOF(stix_byte_t), 0);
 }
 

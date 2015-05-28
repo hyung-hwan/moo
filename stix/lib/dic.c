@@ -26,23 +26,25 @@
 
 #include "stix-prv.h"
 
-static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t old_bucket)
+static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 {
-	stix_oop_oop_t new_bucket;
+	stix_oop_oop_t newbuc;
 	stix_oow_t oldsz, newsz, index;
 	stix_oop_association_t ass;
 	stix_oop_char_t key;
 
 /* TODO: derive a better growth size */
-	new_bucket = (stix_oop_oop_t)stix_instantiate (stix, stix->_array, STIX_NULL, STIX_OBJ_GET_SIZE(old_bucket) * 2); 
-	if (!new_bucket) return STIX_NULL;
+	stix_pushtmp (stix, (stix_oop_t*)&oldbuc);
+	newbuc = (stix_oop_oop_t)stix_instantiate (stix, stix->_array, STIX_NULL, STIX_OBJ_GET_SIZE(oldbuc) * 2); 
+	stix_poptmp (stix);
+	if (!newbuc) return STIX_NULL;
 
-	oldsz = STIX_OBJ_GET_SIZE(old_bucket);
-	newsz = STIX_OBJ_GET_SIZE(new_bucket);
+	oldsz = STIX_OBJ_GET_SIZE(oldbuc);
+	newsz = STIX_OBJ_GET_SIZE(newbuc);
 
 	while (oldsz > 0)
 	{
-		ass = (stix_oop_association_t)old_bucket->slot[--oldsz];
+		ass = (stix_oop_association_t)oldbuc->slot[--oldsz];
 		if ((stix_oop_t)ass != stix->_nil)
 		{
 			STIX_ASSERT (STIX_CLASSOF(stix,ass) == stix->_association);
@@ -50,17 +52,16 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t old_bucket)
 			key = (stix_oop_char_t)ass->key;
 			STIX_ASSERT (STIX_CLASSOF(stix,key) == (stix_oop_t)stix->_symbol);
 
-			index = stix_hashchars (key->slot, STIX_OBJ_GET_SIZE(key)) % newsz;
-			while (new_bucket->slot[index] != stix->_nil) 
-				index = (index + 1) % newsz;
-			new_bucket->slot[index] = (stix_oop_t)ass;
+			index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % newsz;
+			while (newbuc->slot[index] != stix->_nil) index = (index + 1) % newsz;
+			newbuc->slot[index] = (stix_oop_t)ass;
 		}
 	}
 
-	return new_bucket;
+	return newbuc;
 }
 
-static stix_oop_t find_or_insert (stix_t* stix, stix_oop_char_t key, stix_oop_t value)
+static stix_oop_t find_or_insert (stix_t* stix, stix_oop_set_t dic, stix_oop_char_t key, stix_oop_t value)
 {
 	stix_oow_t index, tally;
 	stix_oop_association_t ass;
@@ -69,14 +70,14 @@ static stix_oop_t find_or_insert (stix_t* stix, stix_oop_char_t key, stix_oop_t 
 	/* the system dictionary is not a generic dictionary.
 	 * it accepts only a symbol as a key. */
 	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
-	STIX_ASSERT (STIX_CLASSOF(stix,stix->sysdic->tally) == stix->_small_integer);
-	STIX_ASSERT (STIX_CLASSOF(stix,stix->sysdic->bucket) == stix->_array);
+	STIX_ASSERT (STIX_CLASSOF(stix,dic->tally) == stix->_small_integer);
+	STIX_ASSERT (STIX_CLASSOF(stix,dic->bucket) == stix->_array);
 
-	index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(stix->sysdic->bucket);
+	index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(dic->bucket);
 
-	while (stix->sysdic->bucket->slot[index] != stix->_nil) 
+	while (dic->bucket->slot[index] != stix->_nil) 
 	{
-		ass = (stix_oop_association_t)stix->sysdic->bucket->slot[index];
+		ass = (stix_oop_association_t)dic->bucket->slot[index];
 
 		STIX_ASSERT (STIX_CLASSOF(stix,ass) == stix->_association);
 		STIX_ASSERT (STIX_CLASSOF(stix,ass->key) == stix->_symbol);
@@ -87,7 +88,7 @@ static stix_oop_t find_or_insert (stix_t* stix, stix_oop_char_t key, stix_oop_t 
 			return (stix_oop_t)ass;
 		}
 
-		index = (index + 1) % STIX_OBJ_GET_SIZE(stix->sysdic->bucket);
+		index = (index + 1) % STIX_OBJ_GET_SIZE(dic->bucket);
 	}
 
 	if (value == STIX_NULL)
@@ -97,11 +98,12 @@ static stix_oop_t find_or_insert (stix_t* stix, stix_oop_char_t key, stix_oop_t 
 		return STIX_NULL;
 	}
 
+	stix_pushtmp (stix, (stix_oop_t*)&dic); tmp_count++;
 	stix_pushtmp (stix, (stix_oop_t*)&key); tmp_count++;
 	stix_pushtmp (stix, &value); tmp_count++;
 
-	tally = STIX_OOP_TO_SMINT(stix->sysdic->tally);
-	if (tally + 1 >= STIX_OBJ_GET_SIZE(stix->sysdic->bucket))
+	tally = STIX_OOP_TO_SMINT(dic->tally);
+	if (tally + 1 >= STIX_OBJ_GET_SIZE(dic->bucket))
 	{
 		stix_oop_oop_t bucket;
 
@@ -113,28 +115,28 @@ static stix_oop_t find_or_insert (stix_t* stix, stix_oop_char_t key, stix_oop_t 
 		 * make sure that it has at least one free slot left
 		 * after having added a new symbol. this is to help
 		 * traversal end at a _nil slot if no entry is found. */
-		bucket = expand_bucket (stix, stix->sysdic->bucket);
+		bucket = expand_bucket (stix, dic->bucket);
 		if (!bucket) goto oops;
 
-		stix->sysdic->bucket = bucket;
+		dic->bucket = bucket;
 
 		/* recalculate the index for the expanded bucket */
-		index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(stix->sysdic->bucket);
+		index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(dic->bucket);
 
-		while (stix->sysdic->bucket->slot[index] != stix->_nil) 
-			index = (index + 1) % STIX_OBJ_GET_SIZE(stix->sysdic->bucket);
+		while (dic->bucket->slot[index] != stix->_nil) 
+			index = (index + 1) % STIX_OBJ_GET_SIZE(dic->bucket);
 	}
 
 	/* create a new assocation of a key and a value since 
 	 * the key isn't found in the root dictionary */
 	ass = (stix_oop_association_t)stix_instantiate (stix, stix->_association, STIX_NULL, 0);
 	if (!ass) goto oops;
-	
+
 	ass->key = (stix_oop_t)key;
 	ass->value = value;
 
-	stix->sysdic->tally = STIX_OOP_FROM_SMINT(tally + 1);
-	stix->sysdic->bucket->slot[index] = (stix_oop_t)ass;
+	dic->tally = STIX_OOP_FROM_SMINT(tally + 1);
+	dic->bucket->slot[index] = (stix_oop_t)ass;
 
 	stix_poptmps (stix, tmp_count);
 	return (stix_oop_t)ass;
@@ -144,19 +146,7 @@ oops:
 	return STIX_NULL;
 }
 
-stix_oop_t stix_putatsysdic (stix_t* stix, stix_oop_t key, stix_oop_t value)
-{
-	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
-	return find_or_insert (stix, (stix_oop_char_t)key, value);
-}
-
-stix_oop_t stix_getatsysdic (stix_t* stix, stix_oop_t key)
-{
-	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
-	return find_or_insert (stix, (stix_oop_char_t)key, STIX_NULL);
-}
-
-stix_oop_t stix_lookupsysdic (stix_t* stix, const stix_ucs_t* name)
+static stix_oop_t lookup (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* name)
 {
 	/* this is special version of stix_getatsysdic() that performs
 	 * lookup using a plain string specified */
@@ -164,14 +154,14 @@ stix_oop_t stix_lookupsysdic (stix_t* stix, const stix_ucs_t* name)
 	stix_oow_t index;
 	stix_oop_association_t ass;
 
-	STIX_ASSERT (STIX_CLASSOF(stix,stix->sysdic->tally) == stix->_small_integer);
-	STIX_ASSERT (STIX_CLASSOF(stix,stix->sysdic->bucket) == stix->_array);
+	STIX_ASSERT (STIX_CLASSOF(stix,dic->tally) == stix->_small_integer);
+	STIX_ASSERT (STIX_CLASSOF(stix,dic->bucket) == stix->_array);
 
-	index = stix_hashchars(name->ptr, name->len) % STIX_OBJ_GET_SIZE(stix->sysdic->bucket);
+	index = stix_hashchars(name->ptr, name->len) % STIX_OBJ_GET_SIZE(dic->bucket);
 
-	while (stix->sysdic->bucket->slot[index] != stix->_nil) 
+	while (dic->bucket->slot[index] != stix->_nil) 
 	{
-		ass = (stix_oop_association_t)stix->sysdic->bucket->slot[index];
+		ass = (stix_oop_association_t)dic->bucket->slot[index];
 
 		STIX_ASSERT (STIX_CLASSOF(stix,ass) == stix->_association);
 		STIX_ASSERT (STIX_CLASSOF(stix,ass->key) == stix->_symbol);
@@ -182,10 +172,63 @@ stix_oop_t stix_lookupsysdic (stix_t* stix, const stix_ucs_t* name)
 			return (stix_oop_t)ass;
 		}
 
-		index = (index + 1) % STIX_OBJ_GET_SIZE(stix->sysdic->bucket);
+		index = (index + 1) % STIX_OBJ_GET_SIZE(dic->bucket);
 	}
 
 	/* when value is STIX_NULL, perform no insertion */
 	stix->errnum = STIX_ENOENT;
 	return STIX_NULL;
+}
+
+stix_oop_t stix_putatsysdic (stix_t* stix, stix_oop_t key, stix_oop_t value)
+{
+	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
+	return find_or_insert (stix, stix->sysdic, (stix_oop_char_t)key, value);
+}
+
+stix_oop_t stix_getatsysdic (stix_t* stix, stix_oop_t key)
+{
+	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
+	return find_or_insert (stix, stix->sysdic, (stix_oop_char_t)key, STIX_NULL);
+}
+
+stix_oop_t stix_lookupsysdic (stix_t* stix, const stix_ucs_t* name)
+{
+	return lookup (stix, stix->sysdic, name);
+}
+
+stix_oop_t stix_putatdic (stix_t* stix, stix_oop_set_t dic, stix_oop_t key, stix_oop_t value)
+{
+	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
+	return find_or_insert (stix, stix->sysdic, (stix_oop_char_t)key, value);
+}
+
+stix_oop_t stix_getatdic (stix_t* stix, stix_oop_set_t dic, stix_oop_t key)
+{
+	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
+	return find_or_insert (stix, dic, (stix_oop_char_t)key, STIX_NULL);
+}
+
+stix_oop_t stix_lookupdic (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* name)
+{
+	return lookup (stix, dic, name);
+}
+
+stix_oop_set_t stix_makedic (stix_t* stix, stix_oop_t cls, stix_oow_t size)
+{
+	stix_oop_set_t dic;
+	stix_oop_t tmp;
+
+	dic = (stix_oop_set_t)stix_instantiate (stix, cls, STIX_NULL, 0);
+	if (!dic) return STIX_NULL;
+
+	dic->tally = STIX_OOP_FROM_SMINT(0);
+
+	stix_pushtmp (stix, (stix_oop_t*)&dic);
+	tmp = stix_instantiate (stix, stix->_array, STIX_NULL, size);
+	stix_poptmp (stix);
+	if (!tmp) return STIX_NULL;
+
+	dic->bucket = (stix_oop_oop_t)tmp;
+	return dic;
 }

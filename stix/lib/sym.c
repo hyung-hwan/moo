@@ -26,35 +26,36 @@
 
 #include "stix-prv.h"
 
-static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t old_bucket)
+static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 {
-	stix_oop_oop_t new_bucket;
+	stix_oop_oop_t newbuc;
 	stix_oow_t oldsz, newsz, index;
 	stix_oop_char_t symbol;
 
 /* TODO: derive a better growth size */
-	new_bucket = (stix_oop_oop_t)stix_instantiate (stix, stix->_array, STIX_NULL, STIX_OBJ_GET_SIZE(old_bucket) * 2); 
-	if (!new_bucket) return STIX_NULL;
+	stix_pushtmp (stix, (stix_oop_t*)&oldbuc);
+	newbuc = (stix_oop_oop_t)stix_instantiate (stix, stix->_array, STIX_NULL, STIX_OBJ_GET_SIZE(oldbuc) * 2); 
+	stix_poptmp (stix);
+	if (!newbuc) return STIX_NULL;
 
-	oldsz = STIX_OBJ_GET_SIZE(old_bucket);
-	newsz = STIX_OBJ_GET_SIZE(new_bucket);
+	oldsz = STIX_OBJ_GET_SIZE(oldbuc);
+	newsz = STIX_OBJ_GET_SIZE(newbuc);
 
 	while (oldsz > 0)
 	{
-		symbol = (stix_oop_char_t)old_bucket->slot[--oldsz];
+		symbol = (stix_oop_char_t)oldbuc->slot[--oldsz];
 		if ((stix_oop_t)symbol != stix->_nil)
 		{
 			STIX_ASSERT (STIX_CLASSOF(stix,symbol) == stix->_symbol);
 			/*STIX_ASSERT (sym->size > 0);*/
 
 			index = stix_hashchars(symbol->slot, STIX_OBJ_GET_SIZE(symbol)) % newsz;
-			while (new_bucket->slot[index] != stix->_nil) 
-				index = (index + 1) % newsz;
-			new_bucket->slot[index] = (stix_oop_t)symbol;
+			while (newbuc->slot[index] != stix->_nil) index = (index + 1) % newsz;
+			newbuc->slot[index] = (stix_oop_t)symbol;
 		}
 	}
 
-	return new_bucket;
+	return newbuc;
 }
 
 static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_uch_t* ptr, stix_oow_t len, int create)

@@ -209,6 +209,7 @@ printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
 	stix->_symbol            = stix_moveoop (stix, stix->_symbol);
 	stix->_symbol_set        = stix_moveoop (stix, stix->_symbol_set);
 	stix->_system_dictionary = stix_moveoop (stix, stix->_system_dictionary);
+	stix->_method_dictionary = stix_moveoop (stix, stix->_method_dictionary);
 	stix->_association       = stix_moveoop (stix, stix->_association);
 	stix->_true_class        = stix_moveoop (stix, stix->_true_class);
 	stix->_false_class       = stix_moveoop (stix, stix->_false_class);

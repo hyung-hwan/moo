@@ -620,6 +620,7 @@ struct stix_t
 	stix_oop_t _array; /* Array */
 	stix_oop_t _symbol_set; /* SymbolSet */
 	stix_oop_t _system_dictionary; /* SystemDictionary */
+	stix_oop_t _method_dictionary; /* MethodDictionary */
 	stix_oop_t _association; /* Association */
 	stix_oop_t _true_class; /* True */
 	stix_oop_t _false_class; /* False */
@@ -630,7 +631,7 @@ struct stix_t
 	stix_oop_set_t symtab; /* system-wide symbol table. instance of SymbolSet */
 	stix_oop_set_t sysdic; /* system dictionary. instance of SystemDictionary */
 
-	stix_oop_t* tmp_stack[100]; /* stack for temporaries */
+	stix_oop_t* tmp_stack[256]; /* stack for temporaries */
 	stix_oow_t tmp_count;
 
 #if defined(STIX_INCLUDE_COMPILER)
