@@ -1834,7 +1834,7 @@ static STIX_INLINE int append_class_level_variable (stix_t* stix, var_type_t ind
 	if (n >= 0) 
 	{
 		stix->c->cls.var_count[index]++;
-		/* TODO: check if it exceeds STIX_MAX_NAMED_INSTVARS, STIX_MAX_CLASSVARS, STIX_MAX_CLASSINSTVARS */
+/* TODO: check if it exceeds STIX_MAX_NAMED_INSTVARS, STIX_MAX_CLASSVARS, STIX_MAX_CLASSINSTVARS */
 	}
 
 	return n;
@@ -1988,7 +1988,6 @@ static STIX_INLINE stix_ssize_t find_temporary (stix_t* stix, const stix_ucs_t* 
 	return find_word_in_string(&stix->c->mth.tmprs, name);
 }
 
-
 static int compile_class_level_variables (stix_t* stix)
 {
 	var_type_t dcl_type = VAR_INSTANCE;
@@ -2135,11 +2134,10 @@ static int compile_method_name (stix_t* stix)
 	 * unary-selector := identifier
 	 */
 	int n;
-	stix_ioloc_t mth_loc;
 
 	STIX_ASSERT (stix->c->mth.tmpr_count == 0);
 
-	mth_loc = stix->c->tok.loc;
+	stix->c->mth.name_loc = stix->c->tok.loc;
 	switch (stix->c->tok.type)
 	{
 		case STIX_IOTOK_IDENT:
@@ -2164,7 +2162,7 @@ static int compile_method_name (stix_t* stix)
 	{
 		if (find_method_name(stix, stix->c->cls.self_oop, &stix->c->mth.name) >= 0) 
  		{
-			set_syntax_error (stix, STIX_SYNERR_MTHNAMEDUP, &mth_loc, &stix->c->mth.name);
+			set_syntax_error (stix, STIX_SYNERR_MTHNAMEDUP, &stix->c->mth.name_loc, &stix->c->mth.name);
 			return -1;
  		}
 	}
@@ -2176,7 +2174,7 @@ static int compile_method_name (stix_t* stix)
 	return n;
 }
 
-static int compile_class_method_temporaries (stix_t* stix)
+static int compile_method_temporaries (stix_t* stix)
 {
 	/* 
 	 * method-temporaries := "|" variable-list "|"
@@ -2215,7 +2213,7 @@ static int compile_class_method_temporaries (stix_t* stix)
 	return 0;
 }
 
-static int compile_class_method_primitive (stix_t* stix)
+static int compile_method_primitive (stix_t* stix)
 {
 	/* 
 	 * method-primitive := "<"  "primitive:" integer ">"
@@ -2343,7 +2341,7 @@ static int compile_class_method_statement (stix_t* stix)
 }
 
 
-static int compile_class_method_statements (stix_t* stix)
+static int compile_method_statements (stix_t* stix)
 {
 	/*
 	 * method-statements := method-statement ("." | ("." method-statements))*
@@ -2385,6 +2383,7 @@ static int compile_class_method (stix_t* stix)
 	/* clear data required to compile a method */
 	stix->c->mth.flags = 0;
 	stix->c->mth.name.len = 0;
+	STIX_MEMSET (&stix->c->mth.name_loc, 0, STIX_SIZEOF(stix->c->mth.name_loc));
 	stix->c->mth.tmprs.len = 0;
 	stix->c->mth.tmpr_count = 0;
 	stix->c->mth.tmpr_nargs = 0;
@@ -2423,9 +2422,9 @@ static int compile_class_method (stix_t* stix)
 
 	GET_TOKEN (stix);
 
-	if (compile_class_method_temporaries(stix) <= -1 ||
-	    compile_class_method_primitive(stix) <= -1 ||
-	    compile_class_method_statements(stix) <= -1 /*|| 
+	if (compile_method_temporaries(stix) <= -1 ||
+	    compile_method_primitive(stix) <= -1 ||
+	    compile_method_statements(stix) <= -1 /*|| 
 	    finish_method(stix) <= -1*/) return -1; 
 
 	if (stix->c->tok.type != STIX_IOTOK_RBRACE)
@@ -2447,12 +2446,12 @@ static int make_defined_class (stix_t* stix)
 	stix_oow_t spec, self_spec;
 	int just_made = 0;
 
-
 	spec = STIX_CLASS_SPEC_MAKE (stix->c->cls.var_count[VAR_INSTANCE],  
 	                             ((stix->c->cls.flags & CLASS_INDEXED)? 1: 0),
 	                             stix->c->cls.indexed_type);
 	self_spec = STIX_CLASS_SELFSPEC_MAKE(stix->c->cls.var_count[VAR_CLASS], stix->c->cls.var_count[VAR_CLASSINST]);
 
+printf ("MAKING ... ");
 print_ucs (&stix->c->cls.name);
 printf (" instvars %d classvars %d classinstvars %d\n", (int)stix->c->cls.var_count[VAR_INSTANCE], (int)stix->c->cls.var_count[VAR_CLASS], (int)stix->c->cls.var_count[VAR_CLASSINST]);
 
@@ -2465,11 +2464,14 @@ printf (" instvars %d classvars %d classinstvars %d\n", (int)stix->c->cls.var_co
 		    self_spec != STIX_OOP_TO_SMINT(stix->c->cls.self_oop->selfspec))
 		{
 			/* it conflicts with internal definition */
-printf (" DDDDDDDDDD CONFLICTING CLASS DEFINITION DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD %lu %lu %lu %lu\n", 
+
+
+printf (" CONFLICTING CLASS DEFINITION %lu %lu %lu %lu\n", 
 		(unsigned long)spec, (unsigned long)self_spec,
 		(unsigned long)STIX_OOP_TO_SMINT(stix->c->cls.self_oop->spec), (unsigned long)STIX_OOP_TO_SMINT(stix->c->cls.self_oop->selfspec)
 );
-/* TODO: set syntax error */
+
+			set_syntax_error (stix, STIX_SYNERR_CLASSCONTRA, &stix->c->cls.name_loc, &stix->c->cls.name);
 			return -1;
 		}
 	}
@@ -2534,7 +2536,6 @@ static int __compile_class_definition (stix_t* stix)
 	 * method-modifier := "(" (#class | #instance)? ")"
 	 * method-actual-definition := method-name "{" method-tempraries? method-primitive? method-statements* "}"
 	 */
-	stix_ioloc_t class_name_loc;
 	stix_oop_association_t ass;
 
 	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
@@ -2590,7 +2591,7 @@ static int __compile_class_definition (stix_t* stix)
 
 	/* copy the class name */
 	if (set_class_name(stix, &stix->c->tok.name) <= -1) return -1;
-	class_name_loc = stix->c->tok.loc;
+	stix->c->cls.name_loc = stix->c->tok.loc;
 	GET_TOKEN (stix); 
 
 	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
@@ -2605,7 +2606,6 @@ printf ("%c", stix->c->cls.name.ptr[i]);
 printf ("\n");
 }
 		int super_is_nil = 0;
-		stix_ioloc_t superclass_name_loc;
 
 		/* superclass is specified. new class defintion.
 		 * for example, #class Class(Stix) 
@@ -2626,7 +2626,7 @@ printf ("\n");
 		}
 
 		if (set_superclass_name(stix, &stix->c->tok.name) <= -1) return -1;
-		superclass_name_loc = stix->c->tok.loc;
+		stix->c->cls.supername_loc = stix->c->tok.loc;
 
 		GET_TOKEN (stix);
 		if (stix->c->tok.type != STIX_IOTOK_RPAREN)
@@ -2646,7 +2646,7 @@ printf ("\n");
 				/* the object found with the name is not a class object 
 				 * or the the class object found is a fully defined kernel 
 				 * class object */
-				set_syntax_error (stix, STIX_SYNERR_CLASSDUP, &class_name_loc, &stix->c->cls.name);
+				set_syntax_error (stix, STIX_SYNERR_CLASSDUP, &stix->c->cls.name_loc, &stix->c->cls.name);
 				return -1;
 			}
 			
@@ -2680,7 +2680,7 @@ printf ("\n");
 				 * the object found with the name is not a class object. or,
 				 * the class object found is a internally defined kernel
 				 * class object. */
-				set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &superclass_name_loc, &stix->c->cls.supername);
+				set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &stix->c->cls.supername_loc, &stix->c->cls.supername);
 				return -1;
 			}
 		}
@@ -2710,7 +2710,7 @@ printf ("\n");
 		else
 		{
 			/* only an existing class can be extended. */
-			set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &class_name_loc, &stix->c->cls.name);
+			set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &stix->c->cls.name_loc, &stix->c->cls.name);
 			return -1;
 		}
 
@@ -2788,8 +2788,12 @@ static int compile_class_definition (stix_t* stix)
 
 	/* reset the structure to hold information about a class to be compiled */
 	stix->c->cls.flags = 0;
+
 	stix->c->cls.name.len = 0;
 	stix->c->cls.supername.len = 0;
+	STIX_MEMSET (&stix->c->cls.name_loc, 0, STIX_SIZEOF(stix->c->cls.name_loc));
+	STIX_MEMSET (&stix->c->cls.supername_loc, 0, STIX_SIZEOF(stix->c->cls.supername_loc));
+
 	for (i = 0; i < STIX_COUNTOF(stix->c->cls.var_count); i++) 
 		stix->c->cls.var_count[i] = 0;
 

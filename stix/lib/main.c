@@ -234,6 +234,7 @@ static char* syntax_error_msg[] =
 	"wrong directive",
 	"undefined class",
 	"duplicate class",
+	"contradictory class definition",
 	"#dcl not allowed",
 	"wrong method name",
 	"duplicate method name",

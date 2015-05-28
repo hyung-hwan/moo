@@ -279,6 +279,7 @@ enum stix_synerrnum_t
 	STIX_SYNERR_DIRECTIVE,     /* wrong directive */
 	STIX_SYNERR_CLASSUNDEF,    /* undefined class */
 	STIX_SYNERR_CLASSDUP,      /* duplicate class */
+	STIX_SYNERR_CLASSCONTRA,   /* contradictory class */
 	STIX_SYNERR_DCLBANNED,     /* #dcl not allowed */
 	STIX_SYNERR_MTHNAME,       /* wrong method name */
 	STIX_SYNERR_MTHNAMEDUP,    /* duplicate method name */
@@ -517,9 +518,11 @@ struct stix_compiler_t
 
 		stix_ucs_t name;
 		stix_size_t name_capa;
+		stix_ioloc_t name_loc;
 
 		stix_ucs_t supername;
 		stix_size_t supername_capa;
+		stix_ioloc_t supername_loc;
 
 		/* instance variable, class variable, class instance variable */
 		stix_ucs_t vars[3]; 
@@ -539,6 +542,7 @@ struct stix_compiler_t
 
 		stix_ucs_t name;
 		stix_size_t name_capa;
+		stix_ioloc_t name_loc;
 
 		/* single string containing a space separated list of temporaries */
 		stix_ucs_t tmprs; 
