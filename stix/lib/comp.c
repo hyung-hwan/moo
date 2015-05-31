@@ -28,6 +28,12 @@
 
 #define TOKEN_NAME_ALIGN 256
 #define CLASS_BUFFER_ALIGN 8 /* 256 */
+#define LITERAL_BUFFER_ALIGN 8 /* 256 */
+
+
+/* initial method dictionary size */
+#define INSTANCE_METHOD_DICTIONARY_SIZE 256 /* TODO: choose the right size */
+#define CLASS_METHOD_DICTIONARY_SIZE 256 /* TODO: choose the right size */
 
 #if 0
 
@@ -56,9 +62,10 @@ enum class_mod_t
 	CLASS_EXTENDED  = (1 << 1)
 };
 
-enum mth_mod_t
+enum mth_type_t
 {
-	MTH_CLASS    = (1 << 0)
+	MTH_INSTANCE,
+	MTH_CLASS
 };
 
 enum var_type_t
@@ -264,7 +271,7 @@ static void set_syntax_error (stix_t* stix, stix_synerrnum_t num, const stix_iol
 	}
 }
 
-static int copy_string_to (stix_t* stix, const stix_ucs_t* src, stix_ucs_t* dst, stix_size_t* dst_capa, int append, stix_uch_t append_delim)
+static int copy_string_to (stix_t* stix, const stix_ucs_t* src, stix_ucs_t* dst, stix_size_t* dst_capa, int append, stix_uch_t add_delim)
 {
 	stix_size_t len, pos;
 
@@ -272,7 +279,7 @@ static int copy_string_to (stix_t* stix, const stix_ucs_t* src, stix_ucs_t* dst,
 	{
 		pos = dst->len;
 		len = dst->len + src->len;
-		if (append_delim != '\0') len++;
+		if (add_delim != '\0') len++;
 	}
 	else
 	{
@@ -294,7 +301,7 @@ static int copy_string_to (stix_t* stix, const stix_ucs_t* src, stix_ucs_t* dst,
 		*dst_capa = capa;
 	}
 
-	if (append && append_delim) dst->ptr[pos++] = append_delim;
+	if (append && add_delim) dst->ptr[pos++] = add_delim;
 	stix_copychars (&dst->ptr[pos], src->ptr, src->len);
 	dst->len = len;
 	return 0;
@@ -1244,123 +1251,84 @@ static int emit_do_primitive (stix_t* stix, int no)
 	return emit_code (stix, code, len);
 }
 
-#if 0
-static int __add_literal (stix_t* fsc, stix_word_t literal)
-{
-	stix_word_t i;
-
-	for (i = 0; i < fsc->literal_count; i++) {
-		/* 
-		 * it would remove redundancy of symbols and small integers. 
-		 * more complex redundacy check may be done somewhere else 
-		 * like in __add_string_literal.
-		 */
-		if (fsc->literals[i] == literal) return i;
-	}
-
-	if (fsc->literal_count >= STIX_COUNTOF(fsc->literals)) {
-		fsc->errnum = STIX_FSC_ERROR_TOO_MANY_LITERALS;
-		return -1;
-	}
-
-	fsc->literals[fsc->literal_count++] = literal;
-	return fsc->literal_count - 1;
-}
-
-static int __add_character_literal (stix_t* fsc, stix_uch_t ch)
-{
-	stix_word_t i, c, literal;
-	stix_vm_t* stx = fsc->stx;
-
-	for (i = 0; i < fsc->literal_count; i++) {
-		c = STIX_ISSMALLINT(fsc->literals[i])? 
-			stx->class_smallinteger: STIX_CLASS (stx, fsc->literals[i]);
-		if (c != stx->class_character) continue;
-
-		if (ch == STIX_CHAR_AT(stx,fsc->literals[i],0)) return i;
-	}
-
-	literal = stix_instantiate (
-		stx, stx->class_character, &ch, STIX_NULL, 0);
-	return __add_literal (fsc, literal);
-}
-
-static int __add_string_literal (
-	stix_t* fsc, const stix_uch_t* str, stix_word_t size)
-{
-	stix_word_t i, c, literal;
-	stix_vm_t* stx = fsc->stx;
-
-	for (i = 0; i < fsc->literal_count; i++) {
-		c = STIX_ISSMALLINT(fsc->literals[i])? 
-			stx->class_smallinteger: STIX_CLASS (stx, fsc->literals[i]);
-		if (c != stx->class_string) continue;
-
-		if (stix_strxncmp (str, size, 
-			STIX_DATA(stx,fsc->literals[i]), 
-			STIX_SIZE(stx,fsc->literals[i])) == 0) return i;
-	}
-
-	literal = stix_instantiate (
-		stx, stx->class_string, STIX_NULL, str, size);
-	return __add_literal (fsc, literal);
-}
-
-static int __add_symbol_literal (
-	stix_t* fsc, const stix_uch_t* str, stix_word_t size)
-{
-	stix_vm_t* stx = fsc->stx;
-	return __add_literal (fsc, stix_new_symbolx(stx, str, size));
-}
-
-static int finish_method (stix_t* fsc)
-{
-	stix_vm_t* stx = fsc->stx;
-	stix_oop_class_t class_obj;
-	stix_method_t* method_obj;
-	stix_word_t method, selector;
-
-	STIX_ASSERT (fsc->bcd.size != 0);
-
-	class_obj = (stix_class_t*) STIX_OBJPTR(stx, fsc->method_class);
-
-	if (class_obj->methods == stx->nil) 
-	{
-		/* TODO: reconfigure method dictionary size */
-		class_obj->methods = stix_instantiate (
-			stx, stx->class_system_dictionary, 
-			STIX_NULL, STIX_NULL, 64);
-	}
-	STIX_ASSERT (class_obj->methods != stx->nil);
-
-	selector = stix_new_symbolx (
-		stx, fsc->met.name.buf, fsc->method_name.size);
-
-	method = stix_instantiate(stx, stx->class_method, 
-		STIX_NULL, fsc->literals, fsc->literal_count);
-	method_obj = (stix_method_t*)STIX_OBJPTR(stx, method);
-
-	/* TODO: text saving must be optional */
-	/*method_obj->text = stix_instantiate (
-		stx, stx->class_string, STIX_NULL, 
-		fsc->text, stix_strlen(fsc->text));
-	*/
-	method_obj->selector = selector;
-	method_obj->bytecodes = stix_instantiate (
-		stx, stx->class_bytearray, STIX_NULL, 
-		fsc->bcd.buf, fsc->bcd.size);
-
-	/* TODO: better way to store argument count & temporary count */
-	method_obj->tmpcount = STIX_TO_SMALLINT(fsc->met.tmpr.count - fsc->met.tmpr.nargs);
-	method_obj->argcount = STIX_TO_SMALLINT(fsc->met.tmpr.nargs);
-
-	stix_dict_put (stx, class_obj->methods, selector, method);
-	return 0;
-}
 #endif
 
+static int add_literal (stix_t* stix, stix_oop_t lit, stix_size_t* index)
+{
+	stix_size_t i;
 
+	for (i = 0; i < stix->c->mth.literal_count; i++) 
+	{
+		/* 
+		 * this removes redundancy of symbols, characters, and small integers. 
+		 * more complex redundacy check may be done somewhere else like 
+		 * in add_string_literal().
+		 */
+		if (stix->c->mth.literals[i] == lit) 
+		{
+			*index = i;
+			return i;
+		}
+	}
 
+	if (stix->c->mth.literal_count >= stix->c->mth.literal_capa)
+	{
+		stix_oop_t* tmp;
+		stix_size_t new_capa;
+
+		new_capa = STIX_ALIGN (stix->c->mth.literal_count + 1, LITERAL_BUFFER_ALIGN);
+		tmp = (stix_oop_t*)stix_reallocmem (stix, stix->c->mth.literals, new_capa * STIX_SIZEOF(*tmp));
+		if (!tmp) return -1;
+
+		stix->c->mth.literal_capa = new_capa;
+		stix->c->mth.literals = tmp;
+	}
+
+	*index = stix->c->mth.literal_count;
+	stix->c->mth.literals[stix->c->mth.literal_count++] = lit;
+	return 0;
+}
+
+static STIX_INLINE int add_character_literal (stix_t* stix, stix_uch_t ch, stix_size_t* index)
+{
+	return add_literal (stix, STIX_OOP_FROM_CHAR(ch), index);
+}
+
+static int add_string_literal (stix_t* stix, const stix_ucs_t* str, stix_size_t* index)
+{
+	stix_oop_t lit;
+	stix_size_t i;
+
+	for (i = 0; i < stix->c->mth.literal_count; i++) 
+	{
+		lit = stix->c->mth.literals[i];
+
+		if (STIX_CLASSOF(stix, lit) == stix->_string && 
+		    STIX_OBJ_GET_SIZE(lit) == str->len &&
+		    stix_equalchars(((stix_oop_char_t)lit)->slot, str->ptr, str->len)) 
+		{
+			*index = i;
+			return 0;
+		}
+	}
+
+	lit = stix_instantiate (stix, stix->_string, str->ptr, str->len);
+	if (!lit) return -1;
+
+	return add_literal (stix, lit, index);
+}
+
+static int add_symbol_literal (stix_t* stix, const stix_ucs_t* str, stix_size_t* index)
+{
+	stix_oop_t tmp;
+
+	tmp = stix_makesymbol (stix, str->ptr, str->len);
+	if (!tmp) return -1;
+
+	return add_literal (stix, tmp, index);
+}
+
+/* TODO: add_array_literal, add_byte_array_literal () */
 
 #if 0
 static int parse_block_statements (stix_t* fsc)
@@ -1481,8 +1449,11 @@ static int parse_primary (stix_t* fsc, const stix_uch_t* ident, int* is_super)
 			stix_word_t tmp;
 			STIX_STRTOI (tmp, fsc->tok.name.buffer, STIX_NULL, 10);
 			literal = STIX_TO_SMALLINT(tmp);
+
+
 			pos = __add_literal(fsc, literal);
-			if (pos == -1) return -1;
+			if (pos <= -1) return -1;
+
 			EMIT_PUSH_LITERAL_CONSTANT (fsc, pos);
 			GET_TOKEN (fsc);
 		}
@@ -1812,9 +1783,6 @@ static int parse_unary_message (stix_t* fsc, int is_super)
 #endif
 
 
-#endif
-
-
 static STIX_INLINE int set_class_name (stix_t* stix, const stix_ucs_t* name)
 {
 	return copy_string_to (stix, name, &stix->c->cls.name, &stix->c->cls.name_capa, 0, '\0');
@@ -1825,7 +1793,7 @@ static STIX_INLINE int set_superclass_name (stix_t* stix, const stix_ucs_t* name
 	return copy_string_to (stix, name, &stix->c->cls.supername, &stix->c->cls.supername_capa, 0, '\0');
 }
 
-static STIX_INLINE int append_class_level_variable (stix_t* stix, var_type_t index, const stix_ucs_t* name)
+static STIX_INLINE int add_class_level_variable (stix_t* stix, var_type_t index, const stix_ucs_t* name)
 {
 	int n;
 
@@ -1964,26 +1932,26 @@ done:
 	return pos;
 }
 
-static int append_method_name (stix_t* stix, const stix_ucs_t* name)
+static int add_method_name (stix_t* stix, const stix_ucs_t* name)
 {
 	/* method name segments are concatenated without any delimiters */
 	return copy_string_to (stix, name, &stix->c->mth.name, &stix->c->mth.name_capa, 1, '\0');
 }
 
-static stix_ssize_t find_method_name (stix_t* stix, stix_oop_class_t self, const stix_ucs_t* name)
+static int method_exists (stix_t* stix, const stix_ucs_t* name)
 {
-	/* TODO: .................... */
-	return 0;
+	/* check if the current class contains a method of the given name */
+	return stix_lookupdic (stix, stix->c->cls.mthdic_oop[stix->c->mth.type], name) != STIX_NULL;
 }
 
-static int append_temporary (stix_t* stix, const stix_ucs_t* name)
+static int add_temporary_variable (stix_t* stix, const stix_ucs_t* name)
 {
 	/* temporary variable names are added to the string with leading
 	 * space if it's not the first variable */
 	return copy_string_to (stix, name, &stix->c->mth.tmprs, &stix->c->mth.tmprs_capa, 1, ' ');
 }
 
-static STIX_INLINE stix_ssize_t find_temporary (stix_t* stix, const stix_ucs_t* name)
+static STIX_INLINE stix_ssize_t find_temporary_variable (stix_t* stix, const stix_ucs_t* name)
 {
 	return find_word_in_string(&stix->c->mth.tmprs, name);
 }
@@ -2032,7 +2000,7 @@ printf ("duplicate variable name type %d pos %lu\n", var.type, var.pos);
 				return -1;
 			}
 
-			if (append_class_level_variable(stix, dcl_type, &stix->c->tok.name) <= -1) return -1;
+			if (add_class_level_variable(stix, dcl_type, &stix->c->tok.name) <= -1) return -1;
 		}
 		else
 		{
@@ -2058,7 +2026,7 @@ static int compile_unary_method_name (stix_t* stix)
 	STIX_ASSERT (stix->c->mth.name.len == 0);
 	STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
 
-	if (append_method_name (stix, &stix->c->tok.name) <= -1) return -1;
+	if (add_method_name (stix, &stix->c->tok.name) <= -1) return -1;
 	GET_TOKEN (stix);
 	return 0;
 }
@@ -2068,7 +2036,7 @@ static int compile_binary_method_name (stix_t* stix)
 	STIX_ASSERT (stix->c->mth.name.len == 0);
 	STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
 
-	if (append_method_name (stix, &stix->c->tok.name) <= -1) return -1;
+	if (add_method_name (stix, &stix->c->tok.name) <= -1) return -1;
 	GET_TOKEN (stix);
 
 	/* collect the argument name */
@@ -2083,8 +2051,9 @@ static int compile_binary_method_name (stix_t* stix)
 
 	/* no duplication check is performed against class-level variable names.
 	 * a duplcate name will shade a previsouly defined variable. */
-	if (append_temporary(stix, &stix->c->tok.name) <= -1) return -1;
+	if (add_temporary_variable(stix, &stix->c->tok.name) <= -1) return -1;
 	stix->c->mth.tmpr_nargs++;
+/* TODO: check if tmpr_nargs exceededs LIMIT (SMINT MAX). also bytecode max */
 
 	GET_TOKEN (stix);
 	return 0;
@@ -2097,7 +2066,7 @@ static int compile_keyword_method_name (stix_t* stix)
 
 	do 
 	{
-		if (append_method_name(stix, &stix->c->tok.name) <= -1) return -1;
+		if (add_method_name(stix, &stix->c->tok.name) <= -1) return -1;
 
 		GET_TOKEN (stix);
 		if (stix->c->tok.type != STIX_IOTOK_IDENT) 
@@ -2107,13 +2076,13 @@ static int compile_keyword_method_name (stix_t* stix)
 			return -1;
 		}
 
-		if (find_temporary(stix, &stix->c->tok.name) >= 0)
+		if (find_temporary_variable(stix, &stix->c->tok.name) >= 0)
 		{
 			set_syntax_error (stix, STIX_SYNERR_ARGNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
 		}
 
-		if (append_temporary(stix, &stix->c->tok.name) <= -1) return -1;
+		if (add_temporary_variable(stix, &stix->c->tok.name) <= -1) return -1;
 		stix->c->mth.tmpr_nargs++;
 
 		GET_TOKEN (stix);
@@ -2160,7 +2129,7 @@ static int compile_method_name (stix_t* stix)
 
 	if (n >= 0)
 	{
-		if (find_method_name(stix, stix->c->cls.self_oop, &stix->c->mth.name) >= 0) 
+		if (method_exists(stix, &stix->c->mth.name)) 
  		{
 			set_syntax_error (stix, STIX_SYNERR_MTHNAMEDUP, &stix->c->mth.name_loc, &stix->c->mth.name);
 			return -1;
@@ -2191,15 +2160,16 @@ static int compile_method_temporaries (stix_t* stix)
 	GET_TOKEN (stix);
 	while (stix->c->tok.type == STIX_IOTOK_IDENT) 
 	{
-		if (find_temporary(stix, &stix->c->tok.name) >= 0)
+		if (find_temporary_variable(stix, &stix->c->tok.name) >= 0)
 		{
 			set_syntax_error (stix, STIX_SYNERR_TMPRNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
 		}
 
-		if (append_temporary(stix, &stix->c->tok.name) <= -1) return -1;
+		if (add_temporary_variable(stix, &stix->c->tok.name) <= -1) return -1;
 		stix->c->mth.tmpr_count++;
 
+/* TODO: check if tmpr_count exceededs LIMIT (SMINT MAX). also bytecode max */
 		GET_TOKEN (stix);
 	}
 
@@ -2378,15 +2348,50 @@ static int compile_method_statements (stix_t* stix)
 	return 0;
 }
 
+static int add_compiled_method (stix_t* stix)
+{
+	stix_oop_t sel; /* selector */
+	stix_oop_method_t mth; /* method */
+	stix_oop_t code;
+	stix_size_t tmp_count = 0;
+
+	sel = stix_makesymbol (stix, stix->c->mth.name.ptr, stix->c->mth.name.len);
+	if (!sel) return -1;
+	stix_pushtmp (stix, &sel); tmp_count++;
+
+	mth = (stix_oop_method_t)stix_instantiate (stix, stix->_method_dictionary, stix->c->mth.literals, stix->c->mth.literal_count);
+	if (!mth) goto oops;
+	stix_pushtmp (stix, (stix_oop_t*)&mth); tmp_count++;
+
+	code = stix_instantiate (stix, stix->_byte_array, stix->c->mth.code.ptr, stix->c->mth.code.len);
+	if (!code) goto oops;
+
+	mth->owner = stix->c->cls.self_oop;
+	mth->tmpr_count = STIX_OOP_FROM_SMINT(stix->c->mth.tmpr_count);
+	mth->tmpr_nargs = STIX_OOP_FROM_SMINT(stix->c->mth.tmpr_nargs);
+	mth->code = code;
+	/*TODO: preserve source??? mth->source = TODO */
+
+	stix_poptmps (stix, tmp_count); tmp_count = 0;
+
+	if (!stix_putatdic (stix, stix->c->cls.mthdic_oop[stix->c->mth.type], sel, (stix_oop_t)mth)) goto oops;
+	return 0;
+
+oops:
+	stix_poptmps (stix, tmp_count);
+	return -1;
+}
+
 static int compile_class_method (stix_t* stix)
 {
 	/* clear data required to compile a method */
-	stix->c->mth.flags = 0;
+	stix->c->mth.type = MTH_INSTANCE;
 	stix->c->mth.name.len = 0;
 	STIX_MEMSET (&stix->c->mth.name_loc, 0, STIX_SIZEOF(stix->c->mth.name_loc));
 	stix->c->mth.tmprs.len = 0;
 	stix->c->mth.tmpr_count = 0;
 	stix->c->mth.tmpr_nargs = 0;
+	stix->c->mth.literal_count = 0;
 	stix->c->mth.code.len = 0;
 
 	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
@@ -2397,7 +2402,7 @@ static int compile_class_method (stix_t* stix)
 		if (is_token_symbol(stix, KSYM_CLASS))
 		{
 			/* #method(#class) */
-			stix->c->mth.flags |= MTH_CLASS;
+			stix->c->mth.type = MTH_CLASS;
 			GET_TOKEN (stix);
 		}
 
@@ -2424,8 +2429,7 @@ static int compile_class_method (stix_t* stix)
 
 	if (compile_method_temporaries(stix) <= -1 ||
 	    compile_method_primitive(stix) <= -1 ||
-	    compile_method_statements(stix) <= -1 /*|| 
-	    finish_method(stix) <= -1*/) return -1; 
+	    compile_method_statements(stix) <= -1) return -1;
 
 	if (stix->c->tok.type != STIX_IOTOK_RBRACE)
 	{
@@ -2434,6 +2438,9 @@ static int compile_class_method (stix_t* stix)
 		return -1;
 	}
 	GET_TOKEN (stix);
+
+	/* add a compiled method to the method dictionary */
+	if (add_compiled_method(stix) <= -1) return -1;
 
 	return 0;
 }
@@ -2494,28 +2501,41 @@ printf (" CONFLICTING CLASS DEFINITION %lu %lu %lu %lu\n",
 		stix->c->cls.self_oop->selfspec = STIX_OOP_FROM_SMINT(self_spec);
 	}
 
+/* TODO: check if the current class definition conflicts with the superclass.
+ * if superclass is byte variable, the current class cannot be word variable or something else.
+*  TODO: TODO: TODO:
+ */
 	STIX_OBJ_SET_FLAGS_KERNEL (stix->c->cls.self_oop, 2);
 
-	tmp = stix_makesymbol(stix, stix->c->cls.name.ptr, stix->c->cls.name.len);
+	tmp = stix_makesymbol (stix, stix->c->cls.name.ptr, stix->c->cls.name.len);
 	if (!tmp) return -1;
 	stix->c->cls.self_oop->name = (stix_oop_char_t)tmp;
 
-	tmp = stix_makestring(stix, stix->c->cls.vars[0].ptr, stix->c->cls.vars[0].len);
+	tmp = stix_makestring (stix, stix->c->cls.vars[0].ptr, stix->c->cls.vars[0].len);
 	if (!tmp) return -1;
 	stix->c->cls.self_oop->instvars = (stix_oop_char_t)tmp;
 
-	tmp = stix_makestring(stix, stix->c->cls.vars[1].ptr, stix->c->cls.vars[1].len);
+	tmp = stix_makestring (stix, stix->c->cls.vars[1].ptr, stix->c->cls.vars[1].len);
 	if (!tmp) return -1;
 	stix->c->cls.self_oop->classvars = (stix_oop_char_t)tmp;
 
-	tmp = stix_makestring(stix, stix->c->cls.vars[2].ptr, stix->c->cls.vars[2].len);
+	tmp = stix_makestring (stix, stix->c->cls.vars[2].ptr, stix->c->cls.vars[2].len);
 	if (!tmp) return -1;
 	stix->c->cls.self_oop->classinstvars = (stix_oop_char_t)tmp;
 
-	tmp = stix_instantiate(stix, stix->_method_dictionary, STIX_NULL, 0);
+/* TOOD: good dictionary size */
+	tmp = stix_makedic (stix, stix->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
-	stix->c->cls.mthdic_oop = (stix_oop_set_t)tmp;
+	stix->c->cls.mthdic_oop[MTH_INSTANCE] = (stix_oop_set_t)tmp;
+
+/* TOOD: good dictionary size */
+	tmp = stix_makedic (stix, stix->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
+	if (!tmp) return -1;
+	stix->c->cls.mthdic_oop[MTH_CLASS] = (stix_oop_set_t)tmp;
+
 /* TODO: initialize more fields??? whatelse. */
+
+/* TODO: update the subclasses field of the superclass if it's not nil */
 
 	if (just_made)
 	{
@@ -2756,6 +2776,10 @@ printf ("\n");
 			set_syntax_error (stix, STIX_SYNERR_DCLBANNED, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
 		}
+
+		/* use the method dictionary of an existing class object */
+		stix->c->cls.mthdic_oop[0] = stix->c->cls.self_oop->instmths;
+		stix->c->cls.mthdic_oop[1] = stix->c->cls.self_oop->classmths;
 	}
 	else
 	{
@@ -2783,6 +2807,14 @@ printf ("\n");
 		return -1;
 	}
 
+
+	if (!(stix->c->cls.flags & CLASS_EXTENDED))
+	{
+/* TODO: anything else to set? */
+		stix->c->cls.self_oop->instmths = stix->c->cls.mthdic_oop[MTH_INSTANCE];
+		stix->c->cls.self_oop->classmths = stix->c->cls.mthdic_oop[MTH_CLASS];
+	}
+
 	GET_TOKEN (stix);
 	return 0;
 }
@@ -2805,15 +2837,19 @@ static int compile_class_definition (stix_t* stix)
 
 	stix->c->cls.self_oop = STIX_NULL;
 	stix->c->cls.super_oop = STIX_NULL;
-	stix->c->cls.mthdic_oop = STIX_NULL;
+	stix->c->cls.mthdic_oop[MTH_INSTANCE] = STIX_NULL;
+	stix->c->cls.mthdic_oop[MTH_CLASS] = STIX_NULL;
+	stix->c->mth.literal_count = 0;
 
 	/* do main compilation work */
 	n = __compile_class_definition (stix);
 
-	/* reset these oops not to confuse gc_compiler() */
+	/* reset these oops plus literal pointers not to confuse gc_compiler() */
 	stix->c->cls.self_oop = STIX_NULL;
 	stix->c->cls.super_oop = STIX_NULL;
-	stix->c->cls.mthdic_oop = STIX_NULL;
+	stix->c->cls.mthdic_oop[MTH_INSTANCE] = STIX_NULL;
+	stix->c->cls.mthdic_oop[MTH_CLASS] = STIX_NULL;
+	stix->c->mth.literal_count = 0;
 
 	return n;
 }
@@ -2866,11 +2902,24 @@ static void gc_compiler (stix_t* stix)
 	/* called when garbage collection is performed */
 	if (stix->c)
 	{
+		stix_size_t i;
+
 		if (stix->c->cls.self_oop) 
 			stix->c->cls.self_oop = (stix_oop_class_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.self_oop);
 
 		if (stix->c->cls.super_oop)
 			stix->c->cls.super_oop = stix_moveoop (stix, stix->c->cls.super_oop);
+
+		if (stix->c->cls.mthdic_oop[MTH_INSTANCE])
+			stix->c->cls.mthdic_oop[MTH_INSTANCE] = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.mthdic_oop[MTH_INSTANCE]);
+
+		if (stix->c->cls.mthdic_oop[MTH_CLASS])
+			stix->c->cls.mthdic_oop[MTH_CLASS] = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.mthdic_oop[MTH_CLASS]);
+
+		for (i = 0; i < stix->c->mth.literal_count; i++)
+		{
+			stix->c->mth.literals[i] = stix_moveoop (stix, stix->c->mth.literals[i]);
+		}
 	}
 }
 
@@ -2896,6 +2945,7 @@ static void fini_compiler (stix_t* stix)
 		if (stix->c->mth.tmprs.ptr) stix_freemem (stix, stix->c->mth.tmprs.ptr);
 		if (stix->c->mth.name.ptr) stix_freemem (stix, stix->c->mth.name.ptr);
 		if (stix->c->mth.code.ptr) stix_freemem (stix, stix->c->mth.code.ptr);
+		if (stix->c->mth.literals) stix_freemem (stix, stix->c->mth.literals);
 
 		stix_freemem (stix, stix->c);
 		stix->c = STIX_NULL;

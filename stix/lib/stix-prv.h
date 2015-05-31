@@ -304,43 +304,6 @@ struct stix_synerr_t
 typedef struct stix_synerr_t stix_synerr_t;
 
 
-/*
- * The Smalltalk-80 Bytecodes
- * Range     Bits               Function
- * -------------------------------------------------------------
- * 0-15      0000iiii           Push Receiver Variable #iiii
- * 16-31     0001iiii           Push Temporary Location #iiii
- * 32-63     001iiiii           Push Literal Constant #iiiii
- * 64-95     010iiiii           Push Literal Variable #iiiii
- * 96-103    01100iii           Pop and Store Receiver Variable #iii
- * 104-111   01101iii           Pop and Store Temporary Location #iii
- * 112-119   01110iii           Push (receiver, _true, _false, _nil, -1, 0, 1, 2) [iii]
- * 120-123   011110ii           Return (receiver, _true, _false, _nil) [ii] From Message
- * 124-125   0111110i           Return Stack Top From (Message, Block) [i]
- * 126-127   0111111i           unused
- * 128       10000000 jjkkkkkk  Push (Receiver Variable, Temporary Location, Literal Constant, Literal Variable) [jj] #kkkkkk
- * 129       10000001 jjkkkkkk  Store (Receiver Variable, Temporary Location, Illegal, Literal Variable) [jj] #kkkkkk
- * 130       10000010 jjkkkkkk  Pop and Store (Receiver Variable, Temporary Location, Illegal, Literal Variable) [jj] #kkkkkk
- * 131       10000011 jjjkkkkk  Send Literal Selector #kkkkk With jjj Arguments
- * 132       10000100 jjjjjjjj kkkkkkkk     Send Literal Selector #kkkkkkkk With jjjjjjjj Arguments
- * 133       10000101 jjjkkkkk  Send Literal Selector #kkkkk To Superclass With jjj Arguments
- * 134       10000110 jjjjjjjj kkkkkkkk     Send Literal Selector #kkkkkkkk To Superclass With jjjjjjjj Arguments
- * 135       10000111           Pop Stack Top
- * 136       10001000           Duplicate Stack Top
- * 137       10001001           Push Active Context
- * 138-143   unused
- * 144-151   10010iii           Jump iii + 1 (i.e., 1 through 8)
- * 152-159   10011iii           Pop and Jump On False iii +1 (i.e., 1 through 8)
- * 160-167   10100iii jjjjjjjj  Jump(iii - 4) *256+jjjjjjjj
- * 168-171   101010ii jjjjjjjj  Pop and Jump On True ii *256+jjjjjjjj
- * 172-175   101011ii jjjjjjjj  Pop and Jump On False ii *256+jjjjjjjj
- * 176-191   1011iiii           Send Arithmetic Message #iiii
- * 192-207   1100iiii           Send Special Message #iiii
- * 208-223   1101iiii           Send Literal Selector #iiii With No Arguments
- * 224-239   1110iiii           Send Literal Selector #iiii With 1 Argument
- * 240-255   1111iiii           Send Literal Selector #iiii With 2 Arguments  
- */
-
 /**
  * The stix_code_t type defines byte-code enumerators.
  */
@@ -515,7 +478,7 @@ struct stix_compiler_t
 
 		stix_oop_class_t self_oop;
 		stix_oop_t super_oop; /* this may be nil. so the type is stix_oop_t */
-		stix_oop_set_t mthdic_oop;
+		stix_oop_set_t mthdic_oop[2];
 
 		stix_ucs_t name;
 		stix_size_t name_capa;
@@ -539,7 +502,7 @@ struct stix_compiler_t
 	/* information about a function being comipled */
 	struct
 	{
-		int flags;
+		int type;
 
 		stix_ucs_t name;
 		stix_size_t name_capa;
@@ -553,10 +516,14 @@ struct stix_compiler_t
 		stix_size_t tmpr_nargs;
 
 		/* literals */
-		int literal_count;
+		stix_oop_t* literals;
+		stix_size_t literal_count;
+		stix_size_t literal_capa;
 
-		stix_oow_t prim_no; /* primitive number */
+		/* primitive number */
+		stix_oow_t prim_no; 
 
+		/* byte code */
 		stix_code_t code;
 		stix_size_t code_capa;
 	} mth; 
@@ -731,7 +698,7 @@ stix_oop_t stix_lookupdic (
 	const stix_ucs_t* name
 );
 
-stix_oop_set_t stix_makedic (
+stix_oop_t stix_makedic (
 	stix_t*    stix,
 	stix_oop_t cls,
 	stix_oow_t size
@@ -793,17 +760,6 @@ int stix_utf8toucs (
 	stix_uch_t*         ucs,
 	stix_size_t*        ucslen
 );
-
-
-/**
- * The stix_ucslen() function returns the number of characters before 
- * a terminating null.
- */
-/*
-stix_size_t stix_ucslen (
-	const stix_uch_t* ucs
-);
-*/
 
 /* ========================================================================= */
 /* comp.c                                                                    */

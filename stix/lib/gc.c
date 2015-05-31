@@ -199,24 +199,24 @@ printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
 	stix->_true              = stix_moveoop (stix, stix->_true);
 	stix->_false             = stix_moveoop (stix, stix->_false);
 
-/*printf ("BEFORE GC = %p %p %p %p %p %p %p %p %p %p\n", stix->_array, stix->_class, stix->_nil_object, stix->_object, stix->_symbol, stix->_symbol_set, stix->_system_dictionary, stix->_association, stix->_character, stix->_small_integer);*/
 	stix->_stix              = stix_moveoop (stix, stix->_stix);
 	stix->_class             = stix_moveoop (stix, stix->_class);
 	stix->_nil_object        = stix_moveoop (stix, stix->_nil_object);
 	stix->_object            = stix_moveoop (stix, stix->_object);
 	stix->_array             = stix_moveoop (stix, stix->_array);
+	stix->_byte_array        = stix_moveoop (stix, stix->_byte_array);
 	stix->_string            = stix_moveoop (stix, stix->_string);
 	stix->_symbol            = stix_moveoop (stix, stix->_symbol);
 	stix->_symbol_set        = stix_moveoop (stix, stix->_symbol_set);
 	stix->_system_dictionary = stix_moveoop (stix, stix->_system_dictionary);
 	stix->_method_dictionary = stix_moveoop (stix, stix->_method_dictionary);
+	stix->_method            = stix_moveoop (stix, stix->_method);
 	stix->_association       = stix_moveoop (stix, stix->_association);
 	stix->_true_class        = stix_moveoop (stix, stix->_true_class);
 	stix->_false_class       = stix_moveoop (stix, stix->_false_class);
 	stix->_character         = stix_moveoop (stix, stix->_character);
 	stix->_small_integer     = stix_moveoop (stix, stix->_small_integer);
 
-/*printf ("AFTER GC = %p %p %p %p %p %p %p %p %p %p\n", stix->_array, stix->_class, stix->_nil_object, stix->_object, stix->_symbol, stix->_symbol_set, stix->_system_dictionary, stix->_association, stix->_character, stix->_small_integer);*/
 	stix->sysdic = (stix_oop_set_t) stix_moveoop (stix, (stix_oop_t)stix->sysdic);
 
 	for (i = 0; i < stix->tmp_count; i++)

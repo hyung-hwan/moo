@@ -214,21 +214,25 @@ stix_oop_t stix_lookupdic (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* n
 	return lookup (stix, dic, name);
 }
 
-stix_oop_set_t stix_makedic (stix_t* stix, stix_oop_t cls, stix_oow_t size)
+stix_oop_t stix_makedic (stix_t* stix, stix_oop_t cls, stix_oow_t size)
 {
 	stix_oop_set_t dic;
 	stix_oop_t tmp;
 
+	STIX_ASSERT (STIX_CLASSOF(stix,cls) == stix->_class);
+	STIX_ASSERT (cls != stix->_system_dictionary); 
+
 	dic = (stix_oop_set_t)stix_instantiate (stix, cls, STIX_NULL, 0);
 	if (!dic) return STIX_NULL;
 
-	dic->tally = STIX_OOP_FROM_SMINT(0);
+	STIX_ASSERT (STIX_OBJ_GET_SIZE(dic) == STIX_SET_NAMED_INSTVARS);
 
 	stix_pushtmp (stix, (stix_oop_t*)&dic);
 	tmp = stix_instantiate (stix, stix->_array, STIX_NULL, size);
 	stix_poptmp (stix);
 	if (!tmp) return STIX_NULL;
 
+	dic->tally = STIX_OOP_FROM_SMINT(0);
 	dic->bucket = (stix_oop_oop_t)tmp;
-	return dic;
+	return (stix_oop_t)dic;
 }

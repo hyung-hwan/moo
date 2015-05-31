@@ -109,7 +109,6 @@ typedef struct stix_ucs_t stix_ucs_t;
 	(value = (((type)(value)) | (((bits) & STIX_LBMASK(type,length)) << (offset))))
 
 
-#define STIX
 /** 
  * The STIX_BITS_MAX() macros calculates the maximum value that the 'nbits'
  * bits of an unsigned integer of the given 'type' can hold.
@@ -313,14 +312,14 @@ typedef struct stix_obj_t*       stix_oop_t;
 /* these are more specialized types for stix_obj_t */
 typedef struct stix_obj_oop_t     stix_obj_oop_t;
 typedef struct stix_obj_char_t    stix_obj_char_t;
-typedef struct stix_obj_uint8_t   stix_obj_uint8_t;
-typedef struct stix_obj_uint16_t  stix_obj_uint16_t;
+typedef struct stix_obj_byte_t    stix_obj_byte_t;
+typedef struct stix_obj_word_t    stix_obj_word_t;
 
 /* these are more specialized types for stix_oop_t */
 typedef struct stix_obj_oop_t*    stix_oop_oop_t;
 typedef struct stix_obj_char_t*   stix_oop_char_t;
-typedef struct stix_obj_uint8_t*  stix_oop_uint8_t;
-typedef struct stix_obj_uint16_t* stix_oop_uint16_t;
+typedef struct stix_obj_byte_t*   stix_oop_byte_t;
+typedef struct stix_obj_word_t*   stix_oop_word_t;
 
 #define STIX_OOW_BITS (STIX_SIZEOF(stix_oow_t) * 8)
 #define STIX_OOP_BITS (STIX_SIZEOF(stix_oop_t) * 8)
@@ -479,17 +478,27 @@ struct stix_obj_char_t
 	stix_uch_t slot[1];
 };
 
-struct stix_obj_uint8_t
+struct stix_obj_byte_t
 {
 	STIX_OBJ_HEADER;
-	stix_uint8_t slot[1];
+	stix_byte_t slot[1];
 };
 
-struct stix_obj_uint16_t
+struct stix_obj_word_t
 {
 	STIX_OBJ_HEADER;
-	stix_uint16_t slot[1];
+	stix_oow_t slot[1];
 };
+
+#define STIX_SET_NAMED_INSTVARS 2
+struct stix_set_t
+{
+	STIX_OBJ_HEADER;
+	stix_oop_t     tally;  /* SmallInteger */
+	stix_oop_oop_t bucket; /* Array */
+};
+typedef struct stix_set_t stix_set_t;
+typedef struct stix_set_t* stix_oop_set_t;
 
 #define STIX_CLASS_NAMED_INSTVARS 10
 struct stix_class_t
@@ -510,24 +519,14 @@ struct stix_class_t
 	stix_oop_char_t classinstvars; /* String */
 	/* == NEVER CHANGE THE ORDER OF 3 ITEMS ABOVE == */
 
-	stix_oop_oop_t  instfuns;      /* instance methods, MethodDictionary */
-	stix_oop_oop_t  classfuns;     /* class methods, MethodDictionary */
+	stix_oop_set_t  instmths;      /* instance methods, MethodDictionary */
+	stix_oop_set_t  classmths;     /* class methods, MethodDictionary */
 
 	/* indexed part afterwards */
 	stix_oop_t      classvar[1];   /* most classes have no class variables. better to be 0 */
 };
 typedef struct stix_class_t stix_class_t;
 typedef struct stix_class_t* stix_oop_class_t;
-
-#define STIX_SET_NAMED_INSTVARS 2
-struct stix_set_t
-{
-	STIX_OBJ_HEADER;
-	stix_oop_t     tally;  /* SmallInteger */
-	stix_oop_oop_t bucket; /* Array */
-};
-typedef struct stix_set_t stix_set_t;
-typedef struct stix_set_t* stix_oop_set_t;
 
 #define STIX_ASSOCIATION_NAMED_INSTVARS 2
 struct stix_association_t
@@ -539,7 +538,26 @@ struct stix_association_t
 typedef struct stix_association_t stix_association_t;
 typedef struct stix_association_t* stix_oop_association_t;
 
+#define STIX_METHOD_NAMED_INSTVARS 5
+struct stix_method_t
+{
+	STIX_OBJ_HEADER;
 
+	stix_oop_class_t owner; /* Class */
+
+	/* number of temporaries including arguments */
+	stix_oop_t       tmpr_count; /* SmallInteger */
+	/* number of arguments in temporaries */
+	stix_oop_t       tmpr_nargs; /* SmallInteger */
+
+	stix_oop_t       code; /* ByteArray */
+	stix_oop_t       source; /* TODO: what should I put? */
+
+	/* variable indexed part */
+	stix_oop_t literal[1];
+};
+typedef struct stix_method_t stix_method_t;
+typedef struct stix_method_t* stix_oop_method_t;
 
 /**
  * The STIX_CLASSOF() macro return the class of an object including a numeric
@@ -576,6 +594,8 @@ struct stix_cb_t
 {
 	stix_cbimpl_t gc;
 	stix_cbimpl_t fini;
+
+	/* private below */
 	stix_cb_t*    prev;
 	stix_cb_t*    next;
 };
@@ -618,9 +638,11 @@ struct stix_t
 	stix_oop_t _string; /* String */
 	stix_oop_t _symbol; /* Symbol */
 	stix_oop_t _array; /* Array */
+	stix_oop_t _byte_array; /* ByteArray */
 	stix_oop_t _symbol_set; /* SymbolSet */
 	stix_oop_t _system_dictionary; /* SystemDictionary */
 	stix_oop_t _method_dictionary; /* MethodDictionary */
+	stix_oop_t _method; /* CompiledMethod */
 	stix_oop_t _association; /* Association */
 	stix_oop_t _true_class; /* True */
 	stix_oop_t _false_class; /* False */
