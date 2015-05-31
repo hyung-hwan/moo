@@ -67,6 +67,7 @@ static stix_oop_t find_or_insert (stix_t* stix, stix_oop_set_t dic, stix_oop_cha
 	stix_oop_association_t ass;
 	stix_oow_t tmp_count = 0;
 
+
 	/* the system dictionary is not a generic dictionary.
 	 * it accepts only a symbol as a key. */
 	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
@@ -200,7 +201,7 @@ stix_oop_t stix_lookupsysdic (stix_t* stix, const stix_ucs_t* name)
 stix_oop_t stix_putatdic (stix_t* stix, stix_oop_set_t dic, stix_oop_t key, stix_oop_t value)
 {
 	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
-	return find_or_insert (stix, stix->sysdic, (stix_oop_char_t)key, value);
+	return find_or_insert (stix, dic, (stix_oop_char_t)key, value);
 }
 
 stix_oop_t stix_getatdic (stix_t* stix, stix_oop_set_t dic, stix_oop_t key)
@@ -220,7 +221,6 @@ stix_oop_t stix_makedic (stix_t* stix, stix_oop_t cls, stix_oow_t size)
 	stix_oop_t tmp;
 
 	STIX_ASSERT (STIX_CLASSOF(stix,cls) == stix->_class);
-	STIX_ASSERT (cls != stix->_system_dictionary); 
 
 	dic = (stix_oop_set_t)stix_instantiate (stix, cls, STIX_NULL, 0);
 	if (!dic) return STIX_NULL;
@@ -234,5 +234,9 @@ stix_oop_t stix_makedic (stix_t* stix, stix_oop_t cls, stix_oow_t size)
 
 	dic->tally = STIX_OOP_FROM_SMINT(0);
 	dic->bucket = (stix_oop_oop_t)tmp;
+
+	STIX_ASSERT (STIX_OBJ_GET_SIZE(dic) == STIX_SET_NAMED_INSTVARS);
+	STIX_ASSERT (STIX_OBJ_GET_SIZE(dic->bucket) == size);
+
 	return (stix_oop_t)dic;
 }

@@ -298,9 +298,9 @@ int main (int argc, char* argv[])
 	}
 
 {
-stix_uch_t x[] = { 'S', 't', 'r', 'i', 'n', 'g', '\0' };
+stix_uch_t x[] = { 'X', 't', 'r', 'i', 'n', 'g', '\0' };
 stix_uch_t y[] = { 'S', 'y', 'm', 'b', 'o', 'l', '\0' };
-stix_oop_t a, b;
+stix_oop_t a, b, k;
 
 a = stix_makesymbol (stix, x, 6);
 b = stix_makesymbol (stix, y, 6);
@@ -310,6 +310,13 @@ printf ("%p %p\n", a, b);
 
 	dump_symbol_table (stix);
 
+/*
+stix_pushtmp (stix, &a);
+stix_pushtmp (stix, &b);
+k = stix_instantiate (stix, stix->_byte_array, STIX_NULL, 100);
+stix_poptmps (stix, 2);
+stix_putatsysdic (stix, a, k);
+*/
 
 stix_gc (stix);
 a = stix_findsymbol (stix, x, 6);

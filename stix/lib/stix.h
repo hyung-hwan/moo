@@ -630,7 +630,7 @@ struct stix_t
 	stix_oop_t _false;
 
 	/* == NEVER CHANGE THE ORDER OF FIELDS BELOW == */
-	/* stix_ignite() assumes this order */
+	/* stix_ignite() assumes this order. make sure to update symnames in ignite_3() */
 	stix_oop_t _stix; /* Stix */
 	stix_oop_t _nil_object; /* NilObject */
 	stix_oop_t _class; /* Class */

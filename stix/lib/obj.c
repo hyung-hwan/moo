@@ -176,6 +176,7 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 	}
 
 	stix_pushtmp (stix, &_class); tmp_count++;
+/*TODO: protected vptr if it's not STIX_NULL and the variability(indexed_type) is OOP. the current impl is buggy */
 
 	switch (indexed_type)
 	{
@@ -214,6 +215,7 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 	return oop;
 
 einval:
+	STIX_ASSERT (tmp_count <= 0);
 	stix->errnum = STIX_EINVAL;
 	return STIX_NULL;
 }

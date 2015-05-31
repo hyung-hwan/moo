@@ -33,7 +33,7 @@
 
 /* initial method dictionary size */
 #define INSTANCE_METHOD_DICTIONARY_SIZE 256 /* TODO: choose the right size */
-#define CLASS_METHOD_DICTIONARY_SIZE 256 /* TODO: choose the right size */
+#define CLASS_METHOD_DICTIONARY_SIZE 128 /* TODO: choose the right size */
 
 #if 0
 
@@ -2350,21 +2350,23 @@ static int compile_method_statements (stix_t* stix)
 
 static int add_compiled_method (stix_t* stix)
 {
-	stix_oop_t sel; /* selector */
+	stix_oop_t name; /* selector */
 	stix_oop_method_t mth; /* method */
 	stix_oop_t code;
 	stix_size_t tmp_count = 0;
 
-	sel = stix_makesymbol (stix, stix->c->mth.name.ptr, stix->c->mth.name.len);
-	if (!sel) return -1;
-	stix_pushtmp (stix, &sel); tmp_count++;
+	name = stix_makesymbol (stix, stix->c->mth.name.ptr, stix->c->mth.name.len);
+	if (!name) return -1;
+	stix_pushtmp (stix, &name); tmp_count++;
 
-	mth = (stix_oop_method_t)stix_instantiate (stix, stix->_method_dictionary, stix->c->mth.literals, stix->c->mth.literal_count);
+/* TODO: check if this stix_instantiate is GC safe...as it passed mth.literals... */
+	mth = (stix_oop_method_t)stix_instantiate (stix, stix->_method, stix->c->mth.literals, stix->c->mth.literal_count);
 	if (!mth) goto oops;
 	stix_pushtmp (stix, (stix_oop_t*)&mth); tmp_count++;
 
 	code = stix_instantiate (stix, stix->_byte_array, stix->c->mth.code.ptr, stix->c->mth.code.len);
 	if (!code) goto oops;
+	stix_pushtmp (stix, &code); tmp_count++;
 
 	mth->owner = stix->c->cls.self_oop;
 	mth->tmpr_count = STIX_OOP_FROM_SMINT(stix->c->mth.tmpr_count);
@@ -2374,7 +2376,8 @@ static int add_compiled_method (stix_t* stix)
 
 	stix_poptmps (stix, tmp_count); tmp_count = 0;
 
-	if (!stix_putatdic (stix, stix->c->cls.mthdic_oop[stix->c->mth.type], sel, (stix_oop_t)mth)) goto oops;
+	//if (!stix_putatdic (stix, stix->c->cls.mthdic_oop[stix->c->mth.type], name, (stix_oop_t)mth)) goto oops;
+	if (!stix_putatdic (stix, stix->c->cls.mthdic_oop[stix->c->mth.type], name, stix->_nil)) goto oops;
 	return 0;
 
 oops:
@@ -2778,8 +2781,8 @@ printf ("\n");
 		}
 
 		/* use the method dictionary of an existing class object */
-		stix->c->cls.mthdic_oop[0] = stix->c->cls.self_oop->instmths;
-		stix->c->cls.mthdic_oop[1] = stix->c->cls.self_oop->classmths;
+		stix->c->cls.mthdic_oop[MTH_INSTANCE] = stix->c->cls.self_oop->instmths;
+		stix->c->cls.mthdic_oop[MTH_CLASS] = stix->c->cls.self_oop->classmths;
 	}
 	else
 	{
