@@ -68,6 +68,7 @@ enum mth_type_t
 	MTH_CLASS
 };
 
+/* NOTE store_opcodes table depends on the order of var_tsype_t */
 enum var_type_t
 {
 	VAR_INSTANCE,
@@ -141,7 +142,7 @@ enum ksym_id_t
 };
 typedef enum ksym_id_t ksym_id_t;
 
-static int compile_method_expression (stix_t* stix);
+
 
 static STIX_INLINE int is_spacechar (stix_uci_t c)
 {
@@ -1021,7 +1022,6 @@ static int end_include (stix_t* stix)
 /* ---------------------------------------------------------------------
  * Parser and Code Generator 
  * --------------------------------------------------------------------- */
-#if 0
 
 #define EMIT_CODE_TEST(fsc,high,low) \
 	do { if (emit_code_test(fsc,high,low) <= -1) return -1; } while (0)
@@ -1086,29 +1086,31 @@ static int end_include (stix_t* stix)
 #endif
 
 
-#endif
+/* --------------------------------------------------------------------- */
 
-#define EMIT_CODE(stix, code) \
-	do { if (emit_code(stix, code, STIX_COUNTOF(code)) <= -1) return -1; } while (0);
+#define CODE_MAKE(x,y) (((x) << 4) | y)
+#define CODE_MAX_INDEX               0xFFFF
 
-static stix_byte_t code_dup_stacktop[]       = { 0x0F, 0x01 };
-static stix_byte_t code_pop_stacktop[]       = { 0x0F, 0x02 };
+#define CODE_EXTEND                  0x0
+#define CODE_EXTEND_DOUBLE           0x1
+#define CODE_STORE_INTO_INSTVAR      0x7 /* pop and store */
+#define CODE_STORE_INTO_CLASSSIDEVAR 0x8 /* pop and store */
+#define CODE_STORE_INTO_TEMPVAR      0x9 /* pop and store */
+#define CODE_SPECIAL                 0xF
 
-static stix_byte_t code_return_message_stacktop[]    = { 0x0F, 0x03 };
-static stix_byte_t code_return_block_stacktop[]      = { 0x0F, 0x04 };
-static stix_byte_t code_return_message_receiver[]    = { 0x0F, 0x05 };
+/* special code */
+#define CODE_DUP_STACKTOP             0x1
+#define CODE_POP_STACKTOp             0x2
+#define CODE_RETURN_MESSAGE_STACKTOP  0x3
+#define CODE_RETURN_BLOCK_STACKTOP    0x4
+#define CODE_RETURN_MESSAGE_RECEIVER  0x5
+#define CODE_EXEC_PRIMITIVE           0xF
 
-static stix_byte_t code_exec_primitive[]             = { 0x0F, 0x0F };
-
-
-
-
-
-static STIX_INLINE int emit_code (stix_t* stix, const stix_byte_t* ptr, stix_size_t len)
+static STIX_INLINE int emit_code (stix_t* stix, stix_byte_t code)
 {
 	stix_size_t i;
 
-	i = stix->c->mth.code.len + len;
+	i = stix->c->mth.code.len + 1;
 	if (i > stix->c->mth.code_capa)
 	{
 		stix_byte_t* tmp;
@@ -1122,11 +1124,33 @@ static STIX_INLINE int emit_code (stix_t* stix, const stix_byte_t* ptr, stix_siz
 		stix->c->mth.code_capa = i;
 	}
 
-	for (i = 0; i < len; i++)
-		stix->c->mth.code.ptr[stix->c->mth.code.len++] = ptr[i];
+	stix->c->mth.code.ptr[stix->c->mth.code.len++] = code;
+	return 0;
+}
+
+static int emit_pop_and_store (stix_t* stix, stix_size_t index, int store_code)
+{
+	STIX_ASSERT (index <= CODE_MAX_INDEX);
+
+	if (index > 0xFF)
+	{
+		if (emit_code(stix, CODE_MAKE(CODE_EXTEND_DOUBLE, store_code)) <= -1 ||
+		    emit_code(stix, index >> 8) <= -1 ||
+		    emit_code(stix, index & 0xFF) <= -1) return -1;
+	}
+	else if (index > 0xF)
+	{
+		if (emit_code(stix, CODE_MAKE(CODE_EXTEND, store_code)) <= -1 ||
+		    emit_code(stix, index) <= -1) return -1;
+	}
+	else
+	{
+		if (emit_code(stix, CODE_MAKE(store_code, index)) <= -1) return -1;
+	}
 
 	return 0;
 }
+
 
 #if 0
 static int emit_push_stack (stix_t* fsc, stix_stack_operand_t type, int pos)
@@ -2306,6 +2330,8 @@ static int compile_basic_expression (stix_t* stix, const stix_ucs_t* assignee)
 	return -1;
 }
 
+static int compile_method_expression (stix_t* stix);
+
 static int compile_assignment_expression (stix_t* stix, const stix_ucs_t* assignee, const stix_ioloc_t* assignee_loc)
 {
 	/*
@@ -2332,31 +2358,48 @@ printf ("\n");
 		/* assigning to a temporary variable */
 		if (compile_method_expression(stix) <= -1) return -1;
 
-/* TODO: */
-		/*EMIT_STORE_TO_TEMPORARY (stix, index);*/
-		return 0;
-	}
+		if (index > CODE_MAX_INDEX)
+		{
+			set_syntax_error (stix, STIX_SYNERR_ASSIGNEEUNEXP, assignee_loc, assignee);
+			return -1;
+		}
 
-	if (find_class_level_variable (stix, stix->c->cls.self_oop, assignee, &var) <= -1) 
+		return emit_pop_and_store (stix, index, CODE_STORE_INTO_TEMPVAR);
+	}
+	else if (find_class_level_variable(stix, stix->c->cls.self_oop, assignee, &var) >= 0)
 	{
-		set_syntax_error (stix, STIX_SYNERR_ASSIGNEEUNDCL, assignee_loc, assignee);
-		return -1;
+		/* THIS TABLE MUST MATCH var_type_t */
+		static stix_byte_t store_opcodes[] =
+		{
+			CODE_STORE_INTO_INSTVAR,
+			CODE_STORE_INTO_CLASSSIDEVAR,
+			CODE_STORE_INTO_CLASSSIDEVAR
+		};
+		/* --------------------------------- */
+
+		stix_size_t index;
+
+		index = var.pos;
+		if (var.type != VAR_INSTANCE)
+		{
+			STIX_ASSERT (var.type == VAR_CLASS || var.type == VAR_CLASSINST);
+			/* TODO: calculate the right position/index */
+		}
+
+		if (compile_method_expression(stix) <= -1) return -1;
+
+		if (index > CODE_MAX_INDEX)
+		{
+			set_syntax_error (stix, STIX_SYNERR_ASSIGNEEUNEXP, assignee_loc, assignee);
+			return -1;
+		}
+
+		return emit_pop_and_store (stix, index, store_opcodes[var.type]);
 	}
 
-/* TODO */
-	switch (var.type)
-	{
-		case VAR_INSTANCE:
-			break;
+	set_syntax_error (stix, STIX_SYNERR_ASSIGNEEUNDCL, assignee_loc, assignee);
+	return -1;
 
-		case VAR_CLASS:
-			break;
-
-		case VAR_CLASSINST:
-			break;
-	}
-
-	return 0;
 #if 0
 	
 	if (stix_get_instance_variable_index (stx, stix->method_class, target, &i) == 0) 
@@ -2440,14 +2483,12 @@ static int compile_method_statement (stix_t* stix)
 	{
 		GET_TOKEN (stix);
 		if (compile_method_expression(stix) <= -1) return -1;
-		EMIT_CODE (stix, code_return_message_stacktop);
+		return emit_code (stix, CODE_MAKE(CODE_SPECIAL, CODE_RETURN_MESSAGE_STACKTOP));
 	}
 	else 
 	{
-		if (compile_method_expression(stix) <= -1) return -1;
+		return compile_method_expression(stix);
 	}
-
-	return 0;
 }
 
 
@@ -2480,8 +2521,7 @@ static int compile_method_statements (stix_t* stix)
 	}
 
 	/* TODO: size optimization. emit code_return_receiver only if it's not previously emitted */
-	EMIT_CODE (stix, code_return_message_receiver);
-	return 0;
+	return emit_code (stix, CODE_MAKE(CODE_SPECIAL, CODE_RETURN_MESSAGE_RECEIVER));
 }
 
 static int add_compiled_method (stix_t* stix)

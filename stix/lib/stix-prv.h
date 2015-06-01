@@ -287,7 +287,8 @@ enum stix_synerrnum_t
 	STIX_SYNERR_TMPRNAMEDUP,   /* duplicate temporary variable name */
 	STIX_SYNERR_VARNAMEDUP,    /* duplicate variable name */
 	STIX_SYNERR_ASSIGNEEARG,   /* cannot assign to argument */
-	STIX_SYNERR_ASSIGNEEUNDCL  /* undeclared assignee */
+	STIX_SYNERR_ASSIGNEEUNDCL, /* undeclared assignee */
+	STIX_SYNERR_ASSIGNEEUNEXP  /* assignee unexpressable in compiled code */
 };
 typedef enum stix_synerrnum_t stix_synerrnum_t;
 

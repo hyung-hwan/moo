@@ -242,7 +242,8 @@ static char* syntax_error_msg[] =
 	"duplicate temporary variable name",
 	"duplicate variable name",
 	"cannot assign to argument",
-	"undeclared assignee"
+	"undeclared assignee",
+	"assignee unexpressable in compiled code"
 };
 
 int main (int argc, char* argv[])
