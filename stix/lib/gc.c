@@ -221,9 +221,7 @@ printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
 
 	for (i = 0; i < stix->tmp_count; i++)
 	{
-		stix_oop_t t;
-		t = stix_moveoop (stix, *stix->tmp_stack[i]);
-		*stix->tmp_stack[i] = t;
+		*stix->tmp_stack[i] = stix_moveoop (stix, *stix->tmp_stack[i]);
 	}
 
 	for (cb = stix->cblist; cb; cb = cb->next)

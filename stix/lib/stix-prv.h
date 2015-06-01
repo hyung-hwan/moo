@@ -285,7 +285,9 @@ enum stix_synerrnum_t
 	STIX_SYNERR_MTHNAMEDUP,    /* duplicate method name */
 	STIX_SYNERR_ARGNAMEDUP,    /* duplicate argument name */
 	STIX_SYNERR_TMPRNAMEDUP,   /* duplicate temporary variable name */
-	STIX_SYNERR_VARNAMEDUP     /* duplicate variable name */
+	STIX_SYNERR_VARNAMEDUP,    /* duplicate variable name */
+	STIX_SYNERR_ASSIGNEEARG,   /* cannot assign to argument */
+	STIX_SYNERR_ASSIGNEEUNDCL  /* undeclared assignee */
 };
 typedef enum stix_synerrnum_t stix_synerrnum_t;
 
@@ -504,6 +506,15 @@ struct stix_compiler_t
 	{
 		int type;
 
+		/* method source text */
+		stix_ucs_t text;
+		stix_size_t text_capa;
+
+		/* buffer to store identifier names to be assigned */
+		stix_ucs_t assignees;
+		stix_size_t assignees_capa;
+
+		/* method name */
 		stix_ucs_t name;
 		stix_size_t name_capa;
 		stix_ioloc_t name_loc;
@@ -511,7 +522,6 @@ struct stix_compiler_t
 		/* single string containing a space separated list of temporaries */
 		stix_ucs_t tmprs; 
 		stix_size_t tmprs_capa;
-
 		stix_size_t tmpr_count; /* total number of temporaries including arguments */
 		stix_size_t tmpr_nargs;
 

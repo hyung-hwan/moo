@@ -240,7 +240,9 @@ static char* syntax_error_msg[] =
 	"duplicate method name",
 	"duplicate argument name",
 	"duplicate temporary variable name",
-	"duplicate variable name"
+	"duplicate variable name",
+	"cannot assign to argument",
+	"undeclared assignee"
 };
 
 int main (int argc, char* argv[])

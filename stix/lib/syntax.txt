@@ -42,13 +42,12 @@ keyword-method-name := (keyword selector-argument)+
 method-temporaries := "|" variable-list "|"
 method-primitive := "<"  "primitive:" integer ">"
 method-statements := method-statement ("." | ("." method-statements))*
-method-statement := method-return | method-expression
-method-return := "^" method-expression
+method-statement := method-return-statement | method-expression
+method-return-statement := "^" method-expression
 
-
-method-expression := assignment-expression | basic-expression
-assignment-expression := identifier ":=" method-expression
-basic-expression := expression-primary (message cascaded-message)?
+method-expression := method-assignment-expression | method-basic-expression
+method-assignment-expression := identifier ":=" method-expression
+method-basic-expression := method-expression-primary (message cascaded-message)?
 
 ----------------------------------------------------------
 
