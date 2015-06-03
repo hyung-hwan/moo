@@ -176,7 +176,7 @@ static int ignite_2 (stix_t* stix)
 	stix->sysdic = (stix_oop_set_t)tmp;
 
 	/* Export the system dictionary via the first class variable of the Stix class */
-	((stix_oop_class_t)stix->_stix)->classvar[0] = (stix_oop_t)stix->sysdic;
+	((stix_oop_class_t)stix->_stix)->vars[0] = (stix_oop_t)stix->sysdic;
 
 	return 0;
 }

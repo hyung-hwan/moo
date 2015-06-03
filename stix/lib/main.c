@@ -225,6 +225,7 @@ static char* syntax_error_msg[] =
 	"} expected",
 	"( expected",
 	") expected",
+	"] expected",
 	". expected",
 	"| expected",
 	"> expected",
@@ -246,6 +247,7 @@ static char* syntax_error_msg[] =
 	"unusable variable in compiled code",
 	"inaccessible variable",
 	"wrong expression primary",
+	"too many arguments",
 	"wrong primitive number"
 };
 

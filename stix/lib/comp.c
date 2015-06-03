@@ -13,7 +13,7 @@
        documentation and/or other materials provided with the distribution.
 
     THIS SOFTWARE IS PROVIDED BY THE AUTHOR "AS IS" AND ANY EXPRESS OR
-    IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+    IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WAfRRANTIES
     OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
     IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
     INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
@@ -35,27 +35,6 @@
 #define INSTANCE_METHOD_DICTIONARY_SIZE 256 /* TODO: choose the right size */
 #define CLASS_METHOD_DICTIONARY_SIZE 128 /* TODO: choose the right size */
 
-#if 0
-
-enum stix_send_target_t
-{
-	STIX_SELF = 0,
-	STIX_SUPER = 1
-};
-typedef enum stix_send_target_t stix_send_target_t;
-
-enum stix_stack_operand_t
-{
-	STIX_RECEIVER_VARIABLE = 0,
-	STIX_TEMPORARY_LOCATION = 1,
-	STIX_LITERAL_CONSTANT = 2,
-	STIX_LITERAL_VARIABLE = 3
-};
-typedef enum stix_stack_operand_t stix_stack_operand_t;
-
-#endif
-
-
 enum class_mod_t
 {
 	CLASS_INDEXED   = (1 << 0),
@@ -70,27 +49,32 @@ enum mth_type_t
 
 enum var_type_t
 {
+	/* NEVER Change the order and the value of 3 items below.
+	 * stix->c->cls.vars and stix->c->cls.var_count relies on them. */
+	VAR_INSTANCE   = 0,
+	VAR_CLASS      = 1,
+	VAR_CLASSINST  = 2,
+	/* NEVER Change the order and the value of 3 items above. */
+
+	VAR_GLOBAL,
 	VAR_ARGUMENT,
-	VAR_TEMPORARY,
-	VAR_INSTANCE,
-	VAR_CLASS,
-	VAR_CLASSINST
+	VAR_TEMPORARY
 };
 typedef enum var_type_t var_type_t;
 
 struct var_info_t
 {
-	var_type_t type;
-	stix_size_t pos;
-	stix_oop_class_t cls; /* useful if type is VAR_CLASS. note STIX_NULL indicates the self class. */
+	var_type_t       type;
+	stix_ssize_t     pos;
+	stix_oop_class_t cls; /* useful if type is VAR_CLASS. note STIX_NULL indicates the self class. TODO: use it for GLOBAL?? */
 };
 typedef struct var_info_t var_info_t;
 
-static struct ksym_t
+static struct voca_t
 {
 	stix_oow_t len;
 	stix_uch_t str[11];
-} ksyms[] = {
+} vocas[] = {
 	{  4, { 'b','y','t','e'                                               } },
 	{  9, { 'c','h','a','r','a','c','t','e','r'                           } },
 	{  5, { 'c','l','a','s','s'                                           } },
@@ -110,39 +94,43 @@ static struct ksym_t
 	{ 11, { 't','h','i','s','C','o','n','t','e','x','t'                   } },
 	{  4, { 't','r','u','e'                                               } },
 	{  4, { 'w','o','r','d'                                               } },
+
 	{  1, { '|'                                                           } },
 	{  1, { '>'                                                           } },
-	{  1, { '<'                                                           } }
+	{  1, { '<'                                                           } },
+
+	{  5, { '<','E','O','F','>'                                           } }
 };
 
-enum ksym_id_t
+enum voca_id_t
 {
-	KSYM_BYTE,
-	KSYM_CHARACTER,
-	KSYM_CLASS,
-	KSYM_CLASSINST,
-	KSYM_DCL,
-	KSYM_DECLARE,
-	KSYM_FALSE,
-	KSYM_INCLUDE,
-	KSYM_MAIN,
-	KSYM_METHOD,
-	KSYM_MTH,
-	KSYM_NIL,
-	KSYM_POINTER,
-	KSYM_PRIMITIVE_COLON,
-	KSYM_SELF,
-	KSYM_SUPER,
-	KSYM_THIS_CONTEXT,
-	KSYM_TRUE,
-	KSYM_WORD,
+	VOCA_BYTE,
+	VOCA_CHARACTER,
+	VOCA_CLASS,
+	VOCA_CLASSINST,
+	VOCA_DCL,
+	VOCA_DECLARE,
+	VOCA_FALSE,
+	VOCA_INCLUDE,
+	VOCA_MAIN,
+	VOCA_METHOD,
+	VOCA_MTH,
+	VOCA_NIL,
+	VOCA_POINTER,
+	VOCA_PRIMITIVE_COLON,
+	VOCA_SELF,
+	VOCA_SUPER,
+	VOCA_THIS_CONTEXT,
+	VOCA_TRUE,
+	VOCA_WORD,
 
-	KSYM_VBAR,
-	KSYM_GT,
-	KSYM_LT
+	VOCA_VBAR,
+	VOCA_GT,
+	VOCA_LT,
+
+	VOCA_EOF
 };
-typedef enum ksym_id_t ksym_id_t;
-
+typedef enum voca_id_t voca_id_t;
 
 
 static STIX_INLINE int is_spacechar (stix_uci_t c)
@@ -232,28 +220,28 @@ static STIX_INLINE int is_closing_char (stix_uci_t c)
 	}
 }
 
-static STIX_INLINE int does_token_name_match (stix_t* stix, ksym_id_t id)
+static STIX_INLINE int does_token_name_match (stix_t* stix, voca_id_t id)
 {
-	return stix->c->tok.name.len == ksyms[id].len &&
-	       stix_equalchars(stix->c->tok.name.ptr, ksyms[id].str, ksyms[id].len);
+	return stix->c->tok.name.len == vocas[id].len &&
+	       stix_equalchars(stix->c->tok.name.ptr, vocas[id].str, vocas[id].len);
 }
 
-static STIX_INLINE int is_token_symbol (stix_t* stix, ksym_id_t id)
+static STIX_INLINE int is_token_symbol (stix_t* stix, voca_id_t id)
 {
 	return stix->c->tok.type == STIX_IOTOK_SYMLIT && does_token_name_match(stix, id);
 }
 
-static STIX_INLINE int is_token_ident (stix_t* stix, ksym_id_t id)
+static STIX_INLINE int is_token_ident (stix_t* stix, voca_id_t id)
 {
 	return stix->c->tok.type == STIX_IOTOK_IDENT && does_token_name_match(stix, id);
 }
 
-static STIX_INLINE int is_token_binsel (stix_t* stix, ksym_id_t id)
+static STIX_INLINE int is_token_binsel (stix_t* stix, voca_id_t id)
 {
 	return stix->c->tok.type == STIX_IOTOK_BINSEL && does_token_name_match(stix, id);
 }
 
-static STIX_INLINE int is_token_keyword (stix_t* stix, ksym_id_t id)
+static STIX_INLINE int is_token_keyword (stix_t* stix, voca_id_t id)
 {
 	return stix->c->tok.type == STIX_IOTOK_KEYWORD && does_token_name_match(stix, id);
 }
@@ -548,27 +536,27 @@ static int get_ident (stix_t* stix)
 	else
 	{
 		/* handle reserved words */
-		if (is_token_ident(stix, KSYM_SELF))
+		if (is_token_ident(stix, VOCA_SELF))
 		{
 			stix->c->tok.type = STIX_IOTOK_SELF;
 		}
-		else if (is_token_ident(stix, KSYM_SUPER))
+		else if (is_token_ident(stix, VOCA_SUPER))
 		{
 			stix->c->tok.type = STIX_IOTOK_SUPER;
 		}
-		else if (is_token_ident(stix, KSYM_NIL))
+		else if (is_token_ident(stix, VOCA_NIL))
 		{
 			stix->c->tok.type = STIX_IOTOK_NIL;
 		}
-		else if (is_token_ident(stix, KSYM_TRUE))
+		else if (is_token_ident(stix, VOCA_TRUE))
 		{
 			stix->c->tok.type = STIX_IOTOK_TRUE;
 		}
-		else if (is_token_ident(stix, KSYM_FALSE))
+		else if (is_token_ident(stix, VOCA_FALSE))
 		{
 			stix->c->tok.type = STIX_IOTOK_FALSE;
 		}
-		else if (is_token_ident(stix, KSYM_THIS_CONTEXT))
+		else if (is_token_ident(stix, VOCA_THIS_CONTEXT))
 		{
 			stix->c->tok.type = STIX_IOTOK_THIS_CONTEXT;
 		}
@@ -728,7 +716,6 @@ retry:
 	{
 		case STIX_UCI_EOF:
 		{
-			static stix_uch_t _eof_str[] = { '<', 'E', 'O', 'F', '>' };
 			int n;
 
 			n = end_include (stix);
@@ -736,7 +723,7 @@ retry:
 			if (n >= 1) goto retry;
 
 			stix->c->tok.type = STIX_IOTOK_EOF;
-			ADD_TOKEN_STR(stix, _eof_str, 5);
+			ADD_TOKEN_STR(stix, vocas[VOCA_EOF].str, vocas[VOCA_EOF].len);
 			break;
 		}
 
@@ -1016,25 +1003,31 @@ static int end_include (stix_t* stix)
 	return 1; /* ended the included file successfully */
 }
 
-
-/* --------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+ * Byte-Code Generator
+ * --------------------------------------------------------------------- */
 
 #define MAKE_CODE(x,y) (((x) << 4) | y)
-#define MAX_CODE_INDEX               0xFFFF
+#define MAX_CODE_INDEX               0xFFFFu
+#define MAX_CODE_NARGS               0xFFFFu
 
-#define CMD_EXTEND                  0x0
-#define CMD_EXTEND_DOUBLE           0x1
-#define CMD_PUSH_INSTVAR            0x2
-#define CMD_PUSH_TEMPVAR            0x3
-#define CMD_STORE_INTO_INSTVAR      0x7 /* pop and store */
-#define CMD_STORE_INTO_CLASSVAR     0x8 /* pop and store */
-#define CMD_STORE_INTO_TEMPVAR      0x9 /* pop and store */
+#define CMD_EXTEND                       0x0
+#define CMD_EXTEND_DOUBLE                0x1
+#define CMD_PUSH_INSTVAR                 0x2
+#define CMD_PUSH_TEMPVAR                 0x3
+#define CMD_PUSH_LITERAL                 0x4
+#define CMD_POP_AND_STORE_INTO_INSTVAR   0x5 /* pop and store */
+#define CMD_POP_AND_STORE_INTO_CLASSVAR  0x6 /* pop and store */
+#define CMD_POP_AND_STORE_INTO_TEMPVAR   0x7 /* pop and store */
 
+#define CMD_SEND_MESSAGE_TO_SELF         0xA
+#define CMD_SEND_MESSAGE_TO_SUPER        0xB
 
 /* ---------------------------------- */
-#define CODE_PUSH_NIL                 0x61
-#define CODE_PUSH_TRUE                0x62
-#define CODE_PUSH_FALSE               0x63
+#define CODE_PUSH_RECEIVER            0xE0
+#define CODE_PUSH_NIL                 0xE1
+#define CODE_PUSH_TRUE                0xE2
+#define CODE_PUSH_FALSE               0xE3
 
 /* special code */
 #define CODE_DUP_STACKTOP             0xF1
@@ -1044,7 +1037,7 @@ static int end_include (stix_t* stix)
 #define CODE_RETURN_MESSAGE_RECEIVER  0xF5
 #define CODE_EXEC_PRIMITIVE           0xFF
 
-static STIX_INLINE int emit_code (stix_t* stix, stix_byte_t code)
+static STIX_INLINE int emit_byte_instruction (stix_t* stix, stix_byte_t code)
 {
 	stix_size_t i;
 
@@ -1055,7 +1048,7 @@ static STIX_INLINE int emit_code (stix_t* stix, stix_byte_t code)
 
 		i = STIX_ALIGN (i, CODE_BUFFER_ALIGN);
 
-		tmp = stix_reallocmem (stix, stix->c->mth.code.ptr, i * STIX_SIZEOF(stix_byte_t));
+		tmp = stix_reallocmem (stix, stix->c->mth.code.ptr, i * STIX_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
 		stix->c->mth.code.ptr = tmp;
@@ -1066,178 +1059,76 @@ static STIX_INLINE int emit_code (stix_t* stix, stix_byte_t code)
 	return 0;
 }
 
-static int emit_pop_and_store (stix_t* stix, stix_size_t index, int store_cmd)
+static int emit_positional_instruction (stix_t* stix, int cmd, stix_size_t index)
 {
+	STIX_ASSERT (cmd <= 0xF);
 	STIX_ASSERT (index <= MAX_CODE_INDEX);
 
 	if (index > 0xFF)
 	{
-		if (emit_code(stix, MAKE_CODE(CMD_EXTEND_DOUBLE, store_cmd)) <= -1 ||
-		    emit_code(stix, index >> 8) <= -1 ||
-		    emit_code(stix, index & 0xFF) <= -1) return -1;
+		if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND_DOUBLE, cmd)) <= -1 ||
+		    emit_byte_instruction(stix, index >> 8) <= -1 ||
+		    emit_byte_instruction(stix, index & 0xFF) <= -1) return -1;
 	}
 	else if (index > 0xF)
 	{
-		if (emit_code(stix, MAKE_CODE(CMD_EXTEND, store_cmd)) <= -1 ||
-		    emit_code(stix, index) <= -1) return -1;
+		if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND, cmd)) <= -1 ||
+		    emit_byte_instruction(stix, index) <= -1) return -1;
 	}
 	else
 	{
-		if (emit_code(stix, MAKE_CODE(store_cmd, index)) <= -1) return -1;
+		if (emit_byte_instruction(stix, MAKE_CODE(cmd, index)) <= -1) return -1;
+	}
+
+	return 0;
+
+}
+
+static int emit_send_instruction (stix_t* stix, int cmd, stix_size_t nargs, stix_size_t selector)
+{
+	/* 
+	 * 1010JJJJ KKKKKKKK                    Send literal selector K with J arguments to self
+	 * 1011JJJJ KKKKKKKK                    Send literal selector K with J arguments to super
+ 	 * 00001010 JJJJJJJJ KKKKKKKK
+	 * 00001011 JJJJJJJJ KKKKKKKK
+	 * 00011010 JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
+	 * 00011011 JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
+	 */
+
+	STIX_ASSERT (cmd <= 0xF);
+	STIX_ASSERT (nargs <= MAX_CODE_NARGS);
+	STIX_ASSERT (selector <= MAX_CODE_INDEX);
+
+	if (nargs > 0xFF || selector > 0xFF)
+	{
+		if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND_DOUBLE, cmd)) <= -1 ||
+		    emit_byte_instruction(stix, nargs >> 8) <= -1 ||
+		    emit_byte_instruction(stix, nargs & 0xFF) <= -1 ||
+		    emit_byte_instruction(stix, selector >> 8) <= -1 ||
+		    emit_byte_instruction(stix, selector & 0xFF) <= -1) return -1;
+	}
+	else if (nargs > 0xF)
+	{
+		if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND, cmd)) <= -1 ||
+		    emit_byte_instruction(stix, nargs) <= -1 ||
+		    emit_byte_instruction(stix, selector) <= -1) return -1;
+	}
+	else
+	{
+		if (emit_byte_instruction(stix, MAKE_CODE(cmd, nargs)) <= -1 ||
+		    emit_byte_instruction(stix, selector) <= -1) return -1;
 	}
 
 	return 0;
 }
 
 
-#if 0
-static int emit_push_stack (stix_t* fsc, stix_stack_operand_t type, int pos)
-{
-	/*
-	 * 0-15      0000iiii           Push Receiver Variable #iiii 
-	 * 16-31     0001iiii           Push Temporary Location #iiii
-	 * 32-63     001iiiii           Push Literal Constant #iiiii
-	 * 64-95     010iiiii           Push Literal Variable #iiiii
-	 * 128       10000000 jjkkkkkk  Push (Receiver Variable, Temporary Location, Literal Constant, Literal Variable) [jj] #kkkkkk
-	 */
+/* ---------------------------------------------------------------------
+ * Compiler
+ * --------------------------------------------------------------------- */
 
-	static int bcds[] = 
-	{
-		STIX_PUSH_RECEIVER_VARIABLE,
-		STIX_PUSH_TEMPORARY_LOCATION,
-		STIX_PUSH_LITERAL_CONSTANT,
-		STIX_PUSH_LITERAL_VARIABLE 
-	};
-	static int bounds[] = { 0x0F, 0x0F, 0x1F, 0x1F };
-
-	stix_uint8_t code[2];
-	int len = 0;
-
-	STIX_ASSERT (pos >= 0x0 &&  pos <= 0x3F); /* 0 to 63 */
-	STIX_ASSERT (type >= STIX_RECEIVER_VARIABLE && type <= STIX_LITERAL_VARIABLE);
-
-	if (pos <= bounds[type])
-	{
-		code[len++] = bcds[type] | pos;
-	}
-	else
-	{
-		code[len++] = STIX_PUSH_EXTENDED;
-		code[len++] = (type << 6)  | pos;
-	}
-
-	return emit_code (fsc, code, len);
-}
-
-static int emit_store_stack (stix_t* fsc, stix_stack_operand_t type, int pos)
-{
-	/*
-	 * 129       10000001 jjkkkkkk  Store (Receiver Variable, Temporary Location, Illegal, Literal Variable) [jj] #kkkkkk
-	 */
-
-	stix_uint8_t code[2];
-	int len = 0;
-
-	STIX_ASSERT (pos >= 0x0 &&  pos <= 0x3F); /* 0 to 63 */
-	STIX_ASSERT (type >= STIX_RECEIVER_VARIABLE && type <= STIX_LITERAL_VARIABLE);
-
-	code[len++] = STIX_STORE_EXTENDED;
-	code[len++] = (type << 6) | pos;
-
-	return emit_code (fsc, code, len);
-}
-
-static int emit_pop_store_stack (stix_t* fsc, stix_stack_operand_t type, int pos)
-{
-	/*
-	 * 96-103    01100iii           Pop and Store Receiver Variable #iii
-	 * 104-111   01101iii           Pop and Store Temporary Location #iii
-	 * 129       10000001 jjkkkkkk  Store (Receiver Variable, Temporary Location, Illegal, Literal Variable) [jj] #kkkkkk
-	 * 130       10000010 jjkkkkkk  Pop and Store (Receiver Variable, Temporary Location, Illegal, Literal Variable) [jj] #kkkkkk
-	 */
-
-	stix_uint8_t code[2];
-	int len = 0;
-
-	static int bcds[] = 
-	{
-		STIX_POP_STORE_RECEIVER_VARIABLE,
-		STIX_POP_STORE_TEMPORARY_LOCATION
-	};
-
-	STIX_ASSERT (pos >= 0x0 &&  pos <= 0x3F); /* 0 to 63 */
-	STIX_ASSERT (type >= STIX_RECEIVER_VARIABLE && type <= STIX_LITERAL_VARIABLE && type != STIX_LITERAL_CONSTANT);
-
-	switch (type)
-	{
-		case STIX_RECEIVER_VARIABLE:
-		case STIX_TEMPORARY_LOCATION:
-			if (pos <= 0x07) 
-			{
-				code[len++] = bcds[type] | pos;
-				break;
-			}
-			/* fall through */
-
-		default:
-			code[len++] = STIX_POP_STORE_EXTENDED;
-			code[len++] = (type << 6)  | pos;
-			break;
-	}
-
-	return emit_code (fsc, code, len);
-}
-
-static int emit_send_message (stix_t* fsc, stix_send_target_t target, int selector, int nargs)
-{
-	/*
-	 * 131       10000011 jjjkkkkk          Send Literal Selector #kkkkk With jjj Arguments
-	 * 132       10000100 jjjjjjjj kkkkkkkk Send Literal Selector #kkkkkkkk With jjjjjjjj Arguments
-	 * 133       10000101 jjjkkkkk          Send Literal Selector #kkkkk To Superclass With jjj Arguments
-	 * 134       10000110 jjjjjjjj kkkkkkkk Send Literal Selector #kkkkkkkk To Superclass With jjjjjjjj Arguments
-	 */
-
-	static struct { int basic; int extended; } bcds[] =
-	{
-		{ STIX_SEND_TO_SELF, STIX_SEND_TO_SELF_EXTENDED },
-		{ STIX_SEND_TO_SUPER, STIX_SEND_TO_SUPER_EXTENDED }
-	};
-
-	stix_uint8_t code[3];
-	int len = 0;
-
-	STIX_ASSERT (selector >= 0 && selector <= 0xFF);
-	STIX_ASSERT (nargs >= 0 && nargs <= 0xFF);
-
-	if (nargs <= 0x7 && selector <= 0x1F)
-	{
-		code[len++] = bcds[target].basic;
-		code[len++] = (nargs << 5) | selector;
-	}
-	else
-	{
-		code[len++] = bcds[target].extended;
-		code[len++] = nargs;
-		code[len++] = selector;
-	}
-
-	return emit_code (fsc, code, len);
-}
-
-static int emit_do_primitive (stix_t* stix, int no)
-{
-	stix_uint8_t code[2];
-	int len = 0;
-
-	STIX_ASSERT (no >= 0x0 && no <= 0xFF);
-
-	code[len++] = STIX_DO_PRIMITIVE;
-	code[len++] = no;
-
-	return emit_code (stix, code, len);
-}
-
-#endif
+static int compile_method_statement (stix_t* stix);
+static int compile_method_expression (stix_t* stix);
 
 static int add_literal (stix_t* stix, stix_oop_t lit, stix_size_t* index)
 {
@@ -1316,398 +1207,6 @@ static int add_symbol_literal (stix_t* stix, const stix_ucs_t* str, stix_size_t*
 
 /* TODO: add_array_literal, add_byte_array_literal () */
 
-#if 0
-static int parse_block_statements (stix_t* fsc)
-{
-	while (fsc->tok.type != STIX_IOTOK_RBRACK && 
-	       fsc->tok.type != STIX_IOTOK_EOF) 
-	{
-		if (parse_statement(fsc) <= -1) return -1;
-		if (fsc->tok.type != STIX_IOTOK_PERIOD) break;
-		GET_TOKEN (fsc);
-	}
-
-	return 0;
-}
-
-
-
-static int parse_primary (stix_t* fsc, const stix_uch_t* ident, int* is_super)
-{
-	/*
-	 * <primary> :=
-	 * 	identifier | <literal> | 
-	 * 	<block constructor> | ( '('<expression>')' )
-	 */
-
-	stix_vm_t* stx = fsc->stx;
-
-	if (ident == STIX_NULL) 
-	{
-		int pos;
-		stix_word_t literal;
-
-		*is_super = stix_false;
-
-		if (fsc->tok.type == STIX_IOTOK_IDENT) 
-		{
-			if (parse_primary_ident(fsc, 
-				fsc->tok.name.buffer, is_super) == -1) return -1;
-			GET_TOKEN (fsc);
-		}
-		else if (fsc->tok.type == STIX_IOTOK_CHRLIT) {
-			pos = __add_character_literal(
-				fsc, fsc->tok.name.buffer[0]);
-			if (pos == -1) return -1;
-			EMIT_PUSH_LITERAL_CONSTANT (fsc, pos);
-			GET_TOKEN (fsc);
-		}
-		else if (fsc->tok.type == STIX_IOTOK_STRLIT) {
-			pos = __add_string_literal (fsc,
-				fsc->tok.name.buffer, fsc->tok.name.size);
-			if (pos == -1) return -1;
-			EMIT_PUSH_LITERAL_CONSTANT (fsc, pos);
-			GET_TOKEN (fsc);
-		}
-		else if (fsc->tok.type == STIX_IOTOK_NUMLIT) 
-		{
-			/* TODO: other types of numbers, negative numbers, etc */
-			stix_word_t tmp;
-			STIX_STRTOI (tmp, fsc->tok.name.buffer, STIX_NULL, 10);
-			literal = STIX_TO_SMALLINT(tmp);
-
-
-			pos = __add_literal(fsc, literal);
-			if (pos <= -1) return -1;
-
-			EMIT_PUSH_LITERAL_CONSTANT (fsc, pos);
-			GET_TOKEN (fsc);
-		}
-		else if (fsc->tok.type == STIX_IOTOK_SYMLIT) {
-			pos = __add_symbol_literal (fsc,
-				fsc->tok.name.buffer, fsc->tok.name.size);
-			if (pos == -1) return -1;
-			EMIT_PUSH_LITERAL_CONSTANT (fsc, pos);
-			GET_TOKEN (fsc);
-		}
-		else if (fsc->tok.type == STIX_IOTOK_LBRACK) {
-			GET_TOKEN (fsc);
-			if (parse_block_constructor(fsc) == -1) return -1;
-		}
-		else if (fsc->tok.type == STIX_IOTOK_APAREN) {
-			/* TODO: array literal */
-		}
-		else if (fsc->tok.type == STIX_IOTOK_LPAREN) {
-			GET_TOKEN (fsc);
-			if (parse_expression(fsc) == -1) return -1;
-			if (fsc->tok.type != STIX_IOTOK_RPAREN) {
-				fsc->errnum = STIX_FSC_ERROR_NO_RPAREN;
-				return -1;
-			}
-			GET_TOKEN (fsc);
-		}
-		else {
-			fsc->errnum = STIX_FSC_ERROR_PRIMARY;
-			return -1;
-		}
-	}
-	else {
-		/*if (parse_primary_ident(fsc, fsc->tok.name.buffer) == -1) return -1;*/
-		if (parse_primary_ident(fsc, ident, is_super) == -1) return -1;
-	}
-
-	return 0;
-}
-
-static int parse_primary_ident (stix_t* fsc, const stix_uch_t* ident, int* is_super)
-{
-	stix_word_t i;
-	stix_vm_t* stx = fsc->stx;
-
-	*is_super = stix_false;
-
-	if (stix_strequal(ident, STIX_T("self"))) 
-	{
-		EMIT_CODE (fsc, PUSH_RECEIVER);
-		return 0;
-	}
-	else if (stix_strequal(ident, STIX_T("super"))) 
-	{
-		*is_super = stix_true;
-		EMIT_CODE (fsc, PUSH_RECEIVER);
-		return 0;
-	}
-	else if (stix_strequal(ident, STIX_T("nil"))) 
-	{
-		EMIT_CODE (fsc, PUSH_NIL);
-		return 0;
-	}
-	else if (stix_strequal(ident, STIX_T("true"))) 
-	{
-		EMIT_CODE (fsc, PUSH_TRUE);
-		return 0;
-	}
-	else if (stix_strequal(ident, STIX_T("false"))) 
-	{
-		EMIT_CODE (fsc, PUSH_FALSE);
-		return 0;
-	}
-
-	/* Refer to parse_assignment for identifier lookup */
-
-	for (i = 0; i < fsc->met.tmpr.count; i++) 
-	{
-		if (stix_strequal(ident, fsc->met.tmpr.names[i])) 
-		{
-			EMIT_PUSH_TEMPORARY_LOCATION (fsc, i);
-			return 0;
-		}
-	}
-
-	if (get_instance_variable_index (
-		stx, fsc->method_class, ident, &i) == 0) 
-	{
-		EMIT_PUSH_RECEIVER_VARIABLE (fsc, i);
-		return 0;
-	}
-
-	/* TODO: what is the best way to look up a class variable? */
-	/* 1. Use the class containing it and using its position */
-	/* 2. Use a primitive method after pushing the name as a symbol */
-	/* 3. Implement a vm instruction to do it */
-/*
-	if (stix_lookup_class_variable (
-		stx, fsc->method_class, ident) != stx->nil) {
-		//EMIT_LOOKUP_CLASS_VARIABLE (fsc, ident);
-		return 0;
-	}
-*/
-
-	/* TODO: IMPLEMENT POOL DICTIONARIES */
-
-	/* TODO: IMPLEMENT GLOBLAS, but i don't like this idea */
-
-	fsc->errnum = STIX_FSC_ERROR_UNDECLARED_NAME;
-	return -1;
-}
-
-static int parse_block_constructor (stix_t* fsc)
-{
-	/*
-	 * <block constructor> := '[' <block body> ']'
-	 * <block body> := [<block argument>* '|']
-	 * 	[<temporaries>] [<statements>]
-	 * <block argument> := ':'  identifier
-	 */
-
-	if (fsc->tok.type == STIX_IOTOK_COLON) 
-	{
-		do 
-		{
-			GET_TOKEN (fsc);
-
-			if (fsc->tok.type != STIX_IOTOK_IDENT) 
-			{
-				fsc->errnum = STIX_FSC_ERROR_BLOCK_ARGUMENT_NAME;
-				return -1;
-			}
-
-			/* TODO : store block arguments */
-			GET_TOKEN (fsc);
-		} 
-		while (fsc->tok.type == STIX_IOTOK_COLON);
-			
-		if (!is_vbar_tok(&fsc->tok)) 
-		{
-			fsc->errnum = STIX_FSC_ERROR_BLOCK_ARGUMENT_LIST;
-			return -1;
-		}
-
-		GET_TOKEN (fsc);
-	}
-
-	/* TODO: create a block closure */
-	if (parse_method_temporaries(fsc) == -1) return -1;
-	if (parse_block_statements(fsc) == -1) return -1;
-
-	if (fsc->tok.type != STIX_IOTOK_RBRACK) 
-	{
-		fsc->errnum = STIX_FSC_ERROR_BLOCK_NOT_CLOSED;
-		return -1;
-	}
-
-	GET_TOKEN (fsc);
-
-	/* TODO: do special treatment for block closures */
-
-	return 0;
-}
-
-static int parse_message_continuation (
-	stix_t* fsc, int is_super)
-{
-	/*
-	 * <messages> :=
-	 * 	(<unary message>+ <binary message>* [<keyword message>] ) |
-	 * 	(<binary message>+ [<keyword message>] ) |
-	 * 	<keyword message>
-	 * <cascaded messages> := (';' <messages>)*
-	 */
-	if (parse_keyword_message(fsc, is_super) == -1) return -1;
-
-	while (fsc->tok.type == STIX_IOTOK_SEMICOLON) 
-	{
-		EMIT_CODE_TEST (fsc, STIX_T("DoSpecial(DUP_RECEIVER(CASCADE))"), STIX_T(""));
-		GET_TOKEN (fsc);
-
-		if (parse_keyword_message(fsc, stix_false) == -1) return -1;
-		EMIT_CODE_TEST (fsc, STIX_T("DoSpecial(POP_TOP)"), STIX_T(""));
-	}
-
-	return 0;
-}
-
-static int parse_keyword_message (stix_t* fsc, int is_super)
-{
-	/*
-	 * <keyword message> := (keyword <keyword argument> )+
-	 * <keyword argument> := <primary> <unary message>* <binary message>*
-	 */
-
-	stix_name_t name;
-	stix_word_t pos;
-	int is_super2;
-	int nargs = 0, n;
-
-	if (parse_binary_message (fsc, is_super) == -1) return -1;
-	if (fsc->tok.type != STIX_IOTOK_KEYWORD) return 0;
-
-	if (stix_name_open(&name, 0) == STIX_NULL) {
-		fsc->errnum = STIX_FSC_ERROR_MEMORY;
-		return -1;
-	}
-	
-	do 
-	{
-		if (stix_name_adds(&name, fsc->tok.name.buffer) == -1) 
-		{
-			fsc->errnum = STIX_FSC_ERROR_MEMORY;
-			stix_name_close (&name);
-			return -1;
-		}
-
-		GET_TOKEN (fsc);
-		if (parse_primary(fsc, STIX_NULL, &is_super2) == -1) 
-		{
-			stix_name_close (&name);
-			return -1;
-		}
-
-		if (parse_binary_message(fsc, is_super2) == -1) 
-		{
-			stix_name_close (&name);
-			return -1;
-		}
-
-		nargs++;
-		/* TODO: check if it has too many arguments.. */
-	} 
-	while (fsc->tok.type == STIX_IOTOK_KEYWORD);
-
-	pos = __add_symbol_literal (fsc, name.buffer, name.size);
-	if (pos == -1) 
-	{
-		stix_name_close (&name);
-		return -1;
-	}
-
-	n = (is_super)? emit_send_to_super(fsc,nargs,pos):
-	                emit_send_to_self(fsc,nargs,pos);
-	if (n == -1) {
-		stix_name_close (&name);
-		return -1;
-	}
-
-	stix_name_close (&name);
-	return 0;
-}
-
-static int parse_binary_message (stix_t* fsc, int is_super)
-{
-	/*
-	 * <binary message> := binary-selector <binary argument>
-	 * <binary argument> := <primary> <unary message>*
-	 */
-	stix_word_t pos;
-	int is_super2;
-	int n;
-
-	if (parse_unary_message (fsc, is_super) == -1) return -1;
-
-	while (fsc->tok.type == STIX_IOTOK_BINSEL) 
-	{
-		stix_uch_t* op = stix_tok_yield (&fsc->tok, 0);
-		if (op == STIX_NULL) {
-			fsc->errnum = STIX_FSC_ERROR_MEMORY;
-			return -1;
-		}
-
-		GET_TOKEN (fsc);
-		if (parse_primary(fsc, STIX_NULL, &is_super2) == -1) {
-			stix_free (op);
-			return -1;
-		}
-
-		if (parse_unary_message(fsc, is_super2) == -1) {
-			stix_free (op);
-			return -1;
-		}
-
-		pos = __add_symbol_literal (fsc, op, stix_strlen(op));
-		if (pos == -1) {
-			stix_free (op);
-			return -1;
-		}
-
-		n = (is_super)?
-			emit_send_to_super(fsc,2,pos):
-			emit_send_to_self(fsc,2,pos);
-		if (n == -1) {
-			stix_free (op);
-			return -1;
-		}
-
-		stix_free (op);
-	}
-
-	return 0;
-}
-
-static int parse_unary_message (stix_t* fsc, int is_super)
-{
-	/* <unary message> := unarySelector */
-
-	stix_word_t pos;
-	int n;
-
-	while (fsc->tok.type == STIX_IOTOK_IDENT) 
-	{
-		pos = __add_symbol_literal (fsc, fsc->tok.name.buffer, fsc->tok.name.size);
-		if (pos == -1) return -1;
-
-		n = (is_super)? emit_send_to_super (fsc, 0, pos):
-		                emit_send_to_self (fsc, 0, pos);
-		if (n == -1) return -1;
-
-		GET_TOKEN (fsc);
-	}
-
-	return 0;
-}
-
-#endif
-
-
 static STIX_INLINE int set_class_name (stix_t* stix, const stix_ucs_t* name)
 {
 	return copy_string_to (stix, name, &stix->c->cls.name, &stix->c->cls.name_capa, 0, '\0');
@@ -1723,7 +1222,6 @@ static STIX_INLINE int add_class_level_variable (stix_t* stix, var_type_t index,
 	int n;
 
 	n =  copy_string_to (stix, name, &stix->c->cls.vars[index], &stix->c->cls.vars_capa[index], 1, ' ');
-
 	if (n >= 0) 
 	{
 		stix->c->cls.var_count[index]++;
@@ -1858,7 +1356,7 @@ done:
 	return pos;
 }
 
-static int add_assignee (stix_t* stix, stix_ucs_t* name)
+static int clone_assignee (stix_t* stix, stix_ucs_t* name)
 {
 	int n;
 	stix_size_t old_len;
@@ -1869,6 +1367,34 @@ static int add_assignee (stix_t* stix, stix_ucs_t* name)
 
 	/* update the pointer to of the name. its length is the same. */
 	name->ptr = stix->c->mth.assignees.ptr + old_len;
+	return 0;
+}
+
+static int clone_binary_selector (stix_t* stix, stix_ucs_t* name)
+{
+	int n;
+	stix_size_t old_len;
+
+	old_len = stix->c->mth.binsels.len;
+	n = copy_string_to (stix, name, &stix->c->mth.binsels, &stix->c->mth.binsels_capa, 1, '\0');
+	if (n <= -1) return -1;
+
+	/* update the pointer to of the name. its length is the same. */
+	name->ptr = stix->c->mth.binsels.ptr + old_len;
+	return 0;
+}
+
+static int clone_keyword (stix_t* stix, stix_ucs_t* name)
+{
+	int n;
+	stix_size_t old_len;
+
+	old_len = stix->c->mth.kwsels.len;
+	n = copy_string_to (stix, name, &stix->c->mth.kwsels, &stix->c->mth.kwsels_capa, 1, '\0');
+	if (n <= -1) return -1;
+
+	/* update the pointer to of the name. its length is the same. */
+	name->ptr = stix->c->mth.kwsels.ptr + old_len;
 	return 0;
 }
 
@@ -1905,13 +1431,13 @@ static int compile_class_level_variables (stix_t* stix)
 		/* process variable modifiers */
 		GET_TOKEN (stix);
 
-		if (is_token_symbol(stix, KSYM_CLASS))
+		if (is_token_symbol(stix, VOCA_CLASS))
 		{
 			/* #dcl(#class) */
 			dcl_type = VAR_CLASS;
 			GET_TOKEN (stix);
 		}
-		else if (is_token_symbol(stix, KSYM_CLASSINST))
+		else if (is_token_symbol(stix, VOCA_CLASSINST))
 		{
 			/* #dcl(#classinst) */
 			dcl_type = VAR_CLASSINST;
@@ -1939,6 +1465,9 @@ printf ("duplicate variable name type %d pos %lu\n", var.type, var.pos);
 				set_syntax_error (stix, STIX_SYNERR_VARNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
 				return -1;
 			}
+
+/* TOOD: CHECK IF IT CONFLICTS WITH GLOBAL VARIABLE NAMES */
+/* TODO: ------------------------------------------------ */
 
 			if (add_class_level_variable(stix, dcl_type, &stix->c->tok.name) <= -1) return -1;
 		}
@@ -2090,7 +1619,7 @@ static int compile_method_temporaries (stix_t* stix)
 	 * variable-list := identifier*
 	 */
 
-	if (!is_token_binsel(stix, KSYM_VBAR)) 
+	if (!is_token_binsel(stix, VOCA_VBAR)) 
 	{
 		/* return without doing anything if | is not found.
 		 * this is not an error condition */
@@ -2113,7 +1642,7 @@ static int compile_method_temporaries (stix_t* stix)
 		GET_TOKEN (stix);
 	}
 
-	if (!is_token_binsel(stix, KSYM_VBAR)) 
+	if (!is_token_binsel(stix, VOCA_VBAR)) 
 	{
 		set_syntax_error (stix, STIX_SYNERR_VBAR, &stix->c->tok.loc, &stix->c->tok.name);
 		return -1;
@@ -2131,14 +1660,14 @@ static int compile_method_primitive (stix_t* stix)
 	int prim_no;
 	const stix_uch_t* ptr, * end;
 
-	if (!is_token_binsel(stix, KSYM_LT)) 
+	if (!is_token_binsel(stix, VOCA_LT)) 
 	{
 		/* return if < is not seen. it is not an error condition */
 		return 0;
 	}
 
 	GET_TOKEN (stix);
-	if (!is_token_keyword(stix, KSYM_PRIMITIVE_COLON))
+	if (!is_token_keyword(stix, VOCA_PRIMITIVE_COLON))
 	{
 		set_syntax_error (stix, STIX_SYNERR_PRIMITIVE, &stix->c->tok.loc, &stix->c->tok.name);
 		return -1;
@@ -2171,11 +1700,11 @@ static int compile_method_primitive (stix_t* stix)
 		ptr++;
 	}
 
-	if (emit_code(stix, CODE_EXEC_PRIMITIVE) <= -1 ||
-	    emit_code(stix, prim_no) <= -1) return -1;
+	if (emit_byte_instruction(stix, CODE_EXEC_PRIMITIVE) <= -1 ||
+	    emit_byte_instruction(stix, prim_no) <= -1) return -1;
 
 	GET_TOKEN (stix);
-	if (!is_token_binsel(stix, KSYM_GT)) 
+	if (!is_token_binsel(stix, VOCA_GT)) 
 	{
 		set_syntax_error (stix, STIX_SYNERR_GT, &stix->c->tok.loc, &stix->c->tok.name);
 		return -1;
@@ -2185,25 +1714,17 @@ static int compile_method_primitive (stix_t* stix)
 	return 0;
 }
 
-static int compile_method_expression (stix_t* stix);
 
 
 static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_ioloc_t* name_loc, var_info_t* var)
 {
 	stix_ssize_t index;
+	STIX_MEMSET (var, 0, STIX_SIZEOF(*var));
 
 	index = find_temporary_variable (stix, name);
 	if (index >= 0)
 	{
-		STIX_MEMSET (&var, 0, STIX_SIZEOF(var));
-		if (index < stix->c->mth.tmpr_nargs)
-		{
-			var->type = VAR_ARGUMENT;
-		}
-		else
-		{
-			var->type = VAR_TEMPORARY;
-		}
+		var->type = (index < stix->c->mth.tmpr_nargs)? VAR_ARGUMENT: VAR_TEMPORARY;
 		var->pos = index;
 	}
 	else 
@@ -2229,7 +1750,8 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 
 /* TOOD: index must be incremented witht eh number of classinstancevariables counts from var.cls 
  * verify if the below increment is correct*/
-					var->pos += STIX_CLASS_SELFSPEC_CLASSINSTVAR(STIX_OOP_TO_SMINT(var->cls->selfspec));
+					var->pos += STIX_CLASS_NAMED_INSTVARS + 
+					            STIX_CLASS_SELFSPEC_CLASSINSTVAR(STIX_OOP_TO_SMINT(var->cls->selfspec));
 					break;
 
 				case VAR_CLASSINST:
@@ -2242,7 +1764,9 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 					}
 
 					/* to a class object itself, a class-instance variable is
-					 * just an instance variriable */
+					 * just an instance variriable. but these are located
+					 * after the named instance variables. */
+					var->pos += STIX_CLASS_NAMED_INSTVARS;
 					break;
 
 				default:
@@ -2251,6 +1775,10 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 					return -1;
 			}
 		}
+		/* TODO 
+		else if (find global variable... )
+			var->type = VAR_GLOBAL;
+		*/
 		else
 		{
 			/* undeclared identifier */
@@ -2270,128 +1798,234 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 	return 0;
 }
 
-
-static int compile_assignment_expression (stix_t* stix, const stix_ucs_t* assignee, const stix_ioloc_t* assignee_loc)
+static int compile_block_statements (stix_t* stix)
 {
-	/*
-	 * assignment-expression := identifier ":=" method-expression
+	while (stix->c->tok.type != STIX_IOTOK_RBRACK && 
+	       stix->c->tok.type != STIX_IOTOK_EOF) 
+	{
+		if (compile_method_statement(stix) <= -1) return -1;
+		if (stix->c->tok.type != STIX_IOTOK_PERIOD) break;
+		GET_TOKEN (stix);
+	}
+
+	return 0;
+}
+
+static int compile_block_temporaries (stix_t* stix)
+{
+	/* 
+	 * block-temporaries := "|" variable-list "|"
+	 * variable-list := identifier*
 	 */
 
-	var_info_t var;
-
-printf ("ASSIGNIUNG TO ....");
-print_ucs (assignee);
-printf ("\n");
-
-	if (get_variable_info (stix, assignee, assignee_loc, &var) <= -1) return -1;
-
-	switch (var.type)
+	if (!is_token_binsel(stix, VOCA_VBAR)) 
 	{
-		case VAR_ARGUMENT:
-			/* assigning to an argument is not allowed */
-			set_syntax_error (stix, STIX_SYNERR_VARARG, assignee_loc, assignee);
-			return -1;
-
-		case VAR_TEMPORARY:
-			return emit_pop_and_store (stix, var.pos, CMD_STORE_INTO_TEMPVAR);
-
-
-		case VAR_INSTANCE:
-		case VAR_CLASSINST:
-			return emit_pop_and_store (stix, var.pos, CMD_STORE_INTO_INSTVAR);
-
-		case VAR_CLASS:
-			/* TODO: what instruction to generate for class variable access... */
-			
-			return -1;
-
-
-		default:
-			stix->errnum = STIX_EINTERN;
-			return -1;
+		/* return without doing anything if | is not found.
+		 * this is not an error condition */
+		return 0;
 	}
+
+	GET_TOKEN (stix);
+	while (stix->c->tok.type == STIX_IOTOK_IDENT) 
+	{
+/*
+		if (find_temporary_variable(stix, &stix->c->tok.name) >= 0)
+		{
+			set_syntax_error (stix, STIX_SYNERR_TMPRNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+
+		if (add_temporary_variable(stix, &stix->c->tok.name) <= -1) return -1;
+		stix->c->mth.tmpr_count++;
+* */
+
+/* TODO: check if tmpr_count exceededs LIMIT (SMINT MAX). also bytecode max */
+		GET_TOKEN (stix);
+	}
+
+	if (!is_token_binsel(stix, VOCA_VBAR)) 
+	{
+		set_syntax_error (stix, STIX_SYNERR_VBAR, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	GET_TOKEN (stix);
+	return 0;
+}
+
+static int compile_block_expression (stix_t* stix)
+{
+	/*
+	 * block-expression := "[" block-body "]"
+	 * block-body := (block-argument* "|")? block-temporaries? method-statement*
+	 * block-argument := ":" identifier
+	 */
+
+/* TODO: GENERATE JUMP INSTRUCTION */
+	if (stix->c->tok.type == STIX_IOTOK_COLON) 
+	{
+		/* block temporary variables */
+		do 
+		{
+			GET_TOKEN (stix);
+
+			if (stix->c->tok.type != STIX_IOTOK_IDENT) 
+			{
+				/* wrong argument name. identifier expected */
+				set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
+				return -1;
+			}
+
+			/* TODO : store block arguments */
+/* TODO: check conflicting names as well */
+			GET_TOKEN (stix);
+		} 
+		while (stix->c->tok.type == STIX_IOTOK_COLON);
+
+		if (!is_token_binsel(stix, VOCA_VBAR))
+		{
+			set_syntax_error (stix, STIX_SYNERR_VBAR, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+
+		GET_TOKEN (stix);
+	}
+
+	/* TODO: create a block closure */
+	if (compile_method_temporaries(stix) <= -1 ||
+	    compile_block_statements(stix) <= -1) return -1;
+
+	if (stix->c->tok.type != STIX_IOTOK_RBRACK) 
+	{
+		set_syntax_error (stix, STIX_SYNERR_RBRACK, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	GET_TOKEN (stix);
+
+	/* TODO: do special treatment for block closures */
+/* TODO: GENERATE BLOCK CONTEXT CREATION INSTRUCTION */
+
+	return 0;
 }
 
 
-
-static int compile_expression_primary (stix_t* stix, const stix_ucs_t* ident, const stix_ioloc_t* ident_loc)
+static int compile_expression_primary (stix_t* stix, const stix_ucs_t* ident, const stix_ioloc_t* ident_loc, int* to_super)
 {
 	/*
 	 * expression-primary := identifier | literal | block-constructor | ( "(" method-expression ")" )
 	 */
 
 	var_info_t var;
+	int read_next_token = 0;
+
+	*to_super = 0;
 
 	if (ident) 
 	{
-	handle_ident:
-		/*if (parse_primary_ident(stix, stix->tok.name.buffer) == -1) return -1;*/
-		if (compile_primary_ident(stix, ident, ident_loc) <= -1) return -1;
+		/* the caller has read the identifier and the next word */
 
+	handle_ident:
 		if (get_variable_info (stix, ident, ident_loc, &var) <= -1) return -1;
+
+		switch (var.type)
+		{
+			case VAR_ARGUMENT:
+			case VAR_TEMPORARY:
+printf ("push tempvar %d\n", (int)var.pos);
+				if (emit_positional_instruction (stix, CMD_PUSH_TEMPVAR, var.pos) <= -1) return -1;
+				break;
+
+			case VAR_INSTANCE:
+			case VAR_CLASSINST:
+printf ("push instvar %d\n", (int)var.pos);
+				if (emit_positional_instruction (stix, CMD_PUSH_INSTVAR, var.pos) <= -1) return -1;
+				break;
+
+			case VAR_CLASS:
+				/* TODO: what instruction to generate for class variable access... */
+				return -1;
+
+			case VAR_GLOBAL:
+				/* TODO: .............................. */
+				return -1;
+
+			default:
+				stix->errnum = STIX_EINTERN;
+				return -1;
+		}
+
+		if (read_next_token) GET_TOKEN (stix);
 	}
 	else
 	{
-		/*stix_size_t index;*/
+		stix_size_t index;
 
 		switch (stix->c->tok.type)
 		{
 			case STIX_IOTOK_IDENT:
 				ident = &stix->c->tok.name;
 				ident_loc = &stix->c->tok.loc;
+				read_next_token = 1;
 				goto handle_ident;
 
-				if (compile_variable_push(stix, &stix->c->tok.name, &stix->c->tok.loc) <= -1) return -1;
+			case STIX_IOTOK_SELF:
+printf ("push receiver...\n");
+				if (emit_byte_instruction(stix, CODE_PUSH_RECEIVER) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
 
-			case STIX_IOTOK_SELF:
-				/* TODO: */
-				break;
-
 			case STIX_IOTOK_SUPER:
-				/* TODO: */
+printf ("push receiver(super)...\n");
+				if (emit_byte_instruction(stix, CODE_PUSH_RECEIVER) <= -1) return -1;
+				GET_TOKEN (stix);
+				*to_super = 1;
 				break;
 
 			case STIX_IOTOK_NIL:
-				if (emit_code(stix, CODE_PUSH_NIL) <= -1) return -1;
+printf ("push nil...\n");
+				if (emit_byte_instruction(stix, CODE_PUSH_NIL) <= -1) return -1;
+				GET_TOKEN (stix);
 				break;
 
 			case STIX_IOTOK_TRUE:
-				if (emit_code(stix, CODE_PUSH_TRUE) <= -1) return -1;
+printf ("push true...\n");
+				if (emit_byte_instruction(stix, CODE_PUSH_TRUE) <= -1) return -1;
+				GET_TOKEN (stix);
 				break;
 
 			case STIX_IOTOK_FALSE:
-				if (emit_code(stix, CODE_PUSH_FALSE) <= -1) return -1;
+printf ("push false...\n");
+				if (emit_byte_instruction(stix, CODE_PUSH_FALSE) <= -1) return -1;
+				GET_TOKEN (stix);
 				break;
 
 			case STIX_IOTOK_THIS_CONTEXT:
 				/* TODO */
+				GET_TOKEN (stix);
 				break;
 
 			case STIX_IOTOK_CHRLIT:
-/*
 				STIX_ASSERT (stix->c->tok.name.len == 1);
-				if (add_character_literal(stix, stix->c->tok.name[0], &index) <= -1) return -1;
-				EMIT_PUSH_LITERAL_CONSTANT (stix, index);
+				if (add_character_literal(stix, stix->c->tok.name.ptr[0], &index) <= -1 ||
+				    emit_positional_instruction(stix, CMD_PUSH_LITERAL, index) <= -1) return -1;
+printf ("push character literal %d\n", (int)index);
 				GET_TOKEN (stix);
-*/
 				break;
 
 			case STIX_IOTOK_STRLIT:
-/*
-				if (add_string_literal(stix, stix->c->tok.name, &index) <= -1) return -1;
-				EMIT_PUSH_LITERAL_CONSTANT (stix, index);
+				if (add_string_literal(stix, &stix->c->tok.name, &index) <= -1 ||
+				    emit_positional_instruction(stix, CMD_PUSH_LITERAL, index) <= -1) return -1;
+printf ("push string literal %d\n", (int)index);
 				GET_TOKEN (stix);
-*/
+
 				break;
 
 			case STIX_IOTOK_SYMLIT:
-/*
-				if (add_symbol_literal(stix, stix->c->tok.name, &index) <= -1) return -1;
-				EMIT_PUSH_LITERAL_CONSTANT (stix, index);
+				if (add_symbol_literal(stix, &stix->c->tok.name, &index) <= -1 ||
+				    emit_positional_instruction(stix, CMD_PUSH_LITERAL, index) <= -1) return -1;
+printf ("push symbol literal %d\n", (int)index);
 				GET_TOKEN (stix);
-*/
 				break;
 
 			case STIX_IOTOK_NUMLIT:
@@ -2419,10 +2053,8 @@ static int compile_expression_primary (stix_t* stix, const stix_ucs_t* ident, co
 				break;
 
 			case STIX_IOTOK_LBRACK:
-/*
 				GET_TOKEN (stix);
-				if (parse_block_constructor(stix) <= -1) return -1;
-*/
+				if (compile_block_expression(stix) <= -1) return -1;
 				break;
 
 			case STIX_IOTOK_LPAREN:
@@ -2445,23 +2077,165 @@ static int compile_expression_primary (stix_t* stix, const stix_ucs_t* ident, co
 	return 0;
 }
 
+static stix_byte_t send_message_cmd[] = 
+{
+	CMD_SEND_MESSAGE_TO_SELF,
+	CMD_SEND_MESSAGE_TO_SUPER
+};
+
+static int compile_unary_message (stix_t* stix, int to_super)
+{
+	stix_size_t index;
+
+	while (stix->c->tok.type == STIX_IOTOK_IDENT) 
+	{
+		if (add_symbol_literal(stix, &stix->c->tok.name, &index) <= -1 ||
+		    emit_send_instruction(stix, send_message_cmd[to_super], 0, index) <= -1) return -1;
+printf ("send message %d with 0 arguments to %s\n", (int)index, (to_super? "super": "self"));
+		GET_TOKEN (stix);
+	}
+
+	return 0;
+}
+
+static int compile_binary_message (stix_t* stix, int to_super)
+{
+	/*
+	 * binary-message := binary-selector binary-argument
+	 * binary-argument := expression-primary unary-message*
+	 */
+	stix_size_t index;
+	int to_super2;
+	stix_ucs_t binsel;
+
+	if (compile_unary_message(stix, to_super) <= -1) return -1;
+
+	while (stix->c->tok.type == STIX_IOTOK_BINSEL) 
+	{
+		binsel = stix->c->tok.name;
+		if (clone_binary_selector(stix, &binsel) <= -1) return -1;
+
+		GET_TOKEN (stix);
+		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, &to_super2) <= -1  ||
+		    compile_unary_message(stix, to_super2) <= -1 ||
+		    add_symbol_literal(stix, &binsel, &index) <= -1 ||
+		    emit_send_instruction(stix, send_message_cmd[to_super], 2, index) <= -1) 
+		{
+			stix->c->mth.binsels.len -= binsel.len;
+			return -1;
+		}
+printf ("send message %d with 2 arguments to %s\n", (int)index, (to_super? "super": "self"));
+		stix->c->mth.binsels.len -= binsel.len;
+	}
+
+	return 0;
+}
+
+static int compile_keyword_message (stix_t* stix, int to_super)
+{
+	/*
+	 * keyword-message := (keyword keyword-argument)+
+	 * keyword-argument := expression-primary unary-message* binary-message*
+	 */
+
+	stix_size_t index;
+	int to_super2;
+	stix_ucs_t kw, kwsel;
+	stix_ioloc_t kwsel_loc;
+	stix_size_t kwsel_len;
+	stix_size_t nargs = 0;
+
+	if (compile_binary_message(stix, to_super) <= -1) return -1;
+	if (stix->c->tok.type != STIX_IOTOK_KEYWORD) return 0;
+
+	kwsel_loc = stix->c->tok.loc;
+	kwsel_len = stix->c->mth.kwsels.len;
+
+	kw = stix->c->tok.name;
+	if (clone_keyword(stix, &kw) <= -1) return -1;
+
+	do 
+	{
+		GET_TOKEN (stix);
+		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, &to_super2) <= -1 ||
+		    compile_binary_message(stix, to_super2) <= -1) goto oops;
+
+		if (nargs >= MAX_CODE_NARGS)
+		{
+			set_syntax_error (stix, STIX_SYNERR_ARGFLOOD, &kwsel_loc, &kwsel); 
+			goto oops;
+		}
+
+		nargs++;
+
+		kw = stix->c->tok.name;
+		if (clone_keyword(stix, &kw) <= -1) goto oops;
+	} 
+	while (stix->c->tok.type == STIX_IOTOK_KEYWORD);
+
+	kwsel.ptr = &stix->c->mth.kwsels.ptr[kwsel_len];
+	kwsel.len = stix->c->mth.kwsels.len - kwsel_len;
+
+	if (add_symbol_literal(stix, &kwsel, &index) <= -1 ||
+	    emit_send_instruction(stix, send_message_cmd[to_super], nargs, index) <= -1) goto oops;
+printf ("send message %d with %d arguments to %s\n", (int)index, (int)nargs, (to_super? "super": "self"));
+	stix->c->mth.kwsels.len = kwsel_len;
+	return 0;
+
+oops:
+	stix->c->mth.kwsels.len = kwsel_len;
+	return -1;
+}
+
+static int compile_message_expression (stix_t* stix, int to_super)
+{
+	/*
+	 * message-expression := single-message cascaded-message
+	 * single-message := 
+	 *     (unary-message+ binary-message* keyword-message?) |
+	 *     (binary-message+ keyword-message?) |
+	 *     keyword-message
+	 * 
+	 * keyword-message := (keyword keyword-argument)+
+	 * keyword-argument := expression-primary unary-message* binary-message*
+	 * binary-message := binary-selector binary-argument
+	 * binary-argument := expression-primary unary-message*
+	 * unary-message := unary-selector
+	 * cascaded-message := (";" single-message)*
+	 * cascaded-message := (";" single-message)*
+	 */
+
+	if (compile_keyword_message(stix, to_super) <= -1) return -1;
+
+	while (stix->c->tok.type == STIX_IOTOK_SEMICOLON) 
+	{
+		/* handle message cascading */
+printf ("DoSpecial(DUP_RECEIVER(CASCADE)) ....\n");
+/*T ODO: emit code */
+		GET_TOKEN (stix);
+
+		if (compile_keyword_message(stix, 0) <= -1) return -1;
+printf ("DoSpecial(POP_TOP) ....\n");
+/*T ODO: emit code */
+	}
+
+	return 0;
+}
 
 static int compile_basic_expression (stix_t* stix, const stix_ucs_t* ident, const stix_ioloc_t* ident_loc)
 {
 	/*
-	 * basic-expression := expression-primary (method-messages method-cascaded-messages)?
+	 * basic-expression := expression-primary message-expression?
 	 */
-	int is_super;
+	int to_super;
 
-	if (compile_expression_primary(stix, ident, ident_loc) <= -1) return -1;
-#if 0
-	if (stix->tok.type != STIX_IOTOK_EOF && 
-	    stix->tok.type != STIX_IOTOK_RBRACE && 
-	    stix->tok.type != STIX_IOTOK_PERIOD) 
+	if (compile_expression_primary(stix, ident, ident_loc, &to_super) <= -1) return -1;
+	if (stix->c->tok.type != STIX_IOTOK_EOF && 
+	    stix->c->tok.type != STIX_IOTOK_RBRACE && 
+	    stix->c->tok.type != STIX_IOTOK_PERIOD) 
 	{
-		if (parse_message_continuation(stix, is_super) == -1) return -1;
+		if (compile_message_expression(stix, to_super) <= -1) return -1;
 	}
-#endif
 
 	return 0;
 }
@@ -2471,10 +2245,12 @@ static int compile_method_expression (stix_t* stix)
 	/*
 	 * method-expression := method-assignment-expression | basic-expression
 	 * method-assignment-expression := identifier ":=" method-expression
-	 * basic-expression := method-expression-primary (message cascaded-message)?
+
 	 */
 
 	stix_ucs_t assignee;
+
+	STIX_MEMSET (&assignee, 0, STIX_SIZEOF(assignee));
 
 	if (stix->c->tok.type == STIX_IOTOK_IDENT) 
 	{
@@ -2482,15 +2258,56 @@ static int compile_method_expression (stix_t* stix)
 		/* store the assignee name to the internal buffer
 		 * to make it valid after the token buffer has been overwritten */
 		assignee = stix->c->tok.name;
-		if (add_assignee(stix, &assignee) <= -1) return -1;
+		if (clone_assignee(stix, &assignee) <= -1) return -1;
 
 		assignee_loc = stix->c->tok.loc;
 
 		GET_TOKEN (stix);
 		if (stix->c->tok.type == STIX_IOTOK_ASSIGN) 
 		{
+			/* assignment expression */
+			var_info_t var;
+
 			GET_TOKEN (stix);
-			if (compile_assignment_expression(stix, &assignee, &assignee_loc) <= -1) goto oops;
+
+		printf ("ASSIGNIUNG TO ....");
+		print_ucs (&assignee);
+		printf ("\n");
+
+			if (compile_method_expression(stix) <= -1 ||
+			    get_variable_info(stix, &assignee, &assignee_loc, &var) <= -1) return -1;
+
+			switch (var.type)
+			{
+				case VAR_ARGUMENT:
+					/* assigning to an argument is not allowed */
+					set_syntax_error (stix, STIX_SYNERR_VARARG, &assignee_loc, &assignee);
+					return -1;
+
+				case VAR_TEMPORARY:
+		printf ("emit pop and store to tempvar %d\n", (int)var.pos);
+					if (emit_positional_instruction (stix, CMD_POP_AND_STORE_INTO_TEMPVAR, var.pos) <= -1) return -1;
+					break;
+
+				case VAR_INSTANCE:
+				case VAR_CLASSINST:
+		printf ("emit pop and store to instvar %d\n", (int)var.pos);
+					if (emit_positional_instruction (stix, CMD_POP_AND_STORE_INTO_INSTVAR, var.pos) <= -1) return -1;
+					break;
+
+				case VAR_CLASS:
+					/* TODO: what instruction to generate for class variable access... */
+
+					return -1;
+
+				case VAR_GLOBAL:
+					/* TODO: .............................. */
+					return -1;
+
+				default:
+					stix->errnum = STIX_EINTERN;
+					return -1;
+			}
 		}
 		else 
 		{
@@ -2523,7 +2340,8 @@ static int compile_method_statement (stix_t* stix)
 		/* handle the return statement */
 		GET_TOKEN (stix);
 		if (compile_method_expression(stix) <= -1) return -1;
-		return emit_code (stix, CODE_RETURN_MESSAGE_STACKTOP);
+printf ("return message stacktop\n");
+		return emit_byte_instruction (stix, CODE_RETURN_MESSAGE_STACKTOP);
 	}
 	else 
 	{
@@ -2549,19 +2367,26 @@ static int compile_method_statements (stix_t* stix)
 			{
 				/* period after a statement */
 				GET_TOKEN (stix);
-				if (stix->c->tok.type == STIX_IOTOK_EOF && stix->c->tok.type == STIX_IOTOK_RBRACE) break;
+
+				if (stix->c->tok.type == STIX_IOTOK_EOF ||
+				    stix->c->tok.type == STIX_IOTOK_RBRACE) break;
 			}
-			else 
+			else
 			{
-				if (stix->c->tok.type == STIX_IOTOK_EOF && stix->c->tok.type == STIX_IOTOK_RBRACE) break;
-				set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
+				if (stix->c->tok.type == STIX_IOTOK_EOF ||
+				    stix->c->tok.type == STIX_IOTOK_RBRACE) break;
+				else 
+				{
+					set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
+					return -1;
+				}
 			}
 		}
 		while (1);
 	}
 
 	/* TODO: size optimization. emit code_return_receiver only if it's not previously emitted */
-	return emit_code (stix, CODE_RETURN_MESSAGE_RECEIVER);
+	return emit_byte_instruction (stix, CODE_RETURN_MESSAGE_RECEIVER);
 }
 
 static int add_compiled_method (stix_t* stix)
@@ -2570,14 +2395,20 @@ static int add_compiled_method (stix_t* stix)
 	stix_oop_method_t mth; /* method */
 	stix_oop_t code;
 	stix_size_t tmp_count = 0;
+	stix_size_t i;
 
 	name = stix_makesymbol (stix, stix->c->mth.name.ptr, stix->c->mth.name.len);
 	if (!name) return -1;
 	stix_pushtmp (stix, &name); tmp_count++;
 
-/* TODO: check if this stix_instantiate is GC safe...as it passed mth.literals... */
-	mth = (stix_oop_method_t)stix_instantiate (stix, stix->_method, stix->c->mth.literals, stix->c->mth.literal_count);
+	/* The variadic data part passed to stix_instantiate() is not GC-safe */
+	mth = (stix_oop_method_t)stix_instantiate (stix, stix->_method, STIX_NULL, stix->c->mth.literal_count);
 	if (!mth) goto oops;
+	for (i = 0; i < stix->c->mth.literal_count; i++)
+	{
+		/* let's do the variadic data initialization here */
+		mth->literal[i] = stix->c->mth.literals[i];
+	}
 	stix_pushtmp (stix, (stix_oop_t*)&mth); tmp_count++;
 
 	code = stix_instantiate (stix, stix->_byte_array, stix->c->mth.code.ptr, stix->c->mth.code.len);
@@ -2610,6 +2441,8 @@ static int compile_method_definition (stix_t* stix)
 	stix->c->mth.type = MTH_INSTANCE;
 	stix->c->mth.text.len = 0;
 	stix->c->mth.assignees.len = 0;
+	stix->c->mth.binsels.len = 0;
+	stix->c->mth.kwsels.len = 0;
 	stix->c->mth.name.len = 0;
 	STIX_MEMSET (&stix->c->mth.name_loc, 0, STIX_SIZEOF(stix->c->mth.name_loc));
 	stix->c->mth.tmprs.len = 0;
@@ -2618,13 +2451,12 @@ static int compile_method_definition (stix_t* stix)
 	stix->c->mth.literal_count = 0;
 	stix->c->mth.code.len = 0;
 
-
 	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
 	{
 		/* process method modifiers  */
 		GET_TOKEN (stix);
 
-		if (is_token_symbol(stix, KSYM_CLASS))
+		if (is_token_symbol(stix, VOCA_CLASS))
 		{
 			/* #method(#class) */
 			stix->c->mth.type = MTH_CLASS;
@@ -2794,28 +2626,28 @@ static int __compile_class_definition (stix_t* stix)
 
 		GET_TOKEN (stix);
 
-		if (is_token_symbol(stix, KSYM_BYTE))
+		if (is_token_symbol(stix, VOCA_BYTE))
 		{
 			/* #class(#byte) */
 			stix->c->cls.flags |= CLASS_INDEXED;
 			stix->c->cls.indexed_type = STIX_OBJ_TYPE_BYTE;
 			GET_TOKEN (stix);
 		}
-		else if (is_token_symbol(stix, KSYM_CHARACTER))
+		else if (is_token_symbol(stix, VOCA_CHARACTER))
 		{
 			/* #class(#character) */
 			stix->c->cls.flags |= CLASS_INDEXED;
 			stix->c->cls.indexed_type = STIX_OBJ_TYPE_CHAR;
 			GET_TOKEN (stix);
 		}
-		else if (is_token_symbol(stix, KSYM_WORD))
+		else if (is_token_symbol(stix, VOCA_WORD))
 		{
 			/* #class(#word) */
 			stix->c->cls.flags |= CLASS_INDEXED;
 			stix->c->cls.indexed_type = STIX_OBJ_TYPE_WORD;
 			GET_TOKEN (stix);
 		}
-		else if (is_token_symbol(stix, KSYM_POINTER))
+		else if (is_token_symbol(stix, VOCA_POINTER))
 		{
 			/* #class(#pointer) */
 			stix->c->cls.flags |= CLASS_INDEXED;
@@ -2996,7 +2828,7 @@ printf ("\n");
 	if (stix->c->cls.flags & CLASS_EXTENDED)
 	{
 		/* when a class is extended, a new variable cannot be added */
-		if (is_token_symbol(stix, KSYM_DCL) || is_token_symbol(stix, KSYM_DECLARE))
+		if (is_token_symbol(stix, VOCA_DCL) || is_token_symbol(stix, VOCA_DECLARE))
 		{
 			set_syntax_error (stix, STIX_SYNERR_DCLBANNED, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
@@ -3009,7 +2841,8 @@ printf ("\n");
 	else
 	{
 		/* a new class including an internally defined class object */
-		while (is_token_symbol(stix, KSYM_DCL) || is_token_symbol(stix, KSYM_DECLARE))
+
+		while (is_token_symbol(stix, VOCA_DCL) || is_token_symbol(stix, VOCA_DECLARE))
 		{
 			/* variable definition. #dcl or #declare */
 			GET_TOKEN (stix);
@@ -3019,7 +2852,7 @@ printf ("\n");
 		if (make_defined_class(stix) <= -1) return -1;
 	}
 
-	while (is_token_symbol(stix, KSYM_MTH) || is_token_symbol(stix, KSYM_METHOD))
+	while (is_token_symbol(stix, VOCA_MTH) || is_token_symbol(stix, VOCA_METHOD))
 	{
 		/* method definition. #mth or #method */
 		GET_TOKEN (stix);
@@ -3086,7 +2919,7 @@ static int compile_stream (stix_t* stix)
 
 	while (stix->c->tok.type != STIX_IOTOK_EOF)
 	{
-		if (is_token_symbol(stix, KSYM_INCLUDE))
+		if (is_token_symbol(stix, VOCA_INCLUDE))
 		{
 			/* #include 'xxxx' */
 			GET_TOKEN (stix);
@@ -3097,14 +2930,14 @@ static int compile_stream (stix_t* stix)
 			}
 			if (begin_include(stix) <= -1) return -1;
 		}
-		else if (is_token_symbol(stix, KSYM_CLASS))
+		else if (is_token_symbol(stix, VOCA_CLASS))
 		{
 			/* #class Selfclass(Superclass) { } */
 			GET_TOKEN (stix);
 			if (compile_class_definition(stix) <= -1) return -1;
 		}
 #if 0
-		else if (is_token_symbol(stix, KSYM_MAIN))
+		else if (is_token_symbol(stix, VOCA_MAIN))
 		{
 			/* #main */
 			/* TODO: implement this */
@@ -3143,7 +2976,10 @@ static void gc_compiler (stix_t* stix)
 
 		for (i = 0; i < stix->c->mth.literal_count; i++)
 		{
-			stix->c->mth.literals[i] = stix_moveoop (stix, stix->c->mth.literals[i]);
+			if (STIX_OOP_IS_POINTER(stix->c->mth.literals[i]))
+			{
+				stix->c->mth.literals[i] = stix_moveoop (stix, stix->c->mth.literals[i]);
+			}
 		}
 	}
 }
@@ -3168,6 +3004,8 @@ static void fini_compiler (stix_t* stix)
 
 		if (stix->c->mth.text.ptr) stix_freemem (stix, stix->c->mth.text.ptr);
 		if (stix->c->mth.assignees.ptr) stix_freemem (stix, stix->c->mth.assignees.ptr);
+		if (stix->c->mth.binsels.ptr) stix_freemem (stix, stix->c->mth.binsels.ptr);
+		if (stix->c->mth.kwsels.ptr) stix_freemem (stix, stix->c->mth.kwsels.ptr);
 		if (stix->c->mth.name.ptr) stix_freemem (stix, stix->c->mth.name.ptr);
 		if (stix->c->mth.tmprs.ptr) stix_freemem (stix, stix->c->mth.tmprs.ptr);
 		if (stix->c->mth.code.ptr) stix_freemem (stix, stix->c->mth.code.ptr);

@@ -523,7 +523,7 @@ struct stix_class_t
 	stix_oop_set_t  classmths;     /* class methods, MethodDictionary */
 
 	/* indexed part afterwards */
-	stix_oop_t      classvar[1];   /* most classes have no class variables. better to be 0 */
+	stix_oop_t      vars[1];   /* class instance variables and class variables. */
 };
 typedef struct stix_class_t stix_class_t;
 typedef struct stix_class_t* stix_oop_class_t;

@@ -270,6 +270,7 @@ enum stix_synerrnum_t
 	STIX_SYNERR_RBRACE,        /* } expected */
 	STIX_SYNERR_LPAREN,        /* ( expected */
 	STIX_SYNERR_RPAREN,        /* ) expected */
+	STIX_SYNERR_RBRACK,        /* ] expected */
 	STIX_SYNERR_PERIOD,        /* . expected */
 	STIX_SYNERR_VBAR,          /* | expected */
 	STIX_SYNERR_GT,            /* > expected */
@@ -291,6 +292,7 @@ enum stix_synerrnum_t
 	STIX_SYNERR_VARUNUSE,      /* unsuable variable in compiled code */
 	STIX_SYNERR_VARINACC,      /* inaccessible variable - e.g. accessing an instance variable from a class method is not allowed. */
 	STIX_SYNERR_PRIMARY,       /* wrong expression primary */
+	STIX_SYNERR_ARGFLOOD,      /* too many arguments */
 	STIX_SYNERR_PRIMITIVENO    /* wrong primitive number */
 };
 typedef enum stix_synerrnum_t stix_synerrnum_t;
@@ -309,129 +311,6 @@ struct stix_synerr_t
 };
 typedef struct stix_synerr_t stix_synerr_t;
 
-
-/**
- * The stix_code_t type defines byte-code enumerators.
- */
-enum stix_code_id_t
-{
-	/* 0-15 */
-	STIX_PUSH_RECEIVER_VARIABLE            = 0x00,
-
-	/* 16-31 */
-	STIX_PUSH_TEMPORARY_LOCATION           = 0x10,
-
-	/* 32-63 */
-	STIX_PUSH_LITERAL_CONSTANT             = 0x20,
-
-	/* 64-95 */
-	STIX_PUSH_LITERAL_VARIABLE             = 0x40,
-
-	/* 96-103 */
-	STIX_POP_STORE_RECEIVER_VARIABLE       = 0x60,
-
-	/* 104-111 */
-	STIX_POP_STORE_TEMPORARY_LOCATION      = 0x68,
-
-	/*  112-119 */
-	STIX_PUSH_RECEIVER                     = 0x70,
-	STIX_PUSH_TRUE                         = 0x71,
-	STIX_PUSH_FALSE                        = 0x72,
-	STIX_PUSH_NIL                          = 0x73,
-	STIX_PUSH_MINUSONE                     = 0x74,
-	STIX_PUSH_ZERO                         = 0x75,
-	STIX_PUSH_ONE                          = 0x76,
-	STIX_PUSH_TWO                          = 0x77,
-
-	/* 120-123 */
-	STIX_RETURN_RECEIVER                   = 0x78,
-	STIX_RETURN_TRUE                       = 0x79,
-	STIX_RETURN_FALSE                      = 0x7A,
-	STIX_RETURN_NIL                        = 0x7B,
-
-	/* 124-125 */
-	STIX_RETURN_FROM_MESSAGE               = 0x7C,
-	STIX_RETURN_FROM_BLOCK                 = 0x7D,
-
-	/* 128 */ 
-	STIX_PUSH_EXTENDED                     = 0x80,
-
-	/* 129 */ 
-	STIX_STORE_EXTENDED                    = 0x81,
-
-	/* 130 */ 
-	STIX_POP_STORE_EXTENDED                = 0x82,
-
-	/* 131 */
-	STIX_SEND_TO_SELF                      = 0x83,
-
-	/* 132 */
-	STIX_SEND_TO_SUPER                     = 0x84,
-
-	/* 133 */
-	STIX_SEND_TO_SELF_EXTENDED             = 0x85,
-
-	/* 134 */
-	STIX_SEND_TO_SUPER_EXTENDED            = 0x86,
-
-	/* 135 */
-	STIX_POP_STACK_TOP                     = 0x87,
-
-	/* 136 */
-	STIX_DUP_STACK_TOP                     = 0x88,
-
-	/* 137 */
-	STIX_PUSH_ACTIVE_CONTEXT               = 0x89,
-
-	/* 138 */
-	STIX_DO_PRIMITIVE                      = 0x8A,
-
-	/* 144-151 */
-	STIX_JUMP                              = 0x90,
-
-	/* 152-159 */
-	STIX_POP_JUMP_ON_FALSE                 = 0x98,
-
-	/* 160-167 */
-	STIX_JUMP_EXTENDED                     = 0xA0,
-
-	/* 168-171 */
-	STIX_POP_JUMP_ON_TRUE_EXTENDED         = 0xA8,
-
-	/* 172-175 */
-	STIX_POP_JUMP_ON_FALSE_EXTENDED        = 0xAC,
-
-#if 0
-	STIX_PUSH_RECEIVER_VARIABLE_EXTENDED   = 0x60
-	STIX_PUSH_TEMPORARY_LOCATION_EXTENDED  = 0x61
-	STIX_PUSH_LITERAL_CONSTANT_EXTENDED    = 0x62
-	STIX_PUSH_LITERAL_VARIABLE_EXTENDED    = 0x63
-	STIX_STORE_RECEIVER_VARIABLE_EXTENDED  = 0x64
-	STIX_STORE_TEMPORARY_LOCATION_EXTENDED = 0x65
-
-	STIX_POP_STACK_TOP                     = 0x67
-	STIX_DUPLICATE_STACK_TOP               = 0x68
-	STIX_PUSH_ACTIVE_CONTEXT               = 0x69
-	STIX_PUSH_NIL                          = 0x6A
-	STIX_PUSH_TRUE                         = 0x6B
-	STIX_PUSH_FALSE                        = 0x6C
-	STIX_PUSH_RECEIVER                     = 0x6D
-
-	STIX_SEND_TO_SELF                      = 0x70
-	STIX_SEND_TO_SUPER                     = 0x71
-	STIX_SEND_TO_SELF_EXTENDED             = 0x72
-	STIX_SEND_TO_SUPER_EXTENDED            = 0x73
-
-	STIX_RETURN_RECEIVER                   = 0x78
-	STIX_RETURN_TRUE                       = 0x79
-	STIX_RETURN_FALSE                      = 0x7A
-	STIX_RETURN_NIL                        = 0x7B
-	STIX_RETURN_FROM_MESSAGE               = 0x7C
-	STIX_RETURN_FROM_BLOCK                 = 0x7D
-
-	STIX_DO_PRIMITIVE                      = 0xF0
-#endif
-};
 
 typedef enum stix_code_id_t stix_code_id_t;
 
@@ -475,7 +354,6 @@ struct stix_compiler_t
 	stix_uch_t ilchr;
 	stix_ucs_t ilchr_ucs;
 
-
 	/* information about a class being compiled */
 	struct
 	{
@@ -517,6 +395,14 @@ struct stix_compiler_t
 		/* buffer to store identifier names to be assigned */
 		stix_ucs_t assignees;
 		stix_size_t assignees_capa;
+
+		/* buffer to store binary selectors being worked on */
+		stix_ucs_t binsels;
+		stix_size_t binsels_capa;
+
+		/* buffer to store keyword selectors being worked on */
+		stix_ucs_t kwsels;
+		stix_size_t kwsels_capa;
 
 		/* method name */
 		stix_ucs_t name;

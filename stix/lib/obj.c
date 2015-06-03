@@ -185,11 +185,17 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 			 * the variable part(indexed instance variables) are allowed. */
 			oop = stix_allocoopobj(stix, named_instvar + vlen);
 
+			STIX_ASSERT (vptr == STIX_NULL);
+			/*
+			This function is not GC-safe. so i don't want to initialize
+			propagate the payload of a pointer object. The caller can 
+			call this function and initialize payloads then.
 			if (oop && vptr && vlen > 0)
 			{
 				stix_oop_oop_t hdr = (stix_oop_oop_t)oop;
 				STIX_MEMCPY (&hdr->slot[named_instvar], vptr, vlen * STIX_SIZEOF(stix_oop_t));
 			}
+			*/
 			break;
 
 		case STIX_OBJ_TYPE_CHAR:

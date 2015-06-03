@@ -95,7 +95,9 @@ stix_oop_t stix_moveoop (stix_t* stix, stix_oop_t oop)
 	if (!oop) return oop;
 #endif
 
+
 	STIX_ASSERT (STIX_OOP_IS_POINTER(oop));
+	/*if (STIX_OOP_IS_POINTER(oop)) return oop;*/
 
 	if (STIX_OBJ_GET_FLAGS_MOVED(oop))
 	{
@@ -188,8 +190,8 @@ void stix_gc (stix_t* stix)
 	stix_oow_t i;
 	stix_cb_t* cb;
 
-printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
-	stix->curheap->base, stix->curheap->ptr, stix->newheap->base, stix->newheap->ptr);
+/*printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
+	stix->curheap->base, stix->curheap->ptr, stix->newheap->base, stix->newheap->ptr);*/
 	/* TODO: allocate common objects like _nil and the root dictionary 
 	 *       in the permanant heap.  minimize moving around */
 	old_nil = stix->_nil;

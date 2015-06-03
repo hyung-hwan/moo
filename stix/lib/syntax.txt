@@ -47,10 +47,21 @@ method-return-statement := "^" method-expression
 
 method-expression := method-assignment-expression | basic-expression
 method-assignment-expression := identifier ":=" method-expression
-basic-expression := expression-primary (message cascaded-message)?
+basic-expression := expression-primary (message-expression cascaded-message-expression)?
 expression-primary := identifier | literal | block-constructor | ( "(" method-expression ")" )
 
 ----------------------------------------------------------
+
+message-expression := (unary-message-expression+ binary-message-expresson* keyword-message-expression?) |
+                      (binary-message-expression+ keyword-message-expression?) |
+                      keyword-message-expression
+cascaded-message-expression := (";" message-expression)*
+keyword-message-expression := (keyword keyword-argument)+
+keyword-argument := expression-primary unary-selector* binary-message-expression*
+binary-message-expression := binary-selector binary-argument
+binary-argument := expression-primary unary-selector*
+
+------------------------------------------------------------
 
 #include '....'.
 
