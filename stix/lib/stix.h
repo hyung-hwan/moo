@@ -523,7 +523,7 @@ struct stix_class_t
 	stix_oop_set_t  classmths;     /* class methods, MethodDictionary */
 
 	/* indexed part afterwards */
-	stix_oop_t      vars[1];   /* class instance variables and class variables. */
+	stix_oop_t      slot[1];   /* class instance variables and class variables. */
 };
 typedef struct stix_class_t stix_class_t;
 typedef struct stix_class_t* stix_oop_class_t;

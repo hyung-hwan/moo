@@ -1891,8 +1891,8 @@ static int compile_block_expression (stix_t* stix)
 		GET_TOKEN (stix);
 	}
 
-	/* TODO: create a block closure */
-	if (compile_method_temporaries(stix) <= -1 ||
+/* TODO: create a block closure */
+	if (compile_block_temporaries(stix) <= -1 ||
 	    compile_block_statements(stix) <= -1) return -1;
 
 	if (stix->c->tok.type != STIX_IOTOK_RBRACK) 
