@@ -68,9 +68,10 @@ enum mth_type_t
 	MTH_CLASS
 };
 
-/* NOTE store_opcodes table depends on the order of var_tsype_t */
 enum var_type_t
 {
+	VAR_ARGUMENT,
+	VAR_TEMPORARY,
 	VAR_INSTANCE,
 	VAR_CLASS,
 	VAR_CLASSINST
@@ -1016,95 +1017,32 @@ static int end_include (stix_t* stix)
 }
 
 
-
-
-#if 0
-/* ---------------------------------------------------------------------
- * Parser and Code Generator 
- * --------------------------------------------------------------------- */
-
-#define EMIT_CODE_TEST(fsc,high,low) \
-	do { if (emit_code_test(fsc,high,low) <= -1) return -1; } while (0)
-
-#define EMIT_PUSH_RECEIVER_VARIABLE(fsc,pos) \
-	do {  \
-		if (emit_stack_positional ( \
-			fsc, PUSH_RECEIVER_VARIABLE, pos) <= -1) return -1; \
-	} while (0)
-
-#define EMIT_PUSH_TEMPORARY_LOCATION(fsc,pos) \
-	do {  \
-		if (emit_stack_positional ( \
-			fsc, PUSH_TEMPORARY_LOCATION, pos) <= -1) return -1; \
-	} while (0)
-
-#define EMIT_PUSH_LITERAL_CONSTANT(fsc,pos) \
-	do { \
-		if (emit_stack_positional ( \
-			fsc, PUSH_LITERAL_CONSTANT, pos) <= -1) return -1; \
-	} while (0)
-
-
-#define EMIT_PUSH_LITERAL_VARIABLE(fsc,pos) \
-	do { \
-		if (emit_stack_positional ( \
-			fsc, PUSH_LITERAL_VARIABLE, pos) <= -1) return -1; \
-	} while (0)
-
-#define EMIT_STORE_RECEIVER_VARIABLE(fsc,pos) \
-	do { \
-		if (emit_stack_positional ( \
-			fsc, STORE_RECEIVER_VARIABLE, pos) <= -1) return -1; \
-	} while (0)
-
-#define EMIT_STORE_TEMPORARY_LOCATION(fsc,pos) \
-	do { \
-		if (emit_stack_positional ( \
-			fsc, STORE_TEMPORARY_LOCATION, pos) <= -1) return -1; \
-	} while (0)
-
-
-#define EMIT_POP_STACK_TOP(fsc) EMIT_CODE(fsc, POP_STACK_TOP)
-#define EMIT_DUPLICATE_STACK_TOP(fsc) EMIT_CODE(fsc, DUPLICATE_STACK_TOP)
-#define EMIT_PUSH_ACTIVE_CONTEXT(fsc) EMIT_CODE(fsc, PUSH_ACTIVE_CONTEXT)
-#define EMIT_RETURN_FROM_MESSAGE(fsc) EMIT_CODE(fsc, RETURN_FROM_MESSAGE)
-#define EMIT_RETURN_FROM_BLOCK(fsc) EMIT_CODE(fsc, RETURN_FROM_BLOCK)
-
-#define EMIT_SEND_TO_SELF(fsc,nargs,selector) \
-	do { \
-		if (emit_send_to_self(fsc,nargs,selector) <= -1) return -1; \
-	} while (0)
-
-#define EMIT_SEND_TO_SUPER(fsc,nargs,selector) \
-	do { \
-		if (emit_send_to_super(fsc,nargs,selector) <= -1) return -1; \
-	} while (0)
-
-#define EMIT_DO_PRIMITIVE(fsc,no) \
-	do { if (emit_do_primitive(fsc,no) <= -1) return -1; } while(0)
-
-#endif
-
-
 /* --------------------------------------------------------------------- */
 
-#define CODE_MAKE(x,y) (((x) << 4) | y)
-#define CODE_MAX_INDEX               0xFFFF
+#define MAKE_CODE(x,y) (((x) << 4) | y)
+#define MAX_CODE_INDEX               0xFFFF
 
-#define CODE_EXTEND                  0x0
-#define CODE_EXTEND_DOUBLE           0x1
-#define CODE_STORE_INTO_INSTVAR      0x7 /* pop and store */
-#define CODE_STORE_INTO_CLASSSIDEVAR 0x8 /* pop and store */
-#define CODE_STORE_INTO_TEMPVAR      0x9 /* pop and store */
-#define CODE_SPECIAL                 0xF
+#define CMD_EXTEND                  0x0
+#define CMD_EXTEND_DOUBLE           0x1
+#define CMD_PUSH_INSTVAR            0x2
+#define CMD_PUSH_TEMPVAR            0x3
+#define CMD_STORE_INTO_INSTVAR      0x7 /* pop and store */
+#define CMD_STORE_INTO_CLASSVAR     0x8 /* pop and store */
+#define CMD_STORE_INTO_TEMPVAR      0x9 /* pop and store */
+
+
+/* ---------------------------------- */
+#define CODE_PUSH_NIL                 0x61
+#define CODE_PUSH_TRUE                0x62
+#define CODE_PUSH_FALSE               0x63
 
 /* special code */
-#define CODE_DUP_STACKTOP             0x1
-#define CODE_POP_STACKTOp             0x2
-#define CODE_RETURN_MESSAGE_STACKTOP  0x3
-#define CODE_RETURN_BLOCK_STACKTOP    0x4
-#define CODE_RETURN_MESSAGE_RECEIVER  0x5
-#define CODE_EXEC_PRIMITIVE           0xF
+#define CODE_DUP_STACKTOP             0xF1
+#define CODE_POP_STACKTOP             0xF2
+#define CODE_RETURN_MESSAGE_STACKTOP  0xF3
+#define CODE_RETURN_BLOCK_STACKTOP    0xF4
+#define CODE_RETURN_MESSAGE_RECEIVER  0xF5
+#define CODE_EXEC_PRIMITIVE           0xFF
 
 static STIX_INLINE int emit_code (stix_t* stix, stix_byte_t code)
 {
@@ -1128,24 +1066,24 @@ static STIX_INLINE int emit_code (stix_t* stix, stix_byte_t code)
 	return 0;
 }
 
-static int emit_pop_and_store (stix_t* stix, stix_size_t index, int store_code)
+static int emit_pop_and_store (stix_t* stix, stix_size_t index, int store_cmd)
 {
-	STIX_ASSERT (index <= CODE_MAX_INDEX);
+	STIX_ASSERT (index <= MAX_CODE_INDEX);
 
 	if (index > 0xFF)
 	{
-		if (emit_code(stix, CODE_MAKE(CODE_EXTEND_DOUBLE, store_code)) <= -1 ||
+		if (emit_code(stix, MAKE_CODE(CMD_EXTEND_DOUBLE, store_cmd)) <= -1 ||
 		    emit_code(stix, index >> 8) <= -1 ||
 		    emit_code(stix, index & 0xFF) <= -1) return -1;
 	}
 	else if (index > 0xF)
 	{
-		if (emit_code(stix, CODE_MAKE(CODE_EXTEND, store_code)) <= -1 ||
+		if (emit_code(stix, MAKE_CODE(CMD_EXTEND, store_cmd)) <= -1 ||
 		    emit_code(stix, index) <= -1) return -1;
 	}
 	else
 	{
-		if (emit_code(stix, CODE_MAKE(store_code, index)) <= -1) return -1;
+		if (emit_code(stix, MAKE_CODE(store_cmd, index)) <= -1) return -1;
 	}
 
 	return 0;
@@ -1393,66 +1331,6 @@ static int parse_block_statements (stix_t* fsc)
 }
 
 
-static int parse_basic_expression (stix_t* fsc, const stix_uch_t* ident)
-{
-	/*
-	 * <basic expression> := <primary> [<messages> <cascaded messages>]
-	 */
-	int is_super;
-
-	if (parse_primary(fsc, ident, &is_super) == -1) return -1;
-	if (fsc->tok.type != STIX_IOTOK_EOF && 
-	    fsc->tok.type != STIX_IOTOK_RBRACE && 
-	    fsc->tok.type != STIX_IOTOK_PERIOD) 
-	{
-		if (parse_message_continuation(fsc, is_super) == -1) return -1;
-	}
-	return 0;
-}
-
-static int parse_assignment (stix_t* fsc, const stix_uch_t* target)
-{
-	/*
-	 * <assignment> := <assignment target> assignmentOperator <expression>
-	 */
-
-	stix_word_t i;
-	stix_vm_t* stx = fsc->stx;
-
-	for (i = fsc->met.tmpr.nargs; i < fsc->met.tmpr.count; i++) 
-	{
-		if (stix_strequal (target, fsc->met.tmpr.names[i])) 
-		{
-			if (parse_expression(fsc) == -1) return -1;
-			EMIT_STORE_TEMPORARY_LOCATION (fsc, i);
-			return 0;
-		}
-	}
-
-	if (stix_get_instance_variable_index (stx, fsc->method_class, target, &i) == 0) 
-	{
-		if (parse_expression(fsc) == -1) return -1;
-		EMIT_STORE_RECEIVER_VARIABLE (fsc, i);
-		return 0;
-	}
-
-	if (stix_lookup_class_variable (stx, fsc->method_class, target) != stx->nil) 
-	{
-		if (parse_expression(fsc) == -1) return -1;
-
-		/* TODO */
-		EMIT_CODE_TEST (fsc, STIX_T("ASSIGN_CLASSVAR #"), target);
-		//EMIT_STORE_CLASS_VARIABLE (fsc, target);
-		return 0;
-	}
-
-	/* TODO: IMPLEMENT POOL DICTIONARIES */
-
-	/* TODO: IMPLEMENT GLOBLAS, but i don't like this idea */
-
-	fsc->errnum = STIX_FSC_ERROR_UNDECLARED_NAME;
-	return -1;
-}
 
 static int parse_primary (stix_t* fsc, const stix_uch_t* ident, int* is_super)
 {
@@ -1814,8 +1692,7 @@ static int parse_unary_message (stix_t* fsc, int is_super)
 
 	while (fsc->tok.type == STIX_IOTOK_IDENT) 
 	{
-		pos = __add_symbol_literal (fsc,
-			fsc->tok.name.buffer, fsc->tok.name.size);
+		pos = __add_symbol_literal (fsc, fsc->tok.name.buffer, fsc->tok.name.size);
 		if (pos == -1) return -1;
 
 		n = (is_super)? emit_send_to_super (fsc, 0, pos):
@@ -2251,6 +2128,8 @@ static int compile_method_primitive (stix_t* stix)
 	/* 
 	 * method-primitive := "<"  "primitive:" integer ">"
 	 */
+	int prim_no;
+	const stix_uch_t* ptr, * end;
 
 	if (!is_token_binsel(stix, KSYM_LT)) 
 	{
@@ -2276,23 +2155,24 @@ static int compile_method_primitive (stix_t* stix)
 		return -1;
 	}
 
-/*TODO: more checks the validity of the primitive number */
-#if 0
-	if (!stix_stristype(stix->tok.name.buffer, stix_isdigit)) 
+/*TODO: more checks the validity of the primitive number. support nubmer with radix and so on support more extensive syntax */
+	ptr = stix->c->tok.name.ptr;
+	end = ptr + stix->c->tok.name.len;
+	prim_no = 0;
+	while (ptr < end && is_digitchar(*ptr)) 
 	{
-		stix->errnum = STIX_FSC_ERROR_PRIMITIVE_NUMBER;
-		return -1;
+		prim_no = prim_no * 10 + (*ptr - '0');
+		if (prim_no > 0xFF)
+		{
+			set_syntax_error (stix, STIX_SYNERR_PRIMITIVENO, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+
+		ptr++;
 	}
 
-	STIX_STRTOI (stix->c->mth.prim_no, stix->tok.name.buffer, STIX_NULL, 10);
-	if (prim_no < 0 || prim_no > 0xFF) 
-	{
-		stix->errnum = STIX_FSC_ERROR_PRIMITIVE_NUMBER_RANGE;
-		return -1;
-	}
-
-	EMIT_DO_PRIMITIVE (stix, stix-.c->fun.prim_no); 
-#endif
+	if (emit_code(stix, CODE_EXEC_PRIMITIVE) <= -1 ||
+	    emit_code(stix, prim_no) <= -1) return -1;
 
 	GET_TOKEN (stix);
 	if (!is_token_binsel(stix, KSYM_GT)) 
@@ -2305,32 +2185,91 @@ static int compile_method_primitive (stix_t* stix)
 	return 0;
 }
 
+static int compile_method_expression (stix_t* stix);
 
 
-
-
-
-static int compile_basic_expression (stix_t* stix, const stix_ucs_t* assignee)
+static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_ioloc_t* name_loc, var_info_t* var)
 {
-#if 0
-	/*
-	 * <basic expression> := <primary> [<messages> <cascaded messages>]
-	 */
-	int is_super;
+	stix_ssize_t index;
 
-	if (parse_primary(stix, ident, &is_super) == -1) return -1;
-	if (stix->tok.type != STIX_IOTOK_EOF && 
-	    stix->tok.type != STIX_IOTOK_RBRACE && 
-	    stix->tok.type != STIX_IOTOK_PERIOD) 
+	index = find_temporary_variable (stix, name);
+	if (index >= 0)
 	{
-		if (parse_message_continuation(stix, is_super) == -1) return -1;
+		STIX_MEMSET (&var, 0, STIX_SIZEOF(var));
+		if (index < stix->c->mth.tmpr_nargs)
+		{
+			var->type = VAR_ARGUMENT;
+		}
+		else
+		{
+			var->type = VAR_TEMPORARY;
+		}
+		var->pos = index;
 	}
+	else 
+	{
+		if (find_class_level_variable(stix, stix->c->cls.self_oop, name, var) >= 0)
+		{
+			switch (var->type)
+			{
+				case VAR_INSTANCE:
+					if (stix->c->mth.type == MTH_CLASS)
+					{
+						/* a class method cannot access an instance variable */
+						set_syntax_error (stix, STIX_SYNERR_VARINACC, name_loc, name);
+						return -1;
+					}
+					break;
+
+				case VAR_CLASS:
+/* TODO: change code here ... */
+					/* a class variable can be access by both instance methods and class methods */
+					STIX_ASSERT (var->cls != STIX_NULL);
+					STIX_ASSERT (STIX_CLASSOF(stix, var->cls) == stix->_class);
+
+/* TOOD: index must be incremented witht eh number of classinstancevariables counts from var.cls 
+ * verify if the below increment is correct*/
+					var->pos += STIX_CLASS_SELFSPEC_CLASSINSTVAR(STIX_OOP_TO_SMINT(var->cls->selfspec));
+					break;
+
+				case VAR_CLASSINST:
+					/* class instance variable can be accessed by only class methods */
+					if (stix->c->mth.type == MTH_INSTANCE)
+					{
+						/* an instance method cannot access a class-instance variable */
+						set_syntax_error (stix, STIX_SYNERR_VARINACC, name_loc, name);
+						return -1;
+					}
+
+					/* to a class object itself, a class-instance variable is
+					 * just an instance variriable */
+					break;
+
+				default:
+					/* internal error - it must not happen */
+					stix->errnum = STIX_EINTERN;
+					return -1;
+			}
+		}
+		else
+		{
+			/* undeclared identifier */
+			set_syntax_error (stix, STIX_SYNERR_VARUNDCL, name_loc, name);
+			return -1;
+		}
+	}
+
+	if (index > MAX_CODE_INDEX)
+	{
+		/* the assignee is not usable because its index is too large 
+		 * to be expressed in byte-codes. */
+		set_syntax_error (stix, STIX_SYNERR_VARUNUSE, name_loc, name);
+		return -1;
+	}
+
 	return 0;
-#endif
-	return -1;
 }
 
-static int compile_method_expression (stix_t* stix);
 
 static int compile_assignment_expression (stix_t* stix, const stix_ucs_t* assignee, const stix_ioloc_t* assignee_loc)
 {
@@ -2338,102 +2277,201 @@ static int compile_assignment_expression (stix_t* stix, const stix_ucs_t* assign
 	 * assignment-expression := identifier ":=" method-expression
 	 */
 
-	stix_ssize_t index;
 	var_info_t var;
 
 printf ("ASSIGNIUNG TO ....");
 print_ucs (assignee);
 printf ("\n");
 
-	index = find_temporary_variable (stix, assignee);
-	if (index >= 0)
+	if (get_variable_info (stix, assignee, assignee_loc, &var) <= -1) return -1;
+
+	switch (var.type)
 	{
-		if (index < stix->c->mth.tmpr_nargs)
-		{
+		case VAR_ARGUMENT:
 			/* assigning to an argument is not allowed */
-			set_syntax_error (stix, STIX_SYNERR_ASSIGNEEARG, assignee_loc, assignee);
+			set_syntax_error (stix, STIX_SYNERR_VARARG, assignee_loc, assignee);
 			return -1;
-		}
-		
-		/* assigning to a temporary variable */
-		if (compile_method_expression(stix) <= -1) return -1;
 
-		if (index > CODE_MAX_INDEX)
-		{
-			set_syntax_error (stix, STIX_SYNERR_ASSIGNEEUNEXP, assignee_loc, assignee);
+		case VAR_TEMPORARY:
+			return emit_pop_and_store (stix, var.pos, CMD_STORE_INTO_TEMPVAR);
+
+
+		case VAR_INSTANCE:
+		case VAR_CLASSINST:
+			return emit_pop_and_store (stix, var.pos, CMD_STORE_INTO_INSTVAR);
+
+		case VAR_CLASS:
+			/* TODO: what instruction to generate for class variable access... */
+			
 			return -1;
-		}
 
-		return emit_pop_and_store (stix, index, CODE_STORE_INTO_TEMPVAR);
+
+		default:
+			stix->errnum = STIX_EINTERN;
+			return -1;
 	}
-	else if (find_class_level_variable(stix, stix->c->cls.self_oop, assignee, &var) >= 0)
+}
+
+
+
+static int compile_expression_primary (stix_t* stix, const stix_ucs_t* ident, const stix_ioloc_t* ident_loc)
+{
+	/*
+	 * expression-primary := identifier | literal | block-constructor | ( "(" method-expression ")" )
+	 */
+
+	var_info_t var;
+
+	if (ident) 
 	{
-		/* THIS TABLE MUST MATCH var_type_t */
-		static stix_byte_t store_opcodes[] =
-		{
-			CODE_STORE_INTO_INSTVAR,
-			CODE_STORE_INTO_CLASSSIDEVAR,
-			CODE_STORE_INTO_CLASSSIDEVAR
-		};
-		/* --------------------------------- */
+	handle_ident:
+		/*if (parse_primary_ident(stix, stix->tok.name.buffer) == -1) return -1;*/
+		if (compile_primary_ident(stix, ident, ident_loc) <= -1) return -1;
 
-		stix_size_t index;
+		if (get_variable_info (stix, ident, ident_loc, &var) <= -1) return -1;
+	}
+	else
+	{
+		/*stix_size_t index;*/
 
-		index = var.pos;
-		if (var.type != VAR_INSTANCE)
+		switch (stix->c->tok.type)
 		{
-			STIX_ASSERT (var.type == VAR_CLASS || var.type == VAR_CLASSINST);
-			/* TODO: calculate the right position/index */
+			case STIX_IOTOK_IDENT:
+				ident = &stix->c->tok.name;
+				ident_loc = &stix->c->tok.loc;
+				goto handle_ident;
+
+				if (compile_variable_push(stix, &stix->c->tok.name, &stix->c->tok.loc) <= -1) return -1;
+				GET_TOKEN (stix);
+				break;
+
+			case STIX_IOTOK_SELF:
+				/* TODO: */
+				break;
+
+			case STIX_IOTOK_SUPER:
+				/* TODO: */
+				break;
+
+			case STIX_IOTOK_NIL:
+				if (emit_code(stix, CODE_PUSH_NIL) <= -1) return -1;
+				break;
+
+			case STIX_IOTOK_TRUE:
+				if (emit_code(stix, CODE_PUSH_TRUE) <= -1) return -1;
+				break;
+
+			case STIX_IOTOK_FALSE:
+				if (emit_code(stix, CODE_PUSH_FALSE) <= -1) return -1;
+				break;
+
+			case STIX_IOTOK_THIS_CONTEXT:
+				/* TODO */
+				break;
+
+			case STIX_IOTOK_CHRLIT:
+/*
+				STIX_ASSERT (stix->c->tok.name.len == 1);
+				if (add_character_literal(stix, stix->c->tok.name[0], &index) <= -1) return -1;
+				EMIT_PUSH_LITERAL_CONSTANT (stix, index);
+				GET_TOKEN (stix);
+*/
+				break;
+
+			case STIX_IOTOK_STRLIT:
+/*
+				if (add_string_literal(stix, stix->c->tok.name, &index) <= -1) return -1;
+				EMIT_PUSH_LITERAL_CONSTANT (stix, index);
+				GET_TOKEN (stix);
+*/
+				break;
+
+			case STIX_IOTOK_SYMLIT:
+/*
+				if (add_symbol_literal(stix, stix->c->tok.name, &index) <= -1) return -1;
+				EMIT_PUSH_LITERAL_CONSTANT (stix, index);
+				GET_TOKEN (stix);
+*/
+				break;
+
+			case STIX_IOTOK_NUMLIT:
+			{
+				/* TODO: other types of numbers, negative numbers, etc */
+/*
+				stix_word_t tmp;
+				STIX_STRTOI (tmp, stix->tok.name.buffer, STIX_NULL, 10);
+				literal = STIX_TO_SMALLINT(tmp);
+
+				if (add_literal(stix, literal, &index) <= -1)r eturn -1;
+
+				EMIT_PUSH_LITERAL_CONSTANT (stix, index);
+				GET_TOKEN (stix);
+*/
+				break;
+			}
+
+			case STIX_IOTOK_APAREN:
+				/* TODO: array literal */
+				break;
+
+			case STIX_IOTOK_BPAREN:
+				/* TODO: byte array literal */
+				break;
+
+			case STIX_IOTOK_LBRACK:
+/*
+				GET_TOKEN (stix);
+				if (parse_block_constructor(stix) <= -1) return -1;
+*/
+				break;
+
+			case STIX_IOTOK_LPAREN:
+				GET_TOKEN (stix);
+				if (compile_method_expression(stix) <= -1) return -1;
+				if (stix->c->tok.type != STIX_IOTOK_RPAREN)
+				{
+					set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
+					return -1;
+				}
+				GET_TOKEN (stix);
+				break;
+
+			default:
+				set_syntax_error (stix, STIX_SYNERR_PRIMARY, &stix->c->tok.loc, &stix->c->tok.name);
+				return -1;
 		}
-
-		if (compile_method_expression(stix) <= -1) return -1;
-
-		if (index > CODE_MAX_INDEX)
-		{
-			set_syntax_error (stix, STIX_SYNERR_ASSIGNEEUNEXP, assignee_loc, assignee);
-			return -1;
-		}
-
-		return emit_pop_and_store (stix, index, store_opcodes[var.type]);
 	}
 
-	set_syntax_error (stix, STIX_SYNERR_ASSIGNEEUNDCL, assignee_loc, assignee);
-	return -1;
+	return 0;
+}
 
+
+static int compile_basic_expression (stix_t* stix, const stix_ucs_t* ident, const stix_ioloc_t* ident_loc)
+{
+	/*
+	 * basic-expression := expression-primary (method-messages method-cascaded-messages)?
+	 */
+	int is_super;
+
+	if (compile_expression_primary(stix, ident, ident_loc) <= -1) return -1;
 #if 0
-	
-	if (stix_get_instance_variable_index (stx, stix->method_class, target, &i) == 0) 
+	if (stix->tok.type != STIX_IOTOK_EOF && 
+	    stix->tok.type != STIX_IOTOK_RBRACE && 
+	    stix->tok.type != STIX_IOTOK_PERIOD) 
 	{
-		if (parse_expression(stix) == -1) return -1;
-		EMIT_STORE_RECEIVER_VARIABLE (stix, i);
-		return 0;
+		if (parse_message_continuation(stix, is_super) == -1) return -1;
 	}
-
-	if (stix_lookup_class_variable (stx, stix->method_class, target) != stx->nil) 
-	{
-		if (parse_expression(stix) == -1) return -1;
-
-		/* TODO */
-		EMIT_CODE_TEST (stix, STIX_T("ASSIGN_CLASSVAR #"), target);
-		//EMIT_STORE_CLASS_VARIABLE (stix, target);
-		return 0;
-	}
-
-	/* TODO: IMPLEMENT POOL DICTIONARIES */
-
-	/* TODO: IMPLEMENT GLOBLAS, but i don't like this idea */
-
-	stix->errnum = STIX_stix_ERROR_UNDECLARED_NAME;
-	return -1;
 #endif
+
+	return 0;
 }
 
 static int compile_method_expression (stix_t* stix)
 {
 	/*
-	 * method-expression := method-assignment-expression | method-basic-expression
+	 * method-expression := method-assignment-expression | basic-expression
 	 * method-assignment-expression := identifier ":=" method-expression
-	 * method-basic-expression := method-expression-primary (message cascaded-message)?
+	 * basic-expression := method-expression-primary (message cascaded-message)?
 	 */
 
 	stix_ucs_t assignee;
@@ -2456,13 +2494,13 @@ static int compile_method_expression (stix_t* stix)
 		}
 		else 
 		{
-			if (compile_basic_expression(stix, &assignee) <= -1) goto oops;
+			if (compile_basic_expression(stix, &assignee, &assignee_loc) <= -1) goto oops;
 		}
 	}
 	else 
 	{
 		assignee.len = 0;
-		if (compile_basic_expression(stix, STIX_NULL) <= -1) goto oops;
+		if (compile_basic_expression(stix, STIX_NULL, STIX_NULL) <= -1) goto oops;
 	}
 
 	stix->c->mth.assignees.len -= assignee.len;
@@ -2479,11 +2517,13 @@ static int compile_method_statement (stix_t* stix)
 	 * method-statement := method-return-statement | method-expression
 	 * method-return-statement := "^" method-expression
 	 */
+
 	if (stix->c->tok.type == STIX_IOTOK_RETURN) 
 	{
+		/* handle the return statement */
 		GET_TOKEN (stix);
 		if (compile_method_expression(stix) <= -1) return -1;
-		return emit_code (stix, CODE_MAKE(CODE_SPECIAL, CODE_RETURN_MESSAGE_STACKTOP));
+		return emit_code (stix, CODE_RETURN_MESSAGE_STACKTOP);
 	}
 	else 
 	{
@@ -2521,7 +2561,7 @@ static int compile_method_statements (stix_t* stix)
 	}
 
 	/* TODO: size optimization. emit code_return_receiver only if it's not previously emitted */
-	return emit_code (stix, CODE_MAKE(CODE_SPECIAL, CODE_RETURN_MESSAGE_RECEIVER));
+	return emit_code (stix, CODE_RETURN_MESSAGE_RECEIVER);
 }
 
 static int add_compiled_method (stix_t* stix)

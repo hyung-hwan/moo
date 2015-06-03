@@ -286,9 +286,12 @@ enum stix_synerrnum_t
 	STIX_SYNERR_ARGNAMEDUP,    /* duplicate argument name */
 	STIX_SYNERR_TMPRNAMEDUP,   /* duplicate temporary variable name */
 	STIX_SYNERR_VARNAMEDUP,    /* duplicate variable name */
-	STIX_SYNERR_ASSIGNEEARG,   /* cannot assign to argument */
-	STIX_SYNERR_ASSIGNEEUNDCL, /* undeclared assignee */
-	STIX_SYNERR_ASSIGNEEUNEXP  /* assignee unexpressable in compiled code */
+	STIX_SYNERR_VARARG,        /* cannot assign to argument */
+	STIX_SYNERR_VARUNDCL,      /* undeclared variable */
+	STIX_SYNERR_VARUNUSE,      /* unsuable variable in compiled code */
+	STIX_SYNERR_VARINACC,      /* inaccessible variable - e.g. accessing an instance variable from a class method is not allowed. */
+	STIX_SYNERR_PRIMARY,       /* wrong expression primary */
+	STIX_SYNERR_PRIMITIVENO    /* wrong primitive number */
 };
 typedef enum stix_synerrnum_t stix_synerrnum_t;
 

@@ -45,9 +45,10 @@ method-statements := method-statement ("." | ("." method-statements))*
 method-statement := method-return-statement | method-expression
 method-return-statement := "^" method-expression
 
-method-expression := method-assignment-expression | method-basic-expression
+method-expression := method-assignment-expression | basic-expression
 method-assignment-expression := identifier ":=" method-expression
-method-basic-expression := method-expression-primary (message cascaded-message)?
+basic-expression := expression-primary (message cascaded-message)?
+expression-primary := identifier | literal | block-constructor | ( "(" method-expression ")" )
 
 ----------------------------------------------------------
 
