@@ -127,21 +127,27 @@ static int ignite_1 (stix_t* stix)
 	stix->_method_dictionary = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_SET_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 	stix->_method            = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_METHOD_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 	stix->_association       = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_ASSOCIATION_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
+	stix->_context           = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
+	stix->_block_context     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_BLOCK_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
+	/*stix->_process           = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_PROCESS_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));*/
 	stix->_true_class        = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_false_class       = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
-
 	/* TOOD: what is a proper spec for Character and SmallInteger?
  	 *       If the fixed part is  0, its instance must be an object of 0 payload fields.
 	 *       Does this make sense? */
 	stix->_character         = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_small_integer     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 
-	if (!stix->_stix              || !stix->_nil_object        || !stix->_object ||
-	    !stix->_array             || !stix->_byte_array        ||
-	    !stix->_string            || !stix->_symbol            ||
-	    !stix->_symbol_set        || !stix->_system_dictionary || !stix->_method_dictionary ||
-	    !stix->_association       || !stix->_true_class        || !stix->_false_class       ||
+	if (!stix->_stix              || !stix->_nil_object        || 
+	    !stix->_object            || !stix->_array             ||
+	    !stix->_byte_array        || !stix->_string            ||
+	    !stix->_symbol            || !stix->_symbol_set        ||
+	    !stix->_system_dictionary || !stix->_method_dictionary ||
+	    !stix->_association       || !stix->_context           ||
+	    !stix->_block_context     || /*!stix->_process           ||*/
+	    !stix->_true_class        || !stix->_false_class       ||
 	    !stix->_character         || !stix->_small_integer) return -1;
+	    
 	STIX_OBJ_SET_CLASS (stix->_nil, stix->_nil_object);
 	return 0;
 }
@@ -171,7 +177,7 @@ static int ignite_2 (stix_t* stix)
 	stix->symtab->bucket = (stix_oop_oop_t)tmp;
 
 	/* Create the system dictionary */
-	tmp = stix_makedic (stix, stix->_system_dictionary, stix->option.dfl_sysdic_size);
+	tmp = (stix_oop_t)stix_makedic (stix, stix->_system_dictionary, stix->option.dfl_sysdic_size);
 	if (!tmp) return -1;
 	stix->sysdic = (stix_oop_set_t)tmp;
 
@@ -195,14 +201,20 @@ static int ignite_3 (stix_t* stix)
 		{  5, { 'C','l','a','s','s'                                              } },
 		{  6, { 'O','b','j','e','c','t'                                          } },
 		{  6, { 'S','t','r','i','n','g'                                          } },
+
 		{  6, { 'S','y','m','b','o','l'                                          } },
 		{  5, { 'A','r','r','a','y'                                              } },
 		{  9, { 'B','y','t','e','A','r','r','a','y'                              } },
 		{  9, { 'S','y','m','b','o','l','S','e','t'                              } },
 		{ 16, { 'S','y','s','t','e','m','D','i','c','t','i','o','n','a','r','y'  } },
+
 		{ 16, { 'M','e','t','h','o','d','D','i','c','t','i','o','n','a','r','y'  } },
 		{ 14, { 'C','o','m','p','i','l','e','d','M','e','t','h','o','d'          } },
 		{ 11, { 'A','s','s','o','c','i','a','t','i','o','n'                      } },
+		{ 13, { 'M','e','t','h','o','d','C','o','n','t','e','x','t'              } },
+		{ 12, { 'B','l','o','c','k','C','o','n','t','e','x','t'                  } },
+
+		/*{  7, { 'P','r','o','c','e','s','s'                                      } },*/
 		{  4, { 'T','r','u','e'                                                  } },
 		{  5, { 'F','a','l','s','e'                                              } },
 		{  9, { 'C','h','a','r','a','c','t','e','r'                              } },

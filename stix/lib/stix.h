@@ -50,6 +50,7 @@ typedef signed short int stix_int16_t;
 #endif
 
 typedef unsigned long int stix_uintptr_t;
+typedef signed long int   stix_intptr_t;
 typedef unsigned long int stix_size_t;
 typedef signed long int   stix_ssize_t;
 
@@ -306,6 +307,7 @@ typedef enum stix_trait_t stix_trait_t;
 
 /* NOTE: sizeof(stix_oop_t) must be equal to sizeof(stix_oow_t) */
 typedef stix_uintptr_t           stix_oow_t;
+typedef stix_intptr_t            stix_ooi_t;
 typedef struct stix_obj_t        stix_obj_t;
 typedef struct stix_obj_t*       stix_oop_t;
 
@@ -348,12 +350,23 @@ typedef struct stix_obj_word_t*   stix_oop_word_t;
 #define STIX_OOP_IS_POINTER(oop) (!STIX_OOP_IS_NUMERIC(oop))
 #define STIX_OOP_GET_TAG(oop) (((stix_oow_t)oop) & STIX_LBMASK(stix_oow_t, STIX_OOP_TAG_BITS))
 
-#define STIX_OOP_IS_SMINT(oop) (((stix_oow_t)oop) & STIX_OOP_TAG_SMINT)
+#define STIX_OOP_IS_SMINT(oop) (((stix_ooi_t)oop) & STIX_OOP_TAG_SMINT)
 #define STIX_OOP_IS_CHAR(oop) (((stix_oow_t)oop) & STIX_OOP_TAG_CHAR)
-#define STIX_OOP_FROM_SMINT(num) ((stix_oop_t)((((stix_oow_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_SMINT))
-#define STIX_OOP_TO_SMINT(oop) (((stix_oow_t)oop) >> STIX_OOP_TAG_BITS)
+#define STIX_OOP_FROM_SMINT(num) ((stix_oop_t)((((stix_ooi_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_SMINT))
+#define STIX_OOP_TO_SMINT(oop) (((stix_ooi_t)oop) >> STIX_OOP_TAG_BITS)
 #define STIX_OOP_FROM_CHAR(num) ((stix_oop_t)((((stix_oow_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_CHAR))
 #define STIX_OOP_TO_CHAR(oop) (((stix_oow_t)oop) >> STIX_OOP_TAG_BITS)
+
+#define STIX_SMINT_BITS (STIX_SIZEOF(stix_ooi_t) * 8 - STIX_OOP_TAG_BITS)
+#define STIX_SMINT_MAX ((stix_ooi_t)(~((stix_oow_t)0) >> (STIX_OOP_TAG_BITS + 1)))
+#define STIX_SMINT_MIN (-STIX_SMINT_MAX - 1)
+#define STIX_OOI_IN_SMINT_RANGE(ooi)  ((ooi) >= STIX_SMINT_MIN && (ooi) <= STIX_SMINT_MAX)
+
+/* TODO: There are untested code where smint is converted to stix_oow_t.
+ *       for example, the spec making macro treats the number as stix_oow_t instead of stix_ooi_t.
+ *       as of this writing, i skip testing that part with the spec value exceeding STIX_SMINT_MAX.
+ *       later, please verify it works, probably by limiting the value ranges in such macros
+ */
 
 /*
  * Object structure
@@ -491,16 +504,18 @@ struct stix_obj_word_t
 };
 
 #define STIX_SET_NAMED_INSTVARS 2
+typedef struct stix_set_t stix_set_t;
+typedef struct stix_set_t* stix_oop_set_t;
 struct stix_set_t
 {
 	STIX_OBJ_HEADER;
 	stix_oop_t     tally;  /* SmallInteger */
 	stix_oop_oop_t bucket; /* Array */
 };
-typedef struct stix_set_t stix_set_t;
-typedef struct stix_set_t* stix_oop_set_t;
 
 #define STIX_CLASS_NAMED_INSTVARS 10
+typedef struct stix_class_t stix_class_t;
+typedef struct stix_class_t* stix_oop_class_t;
 struct stix_class_t
 {
 	STIX_OBJ_HEADER;
@@ -525,20 +540,20 @@ struct stix_class_t
 	/* indexed part afterwards */
 	stix_oop_t      slot[1];   /* class instance variables and class variables. */
 };
-typedef struct stix_class_t stix_class_t;
-typedef struct stix_class_t* stix_oop_class_t;
 
 #define STIX_ASSOCIATION_NAMED_INSTVARS 2
+typedef struct stix_association_t stix_association_t;
+typedef struct stix_association_t* stix_oop_association_t;
 struct stix_association_t
 {
 	STIX_OBJ_HEADER;
 	stix_oop_t key;
 	stix_oop_t value;
 };
-typedef struct stix_association_t stix_association_t;
-typedef struct stix_association_t* stix_oop_association_t;
 
 #define STIX_METHOD_NAMED_INSTVARS 5
+typedef struct stix_method_t stix_method_t;
+typedef struct stix_method_t* stix_oop_method_t;
 struct stix_method_t
 {
 	STIX_OBJ_HEADER;
@@ -554,10 +569,60 @@ struct stix_method_t
 	stix_oop_t       source; /* TODO: what should I put? */
 
 	/* variable indexed part */
-	stix_oop_t literal[1];
+	stix_oop_t       slot[1]; /* it stores literals */
 };
-typedef struct stix_method_t stix_method_t;
-typedef struct stix_method_t* stix_oop_method_t;
+
+
+#define STIX_CONTEXT_NAMED_INSTVARS 6
+typedef struct stix_context_t stix_context_t;
+typedef struct stix_context_t* stix_oop_context_t;
+struct stix_context_t
+{
+	STIX_OBJ_HEADER;
+
+	stix_oop_t        sender;
+	stix_oop_t        ip;     /* instruction pointer */
+	stix_oop_t        sp;     /* stack pointer */
+	stix_oop_method_t method; /* CompiledMethod */
+	stix_oop_t        unused; 
+	stix_oop_t        receiver;
+
+	/* variable indexed part */
+	stix_oop_t        slot[1]; /* stack contents */
+};
+
+#define STIX_BLOCK_CONTEXT_NAMED_INSTVARS 6
+typedef struct stix_block_context_t stix_block_context_t;
+typedef struct stix_block_context_t* stix_oop_block_context_t;
+struct stix_block_context_t
+{
+	STIX_OBJ_HEADER;
+
+	stix_oop_t         caller;
+	stix_oop_t         ip;      /* SmallInteger. instruction pointer */
+	stix_oop_t         sp;      /* SmallInteger. stack pointer */
+	stix_oop_t         nargs;   /* SmallInteger */
+	stix_oop_t         iip;     /* SmallInteger. initial instruction pointer */
+	stix_oop_context_t home; 
+
+	/* variable indexed part */
+	stix_oop_t        slot[1]; /* stack */
+};
+
+#if 0
+#define STIX_PROCESS_NAMED_INSTVARS 4
+typedef struct stix_process_t stix_process_t;
+typedef struct stix_process_t* stix_oop_process_t;
+struct stix_process_t
+{
+	STIX_OBJ_HEADER;
+	stix_oop_context_t context;
+	stix_oop_t         state; /* SmallInteger */
+
+	stix_oop_process_t prev;
+	stix_oop_process_t next;
+};
+#endif
 
 /**
  * The STIX_CLASSOF() macro return the class of an object including a numeric
@@ -644,6 +709,9 @@ struct stix_t
 	stix_oop_t _method_dictionary; /* MethodDictionary */
 	stix_oop_t _method; /* CompiledMethod */
 	stix_oop_t _association; /* Association */
+	stix_oop_t _context; /* MethodContext */
+	stix_oop_t _block_context; /* BlockContext */
+	/*stix_oop_t _process; */ /* Process */
 	stix_oop_t _true_class; /* True */
 	stix_oop_t _false_class; /* False */
 	stix_oop_t _character; /* Character */
@@ -655,6 +723,15 @@ struct stix_t
 
 	stix_oop_t* tmp_stack[256]; /* stack for temporaries */
 	stix_oow_t tmp_count;
+
+	/* == EXECUTION REGISTERS == */
+	stix_oop_context_t active_context; /* TODO: this could be either MethodContext or BlockContext. Some redefintion of stix_oop_context_t might be needed  after having removed stix-oop_block-context. */
+	stix_oop_context_t home_context;
+	stix_oop_t         method;
+	stix_oop_t         receiver;
+	stix_oop_t         ip;               /* SmallInteger */
+	stix_oop_t         sp;               /* SmallInteger */
+	/* == END EXECUTION REGISTERS == */
 
 #if defined(STIX_INCLUDE_COMPILER)
 	stix_compiler_t* c;
@@ -750,20 +827,6 @@ STIX_EXPORT void stix_gc (
 );
 
 /**
- * The stix_findclass() function searchs the root system dictionary
- * for a class named \a name. The class object pointer is set to the 
- * memory location pointed to by \a oop.
- *
- * \return 0 if found, -1 if not found.
- */
-STIX_EXPORT int stix_findclass (
-	stix_t*            vm,
-	const stix_uch_t* name,
-	stix_oop_t*        oop
-);
-
-
-/**
  * The stix_instantiate() function creates a new object of the class 
  * \a _class. The size of the fixed part is taken from the information
  * contained in the class defintion. The \a vlen parameter specifies 
@@ -786,6 +849,13 @@ STIX_EXPORT int stix_ignite (
 	stix_t* stix
 );
 
+
+/**
+ * The stix_executes() function creates key initial objects. 
+ */
+STIX_EXPORT int stix_execute (
+	stix_t* stix
+);
 
 /* Temporary OOP management  */
 STIX_EXPORT void stix_pushtmp (

@@ -61,12 +61,11 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 	return newbuc;
 }
 
-static stix_oop_t find_or_insert (stix_t* stix, stix_oop_set_t dic, stix_oop_char_t key, stix_oop_t value)
+static stix_oop_association_t find_or_insert (stix_t* stix, stix_oop_set_t dic, stix_oop_char_t key, stix_oop_t value)
 {
 	stix_oow_t index, tally;
 	stix_oop_association_t ass;
 	stix_oow_t tmp_count = 0;
-
 
 	/* the system dictionary is not a generic dictionary.
 	 * it accepts only a symbol as a key. */
@@ -86,7 +85,7 @@ static stix_oop_t find_or_insert (stix_t* stix, stix_oop_set_t dic, stix_oop_cha
 		if (STIX_OBJ_GET_SIZE(key) == STIX_OBJ_GET_SIZE(ass->key) &&
 		    stix_equalchars (key->slot, ((stix_oop_char_t)ass->key)->slot, STIX_OBJ_GET_SIZE(key))) 
 		{
-			return (stix_oop_t)ass;
+			return ass;
 		}
 
 		index = (index + 1) % STIX_OBJ_GET_SIZE(dic->bucket);
@@ -136,18 +135,19 @@ static stix_oop_t find_or_insert (stix_t* stix, stix_oop_set_t dic, stix_oop_cha
 	ass->key = (stix_oop_t)key;
 	ass->value = value;
 
+	STIX_ASSERT (tally < STIX_SMINT_MAX);
 	dic->tally = STIX_OOP_FROM_SMINT(tally + 1);
 	dic->bucket->slot[index] = (stix_oop_t)ass;
 
 	stix_poptmps (stix, tmp_count);
-	return (stix_oop_t)ass;
+	return ass;
 
 oops:
 	stix_poptmps (stix, tmp_count);
 	return STIX_NULL;
 }
 
-static stix_oop_t lookup (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* name)
+static stix_oop_association_t lookup (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* name)
 {
 	/* this is special version of stix_getatsysdic() that performs
 	 * lookup using a plain string specified */
@@ -170,7 +170,7 @@ static stix_oop_t lookup (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* na
 		if (name->len == STIX_OBJ_GET_SIZE(ass->key) &&
 		    stix_equalchars(name->ptr, ((stix_oop_char_t)ass->key)->slot, name->len)) 
 		{
-			return (stix_oop_t)ass;
+			return ass;
 		}
 
 		index = (index + 1) % STIX_OBJ_GET_SIZE(dic->bucket);
@@ -181,41 +181,41 @@ static stix_oop_t lookup (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* na
 	return STIX_NULL;
 }
 
-stix_oop_t stix_putatsysdic (stix_t* stix, stix_oop_t key, stix_oop_t value)
+stix_oop_association_t stix_putatsysdic (stix_t* stix, stix_oop_t key, stix_oop_t value)
 {
 	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
 	return find_or_insert (stix, stix->sysdic, (stix_oop_char_t)key, value);
 }
 
-stix_oop_t stix_getatsysdic (stix_t* stix, stix_oop_t key)
+stix_oop_association_t stix_getatsysdic (stix_t* stix, stix_oop_t key)
 {
 	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
 	return find_or_insert (stix, stix->sysdic, (stix_oop_char_t)key, STIX_NULL);
 }
 
-stix_oop_t stix_lookupsysdic (stix_t* stix, const stix_ucs_t* name)
+stix_oop_association_t stix_lookupsysdic (stix_t* stix, const stix_ucs_t* name)
 {
 	return lookup (stix, stix->sysdic, name);
 }
 
-stix_oop_t stix_putatdic (stix_t* stix, stix_oop_set_t dic, stix_oop_t key, stix_oop_t value)
+stix_oop_association_t stix_putatdic (stix_t* stix, stix_oop_set_t dic, stix_oop_t key, stix_oop_t value)
 {
 	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
 	return find_or_insert (stix, dic, (stix_oop_char_t)key, value);
 }
 
-stix_oop_t stix_getatdic (stix_t* stix, stix_oop_set_t dic, stix_oop_t key)
+stix_oop_association_t stix_getatdic (stix_t* stix, stix_oop_set_t dic, stix_oop_t key)
 {
 	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
 	return find_or_insert (stix, dic, (stix_oop_char_t)key, STIX_NULL);
 }
 
-stix_oop_t stix_lookupdic (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* name)
+stix_oop_association_t stix_lookupdic (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* name)
 {
 	return lookup (stix, dic, name);
 }
 
-stix_oop_t stix_makedic (stix_t* stix, stix_oop_t cls, stix_oow_t size)
+stix_oop_set_t stix_makedic (stix_t* stix, stix_oop_t cls, stix_oow_t size)
 {
 	stix_oop_set_t dic;
 	stix_oop_t tmp;
@@ -238,5 +238,5 @@ stix_oop_t stix_makedic (stix_t* stix, stix_oop_t cls, stix_oow_t size)
 	STIX_ASSERT (STIX_OBJ_GET_SIZE(dic) == STIX_SET_NAMED_INSTVARS);
 	STIX_ASSERT (STIX_OBJ_GET_SIZE(dic->bucket) == size);
 
-	return (stix_oop_t)dic;
+	return dic;
 }

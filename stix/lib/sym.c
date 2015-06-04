@@ -124,6 +124,7 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_uch_t* ptr, stix
 	symbol = (stix_oop_char_t)stix_instantiate(stix, stix->_symbol, ptr, len);
 	if (symbol)
 	{
+		STIX_ASSERT (tally < STIX_SMINT_MAX);
 		stix->symtab->tally = STIX_OOP_FROM_SMINT(tally + 1);
 		stix->symtab->bucket->slot[index] = (stix_oop_t)symbol;
 	}

@@ -104,13 +104,14 @@
 	((((stix_oow_t)(spec)) >> 1) & STIX_LBMASK(stix_oow_t, STIX_OBJ_FLAGS_TYPE_BITS))
 
 /* What is the maximum number of named instance variables?
- *   2 ^ ((BITS-IN-OOW - STIX_OOP_TAG_BITS) - STIX_OBJ_TYPE_BITS - 1) - 1 
- * This limit is set because the number must be encoded into the spec field
+ * This limit is set so because the number must be encoded into the spec field
  * of the class with limited number of bits assigned to the number of
- * named instance variables.
+ * named instance variables. the trailing -1 in the calculation of number of
+ * bits is to consider the signness of a small-integer which is a typical
+ * type of the spec field in the class object.
  */
 #define STIX_MAX_NAMED_INSTVARS \
-	STIX_BITS_MAX(stix_oow_t, STIX_OOW_BITS - STIX_OOP_TAG_BITS - (STIX_OBJ_FLAGS_TYPE_BITS + 1))
+	STIX_BITS_MAX(stix_oow_t, STIX_OOW_BITS - STIX_OOP_TAG_BITS - (STIX_OBJ_FLAGS_TYPE_BITS + 1) - 1)
 
 /* Given the number of named instance variables, what is the maximum number 
  * of indexed instance variables? The number of indexed instance variables
@@ -128,8 +129,12 @@
 #define STIX_CLASS_SELFSPEC_CLASSVAR(spec) ((stix_oow_t)spec >> ((STIX_OOW_BITS - STIX_OOP_TAG_BITS) / 2))
 #define STIX_CLASS_SELFSPEC_CLASSINSTVAR(spec) (((stix_oow_t)spec) & STIX_LBMASK(stix_oow_t, (STIX_OOW_BITS - STIX_OOP_TAG_BITS) / 2))
 
-#define STIX_MAX_CLASSVARS      STIX_BITS_MAX(stix_oow_t, (STIX_OOW_BITS - STIX_OOP_TAG_BITS) / 2)
-#define STIX_MAX_CLASSINSTVARS  STIX_BITS_MAX(stix_oow_t, (STIX_OOW_BITS - STIX_OOP_TAG_BITS) / 2)
+/*
+ * yet another -1 in the calculation of the bit numbers for signed nature of
+ * a small-integer
+ */
+#define STIX_MAX_CLASSVARS      STIX_BITS_MAX(stix_oow_t, (STIX_OOW_BITS - STIX_OOP_TAG_BITS - 1) / 2)
+#define STIX_MAX_CLASSINSTVARS  STIX_BITS_MAX(stix_oow_t, (STIX_OOW_BITS - STIX_OOP_TAG_BITS - 1) / 2)
 
 #if defined(STIX_INCLUDE_COMPILER)
 
@@ -563,42 +568,42 @@ stix_oop_t stix_makestring (
 /* ========================================================================= */
 /* dic.c                                                                     */
 /* ========================================================================= */
-stix_oop_t stix_putatsysdic (
+stix_oop_association_t stix_putatsysdic (
 	stix_t*     stix,
 	stix_oop_t  key,
 	stix_oop_t  value
 );
 
-stix_oop_t stix_getatsysdic (
+stix_oop_association_t stix_getatsysdic (
 	stix_t*     stix,
 	stix_oop_t  key
 );
 
-stix_oop_t stix_lookupsysdic (
+stix_oop_association_t stix_lookupsysdic (
 	stix_t*           stix,
 	const stix_ucs_t* name
 );
 
-stix_oop_t stix_putatdic (
+stix_oop_association_t stix_putatdic (
 	stix_t*        stix,
 	stix_oop_set_t dic,
 	stix_oop_t     key,
 	stix_oop_t     value
 );
 
-stix_oop_t stix_getatdic (
+stix_oop_association_t stix_getatdic (
 	stix_t*        stix,
 	stix_oop_set_t dic,
 	stix_oop_t     key
 );
 
-stix_oop_t stix_lookupdic (
+stix_oop_association_t stix_lookupdic (
 	stix_t*           stix,
 	stix_oop_set_t    dic,
 	const stix_ucs_t* name
 );
 
-stix_oop_t stix_makedic (
+stix_oop_set_t stix_makedic (
 	stix_t*    stix,
 	stix_oop_t cls,
 	stix_oow_t size

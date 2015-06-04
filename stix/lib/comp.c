@@ -2407,7 +2407,7 @@ static int add_compiled_method (stix_t* stix)
 	for (i = 0; i < stix->c->mth.literal_count; i++)
 	{
 		/* let's do the variadic data initialization here */
-		mth->literal[i] = stix->c->mth.literals[i];
+		mth->slot[i] = stix->c->mth.literals[i];
 	}
 	stix_pushtmp (stix, (stix_oop_t*)&mth); tmp_count++;
 
@@ -2513,7 +2513,9 @@ static int make_defined_class (stix_t* stix)
 	spec = STIX_CLASS_SPEC_MAKE (stix->c->cls.var_count[VAR_INSTANCE],  
 	                             ((stix->c->cls.flags & CLASS_INDEXED)? 1: 0),
 	                             stix->c->cls.indexed_type);
-	self_spec = STIX_CLASS_SELFSPEC_MAKE(stix->c->cls.var_count[VAR_CLASS], stix->c->cls.var_count[VAR_CLASSINST]);
+
+	self_spec = STIX_CLASS_SELFSPEC_MAKE (stix->c->cls.var_count[VAR_CLASS],
+	                                      stix->c->cls.var_count[VAR_CLASSINST]);
 
 #if 0
 printf ("MAKING ... ");
@@ -2581,12 +2583,12 @@ printf (" CONFLICTING CLASS DEFINITION %lu %lu %lu %lu\n",
 	stix->c->cls.self_oop->classinstvars = (stix_oop_char_t)tmp;
 
 /* TOOD: good dictionary size */
-	tmp = stix_makedic (stix, stix->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
+	tmp = (stix_oop_t)stix_makedic (stix, stix->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
 	stix->c->cls.mthdic_oop[MTH_INSTANCE] = (stix_oop_set_t)tmp;
 
 /* TOOD: good dictionary size */
-	tmp = stix_makedic (stix, stix->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
+	tmp = (stix_oop_t)stix_makedic (stix, stix->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
 	stix->c->cls.mthdic_oop[MTH_CLASS] = (stix_oop_set_t)tmp;
 
@@ -2720,7 +2722,7 @@ printf ("\n");
 
 		GET_TOKEN (stix);
 
-		ass = (stix_oop_association_t)stix_lookupsysdic(stix, &stix->c->cls.name);
+		ass = stix_lookupsysdic(stix, &stix->c->cls.name);
 		if (ass)
 		{
 			if (STIX_CLASSOF(stix, ass->value) != stix->_class  ||
@@ -2748,7 +2750,7 @@ printf ("\n");
 		}
 		else
 		{
-			ass = (stix_oop_association_t)stix_lookupsysdic(stix, &stix->c->cls.supername);
+			ass = stix_lookupsysdic(stix, &stix->c->cls.supername);
 			if (ass &&
 			    STIX_CLASSOF(stix, ass->value) == stix->_class &&
 			    STIX_OBJ_GET_FLAGS_KERNEL(ass->value) != 1) 
@@ -2783,7 +2785,7 @@ printf ("\n");
 
 		stix->c->cls.flags |= CLASS_EXTENDED;
 
-		ass = (stix_oop_association_t)stix_lookupsysdic(stix, &stix->c->cls.name);
+		ass = stix_lookupsysdic(stix, &stix->c->cls.name);
 		if (ass && 
 		    STIX_CLASSOF(stix, ass->value) != stix->_class &&
 		    STIX_OBJ_GET_FLAGS_KERNEL(ass->value) != 1)

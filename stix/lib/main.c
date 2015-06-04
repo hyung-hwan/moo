@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <limits.h>
 typedef struct xtn_t xtn_t;
 struct xtn_t
 {
@@ -262,6 +263,17 @@ int main (int argc, char* argv[])
 		(unsigned long int)STIX_MAX_CLASSVARS,
 		(unsigned long int)STIX_MAX_CLASSINSTVARS);
 
+{
+stix_oop_t k;
+k = STIX_OOP_FROM_SMINT(-1);
+printf ("%ld %ld %ld %lX\n", (long int)STIX_OOP_TO_SMINT(k), (long int)STIX_SMINT_MIN, (long int)STIX_SMINT_MAX, (long)LONG_MIN);
+
+k = STIX_OOP_FROM_SMINT(STIX_SMINT_MAX);
+printf ("%ld\n", (long int)STIX_OOP_TO_SMINT(k));
+
+k = STIX_OOP_FROM_SMINT(STIX_SMINT_MIN);
+printf ("%ld\n", (long int)STIX_OOP_TO_SMINT(k));
+}
 
 #if !defined(macintosh)
 	if (argc != 2)
@@ -387,8 +399,18 @@ printf ("%p\n", a);
 		return -1;
 	}
 
+
+/*
+	if (stix_execute (stix) <= -1)
+	{
+		printf ("ERROR: cannot execute code - %d\n", stix_geterrnum(stix));
+		stix_close (stix);
+		return -1;
+	}
+*/
 dump_system_dictionary(stix);
 	stix_close (stix);
+
 
 	return 0;
 }
