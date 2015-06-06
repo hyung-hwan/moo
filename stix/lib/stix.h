@@ -534,12 +534,15 @@ struct stix_class_t
 	stix_oop_char_t classinstvars; /* String */
 	/* == NEVER CHANGE THE ORDER OF 3 ITEMS ABOVE == */
 
-	stix_oop_set_t  instmths;      /* instance methods, MethodDictionary */
-	stix_oop_set_t  classmths;     /* class methods, MethodDictionary */
+	/* [0] - instance methods, MethodDictionary
+	 * [1] - class methods, MethodDictionary */
+	stix_oop_set_t  mthdic[2];      
 
 	/* indexed part afterwards */
 	stix_oop_t      slot[1];   /* class instance variables and class variables. */
 };
+#define STIX_CLASS_MTHDIC_INSTANCE 0
+#define STIX_CLASS_MTHDIC_CLASS    1
 
 #define STIX_ASSOCIATION_NAMED_INSTVARS 2
 typedef struct stix_association_t stix_association_t;
@@ -565,7 +568,7 @@ struct stix_method_t
 	/* number of arguments in temporaries */
 	stix_oop_t       tmpr_nargs; /* SmallInteger */
 
-	stix_oop_t       code; /* ByteArray */
+	stix_oop_byte_t  code; /* ByteArray */
 	stix_oop_t       source; /* TODO: what should I put? */
 
 	/* variable indexed part */
@@ -851,10 +854,20 @@ STIX_EXPORT int stix_ignite (
 
 
 /**
- * The stix_executes() function creates key initial objects. 
+ * The stix_executes() function XXXXXXXXXXXXXX
  */
 STIX_EXPORT int stix_execute (
 	stix_t* stix
+);
+
+/**
+ * The stix_invoke() function sends a message named \a mthname to an object
+ * named \a objname.
+ */
+STIX_EXPORT int stix_invoke (
+	stix_t*           stix,
+	const stix_ucs_t* objname,
+	const stix_ucs_t* mthname
 );
 
 /* Temporary OOP management  */

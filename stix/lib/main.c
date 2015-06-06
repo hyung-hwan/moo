@@ -182,18 +182,18 @@ static void dump_symbol_table (stix_t* stix)
 	printf ("--------------------------------------------\n");
 }
 
-void dump_system_dictionary (stix_t* stix)
+void dump_dictionary (stix_t* stix, stix_oop_set_t dic, const char* title)
 {
 	stix_oow_t i, j;
 	stix_oop_association_t ass;
 
 	printf ("--------------------------------------------\n");
-	printf ("Stix System Dictionary %lu\n", (unsigned long int)STIX_OBJ_GET_SIZE(stix->sysdic->bucket));
+	printf ("%s %lu\n", title, (unsigned long int)STIX_OBJ_GET_SIZE(dic->bucket));
 	printf ("--------------------------------------------\n");
 
-	for (i = 0; i < STIX_OBJ_GET_SIZE(stix->sysdic->bucket); i++)
+	for (i = 0; i < STIX_OBJ_GET_SIZE(dic->bucket); i++)
 	{
-		ass = (stix_oop_association_t)stix->sysdic->bucket->slot[i];
+		ass = (stix_oop_association_t)dic->bucket->slot[i];
 		if ((stix_oop_t)ass != stix->_nil)
 		{
 			printf (" %lu [", (unsigned long int)i);
@@ -252,10 +252,15 @@ static char* syntax_error_msg[] =
 	"wrong primitive number"
 };
 
+stix_uch_t str_stix[] = { 'S', 't', 'i', 'x' };
+stix_uch_t str_main[] = { 'm', 'a', 'i', 'n' };
+
 int main (int argc, char* argv[])
 {
 	stix_t* stix;
 	xtn_t* xtn;
+	stix_ucs_t objname;
+	stix_ucs_t mthname;
 
 	printf ("Stix 1.0.0 - max named %lu max indexed %lu max class %lu max classinst %lu\n", 
 		(unsigned long int)STIX_MAX_NAMED_INSTVARS, 
@@ -344,7 +349,7 @@ printf ("%p\n", a);
 	dump_symbol_table (stix);
 
 
-	dump_system_dictionary (stix);
+	dump_dictionary (stix, stix->sysdic, "System dictionary");
 }
 
 	xtn = stix_getxtn (stix);
@@ -400,15 +405,19 @@ printf ("%p\n", a);
 	}
 
 
-/*
-	if (stix_execute (stix) <= -1)
+	objname.ptr = str_stix;
+	objname.len = 4;
+	mthname.ptr = str_main;
+	mthname.len = 4;
+	if (stix_invoke (stix, &objname, &mthname) <= -1)
 	{
 		printf ("ERROR: cannot execute code - %d\n", stix_geterrnum(stix));
 		stix_close (stix);
 		return -1;
 	}
-*/
-dump_system_dictionary(stix);
+
+
+	dump_dictionary (stix, stix->sysdic, "System dictionary");
 	stix_close (stix);
 
 

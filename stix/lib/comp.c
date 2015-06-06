@@ -2393,7 +2393,7 @@ static int add_compiled_method (stix_t* stix)
 {
 	stix_oop_t name; /* selector */
 	stix_oop_method_t mth; /* method */
-	stix_oop_t code;
+	stix_oop_byte_t code;
 	stix_size_t tmp_count = 0;
 	stix_size_t i;
 
@@ -2411,9 +2411,9 @@ static int add_compiled_method (stix_t* stix)
 	}
 	stix_pushtmp (stix, (stix_oop_t*)&mth); tmp_count++;
 
-	code = stix_instantiate (stix, stix->_byte_array, stix->c->mth.code.ptr, stix->c->mth.code.len);
+	code = (stix_oop_byte_t)stix_instantiate (stix, stix->_byte_array, stix->c->mth.code.ptr, stix->c->mth.code.len);
 	if (!code) goto oops;
-	stix_pushtmp (stix, &code); tmp_count++;
+	stix_pushtmp (stix, (stix_oop_t*)&code); tmp_count++;
 
 	mth->owner = stix->c->cls.self_oop;
 	mth->tmpr_count = STIX_OOP_FROM_SMINT(stix->c->mth.tmpr_count);
@@ -2837,8 +2837,8 @@ printf ("\n");
 		}
 
 		/* use the method dictionary of an existing class object */
-		stix->c->cls.mthdic_oop[MTH_INSTANCE] = stix->c->cls.self_oop->instmths;
-		stix->c->cls.mthdic_oop[MTH_CLASS] = stix->c->cls.self_oop->classmths;
+		stix->c->cls.mthdic_oop[MTH_INSTANCE] = stix->c->cls.self_oop->mthdic[STIX_CLASS_MTHDIC_INSTANCE];
+		stix->c->cls.mthdic_oop[MTH_CLASS] = stix->c->cls.self_oop->mthdic[STIX_CLASS_MTHDIC_CLASS];
 	}
 	else
 	{
@@ -2871,8 +2871,8 @@ printf ("\n");
 	if (!(stix->c->cls.flags & CLASS_EXTENDED))
 	{
 /* TODO: anything else to set? */
-		stix->c->cls.self_oop->instmths = stix->c->cls.mthdic_oop[MTH_INSTANCE];
-		stix->c->cls.self_oop->classmths = stix->c->cls.mthdic_oop[MTH_CLASS];
+		stix->c->cls.self_oop->mthdic[STIX_CLASS_MTHDIC_INSTANCE] = stix->c->cls.mthdic_oop[MTH_INSTANCE];
+		stix->c->cls.self_oop->mthdic[STIX_CLASS_MTHDIC_CLASS] = stix->c->cls.mthdic_oop[MTH_CLASS];
 	}
 
 	GET_TOKEN (stix);
