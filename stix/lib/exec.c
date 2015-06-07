@@ -219,30 +219,119 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t ctx)
 
 int stix_execute (stix_t* stix)
 {
+
 	stix_oop_method_t mth;
 	stix_oop_byte_t code;
-	stix_ooi_t ip;
-	stix_byte_t bc;
+	stix_ooi_t ip, sp;
+	stix_oop_t receiver;
+
+	stix_byte_t bc, cmd;
+	stix_oow_t b1, b2;
+
 
 	STIX_ASSERT (stix->active_context != STIX_NULL);
 	mth = stix->active_context->method;
 	ip = STIX_OOP_TO_SMINT(stix->active_context->ip);
+	sp = STIX_OOP_TO_SMINT(stix->active_context->sp);
 	code = mth->code;
+	receiver = stix->active_context->receiver;
 
 	while (1)
 	{
-
-
 		bc = code->slot[ip++];
 		cmd = bc >> 4;
 		if (cmd == CMD_EXTEND)
 		{
 			cmd = bc & 0xF;
+			b1 = code->slot[ip++];
+		}
+		else
+		{
+			b1 = bc & 0xF;
 		}
 
+printf ("CMD => %d, B1 = %d\n", (int)cmd, (int)b1);
+		switch (cmd)
+		{
+
+			case CMD_PUSH_INSTVAR:
+printf ("PUSHING INSTVAR %d\n", (int)b1);
+				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(receiver) == STIX_OBJ_TYPE_OOP);
+				stix->active_context->slot[++sp] = ((stix_oop_oop_t)receiver)->slot[b1];
+				break;
+
+			case CMD_PUSH_TEMPVAR:
+printf ("PUSHING TEMPVAR %d\n", (int)b1);
+				stix->active_context->slot[++sp] = stix->active_context->slot[b1];
+				break;
+
+			case CMD_PUSH_LITERAL:
+				stix->active_context->slot[++sp] = mth->slot[b1];
+				break;
+
+			case CMD_POP_AND_STORE_INTO_INSTVAR:
+printf ("STORING INSTVAR %d\n", (int)b1);
+				((stix_oop_oop_t)receiver)->slot[b1] = stix->active_context->slot[sp--];
+				break;
+
+			case CMD_POP_AND_STORE_INTO_TEMPVAR:
+printf ("STORING TEMPVAR %d\n", (int)b1);
+				stix->active_context->slot[b1] = stix->active_context->slot[sp--];
+				break;
+
+			/*
+			case CMD_POP_AND_STORE_INTO_OBJECT_POINTED_TO_BY_LITERAL???
+			*/
+
+			case CMD_SEND_MESSAGE_TO_SELF:
+			case CMD_SEND_MESSAGE_TO_SUPER:
+				break;
+
+
+			case CMD_PUSH_SPECIAL:
+				switch (b1)
+				{
+					case SUBCMD_PUSH_RECEIVER:
+printf ("PUSHING RECEIVER\n");
+						stix->active_context->slot[++sp] = receiver;
+						break;
+
+					case SUBCMD_PUSH_NIL:
+						stix->active_context->slot[++sp] = stix->_nil;
+						break;
+
+					case SUBCMD_PUSH_TRUE:
+printf ("PUSHING TRUE\n");
+						stix->active_context->slot[++sp] = stix->_true;
+						break;
+
+					case SUBCMD_PUSH_FALSE:
+						stix->active_context->slot[++sp] = stix->_false;
+						break;
+				}
+				break;
+
+			case CMD_DO_SPECIAL:
+				switch (b1)
+				{
+					case SUBCMD_RETURN_MESSAGE_RECEIVER:
+printf ("RETURNING. RECEIVER...........\n");
+			/* TO RETURN SAVE REGISTERS... RELOAD REGISTERS.. */ goto done;
+						break;
+
+					case SUBCMD_RETURN_MESSAGE_STACKTOP:
+printf ("RETURNING FrOM MESSAGE..........\n"); goto done;
+						break;
+
+					/*case CMD_RETURN_BLOCK_STACKTOP:*/
+					
+				}
+				break;
+		}
 	}
 
-	return -1;
+done:
+	return 0;
 }
 
 int stix_invoke (stix_t* stix, const stix_ucs_t* objname, const stix_ucs_t* mthname)

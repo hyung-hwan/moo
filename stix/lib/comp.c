@@ -1007,36 +1007,6 @@ static int end_include (stix_t* stix)
  * Byte-Code Generator
  * --------------------------------------------------------------------- */
 
-#define MAKE_CODE(x,y) (((x) << 4) | y)
-#define MAX_CODE_INDEX               0xFFFFu
-#define MAX_CODE_NARGS               0xFFFFu
-
-#define CMD_EXTEND                       0x0
-#define CMD_EXTEND_DOUBLE                0x1
-#define CMD_PUSH_INSTVAR                 0x2
-#define CMD_PUSH_TEMPVAR                 0x3
-#define CMD_PUSH_LITERAL                 0x4
-#define CMD_POP_AND_STORE_INTO_INSTVAR   0x5 /* pop and store */
-#define CMD_POP_AND_STORE_INTO_CLASSVAR  0x6 /* pop and store */
-#define CMD_POP_AND_STORE_INTO_TEMPVAR   0x7 /* pop and store */
-
-#define CMD_SEND_MESSAGE_TO_SELF         0xA
-#define CMD_SEND_MESSAGE_TO_SUPER        0xB
-
-/* ---------------------------------- */
-#define CODE_PUSH_RECEIVER            0xE0
-#define CODE_PUSH_NIL                 0xE1
-#define CODE_PUSH_TRUE                0xE2
-#define CODE_PUSH_FALSE               0xE3
-
-/* special code */
-#define CODE_DUP_STACKTOP             0xF1
-#define CODE_POP_STACKTOP             0xF2
-#define CODE_RETURN_MESSAGE_STACKTOP  0xF3
-#define CODE_RETURN_BLOCK_STACKTOP    0xF4
-#define CODE_RETURN_MESSAGE_RECEIVER  0xF5
-#define CODE_EXEC_PRIMITIVE           0xFF
-
 static STIX_INLINE int emit_byte_instruction (stix_t* stix, stix_byte_t code)
 {
 	stix_size_t i;

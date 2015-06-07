@@ -437,6 +437,65 @@ struct stix_compiler_t
 #endif
 
 
+#define MAKE_CODE(x,y) (((x) << 4) | y)
+#define MAX_CODE_INDEX               0xFFFFu
+#define MAX_CODE_NARGS               0xFFFFu
+
+#define CMD_EXTEND                       0x0
+#define CMD_EXTEND_DOUBLE                0x1
+
+/* positional instructions 
+ * XXXXJJJJ
+ * 0000XXXX JJJJJJJJ
+ * 0001XXXX JJJJJJJJ JJJJJJJJ
+ *
+ * XXXX is one of the following positional instructions.
+ * JJJJ or JJJJJJJJ is the position.
+ */
+#define CMD_PUSH_INSTVAR                 0x2
+#define CMD_PUSH_TEMPVAR                 0x3
+#define CMD_PUSH_LITERAL                 0x4
+#define CMD_POP_AND_STORE_INTO_INSTVAR   0x5 /* pop and store */
+#define CMD_POP_AND_STORE_INTO_CLASSVAR  0x6 /* pop and store */
+#define CMD_POP_AND_STORE_INTO_TEMPVAR   0x7 /* pop and store */
+
+/*
+ * XXXXJJJJ KKKKKKKK
+ * 0000XXXX JJJJJJJJ KKKKKKKK
+ * 0001XXXX JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
+ */
+#define CMD_SEND_MESSAGE_TO_SELF         0xA
+#define CMD_SEND_MESSAGE_TO_SUPER        0xB
+
+#define CMD_PUSH_SPECIAL                 0xE
+#define CMD_DO_SPECIAL                   0xF
+
+
+#define SUBCMD_PUSH_RECEIVER 0x0
+#define SUBCMD_PUSH_NIL      0x1
+#define SUBCMD_PUSH_TRUE     0x2
+#define SUBCMD_PUSH_FALSE    0x3
+
+#define SUBCMD_DUP_STACKTOP            0x0
+#define SUBCMD_POP_STACKTOP            0x1
+#define SUBCMD_RETURN_MESSAGE_STACKTOP 0x2
+#define SUBCMD_RETURN_BLOCK_STACKTOP   0x3
+#define SUBCMD_RETURN_MESSAGE_RECEIVER 0x4
+#define SUBCMD_EXEC_PRIMITIVE          0xF
+/* ---------------------------------- */
+#define CODE_PUSH_RECEIVER            MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_RECEIVER)
+#define CODE_PUSH_NIL                 MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_NIL)
+#define CODE_PUSH_TRUE                MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_TRUE)
+#define CODE_PUSH_FALSE               MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_FALSE)
+
+/* special code */
+#define CODE_DUP_STACKTOP             MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_DUP_STACKTOP)
+#define CODE_POP_STACKTOP             MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_POP_STACKTOP)
+#define CODE_RETURN_MESSAGE_STACKTOP  MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_MESSAGE_STACKTOP)
+#define CODE_RETURN_BLOCK_STACKTOP    MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_BLOCK_STACKTOP)
+#define CODE_RETURN_MESSAGE_RECEIVER  MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_MESSAGE_RECEIVER)
+#define CODE_EXEC_PRIMITIVE           MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_EXEC_PRIMITIVE)
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
