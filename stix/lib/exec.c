@@ -27,7 +27,7 @@
 #include "stix-prv.h"
 
 
-static int activate_new_method (stix_t* stix, stix_oop_method_t mth)
+static int activate_new_method (stix_t* stix, stix_oop_method_t mth, stix_ooi_t* xip, stix_ooi_t* xsp)
 {
 	stix_oow_t stack_size;
 	stix_oop_context_t ctx;
@@ -42,21 +42,44 @@ static int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	if (!ctx) return -1;
 
 	/* message sending requires a receiver to be pushed. 
-	 * the stack pointer of the sending context cannot be -1 */
-	sp = STIX_OOP_TO_SMINT (stix->active_context->sp);
-	STIX_ASSERT (sp >= 0);
+	 * the stack pointer of the sending context cannot be -1.
+	 * if one-argumented message is invoked the stack of the
+	 * sending context looks like this.
+	 *
+	 * Sending Context
+	 *
+	 *   +---------------------+
+	 *   | fixed part          |
+	 *   |                     |
+	 *   |                     |
+	 *   |                     |
+	 *   +---------------------+
+	 *   | ....                | slot[0]
+	 *   | ....                | slot[..]
+	 *   | ....                | slot[..] 
+	 *   | receiver            | slot[..] <-- sp - nargs(1)
+	 *   | arg1                | slot[..] <-- sp
+ 	 *   | ....                | slot[..] 
+	 *   |                     | slot[stack_size - 1] 
+	 *   +---------------------+
+	 */
+	/*sp = STIX_OOP_TO_SMINT (stix->active_context->sp);*/
+	sp = *xsp;
+printf ("@@@@@@@@@@@@@ %d %d\n", (int)*xsp, (int)STIX_OOP_TO_SMINT(stix->active_context->sp));
 	ntmprs = STIX_OOP_TO_SMINT (mth->tmpr_count);
-	STIX_ASSERT (ntmprs >= 0);
 	nargs = STIX_OOP_TO_SMINT (mth->tmpr_nargs);
+
+	STIX_ASSERT (ntmprs >= 0);
 	STIX_ASSERT (nargs <= ntmprs);
-	STIX_ASSERT (sp >= ntmprs + 1);
+	STIX_ASSERT (sp >= 0);
+	STIX_ASSERT (sp >= nargs);
 
 	ctx->sender = (stix_oop_t)stix->active_context; 
 	ctx->ip = 0;
 
 	/* the stack front has temporary variables including arguments.
 	 *
-	 * Context
+	 * New Context
 	 *
 	 *   +---------------------+
 	 *   | fixed part          |
@@ -66,11 +89,11 @@ static int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	 *   +---------------------+
 	 *   | tmp1 (arg1)         | slot[0]
 	 *   | tmp2 (arg2)         | slot[1]
-	 *   | ....                | slot[1] 
-	 *   | tmpX                | slot[1]     <-- initial sp
-	 *   |                     | slot[1] 
-	 *   |                     | slot[1] 
-	 *   |                     | slot[1] 
+	 *   | ....                | slot[..] 
+	 *   | tmpX                | slot[..]     <-- initial sp
+	 *   |                     | slot[..] 
+	 *   |                     | slot[..] 
+	 *   |                     | slot[stack_size - 2] 
 	 *   |                     | slot[stack_size - 1] 
 	 *   +---------------------+
 	 *
@@ -102,6 +125,7 @@ static int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	 */
 	j = sp - nargs;
 	ctx->receiver = stix->active_context->slot[j];
+printf ("SETTING RECEIVER %p FROM SLOT %d SP %d NARGS %d\n", ctx->receiver, (int)j, (int)sp, (int)nargs);
 	for (i = 0; i < nargs; i++) 
 	{
 		/* copy an argument*/
@@ -111,34 +135,44 @@ printf ("j = %d, sp = %d\n", (int)j, (int)sp);
 	STIX_ASSERT (j == sp);
 
 /* TODO: store the contennts of internal registers to stix->active_context */
+	sp -= nargs + 1;
+	stix->active_context->ip = STIX_OOP_FROM_SMINT(*xip);
+	stix->active_context->sp = STIX_OOP_FROM_SMINT(sp);
 
 	stix->active_context = ctx;
 
 /* TODO: copy the contens of ctx to internal registers */
+	*xip = STIX_OOP_TO_SMINT(stix->active_context->ip);
+	*xsp = STIX_OOP_TO_SMINT(stix->active_context->sp);
+
 	return 0;
 }
 
-static stix_oop_method_t find_method (stix_t* stix, stix_oop_t obj, const stix_ucs_t* mthname)
+static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const stix_ucs_t* message)
 {
 	stix_oop_class_t cls;
 	stix_oop_association_t ass;
 	stix_oop_t c;
 	stix_oop_set_t mthdic;
 	int dic_no;
+/* TODO: implement method lookup cache */
 
-	cls = (stix_oop_class_t)STIX_CLASSOF(stix, obj);
+printf ("FINDING METHOD FOR %p ", receiver);
+print_ucs (message);
+printf ("\n");
+	cls = (stix_oop_class_t)STIX_CLASSOF(stix, receiver);
 	if ((stix_oop_t)cls == stix->_class)
 	{
-		/* obj is a class object */
-		c = obj; 
+		/* receiver is a class receiverect */
+		c = receiver; 
 		dic_no = STIX_CLASS_MTHDIC_CLASS;
 printf ("going to lookup class method dictioanry...\n");
-	}	
+	}
 	else
 	{
 		c = (stix_oop_t)cls;
 		dic_no = STIX_CLASS_MTHDIC_INSTANCE;
-printf ("going to lookup class instance dictioanry...\n");
+printf ("going to lookup instance method dictioanry...\n");
 	}
 
 	while (c != stix->_nil)
@@ -147,7 +181,7 @@ printf ("going to lookup class instance dictioanry...\n");
 		STIX_ASSERT (STIX_CLASSOF(stix, mthdic) == stix->_method_dictionary);
 
 dump_dictionary (stix, mthdic, "Method dictionary");
-		ass = (stix_oop_association_t)stix_lookupdic (stix, mthdic, mthname);
+		ass = (stix_oop_association_t)stix_lookupdic (stix, mthdic, message);
 		if (ass) 
 		{
 			STIX_ASSERT (STIX_CLASSOF(stix, ass->value) == stix->_method);
@@ -162,11 +196,22 @@ dump_dictionary (stix, mthdic, "Method dictionary");
 
 static int activate_initial_context (stix_t* stix, const stix_ucs_t* objname, const stix_ucs_t* mthname)
 {
-	/* the initial context is a fake context */
+	/* the initial context is a fake context. if objname is 'Stix' and
+	 * mthname is 'main', this function emulates message sending 'Stix main'.
+	 * it should emulate the following logical byte-code sequences:
+	 *
+	 *    push Stix
+	 *    send #main
+	 */
+
 	stix_oop_context_t ctx;
 	stix_oop_association_t ass;
 	stix_oop_method_t mth;
-	stix_ooi_t sp;
+	stix_ooi_t ip, sp;
+
+	/* create a fake initial context */
+	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_context, STIX_NULL, 1);
+	if (!ctx) return -1;
 
 	ass = stix_lookupsysdic (stix, objname);
 	if (!ass) return -1;
@@ -190,54 +235,39 @@ TODO: overcome this problem
 	 * and is not really worked on except that it is used to call the
 	 * initial method. so it doesn't really require any extra stack space.
 	 * TODO: verify my theory above is true */
-	sp = 1 + STIX_OOP_TO_SMINT(mth->tmpr_count);
+	ip = 0;
+	sp = -1;
 
-	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_context, STIX_NULL, sp);
-	if (!ctx) return -1;
-
-	ctx->slot[0] = ass->value;
+	ctx->slot[++sp] = ass->value; /* push receiver */
 	ctx->sp = STIX_OOP_FROM_SMINT(sp);
+	ctx->ip = STIX_OOP_FROM_SMINT(ip); /* fake */
+	/* receiver, sender, method are nils */
 
 	stix->active_context = ctx;
-	return activate_new_method (stix, mth);
+	return activate_new_method (stix, mth, &ip, &sp);
 }
-
-#if 0
-static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t ctx)
-{
-	stix_oop_process_t proc;
-
-	stix_pushtmp (stix, (stix_oop_t*)&ctx);
-	proc = (stix_oop_process_t)stix_instantiate (stix, stix->_process, STIX_NULL, 0);
-	stix_poptmp (stix);
-	if (!proc) return STIX_NULL;
-
-	proc->context = ctx;
-	return proc;
-}
-#endif
 
 int stix_execute (stix_t* stix)
 {
-
 	stix_oop_method_t mth;
 	stix_oop_byte_t code;
 	stix_ooi_t ip, sp;
 	stix_oop_t receiver;
 
 	stix_byte_t bc, cmd;
-	stix_oow_t b1, b2;
-
+	stix_oow_t b1;
 
 	STIX_ASSERT (stix->active_context != STIX_NULL);
-	mth = stix->active_context->method;
 	ip = STIX_OOP_TO_SMINT(stix->active_context->ip);
 	sp = STIX_OOP_TO_SMINT(stix->active_context->sp);
-	code = mth->code;
-	receiver = stix->active_context->receiver;
 
 	while (1)
 	{
+		receiver = stix->active_context->receiver;
+		mth = stix->active_context->method;
+		code = mth->code;
+
+printf ("IP => %d ", (int)ip);
 		bc = code->slot[ip++];
 		cmd = bc >> 4;
 		if (cmd == CMD_EXTEND)
@@ -245,12 +275,13 @@ int stix_execute (stix_t* stix)
 			cmd = bc & 0xF;
 			b1 = code->slot[ip++];
 		}
+/* TODO: handle CMD_EXTEND_DOUBLE */
 		else
 		{
 			b1 = bc & 0xF;
 		}
 
-printf ("CMD => %d, B1 = %d\n", (int)cmd, (int)b1);
+printf ("CMD => %d, B1 = %d, IP AFTER INC %d\n", (int)cmd, (int)b1, (int)ip);
 		switch (cmd)
 		{
 
@@ -283,8 +314,47 @@ printf ("STORING TEMPVAR %d\n", (int)b1);
 			case CMD_POP_AND_STORE_INTO_OBJECT_POINTED_TO_BY_LITERAL???
 			*/
 
-			case CMD_SEND_MESSAGE_TO_SELF:
+			case CMD_SEND_MESSAGE:
+			{
+				/* b1 -> number of arguments 
+				 * b2 -> literal index of the message symbol
+TODO: handle double extension 
+				 */
+				stix_ucs_t mthname;
+				stix_oop_t newrcv;
+				stix_oop_method_t newmth;
+				stix_oop_char_t selector;
+				stix_ooi_t selector_index;
+
+printf ("SENDING MESSAGE   \n");
+				selector_index = code->slot[ip++];
+
+				/* get the selector from the literal frame */
+				selector = (stix_oop_char_t)mth->slot[selector_index];
+
+				STIX_ASSERT (STIX_CLASSOF(stix, selector) == stix->_symbol);
+printf ("RECEIVER INDEX %d\n", (int)(sp - b1));
+
+				newrcv = stix->active_context->slot[sp - b1];
+				mthname.ptr = selector->slot;
+				mthname.len = STIX_OBJ_GET_SIZE(selector);
+				newmth = find_method (stix, newrcv, &mthname);
+				if (!newmth) 
+				{
+/* TODO: implement doesNotUnderstand: XXXXX  instead of returning -1. */
+printf ("no such method .........[");
+print_ucs (&mthname);
+printf ("]\n");
+					return -1;
+				}
+
+				STIX_ASSERT (STIX_OOP_TO_SMINT(newmth->tmpr_nargs) == b1);
+				if (activate_new_method (stix, newmth, &ip, &sp) <= -1) return -1;
+				break;
+			}
+
 			case CMD_SEND_MESSAGE_TO_SUPER:
+				/*b2 = code->slot[ip++];*/
 				break;
 
 
@@ -292,7 +362,7 @@ printf ("STORING TEMPVAR %d\n", (int)b1);
 				switch (b1)
 				{
 					case SUBCMD_PUSH_RECEIVER:
-printf ("PUSHING RECEIVER\n");
+printf ("PUSHING RECEIVER %p TO STACK INDEX %d\n", receiver, (int)sp);
 						stix->active_context->slot[++sp] = receiver;
 						break;
 
@@ -315,13 +385,55 @@ printf ("PUSHING TRUE\n");
 				switch (b1)
 				{
 					case SUBCMD_RETURN_MESSAGE_RECEIVER:
+					{
+						stix_oop_context_t ctx;
+
 printf ("RETURNING. RECEIVER...........\n");
-			/* TO RETURN SAVE REGISTERS... RELOAD REGISTERS.. */ goto done;
+						ctx = stix->active_context; /* current context */
+						ctx->ip = STIX_OOP_FROM_SMINT(ip);
+						ctx->sp = STIX_OOP_FROM_SMINT(sp);
+
+						stix->active_context = (stix_oop_context_t)ctx->sender; /* return to the sending context */
+						if (stix->active_context->sender == stix->_nil) 
+						{
+printf ("RETURNIGN TO THE INITIAL CONTEXT.......\n");
+							/* returning to the initial context */
+							goto done;
+						}
+
+						ip = STIX_OOP_TO_SMINT(stix->active_context->ip);
+						sp = STIX_OOP_TO_SMINT(stix->active_context->sp);
+						stix->active_context->slot[++sp] = ctx->receiver;
+
 						break;
+					}
 
 					case SUBCMD_RETURN_MESSAGE_STACKTOP:
-printf ("RETURNING FrOM MESSAGE..........\n"); goto done;
+					{
+						stix_oop_context_t ctx;
+						stix_oop_t top;
+
+printf ("RETURNING. RECEIVER...........\n");
+						ctx = stix->active_context; /* current context */
+						top = ctx->slot[sp--];
+						ctx->ip = STIX_OOP_FROM_SMINT(ip);
+						ctx->sp = STIX_OOP_FROM_SMINT(sp);
+
+						stix->active_context = (stix_oop_context_t)ctx->sender; /* return to the sending context */
+
+						ip = STIX_OOP_TO_SMINT(stix->active_context->ip);
+						sp = STIX_OOP_TO_SMINT(stix->active_context->sp);
+						stix->active_context->slot[++sp] = top;
+
+						if (stix->active_context->sender == stix->_nil) 
+						{
+printf ("RETURNIGN TO THE INITIAL CONTEXT.......\n");
+							/* returning to the initial context */
+							goto done;
+						}
+
 						break;
+					}
 
 					/*case CMD_RETURN_BLOCK_STACKTOP:*/
 					

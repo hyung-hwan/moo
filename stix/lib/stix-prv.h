@@ -464,7 +464,7 @@ struct stix_compiler_t
  * 0000XXXX JJJJJJJJ KKKKKKKK
  * 0001XXXX JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
  */
-#define CMD_SEND_MESSAGE_TO_SELF         0xA
+#define CMD_SEND_MESSAGE                 0xA
 #define CMD_SEND_MESSAGE_TO_SUPER        0xB
 
 #define CMD_PUSH_SPECIAL                 0xE

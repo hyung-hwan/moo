@@ -729,11 +729,7 @@ struct stix_t
 
 	/* == EXECUTION REGISTERS == */
 	stix_oop_context_t active_context; /* TODO: this could be either MethodContext or BlockContext. Some redefintion of stix_oop_context_t might be needed  after having removed stix-oop_block-context. */
-	stix_oop_context_t home_context;
-	stix_oop_t         method;
-	stix_oop_t         receiver;
-	stix_oop_t         ip;               /* SmallInteger */
-	stix_oop_t         sp;               /* SmallInteger */
+	/* stix_oop_context_t home_context; */
 	/* == END EXECUTION REGISTERS == */
 
 #if defined(STIX_INCLUDE_COMPILER)

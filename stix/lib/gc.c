@@ -230,6 +230,8 @@ void stix_gc (stix_t* stix)
 		*stix->tmp_stack[i] = stix_moveoop (stix, *stix->tmp_stack[i]);
 	}
 
+	stix->active_context = (stix_oop_context_t)stix_moveoop (stix, (stix_oop_t)stix->active_context);
+
 	for (cb = stix->cblist; cb; cb = cb->next)
 	{
 		if (cb->gc) cb->gc (stix);

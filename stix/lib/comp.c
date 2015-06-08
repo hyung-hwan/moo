@@ -1,4 +1,5 @@
 /*
+/*
  * $Id$
  *
     Copyright (c) 2014-2015 Chung, Hyung-Hwan. All rights reserved.
@@ -2049,7 +2050,7 @@ printf ("push symbol literal %d\n", (int)index);
 
 static stix_byte_t send_message_cmd[] = 
 {
-	CMD_SEND_MESSAGE_TO_SELF,
+	CMD_SEND_MESSAGE,
 	CMD_SEND_MESSAGE_TO_SUPER
 };
 
@@ -2121,11 +2122,12 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 	kwsel_loc = stix->c->tok.loc;
 	kwsel_len = stix->c->mth.kwsels.len;
 
-	kw = stix->c->tok.name;
-	if (clone_keyword(stix, &kw) <= -1) return -1;
 
 	do 
 	{
+		kw = stix->c->tok.name;
+		if (clone_keyword(stix, &kw) <= -1) goto oops;
+
 		GET_TOKEN (stix);
 		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, &to_super2) <= -1 ||
 		    compile_binary_message(stix, to_super2) <= -1) goto oops;
@@ -2137,9 +2139,6 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 		}
 
 		nargs++;
-
-		kw = stix->c->tok.name;
-		if (clone_keyword(stix, &kw) <= -1) goto oops;
 	} 
 	while (stix->c->tok.type == STIX_IOTOK_KEYWORD);
 
@@ -2148,7 +2147,9 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 
 	if (add_symbol_literal(stix, &kwsel, &index) <= -1 ||
 	    emit_send_instruction(stix, send_message_cmd[to_super], nargs, index) <= -1) goto oops;
-printf ("send message %d with %d arguments to %s\n", (int)index, (int)nargs, (to_super? "super": "self"));
+printf ("Send message %d [", (int)index);
+print_ucs (&kwsel);
+printf ("] with %d arguments to %s\n", (int)nargs, (to_super? "super": "self"));
 	stix->c->mth.kwsels.len = kwsel_len;
 	return 0;
 
