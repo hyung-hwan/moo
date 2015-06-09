@@ -26,12 +26,26 @@
 
 #include "stix-prv.h"
 
+#define LOAD_IP_AND_SP(v_ctx, v_ip, v_sp) \
+	do \
+	{ \
+		v_ip = STIX_OOP_TO_SMINT((v_ctx)->ip); \
+		v_sp = STIX_OOP_TO_SMINT((v_ctx)->sp); \
+	} while(0)
+
+#define STORE_IP_AND_SP(v_ctx, v_ip, v_sp) \
+	do \
+	{ \
+		(v_ctx)->ip = STIX_OOP_FROM_SMINT(v_ip); \
+		(v_ctx)->sp = STIX_OOP_FROM_SMINT(v_sp); \
+	} while(0)
+
 
 static int activate_new_method (stix_t* stix, stix_oop_method_t mth, stix_ooi_t* xip, stix_ooi_t* xsp)
 {
 	stix_oow_t stack_size;
 	stix_oop_context_t ctx;
-	stix_ooi_t i, j;
+	stix_ooi_t i;
 	stix_ooi_t sp, ntmprs, nargs;
 
 	stack_size = 256; /* TODO: make the stack size configurable or let the compiler choose the rightr value and store it in the compiled method. if it's stored in the compiled method, the code here can take it*/
@@ -65,7 +79,6 @@ static int activate_new_method (stix_t* stix, stix_oop_method_t mth, stix_ooi_t*
 	 */
 	/*sp = STIX_OOP_TO_SMINT (stix->active_context->sp);*/
 	sp = *xsp;
-printf ("@@@@@@@@@@@@@ %d %d\n", (int)*xsp, (int)STIX_OOP_TO_SMINT(stix->active_context->sp));
 	ntmprs = STIX_OOP_TO_SMINT (mth->tmpr_count);
 	nargs = STIX_OOP_TO_SMINT (mth->tmpr_nargs);
 
@@ -123,32 +136,30 @@ printf ("@@@@@@@@@@@@@ %d %d\n", (int)*xsp, (int)STIX_OOP_TO_SMINT(stix->active_
 	 * Since the number of arguments is 3, stack[sp - 3] points to
 	 * the receiver. When the stack is empty, sp is -1.
 	 */
-	j = sp - nargs;
-	ctx->receiver = stix->active_context->slot[j];
-printf ("SETTING RECEIVER %p FROM SLOT %d SP %d NARGS %d\n", ctx->receiver, (int)j, (int)sp, (int)nargs);
-	for (i = 0; i < nargs; i++) 
+	for (i = nargs; i > 0; )
 	{
-		/* copy an argument*/
-		ctx->slot[i] = stix->active_context->slot[++j];
+		/* copy argument */
+		ctx->slot[--i] = stix->active_context->slot[sp--];
 	}
-printf ("j = %d, sp = %d\n", (int)j, (int)sp);
-	STIX_ASSERT (j == sp);
+	/* copy receiver */
+	ctx->receiver = stix->active_context->slot[sp--];
+	STIX_ASSERT (sp >= -1);
 
-/* TODO: store the contennts of internal registers to stix->active_context */
-	sp -= nargs + 1;
-	stix->active_context->ip = STIX_OOP_FROM_SMINT(*xip);
-	stix->active_context->sp = STIX_OOP_FROM_SMINT(sp);
+	/* store an instruction pointer and a stack pointer to the active context
+	 * before switching it to a new context */
+	STORE_IP_AND_SP (stix->active_context, *xip, sp);
 
+	/* swtich the active context */
 	stix->active_context = ctx;
 
-/* TODO: copy the contens of ctx to internal registers */
-	*xip = STIX_OOP_TO_SMINT(stix->active_context->ip);
-	*xsp = STIX_OOP_TO_SMINT(stix->active_context->sp);
+	/* load an instruction pointer and a stack pointer from the new active
+	 * context */
+	LOAD_IP_AND_SP (stix->active_context, *xip, *xsp);
 
 	return 0;
 }
 
-static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const stix_ucs_t* message)
+static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const stix_ucs_t* message, int super)
 {
 	stix_oop_class_t cls;
 	stix_oop_association_t ass;
@@ -175,21 +186,33 @@ printf ("going to lookup class method dictioanry...\n");
 printf ("going to lookup instance method dictioanry...\n");
 	}
 
-	while (c != stix->_nil)
-	{
-		mthdic = ((stix_oop_class_t)c)->mthdic[dic_no];
-		STIX_ASSERT (STIX_CLASSOF(stix, mthdic) == stix->_method_dictionary);
 
-dump_dictionary (stix, mthdic, "Method dictionary");
-		ass = (stix_oop_association_t)stix_lookupdic (stix, mthdic, message);
-		if (ass) 
+	if (c != stix->_nil)
+	{
+		if (super) 
 		{
-			STIX_ASSERT (STIX_CLASSOF(stix, ass->value) == stix->_method);
-			return (stix_oop_method_t)ass->value;
+			c = ((stix_oop_class_t)c)->superclass;
+			if (c == stix->_nil) goto not_found;
 		}
-		c = ((stix_oop_class_t)c)->superclass;
+
+		do
+		{
+			mthdic = ((stix_oop_class_t)c)->mthdic[dic_no];
+			STIX_ASSERT (STIX_CLASSOF(stix, mthdic) == stix->_method_dictionary);
+
+	dump_dictionary (stix, mthdic, "Method dictionary");
+			ass = (stix_oop_association_t)stix_lookupdic (stix, mthdic, message);
+			if (ass) 
+			{
+				STIX_ASSERT (STIX_CLASSOF(stix, ass->value) == stix->_method);
+				return (stix_oop_method_t)ass->value;
+			}
+			c = ((stix_oop_class_t)c)->superclass;
+		}
+		while (c != stix->_nil);
 	}
 
+not_found:
 	stix->errnum = STIX_ENOENT;
 	return STIX_NULL;
 }
@@ -217,7 +240,7 @@ static int activate_initial_context (stix_t* stix, const stix_ucs_t* objname, co
 	if (!ass) return -1;
 
 printf ("found object...\n");
-	mth = find_method (stix, ass->value, mthname);
+	mth = find_method (stix, ass->value, mthname, 0);
 	if (!mth) return -1;
 
 printf ("found method...\n");
@@ -239,12 +262,27 @@ TODO: overcome this problem
 	sp = -1;
 
 	ctx->slot[++sp] = ass->value; /* push receiver */
-	ctx->sp = STIX_OOP_FROM_SMINT(sp);
-	ctx->ip = STIX_OOP_FROM_SMINT(ip); /* fake */
+	STORE_IP_AND_SP (ctx, ip, sp);
 	/* receiver, sender, method are nils */
 
 	stix->active_context = ctx;
 	return activate_new_method (stix, mth, &ip, &sp);
+}
+
+static int execute_primitive (stix_t* stix, int prim_no, stix_ooi_t nargs, stix_ooi_t* sp)
+{
+	switch (prim_no)
+	{
+		case 0:
+			/*dump_object (stix->active_context->slot[sp], nargs);*/
+			return 1;
+
+		default:
+			return -1;
+	}
+
+/* TODO: when it returns 1, it should pop up receiver and argumetns.... 
+ * when it returns 0, it should not touch the stack */
 }
 
 int stix_execute (stix_t* stix)
@@ -252,7 +290,6 @@ int stix_execute (stix_t* stix)
 	stix_oop_method_t mth;
 	stix_oop_byte_t code;
 	stix_ooi_t ip, sp;
-	stix_oop_t receiver;
 
 	stix_byte_t bc, cmd;
 	stix_oow_t b1;
@@ -263,7 +300,6 @@ int stix_execute (stix_t* stix)
 
 	while (1)
 	{
-		receiver = stix->active_context->receiver;
 		mth = stix->active_context->method;
 		code = mth->code;
 
@@ -281,14 +317,14 @@ printf ("IP => %d ", (int)ip);
 			b1 = bc & 0xF;
 		}
 
-printf ("CMD => %d, B1 = %d, IP AFTER INC %d\n", (int)cmd, (int)b1, (int)ip);
+printf ("CMD => %d, B1 = %d, SP = %d, IP AFTER INC %d\n", (int)cmd, (int)b1, (int)sp, (int)ip);
 		switch (cmd)
 		{
 
 			case CMD_PUSH_INSTVAR:
 printf ("PUSHING INSTVAR %d\n", (int)b1);
-				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(receiver) == STIX_OBJ_TYPE_OOP);
-				stix->active_context->slot[++sp] = ((stix_oop_oop_t)receiver)->slot[b1];
+				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver) == STIX_OBJ_TYPE_OOP);
+				stix->active_context->slot[++sp] = ((stix_oop_oop_t)stix->active_context->receiver)->slot[b1];
 				break;
 
 			case CMD_PUSH_TEMPVAR:
@@ -297,12 +333,14 @@ printf ("PUSHING TEMPVAR %d\n", (int)b1);
 				break;
 
 			case CMD_PUSH_LITERAL:
+printf ("PUSHING LITERAL %d\n", (int)b1);
 				stix->active_context->slot[++sp] = mth->slot[b1];
 				break;
 
 			case CMD_POP_AND_STORE_INTO_INSTVAR:
 printf ("STORING INSTVAR %d\n", (int)b1);
-				((stix_oop_oop_t)receiver)->slot[b1] = stix->active_context->slot[sp--];
+				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver) == STIX_OBJ_TYPE_OOP);
+				((stix_oop_oop_t)stix->active_context->receiver)->slot[b1] = stix->active_context->slot[sp--];
 				break;
 
 			case CMD_POP_AND_STORE_INTO_TEMPVAR:
@@ -314,10 +352,12 @@ printf ("STORING TEMPVAR %d\n", (int)b1);
 			case CMD_POP_AND_STORE_INTO_OBJECT_POINTED_TO_BY_LITERAL???
 			*/
 
+		/* -------------------------------------------------------- */
+
 			case CMD_SEND_MESSAGE:
+			case CMD_SEND_MESSAGE_TO_SUPER:
 			{
 				/* b1 -> number of arguments 
-				 * b2 -> literal index of the message symbol
 TODO: handle double extension 
 				 */
 				stix_ucs_t mthname;
@@ -325,8 +365,11 @@ TODO: handle double extension
 				stix_oop_method_t newmth;
 				stix_oop_char_t selector;
 				stix_ooi_t selector_index;
+				stix_ooi_t preamble;
 
 printf ("SENDING MESSAGE   \n");
+				/* the next byte is the message selector index to the
+				 * literal frame. */
 				selector_index = code->slot[ip++];
 
 				/* get the selector from the literal frame */
@@ -338,7 +381,7 @@ printf ("RECEIVER INDEX %d\n", (int)(sp - b1));
 				newrcv = stix->active_context->slot[sp - b1];
 				mthname.ptr = selector->slot;
 				mthname.len = STIX_OBJ_GET_SIZE(selector);
-				newmth = find_method (stix, newrcv, &mthname);
+				newmth = find_method (stix, newrcv, &mthname, (cmd == CMD_SEND_MESSAGE_TO_SUPER));
 				if (!newmth) 
 				{
 /* TODO: implement doesNotUnderstand: XXXXX  instead of returning -1. */
@@ -349,24 +392,63 @@ printf ("]\n");
 				}
 
 				STIX_ASSERT (STIX_OOP_TO_SMINT(newmth->tmpr_nargs) == b1);
-				if (activate_new_method (stix, newmth, &ip, &sp) <= -1) return -1;
-				break;
+
+				preamble = STIX_OOP_TO_SMINT(newmth->preamble);
+				switch (STIX_METHOD_GET_PREAMBLE_CODE(preamble))
+				{
+					case STIX_METHOD_PREAMBLE_RETURN_RECEIVER:
+						sp = sp - b1; /* pop arguments */
+						break;
+
+					case STIX_METHOD_PREAMBLE_RETURN_INSTVAR:
+					{
+						stix_oop_oop_t receiver;
+
+						sp = sp - b1; /* pop arguments */
+
+printf ("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx SIMPLE RETURN INSTVAR VERIFY THIS\n");
+						/* replace the receiver by an instance variable of the receiver */
+						receiver = (stix_oop_oop_t)stix->active_context->slot[sp];
+						STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(receiver) == STIX_OBJ_TYPE_OOP);
+						STIX_ASSERT (STIX_OBJ_GET_SIZE(receiver) > STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
+						stix->active_context->slot[sp] = receiver->slot[STIX_METHOD_GET_PREAMBLE_INDEX(preamble)];
+						break;
+					}
+
+					case STIX_METHOD_PREAMBLE_PRIMITIVE:
+					{
+						int n;
+
+printf ("JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\n");
+						stix_pushtmp (stix, (stix_oop_t*)&newmth);
+						n = execute_primitive (stix, STIX_METHOD_GET_PREAMBLE_INDEX(preamble), b1, &sp);
+						stix_poptmp (stix);
+
+						if (n <= -1) return -1;
+						if (n >= 1) break;
+						/* primitive failed. fall thru */
+					}
+
+					default:
+						if (activate_new_method (stix, newmth, &ip, &sp) <= -1) return -1;
+						break;
+				}
+
+				break; /* CMD_SEND_MESSAGE */
 			}
 
-			case CMD_SEND_MESSAGE_TO_SUPER:
-				/*b2 = code->slot[ip++];*/
-				break;
-
+		/* -------------------------------------------------------- */
 
 			case CMD_PUSH_SPECIAL:
 				switch (b1)
 				{
 					case SUBCMD_PUSH_RECEIVER:
-printf ("PUSHING RECEIVER %p TO STACK INDEX %d\n", receiver, (int)sp);
-						stix->active_context->slot[++sp] = receiver;
+printf ("PUSHING RECEIVER %p TO STACK INDEX %d\n", stix->active_context->receiver, (int)sp);
+						stix->active_context->slot[++sp] = stix->active_context->receiver;
 						break;
 
 					case SUBCMD_PUSH_NIL:
+printf ("PUSHING NIL\n");
 						stix->active_context->slot[++sp] = stix->_nil;
 						break;
 
@@ -376,69 +458,69 @@ printf ("PUSHING TRUE\n");
 						break;
 
 					case SUBCMD_PUSH_FALSE:
+printf ("PUSHING FALSE\n");
 						stix->active_context->slot[++sp] = stix->_false;
 						break;
+
+					case SUBCMD_PUSH_CONTEXT:
+printf ("PUSHING THIS CONTEXT\n");
+						stix->active_context->slot[++sp] = (stix_oop_t)stix->active_context;
+						break;
 				}
-				break;
+				break; /* CMD_PUSH_SPECIAL */
+
+		/* -------------------------------------------------------- */
 
 			case CMD_DO_SPECIAL:
+			{
+				stix_oop_t return_value;
+
 				switch (b1)
 				{
 					case SUBCMD_RETURN_MESSAGE_RECEIVER:
-					{
-						stix_oop_context_t ctx;
-
 printf ("RETURNING. RECEIVER...........\n");
-						ctx = stix->active_context; /* current context */
-						ctx->ip = STIX_OOP_FROM_SMINT(ip);
-						ctx->sp = STIX_OOP_FROM_SMINT(sp);
-
-						stix->active_context = (stix_oop_context_t)ctx->sender; /* return to the sending context */
-						if (stix->active_context->sender == stix->_nil) 
-						{
-printf ("RETURNIGN TO THE INITIAL CONTEXT.......\n");
-							/* returning to the initial context */
-							goto done;
-						}
-
-						ip = STIX_OOP_TO_SMINT(stix->active_context->ip);
-						sp = STIX_OOP_TO_SMINT(stix->active_context->sp);
-						stix->active_context->slot[++sp] = ctx->receiver;
-
-						break;
-					}
+						return_value = stix->active_context->receiver;
+						goto handle_return;
 
 					case SUBCMD_RETURN_MESSAGE_STACKTOP:
-					{
-						stix_oop_context_t ctx;
-						stix_oop_t top;
-
 printf ("RETURNING. RECEIVER...........\n");
-						ctx = stix->active_context; /* current context */
-						top = ctx->slot[sp--];
-						ctx->ip = STIX_OOP_FROM_SMINT(ip);
-						ctx->sp = STIX_OOP_FROM_SMINT(sp);
+						return_value = stix->active_context->slot[sp--];
+						goto handle_return;
 
-						stix->active_context = (stix_oop_context_t)ctx->sender; /* return to the sending context */
+					/*case CMD_RETURN_BLOCK_STACKTOP:*/
 
-						ip = STIX_OOP_TO_SMINT(stix->active_context->ip);
-						sp = STIX_OOP_TO_SMINT(stix->active_context->sp);
-						stix->active_context->slot[++sp] = top;
+					default:
+						stix->errnum = STIX_EINTERN;
+						break;
+
+
+					handle_return:
+						/* store the instruction pointer and the stack pointer to the active context */
+						STORE_IP_AND_SP (stix->active_context, ip, sp);
+
+						/* switch the active context to the sending context */
+						stix->active_context = (stix_oop_context_t)stix->active_context->sender;
+
+						/* load the instruction pointer and the stack pointer from the new active context */
+						LOAD_IP_AND_SP (stix->active_context, ip, sp);
+
+						/* push the return value to the stack of the new active context */
+						stix->active_context->slot[++sp] = return_value;
 
 						if (stix->active_context->sender == stix->_nil) 
 						{
+							/* the sending context of the intial context has been set to nil.
+							 * use this fact to tell an initial context from a normal context. */
 printf ("RETURNIGN TO THE INITIAL CONTEXT.......\n");
-							/* returning to the initial context */
+							STIX_ASSERT (sp == 0);
 							goto done;
 						}
 
 						break;
-					}
-
-					/*case CMD_RETURN_BLOCK_STACKTOP:*/
-					
 				}
-				break;
+				break; /* CMD_DO_SPECIAL */
+			}
+
 		}
 	}
 

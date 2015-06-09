@@ -426,7 +426,7 @@ struct stix_compiler_t
 		stix_size_t literal_capa;
 
 		/* primitive number */
-		stix_oow_t prim_no; 
+		stix_ooi_t prim_no; 
 
 		/* byte code */
 		stix_code_t code;
@@ -475,18 +475,20 @@ struct stix_compiler_t
 #define SUBCMD_PUSH_NIL      0x1
 #define SUBCMD_PUSH_TRUE     0x2
 #define SUBCMD_PUSH_FALSE    0x3
+#define SUBCMD_PUSH_CONTEXT  0x4
 
 #define SUBCMD_DUP_STACKTOP            0x0
 #define SUBCMD_POP_STACKTOP            0x1
 #define SUBCMD_RETURN_MESSAGE_STACKTOP 0x2
 #define SUBCMD_RETURN_BLOCK_STACKTOP   0x3
 #define SUBCMD_RETURN_MESSAGE_RECEIVER 0x4
-#define SUBCMD_EXEC_PRIMITIVE          0xF
+
 /* ---------------------------------- */
 #define CODE_PUSH_RECEIVER            MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_RECEIVER)
 #define CODE_PUSH_NIL                 MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_NIL)
 #define CODE_PUSH_TRUE                MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_TRUE)
 #define CODE_PUSH_FALSE               MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_FALSE)
+#define CODE_PUSH_CONTEXT             MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_CONTEXT)
 
 /* special code */
 #define CODE_DUP_STACKTOP             MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_DUP_STACKTOP)
@@ -494,7 +496,6 @@ struct stix_compiler_t
 #define CODE_RETURN_MESSAGE_STACKTOP  MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_MESSAGE_STACKTOP)
 #define CODE_RETURN_BLOCK_STACKTOP    MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_BLOCK_STACKTOP)
 #define CODE_RETURN_MESSAGE_RECEIVER  MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_MESSAGE_RECEIVER)
-#define CODE_EXEC_PRIMITIVE           MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_EXEC_PRIMITIVE)
 
 #if defined(__cplusplus)
 extern "C" {

@@ -554,7 +554,7 @@ struct stix_association_t
 	stix_oop_t value;
 };
 
-#define STIX_METHOD_NAMED_INSTVARS 5
+#define STIX_METHOD_NAMED_INSTVARS 6
 typedef struct stix_method_t stix_method_t;
 typedef struct stix_method_t* stix_oop_method_t;
 struct stix_method_t
@@ -563,18 +563,39 @@ struct stix_method_t
 
 	stix_oop_class_t owner; /* Class */
 
+	/* primitive number */
+	stix_oop_t       preamble; /* SmallInteger */
+
 	/* number of temporaries including arguments */
 	stix_oop_t       tmpr_count; /* SmallInteger */
+
 	/* number of arguments in temporaries */
 	stix_oop_t       tmpr_nargs; /* SmallInteger */
 
 	stix_oop_byte_t  code; /* ByteArray */
 	stix_oop_t       source; /* TODO: what should I put? */
 
-	/* variable indexed part */
+	/* == variable indexed part == */
 	stix_oop_t       slot[1]; /* it stores literals */
 };
 
+/* The preamble field is composed of a 8-bit code and a 16-bit
+ * index. 
+ *
+ * The code can be one of the following values:
+ *  0 - no special action
+ *  1 - return self
+ *  2 - return instvar[index]
+ *  3 - do primitive[index]
+ */
+#define STIX_METHOD_MAKE_PREAMBLE(code,index)  ((((stix_ooi_t)index) << 8) | ((stix_ooi_t)code))
+#define STIX_METHOD_GET_PREAMBLE_CODE(preamble) (((stix_ooi_t)preamble) & 0xFF)
+#define STIX_METHOD_GET_PREAMBLE_INDEX(preamble) (((stix_ooi_t)preamble) >> 8)
+
+#define STIX_METHOD_PREAMBLE_NONE            0
+#define STIX_METHOD_PREAMBLE_RETURN_RECEIVER 1
+#define STIX_METHOD_PREAMBLE_RETURN_INSTVAR  2
+#define STIX_METHOD_PREAMBLE_PRIMITIVE       3
 
 #define STIX_CONTEXT_NAMED_INSTVARS 6
 typedef struct stix_context_t stix_context_t;

@@ -1,5 +1,4 @@
 /*
-/*
  * $Id$
  *
     Copyright (c) 2014-2015 Chung, Hyung-Hwan. All rights reserved.
@@ -1662,7 +1661,7 @@ static int compile_method_primitive (stix_t* stix)
 	while (ptr < end && is_digitchar(*ptr)) 
 	{
 		prim_no = prim_no * 10 + (*ptr - '0');
-		if (prim_no > 0xFF)
+		if (prim_no > 0xFFFF) /* TODO: replace 0xFFFF by a macro name */
 		{
 			set_syntax_error (stix, STIX_SYNERR_PRIMITIVENO, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
@@ -1671,8 +1670,7 @@ static int compile_method_primitive (stix_t* stix)
 		ptr++;
 	}
 
-	if (emit_byte_instruction(stix, CODE_EXEC_PRIMITIVE) <= -1 ||
-	    emit_byte_instruction(stix, prim_no) <= -1) return -1;
+	stix->c->mth.prim_no = prim_no;
 
 	GET_TOKEN (stix);
 	if (!is_token_binsel(stix, VOCA_GT)) 
@@ -1684,8 +1682,6 @@ static int compile_method_primitive (stix_t* stix)
 	GET_TOKEN (stix);
 	return 0;
 }
-
-
 
 static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_ioloc_t* name_loc, var_info_t* var)
 {
@@ -1972,7 +1968,7 @@ printf ("push false...\n");
 				break;
 
 			case STIX_IOTOK_THIS_CONTEXT:
-				/* TODO */
+				if (emit_byte_instruction(stix, CODE_PUSH_CONTEXT) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
 
@@ -2367,6 +2363,7 @@ static int add_compiled_method (stix_t* stix)
 	stix_oop_byte_t code;
 	stix_size_t tmp_count = 0;
 	stix_size_t i;
+	stix_ooi_t preamble_code, preamble_index;
 
 	name = stix_makesymbol (stix, stix->c->mth.name.ptr, stix->c->mth.name.len);
 	if (!name) return -1;
@@ -2386,7 +2383,71 @@ static int add_compiled_method (stix_t* stix)
 	if (!code) goto oops;
 	stix_pushtmp (stix, (stix_oop_t*)&code); tmp_count++;
 
+	preamble_code = STIX_METHOD_PREAMBLE_NONE;
+	preamble_index = 0;
+
+	if (stix->c->mth.prim_no < 0)
+	{
+		if (stix->c->mth.code.len <= 0)
+		{
+			preamble_code = STIX_METHOD_PREAMBLE_RETURN_RECEIVER;
+		}
+		else
+		{
+			if (stix->c->mth.code.ptr[0] == CODE_RETURN_MESSAGE_RECEIVER)
+			{
+				preamble_code = STIX_METHOD_PREAMBLE_RETURN_RECEIVER;
+			}
+			else if (stix->c->mth.code.len >= 2 &&
+			         stix->c->mth.code.ptr[0] == CODE_PUSH_RECEIVER &&
+			         stix->c->mth.code.ptr[1] == CODE_RETURN_MESSAGE_STACKTOP)
+			{
+				preamble_code = STIX_METHOD_PREAMBLE_RETURN_RECEIVER;
+			}
+			else
+			{
+				/* check if the method begins with 'return instavar' instruction */
+				int index_size;
+				stix_byte_t cmd;
+
+				cmd = stix->c->mth.code.ptr[0] >> 4;
+				if (cmd == CMD_EXTEND)
+				{
+					cmd = stix->c->mth.code.ptr[0] & 0xF;
+					index_size = 1;
+				}
+				else if (cmd == CMD_EXTEND_DOUBLE)
+				{
+					cmd = stix->c->mth.code.ptr[0] & 0xF;
+					index_size = 2;
+				}
+				else
+				{
+					index_size = 0;
+				}
+
+				if (cmd == CMD_PUSH_INSTVAR && 
+				    stix->c->mth.code.ptr[index_size + 1] == CODE_RETURN_MESSAGE_STACKTOP)
+				{
+					preamble_code = STIX_METHOD_PREAMBLE_RETURN_INSTVAR;
+
+					if (index_size == 1) preamble_index = stix->c->mth.code.ptr[1];
+					else if (index_size == 2) preamble_index = ((stix_ooi_t)stix->c->mth.code.ptr[1] << 8) | stix->c->mth.code.ptr[2];
+					else preamble_index = stix->c->mth.code.ptr[0] & 0xF;
+				}
+			}
+		}
+	}
+	else
+	{
+		preamble_code = STIX_METHOD_PREAMBLE_PRIMITIVE;
+		preamble_index = stix->c->mth.prim_no;
+	}
+
+	STIX_ASSERT (preamble_index >= 0 && preamble_index <= 0xFFFF); /* TODO: replace 0xFFFF by a proper macro name */
+
 	mth->owner = stix->c->cls.self_oop;
+	mth->preamble = STIX_OOP_FROM_SMINT(STIX_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index));
 	mth->tmpr_count = STIX_OOP_FROM_SMINT(stix->c->mth.tmpr_count);
 	mth->tmpr_nargs = STIX_OOP_FROM_SMINT(stix->c->mth.tmpr_nargs);
 	mth->code = code;
@@ -2421,6 +2482,7 @@ static int compile_method_definition (stix_t* stix)
 	stix->c->mth.tmpr_nargs = 0;
 	stix->c->mth.literal_count = 0;
 	stix->c->mth.code.len = 0;
+	stix->c->mth.prim_no = -1;
 
 	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
 	{
