@@ -80,13 +80,21 @@ static STIX_INLINE stix_ssize_t open_input (stix_t* stix, stix_ioarg_t* arg)
 			return -1;
 		}
 
+#if defined(__MSDOS__) || defined(_WIN32) || defined(__OS2__)
+		arg->handle = fopen (bcs, "rb");
+#else
 		arg->handle = fopen (bcs, "r");
+#endif
 	}
 	else
 	{
 		/* main stream */
 		xtn_t* xtn = stix_getxtn(stix);
+#if defined(__MSDOS__) || defined(_WIN32) || defined(__OS2__)
+		arg->handle = fopen (xtn->source_path, "rb");
+#else
 		arg->handle = fopen (xtn->source_path, "r");
+#endif
 	}
 
 	if (!arg->handle)
