@@ -394,6 +394,7 @@ static STIX_INLINE void unget_char (stix_t* stix, const stix_iolxc_t* c)
 static int get_char (stix_t* stix)
 {
 	stix_ssize_t n;
+	stix_uci_t lc, ec;
 
 	if (stix->c->nungots > 0)
 	{
@@ -402,13 +403,25 @@ static int get_char (stix_t* stix)
 		return 0;
 	}
 
+	if (stix->c->curinp->b.state == -1) 
+	{
+		stix->c->curinp->b.state = 0;
+		return -1;
+	}
+	else if (stix->c->curinp->b.state == 1) 
+	{
+		stix->c->curinp->b.state = 0;
+		goto return_eof;
+	}
+
 	if (stix->c->curinp->b.pos >= stix->c->curinp->b.len)
 	{
 		n = stix->c->impl (stix, STIX_IO_READ, stix->c->curinp);
 		if (n <= -1) return -1;
-
+		
 		if (n == 0)
 		{
+		return_eof:
 			stix->c->curinp->lxc.c = STIX_UCI_EOF;
 			stix->c->curinp->lxc.l.line = stix->c->curinp->line;
 			stix->c->curinp->lxc.l.colm = stix->c->curinp->colm;
@@ -434,7 +447,43 @@ static int get_char (stix_t* stix)
 		stix->c->curinp->colm = 1;
 	}
 
-	stix->c->curinp->lxc.c = stix->c->curinp->buf[stix->c->curinp->b.pos++];
+	lc = stix->c->curinp->buf[stix->c->curinp->b.pos++];
+	if (lc == '\n' || lc == '\r')
+	{
+		/* handle common newline conventions.
+		 *   LF+CR
+		 *   CR+LF
+		 *   LF
+		 *   CR
+		 */
+		if (stix->c->curinp->b.pos >= stix->c->curinp->b.len)
+		{
+			n = stix->c->impl (stix, STIX_IO_READ, stix->c->curinp);
+			if (n <= -1) 
+			{
+				stix->c->curinp->b.state = -1;
+				goto done;
+			}
+			else if (n == 0)
+			{
+				stix->c->curinp->b.state = 1;
+				goto done;
+			}
+			else
+			{
+				stix->c->curinp->b.pos = 0;
+				stix->c->curinp->b.len = n;
+			}
+		}
+
+		ec = (lc == '\n')? '\r': '\n';
+		if (stix->c->curinp->buf[stix->c->curinp->b.pos] == ec) stix->c->curinp->b.pos++;
+
+	done:
+		lc = STIX_UCI_NL;
+	}
+
+	stix->c->curinp->lxc.c = lc;
 	stix->c->curinp->lxc.l.line = stix->c->curinp->line;
 	stix->c->curinp->lxc.l.colm = stix->c->curinp->colm++;
 	stix->c->curinp->lxc.l.file = stix->c->curinp->name;
@@ -957,7 +1006,7 @@ static int begin_include (stix_t* stix)
 	{
 		end_include (stix); 
 		/* i don't jump to oops since i've called 
-		 * end_include() where stix->c->curinp/arg is freed. */
+		 * end_include() which frees stix->c->curinp/arg */
 		return -1;
 	}
 
@@ -1686,6 +1735,7 @@ static int compile_method_primitive (stix_t* stix)
 static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_ioloc_t* name_loc, var_info_t* var)
 {
 	stix_ssize_t index;
+
 	STIX_MEMSET (var, 0, STIX_SIZEOF(*var));
 
 	index = find_temporary_variable (stix, name);
@@ -1754,7 +1804,7 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 		}
 	}
 
-	if (index > MAX_CODE_INDEX)
+	if (var->pos > MAX_CODE_INDEX)
 	{
 		/* the assignee is not usable because its index is too large 
 		 * to be expressed in byte-codes. */
@@ -3102,8 +3152,12 @@ int stix_compile (stix_t* stix, stix_ioimpl_t io)
 	}
 
 	stix->c->impl = io;
+
+	STIX_MEMSET (&stix->c->arg, 0, STIX_SIZEOF(stix->c->arg));
 	stix->c->arg.line = 1;
 	stix->c->arg.colm = 1;
+	stix->c->nungots = 0;
+
 	stix->c->curinp = &stix->c->arg;
 	clear_io_names (stix);
 

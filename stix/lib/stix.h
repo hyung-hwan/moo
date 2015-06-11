@@ -72,7 +72,6 @@ typedef struct stix_ucs_t stix_ucs_t;
 #define STIX_UCI_EOF ((stix_uci_t)-1)
 #define STIX_UCI_NL  ((stix_uci_t)'\n')
 
-
 #define STIX_SIZEOF(x) (sizeof(x))
 #define STIX_COUNTOF(x) (sizeof(x) / sizeof(x[0]))
 

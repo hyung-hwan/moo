@@ -274,20 +274,6 @@ TODO: overcome this problem
 		(stix)->active_context->slot[sp] = v; \
 	} while (0)
 
-static void dump_object (stix_t* stix, stix_oop_t oop, const char* title)
-{
-	stix_oop_class_t c;
-	stix_ucs_t s;
-
-	printf ("%s: ", title);
-	printf ("%p instance of ", oop);
-
-	c = STIX_CLASSOF(stix, oop);
-	s.ptr = ((stix_oop_char_t)c->name)->slot;
-	s.len = STIX_OBJ_GET_SIZE(c->name);
-	print_ucs (&s);
-	printf ("\n");
-}
 static int execute_primitive (stix_t* stix, int prim_no, stix_ooi_t nargs, stix_ooi_t* xsp)
 {
 	/* a primitive handler must pop off all arguments and the receiver and

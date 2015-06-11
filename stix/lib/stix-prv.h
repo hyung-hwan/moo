@@ -165,11 +165,12 @@ struct stix_iolxc_t
 };
 typedef struct stix_iolxc_t stix_iolxc_t;
 
+/*
 enum stix_ioarg_flag_t
 {
 	STIX_IO_INCLUDED = (1 << 0)
 };
-typedef enum stix_ioarg_flag_t stix_ioarg_flag_t;
+typedef enum stix_ioarg_flag_t stix_ioarg_flag_t; */
 
 typedef struct stix_ioarg_t stix_ioarg_t;
 struct stix_ioarg_t
@@ -204,7 +205,7 @@ struct stix_ioarg_t
 	/*----------- from here down, internal use only -------------------*/
 	struct
 	{
-		int pos, len;
+		int pos, len, state;
 	} b;
 
 	unsigned long line;
@@ -315,9 +316,6 @@ struct stix_synerr_t
 	stix_ucs_t       tgt;
 };
 typedef struct stix_synerr_t stix_synerr_t;
-
-
-typedef enum stix_code_id_t stix_code_id_t;
 
 
 struct stix_code_t
@@ -738,6 +736,16 @@ void stix_getsynerr (
 	stix_t* stix,
 	stix_synerr_t* synerr
 );
+
+
+/* TODO: remove debugging functions */
+/* ========================================================================= */
+/* debug.c                                                                   */
+/* ========================================================================= */
+void dump_symbol_table (stix_t* stix);
+void dump_dictionary (stix_t* stix, stix_oop_set_t dic, const char* title);
+void print_ucs (const stix_ucs_t* name);
+void dump_object (stix_t* stix, stix_oop_t oop, const char* title);
 
 #if defined(__cplusplus)
 }

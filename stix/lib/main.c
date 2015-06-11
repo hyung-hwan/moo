@@ -157,61 +157,6 @@ static stix_ssize_t input_handler (stix_t* stix, stix_iocmd_t cmd, stix_ioarg_t*
 	}
 }
 
-static void dump_symbol_table (stix_t* stix)
-{
-	stix_oow_t i, j;
-	stix_oop_char_t symbol;
-
-	printf ("--------------------------------------------\n");
-	printf ("Stix Symbol Table %lu\n", (unsigned long int)STIX_OBJ_GET_SIZE(stix->symtab->bucket));
-	printf ("--------------------------------------------\n");
-
-	for (i = 0; i < STIX_OBJ_GET_SIZE(stix->symtab->bucket); i++)
-	{
-		symbol = (stix_oop_char_t)stix->symtab->bucket->slot[i];
-		if ((stix_oop_t)symbol != stix->_nil)
-		{
-			printf (" %lu [", (unsigned long int)i);
-			for (j = 0; j < STIX_OBJ_GET_SIZE(symbol); j++)
-			{
-				printf ("%c", symbol->slot[j]);
-			}
-			printf ("]\n");
-		}
-	}
-	printf ("--------------------------------------------\n");
-}
-
-void dump_dictionary (stix_t* stix, stix_oop_set_t dic, const char* title)
-{
-	stix_oow_t i, j;
-	stix_oop_association_t ass;
-
-	printf ("--------------------------------------------\n");
-	printf ("%s %lu\n", title, (unsigned long int)STIX_OBJ_GET_SIZE(dic->bucket));
-	printf ("--------------------------------------------\n");
-
-	for (i = 0; i < STIX_OBJ_GET_SIZE(dic->bucket); i++)
-	{
-		ass = (stix_oop_association_t)dic->bucket->slot[i];
-		if ((stix_oop_t)ass != stix->_nil)
-		{
-			printf (" %lu [", (unsigned long int)i);
-			for (j = 0; j < STIX_OBJ_GET_SIZE(ass->key); j++)
-			{
-				printf ("%c", ((stix_oop_char_t)ass->key)->slot[j]);
-			}
-			printf ("]\n");
-		}
-	}
-	printf ("--------------------------------------------\n");
-}
-
-void print_ucs (const stix_ucs_t* name)
-{
-	stix_size_t i;
-	for (i = 0; i < name->len; i++) printf ("%c", name->ptr[i]);
-}
 static char* syntax_error_msg[] = 
 {
 	"no error",
@@ -262,6 +207,7 @@ int main (int argc, char* argv[])
 	xtn_t* xtn;
 	stix_ucs_t objname;
 	stix_ucs_t mthname;
+	int i;
 
 	printf ("Stix 1.0.0 - max named %lu max indexed %lu max class %lu max classinst %lu\n", 
 		(unsigned long int)STIX_MAX_NAMED_INSTVARS, 
@@ -282,9 +228,9 @@ printf ("%ld\n", (long int)STIX_OOP_TO_SMINT(k));
 }
 
 #if !defined(macintosh)
-	if (argc != 2)
+	if (argc < 2)
 	{
-		fprintf (stderr, "Usage: %s filename\n", argv[0]);
+		fprintf (stderr, "Usage: %s filename ...\n", argv[0]);
 		return -1;
 	}
 #endif
@@ -354,57 +300,65 @@ printf ("%p\n", a);
 }
 
 	xtn = stix_getxtn (stix);
-#if !defined(macintosh)
-	xtn->source_path = argv[1];
-#else
+
+#if defined(macintosh)
+	i = 20;
 	xtn->source_path = "test.st";
+	goto compile;
 #endif
-	if (stix_compile (stix, input_handler) <= -1)
+
+	for (i = 1; i < argc; i++)
 	{
-		if (stix->errnum == STIX_ESYNTAX)
+		xtn->source_path = argv[i];
+
+	compile:
+
+		if (stix_compile (stix, input_handler) <= -1)
 		{
-			stix_synerr_t synerr;
-			stix_bch_t bcs[1024]; /* TODO: right buffer size */
-			stix_size_t bcslen, ucslen;
-
-			stix_getsynerr (stix, &synerr);
-
-			printf ("ERROR: ");
-			if (synerr.loc.file)
+			if (stix->errnum == STIX_ESYNTAX)
 			{
-				bcslen = STIX_COUNTOF(bcs);
-				ucslen = ~(stix_size_t)0;
-				if (stix_ucstoutf8 (synerr.loc.file, &ucslen, bcs, &bcslen) >= 0)
+				stix_synerr_t synerr;
+				stix_bch_t bcs[1024]; /* TODO: right buffer size */
+				stix_size_t bcslen, ucslen;
+
+				stix_getsynerr (stix, &synerr);
+
+				printf ("ERROR: ");
+				if (synerr.loc.file)
 				{
-					printf ("%.*s ", (int)bcslen, bcs);
-				}
-			}
-
-
-			printf ("syntax error at line %lu column %lu - %s", 
-				(unsigned long int)synerr.loc.line, (unsigned long int)synerr.loc.colm,
-				syntax_error_msg[synerr.num]);
-			if (synerr.tgt.len > 0)
-			{
-				bcslen = STIX_COUNTOF(bcs);
-				ucslen = synerr.tgt.len;
-
-				if (stix_ucstoutf8 (synerr.tgt.ptr, &ucslen, bcs, &bcslen) >= 0)
-				{
-					printf (" [%.*s]", (int)bcslen, bcs);
+					bcslen = STIX_COUNTOF(bcs);
+					ucslen = ~(stix_size_t)0;
+					if (stix_ucstoutf8 (synerr.loc.file, &ucslen, bcs, &bcslen) >= 0)
+					{
+						printf ("%.*s ", (int)bcslen, bcs);
+					}
 				}
 
+
+				printf ("syntax error at line %lu column %lu - %s", 
+					(unsigned long int)synerr.loc.line, (unsigned long int)synerr.loc.colm,
+					syntax_error_msg[synerr.num]);
+				if (synerr.tgt.len > 0)
+				{
+					bcslen = STIX_COUNTOF(bcs);
+					ucslen = synerr.tgt.len;
+
+					if (stix_ucstoutf8 (synerr.tgt.ptr, &ucslen, bcs, &bcslen) >= 0)
+					{
+						printf (" [%.*s]", (int)bcslen, bcs);
+					}
+
+				}
+				printf ("\n");
 			}
-			printf ("\n");
+			else
+			{
+				printf ("ERROR: cannot compile code - %d\n", stix_geterrnum(stix));
+			}
+			stix_close (stix);
+			return -1;
 		}
-		else
-		{
-			printf ("ERROR: cannot compile code - %d\n", stix_geterrnum(stix));
-		}
-		stix_close (stix);
-		return -1;
 	}
-
 
 /*	objname.ptr = str_stix;
 	objname.len = 4;*/
