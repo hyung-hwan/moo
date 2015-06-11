@@ -750,6 +750,7 @@ struct stix_t
 
 	/* == EXECUTION REGISTERS == */
 	stix_oop_context_t active_context; /* TODO: this could be either MethodContext or BlockContext. Some redefintion of stix_oop_context_t might be needed  after having removed stix-oop_block-context. */
+	stix_ooi_t* active_context_sp;
 	/* stix_oop_context_t home_context; */
 	/* == END EXECUTION REGISTERS == */
 

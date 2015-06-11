@@ -253,6 +253,7 @@ static char* syntax_error_msg[] =
 };
 
 stix_uch_t str_stix[] = { 'S', 't', 'i', 'x' };
+stix_uch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' };
 stix_uch_t str_main[] = { 'm', 'a', 'i', 'n' };
 
 int main (int argc, char* argv[])
@@ -405,8 +406,10 @@ printf ("%p\n", a);
 	}
 
 
-	objname.ptr = str_stix;
-	objname.len = 4;
+/*	objname.ptr = str_stix;
+	objname.len = 4;*/
+	objname.ptr = str_my_object;
+	objname.len = 8;
 	mthname.ptr = str_main;
 	mthname.len = 4;
 	if (stix_invoke (stix, &objname, &mthname) <= -1)

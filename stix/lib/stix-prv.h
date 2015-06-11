@@ -452,12 +452,12 @@ struct stix_compiler_t
  * XXXX is one of the following positional instructions.
  * JJJJ or JJJJJJJJ is the position.
  */
-#define CMD_PUSH_INSTVAR                 0x2
-#define CMD_PUSH_TEMPVAR                 0x3
-#define CMD_PUSH_LITERAL                 0x4
-#define CMD_POP_AND_STORE_INTO_INSTVAR   0x5 /* pop and store */
-#define CMD_POP_AND_STORE_INTO_CLASSVAR  0x6 /* pop and store */
-#define CMD_POP_AND_STORE_INTO_TEMPVAR   0x7 /* pop and store */
+#define CMD_PUSH_INSTVAR         0x2
+#define CMD_PUSH_TEMPVAR         0x3
+#define CMD_PUSH_LITERAL         0x4
+#define CMD_STORE_INTO_INSTVAR   0x5
+#define CMD_STORE_INTO_CLASSVAR  0x6
+#define CMD_STORE_INTO_TEMPVAR   0x7
 
 /*
  * XXXXJJJJ KKKKKKKK
@@ -479,9 +479,9 @@ struct stix_compiler_t
 
 #define SUBCMD_DUP_STACKTOP            0x0
 #define SUBCMD_POP_STACKTOP            0x1
-#define SUBCMD_RETURN_MESSAGE_STACKTOP 0x2
+#define SUBCMD_RETURN_STACKTOP 0x2
 #define SUBCMD_RETURN_BLOCK_STACKTOP   0x3
-#define SUBCMD_RETURN_MESSAGE_RECEIVER 0x4
+#define SUBCMD_RETURN_RECEIVER 0x4
 
 /* ---------------------------------- */
 #define CODE_PUSH_RECEIVER            MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_RECEIVER)
@@ -493,9 +493,9 @@ struct stix_compiler_t
 /* special code */
 #define CODE_DUP_STACKTOP             MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_DUP_STACKTOP)
 #define CODE_POP_STACKTOP             MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_POP_STACKTOP)
-#define CODE_RETURN_MESSAGE_STACKTOP  MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_MESSAGE_STACKTOP)
+#define CODE_RETURN_STACKTOP          MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_STACKTOP)
 #define CODE_RETURN_BLOCK_STACKTOP    MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_BLOCK_STACKTOP)
-#define CODE_RETURN_MESSAGE_RECEIVER  MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_MESSAGE_RECEIVER)
+#define CODE_RETURN_RECEIVER          MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_RECEIVER)
 
 #if defined(__cplusplus)
 extern "C" {

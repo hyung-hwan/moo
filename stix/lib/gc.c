@@ -159,14 +159,29 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 		STIX_OBJ_SET_CLASS (oop, stix_moveoop(stix, STIX_OBJ_GET_CLASS(oop)));
 		if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_OOP)
 		{
-			stix_obj_oop_t* xtmp;
+			stix_oop_oop_t xtmp;
+			stix_oow_t size;
+
+			if (stix->_context && STIX_OBJ_GET_CLASS(oop) == stix->_context)
+			{
+/* TODO: need to do the same for block context?? */
+				/* the stack in the context object doesn't need to be in
+				 * full. the slots above the stack pointer are garbages. */
+				size = STIX_CONTEXT_NAMED_INSTVARS +
+				       STIX_OOP_TO_SMINT(((stix_oop_context_t)oop)->sp) + 1;
+			}
+			else
+			{
+				size = STIX_OBJ_GET_SIZE(oop);
+			}
 
 			xtmp = (stix_oop_oop_t)oop;
-			for (i = 0; i < oop->_size; i++)
+			for (i = 0; i < size; i++)
 			{
 				if (STIX_OOP_IS_POINTER(xtmp->slot[i]))
 					xtmp->slot[i] = stix_moveoop (stix, xtmp->slot[i]);
 			}
+
 		}
 
 		/*ptr = ptr + STIX_SIZEOF(stix_obj_t) + nbytes_aligned;*/
@@ -190,6 +205,13 @@ void stix_gc (stix_t* stix)
 	stix_oop_t old_nil;
 	stix_oow_t i;
 	stix_cb_t* cb;
+
+	if (stix->active_context_sp && stix->active_context)
+	{
+		/* store the stack pointer to the actual active context */
+/* TODO: verify if this is correct */
+		stix->active_context->sp = STIX_OOP_FROM_SMINT(*stix->active_context_sp);
+	}
 
 /*printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
 	stix->curheap->base, stix->curheap->ptr, stix->newheap->base, stix->newheap->ptr);*/

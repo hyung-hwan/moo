@@ -26,10 +26,10 @@
 
 #include "stix-prv.h"
 
-#define TOKEN_NAME_ALIGN 256
-#define CLASS_BUFFER_ALIGN 8 /* 256 */
+#define TOKEN_NAME_ALIGN     256
+#define CLASS_BUFFER_ALIGN   8 /* 256 */
 #define LITERAL_BUFFER_ALIGN 8 /* 256 */
-#define CODE_BUFFER_ALIGN 8 /* 256 */
+#define CODE_BUFFER_ALIGN    8 /* 256 */
 
 /* initial method dictionary size */
 #define INSTANCE_METHOD_DICTIONARY_SIZE 256 /* TODO: choose the right size */
@@ -1098,7 +1098,7 @@ static int emit_send_instruction (stix_t* stix, int cmd, stix_size_t nargs, stix
  * --------------------------------------------------------------------- */
 
 static int compile_method_statement (stix_t* stix);
-static int compile_method_expression (stix_t* stix);
+static int compile_method_expression (stix_t* stix, int pop);
 
 static int add_literal (stix_t* stix, stix_oop_t lit, stix_size_t* index)
 {
@@ -2026,7 +2026,7 @@ printf ("push symbol literal %d\n", (int)index);
 
 			case STIX_IOTOK_LPAREN:
 				GET_TOKEN (stix);
-				if (compile_method_expression(stix) <= -1) return -1;
+				if (compile_method_expression(stix, 0) <= -1) return -1;
 				if (stix->c->tok.type != STIX_IOTOK_RPAREN)
 				{
 					set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
@@ -2207,16 +2207,17 @@ static int compile_basic_expression (stix_t* stix, const stix_ucs_t* ident, cons
 	return 0;
 }
 
-static int compile_method_expression (stix_t* stix)
+static int compile_method_expression (stix_t* stix, int pop)
 {
 	/*
 	 * method-expression := method-assignment-expression | basic-expression
 	 * method-assignment-expression := identifier ":=" method-expression
-
 	 */
 
 	stix_ucs_t assignee;
+	int ret = 0;
 
+	STIX_ASSERT (pop == 0 || pop == 1);
 	STIX_MEMSET (&assignee, 0, STIX_SIZEOF(assignee));
 
 	if (stix->c->tok.type == STIX_IOTOK_IDENT) 
@@ -2237,43 +2238,49 @@ static int compile_method_expression (stix_t* stix)
 
 			GET_TOKEN (stix);
 
-		printf ("ASSIGNIUNG TO ....");
-		print_ucs (&assignee);
-		printf ("\n");
+printf ("ASSIGNIUNG TO ....");
+print_ucs (&assignee);
+printf ("\n");
 
-			if (compile_method_expression(stix) <= -1 ||
-			    get_variable_info(stix, &assignee, &assignee_loc, &var) <= -1) return -1;
+			if (compile_method_expression(stix, 0) <= -1 ||
+			    get_variable_info(stix, &assignee, &assignee_loc, &var) <= -1) goto oops;
 
 			switch (var.type)
 			{
 				case VAR_ARGUMENT:
 					/* assigning to an argument is not allowed */
 					set_syntax_error (stix, STIX_SYNERR_VARARG, &assignee_loc, &assignee);
-					return -1;
+					goto oops;
 
 				case VAR_TEMPORARY:
-		printf ("emit pop and store to tempvar %d\n", (int)var.pos);
-					if (emit_positional_instruction (stix, CMD_POP_AND_STORE_INTO_TEMPVAR, var.pos) <= -1) return -1;
+printf ("<emit> store to tempvar %d\n", (int)var.pos);
+/* TODO: if pop is 1, emit CMD_POP_AND_STORE_INTO_TEMPVAR.
+ret = pop;
+*/
+					if (emit_positional_instruction (stix, CMD_STORE_INTO_TEMPVAR, var.pos) <= -1) goto oops;
 					break;
 
 				case VAR_INSTANCE:
 				case VAR_CLASSINST:
-		printf ("emit pop and store to instvar %d\n", (int)var.pos);
-					if (emit_positional_instruction (stix, CMD_POP_AND_STORE_INTO_INSTVAR, var.pos) <= -1) return -1;
+printf ("<emit> store to instvar %d\n", (int)var.pos);
+/* TODO: if pop is 1, emit CMD_POP_AND_STORE_INTO_INSTVAR 
+ret = pop;
+*/
+					if (emit_positional_instruction (stix, CMD_STORE_INTO_INSTVAR, var.pos) <= -1) goto oops;
 					break;
 
 				case VAR_CLASS:
 					/* TODO: what instruction to generate for class variable access... */
 
-					return -1;
+					goto oops;
 
 				case VAR_GLOBAL:
 					/* TODO: .............................. */
-					return -1;
+					goto oops;
 
 				default:
 					stix->errnum = STIX_EINTERN;
-					return -1;
+					goto oops;
 			}
 		}
 		else 
@@ -2288,7 +2295,7 @@ static int compile_method_expression (stix_t* stix)
 	}
 
 	stix->c->mth.assignees.len -= assignee.len;
-	return 0;
+	return ret;
 
 oops:
 	stix->c->mth.assignees.len -= assignee.len;
@@ -2306,13 +2313,23 @@ static int compile_method_statement (stix_t* stix)
 	{
 		/* handle the return statement */
 		GET_TOKEN (stix);
-		if (compile_method_expression(stix) <= -1) return -1;
-printf ("return message stacktop\n");
-		return emit_byte_instruction (stix, CODE_RETURN_MESSAGE_STACKTOP);
+		if (compile_method_expression(stix, 0) <= -1) return -1;
+		return emit_byte_instruction (stix, CODE_RETURN_STACKTOP);
 	}
 	else 
 	{
-		return compile_method_expression(stix);
+/* TODO: optimization. if expresssion is a literal, no push and pop are required */
+		int n;
+
+		/* the second parameter to compile_method_expression() indicates 
+		 * that the stack top will eventually be popped off. the compiler
+		 * can optimize some instruction sequencese. for example, two 
+		 * consecutive store and pop intructions can be transformed to 
+		 * a more specialized single pop-and-store instruction. */
+		n = compile_method_expression(stix, 1);
+		if (n <= -1) return -1;
+
+		return (n == 0)? emit_byte_instruction (stix, CODE_POP_STACKTOP): 0;
 	}
 }
 
@@ -2342,18 +2359,18 @@ static int compile_method_statements (stix_t* stix)
 			{
 				if (stix->c->tok.type == STIX_IOTOK_EOF ||
 				    stix->c->tok.type == STIX_IOTOK_RBRACE) break;
-				else 
-				{
-					set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
-					return -1;
-				}
+
+				/* not a period, EOF, nor } */
+				set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
+				return -1;
 			}
 		}
 		while (1);
 	}
 
-	/* TODO: size optimization. emit code_return_receiver only if it's not previously emitted */
-	return emit_byte_instruction (stix, CODE_RETURN_MESSAGE_RECEIVER);
+	/* arrange to return the receiver if execution reached 
+	 * the end of the method without explicit return */
+	return emit_byte_instruction (stix, CODE_RETURN_RECEIVER);
 }
 
 static int add_compiled_method (stix_t* stix)
@@ -2394,13 +2411,13 @@ static int add_compiled_method (stix_t* stix)
 		}
 		else
 		{
-			if (stix->c->mth.code.ptr[0] == CODE_RETURN_MESSAGE_RECEIVER)
+			if (stix->c->mth.code.ptr[0] == CODE_RETURN_RECEIVER)
 			{
 				preamble_code = STIX_METHOD_PREAMBLE_RETURN_RECEIVER;
 			}
 			else if (stix->c->mth.code.len >= 2 &&
 			         stix->c->mth.code.ptr[0] == CODE_PUSH_RECEIVER &&
-			         stix->c->mth.code.ptr[1] == CODE_RETURN_MESSAGE_STACKTOP)
+			         stix->c->mth.code.ptr[1] == CODE_RETURN_STACKTOP)
 			{
 				preamble_code = STIX_METHOD_PREAMBLE_RETURN_RECEIVER;
 			}
@@ -2427,7 +2444,7 @@ static int add_compiled_method (stix_t* stix)
 				}
 
 				if (cmd == CMD_PUSH_INSTVAR && 
-				    stix->c->mth.code.ptr[index_size + 1] == CODE_RETURN_MESSAGE_STACKTOP)
+				    stix->c->mth.code.ptr[index_size + 1] == CODE_RETURN_STACKTOP)
 				{
 					preamble_code = STIX_METHOD_PREAMBLE_RETURN_INSTVAR;
 
@@ -2557,6 +2574,8 @@ printf (" instvars %d classvars %d classinstvars %d\n", (int)stix->c->cls.var_co
 #endif
 	if (stix->c->cls.self_oop)
 	{
+		/* this is an internally created class object being defined. */
+
 		STIX_ASSERT (STIX_CLASSOF(stix, stix->c->cls.self_oop) == stix->_class);
 		STIX_ASSERT (STIX_OBJ_GET_FLAGS_KERNEL (stix->c->cls.self_oop) == 1);
 
@@ -2564,8 +2583,6 @@ printf (" instvars %d classvars %d classinstvars %d\n", (int)stix->c->cls.var_co
 		    self_spec != STIX_OOP_TO_SMINT(stix->c->cls.self_oop->selfspec))
 		{
 			/* it conflicts with internal definition */
-
-
 #if 0
 printf (" CONFLICTING CLASS DEFINITION %lu %lu %lu %lu\n", 
 		(unsigned long)spec, (unsigned long)self_spec,
@@ -2583,7 +2600,7 @@ printf (" CONFLICTING CLASS DEFINITION %lu %lu %lu %lu\n",
 		tmp = stix_instantiate (stix, stix->_class, STIX_NULL,
 		                        stix->c->cls.var_count[VAR_CLASSINST] + stix->c->cls.var_count[VAR_CLASS]);
 		if (!tmp) return -1;
-	
+
 		just_made = 1;
 		stix->c->cls.self_oop = (stix_oop_class_t)tmp;
 
@@ -2598,6 +2615,8 @@ printf (" CONFLICTING CLASS DEFINITION %lu %lu %lu %lu\n",
 *  TODO: TODO: TODO:
  */
 	STIX_OBJ_SET_FLAGS_KERNEL (stix->c->cls.self_oop, 2);
+
+	stix->c->cls.self_oop->superclass = stix->c->cls.super_oop;
 
 	tmp = stix_makesymbol (stix, stix->c->cls.name.ptr, stix->c->cls.name.len);
 	if (!tmp) return -1;
