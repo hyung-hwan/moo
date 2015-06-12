@@ -341,6 +341,10 @@ printf ("%p\n", a);
 						printf ("%.*s ", (int)bcslen, bcs);
 					}
 				}
+				else
+				{
+					printf ("%s ", xtn->source_path);
+				}
 
 
 				printf ("syntax error at line %lu column %lu - %s", 

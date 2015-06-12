@@ -40,6 +40,18 @@
 		(v_ctx)->sp = STIX_OOP_FROM_SMINT(v_sp); \
 	} while(0)
 
+#define LOAD_SP(v_ctx, v_sp) \
+	do \
+	{ \
+		v_sp = STIX_OOP_TO_SMINT((v_ctx)->sp); \
+	} while(0)
+
+#define STORE_SP(v_ctx, v_sp) \
+	do \
+	{ \
+		(v_ctx)->sp = STIX_OOP_FROM_SMINT(v_sp); \
+	} while(0)
+
 
 static int activate_new_method (stix_t* stix, stix_oop_method_t mth, stix_ooi_t* xip, stix_ooi_t* xsp)
 {
@@ -274,35 +286,44 @@ TODO: overcome this problem
 		(stix)->active_context->slot[sp] = v; \
 	} while (0)
 
-static int execute_primitive (stix_t* stix, int prim_no, stix_ooi_t nargs, stix_ooi_t* xsp)
+static int execute_primitive (stix_t* stix, int prim_no, stix_ooi_t nargs)
 {
 	/* a primitive handler must pop off all arguments and the receiver and
 	 * push a return value when it's successful. otherwise, it must not touch
 	 * the stack. */
+	stix_ooi_t sp;
 
+	LOAD_SP (stix->active_context, sp);
 	switch (prim_no)
 	{
 		case 0:
 		{
 			stix_ooi_t i;
 		
-			dump_object (stix, stix->active_context->slot[*xsp - nargs], "receiver");
+			dump_object (stix, stix->active_context->slot[sp - nargs], "receiver");
 			for (i = nargs; i > 0; )
 			{
 				--i;
-				dump_object (stix, stix->active_context->slot[*xsp - i], "argument");
+				dump_object (stix, stix->active_context->slot[sp - i], "argument");
 			}
 
-			*xsp -= nargs; /* pop off arguments */
-			return 1;
+			sp -= nargs; /* pop off arguments */
+			goto success;
 		}
 
 		default:
+			/* this is hard failure */
+			stix->errnum = STIX_ENOIMPL;
 			return -1;
 	}
 
 /* TODO: when it returns 1, it should pop up receiver and argumetns.... 
  * when it returns 0, it should not touch the stack */
+	return 0;
+
+success:
+	STORE_SP (stix->active_context, sp);
+	return 1;
 }
 
 
@@ -383,6 +404,37 @@ printf ("STORE_TEMPVAR %d\n", (int)b1);
 
 		/* -------------------------------------------------------- */
 
+			case CMD_PUSH_OBJVAR:
+			{
+/* TODO: HANDLE DOUBLE EXTEND */
+				/* b1 -> variable index */
+				stix_ooi_t obj_index;
+				stix_oop_oop_t obj;
+				obj_index = code->slot[ip++];
+
+				obj = (stix_oop_oop_t)mth->slot[obj_index];
+printf ("PUSH OBJVAR %d %d\n", (int)b1, (int)obj_index);
+				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(obj) == STIX_OBJ_TYPE_OOP);
+				STIX_ASSERT (obj_index < STIX_OBJ_GET_SIZE(obj));
+				PUSH (stix, obj->slot[b1]);
+				break;
+			}
+
+			case CMD_STORE_INTO_OBJVAR:
+			{
+				stix_ooi_t obj_index;
+				stix_oop_oop_t obj;
+				obj_index = code->slot[ip++];
+
+printf ("STORE OBJVAR %d %d\n", (int)b1, (int)obj_index);
+				obj = (stix_oop_oop_t)mth->slot[obj_index];
+				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(obj) == STIX_OBJ_TYPE_OOP);
+				STIX_ASSERT (obj_index < STIX_OBJ_GET_SIZE(obj));
+				obj->slot[b1] = stix->active_context->slot[sp];
+				break;
+			}
+
+		/* -------------------------------------------------------- */
 			case CMD_SEND_MESSAGE:
 			case CMD_SEND_MESSAGE_TO_SUPER:
 			{
@@ -454,7 +506,9 @@ printf ("RETURN INSTVAR AT PREAMBLE\n");
 
 printf ("JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\n");
 						stix_pushtmp (stix, (stix_oop_t*)&newmth);
-						n = execute_primitive (stix, STIX_METHOD_GET_PREAMBLE_INDEX(preamble), b1, &sp);
+						STORE_SP (stix->active_context, sp);
+						n = execute_primitive (stix, STIX_METHOD_GET_PREAMBLE_INDEX(preamble), b1);
+						LOAD_SP (stix->active_context, sp);
 						stix_poptmp (stix);
 
 						if (n <= -1) goto oops;

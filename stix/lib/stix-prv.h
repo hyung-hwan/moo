@@ -442,7 +442,8 @@ struct stix_compiler_t
 #define CMD_EXTEND                       0x0
 #define CMD_EXTEND_DOUBLE                0x1
 
-/* positional instructions 
+/* Single positional instructions 
+ *
  * XXXXJJJJ
  * 0000XXXX JJJJJJJJ
  * 0001XXXX JJJJJJJJ JJJJJJJJ
@@ -454,32 +455,46 @@ struct stix_compiler_t
 #define CMD_PUSH_TEMPVAR         0x3
 #define CMD_PUSH_LITERAL         0x4
 #define CMD_STORE_INTO_INSTVAR   0x5
-#define CMD_STORE_INTO_CLASSVAR  0x6
-#define CMD_STORE_INTO_TEMPVAR   0x7
+#define CMD_STORE_INTO_TEMPVAR   0x6
 
 /*
+ * Double positional instructions
+ *
  * XXXXJJJJ KKKKKKKK
  * 0000XXXX JJJJJJJJ KKKKKKKK
  * 0001XXXX JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
+ *
+ * Access instance variable #JJJJ of an object at literal frame #KKKKKKKK
+ * Send message at literal frame #KKKKKKKK with #JJJJ arguments.
  */
+#define CMD_PUSH_OBJVAR                  0x8
+#define CMD_STORE_INTO_OBJVAR            0x9
+
 #define CMD_SEND_MESSAGE                 0xA
 #define CMD_SEND_MESSAGE_TO_SUPER        0xB
 
+/* 
+ * Single byte instructions 
+ */
 #define CMD_PUSH_SPECIAL                 0xE
 #define CMD_DO_SPECIAL                   0xF
 
+enum stix_subcmd_t
+{
+	/* sub-commands for CMD_PUSH_SPECIAL */
+	SUBCMD_PUSH_RECEIVER = 0x0,
+	SUBCMD_PUSH_NIL      = 0x1,
+	SUBCMD_PUSH_TRUE     = 0x2,
+	SUBCMD_PUSH_FALSE    = 0x3,
+	SUBCMD_PUSH_CONTEXT  = 0x4,
 
-#define SUBCMD_PUSH_RECEIVER 0x0
-#define SUBCMD_PUSH_NIL      0x1
-#define SUBCMD_PUSH_TRUE     0x2
-#define SUBCMD_PUSH_FALSE    0x3
-#define SUBCMD_PUSH_CONTEXT  0x4
-
-#define SUBCMD_DUP_STACKTOP            0x0
-#define SUBCMD_POP_STACKTOP            0x1
-#define SUBCMD_RETURN_STACKTOP 0x2
-#define SUBCMD_RETURN_BLOCK_STACKTOP   0x3
-#define SUBCMD_RETURN_RECEIVER 0x4
+	/* sub-commands for CMD_DO_SPECIAL */
+	SUBCMD_DUP_STACKTOP            = 0x0,
+	SUBCMD_POP_STACKTOP            = 0x1,
+	SUBCMD_RETURN_STACKTOP         = 0x2,
+	SUBCMD_RETURN_BLOCK_STACKTOP   = 0x3,
+	SUBCMD_RETURN_RECEIVER         = 0x4
+};
 
 /* ---------------------------------- */
 #define CODE_PUSH_RECEIVER            MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_RECEIVER)

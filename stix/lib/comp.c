@@ -951,6 +951,9 @@ retry:
 static void clear_io_names (stix_t* stix)
 {
 	stix_iolink_t* cur;
+
+	STIX_ASSERT (stix->c != STIX_NULL);
+
 	while (stix->c->io_names)
 	{
 		cur = stix->c->io_names;
@@ -1103,44 +1106,51 @@ static int emit_positional_instruction (stix_t* stix, int cmd, stix_size_t index
 
 }
 
-static int emit_send_instruction (stix_t* stix, int cmd, stix_size_t nargs, stix_size_t selector)
+static int emit_double_positional_instruction (stix_t* stix, int cmd, stix_size_t index_1, stix_size_t index_2)
 {
 	/* 
-	 * 1010JJJJ KKKKKKKK                    Send literal selector K with J arguments to self
-	 * 1011JJJJ KKKKKKKK                    Send literal selector K with J arguments to super
+	 * 1010JJJJ KKKKKKKK                    Send literal index_2 K with J arguments to self
+	 * 1011JJJJ KKKKKKKK                    Send literal index_2 K with J arguments to super
  	 * 00001010 JJJJJJJJ KKKKKKKK
 	 * 00001011 JJJJJJJJ KKKKKKKK
 	 * 00011010 JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
 	 * 00011011 JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
+	 *
+	 * Send:
+	 *  index_1 nargs                          JJJJ
+	 *  index_2 seletor-index-in-literal-frame KKKKKKKK
+	 * 
+	 * Objvar:
+	 *  index_1 variable-index                JJJJ
+	 *  index_2 object-index-in-literal-frame KKKKKKKK
 	 */
 
 	STIX_ASSERT (cmd <= 0xF);
-	STIX_ASSERT (nargs <= MAX_CODE_NARGS);
-	STIX_ASSERT (selector <= MAX_CODE_INDEX);
+	STIX_ASSERT (index_1 <= MAX_CODE_NARGS);
+	STIX_ASSERT (index_2 <= MAX_CODE_INDEX);
 
-	if (nargs > 0xFF || selector > 0xFF)
+	if (index_1 > 0xFF || index_2 > 0xFF)
 	{
 		if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND_DOUBLE, cmd)) <= -1 ||
-		    emit_byte_instruction(stix, nargs >> 8) <= -1 ||
-		    emit_byte_instruction(stix, nargs & 0xFF) <= -1 ||
-		    emit_byte_instruction(stix, selector >> 8) <= -1 ||
-		    emit_byte_instruction(stix, selector & 0xFF) <= -1) return -1;
+		    emit_byte_instruction(stix, index_1 >> 8) <= -1 ||
+		    emit_byte_instruction(stix, index_1 & 0xFF) <= -1 ||
+		    emit_byte_instruction(stix, index_2 >> 8) <= -1 ||
+		    emit_byte_instruction(stix, index_2 & 0xFF) <= -1) return -1;
 	}
-	else if (nargs > 0xF)
+	else if (index_1 > 0xF)
 	{
 		if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND, cmd)) <= -1 ||
-		    emit_byte_instruction(stix, nargs) <= -1 ||
-		    emit_byte_instruction(stix, selector) <= -1) return -1;
+		    emit_byte_instruction(stix, index_1) <= -1 ||
+		    emit_byte_instruction(stix, index_2) <= -1) return -1;
 	}
 	else
 	{
-		if (emit_byte_instruction(stix, MAKE_CODE(cmd, nargs)) <= -1 ||
-		    emit_byte_instruction(stix, selector) <= -1) return -1;
+		if (emit_byte_instruction(stix, MAKE_CODE(cmd, index_1)) <= -1 ||
+		    emit_byte_instruction(stix, index_2) <= -1) return -1;
 	}
 
 	return 0;
 }
-
 
 /* ---------------------------------------------------------------------
  * Compiler
@@ -1935,6 +1945,7 @@ static int compile_expression_primary (stix_t* stix, const stix_ucs_t* ident, co
 
 	var_info_t var;
 	int read_next_token = 0;
+	stix_size_t index;
 
 	*to_super = 0;
 
@@ -1943,28 +1954,31 @@ static int compile_expression_primary (stix_t* stix, const stix_ucs_t* ident, co
 		/* the caller has read the identifier and the next word */
 
 	handle_ident:
-		if (get_variable_info (stix, ident, ident_loc, &var) <= -1) return -1;
+		if (get_variable_info(stix, ident, ident_loc, &var) <= -1) return -1;
 
 		switch (var.type)
 		{
 			case VAR_ARGUMENT:
 			case VAR_TEMPORARY:
+				if (emit_positional_instruction(stix, CMD_PUSH_TEMPVAR, var.pos) <= -1) return -1;
 printf ("push tempvar %d\n", (int)var.pos);
-				if (emit_positional_instruction (stix, CMD_PUSH_TEMPVAR, var.pos) <= -1) return -1;
 				break;
 
 			case VAR_INSTANCE:
 			case VAR_CLASSINST:
+				if (emit_positional_instruction(stix, CMD_PUSH_INSTVAR, var.pos) <= -1) return -1;
 printf ("push instvar %d\n", (int)var.pos);
-				if (emit_positional_instruction (stix, CMD_PUSH_INSTVAR, var.pos) <= -1) return -1;
 				break;
 
 			case VAR_CLASS:
-				/* TODO: what instruction to generate for class variable access... */
-				return -1;
+				if (add_literal(stix, (stix_oop_t)var.cls, &index) <= -1 ||
+				    emit_double_positional_instruction(stix, CMD_PUSH_OBJVAR, var.pos, index) <= -1) return -1;
+printf ("PUSH OBJVAR %d %d\n", (int)var.pos, (int)index);
+				break;
 
 			case VAR_GLOBAL:
 				/* TODO: .............................. */
+stix->errnum = STIX_ENOIMPL;
 				return -1;
 
 			default:
@@ -1976,8 +1990,6 @@ printf ("push instvar %d\n", (int)var.pos);
 	}
 	else
 	{
-		stix_size_t index;
-
 		switch (stix->c->tok.type)
 		{
 			case STIX_IOTOK_IDENT:
@@ -2107,7 +2119,7 @@ static int compile_unary_message (stix_t* stix, int to_super)
 	while (stix->c->tok.type == STIX_IOTOK_IDENT) 
 	{
 		if (add_symbol_literal(stix, &stix->c->tok.name, &index) <= -1 ||
-		    emit_send_instruction(stix, send_message_cmd[to_super], 0, index) <= -1) return -1;
+		    emit_double_positional_instruction(stix, send_message_cmd[to_super], 0, index) <= -1) return -1;
 printf ("send message %d with 0 arguments to %s\n", (int)index, (to_super? "super": "self"));
 		GET_TOKEN (stix);
 	}
@@ -2136,7 +2148,7 @@ static int compile_binary_message (stix_t* stix, int to_super)
 		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, &to_super2) <= -1  ||
 		    compile_unary_message(stix, to_super2) <= -1 ||
 		    add_symbol_literal(stix, &binsel, &index) <= -1 ||
-		    emit_send_instruction(stix, send_message_cmd[to_super], 2, index) <= -1) 
+		    emit_double_positional_instruction(stix, send_message_cmd[to_super], 2, index) <= -1) 
 		{
 			stix->c->mth.binsels.len -= binsel.len;
 			return -1;
@@ -2192,7 +2204,7 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 	kwsel.len = stix->c->mth.kwsels.len - kwsel_len;
 
 	if (add_symbol_literal(stix, &kwsel, &index) <= -1 ||
-	    emit_send_instruction(stix, send_message_cmd[to_super], nargs, index) <= -1) goto oops;
+	    emit_double_positional_instruction(stix, send_message_cmd[to_super], nargs, index) <= -1) goto oops;
 printf ("Send message %d [", (int)index);
 print_ucs (&kwsel);
 printf ("] with %d arguments to %s\n", (int)nargs, (to_super? "super": "self"));
@@ -2265,6 +2277,7 @@ static int compile_method_expression (stix_t* stix, int pop)
 	 */
 
 	stix_ucs_t assignee;
+	stix_size_t index;
 	int ret = 0;
 
 	STIX_ASSERT (pop == 0 || pop == 1);
@@ -2320,9 +2333,10 @@ ret = pop;
 					break;
 
 				case VAR_CLASS:
-					/* TODO: what instruction to generate for class variable access... */
-
-					goto oops;
+/* TODO is this correct? */
+					if (add_literal (stix, (stix_oop_t)var.cls, &index) <= -1 ||
+					    emit_double_positional_instruction (stix, CMD_STORE_INTO_OBJVAR, var.pos, index) <= -1) goto oops;
+					break;
 
 				case VAR_GLOBAL:
 					/* TODO: .............................. */
@@ -3151,20 +3165,30 @@ int stix_compile (stix_t* stix, stix_ioimpl_t io)
 		stix->c->ilchr_ucs.len = 1;
 	}
 
-	stix->c->impl = io;
+	/* Some IO names could have been stored in earlier calls to this function.
+	 * I clear such names before i begin this function. i don't clear it
+	 * at the end of this function because i may be referenced as an error
+	 * location */
+	clear_io_names (stix);
 
+	/* initialize some key fields */
+	stix->c->impl = io;
+	stix->c->nungots = 0;
+
+	/* The name field and the includer field are STIX_NULL 
+	 * for the main stream */
 	STIX_MEMSET (&stix->c->arg, 0, STIX_SIZEOF(stix->c->arg));
 	stix->c->arg.line = 1;
 	stix->c->arg.colm = 1;
-	stix->c->nungots = 0;
-
-	stix->c->curinp = &stix->c->arg;
-	clear_io_names (stix);
 
 	/* open the top-level stream */
-	n = stix->c->impl (stix, STIX_IO_OPEN, stix->c->curinp);
+	n = stix->c->impl (stix, STIX_IO_OPEN, &stix->c->arg);
 	if (n <= -1) return -1;
 
+	/* the stream is open. set it as the current input stream */
+	stix->c->curinp = &stix->c->arg;
+
+	/* compile the contents of the stream */
 	if (compile_stream (stix) <= -1) goto oops;
 
 	/* close the stream */

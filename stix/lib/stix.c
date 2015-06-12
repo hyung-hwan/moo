@@ -42,10 +42,7 @@ stix_t* stix_open (stix_mmgr_t* mmgr, stix_size_t xtnsize, stix_size_t heapsize,
 		}
 		else STIX_MEMSET (stix + 1, 0, xtnsize);
 	}
-	else if (errnum)
-	{
-		*errnum = STIX_ENOMEM;
-	}
+	else if (errnum) *errnum = STIX_ENOMEM;
 
 	return stix;
 }
