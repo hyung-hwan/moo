@@ -83,12 +83,13 @@ void print_ucs (const stix_ucs_t* name)
 }
 
 
-void dump_object (stix_t* stix, stix_oop_t oop, const char* title)
+void __dump_object (stix_t* stix, stix_oop_t oop, int depth)
 {
 	stix_oop_class_t c;
 	stix_ucs_t s;
+	int i;
 
-	printf ("%s: ", title);
+	for (i = 0; i < depth; i++) printf ("\t");
 	printf ("%p instance of ", oop);
 
 	c = (stix_oop_class_t)STIX_CLASSOF(stix, oop);
@@ -96,4 +97,18 @@ void dump_object (stix_t* stix, stix_oop_t oop, const char* title)
 	s.len = STIX_OBJ_GET_SIZE(c->name);
 	print_ucs (&s);
 	printf ("\n");
+
+	if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_OOP)
+	{
+		for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+		{
+			__dump_object (stix, ((stix_oop_oop_t)oop)->slot[i], depth + 1);
+		}
+	}
+}
+
+void dump_object (stix_t* stix, stix_oop_t oop, const char* title)
+{
+	printf ("[%s]\n", title);
+	__dump_object (stix, oop, 0);
 }

@@ -265,6 +265,8 @@ TODO: overcome this problem
 		return -1;
 	}
 
+/* TODO: handle preamble */
+
 	/* the initial context starts the life of the entire VM
 	 * and is not really worked on except that it is used to call the
 	 * initial method. so it doesn't really require any extra stack space.
@@ -286,46 +288,107 @@ TODO: overcome this problem
 		(stix)->active_context->slot[sp] = v; \
 	} while (0)
 
-static int execute_primitive (stix_t* stix, int prim_no, stix_ooi_t nargs)
+#define STACK_GET(stix,v_sp) ((stix)->active_context->slot[v_sp])
+#define STACK_PUT(stix,v_sp,v_obj) ((stix)->active_context->slot[v_sp] = v_obj)
+
+int primitive_dump (stix_t* stix, stix_ooi_t nargs)
 {
-	/* a primitive handler must pop off all arguments and the receiver and
-	 * push a return value when it's successful. otherwise, it must not touch
-	 * the stack. */
+	stix_ooi_t i;
 	stix_ooi_t sp;
 
+	STIX_ASSERT (nargs >=  0);
+
 	LOAD_SP (stix->active_context, sp);
-	switch (prim_no)
+	dump_object (stix, stix->active_context->slot[sp - nargs], "receiver");
+	for (i = nargs; i > 0; )
 	{
-		case 0:
-		{
-			stix_ooi_t i;
-		
-			dump_object (stix, stix->active_context->slot[sp - nargs], "receiver");
-			for (i = nargs; i > 0; )
-			{
-				--i;
-				dump_object (stix, stix->active_context->slot[sp - i], "argument");
-			}
-
-			sp -= nargs; /* pop off arguments */
-			goto success;
-		}
-
-		default:
-			/* this is hard failure */
-			stix->errnum = STIX_ENOIMPL;
-			return -1;
+		--i;
+		dump_object (stix, stix->active_context->slot[sp - i], "argument");
 	}
 
-/* TODO: when it returns 1, it should pop up receiver and argumetns.... 
- * when it returns 0, it should not touch the stack */
-	return 0;
-
-success:
+	sp -= nargs; /* pop off arguments */
 	STORE_SP (stix->active_context, sp);
-	return 1;
+	return 1; /* success */
 }
 
+int primitive_new (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_ooi_t sp;
+	stix_oop_t rcv, obj;
+
+	STIX_ASSERT (nargs ==  0);
+
+	LOAD_SP (stix->active_context, sp);
+	rcv = STACK_GET(stix, sp);
+
+	if (STIX_CLASSOF(stix, rcv) != stix->_class) 
+	{
+		/* the receiver is not a class object */
+		return 0;
+	}
+
+	obj = stix_instantiate (stix, rcv, STIX_NULL, 0);
+	if (!obj) return -1;
+
+	/* emulate 'pop receiver' and 'push result' */
+	STACK_PUT (stix, sp, obj);
+	return 1; /* success */
+}
+
+int primitive_new_with_size (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_ooi_t sp;
+	stix_oop_t rcv, szoop, obj;
+	stix_oow_t size;
+
+	STIX_ASSERT (nargs ==  1);
+
+	LOAD_SP (stix->active_context, sp);
+	rcv = STACK_GET(stix, sp - 1);
+
+	if (STIX_CLASSOF(stix, rcv) != stix->_class) 
+	{
+		/* the receiver is not a class object */
+		return 0;
+	}
+
+	szoop = STACK_GET(stix, sp);
+	if (STIX_OOP_IS_SMINT(szoop))
+	{
+		size = STIX_OOP_TO_SMINT(szoop);
+	}
+/* TODO: support LargeInteger */
+	else
+	{
+		/* size is not a proper numeric object */
+		return 0;
+	}
+
+	obj = stix_instantiate (stix, rcv, STIX_NULL, size);
+	if (!obj) return -1; /* hard failure */
+
+	sp--;
+	STACK_PUT (stix, sp, obj);
+	STORE_SP (stix->active_context, sp);
+
+	return 1; /* success */
+}
+
+typedef int (*primitive_handler_t) (stix_t* stix, stix_ooi_t nargs);
+
+struct primitive_t
+{
+	stix_ooi_t          nargs; /* expected number of arguments */
+	primitive_handler_t handler;
+};
+typedef struct primitive_t primitive_t;
+
+static primitive_t primitives[] =
+{
+	{  -1,   primitive_dump             },
+	{   0,   primitive_new              },
+	{   1,   primitive_new_with_size    }
+};
 
 int stix_execute (stix_t* stix)
 {
@@ -448,7 +511,6 @@ TODO: handle double extension
 				stix_ooi_t selector_index;
 				stix_ooi_t preamble;
 
-
 				/* the next byte is the message selector index to the
 				 * literal frame. */
 				selector_index = code->slot[ip++];
@@ -503,17 +565,22 @@ printf ("RETURN INSTVAR AT PREAMBLE\n");
 					case STIX_METHOD_PREAMBLE_PRIMITIVE:
 					{
 						int n;
+						stix_ooi_t prim_no;
 
-printf ("JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ\n");
-						stix_pushtmp (stix, (stix_oop_t*)&newmth);
-						STORE_SP (stix->active_context, sp);
-						n = execute_primitive (stix, STIX_METHOD_GET_PREAMBLE_INDEX(preamble), b1);
-						LOAD_SP (stix->active_context, sp);
-						stix_poptmp (stix);
+						prim_no = STIX_METHOD_GET_PREAMBLE_INDEX(preamble);
+						if (prim_no >= 0 && prim_no < STIX_COUNTOF(primitives) && 
+						    (primitives[prim_no].nargs < 0 || primitives[prim_no].nargs == b1))
+						{
+							stix_pushtmp (stix, (stix_oop_t*)&newmth);
+							STORE_SP (stix->active_context, sp);
+							n = primitives[prim_no].handler (stix, b1);
+							LOAD_SP (stix->active_context, sp);
+							stix_poptmp (stix);
+							if (n <= -1) goto oops;
+							if (n >= 1) break;
+						}
 
-						if (n <= -1) goto oops;
-						if (n >= 1) break;
-						/* primitive failed. fall thru */
+						/* primitive failed. fall through */
 					}
 
 					default:
