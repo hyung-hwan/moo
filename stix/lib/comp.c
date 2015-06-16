@@ -132,6 +132,9 @@ enum voca_id_t
 };
 typedef enum voca_id_t voca_id_t;
 
+static int compile_method_statement (stix_t* stix);
+static int compile_method_expression (stix_t* stix, int pop);
+static int add_literal (stix_t* stix, stix_oop_t lit, stix_size_t* index);
 
 static STIX_INLINE int is_spacechar (stix_uci_t c)
 {
@@ -347,10 +350,14 @@ static stix_ssize_t find_word_in_string (const stix_ucs_t* haystack, const stix_
 	 (c >= 'A' && c <= 'Z')? ((c - 'A' + 10 < base)? (c - 'A' + 10): base): \
 	 (c >= 'a' && c <= 'z')? ((c - 'a' + 10 < base)? (c - 'a' + 10): base): base)
 
-static int string_to_smint (stix_t* stix, stix_ucs_t* str, int base, stix_ooi_t* num)
+static int string_to_smint (stix_t* stix, stix_ucs_t* str, int radixed, stix_ooi_t* num)
 {
+	/* it is not a generic conversion function.
+	 * it assumes a certain pre-sanity check on the string
+	 * done by the lexical analyzer */
+
 /* TODO: handle floating point numbers, etc, handle radix */
-	int v, negsign, overflow;
+	int v, negsign, overflow, base;
 	const stix_uch_t* ptr, * end;
 	stix_oow_t value, old_value;
 
@@ -359,23 +366,34 @@ static int string_to_smint (stix_t* stix, stix_ucs_t* str, int base, stix_ooi_t*
 	ptr = str->ptr,
 	end = str->ptr + str->len;
 
-	if (ptr < end)
+	STIX_ASSERT (ptr < end);
+
+	if (*ptr == '+' || *ptr == '-')
 	{
-		if (*ptr == '+' || *ptr == '-')
+		negsign = *ptr - '+';
+		ptr++;
+	}
+
+	if (radixed)
+	{
+		STIX_ASSERT (ptr < end);
+
+		base = 0;
+		do
 		{
-			negsign = *ptr - '+';
+			base = base * 10 + CHAR_TO_NUM(*ptr, 10);
 			ptr++;
 		}
-	}
+		while (*ptr != 'r');
 
-	if (ptr >= end)
-	{
-		stix->errnum = STIX_EINVAL;
-		return -1;
+		ptr++;
 	}
+	else base = 10;
+
+	STIX_ASSERT (ptr < end);
 
 	value = old_value = 0;
-	while (ptr < end && (v = CHAR_TO_NUM(*ptr, base)) != base)
+	while (ptr < end && (v = CHAR_TO_NUM(*ptr, base)) < base)
 	{
 		value = value * base + v;
 		if (value < old_value) 
@@ -386,7 +404,6 @@ static int string_to_smint (stix_t* stix, stix_ucs_t* str, int base, stix_ooi_t*
 		old_value = value;
 		ptr++;
 	}
-	
 
 	if (ptr < end || overflow) 
 	{
@@ -702,19 +719,62 @@ static int get_numlit (stix_t* stix, int negated)
 	 * fractionalDigits := decimal-integer
 	 */
 
-	stix_uci_t c = stix->c->lxc.c;
+	stix_uci_t c;
+	int radix = 0, r;
+
+	c = stix->c->lxc.c;
 	stix->c->tok.type = STIX_IOTOK_NUMLIT;
 
 /*TODO: support a complex numeric literal */
 	do 
 	{
+		if (radix <= 36)
+		{
+			/* collect the potential radix specifier */
+			r = CHAR_TO_NUM (c, 10);
+			STIX_ASSERT (r < 10);
+			radix = radix * 10 + r;
+		}
+
 		ADD_TOKEN_CHAR(stix, c);
-		GET_CHAR (stix);
-		c = stix->c->lxc.c;
+		GET_CHAR_TO (stix, c);
 	} 
 	while (is_digitchar(c));
 
-	/* TODO; more */
+	if (c == 'r')
+	{
+		/* radix specifier */
+
+		if (radix < 2 || radix > 36)
+		{
+			/* no digit after the radix specifier */
+			set_syntax_error (stix, STIX_SYNERR_RADIX, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+
+		ADD_TOKEN_CHAR(stix, c);
+		GET_CHAR_TO (stix, c);
+
+		if (CHAR_TO_NUM(c, radix) >= radix)
+		{
+			/* no digit after the radix specifier */
+			set_syntax_error (stix, STIX_SYNERR_RADNUMLIT, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+
+		do
+		{
+			ADD_TOKEN_CHAR(stix, c);
+			GET_CHAR_TO (stix, c);
+		}
+		while (CHAR_TO_NUM(c, radix) < radix);
+
+		stix->c->tok.type = STIX_IOTOK_RADNUMLIT;
+	}
+
+/*
+ * TODO: handle floating point number
+ */
 	return 0;
 }
 
@@ -1220,12 +1280,32 @@ static int emit_double_positional_instruction (stix_t* stix, int cmd, stix_size_
 	return 0;
 }
 
+
+static int emit_push_smint_literal (stix_t* stix, stix_ooi_t i)
+{
+	stix_size_t index;
+
+	switch (i)
+	{
+		case -1:
+			return emit_byte_instruction (stix, CODE_PUSH_NEGONE);
+
+		case 0:
+			return emit_byte_instruction (stix, CODE_PUSH_ZERO);
+
+		case 1:
+			return emit_byte_instruction (stix, CODE_PUSH_ONE);
+	}
+
+
+	if (add_literal(stix, STIX_OOP_FROM_SMINT(i), &index) <= -1 ||
+	    emit_positional_instruction(stix, CMD_PUSH_LITERAL, index) <= -1) return -1;
+	return 0;
+}
+
 /* ---------------------------------------------------------------------
  * Compiler
  * --------------------------------------------------------------------- */
-
-static int compile_method_statement (stix_t* stix);
-static int compile_method_expression (stix_t* stix, int pop);
 
 static int add_literal (stix_t* stix, stix_oop_t lit, stix_size_t* index)
 {
@@ -1950,7 +2030,11 @@ static int compile_block_temporaries (stix_t* stix)
 
 static int compile_block_expression (stix_t* stix)
 {
-	stix_size_t code_start_pos;
+	stix_size_t jump_inst_pos;
+	stix_size_t saved_tmpr_count;
+	stix_size_t block_arg_count;
+	stix_size_t block_code_size;
+	stix_ioloc_t block_loc, colon_loc;
 
 	/*
 	 * block-expression := "[" block-body "]"
@@ -1958,23 +2042,17 @@ static int compile_block_expression (stix_t* stix)
 	 * block-argument := ":" identifier
 	 */
 
-	code_start_pos = stix->c->mth.code.len;
+	/* this function expects [ not to be consumed away */
+	STIX_ASSERT (stix->c->tok.type = STIX_IOTOK_LBRACK);
+	block_loc = stix->c->tok.loc;
+	GET_TOKEN (stix);
 
-#if 0
-	if (emit_byte_instruction(stix, CODE_PUSH_CONTEXT) <= -1 ||
-	    emit_byte_instruction(stix, 
-
-	
-	if (emit_byte_instruction(stix, CODE_NOOP) <= -1 ||
-	    emit_byte_instruction(stix, CODE_NOOP) <= -
-	/* reserve space for JUMP instruction */
-	if (emit_byte_instruction(stix, CODE_NOOP) <= -1 ||
-	    emit_byte_instruction(stix, CODE_NOOP) <= -1 ||
-	    emit_byte_instruction(stix, CODE_NOOP) <= -1) return -1;
-#endif
+	saved_tmpr_count = stix->c->mth.tmpr_count;
 
 	if (stix->c->tok.type == STIX_IOTOK_COLON) 
 	{
+		colon_loc = stix->c->tok.loc;
+
 		/* block temporary variables */
 		do 
 		{
@@ -1987,8 +2065,15 @@ static int compile_block_expression (stix_t* stix)
 				return -1;
 			}
 
-			/* TODO : store block arguments */
 /* TODO: check conflicting names as well */
+			if (find_temporary_variable(stix, &stix->c->tok.name) >= 0)
+			{
+				set_syntax_error (stix, STIX_SYNERR_BLKARGNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
+				return -1;
+			}
+
+			if (add_temporary_variable(stix, &stix->c->tok.name) <= -1) return -1;
+
 			GET_TOKEN (stix);
 		} 
 		while (stix->c->tok.type == STIX_IOTOK_COLON);
@@ -2002,7 +2087,23 @@ static int compile_block_expression (stix_t* stix)
 		GET_TOKEN (stix);
 	}
 
-/* TODO: create a block closure */
+	block_arg_count = stix->c->mth.tmpr_count - saved_tmpr_count;
+	if (block_arg_count > MAX_CODE_NBLKARGS)
+	{
+		set_syntax_error (stix, STIX_SYNERR_BLKARGFLOOD, &colon_loc, STIX_NULL); 
+		return -1;
+	}
+
+	if (emit_byte_instruction(stix, CODE_PUSH_CONTEXT) <= -1 ||
+	    emit_push_smint_literal(stix, block_arg_count) <= -1 ||
+	    emit_byte_instruction(stix, CODE_SEND_BLOCK_COPY) <= -1) return -1;
+
+	/* insert dummy instructions before replacing them with a jump instruction */
+	jump_inst_pos = stix->c->mth.code.len;
+	if (emit_byte_instruction(stix, 0) <= -1 ||
+	    emit_byte_instruction(stix, 0) <= -1 ||
+	    emit_byte_instruction(stix, 0) <= -1) return -1;
+
 	if (compile_block_temporaries(stix) <= -1 ||
 	    compile_block_statements(stix) <= -1) return -1;
 
@@ -2012,10 +2113,19 @@ static int compile_block_expression (stix_t* stix)
 		return -1;
 	}
 
-	GET_TOKEN (stix);
+	block_code_size = stix->c->mth.code.len - jump_inst_pos + 3;
+	if (block_code_size > MAX_CODE_BLKCODE)
+	{
+		set_syntax_error (stix, STIX_SYNERR_BLKFLOOD, &colon_loc, STIX_NULL); 
+		return -1;
+	}
 
-	/* TODO: do special treatment for block closures */
-/* TODO: GENERATE BLOCK CONTEXT CREATION INSTRUCTION */
+/* TODO: use CMD_EXTEND if block_code_size is <= 255 */
+	stix->c->mth.code.ptr[jump_inst_pos] = MAKE_CODE(CMD_EXTEND_DOUBLE, CMD_JUMP);
+	stix->c->mth.code.ptr[jump_inst_pos + 1] = (block_code_size & 0xFF00u) >> 8;
+	stix->c->mth.code.ptr[jump_inst_pos + 2] = (block_code_size & 0x00FFu);
+
+	GET_TOKEN (stix);
 
 	return 0;
 }
@@ -2114,6 +2224,7 @@ printf ("push false...\n");
 				break;
 
 			case STIX_IOTOK_THIS_CONTEXT:
+printf ("push context...\n");
 				if (emit_byte_instruction(stix, CODE_PUSH_CONTEXT) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
@@ -2141,12 +2252,13 @@ printf ("push symbol literal %d\n", (int)index);
 				break;
 
 			case STIX_IOTOK_NUMLIT:
+			case STIX_IOTOK_RADNUMLIT:
 			{
 				/* TODO: other types of numbers, negative numbers, etc */
 /* TODO: proper numbeic literal handling */
 				stix_ooi_t tmp;
 
-				if (string_to_smint(stix, &stix->c->tok.name, 10, &tmp) <= -1)
+				if (string_to_smint(stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT, &tmp) <= -1)
 				{
 printf ("NOT IMPLEMENTED LARGE_INTEGER or ERROR?\n");
 						stix->errnum = STIX_ENOIMPL;
@@ -2154,23 +2266,7 @@ printf ("NOT IMPLEMENTED LARGE_INTEGER or ERROR?\n");
 				}
 				else
 				{
-					switch (tmp)
-					{
-						case -1:
-							if (emit_byte_instruction(stix, CODE_PUSH_NEGONE) <= -1) return -1;
-							break;
-
-						case 0:
-							if (emit_byte_instruction(stix, CODE_PUSH_ZERO) <= -1) return -1;
-							break;
-
-						case 1:
-							if (emit_byte_instruction(stix, CODE_PUSH_ONE) <= -1) return -1;
-							break;
-
-						default:
-							if (add_literal(stix, STIX_OOP_FROM_SMINT(tmp), &index) <= -1) return -1;
-					}
+					if (emit_push_smint_literal(stix, tmp) <= -1) return -1;
 				}
 
 				GET_TOKEN (stix);
@@ -2178,15 +2274,15 @@ printf ("NOT IMPLEMENTED LARGE_INTEGER or ERROR?\n");
 			}
 
 			case STIX_IOTOK_APAREN:
-				/* TODO: array literal */
+/* TODO: array literal */
 				break;
 
 			case STIX_IOTOK_BPAREN:
-				/* TODO: byte array literal */
+/* TODO: byte array literal */
 				break;
 
 			case STIX_IOTOK_LBRACK:
-				GET_TOKEN (stix);
+				/*GET_TOKEN (stix);*/
 				if (compile_block_expression(stix) <= -1) return -1;
 				break;
 

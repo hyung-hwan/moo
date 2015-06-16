@@ -208,7 +208,7 @@ printf ("instance method dictioanry ====\n");
 		do
 		{
 			mthdic = ((stix_oop_class_t)c)->mthdic[dic_no];
-			STIX_ASSERT (mthdic != stix->_nil);
+			STIX_ASSERT ((stix_oop_t)mthdic != stix->_nil);
 			STIX_ASSERT (STIX_CLASSOF(stix, mthdic) == stix->_method_dictionary);
 
 dump_dictionary (stix, mthdic, "Method dictionary");

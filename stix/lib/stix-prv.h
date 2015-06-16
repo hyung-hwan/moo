@@ -230,6 +230,7 @@ struct stix_iotok_t
 		STIX_IOTOK_STRLIT,
 		STIX_IOTOK_SYMLIT,
 		STIX_IOTOK_NUMLIT,
+		STIX_IOTOK_RADNUMLIT,
 		STIX_IOTOK_NIL,
 		STIX_IOTOK_SELF,
 		STIX_IOTOK_SUPER,
@@ -272,6 +273,8 @@ enum stix_synerrnum_t
 	STIX_SYNERR_HLTNT,         /* hased literal not terminated */
 	STIX_SYNERR_CLNMS,         /* colon missing */
 	STIX_SYNERR_STRING,        /* string expected */
+	STIX_SYNERR_RADIX,         /* invalid radix */
+	STIX_SYNERR_RADNUMLIT,     /* invalid numeric literal with radix */
 	STIX_SYNERR_LBRACE,        /* { expected */
 	STIX_SYNERR_RBRACE,        /* } expected */
 	STIX_SYNERR_LPAREN,        /* ( expected */
@@ -293,12 +296,15 @@ enum stix_synerrnum_t
 	STIX_SYNERR_ARGNAMEDUP,    /* duplicate argument name */
 	STIX_SYNERR_TMPRNAMEDUP,   /* duplicate temporary variable name */
 	STIX_SYNERR_VARNAMEDUP,    /* duplicate variable name */
+	STIX_SYNERR_BLKARGNAMEDUP, /* duplicate block argument name */
 	STIX_SYNERR_VARARG,        /* cannot assign to argument */
 	STIX_SYNERR_VARUNDCL,      /* undeclared variable */
 	STIX_SYNERR_VARUNUSE,      /* unsuable variable in compiled code */
 	STIX_SYNERR_VARINACC,      /* inaccessible variable - e.g. accessing an instance variable from a class method is not allowed. */
 	STIX_SYNERR_PRIMARY,       /* wrong expression primary */
 	STIX_SYNERR_ARGFLOOD,      /* too many arguments */
+	STIX_SYNERR_BLKARGFLOOD,   /* too many block arguments */
+	STIX_SYNERR_BLKFLOOD,      /* too large block */
 	STIX_SYNERR_PRIMITIVENO    /* wrong primitive number */
 };
 typedef enum stix_synerrnum_t stix_synerrnum_t;
@@ -438,6 +444,8 @@ struct stix_compiler_t
 #define MAKE_CODE(x,y) (((x) << 4) | y)
 #define MAX_CODE_INDEX               0xFFFFu
 #define MAX_CODE_NARGS               0xFFFFu
+#define MAX_CODE_NBLKARGS            0xFFFFu
+#define MAX_CODE_BLKCODE             0xFFFFu
 
 enum stix_cmdcode_t
 {
@@ -500,6 +508,7 @@ enum stix_cmdcode_t
 	SUBCMD_RETURN_STACKTOP         = 0x2,
 	SUBCMD_RETURN_BLOCK_STACKTOP   = 0x3,
 	SUBCMD_RETURN_RECEIVER         = 0x4,
+	SUBCMD_SEND_BLOCK_COPY         = 0xE,
 	SUBCMD_NOOP                    = 0xF
 };
 
@@ -519,6 +528,7 @@ enum stix_cmdcode_t
 #define CODE_RETURN_STACKTOP          MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_STACKTOP)
 #define CODE_RETURN_BLOCK_STACKTOP    MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_BLOCK_STACKTOP)
 #define CODE_RETURN_RECEIVER          MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_RECEIVER)
+#define CODE_SEND_BLOCK_COPY          MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_SEND_BLOCK_COPY)
 #define CODE_NOOP                     MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_NOOP)
 
 #if defined(__cplusplus)

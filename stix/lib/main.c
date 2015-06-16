@@ -174,7 +174,9 @@ static char* syntax_error_msg[] =
 	"no character after $",
 	"no valid character after #",
 	"missing colon",
-	"string expected", /* string expected in place of ${1} */
+	"string expected",
+	"invalid radix", 
+	"invalid numeric literal",
 	"{ expected",
 	"} expected",
 	"( expected",
@@ -196,12 +198,15 @@ static char* syntax_error_msg[] =
 	"duplicate argument name",
 	"duplicate temporary variable name",
 	"duplicate variable name",
+	"duplicate block argument name",
 	"cannot assign to argument",
 	"undeclared variable",
 	"unusable variable in compiled code",
 	"inaccessible variable",
 	"wrong expression primary",
 	"too many arguments",
+	"too many block arguments",
+	"too large block",
 	"wrong primitive number"
 };
 

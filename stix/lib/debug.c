@@ -96,15 +96,100 @@ void __dump_object (stix_t* stix, stix_oop_t oop, int depth)
 	s.ptr = ((stix_oop_char_t)c->name)->slot;
 	s.len = STIX_OBJ_GET_SIZE(c->name);
 	print_ucs (&s);
-	printf ("\n");
 
-	if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_OOP)
+	if (oop == stix->_nil)
 	{
-		for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+		printf (" nil");
+	}
+	else if (oop == stix->_true)
+	{
+		printf (" true");
+	}
+	else if (oop == stix->_false)
+	{
+		printf (" false");
+	}
+	else if (STIX_OOP_IS_SMINT(oop))
+	{
+		printf (" %ld", (long int)STIX_OOP_TO_SMINT(oop));
+	}
+	else if (STIX_OOP_IS_CHAR(oop))
+	{
+		stix_bch_t bcs[32];
+		stix_uch_t uch;
+		stix_size_t ucslen, bcslen;
+
+		uch = STIX_OOP_TO_CHAR(oop);
+		bcslen = STIX_COUNTOF(bcs);
+		ucslen = 1;
+		if (stix_ucstoutf8 (&uch, &ucslen, bcs, &bcslen) >= 0)
 		{
-			__dump_object (stix, ((stix_oop_oop_t)oop)->slot[i], depth + 1);
+			printf (" $%.*s", (int)bcslen, bcs);
 		}
 	}
+	else if (STIX_OOP_IS_POINTER(oop))
+	{
+		if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_OOP)
+		{
+/* TODO: print _Array specially using #( */
+			printf ("\n");
+			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+			{
+				__dump_object (stix, ((stix_oop_oop_t)oop)->slot[i], depth + 1);
+			}
+		}
+		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_CHAR)
+		{
+			if (STIX_CLASSOF(stix,oop) == stix->_symbol)
+			{
+				printf (" #'");
+			}
+			else if (STIX_CLASSOF(stix,oop) == stix->_string)
+			{
+				printf (" '");
+			}
+
+			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+			{
+				stix_bch_t bcs[32];
+				stix_uch_t uch;
+				stix_size_t ucslen, bcslen;
+				uch = ((stix_oop_char_t)oop)->slot[i];
+				if (uch == '\'') printf ("''");
+				else
+				{
+					bcslen = STIX_COUNTOF(bcs);
+					ucslen = 1;
+					if (stix_ucstoutf8 (&uch, &ucslen, bcs, &bcslen) >= 0)
+					{
+						printf ("%.*s", (int)bcslen, bcs);
+					}
+				}
+			}
+
+			printf ("'");
+		}
+		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_BYTE)
+		{
+			printf (" #[");
+			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+			{
+				printf (" %d", ((stix_oop_byte_t)oop)->slot[i]);
+			}
+			printf ("]");
+		}
+		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_WORD)
+		{
+			printf (" #["); /* TODO: different symbol for word array ?? */
+			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+			{
+				printf (" %ld", ((stix_oop_word_t)oop)->slot[i]);
+			}
+			printf ("]");
+		}
+	}
+
+	printf ("\n");
 }
 
 void dump_object (stix_t* stix, stix_oop_t oop, const char* title)
