@@ -439,61 +439,68 @@ struct stix_compiler_t
 #define MAX_CODE_INDEX               0xFFFFu
 #define MAX_CODE_NARGS               0xFFFFu
 
-#define CMD_EXTEND                       0x0
-#define CMD_EXTEND_DOUBLE                0x1
-
-/* Single positional instructions 
- *
- * XXXXJJJJ
- * 0000XXXX JJJJJJJJ
- * 0001XXXX JJJJJJJJ JJJJJJJJ
- *
- * XXXX is one of the following positional instructions.
- * JJJJ or JJJJJJJJ is the position.
- */
-#define CMD_PUSH_INSTVAR         0x2
-#define CMD_PUSH_TEMPVAR         0x3
-#define CMD_PUSH_LITERAL         0x4
-#define CMD_STORE_INTO_INSTVAR   0x5
-#define CMD_STORE_INTO_TEMPVAR   0x6
-
-/*
- * Double positional instructions
- *
- * XXXXJJJJ KKKKKKKK
- * 0000XXXX JJJJJJJJ KKKKKKKK
- * 0001XXXX JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
- *
- * Access instance variable #JJJJ of an object at literal frame #KKKKKKKK
- * Send message at literal frame #KKKKKKKK with #JJJJ arguments.
- */
-#define CMD_PUSH_OBJVAR                  0x8
-#define CMD_STORE_INTO_OBJVAR            0x9
-
-#define CMD_SEND_MESSAGE                 0xA
-#define CMD_SEND_MESSAGE_TO_SUPER        0xB
-
-/* 
- * Single byte instructions 
- */
-#define CMD_PUSH_SPECIAL                 0xE
-#define CMD_DO_SPECIAL                   0xF
-
-enum stix_subcmd_t
+enum stix_cmdcode_t
 {
+	CMD_EXTEND                     = 0x0,
+	CMD_EXTEND_DOUBLE              = 0x1,
+
+	/* Single positional instructions 
+	 *
+	 * XXXXJJJJ
+	 * 0000XXXX JJJJJJJJ
+	 * 0001XXXX JJJJJJJJ JJJJJJJJ
+	 *
+	 * XXXX is one of the following positional instructions.
+	 * JJJJ or JJJJJJJJ is the position.
+	 */
+	CMD_PUSH_INSTVAR               = 0x2,
+	CMD_PUSH_TEMPVAR               = 0x3,
+	CMD_PUSH_LITERAL               = 0x4,
+	CMD_STORE_INTO_INSTVAR         = 0x5,
+	CMD_STORE_INTO_TEMPVAR         = 0x6,
+
+	CMD_JUMP                       = 0x7,
+	CMD_JUMP_IF_FALSE              = 0x8,
+
+	/*
+	 * Double positional instructions
+	 *
+	 * XXXXJJJJ KKKKKKKK
+	 * 0000XXXX JJJJJJJJ KKKKKKKK
+	 * 0001XXXX JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
+	 *
+	 * Access instance variable #JJJJ of an object at literal frame #KKKKKKKK
+	 * Send message at literal frame #KKKKKKKK with #JJJJ arguments.
+	 */
+	CMD_PUSH_OBJVAR                = 0x9,
+	CMD_STORE_INTO_OBJVAR          = 0xA,
+
+	CMD_SEND_MESSAGE               = 0xB,
+	CMD_SEND_MESSAGE_TO_SUPER      = 0xC,
+
+	/* 
+	 * Single byte instructions 
+	 */
+	CMD_PUSH_SPECIAL               = 0xE,
+	CMD_DO_SPECIAL                 = 0xF,
+
 	/* sub-commands for CMD_PUSH_SPECIAL */
-	SUBCMD_PUSH_RECEIVER = 0x0,
-	SUBCMD_PUSH_NIL      = 0x1,
-	SUBCMD_PUSH_TRUE     = 0x2,
-	SUBCMD_PUSH_FALSE    = 0x3,
-	SUBCMD_PUSH_CONTEXT  = 0x4,
+	SUBCMD_PUSH_RECEIVER           = 0x0,
+	SUBCMD_PUSH_NIL                = 0x1,
+	SUBCMD_PUSH_TRUE               = 0x2,
+	SUBCMD_PUSH_FALSE              = 0x3,
+	SUBCMD_PUSH_CONTEXT            = 0x4,
+	SUBCMD_PUSH_NEGONE             = 0x5,
+	SUBCMD_PUSH_ZERO               = 0x6,
+	SUBCMD_PUSH_ONE                = 0x7,
 
 	/* sub-commands for CMD_DO_SPECIAL */
 	SUBCMD_DUP_STACKTOP            = 0x0,
 	SUBCMD_POP_STACKTOP            = 0x1,
 	SUBCMD_RETURN_STACKTOP         = 0x2,
 	SUBCMD_RETURN_BLOCK_STACKTOP   = 0x3,
-	SUBCMD_RETURN_RECEIVER         = 0x4
+	SUBCMD_RETURN_RECEIVER         = 0x4,
+	SUBCMD_NOOP                    = 0xF
 };
 
 /* ---------------------------------- */
@@ -502,6 +509,9 @@ enum stix_subcmd_t
 #define CODE_PUSH_TRUE                MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_TRUE)
 #define CODE_PUSH_FALSE               MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_FALSE)
 #define CODE_PUSH_CONTEXT             MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_CONTEXT)
+#define CODE_PUSH_NEGONE              MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_NEGONE)
+#define CODE_PUSH_ZERO                MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_ZERO)
+#define CODE_PUSH_ONE                 MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_ONE)
 
 /* special code */
 #define CODE_DUP_STACKTOP             MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_DUP_STACKTOP)
@@ -509,6 +519,7 @@ enum stix_subcmd_t
 #define CODE_RETURN_STACKTOP          MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_STACKTOP)
 #define CODE_RETURN_BLOCK_STACKTOP    MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_BLOCK_STACKTOP)
 #define CODE_RETURN_RECEIVER          MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_RECEIVER)
+#define CODE_NOOP                     MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_NOOP)
 
 #if defined(__cplusplus)
 extern "C" {

@@ -342,6 +342,74 @@ static stix_ssize_t find_word_in_string (const stix_ucs_t* haystack, const stix_
 	return -1;
 }
 
+#define CHAR_TO_NUM(c,base) \
+	((c >= '0' && c <= '9')? ((c - '0' < base)? (c - '0'): base): \
+	 (c >= 'A' && c <= 'Z')? ((c - 'A' + 10 < base)? (c - 'A' + 10): base): \
+	 (c >= 'a' && c <= 'z')? ((c - 'a' + 10 < base)? (c - 'a' + 10): base): base)
+
+static int string_to_smint (stix_t* stix, stix_ucs_t* str, int base, stix_ooi_t* num)
+{
+/* TODO: handle floating point numbers, etc, handle radix */
+	int v, negsign, overflow;
+	const stix_uch_t* ptr, * end;
+	stix_oow_t value, old_value;
+
+	negsign = 0;
+	overflow = 0;
+	ptr = str->ptr,
+	end = str->ptr + str->len;
+
+	if (ptr < end)
+	{
+		if (*ptr == '+' || *ptr == '-')
+		{
+			negsign = *ptr - '+';
+			ptr++;
+		}
+	}
+
+	if (ptr >= end)
+	{
+		stix->errnum = STIX_EINVAL;
+		return -1;
+	}
+
+	value = old_value = 0;
+	while (ptr < end && (v = CHAR_TO_NUM(*ptr, base)) != base)
+	{
+		value = value * base + v;
+		if (value < old_value) 
+		{
+			/* overflow must have occurred */
+			overflow = 1;
+		}
+		old_value = value;
+		ptr++;
+	}
+	
+
+	if (ptr < end || overflow) 
+	{
+		/* trailing garbage or overflow */
+		stix->errnum = STIX_EINVAL;
+		return -1;
+	}
+
+	if (negsign)
+	{
+		if (value > STIX_SMINT_MIN) return -1;
+		*num = value;
+		*num *= -1;
+	}
+	else
+	{
+		if (value > STIX_SMINT_MAX) return -1;
+		*num = value;
+	}
+
+	return 0;
+}
+
 /* ---------------------------------------------------------------------
  * Tokenizer 
  * --------------------------------------------------------------------- */
@@ -1882,13 +1950,29 @@ static int compile_block_temporaries (stix_t* stix)
 
 static int compile_block_expression (stix_t* stix)
 {
+	stix_size_t code_start_pos;
+
 	/*
 	 * block-expression := "[" block-body "]"
 	 * block-body := (block-argument* "|")? block-temporaries? method-statement*
 	 * block-argument := ":" identifier
 	 */
 
-/* TODO: GENERATE JUMP INSTRUCTION */
+	code_start_pos = stix->c->mth.code.len;
+
+#if 0
+	if (emit_byte_instruction(stix, CODE_PUSH_CONTEXT) <= -1 ||
+	    emit_byte_instruction(stix, 
+
+	
+	if (emit_byte_instruction(stix, CODE_NOOP) <= -1 ||
+	    emit_byte_instruction(stix, CODE_NOOP) <= -
+	/* reserve space for JUMP instruction */
+	if (emit_byte_instruction(stix, CODE_NOOP) <= -1 ||
+	    emit_byte_instruction(stix, CODE_NOOP) <= -1 ||
+	    emit_byte_instruction(stix, CODE_NOOP) <= -1) return -1;
+#endif
+
 	if (stix->c->tok.type == STIX_IOTOK_COLON) 
 	{
 		/* block temporary variables */
@@ -2047,7 +2131,6 @@ printf ("push character literal %d\n", (int)index);
 				    emit_positional_instruction(stix, CMD_PUSH_LITERAL, index) <= -1) return -1;
 printf ("push string literal %d\n", (int)index);
 				GET_TOKEN (stix);
-
 				break;
 
 			case STIX_IOTOK_SYMLIT:
@@ -2060,16 +2143,37 @@ printf ("push symbol literal %d\n", (int)index);
 			case STIX_IOTOK_NUMLIT:
 			{
 				/* TODO: other types of numbers, negative numbers, etc */
-/*
-				stix_word_t tmp;
-				STIX_STRTOI (tmp, stix->tok.name.buffer, STIX_NULL, 10);
-				literal = STIX_TO_SMALLINT(tmp);
+/* TODO: proper numbeic literal handling */
+				stix_ooi_t tmp;
 
-				if (add_literal(stix, literal, &index) <= -1)r eturn -1;
+				if (string_to_smint(stix, &stix->c->tok.name, 10, &tmp) <= -1)
+				{
+printf ("NOT IMPLEMENTED LARGE_INTEGER or ERROR?\n");
+						stix->errnum = STIX_ENOIMPL;
+						return -1;
+				}
+				else
+				{
+					switch (tmp)
+					{
+						case -1:
+							if (emit_byte_instruction(stix, CODE_PUSH_NEGONE) <= -1) return -1;
+							break;
 
-				EMIT_PUSH_LITERAL_CONSTANT (stix, index);
+						case 0:
+							if (emit_byte_instruction(stix, CODE_PUSH_ZERO) <= -1) return -1;
+							break;
+
+						case 1:
+							if (emit_byte_instruction(stix, CODE_PUSH_ONE) <= -1) return -1;
+							break;
+
+						default:
+							if (add_literal(stix, STIX_OOP_FROM_SMINT(tmp), &index) <= -1) return -1;
+					}
+				}
+
 				GET_TOKEN (stix);
-*/
 				break;
 			}
 

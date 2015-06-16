@@ -26,32 +26,27 @@
 
 #include "stix-prv.h"
 
-#define LOAD_IP_AND_SP(v_ctx, v_ip, v_sp) \
-	do \
-	{ \
-		v_ip = STIX_OOP_TO_SMINT((v_ctx)->ip); \
-		v_sp = STIX_OOP_TO_SMINT((v_ctx)->sp); \
-	} while(0)
+#define LOAD_IP(v_ctx, v_ip) (v_ip = STIX_OOP_TO_SMINT((v_ctx)->ip))
+#define STORE_IP(v_ctx, v_ip) ((v_ctx)->ip = STIX_OOP_FROM_SMINT(v_ip))
 
-#define STORE_IP_AND_SP(v_ctx, v_ip, v_sp) \
-	do \
-	{ \
-		(v_ctx)->ip = STIX_OOP_FROM_SMINT(v_ip); \
-		(v_ctx)->sp = STIX_OOP_FROM_SMINT(v_sp); \
-	} while(0)
+#define LOAD_SP(v_ctx, v_sp) (v_sp = STIX_OOP_TO_SMINT((v_ctx)->sp))
+#define STORE_SP(v_ctx, v_sp) ((v_ctx)->sp = STIX_OOP_FROM_SMINT(v_sp))
 
-#define LOAD_SP(v_ctx, v_sp) \
-	do \
-	{ \
-		v_sp = STIX_OOP_TO_SMINT((v_ctx)->sp); \
-	} while(0)
+#define LOAD_ACTIVE_IP(stix, v_ip) LOAD_IP((stix)->active_context, v_ip)
+#define STORE_ACTIVE_IP(stix, v_ip) STORE_IP((stix)->active_context, v_ip)
 
-#define STORE_SP(v_ctx, v_sp) \
-	do \
-	{ \
-		(v_ctx)->sp = STIX_OOP_FROM_SMINT(v_sp); \
-	} while(0)
+#define LOAD_ACTIVE_SP(stix, v_sp) LOAD_SP((stix)->active_context, v_sp)
+#define STORE_ACTIVE_SP(stix, v_sp) STORE_SP((stix)->active_context, v_sp)
 
+
+#define STACK_PUSH(stix,v) \
+	do { \
+		++sp; \
+		(stix)->active_context->slot[sp] = v; \
+	} while (0)
+
+#define STACK_GET(stix,v_sp) ((stix)->active_context->slot[v_sp])
+#define STACK_PUT(stix,v_sp,v_obj) ((stix)->active_context->slot[v_sp] = v_obj)
 
 static int activate_new_method (stix_t* stix, stix_oop_method_t mth, stix_ooi_t* xip, stix_ooi_t* xsp)
 {
@@ -159,14 +154,16 @@ static int activate_new_method (stix_t* stix, stix_oop_method_t mth, stix_ooi_t*
 
 	/* store an instruction pointer and a stack pointer to the active context
 	 * before switching it to a new context */
-	STORE_IP_AND_SP (stix->active_context, *xip, sp);
+	STORE_ACTIVE_IP (stix, *xip);
+	STORE_ACTIVE_SP (stix, sp); /* note it is not *xsp */
 
 	/* swtich the active context */
 	stix->active_context = ctx;
 
 	/* load an instruction pointer and a stack pointer from the new active
 	 * context */
-	LOAD_IP_AND_SP (stix->active_context, *xip, *xsp);
+	LOAD_ACTIVE_IP (stix, *xip);
+	LOAD_ACTIVE_SP (stix, *xsp);
 
 printf ("<<ENTERING>>\n");
 	return 0;
@@ -187,7 +184,7 @@ printf ("] in ");
 	cls = (stix_oop_class_t)STIX_CLASSOF(stix, receiver);
 	if ((stix_oop_t)cls == stix->_class)
 	{
-		/* receiver is a class receiverect */
+		/* receiver is a class object */
 		c = receiver; 
 		dic_no = STIX_CLASS_MTHDIC_CLASS;
 printf ("class method dictioanry ====\n");
@@ -211,6 +208,7 @@ printf ("instance method dictioanry ====\n");
 		do
 		{
 			mthdic = ((stix_oop_class_t)c)->mthdic[dic_no];
+			STIX_ASSERT (mthdic != stix->_nil);
 			STIX_ASSERT (STIX_CLASSOF(stix, mthdic) == stix->_method_dictionary);
 
 dump_dictionary (stix, mthdic, "Method dictionary");
@@ -275,21 +273,15 @@ TODO: overcome this problem
 	sp = -1;
 
 	ctx->slot[++sp] = ass->value; /* push receiver */
-	STORE_IP_AND_SP (ctx, ip, sp);
 	/* receiver, sender, method are nils */
 
 	stix->active_context = ctx;
+	STORE_ACTIVE_IP (stix, ip);
+	STORE_ACTIVE_SP (stix, sp);
+
 	return activate_new_method (stix, mth, &ip, &sp);
 }
 
-#define PUSH(stix,v) \
-	do { \
-		++sp; \
-		(stix)->active_context->slot[sp] = v; \
-	} while (0)
-
-#define STACK_GET(stix,v_sp) ((stix)->active_context->slot[v_sp])
-#define STACK_PUT(stix,v_sp,v_obj) ((stix)->active_context->slot[v_sp] = v_obj)
 
 int primitive_dump (stix_t* stix, stix_ooi_t nargs)
 {
@@ -298,7 +290,7 @@ int primitive_dump (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs >=  0);
 
-	LOAD_SP (stix->active_context, sp);
+	LOAD_ACTIVE_SP (stix, sp);
 	dump_object (stix, stix->active_context->slot[sp - nargs], "receiver");
 	for (i = nargs; i > 0; )
 	{
@@ -307,7 +299,7 @@ int primitive_dump (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	sp -= nargs; /* pop off arguments */
-	STORE_SP (stix->active_context, sp);
+	STORE_ACTIVE_SP (stix, sp);
 	return 1; /* success */
 }
 
@@ -318,7 +310,7 @@ int primitive_new (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs ==  0);
 
-	LOAD_SP (stix->active_context, sp);
+	LOAD_ACTIVE_SP (stix, sp);
 	rcv = STACK_GET(stix, sp);
 
 	if (STIX_CLASSOF(stix, rcv) != stix->_class) 
@@ -343,7 +335,7 @@ int primitive_new_with_size (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs ==  1);
 
-	LOAD_SP (stix->active_context, sp);
+	LOAD_ACTIVE_SP (stix, sp);
 	rcv = STACK_GET(stix, sp - 1);
 
 	if (STIX_CLASSOF(stix, rcv) != stix->_class) 
@@ -364,12 +356,18 @@ int primitive_new_with_size (stix_t* stix, stix_ooi_t nargs)
 		return 0;
 	}
 
+	/* stix_instantiate() ignores size if the instance specification 
+	 * disallows indexed(variable) parts. */
+	/* TODO: should i check the specification before calling 
+	 *       stix_instantiate()? */
 	obj = stix_instantiate (stix, rcv, STIX_NULL, size);
 	if (!obj) return -1; /* hard failure */
 
+	/* remove the argument and replace the receiver with a new object
+	 * instantiated */
 	sp--;
 	STACK_PUT (stix, sp, obj);
-	STORE_SP (stix->active_context, sp);
+	STORE_ACTIVE_SP (stix, sp);
 
 	return 1; /* success */
 }
@@ -418,6 +416,8 @@ int stix_execute (stix_t* stix)
 
 printf ("IP => %d ", (int)ip);
 		bc = code->slot[ip++];
+		/*if (bc == CODE_NOOP) continue; TODO: DO I NEED THIS???*/
+
 		cmd = bc >> 4;
 		if (cmd == CMD_EXTEND)
 		{
@@ -437,17 +437,17 @@ printf ("CMD => %d, B1 = %d, SP = %d, IP AFTER INC %d\n", (int)cmd, (int)b1, (in
 			case CMD_PUSH_INSTVAR:
 printf ("PUSH_INSTVAR %d\n", (int)b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver) == STIX_OBJ_TYPE_OOP);
-				PUSH (stix, ((stix_oop_oop_t)stix->active_context->receiver)->slot[b1]);
+				STACK_PUSH (stix, ((stix_oop_oop_t)stix->active_context->receiver)->slot[b1]);
 				break;
 
 			case CMD_PUSH_TEMPVAR:
 printf ("PUSH_TEMPVAR %d\n", (int)b1);
-				PUSH (stix, stix->active_context->slot[b1]);
+				STACK_PUSH (stix, stix->active_context->slot[b1]);
 				break;
 
 			case CMD_PUSH_LITERAL:
 printf ("PUSH_LITERAL %d\n", (int)b1);
-				PUSH (stix, mth->slot[b1]);
+				STACK_PUSH (stix, mth->slot[b1]);
 				break;
 
 			case CMD_STORE_INTO_INSTVAR:
@@ -461,9 +461,11 @@ printf ("STORE_TEMPVAR %d\n", (int)b1);
 				stix->active_context->slot[b1] = stix->active_context->slot[sp];
 				break;
 
-			/*
-			case CMD_POP_AND_STORE_INTO_OBJECT_POINTED_TO_BY_LITERAL???
-			*/
+		/* -------------------------------------------------------- */
+
+			case CMD_JUMP:
+				/* TODO: */
+				break;
 
 		/* -------------------------------------------------------- */
 
@@ -479,7 +481,7 @@ printf ("STORE_TEMPVAR %d\n", (int)b1);
 printf ("PUSH OBJVAR %d %d\n", (int)b1, (int)obj_index);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(obj) == STIX_OBJ_TYPE_OOP);
 				STIX_ASSERT (obj_index < STIX_OBJ_GET_SIZE(obj));
-				PUSH (stix, obj->slot[b1]);
+				STACK_PUSH (stix, obj->slot[b1]);
 				break;
 			}
 
@@ -572,9 +574,9 @@ printf ("RETURN INSTVAR AT PREAMBLE\n");
 						    (primitives[prim_no].nargs < 0 || primitives[prim_no].nargs == b1))
 						{
 							stix_pushtmp (stix, (stix_oop_t*)&newmth);
-							STORE_SP (stix->active_context, sp);
+							STORE_ACTIVE_SP (stix, sp);
 							n = primitives[prim_no].handler (stix, b1);
-							LOAD_SP (stix->active_context, sp);
+							LOAD_ACTIVE_SP (stix, sp);
 							stix_poptmp (stix);
 							if (n <= -1) goto oops;
 							if (n >= 1) break;
@@ -598,27 +600,39 @@ printf ("RETURN INSTVAR AT PREAMBLE\n");
 				{
 					case SUBCMD_PUSH_RECEIVER:
 printf ("PUSH_RECEIVER %p TO STACK INDEX %d\n", stix->active_context->receiver, (int)sp);
-						PUSH (stix, stix->active_context->receiver);
+						STACK_PUSH (stix, stix->active_context->receiver);
 						break;
 
 					case SUBCMD_PUSH_NIL:
 printf ("PUSH_NIL\n");
-						PUSH (stix, stix->_nil);
+						STACK_PUSH (stix, stix->_nil);
 						break;
 
 					case SUBCMD_PUSH_TRUE:
 printf ("PUSH_TRUE\n");
-						PUSH (stix, stix->_true);
+						STACK_PUSH (stix, stix->_true);
 						break;
 
 					case SUBCMD_PUSH_FALSE:
 printf ("PUSH_FALSE\n");
-						PUSH (stix, stix->_false);
+						STACK_PUSH (stix, stix->_false);
 						break;
 
 					case SUBCMD_PUSH_CONTEXT:
 printf ("PUSH_CONTEXT\n");
-						PUSH (stix, (stix_oop_t)stix->active_context);
+						STACK_PUSH (stix, (stix_oop_t)stix->active_context);
+						break;
+
+					case SUBCMD_PUSH_NEGONE:
+						STACK_PUSH (stix, STIX_OOP_FROM_SMINT(-1));
+						break;
+
+					case SUBCMD_PUSH_ZERO:
+						STACK_PUSH (stix, STIX_OOP_FROM_SMINT(0));
+						break;
+
+					case SUBCMD_PUSH_ONE:
+						STACK_PUSH (stix, STIX_OOP_FROM_SMINT(1));
 						break;
 				}
 				break; /* CMD_PUSH_SPECIAL */
@@ -657,16 +671,18 @@ printf ("RETURN_RECEIVER\n");
 
 					handle_return:
 						/* store the instruction pointer and the stack pointer to the active context */
-						STORE_IP_AND_SP (stix->active_context, ip, sp);
+						STORE_ACTIVE_IP (stix, ip);
+						STORE_ACTIVE_SP (stix, sp);
 
 						/* switch the active context to the sending context */
 						stix->active_context = (stix_oop_context_t)stix->active_context->sender;
 
 						/* load the instruction pointer and the stack pointer from the new active context */
-						LOAD_IP_AND_SP (stix->active_context, ip, sp);
+						LOAD_ACTIVE_IP (stix, ip);
+						LOAD_ACTIVE_SP (stix, sp);
 
 						/* push the return value to the stack of the new active context */
-						PUSH (stix, return_value);
+						STACK_PUSH (stix, return_value);
 
 printf ("<<LEAVING>>\n");
 						if (stix->active_context->sender == stix->_nil) 
