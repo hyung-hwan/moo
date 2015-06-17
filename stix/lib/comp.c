@@ -1868,9 +1868,9 @@ static int compile_method_primitive (stix_t* stix)
 	while (ptr < end && is_digitchar(*ptr)) 
 	{
 		prim_no = prim_no * 10 + (*ptr - '0');
-		if (prim_no > 0xFFFF) /* TODO: replace 0xFFFF by a macro name */
+		if (prim_no > MAX_CODE_PRIMNO)
 		{
-			set_syntax_error (stix, STIX_SYNERR_PRIMITIVENO, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
 		}
 
@@ -2030,8 +2030,8 @@ static int compile_block_temporaries (stix_t* stix)
 
 static int compile_block_expression (stix_t* stix)
 {
-	stix_size_t jump_inst_pos;
-	stix_size_t saved_tmpr_count;
+	stix_size_t i, jump_inst_pos;
+	stix_size_t saved_tmpr_count, saved_tmprs_len;
 	stix_size_t block_arg_count;
 	stix_size_t block_code_size;
 	stix_ioloc_t block_loc, colon_loc;
@@ -2047,6 +2047,7 @@ static int compile_block_expression (stix_t* stix)
 	block_loc = stix->c->tok.loc;
 	GET_TOKEN (stix);
 
+	saved_tmprs_len = stix->c->mth.tmprs.len;
 	saved_tmpr_count = stix->c->mth.tmpr_count;
 
 	if (stix->c->tok.type == STIX_IOTOK_COLON) 
@@ -2073,6 +2074,7 @@ static int compile_block_expression (stix_t* stix)
 			}
 
 			if (add_temporary_variable(stix, &stix->c->tok.name) <= -1) return -1;
+			stix->c->mth.tmpr_count++;
 
 			GET_TOKEN (stix);
 		} 
@@ -2090,19 +2092,35 @@ static int compile_block_expression (stix_t* stix)
 	block_arg_count = stix->c->mth.tmpr_count - saved_tmpr_count;
 	if (block_arg_count > MAX_CODE_NBLKARGS)
 	{
+		/* while an integer object is pused to indicate the number of
+		 * block arguments, evaluation which is done by message passing
+		 * limits the number of arguments that can be passed. so the
+		 * check is implemented */
 		set_syntax_error (stix, STIX_SYNERR_BLKARGFLOOD, &colon_loc, STIX_NULL); 
 		return -1;
 	}
 
+printf ("push_context %d\n", (int)block_arg_count);
+printf ("send_block_copy\n");
 	if (emit_byte_instruction(stix, CODE_PUSH_CONTEXT) <= -1 ||
 	    emit_push_smint_literal(stix, block_arg_count) <= -1 ||
 	    emit_byte_instruction(stix, CODE_SEND_BLOCK_COPY) <= -1) return -1;
 
+printf ("jump\n");
 	/* insert dummy instructions before replacing them with a jump instruction */
 	jump_inst_pos = stix->c->mth.code.len;
-	if (emit_byte_instruction(stix, 0) <= -1 ||
+	if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND_DOUBLE, CMD_JUMP)) <= -1 ||
 	    emit_byte_instruction(stix, 0) <= -1 ||
 	    emit_byte_instruction(stix, 0) <= -1) return -1;
+
+/* TODO: fix this part below */
+	for (i = 0; i < block_arg_count; i++)
+	{
+		/* arrange to store the top of the stack to a block argument
+		 * when evaluation of a block begins */
+		if (emit_positional_instruction(stix, CMD_STORE_INTO_TEMPVAR, i) <= -1) return -1;
+	}
+/* TODO: fix this part above */
 
 	if (compile_block_temporaries(stix) <= -1 ||
 	    compile_block_statements(stix) <= -1) return -1;
@@ -2113,17 +2131,22 @@ static int compile_block_expression (stix_t* stix)
 		return -1;
 	}
 
-	block_code_size = stix->c->mth.code.len - jump_inst_pos + 3;
+	block_code_size = stix->c->mth.code.len - jump_inst_pos - 3; /* -3 to exclude JUMP code */
 	if (block_code_size > MAX_CODE_BLKCODE)
 	{
-		set_syntax_error (stix, STIX_SYNERR_BLKFLOOD, &colon_loc, STIX_NULL); 
+		set_syntax_error (stix, STIX_SYNERR_BLKFLOOD, &block_loc, STIX_NULL); 
 		return -1;
 	}
 
-/* TODO: use CMD_EXTEND if block_code_size is <= 255 */
-	stix->c->mth.code.ptr[jump_inst_pos] = MAKE_CODE(CMD_EXTEND_DOUBLE, CMD_JUMP);
-	stix->c->mth.code.ptr[jump_inst_pos + 1] = (block_code_size & 0xFF00u) >> 8;
-	stix->c->mth.code.ptr[jump_inst_pos + 2] = (block_code_size & 0x00FFu);
+/* TODO: use CMD_EXTEND if block_code_size is > 127 or < -128 and shift code by 1 after having eliminated 1 byte.
+	stix->c->mth.code.ptr[jump_inst_pos + 1] = (stix_int8_t)block_code_size & 0xFF;*/
+	/* note that the jump offset is a signed number */
+	stix->c->mth.code.ptr[jump_inst_pos + 1] = ((stix_int16_t)block_code_size) >> 8;
+	stix->c->mth.code.ptr[jump_inst_pos + 2] = ((stix_int16_t)block_code_size & 0xFF);
+
+	/* restore the temporary count */
+	stix->c->mth.tmpr_count = saved_tmpr_count;
+	stix->c->mth.tmprs.len = saved_tmprs_len;
 
 	GET_TOKEN (stix);
 
@@ -2578,6 +2601,7 @@ static int compile_method_statement (stix_t* stix)
 		/* handle the return statement */
 		GET_TOKEN (stix);
 		if (compile_method_expression(stix, 0) <= -1) return -1;
+printf ("return_stacktop\n");
 		return emit_byte_instruction (stix, CODE_RETURN_STACKTOP);
 	}
 	else 
@@ -2593,6 +2617,7 @@ static int compile_method_statement (stix_t* stix)
 		n = compile_method_expression(stix, 1);
 		if (n <= -1) return -1;
 
+if (n == 0) printf ("return_stacktop\n");
 		return (n == 0)? emit_byte_instruction (stix, CODE_POP_STACKTOP): 0;
 	}
 }
@@ -2634,6 +2659,7 @@ static int compile_method_statements (stix_t* stix)
 
 	/* arrange to return the receiver if execution reached 
 	 * the end of the method without explicit return */
+printf ("return_receiver\n");
 	return emit_byte_instruction (stix, CODE_RETURN_RECEIVER);
 }
 

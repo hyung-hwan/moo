@@ -372,6 +372,33 @@ int primitive_new_with_size (stix_t* stix, stix_ooi_t nargs)
 	return 1; /* success */
 }
 
+int primitive_block_context_value (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_ooi_t sp;
+	stix_oop_block_context_t blkctx;
+
+	LOAD_ACTIVE_SP (stix, sp);
+	blkctx = (stix_oop_block_context_t)STACK_GET(stix, sp - nargs);
+	STIX_ASSERT (STIX_CLASSOF(stix, blkctx) == stix->_block_context);
+
+	if (STIX_OOP_TO_SMINT(blkctx->nargs) != nargs) 
+	{
+		/* the number of argument doesn't match */
+printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
+		return 0;
+	}
+
+	sp -= nargs + 1; /* pop arguments and receiver */
+	STORE_ACTIVE_SP (stix, sp);
+
+	blkctx->ip = blkctx->iip;
+	blkctx->sp = STIX_OOP_FROM_SMINT(nargs);
+	blkctx->caller = (stix_oop_t)stix->active_context;
+
+	stix->active_context = (stix_oop_context_t)blkctx;
+	return 1;
+}
+
 typedef int (*primitive_handler_t) (stix_t* stix, stix_ooi_t nargs);
 
 struct primitive_t
@@ -383,9 +410,10 @@ typedef struct primitive_t primitive_t;
 
 static primitive_t primitives[] =
 {
-	{  -1,   primitive_dump             },
-	{   0,   primitive_new              },
-	{   1,   primitive_new_with_size    }
+	{  -1,   primitive_dump                 },
+	{   0,   primitive_new                  },
+	{   1,   primitive_new_with_size        },
+	{  -1,   primitive_block_context_value  }
 };
 
 int stix_execute (stix_t* stix)
@@ -395,7 +423,7 @@ int stix_execute (stix_t* stix)
 	stix_ooi_t ip, sp;
 
 	stix_byte_t bc, cmd;
-	stix_oow_t b1;
+	stix_ooi_t b1;
 
 	STIX_ASSERT (stix->active_context != STIX_NULL);
 	ip = STIX_OOP_TO_SMINT(stix->active_context->ip);
@@ -411,7 +439,11 @@ int stix_execute (stix_t* stix)
  */
 	while (1)
 	{
-		mth = stix->active_context->method;
+/* TODO: improve how to access method??? */
+		if (stix->active_context->unused == stix->_nil)
+			mth = stix->active_context->method;
+		else
+			mth = ((stix_oop_block_context_t)stix->active_context)->home->method;
 		code = mth->code;
 
 printf ("IP => %d ", (int)ip);
@@ -422,9 +454,22 @@ printf ("IP => %d ", (int)ip);
 		if (cmd == CMD_EXTEND)
 		{
 			cmd = bc & 0xF;
-			b1 = code->slot[ip++];
+			if (cmd == CMD_JUMP || cmd == CMD_JUMP_IF_FALSE)
+				b1 = (stix_int8_t)code->slot[ip++];
+			else
+				b1 = code->slot[ip++];
+			ip++;
 		}
-/* TODO: handle CMD_EXTEND_DOUBLE */
+		else if (cmd == CMD_EXTEND_DOUBLE)
+		{
+			cmd = bc & 0xF;
+			b1 = code->slot[ip++];
+
+			if (cmd == CMD_JUMP || cmd == CMD_JUMP_IF_FALSE)
+				b1 = (stix_int16_t)((b1 << 8) | code->slot[ip++]); /* JUMP encodes a signed offset */
+			else
+				b1 = (b1 << 8) | code->slot[ip++];
+		}
 		else
 		{
 			b1 = bc & 0xF;
@@ -463,8 +508,10 @@ printf ("STORE_TEMPVAR %d\n", (int)b1);
 
 		/* -------------------------------------------------------- */
 
+/* TODO: CMD_JUMP_IF_FALSE */
 			case CMD_JUMP:
-				/* TODO: */
+printf ("JUMP %d\n", (int)b1);
+				ip += b1;
 				break;
 
 		/* -------------------------------------------------------- */
@@ -475,7 +522,10 @@ printf ("STORE_TEMPVAR %d\n", (int)b1);
 				/* b1 -> variable index */
 				stix_ooi_t obj_index;
 				stix_oop_oop_t obj;
+
 				obj_index = code->slot[ip++];
+				if (cmd == CMD_EXTEND_DOUBLE) 
+					obj_index = (obj_index << 8) | code->slot[ip++];
 
 				obj = (stix_oop_oop_t)mth->slot[obj_index];
 printf ("PUSH OBJVAR %d %d\n", (int)b1, (int)obj_index);
@@ -490,6 +540,8 @@ printf ("PUSH OBJVAR %d %d\n", (int)b1, (int)obj_index);
 				stix_ooi_t obj_index;
 				stix_oop_oop_t obj;
 				obj_index = code->slot[ip++];
+				if (cmd == CMD_EXTEND_DOUBLE) 
+					obj_index = (obj_index << 8) | code->slot[ip++];
 
 printf ("STORE OBJVAR %d %d\n", (int)b1, (int)obj_index);
 				obj = (stix_oop_oop_t)mth->slot[obj_index];
@@ -503,8 +555,8 @@ printf ("STORE OBJVAR %d %d\n", (int)b1, (int)obj_index);
 			case CMD_SEND_MESSAGE:
 			case CMD_SEND_MESSAGE_TO_SUPER:
 			{
+/* TODO: tail call optimization */
 				/* b1 -> number of arguments 
-TODO: handle double extension 
 				 */
 				stix_ucs_t mthname;
 				stix_oop_t newrcv;
@@ -516,6 +568,8 @@ TODO: handle double extension
 				/* the next byte is the message selector index to the
 				 * literal frame. */
 				selector_index = code->slot[ip++];
+				if (cmd == CMD_EXTEND_DOUBLE) 
+					selector_index = (selector_index << 8) | code->slot[ip++];
 
 				/* get the selector from the literal frame */
 				selector = (stix_oop_char_t)mth->slot[selector_index];
@@ -574,8 +628,10 @@ printf ("RETURN INSTVAR AT PREAMBLE\n");
 						    (primitives[prim_no].nargs < 0 || primitives[prim_no].nargs == b1))
 						{
 							stix_pushtmp (stix, (stix_oop_t*)&newmth);
+							STORE_ACTIVE_IP (stix, ip);
 							STORE_ACTIVE_SP (stix, sp);
 							n = primitives[prim_no].handler (stix, b1);
+							LOAD_ACTIVE_IP (stix, ip);
 							LOAD_ACTIVE_SP (stix, sp);
 							stix_poptmp (stix);
 							if (n <= -1) goto oops;
@@ -624,14 +680,17 @@ printf ("PUSH_CONTEXT\n");
 						break;
 
 					case SUBCMD_PUSH_NEGONE:
+printf ("PUSH_NEGONE\n");
 						STACK_PUSH (stix, STIX_OOP_FROM_SMINT(-1));
 						break;
 
 					case SUBCMD_PUSH_ZERO:
+printf ("PUSH_ZERO\n");
 						STACK_PUSH (stix, STIX_OOP_FROM_SMINT(0));
 						break;
 
 					case SUBCMD_PUSH_ONE:
+printf ("PUSH_SMINT\n");
 						STACK_PUSH (stix, STIX_OOP_FROM_SMINT(1));
 						break;
 				}
@@ -663,6 +722,52 @@ printf ("RETURN_RECEIVER\n");
 
 					/*case CMD_RETURN_BLOCK_STACKTOP:*/
 						/* TODO: */
+
+
+					case SUBCMD_SEND_BLOCK_COPY:
+					{
+printf ("SEND_BLOCK_COPY\n");
+						stix_ooi_t nargs;
+						stix_oop_t rctx;
+						stix_oop_block_context_t blkctx;
+
+						/* it emulates thisContext blockCopy: nargs */
+						STIX_ASSERT (sp >= 1);
+						STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context->slot[sp]) == stix->_small_integer);
+						nargs = STIX_OOP_TO_SMINT(stix->active_context->slot[sp]);
+						STIX_ASSERT (nargs >= 0);
+
+						STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context->slot[sp - 1]) == stix->_context);
+
+						blkctx = (stix_oop_block_context_t)stix_instantiate (stix, stix->_block_context, STIX_NULL, 255); /* TODO: proper stack size */
+						if (!blkctx) return -1;
+
+						--sp;
+						rctx = stix->active_context->slot[sp];
+
+						/* blkctx->caller is left to nil */
+						blkctx->ip = STIX_OOP_FROM_SMINT(ip + 3); /* skip the following JUMP */
+						blkctx->sp = 0;
+						blkctx->nargs = STIX_OOP_FROM_SMINT(nargs);
+						blkctx->iip = STIX_OOP_FROM_SMINT(ip + 3);
+
+						if (((stix_oop_block_context_t)rctx)->iip == stix->_nil)
+						{
+							/* the receiver context is a method context */
+							STIX_ASSERT (STIX_CLASSOF(stix, rctx) == stix->_context);
+							blkctx->home = stix->active_context;
+						}
+						else
+						{
+							/* block context is active */
+							STIX_ASSERT (STIX_CLASSOF(stix, rctx) == stix->_block_context);
+							blkctx->home = ((stix_oop_block_context_t)rctx)->home;
+						
+						}
+
+						stix->active_context->slot[sp] = (stix_oop_t)blkctx;
+						break;
+					}
 
 					default:
 						stix->errnum = STIX_EINTERN;

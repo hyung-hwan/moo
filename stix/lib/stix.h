@@ -603,12 +603,12 @@ struct stix_context_t
 {
 	STIX_OBJ_HEADER;
 
-	stix_oop_t        sender;
+	stix_oop_t        sender; /* message sending context - active context before new context activation*/
 	stix_oop_t        ip;     /* instruction pointer */
 	stix_oop_t        sp;     /* stack pointer */
 	stix_oop_method_t method; /* CompiledMethod */
 	stix_oop_t        unused; 
-	stix_oop_t        receiver;
+	stix_oop_t        receiver; /* receiver of the message. For a statement '#xxx do: #yyyy', #xxx is the receiver.*/
 
 	/* variable indexed part */
 	stix_oop_t        slot[1]; /* stack contents */
@@ -631,21 +631,6 @@ struct stix_block_context_t
 	/* variable indexed part */
 	stix_oop_t        slot[1]; /* stack */
 };
-
-#if 0
-#define STIX_PROCESS_NAMED_INSTVARS 4
-typedef struct stix_process_t stix_process_t;
-typedef struct stix_process_t* stix_oop_process_t;
-struct stix_process_t
-{
-	STIX_OBJ_HEADER;
-	stix_oop_context_t context;
-	stix_oop_t         state; /* SmallInteger */
-
-	stix_oop_process_t prev;
-	stix_oop_process_t next;
-};
-#endif
 
 /**
  * The STIX_CLASSOF() macro return the class of an object including a numeric

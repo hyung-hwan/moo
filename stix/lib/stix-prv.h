@@ -305,7 +305,7 @@ enum stix_synerrnum_t
 	STIX_SYNERR_ARGFLOOD,      /* too many arguments */
 	STIX_SYNERR_BLKARGFLOOD,   /* too many block arguments */
 	STIX_SYNERR_BLKFLOOD,      /* too large block */
-	STIX_SYNERR_PRIMITIVENO    /* wrong primitive number */
+	STIX_SYNERR_PRIMNO    /* wrong primitive number */
 };
 typedef enum stix_synerrnum_t stix_synerrnum_t;
 
@@ -442,10 +442,14 @@ struct stix_compiler_t
 
 
 #define MAKE_CODE(x,y) (((x) << 4) | y)
-#define MAX_CODE_INDEX               0xFFFFu
-#define MAX_CODE_NARGS               0xFFFFu
-#define MAX_CODE_NBLKARGS            0xFFFFu
-#define MAX_CODE_BLKCODE             0xFFFFu
+#define MAX_CODE_INDEX               (0xFFFFu)
+#define MAX_CODE_NARGS               (0xFFFFu)
+#define MAX_CODE_NBLKARGS            (0xFFFFu)
+#define MAX_CODE_PRIMNO              (0xFFFFu)
+
+#define MIN_CODE_JUMP                (-0x8000)
+#define MAX_CODE_JUMP                (0x7FFF)
+#define MAX_CODE_BLKCODE             MAX_CODE_JUMP
 
 enum stix_cmdcode_t
 {
