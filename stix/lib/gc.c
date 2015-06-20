@@ -206,11 +206,12 @@ void stix_gc (stix_t* stix)
 	stix_oow_t i;
 	stix_cb_t* cb;
 
-	if (stix->active_context_sp && stix->active_context)
+	if (stix->active_context)
 	{
 		/* store the stack pointer to the actual active context */
 /* TODO: verify if this is correct */
-		stix->active_context->sp = STIX_OOP_FROM_SMINT(*stix->active_context_sp);
+		stix->active_context->sp = STIX_OOP_FROM_SMINT(stix->sp);
+		stix->active_context->ip = STIX_OOP_FROM_SMINT(stix->ip);
 	}
 
 /*printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",

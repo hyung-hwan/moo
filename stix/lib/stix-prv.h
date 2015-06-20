@@ -302,10 +302,12 @@ enum stix_synerrnum_t
 	STIX_SYNERR_VARUNUSE,      /* unsuable variable in compiled code */
 	STIX_SYNERR_VARINACC,      /* inaccessible variable - e.g. accessing an instance variable from a class method is not allowed. */
 	STIX_SYNERR_PRIMARY,       /* wrong expression primary */
+	STIX_SYNERR_TMPRFLOOD,     /* too many temporaries */
 	STIX_SYNERR_ARGFLOOD,      /* too many arguments */
+	STIX_SYNERR_BLKTMPRFLOOD,  /* too many block temporaries */
 	STIX_SYNERR_BLKARGFLOOD,   /* too many block arguments */
 	STIX_SYNERR_BLKFLOOD,      /* too large block */
-	STIX_SYNERR_PRIMNO    /* wrong primitive number */
+	STIX_SYNERR_PRIMNO         /* wrong primitive number */
 };
 typedef enum stix_synerrnum_t stix_synerrnum_t;
 
@@ -443,8 +445,10 @@ struct stix_compiler_t
 
 #define MAKE_CODE(x,y) (((x) << 4) | y)
 #define MAX_CODE_INDEX               (0xFFFFu)
+#define MAX_CODE_NTMPRS               (0xFFFFu)
 #define MAX_CODE_NARGS               (0xFFFFu)
 #define MAX_CODE_NBLKARGS            (0xFFFFu)
+#define MAX_CODE_NBLKTMPRS           (0xFFFFu)
 #define MAX_CODE_PRIMNO              (0xFFFFu)
 
 #define MIN_CODE_JUMP                (-0x8000)
@@ -470,6 +474,11 @@ enum stix_cmdcode_t
 	CMD_PUSH_LITERAL               = 0x4,
 	CMD_STORE_INTO_INSTVAR         = 0x5,
 	CMD_STORE_INTO_TEMPVAR         = 0x6,
+
+/*
+ * CMD_POP_INTO_INSTVAR
+ * CMD_POP_INTO_TEMPVAR
+ */
 
 	CMD_JUMP                       = 0x7,
 	CMD_JUMP_IF_FALSE              = 0x8,
@@ -509,9 +518,9 @@ enum stix_cmdcode_t
 	/* sub-commands for CMD_DO_SPECIAL */
 	SUBCMD_DUP_STACKTOP            = 0x0,
 	SUBCMD_POP_STACKTOP            = 0x1,
-	SUBCMD_RETURN_STACKTOP         = 0x2,
-	SUBCMD_RETURN_BLOCK_STACKTOP   = 0x3,
-	SUBCMD_RETURN_RECEIVER         = 0x4,
+	SUBCMD_RETURN_STACKTOP         = 0x2, /* ^something */
+	SUBCMD_RETURN_RECEIVER         = 0x3, /* ^self */
+	SUBCMD_RETURN_FROM_BLOCK       = 0x4, /* return the stack top from a block */
 	SUBCMD_SEND_BLOCK_COPY         = 0xE,
 	SUBCMD_NOOP                    = 0xF
 };
@@ -530,8 +539,8 @@ enum stix_cmdcode_t
 #define CODE_DUP_STACKTOP             MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_DUP_STACKTOP)
 #define CODE_POP_STACKTOP             MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_POP_STACKTOP)
 #define CODE_RETURN_STACKTOP          MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_STACKTOP)
-#define CODE_RETURN_BLOCK_STACKTOP    MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_BLOCK_STACKTOP)
 #define CODE_RETURN_RECEIVER          MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_RECEIVER)
+#define CODE_RETURN_FROM_BLOCK        MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_FROM_BLOCK)
 #define CODE_SEND_BLOCK_COPY          MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_SEND_BLOCK_COPY)
 #define CODE_NOOP                     MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_NOOP)
 

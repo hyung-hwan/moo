@@ -132,6 +132,7 @@ enum voca_id_t
 };
 typedef enum voca_id_t voca_id_t;
 
+static int compile_block_statement (stix_t* stix);
 static int compile_method_statement (stix_t* stix);
 static int compile_method_expression (stix_t* stix, int pop);
 static int add_literal (stix_t* stix, stix_oop_t lit, stix_size_t* index);
@@ -1300,6 +1301,7 @@ static int emit_push_smint_literal (stix_t* stix, stix_ooi_t i)
 
 	if (add_literal(stix, STIX_OOP_FROM_SMINT(i), &index) <= -1 ||
 	    emit_positional_instruction(stix, CMD_PUSH_LITERAL, index) <= -1) return -1;
+
 	return 0;
 }
 
@@ -1815,7 +1817,12 @@ static int compile_method_temporaries (stix_t* stix)
 		if (add_temporary_variable(stix, &stix->c->tok.name) <= -1) return -1;
 		stix->c->mth.tmpr_count++;
 
-/* TODO: check if tmpr_count exceededs LIMIT (SMINT MAX). also bytecode max */
+		if (stix->c->mth.tmpr_count > MAX_CODE_NARGS)
+		{
+			set_syntax_error (stix, STIX_SYNERR_TMPRFLOOD, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+
 		GET_TOKEN (stix);
 	}
 
@@ -1973,19 +1980,6 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 	return 0;
 }
 
-static int compile_block_statements (stix_t* stix)
-{
-	while (stix->c->tok.type != STIX_IOTOK_RBRACK && 
-	       stix->c->tok.type != STIX_IOTOK_EOF) 
-	{
-		if (compile_method_statement(stix) <= -1) return -1;
-		if (stix->c->tok.type != STIX_IOTOK_PERIOD) break;
-		GET_TOKEN (stix);
-	}
-
-	return 0;
-}
-
 static int compile_block_temporaries (stix_t* stix)
 {
 	/* 
@@ -2003,7 +1997,6 @@ static int compile_block_temporaries (stix_t* stix)
 	GET_TOKEN (stix);
 	while (stix->c->tok.type == STIX_IOTOK_IDENT) 
 	{
-/*
 		if (find_temporary_variable(stix, &stix->c->tok.name) >= 0)
 		{
 			set_syntax_error (stix, STIX_SYNERR_TMPRNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
@@ -2012,7 +2005,11 @@ static int compile_block_temporaries (stix_t* stix)
 
 		if (add_temporary_variable(stix, &stix->c->tok.name) <= -1) return -1;
 		stix->c->mth.tmpr_count++;
-* */
+		if (stix->c->mth.tmpr_count > MAX_CODE_NTMPRS)
+		{
+			set_syntax_error (stix, STIX_SYNERR_TMPRFLOOD, &stix->c->tok.loc, &stix->c->tok.name); 
+			return -1;
+		}
 
 /* TODO: check if tmpr_count exceededs LIMIT (SMINT MAX). also bytecode max */
 		GET_TOKEN (stix);
@@ -2032,9 +2029,9 @@ static int compile_block_expression (stix_t* stix)
 {
 	stix_size_t i, jump_inst_pos;
 	stix_size_t saved_tmpr_count, saved_tmprs_len;
-	stix_size_t block_arg_count;
+	stix_size_t block_arg_count, block_tmpr_count;
 	stix_size_t block_code_size;
-	stix_ioloc_t block_loc, colon_loc;
+	stix_ioloc_t block_loc, colon_loc, tmpr_loc;
 
 	/*
 	 * block-expression := "[" block-body "]"
@@ -2075,6 +2072,11 @@ static int compile_block_expression (stix_t* stix)
 
 			if (add_temporary_variable(stix, &stix->c->tok.name) <= -1) return -1;
 			stix->c->mth.tmpr_count++;
+			if (stix->c->mth.tmpr_count > MAX_CODE_NARGS)
+			{
+				set_syntax_error (stix, STIX_SYNERR_BLKARGFLOOD, &stix->c->tok.loc, &stix->c->tok.name); 
+				return -1;
+			}
 
 			GET_TOKEN (stix);
 		} 
@@ -2100,10 +2102,21 @@ static int compile_block_expression (stix_t* stix)
 		return -1;
 	}
 
-printf ("push_context %d\n", (int)block_arg_count);
+	tmpr_loc = stix->c->tok.loc;
+	if (compile_block_temporaries(stix) <= -1) return -1;
+
+	block_tmpr_count = stix->c->mth.tmpr_count - saved_tmpr_count;
+	if (block_tmpr_count > MAX_CODE_NBLKTMPRS)
+	{
+		set_syntax_error (stix, STIX_SYNERR_BLKTMPRFLOOD, &tmpr_loc, STIX_NULL); 
+		return -1;
+	}
+
+printf ("push_context nargs %d ntmprs %d\n", (int)block_arg_count, (int)block_tmpr_count);
 printf ("send_block_copy\n");
 	if (emit_byte_instruction(stix, CODE_PUSH_CONTEXT) <= -1 ||
 	    emit_push_smint_literal(stix, block_arg_count) <= -1 ||
+	    emit_push_smint_literal(stix, block_tmpr_count) <= -1 ||
 	    emit_byte_instruction(stix, CODE_SEND_BLOCK_COPY) <= -1) return -1;
 
 printf ("jump\n");
@@ -2113,22 +2126,49 @@ printf ("jump\n");
 	    emit_byte_instruction(stix, 0) <= -1 ||
 	    emit_byte_instruction(stix, 0) <= -1) return -1;
 
-/* TODO: fix this part below */
 	for (i = 0; i < block_arg_count; i++)
 	{
 		/* arrange to store the top of the stack to a block argument
-		 * when evaluation of a block begins */
-		if (emit_positional_instruction(stix, CMD_STORE_INTO_TEMPVAR, i) <= -1) return -1;
+		 * when evaluation of a block begins. this is for copying
+		 * pushed arguments for 'aBlock value'.
+		 *
+		 * For the following statements,
+		 *    a := [:x :y | | k | k := x + y ].
+		 *    a value: 10 value 20.
+		 * these instructions copy 10 to x and 20 to y when #value:value: is
+		 * sent to a.
+		 */
+		if (emit_positional_instruction(stix, CMD_STORE_INTO_TEMPVAR, saved_tmpr_count + i) <= -1) return -1;
 	}
-/* TODO: fix this part above */
 
-	if (compile_block_temporaries(stix) <= -1 ||
-	    compile_block_statements(stix) <= -1) return -1;
-
-	if (stix->c->tok.type != STIX_IOTOK_RBRACK) 
+	/* compile statements inside a block */
+	if (stix->c->tok.type == STIX_IOTOK_RBRACK)
 	{
-		set_syntax_error (stix, STIX_SYNERR_RBRACK, &stix->c->tok.loc, &stix->c->tok.name);
-		return -1;
+		/* the block is empty */
+		if (emit_byte_instruction (stix, CODE_PUSH_NIL) <= -1) return -1;
+		GET_TOKEN (stix);
+	}
+	else 
+	{
+		while (stix->c->tok.type != STIX_IOTOK_EOF)
+		{
+			if (compile_block_statement(stix) <= -1) return -1;
+
+			if (stix->c->tok.type == STIX_IOTOK_RBRACK) break;
+			else if (stix->c->tok.type == STIX_IOTOK_PERIOD)
+			{
+				GET_TOKEN (stix);
+				if (stix->c->tok.type == STIX_IOTOK_RBRACK) break;
+				if (emit_byte_instruction(stix, CODE_POP_STACKTOP) <= -1) return -1;
+			}
+			else
+			{
+				set_syntax_error (stix, STIX_SYNERR_RBRACK, &stix->c->tok.loc, &stix->c->tok.name);
+				return -1;
+			}
+		}
+
+		if (emit_byte_instruction(stix,CODE_RETURN_FROM_BLOCK) <= -1) return -1;
 	}
 
 	block_code_size = stix->c->mth.code.len - jump_inst_pos - 3; /* -3 to exclude JUMP code */
@@ -2289,6 +2329,7 @@ printf ("NOT IMPLEMENTED LARGE_INTEGER or ERROR?\n");
 				}
 				else
 				{
+printf ("push int literal\n");
 					if (emit_push_smint_literal(stix, tmp) <= -1) return -1;
 				}
 
@@ -2376,7 +2417,7 @@ static int compile_binary_message (stix_t* stix, int to_super)
 			stix->c->mth.binsels.len -= binsel.len;
 			return -1;
 		}
-printf ("send message %d with 2 arguments to %s\n", (int)index, (to_super? "super": "self"));
+printf ("send message %d with 2 arguments%s\n", (int)index, (to_super? " to super": ""));
 		stix->c->mth.binsels.len -= binsel.len;
 	}
 
@@ -2540,7 +2581,7 @@ printf ("\n");
 
 				case VAR_TEMPORARY:
 printf ("<emit> store to tempvar %d\n", (int)var.pos);
-/* TODO: if pop is 1, emit CMD_POP_AND_STORE_INTO_TEMPVAR.
+/* TODO: if pop is 1, emit CMD_POP_INTO_TEMPVAR.
 ret = pop;
 */
 					if (emit_positional_instruction (stix, CMD_STORE_INTO_TEMPVAR, var.pos) <= -1) goto oops;
@@ -2549,7 +2590,7 @@ ret = pop;
 				case VAR_INSTANCE:
 				case VAR_CLASSINST:
 printf ("<emit> store to instvar %d\n", (int)var.pos);
-/* TODO: if pop is 1, emit CMD_POP_AND_STORE_INTO_INSTVAR 
+/* TODO: if pop is 1, emit CMD_POP_INTO_INSTVAR 
 ret = pop;
 */
 					if (emit_positional_instruction (stix, CMD_STORE_INTO_INSTVAR, var.pos) <= -1) goto oops;
@@ -2589,6 +2630,25 @@ oops:
 	return -1;
 }
 
+static int compile_block_statement (stix_t* stix)
+{
+	/* compile_block_statement() is a simpler version of
+	 * of compile_method_statement(). it doesn't cater for
+	 * popping the stack top */
+	if (stix->c->tok.type == STIX_IOTOK_RETURN) 
+	{
+		/* handle the return statement */
+		GET_TOKEN (stix);
+		if (compile_method_expression(stix, 0) <= -1) return -1;
+printf ("return_stacktop\n");
+		return emit_byte_instruction (stix, CODE_RETURN_STACKTOP);
+	}
+	else
+	{
+		return compile_method_expression(stix, 0);
+	}
+}
+
 static int compile_method_statement (stix_t* stix)
 {
 	/*
@@ -2617,7 +2677,8 @@ printf ("return_stacktop\n");
 		n = compile_method_expression(stix, 1);
 		if (n <= -1) return -1;
 
-if (n == 0) printf ("return_stacktop\n");
+		/* if n is 1, no stack popping is required */
+if (n == 0) printf ("pop_stacktop\n");
 		return (n == 0)? emit_byte_instruction (stix, CODE_POP_STACKTOP): 0;
 	}
 }

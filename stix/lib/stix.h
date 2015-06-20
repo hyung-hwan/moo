@@ -596,25 +596,28 @@ struct stix_method_t
 #define STIX_METHOD_PREAMBLE_RETURN_INSTVAR  2
 #define STIX_METHOD_PREAMBLE_PRIMITIVE       3
 
-#define STIX_CONTEXT_NAMED_INSTVARS 6
+#define STIX_CONTEXT_NAMED_INSTVARS 8
 typedef struct stix_context_t stix_context_t;
 typedef struct stix_context_t* stix_oop_context_t;
 struct stix_context_t
 {
 	STIX_OBJ_HEADER;
 
-	stix_oop_t        sender; /* message sending context - active context before new context activation*/
-	stix_oop_t        ip;     /* instruction pointer */
-	stix_oop_t        sp;     /* stack pointer */
-	stix_oop_method_t method; /* CompiledMethod */
-	stix_oop_t        unused; 
-	stix_oop_t        receiver; /* receiver of the message. For a statement '#xxx do: #yyyy', #xxx is the receiver.*/
+	stix_oop_t         sender; /* message sending context - active context before new context activation*/
+	stix_oop_t         ip;     /* instruction pointer */
+	stix_oop_t         sp;     /* stack pointer */
+
+	stix_oop_method_t  method; /* CompiledMethod */
+	stix_oop_t         unused; 
+	stix_oop_t         receiver; /* receiver of the message. For a statement '#xxx do: #yyyy', #xxx is the receiver.*/
+	stix_oop_t         home; /* nil */
+	stix_oop_t         origin; /* nil */
 
 	/* variable indexed part */
 	stix_oop_t        slot[1]; /* stack contents */
 };
 
-#define STIX_BLOCK_CONTEXT_NAMED_INSTVARS 6
+#define STIX_BLOCK_CONTEXT_NAMED_INSTVARS 8
 typedef struct stix_block_context_t stix_block_context_t;
 typedef struct stix_block_context_t* stix_oop_block_context_t;
 struct stix_block_context_t
@@ -622,11 +625,13 @@ struct stix_block_context_t
 	STIX_OBJ_HEADER;
 
 	stix_oop_t         caller;
-	stix_oop_t         ip;      /* SmallInteger. instruction pointer */
-	stix_oop_t         sp;      /* SmallInteger. stack pointer */
-	stix_oop_t         nargs;   /* SmallInteger */
-	stix_oop_t         iip;     /* SmallInteger. initial instruction pointer */
-	stix_oop_context_t home; 
+	stix_oop_t         ip;           /* SmallInteger. instruction pointer */
+	stix_oop_t         sp;           /* SmallInteger. stack pointer */
+	stix_oop_t         nargs;        /* SmallInteger */
+	stix_oop_t         ntmprs;       /* SmallInteger. total number of temporaries */
+	stix_oop_t         iip;          /* SmallInteger. initial instruction pointer */
+	stix_oop_t         home;         /* MethodContext or BlockContext */
+	stix_oop_context_t origin;       /* MethodContext */
 
 	/* variable indexed part */
 	stix_oop_t        slot[1]; /* stack */
@@ -734,6 +739,9 @@ struct stix_t
 
 	/* == EXECUTION REGISTERS == */
 	stix_oop_context_t active_context; /* TODO: this could be either MethodContext or BlockContext. Some redefintion of stix_oop_context_t might be needed  after having removed stix-oop_block-context. */
+	stix_ooi_t sp;
+	stix_ooi_t ip;
+
 	stix_ooi_t* active_context_sp;
 	/* stix_oop_context_t home_context; */
 	/* == END EXECUTION REGISTERS == */

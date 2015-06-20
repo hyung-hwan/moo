@@ -204,7 +204,9 @@ static char* syntax_error_msg[] =
 	"unusable variable in compiled code",
 	"inaccessible variable",
 	"wrong expression primary",
+	"too many temporaries",
 	"too many arguments",
+	"too many block temporaries",
 	"too many block arguments",
 	"too large block",
 	"wrong primitive number"
