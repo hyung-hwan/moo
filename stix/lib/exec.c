@@ -309,11 +309,15 @@ static int primitive_dump (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs >=  0);
 
-	dump_object (stix, STACK_GET(stix, stix->sp - nargs), "receiver");
+	printf ("RECEIVER:");
+	print_object (stix, STACK_GET(stix, stix->sp - nargs));
+	printf ("\n");
 	for (i = nargs; i > 0; )
 	{
 		--i;
-		dump_object (stix, STACK_GET(stix, stix->sp - i), "argument");
+		printf ("ARGUMENT:");
+		print_object (stix, STACK_GET(stix, stix->sp - i));
+		printf ("\n");
 	}
 
 	STACK_POPS (stix, nargs);
@@ -613,8 +617,8 @@ static primitive_t primitives[] =
 
 int stix_execute (stix_t* stix)
 {
-	volatile stix_oop_method_t mth;
-	volatile stix_oop_byte_t code;
+	stix_oop_method_t mth;
+	stix_oop_byte_t code;
 
 	stix_byte_t bc, cmd;
 	stix_ooi_t b1;
@@ -715,7 +719,7 @@ printf ("JUMP %d\n", (int)b1);
 				}
 
 				obj = (stix_oop_oop_t)stix->active_context->origin->method->slot[obj_index];
-printf ("PUSH OBJVAR %d %d - ", (int)b1, (int)obj_index);
+printf ("PUSH OBJVAR index=%d object_index_in_literal_frame=%d - ", (int)b1, (int)obj_index);
 
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(obj) == STIX_OBJ_TYPE_OOP);
 				STIX_ASSERT (obj_index < STIX_OBJ_GET_SIZE(obj));
@@ -733,11 +737,13 @@ printf ("\n");
 				if (cmd == CMD_EXTEND_DOUBLE) 
 					obj_index = (obj_index << 8) | code->slot[stix->ip++];
 
-printf ("STORE OBJVAR %d %d\n", (int)b1, (int)obj_index);
+printf ("STORE OBJVAR index=%d object_index_in_literal_frame=%d - ", (int)b1, (int)obj_index);
 				obj = (stix_oop_oop_t)stix->active_context->origin->method->slot[obj_index];
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(obj) == STIX_OBJ_TYPE_OOP);
 				STIX_ASSERT (obj_index < STIX_OBJ_GET_SIZE(obj));
 				obj->slot[b1] = STACK_GETTOP(stix);
+print_object (stix, obj->slot[b1]);
+printf ("\n");
 				break;
 			}
 

@@ -1520,7 +1520,7 @@ done:
 				 * the position returned here doesn't consider 
 				 * class instance variables that can be potentially
 				 * placed before the class variables. */
-				var->cls = (stix_oop_class_t)super;
+				//???? var->cls = (stix_oop_class_t)super; /* THIS PART IS WRONG. FIX IT??? */
 				break;
 
 			case VAR_CLASSINST:
@@ -3304,6 +3304,7 @@ static int compile_class_definition (stix_t* stix)
 
 	/* reset the structure to hold information about a class to be compiled */
 	stix->c->cls.flags = 0;
+	stix->c->cls.indexed_type = STIX_OBJ_TYPE_OOP;
 
 	stix->c->cls.name.len = 0;
 	stix->c->cls.supername.len = 0;

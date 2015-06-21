@@ -164,11 +164,16 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 
 			if (stix->_context && STIX_OBJ_GET_CLASS(oop) == stix->_context)
 			{
-/* TODO: need to do the same for block context?? */
-				/* the stack in the context object doesn't need to be in
-				 * full. the slots above the stack pointer are garbages. */
+				/* the stack in the context object doesn't need to be 
+				 * scanned in full. the slots above the stack pointer 
+				 * are garbages. */
 				size = STIX_CONTEXT_NAMED_INSTVARS +
 				       STIX_OOP_TO_SMINT(((stix_oop_context_t)oop)->sp) + 1;
+			}
+			else if (stix->_block_context && STIX_OBJ_GET_CLASS(oop) == stix->_block_context)
+			{
+				size = STIX_BLOCK_CONTEXT_NAMED_INSTVARS +
+				       STIX_OOP_TO_SMINT(((stix_oop_block_context_t)oop)->sp) + 1;
 			}
 			else
 			{
@@ -240,7 +245,6 @@ void stix_gc (stix_t* stix)
 	stix->_association       = stix_moveoop (stix, stix->_association);
 	stix->_context           = stix_moveoop (stix, stix->_context);
 	stix->_block_context     = stix_moveoop (stix, stix->_block_context);
-	/*stix->_process           = stix_moveoop (stix, stix->_process);*/
 	stix->_true_class        = stix_moveoop (stix, stix->_true_class);
 	stix->_false_class       = stix_moveoop (stix, stix->_false_class);
 	stix->_character         = stix_moveoop (stix, stix->_character);

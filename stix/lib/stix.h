@@ -714,17 +714,19 @@ struct stix_t
 	stix_oop_t _class; /* Class */
 	stix_oop_t _object; /* Object */
 	stix_oop_t _string; /* String */
+
 	stix_oop_t _symbol; /* Symbol */
 	stix_oop_t _array; /* Array */
 	stix_oop_t _byte_array; /* ByteArray */
 	stix_oop_t _symbol_set; /* SymbolSet */
 	stix_oop_t _system_dictionary; /* SystemDictionary */
+
 	stix_oop_t _method_dictionary; /* MethodDictionary */
 	stix_oop_t _method; /* CompiledMethod */
 	stix_oop_t _association; /* Association */
 	stix_oop_t _context; /* MethodContext */
 	stix_oop_t _block_context; /* BlockContext */
-	/*stix_oop_t _process; */ /* Process */
+
 	stix_oop_t _true_class; /* True */
 	stix_oop_t _false_class; /* False */
 	stix_oop_t _character; /* Character */
