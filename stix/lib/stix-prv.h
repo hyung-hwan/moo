@@ -32,8 +32,9 @@
 /* this is useful for debugging. stix_gc() can be called 
  * while stix has not been fully initialized when this is defined*/
 #define STIX_SUPPORT_GC_DURING_IGNITION
-#define STIX_DEBUG_GC_1
 
+/* this is for gc debugging */
+#define STIX_DEBUG_GC_001  
 
 #include <stdio.h> /* TODO: delete these header inclusion lines */
 #include <string.h>

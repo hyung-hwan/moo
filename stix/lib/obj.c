@@ -30,8 +30,8 @@ void* stix_allocbytes (stix_t* stix, stix_size_t size)
 {
 	stix_uint8_t* ptr;
 
-#if defined(STIX_DEBUG_GC_1)
-	stix_gc (stix);
+#if defined(STIX_DEBUG_GC_001)
+	if (!(stix->option.trait & STIX_NOGC)) stix_gc (stix);
 #endif
 
 	ptr = stix_allocheapmem (stix, stix->curheap, size);

@@ -603,18 +603,18 @@ struct stix_context_t
 {
 	STIX_OBJ_HEADER;
 
-	stix_oop_t         sender; /* message sending context - active context before new context activation*/
-	stix_oop_t         ip;     /* instruction pointer */
-	stix_oop_t         sp;     /* stack pointer */
+	stix_oop_t         sender;   /* message sending context - active context before new context activation*/
+	stix_oop_t         ip;       /* instruction pointer */
+	stix_oop_t         sp;       /* stack pointer */
 
-	stix_oop_method_t  method; /* CompiledMethod */
+	stix_oop_method_t  method;   /* CompiledMethod */
 	stix_oop_t         unused; 
 	stix_oop_t         receiver; /* receiver of the message. For a statement '#xxx do: #yyyy', #xxx is the receiver.*/
-	stix_oop_t         home; /* nil */
-	stix_oop_t         origin; /* nil */
+	stix_oop_t         home;     /* nil */
+	stix_oop_context_t origin;   /* nil */
 
 	/* variable indexed part */
-	stix_oop_t        slot[1]; /* stack contents */
+	stix_oop_t         slot[1]; /* stack */
 };
 
 #define STIX_BLOCK_CONTEXT_NAMED_INSTVARS 8
@@ -741,9 +741,6 @@ struct stix_t
 	stix_oop_context_t active_context; /* TODO: this could be either MethodContext or BlockContext. Some redefintion of stix_oop_context_t might be needed  after having removed stix-oop_block-context. */
 	stix_ooi_t sp;
 	stix_ooi_t ip;
-
-	stix_ooi_t* active_context_sp;
-	/* stix_oop_context_t home_context; */
 	/* == END EXECUTION REGISTERS == */
 
 #if defined(STIX_INCLUDE_COMPILER)
