@@ -1701,7 +1701,15 @@ static int compile_binary_method_name (stix_t* stix)
 	 * a duplcate name will shade a previsouly defined variable. */
 	if (add_temporary_variable(stix, &stix->c->tok.name) <= -1) return -1;
 	stix->c->mth.tmpr_nargs++;
-/* TODO: check if tmpr_nargs exceededs LIMIT (SMINT MAX). also bytecode max */
+
+	STIX_ASSERT (stix->c->mth.tmpr_nargs == 1);
+	/* this check should not be not necessary
+	if (stix->c->mth.tmpr_nargs > MAX_CODE_NARGS)
+	{
+		set_syntax_error (stix, STIX_SYNERR_ARGFLOOD, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+	*/
 
 	GET_TOKEN (stix);
 	return 0;
@@ -1784,6 +1792,7 @@ static int compile_method_name (stix_t* stix)
  		}
 	}
 
+	STIX_ASSERT (stix->c->mth.tmpr_nargs < MAX_CODE_NARGS);
 	/* the total number of temporaries is equal to the number of 
 	 * arguments after having processed the message pattern. it's because
 	 * stix treats arguments the same as temporaries */
@@ -2412,12 +2421,12 @@ static int compile_binary_message (stix_t* stix, int to_super)
 		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, &to_super2) <= -1  ||
 		    compile_unary_message(stix, to_super2) <= -1 ||
 		    add_symbol_literal(stix, &binsel, &index) <= -1 ||
-		    emit_double_positional_instruction(stix, send_message_cmd[to_super], 2, index) <= -1) 
+		    emit_double_positional_instruction(stix, send_message_cmd[to_super], 1, index) <= -1) 
 		{
 			stix->c->mth.binsels.len -= binsel.len;
 			return -1;
 		}
-printf ("send message %d with 2 arguments%s\n", (int)index, (to_super? " to super": ""));
+printf ("send message %d with 1 arguments%s\n", (int)index, (to_super? " to super": ""));
 		stix->c->mth.binsels.len -= binsel.len;
 	}
 
@@ -3190,9 +3199,14 @@ printf ("\n");
 
 		ass = stix_lookupsysdic(stix, &stix->c->cls.name);
 		if (ass && 
-		    STIX_CLASSOF(stix, ass->value) != stix->_class &&
+		    STIX_CLASSOF(stix, ass->value) == stix->_class &&
 		    STIX_OBJ_GET_FLAGS_KERNEL(ass->value) != 1)
 		{
+			/* the value must be a class object.
+			 * and it must be either a user-defined(0) or 
+			 * completed kernel built-in(2). 
+			 * an incomplete kernel built-in class object(1) can not be
+			 * extended */
 			stix->c->cls.self_oop = (stix_oop_class_t)ass->value;
 		}
 		else

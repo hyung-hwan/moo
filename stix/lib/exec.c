@@ -198,7 +198,7 @@ printf ("] in ");
 		c = receiver; 
 		dic_no = STIX_CLASS_MTHDIC_CLASS;
 printf ("class method dictioanry of ");
-dump_object(stix, ((stix_oop_class_t)c)->name, ""); 
+print_object(stix, (stix_oop_t)((stix_oop_class_t)c)->name); 
 printf ("\n");
 	}
 	else
@@ -206,7 +206,7 @@ printf ("\n");
 		c = (stix_oop_t)cls;
 		dic_no = STIX_CLASS_MTHDIC_INSTANCE;
 printf ("instance method dictioanry of ");
-dump_object(stix, ((stix_oop_class_t)c)->name, "XX");
+print_object(stix, (stix_oop_t)((stix_oop_class_t)c)->name);
 printf ("\n");
 	}
 
@@ -301,7 +301,7 @@ TODO: overcome this problem
 }
 
 
-int primitive_dump (stix_t* stix, stix_ooi_t nargs)
+static int primitive_dump (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_ooi_t i;
 
@@ -318,9 +318,8 @@ int primitive_dump (stix_t* stix, stix_ooi_t nargs)
 	return 1; /* success */
 }
 
-int primitive_new (stix_t* stix, stix_ooi_t nargs)
+static int primitive_new (stix_t* stix, stix_ooi_t nargs)
 {
-
 	stix_oop_t rcv, obj;
 
 	STIX_ASSERT (nargs ==  0);
@@ -337,11 +336,11 @@ int primitive_new (stix_t* stix, stix_ooi_t nargs)
 	if (!obj) return -1;
 
 	/* emulate 'pop receiver' and 'push result' */
-	STACK_SET (stix, stix->sp, obj);
+	STACK_SETTOP (stix, obj);
 	return 1; /* success */
 }
 
-int primitive_new_with_size (stix_t* stix, stix_ooi_t nargs)
+static int primitive_new_with_size (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, szoop, obj;
 	stix_oow_t size;
@@ -380,12 +379,168 @@ int primitive_new_with_size (stix_t* stix, stix_ooi_t nargs)
 	/* remove the argument and replace the receiver with a new object
 	 * instantiated */
 	STACK_POP (stix);
-	STACK_SET (stix, stix->sp, obj);
+	STACK_SETTOP (stix, obj);
 
 	return 1; /* success */
 }
 
-int primitive_block_context_value (stix_t* stix, stix_ooi_t nargs)
+static int primitive_basic_size (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv;
+	STIX_ASSERT (nargs == 0);
+
+
+	rcv = STACK_GETTOP(stix);
+	STACK_SETTOP(stix, STIX_OOP_FROM_SMINT(STIX_OBJ_GET_SIZE(rcv)));
+/* TODO: use LargeInteger if the size is very big */
+	return 1;
+}
+
+static int primitive_basic_at (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, pos, v;
+	stix_ooi_t idx;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = STACK_GET(stix, stix->sp - 1);
+	if (!STIX_OOP_IS_POINTER(rcv))
+	{
+		/* the receiver is a special numeric object, not a normal pointer */
+		return 0;
+	}
+
+	pos = STACK_GET(stix, stix->sp);
+	if (!STIX_OOP_IS_SMINT(pos))
+	{
+/* TODO: handle LargeInteger */
+		/* the position must be an integer */
+		return 0;
+	}
+
+	idx = STIX_OOP_TO_SMINT(pos);
+	if (idx < 1 || idx > STIX_OBJ_GET_SIZE(rcv))
+	{
+		/* index out of range */
+		return 0;
+	}
+
+	/* [NOTE] basicAt: and basicAt:put: used a 1-based index. */
+	idx = idx - 1;
+
+	switch (STIX_OBJ_GET_FLAGS_TYPE(rcv))
+	{
+		case STIX_OBJ_TYPE_BYTE:
+			v = STIX_OOP_FROM_SMINT(((stix_oop_byte_t)rcv)->slot[idx]);
+			break;
+
+		case STIX_OBJ_TYPE_CHAR:
+			v = STIX_OOP_FROM_CHAR(((stix_oop_char_t)rcv)->slot[idx]);
+			break;
+
+		case STIX_OBJ_TYPE_WORD:
+			/* TODO: largeINteger if the word is too large */
+			v = STIX_OOP_FROM_SMINT(((stix_oop_word_t)rcv)->slot[idx]);
+			break;
+
+		case STIX_OBJ_TYPE_OOP:
+			v = ((stix_oop_oop_t)rcv)->slot[idx];
+			break;
+
+		default:
+			stix->errnum = STIX_EINTERN;
+			return -1;
+	}
+
+	STACK_POP (stix);
+	STACK_SETTOP (stix, v);
+	return 1;
+}
+
+static int primitive_basic_at_put (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, pos, val;
+	stix_ooi_t idx;
+
+	STIX_ASSERT (nargs == 2);
+
+/* TODO: disallow change of some key kernel objects */
+ 
+	rcv = STACK_GET(stix, stix->sp - 2);
+	if (!STIX_OOP_IS_POINTER(rcv))
+	{
+		/* the receiver is a special numeric object, not a normal pointer */
+		return 0;
+	}
+
+	pos = STACK_GET(stix, stix->sp - 1);
+	if (!STIX_OOP_IS_SMINT(pos))
+	{
+/* TODO: handle LargeInteger */
+		/* the position must be an integer */
+		return 0;
+	}
+
+	val = STACK_GET(stix, stix->sp);
+
+	idx = STIX_OOP_TO_SMINT(pos);
+	if (idx < 1 || idx > STIX_OBJ_GET_SIZE(rcv))
+	{
+		/* index out of range */
+		return 0;
+	}
+
+	/* [NOTE] basicAt: and basicAt:put: used a 1-based index. */
+	idx = idx - 1;
+
+	switch (STIX_OBJ_GET_FLAGS_TYPE(rcv))
+	{
+		case STIX_OBJ_TYPE_BYTE:
+			if (!STIX_OOP_IS_SMINT(val))
+			{
+				/* the value is not a character */
+				return 0;
+			}
+/* TOOD: must I check the range of the value? */
+			((stix_oop_char_t)rcv)->slot[idx] = STIX_OOP_TO_SMINT(val);
+			break;
+		
+
+		case STIX_OBJ_TYPE_CHAR:
+			if (!STIX_OOP_IS_CHAR(val))
+			{
+				/* the value is not a character */
+				return 0;
+			}
+			((stix_oop_char_t)rcv)->slot[idx] = STIX_OOP_TO_CHAR(val);
+			break;
+
+		case STIX_OBJ_TYPE_WORD:
+			/* TODO: handle largeINteger  */
+			if (!STIX_OOP_IS_SMINT(val))
+			{
+				/* the value is not a character */
+				return 0;
+			}
+			((stix_oop_char_t)rcv)->slot[idx] = STIX_OOP_TO_SMINT(val);
+			break;
+
+		case STIX_OBJ_TYPE_OOP:
+			((stix_oop_oop_t)rcv)->slot[idx] = val;
+			break;
+
+		default:
+			stix->errnum = STIX_EINTERN;
+			return -1;
+	}
+
+	STACK_POPS (stix, 2);
+/* TODO: return receiver or value? */
+	STACK_SETTOP (stix, val);
+	return 1;
+}
+
+static int primitive_block_context_value (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_block_context_t blkctx;
 
@@ -409,7 +564,7 @@ printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 	return 1;
 }
 
-int primitive_integer_add (stix_t* stix, stix_ooi_t nargs)
+static int primitive_integer_add (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_ooi_t tmp;
 	stix_oop_t rcv, arg;
@@ -448,6 +603,9 @@ static primitive_t primitives[] =
 	{  -1,   primitive_dump                 },
 	{   0,   primitive_new                  },
 	{   1,   primitive_new_with_size        },
+	{   0,   primitive_basic_size           },
+	{   1,   primitive_basic_at             },
+	{   2,   primitive_basic_at_put         },
 	{  -1,   primitive_block_context_value  },
 	{   1,   primitive_integer_add          },
 };
@@ -510,12 +668,18 @@ printf ("PUSH_INSTVAR %d\n", (int)b1);
 				break;
 
 			case CMD_PUSH_TEMPVAR:
-printf ("PUSH_TEMPVAR %d\n", (int)b1);
-				STACK_PUSH (stix, stix->active_context->slot[b1]);
+/* TODO: consider temp offset, block context, etc */
+
+printf ("PUSH_TEMPVAR idx=%d - ", (int)b1);
+print_object (stix, STACK_GET(stix, b1));
+printf ("\n");
+				STACK_PUSH (stix, STACK_GET(stix, b1));
 				break;
 
 			case CMD_PUSH_LITERAL:
-printf ("PUSH_LITERAL %d\n", (int)b1);
+printf ("PUSH_LITERAL idx=%d - ", (int)b1);
+print_object (stix, mth->slot[b1]);
+printf ("\n");
 				STACK_PUSH (stix, mth->slot[b1]);
 				break;
 
@@ -599,12 +763,14 @@ printf ("STORE OBJVAR %d %d\n", (int)b1, (int)obj_index);
 				selector = (stix_oop_char_t)mth->slot[selector_index];
 
 if (cmd == CMD_SEND_MESSAGE)
-printf ("SEND_MESSAGE TO RECEIVER AT %d\n", (int)(stix->sp - b1));
+printf ("SEND_MESSAGE TO RECEIVER AT %d NARGS=%d\n", (int)(stix->sp - b1), (int)b1);
 else
-printf ("SEND_MESSAGE_TO_SUPER TO RECEIVER AT %d\n", (int)(stix->sp - b1));
+printf ("SEND_MESSAGE_TO_SUPER TO RECEIVER AT %d NARGS=%d\n", (int)(stix->sp - b1), (int)b1);
 				STIX_ASSERT (STIX_CLASSOF(stix, selector) == stix->_symbol);
 
-				newrcv = STACK_GET (stix, stix->sp - b1);
+				newrcv = STACK_GET(stix, stix->sp - b1);
+print_object(stix, newrcv);
+printf ("\n");
 				mthname.ptr = selector->slot;
 				mthname.len = STIX_OBJ_GET_SIZE(selector);
 				newmth = find_method (stix, newrcv, &mthname, (cmd == CMD_SEND_MESSAGE_TO_SUPER));

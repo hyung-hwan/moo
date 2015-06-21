@@ -83,6 +83,69 @@ void print_ucs (const stix_ucs_t* name)
 }
 
 
+void print_object (stix_t* stix, stix_oop_t oop)
+{
+	if (oop == stix->_nil)
+	{
+		printf ("nil");
+	}
+	else if (oop == stix->_true)
+	{
+		printf ("true");
+	}
+	else if (oop == stix->_false)
+	{
+		printf ("false");
+	}
+	else if (STIX_OOP_IS_SMINT(oop))
+	{
+		printf ("%ld", (long int)STIX_OOP_TO_SMINT(oop));
+	}
+	else if (STIX_OOP_IS_CHAR(oop))
+	{
+		stix_bch_t bcs[32];
+		stix_uch_t uch;
+		stix_size_t ucslen, bcslen;
+
+		uch = STIX_OOP_TO_CHAR(oop);
+		bcslen = STIX_COUNTOF(bcs);
+		ucslen = 1;
+		if (stix_ucstoutf8 (&uch, &ucslen, bcs, &bcslen) >= 0)
+		{
+			printf ("$%.*s", (int)bcslen, bcs);
+		}
+	}
+	else
+	{
+		stix_oop_class_t c;
+		stix_ucs_t s;
+		stix_size_t i;
+		stix_bch_t bcs[32];
+		stix_size_t ucslen, bcslen;
+
+		c = (stix_oop_class_t)STIX_CLASSOF(stix, oop);
+		if ((stix_oop_t)c == stix->_symbol || (stix_oop_t)c == stix->_string)
+		{
+			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+			{
+				bcslen = STIX_COUNTOF(bcs);
+				ucslen = 1;
+				if (stix_ucstoutf8 (&((stix_oop_char_t)oop)->slot[i], &ucslen, bcs, &bcslen) >= 0)
+				{
+					printf ("%.*s", (int)bcslen, bcs);
+				}
+			}
+		}
+		else
+		{
+			s.ptr = ((stix_oop_char_t)c->name)->slot;
+			s.len = STIX_OBJ_GET_SIZE(c->name);
+			printf ("instance of ");
+			print_ucs (&s);
+		}
+	}
+}
+
 void __dump_object (stix_t* stix, stix_oop_t oop, int depth)
 {
 	stix_oop_class_t c;

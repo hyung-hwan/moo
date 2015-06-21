@@ -794,6 +794,7 @@ void stix_getsynerr (
 void dump_symbol_table (stix_t* stix);
 void dump_dictionary (stix_t* stix, stix_oop_set_t dic, const char* title);
 void print_ucs (const stix_ucs_t* name);
+void print_object (stix_t* stix, stix_oop_t oop);
 void dump_object (stix_t* stix, stix_oop_t oop, const char* title);
 
 #if defined(__cplusplus)
