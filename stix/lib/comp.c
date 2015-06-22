@@ -1520,7 +1520,6 @@ done:
 				 * the position returned here doesn't consider 
 				 * class instance variables that can be potentially
 				 * placed before the class variables. */
-				//???? var->cls = (stix_oop_class_t)super; /* THIS PART IS WRONG. FIX IT??? */
 				break;
 
 			case VAR_CLASSINST:
@@ -2038,7 +2037,7 @@ static int compile_block_expression (stix_t* stix)
 {
 	stix_size_t i, jump_inst_pos;
 	stix_size_t saved_tmpr_count, saved_tmprs_len;
-	stix_size_t block_arg_count, block_tmpr_count;
+	stix_size_t block_arg_count/*, block_tmpr_count*/;
 	stix_size_t block_code_size;
 	stix_ioloc_t block_loc, colon_loc, tmpr_loc;
 
@@ -2114,20 +2113,22 @@ static int compile_block_expression (stix_t* stix)
 	tmpr_loc = stix->c->tok.loc;
 	if (compile_block_temporaries(stix) <= -1) return -1;
 
+#if 0
 	block_tmpr_count = stix->c->mth.tmpr_count - saved_tmpr_count;
 	if (block_tmpr_count > MAX_CODE_NBLKTMPRS)
 	{
 		set_syntax_error (stix, STIX_SYNERR_BLKTMPRFLOOD, &tmpr_loc, STIX_NULL); 
 		return -1;
 	}
+#endif
 
-printf ("\tpush_context nargs %d ntmprs %d\n", (int)block_arg_count, (int)block_tmpr_count);
+printf ("\tpush_context nargs %d ntmprs %d\n", (int)block_arg_count, (int)stix->c->mth.tmpr_count /*block_tmpr_count*/);
 printf ("\tpush smint %d\n", (int)block_arg_count);
-printf ("\tpush smint %d\n", (int)block_tmpr_count);
+printf ("\tpush smint %d\n", (int)stix->c->mth.tmpr_count /*block_tmpr_count*/);
 printf ("\tsend_block_copy\n");
 	if (emit_byte_instruction(stix, CODE_PUSH_CONTEXT) <= -1 ||
 	    emit_push_smint_literal(stix, block_arg_count) <= -1 ||
-	    emit_push_smint_literal(stix, block_tmpr_count) <= -1 ||
+	    emit_push_smint_literal(stix, stix->c->mth.tmpr_count/*block_tmpr_count*/) <= -1 ||
 	    emit_byte_instruction(stix, CODE_SEND_BLOCK_COPY) <= -1) return -1;
 
 printf ("\tjump\n");
@@ -2136,21 +2137,6 @@ printf ("\tjump\n");
 	if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND_DOUBLE, CMD_JUMP)) <= -1 ||
 	    emit_byte_instruction(stix, 0) <= -1 ||
 	    emit_byte_instruction(stix, 0) <= -1) return -1;
-
-	for (i = 0; i < block_arg_count; i++)
-	{
-		/* arrange to store the top of the stack to a block argument
-		 * when evaluation of a block begins. this is for copying
-		 * pushed arguments for 'aBlock value'.
-		 *
-		 * For the following statements,
-		 *    a := [:x :y | | k | k := x + y ].
-		 *    a value: 10 value 20.
-		 * these instructions copy 10 to x and 20 to y when #value:value: is
-		 * sent to a.
-		 */
-		if (emit_positional_instruction(stix, CMD_STORE_INTO_TEMPVAR, saved_tmpr_count + i) <= -1) return -1;
-	}
 
 	/* compile statements inside a block */
 	if (stix->c->tok.type == STIX_IOTOK_RBRACK)
@@ -2388,16 +2374,27 @@ static stix_byte_t send_message_cmd[] =
 	CMD_SEND_MESSAGE_TO_SUPER
 };
 
+#if 0
 static int compile_unary_message (stix_t* stix, int to_super)
 {
 	stix_size_t index;
 
 	while (stix->c->tok.type == STIX_IOTOK_IDENT) 
 	{
-		if (add_symbol_literal(stix, &stix->c->tok.name, &index) <= -1 ||
-		    emit_double_positional_instruction(stix, send_message_cmd[to_super], 0, index) <= -1) return -1;
-printf ("\tsend message %d with 0 arguments to %s\n", (int)index, (to_super? "super": "self"));
+		if (add_symbol_literal(stix, &stix->c->tok.name, &index) <= -1) return -1;
+
+printf ("adding binary symbol...");
+print_ucs (&stix->c->tok.name);
+printf ("\n");
 		GET_TOKEN (stix);
+
+if (stix->c->tok.type == STIX_IOTOK_SEMICOLON) printf ("\tdup_stack for cascading\n");
+		/* check adhead if it will be followed by a cascaded message */
+		if (stix->c->tok.type == STIX_IOTOK_SEMICOLON &&
+		    emit_byte_instruction(stix, CODE_DUP_STACKTOP) <= -1) return -1;
+
+		if (emit_double_positional_instruction(stix, send_message_cmd[to_super], 0, index) <= -1) return -1;
+printf ("\tsend message %d with 0 arguments to %s\n", (int)index, (to_super? "super": "self"));
 	}
 
 	return 0;
@@ -2412,28 +2409,40 @@ static int compile_binary_message (stix_t* stix, int to_super)
 	stix_size_t index;
 	int to_super2;
 	stix_ucs_t binsel;
+	stix_size_t saved_binsels_len;
 
 	if (compile_unary_message(stix, to_super) <= -1) return -1;
 
 	while (stix->c->tok.type == STIX_IOTOK_BINSEL) 
 	{
 		binsel = stix->c->tok.name;
-		if (clone_binary_selector(stix, &binsel) <= -1) return -1;
+		saved_binsels_len = stix->c->mth.binsels.len;
+
+		if (clone_binary_selector(stix, &binsel) <= -1) goto oops;
 
 		GET_TOKEN (stix);
 		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, &to_super2) <= -1  ||
 		    compile_unary_message(stix, to_super2) <= -1 ||
-		    add_symbol_literal(stix, &binsel, &index) <= -1 ||
-		    emit_double_positional_instruction(stix, send_message_cmd[to_super], 1, index) <= -1) 
-		{
-			stix->c->mth.binsels.len -= binsel.len;
-			return -1;
-		}
-printf ("send message %d with 1 arguments%s\n", (int)index, (to_super? " to super": ""));
-		stix->c->mth.binsels.len -= binsel.len;
+		    add_symbol_literal(stix, &binsel, &index) <= -1) goto oops;
+
+if (stix->c->tok.type == STIX_IOTOK_SEMICOLON) printf ("\tdup_stack for cascading\n");
+		/* check ahead message cascading */
+		if (stix->c->tok.type == STIX_IOTOK_SEMICOLON && 
+		    emit_byte_instruction(stix, CODE_DUP_STACKTOP) <= -1) goto oops;
+
+		if (emit_double_positional_instruction(stix, send_message_cmd[to_super], 1, index) <= -1) goto oops;
+printf ("\tsend message %d with 1 arguments%s\n", (int)index, (to_super? " to super": ""));
+
+		/*stix->c->mth.binsels.len -= binsel.len;*/
+		stix->c->mth.binsels.len = saved_binsels_len;
 	}
 
 	return 0;
+
+oops:
+	/*stix->c->mth.binsels.len -= binsel.len;*/
+	stix->c->mth.binsels.len -= saved_binsels_len;
+	return -1;
 }
 
 static int compile_keyword_message (stix_t* stix, int to_super)
@@ -2456,7 +2465,6 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 	kwsel_loc = stix->c->tok.loc;
 	kwsel_len = stix->c->mth.kwsels.len;
 
-
 	do 
 	{
 		kw = stix->c->tok.name;
@@ -2468,7 +2476,11 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 
 		if (nargs >= MAX_CODE_NARGS)
 		{
-			set_syntax_error (stix, STIX_SYNERR_ARGFLOOD, &kwsel_loc, &kwsel); 
+			/* 'kw' points to only one segment of the full keyword message. 
+			 * if it parses an expression like 'aBlock value: 10 with: 20',
+			 * 'kw' may point to 'value:' or 'with:'.
+			 */
+			set_syntax_error (stix, STIX_SYNERR_ARGFLOOD, &kwsel_loc, &kw); 
 			goto oops;
 		}
 
@@ -2479,9 +2491,15 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 	kwsel.ptr = &stix->c->mth.kwsels.ptr[kwsel_len];
 	kwsel.len = stix->c->mth.kwsels.len - kwsel_len;
 
-	if (add_symbol_literal(stix, &kwsel, &index) <= -1 ||
-	    emit_double_positional_instruction(stix, send_message_cmd[to_super], nargs, index) <= -1) goto oops;
-printf ("\tSend message %d [", (int)index);
+	if (add_symbol_literal(stix, &kwsel, &index) <= -1) goto oops;
+
+if (stix->c->tok.type == STIX_IOTOK_SEMICOLON) printf ("\tdup_stack for cascading\n");
+
+	if (stix->c->tok.type == STIX_IOTOK_SEMICOLON && 
+	    emit_byte_instruction(stix, CODE_DUP_STACKTOP) <= -1) goto oops;
+
+	if (emit_double_positional_instruction(stix, send_message_cmd[to_super], nargs, index) <= -1) goto oops;
+printf ("\tsend message %d [", (int)index);
 print_ucs (&kwsel);
 printf ("] with %d arguments to %s\n", (int)nargs, (to_super? "super": "self"));
 	stix->c->mth.kwsels.len = kwsel_len;
@@ -2489,6 +2507,129 @@ printf ("] with %d arguments to %s\n", (int)nargs, (to_super? "super": "self"));
 
 oops:
 	stix->c->mth.kwsels.len = kwsel_len;
+	return -1;
+}
+#endif
+
+static int compile_unary_message (stix_t* stix, int to_super)
+{
+	stix_size_t index;
+
+	STIX_ASSERT (stix->c->tok.type == STIX_IOTOK_IDENT);
+
+	do
+	{
+printf ("adding binary symbol...");
+print_ucs (&stix->c->tok.name);
+printf ("\n");
+		if (add_symbol_literal(stix, &stix->c->tok.name, &index) <= -1 ||
+		    emit_double_positional_instruction(stix, send_message_cmd[to_super], 0, index) <= -1) return -1;
+printf ("\tsend message %d with 0 arguments to %s\n", (int)index, (to_super? "super": "self"));
+
+		GET_TOKEN (stix);
+	}
+	while (stix->c->tok.type == STIX_IOTOK_IDENT);
+
+	return 0;
+}
+
+static int compile_binary_message (stix_t* stix, int to_super)
+{
+	/*
+	 * binary-message := binary-selector binary-argument
+	 * binary-argument := expression-primary unary-message*
+	 */
+	stix_size_t index;
+	int to_super2;
+	stix_ucs_t binsel;
+	stix_size_t saved_binsels_len;
+
+	STIX_ASSERT (stix->c->tok.type == STIX_IOTOK_BINSEL);
+
+	do
+	{
+		binsel = stix->c->tok.name;
+		saved_binsels_len = stix->c->mth.binsels.len;
+
+		if (clone_binary_selector(stix, &binsel) <= -1) goto oops;
+
+		GET_TOKEN (stix);
+
+		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, &to_super2) <= -1) goto oops;
+
+		if (stix->c->tok.type == STIX_IOTOK_IDENT && compile_unary_message(stix, to_super2) <= -1) goto oops;
+
+		if (add_symbol_literal(stix, &binsel, &index) <= -1 ||
+		    emit_double_positional_instruction(stix, send_message_cmd[to_super], 1, index) <= -1) goto oops;
+printf ("\tsend message %d with 1 arguments%s\n", (int)index, (to_super? " to super": ""));
+
+		stix->c->mth.binsels.len = saved_binsels_len;
+	}
+	while (stix->c->tok.type == STIX_IOTOK_BINSEL);
+
+	return 0;
+
+oops:
+	stix->c->mth.binsels.len = saved_binsels_len;
+	return -1;
+}
+
+static int compile_keyword_message (stix_t* stix, int to_super)
+{
+	/*
+	 * keyword-message := (keyword keyword-argument)+
+	 * keyword-argument := expression-primary unary-message* binary-message*
+	 */
+
+	stix_size_t index;
+	int to_super2;
+	stix_ucs_t kw, kwsel;
+	stix_ioloc_t saved_kwsel_loc;
+	stix_size_t saved_kwsel_len;
+	stix_size_t nargs = 0;
+
+	saved_kwsel_loc = stix->c->tok.loc;
+	saved_kwsel_len = stix->c->mth.kwsels.len;
+
+	do 
+	{
+		kw = stix->c->tok.name;
+		if (clone_keyword(stix, &kw) <= -1) goto oops;
+
+		GET_TOKEN (stix);
+
+		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, &to_super2) <= -1) goto oops;
+		if (stix->c->tok.type == STIX_IOTOK_IDENT && compile_unary_message(stix, to_super2) <= -1) goto oops;
+		if (stix->c->tok.type == STIX_IOTOK_BINSEL && compile_binary_message(stix, to_super2) <= -1) goto oops;
+
+		if (nargs >= MAX_CODE_NARGS)
+		{
+			/* 'kw' points to only one segment of the full keyword message. 
+			 * if it parses an expression like 'aBlock value: 10 with: 20',
+			 * 'kw' may point to 'value:' or 'with:'.
+			 */
+			set_syntax_error (stix, STIX_SYNERR_ARGFLOOD, &saved_kwsel_loc, &kw); 
+			goto oops;
+		}
+
+		nargs++;
+	} 
+	while (stix->c->tok.type == STIX_IOTOK_KEYWORD);
+
+	kwsel.ptr = &stix->c->mth.kwsels.ptr[saved_kwsel_len];
+	kwsel.len = stix->c->mth.kwsels.len - saved_kwsel_len;
+
+	if (add_symbol_literal(stix, &kwsel, &index) <= -1 ||
+	    emit_double_positional_instruction(stix, send_message_cmd[to_super], nargs, index) <= -1) goto oops;
+
+printf ("\tsend message %d [", (int)index);
+print_ucs (&kwsel);
+printf ("] with %d arguments to %s\n", (int)nargs, (to_super? "super": "self"));
+	stix->c->mth.kwsels.len = saved_kwsel_len;
+	return 0;
+
+oops:
+	stix->c->mth.kwsels.len = saved_kwsel_len;
 	return -1;
 }
 
@@ -2507,23 +2648,104 @@ static int compile_message_expression (stix_t* stix, int to_super)
 	 * binary-argument := expression-primary unary-message*
 	 * unary-message := unary-selector
 	 * cascaded-message := (";" single-message)*
-	 * cascaded-message := (";" single-message)*
 	 */
+	stix_size_t noop_pos;
 
+	do
+	{
+		switch (stix->c->tok.type)
+		{
+			case STIX_IOTOK_IDENT:
+				/* insert NOOP to change to DUP_STACKTOP if there is a 
+				 * cascaded message */
+				noop_pos = stix->c->mth.code.len;
+				if (emit_byte_instruction(stix, CODE_NOOP) <= -1) return -1;
+
+				if (compile_unary_message(stix, to_super) <= -1) return -1;
+
+				if (stix->c->tok.type == STIX_IOTOK_BINSEL)
+				{
+	STIX_ASSERT (stix->c->mth.code.len > noop_pos);
+	STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
+	stix->c->mth.code.len--;
+
+	noop_pos = stix->c->mth.code.len;
+	if (emit_byte_instruction(stix, CODE_NOOP) <= -1) return -1;
+					if (compile_binary_message(stix, to_super) <= -1) return -1;
+				}
+				if (stix->c->tok.type == STIX_IOTOK_KEYWORD)
+				{
+	STIX_ASSERT (stix->c->mth.code.len > noop_pos);
+	STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
+	stix->c->mth.code.len--;
+
+	noop_pos = stix->c->mth.code.len;
+	if (emit_byte_instruction(stix, CODE_NOOP) <= -1) return -1;
+					if (compile_keyword_message(stix, to_super) <= -1) return -1;
+				}
+				break;
+
+			case STIX_IOTOK_BINSEL:
+				noop_pos = stix->c->mth.code.len;
+				if (emit_byte_instruction(stix, CODE_NOOP) <= -1) return -1;
+
+				if (compile_binary_message(stix, to_super) <= -1) return -1;
+				if (stix->c->tok.type == STIX_IOTOK_KEYWORD)
+				{
+	STIX_ASSERT (stix->c->mth.code.len > noop_pos);
+	STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
+	stix->c->mth.code.len--;
+
+	noop_pos = stix->c->mth.code.len;
+	if (emit_byte_instruction(stix, CODE_NOOP) <= -1) return -1;
+
+					if (compile_keyword_message(stix, to_super) <= -1) return -1;
+				}
+				break;
+
+			case STIX_IOTOK_KEYWORD:
+				noop_pos = stix->c->mth.code.len;
+				if (emit_byte_instruction(stix, CODE_NOOP) <= -1) return -1;
+
+				if (compile_keyword_message(stix, to_super) <= -1) return -1;
+				break;
+
+			default:
+				goto done;
+
+		}
+
+		if (stix->c->tok.type == STIX_IOTOK_SEMICOLON)
+		{
+			printf ("\tdup_stacktop for cascading\n");
+			stix->c->mth.code.ptr[noop_pos] = CODE_DUP_STACKTOP;
+			if (emit_byte_instruction(stix, CODE_POP_STACKTOP) <= -1) return -1;
+			GET_TOKEN(stix);
+		}
+		else 
+		{
+			/* delete the NOOP instruction inserted  */
+			STIX_ASSERT (stix->c->mth.code.len > noop_pos);
+			STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
+			stix->c->mth.code.len--;
+			goto done;
+		}
+	}
+	while (1);
+
+#if 0
 	if (compile_keyword_message(stix, to_super) <= -1) return -1;
 
 	while (stix->c->tok.type == STIX_IOTOK_SEMICOLON) 
 	{
-		/* handle message cascading */
-printf ("TODO: DoSpecial(DUP_RECEIVER(CASCADE)) ....\n");
-/*T ODO: emit code */
+		printf ("\tpop_stacktop for cascading\n");
+		if (emit_byte_instruction(stix, CODE_POP_STACKTOP) <= -1) return -1;
 		GET_TOKEN (stix);
-
 		if (compile_keyword_message(stix, 0) <= -1) return -1;
-printf ("\tTODO: DoSpecial(POP_TOP) ....\n");
-/*T ODO: emit code */
 	}
+#endif
 
+done:
 	return 0;
 }
 
@@ -2537,7 +2759,8 @@ static int compile_basic_expression (stix_t* stix, const stix_ucs_t* ident, cons
 	if (compile_expression_primary(stix, ident, ident_loc, &to_super) <= -1) return -1;
 	if (stix->c->tok.type != STIX_IOTOK_EOF && 
 	    stix->c->tok.type != STIX_IOTOK_RBRACE && 
-	    stix->c->tok.type != STIX_IOTOK_PERIOD) 
+	    stix->c->tok.type != STIX_IOTOK_PERIOD &&
+	    stix->c->tok.type != STIX_IOTOK_SEMICOLON)
 	{
 		if (compile_message_expression(stix, to_super) <= -1) return -1;
 	}

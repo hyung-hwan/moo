@@ -606,9 +606,8 @@ struct stix_context_t
 	stix_oop_t         sender;   /* message sending context - active context before new context activation*/
 	stix_oop_t         ip;       /* instruction pointer */
 	stix_oop_t         sp;       /* stack pointer */
-
-	stix_oop_method_t  method;   /* CompiledMethod */
-	stix_oop_t         unused; 
+	stix_oop_t         ntmprs;   /* SmallInteger. */
+	stix_oop_method_t  method;   /* CompiledMethod */	
 	stix_oop_t         receiver; /* receiver of the message. For a statement '#xxx do: #yyyy', #xxx is the receiver.*/
 	stix_oop_t         home;     /* nil */
 	stix_oop_context_t origin;   /* nil */
@@ -627,9 +626,9 @@ struct stix_block_context_t
 	stix_oop_t         caller;
 	stix_oop_t         ip;           /* SmallInteger. instruction pointer */
 	stix_oop_t         sp;           /* SmallInteger. stack pointer */
-	stix_oop_t         nargs;        /* SmallInteger */
 	stix_oop_t         ntmprs;       /* SmallInteger. total number of temporaries */
-	stix_oop_t         iip;          /* SmallInteger. initial instruction pointer */
+	stix_oop_t         nargs;        /* SmallInteger */
+	stix_oop_t         unused/*iip*/;          /* SmallInteger. initial instruction pointer */
 	stix_oop_t         home;         /* MethodContext or BlockContext */
 	stix_oop_context_t origin;       /* MethodContext */
 

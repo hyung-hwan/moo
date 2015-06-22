@@ -40,9 +40,10 @@
 #include <string.h>
 #include <assert.h>
 
-#define STIX_MEMSET(dst,src,size) memset(dst,src,size)
-#define STIX_MEMCPY(dst,src,size) memcpy(dst,src,size)
-#define STIX_ASSERT(x)            assert(x)
+#define STIX_MEMSET(dst,src,size)  memset(dst,src,size)
+#define STIX_MEMCPY(dst,src,size)  memcpy(dst,src,size)
+#define STIX_MEMMOVE(dst,src,size) memmove(dst,src,size)
+#define STIX_ASSERT(x)             assert(x)
 
 #define STIX_ALIGN(x,y) ((((x) + (y) - 1) / (y)) * (y))
 

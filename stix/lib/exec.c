@@ -39,22 +39,22 @@
 #define STORE_ACTIVE_SP(stix) STORE_SP(stix, (stix)->active_context)
 
 
-#define STACK_PUSH(stix,v) \
+#define ACTIVE_STACK_PUSH(stix,v) \
 	do { \
 		(stix)->sp = (stix)->sp + 1; \
 		(stix)->active_context->slot[(stix)->sp] = v; \
 	} while (0)
 
-#define STACK_POP(stix) ((stix)->sp = (stix)->sp - 1)
-#define STACK_UNPOP(stix) ((stix)->sp = (stix)->sp + 1)
-#define STACK_POPS(stix,count) ((stix)->sp = (stix)->sp - (count))
+#define ACTIVE_STACK_POP(stix) ((stix)->sp = (stix)->sp - 1)
+#define ACTIVE_STACK_UNPOP(stix) ((stix)->sp = (stix)->sp + 1)
+#define ACTIVE_STACK_POPS(stix,count) ((stix)->sp = (stix)->sp - (count))
 
-#define STACK_GET(stix,v_sp) ((stix)->active_context->slot[v_sp])
-#define STACK_SET(stix,v_sp,v_obj) ((stix)->active_context->slot[v_sp] = v_obj)
-#define STACK_GETTOP(stix) STACK_GET(stix, (stix)->sp)
-#define STACK_SETTOP(stix,v_obj) STACK_SET(stix, (stix)->sp, v_obj)
+#define ACTIVE_STACK_GET(stix,v_sp) ((stix)->active_context->slot[v_sp])
+#define ACTIVE_STACK_SET(stix,v_sp,v_obj) ((stix)->active_context->slot[v_sp] = v_obj)
+#define ACTIVE_STACK_GETTOP(stix) ACTIVE_STACK_GET(stix, (stix)->sp)
+#define ACTIVE_STACK_SETTOP(stix,v_obj) ACTIVE_STACK_SET(stix, (stix)->sp, v_obj)
 
-#define STACK_ISEMPTY(stix) ((stix)->sp <= -1)
+#define ACTIVE_STACK_ISEMPTY(stix) ((stix)->sp <= -1)
 
 #define SWITCH_ACTIVE_CONTEXT(stix,v_ctx) \
 	do \
@@ -136,6 +136,7 @@ static int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	 * if no temporaries exist, the initial sp is -1.
 	 */
 	ctx->sp = STIX_OOP_FROM_SMINT(ntmprs - 1);
+	ctx->ntmprs = STIX_OOP_FROM_SMINT(ntmprs);
 	ctx->method = mth;
 	/*ctx->home = stix->_nil;*/
 	ctx->origin = ctx; /* point to self */
@@ -164,12 +165,12 @@ static int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	for (i = nargs; i > 0; )
 	{
 		/* copy argument */
-		ctx->slot[--i] = STACK_GETTOP (stix);
-		STACK_POP (stix);
+		ctx->slot[--i] = ACTIVE_STACK_GETTOP (stix);
+		ACTIVE_STACK_POP (stix);
 	}
 	/* copy receiver */
-	ctx->receiver = STACK_GETTOP (stix);
-	STACK_POP (stix);
+	ctx->receiver = ACTIVE_STACK_GETTOP (stix);
+	ACTIVE_STACK_POP (stix);
 
 	STIX_ASSERT (stix->sp >= -1);
 
@@ -294,7 +295,7 @@ TODO: overcome this problem
 	STIX_ASSERT (stix->active_context == STIX_NULL);
 	/* i can't use SWITCH_ACTIVE_CONTEXT() macro as there is no active context before switching */
 	stix->active_context = ctx;
-	STACK_PUSH (stix, ass->value); /* push the receiver */
+	ACTIVE_STACK_PUSH (stix, ass->value); /* push the receiver */
 
 	STORE_ACTIVE_IP (stix);
 	STORE_ACTIVE_SP (stix);
@@ -310,17 +311,17 @@ static int primitive_dump (stix_t* stix, stix_ooi_t nargs)
 	STIX_ASSERT (nargs >=  0);
 
 	printf ("RECEIVER:");
-	print_object (stix, STACK_GET(stix, stix->sp - nargs));
+	print_object (stix, ACTIVE_STACK_GET(stix, stix->sp - nargs));
 	printf ("\n");
 	for (i = nargs; i > 0; )
 	{
 		--i;
 		printf ("ARGUMENT:");
-		print_object (stix, STACK_GET(stix, stix->sp - i));
+		print_object (stix, ACTIVE_STACK_GET(stix, stix->sp - i));
 		printf ("\n");
 	}
 
-	STACK_POPS (stix, nargs);
+	ACTIVE_STACK_POPS (stix, nargs);
 	return 1; /* success */
 }
 
@@ -330,7 +331,7 @@ static int primitive_new (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs ==  0);
 
-	rcv = STACK_GETTOP (stix);
+	rcv = ACTIVE_STACK_GETTOP (stix);
 
 	if (STIX_CLASSOF(stix, rcv) != stix->_class) 
 	{
@@ -342,7 +343,7 @@ static int primitive_new (stix_t* stix, stix_ooi_t nargs)
 	if (!obj) return -1;
 
 	/* emulate 'pop receiver' and 'push result' */
-	STACK_SETTOP (stix, obj);
+	ACTIVE_STACK_SETTOP (stix, obj);
 	return 1; /* success */
 }
 
@@ -353,14 +354,14 @@ static int primitive_new_with_size (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs ==  1);
 
-	rcv = STACK_GET(stix, stix->sp - 1);
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	if (STIX_CLASSOF(stix, rcv) != stix->_class) 
 	{
 		/* the receiver is not a class object */
 		return 0;
 	}
 
-	szoop = STACK_GET(stix, stix->sp);
+	szoop = ACTIVE_STACK_GET(stix, stix->sp);
 	if (STIX_OOP_IS_SMINT(szoop))
 	{
 		size = STIX_OOP_TO_SMINT(szoop);
@@ -384,8 +385,8 @@ static int primitive_new_with_size (stix_t* stix, stix_ooi_t nargs)
 
 	/* remove the argument and replace the receiver with a new object
 	 * instantiated */
-	STACK_POP (stix);
-	STACK_SETTOP (stix, obj);
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, obj);
 
 	return 1; /* success */
 }
@@ -396,8 +397,8 @@ static int primitive_basic_size (stix_t* stix, stix_ooi_t nargs)
 	STIX_ASSERT (nargs == 0);
 
 
-	rcv = STACK_GETTOP(stix);
-	STACK_SETTOP(stix, STIX_OOP_FROM_SMINT(STIX_OBJ_GET_SIZE(rcv)));
+	rcv = ACTIVE_STACK_GETTOP(stix);
+	ACTIVE_STACK_SETTOP(stix, STIX_OOP_FROM_SMINT(STIX_OBJ_GET_SIZE(rcv)));
 /* TODO: use LargeInteger if the size is very big */
 	return 1;
 }
@@ -409,14 +410,14 @@ static int primitive_basic_at (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = STACK_GET(stix, stix->sp - 1);
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	if (!STIX_OOP_IS_POINTER(rcv))
 	{
 		/* the receiver is a special numeric object, not a normal pointer */
 		return 0;
 	}
 
-	pos = STACK_GET(stix, stix->sp);
+	pos = ACTIVE_STACK_GET(stix, stix->sp);
 	if (!STIX_OOP_IS_SMINT(pos))
 	{
 /* TODO: handle LargeInteger */
@@ -458,8 +459,8 @@ static int primitive_basic_at (stix_t* stix, stix_ooi_t nargs)
 			return -1;
 	}
 
-	STACK_POP (stix);
-	STACK_SETTOP (stix, v);
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, v);
 	return 1;
 }
 
@@ -472,14 +473,14 @@ static int primitive_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 
 /* TODO: disallow change of some key kernel objects */
  
-	rcv = STACK_GET(stix, stix->sp - 2);
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 2);
 	if (!STIX_OOP_IS_POINTER(rcv))
 	{
 		/* the receiver is a special numeric object, not a normal pointer */
 		return 0;
 	}
 
-	pos = STACK_GET(stix, stix->sp - 1);
+	pos = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	if (!STIX_OOP_IS_SMINT(pos))
 	{
 /* TODO: handle LargeInteger */
@@ -487,7 +488,7 @@ static int primitive_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 		return 0;
 	}
 
-	val = STACK_GET(stix, stix->sp);
+	val = ACTIVE_STACK_GET(stix, stix->sp);
 
 	idx = STIX_OOP_TO_SMINT(pos);
 	if (idx < 1 || idx > STIX_OBJ_GET_SIZE(rcv))
@@ -540,30 +541,72 @@ static int primitive_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 			return -1;
 	}
 
-	STACK_POPS (stix, 2);
+	ACTIVE_STACK_POPS (stix, 2);
 /* TODO: return receiver or value? */
-	STACK_SETTOP (stix, val);
+	ACTIVE_STACK_SETTOP (stix, val);
 	return 1;
 }
 
 static int primitive_block_context_value (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_block_context_t blkctx;
+	stix_oop_block_context_t blkctx, org_blkctx;
+	stix_ooi_t local_ntmprs, i;
 
-	blkctx = (stix_oop_block_context_t)STACK_GET(stix, stix->sp - nargs);
-	STIX_ASSERT (STIX_CLASSOF(stix, blkctx) == stix->_block_context);
+	/* TODO: find a better way to support a reentrant block context. */
 
-	if (STIX_OOP_TO_SMINT(blkctx->nargs) != nargs) 
+	/* | sum |
+	 * sum := [ :n | (n < 2) ifTrue: [1] ifFalse: [ n + (sum value: (n - 1))] ].
+	 * (sum value: 10).
+	 * 
+	 * For the code above, sum is a block context and it is sent value: inside
+	 * itself. Let me simply clone a block context to allow reentrancy like this
+	 * while the block context is active
+	 */
+	org_blkctx = (stix_oop_block_context_t)ACTIVE_STACK_GET(stix, stix->sp - nargs);
+	STIX_ASSERT (STIX_CLASSOF(stix, org_blkctx) == stix->_block_context);
+
+	if (STIX_OOP_TO_SMINT(org_blkctx->nargs) != nargs) 
 	{
 		/* the number of argument doesn't match */
+/* TODO: better handling of primitive failure */
 printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 		return 0;
 	}
 
-	STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
+/* TODO: what is the right stack size? is 255 too large? any good way to determine it? */ 
+	/* create a new block context to clone org_blkctx */
+	blkctx = (stix_oop_block_context_t) stix_instantiate (stix, stix->_block_context, STIX_NULL, 255); 
+	if (!blkctx) return -1;
 
-	blkctx->ip = blkctx->iip;
-	blkctx->sp = STIX_OOP_FROM_SMINT(nargs);
+	org_blkctx = (stix_oop_block_context_t)ACTIVE_STACK_GET(stix, stix->sp - nargs); /* to be GC-safe */
+	STIX_ASSERT (STIX_CLASSOF(stix, org_blkctx) == stix->_block_context);
+
+	/* shallow-copy the named part. leave the stack part untouched.
+	 * the stack is set up futher down */
+	for (i = 0; i < STIX_BLOCK_CONTEXT_NAMED_INSTVARS; i++)
+	{
+		((stix_oop_oop_t)blkctx)->slot[i] = ((stix_oop_oop_t)org_blkctx)->slot[i];
+	}
+
+/* TODO: check the stack size of a block context to see if it's large enough to hold arguments */
+	for (i = 0; i < nargs; i++)
+	{
+		blkctx->slot[i] = ACTIVE_STACK_GET(stix, stix->sp - nargs + i + 1);
+	}
+	ACTIVE_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
+
+	/*blkctx->ip = blkctx->iip;*/
+
+	STIX_ASSERT (blkctx->home != stix->_nil);
+
+	/* the number of temporaries stored in the block context
+	 * accumulates the number of temporaries starting from the origin.
+	 * simple calculation is needed to find the number of local temporaries */
+	local_ntmprs = STIX_OOP_TO_SMINT(blkctx->ntmprs) -
+	               STIX_OOP_TO_SMINT(((stix_oop_context_t)blkctx->home)->ntmprs);
+	STIX_ASSERT (local_ntmprs >= nargs);
+
+	blkctx->sp = STIX_OOP_FROM_SMINT(local_ntmprs);
 	blkctx->caller = (stix_oop_t)stix->active_context;
 
 	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)blkctx);
@@ -577,22 +620,103 @@ static int primitive_integer_add (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = STACK_GET(stix, stix->sp - 1);
-	arg = STACK_GET(stix, stix->sp);
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
 	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
 	{
 		tmp = STIX_OOP_TO_SMINT(rcv) + STIX_OOP_TO_SMINT(arg);
 		/* TODO: check overflow. if so convert it to LargeInteger */
 
-		STACK_POP (stix);
-		STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(tmp));
+		ACTIVE_STACK_POP (stix);
+		ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(tmp));
 		return 1;
 	}
 
 /* TODO: handle LargeInteger */
 	return 0;
 }
+
+static int primitive_integer_sub (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_ooi_t tmp;
+	stix_oop_t rcv, arg;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	{
+		tmp = STIX_OOP_TO_SMINT(rcv) - STIX_OOP_TO_SMINT(arg);
+		/* TODO: check overflow. if so convert it to LargeInteger */
+
+		ACTIVE_STACK_POP (stix);
+		ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(tmp));
+		return 1;
+	}
+
+/* TODO: handle LargeInteger */
+	return 0;
+}
+
+static int primitive_integer_lt (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	{
+		ACTIVE_STACK_POP (stix);
+		if (STIX_OOP_TO_SMINT(rcv) < STIX_OOP_TO_SMINT(arg))
+		{
+			ACTIVE_STACK_SETTOP (stix, stix->_true);
+		}
+		else
+		{
+			ACTIVE_STACK_SETTOP (stix, stix->_false);
+		}
+		
+		return 1;
+	}
+
+/* TODO: handle LargeInteger */
+	return 0;
+}
+
+static int primitive_integer_gt (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	{
+		ACTIVE_STACK_POP (stix);
+		if (STIX_OOP_TO_SMINT(rcv) > STIX_OOP_TO_SMINT(arg))
+		{
+			ACTIVE_STACK_SETTOP (stix, stix->_true);
+		}
+		else
+		{
+			ACTIVE_STACK_SETTOP (stix, stix->_false);
+		}
+		
+		return 1;
+	}
+
+/* TODO: handle LargeInteger */
+	return 0;
+}
+
 
 typedef int (*primitive_handler_t) (stix_t* stix, stix_ooi_t nargs);
 
@@ -613,6 +737,9 @@ static primitive_t primitives[] =
 	{   2,   primitive_basic_at_put         },
 	{  -1,   primitive_block_context_value  },
 	{   1,   primitive_integer_add          },
+	{   1,   primitive_integer_sub          },
+	{   1,   primitive_integer_lt           },
+	{   1,   primitive_integer_gt           }
 };
 
 int stix_execute (stix_t* stix)
@@ -630,7 +757,9 @@ int stix_execute (stix_t* stix)
 		mth = stix->active_context->origin->method;
 		code = mth->code;
 
+#if 0
 printf ("IP => %d ", (int)stix->ip);
+#endif
 		bc = code->slot[stix->ip++];
 		/*if (bc == CODE_NOOP) continue; TODO: DO I NEED THIS???*/
 
@@ -658,41 +787,120 @@ printf ("IP => %d ", (int)stix->ip);
 			b1 = bc & 0xF;
 		}
 
+#if 0
 printf ("CMD => %d, B1 = %d, SP = %d, IP AFTER INC %d\n", (int)cmd, (int)b1, (int)stix->sp, (int)stix->ip);
+#endif
 		switch (cmd)
 		{
 
 			case CMD_PUSH_INSTVAR:
 printf ("PUSH_INSTVAR %d\n", (int)b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver) == STIX_OBJ_TYPE_OOP);
-				STACK_PUSH (stix, ((stix_oop_oop_t)stix->active_context->origin->receiver)->slot[b1]);
+				ACTIVE_STACK_PUSH (stix, ((stix_oop_oop_t)stix->active_context->origin->receiver)->slot[b1]);
 				break;
 
 			case CMD_PUSH_TEMPVAR:
 /* TODO: consider temp offset, block context, etc */
 
 printf ("PUSH_TEMPVAR idx=%d - ", (int)b1);
-print_object (stix, STACK_GET(stix, b1));
+				if (stix->active_context->home != stix->_nil)
+				{
+/*TODO: improve this slow temporary access */
+					/* this code assuments that the method context and
+					 * the block context places some key fields in the
+					 * same offset. such fields include 'home', 'ntmprs' */
+					stix_oop_context_t ctx;
+					stix_oop_t home;
+					stix_ooi_t home_ntmprs;
+
+					ctx = stix->active_context;
+					home = ctx->home;
+
+					do
+					{
+						home_ntmprs = STIX_OOP_TO_SMINT(((stix_oop_context_t)home)->ntmprs);
+						if (b1 >= home_ntmprs) break;
+
+						ctx = (stix_oop_context_t)home;
+						home = ((stix_oop_context_t)home)->home;
+						if (home == stix->_nil)
+						{
+							home_ntmprs = 0;
+							break;
+						}
+					}
+					while (1);
+
+print_object (stix, ctx->slot[b1 - home_ntmprs]);
 printf ("\n");
-				STACK_PUSH (stix, STACK_GET(stix, b1));
+
+printf ("    XXCTX %p STACK TEMPVAR PTR=>%p ADJOFF=%d B1=%d HOME_NTMPRS=%d\n", ctx, &ctx->slot[b1-home_ntmprs], (int)(b1 - home_ntmprs), (int)b1, (int)home_ntmprs);
+					ACTIVE_STACK_PUSH (stix, ctx->slot[b1 - home_ntmprs]);
+				}
+				else
+				{
+print_object (stix, ACTIVE_STACK_GET(stix, b1));
+printf ("\n");
+
+printf ("    YYCTX %p STACK TEMPVAR PTR=>%p ADJOFF=%d\n", stix->active_context, &stix->active_context->slot[b1], (int)b1);
+					ACTIVE_STACK_PUSH (stix, ACTIVE_STACK_GET(stix, b1));
+				}
+
 				break;
 
 			case CMD_PUSH_LITERAL:
 printf ("PUSH_LITERAL idx=%d - ", (int)b1);
 print_object (stix, stix->active_context->origin->method->slot[b1]);
 printf ("\n");
-				STACK_PUSH (stix, stix->active_context->origin->method->slot[b1]);
+				ACTIVE_STACK_PUSH (stix, stix->active_context->origin->method->slot[b1]);
 				break;
 
 			case CMD_STORE_INTO_INSTVAR:
 printf ("STORE_INSTVAR %d\n", (int)b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver) == STIX_OBJ_TYPE_OOP);
-				((stix_oop_oop_t)stix->active_context->origin->receiver)->slot[b1] = STACK_GETTOP(stix);
+				((stix_oop_oop_t)stix->active_context->origin->receiver)->slot[b1] = ACTIVE_STACK_GETTOP(stix);
 				break;
 
 			case CMD_STORE_INTO_TEMPVAR:
-printf ("STORE_TEMPVAR %d\n", (int)b1); /* TODO: consider temp offset block context etc */
-				STACK_SET (stix, b1, STACK_GETTOP(stix));
+printf ("STORE_TEMPVAR idx=%d - ", (int)b1);
+print_object (stix, ACTIVE_STACK_GETTOP(stix));
+printf ("\n");
+				if (stix->active_context->home != stix->_nil)
+				{
+/*TODO: improve this slow temporary access */
+					/* this code assuments that the method context and
+					 * the block context places some key fields in the
+					 * same offset. such fields include 'home', 'ntmprs' */
+					stix_oop_context_t ctx;
+					stix_oop_t home;
+					stix_ooi_t home_ntmprs;
+
+					ctx = stix->active_context;
+					home = ctx->home;
+
+					do
+					{
+						home_ntmprs = STIX_OOP_TO_SMINT(((stix_oop_context_t)home)->ntmprs);
+						if (b1 >= home_ntmprs) break;
+
+						ctx = (stix_oop_context_t)home;
+						home = ((stix_oop_context_t)home)->home;
+						if (home == stix->_nil)
+						{
+							home_ntmprs = 0;
+							break;
+						}
+					}
+					while (1);
+
+printf ("    XXCTX %p STACK TEMPVAR PTR=>%p ADJOFF=%d B1=%d HOME_NTMPRS=%d\n", ctx, &ctx->slot[b1-home_ntmprs], (int)(b1 - home_ntmprs), (int)b1, (int)home_ntmprs);
+					ctx->slot[b1 - home_ntmprs] = ACTIVE_STACK_GETTOP(stix);
+				}
+				else
+				{
+printf ("    YYCTX %p STACK TEMPVAR PTR=>%p ADJOFF=%d\n", stix->active_context, &stix->active_context->slot[b1], (int)b1);
+					ACTIVE_STACK_SET (stix, b1, ACTIVE_STACK_GETTOP(stix));
+				}
 				break;
 
 		/* -------------------------------------------------------- */
@@ -725,7 +933,7 @@ printf ("PUSH OBJVAR index=%d object_index_in_literal_frame=%d - ", (int)b1, (in
 				STIX_ASSERT (obj_index < STIX_OBJ_GET_SIZE(obj));
 print_object (stix, obj->slot[b1]);
 printf ("\n");
-				STACK_PUSH (stix, obj->slot[b1]);
+				ACTIVE_STACK_PUSH (stix, obj->slot[b1]);
 				break;
 			}
 
@@ -741,7 +949,7 @@ printf ("STORE OBJVAR index=%d object_index_in_literal_frame=%d - ", (int)b1, (i
 				obj = (stix_oop_oop_t)stix->active_context->origin->method->slot[obj_index];
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(obj) == STIX_OBJ_TYPE_OOP);
 				STIX_ASSERT (obj_index < STIX_OBJ_GET_SIZE(obj));
-				obj->slot[b1] = STACK_GETTOP(stix);
+				obj->slot[b1] = ACTIVE_STACK_GETTOP(stix);
 print_object (stix, obj->slot[b1]);
 printf ("\n");
 				break;
@@ -771,12 +979,12 @@ printf ("\n");
 				selector = (stix_oop_char_t)stix->active_context->origin->method->slot[selector_index];
 
 if (cmd == CMD_SEND_MESSAGE)
-printf ("SEND_MESSAGE TO RECEIVER AT %d NARGS=%d\n", (int)(stix->sp - b1), (int)b1);
+printf ("SEND_MESSAGE TO RECEIVER AT STACKPOS=%d NARGS=%d RECEIER=", (int)(stix->sp - b1), (int)b1);
 else
-printf ("SEND_MESSAGE_TO_SUPER TO RECEIVER AT %d NARGS=%d\n", (int)(stix->sp - b1), (int)b1);
+printf ("SEND_MESSAGE_TO_SUPER TO RECEIVER AT STACKPOS=%d NARGS=%d RECEIVER=", (int)(stix->sp - b1), (int)b1);
 				STIX_ASSERT (STIX_CLASSOF(stix, selector) == stix->_symbol);
 
-				newrcv = STACK_GET(stix, stix->sp - b1);
+				newrcv = ACTIVE_STACK_GET(stix, stix->sp - b1);
 print_object(stix, newrcv);
 printf ("\n");
 				mthname.ptr = selector->slot;
@@ -798,21 +1006,21 @@ printf ("]\n");
 				{
 					case STIX_METHOD_PREAMBLE_RETURN_RECEIVER:
 printf ("RETURN RECEIVER AT PREAMBLE\n");
-						STACK_POPS (stix, b1); /* pop arguments only*/
+						ACTIVE_STACK_POPS (stix, b1); /* pop arguments only*/
 						break;
 
 					case STIX_METHOD_PREAMBLE_RETURN_INSTVAR:
 					{
 						stix_oop_oop_t rcv;
 
-						STACK_POPS (stix, b1); /* pop arguments only */
+						ACTIVE_STACK_POPS (stix, b1); /* pop arguments only */
 
 printf ("RETURN INSTVAR AT PREAMBLE\n");
 						/* replace the receiver by an instance variable of the receiver */
-						rcv = (stix_oop_oop_t)STACK_GETTOP(stix);
+						rcv = (stix_oop_oop_t)ACTIVE_STACK_GETTOP(stix);
 						STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(rcv) == STIX_OBJ_TYPE_OOP);
 						STIX_ASSERT (STIX_OBJ_GET_SIZE(rcv) > STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
-						STACK_SET (stix, stix->sp, rcv->slot[STIX_METHOD_GET_PREAMBLE_INDEX(preamble)]);
+						ACTIVE_STACK_SET (stix, stix->sp, rcv->slot[STIX_METHOD_GET_PREAMBLE_INDEX(preamble)]);
 						break;
 					}
 
@@ -850,42 +1058,42 @@ printf ("RETURN INSTVAR AT PREAMBLE\n");
 				{
 					case SUBCMD_PUSH_RECEIVER:
 printf ("PUSH_RECEIVER %p TO STACK INDEX %d\n", stix->active_context->origin->receiver, (int)stix->sp);
-						STACK_PUSH (stix, stix->active_context->origin->receiver);
+						ACTIVE_STACK_PUSH (stix, stix->active_context->origin->receiver);
 						break;
 
 					case SUBCMD_PUSH_NIL:
 printf ("PUSH_NIL\n");
-						STACK_PUSH (stix, stix->_nil);
+						ACTIVE_STACK_PUSH (stix, stix->_nil);
 						break;
 
 					case SUBCMD_PUSH_TRUE:
 printf ("PUSH_TRUE\n");
-						STACK_PUSH (stix, stix->_true);
+						ACTIVE_STACK_PUSH (stix, stix->_true);
 						break;
 
 					case SUBCMD_PUSH_FALSE:
 printf ("PUSH_FALSE\n");
-						STACK_PUSH (stix, stix->_false);
+						ACTIVE_STACK_PUSH (stix, stix->_false);
 						break;
 
 					case SUBCMD_PUSH_CONTEXT:
 printf ("PUSH_CONTEXT\n");
-						STACK_PUSH (stix, (stix_oop_t)stix->active_context);
+						ACTIVE_STACK_PUSH (stix, (stix_oop_t)stix->active_context);
 						break;
 
 					case SUBCMD_PUSH_NEGONE:
 printf ("PUSH_NEGONE\n");
-						STACK_PUSH (stix, STIX_OOP_FROM_SMINT(-1));
+						ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(-1));
 						break;
 
 					case SUBCMD_PUSH_ZERO:
 printf ("PUSH_ZERO\n");
-						STACK_PUSH (stix, STIX_OOP_FROM_SMINT(0));
+						ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(0));
 						break;
 
 					case SUBCMD_PUSH_ONE:
 printf ("PUSH_SMINT\n");
-						STACK_PUSH (stix, STIX_OOP_FROM_SMINT(1));
+						ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(1));
 						break;
 				}
 				break; /* CMD_PUSH_SPECIAL */
@@ -898,16 +1106,26 @@ printf ("PUSH_SMINT\n");
 
 				switch (b1)
 				{
+					case SUBCMD_DUP_STACKTOP:
+					{
+						stix_oop_t tmp;
+printf ("DUP_STACKTOP SP=%d\n", (int)stix->sp);
+						STIX_ASSERT (!ACTIVE_STACK_ISEMPTY(stix));
+						tmp = ACTIVE_STACK_GETTOP(stix);
+						ACTIVE_STACK_PUSH (stix, tmp);
+						break;
+					}
+
 					case SUBCMD_POP_STACKTOP:
 printf ("POP_STACKTOP\n");
-						STIX_ASSERT (!STACK_ISEMPTY(stix));
-						STACK_POP (stix);
+						STIX_ASSERT (!ACTIVE_STACK_ISEMPTY(stix));
+						ACTIVE_STACK_POP (stix);
 						break;
 
 					case SUBCMD_RETURN_STACKTOP:
 printf ("RETURN_STACKTOP\n");
-						return_value = STACK_GETTOP(stix);
-						STACK_POP (stix);
+						return_value = ACTIVE_STACK_GETTOP(stix);
+						ACTIVE_STACK_POP (stix);
 						goto handle_return;
 
 					case SUBCMD_RETURN_RECEIVER:
@@ -922,10 +1140,10 @@ printf ("RETURN_RECEIVER\n");
 
 						STIX_ASSERT(STIX_CLASSOF(stix, stix->active_context)  == stix->_block_context);
 
-						return_value = STACK_GETTOP(stix);
+						return_value = ACTIVE_STACK_GETTOP(stix);
 						blkctx = (stix_oop_block_context_t)stix->active_context;
 						SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)blkctx->caller);
-						STACK_PUSH (stix, return_value);
+						ACTIVE_STACK_PUSH (stix, return_value);
 						break;
 					}
 
@@ -939,30 +1157,39 @@ printf ("SEND_BLOCK_COPY\n");
 						/* it emulates thisContext blockCopy: nargs ofTmprCount: ntmprs */
 						STIX_ASSERT (stix->sp >= 2);
 
-						STIX_ASSERT (STIX_CLASSOF(stix, STACK_GETTOP(stix)) == stix->_small_integer);
-						ntmprs = STIX_OOP_TO_SMINT(STACK_GETTOP(stix));
-						STACK_POP (stix);
+						STIX_ASSERT (STIX_CLASSOF(stix, ACTIVE_STACK_GETTOP(stix)) == stix->_small_integer);
+						ntmprs = STIX_OOP_TO_SMINT(ACTIVE_STACK_GETTOP(stix));
+						ACTIVE_STACK_POP (stix);
 
-						STIX_ASSERT (STIX_CLASSOF(stix, STACK_GETTOP(stix)) == stix->_small_integer);
-						nargs = STIX_OOP_TO_SMINT(STACK_GETTOP(stix));
-						STACK_POP (stix);
+						STIX_ASSERT (STIX_CLASSOF(stix, ACTIVE_STACK_GETTOP(stix)) == stix->_small_integer);
+						nargs = STIX_OOP_TO_SMINT(ACTIVE_STACK_GETTOP(stix));
+						ACTIVE_STACK_POP (stix);
 
 						STIX_ASSERT (nargs >= 0);
 						STIX_ASSERT (ntmprs >= nargs);
 
-						blkctx = (stix_oop_block_context_t)stix_instantiate (stix, stix->_block_context, STIX_NULL, 255); /* TODO: proper stack size */
+						/* the block context object created here is used
+						 * as a base object for block context activation.
+						 * primitive_block_context_value() clones a block 
+						 * context and activates the cloned context.
+						 * this base block context is created with no 
+						 * stack for this reason. */
+						blkctx = (stix_oop_block_context_t)stix_instantiate (stix, stix->_block_context, STIX_NULL, 0); 
 						if (!blkctx) return -1;
 
 						/* get the receiver to the block copy message after block context instantiation
 						 * not to get affected by potential GC */
-						rctx = STACK_GETTOP(stix);
+						rctx = ACTIVE_STACK_GETTOP(stix);
 
 						/* blkctx->caller is left to nil */
-						blkctx->ip = STIX_OOP_FROM_SMINT(stix->ip + 3); /* skip the following JUMP */
-						blkctx->sp = STIX_OOP_FROM_SMINT(0);
+						/*blkctx->iip = STIX_OOP_FROM_SMINT(stix->ip + 3); */
+						blkctx->ip = STIX_OOP_FROM_SMINT(stix->ip + 3); /* TOOD: change +3 to the configured JUMP SIZE */
+						blkctx->sp = STIX_OOP_FROM_SMINT(-1);
+						/* the number of arguments for a block context is local to the block */
 						blkctx->nargs = STIX_OOP_FROM_SMINT(nargs);
+						/* the number of temporaries here is an accumulated count including
+						 * the number of temporaries of a home context */
 						blkctx->ntmprs = STIX_OOP_FROM_SMINT(ntmprs);
-						blkctx->iip = STIX_OOP_FROM_SMINT(stix->ip + 3); /* TOOD: change +3 to the configured JUMP SIZE */
 
 						blkctx->home = rctx;
 						if (((stix_oop_context_t)rctx)->home == stix->_nil)
@@ -979,7 +1206,7 @@ printf ("SEND_BLOCK_COPY\n");
 							blkctx->origin = ((stix_oop_block_context_t)rctx)->origin;
 						}
 
-						STACK_SETTOP (stix, (stix_oop_t)blkctx);
+						ACTIVE_STACK_SETTOP (stix, (stix_oop_t)blkctx);
 						break;
 					}
 
@@ -993,7 +1220,7 @@ printf ("SEND_BLOCK_COPY\n");
 						SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->sender);
 
 						/* push the return value to the stack of the new active context */
-						STACK_PUSH (stix, return_value);
+						ACTIVE_STACK_PUSH (stix, return_value);
 
 printf ("<<LEAVING>>\n");
 						if (stix->active_context->sender == stix->_nil)
