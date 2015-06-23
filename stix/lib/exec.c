@@ -742,13 +742,35 @@ static primitive_t primitives[] =
 	{   1,   primitive_integer_gt           }
 };
 
+
+#if (STIX_CODE_EXTEND_SIZE == 2)
+
+#define FETCH_UNSIGNED_CODE_TO(stix, v_code, v_ooi) \
+	do { \
+		v_ooi = (v_code)->slot[(stix)->ip++]; \
+		v_ooi = (v_ooi << 8) | (v_code)->slot[stix->ip++]; \
+	} while (0)
+
+#define FETCH_SIGNED_CODE_TO(stix, v_code, v_ooi) \
+	do { \
+		v_ooi = (v_code)->slot[(stix)->ip++]; \
+		v_ooi = (stix_int16_t)((v_ooi << 8) | (v_code)->slot[stix->ip++]); \
+	} while (0)
+
+#else /* STIX_CODE_EXTEND_SIZE == 2 */
+
+#define FETCH_UNSIGNED_CODE_TO(stix, v_code, v_ooi) (v_ooi = (v_code)->slot[(stix)->ip++])
+#define FETCH_SIGNED_CODE_TO(stix, v_code, v_ooi) (v_ooi = (stix_int8_t)(v_code)->slot[(stix)->ip++])
+
+#endif /* STIX_CODE_EXTEND_SIZE == 2 */
+
 int stix_execute (stix_t* stix)
 {
 	stix_oop_method_t mth;
 	stix_oop_byte_t code;
 
 	stix_byte_t bc, cmd;
-	stix_ooi_t b1;
+	stix_ooi_t b1, b2;
 
 	STIX_ASSERT (stix->active_context != STIX_NULL);
 
@@ -761,30 +783,54 @@ int stix_execute (stix_t* stix)
 printf ("IP => %d ", (int)stix->ip);
 #endif
 		bc = code->slot[stix->ip++];
-		/*if (bc == CODE_NOOP) continue; TODO: DO I NEED THIS???*/
+		while (bc == CODE_NOOP)
+			bc = code->slot[stix->ip++];
 
 		cmd = bc >> 4;
 		if (cmd == CMD_EXTEND)
 		{
 			cmd = bc & 0xF;
-			if (cmd == CMD_JUMP || cmd == CMD_JUMP_IF_FALSE)
-				b1 = (stix_int8_t)code->slot[stix->ip++];
-			else
-				b1 = code->slot[stix->ip++];
-		}
-		else if (cmd == CMD_EXTEND_DOUBLE)
-		{
-			cmd = bc & 0xF;
-			b1 = code->slot[stix->ip++];
+			switch (cmd)
+			{
+				case CMD_JUMP:
+				case CMD_JUMP_IF_FALSE:
+					FETCH_SIGNED_CODE_TO (stix, code, b1);
+					break;
 
-			if (cmd == CMD_JUMP || cmd == CMD_JUMP_IF_FALSE)
-				b1 = (stix_int16_t)((b1 << 8) | code->slot[stix->ip++]); /* JUMP encodes a signed offset */
-			else
-				b1 = (b1 << 8) | code->slot[stix->ip++];
+				case CMD_PUSH_OBJVAR:
+				case CMD_STORE_INTO_OBJVAR:
+				case CMD_SEND_MESSAGE:
+				case CMD_SEND_MESSAGE_TO_SUPER:
+					FETCH_UNSIGNED_CODE_TO (stix, code, b1);
+					FETCH_UNSIGNED_CODE_TO (stix, code, b2);
+					break;
+
+				default:
+					FETCH_UNSIGNED_CODE_TO (stix, code, b1);
+					break;
+			}
 		}
 		else
 		{
-			b1 = bc & 0xF;
+			switch (cmd)
+			{
+				case CMD_JUMP:
+				case CMD_JUMP_IF_FALSE:
+					b1 = bc & 0xF; /* the short jump offset is unsigned */
+					break;
+
+				case CMD_PUSH_OBJVAR:
+				case CMD_STORE_INTO_OBJVAR:
+				case CMD_SEND_MESSAGE:
+				case CMD_SEND_MESSAGE_TO_SUPER:
+					b1 = bc & 0xF;
+					b2 = code->slot[stix->ip++];
+					break;
+
+				default:
+					b1 = bc & 0xF;
+					break;
+			}
 		}
 
 #if 0
@@ -800,14 +846,12 @@ printf ("PUSH_INSTVAR %d\n", (int)b1);
 				break;
 
 			case CMD_PUSH_TEMPVAR:
-/* TODO: consider temp offset, block context, etc */
-
 printf ("PUSH_TEMPVAR idx=%d - ", (int)b1);
 				if (stix->active_context->home != stix->_nil)
 				{
 /*TODO: improve this slow temporary access */
-					/* this code assuments that the method context and
-					 * the block context places some key fields in the
+					/* this code assumes that the method context and
+					 * the block context place some key fields in the
 					 * same offset. such fields include 'home', 'ntmprs' */
 					stix_oop_context_t ctx;
 					stix_oop_t home;
@@ -915,22 +959,15 @@ printf ("JUMP %d\n", (int)b1);
 
 			case CMD_PUSH_OBJVAR:
 			{
-/* COMPACT CODE FOR CMD_PUSH_OBJVAR AND CMD_STORE_INTO_OBJVAR by sharing */
-				/* b1 -> variable index */
-				stix_ooi_t obj_index;
+				/* b1 -> variable index to the object indicated by b2.
+				 * b2 -> object index stored in the literal frame. */
+
 				stix_oop_oop_t obj;
-
-				obj_index = code->slot[stix->ip++];
-				if (cmd == CMD_EXTEND_DOUBLE) 
-				{
-					obj_index = (obj_index << 8) | code->slot[stix->ip++];
-				}
-
-				obj = (stix_oop_oop_t)stix->active_context->origin->method->slot[obj_index];
-printf ("PUSH OBJVAR index=%d object_index_in_literal_frame=%d - ", (int)b1, (int)obj_index);
-
+printf ("PUSH OBJVAR index=%d object_index_in_literal_frame=%d - ", (int)b1, (int)b2);
+				obj = (stix_oop_oop_t)stix->active_context->origin->method->slot[b2];
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(obj) == STIX_OBJ_TYPE_OOP);
-				STIX_ASSERT (obj_index < STIX_OBJ_GET_SIZE(obj));
+				STIX_ASSERT (b1 < STIX_OBJ_GET_SIZE(obj));
+
 print_object (stix, obj->slot[b1]);
 printf ("\n");
 				ACTIVE_STACK_PUSH (stix, obj->slot[b1]);
@@ -939,19 +976,15 @@ printf ("\n");
 
 			case CMD_STORE_INTO_OBJVAR:
 			{
-				stix_ooi_t obj_index;
 				stix_oop_oop_t obj;
-				obj_index = code->slot[stix->ip++];
-				if (cmd == CMD_EXTEND_DOUBLE) 
-					obj_index = (obj_index << 8) | code->slot[stix->ip++];
-
-printf ("STORE OBJVAR index=%d object_index_in_literal_frame=%d - ", (int)b1, (int)obj_index);
-				obj = (stix_oop_oop_t)stix->active_context->origin->method->slot[obj_index];
+printf ("STORE OBJVAR index=%d object_index_in_literal_frame=%d - ", (int)b1, (int)b2);
+				obj = (stix_oop_oop_t)stix->active_context->origin->method->slot[b2];
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(obj) == STIX_OBJ_TYPE_OOP);
-				STIX_ASSERT (obj_index < STIX_OBJ_GET_SIZE(obj));
-				obj->slot[b1] = ACTIVE_STACK_GETTOP(stix);
-print_object (stix, obj->slot[b1]);
+				STIX_ASSERT (b1 < STIX_OBJ_GET_SIZE(obj));
+
+print_object (stix, ACTIVE_STACK_GETTOP(stix));
 printf ("\n");
+				obj->slot[b1] = ACTIVE_STACK_GETTOP(stix);
 				break;
 			}
 
@@ -960,23 +993,21 @@ printf ("\n");
 			case CMD_SEND_MESSAGE_TO_SUPER:
 			{
 /* TODO: tail call optimization */
+
 				/* b1 -> number of arguments 
+				 * b2 -> index to the selector stored in the literal frame
 				 */
 				stix_ucs_t mthname;
 				stix_oop_t newrcv;
 				stix_oop_method_t newmth;
 				stix_oop_char_t selector;
-				stix_ooi_t selector_index;
 				stix_ooi_t preamble;
 
 				/* the next byte is the message selector index to the
 				 * literal frame. */
-				selector_index = code->slot[stix->ip++];
-				if (cmd == CMD_EXTEND_DOUBLE) 
-					selector_index = (selector_index << 8) | code->slot[stix->ip++];
 
 				/* get the selector from the literal frame */
-				selector = (stix_oop_char_t)stix->active_context->origin->method->slot[selector_index];
+				selector = (stix_oop_char_t)stix->active_context->origin->method->slot[b2];
 
 if (cmd == CMD_SEND_MESSAGE)
 printf ("SEND_MESSAGE TO RECEIVER AT STACKPOS=%d NARGS=%d RECEIER=", (int)(stix->sp - b1), (int)b1);
@@ -1149,11 +1180,10 @@ printf ("RETURN_RECEIVER\n");
 
 					case SUBCMD_SEND_BLOCK_COPY:
 					{
-printf ("SEND_BLOCK_COPY\n");
 						stix_ooi_t nargs, ntmprs;
 						stix_oop_t rctx;
 						stix_oop_block_context_t blkctx;
-
+printf ("SEND_BLOCK_COPY\n");
 						/* it emulates thisContext blockCopy: nargs ofTmprCount: ntmprs */
 						STIX_ASSERT (stix->sp >= 2);
 
@@ -1182,8 +1212,13 @@ printf ("SEND_BLOCK_COPY\n");
 						rctx = ACTIVE_STACK_GETTOP(stix);
 
 						/* blkctx->caller is left to nil */
-						/*blkctx->iip = STIX_OOP_FROM_SMINT(stix->ip + 3); */
-						blkctx->ip = STIX_OOP_FROM_SMINT(stix->ip + 3); /* TOOD: change +3 to the configured JUMP SIZE */
+						/*blkctx->iip = STIX_OOP_FROM_SMINT(stix->ip + STIX_CODE_EXTEND_SIZE + 1); */
+
+						/* the extended jump instruction has the format of 
+						 *   0000XXXX KKKKKKKK or 0000XXXX KKKKKKKK KKKKKKKK 
+						 * depending on STIX_CODE_EXTEND_SIZE. change 'ip' to point to
+						 * the instruction after the jump. */
+						blkctx->ip = STIX_OOP_FROM_SMINT(stix->ip + STIX_CODE_EXTEND_SIZE + 1);
 						blkctx->sp = STIX_OOP_FROM_SMINT(-1);
 						/* the number of arguments for a block context is local to the block */
 						blkctx->nargs = STIX_OOP_FROM_SMINT(nargs);

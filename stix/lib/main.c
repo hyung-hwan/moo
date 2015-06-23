@@ -177,6 +177,7 @@ static char* syntax_error_msg[] =
 	"string expected",
 	"invalid radix", 
 	"invalid numeric literal",
+	"byte too small or too large",
 	"{ expected",
 	"} expected",
 	"( expected",

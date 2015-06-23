@@ -29,6 +29,9 @@
 
 #include "stix.h"
 
+/* you can define this to either 1 or 2 */
+#define STIX_CODE_EXTEND_SIZE 2
+
 /* this is useful for debugging. stix_gc() can be called 
  * while stix has not been fully initialized when this is defined*/
 #define STIX_SUPPORT_GC_DURING_IGNITION
@@ -277,6 +280,7 @@ enum stix_synerrnum_t
 	STIX_SYNERR_STRING,        /* string expected */
 	STIX_SYNERR_RADIX,         /* invalid radix */
 	STIX_SYNERR_RADNUMLIT,     /* invalid numeric literal with radix */
+	STIX_SYNERR_BYTERANGE,     /* byte too small or too large */
 	STIX_SYNERR_LBRACE,        /* { expected */
 	STIX_SYNERR_RBRACE,        /* } expected */
 	STIX_SYNERR_LPAREN,        /* ( expected */
@@ -360,6 +364,7 @@ struct stix_compiler_t
 	/* the last token read */
 	stix_iotok_t  tok;
 	stix_iolink_t* io_names;
+	int in_array;
 
 	stix_synerr_t synerr;
 
@@ -433,6 +438,16 @@ struct stix_compiler_t
 		stix_size_t literal_count;
 		stix_size_t literal_capa;
 
+		/* byte array elements */
+		stix_byte_t* balit;
+		stix_size_t balit_count;
+		stix_size_t balit_capa;
+
+		/* array elements */
+		stix_oop_t* arlit;
+		stix_size_t arlit_count;
+		stix_size_t arlit_capa;
+
 		/* primitive number */
 		stix_ooi_t prim_no; 
 
@@ -444,62 +459,72 @@ struct stix_compiler_t
 
 #endif
 
+#if defined(STIX_CODE_EXTEND_SIZE) && (STIX_CODE_EXTEND_SIZE == 1)
+#	define MAX_CODE_INDEX               (0xFFu)
+#	define MAX_CODE_NTMPRS              (0xFFu)
+#	define MAX_CODE_NARGS               (0xFFu)
+#	define MAX_CODE_NBLKARGS            (0xFFu)
+#	define MAX_CODE_NBLKTMPRS           (0xFFu)
+#	define MAX_CODE_PRIMNO              (0xFFFFu)
+#	define MIN_CODE_JUMP                (-0x80)
+#	define MAX_CODE_JUMP                (0x7F)
+#elif defined(STIX_CODE_EXTEND_SIZE) && (STIX_CODE_EXTEND_SIZE == 2)
+#	define MAX_CODE_INDEX               (0xFFFFu)
+#	define MAX_CODE_NTMPRS              (0xFFFFu)
+#	define MAX_CODE_NARGS               (0xFFFFu)
+#	define MAX_CODE_NBLKARGS            (0xFFFFu)
+#	define MAX_CODE_NBLKTMPRS           (0xFFFFu)
+#	define MAX_CODE_PRIMNO              (0xFFFFu)
+#	define MIN_CODE_JUMP                (-0x8000)
+#	define MAX_CODE_JUMP                (0x7FFF)
+#else
+#	error Unsupported STIX_CODE_EXTEND_SIZE
+#endif
 
-#define MAKE_CODE(x,y) (((x) << 4) | y)
-#define MAX_CODE_INDEX               (0xFFFFu)
-#define MAX_CODE_NTMPRS               (0xFFFFu)
-#define MAX_CODE_NARGS               (0xFFFFu)
-#define MAX_CODE_NBLKARGS            (0xFFFFu)
-#define MAX_CODE_NBLKTMPRS           (0xFFFFu)
-#define MAX_CODE_PRIMNO              (0xFFFFu)
-
-#define MIN_CODE_JUMP                (-0x8000)
-#define MAX_CODE_JUMP                (0x7FFF)
 #define MAX_CODE_BLKCODE             MAX_CODE_JUMP
+#define MAKE_CODE(x,y) (((x) << 4) | y)
 
 enum stix_cmdcode_t
 {
 	CMD_EXTEND                     = 0x0,
-	CMD_EXTEND_DOUBLE              = 0x1,
 
 	/* Single positional instructions 
 	 *
 	 * XXXXJJJJ
 	 * 0000XXXX JJJJJJJJ
-	 * 0001XXXX JJJJJJJJ JJJJJJJJ
+	 * 0000XXXX JJJJJJJJ JJJJJJJJ
 	 *
 	 * XXXX is one of the following positional instructions.
 	 * JJJJ or JJJJJJJJ is the position.
 	 */
-	CMD_PUSH_INSTVAR               = 0x2,
-	CMD_PUSH_TEMPVAR               = 0x3,
-	CMD_PUSH_LITERAL               = 0x4,
-	CMD_STORE_INTO_INSTVAR         = 0x5,
-	CMD_STORE_INTO_TEMPVAR         = 0x6,
+	CMD_PUSH_INSTVAR               = 0x1,
+	CMD_PUSH_TEMPVAR               = 0x2,
+	CMD_PUSH_LITERAL               = 0x3,
+	CMD_STORE_INTO_INSTVAR         = 0x4,
+	CMD_STORE_INTO_TEMPVAR         = 0x5,
+	CMD_POP_INTO_INSTVAR           = 0x6,
+	CMD_POP_INTO_TEMPVAR           = 0x7,
 
-/*
- * CMD_POP_INTO_INSTVAR
- * CMD_POP_INTO_TEMPVAR
- */
-
-	CMD_JUMP                       = 0x7,
-	CMD_JUMP_IF_FALSE              = 0x8,
+	/* Jump is a single positional instructions.
+	 * JJJJJJJJ in the extended format is encoded as a signed offset
+	 * while JJJJ in the compact format is an unsigned offset. */
+	CMD_JUMP                       = 0x8,
+	CMD_JUMP_IF_FALSE              = 0x9,
 
 	/*
 	 * Double positional instructions
 	 *
 	 * XXXXJJJJ KKKKKKKK
 	 * 0000XXXX JJJJJJJJ KKKKKKKK
-	 * 0001XXXX JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
+	 * 0000XXXX JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
 	 *
 	 * Access instance variable #JJJJ of an object at literal frame #KKKKKKKK
 	 * Send message at literal frame #KKKKKKKK with #JJJJ arguments.
 	 */
-	CMD_PUSH_OBJVAR                = 0x9,
-	CMD_STORE_INTO_OBJVAR          = 0xA,
-
-	CMD_SEND_MESSAGE               = 0xB,
-	CMD_SEND_MESSAGE_TO_SUPER      = 0xC,
+	CMD_PUSH_OBJVAR                = 0xA,
+	CMD_STORE_INTO_OBJVAR          = 0xB,
+	CMD_SEND_MESSAGE               = 0xC,
+	CMD_SEND_MESSAGE_TO_SUPER      = 0xD,
 
 	/* 
 	 * Single byte instructions 

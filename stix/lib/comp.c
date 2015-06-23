@@ -27,9 +27,11 @@
 #include "stix-prv.h"
 
 #define TOKEN_NAME_ALIGN     256
-#define CLASS_BUFFER_ALIGN   8 /* 256 */
+#define CLASS_BUFFER_ALIGN   8 /* 256 */ /*TODO: change 8 to 256 */
 #define LITERAL_BUFFER_ALIGN 8 /* 256 */
 #define CODE_BUFFER_ALIGN    8 /* 256 */
+#define BALIT_BUFFER_ALIGN   8 /* 256 */
+#define ARLIT_BUFFER_ALIGN   8 /* 256 */
 
 /* initial method dictionary size */
 #define INSTANCE_METHOD_DICTIONARY_SIZE 256 /* TODO: choose the right size */
@@ -358,12 +360,11 @@ static int string_to_smint (stix_t* stix, stix_ucs_t* str, int radixed, stix_ooi
 	 * done by the lexical analyzer */
 
 /* TODO: handle floating point numbers, etc, handle radix */
-	int v, negsign, overflow, base;
+	int v, negsign, base;
 	const stix_uch_t* ptr, * end;
 	stix_oow_t value, old_value;
 
 	negsign = 0;
-	overflow = 0;
 	ptr = str->ptr,
 	end = str->ptr + str->len;
 
@@ -400,28 +401,38 @@ static int string_to_smint (stix_t* stix, stix_ucs_t* str, int radixed, stix_ooi
 		if (value < old_value) 
 		{
 			/* overflow must have occurred */
-			overflow = 1;
+			stix->errnum = STIX_ERANGE;
+			return -1;
 		}
 		old_value = value;
 		ptr++;
 	}
 
-	if (ptr < end || overflow) 
+	if (ptr < end)
 	{
-		/* trailing garbage or overflow */
+		/* trailing garbage? */
 		stix->errnum = STIX_EINVAL;
 		return -1;
 	}
 
 	if (negsign)
 	{
-		if (value > STIX_SMINT_MIN) return -1;
+		/*if (value > STIX_SMINT_MIN) return -1;*/
+		if (value > ((stix_oow_t)STIX_SMINT_MAX + 1)) 
+		{
+			stix->errnum = STIX_ERANGE;
+			return -1;
+		}
 		*num = value;
 		*num *= -1;
 	}
 	else
 	{
-		if (value > STIX_SMINT_MAX) return -1;
+		if (value > STIX_SMINT_MAX) 
+		{
+			stix->errnum = STIX_ERANGE;
+			return -1;
+		}
 		*num = value;
 	}
 
@@ -444,6 +455,9 @@ static int string_to_smint (stix_t* stix, stix_ucs_t* str, int radixed, stix_ooi
 
 #define GET_TOKEN(stix) \
 	do { if (get_token(stix) <= -1) return -1; } while (0)
+
+#define GET_TOKEN_WITH_ERRRET(stix, v_ret) \
+	do { if (get_token(stix) <= -1) return v_ret; } while (0)
 
 #define ADD_TOKEN_STR(stix,s,l) \
 	do { if (add_token_str(stix, s, l) <= -1) return -1; } while (0)
@@ -651,14 +665,16 @@ static int get_ident (stix_t* stix)
 	 * keyword := identifier ":"
 	 */
 
-	stix_uci_t c = stix->c->lxc.c;
+	stix_uci_t c;
+
+	c = stix->c->lxc.c;
 	stix->c->tok.type = STIX_IOTOK_IDENT;
 
+get_more:
 	do 
 	{
 		ADD_TOKEN_CHAR (stix, c);
-		GET_CHAR (stix);
-		c = stix->c->lxc.c;
+		GET_CHAR_TO (stix, c);
 	} 
 	while (is_alnumchar(c));
 
@@ -666,7 +682,17 @@ static int get_ident (stix_t* stix)
 	{
 		ADD_TOKEN_CHAR (stix, c);
 		stix->c->tok.type = STIX_IOTOK_KEYWORD;
-		GET_CHAR (stix);
+		GET_CHAR_TO (stix, c);
+
+		if (stix->c->in_array && is_alnumchar(c)) 
+		{
+			/* [NOTE]
+			 * for an input like #(abc:def 1 2 3), abc:def is returned as
+			 * a keyword. it would not be a real keyword even if it were
+			 * prefixed with #. it is because it doesn't end with a colon. 
+			 */
+			goto get_more;
+		}
 	}
 	else
 	{
@@ -794,6 +820,7 @@ static int get_charlit (stix_t* stix)
 	}
 
 	stix->c->tok.type = STIX_IOTOK_CHRLIT;
+	ADD_TOKEN_CHAR(stix, '$');
 	ADD_TOKEN_CHAR(stix, c);
 	GET_CHAR (stix);
 	return 0;
@@ -1210,21 +1237,21 @@ static STIX_INLINE int emit_byte_instruction (stix_t* stix, stix_byte_t code)
 	return 0;
 }
 
-static int emit_positional_instruction (stix_t* stix, int cmd, stix_size_t index)
+static int emit_positional_instruction (stix_t* stix, int cmd, stix_oow_t index)
 {
 	STIX_ASSERT (cmd <= 0xF);
 	STIX_ASSERT (index <= MAX_CODE_INDEX);
 
-	if (index > 0xFF)
+	if (index > 0xF)
 	{
-		if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND_DOUBLE, cmd)) <= -1 ||
+	#if (STIX_CODE_EXTEND_SIZE == 2)
+		if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND, cmd)) <= -1 ||
 		    emit_byte_instruction(stix, index >> 8) <= -1 ||
 		    emit_byte_instruction(stix, index & 0xFF) <= -1) return -1;
-	}
-	else if (index > 0xF)
-	{
+	#else
 		if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND, cmd)) <= -1 ||
 		    emit_byte_instruction(stix, index) <= -1) return -1;
+	#endif
 	}
 	else
 	{
@@ -1232,7 +1259,6 @@ static int emit_positional_instruction (stix_t* stix, int cmd, stix_size_t index
 	}
 
 	return 0;
-
 }
 
 static int emit_double_positional_instruction (stix_t* stix, int cmd, stix_size_t index_1, stix_size_t index_2)
@@ -1242,8 +1268,8 @@ static int emit_double_positional_instruction (stix_t* stix, int cmd, stix_size_
 	 * 1011JJJJ KKKKKKKK                    Send literal index_2 K with J arguments to super
  	 * 00001010 JJJJJJJJ KKKKKKKK
 	 * 00001011 JJJJJJJJ KKKKKKKK
-	 * 00011010 JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
-	 * 00011011 JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
+	 * 00001010 JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
+	 * 00001011 JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
 	 *
 	 * Send:
 	 *  index_1 nargs                          JJJJ
@@ -1258,19 +1284,19 @@ static int emit_double_positional_instruction (stix_t* stix, int cmd, stix_size_
 	STIX_ASSERT (index_1 <= MAX_CODE_NARGS);
 	STIX_ASSERT (index_2 <= MAX_CODE_INDEX);
 
-	if (index_1 > 0xFF || index_2 > 0xFF)
+	if (index_1 > 0xF || index_2 > 0xFF)
 	{
-		if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND_DOUBLE, cmd)) <= -1 ||
+	#if (STIX_CODE_EXTEND_SIZE == 2)
+		if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND, cmd)) <= -1 ||
 		    emit_byte_instruction(stix, index_1 >> 8) <= -1 ||
 		    emit_byte_instruction(stix, index_1 & 0xFF) <= -1 ||
 		    emit_byte_instruction(stix, index_2 >> 8) <= -1 ||
 		    emit_byte_instruction(stix, index_2 & 0xFF) <= -1) return -1;
-	}
-	else if (index_1 > 0xF)
-	{
+	#else
 		if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND, cmd)) <= -1 ||
 		    emit_byte_instruction(stix, index_1) <= -1 ||
 		    emit_byte_instruction(stix, index_2) <= -1) return -1;
+	#endif
 	}
 	else
 	{
@@ -1280,7 +1306,6 @@ static int emit_double_positional_instruction (stix_t* stix, int cmd, stix_size_
 
 	return 0;
 }
-
 
 static int emit_push_smint_literal (stix_t* stix, stix_ooi_t i)
 {
@@ -1296,6 +1321,8 @@ static int emit_push_smint_literal (stix_t* stix, stix_ooi_t i)
 
 		case 1:
 			return emit_byte_instruction (stix, CODE_PUSH_ONE);
+
+/* TODO: include some other numbers? like 2 */
 	}
 
 
@@ -1308,6 +1335,7 @@ static int emit_push_smint_literal (stix_t* stix, stix_ooi_t i)
 /* ---------------------------------------------------------------------
  * Compiler
  * --------------------------------------------------------------------- */
+
 
 static int add_literal (stix_t* stix, stix_oop_t lit, stix_size_t* index)
 {
@@ -1383,8 +1411,6 @@ static int add_symbol_literal (stix_t* stix, const stix_ucs_t* str, stix_size_t*
 
 	return add_literal (stix, tmp, index);
 }
-
-/* TODO: add_array_literal, add_byte_array_literal () */
 
 static STIX_INLINE int set_class_name (stix_t* stix, const stix_ucs_t* name)
 {
@@ -1639,7 +1665,6 @@ static int compile_class_level_variables (stix_t* stix)
 
 			if (find_class_level_variable(stix, STIX_NULL, &stix->c->tok.name, &var) >= 0)
 			{
-printf ("duplicate variable name type %d pos %lu\n", var.type, var.pos);
 				set_syntax_error (stix, STIX_SYNERR_VARNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
 				return -1;
 			}
@@ -2019,7 +2044,6 @@ static int compile_block_temporaries (stix_t* stix)
 			return -1;
 		}
 
-/* TODO: check if tmpr_count exceededs LIMIT (SMINT MAX). also bytecode max */
 		GET_TOKEN (stix);
 	}
 
@@ -2035,9 +2059,9 @@ static int compile_block_temporaries (stix_t* stix)
 
 static int compile_block_expression (stix_t* stix)
 {
-	stix_size_t i, jump_inst_pos;
+	stix_size_t jump_inst_pos;
 	stix_size_t saved_tmpr_count, saved_tmprs_len;
-	stix_size_t block_arg_count/*, block_tmpr_count*/;
+	stix_size_t block_arg_count, block_tmpr_count;
 	stix_size_t block_code_size;
 	stix_ioloc_t block_loc, colon_loc, tmpr_loc;
 
@@ -2048,7 +2072,7 @@ static int compile_block_expression (stix_t* stix)
 	 */
 
 	/* this function expects [ not to be consumed away */
-	STIX_ASSERT (stix->c->tok.type = STIX_IOTOK_LBRACK);
+	STIX_ASSERT (stix->c->tok.type == STIX_IOTOK_LBRACK);
 	block_loc = stix->c->tok.loc;
 	GET_TOKEN (stix);
 
@@ -2113,14 +2137,13 @@ static int compile_block_expression (stix_t* stix)
 	tmpr_loc = stix->c->tok.loc;
 	if (compile_block_temporaries(stix) <= -1) return -1;
 
-#if 0
+	/* this is a block-local temporary count */
 	block_tmpr_count = stix->c->mth.tmpr_count - saved_tmpr_count;
 	if (block_tmpr_count > MAX_CODE_NBLKTMPRS)
 	{
 		set_syntax_error (stix, STIX_SYNERR_BLKTMPRFLOOD, &tmpr_loc, STIX_NULL); 
 		return -1;
 	}
-#endif
 
 printf ("\tpush_context nargs %d ntmprs %d\n", (int)block_arg_count, (int)stix->c->mth.tmpr_count /*block_tmpr_count*/);
 printf ("\tpush smint %d\n", (int)block_arg_count);
@@ -2134,9 +2157,14 @@ printf ("\tsend_block_copy\n");
 printf ("\tjump\n");
 	/* insert dummy instructions before replacing them with a jump instruction */
 	jump_inst_pos = stix->c->mth.code.len;
-	if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND_DOUBLE, CMD_JUMP)) <= -1 ||
+#if (STIX_CODE_EXTEND_SIZE == 2)
+	if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND, CMD_JUMP)) <= -1 ||
 	    emit_byte_instruction(stix, 0) <= -1 ||
 	    emit_byte_instruction(stix, 0) <= -1) return -1;
+#else
+	if (emit_byte_instruction(stix, MAKE_CODE(CMD_EXTEND, CMD_JUMP)) <= -1 ||
+	    emit_byte_instruction(stix, 0) <= -1) return -1;
+#endif
 
 	/* compile statements inside a block */
 	if (stix->c->tok.type == STIX_IOTOK_RBRACK)
@@ -2190,6 +2218,246 @@ printf ("\tjump\n");
 	return 0;
 }
 
+
+static int add_to_balit_buffer (stix_t* stix, stix_byte_t b)
+{
+	if (stix->c->mth.balit_count >= stix->c->mth.balit_capa)
+	{
+		stix_byte_t* tmp;
+		stix_size_t new_capa;
+
+		new_capa = STIX_ALIGN (stix->c->mth.balit_count + 1, BALIT_BUFFER_ALIGN);
+		tmp = (stix_byte_t*)stix_reallocmem (stix, stix->c->mth.balit, new_capa * STIX_SIZEOF(*tmp));
+		if (!tmp) return -1;
+
+		stix->c->mth.balit_capa = new_capa;
+		stix->c->mth.balit = tmp;
+	}
+
+	stix->c->mth.balit[stix->c->mth.balit_count++] = b;
+	return 0;
+}
+
+static int add_to_arlit_buffer (stix_t* stix, stix_oop_t item)
+{
+	if (stix->c->mth.arlit_count >= stix->c->mth.arlit_capa)
+	{
+		stix_oop_t* tmp;
+		stix_size_t new_capa;
+
+		new_capa = STIX_ALIGN (stix->c->mth.arlit_count + 1, ARLIT_BUFFER_ALIGN);
+		tmp = (stix_oop_t*)stix_reallocmem (stix, stix->c->mth.arlit, new_capa * STIX_SIZEOF(*tmp));
+		if (!tmp) return -1;
+
+		stix->c->mth.arlit_capa = new_capa;
+		stix->c->mth.arlit = tmp;
+	}
+
+/* TODO: overflow check of stix->c->mth.arlit_count */
+	stix->c->mth.arlit[stix->c->mth.arlit_count++] = item;
+	return 0;
+}
+
+
+static int __compile_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
+{
+	stix_ooi_t tmp;
+	stix_oop_t ba;
+
+	stix->c->mth.balit_count = 0;
+
+	while (stix->c->tok.type == STIX_IOTOK_NUMLIT || stix->c->tok.type == STIX_IOTOK_RADNUMLIT)
+	{
+		/* TODO: check if the number is an integer */
+
+		if (string_to_smint(stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT, &tmp) <= -1)
+		{
+			/* the token reader reads a valid token. no other errors
+			 * than the range error must not occur */
+			STIX_ASSERT (stix->errnum == STIX_ERANGE);
+
+printf ("NOT IMPLEMENTED LARGE_INTEGER or ERROR?\n");
+			stix->errnum = STIX_ENOIMPL;
+			return -1;
+		}
+		else if (tmp < 0 || tmp > 255)
+		{
+			set_syntax_error (stix, STIX_SYNERR_BYTERANGE, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+
+		if (add_to_balit_buffer(stix, tmp) <= -1) return -1;
+		GET_TOKEN (stix);
+	}
+
+	if (stix->c->tok.type != STIX_IOTOK_RBRACK)
+	{
+		set_syntax_error (stix, STIX_SYNERR_RBRACK, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	ba = stix_instantiate (stix, stix->_byte_array, stix->c->mth.balit, stix->c->mth.balit_count);
+	if (!ba) return -1;
+
+	*xlit = ba;
+	return 0;
+}
+
+struct arlit_info_t
+{
+	stix_size_t pos;
+	stix_size_t len;
+};
+
+typedef struct arlit_info_t arlit_info_t;
+
+static int __compile_array_literal (stix_t* stix, stix_oop_t* xlit)
+{
+	stix_oop_t lit, a;
+	stix_size_t i, saved_arlit_count;
+	arlit_info_t info;
+
+	info.pos = stix->c->mth.arlit_count;
+	info.len = 0;
+
+	do
+	{
+		switch (stix->c->tok.type)
+		{
+/* TODO: floating pointer number */
+
+			case STIX_IOTOK_NUMLIT:
+			case STIX_IOTOK_RADNUMLIT:
+			{
+				stix_ooi_t tmp;
+
+				if (string_to_smint(stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT, &tmp) <= -1)
+				{
+					/* the token reader reads a valid token. no other errors
+					 * than the range error must not occur */
+					STIX_ASSERT (stix->errnum == STIX_ERANGE);
+
+/* TODO: IMPLMENET LARGE INTEGER */
+printf ("LARGE NOT IMPLEMENTED IN COMPILE_ARRAY_LITERAL\n");
+					stix->errnum = STIX_ENOIMPL;
+					return -1;
+				}
+
+				lit = STIX_OOP_FROM_SMINT(tmp);
+				break;
+			}
+
+			case STIX_IOTOK_CHRLIT:
+				STIX_ASSERT (stix->c->tok.name.len == 2);
+				lit = STIX_OOP_FROM_CHAR(stix->c->tok.name.ptr[1]);
+				break;
+
+			case STIX_IOTOK_STRLIT:
+				lit = stix_instantiate (stix, stix->_string, stix->c->tok.name.ptr, stix->c->tok.name.len);
+				break;
+
+			case STIX_IOTOK_IDENT:
+			case STIX_IOTOK_BINSEL:
+			case STIX_IOTOK_KEYWORD:
+			case STIX_IOTOK_SYMLIT:
+			case STIX_IOTOK_SELF:
+			case STIX_IOTOK_SUPER:
+			case STIX_IOTOK_THIS_CONTEXT:
+				lit = stix_makesymbol (stix, stix->c->tok.name.ptr, stix->c->tok.name.len);
+				break;
+
+			case STIX_IOTOK_NIL:
+				lit = stix->_nil;
+				break;
+
+			case STIX_IOTOK_TRUE:
+				lit = stix->_true;
+				break;
+
+			case STIX_IOTOK_FALSE:
+				lit = stix->_false;
+				break;
+
+			case STIX_IOTOK_APAREN: /* #( */
+			case STIX_IOTOK_LPAREN: /* ( */
+				saved_arlit_count = stix->c->mth.arlit_count;
+/* TODO: get rid of recursion?? */
+				GET_TOKEN (stix);
+				if (__compile_array_literal (stix, &lit) <= -1) return -1;
+				stix->c->mth.arlit_count = saved_arlit_count;
+				break;
+
+			case STIX_IOTOK_BPAREN: /* #[ */
+			case STIX_IOTOK_LBRACK: /* [ */
+				GET_TOKEN (stix);
+				if (__compile_byte_array_literal (stix, &lit) <= -1) return -1;
+				break;
+
+			default:
+				goto done;
+		}
+
+		if (!lit || add_to_arlit_buffer(stix, lit) <= -1) return -1;
+		info.len++;
+
+		GET_TOKEN (stix);
+	}
+	while (1);
+
+done:
+	if (stix->c->tok.type != STIX_IOTOK_RPAREN)
+	{
+		set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	a = stix_instantiate (stix, stix->_array, STIX_NULL, info.len);
+	if (!a) return -1;
+
+	for (i = 0; i < info.len; i++)
+	{
+		((stix_oop_oop_t)a)->slot[i] = stix->c->mth.arlit[info.pos + i];
+	}
+
+	*xlit = a;
+	return 0;
+}
+
+static int compile_byte_array_literal (stix_t* stix)
+{
+	stix_oop_t lit;
+	stix_size_t index;
+
+	GET_TOKEN (stix); /* skip #[ and read the next token */
+	if (__compile_byte_array_literal (stix, &lit) <= -1) return -1;
+
+printf ("\tpush_literal byte_array\n");
+	if (add_literal (stix, lit, &index) <= -1 ||
+	    emit_positional_instruction (stix, CMD_PUSH_LITERAL, index) <= -1) return -1;
+
+	GET_TOKEN (stix);
+	return 0;
+}
+
+static int compile_array_literal (stix_t* stix)
+{
+	stix_oop_t lit;
+	stix_size_t index;
+	int x;
+
+	stix->c->in_array = 1;
+	GET_TOKEN (stix); /* skip #( and read the next token */
+	x = __compile_array_literal (stix, &lit);
+	stix->c->in_array = 0;
+	if (x <= -1) return -1;
+
+printf ("\tpush_literal array\n");
+	if (add_literal (stix, lit, &index) <= -1 ||
+	    emit_positional_instruction (stix, CMD_PUSH_LITERAL, index) <= -1) return -1;
+
+	GET_TOKEN (stix);
+	return 0;
+}
 
 static int compile_expression_primary (stix_t* stix, const stix_ucs_t* ident, const stix_ioloc_t* ident_loc, int* to_super)
 {
@@ -2291,8 +2559,8 @@ printf ("\tpush context...\n");
 				break;
 
 			case STIX_IOTOK_CHRLIT:
-				STIX_ASSERT (stix->c->tok.name.len == 1);
-				if (add_character_literal(stix, stix->c->tok.name.ptr[0], &index) <= -1 ||
+				STIX_ASSERT (stix->c->tok.name.len == 2); /* the token includes $ */
+				if (add_character_literal(stix, stix->c->tok.name.ptr[1], &index) <= -1 ||
 				    emit_positional_instruction(stix, CMD_PUSH_LITERAL, index) <= -1) return -1;
 printf ("\tpush character literal %d\n", (int)index);
 				GET_TOKEN (stix);
@@ -2321,9 +2589,13 @@ printf ("\tpush symbol literal %d\n", (int)index);
 
 				if (string_to_smint(stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT, &tmp) <= -1)
 				{
+					/* the token reader reads a valid token. no other errors
+					 * than the range error must not occur */
+					STIX_ASSERT (stix->errnum == STIX_ERANGE);
+
 printf ("NOT IMPLEMENTED LARGE_INTEGER or ERROR?\n");
-						stix->errnum = STIX_ENOIMPL;
-						return -1;
+					stix->errnum = STIX_ENOIMPL;
+					return -1;
 				}
 				else
 				{
@@ -2335,15 +2607,19 @@ printf ("\tpush int literal\n");
 				break;
 			}
 
-			case STIX_IOTOK_APAREN:
-/* TODO: array literal */
+			case STIX_IOTOK_BPAREN: /* #[ */
+				/*GET_TOKEN (stix);*/
+				if (compile_byte_array_literal(stix) <= -1) return -1;
 				break;
 
-			case STIX_IOTOK_BPAREN:
-/* TODO: byte array literal */
+			case STIX_IOTOK_APAREN: /* #( */
+				/*GET_TOKEN (stix);*/
+				if (compile_array_literal(stix) <= -1) return -1;
 				break;
 
-			case STIX_IOTOK_LBRACK:
+			/* TODO: dynamic array, non constant array #<> or #{} or what is a better bracket? */
+
+			case STIX_IOTOK_LBRACK: /* [ */
 				/*GET_TOKEN (stix);*/
 				if (compile_block_expression(stix) <= -1) return -1;
 				break;
@@ -3019,12 +3295,7 @@ static int add_compiled_method (stix_t* stix)
 				if (cmd == CMD_EXTEND)
 				{
 					cmd = stix->c->mth.code.ptr[0] & 0xF;
-					index_size = 1;
-				}
-				else if (cmd == CMD_EXTEND_DOUBLE)
-				{
-					cmd = stix->c->mth.code.ptr[0] & 0xF;
-					index_size = 2;
+					index_size = STIX_CODE_EXTEND_SIZE;
 				}
 				else
 				{
@@ -3086,6 +3357,8 @@ static int compile_method_definition (stix_t* stix)
 	stix->c->mth.tmpr_count = 0;
 	stix->c->mth.tmpr_nargs = 0;
 	stix->c->mth.literal_count = 0;
+	stix->c->mth.balit_count = 0;
+	stix->c->mth.arlit_count = 0;
 	stix->c->mth.code.len = 0;
 	stix->c->mth.prim_no = -1;
 
@@ -3546,7 +3819,8 @@ static int compile_class_definition (stix_t* stix)
 	stix->c->cls.mthdic_oop[MTH_INSTANCE] = STIX_NULL;
 	stix->c->cls.mthdic_oop[MTH_CLASS] = STIX_NULL;
 	stix->c->mth.literal_count = 0;
-
+	stix->c->mth.balit_count = 0;
+	stix->c->mth.arlit_count = 0;
 
 	/* do main compilation work */
 	n = __compile_class_definition (stix);
@@ -3557,6 +3831,8 @@ static int compile_class_definition (stix_t* stix)
 	stix->c->cls.mthdic_oop[MTH_INSTANCE] = STIX_NULL;
 	stix->c->cls.mthdic_oop[MTH_CLASS] = STIX_NULL;
 	stix->c->mth.literal_count = 0;
+	stix->c->mth.balit_count = 0;
+	stix->c->mth.arlit_count = 0;
 
 	return n;
 }
@@ -3630,6 +3906,12 @@ static void gc_compiler (stix_t* stix)
 				stix->c->mth.literals[i] = stix_moveoop (stix, stix->c->mth.literals[i]);
 			}
 		}
+
+		for (i = 0; i < stix->c->mth.arlit_count; i++)
+		{
+			if (STIX_OOP_IS_POINTER(stix->c->mth.arlit[i]))
+				stix->c->mth.arlit[i] = stix_moveoop (stix, stix->c->mth.arlit[i]);
+		}
 	}
 }
 
@@ -3659,6 +3941,8 @@ static void fini_compiler (stix_t* stix)
 		if (stix->c->mth.tmprs.ptr) stix_freemem (stix, stix->c->mth.tmprs.ptr);
 		if (stix->c->mth.code.ptr) stix_freemem (stix, stix->c->mth.code.ptr);
 		if (stix->c->mth.literals) stix_freemem (stix, stix->c->mth.literals);
+		if (stix->c->mth.balit) stix_freemem (stix, stix->c->mth.balit);
+		if (stix->c->mth.arlit) stix_freemem (stix, stix->c->mth.arlit);
 
 		stix_freemem (stix, stix->c);
 		stix->c = STIX_NULL;

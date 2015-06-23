@@ -278,6 +278,7 @@ enum stix_errnum_t
 	STIX_EINTERN, /**< internal error */
 	STIX_ENOMEM,  /**< insufficient memory */
 	STIX_EINVAL,  /**< invalid parameter or data */
+	STIX_ERANGE,  /**< range error. overflow and underflow */
 	STIX_ENOENT,  /**< no matching entry */
 	STIX_EIOERR,  /**< I/O error */
 	STIX_EECERR,  /**< encoding conversion error */
