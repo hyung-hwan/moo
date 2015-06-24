@@ -417,7 +417,7 @@ static int string_to_smint (stix_t* stix, stix_ucs_t* str, int radixed, stix_ooi
 
 	if (negsign)
 	{
-		/*if (value > STIX_SMINT_MIN) return -1;*/
+		/*if (value > -STIX_SMINT_MIN) */
 		if (value > ((stix_oow_t)STIX_SMINT_MAX + 1)) 
 		{
 			stix->errnum = STIX_ERANGE;
@@ -658,7 +658,7 @@ static int skip_comment (stix_t* stix)
 	return 0;
 }
 
-static int get_ident (stix_t* stix)
+static int get_ident (stix_t* stix, stix_uci_t char_read_ahead)
 {
 	/*
 	 * identifier := alpha-char (alpha-char | digit-char)*
@@ -669,6 +669,11 @@ static int get_ident (stix_t* stix)
 
 	c = stix->c->lxc.c;
 	stix->c->tok.type = STIX_IOTOK_IDENT;
+
+	if (char_read_ahead != STIX_UCI_EOF)
+	{
+		ADD_TOKEN_CHAR(stix, char_read_ahead);
+	}
 
 get_more:
 	do 
@@ -819,8 +824,7 @@ static int get_charlit (stix_t* stix)
 		return -1;
 	}
 
-	stix->c->tok.type = STIX_IOTOK_CHRLIT;
-	ADD_TOKEN_CHAR(stix, '$');
+	stix->c->tok.type = STIX_IOTOK_CHARLIT;
 	ADD_TOKEN_CHAR(stix, c);
 	GET_CHAR (stix);
 	return 0;
@@ -834,8 +838,6 @@ static int get_strlit (stix_t* stix)
 	 * single-quote := "'"
 	 * normal-character := character-except-single-quote
 	 */
-
-	/* TODO: C-like string */
 
 	stix_uci_t c = stix->c->lxc.c;
 	stix->c->tok.type = STIX_IOTOK_STRLIT;
@@ -862,6 +864,168 @@ static int get_strlit (stix_t* stix)
 
 	return 0;
 }
+
+static int get_string (stix_t* stix, stix_uch_t end_char, stix_uch_t esc_char, int regex, stix_size_t preescaped)
+{
+	stix_uci_t c;
+	stix_size_t escaped = preescaped;
+	stix_size_t digit_count = 0;
+	stix_uci_t c_acc = 0;
+
+	stix->c->tok.type = STIX_IOTOK_STRLIT;
+
+	while (1)
+	{
+		GET_CHAR_TO (stix, c);
+
+		if (c == STIX_UCI_EOF)
+		{
+			set_syntax_error (stix, STIX_SYNERR_STRNC, &stix->c->tok.loc /*&stix->c->lxc.l*/, STIX_NULL);
+			return -1;
+		}
+
+		if (escaped == 3)
+		{
+			if (c >= '0' && c <= '7')
+			{
+				c_acc = c_acc * 8 + c - '0';
+				digit_count++;
+				if (digit_count >= escaped) 
+				{
+					/* should i limit the max to 0xFF/0377? 
+					 * if (c_acc > 0377) c_acc = 0377;*/
+					ADD_TOKEN_CHAR (stix, c_acc);
+					escaped = 0;
+				}
+				continue;
+			}
+			else
+			{
+				ADD_TOKEN_CHAR (stix, c_acc);
+				escaped = 0;
+			}
+		}
+		else if (escaped == 2 || escaped == 4 || escaped == 8)
+		{
+			if (c >= '0' && c <= '9')
+			{
+				c_acc = c_acc * 16 + c - '0';
+				digit_count++;
+				if (digit_count >= escaped) 
+				{
+					ADD_TOKEN_CHAR (stix, c_acc);
+					escaped = 0;
+				}
+				continue;
+			}
+			else if (c >= 'A' && c <= 'F')
+			{
+				c_acc = c_acc * 16 + c - 'A' + 10;
+				digit_count++;
+				if (digit_count >= escaped) 
+				{
+					ADD_TOKEN_CHAR (stix, c_acc);
+					escaped = 0;
+				}
+				continue;
+			}
+			else if (c >= 'a' && c <= 'f')
+			{
+				c_acc = c_acc * 16 + c - 'a' + 10;
+				digit_count++;
+				if (digit_count >= escaped) 
+				{
+					ADD_TOKEN_CHAR (stix, c_acc);
+					escaped = 0;
+				}
+				continue;
+			}
+			else
+			{
+				stix_uch_t rc;
+
+				rc = (escaped == 2)? 'x':
+				     (escaped == 4)? 'u': 'U';
+				if (digit_count == 0) 
+					ADD_TOKEN_CHAR (stix, rc);
+				else ADD_TOKEN_CHAR (stix, c_acc);
+
+				escaped = 0;
+			}
+		}
+
+		if (escaped == 0 && c == end_char)
+		{
+			/* terminating quote */
+			/*GET_CHAR_TO (stix, c);*/
+			GET_CHAR (stix);
+			break;
+		}
+
+		if (escaped == 0 && c == esc_char)
+		{
+			escaped = 1;
+			continue;
+		}
+
+		if (escaped == 1)
+		{
+			if (c == 'n') c = '\n';
+			else if (c == 'r') c = '\r';
+			else if (c == 't') c = '\t';
+			else if (c == 'f') c = '\f';
+			else if (c == 'b') c = '\b';
+			else if (c == 'v') c = '\v';
+			else if (c == 'a') c = '\a';
+			else if (c >= '0' && c <= '7' && !regex) 
+			{
+				/* i don't support the octal notation for a regular expression.
+				 * it conflicts with the backreference notation between \1 and \7 inclusive. */
+				escaped = 3;
+				digit_count = 1;
+				c_acc = c - '0';
+				continue;
+			}
+			else if (c == 'x') 
+			{
+				escaped = 2;
+				digit_count = 0;
+				c_acc = 0;
+				continue;
+			}
+			else if (c == 'u' && STIX_SIZEOF(stix_uch_t) >= 2) 
+			{
+				escaped = 4;
+				digit_count = 0;
+				c_acc = 0;
+				continue;
+			}
+			else if (c == 'U' && STIX_SIZEOF(stix_uch_t) >= 4) 
+			{
+				escaped = 8;
+				digit_count = 0;
+				c_acc = 0;
+				continue;
+			}
+			else if (regex) 
+			{
+				/* if the following character doesn't compose a proper
+				 * escape sequence, keep the escape character. 
+				 * an unhandled escape sequence can be handled 
+				 * outside this function since the escape character 
+				 * is preserved.*/
+				ADD_TOKEN_CHAR (stix, esc_char);
+			}
+
+			escaped = 0;
+		}
+
+		ADD_TOKEN_CHAR (stix, c);
+	}
+
+	return 0;
+}
+
 
 static int get_binsel (stix_t* stix)
 {
@@ -944,21 +1108,31 @@ retry:
 
 		case ':':
 			stix->c->tok.type = STIX_IOTOK_COLON;
-			ADD_TOKEN_CHAR(stix, c);
-			GET_CHAR (stix);
-
-			c = stix->c->lxc.c;
+			ADD_TOKEN_CHAR (stix, c);
+			GET_CHAR_TO (stix, c);
 			if (c == '=') 
 			{
 				stix->c->tok.type = STIX_IOTOK_ASSIGN;
-				ADD_TOKEN_CHAR(stix, c);
+				ADD_TOKEN_CHAR (stix, c);
 				GET_CHAR (stix);
 			}
 			break;
 
 		case '^':
 			stix->c->tok.type = STIX_IOTOK_RETURN;
-			goto single_char_token;
+			ADD_TOKEN_CHAR(stix, c);
+			GET_CHAR_TO (stix, c);
+#if 0
+/* TODO: support explicit block return */
+			if (c == '^')
+			{
+				/* ^^ */
+				stix->c->tok.type == STIX_IOTOK_BLKRET;
+				ADD_TOKEN_CHAR (stix, c);
+			}
+#endif
+			break;
+
 		case '{': /* extension */
 			stix->c->tok.type = STIX_IOTOK_LBRACE;
 			goto single_char_token;
@@ -1050,13 +1224,16 @@ retry:
 
 							if (is_alphachar(c)) 
 							{
+								/* if a colon is found in the middle of a symbol,
+								 * the last charater is expected to be a colon as well */
 								colon_required =1;
 								goto nextword;
 							}
 						}
 						else if (colon_required)
 						{
-							set_syntax_error (stix, STIX_SYNERR_CLNMS, &stix->c->lxc.l, STIX_NULL);
+							/* the last character is not a colon */
+							set_syntax_error (stix, STIX_SYNERR_COLON, &stix->c->lxc.l, STIX_NULL);
 							return -1;
 						}
 					}
@@ -1069,22 +1246,73 @@ retry:
 					stix->c->tok.type = STIX_IOTOK_SYMLIT;
 					break;
 			}
-				
+
 			break;
+
+		case 'C': /* a character with a C-style escape sequence */
+		case 'S': /* a string with a C-style escape sequences */
+		case 'M': /* a symbol with a C-style escape sequences */
+		{
+			stix_uci_t saved_c = c;
+
+			GET_CHAR_TO (stix, c);
+			if (c == '\'')
+			{
+				/*GET_CHAR (stix);*/
+				if (get_string(stix, '\'', '\\', 0, 0) <= -1) return -1;
+
+				if (saved_c == 'C')
+				{
+					if (stix->c->tok.name.len != 1)
+					{
+						set_syntax_error (stix, STIX_SYNERR_CHARLIT, &stix->c->tok.loc, &stix->c->tok.name);
+						return -1;
+					}
+					stix->c->tok.type = STIX_IOTOK_CHARLIT;
+				}
+				else if (saved_c == 'M')
+				{
+					stix->c->tok.type = STIX_IOTOK_SYMLIT;
+				}
+			}
+			else
+			{
+				if (get_ident(stix, saved_c) <= -1) return -1;
+			}
+
+			break;
+		}
+
+	/*	case 'B': TODO: byte string  with a c-style escape sequence? */
+
+	/*  case 'R':
+			TODO: regular expression?
+			GET_CHAR_TO (stix, c);
+			if (c == '\'')
+			{
+				GET_CHAR (stix);
+				if (get_rexlit(stix) <= -1) return -1;
+			}
+			else
+			{
+				if (get_ident(stix, 'R') <= -1) return -1;
+			}
+			break;
+	 */
 
 		default:
 			if (is_alphachar(c)) 
 			{
-				if (get_ident (stix) <= -1) return -1;
+				if (get_ident(stix, STIX_UCI_EOF) <= -1) return -1;
 			}
 			else if (is_digitchar(c)) 
 			{
-				if (get_numlit (stix, 0) <= -1) return -1;
+				if (get_numlit(stix, 0) <= -1) return -1;
 			}
 			else if (is_binselchar(c)) 
 			{
 				/* binary selector */
-				if (get_binsel (stix) <= -1) return -1;
+				if (get_binsel(stix) <= -1) return -1;
 			}
 			else 
 			{
@@ -2193,6 +2421,7 @@ printf ("\tjump\n");
 			}
 		}
 
+printf ("\treturn_from_block\n");
 		if (emit_byte_instruction(stix,CODE_RETURN_FROM_BLOCK) <= -1) return -1;
 	}
 
@@ -2347,9 +2576,9 @@ printf ("LARGE NOT IMPLEMENTED IN COMPILE_ARRAY_LITERAL\n");
 				break;
 			}
 
-			case STIX_IOTOK_CHRLIT:
-				STIX_ASSERT (stix->c->tok.name.len == 2);
-				lit = STIX_OOP_FROM_CHAR(stix->c->tok.name.ptr[1]);
+			case STIX_IOTOK_CHARLIT:
+				STIX_ASSERT (stix->c->tok.name.len == 1);
+				lit = STIX_OOP_FROM_CHAR(stix->c->tok.name.ptr[0]);
 				break;
 
 			case STIX_IOTOK_STRLIT:
@@ -2558,9 +2787,9 @@ printf ("\tpush context...\n");
 				GET_TOKEN (stix);
 				break;
 
-			case STIX_IOTOK_CHRLIT:
-				STIX_ASSERT (stix->c->tok.name.len == 2); /* the token includes $ */
-				if (add_character_literal(stix, stix->c->tok.name.ptr[1], &index) <= -1 ||
+			case STIX_IOTOK_CHARLIT:
+				STIX_ASSERT (stix->c->tok.name.len == 1);
+				if (add_character_literal(stix, stix->c->tok.name.ptr[0], &index) <= -1 ||
 				    emit_positional_instruction(stix, CMD_PUSH_LITERAL, index) <= -1) return -1;
 printf ("\tpush character literal %d\n", (int)index);
 				GET_TOKEN (stix);
@@ -2650,143 +2879,6 @@ static stix_byte_t send_message_cmd[] =
 	CMD_SEND_MESSAGE_TO_SUPER
 };
 
-#if 0
-static int compile_unary_message (stix_t* stix, int to_super)
-{
-	stix_size_t index;
-
-	while (stix->c->tok.type == STIX_IOTOK_IDENT) 
-	{
-		if (add_symbol_literal(stix, &stix->c->tok.name, &index) <= -1) return -1;
-
-printf ("adding binary symbol...");
-print_ucs (&stix->c->tok.name);
-printf ("\n");
-		GET_TOKEN (stix);
-
-if (stix->c->tok.type == STIX_IOTOK_SEMICOLON) printf ("\tdup_stack for cascading\n");
-		/* check adhead if it will be followed by a cascaded message */
-		if (stix->c->tok.type == STIX_IOTOK_SEMICOLON &&
-		    emit_byte_instruction(stix, CODE_DUP_STACKTOP) <= -1) return -1;
-
-		if (emit_double_positional_instruction(stix, send_message_cmd[to_super], 0, index) <= -1) return -1;
-printf ("\tsend message %d with 0 arguments to %s\n", (int)index, (to_super? "super": "self"));
-	}
-
-	return 0;
-}
-
-static int compile_binary_message (stix_t* stix, int to_super)
-{
-	/*
-	 * binary-message := binary-selector binary-argument
-	 * binary-argument := expression-primary unary-message*
-	 */
-	stix_size_t index;
-	int to_super2;
-	stix_ucs_t binsel;
-	stix_size_t saved_binsels_len;
-
-	if (compile_unary_message(stix, to_super) <= -1) return -1;
-
-	while (stix->c->tok.type == STIX_IOTOK_BINSEL) 
-	{
-		binsel = stix->c->tok.name;
-		saved_binsels_len = stix->c->mth.binsels.len;
-
-		if (clone_binary_selector(stix, &binsel) <= -1) goto oops;
-
-		GET_TOKEN (stix);
-		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, &to_super2) <= -1  ||
-		    compile_unary_message(stix, to_super2) <= -1 ||
-		    add_symbol_literal(stix, &binsel, &index) <= -1) goto oops;
-
-if (stix->c->tok.type == STIX_IOTOK_SEMICOLON) printf ("\tdup_stack for cascading\n");
-		/* check ahead message cascading */
-		if (stix->c->tok.type == STIX_IOTOK_SEMICOLON && 
-		    emit_byte_instruction(stix, CODE_DUP_STACKTOP) <= -1) goto oops;
-
-		if (emit_double_positional_instruction(stix, send_message_cmd[to_super], 1, index) <= -1) goto oops;
-printf ("\tsend message %d with 1 arguments%s\n", (int)index, (to_super? " to super": ""));
-
-		/*stix->c->mth.binsels.len -= binsel.len;*/
-		stix->c->mth.binsels.len = saved_binsels_len;
-	}
-
-	return 0;
-
-oops:
-	/*stix->c->mth.binsels.len -= binsel.len;*/
-	stix->c->mth.binsels.len -= saved_binsels_len;
-	return -1;
-}
-
-static int compile_keyword_message (stix_t* stix, int to_super)
-{
-	/*
-	 * keyword-message := (keyword keyword-argument)+
-	 * keyword-argument := expression-primary unary-message* binary-message*
-	 */
-
-	stix_size_t index;
-	int to_super2;
-	stix_ucs_t kw, kwsel;
-	stix_ioloc_t kwsel_loc;
-	stix_size_t kwsel_len;
-	stix_size_t nargs = 0;
-
-	if (compile_binary_message(stix, to_super) <= -1) return -1;
-	if (stix->c->tok.type != STIX_IOTOK_KEYWORD) return 0;
-
-	kwsel_loc = stix->c->tok.loc;
-	kwsel_len = stix->c->mth.kwsels.len;
-
-	do 
-	{
-		kw = stix->c->tok.name;
-		if (clone_keyword(stix, &kw) <= -1) goto oops;
-
-		GET_TOKEN (stix);
-		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, &to_super2) <= -1 ||
-		    compile_binary_message(stix, to_super2) <= -1) goto oops;
-
-		if (nargs >= MAX_CODE_NARGS)
-		{
-			/* 'kw' points to only one segment of the full keyword message. 
-			 * if it parses an expression like 'aBlock value: 10 with: 20',
-			 * 'kw' may point to 'value:' or 'with:'.
-			 */
-			set_syntax_error (stix, STIX_SYNERR_ARGFLOOD, &kwsel_loc, &kw); 
-			goto oops;
-		}
-
-		nargs++;
-	} 
-	while (stix->c->tok.type == STIX_IOTOK_KEYWORD);
-
-	kwsel.ptr = &stix->c->mth.kwsels.ptr[kwsel_len];
-	kwsel.len = stix->c->mth.kwsels.len - kwsel_len;
-
-	if (add_symbol_literal(stix, &kwsel, &index) <= -1) goto oops;
-
-if (stix->c->tok.type == STIX_IOTOK_SEMICOLON) printf ("\tdup_stack for cascading\n");
-
-	if (stix->c->tok.type == STIX_IOTOK_SEMICOLON && 
-	    emit_byte_instruction(stix, CODE_DUP_STACKTOP) <= -1) goto oops;
-
-	if (emit_double_positional_instruction(stix, send_message_cmd[to_super], nargs, index) <= -1) goto oops;
-printf ("\tsend message %d [", (int)index);
-print_ucs (&kwsel);
-printf ("] with %d arguments to %s\n", (int)nargs, (to_super? "super": "self"));
-	stix->c->mth.kwsels.len = kwsel_len;
-	return 0;
-
-oops:
-	stix->c->mth.kwsels.len = kwsel_len;
-	return -1;
-}
-#endif
-
 static int compile_unary_message (stix_t* stix, int to_super)
 {
 	stix_size_t index;
@@ -2795,12 +2887,11 @@ static int compile_unary_message (stix_t* stix, int to_super)
 
 	do
 	{
-printf ("adding binary symbol...");
-print_ucs (&stix->c->tok.name);
-printf ("\n");
 		if (add_symbol_literal(stix, &stix->c->tok.name, &index) <= -1 ||
 		    emit_double_positional_instruction(stix, send_message_cmd[to_super], 0, index) <= -1) return -1;
-printf ("\tsend message %d with 0 arguments to %s\n", (int)index, (to_super? "super": "self"));
+printf ("\tsend unary message %d [", (int)index);
+print_ucs (&stix->c->tok.name);
+printf ("] with 0 arguments %s\n", (to_super? " to super": ""));
 
 		GET_TOKEN (stix);
 	}
@@ -2837,7 +2928,9 @@ static int compile_binary_message (stix_t* stix, int to_super)
 
 		if (add_symbol_literal(stix, &binsel, &index) <= -1 ||
 		    emit_double_positional_instruction(stix, send_message_cmd[to_super], 1, index) <= -1) goto oops;
-printf ("\tsend message %d with 1 arguments%s\n", (int)index, (to_super? " to super": ""));
+printf ("\tsend binary message %d [", (int)index);
+print_ucs (&binsel);
+printf ("] with 1 arguments %s\n", (to_super? " to super": ""));
 
 		stix->c->mth.binsels.len = saved_binsels_len;
 	}
@@ -2898,7 +2991,7 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 	if (add_symbol_literal(stix, &kwsel, &index) <= -1 ||
 	    emit_double_positional_instruction(stix, send_message_cmd[to_super], nargs, index) <= -1) goto oops;
 
-printf ("\tsend message %d [", (int)index);
+printf ("\tsend keyword message %d [", (int)index);
 print_ucs (&kwsel);
 printf ("] with %d arguments to %s\n", (int)nargs, (to_super? "super": "self"));
 	stix->c->mth.kwsels.len = saved_kwsel_len;

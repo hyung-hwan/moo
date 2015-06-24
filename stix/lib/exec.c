@@ -66,7 +66,7 @@
 		LOAD_ACTIVE_SP (stix); \
 	} while (0) \
 
-static int activate_new_method (stix_t* stix, stix_oop_method_t mth)
+static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth, stix_uint16_t next_inst)
 {
 	stix_oow_t stack_size;
 	stix_oop_context_t ctx;
@@ -110,7 +110,28 @@ static int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	STIX_ASSERT (stix->sp >= 0);
 	STIX_ASSERT (stix->sp >= nargs);
 
-	ctx->sender = (stix_oop_t)stix->active_context; 
+	switch (next_inst)
+	{
+		case (CODE_POP_STACKTOP << 8) | CODE_RETURN_STACKTOP:
+		case (CODE_POP_STACKTOP << 8) | CODE_RETURN_RECEIVER:
+		case CODE_RETURN_STACKTOP:
+		case CODE_RETURN_RECEIVER:
+			/* tail-call optimization */
+/* TODO: is this correct? */
+			ctx->sender = stix->active_context->sender;
+			break;
+
+		/* RETURN_FROM_BLOCK is never preceeded by POP_STACKPOP */
+		case CODE_RETURN_FROM_BLOCK:
+			/* tail-call optimization */
+			ctx->sender = stix->active_context->sender;
+			break;
+
+		default:
+			ctx->sender = (stix_oop_t)stix->active_context; 
+			break;
+	}
+
 	ctx->ip = 0;
 
 	/* the stack front has temporary variables including arguments.
@@ -228,7 +249,7 @@ printf ("\n");
 			STIX_ASSERT ((stix_oop_t)mthdic != stix->_nil);
 			STIX_ASSERT (STIX_CLASSOF(stix, mthdic) == stix->_method_dictionary);
 
-dump_dictionary (stix, mthdic, "Method dictionary");
+/*dump_dictionary (stix, mthdic, "Method dictionary");*/
 			ass = (stix_oop_association_t)stix_lookupdic (stix, mthdic, message);
 			if (ass) 
 			{
@@ -300,7 +321,7 @@ TODO: overcome this problem
 	STORE_ACTIVE_IP (stix);
 	STORE_ACTIVE_SP (stix);
 
-	return activate_new_method (stix, mth);
+	return activate_new_method (stix, mth, CODE_NOOP);
 }
 
 
@@ -772,13 +793,16 @@ int stix_execute (stix_t* stix)
 	stix_byte_t bc, cmd;
 	stix_ooi_t b1, b2;
 
+	stix_size_t inst_counter;
+
 	STIX_ASSERT (stix->active_context != STIX_NULL);
+
+	inst_counter = 0;
 
 	while (1)
 	{
 		mth = stix->active_context->origin->method;
 		code = mth->code;
-
 #if 0
 printf ("IP => %d ", (int)stix->ip);
 #endif
@@ -833,6 +857,7 @@ printf ("IP => %d ", (int)stix->ip);
 			}
 		}
 
+		inst_counter++;
 #if 0
 printf ("CMD => %d, B1 = %d, SP = %d, IP AFTER INC %d\n", (int)cmd, (int)b1, (int)stix->sp, (int)stix->ip);
 #endif
@@ -1002,9 +1027,12 @@ printf ("\n");
 				stix_oop_method_t newmth;
 				stix_oop_char_t selector;
 				stix_ooi_t preamble;
+				stix_uint16_t next_inst;
 
-				/* the next byte is the message selector index to the
-				 * literal frame. */
+				/* read ahead the next instruction for tail-call optimization */
+				next_inst = ((stix_oop_byte_t)stix->active_context->origin->method->code)->slot[stix->ip];
+				if (next_inst == CODE_POP_STACKTOP)
+					next_inst |= (next_inst << 8) + ((stix_oop_byte_t)stix->active_context->origin->method->code)->slot[stix->ip + 1];
 
 				/* get the selector from the literal frame */
 				selector = (stix_oop_char_t)stix->active_context->origin->method->slot[b2];
@@ -1075,7 +1103,7 @@ printf ("RETURN INSTVAR AT PREAMBLE\n");
 					}
 
 					default:
-						if (activate_new_method (stix, newmth) <= -1) goto oops;
+						if (activate_new_method (stix, newmth, next_inst) <= -1) goto oops;
 						break;
 				}
 
@@ -1167,7 +1195,6 @@ printf ("RETURN_RECEIVER\n");
 					case SUBCMD_RETURN_FROM_BLOCK:
 					{
 						stix_oop_block_context_t blkctx;
-						
 
 						STIX_ASSERT(STIX_CLASSOF(stix, stix->active_context)  == stix->_block_context);
 
@@ -1251,8 +1278,16 @@ printf ("SEND_BLOCK_COPY\n");
 
 
 					handle_return:
-/* TODO: consider block context.. jump to origin if in a block context */
-						SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->sender);
+						if (stix->active_context->home == stix->_nil)
+						{
+							/* a method context is active. */
+							SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->sender);
+						}
+						else
+						{
+							/* a block context is active */
+							SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->origin->sender);
+						}
 
 						/* push the return value to the stack of the new active context */
 						ACTIVE_STACK_PUSH (stix, return_value);
@@ -1276,6 +1311,7 @@ printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
 	}
 
 done:
+	printf ("TOTAL_INST_COUTNER = %lu\n", (unsigned long int)inst_counter);
 	return 0;
 
 

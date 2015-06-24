@@ -231,7 +231,7 @@ struct stix_iotok_t
 	enum
 	{
 		STIX_IOTOK_EOF,
-		STIX_IOTOK_CHRLIT,
+		STIX_IOTOK_CHARLIT,
 		STIX_IOTOK_STRLIT,
 		STIX_IOTOK_SYMLIT,
 		STIX_IOTOK_NUMLIT,
@@ -276,7 +276,8 @@ enum stix_synerrnum_t
 	STIX_SYNERR_STRNC,         /* string not closed */
 	STIX_SYNERR_CLTNT,         /* character literal not terminated */
 	STIX_SYNERR_HLTNT,         /* hased literal not terminated */
-	STIX_SYNERR_CLNMS,         /* colon missing */
+	STIX_SYNERR_CHARLIT,       /* wrong character literal */
+	STIX_SYNERR_COLON,         /* : expected */
 	STIX_SYNERR_STRING,        /* string expected */
 	STIX_SYNERR_RADIX,         /* invalid radix */
 	STIX_SYNERR_RADNUMLIT,     /* invalid numeric literal with radix */
