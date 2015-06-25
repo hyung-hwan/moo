@@ -503,9 +503,12 @@ enum stix_cmdcode_t
 	CMD_PUSH_LITERAL               = 0x3,
 	CMD_STORE_INTO_INSTVAR         = 0x4,
 	CMD_STORE_INTO_TEMPVAR         = 0x5,
+
+/*
 	CMD_POP_INTO_INSTVAR           = 0x6,
 	CMD_POP_INTO_TEMPVAR           = 0x7,
-
+	CMD_POP_INTO_OBJVAR            = 0xXXX,
+*/
 	/* Jump is a single positional instructions.
 	 * JJJJJJJJ in the extended format is encoded as a signed offset
 	 * while JJJJ in the compact format is an unsigned offset. */

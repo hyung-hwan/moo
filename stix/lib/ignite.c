@@ -129,8 +129,8 @@ static int ignite_1 (stix_t* stix)
 	stix->_method_dictionary = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_SET_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 	stix->_method            = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_METHOD_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 	stix->_association       = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_ASSOCIATION_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
-	stix->_context           = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
-	stix->_block_context     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_BLOCK_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
+	stix->_method_context    = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
+	stix->_block_context     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 
 	stix->_true_class        = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_false_class       = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
@@ -148,7 +148,7 @@ static int ignite_1 (stix_t* stix)
 	    !stix->_system_dictionary || 
 
 	    !stix->_method_dictionary || !stix->_method            ||
-	    !stix->_association       || !stix->_context           ||
+	    !stix->_association       || !stix->_method_context    ||
 	    !stix->_block_context     || 
 
 	    !stix->_true_class        || !stix->_false_class       ||

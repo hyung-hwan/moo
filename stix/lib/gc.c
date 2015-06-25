@@ -162,18 +162,14 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 			stix_oop_oop_t xtmp;
 			stix_oow_t size;
 
-			if (stix->_context && STIX_OBJ_GET_CLASS(oop) == stix->_context)
+			if ((stix->_method_context && STIX_OBJ_GET_CLASS(oop) == stix->_method_context) ||
+			    (stix->_block_context && STIX_OBJ_GET_CLASS(oop) == stix->_block_context))
 			{
 				/* the stack in the context object doesn't need to be 
 				 * scanned in full. the slots above the stack pointer 
 				 * are garbages. */
 				size = STIX_CONTEXT_NAMED_INSTVARS +
 				       STIX_OOP_TO_SMINT(((stix_oop_context_t)oop)->sp) + 1;
-			}
-			else if (stix->_block_context && STIX_OBJ_GET_CLASS(oop) == stix->_block_context)
-			{
-				size = STIX_BLOCK_CONTEXT_NAMED_INSTVARS +
-				       STIX_OOP_TO_SMINT(((stix_oop_block_context_t)oop)->sp) + 1;
 			}
 			else
 			{
@@ -243,7 +239,7 @@ void stix_gc (stix_t* stix)
 	stix->_method_dictionary = stix_moveoop (stix, stix->_method_dictionary);
 	stix->_method            = stix_moveoop (stix, stix->_method);
 	stix->_association       = stix_moveoop (stix, stix->_association);
-	stix->_context           = stix_moveoop (stix, stix->_context);
+	stix->_method_context    = stix_moveoop (stix, stix->_method_context);
 	stix->_block_context     = stix_moveoop (stix, stix->_block_context);
 	stix->_true_class        = stix_moveoop (stix, stix->_true_class);
 	stix->_false_class       = stix_moveoop (stix, stix->_false_class);
@@ -258,6 +254,8 @@ void stix_gc (stix_t* stix)
 	}
 
 	stix->active_context = (stix_oop_context_t)stix_moveoop (stix, (stix_oop_t)stix->active_context);
+	stix->active_method = (stix_oop_method_t)stix_moveoop (stix, (stix_oop_t)stix->active_method);
+	stix->active_code = (stix_oop_byte_t)stix_moveoop (stix, (stix_oop_t)stix->active_code);
 
 	for (cb = stix->cblist; cb; cb = cb->next)
 	{

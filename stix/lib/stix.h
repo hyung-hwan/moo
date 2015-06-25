@@ -235,7 +235,7 @@ struct stix_cmgr_t
  * MACROS THAT CHANGES THE BEHAVIORS OF THE C COMPILER/LINKER
  * =========================================================================*/
 
-#if defined(_WIN32) || defined(__WATCOMC__)
+#if defined(_WIN32) || (defined(__WATCOMC__) && !defined(__WINDOWS_386__))
 #	define STIX_IMPORT __declspec(dllimport)
 #	define STIX_EXPORT __declspec(dllexport)
 #	define STIX_PRIVATE 
@@ -301,7 +301,10 @@ enum stix_trait_t
 {
 	/* perform no garbage collection when the heap is full. 
 	 * you still can use stix_gc() explicitly. */
-	STIX_NOGC = (1 << 0)
+	STIX_NOGC = (1 << 0),
+
+	/* no tail call optimization */
+	STIX_NOTCO = (1 << 1),
 };
 typedef enum stix_trait_t stix_trait_t;
 
@@ -604,37 +607,48 @@ struct stix_context_t
 {
 	STIX_OBJ_HEADER;
 
-	stix_oop_t         sender;   /* message sending context - active context before new context activation*/
-	stix_oop_t         ip;       /* instruction pointer */
+	/* it points to the active context at the moment when
+	 * this context object has been activated. a new method context
+	 * is activated as a result of normal message sending and a block
+	 * context is activated when it is sent 'value'. it's set to
+	 * nil if a block context created haven't received 'value'. */
+	stix_oop_t         sender;
+
+	/* SmallInteger, instruction pointer */
+	stix_oop_t         ip;
+
+	/* SmallInteger, stack pointer */
 	stix_oop_t         sp;       /* stack pointer */
+
+	/* SmallInteger. Number of temporaries.
+	 * For a block context, it's inclusive of the temporaries
+	 * defined its 'home'. */
 	stix_oop_t         ntmprs;   /* SmallInteger. */
-	stix_oop_method_t  method;   /* CompiledMethod */	
-	stix_oop_t         receiver; /* receiver of the message. For a statement '#xxx do: #yyyy', #xxx is the receiver.*/
-	stix_oop_t         home;     /* nil */
-	stix_oop_context_t origin;   /* nil */
+
+	/* CompiledMethod for a method context, 
+	 * SmallInteger for a block context */
+	stix_oop_t         method_or_nargs;
+
+	/* it points to the receiver of the message for a method context.
+	 * a block context created but not activated has nil in this field.
+	 * if a block context is activated by 'value', it points to the
+	 * block context object used as a base for shallow-copy. */
+	stix_oop_t         receiver_or_source;
+
+	/* it is set to nil for a method context.
+	 * for a block context, it points to the active context at the 
+	 * moment the block context was created. */
+	stix_oop_t         home;
+
+	/* when a method context is craeted, it is set to itself.
+	 * no change is made when the method context is activated.
+	 * when a block context is created, it is set to nil.
+	 * when the block context is shallow-copied for activation,
+	 * it is set to the origin of the active context at that moment */
+	stix_oop_context_t origin; 
 
 	/* variable indexed part */
 	stix_oop_t         slot[1]; /* stack */
-};
-
-#define STIX_BLOCK_CONTEXT_NAMED_INSTVARS 8
-typedef struct stix_block_context_t stix_block_context_t;
-typedef struct stix_block_context_t* stix_oop_block_context_t;
-struct stix_block_context_t
-{
-	STIX_OBJ_HEADER;
-
-	stix_oop_t         caller;
-	stix_oop_t         ip;           /* SmallInteger. instruction pointer */
-	stix_oop_t         sp;           /* SmallInteger. stack pointer */
-	stix_oop_t         ntmprs;       /* SmallInteger. total number of temporaries */
-	stix_oop_t         nargs;        /* SmallInteger */
-	stix_oop_t         unused/*iip*/;          /* SmallInteger. initial instruction pointer */
-	stix_oop_t         home;         /* MethodContext or BlockContext */
-	stix_oop_context_t origin;       /* MethodContext */
-
-	/* variable indexed part */
-	stix_oop_t        slot[1]; /* stack */
 };
 
 /**
@@ -724,7 +738,7 @@ struct stix_t
 	stix_oop_t _method_dictionary; /* MethodDictionary */
 	stix_oop_t _method; /* CompiledMethod */
 	stix_oop_t _association; /* Association */
-	stix_oop_t _context; /* MethodContext */
+	stix_oop_t _method_context; /* MethodContext */
 	stix_oop_t _block_context; /* BlockContext */
 
 	stix_oop_t _true_class; /* True */
@@ -740,7 +754,9 @@ struct stix_t
 	stix_oow_t tmp_count;
 
 	/* == EXECUTION REGISTERS == */
-	stix_oop_context_t active_context; /* TODO: this could be either MethodContext or BlockContext. Some redefintion of stix_oop_context_t might be needed  after having removed stix-oop_block-context. */
+	stix_oop_context_t active_context;
+	stix_oop_method_t active_method;
+	stix_oop_byte_t active_code;
 	stix_ooi_t sp;
 	stix_ooi_t ip;
 	/* == END EXECUTION REGISTERS == */
