@@ -165,6 +165,7 @@ void print_object (stix_t* stix, stix_oop_t oop)
 			s.len = STIX_OBJ_GET_SIZE(c->name);
 			printf ("instance of ");
 			print_ucs (&s);
+			printf ("- (%p)", oop);
 		}
 	}
 }

@@ -26,6 +26,10 @@
 
 #include "stix-prv.h"
 
+/* TODO: context's stack overflow check in various part of this file */
+/* TOOD: determine the right stack size */
+#define CONTEXT_STACK_SIZE 96
+
 #define LOAD_IP(stix, v_ctx) ((stix)->ip = STIX_OOP_TO_SMINT((v_ctx)->ip))
 #define STORE_IP(stix, v_ctx) ((v_ctx)->ip = STIX_OOP_FROM_SMINT((stix)->ip))
 
@@ -71,17 +75,9 @@
 
 static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth, stix_uint16_t next_inst)
 {
-	stix_oow_t stack_size;
 	stix_oop_context_t ctx;
 	stix_ooi_t i;
 	stix_ooi_t ntmprs, nargs;
-
-	stack_size = 256; /* TODO: make the stack size configurable or let the compiler choose the right value and store it in the compiled method. if it's stored in the compiled method, the code here can take it*/
-
-	stix_pushtmp (stix, (stix_oop_t*)&mth);
-	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_method_context, STIX_NULL, stack_size);
-	stix_poptmp (stix);
-	if (!ctx) return -1;
 
 	/* message sending requires a receiver to be pushed. 
 	 * the stack pointer of the sending context cannot be -1.
@@ -114,6 +110,26 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth,
 	STIX_ASSERT (stix->sp >= nargs);
 
 #if 0
+	if (!(stix->option.trait & STIX_NOTCO) && next_inst == CODE_RETURN_FROM_BLOCK)
+	{
+		/* don't allocate a new method context. reuse the active context. 
+		 *
+		 * [NOTE]
+		 *  a context stored into a variable by way of 'thisContext' may
+		 *  present different contents after this reuse.
+		 */
+		STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context) == stix->_block_context);
+		ctx = stix->active_context;
+		goto reuse_context;
+	}
+#endif
+
+	stix_pushtmp (stix, (stix_oop_t*)&mth);
+	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_method_context, STIX_NULL, CONTEXT_STACK_SIZE);
+	stix_poptmp (stix);
+	if (!ctx) return -1;
+
+#if 0
 	if (stix->option.trait & STIX_NOTCO)
 	{
 #endif
@@ -125,7 +141,7 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth,
 		switch (next_inst)
 		{
 			case (CODE_POP_STACKTOP << 8) | CODE_RETURN_STACKTOP:
-			case (CODE_POP_STACKTOP << 8) | CODE_RETURN_RECEIVER:
+			case (CODE_POP_STACKTOP << 8) | CODE_RETUCEIVER:
 			case CODE_RETURN_STACKTOP:
 			case CODE_RETURN_RECEIVER:
 				/* tail-call optimization */
@@ -146,8 +162,7 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth,
 	}
 #endif
 
-	ctx->ip = 0;
-
+	ctx->ip = STIX_OOP_FROM_SMINT(0);
 	/* the stack front has temporary variables including arguments.
 	 *
 	 * New Context
@@ -173,7 +188,7 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth,
 	ctx->sp = STIX_OOP_FROM_SMINT(ntmprs - 1);
 	ctx->ntmprs = STIX_OOP_FROM_SMINT(ntmprs);
 	ctx->method_or_nargs = (stix_oop_t)mth;
-	/* the 'home' fiedl is stix->_nil for a method context.
+	/* the 'home' field of a method context is always stix->_nil.
 	ctx->home = stix->_nil;*/
 	ctx->origin = ctx; /* point to self */
 
@@ -215,6 +230,42 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth,
 
 printf ("<<ENTERING>>\n");
 	return 0;
+
+#if 0
+reuse_context:
+	/* force the class to become a method context */
+	ctx->_class = stix->_method_context;
+
+	ctx->receiver_or_source = ACTIVE_STACK_GET(stix, stix->sp - nargs);
+printf ("####### REUSING CONTEXT INSTEAD OF <<ENTERING>> WITH RECEIVER ");
+print_object (stix, ctx->receiver_or_source);
+printf ("\n");
+
+	for (i = 0; i < nargs; i++)
+	{
+		ctx->slot[i] = ACTIVE_STACK_GET (stix, stix->sp - nargs + i + 1);
+printf ("REUSING ARGUMENT %d - ", (int)i);
+print_object (stix, ctx->slot[i]);
+printf ("\n");
+	}
+	for (; i <= stix->sp; i++) ctx->slot[i] = stix->_nil;
+	/* keep the sender 
+	ctx->sender = 
+	*/
+	
+	ctx->ntmprs = STIX_OOP_FROM_SMINT(ntmprs);
+	ctx->method_or_nargs = (stix_oop_t)mth;
+	ctx->home = stix->_nil;
+	ctx->origin = ctx;
+
+	/* let SWITCH_ACTIVE_CONTEXT() fill 'ctx->ip' and 'ctx->sp' by putting
+	 * the values to stix->ip and stix->sp */
+	stix->ip = 0;
+	stix->sp = ntmprs - 1;
+	SWITCH_ACTIVE_CONTEXT (stix, ctx);
+
+	return 0;
+#endif
 }
 
 static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const stix_ucs_t* message, int super)
@@ -345,13 +396,13 @@ static int primitive_dump (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs >=  0);
 
-	printf ("RECEIVER:");
+	printf ("RECEIVER: ");
 	print_object (stix, ACTIVE_STACK_GET(stix, stix->sp - nargs));
 	printf ("\n");
 	for (i = nargs; i > 0; )
 	{
 		--i;
-		printf ("ARGUMENT:");
+		printf ("ARGUMENT: ");
 		print_object (stix, ACTIVE_STACK_GET(stix, stix->sp - i));
 		printf ("\n");
 	}
@@ -598,11 +649,16 @@ static int primitive_block_context_value (stix_t* stix, stix_ooi_t nargs)
 	 * while the block context is active
 	 */
 	org_blkctx = (stix_oop_context_t)ACTIVE_STACK_GET(stix, stix->sp - nargs);
-	STIX_ASSERT (STIX_CLASSOF(stix, org_blkctx) == stix->_block_context);
+	if (STIX_CLASSOF(stix, org_blkctx) != stix->_block_context)
+	{
+printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
+		return 0;
+	}
 
 	if (org_blkctx->receiver_or_source != stix->_nil)
 	{
-		/* this block context has already been activated once.
+		/* the 'source' field is not nil.
+		 * this block context has already been activated once.
 		 * you can't send 'value' again to reactivate it.
 		 * For example, [thisContext value] value.
 		 */
@@ -610,7 +666,6 @@ static int primitive_block_context_value (stix_t* stix, stix_ooi_t nargs)
 printf ("PRIM REVALUING AN BLOCKCONTEXT\n");
 		return 0;
 	}
-
 	STIX_ASSERT (STIX_OBJ_GET_SIZE(org_blkctx) == STIX_CONTEXT_NAMED_INSTVARS);
 
 	if (STIX_OOP_TO_SMINT(org_blkctx->method_or_nargs) != nargs) 
@@ -621,9 +676,8 @@ printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 		return 0;
 	}
 
-/* TODO: what is the right stack size? is 255 too large? any good way to determine it? */ 
 	/* create a new block context to clone org_blkctx */
-	blkctx = (stix_oop_context_t) stix_instantiate (stix, stix->_block_context, STIX_NULL, 255); 
+	blkctx = (stix_oop_context_t) stix_instantiate (stix, stix->_block_context, STIX_NULL, CONTEXT_STACK_SIZE); 
 	if (!blkctx) return -1;
 
 	/* getting org_blkctx again to be GC-safe for stix_instantiate() above */
@@ -643,6 +697,7 @@ printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 	blkctx->receiver_or_source = (stix_oop_t)org_blkctx;
 	blkctx->home = org_blkctx->home;
 	blkctx->origin = org_blkctx->origin;
+printf ("~~~~~~~~~~ BLOCK VALUING %p TO NEW BLOCK %p\n", org_blkctx, blkctx);
 #endif
 
 /* TODO: check the stack size of a block context to see if it's large enough to hold arguments */
@@ -667,6 +722,7 @@ printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 	blkctx->sp = STIX_OOP_FROM_SMINT(local_ntmprs);
 	blkctx->sender = (stix_oop_t)stix->active_context;
 
+printf ("<<ENTERING BLOCK>>\n");
 	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)blkctx);
 	return 1;
 }
@@ -1227,6 +1283,7 @@ printf ("RETURN_RECEIVER\n");
 						goto handle_return;
 
 					case SUBCMD_RETURN_FROM_BLOCK:
+printf ("LEAVING_BLOCK\n");
 						STIX_ASSERT(STIX_CLASSOF(stix, stix->active_context)  == stix->_block_context);
 
 						return_value = ACTIVE_STACK_GETTOP(stix);
