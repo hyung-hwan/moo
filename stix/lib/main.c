@@ -279,6 +279,13 @@ printf ("%ld\n", (long int)STIX_OOP_TO_SMINT(k));
 		stix_setoption (stix, STIX_DFL_SYSDIC_SIZE, &tab_size);
 	}
 
+	{
+		int trait = 0;
+
+		/*trait |= STIX_NOTCO;*/
+		stix_setoption (stix, STIX_TRAIT, &trait);
+	}
+
 	if (stix_ignite(stix) <= -1)
 	{
 		printf ("cannot ignite stix - %d\n", stix_geterrnum(stix));

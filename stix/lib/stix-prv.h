@@ -485,6 +485,80 @@ struct stix_compiler_t
 #define MAX_CODE_BLKCODE             MAX_CODE_JUMP
 #define MAKE_CODE(x,y) (((x) << 4) | y)
 
+
+/*
+--------------------------------------
+
+  0  000000XX PUSH_INSTVAR
+  1  000001XX PUSH_TEMPVAR
+  2  000010XX PUSH_LITERAL
+  3  000011XX STORE_INTO_INSTVAR
+  4  000100XX STORE_INTO_TEMPVAR
+  5  000101XX POP_INTO_INSTVAR
+  6  000110XX POP_INTO_TEMPVAR
+
+  7  000111XX JUMP_FORWARD
+  8  001000XX JUMP_BACKWARD
+  9  001001XX JUMP_IF_TRUE
+ 10  001010XX JUMP_IF_FALSE
+
+ 11  001011XX 
+ 12  001100XX 
+ 13  001101XX 
+ 14  001110XX 
+ 15  001111XX 
+
+---------------------------------------
+ 16  010000XX YYYYYYYY PUSH_XTEMPVAR          XXXth outer-frame, YYYYYYYY local variable
+ 17  010001XX YYYYYYYY STORE_INTO_XTEMPVAR
+ 18  010010XX YYYYYYYY POP_INTO_XTEMPVAR
+
+ 19  010011XX YYYYYYYY PUSH_OBJVAR
+ 20  010100XX YYYYYYYY STORE_INTO_OBJVAR
+ 21  010101XX YYYYYYYY POP_INTO_OBJVAR        XXXth instance variable of YYYYYYYY object
+ 22  010110XX YYYYYYYY SEND_MESSAGE
+ 23  010111XX YYYYYYYY SEND_MESSAGE_TO_SUPER  XXX args, YYYYYYYY message
+
+ 24  011000XX
+ 25  011001XX
+ 26  011010XX
+ 27  011011XX
+ 28  011100XX
+ 29  011101XX
+ 30  011110XX
+ 31  011111XX
+
+-------------------------------------
+
+
+
+switch (binst)
+{
+	case XXX:
+	case YYY:
+
+
+	default:
+	{
+		cmd = binst >> 2;
+
+		switch (cmd)
+		{
+			case PUSH_INSTVAR:
+
+			case PUSHX_INSTVAR:
+
+
+
+			default:
+				treated as no op???
+		}
+	}
+}
+
+*/
+
+
 enum stix_cmdcode_t
 {
 	CMD_EXTEND                     = 0x0,

@@ -159,6 +159,19 @@ void print_object (stix_t* stix, stix_oop_t oop)
 			}
 			printf (")");
 		}
+		else if ((stix_oop_t)c == stix->_class)
+		{
+			/* print the class name */
+			for (i = 0; i < STIX_OBJ_GET_SIZE(((stix_oop_class_t)oop)->name); i++)
+			{
+				bcslen = STIX_COUNTOF(bcs);
+				ucslen = 1;
+				if (stix_ucstoutf8 (&((stix_oop_class_t)oop)->name->slot[i], &ucslen, bcs, &bcslen) >= 0)
+				{
+					printf ("%.*s", (int)bcslen, bcs);
+				}
+			}
+		}
 		else
 		{
 			s.ptr = ((stix_oop_char_t)c->name)->slot;

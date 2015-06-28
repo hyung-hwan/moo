@@ -110,17 +110,28 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth,
 	STIX_ASSERT (stix->sp >= nargs);
 
 #if 0
-	if (!(stix->option.trait & STIX_NOTCO) && next_inst == CODE_RETURN_FROM_BLOCK)
+	if (!(stix->option.trait & STIX_NOTCO))
 	{
-		/* don't allocate a new method context. reuse the active context. 
-		 *
-		 * [NOTE]
-		 *  a context stored into a variable by way of 'thisContext' may
-		 *  present different contents after this reuse.
-		 */
-		STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context) == stix->_block_context);
-		ctx = stix->active_context;
-		goto reuse_context;
+		if (stix->active_context->home == stix->_nil)
+		{
+			/* method context */
+			STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context) == stix->_method_context);
+
+			if (next_inst == ((CODE_POP_STACKTOP << 8) | CODE_RETURN_STACKTOP) ||
+			    next_inst == ((CODE_POP_STACKTOP << 8) | CODE_RETURN_RECEIVER) ||
+			    next_inst == CODE_RETURN_STACKTOP ||
+			    next_inst == CODE_RETURN_RECEIVER)
+			{
+				/* don't allocate a new method context. reuse the active context. 
+				 *
+				 * [NOTE]
+				 *  a context stored into a variable by way of 'thisContext' may
+				 *  present a different context from the original after this reuse.
+				 */
+				ctx = stix->active_context;
+				goto reuse_context;
+			}
+		}
 	}
 #endif
 
@@ -129,39 +140,7 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth,
 	stix_poptmp (stix);
 	if (!ctx) return -1;
 
-#if 0
-	if (stix->option.trait & STIX_NOTCO)
-	{
-#endif
-		ctx->sender = (stix_oop_t)stix->active_context; 
-#if 0
-	}
-	else
-	{
-		switch (next_inst)
-		{
-			case (CODE_POP_STACKTOP << 8) | CODE_RETURN_STACKTOP:
-			case (CODE_POP_STACKTOP << 8) | CODE_RETUCEIVER:
-			case CODE_RETURN_STACKTOP:
-			case CODE_RETURN_RECEIVER:
-				/* tail-call optimization */
-	/* TODO: is this correct? */
-				ctx->sender = stix->active_context->sender;
-				break;
-
-			/* RETURN_FROM_BLOCK is never preceeded by POP_STACKPOP */
-			case CODE_RETURN_FROM_BLOCK:
-				/* tail-call optimization */
-				ctx->sender = stix->active_context->sender;
-				break;
-
-			default:
-				ctx->sender = (stix_oop_t)stix->active_context; 
-				break;
-		}
-	}
-#endif
-
+	ctx->sender = (stix_oop_t)stix->active_context; 
 	ctx->ip = STIX_OOP_FROM_SMINT(0);
 	/* the stack front has temporary variables including arguments.
 	 *
@@ -228,7 +207,7 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth,
 	/* swtich the active context */
 	SWITCH_ACTIVE_CONTEXT (stix, ctx);
 
-printf ("<<ENTERING>>\n");
+printf ("<<ENTERING>> SP=%d\n", (int)stix->sp);
 	return 0;
 
 #if 0
@@ -961,6 +940,7 @@ printf ("PUSH_INSTVAR %d\n", (int)b1);
 
 			case CMD_PUSH_TEMPVAR:
 printf ("PUSH_TEMPVAR idx=%d - ", (int)b1);
+fflush(stdout);
 				if (stix->active_context->home != stix->_nil)
 				{
 /*TODO: improve this slow temporary access */
@@ -1122,12 +1102,15 @@ printf ("\n");
 				selector = (stix_oop_char_t)stix->active_method->slot[b2];
 
 if (cmd == CMD_SEND_MESSAGE)
-printf ("SEND_MESSAGE TO RECEIVER AT STACKPOS=%d NARGS=%d RECEIER=", (int)(stix->sp - b1), (int)b1);
+printf ("SEND_MESSAGE TO RECEIVER AT STACKPOS=%d NARGS=%d SELECTOR=", (int)(stix->sp - b1), (int)b1);
 else
-printf ("SEND_MESSAGE_TO_SUPER TO RECEIVER AT STACKPOS=%d NARGS=%d RECEIVER=", (int)(stix->sp - b1), (int)b1);
+printf ("SEND_MESSAGE_TO_SUPER TO RECEIVER AT STACKPOS=%d NARGS=%d SELECTOR=", (int)(stix->sp - b1), (int)b1);
+print_object (stix, (stix_oop_t)selector);
+fflush (stdout);
 				STIX_ASSERT (STIX_CLASSOF(stix, selector) == stix->_symbol);
 
 				newrcv = ACTIVE_STACK_GET(stix, stix->sp - b1);
+printf (" RECEIVER = ");
 print_object(stix, newrcv);
 printf ("\n");
 				mthname.ptr = selector->slot;
@@ -1163,6 +1146,23 @@ printf ("RETURN INSTVAR AT PREAMBLE\n");
 						rcv = (stix_oop_oop_t)ACTIVE_STACK_GETTOP(stix);
 						STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(rcv) == STIX_OBJ_TYPE_OOP);
 						STIX_ASSERT (STIX_OBJ_GET_SIZE(rcv) > STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
+
+						if (rcv == (stix_oop_oop_t)stix->active_context)
+						{
+							/* the active context object doesn't keep
+							 * the most up-to-date information in the 
+							 * 'ip' and 'sp' field. commit these fields
+							 * when the object to be accessed is 
+							 * the active context. this manual commit
+							 * is required because this premable handling
+							 * skips activation of a new method context
+							 * that would commit these fields. 
+							 */
+							STORE_ACTIVE_IP (stix);
+							STORE_ACTIVE_SP (stix);
+						}
+
+						/* this accesses the instance variable of the receiver */
 						ACTIVE_STACK_SET (stix, stix->sp, rcv->slot[STIX_METHOD_GET_PREAMBLE_INDEX(preamble)]);
 						break;
 					}
@@ -1188,6 +1188,7 @@ printf ("RETURN INSTVAR AT PREAMBLE\n");
 					}
 
 					default:
+/* TOOD: remove it only in the instructions that requires reading ahead */
 						/* read ahead the next instruction for tail-call optimization */
 						next_inst = stix->active_code->slot[stix->ip];
 							if (next_inst == CODE_POP_STACKTOP)
@@ -1388,26 +1389,56 @@ printf ("SEND_BLOCK_COPY\n");
 
 
 					handle_return:
-#if 0
-						if (stix->active_context->home == stix->_nil)
-						{
-							/* a method context is active. */
-							SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->sender);
-						}
-						else
-						{
-							/* a block context is active */
-							SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->origin->sender);
-						}
-#else
+
+printf ("<<LEAVING>> SP=%d\n", (int)stix->sp);
+
+						/* put the instruction pointer back to the return
+						 * instruction (RETURN_RECEIVER or RETURN_RECEIVER)
+						 * if a context returns into this context again,
+						 * it'll be able to return as well again.
+						 * 
+						 * Consider a program like this:
+						 *
+						 * #class MyObject(Object)
+						 * {
+						 *   #declare(#classinst) t1 t2.
+						 *   #method(#class) xxxx
+						 *   {
+						 *     | g1 g2 |
+						 *     t1 dump.
+						 *     t2 := [ g1 := 50. g2 := 100. ^g1 + g2 ].
+						 *     (t1 < 100) ifFalse: [ ^self ].
+						 *     t1 := t1 + 1. 
+						 *     ^self xxxx.
+						 *   }
+						 *   #method(#class) main
+						 *   {
+						 *     t1 := 1.
+						 *     self xxxx.
+						 *     t2 := t2 value.  
+						 *     t2 dump.
+						 *   }
+						 * }
+						 *
+						 * the 'xxxx' method invoked by 'self xxxx' has 
+						 * returned even before 't2 value' is executed.
+						 * the '^' operator makes the active context to
+						 * switch to its 'origin->sender' which is the
+						 * method context of 'xxxx' itself. placing its
+						 * instruction pointer at the 'return' instruction
+						 * helps execute another return when the switching
+						 * occurs.
+						 * 
+						 * TODO: verify if this really works
+						 *
+						 */
+						stix->ip--; 
+
 						SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->origin->sender);
-#endif
-							
 
 						/* push the return value to the stack of the new active context */
 						ACTIVE_STACK_PUSH (stix, return_value);
 
-printf ("<<LEAVING>>\n");
 						if (stix->active_context->sender == stix->_nil)
 						{
 							/* the sending context of the intial context has been set to nil.

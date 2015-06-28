@@ -248,6 +248,24 @@
 	#method pc: anInteger
 	{
 		ip := anInteger.
+		"sp := sp - 1."  "whould this always work??? "
+	}
+
+	#method sp
+	{
+		^sp.
+
+	}
+	#method sp: anInteger
+	{
+		sp := anInteger.
+	}
+
+	#method pc: aPC sp: aSP
+	{
+		ip := aPC.
+		sp := aSP.
+		##sp := sp - 1.
 	}
 }
 
@@ -279,21 +297,46 @@
 	{
 ## http://stackoverflow.com/questions/2500483/is-there-a-way-in-a-message-only-language-to-define-a-whiletrue-message-without
 
+## ----------------------------------------------------------------------------
+
 ##		^(self value) ifTrue: [aBlock value. self whileTrue: aBlock].
 
-		| start |
-		start := thisContext pc.
+## ----------------------------------------------------------------------------
+
+		## less block context before whileTrue: is recursively sent.
+		## whileTrue: is sent in a method context.
+##		(self value) ifFalse: [^nil].
+##		aBlock value. 
+##		self whileTrue: aBlock.
+
+## ----------------------------------------------------------------------------
+
+## ----------------------------------------------------------------------------
+		| pc sp xsp |
+
+		sp := thisContext sp.
+		sp := sp - 1. "decrement sp by 1 becuase thisContext pushed above affects the sp method"
+		pc := thisContext pc.
 		self value ifFalse: [ ^nil "^self" ].
 		aBlock value.
-		thisContext pc: start.
+		##thisContext pc: pc - 3 sp: sp.
+		thisContext pc: pc + 2 sp: sp.   
+		## this +2 or - 3 above is dependent on the byte code instruction size used for 'store'  
+		## +2 to skip STORE_INTO_TEMP(pc) and POP_STACKTOP.
+		## TODO: make it independent of the byte code size 
 
-##		| start |
-##		start := thisContext pc.
-##		^self value ifTrue: [aBlock value. thisContext pc: start]
+## ----------------------------------------------------------------------------
 
+##        #<label>:
+##		thisContext pc: #<label> sp: sp.
+##
+##		| pc |
+##		pc := thisContext pc.
+##		^self value ifTrue: [aBlock value. thisContext pc: pc]
 
-## TODO: add restart method.
-## self value ifTrue: [ aBlock value. thisContext restart. ].
+## ----------------------------------------------------------------------------
+
+##		self value ifTrue: [ aBlock value. thisContext restart. ].
 	}
 
 	#method pc
@@ -314,6 +357,11 @@
 	#method sp: anInteger
 	{
 		sp := anInteger.
+	}
+
+	#method restart
+	{
+		ip := source pc.
 	}
 }
 
@@ -457,7 +505,7 @@
 		##a dump.
 	}
 
-	#method(#class) main99
+	#method(#class) main55
 	{
 		|a b c|
 
@@ -471,6 +519,48 @@
 		^10
 	}
 
+## ---------------------------------------------------------------------------
+
+" this sample demonstrates what happens when a block context returns to the origin's caller
+  after the caller has already returned. "
+
+	#method(#class) xxxx
+	{
+		| g1 g2 |
+		t1 dump.
+		t2 := [ |tmp| g1 := 50. g2 := 100. tmp := g1 + g2. tmp dump. ^tmp ].
+		(t1 < 100) ifFalse: [ ^self ].
+
+		t1 := t1 + 1. 
+		self xxxx
+	}
+	#method(#class) yyyy
+	{
+		|c1|
+		t1 := 1.
+		c1 :=self xxxx.
+		888 dump.
+		999 dump.
+		^c1.
+	}
+	#method(#class) main66
+	{
+		self yyyy.
+		t2 := t2 value.  "can t2 return? it should return somewhere into the method context of yyy. but it has already terminated"
+		t2 dump.
+	}
+
+	#method(#class) mainj
+	{
+		|k1|
+		t1 := 1.
+		self xxxx.
+
+		t2 := t2 value.  "can t2 return? it should return somewhere into the method context of yyy. but it has already terminated"
+		t2 dump.
+	}
+## ----------------------------------------------------------------------
+
 	#method(#class) main
 	{
 		|a b sum |
@@ -480,7 +570,11 @@
 
 		'-------------------------' dump.
 		b := 0.
-		[ b < 1000 ] whileTrue: [ b dump. b := b + 1 ].
+		[ b < 2000 ] whileTrue: [ b dump. b := b + 1 ].
+
+		'-------------------------' dump.
+		b := 0.
+		[ b < 10 ] whileTrue: [ b dump. b := b + 1 ].
 
 		'-------------------------' dump.
 		 a := #[4 5 6 7] at: 3. 
@@ -495,6 +589,7 @@
 
 		[self getTen] value dump.
 	}
+
 }
 
 
