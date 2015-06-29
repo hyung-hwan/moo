@@ -3234,27 +3234,25 @@ printf ("\n");
 					goto oops;
 
 				case VAR_TEMPORARY:
-printf ("\tstore_into_tempvar %d\n", (int)var.pos);
-/* TODO: if pop is 1, emit BCODE_POP_INTO_TEMPVAR.
-ret = pop;
-*/
-					if (emit_single_param_instruction (stix, BCODE_STORE_INTO_TEMPVAR_0, var.pos) <= -1) goto oops;
+					
+printf ("\t%s_into_tempvar %d\n", (pop? "pop":"store"), (int)var.pos);
+					if (emit_single_param_instruction (stix, (pop? BCODE_POP_INTO_TEMPVAR_0: BCODE_STORE_INTO_TEMPVAR_0), var.pos) <= -1) goto oops;
+					ret = pop;
 					break;
 
 				case VAR_INSTANCE:
 				case VAR_CLASSINST:
-printf ("\tstore_into_instvar %d\n", (int)var.pos);
-/* TODO: if pop is 1, emit BCODE_POP_INTO_INSTVAR 
-ret = pop;
-*/
-					if (emit_single_param_instruction (stix, BCODE_STORE_INTO_INSTVAR_0, var.pos) <= -1) goto oops;
+printf ("\t%s_into_instvar %d\n", (pop? "pop":"store"), (int)var.pos);
+					if (emit_single_param_instruction (stix, (pop? BCODE_POP_INTO_INSTVAR_0: BCODE_STORE_INTO_INSTVAR_0), var.pos) <= -1) goto oops;
+					ret = pop;
 					break;
 
 				case VAR_CLASS:
 /* TODO is this correct? */
 					if (add_literal (stix, (stix_oop_t)var.cls, &index) <= -1 ||
-					    emit_double_param_instruction (stix, BCODE_STORE_INTO_OBJVAR_0, var.pos, index) <= -1) goto oops;
-printf ("\tstore_into_objvar %d %d\n", (int)var.pos, (int)index);
+					    emit_double_param_instruction (stix, (pop? BCODE_POP_INTO_OBJVAR_0: BCODE_STORE_INTO_OBJVAR_0), var.pos, index) <= -1) goto oops;
+printf ("\t%s_into_objvar %d %d\n", (pop? "pop":"store"), (int)var.pos, (int)index);
+					ret = pop;
 					break;
 
 				case VAR_GLOBAL:
