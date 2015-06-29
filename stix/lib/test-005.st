@@ -563,7 +563,7 @@
 
 	#method(#class) main
 	{
-		|a b sum |
+		|a b c d e f g h i j k sum |
 
 		sum := [ :n | (n < 2) ifTrue: [1] ifFalse: [ n + (sum value: (n - 1))] ].
 		(sum value: 5) dump.

@@ -282,7 +282,7 @@ printf ("%ld\n", (long int)STIX_OOP_TO_SMINT(k));
 	{
 		int trait = 0;
 
-		/*trait |= STIX_NOTCO;*/
+		/*trait |= STIX_NOGC;*/
 		stix_setoption (stix, STIX_TRAIT, &trait);
 	}
 

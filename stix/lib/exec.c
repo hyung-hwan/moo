@@ -73,7 +73,7 @@
 		LOAD_ACTIVE_SP (stix); \
 	} while (0) \
 
-static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth, stix_uint16_t next_inst)
+static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 {
 	stix_oop_context_t ctx;
 	stix_ooi_t i;
@@ -108,32 +108,6 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth,
 	STIX_ASSERT (nargs <= ntmprs);
 	STIX_ASSERT (stix->sp >= 0);
 	STIX_ASSERT (stix->sp >= nargs);
-
-#if 0
-	if (!(stix->option.trait & STIX_NOTCO))
-	{
-		if (stix->active_context->home == stix->_nil)
-		{
-			/* method context */
-			STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context) == stix->_method_context);
-
-			if (next_inst == ((CODE_POP_STACKTOP << 8) | CODE_RETURN_STACKTOP) ||
-			    next_inst == ((CODE_POP_STACKTOP << 8) | CODE_RETURN_RECEIVER) ||
-			    next_inst == CODE_RETURN_STACKTOP ||
-			    next_inst == CODE_RETURN_RECEIVER)
-			{
-				/* don't allocate a new method context. reuse the active context. 
-				 *
-				 * [NOTE]
-				 *  a context stored into a variable by way of 'thisContext' may
-				 *  present a different context from the original after this reuse.
-				 */
-				ctx = stix->active_context;
-				goto reuse_context;
-			}
-		}
-	}
-#endif
 
 	stix_pushtmp (stix, (stix_oop_t*)&mth);
 	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_method_context, STIX_NULL, CONTEXT_STACK_SIZE);
@@ -366,7 +340,7 @@ TODO: overcome this problem
 	STORE_ACTIVE_IP (stix);
 	STORE_ACTIVE_SP (stix);
 
-	return activate_new_method (stix, mth, CODE_NOOP);
+	return activate_new_method (stix, mth);
 }
 
 static int primitive_dump (stix_t* stix, stix_ooi_t nargs)
@@ -838,33 +812,30 @@ static primitive_t primitives[] =
 
 #define FETCH_BYTE_CODE_TO(stix, v_ooi) (v_ooi = (stix)->active_code->slot[(stix)->ip++])
 
-#if (STIX_CODE_EXTEND_SIZE == 2)
+#if (STIX_BCODE_LONG_PARAM_SIZE == 2)
 
-#define FETCH_UNSIGNED_CODE_TO(stix, v_ooi) \
+#define FETCH_PARAM_CODE_TO(stix, v_ooi) \
 	do { \
 		v_ooi = (stix)->active_code->slot[(stix)->ip++]; \
 		v_ooi = (v_ooi << 8) | (stix)->active_code->slot[stix->ip++]; \
 	} while (0)
 
-#define FETCH_SIGNED_CODE_TO(stix, v_ooi) \
-	do { \
-		v_ooi = (stix)->active_code->slot[(stix)->ip++]; \
-		v_ooi = (stix_int16_t)((v_ooi << 8) | (stix)->active_code->slot[stix->ip++]); \
-	} while (0)
+#else /* STIX_BCODE_LONG_PARAM_SIZE == 2 */
 
-#else /* STIX_CODE_EXTEND_SIZE == 2 */
+#define FETCH_PARAM_CODE_TO(stix, v_ooi) (v_ooi = (stix)->active_code->slot[(stix)->ip++])
 
-#define FETCH_UNSIGNED_CODE_TO(stix, v_ooi) (v_ooi = (stix)->active_code->slot[(stix)->ip++])
-#define FETCH_SIGNED_CODE_TO(stix, v_ooi) (v_ooi = (stix_int8_t)(stix)->active_code->slot[(stix)->ip++])
+#endif /* STIX_BCODE_LONG_PARAM_SIZE == 2 */
 
-#endif /* STIX_CODE_EXTEND_SIZE == 2 */
 
 int stix_execute (stix_t* stix)
 {
-	stix_byte_t bc, cmd;
-	stix_ooi_t b1, b2;
+	stix_byte_t bcode;
+	stix_ooi_t b1, b2, bx;
+	stix_oop_context_t ctx;
+	stix_oop_oop_t t1;
+	stix_oop_t return_value;
 
-	stix_size_t inst_counter;
+stix_size_t inst_counter;
 
 	STIX_ASSERT (stix->active_context != STIX_NULL);
 
@@ -872,82 +843,119 @@ int stix_execute (stix_t* stix)
 
 	while (1)
 	{
+
 #if 0
 printf ("IP => %d ", (int)stix->ip);
 #endif
-		FETCH_BYTE_CODE_TO (stix, bc);
-		while (bc == CODE_NOOP) FETCH_BYTE_CODE_TO (stix, bc);
+		FETCH_BYTE_CODE_TO (stix, bcode);
+		/*while (bcode == BCODE_NOOP) FETCH_BYTE_CODE_TO (stix, bcode);*/
 
-		cmd = bc >> 4;
-		if (cmd == CMD_EXTEND)
-		{
-			cmd = bc & 0xF;
-			switch (cmd)
-			{
-				case CMD_JUMP:
-				case CMD_JUMP_IF_FALSE:
-					FETCH_SIGNED_CODE_TO (stix, b1);
-					break;
-
-				case CMD_PUSH_OBJVAR:
-				case CMD_STORE_INTO_OBJVAR:
-				case CMD_SEND_MESSAGE:
-				case CMD_SEND_MESSAGE_TO_SUPER:
-					FETCH_UNSIGNED_CODE_TO (stix, b1);
-					FETCH_UNSIGNED_CODE_TO (stix, b2);
-					break;
-
-				default:
-					FETCH_UNSIGNED_CODE_TO (stix, b1);
-					break;
-			}
-		}
-		else
-		{
-			switch (cmd)
-			{
-				case CMD_JUMP:
-				case CMD_JUMP_IF_FALSE:
-					b1 = bc & 0xF; /* the short jump offset is unsigned */
-					break;
-
-				case CMD_PUSH_OBJVAR:
-				case CMD_STORE_INTO_OBJVAR:
-				case CMD_SEND_MESSAGE:
-				case CMD_SEND_MESSAGE_TO_SUPER:
-					b1 = bc & 0xF;
-					FETCH_BYTE_CODE_TO (stix, b2);
-					break;
-
-				default:
-					b1 = bc & 0xF;
-					break;
-			}
-		}
-
-		inst_counter++;
 #if 0
-printf ("CMD => %d, B1 = %d, SP = %d, IP AFTER INC %d\n", (int)cmd, (int)b1, (int)stix->sp, (int)stix->ip);
+printf ("BCODE = %x\n", bcode);
 #endif
-		switch (cmd)
-		{
+inst_counter++;
 
-			case CMD_PUSH_INSTVAR:
+		switch (bcode)
+		{
+			/* ------------------------------------------------- */
+
+			case BCODE_PUSH_INSTVAR_X:
+				FETCH_PARAM_CODE_TO (stix, b1);
+				goto push_instvar;
+			case BCODE_PUSH_INSTVAR_0:
+			case BCODE_PUSH_INSTVAR_1:
+			case BCODE_PUSH_INSTVAR_2:
+			case BCODE_PUSH_INSTVAR_3:
+			case BCODE_PUSH_INSTVAR_4:
+			case BCODE_PUSH_INSTVAR_5:
+			case BCODE_PUSH_INSTVAR_6:
+			case BCODE_PUSH_INSTVAR_7:
+				b1 = bcode & 0x7; /* low 3 bits */
+			push_instvar:
 printf ("PUSH_INSTVAR %d\n", (int)b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->origin->receiver_or_source) == STIX_OBJ_TYPE_OOP);
 				ACTIVE_STACK_PUSH (stix, ((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1]);
 				break;
 
-			case CMD_PUSH_TEMPVAR:
-printf ("PUSH_TEMPVAR idx=%d - ", (int)b1);
-fflush(stdout);
+			/* ------------------------------------------------- */
+
+			case BCODE_STORE_INTO_INSTVAR_X:
+				FETCH_PARAM_CODE_TO (stix, b1);
+				goto store_instvar;
+			case BCODE_STORE_INTO_INSTVAR_0:
+			case BCODE_STORE_INTO_INSTVAR_1:
+			case BCODE_STORE_INTO_INSTVAR_2:
+			case BCODE_STORE_INTO_INSTVAR_3:
+			case BCODE_STORE_INTO_INSTVAR_4:
+			case BCODE_STORE_INTO_INSTVAR_5:
+			case BCODE_STORE_INTO_INSTVAR_6:
+			case BCODE_STORE_INTO_INSTVAR_7:
+				b1 = bcode & 0x7; /* low 3 bits */
+			store_instvar:
+printf ("STORE_INTO_INSTVAR %d\n", (int)b1);
+				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver_or_source) == STIX_OBJ_TYPE_OOP);
+				((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1] = ACTIVE_STACK_GETTOP(stix);
+				break;
+
+			/* ------------------------------------------------- */
+			case BCODE_POP_INTO_INSTVAR_X:
+				FETCH_PARAM_CODE_TO (stix, b1);
+				goto pop_into_instvar;
+			case BCODE_POP_INTO_INSTVAR_0:
+			case BCODE_POP_INTO_INSTVAR_1:
+			case BCODE_POP_INTO_INSTVAR_2:
+			case BCODE_POP_INTO_INSTVAR_3:
+			case BCODE_POP_INTO_INSTVAR_4:
+			case BCODE_POP_INTO_INSTVAR_5:
+			case BCODE_POP_INTO_INSTVAR_6:
+			case BCODE_POP_INTO_INSTVAR_7:
+				b1 = bcode & 0x7; /* low 3 bits */
+			pop_into_instvar:
+printf ("POP_INTO_INSTVAR %d\n", (int)b1);
+				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver_or_source) == STIX_OBJ_TYPE_OOP);
+				((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1] = ACTIVE_STACK_GETTOP(stix);
+				ACTIVE_STACK_POP (stix);
+				break;
+
+			/* ------------------------------------------------- */
+			case BCODE_PUSH_TEMPVAR_X:
+			case BCODE_STORE_INTO_TEMPVAR_X:
+			case BCODE_POP_INTO_TEMPVAR_X:
+				FETCH_PARAM_CODE_TO (stix, b1);
+				goto handle_tempvar;
+
+			case BCODE_PUSH_TEMPVAR_0:
+			case BCODE_PUSH_TEMPVAR_1:
+			case BCODE_PUSH_TEMPVAR_2:
+			case BCODE_PUSH_TEMPVAR_3:
+			case BCODE_PUSH_TEMPVAR_4:
+			case BCODE_PUSH_TEMPVAR_5:
+			case BCODE_PUSH_TEMPVAR_6:
+			case BCODE_PUSH_TEMPVAR_7:
+			case BCODE_STORE_INTO_TEMPVAR_0:
+			case BCODE_STORE_INTO_TEMPVAR_1:
+			case BCODE_STORE_INTO_TEMPVAR_2:
+			case BCODE_STORE_INTO_TEMPVAR_3:
+			case BCODE_STORE_INTO_TEMPVAR_4:
+			case BCODE_STORE_INTO_TEMPVAR_5:
+			case BCODE_STORE_INTO_TEMPVAR_6:
+			case BCODE_STORE_INTO_TEMPVAR_7:
+			case BCODE_POP_INTO_TEMPVAR_0:
+			case BCODE_POP_INTO_TEMPVAR_1:
+			case BCODE_POP_INTO_TEMPVAR_2:
+			case BCODE_POP_INTO_TEMPVAR_3:
+			case BCODE_POP_INTO_TEMPVAR_4:
+			case BCODE_POP_INTO_TEMPVAR_5:
+			case BCODE_POP_INTO_TEMPVAR_6:
+			case BCODE_POP_INTO_TEMPVAR_7:
+				b1 = bcode & 0x7; /* low 3 bits */
+			handle_tempvar:
 				if (stix->active_context->home != stix->_nil)
 				{
 /*TODO: improve this slow temporary access */
 					/* this code assumes that the method context and
 					 * the block context place some key fields in the
 					 * same offset. such fields include 'home', 'ntmprs' */
-					stix_oop_context_t ctx;
 					stix_oop_t home;
 					stix_ooi_t home_ntmprs;
 
@@ -969,125 +977,267 @@ fflush(stdout);
 					}
 					while (1);
 
-print_object (stix, ctx->slot[b1 - home_ntmprs]);
-printf ("\n");
-
-printf ("    XXCTX %p STACK TEMPVAR PTR=>%p ADJOFF=%d B1=%d HOME_NTMPRS=%d\n", ctx, &ctx->slot[b1-home_ntmprs], (int)(b1 - home_ntmprs), (int)b1, (int)home_ntmprs);
-					ACTIVE_STACK_PUSH (stix, ctx->slot[b1 - home_ntmprs]);
+					bx = b1 - home_ntmprs;
 				}
 				else
 				{
-print_object (stix, ACTIVE_STACK_GET(stix, b1));
-printf ("\n");
-
-printf ("    YYCTX %p STACK TEMPVAR PTR=>%p ADJOFF=%d\n", stix->active_context, &stix->active_context->slot[b1], (int)b1);
-					ACTIVE_STACK_PUSH (stix, ACTIVE_STACK_GET(stix, b1));
+					ctx = stix->active_context;
+					bx = b1;
 				}
 
+				if ((bcode >> 4) & 1)
+				{
+					/* push - bit 4 on*/
+printf ("PUSH_TEMPVAR %d - ", (int)b1);
+
+					ACTIVE_STACK_PUSH (stix, ctx->slot[bx]);
+				}
+				else
+				{
+					/* store or pop - bit 5 off */
+					ctx->slot[bx] = ACTIVE_STACK_GETTOP(stix);
+
+					if ((bcode >> 3) & 1)
+					{
+						/* pop - bit 3 on */
+						ACTIVE_STACK_POP (stix);
+printf ("POP_INTO_TEMPVAR %d - ", (int)b1);
+
+					}
+else
+{
+printf ("STORE_INTO_TEMPVAR %d - ", (int)b1);
+}
+				}
+
+print_object (stix, ctx->slot[bx]);
+printf ("\n");
 				break;
 
-			case CMD_PUSH_LITERAL:
+			/* ------------------------------------------------- */
+			case BCODE_PUSH_LITERAL_X:
+				FETCH_PARAM_CODE_TO (stix, b1);
+				goto push_literal;
+
+			case BCODE_PUSH_LITERAL_0:
+			case BCODE_PUSH_LITERAL_1:
+			case BCODE_PUSH_LITERAL_2:
+			case BCODE_PUSH_LITERAL_3:
+			case BCODE_PUSH_LITERAL_4:
+			case BCODE_PUSH_LITERAL_5:
+			case BCODE_PUSH_LITERAL_6:
+			case BCODE_PUSH_LITERAL_7:
+				b1 = bcode & 0x7; /* low 3 bits */
+			push_literal:
 printf ("PUSH_LITERAL idx=%d - ", (int)b1);
 print_object (stix, stix->active_method->slot[b1]);
 printf ("\n");
 				ACTIVE_STACK_PUSH (stix, stix->active_method->slot[b1]);
 				break;
 
-			case CMD_STORE_INTO_INSTVAR:
-printf ("STORE_INSTVAR %d\n", (int)b1);
-				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver_or_source) == STIX_OBJ_TYPE_OOP);
-				((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1] = ACTIVE_STACK_GETTOP(stix);
-				break;
+			/* ------------------------------------------------- */
+			case BCODE_PUSH_OBJECT_X:
+			case BCODE_STORE_INTO_OBJECT_X:
+			case BCODE_POP_INTO_OBJECT_X:
+				FETCH_PARAM_CODE_TO (stix, b1);
+				goto handle_object;
 
-			case CMD_STORE_INTO_TEMPVAR:
-printf ("STORE_TEMPVAR idx=%d - ", (int)b1);
-print_object (stix, ACTIVE_STACK_GETTOP(stix));
-printf ("\n");
-				if (stix->active_context->home != stix->_nil)
+			case BCODE_PUSH_OBJECT_0:
+			case BCODE_PUSH_OBJECT_1:
+			case BCODE_PUSH_OBJECT_2:
+			case BCODE_PUSH_OBJECT_3:
+			case BCODE_STORE_INTO_OBJECT_0:
+			case BCODE_STORE_INTO_OBJECT_1:
+			case BCODE_STORE_INTO_OBJECT_2:
+			case BCODE_STORE_INTO_OBJECT_3:
+			case BCODE_POP_INTO_OBJECT_0:
+			case BCODE_POP_INTO_OBJECT_1:
+			case BCODE_POP_INTO_OBJECT_2:
+			case BCODE_POP_INTO_OBJECT_3:
+				b1 = bcode & 0x3; /* low 2 bits */
+			handle_object:
+printf ("<<<<<<<<<<<<<< XXXXX_OBJECT NOT IMPLEMENTED YET >>>>>>>>>>>> \n");
+stix->errnum = STIX_ENOIMPL;
+return -1;
+				if ((bcode >> 3) & 1)
 				{
-/*TODO: improve this slow temporary access */
-					/* this code assuments that the method context and
-					 * the block context places some key fields in the
-					 * same offset. such fields include 'home', 'ntmprs' */
-					stix_oop_context_t ctx;
-					stix_oop_t home;
-					stix_ooi_t home_ntmprs;
-
-					ctx = stix->active_context;
-					home = ctx->home;
-
-					do
+					/* store or pop */
+					if ((bcode >> 2) & 1)
 					{
-						home_ntmprs = STIX_OOP_TO_SMINT(((stix_oop_context_t)home)->ntmprs);
-						if (b1 >= home_ntmprs) break;
-
-						ctx = (stix_oop_context_t)home;
-						home = ((stix_oop_context_t)home)->home;
-						if (home == stix->_nil)
-						{
-							home_ntmprs = 0;
-							break;
-						}
+						/* pop */
 					}
-					while (1);
-
-printf ("    XXCTX %p STACK TEMPVAR PTR=>%p ADJOFF=%d B1=%d HOME_NTMPRS=%d\n", ctx, &ctx->slot[b1-home_ntmprs], (int)(b1 - home_ntmprs), (int)b1, (int)home_ntmprs);
-					ctx->slot[b1 - home_ntmprs] = ACTIVE_STACK_GETTOP(stix);
 				}
 				else
 				{
-printf ("    YYCTX %p STACK TEMPVAR PTR=>%p ADJOFF=%d\n", stix->active_context, &stix->active_context->slot[b1], (int)b1);
-					ACTIVE_STACK_SET (stix, b1, ACTIVE_STACK_GETTOP(stix));
+					/* push */
 				}
 				break;
 
-		/* -------------------------------------------------------- */
+			/* -------------------------------------------------------- */
 
-/* TODO: CMD_JUMP_IF_FALSE */
-			case CMD_JUMP:
-printf ("JUMP %d\n", (int)b1);
+			case BCODE_JUMP_FORWARD_X:
+				FETCH_PARAM_CODE_TO (stix, b1);
+printf ("JUMP_FORWARD %d\n", (int)b1);
 				stix->ip += b1;
 				break;
 
-		/* -------------------------------------------------------- */
+			case BCODE_JUMP_FORWARD_0:
+			case BCODE_JUMP_FORWARD_1:
+			case BCODE_JUMP_FORWARD_2:
+			case BCODE_JUMP_FORWARD_3:
+printf ("JUMP_FORWARD %d\n", (int)(bcode & 0x3));
+				stix->ip += (bcode & 0x3); /* low 2 bits */
+				break;
 
-			case CMD_PUSH_OBJVAR:
-			{
+			case BCODE_JUMP_BACKWARD_X:
+				FETCH_PARAM_CODE_TO (stix, b1);
+printf ("JUMP_BACKWARD %d\n", (int)b1);
+				stix->ip += b1;
+				break;
+
+			case BCODE_JUMP_BACKWARD_0:
+			case BCODE_JUMP_BACKWARD_1:
+			case BCODE_JUMP_BACKWARD_2:
+			case BCODE_JUMP_BACKWARD_3:
+printf ("JUMP_BACKWARD %d\n", (int)(bcode & 0x3));
+				stix->ip -= (bcode & 0x3); /* low 2 bits */
+				break;
+
+			case BCODE_JUMP_IF_TRUE_X:
+			case BCODE_JUMP_IF_FALSE_X:
+			case BCODE_JUMP_BY_OFFSET_X:
+			case BCODE_JUMP_IF_TRUE_0:
+			case BCODE_JUMP_IF_TRUE_1:
+			case BCODE_JUMP_IF_TRUE_2:
+			case BCODE_JUMP_IF_TRUE_3:
+			case BCODE_JUMP_IF_FALSE_0:
+			case BCODE_JUMP_IF_FALSE_1:
+			case BCODE_JUMP_IF_FALSE_2:
+			case BCODE_JUMP_IF_FALSE_3:
+			case BCODE_JUMP_BY_OFFSET_0:
+			case BCODE_JUMP_BY_OFFSET_1:
+			case BCODE_JUMP_BY_OFFSET_2:
+			case BCODE_JUMP_BY_OFFSET_3:
+printf ("<<<<<<<<<<<<<< JUMP NOT IMPLEMENTED YET >>>>>>>>>>>> \n");
+stix->errnum = STIX_ENOIMPL;
+return -1;
+				break;
+
+			/* -------------------------------------------------------- */
+
+			case BCODE_PUSH_CTXTEMPVAR_X:
+			case BCODE_STORE_INTO_CTXTEMPVAR_X:
+			case BCODE_POP_INTO_CTXTEMPVAR_X:
+				FETCH_PARAM_CODE_TO (stix, b1);
+				FETCH_PARAM_CODE_TO (stix, b2);
+				goto handle_ctxtempvar;
+			case BCODE_PUSH_CTXTEMPVAR_0:
+			case BCODE_PUSH_CTXTEMPVAR_1:
+			case BCODE_PUSH_CTXTEMPVAR_2:
+			case BCODE_PUSH_CTXTEMPVAR_3:
+			case BCODE_STORE_INTO_CTXTEMPVAR_0:
+			case BCODE_STORE_INTO_CTXTEMPVAR_1:
+			case BCODE_STORE_INTO_CTXTEMPVAR_2:
+			case BCODE_STORE_INTO_CTXTEMPVAR_3:
+			case BCODE_POP_INTO_CTXTEMPVAR_0:
+			case BCODE_POP_INTO_CTXTEMPVAR_1:
+			case BCODE_POP_INTO_CTXTEMPVAR_2:
+			case BCODE_POP_INTO_CTXTEMPVAR_3:
+				b1 = bcode & 0x3; /* low 2 bits */
+				FETCH_BYTE_CODE_TO (stix, b2);
+			handle_ctxtempvar:
+printf ("<<<<<<<<<<<<<< XXXXX_CTXTEMPVAR NOT IMPLEMENTED YET >>>>>>>>>>>> \n");
+stix->errnum = STIX_ENOIMPL;
+return -1;
+				if ((bcode >> 3) & 1)
+				{
+					/* store or pop */
+					if ((bcode >> 2) & 1)
+					{
+						/* pop */
+					}
+				}
+				else
+				{
+					/* push */
+				}
+				break;
+			/* -------------------------------------------------------- */
+
+			case BCODE_PUSH_OBJVAR_X:
+			case BCODE_STORE_INTO_OBJVAR_X:
+			case BCODE_POP_INTO_OBJVAR_X:
+				FETCH_PARAM_CODE_TO (stix, b1);
+				FETCH_PARAM_CODE_TO (stix, b2);
+				goto handle_objvar;
+
+			case BCODE_PUSH_OBJVAR_0:
+			case BCODE_PUSH_OBJVAR_1:
+			case BCODE_PUSH_OBJVAR_2:
+			case BCODE_PUSH_OBJVAR_3:
+			case BCODE_STORE_INTO_OBJVAR_0:
+			case BCODE_STORE_INTO_OBJVAR_1:
+			case BCODE_STORE_INTO_OBJVAR_2:
+			case BCODE_STORE_INTO_OBJVAR_3:
+			case BCODE_POP_INTO_OBJVAR_0:
+			case BCODE_POP_INTO_OBJVAR_1:
+			case BCODE_POP_INTO_OBJVAR_2:
+			case BCODE_POP_INTO_OBJVAR_3:
 				/* b1 -> variable index to the object indicated by b2.
 				 * b2 -> object index stored in the literal frame. */
+				b1 = bcode & 0x3; /* low 2 bits */
+				FETCH_BYTE_CODE_TO (stix, b2);
 
-				stix_oop_oop_t obj;
-printf ("PUSH OBJVAR index=%d object_index_in_literal_frame=%d - ", (int)b1, (int)b2);
-				obj = (stix_oop_oop_t)stix->active_method->slot[b2];
-				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(obj) == STIX_OBJ_TYPE_OOP);
-				STIX_ASSERT (b1 < STIX_OBJ_GET_SIZE(obj));
+			handle_objvar:
+printf ("XXXXXXXXXXXXXXXXXXXXX [%d]\n", (int)b2);
+				t1 = (stix_oop_oop_t)stix->active_method->slot[b2];
+				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(t1) == STIX_OBJ_TYPE_OOP);
+				STIX_ASSERT (b1 < STIX_OBJ_GET_SIZE(t1));
 
-print_object (stix, obj->slot[b1]);
+				if ((bcode >> 3) & 1)
+				{
+					/* store or pop */
+
+					t1->slot[b1] = ACTIVE_STACK_GETTOP(stix);
+
+					if ((bcode >> 2) & 1)
+					{
+						/* pop */
+						ACTIVE_STACK_POP (stix);
+printf ("POP_INTO_OBJVAR %d %d - ", (int)b1, (int)b2);
+					}
+else
+{
+printf ("STORE_INTO_OBJVAR %d %d - ", (int)b1, (int)b2);
+}
+				}
+				else
+				{
+					/* push */
+printf ("PUSH_OBJVAR %d %d - ", (int)b1, (int)b2);
+					ACTIVE_STACK_PUSH (stix, t1->slot[b1]);
+				}
+
+print_object (stix, t1->slot[b1]);
 printf ("\n");
-				ACTIVE_STACK_PUSH (stix, obj->slot[b1]);
 				break;
-			}
 
-			case CMD_STORE_INTO_OBJVAR:
+			/* -------------------------------------------------------- */
+			case BCODE_SEND_MESSAGE_X:
+			case BCODE_SEND_MESSAGE_TO_SUPER_X:
+				FETCH_PARAM_CODE_TO (stix, b1);
+				FETCH_PARAM_CODE_TO (stix, b2);
+				goto handle_send_message;
+
+			case BCODE_SEND_MESSAGE_0:
+			case BCODE_SEND_MESSAGE_1:
+			case BCODE_SEND_MESSAGE_2:
+			case BCODE_SEND_MESSAGE_3:
+			case BCODE_SEND_MESSAGE_TO_SUPER_0:
+			case BCODE_SEND_MESSAGE_TO_SUPER_1:
+			case BCODE_SEND_MESSAGE_TO_SUPER_2:
+			case BCODE_SEND_MESSAGE_TO_SUPER_3:
 			{
-				stix_oop_oop_t obj;
-printf ("STORE OBJVAR index=%d object_index_in_literal_frame=%d - ", (int)b1, (int)b2);
-				obj = (stix_oop_oop_t)stix->active_method->slot[b2];
-				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(obj) == STIX_OBJ_TYPE_OOP);
-				STIX_ASSERT (b1 < STIX_OBJ_GET_SIZE(obj));
-
-print_object (stix, ACTIVE_STACK_GETTOP(stix));
-printf ("\n");
-				obj->slot[b1] = ACTIVE_STACK_GETTOP(stix);
-				break;
-			}
-
-		/* -------------------------------------------------------- */
-			case CMD_SEND_MESSAGE:
-			case CMD_SEND_MESSAGE_TO_SUPER:
-			{
-/* TODO: tail call optimization */
-
 				/* b1 -> number of arguments 
 				 * b2 -> index to the selector stored in the literal frame
 				 */
@@ -1096,15 +1246,17 @@ printf ("\n");
 				stix_oop_method_t newmth;
 				stix_oop_char_t selector;
 				stix_ooi_t preamble;
-				stix_uint16_t next_inst;
+
+
+			handle_send_message:
+				b1 = bcode & 0x3; /* low 2 bits */
+				FETCH_BYTE_CODE_TO (stix, b2);
 
 				/* get the selector from the literal frame */
 				selector = (stix_oop_char_t)stix->active_method->slot[b2];
 
-if (cmd == CMD_SEND_MESSAGE)
-printf ("SEND_MESSAGE TO RECEIVER AT STACKPOS=%d NARGS=%d SELECTOR=", (int)(stix->sp - b1), (int)b1);
-else
-printf ("SEND_MESSAGE_TO_SUPER TO RECEIVER AT STACKPOS=%d NARGS=%d SELECTOR=", (int)(stix->sp - b1), (int)b1);
+
+printf ("SEND_MESSAGE%s TO RECEIVER AT STACKPOS=%d NARGS=%d SELECTOR=", (((bcode >> 2) & 1)? "_TO_SUPER": ""), (int)(stix->sp - b1), (int)b1);
 print_object (stix, (stix_oop_t)selector);
 fflush (stdout);
 				STIX_ASSERT (STIX_CLASSOF(stix, selector) == stix->_symbol);
@@ -1115,7 +1267,7 @@ print_object(stix, newrcv);
 printf ("\n");
 				mthname.ptr = selector->slot;
 				mthname.len = STIX_OBJ_GET_SIZE(selector);
-				newmth = find_method (stix, newrcv, &mthname, (cmd == CMD_SEND_MESSAGE_TO_SUPER));
+				newmth = find_method (stix, newrcv, &mthname, ((bcode >> 2) & 1));
 				if (!newmth) 
 				{
 /* TODO: implement doesNotUnderstand: XXXXX  instead of returning -1. */
@@ -1188,272 +1340,259 @@ printf ("RETURN INSTVAR AT PREAMBLE\n");
 					}
 
 					default:
-/* TOOD: remove it only in the instructions that requires reading ahead */
-						/* read ahead the next instruction for tail-call optimization */
-						next_inst = stix->active_code->slot[stix->ip];
-							if (next_inst == CODE_POP_STACKTOP)
-						next_inst |= (next_inst << 8) + stix->active_code->slot[stix->ip + 1];
-
-						if (activate_new_method (stix, newmth, next_inst) <= -1) goto oops;
+						if (activate_new_method (stix, newmth) <= -1) goto oops;
 						break;
 				}
 
 				break; /* CMD_SEND_MESSAGE */
 			}
 
-		/* -------------------------------------------------------- */
+			/* -------------------------------------------------------- */
 
-			case CMD_PUSH_SPECIAL:
-				switch (b1)
-				{
-					case SUBCMD_PUSH_RECEIVER:
+			case BCODE_PUSH_RECEIVER:
 printf ("PUSH_RECEIVER %p TO STACK INDEX %d\n", stix->active_context->origin->receiver_or_source, (int)stix->sp);
-						ACTIVE_STACK_PUSH (stix, stix->active_context->origin->receiver_or_source);
-						break;
+				ACTIVE_STACK_PUSH (stix, stix->active_context->origin->receiver_or_source);
+				break;
 
-					case SUBCMD_PUSH_NIL:
+			case BCODE_PUSH_NIL:
 printf ("PUSH_NIL\n");
-						ACTIVE_STACK_PUSH (stix, stix->_nil);
-						break;
+				ACTIVE_STACK_PUSH (stix, stix->_nil);
+				break;
 
-					case SUBCMD_PUSH_TRUE:
+			case BCODE_PUSH_TRUE:
 printf ("PUSH_TRUE\n");
-						ACTIVE_STACK_PUSH (stix, stix->_true);
-						break;
+				ACTIVE_STACK_PUSH (stix, stix->_true);
+				break;
 
-					case SUBCMD_PUSH_FALSE:
+			case BCODE_PUSH_FALSE:
 printf ("PUSH_FALSE\n");
-						ACTIVE_STACK_PUSH (stix, stix->_false);
-						break;
+				ACTIVE_STACK_PUSH (stix, stix->_false);
+				break;
 
-					case SUBCMD_PUSH_CONTEXT:
+			case BCODE_PUSH_CONTEXT:
 printf ("PUSH_CONTEXT\n");
-						ACTIVE_STACK_PUSH (stix, (stix_oop_t)stix->active_context);
-						break;
+				ACTIVE_STACK_PUSH (stix, (stix_oop_t)stix->active_context);
+				break;
 
-					case SUBCMD_PUSH_NEGONE:
+			case BCODE_PUSH_NEGONE:
 printf ("PUSH_NEGONE\n");
-						ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(-1));
-						break;
+				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(-1));
+				break;
 
-					case SUBCMD_PUSH_ZERO:
+			case BCODE_PUSH_ZERO:
 printf ("PUSH_ZERO\n");
-						ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(0));
-						break;
+				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(0));
+				break;
 
-					case SUBCMD_PUSH_ONE:
-printf ("PUSH_SMINT\n");
-						ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(1));
-						break;
-				}
-				break; /* CMD_PUSH_SPECIAL */
+			case BCODE_PUSH_ONE:
+printf ("PUSH_ONE\n");
+				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(1));
+				break;
 
-		/* -------------------------------------------------------- */
+			case BCODE_PUSH_TWO:
+printf ("PUSH_TWO\n");
+				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(2));
+				break;
 
-			case CMD_DO_SPECIAL:
+			/* -------------------------------------------------------- */
+
+			case BCODE_DUP_STACKTOP:
 			{
-				stix_oop_t return_value;
-
-				switch (b1)
-				{
-					case SUBCMD_DUP_STACKTOP:
-					{
-						stix_oop_t tmp;
+				stix_oop_t t;
 printf ("DUP_STACKTOP SP=%d\n", (int)stix->sp);
-						STIX_ASSERT (!ACTIVE_STACK_ISEMPTY(stix));
-						tmp = ACTIVE_STACK_GETTOP(stix);
-						ACTIVE_STACK_PUSH (stix, tmp);
-						break;
-					}
+				STIX_ASSERT (!ACTIVE_STACK_ISEMPTY(stix));
+				t = ACTIVE_STACK_GETTOP(stix);
+				ACTIVE_STACK_PUSH (stix, t);
+				break;
+			}
 
-					case SUBCMD_POP_STACKTOP:
+			case BCODE_POP_STACKTOP:
 printf ("POP_STACKTOP\n");
-						STIX_ASSERT (!ACTIVE_STACK_ISEMPTY(stix));
-						ACTIVE_STACK_POP (stix);
-						break;
+				STIX_ASSERT (!ACTIVE_STACK_ISEMPTY(stix));
+				ACTIVE_STACK_POP (stix);
+				break;
 
-					case SUBCMD_RETURN_STACKTOP:
+			case BCODE_RETURN_STACKTOP:
 printf ("RETURN_STACKTOP\n");
-						return_value = ACTIVE_STACK_GETTOP(stix);
-						ACTIVE_STACK_POP (stix);
-						goto handle_return;
+				return_value = ACTIVE_STACK_GETTOP(stix);
+				ACTIVE_STACK_POP (stix);
+				goto handle_return;
 
-					case SUBCMD_RETURN_RECEIVER:
+			case BCODE_RETURN_RECEIVER:
 printf ("RETURN_RECEIVER\n");
-						return_value = stix->active_context->origin->receiver_or_source;
-						goto handle_return;
-
-					case SUBCMD_RETURN_FROM_BLOCK:
-printf ("LEAVING_BLOCK\n");
-						STIX_ASSERT(STIX_CLASSOF(stix, stix->active_context)  == stix->_block_context);
-
-						return_value = ACTIVE_STACK_GETTOP(stix);
-						SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->sender);
-						ACTIVE_STACK_PUSH (stix, return_value);
-						break;
-
-					case SUBCMD_SEND_BLOCK_COPY:
-					{
-						stix_ooi_t nargs, ntmprs;
-						stix_oop_context_t rctx;
-						stix_oop_context_t blkctx;
-printf ("SEND_BLOCK_COPY\n");
-						/* it emulates thisContext blockCopy: nargs ofTmprCount: ntmprs */
-						STIX_ASSERT (stix->sp >= 2);
-
-						STIX_ASSERT (STIX_CLASSOF(stix, ACTIVE_STACK_GETTOP(stix)) == stix->_small_integer);
-						ntmprs = STIX_OOP_TO_SMINT(ACTIVE_STACK_GETTOP(stix));
-						ACTIVE_STACK_POP (stix);
-
-						STIX_ASSERT (STIX_CLASSOF(stix, ACTIVE_STACK_GETTOP(stix)) == stix->_small_integer);
-						nargs = STIX_OOP_TO_SMINT(ACTIVE_STACK_GETTOP(stix));
-						ACTIVE_STACK_POP (stix);
-
-						STIX_ASSERT (nargs >= 0);
-						STIX_ASSERT (ntmprs >= nargs);
-
-						/* the block context object created here is used
-						 * as a base object for block context activation.
-						 * primitive_block_context_value() clones a block 
-						 * context and activates the cloned context.
-						 * this base block context is created with no 
-						 * stack for this reason. */
-						blkctx = (stix_oop_context_t)stix_instantiate (stix, stix->_block_context, STIX_NULL, 0); 
-						if (!blkctx) return -1;
-
-						/* get the receiver to the block copy message after block context instantiation
-						 * not to get affected by potential GC */
-						rctx = (stix_oop_context_t)ACTIVE_STACK_GETTOP(stix);
-
-						/* [NOTE]
-						 *  blkctx->caller is left to nil. it is set to the 
-						 *  active context before it gets activated. see
-						 *  primitive_block_context_value().
-						 *
-						 *  blkctx->home is set here to the active context.
-						 *  it's redundant to have them pushed to the stack
-						 *  though it is to emulate the message sending of
-						 *  blockCopy:withNtmprs:. 
-						 *  TODO: devise a new byte code to eliminate stack pushing.
-						 *
-						 *  blkctx->origin is set here by copying the origin
-						 *  of the active context.
-						 */
-
-						/* the extended jump instruction has the format of 
-						 *   0000XXXX KKKKKKKK or 0000XXXX KKKKKKKK KKKKKKKK 
-						 * depending on STIX_CODE_EXTEND_SIZE. change 'ip' to point to
-						 * the instruction after the jump. */
-						blkctx->ip = STIX_OOP_FROM_SMINT(stix->ip + STIX_CODE_EXTEND_SIZE + 1);
-						blkctx->sp = STIX_OOP_FROM_SMINT(-1);
-						/* the number of arguments for a block context is local to the block */
-						blkctx->method_or_nargs = STIX_OOP_FROM_SMINT(nargs);
-						/* the number of temporaries here is an accumulated count including
-						 * the number of temporaries of a home context */
-						blkctx->ntmprs = STIX_OOP_FROM_SMINT(ntmprs);
-
-						blkctx->home = (stix_oop_t)rctx;
-						blkctx->receiver_or_source = stix->_nil;
-
-#if 0
-						if (rctx->home == stix->_nil)
-						{
-							/* the context that receives the blockCopy message is a method context */
-							STIX_ASSERT (STIX_CLASSOF(stix, rctx) == stix->_method_context);
-							STIX_ASSERT (rctx == (stix_oop_t)stix->active_context);
-							blkctx->origin = (stix_oop_context_t)rctx;
-						}
-						else
-						{
-							/* a block context is active */
-							STIX_ASSERT (STIX_CLASSOF(stix, rctx) == stix->_block_context);
-							blkctx->origin = ((stix_oop_block_context_t)rctx)->origin;
-						}
-#else
-
-						/* [NOTE]
-						 * the origin of a method context is set to itself
-						 * when it's created. so it's safe to simply copy
-						 * the origin field this way.
-						 */
-						blkctx->origin = rctx->origin;
-#endif
-
-						ACTIVE_STACK_SETTOP (stix, (stix_oop_t)blkctx);
-						break;
-					}
-
-					default:
-						stix->errnum = STIX_EINTERN;
-						break;
-
-
-					handle_return:
-
+				return_value = stix->active_context->origin->receiver_or_source;
+			handle_return:
 printf ("<<LEAVING>> SP=%d\n", (int)stix->sp);
 
-						/* put the instruction pointer back to the return
-						 * instruction (RETURN_RECEIVER or RETURN_RECEIVER)
-						 * if a context returns into this context again,
-						 * it'll be able to return as well again.
-						 * 
-						 * Consider a program like this:
-						 *
-						 * #class MyObject(Object)
-						 * {
-						 *   #declare(#classinst) t1 t2.
-						 *   #method(#class) xxxx
-						 *   {
-						 *     | g1 g2 |
-						 *     t1 dump.
-						 *     t2 := [ g1 := 50. g2 := 100. ^g1 + g2 ].
-						 *     (t1 < 100) ifFalse: [ ^self ].
-						 *     t1 := t1 + 1. 
-						 *     ^self xxxx.
-						 *   }
-						 *   #method(#class) main
-						 *   {
-						 *     t1 := 1.
-						 *     self xxxx.
-						 *     t2 := t2 value.  
-						 *     t2 dump.
-						 *   }
-						 * }
-						 *
-						 * the 'xxxx' method invoked by 'self xxxx' has 
-						 * returned even before 't2 value' is executed.
-						 * the '^' operator makes the active context to
-						 * switch to its 'origin->sender' which is the
-						 * method context of 'xxxx' itself. placing its
-						 * instruction pointer at the 'return' instruction
-						 * helps execute another return when the switching
-						 * occurs.
-						 * 
-						 * TODO: verify if this really works
-						 *
-						 */
-						stix->ip--; 
+				/* put the instruction pointer back to the return
+				 * instruction (RETURN_RECEIVER or RETURN_RECEIVER)
+				 * if a context returns into this context again,
+				 * it'll be able to return as well again.
+				 * 
+				 * Consider a program like this:
+				 *
+				 * #class MyObject(Object)
+				 * {
+				 *   #declare(#classinst) t1 t2.
+				 *   #method(#class) xxxx
+				 *   {
+				 *     | g1 g2 |
+				 *     t1 dump.
+				 *     t2 := [ g1 := 50. g2 := 100. ^g1 + g2 ].
+				 *     (t1 < 100) ifFalse: [ ^self ].
+				 *     t1 := t1 + 1. 
+				 *     ^self xxxx.
+				 *   }
+				 *   #method(#class) main
+				 *   {
+				 *     t1 := 1.
+				 *     self xxxx.
+				 *     t2 := t2 value.  
+				 *     t2 dump.
+				 *   }
+				 * }
+				 *
+				 * the 'xxxx' method invoked by 'self xxxx' has 
+				 * returned even before 't2 value' is executed.
+				 * the '^' operator makes the active context to
+				 * switch to its 'origin->sender' which is the
+				 * method context of 'xxxx' itself. placing its
+				 * instruction pointer at the 'return' instruction
+				 * helps execute another return when the switching
+				 * occurs.
+				 * 
+				 * TODO: verify if this really works
+				 *
+				 */
+				stix->ip--; 
 
-						SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->origin->sender);
+				SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->origin->sender);
 
-						/* push the return value to the stack of the new active context */
-						ACTIVE_STACK_PUSH (stix, return_value);
+				/* push the return value to the stack of the new active context */
+				ACTIVE_STACK_PUSH (stix, return_value);
 
-						if (stix->active_context->sender == stix->_nil)
-						{
-							/* the sending context of the intial context has been set to nil.
-							 * use this fact to tell an initial context from a normal context. */
-							STIX_ASSERT (stix->active_context->receiver_or_source == stix->_nil);
+				if (stix->active_context->sender == stix->_nil)
+				{
+					/* the sending context of the intial context has been set to nil.
+					 * use this fact to tell an initial context from a normal context. */
+					STIX_ASSERT (stix->active_context->receiver_or_source == stix->_nil);
 
 printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
-							STIX_ASSERT (stix->sp == 0);
-							goto done;
-						}
-
-						break;
+					STIX_ASSERT (stix->sp == 0);
+					goto done;
 				}
-				break; /* CMD_DO_SPECIAL */
+
+				break;
+
+			case BCODE_RETURN_FROM_BLOCK:
+printf ("LEAVING_BLOCK\n");
+				STIX_ASSERT(STIX_CLASSOF(stix, stix->active_context)  == stix->_block_context);
+
+				return_value = ACTIVE_STACK_GETTOP(stix);
+				SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->sender);
+				ACTIVE_STACK_PUSH (stix, return_value);
+				break;
+
+			case BCODE_SEND_BLOCK_COPY:
+			{
+				stix_ooi_t nargs, ntmprs;
+				stix_oop_context_t rctx;
+				stix_oop_context_t blkctx;
+printf ("SEND_BLOCK_COPY\n");
+				/* it emulates thisContext blockCopy: nargs ofTmprCount: ntmprs */
+				STIX_ASSERT (stix->sp >= 2);
+
+				STIX_ASSERT (STIX_CLASSOF(stix, ACTIVE_STACK_GETTOP(stix)) == stix->_small_integer);
+				ntmprs = STIX_OOP_TO_SMINT(ACTIVE_STACK_GETTOP(stix));
+				ACTIVE_STACK_POP (stix);
+
+				STIX_ASSERT (STIX_CLASSOF(stix, ACTIVE_STACK_GETTOP(stix)) == stix->_small_integer);
+				nargs = STIX_OOP_TO_SMINT(ACTIVE_STACK_GETTOP(stix));
+				ACTIVE_STACK_POP (stix);
+
+				STIX_ASSERT (nargs >= 0);
+				STIX_ASSERT (ntmprs >= nargs);
+
+				/* the block context object created here is used
+				 * as a base object for block context activation.
+				 * primitive_block_context_value() clones a block 
+				 * context and activates the cloned context.
+				 * this base block context is created with no 
+				 * stack for this reason. */
+				blkctx = (stix_oop_context_t)stix_instantiate (stix, stix->_block_context, STIX_NULL, 0); 
+				if (!blkctx) return -1;
+
+				/* get the receiver to the block copy message after block context instantiation
+				 * not to get affected by potential GC */
+				rctx = (stix_oop_context_t)ACTIVE_STACK_GETTOP(stix);
+
+				/* [NOTE]
+				 *  blkctx->caller is left to nil. it is set to the 
+				 *  active context before it gets activated. see
+				 *  primitive_block_context_value().
+				 *
+				 *  blkctx->home is set here to the active context.
+				 *  it's redundant to have them pushed to the stack
+				 *  though it is to emulate the message sending of
+				 *  blockCopy:withNtmprs:. 
+				 *  TODO: devise a new byte code to eliminate stack pushing.
+				 *
+				 *  blkctx->origin is set here by copying the origin
+				 *  of the active context.
+				 */
+
+				/* the extended jump instruction has the format of 
+				 *   0000XXXX KKKKKKKK or 0000XXXX KKKKKKKK KKKKKKKK 
+				 * depending on STIX_BCODE_LONG_PARAM_SIZE. change 'ip' to point to
+				 * the instruction after the jump. */
+				blkctx->ip = STIX_OOP_FROM_SMINT(stix->ip + STIX_BCODE_LONG_PARAM_SIZE + 1);
+				blkctx->sp = STIX_OOP_FROM_SMINT(-1);
+				/* the number of arguments for a block context is local to the block */
+				blkctx->method_or_nargs = STIX_OOP_FROM_SMINT(nargs);
+				/* the number of temporaries here is an accumulated count including
+				 * the number of temporaries of a home context */
+				blkctx->ntmprs = STIX_OOP_FROM_SMINT(ntmprs);
+
+				blkctx->home = (stix_oop_t)rctx;
+				blkctx->receiver_or_source = stix->_nil;
+
+#if 0
+				if (rctx->home == stix->_nil)
+				{
+					/* the context that receives the blockCopy message is a method context */
+					STIX_ASSERT (STIX_CLASSOF(stix, rctx) == stix->_method_context);
+					STIX_ASSERT (rctx == (stix_oop_t)stix->active_context);
+					blkctx->origin = (stix_oop_context_t)rctx;
+				}
+				else
+				{
+					/* a block context is active */
+					STIX_ASSERT (STIX_CLASSOF(stix, rctx) == stix->_block_context);
+					blkctx->origin = ((stix_oop_block_context_t)rctx)->origin;
+				}
+#else
+
+				/* [NOTE]
+				 * the origin of a method context is set to itself
+				 * when it's created. so it's safe to simply copy
+				 * the origin field this way.
+				 */
+				blkctx->origin = rctx->origin;
+#endif
+
+				ACTIVE_STACK_SETTOP (stix, (stix_oop_t)blkctx);
+				break;
 			}
+
+			case BCODE_NOOP:
+				/* do nothing */
+				break;
+
+
+			default:
+printf ("UNKNOWN BYTE CODE ENCOUNTERED %x\n", (int)bcode);
+				stix->errnum = STIX_EINTERN;
+				break;
 
 		}
 	}

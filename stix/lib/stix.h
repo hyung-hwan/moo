@@ -301,10 +301,7 @@ enum stix_trait_t
 {
 	/* perform no garbage collection when the heap is full. 
 	 * you still can use stix_gc() explicitly. */
-	STIX_NOGC = (1 << 0),
-
-	/* no tail call optimization */
-	STIX_NOTCO = (1 << 1),
+	STIX_NOGC = (1 << 0)
 };
 typedef enum stix_trait_t stix_trait_t;
 

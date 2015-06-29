@@ -30,7 +30,7 @@
 #include "stix.h"
 
 /* you can define this to either 1 or 2 */
-#define STIX_CODE_EXTEND_SIZE 2
+#define STIX_BCODE_LONG_PARAM_SIZE 2
 
 /* this is useful for debugging. stix_gc() can be called 
  * while stix has not been fully initialized when this is defined*/
@@ -460,194 +460,300 @@ struct stix_compiler_t
 
 #endif
 
-#if defined(STIX_CODE_EXTEND_SIZE) && (STIX_CODE_EXTEND_SIZE == 1)
+#if defined(STIX_BCODE_LONG_PARAM_SIZE) && (STIX_BCODE_LONG_PARAM_SIZE == 1)
 #	define MAX_CODE_INDEX               (0xFFu)
 #	define MAX_CODE_NTMPRS              (0xFFu)
 #	define MAX_CODE_NARGS               (0xFFu)
 #	define MAX_CODE_NBLKARGS            (0xFFu)
 #	define MAX_CODE_NBLKTMPRS           (0xFFu)
 #	define MAX_CODE_PRIMNO              (0xFFFFu)
-#	define MIN_CODE_JUMP                (-0x80)
-#	define MAX_CODE_JUMP                (0x7F)
-#elif defined(STIX_CODE_EXTEND_SIZE) && (STIX_CODE_EXTEND_SIZE == 2)
+#	define MAX_CODE_JUMP                (0xFF)
+#elif defined(STIX_BCODE_LONG_PARAM_SIZE) && (STIX_BCODE_LONG_PARAM_SIZE == 2)
 #	define MAX_CODE_INDEX               (0xFFFFu)
 #	define MAX_CODE_NTMPRS              (0xFFFFu)
 #	define MAX_CODE_NARGS               (0xFFFFu)
 #	define MAX_CODE_NBLKARGS            (0xFFFFu)
 #	define MAX_CODE_NBLKTMPRS           (0xFFFFu)
 #	define MAX_CODE_PRIMNO              (0xFFFFu)
-#	define MIN_CODE_JUMP                (-0x8000)
-#	define MAX_CODE_JUMP                (0x7FFF)
+#	define MAX_CODE_JUMP                (0xFFFF)
 #else
-#	error Unsupported STIX_CODE_EXTEND_SIZE
+#	error Unsupported STIX_BCODE_LONG_PARAM_SIZE
 #endif
 
 #define MAX_CODE_BLKCODE             MAX_CODE_JUMP
-#define MAKE_CODE(x,y) (((x) << 4) | y)
+
 
 
 /*
---------------------------------------
+----------------------------------------------------------------------------------------------------------------
+SHORT INSTRUCTION CODE                                        LONG INSTRUCTION CODE
+----------------------------------------------------------------------------------------------------------------
+                                                                      v v
+0-3      0000 00XX STORE_INTO_INSTVAR                         128  1000 0000 XXXXXXXX STORE_INTO_INSTVAR_X                    (bit 4 off, bit 3 off) 
+4-7      0000 01XX STORE_INTO_INSTVAR
+8-11     0000 10XX POP_INTO_INSTVAR                           136  1000 1000 XXXXXXXX POP_INTO_INSTVAR_X                      (bit 4 off, bit 3 on)
+12-15    0000 11XX POP_INTO_INSTVAR
+16-19    0001 00XX PUSH_INSTVAR                               144  1001 0000 XXXXXXXX PUSH_INSTVAR_X                          (bit 4 on)
+20-23    0001 01XX PUSH_INSTVAR
 
-  0  000000XX PUSH_INSTVAR
-  1  000001XX PUSH_TEMPVAR
-  2  000010XX PUSH_LITERAL
-  3  000011XX STORE_INTO_INSTVAR
-  4  000100XX STORE_INTO_TEMPVAR
-  5  000101XX POP_INTO_INSTVAR
-  6  000110XX POP_INTO_TEMPVAR
+                                                                      v v
+24-27    0001 10XX PUSH_TEMPVAR                               152  1001 1000 XXXXXXXX PUSH_TEMPVAR_X                          (bit 4 on)
+28-31    0001 11XX PUSH_TEMPVAR
+32-35    0010 00XX STORE_INTO_TEMPVAR                         160  1010 0000 XXXXXXXX STORE_INTO_TEMPVAR_X                    (bit 4 off, bit 3 off)
+36-39    0010 01XX STORE_INTO_TEMPVAR
+40-43    0010 10XX POP_INTO_TEMPVAR                           168  1010 1000 XXXXXXXX POP_INTO_TEMPVAR_X                      (bit 4 off, bit 3 on)
+44-47    0010 11XX POP_INTO_TEMPVAR
 
-  7  000111XX JUMP_FORWARD
-  8  001000XX JUMP_BACKWARD
-  9  001001XX JUMP_IF_TRUE
- 10  001010XX JUMP_IF_FALSE
+48-51    0011 00XX PUSH_LITERAL                               176  1011 0000 XXXXXXXX PUSH_LITERAL_X
+52-55    0011 01XX PUSH_LITERAL
 
- 11  001011XX 
- 12  001100XX 
- 13  001101XX 
- 14  001110XX 
- 15  001111XX 
-
----------------------------------------
- 16  010000XX YYYYYYYY PUSH_XTEMPVAR          XXXth outer-frame, YYYYYYYY local variable
- 17  010001XX YYYYYYYY STORE_INTO_XTEMPVAR
- 18  010010XX YYYYYYYY POP_INTO_XTEMPVAR
-
- 19  010011XX YYYYYYYY PUSH_OBJVAR
- 20  010100XX YYYYYYYY STORE_INTO_OBJVAR
- 21  010101XX YYYYYYYY POP_INTO_OBJVAR        XXXth instance variable of YYYYYYYY object
- 22  010110XX YYYYYYYY SEND_MESSAGE
- 23  010111XX YYYYYYYY SEND_MESSAGE_TO_SUPER  XXX args, YYYYYYYY message
-
- 24  011000XX
- 25  011001XX
- 26  011010XX
- 27  011011XX
- 28  011100XX
- 29  011101XX
- 30  011110XX
- 31  011111XX
-
--------------------------------------
+                                                                        vv
+56-59    0011 10XX STORE_INTO_OBJECT                          184  1011 1000 XXXXXXXX STORE_INTO_OBJECT                       (bit 3 on, bit 2 off)
+60-63    0011 11XX POP_INTO_OBJECT                            188  1011 1100 XXXXXXXX POP_INTO_OBJECT                         (bit 3 on, bit 2 on)
+64-67    0100 00XX PUSH_OBJECT                                192  1100 0000 XXXXXXXX PUSH_OBJECT                             (bit 3 off)
 
 
+68-71    0100 01XX JUMP_FORWARD                               196  1100 0100 XXXXXXXX JUMP_FORWARD_X
+72-75    0100 10XX JUMP_BACKWARD                              200  1100 1000 XXXXXXXX JUMP_BACKWARD_X
+76-79    0100 11XX JUMP_IF_TRUE                               204  1100 1100 XXXXXXXX JUMP_IF_TRUE_X
+80-83    0101 00XX JUMP_IF_FALSE                              208  1101 0000 XXXXXXXX JUMP_IF_FALSE_X
+84-87    0101 01XX JUMP_BY_OFFSET                             212  1101 0100 XXXXXXXX JUMP_BY_OFFSET_X
+# for JUMP_BY_OFFSET, XX is an index to literal frame pointing to a small integer.
 
-switch (binst)
-{
-	case XXX:
-	case YYY:
+                                                                        vv
+88-91    0101 10XX YYYYYYYY STORE_INTO_CTXTEMPVAR             216  1101 1000 XXXXXXXX YYYYYYYY STORE_INTO_CTXTEMPVAR_X        (bit 3 on, bit 2 off)
+92-95    0101 11XX YYYYYYYY POP_INTO_CTXTEMPVAR               220  1101 1100 XXXXXXXX YYYYYYYY POP_INTO_CTXTEMPVAR_X          (bit 3 on, bit 2 on)
+96-99    0110 00XX YYYYYYYY PUSH_CTXTEMPVAR                   224  1110 0000 XXXXXXXX YYYYYYYY PUSH_CTXTEMPVAR_X              (bit 3 off)
+# XXXth outer-frame, YYYYYYYY local variable
 
+100-103  0110 01XX YYYYYYYY PUSH_OBJVAR                       228  1110 0100 XXXXXXXX YYYYYYYY PUSH_OBJVAR_X                  (bit 3 off)
+104-107  0110 10XX YYYYYYYY STORE_INTO_OBJVAR                 232  1110 1000 XXXXXXXX YYYYYYYY STORE_INTO_OBJVAR_X            (bit 3 on, bit 2 off)
+108-111  0110 11XX YYYYYYYY POP_INTO_OBJVAR                   236  1110 1100 XXXXXXXX YYYYYYYY POP_INTO_OBJVAR_X              (bit 3 on, bit 2 on)
+# XXXth instance variable of YYYYYYYY object
 
-	default:
-	{
-		cmd = binst >> 2;
+                                                                         v
+112-115  0111 00XX YYYYYYYY SEND_MESSAGE                      240  1111 0000 XXXXXXXX YYYYYYYY SEND_MESSAGE_X                 (bit 2 off)
+116-119  0111 01XX YYYYYYYY SEND_MESSAGE_TO_SUPER             244  1111 0100 XXXXXXXX YYYYYYYY SEND_MESSAGE_TO_SUPER_X        (bit 2 on)
+# XXX args, YYYYYYYY message
 
-		switch (cmd)
-		{
-			case PUSH_INSTVAR:
+120-123  0111 10XX  UNUSED
+124-127  0111 11XX  UNUSED
 
-			case PUSHX_INSTVAR:
-
-
-
-			default:
-				treated as no op???
-		}
-	}
-}
-
+##
+## "SHORT_CODE_0 | 0x80" becomes "LONG_CODE_X".
+## A special single byte instruction is assigned an unused number greater than 128.
+##
 */
 
-
-enum stix_cmdcode_t
+enum stix_bcode_t
 {
-	CMD_EXTEND                     = 0x0,
+	BCODE_STORE_INTO_INSTVAR_0  = 0x00,
+	BCODE_STORE_INTO_INSTVAR_1  = 0x01,
+	BCODE_STORE_INTO_INSTVAR_2  = 0x02,
+	BCODE_STORE_INTO_INSTVAR_3  = 0x03,
 
-	/* Single positional instructions 
-	 *
-	 * XXXXJJJJ
-	 * 0000XXXX JJJJJJJJ
-	 * 0000XXXX JJJJJJJJ JJJJJJJJ
-	 *
-	 * XXXX is one of the following positional instructions.
-	 * JJJJ or JJJJJJJJ is the position.
-	 */
-	CMD_PUSH_INSTVAR               = 0x1,
-	CMD_PUSH_TEMPVAR               = 0x2,
-	CMD_PUSH_LITERAL               = 0x3,
-	CMD_STORE_INTO_INSTVAR         = 0x4,
-	CMD_STORE_INTO_TEMPVAR         = 0x5,
+	BCODE_STORE_INTO_INSTVAR_4  = 0x04,
+	BCODE_STORE_INTO_INSTVAR_5  = 0x05,
+	BCODE_STORE_INTO_INSTVAR_6  = 0x06,
+	BCODE_STORE_INTO_INSTVAR_7  = 0x07,
 
-/*
-	CMD_POP_INTO_INSTVAR           = 0x6,
-	CMD_POP_INTO_TEMPVAR           = 0x7,
-	CMD_POP_INTO_OBJVAR            = 0xXXX,
-*/
-	/* Jump is a single positional instructions.
-	 * JJJJJJJJ in the extended format is encoded as a signed offset
-	 * while JJJJ in the compact format is an unsigned offset. */
-	CMD_JUMP                       = 0x8,
-	CMD_JUMP_IF_FALSE              = 0x9,
+	BCODE_POP_INTO_INSTVAR_0    = 0x08,
+	BCODE_POP_INTO_INSTVAR_1    = 0x09,
+	BCODE_POP_INTO_INSTVAR_2    = 0x0A,
+	BCODE_POP_INTO_INSTVAR_3    = 0x0B,
 
-	/*
-	 * Double positional instructions
-	 *
-	 * XXXXJJJJ KKKKKKKK
-	 * 0000XXXX JJJJJJJJ KKKKKKKK
-	 * 0000XXXX JJJJJJJJ JJJJJJJJ KKKKKKKK KKKKKKKK
-	 *
-	 * Access instance variable #JJJJ of an object at literal frame #KKKKKKKK
-	 * Send message at literal frame #KKKKKKKK with #JJJJ arguments.
-	 */
-	CMD_PUSH_OBJVAR                = 0xA,
-	CMD_STORE_INTO_OBJVAR          = 0xB,
-	CMD_SEND_MESSAGE               = 0xC,
-	CMD_SEND_MESSAGE_TO_SUPER      = 0xD,
+	BCODE_POP_INTO_INSTVAR_4    = 0x0C,
+	BCODE_POP_INTO_INSTVAR_5    = 0x0D,
+	BCODE_POP_INTO_INSTVAR_6    = 0x0E,
+	BCODE_POP_INTO_INSTVAR_7    = 0x0F,
 
-	/* 
-	 * Single byte instructions 
-	 */
-	CMD_PUSH_SPECIAL               = 0xE,
-	CMD_DO_SPECIAL                 = 0xF,
+	BCODE_PUSH_INSTVAR_0        = 0x10,
+	BCODE_PUSH_INSTVAR_1        = 0x11,
+	BCODE_PUSH_INSTVAR_2        = 0x12,
+	BCODE_PUSH_INSTVAR_3        = 0x13,
 
-	/* sub-commands for CMD_PUSH_SPECIAL */
-	SUBCMD_PUSH_RECEIVER           = 0x0,
-	SUBCMD_PUSH_NIL                = 0x1,
-	SUBCMD_PUSH_TRUE               = 0x2,
-	SUBCMD_PUSH_FALSE              = 0x3,
-	SUBCMD_PUSH_CONTEXT            = 0x4,
-	SUBCMD_PUSH_NEGONE             = 0x5,
-	SUBCMD_PUSH_ZERO               = 0x6,
-	SUBCMD_PUSH_ONE                = 0x7,
+	BCODE_PUSH_INSTVAR_4        = 0x14,
+	BCODE_PUSH_INSTVAR_5        = 0x15,
+	BCODE_PUSH_INSTVAR_6        = 0x16,
+	BCODE_PUSH_INSTVAR_7        = 0x17,
 
-	/* sub-commands for CMD_DO_SPECIAL */
-	SUBCMD_DUP_STACKTOP            = 0x0,
-	SUBCMD_POP_STACKTOP            = 0x1,
-	SUBCMD_RETURN_STACKTOP         = 0x2, /* ^something */
-	SUBCMD_RETURN_RECEIVER         = 0x3, /* ^self */
-	SUBCMD_RETURN_FROM_BLOCK       = 0x4, /* return the stack top from a block */
-	SUBCMD_SEND_BLOCK_COPY         = 0xE,
-	SUBCMD_NOOP                    = 0xF
+	BCODE_PUSH_TEMPVAR_0        = 0x18,
+	BCODE_PUSH_TEMPVAR_1        = 0x19,
+	BCODE_PUSH_TEMPVAR_2        = 0x1A,
+	BCODE_PUSH_TEMPVAR_3        = 0x1B,
+
+	BCODE_PUSH_TEMPVAR_4        = 0x1C,
+	BCODE_PUSH_TEMPVAR_5        = 0x1D,
+	BCODE_PUSH_TEMPVAR_6        = 0x1E,
+	BCODE_PUSH_TEMPVAR_7        = 0x1F,
+
+	BCODE_STORE_INTO_TEMPVAR_0  = 0x20,
+	BCODE_STORE_INTO_TEMPVAR_1  = 0x21,
+	BCODE_STORE_INTO_TEMPVAR_2  = 0x22,
+	BCODE_STORE_INTO_TEMPVAR_3  = 0x23,
+
+	BCODE_STORE_INTO_TEMPVAR_4  = 0x24,
+	BCODE_STORE_INTO_TEMPVAR_5  = 0x25,
+	BCODE_STORE_INTO_TEMPVAR_6  = 0x26,
+	BCODE_STORE_INTO_TEMPVAR_7  = 0x27,
+
+	BCODE_POP_INTO_TEMPVAR_0    = 0x28,
+	BCODE_POP_INTO_TEMPVAR_1    = 0x29,
+	BCODE_POP_INTO_TEMPVAR_2    = 0x2A,
+	BCODE_POP_INTO_TEMPVAR_3    = 0x2B,
+
+	BCODE_POP_INTO_TEMPVAR_4    = 0x2C,
+	BCODE_POP_INTO_TEMPVAR_5    = 0x2D,
+	BCODE_POP_INTO_TEMPVAR_6    = 0x2E,
+	BCODE_POP_INTO_TEMPVAR_7    = 0x2F,
+
+	BCODE_PUSH_LITERAL_0        = 0x30,
+	BCODE_PUSH_LITERAL_1        = 0x31,
+	BCODE_PUSH_LITERAL_2        = 0x32,
+	BCODE_PUSH_LITERAL_3        = 0x33,
+
+	BCODE_PUSH_LITERAL_4        = 0x34,
+	BCODE_PUSH_LITERAL_5        = 0x35,
+	BCODE_PUSH_LITERAL_6        = 0x36,
+	BCODE_PUSH_LITERAL_7        = 0x37,
+
+	/* -------------------------------------- */
+
+	BCODE_STORE_INTO_OBJECT_0   = 0x38,
+	BCODE_STORE_INTO_OBJECT_1   = 0x39,
+	BCODE_STORE_INTO_OBJECT_2   = 0x3A,
+	BCODE_STORE_INTO_OBJECT_3   = 0x3B,
+
+	BCODE_POP_INTO_OBJECT_0     = 0x3C,
+	BCODE_POP_INTO_OBJECT_1     = 0x3D,
+	BCODE_POP_INTO_OBJECT_2     = 0x3E,
+	BCODE_POP_INTO_OBJECT_3     = 0x3F,
+
+	BCODE_PUSH_OBJECT_0         = 0x40,
+	BCODE_PUSH_OBJECT_1         = 0x41,
+	BCODE_PUSH_OBJECT_2         = 0x42,
+	BCODE_PUSH_OBJECT_3         = 0x43,
+
+	BCODE_JUMP_FORWARD_0        = 0x44, /* 68 */
+	BCODE_JUMP_FORWARD_1        = 0x45, /* 69 */
+	BCODE_JUMP_FORWARD_2        = 0x46, /* 70 */
+	BCODE_JUMP_FORWARD_3        = 0x47, /* 71 */
+
+	BCODE_JUMP_BACKWARD_0       = 0x48,
+	BCODE_JUMP_BACKWARD_1       = 0x49,
+	BCODE_JUMP_BACKWARD_2       = 0x4A,
+	BCODE_JUMP_BACKWARD_3       = 0x4B,
+
+	BCODE_JUMP_IF_TRUE_0        = 0x4C,
+	BCODE_JUMP_IF_TRUE_1        = 0x4D,
+	BCODE_JUMP_IF_TRUE_2        = 0x4E,
+	BCODE_JUMP_IF_TRUE_3        = 0x4F,
+
+	BCODE_JUMP_IF_FALSE_0       = 0x50,
+	BCODE_JUMP_IF_FALSE_1       = 0x51,
+	BCODE_JUMP_IF_FALSE_2       = 0x52,
+	BCODE_JUMP_IF_FALSE_3       = 0x53,
+
+	BCODE_JUMP_BY_OFFSET_0      = 0x54,
+	BCODE_JUMP_BY_OFFSET_1      = 0x55,
+	BCODE_JUMP_BY_OFFSET_2      = 0x56,
+	BCODE_JUMP_BY_OFFSET_3      = 0x57,
+
+	BCODE_PUSH_CTXTEMPVAR_0     = 0x58,
+	BCODE_PUSH_CTXTEMPVAR_1     = 0x59,
+	BCODE_PUSH_CTXTEMPVAR_2     = 0x5A,
+	BCODE_PUSH_CTXTEMPVAR_3     = 0x5B,
+
+	BCODE_STORE_INTO_CTXTEMPVAR_0  = 0x5C,
+	BCODE_STORE_INTO_CTXTEMPVAR_1  = 0x5D,
+	BCODE_STORE_INTO_CTXTEMPVAR_2  = 0x5E,
+	BCODE_STORE_INTO_CTXTEMPVAR_3  = 0x5F,
+
+	BCODE_POP_INTO_CTXTEMPVAR_0  = 0x60,
+	BCODE_POP_INTO_CTXTEMPVAR_1  = 0x61,
+	BCODE_POP_INTO_CTXTEMPVAR_2  = 0x62,
+	BCODE_POP_INTO_CTXTEMPVAR_3  = 0x63,
+
+	BCODE_PUSH_OBJVAR_0          = 0x64,
+	BCODE_PUSH_OBJVAR_1          = 0x65,
+	BCODE_PUSH_OBJVAR_2          = 0x66,
+	BCODE_PUSH_OBJVAR_3          = 0x67,
+
+	BCODE_STORE_INTO_OBJVAR_0    = 0x68,
+	BCODE_STORE_INTO_OBJVAR_1    = 0x69,
+	BCODE_STORE_INTO_OBJVAR_2    = 0x6A,
+	BCODE_STORE_INTO_OBJVAR_3    = 0x6B,
+
+	BCODE_POP_INTO_OBJVAR_0      = 0x6C,
+	BCODE_POP_INTO_OBJVAR_1      = 0x6D,
+	BCODE_POP_INTO_OBJVAR_2      = 0x6E,
+	BCODE_POP_INTO_OBJVAR_3      = 0x6F,
+
+
+	BCODE_SEND_MESSAGE_0         = 0x70,
+	BCODE_SEND_MESSAGE_1         = 0x71,
+	BCODE_SEND_MESSAGE_2         = 0x72,
+	BCODE_SEND_MESSAGE_3         = 0x73,
+
+	BCODE_SEND_MESSAGE_TO_SUPER_0  = 0x74,
+	BCODE_SEND_MESSAGE_TO_SUPER_1  = 0x75,
+	BCODE_SEND_MESSAGE_TO_SUPER_2  = 0x76,
+	BCODE_SEND_MESSAGE_TO_SUPER_3  = 0x77,
+
+	/* UNUSED 0x78 - 0x7F */
+
+	BCODE_STORE_INTO_INSTVAR_X     = 0x80, /* 128 */
+	BCODE_POP_INTO_INSTVAR_X       = 0x88, /* 136 */
+	BCODE_PUSH_INSTVAR_X           = 0x90, /* 144 */
+
+	BCODE_PUSH_TEMPVAR_X           = 0x98, /* 152 */
+	BCODE_STORE_INTO_TEMPVAR_X     = 0xA0, /* 160 */
+	BCODE_POP_INTO_TEMPVAR_X       = 0xA8, /* 168 */
+
+	BCODE_PUSH_LITERAL_X           = 0xB0, /* 176 */
+
+	BCODE_STORE_INTO_OBJECT_X      = 0xB8, /* 184 */
+	BCODE_POP_INTO_OBJECT_X        = 0xBC, /* 188 */
+	BCODE_PUSH_OBJECT_X            = 0xC0, /* 192 */
+
+	BCODE_JUMP_FORWARD_X           = 0xC4, /* 196 */
+	BCODE_JUMP_BACKWARD_X          = 0xC8, /* 200 */
+	BCODE_JUMP_IF_TRUE_X           = 0xCC, /* 204 */
+	BCODE_JUMP_IF_FALSE_X          = 0xD0, /* 208 */
+	BCODE_JUMP_BY_OFFSET_X         = 0xD4, /* 212 */
+
+	BCODE_STORE_INTO_CTXTEMPVAR_X  = 0xD8, /* 216 */
+	BCODE_POP_INTO_CTXTEMPVAR_X    = 0xDC, /* 220 */
+	BCODE_PUSH_CTXTEMPVAR_X        = 0xE0, /* 224 */
+
+	BCODE_PUSH_OBJVAR_X            = 0xE4, /* 228 */
+	BCODE_STORE_INTO_OBJVAR_X      = 0xE8, /* 232 */
+	BCODE_POP_INTO_OBJVAR_X        = 0xEC, /* 236 */
+
+	BCODE_SEND_MESSAGE_X           = 0xF0, /* 240 */
+	BCODE_SEND_MESSAGE_TO_SUPER_X  = 0xF4, /* 244 */
+
+
+	BCODE_PUSH_RECEIVER            = 0x81,
+	BCODE_PUSH_NIL                 = 0x82,
+	BCODE_PUSH_TRUE                = 0x83,
+	BCODE_PUSH_FALSE               = 0x84,
+	BCODE_PUSH_CONTEXT             = 0x85,
+	BCODE_PUSH_NEGONE              = 0x86,
+	BCODE_PUSH_ZERO                = 0x87,
+	BCODE_PUSH_ONE                 = 0x89,
+	BCODE_PUSH_TWO                 = 0x91,
+
+	/* UNUSED 0xE8 - 0xF8 */
+
+	BCODE_DUP_STACKTOP             = 0xF9,
+	BCODE_POP_STACKTOP             = 0xFA,
+	BCODE_RETURN_STACKTOP          = 0xFB, /* ^something */
+	BCODE_RETURN_RECEIVER          = 0xFC, /* ^self */
+	BCODE_RETURN_FROM_BLOCK        = 0xFD, /* return the stack top from a block */
+	BCODE_SEND_BLOCK_COPY          = 0xFE,
+	BCODE_NOOP                     = 0xFF
 };
-
-/* ---------------------------------- */
-#define CODE_PUSH_RECEIVER            MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_RECEIVER)
-#define CODE_PUSH_NIL                 MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_NIL)
-#define CODE_PUSH_TRUE                MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_TRUE)
-#define CODE_PUSH_FALSE               MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_FALSE)
-#define CODE_PUSH_CONTEXT             MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_CONTEXT)
-#define CODE_PUSH_NEGONE              MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_NEGONE)
-#define CODE_PUSH_ZERO                MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_ZERO)
-#define CODE_PUSH_ONE                 MAKE_CODE(CMD_PUSH_SPECIAL, SUBCMD_PUSH_ONE)
-
-/* special code */
-#define CODE_DUP_STACKTOP             MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_DUP_STACKTOP)
-#define CODE_POP_STACKTOP             MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_POP_STACKTOP)
-#define CODE_RETURN_STACKTOP          MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_STACKTOP)
-#define CODE_RETURN_RECEIVER          MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_RECEIVER)
-#define CODE_RETURN_FROM_BLOCK        MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_RETURN_FROM_BLOCK)
-#define CODE_SEND_BLOCK_COPY          MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_SEND_BLOCK_COPY)
-#define CODE_NOOP                     MAKE_CODE(CMD_DO_SPECIAL, SUBCMD_NOOP)
 
 #if defined(__cplusplus)
 extern "C" {
