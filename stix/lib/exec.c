@@ -1293,7 +1293,7 @@ printf ("RETURN RECEIVER AT PREAMBLE\n");
 
 						ACTIVE_STACK_POPS (stix, b1); /* pop arguments only */
 
-printf ("RETURN INSTVAR AT PREAMBLE\n");
+printf ("RETURN INSTVAR AT PREAMBLE index %d\n", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
 						/* replace the receiver by an instance variable of the receiver */
 						rcv = (stix_oop_oop_t)ACTIVE_STACK_GETTOP(stix);
 						STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(rcv) == STIX_OBJ_TYPE_OOP);

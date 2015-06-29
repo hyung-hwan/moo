@@ -3446,7 +3446,7 @@ static int add_compiled_method (stix_t* stix)
 					preamble_index = stix->c->mth.code.ptr[1];
 					for (i = 2; i <= STIX_BCODE_LONG_PARAM_SIZE; i++)
 					{
-						preamble_index = (preamble_index << 8) || stix->c->mth.code.ptr[i];
+						preamble_index = (preamble_index << 8) | stix->c->mth.code.ptr[i];
 					}
 				}
 			}
