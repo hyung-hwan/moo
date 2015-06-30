@@ -2970,7 +2970,7 @@ printf ("\tpush int literal\n");
 				 * stix->c->mth.tmpr_count[0] contains the number of temporaries for a method.
 				 * stix->c->mth.tmpr_count[1] contains the number of temporaries for the block plus the containing method.
 				 * ...
-				 * stix->c->mth.tmpr_count[n] contains the number of temporaries for the block plus all containing method and block.
+				 * stix->c->mth.tmpr_count[n] contains the number of temporaries for the block plus all containing method and blocks.
 				 */
 				n = compile_block_expression(stix);
 				stix->c->mth.blk_depth--;

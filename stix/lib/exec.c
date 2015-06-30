@@ -830,7 +830,7 @@ static primitive_t primitives[] =
 int stix_execute (stix_t* stix)
 {
 	stix_byte_t bcode;
-	stix_ooi_t b1, b2, bx;
+	stix_ooi_t b1, b2;
 	stix_oop_t return_value;
 
 stix_size_t inst_counter;
@@ -947,45 +947,18 @@ printf ("POP_INTO_INSTVAR %d\n", (int)b1);
 			case BCODE_POP_INTO_TEMPVAR_6:
 			case BCODE_POP_INTO_TEMPVAR_7:
 			{
-			#if defined(STIX_USE_CTXTEMPVAR)
-				b1 = bcode & 0x7; /* low 3 bits */
-
-			handle_tempvar:
-				if ((bcode >> 4) & 1)
-				{
-					/* push - bit 4 on*/
-printf ("PUSH_TEMPVAR %d - ", (int)b1);
-
-					ACTIVE_STACK_PUSH (stix, ACTIVE_STACK_GET(stix, b1]));
-				}
-				else
-				{
-					/* store or pop - bit 5 off */
-					ACTIVE_STACK_SET(stix, b1, ACTIVE_STACK_GETTOP(stix));
-
-					if ((bcode >> 3) & 1)
-					{
-						/* pop - bit 3 on */
-						ACTIVE_STACK_POP (stix);
-printf ("POP_INTO_TEMPVAR %d - ", (int)b1);
-
-					}
-else
-{
-printf ("STORE_INTO_TEMPVAR %d - ", (int)b1);
-}
-				}
-
-print_object (stix, ctx->slot[bx]);
-printf ("\n");
-			#else
 				stix_oop_context_t ctx;
+				stix_ooi_t bx;
 
 				b1 = bcode & 0x7; /* low 3 bits */
 			handle_tempvar:
+
+			#if defined(STIX_USE_CTXTEMPVAR)
+				ctx = stix->active_context->origin;
+				bx = b1;
+			#else
 				if (stix->active_context->home != stix->_nil)
 				{
-/*TODO: improve this slow temporary access */
 					/* this code assumes that the method context and
 					 * the block context place some key fields in the
 					 * same offset. such fields include 'home', 'ntmprs' */
@@ -1017,6 +990,7 @@ printf ("\n");
 					ctx = stix->active_context;
 					bx = b1;
 				}
+			#endif
 
 				if ((bcode >> 4) & 1)
 				{
@@ -1045,7 +1019,6 @@ printf ("STORE_INTO_TEMPVAR %d - ", (int)b1);
 
 print_object (stix, ctx->slot[bx]);
 printf ("\n");
-			#endif
 				break;
 			}
 
@@ -1228,7 +1201,6 @@ printf ("STORE_INTO_CTXTEMPVAR %d %d - ", (int)b1, (int)b2);
 				{
 					/* push */
 					ACTIVE_STACK_PUSH (stix, ctx->slot[b2]);
-
 printf ("PUSH_CTXTEMPVAR %d %d - ", (int)b1, (int)b2);
 				}
 
