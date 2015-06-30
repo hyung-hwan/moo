@@ -831,8 +831,6 @@ int stix_execute (stix_t* stix)
 {
 	stix_byte_t bcode;
 	stix_ooi_t b1, b2, bx;
-	stix_oop_context_t ctx;
-	stix_oop_oop_t t1;
 	stix_oop_t return_value;
 
 stix_size_t inst_counter;
@@ -948,6 +946,41 @@ printf ("POP_INTO_INSTVAR %d\n", (int)b1);
 			case BCODE_POP_INTO_TEMPVAR_5:
 			case BCODE_POP_INTO_TEMPVAR_6:
 			case BCODE_POP_INTO_TEMPVAR_7:
+			{
+			#if defined(STIX_USE_CTXTEMPVAR)
+				b1 = bcode & 0x7; /* low 3 bits */
+
+			handle_tempvar:
+				if ((bcode >> 4) & 1)
+				{
+					/* push - bit 4 on*/
+printf ("PUSH_TEMPVAR %d - ", (int)b1);
+
+					ACTIVE_STACK_PUSH (stix, ACTIVE_STACK_GET(stix, b1]));
+				}
+				else
+				{
+					/* store or pop - bit 5 off */
+					ACTIVE_STACK_SET(stix, b1, ACTIVE_STACK_GETTOP(stix));
+
+					if ((bcode >> 3) & 1)
+					{
+						/* pop - bit 3 on */
+						ACTIVE_STACK_POP (stix);
+printf ("POP_INTO_TEMPVAR %d - ", (int)b1);
+
+					}
+else
+{
+printf ("STORE_INTO_TEMPVAR %d - ", (int)b1);
+}
+				}
+
+print_object (stix, ctx->slot[bx]);
+printf ("\n");
+			#else
+				stix_oop_context_t ctx;
+
 				b1 = bcode & 0x7; /* low 3 bits */
 			handle_tempvar:
 				if (stix->active_context->home != stix->_nil)
@@ -1012,7 +1045,9 @@ printf ("STORE_INTO_TEMPVAR %d - ", (int)b1);
 
 print_object (stix, ctx->slot[bx]);
 printf ("\n");
+			#endif
 				break;
+			}
 
 			/* ------------------------------------------------- */
 			case BCODE_PUSH_LITERAL_X:
@@ -1054,24 +1089,38 @@ printf ("\n");
 			case BCODE_POP_INTO_OBJECT_1:
 			case BCODE_POP_INTO_OBJECT_2:
 			case BCODE_POP_INTO_OBJECT_3:
+			{
+				stix_oop_association_t ass;
+
 				b1 = bcode & 0x3; /* low 2 bits */
 			handle_object:
-printf ("<<<<<<<<<<<<<< XXXXX_OBJECT NOT IMPLEMENTED YET >>>>>>>>>>>> \n");
-stix->errnum = STIX_ENOIMPL;
-return -1;
+				ass = (stix_oop_association_t)stix->active_method->slot[b1];
+				STIX_ASSERT (STIX_CLASSOF(stix, ass) == stix->_association);
+
 				if ((bcode >> 3) & 1)
 				{
 					/* store or pop */
+					ass->value = ACTIVE_STACK_GETTOP(stix);
+
 					if ((bcode >> 2) & 1)
 					{
 						/* pop */
+						ACTIVE_STACK_POP (stix);
+printf ("POP_INTO_OBJECT %d - ", (int)b1);
 					}
+else
+{
+printf ("STORE_INTO_OBJECT %d - ", (int)b1);
+}
 				}
 				else
 				{
 					/* push */
+					ACTIVE_STACK_PUSH (stix, ass->value);
+printf ("PUSH_OBJECT %d - ", (int)b1);
 				}
 				break;
+			}
 
 			/* -------------------------------------------------------- */
 
@@ -1143,25 +1192,50 @@ return -1;
 			case BCODE_POP_INTO_CTXTEMPVAR_1:
 			case BCODE_POP_INTO_CTXTEMPVAR_2:
 			case BCODE_POP_INTO_CTXTEMPVAR_3:
+			{
+				stix_ooi_t i;
+				stix_oop_context_t ctx;
+
 				b1 = bcode & 0x3; /* low 2 bits */
 				FETCH_BYTE_CODE_TO (stix, b2);
+
 			handle_ctxtempvar:
-printf ("<<<<<<<<<<<<<< XXXXX_CTXTEMPVAR NOT IMPLEMENTED YET >>>>>>>>>>>> \n");
-stix->errnum = STIX_ENOIMPL;
-return -1;
+
+				ctx = stix->active_context;
+				STIX_ASSERT ((stix_oop_t)ctx != stix->_nil);
+				for (i = 0; i < b1; i++)
+				{
+					ctx = (stix_oop_context_t)ctx->home;
+				}
+
 				if ((bcode >> 3) & 1)
 				{
 					/* store or pop */
+					ctx->slot[b2] = ACTIVE_STACK_GETTOP(stix);
+
 					if ((bcode >> 2) & 1)
 					{
 						/* pop */
+						ACTIVE_STACK_POP (stix);
+printf ("POP_INTO_CTXTEMPVAR %d %d - ", (int)b1, (int)b2);
 					}
+else
+{
+printf ("STORE_INTO_CTXTEMPVAR %d %d - ", (int)b1, (int)b2);
+}
 				}
 				else
 				{
 					/* push */
+					ACTIVE_STACK_PUSH (stix, ctx->slot[b2]);
+
+printf ("PUSH_CTXTEMPVAR %d %d - ", (int)b1, (int)b2);
 				}
+
+print_object (stix, ctx->slot[b2]);
+printf ("\n");
 				break;
+			}
 			/* -------------------------------------------------------- */
 
 			case BCODE_PUSH_OBJVAR_X:
@@ -1183,22 +1257,24 @@ return -1;
 			case BCODE_POP_INTO_OBJVAR_1:
 			case BCODE_POP_INTO_OBJVAR_2:
 			case BCODE_POP_INTO_OBJVAR_3:
+			{
+				stix_oop_oop_t t;
+
 				/* b1 -> variable index to the object indicated by b2.
 				 * b2 -> object index stored in the literal frame. */
 				b1 = bcode & 0x3; /* low 2 bits */
 				FETCH_BYTE_CODE_TO (stix, b2);
 
 			handle_objvar:
-printf ("XXXXXXXXXXXXXXXXXXXXX [%d]\n", (int)b2);
-				t1 = (stix_oop_oop_t)stix->active_method->slot[b2];
-				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(t1) == STIX_OBJ_TYPE_OOP);
-				STIX_ASSERT (b1 < STIX_OBJ_GET_SIZE(t1));
+				t = (stix_oop_oop_t)stix->active_method->slot[b2];
+				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(t) == STIX_OBJ_TYPE_OOP);
+				STIX_ASSERT (b1 < STIX_OBJ_GET_SIZE(t));
 
 				if ((bcode >> 3) & 1)
 				{
 					/* store or pop */
 
-					t1->slot[b1] = ACTIVE_STACK_GETTOP(stix);
+					t->slot[b1] = ACTIVE_STACK_GETTOP(stix);
 
 					if ((bcode >> 2) & 1)
 					{
@@ -1215,12 +1291,13 @@ printf ("STORE_INTO_OBJVAR %d %d - ", (int)b1, (int)b2);
 				{
 					/* push */
 printf ("PUSH_OBJVAR %d %d - ", (int)b1, (int)b2);
-					ACTIVE_STACK_PUSH (stix, t1->slot[b1]);
+					ACTIVE_STACK_PUSH (stix, t->slot[b1]);
 				}
 
-print_object (stix, t1->slot[b1]);
+print_object (stix, t->slot[b1]);
 printf ("\n");
 				break;
+			}
 
 			/* -------------------------------------------------------- */
 			case BCODE_SEND_MESSAGE_X:

@@ -32,6 +32,7 @@
 #define CODE_BUFFER_ALIGN    8 /* 256 */
 #define BALIT_BUFFER_ALIGN   8 /* 256 */
 #define ARLIT_BUFFER_ALIGN   8 /* 256 */
+#define BLK_TMPRCNT_BUFFER_ALIGN 8
 
 /* initial method dictionary size */
 #define INSTANCE_METHOD_DICTIONARY_SIZE 256 /* TODO: choose the right size */
@@ -66,9 +67,10 @@ typedef enum var_type_t var_type_t;
 
 struct var_info_t
 {
-	var_type_t       type;
-	stix_ssize_t     pos;
-	stix_oop_class_t cls; /* useful if type is VAR_CLASS. note STIX_NULL indicates the self class. TODO: use it for GLOBAL?? */
+	var_type_t             type;
+	stix_ssize_t           pos; /* not used for VAR_GLOBAL */
+	stix_oop_class_t       cls; /* useful if type is VAR_CLASS. note STIX_NULL indicates the self class. */
+	stix_oop_association_t gbl; /* used for VAR_GLOBAL only */
 };
 typedef struct var_info_t var_info_t;
 
@@ -1519,14 +1521,14 @@ write_short:
 	return 0;
 
 write_long:
-	#if (STIX_BCODE_LONG_PARAM_SIZE == 2)
-		if (emit_byte_instruction(stix, bc) <= -1 ||
-		    emit_byte_instruction(stix, param_1 >> 8) <= -1 ||
-		    emit_byte_instruction(stix, param_1 & 0xFF) <= -1) return -1;
-	#else
-		if (emit_byte_instruction(stix, bc) <= -1 ||
-		    emit_byte_instruction(stix, param_1) <= -1) return -1;
-	#endif
+#if (STIX_BCODE_LONG_PARAM_SIZE == 2)
+	if (emit_byte_instruction(stix, bc) <= -1 ||
+	    emit_byte_instruction(stix, param_1 >> 8) <= -1 ||
+	    emit_byte_instruction(stix, param_1 & 0xFF) <= -1) return -1;
+#else
+	if (emit_byte_instruction(stix, bc) <= -1 ||
+	    emit_byte_instruction(stix, param_1) <= -1) return -1;
+#endif
 	return 0;
 }
 
@@ -1568,17 +1570,17 @@ write_short:
 	return 0;
 
 write_long:
-	#if (STIX_BCODE_LONG_PARAM_SIZE == 2)
-		if (emit_byte_instruction(stix, bc) <= -1 ||
-		    emit_byte_instruction(stix, param_1 >> 8) <= -1 ||
-		    emit_byte_instruction(stix, param_1 & 0xFF) <= -1 ||
-		    emit_byte_instruction(stix, param_2 >> 8) <= -1 ||
-		    emit_byte_instruction(stix, param_2 & 0xFF) <= -1) return -1;
-	#else
-		if (emit_byte_instruction(stix, bc) <= -1 ||
-		    emit_byte_instruction(stix, param_1) <= -1 ||
-		    emit_byte_instruction(stix, param_2) return -1;
-	#endif
+#if (STIX_BCODE_LONG_PARAM_SIZE == 2)
+	if (emit_byte_instruction(stix, bc) <= -1 ||
+	    emit_byte_instruction(stix, param_1 >> 8) <= -1 ||
+	    emit_byte_instruction(stix, param_1 & 0xFF) <= -1 ||
+	    emit_byte_instruction(stix, param_2 >> 8) <= -1 ||
+	    emit_byte_instruction(stix, param_2 & 0xFF) <= -1) return -1;
+#else
+	if (emit_byte_instruction(stix, bc) <= -1 ||
+	    emit_byte_instruction(stix, param_1) <= -1 ||
+	    emit_byte_instruction(stix, param_2) <= -1) return -1;
+#endif
 	return 0;
 }
 
@@ -2268,15 +2270,21 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 					return -1;
 			}
 		}
-		/* TODO 
-		else if (find global variable... )
-			var->type = VAR_GLOBAL;
-		*/
-		else
+		else 
 		{
-			/* undeclared identifier */
-			set_syntax_error (stix, STIX_SYNERR_VARUNDCL, name_loc, name);
-			return -1;
+			stix_oop_association_t ass;
+			ass = stix_lookupsysdic (stix, name);
+			if (ass)
+			{
+				var->type = VAR_GLOBAL;
+				var->gbl = ass;
+			}
+			else
+			{
+				/* undeclared identifier */
+				set_syntax_error (stix, STIX_SYNERR_VARUNDCL, name_loc, name);
+				return -1;
+			}
 		}
 	}
 
@@ -2335,6 +2343,26 @@ static int compile_block_temporaries (stix_t* stix)
 	return 0;
 }
 
+static int store_tmpr_count_for_block (stix_t* stix, stix_size_t tmpr_count)
+{
+	if (stix->c->mth.blk_depth >= stix->c->mth.blk_tmprcnt_capa)
+	{
+		stix_size_t* tmp;
+		stix_size_t new_capa;
+
+		new_capa = STIX_ALIGN (stix->c->mth.blk_depth + 1, BLK_TMPRCNT_BUFFER_ALIGN);
+		tmp = (stix_size_t*)stix_reallocmem (stix, stix->c->mth.blk_tmprcnt, new_capa * STIX_SIZEOF(*tmp));
+		if (!tmp) return -1;
+
+		stix->c->mth.blk_tmprcnt_capa = new_capa;
+		stix->c->mth.blk_tmprcnt = tmp;
+	}
+
+	/* [NOTE] i don't increment blk_depth here */
+	stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth] = tmpr_count;
+	return 0;
+}
+
 static int compile_block_expression (stix_t* stix)
 {
 	stix_size_t jump_inst_pos;
@@ -2356,6 +2384,8 @@ static int compile_block_expression (stix_t* stix)
 
 	saved_tmprs_len = stix->c->mth.tmprs.len;
 	saved_tmpr_count = stix->c->mth.tmpr_count;
+	STIX_ASSERT (stix->c->mth.blk_depth > 0);
+	STIX_ASSERT (stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth - 1] == saved_tmpr_count);
 
 	if (stix->c->tok.type == STIX_IOTOK_COLON) 
 	{
@@ -2415,13 +2445,16 @@ static int compile_block_expression (stix_t* stix)
 	tmpr_loc = stix->c->tok.loc;
 	if (compile_block_temporaries(stix) <= -1) return -1;
 
-	/* this is a block-local temporary count */
+	/* this is a block-local temporary count including arguments */
 	block_tmpr_count = stix->c->mth.tmpr_count - saved_tmpr_count;
 	if (block_tmpr_count > MAX_CODE_NBLKTMPRS)
 	{
 		set_syntax_error (stix, STIX_SYNERR_BLKTMPRFLOOD, &tmpr_loc, STIX_NULL); 
 		return -1;
 	}
+
+	/* store the accumulated number of temporaries for the current block */
+	if (store_tmpr_count_for_block (stix, stix->c->mth.tmpr_count) <= -1) return -1;
 
 printf ("\tpush_context nargs %d ntmprs %d\n", (int)block_arg_count, (int)stix->c->mth.tmpr_count /*block_tmpr_count*/);
 printf ("\tpush smint %d\n", (int)block_arg_count);
@@ -2435,21 +2468,15 @@ printf ("\tsend_block_copy\n");
 printf ("\tjump\n");
 	/* insert dummy instructions before replacing them with a jump instruction */
 	jump_inst_pos = stix->c->mth.code.len;
-#if (STIX_BCODE_LONG_PARAM_SIZE == 2)
-	if (emit_byte_instruction(stix, BCODE_JUMP_FORWARD_X) <= -1 ||
-	    emit_byte_instruction(stix, 0) <= -1 ||
-	    emit_byte_instruction(stix, 0) <= -1) return -1;
-#else
-	if (emit_byte_instruction(stix, BCODE_JUMP_FORWARD_X) <= -1 ||
-	    emit_byte_instruction(stix, 0) <= -1) return -1;
-#endif
+	/* specifying MAX_CODE_JUMP causes emit_single_param_instruction() to 
+	 * produce the long jump instruction (BCODE_JUMP_FORWARD_X) */
+	if (emit_single_param_instruction (stix, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
 
 	/* compile statements inside a block */
 	if (stix->c->tok.type == STIX_IOTOK_RBRACK)
 	{
 		/* the block is empty */
 		if (emit_byte_instruction (stix, BCODE_PUSH_NIL) <= -1) return -1;
-		GET_TOKEN (stix);
 	}
 	else 
 	{
@@ -2485,12 +2512,16 @@ printf ("\treturn_from_block\n");
 	}
 
 	/* note that the jump offset is a signed number */
+#if (STIX_BCODE_LONG_PARAM_SIZE == 2)
 	stix->c->mth.code.ptr[jump_inst_pos + 1] = block_code_size >> 8;
 	stix->c->mth.code.ptr[jump_inst_pos + 2] = ((stix_int16_t)block_code_size & 0xFF);
+#else
+	stix->c->mth.code.ptr[jump_inst_pos + 1] = block_code_size ;
+#endif
 
 	/* restore the temporary count */
-	stix->c->mth.tmpr_count = saved_tmpr_count;
 	stix->c->mth.tmprs.len = saved_tmprs_len;
+	stix->c->mth.tmpr_count = saved_tmpr_count;
 
 	GET_TOKEN (stix);
 
@@ -2761,9 +2792,30 @@ static int compile_expression_primary (stix_t* stix, const stix_ucs_t* ident, co
 		{
 			case VAR_ARGUMENT:
 			case VAR_TEMPORARY:
+			{
+			#if defined(STIX_USE_CTXTEMPVAR)
+				if (stix->c->mth.blk_depth > 0)
+				{
+					stix_size_t i;
+
+					STIX_ASSERT (var.pos < stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth]);
+					for (i = stix->c->mth.blk_depth; i > 0; i--)
+					{
+						if (var.pos >= stix->c->mth.blk_tmprcnt[i - 1])
+						{
+printf ("\tpush ctxtempvar %d %d\n", (int)(stix->c->mth.blk_depth - i), (int)(var.pos - stix->c->mth.blk_tmprcnt[i - 1]));
+							if (emit_double_param_instruction(stix, BCODE_PUSH_CTXTEMPVAR_0, stix->c->mth.blk_depth - i, var.pos - stix->c->mth.blk_tmprcnt[i - 1]) <= -1) return -1;
+							goto temporary_done;
+						}
+					}
+				}
+			#endif
+
 				if (emit_single_param_instruction(stix, BCODE_PUSH_TEMPVAR_0, var.pos) <= -1) return -1;
 printf ("\tpush tempvar %d\n", (int)var.pos);
+			temporary_done:
 				break;
+			}
 
 			case VAR_INSTANCE:
 			case VAR_CLASSINST:
@@ -2778,10 +2830,19 @@ printf ("\tpush objvar %d %d\n", (int)var.pos, (int)index);
 				break;
 
 			case VAR_GLOBAL:
-/* TODO: .............................. */
-printf ("GLOBAL NOT IMPLMENTED.... \n");
-				stix->errnum = STIX_ENOIMPL;
-				return -1;
+				/* [NOTE]
+				 * the association object pointed to by a system dictionary
+				 * is stored into the literal frame. so the system dictionary
+				 * must not migrate the value of the association to a new
+				 * association when it rehashes the entire dictionary. 
+				 * If the association entry is deleted from the dictionary,
+				 * the code compiled before the deletion will still access
+				 * the deleted association
+				 */
+				if (add_literal(stix, (stix_oop_t)var.gbl, &index) <= -1 ||
+				    emit_single_param_instruction(stix, BCODE_PUSH_OBJECT_0, index) <= -1) return -1;
+printf ("\tpush object %d\n", (int)index);
+				break;
 
 			default:
 				stix->errnum = STIX_EINTERN;
@@ -2899,9 +2960,23 @@ printf ("\tpush int literal\n");
 			/* TODO: dynamic array, non constant array #<> or #{} or what is a better bracket? */
 
 			case STIX_IOTOK_LBRACK: /* [ */
+			{
+				int n;
+
 				/*GET_TOKEN (stix);*/
-				if (compile_block_expression(stix) <= -1) return -1;
+				if (store_tmpr_count_for_block (stix, stix->c->mth.tmpr_count) <= -1) return -1;
+				stix->c->mth.blk_depth++;
+				/*
+				 * stix->c->mth.tmpr_count[0] contains the number of temporaries for a method.
+				 * stix->c->mth.tmpr_count[1] contains the number of temporaries for the block plus the containing method.
+				 * ...
+				 * stix->c->mth.tmpr_count[n] contains the number of temporaries for the block plus all containing method and block.
+				 */
+				n = compile_block_expression(stix);
+				stix->c->mth.blk_depth--;
+				if (n <= -1) return -1;
 				break;
+			}
 
 			case STIX_IOTOK_LPAREN:
 				GET_TOKEN (stix);
@@ -3084,22 +3159,23 @@ static int compile_message_expression (stix_t* stix, int to_super)
 
 				if (stix->c->tok.type == STIX_IOTOK_BINSEL)
 				{
-	STIX_ASSERT (stix->c->mth.code.len > noop_pos);
-	STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
-	stix->c->mth.code.len--;
+					STIX_ASSERT (stix->c->mth.code.len > noop_pos);
+					STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
+					stix->c->mth.code.len--;
 
-	noop_pos = stix->c->mth.code.len;
-	if (emit_byte_instruction(stix, BCODE_NOOP) <= -1) return -1;
+					noop_pos = stix->c->mth.code.len;
+					if (emit_byte_instruction(stix, BCODE_NOOP) <= -1) return -1;
 					if (compile_binary_message(stix, to_super) <= -1) return -1;
 				}
+
 				if (stix->c->tok.type == STIX_IOTOK_KEYWORD)
 				{
-	STIX_ASSERT (stix->c->mth.code.len > noop_pos);
-	STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
-	stix->c->mth.code.len--;
+					STIX_ASSERT (stix->c->mth.code.len > noop_pos);
+					STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
+					stix->c->mth.code.len--;
 
-	noop_pos = stix->c->mth.code.len;
-	if (emit_byte_instruction(stix, BCODE_NOOP) <= -1) return -1;
+					noop_pos = stix->c->mth.code.len;
+					if (emit_byte_instruction(stix, BCODE_NOOP) <= -1) return -1;
 					if (compile_keyword_message(stix, to_super) <= -1) return -1;
 				}
 				break;
@@ -3111,13 +3187,12 @@ static int compile_message_expression (stix_t* stix, int to_super)
 				if (compile_binary_message(stix, to_super) <= -1) return -1;
 				if (stix->c->tok.type == STIX_IOTOK_KEYWORD)
 				{
-	STIX_ASSERT (stix->c->mth.code.len > noop_pos);
-	STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
-	stix->c->mth.code.len--;
+					STIX_ASSERT (stix->c->mth.code.len > noop_pos);
+					STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
+					stix->c->mth.code.len--;
 
-	noop_pos = stix->c->mth.code.len;
-	if (emit_byte_instruction(stix, BCODE_NOOP) <= -1) return -1;
-
+					noop_pos = stix->c->mth.code.len;
+					if (emit_byte_instruction(stix, BCODE_NOOP) <= -1) return -1;
 					if (compile_keyword_message(stix, to_super) <= -1) return -1;
 				}
 				break;
@@ -3234,11 +3309,32 @@ printf ("\n");
 					goto oops;
 
 				case VAR_TEMPORARY:
-					
+				{
+				#if defined(STIX_USE_CTXTEMPVAR)
+					if (stix->c->mth.blk_depth > 0)
+					{
+						stix_size_t i;
+
+						STIX_ASSERT (var.pos < stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth]);
+						for (i = stix->c->mth.blk_depth; i > 0; i--)
+						{
+							if (var.pos >= stix->c->mth.blk_tmprcnt[i - 1])
+							{
+printf ("\t%s_into_ctxtempvar %d %d\n", (pop? "pop":"store"), (int)(stix->c->mth.blk_depth - i), (int)(var.pos - stix->c->mth.blk_tmprcnt[i - 1]));
+								if (emit_double_param_instruction(stix, (pop? BCODE_POP_INTO_CTXTEMPVAR_0: BCODE_STORE_INTO_CTXTEMPVAR_0), stix->c->mth.blk_depth - i, var.pos - stix->c->mth.blk_tmprcnt[i - 1]) <= -1) return -1;
+								goto temporary_done;
+							}
+						}
+					}
+				#endif
+
 printf ("\t%s_into_tempvar %d\n", (pop? "pop":"store"), (int)var.pos);
 					if (emit_single_param_instruction (stix, (pop? BCODE_POP_INTO_TEMPVAR_0: BCODE_STORE_INTO_TEMPVAR_0), var.pos) <= -1) goto oops;
+
+				temporary_done:
 					ret = pop;
 					break;
+				}
 
 				case VAR_INSTANCE:
 				case VAR_CLASSINST:
@@ -3256,9 +3352,11 @@ printf ("\t%s_into_objvar %d %d\n", (pop? "pop":"store"), (int)var.pos, (int)ind
 					break;
 
 				case VAR_GLOBAL:
-					/* TODO: .............................. */
-printf ("\tSTORE_INTO_GLOBL NOT IMPLEMENTED YET\n");
-					goto oops;
+					if (add_literal(stix, (stix_oop_t)var.gbl, &index) <= -1 ||
+					    emit_single_param_instruction(stix, (pop? BCODE_POP_INTO_OBJECT_0: BCODE_STORE_INTO_OBJECT_0), index) <= -1) return -1;
+printf ("\t%s_into_object %d\n", (pop? "pop":"store"), (int)index);
+					ret = pop;
+					break;
 
 				default:
 					stix->errnum = STIX_EINTERN;
@@ -3495,8 +3593,9 @@ static int compile_method_definition (stix_t* stix)
 	stix->c->mth.literal_count = 0;
 	stix->c->mth.balit_count = 0;
 	stix->c->mth.arlit_count = 0;
-	stix->c->mth.code.len = 0;
 	stix->c->mth.prim_no = -1;
+	stix->c->mth.blk_depth = 0;
+	stix->c->mth.code.len = 0;
 
 	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
 	{
@@ -4079,6 +4178,7 @@ static void fini_compiler (stix_t* stix)
 		if (stix->c->mth.literals) stix_freemem (stix, stix->c->mth.literals);
 		if (stix->c->mth.balit) stix_freemem (stix, stix->c->mth.balit);
 		if (stix->c->mth.arlit) stix_freemem (stix, stix->c->mth.arlit);
+		if (stix->c->mth.blk_tmprcnt) stix_freemem (stix, stix->c->mth.blk_tmprcnt);
 
 		stix_freemem (stix, stix->c);
 		stix->c = STIX_NULL;

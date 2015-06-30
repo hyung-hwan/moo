@@ -320,7 +320,8 @@
 		self value ifFalse: [ ^nil "^self" ].
 		aBlock value.
 		##thisContext pc: pc - 3 sp: sp.
-		thisContext pc: pc + 2 sp: sp.   
+		##thisContext pc: pc + 2 sp: sp.   
+		thisContext pc: pc + 1 sp: sp.   
 		## this +2 or - 3 above is dependent on the byte code instruction size used for 'store'  
 		## +2 to skip STORE_INTO_TEMP(pc) and POP_STACKTOP.
 		## TODO: make it independent of the byte code size 

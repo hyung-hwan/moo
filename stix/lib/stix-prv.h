@@ -30,14 +30,19 @@
 #include "stix.h"
 
 /* you can define this to either 1 or 2 */
-#define STIX_BCODE_LONG_PARAM_SIZE 2
+#define STIX_BCODE_LONG_PARAM_SIZE 1
 
 /* this is useful for debugging. stix_gc() can be called 
  * while stix has not been fully initialized when this is defined*/
 #define STIX_SUPPORT_GC_DURING_IGNITION
 
+/* define this to generate CTXTEMVAR instructions */
+#define STIX_USE_CTXTEMPVAR
+
 /* this is for gc debugging */
 #define STIX_DEBUG_GC_001  
+
+
 
 #include <stdio.h> /* TODO: delete these header inclusion lines */
 #include <string.h>
@@ -452,6 +457,11 @@ struct stix_compiler_t
 		/* primitive number */
 		stix_ooi_t prim_no; 
 
+		/* block depth */
+		stix_size_t blk_depth;
+		stix_size_t* blk_tmprcnt;
+		stix_size_t blk_tmprcnt_capa;
+
 		/* byte code */
 		stix_code_t code;
 		stix_size_t code_capa;
@@ -659,41 +669,40 @@ enum stix_bcode_t
 	BCODE_JUMP_BY_OFFSET_2      = 0x56,
 	BCODE_JUMP_BY_OFFSET_3      = 0x57,
 
-	BCODE_PUSH_CTXTEMPVAR_0     = 0x58,
-	BCODE_PUSH_CTXTEMPVAR_1     = 0x59,
-	BCODE_PUSH_CTXTEMPVAR_2     = 0x5A,
-	BCODE_PUSH_CTXTEMPVAR_3     = 0x5B,
+	BCODE_STORE_INTO_CTXTEMPVAR_0  = 0x58, /* 88 */
+	BCODE_STORE_INTO_CTXTEMPVAR_1  = 0x59, /* 89 */
+	BCODE_STORE_INTO_CTXTEMPVAR_2  = 0x5A, /* 90 */
+	BCODE_STORE_INTO_CTXTEMPVAR_3  = 0x5B, /* 91 */
 
-	BCODE_STORE_INTO_CTXTEMPVAR_0  = 0x5C,
-	BCODE_STORE_INTO_CTXTEMPVAR_1  = 0x5D,
-	BCODE_STORE_INTO_CTXTEMPVAR_2  = 0x5E,
-	BCODE_STORE_INTO_CTXTEMPVAR_3  = 0x5F,
+	BCODE_POP_INTO_CTXTEMPVAR_0    = 0x5C, /* 92 */
+	BCODE_POP_INTO_CTXTEMPVAR_1    = 0x5D, /* 93 */
+	BCODE_POP_INTO_CTXTEMPVAR_2    = 0x5E, /* 94 */
+	BCODE_POP_INTO_CTXTEMPVAR_3    = 0x5F, /* 95 */
 
-	BCODE_POP_INTO_CTXTEMPVAR_0  = 0x60,
-	BCODE_POP_INTO_CTXTEMPVAR_1  = 0x61,
-	BCODE_POP_INTO_CTXTEMPVAR_2  = 0x62,
-	BCODE_POP_INTO_CTXTEMPVAR_3  = 0x63,
+	BCODE_PUSH_CTXTEMPVAR_0        = 0x60, /* 96 */
+	BCODE_PUSH_CTXTEMPVAR_1        = 0x61, /* 97 */
+	BCODE_PUSH_CTXTEMPVAR_2        = 0x62, /* 98 */
+	BCODE_PUSH_CTXTEMPVAR_3        = 0x63, /* 99 */
 
-	BCODE_PUSH_OBJVAR_0          = 0x64,
-	BCODE_PUSH_OBJVAR_1          = 0x65,
-	BCODE_PUSH_OBJVAR_2          = 0x66,
-	BCODE_PUSH_OBJVAR_3          = 0x67,
+	BCODE_PUSH_OBJVAR_0            = 0x64,
+	BCODE_PUSH_OBJVAR_1            = 0x65,
+	BCODE_PUSH_OBJVAR_2            = 0x66,
+	BCODE_PUSH_OBJVAR_3            = 0x67,
 
-	BCODE_STORE_INTO_OBJVAR_0    = 0x68,
-	BCODE_STORE_INTO_OBJVAR_1    = 0x69,
-	BCODE_STORE_INTO_OBJVAR_2    = 0x6A,
-	BCODE_STORE_INTO_OBJVAR_3    = 0x6B,
+	BCODE_STORE_INTO_OBJVAR_0      = 0x68,
+	BCODE_STORE_INTO_OBJVAR_1      = 0x69,
+	BCODE_STORE_INTO_OBJVAR_2      = 0x6A,
+	BCODE_STORE_INTO_OBJVAR_3      = 0x6B,
 
-	BCODE_POP_INTO_OBJVAR_0      = 0x6C,
-	BCODE_POP_INTO_OBJVAR_1      = 0x6D,
-	BCODE_POP_INTO_OBJVAR_2      = 0x6E,
-	BCODE_POP_INTO_OBJVAR_3      = 0x6F,
+	BCODE_POP_INTO_OBJVAR_0        = 0x6C,
+	BCODE_POP_INTO_OBJVAR_1        = 0x6D,
+	BCODE_POP_INTO_OBJVAR_2        = 0x6E,
+	BCODE_POP_INTO_OBJVAR_3        = 0x6F,
 
-
-	BCODE_SEND_MESSAGE_0         = 0x70,
-	BCODE_SEND_MESSAGE_1         = 0x71,
-	BCODE_SEND_MESSAGE_2         = 0x72,
-	BCODE_SEND_MESSAGE_3         = 0x73,
+	BCODE_SEND_MESSAGE_0           = 0x70,
+	BCODE_SEND_MESSAGE_1           = 0x71,
+	BCODE_SEND_MESSAGE_2           = 0x72,
+	BCODE_SEND_MESSAGE_3           = 0x73,
 
 	BCODE_SEND_MESSAGE_TO_SUPER_0  = 0x74,
 	BCODE_SEND_MESSAGE_TO_SUPER_1  = 0x75,
