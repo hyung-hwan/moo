@@ -43,7 +43,6 @@
 #define STIX_DEBUG_GC_001  
 
 
-
 #include <stdio.h> /* TODO: delete these header inclusion lines */
 #include <string.h>
 #include <assert.h>
@@ -477,7 +476,7 @@ struct stix_compiler_t
 #	define MAX_CODE_NBLKARGS            (0xFFu)
 #	define MAX_CODE_NBLKTMPRS           (0xFFu)
 #	define MAX_CODE_PRIMNO              (0xFFFFu)
-#	define MAX_CODE_JUMP                (0xFF)
+#	define MAX_CODE_JUMP                (0xFFu)
 #elif defined(STIX_BCODE_LONG_PARAM_SIZE) && (STIX_BCODE_LONG_PARAM_SIZE == 2)
 #	define MAX_CODE_INDEX               (0xFFFFu)
 #	define MAX_CODE_NTMPRS              (0xFFFFu)
@@ -485,13 +484,10 @@ struct stix_compiler_t
 #	define MAX_CODE_NBLKARGS            (0xFFFFu)
 #	define MAX_CODE_NBLKTMPRS           (0xFFFFu)
 #	define MAX_CODE_PRIMNO              (0xFFFFu)
-#	define MAX_CODE_JUMP                (0xFFFF)
+#	define MAX_CODE_JUMP                (0xFFFFu)
 #else
 #	error Unsupported STIX_BCODE_LONG_PARAM_SIZE
 #endif
-
-#define MAX_CODE_BLKCODE             MAX_CODE_JUMP
-
 
 
 /*
@@ -527,8 +523,8 @@ SHORT INSTRUCTION CODE                                        LONG INSTRUCTION C
 72-75    0100 10XX JUMP_BACKWARD                              200  1100 1000 XXXXXXXX JUMP_BACKWARD_X
 76-79    0100 11XX JUMP_IF_TRUE                               204  1100 1100 XXXXXXXX JUMP_IF_TRUE_X
 80-83    0101 00XX JUMP_IF_FALSE                              208  1101 0000 XXXXXXXX JUMP_IF_FALSE_X
-84-87    0101 01XX JUMP_BY_OFFSET                             212  1101 0100 XXXXXXXX JUMP_BY_OFFSET_X
-# for JUMP_BY_OFFSET, XX is an index to literal frame pointing to a small integer.
+
+84-87    0101 01XX UNUSED
 
                                                                         vv
 88-91    0101 10XX YYYYYYYY STORE_INTO_CTXTEMPVAR             216  1101 1000 XXXXXXXX YYYYYYYY STORE_INTO_CTXTEMPVAR_X        (bit 3 on, bit 2 off)
@@ -557,117 +553,114 @@ SHORT INSTRUCTION CODE                                        LONG INSTRUCTION C
 
 enum stix_bcode_t
 {
-	BCODE_STORE_INTO_INSTVAR_0  = 0x00,
-	BCODE_STORE_INTO_INSTVAR_1  = 0x01,
-	BCODE_STORE_INTO_INSTVAR_2  = 0x02,
-	BCODE_STORE_INTO_INSTVAR_3  = 0x03,
+	BCODE_STORE_INTO_INSTVAR_0     = 0x00,
+	BCODE_STORE_INTO_INSTVAR_1     = 0x01,
+	BCODE_STORE_INTO_INSTVAR_2     = 0x02,
+	BCODE_STORE_INTO_INSTVAR_3     = 0x03,
 
-	BCODE_STORE_INTO_INSTVAR_4  = 0x04,
-	BCODE_STORE_INTO_INSTVAR_5  = 0x05,
-	BCODE_STORE_INTO_INSTVAR_6  = 0x06,
-	BCODE_STORE_INTO_INSTVAR_7  = 0x07,
+	BCODE_STORE_INTO_INSTVAR_4     = 0x04,
+	BCODE_STORE_INTO_INSTVAR_5     = 0x05,
+	BCODE_STORE_INTO_INSTVAR_6     = 0x06,
+	BCODE_STORE_INTO_INSTVAR_7     = 0x07,
 
-	BCODE_POP_INTO_INSTVAR_0    = 0x08,
-	BCODE_POP_INTO_INSTVAR_1    = 0x09,
-	BCODE_POP_INTO_INSTVAR_2    = 0x0A,
-	BCODE_POP_INTO_INSTVAR_3    = 0x0B,
+	BCODE_POP_INTO_INSTVAR_0       = 0x08,
+	BCODE_POP_INTO_INSTVAR_1       = 0x09,
+	BCODE_POP_INTO_INSTVAR_2       = 0x0A,
+	BCODE_POP_INTO_INSTVAR_3       = 0x0B,
 
-	BCODE_POP_INTO_INSTVAR_4    = 0x0C,
-	BCODE_POP_INTO_INSTVAR_5    = 0x0D,
-	BCODE_POP_INTO_INSTVAR_6    = 0x0E,
-	BCODE_POP_INTO_INSTVAR_7    = 0x0F,
+	BCODE_POP_INTO_INSTVAR_4       = 0x0C,
+	BCODE_POP_INTO_INSTVAR_5       = 0x0D,
+	BCODE_POP_INTO_INSTVAR_6       = 0x0E,
+	BCODE_POP_INTO_INSTVAR_7       = 0x0F,
 
-	BCODE_PUSH_INSTVAR_0        = 0x10,
-	BCODE_PUSH_INSTVAR_1        = 0x11,
-	BCODE_PUSH_INSTVAR_2        = 0x12,
-	BCODE_PUSH_INSTVAR_3        = 0x13,
+	BCODE_PUSH_INSTVAR_0           = 0x10,
+	BCODE_PUSH_INSTVAR_1           = 0x11,
+	BCODE_PUSH_INSTVAR_2           = 0x12,
+	BCODE_PUSH_INSTVAR_3           = 0x13,
 
-	BCODE_PUSH_INSTVAR_4        = 0x14,
-	BCODE_PUSH_INSTVAR_5        = 0x15,
-	BCODE_PUSH_INSTVAR_6        = 0x16,
-	BCODE_PUSH_INSTVAR_7        = 0x17,
+	BCODE_PUSH_INSTVAR_4           = 0x14,
+	BCODE_PUSH_INSTVAR_5           = 0x15,
+	BCODE_PUSH_INSTVAR_6           = 0x16,
+	BCODE_PUSH_INSTVAR_7           = 0x17,
 
-	BCODE_PUSH_TEMPVAR_0        = 0x18,
-	BCODE_PUSH_TEMPVAR_1        = 0x19,
-	BCODE_PUSH_TEMPVAR_2        = 0x1A,
-	BCODE_PUSH_TEMPVAR_3        = 0x1B,
+	BCODE_PUSH_TEMPVAR_0           = 0x18,
+	BCODE_PUSH_TEMPVAR_1           = 0x19,
+	BCODE_PUSH_TEMPVAR_2           = 0x1A,
+	BCODE_PUSH_TEMPVAR_3           = 0x1B,
 
-	BCODE_PUSH_TEMPVAR_4        = 0x1C,
-	BCODE_PUSH_TEMPVAR_5        = 0x1D,
-	BCODE_PUSH_TEMPVAR_6        = 0x1E,
-	BCODE_PUSH_TEMPVAR_7        = 0x1F,
+	BCODE_PUSH_TEMPVAR_4           = 0x1C,
+	BCODE_PUSH_TEMPVAR_5           = 0x1D,
+	BCODE_PUSH_TEMPVAR_6           = 0x1E,
+	BCODE_PUSH_TEMPVAR_7           = 0x1F,
 
-	BCODE_STORE_INTO_TEMPVAR_0  = 0x20,
-	BCODE_STORE_INTO_TEMPVAR_1  = 0x21,
-	BCODE_STORE_INTO_TEMPVAR_2  = 0x22,
-	BCODE_STORE_INTO_TEMPVAR_3  = 0x23,
+	BCODE_STORE_INTO_TEMPVAR_0     = 0x20,
+	BCODE_STORE_INTO_TEMPVAR_1     = 0x21,
+	BCODE_STORE_INTO_TEMPVAR_2     = 0x22,
+	BCODE_STORE_INTO_TEMPVAR_3     = 0x23,
 
-	BCODE_STORE_INTO_TEMPVAR_4  = 0x24,
-	BCODE_STORE_INTO_TEMPVAR_5  = 0x25,
-	BCODE_STORE_INTO_TEMPVAR_6  = 0x26,
-	BCODE_STORE_INTO_TEMPVAR_7  = 0x27,
+	BCODE_STORE_INTO_TEMPVAR_4     = 0x24,
+	BCODE_STORE_INTO_TEMPVAR_5     = 0x25,
+	BCODE_STORE_INTO_TEMPVAR_6     = 0x26,
+	BCODE_STORE_INTO_TEMPVAR_7     = 0x27,
 
-	BCODE_POP_INTO_TEMPVAR_0    = 0x28,
-	BCODE_POP_INTO_TEMPVAR_1    = 0x29,
-	BCODE_POP_INTO_TEMPVAR_2    = 0x2A,
-	BCODE_POP_INTO_TEMPVAR_3    = 0x2B,
+	BCODE_POP_INTO_TEMPVAR_0       = 0x28,
+	BCODE_POP_INTO_TEMPVAR_1       = 0x29,
+	BCODE_POP_INTO_TEMPVAR_2       = 0x2A,
+	BCODE_POP_INTO_TEMPVAR_3       = 0x2B,
 
-	BCODE_POP_INTO_TEMPVAR_4    = 0x2C,
-	BCODE_POP_INTO_TEMPVAR_5    = 0x2D,
-	BCODE_POP_INTO_TEMPVAR_6    = 0x2E,
-	BCODE_POP_INTO_TEMPVAR_7    = 0x2F,
+	BCODE_POP_INTO_TEMPVAR_4       = 0x2C,
+	BCODE_POP_INTO_TEMPVAR_5       = 0x2D,
+	BCODE_POP_INTO_TEMPVAR_6       = 0x2E,
+	BCODE_POP_INTO_TEMPVAR_7       = 0x2F,
 
-	BCODE_PUSH_LITERAL_0        = 0x30,
-	BCODE_PUSH_LITERAL_1        = 0x31,
-	BCODE_PUSH_LITERAL_2        = 0x32,
-	BCODE_PUSH_LITERAL_3        = 0x33,
+	BCODE_PUSH_LITERAL_0           = 0x30,
+	BCODE_PUSH_LITERAL_1           = 0x31,
+	BCODE_PUSH_LITERAL_2           = 0x32,
+	BCODE_PUSH_LITERAL_3           = 0x33,
 
-	BCODE_PUSH_LITERAL_4        = 0x34,
-	BCODE_PUSH_LITERAL_5        = 0x35,
-	BCODE_PUSH_LITERAL_6        = 0x36,
-	BCODE_PUSH_LITERAL_7        = 0x37,
+	BCODE_PUSH_LITERAL_4           = 0x34,
+	BCODE_PUSH_LITERAL_5           = 0x35,
+	BCODE_PUSH_LITERAL_6           = 0x36,
+	BCODE_PUSH_LITERAL_7           = 0x37,
 
 	/* -------------------------------------- */
 
-	BCODE_STORE_INTO_OBJECT_0   = 0x38,
-	BCODE_STORE_INTO_OBJECT_1   = 0x39,
-	BCODE_STORE_INTO_OBJECT_2   = 0x3A,
-	BCODE_STORE_INTO_OBJECT_3   = 0x3B,
+	BCODE_STORE_INTO_OBJECT_0      = 0x38,
+	BCODE_STORE_INTO_OBJECT_1      = 0x39,
+	BCODE_STORE_INTO_OBJECT_2      = 0x3A,
+	BCODE_STORE_INTO_OBJECT_3      = 0x3B,
 
-	BCODE_POP_INTO_OBJECT_0     = 0x3C,
-	BCODE_POP_INTO_OBJECT_1     = 0x3D,
-	BCODE_POP_INTO_OBJECT_2     = 0x3E,
-	BCODE_POP_INTO_OBJECT_3     = 0x3F,
+	BCODE_POP_INTO_OBJECT_0        = 0x3C,
+	BCODE_POP_INTO_OBJECT_1        = 0x3D,
+	BCODE_POP_INTO_OBJECT_2        = 0x3E,
+	BCODE_POP_INTO_OBJECT_3        = 0x3F,
 
-	BCODE_PUSH_OBJECT_0         = 0x40,
-	BCODE_PUSH_OBJECT_1         = 0x41,
-	BCODE_PUSH_OBJECT_2         = 0x42,
-	BCODE_PUSH_OBJECT_3         = 0x43,
+	BCODE_PUSH_OBJECT_0            = 0x40,
+	BCODE_PUSH_OBJECT_1            = 0x41,
+	BCODE_PUSH_OBJECT_2            = 0x42,
+	BCODE_PUSH_OBJECT_3            = 0x43,
 
-	BCODE_JUMP_FORWARD_0        = 0x44, /* 68 */
-	BCODE_JUMP_FORWARD_1        = 0x45, /* 69 */
-	BCODE_JUMP_FORWARD_2        = 0x46, /* 70 */
-	BCODE_JUMP_FORWARD_3        = 0x47, /* 71 */
+	BCODE_JUMP_FORWARD_0           = 0x44, /* 68 */
+	BCODE_JUMP_FORWARD_1           = 0x45, /* 69 */
+	BCODE_JUMP_FORWARD_2           = 0x46, /* 70 */
+	BCODE_JUMP_FORWARD_3           = 0x47, /* 71 */
 
-	BCODE_JUMP_BACKWARD_0       = 0x48,
-	BCODE_JUMP_BACKWARD_1       = 0x49,
-	BCODE_JUMP_BACKWARD_2       = 0x4A,
-	BCODE_JUMP_BACKWARD_3       = 0x4B,
+	BCODE_JUMP_BACKWARD_0          = 0x48,
+	BCODE_JUMP_BACKWARD_1          = 0x49,
+	BCODE_JUMP_BACKWARD_2          = 0x4A,
+	BCODE_JUMP_BACKWARD_3          = 0x4B,
 
-	BCODE_JUMP_IF_TRUE_0        = 0x4C,
-	BCODE_JUMP_IF_TRUE_1        = 0x4D,
-	BCODE_JUMP_IF_TRUE_2        = 0x4E,
-	BCODE_JUMP_IF_TRUE_3        = 0x4F,
+	BCODE_JUMP_IF_TRUE_0           = 0x4C,
+	BCODE_JUMP_IF_TRUE_1           = 0x4D,
+	BCODE_JUMP_IF_TRUE_2           = 0x4E,
+	BCODE_JUMP_IF_TRUE_3           = 0x4F,
 
-	BCODE_JUMP_IF_FALSE_0       = 0x50,
-	BCODE_JUMP_IF_FALSE_1       = 0x51,
-	BCODE_JUMP_IF_FALSE_2       = 0x52,
-	BCODE_JUMP_IF_FALSE_3       = 0x53,
+	BCODE_JUMP_IF_FALSE_0          = 0x50, /* 80 */
+	BCODE_JUMP_IF_FALSE_1          = 0x51, /* 81 */
+	BCODE_JUMP_IF_FALSE_2          = 0x52, /* 82 */
+	BCODE_JUMP_IF_FALSE_3          = 0x53, /* 83 */
 
-	BCODE_JUMP_BY_OFFSET_0      = 0x54,
-	BCODE_JUMP_BY_OFFSET_1      = 0x55,
-	BCODE_JUMP_BY_OFFSET_2      = 0x56,
-	BCODE_JUMP_BY_OFFSET_3      = 0x57,
+
 
 	BCODE_STORE_INTO_CTXTEMPVAR_0  = 0x58, /* 88 */
 	BCODE_STORE_INTO_CTXTEMPVAR_1  = 0x59, /* 89 */
@@ -729,7 +722,7 @@ enum stix_bcode_t
 	BCODE_JUMP_BACKWARD_X          = 0xC8, /* 200 */
 	BCODE_JUMP_IF_TRUE_X           = 0xCC, /* 204 */
 	BCODE_JUMP_IF_FALSE_X          = 0xD0, /* 208 */
-	BCODE_JUMP_BY_OFFSET_X         = 0xD4, /* 212 */
+
 
 	BCODE_STORE_INTO_CTXTEMPVAR_X  = 0xD8, /* 216 */
 	BCODE_POP_INTO_CTXTEMPVAR_X    = 0xDC, /* 220 */
@@ -743,15 +736,18 @@ enum stix_bcode_t
 	BCODE_SEND_MESSAGE_TO_SUPER_X  = 0xF4, /* 244 */
 
 
-	BCODE_PUSH_RECEIVER            = 0x81,
-	BCODE_PUSH_NIL                 = 0x82,
-	BCODE_PUSH_TRUE                = 0x83,
-	BCODE_PUSH_FALSE               = 0x84,
-	BCODE_PUSH_CONTEXT             = 0x85,
-	BCODE_PUSH_NEGONE              = 0x86,
-	BCODE_PUSH_ZERO                = 0x87,
-	BCODE_PUSH_ONE                 = 0x89,
-	BCODE_PUSH_TWO                 = 0x91,
+	BCODE_JUMP2_FORWARD            = 0xC5, /* 197 */
+	BCODE_JUMP2_BACKWARD           = 0xC9, /* 201 */
+
+	BCODE_PUSH_RECEIVER            = 0x81, /* 129 */
+	BCODE_PUSH_NIL                 = 0x82, /* 130 */
+	BCODE_PUSH_TRUE                = 0x83, /* 131 */
+	BCODE_PUSH_FALSE               = 0x84, /* 132 */
+	BCODE_PUSH_CONTEXT             = 0x85, /* 133 */
+	BCODE_PUSH_NEGONE              = 0x86, /* 134 */
+	BCODE_PUSH_ZERO                = 0x87, /* 135 */
+	BCODE_PUSH_ONE                 = 0x89, /* 137 */
+	BCODE_PUSH_TWO                 = 0x8A, /* 138 */
 
 	/* UNUSED 0xE8 - 0xF8 */
 

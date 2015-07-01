@@ -1499,7 +1499,6 @@ static int emit_single_param_instruction (stix_t* stix, int cmd, stix_oow_t para
 		case BCODE_JUMP_BACKWARD_0:
 		case BCODE_JUMP_IF_TRUE_0:
 		case BCODE_JUMP_IF_FALSE_0:
-		case BCODE_JUMP_BY_OFFSET_0:
 			if (param_1 < 4)
 			{
 				bc = (stix_byte_t)(cmd & 0xFC) | (stix_byte_t)param_1;
@@ -1511,6 +1510,11 @@ static int emit_single_param_instruction (stix_t* stix, int cmd, stix_oow_t para
 				bc = cmd | 0x80;
 				goto write_long;
 			}
+
+		case BCODE_JUMP2_FORWARD:
+		case BCODE_JUMP2_BACKWARD:
+			bc = cmd;
+			goto write_long;
 	}
 
 	stix->errnum = STIX_EINVAL;
@@ -2503,21 +2507,35 @@ printf ("\treturn_from_block\n");
 	}
 
 	block_code_size = stix->c->mth.code.len - jump_inst_pos - (STIX_BCODE_LONG_PARAM_SIZE + 1);
-	if (block_code_size > MAX_CODE_BLKCODE)
+	if (block_code_size > MAX_CODE_JUMP * 2)
 	{
-/* TOOD: increate the max block code size and 
- * if it exceedes the limit for BCODE_JUMP_FORWARD_X, switch to BECODE_JUMP_BY_OFFSET */
 		set_syntax_error (stix, STIX_SYNERR_BLKFLOOD, &block_loc, STIX_NULL); 
 		return -1;
 	}
+	else 
+	{
+		stix_size_t jump_offset;
 
-	/* note that the jump offset is a signed number */
-#if (STIX_BCODE_LONG_PARAM_SIZE == 2)
-	stix->c->mth.code.ptr[jump_inst_pos + 1] = block_code_size >> 8;
-	stix->c->mth.code.ptr[jump_inst_pos + 2] = ((stix_int16_t)block_code_size & 0xFF);
-#else
-	stix->c->mth.code.ptr[jump_inst_pos + 1] = block_code_size ;
-#endif
+		if (block_code_size > MAX_CODE_JUMP)
+		{
+printf ("\tfixed jump to jump2\n");
+			stix->c->mth.code.ptr[jump_inst_pos] = BCODE_JUMP2_FORWARD;
+			jump_offset = block_code_size - MAX_CODE_JUMP;
+		}
+		else
+		{
+			jump_offset = block_code_size;
+		}
+
+printf ("\tfixed jump offset to %u\n", (unsigned int)jump_offset);
+
+	#if (STIX_BCODE_LONG_PARAM_SIZE == 2)
+		stix->c->mth.code.ptr[jump_inst_pos + 1] = jump_offset >> 8;
+		stix->c->mth.code.ptr[jump_inst_pos + 2] = jump_offset & 0xFF;
+	#else
+		stix->c->mth.code.ptr[jump_inst_pos + 1] = jump_offset;
+	#endif
+	}
 
 	/* restore the temporary count */
 	stix->c->mth.tmprs.len = saved_tmprs_len;

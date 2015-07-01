@@ -728,6 +728,58 @@ static int primitive_integer_sub (stix_t* stix, stix_ooi_t nargs)
 	return 0;
 }
 
+static int primitive_integer_mul (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_ooi_t tmp;
+	stix_oop_t rcv, arg;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	{
+		tmp = STIX_OOP_TO_SMINT(rcv) * STIX_OOP_TO_SMINT(arg);
+		/* TODO: check overflow. if so convert it to LargeInteger */
+
+		ACTIVE_STACK_POP (stix);
+		ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(tmp));
+		return 1;
+	}
+
+/* TODO: handle LargeInteger */
+	return 0;
+}
+
+static int primitive_integer_eq (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	{
+		ACTIVE_STACK_POP (stix);
+		if (STIX_OOP_TO_SMINT(rcv) < STIX_OOP_TO_SMINT(arg))
+		{
+			ACTIVE_STACK_SETTOP (stix, stix->_true);
+		}
+		else
+		{
+			ACTIVE_STACK_SETTOP (stix, stix->_false);
+		}
+		
+		return 1;
+	}
+
+/* TODO: handle LargeInteger */
+	return 0;
+}
+
 static int primitive_integer_lt (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
@@ -796,17 +848,19 @@ typedef struct primitive_t primitive_t;
 
 static primitive_t primitives[] =
 {
-	{  -1,   primitive_dump                 },
-	{   0,   primitive_new                  },
-	{   1,   primitive_new_with_size        },
-	{   0,   primitive_basic_size           },
-	{   1,   primitive_basic_at             },
-	{   2,   primitive_basic_at_put         },
-	{  -1,   primitive_block_context_value  },
-	{   1,   primitive_integer_add          },
-	{   1,   primitive_integer_sub          },
-	{   1,   primitive_integer_lt           },
-	{   1,   primitive_integer_gt           }
+	{  -1,   primitive_dump                 }, /* 0 */
+	{   0,   primitive_new                  }, /* 1 */
+	{   1,   primitive_new_with_size        }, /* 2 */
+	{   0,   primitive_basic_size           }, /* 3 */
+	{   1,   primitive_basic_at             }, /* 4 */
+	{   2,   primitive_basic_at_put         }, /* 5 */
+	{  -1,   primitive_block_context_value  }, /* 6 */
+	{   1,   primitive_integer_add          }, /* 7 */
+	{   1,   primitive_integer_sub          }, /* 8 */
+	{   1,   primitive_integer_mul          }, /* 9 */
+	{   1,   primitive_integer_eq           }, /* 10 */
+	{   1,   primitive_integer_lt           }, /* 11 */
+	{   1,   primitive_integer_gt           }  /* 12 */
 };
 
 
@@ -1127,7 +1181,6 @@ printf ("JUMP_BACKWARD %d\n", (int)(bcode & 0x3));
 
 			case BCODE_JUMP_IF_TRUE_X:
 			case BCODE_JUMP_IF_FALSE_X:
-			case BCODE_JUMP_BY_OFFSET_X:
 			case BCODE_JUMP_IF_TRUE_0:
 			case BCODE_JUMP_IF_TRUE_1:
 			case BCODE_JUMP_IF_TRUE_2:
@@ -1136,13 +1189,21 @@ printf ("JUMP_BACKWARD %d\n", (int)(bcode & 0x3));
 			case BCODE_JUMP_IF_FALSE_1:
 			case BCODE_JUMP_IF_FALSE_2:
 			case BCODE_JUMP_IF_FALSE_3:
-			case BCODE_JUMP_BY_OFFSET_0:
-			case BCODE_JUMP_BY_OFFSET_1:
-			case BCODE_JUMP_BY_OFFSET_2:
-			case BCODE_JUMP_BY_OFFSET_3:
 printf ("<<<<<<<<<<<<<< JUMP NOT IMPLEMENTED YET >>>>>>>>>>>> \n");
 stix->errnum = STIX_ENOIMPL;
 return -1;
+
+			case BCODE_JUMP2_FORWARD:
+				FETCH_PARAM_CODE_TO (stix, b1);
+printf ("JUMP2_FORWARD %d\n", (int)b1);
+				stix->ip += MAX_CODE_JUMP + b1;
+				break;
+				break;
+
+			case BCODE_JUMP2_BACKWARD:
+				FETCH_PARAM_CODE_TO (stix, b1);
+printf ("JUMP2_BACKWARD %d\n", (int)b1);
+				stix->ip -= MAX_CODE_JUMP + b1;
 				break;
 
 			/* -------------------------------------------------------- */
