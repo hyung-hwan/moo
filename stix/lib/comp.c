@@ -1844,7 +1844,7 @@ done:
 	return pos;
 }
 
-static int clone_assignee (stix_t* stix, stix_ucs_t* name)
+static int clone_assignee (stix_t* stix, const stix_ucs_t* name, stix_size_t* offset)
 {
 	int n;
 	stix_size_t old_len;
@@ -1854,11 +1854,12 @@ static int clone_assignee (stix_t* stix, stix_ucs_t* name)
 	if (n <= -1) return -1;
 
 	/* update the pointer to of the name. its length is the same. */
-	name->ptr = stix->c->mth.assignees.ptr + old_len;
+	/*name->ptr = stix->c->mth.assignees.ptr + old_len;*/
+	*offset = old_len;
 	return 0;
 }
 
-static int clone_binary_selector (stix_t* stix, stix_ucs_t* name)
+static int clone_binary_selector (stix_t* stix, const stix_ucs_t* name, stix_size_t* offset)
 {
 	int n;
 	stix_size_t old_len;
@@ -1868,11 +1869,12 @@ static int clone_binary_selector (stix_t* stix, stix_ucs_t* name)
 	if (n <= -1) return -1;
 
 	/* update the pointer to of the name. its length is the same. */
-	name->ptr = stix->c->mth.binsels.ptr + old_len;
+	/*name->ptr = stix->c->mth.binsels.ptr + old_len;*/
+	*offset = old_len;
 	return 0;
 }
 
-static int clone_keyword (stix_t* stix, stix_ucs_t* name)
+static int clone_keyword (stix_t* stix, const stix_ucs_t* name, stix_size_t* offset)
 {
 	int n;
 	stix_size_t old_len;
@@ -1882,7 +1884,8 @@ static int clone_keyword (stix_t* stix, stix_ucs_t* name)
 	if (n <= -1) return -1;
 
 	/* update the pointer to of the name. its length is the same. */
-	name->ptr = stix->c->mth.kwsels.ptr + old_len;
+	/*name->ptr = stix->c->mth.kwsels.ptr + old_len;*/
+	*offset = old_len;
 	return 0;
 }
 
@@ -3052,7 +3055,7 @@ static int compile_binary_message (stix_t* stix, int to_super)
 	stix_size_t index;
 	int to_super2;
 	stix_ucs_t binsel;
-	stix_size_t saved_binsels_len;
+	stix_size_t saved_binsels_len, binsel_offset;
 
 	STIX_ASSERT (stix->c->tok.type == STIX_IOTOK_BINSEL);
 
@@ -3061,7 +3064,7 @@ static int compile_binary_message (stix_t* stix, int to_super)
 		binsel = stix->c->tok.name;
 		saved_binsels_len = stix->c->mth.binsels.len;
 
-		if (clone_binary_selector(stix, &binsel) <= -1) goto oops;
+		if (clone_binary_selector(stix, &binsel, &binsel_offset) <= -1) goto oops;
 
 		GET_TOKEN (stix);
 
@@ -3069,6 +3072,10 @@ static int compile_binary_message (stix_t* stix, int to_super)
 
 		if (stix->c->tok.type == STIX_IOTOK_IDENT && compile_unary_message(stix, to_super2) <= -1) goto oops;
 
+		/* update the pointer to the cloned selector now 
+		 * to be free from reallocation risk for the recursive call
+		 * to compile_expression_primary(). */
+		binsel.ptr = &stix->c->mth.binsels.ptr[binsel_offset];
 		if (add_symbol_literal(stix, &binsel, &index) <= -1 ||
 		    emit_double_param_instruction(stix, send_message_cmd[to_super], 1, index) <= -1) goto oops;
 printf ("\tsend binary message %d [", (int)index);
@@ -3098,6 +3105,7 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 	stix_ucs_t kw, kwsel;
 	stix_ioloc_t saved_kwsel_loc;
 	stix_size_t saved_kwsel_len;
+	stix_size_t kw_offset;
 	stix_size_t nargs = 0;
 
 	saved_kwsel_loc = stix->c->tok.loc;
@@ -3106,7 +3114,7 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 	do 
 	{
 		kw = stix->c->tok.name;
-		if (clone_keyword(stix, &kw) <= -1) goto oops;
+		if (clone_keyword(stix, &kw, &kw_offset) <= -1) goto oops;
 
 		GET_TOKEN (stix);
 
@@ -3114,6 +3122,7 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 		if (stix->c->tok.type == STIX_IOTOK_IDENT && compile_unary_message(stix, to_super2) <= -1) goto oops;
 		if (stix->c->tok.type == STIX_IOTOK_BINSEL && compile_binary_message(stix, to_super2) <= -1) goto oops;
 
+		kw.ptr = &stix->c->mth.kwsels.ptr[kw_offset];
 		if (nargs >= MAX_CODE_NARGS)
 		{
 			/* 'kw' points to only one segment of the full keyword message. 
@@ -3297,10 +3306,13 @@ static int compile_method_expression (stix_t* stix, int pop)
 	if (stix->c->tok.type == STIX_IOTOK_IDENT) 
 	{
 		stix_ioloc_t assignee_loc;
+		stix_size_t assignee_offset;
+
 		/* store the assignee name to the internal buffer
 		 * to make it valid after the token buffer has been overwritten */
 		assignee = stix->c->tok.name;
-		if (clone_assignee(stix, &assignee) <= -1) return -1;
+
+		if (clone_assignee(stix, &assignee, &assignee_offset) <= -1) return -1;
 
 		assignee_loc = stix->c->tok.loc;
 
@@ -3316,8 +3328,16 @@ printf ("ASSIGNIUNG TO ....");
 print_ucs (&assignee);
 printf ("\n");
 
-			if (compile_method_expression(stix, 0) <= -1 ||
-			    get_variable_info(stix, &assignee, &assignee_loc, &var) <= -1) goto oops;
+			if (compile_method_expression(stix, 0) <= -1) goto oops;
+
+			/* compile_method_expression() is called after clone_assignee().
+			 * clone_assignee() may reallocate a single buffer to hold 
+			 * a series of assigness names. the pointer based operation is
+			 * fragile as it can change. use the offset of the cloned
+			 * assignee to update the actual pointer after the recursive
+			 * compile_method_expression() call */
+			assignee.ptr = &stix->c->mth.assignees.ptr[assignee_offset];
+			if (get_variable_info(stix, &assignee, &assignee_loc, &var) <= -1) goto oops;
 
 			switch (var.type)
 			{
@@ -3383,6 +3403,7 @@ printf ("\t%s_into_object %d\n", (pop? "pop":"store"), (int)index);
 		}
 		else 
 		{
+			assignee.ptr = &stix->c->mth.assignees.ptr[assignee_offset];
 			if (compile_basic_expression(stix, &assignee, &assignee_loc) <= -1) goto oops;
 		}
 	}
@@ -3453,7 +3474,6 @@ if (n == 0) printf ("\tpop_stacktop\n");
 	}
 }
 
-
 static int compile_method_statements (stix_t* stix)
 {
 	/*
@@ -3498,7 +3518,11 @@ static int add_compiled_method (stix_t* stix)
 {
 	stix_oop_t name; /* selector */
 	stix_oop_method_t mth; /* method */
+#if defined(STIX_USE_OBJECT_TRAILER)
+	/* nothing extra */
+#else
 	stix_oop_byte_t code;
+#endif
 	stix_size_t tmp_count = 0;
 	stix_size_t i;
 	stix_ooi_t preamble_code, preamble_index;
@@ -3508,8 +3532,13 @@ static int add_compiled_method (stix_t* stix)
 	stix_pushtmp (stix, &name); tmp_count++;
 
 	/* The variadic data part passed to stix_instantiate() is not GC-safe */
+#if defined(STIX_USE_OBJECT_TRAILER)
+	mth = (stix_oop_method_t)stix_instantiatewithtrailer (stix, stix->_method, stix->c->mth.literal_count, stix->c->mth.code.ptr, stix->c->mth.code.len);
+#else
 	mth = (stix_oop_method_t)stix_instantiate (stix, stix->_method, STIX_NULL, stix->c->mth.literal_count);
+#endif
 	if (!mth) goto oops;
+
 	for (i = 0; i < stix->c->mth.literal_count; i++)
 	{
 		/* let's do the variadic data initialization here */
@@ -3517,9 +3546,13 @@ static int add_compiled_method (stix_t* stix)
 	}
 	stix_pushtmp (stix, (stix_oop_t*)&mth); tmp_count++;
 
+#if defined(STIX_USE_OBJECT_TRAILER)
+	/* do nothing */
+#else
 	code = (stix_oop_byte_t)stix_instantiate (stix, stix->_byte_array, stix->c->mth.code.ptr, stix->c->mth.code.len);
 	if (!code) goto oops;
 	stix_pushtmp (stix, (stix_oop_t*)&code); tmp_count++;
+#endif
 
 	preamble_code = STIX_METHOD_PREAMBLE_NONE;
 	preamble_index = 0;
@@ -3564,6 +3597,7 @@ static int add_compiled_method (stix_t* stix)
 					}
 				}
 			}
+/* TODO: check more special cases like 'return true' and encode it to this preamble */
 		}
 	}
 	else
@@ -3578,7 +3612,12 @@ static int add_compiled_method (stix_t* stix)
 	mth->preamble = STIX_OOP_FROM_SMINT(STIX_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index));
 	mth->tmpr_count = STIX_OOP_FROM_SMINT(stix->c->mth.tmpr_count);
 	mth->tmpr_nargs = STIX_OOP_FROM_SMINT(stix->c->mth.tmpr_nargs);
+
+#if defined(STIX_USE_OBJECT_TRAILER)
+	/* do nothing */
+#else
 	mth->code = code;
+#endif
 
 	/*TODO: preserve source??? mth->text = stix->c->mth.text
 the compiler must collect all source method string collected so far.

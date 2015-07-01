@@ -39,6 +39,11 @@
 /* define this to generate CTXTEMVAR instructions */
 #define STIX_USE_CTXTEMPVAR
 
+/* define this to allow an pointer(OOP) object to have trailing bytes 
+ * this is used to embed bytes codes into the back of a compile method
+ * object instead of putting in in a separate byte array. */
+#define STIX_USE_OBJECT_TRAILER
+
 /* this is for gc debugging */
 #define STIX_DEBUG_GC_001  
 
@@ -469,6 +474,14 @@ struct stix_compiler_t
 
 #endif
 
+#if defined(STIX_USE_OBJECT_TRAILER)
+	/* let it point to the trailer of the method */
+#	define SET_ACTIVE_METHOD_CODE(stix) ((stix)->active_code = (stix_byte_t*)&(stix)->active_method->slot[STIX_OBJ_GET_SIZE((stix)->active_method) + 1 - STIX_METHOD_NAMED_INSTVARS])
+#else
+	/* let it point to the payload of the code byte array */
+#	define SET_ACTIVE_METHOD_CODE(stix) ((stix)->active_code = (stix)->active_method->code->slot)
+#endif
+
 #if defined(STIX_BCODE_LONG_PARAM_SIZE) && (STIX_BCODE_LONG_PARAM_SIZE == 1)
 #	define MAX_CODE_INDEX               (0xFFu)
 #	define MAX_CODE_NTMPRS              (0xFFu)
@@ -660,8 +673,6 @@ enum stix_bcode_t
 	BCODE_JUMP_IF_FALSE_2          = 0x52, /* 82 */
 	BCODE_JUMP_IF_FALSE_3          = 0x53, /* 83 */
 
-
-
 	BCODE_STORE_INTO_CTXTEMPVAR_0  = 0x58, /* 88 */
 	BCODE_STORE_INTO_CTXTEMPVAR_1  = 0x59, /* 89 */
 	BCODE_STORE_INTO_CTXTEMPVAR_2  = 0x5A, /* 90 */
@@ -849,6 +860,15 @@ stix_oop_t stix_allocoopobj (
 	stix_oow_t size
 );
 
+#if defined(STIX_USE_OBJECT_TRAILER)
+stix_oop_t stix_allocoopobjwithtrailer (
+	stix_t*            stix,
+	stix_oow_t         size,
+	const stix_byte_t* tptr,
+	stix_oow_t         tlen
+);
+#endif
+
 stix_oop_t stix_alloccharobj (
 	stix_t*            stix,
 	const stix_uch_t*  ptr,
@@ -866,6 +886,16 @@ stix_oop_t stix_allocwordobj (
 	const stix_oow_t*  ptr,
 	stix_oow_t         len
 );
+
+#if defined(STIX_USE_OBJECT_TRAILER)
+stix_oop_t stix_instantiatewithtrailer (
+	stix_t*            stix, 
+	stix_oop_t         _class,
+	stix_oow_t         vlen,
+	const stix_byte_t* tptr,
+	stix_oow_t tlen
+);
+#endif
 
 /* ========================================================================= */
 /* sym.c                                                                     */

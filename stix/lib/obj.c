@@ -64,7 +64,7 @@ stix_oop_t stix_allocoopobj (stix_t* stix, stix_oow_t size)
 	hdr = stix_allocbytes (stix, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
 	if (!hdr) return STIX_NULL;
 
-	hdr->_flags = STIX_OBJ_MAKE_FLAGS(STIX_OBJ_TYPE_OOP, STIX_SIZEOF(stix_oop_t), 0, 0, 0);
+	hdr->_flags = STIX_OBJ_MAKE_FLAGS(STIX_OBJ_TYPE_OOP, STIX_SIZEOF(stix_oop_t), 0, 0, 0, 0);
 	STIX_OBJ_SET_SIZE (hdr, size);
 	STIX_OBJ_SET_CLASS (hdr, stix->_nil);
 
@@ -72,6 +72,42 @@ stix_oop_t stix_allocoopobj (stix_t* stix, stix_oow_t size)
 
 	return (stix_oop_t)hdr;
 }
+
+#if defined(STIX_USE_OBJECT_TRAILER)
+stix_oop_t stix_allocoopobjwithtrailer (stix_t* stix, stix_oow_t size, const stix_byte_t* bptr, stix_oow_t blen)
+{
+	stix_oop_oop_t hdr;
+	stix_oow_t nbytes, nbytes_aligned;
+	stix_oow_t i;
+
+	/* +1 for the trailer size of the stix_oow_t type */
+	nbytes = (size + 1) * STIX_SIZEOF(stix_oop_t) + blen;
+	nbytes_aligned = STIX_ALIGN(nbytes, STIX_SIZEOF(stix_oop_t)); 
+
+	hdr = stix_allocbytes (stix, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
+	if (!hdr) return STIX_NULL;
+
+	hdr->_flags = STIX_OBJ_MAKE_FLAGS(STIX_OBJ_TYPE_OOP, STIX_SIZEOF(stix_oop_t), 0, 0, 0, 1);
+	STIX_OBJ_SET_SIZE (hdr, size);
+	STIX_OBJ_SET_CLASS (hdr, stix->_nil);
+
+	for (i = 0; i < size; i++) hdr->slot[i] = stix->_nil;
+
+	/* [NOTE] this is not converted to a SmallInteger object */
+	hdr->slot[size] = (stix_oop_t)blen; 
+
+	if (bptr)
+	{
+		STIX_MEMCPY (&hdr->slot[size + 1], bptr, blen);
+	}
+	else
+	{
+		STIX_MEMSET (&hdr->slot[size + 1], 0, blen);
+	}
+
+	return (stix_oop_t)hdr;
+}
+#endif
 
 static stix_oop_t alloc_numeric_array (stix_t* stix, const void* ptr, stix_oow_t len, stix_obj_type_t type, stix_oow_t unit, int extra)
 {
@@ -94,7 +130,7 @@ static stix_oop_t alloc_numeric_array (stix_t* stix, const void* ptr, stix_oow_t
 	hdr = stix_allocbytes (stix, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
 	if (!hdr) return STIX_NULL;
 
-	hdr->_flags = STIX_OBJ_MAKE_FLAGS(type, unit, extra, 0, 0);
+	hdr->_flags = STIX_OBJ_MAKE_FLAGS(type, unit, extra, 0, 0, 0);
 	hdr->_size = len;
 	STIX_OBJ_SET_SIZE (hdr, len);
 	STIX_OBJ_SET_CLASS (hdr, stix->_nil);
@@ -118,6 +154,14 @@ stix_oop_t stix_alloccharobj (stix_t* stix, const stix_uch_t* ptr, stix_oow_t le
 {
 	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_CHAR, STIX_SIZEOF(stix_uch_t), 1);
 }
+
+/*
+TODO: extra bits must be set ...
+stix_oop_t stix_allocmbcharobj (stix_t* stix, const stix_uch_t* ptr, stix_oow_t len)
+{
+	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_MBCHAR, STIX_SIZEOF(stix_uch_t), 1);
+}
+*/
 
 stix_oop_t stix_allocbyteobj (stix_t* stix, const stix_byte_t* ptr, stix_oow_t len)
 {
@@ -225,3 +269,77 @@ einval:
 	stix->errnum = STIX_EINVAL;
 	return STIX_NULL;
 }
+
+#if defined(STIX_USE_OBJECT_TRAILER)
+
+stix_oop_t stix_instantiatewithtrailer (stix_t* stix, stix_oop_t _class, stix_oow_t vlen, const stix_byte_t* tptr, stix_oow_t tlen)
+{
+	stix_oop_t oop;
+	stix_oow_t spec;
+	stix_oow_t named_instvar;
+	stix_obj_type_t indexed_type;
+	stix_oow_t tmp_count = 0;
+
+	STIX_ASSERT (stix->_nil != STIX_NULL);
+
+	STIX_ASSERT (STIX_OOP_IS_POINTER(_class));
+	STIX_ASSERT (STIX_CLASSOF(stix, _class) == stix->_class);
+
+	STIX_ASSERT (STIX_OOP_IS_SMINT(((stix_oop_class_t)_class)->spec));
+	spec = STIX_OOP_TO_SMINT(((stix_oop_class_t)_class)->spec);
+
+	named_instvar = STIX_CLASS_SPEC_NAMED_INSTVAR(spec); /* size of the named_instvar part */
+
+	if (STIX_CLASS_SPEC_IS_INDEXED(spec)) 
+	{
+		indexed_type = STIX_CLASS_SPEC_INDEXED_TYPE(spec);
+
+		if (indexed_type == STIX_OBJ_TYPE_OOP)
+		{
+			if (named_instvar > STIX_MAX_NAMED_INSTVARS ||
+			    vlen > STIX_MAX_INDEXED_INSTVARS(named_instvar))
+			{
+				goto einval;
+			}
+		}
+		else
+		{
+			/* not a class for an OOP object */
+			goto einval;
+		}
+	}
+	else
+	{
+		/* named instance variables only. treat it as if it is an
+		 * indexable class with no variable data */
+		indexed_type = STIX_OBJ_TYPE_OOP;
+		vlen = 0;
+
+		if (named_instvar > STIX_MAX_NAMED_INSTVARS) goto einval;
+	}
+
+	stix_pushtmp (stix, &_class); tmp_count++;
+
+	switch (indexed_type)
+	{
+		case STIX_OBJ_TYPE_OOP:
+			oop = stix_allocoopobjwithtrailer(stix, named_instvar + vlen, tptr, tlen);
+			break;
+
+		default:
+			stix->errnum = STIX_EINTERN;
+			oop = STIX_NULL;
+			break;
+	}
+
+	if (oop) STIX_OBJ_SET_CLASS (oop, _class);
+	stix_poptmps (stix, tmp_count);
+	return oop;
+
+einval:
+	STIX_ASSERT (tmp_count <= 0);
+	stix->errnum = STIX_EINVAL;
+	return STIX_NULL;
+
+}
+#endif

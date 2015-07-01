@@ -51,13 +51,6 @@ static void compact_symbol_table (stix_t* stix, stix_oop_t _nil)
 
 		STIX_ASSERT (stix->symtab->bucket->slot[index] != _nil);
 
-/*
-{
-sym = (stix_oop_char_t)buc->slot[index];
-wprintf (L">> DISPOSING %d [%S] from the symbol table\n", (int)index, sym->slot);
-}
-*/
-
 		for (i = 0, x = index, y = index; i < bucket_size; i++)
 		{
 			y = (y + 1) % bucket_size;
@@ -96,7 +89,6 @@ stix_oop_t stix_moveoop (stix_t* stix, stix_oop_t oop)
 	if (!oop) return oop;
 #endif
 
-
 	STIX_ASSERT (STIX_OOP_IS_POINTER(oop));
 	/*if (STIX_OOP_IS_POINTER(oop)) return oop;*/
 
@@ -113,8 +105,39 @@ stix_oop_t stix_moveoop (stix_t* stix, stix_oop_t oop)
 		stix_oow_t nbytes_aligned;
 		stix_oop_t tmp;
 
-		/* calculate the payload size in bytes */
-		nbytes_aligned = STIX_ALIGN (STIX_OBJ_BYTESOF(oop), STIX_SIZEOF(stix_oop_t));
+#if defined(STIX_USE_OBJECT_TRAILER)
+		if (STIX_OBJ_GET_FLAGS_TRAILER(oop))
+		{
+			stix_oow_t nbytes;
+
+			/* only an OOP object can have the trailer. 
+			 *
+			 * | _flags    |
+			 * | _size     |  <-- if it's 3
+			 * | _class    |
+			 * |   X       |
+			 * |   X       |
+			 * |   X       |
+			 * |   Y       | <-- it may exist if EXTRA is set in _flags.
+			 * |   Z       | <-- if TRAILER is set, it is the number of bytes in the trailer
+			 * |  |  |  |  | 
+			 */
+			STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_OOP);
+			STIX_ASSERT (STIX_OBJ_GET_FLAGS_UNIT(oop) == STIX_SIZEOF(stix_oow_t));
+			STIX_ASSERT (STIX_OBJ_GET_FLAGS_EXTRA(oop) == 0); /* no 'extra' for an OOP object */
+
+			nbytes = STIX_OBJ_BYTESOF(oop) + STIX_SIZEOF(stix_oow_t) + \
+			        (stix_oow_t)((stix_oop_oop_t)oop)->slot[STIX_OBJ_GET_SIZE(oop)];
+			nbytes_aligned = STIX_ALIGN (nbytes, STIX_SIZEOF(stix_oop_t));
+		}
+		else
+		{
+#endif
+			/* calculate the payload size in bytes */
+			nbytes_aligned = STIX_ALIGN (STIX_OBJ_BYTESOF(oop), STIX_SIZEOF(stix_oop_t));
+#if defined(STIX_USE_OBJECT_TRAILER)
+		}
+#endif
 
 		/* allocate space in the new heap */
 		tmp = stix_allocheapmem (stix, stix->newheap, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
@@ -154,7 +177,27 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 		stix_oop_t oop;
 
 		oop = (stix_oop_t)ptr;
-		nbytes_aligned = STIX_ALIGN (STIX_OBJ_BYTESOF(oop), STIX_SIZEOF(stix_oop_t));
+
+#if defined(STIX_USE_OBJECT_TRAILER)
+		if (STIX_OBJ_GET_FLAGS_TRAILER(oop))
+		{
+			stix_oow_t nbytes;
+
+			STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_OOP);
+			STIX_ASSERT (STIX_OBJ_GET_FLAGS_UNIT(oop) == STIX_SIZEOF(stix_oow_t));
+			STIX_ASSERT (STIX_OBJ_GET_FLAGS_EXTRA(oop) == 0); /* no 'extra' for an OOP object */
+
+			nbytes = STIX_OBJ_BYTESOF(oop) + STIX_SIZEOF(stix_oow_t) + \
+			         (stix_oow_t)((stix_oop_oop_t)oop)->slot[STIX_OBJ_GET_SIZE(oop)];
+			nbytes_aligned = STIX_ALIGN (nbytes, STIX_SIZEOF(stix_oop_t));
+		}
+		else
+		{
+#endif
+			nbytes_aligned = STIX_ALIGN (STIX_OBJ_BYTESOF(oop), STIX_SIZEOF(stix_oop_t));
+#if defined(STIX_USE_OBJECT_TRAILER)
+		}
+#endif
 
 		STIX_OBJ_SET_CLASS (oop, stix_moveoop(stix, STIX_OBJ_GET_CLASS(oop)));
 		if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_OOP)
@@ -182,7 +225,6 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 				if (STIX_OOP_IS_POINTER(xtmp->slot[i]))
 					xtmp->slot[i] = stix_moveoop (stix, xtmp->slot[i]);
 			}
-
 		}
 
 		/*ptr = ptr + STIX_SIZEOF(stix_obj_t) + nbytes_aligned;*/
@@ -255,7 +297,6 @@ void stix_gc (stix_t* stix)
 
 	stix->active_context = (stix_oop_context_t)stix_moveoop (stix, (stix_oop_t)stix->active_context);
 	stix->active_method = (stix_oop_method_t)stix_moveoop (stix, (stix_oop_t)stix->active_method);
-	stix->active_code = (stix_oop_byte_t)stix_moveoop (stix, (stix_oop_t)stix->active_code);
 
 	for (cb = stix->cblist; cb; cb = cb->next)
 	{
@@ -309,6 +350,7 @@ for (index = 0; index < buc->size; index++)
 printf ("===========================\n");
 }
 */
+	if (stix->active_method) SET_ACTIVE_METHOD_CODE (stix); /* update stix->active_code */
 }
 
 

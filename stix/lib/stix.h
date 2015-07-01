@@ -405,11 +405,15 @@ typedef enum stix_obj_type_t stix_obj_type_t;
  *                STIX_OBJ_TYPE_BYTE, STIX_OBJ_TYPE_WORD
  *   unit: the size of a payload item in bytes. 
  *   extra: 0 or 1. 1 indicates that the payload contains 1 more
- *          item than the value of the size field. mostly used for a 
- *          terminating null in a variable-char object.
+ *          item than the value of the size field. used for a 
+ *          terminating null in a variable-char object. internel
+ *          use only.
  *   kernel: 0 or 1. indicates that the object is a kernel object.
  *           VM disallows layout changes of a kernel object.
- *   moved: 0 or 1. used by GC.
+ *           internal use only.
+ *   moved: 0 or 1. used by GC. internal use only.
+ *   trailer: 0 or 1. indicates that there are trailing bytes
+ *            after the object payload. internal use only.
  *
  * _size: the number of payload items in an object.
  *        it doesn't include the header size.
@@ -418,6 +422,10 @@ typedef enum stix_obj_type_t stix_obj_type_t;
  * with this fomula:
  *    sizeof(stix_obj_t) + ALIGN((size + extra) * unit), sizeof(stix_oop_t))
  * 
+ * If the type is known to be not STIX_OBJ_TYPE_CHAR, you can assume that 
+ * 'extra' is 0. So you can simplify the fomula in such a context.
+ *    sizeof(stix_obj_t) + ALIGN(size * unit), sizeof(stix_oop_t))
+ *
  * The ALIGN() macro is used above since allocation adjusts the payload
  * size to a multiple of sizeof(stix_oop_t). it assumes that sizeof(stix_obj_t)
  * is a multiple of sizeof(stix_oop_t). See the STIX_BYTESOF() macro.
@@ -432,23 +440,26 @@ typedef enum stix_obj_type_t stix_obj_type_t;
  * size calculation and the access to the payload fields become more complex. 
  * Therefore, i've dropped the idea.
  * ========================================================================= */
-#define STIX_OBJ_FLAGS_TYPE_BITS   6
-#define STIX_OBJ_FLAGS_UNIT_BITS   5
-#define STIX_OBJ_FLAGS_EXTRA_BITS  1
-#define STIX_OBJ_FLAGS_KERNEL_BITS 2
-#define STIX_OBJ_FLAGS_MOVED_BITS  1
+#define STIX_OBJ_FLAGS_TYPE_BITS    6
+#define STIX_OBJ_FLAGS_UNIT_BITS    5
+#define STIX_OBJ_FLAGS_EXTRA_BITS   1
+#define STIX_OBJ_FLAGS_KERNEL_BITS  2
+#define STIX_OBJ_FLAGS_MOVED_BITS   1
+#define STIX_OBJ_FLAGS_TRAILER_BITS 1
 
-#define STIX_OBJ_GET_FLAGS_TYPE(oop)     STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_UNIT_BITS + STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS), STIX_OBJ_FLAGS_TYPE_BITS)
-#define STIX_OBJ_GET_FLAGS_UNIT(oop)     STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS),                            STIX_OBJ_FLAGS_UNIT_BITS)
-#define STIX_OBJ_GET_FLAGS_EXTRA(oop)    STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS),                                                        STIX_OBJ_FLAGS_EXTRA_BITS)
-#define STIX_OBJ_GET_FLAGS_KERNEL(oop)   STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_MOVED_BITS),                                                                                     STIX_OBJ_FLAGS_KERNEL_BITS)
-#define STIX_OBJ_GET_FLAGS_MOVED(oop)    STIX_GETBITS(stix_oow_t, (oop)->_flags, 0,                                                                                                               STIX_OBJ_FLAGS_MOVED_BITS)
+#define STIX_OBJ_GET_FLAGS_TYPE(oop)       STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_UNIT_BITS + STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS + STIX_OBJ_FLAGS_TRAILER_BITS), STIX_OBJ_FLAGS_TYPE_BITS)
+#define STIX_OBJ_GET_FLAGS_UNIT(oop)       STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS + STIX_OBJ_FLAGS_TRAILER_BITS),                            STIX_OBJ_FLAGS_UNIT_BITS)
+#define STIX_OBJ_GET_FLAGS_EXTRA(oop)      STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS + STIX_OBJ_FLAGS_TRAILER_BITS),                                                        STIX_OBJ_FLAGS_EXTRA_BITS)
+#define STIX_OBJ_GET_FLAGS_KERNEL(oop)     STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_MOVED_BITS + STIX_OBJ_FLAGS_TRAILER_BITS),                                                                                     STIX_OBJ_FLAGS_KERNEL_BITS)
+#define STIX_OBJ_GET_FLAGS_MOVED(oop)      STIX_GETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_TRAILER_BITS),                                                                                                                 STIX_OBJ_FLAGS_MOVED_BITS)
+#define STIX_OBJ_GET_FLAGS_TRAILER(oop)    STIX_GETBITS(stix_oow_t, (oop)->_flags, 0,                                                                                                                                             STIX_OBJ_FLAGS_TRAILER_BITS)
 
-#define STIX_OBJ_SET_FLAGS_TYPE(oop,v)   STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_UNIT_BITS + STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS), STIX_OBJ_FLAGS_TYPE_BITS,   v)
-#define STIX_OBJ_SET_FLAGS_UNIT(oop,v)   STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS),                            STIX_OBJ_FLAGS_UNIT_BITS,   v)
-#define STIX_OBJ_SET_FLAGS_EXTRA(oop,v)  STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS),                                                        STIX_OBJ_FLAGS_EXTRA_BITS,  v)
-#define STIX_OBJ_SET_FLAGS_KERNEL(oop,v) STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_MOVED_BITS),                                                                                     STIX_OBJ_FLAGS_KERNEL_BITS, v)
-#define STIX_OBJ_SET_FLAGS_MOVED(oop,v)  STIX_SETBITS(stix_oow_t, (oop)->_flags, 0,                                                                                                               STIX_OBJ_FLAGS_MOVED_BITS,  v)
+#define STIX_OBJ_SET_FLAGS_TYPE(oop,v)     STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_UNIT_BITS + STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS + STIX_OBJ_FLAGS_TRAILER_BITS), STIX_OBJ_FLAGS_TYPE_BITS,     v)
+#define STIX_OBJ_SET_FLAGS_UNIT(oop,v)     STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS + STIX_OBJ_FLAGS_TRAILER_BITS),                            STIX_OBJ_FLAGS_UNIT_BITS,     v)
+#define STIX_OBJ_SET_FLAGS_EXTRA(oop,v)    STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS + STIX_OBJ_FLAGS_TRAILER_BITS),                                                        STIX_OBJ_FLAGS_EXTRA_BITS,    v)
+#define STIX_OBJ_SET_FLAGS_KERNEL(oop,v)   STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_MOVED_BITS + STIX_OBJ_FLAGS_TRAILER_BITS),                                                                                     STIX_OBJ_FLAGS_KERNEL_BITS,   v)
+#define STIX_OBJ_SET_FLAGS_MOVED(oop,v)    STIX_SETBITS(stix_oow_t, (oop)->_flags, (STIX_OBJ_FLAGS_TRAILER_BITS),                                                                                                                 STIX_OBJ_FLAGS_MOVED_BITS,    v)
+#define STIX_OBJ_SET_FLAGS_TRAILER(oop,v)  STIX_SETBITS(stix_oow_t, (oop)->_flags, 0,                                                                                                                                             STIX_OBJ_FLAGS_TRAILER_BITS,  v)
 
 #define STIX_OBJ_GET_SIZE(oop) ((oop)->_size)
 #define STIX_OBJ_GET_CLASS(oop) ((oop)->_class)
@@ -456,17 +467,19 @@ typedef enum stix_obj_type_t stix_obj_type_t;
 #define STIX_OBJ_SET_SIZE(oop,v) ((oop)->_size = (v))
 #define STIX_OBJ_SET_CLASS(oop,c) ((oop)->_class = (c))
 
+/* [NOTE] this macro doesn't include the size of the trailer */
 #define STIX_OBJ_BYTESOF(oop) ((STIX_OBJ_GET_SIZE(oop) + STIX_OBJ_GET_FLAGS_EXTRA(oop)) * STIX_OBJ_GET_FLAGS_UNIT(oop))
 
-/* this macro doesn't check the range of the actual value.
- * make sure that the value of each bit fields given fall within the number
- * of defined bits */
-#define STIX_OBJ_MAKE_FLAGS(t,u,e,k,m) ( \
-	(((stix_oow_t)(t)) << (STIX_OBJ_FLAGS_UNIT_BITS + STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS)) | \
-	(((stix_oow_t)(u)) << (STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS)) | \
-	(((stix_oow_t)(e)) << (STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS)) | \
-	(((stix_oow_t)(k)) << (STIX_OBJ_FLAGS_MOVED_BITS)) | \
-	(((stix_oow_t)(m)) << 0) \
+/* [NOTE] this macro doesn't check the range of the actual value.
+ *        make sure that the value of each bit fields given falls within the 
+ *        possible range of the defined bits */
+#define STIX_OBJ_MAKE_FLAGS(t,u,e,k,m,r) ( \
+	(((stix_oow_t)(t)) << (STIX_OBJ_FLAGS_UNIT_BITS + STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS + STIX_OBJ_FLAGS_TRAILER_BITS)) | \
+	(((stix_oow_t)(u)) << (STIX_OBJ_FLAGS_EXTRA_BITS + STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS + STIX_OBJ_FLAGS_TRAILER_BITS)) | \
+	(((stix_oow_t)(e)) << (STIX_OBJ_FLAGS_KERNEL_BITS + STIX_OBJ_FLAGS_MOVED_BITS + STIX_OBJ_FLAGS_TRAILER_BITS)) | \
+	(((stix_oow_t)(k)) << (STIX_OBJ_FLAGS_MOVED_BITS + STIX_OBJ_FLAGS_TRAILER_BITS)) | \
+	(((stix_oow_t)(m)) << (STIX_OBJ_FLAGS_TRAILER_BITS)) | \
+	(((stix_oow_t)(r)) << 0) \
 )
 
 #define STIX_OBJ_HEADER \
@@ -501,6 +514,13 @@ struct stix_obj_word_t
 {
 	STIX_OBJ_HEADER;
 	stix_oow_t slot[1];
+};
+
+typedef struct stix_trailer_t stix_trailer_t;
+struct stix_trailer_t
+{
+	stix_oow_t size;
+	stix_byte_t slot[1];
 };
 
 #define STIX_SET_NAMED_INSTVARS 2
@@ -554,7 +574,11 @@ struct stix_association_t
 	stix_oop_t value;
 };
 
-#define STIX_METHOD_NAMED_INSTVARS 6
+#if defined(STIX_USE_OBJECT_TRAILER)
+#	define STIX_METHOD_NAMED_INSTVARS 5
+#else
+#	define STIX_METHOD_NAMED_INSTVARS 6
+#endif
 typedef struct stix_method_t stix_method_t;
 typedef struct stix_method_t* stix_oop_method_t;
 struct stix_method_t
@@ -572,7 +596,12 @@ struct stix_method_t
 	/* number of arguments in temporaries */
 	stix_oop_t       tmpr_nargs; /* SmallInteger */
 
+#if defined(STIX_USE_OBJECT_TRAILER)
+	/* no code field is used */
+#else
 	stix_oop_byte_t  code; /* ByteArray */
+#endif
+
 	stix_oop_t       source; /* TODO: what should I put? */
 
 	/* == variable indexed part == */
@@ -753,7 +782,7 @@ struct stix_t
 	/* == EXECUTION REGISTERS == */
 	stix_oop_context_t active_context;
 	stix_oop_method_t active_method;
-	stix_oop_byte_t active_code;
+	stix_byte_t* active_code;
 	stix_ooi_t sp;
 	stix_ooi_t ip;
 	/* == END EXECUTION REGISTERS == */

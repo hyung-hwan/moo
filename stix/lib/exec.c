@@ -60,7 +60,6 @@
 
 #define ACTIVE_STACK_ISEMPTY(stix) ((stix)->sp <= -1)
 
-
 #define SWITCH_ACTIVE_CONTEXT(stix,v_ctx) \
 	do \
 	{ \
@@ -68,10 +67,23 @@
 		STORE_ACTIVE_SP (stix); \
 		(stix)->active_context = (v_ctx); \
 		(stix)->active_method = (stix_oop_method_t)(stix)->active_context->origin->method_or_nargs; \
-		(stix)->active_code = (stix)->active_method->code; \
+		SET_ACTIVE_METHOD_CODE(stix); \
 		LOAD_ACTIVE_IP (stix); \
 		LOAD_ACTIVE_SP (stix); \
 	} while (0) \
+
+#define FETCH_BYTE_CODE(stix) ((stix)->active_code[(stix)->ip++])
+#define FETCH_BYTE_CODE_TO(stix, v_ooi) (v_ooi = FETCH_BYTE_CODE(stix))
+#if (STIX_BCODE_LONG_PARAM_SIZE == 2)
+#define FETCH_PARAM_CODE_TO(stix, v_ooi) \
+	do { \
+		v_ooi = FETCH_BYTE_CODE(stix); \
+		v_ooi = (v_ooi << 8) | FETCH_BYTE_CODE(stix); \
+	} while (0)
+#else
+#define FETCH_PARAM_CODE_TO(stix, v_ooi) (v_ooi = FETCH_BYTE_CODE(stix))
+#endif
+
 
 static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 {
@@ -862,24 +874,6 @@ static primitive_t primitives[] =
 	{   1,   primitive_integer_lt           }, /* 11 */
 	{   1,   primitive_integer_gt           }  /* 12 */
 };
-
-
-#define FETCH_BYTE_CODE_TO(stix, v_ooi) (v_ooi = (stix)->active_code->slot[(stix)->ip++])
-
-#if (STIX_BCODE_LONG_PARAM_SIZE == 2)
-
-#define FETCH_PARAM_CODE_TO(stix, v_ooi) \
-	do { \
-		v_ooi = (stix)->active_code->slot[(stix)->ip++]; \
-		v_ooi = (v_ooi << 8) | (stix)->active_code->slot[stix->ip++]; \
-	} while (0)
-
-#else /* STIX_BCODE_LONG_PARAM_SIZE == 2 */
-
-#define FETCH_PARAM_CODE_TO(stix, v_ooi) (v_ooi = (stix)->active_code->slot[(stix)->ip++])
-
-#endif /* STIX_BCODE_LONG_PARAM_SIZE == 2 */
-
 
 int stix_execute (stix_t* stix)
 {

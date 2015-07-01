@@ -253,7 +253,7 @@ int stix_ignite (stix_t* stix)
 	stix->_nil = stix_allocbytes (stix, STIX_SIZEOF(stix_obj_t));
 	if (!stix->_nil) return -1;
 
-	stix->_nil->_flags = STIX_OBJ_MAKE_FLAGS (STIX_OBJ_TYPE_OOP, STIX_SIZEOF(stix_oop_t), 0, 1, 0);
+	stix->_nil->_flags = STIX_OBJ_MAKE_FLAGS (STIX_OBJ_TYPE_OOP, STIX_SIZEOF(stix_oop_t), 0, 1, 0, 0);
 	stix->_nil->_size = 0;
 
 	if (ignite_1(stix) <= -1 || ignite_2(stix) <= -1 || ignite_3(stix)) return -1;
