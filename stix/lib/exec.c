@@ -1349,7 +1349,7 @@ printf ("\n");
 				stix_oop_t newrcv;
 				stix_oop_method_t newmth;
 				stix_oop_char_t selector;
-				stix_ooi_t preamble;
+				stix_ooi_t preamble, preamble_code;
 
 
 			handle_send_message:
@@ -1384,13 +1384,54 @@ printf ("]\n");
 				STIX_ASSERT (STIX_OOP_TO_SMINT(newmth->tmpr_nargs) == b1);
 
 				preamble = STIX_OOP_TO_SMINT(newmth->preamble);
-				switch (STIX_METHOD_GET_PREAMBLE_CODE(preamble))
+				preamble_code = STIX_METHOD_GET_PREAMBLE_CODE(preamble);
+				switch (preamble_code)
 				{
 					case STIX_METHOD_PREAMBLE_RETURN_RECEIVER:
 printf ("RETURN RECEIVER AT PREAMBLE\n");
 						ACTIVE_STACK_POPS (stix, b1); /* pop arguments only*/
 						break;
 
+					case STIX_METHOD_PREAMBLE_RETURN_NIL:
+printf ("RETURN NIL AT PREAMBLE\n");
+						ACTIVE_STACK_POPS (stix, b1);
+						ACTIVE_STACK_SETTOP (stix, stix->_nil);
+						break;
+
+					case STIX_METHOD_PREAMBLE_RETURN_TRUE:
+printf ("RETURN TRUE AT PREAMBLE\n");
+						ACTIVE_STACK_POPS (stix, b1);
+						ACTIVE_STACK_SETTOP (stix, stix->_true);
+						break;
+
+					case STIX_METHOD_PREAMBLE_RETURN_FALSE:
+printf ("RETURN FALSE AT PREAMBLE\n");
+						ACTIVE_STACK_POPS (stix, b1);
+						ACTIVE_STACK_SETTOP (stix, stix->_false);
+						break;
+
+					case STIX_METHOD_PREAMBLE_RETURN_NEGINDEX:
+printf ("RETURN %d AT PREAMBLE\n", (int)-STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
+						ACTIVE_STACK_POPS (stix, b1);
+						ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(-STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
+						break;
+
+					case STIX_METHOD_PREAMBLE_RETURN_INDEX:
+printf ("RETURN %d AT PREAMBLE\n", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
+						ACTIVE_STACK_POPS (stix, b1);
+						ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
+						break;
+
+#if 0
+					case STIX_METHOD_PREAMBLE_RETURN_ZERO:
+					case STIX_METHOD_PREAMBLE_RETURN_ONE:
+					case STIX_METHOD_PREAMBLE_RETURN_TWO:
+printf ("RETURN %d AT PREAMBLE\n", (int)(preamble_code - STIX_METHOD_PREAMBLE_RETURN_NEGONE - 1));
+						ACTIVE_STACK_POPS (stix, b1);
+						ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(preamble_code - STIX_METHOD_PREAMBLE_RETURN_NEGONE - 1));
+						break;
+#endif
+					
 					case STIX_METHOD_PREAMBLE_RETURN_INSTVAR:
 					{
 						stix_oop_oop_t rcv;

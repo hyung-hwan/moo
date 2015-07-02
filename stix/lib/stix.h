@@ -614,8 +614,13 @@ struct stix_method_t
  * The code can be one of the following values:
  *  0 - no special action
  *  1 - return self
- *  2 - return instvar[index]
- *  3 - do primitive[index]
+ *  2 - return nil
+ *  3 - return true
+ *  4 - return false
+ *  5 - return -index.
+ *  6 - return index.
+ *  7 - return instvar[index]
+ *  8 - do primitive[index]
  */
 #define STIX_METHOD_MAKE_PREAMBLE(code,index)  ((((stix_ooi_t)index) << 8) | ((stix_ooi_t)code))
 #define STIX_METHOD_GET_PREAMBLE_CODE(preamble) (((stix_ooi_t)preamble) & 0xFF)
@@ -623,8 +628,16 @@ struct stix_method_t
 
 #define STIX_METHOD_PREAMBLE_NONE            0
 #define STIX_METHOD_PREAMBLE_RETURN_RECEIVER 1
-#define STIX_METHOD_PREAMBLE_RETURN_INSTVAR  2
-#define STIX_METHOD_PREAMBLE_PRIMITIVE       3
+#define STIX_METHOD_PREAMBLE_RETURN_NIL      2
+#define STIX_METHOD_PREAMBLE_RETURN_TRUE     3
+#define STIX_METHOD_PREAMBLE_RETURN_FALSE    4
+#define STIX_METHOD_PREAMBLE_RETURN_NEGINDEX 5
+#define STIX_METHOD_PREAMBLE_RETURN_INDEX    6
+#define STIX_METHOD_PREAMBLE_RETURN_INSTVAR  7
+#define STIX_METHOD_PREAMBLE_PRIMITIVE       8
+
+/* the index is an 16-bit unsigned integer. */
+#define STIX_OOI_IN_PREAMBLE_INDEX_RANGE(ooi) ((ooi) >= 0 && (ooi) <= 0xFFFF)
 
 #define STIX_CONTEXT_NAMED_INSTVARS 8
 typedef struct stix_context_t stix_context_t;

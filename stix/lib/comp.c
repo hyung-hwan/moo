@@ -3569,35 +3569,96 @@ static int add_compiled_method (stix_t* stix)
 			{
 				preamble_code = STIX_METHOD_PREAMBLE_RETURN_RECEIVER;
 			}
-			else if (stix->c->mth.code.len >= 2 &&
-			         stix->c->mth.code.ptr[0] == BCODE_PUSH_RECEIVER &&
-			         stix->c->mth.code.ptr[1] == BCODE_RETURN_STACKTOP)
+			else if (stix->c->mth.code.len >= 2 && stix->c->mth.code.ptr[1] == BCODE_RETURN_STACKTOP)
 			{
-				preamble_code = STIX_METHOD_PREAMBLE_RETURN_RECEIVER;
-			}
-			else
-			{
-				/* check if the method begins with 'return instavar' instruction */
-				if (stix->c->mth.code.ptr[0] >= BCODE_PUSH_INSTVAR_0 &&
-				    stix->c->mth.code.ptr[0] <= BCODE_PUSH_INSTVAR_7 &&
-				    stix->c->mth.code.ptr[1] == BCODE_RETURN_STACKTOP)
+				switch (stix->c->mth.code.ptr[0])
 				{
-					preamble_code = STIX_METHOD_PREAMBLE_RETURN_INSTVAR;
-					preamble_index = stix->c->mth.code.ptr[0] & 0x7; /* low 3 bits */
+					case BCODE_PUSH_RECEIVER:
+						preamble_code = STIX_METHOD_PREAMBLE_RETURN_RECEIVER;
+						break;
+
+					case BCODE_PUSH_NIL:
+						preamble_code = STIX_METHOD_PREAMBLE_RETURN_NIL;
+						break;
+
+					case BCODE_PUSH_TRUE:
+						preamble_code = STIX_METHOD_PREAMBLE_RETURN_TRUE;
+						break;
+
+					case BCODE_PUSH_FALSE:
+						preamble_code = STIX_METHOD_PREAMBLE_RETURN_FALSE;
+						break;
+
+					case BCODE_PUSH_NEGONE:
+						preamble_code = STIX_METHOD_PREAMBLE_RETURN_NEGINDEX;
+						preamble_index = 1;
+						break;
+
+					case BCODE_PUSH_ZERO:
+						preamble_code = STIX_METHOD_PREAMBLE_RETURN_INDEX;
+						preamble_index = 0;
+						break;
+
+					case BCODE_PUSH_ONE:
+						preamble_code = STIX_METHOD_PREAMBLE_RETURN_INDEX;
+						preamble_index = 1;
+						break;
+
+					case BCODE_PUSH_TWO:
+						preamble_code = STIX_METHOD_PREAMBLE_RETURN_INDEX;
+						preamble_index = 2;
+						break;
+
+/*
+					case BCODE_PUSH_LITERAL_0:
+					case BCODE_PUSH_LITERAL_1:
+					case BCODE_PUSH_LITERAL_2:
+					case BCODE_PUSH_LITERAL_3:
+					case BCODE_PUSH_LITERAL_4:
+					case BCODE_PUSH_LITERAL_5:
+					case BCODE_PUSH_LITERAL_6:
+					case BCODE_PUSH_LITERAL_7:
+						 TODO: check the literal frame. if the value in the literal frame is a small integer within the premable index range,
+							 convert ito to PREAMBEL_RETURN_INDEX or NEGINDEX 
+						break;
+*/
+
+					case BCODE_PUSH_INSTVAR_0:
+					case BCODE_PUSH_INSTVAR_1:
+					case BCODE_PUSH_INSTVAR_2:
+					case BCODE_PUSH_INSTVAR_3:
+					case BCODE_PUSH_INSTVAR_4:
+					case BCODE_PUSH_INSTVAR_5:
+					case BCODE_PUSH_INSTVAR_6:
+					case BCODE_PUSH_INSTVAR_7:
+						preamble_code = STIX_METHOD_PREAMBLE_RETURN_INSTVAR;
+						preamble_index = stix->c->mth.code.ptr[0] & 0x7; /* low 3 bits */
+						break;
+
+					
 				}
-				else if (stix->c->mth.code.ptr[0] == BCODE_PUSH_INSTVAR_X &&
-				         stix->c->mth.code.ptr[STIX_BCODE_LONG_PARAM_SIZE + 1] == BCODE_RETURN_STACKTOP)
+			}
+			else if (stix->c->mth.code.ptr[0] == BCODE_PUSH_INSTVAR_X &&
+			         stix->c->mth.code.ptr[STIX_BCODE_LONG_PARAM_SIZE + 1] == BCODE_RETURN_STACKTOP)
+			{
+				int i;
+
+				STIX_ASSERT (stix->c->mth.code.len >= STIX_BCODE_LONG_PARAM_SIZE + 1);
+
+				preamble_code = STIX_METHOD_PREAMBLE_RETURN_INSTVAR;
+				preamble_index = 0;
+				for (i = 1; i <= STIX_BCODE_LONG_PARAM_SIZE; i++)
 				{
-					int i;
-					preamble_code = STIX_METHOD_PREAMBLE_RETURN_INSTVAR;
-					preamble_index = stix->c->mth.code.ptr[1];
-					for (i = 2; i <= STIX_BCODE_LONG_PARAM_SIZE; i++)
+					preamble_index = (preamble_index << 8) | stix->c->mth.code.ptr[i];
+					if (!STIX_OOI_IN_PREAMBLE_INDEX_RANGE(preamble_index))
 					{
-						preamble_index = (preamble_index << 8) | stix->c->mth.code.ptr[i];
+						/* the index got out of the range */
+						preamble_code = STIX_METHOD_PREAMBLE_NONE;
+						preamble_index = 0;
+						break;
 					}
 				}
 			}
-/* TODO: check more special cases like 'return true' and encode it to this preamble */
 		}
 	}
 	else
