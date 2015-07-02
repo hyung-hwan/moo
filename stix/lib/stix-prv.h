@@ -30,7 +30,7 @@
 #include "stix.h"
 
 /* you can define this to either 1 or 2 */
-#define STIX_BCODE_LONG_PARAM_SIZE 1
+#define STIX_BCODE_LONG_PARAM_SIZE 2
 
 /* this is useful for debugging. stix_gc() can be called 
  * while stix has not been fully initialized when this is defined*/
@@ -488,16 +488,16 @@ struct stix_compiler_t
 #	define MAX_CODE_NARGS               (0xFFu)
 #	define MAX_CODE_NBLKARGS            (0xFFu)
 #	define MAX_CODE_NBLKTMPRS           (0xFFu)
-#	define MAX_CODE_PRIMNO              (0xFFFFu)
 #	define MAX_CODE_JUMP                (0xFFu)
+#	define MAX_CODE_PARAM               (0xFFu)
 #elif defined(STIX_BCODE_LONG_PARAM_SIZE) && (STIX_BCODE_LONG_PARAM_SIZE == 2)
 #	define MAX_CODE_INDEX               (0xFFFFu)
 #	define MAX_CODE_NTMPRS              (0xFFFFu)
 #	define MAX_CODE_NARGS               (0xFFFFu)
 #	define MAX_CODE_NBLKARGS            (0xFFFFu)
 #	define MAX_CODE_NBLKTMPRS           (0xFFFFu)
-#	define MAX_CODE_PRIMNO              (0xFFFFu)
 #	define MAX_CODE_JUMP                (0xFFFFu)
+#	define MAX_CODE_PARAM               (0xFFFFu)
 #else
 #	error Unsupported STIX_BCODE_LONG_PARAM_SIZE
 #endif
@@ -746,6 +746,7 @@ enum stix_bcode_t
 	BCODE_SEND_MESSAGE_X           = 0xF0, /* 240 */
 	BCODE_SEND_MESSAGE_TO_SUPER_X  = 0xF4, /* 244 */
 
+	/* -------------------------------------- */
 
 	BCODE_JUMP2_FORWARD            = 0xC5, /* 197 */
 	BCODE_JUMP2_BACKWARD           = 0xC9, /* 201 */
@@ -759,6 +760,9 @@ enum stix_bcode_t
 	BCODE_PUSH_ZERO                = 0x87, /* 135 */
 	BCODE_PUSH_ONE                 = 0x89, /* 137 */
 	BCODE_PUSH_TWO                 = 0x8A, /* 138 */
+
+	BCODE_PUSH_INTLIT              = 0xB1, /* 177 */
+	BCODE_PUSH_NEGINTLIT           = 0xB2, /* 178 */
 
 	/* UNUSED 0xE8 - 0xF8 */
 

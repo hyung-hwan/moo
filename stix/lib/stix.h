@@ -616,9 +616,9 @@ struct stix_method_t
  *  1 - return self
  *  2 - return nil
  *  3 - return true
- *  4 - return false
- *  5 - return -index.
- *  6 - return index.
+ *  4 - return false 
+ *  5 - return index.
+ *  6 - return -index.
  *  7 - return instvar[index]
  *  8 - do primitive[index]
  */
@@ -631,8 +631,8 @@ struct stix_method_t
 #define STIX_METHOD_PREAMBLE_RETURN_NIL      2
 #define STIX_METHOD_PREAMBLE_RETURN_TRUE     3
 #define STIX_METHOD_PREAMBLE_RETURN_FALSE    4
-#define STIX_METHOD_PREAMBLE_RETURN_NEGINDEX 5
-#define STIX_METHOD_PREAMBLE_RETURN_INDEX    6
+#define STIX_METHOD_PREAMBLE_RETURN_INDEX    5
+#define STIX_METHOD_PREAMBLE_RETURN_NEGINDEX 6
 #define STIX_METHOD_PREAMBLE_RETURN_INSTVAR  7
 #define STIX_METHOD_PREAMBLE_PRIMITIVE       8
 

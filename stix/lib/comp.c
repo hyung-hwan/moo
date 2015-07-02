@@ -1513,6 +1513,8 @@ static int emit_single_param_instruction (stix_t* stix, int cmd, stix_oow_t para
 
 		case BCODE_JUMP2_FORWARD:
 		case BCODE_JUMP2_BACKWARD:
+		case BCODE_PUSH_INTLIT:
+		case BCODE_PUSH_NEGINTLIT:
 			bc = cmd;
 			goto write_long;
 	}
@@ -1605,10 +1607,16 @@ static int emit_push_smint_literal (stix_t* stix, stix_ooi_t i)
 
 		case 2:
 			return emit_byte_instruction (stix, BCODE_PUSH_TWO);
-
-/* TODO: include some other numbers? like 3 */
 	}
 
+	if (i >= 0 && i <= MAX_CODE_PARAM)
+	{
+		return emit_single_param_instruction(stix, BCODE_PUSH_INTLIT, i);
+	}
+	else if (i < 0 && i >= -(stix_ooi_t)MAX_CODE_PARAM)
+	{
+		return emit_single_param_instruction(stix, BCODE_PUSH_NEGINTLIT, -i);
+	}
 
 	if (add_literal(stix, STIX_OOP_FROM_SMINT(i), &index) <= -1 ||
 	    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
@@ -2161,7 +2169,7 @@ static int compile_method_primitive (stix_t* stix)
 	/* 
 	 * method-primitive := "<"  "primitive:" integer ">"
 	 */
-	int prim_no;
+	stix_ooi_t prim_no;
 	const stix_uch_t* ptr, * end;
 
 	if (!is_token_binsel(stix, VOCA_LT)) 
@@ -2188,14 +2196,14 @@ static int compile_method_primitive (stix_t* stix)
 		return -1;
 	}
 
-/*TODO: more checks the validity of the primitive number. support nubmer with radix and so on support more extensive syntax */
+/*TODO: more checks the validity of the primitive number. support number with radix and so on support more extensive syntax. support primitive name, not number*/
 	ptr = stix->c->tok.name.ptr;
 	end = ptr + stix->c->tok.name.len;
 	prim_no = 0;
 	while (ptr < end && is_digitchar(*ptr)) 
 	{
 		prim_no = prim_no * 10 + (*ptr - '0');
-		if (prim_no > MAX_CODE_PRIMNO)
+		if (!STIX_OOI_IN_PREAMBLE_INDEX_RANGE(prim_no))
 		{
 			set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
@@ -3569,7 +3577,7 @@ static int add_compiled_method (stix_t* stix)
 			{
 				preamble_code = STIX_METHOD_PREAMBLE_RETURN_RECEIVER;
 			}
-			else if (stix->c->mth.code.len >= 2 && stix->c->mth.code.ptr[1] == BCODE_RETURN_STACKTOP)
+			else if (stix->c->mth.code.len > 1 && stix->c->mth.code.ptr[1] == BCODE_RETURN_STACKTOP)
 			{
 				switch (stix->c->mth.code.ptr[0])
 				{
@@ -3609,20 +3617,6 @@ static int add_compiled_method (stix_t* stix)
 						preamble_index = 2;
 						break;
 
-/*
-					case BCODE_PUSH_LITERAL_0:
-					case BCODE_PUSH_LITERAL_1:
-					case BCODE_PUSH_LITERAL_2:
-					case BCODE_PUSH_LITERAL_3:
-					case BCODE_PUSH_LITERAL_4:
-					case BCODE_PUSH_LITERAL_5:
-					case BCODE_PUSH_LITERAL_6:
-					case BCODE_PUSH_LITERAL_7:
-						 TODO: check the literal frame. if the value in the literal frame is a small integer within the premable index range,
-							 convert ito to PREAMBEL_RETURN_INDEX or NEGINDEX 
-						break;
-*/
-
 					case BCODE_PUSH_INSTVAR_0:
 					case BCODE_PUSH_INSTVAR_1:
 					case BCODE_PUSH_INSTVAR_2:
@@ -3634,29 +3628,39 @@ static int add_compiled_method (stix_t* stix)
 						preamble_code = STIX_METHOD_PREAMBLE_RETURN_INSTVAR;
 						preamble_index = stix->c->mth.code.ptr[0] & 0x7; /* low 3 bits */
 						break;
-
-					
 				}
 			}
-			else if (stix->c->mth.code.ptr[0] == BCODE_PUSH_INSTVAR_X &&
+			else if (stix->c->mth.code.len > STIX_BCODE_LONG_PARAM_SIZE + 1 &&
 			         stix->c->mth.code.ptr[STIX_BCODE_LONG_PARAM_SIZE + 1] == BCODE_RETURN_STACKTOP)
 			{
 				int i;
-
-				STIX_ASSERT (stix->c->mth.code.len >= STIX_BCODE_LONG_PARAM_SIZE + 1);
-
-				preamble_code = STIX_METHOD_PREAMBLE_RETURN_INSTVAR;
-				preamble_index = 0;
-				for (i = 1; i <= STIX_BCODE_LONG_PARAM_SIZE; i++)
+				switch (stix->c->mth.code.ptr[0])
 				{
-					preamble_index = (preamble_index << 8) | stix->c->mth.code.ptr[i];
-					if (!STIX_OOI_IN_PREAMBLE_INDEX_RANGE(preamble_index))
-					{
-						/* the index got out of the range */
-						preamble_code = STIX_METHOD_PREAMBLE_NONE;
+					case BCODE_PUSH_INSTVAR_X:
+						preamble_code = STIX_METHOD_PREAMBLE_RETURN_INSTVAR;
+						goto set_preamble_index;
+
+					case BCODE_PUSH_INTLIT:
+						preamble_code = STIX_METHOD_PREAMBLE_RETURN_INDEX;
+						goto set_preamble_index;
+
+					case BCODE_PUSH_NEGINTLIT:
+						preamble_code = STIX_METHOD_PREAMBLE_RETURN_NEGINDEX;
+						goto set_preamble_index;
+
+					set_preamble_index:
 						preamble_index = 0;
-						break;
-					}
+						for (i = 1; i <= STIX_BCODE_LONG_PARAM_SIZE; i++)
+						{
+							preamble_index = (preamble_index << 8) | stix->c->mth.code.ptr[i];
+						}
+
+						if (!STIX_OOI_IN_PREAMBLE_INDEX_RANGE(preamble_index))
+						{
+							/* the index got out of the range */
+							preamble_code = STIX_METHOD_PREAMBLE_NONE;
+							preamble_index = 0;
+						}
 				}
 			}
 		}

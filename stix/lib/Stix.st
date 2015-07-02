@@ -141,7 +141,6 @@
 
 #class SmallInteger(Number)
 {
-	
 }
 
 #class Boolean(Object)

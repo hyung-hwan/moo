@@ -1410,28 +1410,18 @@ printf ("RETURN FALSE AT PREAMBLE\n");
 						ACTIVE_STACK_SETTOP (stix, stix->_false);
 						break;
 
-					case STIX_METHOD_PREAMBLE_RETURN_NEGINDEX:
-printf ("RETURN %d AT PREAMBLE\n", (int)-STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
-						ACTIVE_STACK_POPS (stix, b1);
-						ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(-STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
-						break;
-
 					case STIX_METHOD_PREAMBLE_RETURN_INDEX:
 printf ("RETURN %d AT PREAMBLE\n", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
 						ACTIVE_STACK_POPS (stix, b1);
 						ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
 						break;
 
-#if 0
-					case STIX_METHOD_PREAMBLE_RETURN_ZERO:
-					case STIX_METHOD_PREAMBLE_RETURN_ONE:
-					case STIX_METHOD_PREAMBLE_RETURN_TWO:
-printf ("RETURN %d AT PREAMBLE\n", (int)(preamble_code - STIX_METHOD_PREAMBLE_RETURN_NEGONE - 1));
+					case STIX_METHOD_PREAMBLE_RETURN_NEGINDEX:
+printf ("RETURN %d AT PREAMBLE\n", (int)-STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
 						ACTIVE_STACK_POPS (stix, b1);
-						ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(preamble_code - STIX_METHOD_PREAMBLE_RETURN_NEGONE - 1));
+						ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(-STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
 						break;
-#endif
-					
+
 					case STIX_METHOD_PREAMBLE_RETURN_INSTVAR:
 					{
 						stix_oop_oop_t rcv;
@@ -1537,6 +1527,18 @@ printf ("PUSH_ONE\n");
 			case BCODE_PUSH_TWO:
 printf ("PUSH_TWO\n");
 				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(2));
+				break;
+
+			case BCODE_PUSH_INTLIT:
+				FETCH_PARAM_CODE_TO (stix, b1);
+				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(b1));
+printf ("PUSH_INTLIT %d\n", (int)b1);
+				break;
+
+			case BCODE_PUSH_NEGINTLIT:
+				FETCH_PARAM_CODE_TO (stix, b1);
+				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(-b1));
+printf ("PUSH_NEGINTLIT %d\n", (int)-b1);
 				break;
 
 			/* -------------------------------------------------------- */
