@@ -916,9 +916,8 @@ STIX_EXPORT int stix_ignite (
 	stix_t* stix
 );
 
-
 /**
- * The stix_executes() function XXXXXXXXXXXXXX
+ * The stix_execute() function executes an activated context.
  */
 STIX_EXPORT int stix_execute (
 	stix_t* stix

@@ -673,8 +673,6 @@ printf ("~~~~~~~~~~ BLOCK VALUING %p TO NEW BLOCK %p\n", org_blkctx, blkctx);
 	}
 	ACTIVE_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
 
-	/*blkctx->ip = blkctx->iip;*/
-
 	STIX_ASSERT (blkctx->home != stix->_nil);
 
 	/* the number of temporaries stored in the block context
@@ -1640,6 +1638,51 @@ printf ("LEAVING_BLOCK\n");
 				ACTIVE_STACK_PUSH (stix, return_value);
 				break;
 
+			case BCODE_MAKE_BLOCK:
+			{
+				stix_oop_context_t blkctx;
+
+				/* b1 - number of block arguments
+				 * b2 - number of block temporaries */
+				FETCH_PARAM_CODE_TO (stix, b1);
+				FETCH_PARAM_CODE_TO (stix, b2);
+
+printf ("MAKE_BLOCK %d %d\n", (int)b1, (int)b2);
+
+				STIX_ASSERT (b1 >= 0);
+				STIX_ASSERT (b2 >= b1);
+
+				/* the block context object created here is used
+				 * as a base object for block context activation.
+				 * primitive_block_context_value() clones a block 
+				 * context and activates the cloned context.
+				 * this base block context is created with no 
+				 * stack for this reason. */
+				blkctx = (stix_oop_context_t)stix_instantiate (stix, stix->_block_context, STIX_NULL, 0); 
+				if (!blkctx) return -1;
+
+				/* the long forward jump instruction has the format of 
+				 *   11000100 KKKKKKKK or 11000100 KKKKKKKK KKKKKKKK 
+				 * depending on STIX_BCODE_LONG_PARAM_SIZE. change 'ip' to point to
+				 * the instruction after the jump. */
+				blkctx->ip = STIX_OOP_FROM_SMINT(stix->ip + STIX_BCODE_LONG_PARAM_SIZE + 1);
+				/* stack pointer below the bottom. this block context has an
+				 * empty stack anyway. */
+				blkctx->sp = STIX_OOP_FROM_SMINT(-1);
+				/* the number of arguments for a block context is local to the block */
+				blkctx->method_or_nargs = STIX_OOP_FROM_SMINT(b1);
+				/* the number of temporaries here is an accumulated count including
+				 * the number of temporaries of a home context */
+				blkctx->ntmprs = STIX_OOP_FROM_SMINT(b2);
+
+				blkctx->home = (stix_oop_t)stix->active_context;
+				blkctx->receiver_or_source = stix->_nil; /* no source */
+
+				blkctx->origin = stix->active_context->origin;
+				ACTIVE_STACK_PUSH (stix, (stix_oop_t)blkctx);
+				break;
+			}
+
 			case BCODE_SEND_BLOCK_COPY:
 			{
 				stix_ooi_t nargs, ntmprs;
@@ -1672,6 +1715,7 @@ printf ("SEND_BLOCK_COPY\n");
 				/* get the receiver to the block copy message after block context instantiation
 				 * not to get affected by potential GC */
 				rctx = (stix_oop_context_t)ACTIVE_STACK_GETTOP(stix);
+				STIX_ASSERT (rctx == stix->active_context);
 
 				/* [NOTE]
 				 *  blkctx->caller is left to nil. it is set to the 

@@ -1565,6 +1565,10 @@ static int emit_double_param_instruction (stix_t* stix, int cmd, stix_size_t par
 				bc = cmd | 0x80;
 				goto write_long;
 			}
+
+		case BCODE_MAKE_BLOCK:
+			bc = cmd;
+			goto write_long;
 	}
 
 	stix->errnum = STIX_EINVAL;
@@ -2471,6 +2475,10 @@ static int compile_block_expression (stix_t* stix)
 	/* store the accumulated number of temporaries for the current block */
 	if (store_tmpr_count_for_block (stix, stix->c->mth.tmpr_count) <= -1) return -1;
 
+#if defined(STIX_USE_MAKE_BLOCK)
+printf ("\tmake_block nargs %d ntmprs %d\n", (int)block_arg_count, (int)stix->c->mth.tmpr_count /*block_tmpr_count*/);
+	if (emit_double_param_instruction(stix, BCODE_MAKE_BLOCK, block_arg_count, stix->c->mth.tmpr_count/*block_tmpr_count*/) <= -1) return -1;
+#else
 printf ("\tpush_context nargs %d ntmprs %d\n", (int)block_arg_count, (int)stix->c->mth.tmpr_count /*block_tmpr_count*/);
 printf ("\tpush smint %d\n", (int)block_arg_count);
 printf ("\tpush smint %d\n", (int)stix->c->mth.tmpr_count /*block_tmpr_count*/);
@@ -2479,6 +2487,8 @@ printf ("\tsend_block_copy\n");
 	    emit_push_smint_literal(stix, block_arg_count) <= -1 ||
 	    emit_push_smint_literal(stix, stix->c->mth.tmpr_count/*block_tmpr_count*/) <= -1 ||
 	    emit_byte_instruction(stix, BCODE_SEND_BLOCK_COPY) <= -1) return -1;
+#endif
+	
 
 printf ("\tjump\n");
 	/* insert dummy instructions before replacing them with a jump instruction */
@@ -3332,7 +3342,8 @@ static int compile_method_expression (stix_t* stix, int pop)
 
 			GET_TOKEN (stix);
 
-printf ("ASSIGNIUNG TO ....");
+printf ("ASSIGNING TO ....");
+assignee.ptr = &stix->c->mth.assignees.ptr[assignee_offset];
 print_ucs (&assignee);
 printf ("\n");
 

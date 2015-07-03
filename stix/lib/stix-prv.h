@@ -36,8 +36,12 @@
  * while stix has not been fully initialized when this is defined*/
 #define STIX_SUPPORT_GC_DURING_IGNITION
 
-/* define this to generate CTXTEMVAR instructions */
+/* define this to generate XXXX_CTXTEMVAR instructions */
 #define STIX_USE_CTXTEMPVAR
+
+/* define this to use the MAKE_BLOCK instruction instead of
+ * PUSH_CONTEXT, PUSH_INTLIT, PUSH_INTLIT, SEND_BLOCK_COPY */
+#define STIX_USE_MAKE_BLOCK
 
 /* define this to allow an pointer(OOP) object to have trailing bytes 
  * this is used to embed bytes codes into the back of a compile method
@@ -46,7 +50,6 @@
 
 /* this is for gc debugging */
 #define STIX_DEBUG_GC_001  
-
 
 #include <stdio.h> /* TODO: delete these header inclusion lines */
 #include <string.h>
@@ -764,13 +767,14 @@ enum stix_bcode_t
 	BCODE_PUSH_INTLIT              = 0xB1, /* 177 */
 	BCODE_PUSH_NEGINTLIT           = 0xB2, /* 178 */
 
-	/* UNUSED 0xE8 - 0xF8 */
+	/* UNUSED 0xE8 - 0xF7 */
 
-	BCODE_DUP_STACKTOP             = 0xF9,
-	BCODE_POP_STACKTOP             = 0xFA,
-	BCODE_RETURN_STACKTOP          = 0xFB, /* ^something */
-	BCODE_RETURN_RECEIVER          = 0xFC, /* ^self */
-	BCODE_RETURN_FROM_BLOCK        = 0xFD, /* return the stack top from a block */
+	BCODE_DUP_STACKTOP             = 0xF8,
+	BCODE_POP_STACKTOP             = 0xF9,
+	BCODE_RETURN_STACKTOP          = 0xFA, /* ^something */
+	BCODE_RETURN_RECEIVER          = 0xFB, /* ^self */
+	BCODE_RETURN_FROM_BLOCK        = 0xFC, /* return the stack top from a block */
+	BCODE_MAKE_BLOCK               = 0xFD,
 	BCODE_SEND_BLOCK_COPY          = 0xFE,
 	BCODE_NOOP                     = 0xFF
 };
