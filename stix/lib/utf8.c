@@ -310,7 +310,7 @@ static STIX_INLINE int bcs_to_ucs_with_cmgr (
 	stix_size_t mlen, wlen;
 	int n;
 
-	for (bp = bcs; *bp != '\0'; bp++);
+	for (bp = bcs; *bp != '\0'; bp++) /* nothing */ ;
 
 	mlen = bp - bcs; wlen = *ucslen;
 	n = bcsn_to_ucsn_with_cmgr (bcs, &mlen, ucs, &wlen, cmgr, all);

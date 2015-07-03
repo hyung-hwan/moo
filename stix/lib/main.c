@@ -80,6 +80,8 @@ static STIX_INLINE stix_ssize_t open_input (stix_t* stix, stix_ioarg_t* arg)
 			return -1;
 		}
 
+/* TODO: make bcs relative to the includer */
+
 #if defined(__MSDOS__) || defined(_WIN32) || defined(__OS2__)
 		arg->handle = fopen (bcs, "rb");
 #else
@@ -211,7 +213,8 @@ static char* syntax_error_msg[] =
 	"too many block temporaries",
 	"too many block arguments",
 	"too large block",
-	"wrong primitive number"
+	"wrong primitive number",
+	"#include error"
 };
 
 stix_uch_t str_stix[] = { 'S', 't', 'i', 'x' };

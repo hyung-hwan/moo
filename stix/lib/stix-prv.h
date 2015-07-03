@@ -326,7 +326,8 @@ enum stix_synerrnum_t
 	STIX_SYNERR_BLKTMPRFLOOD,  /* too many block temporaries */
 	STIX_SYNERR_BLKARGFLOOD,   /* too many block arguments */
 	STIX_SYNERR_BLKFLOOD,      /* too large block */
-	STIX_SYNERR_PRIMNO         /* wrong primitive number */
+	STIX_SYNERR_PRIMNO,        /* wrong primitive number */
+	STIX_SYNERR_INCLUDE        /* #include error */
 };
 typedef enum stix_synerrnum_t stix_synerrnum_t;
 

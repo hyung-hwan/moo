@@ -1383,7 +1383,11 @@ static int begin_include (stix_t* stix)
 	arg->colm = 1;
 	arg->includer = stix->c->curinp;
 
-	if (stix->c->impl (stix, STIX_IO_OPEN, arg) <= -1) goto oops;
+	if (stix->c->impl (stix, STIX_IO_OPEN, arg) <= -1) 
+	{
+		set_syntax_error (stix, STIX_SYNERR_INCLUDE, &stix->c->tok.loc, &stix->c->tok.name);
+		goto oops;
+	}
 
 	stix->c->curinp = arg;
 	/* stix->c->depth.incl++; */
