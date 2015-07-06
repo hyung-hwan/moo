@@ -9,12 +9,12 @@
 ##       use #extend to extend a class
 ##       using #class for both feels confusing.
 
-#class Stix
+#extend Stix
 {
 
 }
 
-#class SmallInteger
+#extend SmallInteger
 {
 	#method getTrue: anInteger
 	{

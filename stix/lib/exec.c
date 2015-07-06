@@ -598,7 +598,7 @@ static int primitive_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int primitive_block_context_value (stix_t* stix, stix_ooi_t nargs)
+static int primitive_block_value (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_context_t blkctx, org_blkctx;
 	stix_ooi_t local_ntmprs, i;
@@ -853,24 +853,25 @@ struct primitive_t
 {
 	stix_ooi_t          nargs; /* expected number of arguments */
 	primitive_handler_t handler;
+	stix_ucs_t          name;
 };
 typedef struct primitive_t primitive_t;
 
 static primitive_t primitives[] =
 {
-	{  -1,   primitive_dump                 }, /* 0 */
-	{   0,   primitive_new                  }, /* 1 */
-	{   1,   primitive_new_with_size        }, /* 2 */
-	{   0,   primitive_basic_size           }, /* 3 */
-	{   1,   primitive_basic_at             }, /* 4 */
-	{   2,   primitive_basic_at_put         }, /* 5 */
-	{  -1,   primitive_block_context_value  }, /* 6 */
-	{   1,   primitive_integer_add          }, /* 7 */
-	{   1,   primitive_integer_sub          }, /* 8 */
-	{   1,   primitive_integer_mul          }, /* 9 */
-	{   1,   primitive_integer_eq           }, /* 10 */
-	{   1,   primitive_integer_lt           }, /* 11 */
-	{   1,   primitive_integer_gt           }  /* 12 */
+	/*  0 */ {  -1,   primitive_dump                       },
+	/*  1 */ {   0,   primitive_new                        },
+	/*  2 */ {   1,   primitive_new_with_size              },
+	/*  3 */ {   0,   primitive_basic_size                 },
+	/*  4 */ {   1,   primitive_basic_at                   },
+	/*  5 */ {   2,   primitive_basic_at_put               },
+	/*  6 */ {  -1,   primitive_block_value                },
+	/*  7 */ {   1,   primitive_integer_add                },
+	/*  8 */ {   1,   primitive_integer_sub                },
+	/*  9 */ {   1,   primitive_integer_mul                },
+	/* 10 */ {   1,   primitive_integer_eq                 },
+	/* 11 */ {   1,   primitive_integer_lt                 },
+	/* 12 */ {   1,   primitive_integer_gt                 }
 };
 
 int stix_execute (stix_t* stix)
@@ -1654,7 +1655,7 @@ printf ("MAKE_BLOCK %d %d\n", (int)b1, (int)b2);
 
 				/* the block context object created here is used
 				 * as a base object for block context activation.
-				 * primitive_block_context_value() clones a block 
+				 * primitive_block_value() clones a block 
 				 * context and activates the cloned context.
 				 * this base block context is created with no 
 				 * stack for this reason. */
@@ -1705,7 +1706,7 @@ printf ("SEND_BLOCK_COPY\n");
 
 				/* the block context object created here is used
 				 * as a base object for block context activation.
-				 * primitive_block_context_value() clones a block 
+				 * primitive_block_value() clones a block 
 				 * context and activates the cloned context.
 				 * this base block context is created with no 
 				 * stack for this reason. */
@@ -1720,7 +1721,7 @@ printf ("SEND_BLOCK_COPY\n");
 				/* [NOTE]
 				 *  blkctx->caller is left to nil. it is set to the 
 				 *  active context before it gets activated. see
-				 *  primitive_block_context_value().
+				 *  primitive_block_value().
 				 *
 				 *  blkctx->home is set here to the active context.
 				 *  it's redundant to have them pushed to the stack

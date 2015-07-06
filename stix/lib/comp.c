@@ -40,8 +40,7 @@
 
 enum class_mod_t
 {
-	CLASS_INDEXED   = (1 << 0),
-	CLASS_EXTENDED  = (1 << 1)
+	CLASS_INDEXED   = (1 << 0)
 };
 
 enum mth_type_t
@@ -85,6 +84,7 @@ static struct voca_t
 	{  9, { 'c','l','a','s','s','i','n','s','t'                           } },
 	{  3, { 'd','c','l'                                                   } },
 	{  7, { 'd','e','c','l','a','r','e'                                   } },
+	{  6, { 'e','x','t','e','n','d'                                       } },
 	{  5, { 'f','a','l','s','e'                                           } },
 	{  7, { 'i','n','c','l','u','d','e'                                   } },
 	{  4, { 'm','a','i','n'                                               } },
@@ -114,6 +114,7 @@ enum voca_id_t
 	VOCA_CLASSINST,
 	VOCA_DCL,
 	VOCA_DECLARE,
+	VOCA_EXTEND,
 	VOCA_FALSE,
 	VOCA_INCLUDE,
 	VOCA_MAIN,
@@ -3893,7 +3894,7 @@ printf (" CONFLICTING CLASS DEFINITION %lu %lu %lu %lu\n",
 	return 0;
 }
 
-static int __compile_class_definition (stix_t* stix)
+static int __compile_class_definition (stix_t* stix, int extend)
 {
 	/* 
 	 * class-definition := #class class-modifier? "{" class-body "}"
@@ -3910,7 +3911,7 @@ static int __compile_class_definition (stix_t* stix)
 	 */
 	stix_oop_association_t ass;
 
-	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
+	if (!extend && stix->c->tok.type == STIX_IOTOK_LPAREN)
 	{
 		/* process class modifiers */
 
@@ -3966,43 +3967,78 @@ static int __compile_class_definition (stix_t* stix)
 	stix->c->cls.name_loc = stix->c->tok.loc;
 	GET_TOKEN (stix); 
 
-	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
+	if (extend)
+	{
+		/* extending class */
+		STIX_ASSERT (stix->c->cls.flags == 0);
+
+		ass = stix_lookupsysdic(stix, &stix->c->cls.name);
+		if (ass && 
+		    STIX_CLASSOF(stix, ass->value) == stix->_class &&
+		    STIX_OBJ_GET_FLAGS_KERNEL(ass->value) != 1)
+		{
+			/* the value must be a class object.
+			 * and it must be either a user-defined(0) or 
+			 * completed kernel built-in(2). 
+			 * an incomplete kernel built-in class object(1) can not be
+			 * extended */
+			stix->c->cls.self_oop = (stix_oop_class_t)ass->value;
+		}
+		else
+		{
+			/* only an existing class can be extended. */
+			set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &stix->c->cls.name_loc, &stix->c->cls.name);
+			return -1;
+		}
+
+		stix->c->cls.super_oop = stix->c->cls.self_oop->superclass;
+
+		STIX_ASSERT ((stix_oop_t)stix->c->cls.super_oop == stix->_nil || 
+		             STIX_CLASSOF(stix, stix->c->cls.super_oop) == stix->_class);
+	}
+	else
 	{
 		int super_is_nil = 0;
 
 printf ("DEFININING..");
 print_ucs (&stix->c->cls.name);
 printf ("\n");
+		if (stix->c->tok.type == STIX_IOTOK_LPAREN)
+		{
+			/* superclass is specified. new class defintion.
+			 * for example, #class Class(Stix) 
+			 */
+			GET_TOKEN (stix); /* read superclass name */
 
-		/* superclass is specified. new class defintion.
-		 * for example, #class Class(Stix) 
-		 */
-		GET_TOKEN (stix); /* read superclass name */
+			/* TODO: multiple inheritance */
 
-		/* TODO: multiple inheritance */
+			if (stix->c->tok.type == STIX_IOTOK_NIL)
+			{
+				super_is_nil = 1;
+			}
+			else if (stix->c->tok.type != STIX_IOTOK_IDENT)
+			{
+				/* superclass name expected */
+				set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
+				return -1;
+			}
 
-		if (stix->c->tok.type == STIX_IOTOK_NIL)
+			if (set_superclass_name(stix, &stix->c->tok.name) <= -1) return -1;
+			stix->c->cls.supername_loc = stix->c->tok.loc;
+
+			GET_TOKEN (stix);
+			if (stix->c->tok.type != STIX_IOTOK_RPAREN)
+			{
+				set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
+				return -1;
+			}
+
+			GET_TOKEN (stix);
+		}
+		else 
 		{
 			super_is_nil = 1;
 		}
-		else if (stix->c->tok.type != STIX_IOTOK_IDENT)
-		{
-			/* superclass name expected */
-			set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
-			return -1;
-		}
-
-		if (set_superclass_name(stix, &stix->c->tok.name) <= -1) return -1;
-		stix->c->cls.supername_loc = stix->c->tok.loc;
-
-		GET_TOKEN (stix);
-		if (stix->c->tok.type != STIX_IOTOK_RPAREN)
-		{
-			set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
-			return -1;
-		}
-
-		GET_TOKEN (stix);
 
 		ass = stix_lookupsysdic(stix, &stix->c->cls.name);
 		if (ass)
@@ -4051,45 +4087,7 @@ printf ("\n");
 				return -1;
 			}
 		}
-	}
-	else
-	{
-		/* extending class */
-		if (stix->c->cls.flags != 0)
-		{
-			/* the class definition specified with modifiers cannot extend 
-			 * an existing class. the superclass must be specified enclosed
-			 * in parentheses. an opening parenthesis is expected to specify
-			 * a superclass here. */
-			set_syntax_error (stix, STIX_SYNERR_LPAREN, &stix->c->tok.loc, &stix->c->tok.name);
-			return -1;
-		}
-
-		stix->c->cls.flags |= CLASS_EXTENDED;
-
-		ass = stix_lookupsysdic(stix, &stix->c->cls.name);
-		if (ass && 
-		    STIX_CLASSOF(stix, ass->value) == stix->_class &&
-		    STIX_OBJ_GET_FLAGS_KERNEL(ass->value) != 1)
-		{
-			/* the value must be a class object.
-			 * and it must be either a user-defined(0) or 
-			 * completed kernel built-in(2). 
-			 * an incomplete kernel built-in class object(1) can not be
-			 * extended */
-			stix->c->cls.self_oop = (stix_oop_class_t)ass->value;
-		}
-		else
-		{
-			/* only an existing class can be extended. */
-			set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &stix->c->cls.name_loc, &stix->c->cls.name);
-			return -1;
-		}
-
-		stix->c->cls.super_oop = stix->c->cls.self_oop->superclass;
-
-		STIX_ASSERT ((stix_oop_t)stix->c->cls.super_oop == stix->_nil || 
-		             STIX_CLASSOF(stix, stix->c->cls.super_oop) == stix->_class);
+		
 	}
 
 	if (stix->c->tok.type != STIX_IOTOK_LBRACE)
@@ -4114,7 +4112,7 @@ printf ("\n");
 
 	GET_TOKEN (stix);
 
-	if (stix->c->cls.flags & CLASS_EXTENDED)
+	if (extend)
 	{
 		/* when a class is extended, a new variable cannot be added */
 		if (is_token_symbol(stix, VOCA_DCL) || is_token_symbol(stix, VOCA_DECLARE))
@@ -4154,7 +4152,7 @@ printf ("\n");
 		return -1;
 	}
 
-	if (!(stix->c->cls.flags & CLASS_EXTENDED))
+	if (!extend)
 	{
 /* TODO: anything else to set? */
 		stix->c->cls.self_oop->mthdic[STIX_CLASS_MTHDIC_INSTANCE] = stix->c->cls.mthdic_oop[MTH_INSTANCE];
@@ -4165,7 +4163,7 @@ printf ("\n");
 	return 0;
 }
 
-static int compile_class_definition (stix_t* stix)
+static int compile_class_definition (stix_t* stix, int extend)
 {
 	int n;
 	stix_size_t i;
@@ -4195,7 +4193,7 @@ static int compile_class_definition (stix_t* stix)
 	stix->c->mth.arlit_count = 0;
 
 	/* do main compilation work */
-	n = __compile_class_definition (stix);
+	n = __compile_class_definition (stix, extend);
 
 	/* reset these oops plus literal pointers not to confuse gc_compiler() */
 	stix->c->cls.self_oop = STIX_NULL;
@@ -4231,7 +4229,13 @@ static int compile_stream (stix_t* stix)
 		{
 			/* #class Selfclass(Superclass) { } */
 			GET_TOKEN (stix);
-			if (compile_class_definition(stix) <= -1) return -1;
+			if (compile_class_definition(stix, 0) <= -1) return -1;
+		}
+		else if (is_token_symbol(stix, VOCA_EXTEND))
+		{
+			/* #extend Selfclass {} */
+			GET_TOKEN (stix);
+			if (compile_class_definition(stix, 1) <= -1) return -1;
 		}
 #if 0
 		else if (is_token_symbol(stix, VOCA_MAIN))
