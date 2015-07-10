@@ -126,12 +126,13 @@ static int ignite_1 (stix_t* stix)
 	stix->_symbol_set        = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_SET_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 	stix->_system_dictionary = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_SET_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 
+	stix->_namespace         = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_SET_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 	stix->_method_dictionary = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_SET_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 	stix->_method            = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_METHOD_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 	stix->_association       = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_ASSOCIATION_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 	stix->_method_context    = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
-	stix->_block_context     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 
+	stix->_block_context     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 	stix->_true_class        = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_false_class       = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	/* TOOD: what is a proper spec for Character and SmallInteger?
@@ -144,15 +145,13 @@ static int ignite_1 (stix_t* stix)
 	    !stix->_object            || !stix->_string            ||
 
 	    !stix->_symbol            || !stix->_array             ||
-	    !stix->_byte_array        || !stix->_symbol_set        ||
-	    !stix->_system_dictionary || 
+	    !stix->_byte_array        || !stix->_symbol_set        || !stix->_system_dictionary || 
 
-	    !stix->_method_dictionary || !stix->_method            ||
-	    !stix->_association       || !stix->_method_context    ||
-	    !stix->_block_context     || 
+	    !stix->_namespace         || !stix->_method_dictionary ||
+	    !stix->_method            || !stix->_association       || !stix->_method_context    ||
 
-	    !stix->_true_class        || !stix->_false_class       ||
-	    !stix->_character         || !stix->_small_integer) return -1;
+	    !stix->_block_context     || !stix->_true_class        ||
+	    !stix->_false_class       || !stix->_character         || !stix->_small_integer) return -1;
 	    
 	STIX_OBJ_SET_CLASS (stix->_nil, stix->_nil_object);
 	return 0;
@@ -214,12 +213,13 @@ static int ignite_3 (stix_t* stix)
 		{  9, { 'S','y','m','b','o','l','S','e','t'                              } },
 		{ 16, { 'S','y','s','t','e','m','D','i','c','t','i','o','n','a','r','y'  } },
 
+		{  9, { 'N','a','m','e','s','p','a','c','e'                              } },
 		{ 16, { 'M','e','t','h','o','d','D','i','c','t','i','o','n','a','r','y'  } },
 		{ 14, { 'C','o','m','p','i','l','e','d','M','e','t','h','o','d'          } },
 		{ 11, { 'A','s','s','o','c','i','a','t','i','o','n'                      } },
 		{ 13, { 'M','e','t','h','o','d','C','o','n','t','e','x','t'              } },
-		{ 12, { 'B','l','o','c','k','C','o','n','t','e','x','t'                  } },
 
+		{ 12, { 'B','l','o','c','k','C','o','n','t','e','x','t'                  } },
 		{  4, { 'T','r','u','e'                                                  } },
 		{  5, { 'F','a','l','s','e'                                              } },
 		{  9, { 'C','h','a','r','a','c','t','e','r'                              } },

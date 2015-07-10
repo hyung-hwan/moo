@@ -278,6 +278,7 @@ void stix_gc (stix_t* stix)
 	stix->_symbol            = stix_moveoop (stix, stix->_symbol);
 	stix->_symbol_set        = stix_moveoop (stix, stix->_symbol_set);
 	stix->_system_dictionary = stix_moveoop (stix, stix->_system_dictionary);
+	stix->_namespace         = stix_moveoop (stix, stix->_namespace);
 	stix->_method_dictionary = stix_moveoop (stix, stix->_method_dictionary);
 	stix->_method            = stix_moveoop (stix, stix->_method);
 	stix->_association       = stix_moveoop (stix, stix->_association);

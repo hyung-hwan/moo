@@ -90,6 +90,7 @@ static struct voca_t
 	{  4, { 'm','a','i','n'                                               } },
 	{  6, { 'm','e','t','h','o','d'                                       } },
 	{  3, { 'm','t','h'                                                   } },
+	{  9, { 'n','a','m','e','s','p','a','c','e'                           } },
 	{  3, { 'n','i','l'                                                   } },
 	{  7, { 'p','o','i','n','t','e','r'                                   } },
 	{ 10, { 'p','r','i','m','i','t','i','v','e',':'                       } },
@@ -120,6 +121,7 @@ enum voca_id_t
 	VOCA_MAIN,
 	VOCA_METHOD,
 	VOCA_MTH,
+	VOCA_NAMESPACE,
 	VOCA_NIL,
 	VOCA_POINTER,
 	VOCA_PRIMITIVE_COLON,
@@ -240,12 +242,12 @@ static STIX_INLINE int is_token_symbol (stix_t* stix, voca_id_t id)
 	return stix->c->tok.type == STIX_IOTOK_SYMLIT && does_token_name_match(stix, id);
 }
 
-static STIX_INLINE int is_token_ident (stix_t* stix, voca_id_t id)
+static STIX_INLINE int is_token_reserved_word (stix_t* stix, voca_id_t id)
 {
 	return stix->c->tok.type == STIX_IOTOK_IDENT && does_token_name_match(stix, id);
 }
 
-static STIX_INLINE int is_token_binsel (stix_t* stix, voca_id_t id)
+static STIX_INLINE int is_token_binary_selector (stix_t* stix, voca_id_t id)
 {
 	return stix->c->tok.type == STIX_IOTOK_BINSEL && does_token_name_match(stix, id);
 }
@@ -597,7 +599,7 @@ static int get_char (stix_t* stix)
 
 static int skip_spaces (stix_t* stix)
 {
-	while (is_spacechar(stix->c->curinp->lxc.c)) GET_CHAR (stix);
+	while (is_spacechar(stix->c->lxc.c)) GET_CHAR (stix);
 	return 0;
 }
 
@@ -678,7 +680,6 @@ static int get_ident (stix_t* stix, stix_uci_t char_read_ahead)
 		ADD_TOKEN_CHAR(stix, char_read_ahead);
 	}
 
-get_more:
 	do 
 	{
 		ADD_TOKEN_CHAR (stix, c);
@@ -688,44 +689,85 @@ get_more:
 
 	if (c == ':') 
 	{
+	read_more_kwsym:
 		ADD_TOKEN_CHAR (stix, c);
 		stix->c->tok.type = STIX_IOTOK_KEYWORD;
 		GET_CHAR_TO (stix, c);
 
-		if (stix->c->in_array && is_alnumchar(c)) 
+		if (stix->c->in_array && is_alphachar(c)) 
 		{
-			/* [NOTE]
-			 * for an input like #(abc:def 1 2 3), abc:def is returned as
-			 * a keyword. it would not be a real keyword even if it were
-			 * prefixed with #. it is because it doesn't end with a colon. 
-			 */
-			goto get_more;
+			/* when reading an array literal, read as many characters as
+			 * would compose a normal keyword symbol literal */
+			do
+			{
+				ADD_TOKEN_CHAR (stix, c);
+				GET_CHAR_TO (stix, c);
+			}
+			while (is_alnumchar(c));
+
+			if (c == ':') goto read_more_kwsym;
+			else
+			{
+				/* the last character is not a colon */
+				set_syntax_error (stix, STIX_SYNERR_COLON, &stix->c->lxc.l, STIX_NULL);
+				return -1;
+			}
 		}
 	}
 	else
 	{
+		if (c == '.')
+		{
+			stix_iolxc_t period;
+
+			period = stix->c->lxc;
+
+		read_more_seg:
+			GET_CHAR_TO (stix, c);
+
+			if (is_alphachar(c))
+			{
+				stix->c->tok.type = STIX_IOTOK_IDENT_DOTTED;
+
+				ADD_TOKEN_CHAR (stix, '.');
+				do
+				{
+					ADD_TOKEN_CHAR (stix, c);
+					GET_CHAR_TO (stix, c);
+				}
+				while (is_alnumchar(c));
+
+				if (c == '.') goto read_more_seg;
+			}
+			else
+			{
+				unget_char (stix, &stix->c->lxc); 
+				stix->c->lxc = period; 
+			}
+		}
+
 		/* handle reserved words */
-		if (is_token_ident(stix, VOCA_SELF))
+		if (is_token_reserved_word(stix, VOCA_SELF))
 		{
 			stix->c->tok.type = STIX_IOTOK_SELF;
 		}
-		else if (is_token_ident(stix, VOCA_SUPER))
+		else if (is_token_reserved_word(stix, VOCA_SUPER))
 		{
 			stix->c->tok.type = STIX_IOTOK_SUPER;
 		}
-		else if (is_token_ident(stix, VOCA_NIL))
+		else if (is_token_reserved_word(stix, VOCA_NIL))
 		{
 			stix->c->tok.type = STIX_IOTOK_NIL;
 		}
-		else if (is_token_ident(stix, VOCA_TRUE))
+		else if (is_token_reserved_word(stix, VOCA_TRUE))
 		{
 			stix->c->tok.type = STIX_IOTOK_TRUE;
 		}
-		else if (is_token_ident(stix, VOCA_FALSE))
+		else if (is_token_reserved_word(stix, VOCA_FALSE))
 		{
 			stix->c->tok.type = STIX_IOTOK_FALSE;
 		}
-		else if (is_token_ident(stix, VOCA_THIS_CONTEXT))
+		else if (is_token_reserved_word(stix, VOCA_THIS_CONTEXT))
 		{
 			stix->c->tok.type = STIX_IOTOK_THIS_CONTEXT;
 		}
@@ -1029,7 +1071,6 @@ static int get_string (stix_t* stix, stix_uch_t end_char, stix_uch_t esc_char, i
 	return 0;
 }
 
-
 static int get_binsel (stix_t* stix)
 {
 	/* 
@@ -1210,9 +1251,6 @@ retry:
 					}
 					else if (is_alphachar(c))
 					{
-						int colon_required = 0;
-
-					nextword:
 						do 
 						{
 							ADD_TOKEN_CHAR (stix, c);
@@ -1222,22 +1260,59 @@ retry:
 
 						if (c == ':')
 						{
+							/* keyword symbol - e.g. #ifTrue:ifFalse: */
+						read_more_word:
 							ADD_TOKEN_CHAR (stix, c);
 							GET_CHAR_TO (stix, c);
 
-							if (is_alphachar(c)) 
+							if (is_alphachar(c))
 							{
-								/* if a colon is found in the middle of a symbol,
-								 * the last charater is expected to be a colon as well */
-								colon_required =1;
-								goto nextword;
+								do 
+								{
+									ADD_TOKEN_CHAR (stix, c);
+									GET_CHAR_TO (stix, c);
+								} 
+								while (is_alnumchar(c));
+
+								if (c == ':') goto read_more_word;
+								else
+								{
+									/* if a colon is found in the middle of a symbol,
+									 * the last charater is expected to be a colon as well.
+									 * but, the last character is not a colon */
+									set_syntax_error (stix, STIX_SYNERR_COLON, &stix->c->lxc.l, STIX_NULL);
+									return -1;
+								}
 							}
 						}
-						else if (colon_required)
+						else if (c == '.')
 						{
-							/* the last character is not a colon */
-							set_syntax_error (stix, STIX_SYNERR_COLON, &stix->c->lxc.l, STIX_NULL);
-							return -1;
+							/* dotted symbol e.g. #Planet.Earth.Object */
+
+							stix_iolxc_t period;
+
+							period = stix->c->lxc;
+
+						read_more_seg:
+							GET_CHAR_TO (stix, c);
+
+							if (is_alphachar(c))
+							{
+								ADD_TOKEN_CHAR (stix, '.');
+								do
+								{
+									ADD_TOKEN_CHAR (stix, c);
+									GET_CHAR_TO (stix, c);
+								}
+								while (is_alnumchar(c));
+
+								if (c == '.') goto read_more_seg;
+							}
+							else
+							{
+								unget_char (stix, &stix->c->lxc); 
+								stix->c->lxc = period; 
+							}
 						}
 					}
 					else
@@ -1331,6 +1406,9 @@ retry:
 			break;
 	}
 
+printf ("TOKEN: [");
+print_ucs (&stix->c->tok.name);
+printf ("]\n");
 	return 0;
 }
 
@@ -1390,6 +1468,15 @@ static int begin_include (stix_t* stix)
 		goto oops;
 	}
 
+	GET_TOKEN (stix);
+	if (stix->c->tok.type != STIX_IOTOK_PERIOD)
+	{
+		/* check if a period is following the includee name */
+		set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
+		goto oops;
+	}
+
+	/* switch to theincludee's stream */
 	stix->c->curinp = arg;
 	/* stix->c->depth.incl++; */
 
@@ -2135,7 +2222,7 @@ static int compile_method_temporaries (stix_t* stix)
 	 * variable-list := identifier*
 	 */
 
-	if (!is_token_binsel(stix, VOCA_VBAR)) 
+	if (!is_token_binary_selector(stix, VOCA_VBAR)) 
 	{
 		/* return without doing anything if | is not found.
 		 * this is not an error condition */
@@ -2163,7 +2250,7 @@ static int compile_method_temporaries (stix_t* stix)
 		GET_TOKEN (stix);
 	}
 
-	if (!is_token_binsel(stix, VOCA_VBAR)) 
+	if (!is_token_binary_selector(stix, VOCA_VBAR)) 
 	{
 		set_syntax_error (stix, STIX_SYNERR_VBAR, &stix->c->tok.loc, &stix->c->tok.name);
 		return -1;
@@ -2181,7 +2268,7 @@ static int compile_method_primitive (stix_t* stix)
 	stix_ooi_t prim_no;
 	const stix_uch_t* ptr, * end;
 
-	if (!is_token_binsel(stix, VOCA_LT)) 
+	if (!is_token_binary_selector(stix, VOCA_LT)) 
 	{
 		/* return if < is not seen. it is not an error condition */
 		return 0;
@@ -2224,7 +2311,7 @@ static int compile_method_primitive (stix_t* stix)
 	stix->c->mth.prim_no = prim_no;
 
 	GET_TOKEN (stix);
-	if (!is_token_binsel(stix, VOCA_GT)) 
+	if (!is_token_binary_selector(stix, VOCA_GT)) 
 	{
 		set_syntax_error (stix, STIX_SYNERR_GT, &stix->c->tok.loc, &stix->c->tok.name);
 		return -1;
@@ -2234,11 +2321,22 @@ static int compile_method_primitive (stix_t* stix)
 	return 0;
 }
 
-static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_ioloc_t* name_loc, var_info_t* var)
+static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_ioloc_t* name_loc, int name_dotted, var_info_t* var)
 {
 	stix_ssize_t index;
 
 	STIX_MEMSET (var, 0, STIX_SIZEOF(*var));
+
+	if (name_dotted)
+	{
+		/* if a name is dotted,
+		 * 
+		 *   self.XXX - instance variable
+		 *   A.B.C    - namespace or pool dictionary related reference.
+		 */
+printf ("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n");
+		return -1;
+	}
 
 	index = find_temporary_variable (stix, name);
 	if (index >= 0)
@@ -2330,7 +2428,7 @@ static int compile_block_temporaries (stix_t* stix)
 	 * variable-list := identifier*
 	 */
 
-	if (!is_token_binsel(stix, VOCA_VBAR)) 
+	if (!is_token_binary_selector(stix, VOCA_VBAR)) 
 	{
 		/* return without doing anything if | is not found.
 		 * this is not an error condition */
@@ -2357,7 +2455,7 @@ static int compile_block_temporaries (stix_t* stix)
 		GET_TOKEN (stix);
 	}
 
-	if (!is_token_binsel(stix, VOCA_VBAR)) 
+	if (!is_token_binary_selector(stix, VOCA_VBAR)) 
 	{
 		set_syntax_error (stix, STIX_SYNERR_VBAR, &stix->c->tok.loc, &stix->c->tok.name);
 		return -1;
@@ -2446,7 +2544,7 @@ static int compile_block_expression (stix_t* stix)
 		} 
 		while (stix->c->tok.type == STIX_IOTOK_COLON);
 
-		if (!is_token_binsel(stix, VOCA_VBAR))
+		if (!is_token_binary_selector(stix, VOCA_VBAR))
 		{
 			set_syntax_error (stix, STIX_SYNERR_VBAR, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
@@ -2711,6 +2809,7 @@ printf ("LARGE NOT IMPLEMENTED IN COMPILE_ARRAY_LITERAL\n");
 				break;
 
 			case STIX_IOTOK_IDENT:
+			case STIX_IOTOK_IDENT_DOTTED:
 			case STIX_IOTOK_BINSEL:
 			case STIX_IOTOK_KEYWORD:
 			case STIX_IOTOK_SYMLIT:
@@ -2813,7 +2912,7 @@ printf ("\tpush_literal array\n");
 	return 0;
 }
 
-static int compile_expression_primary (stix_t* stix, const stix_ucs_t* ident, const stix_ioloc_t* ident_loc, int* to_super)
+static int compile_expression_primary (stix_t* stix, const stix_ucs_t* ident, const stix_ioloc_t* ident_loc, int ident_dotted, int* to_super)
 {
 	/*
 	 * expression-primary := identifier | literal | block-constructor | ( "(" method-expression ")" )
@@ -2830,7 +2929,7 @@ static int compile_expression_primary (stix_t* stix, const stix_ucs_t* ident, co
 		/* the caller has read the identifier and the next word */
 
 	handle_ident:
-		if (get_variable_info(stix, ident, ident_loc, &var) <= -1) return -1;
+		if (get_variable_info(stix, ident, ident_loc, ident_dotted, &var) <= -1) return -1;
 
 		switch (var.type)
 		{
@@ -2899,6 +2998,7 @@ printf ("\tpush object %d\n", (int)index);
 	{
 		switch (stix->c->tok.type)
 		{
+			case STIX_IOTOK_IDENT_DOTTED:
 			case STIX_IOTOK_IDENT:
 				ident = &stix->c->tok.name;
 				ident_loc = &stix->c->tok.loc;
@@ -3091,7 +3191,7 @@ static int compile_binary_message (stix_t* stix, int to_super)
 
 		GET_TOKEN (stix);
 
-		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, &to_super2) <= -1) goto oops;
+		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, 0, &to_super2) <= -1) goto oops;
 
 		if (stix->c->tok.type == STIX_IOTOK_IDENT && compile_unary_message(stix, to_super2) <= -1) goto oops;
 
@@ -3141,7 +3241,7 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 
 		GET_TOKEN (stix);
 
-		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, &to_super2) <= -1) goto oops;
+		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, 0, &to_super2) <= -1) goto oops;
 		if (stix->c->tok.type == STIX_IOTOK_IDENT && compile_unary_message(stix, to_super2) <= -1) goto oops;
 		if (stix->c->tok.type == STIX_IOTOK_BINSEL && compile_binary_message(stix, to_super2) <= -1) goto oops;
 
@@ -3293,14 +3393,14 @@ done:
 	return 0;
 }
 
-static int compile_basic_expression (stix_t* stix, const stix_ucs_t* ident, const stix_ioloc_t* ident_loc)
+static int compile_basic_expression (stix_t* stix, const stix_ucs_t* ident, const stix_ioloc_t* ident_loc, int ident_dotted)
 {
 	/*
 	 * basic-expression := expression-primary message-expression?
 	 */
 	int to_super;
 
-	if (compile_expression_primary(stix, ident, ident_loc, &to_super) <= -1) return -1;
+	if (compile_expression_primary(stix, ident, ident_loc, ident_dotted, &to_super) <= -1) return -1;
 	if (stix->c->tok.type != STIX_IOTOK_EOF && 
 	    stix->c->tok.type != STIX_IOTOK_RBRACE && 
 	    stix->c->tok.type != STIX_IOTOK_PERIOD &&
@@ -3326,10 +3426,12 @@ static int compile_method_expression (stix_t* stix, int pop)
 	STIX_ASSERT (pop == 0 || pop == 1);
 	STIX_MEMSET (&assignee, 0, STIX_SIZEOF(assignee));
 
-	if (stix->c->tok.type == STIX_IOTOK_IDENT) 
+	if (stix->c->tok.type == STIX_IOTOK_IDENT ||
+	    stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
 	{
 		stix_ioloc_t assignee_loc;
 		stix_size_t assignee_offset;
+		int assignee_dotted;
 
 		/* store the assignee name to the internal buffer
 		 * to make it valid after the token buffer has been overwritten */
@@ -3338,6 +3440,7 @@ static int compile_method_expression (stix_t* stix, int pop)
 		if (clone_assignee(stix, &assignee, &assignee_offset) <= -1) return -1;
 
 		assignee_loc = stix->c->tok.loc;
+		assignee_dotted = (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED);
 
 		GET_TOKEN (stix);
 		if (stix->c->tok.type == STIX_IOTOK_ASSIGN) 
@@ -3361,7 +3464,7 @@ printf ("\n");
 			 * assignee to update the actual pointer after the recursive
 			 * compile_method_expression() call */
 			assignee.ptr = &stix->c->mth.assignees.ptr[assignee_offset];
-			if (get_variable_info(stix, &assignee, &assignee_loc, &var) <= -1) goto oops;
+			if (get_variable_info(stix, &assignee, &assignee_loc, assignee_dotted, &var) <= -1) goto oops;
 
 			switch (var.type)
 			{
@@ -3427,14 +3530,17 @@ printf ("\t%s_into_object %d\n", (pop? "pop":"store"), (int)index);
 		}
 		else 
 		{
+			/* what is held in assignee is not an assignee any more.
+			 * potentially it is a variable or object reference
+			 * to be pused on to the stack */
 			assignee.ptr = &stix->c->mth.assignees.ptr[assignee_offset];
-			if (compile_basic_expression(stix, &assignee, &assignee_loc) <= -1) goto oops;
+			if (compile_basic_expression(stix, &assignee, &assignee_loc, assignee_dotted) <= -1) goto oops;
 		}
 	}
 	else 
 	{
 		assignee.len = 0;
-		if (compile_basic_expression(stix, STIX_NULL, STIX_NULL) <= -1) goto oops;
+		if (compile_basic_expression(stix, STIX_NULL, STIX_NULL, 0) <= -1) goto oops;
 	}
 
 	stix->c->mth.assignees.len -= assignee.len;
@@ -4207,6 +4313,66 @@ static int compile_class_definition (stix_t* stix, int extend)
 	return n;
 }
 
+static int compile_namespace (stix_t* stix)
+{
+	/* the name sapce path must not contain any space between segments
+	 * #namespace Abc.Def .Hij
+	 * Abc.Def comprises a valid name space. a period before Hij acts
+	 * as a terminator for the namespace declaration. Hij itself causes
+	 * a syntax error */
+
+	stix_iotok_t seg_tok;
+
+	if (stix->c->tok.type != STIX_IOTOK_IDENT)
+	{
+		set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	seg_tok = stix->c->tok;
+
+/*clone_nameseg_segment ().*/
+
+	GET_TOKEN (stix);
+	while (stix->c->tok.type == STIX_IOTOK_PERIOD)
+	{
+		GET_TOKEN (stix);
+		if (stix->c->tok.type != STIX_IOTOK_IDENT) goto ok;
+
+		if (stix->c->tok.loc.line == seg_tok.loc.line && 
+		    stix->c->tok.loc.colm == seg_tok.loc.colm + seg_tok.name.len + 1)
+		{
+			stix_oop_association_t ass;
+
+			ass = stix_lookupsysdic (stix, &seg_tok.name);
+			if (ass == STIX_NULL || STIX_CLASSOF(stix, ass->value) != stix->_namespace)
+			{
+				/* unknown name space */
+				/*set_syntax_error (stix, STIX_SYNERR_UNKNOW*/
+				return -1;
+			}
+
+			seg_tok = stix->c->tok;
+			GET_TOKEN (stix);
+		}
+		else
+		{
+			goto ok;
+		}
+	}
+
+	set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
+	return -1;
+
+ok:
+/*
+	name = stix_makesymbol (stix, seg_tok.name);
+	ns = stix_instantiate (stix, stix->_namespace, XXXXXXXXXXX);
+	stix_putatdic (stix, dic, name, ns);
+*/
+	return 0;
+}
+
 static int compile_stream (stix_t* stix)
 {
 	GET_CHAR (stix);
@@ -4236,6 +4402,13 @@ static int compile_stream (stix_t* stix)
 			/* #extend Selfclass {} */
 			GET_TOKEN (stix);
 			if (compile_class_definition(stix, 1) <= -1) return -1;
+		}
+		else if (is_token_symbol(stix, VOCA_NAMESPACE))
+		{
+			/* #namespace Planet 
+			 * #namespace Planet.Earth */
+			GET_TOKEN (stix);
+			if (compile_namespace(stix) <= -1) return -1;
 		}
 #if 0
 		else if (is_token_symbol(stix, VOCA_MAIN))

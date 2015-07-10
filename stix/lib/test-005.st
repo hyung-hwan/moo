@@ -1,5 +1,5 @@
 
-#include 'Stix.st'
+#include 'Stix.st'.
 
 #################################################################
 ## MAIN
@@ -33,6 +33,7 @@
 	#dcl(#classinst) t1 t2.
 }
 
+
 #class MyObject(TestObject)
 {
 	#dcl(#class) C B A.
@@ -51,12 +52,14 @@
 		^false
 	}
 
-
 	#method yyy: aBlock
 	{
 		| a |
 		a := aBlock value.
 		^a + 99.
+
+
+		##a := Stix.MyCOM.HashTable new.
 	}
 
 	#method xxx: aBlock

@@ -774,12 +774,13 @@ struct stix_t
 	stix_oop_t _symbol_set; /* SymbolSet */
 	stix_oop_t _system_dictionary; /* SystemDictionary */
 
+	stix_oop_t _namespace; /* Namespace */
 	stix_oop_t _method_dictionary; /* MethodDictionary */
 	stix_oop_t _method; /* CompiledMethod */
 	stix_oop_t _association; /* Association */
 	stix_oop_t _method_context; /* MethodContext */
-	stix_oop_t _block_context; /* BlockContext */
 
+	stix_oop_t _block_context; /* BlockContext */
 	stix_oop_t _true_class; /* True */
 	stix_oop_t _false_class; /* False */
 	stix_oop_t _character; /* Character */
