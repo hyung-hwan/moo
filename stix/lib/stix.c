@@ -217,6 +217,20 @@ void stix_copychars (stix_uch_t* dst, const stix_uch_t* src, stix_size_t len)
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
+stix_uch_t* stix_findchar (const stix_uch_t* ptr, stix_size_t len, stix_uch_t c)
+{
+	const stix_uch_t* end;
+
+	end = ptr + len;
+	while (ptr < end)
+	{
+		if (*ptr == c) return (stix_uch_t*)ptr;
+		ptr++;
+	}
+
+	return STIX_NULL;
+}
+
 void* stix_allocmem (stix_t* stix, stix_size_t size)
 {
 	void* ptr;

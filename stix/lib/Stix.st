@@ -241,6 +241,10 @@
 {
 }
 
+#class Namespace(Set)
+{
+}
+
 #class MethodDictionary(Dictionary)
 {
 

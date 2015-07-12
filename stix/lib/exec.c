@@ -109,7 +109,7 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	 *   | ....                | slot[..] 
 	 *   | receiver            | slot[..] <-- sp - nargs(1)
 	 *   | arg1                | slot[..] <-- sp
- 	 *   | ....                | slot[..] 
+	 *   | ....                | slot[..] 
 	 *   |                     | slot[stack_size - 1] 
 	 *   +---------------------+
 	 */

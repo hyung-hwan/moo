@@ -226,6 +226,8 @@ static int ignite_3 (stix_t* stix)
 		{ 12, { 'S','m','a','l','l','I','n','t','e','g','e','r'                  } }
 	};
 
+	static stix_uch_t stix_str[] = { 'S','t','a','x' };
+
 	stix_oow_t i;
 	stix_oop_t sym;
 	stix_oop_t* stix_ptr;
@@ -239,9 +241,13 @@ static int ignite_3 (stix_t* stix)
 		sym = stix_makesymbol (stix, symnames[i].str, symnames[i].len);
 		if (!sym) return -1;
 
-		if (!stix_putatsysdic (stix, sym, *stix_ptr)) return -1;
+		if (!stix_putatsysdic(stix, sym, *stix_ptr)) return -1;
 		stix_ptr++;
 	}
+
+	sym = stix_makesymbol (stix, stix_str, 4);
+	if (!sym) return -1;
+	if (!stix_putatsysdic(stix, sym, (stix_oop_t)stix->sysdic)) return -1;
 
 	return 0;
 }

@@ -214,7 +214,9 @@ static char* syntax_error_msg[] =
 	"too many block arguments",
 	"too large block",
 	"wrong primitive number",
-	"#include error"
+	"#include error",
+	"wrong namespace name",
+	"duplicate namespace name"
 };
 
 stix_uch_t str_stix[] = { 'S', 't', 'i', 'x' };

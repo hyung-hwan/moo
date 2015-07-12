@@ -328,7 +328,9 @@ enum stix_synerrnum_t
 	STIX_SYNERR_BLKARGFLOOD,   /* too many block arguments */
 	STIX_SYNERR_BLKFLOOD,      /* too large block */
 	STIX_SYNERR_PRIMNO,        /* wrong primitive number */
-	STIX_SYNERR_INCLUDE        /* #include error */
+	STIX_SYNERR_INCLUDE,       /* #include error */
+	STIX_SYNERR_NAMESPACE,     /* wrong namespace name */
+	STIX_SYNERR_NAMESPACEDUP   /* duplicate namespace name */
 };
 typedef enum stix_synerrnum_t stix_synerrnum_t;
 
@@ -842,7 +844,13 @@ int stix_equalchars (
 void stix_copychars (
 	stix_uch_t*       dst,
 	const stix_uch_t* src,
-	stix_size_t len
+	stix_size_t       len
+);
+
+stix_uch_t* stix_findchar (
+	const stix_uch_t* ptr,
+	stix_size_t       len,
+	stix_uch_t        c
 );
 
 /* ========================================================================= */
@@ -1038,7 +1046,7 @@ int stix_compile (
 );
 
 void stix_getsynerr (
-	stix_t* stix,
+	stix_t*        stix,
 	stix_synerr_t* synerr
 );
 

@@ -37,6 +37,7 @@
 /* initial method dictionary size */
 #define INSTANCE_METHOD_DICTIONARY_SIZE 256 /* TODO: choose the right size */
 #define CLASS_METHOD_DICTIONARY_SIZE 128 /* TODO: choose the right size */
+#define NAMESPACE_SIZE 128 /* TODO: choose the right size */
 
 enum class_mod_t
 {
@@ -4313,63 +4314,105 @@ static int compile_class_definition (stix_t* stix, int extend)
 	return n;
 }
 
+static int add_namespace (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* name)
+{
+	stix_size_t tmp_count = 0;
+	stix_oop_t sym;
+	stix_oop_set_t ns;
+
+	stix_pushtmp (stix, (stix_oop_t*)&dic); tmp_count++;
+
+	sym = stix_makesymbol (stix, name->ptr, name->len);
+	if (!sym) goto oops;
+
+	stix_pushtmp (stix, &sym); tmp_count++;
+
+	ns = stix_makedic (stix, stix->_namespace, NAMESPACE_SIZE);
+	if (!ns) goto oops;
+
+	/*stix_pushtmp (stix, &ns); tmp_count++;*/
+
+	if (!stix_putatdic (stix, dic, sym, (stix_oop_t)ns)) goto oops;
+
+	stix_poptmps (stix, tmp_count);
+	return 0;
+
+oops:
+	stix_poptmps (stix, tmp_count);
+	return -1;
+}
+
 static int compile_namespace (stix_t* stix)
 {
-	/* the name sapce path must not contain any space between segments
-	 * #namespace Abc.Def .Hij
-	 * Abc.Def comprises a valid name space. a period before Hij acts
-	 * as a terminator for the namespace declaration. Hij itself causes
-	 * a syntax error */
+	const stix_uch_t* ptr, * dot;
+	stix_size_t len;
+	stix_ucs_t seg;
+	stix_oop_set_t dic;
+	stix_oop_association_t ass;
 
-	stix_iotok_t seg_tok;
-
-	if (stix->c->tok.type != STIX_IOTOK_IDENT)
+	if (stix->c->tok.type != STIX_IOTOK_IDENT &&
+	    stix->c->tok.type != STIX_IOTOK_IDENT_DOTTED)
 	{
 		set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
 		return -1;
 	}
 
-	seg_tok = stix->c->tok;
+/* TODO: handle namespace attribute like dupok or missingok. #namespace(dupok) XXX. */
 
-/*clone_nameseg_segment ().*/
-
-	GET_TOKEN (stix);
-	while (stix->c->tok.type == STIX_IOTOK_PERIOD)
+	dic = stix->sysdic;
+	ptr = stix->c->tok.name.ptr;
+	len = stix->c->tok.name.len;
+	while (1)
 	{
-		GET_TOKEN (stix);
-		if (stix->c->tok.type != STIX_IOTOK_IDENT) goto ok;
+		seg.ptr = (stix_uch_t*)ptr;
 
-		if (stix->c->tok.loc.line == seg_tok.loc.line && 
-		    stix->c->tok.loc.colm == seg_tok.loc.colm + seg_tok.name.len + 1)
+		dot = stix_findchar (ptr, len, '.');
+		if (dot)
 		{
-			stix_oop_association_t ass;
+			seg.len = dot - ptr;
 
-			ass = stix_lookupsysdic (stix, &seg_tok.name);
-			if (ass == STIX_NULL || STIX_CLASSOF(stix, ass->value) != stix->_namespace)
+			ass = stix_lookupdic (stix, dic, &seg);
+			if (ass && (STIX_CLASSOF(stix, ass->value) == stix->_namespace || 
+			            (seg.ptr == stix->c->tok.name.ptr && ass->value == (stix_oop_t)stix->sysdic)))
 			{
-				/* unknown name space */
-				/*set_syntax_error (stix, STIX_SYNERR_UNKNOW*/
+				/* ok */
+				dic = (stix_oop_set_t)ass->value;
+			}
+			else
+			{
+				set_syntax_error (stix, STIX_SYNERR_NAMESPACE, &stix->c->tok.loc, &stix->c->tok.name);
 				return -1;
 			}
-
-			seg_tok = stix->c->tok;
-			GET_TOKEN (stix);
 		}
 		else
 		{
-			goto ok;
+			/* this is the last segment.  */
+			seg.len = len;
+
+			ass = stix_lookupdic (stix, dic, &seg);
+			if (ass)
+			{
+				/* duplicate name space or conflicting name */
+				set_syntax_error (stix, STIX_SYNERR_NAMESPACEDUP, &stix->c->tok.loc, &stix->c->tok.name);
+				return -1;
+			}
+
+			if (add_namespace (stix, dic, &seg) <= -1) return -1;
+			break;
 		}
+
+		ptr = dot + 1;
+		len -= seg.len + 1;
 	}
 
-	set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
-	return -1;
+	GET_TOKEN (stix);
+	if (stix->c->tok.type != STIX_IOTOK_PERIOD)
+	{
+		set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
 
-ok:
-/*
-	name = stix_makesymbol (stix, seg_tok.name);
-	ns = stix_instantiate (stix, stix->_namespace, XXXXXXXXXXX);
-	stix_putatdic (stix, dic, name, ns);
-*/
+	GET_TOKEN (stix);
 	return 0;
 }
 
