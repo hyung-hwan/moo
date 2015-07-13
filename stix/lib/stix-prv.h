@@ -329,8 +329,7 @@ enum stix_synerrnum_t
 	STIX_SYNERR_BLKFLOOD,      /* too large block */
 	STIX_SYNERR_PRIMNO,        /* wrong primitive number */
 	STIX_SYNERR_INCLUDE,       /* #include error */
-	STIX_SYNERR_NAMESPACE,     /* wrong namespace name */
-	STIX_SYNERR_NAMESPACEDUP   /* duplicate namespace name */
+	STIX_SYNERR_NAMESPACE      /* wrong namespace name */
 };
 typedef enum stix_synerrnum_t stix_synerrnum_t;
 
@@ -399,13 +398,17 @@ struct stix_compiler_t
 		stix_oop_t super_oop; /* this may be nil. so the type is stix_oop_t */
 		stix_oop_set_t mthdic_oop[2];
 
+		stix_oop_set_t ns_oop;
+		stix_ucs_t fqn;
 		stix_ucs_t name;
-		stix_size_t name_capa;
-		stix_ioloc_t name_loc;
+		stix_size_t fqn_capa;
+		stix_ioloc_t fqn_loc;
 
+		stix_oop_set_t superns_oop;
+		stix_ucs_t superfqn;
 		stix_ucs_t supername;
-		stix_size_t supername_capa;
-		stix_ioloc_t supername_loc;
+		stix_size_t superfqn_capa;
+		stix_ioloc_t superfqn_loc;
 
 		/* instance variable, class variable, class instance variable */
 		stix_ucs_t vars[3]; 

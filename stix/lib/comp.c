@@ -91,7 +91,6 @@ static struct voca_t
 	{  4, { 'm','a','i','n'                                               } },
 	{  6, { 'm','e','t','h','o','d'                                       } },
 	{  3, { 'm','t','h'                                                   } },
-	{  9, { 'n','a','m','e','s','p','a','c','e'                           } },
 	{  3, { 'n','i','l'                                                   } },
 	{  7, { 'p','o','i','n','t','e','r'                                   } },
 	{ 10, { 'p','r','i','m','i','t','i','v','e',':'                       } },
@@ -122,7 +121,6 @@ enum voca_id_t
 	VOCA_MAIN,
 	VOCA_METHOD,
 	VOCA_MTH,
-	VOCA_NAMESPACE,
 	VOCA_NIL,
 	VOCA_POINTER,
 	VOCA_PRIMITIVE_COLON,
@@ -243,7 +241,7 @@ static STIX_INLINE int is_token_symbol (stix_t* stix, voca_id_t id)
 	return stix->c->tok.type == STIX_IOTOK_SYMLIT && does_token_name_match(stix, id);
 }
 
-static STIX_INLINE int is_token_reserved_word (stix_t* stix, voca_id_t id)
+static STIX_INLINE int is_token_word (stix_t* stix, voca_id_t id)
 {
 	return stix->c->tok.type == STIX_IOTOK_IDENT && does_token_name_match(stix, id);
 }
@@ -256,6 +254,32 @@ static STIX_INLINE int is_token_binary_selector (stix_t* stix, voca_id_t id)
 static STIX_INLINE int is_token_keyword (stix_t* stix, voca_id_t id)
 {
 	return stix->c->tok.type == STIX_IOTOK_KEYWORD && does_token_name_match(stix, id);
+}
+
+static STIX_INLINE int is_word (const stix_ucs_t* ucs, voca_id_t id)
+{
+	return ucs->len == vocas[id].len && stix_equalchars(ucs->ptr, vocas[id].str, vocas[id].len);
+}
+
+static int is_reserved_word (const stix_ucs_t* ucs)
+{
+	static int rw[] = 
+	{
+		VOCA_SELF,
+		VOCA_SUPER,
+		VOCA_NIL,
+		VOCA_TRUE,
+		VOCA_FALSE,
+		VOCA_THIS_CONTEXT
+	};
+	int i;
+
+	for (i = 0; i < STIX_COUNTOF(rw); i++)
+	{
+		if (is_word(ucs, rw[i])) return 1;
+	}
+
+	return 0;
 }
 
 static int begin_include (stix_t* fsc);
@@ -748,27 +772,27 @@ static int get_ident (stix_t* stix, stix_uci_t char_read_ahead)
 		}
 
 		/* handle reserved words */
-		if (is_token_reserved_word(stix, VOCA_SELF))
+		if (is_token_word(stix, VOCA_SELF))
 		{
 			stix->c->tok.type = STIX_IOTOK_SELF;
 		}
-		else if (is_token_reserved_word(stix, VOCA_SUPER))
+		else if (is_token_word(stix, VOCA_SUPER))
 		{
 			stix->c->tok.type = STIX_IOTOK_SUPER;
 		}
-		else if (is_token_reserved_word(stix, VOCA_NIL))
+		else if (is_token_word(stix, VOCA_NIL))
 		{
 			stix->c->tok.type = STIX_IOTOK_NIL;
 		}
-		else if (is_token_reserved_word(stix, VOCA_TRUE))
+		else if (is_token_word(stix, VOCA_TRUE))
 		{
 			stix->c->tok.type = STIX_IOTOK_TRUE;
 		}
-		else if (is_token_reserved_word(stix, VOCA_FALSE))
+		else if (is_token_word(stix, VOCA_FALSE))
 		{
 			stix->c->tok.type = STIX_IOTOK_FALSE;
 		}
-		else if (is_token_reserved_word(stix, VOCA_THIS_CONTEXT))
+		else if (is_token_word(stix, VOCA_THIS_CONTEXT))
 		{
 			stix->c->tok.type = STIX_IOTOK_THIS_CONTEXT;
 		}
@@ -1801,14 +1825,18 @@ static int add_symbol_literal (stix_t* stix, const stix_ucs_t* str, stix_size_t*
 	return add_literal (stix, tmp, index);
 }
 
-static STIX_INLINE int set_class_name (stix_t* stix, const stix_ucs_t* name)
+static STIX_INLINE int set_class_fqn (stix_t* stix, const stix_ucs_t* name)
 {
-	return copy_string_to (stix, name, &stix->c->cls.name, &stix->c->cls.name_capa, 0, '\0');
+	if (copy_string_to (stix, name, &stix->c->cls.fqn, &stix->c->cls.fqn_capa, 0, '\0') <= -1) return -1;
+	stix->c->cls.name = stix->c->cls.fqn;
+	return 0;
 }
 
-static STIX_INLINE int set_superclass_name (stix_t* stix, const stix_ucs_t* name)
+static STIX_INLINE int set_superclass_fqn (stix_t* stix, const stix_ucs_t* name)
 {
-	return copy_string_to (stix, name, &stix->c->cls.supername, &stix->c->cls.supername_capa, 0, '\0');
+	if (copy_string_to (stix, name, &stix->c->cls.superfqn, &stix->c->cls.superfqn_capa, 0, '\0') <= -1) return -1;
+	stix->c->cls.supername = stix->c->cls.superfqn;
+	return 0;
 }
 
 static STIX_INLINE int add_class_level_variable (stix_t* stix, var_type_t index, const stix_ucs_t* name)
@@ -3933,7 +3961,7 @@ printf (" CONFLICTING CLASS DEFINITION %lu %lu %lu %lu\n",
 		(unsigned long)STIX_OOP_TO_SMINT(stix->c->cls.self_oop->spec), (unsigned long)STIX_OOP_TO_SMINT(stix->c->cls.self_oop->selfspec)
 );
 #endif
-			set_syntax_error (stix, STIX_SYNERR_CLASSCONTRA, &stix->c->cls.name_loc, &stix->c->cls.name);
+			set_syntax_error (stix, STIX_SYNERR_CLASSCONTRA, &stix->c->cls.fqn_loc, &stix->c->cls.name);
 			return -1;
 		}
 	}
@@ -3995,10 +4023,123 @@ printf (" CONFLICTING CLASS DEFINITION %lu %lu %lu %lu\n",
 	if (just_made)
 	{
 		/* register the class to the system dictionary */
-		if (!stix_putatsysdic(stix, (stix_oop_t)stix->c->cls.self_oop->name, (stix_oop_t)stix->c->cls.self_oop)) return -1;
+		/*if (!stix_putatsysdic(stix, (stix_oop_t)stix->c->cls.self_oop->name, (stix_oop_t)stix->c->cls.self_oop)) return -1;*/
+		if (!stix_putatdic(stix, stix->c->cls.ns_oop, (stix_oop_t)stix->c->cls.self_oop->name, (stix_oop_t)stix->c->cls.self_oop)) return -1;
 	}
 
 	return 0;
+}
+
+static stix_oop_set_t add_namespace (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* name)
+{
+	stix_size_t tmp_count = 0;
+	stix_oop_t sym;
+	stix_oop_set_t ns;
+	stix_oop_association_t ass;
+
+	stix_pushtmp (stix, (stix_oop_t*)&dic); tmp_count++;
+
+	sym = stix_makesymbol (stix, name->ptr, name->len);
+	if (!sym) goto oops;
+
+	stix_pushtmp (stix, &sym); tmp_count++;
+
+	ns = stix_makedic (stix, stix->_namespace, NAMESPACE_SIZE);
+	if (!ns) goto oops;
+
+	/*stix_pushtmp (stix, &ns); tmp_count++;*/
+
+	ass = stix_putatdic (stix, dic, sym, (stix_oop_t)ns);
+	if (!ass) goto oops;
+
+	stix_poptmps (stix, tmp_count);
+	return (stix_oop_set_t)ass->value;
+
+oops:
+	stix_poptmps (stix, tmp_count);
+	return STIX_NULL;
+}
+
+static int preprocess_dotted_class_name (stix_t* stix, int dont_add_ns, const stix_ucs_t* fqn, stix_ucs_t* name, stix_oop_set_t* ns_oop)
+{
+	const stix_uch_t* ptr, * dot;
+	stix_size_t len;
+	stix_ucs_t seg;
+	stix_oop_set_t dic;
+	stix_oop_association_t ass;
+
+	STIX_ASSERT (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED);
+
+	dic = stix->sysdic;
+	ptr = fqn->ptr;
+	len = fqn->len;
+
+	while (1)
+	{
+		seg.ptr = (stix_uch_t*)ptr;
+
+		dot = stix_findchar (ptr, len, '.');
+		if (dot)
+		{
+			seg.len = dot - ptr;
+
+			if (is_reserved_word(&seg)) goto wrong_name;
+
+			ass = stix_lookupdic (stix, dic, &seg);
+			if (ass)
+			{
+				if (STIX_CLASSOF(stix, ass->value) == stix->_namespace || 
+				    (seg.ptr == stix->c->cls.name.ptr && ass->value == (stix_oop_t)stix->sysdic))
+				{
+					/* ok */
+					dic = (stix_oop_set_t)ass->value;
+				}
+				else
+				{
+					goto wrong_name;
+				}
+			}
+			else
+			{
+				stix_oop_set_t t;
+
+				/* the segment does not exist. add it */
+				if (dont_add_ns)
+				{
+					/* in '#extend Planet.Earth', it's an error
+					 * if Planet doesn't exist */
+					goto wrong_name;
+				}
+				
+				/* When definining a new class, add a missing namespace */
+				t = add_namespace (stix, dic, &seg);
+				if (!t) return -1;
+
+				dic = t;
+			}
+		}
+		else
+		{
+			/* this is the last segment. it should be a class name */
+			seg.len = len;
+
+			if (is_reserved_word(&seg)) goto wrong_name;
+
+			*name = seg;
+			*ns_oop = dic;
+
+			break;
+		}
+
+		ptr = dot + 1;
+		len -= seg.len + 1;
+	}
+
+	return 0;
+
+wrong_name:
+	set_syntax_error (stix, STIX_SYNERR_NAMESPACE, &stix->c->tok.loc, &stix->c->tok.name);
+	return -1;
 }
 
 static int __compile_class_definition (stix_t* stix, int extend)
@@ -4062,7 +4203,8 @@ static int __compile_class_definition (stix_t* stix, int extend)
 		GET_TOKEN (stix);
 	}
 
-	if (stix->c->tok.type != STIX_IOTOK_IDENT)
+	if (stix->c->tok.type != STIX_IOTOK_IDENT &&
+	    stix->c->tok.type != STIX_IOTOK_IDENT_DOTTED)
 	{
 		/* class name expected. */
 		set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
@@ -4070,8 +4212,16 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	}
 
 	/* copy the class name */
-	if (set_class_name(stix, &stix->c->tok.name) <= -1) return -1;
-	stix->c->cls.name_loc = stix->c->tok.loc;
+	if (set_class_fqn(stix, &stix->c->tok.name) <= -1) return -1;
+	stix->c->cls.fqn_loc = stix->c->tok.loc;
+	if (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
+	{
+		if (preprocess_dotted_class_name(stix, extend, &stix->c->cls.fqn, &stix->c->cls.name, &stix->c->cls.ns_oop) <= -1) return -1;
+	}
+	else
+	{
+		stix->c->cls.ns_oop = stix->sysdic;
+	}
 	GET_TOKEN (stix); 
 
 	if (extend)
@@ -4079,7 +4229,8 @@ static int __compile_class_definition (stix_t* stix, int extend)
 		/* extending class */
 		STIX_ASSERT (stix->c->cls.flags == 0);
 
-		ass = stix_lookupsysdic(stix, &stix->c->cls.name);
+		/*ass = stix_lookupsysdic(stix, &stix->c->cls.name);*/
+		ass = stix_lookupdic(stix, stix->c->cls.ns_oop, &stix->c->cls.name);
 		if (ass && 
 		    STIX_CLASSOF(stix, ass->value) == stix->_class &&
 		    STIX_OBJ_GET_FLAGS_KERNEL(ass->value) != 1)
@@ -4094,7 +4245,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 		else
 		{
 			/* only an existing class can be extended. */
-			set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &stix->c->cls.name_loc, &stix->c->cls.name);
+			set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &stix->c->cls.fqn_loc, &stix->c->cls.name);
 			return -1;
 		}
 
@@ -4123,15 +4274,28 @@ printf ("\n");
 			{
 				super_is_nil = 1;
 			}
-			else if (stix->c->tok.type != STIX_IOTOK_IDENT)
+			else if (stix->c->tok.type != STIX_IOTOK_IDENT &&
+			         stix->c->tok.type != STIX_IOTOK_IDENT_DOTTED)
 			{
 				/* superclass name expected */
 				set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
 				return -1;
 			}
 
-			if (set_superclass_name(stix, &stix->c->tok.name) <= -1) return -1;
-			stix->c->cls.supername_loc = stix->c->tok.loc;
+			if (set_superclass_fqn(stix, &stix->c->tok.name) <= -1) return -1;
+			stix->c->cls.superfqn_loc = stix->c->tok.loc;
+
+			if (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
+			{
+				if (preprocess_dotted_class_name(stix, 1, &stix->c->cls.superfqn, &stix->c->cls.supername, &stix->c->cls.superns_oop) <= -1) return -1;
+			}
+			else
+			{
+				/* if no fully qualified name is specified for the super class name,
+				 * the name is searched in the name space that the class being defined
+				 * belongs to first and in the 'stix->sysdic'. */
+				stix->c->cls.superns_oop = stix->c->cls.ns_oop;
+			}
 
 			GET_TOKEN (stix);
 			if (stix->c->tok.type != STIX_IOTOK_RPAREN)
@@ -4147,7 +4311,8 @@ printf ("\n");
 			super_is_nil = 1;
 		}
 
-		ass = stix_lookupsysdic(stix, &stix->c->cls.name);
+		/*ass = stix_lookupsysdic(stix, &stix->c->cls.name);*/
+		ass = stix_lookupdic (stix, stix->c->cls.ns_oop, &stix->c->cls.name);
 		if (ass)
 		{
 			if (STIX_CLASSOF(stix, ass->value) != stix->_class  ||
@@ -4156,10 +4321,10 @@ printf ("\n");
 				/* the object found with the name is not a class object 
 				 * or the the class object found is a fully defined kernel 
 				 * class object */
-				set_syntax_error (stix, STIX_SYNERR_CLASSDUP, &stix->c->cls.name_loc, &stix->c->cls.name);
+				set_syntax_error (stix, STIX_SYNERR_CLASSDUP, &stix->c->cls.fqn_loc, &stix->c->cls.name);
 				return -1;
 			}
-			
+
 			stix->c->cls.self_oop = (stix_oop_class_t)ass->value;
 		}
 		else
@@ -4175,7 +4340,10 @@ printf ("\n");
 		}
 		else
 		{
-			ass = stix_lookupsysdic(stix, &stix->c->cls.supername);
+			/* ass = stix_lookupsysdic(stix, &stix->c->cls.supername); */
+			ass = stix_lookupdic (stix, stix->c->cls.superns_oop, &stix->c->cls.supername);
+			if (!ass && stix->c->cls.superns_oop != stix->sysdic)
+				ass = stix_lookupdic (stix, stix->sysdic, &stix->c->cls.supername);
 			if (ass &&
 			    STIX_CLASSOF(stix, ass->value) == stix->_class &&
 			    STIX_OBJ_GET_FLAGS_KERNEL(ass->value) != 1) 
@@ -4190,7 +4358,7 @@ printf ("\n");
 				 * the object found with the name is not a class object. or,
 				 * the class object found is a internally defined kernel
 				 * class object. */
-				set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &stix->c->cls.supername_loc, &stix->c->cls.supername);
+				set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &stix->c->cls.superfqn_loc, &stix->c->cls.superfqn);
 				return -1;
 			}
 		}
@@ -4281,8 +4449,8 @@ static int compile_class_definition (stix_t* stix, int extend)
 
 	stix->c->cls.name.len = 0;
 	stix->c->cls.supername.len = 0;
-	STIX_MEMSET (&stix->c->cls.name_loc, 0, STIX_SIZEOF(stix->c->cls.name_loc));
-	STIX_MEMSET (&stix->c->cls.supername_loc, 0, STIX_SIZEOF(stix->c->cls.supername_loc));
+	STIX_MEMSET (&stix->c->cls.fqn_loc, 0, STIX_SIZEOF(stix->c->cls.fqn_loc));
+	STIX_MEMSET (&stix->c->cls.superfqn_loc, 0, STIX_SIZEOF(stix->c->cls.superfqn_loc));
 
 	STIX_ASSERT (STIX_COUNTOF(stix->c->cls.var_count) == STIX_COUNTOF(stix->c->cls.vars));
 	for (i = 0; i < STIX_COUNTOF(stix->c->cls.var_count); i++) 
@@ -4295,6 +4463,8 @@ static int compile_class_definition (stix_t* stix, int extend)
 	stix->c->cls.super_oop = STIX_NULL;
 	stix->c->cls.mthdic_oop[MTH_INSTANCE] = STIX_NULL;
 	stix->c->cls.mthdic_oop[MTH_CLASS] = STIX_NULL;
+	stix->c->cls.ns_oop = STIX_NULL;
+	stix->c->cls.superns_oop = STIX_NULL;
 	stix->c->mth.literal_count = 0;
 	stix->c->mth.balit_count = 0;
 	stix->c->mth.arlit_count = 0;
@@ -4307,113 +4477,13 @@ static int compile_class_definition (stix_t* stix, int extend)
 	stix->c->cls.super_oop = STIX_NULL;
 	stix->c->cls.mthdic_oop[MTH_INSTANCE] = STIX_NULL;
 	stix->c->cls.mthdic_oop[MTH_CLASS] = STIX_NULL;
+	stix->c->cls.ns_oop = STIX_NULL;
+	stix->c->cls.superns_oop = STIX_NULL;
 	stix->c->mth.literal_count = 0;
 	stix->c->mth.balit_count = 0;
 	stix->c->mth.arlit_count = 0;
 
 	return n;
-}
-
-static int add_namespace (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* name)
-{
-	stix_size_t tmp_count = 0;
-	stix_oop_t sym;
-	stix_oop_set_t ns;
-
-	stix_pushtmp (stix, (stix_oop_t*)&dic); tmp_count++;
-
-	sym = stix_makesymbol (stix, name->ptr, name->len);
-	if (!sym) goto oops;
-
-	stix_pushtmp (stix, &sym); tmp_count++;
-
-	ns = stix_makedic (stix, stix->_namespace, NAMESPACE_SIZE);
-	if (!ns) goto oops;
-
-	/*stix_pushtmp (stix, &ns); tmp_count++;*/
-
-	if (!stix_putatdic (stix, dic, sym, (stix_oop_t)ns)) goto oops;
-
-	stix_poptmps (stix, tmp_count);
-	return 0;
-
-oops:
-	stix_poptmps (stix, tmp_count);
-	return -1;
-}
-
-static int compile_namespace (stix_t* stix)
-{
-	const stix_uch_t* ptr, * dot;
-	stix_size_t len;
-	stix_ucs_t seg;
-	stix_oop_set_t dic;
-	stix_oop_association_t ass;
-
-	if (stix->c->tok.type != STIX_IOTOK_IDENT &&
-	    stix->c->tok.type != STIX_IOTOK_IDENT_DOTTED)
-	{
-		set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
-		return -1;
-	}
-
-/* TODO: handle namespace attribute like dupok or missingok. #namespace(dupok) XXX. */
-
-	dic = stix->sysdic;
-	ptr = stix->c->tok.name.ptr;
-	len = stix->c->tok.name.len;
-	while (1)
-	{
-		seg.ptr = (stix_uch_t*)ptr;
-
-		dot = stix_findchar (ptr, len, '.');
-		if (dot)
-		{
-			seg.len = dot - ptr;
-
-			ass = stix_lookupdic (stix, dic, &seg);
-			if (ass && (STIX_CLASSOF(stix, ass->value) == stix->_namespace || 
-			            (seg.ptr == stix->c->tok.name.ptr && ass->value == (stix_oop_t)stix->sysdic)))
-			{
-				/* ok */
-				dic = (stix_oop_set_t)ass->value;
-			}
-			else
-			{
-				set_syntax_error (stix, STIX_SYNERR_NAMESPACE, &stix->c->tok.loc, &stix->c->tok.name);
-				return -1;
-			}
-		}
-		else
-		{
-			/* this is the last segment.  */
-			seg.len = len;
-
-			ass = stix_lookupdic (stix, dic, &seg);
-			if (ass)
-			{
-				/* duplicate name space or conflicting name */
-				set_syntax_error (stix, STIX_SYNERR_NAMESPACEDUP, &stix->c->tok.loc, &stix->c->tok.name);
-				return -1;
-			}
-
-			if (add_namespace (stix, dic, &seg) <= -1) return -1;
-			break;
-		}
-
-		ptr = dot + 1;
-		len -= seg.len + 1;
-	}
-
-	GET_TOKEN (stix);
-	if (stix->c->tok.type != STIX_IOTOK_PERIOD)
-	{
-		set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
-		return -1;
-	}
-
-	GET_TOKEN (stix);
-	return 0;
 }
 
 static int compile_stream (stix_t* stix)
@@ -4445,13 +4515,6 @@ static int compile_stream (stix_t* stix)
 			/* #extend Selfclass {} */
 			GET_TOKEN (stix);
 			if (compile_class_definition(stix, 1) <= -1) return -1;
-		}
-		else if (is_token_symbol(stix, VOCA_NAMESPACE))
-		{
-			/* #namespace Planet 
-			 * #namespace Planet.Earth */
-			GET_TOKEN (stix);
-			if (compile_namespace(stix) <= -1) return -1;
 		}
 #if 0
 		else if (is_token_symbol(stix, VOCA_MAIN))
@@ -4491,6 +4554,12 @@ static void gc_compiler (stix_t* stix)
 		if (stix->c->cls.mthdic_oop[MTH_CLASS])
 			stix->c->cls.mthdic_oop[MTH_CLASS] = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.mthdic_oop[MTH_CLASS]);
 
+		if (stix->c->cls.ns_oop)
+			stix->c->cls.ns_oop = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.ns_oop);
+
+		if (stix->c->cls.superns_oop)
+			stix->c->cls.superns_oop = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.superns_oop);
+
 		for (i = 0; i < stix->c->mth.literal_count; i++)
 		{
 			if (STIX_OOP_IS_POINTER(stix->c->mth.literals[i]))
@@ -4517,8 +4586,8 @@ static void fini_compiler (stix_t* stix)
 		clear_io_names (stix);
 
 		if (stix->c->tok.name.ptr) stix_freemem (stix, stix->c->tok.name.ptr);
-		if (stix->c->cls.name.ptr) stix_freemem (stix, stix->c->cls.name.ptr);
-		if (stix->c->cls.supername.ptr) stix_freemem (stix, stix->c->cls.supername.ptr);
+		if (stix->c->cls.fqn.ptr) stix_freemem (stix, stix->c->cls.fqn.ptr);
+		if (stix->c->cls.superfqn.ptr) stix_freemem (stix, stix->c->cls.superfqn.ptr);
 
 		for (i = 0; i < STIX_COUNTOF(stix->c->cls.vars); i++)
 		{
