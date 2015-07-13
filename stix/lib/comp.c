@@ -2113,6 +2113,118 @@ static int compile_class_level_variables (stix_t* stix)
 	return 0;
 }
 
+static stix_oop_set_t add_namespace (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* name)
+{
+	stix_size_t tmp_count = 0;
+	stix_oop_t sym;
+	stix_oop_set_t ns;
+	stix_oop_association_t ass;
+
+	stix_pushtmp (stix, (stix_oop_t*)&dic); tmp_count++;
+
+	sym = stix_makesymbol (stix, name->ptr, name->len);
+	if (!sym) goto oops;
+
+	stix_pushtmp (stix, &sym); tmp_count++;
+
+	ns = stix_makedic (stix, stix->_namespace, NAMESPACE_SIZE);
+	if (!ns) goto oops;
+
+	/*stix_pushtmp (stix, &ns); tmp_count++;*/
+
+	ass = stix_putatdic (stix, dic, sym, (stix_oop_t)ns);
+	if (!ass) goto oops;
+
+	stix_poptmps (stix, tmp_count);
+	return (stix_oop_set_t)ass->value;
+
+oops:
+	stix_poptmps (stix, tmp_count);
+	return STIX_NULL;
+}
+
+static int preprocess_dotted_class_name (stix_t* stix, int dont_add_ns, const stix_ucs_t* fqn, const stix_ioloc_t* fqn_loc, stix_ucs_t* name, stix_oop_set_t* ns_oop)
+{
+	const stix_uch_t* ptr, * dot;
+	stix_size_t len;
+	stix_ucs_t seg;
+	stix_oop_set_t dic;
+	stix_oop_association_t ass;
+
+	dic = stix->sysdic;
+	ptr = fqn->ptr;
+	len = fqn->len;
+
+	while (1)
+	{
+		seg.ptr = (stix_uch_t*)ptr;
+
+		dot = stix_findchar (ptr, len, '.');
+		if (dot)
+		{
+			seg.len = dot - ptr;
+
+			if (is_reserved_word(&seg)) goto wrong_name;
+
+			ass = stix_lookupdic (stix, dic, &seg);
+			if (ass)
+			{
+				if (STIX_CLASSOF(stix, ass->value) == stix->_namespace || 
+				    (seg.ptr == stix->c->cls.name.ptr && ass->value == (stix_oop_t)stix->sysdic))
+				{
+					/* ok */
+					dic = (stix_oop_set_t)ass->value;
+				}
+				else
+				{
+					goto wrong_name;
+				}
+			}
+			else
+			{
+				stix_oop_set_t t;
+
+				/* the segment does not exist. add it */
+				if (dont_add_ns)
+				{
+					/* in '#extend Planet.Earth', it's an error
+					 * if Planet doesn't exist */
+					goto wrong_name;
+				}
+				
+				/* When definining a new class, add a missing namespace */
+				t = add_namespace (stix, dic, &seg);
+				if (!t) return -1;
+
+				dic = t;
+			}
+		}
+		else
+		{
+			/* this is the last segment. it should be a class name */
+			seg.len = len;
+
+			if (is_reserved_word(&seg)) goto wrong_name;
+
+			*name = seg;
+			*ns_oop = dic;
+
+			break;
+		}
+
+		ptr = dot + 1;
+		len -= seg.len + 1;
+	}
+
+	return 0;
+
+wrong_name:
+	seg.len += seg.ptr - fqn->ptr;
+	seg.ptr = fqn->ptr;
+	set_syntax_error (stix, STIX_SYNERR_NAMESPACE, fqn_loc, &seg);
+	return -1;
+}
+
 static int compile_unary_method_name (stix_t* stix)
 {
 	STIX_ASSERT (stix->c->mth.name.len == 0);
@@ -2363,8 +2475,29 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 		 *   self.XXX - instance variable
 		 *   A.B.C    - namespace or pool dictionary related reference.
 		 */
-printf ("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n");
-		return -1;
+
+		stix_ucs_t last;
+		stix_oop_set_t ns_oop;
+		stix_oop_association_t ass;
+
+/*TODO: handle self.XXX ---------- */
+/* TOOD: handle pool dictionary ---- */
+		if (preprocess_dotted_class_name (stix, 1, name, name_loc, &last, &ns_oop) <= -1) return -1;
+
+		ass = stix_lookupdic (stix, ns_oop, &last);
+		if (ass)
+		{
+			var->type = VAR_GLOBAL;
+			var->gbl = ass;
+		}
+		else
+		{
+			/* undeclared identifier */
+			set_syntax_error (stix, STIX_SYNERR_VARUNDCL, name_loc, name);
+			return -1;
+		}
+
+		return 0;
 	}
 
 	index = find_temporary_variable (stix, name);
@@ -4030,118 +4163,6 @@ printf (" CONFLICTING CLASS DEFINITION %lu %lu %lu %lu\n",
 	return 0;
 }
 
-static stix_oop_set_t add_namespace (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* name)
-{
-	stix_size_t tmp_count = 0;
-	stix_oop_t sym;
-	stix_oop_set_t ns;
-	stix_oop_association_t ass;
-
-	stix_pushtmp (stix, (stix_oop_t*)&dic); tmp_count++;
-
-	sym = stix_makesymbol (stix, name->ptr, name->len);
-	if (!sym) goto oops;
-
-	stix_pushtmp (stix, &sym); tmp_count++;
-
-	ns = stix_makedic (stix, stix->_namespace, NAMESPACE_SIZE);
-	if (!ns) goto oops;
-
-	/*stix_pushtmp (stix, &ns); tmp_count++;*/
-
-	ass = stix_putatdic (stix, dic, sym, (stix_oop_t)ns);
-	if (!ass) goto oops;
-
-	stix_poptmps (stix, tmp_count);
-	return (stix_oop_set_t)ass->value;
-
-oops:
-	stix_poptmps (stix, tmp_count);
-	return STIX_NULL;
-}
-
-static int preprocess_dotted_class_name (stix_t* stix, int dont_add_ns, const stix_ucs_t* fqn, stix_ucs_t* name, stix_oop_set_t* ns_oop)
-{
-	const stix_uch_t* ptr, * dot;
-	stix_size_t len;
-	stix_ucs_t seg;
-	stix_oop_set_t dic;
-	stix_oop_association_t ass;
-
-	STIX_ASSERT (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED);
-
-	dic = stix->sysdic;
-	ptr = fqn->ptr;
-	len = fqn->len;
-
-	while (1)
-	{
-		seg.ptr = (stix_uch_t*)ptr;
-
-		dot = stix_findchar (ptr, len, '.');
-		if (dot)
-		{
-			seg.len = dot - ptr;
-
-			if (is_reserved_word(&seg)) goto wrong_name;
-
-			ass = stix_lookupdic (stix, dic, &seg);
-			if (ass)
-			{
-				if (STIX_CLASSOF(stix, ass->value) == stix->_namespace || 
-				    (seg.ptr == stix->c->cls.name.ptr && ass->value == (stix_oop_t)stix->sysdic))
-				{
-					/* ok */
-					dic = (stix_oop_set_t)ass->value;
-				}
-				else
-				{
-					goto wrong_name;
-				}
-			}
-			else
-			{
-				stix_oop_set_t t;
-
-				/* the segment does not exist. add it */
-				if (dont_add_ns)
-				{
-					/* in '#extend Planet.Earth', it's an error
-					 * if Planet doesn't exist */
-					goto wrong_name;
-				}
-				
-				/* When definining a new class, add a missing namespace */
-				t = add_namespace (stix, dic, &seg);
-				if (!t) return -1;
-
-				dic = t;
-			}
-		}
-		else
-		{
-			/* this is the last segment. it should be a class name */
-			seg.len = len;
-
-			if (is_reserved_word(&seg)) goto wrong_name;
-
-			*name = seg;
-			*ns_oop = dic;
-
-			break;
-		}
-
-		ptr = dot + 1;
-		len -= seg.len + 1;
-	}
-
-	return 0;
-
-wrong_name:
-	set_syntax_error (stix, STIX_SYNERR_NAMESPACE, &stix->c->tok.loc, &stix->c->tok.name);
-	return -1;
-}
-
 static int __compile_class_definition (stix_t* stix, int extend)
 {
 	/* 
@@ -4216,7 +4237,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	stix->c->cls.fqn_loc = stix->c->tok.loc;
 	if (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
 	{
-		if (preprocess_dotted_class_name(stix, extend, &stix->c->cls.fqn, &stix->c->cls.name, &stix->c->cls.ns_oop) <= -1) return -1;
+		if (preprocess_dotted_class_name(stix, extend, &stix->c->cls.fqn, &stix->c->cls.fqn_loc, &stix->c->cls.name, &stix->c->cls.ns_oop) <= -1) return -1;
 	}
 	else
 	{
@@ -4287,7 +4308,7 @@ printf ("\n");
 
 			if (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
 			{
-				if (preprocess_dotted_class_name(stix, 1, &stix->c->cls.superfqn, &stix->c->cls.supername, &stix->c->cls.superns_oop) <= -1) return -1;
+				if (preprocess_dotted_class_name(stix, 1, &stix->c->cls.superfqn, &stix->c->cls.superfqn_loc, &stix->c->cls.supername, &stix->c->cls.superns_oop) <= -1) return -1;
 			}
 			else
 			{
