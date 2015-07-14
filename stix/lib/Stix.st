@@ -1,4 +1,4 @@
-#class Stix(nil)
+#class Apex(nil)
 {
 	#dcl(#class) sysdic.
 
@@ -72,17 +72,17 @@
 	}
 }
 
-#class Object(Stix)
+#class Object(Apex)
 {
 
 }
 
-#class NilObject(Stix)
+#class UndefinedObject(Apex)
 {
 
 }
 
-#class(#pointer) Class(Stix)
+#class(#pointer) Class(Apex)
 {
 	#dcl spec selfspec superclass subclasses name instvars classvars classinstvars instmthdic classmthdic.
 }
@@ -245,12 +245,16 @@
 {
 }
 
+#class PoolDictionary(Set)
+{
+}
+
 #class MethodDictionary(Dictionary)
 {
 
 }
 
-#class(#pointer) Context(Stix)
+#class(#pointer) Context(Apex)
 {
 }
 

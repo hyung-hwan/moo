@@ -104,9 +104,9 @@ static int ignite_1 (stix_t* stix)
 	STIX_OBJ_SET_CLASS (stix->_class, stix->_class);
 
 	/* --------------------------------------------------------------
-	 * Stix      - proto-object with 1 class variable.
-	 * NilObject - class for the nil object.
-	 * Object    - top of all ordinary objects.
+	 * Apex            - proto-object with 1 class variable.
+	 * UndefinedObject - class for the nil object.
+	 * Object          - top of all ordinary objects.
 	 * String
 	 * Symbol
 	 * Array
@@ -115,8 +115,8 @@ static int ignite_1 (stix_t* stix)
 	 * Character
 	 * SmallIntger
 	 * -------------------------------------------------------------- */
-	stix->_stix              = alloc_kernel_class (stix, 1, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
-	stix->_nil_object        = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
+	stix->_apex              = alloc_kernel_class (stix, 1, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
+	stix->_undefined_object  = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_object            = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_string            = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_CHAR));
 
@@ -127,11 +127,12 @@ static int ignite_1 (stix_t* stix)
 	stix->_system_dictionary = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_SET_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 
 	stix->_namespace         = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_SET_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
+	stix->_pool_dictionary   = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_SET_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 	stix->_method_dictionary = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_SET_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 	stix->_method            = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_METHOD_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 	stix->_association       = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_ASSOCIATION_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
-	stix->_method_context    = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 
+	stix->_method_context    = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 	stix->_block_context     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 	stix->_true_class        = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_false_class       = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
@@ -141,19 +142,20 @@ static int ignite_1 (stix_t* stix)
 	stix->_character         = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_small_integer     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 
-	if (!stix->_stix              || !stix->_nil_object        || 
+	if (!stix->_apex              || !stix->_undefined_object  || 
 	    !stix->_object            || !stix->_string            ||
 
 	    !stix->_symbol            || !stix->_array             ||
 	    !stix->_byte_array        || !stix->_symbol_set        || !stix->_system_dictionary || 
 
-	    !stix->_namespace         || !stix->_method_dictionary ||
-	    !stix->_method            || !stix->_association       || !stix->_method_context    ||
+	    !stix->_namespace         || !stix->_pool_dictionary   ||
+	    !stix->_method_dictionary || !stix->_method            || !stix->_association ||
 
-	    !stix->_block_context     || !stix->_true_class        ||
-	    !stix->_false_class       || !stix->_character         || !stix->_small_integer) return -1;
-	    
-	STIX_OBJ_SET_CLASS (stix->_nil, stix->_nil_object);
+	    !stix->_method_context    || !stix->_block_context     ||
+	    !stix->_true_class        || !stix->_false_class       || 
+	    !stix->_character         || !stix->_small_integer) return -1;
+
+	STIX_OBJ_SET_CLASS (stix->_nil, stix->_undefined_object);
 	return 0;
 }
 
@@ -187,7 +189,7 @@ static int ignite_2 (stix_t* stix)
 	stix->sysdic = (stix_oop_set_t)tmp;
 
 	/* Export the system dictionary via the first class variable of the Stix class */
-	((stix_oop_class_t)stix->_stix)->slot[0] = (stix_oop_t)stix->sysdic;
+	((stix_oop_class_t)stix->_apex)->slot[0] = (stix_oop_t)stix->sysdic;
 
 	return 0;
 }
@@ -201,8 +203,8 @@ static int ignite_3 (stix_t* stix)
 		stix_oow_t len;
 		stix_uch_t str[16];
 	} symnames[] = {
-		{  4, { 'S','t','i','x'                                                  } },
-		{  9, { 'N','i','l','O','b','j','e','c','t'                              } },
+		{  4, { 'A','p','e','x'                                                  } },
+		{ 15, { 'U','n','d','e','f','i','n','e','d','O','b','j','e','c','t'      } },
 		{  5, { 'C','l','a','s','s'                                              } },
 		{  6, { 'O','b','j','e','c','t'                                          } },
 		{  6, { 'S','t','r','i','n','g'                                          } },
@@ -214,11 +216,12 @@ static int ignite_3 (stix_t* stix)
 		{ 16, { 'S','y','s','t','e','m','D','i','c','t','i','o','n','a','r','y'  } },
 
 		{  9, { 'N','a','m','e','s','p','a','c','e'                              } },
+		{ 14, { 'P','o','o','l','D','i','c','t','i','o','n','a','r','y'          } },
 		{ 16, { 'M','e','t','h','o','d','D','i','c','t','i','o','n','a','r','y'  } },
 		{ 14, { 'C','o','m','p','i','l','e','d','M','e','t','h','o','d'          } },
 		{ 11, { 'A','s','s','o','c','i','a','t','i','o','n'                      } },
-		{ 13, { 'M','e','t','h','o','d','C','o','n','t','e','x','t'              } },
 
+		{ 13, { 'M','e','t','h','o','d','C','o','n','t','e','x','t'              } },
 		{ 12, { 'B','l','o','c','k','C','o','n','t','e','x','t'                  } },
 		{  4, { 'T','r','u','e'                                                  } },
 		{  5, { 'F','a','l','s','e'                                              } },
@@ -226,16 +229,17 @@ static int ignite_3 (stix_t* stix)
 		{ 12, { 'S','m','a','l','l','I','n','t','e','g','e','r'                  } }
 	};
 
-	static stix_uch_t stix_str[] = { 'S','t','a','x' };
+	static stix_uch_t str_stix[] = { 'S','t','i','x' };
 
 	stix_oow_t i;
 	stix_oop_t sym;
 	stix_oop_t* stix_ptr;
 
-	stix_ptr = &stix->_stix;
-	/* The loop here repies on the proper order of fields in stix_t.
-	 * Be sure to keep in sync the order of items in symnames and 
-	 * the releated fields of stix_t */
+	stix_ptr = &stix->_apex;
+	/* [NOTE]
+	 *  The loop here repies on the proper order of fields in stix_t.
+	 *  Be sure to keep in sync the order of items in symnames and 
+	 *  the releated fields of stix_t */
 	for (i = 0; i < STIX_COUNTOF(symnames); i++)
 	{
 		sym = stix_makesymbol (stix, symnames[i].str, symnames[i].len);
@@ -245,7 +249,7 @@ static int ignite_3 (stix_t* stix)
 		stix_ptr++;
 	}
 
-	sym = stix_makesymbol (stix, stix_str, 4);
+	sym = stix_makesymbol (stix, str_stix, 4);
 	if (!sym) return -1;
 	if (!stix_putatsysdic(stix, sym, (stix_oop_t)stix->sysdic)) return -1;
 

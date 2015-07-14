@@ -762,8 +762,8 @@ struct stix_t
 
 	/* == NEVER CHANGE THE ORDER OF FIELDS BELOW == */
 	/* stix_ignite() assumes this order. make sure to update symnames in ignite_3() */
-	stix_oop_t _stix; /* Stix */
-	stix_oop_t _nil_object; /* NilObject */
+	stix_oop_t _apex; /* Apex */
+	stix_oop_t _undefined_object; /* UndefinedObject */
 	stix_oop_t _class; /* Class */
 	stix_oop_t _object; /* Object */
 	stix_oop_t _string; /* String */
@@ -775,15 +775,17 @@ struct stix_t
 	stix_oop_t _system_dictionary; /* SystemDictionary */
 
 	stix_oop_t _namespace; /* Namespace */
+	stix_oop_t _pool_dictionary; /* PoolDictionary */
 	stix_oop_t _method_dictionary; /* MethodDictionary */
 	stix_oop_t _method; /* CompiledMethod */
 	stix_oop_t _association; /* Association */
-	stix_oop_t _method_context; /* MethodContext */
 
+	stix_oop_t _method_context; /* MethodContext */
 	stix_oop_t _block_context; /* BlockContext */
 	stix_oop_t _true_class; /* True */
 	stix_oop_t _false_class; /* False */
 	stix_oop_t _character; /* Character */
+
 	stix_oop_t _small_integer; /* SmallInteger */
 	/* == NEVER CHANGE THE ORDER OF FIELDS ABOVE == */
 

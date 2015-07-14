@@ -268,9 +268,9 @@ void stix_gc (stix_t* stix)
 	stix->_true              = stix_moveoop (stix, stix->_true);
 	stix->_false             = stix_moveoop (stix, stix->_false);
 
-	stix->_stix              = stix_moveoop (stix, stix->_stix);
+	stix->_apex              = stix_moveoop (stix, stix->_apex);
 	stix->_class             = stix_moveoop (stix, stix->_class);
-	stix->_nil_object        = stix_moveoop (stix, stix->_nil_object);
+	stix->_undefined_object  = stix_moveoop (stix, stix->_undefined_object);
 	stix->_object            = stix_moveoop (stix, stix->_object);
 	stix->_array             = stix_moveoop (stix, stix->_array);
 	stix->_byte_array        = stix_moveoop (stix, stix->_byte_array);
@@ -279,6 +279,7 @@ void stix_gc (stix_t* stix)
 	stix->_symbol_set        = stix_moveoop (stix, stix->_symbol_set);
 	stix->_system_dictionary = stix_moveoop (stix, stix->_system_dictionary);
 	stix->_namespace         = stix_moveoop (stix, stix->_namespace);
+	stix->_pool_dictionary   = stix_moveoop (stix, stix->_pool_dictionary);
 	stix->_method_dictionary = stix_moveoop (stix, stix->_method_dictionary);
 	stix->_method            = stix_moveoop (stix, stix->_method);
 	stix->_association       = stix_moveoop (stix, stix->_association);

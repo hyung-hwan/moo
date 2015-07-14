@@ -9,7 +9,7 @@
 ##       use #extend to extend a class
 ##       using #class for both feels confusing.
 
-#extend Stix
+#extend Apex
 {
 
 }

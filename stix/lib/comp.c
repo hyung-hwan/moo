@@ -38,6 +38,7 @@
 #define INSTANCE_METHOD_DICTIONARY_SIZE 256 /* TODO: choose the right size */
 #define CLASS_METHOD_DICTIONARY_SIZE 128 /* TODO: choose the right size */
 #define NAMESPACE_SIZE 128 /* TODO: choose the right size */
+#define POOL_DICTIONARY_SIZE_ALIGN 128
 
 enum class_mod_t
 {
@@ -93,6 +94,7 @@ static struct voca_t
 	{  3, { 'm','t','h'                                                   } },
 	{  3, { 'n','i','l'                                                   } },
 	{  7, { 'p','o','i','n','t','e','r'                                   } },
+	{  7, { 'p','o','o','l','d','i','c'                                   } },
 	{ 10, { 'p','r','i','m','i','t','i','v','e',':'                       } },
 	{  4, { 's','e','l','f'                                               } },
 	{  5, { 's','u','p','e','r'                                           } },
@@ -123,6 +125,7 @@ enum voca_id_t
 	VOCA_MTH,
 	VOCA_NIL,
 	VOCA_POINTER,
+	VOCA_POOLDIC,
 	VOCA_PRIMITIVE_COLON,
 	VOCA_SELF,
 	VOCA_SUPER,
@@ -1431,9 +1434,11 @@ retry:
 			break;
 	}
 
+/*
 printf ("TOKEN: [");
 print_ucs (&stix->c->tok.name);
 printf ("]\n");
+*/
 	return 0;
 }
 
@@ -1866,7 +1871,9 @@ static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t se
 	{
 		STIX_ASSERT (STIX_CLASSOF(stix, self) == stix->_class);
 
-		/* NOTE the loop here assumes the right order of
+		/* [NOTE] 
+		 *  the loop here assumes that the class has the following
+		 *  fields in the order shown below:
 		 *    instvars
 		 *    classvars
 		 *    classinstvars
@@ -1882,6 +1889,11 @@ static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t se
 			if (pos >= 0) 
 			{
 				super = self->superclass;
+
+				/* 'self' may be STIX_NULL if STIX_NULL has been given for it.
+				 * the caller must take good care when interpreting the meaning of 
+				 * this field */
+				var->cls = self;
 				goto done;
 			}
 		}
@@ -1890,7 +1902,8 @@ static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t se
 	}
 	else
 	{
-		/* the class definition is not available yet */
+		/* the class definition is not available yet.
+		 * find the variable in the compiler's own list */
 		for (index = VAR_INSTANCE; index <= VAR_CLASSINST; index++)
 		{
 			pos = find_word_in_string(&stix->c->cls.vars[index], name);
@@ -1898,6 +1911,7 @@ static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t se
 			if (pos >= 0) 
 			{
 				super = stix->c->cls.super_oop;
+				var->cls = self;
 				goto done;
 			}
 		}
@@ -1908,7 +1922,9 @@ static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t se
 	{
 		STIX_ASSERT (STIX_CLASSOF(stix, super) == stix->_class);
 
-		/* NOTE the loop here assumes the right order of
+		/* [NOTE] 
+		 *  the loop here assumes that the class has the following
+		 *  fields in the order shown below:
 		 *    instvars
 		 *    classvars
 		 *    classinstvars
@@ -1923,6 +1939,13 @@ static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t se
 			pos = find_word_in_string(&hs, name);
 			if (pos >= 0) 
 			{
+				/* class variables reside in the class where the definition is found.
+				 * that means a class variable is found in the definition of
+				 * a superclass, the superclass is the placeholder of the 
+				 * class variable. on the other hand, instance variables and
+				 * class instance variables live in the current class being 
+				 * compiled as they are inherited. */
+				var->cls = (index == VAR_CLASS)? (stix_oop_class_t)super: self;
 				super = ((stix_oop_class_t)super)->superclass;
 				goto done;
 			}
@@ -1935,14 +1958,11 @@ static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t se
 	return -1;
 
 done:
-	/* 'self' may be STIX_NULL if STIX_NULL has been given for it.
-	 * the caller must take good care when interpreting the meaning of 
-	 * this field */
-	var->cls = self; 
-
 	if (super != stix->_nil)
 	{
 		stix_oow_t spec;
+
+		/* the class being compiled has a superclass */
 
 		STIX_ASSERT (STIX_CLASSOF(stix, super) == stix->_class);
 		switch (index)
@@ -1957,12 +1977,13 @@ done:
 				break;
 
 			case VAR_CLASS:
-				/* no adjustment is needed.
-				 * a class object is composed of three parts.
-				 *  fixed-part | classinst-variables | class-variabes 
-				 * the position returned here doesn't consider 
-				 * class instance variables that can be potentially
-				 * placed before the class variables. */
+				/* [NOTE]
+				 *  no adjustment is needed.
+				 *  a class object is composed of three parts.
+				 *    fixed-part | classinst-variables | class-variabes 
+				 *  the position returned here doesn't consider 
+				 *  class instance variables that can be potentially
+				 *  placed before the class variables. */
 				break;
 
 			case VAR_CLASSINST:
@@ -2143,7 +2164,7 @@ oops:
 	return STIX_NULL;
 }
 
-static int preprocess_dotted_class_name (stix_t* stix, int dont_add_ns, const stix_ucs_t* fqn, const stix_ioloc_t* fqn_loc, stix_ucs_t* name, stix_oop_set_t* ns_oop)
+static int preprocess_dotted_name (stix_t* stix, int dont_add_ns, const stix_ucs_t* fqn, const stix_ioloc_t* fqn_loc, stix_ucs_t* name, stix_oop_set_t* ns_oop)
 {
 	const stix_uch_t* ptr, * dot;
 	stix_size_t len;
@@ -2170,7 +2191,7 @@ static int preprocess_dotted_class_name (stix_t* stix, int dont_add_ns, const st
 			if (ass)
 			{
 				if (STIX_CLASSOF(stix, ass->value) == stix->_namespace || 
-				    (seg.ptr == stix->c->cls.name.ptr && ass->value == (stix_oop_t)stix->sysdic))
+				    (seg.ptr == fqn->ptr && ass->value == (stix_oop_t)stix->sysdic))
 				{
 					/* ok */
 					dic = (stix_oop_set_t)ass->value;
@@ -2482,7 +2503,7 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 
 /*TODO: handle self.XXX ---------- */
 /* TOOD: handle pool dictionary ---- */
-		if (preprocess_dotted_class_name (stix, 1, name, name_loc, &last, &ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name (stix, 1, name, name_loc, &last, &ns_oop) <= -1) return -1;
 
 		ass = stix_lookupdic (stix, ns_oop, &last);
 		if (ass)
@@ -2522,13 +2543,12 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 					break;
 
 				case VAR_CLASS:
-/* TODO: change code here ... */
 					/* a class variable can be access by both instance methods and class methods */
 					STIX_ASSERT (var->cls != STIX_NULL);
 					STIX_ASSERT (STIX_CLASSOF(stix, var->cls) == stix->_class);
 
-/* TOOD: index must be incremented witht eh number of classinstancevariables counts from var.cls 
- * verify if the below increment is correct*/
+					/* increment the position by the number of class instance variables
+					 * as the class variables are placed after the class instance variables */
 					var->pos += STIX_CLASS_NAMED_INSTVARS + 
 					            STIX_CLASS_SELFSPEC_CLASSINSTVAR(STIX_OOP_TO_SMINT(var->cls->selfspec));
 					break;
@@ -2557,7 +2577,10 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 		else 
 		{
 			stix_oop_association_t ass;
-			ass = stix_lookupsysdic (stix, name);
+			/*ass = stix_lookupsysdic (stix, name);*/
+			ass = stix_lookupdic (stix, stix->c->cls.ns_oop, name);
+			if (!ass && stix->c->cls.ns_oop != stix->sysdic) 
+				ass = stix_lookupdic (stix, stix->sysdic, name);
 			if (ass)
 			{
 				var->type = VAR_GLOBAL;
@@ -2867,11 +2890,10 @@ static int add_to_arlit_buffer (stix_t* stix, stix_oop_t item)
 		stix->c->mth.arlit = tmp;
 	}
 
-/* TODO: overflow check of stix->c->mth.arlit_count */
+/* TODO: overflow check of stix->c->mth.arlit_count itself */
 	stix->c->mth.arlit[stix->c->mth.arlit_count++] = item;
 	return 0;
 }
-
 
 static int __compile_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
 {
@@ -3671,7 +3693,6 @@ printf ("\t%s_into_instvar %d\n", (pop? "pop":"store"), (int)var.pos);
 					break;
 
 				case VAR_CLASS:
-/* TODO is this correct? */
 					if (add_literal (stix, (stix_oop_t)var.cls, &index) <= -1 ||
 					    emit_double_param_instruction (stix, (pop? BCODE_POP_INTO_OBJVAR_0: BCODE_STORE_INTO_OBJVAR_0), var.pos, index) <= -1) goto oops;
 printf ("\t%s_into_objvar %d %d\n", (pop? "pop":"store"), (int)var.pos, (int)index);
@@ -3975,7 +3996,7 @@ need to write code to collect string.
 
 	stix_poptmps (stix, tmp_count); tmp_count = 0;
 
-	if (!stix_putatdic (stix, stix->c->cls.mthdic_oop[stix->c->mth.type], name, (stix_oop_t)mth)) goto oops;
+	if (!stix_putatdic(stix, stix->c->cls.mthdic_oop[stix->c->mth.type], name, (stix_oop_t)mth)) goto oops;
 	return 0;
 
 oops:
@@ -4237,7 +4258,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	stix->c->cls.fqn_loc = stix->c->tok.loc;
 	if (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
 	{
-		if (preprocess_dotted_class_name(stix, extend, &stix->c->cls.fqn, &stix->c->cls.fqn_loc, &stix->c->cls.name, &stix->c->cls.ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name(stix, extend, &stix->c->cls.fqn, &stix->c->cls.fqn_loc, &stix->c->cls.name, &stix->c->cls.ns_oop) <= -1) return -1;
 	}
 	else
 	{
@@ -4308,7 +4329,7 @@ printf ("\n");
 
 			if (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
 			{
-				if (preprocess_dotted_class_name(stix, 1, &stix->c->cls.superfqn, &stix->c->cls.superfqn_loc, &stix->c->cls.supername, &stix->c->cls.superns_oop) <= -1) return -1;
+				if (preprocess_dotted_name(stix, 1, &stix->c->cls.superfqn, &stix->c->cls.superfqn_loc, &stix->c->cls.supername, &stix->c->cls.superns_oop) <= -1) return -1;
 			}
 			else
 			{
@@ -4507,6 +4528,182 @@ static int compile_class_definition (stix_t* stix, int extend)
 	return n;
 }
 
+static int __compile_pooldic_definition (stix_t* stix)
+{
+	stix_oop_t lit;
+	stix_ooi_t tally;
+	stix_size_t i;
+
+	if (stix->c->tok.type != STIX_IOTOK_IDENT && 
+	    stix->c->tok.type != STIX_IOTOK_IDENT_DOTTED)
+	{
+		set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	/* [NOTE] 
+	 * reuse stix->c->cls.fqn and related fields are reused 
+	 * to store the pool dictionary name */
+	if (set_class_fqn(stix, &stix->c->tok.name) <= -1) return -1;
+	stix->c->cls.fqn_loc = stix->c->tok.loc;
+
+	if (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
+	{
+		if (preprocess_dotted_name(stix, 0, &stix->c->cls.fqn, &stix->c->cls.fqn_loc, &stix->c->cls.name, &stix->c->cls.ns_oop) <= -1) return -1;
+	}
+	else
+	{
+		stix->c->cls.ns_oop = stix->sysdic;
+	}
+
+	if (stix_lookupdic (stix, stix->c->cls.ns_oop, &stix->c->cls.name))
+	{
+		/* a conflicting entry has been found */
+		set_syntax_error (stix, STIX_SYNERR_POOLDICDUP, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	GET_TOKEN (stix);
+	if (stix->c->tok.type != STIX_IOTOK_LBRACE)
+	{
+		set_syntax_error (stix, STIX_SYNERR_LBRACE, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	GET_TOKEN (stix);
+
+	while (stix->c->tok.type == STIX_IOTOK_SYMLIT)
+	{
+		lit = stix_makesymbol (stix, stix->c->tok.name.ptr, stix->c->tok.name.len);
+		if (!lit || add_to_arlit_buffer (stix, lit) <= -1) return -1;
+
+		GET_TOKEN (stix);
+
+		if (stix->c->tok.type != STIX_IOTOK_ASSIGN)
+		{
+			set_syntax_error (stix, STIX_SYNERR_ASSIGN, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+
+		GET_TOKEN (stix);
+
+		switch (stix->c->tok.type)
+		{
+			case STIX_IOTOK_NIL:
+				lit = stix->_nil;
+				goto simple_literal;
+
+			case STIX_IOTOK_TRUE:
+				lit = stix->_true;
+				goto simple_literal;
+
+			case STIX_IOTOK_FALSE:
+				lit = stix->_false;
+				goto simple_literal;
+
+			
+			case STIX_IOTOK_CHARLIT:
+				STIX_ASSERT (stix->c->tok.name.len == 1);
+				lit = STIX_OOP_FROM_CHAR(stix->c->tok.name.ptr[0]);
+				goto simple_literal;
+
+			case STIX_IOTOK_STRLIT:
+				lit = stix_instantiate (stix, stix->_string, stix->c->tok.name.ptr, stix->c->tok.name.len);
+				if (!lit) return -1;
+				goto simple_literal;
+
+			case STIX_IOTOK_SYMLIT:
+				lit = stix_makesymbol (stix, stix->c->tok.name.ptr, stix->c->tok.name.len);
+				if (!lit) return -1;
+				goto simple_literal;
+
+			case STIX_IOTOK_NUMLIT:
+			case STIX_IOTOK_RADNUMLIT:
+				goto simple_literal;
+
+#if 0
+			case STIX_IOTOK_BPAREN: /* byte array */
+			case STIX_IOTOK_APAREN: /* array */
+				break;
+TODO:
+#endif
+
+			default:
+				set_syntax_error (stix, STIX_SYNERR_LITERAL, &stix->c->tok.loc, &stix->c->tok.name);
+				return -1;
+
+			simple_literal:
+				if (add_to_arlit_buffer(stix, lit) <= -1) return -1;
+				GET_TOKEN (stix);
+				break;
+		}
+
+		/*if (stix->c->tok.type == STIX_IOTOK_RBRACE) goto done;
+		else*/ if (stix->c->tok.type != STIX_IOTOK_PERIOD)
+		{
+			set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+
+		GET_TOKEN (stix);
+	}
+
+
+	if (stix->c->tok.type != STIX_IOTOK_RBRACE)
+	{
+		set_syntax_error (stix, STIX_SYNERR_RBRACE, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+/*done:*/
+	GET_TOKEN (stix);
+
+	tally = stix->c->mth.arlit_count / 2;
+/*TODO: tally and arlit_count range check */
+	/*if (!STIX_OOI_IN_SMINT_RANGE(tally)) ERROR??*/
+
+	stix->c->cls.mthdic_oop[0] = stix_makedic (stix, stix->_pool_dictionary, STIX_ALIGN(tally + 10, POOL_DICTIONARY_SIZE_ALIGN));
+	if (!stix->c->cls.mthdic_oop[0]) return -1;
+
+	for (i = 0; i < stix->c->mth.arlit_count; i += 2)
+	{
+		/* TODO: handle duplicate keys? */
+		if (!stix_putatdic(stix, stix->c->cls.mthdic_oop[0], stix->c->mth.arlit[i], stix->c->mth.arlit[i + 1])) return -1;
+	}
+
+	/* eveything seems ok. register the pool dictionary to the main
+	 * system dictionary or to the name space it belongs to */
+	lit = stix_makesymbol (stix, stix->c->cls.name.ptr, stix->c->cls.name.len);
+	if (!lit || !stix_putatdic (stix, stix->c->cls.ns_oop, lit, (stix_oop_t)stix->c->cls.mthdic_oop[0])) return -1;
+	return 0;
+}
+
+static int compile_pooldic_definition (stix_t* stix)
+{
+	int n;
+
+	/* reset the structure to hold information about a pool dictionary to be compiled.
+	 * i'll be reusing some fields reserved for compling a class */
+	stix->c->cls.name.len = 0;
+	STIX_MEMSET (&stix->c->cls.fqn_loc, 0, STIX_SIZEOF(stix->c->cls.fqn_loc));
+	stix->c->cls.mthdic_oop[0] = STIX_NULL;
+	stix->c->cls.ns_oop = STIX_NULL;
+	stix->c->mth.literal_count = 0;
+	stix->c->mth.balit_count = 0;
+	stix->c->mth.arlit_count = 0;
+
+	n = __compile_pooldic_definition (stix);
+
+	/* reset these oops plus literal pointers not to confuse gc_compiler() */
+	stix->c->cls.mthdic_oop[0] = STIX_NULL;
+	stix->c->cls.ns_oop = STIX_NULL;
+	stix->c->mth.literal_count = 0;
+	stix->c->mth.balit_count = 0;
+	stix->c->mth.arlit_count = 0;
+	return n;
+}
+
+
 static int compile_stream (stix_t* stix)
 {
 	GET_CHAR (stix);
@@ -4536,6 +4733,12 @@ static int compile_stream (stix_t* stix)
 			/* #extend Selfclass {} */
 			GET_TOKEN (stix);
 			if (compile_class_definition(stix, 1) <= -1) return -1;
+		}
+		else if (is_token_symbol(stix, VOCA_POOLDIC))
+		{
+			/* #pooldic SharedPoolDic { #abc := 20. #defg := 'ayz' } */
+			GET_TOKEN (stix);
+			if (compile_pooldic_definition(stix) <= -1) return -1;
 		}
 #if 0
 		else if (is_token_symbol(stix, VOCA_MAIN))

@@ -303,6 +303,7 @@ enum stix_synerrnum_t
 	STIX_SYNERR_PERIOD,        /* . expected */
 	STIX_SYNERR_VBAR,          /* | expected */
 	STIX_SYNERR_GT,            /* > expected */
+	STIX_SYNERR_ASSIGN,        /* := expected */
 	STIX_SYNERR_IDENT,         /* identifier expected */
 	STIX_SYNERR_INTEGER,       /* integer expected */
 	STIX_SYNERR_PRIMITIVE,     /* primitive: expected */
@@ -329,7 +330,9 @@ enum stix_synerrnum_t
 	STIX_SYNERR_BLKFLOOD,      /* too large block */
 	STIX_SYNERR_PRIMNO,        /* wrong primitive number */
 	STIX_SYNERR_INCLUDE,       /* #include error */
-	STIX_SYNERR_NAMESPACE      /* wrong namespace name */
+	STIX_SYNERR_NAMESPACE,     /* wrong namespace name */
+	STIX_SYNERR_POOLDICDUP,    /* duplicate pool dictionary */
+	STIX_SYNERR_LITERAL        /* literal expected */
 };
 typedef enum stix_synerrnum_t stix_synerrnum_t;
 
