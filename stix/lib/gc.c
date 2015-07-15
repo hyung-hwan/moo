@@ -89,8 +89,7 @@ stix_oop_t stix_moveoop (stix_t* stix, stix_oop_t oop)
 	if (!oop) return oop;
 #endif
 
-	STIX_ASSERT (STIX_OOP_IS_POINTER(oop));
-	/*if (STIX_OOP_IS_POINTER(oop)) return oop;*/
+	if (!STIX_OOP_IS_POINTER(oop)) return oop;
 
 	if (STIX_OBJ_GET_FLAGS_MOVED(oop))
 	{

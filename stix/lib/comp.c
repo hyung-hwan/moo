@@ -2163,13 +2163,14 @@ oops:
 	return STIX_NULL;
 }
 
-static int preprocess_dotted_name (stix_t* stix, int dont_add_ns, const stix_ucs_t* fqn, const stix_ioloc_t* fqn_loc, stix_ucs_t* name, stix_oop_set_t* ns_oop)
+static int preprocess_dotted_name (stix_t* stix, int dont_add_ns, int accept_pooldic_as_ns, const stix_ucs_t* fqn, const stix_ioloc_t* fqn_loc, stix_ucs_t* name, stix_oop_set_t* ns_oop)
 {
 	const stix_uch_t* ptr, * dot;
 	stix_size_t len;
 	stix_ucs_t seg;
 	stix_oop_set_t dic;
 	stix_oop_association_t ass;
+	int pooldic_gotten = 0;
 
 	dic = stix->sysdic;
 	ptr = fqn->ptr;
@@ -2182,6 +2183,8 @@ static int preprocess_dotted_name (stix_t* stix, int dont_add_ns, const stix_ucs
 		dot = stix_findchar (ptr, len, '.');
 		if (dot)
 		{
+			if (pooldic_gotten) goto wrong_name;
+
 			seg.len = dot - ptr;
 
 			if (is_reserved_word(&seg)) goto wrong_name;
@@ -2197,7 +2200,18 @@ static int preprocess_dotted_name (stix_t* stix, int dont_add_ns, const stix_ucs
 				}
 				else
 				{
-					goto wrong_name;
+					if (accept_pooldic_as_ns && STIX_CLASSOF(stix, ass->value) == stix->_pool_dictionary)
+					{
+						/* A pool dictionary is treated as if it's a name space.
+						 * However, the pool dictionary can only act as a name space
+						 * if it's the second last segment. */
+						dic = (stix_oop_set_t)ass->value;
+						pooldic_gotten = 1;
+					}
+					else
+					{
+						goto wrong_name;
+					}
 				}
 			}
 			else
@@ -2501,9 +2515,11 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 		stix_oop_association_t ass;
 
 /*TODO: handle self.XXX ---------- */
-/* TOOD: handle pool dictionary ---- */
-		if (preprocess_dotted_name (stix, 1, name, name_loc, &last, &ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name (stix, 1, 1, name, name_loc, &last, &ns_oop) <= -1) return -1;
 
+printf ("checking variable ");
+print_ucs (&last);
+printf ("\n");
 		ass = stix_lookupdic (stix, ns_oop, &last);
 		if (ass)
 		{
@@ -2579,6 +2595,7 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 			ass = stix_lookupdic (stix, stix->c->cls.ns_oop, name);
 			if (!ass && stix->c->cls.ns_oop != stix->sysdic) 
 				ass = stix_lookupdic (stix, stix->sysdic, name);
+/* TODO: search in the pool dictionary */
 			if (ass)
 			{
 				var->type = VAR_GLOBAL;
@@ -2893,7 +2910,7 @@ static int add_to_arlit_buffer (stix_t* stix, stix_oop_t item)
 	return 0;
 }
 
-static int __compile_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
+static int __read_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
 {
 	stix_ooi_t tmp;
 	stix_oop_t ba;
@@ -2945,7 +2962,7 @@ struct arlit_info_t
 
 typedef struct arlit_info_t arlit_info_t;
 
-static int __compile_array_literal (stix_t* stix, stix_oop_t* xlit)
+static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
 {
 	stix_oop_t lit, a;
 	stix_size_t i, saved_arlit_count;
@@ -3018,14 +3035,14 @@ printf ("LARGE NOT IMPLEMENTED IN COMPILE_ARRAY_LITERAL\n");
 				saved_arlit_count = stix->c->mth.arlit_count;
 /* TODO: get rid of recursion?? */
 				GET_TOKEN (stix);
-				if (__compile_array_literal (stix, &lit) <= -1) return -1;
+				if (__read_array_literal (stix, &lit) <= -1) return -1;
 				stix->c->mth.arlit_count = saved_arlit_count;
 				break;
 
 			case STIX_IOTOK_BPAREN: /* #[ */
 			case STIX_IOTOK_LBRACK: /* [ */
 				GET_TOKEN (stix);
-				if (__compile_byte_array_literal (stix, &lit) <= -1) return -1;
+				if (__read_byte_array_literal (stix, &lit) <= -1) return -1;
 				break;
 
 			default:
@@ -3058,37 +3075,57 @@ done:
 	return 0;
 }
 
+static STIX_INLINE int read_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
+{
+	GET_TOKEN (stix); /* skip #[ and read the next token */
+	return __read_byte_array_literal(stix, xlit);
+}
+
 static int compile_byte_array_literal (stix_t* stix)
 {
 	stix_oop_t lit;
 	stix_size_t index;
 
-	GET_TOKEN (stix); /* skip #[ and read the next token */
-	if (__compile_byte_array_literal (stix, &lit) <= -1) return -1;
-
+	if (read_byte_array_literal(stix, &lit) <= -1 ||
+	    add_literal(stix, lit, &index) <= -1 ||
+	    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 printf ("\tpush_literal byte_array\n");
-	if (add_literal (stix, lit, &index) <= -1 ||
-	    emit_single_param_instruction (stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 
 	GET_TOKEN (stix);
 	return 0;
+}
+
+static int read_array_literal (stix_t* stix, stix_oop_t* xlit)
+{
+	int x;
+	stix_size_t saved_arlit_count;
+
+	stix->c->in_array = 1;
+	if (get_token(stix) <= -1)
+	{
+		/* skip #( and read the next token */
+		stix->c->in_array = 0;
+		return -1;
+	}
+	saved_arlit_count = stix->c->mth.arlit_count;
+	x = __read_array_literal (stix, xlit);
+	stix->c->mth.arlit_count = saved_arlit_count;
+	stix->c->in_array = 0;
+
+	return x;
 }
 
 static int compile_array_literal (stix_t* stix)
 {
 	stix_oop_t lit;
 	stix_size_t index;
-	int x;
 
-	stix->c->in_array = 1;
-	GET_TOKEN (stix); /* skip #( and read the next token */
-	x = __compile_array_literal (stix, &lit);
-	stix->c->in_array = 0;
-	if (x <= -1) return -1;
+	STIX_ASSERT (stix->c->mth.arlit_count == 0);
 
+	if (read_array_literal(stix, &lit) <= -1 ||
+	    add_literal(stix, lit, &index) <= -1 ||
+	    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 printf ("\tpush_literal array\n");
-	if (add_literal (stix, lit, &index) <= -1 ||
-	    emit_single_param_instruction (stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 
 	GET_TOKEN (stix);
 	return 0;
@@ -4256,7 +4293,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	stix->c->cls.fqn_loc = stix->c->tok.loc;
 	if (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
 	{
-		if (preprocess_dotted_name(stix, extend, &stix->c->cls.fqn, &stix->c->cls.fqn_loc, &stix->c->cls.name, &stix->c->cls.ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name(stix, extend, 0, &stix->c->cls.fqn, &stix->c->cls.fqn_loc, &stix->c->cls.name, &stix->c->cls.ns_oop) <= -1) return -1;
 	}
 	else
 	{
@@ -4298,7 +4335,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	{
 		int super_is_nil = 0;
 
-printf ("DEFININING..");
+printf ("DEFININING CLASS ");
 print_ucs (&stix->c->cls.name);
 printf ("\n");
 		if (stix->c->tok.type == STIX_IOTOK_LPAREN)
@@ -4327,7 +4364,7 @@ printf ("\n");
 
 			if (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
 			{
-				if (preprocess_dotted_name(stix, 1, &stix->c->cls.superfqn, &stix->c->cls.superfqn_loc, &stix->c->cls.supername, &stix->c->cls.superns_oop) <= -1) return -1;
+				if (preprocess_dotted_name(stix, 1, 0, &stix->c->cls.superfqn, &stix->c->cls.superfqn_loc, &stix->c->cls.supername, &stix->c->cls.superns_oop) <= -1) return -1;
 			}
 			else
 			{
@@ -4547,7 +4584,7 @@ static int __compile_pooldic_definition (stix_t* stix)
 
 	if (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
 	{
-		if (preprocess_dotted_name(stix, 0, &stix->c->cls.fqn, &stix->c->cls.fqn_loc, &stix->c->cls.name, &stix->c->cls.ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name(stix, 0, 0, &stix->c->cls.fqn, &stix->c->cls.fqn_loc, &stix->c->cls.name, &stix->c->cls.ns_oop) <= -1) return -1;
 	}
 	else
 	{
@@ -4567,6 +4604,10 @@ static int __compile_pooldic_definition (stix_t* stix)
 		set_syntax_error (stix, STIX_SYNERR_LBRACE, &stix->c->tok.loc, &stix->c->tok.name);
 		return -1;
 	}
+
+printf ("DEFININING POOL DICTIONARY ");
+print_ucs (&stix->c->cls.name);
+printf ("\n");
 
 	GET_TOKEN (stix);
 
@@ -4589,51 +4630,73 @@ static int __compile_pooldic_definition (stix_t* stix)
 		{
 			case STIX_IOTOK_NIL:
 				lit = stix->_nil;
-				goto simple_literal;
+				goto add_literal;
 
 			case STIX_IOTOK_TRUE:
 				lit = stix->_true;
-				goto simple_literal;
+				goto add_literal;
 
 			case STIX_IOTOK_FALSE:
 				lit = stix->_false;
-				goto simple_literal;
+				goto add_literal;
 
-			
 			case STIX_IOTOK_CHARLIT:
 				STIX_ASSERT (stix->c->tok.name.len == 1);
 				lit = STIX_OOP_FROM_CHAR(stix->c->tok.name.ptr[0]);
-				goto simple_literal;
+				goto add_literal;
 
 			case STIX_IOTOK_STRLIT:
 				lit = stix_instantiate (stix, stix->_string, stix->c->tok.name.ptr, stix->c->tok.name.len);
 				if (!lit) return -1;
-				goto simple_literal;
+				goto add_literal;
 
 			case STIX_IOTOK_SYMLIT:
 				lit = stix_makesymbol (stix, stix->c->tok.name.ptr, stix->c->tok.name.len);
 				if (!lit) return -1;
-				goto simple_literal;
+				goto add_literal;
 
 			case STIX_IOTOK_NUMLIT:
 			case STIX_IOTOK_RADNUMLIT:
-				goto simple_literal;
+			{
+				stix_ooi_t tmp;
 
-#if 0
-			case STIX_IOTOK_BPAREN: /* byte array */
-			case STIX_IOTOK_APAREN: /* array */
+				if (string_to_smint(stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT, &tmp) <= -1)
+				{
+					/* the token reader reads a valid token. no other errors
+					 * than the range error must not occur */
+					STIX_ASSERT (stix->errnum == STIX_ERANGE);
+
+printf ("NOT IMPLEMENTED LARGE_INTEGER or ERROR?\n");
+					stix->errnum = STIX_ENOIMPL;
+					return -1;
+				}
+				else
+				{
+					lit = STIX_OOP_FROM_SMINT(tmp);
+				}
+
+				goto add_literal;
+			}
+
+			case STIX_IOTOK_BPAREN: /* #[ */
+				if (read_byte_array_literal(stix, &lit) <= -1) return -1;
+				goto add_literal;
+
+			case STIX_IOTOK_APAREN: /* #( */
+				if (read_array_literal(stix, &lit) <= -1) return -1;
+				goto add_literal;
+
+			add_literal:
+				/*
+				 * for this definition, #pooldic MyPoolDic { #a := 10. #b := 20 },
+				 * arlit_buffer contains (#a 10 #b 20) when the 'while' loop is over. */
+				if (add_to_arlit_buffer(stix, lit) <= -1) return -1;
+				GET_TOKEN (stix);
 				break;
-TODO:
-#endif
 
 			default:
 				set_syntax_error (stix, STIX_SYNERR_LITERAL, &stix->c->tok.loc, &stix->c->tok.name);
 				return -1;
-
-			simple_literal:
-				if (add_to_arlit_buffer(stix, lit) <= -1) return -1;
-				GET_TOKEN (stix);
-				break;
 		}
 
 		/*if (stix->c->tok.type == STIX_IOTOK_RBRACE) goto done;
@@ -4686,7 +4749,6 @@ static int compile_pooldic_definition (stix_t* stix)
 	STIX_MEMSET (&stix->c->cls.fqn_loc, 0, STIX_SIZEOF(stix->c->cls.fqn_loc));
 	stix->c->cls.mthdic_oop[0] = STIX_NULL;
 	stix->c->cls.ns_oop = STIX_NULL;
-	stix->c->mth.literal_count = 0;
 	stix->c->mth.balit_count = 0;
 	stix->c->mth.arlit_count = 0;
 
@@ -4695,9 +4757,9 @@ static int compile_pooldic_definition (stix_t* stix)
 	/* reset these oops plus literal pointers not to confuse gc_compiler() */
 	stix->c->cls.mthdic_oop[0] = STIX_NULL;
 	stix->c->cls.ns_oop = STIX_NULL;
-	stix->c->mth.literal_count = 0;
 	stix->c->mth.balit_count = 0;
 	stix->c->mth.arlit_count = 0;
+
 	return n;
 }
 
@@ -4784,16 +4846,12 @@ static void gc_compiler (stix_t* stix)
 
 		for (i = 0; i < stix->c->mth.literal_count; i++)
 		{
-			if (STIX_OOP_IS_POINTER(stix->c->mth.literals[i]))
-			{
-				stix->c->mth.literals[i] = stix_moveoop (stix, stix->c->mth.literals[i]);
-			}
+			stix->c->mth.literals[i] = stix_moveoop (stix, stix->c->mth.literals[i]);
 		}
 
 		for (i = 0; i < stix->c->mth.arlit_count; i++)
 		{
-			if (STIX_OOP_IS_POINTER(stix->c->mth.arlit[i]))
-				stix->c->mth.arlit[i] = stix_moveoop (stix, stix->c->mth.arlit[i]);
+			stix->c->mth.arlit[i] = stix_moveoop (stix, stix->c->mth.arlit[i]);
 		}
 	}
 }

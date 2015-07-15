@@ -31,6 +31,9 @@ stix_t* stix_open (stix_mmgr_t* mmgr, stix_size_t xtnsize, stix_size_t heapsize,
 {
 	stix_t* stix;
 
+	/* if this assertion fails, correct the type definition in stix.h */
+	STIX_ASSERT (STIX_SIZEOF(stix_oow_t) == STIX_SIZEOF(stix_oop_t));
+
 	stix = STIX_MMGR_ALLOC (mmgr, STIX_SIZEOF(*stix) + xtnsize);
 	if (stix)
 	{

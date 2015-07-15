@@ -283,7 +283,7 @@ static void __dump_object (stix_t* stix, stix_oop_t oop, int depth)
 			printf (" #["); /* TODO: different symbol for word array ?? */
 			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
 			{
-				printf (" %ld", ((stix_oop_word_t)oop)->slot[i]);
+				printf (" %ld", (long int)((stix_oop_word_t)oop)->slot[i]);
 			}
 			printf ("]");
 		}
