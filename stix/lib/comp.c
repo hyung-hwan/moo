@@ -337,7 +337,7 @@ static int copy_string_to (stix_t* stix, const stix_ucs_t* src, stix_ucs_t* dst,
 	return 0;
 }
 
-static stix_ssize_t find_word_in_string (const stix_ucs_t* haystack, const stix_ucs_t* name)
+static int find_word_in_string (const stix_ucs_t* haystack, const stix_ucs_t* name, stix_size_t* xindex)
 {
 	/* this function is inefficient. but considering the typical number
 	 * of arguments and temporary variables, the inefficiency can be 
@@ -346,8 +346,7 @@ static stix_ssize_t find_word_in_string (const stix_ucs_t* haystack, const stix_
 	 * inefficient lookup */
 
 	stix_uch_t* t, * e;
-	stix_ssize_t index;
-	stix_size_t i;
+	stix_size_t index, i;
 
 	t = haystack->ptr;
 	e = t + haystack->len;
@@ -362,7 +361,11 @@ static stix_ssize_t find_word_in_string (const stix_ucs_t* haystack, const stix_
 			if (t >= e || name->ptr[i] != *t) goto unmatched;
 			t++;
 		}
-		if (t >= e || is_spacechar(*t)) return index;
+		if (t >= e || is_spacechar(*t)) 
+		{
+			if (xindex) *xindex = index;
+			return 0;
+		}
 
 	unmatched:
 		while (t < e)
@@ -1860,7 +1863,7 @@ static STIX_INLINE int add_class_level_variable (stix_t* stix, var_type_t index,
 
 static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t self, const stix_ucs_t* name, var_info_t* var)
 {
-	stix_ssize_t pos;
+	stix_size_t pos;
 	stix_oop_t super;
 	stix_oop_char_t v;
 	stix_oop_char_t* vv;
@@ -1885,8 +1888,7 @@ static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t se
 			hs.ptr = v->slot;
 			hs.len = STIX_OBJ_GET_SIZE(v);
 
-			pos = find_word_in_string(&hs, name);
-			if (pos >= 0) 
+			if (find_word_in_string(&hs, name, &pos) >= 0)
 			{
 				super = self->superclass;
 
@@ -1906,9 +1908,7 @@ static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t se
 		 * find the variable in the compiler's own list */
 		for (index = VAR_INSTANCE; index <= VAR_CLASSINST; index++)
 		{
-			pos = find_word_in_string(&stix->c->cls.vars[index], name);
-
-			if (pos >= 0) 
+			if (find_word_in_string(&stix->c->cls.vars[index], name, &pos) >= 0)
 			{
 				super = stix->c->cls.super_oop;
 				var->cls = self;
@@ -1936,8 +1936,7 @@ static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t se
 			hs.ptr = v->slot;
 			hs.len = STIX_OBJ_GET_SIZE(v);
 
-			pos = find_word_in_string(&hs, name);
-			if (pos >= 0) 
+			if (find_word_in_string(&hs, name, &pos) >= 0)
 			{
 				/* class variables reside in the class where the definition is found.
 				 * that means a class variable is found in the definition of
@@ -2062,9 +2061,9 @@ static int add_temporary_variable (stix_t* stix, const stix_ucs_t* name)
 	return copy_string_to (stix, name, &stix->c->mth.tmprs, &stix->c->mth.tmprs_capa, 1, ' ');
 }
 
-static STIX_INLINE stix_ssize_t find_temporary_variable (stix_t* stix, const stix_ucs_t* name)
+static STIX_INLINE int find_temporary_variable (stix_t* stix, const stix_ucs_t* name, stix_size_t* xindex)
 {
-	return find_word_in_string(&stix->c->mth.tmprs, name);
+	return find_word_in_string (&stix->c->mth.tmprs, name, xindex);
 }
 
 static int compile_class_level_variables (stix_t* stix)
@@ -2309,7 +2308,7 @@ static int compile_keyword_method_name (stix_t* stix)
 			return -1;
 		}
 
-		if (find_temporary_variable(stix, &stix->c->tok.name) >= 0)
+		if (find_temporary_variable(stix, &stix->c->tok.name, STIX_NULL) >= 0)
 		{
 			set_syntax_error (stix, STIX_SYNERR_ARGNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
@@ -2394,7 +2393,7 @@ static int compile_method_temporaries (stix_t* stix)
 	GET_TOKEN (stix);
 	while (stix->c->tok.type == STIX_IOTOK_IDENT) 
 	{
-		if (find_temporary_variable(stix, &stix->c->tok.name) >= 0)
+		if (find_temporary_variable(stix, &stix->c->tok.name, STIX_NULL) >= 0)
 		{
 			set_syntax_error (stix, STIX_SYNERR_TMPRNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
@@ -2485,7 +2484,7 @@ static int compile_method_primitive (stix_t* stix)
 
 static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_ioloc_t* name_loc, int name_dotted, var_info_t* var)
 {
-	stix_ssize_t index;
+	stix_size_t index;
 
 	STIX_MEMSET (var, 0, STIX_SIZEOF(*var));
 
@@ -2521,8 +2520,7 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 		return 0;
 	}
 
-	index = find_temporary_variable (stix, name);
-	if (index >= 0)
+	if (find_temporary_variable (stix, name, &index) >= 0)
 	{
 		var->type = (index < stix->c->mth.tmpr_nargs)? VAR_ARGUMENT: VAR_TEMPORARY;
 		var->pos = index;
@@ -2623,7 +2621,7 @@ static int compile_block_temporaries (stix_t* stix)
 	GET_TOKEN (stix);
 	while (stix->c->tok.type == STIX_IOTOK_IDENT) 
 	{
-		if (find_temporary_variable(stix, &stix->c->tok.name) >= 0)
+		if (find_temporary_variable(stix, &stix->c->tok.name, STIX_NULL) >= 0)
 		{
 			set_syntax_error (stix, STIX_SYNERR_TMPRNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
@@ -2711,7 +2709,7 @@ static int compile_block_expression (stix_t* stix)
 			}
 
 /* TODO: check conflicting names as well */
-			if (find_temporary_variable(stix, &stix->c->tok.name) >= 0)
+			if (find_temporary_variable(stix, &stix->c->tok.name, STIX_NULL) >= 0)
 			{
 				set_syntax_error (stix, STIX_SYNERR_BLKARGNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
 				return -1;

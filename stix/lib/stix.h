@@ -49,10 +49,17 @@ typedef signed short int stix_int16_t;
 	typedef signed int stix_int32_t;
 #endif
 
-typedef unsigned long int stix_uintptr_t;
-typedef signed long int   stix_intptr_t;
-typedef unsigned long int stix_size_t;
-typedef signed long int   stix_ssize_t;
+#if defined(_WIN64)
+	typedef unsigned __int64  stix_uintptr_t;
+	typedef signed __int64    stix_intptr_t;
+	typedef unsigned __int64  stix_size_t;
+	typedef signed __int64    stix_ssize_t;
+#else
+	typedef unsigned long int stix_uintptr_t;
+	typedef signed long int   stix_intptr_t;
+	typedef unsigned long int stix_size_t;
+	typedef signed long int   stix_ssize_t;
+#endif
 
 typedef stix_uint8_t  stix_byte_t;
 typedef stix_uint16_t stix_uch_t; /* TODO ... wchar_t??? */
