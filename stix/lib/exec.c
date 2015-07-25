@@ -853,7 +853,7 @@ struct primitive_t
 {
 	stix_ooi_t          nargs; /* expected number of arguments */
 	primitive_handler_t handler;
-	stix_ucs_t          name;
+	/* stix_ucs_t          name; */
 };
 typedef struct primitive_t primitive_t;
 

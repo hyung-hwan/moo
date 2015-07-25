@@ -217,6 +217,7 @@ static char* syntax_error_msg[] =
 	"wrong primitive number",
 	"#include error",
 	"wrong namespace name",
+	"wrong pool dictionary name",
 	"duplicate pool dictionary name",
 	"literal expected"
 };

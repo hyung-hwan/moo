@@ -2066,73 +2066,6 @@ static STIX_INLINE int find_temporary_variable (stix_t* stix, const stix_ucs_t* 
 	return find_word_in_string (&stix->c->mth.tmprs, name, xindex);
 }
 
-static int compile_class_level_variables (stix_t* stix)
-{
-	var_type_t dcl_type = VAR_INSTANCE;
-
-	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
-	{
-		/* process variable modifiers */
-		GET_TOKEN (stix);
-
-		if (is_token_symbol(stix, VOCA_CLASS))
-		{
-			/* #dcl(#class) */
-			dcl_type = VAR_CLASS;
-			GET_TOKEN (stix);
-		}
-		else if (is_token_symbol(stix, VOCA_CLASSINST))
-		{
-			/* #dcl(#classinst) */
-			dcl_type = VAR_CLASSINST;
-			GET_TOKEN (stix);
-		}
-
-		if (stix->c->tok.type != STIX_IOTOK_RPAREN)
-		{
-			set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
-			return -1;
-		}
-
-		GET_TOKEN (stix);
-	}
-
-	do
-	{
-		if (stix->c->tok.type == STIX_IOTOK_IDENT)
-		{
-			var_info_t var;
-
-			if (find_class_level_variable(stix, STIX_NULL, &stix->c->tok.name, &var) >= 0)
-			{
-				set_syntax_error (stix, STIX_SYNERR_VARNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
-				return -1;
-			}
-
-/* TOOD: CHECK IF IT CONFLICTS WITH GLOBAL VARIABLE NAMES */
-/* TODO: ------------------------------------------------ */
-
-			if (add_class_level_variable(stix, dcl_type, &stix->c->tok.name) <= -1) return -1;
-		}
-		else
-		{
-			break;
-		}
-
-		GET_TOKEN (stix);
-	}
-	while (1);
-
-	if (stix->c->tok.type != STIX_IOTOK_PERIOD)
-	{
-		set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
-		return -1;
-	}
-
-	GET_TOKEN (stix);
-	return 0;
-}
-
 static stix_oop_set_t add_namespace (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* name)
 {
 	stix_size_t tmp_count = 0;
@@ -2257,6 +2190,117 @@ wrong_name:
 	seg.ptr = fqn->ptr;
 	set_syntax_error (stix, STIX_SYNERR_NAMESPACE, fqn_loc, &seg);
 	return -1;
+}
+
+static int compile_class_level_variables (stix_t* stix)
+{
+	var_type_t dcl_type = VAR_INSTANCE;
+
+	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
+	{
+		/* process variable modifiers */
+		GET_TOKEN (stix);
+
+		if (is_token_symbol(stix, VOCA_CLASS))
+		{
+			/* #dcl(#class) */
+			dcl_type = VAR_CLASS;
+			GET_TOKEN (stix);
+		}
+		else if (is_token_symbol(stix, VOCA_CLASSINST))
+		{
+			/* #dcl(#classinst) */
+			dcl_type = VAR_CLASSINST;
+			GET_TOKEN (stix);
+		}
+		else if (is_token_symbol(stix, VOCA_POOLDIC))
+		{
+			/* #dcl(#pooldic) */
+			dcl_type = VAR_GLOBAL; /* this is not a real type. use for branching below */
+			GET_TOKEN (stix);
+		}
+
+		if (stix->c->tok.type != STIX_IOTOK_RPAREN)
+		{
+			set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
+		}
+
+		GET_TOKEN (stix);
+	}
+
+	if (dcl_type == VAR_GLOBAL) 
+	{
+		stix_ucs_t last;
+		stix_oop_set_t ns_oop;
+		stix_oop_association_t ass;
+
+		do
+		{
+			if (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
+			{
+				if (preprocess_dotted_name(stix, 0, 0, &stix->c->tok.name, &stix->c->tok.loc, &last, &ns_oop) <= -1) return -1;
+			}
+			else if (stix->c->tok.type == STIX_IOTOK_IDENT)
+			{
+				last = stix->c->tok.name;
+				ns_oop = stix->sysdic;
+			}
+			else break;
+
+			ass = stix_lookupdic (stix, ns_oop, &last);
+			if (!ass || STIX_CLASSOF(stix, ass->value) != stix->_pool_dictionary)
+			{
+				set_syntax_error (stix, STIX_SYNERR_POOLDIC, &stix->c->tok.loc, &stix->c->tok.name);
+				return -1;
+			}
+
+	/* TODO: */
+			/*if (add_pool_dictionary(stix, &stix->c->tok.name) <= -1) return -1;*/
+			GET_TOKEN (stix);
+		}
+		while (1);
+	}
+	else
+	{
+
+		do
+		{
+			if (stix->c->tok.type == STIX_IOTOK_IDENT)
+			{
+				var_info_t var;
+
+				if (find_class_level_variable(stix, STIX_NULL, &stix->c->tok.name, &var) >= 0 ||
+				    stix_lookupdic (stix, stix->sysdic, &stix->c->tok.name) ||  /* conflicts with a top global name */
+				    stix_lookupdic (stix, stix->c->cls.ns_oop, &stix->c->tok.name)) /* conflicts with a global name in the class'es name space */
+				{
+					set_syntax_error (stix, STIX_SYNERR_VARNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
+					return -1;
+				}
+
+				if (add_class_level_variable(stix, dcl_type, &stix->c->tok.name) <= -1) return -1;
+			}
+			else
+			{
+				break;
+			}
+
+			GET_TOKEN (stix);
+		}
+		while (1);
+	}
+
+	if (stix->c->tok.type != STIX_IOTOK_PERIOD)
+	{
+		set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
+
+	GET_TOKEN (stix);
+	return 0;
+
+
+
 }
 
 static int compile_unary_method_name (stix_t* stix)

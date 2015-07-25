@@ -331,6 +331,7 @@ enum stix_synerrnum_t
 	STIX_SYNERR_PRIMNO,        /* wrong primitive number */
 	STIX_SYNERR_INCLUDE,       /* #include error */
 	STIX_SYNERR_NAMESPACE,     /* wrong namespace name */
+	STIX_SYNERR_POOLDIC,       /* wrong pool dictionary */
 	STIX_SYNERR_POOLDICDUP,    /* duplicate pool dictionary */
 	STIX_SYNERR_LITERAL        /* literal expected */
 };
