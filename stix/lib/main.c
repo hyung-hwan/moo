@@ -208,6 +208,7 @@ static char* syntax_error_msg[] =
 	"undeclared variable",
 	"unusable variable in compiled code",
 	"inaccessible variable",
+	"ambiguous variable",
 	"wrong expression primary",
 	"too many temporaries",
 	"too many arguments",

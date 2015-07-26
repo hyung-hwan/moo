@@ -322,6 +322,7 @@ enum stix_synerrnum_t
 	STIX_SYNERR_VARUNDCL,      /* undeclared variable */
 	STIX_SYNERR_VARUNUSE,      /* unsuable variable in compiled code */
 	STIX_SYNERR_VARINACC,      /* inaccessible variable - e.g. accessing an instance variable from a class method is not allowed. */
+	STIX_SYNERR_VARAMBIG,      /* ambiguious variable - e.g. the variable is found in multiple pool dictionaries imported */
 	STIX_SYNERR_PRIMARY,       /* wrong expression primary */
 	STIX_SYNERR_TMPRFLOOD,     /* too many temporaries */
 	STIX_SYNERR_ARGFLOOD,      /* too many arguments */
@@ -423,6 +424,13 @@ struct stix_compiler_t
 		 * var_count[1] - number of class variables
 		 * var_count[2] - number of class instance variables */
 		stix_size_t var_count[3];
+
+		stix_ucs_t pooldic;
+		stix_size_t pooldic_capa;
+		stix_size_t pooldic_count;
+
+		stix_oop_set_t* pooldic_oops;
+		stix_size_t pooldic_oop_capa;
 	} cls;
 
 	/* information about a function being comipled */

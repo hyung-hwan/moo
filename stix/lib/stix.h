@@ -540,7 +540,7 @@ struct stix_set_t
 	stix_oop_oop_t bucket; /* Array */
 };
 
-#define STIX_CLASS_NAMED_INSTVARS 10
+#define STIX_CLASS_NAMED_INSTVARS 11
 typedef struct stix_class_t stix_class_t;
 typedef struct stix_class_t* stix_oop_class_t;
 struct stix_class_t
@@ -560,6 +560,8 @@ struct stix_class_t
 	stix_oop_char_t classvars;     /* String */
 	stix_oop_char_t classinstvars; /* String */
 	/* == NEVER CHANGE THE ORDER OF 3 ITEMS ABOVE == */
+
+	stix_oop_char_t pooldics;      /* String */
 
 	/* [0] - instance methods, MethodDictionary
 	 * [1] - class methods, MethodDictionary */

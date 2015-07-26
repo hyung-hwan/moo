@@ -33,6 +33,7 @@
 #define BALIT_BUFFER_ALIGN   8 /* 256 */
 #define ARLIT_BUFFER_ALIGN   8 /* 256 */
 #define BLK_TMPRCNT_BUFFER_ALIGN 8
+#define POOLDIC_OOP_BUFFER_ALIGN 8
 
 /* initial method dictionary size */
 #define INSTANCE_METHOD_DICTIONARY_SIZE 256 /* TODO: choose the right size */
@@ -1851,7 +1852,7 @@ static STIX_INLINE int add_class_level_variable (stix_t* stix, var_type_t index,
 {
 	int n;
 
-	n =  copy_string_to (stix, name, &stix->c->cls.vars[index], &stix->c->cls.vars_capa[index], 1, ' ');
+	n = copy_string_to (stix, name, &stix->c->cls.vars[index], &stix->c->cls.vars_capa[index], 1, ' ');
 	if (n >= 0) 
 	{
 		stix->c->cls.var_count[index]++;
@@ -1860,6 +1861,42 @@ static STIX_INLINE int add_class_level_variable (stix_t* stix, var_type_t index,
 
 	return n;
 }
+
+static STIX_INLINE int add_pool_dictionary (stix_t* stix, const stix_ucs_t* name, stix_oop_set_t pooldic_oop)
+{
+	int n;
+	stix_size_t saved_len;
+
+	saved_len = stix->c->cls.pooldic.len;
+
+	n = copy_string_to (stix, name, &stix->c->cls.pooldic, &stix->c->cls.pooldic_capa, 1, ' ');
+	if (n >= 0) 
+	{
+		if (stix->c->cls.pooldic_count >= stix->c->cls.pooldic_oop_capa)
+		{
+			stix_size_t new_capa;
+			stix_oop_set_t* tmp;
+
+			new_capa = STIX_ALIGN(stix->c->cls.pooldic_oop_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
+			tmp = stix_reallocmem (stix, stix->c->cls.pooldic_oops, new_capa * STIX_SIZEOF(stix_oop_set_t));
+			if (!tmp) 
+			{
+				stix->c->cls.pooldic.len = saved_len;
+				return -1;
+			}
+
+			stix->c->cls.pooldic_oop_capa = new_capa;
+			stix->c->cls.pooldic_oops = tmp;
+		}
+
+		stix->c->cls.pooldic_oops[stix->c->cls.pooldic_count] = pooldic_oop;
+		stix->c->cls.pooldic_count++;
+/* TODO: check if pooldic_count overflows */
+	}
+
+	return n;
+}
+
 
 static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t self, const stix_ucs_t* name, var_info_t* var)
 {
@@ -2231,9 +2268,12 @@ static int compile_class_level_variables (stix_t* stix)
 
 	if (dcl_type == VAR_GLOBAL) 
 	{
+		/* pool dictionary import declaration
+		 * #dcl(#pooldic) ... */
 		stix_ucs_t last;
 		stix_oop_set_t ns_oop;
 		stix_oop_association_t ass;
+		stix_size_t i;
 
 		do
 		{
@@ -2244,10 +2284,12 @@ static int compile_class_level_variables (stix_t* stix)
 			else if (stix->c->tok.type == STIX_IOTOK_IDENT)
 			{
 				last = stix->c->tok.name;
-				ns_oop = stix->sysdic;
+				/* it falls back to the name space of the class */
+				ns_oop = stix->c->cls.ns_oop; 
 			}
 			else break;
 
+			/* check if the name refers to a pool dictionary */
 			ass = stix_lookupdic (stix, ns_oop, &last);
 			if (!ass || STIX_CLASSOF(stix, ass->value) != stix->_pool_dictionary)
 			{
@@ -2255,15 +2297,24 @@ static int compile_class_level_variables (stix_t* stix)
 				return -1;
 			}
 
-	/* TODO: */
-			/*if (add_pool_dictionary(stix, &stix->c->tok.name) <= -1) return -1;*/
+			/* check if the same dictionary pool has been declared for import */
+			for (i = 0; i < stix->c->cls.pooldic_count; i++)
+			{
+				if ((stix_oop_set_t)ass->value == stix->c->cls.pooldic_oops[i])
+				{
+					set_syntax_error (stix, STIX_SYNERR_POOLDICDUP, &stix->c->tok.loc, &stix->c->tok.name);
+					return -1;
+				}
+			}
+
+			if (add_pool_dictionary(stix, &stix->c->tok.name, (stix_oop_set_t)ass->value) <= -1) return -1;
 			GET_TOKEN (stix);
 		}
 		while (1);
 	}
 	else
 	{
-
+		/* variable declaration */
 		do
 		{
 			if (stix->c->tok.type == STIX_IOTOK_IDENT)
@@ -2557,8 +2608,36 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 		stix_ucs_t last;
 		stix_oop_set_t ns_oop;
 		stix_oop_association_t ass;
+		const stix_uch_t* dot;
 
-/*TODO: handle self.XXX ---------- */
+
+		dot = stix_findchar (name->ptr, name->len, '.');
+		STIX_ASSERT (dot != STIX_NULL);
+		if (dot - name->ptr == 4 && stix_equalchars(name->ptr, vocas[VOCA_SELF].str, 4))
+		{
+			/* the dotted name begins with self. */
+			dot = stix_findchar (dot + 1, name->len - 5, '.');
+			if (!dot)
+			{
+				/* the dotted name is composed of 2 segments only */
+				last.ptr = name->ptr + 5;
+				last.len = name->len - 5;
+				if (!is_reserved_word(&last))
+				{
+					if (find_class_level_variable(stix, stix->c->cls.self_oop, &last, var) >= 0)
+					{
+						goto class_level_variable;
+					}
+					else
+					{
+						/* undeclared identifier */
+						set_syntax_error (stix, STIX_SYNERR_VARUNDCL, name_loc, name);
+						return -1;
+					}
+				}
+			}
+		}
+
 		if (preprocess_dotted_name (stix, 1, 1, name, name_loc, &last, &ns_oop) <= -1) return -1;
 
 printf ("checking variable ");
@@ -2587,8 +2666,10 @@ printf ("\n");
 	}
 	else 
 	{
+	
 		if (find_class_level_variable(stix, stix->c->cls.self_oop, name, var) >= 0)
 		{
+		class_level_variable:
 			switch (var->type)
 			{
 				case VAR_INSTANCE:
@@ -2639,7 +2720,7 @@ printf ("\n");
 			ass = stix_lookupdic (stix, stix->c->cls.ns_oop, name);
 			if (!ass && stix->c->cls.ns_oop != stix->sysdic) 
 				ass = stix_lookupdic (stix, stix->sysdic, name);
-/* TODO: search in the pool dictionary */
+
 			if (ass)
 			{
 				var->type = VAR_GLOBAL;
@@ -2647,9 +2728,36 @@ printf ("\n");
 			}
 			else
 			{
-				/* undeclared identifier */
-				set_syntax_error (stix, STIX_SYNERR_VARUNDCL, name_loc, name);
-				return -1;
+				stix_size_t i;
+				stix_oop_association_t ass2 = STIX_NULL;
+
+				/* attempt to find the variable in pool dictionaries */
+				for (i = 0; i < stix->c->cls.pooldic_count; i++)
+				{
+					ass = stix_lookupdic (stix, stix->c->cls.pooldic_oops[i], name);
+					if (ass)
+					{
+						if (ass2)
+						{
+							/* the variable name has been found at least in 2 dictionaries */
+							set_syntax_error (stix, STIX_SYNERR_VARAMBIG, name_loc, name);
+							return -1;
+						}
+						ass2 = ass;
+					}
+				}
+
+				if (ass2)
+				{
+					var->type = VAR_GLOBAL;
+					var->gbl = ass2;
+				}
+				else
+				{
+					/* undeclared identifier */
+					set_syntax_error (stix, STIX_SYNERR_VARUNDCL, name_loc, name);
+					return -1;
+				}
 			}
 		}
 	}
@@ -4239,6 +4347,10 @@ printf (" CONFLICTING CLASS DEFINITION %lu %lu %lu %lu\n",
 	if (!tmp) return -1;
 	stix->c->cls.self_oop->classinstvars = (stix_oop_char_t)tmp;
 
+	tmp = stix_makestring (stix, stix->c->cls.pooldic.ptr, stix->c->cls.pooldic.len);
+	if (!tmp) return -1;
+	stix->c->cls.self_oop->pooldics = (stix_oop_char_t)tmp;
+
 /* TOOD: good dictionary size */
 	tmp = (stix_oop_t)stix_makedic (stix, stix->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
@@ -4580,6 +4692,9 @@ static int compile_class_definition (stix_t* stix, int extend)
 		stix->c->cls.vars[i].len = 0;
 	}
 
+	stix->c->cls.pooldic_count = 0;
+	stix->c->cls.pooldic.len = 0;
+
 	stix->c->cls.self_oop = STIX_NULL;
 	stix->c->cls.super_oop = STIX_NULL;
 	stix->c->cls.mthdic_oop[MTH_INSTANCE] = STIX_NULL;
@@ -4603,6 +4718,8 @@ static int compile_class_definition (stix_t* stix, int extend)
 	stix->c->mth.literal_count = 0;
 	stix->c->mth.balit_count = 0;
 	stix->c->mth.arlit_count = 0;
+
+	stix->c->cls.pooldic_count = 0;
 
 	return n;
 }
@@ -4888,6 +5005,11 @@ static void gc_compiler (stix_t* stix)
 		if (stix->c->cls.superns_oop)
 			stix->c->cls.superns_oop = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.superns_oop);
 
+		for (i = 0; i < stix->c->cls.pooldic_count; i++)
+		{
+			stix->c->cls.pooldic_oops[i] = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.pooldic_oops[i]);
+		}
+
 		for (i = 0; i < stix->c->mth.literal_count; i++)
 		{
 			stix->c->mth.literals[i] = stix_moveoop (stix, stix->c->mth.literals[i]);
@@ -4917,6 +5039,9 @@ static void fini_compiler (stix_t* stix)
 		{
 			if (stix->c->cls.vars[i].ptr) stix_freemem (stix, stix->c->cls.vars[i].ptr);
 		}
+
+		if (stix->c->cls.pooldic.ptr) stix_freemem (stix, stix->c->cls.pooldic.ptr);
+		if (stix->c->cls.pooldic_oops) stix_freemem (stix, stix->c->cls.pooldic_oops);
 
 		if (stix->c->mth.text.ptr) stix_freemem (stix, stix->c->mth.text.ptr);
 		if (stix->c->mth.assignees.ptr) stix_freemem (stix, stix->c->mth.assignees.ptr);
