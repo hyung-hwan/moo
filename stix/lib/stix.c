@@ -214,6 +214,21 @@ int stix_equalchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_size_t
 	return 1;
 }
 
+int stix_equalchars2 (const stix_ucs_t* str1, const char* str2)
+{
+	const stix_uch_t* ptr, * end;
+
+	ptr = str1->ptr;
+	end = str1->ptr + str1->len;
+	while (ptr < end && *ptr == *str2 && *str2 != '\0') 
+	{
+		ptr++;
+		str2++;
+	}
+
+	return ptr >= end && *str2 == '\0';
+}
+
 void stix_copychars (stix_uch_t* dst, const stix_uch_t* src, stix_size_t len)
 {
 	stix_size_t i;

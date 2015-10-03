@@ -856,6 +856,11 @@ int stix_equalchars (
 	stix_size_t         len
 );
 
+int stix_equalchars2 (
+	const stix_ucs_t* str1,
+	const char*       str2
+);
+
 void stix_copychars (
 	stix_uch_t*       dst,
 	const stix_uch_t* src,
@@ -1065,6 +1070,13 @@ void stix_getsynerr (
 	stix_synerr_t* synerr
 );
 
+/* ========================================================================= */
+/* exec.c                                                                    */
+/* ========================================================================= */
+int stix_getprimno (
+	stix_t*           stix,
+	const stix_ucs_t* name
+);
 
 /* TODO: remove debugging functions */
 /* ========================================================================= */

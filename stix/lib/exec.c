@@ -26,6 +26,8 @@
 
 #include "stix-prv.h"
 
+#include <dlfcn.h> /* TODO: remove this. make dlXXX calls to callbacks */
+
 /* TODO: context's stack overflow check in various part of this file */
 /* TOOD: determine the right stack size */
 #define CONTEXT_STACK_SIZE 96
@@ -355,6 +357,8 @@ TODO: overcome this problem
 	return activate_new_method (stix, mth);
 }
 
+
+/* ------------------------------------------------------------------------- */
 static int primitive_dump (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_ooi_t i;
@@ -446,7 +450,6 @@ static int primitive_basic_size (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 	STIX_ASSERT (nargs == 0);
-
 
 	rcv = ACTIVE_STACK_GETTOP(stix);
 	ACTIVE_STACK_SETTOP(stix, STIX_OOP_FROM_SMINT(STIX_OBJ_GET_SIZE(rcv)));
@@ -846,6 +849,155 @@ static int primitive_integer_gt (stix_t* stix, stix_ooi_t nargs)
 	return 0;
 }
 
+static int primitive_ffi_open (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg;
+	void* handle;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (STIX_OBJ_GET_FLAGS_TYPE(arg) != STIX_OBJ_TYPE_CHAR)
+	{
+		/* TODO: more info on error */
+		return 0;
+	}
+
+
+{ ///////////////////////
+/* TODO: grow buffer */
+	stix_bch_t bcs[128];
+	stix_size_t ucslen, bcslen;
+
+	bcslen = STIX_COUNTOF(bcs);
+	ucslen = STIX_OBJ_GET_SIZE(arg);
+	if (stix_ucstoutf8 (((stix_oop_char_t)arg)->slot, &ucslen, bcs, &bcslen) <= -1)
+	{
+		/* TODO: more info on error */
+		return 0;
+	}
+
+	bcs[bcslen] = '\0';
+	handle = dlopen (bcs, RTLD_NOW);
+	if (!handle) 
+	{
+		/* TODO: more info on error */
+		return 0;
+	}
+} ///////////////////////
+
+	ACTIVE_STACK_POP (stix);
+/* TODO: how to hold an address? as an integer????  or a byte array? */
+	ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(handle));
+
+	return 1;
+}
+
+static int primitive_ffi_close (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg;
+	void* handle;
+
+	STIX_ASSERT (nargs == 1);
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (!STIX_OOP_IS_SMINT(arg))
+	{
+		/* TODO: more info on error */
+		return 0;
+	}
+
+	ACTIVE_STACK_POP (stix);
+
+	handle = STIX_OOP_TO_SMINT(arg); /* TODO: how to store void* ??? */
+	dlclose (handle);
+	return 1;
+}
+
+static int primitive_ffi_call (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, fun, arr;
+
+	STIX_ASSERT (nargs == 2);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 2);
+	fun = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arr = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (!STIX_OOP_IS_SMINT(fun)) /* TODO: how to store pointer  */
+	{
+		/* TODO: more info on error */
+		return 0;
+	}
+
+	if (STIX_CLASSOF(arr) != stix->_array) /* TODO: check if arr is a kind of array??? */
+	{
+		/* TODO: more info on error */
+		return 0;
+	}
+
+	return 1;
+}
+
+static int primitive_ffi_getsym (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, hnd, nam;
+	void* handle, * sym;
+
+
+	STIX_ASSERT (nargs == 2);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 2);
+	nam = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	hnd = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (!STIX_OOP_IS_SMINT(hnd)) /* TODO: how to store pointer  */
+	{
+		/* TODO: more info on error */
+		return 0;
+	}
+
+	if (STIX_OBJ_GET_FLAGS_TYPE(nam) != STIX_OBJ_TYPE_CHAR)
+	{
+		/* TODO: more info on error */
+		return 0;
+	}
+
+
+{ ///////////////////////
+/* TODO: grow buffer */
+	stix_bch_t bcs[128];
+	stix_size_t ucslen, bcslen;
+
+	bcslen = STIX_COUNTOF(bcs);
+	ucslen = STIX_OBJ_GET_SIZE(nam);
+	if (stix_ucstoutf8 (((stix_oop_char_t)nam)->slot, &ucslen, bcs, &bcslen) <= -1)
+	{
+		/* TODO: more info on error */
+		return 0;
+	}
+
+	bcs[bcslen] = '\0';
+	sym = dlsym (handle, bcs);
+	if (!sym) 
+	{
+		/* TODO: more info on error */
+		return 0;
+	}
+} ///////////////////////
+
+	ACTIVE_STACK_POPS (stix, 2);
+/* TODO: how to hold an address? as an integer????  or a byte array? */
+	ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(sym));
+
+	return 1;
+}
 
 typedef int (*primitive_handler_t) (stix_t* stix, stix_ooi_t nargs);
 
@@ -853,26 +1005,49 @@ struct primitive_t
 {
 	stix_ooi_t          nargs; /* expected number of arguments */
 	primitive_handler_t handler;
-	/* stix_ucs_t          name; */
+	const char*         name; /* the name is supposed to be 7-bit ascii only */
 };
 typedef struct primitive_t primitive_t;
 
 static primitive_t primitives[] =
 {
-	/*  0 */ {  -1,   primitive_dump                       },
-	/*  1 */ {   0,   primitive_new                        },
-	/*  2 */ {   1,   primitive_new_with_size              },
-	/*  3 */ {   0,   primitive_basic_size                 },
-	/*  4 */ {   1,   primitive_basic_at                   },
-	/*  5 */ {   2,   primitive_basic_at_put               },
-	/*  6 */ {  -1,   primitive_block_value                },
-	/*  7 */ {   1,   primitive_integer_add                },
-	/*  8 */ {   1,   primitive_integer_sub                },
-	/*  9 */ {   1,   primitive_integer_mul                },
-	/* 10 */ {   1,   primitive_integer_eq                 },
-	/* 11 */ {   1,   primitive_integer_lt                 },
-	/* 12 */ {   1,   primitive_integer_gt                 }
+	{  -1,   primitive_dump,                 "dump"          }, /*  0 */
+	{   0,   primitive_new,                  "new"           }, /*  1 */
+	{   1,   primitive_new_with_size,        "new:"          }, /*  2 */
+	{   0,   primitive_basic_size,           "basicSize"     }, /*  3 */
+	{   1,   primitive_basic_at,             "basicAt:"      }, /*  4 */
+	{   2,   primitive_basic_at_put,         "basicAt:put:"  }, /*  5 */
+	{  -1,   primitive_block_value,          "blockValue"    }, /*  6 */
+	{   1,   primitive_integer_add,          "integerAdd:"   }, /*  7 */
+	{   1,   primitive_integer_sub,          "integerSub:"   }, /*  8 */
+	{   1,   primitive_integer_mul,          "integerMul:"   }, /*  9 */
+	{   1,   primitive_integer_eq,           "integerEq:"    }, /* 10 */
+	{   1,   primitive_integer_lt,           "integerLt:"    }, /* 11 */
+	{   1,   primitive_integer_gt,           "integerGt:"    }, /* 12 */
+
+	{   1,   primitive_ffi_open,             "ffiOpen"       },
+	{   1,   primitive_ffi_close,            "ffiClose"      },
+	{   2,   primitive_ffi_call,             "ffiCall"       },
+	{   2,   primitive_ffi_getsym,           "ffiGetSym"     }
 };
+
+int stix_getprimno (stix_t* stix, const stix_ucs_t* name)
+{
+	int i;
+
+	for (i = 0; i < STIX_COUNTOF(primitives); i++)
+	{
+		if (stix_equalchars2(name, primitives[i].name))
+		{
+			return i;
+		}
+	}
+
+	stix->errnum = STIX_ENOENT;
+	return -1;
+}
+
+/* ------------------------------------------------------------------------- */
 
 int stix_execute (stix_t* stix)
 {

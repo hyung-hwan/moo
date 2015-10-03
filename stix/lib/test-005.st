@@ -195,7 +195,7 @@
 	}
 ## ----------------------------------------------------------------------
 
-	#method(#class) main
+	#method(#class) main22
 	{
 		|a b c d e f g h i j k sum |
 
@@ -224,6 +224,13 @@
 		[self getTen] value dump.
 	}
 
+	#method(#class) main
+	{
+		| ffi |
+		ffi := FFI new: 'libc.so.6'.
+		ffi call: #printf withArgs: #((str '%d') (int 10) (long 20)).
+		ffi close.
+	}
 }
 
 

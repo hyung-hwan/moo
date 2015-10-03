@@ -14,40 +14,45 @@
 
 	#method(#class) dump
 	{
-		<primitive: 0>
+		<primitive: #dump>
 	}
 
 	#method dump
 	{
-		<primitive: 0>
+		<primitive: #dump>
 	}
 
 	#method(#class) new
 	{
-		<primitive: 1>
+		## <primitive: 1>
+		<primitive: #new>
 	}
 
 	#method(#class) new: anInteger
 	{
-		<primitive: 2>
+		## <primitive: 2>
+		<primitive: #new:>
 	}
 
 	#method basicSize
 	{
-		<primitive: 3>
+		## <primitive: 3>
+		<primitive: #basicSize>
 		^0
 	}
 
 
 	#method basicAt: anInteger
 	{
-		<primitive: 4>
+		## <primitive: 4>
+		<primitive: #basicAt:>
 		## self error: 'out of range'.
 	}
 
 	#method basicAt: anInteger put: anObject
 	{
-		<primitive: 5>
+		## <primitive: 5>
+		<primitive: #basicAt:put:>
 		## self error: 'out of range'.
 	}
 
@@ -392,4 +397,64 @@
 {
 	#dcl owner preamble ntmprs nargs code source.
 }
+
+
+#class FFI(Object)
+{
+	#dcl name handle funcs.
+
+	#method(#class) new: aString
+	{
+		^self new open: aString.
+	}
+
+	#method open: aString
+	{
+		self.funcs := Dictionary new.
+		self.name := aString.
+		self.handle := self privateOpen: self.name.
+	}
+
+	#method close
+	{
+		self privateClose: self.handle.
+		self.handle := nil.
+	}
+
+	#method call: aFunctionName withArgs: anArgArray
+	{
+		| f |
+
+		f := self.funcs at: aFunctionName.
+		f isNil ifTrue: [
+			f := self privateGetSymbol: aFunctionName in: self.handle.
+			f isNil ifTrue: [ self error: 'No such function' ].
+			self.funcs at: aFunctionName put: f.
+		].
+
+		^self privateCall: f withArgs: anArgArray.
+	}
+
+	#method privateOpen: aString
+	{
+		<primitive: #ffiOpen>
+		## throw an exception here.
+	}
+
+	#method privateClose: aHandle
+	{
+		<primitive: #ffiClose>
+	}
+
+	#method privateCall: aFFISym withArgs: anArgArray
+	{
+		<primitive: #ffiCall>
+	}
+
+	#method privateGetSymbol: aString in: aHandle
+	{
+		<primitive: #ffiGetSym>
+	}
+}
+
 

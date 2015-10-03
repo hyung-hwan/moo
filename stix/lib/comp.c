@@ -165,6 +165,7 @@ static STIX_INLINE int is_spacechar (stix_uci_t c)
 	}
 }
 
+
 static STIX_INLINE int is_alphachar (stix_uci_t c)
 {
 /* TODO: support full unicode */
@@ -215,6 +216,16 @@ static STIX_INLINE int is_binselchar (stix_uci_t c)
 		default:
 			return 0;
 	}
+}
+
+static STIX_INLINE int is_leadidentchar (stix_uci_t c)
+{
+	return is_alphachar(c) || c == '_';
+}
+
+static STIX_INLINE int is_identchar (stix_uci_t c)
+{
+	return is_alnumchar(c) || c == '_';
 }
 
 static STIX_INLINE int is_closing_char (stix_uci_t c)
@@ -717,7 +728,7 @@ static int get_ident (stix_t* stix, stix_uci_t char_read_ahead)
 		ADD_TOKEN_CHAR (stix, c);
 		GET_CHAR_TO (stix, c);
 	} 
-	while (is_alnumchar(c));
+	while (is_identchar(c));
 
 	if (c == ':') 
 	{
@@ -726,7 +737,7 @@ static int get_ident (stix_t* stix, stix_uci_t char_read_ahead)
 		stix->c->tok.type = STIX_IOTOK_KEYWORD;
 		GET_CHAR_TO (stix, c);
 
-		if (stix->c->in_array && is_alphachar(c)) 
+		if (stix->c->in_array && is_leadidentchar(c)) 
 		{
 			/* when reading an array literal, read as many characters as
 			 * would compose a normal keyword symbol literal */
@@ -735,7 +746,7 @@ static int get_ident (stix_t* stix, stix_uci_t char_read_ahead)
 				ADD_TOKEN_CHAR (stix, c);
 				GET_CHAR_TO (stix, c);
 			}
-			while (is_alnumchar(c));
+			while (is_identchar(c));
 
 			if (c == ':') goto read_more_kwsym;
 			else
@@ -757,7 +768,7 @@ static int get_ident (stix_t* stix, stix_uci_t char_read_ahead)
 		read_more_seg:
 			GET_CHAR_TO (stix, c);
 
-			if (is_alphachar(c))
+			if (is_leadidentchar(c))
 			{
 				stix->c->tok.type = STIX_IOTOK_IDENT_DOTTED;
 
@@ -767,7 +778,7 @@ static int get_ident (stix_t* stix, stix_uci_t char_read_ahead)
 					ADD_TOKEN_CHAR (stix, c);
 					GET_CHAR_TO (stix, c);
 				}
-				while (is_alnumchar(c));
+				while (is_identchar(c));
 
 				if (c == '.') goto read_more_seg;
 			}
@@ -1281,14 +1292,14 @@ retry:
 						} 
 						while (is_binselchar(c));
 					}
-					else if (is_alphachar(c))
+					else if (is_leadidentchar(c)) 
 					{
 						do 
 						{
 							ADD_TOKEN_CHAR (stix, c);
 							GET_CHAR_TO (stix, c);
 						} 
-						while (is_alnumchar(c));
+						while (is_identchar(c));
 
 						if (c == ':')
 						{
@@ -1297,14 +1308,14 @@ retry:
 							ADD_TOKEN_CHAR (stix, c);
 							GET_CHAR_TO (stix, c);
 
-							if (is_alphachar(c))
+							if (is_leadidentchar(c))
 							{
 								do 
 								{
 									ADD_TOKEN_CHAR (stix, c);
 									GET_CHAR_TO (stix, c);
 								} 
-								while (is_alnumchar(c));
+								while (is_identchar(c));
 
 								if (c == ':') goto read_more_word;
 								else
@@ -1328,7 +1339,7 @@ retry:
 						read_more_seg:
 							GET_CHAR_TO (stix, c);
 
-							if (is_alphachar(c))
+							if (is_leadidentchar(c))
 							{
 								ADD_TOKEN_CHAR (stix, '.');
 								do
@@ -1336,7 +1347,7 @@ retry:
 									ADD_TOKEN_CHAR (stix, c);
 									GET_CHAR_TO (stix, c);
 								}
-								while (is_alnumchar(c));
+								while (is_identchar(c));
 
 								if (c == '.') goto read_more_seg;
 							}
@@ -1411,7 +1422,7 @@ retry:
 	 */
 
 		default:
-			if (is_alphachar(c)) 
+			if (is_leadidentchar(c)) 
 			{
 				if (get_ident(stix, STIX_UCI_EOF) <= -1) return -1;
 			}
@@ -2555,30 +2566,49 @@ static int compile_method_primitive (stix_t* stix)
  * <some-other-modifier: xxxx>
  */
 
-	GET_TOKEN (stix); /* TODO: only integer */
-	if (stix->c->tok.type != STIX_IOTOK_NUMLIT) 
+	GET_TOKEN (stix); 
+	switch (stix->c->tok.type)
 	{
-		set_syntax_error (stix, STIX_SYNERR_INTEGER, &stix->c->tok.loc, &stix->c->tok.name);
-		return -1;
-	}
-
+		case STIX_IOTOK_NUMLIT: /* TODO: allow only an integer */
 /*TODO: more checks the validity of the primitive number. support number with radix and so on support more extensive syntax. support primitive name, not number*/
-	ptr = stix->c->tok.name.ptr;
-	end = ptr + stix->c->tok.name.len;
-	prim_no = 0;
-	while (ptr < end && is_digitchar(*ptr)) 
-	{
-		prim_no = prim_no * 10 + (*ptr - '0');
-		if (!STIX_OOI_IN_PREAMBLE_INDEX_RANGE(prim_no))
-		{
-			set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
-			return -1;
-		}
+			ptr = stix->c->tok.name.ptr;
+			end = ptr + stix->c->tok.name.len;
+			prim_no = 0;
+			while (ptr < end && is_digitchar(*ptr)) 
+			{
+				prim_no = prim_no * 10 + (*ptr - '0');
+				if (!STIX_OOI_IN_PREAMBLE_INDEX_RANGE(prim_no))
+				{
+					set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
+					return -1;
+				}
 
-		ptr++;
+				ptr++;
+			}
+
+			stix->c->mth.prim_no = prim_no;
+			break;
+ 
+		case STIX_IOTOK_SYMLIT:
+			prim_no = stix_getprimno (stix, &stix->c->tok.name);
+			if (prim_no <= -1)
+			{
+				set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
+				return -1;
+			}
+			else if (!STIX_OOI_IN_PREAMBLE_INDEX_RANGE(prim_no))
+			{
+				set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
+				return -1;
+			}
+			stix->c->mth.prim_no = prim_no;
+			break;
+
+		default:
+			set_syntax_error (stix, STIX_SYNERR_INTEGER, &stix->c->tok.loc, &stix->c->tok.name);
+			return -1;
 	}
 
-	stix->c->mth.prim_no = prim_no;
 
 	GET_TOKEN (stix);
 	if (!is_token_binary_selector(stix, VOCA_GT)) 
@@ -2609,7 +2639,6 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 		stix_oop_set_t ns_oop;
 		stix_oop_association_t ass;
 		const stix_uch_t* dot;
-
 
 		dot = stix_findchar (name->ptr, name->len, '.');
 		STIX_ASSERT (dot != STIX_NULL);
@@ -3298,7 +3327,6 @@ static int compile_expression_primary (stix_t* stix, const stix_ucs_t* ident, co
 	if (ident) 
 	{
 		/* the caller has read the identifier and the next word */
-
 	handle_ident:
 		if (get_variable_info(stix, ident, ident_loc, ident_dotted, &var) <= -1) return -1;
 
@@ -3370,6 +3398,7 @@ printf ("\tpush object %d\n", (int)index);
 		switch (stix->c->tok.type)
 		{
 			case STIX_IOTOK_IDENT_DOTTED:
+				ident_dotted = 1;
 			case STIX_IOTOK_IDENT:
 				ident = &stix->c->tok.name;
 				ident_loc = &stix->c->tok.loc;
