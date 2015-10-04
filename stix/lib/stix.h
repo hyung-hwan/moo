@@ -716,6 +716,12 @@ struct stix_context_t
 #define STIX_BYTESOF(stix,oop) \
 	(STIX_OOP_IS_NUMERIC(oop)? STIX_SIZEOF(stix_oow_t): STIX_OBJ_BYTESOF(oop))
 
+/**
+ * The STIX_ISTYPEOF() macro is a safe replacement for STIX_OBJ_GET_FLAGS_TYPE()
+ */
+#define STIX_ISTYPEOF(stix,oop,type) \
+	(!STIX_OOP_IS_NUMERIC(oop) && STIX_OBJ_GET_FLAGS_TYPE(oop) == (type))
+
 typedef struct stix_heap_t stix_heap_t;
 
 struct stix_heap_t

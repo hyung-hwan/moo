@@ -31,7 +31,7 @@
 	#method(#class) new: anInteger
 	{
 		## <primitive: 2>
-		<primitive: #new:>
+		<primitive: #newWithSize>
 	}
 
 	#method basicSize
@@ -45,14 +45,14 @@
 	#method basicAt: anInteger
 	{
 		## <primitive: 4>
-		<primitive: #basicAt:>
+		<primitive: #basicAt>
 		## self error: 'out of range'.
 	}
 
 	#method basicAt: anInteger put: anObject
 	{
 		## <primitive: 5>
-		<primitive: #basicAt:put:>
+		<primitive: #basicAtPut>
 		## self error: 'out of range'.
 	}
 
@@ -110,37 +110,37 @@
 {
 	#method add: aNumber
 	{
-		<primitive: 7>
+		<primitive: #integerAdd>
 	}
 
 	#method + aNumber
 	{
-		<primitive: 7>
+		<primitive: #integerAdd>
 	}
 
 	#method - aNumber
 	{
-		<primitive: 8>
+		<primitive: #integerSub>
 	}
 
 	#method * aNumber
 	{
-		<primitive: 8>
+		<primitive: #integerMul>
 	}
 
 	#method = aNumber
 	{
-		<primitive: 10>
+		<primitive: #integerEQ>
 	}
 
 	#method < aNumber
 	{
-		<primitive: 11>
+		<primitive: #integerLT>
 	}
 
 	#method > aNumber
 	{
-		<primitive: 12>
+		<primitive: #integerGT>
 	}
 }
 
@@ -302,22 +302,22 @@
 
 	#method value
 	{
-		<primitive: 6>
+		<primitive: #blockValue>
 	}
 
 	#method value: a 
 	{
-		<primitive: 6>
+		<primitive: #blockValue>
 	}
 
 	#method value: a value: b
 	{
-		<primitive: 6>
+		<primitive: #blockValue>
 	}
 
 	#method value: a value: b value: c
 	{
-		<primitive: 6>
+		<primitive: #blockValue>
 	}
 
 	#method whileTrue: aBlock
@@ -421,18 +421,20 @@
 		self.handle := nil.
 	}
 
-	#method call: aFunctionName withArgs: anArgArray
+	#method call: aFunctionName withSig: aString withArgs: anArray
 	{
 		| f |
 
-		f := self.funcs at: aFunctionName.
-		f isNil ifTrue: [
-			f := self privateGetSymbol: aFunctionName in: self.handle.
-			f isNil ifTrue: [ self error: 'No such function' ].
-			self.funcs at: aFunctionName put: f.
-		].
+	##	f := self.funcs at: aFunctionName.
+	##	f isNil ifTrue: [
+	##		f := self privateGetSymbol: aFunctionName in: self.handle.
+	##		f isNil ifTrue: [ self error: 'No such function' ].
+	##		self.funcs at: aFunctionName put: f.
+	##	].
+f := self privateGetSymbol: aFunctionName in: self.handle.
+## f isNil ifTrue: [ self error: 'No such function' ].
 
-		^self privateCall: f withArgs: anArgArray.
+		^self privateCall: f withSig: aString withArgs: anArray
 	}
 
 	#method privateOpen: aString
@@ -446,7 +448,7 @@
 		<primitive: #ffiClose>
 	}
 
-	#method privateCall: aFFISym withArgs: anArgArray
+	#method privateCall: aSymbol withSig: aString withArgs: anArray
 	{
 		<primitive: #ffiCall>
 	}

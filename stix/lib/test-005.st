@@ -228,7 +228,9 @@
 	{
 		| ffi |
 		ffi := FFI new: 'libc.so.6'.
-		ffi call: #printf withArgs: #((str '%d') (int 10) (long 20)).
+		## ffi call: #printf with: #((str '%d') (int 10) (long 20)).
+		 ffi call: #printf withSig: 'i|sii' withArgs: #(S'hello world %d %d\n' 11123 9876543).
+		## ffi call: #puts withSig: 'i|s' withArgs: #('hello world').
 		ffi close.
 	}
 }

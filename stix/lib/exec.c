@@ -26,7 +26,11 @@
 
 #include "stix-prv.h"
 
-#include <dlfcn.h> /* TODO: remove this. make dlXXX calls to callbacks */
+
+/* TODO: defined dcAllocMem and dcFreeMeme before builing the dynload and dyncall library */
+#include <dynload.h> /* TODO: remove this. make dlXXX calls to callbacks */
+#include <dyncall.h> /* TODO: remove this. make dyXXXX calls to callbacks */
+
 
 /* TODO: context's stack overflow check in various part of this file */
 /* TOOD: determine the right stack size */
@@ -777,7 +781,7 @@ static int primitive_integer_eq (stix_t* stix, stix_ooi_t nargs)
 	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
 	{
 		ACTIVE_STACK_POP (stix);
-		if (STIX_OOP_TO_SMINT(rcv) < STIX_OOP_TO_SMINT(arg))
+		if (STIX_OOP_TO_SMINT(rcv) == STIX_OOP_TO_SMINT(arg))
 		{
 			ACTIVE_STACK_SETTOP (stix, stix->_true);
 		}
@@ -793,6 +797,33 @@ static int primitive_integer_eq (stix_t* stix, stix_ooi_t nargs)
 	return 0;
 }
 
+static int primitive_integer_ne (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	{
+		ACTIVE_STACK_POP (stix);
+		if (STIX_OOP_TO_SMINT(rcv) != STIX_OOP_TO_SMINT(arg))
+		{
+			ACTIVE_STACK_SETTOP (stix, stix->_true);
+		}
+		else
+		{
+			ACTIVE_STACK_SETTOP (stix, stix->_false);
+		}
+		
+		return 1;
+	}
+
+/* TODO: handle LargeInteger */
+	return 0;
+}
 static int primitive_integer_lt (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
@@ -849,6 +880,62 @@ static int primitive_integer_gt (stix_t* stix, stix_ooi_t nargs)
 	return 0;
 }
 
+static int primitive_integer_le (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	{
+		ACTIVE_STACK_POP (stix);
+		if (STIX_OOP_TO_SMINT(rcv) <= STIX_OOP_TO_SMINT(arg))
+		{
+			ACTIVE_STACK_SETTOP (stix, stix->_true);
+		}
+		else
+		{
+			ACTIVE_STACK_SETTOP (stix, stix->_false);
+		}
+		
+		return 1;
+	}
+
+/* TODO: handle LargeInteger */
+	return 0;
+}
+
+static int primitive_integer_ge (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	{
+		ACTIVE_STACK_POP (stix);
+		if (STIX_OOP_TO_SMINT(rcv) >= STIX_OOP_TO_SMINT(arg))
+		{
+			ACTIVE_STACK_SETTOP (stix, stix->_true);
+		}
+		else
+		{
+			ACTIVE_STACK_SETTOP (stix, stix->_false);
+		}
+		
+		return 1;
+	}
+
+/* TODO: handle LargeInteger */
+	return 0;
+}
+
 static int primitive_ffi_open (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
@@ -859,12 +946,11 @@ static int primitive_ffi_open (stix_t* stix, stix_ooi_t nargs)
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (STIX_OBJ_GET_FLAGS_TYPE(arg) != STIX_OBJ_TYPE_CHAR)
+	if (!STIX_ISTYPEOF(stix, arg, STIX_OBJ_TYPE_CHAR))
 	{
 		/* TODO: more info on error */
 		return 0;
 	}
-
 
 { ///////////////////////
 /* TODO: grow buffer */
@@ -880,7 +966,7 @@ static int primitive_ffi_open (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	bcs[bcslen] = '\0';
-	handle = dlopen (bcs, RTLD_NOW);
+	handle = dlLoadLibrary (bcs);
 	if (!handle) 
 	{
 		/* TODO: more info on error */
@@ -916,19 +1002,20 @@ static int primitive_ffi_close (stix_t* stix, stix_ooi_t nargs)
 	ACTIVE_STACK_POP (stix);
 
 	handle = STIX_OOP_TO_SMINT(arg); /* TODO: how to store void* ??? */
-	dlclose (handle);
+	dlFreeLibrary (handle);
 	return 1;
 }
 
 static int primitive_ffi_call (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_t rcv, fun, arr;
+	stix_oop_t rcv, fun, sig, args;
 
-	STIX_ASSERT (nargs == 2);
+	STIX_ASSERT (nargs == 3);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 2);
-	fun = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arr = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 3);
+	fun = ACTIVE_STACK_GET(stix, stix->sp - 2);
+	sig = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	args = ACTIVE_STACK_GET(stix, stix->sp);
 
 	if (!STIX_OOP_IS_SMINT(fun)) /* TODO: how to store pointer  */
 	{
@@ -936,25 +1023,167 @@ static int primitive_ffi_call (stix_t* stix, stix_ooi_t nargs)
 		return 0;
 	}
 
-	if (STIX_CLASSOF(arr) != stix->_array) /* TODO: check if arr is a kind of array??? */
+	if (!STIX_ISTYPEOF(stix, sig, STIX_OBJ_TYPE_CHAR) || STIX_OBJ_GET_SIZE(sig) <= 0)
+	{
+printf ("wrong signature...\n");
+		return 0;
+	}
+
+	if (STIX_CLASSOF(stix,args) != stix->_array) /* TODO: check if arr is a kind of array??? or check if it's indexed */
 	{
 		/* TODO: more info on error */
 		return 0;
 	}
 
+	{
+		stix_oow_t i;
+		DCCallVM* dc;
+		void* f;
+		stix_oop_oop_t arr;
+		int mode_set;
+
+		f = STIX_OOP_TO_SMINT(fun); /* TODO: decode pointer properly */
+		arr = (stix_oop_oop_t)args;
+
+		dc = dcNewCallVM (4096);
+		if (!dc) return -1; /* TODO: proper error handling */
+
+printf ("CALLING............%p\n", f);
+		//dcMode (dc, DC_CALL_C_DEFAULT);
+		//dcReset (dc);
+
+		/*for (i = 2; i < STIX_OBJ_GET_SIZE(sig); i++)
+		{
+			if (((stix_oop_char_t)sig)->slot[i] == '|') 
+			{
+				dcMode (dc, DC_CALL_C_ELLIPSIS);
+printf ("CALL MODE 111 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
+				mode_set = 1;
+				break;
+			}
+		}
+		if (!mode_set) */ dcMode (dc, DC_CALL_C_DEFAULT);
+
+		for (i = 2; i < STIX_OBJ_GET_SIZE(sig); i++)
+		{
+printf ("CALLING ARG %c\n", ((stix_oop_char_t)sig)->slot[i]);
+			switch (((stix_oop_char_t)sig)->slot[i])
+			{
+			/* TODO: support more types... */
+				/*
+				case '|':
+					dcMode (dc, DC_CALL_C_ELLIPSIS_VARARGS);
+printf ("CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
+					break;
+				*/
+
+				case 'c':
+					/* TODO: sanity check on the argument type */
+					dcArgChar (dc, STIX_OOP_TO_CHAR(arr->slot[i - 2]));
+					break;
+
+				case 'i':
+					dcArgInt (dc, STIX_OOP_TO_SMINT(arr->slot[i - 2]));
+					break;
+
+				case 'l':
+					dcArgLong (dc, STIX_OOP_TO_SMINT(arr->slot[i - 2]));
+					break;
+
+				case 'L':
+					dcArgLongLong (dc, STIX_OOP_TO_SMINT(arr->slot[i - 2]));
+					break;
+
+				case 's':
+				{
+					stix_size_t bcslen, ucslen;
+					stix_bch_t bcs[1024];
+
+					ucslen = STIX_OBJ_GET_SIZE(arr->slot[i - 2]);
+					stix_ucstoutf8 (((stix_oop_char_t)arr->slot[i - 2])->slot, &ucslen, bcs, &bcslen); /* proper string conversion */
+
+					bcs[bcslen] = '\0';
+					dcArgPointer (dc, bcs);
+					break;
+				}
+
+				default:
+					/* TODO: ERROR HANDLING */
+					break;
+			}
+
+		}
+
+		ACTIVE_STACK_POPS (stix, nargs);
+
+		switch (((stix_oop_char_t)sig)->slot[0])
+		{
+/* TODO: support more types... */
+/* TODO: proper return value conversion */
+			case 'c':
+			{
+				char r = dcCallChar (dc, f);
+				ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_CHAR(r));
+				break;
+			}
+
+			case 'i':
+			{
+				int r = dcCallInt (dc, f);
+printf ("CALLED... %d\n", r);
+printf ("CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
+				ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(r));
+				break;
+			}
+
+			case 'l':
+			{
+				long r = dcCallLong (dc, f);
+				ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(r));
+				break;
+			}
+
+			case 'L':
+			{
+				long long r = dcCallLongLong (dc, f);
+				ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(r));
+				break;
+			}
+
+			case 's':
+			{
+				stix_size_t bcslen, ucslen;
+				stix_uch_t ucs[1024];
+				char* r = dcCallPointer (dc, f);
+				
+				bcslen = strlen(r); 
+				stix_utf8toucs (r, &bcslen, ucs, &ucslen); /* proper string conversion */
+
+				ACTIVE_STACK_SETTOP (stix, stix_makestring(stix, ucs, ucslen)); /* TODO: proper error h andling */
+				break;
+			}
+
+			default:
+				/* TOOD: ERROR HANDLING */
+				break;
+		}
+
+		dcFree (dc);
+	}
+
+	
 	return 1;
 }
 
 static int primitive_ffi_getsym (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_t rcv, hnd, nam;
-	void* handle, * sym;
-
+	stix_oop_t rcv, hnd, fun;
+	void* sym;
 
 	STIX_ASSERT (nargs == 2);
 
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 2);
-	nam = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	fun = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	hnd = ACTIVE_STACK_GET(stix, stix->sp);
 
 	if (!STIX_OOP_IS_SMINT(hnd)) /* TODO: how to store pointer  */
@@ -963,12 +1192,11 @@ static int primitive_ffi_getsym (stix_t* stix, stix_ooi_t nargs)
 		return 0;
 	}
 
-	if (STIX_OBJ_GET_FLAGS_TYPE(nam) != STIX_OBJ_TYPE_CHAR)
+	if (!STIX_ISTYPEOF(stix,fun,STIX_OBJ_TYPE_CHAR))
 	{
-		/* TODO: more info on error */
+printf ("wrong function name...\n");
 		return 0;
 	}
-
 
 { ///////////////////////
 /* TODO: grow buffer */
@@ -976,20 +1204,22 @@ static int primitive_ffi_getsym (stix_t* stix, stix_ooi_t nargs)
 	stix_size_t ucslen, bcslen;
 
 	bcslen = STIX_COUNTOF(bcs);
-	ucslen = STIX_OBJ_GET_SIZE(nam);
-	if (stix_ucstoutf8 (((stix_oop_char_t)nam)->slot, &ucslen, bcs, &bcslen) <= -1)
+	ucslen = STIX_OBJ_GET_SIZE(fun);
+	if (stix_ucstoutf8 (((stix_oop_char_t)fun)->slot, &ucslen, bcs, &bcslen) <= -1)
 	{
 		/* TODO: more info on error */
 		return 0;
 	}
 
 	bcs[bcslen] = '\0';
-	sym = dlsym (handle, bcs);
+printf ("FINDING SYMBOL %s\n", bcs);
+	sym = dlFindSymbol (STIX_OOP_TO_SMINT(hnd), bcs); // TODO: decode hnd properly.
 	if (!sym) 
 	{
 		/* TODO: more info on error */
 		return 0;
 	}
+printf ("FOUND SYMBOL %p\n", sym);
 } ///////////////////////
 
 	ACTIVE_STACK_POPS (stix, 2);
@@ -1011,23 +1241,28 @@ typedef struct primitive_t primitive_t;
 
 static primitive_t primitives[] =
 {
-	{  -1,   primitive_dump,                 "dump"          }, /*  0 */
-	{   0,   primitive_new,                  "new"           }, /*  1 */
-	{   1,   primitive_new_with_size,        "new:"          }, /*  2 */
-	{   0,   primitive_basic_size,           "basicSize"     }, /*  3 */
-	{   1,   primitive_basic_at,             "basicAt:"      }, /*  4 */
-	{   2,   primitive_basic_at_put,         "basicAt:put:"  }, /*  5 */
-	{  -1,   primitive_block_value,          "blockValue"    }, /*  6 */
-	{   1,   primitive_integer_add,          "integerAdd:"   }, /*  7 */
-	{   1,   primitive_integer_sub,          "integerSub:"   }, /*  8 */
-	{   1,   primitive_integer_mul,          "integerMul:"   }, /*  9 */
-	{   1,   primitive_integer_eq,           "integerEq:"    }, /* 10 */
-	{   1,   primitive_integer_lt,           "integerLt:"    }, /* 11 */
-	{   1,   primitive_integer_gt,           "integerGt:"    }, /* 12 */
+	{  -1,   primitive_dump,                 "dump"          },
+	{   0,   primitive_new,                  "new"           },
+	{   1,   primitive_new_with_size,        "newWithSize"   },
+	{   0,   primitive_basic_size,           "basicSize"     },
+
+	{   1,   primitive_basic_at,             "basicAt"       },
+	{   2,   primitive_basic_at_put,         "basicAtPut"    },
+
+	{  -1,   primitive_block_value,          "blockValue"    },
+	{   1,   primitive_integer_add,          "integerAdd"    },
+	{   1,   primitive_integer_sub,          "integerSub"    },
+	{   1,   primitive_integer_mul,          "integerMul"    },
+	{   1,   primitive_integer_eq,           "integerEQ"     },
+	{   1,   primitive_integer_ne,           "integerNE"     },
+	{   1,   primitive_integer_lt,           "integerLT"     },
+	{   1,   primitive_integer_gt,           "integerGT"     },
+	{   1,   primitive_integer_le,           "integerLE"     },
+	{   1,   primitive_integer_ge,           "integerGE"     },
 
 	{   1,   primitive_ffi_open,             "ffiOpen"       },
 	{   1,   primitive_ffi_close,            "ffiClose"      },
-	{   2,   primitive_ffi_call,             "ffiCall"       },
+	{   3,   primitive_ffi_call,             "ffiCall"       },
 	{   2,   primitive_ffi_getsym,           "ffiGetSym"     }
 };
 
