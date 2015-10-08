@@ -91,6 +91,18 @@
 #endif
 
 
+#if defined(STIX_DEBUG_EXEC)
+#	define DBGOUT_EXEC_0(fmt) printf(fmt "\n")
+#	define DBGOUT_EXEC_1(fmt,a1) printf(fmt "\n",a1)
+#	define DBGOUT_EXEC_2(fmt,a1,a2) printf(fmt "\n", a1, a2)
+#	define DBGOUT_EXEC_3(fmt,a1,a2,a3) printf(fmt "\n", a1, a2, a3)
+#else
+#	define DBGOUT_EXEC_0(fmt)
+#	define DBGOUT_EXEC_1(fmt,a1)
+#	define DBGOUT_EXEC_2(fmt,a1,a2)
+#	define DBGOUT_EXEC_3(fmt,a1,a2,a3)
+#endif
+
 static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 {
 	stix_oop_context_t ctx;
@@ -199,7 +211,9 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	/* swtich the active context */
 	SWITCH_ACTIVE_CONTEXT (stix, ctx);
 
+#if defined(STIX_DEBUG_EXEC)
 printf ("<<ENTERING>> SP=%d\n", (int)stix->sp);
+#endif
 	return 0;
 
 #if 0
@@ -208,16 +222,20 @@ reuse_context:
 	ctx->_class = stix->_method_context;
 
 	ctx->receiver_or_source = ACTIVE_STACK_GET(stix, stix->sp - nargs);
+#if defined(STIX_DEBUG_EXEC)
 printf ("####### REUSING CONTEXT INSTEAD OF <<ENTERING>> WITH RECEIVER ");
 print_object (stix, ctx->receiver_or_source);
 printf ("\n");
+#endif
 
 	for (i = 0; i < nargs; i++)
 	{
 		ctx->slot[i] = ACTIVE_STACK_GET (stix, stix->sp - nargs + i + 1);
+#if defined(STIX_DEBUG_EXEC)
 printf ("REUSING ARGUMENT %d - ", (int)i);
 print_object (stix, ctx->slot[i]);
 printf ("\n");
+#endif
 	}
 	for (; i <= stix->sp; i++) ctx->slot[i] = stix->_nil;
 	/* keep the sender 
@@ -248,9 +266,11 @@ static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const s
 	int dic_no;
 /* TODO: implement method lookup cache */
 
+#if defined(STIX_DEBUG_EXEC)
 printf ("==== FINDING METHOD FOR %p [", receiver);
 print_ucs (message);
 printf ("] in ");
+#endif
 
 	cls = (stix_oop_class_t)STIX_CLASSOF(stix, receiver);
 	if ((stix_oop_t)cls == stix->_class)
@@ -258,17 +278,21 @@ printf ("] in ");
 		/* receiver is a class object */
 		c = receiver; 
 		dic_no = STIX_CLASS_MTHDIC_CLASS;
+#if defined(STIX_DEBUG_EXEC)
 printf ("class method dictioanry of ");
 print_object(stix, (stix_oop_t)((stix_oop_class_t)c)->name); 
 printf ("\n");
+#endif
 	}
 	else
 	{
 		c = (stix_oop_t)cls;
 		dic_no = STIX_CLASS_MTHDIC_INSTANCE;
+#if defined(STIX_DEBUG_EXEC)
 printf ("instance method dictioanry of ");
 print_object(stix, (stix_oop_t)((stix_oop_class_t)c)->name);
 printf ("\n");
+#endif
 	}
 
 
@@ -381,6 +405,49 @@ static int primitive_dump (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	ACTIVE_STACK_POPS (stix, nargs);
+	return 1; /* success */
+}
+
+static int primitive_identical (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg, b;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	b = (rcv == arg)? stix->_true: stix->_false;
+
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, b);
+	return 1;
+}
+
+static int primitive_not_identical (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg, b;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	b = (rcv != arg)? stix->_true: stix->_false;
+
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, b);
+	return 1;
+}
+
+static int primitive_class (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, c;
+
+	STIX_ASSERT (nargs ==  0);
+	rcv = ACTIVE_STACK_GETTOP (stix);
+	c = STIX_CLASSOF(stix, rcv);
+	ACTIVE_STACK_SETTOP (stix, c);
 	return 1; /* success */
 }
 
@@ -504,7 +571,7 @@ static int primitive_basic_at (stix_t* stix, stix_ooi_t nargs)
 			break;
 
 		case STIX_OBJ_TYPE_WORD:
-			/* TODO: largeINteger if the word is too large */
+			/* TODO: LargeInteger if the word is too large */
 			v = STIX_OOP_FROM_SMINT(((stix_oop_word_t)rcv)->slot[idx]);
 			break;
 
@@ -623,7 +690,9 @@ static int primitive_block_value (stix_t* stix, stix_ooi_t nargs)
 	org_blkctx = (stix_oop_context_t)ACTIVE_STACK_GET(stix, stix->sp - nargs);
 	if (STIX_CLASSOF(stix, org_blkctx) != stix->_block_context)
 	{
+#if defined(STIX_DEBUG_EXEC)
 printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
+#endif
 		return 0;
 	}
 
@@ -635,7 +704,9 @@ printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 		 * For example, [thisContext value] value.
 		 */
 		STIX_ASSERT (STIX_OBJ_GET_SIZE(org_blkctx) > STIX_CONTEXT_NAMED_INSTVARS);
+#if defined(STIX_DEBUG_EXEC)
 printf ("PRIM REVALUING AN BLOCKCONTEXT\n");
+#endif
 		return 0;
 	}
 	STIX_ASSERT (STIX_OBJ_GET_SIZE(org_blkctx) == STIX_CONTEXT_NAMED_INSTVARS);
@@ -643,8 +714,10 @@ printf ("PRIM REVALUING AN BLOCKCONTEXT\n");
 	if (STIX_OOP_TO_SMINT(org_blkctx->method_or_nargs) != nargs) 
 	{
 		/* the number of argument doesn't match */
+#if defined(STIX_DEBUG_EXEC)
 /* TODO: better handling of primitive failure */
 printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
+#endif
 		return 0;
 	}
 
@@ -669,7 +742,9 @@ printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 	blkctx->receiver_or_source = (stix_oop_t)org_blkctx;
 	blkctx->home = org_blkctx->home;
 	blkctx->origin = org_blkctx->origin;
+#if defined(STIX_DEBUG_EXEC)
 printf ("~~~~~~~~~~ BLOCK VALUING %p TO NEW BLOCK %p\n", org_blkctx, blkctx);
+#endif
 #endif
 
 /* TODO: check the stack size of a block context to see if it's large enough to hold arguments */
@@ -692,7 +767,9 @@ printf ("~~~~~~~~~~ BLOCK VALUING %p TO NEW BLOCK %p\n", org_blkctx, blkctx);
 	blkctx->sp = STIX_OOP_FROM_SMINT(local_ntmprs);
 	blkctx->sender = (stix_oop_t)stix->active_context;
 
+#if defined(STIX_DEBUG_EXEC)
 printf ("<<ENTERING BLOCK>>\n");
+#endif
 	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)blkctx);
 	return 1;
 }
@@ -1242,6 +1319,10 @@ typedef struct primitive_t primitive_t;
 static primitive_t primitives[] =
 {
 	{  -1,   primitive_dump,                 "dump"          },
+	{   1,   primitive_identical,            "identical"     },
+	{   1,   primitive_not_identical,        "notIdentical"  },
+	{   0,   primitive_class,                "class"         },
+
 	{   0,   primitive_new,                  "new"           },
 	{   1,   primitive_new_with_size,        "newWithSize"   },
 	{   0,   primitive_basic_size,           "basicSize"     },
@@ -1282,6 +1363,171 @@ int stix_getprimno (stix_t* stix, const stix_ucs_t* name)
 	return -1;
 }
 
+static stix_mod_t* query_primitive_module (stix_t* stix, const stix_uch_t* name)
+{
+	stix_rbt_pair_t* pair;
+	stix_mod_data_t* mdp;
+	stix_cstr_t ea;
+	int n;
+
+	STIX_ASSERT (nsegs == 2);
+
+	pair = stix_rbt_search (stix->modtab, segs[0].ptr, segs[0].len);
+	if (pair)
+	{
+		mdp = (stix_mod_data_t*)STIX_RBT_VPTR(pair);
+	}
+	else
+	{
+		stix_mod_data_t md;
+		stix_mod_load_t load = STIX_NULL;
+		stix_mod_spec_t spec;
+		stix_size_t buflen;
+		/*stix_char_t buf[64 + 15] = STIX_T("_stix_mod_");*/
+
+		/* maximum module name length is 64. 15 is decomposed to 13 + 1 + 1.
+		 * 13 for _stix_mod_t
+		 * 1 for _ at the end when stix_mod_xxx_ is attempted.
+		 * 1 for the terminating '\0'
+		 */
+		stix_char_t buf[64 + 15]; 
+
+		/* the terminating null isn't needed in buf here */
+		STIX_MEMCPY (buf, STIX_T("_stix_mod_"), STIX_SIZEOF(stix_char_t) * 13); 
+		if (segs[0].len > STIX_COUNTOF(buf) - 15)
+		{
+			/* module name too long  */
+			ea.ptr = segs[0].ptr;
+			ea.len = segs[0].len;
+			stix_seterror (stix, STIX_ESEGTL, &ea, STIX_NULL);
+			return STIX_NULL;
+		}
+
+#if defined(STIX_ENABLE_STATIC_MODULE)
+		/* attempt to find a statically linked module */
+
+		/* TODO: binary search ... */
+		for (n = 0; n < STIX_COUNTOF(static_modtab); n++)
+		{
+			if (stix_strcmp (static_modtab[n].modname, segs[0].ptr) == 0) 
+			{
+				load = static_modtab[n].modload;
+				break;
+			}
+		}
+
+		/*if (n >= STIX_COUNTOF(static_modtab))
+		{
+
+			ea.ptr = segs[0].ptr;
+			ea.len = segs[0].len;
+			stix_seterror (stix, STIX_ENOENT, &ea, STIX_NULL);
+			return STIX_NULL;
+		}*/
+
+		if (load)
+		{
+			/* found the module in the staic module table */
+
+			STIX_MEMSET (&md, 0, STIX_SIZEOF(md));
+			/* Note md.handle is STIX_NULL for a static module */
+
+			/* i copy-insert 'md' into the table before calling 'load'.
+			 * to pass the same address to load(), query(), etc */
+			pair = stix_rbt_insert (stix->modtab, segs[0].ptr, segs[0].len, &md, STIX_SIZEOF(md));
+			if (pair == STIX_NULL)
+			{
+				stix_seterrnum (stix, STIX_ENOMEM, STIX_NULL);
+				return STIX_NULL;
+			}
+
+			mdp = (stix_mod_data_t*)STIX_RBT_VPTR(pair);
+			if (load (&mdp->mod, stix) <= -1)
+			{
+				stix_rbt_delete (stix->modtab, segs[0].ptr, segs[0].len);
+				return STIX_NULL;
+			}
+
+			goto done;
+		}
+#endif
+
+		/* attempt to find an external module */
+		STIX_MEMSET (&spec, 0, STIX_SIZEOF(spec));
+
+		if (stix->opt.mod[0].len > 0)
+			spec.prefix = stix->opt.mod[0].ptr;
+		else spec.prefix = STIX_T(STIX_DEFAULT_MODPREFIX);
+
+		if (stix->opt.mod[1].len > 0)
+			spec.postfix = stix->opt.mod[1].ptr;
+		else spec.postfix = STIX_T(STIX_DEFAULT_MODPOSTFIX);
+		
+		STIX_MEMSET (&md, 0, STIX_SIZEOF(md));
+		if (stix->prm.modopen && stix->prm.modsym && stix->prm.modclose)
+		{
+			spec.name = segs[0].ptr;
+			md.handle = stix->prm.modopen (stix, &spec);
+		}
+		else md.handle = STIX_NULL;
+
+		if (md.handle == STIX_NULL) 
+		{
+			ea.ptr = segs[0].ptr;
+			ea.len = segs[0].len;
+			stix_seterror (stix, STIX_ENOENT, &ea, STIX_NULL);
+			return STIX_NULL;
+		}
+
+		buflen = stix_strcpy (&buf[13], segs[0].ptr);
+		/* attempt stix_mod_xxx */
+		load = stix->prm.modsym (stix, md.handle, &buf[1]);
+		if (!load) 
+		{
+			/* attempt _stix_mod_xxx */
+			load = stix->prm.modsym (stix, md.handle, &buf[0]);
+			if (!load)
+			{
+				/* attempt stix_mod_xxx_ */
+				buf[13 + buflen] = STIX_T('_');
+				buf[13 + buflen + 1] = STIX_T('\0');
+				load = stix->prm.modsym (stix, md.handle, &buf[1]);
+				if (!load)
+				{
+					ea.ptr = &buf[1];
+					ea.len = 12 + buflen;
+					stix_seterror (stix, STIX_ENOENT, &ea, STIX_NULL);
+
+					stix->prm.modclose (stix, md.handle);
+					return STIX_NULL;
+				}
+			}
+		}
+
+		/* i copy-insert 'md' into the table before calling 'load'.
+		 * to pass the same address to load(), query(), etc */
+		pair = stix_rbt_insert (stix->modtab, segs[0].ptr, segs[0].len, &md, STIX_SIZEOF(md));
+		if (pair == STIX_NULL)
+		{
+			stix_seterrnum (stix, STIX_ENOMEM, STIX_NULL);
+			stix->prm.modclose (stix, md.handle);
+			return STIX_NULL;
+		}
+
+		mdp = (stix_mod_data_t*)STIX_RBT_VPTR(pair);
+		if (load (&mdp->mod, stix) <= -1)
+		{
+			stix_rbt_delete (stix->modtab, segs[0].ptr, segs[0].len);
+			stix->prm.modclose (stix, mdp->handle);
+			return STIX_NULL;
+		}
+	}
+
+done:
+	n = mdp->mod.query (&mdp->mod, stix, segs[1].ptr, sym);
+	return (n <= -1)? STIX_NULL: &mdp->mod;
+}
+
 /* ------------------------------------------------------------------------- */
 
 int stix_execute (stix_t* stix)
@@ -1290,11 +1536,11 @@ int stix_execute (stix_t* stix)
 	stix_ooi_t b1, b2;
 	stix_oop_t return_value;
 
-stix_size_t inst_counter;
+#if defined(STIX_PROFILE_EXEC)
+	stix_size_t inst_counter = 0;
+#endif
 
 	STIX_ASSERT (stix->active_context != STIX_NULL);
-
-	inst_counter = 0;
 
 	while (1)
 	{
@@ -1308,7 +1554,10 @@ printf ("IP => %d ", (int)stix->ip);
 #if 0
 printf ("BCODE = %x\n", bcode);
 #endif
-inst_counter++;
+
+#if defined(STIX_PROFILE_EXEC)
+		inst_counter++;
+#endif
 
 		switch (bcode)
 		{
@@ -1327,7 +1576,7 @@ inst_counter++;
 			case BCODE_PUSH_INSTVAR_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			push_instvar:
-printf ("PUSH_INSTVAR %d\n", (int)b1);
+				DBGOUT_EXEC_1 ("PUSH_INSTVAR %d", (int)b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->origin->receiver_or_source) == STIX_OBJ_TYPE_OOP);
 				ACTIVE_STACK_PUSH (stix, ((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1]);
 				break;
@@ -1347,7 +1596,7 @@ printf ("PUSH_INSTVAR %d\n", (int)b1);
 			case BCODE_STORE_INTO_INSTVAR_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			store_instvar:
-printf ("STORE_INTO_INSTVAR %d\n", (int)b1);
+				DBGOUT_EXEC_1 ("STORE_INTO_INSTVAR %d", (int)b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver_or_source) == STIX_OBJ_TYPE_OOP);
 				((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1] = ACTIVE_STACK_GETTOP(stix);
 				break;
@@ -1366,7 +1615,7 @@ printf ("STORE_INTO_INSTVAR %d\n", (int)b1);
 			case BCODE_POP_INTO_INSTVAR_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			pop_into_instvar:
-printf ("POP_INTO_INSTVAR %d\n", (int)b1);
+				DBGOUT_EXEC_1 ("POP_INTO_INSTVAR %d", (int)b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver_or_source) == STIX_OBJ_TYPE_OOP);
 				((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1] = ACTIVE_STACK_GETTOP(stix);
 				ACTIVE_STACK_POP (stix);
@@ -1452,8 +1701,7 @@ printf ("POP_INTO_INSTVAR %d\n", (int)b1);
 				if ((bcode >> 4) & 1)
 				{
 					/* push - bit 4 on*/
-printf ("PUSH_TEMPVAR %d - ", (int)b1);
-
+					DBGOUT_EXEC_1 ("PUSH_TEMPVAR %d", (int)b1);
 					ACTIVE_STACK_PUSH (stix, ctx->slot[bx]);
 				}
 				else
@@ -1464,18 +1712,18 @@ printf ("PUSH_TEMPVAR %d - ", (int)b1);
 					if ((bcode >> 3) & 1)
 					{
 						/* pop - bit 3 on */
+						DBGOUT_EXEC_1 ("POP_INTO_TEMPVAR %d", (int)b1);
 						ACTIVE_STACK_POP (stix);
-printf ("POP_INTO_TEMPVAR %d - ", (int)b1);
-
 					}
-else
-{
-printf ("STORE_INTO_TEMPVAR %d - ", (int)b1);
-}
+					else
+					{
+						DBGOUT_EXEC_1 ("STORE_INTO_TEMPVAR %d", (int)b1);
+					}
 				}
-
-print_object (stix, ctx->slot[bx]);
-printf ("\n");
+				/*
+				print_object (stix, ctx->slot[bx]);
+				printf ("\n");
+ 				*/
 				break;
 			}
 
@@ -1494,9 +1742,11 @@ printf ("\n");
 			case BCODE_PUSH_LITERAL_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			push_literal:
-printf ("PUSH_LITERAL idx=%d - ", (int)b1);
-print_object (stix, stix->active_method->slot[b1]);
-printf ("\n");
+				DBGOUT_EXEC_1 ("PUSH_LITERAL %d", (int)b1);
+				/*
+				print_object (stix, stix->active_method->slot[b1]);
+				printf ("\n");
+				*/
 				ACTIVE_STACK_PUSH (stix, stix->active_method->slot[b1]);
 				break;
 
@@ -1535,19 +1785,19 @@ printf ("\n");
 					if ((bcode >> 2) & 1)
 					{
 						/* pop */
+						DBGOUT_EXEC_1("POP_INTO_OBJECT %d", (int)b1);
 						ACTIVE_STACK_POP (stix);
-printf ("POP_INTO_OBJECT %d - ", (int)b1);
 					}
-else
-{
-printf ("STORE_INTO_OBJECT %d - ", (int)b1);
-}
+					else
+					{
+						DBGOUT_EXEC_1("STORE_INTO_OBJECT %d", (int)b1);
+					}
 				}
 				else
 				{
 					/* push */
+					DBGOUT_EXEC_1("PUSH_OBJECT %d", (int)b1);
 					ACTIVE_STACK_PUSH (stix, ass->value);
-printf ("PUSH_OBJECT %d - ", (int)b1);
 				}
 				break;
 			}
@@ -1556,7 +1806,7 @@ printf ("PUSH_OBJECT %d - ", (int)b1);
 
 			case BCODE_JUMP_FORWARD_X:
 				FETCH_PARAM_CODE_TO (stix, b1);
-printf ("JUMP_FORWARD %d\n", (int)b1);
+				DBGOUT_EXEC_1 ("JUMP_FORWARD %d", (int)b1);
 				stix->ip += b1;
 				break;
 
@@ -1564,13 +1814,13 @@ printf ("JUMP_FORWARD %d\n", (int)b1);
 			case BCODE_JUMP_FORWARD_1:
 			case BCODE_JUMP_FORWARD_2:
 			case BCODE_JUMP_FORWARD_3:
-printf ("JUMP_FORWARD %d\n", (int)(bcode & 0x3));
+				DBGOUT_EXEC_1 ("JUMP_FORWARD %d", (int)(bcode & 0x3));
 				stix->ip += (bcode & 0x3); /* low 2 bits */
 				break;
 
 			case BCODE_JUMP_BACKWARD_X:
 				FETCH_PARAM_CODE_TO (stix, b1);
-printf ("JUMP_BACKWARD %d\n", (int)b1);
+				DBGOUT_EXEC_1 ("JUMP_BACKWARD %d", (int)b1);
 				stix->ip += b1;
 				break;
 
@@ -1578,7 +1828,7 @@ printf ("JUMP_BACKWARD %d\n", (int)b1);
 			case BCODE_JUMP_BACKWARD_1:
 			case BCODE_JUMP_BACKWARD_2:
 			case BCODE_JUMP_BACKWARD_3:
-printf ("JUMP_BACKWARD %d\n", (int)(bcode & 0x3));
+				DBGOUT_EXEC_1 ("JUMP_BACKWARD %d", (int)(bcode & 0x3));
 				stix->ip -= (bcode & 0x3); /* low 2 bits */
 				break;
 
@@ -1598,14 +1848,14 @@ return -1;
 
 			case BCODE_JUMP2_FORWARD:
 				FETCH_PARAM_CODE_TO (stix, b1);
-printf ("JUMP2_FORWARD %d\n", (int)b1);
+				DBGOUT_EXEC_1 ("JUMP2_FORWARD %d", (int)b1);
 				stix->ip += MAX_CODE_JUMP + b1;
 				break;
 				break;
 
 			case BCODE_JUMP2_BACKWARD:
 				FETCH_PARAM_CODE_TO (stix, b1);
-printf ("JUMP2_BACKWARD %d\n", (int)b1);
+				DBGOUT_EXEC_1 ("JUMP2_BACKWARD %d", (int)b1);
 				stix->ip -= MAX_CODE_JUMP + b1;
 				break;
 
@@ -1654,22 +1904,24 @@ printf ("JUMP2_BACKWARD %d\n", (int)b1);
 					{
 						/* pop */
 						ACTIVE_STACK_POP (stix);
-printf ("POP_INTO_CTXTEMPVAR %d %d - ", (int)b1, (int)b2);
+						DBGOUT_EXEC_2 ("POP_INTO_CTXTEMPVAR %d %d", (int)b1, (int)b2);
 					}
-else
-{
-printf ("STORE_INTO_CTXTEMPVAR %d %d - ", (int)b1, (int)b2);
-}
+					else
+					{
+						DBGOUT_EXEC_2 ("STORE_INTO_CTXTEMPVAR %d %d", (int)b1, (int)b2);
+					}
 				}
 				else
 				{
 					/* push */
 					ACTIVE_STACK_PUSH (stix, ctx->slot[b2]);
-printf ("PUSH_CTXTEMPVAR %d %d - ", (int)b1, (int)b2);
+					DBGOUT_EXEC_2 ("PUSH_CTXTEMPVAR %d %d", (int)b1, (int)b2);
 				}
-
+/*
 print_object (stix, ctx->slot[b2]);
 printf ("\n");
+*/
+
 				break;
 			}
 			/* -------------------------------------------------------- */
@@ -1716,22 +1968,23 @@ printf ("\n");
 					{
 						/* pop */
 						ACTIVE_STACK_POP (stix);
-printf ("POP_INTO_OBJVAR %d %d - ", (int)b1, (int)b2);
+						DBGOUT_EXEC_2 ("POP_INTO_OBJVAR %d %d", (int)b1, (int)b2);
 					}
-else
-{
-printf ("STORE_INTO_OBJVAR %d %d - ", (int)b1, (int)b2);
-}
+					else
+					{
+						DBGOUT_EXEC_2 ("STORE_INTO_OBJVAR %d %d", (int)b1, (int)b2);
+					}
 				}
 				else
 				{
 					/* push */
-printf ("PUSH_OBJVAR %d %d - ", (int)b1, (int)b2);
+					DBGOUT_EXEC_2 ("PUSH_OBJVAR %d %d", (int)b1, (int)b2);
 					ACTIVE_STACK_PUSH (stix, t->slot[b1]);
 				}
-
+/*
 print_object (stix, t->slot[b1]);
 printf ("\n");
+*/
 				break;
 			}
 
@@ -1769,15 +2022,19 @@ printf ("\n");
 				selector = (stix_oop_char_t)stix->active_method->slot[b2];
 
 
+#if defined(STIX_DEBUG_EXEC)
 printf ("SEND_MESSAGE%s TO RECEIVER AT STACKPOS=%d NARGS=%d SELECTOR=", (((bcode >> 2) & 1)? "_TO_SUPER": ""), (int)(stix->sp - b1), (int)b1);
 print_object (stix, (stix_oop_t)selector);
 fflush (stdout);
+#endif
 				STIX_ASSERT (STIX_CLASSOF(stix, selector) == stix->_symbol);
 
 				newrcv = ACTIVE_STACK_GET(stix, stix->sp - b1);
+#if defined(STIX_DEBUG_EXEC)
 printf (" RECEIVER = ");
 print_object(stix, newrcv);
 printf ("\n");
+#endif
 				mthname.ptr = selector->slot;
 				mthname.len = STIX_OBJ_GET_SIZE(selector);
 				newmth = find_method (stix, newrcv, &mthname, ((bcode >> 2) & 1));
@@ -1797,36 +2054,36 @@ printf ("]\n");
 				switch (preamble_code)
 				{
 					case STIX_METHOD_PREAMBLE_RETURN_RECEIVER:
-printf ("RETURN RECEIVER AT PREAMBLE\n");
+						DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_RECEIVER");
 						ACTIVE_STACK_POPS (stix, b1); /* pop arguments only*/
 						break;
 
 					case STIX_METHOD_PREAMBLE_RETURN_NIL:
-printf ("RETURN NIL AT PREAMBLE\n");
+						DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_NIL");
 						ACTIVE_STACK_POPS (stix, b1);
 						ACTIVE_STACK_SETTOP (stix, stix->_nil);
 						break;
 
 					case STIX_METHOD_PREAMBLE_RETURN_TRUE:
-printf ("RETURN TRUE AT PREAMBLE\n");
+						DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_TRUE");
 						ACTIVE_STACK_POPS (stix, b1);
 						ACTIVE_STACK_SETTOP (stix, stix->_true);
 						break;
 
 					case STIX_METHOD_PREAMBLE_RETURN_FALSE:
-printf ("RETURN FALSE AT PREAMBLE\n");
+						DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_FALSE");
 						ACTIVE_STACK_POPS (stix, b1);
 						ACTIVE_STACK_SETTOP (stix, stix->_false);
 						break;
 
 					case STIX_METHOD_PREAMBLE_RETURN_INDEX:
-printf ("RETURN %d AT PREAMBLE\n", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
+						DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_INDEX %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
 						ACTIVE_STACK_POPS (stix, b1);
 						ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
 						break;
 
 					case STIX_METHOD_PREAMBLE_RETURN_NEGINDEX:
-printf ("RETURN %d AT PREAMBLE\n", (int)-STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
+						DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_NEGINDEX %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
 						ACTIVE_STACK_POPS (stix, b1);
 						ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(-STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
 						break;
@@ -1837,7 +2094,8 @@ printf ("RETURN %d AT PREAMBLE\n", (int)-STIX_METHOD_GET_PREAMBLE_INDEX(preamble
 
 						ACTIVE_STACK_POPS (stix, b1); /* pop arguments only */
 
-printf ("RETURN INSTVAR AT PREAMBLE index %d\n", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
+						DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_INSTVAR %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
+
 						/* replace the receiver by an instance variable of the receiver */
 						rcv = (stix_oop_oop_t)ACTIVE_STACK_GETTOP(stix);
 						STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(rcv) == STIX_OBJ_TYPE_OOP);
@@ -1863,11 +2121,14 @@ printf ("RETURN INSTVAR AT PREAMBLE index %d\n", (int)STIX_METHOD_GET_PREAMBLE_I
 						break;
 					}
 
+
 					case STIX_METHOD_PREAMBLE_PRIMITIVE:
 					{
 						stix_ooi_t prim_no;
 
 						prim_no = STIX_METHOD_GET_PREAMBLE_INDEX(preamble);
+						DBGOUT_EXEC_1 ("METHOD_PREAMBLE_PRIMITIVE %d", (int)prim_no);
+
 						if (prim_no >= 0 && prim_no < STIX_COUNTOF(primitives) && 
 						    (primitives[prim_no].nargs < 0 || primitives[prim_no].nargs == b1))
 						{
@@ -1880,12 +2141,46 @@ printf ("RETURN INSTVAR AT PREAMBLE index %d\n", (int)STIX_METHOD_GET_PREAMBLE_I
 							if (n >= 1) break;
 						}
 
-						/* primitive failed. fall through */
+						/* primitive failed */
+						if (activate_new_method (stix, newmth) <= -1) goto oops;
+						break;
+					}
+
+					case STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE:
+					{
+						stix_ooi_t prim_name_index;
+						stix_oop_t name;
+						primitive_handler_t handler;
+
+						prim_name_index = STIX_METHOD_GET_PREAMBLE_INDEX(preamble);
+						DBGOUT_EXEC_1 ("METHOD_PREAMBLE_NAMED_PRIMITIVE %d", (int)prim_name_index);
+
+						name = newmth->slot[prim_name_index];
+
+						STIX_ASSERT (STIX_ISTYPEOF(stix,name,STIX_OBJ_TYPE_CHAR));
+						STIX_ASSERT (STIX_OBJ_GET_FLAGS_EXTRA(name));
+						STIX_ASSERT (STIX_CLASSOF(stix,name) == stix->_symbol);
+
+						handler = query_primitive_module (stix, ((stix_oop_char_t)name)->slot);
+						if (handler)
+						{
+							stix_pushtmp (stix, (stix_oop_t*)&newmth);
+							n = handler (stix, b1);
+							stix_poptmp (stix);
+							if (n <= -1) goto oops;
+							if (n >= 1) break;
+						}
+
+						/* primitive failed */
+						if (activate_new_method (stix, newmth) <= -1) goto oops;
+						break;
 					}
 
 					default:
-						if (activate_new_method (stix, newmth) <= -1) goto oops;
-						break;
+						/* this must not happen */
+			
+						stix->errnum = STIX_EINTERN;
+						return -1;
 				}
 
 				break; /* CMD_SEND_MESSAGE */
@@ -1894,60 +2189,60 @@ printf ("RETURN INSTVAR AT PREAMBLE index %d\n", (int)STIX_METHOD_GET_PREAMBLE_I
 			/* -------------------------------------------------------- */
 
 			case BCODE_PUSH_RECEIVER:
-printf ("PUSH_RECEIVER %p TO STACK INDEX %d\n", stix->active_context->origin->receiver_or_source, (int)stix->sp);
+				DBGOUT_EXEC_0 ("PUSH_RECEIVER");
 				ACTIVE_STACK_PUSH (stix, stix->active_context->origin->receiver_or_source);
 				break;
 
 			case BCODE_PUSH_NIL:
-printf ("PUSH_NIL\n");
+				DBGOUT_EXEC_0 ("PUSH_NIL");
 				ACTIVE_STACK_PUSH (stix, stix->_nil);
 				break;
 
 			case BCODE_PUSH_TRUE:
-printf ("PUSH_TRUE\n");
+				DBGOUT_EXEC_0 ("PUSH_TRUE");
 				ACTIVE_STACK_PUSH (stix, stix->_true);
 				break;
 
 			case BCODE_PUSH_FALSE:
-printf ("PUSH_FALSE\n");
+				DBGOUT_EXEC_0 ("PUSH_FALSE");
 				ACTIVE_STACK_PUSH (stix, stix->_false);
 				break;
 
 			case BCODE_PUSH_CONTEXT:
-printf ("PUSH_CONTEXT\n");
+				DBGOUT_EXEC_0 ("PUSH_CONTEXT");
 				ACTIVE_STACK_PUSH (stix, (stix_oop_t)stix->active_context);
 				break;
 
 			case BCODE_PUSH_NEGONE:
-printf ("PUSH_NEGONE\n");
+				DBGOUT_EXEC_0 ("PUSH_NEGONE");
 				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(-1));
 				break;
 
 			case BCODE_PUSH_ZERO:
-printf ("PUSH_ZERO\n");
+				DBGOUT_EXEC_0 ("PUSH_ZERO");
 				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(0));
 				break;
 
 			case BCODE_PUSH_ONE:
-printf ("PUSH_ONE\n");
+				DBGOUT_EXEC_0 ("PUSH_ONE");
 				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(1));
 				break;
 
 			case BCODE_PUSH_TWO:
-printf ("PUSH_TWO\n");
+				DBGOUT_EXEC_0 ("PUSH_TWO");
 				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(2));
 				break;
 
 			case BCODE_PUSH_INTLIT:
 				FETCH_PARAM_CODE_TO (stix, b1);
+				DBGOUT_EXEC_1 ("PUSH_INTLIT %d", (int)b1);
 				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(b1));
-printf ("PUSH_INTLIT %d\n", (int)b1);
 				break;
 
 			case BCODE_PUSH_NEGINTLIT:
 				FETCH_PARAM_CODE_TO (stix, b1);
+				DBGOUT_EXEC_1 ("PUSH_NEGINTLIT %d", (int)-b1);
 				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(-b1));
-printf ("PUSH_NEGINTLIT %d\n", (int)-b1);
 				break;
 
 			/* -------------------------------------------------------- */
@@ -1955,7 +2250,7 @@ printf ("PUSH_NEGINTLIT %d\n", (int)-b1);
 			case BCODE_DUP_STACKTOP:
 			{
 				stix_oop_t t;
-printf ("DUP_STACKTOP SP=%d\n", (int)stix->sp);
+				DBGOUT_EXEC_0 ("DUP_STACKTOP");
 				STIX_ASSERT (!ACTIVE_STACK_ISEMPTY(stix));
 				t = ACTIVE_STACK_GETTOP(stix);
 				ACTIVE_STACK_PUSH (stix, t);
@@ -1963,22 +2258,25 @@ printf ("DUP_STACKTOP SP=%d\n", (int)stix->sp);
 			}
 
 			case BCODE_POP_STACKTOP:
-printf ("POP_STACKTOP\n");
+				DBGOUT_EXEC_0 ("POP_STACKTOP");
 				STIX_ASSERT (!ACTIVE_STACK_ISEMPTY(stix));
 				ACTIVE_STACK_POP (stix);
 				break;
 
 			case BCODE_RETURN_STACKTOP:
-printf ("RETURN_STACKTOP\n");
+				DBGOUT_EXEC_0 ("RETURN_STACKTOP");
 				return_value = ACTIVE_STACK_GETTOP(stix);
 				ACTIVE_STACK_POP (stix);
 				goto handle_return;
 
 			case BCODE_RETURN_RECEIVER:
-printf ("RETURN_RECEIVER\n");
+				DBGOUT_EXEC_0 ("RETURN_RECEIVER");
 				return_value = stix->active_context->origin->receiver_or_source;
+
 			handle_return:
+#if defined(STIX_DEBUG_EXEC)
 printf ("<<LEAVING>> SP=%d\n", (int)stix->sp);
+#endif
 
 				/* put the instruction pointer back to the return
 				 * instruction (RETURN_RECEIVER or RETURN_RECEIVER)
@@ -2032,8 +2330,9 @@ printf ("<<LEAVING>> SP=%d\n", (int)stix->sp);
 					/* the sending context of the intial context has been set to nil.
 					 * use this fact to tell an initial context from a normal context. */
 					STIX_ASSERT (stix->active_context->receiver_or_source == stix->_nil);
-
+#if defined(STIX_DEBUG_EXEC)
 printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
+#endif
 					STIX_ASSERT (stix->sp == 0);
 					goto done;
 				}
@@ -2041,7 +2340,8 @@ printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
 				break;
 
 			case BCODE_RETURN_FROM_BLOCK:
-printf ("LEAVING_BLOCK\n");
+				DBGOUT_EXEC_0 ("RETURN_FROM_BLOCK");
+
 				STIX_ASSERT(STIX_CLASSOF(stix, stix->active_context)  == stix->_block_context);
 
 				return_value = ACTIVE_STACK_GETTOP(stix);
@@ -2058,7 +2358,7 @@ printf ("LEAVING_BLOCK\n");
 				FETCH_PARAM_CODE_TO (stix, b1);
 				FETCH_PARAM_CODE_TO (stix, b2);
 
-printf ("MAKE_BLOCK %d %d\n", (int)b1, (int)b2);
+				DBGOUT_EXEC_2 ("MAKE_BLOCK %d %d", (int)b1, (int)b2);
 
 				STIX_ASSERT (b1 >= 0);
 				STIX_ASSERT (b2 >= b1);
@@ -2099,7 +2399,9 @@ printf ("MAKE_BLOCK %d %d\n", (int)b1, (int)b2);
 				stix_ooi_t nargs, ntmprs;
 				stix_oop_context_t rctx;
 				stix_oop_context_t blkctx;
-printf ("SEND_BLOCK_COPY\n");
+
+				DBGOUT_EXEC_0 ("SEND_BLOCK_COPY");
+
 				/* it emulates thisContext blockCopy: nargs ofTmprCount: ntmprs */
 				STIX_ASSERT (stix->sp >= 2);
 
@@ -2200,7 +2502,10 @@ printf ("UNKNOWN BYTE CODE ENCOUNTERED %x\n", (int)bcode);
 	}
 
 done:
+
+#if defined(STIX_PROFILE_EXEC)
 	printf ("TOTAL_INST_COUTNER = %lu\n", (unsigned long int)inst_counter);
+#endif
 	return 0;
 
 
@@ -2209,8 +2514,10 @@ oops:
 	return -1;
 }
 
+
 int stix_invoke (stix_t* stix, const stix_ucs_t* objname, const stix_ucs_t* mthname)
 {
 	if (activate_initial_context (stix, objname, mthname) <= -1) return -1;
 	return stix_execute (stix);
 }
+

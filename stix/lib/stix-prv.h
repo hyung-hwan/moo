@@ -50,6 +50,8 @@
 
 /* this is for gc debugging */
 #define STIX_DEBUG_GC_001  
+/*#define STIX_DEBUG_EXEC*/
+#define STIX_PROFILE_EXEC
 
 #include <stdio.h> /* TODO: delete these header inclusion lines */
 #include <string.h>
@@ -159,13 +161,13 @@
 /* SOURCE CODE I/O FOR COMPILER                                              */
 /* ========================================================================= */
 
-enum stix_iocmd_t
+enum stix_io_cmd_t
 {
 	STIX_IO_OPEN,
 	STIX_IO_CLOSE,
 	STIX_IO_READ
 };
-typedef enum stix_iocmd_t stix_iocmd_t;
+typedef enum stix_io_cmd_t stix_io_cmd_t;
 
 struct stix_ioloc_t
 {
@@ -183,14 +185,14 @@ struct stix_iolxc_t
 typedef struct stix_iolxc_t stix_iolxc_t;
 
 /*
-enum stix_ioarg_flag_t
+enum stix_io_arg_flag_t
 {
 	STIX_IO_INCLUDED = (1 << 0)
 };
-typedef enum stix_ioarg_flag_t stix_ioarg_flag_t; */
+typedef enum stix_io_arg_flag_t stix_io_arg_flag_t; */
 
-typedef struct stix_ioarg_t stix_ioarg_t;
-struct stix_ioarg_t
+typedef struct stix_io_arg_t stix_io_arg_t;
+struct stix_io_arg_t
 {
 	/** 
 	 * [IN] I/O object name.
@@ -216,7 +218,7 @@ struct stix_ioarg_t
 	 * [IN] points to the data of the includer. It is #STIX_NULL for the
 	 * main stream.
 	 */
-	stix_ioarg_t* includer;
+	stix_io_arg_t* includer;
 
 	/*-----------------------------------------------------------------*/
 	/*----------- from here down, internal use only -------------------*/
@@ -232,10 +234,10 @@ struct stix_ioarg_t
 	/*-----------------------------------------------------------------*/
 };
 
-typedef stix_ssize_t (*stix_ioimpl_t) (
+typedef stix_ssize_t (*stix_io_impl_t) (
 	stix_t*       stix,
-	stix_iocmd_t  cmd,
-	stix_ioarg_t* arg
+	stix_io_cmd_t  cmd,
+	stix_io_arg_t* arg
 );
 
 struct stix_iotok_t
@@ -363,7 +365,7 @@ typedef struct stix_code_t stix_code_t;
 struct stix_compiler_t
 {
 	/* input handler */
-	stix_ioimpl_t impl;
+	stix_io_impl_t impl;
 
 	/* information about the last meaningful character read.
 	 * this is a copy of curinp->lxc if no ungetting is performed.
@@ -377,10 +379,10 @@ struct stix_compiler_t
 	int           nungots;
 
 	/* static input data buffer */
-	stix_ioarg_t  arg;    
+	stix_io_arg_t  arg;    
 
 	/* pointer to the current input data. initially, it points to &arg */
-	stix_ioarg_t* curinp;
+	stix_io_arg_t* curinp;
 
 	/* the last token read */
 	stix_iotok_t  tok;
@@ -480,6 +482,8 @@ struct stix_compiler_t
 		stix_size_t arlit_count;
 		stix_size_t arlit_capa;
 
+		/* 0 for no primitive, 1 for a normal primitive, 2 for a named primitive */
+		int prim_type;
 		/* primitive number */
 		stix_ooi_t prim_no; 
 
@@ -1062,7 +1066,7 @@ int stix_utf8toucs (
 /* ========================================================================= */
 int stix_compile (
 	stix_t*       stix,
-	stix_ioimpl_t io
+	stix_io_impl_t io
 );
 
 void stix_getsynerr (

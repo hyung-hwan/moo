@@ -73,6 +73,8 @@ struct stix_ucs_t
 };
 typedef struct stix_ucs_t stix_ucs_t;
 
+
+
 /* =========================================================================
  * PRIMITIVE MACROS
  * ========================================================================= */
@@ -584,9 +586,9 @@ struct stix_association_t
 };
 
 #if defined(STIX_USE_OBJECT_TRAILER)
-#	define STIX_METHOD_NAMED_INSTVARS 5
+#	define STIX_METHOD_NAMED_INSTVARS 7
 #else
-#	define STIX_METHOD_NAMED_INSTVARS 6
+#	define STIX_METHOD_NAMED_INSTVARS 8
 #endif
 typedef struct stix_method_t stix_method_t;
 typedef struct stix_method_t* stix_oop_method_t;
@@ -598,6 +600,8 @@ struct stix_method_t
 
 	/* primitive number */
 	stix_oop_t       preamble; /* SmallInteger */
+
+	stix_oop_t       preamble_data[2]; /* SmallInteger */
 
 	/* number of temporaries including arguments */
 	stix_oop_t       tmpr_count; /* SmallInteger */
@@ -644,9 +648,12 @@ struct stix_method_t
 #define STIX_METHOD_PREAMBLE_RETURN_NEGINDEX 6
 #define STIX_METHOD_PREAMBLE_RETURN_INSTVAR  7
 #define STIX_METHOD_PREAMBLE_PRIMITIVE       8
+#define STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE 9 /* index is an index to the symbol table */
 
 /* the index is an 16-bit unsigned integer. */
-#define STIX_OOI_IN_PREAMBLE_INDEX_RANGE(ooi) ((ooi) >= 0 && (ooi) <= 0xFFFF)
+#define STIX_METHOD_PREAMBLE_INDEX_MIN 0x0000
+#define STIX_METHOD_PREAMBLE_INDEX_MAX 0xFFFF
+#define STIX_OOI_IN_PREAMBLE_INDEX_RANGE(num) ((num) >= STIX_METHOD_PREAMBLE_INDEX_MIN && (num) <= STIX_METHOD_PREAMBLE_INDEX_MAX)
 
 #define STIX_CONTEXT_NAMED_INSTVARS 8
 typedef struct stix_context_t stix_context_t;
@@ -733,18 +740,57 @@ struct stix_heap_t
 
 typedef struct stix_t stix_t;
 
-typedef void (*stix_cbimpl_t) (stix_t* stix);
+/* =========================================================================
+ * MODULE MANIPULATION
+ * ========================================================================= */
+enum stix_mod_cmd_t
+{
+	STIX_MOD_OPEN,
+	STIX_MOD_CLOSE,
+	STIX_MOD_READ
+};
+typedef enum stix_mod_cmd_t stix_mod_cmd_t;
+
+struct stix_mod_arg_t
+{
+	/* [INPUT] */
+	const stix_uch_t* prefix;
+	const stix_uch_t* postfix;
+	const stix_uch_t* name;
+
+	/* [OUTPUT] */
+	void* handle;
+};
+typedef struct stix_mod_arg_t stix_mod_arg_t;
+
+typedef int (*stix_mod_impl_t) (
+	stix_t*         stix,
+	stix_mod_cmd_t  cmd,
+	stix_mod_arg_t* arg
+);
+
+/* =========================================================================
+ * IO MANIPULATION
+ * ========================================================================= */
+
+/* TODO: MOVE stix_io_impl_t HERE */
+
+/* =========================================================================
+ * CALLBACK MANIPULATION
+ * ========================================================================= */
+typedef void (*stix_cb_impl_t) (stix_t* stix);
 
 typedef struct stix_cb_t stix_cb_t;
 struct stix_cb_t
 {
-	stix_cbimpl_t gc;
-	stix_cbimpl_t fini;
+	stix_cb_impl_t gc;
+	stix_cb_impl_t fini;
 
 	/* private below */
-	stix_cb_t*    prev;
-	stix_cb_t*    next;
+	stix_cb_t*     prev;
+	stix_cb_t*     next;
 };
+
 
 #if defined(STIX_INCLUDE_COMPILER)
 typedef struct stix_compiler_t stix_compiler_t;

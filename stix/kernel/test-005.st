@@ -224,14 +224,27 @@
 		[self getTen] value dump.
 	}
 
+	#method(#class) abc
+	{
+		<primitive: #abc_integer_add>
+	}
+
 	#method(#class) main
 	{
-		| ffi |
+		"| ffi |
 		ffi := FFI new: 'libc.so.6'.
 		## ffi call: #printf with: #((str '%d') (int 10) (long 20)).
 		 ffi call: #printf withSig: 'i|sii' withArgs: #(S'hello world %d %d\n' 11123 9876543).
 		## ffi call: #puts withSig: 'i|s' withArgs: #('hello world').
-		ffi close.
+		ffi close."
+		self abc.
+
+		FFI isNil dump.
+		FFI notNil dump.
+		nil isNil dump.
+		nil notNil dump.
+		nil class dump.
+		nil class class class dump.
 	}
 }
 

@@ -1,97 +1,18 @@
-#class Apex(nil)
+#include 'Apex.st'.
+#include 'Object.st'.
+#include 'UndefinedObject.st'.
+#include 'Class.st'.
+#include 'Boolean.st'.
+
+
+#class Error(Object)
 {
-	#dcl(#class) sysdic.
-
-	#method(#class) yourself
+	#method(#class) signal: aString
 	{
-		^self.
-	}
-
-	#method yourself
-	{
-		^self.
-	}
-
-	#method(#class) dump
-	{
-		<primitive: #dump>
-	}
-
-	#method dump
-	{
-		<primitive: #dump>
-	}
-
-	#method(#class) new
-	{
-		## <primitive: 1>
-		<primitive: #new>
-	}
-
-	#method(#class) new: anInteger
-	{
-		## <primitive: 2>
-		<primitive: #newWithSize>
-	}
-
-	#method basicSize
-	{
-		## <primitive: 3>
-		<primitive: #basicSize>
-		^0
-	}
-
-
-	#method basicAt: anInteger
-	{
-		## <primitive: 4>
-		<primitive: #basicAt>
-		## self error: 'out of range'.
-	}
-
-	#method basicAt: anInteger put: anObject
-	{
-		## <primitive: 5>
-		<primitive: #basicAtPut>
-		## self error: 'out of range'.
-	}
-
-	#method badReturnError
-	{
-		## TODO: implement this
-	}
-
-	#method mustBeBoolean
-	{
-		## TODO: implement this
-	}
-
-	#method doesNotUnderstand: aMessageSymbol
-	{
-		## TODO: implement this
-	}
-
-	#method error: anErrorString
-	{
-		anErrorString dump.
+		"accept an arbitary object instead of a string. 
+		 the object can be sent displayString for string conversion"
 	}
 }
-
-#class Object(Apex)
-{
-
-}
-
-#class UndefinedObject(Apex)
-{
-
-}
-
-#class(#pointer) Class(Apex)
-{
-	#dcl spec selfspec superclass subclasses name instvars classvars classinstvars pooldics instmthdic classmthdic.
-}
-
 
 #class Magnitude(Object)
 {
@@ -142,122 +63,43 @@
 	{
 		<primitive: #integerGT>
 	}
+
+
+	#method to: end by: step do: aBlock
+	{
+		| i |
+
+		i := self.
+		(step > 0) 
+			ifTrue: [
+				[ i <= end ] whileTrue: [ 
+					aBlock value: i.
+					i := i + step.
+				]
+			]
+			ifFalse: [
+				[ i >= end ] whileTrue: [
+					aBlock value: i.
+					i := i - step.
+				]
+			].
+	}
+
+	#method to: end do: aBlock
+	{
+		^self to: end by: 1 do: aBlock.
+	}
 }
 
 #class SmallInteger(Number)
 {
 }
 
-#class Boolean(Object)
-{
+#include 'Collection.st'.
+#include 'Collection-ByteArray.st'.
+#include 'Collection-Array.st'.
+#include 'Collection-Set.st'.
 
-}
-
-#class True(Boolean)
-{
-	#method ifTrue: trueBlock ifFalse: falseBlock
-	{
-		^trueBlock value.
-	}
-
-	#method ifTrue: trueBlock
-	{
-		^trueBlock value.
-	}
-
-	#method ifFalse: falseBlock
-	{
-		^nil.
-	}
-}
-
-#class False(Boolean)
-{
-	#method ifTrue: trueBlock ifFalse: falseBlock
-	{
-		^falseBlock value.
-	}
-
-	#method ifTrue: trueBlock
-	{
-		^nil.
-	}
-
-	#method ifFalse: falseBlock
-	{
-		^falseBlock value.
-	}
-}
-
-#class Collection(Object)
-{
-}
-
-#class(#byte) ByteArray(Collection)
-{
-	#method at: anInteger
-	{
-		^self basicAt: anInteger.
-	}
-
-	#method at: anInteger put: aValue
-	{
-		^self basicAt: anInteger put: aValue.
-	}
-
-}
-
-#class(#pointer) Array(Collection)
-{
-	#method at: anInteger
-	{
-		^self basicAt: anInteger.
-	}
-
-	#method at: anInteger put: aValue
-	{
-		^self basicAt: anInteger put: aValue.
-	}
-}
-
-#class(#character) String(Array)
-{
-}
-
-#class(#character) Symbol(Array)
-{
-}
-
-
-#class Set(Collection)
-{
-	#dcl tally bucket.
-}
-
-#class SymbolSet(Set)
-{
-}
-
-#class Dictionary(Set)
-{
-}
-
-#class SystemDictionary(Dictionary)
-{
-}
-
-#class Namespace(Set)
-{
-}
-
-#class PoolDictionary(Set)
-{
-}
-
-#class MethodDictionary(Dictionary)
-{
-
-}
 
 #class(#pointer) Context(Apex)
 {
@@ -391,11 +233,29 @@
 	{
 		ip := source pc.
 	}
+
+
+
+	"------ TODO: -------------------------------------"
+	#method on: anError do: anExceptionBlock
+	{
+		"TODO: handle if anError is an ErrorSet .."
+	}
+
+	#method ensure: aBlock
+	{
+	}
+
+	#method ifCurtailed: aBlock
+	{
+	}
+
+	"------ TODO: -------------------------------------"
 }
 
 #class(#pointer) CompiledMethod(Object)
 {
-	#dcl owner preamble ntmprs nargs code source.
+	#dcl owner preamble preamble_data_1 preamble_data_2 ntmprs nargs code source.
 }
 
 
@@ -413,6 +273,14 @@
 		self.funcs := Dictionary new.
 		self.name := aString.
 		self.handle := self privateOpen: self.name.
+
+		"[ self.handle := self privateOpen: self.name ] 
+			on: Error do: [
+			]
+			on: XError do: [
+			]."
+
+		^self.
 	}
 
 	#method close
@@ -432,7 +300,7 @@
 	##		self.funcs at: aFunctionName put: f.
 	##	].
 f := self privateGetSymbol: aFunctionName in: self.handle.
-## f isNil ifTrue: [ self error: 'No such function' ].
+f isNil ifTrue: [ self error: 'No such function' ].
 
 		^self privateCall: f withSig: aString withArgs: anArray
 	}
@@ -440,7 +308,7 @@ f := self privateGetSymbol: aFunctionName in: self.handle.
 	#method privateOpen: aString
 	{
 		<primitive: #ffiOpen>
-		## throw an exception here.
+		^nil. ## TODO: Error signal: 'can not open'
 	}
 
 	#method privateClose: aHandle
@@ -456,6 +324,7 @@ f := self privateGetSymbol: aFunctionName in: self.handle.
 	#method privateGetSymbol: aString in: aHandle
 	{
 		<primitive: #ffiGetSym>
+		^nil.
 	}
 }
 

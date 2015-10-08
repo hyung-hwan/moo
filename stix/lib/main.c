@@ -65,7 +65,7 @@ static stix_mmgr_t sys_mmgr =
 };
 
 
-static STIX_INLINE stix_ssize_t open_input (stix_t* stix, stix_ioarg_t* arg)
+static STIX_INLINE stix_ssize_t open_input (stix_t* stix, stix_io_arg_t* arg)
 {
 	if (arg->includer)
 	{
@@ -108,7 +108,7 @@ static STIX_INLINE stix_ssize_t open_input (stix_t* stix, stix_ioarg_t* arg)
 	return 0;
 }
 
-static STIX_INLINE stix_ssize_t read_input (stix_t* stix, stix_ioarg_t* arg)
+static STIX_INLINE stix_ssize_t read_input (stix_t* stix, stix_io_arg_t* arg)
 {
 	xtn_t* xtn = stix_getxtn(stix);
 	stix_size_t n, bcslen, ucslen, remlen;
@@ -141,14 +141,14 @@ static STIX_INLINE stix_ssize_t read_input (stix_t* stix, stix_ioarg_t* arg)
 	return ucslen;
 }
 
-static STIX_INLINE stix_ssize_t close_input (stix_t* stix, stix_ioarg_t* arg)
+static STIX_INLINE stix_ssize_t close_input (stix_t* stix, stix_io_arg_t* arg)
 {
 	STIX_ASSERT (arg->handle != STIX_NULL);
 	fclose ((FILE*)arg->handle);
 	return 0;
 }
 
-static stix_ssize_t input_handler (stix_t* stix, stix_iocmd_t cmd, stix_ioarg_t* arg)
+static stix_ssize_t input_handler (stix_t* stix, stix_io_cmd_t cmd, stix_io_arg_t* arg)
 {
 	switch (cmd)
 	{

@@ -1493,13 +1493,13 @@ static const stix_uch_t* add_io_name (stix_t* stix, const stix_ucs_t* name)
 
 static int begin_include (stix_t* stix)
 {
-	stix_ioarg_t* arg;
+	stix_io_arg_t* arg;
 	const stix_uch_t* io_name;
 
 	io_name = add_io_name (stix, &stix->c->tok.name);
 	if (!io_name) return -1;
 
-	arg = (stix_ioarg_t*) stix_callocmem (stix, STIX_SIZEOF(*arg));
+	arg = (stix_io_arg_t*) stix_callocmem (stix, STIX_SIZEOF(*arg));
 	if (!arg) goto oops;
 
 	arg->name = io_name;
@@ -1546,7 +1546,7 @@ oops:
 static int end_include (stix_t* stix)
 {
 	int x;
-	stix_ioarg_t* cur;
+	stix_io_arg_t* cur;
 
 	if (stix->c->curinp == &stix->c->arg) return 0; /* no include */
 
@@ -2561,8 +2561,10 @@ static int compile_method_primitive (stix_t* stix)
 		set_syntax_error (stix, STIX_SYNERR_PRIMITIVE, &stix->c->tok.loc, &stix->c->tok.name);
 		return -1;
 	}
-/* TODO: other modifiers? 
+
+/* TODO: other modifiers than primitive: ? 
  * <primitive: 10>
+ * <primitive: #primitive_name>
  * <some-other-modifier: xxxx>
  */
 
@@ -2593,6 +2595,23 @@ static int compile_method_primitive (stix_t* stix)
 			prim_no = stix_getprimno (stix, &stix->c->tok.name);
 			if (prim_no <= -1)
 			{
+				const stix_uch_t* us;
+				/* the primitive is not found */
+				us = stix_findchar (stix->c->tok.name.ptr, stix->c->tok.name.len, '_');
+				if (us > stix->c->tok.name.ptr && us < stix->c->tok.name.ptr + stix->c->tok.name.len - 1)
+				{
+					stix_size_t lit_idx;
+					/* the symbol literal contains an underscore.
+					 * and it is none of the first of the last character */
+					if (add_symbol_literal(stix, &stix->c->tok.name, &lit_idx) >= 0 &&
+					    STIX_OOI_IN_PREAMBLE_INDEX_RANGE(lit_idx))
+					{
+						stix->c->mth.prim_type = 2; /* named primitive */
+						stix->c->mth.prim_no = lit_idx;
+						break;
+					}
+				}
+
 				set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
 				return -1;
 			}
@@ -2601,6 +2620,8 @@ static int compile_method_primitive (stix_t* stix)
 				set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
 				return -1;
 			}
+
+			stix->c->mth.prim_type = 1; 
 			stix->c->mth.prim_no = prim_no;
 			break;
 
@@ -4086,8 +4107,9 @@ static int add_compiled_method (stix_t* stix)
 	preamble_code = STIX_METHOD_PREAMBLE_NONE;
 	preamble_index = 0;
 
-	if (stix->c->mth.prim_no < 0)
+	if (stix->c->mth.prim_type <= 0)
 	{
+		/* no primitive is set */
 		if (stix->c->mth.code.len <= 0)
 		{
 			preamble_code = STIX_METHOD_PREAMBLE_RETURN_RECEIVER;
@@ -4186,13 +4208,19 @@ static int add_compiled_method (stix_t* stix)
 			}
 		}
 	}
-	else
+	else if (stix->c->mth.prim_type == 1)
 	{
 		preamble_code = STIX_METHOD_PREAMBLE_PRIMITIVE;
 		preamble_index = stix->c->mth.prim_no;
 	}
+	else
+	{
+		STIX_ASSERT (stix->c->mth.prim_type == 2);
+		preamble_code = STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE;
+		preamble_index = stix->c->mth.prim_no;
+	}
 
-	STIX_ASSERT (preamble_index >= 0 && preamble_index <= 0xFFFF); /* TODO: replace 0xFFFF by a proper macro name */
+	STIX_ASSERT (STIX_OOI_IN_PREAMBLE_INDEX_RANGE(preamble_index));
 
 	mth->owner = stix->c->cls.self_oop;
 	mth->preamble = STIX_OOP_FROM_SMINT(STIX_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index));
@@ -4236,7 +4264,8 @@ static int compile_method_definition (stix_t* stix)
 	stix->c->mth.literal_count = 0;
 	stix->c->mth.balit_count = 0;
 	stix->c->mth.arlit_count = 0;
-	stix->c->mth.prim_no = -1;
+	stix->c->mth.prim_type = 0;
+	stix->c->mth.prim_no = 0;
 	stix->c->mth.blk_depth = 0;
 	stix->c->mth.code.len = 0;
 
@@ -5089,7 +5118,7 @@ static void fini_compiler (stix_t* stix)
 	}
 }
 
-int stix_compile (stix_t* stix, stix_ioimpl_t io)
+int stix_compile (stix_t* stix, stix_io_impl_t io)
 {
 	int n;
 
@@ -5158,7 +5187,7 @@ oops:
 	 * closed. close them */
 	while (stix->c->curinp != &stix->c->arg)
 	{
-		stix_ioarg_t* prev;
+		stix_io_arg_t* prev;
 
 		/* nothing much to do about a close error */
 		stix->c->impl (stix, STIX_IO_CLOSE, stix->c->curinp);
