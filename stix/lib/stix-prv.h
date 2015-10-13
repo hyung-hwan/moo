@@ -60,6 +60,7 @@
 #define STIX_MEMSET(dst,src,size)  memset(dst,src,size)
 #define STIX_MEMCPY(dst,src,size)  memcpy(dst,src,size)
 #define STIX_MEMMOVE(dst,src,size) memmove(dst,src,size)
+#define STIX_MEMCMP(dst,src,size)  memcmp(dst,src,size)
 #define STIX_ASSERT(x)             assert(x)
 
 #define STIX_ALIGN(x,y) ((((x) + (y) - 1) / (y)) * (y))
@@ -857,12 +858,22 @@ stix_size_t stix_hashchars (
 int stix_equalchars (
 	const stix_uch_t*  str1,
 	const stix_uch_t*  str2,
-	stix_size_t         len
+	stix_size_t        len
 );
 
 int stix_equalchars2 (
 	const stix_ucs_t* str1,
-	const char*       str2
+	const stix_bch_t* str2
+);
+
+int stix_compucstr (
+	const stix_uch_t* str1,
+	const stix_uch_t* str2
+);
+
+int stix_compbcstr (
+	const stix_bch_t* str1,
+	const stix_bch_t* str2
 );
 
 void stix_copychars (
@@ -871,10 +882,28 @@ void stix_copychars (
 	stix_size_t       len
 );
 
+void stix_copychars2 (
+	stix_uch_t*       dst,
+	const stix_bch_t* src,
+	stix_size_t       len
+);
+
 stix_uch_t* stix_findchar (
 	const stix_uch_t* ptr,
 	stix_size_t       len,
 	stix_uch_t        c
+);
+
+stix_size_t stix_copyucstr (
+	stix_uch_t*       dst,
+	stix_size_t       len,
+	const stix_uch_t* src
+);
+
+stix_size_t stix_copybcstr (
+	stix_bch_t*       dst,
+	stix_size_t       len,
+	const stix_bch_t* src
 );
 
 /* ========================================================================= */

@@ -27,7 +27,7 @@
 #include "stix-prv.h"
 
 
-stix_t* stix_open (stix_mmgr_t* mmgr, stix_size_t xtnsize, stix_size_t heapsize, stix_errnum_t* errnum)
+stix_t* stix_open (stix_mmgr_t* mmgr, stix_size_t xtnsize, stix_size_t heapsize, const stix_vmprim_t* vmprim, stix_errnum_t* errnum)
 {
 	stix_t* stix;
 
@@ -37,7 +37,7 @@ stix_t* stix_open (stix_mmgr_t* mmgr, stix_size_t xtnsize, stix_size_t heapsize,
 	stix = STIX_MMGR_ALLOC (mmgr, STIX_SIZEOF(*stix) + xtnsize);
 	if (stix)
 	{
-		if (stix_init(stix, mmgr, heapsize) <= -1)
+		if (stix_init(stix, mmgr, heapsize, vmprim) <= -1)
 		{
 			if (errnum) *errnum = stix->errnum;
 			STIX_MMGR_FREE (mmgr, stix);
@@ -56,10 +56,11 @@ void stix_close (stix_t* stix)
 	STIX_MMGR_FREE (stix->mmgr, stix);
 }
 
-int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_size_t heapsz)
+int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_size_t heapsz, const stix_vmprim_t* vmprim)
 {
 	STIX_MEMSET (stix, 0, STIX_SIZEOF(*stix));
 	stix->mmgr = mmgr;
+	stix->vmprim = *vmprim;
 
 	/*stix->permheap = stix_makeheap (stix, what is the best size???);
 	if (!stix->curheap) goto oops; */
@@ -68,6 +69,8 @@ int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_size_t heapsz)
 	stix->newheap = stix_makeheap (stix, heapsz);
 	if (!stix->newheap) goto oops;
 
+	if (stix_rbt_init (&stix->pmtable, mmgr, STIX_SIZEOF(stix_uch_t), 1) <= -1) goto oops;
+	stix_rbt_setstyle (&stix->pmtable, stix_getrbtstyle(STIX_RBT_STYLE_INLINE_COPIERS));
 	return 0;
 
 oops:
@@ -86,10 +89,11 @@ void stix_fini (stix_t* stix)
 		if (cb->fini) cb->fini (stix);
 	}
 
+	stix_rbt_fini (&stix->pmtable);
+
 	stix_killheap (stix, stix->newheap);
 	stix_killheap (stix, stix->curheap);
 	stix_killheap (stix, stix->permheap);
-
 
 	/* deregister all callbacks */
 	while (stix->cblist) stix_deregcb (stix, stix->cblist);
@@ -124,11 +128,13 @@ int stix_setoption (stix_t* stix, stix_option_t id, const void* value)
 			stix->option.trait = *(const int*)value;
 			return 0;
 
-		case STIX_DFL_SYMTAB_SIZE:
+		case STIX_SYMTAB_SIZE:
 			stix->option.dfl_symtab_size = *(stix_oow_t*)value;
+			return 0;
 
-		case STIX_DFL_SYSDIC_SIZE:
+		case STIX_SYSDIC_SIZE:
 			stix->option.dfl_sysdic_size = *(stix_oow_t*)value;
+			return 0;
 	}
 
 	stix->errnum = STIX_EINVAL;
@@ -143,10 +149,10 @@ int stix_getoption (stix_t* stix, stix_option_t id, void* value)
 			*(int*)value = stix->option.trait;
 			return 0;
 
-		case STIX_DFL_SYMTAB_SIZE:
+		case STIX_SYMTAB_SIZE:
 			*(stix_oow_t*)value = stix->option.dfl_symtab_size;
 
-		case STIX_DFL_SYSDIC_SIZE:
+		case STIX_SYSDIC_SIZE:
 			*(stix_oow_t*)value = stix->option.dfl_sysdic_size;
 	};
 
@@ -214,7 +220,7 @@ int stix_equalchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_size_t
 	return 1;
 }
 
-int stix_equalchars2 (const stix_ucs_t* str1, const char* str2)
+int stix_equalchars2 (const stix_ucs_t* str1, const stix_bch_t* str2)
 {
 	const stix_uch_t* ptr, * end;
 
@@ -229,10 +235,70 @@ int stix_equalchars2 (const stix_ucs_t* str1, const char* str2)
 	return ptr >= end && *str2 == '\0';
 }
 
+int stix_compucstr (const stix_uch_t* str1, const stix_uch_t* str2)
+{
+	while (*str1 == *str2)
+	{
+		if (*str1 == '\0') return 0;
+		str1++, str2++;
+	}
+
+	return (*str1 > *str2)? 1: -1;
+}
+
+int stix_compbcstr (const stix_bch_t* str1, const stix_bch_t* str2)
+{
+	while (*str1 == *str2)
+	{
+		if (*str1 == '\0') return 0;
+		str1++, str2++;
+	}
+
+	return (*str1 > *str2)? 1: -1;
+}
+
 void stix_copychars (stix_uch_t* dst, const stix_uch_t* src, stix_size_t len)
 {
 	stix_size_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];
+}
+
+void stix_copychars2 (stix_uch_t* dst, const stix_bch_t* src, stix_size_t len)
+{
+	stix_size_t i;
+	for (i = 0; i < len; i++) dst[i] = src[i];
+}
+
+stix_size_t stix_copyucstr (stix_uch_t* dst, stix_size_t len, const stix_uch_t* src)
+{
+	stix_uch_t* p, * p2;
+
+	p = dst; p2 = dst + len - 1;
+
+	while (p < p2)
+	{
+		 if (*src == '\0') break;
+		 *p++ = *src++;
+	}
+
+	if (len > 0) *p = '\0';
+	return p - dst;
+}
+
+stix_size_t stix_copybcstr (stix_bch_t* dst, stix_size_t len, const stix_bch_t* src)
+{
+	stix_bch_t* p, * p2;
+
+	p = dst; p2 = dst + len - 1;
+
+	while (p < p2)
+	{
+		 if (*src == '\0') break;
+		 *p++ = *src++;
+	}
+
+	if (len > 0) *p = '\0';
+	return p - dst;
 }
 
 stix_uch_t* stix_findchar (const stix_uch_t* ptr, stix_size_t len, stix_uch_t c)

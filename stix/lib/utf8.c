@@ -482,9 +482,7 @@ static stix_cmgr_t utf8_cmgr =
 	stix_uctoutf8
 };
 
-int stix_utf8toucs (
-	const stix_bch_t* bcs, stix_size_t* bcslen,
-	stix_uch_t* ucs, stix_size_t* ucslen)
+int stix_utf8toucs (const stix_bch_t* bcs, stix_size_t* bcslen, stix_uch_t* ucs, stix_size_t* ucslen)
 {
 	if (*bcslen == ~(stix_size_t)0)
 	{
@@ -498,9 +496,7 @@ int stix_utf8toucs (
 	}
 }
 
-int stix_ucstoutf8 (
-	const stix_uch_t* ucs, stix_size_t *ucslen,
-	stix_bch_t* bcs, stix_size_t* bcslen)
+int stix_ucstoutf8 (const stix_uch_t* ucs, stix_size_t *ucslen, stix_bch_t* bcs, stix_size_t* bcslen)
 {
 	if (*ucslen == ~(stix_size_t)0)
 	{

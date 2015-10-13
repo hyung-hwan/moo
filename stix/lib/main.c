@@ -29,8 +29,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dlfcn.h>
 
 #include <limits.h>
+#include <dlfcn.h>
+
+#if defined(_WIN32)
+#	define DEFAULT_MODPREFIX "stix-"
+#elif defined(__OS2__)
+#	define DEFAULT_MODPREFIX "st-"
+#elif defined(__DOS__)
+#	define DEFAULT_MODPREFIX "st-"
+#else
+#	define DEFAULT_MODPREFIX "libstix-"
+#endif
+
+
 typedef struct xtn_t xtn_t;
 struct xtn_t
 {
@@ -167,6 +181,63 @@ static stix_ssize_t input_handler (stix_t* stix, stix_io_cmd_t cmd, stix_io_arg_
 	}
 }
 
+static void* mod_open (stix_t* stix, const stix_uch_t* name)
+{
+/* TODO: support various platforms */
+	stix_bch_t buf[1024]; /* TODO: use a proper path buffer */
+	stix_size_t ucslen, bcslen;
+	stix_size_t len;
+
+	len = stix_copybcstr (buf, STIX_COUNTOF(buf), DEFAULT_MODPREFIX);
+
+/* TODO: proper error checking and overflow checking */
+	ucslen = ~(stix_size_t)0;
+	bcslen = STIX_COUNTOF(buf) - len;
+	stix_ucstoutf8 (name, &ucslen, &buf[len], &bcslen);
+
+printf ("MOD-OPENING %s\n", buf);
+	return dlopen (buf, RTLD_NOW);
+}
+
+static void mod_close (stix_t* stix, void* handle)
+{
+	dlclose (handle);
+}
+
+static void* mod_getsym (stix_t* stix, void* handle, const stix_uch_t* name)
+{
+	stix_bch_t buf[1024]; /* TODO: use a proper buffer. dynamically allocated if conversion result in too a large value */
+	stix_size_t ucslen, bcslen;
+	void* sym;
+
+	buf[0] = '_';
+
+	ucslen = ~(stix_size_t)0;
+	bcslen = STIX_COUNTOF(buf) - 2;
+	stix_ucstoutf8 (name, &ucslen, &buf[1], &bcslen);
+printf ("MOD_GETSYM [%s]\n", &buf[1]);
+	sym = dlsym (handle, &buf[1]);
+	if (!sym)
+	{
+printf ("MOD_GETSYM [%s]\n", &buf[0]);
+		sym = dlsym (handle, &buf[0]);
+		if (!sym)
+		{
+			buf[bcslen + 1] = '_';
+			buf[bcslen + 2] = '\0';
+printf ("MOD_GETSYM [%s]\n", &buf[1]);
+			sym = dlsym (handle, &buf[1]);
+			if (!sym)
+			{
+printf ("MOD_GETSYM [%s]\n", &buf[0]);
+				sym = dlsym (handle, &buf[0]);
+			}
+		}
+	}
+
+	return sym;
+}
+
 static char* syntax_error_msg[] = 
 {
 	"no error",
@@ -233,6 +304,7 @@ int main (int argc, char* argv[])
 	xtn_t* xtn;
 	stix_ucs_t objname;
 	stix_ucs_t mthname;
+	stix_vmprim_t vmprim;
 	int i;
 
 	printf ("Stix 1.0.0 - max named %lu max indexed %lu max class %lu max classinst %lu\n", 
@@ -241,17 +313,6 @@ int main (int argc, char* argv[])
 		(unsigned long int)STIX_MAX_CLASSVARS,
 		(unsigned long int)STIX_MAX_CLASSINSTVARS);
 
-{
-stix_oop_t k;
-k = STIX_OOP_FROM_SMINT(-1);
-printf ("%ld %ld %ld %lX\n", (long int)STIX_OOP_TO_SMINT(k), (long int)STIX_SMINT_MIN, (long int)STIX_SMINT_MAX, (long)LONG_MIN);
-
-k = STIX_OOP_FROM_SMINT(STIX_SMINT_MAX);
-printf ("%ld\n", (long int)STIX_OOP_TO_SMINT(k));
-
-k = STIX_OOP_FROM_SMINT(STIX_SMINT_MIN);
-printf ("%ld\n", (long int)STIX_OOP_TO_SMINT(k));
-}
 
 #if !defined(macintosh)
 	if (argc < 2)
@@ -261,18 +322,32 @@ printf ("%ld\n", (long int)STIX_OOP_TO_SMINT(k));
 	}
 #endif
 
+	/*
 	{
+	stix_oop_t k;
 	stix_oow_t x;
 
-	printf ("%u\n", STIX_BITS_MAX(unsigned int, 5));
+	k = STIX_OOP_FROM_SMINT(-1);
+	printf ("%ld %ld %ld %lX\n", (long int)STIX_OOP_TO_SMINT(k), (long int)STIX_SMINT_MIN, (long int)STIX_SMINT_MAX, (long)LONG_MIN);
 
+	k = STIX_OOP_FROM_SMINT(STIX_SMINT_MAX);
+	printf ("%ld\n", (long int)STIX_OOP_TO_SMINT(k));
+
+	k = STIX_OOP_FROM_SMINT(STIX_SMINT_MIN);
+	printf ("%ld\n", (long int)STIX_OOP_TO_SMINT(k));
+
+	printf ("%u\n", STIX_BITS_MAX(unsigned int, 5));
 	x = STIX_CLASS_SPEC_MAKE (10, 1, STIX_OBJ_TYPE_CHAR);
 	printf ("%lu %lu %lu %lu\n", (unsigned long int)x, (unsigned long int)STIX_OOP_FROM_SMINT(x),
 		(unsigned long int)STIX_CLASS_SPEC_NAMED_INSTVAR(x),
 		(unsigned long int)STIX_CLASS_SPEC_INDEXED_TYPE(x));
-	}
+	}*/
 
-	stix = stix_open (&sys_mmgr, STIX_SIZEOF(xtn_t), 512000lu, STIX_NULL);
+	vmprim.mod_open = mod_open;
+	vmprim.mod_close = mod_close;
+	vmprim.mod_getsym = mod_getsym;
+
+	stix = stix_open (&sys_mmgr, STIX_SIZEOF(xtn_t), 512000lu, &vmprim, STIX_NULL);
 	if (!stix)
 	{
 		printf ("cannot open stix\n");
@@ -283,9 +358,9 @@ printf ("%ld\n", (long int)STIX_OOP_TO_SMINT(k));
 		stix_oow_t tab_size;
 
 		tab_size = 5000;
-		stix_setoption (stix, STIX_DFL_SYMTAB_SIZE, &tab_size);
+		stix_setoption (stix, STIX_SYMTAB_SIZE, &tab_size);
 		tab_size = 5000;
-		stix_setoption (stix, STIX_DFL_SYSDIC_SIZE, &tab_size);
+		stix_setoption (stix, STIX_SYSDIC_SIZE, &tab_size);
 	}
 
 	{
