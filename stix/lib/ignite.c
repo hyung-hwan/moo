@@ -134,6 +134,7 @@ static int ignite_1 (stix_t* stix)
 
 	stix->_method_context    = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 	stix->_block_context     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
+	stix->_process           = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_PROCESS_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 	stix->_true_class        = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_false_class       = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	/* TOOD: what is a proper spec for Character and SmallInteger?
@@ -151,7 +152,7 @@ static int ignite_1 (stix_t* stix)
 	    !stix->_namespace         || !stix->_pool_dictionary   ||
 	    !stix->_method_dictionary || !stix->_method            || !stix->_association ||
 
-	    !stix->_method_context    || !stix->_block_context     ||
+	    !stix->_method_context    || !stix->_block_context     || !stix->_process ||
 	    !stix->_true_class        || !stix->_false_class       || 
 	    !stix->_character         || !stix->_small_integer) return -1;
 
@@ -223,6 +224,7 @@ static int ignite_3 (stix_t* stix)
 
 		{ 13, { 'M','e','t','h','o','d','C','o','n','t','e','x','t'              } },
 		{ 12, { 'B','l','o','c','k','C','o','n','t','e','x','t'                  } },
+		{  7, { 'P','r','o','c','e','s','s'                                      } },
 		{  4, { 'T','r','u','e'                                                  } },
 		{  5, { 'F','a','l','s','e'                                              } },
 		{  9, { 'C','h','a','r','a','c','t','e','r'                              } },

@@ -61,8 +61,9 @@ typedef enum stix_errnum_t stix_errnum_t;
 enum stix_option_t
 {
 	STIX_TRAIT,
-	STIX_SYMTAB_SIZE, /* default system table size */
-	STIX_SYSDIC_SIZE  /* default system dictionary size */
+	STIX_SYMTAB_SIZE,  /* default system table size */
+	STIX_SYSDIC_SIZE,  /* default system dictionary size */
+	STIX_PROCSTK_SIZE  /* default process stack size */
 };
 typedef enum stix_option_t stix_option_t;
 
@@ -466,6 +467,20 @@ struct stix_context_t
 	stix_oop_t         slot[1]; /* stack */
 };
 
+
+#define STIX_PROCESS_NAMED_INSTVARS 1
+typedef struct stix_process_t stix_process_t;
+typedef struct stix_process_t* stix_oop_process_t;
+struct stix_process_t
+{
+	STIX_OBJ_HEADER;
+	stix_oop_t  state;
+
+	/* == variable indexed part == */
+	stix_oop_t slot[1]; /* process stack */
+};
+
+
 /**
  * The STIX_CLASSOF() macro return the class of an object including a numeric
  * object encoded into a pointer.
@@ -588,6 +603,7 @@ struct stix_t
 		int trait;
 		stix_oow_t dfl_symtab_size;
 		stix_oow_t dfl_sysdic_size;
+		stix_oow_t dfl_procstk_size; 
 	} option;
 
 	stix_vmprim_t vmprim;
@@ -627,6 +643,7 @@ struct stix_t
 
 	stix_oop_t _method_context; /* MethodContext */
 	stix_oop_t _block_context; /* BlockContext */
+	stix_oop_t _process; /* Process */
 	stix_oop_t _true_class; /* True */
 	stix_oop_t _false_class; /* False */
 	stix_oop_t _character; /* Character */

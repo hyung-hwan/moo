@@ -258,6 +258,11 @@
 	#dcl owner preamble preamble_data_1 preamble_data_2 ntmprs nargs code source.
 }
 
+#class(#pointer) Process(Object)
+{
+	#dcl state.
+}
+
 
 #class FFI(Object)
 {

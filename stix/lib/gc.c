@@ -284,6 +284,7 @@ void stix_gc (stix_t* stix)
 	stix->_association       = stix_moveoop (stix, stix->_association);
 	stix->_method_context    = stix_moveoop (stix, stix->_method_context);
 	stix->_block_context     = stix_moveoop (stix, stix->_block_context);
+	stix->_process           = stix_moveoop (stix, stix->_process);
 	stix->_true_class        = stix_moveoop (stix, stix->_true_class);
 	stix->_false_class       = stix_moveoop (stix, stix->_false_class);
 	stix->_character         = stix_moveoop (stix, stix->_character);

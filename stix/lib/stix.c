@@ -135,6 +135,10 @@ int stix_setoption (stix_t* stix, stix_option_t id, const void* value)
 		case STIX_SYSDIC_SIZE:
 			stix->option.dfl_sysdic_size = *(stix_oow_t*)value;
 			return 0;
+
+		case STIX_PROCSTK_SIZE:
+			stix->option.dfl_procstk_size = *(stix_oow_t*)value;
+			return 0;
 	}
 
 	stix->errnum = STIX_EINVAL;
@@ -151,9 +155,15 @@ int stix_getoption (stix_t* stix, stix_option_t id, void* value)
 
 		case STIX_SYMTAB_SIZE:
 			*(stix_oow_t*)value = stix->option.dfl_symtab_size;
+			return 0;
 
 		case STIX_SYSDIC_SIZE:
 			*(stix_oow_t*)value = stix->option.dfl_sysdic_size;
+			return 0;
+
+		case STIX_PROCSTK_SIZE:
+			*(stix_oow_t*)value = stix->option.dfl_procstk_size;
+			return 0;
 	};
 
 	stix->errnum = STIX_EINVAL;
