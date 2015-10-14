@@ -344,7 +344,7 @@ static int copy_string_to (stix_t* stix, const stix_ucs_t* src, stix_ucs_t* dst,
 	}
 
 	if (append && add_delim) dst->ptr[pos++] = add_delim;
-	stix_copychars (&dst->ptr[pos], src->ptr, src->len);
+	stix_copyuchars (&dst->ptr[pos], src->ptr, src->len);
 	dst->len = len;
 	return 0;
 }
@@ -1482,7 +1482,7 @@ static const stix_uch_t* add_io_name (stix_t* stix, const stix_ucs_t* name)
 
 	ptr = (stix_uch_t*)(link + 1);
 
-	stix_copychars (ptr, name->ptr, name->len);
+	stix_copyuchars (ptr, name->ptr, name->len);
 	ptr[name->len] = '\0';
 
 	link->link = stix->c->io_names;

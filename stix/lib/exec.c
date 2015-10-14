@@ -1116,8 +1116,8 @@ printf ("wrong signature...\n");
 		if (!dc) return -1; /* TODO: proper error handling */
 
 printf ("CALLING............%p\n", f);
-		//dcMode (dc, DC_CALL_C_DEFAULT);
-		//dcReset (dc);
+		/*dcMode (dc, DC_CALL_C_DEFAULT);
+		dcReset (dc);*/
 
 		/*for (i = 2; i < STIX_OBJ_GET_SIZE(sig); i++)
 		{
@@ -1331,7 +1331,7 @@ int stix_getprimno (stix_t* stix, const stix_ucs_t* name)
 
 	for (i = 0; i < STIX_COUNTOF(primitives); i++)
 	{
-		if (stix_equalchars2(name, primitives[i].name))
+		if (stix_compucxbcstr(name->ptr, name->len, primitives[i].name) == 0)
 		{
 			return i;
 		}
@@ -1404,7 +1404,7 @@ static stix_prim_mod_t* query_primitive_module (stix_t* stix, const stix_uch_t* 
 		stix_uch_t buf[STIX_MOD_NAME_LEN_MAX + 17]; 
 
 		/* the terminating null isn't needed in buf here */
-		stix_copychars2 (buf, "_stix_prim_mod_", 15); 
+		stix_copybchtouchars (buf, "_stix_prim_mod_", 15); 
 
 		if (mod_name_len > STIX_COUNTOF(buf) - 17)
 		{
@@ -1413,7 +1413,7 @@ static stix_prim_mod_t* query_primitive_module (stix_t* stix, const stix_uch_t* 
 			return STIX_NULL;
 		}
 
-		stix_copychars (&buf[15], name, mod_name_len);
+		stix_copyuchars (&buf[15], name, mod_name_len);
 		buf[15 + mod_name_len] = '\0';
 
 #if defined(STIX_ENABLE_STATIC_MODULE)

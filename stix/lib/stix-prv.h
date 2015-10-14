@@ -850,20 +850,17 @@ stix_size_t stix_hashbytes (
 	stix_size_t        len
 );
 
-stix_size_t stix_hashchars (
+stix_size_t stix_hashuchars (
 	const stix_uch_t*  ptr,
-	stix_size_t         len
+	stix_size_t        len
 );
+
+#define stix_hashbchars(ptr,len) stix_hashbytes(ptr,len)
 
 int stix_equalchars (
 	const stix_uch_t*  str1,
 	const stix_uch_t*  str2,
 	stix_size_t        len
-);
-
-int stix_equalchars2 (
-	const stix_ucs_t* str1,
-	const stix_bch_t* str2
 );
 
 int stix_compucstr (
@@ -876,13 +873,24 @@ int stix_compbcstr (
 	const stix_bch_t* str2
 );
 
-void stix_copychars (
+int stix_compucbcstr (
+	const stix_uch_t* str1,
+	const stix_bch_t* str2
+);
+
+int stix_compucxbcstr (
+	const stix_uch_t* str1,
+	stix_size_t       len,
+	const stix_bch_t* str2
+);
+
+void stix_copyuchars (
 	stix_uch_t*       dst,
 	const stix_uch_t* src,
 	stix_size_t       len
 );
 
-void stix_copychars2 (
+void stix_copybchtouchars (
 	stix_uch_t*       dst,
 	const stix_bch_t* src,
 	stix_size_t       len
@@ -1063,10 +1071,10 @@ int stix_ucstoutf8 (
  * \code
  *  const stix_bch_t* bcs = "test string";
  *  stix_uch_t ucs[100];
- *  qse_size_t ucslen = STIX_COUNTOF(buf), n;
- *  qse_size_t bcslen = 11;
+ *  stix_size_t ucslen = STIX_COUNTOF(buf), n;
+ *  stix_size_t bcslen = 11;
  *  int n;
- *  n = qse_bcstoucs (bcs, &bcslen, ucs, &ucslen);
+ *  n = stix_utf8toucs (bcs, &bcslen, ucs, &ucslen);
  *  if (n <= -1) { invalid/incomplenete sequence or buffer to small }
  * \endcode
  *

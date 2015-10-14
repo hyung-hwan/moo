@@ -34,16 +34,29 @@
 #include <limits.h>
 #include <dlfcn.h>
 
-#if defined(_WIN32)
-#	define DEFAULT_MODPREFIX "stix-"
-#elif defined(__OS2__)
-#	define DEFAULT_MODPREFIX "st-"
-#elif defined(__DOS__)
-#	define DEFAULT_MODPREFIX "st-"
-#else
-#	define DEFAULT_MODPREFIX "libstix-"
+#if !defined(STIX_DEFAULT_MODPREFIX)
+#	if defined(_WIN32)
+#		define STIX_DEFAULT_MODPREFIX "stix-"
+#	elif defined(__OS2__)
+#		define STIX_DEFAULT_MODPREFIX "st-"
+#	elif defined(__DOS__)
+#		define STIX_DEFAULT_MODPREFIX "st-"
+#	else
+#		define STIX_DEFAULT_MODPREFIX "libstix-"
+#	endif
 #endif
 
+#if !defined(STIX_DEFAULT_MODPOSTFIX)
+#	if defined(_WIN32)
+#		define STIX_DEFAULT_MODPOSTFIX ""
+#	elif defined(__OS2__)
+#		define STIX_DEFAULT_MODPOSTFIX ""
+#	elif defined(__DOS__)
+#		define STIX_DEFAULT_MODPOSTFIX ""
+#	else
+#		define STIX_DEFAULT_MODPOSTFIX ""
+#	endif
+#endif
 
 typedef struct xtn_t xtn_t;
 struct xtn_t
@@ -188,14 +201,14 @@ static void* mod_open (stix_t* stix, const stix_uch_t* name)
 	stix_size_t ucslen, bcslen;
 	stix_size_t len;
 
-	len = stix_copybcstr (buf, STIX_COUNTOF(buf), DEFAULT_MODPREFIX);
+	len = stix_copybcstr (buf, STIX_COUNTOF(buf), STIX_DEFAULT_MODPREFIX);
 
 /* TODO: proper error checking and overflow checking */
 	ucslen = ~(stix_size_t)0;
 	bcslen = STIX_COUNTOF(buf) - len;
 	stix_ucstoutf8 (name, &ucslen, &buf[len], &bcslen);
 
-printf ("MOD-OPENING %s\n", buf);
+printf ("MOD_OPEN %s\n", buf);
 	return dlopen (buf, RTLD_NOW);
 }
 

@@ -203,7 +203,7 @@ stix_size_t stix_hashbytes (const stix_byte_t* ptr, stix_size_t len)
 	return h;
 }
 
-stix_size_t stix_hashchars (const stix_uch_t* ptr, stix_size_t len)
+stix_size_t stix_hashuchars (const stix_uch_t* ptr, stix_size_t len)
 {
 	return stix_hashbytes ((const stix_byte_t *)ptr, len * STIX_SIZEOF(*ptr));
 }
@@ -218,21 +218,6 @@ int stix_equalchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_size_t
 	}
 
 	return 1;
-}
-
-int stix_equalchars2 (const stix_ucs_t* str1, const stix_bch_t* str2)
-{
-	const stix_uch_t* ptr, * end;
-
-	ptr = str1->ptr;
-	end = str1->ptr + str1->len;
-	while (ptr < end && *ptr == *str2 && *str2 != '\0') 
-	{
-		ptr++;
-		str2++;
-	}
-
-	return ptr >= end && *str2 == '\0';
 }
 
 int stix_compucstr (const stix_uch_t* str1, const stix_uch_t* str2)
@@ -257,13 +242,33 @@ int stix_compbcstr (const stix_bch_t* str1, const stix_bch_t* str2)
 	return (*str1 > *str2)? 1: -1;
 }
 
-void stix_copychars (stix_uch_t* dst, const stix_uch_t* src, stix_size_t len)
+int stix_compucbcstr (const stix_uch_t* str1, const stix_bch_t* str2)
+{
+	while (*str1 == *str2)
+	{
+		if (*str1 == '\0') return 0;
+		str1++, str2++;
+	}
+
+	return (*str1 > *str2)? 1: -1;
+}
+
+int stix_compucxbcstr (const stix_uch_t* str1, stix_size_t len, const stix_bch_t* str2)
+{
+	const stix_uch_t* end = str1 + len;
+	while (str1 < end && *str2 != '\0' && *str1 == *str2) str1++, str2++;
+	if (str1 == end && *str2 == '\0') return 0;
+	if (*str1 == *str2) return (str1 < end)? 1: -1;
+	return (*str1 > *str2)? 1: -1;
+}
+
+void stix_copyuchars (stix_uch_t* dst, const stix_uch_t* src, stix_size_t len)
 {
 	stix_size_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
-void stix_copychars2 (stix_uch_t* dst, const stix_bch_t* src, stix_size_t len)
+void stix_copybchtouchars (stix_uch_t* dst, const stix_bch_t* src, stix_size_t len)
 {
 	stix_size_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];

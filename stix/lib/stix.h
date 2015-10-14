@@ -503,17 +503,7 @@ typedef struct stix_t stix_t;
 /* =========================================================================
  * VIRTUAL MACHINE PRIMITIVES
  * ========================================================================= */
-#define STIX_MOD_PREFIX_LEN_MAX  30
-#define STIX_MOD_POSTFIX_LEN_MAX 30
-#define STIX_MOD_NAME_LEN_MAX    60
-
-struct stix_mod_spec_t
-{
-	const stix_uch_t prefix[STIX_MOD_PREFIX_LEN_MAX];
-	const stix_uch_t postfix[STIX_MOD_POSTFIX_LEN_MAX];
-	const stix_uch_t name[STIX_MOD_NAME_LEN_MAX];
-};
-typedef struct stix_mod_spec_t stix_mod_spec_t;
+#define STIX_MOD_NAME_LEN_MAX 60
 
 typedef void* (*stix_mod_open_t) (stix_t* stix, const stix_uch_t* name);
 typedef void (*stix_mod_close_t) (stix_t* stix, void* handle);
@@ -565,8 +555,6 @@ struct stix_t
 		int trait;
 		stix_oow_t dfl_symtab_size;
 		stix_oow_t dfl_sysdic_size;
-		stix_ucs_t dfl_mod_prefix[STIX_MOD_PREFIX_LEN_MAX + 1];
-		stix_ucs_t dfl_mod_postfix[STIX_MOD_POSTFIX_LEN_MAX + 1];
 	} option;
 
 	stix_vmprim_t vmprim;
