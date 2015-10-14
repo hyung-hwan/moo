@@ -29,9 +29,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dlfcn.h>
-
 #include <limits.h>
+
+
+#if defined(_WIN32)
+#	include <windows.h>
+#	include <tchar.h>
+#	if defined(STIX_HAVE_CFG_H)
+#		include <ltdl.h>
+#		define USE_LTDL
+#	endif
+#elif defined(__OS2__)
+#	define INCL_DOSMODULEMGR
+#	define INCL_DOSPROCESS
+#	define INCL_DOSERRORS
+#	include <os2.h>
+#elif defined(__DOS__)
+	/* nothing to include */
+#else
+#	include <unistd.h>
+#	include <ltdl.h>
+#	define USE_LTDL
+#endif
 #include <dlfcn.h>
 
 #if !defined(STIX_DEFAULT_MODPREFIX)
@@ -196,10 +215,22 @@ static stix_ssize_t input_handler (stix_t* stix, stix_io_cmd_t cmd, stix_io_arg_
 
 static void* mod_open (stix_t* stix, const stix_uch_t* name)
 {
+#if defined(USE_LTDL)
 /* TODO: support various platforms */
 	stix_bch_t buf[1024]; /* TODO: use a proper path buffer */
 	stix_size_t ucslen, bcslen;
 	stix_size_t len;
+	void* handle;
+
+/* TODO: using MODPREFIX isn't a good idean for all kind of modules.
+ * OK to use it for a primitive module.
+ * NOT OK to use it for a FFI target. 
+ * Attempting /home/hyung-hwan/xxx/lib/libstix-libc.so.6 followed by libc.so.6 is bad.
+ * Need to accept the type or flags?
+ *
+ * mod_open (stix, "xxxx", STIX_MOD_EXTERNAL);
+ * if external, don't use DEFAULT_MODPERFIX and MODPOSTFIX???
+ */
 
 	len = stix_copybcstr (buf, STIX_COUNTOF(buf), STIX_DEFAULT_MODPREFIX);
 
@@ -208,17 +239,44 @@ static void* mod_open (stix_t* stix, const stix_uch_t* name)
 	bcslen = STIX_COUNTOF(buf) - len;
 	stix_ucstoutf8 (name, &ucslen, &buf[len], &bcslen);
 
+	stix_copybcstr (&buf[bcslen + len], STIX_COUNTOF(buf) - bcslen - len, STIX_DEFAULT_MODPOSTFIX);
+
 printf ("MOD_OPEN %s\n", buf);
-	return dlopen (buf, RTLD_NOW);
+	handle = lt_dlopenext (buf);
+	if (!handle) 
+	{
+		buf[bcslen + len] = '\0';
+printf ("MOD_OPEN %s\n", &buf[len]);
+		handle = lt_dlopenext (&buf[len]);
+	}
+
+printf ("MOD_OPEN RET=>%p\n", handle);
+	return handle;
+
+#else
+	/* TODO: implemenent this */
+	return STIX_NULL;
+#endif
 }
 
 static void mod_close (stix_t* stix, void* handle)
 {
-	dlclose (handle);
+#if defined(USE_LTDL)
+	lt_dlclose (handle);
+#elif defined(_WIN32)
+	FreeLibrary ((HMODULE)handle);
+#elif defined(__OS2__)
+	DosFreeModule ((HMODULE)handle);
+#elif defined(__DOS__) && defined(QSE_ENABLE_DOS_DYNAMIC_MODULE)
+	FreeModule (handle);
+#else
+        /* nothing to do */
+#endif
 }
 
 static void* mod_getsym (stix_t* stix, void* handle, const stix_uch_t* name)
 {
+#if defined(USE_LTDL)
 	stix_bch_t buf[1024]; /* TODO: use a proper buffer. dynamically allocated if conversion result in too a large value */
 	stix_size_t ucslen, bcslen;
 	void* sym;
@@ -229,17 +287,17 @@ static void* mod_getsym (stix_t* stix, void* handle, const stix_uch_t* name)
 	bcslen = STIX_COUNTOF(buf) - 2;
 	stix_ucstoutf8 (name, &ucslen, &buf[1], &bcslen);
 printf ("MOD_GETSYM [%s]\n", &buf[1]);
-	sym = dlsym (handle, &buf[1]);
+	sym = lt_dlsym (handle, &buf[1]);
 	if (!sym)
 	{
 printf ("MOD_GETSYM [%s]\n", &buf[0]);
-		sym = dlsym (handle, &buf[0]);
+		sym = lt_dlsym (handle, &buf[0]);
 		if (!sym)
 		{
 			buf[bcslen + 1] = '_';
 			buf[bcslen + 2] = '\0';
 printf ("MOD_GETSYM [%s]\n", &buf[1]);
-			sym = dlsym (handle, &buf[1]);
+			sym = lt_dlsym (handle, &buf[1]);
 			if (!sym)
 			{
 printf ("MOD_GETSYM [%s]\n", &buf[0]);
@@ -249,6 +307,10 @@ printf ("MOD_GETSYM [%s]\n", &buf[0]);
 	}
 
 	return sym;
+#else
+	/* TODO: IMPLEMENT THIS */
+	return STIX_NULL;
+#endif
 }
 
 static char* syntax_error_msg[] = 
@@ -359,6 +421,10 @@ int main (int argc, char* argv[])
 	vmprim.mod_open = mod_open;
 	vmprim.mod_close = mod_close;
 	vmprim.mod_getsym = mod_getsym;
+
+#if defined(USE_LTDL)
+	lt_dlinit ();
+#endif
 
 	stix = stix_open (&sys_mmgr, STIX_SIZEOF(xtn_t), 512000lu, &vmprim, STIX_NULL);
 	if (!stix)
@@ -502,6 +568,8 @@ printf ("%p\n", a);
 	dump_dictionary (stix, stix->sysdic, "System dictionary");
 	stix_close (stix);
 
-
+#if defined(USE_LTDL)
+	lt_dlexit ();
+#endif
 	return 0;
 }

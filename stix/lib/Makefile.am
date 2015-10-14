@@ -1,18 +1,18 @@
 AUTOMAKE_OPTIONS = nostdinc
 
 CPPFLAGS_ALL_COMMON = \
-	-I$(top_builddir)/include \
-	-I$(top_srcdir)/include \
+	-I$(abs_builddir) \
+	-I$(abs_srcdir) \
 	-I$(includedir)	
 
-LDFLAGS_ALL_COMMON = -L. -L$(libdir) -version-info 1:0:0 -no-undefined
+LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(libdir)
 
 ##################################################
 # MAIN LIBRARY 
 ##################################################
 
 CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) $(LTDLINCL)
-LDFLAGS_LIB_COMMON = $(LDFLAGS_ALL_COMMON) 
+LDFLAGS_LIB_COMMON = $(LDFLAGS_ALL_COMMON) -version-info 1:0:0 -no-undefined
 LIBADD_LIB_COMMON = $(LIBM) $(LIBLTDL) 
 
 if WIN32
@@ -31,12 +31,14 @@ pkginclude_HEADERS = \
 	stix-cfg.h \
 	stix-cmn.h \
 	stix-rbt.h \
+	stix-utl.h \
 	stix.h
 
 pkglib_LTLIBRARIES = libstix.la
 libstix_la_SOURCES = \
 	stix-prv.h \
 	stix-rbt.c \
+	stix-utl.c \
 	stix.c \
 	heap.c \
 	gc.c \
@@ -72,17 +74,17 @@ else
 # DYNAMIC MODULES 
 ##################################################
 
-#CPPFLAGS_MOD_COMMON = $(CPPFLAGS_ALL_COMMON)
-#LDFLAGS_MOD_COMMON = $(LDFLAGS_ALL_COMMON)
-#LIBADD_MOD_COMMON = -lstix
+CPPFLAGS_MOD_COMMON = $(CPPFLAGS_LIB_COMMON)
+LDFLAGS_MOD_COMMON = $(LDFLAGS_LIB_COMMON)
+LIBADD_MOD_COMMON = -lstix
 
-#modexecdir = $(libdir)
+pkgmodexecdir = $(libdir)
 
-#modexec_LTLIBRARIES = libstix-dir.la
-#ibstix_dir_la_SOURCES = mod-dir.c mod-dir.h
-#ibstix_dir_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
-#ibstix_dir_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
-#ibstix_dir_la_LIBADD = $(LIBADD_MOD_COMMON)
+pkgmodexec_LTLIBRARIES = libstix-snd.la
+libstix_snd_la_SOURCES = mod-snd.c mod-snd.h
+libstix_snd_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
+libstix_snd_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
+libstix_snd_la_LIBADD = $(LIBADD_MOD_COMMON)
 
 endif
 

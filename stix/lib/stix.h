@@ -503,7 +503,7 @@ typedef struct stix_t stix_t;
 /* =========================================================================
  * VIRTUAL MACHINE PRIMITIVES
  * ========================================================================= */
-#define STIX_MOD_NAME_LEN_MAX 60
+#define STIX_MOD_NAME_LEN_MAX 120
 
 typedef void* (*stix_mod_open_t) (stix_t* stix, const stix_uch_t* name);
 typedef void (*stix_mod_close_t) (stix_t* stix, void* handle);
@@ -541,6 +541,39 @@ struct stix_cb_t
 };
 
 
+/* =========================================================================
+ * PRIMITIVE MODULE MANIPULATION
+ * ========================================================================= */
+typedef int (*stix_prim_impl_t) (stix_t* stix, stix_ooi_t nargs);
+
+typedef struct stix_prim_mod_t stix_prim_mod_t;
+
+typedef int (*stix_prim_mod_load_t) (
+	stix_t*          stix,
+	stix_prim_mod_t* mod
+);
+
+typedef stix_prim_impl_t (*stix_prim_mod_query_t) (
+	stix_t*           stix,
+	stix_prim_mod_t*  mod,
+	const stix_uch_t* name
+);
+
+typedef void (*stix_prim_mod_unload_t) (
+	stix_t*          stix,
+	stix_prim_mod_t* mod
+);
+
+struct stix_prim_mod_t
+{
+	stix_prim_mod_unload_t unload;
+	stix_prim_mod_query_t  query;
+	void*                  ctx;
+};
+
+/* =========================================================================
+ * STIX VM
+ * ========================================================================= */
 #if defined(STIX_INCLUDE_COMPILER)
 typedef struct stix_compiler_t stix_compiler_t;
 #endif

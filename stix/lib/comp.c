@@ -4224,6 +4224,8 @@ static int add_compiled_method (stix_t* stix)
 
 	mth->owner = stix->c->cls.self_oop;
 	mth->preamble = STIX_OOP_FROM_SMINT(STIX_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index));
+	mth->preamble_data[0] = STIX_OOP_FROM_SMINT(0);
+	mth->preamble_data[1] = STIX_OOP_FROM_SMINT(0);
 	mth->tmpr_count = STIX_OOP_FROM_SMINT(stix->c->mth.tmpr_count);
 	mth->tmpr_nargs = STIX_OOP_FROM_SMINT(stix->c->mth.tmpr_nargs);
 

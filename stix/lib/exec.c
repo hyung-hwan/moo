@@ -1033,6 +1033,7 @@ static int primitive_ffi_open (stix_t* stix, stix_ooi_t nargs)
 		return 0;
 	}
 
+
 /* TODO: check null-termination... */
 	handle = stix->vmprim.mod_open (stix, ((stix_oop_char_t)arg)->slot);
 	if (!handle)
@@ -1283,12 +1284,12 @@ printf ("wrong function name...\n");
 	return 1;
 }
 
-typedef int (*primitive_handler_t) (stix_t* stix, stix_ooi_t nargs);
+
 
 struct primitive_t
 {
 	stix_ooi_t          nargs; /* expected number of arguments */
-	primitive_handler_t handler;
+	stix_prim_impl_t    handler;
 	const char*         name; /* the name is supposed to be 7-bit ascii only */
 };
 typedef struct primitive_t primitive_t;
@@ -1341,31 +1342,6 @@ int stix_getprimno (stix_t* stix, const stix_ucs_t* name)
 	return -1;
 }
 
-typedef struct stix_prim_mod_t stix_prim_mod_t;
-
-typedef int (*stix_prim_mod_load_t) (
-	stix_t*          stix,
-	stix_prim_mod_t* mod
-);
-
-typedef void* (*stix_prim_mod_query_t) (
-	stix_t*           stix,
-	stix_prim_mod_t*  mod,
-	const stix_uch_t* name
-);
-
-typedef void (*stix_prim_mod_unload_t) (
-	stix_t*          stix,
-	stix_prim_mod_t* mod
-);
-
-struct stix_prim_mod_t
-{
-	stix_prim_mod_load_t   load;
-	stix_prim_mod_unload_t unload;
-	stix_prim_mod_query_t  query;
-};
-
 struct stix_prim_mod_data_t 
 {
 	void* handle;
@@ -1373,12 +1349,13 @@ struct stix_prim_mod_data_t
 };
 typedef struct stix_prim_mod_data_t stix_prim_mod_data_t;
 
-static stix_prim_mod_t* query_primitive_module (stix_t* stix, const stix_uch_t* name, stix_oow_t len)
+static stix_prim_impl_t query_primitive_module (stix_t* stix, const stix_uch_t* name, stix_oow_t len)
 {
 	stix_rbt_pair_t* pair;
 	stix_prim_mod_data_t* mdp;
 	const stix_uch_t* sep;
 	stix_oow_t mod_name_len;
+	stix_prim_impl_t handler;
 	int n;
 
 	sep = stix_findchar (name, len, '_');
@@ -1396,25 +1373,25 @@ static stix_prim_mod_t* query_primitive_module (stix_t* stix, const stix_uch_t* 
 		stix_prim_mod_load_t load = STIX_NULL;
 
 		/* maximum module name length is STIX_MOD_NAME_LEN_MAX. 
-		 * 17 is decomposed to 15 + 1 + 1.
-		 *   15 for _stix_prim_mod_.
+		 * 16 is decomposed to 14 + 1 + 1.
+		 *   14 for stix_prim_mod_.
 		 *   1 for _ at the end when stix_prim_mod_xxx_ is attempted.
 		 *   1 for the terminating '\0'.
 		 */
-		stix_uch_t buf[STIX_MOD_NAME_LEN_MAX + 17]; 
+		stix_uch_t buf[STIX_MOD_NAME_LEN_MAX + 16]; 
 
 		/* the terminating null isn't needed in buf here */
-		stix_copybchtouchars (buf, "_stix_prim_mod_", 15); 
+		stix_copybchtouchars (buf, "stix_prim_mod_", 14); 
 
-		if (mod_name_len > STIX_COUNTOF(buf) - 17)
+		if (mod_name_len > STIX_COUNTOF(buf) - 16)
 		{
 			/* module name too long  */
 			stix->errnum = STIX_EINVAL; /* TODO: change the  error number to something more specific */
 			return STIX_NULL;
 		}
 
-		stix_copyuchars (&buf[15], name, mod_name_len);
-		buf[15 + mod_name_len] = '\0';
+		stix_copyuchars (&buf[14], name, mod_name_len);
+		buf[14 + mod_name_len] = '\0';
 
 #if defined(STIX_ENABLE_STATIC_MODULE)
 		/* attempt to find a statically linked module */
@@ -1466,7 +1443,7 @@ static stix_prim_mod_t* query_primitive_module (stix_t* stix, const stix_uch_t* 
 		STIX_MEMSET (&md, 0, STIX_SIZEOF(md));
 		if (stix->vmprim.mod_open && stix->vmprim.mod_getsym && stix->vmprim.mod_close)
 		{
-			md.handle = stix->vmprim.mod_open (stix, &buf[15]);
+			md.handle = stix->vmprim.mod_open (stix, &buf[14]);
 		}
 
 		if (md.handle == STIX_NULL) 
@@ -1497,15 +1474,27 @@ static stix_prim_mod_t* query_primitive_module (stix_t* stix, const stix_uch_t* 
 		mdp = (stix_prim_mod_data_t*)STIX_RBT_VPTR(pair);
 		if (load (stix, &mdp->mod) <= -1)
 		{
+			/* stix->errnum = STIX_ENOENT; TODO: proper error code and handling */
 			stix_rbt_delete (&stix->pmtable, name, mod_name_len);
 			stix->vmprim.mod_close (stix, mdp->handle);
+			return STIX_NULL;
+		}
+
+		if (!mdp->mod.query)
+		{
+			/* the module must be at fault */
+			stix->errnum = STIX_EINVAL; /* TODO: proper error code and handling */
 			return STIX_NULL;
 		}
 	}
 
 done:
-	if (mdp->mod.query (stix, &mdp->mod, sep + 1) == STIX_NULL) return STIX_NULL;
-	return &mdp->mod;
+	if ((handler = mdp->mod.query (stix, &mdp->mod, sep + 1)) == STIX_NULL) 
+	{
+		stix->errnum = STIX_ENOENT; /* TODO: proper error code and handling */
+		return STIX_NULL;
+	}
+	return handler;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -2121,7 +2110,7 @@ printf ("]\n");
 							if (n >= 1) break;
 						}
 
-						/* primitive failed */
+						/* primitive handler failed */
 						if (activate_new_method (stix, newmth) <= -1) goto oops;
 						break;
 					}
@@ -2130,7 +2119,7 @@ printf ("]\n");
 					{
 						stix_ooi_t prim_name_index;
 						stix_oop_t name;
-						primitive_handler_t handler;
+						stix_prim_impl_t handler;
 
 						prim_name_index = STIX_METHOD_GET_PREAMBLE_INDEX(preamble);
 						DBGOUT_EXEC_1 ("METHOD_PREAMBLE_NAMED_PRIMITIVE %d", (int)prim_name_index);
@@ -2141,10 +2130,18 @@ printf ("]\n");
 						STIX_ASSERT (STIX_OBJ_GET_FLAGS_EXTRA(name));
 						STIX_ASSERT (STIX_CLASSOF(stix,name) == stix->_symbol);
 
-						handler = query_primitive_module (stix, ((stix_oop_char_t)name)->slot, STIX_OBJ_GET_SIZE(name));
+						/* merge two SmallIntegers to get a full pointer */
+						handler = (stix_oow_t)STIX_OOP_TO_SMINT(newmth->preamble_data[0]) << (STIX_OOW_BITS / 2) | 
+						          (stix_oow_t)STIX_OOP_TO_SMINT(newmth->preamble_data[1]);
+						if (!handler) handler = query_primitive_module (stix, ((stix_oop_char_t)name)->slot, STIX_OBJ_GET_SIZE(name));
+
 						if (handler)
 						{
 							int n;
+
+							/* split a pointer to two OOP fields as SmallIntegers for storing. */
+							newmth->preamble_data[0] = STIX_OOP_FROM_SMINT((stix_oow_t)handler >> (STIX_OOW_BITS / 2));
+							newmth->preamble_data[1] = STIX_OOP_FROM_SMINT((stix_oow_t)handler & STIX_LBMASK(stix_oow_t, STIX_OOW_BITS / 2));
 
 							stix_pushtmp (stix, (stix_oop_t*)&newmth);
 							n = handler (stix, b1);
@@ -2152,17 +2149,17 @@ printf ("]\n");
 							if (n <= -1) goto oops;
 							if (n >= 1) break;
 						}
+						
 
-						/* primitive failed */
+						/* primitive handler failed or not found*/
 						if (activate_new_method (stix, newmth) <= -1) goto oops;
 						break;
 					}
 
 					default:
-						/* this must not happen */
-			
-						stix->errnum = STIX_EINTERN;
-						return -1;
+						STIX_ASSERT (preamble_code == STIX_METHOD_PREAMBLE_NONE);
+						if (activate_new_method (stix, newmth) <= -1) goto oops;
+						break;
 				}
 
 				break; /* CMD_SEND_MESSAGE */

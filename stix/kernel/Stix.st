@@ -272,6 +272,7 @@
 	{
 		self.funcs := Dictionary new.
 		self.name := aString.
+
 		self.handle := self privateOpen: self.name.
 
 		"[ self.handle := self privateOpen: self.name ] 

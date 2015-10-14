@@ -28,6 +28,7 @@
 #define _STIX_PRV_H_
 
 #include "stix.h"
+#include "stix-utl.h"
 
 /* you can define this to either 1 or 2 */
 #define STIX_BCODE_LONG_PARAM_SIZE 2
@@ -857,62 +858,6 @@ stix_size_t stix_hashuchars (
 
 #define stix_hashbchars(ptr,len) stix_hashbytes(ptr,len)
 
-int stix_equalchars (
-	const stix_uch_t*  str1,
-	const stix_uch_t*  str2,
-	stix_size_t        len
-);
-
-int stix_compucstr (
-	const stix_uch_t* str1,
-	const stix_uch_t* str2
-);
-
-int stix_compbcstr (
-	const stix_bch_t* str1,
-	const stix_bch_t* str2
-);
-
-int stix_compucbcstr (
-	const stix_uch_t* str1,
-	const stix_bch_t* str2
-);
-
-int stix_compucxbcstr (
-	const stix_uch_t* str1,
-	stix_size_t       len,
-	const stix_bch_t* str2
-);
-
-void stix_copyuchars (
-	stix_uch_t*       dst,
-	const stix_uch_t* src,
-	stix_size_t       len
-);
-
-void stix_copybchtouchars (
-	stix_uch_t*       dst,
-	const stix_bch_t* src,
-	stix_size_t       len
-);
-
-stix_uch_t* stix_findchar (
-	const stix_uch_t* ptr,
-	stix_size_t       len,
-	stix_uch_t        c
-);
-
-stix_size_t stix_copyucstr (
-	stix_uch_t*       dst,
-	stix_size_t       len,
-	const stix_uch_t* src
-);
-
-stix_size_t stix_copybcstr (
-	stix_bch_t*       dst,
-	stix_size_t       len,
-	const stix_bch_t* src
-);
 
 /* ========================================================================= */
 /* gc.c                                                                     */
