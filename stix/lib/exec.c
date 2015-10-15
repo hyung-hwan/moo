@@ -334,7 +334,6 @@ static int activate_initial_context (stix_t* stix, const stix_ucs_t* objname, co
 	 *    push Stix
 	 *    send #main
 	 */
-
 	stix_oop_context_t ctx;
 	stix_oop_association_t ass;
 	stix_oop_method_t mth;
@@ -364,7 +363,7 @@ TODO: overcome this problem
 	/* the initial context starts the life of the entire VM
 	 * and is not really worked on except that it is used to call the
 	 * initial method. so it doesn't really require any extra stack space.
-	 * TODO: verify my theory above is true */
+	 * TODO: verify this theory of mine. */
 	stix->ip = 0;
 	stix->sp = -1;
 
@@ -385,7 +384,7 @@ TODO: overcome this problem
 
 
 /* ------------------------------------------------------------------------- */
-static int primitive_dump (stix_t* stix, stix_ooi_t nargs)
+static int prim_dump (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_ooi_t i;
 
@@ -406,7 +405,7 @@ static int primitive_dump (stix_t* stix, stix_ooi_t nargs)
 	return 1; /* success */
 }
 
-static int primitive_identical (stix_t* stix, stix_ooi_t nargs)
+static int prim_identical (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, b;
 
@@ -422,7 +421,7 @@ static int primitive_identical (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int primitive_not_identical (stix_t* stix, stix_ooi_t nargs)
+static int prim_not_identical (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, b;
 
@@ -438,7 +437,7 @@ static int primitive_not_identical (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int primitive_class (stix_t* stix, stix_ooi_t nargs)
+static int prim_class (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, c;
 
@@ -449,7 +448,7 @@ static int primitive_class (stix_t* stix, stix_ooi_t nargs)
 	return 1; /* success */
 }
 
-static int primitive_new (stix_t* stix, stix_ooi_t nargs)
+static int prim_basic_new (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, obj;
 
@@ -471,7 +470,7 @@ static int primitive_new (stix_t* stix, stix_ooi_t nargs)
 	return 1; /* success */
 }
 
-static int primitive_new_with_size (stix_t* stix, stix_ooi_t nargs)
+static int prim_basic_new_with_size (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, szoop, obj;
 	stix_oow_t size;
@@ -515,7 +514,7 @@ static int primitive_new_with_size (stix_t* stix, stix_ooi_t nargs)
 	return 1; /* success */
 }
 
-static int primitive_basic_size (stix_t* stix, stix_ooi_t nargs)
+static int prim_basic_size (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 	STIX_ASSERT (nargs == 0);
@@ -526,7 +525,7 @@ static int primitive_basic_size (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int primitive_basic_at (stix_t* stix, stix_ooi_t nargs)
+static int prim_basic_at (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, pos, v;
 	stix_ooi_t idx;
@@ -587,7 +586,7 @@ static int primitive_basic_at (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int primitive_basic_at_put (stix_t* stix, stix_ooi_t nargs)
+static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, pos, val;
 	stix_ooi_t idx;
@@ -670,7 +669,7 @@ static int primitive_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int primitive_block_value (stix_t* stix, stix_ooi_t nargs)
+static int prim_block_value (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_context_t blkctx, org_blkctx;
 	stix_ooi_t local_ntmprs, i;
@@ -772,7 +771,7 @@ printf ("<<ENTERING BLOCK>>\n");
 	return 1;
 }
 
-static int primitive_integer_add (stix_t* stix, stix_ooi_t nargs)
+static int prim_integer_add (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_ooi_t tmp;
 	stix_oop_t rcv, arg;
@@ -796,7 +795,7 @@ static int primitive_integer_add (stix_t* stix, stix_ooi_t nargs)
 	return 0;
 }
 
-static int primitive_integer_sub (stix_t* stix, stix_ooi_t nargs)
+static int prim_integer_sub (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_ooi_t tmp;
 	stix_oop_t rcv, arg;
@@ -820,7 +819,7 @@ static int primitive_integer_sub (stix_t* stix, stix_ooi_t nargs)
 	return 0;
 }
 
-static int primitive_integer_mul (stix_t* stix, stix_ooi_t nargs)
+static int prim_integer_mul (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_ooi_t tmp;
 	stix_oop_t rcv, arg;
@@ -844,7 +843,7 @@ static int primitive_integer_mul (stix_t* stix, stix_ooi_t nargs)
 	return 0;
 }
 
-static int primitive_integer_eq (stix_t* stix, stix_ooi_t nargs)
+static int prim_integer_eq (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
 
@@ -872,7 +871,7 @@ static int primitive_integer_eq (stix_t* stix, stix_ooi_t nargs)
 	return 0;
 }
 
-static int primitive_integer_ne (stix_t* stix, stix_ooi_t nargs)
+static int prim_integer_ne (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
 
@@ -899,7 +898,7 @@ static int primitive_integer_ne (stix_t* stix, stix_ooi_t nargs)
 /* TODO: handle LargeInteger */
 	return 0;
 }
-static int primitive_integer_lt (stix_t* stix, stix_ooi_t nargs)
+static int prim_integer_lt (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
 
@@ -927,7 +926,7 @@ static int primitive_integer_lt (stix_t* stix, stix_ooi_t nargs)
 	return 0;
 }
 
-static int primitive_integer_gt (stix_t* stix, stix_ooi_t nargs)
+static int prim_integer_gt (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
 
@@ -955,7 +954,7 @@ static int primitive_integer_gt (stix_t* stix, stix_ooi_t nargs)
 	return 0;
 }
 
-static int primitive_integer_le (stix_t* stix, stix_ooi_t nargs)
+static int prim_integer_le (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
 
@@ -983,7 +982,7 @@ static int primitive_integer_le (stix_t* stix, stix_ooi_t nargs)
 	return 0;
 }
 
-static int primitive_integer_ge (stix_t* stix, stix_ooi_t nargs)
+static int prim_integer_ge (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
 
@@ -1011,7 +1010,18 @@ static int primitive_integer_ge (stix_t* stix, stix_ooi_t nargs)
 	return 0;
 }
 
-static int primitive_ffi_open (stix_t* stix, stix_ooi_t nargs)
+static int prim_scheduler_add (stix_t* stix, stix_ooi_t nargs)
+{
+	return 0;
+}
+
+static int prim_scheduler_remove (stix_t* stix, stix_ooi_t nargs)
+{
+	return 0;
+}
+
+
+static int prim_ffi_open (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
 	void* handle;
@@ -1049,7 +1059,7 @@ static int primitive_ffi_open (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int primitive_ffi_close (stix_t* stix, stix_ooi_t nargs)
+static int prim_ffi_close (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
 	void* handle;
@@ -1074,7 +1084,7 @@ static int primitive_ffi_close (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int primitive_ffi_call (stix_t* stix, stix_ooi_t nargs)
+static int prim_ffi_call (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, fun, sig, args;
 
@@ -1243,7 +1253,7 @@ printf ("CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
 	return 1;
 }
 
-static int primitive_ffi_getsym (stix_t* stix, stix_ooi_t nargs)
+static int prim_ffi_getsym (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, hnd, fun;
 	void* sym;
@@ -1286,43 +1296,47 @@ printf ("wrong function name...\n");
 
 
 
-struct primitive_t
+struct prim_t
 {
-	stix_ooi_t          nargs; /* expected number of arguments */
+	stix_ooi_t          nargs;   /* expected number of arguments */
 	stix_prim_impl_t    handler;
-	const char*         name; /* the name is supposed to be 7-bit ascii only */
+	const char*         name;    /* the name is supposed to be 7-bit ascii only */
 };
-typedef struct primitive_t primitive_t;
+typedef struct prim_t prim_t;
 
-static primitive_t primitives[] =
+static prim_t primitives[] =
 {
-	{  -1,   primitive_dump,                 "dump"          },
-	{   1,   primitive_identical,            "identical"     },
-	{   1,   primitive_not_identical,        "notIdentical"  },
-	{   0,   primitive_class,                "class"         },
+	{  -1,   prim_dump,                 "_dump"                },
+	{   1,   prim_identical,            "_identical"           },
+	{   1,   prim_not_identical,        "_not_identical"       },
+	{   0,   prim_class,                "_class"               },
 
-	{   0,   primitive_new,                  "new"           },
-	{   1,   primitive_new_with_size,        "newWithSize"   },
-	{   0,   primitive_basic_size,           "basicSize"     },
+	{   0,   prim_basic_new,            "_basic_new"           },
+	{   1,   prim_basic_new_with_size,  "_basic_new_with_size" },
+	{   0,   prim_basic_size,           "_basic_size"          },
 
-	{   1,   primitive_basic_at,             "basicAt"       },
-	{   2,   primitive_basic_at_put,         "basicAtPut"    },
+	{   1,   prim_basic_at,             "_basic_at"            },
+	{   2,   prim_basic_at_put,         "_basic_at_put"        },
 
-	{  -1,   primitive_block_value,          "blockValue"    },
-	{   1,   primitive_integer_add,          "integerAdd"    },
-	{   1,   primitive_integer_sub,          "integerSub"    },
-	{   1,   primitive_integer_mul,          "integerMul"    },
-	{   1,   primitive_integer_eq,           "integerEQ"     },
-	{   1,   primitive_integer_ne,           "integerNE"     },
-	{   1,   primitive_integer_lt,           "integerLT"     },
-	{   1,   primitive_integer_gt,           "integerGT"     },
-	{   1,   primitive_integer_le,           "integerLE"     },
-	{   1,   primitive_integer_ge,           "integerGE"     },
+	{  -1,   prim_block_value,          "_block_value"         },
 
-	{   1,   primitive_ffi_open,             "ffiOpen"       },
-	{   1,   primitive_ffi_close,            "ffiClose"      },
-	{   2,   primitive_ffi_getsym,           "ffiGetSym"     },
-	{   3,   primitive_ffi_call,             "ffiCall"       }
+	{   1,   prim_integer_add,          "_integer_add"         },
+	{   1,   prim_integer_sub,          "_integer_sub"         },
+	{   1,   prim_integer_mul,          "_integer_mul"         },
+	{   1,   prim_integer_eq,           "_integer_eq"          },
+	{   1,   prim_integer_ne,           "_integer_ne"          },
+	{   1,   prim_integer_lt,           "_integer_lt"          },
+	{   1,   prim_integer_gt,           "_integer_gt"          },
+	{   1,   prim_integer_le,           "_integer_le"          },
+	{   1,   prim_integer_ge,           "_integer_ge"          },
+
+	{   1,   prim_scheduler_add,        "_scheduler_add"       },
+	{   1,   prim_scheduler_remove,     "_scheduler_remove"    },
+
+	{   1,   prim_ffi_open,             "_ffi_open"            },
+	{   1,   prim_ffi_close,            "_ffi_close"           },
+	{   2,   prim_ffi_getsym,           "_ffi_getsym"          },
+	{   3,   prim_ffi_call,             "_ffi_call"            }
 	
 };
 
@@ -1342,14 +1356,7 @@ int stix_getprimno (stix_t* stix, const stix_ucs_t* name)
 	return -1;
 }
 
-struct stix_prim_mod_data_t 
-{
-	void* handle;
-	stix_prim_mod_t mod;
-};
-typedef struct stix_prim_mod_data_t stix_prim_mod_data_t;
-
-static stix_prim_impl_t query_primitive_module (stix_t* stix, const stix_uch_t* name, stix_oow_t len)
+static stix_prim_impl_t query_prim_module (stix_t* stix, const stix_uch_t* name, stix_oow_t len)
 {
 	stix_rbt_pair_t* pair;
 	stix_prim_mod_data_t* mdp;
@@ -1395,6 +1402,8 @@ static stix_prim_impl_t query_primitive_module (stix_t* stix, const stix_uch_t* 
 
 #if defined(STIX_ENABLE_STATIC_MODULE)
 		/* attempt to find a statically linked module */
+
+/*TODO: CHANGE THIS PART */
 
 		/* TODO: binary search ... */
 		for (n = 0; n < STIX_COUNTOF(static_modtab); n++)
@@ -1474,18 +1483,14 @@ static stix_prim_impl_t query_primitive_module (stix_t* stix, const stix_uch_t* 
 		mdp = (stix_prim_mod_data_t*)STIX_RBT_VPTR(pair);
 		if (load (stix, &mdp->mod) <= -1)
 		{
-			/* stix->errnum = STIX_ENOENT; TODO: proper error code and handling */
+			stix->errnum = STIX_ENOENT; /* TODO: proper error code and handling */
 			stix_rbt_delete (&stix->pmtable, name, mod_name_len);
 			stix->vmprim.mod_close (stix, mdp->handle);
 			return STIX_NULL;
 		}
 
-		if (!mdp->mod.query)
-		{
-			/* the module must be at fault */
-			stix->errnum = STIX_EINVAL; /* TODO: proper error code and handling */
-			return STIX_NULL;
-		}
+		/* the module loader must ensure to set a proper query handler */
+		STIX_ASSERT (mdp->mod.query != STIX_NULL);
 	}
 
 done:
@@ -2133,7 +2138,7 @@ printf ("]\n");
 						/* merge two SmallIntegers to get a full pointer */
 						handler = (stix_oow_t)STIX_OOP_TO_SMINT(newmth->preamble_data[0]) << (STIX_OOW_BITS / 2) | 
 						          (stix_oow_t)STIX_OOP_TO_SMINT(newmth->preamble_data[1]);
-						if (!handler) handler = query_primitive_module (stix, ((stix_oop_char_t)name)->slot, STIX_OBJ_GET_SIZE(name));
+						if (!handler) handler = query_prim_module (stix, ((stix_oop_char_t)name)->slot, STIX_OBJ_GET_SIZE(name));
 
 						if (handler)
 						{
@@ -2344,7 +2349,7 @@ printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
 
 				/* the block context object created here is used
 				 * as a base object for block context activation.
-				 * primitive_block_value() clones a block 
+				 * prim_block_value() clones a block 
 				 * context and activates the cloned context.
 				 * this base block context is created with no 
 				 * stack for this reason. */
@@ -2397,7 +2402,7 @@ printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
 
 				/* the block context object created here is used
 				 * as a base object for block context activation.
-				 * primitive_block_value() clones a block 
+				 * prim_block_value() clones a block 
 				 * context and activates the cloned context.
 				 * this base block context is created with no 
 				 * stack for this reason. */
@@ -2412,7 +2417,7 @@ printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
 				/* [NOTE]
 				 *  blkctx->caller is left to nil. it is set to the 
 				 *  active context before it gets activated. see
-				 *  primitive_block_value().
+				 *  prim_block_value().
 				 *
 				 *  blkctx->home is set here to the active context.
 				 *  it's redundant to have them pushed to the stack
@@ -2496,6 +2501,8 @@ oops:
 
 int stix_invoke (stix_t* stix, const stix_ucs_t* objname, const stix_ucs_t* mthname)
 {
+	/*stix_oop_process_t proc;*/
+
 	if (activate_initial_context (stix, objname, mthname) <= -1) return -1;
 	return stix_execute (stix);
 }

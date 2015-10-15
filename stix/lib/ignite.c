@@ -135,6 +135,7 @@ static int ignite_1 (stix_t* stix)
 	stix->_method_context    = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 	stix->_block_context     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 	stix->_process           = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_PROCESS_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
+	stix->_process_scheduler = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_PROCESS_SCHEDULER_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 	stix->_true_class        = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_false_class       = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	/* TOOD: what is a proper spec for Character and SmallInteger?
@@ -152,7 +153,9 @@ static int ignite_1 (stix_t* stix)
 	    !stix->_namespace         || !stix->_pool_dictionary   ||
 	    !stix->_method_dictionary || !stix->_method            || !stix->_association ||
 
-	    !stix->_method_context    || !stix->_block_context     || !stix->_process ||
+	    !stix->_method_context    || !stix->_block_context     || 
+	    !stix->_process           || !stix->_process_scheduler ||
+
 	    !stix->_true_class        || !stix->_false_class       || 
 	    !stix->_character         || !stix->_small_integer) return -1;
 
@@ -188,6 +191,10 @@ static int ignite_2 (stix_t* stix)
 	tmp = (stix_oop_t)stix_makedic (stix, stix->_system_dictionary, stix->option.dfl_sysdic_size);
 	if (!tmp) return -1;
 	stix->sysdic = (stix_oop_set_t)tmp;
+
+	tmp = (stix_oop_t)stix_instantiate (stix, stix->_process_scheduler, STIX_NULL, 0);
+	if (!tmp) return -1;
+	stix->scheduler = (stix_oop_process_scheduler_t)tmp;
 
 	/* Export the system dictionary via the first class variable of the Stix class */
 	((stix_oop_class_t)stix->_apex)->slot[0] = (stix_oop_t)stix->sysdic;
@@ -225,6 +232,7 @@ static int ignite_3 (stix_t* stix)
 		{ 13, { 'M','e','t','h','o','d','C','o','n','t','e','x','t'              } },
 		{ 12, { 'B','l','o','c','k','C','o','n','t','e','x','t'                  } },
 		{  7, { 'P','r','o','c','e','s','s'                                      } },
+		{ 16, { 'P','r','o','c','e','s','s','S','c','h','e','d','u','l','e','r'  } },
 		{  4, { 'T','r','u','e'                                                  } },
 		{  5, { 'F','a','l','s','e'                                              } },
 		{  9, { 'C','h','a','r','a','c','t','e','r'                              } },
@@ -232,6 +240,7 @@ static int ignite_3 (stix_t* stix)
 	};
 
 	static stix_uch_t str_stix[] = { 'S','t','i','x' };
+	static stix_uch_t str_scheduler[] = { 'S', 'c', 'h', 'e', 'd', 'u', 'l', 'e', 'r' };
 
 	stix_oow_t i;
 	stix_oop_t sym;
@@ -251,9 +260,15 @@ static int ignite_3 (stix_t* stix)
 		stix_ptr++;
 	}
 
+	/* Make the system dictionary available as the global name 'Stix' */
 	sym = stix_makesymbol (stix, str_stix, 4);
 	if (!sym) return -1;
 	if (!stix_putatsysdic(stix, sym, (stix_oop_t)stix->sysdic)) return -1;
+
+	/* Make the process scheduler avaialble as the global name 'Scheduler' */
+	sym = stix_makesymbol (stix, str_scheduler, 4);
+	if (!sym) return -1;
+	if (!stix_putatsysdic(stix, sym, (stix_oop_t)stix->scheduler)) return -1;
 
 	return 0;
 }

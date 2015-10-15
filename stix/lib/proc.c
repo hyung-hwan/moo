@@ -27,8 +27,7 @@
 
 #include "stix-prv.h"
 
-
-stix_oop_process_t stix_makeproc (stix_t* stix)
+stix_oop_process_t stix_addnewproc (stix_t* stix)
 {
 	stix_oop_process_t proc;
 
@@ -36,6 +35,18 @@ stix_oop_process_t stix_makeproc (stix_t* stix)
 	if (!proc) return STIX_NULL;
 
 	proc->state = STIX_OOP_FROM_SMINT(0);
+	
 	STIX_ASSERT (STIX_OBJ_GET_SIZE(proc) == STIX_PROCESS_NAMED_INSTVARS + stix->option.dfl_procstk_size);
 	return proc;
+}
+
+void stix_schedproc (stix_t* stix, stix_oop_process_t proc)
+{
+	/* TODO: if scheduled, don't add */
+	/*proc->next = stix->_active_process;
+	proc->_active_process = proc;*/
+}
+
+void stix_unschedproc (stix_t* stix, stix_oop_process_t proc)
+{
 }

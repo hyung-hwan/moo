@@ -80,6 +80,18 @@ oops:
 	return -1;
 }
 
+static stix_rbt_walk_t unload_primitive_module (stix_rbt_t* rbt, stix_rbt_pair_t* pair, void* ctx)
+{
+	stix_t* stix = (stix_t*)ctx;
+	stix_prim_mod_data_t* md;
+
+	md = STIX_RBT_VPTR(pair);
+	if (md->mod.unload) md->mod.unload (stix, &md->mod);
+	if (md->handle) stix->vmprim.mod_close (stix, md->handle);
+
+	return STIX_RBT_WALK_FORWARD;
+}
+
 void stix_fini (stix_t* stix)
 {
 	stix_cb_t* cb;
@@ -89,6 +101,7 @@ void stix_fini (stix_t* stix)
 		if (cb->fini) cb->fini (stix);
 	}
 
+	stix_rbt_walk (&stix->pmtable, unload_primitive_module, stix);
 	stix_rbt_fini (&stix->pmtable);
 
 	stix_killheap (stix, stix->newheap);

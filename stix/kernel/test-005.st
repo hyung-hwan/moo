@@ -240,9 +240,11 @@
 		## ffi call: #puts withSig: 'i|s' withArgs: #('hello world').
 		ffi close.
 "
+
 		self abc.
 		self abc.
 		self abc.
+
 "
 		FFI isNil dump.
 		FFI notNil dump.

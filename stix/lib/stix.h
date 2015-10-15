@@ -467,14 +467,28 @@ struct stix_context_t
 	stix_oop_t         slot[1]; /* stack */
 };
 
+#define STIX_PROCESS_SCHEDULER_NAMED_INSTVARS 4
+typedef struct stix_process_scheduler_t stix_process_scheduler_t;
+typedef struct stix_process_scheduler_t* stix_oop_process_scheduler_t;
+struct stix_process_scheduler_t
+{
+	STIX_OBJ_HEADER;
+	stix_oop_t tally;
+	stix_oop_t head;
+	stix_oop_t tail;
+	stix_oop_t active;
+};
 
-#define STIX_PROCESS_NAMED_INSTVARS 1
+#define STIX_PROCESS_NAMED_INSTVARS 4
 typedef struct stix_process_t stix_process_t;
 typedef struct stix_process_t* stix_oop_process_t;
 struct stix_process_t
 {
 	STIX_OBJ_HEADER;
+	stix_oop_t  sp;
 	stix_oop_t  state;
+	stix_oop_t  prev;
+	stix_oop_t  next;
 
 	/* == variable indexed part == */
 	stix_oop_t slot[1]; /* process stack */
@@ -586,6 +600,13 @@ struct stix_prim_mod_t
 	void*                  ctx;
 };
 
+struct stix_prim_mod_data_t 
+{
+	void* handle;
+	stix_prim_mod_t mod;
+};
+typedef struct stix_prim_mod_data_t stix_prim_mod_data_t;
+
 /* =========================================================================
  * STIX VM
  * ========================================================================= */
@@ -644,6 +665,7 @@ struct stix_t
 	stix_oop_t _method_context; /* MethodContext */
 	stix_oop_t _block_context; /* BlockContext */
 	stix_oop_t _process; /* Process */
+	stix_oop_t _process_scheduler; /* ProcessScheduler */
 	stix_oop_t _true_class; /* True */
 	stix_oop_t _false_class; /* False */
 	stix_oop_t _character; /* Character */
@@ -653,6 +675,7 @@ struct stix_t
 
 	stix_oop_set_t symtab; /* system-wide symbol table. instance of SymbolSet */
 	stix_oop_set_t sysdic; /* system dictionary. instance of SystemDictionary */
+	stix_oop_process_scheduler_t scheduler; /* instance of ProcessScheduler */
 
 	stix_oop_t* tmp_stack[256]; /* stack for temporaries */
 	stix_oow_t tmp_count;

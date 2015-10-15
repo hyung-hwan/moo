@@ -7,12 +7,12 @@
 
 	#method(#class) dump
 	{
-		<primitive: #dump>
+		<primitive: #_dump>
 	}
 
 	#method dump
 	{
-		<primitive: #dump>
+		<primitive: #_dump>
 	}
 
 	## -------------------------------------------------------
@@ -31,16 +31,39 @@
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
+	#method(#class) basicNew
+	{
+		<primitive: #_basic_new>
+		self primitiveFailed.
+	}
+
+	#method(#class) basicNew: anInteger
+	{
+		<primitive: #_basic_new_with_size>
+		self primitiveFailed.
+	}
+
 	#method(#class) new
 	{
-		<primitive: #new>
-		self primitiveFailed.
+		| x |
+		x := self basicNew.
+		x initialize. "TODO: assess if it's good to call 'initialize' from new."
+		^x.
 	}
 
 	#method(#class) new: anInteger
 	{
-		<primitive: #newWithSize>
-		self primitiveFailed.
+		| x |
+		x := self basicNew: anInteger.
+		x initialize. "TODO: assess if it's good to call 'initialize' from new."
+		^x.
+	}
+
+	#method initialize
+	{
+		"a subclass may override this method."
+		
+		^self.
 	}
 
 	## -------------------------------------------------------
@@ -48,12 +71,12 @@
 
 	#method class
 	{
-		<primitive: #class>
+		<primitive: #_class>
 	}
 
 	#method(#class) class
 	{
-		<primitive: #class>
+		<primitive: #_class>
 		^Class
 	}
 
@@ -62,37 +85,38 @@
 
 	#method basicSize
 	{
-		<primitive: #basicSize>
-		^0
+		<primitive: #_basic_size>
+		self primitiveFailed.
+	}
+
+	#method(#class) basicSize
+	{
+		<primitive: #_basic_size>
+		self primitiveFailed.
 	}
 
 	#method basicAt: anInteger
 	{
-		<primitive: #basicAt>
+		<primitive: #_basic_at>
 		self error: 'out of range'.
 	}
 
 	#method basicAt: anInteger put: anObject
 	{
-		<primitive: #basicAtPut>
+		<primitive: #_basic_at_put>
 		self error: 'out of range'.
 	}
 
-	#method(#class) basicSize
-	{
-		<primitive: #basicSize>
-		^0
-	}
 
 	#method(#class) basicAt: anInteger
 	{
-		<primitive: #basicAt>
+		<primitive: #_basic_at>
 		self error: 'out of range'.
 	}
 
 	#method(#class) basicAt: anInteger put: anObject
 	{
-		<primitive: #basicAtPut>
+		<primitive: #_basic_at_put>
 		self error: 'out of range'.
 	}
 
@@ -103,12 +127,12 @@
 	{
 		"check if the receiver is identical to anObject.
 		 this doesn't compare the contents"
-		<primitive: #identical>
+		<primitive: #_identical>
 	}
 
 	#method ~~ anObject
 	{
-		<primitive: #notIdentical>
+		<primitive: #_not_identical>
 		^(self == anObject) not.
 	}
 
@@ -116,12 +140,12 @@
 	{
 		"check if the receiver is identical to anObject.
 		 this doesn't compare the contents"
-		<primitive: #identical>
+		<primitive: #_identical>
 	}
 
 	#method(#class) ~~ anObject
 	{
-		<primitive: #notIdentical>
+		<primitive: #_not_identical>
 		^(self == anObject) not.
 	}
 

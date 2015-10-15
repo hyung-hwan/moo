@@ -285,12 +285,14 @@ void stix_gc (stix_t* stix)
 	stix->_method_context    = stix_moveoop (stix, stix->_method_context);
 	stix->_block_context     = stix_moveoop (stix, stix->_block_context);
 	stix->_process           = stix_moveoop (stix, stix->_process);
+	stix->_process_scheduler = stix_moveoop (stix, stix->_process_scheduler);
 	stix->_true_class        = stix_moveoop (stix, stix->_true_class);
 	stix->_false_class       = stix_moveoop (stix, stix->_false_class);
 	stix->_character         = stix_moveoop (stix, stix->_character);
 	stix->_small_integer     = stix_moveoop (stix, stix->_small_integer);
 
 	stix->sysdic = (stix_oop_set_t) stix_moveoop (stix, (stix_oop_t)stix->sysdic);
+	stix->scheduler = (stix_oop_process_scheduler_t) stix_moveoop (stix, (stix_oop_t)stix->scheduler);
 
 	for (i = 0; i < stix->tmp_count; i++)
 	{

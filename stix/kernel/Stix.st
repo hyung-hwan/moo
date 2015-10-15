@@ -29,40 +29,60 @@
 
 #class Number(Magnitude)
 {
-	#method add: aNumber
-	{
-		<primitive: #integerAdd>
-	}
-
 	#method + aNumber
 	{
-		<primitive: #integerAdd>
+		<primitive: #_integer_add>
+		self primitiveFailed.
 	}
 
 	#method - aNumber
 	{
-		<primitive: #integerSub>
+		<primitive: #_integer_sub>
+		self primitiveFailed.
 	}
 
 	#method * aNumber
 	{
-		<primitive: #integerMul>
+		<primitive: #_integer_mul>
+		self primitiveFailed.
 	}
 
 	#method = aNumber
 	{
-		<primitive: #integerEQ>
+		<primitive: #_integer_eq>
+		self primitiveFailed.
+	}
+
+	#method ~= aNumber
+	{
+		<primitive: #_integer_ne>
+		self primitiveFailed.
 	}
 
 	#method < aNumber
 	{
-		<primitive: #integerLT>
+		<primitive: #_integer_lt>
+		self primitiveFailed.
 	}
 
 	#method > aNumber
 	{
-		<primitive: #integerGT>
+		<primitive: #_integer_gt>
+		self primitiveFailed.
 	}
+
+	#method <= aNumber
+	{
+		<primitive: #_integer_le>
+		self primitiveFailed.
+	}
+
+	#method >= aNumber
+	{
+		<primitive: #_integer_ge>
+		self primitiveFailed.
+	}
+
 
 
 	#method to: end by: step do: aBlock
@@ -100,169 +120,13 @@
 #include 'Collection-Array.st'.
 #include 'Collection-Set.st'.
 
-
-#class(#pointer) Context(Apex)
-{
-}
-
-#class(#pointer) MethodContext(Context)
-{
-	#dcl sender ip sp ntmprs method receiver home origin.
-
-	#method pc
-	{
-		^ip
-	}
-
-	#method pc: anInteger
-	{
-		ip := anInteger.
-		"sp := sp - 1."  "whould this always work??? "
-	}
-
-	#method sp
-	{
-		^sp.
-
-	}
-	#method sp: anInteger
-	{
-		sp := anInteger.
-	}
-
-	#method pc: aPC sp: aSP
-	{
-		ip := aPC.
-		sp := aSP.
-		##sp := sp - 1.
-	}
-}
-
-#class(#pointer) BlockContext(Context)
-{
-	#dcl caller ip sp ntmprs nargs source  home origin.
-
-	#method value
-	{
-		<primitive: #blockValue>
-	}
-
-	#method value: a 
-	{
-		<primitive: #blockValue>
-	}
-
-	#method value: a value: b
-	{
-		<primitive: #blockValue>
-	}
-
-	#method value: a value: b value: c
-	{
-		<primitive: #blockValue>
-	}
-
-	#method whileTrue: aBlock
-	{
-## http://stackoverflow.com/questions/2500483/is-there-a-way-in-a-message-only-language-to-define-a-whiletrue-message-without
-
-## ----------------------------------------------------------------------------
-
-##		^(self value) ifTrue: [aBlock value. self whileTrue: aBlock].
-
-## ----------------------------------------------------------------------------
-
-		## less block context before whileTrue: is recursively sent.
-		## whileTrue: is sent in a method context.
-##		(self value) ifFalse: [^nil].
-##		aBlock value. 
-##		self whileTrue: aBlock.
-
-## ----------------------------------------------------------------------------
-
-## ----------------------------------------------------------------------------
-		| pc sp xsp |
-
-		sp := thisContext sp.
-		sp := sp - 1. "decrement sp by 1 becuase thisContext pushed above affects the sp method"
-		pc := thisContext pc.
-		self value ifFalse: [ ^nil "^self" ].
-		aBlock value.
-		##thisContext pc: pc - 3 sp: sp.
-		##thisContext pc: pc + 2 sp: sp.   
-		thisContext pc: pc + 1 sp: sp.   
-		## this +2 or - 3 above is dependent on the byte code instruction size used for 'store'  
-		## +2 to skip STORE_INTO_TEMP(pc) and POP_STACKTOP.
-		## TODO: make it independent of the byte code size 
-
-## ----------------------------------------------------------------------------
-
-##        #<label>:
-##		thisContext pc: #<label> sp: sp.
-##
-##		| pc |
-##		pc := thisContext pc.
-##		^self value ifTrue: [aBlock value. thisContext pc: pc]
-
-## ----------------------------------------------------------------------------
-
-##		self value ifTrue: [ aBlock value. thisContext restart. ].
-	}
-
-	#method pc
-	{
-		^ip
-	}
-
-	#method pc: anInteger
-	{
-		ip := anInteger.
-	}
-	
-	#method sp
-	{
-		^sp
-	}
-
-	#method sp: anInteger
-	{
-		sp := anInteger.
-	}
-
-	#method restart
-	{
-		ip := source pc.
-	}
-
-
-
-	"------ TODO: -------------------------------------"
-	#method on: anError do: anExceptionBlock
-	{
-		"TODO: handle if anError is an ErrorSet .."
-	}
-
-	#method ensure: aBlock
-	{
-	}
-
-	#method ifCurtailed: aBlock
-	{
-	}
-
-	"------ TODO: -------------------------------------"
-}
-
 #class(#pointer) CompiledMethod(Object)
 {
 	#dcl owner preamble preamble_data_1 preamble_data_2 ntmprs nargs code source.
 }
 
-#class(#pointer) Process(Object)
-{
-	#dcl state.
-}
-
+#include 'Context.st'.
+#include 'Process.st'.
 
 #class FFI(Object)
 {
@@ -313,23 +177,23 @@ f isNil ifTrue: [ self error: 'No such function' ].
 
 	#method privateOpen: aString
 	{
-		<primitive: #ffiOpen>
+		<primitive: #_ffi_open>
 		^nil. ## TODO: Error signal: 'can not open'
 	}
 
 	#method privateClose: aHandle
 	{
-		<primitive: #ffiClose>
+		<primitive: #_ffi_close>
 	}
 
 	#method privateCall: aSymbol withSig: aString withArgs: anArray
 	{
-		<primitive: #ffiCall>
+		<primitive: #_ffi_call>
 	}
 
 	#method privateGetSymbol: aString in: aHandle
 	{
-		<primitive: #ffiGetSym>
+		<primitive: #_ffi_getsym>
 		^nil.
 	}
 }
