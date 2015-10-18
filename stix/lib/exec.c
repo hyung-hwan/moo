@@ -100,6 +100,84 @@
 #	define DBGOUT_EXEC_3(fmt,a1,a2,a3)
 #endif
 
+static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
+{
+	stix_oop_process_t proc;
+
+/* TODO: do something about the stack. */
+	stix_pushtmp (stix, &c);
+	proc = (stix_oop_process_t)stix_instantiate (stix, stix->_process, STIX_NULL, stix->option.dfl_procstk_size);
+	stix_poptmp (stix);
+	if (!proc) return STIX_NULL;
+
+	proc->state = STIX_OOP_FROM_SMINT(0);
+	proc->context = c;
+
+	return proc;
+}
+
+static void resume_process (stix_t* stix, stix_oop_process_t proc)
+{
+	if (proc->state == STIX_OOP_FROM_SMINT(0))
+	{
+		stix_ooi_t tally;
+		STIX_ASSERT (proc->prev == stix->_nil);
+		STIX_ASSERT (proc->next == stix->_nil);
+
+		tally = STIX_OOP_TO_SMINT(stix->scheduler->tally);
+		if (tally <= 0)
+		{
+			stix->scheduler->head = proc;
+			stix->scheduler->tail = proc;
+			stix->scheduler->tally  = STIX_OOP_FROM_SMINT(1);
+		}
+		else
+		{
+			/* TODO: over flow check or maximum number of process check? */
+			proc->next = stix->scheduler->head;
+			stix->scheduler->head->prev = proc;
+			stix->scheduler->head = proc;
+			stix->scheduler->tally = STIX_OOP_FROM_SMINT(tally + 1);
+		}
+	}
+
+	stix->scheduler->active = proc;
+	proc->state = STIX_OOP_FROM_SMINT(1); /* TODO: change the code properly... changing state alone doesn't help */
+}
+
+static stix_oop_process_t start_new_process (stix_t* stix, stix_oop_context_t c)
+{
+	stix_oop_process_t proc;
+
+	proc = make_process (stix, c);
+	if (!proc) return STIX_NULL;
+
+	resume_process (stix, proc);
+	return proc;
+}
+
+static void switch_process (stix_t* stix, stix_oop_process_t proc)
+{
+	if (stix->scheduler->active != proc)
+	{
+		SWITCH_ACTIVE_CONTEXT (stix, proc->context);
+		/*TODO: set the state to RUNNING */
+		stix->scheduler->active = proc;
+	}
+}
+
+static void switch_to_next_process (stix_t* stix)
+{
+/* TODO: this is experimental. rewrite it */
+	if (stix->scheduler->active->next == stix->_nil)
+	{
+		switch_process (stix, stix->scheduler->head);
+	}
+	else
+	{
+		switch_process (stix, stix->scheduler->active->next);
+	}
+}
 
 static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 {
@@ -337,6 +415,7 @@ static int activate_initial_context (stix_t* stix, const stix_ucs_t* objname, co
 	stix_oop_context_t ctx;
 	stix_oop_association_t ass;
 	stix_oop_method_t mth;
+	stix_oop_process_t proc;
 
 	/* create a fake initial context */
 	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_method_context, STIX_NULL, 1);
@@ -369,19 +448,29 @@ TODO: overcome this problem
 
 	ctx->origin = ctx;
 	ctx->method_or_nargs = (stix_oop_t)mth; /* fake. help SWITCH_ACTIVE_CONTEXT() not fail*/
-	/* receiver, sender of ctx are nils */
+
+	/* [NOTE]
+	 *  the receiver field and the sender field of ctx are nils.
+	 *  especially, the fact that the sender field is nil is used by 
+	 *  the main execution loop for breaking out of the loop */
 
 	STIX_ASSERT (stix->active_context == STIX_NULL);
-	/* i can't use SWITCH_ACTIVE_CONTEXT() macro as there is no active context before switching */
+	/* i can't use SWITCH_ACTIVE_CONTEXT() macro as there is no active 
+	 * context before switching. let's force set active_context to ctx
+	 * directly. */
 	stix->active_context = ctx;
 	ACTIVE_STACK_PUSH (stix, ass->value); /* push the receiver */
 
 	STORE_ACTIVE_IP (stix);
 	STORE_ACTIVE_SP (stix);
 
+	stix_pushtmp (stix, (stix_oop_t*)&mth);
+	proc = start_new_process (stix, ctx);
+	stix_poptmp (stix);
+	if (!proc) return -1;
+
 	return activate_new_method (stix, mth);
 }
-
 
 /* ------------------------------------------------------------------------- */
 static int prim_dump (stix_t* stix, stix_ooi_t nargs)
@@ -768,6 +857,27 @@ printf ("~~~~~~~~~~ BLOCK VALUING %p TO NEW BLOCK %p\n", org_blkctx, blkctx);
 printf ("<<ENTERING BLOCK>>\n");
 #endif
 	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)blkctx);
+	return 1;
+}
+
+static int prim_block_new_process (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_process_t proc;
+	stix_oop_context_t rcv;
+
+	rcv = (stix_oop_context_t)ACTIVE_STACK_GETTOP(stix);
+	if (STIX_CLASSOF(stix, rcv) != stix->_block_context)
+	{
+#if defined(STIX_DEBUG_EXEC)
+printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
+#endif
+		return 0;
+	}
+
+	proc = make_process (stix, rcv);
+	if (!proc) return -1; /* hard failure */ /* TOOD: can't this be a soft failure? */
+
+	ACTIVE_STACK_SETTOP (stix, (stix_oop_t)proc);
 	return 1;
 }
 
@@ -1319,6 +1429,7 @@ static prim_t primitives[] =
 	{   2,   prim_basic_at_put,         "_basic_at_put"        },
 
 	{  -1,   prim_block_value,          "_block_value"         },
+	{   0,   prim_block_new_process,    "_block_new_process"   },
 
 	{   1,   prim_integer_add,          "_integer_add"         },
 	{   1,   prim_integer_sub,          "_integer_sub"         },
@@ -1519,6 +1630,8 @@ int stix_execute (stix_t* stix)
 	while (1)
 	{
 
+
+switch_to_next_process (stix);
 #if 0
 printf ("IP => %d ", (int)stix->ip);
 #endif
@@ -2498,11 +2611,8 @@ oops:
 	return -1;
 }
 
-
 int stix_invoke (stix_t* stix, const stix_ucs_t* objname, const stix_ucs_t* mthname)
 {
-	/*stix_oop_process_t proc;*/
-
 	if (activate_initial_context (stix, objname, mthname) <= -1) return -1;
 	return stix_execute (stix);
 }

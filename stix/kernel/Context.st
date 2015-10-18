@@ -42,13 +42,14 @@
 	#method fork
 	{
 		"crate a new process in the runnable state"
-## TODO
+		^self newProcess resume.
 	}
 
 	#method newProcess
 	{
 		"create a new process in the suspended state"
-## TODO
+		<primitive: #_block_new_process>
+		self primitiveFailed.
 	}
 
 	#method newProcessWith: anArray

@@ -241,9 +241,16 @@
 		ffi close.
 "
 
-		self abc.
-		self abc.
-		self abc.
+		| p |
+		'000000000000000000' dump.
+		p := [ 'xxxxxxxxxxxxxxxxx' dump. 'yyyyyyyyyyyyyyyyyyyyyyyyyy' dump. ] newProcess.
+		'999999999999999999' dump.
+		p resume.
+
+		'111111111111111111' dump.
+		'222222222222222222' dump.
+		'333333333333333333' dump.
+		'444444444444444444' dump.
 
 "
 		FFI isNil dump.

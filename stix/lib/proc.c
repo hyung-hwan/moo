@@ -27,6 +27,8 @@
 
 #include "stix-prv.h"
 
+
+
 stix_oop_process_t stix_addnewproc (stix_t* stix)
 {
 	stix_oop_process_t proc;

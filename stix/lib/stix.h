@@ -456,7 +456,7 @@ struct stix_context_t
 	 * moment the block context was created. */
 	stix_oop_t         home;
 
-	/* when a method context is craeted, it is set to itself.
+	/* when a method context is created, it is set to itself.
 	 * no change is made when the method context is activated.
 	 * when a block context is created, it is set to nil.
 	 * when the block context is shallow-copied for activation,
@@ -467,17 +467,6 @@ struct stix_context_t
 	stix_oop_t         slot[1]; /* stack */
 };
 
-#define STIX_PROCESS_SCHEDULER_NAMED_INSTVARS 4
-typedef struct stix_process_scheduler_t stix_process_scheduler_t;
-typedef struct stix_process_scheduler_t* stix_oop_process_scheduler_t;
-struct stix_process_scheduler_t
-{
-	STIX_OBJ_HEADER;
-	stix_oop_t tally;
-	stix_oop_t head;
-	stix_oop_t tail;
-	stix_oop_t active;
-};
 
 #define STIX_PROCESS_NAMED_INSTVARS 4
 typedef struct stix_process_t stix_process_t;
@@ -485,13 +474,25 @@ typedef struct stix_process_t* stix_oop_process_t;
 struct stix_process_t
 {
 	STIX_OBJ_HEADER;
-	stix_oop_t  sp;
-	stix_oop_t  state;
-	stix_oop_t  prev;
-	stix_oop_t  next;
+	stix_oop_context_t context;
+	stix_oop_t         state;
+	stix_oop_process_t prev;
+	stix_oop_process_t next;
 
 	/* == variable indexed part == */
 	stix_oop_t slot[1]; /* process stack */
+};
+
+#define STIX_PROCESS_SCHEDULER_NAMED_INSTVARS 4
+typedef struct stix_process_scheduler_t stix_process_scheduler_t;
+typedef struct stix_process_scheduler_t* stix_oop_process_scheduler_t;
+struct stix_process_scheduler_t
+{
+	STIX_OBJ_HEADER;
+	stix_oop_t tally;
+	stix_oop_process_t head;
+	stix_oop_process_t tail;
+	stix_oop_process_t active;
 };
 
 

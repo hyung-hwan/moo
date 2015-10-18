@@ -266,7 +266,7 @@ static int ignite_3 (stix_t* stix)
 	if (!stix_putatsysdic(stix, sym, (stix_oop_t)stix->sysdic)) return -1;
 
 	/* Make the process scheduler avaialble as the global name 'Scheduler' */
-	sym = stix_makesymbol (stix, str_scheduler, 4);
+	sym = stix_makesymbol (stix, str_scheduler, 9);
 	if (!sym) return -1;
 	if (!stix_putatsysdic(stix, sym, (stix_oop_t)stix->scheduler)) return -1;
 

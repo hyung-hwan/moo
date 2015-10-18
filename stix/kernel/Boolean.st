@@ -1,6 +1,5 @@
 #class Boolean(Object)
 {
-
 	"TODO: do i need to really define methods defined in True and False here?
 	       and call subclassResponsibiltiy?"
 }
@@ -74,7 +73,6 @@
 	{
 		^aBlock value
 	}
-
 
 	#method ifTrue: trueBlock ifFalse: falseBlock
 	{

@@ -1,6 +1,6 @@
 #class(#pointer) Process(Object)
 {
-	#dcl sp state prev next.
+	#dcl context state prev next.
 
 	#method prev
 	{
@@ -21,6 +21,12 @@
 	{
 		self.prev := aProcess.
 	}
+
+	#method resume
+	{
+		^Scheduler resume: self.
+	}
+
 }
 
 #class ProcessScheduler(Object)
@@ -56,12 +62,22 @@
 			].
 	}
 
+	#method resume: aProcess
+	{
+		self add: aProcess.
+		self.active := aProcess.
+	}
+
 	#method remove: aProcess
 	{
 		"<primitive: #_scheduler_remove>"
 
 "TODO: "
+	}
 
+	#method suspendActive
+	{
+		" TODO: .........."
 	}
 
 	"
