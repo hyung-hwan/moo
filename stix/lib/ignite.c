@@ -192,9 +192,12 @@ static int ignite_2 (stix_t* stix)
 	if (!tmp) return -1;
 	stix->sysdic = (stix_oop_set_t)tmp;
 
+	/* Create a process scheduler */
 	tmp = (stix_oop_t)stix_instantiate (stix, stix->_process_scheduler, STIX_NULL, 0);
 	if (!tmp) return -1;
 	stix->scheduler = (stix_oop_process_scheduler_t)tmp;
+	/* initialize the tally field to 0, keep other fields as nils */
+	stix->scheduler->tally = STIX_OOP_FROM_SMINT(0);
 
 	/* Export the system dictionary via the first class variable of the Stix class */
 	((stix_oop_class_t)stix->_apex)->slot[0] = (stix_oop_t)stix->sysdic;

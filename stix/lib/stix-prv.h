@@ -50,7 +50,7 @@
 #define STIX_USE_OBJECT_TRAILER
 
 /* this is for gc debugging */
-#define STIX_DEBUG_GC_001  
+/*#define STIX_DEBUG_GC_001*/
 /*#define STIX_DEBUG_EXEC*/
 #define STIX_PROFILE_EXEC
 

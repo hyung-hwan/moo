@@ -105,64 +105,32 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 	stix_oop_process_t proc;
 
 /* TODO: do something about the stack. */
-	stix_pushtmp (stix, &c);
+	stix_pushtmp (stix, (stix_oop_t*)&c);
 	proc = (stix_oop_process_t)stix_instantiate (stix, stix->_process, STIX_NULL, stix->option.dfl_procstk_size);
 	stix_poptmp (stix);
 	if (!proc) return STIX_NULL;
 
 	proc->state = STIX_OOP_FROM_SMINT(0);
-	proc->context = c;
+	proc->initial_context = c;
 
 	return proc;
 }
 
-static void resume_process (stix_t* stix, stix_oop_process_t proc)
-{
-	if (proc->state == STIX_OOP_FROM_SMINT(0))
-	{
-		stix_ooi_t tally;
-		STIX_ASSERT (proc->prev == stix->_nil);
-		STIX_ASSERT (proc->next == stix->_nil);
-
-		tally = STIX_OOP_TO_SMINT(stix->scheduler->tally);
-		if (tally <= 0)
-		{
-			stix->scheduler->head = proc;
-			stix->scheduler->tail = proc;
-			stix->scheduler->tally  = STIX_OOP_FROM_SMINT(1);
-		}
-		else
-		{
-			/* TODO: over flow check or maximum number of process check? */
-			proc->next = stix->scheduler->head;
-			stix->scheduler->head->prev = proc;
-			stix->scheduler->head = proc;
-			stix->scheduler->tally = STIX_OOP_FROM_SMINT(tally + 1);
-		}
-	}
-
-	stix->scheduler->active = proc;
-	proc->state = STIX_OOP_FROM_SMINT(1); /* TODO: change the code properly... changing state alone doesn't help */
-}
-
-static stix_oop_process_t start_new_process (stix_t* stix, stix_oop_context_t c)
-{
-	stix_oop_process_t proc;
-
-	proc = make_process (stix, c);
-	if (!proc) return STIX_NULL;
-
-	resume_process (stix, proc);
-	return proc;
-}
 
 static void switch_process (stix_t* stix, stix_oop_process_t proc)
 {
 	if (stix->scheduler->active != proc)
 	{
-		SWITCH_ACTIVE_CONTEXT (stix, proc->context);
+printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_context);
+
+/* store the active context to the active process */
+stix->scheduler->active->active_context = stix->active_context;
+
+		SWITCH_ACTIVE_CONTEXT (stix, proc->active_context);
+printf ("ACTUAL PROCESS SWITCHING AF...%d %p\n", (int)stix->ip, stix->active_context);
 		/*TODO: set the state to RUNNING */
 		stix->scheduler->active = proc;
+
 	}
 }
 
@@ -178,6 +146,55 @@ static void switch_to_next_process (stix_t* stix)
 		switch_process (stix, stix->scheduler->active->next);
 	}
 }
+
+static void schedule_process (stix_t* stix, stix_oop_process_t proc)
+{
+	if (proc->state == STIX_OOP_FROM_SMINT(0))
+	{
+		stix_ooi_t tally;
+		STIX_ASSERT ((stix_oop_t)proc->prev == stix->_nil);
+		STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
+
+		tally = STIX_OOP_TO_SMINT(stix->scheduler->tally);
+		if (tally <= 0)
+		{
+			stix->scheduler->head = proc;
+			stix->scheduler->tail = proc;
+			stix->scheduler->tally  = STIX_OOP_FROM_SMINT(1);
+printf ("ADD NEW PROCESS X - %d\n", (int)1);
+		}
+		else
+		{
+			/* TODO: over flow check or maximum number of process check using the tally field? */
+			proc->next = stix->scheduler->head;
+			stix->scheduler->head->prev = proc;
+			stix->scheduler->head = proc;
+			stix->scheduler->tally = STIX_OOP_FROM_SMINT(tally + 1);
+printf ("ADD NEW PROCESS Y - %d\n", (int)tally + 1);
+		}
+
+		proc->state = STIX_OOP_FROM_SMINT(1); /* TODO: change the code properly... changing state alone doesn't help */
+		proc->active_context = proc->initial_context;
+
+		switch_process (stix, proc);
+	}
+	else if (stix->scheduler->active != proc)
+	{
+		switch_process (stix, proc);
+	}
+}
+
+static stix_oop_process_t start_new_process (stix_t* stix, stix_oop_context_t c)
+{
+	stix_oop_process_t proc;
+
+	proc = make_process (stix, c);
+	if (!proc) return STIX_NULL;
+
+	schedule_process (stix, proc);
+	return proc;
+}
+
 
 static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 {
@@ -1122,11 +1139,25 @@ static int prim_integer_ge (stix_t* stix, stix_ooi_t nargs)
 
 static int prim_scheduler_add (stix_t* stix, stix_ooi_t nargs)
 {
-	return 0;
+	stix_oop_t rcv, arg;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (rcv != (stix_oop_t)stix->scheduler || STIX_CLASSOF(stix,arg) != stix->_process)
+	{
+		return 0;
+	}
+
+	schedule_process (stix, (stix_oop_process_t)arg);
+	return 1;
 }
 
 static int prim_scheduler_remove (stix_t* stix, stix_ooi_t nargs)
 {
+/* TODO: */
 	return 0;
 }
 
@@ -1631,10 +1662,15 @@ int stix_execute (stix_t* stix)
 	{
 
 
-switch_to_next_process (stix);
-#if 0
-printf ("IP => %d ", (int)stix->ip);
+
+#if 1
+printf ("IP<BF> => %d\n", (int)stix->ip);
 #endif
+switch_to_next_process (stix);
+#if 1
+printf ("IP<AF> => %d\n", (int)stix->ip);
+#endif
+
 		FETCH_BYTE_CODE_TO (stix, bcode);
 		/*while (bcode == BCODE_NOOP) FETCH_BYTE_CODE_TO (stix, bcode);*/
 
@@ -2417,21 +2453,29 @@ printf ("<<LEAVING>> SP=%d\n", (int)stix->sp);
 				 */
 				stix->ip--; 
 
-				SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->origin->sender);
-
-				/* push the return value to the stack of the new active context */
-				ACTIVE_STACK_PUSH (stix, return_value);
-
-				if (stix->active_context->sender == stix->_nil)
+				if (stix->scheduler->active->initial_context == stix->active_context)
 				{
-					/* the sending context of the intial context has been set to nil.
-					 * use this fact to tell an initial context from a normal context. */
-					STIX_ASSERT (stix->active_context->receiver_or_source == stix->_nil);
+/* TODO: terminate a proces... */
+printf ("TERMINATING XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n");
+				}
+				else
+				{
+					SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->origin->sender);
+
+					/* push the return value to the stack of the new active context */
+					ACTIVE_STACK_PUSH (stix, return_value);
+
+					if (stix->active_context->sender == stix->_nil)
+					{
+						/* the sending context of the intial context has been set to nil.
+						 * use this fact to tell an initial context from a normal context. */
+						STIX_ASSERT (stix->active_context->receiver_or_source == stix->_nil);
 #if defined(STIX_DEBUG_EXEC)
 printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
 #endif
-					STIX_ASSERT (stix->sp == 0);
-					goto done;
+						STIX_ASSERT (stix->sp == 0);
+						goto done;
+					}
 				}
 
 				break;
@@ -2441,9 +2485,19 @@ printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
 
 				STIX_ASSERT(STIX_CLASSOF(stix, stix->active_context)  == stix->_block_context);
 
-				return_value = ACTIVE_STACK_GETTOP(stix);
-				SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->sender);
-				ACTIVE_STACK_PUSH (stix, return_value);
+				if (stix->active_context == stix->scheduler->active->initial_context)
+				{
+					/* TODO: terminate the process */
+printf ("TERMINATE A PROCESS............\n");
+/* **************************************** */
+				}
+				else
+				{
+					return_value = ACTIVE_STACK_GETTOP(stix);
+					SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->sender);
+					ACTIVE_STACK_PUSH (stix, return_value);
+				}
+
 				break;
 
 			case BCODE_MAKE_BLOCK:

@@ -1,6 +1,12 @@
 #class(#pointer) Process(Object)
 {
-	#dcl context state prev next.
+	#dcl initial active state prev next.
+
+	#method new
+	{
+		"instantiation is not allowed"
+		^nil. "TODO: raise an exception"
+	}
 
 	#method prev
 	{
@@ -47,6 +53,9 @@
 	#method add: aProcess
 	{
 		<primitive: #_scheduler_add>
+		self primitiveFailed.
+
+		"The primitive does something like the following.
 
 		(self.tally = 0)
 			ifTrue: [
@@ -59,13 +68,17 @@
 				self.head prev: aProcess.
 				self.head := aProcess.
 				self.tally := self.tally + 1.
-			].
+			]."
 	}
 
 	#method resume: aProcess
 	{
-		self add: aProcess.
-		self.active := aProcess.
+		<primitive: #_scheduler_add>
+		self primitiveFailed.
+
+		"self add: aProcess.
+		 TODO: need to change state of a Process??? 
+		self.active := aProcess."
 	}
 
 	#method remove: aProcess

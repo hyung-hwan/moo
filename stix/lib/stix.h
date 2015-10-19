@@ -468,13 +468,14 @@ struct stix_context_t
 };
 
 
-#define STIX_PROCESS_NAMED_INSTVARS 4
+#define STIX_PROCESS_NAMED_INSTVARS 5
 typedef struct stix_process_t stix_process_t;
 typedef struct stix_process_t* stix_oop_process_t;
 struct stix_process_t
 {
 	STIX_OBJ_HEADER;
-	stix_oop_context_t context;
+	stix_oop_context_t initial_context;
+	stix_oop_context_t active_context;
 	stix_oop_t         state;
 	stix_oop_process_t prev;
 	stix_oop_process_t next;
