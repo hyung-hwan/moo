@@ -195,9 +195,9 @@ static int ignite_2 (stix_t* stix)
 	/* Create a process scheduler */
 	tmp = (stix_oop_t)stix_instantiate (stix, stix->_process_scheduler, STIX_NULL, 0);
 	if (!tmp) return -1;
-	stix->scheduler = (stix_oop_process_scheduler_t)tmp;
+	stix->processor = (stix_oop_process_scheduler_t)tmp;
 	/* initialize the tally field to 0, keep other fields as nils */
-	stix->scheduler->tally = STIX_OOP_FROM_SMINT(0);
+	stix->processor->tally = STIX_OOP_FROM_SMINT(0);
 
 	/* Export the system dictionary via the first class variable of the Stix class */
 	((stix_oop_class_t)stix->_apex)->slot[0] = (stix_oop_t)stix->sysdic;
@@ -243,7 +243,7 @@ static int ignite_3 (stix_t* stix)
 	};
 
 	static stix_uch_t str_stix[] = { 'S','t','i','x' };
-	static stix_uch_t str_scheduler[] = { 'S', 'c', 'h', 'e', 'd', 'u', 'l', 'e', 'r' };
+	static stix_uch_t str_processor[] = { 'P', 'r', 'o', 'c', 'e', 's', 's', 'o', 'r' };
 
 	stix_oow_t i;
 	stix_oop_t sym;
@@ -268,10 +268,10 @@ static int ignite_3 (stix_t* stix)
 	if (!sym) return -1;
 	if (!stix_putatsysdic(stix, sym, (stix_oop_t)stix->sysdic)) return -1;
 
-	/* Make the process scheduler avaialble as the global name 'Scheduler' */
-	sym = stix_makesymbol (stix, str_scheduler, 9);
+	/* Make the process scheduler avaialble as the global name 'Processor' */
+	sym = stix_makesymbol (stix, str_processor, 9);
 	if (!sym) return -1;
-	if (!stix_putatsysdic(stix, sym, (stix_oop_t)stix->scheduler)) return -1;
+	if (!stix_putatsysdic(stix, sym, (stix_oop_t)stix->processor)) return -1;
 
 	return 0;
 }

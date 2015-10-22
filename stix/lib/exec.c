@@ -119,17 +119,17 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 
 static void switch_process (stix_t* stix, stix_oop_process_t proc)
 {
-	if (stix->scheduler->active != proc)
+	if (stix->processor->active != proc)
 	{
 printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_context);
 
 /* store the active context to the active process */
-stix->scheduler->active->active_context = stix->active_context;
+stix->processor->active->active_context = stix->active_context;
 
 		SWITCH_ACTIVE_CONTEXT (stix, proc->active_context);
 printf ("ACTUAL PROCESS SWITCHING AF...%d %p\n", (int)stix->ip, stix->active_context);
 		/*TODO: set the state to RUNNING */
-		stix->scheduler->active = proc;
+		stix->processor->active = proc;
 
 	}
 }
@@ -137,13 +137,13 @@ printf ("ACTUAL PROCESS SWITCHING AF...%d %p\n", (int)stix->ip, stix->active_con
 static void switch_to_next_process (stix_t* stix)
 {
 /* TODO: this is experimental. rewrite it */
-	if (stix->scheduler->active->next == stix->_nil)
+	if (stix->processor->active->next == stix->_nil)
 	{
-		switch_process (stix, stix->scheduler->head);
+		switch_process (stix, stix->processor->head);
 	}
 	else
 	{
-		switch_process (stix, stix->scheduler->active->next);
+		switch_process (stix, stix->processor->active->next);
 	}
 }
 
@@ -155,21 +155,21 @@ static void schedule_process (stix_t* stix, stix_oop_process_t proc)
 		STIX_ASSERT ((stix_oop_t)proc->prev == stix->_nil);
 		STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
 
-		tally = STIX_OOP_TO_SMINT(stix->scheduler->tally);
+		tally = STIX_OOP_TO_SMINT(stix->processor->tally);
 		if (tally <= 0)
 		{
-			stix->scheduler->head = proc;
-			stix->scheduler->tail = proc;
-			stix->scheduler->tally  = STIX_OOP_FROM_SMINT(1);
+			stix->processor->head = proc;
+			stix->processor->tail = proc;
+			stix->processor->tally  = STIX_OOP_FROM_SMINT(1);
 printf ("ADD NEW PROCESS X - %d\n", (int)1);
 		}
 		else
 		{
 			/* TODO: over flow check or maximum number of process check using the tally field? */
-			proc->next = stix->scheduler->head;
-			stix->scheduler->head->prev = proc;
-			stix->scheduler->head = proc;
-			stix->scheduler->tally = STIX_OOP_FROM_SMINT(tally + 1);
+			proc->next = stix->processor->head;
+			stix->processor->head->prev = proc;
+			stix->processor->head = proc;
+			stix->processor->tally = STIX_OOP_FROM_SMINT(tally + 1);
 printf ("ADD NEW PROCESS Y - %d\n", (int)tally + 1);
 		}
 
@@ -178,7 +178,7 @@ printf ("ADD NEW PROCESS Y - %d\n", (int)tally + 1);
 
 		switch_process (stix, proc);
 	}
-	else if (stix->scheduler->active != proc)
+	else if (stix->processor->active != proc)
 	{
 		switch_process (stix, proc);
 	}
@@ -775,10 +775,14 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int prim_block_value (stix_t* stix, stix_ooi_t nargs)
+static int __block_value (stix_t* stix, stix_ooi_t nargs, stix_ooi_t num_first_arg_elems, stix_oop_context_t* pblkctx)
 {
 	stix_oop_context_t blkctx, org_blkctx;
 	stix_ooi_t local_ntmprs, i;
+	stix_ooi_t actual_arg_count;
+
+
+	actual_arg_count = (num_first_arg_elems > 0)? num_first_arg_elems: nargs;
 
 	/* TODO: find a better way to support a reentrant block context. */
 
@@ -814,7 +818,7 @@ printf ("PRIM REVALUING AN BLOCKCONTEXT\n");
 	}
 	STIX_ASSERT (STIX_OBJ_GET_SIZE(org_blkctx) == STIX_CONTEXT_NAMED_INSTVARS);
 
-	if (STIX_OOP_TO_SMINT(org_blkctx->method_or_nargs) != nargs) 
+	if (STIX_OOP_TO_SMINT(org_blkctx->method_or_nargs) != actual_arg_count /* nargs */)
 	{
 		/* the number of argument doesn't match */
 #if defined(STIX_DEBUG_EXEC)
@@ -851,12 +855,28 @@ printf ("~~~~~~~~~~ BLOCK VALUING %p TO NEW BLOCK %p\n", org_blkctx, blkctx);
 #endif
 
 /* TODO: check the stack size of a block context to see if it's large enough to hold arguments */
-	/* copy the arguments to the stack */
-	for (i = 0; i < nargs; i++)
+	if (num_first_arg_elems > 0)
 	{
-		blkctx->slot[i] = ACTIVE_STACK_GET(stix, stix->sp - nargs + i + 1);
+		stix_oop_oop_t xarg;
+		STIX_ASSERT (nargs == 1);
+		xarg = (stix_oop_oop_t)ACTIVE_STACK_GETTOP (stix);
+		STIX_ASSERT (STIX_ISTYPEOF(stix,xarg,STIX_OBJ_TYPE_OOP)); 
+		STIX_ASSERT (STIX_OBJ_GET_SIZE(xarg) == num_first_arg_elems); 
+		for (i = 0; i < num_first_arg_elems; i++)
+		{
+			blkctx->slot[i] = xarg->slot[i];
+		}
+	}
+	else
+	{
+		/* copy the arguments to the stack */
+		for (i = 0; i < nargs; i++)
+		{
+			blkctx->slot[i] = ACTIVE_STACK_GET(stix, stix->sp - nargs + i + 1);
+		}
 	}
 	ACTIVE_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
+	
 
 	STIX_ASSERT (blkctx->home != stix->_nil);
 
@@ -870,6 +890,18 @@ printf ("~~~~~~~~~~ BLOCK VALUING %p TO NEW BLOCK %p\n", org_blkctx, blkctx);
 	blkctx->sp = STIX_OOP_FROM_SMINT(local_ntmprs);
 	blkctx->sender = (stix_oop_t)stix->active_context;
 
+	*pblkctx = blkctx;
+	return 1;
+}
+
+static int prim_block_value (stix_t* stix, stix_ooi_t nargs)
+{
+	int x;
+	stix_oop_context_t blkctx;
+
+	x = __block_value (stix, nargs, 0, &blkctx);
+	if (x <= 0) return x; /* hard failure and soft failure */
+
 #if defined(STIX_DEBUG_EXEC)
 printf ("<<ENTERING BLOCK>>\n");
 #endif
@@ -879,6 +911,45 @@ printf ("<<ENTERING BLOCK>>\n");
 
 static int prim_block_new_process (stix_t* stix, stix_ooi_t nargs)
 {
+	int x;
+	stix_oop_context_t blkctx;
+	stix_oop_process_t proc;
+	stix_ooi_t num_first_arg_elems = 0;
+
+	if (nargs > 1)
+	{
+		/* too many arguments */
+/* TODO: proper error handling */
+		return 0;
+	}
+
+	if (nargs == 1)
+	{
+		stix_oop_oop_t xarg;
+
+		xarg = ACTIVE_STACK_GETTOP(stix);
+		if (!STIX_ISTYPEOF(stix,xarg,STIX_OBJ_TYPE_OOP))
+		{
+			return 0;
+		}
+
+		num_first_arg_elems = STIX_OBJ_GET_SIZE(xarg);
+	}
+
+	/* this primitive creates a new process with a block as if the block
+	 * is sent the value message */
+	x = __block_value (stix, nargs, num_first_arg_elems, &blkctx);
+	if (x <= 0) return x; /* hard failure and soft failure */
+
+	proc = make_process (stix, blkctx);
+	if (!proc) return -1; /* hard failure */ /* TOOD: can't this be a soft failure? */
+
+	/* __block_value() has popped all arguments and the receiver. 
+	 * PUSH the return value instead of changing the stack top */
+	ACTIVE_STACK_PUSH (stix, (stix_oop_t)proc);
+	return 1;
+
+#if 0
 	stix_oop_process_t proc;
 	stix_oop_context_t rcv;
 
@@ -896,6 +967,7 @@ printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 
 	ACTIVE_STACK_SETTOP (stix, (stix_oop_t)proc);
 	return 1;
+#endif
 }
 
 static int prim_integer_add (stix_t* stix, stix_ooi_t nargs)
@@ -1137,7 +1209,7 @@ static int prim_integer_ge (stix_t* stix, stix_ooi_t nargs)
 	return 0;
 }
 
-static int prim_scheduler_add (stix_t* stix, stix_ooi_t nargs)
+static int prim_processor_schedule (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
 
@@ -1146,7 +1218,7 @@ static int prim_scheduler_add (stix_t* stix, stix_ooi_t nargs)
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (rcv != (stix_oop_t)stix->scheduler || STIX_CLASSOF(stix,arg) != stix->_process)
+	if (rcv != (stix_oop_t)stix->processor || STIX_CLASSOF(stix,arg) != stix->_process)
 	{
 		return 0;
 	}
@@ -1155,7 +1227,13 @@ static int prim_scheduler_add (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int prim_scheduler_remove (stix_t* stix, stix_ooi_t nargs)
+static int prim_processor_remove (stix_t* stix, stix_ooi_t nargs)
+{
+/* TODO: */
+	return 0;
+}
+
+static int prim_processor_sleep (stix_t* stix, stix_ooi_t nargs)
 {
 /* TODO: */
 	return 0;
@@ -1460,7 +1538,7 @@ static prim_t primitives[] =
 	{   2,   prim_basic_at_put,         "_basic_at_put"        },
 
 	{  -1,   prim_block_value,          "_block_value"         },
-	{   0,   prim_block_new_process,    "_block_new_process"   },
+	{  -1,   prim_block_new_process,    "_block_new_process"   },
 
 	{   1,   prim_integer_add,          "_integer_add"         },
 	{   1,   prim_integer_sub,          "_integer_sub"         },
@@ -1472,8 +1550,9 @@ static prim_t primitives[] =
 	{   1,   prim_integer_le,           "_integer_le"          },
 	{   1,   prim_integer_ge,           "_integer_ge"          },
 
-	{   1,   prim_scheduler_add,        "_scheduler_add"       },
-	{   1,   prim_scheduler_remove,     "_scheduler_remove"    },
+	{   1,   prim_processor_schedule,   "_processor_schedule"  },
+	{   1,   prim_processor_remove,     "_processor_remove"    },
+	{   1,   prim_processor_sleep,      "_processor_sleep"     },
 
 	{   1,   prim_ffi_open,             "_ffi_open"            },
 	{   1,   prim_ffi_close,            "_ffi_close"           },
@@ -2453,7 +2532,7 @@ printf ("<<LEAVING>> SP=%d\n", (int)stix->sp);
 				 */
 				stix->ip--; 
 
-				if (stix->scheduler->active->initial_context == stix->active_context)
+				if (stix->processor->active->initial_context == stix->active_context)
 				{
 /* TODO: terminate a proces... */
 printf ("TERMINATING XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n");
@@ -2485,7 +2564,7 @@ printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
 
 				STIX_ASSERT(STIX_CLASSOF(stix, stix->active_context)  == stix->_block_context);
 
-				if (stix->active_context == stix->scheduler->active->initial_context)
+				if (stix->active_context == stix->processor->active->initial_context)
 				{
 					/* TODO: terminate the process */
 printf ("TERMINATE A PROCESS............\n");

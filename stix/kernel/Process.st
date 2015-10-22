@@ -1,3 +1,29 @@
+#class Delay(Object)
+{
+## TODO: support milliseconds or nanoseconds
+	#dcl delay.
+
+	#method(#class) forSeconds: anInteger
+	{
+		^super basicNew initWith: anInteger.
+	}
+
+	#method initWith: anInteger
+	{
+		self.delay := anInteger.
+	}
+
+	#method wait
+	{
+		Processor sleep: self.delay.
+	}
+
+	#method resume
+	{
+		" TODO: .............. "
+	}
+}
+
 #class(#pointer) Process(Object)
 {
 	#dcl initial active state prev next.
@@ -30,7 +56,7 @@
 
 	#method resume
 	{
-		^Scheduler resume: self.
+		^Processor resume: self.
 	}
 
 }
@@ -50,13 +76,18 @@
 		^self.active.
 	}
 
-	#method add: aProcess
+	#method sleep: anInteger
 	{
-		<primitive: #_scheduler_add>
+		<primitive: #_processor_sleep>
+		self primitiveFailed.
+	}
+
+	#method resume: aProcess
+	{
+		<primitive: #_processor_schedule>
 		self primitiveFailed.
 
-		"The primitive does something like the following.
-
+		"The primitive does something like the following in principle:
 		(self.tally = 0)
 			ifTrue: [
 				self.head := aProcess.
@@ -68,23 +99,13 @@
 				self.head prev: aProcess.
 				self.head := aProcess.
 				self.tally := self.tally + 1.
-			]."
-	}
-
-	#method resume: aProcess
-	{
-		<primitive: #_scheduler_add>
-		self primitiveFailed.
-
-		"self add: aProcess.
-		 TODO: need to change state of a Process??? 
-		self.active := aProcess."
+			].
+		"
 	}
 
 	#method remove: aProcess
 	{
-		"<primitive: #_scheduler_remove>"
-
+		"<primitive: #_processor_remove>"
 "TODO: "
 	}
 
@@ -96,13 +117,7 @@
 	"
 	#method yield
 	{
-		<primitive: #processYield>
-		self primitiveFailed
-	}
-
-	#method enter: aContext
-	{
-		<primitive: #processEnter>
+		<primitive: #_processor_yield>
 		self primitiveFailed
 	}
 	"

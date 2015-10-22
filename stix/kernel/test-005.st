@@ -243,7 +243,8 @@
 
 		| p |
 		'000000000000000000' dump.
-		p := [ 'xxxxxxxxxxxxxxxxx' dump. 'yyyyyyyyyyyyyyyyyyyyyyyyyy' dump. ^10. ] newProcess.
+		## p := [ | 'xxxxxxxxxxx' dump. 'yyyyyyyyyy' dump. ^10. ] newProcess.
+		p := [ :a :b :c :d | a dump. b dump. (c + d) dump. ^10. ] newProcessWith: #(abc def 10 20).
 		'999999999999999999' dump.
 		p resume.
 

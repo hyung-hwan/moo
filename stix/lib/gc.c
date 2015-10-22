@@ -292,7 +292,7 @@ void stix_gc (stix_t* stix)
 	stix->_small_integer     = stix_moveoop (stix, stix->_small_integer);
 
 	stix->sysdic = (stix_oop_set_t) stix_moveoop (stix, (stix_oop_t)stix->sysdic);
-	stix->scheduler = (stix_oop_process_scheduler_t) stix_moveoop (stix, (stix_oop_t)stix->scheduler);
+	stix->processor = (stix_oop_process_scheduler_t) stix_moveoop (stix, (stix_oop_t)stix->processor);
 
 	for (i = 0; i < stix->tmp_count; i++)
 	{

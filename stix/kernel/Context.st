@@ -56,7 +56,8 @@
 	{
 		"create a new process in the suspended state passing the elements
 		 of anArray as block arguments"
-## TODO
+		<primitive: #_block_new_process>
+		self primitiveFailed.
 	}
 
 	#method value
