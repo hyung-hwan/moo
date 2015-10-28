@@ -37,6 +37,19 @@ extern "C" {
 /* ========================================================================= */
 /* stix-utl.c                                                                */
 /* ========================================================================= */
+stix_size_t stix_hashbytes (
+	const stix_byte_t* ptr,
+	stix_size_t        len
+);
+
+stix_size_t stix_hashuchars (
+	const stix_uch_t*  ptr,
+	stix_size_t        len
+);
+
+#define stix_hashbchars(ptr,len) stix_hashbytes(ptr,len)
+
+
 int stix_equalchars (
 	const stix_uch_t*  str1,
 	const stix_uch_t*  str2,
@@ -70,16 +83,28 @@ void stix_copyuchars (
 	stix_size_t       len
 );
 
+void stix_copybchars (
+	stix_bch_t*       dst,
+	const stix_bch_t* src,
+	stix_size_t       len
+);
+
 void stix_copybchtouchars (
 	stix_uch_t*       dst,
 	const stix_bch_t* src,
 	stix_size_t       len
 );
 
-stix_uch_t* stix_findchar (
+stix_uch_t* stix_finduchar (
 	const stix_uch_t* ptr,
 	stix_size_t       len,
 	stix_uch_t        c
+);
+
+stix_uch_t* stix_findbchar (
+	const stix_bch_t* ptr,
+	stix_size_t       len,
+	stix_bch_t        c
 );
 
 stix_size_t stix_copyucstr (

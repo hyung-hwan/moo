@@ -33,42 +33,204 @@
 
 #if defined(STIX_HAVE_CFG_H)
 #	include "stix-cfg.h"
+#else
+#	error UNSUPPORTED SYSTEM
+#endif
+
+#if defined(EMSCRIPTEN)
+#	if defined(STIX_SIZEOF___INT128)
+#		undef STIX_SIZEOF___INT128 
+#		define STIX_SIZEOF___INT128 0
+#	endif
+#	if defined(STIX_SIZEOF_LONG) && defined(STIX_SIZEOF_INT) && (STIX_SIZEOF_LONG > STIX_SIZEOF_INT)
+		/* autoconf doesn't seem to match actual emscripten */
+#		undef STIX_SIZEOF_LONG
+#		define STIX_SIZEOF_LONG STIX_SIZEOF_INT
+#	endif
 #endif
 
 /* =========================================================================
  * PRIMITIVE TYPE DEFINTIONS
  * ========================================================================= */
-/* TODO: define these types and macros using autoconf */
-typedef unsigned char      stix_uint8_t;
-typedef signed char        stix_int8_t;
-
-typedef unsigned short int stix_uint16_t;
-typedef signed short int stix_int16_t;
-
-#if defined(__MSDOS__)
-	typedef unsigned long int stix_uint32_t;
-	typedef signed long int stix_int32_t;
+#if defined(STIX_SIZEOF_CHAR) && (STIX_SIZEOF_CHAR == 1)
+#	define STIX_HAVE_UINT8_T
+#	define STIX_HAVE_INT8_T
+	typedef unsigned char      stix_uint8_t;
+	typedef signed char        stix_int8_t;
+#elif defined(STIX_SIZEOF___INT8) && (STIX_SIZEOF___INT8 == 1)
+#	define STIX_HAVE_UINT8_T
+#	define STIX_HAVE_INT8_T
+	typedef unsigned __int8    stix_uint8_t;
+	typedef signed __int8      stix_int8_t;
+#elif defined(STIX_SIZEOF___INT8_T) && (STIX_SIZEOF___INT8_T == 1)
+#	define STIX_HAVE_UINT8_T
+#	define STIX_HAVE_INT8_T
+	typedef unsigned __int8_t  stix_uint8_t;
+	typedef signed __int8_t    stix_int8_t;
 #else
-	typedef unsigned int stix_uint32_t;
-	typedef signed int stix_int32_t;
+#	define STIX_HAVE_UINT8_T
+#	define STIX_HAVE_INT8_T
+	typedef unsigned char      stix_uint8_t;
+	typedef signed char        stix_int8_t;
 #endif
 
-#if defined(_WIN64)
-	typedef unsigned __int64  stix_uintptr_t;
-	typedef signed __int64    stix_intptr_t;
-	typedef unsigned __int64  stix_size_t;
-	typedef signed __int64    stix_ssize_t;
+#if defined(STIX_SIZEOF_SHORT) && (STIX_SIZEOF_SHORT == 2)
+#	define STIX_HAVE_UINT16_T
+#	define STIX_HAVE_INT16_T
+	typedef unsigned short int  stix_uint16_t;
+	typedef signed short int    stix_int16_t;
+#elif defined(STIX_SIZEOF___INT16) && (STIX_SIZEOF___INT16 == 2)
+#	define STIX_HAVE_UINT16_T
+#	define STIX_HAVE_INT16_T
+	typedef unsigned __int16    stix_uint16_t;
+	typedef signed __int16      stix_int16_t;
+#elif defined(STIX_SIZEOF___INT16_T) && (STIX_SIZEOF___INT16_T == 2)
+#	define STIX_HAVE_UINT16_T
+#	define STIX_HAVE_INT16_T
+	typedef unsigned __int16_t  stix_uint16_t;
+	typedef signed __int16_t    stix_int16_t;
 #else
-	typedef unsigned long int stix_uintptr_t;
-	typedef signed long int   stix_intptr_t;
-	typedef unsigned long int stix_size_t;
-	typedef signed long int   stix_ssize_t;
+#	define STIX_HAVE_UINT16_T
+#	define STIX_HAVE_INT16_T
+	typedef unsigned short int  stix_uint16_t;
+	typedef signed short int    stix_int16_t;
 #endif
 
+
+#if defined(STIX_SIZEOF_INT) && (STIX_SIZEOF_INT == 4)
+#	define STIX_HAVE_UINT32_T
+#	define STIX_HAVE_INT32_T
+	typedef unsigned int        stix_uint32_t;
+	typedef signed int          stix_int32_t;
+#elif defined(STIX_SIZEOF_LONG) && (STIX_SIZEOF_LONG == 4)
+#	define STIX_HAVE_UINT32_T
+#	define STIX_HAVE_INT32_T
+	typedef unsigned long       stix_uint32_t;
+	typedef signed long         stix_int32_t;
+#elif defined(STIX_SIZEOF___INT32) && (STIX_SIZEOF___INT32 == 4)
+#	define STIX_HAVE_UINT32_T
+#	define STIX_HAVE_INT32_T
+	typedef unsigned __int32    stix_uint32_t;
+	typedef signed __int32      stix_int32_t;
+#elif defined(STIX_SIZEOF___INT32_T) && (STIX_SIZEOF___INT32_T == 4)
+#	define STIX_HAVE_UINT32_T
+#	define STIX_HAVE_INT32_T
+	typedef unsigned __int32_t  stix_uint32_t;
+	typedef signed __int32_t    stix_int32_t;
+#elif defined(__MSDOS__)
+#	define STIX_HAVE_UINT32_T
+#	define STIX_HAVE_INT32_T
+	typedef unsigned long int   stix_uint32_t;
+	typedef signed long int     stix_int32_t;
+#else
+#	define STIX_HAVE_UINT32_T
+#	define STIX_HAVE_INT32_T
+	typedef unsigned int        stix_uint32_t;
+	typedef signed int          stix_int32_t;
+#endif
+
+
+#if defined(STIX_SIZEOF_INT) && (STIX_SIZEOF_INT == 8)
+#	define STIX_HAVE_UINT64_T
+#	define STIX_HAVE_INT64_T
+	typedef unsigned int        stix_uint64_t;
+	typedef signed int          stix_int64_t;
+#elif defined(STIX_SIZEOF_LONG) && (STIX_SIZEOF_LONG == 8)
+#	define STIX_HAVE_UINT64_T
+#	define STIX_HAVE_INT64_T
+	typedef unsigned long       stix_uint64_t;
+	typedef signed long         stix_int64_t;
+#elif defined(STIX_SIZEOF_LONG_LONG) && (STIX_SIZEOF_LONG_LONG == 8)
+#	define STIX_HAVE_UINT64_T
+#	define STIX_HAVE_INT64_T
+	typedef unsigned long long  stix_uint64_t;
+	typedef signed long long    stix_int64_t;
+#elif defined(STIX_SIZEOF___INT64) && (STIX_SIZEOF___INT64 == 8)
+#	define STIX_HAVE_UINT64_T
+#	define STIX_HAVE_INT64_T
+	typedef unsigned __int64    stix_uint64_t;
+	typedef signed __int64      stix_int64_t;
+#elif defined(STIX_SIZEOF___INT64_T) && (STIX_SIZEOF___INT64_T == 8)
+#	define STIX_HAVE_UINT64_T
+#	define STIX_HAVE_INT64_T
+	typedef unsigned __int64_t  stix_uint64_t;
+	typedef signed __int64_t    stix_int64_t;
+#elif defined(_WIN64) || defined(_WIN32)
+#	define STIX_HAVE_UINT64_T
+#	define STIX_HAVE_INT64_T
+	typedef unsigned __int64  stix_uint64_t;
+	typedef signed __int64    stix_int64_t;
+#else
+	/* no 64-bit integer */
+#endif
+
+#if defined(STIX_SIZEOF_INT) && (STIX_SIZEOF_INT == 16)
+#	define STIX_HAVE_UINT128_T
+#	define STIX_HAVE_INT128_T
+	typedef unsigned int        stix_uint128_t;
+	typedef signed int          stix_int128_t;
+#elif defined(STIX_SIZEOF_LONG) && (STIX_SIZEOF_LONG == 16)
+#	define STIX_HAVE_UINT128_T
+#	define STIX_HAVE_INT128_T
+	typedef unsigned long       stix_uint128_t;
+	typedef signed long         stix_int128_t;
+#elif defined(STIX_SIZEOF_LONG_LONG) && (STIX_SIZEOF_LONG_LONG == 16)
+#	define STIX_HAVE_UINT128_T
+#	define STIX_HAVE_INT128_T
+	typedef unsigned long long  stix_uint128_t;
+	typedef signed long long    stix_int128_t;
+#elif defined(STIX_SIZEOF___INT128) && (STIX_SIZEOF___INT128 == 16)
+#	define STIX_HAVE_UINT128_T
+#	define STIX_HAVE_INT128_T
+	typedef unsigned __int128    stix_uint128_t;
+	typedef signed __int128      stix_int128_t;
+#elif defined(STIX_SIZEOF___INT128_T) && (STIX_SIZEOF___INT128_T == 16)
+#	define STIX_HAVE_UINT128_T
+#	define STIX_HAVE_INT128_T
+	typedef unsigned __int128_t  stix_uint128_t;
+	typedef signed __int128_t    stix_int128_t;
+#else
+	/* no 128-bit integer */
+#endif
+
+#if defined(STIX_HAVE_UINT8_T) && (STIX_SIZEOF_VOID_P == 1)
+#	error UNSUPPORTED POINTER SIZE
+#elif defined(STIX_HAVE_UINT16_T) && (STIX_SIZEOF_VOID_P == 2)
+	typedef stix_uint16_t stix_uintptr_t;
+	typedef stix_int16_t stix_intptr_t;
+	typedef stix_uint8_t stix_ushortptr_t;
+	typedef stix_int8_t stix_shortptr_t;
+#elif defined(STIX_HAVE_UINT32_T) && (STIX_SIZEOF_VOID_P == 4)
+	typedef stix_uint32_t stix_uintptr_t;
+	typedef stix_int32_t stix_intptr_t;
+	typedef stix_uint16_t stix_ushortptr_t;
+	typedef stix_int16_t stix_shortptr_t;
+#elif defined(STIX_HAVE_UINT64_T) && (STIX_SIZEOF_VOID_P == 8)
+	typedef stix_uint64_t stix_uintptr_t;
+	typedef stix_int64_t stix_intptr_t;
+	typedef stix_uint32_t stix_ushortptr_t;
+	typedef stix_int32_t stix_shortptr_t;
+#elif defined(STIX_HAVE_UINT128_T) && (STIX_SIZEOF_VOID_P == 16) 
+	typedef stix_uint128_t stix_uintptr_t;
+	typedef stix_int128_t stix_intptr_t;
+	typedef stix_uint64_t stix_ushortptr_t;
+	typedef stix_int64_t stix_shortptr_t;
+#else
+#	error UNSUPPORTED POINTER SIZE
+#endif
+
+#define STIX_SIZEOF_INTPTR_T STIX_SIZEOF_VOID_P
+#define STIX_SIZEOF_UINTPTR_T STIX_SIZEOF_VOID_P
+#define STIX_SIZEOF_SHORTPTR_T (STIX_SIZEOF_VOID_P / 2)
+#define STIX_SIZEOF_USHORTPTR_T (STIX_SIZEOF_VOID_P / 2)
+
+typedef stix_uintptr_t stix_size_t;
+typedef stix_intptr_t stix_ssize_t;
 typedef stix_uint8_t  stix_byte_t;
+
+typedef char          stix_bch_t;
 typedef stix_uint16_t stix_uch_t; /* TODO ... wchar_t??? */
 typedef stix_int32_t  stix_uci_t;
-typedef char          stix_bch_t;
 
 struct stix_ucs_t
 {
@@ -78,12 +240,11 @@ struct stix_ucs_t
 typedef struct stix_ucs_t stix_ucs_t;
 
 
-
 /* =========================================================================
  * PRIMITIVE MACROS
  * ========================================================================= */
-#define STIX_UCI_EOF ((stix_uci_t)-1)
-#define STIX_UCI_NL  ((stix_uci_t)'\n')
+#define STIX_UCI_EOF ((stix_ooci_t)-1)
+#define STIX_UCI_NL  ((stix_ooci_t)'\n')
 
 #define STIX_SIZEOF(x) (sizeof(x))
 #define STIX_COUNTOF(x) (sizeof(x) / sizeof(x[0]))

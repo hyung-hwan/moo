@@ -79,7 +79,7 @@ typedef struct var_info_t var_info_t;
 static struct voca_t
 {
 	stix_oow_t len;
-	stix_uch_t str[11];
+	stix_ooch_t str[11];
 } vocas[] = {
 	{  4, { 'b','y','t','e'                                               } },
 	{  9, { 'c','h','a','r','a','c','t','e','r'                           } },
@@ -147,7 +147,7 @@ static int compile_method_statement (stix_t* stix);
 static int compile_method_expression (stix_t* stix, int pop);
 static int add_literal (stix_t* stix, stix_oop_t lit, stix_size_t* index);
 
-static STIX_INLINE int is_spacechar (stix_uci_t c)
+static STIX_INLINE int is_spacechar (stix_ooci_t c)
 {
 	/* TODO: handle other space unicode characters */
 	switch (c)
@@ -166,25 +166,25 @@ static STIX_INLINE int is_spacechar (stix_uci_t c)
 }
 
 
-static STIX_INLINE int is_alphachar (stix_uci_t c)
+static STIX_INLINE int is_alphachar (stix_ooci_t c)
 {
 /* TODO: support full unicode */
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
-static STIX_INLINE int is_digitchar (stix_uci_t c)
+static STIX_INLINE int is_digitchar (stix_ooci_t c)
 {
 /* TODO: support full unicode */
 	return (c >= '0' && c <= '9');
 }
 
-static STIX_INLINE int is_alnumchar (stix_uci_t c)
+static STIX_INLINE int is_alnumchar (stix_ooci_t c)
 {
 /* TODO: support full unicode */
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 }
 
-static STIX_INLINE int is_binselchar (stix_uci_t c)
+static STIX_INLINE int is_binselchar (stix_ooci_t c)
 {
 	/*
 	 * binary-selector-character :=
@@ -218,17 +218,17 @@ static STIX_INLINE int is_binselchar (stix_uci_t c)
 	}
 }
 
-static STIX_INLINE int is_leadidentchar (stix_uci_t c)
+static STIX_INLINE int is_leadidentchar (stix_ooci_t c)
 {
 	return is_alphachar(c) || c == '_';
 }
 
-static STIX_INLINE int is_identchar (stix_uci_t c)
+static STIX_INLINE int is_identchar (stix_ooci_t c)
 {
 	return is_alnumchar(c) || c == '_';
 }
 
-static STIX_INLINE int is_closing_char (stix_uci_t c)
+static STIX_INLINE int is_closing_char (stix_ooci_t c)
 {
 	switch (c)
 	{
@@ -271,12 +271,12 @@ static STIX_INLINE int is_token_keyword (stix_t* stix, voca_id_t id)
 	return stix->c->tok.type == STIX_IOTOK_KEYWORD && does_token_name_match(stix, id);
 }
 
-static STIX_INLINE int is_word (const stix_ucs_t* ucs, voca_id_t id)
+static STIX_INLINE int is_word (const stix_oocs_t* ucs, voca_id_t id)
 {
 	return ucs->len == vocas[id].len && stix_equalchars(ucs->ptr, vocas[id].str, vocas[id].len);
 }
 
-static int is_reserved_word (const stix_ucs_t* ucs)
+static int is_reserved_word (const stix_oocs_t* ucs)
 {
 	static int rw[] = 
 	{
@@ -300,7 +300,7 @@ static int is_reserved_word (const stix_ucs_t* ucs)
 static int begin_include (stix_t* fsc);
 static int end_include (stix_t* fsc);
 
-static void set_syntax_error (stix_t* stix, stix_synerrnum_t num, const stix_ioloc_t* loc, const stix_ucs_t* tgt)
+static void set_syntax_error (stix_t* stix, stix_synerrnum_t num, const stix_ioloc_t* loc, const stix_oocs_t* tgt)
 {
 	stix->errnum = STIX_ESYNTAX;
 	stix->c->synerr.num = num;
@@ -313,7 +313,7 @@ static void set_syntax_error (stix_t* stix, stix_synerrnum_t num, const stix_iol
 	}
 }
 
-static int copy_string_to (stix_t* stix, const stix_ucs_t* src, stix_ucs_t* dst, stix_size_t* dst_capa, int append, stix_uch_t add_delim)
+static int copy_string_to (stix_t* stix, const stix_oocs_t* src, stix_oocs_t* dst, stix_size_t* dst_capa, int append, stix_ooch_t add_delim)
 {
 	stix_size_t len, pos;
 
@@ -331,7 +331,7 @@ static int copy_string_to (stix_t* stix, const stix_ucs_t* src, stix_ucs_t* dst,
 
 	if (len > *dst_capa)
 	{
-		stix_uch_t* tmp;
+		stix_ooch_t* tmp;
 		stix_size_t capa;
 
 		capa = STIX_ALIGN(len, CLASS_BUFFER_ALIGN);
@@ -344,12 +344,12 @@ static int copy_string_to (stix_t* stix, const stix_ucs_t* src, stix_ucs_t* dst,
 	}
 
 	if (append && add_delim) dst->ptr[pos++] = add_delim;
-	stix_copyuchars (&dst->ptr[pos], src->ptr, src->len);
+	stix_copyoochars (&dst->ptr[pos], src->ptr, src->len);
 	dst->len = len;
 	return 0;
 }
 
-static int find_word_in_string (const stix_ucs_t* haystack, const stix_ucs_t* name, stix_size_t* xindex)
+static int find_word_in_string (const stix_oocs_t* haystack, const stix_oocs_t* name, stix_size_t* xindex)
 {
 	/* this function is inefficient. but considering the typical number
 	 * of arguments and temporary variables, the inefficiency can be 
@@ -357,7 +357,7 @@ static int find_word_in_string (const stix_ucs_t* haystack, const stix_ucs_t* na
 	 * table from a name to an index should be greater than this simple
 	 * inefficient lookup */
 
-	stix_uch_t* t, * e;
+	stix_ooch_t* t, * e;
 	stix_size_t index, i;
 
 	t = haystack->ptr;
@@ -401,7 +401,7 @@ static int find_word_in_string (const stix_ucs_t* haystack, const stix_ucs_t* na
 	 (c >= 'A' && c <= 'Z')? ((c - 'A' + 10 < base)? (c - 'A' + 10): base): \
 	 (c >= 'a' && c <= 'z')? ((c - 'a' + 10 < base)? (c - 'a' + 10): base): base)
 
-static int string_to_smint (stix_t* stix, stix_ucs_t* str, int radixed, stix_ooi_t* num)
+static int string_to_smint (stix_t* stix, stix_oocs_t* str, int radixed, stix_ooi_t* num)
 {
 	/* it is not a generic conversion function.
 	 * it assumes a certain pre-sanity check on the string
@@ -409,7 +409,7 @@ static int string_to_smint (stix_t* stix, stix_ucs_t* str, int radixed, stix_ooi
 
 /* TODO: handle floating point numbers, etc, handle radix */
 	int v, negsign, base;
-	const stix_uch_t* ptr, * end;
+	const stix_ooch_t* ptr, * end;
 	stix_oow_t value, old_value;
 
 	negsign = 0;
@@ -514,18 +514,18 @@ static int string_to_smint (stix_t* stix, stix_ucs_t* str, int radixed, stix_ooi
 	do { if (add_token_char(stix, c) <= -1) return -1; } while (0)
 
 
-static STIX_INLINE int add_token_str (stix_t* stix, const stix_uch_t* ptr, stix_size_t len)
+static STIX_INLINE int add_token_str (stix_t* stix, const stix_ooch_t* ptr, stix_size_t len)
 {
-	stix_ucs_t tmp;
+	stix_oocs_t tmp;
 
-	tmp.ptr = (stix_uch_t*)ptr;
+	tmp.ptr = (stix_ooch_t*)ptr;
 	tmp.len = len;
 	return copy_string_to (stix, &tmp, &stix->c->tok.name, &stix->c->tok.name_capa, 1, '\0');
 }
 
-static STIX_INLINE int add_token_char (stix_t* stix, stix_uch_t c)
+static STIX_INLINE int add_token_char (stix_t* stix, stix_ooch_t c)
 {
-	stix_ucs_t tmp;
+	stix_oocs_t tmp;
 
 	tmp.ptr = &c;
 	tmp.len = 1;
@@ -542,7 +542,7 @@ static STIX_INLINE void unget_char (stix_t* stix, const stix_iolxc_t* c)
 static int get_char (stix_t* stix)
 {
 	stix_ssize_t n;
-	stix_uci_t lc, ec;
+	stix_ooci_t lc, ec;
 
 	if (stix->c->nungots > 0)
 	{
@@ -648,7 +648,7 @@ static int skip_spaces (stix_t* stix)
 
 static int skip_comment (stix_t* stix)
 {
-	stix_uci_t c = stix->c->lxc.c;
+	stix_ooci_t c = stix->c->lxc.c;
 	stix_iolxc_t lc;
 
 	if (c == '"')
@@ -706,14 +706,14 @@ static int skip_comment (stix_t* stix)
 	return 0;
 }
 
-static int get_ident (stix_t* stix, stix_uci_t char_read_ahead)
+static int get_ident (stix_t* stix, stix_ooci_t char_read_ahead)
 {
 	/*
 	 * identifier := alpha-char (alpha-char | digit-char)*
 	 * keyword := identifier ":"
 	 */
 
-	stix_uci_t c;
+	stix_ooci_t c;
 
 	c = stix->c->lxc.c;
 	stix->c->tok.type = STIX_IOTOK_IDENT;
@@ -839,7 +839,7 @@ static int get_numlit (stix_t* stix, int negated)
 	 * fractionalDigits := decimal-integer
 	 */
 
-	stix_uci_t c;
+	stix_ooci_t c;
 	int radix = 0, r;
 
 	c = stix->c->lxc.c;
@@ -905,7 +905,7 @@ static int get_charlit (stix_t* stix)
 	 * character := normal-character | "'"
 	 */
 
-	stix_uci_t c = stix->c->lxc.c; /* even a new-line or white space would be taken */
+	stix_ooci_t c = stix->c->lxc.c; /* even a new-line or white space would be taken */
 	if (c == STIX_UCI_EOF) 
 	{
 		set_syntax_error (stix, STIX_SYNERR_CLTNT, &stix->c->lxc.l, STIX_NULL);
@@ -927,7 +927,7 @@ static int get_strlit (stix_t* stix)
 	 * normal-character := character-except-single-quote
 	 */
 
-	stix_uci_t c = stix->c->lxc.c;
+	stix_ooci_t c = stix->c->lxc.c;
 	stix->c->tok.type = STIX_IOTOK_STRLIT;
 
 	do 
@@ -953,12 +953,12 @@ static int get_strlit (stix_t* stix)
 	return 0;
 }
 
-static int get_string (stix_t* stix, stix_uch_t end_char, stix_uch_t esc_char, int regex, stix_size_t preescaped)
+static int get_string (stix_t* stix, stix_ooch_t end_char, stix_ooch_t esc_char, int regex, stix_size_t preescaped)
 {
-	stix_uci_t c;
+	stix_ooci_t c;
 	stix_size_t escaped = preescaped;
 	stix_size_t digit_count = 0;
-	stix_uci_t c_acc = 0;
+	stix_ooci_t c_acc = 0;
 
 	stix->c->tok.type = STIX_IOTOK_STRLIT;
 
@@ -1030,7 +1030,7 @@ static int get_string (stix_t* stix, stix_uch_t end_char, stix_uch_t esc_char, i
 			}
 			else
 			{
-				stix_uch_t rc;
+				stix_ooch_t rc;
 
 				rc = (escaped == 2)? 'x':
 				     (escaped == 4)? 'u': 'U';
@@ -1081,14 +1081,14 @@ static int get_string (stix_t* stix, stix_uch_t end_char, stix_uch_t esc_char, i
 				c_acc = 0;
 				continue;
 			}
-			else if (c == 'u' && STIX_SIZEOF(stix_uch_t) >= 2) 
+			else if (c == 'u' && STIX_SIZEOF(stix_ooch_t) >= 2) 
 			{
 				escaped = 4;
 				digit_count = 0;
 				c_acc = 0;
 				continue;
 			}
-			else if (c == 'U' && STIX_SIZEOF(stix_uch_t) >= 4) 
+			else if (c == 'U' && STIX_SIZEOF(stix_ooch_t) >= 4) 
 			{
 				escaped = 8;
 				digit_count = 0;
@@ -1119,7 +1119,7 @@ static int get_binsel (stix_t* stix)
 	/* 
 	 * binary-selector := binary-selector-character+
 	 */
-	stix_uci_t oc;
+	stix_ooci_t oc;
 
 	oc = stix->c->lxc.c;
 	ADD_TOKEN_CHAR (stix, oc);
@@ -1150,7 +1150,7 @@ static int get_binsel (stix_t* stix)
 
 static int get_token (stix_t* stix)
 {
-	stix_uci_t c;
+	stix_ooci_t c;
 	int n;
 
 retry:
@@ -1374,7 +1374,7 @@ retry:
 		case 'S': /* a string with a C-style escape sequences */
 		case 'M': /* a symbol with a C-style escape sequences */
 		{
-			stix_uci_t saved_c = c;
+			stix_ooci_t saved_c = c;
 
 			GET_CHAR_TO (stix, c);
 			if (c == '\'')
@@ -1437,7 +1437,7 @@ retry:
 			}
 			else 
 			{
-				stix->c->ilchr = (stix_uch_t)c;
+				stix->c->ilchr = (stix_ooch_t)c;
 				set_syntax_error (stix, STIX_SYNERR_ILCHR, &stix->c->lxc.l, &stix->c->ilchr_ucs);
 				return -1;
 			}
@@ -1451,7 +1451,7 @@ retry:
 
 /*
 printf ("TOKEN: [");
-print_ucs (&stix->c->tok.name);
+print_oocs (&stix->c->tok.name);
 printf ("]\n");
 */
 	return 0;
@@ -1472,17 +1472,17 @@ static void clear_io_names (stix_t* stix)
 	}
 }
 
-static const stix_uch_t* add_io_name (stix_t* stix, const stix_ucs_t* name)
+static const stix_ooch_t* add_io_name (stix_t* stix, const stix_oocs_t* name)
 {
 	stix_iolink_t* link;
-	stix_uch_t* ptr;
+	stix_ooch_t* ptr;
 
-	link = (stix_iolink_t*) stix_callocmem (stix, STIX_SIZEOF(*link) + STIX_SIZEOF(stix_uch_t) * (name->len + 1));
+	link = (stix_iolink_t*) stix_callocmem (stix, STIX_SIZEOF(*link) + STIX_SIZEOF(stix_ooch_t) * (name->len + 1));
 	if (!link) return STIX_NULL;
 
-	ptr = (stix_uch_t*)(link + 1);
+	ptr = (stix_ooch_t*)(link + 1);
 
-	stix_copyuchars (ptr, name->ptr, name->len);
+	stix_copyoochars (ptr, name->ptr, name->len);
 	ptr[name->len] = '\0';
 
 	link->link = stix->c->io_names;
@@ -1494,7 +1494,7 @@ static const stix_uch_t* add_io_name (stix_t* stix, const stix_ucs_t* name)
 static int begin_include (stix_t* stix)
 {
 	stix_io_arg_t* arg;
-	const stix_uch_t* io_name;
+	const stix_ooch_t* io_name;
 
 	io_name = add_io_name (stix, &stix->c->tok.name);
 	if (!io_name) return -1;
@@ -1806,12 +1806,12 @@ static int add_literal (stix_t* stix, stix_oop_t lit, stix_size_t* index)
 	return 0;
 }
 
-static STIX_INLINE int add_character_literal (stix_t* stix, stix_uch_t ch, stix_size_t* index)
+static STIX_INLINE int add_character_literal (stix_t* stix, stix_ooch_t ch, stix_size_t* index)
 {
 	return add_literal (stix, STIX_OOP_FROM_CHAR(ch), index);
 }
 
-static int add_string_literal (stix_t* stix, const stix_ucs_t* str, stix_size_t* index)
+static int add_string_literal (stix_t* stix, const stix_oocs_t* str, stix_size_t* index)
 {
 	stix_oop_t lit;
 	stix_size_t i;
@@ -1835,7 +1835,7 @@ static int add_string_literal (stix_t* stix, const stix_ucs_t* str, stix_size_t*
 	return add_literal (stix, lit, index);
 }
 
-static int add_symbol_literal (stix_t* stix, const stix_ucs_t* str, stix_size_t* index)
+static int add_symbol_literal (stix_t* stix, const stix_oocs_t* str, stix_size_t* index)
 {
 	stix_oop_t tmp;
 
@@ -1845,21 +1845,21 @@ static int add_symbol_literal (stix_t* stix, const stix_ucs_t* str, stix_size_t*
 	return add_literal (stix, tmp, index);
 }
 
-static STIX_INLINE int set_class_fqn (stix_t* stix, const stix_ucs_t* name)
+static STIX_INLINE int set_class_fqn (stix_t* stix, const stix_oocs_t* name)
 {
 	if (copy_string_to (stix, name, &stix->c->cls.fqn, &stix->c->cls.fqn_capa, 0, '\0') <= -1) return -1;
 	stix->c->cls.name = stix->c->cls.fqn;
 	return 0;
 }
 
-static STIX_INLINE int set_superclass_fqn (stix_t* stix, const stix_ucs_t* name)
+static STIX_INLINE int set_superclass_fqn (stix_t* stix, const stix_oocs_t* name)
 {
 	if (copy_string_to (stix, name, &stix->c->cls.superfqn, &stix->c->cls.superfqn_capa, 0, '\0') <= -1) return -1;
 	stix->c->cls.supername = stix->c->cls.superfqn;
 	return 0;
 }
 
-static STIX_INLINE int add_class_level_variable (stix_t* stix, var_type_t index, const stix_ucs_t* name)
+static STIX_INLINE int add_class_level_variable (stix_t* stix, var_type_t index, const stix_oocs_t* name)
 {
 	int n;
 
@@ -1873,7 +1873,7 @@ static STIX_INLINE int add_class_level_variable (stix_t* stix, var_type_t index,
 	return n;
 }
 
-static STIX_INLINE int add_pool_dictionary (stix_t* stix, const stix_ucs_t* name, stix_oop_set_t pooldic_oop)
+static STIX_INLINE int add_pool_dictionary (stix_t* stix, const stix_oocs_t* name, stix_oop_set_t pooldic_oop)
 {
 	int n;
 	stix_size_t saved_len;
@@ -1909,13 +1909,13 @@ static STIX_INLINE int add_pool_dictionary (stix_t* stix, const stix_ucs_t* name
 }
 
 
-static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t self, const stix_ucs_t* name, var_info_t* var)
+static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t self, const stix_oocs_t* name, var_info_t* var)
 {
 	stix_size_t pos;
 	stix_oop_t super;
 	stix_oop_char_t v;
 	stix_oop_char_t* vv;
-	stix_ucs_t hs;
+	stix_oocs_t hs;
 	int index;
 
 	if (self)
@@ -2045,7 +2045,7 @@ done:
 	return pos;
 }
 
-static int clone_assignee (stix_t* stix, const stix_ucs_t* name, stix_size_t* offset)
+static int clone_assignee (stix_t* stix, const stix_oocs_t* name, stix_size_t* offset)
 {
 	int n;
 	stix_size_t old_len;
@@ -2060,7 +2060,7 @@ static int clone_assignee (stix_t* stix, const stix_ucs_t* name, stix_size_t* of
 	return 0;
 }
 
-static int clone_binary_selector (stix_t* stix, const stix_ucs_t* name, stix_size_t* offset)
+static int clone_binary_selector (stix_t* stix, const stix_oocs_t* name, stix_size_t* offset)
 {
 	int n;
 	stix_size_t old_len;
@@ -2075,7 +2075,7 @@ static int clone_binary_selector (stix_t* stix, const stix_ucs_t* name, stix_siz
 	return 0;
 }
 
-static int clone_keyword (stix_t* stix, const stix_ucs_t* name, stix_size_t* offset)
+static int clone_keyword (stix_t* stix, const stix_oocs_t* name, stix_size_t* offset)
 {
 	int n;
 	stix_size_t old_len;
@@ -2090,31 +2090,31 @@ static int clone_keyword (stix_t* stix, const stix_ucs_t* name, stix_size_t* off
 	return 0;
 }
 
-static int add_method_name_fragment (stix_t* stix, const stix_ucs_t* name)
+static int add_method_name_fragment (stix_t* stix, const stix_oocs_t* name)
 {
 	/* method name fragments are concatenated without any delimiters */
 	return copy_string_to (stix, name, &stix->c->mth.name, &stix->c->mth.name_capa, 1, '\0');
 }
 
-static int method_exists (stix_t* stix, const stix_ucs_t* name)
+static int method_exists (stix_t* stix, const stix_oocs_t* name)
 {
 	/* check if the current class contains a method of the given name */
 	return stix_lookupdic (stix, stix->c->cls.mthdic_oop[stix->c->mth.type], name) != STIX_NULL;
 }
 
-static int add_temporary_variable (stix_t* stix, const stix_ucs_t* name)
+static int add_temporary_variable (stix_t* stix, const stix_oocs_t* name)
 {
 	/* temporary variable names are added to the string with leading
 	 * space if it's not the first variable */
 	return copy_string_to (stix, name, &stix->c->mth.tmprs, &stix->c->mth.tmprs_capa, 1, ' ');
 }
 
-static STIX_INLINE int find_temporary_variable (stix_t* stix, const stix_ucs_t* name, stix_size_t* xindex)
+static STIX_INLINE int find_temporary_variable (stix_t* stix, const stix_oocs_t* name, stix_size_t* xindex)
 {
 	return find_word_in_string (&stix->c->mth.tmprs, name, xindex);
 }
 
-static stix_oop_set_t add_namespace (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* name)
+static stix_oop_set_t add_namespace (stix_t* stix, stix_oop_set_t dic, const stix_oocs_t* name)
 {
 	stix_size_t tmp_count = 0;
 	stix_oop_t sym;
@@ -2144,11 +2144,11 @@ oops:
 	return STIX_NULL;
 }
 
-static int preprocess_dotted_name (stix_t* stix, int dont_add_ns, int accept_pooldic_as_ns, const stix_ucs_t* fqn, const stix_ioloc_t* fqn_loc, stix_ucs_t* name, stix_oop_set_t* ns_oop)
+static int preprocess_dotted_name (stix_t* stix, int dont_add_ns, int accept_pooldic_as_ns, const stix_oocs_t* fqn, const stix_ioloc_t* fqn_loc, stix_oocs_t* name, stix_oop_set_t* ns_oop)
 {
-	const stix_uch_t* ptr, * dot;
+	const stix_ooch_t* ptr, * dot;
 	stix_size_t len;
-	stix_ucs_t seg;
+	stix_oocs_t seg;
 	stix_oop_set_t dic;
 	stix_oop_association_t ass;
 	int pooldic_gotten = 0;
@@ -2159,9 +2159,9 @@ static int preprocess_dotted_name (stix_t* stix, int dont_add_ns, int accept_poo
 
 	while (1)
 	{
-		seg.ptr = (stix_uch_t*)ptr;
+		seg.ptr = (stix_ooch_t*)ptr;
 
-		dot = stix_findchar (ptr, len, '.');
+		dot = stix_findoochar (ptr, len, '.');
 		if (dot)
 		{
 			if (pooldic_gotten) goto wrong_name;
@@ -2281,7 +2281,7 @@ static int compile_class_level_variables (stix_t* stix)
 	{
 		/* pool dictionary import declaration
 		 * #dcl(#pooldic) ... */
-		stix_ucs_t last;
+		stix_oocs_t last;
 		stix_oop_set_t ns_oop;
 		stix_oop_association_t ass;
 		stix_size_t i;
@@ -2547,7 +2547,7 @@ static int compile_method_primitive (stix_t* stix)
 	 * method-primitive := "<"  "primitive:" integer ">"
 	 */
 	stix_ooi_t prim_no;
-	const stix_uch_t* ptr, * end;
+	const stix_ooch_t* ptr, * end;
 
 	if (!is_token_binary_selector(stix, VOCA_LT)) 
 	{
@@ -2595,9 +2595,9 @@ static int compile_method_primitive (stix_t* stix)
 			prim_no = stix_getprimno (stix, &stix->c->tok.name);
 			if (prim_no <= -1)
 			{
-				const stix_uch_t* us;
+				const stix_ooch_t* us;
 				/* the primitive is not found */
-				us = stix_findchar (stix->c->tok.name.ptr, stix->c->tok.name.len, '_');
+				us = stix_findoochar (stix->c->tok.name.ptr, stix->c->tok.name.len, '_');
 				if (us > stix->c->tok.name.ptr && us < stix->c->tok.name.ptr + stix->c->tok.name.len - 1)
 				{
 					stix_size_t lit_idx;
@@ -2642,7 +2642,7 @@ static int compile_method_primitive (stix_t* stix)
 	return 0;
 }
 
-static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_ioloc_t* name_loc, int name_dotted, var_info_t* var)
+static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_ioloc_t* name_loc, int name_dotted, var_info_t* var)
 {
 	stix_size_t index;
 
@@ -2656,17 +2656,17 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 		 *   A.B.C    - namespace or pool dictionary related reference.
 		 */
 
-		stix_ucs_t last;
+		stix_oocs_t last;
 		stix_oop_set_t ns_oop;
 		stix_oop_association_t ass;
-		const stix_uch_t* dot;
+		const stix_ooch_t* dot;
 
-		dot = stix_findchar (name->ptr, name->len, '.');
+		dot = stix_findoochar (name->ptr, name->len, '.');
 		STIX_ASSERT (dot != STIX_NULL);
 		if (dot - name->ptr == 4 && stix_equalchars(name->ptr, vocas[VOCA_SELF].str, 4))
 		{
 			/* the dotted name begins with self. */
-			dot = stix_findchar (dot + 1, name->len - 5, '.');
+			dot = stix_findoochar (dot + 1, name->len - 5, '.');
 			if (!dot)
 			{
 				/* the dotted name is composed of 2 segments only */
@@ -2691,7 +2691,7 @@ static int get_variable_info (stix_t* stix, const stix_ucs_t* name, const stix_i
 		if (preprocess_dotted_name (stix, 1, 1, name, name_loc, &last, &ns_oop) <= -1) return -1;
 
 printf ("checking variable ");
-print_ucs (&last);
+print_oocs (&last);
 printf ("\n");
 		ass = stix_lookupdic (stix, ns_oop, &last);
 		if (ass)
@@ -3333,7 +3333,7 @@ printf ("\tpush_literal array\n");
 	return 0;
 }
 
-static int compile_expression_primary (stix_t* stix, const stix_ucs_t* ident, const stix_ioloc_t* ident_loc, int ident_dotted, int* to_super)
+static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, const stix_ioloc_t* ident_loc, int ident_dotted, int* to_super)
 {
 	/*
 	 * expression-primary := identifier | literal | block-constructor | ( "(" method-expression ")" )
@@ -3580,7 +3580,7 @@ static int compile_unary_message (stix_t* stix, int to_super)
 		if (add_symbol_literal(stix, &stix->c->tok.name, &index) <= -1 ||
 		    emit_double_param_instruction(stix, send_message_cmd[to_super], 0, index) <= -1) return -1;
 printf ("\tsend unary message %d [", (int)index);
-print_ucs (&stix->c->tok.name);
+print_oocs (&stix->c->tok.name);
 printf ("] with 0 arguments %s\n", (to_super? " to super": ""));
 
 		GET_TOKEN (stix);
@@ -3598,7 +3598,7 @@ static int compile_binary_message (stix_t* stix, int to_super)
 	 */
 	stix_size_t index;
 	int to_super2;
-	stix_ucs_t binsel;
+	stix_oocs_t binsel;
 	stix_size_t saved_binsels_len, binsel_offset;
 
 	STIX_ASSERT (stix->c->tok.type == STIX_IOTOK_BINSEL);
@@ -3623,7 +3623,7 @@ static int compile_binary_message (stix_t* stix, int to_super)
 		if (add_symbol_literal(stix, &binsel, &index) <= -1 ||
 		    emit_double_param_instruction(stix, send_message_cmd[to_super], 1, index) <= -1) goto oops;
 printf ("\tsend binary message %d [", (int)index);
-print_ucs (&binsel);
+print_oocs (&binsel);
 printf ("] with 1 arguments %s\n", (to_super? " to super": ""));
 
 		stix->c->mth.binsels.len = saved_binsels_len;
@@ -3646,7 +3646,7 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 
 	stix_size_t index;
 	int to_super2;
-	stix_ucs_t kw, kwsel;
+	stix_oocs_t kw, kwsel;
 	stix_ioloc_t saved_kwsel_loc;
 	stix_size_t saved_kwsel_len;
 	stix_size_t kw_offset;
@@ -3688,7 +3688,7 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 	    emit_double_param_instruction(stix, send_message_cmd[to_super], nargs, index) <= -1) goto oops;
 
 printf ("\tsend keyword message %d [", (int)index);
-print_ucs (&kwsel);
+print_oocs (&kwsel);
 printf ("] with %d arguments to %s\n", (int)nargs, (to_super? "super": "self"));
 	stix->c->mth.kwsels.len = saved_kwsel_len;
 	return 0;
@@ -3814,7 +3814,7 @@ done:
 	return 0;
 }
 
-static int compile_basic_expression (stix_t* stix, const stix_ucs_t* ident, const stix_ioloc_t* ident_loc, int ident_dotted)
+static int compile_basic_expression (stix_t* stix, const stix_oocs_t* ident, const stix_ioloc_t* ident_loc, int ident_dotted)
 {
 	/*
 	 * basic-expression := expression-primary message-expression?
@@ -3840,7 +3840,7 @@ static int compile_method_expression (stix_t* stix, int pop)
 	 * method-assignment-expression := identifier ":=" method-expression
 	 */
 
-	stix_ucs_t assignee;
+	stix_oocs_t assignee;
 	stix_size_t index;
 	int ret = 0;
 
@@ -3873,7 +3873,7 @@ static int compile_method_expression (stix_t* stix, int pop)
 
 printf ("ASSIGNING TO ....");
 assignee.ptr = &stix->c->mth.assignees.ptr[assignee_offset];
-print_ucs (&assignee);
+print_oocs (&assignee);
 printf ("\n");
 
 			if (compile_method_expression(stix, 0) <= -1) goto oops;
@@ -4296,7 +4296,7 @@ static int compile_method_definition (stix_t* stix)
 	if (compile_method_name(stix) <= -1) return -1;
 
 printf (">>METHOD ");
-print_ucs (&stix->c->mth.name);
+print_oocs (&stix->c->mth.name);
 printf ("\n");
 	if (stix->c->tok.type != STIX_IOTOK_LBRACE)
 	{
@@ -4342,7 +4342,7 @@ static int make_defined_class (stix_t* stix)
 
 #if 0
 printf ("MAKING ... ");
-print_ucs (&stix->c->cls.name);
+print_oocs (&stix->c->cls.name);
 printf (" instvars %d classvars %d classinstvars %d\n", (int)stix->c->cls.var_count[VAR_INSTANCE], (int)stix->c->cls.var_count[VAR_CLASS], (int)stix->c->cls.var_count[VAR_CLASSINST]);
 #endif
 	if (stix->c->cls.self_oop)
@@ -4552,7 +4552,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 		int super_is_nil = 0;
 
 printf ("DEFININING CLASS ");
-print_ucs (&stix->c->cls.name);
+print_oocs (&stix->c->cls.name);
 printf ("\n");
 		if (stix->c->tok.type == STIX_IOTOK_LPAREN)
 		{
@@ -4827,7 +4827,7 @@ static int __compile_pooldic_definition (stix_t* stix)
 	}
 
 printf ("DEFININING POOL DICTIONARY ");
-print_ucs (&stix->c->cls.name);
+print_oocs (&stix->c->cls.name);
 printf ("\n");
 
 	GET_TOKEN (stix);

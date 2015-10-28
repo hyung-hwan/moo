@@ -350,7 +350,7 @@ printf ("\n");
 #endif
 }
 
-static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const stix_ucs_t* message, int super)
+static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const stix_oocs_t* message, int super)
 {
 	stix_oop_class_t cls;
 	stix_oop_association_t ass;
@@ -361,7 +361,7 @@ static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const s
 
 #if defined(STIX_DEBUG_EXEC)
 printf ("==== FINDING METHOD FOR %p [", receiver);
-print_ucs (message);
+print_oocs (message);
 printf ("] in ");
 #endif
 
@@ -420,7 +420,7 @@ not_found:
 	return STIX_NULL;
 }
 
-static int activate_initial_context (stix_t* stix, const stix_ucs_t* objname, const stix_ucs_t* mthname)
+static int activate_initial_context (stix_t* stix, const stix_oocs_t* objname, const stix_oocs_t* mthname)
 {
 	/* the initial context is a fake context. if objname is 'Stix' and
 	 * mthname is 'main', this function emulates message sending 'Stix main'.
@@ -1561,7 +1561,7 @@ static prim_t primitives[] =
 	
 };
 
-int stix_getprimno (stix_t* stix, const stix_ucs_t* name)
+int stix_getprimno (stix_t* stix, const stix_oocs_t* name)
 {
 	int i;
 
@@ -1577,16 +1577,16 @@ int stix_getprimno (stix_t* stix, const stix_ucs_t* name)
 	return -1;
 }
 
-static stix_prim_impl_t query_prim_module (stix_t* stix, const stix_uch_t* name, stix_oow_t len)
+static stix_prim_impl_t query_prim_module (stix_t* stix, const stix_ooch_t* name, stix_oow_t len)
 {
 	stix_rbt_pair_t* pair;
 	stix_prim_mod_data_t* mdp;
-	const stix_uch_t* sep;
+	const stix_ooch_t* sep;
 	stix_oow_t mod_name_len;
 	stix_prim_impl_t handler;
 	int n;
 
-	sep = stix_findchar (name, len, '_');
+	sep = stix_findoochar (name, len, '_');
 	STIX_ASSERT (sep != STIX_NULL);
 	mod_name_len = sep - name;
 
@@ -1606,10 +1606,10 @@ static stix_prim_impl_t query_prim_module (stix_t* stix, const stix_uch_t* name,
 		 *   1 for _ at the end when stix_prim_mod_xxx_ is attempted.
 		 *   1 for the terminating '\0'.
 		 */
-		stix_uch_t buf[STIX_MOD_NAME_LEN_MAX + 16]; 
+		stix_ooch_t buf[STIX_MOD_NAME_LEN_MAX + 16]; 
 
 		/* the terminating null isn't needed in buf here */
-		stix_copybchtouchars (buf, "stix_prim_mod_", 14); 
+		stix_copybchtooochars (buf, "stix_prim_mod_", 14); 
 
 		if (mod_name_len > STIX_COUNTOF(buf) - 16)
 		{
@@ -1618,7 +1618,7 @@ static stix_prim_impl_t query_prim_module (stix_t* stix, const stix_uch_t* name,
 			return STIX_NULL;
 		}
 
-		stix_copyuchars (&buf[14], name, mod_name_len);
+		stix_copyoochars (&buf[14], name, mod_name_len);
 		buf[14 + mod_name_len] = '\0';
 
 #if defined(STIX_ENABLE_STATIC_MODULE)
@@ -1629,7 +1629,7 @@ static stix_prim_impl_t query_prim_module (stix_t* stix, const stix_uch_t* name,
 		/* TODO: binary search ... */
 		for (n = 0; n < STIX_COUNTOF(static_modtab); n++)
 		{
-			if (stix_compucstr (static_modtab[n].modname, name) == 0) 
+			if (stix_compoocstr (static_modtab[n].modname, name) == 0) 
 			{
 				load = static_modtab[n].modload;
 				break;
@@ -2209,7 +2209,7 @@ printf ("\n");
 				/* b1 -> number of arguments 
 				 * b2 -> index to the selector stored in the literal frame
 				 */
-				stix_ucs_t mthname;
+				stix_oocs_t mthname;
 				stix_oop_t newrcv;
 				stix_oop_method_t newmth;
 				stix_oop_char_t selector;
@@ -2244,7 +2244,7 @@ printf ("\n");
 				{
 /* TODO: implement doesNotUnderstand: XXXXX  instead of returning -1. */
 printf ("no such method .........[");
-print_ucs (&mthname);
+print_oocs (&mthname);
 printf ("]\n");
 					goto oops;
 				}
@@ -2744,7 +2744,7 @@ oops:
 	return -1;
 }
 
-int stix_invoke (stix_t* stix, const stix_ucs_t* objname, const stix_ucs_t* mthname)
+int stix_invoke (stix_t* stix, const stix_oocs_t* objname, const stix_oocs_t* mthname)
 {
 	if (activate_initial_context (stix, objname, mthname) <= -1) return -1;
 	return stix_execute (stix);

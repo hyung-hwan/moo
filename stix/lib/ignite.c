@@ -143,6 +143,7 @@ static int ignite_1 (stix_t* stix)
 	 *       Does this make sense? */
 	stix->_character         = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_small_integer     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
+	stix->_large_integer     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_OOP));
 
 	if (!stix->_apex              || !stix->_undefined_object  || 
 	    !stix->_object            || !stix->_string            ||
@@ -157,7 +158,7 @@ static int ignite_1 (stix_t* stix)
 	    !stix->_process           || !stix->_process_scheduler ||
 
 	    !stix->_true_class        || !stix->_false_class       || 
-	    !stix->_character         || !stix->_small_integer) return -1;
+	    !stix->_character         || !stix->_small_integer     || !stix->_large_integer) return -1;
 
 	STIX_OBJ_SET_CLASS (stix->_nil, stix->_undefined_object);
 	return 0;
@@ -212,7 +213,7 @@ static int ignite_3 (stix_t* stix)
 	static struct symbol_name_t
 	{
 		stix_oow_t len;
-		stix_uch_t str[16];
+		stix_ooch_t str[16];
 	} symnames[] = {
 		{  4, { 'A','p','e','x'                                                  } },
 		{ 15, { 'U','n','d','e','f','i','n','e','d','O','b','j','e','c','t'      } },
@@ -239,11 +240,12 @@ static int ignite_3 (stix_t* stix)
 		{  4, { 'T','r','u','e'                                                  } },
 		{  5, { 'F','a','l','s','e'                                              } },
 		{  9, { 'C','h','a','r','a','c','t','e','r'                              } },
-		{ 12, { 'S','m','a','l','l','I','n','t','e','g','e','r'                  } }
+		{ 12, { 'S','m','a','l','l','I','n','t','e','g','e','r'                  } },
+		{ 12, { 'L','a','r','g','e','I','n','t','e','g','e','r'                  } }
 	};
 
-	static stix_uch_t str_stix[] = { 'S','t','i','x' };
-	static stix_uch_t str_processor[] = { 'P', 'r', 'o', 'c', 'e', 's', 's', 'o', 'r' };
+	static stix_ooch_t str_stix[] = { 'S','t','i','x' };
+	static stix_ooch_t str_processor[] = { 'P', 'r', 'o', 'c', 'e', 's', 's', 'o', 'r' };
 
 	stix_oow_t i;
 	stix_oop_t sym;

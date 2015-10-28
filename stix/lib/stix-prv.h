@@ -175,13 +175,13 @@ struct stix_ioloc_t
 {
 	unsigned long     line; /**< line */
 	unsigned long     colm; /**< column */
-	const stix_uch_t* file; /**< file specified in #include */
+	const stix_ooch_t* file; /**< file specified in #include */
 };
 typedef struct stix_ioloc_t stix_ioloc_t;
 
 struct stix_iolxc_t
 {
-	stix_uci_t    c; /**< character */
+	stix_ooci_t    c; /**< character */
 	stix_ioloc_t  l; /**< location */
 };
 typedef struct stix_iolxc_t stix_iolxc_t;
@@ -201,7 +201,7 @@ struct stix_io_arg_t
 	 * It is #STIX_NULL for the main stream and points to a non-NULL string
 	 * for an included stream.
 	 */
-	const stix_uch_t* name;   
+	const stix_ooch_t* name;   
 
 	/** 
 	 * [OUT] I/O handle set by a handler. 
@@ -214,7 +214,7 @@ struct stix_io_arg_t
 	/**
 	 * [OUT] place data here 
 	 */
-	stix_uch_t buf[1024];
+	stix_ooch_t buf[1024];
 
 	/**
 	 * [IN] points to the data of the includer. It is #STIX_NULL for the
@@ -278,7 +278,7 @@ struct stix_iotok_t
 		STIX_IOTOK_SEMICOLON
 	} type;
 
-	stix_ucs_t name;
+	stix_oocs_t name;
 	stix_size_t name_capa;
 
 	stix_ioloc_t loc;
@@ -352,7 +352,7 @@ struct stix_synerr_t
 {
 	stix_synerrnum_t num;
 	stix_ioloc_t     loc;
-	stix_ucs_t       tgt;
+	stix_oocs_t       tgt;
 };
 typedef struct stix_synerr_t stix_synerr_t;
 
@@ -394,8 +394,8 @@ struct stix_compiler_t
 	stix_synerr_t synerr;
 
 	/* temporary space to handle an illegal character */
-	stix_uch_t ilchr;
-	stix_ucs_t ilchr_ucs;
+	stix_ooch_t ilchr;
+	stix_oocs_t ilchr_ucs;
 
 	/* information about a class being compiled */
 	struct
@@ -408,19 +408,19 @@ struct stix_compiler_t
 		stix_oop_set_t mthdic_oop[2];
 
 		stix_oop_set_t ns_oop;
-		stix_ucs_t fqn;
-		stix_ucs_t name;
+		stix_oocs_t fqn;
+		stix_oocs_t name;
 		stix_size_t fqn_capa;
 		stix_ioloc_t fqn_loc;
 
 		stix_oop_set_t superns_oop;
-		stix_ucs_t superfqn;
-		stix_ucs_t supername;
+		stix_oocs_t superfqn;
+		stix_oocs_t supername;
 		stix_size_t superfqn_capa;
 		stix_ioloc_t superfqn_loc;
 
 		/* instance variable, class variable, class instance variable */
-		stix_ucs_t vars[3]; 
+		stix_oocs_t vars[3]; 
 		stix_size_t vars_capa[3];
 
 		/* var_count, unlike vars above, includes superclass counts as well.
@@ -429,7 +429,7 @@ struct stix_compiler_t
 		 * var_count[2] - number of class instance variables */
 		stix_size_t var_count[3];
 
-		stix_ucs_t pooldic;
+		stix_oocs_t pooldic;
 		stix_size_t pooldic_capa;
 		stix_size_t pooldic_count;
 
@@ -443,28 +443,28 @@ struct stix_compiler_t
 		int type;
 
 		/* method source text */
-		stix_ucs_t text;
+		stix_oocs_t text;
 		stix_size_t text_capa;
 
 		/* buffer to store identifier names to be assigned */
-		stix_ucs_t assignees;
+		stix_oocs_t assignees;
 		stix_size_t assignees_capa;
 
 		/* buffer to store binary selectors being worked on */
-		stix_ucs_t binsels;
+		stix_oocs_t binsels;
 		stix_size_t binsels_capa;
 
 		/* buffer to store keyword selectors being worked on */
-		stix_ucs_t kwsels;
+		stix_oocs_t kwsels;
 		stix_size_t kwsels_capa;
 
 		/* method name */
-		stix_ucs_t name;
+		stix_oocs_t name;
 		stix_size_t name_capa;
 		stix_ioloc_t name_loc;
 
 		/* single string containing a space separated list of temporaries */
-		stix_ucs_t tmprs; 
+		stix_oocs_t tmprs; 
 		stix_size_t tmprs_capa;
 		stix_size_t tmpr_count; /* total number of temporaries including arguments */
 		stix_size_t tmpr_nargs;
@@ -808,6 +808,24 @@ enum stix_bcode_t
 extern "C" {
 #endif
 
+#if defined(STIX_OOCH_IS_UCH)
+#	define stix_hashchars(ptr,len) stix_hashuchars(ptr,len)
+#	define stix_compoocbcstr(str1,str2) stix_compucbcstr(str1,str2)
+#	define stix_compoocstr(str1,str2) stix_compucstr(str1,str2)
+#	define stix_copyoochars(dst,src,len) stix_copyuchars(dst,src,len)
+#	define stix_copybchtooochars(dst,src,len) stix_copybchtouchars(dst,src,len)
+#	define stix_copyoocstr(dst,len,src) stix_copyucstr(dst,len,src)
+#	define stix_findoochar(ptr,len,c) stix_finduchar(ptr,len,c)
+#else
+#	define stix_hashchars(ptr,len) stix_hashbchars(ptr,len)
+#	define stix_compoocbcstr(str1,str2) stix_compbcstr(str1,str2)
+#	define stix_compoocstr(str1,str2) stix_compbcstr(str1,str2)
+#	define stix_copyoochars(dst,src,len) stix_copybchars(dst,src,len)
+#	define stix_copybchtooochars(dst,src,len) stix_copybchars(dst,src,len)
+#	define stix_copyoocstr(dst,len,src) stix_copybcstr(dst,len,src)
+#	define stix_findoochar(ptr,len,c) stix_findbchar(ptr,len,c)
+#endif
+
 /* ========================================================================= */
 /* heap.c                                                                    */
 /* ========================================================================= */
@@ -841,22 +859,6 @@ void* stix_allocheapmem (
 	stix_heap_t* heap,
 	stix_size_t  size
 );
-
-
-/* ========================================================================= */
-/* stix.c                                                                    */
-/* ========================================================================= */
-stix_size_t stix_hashbytes (
-	const stix_byte_t* ptr,
-	stix_size_t        len
-);
-
-stix_size_t stix_hashuchars (
-	const stix_uch_t*  ptr,
-	stix_size_t        len
-);
-
-#define stix_hashbchars(ptr,len) stix_hashbytes(ptr,len)
 
 
 /* ========================================================================= */
@@ -895,7 +897,7 @@ stix_oop_t stix_allocoopobjwithtrailer (
 
 stix_oop_t stix_alloccharobj (
 	stix_t*            stix,
-	const stix_uch_t*  ptr,
+	const stix_ooch_t*  ptr,
 	stix_oow_t         len
 );
 
@@ -926,19 +928,19 @@ stix_oop_t stix_instantiatewithtrailer (
 /* ========================================================================= */
 stix_oop_t stix_makesymbol (
 	stix_t*            stix,
-	const stix_uch_t*  ptr,
+	const stix_ooch_t*  ptr,
 	stix_oow_t         len
 );
 
 stix_oop_t stix_findsymbol (
 	stix_t*            stix,
-	const stix_uch_t*  ptr,
+	const stix_ooch_t*  ptr,
 	stix_oow_t         len
 );
 
 stix_oop_t stix_makestring (
 	stix_t*            stix, 
-	const stix_uch_t*  ptr, 
+	const stix_ooch_t*  ptr, 
 	stix_oow_t         len
 );
 
@@ -958,7 +960,7 @@ stix_oop_association_t stix_getatsysdic (
 
 stix_oop_association_t stix_lookupsysdic (
 	stix_t*           stix,
-	const stix_ucs_t* name
+	const stix_oocs_t* name
 );
 
 stix_oop_association_t stix_putatdic (
@@ -977,7 +979,7 @@ stix_oop_association_t stix_getatdic (
 stix_oop_association_t stix_lookupdic (
 	stix_t*           stix,
 	stix_oop_set_t    dic,
-	const stix_ucs_t* name
+	const stix_oocs_t* name
 );
 
 stix_oop_set_t stix_makedic (
@@ -1068,7 +1070,7 @@ void stix_getsynerr (
 /* ========================================================================= */
 int stix_getprimno (
 	stix_t*           stix,
-	const stix_ucs_t* name
+	const stix_oocs_t* name
 );
 
 /* TODO: remove debugging functions */
@@ -1077,7 +1079,7 @@ int stix_getprimno (
 /* ========================================================================= */
 void dump_symbol_table (stix_t* stix);
 void dump_dictionary (stix_t* stix, stix_oop_set_t dic, const char* title);
-void print_ucs (const stix_ucs_t* name);
+void print_oocs (const stix_oocs_t* name);
 void print_object (stix_t* stix, stix_oop_t oop);
 void dump_object (stix_t* stix, stix_oop_t oop, const char* title);
 

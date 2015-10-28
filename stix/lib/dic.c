@@ -52,7 +52,7 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 			key = (stix_oop_char_t)ass->key;
 			STIX_ASSERT (STIX_CLASSOF(stix,key) == (stix_oop_t)stix->_symbol);
 
-			index = stix_hashuchars(key->slot, STIX_OBJ_GET_SIZE(key)) % newsz;
+			index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % newsz;
 			while (newbuc->slot[index] != stix->_nil) index = (index + 1) % newsz;
 			newbuc->slot[index] = (stix_oop_t)ass;
 		}
@@ -73,7 +73,7 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 	STIX_ASSERT (STIX_CLASSOF(stix,dic->tally) == stix->_small_integer);
 	STIX_ASSERT (STIX_CLASSOF(stix,dic->bucket) == stix->_array);
 
-	index = stix_hashuchars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(dic->bucket);
+	index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(dic->bucket);
 
 	while (dic->bucket->slot[index] != stix->_nil) 
 	{
@@ -124,7 +124,7 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 		dic->bucket = bucket;
 
 		/* recalculate the index for the expanded bucket */
-		index = stix_hashuchars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(dic->bucket);
+		index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(dic->bucket);
 
 		while (dic->bucket->slot[index] != stix->_nil) 
 			index = (index + 1) % STIX_OBJ_GET_SIZE(dic->bucket);
@@ -150,7 +150,7 @@ oops:
 	return STIX_NULL;
 }
 
-static stix_oop_association_t lookup (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* name)
+static stix_oop_association_t lookup (stix_t* stix, stix_oop_set_t dic, const stix_oocs_t* name)
 {
 	/* this is special version of stix_getatsysdic() that performs
 	 * lookup using a plain string specified */
@@ -161,7 +161,7 @@ static stix_oop_association_t lookup (stix_t* stix, stix_oop_set_t dic, const st
 	STIX_ASSERT (STIX_CLASSOF(stix,dic->tally) == stix->_small_integer);
 	STIX_ASSERT (STIX_CLASSOF(stix,dic->bucket) == stix->_array);
 
-	index = stix_hashuchars(name->ptr, name->len) % STIX_OBJ_GET_SIZE(dic->bucket);
+	index = stix_hashchars(name->ptr, name->len) % STIX_OBJ_GET_SIZE(dic->bucket);
 
 	while (dic->bucket->slot[index] != stix->_nil) 
 	{
@@ -196,7 +196,7 @@ stix_oop_association_t stix_getatsysdic (stix_t* stix, stix_oop_t key)
 	return find_or_upsert (stix, stix->sysdic, (stix_oop_char_t)key, STIX_NULL);
 }
 
-stix_oop_association_t stix_lookupsysdic (stix_t* stix, const stix_ucs_t* name)
+stix_oop_association_t stix_lookupsysdic (stix_t* stix, const stix_oocs_t* name)
 {
 	return lookup (stix, stix->sysdic, name);
 }
@@ -213,7 +213,7 @@ stix_oop_association_t stix_getatdic (stix_t* stix, stix_oop_set_t dic, stix_oop
 	return find_or_upsert (stix, dic, (stix_oop_char_t)key, STIX_NULL);
 }
 
-stix_oop_association_t stix_lookupdic (stix_t* stix, stix_oop_set_t dic, const stix_ucs_t* name)
+stix_oop_association_t stix_lookupdic (stix_t* stix, stix_oop_set_t dic, const stix_oocs_t* name)
 {
 	return lookup (stix, dic, name);
 }

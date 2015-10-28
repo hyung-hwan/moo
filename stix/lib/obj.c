@@ -150,16 +150,16 @@ static stix_oop_t alloc_numeric_array (stix_t* stix, const void* ptr, stix_oow_t
 	return hdr;
 }
 
-stix_oop_t stix_alloccharobj (stix_t* stix, const stix_uch_t* ptr, stix_oow_t len)
+stix_oop_t stix_alloccharobj (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
 {
-	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_CHAR, STIX_SIZEOF(stix_uch_t), 1);
+	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_CHAR, STIX_SIZEOF(stix_ooch_t), 1);
 }
 
 /*
 TODO: extra bits must be set ...
-stix_oop_t stix_allocmbcharobj (stix_t* stix, const stix_uch_t* ptr, stix_oow_t len)
+stix_oop_t stix_allocmbcharobj (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
 {
-	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_MBCHAR, STIX_SIZEOF(stix_uch_t), 1);
+	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_MBCHAR, STIX_SIZEOF(stix_ooch_t), 1);
 }
 */
 

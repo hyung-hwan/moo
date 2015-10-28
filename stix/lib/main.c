@@ -213,7 +213,7 @@ static stix_ssize_t input_handler (stix_t* stix, stix_io_cmd_t cmd, stix_io_arg_
 	}
 }
 
-static void* mod_open (stix_t* stix, const stix_uch_t* name)
+static void* mod_open (stix_t* stix, const stix_ooch_t* name)
 {
 #if defined(USE_LTDL)
 /* TODO: support various platforms */
@@ -274,7 +274,7 @@ static void mod_close (stix_t* stix, void* handle)
 #endif
 }
 
-static void* mod_getsym (stix_t* stix, void* handle, const stix_uch_t* name)
+static void* mod_getsym (stix_t* stix, void* handle, const stix_ooch_t* name)
 {
 #if defined(USE_LTDL)
 	stix_bch_t buf[1024]; /* TODO: use a proper buffer. dynamically allocated if conversion result in too a large value */
@@ -369,16 +369,16 @@ static char* syntax_error_msg[] =
 	"literal expected"
 };
 
-stix_uch_t str_stix[] = { 'S', 't', 'i', 'x' };
-stix_uch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' };
-stix_uch_t str_main[] = { 'm', 'a', 'i', 'n' };
+stix_ooch_t str_stix[] = { 'S', 't', 'i', 'x' };
+stix_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' };
+stix_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
 
 int main (int argc, char* argv[])
 {
 	stix_t* stix;
 	xtn_t* xtn;
-	stix_ucs_t objname;
-	stix_ucs_t mthname;
+	stix_oocs_t objname;
+	stix_oocs_t mthname;
 	stix_vmprim_t vmprim;
 	int i;
 
@@ -457,8 +457,8 @@ int main (int argc, char* argv[])
 	}
 
 {
-stix_uch_t x[] = { 'X', 't', 'r', 'i', 'n', 'g', '\0' };
-stix_uch_t y[] = { 'S', 'y', 'm', 'b', 'o', 'l', '\0' };
+stix_ooch_t x[] = { 'X', 't', 'r', 'i', 'n', 'g', '\0' };
+stix_ooch_t y[] = { 'S', 'y', 'm', 'b', 'o', 'l', '\0' };
 stix_oop_t a, b, k;
 
 a = stix_makesymbol (stix, x, 6);

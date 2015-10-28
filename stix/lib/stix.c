@@ -69,7 +69,7 @@ int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_size_t heapsz, const stix_v
 	stix->newheap = stix_makeheap (stix, heapsz);
 	if (!stix->newheap) goto oops;
 
-	if (stix_rbt_init (&stix->pmtable, mmgr, STIX_SIZEOF(stix_uch_t), 1) <= -1) goto oops;
+	if (stix_rbt_init (&stix->pmtable, mmgr, STIX_SIZEOF(stix_ooch_t), 1) <= -1) goto oops;
 	stix_rbt_setstyle (&stix->pmtable, stix_getrbtstyle(STIX_RBT_STYLE_INLINE_COPIERS));
 	return 0;
 
@@ -215,21 +215,7 @@ void stix_deregcb (stix_t* stix, stix_cb_t* cb)
 	stix_freemem (stix, cb);
 }
 
-stix_size_t stix_hashbytes (const stix_byte_t* ptr, stix_size_t len)
-{
-	stix_size_t h = 0;
-	const stix_uint8_t* bp, * be;
 
-	bp = ptr; be = bp + len;
-	while (bp < be) h = h * 31 + *bp++;
-
-	return h;
-}
-
-stix_size_t stix_hashuchars (const stix_uch_t* ptr, stix_size_t len)
-{
-	return stix_hashbytes ((const stix_byte_t *)ptr, len * STIX_SIZEOF(*ptr));
-}
 
 
 void* stix_allocmem (stix_t* stix, stix_size_t size)

@@ -49,7 +49,7 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 			STIX_ASSERT (STIX_CLASSOF(stix,symbol) == stix->_symbol);
 			/*STIX_ASSERT (sym->size > 0);*/
 
-			index = stix_hashuchars(symbol->slot, STIX_OBJ_GET_SIZE(symbol)) % newsz;
+			index = stix_hashchars(symbol->slot, STIX_OBJ_GET_SIZE(symbol)) % newsz;
 			while (newbuc->slot[index] != stix->_nil) index = (index + 1) % newsz;
 			newbuc->slot[index] = (stix_oop_t)symbol;
 		}
@@ -58,7 +58,7 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 	return newbuc;
 }
 
-static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_uch_t* ptr, stix_oow_t len, int create)
+static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len, int create)
 {
 	stix_oow_t index, tally;
 	stix_oop_char_t symbol;
@@ -72,7 +72,7 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_uch_t* ptr, stix
 	}
 
 	STIX_ASSERT (STIX_CLASSOF(stix,stix->symtab->bucket) == stix->_array);
-	index = stix_hashuchars(ptr, len) % STIX_OBJ_GET_SIZE(stix->symtab->bucket);
+	index = stix_hashchars(ptr, len) % STIX_OBJ_GET_SIZE(stix->symtab->bucket);
 
 	/* find a matching symbol in the open-addressed symbol table */
 	while (stix->symtab->bucket->slot[index] != stix->_nil) 
@@ -114,7 +114,7 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_uch_t* ptr, stix
 		stix->symtab->bucket = bucket;
 
 		/* recalculate the index for the expanded bucket */
-		index = stix_hashuchars(ptr, len) % STIX_OBJ_GET_SIZE(stix->symtab->bucket);
+		index = stix_hashchars(ptr, len) % STIX_OBJ_GET_SIZE(stix->symtab->bucket);
 
 		while (stix->symtab->bucket->slot[index] != stix->_nil) 
 			index = (index + 1) % STIX_OBJ_GET_SIZE(stix->symtab->bucket);
@@ -132,17 +132,17 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_uch_t* ptr, stix
 	return (stix_oop_t)symbol;
 }
 
-stix_oop_t stix_makesymbol (stix_t* stix, const stix_uch_t* ptr, stix_oow_t len)
+stix_oop_t stix_makesymbol (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
 {
 	return find_or_make_symbol (stix, ptr, len, 1);
 }
 
-stix_oop_t stix_findsymbol (stix_t* stix, const stix_uch_t* ptr, stix_oow_t len)
+stix_oop_t stix_findsymbol (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
 {
 	return find_or_make_symbol (stix, ptr, len, 0);
 }
 
-stix_oop_t stix_makestring (stix_t* stix, const stix_uch_t* ptr, stix_oow_t len)
+stix_oop_t stix_makestring (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
 {
 	return stix_instantiate (stix, stix->_string, ptr, len);
 }

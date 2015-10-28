@@ -27,6 +27,22 @@
 
 #include "stix-utl.h"
 
+stix_size_t stix_hashbytes (const stix_byte_t* ptr, stix_size_t len)
+{
+	stix_size_t h = 0;
+	const stix_uint8_t* bp, * be;
+
+	bp = ptr; be = bp + len;
+	while (bp < be) h = h * 31 + *bp++;
+
+	return h;
+}
+
+stix_size_t stix_hashuchars (const stix_uch_t* ptr, stix_size_t len)
+{
+	return stix_hashbytes ((const stix_byte_t *)ptr, len * STIX_SIZEOF(*ptr));
+}
+
 int stix_equalchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_size_t len)
 {
 	stix_size_t i;
@@ -87,6 +103,12 @@ void stix_copyuchars (stix_uch_t* dst, const stix_uch_t* src, stix_size_t len)
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
+void stix_copybchars (stix_bch_t* dst, const stix_bch_t* src, stix_size_t len)
+{
+	stix_size_t i;
+	for (i = 0; i < len; i++) dst[i] = src[i];
+}
+
 void stix_copybchtouchars (stix_uch_t* dst, const stix_bch_t* src, stix_size_t len)
 {
 	stix_size_t i;
@@ -125,7 +147,7 @@ stix_size_t stix_copybcstr (stix_bch_t* dst, stix_size_t len, const stix_bch_t* 
 	return p - dst;
 }
 
-stix_uch_t* stix_findchar (const stix_uch_t* ptr, stix_size_t len, stix_uch_t c)
+stix_uch_t* stix_finduchar (const stix_uch_t* ptr, stix_size_t len, stix_uch_t c)
 {
 	const stix_uch_t* end;
 
@@ -133,6 +155,20 @@ stix_uch_t* stix_findchar (const stix_uch_t* ptr, stix_size_t len, stix_uch_t c)
 	while (ptr < end)
 	{
 		if (*ptr == c) return (stix_uch_t*)ptr;
+		ptr++;
+	}
+
+	return STIX_NULL;
+}
+
+stix_uch_t* stix_findbchar (const stix_bch_t* ptr, stix_size_t len, stix_bch_t c)
+{
+	const stix_bch_t* end;
+
+	end = ptr + len;
+	while (ptr < end)
+	{
+		if (*ptr == c) return (stix_bch_t*)ptr;
 		ptr++;
 	}
 

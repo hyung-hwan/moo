@@ -78,8 +78,15 @@ typedef enum stix_trait_t stix_trait_t;
 /* NOTE: sizeof(stix_oop_t) must be equal to sizeof(stix_oow_t) */
 typedef stix_uintptr_t           stix_oow_t;
 typedef stix_intptr_t            stix_ooi_t;
+typedef stix_ushortptr_t         stix_oosw_t; /* short word - half word */
+typedef stix_shortptr_t          stix_oosi_t; /* signed short word */
 typedef struct stix_obj_t        stix_obj_t;
 typedef struct stix_obj_t*       stix_oop_t;
+
+typedef stix_uch_t               stix_ooch_t;
+typedef stix_uci_t               stix_ooci_t;
+typedef stix_ucs_t               stix_oocs_t;
+#define STIX_OOCH_IS_UCH
 
 /* these are more specialized types for stix_obj_t */
 typedef struct stix_obj_oop_t     stix_obj_oop_t;
@@ -95,7 +102,6 @@ typedef struct stix_obj_word_t*   stix_oop_word_t;
 
 #define STIX_OOW_BITS (STIX_SIZEOF(stix_oow_t) * 8)
 #define STIX_OOP_BITS (STIX_SIZEOF(stix_oop_t) * 8)
-
 
 /* 
  * OOP encoding
@@ -271,7 +277,7 @@ struct stix_obj_oop_t
 struct stix_obj_char_t
 {
 	STIX_OBJ_HEADER;
-	stix_uch_t slot[1];
+	stix_ooch_t slot[1];
 };
 
 struct stix_obj_byte_t
@@ -673,6 +679,7 @@ struct stix_t
 	stix_oop_t _character; /* Character */
 
 	stix_oop_t _small_integer; /* SmallInteger */
+	stix_oop_t _large_integer;
 	/* == NEVER CHANGE THE ORDER OF FIELDS ABOVE == */
 
 	stix_oop_set_t symtab; /* system-wide symbol table. instance of SymbolSet */
@@ -820,9 +827,9 @@ STIX_EXPORT int stix_execute (
  * named \a objname.
  */
 STIX_EXPORT int stix_invoke (
-	stix_t*           stix,
-	const stix_ucs_t* objname,
-	const stix_ucs_t* mthname
+	stix_t*            stix,
+	const stix_oocs_t* objname,
+	const stix_oocs_t* mthname
 );
 
 /* Temporary OOP management  */

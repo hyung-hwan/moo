@@ -76,7 +76,7 @@ void dump_dictionary (stix_t* stix, stix_oop_set_t dic, const char* title)
 	printf ("--------------------------------------------\n");
 }
 
-void print_ucs (const stix_ucs_t* name)
+void print_oocs (const stix_oocs_t* name)
 {
 	stix_size_t i;
 	for (i = 0; i < name->len; i++) printf ("%c", name->ptr[i]);
@@ -118,7 +118,7 @@ void print_object (stix_t* stix, stix_oop_t oop)
 	else
 	{
 		stix_oop_class_t c;
-		stix_ucs_t s;
+		stix_oocs_t s;
 		stix_size_t i;
 		stix_bch_t bcs[32];
 		stix_size_t ucslen, bcslen;
@@ -177,7 +177,7 @@ void print_object (stix_t* stix, stix_oop_t oop)
 			s.ptr = ((stix_oop_char_t)c->name)->slot;
 			s.len = STIX_OBJ_GET_SIZE(c->name);
 			printf ("instance of ");
-			print_ucs (&s);
+			print_oocs (&s);
 			printf ("- (%p)", oop);
 		}
 	}
@@ -186,7 +186,7 @@ void print_object (stix_t* stix, stix_oop_t oop)
 static void __dump_object (stix_t* stix, stix_oop_t oop, int depth)
 {
 	stix_oop_class_t c;
-	stix_ucs_t s;
+	stix_oocs_t s;
 	int i;
 
 	for (i = 0; i < depth; i++) printf ("\t");
@@ -195,7 +195,7 @@ static void __dump_object (stix_t* stix, stix_oop_t oop, int depth)
 	c = (stix_oop_class_t)STIX_CLASSOF(stix, oop);
 	s.ptr = ((stix_oop_char_t)c->name)->slot;
 	s.len = STIX_OBJ_GET_SIZE(c->name);
-	print_ucs (&s);
+	print_oocs (&s);
 
 	if (oop == stix->_nil)
 	{

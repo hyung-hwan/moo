@@ -95,8 +95,8 @@ then
 fi
 
 dnl indicate the existence of config.h
-CFLAGS="$CFLAGS -DSTIX_HAVE_CONFIG_H"
-CXXFLAGS="$CXXFLAGS -DSTIX_HAVE_CONFIG_H"
+CFLAGS="$CFLAGS -DSTIX_HAVE_CFG_H"
+CXXFLAGS="$CXXFLAGS -DSTIX_HAVE_CFG_H"
 
 dnl make visible the 64-bit interface to the file system
 CFLAGS="$CFLAGS -D_LARGEFILE64_SOURCE"
