@@ -46,6 +46,7 @@ libstix_la_SOURCES = \
 	sym.c \
 	dic.c \
 	proc.c \
+	bigint.c \
 	ignite.c \
 	utf8.c \
 	comp.c \

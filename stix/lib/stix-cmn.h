@@ -226,7 +226,6 @@
 
 typedef stix_uintptr_t stix_size_t;
 typedef stix_intptr_t stix_ssize_t;
-typedef stix_uint8_t  stix_byte_t;
 
 typedef char          stix_bch_t;
 typedef stix_uint16_t stix_uch_t; /* TODO ... wchar_t??? */
@@ -436,6 +435,26 @@ struct stix_cmgr_t
 #	define STIX_INLINE 
 #	undef STIX_HAVE_INLINE
 #endif
+
+
+
+
+/* =========================================================================
+ * BASIC STIX TYPES
+ * =========================================================================*/
+
+typedef stix_uint8_t             stix_oob_t;
+/* NOTE: sizeof(stix_oop_t) must be equal to sizeof(stix_oow_t) */
+typedef stix_uintptr_t           stix_oow_t;
+typedef stix_intptr_t            stix_ooi_t;
+
+typedef stix_ushortptr_t         stix_oohw_t; /* half word - half word */
+typedef stix_shortptr_t          stix_oohi_t; /* signed half word */
+
+typedef stix_uch_t               stix_ooch_t;
+typedef stix_uci_t               stix_ooci_t;
+typedef stix_ucs_t               stix_oocs_t;
+#define STIX_OOCH_IS_UCH
 
 
 #endif

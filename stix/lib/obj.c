@@ -74,7 +74,7 @@ stix_oop_t stix_allocoopobj (stix_t* stix, stix_oow_t size)
 }
 
 #if defined(STIX_USE_OBJECT_TRAILER)
-stix_oop_t stix_allocoopobjwithtrailer (stix_t* stix, stix_oow_t size, const stix_byte_t* bptr, stix_oow_t blen)
+stix_oop_t stix_allocoopobjwithtrailer (stix_t* stix, stix_oow_t size, const stix_oob_t* bptr, stix_oow_t blen)
 {
 	stix_oop_oop_t hdr;
 	stix_oow_t nbytes, nbytes_aligned;
@@ -163,9 +163,9 @@ stix_oop_t stix_allocmbcharobj (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t
 }
 */
 
-stix_oop_t stix_allocbyteobj (stix_t* stix, const stix_byte_t* ptr, stix_oow_t len)
+stix_oop_t stix_allocbyteobj (stix_t* stix, const stix_oob_t* ptr, stix_oow_t len)
 {
-	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_BYTE, STIX_SIZEOF(stix_byte_t), 0);
+	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_BYTE, STIX_SIZEOF(stix_oob_t), 0);
 }
 
 stix_oop_t stix_allocwordobj (stix_t* stix, const stix_oow_t* ptr, stix_oow_t len)
@@ -272,7 +272,7 @@ einval:
 
 #if defined(STIX_USE_OBJECT_TRAILER)
 
-stix_oop_t stix_instantiatewithtrailer (stix_t* stix, stix_oop_t _class, stix_oow_t vlen, const stix_byte_t* tptr, stix_oow_t tlen)
+stix_oop_t stix_instantiatewithtrailer (stix_t* stix, stix_oop_t _class, stix_oow_t vlen, const stix_oob_t* tptr, stix_oow_t tlen)
 {
 	stix_oop_t oop;
 	stix_oow_t spec;

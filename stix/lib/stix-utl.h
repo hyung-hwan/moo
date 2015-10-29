@@ -33,12 +33,30 @@
 extern "C" {
 #endif
 
+#if defined(STIX_OOCH_IS_UCH)
+#	define stix_hashchars(ptr,len) stix_hashuchars(ptr,len)
+#	define stix_compoocbcstr(str1,str2) stix_compucbcstr(str1,str2)
+#	define stix_compoocstr(str1,str2) stix_compucstr(str1,str2)
+#	define stix_copyoochars(dst,src,len) stix_copyuchars(dst,src,len)
+#	define stix_copybchtooochars(dst,src,len) stix_copybchtouchars(dst,src,len)
+#	define stix_copyoocstr(dst,len,src) stix_copyucstr(dst,len,src)
+#	define stix_findoochar(ptr,len,c) stix_finduchar(ptr,len,c)
+#else
+#	define stix_hashchars(ptr,len) stix_hashbchars(ptr,len)
+#	define stix_compoocbcstr(str1,str2) stix_compbcstr(str1,str2)
+#	define stix_compoocstr(str1,str2) stix_compbcstr(str1,str2)
+#	define stix_copyoochars(dst,src,len) stix_copybchars(dst,src,len)
+#	define stix_copybchtooochars(dst,src,len) stix_copybchars(dst,src,len)
+#	define stix_copyoocstr(dst,len,src) stix_copybcstr(dst,len,src)
+#	define stix_findoochar(ptr,len,c) stix_findbchar(ptr,len,c)
+#endif
+
 
 /* ========================================================================= */
 /* stix-utl.c                                                                */
 /* ========================================================================= */
 stix_size_t stix_hashbytes (
-	const stix_byte_t* ptr,
+	const stix_oob_t* ptr,
 	stix_size_t        len
 );
 

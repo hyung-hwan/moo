@@ -289,8 +289,10 @@ void stix_gc (stix_t* stix)
 	stix->_true_class        = stix_moveoop (stix, stix->_true_class);
 	stix->_false_class       = stix_moveoop (stix, stix->_false_class);
 	stix->_character         = stix_moveoop (stix, stix->_character);
-	stix->_small_integer     = stix_moveoop (stix, stix->_small_integer);
-	stix->_large_integer     = stix_moveoop (stix, stix->_large_integer);
+
+	stix->_small_integer          = stix_moveoop (stix, stix->_small_integer);
+	stix->_large_positive_integer = stix_moveoop (stix, stix->_large_positive_integer);
+	stix->_large_negative_integer = stix_moveoop (stix, stix->_large_negative_integer);
 
 	stix->sysdic = (stix_oop_set_t) stix_moveoop (stix, (stix_oop_t)stix->sysdic);
 	stix->processor = (stix_oop_process_scheduler_t) stix_moveoop (stix, (stix_oop_t)stix->processor);

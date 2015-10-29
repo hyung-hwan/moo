@@ -475,7 +475,7 @@ struct stix_compiler_t
 		stix_size_t literal_capa;
 
 		/* byte array elements */
-		stix_byte_t* balit;
+		stix_oob_t* balit;
 		stix_size_t balit_count;
 		stix_size_t balit_capa;
 
@@ -504,7 +504,7 @@ struct stix_compiler_t
 
 #if defined(STIX_USE_OBJECT_TRAILER)
 	/* let it point to the trailer of the method */
-#	define SET_ACTIVE_METHOD_CODE(stix) ((stix)->active_code = (stix_byte_t*)&(stix)->active_method->slot[STIX_OBJ_GET_SIZE((stix)->active_method) + 1 - STIX_METHOD_NAMED_INSTVARS])
+#	define SET_ACTIVE_METHOD_CODE(stix) ((stix)->active_code = (stix_oob_t*)&(stix)->active_method->slot[STIX_OBJ_GET_SIZE((stix)->active_method) + 1 - STIX_METHOD_NAMED_INSTVARS])
 #else
 	/* let it point to the payload of the code byte array */
 #	define SET_ACTIVE_METHOD_CODE(stix) ((stix)->active_code = (stix)->active_method->code->slot)
@@ -808,23 +808,6 @@ enum stix_bcode_t
 extern "C" {
 #endif
 
-#if defined(STIX_OOCH_IS_UCH)
-#	define stix_hashchars(ptr,len) stix_hashuchars(ptr,len)
-#	define stix_compoocbcstr(str1,str2) stix_compucbcstr(str1,str2)
-#	define stix_compoocstr(str1,str2) stix_compucstr(str1,str2)
-#	define stix_copyoochars(dst,src,len) stix_copyuchars(dst,src,len)
-#	define stix_copybchtooochars(dst,src,len) stix_copybchtouchars(dst,src,len)
-#	define stix_copyoocstr(dst,len,src) stix_copyucstr(dst,len,src)
-#	define stix_findoochar(ptr,len,c) stix_finduchar(ptr,len,c)
-#else
-#	define stix_hashchars(ptr,len) stix_hashbchars(ptr,len)
-#	define stix_compoocbcstr(str1,str2) stix_compbcstr(str1,str2)
-#	define stix_compoocstr(str1,str2) stix_compbcstr(str1,str2)
-#	define stix_copyoochars(dst,src,len) stix_copybchars(dst,src,len)
-#	define stix_copybchtooochars(dst,src,len) stix_copybchars(dst,src,len)
-#	define stix_copyoocstr(dst,len,src) stix_copybcstr(dst,len,src)
-#	define stix_findoochar(ptr,len,c) stix_findbchar(ptr,len,c)
-#endif
 
 /* ========================================================================= */
 /* heap.c                                                                    */
@@ -890,7 +873,7 @@ stix_oop_t stix_allocoopobj (
 stix_oop_t stix_allocoopobjwithtrailer (
 	stix_t*            stix,
 	stix_oow_t         size,
-	const stix_byte_t* tptr,
+	const stix_oob_t* tptr,
 	stix_oow_t         tlen
 );
 #endif
@@ -903,7 +886,7 @@ stix_oop_t stix_alloccharobj (
 
 stix_oop_t stix_allocbyteobj (
 	stix_t*            stix,
-	const stix_byte_t* ptr,
+	const stix_oob_t* ptr,
 	stix_oow_t         len
 );
 
@@ -918,7 +901,7 @@ stix_oop_t stix_instantiatewithtrailer (
 	stix_t*            stix, 
 	stix_oop_t         _class,
 	stix_oow_t         vlen,
-	const stix_byte_t* tptr,
+	const stix_oob_t* tptr,
 	stix_oow_t tlen
 );
 #endif
@@ -1050,6 +1033,21 @@ int stix_utf8toucs (
 	stix_size_t*        bcslen,
 	stix_uch_t*         ucs,
 	stix_size_t*        ucslen
+);
+
+/* ========================================================================= */
+/* bigint.c                                                                    */
+/* ========================================================================= */
+stix_oop_t stix_addbigints (
+	stix_t*    stix,
+	stix_oop_t x,
+	stix_oop_t y
+);
+
+stix_oop_t stix_subbigints (
+	stix_t*    stix,
+	stix_oop_t x,
+	stix_oop_t y
 );
 
 /* ========================================================================= */

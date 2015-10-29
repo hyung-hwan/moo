@@ -673,6 +673,11 @@ static int prim_basic_at (stix_t* stix, stix_ooi_t nargs)
 			v = STIX_OOP_FROM_CHAR(((stix_oop_char_t)rcv)->slot[idx]);
 			break;
 
+		case STIX_OBJ_TYPE_HALFWORD:
+			/* TODO: LargeInteger if the halfword is too large */
+			v = STIX_OOP_FROM_SMINT(((stix_oop_halfword_t)rcv)->slot[idx]);
+			break;
+
 		case STIX_OBJ_TYPE_WORD:
 			/* TODO: LargeInteger if the word is too large */
 			v = STIX_OOP_FROM_SMINT(((stix_oop_word_t)rcv)->slot[idx]);
@@ -739,7 +744,6 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 /* TOOD: must I check the range of the value? */
 			((stix_oop_char_t)rcv)->slot[idx] = STIX_OOP_TO_SMINT(val);
 			break;
-		
 
 		case STIX_OBJ_TYPE_CHAR:
 			if (!STIX_OOP_IS_CHAR(val))
@@ -750,14 +754,25 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 			((stix_oop_char_t)rcv)->slot[idx] = STIX_OOP_TO_CHAR(val);
 			break;
 
+		case STIX_OBJ_TYPE_HALFWORD:
+			if (!STIX_OOP_IS_SMINT(val))
+			{
+				/* the value is not a number */
+				return 0;
+			}
+
+			/* if the small integer is too large, it will get truncated */
+			((stix_oop_halfword_t)rcv)->slot[idx] = STIX_OOP_TO_SMINT(val);
+			break;
+
 		case STIX_OBJ_TYPE_WORD:
 			/* TODO: handle largeINteger  */
 			if (!STIX_OOP_IS_SMINT(val))
 			{
-				/* the value is not a character */
+				/* the value is not a number */
 				return 0;
 			}
-			((stix_oop_char_t)rcv)->slot[idx] = STIX_OOP_TO_SMINT(val);
+			((stix_oop_word_t)rcv)->slot[idx] = STIX_OOP_TO_SMINT(val);
 			break;
 
 		case STIX_OBJ_TYPE_OOP:
@@ -1727,7 +1742,7 @@ done:
 
 int stix_execute (stix_t* stix)
 {
-	stix_byte_t bcode;
+	stix_oob_t bcode;
 	stix_ooi_t b1, b2;
 	stix_oop_t return_value;
 

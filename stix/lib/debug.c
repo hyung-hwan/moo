@@ -278,6 +278,15 @@ static void __dump_object (stix_t* stix, stix_oop_t oop, int depth)
 			}
 			printf ("]");
 		}
+		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_HALFWORD)
+		{
+			printf (" #["); /* TODO: different symbol for word array ?? */
+			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+			{
+				printf (" %ld", (long int)((stix_oop_halfword_t)oop)->slot[i]);
+			}
+			printf ("]");
+		}
 		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_WORD)
 		{
 			printf (" #["); /* TODO: different symbol for word array ?? */

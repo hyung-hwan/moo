@@ -126,8 +126,9 @@ libstix_la_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am_libstix_la_OBJECTS = libstix_la-stix-rbt.lo libstix_la-stix-utl.lo \
 	libstix_la-stix.lo libstix_la-heap.lo libstix_la-gc.lo \
 	libstix_la-obj.lo libstix_la-sym.lo libstix_la-dic.lo \
-	libstix_la-proc.lo libstix_la-ignite.lo libstix_la-utf8.lo \
-	libstix_la-comp.lo libstix_la-exec.lo libstix_la-debug.lo
+	libstix_la-proc.lo libstix_la-bigint.lo libstix_la-ignite.lo \
+	libstix_la-utf8.lo libstix_la-comp.lo libstix_la-exec.lo \
+	libstix_la-debug.lo
 libstix_la_OBJECTS = $(am_libstix_la_OBJECTS)
 libstix_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
@@ -381,6 +382,7 @@ libstix_la_SOURCES = \
 	sym.c \
 	dic.c \
 	proc.c \
+	bigint.c \
 	ignite.c \
 	utf8.c \
 	comp.c \
@@ -588,6 +590,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-bigint.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-comp.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-debug.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-dic.Plo@am__quote@
@@ -695,6 +698,13 @@ libstix_la-proc.lo: proc.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='proc.c' object='libstix_la-proc.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-proc.lo `test -f 'proc.c' || echo '$(srcdir)/'`proc.c
+
+libstix_la-bigint.lo: bigint.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-bigint.lo -MD -MP -MF $(DEPDIR)/libstix_la-bigint.Tpo -c -o libstix_la-bigint.lo `test -f 'bigint.c' || echo '$(srcdir)/'`bigint.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-bigint.Tpo $(DEPDIR)/libstix_la-bigint.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='bigint.c' object='libstix_la-bigint.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-bigint.lo `test -f 'bigint.c' || echo '$(srcdir)/'`bigint.c
 
 libstix_la-ignite.lo: ignite.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-ignite.lo -MD -MP -MF $(DEPDIR)/libstix_la-ignite.Tpo -c -o libstix_la-ignite.lo `test -f 'ignite.c' || echo '$(srcdir)/'`ignite.c

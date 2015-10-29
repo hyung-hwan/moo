@@ -75,33 +75,26 @@ enum stix_trait_t
 };
 typedef enum stix_trait_t stix_trait_t;
 
-/* NOTE: sizeof(stix_oop_t) must be equal to sizeof(stix_oow_t) */
-typedef stix_uintptr_t           stix_oow_t;
-typedef stix_intptr_t            stix_ooi_t;
-typedef stix_ushortptr_t         stix_oosw_t; /* short word - half word */
-typedef stix_shortptr_t          stix_oosi_t; /* signed short word */
-typedef struct stix_obj_t        stix_obj_t;
-typedef struct stix_obj_t*       stix_oop_t;
-
-typedef stix_uch_t               stix_ooch_t;
-typedef stix_uci_t               stix_ooci_t;
-typedef stix_ucs_t               stix_oocs_t;
-#define STIX_OOCH_IS_UCH
+typedef struct stix_obj_t           stix_obj_t;
+typedef struct stix_obj_t*          stix_oop_t;
 
 /* these are more specialized types for stix_obj_t */
-typedef struct stix_obj_oop_t     stix_obj_oop_t;
-typedef struct stix_obj_char_t    stix_obj_char_t;
-typedef struct stix_obj_byte_t    stix_obj_byte_t;
-typedef struct stix_obj_word_t    stix_obj_word_t;
+typedef struct stix_obj_oop_t       stix_obj_oop_t;
+typedef struct stix_obj_char_t      stix_obj_char_t;
+typedef struct stix_obj_byte_t      stix_obj_byte_t;
+typedef struct stix_obj_halfword_t  stix_obj_halfword_t;
+typedef struct stix_obj_word_t      stix_obj_word_t;
 
 /* these are more specialized types for stix_oop_t */
-typedef struct stix_obj_oop_t*    stix_oop_oop_t;
-typedef struct stix_obj_char_t*   stix_oop_char_t;
-typedef struct stix_obj_byte_t*   stix_oop_byte_t;
-typedef struct stix_obj_word_t*   stix_oop_word_t;
+typedef struct stix_obj_oop_t*      stix_oop_oop_t;
+typedef struct stix_obj_char_t*     stix_oop_char_t;
+typedef struct stix_obj_byte_t*     stix_oop_byte_t;
+typedef struct stix_obj_halfword_t* stix_oop_halfword_t;
+typedef struct stix_obj_word_t*     stix_oop_word_t;
 
-#define STIX_OOW_BITS (STIX_SIZEOF(stix_oow_t) * 8)
-#define STIX_OOP_BITS (STIX_SIZEOF(stix_oop_t) * 8)
+#define STIX_OOW_BITS  (STIX_SIZEOF(stix_oow_t) * 8)
+#define STIX_OOP_BITS  (STIX_SIZEOF(stix_oop_t) * 8)
+#define STIX_OOHW_BITS (STIX_SIZEOF(stix_oohw_t) * 8)
 
 /* 
  * OOP encoding
@@ -152,7 +145,9 @@ enum stix_obj_type_t
 	STIX_OBJ_TYPE_OOP,
 	STIX_OBJ_TYPE_CHAR,
 	STIX_OBJ_TYPE_BYTE,
-	STIX_OBJ_TYPE_WORD
+	STIX_OBJ_TYPE_HALFWORD,
+	STIX_OBJ_TYPE_WORD,
+	
 
 /*
 	STIX_OBJ_TYPE_UINT8,
@@ -178,7 +173,7 @@ typedef enum stix_obj_type_t stix_obj_type_t;
  * _flags:
  *   type: the type of a payload item. 
  *         one of STIX_OBJ_TYPE_OOP, STIX_OBJ_TYPE_CHAR, 
- *                STIX_OBJ_TYPE_BYTE, STIX_OBJ_TYPE_WORD
+ *                STIX_OBJ_TYPE_BYTE, STIX_OBJ_TYPE_HALFWORD, STIX_OBJ_TYPE_WORD
  *   unit: the size of a payload item in bytes. 
  *   extra: 0 or 1. 1 indicates that the payload contains 1 more
  *          item than the value of the size field. used for a 
@@ -283,7 +278,13 @@ struct stix_obj_char_t
 struct stix_obj_byte_t
 {
 	STIX_OBJ_HEADER;
-	stix_byte_t slot[1];
+	stix_oob_t slot[1];
+};
+
+struct stix_obj_halfword_t
+{
+	STIX_OBJ_HEADER;
+	stix_oohw_t slot[1];
 };
 
 struct stix_obj_word_t
@@ -296,7 +297,7 @@ typedef struct stix_trailer_t stix_trailer_t;
 struct stix_trailer_t
 {
 	stix_oow_t size;
-	stix_byte_t slot[1];
+	stix_oob_t slot[1];
 };
 
 #define STIX_SET_NAMED_INSTVARS 2
@@ -679,7 +680,8 @@ struct stix_t
 	stix_oop_t _character; /* Character */
 
 	stix_oop_t _small_integer; /* SmallInteger */
-	stix_oop_t _large_integer;
+	stix_oop_t _large_positive_integer; /* LargePositiveInteger */
+	stix_oop_t _large_negative_integer; /* LargeNegativeInteger */
 	/* == NEVER CHANGE THE ORDER OF FIELDS ABOVE == */
 
 	stix_oop_set_t symtab; /* system-wide symbol table. instance of SymbolSet */
@@ -692,7 +694,7 @@ struct stix_t
 	/* == EXECUTION REGISTERS == */
 	stix_oop_context_t active_context;
 	stix_oop_method_t active_method;
-	stix_byte_t* active_code;
+	stix_oob_t* active_code;
 	stix_ooi_t sp;
 	stix_ooi_t ip;
 	/* == END EXECUTION REGISTERS == */

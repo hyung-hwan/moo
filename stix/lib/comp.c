@@ -89,6 +89,7 @@ static struct voca_t
 	{  7, { 'd','e','c','l','a','r','e'                                   } },
 	{  6, { 'e','x','t','e','n','d'                                       } },
 	{  5, { 'f','a','l','s','e'                                           } },
+	{  8, { 'h','a','l','f','w','o','r','d'                               } },
 	{  7, { 'i','n','c','l','u','d','e'                                   } },
 	{  4, { 'm','a','i','n'                                               } },
 	{  6, { 'm','e','t','h','o','d'                                       } },
@@ -120,6 +121,7 @@ enum voca_id_t
 	VOCA_DECLARE,
 	VOCA_EXTEND,
 	VOCA_FALSE,
+	VOCA_HALFWORD,
 	VOCA_INCLUDE,
 	VOCA_MAIN,
 	VOCA_METHOD,
@@ -1582,14 +1584,14 @@ static int end_include (stix_t* stix)
  * Byte-Code Generator
  * --------------------------------------------------------------------- */
 
-static STIX_INLINE int emit_byte_instruction (stix_t* stix, stix_byte_t code)
+static STIX_INLINE int emit_byte_instruction (stix_t* stix, stix_oob_t code)
 {
 	stix_size_t i;
 
 	i = stix->c->mth.code.len + 1;
 	if (i > stix->c->mth.code_capa)
 	{
-		stix_byte_t* tmp;
+		stix_oob_t* tmp;
 
 		i = STIX_ALIGN (i, CODE_BUFFER_ALIGN);
 
@@ -1606,7 +1608,7 @@ static STIX_INLINE int emit_byte_instruction (stix_t* stix, stix_byte_t code)
 
 static int emit_single_param_instruction (stix_t* stix, int cmd, stix_oow_t param_1)
 {
-	stix_byte_t bc;
+	stix_oob_t bc;
 
 	switch (cmd)
 	{
@@ -1619,7 +1621,7 @@ static int emit_single_param_instruction (stix_t* stix, int cmd, stix_oow_t para
 		case BCODE_PUSH_LITERAL_0:
 			if (param_1 < 8)
 			{
-				bc = (stix_byte_t)(cmd & 0xF8) | (stix_byte_t)param_1;
+				bc = (stix_oob_t)(cmd & 0xF8) | (stix_oob_t)param_1;
 				goto write_short;
 			}
 			else
@@ -1638,7 +1640,7 @@ static int emit_single_param_instruction (stix_t* stix, int cmd, stix_oow_t para
 		case BCODE_JUMP_IF_FALSE_0:
 			if (param_1 < 4)
 			{
-				bc = (stix_byte_t)(cmd & 0xFC) | (stix_byte_t)param_1;
+				bc = (stix_oob_t)(cmd & 0xFC) | (stix_oob_t)param_1;
 				goto write_short;
 			}
 			else
@@ -1678,7 +1680,7 @@ write_long:
 
 static int emit_double_param_instruction (stix_t* stix, int cmd, stix_size_t param_1, stix_size_t param_2)
 {
-	stix_byte_t bc;
+	stix_oob_t bc;
 
 	switch (cmd)
 	{
@@ -1693,7 +1695,7 @@ static int emit_double_param_instruction (stix_t* stix, int cmd, stix_size_t par
 			if (param_1 < 8 && param_2 < 0xFF)
 			{
 				/* low 2 bits of the instruction code is the first parameter */
-				bc = (stix_byte_t)(cmd & 0xFC) | (stix_byte_t)param_1;
+				bc = (stix_oob_t)(cmd & 0xFC) | (stix_oob_t)param_1;
 				goto write_short;
 			}
 			else
@@ -3073,15 +3075,15 @@ printf ("\tfixed jump offset to %u\n", (unsigned int)jump_offset);
 }
 
 
-static int add_to_balit_buffer (stix_t* stix, stix_byte_t b)
+static int add_to_balit_buffer (stix_t* stix, stix_oob_t b)
 {
 	if (stix->c->mth.balit_count >= stix->c->mth.balit_capa)
 	{
-		stix_byte_t* tmp;
+		stix_oob_t* tmp;
 		stix_size_t new_capa;
 
 		new_capa = STIX_ALIGN (stix->c->mth.balit_count + 1, BALIT_BUFFER_ALIGN);
-		tmp = (stix_byte_t*)stix_reallocmem (stix, stix->c->mth.balit, new_capa * STIX_SIZEOF(*tmp));
+		tmp = (stix_oob_t*)stix_reallocmem (stix, stix->c->mth.balit, new_capa * STIX_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
 		stix->c->mth.balit_capa = new_capa;
@@ -3563,7 +3565,7 @@ printf ("\tpush int literal\n");
 	return 0;
 }
 
-static stix_byte_t send_message_cmd[] = 
+static stix_oob_t send_message_cmd[] = 
 {
 	BCODE_SEND_MESSAGE_0,
 	BCODE_SEND_MESSAGE_TO_SUPER_0
@@ -4470,6 +4472,13 @@ static int __compile_class_definition (stix_t* stix, int extend)
 			/* #class(#character) */
 			stix->c->cls.flags |= CLASS_INDEXED;
 			stix->c->cls.indexed_type = STIX_OBJ_TYPE_CHAR;
+			GET_TOKEN (stix);
+		}
+		else if (is_token_symbol(stix, VOCA_HALFWORD))
+		{
+			/* #class(#halfword) */
+			stix->c->cls.flags |= CLASS_INDEXED;
+			stix->c->cls.indexed_type = STIX_OBJ_TYPE_HALFWORD;
 			GET_TOKEN (stix);
 		}
 		else if (is_token_symbol(stix, VOCA_WORD))

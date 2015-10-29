@@ -115,6 +115,19 @@
 {
 }
 
+#class(#halfword) LargeInteger(Number)
+{
+}
+
+#class(#halfword) LargePositiveInteger(LargeInteger)
+{
+}
+
+#class(#halfword) LargeNegativeInteger(LargeInteger)
+{
+}
+
+
 #include 'Collection.st'.
 #include 'Collection-ByteArray.st'.
 #include 'Collection-Array.st'.
