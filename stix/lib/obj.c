@@ -109,7 +109,7 @@ stix_oop_t stix_allocoopobjwithtrailer (stix_t* stix, stix_oow_t size, const sti
 }
 #endif
 
-static stix_oop_t alloc_numeric_array (stix_t* stix, const void* ptr, stix_oow_t len, stix_obj_type_t type, stix_oow_t unit, int extra)
+static STIX_INLINE stix_oop_t alloc_numeric_array (stix_t* stix, const void* ptr, stix_oow_t len, stix_obj_type_t type, stix_oow_t unit, int extra)
 {
 	/* allocate a variable object */
 
@@ -155,17 +155,14 @@ stix_oop_t stix_alloccharobj (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t l
 	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_CHAR, STIX_SIZEOF(stix_ooch_t), 1);
 }
 
-/*
-TODO: extra bits must be set ...
-stix_oop_t stix_allocmbcharobj (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
-{
-	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_MBCHAR, STIX_SIZEOF(stix_ooch_t), 1);
-}
-*/
-
 stix_oop_t stix_allocbyteobj (stix_t* stix, const stix_oob_t* ptr, stix_oow_t len)
 {
 	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_BYTE, STIX_SIZEOF(stix_oob_t), 0);
+}
+
+stix_oop_t stix_allochalfwordobj (stix_t* stix, const stix_oohw_t* ptr, stix_oow_t len)
+{
+	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_HALFWORD, STIX_SIZEOF(stix_oohw_t), 0);
 }
 
 stix_oop_t stix_allocwordobj (stix_t* stix, const stix_oow_t* ptr, stix_oow_t len)
@@ -227,7 +224,7 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 		case STIX_OBJ_TYPE_OOP:
 			/* both the fixed part(named instance variables) and 
 			 * the variable part(indexed instance variables) are allowed. */
-			oop = stix_allocoopobj(stix, named_instvar + vlen);
+			oop = stix_allocoopobj (stix, named_instvar + vlen);
 
 			STIX_ASSERT (vptr == STIX_NULL);
 			/*
@@ -243,15 +240,19 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 			break;
 
 		case STIX_OBJ_TYPE_CHAR:
-			oop = stix_alloccharobj(stix, vptr, vlen);
+			oop = stix_alloccharobj (stix, vptr, vlen);
 			break;
 
 		case STIX_OBJ_TYPE_BYTE:
-			oop = stix_allocbyteobj(stix, vptr, vlen);
+			oop = stix_allocbyteobj (stix, vptr, vlen);
+			break;
+
+		case STIX_OBJ_TYPE_HALFWORD:
+			oop = stix_allochalfwordobj (stix, vptr, vlen);
 			break;
 
 		case STIX_OBJ_TYPE_WORD:
-			oop = stix_allocwordobj(stix, vptr, vlen);
+			oop = stix_allocwordobj (stix, vptr, vlen);
 			break;
 
 		default:
@@ -343,3 +344,4 @@ einval:
 
 }
 #endif
+

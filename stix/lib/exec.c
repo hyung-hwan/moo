@@ -620,6 +620,22 @@ static int prim_basic_new_with_size (stix_t* stix, stix_ooi_t nargs)
 	return 1; /* success */
 }
 
+static int prim_shallow_copy (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, obj;
+
+	STIX_ASSERT (nargs ==  0);
+
+	rcv = ACTIVE_STACK_GETTOP (stix);
+
+	obj = stix_shallowcopy (stix, rcv);
+	if (!obj) return -1;
+
+	/* emulate 'pop receiver' and 'push result' */
+	ACTIVE_STACK_SETTOP (stix, obj);
+	return 1; /* success */
+}
+
 static int prim_basic_size (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
@@ -704,8 +720,6 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 2);
 
-/* TODO: disallow change of some key kernel objects */
- 
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 2);
 	if (!STIX_OOP_IS_POINTER(rcv))
 	{
@@ -727,6 +741,14 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 	if (idx < 1 || idx > STIX_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
+		return 0;
+	}
+
+	if (STIX_OBJ_GET_CLASS(rcv) == stix->_symbol)
+	{
+/* TODO: disallow change of some key kernel objects???? */
+		/* TODO: is it better to introduct a read-only mark in the object header instead of this class check??? */
+		/* read-only object */ /* TODO: DEVISE A WAY TO PASS a proper error from the primitive handler to STIX */
 		return 0;
 	}
 
@@ -987,16 +1009,18 @@ printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 
 static int prim_integer_add (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_ooi_t tmp;
-	stix_oop_t rcv, arg;
+	stix_oop_t rcv, arg, res;
 
 	STIX_ASSERT (nargs == 1);
 
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
+#if 0
 	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
 	{
+		stix_ooi_t tmp;
+
 		tmp = STIX_OOP_TO_SMINT(rcv) + STIX_OOP_TO_SMINT(arg);
 		/* TODO: check overflow. if so convert it to LargeInteger */
 
@@ -1007,20 +1031,31 @@ static int prim_integer_add (stix_t* stix, stix_ooi_t nargs)
 
 /* TODO: handle LargeInteger */
 	return 0;
+
+#else
+	res = stix_addints (stix, rcv, arg);
+	if (!res) return -1; /* hard failure */
+
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
+#endif
+
 }
 
 static int prim_integer_sub (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_ooi_t tmp;
-	stix_oop_t rcv, arg;
+	stix_oop_t rcv, arg, res;
 
 	STIX_ASSERT (nargs == 1);
 
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
+#if 0
 	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
 	{
+		stix_ooi_t tmp;
 		tmp = STIX_OOP_TO_SMINT(rcv) - STIX_OOP_TO_SMINT(arg);
 		/* TODO: check overflow. if so convert it to LargeInteger */
 
@@ -1031,6 +1066,14 @@ static int prim_integer_sub (stix_t* stix, stix_ooi_t nargs)
 
 /* TODO: handle LargeInteger */
 	return 0;
+#else
+	res = stix_subints (stix, rcv, arg);
+	if (!res) return -1; /* hard failure */
+
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
+#endif
 }
 
 static int prim_integer_mul (stix_t* stix, stix_ooi_t nargs)
@@ -1547,10 +1590,12 @@ static prim_t primitives[] =
 
 	{   0,   prim_basic_new,            "_basic_new"           },
 	{   1,   prim_basic_new_with_size,  "_basic_new_with_size" },
-	{   0,   prim_basic_size,           "_basic_size"          },
+	{   0,   prim_shallow_copy,         "_shallow_copy"        },
 
+	{   0,   prim_basic_size,           "_basic_size"          },
 	{   1,   prim_basic_at,             "_basic_at"            },
 	{   2,   prim_basic_at_put,         "_basic_at_put"        },
+
 
 	{  -1,   prim_block_value,          "_block_value"         },
 	{  -1,   prim_block_new_process,    "_block_new_process"   },

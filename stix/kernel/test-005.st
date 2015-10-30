@@ -241,6 +241,9 @@
 		ffi close.
 "
 
+
+"
+PROCESS TESTING
 		| p |
 		'000000000000000000' dump.
 		## p := [ | 'xxxxxxxxxxx' dump. 'yyyyyyyyyy' dump. ^10. ] newProcess.
@@ -252,7 +255,8 @@
 		'222222222222222222' dump.
 		'333333333333333333' dump.
 		'444444444444444444' dump.
-
+" 
+		(-2305843009213693952 - 1) dump.
 "
 		FFI isNil dump.
 		FFI notNil dump.
@@ -261,6 +265,7 @@
 		nil class dump.
 		nil class class class dump.
 "
+
 	}
 }
 

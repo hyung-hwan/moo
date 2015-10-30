@@ -83,6 +83,48 @@ static void compact_symbol_table (stix_t* stix, stix_oop_t _nil)
 	stix->symtab->tally = STIX_OOP_FROM_SMINT(tally);
 }
 
+
+static STIX_INLINE stix_oow_t get_payload_bytes (stix_t* stix, stix_oop_t oop)
+{
+	stix_oow_t nbytes_aligned;
+
+#if defined(STIX_USE_OBJECT_TRAILER)
+	if (STIX_OBJ_GET_FLAGS_TRAILER(oop))
+	{
+		stix_oow_t nbytes;
+
+		/* only an OOP object can have the trailer. 
+		 *
+		 * | _flags    |
+		 * | _size     |  <-- if it's 3
+		 * | _class    |
+		 * |   X       |
+		 * |   X       |
+		 * |   X       |
+		 * |   Y       | <-- it may exist if EXTRA is set in _flags.
+		 * |   Z       | <-- if TRAILER is set, it is the number of bytes in the trailer
+		 * |  |  |  |  | 
+		 */
+		STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_OOP);
+		STIX_ASSERT (STIX_OBJ_GET_FLAGS_UNIT(oop) == STIX_SIZEOF(stix_oow_t));
+		STIX_ASSERT (STIX_OBJ_GET_FLAGS_EXTRA(oop) == 0); /* no 'extra' for an OOP object */
+
+		nbytes = STIX_OBJ_BYTESOF(oop) + STIX_SIZEOF(stix_oow_t) + \
+		         (stix_oow_t)((stix_oop_oop_t)oop)->slot[STIX_OBJ_GET_SIZE(oop)];
+		nbytes_aligned = STIX_ALIGN (nbytes, STIX_SIZEOF(stix_oop_t));
+	}
+	else
+	{
+#endif
+		/* calculate the payload size in bytes */
+		nbytes_aligned = STIX_ALIGN (STIX_OBJ_BYTESOF(oop), STIX_SIZEOF(stix_oop_t));
+#if defined(STIX_USE_OBJECT_TRAILER)
+	}
+#endif
+
+	return nbytes_aligned;
+}
+
 stix_oop_t stix_moveoop (stix_t* stix, stix_oop_t oop)
 {
 #if defined(STIX_SUPPORT_GC_DURING_IGNITION)
@@ -104,39 +146,7 @@ stix_oop_t stix_moveoop (stix_t* stix, stix_oop_t oop)
 		stix_oow_t nbytes_aligned;
 		stix_oop_t tmp;
 
-#if defined(STIX_USE_OBJECT_TRAILER)
-		if (STIX_OBJ_GET_FLAGS_TRAILER(oop))
-		{
-			stix_oow_t nbytes;
-
-			/* only an OOP object can have the trailer. 
-			 *
-			 * | _flags    |
-			 * | _size     |  <-- if it's 3
-			 * | _class    |
-			 * |   X       |
-			 * |   X       |
-			 * |   X       |
-			 * |   Y       | <-- it may exist if EXTRA is set in _flags.
-			 * |   Z       | <-- if TRAILER is set, it is the number of bytes in the trailer
-			 * |  |  |  |  | 
-			 */
-			STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_OOP);
-			STIX_ASSERT (STIX_OBJ_GET_FLAGS_UNIT(oop) == STIX_SIZEOF(stix_oow_t));
-			STIX_ASSERT (STIX_OBJ_GET_FLAGS_EXTRA(oop) == 0); /* no 'extra' for an OOP object */
-
-			nbytes = STIX_OBJ_BYTESOF(oop) + STIX_SIZEOF(stix_oow_t) + \
-			        (stix_oow_t)((stix_oop_oop_t)oop)->slot[STIX_OBJ_GET_SIZE(oop)];
-			nbytes_aligned = STIX_ALIGN (nbytes, STIX_SIZEOF(stix_oop_t));
-		}
-		else
-		{
-#endif
-			/* calculate the payload size in bytes */
-			nbytes_aligned = STIX_ALIGN (STIX_OBJ_BYTESOF(oop), STIX_SIZEOF(stix_oop_t));
-#if defined(STIX_USE_OBJECT_TRAILER)
-		}
-#endif
+		nbytes_aligned = get_payload_bytes (stix, oop);
 
 		/* allocate space in the new heap */
 		tmp = stix_allocheapmem (stix, stix->newheap, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
@@ -379,4 +389,42 @@ void stix_poptmps (stix_t* stix, stix_oow_t count)
 {
 	STIX_ASSERT (stix->tmp_count >= count);
 	stix->tmp_count -= count;
+}
+
+
+stix_oop_t stix_shallowcopy (stix_t* stix, stix_oop_t oop)
+{
+	if (STIX_OOP_IS_POINTER(oop) && STIX_OBJ_GET_CLASS(oop) != stix->_symbol)
+	{
+#if 0
+		stix_oop_t z;
+		stix_oop_class_t c;
+
+		c = (stix_oop_class_t)STIX_OBJ_GET_CLASS(oop);
+		stix_pushtmp (stix, &oop);
+		z = stix_instantiate (stix, (stix_oop_t)c, STIX_NULL, STIX_OBJ_GET_SIZE(oop) - STIX_CLASS_SPEC_NAMED_INSTVAR(STIX_OOP_TO_SMINT(c->spec)));
+		stix_poptmp(stix);
+
+		if (!z) return z;
+
+		/* copy the payload */
+		STIX_MEMCPY (z + 1, oop + 1, get_payload_bytes(stix, oop));
+
+		return z;
+#else
+		stix_oop_t z;
+		stix_oow_t total_bytes;
+
+		total_bytes = STIX_SIZEOF(stix_obj_t) + get_payload_bytes(stix, oop);
+
+		stix_pushtmp (stix, &oop);
+		z = stix_allocbytes (stix, total_bytes);
+		stix_poptmp(stix);
+
+		STIX_MEMCPY (z, oop, total_bytes);
+		return z;
+#endif 
+	}
+
+	return oop;
 }

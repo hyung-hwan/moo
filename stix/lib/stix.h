@@ -794,6 +794,11 @@ STIX_EXPORT void stix_gc (
 	stix_t* stix
 );
 
+STIX_EXPORT stix_oow_t stix_getpayloadbytes (
+	stix_t*    stix,
+	stix_oop_t oop
+);
+
 /**
  * The stix_instantiate() function creates a new object of the class 
  * \a _class. The size of the fixed part is taken from the information
@@ -808,6 +813,11 @@ STIX_EXPORT stix_oop_t stix_instantiate (
 	stix_oop_t       _class,
 	const void*      vptr,
 	stix_oow_t       vlen
+);
+
+STIX_EXPORT stix_oop_t stix_shallowcopy (
+	stix_t*          stix,
+	stix_oop_t       oop
 );
 
 /**

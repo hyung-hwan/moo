@@ -1038,13 +1038,13 @@ int stix_utf8toucs (
 /* ========================================================================= */
 /* bigint.c                                                                    */
 /* ========================================================================= */
-stix_oop_t stix_addbigints (
+stix_oop_t stix_addints (
 	stix_t*    stix,
 	stix_oop_t x,
 	stix_oop_t y
 );
 
-stix_oop_t stix_subbigints (
+stix_oop_t stix_subints (
 	stix_t*    stix,
 	stix_oop_t x,
 	stix_oop_t y
