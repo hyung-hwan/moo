@@ -61,19 +61,6 @@ static STIX_INLINE stix_oop_t make_bigint_with_ooi (stix_t* stix, stix_ooi_t i)
 	}
 }
 
-static STIX_INLINE stix_oow_t count_effective_digits (stix_oop_t oop)
-{
-	stix_oow_t i;
-
-	for (i = STIX_OBJ_GET_SIZE(oop); i > 1; )
-	{
-		--i;
-		if (((stix_oop_halfword_t)oop)->slot[i] != 0) return i + 1;
-	}
-
-	return 1;
-}
-
 static STIX_INLINE stix_oop_t clone_bigint (stix_t* stix, stix_oop_t oop, stix_oow_t count)
 {
 	stix_oop_t z;
@@ -92,6 +79,19 @@ static STIX_INLINE stix_oop_t clone_bigint (stix_t* stix, stix_oop_t oop, stix_o
 		((stix_oop_halfword_t)z)->slot[i] = ((stix_oop_halfword_t)oop)->slot[i];
 	}
 	return z;
+}
+
+static STIX_INLINE stix_oow_t count_effective_digits (stix_oop_t oop)
+{
+	stix_oow_t i;
+
+	for (i = STIX_OBJ_GET_SIZE(oop); i > 1; )
+	{
+		--i;
+		if (((stix_oop_halfword_t)oop)->slot[i] != 0) return i + 1;
+	}
+
+	return 1;
 }
 
 static stix_oop_t normalize_bigint (stix_t* stix, stix_oop_t oop)
