@@ -26,8 +26,10 @@
 
 #include "stix-prv.h"
 
+#if defined(USE_DYNCALL)
 /* TODO: defined dcAllocMem and dcFreeMeme before builing the dynload and dyncall library */
-#include <dyncall.h> /* TODO: remove this. make dyXXXX calls to callbacks */
+#	include <dyncall.h> /* TODO: remove this. make dyXXXX calls to callbacks */
+#endif
 
 /* TODO: context's stack overflow check in various part of this file */
 /* TOOD: determine the right stack size */
@@ -1363,6 +1365,7 @@ static int prim_ffi_close (stix_t* stix, stix_ooi_t nargs)
 
 static int prim_ffi_call (stix_t* stix, stix_ooi_t nargs)
 {
+#if defined(USE_DYNCALL)
 	stix_oop_t rcv, fun, sig, args;
 
 	STIX_ASSERT (nargs == 3);
@@ -1526,8 +1529,10 @@ printf ("CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
 		dcFree (dc);
 	}
 
-	
 	return 1;
+#else
+	return 0;
+#endif
 }
 
 static int prim_ffi_getsym (stix_t* stix, stix_ooi_t nargs)
@@ -1570,7 +1575,6 @@ printf ("wrong function name...\n");
 
 	return 1;
 }
-
 
 
 struct prim_t

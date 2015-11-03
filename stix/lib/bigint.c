@@ -513,22 +513,31 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 		/* get log2(radix) in a fast way under the fact that
 		 * radix is a power of 2. */
 	#if defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
+
 		/* use the Bit Scan Forward instruction */
 		__asm__ volatile (
 			"bsf %1,%0\n\t"
-			: "=&r"(exp) /* output */
+			: "=r"(exp) /* output */
 			: "r"(radix) /* input */
 		);
 
-	#elif defined(__GNUC__) && defined(__arm__)
 
+	#elif defined(USE_THIS_UGLY_CODE) && defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH_5__) || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__))
+
+		/* clz is available in ARMv5T and above */
 		__asm__ volatile (
 			"clz %0,%1\n\t"
-			: "=&r"(exp) /* output */
+			: "=r"(exp) /* output */
 			: "r"(radix) /* input */
+		);
 
-		/* TODO: ARM - use clz,  PPC - use cntlz, cntlzw, cntlzd, SPARC - use lzcnt, MIPS clz */
+		/* TODO: in ARMv6T2 and above, RBIT can be used before clz to avoid this calculation  */
+		exp = (STIX_SIZEOF(exp) * 8) - exp - 1; 
+
+
+		/* TODO: PPC - use cntlz, cntlzw, cntlzd, SPARC - use lzcnt, MIPS clz */
 	#else
+
 		static unsigned int exp_tab[] = 
 		{
 			0, 0, 1, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 
@@ -537,6 +546,7 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 		exp = exp_tab[radix];
 	#endif
 
+printf ("<<%d>>>>>>\n",exp);
 		start = ptr; /* this is the real start */
 		ptr = end - 1;
 
