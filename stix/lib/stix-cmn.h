@@ -439,6 +439,38 @@ struct stix_cmgr_t
 
 
 
+/**
+ * The STIX_TYPE_IS_SIGNED() macro determines if a type is signed.
+ * \code
+ * printf ("%d\n", (int)STIX_TYPE_IS_SIGNED(int));
+ * printf ("%d\n", (int)STIX_TYPE_IS_SIGNED(unsigned int));
+ * \endcode
+ */
+#define STIX_TYPE_IS_SIGNED(type) (((type)0) > ((type)-1))
+
+/**
+ * The STIX_TYPE_IS_SIGNED() macro determines if a type is unsigned.
+ * \code
+ * printf ("%d\n", STIX_TYPE_IS_UNSIGNED(int));
+ * printf ("%d\n", STIX_TYPE_IS_UNSIGNED(unsigned int));
+ * \endcode
+ */
+#define STIX_TYPE_IS_UNSIGNED(type) (((type)0) < ((type)-1))
+
+#define STIX_TYPE_SIGNED_MAX(type) \
+	((type)~((type)1 << (STIX_SIZEOF(type) * 8 - 1)))
+#define STIX_TYPE_UNSIGNED_MAX(type) ((type)(~(type)0))
+
+#define STIX_TYPE_SIGNED_MIN(type) \
+	((type)((type)1 << (STIX_SIZEOF(type) * 8 - 1)))
+#define STIX_TYPE_UNSIGNED_MIN(type) ((type)0)
+
+#define STIX_TYPE_MAX(type) \
+	((STIX_TYPE_IS_SIGNED(type)? STIX_TYPE_SIGNED_MAX(type): STIX_TYPE_UNSIGNED_MAX(type)))
+#define STIX_TYPE_MIN(type) \
+	((STIX_TYPE_IS_SIGNED(type)? STIX_TYPE_SIGNED_MIN(type): STIX_TYPE_UNSIGNED_MIN(type)))
+
+
 /* =========================================================================
  * BASIC STIX TYPES
  * =========================================================================*/

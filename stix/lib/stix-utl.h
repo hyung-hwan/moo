@@ -41,6 +41,7 @@ extern "C" {
 #	define stix_copybchtooochars(dst,src,len) stix_copybchtouchars(dst,src,len)
 #	define stix_copyoocstr(dst,len,src) stix_copyucstr(dst,len,src)
 #	define stix_findoochar(ptr,len,c) stix_finduchar(ptr,len,c)
+#	define stix_countoocstr(str) stix_countucstr(str)
 #else
 #	define stix_hashchars(ptr,len) stix_hashbchars(ptr,len)
 #	define stix_compoocbcstr(str1,str2) stix_compbcstr(str1,str2)
@@ -49,6 +50,7 @@ extern "C" {
 #	define stix_copybchtooochars(dst,src,len) stix_copybchars(dst,src,len)
 #	define stix_copyoocstr(dst,len,src) stix_copybcstr(dst,len,src)
 #	define stix_findoochar(ptr,len,c) stix_findbchar(ptr,len,c)
+#	define stix_countoocstr(str) stix_countbcstr(str)
 #endif
 
 
@@ -113,18 +115,6 @@ void stix_copybchtouchars (
 	stix_size_t       len
 );
 
-stix_uch_t* stix_finduchar (
-	const stix_uch_t* ptr,
-	stix_size_t       len,
-	stix_uch_t        c
-);
-
-stix_uch_t* stix_findbchar (
-	const stix_bch_t* ptr,
-	stix_size_t       len,
-	stix_bch_t        c
-);
-
 stix_size_t stix_copyucstr (
 	stix_uch_t*       dst,
 	stix_size_t       len,
@@ -137,6 +127,25 @@ stix_size_t stix_copybcstr (
 	const stix_bch_t* src
 );
 
+stix_uch_t* stix_finduchar (
+	const stix_uch_t* ptr,
+	stix_size_t       len,
+	stix_uch_t        c
+);
+
+stix_bch_t* stix_findbchar (
+	const stix_bch_t* ptr,
+	stix_size_t       len,
+	stix_bch_t        c
+);
+
+stix_size_t stix_countucstr (
+	const stix_uch_t* str
+);
+
+stix_size_t stix_countbcstr (
+	const stix_bch_t* str
+);
 
 #if defined(__cplusplus)
 }

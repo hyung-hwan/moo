@@ -28,6 +28,9 @@
 
 #define MAKE_WORD(hw1,hw2) ((stix_oow_t)(hw1) | (stix_oow_t)(hw2) << STIX_OOHW_BITS)
 
+/*#define IS_POWER_OF_2(ui) (((ui) > 0) && (((ui) & (~(ui)+ 1)) == (ui)))*/
+#define IS_POWER_OF_2(ui) (((ui) > 0) && ((ui) & ((ui) - 1)) == 0) /* unsigned integer only */
+
 static STIX_INLINE int is_integer (stix_t* stix, stix_oop_t oop)
 {
 	stix_oop_t c;
@@ -465,3 +468,142 @@ oops_einval:
 	return STIX_NULL;
 }
 
+
+
+stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, unsigned int radix)
+{
+	int neg = 0;
+	const stix_ooch_t* ptr, * start, * end;
+	stix_oow_t w, v, r;
+	stix_oohw_t hw[64];
+	stix_oow_t hwlen;
+
+	STIX_ASSERT (radix >= 2 && radix <= 36);
+
+	ptr = str;
+	end = str + len;
+
+	if (ptr < end)
+	{
+		if (*ptr == '+') ptr++;
+		else if (*ptr == '-') 
+		{
+			ptr++; 
+			neg = 1;
+		}
+	}
+
+	if (ptr >= end) goto oops_einval; /* no digits */
+
+	while (ptr < end && *ptr == '0') 
+	{
+		/* skip leading zeros */
+		ptr++;
+	}
+	if (ptr >= end)
+	{
+		/* all zeros */
+		return STIX_OOP_FROM_SMINT(0);
+	}
+
+	if (IS_POWER_OF_2(radix))
+	{
+		unsigned int exp;
+
+		/* get log2(radix) in a fast way under the fact that
+		 * radix is a power of 2. */
+	#if defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
+		/* use the Bit Scan Forward instruction */
+		__asm__ volatile (
+			"bsf %1,%0\n\t"
+			: "=&r"(exp) /* output */
+			: "r"(radix) /* input */
+		);
+
+	#elif defined(__GNUC__) && defined(__arm__)
+
+		__asm__ volatile (
+			"clz %0,%1\n\t"
+			: "=&r"(exp) /* output */
+			: "r"(radix) /* input */
+
+		/* TODO: ARM - use clz,  PPC - use cntlz, cntlzw, cntlzd, SPARC - use lzcnt, MIPS clz */
+	#else
+		static unsigned int exp_tab[] = 
+		{
+			0, 0, 1, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 
+			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0
+		};
+		exp = exp_tab[radix];
+	#endif
+
+		start = ptr; /* this is the real start */
+		ptr = end - 1;
+
+		hwlen = 0;
+		w = 0;
+		r = 1;
+		while (ptr >= start)
+		{
+			if (*ptr >= '0' && *ptr <= '9') v = *ptr - '0';
+			else if (*ptr >= 'A' && *ptr <= 'Z') v = *ptr - 'A' + 10;
+			else if (*ptr >= 'a' && *ptr <= 'z') v = *ptr - 'a' + 10;
+			else goto oops_einval;
+
+			if (v >= radix) goto oops_einval;
+
+	printf ("wwww=<<%lx>>", (long int)w);
+			w += v * r;
+	printf ("r=><<%lX>> v<<%lX>> w<<%lX>>\n", (long int)r, (long int)v, (long int)w);
+			if (w > STIX_TYPE_MAX(stix_oohw_t))
+			{
+				hw[hwlen++] = (stix_oohw_t)(w & STIX_LBMASK(stix_oow_t, STIX_OOHW_BITS));
+				w = w >> STIX_OOHW_BITS;
+				if (w == 0) r = 1;
+				else r = radix;
+			}
+			else 
+			{
+				r = r * radix;
+			}
+
+			ptr--;
+		}
+
+		STIX_ASSERT (w <= STIX_TYPE_MAX(stix_oohw_t));
+		hw[hwlen++] = w;
+	}
+	else
+	{
+		/*  TODO: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX */
+	}
+
+/*
+	if (hwlen == 1) return STIX_OOP_FROM_SMINT((stix_ooi_t)hw[0] * -neg);
+	else if (hwlen == 2)
+	{
+		w = MAKE_WORD(hw[0], hw[1]);
+		if (neg) 
+		{
+			if (w <= STIX_SMINT_MAX + 1) return STIX_OOP_FROM_SMINT(-(stix_ooi_t)w);
+		}
+		else 
+		{
+			if (w <= STIX_SMINT_MAX) return STIX_OOP_FROM_SMINT(w);
+		}
+	}
+*/
+
+{ int i;
+for (i = hwlen; i > 0;)
+{
+printf ("%x ", hw[--i]);
+}
+printf ("\n");
+}
+	return stix_instantiate (stix, (neg? stix->_large_negative_integer: stix->_large_positive_integer), hw, hwlen);
+
+oops_einval:
+	stix->errnum = STIX_EINVAL;
+	return STIX_NULL;
+}

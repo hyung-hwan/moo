@@ -434,6 +434,10 @@ int main (int argc, char* argv[])
 		return -1;
 	}
 
+
+
+
+
 	{
 		stix_oow_t tab_size;
 
@@ -457,6 +461,20 @@ int main (int argc, char* argv[])
 		return -1;
 	}
 
+
+{
+
+/*const stix_bch_t* xxx = "9999999999999999999999999999999999999999999999999999999999999999999999999999999999";*/
+const stix_bch_t* xxx = "7777777777777777777777777";
+stix_ooch_t buf[10240];
+stix_oow_t xxxlen;
+stix_oow_t buflen;
+
+xxxlen = stix_countbcstr(xxx);
+buflen = STIX_COUNTOF(buf);
+stix_utf8toucs (xxx, &xxxlen, buf, &buflen);
+stix_strtoint (stix, buf, buflen, 16);
+}
 {
 stix_ooch_t x[] = { 'X', 't', 'r', 'i', 'n', 'g', '\0' };
 stix_ooch_t y[] = { 'S', 'y', 'm', 'b', 'o', 'l', '\0' };

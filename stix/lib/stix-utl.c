@@ -147,6 +147,20 @@ stix_size_t stix_copybcstr (stix_bch_t* dst, stix_size_t len, const stix_bch_t* 
 	return p - dst;
 }
 
+stix_size_t stix_countucstr (const stix_uch_t* str)
+{
+	const stix_uch_t* ptr = str;
+	while (*ptr != '\0') ptr++;
+	return ptr - str;
+}
+
+stix_size_t stix_countbcstr (const stix_bch_t* str)
+{
+	const stix_bch_t* ptr = str;
+	while (*ptr != '\0') ptr++;
+	return ptr - str;
+}
+
 stix_uch_t* stix_finduchar (const stix_uch_t* ptr, stix_size_t len, stix_uch_t c)
 {
 	const stix_uch_t* end;
@@ -161,7 +175,7 @@ stix_uch_t* stix_finduchar (const stix_uch_t* ptr, stix_size_t len, stix_uch_t c
 	return STIX_NULL;
 }
 
-stix_uch_t* stix_findbchar (const stix_bch_t* ptr, stix_size_t len, stix_bch_t c)
+stix_bch_t* stix_findbchar (const stix_bch_t* ptr, stix_size_t len, stix_bch_t c)
 {
 	const stix_bch_t* end;
 
