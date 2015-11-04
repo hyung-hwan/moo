@@ -31,6 +31,56 @@
 /*#define IS_POWER_OF_2(ui) (((ui) > 0) && (((ui) & (~(ui)+ 1)) == (ui)))*/
 #define IS_POWER_OF_2(ui) (((ui) > 0) && ((ui) & ((ui) - 1)) == 0) /* unsigned integer only */
 
+#if (STIX_SIZEOF_OOW_T == STIX_SIZEOF_INT) && defined(STIX_HAVE_BUILTIN_UADD_OVERFLOW)
+#	define oow_add_overflow(a,b,c)  __builtin_uadd_overflow(a,b,c)
+#elif (STIX_SIZEOF_OOW_T == STIX_SIZEOF_LONG) && defined(STIX_HAVE_BUILTIN_UADDL_OVERFLOW)
+#	define oow_add_overflow(a,b,c)  __builtin_uaddl_overflow(a,b,c)
+#elif (STIX_SIZEOF_OOW_T == STIX_SIZEOF_LONG_LONG) && defined(STIX_HAVE_BUILTIN_UADDLL_OVERFLOW)
+#	define oow_add_overflow(a,b,c)  __builtin_uaddll_overflow(a,b,c)
+#else
+static STIX_INLINE int oow_add_overflow (stix_oow_t a, stix_oow_t b, stix_oow_t* c)
+{
+	*c = a + b;
+	return b > STIX_TYPE_MAX(stix_oow_t) - a;
+}
+#endif
+
+#if (STIX_SIZEOF_OOHW_T == STIX_SIZEOF_INT) && defined(STIX_HAVE_BUILTIN_UADD_OVERFLOW)
+#	define oohw_add_overflow(a,b,c)  __builtin_uadd_overflow(a,b,c)
+#elif (STIX_SIZEOF_OOHW_T == STIX_SIZEOF_LONG) && defined(STIX_HAVE_BUILTIN_UADDL_OVERFLOW)
+#	define oohw_add_overflow(a,b,c)  __builtin_uaddl_overflow(a,b,c)
+#elif (STIX_SIZEOF_OOHW_T == STIX_SIZEOF_LONG_LONG) && defined(STIX_HAVE_BUILTIN_UADDLL_OVERFLOW)
+#	define oohw_add_overflow(a,b,c)  __builtin_uaddll_overflow(a,b,c)
+#else
+static STIX_INLINE int oohw_add_overflow (stix_oohw_t a, stix_oohw_t b, stix_oohw_t* c)
+{
+	*c = a + b;
+	return b > STIX_TYPE_MAX(stix_oohw_t) - a;
+}
+#endif
+
+#if (STIX_SIZEOF_OOW_T == STIX_SIZEOF_INT) && defined(STIX_HAVE_BUILTIN_UMUL_OVERFLOW)
+#	define oow_mul_overflow(a,b,c)  __builtin_umul_overflow(a,b,c)
+#elif (STIX_SIZEOF_OOW_T == STIX_SIZEOF_LONG) && defined(STIX_HAVE_BUILTIN_UMULL_OVERFLOW)
+#	define oow_mul_overflow(a,b,c)  __builtin_umull_overflow(a,b,c)
+#elif (STIX_SIZEOF_OOW_T == STIX_SIZEOF_LONG_LONG) && defined(STIX_HAVE_BUILTIN_UMULLL_OVERFLOW)
+#	define oow_mul_overflow(a,b,c)  __builtin_umulll_overflow(a,b,c)
+#else
+static STIX_INLINE int oow_mul_overflow (stix_oow_t a, stix_oow_t b, stix_oow_t* c)
+{
+#if (STIX_SIZEOF_UINTMAX_T > STIX_SIZEOF_OOW_T)
+	stix_uintmax_t k;
+	k = (stix_uintmax_t)a * (stix_uintmax_t)b;
+	*c = (stix_oow_t)k;
+	return (k >> STIX_OOW_BITS) > 0;
+	/*return k > STIX_TYPE_MAX(stix_oow_t);*/
+#else
+	*c = a * b;
+	return b > 0 && a > STIX_TYPE_MAX(stix_oow_t) / b; /* works for unsigned types only */
+#endif
+}
+#endif
+
 static STIX_INLINE int is_integer (stix_t* stix, stix_oop_t oop)
 {
 	stix_oop_t c;
@@ -468,13 +518,23 @@ oops_einval:
 	return STIX_NULL;
 }
 
-
+static stix_uint8_t ooch_val_tab[] =
+{
+	99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
+	99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
+	99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
+	 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 99, 99, 99, 99, 99, 99,
+	99, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+	25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 99, 99, 99, 99, 99,
+	99, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+	25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 99, 99, 99, 99, 99
+};
 
 stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, unsigned int radix)
 {
 	int neg = 0;
 	const stix_ooch_t* ptr, * start, * end;
-	stix_oow_t w, v, r;
+	stix_oow_t w, v;
 	stix_oohw_t hw[64];
 	stix_oow_t hwlen;
 
@@ -506,14 +566,21 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 		return STIX_OOP_FROM_SMINT(0);
 	}
 
+	hwlen = 0;
+	start = ptr; /* this is the real start */
+
 	if (IS_POWER_OF_2(radix))
 	{
 		unsigned int exp;
+		unsigned int bitcnt;
 
 		/* get log2(radix) in a fast way under the fact that
-		 * radix is a power of 2. */
-	#if defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
+		 * radix is a power of 2. the exponent acquired is
+		 * the number of bits that a digit of the given radix takes up */
+	#if defined(STIX_HAVE_BUILTIN_CTZ)
+		exp = __builtin_ctz(radix);
 
+	#elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
 		/* use the Bit Scan Forward instruction */
 		__asm__ volatile (
 			"bsf %1,%0\n\t"
@@ -521,24 +588,22 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 			: "r"(radix) /* input */
 		);
 
+	#elif defined(USE_UGLY_CODE) && defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH_5__) || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__))
 
-	#elif defined(USE_THIS_UGLY_CODE) && defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH_5__) || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__))
-
-		/* clz is available in ARMv5T and above */
+		/* CLZ is available in ARMv5T and above. there is no instruction to
+		 * count trailing zeros or something similar. using RBIT with CLZ
+		 * would be good in ARMv6T2 and above to avoid further calculation
+		 * afte CLZ */
 		__asm__ volatile (
 			"clz %0,%1\n\t"
 			: "=r"(exp) /* output */
 			: "r"(radix) /* input */
 		);
-
-		/* TODO: in ARMv6T2 and above, RBIT can be used before clz to avoid this calculation  */
 		exp = (STIX_SIZEOF(exp) * 8) - exp - 1; 
-
 
 		/* TODO: PPC - use cntlz, cntlzw, cntlzd, SPARC - use lzcnt, MIPS clz */
 	#else
-
-		static unsigned int exp_tab[] = 
+		static stix_uint8_t exp_tab[] = 
 		{
 			0, 0, 1, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 
 			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0
@@ -546,49 +611,102 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 		exp = exp_tab[radix];
 	#endif
 
-printf ("<<%d>>>>>>\n",exp);
-		start = ptr; /* this is the real start */
+		w = 0;
+		bitcnt = 0;
 		ptr = end - 1;
 
-		hwlen = 0;
-		w = 0;
-		r = 1;
 		while (ptr >= start)
 		{
-			if (*ptr >= '0' && *ptr <= '9') v = *ptr - '0';
-			else if (*ptr >= 'A' && *ptr <= 'Z') v = *ptr - 'A' + 10;
-			else if (*ptr >= 'a' && *ptr <= 'z') v = *ptr - 'a' + 10;
-			else goto oops_einval;
-
+			if (*ptr < 0 || *ptr >= STIX_COUNTOF(ooch_val_tab)) goto oops_einval;
+			v = ooch_val_tab[*ptr];
 			if (v >= radix) goto oops_einval;
 
-	printf ("wwww=<<%lx>>", (long int)w);
-			w += v * r;
-	printf ("r=><<%lX>> v<<%lX>> w<<%lX>>\n", (long int)r, (long int)v, (long int)w);
-			if (w > STIX_TYPE_MAX(stix_oohw_t))
+			w |= (v << bitcnt);
+			bitcnt += exp;
+			if (bitcnt >= STIX_OOHW_BITS)
 			{
+				bitcnt -= STIX_OOHW_BITS;
+/* TODO: grow hw if it's full OR
+ * i can estimate how much will be needed based on ext. so preallocate the buffer for these bases */
 				hw[hwlen++] = (stix_oohw_t)(w & STIX_LBMASK(stix_oow_t, STIX_OOHW_BITS));
-				w = w >> STIX_OOHW_BITS;
-				if (w == 0) r = 1;
-				else r = radix;
-			}
-			else 
-			{
-				r = r * radix;
+				w >>= STIX_OOHW_BITS;
 			}
 
 			ptr--;
 		}
 
 		STIX_ASSERT (w <= STIX_TYPE_MAX(stix_oohw_t));
-		hw[hwlen++] = w;
+		if (hwlen == 0 || w > 0) hw[hwlen++] = w;
 	}
 	else
 	{
-		/*  TODO: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX */
+		stix_oow_t r1, r2;
+		stix_oohw_t multiplier;
+		int dg, i, max_ndigits;
+
+		w = 0;
+		ptr = start;
+
+max_ndigits = 9; /* GET THIS */
+reqsize = (end - str) / max_ndigits + 1;
+if (reqsize > STIX_COUNTF(hw)) hwp = malloc (reqsize * STIX_SIZEOF(stix_oohw_t));
+
+		multiplier = 1;
+		for (i = 0; i < max_ndigits; i++) multiplier *= radix;
+
+		do
+		{
+			r1 = 0;
+			for (dg = 0; dg < max_ndigits; dg++)
+			{
+				if (ptr >= end) 
+				{
+					multiplier = 1;
+					for (i = 0; i < dg; i++) multiplier *= radix;
+					break;
+				}
+
+				if (*ptr < 0 || *ptr >= STIX_COUNTOF(ooch_val_tab)) goto oops_einval;
+				v = ooch_val_tab[*ptr];
+				if (v >= radix) goto oops_einval;
+
+				r1 = r1 * radix + (stix_oohw_t)v;
+				ptr++;
+			}
+
+			r2 = r1;
+			for (i = 0; i < hwlen; i++)
+			{
+				stix_oohw_t high, low;
+
+				v = (stix_oow_t)hw[i] * multiplier;
+				high = (stix_oohw_t)(v >> STIX_OOHW_BITS);
+				low = (stix_oohw_t)(v /*& STIX_LBMASK(stix_oow_t, STIX_OOHW_BITS)*/);
+
+			#if defined(oohw_add_overflow)
+				/* use oohw_add_overflow() only if it's compiler-builtin. */
+				r2 = high + oohw_add_overflow(low, r2, &low);
+			#else
+				/* don't use the fall-back version of oohw_add_overflow() */
+				low += r2;
+				r2 = high + (low < r2);
+			#endif
+
+				hw[i] = low;
+			}
+			if (r2) hw[hwlen++] = r2;
+		}
+		while (dg >= max_ndigits);
 	}
 
-/*
+{ int i;
+for (i = hwlen; i > 0;)
+{
+printf ("%08x ", hw[--i]);
+}
+printf ("\n");
+}
+
 	if (hwlen == 1) return STIX_OOP_FROM_SMINT((stix_ooi_t)hw[0] * -neg);
 	else if (hwlen == 2)
 	{
@@ -602,15 +720,7 @@ printf ("<<%d>>>>>>\n",exp);
 			if (w <= STIX_SMINT_MAX) return STIX_OOP_FROM_SMINT(w);
 		}
 	}
-*/
 
-{ int i;
-for (i = hwlen; i > 0;)
-{
-printf ("%x ", hw[--i]);
-}
-printf ("\n");
-}
 	return stix_instantiate (stix, (neg? stix->_large_negative_integer: stix->_large_positive_integer), hw, hwlen);
 
 oops_einval:

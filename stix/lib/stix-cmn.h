@@ -49,9 +49,13 @@
 #	endif
 #endif
 
+
+
 /* =========================================================================
  * PRIMITIVE TYPE DEFINTIONS
  * ========================================================================= */
+
+/* stix_int8_t */
 #if defined(STIX_SIZEOF_CHAR) && (STIX_SIZEOF_CHAR == 1)
 #	define STIX_HAVE_UINT8_T
 #	define STIX_HAVE_INT8_T
@@ -74,6 +78,8 @@
 	typedef signed char        stix_int8_t;
 #endif
 
+
+/* stix_int16_t */
 #if defined(STIX_SIZEOF_SHORT) && (STIX_SIZEOF_SHORT == 2)
 #	define STIX_HAVE_UINT16_T
 #	define STIX_HAVE_INT16_T
@@ -97,6 +103,7 @@
 #endif
 
 
+/* stix_int32_t */
 #if defined(STIX_SIZEOF_INT) && (STIX_SIZEOF_INT == 4)
 #	define STIX_HAVE_UINT32_T
 #	define STIX_HAVE_INT32_T
@@ -129,7 +136,7 @@
 	typedef signed int          stix_int32_t;
 #endif
 
-
+/* stix_int64_t */
 #if defined(STIX_SIZEOF_INT) && (STIX_SIZEOF_INT == 8)
 #	define STIX_HAVE_UINT64_T
 #	define STIX_HAVE_INT64_T
@@ -164,6 +171,7 @@
 	/* no 64-bit integer */
 #endif
 
+/* stix_int128_t */
 #if defined(STIX_SIZEOF_INT) && (STIX_SIZEOF_INT == 16)
 #	define STIX_HAVE_UINT128_T
 #	define STIX_HAVE_INT128_T
@@ -216,13 +224,43 @@
 	typedef stix_uint64_t stix_ushortptr_t;
 	typedef stix_int64_t stix_shortptr_t;
 #else
-#	error UNSUPPORTED POINTER SIZE
+#	error UNKNOWN POINTER SIZE
 #endif
 
 #define STIX_SIZEOF_INTPTR_T STIX_SIZEOF_VOID_P
 #define STIX_SIZEOF_UINTPTR_T STIX_SIZEOF_VOID_P
 #define STIX_SIZEOF_SHORTPTR_T (STIX_SIZEOF_VOID_P / 2)
 #define STIX_SIZEOF_USHORTPTR_T (STIX_SIZEOF_VOID_P / 2)
+
+#if defined(STIX_HAVE_INT128_T)
+#	define STIX_SIZEOF_INTMAX_T 16
+#	define STIX_SIZEOF_UINTMAX_T 16
+	typedef stix_int128_t stix_intmax_t;
+	typedef stix_uint128_t stix_uintmax_t;
+#elif defined(STIX_HAVE_INT64_T)
+#	define STIX_SIZEOF_INTMAX_T 8
+#	define STIX_SIZEOF_UINTMAX_T 8
+	typedef stix_int64_t stix_intmax_t;
+	typedef stix_uint64_t stix_uintmax_t;
+#elif defined(STIX_HAVE_INT32_T)
+#	define STIX_SIZEOF_INTMAX_T 4
+#	define STIX_SIZEOF_UINTMAX_T 4
+	typedef stix_int32_t stix_intmax_t;
+	typedef stix_uint32_t stix_uintmax_t;
+#elif defined(STIX_HAVE_INT16_T)
+#	define STIX_SIZEOF_INTMAX_T 2
+#	define STIX_SIZEOF_UINTMAX_T 2
+	typedef stix_int16_t stix_intmax_t;
+	typedef stix_uint16_t stix_uintmax_t;
+#elif defined(STIX_HAVE_INT8_T)
+#	define STIX_SIZEOF_INTMAX_T 1
+#	define STIX_SIZEOF_UINTMAX_T 1
+	typedef stix_int8_t stix_intmax_t;
+	typedef stix_uint8_t stix_uintmax_t;
+#else
+#	error UNKNOWN INTMAX SIZE
+#endif
+
 
 typedef stix_uintptr_t stix_size_t;
 typedef stix_intptr_t stix_ssize_t;
@@ -476,17 +514,81 @@ struct stix_cmgr_t
  * =========================================================================*/
 
 typedef stix_uint8_t             stix_oob_t;
+
 /* NOTE: sizeof(stix_oop_t) must be equal to sizeof(stix_oow_t) */
 typedef stix_uintptr_t           stix_oow_t;
 typedef stix_intptr_t            stix_ooi_t;
+#define STIX_SIZEOF_OOW_T STIX_SIZEOF_UINTPTR_T
+#define STIX_SIZEOF_OOI_T STIX_SIZEOF_INTPTR_T
 
 typedef stix_ushortptr_t         stix_oohw_t; /* half word - half word */
 typedef stix_shortptr_t          stix_oohi_t; /* signed half word */
+#define STIX_SIZEOF_OOHW_T STIX_SIZEOF_USHORTPTR_T
+#define STIX_SIZEOF_OOHI_T STIX_SIZEOF_SHORTPTR_T
 
 typedef stix_uch_t               stix_ooch_t;
 typedef stix_uci_t               stix_ooci_t;
 typedef stix_ucs_t               stix_oocs_t;
 #define STIX_OOCH_IS_UCH
+
+
+/* =========================================================================
+ * COMPILER FEATURE TEST MACROS
+ * =========================================================================*/
+#if defined(__has_builtin)
+	#if __has_builtin(__builtin_ctz)
+		#define STIX_HAVE_BUILTIN_CTZ
+	#endif
+	#if __has_builtin(__builtin_uadd_overflow)
+		#define STIX_HAVE_BUILTIN_UADD_OVERFLOW 
+	#endif
+	#if __has_builtin(__builtin_uaddl_overflow)
+		#define STIX_HAVE_BUILTIN_UADDL_OVERFLOW 
+	#endif
+	#if __has_builtin(__builtin_uaddll_overflow)
+		#define STIX_HAVE_BUILTIN_UADDLL_OVERFLOW 
+	#endif
+	#if __has_builtin(__builtin_umul_overflow)
+		#define STIX_HAVE_BUILTIN_UMUL_OVERFLOW 
+	#endif
+	#if __has_builtin(__builtin_umull_overflow)
+		#define STIX_HAVE_BUILTIN_UMULL_OVERFLOW 
+	#endif
+	#if __has_builtin(__builtin_umulll_overflow)
+		#define STIX_HAVE_BUILTIN_UMULLL_OVERFLOW 
+	#endif
+	
+#elif defined(__GNUC__) && defined(__GNUC_MINOR__)
+
+	#if (__GNUC__ >= 5)
+		#define STIX_HAVE_BUILTIN_UADD_OVERFLOW
+		#define STIX_HAVE_BUILTIN_UADDL_OVERFLOW
+		#define STIX_HAVE_BUILTIN_UADDLL_OVERFLOW
+		#define STIX_HAVE_BUILTIN_UMUL_OVERFLOW
+		#define STIX_HAVE_BUILTIN_UMULL_OVERFLOW
+		#define STIX_HAVE_BUILTIN_UMULLL_OVERFLOW
+	#endif
+
+	#if (__GNUC__ >= 4) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)
+		#define STIX_HAVE_BUILTIN_CTZ
+	#endif
+#endif
+
+/*
+#if !defined(__has_builtin)
+	#define __has_builtin(x) 0
+#endif
+
+
+#if !defined(__is_identifier)
+	#define __is_identifier(x) 0
+#endif
+
+#if !defined(__has_attribute)
+	#define __has_attribute(x) 0
+#endif
+*/
+
 
 
 #endif

@@ -1050,6 +1050,12 @@ stix_oop_t stix_subints (
 	stix_oop_t y
 );
 
+stix_oop_t stix_strtoint (
+	stix_t*            stix,
+	const stix_ooch_t* str,
+	stix_oow_t         len,
+	unsigned int       radix
+);
 /* ========================================================================= */
 /* comp.c                                                                    */
 /* ========================================================================= */
