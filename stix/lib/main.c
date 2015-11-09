@@ -467,7 +467,10 @@ int main (int argc, char* argv[])
 /*const stix_bch_t* xxx = "9999999999999999999999999999999999999999999999999999999999999999999999999999999999";*/
 
 //const stix_bch_t* xxx = "2305843009213693953";
-const stix_bch_t* xxx = "184467440737095516161111";
+//const stix_bch_t* xxx = "184467440737095516161111";
+const stix_bch_t* xxx = "999999999999999999999999";
+const stix_bch_t* yyy = "1000000000000000000000000000000000000000000000000";
+//const stix_bch_t* yyy = "1290812390812903812903812903812903812903481290381209381290381290381290831290381290381290831209381293712897361287361278631278361278631278631287361278361278";
 
 stix_ooch_t buf[10240];
 stix_oow_t xxxlen;
@@ -476,7 +479,12 @@ stix_oow_t buflen;
 xxxlen = stix_countbcstr(xxx);
 buflen = STIX_COUNTOF(buf);
 stix_utf8toucs (xxx, &xxxlen, buf, &buflen);
-dump_object (stix, stix_strtoint (stix, buf, buflen, 16), "STRINT");
+dump_object (stix, stix_strtoint (stix, buf, buflen, 10), "STRINT");
+
+xxxlen = stix_countbcstr(yyy);
+buflen = STIX_COUNTOF(buf);
+stix_utf8toucs (yyy, &xxxlen, buf, &buflen);
+dump_object (stix, stix_strtoint (stix, buf, buflen, 3), "STRINT");
 }
 {
 stix_ooch_t x[] = { 'X', 't', 'r', 'i', 'n', 'g', '\0' };

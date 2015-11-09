@@ -195,8 +195,13 @@
 #elif defined(STIX_SIZEOF___INT128_T) && (STIX_SIZEOF___INT128_T == 16)
 #	define STIX_HAVE_UINT128_T
 #	define STIX_HAVE_INT128_T
+	#if defined(__clang__)
+	typedef __uint128_t  stix_uint128_t;
+	typedef __int128_t   stix_int128_t;
+	#else
 	typedef unsigned __int128_t  stix_uint128_t;
 	typedef signed __int128_t    stix_int128_t;
+	#endif
 #else
 	/* no 128-bit integer */
 #endif

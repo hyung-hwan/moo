@@ -699,6 +699,14 @@ struct stix_t
 	stix_ooi_t ip;
 	/* == END EXECUTION REGISTERS == */
 
+	/* == BIGINT CONVERSION == */
+	struct
+	{
+		int safe_ndigits;
+		stix_oow_t multiplier;
+	} bigint[36];
+	/* == END BIGINT CONVERSION == */
+
 #if defined(STIX_INCLUDE_COMPILER)
 	stix_compiler_t* c;
 #endif

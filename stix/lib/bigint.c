@@ -87,7 +87,7 @@ static STIX_INLINE int is_integer (stix_t* stix, stix_oop_t oop)
 
 	c = STIX_CLASSOF(stix,oop);
 
-/* TODO: is it better to introduct a special integer mark into the class itself */
+/* TODO: is it better to introduce a special integer mark into the class itself */
 	return c == stix->_small_integer ||
 	       c == stix->_large_positive_integer ||
 	       c == stix->_large_negative_integer;
@@ -615,12 +615,11 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 		/* bytes */
 		outlen = ((stix_oow_t)(end - str) * exp + 7) / 8; 
 		/* number of stix_oohw_t */
-		outlen = (outlen + STIX_SIZEOF(stix_oohw_t) - 1) / STIX_SIZEOF(stix_oohw_t);
-/* TODO: use a precomputed table for outlen instead of calculating here */
+		outlen = (outlen + STIX_SIZEOF(hw[0]) - 1) / STIX_SIZEOF(hw[0]);
 
 		if (outlen > STIX_COUNTOF(hw)) 
 		{
-			hwp = stix_allocmem (stix, outlen * STIX_SIZEOF(stix_oohw_t));
+			hwp = stix_allocmem (stix, outlen * STIX_SIZEOF(hw[0]));
 			if (!hwp) return STIX_NULL;
 		}
 		else
@@ -655,15 +654,37 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 	}
 	else
 	{
-		stix_oow_t r1, r2;
+		stix_oow_t r1, r2, ub;
 		stix_oohw_t multiplier;
-		int dg, i, max_ndigits;
+		int dg, i, safe_ndigits;
 
 		w = 0;
 		ptr = start;
 
-max_ndigits = 9; /* GET THIS */
-		outlen = (end - str) / max_ndigits + 1;
+		if (stix->bigint[radix].safe_ndigits > 0) 
+		{
+			/* if the table entry has been initialized properly,
+			 * take it instead of recalculation. */
+			safe_ndigits = stix->bigint[radix].safe_ndigits;
+			multiplier = stix->bigint[radix].multiplier;
+		}
+		else
+		{
+			r1 = 0;
+			ub = STIX_TYPE_MAX(stix_oohw_t) / radix - (radix - 1);
+			multiplier = 1;
+			for (safe_ndigits = 0; r1 <= ub; safe_ndigits++)
+			{
+				r1 = r1 * radix + (radix - 1);
+				multiplier *= radix;
+			}
+			/* safe_ndigits contains the number of digits that never
+			 * cause overflow when computed normally with a native type. */
+			stix->bigint[radix].safe_ndigits = safe_ndigits;
+			stix->bigint[radix].multiplier = multiplier;
+		}
+
+		outlen = (end - str) / safe_ndigits + 1;
 		if (outlen > STIX_COUNTOF(hw)) 
 		{
 			hwp = stix_allocmem (stix, outlen * STIX_SIZEOF(stix_oohw_t));
@@ -673,13 +694,12 @@ max_ndigits = 9; /* GET THIS */
 		{
 			hwp = hw;
 		}
-		multiplier = 1;
-		for (i = 0; i < max_ndigits; i++) multiplier *= radix;
 
+		STIX_ASSERT (ptr < end);
 		do
 		{
 			r1 = 0;
-			for (dg = 0; dg < max_ndigits; dg++)
+			for (dg = 0; dg < safe_ndigits; dg++)
 			{
 				if (ptr >= end) 
 				{
@@ -718,7 +738,7 @@ max_ndigits = 9; /* GET THIS */
 			}
 			if (r2) hwp[hwlen++] = r2;
 		}
-		while (dg >= max_ndigits);
+		while (ptr < end);
 	}
 
 { int i;
@@ -729,6 +749,7 @@ printf ("%08x ", hwp[--i]);
 printf ("\n");
 }
 
+	STIX_ASSERT (hwlen > 1);
 	if (hwlen == 1) return STIX_OOP_FROM_SMINT((stix_ooi_t)hwp[0] * -neg);
 	else if (hwlen == 2)
 	{
@@ -750,5 +771,10 @@ printf ("\n");
 oops_einval:
 	if (hwp && hw != hwp) stix_freemem (stix, hwp);
 	stix->errnum = STIX_EINVAL;
+	return STIX_NULL;
+}
+
+stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num)
+{
 	return STIX_NULL;
 }

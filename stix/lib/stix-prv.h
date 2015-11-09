@@ -58,10 +58,42 @@
 #include <string.h>
 #include <assert.h>
 
-#define STIX_MEMSET(dst,src,size)  memset(dst,src,size)
-#define STIX_MEMCPY(dst,src,size)  memcpy(dst,src,size)
-#define STIX_MEMMOVE(dst,src,size) memmove(dst,src,size)
-#define STIX_MEMCMP(dst,src,size)  memcmp(dst,src,size)
+#if defined(__has_builtin)
+#	if __has_builtin(__builtin_memset)
+#		define STIX_MEMSET(dst,src,size)  __builtin_memset(dst,src,size)
+#	else
+#		define STIX_MEMSET(dst,src,size)  memset(dst,src,size)
+#	endif
+#	if __has_builtin(__builtin_memcpy)
+#		define STIX_MEMCPY(dst,src,size)  __builtin_memcpy(dst,src,size)
+#	else
+#		define STIX_MEMCPY(dst,src,size)  memcpy(dst,src,size)
+#	endif
+#	if __has_builtin(__builtin_memmove)
+#		define STIX_MEMMOVE(dst,src,size)  __builtin_memmove(dst,src,size)
+#	else
+#		define STIX_MEMMOVE(dst,src,size)  memmove(dst,src,size)
+#	endif
+#	if __has_builtin(__builtin_memcmp)
+#		define STIX_MEMCMP(dst,src,size)  __builtin_memcmp(dst,src,size)
+#	else
+#		define STIX_MEMCMP(dst,src,size)  memcmp(dst,src,size)
+#	endif
+
+#elif defined(__GNUC__)
+/* TODO: may need to check a gnuc version or use autoconf to check the availibility ? */
+#	define STIX_MEMSET(dst,src,size)  __builtin_memset(dst,src,size)
+#	define STIX_MEMCPY(dst,src,size)  __builtin_memcpy(dst,src,size)
+#	define STIX_MEMMOVE(dst,src,size) __builtin_memmove(dst,src,size)
+#	define STIX_MEMCMP(dst,src,size)  __builtin_memcmp(dst,src,size)
+
+#else
+#	define STIX_MEMSET(dst,src,size)  memset(dst,src,size)
+#	define STIX_MEMCPY(dst,src,size)  memcpy(dst,src,size)
+#	define STIX_MEMMOVE(dst,src,size) memmove(dst,src,size)
+#	define STIX_MEMCMP(dst,src,size)  memcmp(dst,src,size)
+#endif
+
 #define STIX_ASSERT(x)             assert(x)
 
 #define STIX_ALIGN(x,y) ((((x) + (y) - 1) / (y)) * (y))

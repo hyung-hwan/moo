@@ -772,6 +772,18 @@
 /* Define to 1 if you have the `_vsnwprintf' function. */
 #undef HAVE__VSNWPRINTF
 
+/* __builtin_memcmp */
+#undef HAVE___BUILTIN_MEMCMP
+
+/* __builtin_memcpy */
+#undef HAVE___BUILTIN_MEMCPY
+
+/* __builtin_memmove */
+#undef HAVE___BUILTIN_MEMMOVE
+
+/* __builtin_memset */
+#undef HAVE___BUILTIN_MEMSET
+
 /* __va_copy is available */
 #undef HAVE___VA_COPY
 
