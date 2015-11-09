@@ -535,8 +535,9 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 	int neg = 0;
 	const stix_ooch_t* ptr, * start, * end;
 	stix_oow_t w, v;
-	stix_oohw_t hw[64];
-	stix_oow_t hwlen;
+	stix_oohw_t hw[64], * hwp = STIX_NULL;
+	stix_oow_t hwlen, outlen;
+	stix_oop_t res;
 
 	STIX_ASSERT (radix >= 2 && radix <= 36);
 
@@ -611,6 +612,22 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 		exp = exp_tab[radix];
 	#endif
 
+		/* bytes */
+		outlen = ((stix_oow_t)(end - str) * exp + 7) / 8; 
+		/* number of stix_oohw_t */
+		outlen = (outlen + STIX_SIZEOF(stix_oohw_t) - 1) / STIX_SIZEOF(stix_oohw_t);
+/* TODO: use a precomputed table for outlen instead of calculating here */
+
+		if (outlen > STIX_COUNTOF(hw)) 
+		{
+			hwp = stix_allocmem (stix, outlen * STIX_SIZEOF(stix_oohw_t));
+			if (!hwp) return STIX_NULL;
+		}
+		else
+		{
+			hwp = hw;
+		}
+
 		w = 0;
 		bitcnt = 0;
 		ptr = end - 1;
@@ -626,9 +643,7 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 			if (bitcnt >= STIX_OOHW_BITS)
 			{
 				bitcnt -= STIX_OOHW_BITS;
-/* TODO: grow hw if it's full OR
- * i can estimate how much will be needed based on ext. so preallocate the buffer for these bases */
-				hw[hwlen++] = (stix_oohw_t)(w & STIX_LBMASK(stix_oow_t, STIX_OOHW_BITS));
+				hwp[hwlen++] = (stix_oohw_t)(w & STIX_LBMASK(stix_oow_t, STIX_OOHW_BITS));
 				w >>= STIX_OOHW_BITS;
 			}
 
@@ -636,7 +651,7 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 		}
 
 		STIX_ASSERT (w <= STIX_TYPE_MAX(stix_oohw_t));
-		if (hwlen == 0 || w > 0) hw[hwlen++] = w;
+		if (hwlen == 0 || w > 0) hwp[hwlen++] = w;
 	}
 	else
 	{
@@ -648,9 +663,16 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 		ptr = start;
 
 max_ndigits = 9; /* GET THIS */
-reqsize = (end - str) / max_ndigits + 1;
-if (reqsize > STIX_COUNTF(hw)) hwp = malloc (reqsize * STIX_SIZEOF(stix_oohw_t));
-
+		outlen = (end - str) / max_ndigits + 1;
+		if (outlen > STIX_COUNTOF(hw)) 
+		{
+			hwp = stix_allocmem (stix, outlen * STIX_SIZEOF(stix_oohw_t));
+			if (!hwp) return STIX_NULL;
+		}
+		else
+		{
+			hwp = hw;
+		}
 		multiplier = 1;
 		for (i = 0; i < max_ndigits; i++) multiplier *= radix;
 
@@ -679,7 +701,7 @@ if (reqsize > STIX_COUNTF(hw)) hwp = malloc (reqsize * STIX_SIZEOF(stix_oohw_t))
 			{
 				stix_oohw_t high, low;
 
-				v = (stix_oow_t)hw[i] * multiplier;
+				v = (stix_oow_t)hwp[i] * multiplier;
 				high = (stix_oohw_t)(v >> STIX_OOHW_BITS);
 				low = (stix_oohw_t)(v /*& STIX_LBMASK(stix_oow_t, STIX_OOHW_BITS)*/);
 
@@ -692,9 +714,9 @@ if (reqsize > STIX_COUNTF(hw)) hwp = malloc (reqsize * STIX_SIZEOF(stix_oohw_t))
 				r2 = high + (low < r2);
 			#endif
 
-				hw[i] = low;
+				hwp[i] = low;
 			}
-			if (r2) hw[hwlen++] = r2;
+			if (r2) hwp[hwlen++] = r2;
 		}
 		while (dg >= max_ndigits);
 	}
@@ -702,15 +724,15 @@ if (reqsize > STIX_COUNTF(hw)) hwp = malloc (reqsize * STIX_SIZEOF(stix_oohw_t))
 { int i;
 for (i = hwlen; i > 0;)
 {
-printf ("%08x ", hw[--i]);
+printf ("%08x ", hwp[--i]);
 }
 printf ("\n");
 }
 
-	if (hwlen == 1) return STIX_OOP_FROM_SMINT((stix_ooi_t)hw[0] * -neg);
+	if (hwlen == 1) return STIX_OOP_FROM_SMINT((stix_ooi_t)hwp[0] * -neg);
 	else if (hwlen == 2)
 	{
-		w = MAKE_WORD(hw[0], hw[1]);
+		w = MAKE_WORD(hwp[0], hwp[1]);
 		if (neg) 
 		{
 			if (w <= STIX_SMINT_MAX + 1) return STIX_OOP_FROM_SMINT(-(stix_ooi_t)w);
@@ -721,9 +743,12 @@ printf ("\n");
 		}
 	}
 
-	return stix_instantiate (stix, (neg? stix->_large_negative_integer: stix->_large_positive_integer), hw, hwlen);
+	res = stix_instantiate (stix, (neg? stix->_large_negative_integer: stix->_large_positive_integer), hwp, hwlen);
+	if (hwp && hw != hwp) stix_freemem (stix, hwp);
+	return res;
 
 oops_einval:
+	if (hwp && hw != hwp) stix_freemem (stix, hwp);
 	stix->errnum = STIX_EINVAL;
 	return STIX_NULL;
 }

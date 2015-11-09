@@ -476,7 +476,7 @@ stix_oow_t buflen;
 xxxlen = stix_countbcstr(xxx);
 buflen = STIX_COUNTOF(buf);
 stix_utf8toucs (xxx, &xxxlen, buf, &buflen);
-dump_object (stix, stix_strtoint (stix, buf, buflen, 10), "STRINT");
+dump_object (stix, stix_strtoint (stix, buf, buflen, 16), "STRINT");
 }
 {
 stix_ooch_t x[] = { 'X', 't', 'r', 'i', 'n', 'g', '\0' };
