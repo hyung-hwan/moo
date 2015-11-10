@@ -56,6 +56,29 @@ void stix_close (stix_t* stix)
 	STIX_MMGR_FREE (stix->mmgr, stix);
 }
 
+static void fill_bigint_tables (stix_t* stix)
+{
+	int radix, safe_ndigits;
+	stix_oow_t multiplier, ub, w;
+
+	for (radix = 2; radix <= 36; radix++)
+	{
+		w = 0;
+		ub = (stix_oow_t)STIX_TYPE_MAX(stix_oohw_t) / radix - (radix - 1);
+		multiplier = 1;
+		for (safe_ndigits = 0; w <= ub; safe_ndigits++)
+		{
+			w = w * radix + (radix - 1);
+			multiplier *= radix;
+		}
+
+		/* safe_ndigits contains the number of digits that never
+		 * cause overflow when computed normally with a native type. */
+		stix->bigint[radix].safe_ndigits = safe_ndigits;
+		stix->bigint[radix].multiplier = multiplier;
+	}
+}
+
 int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_size_t heapsz, const stix_vmprim_t* vmprim)
 {
 	STIX_MEMSET (stix, 0, STIX_SIZEOF(*stix));
@@ -71,6 +94,8 @@ int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_size_t heapsz, const stix_v
 
 	if (stix_rbt_init (&stix->pmtable, mmgr, STIX_SIZEOF(stix_ooch_t), 1) <= -1) goto oops;
 	stix_rbt_setstyle (&stix->pmtable, stix_getrbtstyle(STIX_RBT_STYLE_INLINE_COPIERS));
+
+	fill_bigint_tables (stix);
 	return 0;
 
 oops:

@@ -704,7 +704,7 @@ struct stix_t
 	{
 		int safe_ndigits;
 		stix_oow_t multiplier;
-	} bigint[36];
+	} bigint[37];
 	/* == END BIGINT CONVERSION == */
 
 #if defined(STIX_INCLUDE_COMPILER)

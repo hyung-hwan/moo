@@ -654,35 +654,15 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 	}
 	else
 	{
-		stix_oow_t r1, r2, ub;
+		stix_oow_t r1, r2;
 		stix_oohw_t multiplier;
 		int dg, i, safe_ndigits;
 
 		w = 0;
 		ptr = start;
 
-		if (stix->bigint[radix].safe_ndigits > 0) 
-		{
-			/* if the table entry has been initialized properly,
-			 * take it instead of recalculation. */
-			safe_ndigits = stix->bigint[radix].safe_ndigits;
-			multiplier = stix->bigint[radix].multiplier;
-		}
-		else
-		{
-			r1 = 0;
-			ub = STIX_TYPE_MAX(stix_oohw_t) / radix - (radix - 1);
-			multiplier = 1;
-			for (safe_ndigits = 0; r1 <= ub; safe_ndigits++)
-			{
-				r1 = r1 * radix + (radix - 1);
-				multiplier *= radix;
-			}
-			/* safe_ndigits contains the number of digits that never
-			 * cause overflow when computed normally with a native type. */
-			stix->bigint[radix].safe_ndigits = safe_ndigits;
-			stix->bigint[radix].multiplier = multiplier;
-		}
+		safe_ndigits = stix->bigint[radix].safe_ndigits;
+		multiplier = stix->bigint[radix].multiplier;
 
 		outlen = (end - str) / safe_ndigits + 1;
 		if (outlen > STIX_COUNTOF(hw)) 
