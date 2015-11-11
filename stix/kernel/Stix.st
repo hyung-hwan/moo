@@ -115,15 +115,18 @@
 {
 }
 
-#class(#halfword) LargeInteger(Number)
+## #class(#halfword) LargeInteger(Number)
+#class(#word) LargeInteger(Number)
 {
 }
 
-#class(#halfword) LargePositiveInteger(LargeInteger)
+## #class(#halfword) LargePositiveInteger(LargeInteger)
+#class(#word) LargePositiveInteger(LargeInteger)
 {
 }
 
-#class(#halfword) LargeNegativeInteger(LargeInteger)
+## #class(#halfword) LargeNegativeInteger(LargeInteger)
+#class(#word) LargeNegativeInteger(LargeInteger)
 {
 }
 

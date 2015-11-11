@@ -382,13 +382,16 @@ int main (int argc, char* argv[])
 	stix_vmprim_t vmprim;
 	int i;
 
-	printf ("Stix 1.0.0 - max named %lu max indexed %lu max class %lu max classinst %lu smintmax %ld smintmax %ld\n", 
+	printf ("Stix 1.0.0 - max named %lu max indexed %lu max class %lu max classinst %lu oowmax %lu, smintmax %ld smintmax %ld\n", 
 		(unsigned long int)STIX_MAX_NAMED_INSTVARS, 
 		(unsigned long int)STIX_MAX_INDEXED_INSTVARS(STIX_MAX_NAMED_INSTVARS),
 		(unsigned long int)STIX_MAX_CLASSVARS,
 		(unsigned long int)STIX_MAX_CLASSINSTVARS,
+		(unsigned long int)STIX_TYPE_MAX(stix_oow_t),
 		(long)STIX_SMINT_MAX, (long)STIX_SMINT_MIN);
 
+	printf ("STIX_SMINT_MIN + STIX_SMINT_MIN => %ld\n", (long)(STIX_SMINT_MIN + STIX_SMINT_MIN));
+	printf ("STIX_SMINT_MIN - STIX_SMINT_MAX => %ld\n", (long)(STIX_SMINT_MIN - STIX_SMINT_MAX));
 
 #if !defined(macintosh)
 	if (argc < 2)

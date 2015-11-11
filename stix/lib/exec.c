@@ -1036,7 +1036,7 @@ static int prim_integer_add (stix_t* stix, stix_ooi_t nargs)
 
 #else
 	res = stix_addints (stix, rcv, arg);
-	if (!res) return -1; /* hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL)? 0: -1; /* soft or hard failure */
 
 	ACTIVE_STACK_POP (stix);
 	ACTIVE_STACK_SETTOP (stix, res);
@@ -1070,7 +1070,7 @@ static int prim_integer_sub (stix_t* stix, stix_ooi_t nargs)
 	return 0;
 #else
 	res = stix_subints (stix, rcv, arg);
-	if (!res) return -1; /* hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL)? 0: -1; /* soft or hard failure */
 
 	ACTIVE_STACK_POP (stix);
 	ACTIVE_STACK_SETTOP (stix, res);
@@ -1080,16 +1080,18 @@ static int prim_integer_sub (stix_t* stix, stix_ooi_t nargs)
 
 static int prim_integer_mul (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_ooi_t tmp;
-	stix_oop_t rcv, arg;
+	stix_oop_t rcv, arg, res;
 
 	STIX_ASSERT (nargs == 1);
 
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
+#if 0
 	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
 	{
+		stix_ooi_t tmp;
+
 		tmp = STIX_OOP_TO_SMINT(rcv) * STIX_OOP_TO_SMINT(arg);
 		/* TODO: check overflow. if so convert it to LargeInteger */
 
@@ -1100,6 +1102,14 @@ static int prim_integer_mul (stix_t* stix, stix_ooi_t nargs)
 
 /* TODO: handle LargeInteger */
 	return 0;
+#else
+	res = stix_mulints (stix, rcv, arg);
+	if (!res) return (stix->errnum == STIX_EINVAL)? 0: -1; /* soft or hard failure */
+
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
+#endif
 }
 
 static int prim_integer_eq (stix_t* stix, stix_ooi_t nargs)

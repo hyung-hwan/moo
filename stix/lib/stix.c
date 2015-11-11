@@ -59,17 +59,21 @@ void stix_close (stix_t* stix)
 static void fill_bigint_tables (stix_t* stix)
 {
 	int radix, safe_ndigits;
-	stix_oow_t multiplier, ub, w;
+	stix_oow_t ub, w;
+	stix_oow_t multiplier;
 
 	for (radix = 2; radix <= 36; radix++)
 	{
 		w = 0;
-		ub = (stix_oow_t)STIX_TYPE_MAX(stix_oohw_t) / radix - (radix - 1);
+		ub = (stix_oow_t)STIX_TYPE_MAX(atom_t) / radix - (radix - 1);
 		multiplier = 1;
-		for (safe_ndigits = 0; w <= ub; safe_ndigits++)
+		safe_ndigits = 0;
+
+		while (w <= ub)
 		{
 			w = w * radix + (radix - 1);
 			multiplier *= radix;
+			safe_ndigits++;
 		}
 
 		/* safe_ndigits contains the number of digits that never
