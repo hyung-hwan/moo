@@ -364,94 +364,93 @@ static STIX_INLINE stix_oow_t subtract_unsigned_array (const atom_t* x, stix_oow
 
 static STIX_INLINE void multiply_unsigned_array (const atom_t* x, stix_oow_t xs, const atom_t* y, stix_oow_t ys, atom_t* z)
 {
-#if 0
-	/* Comba multiplication */ /* TODO: implement Karatsuba algorithm when the input length is long */
-
-/* TODO: I don't know why this doesn't work 
- 0FF0000000000013EC00000000000956A00000000001F20C000000000026E8F0 * 0FF0000000000013EC00000000000956A00000000001F20C000000000026E8F0 must
-produce  
-
-00FE010000000002 7B028000000002B6 8ABC00000001B216 B580000000A990DE E60000002A6437B9 800000069FA8B4FC 0000009765EB9680 000005E9FB33E100
-
-but this produce
-00FE010000000002 7B028000000002B6 8ABC00000001B215 B580000000A990DE E60000002A6437B9 800000069FA8B4FC 0000009765EB9680 000005E9FB33E100* 
-* */
 	bigatom_t v;
-	stix_oow_t s1, s2;
-	stix_oow_t i, j;
-	stix_oow_t a, b;
+	stix_oow_t pa;
 
-	s1 = xs + ys;
+/* TODO: implement Karatsuba  or Toom-Cook 3-way algorithm when the input length is long */
 
-	v = 0;
-	for (i = 0; i < s1; i++)
+	pa = (xs < ys)? xs: ys;
+	if (pa <= ((stix_oow_t)1 << (BIGATOM_BITS - (ATOM_BITS * 2))))
 	{
-		b = (i < ys - 1)? i: ys - 1;
-		a = i - b;
-		s2 = (xs - a < b + 1)? xs - a: b + 1;
+		/* Comba(column-array) multiplication */
 
-		for (j = 0; j < s2; j++)
+		/* when the input length is too long, v may overflow. if it
+		 * happens, comba's method doesn't work as carry propagation is
+		 * affected badly. so we need to use this method only if
+		 * the input is short enough. */
+
+		stix_oow_t pa, ix, iy, iz, tx, ty;
+
+		pa = xs + ys;
+		v = 0;
+		for (ix = 0; ix < pa; ix++)
 		{
-			v += (bigatom_t)x[a + j] * (bigatom_t)y[b - j];
-		}
+			ty = (ix < ys - 1)? ix: (ys - 1);
+			tx = ix - ty;
+			iy = (ty + 1 < xs - tx)? (ty + 1): (xs - tx);
 
-		z[i] = (atom_t)v;
-		v >>= ATOM_BITS;
-	}
-
-#elif 1
-	stix_oow_t i, j;
-	bigatom_t v;
-	atom_t carry;
-
-	for (i = 0; i < ys; i++)
-	{
-		if (y[i] == 0)
-		{
-			z[xs + i] = 0;
-		}
-		else
-		{
-			carry = 0;
-			for (j = 0; j < xs; j++)
+			for (iz = 0; iz < iy; iz++)
 			{
-				v = (bigatom_t)x[j] * (bigatom_t)y[i] + (bigatom_t)carry + (bigatom_t)z[j + i];
-				z[j + i] = (atom_t)v;
-				carry = (atom_t)(v >> ATOM_BITS);
+				v = v + (bigatom_t)x[tx + iz] * (bigatom_t)y[ty - iz];
 			}
 
-			z[xs + i] = carry;
+			z[ix] = (atom_t)v;
+			v = v >> ATOM_BITS;
 		}
 	}
-
-#else
-	stix_oow_t i, j, idx;
-	bigatom_t v;
-	atom_t carry;
-
-	for (i = 0; i < ys; i++)
+	else
 	{
-		idx = i;
+	#if 1
+		stix_oow_t i, j;
+		atom_t carry;
 
-		for (j = 0; j < xs; j++)
+		for (i = 0; i < ys; i++)
 		{
-			v = (bigatom_t)x[j] * (bigatom_t)y[i] + (bigatom_t)carry + (bigatom_t)z[idx];
-			z[idx] = (atom_t)v;
-			carry = (atom_t)(v >> ATOM_BITS);
-			idx++;
+			if (y[i] == 0)
+			{
+				z[xs + i] = 0;
+			}
+			else
+			{
+				carry = 0;
+				for (j = 0; j < xs; j++)
+				{
+					v = (bigatom_t)x[j] * (bigatom_t)y[i] + (bigatom_t)carry + (bigatom_t)z[j + i];
+					z[j + i] = (atom_t)v;
+					carry = (atom_t)(v >> ATOM_BITS);
+				}
+
+				z[xs + i] = carry;
+			}
 		}
 
-		while (carry > 0)
-		{
-			v = (bigatom_t)z[idx] + (bigatom_t)carry;
-			z[idx] = (atom_t)v;
-			carry = (atom_t)(v >> ATOM_BITS);
-			idx++;
-		}
+	#else
+		stix_oow_t i, j, idx;
+		atom_t carry;
 
+		for (i = 0; i < ys; i++)
+		{
+			idx = i;
+
+			for (j = 0; j < xs; j++)
+			{
+				v = (bigatom_t)x[j] * (bigatom_t)y[i] + (bigatom_t)carry + (bigatom_t)z[idx];
+				z[idx] = (atom_t)v;
+				carry = (atom_t)(v >> ATOM_BITS);
+				idx++;
+			}
+
+			while (carry > 0)
+			{
+				v = (bigatom_t)z[idx] + (bigatom_t)carry;
+				z[idx] = (atom_t)v;
+				carry = (atom_t)(v >> ATOM_BITS);
+				idx++;
+			}
+
+		}
+	#endif
 	}
-
-#endif
 }
 
 static stix_oop_t add_unsigned_integers (stix_t* stix, stix_oop_t x, stix_oop_t y)

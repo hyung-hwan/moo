@@ -111,12 +111,14 @@
 	typedef stix_oow_t atom_t;
 	typedef stix_oop_word_t oop_atom_t;
 #	define ATOM_BITS STIX_OOW_BITS
+#	define BIGATOM_BITS (STIX_SIZEOF(bigatom_t) * 8)
 #	define SIZEOF_ATOM_T STIX_SIZEOF_OOW_T
 #else
 	typedef stix_oow_t bigatom_t;
 	typedef stix_oohw_t atom_t;
-#	define ATOM_BITS STIX_OOHW_BITS
 	typedef stix_oop_halfword_t oop_atom_t;
+#	define ATOM_BITS STIX_OOHW_BITS
+#	define BIGATOM_BITS STIX_OOW_BITS
 #	define SIZEOF_ATOM_T STIX_SIZEOF_OOHW_T
 #	define MAKE_WORD(hw1,hw2) ((stix_oow_t)(hw1) | (stix_oow_t)(hw2) << ATOM_BITS)
 #endif
