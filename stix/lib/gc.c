@@ -38,7 +38,7 @@ static void compact_symbol_table (stix_t* stix, stix_oop_t _nil)
 
 	bucket_size = STIX_OBJ_GET_SIZE(stix->symtab->bucket);
 
-	tally = STIX_OOP_TO_SMINT(stix->symtab->tally);
+	tally = STIX_OOP_TO_SMOOI(stix->symtab->tally);
 	if (tally <= 0) return;
 
 	for (index = 0; index < bucket_size; )
@@ -79,8 +79,8 @@ static void compact_symbol_table (stix_t* stix, stix_oop_t _nil)
 		tally--;
 	}
 
-	STIX_ASSERT (tally <= STIX_SMINT_MAX);
-	stix->symtab->tally = STIX_OOP_FROM_SMINT(tally);
+	STIX_ASSERT (tally <= STIX_SMOOI_MAX);
+	stix->symtab->tally = STIX_SMOOI_TO_OOP(tally);
 }
 
 
@@ -221,7 +221,7 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 				 * scanned in full. the slots above the stack pointer 
 				 * are garbages. */
 				size = STIX_CONTEXT_NAMED_INSTVARS +
-				       STIX_OOP_TO_SMINT(((stix_oop_context_t)oop)->sp) + 1;
+				       STIX_OOP_TO_SMOOI(((stix_oop_context_t)oop)->sp) + 1;
 			}
 			else
 			{
@@ -262,8 +262,8 @@ void stix_gc (stix_t* stix)
 	{
 		/* store the stack pointer to the actual active context */
 /* TODO: verify if this is correct */
-		stix->active_context->sp = STIX_OOP_FROM_SMINT(stix->sp);
-		stix->active_context->ip = STIX_OOP_FROM_SMINT(stix->ip);
+		stix->active_context->sp = STIX_SMOOI_TO_OOP(stix->sp);
+		stix->active_context->ip = STIX_SMOOI_TO_OOP(stix->ip);
 	}
 
 /*printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
@@ -402,7 +402,7 @@ stix_oop_t stix_shallowcopy (stix_t* stix, stix_oop_t oop)
 
 		c = (stix_oop_class_t)STIX_OBJ_GET_CLASS(oop);
 		stix_pushtmp (stix, &oop);
-		z = stix_instantiate (stix, (stix_oop_t)c, STIX_NULL, STIX_OBJ_GET_SIZE(oop) - STIX_CLASS_SPEC_NAMED_INSTVAR(STIX_OOP_TO_SMINT(c->spec)));
+		z = stix_instantiate (stix, (stix_oop_t)c, STIX_NULL, STIX_OBJ_GET_SIZE(oop) - STIX_CLASS_SPEC_NAMED_INSTVAR(STIX_OOP_TO_SMOOI(c->spec)));
 		stix_poptmp(stix);
 
 		if (!z) return z;

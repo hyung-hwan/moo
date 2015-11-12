@@ -35,11 +35,11 @@
 /* TOOD: determine the right stack size */
 #define CONTEXT_STACK_SIZE 96
 
-#define LOAD_IP(stix, v_ctx) ((stix)->ip = STIX_OOP_TO_SMINT((v_ctx)->ip))
-#define STORE_IP(stix, v_ctx) ((v_ctx)->ip = STIX_OOP_FROM_SMINT((stix)->ip))
+#define LOAD_IP(stix, v_ctx) ((stix)->ip = STIX_OOP_TO_SMOOI((v_ctx)->ip))
+#define STORE_IP(stix, v_ctx) ((v_ctx)->ip = STIX_SMOOI_TO_OOP((stix)->ip))
 
-#define LOAD_SP(stix, v_ctx) ((stix)->sp = STIX_OOP_TO_SMINT((v_ctx)->sp))
-#define STORE_SP(stix, v_ctx) ((v_ctx)->sp = STIX_OOP_FROM_SMINT((stix)->sp))
+#define LOAD_SP(stix, v_ctx) ((stix)->sp = STIX_OOP_TO_SMOOI((v_ctx)->sp))
+#define STORE_SP(stix, v_ctx) ((v_ctx)->sp = STIX_SMOOI_TO_OOP((stix)->sp))
 
 #define LOAD_ACTIVE_IP(stix) LOAD_IP(stix, (stix)->active_context)
 #define STORE_ACTIVE_IP(stix) STORE_IP(stix, (stix)->active_context)
@@ -112,7 +112,7 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 	stix_poptmp (stix);
 	if (!proc) return STIX_NULL;
 
-	proc->state = STIX_OOP_FROM_SMINT(0);
+	proc->state = STIX_SMOOI_TO_OOP(0);
 	proc->initial_context = c;
 
 	return proc;
@@ -151,18 +151,18 @@ static void switch_to_next_process (stix_t* stix)
 
 static void schedule_process (stix_t* stix, stix_oop_process_t proc)
 {
-	if (proc->state == STIX_OOP_FROM_SMINT(0))
+	if (proc->state == STIX_SMOOI_TO_OOP(0))
 	{
 		stix_ooi_t tally;
 		STIX_ASSERT ((stix_oop_t)proc->prev == stix->_nil);
 		STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
 
-		tally = STIX_OOP_TO_SMINT(stix->processor->tally);
+		tally = STIX_OOP_TO_SMOOI(stix->processor->tally);
 		if (tally <= 0)
 		{
 			stix->processor->head = proc;
 			stix->processor->tail = proc;
-			stix->processor->tally  = STIX_OOP_FROM_SMINT(1);
+			stix->processor->tally  = STIX_SMOOI_TO_OOP(1);
 printf ("ADD NEW PROCESS X - %d\n", (int)1);
 		}
 		else
@@ -171,11 +171,11 @@ printf ("ADD NEW PROCESS X - %d\n", (int)1);
 			proc->next = stix->processor->head;
 			stix->processor->head->prev = proc;
 			stix->processor->head = proc;
-			stix->processor->tally = STIX_OOP_FROM_SMINT(tally + 1);
+			stix->processor->tally = STIX_SMOOI_TO_OOP(tally + 1);
 printf ("ADD NEW PROCESS Y - %d\n", (int)tally + 1);
 		}
 
-		proc->state = STIX_OOP_FROM_SMINT(1); /* TODO: change the code properly... changing state alone doesn't help */
+		proc->state = STIX_SMOOI_TO_OOP(1); /* TODO: change the code properly... changing state alone doesn't help */
 		proc->active_context = proc->initial_context;
 
 		switch_process (stix, proc);
@@ -226,8 +226,8 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	 *   |                     | slot[stack_size - 1] 
 	 *   +---------------------+
 	 */
-	ntmprs = STIX_OOP_TO_SMINT(mth->tmpr_count);
-	nargs = STIX_OOP_TO_SMINT(mth->tmpr_nargs);
+	ntmprs = STIX_OOP_TO_SMOOI(mth->tmpr_count);
+	nargs = STIX_OOP_TO_SMOOI(mth->tmpr_nargs);
 
 	STIX_ASSERT (ntmprs >= 0);
 	STIX_ASSERT (nargs <= ntmprs);
@@ -240,7 +240,7 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	if (!ctx) return -1;
 
 	ctx->sender = (stix_oop_t)stix->active_context; 
-	ctx->ip = STIX_OOP_FROM_SMINT(0);
+	ctx->ip = STIX_SMOOI_TO_OOP(0);
 	/* the stack front has temporary variables including arguments.
 	 *
 	 * New Context
@@ -263,8 +263,8 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	 *
 	 * if no temporaries exist, the initial sp is -1.
 	 */
-	ctx->sp = STIX_OOP_FROM_SMINT(ntmprs - 1);
-	ctx->ntmprs = STIX_OOP_FROM_SMINT(ntmprs);
+	ctx->sp = STIX_SMOOI_TO_OOP(ntmprs - 1);
+	ctx->ntmprs = STIX_SMOOI_TO_OOP(ntmprs);
 	ctx->method_or_nargs = (stix_oop_t)mth;
 	/* the 'home' field of a method context is always stix->_nil.
 	ctx->home = stix->_nil;*/
@@ -337,7 +337,7 @@ printf ("\n");
 	ctx->sender = 
 	*/
 	
-	ctx->ntmprs = STIX_OOP_FROM_SMINT(ntmprs);
+	ctx->ntmprs = STIX_SMOOI_TO_OOP(ntmprs);
 	ctx->method_or_nargs = (stix_oop_t)mth;
 	ctx->home = stix->_nil;
 	ctx->origin = ctx;
@@ -446,7 +446,7 @@ static int activate_initial_context (stix_t* stix, const stix_oocs_t* objname, c
 	mth = find_method (stix, ass->value, mthname, 0);
 	if (!mth) return -1;
 
-	if (STIX_OOP_TO_SMINT(mth->tmpr_nargs) > 0)
+	if (STIX_OOP_TO_SMOOI(mth->tmpr_nargs) > 0)
 	{
 		/* this method expects more than 0 arguments. 
 		 * i can't use it as a start-up method.
@@ -593,9 +593,9 @@ static int prim_basic_new_with_size (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	szoop = ACTIVE_STACK_GET(stix, stix->sp);
-	if (STIX_OOP_IS_SMINT(szoop))
+	if (STIX_OOP_IS_SMOOI(szoop))
 	{
-		size = STIX_OOP_TO_SMINT(szoop);
+		size = STIX_OOP_TO_SMOOI(szoop);
 	}
 /* TODO: support LargeInteger */
 	else
@@ -644,7 +644,7 @@ static int prim_basic_size (stix_t* stix, stix_ooi_t nargs)
 	STIX_ASSERT (nargs == 0);
 
 	rcv = ACTIVE_STACK_GETTOP(stix);
-	ACTIVE_STACK_SETTOP(stix, STIX_OOP_FROM_SMINT(STIX_OBJ_GET_SIZE(rcv)));
+	ACTIVE_STACK_SETTOP(stix, STIX_SMOOI_TO_OOP(STIX_OBJ_GET_SIZE(rcv)));
 /* TODO: use LargeInteger if the size is very big */
 	return 1;
 }
@@ -664,14 +664,14 @@ static int prim_basic_at (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	pos = ACTIVE_STACK_GET(stix, stix->sp);
-	if (!STIX_OOP_IS_SMINT(pos))
+	if (!STIX_OOP_IS_SMOOI(pos))
 	{
 /* TODO: handle LargeInteger */
 		/* the position must be an integer */
 		return 0;
 	}
 
-	idx = STIX_OOP_TO_SMINT(pos);
+	idx = STIX_OOP_TO_SMOOI(pos);
 	if (idx < 1 || idx > STIX_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
@@ -684,7 +684,7 @@ static int prim_basic_at (stix_t* stix, stix_ooi_t nargs)
 	switch (STIX_OBJ_GET_FLAGS_TYPE(rcv))
 	{
 		case STIX_OBJ_TYPE_BYTE:
-			v = STIX_OOP_FROM_SMINT(((stix_oop_byte_t)rcv)->slot[idx]);
+			v = STIX_SMOOI_TO_OOP(((stix_oop_byte_t)rcv)->slot[idx]);
 			break;
 
 		case STIX_OBJ_TYPE_CHAR:
@@ -693,12 +693,12 @@ static int prim_basic_at (stix_t* stix, stix_ooi_t nargs)
 
 		case STIX_OBJ_TYPE_HALFWORD:
 			/* TODO: LargeInteger if the halfword is too large */
-			v = STIX_OOP_FROM_SMINT(((stix_oop_halfword_t)rcv)->slot[idx]);
+			v = STIX_SMOOI_TO_OOP(((stix_oop_halfword_t)rcv)->slot[idx]);
 			break;
 
 		case STIX_OBJ_TYPE_WORD:
 			/* TODO: LargeInteger if the word is too large */
-			v = STIX_OOP_FROM_SMINT(((stix_oop_word_t)rcv)->slot[idx]);
+			v = STIX_SMOOI_TO_OOP(((stix_oop_word_t)rcv)->slot[idx]);
 			break;
 
 		case STIX_OBJ_TYPE_OOP:
@@ -730,7 +730,7 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	pos = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	if (!STIX_OOP_IS_SMINT(pos))
+	if (!STIX_OOP_IS_SMOOI(pos))
 	{
 /* TODO: handle LargeInteger */
 		/* the position must be an integer */
@@ -739,7 +739,7 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 
 	val = ACTIVE_STACK_GET(stix, stix->sp);
 
-	idx = STIX_OOP_TO_SMINT(pos);
+	idx = STIX_OOP_TO_SMOOI(pos);
 	if (idx < 1 || idx > STIX_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
@@ -760,13 +760,13 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 	switch (STIX_OBJ_GET_FLAGS_TYPE(rcv))
 	{
 		case STIX_OBJ_TYPE_BYTE:
-			if (!STIX_OOP_IS_SMINT(val))
+			if (!STIX_OOP_IS_SMOOI(val))
 			{
 				/* the value is not a character */
 				return 0;
 			}
 /* TOOD: must I check the range of the value? */
-			((stix_oop_char_t)rcv)->slot[idx] = STIX_OOP_TO_SMINT(val);
+			((stix_oop_char_t)rcv)->slot[idx] = STIX_OOP_TO_SMOOI(val);
 			break;
 
 		case STIX_OBJ_TYPE_CHAR:
@@ -779,24 +779,24 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 			break;
 
 		case STIX_OBJ_TYPE_HALFWORD:
-			if (!STIX_OOP_IS_SMINT(val))
+			if (!STIX_OOP_IS_SMOOI(val))
 			{
 				/* the value is not a number */
 				return 0;
 			}
 
 			/* if the small integer is too large, it will get truncated */
-			((stix_oop_halfword_t)rcv)->slot[idx] = STIX_OOP_TO_SMINT(val);
+			((stix_oop_halfword_t)rcv)->slot[idx] = STIX_OOP_TO_SMOOI(val);
 			break;
 
 		case STIX_OBJ_TYPE_WORD:
 			/* TODO: handle largeINteger  */
-			if (!STIX_OOP_IS_SMINT(val))
+			if (!STIX_OOP_IS_SMOOI(val))
 			{
 				/* the value is not a number */
 				return 0;
 			}
-			((stix_oop_word_t)rcv)->slot[idx] = STIX_OOP_TO_SMINT(val);
+			((stix_oop_word_t)rcv)->slot[idx] = STIX_OOP_TO_SMOOI(val);
 			break;
 
 		case STIX_OBJ_TYPE_OOP:
@@ -857,7 +857,7 @@ printf ("PRIM REVALUING AN BLOCKCONTEXT\n");
 	}
 	STIX_ASSERT (STIX_OBJ_GET_SIZE(org_blkctx) == STIX_CONTEXT_NAMED_INSTVARS);
 
-	if (STIX_OOP_TO_SMINT(org_blkctx->method_or_nargs) != actual_arg_count /* nargs */)
+	if (STIX_OOP_TO_SMOOI(org_blkctx->method_or_nargs) != actual_arg_count /* nargs */)
 	{
 		/* the number of argument doesn't match */
 #if defined(STIX_DEBUG_EXEC)
@@ -922,11 +922,11 @@ printf ("~~~~~~~~~~ BLOCK VALUING %p TO NEW BLOCK %p\n", org_blkctx, blkctx);
 	/* the number of temporaries stored in the block context
 	 * accumulates the number of temporaries starting from the origin.
 	 * simple calculation is needed to find the number of local temporaries */
-	local_ntmprs = STIX_OOP_TO_SMINT(blkctx->ntmprs) -
-	               STIX_OOP_TO_SMINT(((stix_oop_context_t)blkctx->home)->ntmprs);
+	local_ntmprs = STIX_OOP_TO_SMOOI(blkctx->ntmprs) -
+	               STIX_OOP_TO_SMOOI(((stix_oop_context_t)blkctx->home)->ntmprs);
 	STIX_ASSERT (local_ntmprs >= nargs);
 
-	blkctx->sp = STIX_OOP_FROM_SMINT(local_ntmprs);
+	blkctx->sp = STIX_SMOOI_TO_OOP(local_ntmprs);
 	blkctx->sender = (stix_oop_t)stix->active_context;
 
 	*pblkctx = blkctx;
@@ -1019,15 +1019,15 @@ static int prim_integer_add (stix_t* stix, stix_ooi_t nargs)
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
 #if 0
-	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
 	{
 		stix_ooi_t tmp;
 
-		tmp = STIX_OOP_TO_SMINT(rcv) + STIX_OOP_TO_SMINT(arg);
+		tmp = STIX_OOP_TO_SMOOI(rcv) + STIX_OOP_TO_SMOOI(arg);
 		/* TODO: check overflow. if so convert it to LargeInteger */
 
 		ACTIVE_STACK_POP (stix);
-		ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(tmp));
+		ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(tmp));
 		return 1;
 	}
 
@@ -1055,14 +1055,14 @@ static int prim_integer_sub (stix_t* stix, stix_ooi_t nargs)
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
 #if 0
-	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
 	{
 		stix_ooi_t tmp;
-		tmp = STIX_OOP_TO_SMINT(rcv) - STIX_OOP_TO_SMINT(arg);
+		tmp = STIX_OOP_TO_SMOOI(rcv) - STIX_OOP_TO_SMOOI(arg);
 		/* TODO: check overflow. if so convert it to LargeInteger */
 
 		ACTIVE_STACK_POP (stix);
-		ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(tmp));
+		ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(tmp));
 		return 1;
 	}
 
@@ -1088,15 +1088,15 @@ static int prim_integer_mul (stix_t* stix, stix_ooi_t nargs)
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
 #if 0
-	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
 	{
 		stix_ooi_t tmp;
 
-		tmp = STIX_OOP_TO_SMINT(rcv) * STIX_OOP_TO_SMINT(arg);
+		tmp = STIX_OOP_TO_SMOOI(rcv) * STIX_OOP_TO_SMOOI(arg);
 		/* TODO: check overflow. if so convert it to LargeInteger */
 
 		ACTIVE_STACK_POP (stix);
-		ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(tmp));
+		ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(tmp));
 		return 1;
 	}
 
@@ -1121,10 +1121,10 @@ static int prim_integer_eq (stix_t* stix, stix_ooi_t nargs)
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
 	{
 		ACTIVE_STACK_POP (stix);
-		if (STIX_OOP_TO_SMINT(rcv) == STIX_OOP_TO_SMINT(arg))
+		if (STIX_OOP_TO_SMOOI(rcv) == STIX_OOP_TO_SMOOI(arg))
 		{
 			ACTIVE_STACK_SETTOP (stix, stix->_true);
 		}
@@ -1149,10 +1149,10 @@ static int prim_integer_ne (stix_t* stix, stix_ooi_t nargs)
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
 	{
 		ACTIVE_STACK_POP (stix);
-		if (STIX_OOP_TO_SMINT(rcv) != STIX_OOP_TO_SMINT(arg))
+		if (STIX_OOP_TO_SMOOI(rcv) != STIX_OOP_TO_SMOOI(arg))
 		{
 			ACTIVE_STACK_SETTOP (stix, stix->_true);
 		}
@@ -1176,10 +1176,10 @@ static int prim_integer_lt (stix_t* stix, stix_ooi_t nargs)
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
 	{
 		ACTIVE_STACK_POP (stix);
-		if (STIX_OOP_TO_SMINT(rcv) < STIX_OOP_TO_SMINT(arg))
+		if (STIX_OOP_TO_SMOOI(rcv) < STIX_OOP_TO_SMOOI(arg))
 		{
 			ACTIVE_STACK_SETTOP (stix, stix->_true);
 		}
@@ -1204,10 +1204,10 @@ static int prim_integer_gt (stix_t* stix, stix_ooi_t nargs)
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
 	{
 		ACTIVE_STACK_POP (stix);
-		if (STIX_OOP_TO_SMINT(rcv) > STIX_OOP_TO_SMINT(arg))
+		if (STIX_OOP_TO_SMOOI(rcv) > STIX_OOP_TO_SMOOI(arg))
 		{
 			ACTIVE_STACK_SETTOP (stix, stix->_true);
 		}
@@ -1232,10 +1232,10 @@ static int prim_integer_le (stix_t* stix, stix_ooi_t nargs)
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
 	{
 		ACTIVE_STACK_POP (stix);
-		if (STIX_OOP_TO_SMINT(rcv) <= STIX_OOP_TO_SMINT(arg))
+		if (STIX_OOP_TO_SMOOI(rcv) <= STIX_OOP_TO_SMOOI(arg))
 		{
 			ACTIVE_STACK_SETTOP (stix, stix->_true);
 		}
@@ -1260,10 +1260,10 @@ static int prim_integer_ge (stix_t* stix, stix_ooi_t nargs)
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (STIX_OOP_IS_SMINT(rcv) && STIX_OOP_IS_SMINT(arg))
+	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
 	{
 		ACTIVE_STACK_POP (stix);
-		if (STIX_OOP_TO_SMINT(rcv) >= STIX_OOP_TO_SMINT(arg))
+		if (STIX_OOP_TO_SMOOI(rcv) >= STIX_OOP_TO_SMOOI(arg))
 		{
 			ACTIVE_STACK_SETTOP (stix, stix->_true);
 		}
@@ -1343,7 +1343,7 @@ static int prim_ffi_open (stix_t* stix, stix_ooi_t nargs)
 
 	ACTIVE_STACK_POP (stix);
 /* TODO: how to hold an address? as an integer????  or a byte array? */
-	ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(handle));
+	ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(handle));
 
 	return 1;
 }
@@ -1360,7 +1360,7 @@ static int prim_ffi_close (stix_t* stix, stix_ooi_t nargs)
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (!STIX_OOP_IS_SMINT(arg))
+	if (!STIX_OOP_IS_SMOOI(arg))
 	{
 		/* TODO: more info on error */
 		return 0;
@@ -1368,7 +1368,7 @@ static int prim_ffi_close (stix_t* stix, stix_ooi_t nargs)
 
 	ACTIVE_STACK_POP (stix);
 
-	handle = STIX_OOP_TO_SMINT(arg); /* TODO: how to store void* ??? */
+	handle = STIX_OOP_TO_SMOOI(arg); /* TODO: how to store void* ??? */
 	if (stix->vmprim.mod_close) stix->vmprim.mod_close (stix, handle);
 	return 1;
 }
@@ -1385,7 +1385,7 @@ static int prim_ffi_call (stix_t* stix, stix_ooi_t nargs)
 	sig = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	args = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (!STIX_OOP_IS_SMINT(fun)) /* TODO: how to store pointer  */
+	if (!STIX_OOP_IS_SMOOI(fun)) /* TODO: how to store pointer  */
 	{
 		/* TODO: more info on error */
 		return 0;
@@ -1410,7 +1410,7 @@ printf ("wrong signature...\n");
 		stix_oop_oop_t arr;
 		int mode_set;
 
-		f = STIX_OOP_TO_SMINT(fun); /* TODO: decode pointer properly */
+		f = STIX_OOP_TO_SMOOI(fun); /* TODO: decode pointer properly */
 		arr = (stix_oop_oop_t)args;
 
 		dc = dcNewCallVM (4096);
@@ -1451,15 +1451,15 @@ printf ("CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MOD
 					break;
 
 				case 'i':
-					dcArgInt (dc, STIX_OOP_TO_SMINT(arr->slot[i - 2]));
+					dcArgInt (dc, STIX_OOP_TO_SMOOI(arr->slot[i - 2]));
 					break;
 
 				case 'l':
-					dcArgLong (dc, STIX_OOP_TO_SMINT(arr->slot[i - 2]));
+					dcArgLong (dc, STIX_OOP_TO_SMOOI(arr->slot[i - 2]));
 					break;
 
 				case 'L':
-					dcArgLongLong (dc, STIX_OOP_TO_SMINT(arr->slot[i - 2]));
+					dcArgLongLong (dc, STIX_OOP_TO_SMOOI(arr->slot[i - 2]));
 					break;
 
 				case 's':
@@ -1500,21 +1500,21 @@ printf ("CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MOD
 				int r = dcCallInt (dc, f);
 printf ("CALLED... %d\n", r);
 printf ("CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
-				ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(r));
+				ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(r));
 				break;
 			}
 
 			case 'l':
 			{
 				long r = dcCallLong (dc, f);
-				ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(r));
+				ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(r));
 				break;
 			}
 
 			case 'L':
 			{
 				long long r = dcCallLongLong (dc, f);
-				ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(r));
+				ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(r));
 				break;
 			}
 
@@ -1556,7 +1556,7 @@ static int prim_ffi_getsym (stix_t* stix, stix_ooi_t nargs)
 	fun = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	hnd = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (!STIX_OOP_IS_SMINT(hnd)) /* TODO: how to store pointer  */
+	if (!STIX_OOP_IS_SMOOI(hnd)) /* TODO: how to store pointer  */
 	{
 		/* TODO: more info on error */
 		return 0;
@@ -1573,7 +1573,7 @@ printf ("wrong function name...\n");
 		return 0;
 	}
 
-	sym = stix->vmprim.mod_getsym (stix, STIX_OOP_TO_SMINT(hnd), ((stix_oop_char_t)fun)->slot);
+	sym = stix->vmprim.mod_getsym (stix, STIX_OOP_TO_SMOOI(hnd), ((stix_oop_char_t)fun)->slot);
 	if (!sym)
 	{
 		return 0;
@@ -1581,7 +1581,7 @@ printf ("wrong function name...\n");
 
 	ACTIVE_STACK_POPS (stix, 2);
 /* TODO: how to hold an address? as an integer????  or a byte array? */
-	ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(sym));
+	ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(sym));
 
 	return 1;
 }
@@ -1952,7 +1952,7 @@ printf ("BCODE = %x\n", bcode);
 
 					do
 					{
-						home_ntmprs = STIX_OOP_TO_SMINT(((stix_oop_context_t)home)->ntmprs);
+						home_ntmprs = STIX_OOP_TO_SMOOI(((stix_oop_context_t)home)->ntmprs);
 						if (b1 >= home_ntmprs) break;
 
 						ctx = (stix_oop_context_t)home;
@@ -2323,9 +2323,9 @@ printf ("]\n");
 					goto oops;
 				}
 
-				STIX_ASSERT (STIX_OOP_TO_SMINT(newmth->tmpr_nargs) == b1);
+				STIX_ASSERT (STIX_OOP_TO_SMOOI(newmth->tmpr_nargs) == b1);
 
-				preamble = STIX_OOP_TO_SMINT(newmth->preamble);
+				preamble = STIX_OOP_TO_SMOOI(newmth->preamble);
 				preamble_code = STIX_METHOD_GET_PREAMBLE_CODE(preamble);
 				switch (preamble_code)
 				{
@@ -2355,13 +2355,13 @@ printf ("]\n");
 					case STIX_METHOD_PREAMBLE_RETURN_INDEX:
 						DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_INDEX %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
 						ACTIVE_STACK_POPS (stix, b1);
-						ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
+						ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
 						break;
 
 					case STIX_METHOD_PREAMBLE_RETURN_NEGINDEX:
 						DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_NEGINDEX %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
 						ACTIVE_STACK_POPS (stix, b1);
-						ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_SMINT(-STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
+						ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(-STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
 						break;
 
 					case STIX_METHOD_PREAMBLE_RETURN_INSTVAR:
@@ -2438,8 +2438,8 @@ printf ("]\n");
 						STIX_ASSERT (STIX_CLASSOF(stix,name) == stix->_symbol);
 
 						/* merge two SmallIntegers to get a full pointer */
-						handler = (stix_oow_t)STIX_OOP_TO_SMINT(newmth->preamble_data[0]) << (STIX_OOW_BITS / 2) | 
-						          (stix_oow_t)STIX_OOP_TO_SMINT(newmth->preamble_data[1]);
+						handler = (stix_oow_t)STIX_OOP_TO_SMOOI(newmth->preamble_data[0]) << (STIX_OOW_BITS / 2) | 
+						          (stix_oow_t)STIX_OOP_TO_SMOOI(newmth->preamble_data[1]);
 						if (!handler) handler = query_prim_module (stix, ((stix_oop_char_t)name)->slot, STIX_OBJ_GET_SIZE(name));
 
 						if (handler)
@@ -2447,8 +2447,8 @@ printf ("]\n");
 							int n;
 
 							/* split a pointer to two OOP fields as SmallIntegers for storing. */
-							newmth->preamble_data[0] = STIX_OOP_FROM_SMINT((stix_oow_t)handler >> (STIX_OOW_BITS / 2));
-							newmth->preamble_data[1] = STIX_OOP_FROM_SMINT((stix_oow_t)handler & STIX_LBMASK(stix_oow_t, STIX_OOW_BITS / 2));
+							newmth->preamble_data[0] = STIX_SMOOI_TO_OOP((stix_oow_t)handler >> (STIX_OOW_BITS / 2));
+							newmth->preamble_data[1] = STIX_SMOOI_TO_OOP((stix_oow_t)handler & STIX_LBMASK(stix_oow_t, STIX_OOW_BITS / 2));
 
 							stix_pushtmp (stix, (stix_oop_t*)&newmth);
 							n = handler (stix, b1);
@@ -2501,34 +2501,34 @@ printf ("]\n");
 
 			case BCODE_PUSH_NEGONE:
 				DBGOUT_EXEC_0 ("PUSH_NEGONE");
-				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(-1));
+				ACTIVE_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(-1));
 				break;
 
 			case BCODE_PUSH_ZERO:
 				DBGOUT_EXEC_0 ("PUSH_ZERO");
-				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(0));
+				ACTIVE_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(0));
 				break;
 
 			case BCODE_PUSH_ONE:
 				DBGOUT_EXEC_0 ("PUSH_ONE");
-				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(1));
+				ACTIVE_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(1));
 				break;
 
 			case BCODE_PUSH_TWO:
 				DBGOUT_EXEC_0 ("PUSH_TWO");
-				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(2));
+				ACTIVE_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(2));
 				break;
 
 			case BCODE_PUSH_INTLIT:
 				FETCH_PARAM_CODE_TO (stix, b1);
 				DBGOUT_EXEC_1 ("PUSH_INTLIT %d", (int)b1);
-				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(b1));
+				ACTIVE_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(b1));
 				break;
 
 			case BCODE_PUSH_NEGINTLIT:
 				FETCH_PARAM_CODE_TO (stix, b1);
 				DBGOUT_EXEC_1 ("PUSH_NEGINTLIT %d", (int)-b1);
-				ACTIVE_STACK_PUSH (stix, STIX_OOP_FROM_SMINT(-b1));
+				ACTIVE_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(-b1));
 				break;
 
 			/* -------------------------------------------------------- */
@@ -2680,15 +2680,15 @@ printf ("TERMINATE A PROCESS............\n");
 				 *   11000100 KKKKKKKK or 11000100 KKKKKKKK KKKKKKKK 
 				 * depending on STIX_BCODE_LONG_PARAM_SIZE. change 'ip' to point to
 				 * the instruction after the jump. */
-				blkctx->ip = STIX_OOP_FROM_SMINT(stix->ip + STIX_BCODE_LONG_PARAM_SIZE + 1);
+				blkctx->ip = STIX_SMOOI_TO_OOP(stix->ip + STIX_BCODE_LONG_PARAM_SIZE + 1);
 				/* stack pointer below the bottom. this block context has an
 				 * empty stack anyway. */
-				blkctx->sp = STIX_OOP_FROM_SMINT(-1);
+				blkctx->sp = STIX_SMOOI_TO_OOP(-1);
 				/* the number of arguments for a block context is local to the block */
-				blkctx->method_or_nargs = STIX_OOP_FROM_SMINT(b1);
+				blkctx->method_or_nargs = STIX_SMOOI_TO_OOP(b1);
 				/* the number of temporaries here is an accumulated count including
 				 * the number of temporaries of a home context */
-				blkctx->ntmprs = STIX_OOP_FROM_SMINT(b2);
+				blkctx->ntmprs = STIX_SMOOI_TO_OOP(b2);
 
 				blkctx->home = (stix_oop_t)stix->active_context;
 				blkctx->receiver_or_source = stix->_nil; /* no source */
@@ -2710,11 +2710,11 @@ printf ("TERMINATE A PROCESS............\n");
 				STIX_ASSERT (stix->sp >= 2);
 
 				STIX_ASSERT (STIX_CLASSOF(stix, ACTIVE_STACK_GETTOP(stix)) == stix->_small_integer);
-				ntmprs = STIX_OOP_TO_SMINT(ACTIVE_STACK_GETTOP(stix));
+				ntmprs = STIX_OOP_TO_SMOOI(ACTIVE_STACK_GETTOP(stix));
 				ACTIVE_STACK_POP (stix);
 
 				STIX_ASSERT (STIX_CLASSOF(stix, ACTIVE_STACK_GETTOP(stix)) == stix->_small_integer);
-				nargs = STIX_OOP_TO_SMINT(ACTIVE_STACK_GETTOP(stix));
+				nargs = STIX_OOP_TO_SMOOI(ACTIVE_STACK_GETTOP(stix));
 				ACTIVE_STACK_POP (stix);
 
 				STIX_ASSERT (nargs >= 0);
@@ -2753,13 +2753,13 @@ printf ("TERMINATE A PROCESS............\n");
 				 *   0000XXXX KKKKKKKK or 0000XXXX KKKKKKKK KKKKKKKK 
 				 * depending on STIX_BCODE_LONG_PARAM_SIZE. change 'ip' to point to
 				 * the instruction after the jump. */
-				blkctx->ip = STIX_OOP_FROM_SMINT(stix->ip + STIX_BCODE_LONG_PARAM_SIZE + 1);
-				blkctx->sp = STIX_OOP_FROM_SMINT(-1);
+				blkctx->ip = STIX_SMOOI_TO_OOP(stix->ip + STIX_BCODE_LONG_PARAM_SIZE + 1);
+				blkctx->sp = STIX_SMOOI_TO_OOP(-1);
 				/* the number of arguments for a block context is local to the block */
-				blkctx->method_or_nargs = STIX_OOP_FROM_SMINT(nargs);
+				blkctx->method_or_nargs = STIX_SMOOI_TO_OOP(nargs);
 				/* the number of temporaries here is an accumulated count including
 				 * the number of temporaries of a home context */
-				blkctx->ntmprs = STIX_OOP_FROM_SMINT(ntmprs);
+				blkctx->ntmprs = STIX_SMOOI_TO_OOP(ntmprs);
 
 				blkctx->home = (stix_oop_t)rctx;
 				blkctx->receiver_or_source = stix->_nil;

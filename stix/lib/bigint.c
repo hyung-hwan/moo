@@ -156,6 +156,28 @@ static STIX_INLINE stix_oop_t make_bigint_with_ooi (stix_t* stix, stix_ooi_t i)
 #endif
 }
 
+static STIX_INLINE stix_oop_t make_bigint_with_intmax (stix_t* stix, stix_intmax_t v)
+{
+	/* this is not a generic function. it can't handle v 
+	 * if it's STIX_TYPE_MIN(stix_intmax_t) */
+	stix_oow_t len;
+	atom_t buf[STIX_SIZEOF_INTMAX_T / SIZEOF_ATOM_T];
+	stix_uintmax_t ui;
+
+	STIX_ASSERT (v > STIX_TYPE_MIN(stix_intmax_t));
+
+	ui = (v >= 0)? v: -v;
+	len = 0;
+	do
+	{
+		buf[len++] = (atom_t)ui;
+		ui = ui >> ATOM_BITS;
+	}
+	while (ui > 0);
+
+	return stix_instantiate (stix, ((v >= 0)? stix->_large_positive_integer: stix->_large_negative_integer), buf, len);
+}
+
 static STIX_INLINE stix_oop_t clone_bigint (stix_t* stix, stix_oop_t oop, stix_oow_t count)
 {
 	stix_oop_t z;
@@ -166,6 +188,31 @@ static STIX_INLINE stix_oop_t clone_bigint (stix_t* stix, stix_oop_t oop, stix_o
 
 	stix_pushtmp (stix, &oop);
 	z = stix_instantiate (stix, STIX_OBJ_GET_CLASS(oop), STIX_NULL, count);
+	stix_poptmp (stix);
+	if (!z) return STIX_NULL;
+
+	for (i = 0; i < count; i++)
+	{
+		((oop_atom_t)z)->slot[i] = ((oop_atom_t)oop)->slot[i];
+	}
+	return z;
+}
+
+static STIX_INLINE stix_oop_t clone_bigint_negated (stix_t* stix, stix_oop_t oop, stix_oow_t count)
+{
+	stix_oop_t z, c;
+	stix_oow_t i;
+
+	STIX_ASSERT (STIX_OOP_IS_POINTER(oop));
+	if (count <= 0) count = STIX_OBJ_GET_SIZE(oop);
+
+	if (STIX_OBJ_GET_CLASS(oop) == stix->_large_positive_integer)
+		c = stix->_large_negative_integer;
+	else
+		c = stix->_large_positive_integer;
+
+	stix_pushtmp (stix, &oop);
+	z = stix_instantiate (stix, c, STIX_NULL, count);
 	stix_poptmp (stix);
 	if (!z) return STIX_NULL;
 
@@ -204,13 +251,13 @@ static stix_oop_t normalize_bigint (stix_t* stix, stix_oop_t oop)
 		w = ((oop_atom_t)oop)->slot[0];
 		if (STIX_OBJ_GET_CLASS(oop) == stix->_large_positive_integer)
 		{
-			if (w <= STIX_SMINT_MAX) return STIX_OOP_FROM_SMINT(w);
+			if (w <= STIX_SMOOI_MAX) return STIX_SMOOI_TO_OOP(w);
 		}
 		else
 		{
 			STIX_ASSERT (STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer);
-			/*if (w <= -STIX_SMINT_MIN) */
-			if (w <= ((stix_oow_t)STIX_SMINT_MAX + 1)) return STIX_OOP_FROM_SMINT(-(stix_ooi_t)w);
+			/*if (w <= -STIX_SMOOI_MIN) */
+			if (w <= ((stix_oow_t)STIX_SMOOI_MAX + 1)) return STIX_SMOOI_TO_OOP(-(stix_ooi_t)w);
 		}
 	}
 #else
@@ -218,12 +265,12 @@ static stix_oop_t normalize_bigint (stix_t* stix, stix_oop_t oop)
 	{
 		if (STIX_OBJ_GET_CLASS(oop) == stix->_large_positive_integer)
 		{
-			return STIX_OOP_FROM_SMINT(((oop_atom_t)oop)->slot[0]);
+			return STIX_SMOOI_TO_OOP(((oop_atom_t)oop)->slot[0]);
 		}
 		else
 		{
 			STIX_ASSERT (STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer);
-			return STIX_OOP_FROM_SMINT(-(stix_oow_t)((oop_atom_t)oop)->slot[0]);
+			return STIX_SMOOI_TO_OOP(-(stix_oow_t)((oop_atom_t)oop)->slot[0]);
 		}
 	}
 	else if (count == 2)
@@ -233,13 +280,13 @@ static stix_oop_t normalize_bigint (stix_t* stix, stix_oop_t oop)
 		w = MAKE_WORD (((oop_atom_t)oop)->slot[0], ((oop_atom_t)oop)->slot[1]);
 		if (STIX_OBJ_GET_CLASS(oop) == stix->_large_positive_integer)
 		{
-			if (w <= STIX_SMINT_MAX) return STIX_OOP_FROM_SMINT(w);
+			if (w <= STIX_SMOOI_MAX) return STIX_SMOOI_TO_OOP(w);
 		}
 		else
 		{
 			STIX_ASSERT (STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer);
-			/*if (w <= -STIX_SMINT_MIN) */
-			if (w <= ((stix_oow_t)STIX_SMINT_MAX + 1)) return STIX_OOP_FROM_SMINT(-(stix_ooi_t)w);
+			/*if (w <= -STIX_SMOOI_MIN) */
+			if (w <= ((stix_oow_t)STIX_SMOOI_MAX + 1)) return STIX_SMOOI_TO_OOP(-(stix_ooi_t)w);
 		}
 	}
 #endif
@@ -521,29 +568,30 @@ stix_oop_t stix_addints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 {
 	stix_oop_t z;
 
-	if (STIX_OOP_IS_SMINT(x) && STIX_OOP_IS_SMINT(y))
+	if (STIX_OOP_IS_SMOOI(x) && STIX_OOP_IS_SMOOI(y))
 	{
 		stix_ooi_t i;
+
 		/* no integer overflow/underflow must occur as the possible integer
 		 * range is narrowed by the tag bits used */
-		i = STIX_OOP_TO_SMINT(x) + STIX_OOP_TO_SMINT(y);
-		if (STIX_OOI_IN_SMINT_RANGE(i)) return STIX_OOP_FROM_SMINT(i);
+		STIX_ASSERT (STIX_SMOOI_MAX + STIX_SMOOI_MAX < STIX_TYPE_MAX(stix_ooi_t));
+		STIX_ASSERT (STIX_SMOOI_MIN + STIX_SMOOI_MIN > STIX_TYPE_MIN(stix_ooi_t));
 
-		STIX_ASSERT (STIX_SMINT_MAX + STIX_SMINT_MAX < STIX_TYPE_MAX(stix_ooi_t));
-		STIX_ASSERT (STIX_SMINT_MIN + STIX_SMINT_MIN > STIX_TYPE_MAX(stix_ooi_t));
+		i = STIX_OOP_TO_SMOOI(x) + STIX_OOP_TO_SMOOI(y);
+		if (STIX_IN_SMOOI_RANGE(i)) return STIX_SMOOI_TO_OOP(i);
+
 		return make_bigint_with_ooi (stix, i);
 	}
 	else
 	{
 		stix_ooi_t v;
-		int neg;
 
-		if (STIX_OOP_IS_SMINT(x))
+		if (STIX_OOP_IS_SMOOI(x))
 		{
 			if (!is_integer(stix,y)) goto oops_einval;
 
-			v = STIX_OOP_TO_SMINT(x);
-			if (v == 0) return y;
+			v = STIX_OOP_TO_SMOOI(x);
+			if (v == 0) return clone_bigint (stix, y, STIX_OBJ_GET_SIZE(y));
 
 			stix_pushtmp (stix, &y);
 			x = make_bigint_with_ooi (stix, v);
@@ -551,12 +599,12 @@ stix_oop_t stix_addints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 
 			if (!x) return STIX_NULL;
 		}
-		else if (STIX_OOP_IS_SMINT(y))
+		else if (STIX_OOP_IS_SMOOI(y))
 		{
 			if (!is_integer(stix,x)) goto oops_einval;
 
-			v = STIX_OOP_TO_SMINT(y);
-			if (v == 0) return x;
+			v = STIX_OOP_TO_SMOOI(y);
+			if (v == 0) return clone_bigint (stix, x, STIX_OBJ_GET_SIZE(x));
 
 			stix_pushtmp (stix, &x);
 			y = make_bigint_with_ooi (stix, v);
@@ -586,6 +634,7 @@ stix_oop_t stix_addints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		}
 		else
 		{
+			int neg;
 			/* both are positive or negative */
 			neg = (STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer); 
 			z = add_unsigned_integers (stix, x, y);
@@ -605,13 +654,17 @@ stix_oop_t stix_subints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 {
 	stix_oop_t z;
 
-	if (STIX_OOP_IS_SMINT(x) && STIX_OOP_IS_SMINT(y))
+	if (STIX_OOP_IS_SMOOI(x) && STIX_OOP_IS_SMOOI(y))
 	{
 		stix_ooi_t i;
+
 		/* no integer overflow/underflow must occur as the possible integer
 		 * range is narrowed by the tag bits used */
-		i = STIX_OOP_TO_SMINT(x) - STIX_OOP_TO_SMINT(y);
-		if (STIX_OOI_IN_SMINT_RANGE(i)) return STIX_OOP_FROM_SMINT(i);
+		STIX_ASSERT (STIX_SMOOI_MAX - STIX_SMOOI_MIN < STIX_TYPE_MAX(stix_ooi_t));
+		STIX_ASSERT (STIX_SMOOI_MIN - STIX_SMOOI_MAX > STIX_TYPE_MIN(stix_ooi_t));
+
+		i = STIX_OOP_TO_SMOOI(x) - STIX_OOP_TO_SMOOI(y);
+		if (STIX_IN_SMOOI_RANGE(i)) return STIX_SMOOI_TO_OOP(i);
 
 		return make_bigint_with_ooi (stix, i);
 	}
@@ -620,18 +673,15 @@ stix_oop_t stix_subints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		stix_ooi_t v;
 		int neg;
 
-		if (STIX_OOP_IS_SMINT(x))
+		if (STIX_OOP_IS_SMOOI(x))
 		{
 			if (!is_integer(stix,y)) goto oops_einval;
 
-			v = STIX_OOP_TO_SMINT(x);
+			v = STIX_OOP_TO_SMOOI(x);
 			if (v == 0) 
 			{
 				/* switch the sign to the opposite and return it */
-				neg = (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer);
-				z = clone_bigint (stix, y, 0);
-				if (!neg) STIX_OBJ_SET_CLASS(z, stix->_large_negative_integer);
-				return z;
+				return clone_bigint_negated (stix, y, STIX_OBJ_GET_SIZE(y));
 			}
 
 			stix_pushtmp (stix, &y);
@@ -639,12 +689,12 @@ stix_oop_t stix_subints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			if (!x) return STIX_NULL;
 			stix_poptmp (stix);
 		}
-		else if (STIX_OOP_IS_SMINT(y))
+		else if (STIX_OOP_IS_SMOOI(y))
 		{
 			if (!is_integer(stix,x)) goto oops_einval;
 
-			v = STIX_OOP_TO_SMINT(y);
-			if (v == 0) return x;
+			v = STIX_OOP_TO_SMOOI(y);
+			if (v == 0) return clone_bigint (stix, x, STIX_OBJ_GET_SIZE(x));
 
 			stix_pushtmp (stix, &x);
 			y = make_bigint_with_ooi (stix, v);
@@ -691,34 +741,45 @@ oops_einval:
 	return STIX_NULL;
 }
 
-
 stix_oop_t stix_mulints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 {
 	stix_oop_t z;
 
-	if (STIX_OOP_IS_SMINT(x) && STIX_OOP_IS_SMINT(y))
+	if (STIX_OOP_IS_SMOOI(x) && STIX_OOP_IS_SMOOI(y))
 	{
-/* TODO: XXXXXXXXXXXXXXXXXXXXXXXxx */
-		stix_ooi_t i;
-		/* no integer overflow/underflow must occur as the possible integer
-		 * range is narrowed by the tag bits used */
-		i = STIX_OOP_TO_SMINT(x) * STIX_OOP_TO_SMINT(y);
-		if (STIX_OOI_IN_SMINT_RANGE(i)) return STIX_OOP_FROM_SMINT(i);
+	#if STIX_SIZEOF_INTMAX_T > STIX_SIZEOF_OOI_T
+		stix_intmax_t i;
 
-		STIX_ASSERT (STIX_SMINT_MAX + STIX_SMINT_MAX < STIX_TYPE_MAX(stix_ooi_t));
-		STIX_ASSERT (STIX_SMINT_MIN + STIX_SMINT_MIN > STIX_TYPE_MAX(stix_ooi_t));
+		i = (stix_intmax_t)STIX_OOP_TO_SMOOI(x) * (stix_intmax_t)STIX_OOP_TO_SMOOI(y);
+		if (STIX_IN_SMOOI_RANGE(i)) return STIX_SMOOI_TO_OOP((stix_ooi_t)i);
+
+		return make_bigint_with_intmax (stix, i);
+	#else
+		stix_ooi_t i;
+		i = STIX_OOP_TO_SMOOI(x) * STIX_OOP_TO_SMOOI(y);
+		if (STIX_IN_SMOOI_RANGE(i)) return STIX_SMOOI_TO_OOP(i);
+
 		return make_bigint_with_ooi (stix, i);
+	#endif
 	}
 	else
 	{
 		stix_ooi_t v;
 
-		if (STIX_OOP_IS_SMINT(x))
+		if (STIX_OOP_IS_SMOOI(x))
 		{
 			if (!is_integer(stix,y)) goto oops_einval;
 
-			v = STIX_OOP_TO_SMINT(x);
-			if (v == 0) return STIX_OOP_FROM_SMINT(0);
+			v = STIX_OOP_TO_SMOOI(x);
+			switch (v)
+			{
+				case 0:
+					return STIX_SMOOI_TO_OOP(0);
+				case 1:
+					return clone_bigint (stix, y, STIX_OBJ_GET_SIZE(y));
+				case -1:
+					return clone_bigint_negated (stix, y, STIX_OBJ_GET_SIZE(y));
+			}
 
 			stix_pushtmp (stix, &y);
 			x = make_bigint_with_ooi (stix, v);
@@ -726,12 +787,20 @@ stix_oop_t stix_mulints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 
 			if (!x) return STIX_NULL;
 		}
-		else if (STIX_OOP_IS_SMINT(y))
+		else if (STIX_OOP_IS_SMOOI(y))
 		{
 			if (!is_integer(stix,x)) goto oops_einval;
 
-			v = STIX_OOP_TO_SMINT(y);
-			if (v == 0) return STIX_OOP_FROM_SMINT(0);
+			v = STIX_OOP_TO_SMOOI(y);
+			switch (v)
+			{
+				case 0:
+					return STIX_SMOOI_TO_OOP(0);
+				case 1:
+					return clone_bigint (stix, x, STIX_OBJ_GET_SIZE(x));
+				case -1:
+					return clone_bigint_negated (stix, x, STIX_OBJ_GET_SIZE(x));
+			}
 
 			stix_pushtmp (stix, &x);
 			y = make_bigint_with_ooi (stix, v);
@@ -779,7 +848,7 @@ static stix_uint8_t ooch_val_tab[] =
 	25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 99, 99, 99, 99, 99
 };
 
-stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, unsigned int radix)
+stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, int radix)
 {
 	int neg = 0;
 	const stix_ooch_t* ptr, * start, * end;
@@ -787,6 +856,12 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 	atom_t hw[16], * hwp = STIX_NULL;
 	stix_oow_t hwlen, outlen;
 	stix_oop_t res;
+
+	if (radix < 0) 
+	{
+		neg = 1;
+		radix = -radix;
+	}
 
 	STIX_ASSERT (radix >= 2 && radix <= 36);
 
@@ -813,7 +888,7 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 	if (ptr >= end)
 	{
 		/* all zeros */
-		return STIX_OOP_FROM_SMINT(0);
+		return STIX_SMOOI_TO_OOP(0);
 	}
 
 	hwlen = 0;
@@ -979,32 +1054,32 @@ printf ("%08lx ", (unsigned long)hwp[--i]);
 printf ("\n");
 }
 
-	STIX_ASSERT (hwlen > 1);
+	STIX_ASSERT (hwlen >= 1);
 #if defined(USE_FULL_WORD)
 	if (hwlen == 1) 
 	{
 		w = hwp[0];
 		if (neg) 
 		{
-			if (w <= STIX_SMINT_MAX + 1) return STIX_OOP_FROM_SMINT(-(stix_ooi_t)w);
+			if (w <= STIX_SMOOI_MAX + 1) return STIX_SMOOI_TO_OOP(-(stix_ooi_t)w);
 		}
 		else 
 		{
-			if (w <= STIX_SMINT_MAX) return STIX_OOP_FROM_SMINT(w);
+			if (w <= STIX_SMOOI_MAX) return STIX_SMOOI_TO_OOP(w);
 		}
 	}
 #else
-	if (hwlen == 1) return STIX_OOP_FROM_SMINT((stix_ooi_t)hwp[0] * -neg);
+	if (hwlen == 1) return STIX_SMOOI_TO_OOP((stix_ooi_t)hwp[0] * -neg);
 	else if (hwlen == 2)
 	{
 		w = MAKE_WORD(hwp[0], hwp[1]);
 		if (neg) 
 		{
-			if (w <= STIX_SMINT_MAX + 1) return STIX_OOP_FROM_SMINT(-(stix_ooi_t)w);
+			if (w <= STIX_SMOOI_MAX + 1) return STIX_SMOOI_TO_OOP(-(stix_ooi_t)w);
 		}
 		else 
 		{
-			if (w <= STIX_SMINT_MAX) return STIX_OOP_FROM_SMINT(w);
+			if (w <= STIX_SMOOI_MAX) return STIX_SMOOI_TO_OOP(w);
 		}
 	}
 #endif

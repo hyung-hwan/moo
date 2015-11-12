@@ -119,21 +119,21 @@ typedef struct stix_obj_word_t*     stix_oop_word_t;
 #define STIX_OOP_IS_POINTER(oop) (!STIX_OOP_IS_NUMERIC(oop))
 #define STIX_OOP_GET_TAG(oop) (((stix_oow_t)oop) & STIX_LBMASK(stix_oow_t, STIX_OOP_TAG_BITS))
 
-#define STIX_OOP_IS_SMINT(oop) (((stix_ooi_t)oop) & STIX_OOP_TAG_SMINT)
+#define STIX_OOP_IS_SMOOI(oop) (((stix_ooi_t)oop) & STIX_OOP_TAG_SMINT)
 #define STIX_OOP_IS_CHAR(oop) (((stix_oow_t)oop) & STIX_OOP_TAG_CHAR)
-#define STIX_OOP_FROM_SMINT(num) ((stix_oop_t)((((stix_ooi_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_SMINT))
-#define STIX_OOP_TO_SMINT(oop) (((stix_ooi_t)oop) >> STIX_OOP_TAG_BITS)
+#define STIX_SMOOI_TO_OOP(num) ((stix_oop_t)((((stix_ooi_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_SMINT))
+#define STIX_OOP_TO_SMOOI(oop) (((stix_ooi_t)oop) >> STIX_OOP_TAG_BITS)
 #define STIX_OOP_FROM_CHAR(num) ((stix_oop_t)((((stix_oow_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_CHAR))
 #define STIX_OOP_TO_CHAR(oop) (((stix_oow_t)oop) >> STIX_OOP_TAG_BITS)
 
 #define STIX_SMINT_BITS (STIX_SIZEOF(stix_ooi_t) * 8 - STIX_OOP_TAG_BITS)
-#define STIX_SMINT_MAX ((stix_ooi_t)(~((stix_oow_t)0) >> (STIX_OOP_TAG_BITS + 1)))
-#define STIX_SMINT_MIN (-STIX_SMINT_MAX - 1)
-#define STIX_OOI_IN_SMINT_RANGE(ooi)  ((ooi) >= STIX_SMINT_MIN && (ooi) <= STIX_SMINT_MAX)
+#define STIX_SMOOI_MAX ((stix_ooi_t)(~((stix_oow_t)0) >> (STIX_OOP_TAG_BITS + 1)))
+#define STIX_SMOOI_MIN (-STIX_SMOOI_MAX - 1)
+#define STIX_IN_SMOOI_RANGE(ooi)  ((ooi) >= STIX_SMOOI_MIN && (ooi) <= STIX_SMOOI_MAX)
 
 /* TODO: There are untested code where smint is converted to stix_oow_t.
  *       for example, the spec making macro treats the number as stix_oow_t instead of stix_ooi_t.
- *       as of this writing, i skip testing that part with the spec value exceeding STIX_SMINT_MAX.
+ *       as of this writing, i skip testing that part with the spec value exceeding STIX_SMOOI_MAX.
  *       later, please verify it works, probably by limiting the value ranges in such macros
  */
 
@@ -509,7 +509,7 @@ struct stix_process_scheduler_t
  * object encoded into a pointer.
  */
 #define STIX_CLASSOF(stix,oop) ( \
-	STIX_OOP_IS_SMINT(oop)? (stix)->_small_integer: \
+	STIX_OOP_IS_SMOOI(oop)? (stix)->_small_integer: \
 	STIX_OOP_IS_CHAR(oop)? (stix)->_character: STIX_OBJ_GET_CLASS(oop) \
 )
 

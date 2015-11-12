@@ -97,9 +97,9 @@ void print_object (stix_t* stix, stix_oop_t oop)
 	{
 		printf ("false");
 	}
-	else if (STIX_OOP_IS_SMINT(oop))
+	else if (STIX_OOP_IS_SMOOI(oop))
 	{
-		printf ("%ld", (long int)STIX_OOP_TO_SMINT(oop));
+		printf ("%ld", (long int)STIX_OOP_TO_SMOOI(oop));
 	}
 	else if (STIX_OOP_IS_CHAR(oop))
 	{
@@ -209,9 +209,9 @@ static void __dump_object (stix_t* stix, stix_oop_t oop, int depth)
 	{
 		printf (" false");
 	}
-	else if (STIX_OOP_IS_SMINT(oop))
+	else if (STIX_OOP_IS_SMOOI(oop))
 	{
-		printf (" %ld", (long int)STIX_OOP_TO_SMINT(oop));
+		printf (" %ld", (long int)STIX_OOP_TO_SMOOI(oop));
 	}
 	else if (STIX_OOP_IS_CHAR(oop))
 	{

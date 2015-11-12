@@ -388,10 +388,10 @@ int main (int argc, char* argv[])
 		(unsigned long int)STIX_MAX_CLASSVARS,
 		(unsigned long int)STIX_MAX_CLASSINSTVARS,
 		(unsigned long int)STIX_TYPE_MAX(stix_oow_t),
-		(long)STIX_SMINT_MAX, (long)STIX_SMINT_MIN);
+		(long)STIX_SMOOI_MAX, (long)STIX_SMOOI_MIN);
 
-	printf ("STIX_SMINT_MIN + STIX_SMINT_MIN => %ld\n", (long)(STIX_SMINT_MIN + STIX_SMINT_MIN));
-	printf ("STIX_SMINT_MIN - STIX_SMINT_MAX => %ld\n", (long)(STIX_SMINT_MIN - STIX_SMINT_MAX));
+	printf ("STIX_SMOOI_MIN + STIX_SMOOI_MIN => %ld\n", (long)(STIX_SMOOI_MIN + STIX_SMOOI_MIN));
+	printf ("STIX_SMOOI_MIN - STIX_SMOOI_MAX => %ld\n", (long)(STIX_SMOOI_MIN - STIX_SMOOI_MAX));
 
 #if !defined(macintosh)
 	if (argc < 2)
@@ -406,18 +406,18 @@ int main (int argc, char* argv[])
 	stix_oop_t k;
 	stix_oow_t x;
 
-	k = STIX_OOP_FROM_SMINT(-1);
-	printf ("%ld %ld %ld %lX\n", (long int)STIX_OOP_TO_SMINT(k), (long int)STIX_SMINT_MIN, (long int)STIX_SMINT_MAX, (long)LONG_MIN);
+	k = STIX_SMOOI_TO_OOP(-1);
+	printf ("%ld %ld %ld %lX\n", (long int)STIX_OOP_TO_SMOOI(k), (long int)STIX_SMOOI_MIN, (long int)STIX_SMOOI_MAX, (long)LONG_MIN);
 
-	k = STIX_OOP_FROM_SMINT(STIX_SMINT_MAX);
-	printf ("%ld\n", (long int)STIX_OOP_TO_SMINT(k));
+	k = STIX_SMOOI_TO_OOP(STIX_SMOOI_MAX);
+	printf ("%ld\n", (long int)STIX_OOP_TO_SMOOI(k));
 
-	k = STIX_OOP_FROM_SMINT(STIX_SMINT_MIN);
-	printf ("%ld\n", (long int)STIX_OOP_TO_SMINT(k));
+	k = STIX_SMOOI_TO_OOP(STIX_SMOOI_MIN);
+	printf ("%ld\n", (long int)STIX_OOP_TO_SMOOI(k));
 
 	printf ("%u\n", STIX_BITS_MAX(unsigned int, 5));
 	x = STIX_CLASS_SPEC_MAKE (10, 1, STIX_OBJ_TYPE_CHAR);
-	printf ("%lu %lu %lu %lu\n", (unsigned long int)x, (unsigned long int)STIX_OOP_FROM_SMINT(x),
+	printf ("%lu %lu %lu %lu\n", (unsigned long int)x, (unsigned long int)STIX_SMOOI_TO_OOP(x),
 		(unsigned long int)STIX_CLASS_SPEC_NAMED_INSTVAR(x),
 		(unsigned long int)STIX_CLASS_SPEC_INDEXED_TYPE(x));
 	}*/

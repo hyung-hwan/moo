@@ -105,7 +105,7 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 	stix_pushtmp (stix, (stix_oop_t*)&key); tmp_count++;
 	stix_pushtmp (stix, &value); tmp_count++;
 
-	tally = STIX_OOP_TO_SMINT(dic->tally);
+	tally = STIX_OOP_TO_SMOOI(dic->tally);
 	if (tally + 1 >= STIX_OBJ_GET_SIZE(dic->bucket))
 	{
 		stix_oop_oop_t bucket;
@@ -138,8 +138,8 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 	ass->key = (stix_oop_t)key;
 	ass->value = value;
 
-	STIX_ASSERT (tally < STIX_SMINT_MAX);
-	dic->tally = STIX_OOP_FROM_SMINT(tally + 1);
+	STIX_ASSERT (tally < STIX_SMOOI_MAX);
+	dic->tally = STIX_SMOOI_TO_OOP(tally + 1);
 	dic->bucket->slot[index] = (stix_oop_t)ass;
 
 	stix_poptmps (stix, tmp_count);
@@ -235,7 +235,7 @@ stix_oop_set_t stix_makedic (stix_t* stix, stix_oop_t cls, stix_oow_t size)
 	stix_poptmp (stix);
 	if (!tmp) return STIX_NULL;
 
-	dic->tally = STIX_OOP_FROM_SMINT(0);
+	dic->tally = STIX_SMOOI_TO_OOP(0);
 	dic->bucket = (stix_oop_oop_t)tmp;
 
 	STIX_ASSERT (STIX_OBJ_GET_SIZE(dic) == STIX_SET_NAMED_INSTVARS);

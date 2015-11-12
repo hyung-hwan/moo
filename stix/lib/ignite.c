@@ -79,8 +79,8 @@ static stix_oop_t alloc_kernel_class (stix_t* stix, stix_oow_t indexed, stix_oow
 
 	STIX_OBJ_SET_FLAGS_KERNEL (c, 1);
 	STIX_OBJ_SET_CLASS (c, stix->_class);
-	c->spec = STIX_OOP_FROM_SMINT(spec); 
-	c->selfspec = STIX_OOP_FROM_SMINT(STIX_CLASS_SELFSPEC_MAKE(indexed, 0));
+	c->spec = STIX_SMOOI_TO_OOP(spec); 
+	c->selfspec = STIX_SMOOI_TO_OOP(STIX_CLASS_SELFSPEC_MAKE(indexed, 0));
 
 	return (stix_oop_t)c;
 }
@@ -187,7 +187,7 @@ static int ignite_2 (stix_t* stix)
 	if (!tmp) return -1;
 	stix->symtab = (stix_oop_set_t)tmp;
 
-	stix->symtab->tally = STIX_OOP_FROM_SMINT(0);
+	stix->symtab->tally = STIX_SMOOI_TO_OOP(0);
 	/* It's important to assign the result of stix_instantiate() to a temporary
 	 * variable first and then assign it to stix->symtab->bucket. 
 	 * The pointer 'stix->symtab; can change in stix_instantiate() and the 
@@ -207,7 +207,7 @@ static int ignite_2 (stix_t* stix)
 	if (!tmp) return -1;
 	stix->processor = (stix_oop_process_scheduler_t)tmp;
 	/* initialize the tally field to 0, keep other fields as nils */
-	stix->processor->tally = STIX_OOP_FROM_SMINT(0);
+	stix->processor->tally = STIX_SMOOI_TO_OOP(0);
 
 	/* Export the system dictionary via the first class variable of the Stix class */
 	((stix_oop_class_t)stix->_apex)->slot[0] = (stix_oop_t)stix->sysdic;

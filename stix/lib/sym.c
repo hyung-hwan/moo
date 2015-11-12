@@ -95,7 +95,7 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_ooch_t* ptr, sti
 		return STIX_NULL;
 	}
 
-	tally = STIX_OOP_TO_SMINT(stix->symtab->tally);
+	tally = STIX_OOP_TO_SMOOI(stix->symtab->tally);
 	if (tally + 1 >= STIX_OBJ_GET_SIZE(stix->symtab->bucket))
 	{
 		stix_oop_oop_t bucket;
@@ -124,8 +124,8 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_ooch_t* ptr, sti
 	symbol = (stix_oop_char_t)stix_instantiate(stix, stix->_symbol, ptr, len);
 	if (symbol)
 	{
-		STIX_ASSERT (tally < STIX_SMINT_MAX);
-		stix->symtab->tally = STIX_OOP_FROM_SMINT(tally + 1);
+		STIX_ASSERT (tally < STIX_SMOOI_MAX);
+		stix->symtab->tally = STIX_SMOOI_TO_OOP(tally + 1);
 		stix->symtab->bucket->slot[index] = (stix_oop_t)symbol;
 	}
 

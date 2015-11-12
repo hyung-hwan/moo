@@ -467,8 +467,8 @@ static int string_to_smint (stix_t* stix, stix_oocs_t* str, int radixed, stix_oo
 
 	if (negsign)
 	{
-		/*if (value > -STIX_SMINT_MIN) */
-		if (value > ((stix_oow_t)STIX_SMINT_MAX + 1)) 
+		/*if (value > -STIX_SMOOI_MIN) */
+		if (value > ((stix_oow_t)STIX_SMOOI_MAX + 1)) 
 		{
 			stix->errnum = STIX_ERANGE;
 			return -1;
@@ -478,7 +478,7 @@ static int string_to_smint (stix_t* stix, stix_oocs_t* str, int radixed, stix_oo
 	}
 	else
 	{
-		if (value > STIX_SMINT_MAX) 
+		if (value > STIX_SMOOI_MAX) 
 		{
 			stix->errnum = STIX_ERANGE;
 			return -1;
@@ -487,6 +487,44 @@ static int string_to_smint (stix_t* stix, stix_oocs_t* str, int radixed, stix_oo
 	}
 
 	return 0;
+}
+
+static stix_oop_t string_to_num (stix_t* stix, stix_oocs_t* str, int radixed)
+{
+	int negsign, base;
+	const stix_ooch_t* ptr, * end;
+
+	negsign = 0;
+	ptr = str->ptr,
+	end = str->ptr + str->len;
+
+	STIX_ASSERT (ptr < end);
+
+	if (*ptr == '+' || *ptr == '-')
+	{
+		negsign = *ptr - '+';
+		ptr++;
+	}
+
+	if (radixed)
+	{
+		STIX_ASSERT (ptr < end);
+
+		base = 0;
+		do
+		{
+			base = base * 10 + CHAR_TO_NUM(*ptr, 10);
+			ptr++;
+		}
+		while (*ptr != 'r');
+
+		ptr++;
+	}
+	else base = 10;
+
+/* TODO: handle floating point numbers ... etc */
+	if (negsign) base = -base;
+	return stix_strtoint (stix, ptr, end - ptr, base);
 }
 
 /* ---------------------------------------------------------------------
@@ -1761,7 +1799,7 @@ static int emit_push_smint_literal (stix_t* stix, stix_ooi_t i)
 		return emit_single_param_instruction(stix, BCODE_PUSH_NEGINTLIT, -i);
 	}
 
-	if (add_literal(stix, STIX_OOP_FROM_SMINT(i), &index) <= -1 ||
+	if (add_literal(stix, STIX_SMOOI_TO_OOP(i), &index) <= -1 ||
 	    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 
 	return 0;
@@ -2021,7 +2059,7 @@ done:
 				 * accumulated for inheritance. the position found in the
 				 * local variable string can be adjusted by adding the
 				 * number in the superclass */
-				spec = STIX_OOP_TO_SMINT(((stix_oop_class_t)super)->spec);
+				spec = STIX_OOP_TO_SMOOI(((stix_oop_class_t)super)->spec);
 				pos += STIX_CLASS_SPEC_NAMED_INSTVAR(spec);
 				break;
 
@@ -2036,7 +2074,7 @@ done:
 				break;
 
 			case VAR_CLASSINST:
-				spec = STIX_OOP_TO_SMINT(((stix_oop_class_t)super)->selfspec);
+				spec = STIX_OOP_TO_SMOOI(((stix_oop_class_t)super)->selfspec);
 				pos += STIX_CLASS_SELFSPEC_CLASSINSTVAR(spec);
 				break;
 		}
@@ -2741,7 +2779,7 @@ printf ("\n");
 					/* increment the position by the number of class instance variables
 					 * as the class variables are placed after the class instance variables */
 					var->pos += STIX_CLASS_NAMED_INSTVARS + 
-					            STIX_CLASS_SELFSPEC_CLASSINSTVAR(STIX_OOP_TO_SMINT(var->cls->selfspec));
+					            STIX_CLASS_SELFSPEC_CLASSINSTVAR(STIX_OOP_TO_SMOOI(var->cls->selfspec));
 					break;
 
 				case VAR_CLASSINST:
@@ -3198,7 +3236,7 @@ printf ("LARGE NOT IMPLEMENTED IN COMPILE_ARRAY_LITERAL\n");
 					return -1;
 				}
 
-				lit = STIX_OOP_FROM_SMINT(tmp);
+				lit = STIX_SMOOI_TO_OOP(tmp);
 				break;
 			}
 
@@ -3491,6 +3529,7 @@ printf ("\tpush symbol literal %d\n", (int)index);
 			case STIX_IOTOK_RADNUMLIT:
 			{
 				/* TODO: other types of numbers, negative numbers, etc */
+#if 0
 /* TODO: proper numbeic literal handling */
 				stix_ooi_t tmp;
 
@@ -3509,6 +3548,23 @@ printf ("NOT IMPLEMENTED LARGE_INTEGER or ERROR?\n");
 printf ("\tpush int literal\n");
 					if (emit_push_smint_literal(stix, tmp) <= -1) return -1;
 				}
+#else
+
+				stix_oop_t tmp;
+				tmp = string_to_num (stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT);
+				if (!tmp) return -1;
+
+				if (STIX_OOP_IS_SMOOI(tmp))
+				{
+printf ("\tpush int literal\n");
+					if (emit_push_smint_literal(stix, STIX_OOP_TO_SMOOI(tmp)) <= -1) return -1;
+				}
+				else
+				{
+					if (add_literal(stix, tmp, &index) <= -1 ||
+					    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				}
+#endif
 
 				GET_TOKEN (stix);
 				break;
@@ -4225,11 +4281,11 @@ static int add_compiled_method (stix_t* stix)
 	STIX_ASSERT (STIX_OOI_IN_PREAMBLE_INDEX_RANGE(preamble_index));
 
 	mth->owner = stix->c->cls.self_oop;
-	mth->preamble = STIX_OOP_FROM_SMINT(STIX_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index));
-	mth->preamble_data[0] = STIX_OOP_FROM_SMINT(0);
-	mth->preamble_data[1] = STIX_OOP_FROM_SMINT(0);
-	mth->tmpr_count = STIX_OOP_FROM_SMINT(stix->c->mth.tmpr_count);
-	mth->tmpr_nargs = STIX_OOP_FROM_SMINT(stix->c->mth.tmpr_nargs);
+	mth->preamble = STIX_SMOOI_TO_OOP(STIX_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index));
+	mth->preamble_data[0] = STIX_SMOOI_TO_OOP(0);
+	mth->preamble_data[1] = STIX_SMOOI_TO_OOP(0);
+	mth->tmpr_count = STIX_SMOOI_TO_OOP(stix->c->mth.tmpr_count);
+	mth->tmpr_nargs = STIX_SMOOI_TO_OOP(stix->c->mth.tmpr_nargs);
 
 #if defined(STIX_USE_OBJECT_TRAILER)
 	/* do nothing */
@@ -4354,14 +4410,14 @@ printf (" instvars %d classvars %d classinstvars %d\n", (int)stix->c->cls.var_co
 		STIX_ASSERT (STIX_CLASSOF(stix, stix->c->cls.self_oop) == stix->_class);
 		STIX_ASSERT (STIX_OBJ_GET_FLAGS_KERNEL (stix->c->cls.self_oop) == 1);
 
-		if (spec != STIX_OOP_TO_SMINT(stix->c->cls.self_oop->spec) ||
-		    self_spec != STIX_OOP_TO_SMINT(stix->c->cls.self_oop->selfspec))
+		if (spec != STIX_OOP_TO_SMOOI(stix->c->cls.self_oop->spec) ||
+		    self_spec != STIX_OOP_TO_SMOOI(stix->c->cls.self_oop->selfspec))
 		{
 			/* it conflicts with internal definition */
 #if 0
 printf (" CONFLICTING CLASS DEFINITION %lu %lu %lu %lu\n", 
 		(unsigned long)spec, (unsigned long)self_spec,
-		(unsigned long)STIX_OOP_TO_SMINT(stix->c->cls.self_oop->spec), (unsigned long)STIX_OOP_TO_SMINT(stix->c->cls.self_oop->selfspec)
+		(unsigned long)STIX_OOP_TO_SMOOI(stix->c->cls.self_oop->spec), (unsigned long)STIX_OOP_TO_SMOOI(stix->c->cls.self_oop->selfspec)
 );
 #endif
 			set_syntax_error (stix, STIX_SYNERR_CLASSCONTRA, &stix->c->cls.fqn_loc, &stix->c->cls.name);
@@ -4381,8 +4437,8 @@ printf (" CONFLICTING CLASS DEFINITION %lu %lu %lu %lu\n",
 
 		STIX_ASSERT (STIX_CLASSOF(stix, stix->c->cls.self_oop) == stix->_class);
 
-		stix->c->cls.self_oop->spec = STIX_OOP_FROM_SMINT(spec);
-		stix->c->cls.self_oop->selfspec = STIX_OOP_FROM_SMINT(self_spec);
+		stix->c->cls.self_oop->spec = STIX_SMOOI_TO_OOP(spec);
+		stix->c->cls.self_oop->selfspec = STIX_SMOOI_TO_OOP(self_spec);
 	}
 
 /* TODO: check if the current class definition conflicts with the superclass.
@@ -4681,8 +4737,8 @@ printf ("\n");
 		stix_oow_t spec, self_spec;
 
 		c = (stix_oop_class_t)stix->c->cls.super_oop;
-		spec = STIX_OOP_TO_SMINT(c->spec);
-		self_spec = STIX_OOP_TO_SMINT(c->selfspec);
+		spec = STIX_OOP_TO_SMOOI(c->spec);
+		self_spec = STIX_OOP_TO_SMOOI(c->selfspec);
 		stix->c->cls.var_count[VAR_INSTANCE] = STIX_CLASS_SPEC_NAMED_INSTVAR(spec);
 		stix->c->cls.var_count[VAR_CLASSINST] = STIX_CLASS_SELFSPEC_CLASSINSTVAR(self_spec);
 	}
@@ -4888,6 +4944,7 @@ printf ("\n");
 			case STIX_IOTOK_NUMLIT:
 			case STIX_IOTOK_RADNUMLIT:
 			{
+#if 0
 				stix_ooi_t tmp;
 
 				if (string_to_smint(stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT, &tmp) <= -1)
@@ -4902,9 +4959,12 @@ printf ("NOT IMPLEMENTED LARGE_INTEGER or ERROR?\n");
 				}
 				else
 				{
-					lit = STIX_OOP_FROM_SMINT(tmp);
+					lit = STIX_SMOOI_TO_OOP(tmp);
 				}
-
+#else
+				lit = string_to_num (stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT);
+				if (!lit) return -1;
+#endif
 				goto add_literal;
 			}
 
@@ -4951,7 +5011,7 @@ printf ("NOT IMPLEMENTED LARGE_INTEGER or ERROR?\n");
 
 	tally = stix->c->mth.arlit_count / 2;
 /*TODO: tally and arlit_count range check */
-	/*if (!STIX_OOI_IN_SMINT_RANGE(tally)) ERROR??*/
+	/*if (!STIX_IN_SMOOI_RANGE(tally)) ERROR??*/
 
 	stix->c->cls.mthdic_oop[0] = stix_makedic (stix, stix->_pool_dictionary, STIX_ALIGN(tally + 10, POOL_DICTIONARY_SIZE_ALIGN));
 	if (!stix->c->cls.mthdic_oop[0]) return -1;

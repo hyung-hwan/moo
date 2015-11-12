@@ -183,8 +183,8 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 	STIX_ASSERT (STIX_OOP_IS_POINTER(_class));
 	STIX_ASSERT (STIX_CLASSOF(stix, _class) == stix->_class);
 
-	STIX_ASSERT (STIX_OOP_IS_SMINT(((stix_oop_class_t)_class)->spec));
-	spec = STIX_OOP_TO_SMINT(((stix_oop_class_t)_class)->spec);
+	STIX_ASSERT (STIX_OOP_IS_SMOOI(((stix_oop_class_t)_class)->spec));
+	spec = STIX_OOP_TO_SMOOI(((stix_oop_class_t)_class)->spec);
 
 	named_instvar = STIX_CLASS_SPEC_NAMED_INSTVAR(spec); /* size of the named_instvar part */
 
@@ -286,8 +286,8 @@ stix_oop_t stix_instantiatewithtrailer (stix_t* stix, stix_oop_t _class, stix_oo
 	STIX_ASSERT (STIX_OOP_IS_POINTER(_class));
 	STIX_ASSERT (STIX_CLASSOF(stix, _class) == stix->_class);
 
-	STIX_ASSERT (STIX_OOP_IS_SMINT(((stix_oop_class_t)_class)->spec));
-	spec = STIX_OOP_TO_SMINT(((stix_oop_class_t)_class)->spec);
+	STIX_ASSERT (STIX_OOP_IS_SMOOI(((stix_oop_class_t)_class)->spec));
+	spec = STIX_OOP_TO_SMOOI(((stix_oop_class_t)_class)->spec);
 
 	named_instvar = STIX_CLASS_SPEC_NAMED_INSTVAR(spec); /* size of the named_instvar part */
 

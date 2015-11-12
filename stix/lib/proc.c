@@ -36,7 +36,7 @@ stix_oop_process_t stix_addnewproc (stix_t* stix)
 	proc = (stix_oop_process_t)stix_instantiate (stix, stix->_process, STIX_NULL, stix->option.dfl_procstk_size);
 	if (!proc) return STIX_NULL;
 
-	proc->state = STIX_OOP_FROM_SMINT(0);
+	proc->state = STIX_SMOOI_TO_OOP(0);
 	
 	STIX_ASSERT (STIX_OBJ_GET_SIZE(proc) == STIX_PROCESS_NAMED_INSTVARS + stix->option.dfl_procstk_size);
 	return proc;

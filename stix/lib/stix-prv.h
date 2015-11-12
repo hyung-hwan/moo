@@ -110,16 +110,18 @@
 	typedef stix_uintmax_t bigatom_t;
 	typedef stix_oow_t atom_t;
 	typedef stix_oop_word_t oop_atom_t;
-#	define ATOM_BITS STIX_OOW_BITS
-#	define BIGATOM_BITS (STIX_SIZEOF(bigatom_t) * 8)
 #	define SIZEOF_ATOM_T STIX_SIZEOF_OOW_T
+#	define SIZEOF_BIGATOM_T STIX_SIZEOF_UINTMAX_T
+#	define ATOM_BITS STIX_OOW_BITS
+#	define BIGATOM_BITS (STIX_SIZEOF_UINTMAX_T * 8)
 #else
 	typedef stix_oow_t bigatom_t;
 	typedef stix_oohw_t atom_t;
 	typedef stix_oop_halfword_t oop_atom_t;
+#	define SIZEOF_ATOM_T STIX_SIZEOF_OOHW_T
+#	define SIZEOF_BIGATOM_T STIX_SIZEOF_OOW_T
 #	define ATOM_BITS STIX_OOHW_BITS
 #	define BIGATOM_BITS STIX_OOW_BITS
-#	define SIZEOF_ATOM_T STIX_SIZEOF_OOHW_T
 #	define MAKE_WORD(hw1,hw2) ((stix_oow_t)(hw1) | (stix_oow_t)(hw2) << ATOM_BITS)
 #endif
 
@@ -158,14 +160,14 @@
 
 /*
  * The STIX_CLASS_SPEC_MAKE() macro creates a class spec value.
- *  _class->spec = STIX_OOP_FROM_SMINT(STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_CHAR));
+ *  _class->spec = STIX_SMOOI_TO_OOP(STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_CHAR));
  */
 #define STIX_CLASS_SPEC_MAKE(named_instvar,is_indexed,indexed_type) ( \
 	(((stix_oow_t)(named_instvar)) << (STIX_OBJ_FLAGS_TYPE_BITS + 1)) |  \
 	(((stix_oow_t)(indexed_type)) << 1) | (((stix_oow_t)is_indexed) & 1) )
 
 /* what is the number of named instance variables? 
- *  STIX_CLASS_SPEC_NAMED_INSTVAR(STIX_OOP_TO_SMINT(_class->spec))
+ *  STIX_CLASS_SPEC_NAMED_INSTVAR(STIX_OOP_TO_SMOOI(_class->spec))
  */
 #define STIX_CLASS_SPEC_NAMED_INSTVAR(spec) \
 	(((stix_oow_t)(spec)) >> (STIX_OBJ_FLAGS_TYPE_BITS + 1))
@@ -1117,7 +1119,7 @@ stix_oop_t stix_strtoint (
 	stix_t*            stix,
 	const stix_ooch_t* str,
 	stix_oow_t         len,
-	unsigned int       radix
+	int                radix
 );
 /* ========================================================================= */
 /* comp.c                                                                    */
