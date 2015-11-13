@@ -544,6 +544,7 @@ typedef stix_ucs_t               stix_oocs_t;
 	#if __has_builtin(__builtin_ctz)
 		#define STIX_HAVE_BUILTIN_CTZ
 	#endif
+
 	#if __has_builtin(__builtin_uadd_overflow)
 		#define STIX_HAVE_BUILTIN_UADD_OVERFLOW 
 	#endif
@@ -562,8 +563,30 @@ typedef stix_ucs_t               stix_oocs_t;
 	#if __has_builtin(__builtin_umulll_overflow)
 		#define STIX_HAVE_BUILTIN_UMULLL_OVERFLOW 
 	#endif
-	
+
+	#if __has_builtin(__builtin_sadd_overflow)
+		#define STIX_HAVE_BUILTIN_SADD_OVERFLOW 
+	#endif
+	#if __has_builtin(__builtin_saddl_overflow)
+		#define STIX_HAVE_BUILTIN_SADDL_OVERFLOW 
+	#endif
+	#if __has_builtin(__builtin_saddll_overflow)
+		#define STIX_HAVE_BUILTIN_SADDLL_OVERFLOW 
+	#endif
+	#if __has_builtin(__builtin_smul_overflow)
+		#define STIX_HAVE_BUILTIN_SMUL_OVERFLOW 
+	#endif
+	#if __has_builtin(__builtin_smull_overflow)
+		#define STIX_HAVE_BUILTIN_SMULL_OVERFLOW 
+	#endif
+	#if __has_builtin(__builtin_smulll_overflow)
+		#define STIX_HAVE_BUILTIN_SMULLL_OVERFLOW 
+	#endif
 #elif defined(__GNUC__) && defined(__GNUC_MINOR__)
+
+	#if (__GNUC__ >= 4) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)
+		#define STIX_HAVE_BUILTIN_CTZ
+	#endif
 
 	#if (__GNUC__ >= 5)
 		#define STIX_HAVE_BUILTIN_UADD_OVERFLOW
@@ -572,11 +595,15 @@ typedef stix_ucs_t               stix_oocs_t;
 		#define STIX_HAVE_BUILTIN_UMUL_OVERFLOW
 		#define STIX_HAVE_BUILTIN_UMULL_OVERFLOW
 		#define STIX_HAVE_BUILTIN_UMULLL_OVERFLOW
+
+		#define STIX_HAVE_BUILTIN_SADD_OVERFLOW
+		#define STIX_HAVE_BUILTIN_SADDL_OVERFLOW
+		#define STIX_HAVE_BUILTIN_SADDLL_OVERFLOW
+		#define STIX_HAVE_BUILTIN_SMUL_OVERFLOW
+		#define STIX_HAVE_BUILTIN_SMULL_OVERFLOW
+		#define STIX_HAVE_BUILTIN_SMULLL_OVERFLOW
 	#endif
 
-	#if (__GNUC__ >= 4) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)
-		#define STIX_HAVE_BUILTIN_CTZ
-	#endif
 #endif
 
 /*

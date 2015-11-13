@@ -67,6 +67,29 @@ static STIX_INLINE int oow_mul_overflow (stix_oow_t a, stix_oow_t b, stix_oow_t*
 }
 #endif
 
+#if (STIX_SIZEOF_OOI_T == STIX_SIZEOF_INT) && defined(STIX_HAVE_BUILTIN_SMUL_OVERFLOW)
+#	define ooi_mul_overflow(a,b,c)  __builtin_smul_overflow(a,b,c)
+#elif (STIX_SIZEOF_OOI_T == STIX_SIZEOF_LONG) && defined(STIX_HAVE_BUILTIN_SMULL_OVERFLOW)
+#	define ooi_mul_overflow(a,b,c)  __builtin_smull_overflow(a,b,c)
+#elif (STIX_SIZEOF_OOI_T == STIX_SIZEOF_LONG_LONG) && defined(STIX_HAVE_BUILTIN_SMULLL_OVERFLOW)
+#	define ooi_mul_overflow(a,b,c)  __builtin_smulll_overflow(a,b,c)
+#else
+static STIX_INLINE int ooi_mul_overflow (stix_ooi_t a, stix_ooi_t b, stix_ooi_t* c)
+{
+#if (STIX_SIZEOF_UINTMAX_T > STIX_SIZEOF_OOI_T)
+	stix_intmax_t k;
+	k = (stix_intmax_t)a * (stix_intmax_t)b;
+	*c = (stix_ooi_t)k;
+	return k > STIX_TYPE_MAX(stix_ooi_t) || k < STIX_TYPE_MIN(stix_ooi_t);
+#else
+/* TODO: fix this */
+#error not implemented
+	*c = a * b;
+	return b > 0 && a > STIX_TYPE_MAX(stix_ooi_t) / b; /* works for unsigned types only */
+#endif
+}
+#endif
+
 #if (SIZEOF_ATOM_T == STIX_SIZEOF_INT) && defined(STIX_HAVE_BUILTIN_UADD_OVERFLOW)
 #	define atom_add_overflow(a,b,c)  __builtin_uadd_overflow(a,b,c)
 #elif (SIZEOF_ATOM_T == STIX_SIZEOF_LONG) && defined(STIX_HAVE_BUILTIN_UADDL_OVERFLOW)
@@ -158,12 +181,12 @@ static STIX_INLINE stix_oop_t make_bigint_with_ooi (stix_t* stix, stix_ooi_t i)
 
 static STIX_INLINE stix_oop_t make_bigint_with_intmax (stix_t* stix, stix_intmax_t v)
 {
-	/* this is not a generic function. it can't handle v 
-	 * if it's STIX_TYPE_MIN(stix_intmax_t) */
 	stix_oow_t len;
 	atom_t buf[STIX_SIZEOF_INTMAX_T / SIZEOF_ATOM_T];
 	stix_uintmax_t ui;
 
+	/* this is not a generic function. it can't handle v 
+	 * if it's STIX_TYPE_MIN(stix_intmax_t) */
 	STIX_ASSERT (v > STIX_TYPE_MIN(stix_intmax_t));
 
 	ui = (v >= 0)? v: -v;
@@ -174,6 +197,15 @@ static STIX_INLINE stix_oop_t make_bigint_with_intmax (stix_t* stix, stix_intmax
 		ui = ui >> ATOM_BITS;
 	}
 	while (ui > 0);
+
+{ int i;
+printf ("MKBI-INTMAX=>");
+for (i = len; i > 0;)
+{
+printf ("%016lX ", (unsigned long)buf[--i]);
+}
+printf ("\n");
+}
 
 	return stix_instantiate (stix, ((v >= 0)? stix->_large_positive_integer: stix->_large_negative_integer), buf, len);
 }
@@ -747,19 +779,42 @@ stix_oop_t stix_mulints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 
 	if (STIX_OOP_IS_SMOOI(x) && STIX_OOP_IS_SMOOI(y))
 	{
-	#if STIX_SIZEOF_INTMAX_T > STIX_SIZEOF_OOI_T
+	/*#if STIX_SIZEOF_INTMAX_T > STIX_SIZEOF_OOI_T*/ /* TOOD: uncomment this line and remove the next line after #else block has been tested */
+	#if STIX_SIZEOF_INTMAX_T <= STIX_SIZEOF_OOI_T
 		stix_intmax_t i;
-
 		i = (stix_intmax_t)STIX_OOP_TO_SMOOI(x) * (stix_intmax_t)STIX_OOP_TO_SMOOI(y);
 		if (STIX_IN_SMOOI_RANGE(i)) return STIX_SMOOI_TO_OOP((stix_ooi_t)i);
-
 		return make_bigint_with_intmax (stix, i);
 	#else
 		stix_ooi_t i;
+		stix_ooi_t xv, yv;
+
+		xv = STIX_OOP_TO_SMOOI(x);
+		yv = STIX_OOP_TO_SMOOI(y);
+		if (ooi_mul_overflow (xv, yv, &i))
+		{
+			/* overflowed 
+			 * -----------------------------------------------------
+			 * no need to call stix_pushtmp() on x and y as they are 
+			 * known to be small integers and we don't need them.
+			 * actual values are all in xv and yv. */
+			if (!(x = make_bigint_with_ooi (stix, xv)) ||
+			    !(y = make_bigint_with_ooi (stix, yv))) return STIX_NULL;
+		}
+		else
+		{
+			if (STIX_IN_SMOOI_RANGE(i)) return STIX_SMOOI_TO_OOP(i);
+			return make_bigint_with_ooi (stix, i);
+		}
+	
+	/*
+		stix_ooi_t i;
+
 		i = STIX_OOP_TO_SMOOI(x) * STIX_OOP_TO_SMOOI(y);
 		if (STIX_IN_SMOOI_RANGE(i)) return STIX_SMOOI_TO_OOP(i);
 
 		return make_bigint_with_ooi (stix, i);
+	*/
 	#endif
 	}
 	else

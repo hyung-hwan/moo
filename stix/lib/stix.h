@@ -92,9 +92,10 @@ typedef struct stix_obj_byte_t*     stix_oop_byte_t;
 typedef struct stix_obj_halfword_t* stix_oop_halfword_t;
 typedef struct stix_obj_word_t*     stix_oop_word_t;
 
-#define STIX_OOW_BITS  (STIX_SIZEOF(stix_oow_t) * 8)
-#define STIX_OOP_BITS  (STIX_SIZEOF(stix_oop_t) * 8)
-#define STIX_OOHW_BITS (STIX_SIZEOF(stix_oohw_t) * 8)
+#define STIX_OOW_BITS  (STIX_SIZEOF_OOW_T * 8)
+#define STIX_OOI_BITS  (STIX_SIZEOF_OOI_T * 8)
+#define STIX_OOP_BITS  (STIX_SIZEOF_OOP_T * 8)
+#define STIX_OOHW_BITS (STIX_SIZEOF_OOHW_T * 8)
 
 /* 
  * OOP encoding
