@@ -68,24 +68,40 @@ static STIX_INLINE int oow_mul_overflow (stix_oow_t a, stix_oow_t b, stix_oow_t*
 #endif
 
 #if (STIX_SIZEOF_OOI_T == STIX_SIZEOF_INT) && defined(STIX_HAVE_BUILTIN_SMUL_OVERFLOW)
-#	define ooi_mul_overflow(a,b,c)  __builtin_smul_overflow(a,b,c)
+#	define smooi_mul_overflow(a,b,c)  __builtin_smul_overflow(a,b,c)
 #elif (STIX_SIZEOF_OOI_T == STIX_SIZEOF_LONG) && defined(STIX_HAVE_BUILTIN_SMULL_OVERFLOW)
-#	define ooi_mul_overflow(a,b,c)  __builtin_smull_overflow(a,b,c)
+#	define smooi_mul_overflow(a,b,c)  __builtin_smull_overflow(a,b,c)
 #elif (STIX_SIZEOF_OOI_T == STIX_SIZEOF_LONG_LONG) && defined(STIX_HAVE_BUILTIN_SMULLL_OVERFLOW)
-#	define ooi_mul_overflow(a,b,c)  __builtin_smulll_overflow(a,b,c)
+#	define smooi_mul_overflow(a,b,c)  __builtin_smulll_overflow(a,b,c)
 #else
-static STIX_INLINE int ooi_mul_overflow (stix_ooi_t a, stix_ooi_t b, stix_ooi_t* c)
+static STIX_INLINE int smooi_mul_overflow (stix_ooi_t a, stix_ooi_t b, stix_ooi_t* c)
 {
 #if (STIX_SIZEOF_UINTMAX_T > STIX_SIZEOF_OOI_T)
 	stix_intmax_t k;
+
+	STIX_ASSERT (STIX_IN_SMOOI_RANGE(a));
+	STIX_ASSERT (STIX_IN_SMOOI_RANGE(b));
+
 	k = (stix_intmax_t)a * (stix_intmax_t)b;
 	*c = (stix_ooi_t)k;
+
 	return k > STIX_TYPE_MAX(stix_ooi_t) || k < STIX_TYPE_MIN(stix_ooi_t);
 #else
-/* TODO: fix this */
-#error not implemented
+
+	stix_ooi_t ua, ub;
+
+	STIX_ASSERT (STIX_IN_SMOOI_RANGE(a));
+	STIX_ASSERT (STIX_IN_SMOOI_RANGE(b));
+
 	*c = a * b;
-	return b > 0 && a > STIX_TYPE_MAX(stix_ooi_t) / b; /* works for unsigned types only */
+
+	ub = (b >= 0)? b: -b;
+	ua = (a >= 0)? a: -a;
+
+	/* though this fomula basically works for unsigned types in principle, 
+	 * the values used here are all absolute values and they fall in
+	 * a safe range to apply this fomula */
+	return ub > 0 && ua > STIX_TYPE_MAX(stix_ooi_t) / ub; 
 #endif
 }
 #endif
@@ -143,6 +159,7 @@ static STIX_INLINE stix_oop_t make_bigint_with_ooi (stix_t* stix, stix_ooi_t i)
 #if defined(USE_FULL_WORD)
 	stix_oow_t w;
 
+	STIX_ASSERT (STIX_ZIEOF(stix_oow_t) == STIX_SIZEOF(atom_t));
 	if (i >= 0)
 	{
 		w = i;
@@ -150,7 +167,7 @@ static STIX_INLINE stix_oop_t make_bigint_with_ooi (stix_t* stix, stix_ooi_t i)
 	}
 	else
 	{
-		/* The caller must ensure that i is grater than the smallest value
+		/* The caller must ensure that i is greater than the smallest value
 		 * that stix_ooi_t can represent. otherwise, the absolute value 
 		 * cannot be held in stix_ooi_t. */
 		STIX_ASSERT (i > STIX_TYPE_MIN(stix_ooi_t));
@@ -779,8 +796,7 @@ stix_oop_t stix_mulints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 
 	if (STIX_OOP_IS_SMOOI(x) && STIX_OOP_IS_SMOOI(y))
 	{
-	/*#if STIX_SIZEOF_INTMAX_T > STIX_SIZEOF_OOI_T*/ /* TOOD: uncomment this line and remove the next line after #else block has been tested */
-	#if STIX_SIZEOF_INTMAX_T <= STIX_SIZEOF_OOI_T
+	#if STIX_SIZEOF_INTMAX_T > STIX_SIZEOF_OOI_T
 		stix_intmax_t i;
 		i = (stix_intmax_t)STIX_OOP_TO_SMOOI(x) * (stix_intmax_t)STIX_OOP_TO_SMOOI(y);
 		if (STIX_IN_SMOOI_RANGE(i)) return STIX_SMOOI_TO_OOP((stix_ooi_t)i);
@@ -791,30 +807,27 @@ stix_oop_t stix_mulints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 
 		xv = STIX_OOP_TO_SMOOI(x);
 		yv = STIX_OOP_TO_SMOOI(y);
-		if (ooi_mul_overflow (xv, yv, &i))
+		if (smooi_mul_overflow (xv, yv, &i))
 		{
-			/* overflowed 
-			 * -----------------------------------------------------
-			 * no need to call stix_pushtmp() on x and y as they are 
-			 * known to be small integers and we don't need them.
-			 * actual values are all in xv and yv. */
-			if (!(x = make_bigint_with_ooi (stix, xv)) ||
-			    !(y = make_bigint_with_ooi (stix, yv))) return STIX_NULL;
+			/* overflowed - convert x and y normal objects and carry on */
+
+			/* no need to call stix_pushtmp before creating x because
+			 * xv and yv contains actual values needed */
+			x = make_bigint_with_ooi (stix, xv);
+			if (!x) return STIX_NULL;
+
+			stix_pushtmp (stix, &x); /* protect x made above */
+			y = make_bigint_with_ooi (stix, yv);
+			stix_poptmp (stix);
+			if (!y) return STIX_NULL;
+
+			goto normal;
 		}
 		else
 		{
 			if (STIX_IN_SMOOI_RANGE(i)) return STIX_SMOOI_TO_OOP(i);
 			return make_bigint_with_ooi (stix, i);
 		}
-	
-	/*
-		stix_ooi_t i;
-
-		i = STIX_OOP_TO_SMOOI(x) * STIX_OOP_TO_SMOOI(y);
-		if (STIX_IN_SMOOI_RANGE(i)) return STIX_SMOOI_TO_OOP(i);
-
-		return make_bigint_with_ooi (stix, i);
-	*/
 	#endif
 	}
 	else
@@ -869,6 +882,7 @@ stix_oop_t stix_mulints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			if (!is_integer(stix,y)) goto oops_einval;
 		}
 
+	normal:
 		z = multiply_unsigned_integers (stix, x, y);
 		if (!z) return STIX_NULL;
 		if (STIX_OBJ_GET_CLASS(x) != STIX_OBJ_GET_CLASS(y))
