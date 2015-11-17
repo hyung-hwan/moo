@@ -373,6 +373,7 @@ stix_ooch_t str_stix[] = { 'S', 't', 'i', 'x' };
 stix_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' };
 stix_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
 
+
 int main (int argc, char* argv[])
 {
 	stix_t* stix;
@@ -382,12 +383,14 @@ int main (int argc, char* argv[])
 	stix_vmprim_t vmprim;
 	int i;
 
-	printf ("Stix 1.0.0 - max named %lu max indexed %lu max class %lu max classinst %lu oowmax %lu, smintmax %ld smintmax %ld\n", 
+	printf ("Stix 1.0.0 - max named %lu max indexed %lu max class %lu max classinst %lu oowmax %lu, ooimax %ld ooimin %ld smintmax %ld smintmax %ld\n", 
 		(unsigned long int)STIX_MAX_NAMED_INSTVARS, 
 		(unsigned long int)STIX_MAX_INDEXED_INSTVARS(STIX_MAX_NAMED_INSTVARS),
 		(unsigned long int)STIX_MAX_CLASSVARS,
 		(unsigned long int)STIX_MAX_CLASSINSTVARS,
 		(unsigned long int)STIX_TYPE_MAX(stix_oow_t),
+		(long int)STIX_TYPE_MAX(stix_ooi_t),
+		(long int)STIX_TYPE_MIN(stix_ooi_t),
 		(long)STIX_SMOOI_MAX, (long)STIX_SMOOI_MIN);
 
 	printf ("STIX_SMOOI_MIN + STIX_SMOOI_MIN => %ld\n", (long)(STIX_SMOOI_MIN + STIX_SMOOI_MIN));
@@ -438,9 +441,6 @@ int main (int argc, char* argv[])
 	}
 
 
-
-
-
 	{
 		stix_oow_t tab_size;
 
@@ -463,7 +463,6 @@ int main (int argc, char* argv[])
 		stix_close (stix);
 		return -1;
 	}
-
 
 {
 

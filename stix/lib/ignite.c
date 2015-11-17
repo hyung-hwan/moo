@@ -145,13 +145,8 @@ static int ignite_1 (stix_t* stix)
 	 *       Does this make sense? */
 	stix->_character         = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_small_integer     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
-#if defined(USE_FULL_WORD)
-	stix->_large_positive_integer = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_WORD));
-	stix->_large_negative_integer = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_WORD));
-#else
-	stix->_large_positive_integer = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_HALFWORD));
-	stix->_large_negative_integer = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_HALFWORD));
-#endif
+	stix->_large_positive_integer = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_LIWORD));
+	stix->_large_negative_integer = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_LIWORD));
 
 	if (!stix->_apex              || !stix->_undefined_object  || 
 	    !stix->_object            || !stix->_string            ||

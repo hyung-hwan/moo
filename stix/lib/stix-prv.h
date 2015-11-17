@@ -54,10 +54,6 @@
 /*#define STIX_DEBUG_EXEC*/
 #define STIX_PROFILE_EXEC
 
-#if STIX_SIZEOF_UINTMAX_T  > STIX_SIZEOF_OOW_T
-#	define USE_FULL_WORD
-#endif
-
 #include <stdio.h> /* TODO: delete these header inclusion lines */
 #include <string.h>
 #include <assert.h>
@@ -102,28 +98,6 @@
 
 #define STIX_ALIGN(x,y) ((((x) + (y) - 1) / (y)) * (y))
 
-
-/* ========================================================================= */
-/* BIGINT TYPES AND MACROS                                                   */
-/* ========================================================================= */
-#if defined(USE_FULL_WORD)
-	typedef stix_uintmax_t bigatom_t;
-	typedef stix_oow_t atom_t;
-	typedef stix_oop_word_t oop_atom_t;
-#	define SIZEOF_ATOM_T STIX_SIZEOF_OOW_T
-#	define SIZEOF_BIGATOM_T STIX_SIZEOF_UINTMAX_T
-#	define ATOM_BITS STIX_OOW_BITS
-#	define BIGATOM_BITS (STIX_SIZEOF_UINTMAX_T * 8)
-#else
-	typedef stix_oow_t bigatom_t;
-	typedef stix_oohw_t atom_t;
-	typedef stix_oop_halfword_t oop_atom_t;
-#	define SIZEOF_ATOM_T STIX_SIZEOF_OOHW_T
-#	define SIZEOF_BIGATOM_T STIX_SIZEOF_OOW_T
-#	define ATOM_BITS STIX_OOHW_BITS
-#	define BIGATOM_BITS STIX_OOW_BITS
-#	define MAKE_WORD(hw1,hw2) ((stix_oow_t)(hw1) | (stix_oow_t)(hw2) << ATOM_BITS)
-#endif
 
 /* ========================================================================= */
 /* CLASS SPEC ENCODING                                                       */
@@ -1113,6 +1087,13 @@ stix_oop_t stix_mulints (
 	stix_t*    stix,
 	stix_oop_t x,
 	stix_oop_t y
+);
+
+stix_oop_t stix_divints (
+	stix_t*     stix,
+	stix_oop_t  x,
+	stix_oop_t  y,
+	stix_oop_t* rem
 );
 
 stix_oop_t stix_strtoint (

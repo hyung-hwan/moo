@@ -65,7 +65,7 @@ static void fill_bigint_tables (stix_t* stix)
 	for (radix = 2; radix <= 36; radix++)
 	{
 		w = 0;
-		ub = (stix_oow_t)STIX_TYPE_MAX(atom_t) / radix - (radix - 1);
+		ub = (stix_oow_t)STIX_TYPE_MAX(stix_liw_t) / radix - (radix - 1);
 		multiplier = 1;
 		safe_ndigits = 0;
 

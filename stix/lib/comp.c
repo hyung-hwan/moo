@@ -91,6 +91,7 @@ static struct voca_t
 	{  5, { 'f','a','l','s','e'                                           } },
 	{  8, { 'h','a','l','f','w','o','r','d'                               } },
 	{  7, { 'i','n','c','l','u','d','e'                                   } },
+	{  6, { 'l','i','w','o','r','d'                                       } },
 	{  4, { 'm','a','i','n'                                               } },
 	{  6, { 'm','e','t','h','o','d'                                       } },
 	{  3, { 'm','t','h'                                                   } },
@@ -123,6 +124,7 @@ enum voca_id_t
 	VOCA_FALSE,
 	VOCA_HALFWORD,
 	VOCA_INCLUDE,
+	VOCA_LIWORD,
 	VOCA_MAIN,
 	VOCA_METHOD,
 	VOCA_MTH,
@@ -306,7 +308,17 @@ static void set_syntax_error (stix_t* stix, stix_synerrnum_t num, const stix_iol
 {
 	stix->errnum = STIX_ESYNTAX;
 	stix->c->synerr.num = num;
-	stix->c->synerr.loc = loc? *loc: stix->c->tok.loc;
+
+	/* The SCO compiler complains of this ternary operation saying:
+	 *    error: operands have incompatible types: op ":" 
+	 * it seems to complain of type mismatch between *loc and
+	 * stix->c->tok.loc due to 'const' prefixed to loc. */
+	/*stix->c->synerr.loc = loc? *loc: stix->c->tok.loc;*/
+	if (loc)
+		stix->c->synerr.loc = *loc;
+	else
+		stix->c->synerr.loc = stix->c->tok.loc;
+	
 	if (tgt) stix->c->synerr.tgt = *tgt;
 	else 
 	{
@@ -4549,6 +4561,13 @@ static int __compile_class_definition (stix_t* stix, int extend)
 			/* #class(#pointer) */
 			stix->c->cls.flags |= CLASS_INDEXED;
 			stix->c->cls.indexed_type = STIX_OBJ_TYPE_OOP;
+			GET_TOKEN (stix);
+		}
+		else if (is_token_symbol(stix, VOCA_LIWORD))
+		{
+			/* #class(#biatom) */
+			stix->c->cls.flags |= CLASS_INDEXED;
+			stix->c->cls.indexed_type = STIX_OBJ_TYPE_LIWORD;
 			GET_TOKEN (stix);
 		}
 

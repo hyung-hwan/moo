@@ -97,6 +97,39 @@ typedef struct stix_obj_word_t*     stix_oop_word_t;
 #define STIX_OOP_BITS  (STIX_SIZEOF_OOP_T * 8)
 #define STIX_OOHW_BITS (STIX_SIZEOF_OOHW_T * 8)
 
+
+/* ========================================================================= */
+/* BIGINT TYPES AND MACROS                                                   */
+/* ========================================================================= */
+#if STIX_SIZEOF_UINTMAX_T > STIX_SIZEOF_OOW_T
+#	define STIX_USE_FULL_WORD
+#endif
+
+#if defined(STIX_USE_FULL_WORD)
+	typedef stix_oow_t          stix_liw_t; /* large integer word */
+	typedef stix_uintmax_t      stix_lidw_t; /* large integer double word */
+#	define STIX_SIZEOF_LIW_T    STIX_SIZEOF_OOW_T
+#	define STIX_SIZEOF_LIDW_T   STIX_SIZEOF_UINTMAX_T
+#	define STIX_LIW_BITS        STIX_OOW_BITS
+#	define STIX_LIDW_BITS       (STIX_SIZEOF_UINTMAX_T * 8) 
+
+	typedef stix_oop_word_t     stix_oop_liword_t;
+#	define STIX_OBJ_TYPE_LIWORD STIX_OBJ_TYPE_WORD
+
+#else
+	typedef stix_oohw_t         stix_liw_t;
+	typedef stix_oow_t          stix_lidw_t;
+#	define STIX_SIZEOF_LIW_T    STIX_SIZEOF_OOHW_T
+#	define STIX_SIZEOF_LIDW_T   STIX_SIZEOF_OOW_T
+#	define STIX_LIW_BITS        STIX_OOHW_BITS
+#	define STIX_LIDW_BITS       STIX_OOW_BITS
+
+	typedef stix_oop_halfword_t stix_oop_liword_t;
+#	define STIX_OBJ_TYPE_LIWORD STIX_OBJ_TYPE_HALFWORD
+
+#endif
+
+
 /* 
  * OOP encoding
  * An object pointer(OOP) is an ordinary pointer value to an object.
