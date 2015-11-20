@@ -63,7 +63,8 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 
 static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, stix_oop_char_t key, stix_oop_t value)
 {
-	stix_oow_t index, tally;
+	stix_ooi_t tally;
+	stix_oow_t index;
 	stix_oop_association_t ass;
 	stix_oow_t tmp_count = 0;
 
@@ -75,6 +76,7 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 
 	index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(dic->bucket);
 
+	/* find */
 	while (dic->bucket->slot[index] != stix->_nil) 
 	{
 		ass = (stix_oop_association_t)dic->bucket->slot[index];
@@ -86,7 +88,7 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 		    stix_equalchars (key->slot, ((stix_oop_char_t)ass->key)->slot, STIX_OBJ_GET_SIZE(key))) 
 		{
 			/* the value of STIX_NULL indicates no insertion or update. */
-			if (value) ass->value = value;
+			if (value) ass->value = value; /* update */
 			return ass;
 		}
 
@@ -101,20 +103,34 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 		return STIX_NULL;
 	}
 
+	/* the key is not found. insert it. */
+	STIX_ASSERT (STIX_OOP_IS_SMOOI(dic->tally));
+	tally = STIX_OOP_TO_SMOOI(dic->tally);
+	if (tally >= STIX_SMOOI_MAX)
+	{
+		/* this built-in dictionary is not allowed to hold more than 
+		 * STIX_SMOOI_MAX items for efficiency sake */
+		stix->errnum = STIX_EDFULL;
+		return STIX_NULL;
+	}
+
 	stix_pushtmp (stix, (stix_oop_t*)&dic); tmp_count++;
 	stix_pushtmp (stix, (stix_oop_t*)&key); tmp_count++;
 	stix_pushtmp (stix, &value); tmp_count++;
 
-	tally = STIX_OOP_TO_SMOOI(dic->tally);
+	/* no conversion to stix_oow_t is necessary for tally + 1.
+	 * the maximum value of tally is checked to be STIX_SMOOI_MAX - 1.
+	 * tally + 1 can produce at most STIX_SMOOI_MAX. above all, 
+	 * STIX_SMOOI_MAX is way smaller than STIX_TYPE_MAX(stix_ooi_t). */
 	if (tally + 1 >= STIX_OBJ_GET_SIZE(dic->bucket))
 	{
 		stix_oop_oop_t bucket;
 
 		/* TODO: make the growth policy configurable instead of growing
-			     it just before it gets full. The polcy can be grow it	
+			     it just before it gets full. The polcy can be grow it
 			     if it's 70% full */
 
-		/* Enlarge the symbol table before it gets full to
+		/* enlarge the bucket before it gets full to
 		 * make sure that it has at least one free slot left
 		 * after having added a new symbol. this is to help
 		 * traversal end at a _nil slot if no entry is found. */
@@ -138,6 +154,8 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 	ass->key = (stix_oop_t)key;
 	ass->value = value;
 
+	/* the current tally must be less than the maximum value. otherwise,
+	 * it overflows after increment below */
 	STIX_ASSERT (tally < STIX_SMOOI_MAX);
 	dic->tally = STIX_SMOOI_TO_OOP(tally + 1);
 	dic->bucket->slot[index] = (stix_oop_t)ass;

@@ -29,17 +29,24 @@
 static void compact_symbol_table (stix_t* stix, stix_oop_t _nil)
 {
 	stix_oop_char_t symbol;
-	stix_oow_t tally, index, i, x, y, z;
-	stix_oow_t bucket_size;
+	stix_oow_t i, x, y, z;
+	stix_oow_t bucket_size, index;
+	stix_ooi_t tally;
 
 #if defined(STIX_SUPPORT_GC_DURING_IGNITION)
 	if (!stix->symtab) return; /* symbol table has not been created */
 #endif
 
-	bucket_size = STIX_OBJ_GET_SIZE(stix->symtab->bucket);
-
+	/* the symbol table doesn't allow more data items than STIX_SMOOI_MAX.
+	 * so stix->symtab->tally must always be a small integer */
+	STIX_ASSERT (STIX_OOP_IS_SMOOI(stix->symtab->tally));
 	tally = STIX_OOP_TO_SMOOI(stix->symtab->tally);
+	STIX_ASSERT (tally >= 0); /* it must not be less than 0 */
 	if (tally <= 0) return;
+
+	/* NOTE: in theory, the bucket size can be greater than STIX_SMOOI_MAX
+	 * as it is an internal header field and is of an unsigned type */
+	bucket_size = STIX_OBJ_GET_SIZE(stix->symtab->bucket);
 
 	for (index = 0; index < bucket_size; )
 	{
@@ -79,6 +86,7 @@ static void compact_symbol_table (stix_t* stix, stix_oop_t _nil)
 		tally--;
 	}
 
+	STIX_ASSERT (tally >= 0);
 	STIX_ASSERT (tally <= STIX_SMOOI_MAX);
 	stix->symtab->tally = STIX_SMOOI_TO_OOP(tally);
 }

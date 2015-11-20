@@ -304,7 +304,7 @@ static stix_oop_t normalize_bigint (stix_t* stix, stix_oop_t oop)
 	count = count_effective_digits (oop);
 
 #if defined(STIX_USE_FULL_WORD)
-	if (count == 1)
+	if (count == 1) /* 1 word */
 	{
 		stix_oow_t w;
 
@@ -315,13 +315,13 @@ static stix_oop_t normalize_bigint (stix_t* stix, stix_oop_t oop)
 		}
 		else
 		{
+			STIX_ASSERT (-STIX_SMOOI_MAX  == STIX_SMOOI_MIN);
 			STIX_ASSERT (STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer);
-			/*if (w <= -STIX_SMOOI_MIN) */
-			if (w <= ((stix_oow_t)STIX_SMOOI_MAX + 1)) return STIX_SMOOI_TO_OOP(-(stix_ooi_t)w);
+			if (w <= STIX_SMOOI_MAX) return STIX_SMOOI_TO_OOP(-(stix_ooi_t)w);
 		}
 	}
 #else
-	if (count == 1)
+	if (count == 1) /* 1 half-word */
 	{
 		if (STIX_OBJ_GET_CLASS(oop) == stix->_large_positive_integer)
 		{
@@ -330,10 +330,10 @@ static stix_oop_t normalize_bigint (stix_t* stix, stix_oop_t oop)
 		else
 		{
 			STIX_ASSERT (STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer);
-			return STIX_SMOOI_TO_OOP(-(stix_oow_t)((stix_oop_liword_t)oop)->slot[0]);
+			return STIX_SMOOI_TO_OOP(-(stix_ooi_t)((stix_oop_liword_t)oop)->slot[0]);
 		}
 	}
-	else if (count == 2)
+	else if (count == 2) /* 2 half-words */
 	{
 		stix_oow_t w;
 
@@ -344,9 +344,9 @@ static stix_oop_t normalize_bigint (stix_t* stix, stix_oop_t oop)
 		}
 		else
 		{
+			STIX_ASSERT (-STIX_SMOOI_MAX  == STIX_SMOOI_MIN);
 			STIX_ASSERT (STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer);
-			/*if (w <= -STIX_SMOOI_MIN) */
-			if (w <= ((stix_oow_t)STIX_SMOOI_MAX + 1)) return STIX_SMOOI_TO_OOP(-(stix_ooi_t)w);
+			if (w <= STIX_SMOOI_MAX) return STIX_SMOOI_TO_OOP(-(stix_ooi_t)w);
 		}
 	}
 #endif
@@ -630,6 +630,40 @@ static STIX_INLINE void rshift_unsigned_array (stix_liw_t* x, stix_oow_t xs, sti
 	/* fill the remaining part with zeros */
 	if (word_shifts > 0)
 		STIX_MEMSET (&x[xs - word_shifts], 0, word_shifts * STIX_SIZEOF(stix_liw_t));
+}
+
+static void divide_unsigned_array (
+	const stix_liw_t* x, stix_oow_t xs, 
+	const stix_liw_t* y, stix_oow_t ys, 
+	stix_liw_t* q, stix_liw_t* r)
+{
+	/* TODO: this function needs to be rewritten for performance improvement. */
+
+	/* Perform binary long division.
+	 * http://en.wikipedia.org/wiki/Division_algorithm
+	 * ---------------------------------------------------------------------
+	 * Q := 0                 initialize quotient and remainder to zero
+	 * R := 0                     
+	 * for i = n-1...0 do     where n is number of bits in N
+	 *   R := R << 1          left-shift R by 1 bit    
+	 *   R(0) := X(i)         set the least-significant bit of R equal to bit i of the numerator
+	 *   if R >= Y then
+	 *     R = R - Y               
+	 *     Q(i) := 1
+	 *   end
+	 * end 
+	 */
+
+	stix_liw_t* d;
+	stix_oow_t ds;
+
+/* TODO: */
+	while (!is_less_unsigned_array (d, ds, y, ys)) /* while (y <= d) */
+	{
+		
+	}
+
+	STIX_MEMCPY (r, d, ds);
 }
 
 static stix_oop_t add_unsigned_integers (stix_t* stix, stix_oop_t x, stix_oop_t y)
@@ -981,6 +1015,7 @@ printf ("%0*lX ", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_
 printf ("\n");
 }
 
+/*
 lshift_unsigned_array (((stix_oop_liword_t)z)->slot, STIX_OBJ_GET_SIZE(z), 16 * 5 + 4);
 { int i;
 printf ("LSHIFT10=>");
@@ -989,7 +1024,7 @@ for (i = STIX_OBJ_GET_SIZE(z); i > 0;)
 printf ("%0*lX ", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)z)->slot[--i]);
 }
 printf ("\n");
-}
+}*/
 
 
 	return normalize_bigint (stix, z);
@@ -1001,6 +1036,80 @@ oops_einval:
 
 stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, stix_oop_t* rem)
 {
+	stix_oop_t t;
+
+	if (STIX_OOP_IS_SMOOI(x) && STIX_OOP_IS_SMOOI(y))
+	{
+		stix_ooi_t xv, yv, q, r;
+
+		xv = STIX_OOP_TO_SMOOI(x);
+		yv = STIX_OOP_TO_SMOOI(y);
+
+		if (yv == 0)
+		{
+			stix->errnum = STIX_EDIVBY0;
+			return STIX_NULL;
+		}
+
+		q = xv / yv;
+		STIX_ASSERT (STIX_IN_SMOOI_RANGE(q));
+
+#if 1
+/* TODO : verify this... */
+		r = xv - yv * q;
+		STIX_ASSERT (STIX_IN_SMOOI_RANGE(r));
+
+		/* handle sign difference */
+		if (r && ((yv ^ r) < 0))
+		{
+			/* if the sign bit is different betwen yv and r,
+			 * the sign bit of (yv ^ r) must be set */
+			r += yv;
+			--q;
+
+			STIX_ASSERT (STIX_IN_SMOOI_RANGE(r));
+		}
+#else
+		r = xv % yv;
+		STIX_ASSERT (STIX_IN_SMOOI_RANGE(r));
+#endif
+
+		*rem = STIX_SMOOI_TO_OOP(r);
+		return STIX_SMOOI_TO_OOP((stix_ooi_t)q);
+	}
+	else if (STIX_OOP_IS_SMOOI(x))
+	{
+		if (STIX_OOP_TO_SMOOI(x) == 0)
+		{
+			t = clone_bigint (stix, y, STIX_OBJ_GET_SIZE(y));
+			if (!t) return STIX_NULL;
+
+			*rem = t;
+			return STIX_SMOOI_TO_OOP(0);
+		}
+	}
+	else if (STIX_OOP_IS_SMOOI(y))
+	{
+		stix_ooi_t yv;
+
+		if (yv == 0)
+		{
+			stix->errnum = STIX_EDIVBY0;
+			return STIX_NULL;
+		}
+		else if (yv == 1)
+		{
+			t = clone_bigint (stix, x, STIX_OBJ_GET_SIZE(x));
+			if (!t) return STIX_NULL;
+
+			*rem = STIX_SMOOI_TO_OOP(0);
+			return t;
+		}
+	}
+	else
+	{
+	}
+
 	return STIX_NULL;
 }
 
@@ -1229,7 +1338,8 @@ printf ("\n");
 		w = hwp[0];
 		if (neg) 
 		{
-			if (w <= STIX_SMOOI_MAX + 1) return STIX_SMOOI_TO_OOP(-(stix_ooi_t)w);
+			STIX_ASSERT (-STIX_SMOOI_MAX == STIX_SMOOI_MIN);
+			if (w <= STIX_SMOOI_MAX) return STIX_SMOOI_TO_OOP(-(stix_ooi_t)w);
 		}
 		else 
 		{
@@ -1243,7 +1353,8 @@ printf ("\n");
 		w = MAKE_WORD(hwp[0], hwp[1]);
 		if (neg) 
 		{
-			if (w <= STIX_SMOOI_MAX + 1) return STIX_SMOOI_TO_OOP(-(stix_ooi_t)w);
+			STIX_ASSERT (-STIX_SMOOI_MAX == STIX_SMOOI_MIN);
+			if (w <= STIX_SMOOI_MAX) return STIX_SMOOI_TO_OOP(-(stix_ooi_t)w);
 		}
 		else 
 		{

@@ -688,7 +688,7 @@ static int prim_basic_at (stix_t* stix, stix_ooi_t nargs)
 			break;
 
 		case STIX_OBJ_TYPE_CHAR:
-			v = STIX_OOP_FROM_CHAR(((stix_oop_char_t)rcv)->slot[idx]);
+			v = STIX_CHAR_TO_OOP(((stix_oop_char_t)rcv)->slot[idx]);
 			break;
 
 		case STIX_OBJ_TYPE_HALFWORD:
@@ -1491,7 +1491,7 @@ printf ("CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MOD
 			case 'c':
 			{
 				char r = dcCallChar (dc, f);
-				ACTIVE_STACK_SETTOP (stix, STIX_OOP_FROM_CHAR(r));
+				ACTIVE_STACK_SETTOP (stix, STIX_CHAR_TO_OOP(r));
 				break;
 			}
 

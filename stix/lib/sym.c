@@ -60,7 +60,8 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 
 static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len, int create)
 {
-	stix_oow_t index, tally;
+	stix_ooi_t tally;
+	stix_oow_t index;
 	stix_oop_char_t symbol;
 
 	STIX_ASSERT (len > 0);
@@ -95,7 +96,21 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_ooch_t* ptr, sti
 		return STIX_NULL;
 	}
 
+	/* make a new symbol and insert it */
+	STIX_ASSERT (STIX_OOP_IS_SMOOI(stix->symtab->tally));
 	tally = STIX_OOP_TO_SMOOI(stix->symtab->tally);
+	if (tally >= STIX_SMOOI_MAX)
+	{
+		/* this built-in table is not allowed to hold more than 
+		 * STIX_SMOOI_MAX items for efficiency sake */
+		stix->errnum = STIX_EDFULL;
+		return STIX_NULL;
+	}
+
+	/* no conversion to stix_oow_t is necessary for tally + 1.
+	 * the maximum value of tally is checked to be STIX_SMOOI_MAX - 1.
+	 * tally + 1 can produce at most STIX_SMOOI_MAX. above all, 
+	 * STIX_SMOOI_MAX is way smaller than STIX_TYPE_MAX(stix_ooi_t). */
 	if (tally + 1 >= STIX_OBJ_GET_SIZE(stix->symtab->bucket))
 	{
 		stix_oop_oop_t bucket;
@@ -104,7 +119,7 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_ooch_t* ptr, sti
 			     it just before it gets full. The polcy can be grow it
 			     if it's 70% full */
 
-		/* Enlarge the symbol table before it gets full to
+		/* enlarge the symbol table before it gets full to
 		 * make sure that it has at least one free slot left
 		 * after having added a new symbol. this is to help
 		 * traversal end at a _nil slot if no entry is found. */

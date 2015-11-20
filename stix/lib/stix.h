@@ -49,6 +49,8 @@ enum stix_errnum_t
 	STIX_EINVAL,  /**< invalid parameter or data */
 	STIX_ERANGE,  /**< range error. overflow and underflow */
 	STIX_ENOENT,  /**< no matching entry */
+	STIX_EDFULL,  /**< dictionary full */
+	STIX_EDIVBY0, /**< divide by zero */
 	STIX_EIOERR,  /**< I/O error */
 	STIX_EECERR,  /**< encoding conversion error */
 
@@ -157,12 +159,15 @@ typedef struct stix_obj_word_t*     stix_oop_word_t;
 #define STIX_OOP_IS_CHAR(oop) (((stix_oow_t)oop) & STIX_OOP_TAG_CHAR)
 #define STIX_SMOOI_TO_OOP(num) ((stix_oop_t)((((stix_ooi_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_SMINT))
 #define STIX_OOP_TO_SMOOI(oop) (((stix_ooi_t)oop) >> STIX_OOP_TAG_BITS)
-#define STIX_OOP_FROM_CHAR(num) ((stix_oop_t)((((stix_oow_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_CHAR))
+#define STIX_CHAR_TO_OOP(num) ((stix_oop_t)((((stix_oow_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_CHAR))
 #define STIX_OOP_TO_CHAR(oop) (((stix_oow_t)oop) >> STIX_OOP_TAG_BITS)
 
 #define STIX_SMINT_BITS (STIX_SIZEOF(stix_ooi_t) * 8 - STIX_OOP_TAG_BITS)
 #define STIX_SMOOI_MAX ((stix_ooi_t)(~((stix_oow_t)0) >> (STIX_OOP_TAG_BITS + 1)))
-#define STIX_SMOOI_MIN (-STIX_SMOOI_MAX - 1)
+/* Sacrificing 1 bit pattern for a negative SMOOI makes implementation
+ * a lot eaisier in many parts */
+/*#define STIX_SMOOI_MIN (-STIX_SMOOI_MAX - 1)*/
+#define STIX_SMOOI_MIN (-STIX_SMOOI_MAX)
 #define STIX_IN_SMOOI_RANGE(ooi)  ((ooi) >= STIX_SMOOI_MIN && (ooi) <= STIX_SMOOI_MAX)
 
 /* TODO: There are untested code where smint is converted to stix_oow_t.

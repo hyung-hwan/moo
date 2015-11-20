@@ -421,7 +421,6 @@ static int string_to_smint (stix_t* stix, stix_oocs_t* str, int radixed, stix_oo
 	 * it assumes a certain pre-sanity check on the string
 	 * done by the lexical analyzer */
 
-/* TODO: handle floating point numbers, etc, handle radix */
 	int v, negsign, base;
 	const stix_ooch_t* ptr, * end;
 	stix_oow_t value, old_value;
@@ -477,26 +476,15 @@ static int string_to_smint (stix_t* stix, stix_oocs_t* str, int radixed, stix_oo
 		return -1;
 	}
 
-	if (negsign)
+	STIX_ASSERT (-STIX_SMOOI_MAX == STIX_SMOOI_MIN);
+	if (value > STIX_SMOOI_MAX) 
 	{
-		/*if (value > -STIX_SMOOI_MIN) */
-		if (value > ((stix_oow_t)STIX_SMOOI_MAX + 1)) 
-		{
-			stix->errnum = STIX_ERANGE;
-			return -1;
-		}
-		*num = value;
-		*num *= -1;
+		stix->errnum = STIX_ERANGE;
+		return -1;
 	}
-	else
-	{
-		if (value > STIX_SMOOI_MAX) 
-		{
-			stix->errnum = STIX_ERANGE;
-			return -1;
-		}
-		*num = value;
-	}
+
+	*num = value;
+	if (negsign) *num *= -1;
 
 	return 0;
 }
@@ -1860,7 +1848,7 @@ static int add_literal (stix_t* stix, stix_oop_t lit, stix_size_t* index)
 
 static STIX_INLINE int add_character_literal (stix_t* stix, stix_ooch_t ch, stix_size_t* index)
 {
-	return add_literal (stix, STIX_OOP_FROM_CHAR(ch), index);
+	return add_literal (stix, STIX_CHAR_TO_OOP(ch), index);
 }
 
 static int add_string_literal (stix_t* stix, const stix_oocs_t* str, stix_size_t* index)
@@ -3181,8 +3169,9 @@ static int __read_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
 			 * than the range error must not occur */
 			STIX_ASSERT (stix->errnum == STIX_ERANGE);
 
-printf ("NOT IMPLEMENTED LARGE_INTEGER or ERROR?\n");
-			stix->errnum = STIX_ENOIMPL;
+			/* if the token is out of the SMOOI range, it's too big or 
+			 * to small to be a byte */
+			set_syntax_error (stix, STIX_SYNERR_BYTERANGE, &stix->c->tok.loc, &stix->c->tok.name);
 			return -1;
 		}
 		else if (tmp < 0 || tmp > 255)
@@ -3233,28 +3222,13 @@ static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
 
 			case STIX_IOTOK_NUMLIT:
 			case STIX_IOTOK_RADNUMLIT:
-			{
-				stix_ooi_t tmp;
-
-				if (string_to_smint(stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT, &tmp) <= -1)
-				{
-					/* the token reader reads a valid token. no other errors
-					 * than the range error must not occur */
-					STIX_ASSERT (stix->errnum == STIX_ERANGE);
-
-/* TODO: IMPLMENET LARGE INTEGER */
-printf ("LARGE NOT IMPLEMENTED IN COMPILE_ARRAY_LITERAL\n");
-					stix->errnum = STIX_ENOIMPL;
-					return -1;
-				}
-
-				lit = STIX_SMOOI_TO_OOP(tmp);
+				lit = string_to_num (stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT);
+				if (!lit) return -1;
 				break;
-			}
 
 			case STIX_IOTOK_CHARLIT:
 				STIX_ASSERT (stix->c->tok.name.len == 1);
-				lit = STIX_OOP_FROM_CHAR(stix->c->tok.name.ptr[0]);
+				lit = STIX_CHAR_TO_OOP(stix->c->tok.name.ptr[0]);
 				break;
 
 			case STIX_IOTOK_STRLIT:
@@ -3540,28 +3514,8 @@ printf ("\tpush symbol literal %d\n", (int)index);
 			case STIX_IOTOK_NUMLIT:
 			case STIX_IOTOK_RADNUMLIT:
 			{
-				/* TODO: other types of numbers, negative numbers, etc */
-#if 0
-/* TODO: proper numbeic literal handling */
-				stix_ooi_t tmp;
-
-				if (string_to_smint(stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT, &tmp) <= -1)
-				{
-					/* the token reader reads a valid token. no other errors
-					 * than the range error must not occur */
-					STIX_ASSERT (stix->errnum == STIX_ERANGE);
-
-printf ("NOT IMPLEMENTED LARGE_INTEGER or ERROR?\n");
-					stix->errnum = STIX_ENOIMPL;
-					return -1;
-				}
-				else
-				{
-printf ("\tpush int literal\n");
-					if (emit_push_smint_literal(stix, tmp) <= -1) return -1;
-				}
-#else
-
+/* TODO: floating pointer number */
+				/* TODO: other types of numbers, etc */
 				stix_oop_t tmp;
 				tmp = string_to_num (stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT);
 				if (!tmp) return -1;
@@ -3576,7 +3530,6 @@ printf ("\tpush int literal\n");
 					if (add_literal(stix, tmp, &index) <= -1 ||
 					    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 				}
-#endif
 
 				GET_TOKEN (stix);
 				break;
@@ -4947,7 +4900,7 @@ printf ("\n");
 
 			case STIX_IOTOK_CHARLIT:
 				STIX_ASSERT (stix->c->tok.name.len == 1);
-				lit = STIX_OOP_FROM_CHAR(stix->c->tok.name.ptr[0]);
+				lit = STIX_CHAR_TO_OOP(stix->c->tok.name.ptr[0]);
 				goto add_literal;
 
 			case STIX_IOTOK_STRLIT:
@@ -4963,27 +4916,8 @@ printf ("\n");
 			case STIX_IOTOK_NUMLIT:
 			case STIX_IOTOK_RADNUMLIT:
 			{
-#if 0
-				stix_ooi_t tmp;
-
-				if (string_to_smint(stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT, &tmp) <= -1)
-				{
-					/* the token reader reads a valid token. no other errors
-					 * than the range error must not occur */
-					STIX_ASSERT (stix->errnum == STIX_ERANGE);
-
-printf ("NOT IMPLEMENTED LARGE_INTEGER or ERROR?\n");
-					stix->errnum = STIX_ENOIMPL;
-					return -1;
-				}
-				else
-				{
-					lit = STIX_SMOOI_TO_OOP(tmp);
-				}
-#else
 				lit = string_to_num (stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT);
 				if (!lit) return -1;
-#endif
 				goto add_literal;
 			}
 
