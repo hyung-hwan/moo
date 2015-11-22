@@ -33,6 +33,8 @@
 
 #if defined(STIX_HAVE_CFG_H)
 #	include "stix-cfg.h"
+#elif defined(_WIN32)
+#	include "stix-msw.h"
 #else
 #	error UNSUPPORTED SYSTEM
 #endif
@@ -48,8 +50,6 @@
 #		define STIX_SIZEOF_LONG STIX_SIZEOF_INT
 #	endif
 #endif
-
-
 
 /* =========================================================================
  * PRIMITIVE TYPE DEFINTIONS

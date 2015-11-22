@@ -51,7 +51,6 @@
 #	include <ltdl.h>
 #	define USE_LTDL
 #endif
-#include <dlfcn.h>
 
 #if !defined(STIX_DEFAULT_MODPREFIX)
 #	if defined(_WIN32)
@@ -464,6 +463,7 @@ int main (int argc, char* argv[])
 		return -1;
 	}
 
+#if 0
 {
 
 /*const stix_bch_t* xxx = "9999999999999999999999999999999999999999999999999999999999999999999999999999999999";*/
@@ -488,6 +488,7 @@ buflen = STIX_COUNTOF(buf);
 stix_utf8toucs (yyy, &xxxlen, buf, &buflen);
 dump_object (stix, stix_strtoint (stix, buf, buflen, 3), "STRINT");
 }
+
 {
 stix_ooch_t x[] = { 'X', 't', 'r', 'i', 'n', 'g', '\0' };
 stix_ooch_t y[] = { 'S', 'y', 'm', 'b', 'o', 'l', '\0' };
@@ -517,6 +518,7 @@ printf ("%p\n", a);
 
 	dump_dictionary (stix, stix->sysdic, "System dictionary");
 }
+#endif
 
 	xtn = stix_getxtn (stix);
 
@@ -597,11 +599,15 @@ printf ("%p\n", a);
 	}
 
 
-	dump_dictionary (stix, stix->sysdic, "System dictionary");
+/*	dump_dictionary (stix, stix->sysdic, "System dictionary");*/
 	stix_close (stix);
 
 #if defined(USE_LTDL)
 	lt_dlexit ();
+#endif
+
+#if defined(_WIN32) && defined(_DEBUG)
+getchar();
 #endif
 	return 0;
 }

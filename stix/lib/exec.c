@@ -1018,31 +1018,12 @@ static int prim_integer_add (stix_t* stix, stix_ooi_t nargs)
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-#if 0
-	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
-	{
-		stix_ooi_t tmp;
-
-		tmp = STIX_OOP_TO_SMOOI(rcv) + STIX_OOP_TO_SMOOI(arg);
-		/* TODO: check overflow. if so convert it to LargeInteger */
-
-		ACTIVE_STACK_POP (stix);
-		ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(tmp));
-		return 1;
-	}
-
-/* TODO: handle LargeInteger */
-	return 0;
-
-#else
 	res = stix_addints (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL)? 0: -1; /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
 	ACTIVE_STACK_POP (stix);
 	ACTIVE_STACK_SETTOP (stix, res);
 	return 1;
-#endif
-
 }
 
 static int prim_integer_sub (stix_t* stix, stix_ooi_t nargs)
@@ -1054,28 +1035,12 @@ static int prim_integer_sub (stix_t* stix, stix_ooi_t nargs)
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-#if 0
-	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
-	{
-		stix_ooi_t tmp;
-		tmp = STIX_OOP_TO_SMOOI(rcv) - STIX_OOP_TO_SMOOI(arg);
-		/* TODO: check overflow. if so convert it to LargeInteger */
-
-		ACTIVE_STACK_POP (stix);
-		ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(tmp));
-		return 1;
-	}
-
-/* TODO: handle LargeInteger */
-	return 0;
-#else
 	res = stix_subints (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL)? 0: -1; /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
 	ACTIVE_STACK_POP (stix);
 	ACTIVE_STACK_SETTOP (stix, res);
 	return 1;
-#endif
 }
 
 static int prim_integer_mul (stix_t* stix, stix_ooi_t nargs)
@@ -1087,29 +1052,46 @@ static int prim_integer_mul (stix_t* stix, stix_ooi_t nargs)
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-#if 0
-	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
-	{
-		stix_ooi_t tmp;
-
-		tmp = STIX_OOP_TO_SMOOI(rcv) * STIX_OOP_TO_SMOOI(arg);
-		/* TODO: check overflow. if so convert it to LargeInteger */
-
-		ACTIVE_STACK_POP (stix);
-		ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(tmp));
-		return 1;
-	}
-
-/* TODO: handle LargeInteger */
-	return 0;
-#else
 	res = stix_mulints (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL)? 0: -1; /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
 	ACTIVE_STACK_POP (stix);
 	ACTIVE_STACK_SETTOP (stix, res);
 	return 1;
-#endif
+}
+
+static int prim_integer_quo (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg, quo;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	quo = stix_divints (stix, rcv, arg, STIX_NULL);
+	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, quo);
+	return 1;
+}
+
+static int prim_integer_rem (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg, quo, rem;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	quo = stix_divints (stix, rcv, arg, &rem);
+	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, rem);
+	return 1;
 }
 
 static int prim_integer_eq (stix_t* stix, stix_ooi_t nargs)
@@ -1617,6 +1599,8 @@ static prim_t primitives[] =
 	{   1,   prim_integer_add,          "_integer_add"         },
 	{   1,   prim_integer_sub,          "_integer_sub"         },
 	{   1,   prim_integer_mul,          "_integer_mul"         },
+	{   1,   prim_integer_quo,          "_integer_quo"         },
+	{   1,   prim_integer_rem,          "_integer_rem"         },
 	{   1,   prim_integer_eq,           "_integer_eq"          },
 	{   1,   prim_integer_ne,           "_integer_ne"          },
 	{   1,   prim_integer_lt,           "_integer_lt"          },

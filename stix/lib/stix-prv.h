@@ -1105,12 +1105,12 @@ stix_oop_t stix_strtoint (
 /* ========================================================================= */
 /* comp.c                                                                    */
 /* ========================================================================= */
-int stix_compile (
+STIX_EXPORT int stix_compile (
 	stix_t*       stix,
 	stix_io_impl_t io
 );
 
-void stix_getsynerr (
+STIX_EXPORT void stix_getsynerr (
 	stix_t*        stix,
 	stix_synerr_t* synerr
 );

@@ -28,7 +28,7 @@
 
 
 #if defined(STIX_USE_FULL_WORD)
-	/* nothign special */
+	/* nothing special */
 #else
 #	define MAKE_WORD(hw1,hw2) ((stix_oow_t)(hw1) | (stix_oow_t)(hw2) << STIX_LIW_BITS)
 #endif
@@ -1054,62 +1054,53 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, stix_oop_t* r
 		q = xv / yv;
 		STIX_ASSERT (STIX_IN_SMOOI_RANGE(q));
 
-#if 1
-/* TODO : verify this... */
-		r = xv - yv * q;
-		STIX_ASSERT (STIX_IN_SMOOI_RANGE(r));
-
-		/* handle sign difference */
-		if (r && ((yv ^ r) < 0))
+		if (rem)
 		{
-			/* if the sign bit is different betwen yv and r,
-			 * the sign bit of (yv ^ r) must be set */
-			r += yv;
-			--q;
-
+			r = xv - yv * q; /* r = xv % yv; */
 			STIX_ASSERT (STIX_IN_SMOOI_RANGE(r));
+			*rem = STIX_SMOOI_TO_OOP(r);
 		}
-#else
-		r = xv % yv;
-		STIX_ASSERT (STIX_IN_SMOOI_RANGE(r));
-#endif
 
-		*rem = STIX_SMOOI_TO_OOP(r);
 		return STIX_SMOOI_TO_OOP((stix_ooi_t)q);
 	}
 	else if (STIX_OOP_IS_SMOOI(x))
 	{
 		if (STIX_OOP_TO_SMOOI(x) == 0)
 		{
-			t = clone_bigint (stix, y, STIX_OBJ_GET_SIZE(y));
-			if (!t) return STIX_NULL;
-
-			*rem = t;
+			if (rem)
+			{
+				t = clone_bigint (stix, y, STIX_OBJ_GET_SIZE(y));
+				if (!t) return STIX_NULL;
+				*rem = t;
+			}
 			return STIX_SMOOI_TO_OOP(0);
 		}
+/* TODO: convert x to bigint */
 	}
 	else if (STIX_OOP_IS_SMOOI(y))
 	{
-		stix_ooi_t yv;
-
-		if (yv == 0)
+		switch (STIX_OOP_TO_SMOOI(y))
 		{
-			stix->errnum = STIX_EDIVBY0;
-			return STIX_NULL;
-		}
-		else if (yv == 1)
-		{
-			t = clone_bigint (stix, x, STIX_OBJ_GET_SIZE(x));
-			if (!t) return STIX_NULL;
+			case 0:
+				stix->errnum = STIX_EDIVBY0;
+				return STIX_NULL;
 
-			*rem = STIX_SMOOI_TO_OOP(0);
-			return t;
+			case 1:
+				t = clone_bigint (stix, x, STIX_OBJ_GET_SIZE(x));
+				if (!t) return STIX_NULL;
+				if (rem) *rem = STIX_SMOOI_TO_OOP(0);
+				return t;
+				
+			case -1:
+				t = clone_bigint_negated (stix, x, STIX_OBJ_GET_SIZE(x));
+				if (!t) return STIX_NULL;
+				if (rem) *rem = STIX_SMOOI_TO_OOP(0);
+				return t;
 		}
-	}
-	else
-	{
+/* TODO: convert y to bigint */
 	}
 
+/* TODO: do bigint division. */
 	return STIX_NULL;
 }
 

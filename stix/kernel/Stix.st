@@ -47,6 +47,18 @@
 		self primitiveFailed.
 	}
 
+	#method quo: aNumber
+	{
+		<primitive: #_integer_quo>
+		self primitiveFailed.
+	}
+
+	#method rem: aNumber
+	{
+		<primitive: #_integer_rem>
+		self primitiveFailed.
+	}
+
 	#method = aNumber
 	{
 		<primitive: #_integer_eq>
