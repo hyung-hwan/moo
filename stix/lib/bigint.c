@@ -1051,6 +1051,24 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 			return STIX_NULL;
 		}
 
+		/* In C89, integer division with a negative number  is
+		 * implementation dependent. In C99, it truncates towards zero.
+		 * 
+		 * http://python-history.blogspot.kr/2010/08/why-pythons-integer-division-floors.html
+		 *   The integer division operation (//) and its sibling, 
+		 *   the modulo operation (%), go together and satisfy a nice
+		 *   mathematical relationship (all variables are integers):
+		 *      a/b = q with remainder r
+		 *   such that
+		 *      b*q + r = a and 0 <= r < b (assuming a and b are >= 0).
+		 * 
+		 *   If you want the relationship to extend for negative a
+		 *   (keeping b positive), you have two choices: if you truncate q
+		 *   towards zero, r will become negative, so that the invariant
+		 *   changes to 0 <= abs(r) < abs(b). otherwise, you can floor q
+		 *   towards negative infinity, and the invariant remains 0 <= r < b. 
+		 */
+
 		q = xv / yv;
 		STIX_ASSERT (STIX_IN_SMOOI_RANGE(q));
 
@@ -1066,6 +1084,9 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 				 7      -3     -3      -2
 				-7      -3      2      -1
 			 */
+
+			/* r must be floored. that is, it rounds away from zero 
+			 * and towards negative infinity */
 			if (r && ((yv ^ r) < 0))
 			{
 				/* if the divisor has a different sign from r,
