@@ -1034,7 +1034,7 @@ oops_einval:
 	return STIX_NULL;
 }
 
-stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, stix_oop_t* rem)
+stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, stix_oop_t* rem)
 {
 	stix_oop_t t;
 
@@ -1054,9 +1054,50 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, stix_oop_t* r
 		q = xv / yv;
 		STIX_ASSERT (STIX_IN_SMOOI_RANGE(q));
 
+		r = xv - yv * q; /* xv % yv; */
+		if (modulo)
+		{
+			/* modulo */
+			/*
+				xv      yv      q       r
+				-------------------------
+				 7       3      2       1
+				-7       3     -3       2
+				 7      -3     -3      -2
+				-7      -3      2      -1
+			 */
+			if (r && ((yv ^ r) < 0))
+			{
+				/* if the divisor has a different sign from r,
+				 * change the sign of r to the divisor's sign */
+				r += yv;
+				--q;
+				STIX_ASSERT (r && ((yv ^ r) >= 0));
+			}
+		}
+		else
+		{
+			/* remainder */
+			/*
+				xv      yv      q       r
+				-------------------------
+				 7       3      2       1
+				-7       3     -2      -1
+				 7      -3     -2       1
+				-7      -3      2      -1
+			 */
+			if (xv && ((xv ^ r) < 0)) 
+			{
+				/* if the dividend has a different sign from r,
+				 * change the sign of r to the dividend's sign */
+				r -= yv;
+				++q;
+				STIX_ASSERT (xv && ((xv ^ r) >= 0));
+			}
+		}
+
 		if (rem)
 		{
-			r = xv - yv * q; /* r = xv % yv; */
 			STIX_ASSERT (STIX_IN_SMOOI_RANGE(r));
 			*rem = STIX_SMOOI_TO_OOP(r);
 		}

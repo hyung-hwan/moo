@@ -1093,6 +1093,7 @@ stix_oop_t stix_divints (
 	stix_t*     stix,
 	stix_oop_t  x,
 	stix_oop_t  y,
+	int         modulo,
 	stix_oop_t* rem
 );
 

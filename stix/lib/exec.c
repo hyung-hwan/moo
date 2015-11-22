@@ -1069,7 +1069,7 @@ static int prim_integer_quo (stix_t* stix, stix_ooi_t nargs)
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	quo = stix_divints (stix, rcv, arg, STIX_NULL);
+	quo = stix_divints (stix, rcv, arg, 0, STIX_NULL);
 	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
 	ACTIVE_STACK_POP (stix);
@@ -1086,7 +1086,41 @@ static int prim_integer_rem (stix_t* stix, stix_ooi_t nargs)
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	quo = stix_divints (stix, rcv, arg, &rem);
+	quo = stix_divints (stix, rcv, arg, 0, &rem);
+	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, rem);
+	return 1;
+}
+
+static int prim_integer_quo2 (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg, quo;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	quo = stix_divints (stix, rcv, arg, 1, STIX_NULL);
+	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, quo);
+	return 1;
+}
+
+static int prim_integer_rem2 (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg, quo, rem;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	quo = stix_divints (stix, rcv, arg, 1, &rem);
 	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
 	ACTIVE_STACK_POP (stix);
@@ -1601,6 +1635,8 @@ static prim_t primitives[] =
 	{   1,   prim_integer_mul,          "_integer_mul"         },
 	{   1,   prim_integer_quo,          "_integer_quo"         },
 	{   1,   prim_integer_rem,          "_integer_rem"         },
+	{   1,   prim_integer_quo2,         "_integer_quo2"        },
+	{   1,   prim_integer_rem2,         "_integer_rem2"        },
 	{   1,   prim_integer_eq,           "_integer_eq"          },
 	{   1,   prim_integer_ne,           "_integer_ne"          },
 	{   1,   prim_integer_lt,           "_integer_lt"          },
