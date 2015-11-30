@@ -115,6 +115,24 @@ void print_object (stix_t* stix, stix_oop_t oop)
 			printf ("$%.*s", (int)bcslen, bcs);
 		}
 	}
+	else if (STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer)
+	{
+		stix_oow_t i;
+		printf ("-16r");
+		for (i = STIX_OBJ_GET_SIZE(oop); i > 0;)
+		{
+			printf ("%0*lX", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)oop)->slot[--i]);
+		}
+	}
+	else if (STIX_OBJ_GET_CLASS(oop) == stix->_large_positive_integer)
+	{
+		stix_oow_t i;
+		printf ("16r");
+		for (i = STIX_OBJ_GET_SIZE(oop); i > 0;)
+		{
+			printf ("%0*lX", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)oop)->slot[--i]);
+		}
+	}
 	else
 	{
 		stix_oop_class_t c;

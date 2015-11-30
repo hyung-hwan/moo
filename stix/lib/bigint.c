@@ -777,7 +777,7 @@ static stix_oop_t divide_unsigned_integers (stix_t* stix, stix_oop_t x, stix_oop
 		((stix_oop_liword_t)y)->slot, STIX_OBJ_GET_SIZE(y),
 		((stix_oop_liword_t)qq)->slot, ((stix_oop_liword_t)rr)->slot);
 
-	if (r) *r = rr;
+	*r = rr;
 	return qq;
 }
 
@@ -1106,7 +1106,7 @@ oops_einval:
 
 stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, stix_oop_t* rem)
 {
-	stix_oop_t z;
+	stix_oop_t z, r;
 	int x_neg, y_neg;
 
 	if (STIX_OOP_IS_SMOOI(x) && STIX_OOP_IS_SMOOI(y))
@@ -1131,7 +1131,7 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 		 *   mathematical relationship (all variables are integers):
 		 *      a/b = q with remainder r
 		 *   such that
-		 *      b*q + r = a and 0 <= r < b (assuming a and b are >= 0).
+		 *      b*q + r = a and 0 <= r < b (assuming- a and b are >= 0).
 		 * 
 		 *   If you want the relationship to extend for negative a
 		 *   (keeping b positive), you have two choices: if you truncate q
@@ -1144,47 +1144,50 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 		STIX_ASSERT (STIX_IN_SMOOI_RANGE(q));
 
 		r = xv - yv * q; /* xv % yv; */
-		if (modulo)
+		if (r)
 		{
-			/* modulo */
-			/*
-				xv      yv      q       r
-				-------------------------
-				 7       3      2       1
-				-7       3     -3       2
-				 7      -3     -3      -2
-				-7      -3      2      -1
-			 */
+			if (modulo)
+			{
+				/* modulo */
+				/*
+					xv      yv      q       r
+					-------------------------
+					 7       3      2       1
+					-7       3     -3       2
+					 7      -3     -3      -2
+					-7      -3      2      -1
+				 */
 
-			/* r must be floored. that is, it rounds away from zero 
-			 * and towards negative infinity */
-			if (r && ((yv ^ r) < 0))
-			{
-				/* if the divisor has a different sign from r,
-				 * change the sign of r to the divisor's sign */
-				r += yv;
-				--q;
-				STIX_ASSERT (r && ((yv ^ r) >= 0));
+				/* r must be floored. that is, it rounds away from zero 
+				 * and towards negative infinity */
+				if (r && ((yv ^ r) < 0))
+				{
+					/* if the divisor has a different sign from r,
+					 * change the sign of r to the divisor's sign */
+					r += yv;
+					--q;
+					STIX_ASSERT (r && ((yv ^ r) >= 0));
+				}
 			}
-		}
-		else
-		{
-			/* remainder */
-			/*
-				xv      yv      q       r
-				-------------------------
-				 7       3      2       1
-				-7       3     -2      -1
-				 7      -3     -2       1
-				-7      -3      2      -1
-			 */
-			if (xv && ((xv ^ r) < 0)) 
+			else
 			{
-				/* if the dividend has a different sign from r,
-				 * change the sign of r to the dividend's sign */
-				r -= yv;
-				++q;
-				STIX_ASSERT (xv && ((xv ^ r) >= 0));
+				/* remainder */
+				/*
+					xv      yv      q       r
+					-------------------------
+					 7       3      2       1
+					-7       3     -2      -1
+					 7      -3     -2       1
+					-7      -3      2      -1
+				 */
+				if (xv && ((xv ^ r) < 0)) 
+				{
+					/* if the dividend has a different sign from r,
+					 * change the sign of r to the dividend's sign */
+					r -= yv;
+					++q;
+					STIX_ASSERT (xv && ((xv ^ r) >= 0));
+				}
 			}
 		}
 
@@ -1256,86 +1259,64 @@ DO SHIFTING.
 
 	stix_pushtmp (stix, &x);
 	stix_pushtmp (stix, &y);
-	z = divide_unsigned_integers (stix, x, y, rem);
+	z = divide_unsigned_integers (stix, x, y, &r);
 	stix_poptmps (stix, 2);
 	if (!z) return STIX_NULL;
-	if (x_neg != y_neg) 
-	{
-		STIX_OBJ_SET_CLASS(z, stix->_large_negative_integer);
-	}
+	if (x_neg != y_neg) STIX_OBJ_SET_CLASS(z, stix->_large_negative_integer);
 
-{ int i;
-printf ("QUO=>");
-for (i = STIX_OBJ_GET_SIZE(z); i > 0;)
-{
-printf ("%0*lX ", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)z)->slot[--i]);
-}
-printf ("\n");
-}
-
-/* TODO: handle modulo... */
-	if (rem)
+	if (x_neg) 
 	{
+		/* the class on r must be set before normalize_bigint() 
+		 * because it can turn it to a small integer */
+		STIX_OBJ_SET_CLASS(r, stix->_large_negative_integer);
+
 		stix_pushtmp (stix, &z);
-		*rem = normalize_bigint (stix, *rem);
-		stix_poptmp (stix);
-		if (!*rem) return STIX_NULL;
+		stix_pushtmp (stix, &y);
+		r = normalize_bigint (stix, r);
+		stix_poptmps (stix, 2);
+		if (!r) return STIX_NULL;
 
-		if (x_neg) 
+		if (r != STIX_SMOOI_TO_OOP(0) && modulo)
 		{
-			STIX_OBJ_SET_CLASS(*rem, stix->_large_negative_integer);
-			if (modulo)
+			if (rem)
 			{
-{ int i;
-printf ("REM=>");
-for (i = STIX_OBJ_GET_SIZE(*rem); i > 0;)
-{
-printf ("%0*lX ", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)*rem)->slot[--i]);
-}
-printf ("\n");
-}
 				stix_pushtmp (stix, &z);
 				stix_pushtmp (stix, &y);
-				*rem = stix_addints (stix, *rem, y);
+				r = stix_addints (stix, r, y);
 				stix_poptmps (stix, 2);
-				if (!*rem) return STIX_NULL;
+				if (!r) return STIX_NULL;
 
-{ int i;
-printf ("REM=>");
-for (i = STIX_OBJ_GET_SIZE(*rem); i > 0;)
-{
-printf ("%0*lX ", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)*rem)->slot[--i]);
-}
-printf ("\n");
-}
-				stix_pushtmp (stix, rem);
+				stix_pushtmp (stix, &r);
 				z = normalize_bigint (stix, z);
 				stix_poptmp (stix);
 				if (!z) return STIX_NULL;
 
-				stix_pushtmp (stix, rem);
+				stix_pushtmp (stix, &r);
 				z = stix_subints (stix, z, STIX_SMOOI_TO_OOP(1));
 				stix_poptmp (stix);
+
+				*rem = r;
 				return z;
 			}
+			else
+			{
+				/* remainder is not needed at all */
+/* TODO: subtract 1 without normalization??? */
+				z = normalize_bigint (stix, z);
+				if (!z) return STIX_NULL;
+				return stix_subints (stix, z, STIX_SMOOI_TO_OOP(1));
+			}
 		}
-
-{ int i;
-printf ("REM=>");
-for (i = STIX_OBJ_GET_SIZE(*rem); i > 0;)
-{
-printf ("%0*lX ", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)*rem)->slot[--i]);
-}
-printf ("\n");
-}
-
 	}
-	else if (modulo && x_neg)
+	else
 	{
-		z = normalize_bigint (stix, z);
-		return stix_subints (stix, z, STIX_SMOOI_TO_OOP(1));
+		stix_pushtmp (stix, &z);
+		r = normalize_bigint (stix, r);
+		stix_poptmp (stix);
+		if (!r) return STIX_NULL;
 	}
 
+	if (rem) *rem = r;
 	return normalize_bigint (stix, z);
 }
 
