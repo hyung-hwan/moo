@@ -34,7 +34,7 @@
 #endif
 
 /*#define IS_POWER_OF_2(ui) (((ui) > 0) && (((ui) & (~(ui)+ 1)) == (ui)))*/
-#define IS_POWER_OF_2(ui) (((ui) > 0) && ((ui) & ((ui) - 1)) == 0) /* unsigned integer only */
+#define IS_POWER_OF_2(ui) (((ui) > 0) && ((ui) & ((ui) - 1)) == 0)
 
 #if (STIX_SIZEOF_OOW_T == STIX_SIZEOF_INT) && defined(STIX_HAVE_BUILTIN_UADD_OVERFLOW)
 #	define oow_add_overflow(a,b,c)  __builtin_uadd_overflow(a,b,c)
@@ -1122,6 +1122,13 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 			return STIX_NULL;
 		}
 
+		if (xv == 0)
+		{
+			if (rem) *rem = STIX_SMOOI_TO_OOP(0);
+			return STIX_SMOOI_TO_OOP(0);
+		}
+
+
 		/* In C89, integer division with a negative number  is
 		 * implementation dependent. In C99, it truncates towards zero.
 		 * 
@@ -1160,7 +1167,7 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 
 				/* r must be floored. that is, it rounds away from zero 
 				 * and towards negative infinity */
-				if (r && ((yv ^ r) < 0))
+				if ((yv ^ r) < 0)
 				{
 					/* if the divisor has a different sign from r,
 					 * change the sign of r to the divisor's sign */
@@ -1183,7 +1190,11 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 				if (xv && ((xv ^ r) < 0)) 
 				{
 					/* if the dividend has a different sign from r,
-					 * change the sign of r to the dividend's sign */
+					 * change the sign of r to the dividend's sign.
+					 * all the compilers i've worked with produced
+					 * the quotient and the remainder that don't need
+					 * any adjustment. however, there may be an esoteric
+					 * architecture. */
 					r -= yv;
 					++q;
 					STIX_ASSERT (xv && ((xv ^ r) >= 0));
@@ -1206,12 +1217,7 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 		v = STIX_OOP_TO_SMOOI(x);
 		if (v == 0)
 		{
-			if (rem)
-			{
-				z = clone_bigint (stix, y, STIX_OBJ_GET_SIZE(y));
-				if (!z) return STIX_NULL;
-				*rem = z;
-			}
+			if (rem) *rem = STIX_SMOOI_TO_OOP(0);
 			return STIX_SMOOI_TO_OOP(0);
 		}
 
@@ -1237,16 +1243,24 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 				return z;
 
 
-			/*
-			case 2: 
-DO SHIFTING.
-* if v is powerof2, do shifting???
-			*/
 			case -1:
 				z = clone_bigint_negated (stix, x, STIX_OBJ_GET_SIZE(x));
 				if (!z) return STIX_NULL;
 				if (rem) *rem = STIX_SMOOI_TO_OOP(0);
 				return z;
+
+/*
+			default:
+				if (IS_POWER_OF_2(v))
+				{
+TODO:
+DO SHIFTING. how to get remainder..
+if v is powerof2, do shifting???
+
+					z = clone_bigint_negated (stix, x, STIX_OBJ_GET_SIZE(x));
+					rshift_unsigned_array (z, STIX_OBJ_GET_SIZE(z), 10);
+				}
+*/
 		}
 
 		stix_pushtmp (stix, &x);
@@ -1254,21 +1268,25 @@ DO SHIFTING.
 		stix_poptmp (stix);
 	}
 
-	x_neg = STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer;
-	y_neg = STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer;
+	x_neg = (STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer);
+	y_neg = (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer);
 
 	stix_pushtmp (stix, &x);
 	stix_pushtmp (stix, &y);
 	z = divide_unsigned_integers (stix, x, y, &r);
 	stix_poptmps (stix, 2);
 	if (!z) return STIX_NULL;
-	if (x_neg != y_neg) STIX_OBJ_SET_CLASS(z, stix->_large_negative_integer);
 
 	if (x_neg) 
 	{
 		/* the class on r must be set before normalize_bigint() 
-		 * because it can turn it to a small integer */
+		 * because it can get changed to a small integer */
 		STIX_OBJ_SET_CLASS(r, stix->_large_negative_integer);
+	}
+
+	if (x_neg != y_neg)
+	{
+		STIX_OBJ_SET_CLASS(z, stix->_large_negative_integer);
 
 		stix_pushtmp (stix, &z);
 		stix_pushtmp (stix, &y);
@@ -1319,6 +1337,20 @@ DO SHIFTING.
 	if (rem) *rem = r;
 	return normalize_bigint (stix, z);
 }
+
+#if 0
+stix_oop_t stix_bitandints (stix_t* stix, stix_oop_t x, stix_oop_t y)
+{
+}
+
+stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
+{
+}
+
+stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
+{
+}
+#endif
 
 static stix_uint8_t ooch_val_tab[] =
 {
@@ -1580,7 +1612,40 @@ oops_einval:
 	return STIX_NULL;
 }
 
-stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num)
+static stix_oow_t oow_to_text (stix_oow_t w, int radix, stix_ooch_t* buf)
 {
-	return STIX_NULL;
+	stix_ooch_t* ptr;
+	static char* c = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+	STIX_ASSERT (radix >= 2 && radix <= 36);
+
+	ptr = buf;
+	do
+	{
+		*ptr++ = c[w % radix];
+		w /= radix;
+	}
+	while (w <= 0);
+
+	return ptr - buf;
+}
+
+stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num, int radix)
+{
+	stix_oow_t w;
+
+	if (STIX_OOP_IS_SMOOI(num))
+	{
+		stix_ooi_t v;
+		stix_ooch_t buf[STIX_OOW_BITS + 1];
+		stix_oow_t len;
+
+		v = STIX_OOP_TO_SMOOI(num);
+		w = (v < 0)? -v: v;
+
+		len = oow_to_text (w, radix, buf);
+		if (v < 0) buf[len++] = '-';
+		return stix_makestring (stix, buf, len, invert);
+	}
+
 }
