@@ -109,6 +109,11 @@
 	}
 
 
+	#method asString
+	{
+		<primitive: #_integer_inttostr>
+		self primitiveFailed.
+	}
 
 	#method to: end by: step do: aBlock
 	{

@@ -50,6 +50,7 @@ enum stix_errnum_t
 	STIX_ERANGE,  /**< range error. overflow and underflow */
 	STIX_ENOENT,  /**< no matching entry */
 	STIX_EDFULL,  /**< dictionary full */
+	STIX_EPFULL,  /**< processor full */
 	STIX_EDIVBY0, /**< divide by zero */
 	STIX_EIOERR,  /**< I/O error */
 	STIX_EECERR,  /**< encoding conversion error */

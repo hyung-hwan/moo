@@ -118,7 +118,6 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 	return proc;
 }
 
-
 static void switch_process (stix_t* stix, stix_oop_process_t proc)
 {
 	if (stix->processor->active != proc)
@@ -126,66 +125,91 @@ static void switch_process (stix_t* stix, stix_oop_process_t proc)
 printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_context);
 
 /* store the active context to the active process */
+STIX_ASSERT ((stix_oop_t)stix->processor->active != stix->_nil);
 stix->processor->active->active_context = stix->active_context;
 
 		SWITCH_ACTIVE_CONTEXT (stix, proc->active_context);
 printf ("ACTUAL PROCESS SWITCHING AF...%d %p\n", (int)stix->ip, stix->active_context);
 		/*TODO: set the state to RUNNING */
 		stix->processor->active = proc;
-
 	}
 }
 
 static void switch_to_next_process (stix_t* stix)
 {
 /* TODO: this is experimental. rewrite it */
-	if (stix->processor->active->next == stix->_nil)
+	if ((stix_oop_t)stix->processor->active->next == stix->_nil)
 	{
+printf ("SWITCHING TO THE HEAD PROCESS\n");
 		switch_process (stix, stix->processor->head);
 	}
 	else
 	{
+printf ("SWITCHING TO THE NEXT PROCESS\n");
 		switch_process (stix, stix->processor->active->next);
 	}
 }
 
-static void schedule_process (stix_t* stix, stix_oop_process_t proc)
+static STIX_INLINE int register_new_process (stix_t* stix, stix_oop_process_t proc)
+{
+	/* the process is not scheduled at all. 
+	 * link it to the processor's process list. */
+	stix_ooi_t tally;
+
+	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(0));
+	STIX_ASSERT ((stix_oop_t)proc->prev == stix->_nil);
+	STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
+	STIX_ASSERT ((stix_oop_t)proc->active_context == stix->_nil);
+
+	tally = STIX_OOP_TO_SMOOI(stix->processor->tally);
+	if (tally <= 0)
+	{
+		/* the process schedule has no process.
+		 * it is the first process */
+		stix->processor->head = proc;
+		stix->processor->tail = proc;
+		stix->processor->tally  = STIX_SMOOI_TO_OOP(1);
+printf ("ADD NEW PROCESS X - %d\n", (int)1);
+	}
+	else if (tally >= STIX_SMOOI_MAX)
+	{
+printf ("TOO MANY PROCESS\n");
+		stix->errnum = STIX_EPFULL;
+		return -1;
+	}
+	else
+	{
+		/* TODO: over flow check or maximum number of process check using the tally field? */
+		proc->next = stix->processor->head;
+		stix->processor->head->prev = proc;
+		stix->processor->head = proc;
+		stix->processor->tally = STIX_SMOOI_TO_OOP(tally + 1);
+printf ("ADD NEW PROCESS Y - %d\n", (int)tally + 1);
+	}
+
+	proc->state = STIX_SMOOI_TO_OOP(1); /* TODO: change the code properly... changing state alone doesn't help */
+	proc->active_context = proc->initial_context;
+	return 0;
+}
+
+static int schedule_process (stix_t* stix, stix_oop_process_t proc)
 {
 	if (proc->state == STIX_SMOOI_TO_OOP(0))
 	{
-		stix_ooi_t tally;
-		STIX_ASSERT ((stix_oop_t)proc->prev == stix->_nil);
-		STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
-
-		tally = STIX_OOP_TO_SMOOI(stix->processor->tally);
-		if (tally <= 0)
-		{
-			stix->processor->head = proc;
-			stix->processor->tail = proc;
-			stix->processor->tally  = STIX_SMOOI_TO_OOP(1);
-printf ("ADD NEW PROCESS X - %d\n", (int)1);
-		}
-		else
-		{
-			/* TODO: over flow check or maximum number of process check using the tally field? */
-			proc->next = stix->processor->head;
-			stix->processor->head->prev = proc;
-			stix->processor->head = proc;
-			stix->processor->tally = STIX_SMOOI_TO_OOP(tally + 1);
-printf ("ADD NEW PROCESS Y - %d\n", (int)tally + 1);
-		}
-
-		proc->state = STIX_SMOOI_TO_OOP(1); /* TODO: change the code properly... changing state alone doesn't help */
-		proc->active_context = proc->initial_context;
-
+		/* the process is not scheduled at all. it must not exist in the
+		 * process list of the process scheduler. */
+		if (register_new_process (stix, proc) <= -1) return -1;
 		switch_process (stix, proc);
 	}
 	else if (stix->processor->active != proc)
 	{
 		switch_process (stix, proc);
 	}
+
+	return 0;
 }
 
+#if 0
 static stix_oop_process_t start_new_process (stix_t* stix, stix_oop_context_t c)
 {
 	stix_oop_process_t proc;
@@ -193,10 +217,29 @@ static stix_oop_process_t start_new_process (stix_t* stix, stix_oop_context_t c)
 	proc = make_process (stix, c);
 	if (!proc) return STIX_NULL;
 
-	schedule_process (stix, proc);
+	if (schedule_process (stix, proc) <= -1) return STIX_NULL;
 	return proc;
 }
+#endif
 
+static stix_oop_process_t start_initial_process (stix_t* stix, stix_oop_context_t c)
+{
+	stix_oop_process_t proc;
+
+	proc = make_process (stix, c);
+	if (!proc) return STIX_NULL;
+
+	if (register_new_process (stix, proc) <= -1) return STIX_NULL;
+
+	/* do somthing that schedule_process() would do with less overhead */
+	STIX_ASSERT ((stix_oop_t)proc->active_context != stix->_nil);
+	STIX_ASSERT (proc->active_context == proc->initial_context);
+	SWITCH_ACTIVE_CONTEXT (stix, proc->active_context);
+	/*TODO: set the state to RUNNING */
+	stix->processor->active = proc;
+	
+	return proc;
+}
 
 static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 {
@@ -480,11 +523,12 @@ TODO: overcome this problem
 	stix->active_context = ctx;
 	ACTIVE_STACK_PUSH (stix, ass->value); /* push the receiver */
 
-	STORE_ACTIVE_IP (stix);
-	STORE_ACTIVE_SP (stix);
+	STORE_ACTIVE_IP (stix); /* stix->active_context->ip = STIX_SMOOI_TO_OOP(stix->ip) */
+	STORE_ACTIVE_SP (stix); /* stix->active_context->sp = STIX_SMOOI_TO_OOP(stix->sp) */
 
 	stix_pushtmp (stix, (stix_oop_t*)&mth);
-	proc = start_new_process (stix, ctx);
+	/* call start_initial_process() intead of start_new_process() */
+	proc = start_initial_process (stix, ctx); 
 	stix_poptmp (stix);
 	if (!proc) return -1;
 
@@ -1291,8 +1335,22 @@ static int prim_integer_ge (stix_t* stix, stix_ooi_t nargs)
 		return 1;
 	}
 
-/* TODO: handle LargeInteger */
 	return 0;
+}
+
+static int prim_integer_inttostr (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, str;
+
+	STIX_ASSERT (nargs == 0);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+
+	str = stix_inttostr (stix, rcv, 10);
+	if (!str) return (stix->errnum == STIX_EINVAL? 0: -1);
+
+	ACTIVE_STACK_SETTOP (stix, str);
+	return 1;
 }
 
 static int prim_processor_schedule (stix_t* stix, stix_ooi_t nargs)
@@ -1309,7 +1367,12 @@ static int prim_processor_schedule (stix_t* stix, stix_ooi_t nargs)
 		return 0;
 	}
 
-	schedule_process (stix, (stix_oop_process_t)arg);
+	if (!schedule_process (stix, (stix_oop_process_t)arg)) 
+	{
+/* TODO: Can this be a soft failure? */
+		return (stix->errnum == STIX_EPFULL)? 0: -1;
+	}
+
 	return 1;
 }
 
@@ -1537,13 +1600,21 @@ printf ("CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
 			case 's':
 			{
 				stix_size_t bcslen, ucslen;
-				stix_uch_t ucs[1024];
+				stix_ooch_t ucs[1024];
+				stix_oop_t s;
 				char* r = dcCallPointer (dc, f);
 				
 				bcslen = strlen(r); 
 				stix_utf8toucs (r, &bcslen, ucs, &ucslen); /* proper string conversion */
 
-				ACTIVE_STACK_SETTOP (stix, stix_makestring(stix, ucs, ucslen)); /* TODO: proper error h andling */
+				s = stix_makestring(stix, ucs, ucslen)
+				if (!s) 
+				{
+					dcFree (dc);
+					return -1; /* TODO: proper error h andling */
+				}
+
+				ACTIVE_STACK_SETTOP (stix, s); 
 				break;
 			}
 
@@ -1643,6 +1714,7 @@ static prim_t primitives[] =
 	{   1,   prim_integer_gt,           "_integer_gt"          },
 	{   1,   prim_integer_le,           "_integer_le"          },
 	{   1,   prim_integer_ge,           "_integer_ge"          },
+	{   0,   prim_integer_inttostr,     "_integer_inttostr"    },
 
 	{   1,   prim_processor_schedule,   "_processor_schedule"  },
 	{   1,   prim_processor_remove,     "_processor_remove"    },
@@ -1831,11 +1903,9 @@ int stix_execute (stix_t* stix)
 
 	STIX_ASSERT (stix->active_context != STIX_NULL);
 
+printf ("QQQQQQQQQQQQQQQQQQQQQQQQQq\n");
 	while (1)
 	{
-
-
-
 #if 1
 printf ("IP<BF> => %d\n", (int)stix->ip);
 #endif
@@ -2324,9 +2394,10 @@ print_object (stix, (stix_oop_t)selector);
 fflush (stdout);
 #endif
 				STIX_ASSERT (STIX_CLASSOF(stix, selector) == stix->_symbol);
-
 				newrcv = ACTIVE_STACK_GET(stix, stix->sp - b1);
+
 #if defined(STIX_DEBUG_EXEC)
+printf ("NEWRCV => %p\n", newrcv);
 printf (" RECEIVER = ");
 print_object(stix, newrcv);
 printf ("\n");

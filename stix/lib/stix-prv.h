@@ -50,7 +50,7 @@
 #define STIX_USE_OBJECT_TRAILER
 
 /* this is for gc debugging */
-/*#define STIX_DEBUG_GC_001*/
+#define STIX_DEBUG_GC_001
 /*#define STIX_DEBUG_EXEC*/
 #define STIX_PROFILE_EXEC
 
@@ -943,22 +943,23 @@ stix_oop_t stix_instantiatewithtrailer (
 /* sym.c                                                                     */
 /* ========================================================================= */
 stix_oop_t stix_makesymbol (
-	stix_t*            stix,
+	stix_t*             stix,
 	const stix_ooch_t*  ptr,
-	stix_oow_t         len
+	stix_oow_t          len
 );
 
 stix_oop_t stix_findsymbol (
-	stix_t*            stix,
+	stix_t*             stix,
 	const stix_ooch_t*  ptr,
-	stix_oow_t         len
+	stix_oow_t          len
 );
 
 stix_oop_t stix_makestring (
-	stix_t*            stix, 
+	stix_t*             stix, 
 	const stix_ooch_t*  ptr, 
-	stix_oow_t         len
+	stix_oow_t          len
 );
+
 
 /* ========================================================================= */
 /* dic.c                                                                     */
@@ -1103,6 +1104,13 @@ stix_oop_t stix_strtoint (
 	stix_oow_t         len,
 	int                radix
 );
+
+stix_oop_t stix_inttostr (
+	stix_t*      stix,
+	stix_oop_t   num,
+	int          radix
+);
+
 /* ========================================================================= */
 /* comp.c                                                                    */
 /* ========================================================================= */

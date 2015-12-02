@@ -291,6 +291,7 @@ void stix_gc (stix_t* stix)
 	stix->_object            = stix_moveoop (stix, stix->_object);
 	stix->_array             = stix_moveoop (stix, stix->_array);
 	stix->_byte_array        = stix_moveoop (stix, stix->_byte_array);
+
 	stix->_string            = stix_moveoop (stix, stix->_string);
 	stix->_symbol            = stix_moveoop (stix, stix->_symbol);
 	stix->_symbol_set        = stix_moveoop (stix, stix->_symbol_set);

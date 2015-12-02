@@ -244,9 +244,6 @@ void stix_deregcb (stix_t* stix, stix_cb_t* cb)
 	stix_freemem (stix, cb);
 }
 
-
-
-
 void* stix_allocmem (stix_t* stix, stix_size_t size)
 {
 	void* ptr;

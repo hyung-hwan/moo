@@ -159,6 +159,7 @@ static STIX_INLINE int is_integer (stix_t* stix, stix_oop_t oop)
 	c = STIX_CLASSOF(stix,oop);
 
 /* TODO: is it better to introduce a special integer mark into the class itself */
+/* TODO: or should it check if it's a subclass, subsubclass, subsubsubclass, etc of a large_integer as well? */
 	return c == stix->_small_integer ||
 	       c == stix->_large_positive_integer ||
 	       c == stix->_large_negative_integer;
@@ -1128,7 +1129,6 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 			return STIX_SMOOI_TO_OOP(0);
 		}
 
-
 		/* In C89, integer division with a negative number  is
 		 * implementation dependent. In C99, it truncates towards zero.
 		 * 
@@ -1210,62 +1210,74 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 
 		return STIX_SMOOI_TO_OOP((stix_ooi_t)q);
 	}
-	else if (STIX_OOP_IS_SMOOI(x))
+	else 
 	{
-		stix_ooi_t v;
-
-		v = STIX_OOP_TO_SMOOI(x);
-		if (v == 0)
+		if (STIX_OOP_IS_SMOOI(x))
 		{
-			if (rem) *rem = STIX_SMOOI_TO_OOP(0);
-			return STIX_SMOOI_TO_OOP(0);
+			stix_ooi_t v;
+
+			if (!is_integer(stix,y)) goto oops_einval;
+
+			v = STIX_OOP_TO_SMOOI(x);
+			if (v == 0)
+			{
+				if (rem) *rem = STIX_SMOOI_TO_OOP(0);
+				return STIX_SMOOI_TO_OOP(0);
+			}
+
+			stix_pushtmp (stix, &y);
+			x = make_bigint_with_ooi (stix, v);
+			stix_poptmp (stix);
 		}
-
-		stix_pushtmp (stix, &y);
-		x = make_bigint_with_ooi (stix, v);
-		stix_poptmp (stix);
-	}
-	else if (STIX_OOP_IS_SMOOI(y))
-	{
-		stix_ooi_t v;
-
-		v = STIX_OOP_TO_SMOOI(y);
-		switch (v)
+		else if (STIX_OOP_IS_SMOOI(y))
 		{
-			case 0:
-				stix->errnum = STIX_EDIVBY0;
-				return STIX_NULL;
+			stix_ooi_t v;
 
-			case 1:
-				z = clone_bigint (stix, x, STIX_OBJ_GET_SIZE(x));
-				if (!z) return STIX_NULL;
-				if (rem) *rem = STIX_SMOOI_TO_OOP(0);
-				return z;
+			if (!is_integer(stix,x)) goto oops_einval;
+
+			v = STIX_OOP_TO_SMOOI(y);
+			switch (v)
+			{
+				case 0:
+					stix->errnum = STIX_EDIVBY0;
+					return STIX_NULL;
+
+				case 1:
+					z = clone_bigint (stix, x, STIX_OBJ_GET_SIZE(x));
+					if (!z) return STIX_NULL;
+					if (rem) *rem = STIX_SMOOI_TO_OOP(0);
+					return z;
 
 
-			case -1:
-				z = clone_bigint_negated (stix, x, STIX_OBJ_GET_SIZE(x));
-				if (!z) return STIX_NULL;
-				if (rem) *rem = STIX_SMOOI_TO_OOP(0);
-				return z;
-
-/*
-			default:
-				if (IS_POWER_OF_2(v))
-				{
-TODO:
-DO SHIFTING. how to get remainder..
-if v is powerof2, do shifting???
-
+				case -1:
 					z = clone_bigint_negated (stix, x, STIX_OBJ_GET_SIZE(x));
-					rshift_unsigned_array (z, STIX_OBJ_GET_SIZE(z), 10);
-				}
-*/
-		}
+					if (!z) return STIX_NULL;
+					if (rem) *rem = STIX_SMOOI_TO_OOP(0);
+					return z;
 
-		stix_pushtmp (stix, &x);
-		y = make_bigint_with_ooi (stix, v);
-		stix_poptmp (stix);
+	/*
+				default:
+					if (IS_POWER_OF_2(v))
+					{
+	TODO:
+	DO SHIFTING. how to get remainder..
+	if v is powerof2, do shifting???
+
+						z = clone_bigint_negated (stix, x, STIX_OBJ_GET_SIZE(x));
+						rshift_unsigned_array (z, STIX_OBJ_GET_SIZE(z), 10);
+					}
+	*/
+			}
+
+			stix_pushtmp (stix, &x);
+			y = make_bigint_with_ooi (stix, v);
+			stix_poptmp (stix);
+		}
+		else
+		{
+			if (!is_integer(stix,x)) goto oops_einval;
+			if (!is_integer(stix,y)) goto oops_einval;
+		}
 	}
 
 	x_neg = (STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer);
@@ -1336,6 +1348,10 @@ if v is powerof2, do shifting???
 
 	if (rem) *rem = r;
 	return normalize_bigint (stix, z);
+
+oops_einval:
+	stix->errnum = STIX_EINVAL;
+	return STIX_NULL;
 }
 
 #if 0
@@ -1562,14 +1578,6 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 		while (ptr < end);
 	}
 
-{ int i;
-for (i = hwlen; i > 0;)
-{
-printf ("%0*lx ", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)hwp[--i]);
-}
-printf ("\n");
-}
-
 	STIX_ASSERT (hwlen >= 1);
 #if defined(STIX_USE_FULL_WORD)
 	if (hwlen == 1) 
@@ -1615,37 +1623,113 @@ oops_einval:
 static stix_oow_t oow_to_text (stix_oow_t w, int radix, stix_ooch_t* buf)
 {
 	stix_ooch_t* ptr;
-	static char* c = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	static char* digitc = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 	STIX_ASSERT (radix >= 2 && radix <= 36);
 
 	ptr = buf;
 	do
 	{
-		*ptr++ = c[w % radix];
+		*ptr++ = digitc[w % radix];
 		w /= radix;
 	}
-	while (w <= 0);
+	while (w > 0);
 
 	return ptr - buf;
+}
+
+static void reverse_string (stix_ooch_t* str, stix_oow_t len)
+{
+	stix_ooch_t ch;
+	stix_ooch_t* start = str;
+	stix_ooch_t* end = str + len - 1;
+
+	while (start < end)
+	{
+		ch = *start;
+		*start++ = *end;
+		*end-- = ch;
+	}
 }
 
 stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num, int radix)
 {
 	stix_oow_t w;
+	stix_ooi_t v = 0;
 
 	if (STIX_OOP_IS_SMOOI(num))
 	{
-		stix_ooi_t v;
+		v = STIX_OOP_TO_SMOOI(num);
+		if (v < 0)
+		{
+			w = -v;
+			v = -1;
+		}
+		else
+		{
+			w = v;
+			v = 1;
+		}
+	}
+	else if (!is_integer(stix,num)) 
+	{
+		goto oops_einval;
+	}
+	else
+	{
+	#if STIX_LIW_BITS == STIX_OOW_BITS
+		if (STIX_OBJ_GET_SIZE(num) == 1)
+		{
+			w = ((stix_oop_word_t)num)->slot[0];
+			v = (STIX_OBJ_GET_CLASS(num) == stix->_large_negative_integer)? -1: 1;
+		}
+	#elif STIX_LIW_BITS == STIX_OOHW_BITS
+		if (STIX_OBJ_GET_SIZE(num) == 1)
+		{
+			w = ((stix_oop_halfword_t)num)->slot[0];
+			v = (STIX_OBJ_GET_CLASS(num) == stix->_large_negative_integer)? -1: 1;
+		}
+		else if (STIX_OBJ_GET_SIZE(num) == 2)
+		{
+			w = MAKE_WORD (((stix_oop_halfword_t)num)->slot[0], ((stix_oop_halfword_t)num)->slot[1]);
+			v = (STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer)? -1: 1;
+		}
+	#endif
+	}
+
+	if (v)
+	{
+		/* Use a static buffer for simple conversion as the largest
+		 * size is known. The largest buffer is required for radix 2.
+		 * For a binary conversion(radix 2), the number of bits is
+		 * the maximum number of digits that can be produced. +1 is
+		 * needed for the sign. */
 		stix_ooch_t buf[STIX_OOW_BITS + 1];
 		stix_oow_t len;
 
-		v = STIX_OOP_TO_SMOOI(num);
-		w = (v < 0)? -v: v;
-
 		len = oow_to_text (w, radix, buf);
 		if (v < 0) buf[len++] = '-';
-		return stix_makestring (stix, buf, len, invert);
+
+		reverse_string (buf, len);
+		return stix_makestring (stix, buf, len);
 	}
 
+
+	/* Do it in a hard way */
+	do
+	{
+		if (is_less_unsigned_array (b, .s, a, as))
+		{
+		}
+		else
+		{
+			r = a;
+		}
+
+	}
+	while (1);
+
+oops_einval:
+	stix->errnum = STIX_EINVAL;
+	return STIX_NULL;
 }

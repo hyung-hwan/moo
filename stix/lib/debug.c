@@ -115,24 +115,6 @@ void print_object (stix_t* stix, stix_oop_t oop)
 			printf ("$%.*s", (int)bcslen, bcs);
 		}
 	}
-	else if (STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer)
-	{
-		stix_oow_t i;
-		printf ("-16r");
-		for (i = STIX_OBJ_GET_SIZE(oop); i > 0;)
-		{
-			printf ("%0*lX", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)oop)->slot[--i]);
-		}
-	}
-	else if (STIX_OBJ_GET_CLASS(oop) == stix->_large_positive_integer)
-	{
-		stix_oow_t i;
-		printf ("16r");
-		for (i = STIX_OBJ_GET_SIZE(oop); i > 0;)
-		{
-			printf ("%0*lX", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)oop)->slot[--i]);
-		}
-	}
 	else
 	{
 		stix_oop_class_t c;
@@ -141,8 +123,28 @@ void print_object (stix_t* stix, stix_oop_t oop)
 		stix_bch_t bcs[32];
 		stix_size_t ucslen, bcslen;
 
-		c = (stix_oop_class_t)STIX_CLASSOF(stix, oop);
-		if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_CHAR)
+		STIX_ASSERT (STIX_OOP_IS_POINTER(oop));
+		c = (stix_oop_class_t)STIX_OBJ_GET_CLASS(oop); /*STIX_CLASSOF(stix, oop);*/
+
+		if (c == stix->_large_negative_integer)
+		{
+			stix_oow_t i;
+			printf ("-16r");
+			for (i = STIX_OBJ_GET_SIZE(oop); i > 0;)
+			{
+				printf ("%0*lX", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)oop)->slot[--i]);
+			}
+		}
+		else if (c == stix->_large_positive_integer)
+		{
+			stix_oow_t i;
+			printf ("16r");
+			for (i = STIX_OBJ_GET_SIZE(oop); i > 0;)
+			{
+				printf ("%0*lX", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)oop)->slot[--i]);
+			}
+		}
+		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_CHAR)
 		{
 			if ((stix_oop_t)c == stix->_symbol) printf ("#");
 			else if ((stix_oop_t)c == stix->_string) printf ("'");
@@ -166,6 +168,25 @@ void print_object (stix_t* stix, stix_oop_t oop)
 				printf (" %d", ((stix_oop_byte_t)oop)->slot[i]);
 			}
 			printf ("]");
+		}
+		
+		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_HALFWORD)
+		{
+			printf ("#[["); /* TODO: fix this symbol */
+			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+			{
+				printf (" %lX", (unsigned long int)((stix_oop_halfword_t)oop)->slot[i]);
+			}
+			printf ("]]");
+		}
+		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_WORD)
+		{
+			printf ("#[[["); /* TODO: fix this symbol */
+			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+			{
+				printf (" %lX", (unsigned long int)((stix_oop_word_t)oop)->slot[i]);
+			}
+			printf ("]]]");
 		}
 		else if ((stix_oop_t)c == stix->_array)
 		{
