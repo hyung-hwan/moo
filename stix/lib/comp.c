@@ -1778,29 +1778,37 @@ static int emit_push_smint_literal (stix_t* stix, stix_ooi_t i)
 	switch (i)
 	{
 		case -1:
+printf ("\tpush negone\n");
 			return emit_byte_instruction (stix, BCODE_PUSH_NEGONE);
 
 		case 0:
+printf ("\tpush zero\n");
 			return emit_byte_instruction (stix, BCODE_PUSH_ZERO);
 
 		case 1:
+printf ("\tpush one\n");
 			return emit_byte_instruction (stix, BCODE_PUSH_ONE);
 
 		case 2:
+printf ("\tpush two\n");
 			return emit_byte_instruction (stix, BCODE_PUSH_TWO);
 	}
 
 	if (i >= 0 && i <= MAX_CODE_PARAM)
 	{
+printf ("\tpush intlit %d\n", (int)i);
 		return emit_single_param_instruction(stix, BCODE_PUSH_INTLIT, i);
 	}
 	else if (i < 0 && i >= -(stix_ooi_t)MAX_CODE_PARAM)
 	{
+printf ("\tpush negintlit %d\n", (int)i);
 		return emit_single_param_instruction(stix, BCODE_PUSH_NEGINTLIT, -i);
 	}
 
+
 	if (add_literal(stix, STIX_SMOOI_TO_OOP(i), &index) <= -1 ||
 	    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+printf ("\tpush litral_0 %d\n", (int)index);
 
 	return 0;
 }
@@ -3517,18 +3525,19 @@ printf ("\tpush symbol literal %d\n", (int)index);
 /* TODO: floating pointer number */
 				/* TODO: other types of numbers, etc */
 				stix_oop_t tmp;
+
 				tmp = string_to_num (stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT);
 				if (!tmp) return -1;
 
 				if (STIX_OOP_IS_SMOOI(tmp))
 				{
-printf ("\tpush int literal\n");
 					if (emit_push_smint_literal(stix, STIX_OOP_TO_SMOOI(tmp)) <= -1) return -1;
 				}
 				else
 				{
 					if (add_literal(stix, tmp, &index) <= -1 ||
 					    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+printf ("\tpush_literal_0 %d\n", (int)index);
 				}
 
 				GET_TOKEN (stix);

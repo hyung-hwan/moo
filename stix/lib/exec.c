@@ -122,14 +122,18 @@ static void switch_process (stix_t* stix, stix_oop_process_t proc)
 {
 	if (stix->processor->active != proc)
 	{
+#if defined(STIX_DEBUG_PROCESSOR)
 printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_context);
+#endif
 
 /* store the active context to the active process */
 STIX_ASSERT ((stix_oop_t)stix->processor->active != stix->_nil);
 stix->processor->active->active_context = stix->active_context;
 
 		SWITCH_ACTIVE_CONTEXT (stix, proc->active_context);
+#if defined(STIX_DEBUG_PROCESSOR)
 printf ("ACTUAL PROCESS SWITCHING AF...%d %p\n", (int)stix->ip, stix->active_context);
+#endif
 		/*TODO: set the state to RUNNING */
 		stix->processor->active = proc;
 	}
@@ -140,12 +144,16 @@ static void switch_to_next_process (stix_t* stix)
 /* TODO: this is experimental. rewrite it */
 	if ((stix_oop_t)stix->processor->active->next == stix->_nil)
 	{
+#if defined(STIX_DEBUG_PROCESSOR)
 printf ("SWITCHING TO THE HEAD PROCESS\n");
+#endif
 		switch_process (stix, stix->processor->head);
 	}
 	else
 	{
+#if defined(STIX_DEBUG_PROCESSOR)
 printf ("SWITCHING TO THE NEXT PROCESS\n");
+#endif
 		switch_process (stix, stix->processor->active->next);
 	}
 }
@@ -169,22 +177,27 @@ static STIX_INLINE int register_new_process (stix_t* stix, stix_oop_process_t pr
 		stix->processor->head = proc;
 		stix->processor->tail = proc;
 		stix->processor->tally  = STIX_SMOOI_TO_OOP(1);
+#if defined(STIX_DEBUG_PROCESSOR)
 printf ("ADD NEW PROCESS X - %d\n", (int)1);
+#endif
 	}
 	else if (tally >= STIX_SMOOI_MAX)
 	{
+#if defined(STIX_DEBUG_PROCESSOR)
 printf ("TOO MANY PROCESS\n");
+#endif
 		stix->errnum = STIX_EPFULL;
 		return -1;
 	}
 	else
 	{
-		/* TODO: over flow check or maximum number of process check using the tally field? */
 		proc->next = stix->processor->head;
 		stix->processor->head->prev = proc;
 		stix->processor->head = proc;
 		stix->processor->tally = STIX_SMOOI_TO_OOP(tally + 1);
+#if defined(STIX_DEBUG_PROCESSOR)
 printf ("ADD NEW PROCESS Y - %d\n", (int)tally + 1);
+#endif
 	}
 
 	proc->state = STIX_SMOOI_TO_OOP(1); /* TODO: change the code properly... changing state alone doesn't help */
@@ -1115,6 +1128,7 @@ static int prim_integer_quo (stix_t* stix, stix_ooi_t nargs)
 
 	quo = stix_divints (stix, rcv, arg, 0, STIX_NULL);
 	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+/* TODO: STIX_EDIVBY0 soft or hard failure? */
 
 	ACTIVE_STACK_POP (stix);
 	ACTIVE_STACK_SETTOP (stix, quo);
@@ -1132,6 +1146,7 @@ static int prim_integer_rem (stix_t* stix, stix_ooi_t nargs)
 
 	quo = stix_divints (stix, rcv, arg, 0, &rem);
 	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+/* TODO: STIX_EDIVBY0 soft or hard failure? */
 
 	ACTIVE_STACK_POP (stix);
 	ACTIVE_STACK_SETTOP (stix, rem);
@@ -1149,6 +1164,7 @@ static int prim_integer_quo2 (stix_t* stix, stix_ooi_t nargs)
 
 	quo = stix_divints (stix, rcv, arg, 1, STIX_NULL);
 	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+/* TODO: STIX_EDIVBY0 soft or hard failure? */
 
 	ACTIVE_STACK_POP (stix);
 	ACTIVE_STACK_SETTOP (stix, quo);
@@ -1166,6 +1182,7 @@ static int prim_integer_rem2 (stix_t* stix, stix_ooi_t nargs)
 
 	quo = stix_divints (stix, rcv, arg, 1, &rem);
 	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+/* TODO: STIX_EDIVBY0 soft or hard failure? */
 
 	ACTIVE_STACK_POP (stix);
 	ACTIVE_STACK_SETTOP (stix, rem);
@@ -2397,7 +2414,6 @@ fflush (stdout);
 				newrcv = ACTIVE_STACK_GET(stix, stix->sp - b1);
 
 #if defined(STIX_DEBUG_EXEC)
-printf ("NEWRCV => %p\n", newrcv);
 printf (" RECEIVER = ");
 print_object(stix, newrcv);
 printf ("\n");
