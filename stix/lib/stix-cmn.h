@@ -35,6 +35,8 @@
 #	include "stix-cfg.h"
 #elif defined(_WIN32)
 #	include "stix-msw.h"
+#elif defined(__MSDOS__)
+#	include "stix-dos.h"
 #elif defined(macintosh)
 #	include "stix-mac.h" /* class mac os */
 #else
@@ -341,6 +343,7 @@ typedef struct stix_ucs_t stix_ucs_t;
  * POINTER MANIPULATION MACROS
  * ========================================================================= */
 
+/*
 #if defined(__MSDOS__)
 #	define STIX_INCPTR(type,base,inc)  (((type __huge*)base) + (inc))
 #	define STIX_DECPTR(type,base,inc)  (((type __huge*)base) - (inc))
@@ -350,7 +353,8 @@ typedef struct stix_ucs_t stix_ucs_t;
 #	define STIX_LEPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) <= ((type __huge*)ptr2))
 #	define STIX_EQPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) == ((type __huge*)ptr2))
 #	define STIX_SUBPTR(type,ptr1,ptr2) (((type __huge*)ptr1) - ((type __huge*)ptr2))
-#else
+#else 
+*/
 #	define STIX_INCPTR(type,base,inc)  (((type*)base) + (inc))
 #	define STIX_DECPTR(type,base,inc)  (((type*)base) - (inc))
 #	define STIX_GTPTR(type,ptr1,ptr2)  (((type*)ptr1) > ((type*)ptr2))
@@ -359,7 +363,9 @@ typedef struct stix_ucs_t stix_ucs_t;
 #	define STIX_LEPTR(type,ptr1,ptr2)  (((type*)ptr1) <= ((type*)ptr2))
 #	define STIX_EQPTR(type,ptr1,ptr2)  (((type*)ptr1) == ((type*)ptr2))
 #	define STIX_SUBPTR(type,ptr1,ptr2) (((type*)ptr1) - ((type*)ptr2))
+/*
 #endif
+*/
 
 /* =========================================================================
  * MMGR

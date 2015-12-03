@@ -44,7 +44,7 @@
 #	define INCL_DOSPROCESS
 #	define INCL_DOSERRORS
 #	include <os2.h>
-#elif defined(__DOS__)
+#elif defined(__MSDOS__)
 	/* nothing to include */
 #elif defined(macintosh)
 	/* nothing to include */
@@ -59,7 +59,7 @@
 #		define STIX_DEFAULT_MODPREFIX "stix-"
 #	elif defined(__OS2__)
 #		define STIX_DEFAULT_MODPREFIX "st-"
-#	elif defined(__DOS__)
+#	elif defined(__MSDOS__)
 #		define STIX_DEFAULT_MODPREFIX "st-"
 #	else
 #		define STIX_DEFAULT_MODPREFIX "libstix-"
@@ -71,7 +71,7 @@
 #		define STIX_DEFAULT_MODPOSTFIX ""
 #	elif defined(__OS2__)
 #		define STIX_DEFAULT_MODPOSTFIX ""
-#	elif defined(__DOS__)
+#	elif defined(__MSDOS__)
 #		define STIX_DEFAULT_MODPOSTFIX ""
 #	else
 #		define STIX_DEFAULT_MODPOSTFIX ""
@@ -268,7 +268,7 @@ static void mod_close (stix_t* stix, void* handle)
 	FreeLibrary ((HMODULE)handle);
 #elif defined(__OS2__)
 	DosFreeModule ((HMODULE)handle);
-#elif defined(__DOS__) && defined(QSE_ENABLE_DOS_DYNAMIC_MODULE)
+#elif defined(__MSDOS__) && defined(QSE_ENABLE_DOS_DYNAMIC_MODULE)
 	FreeModule (handle);
 #else
         /* nothing to do */

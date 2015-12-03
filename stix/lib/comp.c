@@ -2711,7 +2711,7 @@ static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_
 
 		dot = stix_findoochar (name->ptr, name->len, '.');
 		STIX_ASSERT (dot != STIX_NULL);
-		if (dot - name->ptr == 4 && stix_equalchars(name->ptr, vocas[VOCA_SELF].str, 4))
+		if (dot - (const stix_ooch_t*)name->ptr == 4 && stix_equalchars(name->ptr, vocas[VOCA_SELF].str, 4))
 		{
 			/* the dotted name begins with self. */
 			dot = stix_findoochar (dot + 1, name->len - 5, '.');
