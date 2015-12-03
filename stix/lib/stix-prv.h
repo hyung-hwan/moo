@@ -906,38 +906,44 @@ stix_oop_t stix_allocoopobj (
 
 #if defined(STIX_USE_OBJECT_TRAILER)
 stix_oop_t stix_allocoopobjwithtrailer (
-	stix_t*            stix,
-	stix_oow_t         size,
+	stix_t*           stix,
+	stix_oow_t        size,
 	const stix_oob_t* tptr,
-	stix_oow_t         tlen
+	stix_oow_t        tlen
 );
 #endif
 
 stix_oop_t stix_alloccharobj (
 	stix_t*            stix,
-	const stix_ooch_t*  ptr,
+	const stix_ooch_t* ptr,
 	stix_oow_t         len
 );
 
 stix_oop_t stix_allocbyteobj (
-	stix_t*            stix,
+	stix_t*           stix,
 	const stix_oob_t* ptr,
+	stix_oow_t        len
+);
+
+stix_oop_t stix_allochalfwordobj (
+	stix_t*            stix,
+	const stix_oohw_t* ptr,
 	stix_oow_t         len
 );
 
 stix_oop_t stix_allocwordobj (
-	stix_t*            stix,
-	const stix_oow_t*  ptr,
-	stix_oow_t         len
+	stix_t*           stix,
+	const stix_oow_t* ptr,
+	stix_oow_t        len
 );
 
 #if defined(STIX_USE_OBJECT_TRAILER)
 stix_oop_t stix_instantiatewithtrailer (
-	stix_t*            stix, 
-	stix_oop_t         _class,
-	stix_oow_t         vlen,
+	stix_t*           stix, 
+	stix_oop_t        _class,
+	stix_oow_t        vlen,
 	const stix_oob_t* tptr,
-	stix_oow_t tlen
+	stix_oow_t        tlen
 );
 #endif
 

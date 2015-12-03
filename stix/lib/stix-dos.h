@@ -122,7 +122,7 @@
 #	define STIX_SIZEOF_STRUCT_SOCKADDR_IN6 64
 #	define STIX_SIZEOF_SOCKLEN_T 4
 
-#elif defined(__ZTC__) && defined(__DOSX386__)
+#elif defined(__ZTC__) && defined(DOS386)
 
 	/* Zortech in DOSX 386 mode (ztc -mx) */
 #	define STIX_SIZEOF_CHAR        1
