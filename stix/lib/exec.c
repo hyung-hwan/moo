@@ -1021,7 +1021,7 @@ static int prim_block_new_process (stix_t* stix, stix_ooi_t nargs)
 
 	if (nargs == 1)
 	{
-		stix_oop_oop_t xarg;
+		stix_oop_t xarg;
 
 		xarg = ACTIVE_STACK_GETTOP(stix);
 		if (!STIX_ISTYPEOF(stix,xarg,STIX_OBJ_TYPE_OOP))
@@ -1438,7 +1438,7 @@ static int prim_ffi_open (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	ACTIVE_STACK_POP (stix);
-/* TODO: how to hold an address? as an integer????  or a byte array? */
+/* TODO: how to hold an address? as an integer????  or a byte array? fix this not to loose accuracy*/
 	ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(handle));
 
 	return 1;
@@ -1464,7 +1464,7 @@ static int prim_ffi_close (stix_t* stix, stix_ooi_t nargs)
 
 	ACTIVE_STACK_POP (stix);
 
-	handle = STIX_OOP_TO_SMOOI(arg); /* TODO: how to store void* ??? */
+	handle = (void*)STIX_OOP_TO_SMOOI(arg); /* TODO: how to store void* ???. fix this not to loose accuracy */
 	if (stix->vmprim.mod_close) stix->vmprim.mod_close (stix, handle);
 	return 1;
 }
@@ -1677,7 +1677,7 @@ printf ("wrong function name...\n");
 		return 0;
 	}
 
-	sym = stix->vmprim.mod_getsym (stix, STIX_OOP_TO_SMOOI(hnd), ((stix_oop_char_t)fun)->slot);
+	sym = stix->vmprim.mod_getsym (stix, (void*)STIX_OOP_TO_SMOOI(hnd), ((stix_oop_char_t)fun)->slot);
 	if (!sym)
 	{
 		return 0;
@@ -1876,7 +1876,7 @@ static stix_prim_impl_t query_prim_module (stix_t* stix, const stix_ooch_t* name
 
 		/* i copy-insert 'md' into the table before calling 'load'.
 		 * to pass the same address to load(), query(), etc */
-		pair = stix_rbt_insert (&stix->pmtable, name, mod_name_len, &md, STIX_SIZEOF(md));
+		pair = stix_rbt_insert (&stix->pmtable, (void*)name, mod_name_len, &md, STIX_SIZEOF(md));
 		if (pair == STIX_NULL)
 		{
 			stix->errnum = STIX_ENOMEM;
@@ -2534,6 +2534,7 @@ printf ("]\n");
 						stix_ooi_t prim_name_index;
 						stix_oop_t name;
 						stix_prim_impl_t handler;
+						register stix_oow_t w;
 
 						prim_name_index = STIX_METHOD_GET_PREAMBLE_INDEX(preamble);
 						DBGOUT_EXEC_1 ("METHOD_PREAMBLE_NAMED_PRIMITIVE %d", (int)prim_name_index);
@@ -2545,8 +2546,9 @@ printf ("]\n");
 						STIX_ASSERT (STIX_CLASSOF(stix,name) == stix->_symbol);
 
 						/* merge two SmallIntegers to get a full pointer */
-						handler = (stix_oow_t)STIX_OOP_TO_SMOOI(newmth->preamble_data[0]) << (STIX_OOW_BITS / 2) | 
+						w = (stix_oow_t)STIX_OOP_TO_SMOOI(newmth->preamble_data[0]) << (STIX_OOW_BITS / 2) | 
 						          (stix_oow_t)STIX_OOP_TO_SMOOI(newmth->preamble_data[1]);
+						handler = (stix_prim_impl_t)w;
 						if (!handler) handler = query_prim_module (stix, ((stix_oop_char_t)name)->slot, STIX_OBJ_GET_SIZE(name));
 
 						if (handler)

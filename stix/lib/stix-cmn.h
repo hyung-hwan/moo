@@ -35,6 +35,8 @@
 #	include "stix-cfg.h"
 #elif defined(_WIN32)
 #	include "stix-msw.h"
+#elif defined(macintosh)
+#	include "stix-mac.h" /* class mac os */
 #else
 #	error UNSUPPORTED SYSTEM
 #endif

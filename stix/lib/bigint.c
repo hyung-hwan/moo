@@ -1369,7 +1369,6 @@ static stix_uint8_t ooch_val_tab[] =
 
 stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, int radix)
 {
-	//int neg = 0;
 	int sign = 1;
 	const stix_ooch_t* ptr, * start, * end;
 	stix_lidw_t w, v;

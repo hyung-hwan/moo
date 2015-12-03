@@ -126,7 +126,7 @@ void print_object (stix_t* stix, stix_oop_t oop)
 		STIX_ASSERT (STIX_OOP_IS_POINTER(oop));
 		c = (stix_oop_class_t)STIX_OBJ_GET_CLASS(oop); /*STIX_CLASSOF(stix, oop);*/
 
-		if (c == stix->_large_negative_integer)
+		if ((stix_oop_t)c == stix->_large_negative_integer)
 		{
 			stix_oow_t i;
 			printf ("-16r");
@@ -135,7 +135,7 @@ void print_object (stix_t* stix, stix_oop_t oop)
 				printf ("%0*lX", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)oop)->slot[--i]);
 			}
 		}
-		else if (c == stix->_large_positive_integer)
+		else if ((stix_oop_t)c == stix->_large_positive_integer)
 		{
 			stix_oow_t i;
 			printf ("16r");

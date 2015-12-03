@@ -46,6 +46,8 @@
 #	include <os2.h>
 #elif defined(__DOS__)
 	/* nothing to include */
+#elif defined(macintosh)
+	/* nothing to include */
 #else
 #	include <unistd.h>
 #	include <ltdl.h>
