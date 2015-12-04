@@ -35,6 +35,8 @@
 #	include "stix-cfg.h"
 #elif defined(_WIN32)
 #	include "stix-msw.h"
+#elif defined(__OS2__)
+#	include "stix-os2.h"
 #elif defined(__MSDOS__)
 #	include "stix-dos.h"
 #elif defined(macintosh)

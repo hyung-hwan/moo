@@ -302,7 +302,7 @@ printf ("MOD_GETSYM [%s]\n", &buf[1]);
 			if (!sym)
 			{
 printf ("MOD_GETSYM [%s]\n", &buf[0]);
-				sym = dlsym (handle, &buf[0]);
+				sym = lt_dlsym (handle, &buf[0]);
 			}
 		}
 	}
