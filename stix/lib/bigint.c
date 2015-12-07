@@ -717,6 +717,7 @@ static stix_oop_t add_unsigned_integers (stix_t* stix, stix_oop_t x, stix_oop_t 
 	stix_pushtmp (stix, &y);
 	z = stix_instantiate (stix, STIX_OBJ_GET_CLASS(x), STIX_NULL, zs);
 	stix_poptmps (stix, 2);
+	if (!z) return STIX_NULL;
 
 	if (as >= bs)
 	{
@@ -743,6 +744,7 @@ static stix_oop_t subtract_unsigned_integers (stix_t* stix, stix_oop_t x, stix_o
 	stix_pushtmp (stix, &y);
 	z = stix_instantiate (stix, stix->_large_positive_integer, STIX_NULL, STIX_OBJ_GET_SIZE(x));
 	stix_poptmps (stix, 2);
+	if (!z) return STIX_NULL;
 
 	subtract_unsigned_array (
 		((stix_oop_liword_t)x)->slot, STIX_OBJ_GET_SIZE(x),
@@ -759,6 +761,7 @@ static stix_oop_t multiply_unsigned_integers (stix_t* stix, stix_oop_t x, stix_o
 	stix_pushtmp (stix, &y);
 	z = stix_instantiate (stix, stix->_large_positive_integer, STIX_NULL, STIX_OBJ_GET_SIZE(x) + STIX_OBJ_GET_SIZE(y));
 	stix_poptmps (stix, 2);
+	if (!z) return STIX_NULL;
 
 	multiply_unsigned_array (
 		((stix_oop_liword_t)x)->slot, STIX_OBJ_GET_SIZE(x),
@@ -776,9 +779,16 @@ static stix_oop_t divide_unsigned_integers (stix_t* stix, stix_oop_t x, stix_oop
 	stix_pushtmp (stix, &x);
 	stix_pushtmp (stix, &y);
 	qq = stix_instantiate (stix, stix->_large_positive_integer, STIX_NULL, STIX_OBJ_GET_SIZE(x));
+	if (!qq) 
+	{
+		stix_poptmps (stix, 2);
+		return STIX_NULL;
+	}
+
 	stix_pushtmp (stix, &qq);
 	rr = stix_instantiate (stix, stix->_large_positive_integer, STIX_NULL, STIX_OBJ_GET_SIZE(x));
 	stix_poptmps (stix, 3);
+	if (!rr) return STIX_NULL;
 
 	divide_unsigned_array (
 		((stix_oop_liword_t)x)->slot, STIX_OBJ_GET_SIZE(x),
@@ -1103,7 +1113,6 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 		xv = STIX_OOP_TO_SMOOI(x);
 		yv = STIX_OOP_TO_SMOOI(y);
 
-printf ("%d %d\n", (int)xv, (int)yv);
 		if (yv == 0)
 		{
 			stix->errnum = STIX_EDIVBY0;
@@ -1311,6 +1320,7 @@ printf ("%d %d\n", (int)xv, (int)yv);
 				stix_pushtmp (stix, &r);
 				z = stix_subints (stix, z, STIX_SMOOI_TO_OOP(1));
 				stix_poptmp (stix);
+				if (!z) return STIX_NULL;
 
 				*rem = r;
 				return z;
@@ -1635,8 +1645,21 @@ static void reverse_string (stix_ooch_t* str, stix_oow_t len)
 
 stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num, int radix)
 {
-	stix_oow_t w;
 	stix_ooi_t v = 0;
+	stix_oow_t w;
+	stix_oow_t as, bs, rs;
+#if STIX_LIW_BITS == STIX_OOW_BITS
+	stix_liw_t b[1];
+#elif STIX_LIW_BITS == STIX_OOHW_BITS
+	stix_liw_t b[2];
+#else
+#	error UNSUPPORTED
+#endif
+	stix_liw_t* a, * q, * r;
+	stix_liw_t* t = STIX_NULL;
+	stix_ooch_t* xbuf = STIX_NULL;
+	stix_oow_t xlen = 0, seglen;
+	stix_oop_t s;
 
 	if (STIX_OOP_IS_SMOOI(num))
 	{
@@ -1697,21 +1720,97 @@ stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num, int radix)
 		return stix_makestring (stix, buf, len);
 	}
 
-#if 0
 	/* Do it in a hard way */
+#if (STIX_LIW_BITS == STIX_OOW_BITS)
+	b[0] = stix->bigint[radix].multiplier; /* block divisor */
+	bs = 1;
+#elif (STIX_LIW_BITS == STIX_OOHW_BITS)
+	b[0] = stix->bigint[radix].multiplier & STIX_LBMASK(stix_oow_t, STIX_OOHW_BITS);
+	b[1] = stix->bigint[radix].multiplier >> STIX_OOHW_BITS;
+	bs = (b[1] > 0)? 2: 1;
+#else
+#	error UNSUPPORTED
+#endif
+
+	as = STIX_OBJ_GET_SIZE(num);
+
+/* TODO: migrate these buffers into stix_t? */
+/* TODO: find an optimial buffer size */
+	xbuf = (stix_ooch_t*)stix_allocmem (stix, STIX_SIZEOF(*xbuf) * (as * STIX_LIW_BITS + 1));
+	if (!xbuf) return STIX_NULL;
+
+	t = (stix_liw_t*)stix_callocmem (stix, STIX_SIZEOF(*t) * as * 3);
+	if (!t) 
+	{
+		stix_freemem (stix, xbuf);
+		return STIX_NULL;
+	}
+
+	a = &t[0];
+	q = &t[as];
+	r = &t[as * 2];
+
+	STIX_MEMCPY (a, ((stix_oop_liword_t)num)->slot, STIX_SIZEOF(*a) * as);
+
 	do
 	{
-		if (is_less_unsigned_array (b, .s, a, as))
+		if (is_less_unsigned_array (b, bs, a, as))
 		{
+			stix_liw_t* tmp;
+
+			divide_unsigned_array (a, as, b, bs, q, r);
+
+			/* get 'rs' before 'as' gets changed */
+			rs = count_effective (r, as); 
+ 
+			/* swap a and q for later division */
+			tmp = a;
+			a = q;
+			q = tmp;
+
+			as = count_effective (a, as);
 		}
 		else
 		{
+			/* it is the last block */
 			r = a;
+			rs = as;
 		}
 
+	#if (STIX_LIW_BITS == STIX_OOW_BITS)
+		STIX_ASSERT (rs == 1);
+		w = r[0];
+	#elif (STIX_LIW_BITS == STIX_OOHW_BITS)
+		if (rs == 1) w = r[0];
+		else 
+		{
+			STIX_ASSERT (rs == 2);
+			w = MAKE_WORD (r[0], r[1]);
+		}
+	#else
+	#	UNSUPPORTED
+	#endif
+		seglen = oow_to_text (w, radix, &xbuf[xlen]);
+		xlen += seglen;
+		if (r == a) break; /* reached the last block */
+
+		/* fill unfilled leading digits with zeros as it's not 
+		 * the last block */
+		while (seglen < stix->bigint[radix].safe_ndigits)
+		{
+			xbuf[xlen++] = '0';
+			seglen++;
+		}
 	}
 	while (1);
-#endif
+
+	if (STIX_OBJ_GET_CLASS(num) == stix->_large_negative_integer) xbuf[xlen++] = '-';
+	reverse_string (xbuf, xlen);
+	s = stix_makestring (stix, xbuf, xlen);
+
+	stix_freemem (stix, t);
+	stix_freemem (stix, xbuf);
+	return s;
 
 oops_einval:
 	stix->errnum = STIX_EINVAL;
