@@ -1189,6 +1189,74 @@ static int prim_integer_rem2 (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
+static int prim_integer_bitand (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg, res;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	res = stix_bitandints (stix, rcv, arg);
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
+}
+
+static int prim_integer_bitor (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg, res;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	res = stix_bitorints (stix, rcv, arg);
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
+}
+
+static int prim_integer_bitxor (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg, res;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	res = stix_bitxorints (stix, rcv, arg);
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
+}
+
+
+static int prim_integer_bitinvert (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg, res;
+
+	STIX_ASSERT (nargs == 0);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp );
+
+	res = stix_bitinvertint (stix, rcv);
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
+}
+
 static int prim_integer_eq (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
@@ -1725,6 +1793,10 @@ static prim_t primitives[] =
 	{   1,   prim_integer_rem,          "_integer_rem"         },
 	{   1,   prim_integer_quo2,         "_integer_quo2"        },
 	{   1,   prim_integer_rem2,         "_integer_rem2"        },
+	{   1,   prim_integer_bitand,       "_integer_bitand"      },
+	{   1,   prim_integer_bitor,        "_integer_bitor"       },
+	{   1,   prim_integer_bitxor,       "_integer_bitxor"      },
+	{   0,   prim_integer_bitinvert,    "_integer_bitinvert"   },
 	{   1,   prim_integer_eq,           "_integer_eq"          },
 	{   1,   prim_integer_ne,           "_integer_ne"          },
 	{   1,   prim_integer_lt,           "_integer_lt"          },

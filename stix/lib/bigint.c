@@ -1351,19 +1351,232 @@ oops_einval:
 	return STIX_NULL;
 }
 
-#if 0
 stix_oop_t stix_bitandints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 {
+/* TODO: revisit negative number handling. 2's complement? sign bit */
+	if (STIX_OOP_IS_SMOOI(x) && STIX_OOP_IS_SMOOI(y))
+	{
+		stix_ooi_t v1, v2, v3, sign;
+
+		sign = 1;
+		v1 = STIX_OOP_TO_SMOOI(x);
+		v2 = STIX_OOP_TO_SMOOI(y);
+
+		if (v1 < 0) 
+		{
+			v1 = -v1;
+			if (v2 < 0) 
+			{
+				v2 = -v2;
+				sign = -1;
+			}
+		}
+		else if (v2 < 0) 
+		{
+			v2 = -v2;
+		}
+
+		v3 = (stix_ooi_t)((stix_oow_t)v1 & (stix_oow_t)v2);
+		return STIX_SMOOI_TO_OOP(v3 * sign);
+	}
+	else if (STIX_OOP_IS_SMOOI(x))
+	{
+		stix_ooi_t v1, v3, sign;
+		stix_oow_t w2;
+
+	smooi_and_large:
+		if (!is_integer(stix,y)) goto oops_einval;
+
+		sign = 1;
+		v1 = STIX_OOP_TO_SMOOI(x);
+		if (v1 < 0) 
+		{
+			v1 = -v1;
+			if (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer) sign = -1;
+		}
+
+	#if (STIX_LIW_BITS == STIX_OOW_BITS)
+		w2 = ((stix_oop_liword_t)y)->slot[0];
+	#elif (STIX_LIW_BITS == STIX_OOHW_BITS)
+		if (STIX_OBJ_GET_SIZE(y) == 1)
+		{
+			w2 = ((stix_oop_liword_t)y)->slot[0];
+		}
+		else
+		{
+			w2 = MAKE_WORD(((stix_oop_liword_t)y)->slot[0], ((stix_oop_liword_t)y)->slot[1]);
+		}
+	#else
+	#	error UNSUPPORTED
+	#endif
+
+		v3 = (stix_ooi_t)((stix_oow_t)v1 & w2);
+		return STIX_SMOOI_TO_OOP(v3 * sign);
+	}
+	else if (STIX_OOP_IS_SMOOI(y))
+	{
+		stix_oop_t z;
+
+		z = x;
+		x = y;
+		y = z;
+
+		goto smooi_and_large;
+	}
+	else
+	{
+		stix_oow_t xs, ys, zs;
+		stix_oop_t z;
+
+		if (!is_integer(stix,x)) goto oops_einval;
+		if (!is_integer(stix,y)) goto oops_einval;
+
+		xs = STIX_OBJ_GET_SIZE(x);
+		ys = STIX_OBJ_GET_SIZE(y);
+
+		zs = (xs < ys)? xs: ys;
+		stix_pushtmp (stix, &x);
+		stix_pushtmp (stix, &y);
+		z = stix_instantiate (stix, stix->_large_positive_integer, 0, zs);
+		stix_poptmps (stix, 2);
+		if (!z) return STIX_NULL;
+
+		while (zs > 0)
+		{
+			--zs;
+			((stix_oop_liword_t)z)->slot[zs] = ((stix_oop_liword_t)x)->slot[zs] & ((stix_oop_liword_t)y)->slot[zs];
+		}
+
+		if (STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer &&
+		    STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer)
+		{
+			STIX_OBJ_SET_CLASS(z, stix->_large_negative_integer);
+		}
+		return z;
+	}
+
+oops_einval:
+	stix->errnum = STIX_EINVAL;
+	return STIX_NULL;
 }
 
 stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 {
+/* TODO: revisit negative number handling. 2's complement? sign bit */
+	if (STIX_OOP_IS_SMOOI(x) && STIX_OOP_IS_SMOOI(y))
+	{
+		stix_ooi_t v1, v2, v3, sign;
+
+		sign = 1;
+		v1 = STIX_OOP_TO_SMOOI(x);
+		v2 = STIX_OOP_TO_SMOOI(y);
+
+		if (v1 < 0) 
+		{
+			v1 = -v1;
+			sign = -1;
+		}
+		else if (v2 < 0) 
+		{
+			v2 = -v2;
+			sign = -1;
+		}
+
+		v3 = (stix_ooi_t)((stix_oow_t)v1 | (stix_oow_t)v2);
+		return STIX_SMOOI_TO_OOP(v3 * sign);
+	}
+	else
+	{
+		stix_oow_t xs, ys, zs;
+		stix_oop_t z;
+
+		if (STIX_OOP_IS_SMOOI(x))
+		{
+			stix_ooi_t v;
+
+			if (!is_integer(stix,y)) goto oops_einval;
+			v = STIX_OOP_TO_SMOOI(x);
+
+			stix_pushtmp (stix, &y);
+			x = make_bigint_with_ooi (stix, v);
+			stix_poptmp (stix);
+		}
+		else if (STIX_OOP_IS_SMOOI(y))
+		{
+			stix_ooi_t v;
+
+			if (!is_integer(stix,x)) goto oops_einval;
+			v = STIX_OOP_TO_SMOOI(y);
+
+			stix_pushtmp (stix, &x);
+			y = make_bigint_with_ooi (stix, v);
+			stix_poptmp (stix);
+		}
+		else
+		{
+			if (!is_integer(stix,x)) goto oops_einval;
+			if (!is_integer(stix,y)) goto oops_einval;
+		}
+
+		xs = STIX_OBJ_GET_SIZE(x);
+		ys = STIX_OBJ_GET_SIZE(y);
+
+		if (xs > ys)
+		{
+			zs = xs;
+		}
+		else
+		{
+			/* swap x and y */
+			z = x;
+			x = y;
+			y = z;
+			zs = ys;
+			ys = xs;
+			xs = zs;
+		}
+
+		stix_pushtmp (stix, &x);
+		stix_pushtmp (stix, &y);
+		z = stix_instantiate (stix, stix->_large_positive_integer, 0, zs);
+		stix_poptmps (stix, 2);
+		if (!z) return STIX_NULL;
+
+		while (zs > ys)
+		{
+			--zs;
+			((stix_oop_liword_t)z)->slot[zs] = ((stix_oop_liword_t)x)->slot[zs];
+		}
+		while (zs > 0)
+		{
+			--zs;
+			((stix_oop_liword_t)z)->slot[zs] = ((stix_oop_liword_t)x)->slot[zs] | ((stix_oop_liword_t)y)->slot[zs];
+		}
+
+		if (STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer ||
+		    STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer)
+		{
+			STIX_OBJ_SET_CLASS(z, stix->_large_negative_integer);
+		}
+		return z;
+	}
+
+oops_einval:
+	stix->errnum = STIX_EINVAL;
+	return STIX_NULL;
 }
 
 stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 {
+stix->errnum = STIX_ENOIMPL;
+	return STIX_NULL;
 }
-#endif
+
+stix_oop_t stix_bitinvertint (stix_t* stix, stix_oop_t x)
+{
+stix->errnum = STIX_ENOIMPL;
+	return STIX_NULL;
+}
 
 static stix_uint8_t ooch_val_tab[] =
 {

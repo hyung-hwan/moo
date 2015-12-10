@@ -1106,6 +1106,29 @@ stix_oop_t stix_divints (
 	stix_oop_t* rem
 );
 
+stix_oop_t stix_bitandints (
+	stix_t*    stix,
+	stix_oop_t x,
+	stix_oop_t y
+);
+
+stix_oop_t stix_bitorints (
+	stix_t*    stix,
+	stix_oop_t x,
+	stix_oop_t y
+);
+
+stix_oop_t stix_bitxorints (
+	stix_t*    stix,
+	stix_oop_t x,
+	stix_oop_t y
+);
+
+stix_oop_t stix_bitinvertint (
+	stix_t*    stix,
+	stix_oop_t x
+);
+
 stix_oop_t stix_strtoint (
 	stix_t*            stix,
 	const stix_ooch_t* str,

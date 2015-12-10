@@ -108,6 +108,29 @@
 		self primitiveFailed.
 	}
 
+	#method bitAnd: aNumber
+	{
+		<primitive: #_integer_bitand>
+		self primitiveFailed.
+	}
+
+	#method bitOr: aNumber
+	{
+		<primitive: #_integer_bitor>
+		self primitiveFailed.
+	}
+
+	#method bitXor: aNumber
+	{
+		<primitive: #_integer_bitxor>
+		self primitiveFailed.
+	}
+
+	#method bitInvert
+	{
+		<primitive: #_integer_bitinvert>
+		self primitiveFailed.
+	}
 
 	#method asString
 	{
