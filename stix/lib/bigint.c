@@ -1398,16 +1398,10 @@ stix_oop_t stix_bitandints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 	#if (STIX_LIW_BITS == STIX_OOW_BITS)
 		w2 = ((stix_oop_liword_t)y)->slot[0];
 	#elif (STIX_LIW_BITS == STIX_OOHW_BITS)
-		if (STIX_OBJ_GET_SIZE(y) == 1)
-		{
-			w2 = ((stix_oop_liword_t)y)->slot[0];
-		}
-		else
-		{
-			w2 = MAKE_WORD(((stix_oop_liword_t)y)->slot[0], ((stix_oop_liword_t)y)->slot[1]);
-		}
+		STIX_ASSERT (STIX_OBJ_GET_SIZE(y) >= 2);
+		w2 = MAKE_WORD(((stix_oop_liword_t)y)->slot[0], ((stix_oop_liword_t)y)->slot[1]);
 	#else
-	#	error UNSUPPORTED
+	#	error UNSUPPORTED LIW BIT SIZE
 	#endif
 
 		v3 = (stix_ooi_t)((stix_oow_t)v1 & w2);
@@ -1452,7 +1446,10 @@ stix_oop_t stix_bitandints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		{
 			STIX_OBJ_SET_CLASS(z, stix->_large_negative_integer);
 		}
-		return z;
+
+		/* for example, 16r1010101010... bitAnd: 16r0101010101... procduces 0.
+		 * so normalization is needed */
+		return normalize_bigint (stix, z);
 	}
 
 oops_einval:
@@ -1476,7 +1473,8 @@ stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			v1 = -v1;
 			sign = -1;
 		}
-		else if (v2 < 0) 
+
+		if (v2 < 0) 
 		{
 			v2 = -v2;
 			sign = -1;
@@ -1485,38 +1483,64 @@ stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		v3 = (stix_ooi_t)((stix_oow_t)v1 | (stix_oow_t)v2);
 		return STIX_SMOOI_TO_OOP(v3 * sign);
 	}
-	else
+	else if (STIX_OOP_IS_SMOOI(x))
 	{
-		stix_oow_t xs, ys, zs;
 		stix_oop_t z;
+		stix_ooi_t v;
+		int neg;
 
-		if (STIX_OOP_IS_SMOOI(x))
+	smooi_and_large:
+		if (!is_integer(stix,y)) goto oops_einval;
+
+		neg = 0;
+		v = STIX_OOP_TO_SMOOI(x);
+
+		if (v < 0) 
 		{
-			stix_ooi_t v;
-
-			if (!is_integer(stix,y)) goto oops_einval;
-			v = STIX_OOP_TO_SMOOI(x);
-
-			stix_pushtmp (stix, &y);
-			x = make_bigint_with_ooi (stix, v);
-			stix_poptmp (stix);
+			v = -v;
+			neg = 1;
 		}
-		else if (STIX_OOP_IS_SMOOI(y))
+
+		z = clone_bigint (stix, y, STIX_OBJ_GET_SIZE(y));
+		if (!z) return STIX_NULL;
+
+	#if STIX_LIW_BITS == STIX_OOW_BITS
+		((stix_oop_liword_t)z)->slot[0] |= (stix_oow_t)v;
+	#elif STIX_LIW_BITS == STIX_OOHW_BITS
+		STIX_ASSERT (STIX_OBJ_GET_SIZE(z) >= 2);
+		((stix_oop_liword_t)z)->slot[0] |= ((stix_oow_t)v & STIX_LBMASK(stix_oow_t, STIX_OOHW_BITS));
+		((stix_oop_liword_t)z)->slot[1] |= ((stix_oow_t)v >> STIX_OOHW_BITS);
+	#else
+	#	error UNSUPPORTED LIW BIT SIZE
+	#endif
+
+		if (neg || STIX_OBJ_GET_CLASS(z) == stix->_large_negative_integer)
 		{
-			stix_ooi_t v;
-
-			if (!is_integer(stix,x)) goto oops_einval;
-			v = STIX_OOP_TO_SMOOI(y);
-
-			stix_pushtmp (stix, &x);
-			y = make_bigint_with_ooi (stix, v);
-			stix_poptmp (stix);
+			STIX_OBJ_SET_CLASS(z, stix->_large_negative_integer);
 		}
 		else
 		{
-			if (!is_integer(stix,x)) goto oops_einval;
-			if (!is_integer(stix,y)) goto oops_einval;
+			STIX_OBJ_SET_CLASS(z, stix->_large_positive_integer);
 		}
+		return z;
+	}
+	else if (STIX_OOP_IS_SMOOI(y))
+	{
+		stix_oop_t z;
+
+		z = x;
+		x = y;
+		y = z;
+
+		goto smooi_and_large;
+	}
+	else
+	{
+		stix_oop_t z;
+		stix_oow_t xs, ys, zs;
+
+		if (!is_integer(stix,x)) goto oops_einval;
+		if (!is_integer(stix,y)) goto oops_einval;
 
 		xs = STIX_OBJ_GET_SIZE(x);
 		ys = STIX_OBJ_GET_SIZE(y);
@@ -1558,6 +1582,8 @@ stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		{
 			STIX_OBJ_SET_CLASS(z, stix->_large_negative_integer);
 		}
+
+		/* no normalization is needed */
 		return z;
 	}
 
@@ -1568,13 +1594,140 @@ oops_einval:
 
 stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 {
-stix->errnum = STIX_ENOIMPL;
-	return STIX_NULL;
-}
+	if (STIX_OOP_IS_SMOOI(x) && STIX_OOP_IS_SMOOI(y))
+	{
+		stix_ooi_t v[3], sign[2];
 
-stix_oop_t stix_bitinvertint (stix_t* stix, stix_oop_t x)
-{
-stix->errnum = STIX_ENOIMPL;
+		sign[0] = 1;
+		sign[1] = 1;
+		v[0] = STIX_OOP_TO_SMOOI(x);
+		v[1] = STIX_OOP_TO_SMOOI(y);
+
+		if (v[0] < 0) 
+		{
+			v[0] = -v[0];
+			sign[0] = -1;
+		}
+
+		if (v[1] < 0) 
+		{
+			v[1] = -v[1];
+			sign[1] = -1;
+		}
+
+		v[2] = (stix_ooi_t)((stix_oow_t)v[0] ^ (stix_oow_t)v[1]);
+		return STIX_SMOOI_TO_OOP(v[2] * sign[0] * sign[1]);
+	}
+	else if (STIX_OOP_IS_SMOOI(x))
+	{
+		stix_oop_t z;
+		stix_ooi_t v;
+		int neg1, neg2;
+
+	smooi_and_large:
+		if (!is_integer(stix,y)) goto oops_einval;
+
+		neg1 = 0;
+		neg2 = 0;
+		v = STIX_OOP_TO_SMOOI(x);
+
+		if (v < 0) 
+		{
+			v = -v;
+			neg1 = 1;
+		}
+
+		if (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer) neg2 = 1;
+
+		z = clone_bigint (stix, y, STIX_OBJ_GET_SIZE(y));
+		if (!z) return STIX_NULL;
+
+	#if STIX_LIW_BITS == STIX_OOW_BITS
+		((stix_oop_liword_t)z)->slot[0] ^= (stix_oow_t)v;
+	#elif STIX_LIW_BITS == STIX_OOHW_BITS
+		STIX_ASSERT (STIX_OBJ_GET_SIZE(z) >= 2);
+		((stix_oop_liword_t)z)->slot[0] ^= ((stix_oow_t)v & STIX_LBMASK(stix_oow_t, STIX_OOHW_BITS));
+		((stix_oop_liword_t)z)->slot[1] ^= ((stix_oow_t)v >> STIX_OOHW_BITS);
+	#else
+	#	error UNSUPPORTED LIW BIT SIZE
+	#endif
+
+		if (STIX_OBJ_GET_CLASS(z) == stix->_large_negative_integer) neg2 = 1;
+
+		if (neg1 == neg2)
+		{
+			STIX_OBJ_SET_CLASS(z, stix->_large_negative_integer);
+		}
+		else
+		{
+			STIX_OBJ_SET_CLASS(z, stix->_large_positive_integer);
+		}
+
+		return normalize_bigint (stix, z);
+	}
+	else if (STIX_OOP_IS_SMOOI(y))
+	{
+		stix_oop_t z;
+
+		z = x;
+		x = y;
+		y = z;
+
+		goto smooi_and_large;
+	}
+	else
+	{
+		stix_oop_t z;
+		stix_oow_t xs, ys, zs;
+
+		if (!is_integer(stix,x)) goto oops_einval;
+		if (!is_integer(stix,y)) goto oops_einval;
+
+		xs = STIX_OBJ_GET_SIZE(x);
+		ys = STIX_OBJ_GET_SIZE(y);
+
+		if (xs > ys)
+		{
+			zs = xs;
+		}
+		else
+		{
+			/* swap x and y */
+			z = x;
+			x = y;
+			y = z;
+			zs = ys;
+			ys = xs;
+			xs = zs;
+		}
+
+		stix_pushtmp (stix, &x);
+		stix_pushtmp (stix, &y);
+		z = stix_instantiate (stix, stix->_large_positive_integer, 0, zs);
+		stix_poptmps (stix, 2);
+		if (!z) return STIX_NULL;
+
+		while (zs > ys)
+		{
+			--zs;
+			((stix_oop_liword_t)z)->slot[zs] = ((stix_oop_liword_t)x)->slot[zs];
+		}
+		while (zs > 0)
+		{
+			--zs;
+			((stix_oop_liword_t)z)->slot[zs] = ((stix_oop_liword_t)x)->slot[zs] ^ ((stix_oop_liword_t)y)->slot[zs];
+		}
+
+		if (STIX_OBJ_GET_CLASS(x) == STIX_OBJ_GET_CLASS(y))
+		{
+			STIX_OBJ_SET_CLASS(z, stix->_large_negative_integer);
+		}
+
+		return normalize_bigint (stix, z);
+	}
+
+oops_einval:
+	stix->errnum = STIX_EINVAL;
 	return STIX_NULL;
 }
 
@@ -1866,7 +2019,7 @@ stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num, int radix)
 #elif STIX_LIW_BITS == STIX_OOHW_BITS
 	stix_liw_t b[2];
 #else
-#	error UNSUPPORTED
+#	error UNSUPPORTED LIW BIT SIZE
 #endif
 	stix_liw_t* a, * q, * r;
 	stix_liw_t* t = STIX_NULL;
@@ -1901,12 +2054,8 @@ stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num, int radix)
 			v = (STIX_OBJ_GET_CLASS(num) == stix->_large_negative_integer)? -1: 1;
 		}
 	#elif (STIX_LIW_BITS == STIX_OOHW_BITS)
-		if (STIX_OBJ_GET_SIZE(num) == 1)
-		{
-			w = ((stix_oop_halfword_t)num)->slot[0];
-			v = (STIX_OBJ_GET_CLASS(num) == stix->_large_negative_integer)? -1: 1;
-		}
-		else if (STIX_OBJ_GET_SIZE(num) == 2)
+		STIX_ASSERT (STIX_OBJ_GET_SIZE(num) >= 2);
+		if (STIX_OBJ_GET_SIZE(num) == 2)
 		{
 			w = MAKE_WORD (((stix_oop_halfword_t)num)->slot[0], ((stix_oop_halfword_t)num)->slot[1]);
 			v = (STIX_OBJ_GET_CLASS(num) == stix->_large_negative_integer)? -1: 1;
@@ -1942,7 +2091,7 @@ stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num, int radix)
 	b[1] = stix->bigint[radix].multiplier >> STIX_OOHW_BITS;
 	bs = (b[1] > 0)? 2: 1;
 #else
-#	error UNSUPPORTED
+#	error UNSUPPORTED LIW BIT SIZE
 #endif
 
 	as = STIX_OBJ_GET_SIZE(num);
@@ -2001,7 +2150,7 @@ stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num, int radix)
 			w = MAKE_WORD (r[0], r[1]);
 		}
 	#else
-	#	UNSUPPORTED
+	#	error UNSUPPORTED LIW BIT SIZE
 	#endif
 		seglen = oow_to_text (w, radix, &xbuf[xlen]);
 		xlen += seglen;

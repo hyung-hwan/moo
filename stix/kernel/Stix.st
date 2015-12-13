@@ -128,11 +128,18 @@
 
 	#method bitInvert
 	{
-		<primitive: #_integer_bitinvert>
-		self primitiveFailed.
+		##<primitive: #_integer_bitinvert>
+		##self primitiveFailed.
+
+		^-1 - self.
 	}
 
 	#method asString
+	{
+		self printStringRadix: 10
+	}
+
+	#method printStringRadix: aNumber
 	{
 		<primitive: #_integer_inttostr>
 		self primitiveFailed.

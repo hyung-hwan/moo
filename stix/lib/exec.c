@@ -1240,23 +1240,6 @@ static int prim_integer_bitxor (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-
-static int prim_integer_bitinvert (stix_t* stix, stix_ooi_t nargs)
-{
-	stix_oop_t rcv, arg, res;
-
-	STIX_ASSERT (nargs == 0);
-
-	rcv = ACTIVE_STACK_GET(stix, stix->sp );
-
-	res = stix_bitinvertint (stix, rcv);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
-
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, res);
-	return 1;
-}
-
 static int prim_integer_eq (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
@@ -1425,13 +1408,19 @@ static int prim_integer_ge (stix_t* stix, stix_ooi_t nargs)
 
 static int prim_integer_inttostr (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_t rcv, str;
+	stix_oop_t rcv, arg, str;
+	stix_ooi_t radix;
 
-	STIX_ASSERT (nargs == 0);
+	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	str = stix_inttostr (stix, rcv, 10);
+	if (!STIX_OOP_IS_SMOOI(arg)) return 0; /* soft failure */
+	radix = STIX_OOP_TO_SMOOI(arg);
+
+	if (radix < 2 || radix > 36) return 0; /* soft failure */
+	str = stix_inttostr (stix, rcv, radix);
 	if (!str) return (stix->errnum == STIX_EINVAL? 0: -1);
 
 	ACTIVE_STACK_SETTOP (stix, str);
@@ -1796,14 +1785,13 @@ static prim_t primitives[] =
 	{   1,   prim_integer_bitand,       "_integer_bitand"      },
 	{   1,   prim_integer_bitor,        "_integer_bitor"       },
 	{   1,   prim_integer_bitxor,       "_integer_bitxor"      },
-	{   0,   prim_integer_bitinvert,    "_integer_bitinvert"   },
 	{   1,   prim_integer_eq,           "_integer_eq"          },
 	{   1,   prim_integer_ne,           "_integer_ne"          },
 	{   1,   prim_integer_lt,           "_integer_lt"          },
 	{   1,   prim_integer_gt,           "_integer_gt"          },
 	{   1,   prim_integer_le,           "_integer_le"          },
 	{   1,   prim_integer_ge,           "_integer_ge"          },
-	{   0,   prim_integer_inttostr,     "_integer_inttostr"    },
+	{   1,   prim_integer_inttostr,     "_integer_inttostr"    },
 
 	{   1,   prim_processor_schedule,   "_processor_schedule"  },
 	{   1,   prim_processor_remove,     "_processor_remove"    },
