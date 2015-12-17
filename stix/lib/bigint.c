@@ -1494,10 +1494,10 @@ stix_oop_t stix_bitandints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			/* 2's complement on both x and y and perform bitwise-and */
 			for (i = 0; i < ys; i++)
 			{
-				w[0] = (stix_lidw_t)(~((stix_oop_liword_t)x)->slot[i]) + carry[0];
+				w[0] = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry[0];
 				carry[0] = w[0] >> STIX_LIW_BITS;
 
-				w[1] = (stix_lidw_t)(~((stix_oop_liword_t)y)->slot[i]) + carry[1];
+				w[1] = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)y)->slot[i]) + carry[1];
 				carry[1] = w[1] >> STIX_LIW_BITS;
 
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0] & (stix_liw_t)w[1];
@@ -1508,7 +1508,7 @@ stix_oop_t stix_bitandints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			 * in y is treated as if they are all 1s. */
 			for (; i < xs; i++)
 			{
-				w[0] = (stix_lidw_t)(~((stix_oop_liword_t)x)->slot[i]) + carry[0];
+				w[0] = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry[0];
 				carry[0] = w[0] >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0];
 			}
@@ -1519,7 +1519,7 @@ stix_oop_t stix_bitandints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			carry[0] = 1;
 			for (i = 0; i <= zs; i++)
 			{
-				w[0] = (stix_lidw_t)(~((stix_oop_liword_t)z)->slot[i]) + carry[0];
+				w[0] = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)z)->slot[i]) + carry[0];
 				carry[0] = w[0] >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0];
 			}
@@ -1535,7 +1535,7 @@ stix_oop_t stix_bitandints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			carry = 1;
 			for (i = 0; i < ys; i++)
 			{
-				w = (stix_lidw_t)(~((stix_oop_liword_t)x)->slot[i]) + carry;
+				w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry;
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w & ((stix_oop_liword_t)y)->slot[i];
 			}
@@ -1553,7 +1553,7 @@ stix_oop_t stix_bitandints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			carry = 1;
 			for (i = 0; i < ys; i++)
 			{
-				w = (stix_lidw_t)(~((stix_oop_liword_t)y)->slot[i]) + carry;
+				w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)y)->slot[i]) + carry;
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = ((stix_oop_liword_t)x)->slot[i] & (stix_liw_t)w;
 			}
@@ -1707,10 +1707,10 @@ stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			/* 2's complement on both x and y and perform bitwise-and */
 			for (i = 0; i < ys; i++)
 			{
-				w[0] = (stix_lidw_t)(~((stix_oop_liword_t)x)->slot[i]) + carry[0];
+				w[0] = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry[0];
 				carry[0] = w[0] >> STIX_LIW_BITS;
 
-				w[1] = (stix_lidw_t)(~((stix_oop_liword_t)y)->slot[i]) + carry[1];
+				w[1] = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)y)->slot[i]) + carry[1];
 				carry[1] = w[1] >> STIX_LIW_BITS;
 
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0] | (stix_liw_t)w[1];
@@ -1727,7 +1727,7 @@ stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			carry[0] = 1;
 			for (i = 0; i <= zs; i++)
 			{
-				w[0] = (stix_lidw_t)(~((stix_oop_liword_t)z)->slot[i]) + carry[0];
+				w[0] = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)z)->slot[i]) + carry[0];
 				carry[0] = w[0] >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0];
 			}
@@ -1743,14 +1743,14 @@ stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			carry = 1;
 			for (i = 0; i < ys; i++)
 			{
-				w = (stix_lidw_t)(~((stix_oop_liword_t)x)->slot[i]) + carry;
+				w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry;
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w | ((stix_oop_liword_t)y)->slot[i];
 			}
 
 			for (; i < xs; i++)
 			{
-				w = (stix_lidw_t)(~((stix_oop_liword_t)x)->slot[i]) + carry;
+				w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry;
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
 			}
@@ -1767,7 +1767,7 @@ stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			carry = 1;
 			for (i = 0; i < ys; i++)
 			{
-				w = (stix_lidw_t)(~((stix_oop_liword_t)y)->slot[i]) + carry;
+				w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)y)->slot[i]) + carry;
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = ((stix_oop_liword_t)x)->slot[i] | (stix_liw_t)w;
 			}
@@ -1918,10 +1918,10 @@ stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			/* 2's complement on both x and y and perform bitwise-and */
 			for (i = 0; i < ys; i++)
 			{
-				w[0] = (stix_lidw_t)(~((stix_oop_liword_t)x)->slot[i]) + carry[0];
+				w[0] = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry[0];
 				carry[0] = w[0] >> STIX_LIW_BITS;
 
-				w[1] = (stix_lidw_t)(~((stix_oop_liword_t)y)->slot[i]) + carry[1];
+				w[1] = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)y)->slot[i]) + carry[1];
 				carry[1] = w[1] >> STIX_LIW_BITS;
 
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0] ^ (stix_liw_t)w[1];
@@ -1931,7 +1931,7 @@ stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			/* treat the lacking part in y as all 1s */
 			for (; i < xs; i++)
 			{
-				w[0] = (stix_lidw_t)(~((stix_oop_liword_t)x)->slot[i]) + carry[0];
+				w[0] = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry[0];
 				carry[0] = w[0] >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0] ^ STIX_TYPE_MAX(stix_liw_t);
 			}
@@ -1945,7 +1945,7 @@ stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			carry = 1;
 			for (i = 0; i < ys; i++)
 			{
-				w = (stix_lidw_t)(~((stix_oop_liword_t)x)->slot[i]) + carry;
+				w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry;
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w ^ ((stix_oop_liword_t)y)->slot[i];
 			}
@@ -1953,7 +1953,7 @@ stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			/* treat the lacking part in y as all 0s */
 			for (; i < xs; i++)
 			{
-				w = (stix_lidw_t)(~((stix_oop_liword_t)x)->slot[i]) + carry;
+				w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry;
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
 			}
@@ -1965,7 +1965,7 @@ stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			carry = 1;
 			for (i = 0; i <= zs; i++)
 			{
-				w = (stix_lidw_t)(~((stix_oop_liword_t)z)->slot[i]) + carry;
+				w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)z)->slot[i]) + carry;
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
 			}
@@ -1982,7 +1982,7 @@ stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			carry = 1;
 			for (i = 0; i < ys; i++)
 			{
-				w = (stix_lidw_t)(~((stix_oop_liword_t)y)->slot[i]) + carry;
+				w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)y)->slot[i]) + carry;
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = ((stix_oop_liword_t)x)->slot[i] ^ (stix_liw_t)w;
 			}
@@ -2063,7 +2063,7 @@ stix_oop_t stix_bitinvint (stix_t* stix, stix_oop_t x)
 			carry = 1;
 			for (i = 0; i < xs; i++)
 			{
-				w = (stix_lidw_t)(~((stix_oop_liword_t)x)->slot[i]) + carry;
+				w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry;
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = ~(stix_liw_t)w;
 			}
@@ -2083,7 +2083,7 @@ stix_oop_t stix_bitinvint (stix_t* stix, stix_oop_t x)
 			carry = 1;
 			for (i = 0; i <= zs; i++)
 			{
-				w = (stix_lidw_t)(~((stix_oop_liword_t)z)->slot[i]) + carry;
+				w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)z)->slot[i]) + carry;
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
 			}
