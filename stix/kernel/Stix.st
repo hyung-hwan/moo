@@ -128,9 +128,7 @@
 
 	#method bitInvert
 	{
-		##<primitive: #_integer_bitinvert>
-		##self primitiveFailed.
-
+		<primitive: #_integer_bitinv>
 		^-1 - self.
 	}
 

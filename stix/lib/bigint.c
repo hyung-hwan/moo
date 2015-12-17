@@ -736,7 +736,6 @@ static void divide_unsigned_array (
 
 static stix_oop_t add_unsigned_integers (stix_t* stix, stix_oop_t x, stix_oop_t y)
 {
-	stix_liw_t* a, * b;
 	stix_oow_t as, bs, zs;
 	stix_oop_t z;
 
@@ -752,16 +751,22 @@ static stix_oop_t add_unsigned_integers (stix_t* stix, stix_oop_t x, stix_oop_t 
 
 	if (as >= bs)
 	{
-		a = ((stix_oop_liword_t)x)->slot;
-		b = ((stix_oop_liword_t)y)->slot;
+		add_unsigned_array (
+			((stix_oop_liword_t)x)->slot, as,
+			((stix_oop_liword_t)y)->slot, bs,
+			((stix_oop_liword_t)z)->slot
+		);
 	}
 	else 
 	{
-		a = ((stix_oop_liword_t)y)->slot;
-		b = ((stix_oop_liword_t)x)->slot;
+		add_unsigned_array (
+			((stix_oop_liword_t)y)->slot, bs,
+			((stix_oop_liword_t)x)->slot, as,
+			((stix_oop_liword_t)z)->slot
+		);
 	}
 
-	add_unsigned_array (a, as, b, bs, ((stix_oop_liword_t)z)->slot);
+	
 	return z;
 }
 
@@ -2014,6 +2019,82 @@ oops_einval:
 	return STIX_NULL;
 }
 
+stix_oop_t stix_bitinvint (stix_t* stix, stix_oop_t x)
+{
+	if (STIX_OOP_IS_SMOOI(x))
+	{
+		stix_ooi_t v;
+
+		v = STIX_OOP_TO_SMOOI(x);
+		v = ~v;
+
+		if (STIX_IN_SMOOI_RANGE(v)) return STIX_SMOOI_TO_OOP(v);
+		return make_bigint_with_ooi (stix, v);
+	}
+	else
+	{
+		stix_oop_t z;
+		stix_oow_t i, xs, zs, zalloc;
+		int negx;
+
+		xs = STIX_OBJ_GET_SIZE(x);
+		negx = (STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer)? 1: 0;
+
+		if (negx)
+		{
+			zalloc = xs;
+			zs = xs;
+		}
+		else
+		{
+			zalloc = xs + 1;
+			zs = xs;
+		}
+
+		stix_pushtmp (stix, &x);
+		z = stix_instantiate (stix, stix->_large_positive_integer, STIX_NULL, zalloc);
+		stix_poptmp (stix);
+		if (!z) return STIX_NULL;
+
+		if (negx)
+		{
+			stix_lidw_t w, carry;
+
+			carry = 1;
+			for (i = 0; i < xs; i++)
+			{
+				w = (stix_lidw_t)(~((stix_oop_liword_t)x)->slot[i]) + carry;
+				carry = w >> STIX_LIW_BITS;
+				((stix_oop_liword_t)z)->slot[i] = ~(stix_liw_t)w;
+			}
+			STIX_ASSERT (carry == 0);
+		}
+		else
+		{
+			stix_lidw_t w, carry;
+
+			for (i = 0; i < xs; i++)
+			{
+				((stix_oop_liword_t)z)->slot[i] = ~((stix_oop_liword_t)x)->slot[i];
+			}
+
+			/* 2's complement on the final result */
+			((stix_oop_liword_t)z)->slot[zs] = STIX_TYPE_MAX(stix_liw_t);
+			carry = 1;
+			for (i = 0; i <= zs; i++)
+			{
+				w = (stix_lidw_t)(~((stix_oop_liword_t)z)->slot[i]) + carry;
+				carry = w >> STIX_LIW_BITS;
+				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
+			}
+			STIX_ASSERT (carry == 0);
+
+			STIX_OBJ_SET_CLASS (z, stix->_large_negative_integer);
+		}
+
+		return normalize_bigint(stix, z);
+	}
+}
 
 static stix_uint8_t ooch_val_tab[] =
 {

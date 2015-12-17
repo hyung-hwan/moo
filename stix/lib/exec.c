@@ -1240,6 +1240,22 @@ static int prim_integer_bitxor (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
+static int prim_integer_bitinv (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, res;
+
+	STIX_ASSERT (nargs == 0);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+
+	res = stix_bitinvint (stix, rcv);
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
+}
+
 static int prim_integer_eq (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
@@ -1785,6 +1801,7 @@ static prim_t primitives[] =
 	{   1,   prim_integer_bitand,       "_integer_bitand"      },
 	{   1,   prim_integer_bitor,        "_integer_bitor"       },
 	{   1,   prim_integer_bitxor,       "_integer_bitxor"      },
+	{   0,   prim_integer_bitinv,       "_integer_bitinv"      },
 	{   1,   prim_integer_eq,           "_integer_eq"          },
 	{   1,   prim_integer_ne,           "_integer_ne"          },
 	{   1,   prim_integer_lt,           "_integer_lt"          },
