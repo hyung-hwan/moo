@@ -57,14 +57,14 @@ extern "C" {
 /* ========================================================================= */
 /* stix-utl.c                                                                */
 /* ========================================================================= */
-stix_size_t stix_hashbytes (
+stix_oow_t stix_hashbytes (
 	const stix_oob_t* ptr,
-	stix_size_t        len
+	stix_oow_t        len
 );
 
-stix_size_t stix_hashuchars (
+stix_oow_t stix_hashuchars (
 	const stix_uch_t*  ptr,
-	stix_size_t        len
+	stix_oow_t        len
 );
 
 #define stix_hashbchars(ptr,len) stix_hashbytes(ptr,len)
@@ -73,7 +73,7 @@ stix_size_t stix_hashuchars (
 int stix_equalchars (
 	const stix_uch_t*  str1,
 	const stix_uch_t*  str2,
-	stix_size_t        len
+	stix_oow_t        len
 );
 
 int stix_compucstr (
@@ -93,57 +93,57 @@ int stix_compucbcstr (
 
 int stix_compucxbcstr (
 	const stix_uch_t* str1,
-	stix_size_t       len,
+	stix_oow_t       len,
 	const stix_bch_t* str2
 );
 
 void stix_copyuchars (
 	stix_uch_t*       dst,
 	const stix_uch_t* src,
-	stix_size_t       len
+	stix_oow_t       len
 );
 
 void stix_copybchars (
 	stix_bch_t*       dst,
 	const stix_bch_t* src,
-	stix_size_t       len
+	stix_oow_t       len
 );
 
 void stix_copybchtouchars (
 	stix_uch_t*       dst,
 	const stix_bch_t* src,
-	stix_size_t       len
+	stix_oow_t       len
 );
 
-stix_size_t stix_copyucstr (
+stix_oow_t stix_copyucstr (
 	stix_uch_t*       dst,
-	stix_size_t       len,
+	stix_oow_t       len,
 	const stix_uch_t* src
 );
 
-stix_size_t stix_copybcstr (
+stix_oow_t stix_copybcstr (
 	stix_bch_t*       dst,
-	stix_size_t       len,
+	stix_oow_t       len,
 	const stix_bch_t* src
 );
 
 stix_uch_t* stix_finduchar (
 	const stix_uch_t* ptr,
-	stix_size_t       len,
+	stix_oow_t       len,
 	stix_uch_t        c
 );
 
 stix_bch_t* stix_findbchar (
 	const stix_bch_t* ptr,
-	stix_size_t       len,
+	stix_oow_t       len,
 	stix_bch_t        c
 );
 
-stix_size_t stix_countucstr (
+stix_oow_t stix_countucstr (
 	const stix_uch_t* str
 );
 
-stix_size_t stix_countbcstr (
+stix_oow_t stix_countbcstr (
 	const stix_bch_t* str
 );
 

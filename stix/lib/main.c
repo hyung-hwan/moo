@@ -84,16 +84,16 @@ struct xtn_t
 	const char* source_path;
 
 	char bchar_buf[1024];
-	stix_size_t bchar_pos;
-	stix_size_t bchar_len;
+	stix_oow_t bchar_pos;
+	stix_oow_t bchar_len;
 };
 
-static void* sys_alloc (stix_mmgr_t* mmgr, stix_size_t size)
+static void* sys_alloc (stix_mmgr_t* mmgr, stix_oow_t size)
 {
 	return malloc (size);
 }
 
-static void* sys_realloc (stix_mmgr_t* mmgr, void* ptr, stix_size_t size)
+static void* sys_realloc (stix_mmgr_t* mmgr, void* ptr, stix_oow_t size)
 {
 	return realloc (ptr, size);
 }
@@ -112,14 +112,14 @@ static stix_mmgr_t sys_mmgr =
 };
 
 
-static STIX_INLINE stix_ssize_t open_input (stix_t* stix, stix_io_arg_t* arg)
+static STIX_INLINE stix_ooi_t open_input (stix_t* stix, stix_io_arg_t* arg)
 {
 	if (arg->includer)
 	{
 		/* includee */
 		stix_bch_t bcs[1024]; /* TODO: right buffer size */
-		stix_size_t bcslen = STIX_COUNTOF(bcs);
-		stix_size_t ucslen = ~(stix_size_t)0;
+		stix_oow_t bcslen = STIX_COUNTOF(bcs);
+		stix_oow_t ucslen = ~(stix_oow_t)0;
 
 		if (stix_ucstoutf8 (arg->name, &ucslen, bcs, &bcslen) <= -1)
 		{
@@ -155,10 +155,10 @@ static STIX_INLINE stix_ssize_t open_input (stix_t* stix, stix_io_arg_t* arg)
 	return 0;
 }
 
-static STIX_INLINE stix_ssize_t read_input (stix_t* stix, stix_io_arg_t* arg)
+static STIX_INLINE stix_ooi_t read_input (stix_t* stix, stix_io_arg_t* arg)
 {
 	xtn_t* xtn = stix_getxtn(stix);
-	stix_size_t n, bcslen, ucslen, remlen;
+	stix_oow_t n, bcslen, ucslen, remlen;
 	int x;
 
 	STIX_ASSERT (arg->handle != STIX_NULL);
@@ -188,14 +188,14 @@ static STIX_INLINE stix_ssize_t read_input (stix_t* stix, stix_io_arg_t* arg)
 	return ucslen;
 }
 
-static STIX_INLINE stix_ssize_t close_input (stix_t* stix, stix_io_arg_t* arg)
+static STIX_INLINE stix_ooi_t close_input (stix_t* stix, stix_io_arg_t* arg)
 {
 	STIX_ASSERT (arg->handle != STIX_NULL);
 	fclose ((FILE*)arg->handle);
 	return 0;
 }
 
-static stix_ssize_t input_handler (stix_t* stix, stix_io_cmd_t cmd, stix_io_arg_t* arg)
+static stix_ooi_t input_handler (stix_t* stix, stix_io_cmd_t cmd, stix_io_arg_t* arg)
 {
 	switch (cmd)
 	{
@@ -219,8 +219,8 @@ static void* mod_open (stix_t* stix, const stix_ooch_t* name)
 #if defined(USE_LTDL)
 /* TODO: support various platforms */
 	stix_bch_t buf[1024]; /* TODO: use a proper path buffer */
-	stix_size_t ucslen, bcslen;
-	stix_size_t len;
+	stix_oow_t ucslen, bcslen;
+	stix_oow_t len;
 	void* handle;
 
 /* TODO: using MODPREFIX isn't a good idean for all kind of modules.
@@ -236,7 +236,7 @@ static void* mod_open (stix_t* stix, const stix_ooch_t* name)
 	len = stix_copybcstr (buf, STIX_COUNTOF(buf), STIX_DEFAULT_MODPREFIX);
 
 /* TODO: proper error checking and overflow checking */
-	ucslen = ~(stix_size_t)0;
+	ucslen = ~(stix_oow_t)0;
 	bcslen = STIX_COUNTOF(buf) - len;
 	stix_ucstoutf8 (name, &ucslen, &buf[len], &bcslen);
 
@@ -279,12 +279,12 @@ static void* mod_getsym (stix_t* stix, void* handle, const stix_ooch_t* name)
 {
 #if defined(USE_LTDL)
 	stix_bch_t buf[1024]; /* TODO: use a proper buffer. dynamically allocated if conversion result in too a large value */
-	stix_size_t ucslen, bcslen;
+	stix_oow_t ucslen, bcslen;
 	void* sym;
 
 	buf[0] = '_';
 
-	ucslen = ~(stix_size_t)0;
+	ucslen = ~(stix_oow_t)0;
 	bcslen = STIX_COUNTOF(buf) - 2;
 	stix_ucstoutf8 (name, &ucslen, &buf[1], &bcslen);
 printf ("MOD_GETSYM [%s]\n", &buf[1]);
@@ -542,7 +542,7 @@ printf ("%p\n", a);
 			{
 				stix_synerr_t synerr;
 				stix_bch_t bcs[1024]; /* TODO: right buffer size */
-				stix_size_t bcslen, ucslen;
+				stix_oow_t bcslen, ucslen;
 
 				stix_getsynerr (stix, &synerr);
 
@@ -550,7 +550,7 @@ printf ("%p\n", a);
 				if (synerr.loc.file)
 				{
 					bcslen = STIX_COUNTOF(bcs);
-					ucslen = ~(stix_size_t)0;
+					ucslen = ~(stix_oow_t)0;
 					if (stix_ucstoutf8 (synerr.loc.file, &ucslen, bcs, &bcslen) >= 0)
 					{
 						printf ("%.*s ", (int)bcslen, bcs);

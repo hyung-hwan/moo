@@ -56,14 +56,14 @@
 #define rotate_right(rbt,pivot) rotate(rbt,pivot,0);
 
 STIX_INLINE stix_rbt_pair_t* stix_rbt_allocpair (
-	stix_rbt_t* rbt, void* kptr, stix_size_t klen, void* vptr, stix_size_t vlen)
+	stix_rbt_t* rbt, void* kptr, stix_oow_t klen, void* vptr, stix_oow_t vlen)
 {
 	stix_rbt_pair_t* n;
 
 	copier_t kcop = rbt->style->copier[STIX_RBT_KEY];
 	copier_t vcop = rbt->style->copier[STIX_RBT_VAL];
 
-	stix_size_t as = STIX_SIZEOF(stix_rbt_pair_t);
+	stix_oow_t as = STIX_SIZEOF(stix_rbt_pair_t);
 	if (kcop == STIX_RBT_COPIER_INLINE) as += KTOB(rbt,klen);
 	if (vcop == STIX_RBT_COPIER_INLINE) as += VTOB(rbt,vlen);
 
@@ -191,7 +191,7 @@ const stix_rbt_style_t* stix_getrbtstyle (stix_rbt_style_kind_t kind)
 	return &style[kind];
 }
 
-stix_rbt_t* stix_rbt_open (stix_mmgr_t* mmgr, stix_size_t xtnsize, int kscale, int vscale)
+stix_rbt_t* stix_rbt_open (stix_mmgr_t* mmgr, stix_oow_t xtnsize, int kscale, int vscale)
 {
 	stix_rbt_t* rbt;
 
@@ -264,12 +264,12 @@ void stix_rbt_setstyle (stix_rbt_t* rbt, const stix_rbt_style_t* style)
 	rbt->style = style;
 }
 
-stix_size_t stix_rbt_getsize (const stix_rbt_t* rbt)
+stix_oow_t stix_rbt_getsize (const stix_rbt_t* rbt)
 {
 	return rbt->size;
 }
 
-stix_rbt_pair_t* stix_rbt_search (const stix_rbt_t* rbt, const void* kptr, stix_size_t klen)
+stix_rbt_pair_t* stix_rbt_search (const stix_rbt_t* rbt, const void* kptr, stix_oow_t klen)
 {
 	stix_rbt_pair_t* pair = rbt->root;
 
@@ -418,7 +418,7 @@ static void adjust (stix_rbt_t* rbt, stix_rbt_pair_t* pair)
 }
 
 static stix_rbt_pair_t* change_pair_val (
-	stix_rbt_t* rbt, stix_rbt_pair_t* pair, void* vptr, stix_size_t vlen)
+	stix_rbt_t* rbt, stix_rbt_pair_t* pair, void* vptr, stix_oow_t vlen)
 {
 	if (VPTR(pair) == vptr && VLEN(pair) == vlen)
 	{
@@ -434,7 +434,7 @@ static stix_rbt_pair_t* change_pair_val (
 	{
 		copier_t vcop = rbt->style->copier[STIX_RBT_VAL];
 		void* ovptr = VPTR(pair);
-		stix_size_t ovlen = VLEN(pair);
+		stix_oow_t ovlen = VLEN(pair);
 
 		/* place the new value according to the copier */
 		if (vcop == STIX_RBT_COPIER_SIMPLE)
@@ -501,7 +501,7 @@ static stix_rbt_pair_t* change_pair_val (
 }
 
 static stix_rbt_pair_t* insert (
-	stix_rbt_t* rbt, void* kptr, stix_size_t klen, void* vptr, stix_size_t vlen, int opt)
+	stix_rbt_t* rbt, void* kptr, stix_oow_t klen, void* vptr, stix_oow_t vlen, int opt)
 {
 	stix_rbt_pair_t* x_cur = rbt->root;
 	stix_rbt_pair_t* x_par = STIX_NULL;
@@ -570,32 +570,32 @@ static stix_rbt_pair_t* insert (
 }
 
 stix_rbt_pair_t* stix_rbt_upsert (
-	stix_rbt_t* rbt, void* kptr, stix_size_t klen, void* vptr, stix_size_t vlen)
+	stix_rbt_t* rbt, void* kptr, stix_oow_t klen, void* vptr, stix_oow_t vlen)
 {
 	return insert (rbt, kptr, klen, vptr, vlen, UPSERT);
 }
 
 stix_rbt_pair_t* stix_rbt_ensert (
-	stix_rbt_t* rbt, void* kptr, stix_size_t klen, void* vptr, stix_size_t vlen)
+	stix_rbt_t* rbt, void* kptr, stix_oow_t klen, void* vptr, stix_oow_t vlen)
 {
 	return insert (rbt, kptr, klen, vptr, vlen, ENSERT);
 }
 
 stix_rbt_pair_t* stix_rbt_insert (
-	stix_rbt_t* rbt, void* kptr, stix_size_t klen, void* vptr, stix_size_t vlen)
+	stix_rbt_t* rbt, void* kptr, stix_oow_t klen, void* vptr, stix_oow_t vlen)
 {
 	return insert (rbt, kptr, klen, vptr, vlen, INSERT);
 }
 
 
 stix_rbt_pair_t* stix_rbt_update (
-	stix_rbt_t* rbt, void* kptr, stix_size_t klen, void* vptr, stix_size_t vlen)
+	stix_rbt_t* rbt, void* kptr, stix_oow_t klen, void* vptr, stix_oow_t vlen)
 {
 	return insert (rbt, kptr, klen, vptr, vlen, UPDATE);
 }
 
 stix_rbt_pair_t* stix_rbt_cbsert (
-	stix_rbt_t* rbt, void* kptr, stix_size_t klen, cbserter_t cbserter, void* ctx)
+	stix_rbt_t* rbt, void* kptr, stix_oow_t klen, cbserter_t cbserter, void* ctx)
 {
 	stix_rbt_pair_t* x_cur = rbt->root;
 	stix_rbt_pair_t* x_par = STIX_NULL;
@@ -865,7 +865,7 @@ static void delete_pair (stix_rbt_t* rbt, stix_rbt_pair_t* pair)
 	rbt->size--;
 }
 
-int stix_rbt_delete (stix_rbt_t* rbt, const void* kptr, stix_size_t klen)
+int stix_rbt_delete (stix_rbt_t* rbt, const void* kptr, stix_oow_t klen)
 {
 	stix_rbt_pair_t* pair;
 
@@ -979,9 +979,9 @@ void stix_rbt_rwalk (stix_rbt_t* rbt, walker_t walker, void* ctx)
 	walk (rbt, walker, ctx, RIGHT, LEFT);
 }
 
-int stix_rbt_dflcomp (const stix_rbt_t* rbt, const void* kptr1, stix_size_t klen1, const void* kptr2, stix_size_t klen2)
+int stix_rbt_dflcomp (const stix_rbt_t* rbt, const void* kptr1, stix_oow_t klen1, const void* kptr2, stix_oow_t klen2)
 {
-	stix_size_t min;
+	stix_oow_t min;
 	int n, nn;
 
 	if (klen1 < klen2)

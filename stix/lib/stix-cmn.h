@@ -272,20 +272,47 @@
 #	error UNKNOWN INTMAX SIZE
 #endif
 
+/* =========================================================================
+ * BASIC STIX TYPES
+ * =========================================================================*/
 
-typedef stix_uintptr_t stix_size_t;
-typedef stix_intptr_t stix_ssize_t;
+typedef char                     stix_bch_t;
+typedef int                      stix_bci_t;
 
-typedef char          stix_bch_t;
-typedef stix_uint16_t stix_uch_t; /* TODO ... wchar_t??? */
-typedef stix_int32_t  stix_uci_t;
+typedef stix_uint16_t            stix_uch_t; /* TODO ... wchar_t??? */
+typedef stix_int32_t             stix_uci_t;
+
+typedef stix_uint8_t             stix_oob_t;
+
+/* NOTE: sizeof(stix_oop_t) must be equal to sizeof(stix_oow_t) */
+typedef stix_uintptr_t           stix_oow_t;
+typedef stix_intptr_t            stix_ooi_t;
+#define STIX_SIZEOF_OOW_T STIX_SIZEOF_UINTPTR_T
+#define STIX_SIZEOF_OOI_T STIX_SIZEOF_INTPTR_T
+
+typedef stix_ushortptr_t         stix_oohw_t; /* half word - half word */
+typedef stix_shortptr_t          stix_oohi_t; /* signed half word */
+#define STIX_SIZEOF_OOHW_T STIX_SIZEOF_USHORTPTR_T
+#define STIX_SIZEOF_OOHI_T STIX_SIZEOF_SHORTPTR_T
 
 struct stix_ucs_t
 {
 	stix_uch_t* ptr;
-	stix_size_t len;
+	stix_oow_t len;
 };
 typedef struct stix_ucs_t stix_ucs_t;
+
+struct stix_bcs_t
+{
+	stix_bch_t* ptr;
+	stix_oow_t len;
+};
+typedef struct stix_bcs_t stix_bcs_t;
+
+typedef stix_uch_t               stix_ooch_t;
+typedef stix_uci_t               stix_ooci_t;
+typedef stix_ucs_t               stix_oocs_t;
+#define STIX_OOCH_IS_UCH
 
 
 /* =========================================================================
@@ -378,12 +405,12 @@ typedef struct stix_mmgr_t stix_mmgr_t;
  * allocate a memory chunk of the size \a n.
  * \return pointer to a memory chunk on success, #STIX_NULL on failure.
  */
-typedef void* (*stix_mmgr_alloc_t)   (stix_mmgr_t* mmgr, stix_size_t n);
+typedef void* (*stix_mmgr_alloc_t)   (stix_mmgr_t* mmgr, stix_oow_t n);
 /** 
  * resize a memory chunk pointed to by \a ptr to the size \a n.
  * \return pointer to a memory chunk on success, #STIX_NULL on failure.
  */
-typedef void* (*stix_mmgr_realloc_t) (stix_mmgr_t* mmgr, void* ptr, stix_size_t n);
+typedef void* (*stix_mmgr_realloc_t) (stix_mmgr_t* mmgr, void* ptr, stix_oow_t n);
 /**
  * free a memory chunk pointed to by \a ptr.
  */
@@ -432,16 +459,16 @@ struct stix_mmgr_t
 
 typedef struct stix_cmgr_t stix_cmgr_t;
 
-typedef stix_size_t (*stix_cmgr_bctouc_t) (
+typedef stix_oow_t (*stix_cmgr_bctouc_t) (
 	const stix_bch_t*   mb, 
-	stix_size_t         size,
+	stix_oow_t         size,
 	stix_uch_t*         wc
 );
 
-typedef stix_size_t (*stix_cmgr_uctobc_t) (
+typedef stix_oow_t (*stix_cmgr_uctobc_t) (
 	stix_uch_t    wc,
 	stix_bch_t*   mb,
-	stix_size_t   size
+	stix_oow_t   size
 );
 
 /**
@@ -522,29 +549,6 @@ struct stix_cmgr_t
 	((STIX_TYPE_IS_SIGNED(type)? STIX_TYPE_SIGNED_MAX(type): STIX_TYPE_UNSIGNED_MAX(type)))
 #define STIX_TYPE_MIN(type) \
 	((STIX_TYPE_IS_SIGNED(type)? STIX_TYPE_SIGNED_MIN(type): STIX_TYPE_UNSIGNED_MIN(type)))
-
-
-/* =========================================================================
- * BASIC STIX TYPES
- * =========================================================================*/
-
-typedef stix_uint8_t             stix_oob_t;
-
-/* NOTE: sizeof(stix_oop_t) must be equal to sizeof(stix_oow_t) */
-typedef stix_uintptr_t           stix_oow_t;
-typedef stix_intptr_t            stix_ooi_t;
-#define STIX_SIZEOF_OOW_T STIX_SIZEOF_UINTPTR_T
-#define STIX_SIZEOF_OOI_T STIX_SIZEOF_INTPTR_T
-
-typedef stix_ushortptr_t         stix_oohw_t; /* half word - half word */
-typedef stix_shortptr_t          stix_oohi_t; /* signed half word */
-#define STIX_SIZEOF_OOHW_T STIX_SIZEOF_USHORTPTR_T
-#define STIX_SIZEOF_OOHI_T STIX_SIZEOF_SHORTPTR_T
-
-typedef stix_uch_t               stix_ooch_t;
-typedef stix_uci_t               stix_ooci_t;
-typedef stix_ucs_t               stix_oocs_t;
-#define STIX_OOCH_IS_UCH
 
 
 /* =========================================================================

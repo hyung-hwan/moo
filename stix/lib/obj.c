@@ -26,7 +26,7 @@
 
 #include "stix-prv.h"
 
-void* stix_allocbytes (stix_t* stix, stix_size_t size)
+void* stix_allocbytes (stix_t* stix, stix_oow_t size)
 {
 	stix_uint8_t* ptr;
 

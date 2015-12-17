@@ -81,7 +81,7 @@ static STIX_INLINE __utf8_t* get_utf8_slot (stix_uch_t uc)
 	return STIX_NULL; /* invalid character */
 }
 
-stix_size_t stix_uctoutf8 (stix_uch_t uc, stix_bch_t* utf8, stix_size_t size)
+stix_oow_t stix_uctoutf8 (stix_uch_t uc, stix_bch_t* utf8, stix_oow_t size)
 {
 	__utf8_t* cur = get_utf8_slot (uc);
 
@@ -105,10 +105,10 @@ stix_size_t stix_uctoutf8 (stix_uch_t uc, stix_bch_t* utf8, stix_size_t size)
 
 	/* small buffer is also indicated by this return value
 	 * greater than 'size'. */
-	return (stix_size_t)cur->length;
+	return (stix_oow_t)cur->length;
 }
 
-stix_size_t stix_utf8touc (const stix_bch_t* utf8, stix_size_t size, stix_uch_t* uc)
+stix_oow_t stix_utf8touc (const stix_bch_t* utf8, stix_oow_t size, stix_uch_t* uc)
 {
 	__utf8_t* cur, * end;
 
@@ -171,7 +171,7 @@ stix_size_t stix_utf8touc (const stix_bch_t* utf8, stix_size_t size, stix_uch_t*
 			 * and 
 			 *    the incomplete seqeunce error (size < cur->length).
 			 */
-			return (stix_size_t)cur->length;
+			return (stix_oow_t)cur->length;
 		}
 		cur++;
 	}
@@ -182,12 +182,12 @@ stix_size_t stix_utf8touc (const stix_bch_t* utf8, stix_size_t size, stix_uch_t*
 /* ----------------------------------------------------------------------- */
 
 static STIX_INLINE int bcsn_to_ucsn_with_cmgr (
-	const stix_bch_t* bcs, stix_size_t* bcslen,
-	stix_uch_t* ucs, stix_size_t* ucslen, stix_cmgr_t* cmgr, int all)
+	const stix_bch_t* bcs, stix_oow_t* bcslen,
+	stix_uch_t* ucs, stix_oow_t* ucslen, stix_cmgr_t* cmgr, int all)
 {
 	const stix_bch_t* p;
 	int ret = 0;
-	stix_size_t mlen;
+	stix_oow_t mlen;
 
 	if (ucs)
 	{
@@ -203,7 +203,7 @@ static STIX_INLINE int bcsn_to_ucsn_with_cmgr (
 
 		while (mlen > 0)
 		{
-			stix_size_t n;
+			stix_oow_t n;
 
 			if (q >= qend)
 			{
@@ -259,14 +259,14 @@ static STIX_INLINE int bcsn_to_ucsn_with_cmgr (
 		 * the buffer. */
 
 		stix_uch_t w;
-		stix_size_t wlen = 0;
+		stix_oow_t wlen = 0;
 
 		p = bcs;
 		mlen = *bcslen;
 
 		while (mlen > 0)
 		{
-			stix_size_t n;
+			stix_oow_t n;
 
 			n = cmgr->bctouc (p, mlen, &w);
 			if (n == 0)
@@ -303,11 +303,11 @@ static STIX_INLINE int bcsn_to_ucsn_with_cmgr (
 }
 
 static STIX_INLINE int bcs_to_ucs_with_cmgr (
-	const stix_bch_t* bcs, stix_size_t* bcslen,
-	stix_uch_t* ucs, stix_size_t* ucslen, stix_cmgr_t* cmgr, int all)
+	const stix_bch_t* bcs, stix_oow_t* bcslen,
+	stix_uch_t* ucs, stix_oow_t* ucslen, stix_cmgr_t* cmgr, int all)
 {
 	const stix_bch_t* bp;
-	stix_size_t mlen, wlen;
+	stix_oow_t mlen, wlen;
 	int n;
 
 	for (bp = bcs; *bp != '\0'; bp++) /* nothing */ ;
@@ -326,8 +326,8 @@ static STIX_INLINE int bcs_to_ucs_with_cmgr (
 }
 
 static STIX_INLINE int ucsn_to_bcsn_with_cmgr (
-	const stix_uch_t* ucs, stix_size_t* ucslen,
-	stix_bch_t* bcs, stix_size_t* bcslen, stix_cmgr_t* cmgr)
+	const stix_uch_t* ucs, stix_oow_t* ucslen,
+	stix_bch_t* bcs, stix_oow_t* bcslen, stix_cmgr_t* cmgr)
 {
 	const stix_uch_t* p = ucs;
 	const stix_uch_t* end = ucs + *ucslen;
@@ -335,11 +335,11 @@ static STIX_INLINE int ucsn_to_bcsn_with_cmgr (
 
 	if (bcs)
 	{
-		stix_size_t rem = *bcslen;
+		stix_oow_t rem = *bcslen;
 
 		while (p < end) 
 		{
-			stix_size_t n;
+			stix_oow_t n;
 
 			if (rem <= 0)
 			{
@@ -366,11 +366,11 @@ static STIX_INLINE int ucsn_to_bcsn_with_cmgr (
 	else
 	{
 		stix_bch_t bcsbuf[STIX_BCLEN_MAX];
-		stix_size_t mlen = 0;
+		stix_oow_t mlen = 0;
 
 		while (p < end)
 		{
-			stix_size_t n;
+			stix_oow_t n;
 
 			n = cmgr->uctobc (*p, bcsbuf, STIX_COUNTOF(bcsbuf));
 			if (n == 0) 
@@ -396,19 +396,19 @@ static STIX_INLINE int ucsn_to_bcsn_with_cmgr (
 
 
 static int ucs_to_bcs_with_cmgr (
-	const stix_uch_t* ucs, stix_size_t* ucslen,
-	stix_bch_t* bcs, stix_size_t* bcslen, stix_cmgr_t* cmgr)
+	const stix_uch_t* ucs, stix_oow_t* ucslen,
+	stix_bch_t* bcs, stix_oow_t* bcslen, stix_cmgr_t* cmgr)
 {
 	const stix_uch_t* p = ucs;
 	int ret = 0;
 
 	if (bcs)
 	{
-		stix_size_t rem = *bcslen;
+		stix_oow_t rem = *bcslen;
 
 		while (*p != '\0')
 		{
-			stix_size_t n;
+			stix_oow_t n;
 
 			if (rem <= 0)
 			{
@@ -448,11 +448,11 @@ static int ucs_to_bcs_with_cmgr (
 	else
 	{
 		stix_bch_t bcsbuf[STIX_BCLEN_MAX];
-		stix_size_t mlen = 0;
+		stix_oow_t mlen = 0;
 
 		while (*p != '\0')
 		{
-			stix_size_t n;
+			stix_oow_t n;
 
 			n = cmgr->uctobc (*p, bcsbuf, STIX_COUNTOF(bcsbuf));
 			if (n == 0) 
@@ -482,9 +482,9 @@ static stix_cmgr_t utf8_cmgr =
 	stix_uctoutf8
 };
 
-int stix_utf8toucs (const stix_bch_t* bcs, stix_size_t* bcslen, stix_uch_t* ucs, stix_size_t* ucslen)
+int stix_utf8toucs (const stix_bch_t* bcs, stix_oow_t* bcslen, stix_uch_t* ucs, stix_oow_t* ucslen)
 {
-	if (*bcslen == ~(stix_size_t)0)
+	if (*bcslen == ~(stix_oow_t)0)
 	{
 		/* the source is null-terminated. */
 		return bcs_to_ucs_with_cmgr (bcs, bcslen, ucs, ucslen, &utf8_cmgr, 0);
@@ -496,9 +496,9 @@ int stix_utf8toucs (const stix_bch_t* bcs, stix_size_t* bcslen, stix_uch_t* ucs,
 	}
 }
 
-int stix_ucstoutf8 (const stix_uch_t* ucs, stix_size_t *ucslen, stix_bch_t* bcs, stix_size_t* bcslen)
+int stix_ucstoutf8 (const stix_uch_t* ucs, stix_oow_t *ucslen, stix_bch_t* bcs, stix_oow_t* bcslen)
 {
-	if (*ucslen == ~(stix_size_t)0)
+	if (*ucslen == ~(stix_oow_t)0)
 	{
 		/* null-terminated */
 		return ucs_to_bcs_with_cmgr (ucs, ucslen, bcs, bcslen, &utf8_cmgr);
@@ -511,7 +511,7 @@ int stix_ucstoutf8 (const stix_uch_t* ucs, stix_size_t *ucslen, stix_bch_t* bcs,
 }
 
 /*
-stix_size_t stix_ucslen (const stix_uch_t* ucs)
+stix_oow_t stix_ucslen (const stix_uch_t* ucs)
 {
 	const stix_uch_t* ptr = ucs;
 	while  (*ptr) ptr = STIX_INCPTR(const stix_uch_t, ptr, 1);

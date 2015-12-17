@@ -78,7 +78,7 @@ void dump_dictionary (stix_t* stix, stix_oop_set_t dic, const char* title)
 
 void print_oocs (const stix_oocs_t* name)
 {
-	stix_size_t i;
+	stix_oow_t i;
 	for (i = 0; i < name->len; i++) printf ("%c", name->ptr[i]);
 }
 
@@ -105,7 +105,7 @@ void print_object (stix_t* stix, stix_oop_t oop)
 	{
 		stix_bch_t bcs[32];
 		stix_uch_t uch;
-		stix_size_t ucslen, bcslen;
+		stix_oow_t ucslen, bcslen;
 
 		uch = STIX_OOP_TO_CHAR(oop);
 		bcslen = STIX_COUNTOF(bcs);
@@ -119,9 +119,9 @@ void print_object (stix_t* stix, stix_oop_t oop)
 	{
 		stix_oop_class_t c;
 		stix_oocs_t s;
-		stix_size_t i;
+		stix_oow_t i;
 		stix_bch_t bcs[32];
-		stix_size_t ucslen, bcslen;
+		stix_oow_t ucslen, bcslen;
 
 		STIX_ASSERT (STIX_OOP_IS_POINTER(oop));
 		c = (stix_oop_class_t)STIX_OBJ_GET_CLASS(oop); /*STIX_CLASSOF(stix, oop);*/
@@ -256,7 +256,7 @@ static void __dump_object (stix_t* stix, stix_oop_t oop, int depth)
 	{
 		stix_bch_t bcs[32];
 		stix_uch_t uch;
-		stix_size_t ucslen, bcslen;
+		stix_oow_t ucslen, bcslen;
 
 		uch = STIX_OOP_TO_CHAR(oop);
 		bcslen = STIX_COUNTOF(bcs);
@@ -292,7 +292,7 @@ static void __dump_object (stix_t* stix, stix_oop_t oop, int depth)
 			{
 				stix_bch_t bcs[32];
 				stix_uch_t uch;
-				stix_size_t ucslen, bcslen;
+				stix_oow_t ucslen, bcslen;
 				uch = ((stix_oop_char_t)oop)->slot[i];
 				if (uch == '\'') printf ("''");
 				else

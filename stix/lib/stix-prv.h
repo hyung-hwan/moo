@@ -271,7 +271,7 @@ struct stix_io_arg_t
 	/*-----------------------------------------------------------------*/
 };
 
-typedef stix_ssize_t (*stix_io_impl_t) (
+typedef stix_ooi_t (*stix_io_impl_t) (
 	stix_t*       stix,
 	stix_io_cmd_t  cmd,
 	stix_io_arg_t* arg
@@ -314,7 +314,7 @@ struct stix_iotok_t
 	} type;
 
 	stix_oocs_t name;
-	stix_size_t name_capa;
+	stix_oow_t name_capa;
 
 	stix_ioloc_t loc;
 };
@@ -395,7 +395,7 @@ typedef struct stix_synerr_t stix_synerr_t;
 struct stix_code_t
 {
 	stix_uint8_t* ptr;
-	stix_size_t   len;
+	stix_oow_t   len;
 };
 typedef struct stix_code_t stix_code_t;
 
@@ -445,31 +445,31 @@ struct stix_compiler_t
 		stix_oop_set_t ns_oop;
 		stix_oocs_t fqn;
 		stix_oocs_t name;
-		stix_size_t fqn_capa;
+		stix_oow_t fqn_capa;
 		stix_ioloc_t fqn_loc;
 
 		stix_oop_set_t superns_oop;
 		stix_oocs_t superfqn;
 		stix_oocs_t supername;
-		stix_size_t superfqn_capa;
+		stix_oow_t superfqn_capa;
 		stix_ioloc_t superfqn_loc;
 
 		/* instance variable, class variable, class instance variable */
 		stix_oocs_t vars[3]; 
-		stix_size_t vars_capa[3];
+		stix_oow_t vars_capa[3];
 
 		/* var_count, unlike vars above, includes superclass counts as well.
 		 * var_count[0] - number of named instance variables
 		 * var_count[1] - number of class variables
 		 * var_count[2] - number of class instance variables */
-		stix_size_t var_count[3];
+		stix_oow_t var_count[3];
 
 		stix_oocs_t pooldic;
-		stix_size_t pooldic_capa;
-		stix_size_t pooldic_count;
+		stix_oow_t pooldic_capa;
+		stix_oow_t pooldic_count;
 
 		stix_oop_set_t* pooldic_oops;
-		stix_size_t pooldic_oop_capa;
+		stix_oow_t pooldic_oop_capa;
 	} cls;
 
 	/* information about a function being comipled */
@@ -479,45 +479,45 @@ struct stix_compiler_t
 
 		/* method source text */
 		stix_oocs_t text;
-		stix_size_t text_capa;
+		stix_oow_t text_capa;
 
 		/* buffer to store identifier names to be assigned */
 		stix_oocs_t assignees;
-		stix_size_t assignees_capa;
+		stix_oow_t assignees_capa;
 
 		/* buffer to store binary selectors being worked on */
 		stix_oocs_t binsels;
-		stix_size_t binsels_capa;
+		stix_oow_t binsels_capa;
 
 		/* buffer to store keyword selectors being worked on */
 		stix_oocs_t kwsels;
-		stix_size_t kwsels_capa;
+		stix_oow_t kwsels_capa;
 
 		/* method name */
 		stix_oocs_t name;
-		stix_size_t name_capa;
+		stix_oow_t name_capa;
 		stix_ioloc_t name_loc;
 
 		/* single string containing a space separated list of temporaries */
 		stix_oocs_t tmprs; 
-		stix_size_t tmprs_capa;
-		stix_size_t tmpr_count; /* total number of temporaries including arguments */
-		stix_size_t tmpr_nargs;
+		stix_oow_t tmprs_capa;
+		stix_oow_t tmpr_count; /* total number of temporaries including arguments */
+		stix_oow_t tmpr_nargs;
 
 		/* literals */
 		stix_oop_t* literals;
-		stix_size_t literal_count;
-		stix_size_t literal_capa;
+		stix_oow_t literal_count;
+		stix_oow_t literal_capa;
 
 		/* byte array elements */
 		stix_oob_t* balit;
-		stix_size_t balit_count;
-		stix_size_t balit_capa;
+		stix_oow_t balit_count;
+		stix_oow_t balit_capa;
 
 		/* array elements */
 		stix_oop_t* arlit;
-		stix_size_t arlit_count;
-		stix_size_t arlit_capa;
+		stix_oow_t arlit_count;
+		stix_oow_t arlit_capa;
 
 		/* 0 for no primitive, 1 for a normal primitive, 2 for a named primitive */
 		int prim_type;
@@ -525,13 +525,13 @@ struct stix_compiler_t
 		stix_ooi_t prim_no; 
 
 		/* block depth */
-		stix_size_t blk_depth;
-		stix_size_t* blk_tmprcnt;
-		stix_size_t blk_tmprcnt_capa;
+		stix_oow_t blk_depth;
+		stix_oow_t* blk_tmprcnt;
+		stix_oow_t blk_tmprcnt_capa;
 
 		/* byte code */
 		stix_code_t code;
-		stix_size_t code_capa;
+		stix_oow_t code_capa;
 	} mth; 
 };
 
@@ -855,7 +855,7 @@ extern "C" {
  */
 stix_heap_t* stix_makeheap (
 	stix_t*     stix, 
-	stix_size_t size
+	stix_oow_t size
 );
 
 /**
@@ -875,7 +875,7 @@ void stix_killheap (
 void* stix_allocheapmem (
 	stix_t*      stix,
 	stix_heap_t* heap,
-	stix_size_t  size
+	stix_oow_t  size
 );
 
 
@@ -892,7 +892,7 @@ stix_oop_t stix_moveoop (
 /* ========================================================================= */
 void* stix_allocbytes (
 	stix_t*     stix,
-	stix_size_t size
+	stix_oow_t size
 );
 
 /**
@@ -1023,23 +1023,23 @@ stix_oop_process_t stix_makeproc (
 /* ========================================================================= */
 /* utf8.c                                                                    */
 /* ========================================================================= */
-stix_size_t stix_uctoutf8 (
+stix_oow_t stix_uctoutf8 (
 	stix_uch_t    uc,
 	stix_bch_t*   utf8,
-	stix_size_t   size
+	stix_oow_t   size
 );
 
-stix_size_t stix_utf8touc (
+stix_oow_t stix_utf8touc (
 	const stix_bch_t* utf8,
-	stix_size_t       size,
+	stix_oow_t       size,
 	stix_uch_t*       uc
 );
 
 int stix_ucstoutf8 (
 	const stix_uch_t*    ucs,
-	stix_size_t*         ucslen,
+	stix_oow_t*         ucslen,
 	stix_bch_t*          bcs,
-	stix_size_t*         bcslen
+	stix_oow_t*         bcslen
 );
 
 /**
@@ -1050,14 +1050,14 @@ int stix_ucstoutf8 (
  * \code
  *  const stix_bch_t* bcs = "test string";
  *  stix_uch_t ucs[100];
- *  stix_size_t ucslen = STIX_COUNTOF(buf), n;
- *  stix_size_t bcslen = 11;
+ *  stix_oow_t ucslen = STIX_COUNTOF(buf), n;
+ *  stix_oow_t bcslen = 11;
  *  int n;
  *  n = stix_utf8toucs (bcs, &bcslen, ucs, &ucslen);
  *  if (n <= -1) { invalid/incomplenete sequence or buffer to small }
  * \endcode
  *
- * For a null-terminated string, you can specify ~(stix_size_t)0 in
+ * For a null-terminated string, you can specify ~(stix_oow_t)0 in
  * \a bcslen. The destination buffer \a ucs also must be large enough to
  * store a terminating null. Otherwise, -2 is returned.
  * 
@@ -1072,9 +1072,9 @@ int stix_ucstoutf8 (
  */
 int stix_utf8toucs (
 	const stix_bch_t*   bcs,
-	stix_size_t*        bcslen,
+	stix_oow_t*        bcslen,
 	stix_uch_t*         ucs,
-	stix_size_t*        ucslen
+	stix_oow_t*        ucslen
 );
 
 /* ========================================================================= */

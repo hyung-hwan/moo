@@ -27,7 +27,7 @@
 #include "stix-prv.h"
 
 
-stix_t* stix_open (stix_mmgr_t* mmgr, stix_size_t xtnsize, stix_size_t heapsize, const stix_vmprim_t* vmprim, stix_errnum_t* errnum)
+stix_t* stix_open (stix_mmgr_t* mmgr, stix_oow_t xtnsize, stix_oow_t heapsize, const stix_vmprim_t* vmprim, stix_errnum_t* errnum)
 {
 	stix_t* stix;
 
@@ -83,7 +83,7 @@ static void fill_bigint_tables (stix_t* stix)
 	}
 }
 
-int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_size_t heapsz, const stix_vmprim_t* vmprim)
+int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_oow_t heapsz, const stix_vmprim_t* vmprim)
 {
 	STIX_MEMSET (stix, 0, STIX_SIZEOF(*stix));
 	stix->mmgr = mmgr;
@@ -244,7 +244,7 @@ void stix_deregcb (stix_t* stix, stix_cb_t* cb)
 	stix_freemem (stix, cb);
 }
 
-void* stix_allocmem (stix_t* stix, stix_size_t size)
+void* stix_allocmem (stix_t* stix, stix_oow_t size)
 {
 	void* ptr;
 
@@ -253,7 +253,7 @@ void* stix_allocmem (stix_t* stix, stix_size_t size)
 	return ptr;
 }
 
-void* stix_callocmem (stix_t* stix, stix_size_t size)
+void* stix_callocmem (stix_t* stix, stix_oow_t size)
 {
 	void* ptr;
 
@@ -263,7 +263,7 @@ void* stix_callocmem (stix_t* stix, stix_size_t size)
 	return ptr;
 }
 
-void* stix_reallocmem (stix_t* stix, void* ptr, stix_size_t size)
+void* stix_reallocmem (stix_t* stix, void* ptr, stix_oow_t size)
 {
 	ptr = STIX_MMGR_REALLOC (stix->mmgr, ptr, size);
 	if (!ptr) stix->errnum = STIX_ENOMEM;

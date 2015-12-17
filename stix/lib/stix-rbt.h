@@ -101,7 +101,7 @@ typedef enum stix_rbt_id_t stix_rbt_id_t;
 typedef void* (*stix_rbt_copier_t) (
 	stix_rbt_t* rbt  /* red-black tree */,
 	void*       dptr /* pointer to a key or a value */, 
-	stix_size_t dlen /* length of a key or a value */
+	stix_oow_t dlen /* length of a key or a value */
 );
 
 /**
@@ -110,7 +110,7 @@ typedef void* (*stix_rbt_copier_t) (
 typedef void (*stix_rbt_freeer_t) (
 	stix_rbt_t* rbt,  /**< red-black tree */
 	void*      dptr, /**< pointer to a key or a value */
-	stix_size_t dlen  /**< length of a key or a value */
+	stix_oow_t dlen  /**< length of a key or a value */
 );
 
 /**
@@ -123,9 +123,9 @@ typedef void (*stix_rbt_freeer_t) (
 typedef int (*stix_rbt_comper_t) (
 	const stix_rbt_t* rbt,    /**< red-black tree */ 
 	const void*      kptr1,  /**< key pointer */
-	stix_size_t       klen1,  /**< key length */ 
+	stix_oow_t       klen1,  /**< key length */ 
 	const void*      kptr2,  /**< key pointer */
-	stix_size_t       klen2   /**< key length */
+	stix_oow_t       klen2   /**< key length */
 );
 
 /**
@@ -137,7 +137,7 @@ typedef int (*stix_rbt_comper_t) (
 typedef void (*stix_rbt_keeper_t) (
 	stix_rbt_t* rbt,    /**< red-black tree */
 	void*       vptr,   /**< value pointer */
-	stix_size_t vlen    /**< value length */
+	stix_oow_t vlen    /**< value length */
 );
 
 /**
@@ -163,7 +163,7 @@ typedef stix_rbt_pair_t* (*stix_rbt_cbserter_t) (
 	stix_rbt_t*      rbt,    /**< red-black tree */
 	stix_rbt_pair_t* pair,   /**< pair pointer */
 	void*            kptr,   /**< key pointer */
-	stix_size_t      klen,   /**< key length */
+	stix_oow_t      klen,   /**< key length */
 	void*            ctx     /**< callback context */
 );
 
@@ -178,13 +178,13 @@ struct stix_rbt_pair_t
 	struct
 	{
 		void*       ptr;
-		stix_size_t len;
+		stix_oow_t len;
 	} key;
 
 	struct
 	{
 		void*       ptr;
-		stix_size_t len;
+		stix_oow_t len;
 	} val;
 
 	/* management information below */
@@ -238,7 +238,7 @@ struct stix_rbt_t
 	const stix_rbt_style_t* style;
 	stix_oob_t             scale[2];  /**< length scale */
 	stix_rbt_pair_t         xnil;      /**< internal nil node */
-	stix_size_t             size;      /**< number of pairs */
+	stix_oow_t             size;      /**< number of pairs */
 	stix_rbt_pair_t*        root;      /**< root pair */
 };
 
@@ -262,7 +262,7 @@ struct stix_rbt_t
 /**
  * The STIX_RBT_SIZE() macro returns the number of pairs in red-black tree.
  */
-#define STIX_RBT_SIZE(m)   ((const stix_size_t)(m)->size)
+#define STIX_RBT_SIZE(m)   ((const stix_oow_t)(m)->size)
 #define STIX_RBT_KSCALE(m) ((const int)(m)->scale[STIX_RBT_KEY])
 #define STIX_RBT_VSCALE(m) ((const int)(m)->scale[STIX_RBT_VAL])
 
@@ -294,7 +294,7 @@ STIX_EXPORT const stix_rbt_style_t* stix_getrbtstyle (
  */
 STIX_EXPORT stix_rbt_t* stix_rbt_open (
 	stix_mmgr_t* mmgr,    /**< memory manager */
-	stix_size_t  xtnsize, /**< extension size in bytes */
+	stix_oow_t  xtnsize, /**< extension size in bytes */
 	int          kscale,  /**< key scale */
 	int          vscale   /**< value scale */
 );
@@ -353,7 +353,7 @@ STIX_EXPORT void stix_rbt_setstyle (
 /**
  * The stix_rbt_getsize() function gets the number of pairs in red-black tree.
  */
-STIX_EXPORT stix_size_t stix_rbt_getsize (
+STIX_EXPORT stix_oow_t stix_rbt_getsize (
 	const stix_rbt_t* rbt  /**< red-black tree */
 );
 
@@ -367,7 +367,7 @@ STIX_EXPORT stix_size_t stix_rbt_getsize (
 STIX_EXPORT stix_rbt_pair_t* stix_rbt_search (
 	const stix_rbt_t* rbt,   /**< red-black tree */
 	const void*       kptr,  /**< key pointer */
-	stix_size_t       klen   /**< the size of the key */
+	stix_oow_t       klen   /**< the size of the key */
 );
 
 /**
@@ -381,9 +381,9 @@ STIX_EXPORT stix_rbt_pair_t* stix_rbt_search (
 STIX_EXPORT stix_rbt_pair_t* stix_rbt_upsert (
 	stix_rbt_t* rbt,   /**< red-black tree */
 	void*       kptr,  /**< key pointer */
-	stix_size_t klen,  /**< key length */
+	stix_oow_t klen,  /**< key length */
 	void*       vptr,  /**< value pointer */
-	stix_size_t vlen   /**< value length */
+	stix_oow_t vlen   /**< value length */
 );
 
 /**
@@ -395,9 +395,9 @@ STIX_EXPORT stix_rbt_pair_t* stix_rbt_upsert (
 STIX_EXPORT stix_rbt_pair_t* stix_rbt_ensert (
 	stix_rbt_t* rbt,   /**< red-black tree */
 	void*       kptr,  /**< key pointer */
-	stix_size_t klen,  /**< key length */
+	stix_oow_t klen,  /**< key length */
 	void*       vptr,  /**< value pointer */
-	stix_size_t vlen   /**< value length */
+	stix_oow_t vlen   /**< value length */
 );
 
 /**
@@ -409,9 +409,9 @@ STIX_EXPORT stix_rbt_pair_t* stix_rbt_ensert (
 STIX_EXPORT stix_rbt_pair_t* stix_rbt_insert (
 	stix_rbt_t* rbt,   /**< red-black tree */
 	void*       kptr,  /**< key pointer */
-	stix_size_t klen,  /**< key length */
+	stix_oow_t klen,  /**< key length */
 	void*       vptr,  /**< value pointer */
-	stix_size_t vlen   /**< value length */
+	stix_oow_t vlen   /**< value length */
 );
 
 /**
@@ -422,9 +422,9 @@ STIX_EXPORT stix_rbt_pair_t* stix_rbt_insert (
 STIX_EXPORT stix_rbt_pair_t* stix_rbt_update (
 	stix_rbt_t* rbt,   /**< red-black tree */
 	void*      kptr,  /**< key pointer */
-	stix_size_t klen,  /**< key length */
+	stix_oow_t klen,  /**< key length */
 	void*      vptr,  /**< value pointer */
-	stix_size_t vlen   /**< value length */
+	stix_oow_t vlen   /**< value length */
 );
 
 /**
@@ -446,7 +446,7 @@ STIX_EXPORT stix_rbt_pair_t* stix_rbt_update (
  * 
  * stix_rbt_pair_t* cbserter (
  *   stix_rbt_t* rbt, stix_rbt_pair_t* pair,
- *   void* kptr, stix_size_t klen, void* ctx)
+ *   void* kptr, stix_oow_t klen, void* ctx)
  * {
  *   stix_cstr_t* v = (stix_cstr_t*)ctx;
  *   if (pair == STIX_NULL)
@@ -517,7 +517,7 @@ STIX_EXPORT stix_rbt_pair_t* stix_rbt_update (
 STIX_EXPORT stix_rbt_pair_t* stix_rbt_cbsert (
 	stix_rbt_t*         rbt,      /**< red-black tree */
 	void*               kptr,     /**< key pointer */
-	stix_size_t         klen,     /**< key length */
+	stix_oow_t         klen,     /**< key length */
 	stix_rbt_cbserter_t cbserter, /**< callback function */
 	void*               ctx       /**< callback context */
 );
@@ -529,7 +529,7 @@ STIX_EXPORT stix_rbt_pair_t* stix_rbt_cbsert (
 STIX_EXPORT int stix_rbt_delete (
 	stix_rbt_t* rbt,   /**< red-black tree */
 	const void* kptr, /**< key pointer */
-	stix_size_t klen   /**< key size */
+	stix_oow_t klen   /**< key size */
 );
 
 /**
@@ -574,9 +574,9 @@ STIX_EXPORT void stix_rbt_rwalk (
 STIX_EXPORT stix_rbt_pair_t* stix_rbt_allocpair (
 	stix_rbt_t* rbt,
 	void*       kptr, 
-	stix_size_t klen,
+	stix_oow_t klen,
 	void*       vptr,
-	stix_size_t vlen
+	stix_oow_t vlen
 );
 
 /**
@@ -595,9 +595,9 @@ STIX_EXPORT void stix_rbt_freepair (
 STIX_EXPORT int stix_rbt_dflcomp (
 	const stix_rbt_t* rbt,
 	const void*       kptr1,
-	stix_size_t       klen1,
+	stix_oow_t       klen1,
 	const void*       kptr2,
-	stix_size_t       klen2
+	stix_oow_t       klen2
 );
 
 #if defined(__cplusplus)

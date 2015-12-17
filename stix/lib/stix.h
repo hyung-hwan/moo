@@ -759,8 +759,8 @@ extern "C" {
 
 STIX_EXPORT stix_t* stix_open (
 	stix_mmgr_t*         mmgr,
-	stix_size_t          xtnsize,
-	stix_size_t          heapsize,
+	stix_oow_t          xtnsize,
+	stix_oow_t          heapsize,
 	const stix_vmprim_t* vmprim,
 	stix_errnum_t*       errnum
 );
@@ -772,7 +772,7 @@ STIX_EXPORT void stix_close (
 STIX_EXPORT int stix_init (
 	stix_t*              vm,
 	stix_mmgr_t*         mmgr,
-	stix_size_t          heapsize,
+	stix_oow_t          heapsize,
 	const stix_vmprim_t* vmprim
 );
 
@@ -912,18 +912,18 @@ STIX_EXPORT void stix_poptmps (
 
 STIX_EXPORT void* stix_allocmem (
 	stix_t*     stix,
-	stix_size_t size
+	stix_oow_t size
 );
 
 STIX_EXPORT void* stix_callocmem (
 	stix_t*     stix,
-	stix_size_t size
+	stix_oow_t size
 );
 
 STIX_EXPORT void* stix_reallocmem (
 	stix_t*     stix,
 	void*       ptr,
-	stix_size_t size
+	stix_oow_t size
 );
 
 STIX_EXPORT void stix_freemem (

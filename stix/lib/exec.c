@@ -1617,7 +1617,7 @@ printf ("CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MOD
 
 				case 's':
 				{
-					stix_size_t bcslen, ucslen;
+					stix_oow_t bcslen, ucslen;
 					stix_bch_t bcs[1024];
 
 					ucslen = STIX_OBJ_GET_SIZE(arr->slot[i - 2]);
@@ -1673,7 +1673,7 @@ printf ("CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
 
 			case 's':
 			{
-				stix_size_t bcslen, ucslen;
+				stix_oow_t bcslen, ucslen;
 				stix_ooch_t ucs[1024];
 				stix_oop_t s;
 				char* r = dcCallPointer (dc, f);
@@ -1975,7 +1975,7 @@ int stix_execute (stix_t* stix)
 	stix_oop_t return_value;
 
 #if defined(STIX_PROFILE_EXEC)
-	stix_size_t inst_counter = 0;
+	stix_oow_t inst_counter = 0;
 #endif
 
 	STIX_ASSERT (stix->active_context != STIX_NULL);

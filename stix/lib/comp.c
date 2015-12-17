@@ -70,7 +70,7 @@ typedef enum var_type_t var_type_t;
 struct var_info_t
 {
 	var_type_t             type;
-	stix_ssize_t           pos; /* not used for VAR_GLOBAL */
+	stix_ooi_t           pos; /* not used for VAR_GLOBAL */
 	stix_oop_class_t       cls; /* useful if type is VAR_CLASS. note STIX_NULL indicates the self class. */
 	stix_oop_association_t gbl; /* used for VAR_GLOBAL only */
 };
@@ -149,7 +149,7 @@ typedef enum voca_id_t voca_id_t;
 static int compile_block_statement (stix_t* stix);
 static int compile_method_statement (stix_t* stix);
 static int compile_method_expression (stix_t* stix, int pop);
-static int add_literal (stix_t* stix, stix_oop_t lit, stix_size_t* index);
+static int add_literal (stix_t* stix, stix_oop_t lit, stix_oow_t* index);
 
 static STIX_INLINE int is_spacechar (stix_ooci_t c)
 {
@@ -327,9 +327,9 @@ static void set_syntax_error (stix_t* stix, stix_synerrnum_t num, const stix_iol
 	}
 }
 
-static int copy_string_to (stix_t* stix, const stix_oocs_t* src, stix_oocs_t* dst, stix_size_t* dst_capa, int append, stix_ooch_t add_delim)
+static int copy_string_to (stix_t* stix, const stix_oocs_t* src, stix_oocs_t* dst, stix_oow_t* dst_capa, int append, stix_ooch_t add_delim)
 {
-	stix_size_t len, pos;
+	stix_oow_t len, pos;
 
 	if (append)
 	{
@@ -346,7 +346,7 @@ static int copy_string_to (stix_t* stix, const stix_oocs_t* src, stix_oocs_t* ds
 	if (len > *dst_capa)
 	{
 		stix_ooch_t* tmp;
-		stix_size_t capa;
+		stix_oow_t capa;
 
 		capa = STIX_ALIGN(len, CLASS_BUFFER_ALIGN);
 
@@ -363,7 +363,7 @@ static int copy_string_to (stix_t* stix, const stix_oocs_t* src, stix_oocs_t* ds
 	return 0;
 }
 
-static int find_word_in_string (const stix_oocs_t* haystack, const stix_oocs_t* name, stix_size_t* xindex)
+static int find_word_in_string (const stix_oocs_t* haystack, const stix_oocs_t* name, stix_oow_t* xindex)
 {
 	/* this function is inefficient. but considering the typical number
 	 * of arguments and temporary variables, the inefficiency can be 
@@ -372,7 +372,7 @@ static int find_word_in_string (const stix_oocs_t* haystack, const stix_oocs_t* 
 	 * inefficient lookup */
 
 	stix_ooch_t* t, * e;
-	stix_size_t index, i;
+	stix_oow_t index, i;
 
 	t = haystack->ptr;
 	e = t + haystack->len;
@@ -554,7 +554,7 @@ static stix_oop_t string_to_num (stix_t* stix, stix_oocs_t* str, int radixed)
 	do { if (add_token_char(stix, c) <= -1) return -1; } while (0)
 
 
-static STIX_INLINE int add_token_str (stix_t* stix, const stix_ooch_t* ptr, stix_size_t len)
+static STIX_INLINE int add_token_str (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
 {
 	stix_oocs_t tmp;
 
@@ -581,7 +581,7 @@ static STIX_INLINE void unget_char (stix_t* stix, const stix_iolxc_t* c)
 
 static int get_char (stix_t* stix)
 {
-	stix_ssize_t n;
+	stix_ooi_t n;
 	stix_ooci_t lc, ec;
 
 	if (stix->c->nungots > 0)
@@ -993,11 +993,11 @@ static int get_strlit (stix_t* stix)
 	return 0;
 }
 
-static int get_string (stix_t* stix, stix_ooch_t end_char, stix_ooch_t esc_char, int regex, stix_size_t preescaped)
+static int get_string (stix_t* stix, stix_ooch_t end_char, stix_ooch_t esc_char, int regex, stix_oow_t preescaped)
 {
 	stix_ooci_t c;
-	stix_size_t escaped = preescaped;
-	stix_size_t digit_count = 0;
+	stix_oow_t escaped = preescaped;
+	stix_oow_t digit_count = 0;
 	stix_ooci_t c_acc = 0;
 
 	stix->c->tok.type = STIX_IOTOK_STRLIT;
@@ -1624,7 +1624,7 @@ static int end_include (stix_t* stix)
 
 static STIX_INLINE int emit_byte_instruction (stix_t* stix, stix_oob_t code)
 {
-	stix_size_t i;
+	stix_oow_t i;
 
 	i = stix->c->mth.code.len + 1;
 	if (i > stix->c->mth.code_capa)
@@ -1716,7 +1716,7 @@ write_long:
 }
 
 
-static int emit_double_param_instruction (stix_t* stix, int cmd, stix_size_t param_1, stix_size_t param_2)
+static int emit_double_param_instruction (stix_t* stix, int cmd, stix_oow_t param_1, stix_oow_t param_2)
 {
 	stix_oob_t bc;
 
@@ -1773,7 +1773,7 @@ write_long:
 
 static int emit_push_smint_literal (stix_t* stix, stix_ooi_t i)
 {
-	stix_size_t index;
+	stix_oow_t index;
 
 	switch (i)
 	{
@@ -1818,9 +1818,9 @@ printf ("\tpush litral_0 %d\n", (int)index);
  * --------------------------------------------------------------------- */
 
 
-static int add_literal (stix_t* stix, stix_oop_t lit, stix_size_t* index)
+static int add_literal (stix_t* stix, stix_oop_t lit, stix_oow_t* index)
 {
-	stix_size_t i;
+	stix_oow_t i;
 
 	for (i = 0; i < stix->c->mth.literal_count; i++) 
 	{
@@ -1839,7 +1839,7 @@ static int add_literal (stix_t* stix, stix_oop_t lit, stix_size_t* index)
 	if (stix->c->mth.literal_count >= stix->c->mth.literal_capa)
 	{
 		stix_oop_t* tmp;
-		stix_size_t new_capa;
+		stix_oow_t new_capa;
 
 		new_capa = STIX_ALIGN (stix->c->mth.literal_count + 1, LITERAL_BUFFER_ALIGN);
 		tmp = (stix_oop_t*)stix_reallocmem (stix, stix->c->mth.literals, new_capa * STIX_SIZEOF(*tmp));
@@ -1854,15 +1854,15 @@ static int add_literal (stix_t* stix, stix_oop_t lit, stix_size_t* index)
 	return 0;
 }
 
-static STIX_INLINE int add_character_literal (stix_t* stix, stix_ooch_t ch, stix_size_t* index)
+static STIX_INLINE int add_character_literal (stix_t* stix, stix_ooch_t ch, stix_oow_t* index)
 {
 	return add_literal (stix, STIX_CHAR_TO_OOP(ch), index);
 }
 
-static int add_string_literal (stix_t* stix, const stix_oocs_t* str, stix_size_t* index)
+static int add_string_literal (stix_t* stix, const stix_oocs_t* str, stix_oow_t* index)
 {
 	stix_oop_t lit;
-	stix_size_t i;
+	stix_oow_t i;
 
 	for (i = 0; i < stix->c->mth.literal_count; i++) 
 	{
@@ -1883,7 +1883,7 @@ static int add_string_literal (stix_t* stix, const stix_oocs_t* str, stix_size_t
 	return add_literal (stix, lit, index);
 }
 
-static int add_symbol_literal (stix_t* stix, const stix_oocs_t* str, stix_size_t* index)
+static int add_symbol_literal (stix_t* stix, const stix_oocs_t* str, stix_oow_t* index)
 {
 	stix_oop_t tmp;
 
@@ -1924,7 +1924,7 @@ static STIX_INLINE int add_class_level_variable (stix_t* stix, var_type_t index,
 static STIX_INLINE int add_pool_dictionary (stix_t* stix, const stix_oocs_t* name, stix_oop_set_t pooldic_oop)
 {
 	int n;
-	stix_size_t saved_len;
+	stix_oow_t saved_len;
 
 	saved_len = stix->c->cls.pooldic.len;
 
@@ -1933,7 +1933,7 @@ static STIX_INLINE int add_pool_dictionary (stix_t* stix, const stix_oocs_t* nam
 	{
 		if (stix->c->cls.pooldic_count >= stix->c->cls.pooldic_oop_capa)
 		{
-			stix_size_t new_capa;
+			stix_oow_t new_capa;
 			stix_oop_set_t* tmp;
 
 			new_capa = STIX_ALIGN(stix->c->cls.pooldic_oop_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
@@ -1957,9 +1957,9 @@ static STIX_INLINE int add_pool_dictionary (stix_t* stix, const stix_oocs_t* nam
 }
 
 
-static stix_ssize_t find_class_level_variable (stix_t* stix, stix_oop_class_t self, const stix_oocs_t* name, var_info_t* var)
+static stix_ooi_t find_class_level_variable (stix_t* stix, stix_oop_class_t self, const stix_oocs_t* name, var_info_t* var)
 {
-	stix_size_t pos;
+	stix_oow_t pos;
 	stix_oop_t super;
 	stix_oop_char_t v;
 	stix_oop_char_t* vv;
@@ -2093,10 +2093,10 @@ done:
 	return pos;
 }
 
-static int clone_assignee (stix_t* stix, const stix_oocs_t* name, stix_size_t* offset)
+static int clone_assignee (stix_t* stix, const stix_oocs_t* name, stix_oow_t* offset)
 {
 	int n;
-	stix_size_t old_len;
+	stix_oow_t old_len;
 
 	old_len = stix->c->mth.assignees.len;
 	n = copy_string_to (stix, name, &stix->c->mth.assignees, &stix->c->mth.assignees_capa, 1, '\0');
@@ -2108,10 +2108,10 @@ static int clone_assignee (stix_t* stix, const stix_oocs_t* name, stix_size_t* o
 	return 0;
 }
 
-static int clone_binary_selector (stix_t* stix, const stix_oocs_t* name, stix_size_t* offset)
+static int clone_binary_selector (stix_t* stix, const stix_oocs_t* name, stix_oow_t* offset)
 {
 	int n;
-	stix_size_t old_len;
+	stix_oow_t old_len;
 
 	old_len = stix->c->mth.binsels.len;
 	n = copy_string_to (stix, name, &stix->c->mth.binsels, &stix->c->mth.binsels_capa, 1, '\0');
@@ -2123,10 +2123,10 @@ static int clone_binary_selector (stix_t* stix, const stix_oocs_t* name, stix_si
 	return 0;
 }
 
-static int clone_keyword (stix_t* stix, const stix_oocs_t* name, stix_size_t* offset)
+static int clone_keyword (stix_t* stix, const stix_oocs_t* name, stix_oow_t* offset)
 {
 	int n;
-	stix_size_t old_len;
+	stix_oow_t old_len;
 
 	old_len = stix->c->mth.kwsels.len;
 	n = copy_string_to (stix, name, &stix->c->mth.kwsels, &stix->c->mth.kwsels_capa, 1, '\0');
@@ -2157,14 +2157,14 @@ static int add_temporary_variable (stix_t* stix, const stix_oocs_t* name)
 	return copy_string_to (stix, name, &stix->c->mth.tmprs, &stix->c->mth.tmprs_capa, 1, ' ');
 }
 
-static STIX_INLINE int find_temporary_variable (stix_t* stix, const stix_oocs_t* name, stix_size_t* xindex)
+static STIX_INLINE int find_temporary_variable (stix_t* stix, const stix_oocs_t* name, stix_oow_t* xindex)
 {
 	return find_word_in_string (&stix->c->mth.tmprs, name, xindex);
 }
 
 static stix_oop_set_t add_namespace (stix_t* stix, stix_oop_set_t dic, const stix_oocs_t* name)
 {
-	stix_size_t tmp_count = 0;
+	stix_oow_t tmp_count = 0;
 	stix_oop_t sym;
 	stix_oop_set_t ns;
 	stix_oop_association_t ass;
@@ -2195,7 +2195,7 @@ oops:
 static int preprocess_dotted_name (stix_t* stix, int dont_add_ns, int accept_pooldic_as_ns, const stix_oocs_t* fqn, const stix_ioloc_t* fqn_loc, stix_oocs_t* name, stix_oop_set_t* ns_oop)
 {
 	const stix_ooch_t* ptr, * dot;
-	stix_size_t len;
+	stix_oow_t len;
 	stix_oocs_t seg;
 	stix_oop_set_t dic;
 	stix_oop_association_t ass;
@@ -2332,7 +2332,7 @@ static int compile_class_level_variables (stix_t* stix)
 		stix_oocs_t last;
 		stix_oop_set_t ns_oop;
 		stix_oop_association_t ass;
-		stix_size_t i;
+		stix_oow_t i;
 
 		do
 		{
@@ -2648,7 +2648,7 @@ static int compile_method_primitive (stix_t* stix)
 				us = stix_findoochar (stix->c->tok.name.ptr, stix->c->tok.name.len, '_');
 				if (us > stix->c->tok.name.ptr && us < stix->c->tok.name.ptr + stix->c->tok.name.len - 1)
 				{
-					stix_size_t lit_idx;
+					stix_oow_t lit_idx;
 					/* the symbol literal contains an underscore.
 					 * and it is none of the first of the last character */
 					if (add_symbol_literal(stix, &stix->c->tok.name, &lit_idx) >= 0 &&
@@ -2692,7 +2692,7 @@ static int compile_method_primitive (stix_t* stix)
 
 static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_ioloc_t* name_loc, int name_dotted, var_info_t* var)
 {
-	stix_size_t index;
+	stix_oow_t index;
 
 	STIX_MEMSET (var, 0, STIX_SIZEOF(*var));
 
@@ -2826,7 +2826,7 @@ printf ("\n");
 			}
 			else
 			{
-				stix_size_t i;
+				stix_oow_t i;
 				stix_oop_association_t ass2 = STIX_NULL;
 
 				/* attempt to find the variable in pool dictionaries */
@@ -2915,15 +2915,15 @@ static int compile_block_temporaries (stix_t* stix)
 	return 0;
 }
 
-static int store_tmpr_count_for_block (stix_t* stix, stix_size_t tmpr_count)
+static int store_tmpr_count_for_block (stix_t* stix, stix_oow_t tmpr_count)
 {
 	if (stix->c->mth.blk_depth >= stix->c->mth.blk_tmprcnt_capa)
 	{
-		stix_size_t* tmp;
-		stix_size_t new_capa;
+		stix_oow_t* tmp;
+		stix_oow_t new_capa;
 
 		new_capa = STIX_ALIGN (stix->c->mth.blk_depth + 1, BLK_TMPRCNT_BUFFER_ALIGN);
-		tmp = (stix_size_t*)stix_reallocmem (stix, stix->c->mth.blk_tmprcnt, new_capa * STIX_SIZEOF(*tmp));
+		tmp = (stix_oow_t*)stix_reallocmem (stix, stix->c->mth.blk_tmprcnt, new_capa * STIX_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
 		stix->c->mth.blk_tmprcnt_capa = new_capa;
@@ -2937,10 +2937,10 @@ static int store_tmpr_count_for_block (stix_t* stix, stix_size_t tmpr_count)
 
 static int compile_block_expression (stix_t* stix)
 {
-	stix_size_t jump_inst_pos;
-	stix_size_t saved_tmpr_count, saved_tmprs_len;
-	stix_size_t block_arg_count, block_tmpr_count;
-	stix_size_t block_code_size;
+	stix_oow_t jump_inst_pos;
+	stix_oow_t saved_tmpr_count, saved_tmprs_len;
+	stix_oow_t block_arg_count, block_tmpr_count;
+	stix_oow_t block_code_size;
 	stix_ioloc_t block_loc, colon_loc, tmpr_loc;
 
 	/*
@@ -3088,7 +3088,7 @@ printf ("\treturn_from_block\n");
 	}
 	else 
 	{
-		stix_size_t jump_offset;
+		stix_oow_t jump_offset;
 
 		if (block_code_size > MAX_CODE_JUMP)
 		{
@@ -3126,7 +3126,7 @@ static int add_to_balit_buffer (stix_t* stix, stix_oob_t b)
 	if (stix->c->mth.balit_count >= stix->c->mth.balit_capa)
 	{
 		stix_oob_t* tmp;
-		stix_size_t new_capa;
+		stix_oow_t new_capa;
 
 		new_capa = STIX_ALIGN (stix->c->mth.balit_count + 1, BALIT_BUFFER_ALIGN);
 		tmp = (stix_oob_t*)stix_reallocmem (stix, stix->c->mth.balit, new_capa * STIX_SIZEOF(*tmp));
@@ -3145,7 +3145,7 @@ static int add_to_arlit_buffer (stix_t* stix, stix_oop_t item)
 	if (stix->c->mth.arlit_count >= stix->c->mth.arlit_capa)
 	{
 		stix_oop_t* tmp;
-		stix_size_t new_capa;
+		stix_oow_t new_capa;
 
 		new_capa = STIX_ALIGN (stix->c->mth.arlit_count + 1, ARLIT_BUFFER_ALIGN);
 		tmp = (stix_oop_t*)stix_reallocmem (stix, stix->c->mth.arlit, new_capa * STIX_SIZEOF(*tmp));
@@ -3207,8 +3207,8 @@ static int __read_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
 
 struct arlit_info_t
 {
-	stix_size_t pos;
-	stix_size_t len;
+	stix_oow_t pos;
+	stix_oow_t len;
 };
 
 typedef struct arlit_info_t arlit_info_t;
@@ -3216,7 +3216,7 @@ typedef struct arlit_info_t arlit_info_t;
 static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
 {
 	stix_oop_t lit, a;
-	stix_size_t i, saved_arlit_count;
+	stix_oow_t i, saved_arlit_count;
 	arlit_info_t info;
 
 	info.pos = stix->c->mth.arlit_count;
@@ -3320,7 +3320,7 @@ static STIX_INLINE int read_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
 static int compile_byte_array_literal (stix_t* stix)
 {
 	stix_oop_t lit;
-	stix_size_t index;
+	stix_oow_t index;
 
 	if (read_byte_array_literal(stix, &lit) <= -1 ||
 	    add_literal(stix, lit, &index) <= -1 ||
@@ -3334,7 +3334,7 @@ printf ("\tpush_literal byte_array\n");
 static int read_array_literal (stix_t* stix, stix_oop_t* xlit)
 {
 	int x;
-	stix_size_t saved_arlit_count;
+	stix_oow_t saved_arlit_count;
 
 	stix->c->in_array = 1;
 	if (get_token(stix) <= -1)
@@ -3354,7 +3354,7 @@ static int read_array_literal (stix_t* stix, stix_oop_t* xlit)
 static int compile_array_literal (stix_t* stix)
 {
 	stix_oop_t lit;
-	stix_size_t index;
+	stix_oow_t index;
 
 	STIX_ASSERT (stix->c->mth.arlit_count == 0);
 
@@ -3375,7 +3375,7 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 
 	var_info_t var;
 	int read_next_token = 0;
-	stix_size_t index;
+	stix_oow_t index;
 
 	*to_super = 0;
 
@@ -3393,7 +3393,7 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 			#if defined(STIX_USE_CTXTEMPVAR)
 				if (stix->c->mth.blk_depth > 0)
 				{
-					stix_size_t i;
+					stix_oow_t i;
 
 					STIX_ASSERT (var.pos < stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth]);
 					for (i = stix->c->mth.blk_depth; i > 0; i--)
@@ -3603,7 +3603,7 @@ static stix_oob_t send_message_cmd[] =
 
 static int compile_unary_message (stix_t* stix, int to_super)
 {
-	stix_size_t index;
+	stix_oow_t index;
 
 	STIX_ASSERT (stix->c->tok.type == STIX_IOTOK_IDENT);
 
@@ -3628,10 +3628,10 @@ static int compile_binary_message (stix_t* stix, int to_super)
 	 * binary-message := binary-selector binary-argument
 	 * binary-argument := expression-primary unary-message*
 	 */
-	stix_size_t index;
+	stix_oow_t index;
 	int to_super2;
 	stix_oocs_t binsel;
-	stix_size_t saved_binsels_len, binsel_offset;
+	stix_oow_t saved_binsels_len, binsel_offset;
 
 	STIX_ASSERT (stix->c->tok.type == STIX_IOTOK_BINSEL);
 
@@ -3676,13 +3676,13 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 	 * keyword-argument := expression-primary unary-message* binary-message*
 	 */
 
-	stix_size_t index;
+	stix_oow_t index;
 	int to_super2;
 	stix_oocs_t kw, kwsel;
 	stix_ioloc_t saved_kwsel_loc;
-	stix_size_t saved_kwsel_len;
-	stix_size_t kw_offset;
-	stix_size_t nargs = 0;
+	stix_oow_t saved_kwsel_len;
+	stix_oow_t kw_offset;
+	stix_oow_t nargs = 0;
 
 	saved_kwsel_loc = stix->c->tok.loc;
 	saved_kwsel_len = stix->c->mth.kwsels.len;
@@ -3746,7 +3746,7 @@ static int compile_message_expression (stix_t* stix, int to_super)
 	 * unary-message := unary-selector
 	 * cascaded-message := (";" single-message)*
 	 */
-	stix_size_t noop_pos;
+	stix_oow_t noop_pos;
 
 	do
 	{
@@ -3873,7 +3873,7 @@ static int compile_method_expression (stix_t* stix, int pop)
 	 */
 
 	stix_oocs_t assignee;
-	stix_size_t index;
+	stix_oow_t index;
 	int ret = 0;
 
 	STIX_ASSERT (pop == 0 || pop == 1);
@@ -3883,7 +3883,7 @@ static int compile_method_expression (stix_t* stix, int pop)
 	    stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
 	{
 		stix_ioloc_t assignee_loc;
-		stix_size_t assignee_offset;
+		stix_oow_t assignee_offset;
 		int assignee_dotted;
 
 		/* store the assignee name to the internal buffer
@@ -3931,7 +3931,7 @@ printf ("\n");
 				#if defined(STIX_USE_CTXTEMPVAR)
 					if (stix->c->mth.blk_depth > 0)
 					{
-						stix_size_t i;
+						stix_oow_t i;
 
 						STIX_ASSERT (var.pos < stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth]);
 						for (i = stix->c->mth.blk_depth; i > 0; i--)
@@ -4105,8 +4105,8 @@ static int add_compiled_method (stix_t* stix)
 #else
 	stix_oop_byte_t code;
 #endif
-	stix_size_t tmp_count = 0;
-	stix_size_t i;
+	stix_oow_t tmp_count = 0;
+	stix_oow_t i;
 	stix_ooi_t preamble_code, preamble_index;
 
 	name = stix_makesymbol (stix, stix->c->mth.name.ptr, stix->c->mth.name.len);
@@ -4780,7 +4780,7 @@ printf ("\n");
 static int compile_class_definition (stix_t* stix, int extend)
 {
 	int n;
-	stix_size_t i;
+	stix_oow_t i;
 
 	/* reset the structure to hold information about a class to be compiled */
 	stix->c->cls.flags = 0;
@@ -4834,7 +4834,7 @@ static int __compile_pooldic_definition (stix_t* stix)
 {
 	stix_oop_t lit;
 	stix_ooi_t tally;
-	stix_size_t i;
+	stix_oow_t i;
 
 	if (stix->c->tok.type != STIX_IOTOK_IDENT && 
 	    stix->c->tok.type != STIX_IOTOK_IDENT_DOTTED)
@@ -5076,7 +5076,7 @@ static void gc_compiler (stix_t* stix)
 	/* called when garbage collection is performed */
 	if (stix->c)
 	{
-		stix_size_t i;
+		stix_oow_t i;
 
 		if (stix->c->cls.self_oop) 
 			stix->c->cls.self_oop = (stix_oop_class_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.self_oop);
@@ -5118,7 +5118,7 @@ static void fini_compiler (stix_t* stix)
 	/* called before the stix object is closed */
 	if (stix->c)
 	{
-		stix_size_t i;
+		stix_oow_t i;
 
 		clear_io_names (stix);
 

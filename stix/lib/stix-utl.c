@@ -27,9 +27,9 @@
 
 #include "stix-utl.h"
 
-stix_size_t stix_hashbytes (const stix_oob_t* ptr, stix_size_t len)
+stix_oow_t stix_hashbytes (const stix_oob_t* ptr, stix_oow_t len)
 {
-	stix_size_t h = 0;
+	stix_oow_t h = 0;
 	const stix_uint8_t* bp, * be;
 
 	bp = ptr; be = bp + len;
@@ -38,14 +38,14 @@ stix_size_t stix_hashbytes (const stix_oob_t* ptr, stix_size_t len)
 	return h;
 }
 
-stix_size_t stix_hashuchars (const stix_uch_t* ptr, stix_size_t len)
+stix_oow_t stix_hashuchars (const stix_uch_t* ptr, stix_oow_t len)
 {
 	return stix_hashbytes ((const stix_oob_t *)ptr, len * STIX_SIZEOF(*ptr));
 }
 
-int stix_equalchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_size_t len)
+int stix_equalchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_oow_t len)
 {
-	stix_size_t i;
+	stix_oow_t i;
 
 	for (i = 0; i < len; i++)
 	{
@@ -88,7 +88,7 @@ int stix_compucbcstr (const stix_uch_t* str1, const stix_bch_t* str2)
 	return (*str1 > *str2)? 1: -1;
 }
 
-int stix_compucxbcstr (const stix_uch_t* str1, stix_size_t len, const stix_bch_t* str2)
+int stix_compucxbcstr (const stix_uch_t* str1, stix_oow_t len, const stix_bch_t* str2)
 {
 	const stix_uch_t* end = str1 + len;
 	while (str1 < end && *str2 != '\0' && *str1 == *str2) str1++, str2++;
@@ -97,25 +97,25 @@ int stix_compucxbcstr (const stix_uch_t* str1, stix_size_t len, const stix_bch_t
 	return (*str1 > *str2)? 1: -1;
 }
 
-void stix_copyuchars (stix_uch_t* dst, const stix_uch_t* src, stix_size_t len)
+void stix_copyuchars (stix_uch_t* dst, const stix_uch_t* src, stix_oow_t len)
 {
-	stix_size_t i;
+	stix_oow_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
-void stix_copybchars (stix_bch_t* dst, const stix_bch_t* src, stix_size_t len)
+void stix_copybchars (stix_bch_t* dst, const stix_bch_t* src, stix_oow_t len)
 {
-	stix_size_t i;
+	stix_oow_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
-void stix_copybchtouchars (stix_uch_t* dst, const stix_bch_t* src, stix_size_t len)
+void stix_copybchtouchars (stix_uch_t* dst, const stix_bch_t* src, stix_oow_t len)
 {
-	stix_size_t i;
+	stix_oow_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
-stix_size_t stix_copyucstr (stix_uch_t* dst, stix_size_t len, const stix_uch_t* src)
+stix_oow_t stix_copyucstr (stix_uch_t* dst, stix_oow_t len, const stix_uch_t* src)
 {
 	stix_uch_t* p, * p2;
 
@@ -131,7 +131,7 @@ stix_size_t stix_copyucstr (stix_uch_t* dst, stix_size_t len, const stix_uch_t* 
 	return p - dst;
 }
 
-stix_size_t stix_copybcstr (stix_bch_t* dst, stix_size_t len, const stix_bch_t* src)
+stix_oow_t stix_copybcstr (stix_bch_t* dst, stix_oow_t len, const stix_bch_t* src)
 {
 	stix_bch_t* p, * p2;
 
@@ -147,21 +147,21 @@ stix_size_t stix_copybcstr (stix_bch_t* dst, stix_size_t len, const stix_bch_t* 
 	return p - dst;
 }
 
-stix_size_t stix_countucstr (const stix_uch_t* str)
+stix_oow_t stix_countucstr (const stix_uch_t* str)
 {
 	const stix_uch_t* ptr = str;
 	while (*ptr != '\0') ptr++;
 	return ptr - str;
 }
 
-stix_size_t stix_countbcstr (const stix_bch_t* str)
+stix_oow_t stix_countbcstr (const stix_bch_t* str)
 {
 	const stix_bch_t* ptr = str;
 	while (*ptr != '\0') ptr++;
 	return ptr - str;
 }
 
-stix_uch_t* stix_finduchar (const stix_uch_t* ptr, stix_size_t len, stix_uch_t c)
+stix_uch_t* stix_finduchar (const stix_uch_t* ptr, stix_oow_t len, stix_uch_t c)
 {
 	const stix_uch_t* end;
 
@@ -175,7 +175,7 @@ stix_uch_t* stix_finduchar (const stix_uch_t* ptr, stix_size_t len, stix_uch_t c
 	return STIX_NULL;
 }
 
-stix_bch_t* stix_findbchar (const stix_bch_t* ptr, stix_size_t len, stix_bch_t c)
+stix_bch_t* stix_findbchar (const stix_bch_t* ptr, stix_oow_t len, stix_bch_t c)
 {
 	const stix_bch_t* end;
 

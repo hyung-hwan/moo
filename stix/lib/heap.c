@@ -26,7 +26,7 @@
 
 #include "stix-prv.h"
 
-stix_heap_t* stix_makeheap (stix_t* stix, stix_size_t size)
+stix_heap_t* stix_makeheap (stix_t* stix, stix_oow_t size)
 {
 	stix_heap_t* heap;
 
@@ -61,7 +61,7 @@ void stix_killheap (stix_t* stix, stix_heap_t* heap)
 	STIX_MMGR_FREE (stix->mmgr, heap);
 }
 
-void* stix_allocheapmem (stix_t* stix, stix_heap_t* heap, stix_size_t size)
+void* stix_allocheapmem (stix_t* stix, stix_heap_t* heap, stix_oow_t size)
 {
 	stix_uint8_t* ptr;
 
