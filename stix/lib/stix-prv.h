@@ -1129,6 +1129,12 @@ stix_oop_t stix_bitinvint (
 	stix_oop_t x
 );
 
+stix_oop_t stix_bitshiftint (
+	stix_t*    stix,
+	stix_oop_t x,
+	stix_oop_t y
+);
+
 stix_oop_t stix_strtoint (
 	stix_t*            stix,
 	const stix_ooch_t* str,

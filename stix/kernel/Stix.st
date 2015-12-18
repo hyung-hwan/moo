@@ -132,6 +132,12 @@
 		^-1 - self.
 	}
 
+	#method bitShift: aNumber
+	{
+		<primitive: #_integer_bitshift>
+		self primitiveFailed.
+	}
+
 	#method asString
 	{
 		self printStringRadix: 10
