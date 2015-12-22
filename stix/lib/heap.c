@@ -33,7 +33,7 @@ stix_heap_t* stix_makeheap (stix_t* stix, stix_oow_t size)
 	heap = (stix_heap_t*)STIX_MMGR_ALLOC(stix->mmgr, STIX_SIZEOF(*heap) + size);
 	if (!heap)
 	{
-		stix->errnum = STIX_ENOMEM;
+		stix->errnum = STIX_ESYSMEM;
 		return STIX_NULL;
 	}
 
@@ -70,7 +70,7 @@ void* stix_allocheapmem (stix_t* stix, stix_heap_t* heap, stix_oow_t size)
 	if (STIX_GEPTR(stix_uint8_t, heap->ptr, heap->limit) || 
 	    STIX_SUBPTR(stix_uint8_t, heap->limit, heap->ptr) < size)
 	{
-		stix->errnum = STIX_ENOMEM;
+		stix->errnum = STIX_EOOMEM;
 		return STIX_NULL;
 	}
 

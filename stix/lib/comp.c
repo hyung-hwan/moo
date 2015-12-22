@@ -2049,7 +2049,7 @@ static stix_ooi_t find_class_level_variable (stix_t* stix, stix_oop_class_t self
 		super = ((stix_oop_class_t)super)->superclass;
 	}
 
-	stix->errnum = STIX_ENOMEM;
+	stix->errnum = STIX_ENOENT;
 	return -1;
 
 done:

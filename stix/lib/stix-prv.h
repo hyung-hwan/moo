@@ -55,6 +55,13 @@
 /*#define STIX_DEBUG_EXEC*/
 #define STIX_PROFILE_EXEC
 
+/* limit the maximum object size such that:
+ *   1. an index to an object field can be represented in a small integer.
+ *   2. the maximum number of bit shifts can be represented in the stix_oow_t type.
+ */
+#define STIX_LIMIT_OBJ_SIZE
+
+
 #include <stdio.h> /* TODO: delete these header inclusion lines */
 #include <string.h>
 #include <assert.h>
@@ -206,6 +213,18 @@
 */
 #define STIX_MAX_CLASSVARS      STIX_BITS_MAX(stix_oow_t, STIX_SMOOI_ABS_BITS / 2)
 #define STIX_MAX_CLASSINSTVARS  STIX_BITS_MAX(stix_oow_t, STIX_SMOOI_ABS_BITS / 2)
+
+
+#if defined(STIX_LIMIT_OBJ_SIZE)
+/* limit the maximum object size such that:
+ *   1. an index to an object field can be represented in a small integer.
+ *   2. the maximum number of bit shifts can be represented in the stix_oow_t type.
+ */
+#	define STIX_OBJ_SIZE_MAX ((stix_oow_t)STIX_SMOOI_MAX)
+#else
+#	define STIX_OBJ_SIZE_MAX ((stix_oow_t)STIX_TYPE_MAX(stix_oow_t))
+#endif
+
 
 #if defined(STIX_INCLUDE_COMPILER)
 

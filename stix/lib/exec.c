@@ -1932,7 +1932,7 @@ static stix_prim_impl_t query_prim_module (stix_t* stix, const stix_ooch_t* name
 			pair = stix_rbt_insert (stix->modtab, name, mod_name_len, &md, STIX_SIZEOF(md));
 			if (pair == STIX_NULL)
 			{
-				stix->errnum = STIX_ENOMEM;
+				stix->errnum = STIX_ESYSMEM;
 				return STIX_NULL;
 			}
 
@@ -1974,7 +1974,7 @@ static stix_prim_impl_t query_prim_module (stix_t* stix, const stix_ooch_t* name
 		pair = stix_rbt_insert (&stix->pmtable, (void*)name, mod_name_len, &md, STIX_SIZEOF(md));
 		if (pair == STIX_NULL)
 		{
-			stix->errnum = STIX_ENOMEM;
+			stix->errnum = STIX_ESYSMEM;
 			stix->vmprim.mod_close (stix, md.handle);
 			return STIX_NULL;
 		}

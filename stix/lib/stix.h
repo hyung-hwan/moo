@@ -45,7 +45,8 @@ enum stix_errnum_t
 	STIX_ENOIMPL, /**< not implemented */
 	STIX_ESYSERR, /**< subsystem error */
 	STIX_EINTERN, /**< internal error */
-	STIX_ENOMEM,  /**< insufficient memory */
+	STIX_ESYSMEM, /**< insufficient system memory */
+	STIX_EOOMEM,  /**< insufficient object memory */
 	STIX_EINVAL,  /**< invalid parameter or data */
 	STIX_ERANGE,  /**< range error. overflow and underflow */
 	STIX_ENOENT,  /**< no matching entry */
@@ -295,9 +296,6 @@ typedef enum stix_obj_type_t stix_obj_type_t;
 	(((stix_oow_t)(m)) << (STIX_OBJ_FLAGS_TRAILER_BITS)) | \
 	(((stix_oow_t)(r)) << 0) \
 )
-
-#define STIX_OBJ_SIZE_MAX ((stix_oow_t)STIX_SMOOI_MAX)
-/*#define STIX_OBJ_SIZE_MAX ((stix_oow_t)STIX_TYPE_MAX(stix_oow_t))*/
 
 #define STIX_OBJ_HEADER \
 	stix_oow_t _flags; \

@@ -347,8 +347,13 @@ typedef stix_ucs_t               stix_oocs_t;
 #	define STIX_NULL ((void*)0)
 #endif
 
-/* make a low bit mask that can mask off low n bits*/
+/* make a bit mask that can mask off low n bits */
 #define STIX_LBMASK(type,n) (~(~((type)0) << (n))) 
+#define STIX_LBMASK_SAFE(type,n) (((n) < STIX_SIZEOF(type) * 8)? STIX_LBMASK(type,n): ~(type)0)
+
+/* make a bit mask that can mask off hig n bits */
+#define STIX_HBMASK(type,n) (~(~((type)0) >> (n)))
+#define STIX_HBMASK_SAFE(type,n) (((n) < STIX_SIZEOF(type) * 8)? STIX_HBMASK(type,n): ~(type)0)
 
 /* get 'length' bits starting from the bit at the 'offset' */
 #define STIX_GETBITS(type,value,offset,length) \
@@ -538,11 +543,11 @@ struct stix_cmgr_t
 #define STIX_TYPE_IS_UNSIGNED(type) (((type)0) < ((type)-1))
 
 #define STIX_TYPE_SIGNED_MAX(type) \
-	((type)~((type)1 << (STIX_SIZEOF(type) * 8 - 1)))
+	((type)~((type)1 << ((type)STIX_SIZEOF(type) * 8 - 1)))
 #define STIX_TYPE_UNSIGNED_MAX(type) ((type)(~(type)0))
 
 #define STIX_TYPE_SIGNED_MIN(type) \
-	((type)((type)1 << (STIX_SIZEOF(type) * 8 - 1)))
+	((type)((type)1 << ((type)STIX_SIZEOF(type) * 8 - 1)))
 #define STIX_TYPE_UNSIGNED_MIN(type) ((type)0)
 
 #define STIX_TYPE_MAX(type) \

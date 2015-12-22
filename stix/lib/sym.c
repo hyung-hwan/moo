@@ -53,7 +53,7 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 			if (inc_max > 0) inc = inc_max;
 			else
 			{
-				stix->errnum = STIX_ENOMEM;
+				stix->errnum = STIX_EOOMEM;
 				return STIX_NULL;
 			}
 		}

@@ -122,7 +122,7 @@ static STIX_INLINE int smooi_mul_overflow (stix_ooi_t a, stix_ooi_t b, stix_ooi_
 
 	/* though this fomula basically works for unsigned types in principle, 
 	 * the values used here are all absolute values and they fall in
-	 * a safe range to apply this fomula. the safe range is guarantee because
+	 * a safe range to apply this fomula. the safe range is guaranteed because
 	 * the sources are supposed to be smoois. */
 	return ub != 0 && ua > STIX_TYPE_MAX(stix_ooi_t) / ub; 
 #endif
@@ -234,7 +234,7 @@ static STIX_INLINE stix_oop_t make_bigint_with_ooi (stix_t* stix, stix_ooi_t i)
 	if (i >= 0)
 	{
 		w = i;
-		hw[0] = w & STIX_LBMASK(stix_oow_t,STIX_LIW_BITS);
+		hw[0] = w /*& STIX_LBMASK(stix_oow_t,STIX_LIW_BITS)*/;
 		hw[1] = w >> STIX_LIW_BITS;
 		return stix_instantiate (stix, stix->_large_positive_integer, &hw, (hw[1] > 0? 2: 1));
 	}
@@ -242,7 +242,7 @@ static STIX_INLINE stix_oop_t make_bigint_with_ooi (stix_t* stix, stix_ooi_t i)
 	{
 		STIX_ASSERT (i > STIX_TYPE_MIN(stix_ooi_t));
 		w = -i;
-		hw[0] = w & STIX_LBMASK(stix_oow_t,STIX_LIW_BITS);
+		hw[0] = w /*& STIX_LBMASK(stix_oow_t,STIX_LIW_BITS)*/;
 		hw[1] = w >> STIX_LIW_BITS;
 		return stix_instantiate (stix, stix->_large_negative_integer, &hw, (hw[1] > 0? 2: 1));
 	}
@@ -284,7 +284,7 @@ static STIX_INLINE stix_oop_t make_bloated_bigint_with_ooi (stix_t* stix, stix_o
 	if (i >= 0)
 	{
 		w = i;
-		hw[0] = w & STIX_LBMASK(stix_oow_t,STIX_LIW_BITS);
+		hw[0] = w /*& STIX_LBMASK(stix_oow_t,STIX_LIW_BITS)*/;
 		hw[1] = w >> STIX_LIW_BITS;
 		z = stix_instantiate (stix, stix->_large_positive_integer, STIX_NULL, (hw[1] > 0? 2: 1) + extra);
 	}
@@ -292,7 +292,7 @@ static STIX_INLINE stix_oop_t make_bloated_bigint_with_ooi (stix_t* stix, stix_o
 	{
 		STIX_ASSERT (i > STIX_TYPE_MIN(stix_ooi_t));
 		w = -i;
-		hw[0] = w & STIX_LBMASK(stix_oow_t,STIX_LIW_BITS);
+		hw[0] = w /*& STIX_LBMASK(stix_oow_t,STIX_LIW_BITS)*/;
 		hw[1] = w >> STIX_LIW_BITS;
 		z = stix_instantiate (stix, stix->_large_negative_integer, STIX_NULL, (hw[1] > 0? 2: 1) + extra);
 	}
@@ -339,7 +339,7 @@ static STIX_INLINE stix_oop_t expand_bigint (stix_t* stix, stix_oop_t oop, stix_
 
 	if (inc > STIX_OBJ_SIZE_MAX - count)
 	{
-		stix->errnum = STIX_ENOMEM; /* TODO: is it a soft failure or a hard failure? is this error code proper? */
+		stix->errnum = STIX_EOOMEM; /* TODO: is it a soft failure or a hard failure? is this error code proper? */
 		return STIX_NULL;
 	}
 
@@ -857,7 +857,7 @@ static stix_oop_t add_unsigned_integers (stix_t* stix, stix_oop_t x, stix_oop_t 
 
 	if (zs >= STIX_OBJ_SIZE_MAX)
 	{
-		stix->errnum = STIX_ENOMEM; /* TOOD: is it a soft failure or hard failure? */
+		stix->errnum = STIX_EOOMEM; /* TOOD: is it a soft failure or hard failure? */
 		return STIX_NULL;
 	}
 	zs++;
@@ -918,7 +918,7 @@ static stix_oop_t multiply_unsigned_integers (stix_t* stix, stix_oop_t x, stix_o
 
 	if (yz > STIX_OBJ_SIZE_MAX - xz)
 	{
-		stix->errnum = STIX_ENOMEM; /* TOOD: is it a soft failure or hard failure? */
+		stix->errnum = STIX_EOOMEM; /* TOOD: is it a soft failure or hard failure? */
 		return STIX_NULL;
 	}
 
@@ -1822,7 +1822,7 @@ stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		if (zalloc < zs)
 		{
 			/* overflow in zalloc calculation above */
-			stix->errnum = STIX_ENOMEM; /* TODO: is it a soft failure or hard failure? */
+			stix->errnum = STIX_EOOMEM; /* TODO: is it a soft failure or hard failure? */
 			return STIX_NULL;
 		}
 
@@ -2040,7 +2040,7 @@ stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		if (zalloc < zs)
 		{
 			/* overflow in zalloc calculation above */
-			stix->errnum = STIX_ENOMEM; /* TODO: is it a soft failure or hard failure? */
+			stix->errnum = STIX_EOOMEM; /* TODO: is it a soft failure or hard failure? */
 			return STIX_NULL;
 		}
 
@@ -2199,7 +2199,7 @@ stix_oop_t stix_bitinvint (stix_t* stix, stix_oop_t x)
 		if (zalloc < zs)
 		{
 			/* overflow in zalloc calculation above */
-			stix->errnum = STIX_ENOMEM; /* TODO: is it a soft failure or hard failure? */
+			stix->errnum = STIX_EOOMEM; /* TODO: is it a soft failure or hard failure? */
 			return STIX_NULL;
 		}
 
@@ -2288,12 +2288,40 @@ stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		{
 			/* right shift */
 			stix_ooi_t v;
-/* TODO: ... */
-/* right shift of a negative number is complex... */
-			v2 = -v2;
-			if (v2 >= STIX_OOI_BITS) return STIX_SMOOI_TO_OOP(0);
 
-			v = v1 >> v2;
+			v2 = -v2;
+			if (v1 < 0)
+			{
+				/* guarantee arithmetic shift preserving the sign bit
+				 * regardless of compiler implementation.
+				 *
+				 *    binary    decimal   shifted by
+				 *   -------------------------------
+				 *   10000011    (-125)    0
+				 *   11000001    (-63)     1
+				 *   11100000    (-32)     2
+				 *   11110000    (-16)     3
+				 *   11111000    (-8)      4
+				 *   11111100    (-4)      5
+				 *   11111110    (-2)      6
+				 *   11111111    (-1)      7
+				 *   11111111    (-1)      8
+				 */
+				
+				if (v2 >= STIX_OOI_BITS - 1) v = -1;
+				else 
+				{
+					/* STIX_HBMASK_SAFE(stix_oow_t, v2 + 1) could also be
+					 * used as a mask. but the sign bit is shifted in. 
+					 * so, masking up to 'v2' bits is sufficient */
+					v = (stix_ooi_t)(((stix_oow_t)v1 >> v2) | STIX_HBMASK(stix_oow_t, v2));
+				}
+			}
+			else
+			{
+				if (v2 >= STIX_OOI_BITS) v = 0;
+				else v = v1 >> v2;
+			}
 			if (STIX_IN_SMOOI_RANGE(v)) return STIX_SMOOI_TO_OOP(v);
 			return make_bigint_with_ooi (stix, v);
 		}
@@ -2306,6 +2334,15 @@ stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 
 		v = STIX_OOP_TO_SMOOI(x);
 		if (v == 0) return STIX_SMOOI_TO_OOP(0);
+
+		if (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer)
+		{
+			/* right shift - special case.
+			 * x is a small integer. it is just a few bytes long.
+			 * y is a large negative integer. its smallest absolute value
+			 * is STIX_SMOOI_MAX. i know the final answer. */
+			return (v < 0)? STIX_SMOOI_TO_OOP(-1): STIX_SMOOI_TO_OOP(0);
+		}
 
 		stix_pushtmp (stix, &y);
 		x = make_bigint_with_ooi (stix, v);
@@ -2348,10 +2385,24 @@ stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			/* y is too big or too small */
 			if (negy)
 			{
-				/* TODO: right shift... */
+				/* right shift */
+			#if defined(STIX_LIMIT_OBJ_SIZE)
+				return (negx)? STIX_SMOOI_TO_OOP(-1): STIX_SMOOI_TO_OOP(0);
+			#else
+				/* TODO: */
+			#endif
 			}
 			else
 			{
+				/* left shift */
+			#if defined(STIX_LIMIT_OBJ_SIZE)
+				/* the maximum number of bit shifts are guaranteed to be
+				 * small enough to fit into the stix_oow_t type, i can 
+				 * simply return a failure here */
+				STIX_ASSERT (STIX_TYPE_MAX(stix_oow_t) >= STIX_OBJ_SIZE_MAX * 8);
+				stix->errnum = STIX_EOOMEM; /* is it a soft failure or a hard failure? is this error code proper? */
+				return STIX_NULL;
+			#else
 				/* this loop is very inefficient as shifting is repeated
 				 * with lshift_unsigned_array(). however, this part of the
 				 * code is not likey to be useful because the amount of
@@ -2393,6 +2444,7 @@ stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 					goto left_shift_last;
 				else
 					z = x;
+			#endif
 			}
 		}
 		else if (sign >= 1)
@@ -2821,8 +2873,8 @@ stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num, int radix)
 	b[0] = stix->bigint[radix].multiplier; /* block divisor */
 	bs = 1;
 #elif (STIX_LIW_BITS == STIX_OOHW_BITS)
-	b[0] = stix->bigint[radix].multiplier & STIX_LBMASK(stix_oow_t, STIX_OOHW_BITS);
-	b[1] = stix->bigint[radix].multiplier >> STIX_OOHW_BITS;
+	b[0] = stix->bigint[radix].multiplier /*& STIX_LBMASK(stix_oow_t, STIX_LIW_BITS)*/;
+	b[1] = stix->bigint[radix].multiplier >> STIX_LIW_BITS;
 	bs = (b[1] > 0)? 2: 1;
 #else
 #	error UNSUPPORTED LIW BIT SIZE

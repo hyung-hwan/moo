@@ -45,7 +45,7 @@ stix_t* stix_open (stix_mmgr_t* mmgr, stix_oow_t xtnsize, stix_oow_t heapsize, c
 		}
 		else STIX_MEMSET (stix + 1, 0, xtnsize);
 	}
-	else if (errnum) *errnum = STIX_ENOMEM;
+	else if (errnum) *errnum = STIX_ESYSMEM;
 
 	return stix;
 }
@@ -249,7 +249,7 @@ void* stix_allocmem (stix_t* stix, stix_oow_t size)
 	void* ptr;
 
 	ptr = STIX_MMGR_ALLOC (stix->mmgr, size);
-	if (!ptr) stix->errnum = STIX_ENOMEM;
+	if (!ptr) stix->errnum = STIX_ESYSMEM;
 	return ptr;
 }
 
@@ -258,7 +258,7 @@ void* stix_callocmem (stix_t* stix, stix_oow_t size)
 	void* ptr;
 
 	ptr = STIX_MMGR_ALLOC (stix->mmgr, size);
-	if (!ptr) stix->errnum = STIX_ENOMEM;
+	if (!ptr) stix->errnum = STIX_ESYSMEM;
 	else STIX_MEMSET (ptr, 0, size);
 	return ptr;
 }
@@ -266,7 +266,7 @@ void* stix_callocmem (stix_t* stix, stix_oow_t size)
 void* stix_reallocmem (stix_t* stix, void* ptr, stix_oow_t size)
 {
 	ptr = STIX_MMGR_REALLOC (stix->mmgr, ptr, size);
-	if (!ptr) stix->errnum = STIX_ENOMEM;
+	if (!ptr) stix->errnum = STIX_ESYSMEM;
 	return ptr;
 }
 
