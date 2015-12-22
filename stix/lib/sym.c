@@ -32,14 +32,38 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 	stix_oow_t oldsz, newsz, index;
 	stix_oop_char_t symbol;
 
-/* TODO: derive a better growth size */
+	oldsz = STIX_OBJ_GET_SIZE(oldbuc);
+
+/* TODO: better growth policy? */
+	if (oldsz < 5000) newsz = oldsz + oldsz;
+	else if (oldsz < 50000) newsz = oldsz + (oldsz / 2);
+	else if (oldsz < 100000) newsz = oldsz + (oldsz / 4);
+	else if (oldsz < 200000) newsz = oldsz + (oldsz / 8);
+	else if (oldsz < 400000) newsz = oldsz + (oldsz / 16);
+	else if (oldsz < 800000) newsz = oldsz + (oldsz / 32);
+	else if (oldsz < 1600000) newsz = oldsz + (oldsz / 64);
+	else 
+	{
+		stix_oow_t inc, inc_max;
+
+		inc = oldsz / 128;
+		inc_max = STIX_OBJ_SIZE_MAX - oldsz;
+		if (inc > inc_max) 
+		{
+			if (inc_max > 0) inc = inc_max;
+			else
+			{
+				stix->errnum = STIX_ENOMEM;
+				return STIX_NULL;
+			}
+		}
+		newsz = oldsz + inc;
+	}
+
 	stix_pushtmp (stix, (stix_oop_t*)&oldbuc);
-	newbuc = (stix_oop_oop_t)stix_instantiate (stix, stix->_array, STIX_NULL, STIX_OBJ_GET_SIZE(oldbuc) * 2); 
+	newbuc = (stix_oop_oop_t)stix_instantiate (stix, stix->_array, STIX_NULL, newsz); 
 	stix_poptmp (stix);
 	if (!newbuc) return STIX_NULL;
-
-	oldsz = STIX_OBJ_GET_SIZE(oldbuc);
-	newsz = STIX_OBJ_GET_SIZE(newbuc);
 
 	while (oldsz > 0)
 	{

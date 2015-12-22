@@ -384,7 +384,7 @@ int main (int argc, char* argv[])
 	stix_vmprim_t vmprim;
 	int i;
 
-	printf ("Stix 1.0.0 - max named %lu max indexed %lu max class %lu max classinst %lu oowmax %lu, ooimax %ld ooimin %ld smintmax %ld smintmax %ld\n", 
+	printf ("Stix 1.0.0 - max named %lu max indexed %lu max class %lu max classinst %lu oowmax %lu, ooimax %ld ooimin %ld smooimax %ld smooimax %ld\n", 
 		(unsigned long int)STIX_MAX_NAMED_INSTVARS, 
 		(unsigned long int)STIX_MAX_INDEXED_INSTVARS(STIX_MAX_NAMED_INSTVARS),
 		(unsigned long int)STIX_MAX_CLASSVARS,

@@ -55,7 +55,6 @@
 /*#define STIX_DEBUG_EXEC*/
 #define STIX_PROFILE_EXEC
 
-
 #include <stdio.h> /* TODO: delete these header inclusion lines */
 #include <string.h>
 #include <assert.h>
@@ -118,8 +117,9 @@
  * |number of named instance variables|indexed-type|indexability|oop-tag|
  *
  * the number of named instance variables is stored in high 23 bits.
- * the indexed type takes up bit 3 to bit 8. And the indexability is
- * stored in bit 2. 
+ * the indexed type takes up bit 3 to bit 8 (assuming STIX_OBJ_TYPE_BITS is 6. 
+ * STIX_OBJ_TYPE_XXX enumerators are used to represent actual values).
+ * and the indexability is stored in bit 2.
  *
  * The maximum number of named(fixed) instance variables for a class is:
  *     2 ^ ((BITS-IN-OOW - STIX_OOP_TAG_BITS) - STIX_OBJ_TYPE_BITS - 1) - 1
@@ -163,11 +163,15 @@
  * This limit is set so because the number must be encoded into the spec field
  * of the class with limited number of bits assigned to the number of
  * named instance variables. the trailing -1 in the calculation of number of
- * bits is to consider the signness of a small-integer which is a typical
+ * bits is to consider the sign bit of a small-integer which is a typical
  * type of the spec field in the class object.
  */
+/*
 #define STIX_MAX_NAMED_INSTVARS \
 	STIX_BITS_MAX(stix_oow_t, STIX_OOW_BITS - STIX_OOP_TAG_BITS - (STIX_OBJ_FLAGS_TYPE_BITS + 1) - 1)
+*/
+#define STIX_MAX_NAMED_INSTVARS \
+	STIX_BITS_MAX(stix_oow_t, STIX_SMOOI_ABS_BITS - (STIX_OBJ_FLAGS_TYPE_BITS + 1))
 
 /* Given the number of named instance variables, what is the maximum number 
  * of indexed instance variables? The number of indexed instance variables
@@ -176,21 +180,32 @@
  * named instance variables. So it's the maximum value of obj->_size minus
  * the number of named instance variables.
  */
-#define STIX_MAX_INDEXED_INSTVARS(named_instvar) ((~(stix_oow_t)0) - named_instvar)
+#define STIX_MAX_INDEXED_INSTVARS(named_instvar) (STIX_OBJ_SIZE_MAX - named_instvar)
 
-
+/*
 #define STIX_CLASS_SELFSPEC_MAKE(class_var,classinst_var) \
 	(((stix_oow_t)class_var) << ((STIX_OOW_BITS - STIX_OOP_TAG_BITS) / 2)) | ((stix_oow_t)classinst_var)
+*/
+#define STIX_CLASS_SELFSPEC_MAKE(class_var,classinst_var) \
+	(((stix_oow_t)class_var) << (STIX_SMOOI_BITS / 2)) | ((stix_oow_t)classinst_var)
 
+/*
 #define STIX_CLASS_SELFSPEC_CLASSVAR(spec) ((stix_oow_t)spec >> ((STIX_OOW_BITS - STIX_OOP_TAG_BITS) / 2))
 #define STIX_CLASS_SELFSPEC_CLASSINSTVAR(spec) (((stix_oow_t)spec) & STIX_LBMASK(stix_oow_t, (STIX_OOW_BITS - STIX_OOP_TAG_BITS) / 2))
+*/
+#define STIX_CLASS_SELFSPEC_CLASSVAR(spec) ((stix_oow_t)spec >> (STIX_SMOOI_BITS / 2))
+#define STIX_CLASS_SELFSPEC_CLASSINSTVAR(spec) (((stix_oow_t)spec) & STIX_LBMASK(stix_oow_t, (STIX_SMOOI_BITS / 2)))
 
 /*
  * yet another -1 in the calculation of the bit numbers for signed nature of
  * a small-integer
  */
+/*
 #define STIX_MAX_CLASSVARS      STIX_BITS_MAX(stix_oow_t, (STIX_OOW_BITS - STIX_OOP_TAG_BITS - 1) / 2)
 #define STIX_MAX_CLASSINSTVARS  STIX_BITS_MAX(stix_oow_t, (STIX_OOW_BITS - STIX_OOP_TAG_BITS - 1) / 2)
+*/
+#define STIX_MAX_CLASSVARS      STIX_BITS_MAX(stix_oow_t, STIX_SMOOI_ABS_BITS / 2)
+#define STIX_MAX_CLASSINSTVARS  STIX_BITS_MAX(stix_oow_t, STIX_SMOOI_ABS_BITS / 2)
 
 #if defined(STIX_INCLUDE_COMPILER)
 
@@ -855,7 +870,7 @@ extern "C" {
  */
 stix_heap_t* stix_makeheap (
 	stix_t*     stix, 
-	stix_oow_t size
+	stix_oow_t  size
 );
 
 /**
@@ -875,7 +890,7 @@ void stix_killheap (
 void* stix_allocheapmem (
 	stix_t*      stix,
 	stix_heap_t* heap,
-	stix_oow_t  size
+	stix_oow_t   size
 );
 
 
@@ -892,7 +907,7 @@ stix_oop_t stix_moveoop (
 /* ========================================================================= */
 void* stix_allocbytes (
 	stix_t*     stix,
-	stix_oow_t size
+	stix_oow_t  size
 );
 
 /**
@@ -984,7 +999,7 @@ stix_oop_association_t stix_getatsysdic (
 );
 
 stix_oop_association_t stix_lookupsysdic (
-	stix_t*           stix,
+	stix_t*            stix,
 	const stix_oocs_t* name
 );
 
@@ -1002,8 +1017,8 @@ stix_oop_association_t stix_getatdic (
 );
 
 stix_oop_association_t stix_lookupdic (
-	stix_t*           stix,
-	stix_oop_set_t    dic,
+	stix_t*            stix,
+	stix_oop_set_t     dic,
 	const stix_oocs_t* name
 );
 
@@ -1026,20 +1041,20 @@ stix_oop_process_t stix_makeproc (
 stix_oow_t stix_uctoutf8 (
 	stix_uch_t    uc,
 	stix_bch_t*   utf8,
-	stix_oow_t   size
+	stix_oow_t    size
 );
 
 stix_oow_t stix_utf8touc (
 	const stix_bch_t* utf8,
-	stix_oow_t       size,
+	stix_oow_t        size,
 	stix_uch_t*       uc
 );
 
 int stix_ucstoutf8 (
 	const stix_uch_t*    ucs,
-	stix_oow_t*         ucslen,
+	stix_oow_t*          ucslen,
 	stix_bch_t*          bcs,
-	stix_oow_t*         bcslen
+	stix_oow_t*          bcslen
 );
 
 /**
@@ -1072,9 +1087,9 @@ int stix_ucstoutf8 (
  */
 int stix_utf8toucs (
 	const stix_bch_t*   bcs,
-	stix_oow_t*        bcslen,
+	stix_oow_t*         bcslen,
 	stix_uch_t*         ucs,
-	stix_oow_t*        ucslen
+	stix_oow_t*         ucslen
 );
 
 /* ========================================================================= */
@@ -1152,7 +1167,7 @@ stix_oop_t stix_inttostr (
 /* comp.c                                                                    */
 /* ========================================================================= */
 STIX_EXPORT int stix_compile (
-	stix_t*       stix,
+	stix_t*        stix,
 	stix_io_impl_t io
 );
 
@@ -1165,7 +1180,7 @@ STIX_EXPORT void stix_getsynerr (
 /* exec.c                                                                    */
 /* ========================================================================= */
 int stix_getprimno (
-	stix_t*           stix,
+	stix_t*            stix,
 	const stix_oocs_t* name
 );
 

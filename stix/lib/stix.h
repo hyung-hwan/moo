@@ -163,10 +163,14 @@ typedef struct stix_obj_word_t*     stix_oop_word_t;
 #define STIX_CHAR_TO_OOP(num) ((stix_oop_t)((((stix_oow_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_CHAR))
 #define STIX_OOP_TO_CHAR(oop) (((stix_oow_t)oop) >> STIX_OOP_TAG_BITS)
 
-#define STIX_SMINT_BITS (STIX_SIZEOF(stix_ooi_t) * 8 - STIX_OOP_TAG_BITS)
+/* SMOOI takes up 62 bit on a 64-bit architecture and 30 bits 
+ * on a 32-bit architecture. The absolute value takes up 61 bits and 29 bits
+ * respectively for the 1 sign bit. */
+#define STIX_SMOOI_BITS (STIX_OOI_BITS - STIX_OOP_TAG_BITS)
+#define STIX_SMOOI_ABS_BITS (STIX_SMOOI_BITS - 1)
 #define STIX_SMOOI_MAX ((stix_ooi_t)(~((stix_oow_t)0) >> (STIX_OOP_TAG_BITS + 1)))
-/* Sacrificing 1 bit pattern for a negative SMOOI makes implementation
- * a lot eaisier in many parts */
+/* Sacrificing 1 bit pattern for a negative SMOOI makes 
+ * implementation a lot eaisier in many respect. */
 /*#define STIX_SMOOI_MIN (-STIX_SMOOI_MAX - 1)*/
 #define STIX_SMOOI_MIN (-STIX_SMOOI_MAX)
 #define STIX_IN_SMOOI_RANGE(ooi)  ((ooi) >= STIX_SMOOI_MIN && (ooi) <= STIX_SMOOI_MAX)
@@ -187,7 +191,6 @@ enum stix_obj_type_t
 	STIX_OBJ_TYPE_BYTE,
 	STIX_OBJ_TYPE_HALFWORD,
 	STIX_OBJ_TYPE_WORD,
-	
 
 /*
 	STIX_OBJ_TYPE_UINT8,
@@ -292,6 +295,9 @@ typedef enum stix_obj_type_t stix_obj_type_t;
 	(((stix_oow_t)(m)) << (STIX_OBJ_FLAGS_TRAILER_BITS)) | \
 	(((stix_oow_t)(r)) << 0) \
 )
+
+#define STIX_OBJ_SIZE_MAX ((stix_oow_t)STIX_SMOOI_MAX)
+/*#define STIX_OBJ_SIZE_MAX ((stix_oow_t)STIX_TYPE_MAX(stix_oow_t))*/
 
 #define STIX_OBJ_HEADER \
 	stix_oow_t _flags; \

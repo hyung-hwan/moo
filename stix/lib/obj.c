@@ -199,11 +199,14 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 			{
 				goto einval;
 			}
+
+			STIX_ASSERT (named_instvar + vlen <= STIX_OBJ_SIZE_MAX);
 		}
 		else
 		{
 			/* a non-pointer indexed class can't have named instance variables */
 			if (named_instvar > 0) goto einval;
+			if (vlen > STIX_OBJ_SIZE_MAX) goto einval;
 		}
 	}
 	else
@@ -211,9 +214,10 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 		/* named instance variables only. treat it as if it is an
 		 * indexable class with no variable data */
 		indexed_type = STIX_OBJ_TYPE_OOP;
-		vlen = 0;
+		vlen = 0; /* vlen is not used */
 
 		if (named_instvar > STIX_MAX_NAMED_INSTVARS) goto einval;
+		STIX_ASSERT (named_instvar <= STIX_OBJ_SIZE_MAX);
 	}
 
 	stix_pushtmp (stix, &_class); tmp_count++;

@@ -257,7 +257,7 @@ static STIX_INLINE stix_oop_t make_bloated_bigint_with_ooi (stix_t* stix, stix_o
 	stix_oow_t w;
 	stix_oop_t z;
 
-	STIX_ASSERT (extra <= STIX_TYPE_MAX(stix_oow_t) - 1); 
+	STIX_ASSERT (extra <= STIX_OBJ_SIZE_MAX - 1); 
 	STIX_ASSERT (STIX_SIZEOF(stix_oow_t) == STIX_SIZEOF(stix_liw_t));
 	if (i >= 0)
 	{
@@ -280,7 +280,7 @@ static STIX_INLINE stix_oop_t make_bloated_bigint_with_ooi (stix_t* stix, stix_o
 	stix_oow_t w;
 	stix_oop_t z;
 
-	STIX_ASSERT (extra <= STIX_TYPE_MAX(stix_oow_t) - 2); 
+	STIX_ASSERT (extra <= STIX_OBJ_SIZE_MAX - 2); 
 	if (i >= 0)
 	{
 		w = i;
@@ -337,7 +337,7 @@ static STIX_INLINE stix_oop_t expand_bigint (stix_t* stix, stix_oop_t oop, stix_
 	STIX_ASSERT (STIX_OOP_IS_POINTER(oop));
 	count = STIX_OBJ_GET_SIZE(oop);
 
-	if (inc > STIX_TYPE_MAX(stix_oow_t) - count)
+	if (inc > STIX_OBJ_SIZE_MAX - count)
 	{
 		stix->errnum = STIX_ENOMEM; /* TODO: is it a soft failure or a hard failure? is this error code proper? */
 		return STIX_NULL;
@@ -855,7 +855,7 @@ static stix_oop_t add_unsigned_integers (stix_t* stix, stix_oop_t x, stix_oop_t 
 	bs = STIX_OBJ_GET_SIZE(y);
 	zs = (as >= bs? as: bs);
 
-	if (zs >= STIX_TYPE_MAX(stix_oow_t))
+	if (zs >= STIX_OBJ_SIZE_MAX)
 	{
 		stix->errnum = STIX_ENOMEM; /* TOOD: is it a soft failure or hard failure? */
 		return STIX_NULL;
@@ -916,7 +916,7 @@ static stix_oop_t multiply_unsigned_integers (stix_t* stix, stix_oop_t x, stix_o
 	xz = STIX_OBJ_GET_SIZE(x);
 	yz = STIX_OBJ_GET_SIZE(y);
 
-	if (yz > STIX_TYPE_MAX(stix_oow_t) - xz)
+	if (yz > STIX_OBJ_SIZE_MAX - xz)
 	{
 		stix->errnum = STIX_ENOMEM; /* TOOD: is it a soft failure or hard failure? */
 		return STIX_NULL;
