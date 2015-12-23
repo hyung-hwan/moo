@@ -547,7 +547,7 @@ static void complement2_unsigned_array (const stix_liw_t* x, stix_oow_t xs, stix
 	for (i = 0; i < xs; i++)
 	{
 		w = (stix_lidw_t)(~x[i]) + carry;
-		/*w = (stix_lidw_t)(x[i] ^ STIX_TYPE_MAX(stix_liw_t)) + carry;*/
+		/*w = (stix_lidw_t)(x[i] ^ (~(stix_liw_t)0)) + carry;*/
 		carry = w >> STIX_LIW_BITS;
 		z[i] = w;
 	}
@@ -1644,7 +1644,7 @@ stix_oop_t stix_bitandints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			STIX_ASSERT (carry[0] == 0);
 
 			/* 2's complement on the final result */
-			((stix_oop_liword_t)z)->slot[zs] = STIX_TYPE_MAX(stix_liw_t);
+			((stix_oop_liword_t)z)->slot[zs] = ~(stix_liw_t)0;
 			carry[0] = 1;
 			for (i = 0; i <= zs; i++)
 			{
@@ -1859,7 +1859,7 @@ stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 
 		adjust_to_negative:
 			/* 2's complement on the final result */
-			((stix_oop_liword_t)z)->slot[zs] = STIX_TYPE_MAX(stix_liw_t);
+			((stix_oop_liword_t)z)->slot[zs] = ~(stix_liw_t)0;
 			carry[0] = 1;
 			for (i = 0; i <= zs; i++)
 			{
@@ -1918,7 +1918,7 @@ stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			 *  redundant.
 			for (; i < xs; i++)
 			{
-				((stix_oop_liword_t)z)->slot[i] = STIX_TYPE_MAX(stix_liw_t);
+				((stix_oop_liword_t)z)->slot[i] = ~(stix_liw_t)0;
 			}
 			*/
 			goto adjust_to_negative;
@@ -2076,7 +2076,7 @@ stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			{
 				w[0] = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry[0];
 				carry[0] = w[0] >> STIX_LIW_BITS;
-				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0] ^ STIX_TYPE_MAX(stix_liw_t);
+				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0] ^ (~(stix_liw_t)0);
 			}
 			STIX_ASSERT (carry[0] == 0);
 		}
@@ -2104,7 +2104,7 @@ stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 
 		adjust_to_negative:
 			/* 2's complement on the final result */
-			((stix_oop_liword_t)z)->slot[zs] = STIX_TYPE_MAX(stix_liw_t);
+			((stix_oop_liword_t)z)->slot[zs] = ~(stix_liw_t)0;
 			carry = 1;
 			for (i = 0; i <= zs; i++)
 			{
@@ -2134,7 +2134,7 @@ stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			/* treat the lacking part in y as all 1s */
 			for (; i < xs; i++)
 			{
-				((stix_oop_liword_t)z)->slot[i] = ((stix_oop_liword_t)x)->slot[i] ^ STIX_TYPE_MAX(stix_liw_t);
+				((stix_oop_liword_t)z)->slot[i] = ((stix_oop_liword_t)x)->slot[i] ^ (~(stix_liw_t)0);
 			}
 
 			goto adjust_to_negative;
@@ -2225,13 +2225,13 @@ stix_oop_t stix_bitinvint (stix_t* stix, stix_oop_t x)
 		{
 			stix_lidw_t w, carry;
 
+		#if 0
 			for (i = 0; i < xs; i++)
 			{
 				((stix_oop_liword_t)z)->slot[i] = ~((stix_oop_liword_t)x)->slot[i];
 			}
 
-			/* 2's complement on the final result */
-			((stix_oop_liword_t)z)->slot[zs] = STIX_TYPE_MAX(stix_liw_t);
+			((stix_oop_liword_t)z)->slot[zs] = ~(stix_liw_t)0;
 			carry = 1;
 			for (i = 0; i <= zs; i++)
 			{
@@ -2240,6 +2240,18 @@ stix_oop_t stix_bitinvint (stix_t* stix, stix_oop_t x)
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
 			}
 			STIX_ASSERT (carry == 0);
+		#else
+			carry = 1;
+			for (i = 0; i < xs; i++)
+			{
+				w = (stix_lidw_t)(((stix_oop_liword_t)x)->slot[i]) + carry;
+				carry = w >> STIX_LIW_BITS;
+				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
+			}
+			STIX_ASSERT (i == zs);
+			((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)carry;
+			STIX_ASSERT ((carry >> STIX_LIW_BITS) == 0);
+		#endif
 
 			STIX_OBJ_SET_CLASS (z, stix->_large_negative_integer);
 		}
@@ -2371,7 +2383,7 @@ stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 	{
 		stix_oop_t z;
 		int sign, negx, negy;
-		stix_oow_t shift, wshift;
+		stix_oow_t shift;
 
 		if (!is_integer(stix,x) || !is_integer(stix, y)) goto oops_einval;
 
@@ -2387,8 +2399,14 @@ stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			{
 				/* right shift */
 			#if defined(STIX_LIMIT_OBJ_SIZE)
+				/* the maximum number of bit shifts are guaranteed to be
+				 * small enough to fit into the stix_oow_t type. so i can 
+				 * easily assume that all bits are shifted out */
+				STIX_ASSERT (STIX_TYPE_MAX(stix_oow_t) >= STIX_OBJ_SIZE_MAX * 8);
 				return (negx)? STIX_SMOOI_TO_OOP(-1): STIX_SMOOI_TO_OOP(0);
 			#else
+				/* TODO: */
+				/* TODO: */
 				/* TODO: */
 			#endif
 			}
@@ -2397,8 +2415,9 @@ stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 				/* left shift */
 			#if defined(STIX_LIMIT_OBJ_SIZE)
 				/* the maximum number of bit shifts are guaranteed to be
-				 * small enough to fit into the stix_oow_t type, i can 
-				 * simply return a failure here */
+				 * small enough to fit into the stix_oow_t type. so i can 
+				 * simply return a failure here becuase it's surely too 
+				 * large after shifting */
 				STIX_ASSERT (STIX_TYPE_MAX(stix_oow_t) >= STIX_OBJ_SIZE_MAX * 8);
 				stix->errnum = STIX_EOOMEM; /* is it a soft failure or a hard failure? is this error code proper? */
 				return STIX_NULL;
@@ -2449,6 +2468,8 @@ stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		}
 		else if (sign >= 1)
 		{
+			stix_oow_t wshift;
+
 		left_shift_last:
 			wshift = shift / STIX_LIW_BITS;
 			if (shift > wshift * STIX_LIW_BITS) wshift++;
@@ -2462,9 +2483,70 @@ stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		{
 			/* right shift */
 			STIX_ASSERT (sign <= -1);
-/*TODO" */
-		}
 
+			if (negx)
+			{
+				stix_lidw_t w;
+				stix_lidw_t carry;
+				stix_oow_t i, xs;
+
+				xs = STIX_OBJ_GET_SIZE(x);
+
+				stix_pushtmp (stix, &x);
+				stix_pushtmp (stix, &y);
+				/* +1 for the second inversion below */
+				z = stix_instantiate (stix, stix->_large_negative_integer, STIX_NULL, xs + 1);
+				stix_poptmps (stix, 2);
+				if (!z) return STIX_NULL;
+
+				/* the following lines roughly for 'z = stix_bitinv (stix, x)' */
+				carry = 1;
+				for (i = 0; i < xs; i++)
+				{
+					w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry;
+					carry = w >> STIX_LIW_BITS;
+					((stix_oop_liword_t)z)->slot[i] = ~(stix_liw_t)w;
+				}
+				STIX_ASSERT (carry == 0);
+
+				/* shift to the right */
+				rshift_unsigned_array (((stix_oop_liword_t)z)->slot, xs, shift);
+
+				/* the following lines roughly for 'z = stix_bitinv (stix, z)' */
+			#if 0
+				for (i = 0; i < xs; i++)
+				{
+					((stix_oop_liword_t)z)->slot[i] = ~((stix_oop_liword_t)z)->slot[i];
+				}
+				((stix_oop_liword_t)z)->slot[xs] = ~(stix_liw_t)0;
+
+				carry = 1;
+				for (i = 0; i <= xs; i++)
+				{
+					w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)z)->slot[i]) + carry;
+					carry = w >> STIX_LIW_BITS;
+					((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
+				}
+				STIX_ASSERT (carry == 0);
+			#else
+				carry = 1;
+				for (i = 0; i < xs; i++)
+				{
+					w = (stix_lidw_t)(((stix_oop_liword_t)z)->slot[i]) + carry;
+					carry = w >> STIX_LIW_BITS;
+					((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
+				}
+				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)carry;
+				STIX_ASSERT ((carry >> STIX_LIW_BITS) == 0);
+			#endif
+			}
+			else
+			{
+				z = clone_bigint (stix, x, STIX_OBJ_GET_SIZE(x));
+				if (!z) return STIX_NULL;
+				rshift_unsigned_array (((stix_oop_liword_t)z)->slot, STIX_OBJ_GET_SIZE(z), shift);
+			}
+		}
 
 		return normalize_bigint(stix, z);
 	}
