@@ -165,26 +165,73 @@ static STIX_INLINE int liw_mul_overflow (stix_liw_t a, stix_liw_t b, stix_liw_t*
 }
 #endif
 
-static STIX_INLINE int is_integer (stix_t* stix, stix_oop_t oop)
+static int is_normalized_integer (stix_t* stix, stix_oop_t oop)
 {
-	stix_oop_t c;
-
-	c = STIX_CLASSOF(stix,oop);
-
+	if (STIX_OOP_IS_SMOOI(oop)) return 1;
+	if (STIX_OOP_IS_POINTER(oop))
+	{
+		stix_oop_t c;
 /* TODO: is it better to introduce a special integer mark into the class itself */
 /* TODO: or should it check if it's a subclass, subsubclass, subsubsubclass, etc of a large_integer as well? */
-	return c == stix->_small_integer ||
-	       c == stix->_large_positive_integer ||
-	       c == stix->_large_negative_integer;
+		c = STIX_OBJ_GET_CLASS(oop);
+
+		if (c == stix->_large_positive_integer ||
+		    c == stix->_large_negative_integer) 
+		{
+			stix_oow_t sz;
+
+			sz = STIX_OBJ_GET_SIZE(oop);
+			STIX_ASSERT (sz >= 1);
+
+			return ((stix_oop_liword_t)oop)->slot[sz - 1] == 0? 0: 1;
+		}
+	}
+
+	return 0;
 }
 
-static STIX_INLINE int bigint_to_oow (stix_t* stix, stix_oop_t num, stix_oow_t* w)
+static STIX_INLINE int is_integer (stix_t* stix, stix_oop_t oop)
+{
+	if (STIX_OOP_IS_SMOOI(oop)) return 1;
+	if (STIX_OOP_IS_POINTER(oop))
+	{
+		stix_oop_t c;
+/* TODO: is it better to introduce a special integer mark into the class itself */
+/* TODO: or should it check if it's a subclass, subsubclass, subsubsubclass, etc of a large_integer as well? */
+		c = STIX_OBJ_GET_CLASS(oop);
+
+		if (c == stix->_large_positive_integer ||
+		    c == stix->_large_negative_integer) return 1;
+	}
+
+	return 0;
+}
+
+static STIX_INLINE int integer_to_oow (stix_t* stix, stix_oop_t num, stix_oow_t* w)
 {
 	/* return value 
 	 *   1 - a positive number including 0 that can fit into stix_oow_t
 	 *  -1 - a negative number whose absolute value can fit into stix_oow_t
 	 *   0 - number too large or too small
 	 */
+
+	if (STIX_OOP_IS_SMOOI(num))
+	{
+		stix_ooi_t v;
+
+		v = STIX_OOP_TO_SMOOI(num);
+		if (v < 0)
+		{
+			*w = -v;
+			return -1;
+		}
+		else
+		{
+			*w = v;
+			return 1;
+		}
+	}
+
 #if (STIX_LIW_BITS == STIX_OOW_BITS)
 	STIX_ASSERT (STIX_OBJ_GET_SIZE(num) >= 1);
 	if (STIX_OBJ_GET_SIZE(num) == 1)
@@ -194,6 +241,11 @@ static STIX_INLINE int bigint_to_oow (stix_t* stix, stix_oop_t num, stix_oow_t* 
 	}
 
 #elif (STIX_LIW_BITS == STIX_OOHW_BITS)
+	/* this function must be called with a real large integer.
+	 * a real large integer is at least 2 half-word long.
+	 * you must not call this function with an unnormalized
+	 * large integer. */
+
 	STIX_ASSERT (STIX_OBJ_GET_SIZE(num) >= 2);
 	if (STIX_OBJ_GET_SIZE(num) == 2)
 	{
@@ -2264,6 +2316,260 @@ oops_einval:
 	return STIX_NULL;
 }
 
+static STIX_INLINE stix_oop_t rshift_negative_bigint (stix_t* stix, stix_oop_t x, stix_oow_t shift)
+{
+	stix_oop_t z;
+	stix_lidw_t w;
+	stix_lidw_t carry;
+	stix_oow_t i, xs;
+
+	STIX_ASSERT (STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer);
+	xs = STIX_OBJ_GET_SIZE(x);
+
+	stix_pushtmp (stix, &x);
+	/* +1 for the second inversion below */
+	z = stix_instantiate (stix, stix->_large_negative_integer, STIX_NULL, xs + 1);
+	stix_poptmp (stix);
+	if (!z) return STIX_NULL;
+
+	/* the following lines roughly for 'z = stix_bitinv (stix, x)' */
+	carry = 1;
+	for (i = 0; i < xs; i++)
+	{
+		w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry;
+		carry = w >> STIX_LIW_BITS;
+		((stix_oop_liword_t)z)->slot[i] = ~(stix_liw_t)w;
+	}
+	STIX_ASSERT (carry == 0);
+
+	/* shift to the right */
+	rshift_unsigned_array (((stix_oop_liword_t)z)->slot, xs, shift);
+
+	/* the following lines roughly for 'z = stix_bitinv (stix, z)' */
+#if 0
+	for (i = 0; i < xs; i++)
+	{
+		((stix_oop_liword_t)z)->slot[i] = ~((stix_oop_liword_t)z)->slot[i];
+	}
+	((stix_oop_liword_t)z)->slot[xs] = ~(stix_liw_t)0;
+
+	carry = 1;
+	for (i = 0; i <= xs; i++)
+	{
+		w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)z)->slot[i]) + carry;
+		carry = w >> STIX_LIW_BITS;
+		((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
+	}
+	STIX_ASSERT (carry == 0);
+#else
+	carry = 1;
+	for (i = 0; i < xs; i++)
+	{
+		w = (stix_lidw_t)(((stix_oop_liword_t)z)->slot[i]) + carry;
+		carry = w >> STIX_LIW_BITS;
+		((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
+	}
+	((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)carry;
+	STIX_ASSERT ((carry >> STIX_LIW_BITS) == 0);
+#endif
+
+	return z; /* z is not normalized */
+}
+
+#if defined(STIX_LIMIT_OBJ_SIZE)
+	/* nothing */
+#else
+
+static STIX_INLINE stix_oop_t rshift_negative_bigint_and_normalize (stix_t* stix, stix_oop_t x, stix_oop_t y)
+{
+	stix_oop_t z;
+	stix_oow_t shift;
+	int sign;
+
+	STIX_ASSERT (STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer);
+	STIX_ASSERT (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer);
+
+	/* for convenience in subtraction below. 
+	 * it could be STIX_TYPE_MAX(stix_oow_t) 
+	 * if make_bigint_with_intmax() or something
+	 * similar were used instead of STIX_SMOOI_TO_OOP().*/
+	shift = STIX_SMOOI_MAX;
+	do
+	{
+		stix_pushtmp (stix, &y);
+		z = rshift_negative_bigint (stix, x, shift);
+		stix_poptmp (stix);
+		if (!z) return STIX_NULL;
+
+		/* y is a negative number. use stix_addints() until it becomes 0 */
+		stix_pushtmp (stix, &z);
+		y = stix_addints (stix, y, STIX_SMOOI_TO_OOP(shift));
+		stix_poptmp (stix);
+		if (!y) return STIX_NULL;
+
+		sign = integer_to_oow (stix, y, &shift);
+		if (sign == 0) shift = STIX_SMOOI_MAX;
+		else 
+		{
+			if (shift == 0)
+			{
+				/* no more shift */
+				return normalize_bigint (stix, z);
+			}
+			STIX_ASSERT (sign <= -1);
+		}
+
+		stix_pushtmp (stix, &y);
+		x = normalize_bigint (stix, z);
+		stix_poptmp (stix);
+		if (!x) return STIX_NULL;
+
+		if (STIX_OOP_IS_SMOOI(x))
+		{
+			/* for normaization above, x can become a small integer */
+			stix_ooi_t v;
+
+			v = STIX_OOP_TO_SMOOI(x);
+			STIX_ASSERT (v < 0);
+
+			/* normal right shift of a small negative integer */
+			if (shift >= STIX_OOI_BITS - 1) 
+			{
+				/* when y is still a large integer, this condition is met
+				 * met as STIX_SMOOI_MAX > STIX_OOI_BITS. so i can simly 
+				 * terminate the loop after this */
+				return STIX_SMOOI_TO_OOP(-1);
+			}
+			else 
+			{
+				v = (stix_ooi_t)(((stix_oow_t)v >> shift) | STIX_HBMASK(stix_oow_t, shift));
+				if (STIX_IN_SMOOI_RANGE(v)) 
+					return STIX_SMOOI_TO_OOP(v);
+				else 
+					return make_bigint_with_ooi (stix, v);
+			}
+		}
+	}
+	while (1);
+
+	/* this part must not be reached */
+	STIX_ASSERT (!"internal error - must not happen");
+	stix->errnum = STIX_EINTERN;
+	return STIX_NULL;
+}
+
+static STIX_INLINE stix_oop_t rshift_positive_bigint_and_normalize (stix_t* stix, stix_oop_t x, stix_oop_t y)
+{
+	stix_oop_t z;
+	stix_oow_t zs, shift;
+	int sign;
+
+	STIX_ASSERT (STIX_OBJ_GET_CLASS(x) == stix->_large_positive_integer);
+	STIX_ASSERT (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer);
+
+	zs = STIX_OBJ_GET_SIZE(x);
+
+	stix_pushtmp (stix, &y);
+	z = clone_bigint (stix, x, zs);
+	stix_poptmp (stix);
+	if (!z) return STIX_NULL;
+
+	/* for convenience in subtraction below. 
+	 * it could be STIX_TYPE_MAX(stix_oow_t) 
+	 * if make_bigint_with_intmax() or something
+	 * similar were used instead of STIX_SMOOI_TO_OOP().*/
+	shift = STIX_SMOOI_MAX;
+	do
+	{
+		rshift_unsigned_array (((stix_oop_liword_t)z)->slot, zs, shift);
+		if (count_effective (((stix_oop_liword_t)z)->slot, zs) == 1 &&
+		    ((stix_oop_liword_t)z)->slot[0] == 0) 
+		{
+			/* if z is 0, i don't have to go on */
+			break;
+		}
+
+		/* y is a negative number. use stix_addints() until it becomes 0 */
+		stix_pushtmp (stix, &z);
+		y = stix_addints (stix, y, STIX_SMOOI_TO_OOP(shift));
+		stix_poptmp (stix);
+		if (!y) return STIX_NULL;
+
+		sign = integer_to_oow (stix, y, &shift);
+		if (sign == 0) shift = STIX_SMOOI_MAX;
+		else 
+		{
+			if (shift == 0) break;
+			STIX_ASSERT (sign <= -1);
+		}
+	}
+	while (1);
+
+	return normalize_bigint(stix, z);
+}
+
+static STIX_INLINE stix_oop_t lshift_bigint_and_normalize (stix_t* stix, stix_oop_t x, stix_oop_t y)
+{
+	stix_oop_t z;
+	stix_oow_t wshift, shift;
+	int sign;
+
+	STIX_ASSERT (STIX_OBJ_GET_CLASS(y) == stix->_large_positive_integer);
+
+	/* this loop is very inefficient as shifting is repeated
+	 * with lshift_unsigned_array(). however, this part of the
+	 * code is not likey to be useful because the amount of
+	 * memory available is certainly not enough to support 
+	 * huge shifts greater than STIX_TYPE_MAX(stix_oow_t) */
+	shift = STIX_SMOOI_MAX;
+	do
+	{
+		/* for convenience only in subtraction below. 
+		 * should it be between STIX_SMOOI_MAX and STIX_TYPE_MAX(stix_oow_t),
+		 * the second parameter to stix_subints() can't be composed
+		 * using STIX_SMOOI_TO_OOP() */
+		wshift = shift / STIX_LIW_BITS;
+		if (shift > wshift * STIX_LIW_BITS) wshift++;
+
+		stix_pushtmp (stix, &y);
+		z = expand_bigint (stix, x, wshift);
+		stix_poptmp (stix);
+		if (!z) return STIX_NULL;
+
+		lshift_unsigned_array (((stix_oop_liword_t)z)->slot, STIX_OBJ_GET_SIZE(z), shift);
+
+		stix_pushtmp (stix, &y);
+		x = normalize_bigint (stix, z);
+		stix_poptmp (stix);
+		if (!x) return STIX_NULL;
+
+		stix_pushtmp (stix, &x);
+		y = stix_subints (stix, y, STIX_SMOOI_TO_OOP(shift));
+		stix_poptmp (stix);
+		if (!y) return STIX_NULL;
+
+		sign = integer_to_oow (stix, y, &shift);
+		if (sign == 0) shift = STIX_SMOOI_MAX;
+		else
+		{
+			if (shift == 0) 
+			{
+				STIX_ASSERT (is_normalized_integer (stix, x));
+				return x;
+			}
+			STIX_ASSERT (sign >= 1);
+		}
+	}
+	while (1);
+
+	/* this part must not be reached */
+	STIX_ASSERT (!"internal error - must not happen");
+	stix->errnum = STIX_EINTERN;
+	return STIX_NULL;
+}
+
+#endif
+
 stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 {
 	/* left shift if y is positive,
@@ -2338,217 +2644,143 @@ stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			return make_bigint_with_ooi (stix, v);
 		}
 	}
-	else if (STIX_OOP_IS_SMOOI(x))
-	{
-		stix_ooi_t v;
-
-		if (!is_integer(stix,y)) goto oops_einval;
-
-		v = STIX_OOP_TO_SMOOI(x);
-		if (v == 0) return STIX_SMOOI_TO_OOP(0);
-
-		if (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer)
-		{
-			/* right shift - special case.
-			 * x is a small integer. it is just a few bytes long.
-			 * y is a large negative integer. its smallest absolute value
-			 * is STIX_SMOOI_MAX. i know the final answer. */
-			return (v < 0)? STIX_SMOOI_TO_OOP(-1): STIX_SMOOI_TO_OOP(0);
-		}
-
-		stix_pushtmp (stix, &y);
-		x = make_bigint_with_ooi (stix, v);
-		stix_poptmp (stix);
-		if (!x) return STIX_NULL;
-
-		goto bigint_and_bigint;
-	}
-	else if (STIX_OOP_IS_SMOOI(y))
-	{
-		stix_ooi_t v;
-
-		if (!is_integer(stix,x)) goto oops_einval;
-
-		v = STIX_OOP_TO_SMOOI(y);
-		if (v == 0) return clone_bigint (stix, x, STIX_OBJ_GET_SIZE(x));
-
-		stix_pushtmp (stix, &x);
-		y = make_bigint_with_ooi (stix, v);
-		stix_poptmp (stix);
-		if (!y) return STIX_NULL;
-
-		goto bigint_and_bigint;
-	}
 	else
 	{
-		stix_oop_t z;
 		int sign, negx, negy;
 		stix_oow_t shift;
 
-		if (!is_integer(stix,x) || !is_integer(stix, y)) goto oops_einval;
-
-	bigint_and_bigint:
-		negx = (STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer)? 1: 0;
-		negy = (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer)? 1: 0;
-
-		sign = bigint_to_oow (stix, y, &shift);
-		if (sign == 0)
+		if (STIX_OOP_IS_SMOOI(x))
 		{
-			/* y is too big or too small */
-			if (negy)
+			stix_ooi_t v;
+
+			if (!is_integer(stix,y)) goto oops_einval;
+
+			v = STIX_OOP_TO_SMOOI(x);
+			if (v == 0) return STIX_SMOOI_TO_OOP(0);
+
+			if (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer)
 			{
-				/* right shift */
-			#if defined(STIX_LIMIT_OBJ_SIZE)
-				/* the maximum number of bit shifts are guaranteed to be
-				 * small enough to fit into the stix_oow_t type. so i can 
-				 * easily assume that all bits are shifted out */
-				STIX_ASSERT (STIX_TYPE_MAX(stix_oow_t) >= STIX_OBJ_SIZE_MAX * 8);
-				return (negx)? STIX_SMOOI_TO_OOP(-1): STIX_SMOOI_TO_OOP(0);
-			#else
-				/* TODO: */
-				/* TODO: */
-				/* TODO: */
-			#endif
+				/* right shift - special case.
+				 * x is a small integer. it is just a few bytes long.
+				 * y is a large negative integer. its smallest absolute value
+				 * is STIX_SMOOI_MAX. i know the final answer. */
+				return (v < 0)? STIX_SMOOI_TO_OOP(-1): STIX_SMOOI_TO_OOP(0);
 			}
-			else
+
+			stix_pushtmp (stix, &y);
+			x = make_bigint_with_ooi (stix, v);
+			stix_poptmp (stix);
+			if (!x) return STIX_NULL;
+
+			goto bigint_and_bigint;
+		}
+		else if (STIX_OOP_IS_SMOOI(y))
+		{
+			stix_ooi_t v;
+
+			if (!is_integer(stix,x)) goto oops_einval;
+
+			v = STIX_OOP_TO_SMOOI(y);
+			if (v == 0) return clone_bigint (stix, x, STIX_OBJ_GET_SIZE(x));
+
+			negx = (STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer)? 1: 0;
+			if (v > 0)
+			{
+				sign = 1;
+				negy = 0;
+				shift = v;
+				goto bigint_and_positive_oow;
+			}
+			else 
+			{
+				sign = -1;
+				negy = 1;
+				shift = -v;
+				goto bigint_and_negative_oow;
+			}
+		}
+		else
+		{
+			stix_oop_t z;
+
+			if (!is_integer(stix,x) || !is_integer(stix, y)) goto oops_einval;
+
+		bigint_and_bigint:
+			negx = (STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer)? 1: 0;
+			negy = (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer)? 1: 0;
+
+			sign = integer_to_oow (stix, y, &shift);
+			if (sign == 0)
+			{
+				/* y is too big or too small */
+				if (negy)
+				{
+					/* right shift */
+				#if defined(STIX_LIMIT_OBJ_SIZE)
+					/* the maximum number of bit shifts are guaranteed to be
+					 * small enough to fit into the stix_oow_t type. so i can 
+					 * easily assume that all bits are shifted out */
+					STIX_ASSERT (STIX_TYPE_MAX(stix_oow_t) >= STIX_OBJ_SIZE_MAX * 8);
+					return (negx)? STIX_SMOOI_TO_OOP(-1): STIX_SMOOI_TO_OOP(0);
+				#else
+					if (negx)
+						return rshift_negative_bigint_and_normalize (stix, x, y);
+					else
+						return rshift_positive_bigint_and_normalize (stix, x, y);
+				#endif
+				}
+				else
+				{
+					/* left shift */
+				#if defined(STIX_LIMIT_OBJ_SIZE)
+					/* the maximum number of bit shifts are guaranteed to be
+					 * small enough to fit into the stix_oow_t type. so i can 
+					 * simply return a failure here becuase it's surely too 
+					 * large after shifting */
+					STIX_ASSERT (STIX_TYPE_MAX(stix_oow_t) >= STIX_OBJ_SIZE_MAX * 8);
+					stix->errnum = STIX_EOOMEM; /* is it a soft failure or a hard failure? is this error code proper? */
+					return STIX_NULL;
+				#else
+					return lshift_bigint_and_normalize (stix, x, y);
+				#endif
+				}
+			}
+			else if (sign >= 1)
 			{
 				/* left shift */
-			#if defined(STIX_LIMIT_OBJ_SIZE)
-				/* the maximum number of bit shifts are guaranteed to be
-				 * small enough to fit into the stix_oow_t type. so i can 
-				 * simply return a failure here becuase it's surely too 
-				 * large after shifting */
-				STIX_ASSERT (STIX_TYPE_MAX(stix_oow_t) >= STIX_OBJ_SIZE_MAX * 8);
-				stix->errnum = STIX_EOOMEM; /* is it a soft failure or a hard failure? is this error code proper? */
-				return STIX_NULL;
-			#else
-				/* this loop is very inefficient as shifting is repeated
-				 * with lshift_unsigned_array(). however, this part of the
-				 * code is not likey to be useful because the amount of
-				 * memory available is certainly not enough to support 
-				 * huge shifts greater than STIX_TYPE_MAX(stix_oow_t) */
-				do
-				{
-					/* for convenience only in subtraction below. 
-					 * should it be between STIX_SMOOI_MAX and STIX_TYPE_MAX(stix_oow_t),
-					 * the second parameter to stix_subints() can't be composed
-					 * using STIX_SMOOI_TO_OOP() */
-					shift = STIX_SMOOI_MAX;
-					wshift = shift / STIX_LIW_BITS;
-					if (shift > wshift * STIX_LIW_BITS) wshift++;
+				stix_oow_t wshift;
 
-					stix_pushtmp (stix, &y);
-					z = expand_bigint (stix, x, wshift);
-					stix_poptmp (stix);
+			bigint_and_positive_oow:
+				wshift = shift / STIX_LIW_BITS;
+				if (shift > wshift * STIX_LIW_BITS) wshift++;
+
+				z = expand_bigint (stix, x, wshift);
+				if (!z) return STIX_NULL;
+
+				lshift_unsigned_array (((stix_oop_liword_t)z)->slot, STIX_OBJ_GET_SIZE(z), shift);
+			}
+			else 
+			{
+				/* right shift */
+			bigint_and_negative_oow:
+
+				STIX_ASSERT (sign <= -1);
+
+				if (negx)
+				{
+					z = rshift_negative_bigint (stix, x, shift);
 					if (!z) return STIX_NULL;
-
-					lshift_unsigned_array (((stix_oop_liword_t)z)->slot, STIX_OBJ_GET_SIZE(z), shift);
-					stix_pushtmp (stix, &y);
-					x = normalize_bigint (stix, z);
-					stix_poptmp (stix);
-					if (!x) return STIX_NULL;
-
-					stix_pushtmp (stix, &x);
-					y = stix_subints (stix, y, STIX_SMOOI_TO_OOP(shift));
-					stix_poptmp (stix);
-					if (!y) return STIX_NULL;
-
-					sign = bigint_to_oow (stix, y, &shift);
 				}
-				while (sign == 0);
-
-				STIX_ASSERT (sign >= 1);
-
-				if (shift) 
-					goto left_shift_last;
 				else
-					z = x;
-			#endif
+				{
+					z = clone_bigint (stix, x, STIX_OBJ_GET_SIZE(x));
+					if (!z) return STIX_NULL;
+					rshift_unsigned_array (((stix_oop_liword_t)z)->slot, STIX_OBJ_GET_SIZE(z), shift);
+				}
 			}
+
+			return normalize_bigint(stix, z);
 		}
-		else if (sign >= 1)
-		{
-			stix_oow_t wshift;
-
-		left_shift_last:
-			wshift = shift / STIX_LIW_BITS;
-			if (shift > wshift * STIX_LIW_BITS) wshift++;
-
-			z = expand_bigint (stix, x, wshift);
-			if (!z) return STIX_NULL;
-
-			lshift_unsigned_array (((stix_oop_liword_t)z)->slot, STIX_OBJ_GET_SIZE(z), shift);
-		}
-		else 
-		{
-			/* right shift */
-			STIX_ASSERT (sign <= -1);
-
-			if (negx)
-			{
-				stix_lidw_t w;
-				stix_lidw_t carry;
-				stix_oow_t i, xs;
-
-				xs = STIX_OBJ_GET_SIZE(x);
-
-				stix_pushtmp (stix, &x);
-				stix_pushtmp (stix, &y);
-				/* +1 for the second inversion below */
-				z = stix_instantiate (stix, stix->_large_negative_integer, STIX_NULL, xs + 1);
-				stix_poptmps (stix, 2);
-				if (!z) return STIX_NULL;
-
-				/* the following lines roughly for 'z = stix_bitinv (stix, x)' */
-				carry = 1;
-				for (i = 0; i < xs; i++)
-				{
-					w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry;
-					carry = w >> STIX_LIW_BITS;
-					((stix_oop_liword_t)z)->slot[i] = ~(stix_liw_t)w;
-				}
-				STIX_ASSERT (carry == 0);
-
-				/* shift to the right */
-				rshift_unsigned_array (((stix_oop_liword_t)z)->slot, xs, shift);
-
-				/* the following lines roughly for 'z = stix_bitinv (stix, z)' */
-			#if 0
-				for (i = 0; i < xs; i++)
-				{
-					((stix_oop_liword_t)z)->slot[i] = ~((stix_oop_liword_t)z)->slot[i];
-				}
-				((stix_oop_liword_t)z)->slot[xs] = ~(stix_liw_t)0;
-
-				carry = 1;
-				for (i = 0; i <= xs; i++)
-				{
-					w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)z)->slot[i]) + carry;
-					carry = w >> STIX_LIW_BITS;
-					((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
-				}
-				STIX_ASSERT (carry == 0);
-			#else
-				carry = 1;
-				for (i = 0; i < xs; i++)
-				{
-					w = (stix_lidw_t)(((stix_oop_liword_t)z)->slot[i]) + carry;
-					carry = w >> STIX_LIW_BITS;
-					((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
-				}
-				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)carry;
-				STIX_ASSERT ((carry >> STIX_LIW_BITS) == 0);
-			#endif
-			}
-			else
-			{
-				z = clone_bigint (stix, x, STIX_OBJ_GET_SIZE(x));
-				if (!z) return STIX_NULL;
-				rshift_unsigned_array (((stix_oop_liword_t)z)->slot, STIX_OBJ_GET_SIZE(z), shift);
-			}
-		}
-
-		return normalize_bigint(stix, z);
 	}
 
 oops_einval:
@@ -2848,28 +3080,8 @@ stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num, int radix)
 
 	STIX_ASSERT (radix >= 2 && radix <= 36);
 
-	if (STIX_OOP_IS_SMOOI(num))
-	{
-		v = STIX_OOP_TO_SMOOI(num);
-		if (v < 0)
-		{
-			w = -v;
-			v = -1;
-		}
-		else
-		{
-			w = v;
-			v = 1;
-		}
-	}
-	else if (!is_integer(stix,num)) 
-	{
-		goto oops_einval;
-	}
-	else
-	{
-		v = bigint_to_oow (stix, num, &w);
-	}
+	if (!is_integer(stix,num)) goto oops_einval;
+	v = integer_to_oow (stix, num, &w);
 
 	if (v)
 	{

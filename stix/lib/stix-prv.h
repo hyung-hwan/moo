@@ -57,7 +57,8 @@
 
 /* limit the maximum object size such that:
  *   1. an index to an object field can be represented in a small integer.
- *   2. the maximum number of bit shifts can be represented in the stix_oow_t type.
+ *   2. the maximum number of bits including bit-shifts can be represented
+ *      in the stix_oow_t type.
  */
 #define STIX_LIMIT_OBJ_SIZE
 
