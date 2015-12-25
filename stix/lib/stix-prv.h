@@ -1141,6 +1141,17 @@ stix_oop_t stix_divints (
 	stix_oop_t* rem
 );
 
+stix_oop_t stix_negateint (
+	stix_t*    stix,
+	stix_oop_t x
+);
+
+stix_oop_t stix_bitatint (
+	stix_t*    stix,
+	stix_oop_t x,
+	stix_oop_t y
+);
+
 stix_oop_t stix_bitandints (
 	stix_t*    stix,
 	stix_oop_t x,

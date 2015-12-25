@@ -108,6 +108,18 @@
 		self primitiveFailed.
 	}
 
+	#method negated
+	{
+		<primitive: #_integer_negated>
+		^0 - self.
+	}
+
+	#method bitAt: index
+	{
+		"## index 1 - least significant bit"
+		^(self bitShift: (index - 1) negated) bitAnd: 1.
+	}
+
 	#method bitAnd: aNumber
 	{
 		<primitive: #_integer_bitand>

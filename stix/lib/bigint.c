@@ -38,6 +38,8 @@
 /*#define IS_POWER_OF_2(ui) (((ui) > 0) && (((ui) & (~(ui)+ 1)) == (ui)))*/
 #define IS_POWER_OF_2(ui) (((ui) > 0) && ((ui) & ((ui) - 1)) == 0)
 
+#define IS_SIGN_DIFF(x,y) (((x) ^ (y)) < 0)
+
 /* digit character array */
 static char* _digitc = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -1376,13 +1378,13 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 
 				/* r must be floored. that is, it rounds away from zero 
 				 * and towards negative infinity */
-				if ((yv ^ r) < 0)
+				if (IS_SIGN_DIFF(yv, r))
 				{
 					/* if the divisor has a different sign from r,
 					 * change the sign of r to the divisor's sign */
 					r += yv;
 					--q;
-					STIX_ASSERT (r && ((yv ^ r) >= 0));
+					STIX_ASSERT (r && !IS_SIGN_DIFF(yv, r));
 				}
 			}
 			else
@@ -1396,7 +1398,7 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 					 7      -3     -2       1
 					-7      -3      2      -1
 				 */
-				if (xv && ((xv ^ r) < 0)) 
+				if (xv && IS_SIGN_DIFF(xv, r)) 
 				{
 					/* if the dividend has a different sign from r,
 					 * change the sign of r to the dividend's sign.
@@ -1406,7 +1408,7 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 					 * architecture. */
 					r -= yv;
 					++q;
-					STIX_ASSERT (xv && ((xv ^ r) >= 0));
+					STIX_ASSERT (xv && !IS_SIGN_DIFF(xv, r));
 				}
 			}
 		}
@@ -1560,6 +1562,40 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 
 	if (rem) *rem = r;
 	return normalize_bigint (stix, z);
+
+oops_einval:
+	stix->errnum = STIX_EINVAL;
+	return STIX_NULL;
+}
+
+
+stix_oop_t stix_negateint (stix_t* stix, stix_oop_t x)
+{
+	if (STIX_OOP_IS_SMOOI(x))
+	{
+		stix_ooi_t v;
+		v = STIX_OOP_TO_SMOOI(x);
+		return STIX_SMOOI_TO_OOP(-v);
+	}
+	else
+	{
+		if (!is_integer(stix, x)) goto oops_einval;
+		return clone_bigint_negated (stix, x, STIX_OBJ_GET_SIZE(x));
+	}
+
+oops_einval:
+	stix->errnum = STIX_EINVAL;
+	return STIX_NULL;
+}
+
+stix_oop_t stix_bitatint (stix_t* stix, stix_oop_t x, stix_oop_t y)
+{
+	if (STIX_OOP_IS_SMOOI(x) && STIX_OOP_IS_SMOOI(y))
+	{
+	}
+	else
+	{
+	}
 
 oops_einval:
 	stix->errnum = STIX_EINVAL;

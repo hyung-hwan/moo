@@ -1189,6 +1189,38 @@ static int prim_integer_rem2 (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
+static int prim_integer_negated (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, res;
+
+	STIX_ASSERT (nargs == 0);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+
+	res = stix_negateint (stix, rcv);
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
+}
+
+static int prim_integer_bitat (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg, res;
+
+	STIX_ASSERT (nargs == 2);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	res = stix_bitatint (stix, rcv, arg);
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
+}
+
 static int prim_integer_bitand (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
@@ -1251,7 +1283,6 @@ static int prim_integer_bitinv (stix_t* stix, stix_ooi_t nargs)
 	res = stix_bitinvint (stix, rcv);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_POP (stix);
 	ACTIVE_STACK_SETTOP (stix, res);
 	return 1;
 }
@@ -1815,11 +1846,13 @@ static prim_t primitives[] =
 	{   1,   prim_integer_rem,          "_integer_rem"         },
 	{   1,   prim_integer_quo2,         "_integer_quo2"        },
 	{   1,   prim_integer_rem2,         "_integer_rem2"        },
+	{   0,   prim_integer_negated,      "_integer_negated"     },
+	{   1,   prim_integer_bitat,        "_integer_bitat"       },
 	{   1,   prim_integer_bitand,       "_integer_bitand"      },
 	{   1,   prim_integer_bitor,        "_integer_bitor"       },
 	{   1,   prim_integer_bitxor,       "_integer_bitxor"      },
 	{   0,   prim_integer_bitinv,       "_integer_bitinv"      },
-	{   1,   prim_integer_bitshift,     "_integer_bitshift"      },
+	{   1,   prim_integer_bitshift,     "_integer_bitshift"    },
 	{   1,   prim_integer_eq,           "_integer_eq"          },
 	{   1,   prim_integer_ne,           "_integer_ne"          },
 	{   1,   prim_integer_lt,           "_integer_lt"          },
@@ -2015,14 +2048,13 @@ int stix_execute (stix_t* stix)
 
 	STIX_ASSERT (stix->active_context != STIX_NULL);
 
-printf ("QQQQQQQQQQQQQQQQQQQQQQQQQq\n");
 	while (1)
 	{
-#if 1
+#if 0
 printf ("IP<BF> => %d\n", (int)stix->ip);
 #endif
 switch_to_next_process (stix);
-#if 1
+#if 0
 printf ("IP<AF> => %d\n", (int)stix->ip);
 #endif
 
@@ -2519,7 +2551,15 @@ printf ("\n");
 				if (!newmth) 
 				{
 /* TODO: implement doesNotUnderstand: XXXXX  instead of returning -1. */
-printf ("no such method .........[");
+stix_oop_t c;
+
+c = STIX_CLASSOF(stix,newrcv);
+
+printf ("ERROR [NOT IMPLEMENTED YET] - receiver [");
+print_object (stix, newrcv);
+printf ("] class ");
+print_object (stix, c);
+printf (" doesNotUnderstand: [");
 print_oocs (&mthname);
 printf ("]\n");
 					goto oops;

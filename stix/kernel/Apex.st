@@ -206,6 +206,7 @@
 	{
 		## TODO: implement this
 		## PrimitiveFailureError signal.
+		self dump.
 		'primitive failed' dump.
 	}
 
@@ -218,6 +219,7 @@
 	{
 		## TODO: implement this
 		## UnrecognizedMessage signal.
+		self class dump.
 		'does not understand' dump.
 	}
 
