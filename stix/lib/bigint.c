@@ -883,7 +883,7 @@ static void divide_unsigned_array (
 	for (i = xs; i > 0; )
 	{
 		--i;
-		for (j = STIX_SIZEOF(stix_liw_t) * 8; j > 0;)
+		for (j = STIX_LIW_BITS; j > 0;)
 		{
 			--j;
 
@@ -1590,6 +1590,8 @@ oops_einval:
 
 stix_oop_t stix_bitatint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 {
+	/* y is 1-based */
+
 	if (STIX_OOP_IS_SMOOI(x) && STIX_OOP_IS_SMOOI(y))
 	{
 		stix_ooi_t v1, v2, v3;
@@ -1600,18 +1602,152 @@ stix_oop_t stix_bitatint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		if (v2 <= 0) return STIX_SMOOI_TO_OOP(0);
 		if (v1 >= 0)
 		{
-			if (v2 >= XXXXXXXXXX) return STIX_SMOOI_TO_OOP(0);
+			if (v2 >= STIX_SMOOI_BITS) return STIX_SMOOI_TO_OOP(0);
 			v3 = ((stix_oow_t)v1 >> (v2 - 1)) & 1;
 		}
 		else
 		{
-			if (v2 >= XXXXXXXXXX) return STIX_SMOOI_TO_OOP(-1);
+			if (v2 >= STIX_SMOOI_BITS) return STIX_SMOOI_TO_OOP(1);
 			v3 = ((~(stix_oow_t)-v1 + 1) >> (v2 - 1)) & 1;
 		}
 		return STIX_SMOOI_TO_OOP(v3);
 	}
+	else if (STIX_OOP_IS_SMOOI(x))
+	{
+		if (!is_integer(stix, y)) goto oops_einval;
+
+		if (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer) return STIX_SMOOI_TO_OOP(0);
+		/* y is definitely >= STIX_SMOOI_BITS */
+		if (STIX_OOP_TO_SMOOI(x) >= 0) 
+			return STIX_SMOOI_TO_OOP(0);
+		else 
+			return STIX_SMOOI_TO_OOP(1);
+	}
+	else if (STIX_OOP_IS_SMOOI(y))
+	{
+		stix_ooi_t v;
+		stix_oow_t wp, bp, xs;
+
+		if (!is_integer(stix, x)) goto oops_einval;
+		v = STIX_OOP_TO_SMOOI(y);
+
+		if (v <= 0) return STIX_SMOOI_TO_OOP(0);
+		wp = (v - 1) / STIX_LIW_BITS;
+		bp = (v - 1) - (wp * STIX_LIW_BITS);
+
+		xs = STIX_OBJ_GET_SIZE(x);
+		if (STIX_OBJ_GET_CLASS(x) == stix->_large_positive_integer)
+		{
+			if (wp >= xs) return STIX_SMOOI_TO_OOP(0);
+			v = (((stix_oop_liword_t)x)->slot[wp] >> bp) & 1;
+		}
+		else
+		{
+			stix_lidw_t w, carry;
+			stix_oow_t i;
+
+			if (wp >= xs) return STIX_SMOOI_TO_OOP(1);
+
+			carry = 1;
+			for (i = 0; i <= wp; i++)
+			{
+				w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry;
+				carry = w >> STIX_LIW_BITS;
+			}
+			v = ((stix_oow_t)w >> bp) & 1;
+		}
+
+		return STIX_SMOOI_TO_OOP(v);
+	}
 	else
 	{
+	#if defined(STIX_LIMIT_OBJ_SIZE)
+		/* nothing */
+	#else
+		stix_oow_t w, wp, bp, xs;
+		stix_ooi_t v;
+		int sign;
+	#endif
+
+		if (!is_integer(stix, x) || !is_integer(stix, y)) goto oops_einval;
+
+	#if defined(STIX_LIMIT_OBJ_SIZE)
+		if (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer) return STIX_SMOOI_TO_OOP(0);
+
+		STIX_ASSERT (STIX_OBJ_SIZE_BITS_MAX <= STIX_TYPE_MAX(stix_oow_t));
+		if (STIX_OBJ_GET_CLASS(x) == stix->_large_positive_integer)
+		{
+			return STIX_SMOOI_TO_OOP (0);
+		}
+		else
+		{
+			return STIX_SMOOI_TO_OOP (1);
+		}
+	#else
+		xs = STIX_OBJ_GET_SIZE(x);
+
+		if (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer) return STIX_SMOOI_TO_OOP(0);
+
+		sign = integer_to_oow (stix, y, &w);
+		STIX_ASSERT (sign >= 0);
+		if (sign >= 1)
+		{
+			wp = (w - 1) / STIX_LIW_BITS;
+			bp = (w - 1) - (wp * STIX_LIW_BITS);
+		}
+		else
+		{
+			stix_oop_t quo, rem;
+
+			STIX_ASSERT (sign == 0);
+
+			stix_pushtmp (stix, &x);
+			y = stix_subints (stix, y, STIX_SMOOI_TO_OOP(1));
+			stix_poptmp (stix);
+			if (!y) return STIX_NULL;
+
+			stix_pushtmp (stix, &x);
+			quo = stix_divints (stix, y, STIX_SMOOI_TO_OOP(STIX_LIW_BITS), 0, &rem);
+			stix_poptmp (stix);
+			if (!quo) return STIX_NULL;
+
+			sign = integer_to_oow (stix, quo, &wp);
+			STIX_ASSERT (sign >= 0);
+			if (sign == 0)
+			{
+				/* too large. set it to xs so that it gets out of
+				 * the valid range */
+				wp = xs;
+			}
+
+			STIX_ASSERT (STIX_OOP_IS_SMOOI(rem));
+			bp = STIX_OOP_TO_SMOOI(rem);
+			STIX_ASSERT (bp >= 0 && bp < STIX_LIW_BITS);
+		}
+
+		if (STIX_OBJ_GET_CLASS(x) == stix->_large_positive_integer)
+		{
+			if (wp >= xs) return STIX_SMOOI_TO_OOP(0);
+			v = (((stix_oop_liword_t)x)->slot[wp] >> bp) & 1;
+		}
+		else
+		{
+			stix_lidw_t w, carry;
+			stix_oow_t i;
+
+			if (wp >= xs) return STIX_SMOOI_TO_OOP(1);
+
+			carry = 1;
+			for (i = 0; i <= wp; i++)
+			{
+				w = (stix_lidw_t)((stix_liw_t)~((stix_oop_liword_t)x)->slot[i]) + carry;
+				carry = w >> STIX_LIW_BITS;
+			}
+			v = ((stix_oow_t)w >> bp) & 1;
+		}
+
+		return STIX_SMOOI_TO_OOP(v);
+	#endif
 	}
 
 oops_einval:
@@ -2773,7 +2909,7 @@ stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 					/* the maximum number of bit shifts are guaranteed to be
 					 * small enough to fit into the stix_oow_t type. so i can 
 					 * easily assume that all bits are shifted out */
-					STIX_ASSERT (STIX_TYPE_MAX(stix_oow_t) >= STIX_OBJ_SIZE_MAX * 8);
+					STIX_ASSERT (STIX_OBJ_SIZE_BITS_MAX <= STIX_TYPE_MAX(stix_oow_t));
 					return (negx)? STIX_SMOOI_TO_OOP(-1): STIX_SMOOI_TO_OOP(0);
 				#else
 					if (negx)
@@ -2790,7 +2926,7 @@ stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 					 * small enough to fit into the stix_oow_t type. so i can 
 					 * simply return a failure here becuase it's surely too 
 					 * large after shifting */
-					STIX_ASSERT (STIX_TYPE_MAX(stix_oow_t) >= STIX_OBJ_SIZE_MAX * 8);
+					STIX_ASSERT (STIX_TYPE_MAX(stix_oow_t) >= STIX_OBJ_SIZE_BITS_MAX);
 					stix->errnum = STIX_EOOMEM; /* is it a soft failure or a hard failure? is this error code proper? */
 					return STIX_NULL;
 				#else

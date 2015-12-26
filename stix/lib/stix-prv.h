@@ -222,8 +222,10 @@
  *   2. the maximum number of bit shifts can be represented in the stix_oow_t type.
  */
 #	define STIX_OBJ_SIZE_MAX ((stix_oow_t)STIX_SMOOI_MAX)
+#	define STIX_OBJ_SIZE_BITS_MAX (STIX_OBJ_SIZE_MAX * 8)
 #else
 #	define STIX_OBJ_SIZE_MAX ((stix_oow_t)STIX_TYPE_MAX(stix_oow_t))
+#	define STIX_OBJ_SIZE_BITS_MAX (STIX_OBJ_SIZE_MAX * 8)
 #endif
 
 
