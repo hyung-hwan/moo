@@ -1592,6 +1592,23 @@ stix_oop_t stix_bitatint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 {
 	if (STIX_OOP_IS_SMOOI(x) && STIX_OOP_IS_SMOOI(y))
 	{
+		stix_ooi_t v1, v2, v3;
+
+		v1 = STIX_OOP_TO_SMOOI(x);
+		v2 = STIX_OOP_TO_SMOOI(y);
+
+		if (v2 <= 0) return STIX_SMOOI_TO_OOP(0);
+		if (v1 >= 0)
+		{
+			if (v2 >= XXXXXXXXXX) return STIX_SMOOI_TO_OOP(0);
+			v3 = ((stix_oow_t)v1 >> (v2 - 1)) & 1;
+		}
+		else
+		{
+			if (v2 >= XXXXXXXXXX) return STIX_SMOOI_TO_OOP(-1);
+			v3 = ((~(stix_oow_t)-v1 + 1) >> (v2 - 1)) & 1;
+		}
+		return STIX_SMOOI_TO_OOP(v3);
 	}
 	else
 	{

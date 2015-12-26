@@ -1208,7 +1208,7 @@ static int prim_integer_bitat (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
 
-	STIX_ASSERT (nargs == 2);
+	STIX_ASSERT (nargs == 1);
 
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);

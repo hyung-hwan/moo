@@ -58,11 +58,6 @@
 #endif
 
 
-#if STIX_SIZEOF___INT128_T > 0
-#	undef STIX_SIZEOF___INT128_T
-#	define STIX_SIZEOF___INT128_T 0
-#endif
-
 /* =========================================================================
  * PRIMITIVE TYPE DEFINTIONS
  * ========================================================================= */

@@ -116,7 +116,8 @@
 
 	#method bitAt: index
 	{
-		"## index 1 - least significant bit"
+		"## index is 1-based"
+		<primitive: #_integer_bitat>
 		^(self bitShift: (index - 1) negated) bitAnd: 1.
 	}
 
