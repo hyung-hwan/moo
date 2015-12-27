@@ -64,7 +64,7 @@ stix_oop_t stix_allocoopobj (stix_t* stix, stix_oow_t size)
 	hdr = stix_allocbytes (stix, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
 	if (!hdr) return STIX_NULL;
 
-	hdr->_flags = STIX_OBJ_MAKE_FLAGS(STIX_OBJ_TYPE_OOP, STIX_SIZEOF(stix_oop_t), 0, 0, 0, 0);
+	hdr->_flags = STIX_OBJ_MAKE_FLAGS(STIX_OBJ_TYPE_OOP, STIX_SIZEOF(stix_oop_t), 0, 0, 0, 0, 0);
 	STIX_OBJ_SET_SIZE (hdr, size);
 	STIX_OBJ_SET_CLASS (hdr, stix->_nil);
 
@@ -87,7 +87,7 @@ stix_oop_t stix_allocoopobjwithtrailer (stix_t* stix, stix_oow_t size, const sti
 	hdr = stix_allocbytes (stix, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
 	if (!hdr) return STIX_NULL;
 
-	hdr->_flags = STIX_OBJ_MAKE_FLAGS(STIX_OBJ_TYPE_OOP, STIX_SIZEOF(stix_oop_t), 0, 0, 0, 1);
+	hdr->_flags = STIX_OBJ_MAKE_FLAGS(STIX_OBJ_TYPE_OOP, STIX_SIZEOF(stix_oop_t), 0, 0, 0, 0, 1);
 	STIX_OBJ_SET_SIZE (hdr, size);
 	STIX_OBJ_SET_CLASS (hdr, stix->_nil);
 
@@ -130,7 +130,7 @@ static STIX_INLINE stix_oop_t alloc_numeric_array (stix_t* stix, const void* ptr
 	hdr = stix_allocbytes (stix, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
 	if (!hdr) return STIX_NULL;
 
-	hdr->_flags = STIX_OBJ_MAKE_FLAGS(type, unit, extra, 0, 0, 0);
+	hdr->_flags = STIX_OBJ_MAKE_FLAGS(type, unit, extra, 0, 0, 0, 0);
 	hdr->_size = len;
 	STIX_OBJ_SET_SIZE (hdr, len);
 	STIX_OBJ_SET_CLASS (hdr, stix->_nil);
@@ -170,15 +170,11 @@ stix_oop_t stix_allocwordobj (stix_t* stix, const stix_oow_t* ptr, stix_oow_t le
 	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_WORD, STIX_SIZEOF(stix_oow_t), 0);
 }
 
-stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, stix_oow_t vlen)
+static STIX_INLINE int decode_spec (stix_t* stix, stix_oop_t _class, stix_oow_t vlen, stix_obj_type_t* type, stix_oow_t* outlen)
 {
-	stix_oop_t oop;
 	stix_oow_t spec;
 	stix_oow_t named_instvar;
 	stix_obj_type_t indexed_type;
-	stix_oow_t tmp_count = 0;
-
-	STIX_ASSERT (stix->_nil != STIX_NULL);
 
 	STIX_ASSERT (STIX_OOP_IS_POINTER(_class));
 	STIX_ASSERT (STIX_CLASSOF(stix, _class) == stix->_class);
@@ -197,7 +193,7 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 			if (named_instvar > STIX_MAX_NAMED_INSTVARS ||
 			    vlen > STIX_MAX_INDEXED_INSTVARS(named_instvar))
 			{
-				goto einval;
+				return -1;
 			}
 
 			STIX_ASSERT (named_instvar + vlen <= STIX_OBJ_SIZE_MAX);
@@ -205,8 +201,8 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 		else
 		{
 			/* a non-pointer indexed class can't have named instance variables */
-			if (named_instvar > 0) goto einval;
-			if (vlen > STIX_OBJ_SIZE_MAX) goto einval;
+			if (named_instvar > 0) return -1;
+			if (vlen > STIX_OBJ_SIZE_MAX) return -1;
 		}
 	}
 	else
@@ -216,18 +212,38 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 		indexed_type = STIX_OBJ_TYPE_OOP;
 		vlen = 0; /* vlen is not used */
 
-		if (named_instvar > STIX_MAX_NAMED_INSTVARS) goto einval;
+		if (named_instvar > STIX_MAX_NAMED_INSTVARS) return -1;
 		STIX_ASSERT (named_instvar <= STIX_OBJ_SIZE_MAX);
+	}
+
+	*type = indexed_type;
+	*outlen = named_instvar + vlen;
+	return 0; 
+}
+
+stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, stix_oow_t vlen)
+{
+	stix_oop_t oop;
+	stix_obj_type_t type;
+	stix_oow_t alloclen;
+	stix_oow_t tmp_count = 0;
+
+	STIX_ASSERT (stix->_nil != STIX_NULL);
+
+	if (decode_spec (stix, _class, vlen, &type, &alloclen) <= -1) 
+	{
+		stix->errnum = STIX_EINVAL;
+		return STIX_NULL;
 	}
 
 	stix_pushtmp (stix, &_class); tmp_count++;
 
-	switch (indexed_type)
+	switch (type)
 	{
 		case STIX_OBJ_TYPE_OOP:
 			/* both the fixed part(named instance variables) and 
 			 * the variable part(indexed instance variables) are allowed. */
-			oop = stix_allocoopobj (stix, named_instvar + vlen);
+			oop = stix_allocoopobj (stix, alloclen);
 
 			STIX_ASSERT (vptr == STIX_NULL);
 			/*
@@ -248,19 +264,19 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 			break;
 
 		case STIX_OBJ_TYPE_CHAR:
-			oop = stix_alloccharobj (stix, vptr, vlen);
+			oop = stix_alloccharobj (stix, vptr, alloclen);
 			break;
 
 		case STIX_OBJ_TYPE_BYTE:
-			oop = stix_allocbyteobj (stix, vptr, vlen);
+			oop = stix_allocbyteobj (stix, vptr, alloclen);
 			break;
 
 		case STIX_OBJ_TYPE_HALFWORD:
-			oop = stix_allochalfwordobj (stix, vptr, vlen);
+			oop = stix_allochalfwordobj (stix, vptr, alloclen);
 			break;
 
 		case STIX_OBJ_TYPE_WORD:
-			oop = stix_allocwordobj (stix, vptr, vlen);
+			oop = stix_allocwordobj (stix, vptr, alloclen);
 			break;
 
 		default:
@@ -272,67 +288,85 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 	if (oop) STIX_OBJ_SET_CLASS (oop, _class);
 	stix_poptmps (stix, tmp_count);
 	return oop;
-
-einval:
-	STIX_ASSERT (tmp_count <= 0);
-	stix->errnum = STIX_EINVAL;
-	return STIX_NULL;
 }
+
+stix_oop_t stix_instantiate2 (stix_t* stix, stix_oop_t _class, const void* vptr, stix_oow_t vlen, int ngc)
+{
+	stix_oop_t oop;
+	stix_obj_type_t type;
+	stix_oow_t alloclen;
+	stix_oow_t tmp_count = 0;
+
+	STIX_ASSERT (stix->_nil != STIX_NULL);
+
+	if (decode_spec (stix, _class, vlen, &type, &alloclen) <= -1) 
+	{
+		stix->errnum = STIX_EINVAL;
+		return STIX_NULL;
+	}
+
+	stix_pushtmp (stix, &_class); tmp_count++;
+
+/* TODO: support NGC */
+	switch (type)
+	{
+		case STIX_OBJ_TYPE_OOP:
+			/* NOTE: vptr is not used for GC unsafety */
+			oop = stix_allocoopobj (stix, alloclen);
+			break;
+
+		case STIX_OBJ_TYPE_CHAR:
+			oop = stix_alloccharobj (stix, vptr, alloclen);
+			break;
+
+		case STIX_OBJ_TYPE_BYTE:
+			oop = stix_allocbyteobj (stix, vptr, alloclen);
+			break;
+
+		case STIX_OBJ_TYPE_HALFWORD:
+			oop = stix_allochalfwordobj (stix, vptr, alloclen);
+			break;
+
+		case STIX_OBJ_TYPE_WORD:
+			oop = stix_allocwordobj (stix, vptr, alloclen);
+			break;
+
+		default:
+			stix->errnum = STIX_EINTERN;
+			oop = STIX_NULL;
+			break;
+	}
+
+	if (oop) STIX_OBJ_SET_CLASS (oop, _class);
+	stix_poptmps (stix, tmp_count);
+	return oop;
+}
+
 
 #if defined(STIX_USE_OBJECT_TRAILER)
 
 stix_oop_t stix_instantiatewithtrailer (stix_t* stix, stix_oop_t _class, stix_oow_t vlen, const stix_oob_t* tptr, stix_oow_t tlen)
 {
 	stix_oop_t oop;
-	stix_oow_t spec;
-	stix_oow_t named_instvar;
-	stix_obj_type_t indexed_type;
+	stix_obj_type_t type;
+	stix_oow_t alloclen;
 	stix_oow_t tmp_count = 0;
 
 	STIX_ASSERT (stix->_nil != STIX_NULL);
 
-	STIX_ASSERT (STIX_OOP_IS_POINTER(_class));
-	STIX_ASSERT (STIX_CLASSOF(stix, _class) == stix->_class);
-
-	STIX_ASSERT (STIX_OOP_IS_SMOOI(((stix_oop_class_t)_class)->spec));
-	spec = STIX_OOP_TO_SMOOI(((stix_oop_class_t)_class)->spec);
-
-	named_instvar = STIX_CLASS_SPEC_NAMED_INSTVAR(spec); /* size of the named_instvar part */
-
-	if (STIX_CLASS_SPEC_IS_INDEXED(spec)) 
+	if (decode_spec (stix, _class, vlen, &type, &alloclen) <= -1) 
 	{
-		indexed_type = STIX_CLASS_SPEC_INDEXED_TYPE(spec);
-
-		if (indexed_type == STIX_OBJ_TYPE_OOP)
-		{
-			if (named_instvar > STIX_MAX_NAMED_INSTVARS ||
-			    vlen > STIX_MAX_INDEXED_INSTVARS(named_instvar))
-			{
-				goto einval;
-			}
-		}
-		else
-		{
-			/* not a class for an OOP object */
-			goto einval;
-		}
-	}
-	else
-	{
-		/* named instance variables only. treat it as if it is an
-		 * indexable class with no variable data */
-		indexed_type = STIX_OBJ_TYPE_OOP;
-		vlen = 0;
-
-		if (named_instvar > STIX_MAX_NAMED_INSTVARS) goto einval;
+		stix->errnum = STIX_EINVAL;
+		return STIX_NULL;
 	}
 
 	stix_pushtmp (stix, &_class); tmp_count++;
 
-	switch (indexed_type)
+	switch (type)
 	{
 		case STIX_OBJ_TYPE_OOP:
-			oop = stix_allocoopobjwithtrailer(stix, named_instvar + vlen, tptr, tlen);
+			/* NOTE: vptr is not used for GC unsafety */
+			oop = stix_allocoopobjwithtrailer(stix, alloclen, tptr, tlen);
 			break;
 
 		default:
@@ -344,12 +378,6 @@ stix_oop_t stix_instantiatewithtrailer (stix_t* stix, stix_oop_t _class, stix_oo
 	if (oop) STIX_OBJ_SET_CLASS (oop, _class);
 	stix_poptmps (stix, tmp_count);
 	return oop;
-
-einval:
-	STIX_ASSERT (tmp_count <= 0);
-	stix->errnum = STIX_EINVAL;
-	return STIX_NULL;
-
 }
 #endif
 

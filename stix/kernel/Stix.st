@@ -186,6 +186,19 @@
 	{
 		^self to: end by: 1 do: aBlock.
 	}
+
+	#method abs
+	{
+		self < 0 ifTrue: [^self negated].
+		^self.
+	}
+
+	#method sign
+	{
+		self < 0 ifTrue: [^-1].
+		self > 0 ifTrue: [^1].
+		^0.
+	}
 }
 
 #class SmallInteger(Number)

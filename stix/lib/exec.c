@@ -650,14 +650,9 @@ static int prim_basic_new_with_size (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	szoop = ACTIVE_STACK_GET(stix, stix->sp);
-	if (STIX_OOP_IS_SMOOI(szoop))
+	if (stix_inttooow (stix, szoop, &size) <= 0)
 	{
-		size = STIX_OOP_TO_SMOOI(szoop);
-	}
-/* TODO: support LargeInteger */
-	else
-	{
-		/* size is not a proper numeric object */
+		/* integer out of range or not integer */
 		return 0;
 	}
 
@@ -679,6 +674,40 @@ static int prim_basic_new_with_size (stix_t* stix, stix_ooi_t nargs)
 	return 1; /* success */
 }
 
+static int prim_ngc_new (stix_t* stix, stix_ooi_t nargs)
+{
+	int n;
+
+	n = prim_basic_new (stix, nargs);
+	if (n <= 0) return n;
+
+	return 1;
+}
+
+static int prim_ngc_new_with_size (stix_t* stix, stix_ooi_t nargs)
+{
+	int n;
+
+	n = prim_basic_new_with_size (stix, nargs);
+	if (n <= 0) return n;
+
+	return 1;
+}
+
+
+static int prim_ngc_dispose (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv;
+
+	STIX_ASSERT (nargs ==  0);
+	rcv = ACTIVE_STACK_GETTOP (stix);
+
+	stix_freemem (stix, rcv);
+
+	ACTIVE_STACK_SETTOP (stix, stix->_nil);
+	return 1; /* success */
+}
+
 static int prim_shallow_copy (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, obj;
@@ -697,19 +726,23 @@ static int prim_shallow_copy (stix_t* stix, stix_ooi_t nargs)
 
 static int prim_basic_size (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_t rcv;
+	stix_oop_t rcv, sz;
+
 	STIX_ASSERT (nargs == 0);
 
 	rcv = ACTIVE_STACK_GETTOP(stix);
-	ACTIVE_STACK_SETTOP(stix, STIX_SMOOI_TO_OOP(STIX_OBJ_GET_SIZE(rcv)));
-/* TODO: use LargeInteger if the size is very big */
+
+	sz = stix_oowtoint (stix, STIX_OBJ_GET_SIZE(rcv));
+	if (!sz) return -1; /* hard failure */
+	ACTIVE_STACK_SETTOP(stix, sz);
+
 	return 1;
 }
 
 static int prim_basic_at (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, pos, v;
-	stix_ooi_t idx;
+	stix_oow_t idx;
 
 	STIX_ASSERT (nargs == 1);
 
@@ -721,21 +754,18 @@ static int prim_basic_at (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	pos = ACTIVE_STACK_GET(stix, stix->sp);
-	if (!STIX_OOP_IS_SMOOI(pos))
+	if (stix_inttooow (stix, pos, &idx) <= 0)
 	{
-/* TODO: handle LargeInteger */
-		/* the position must be an integer */
+		/* integer out of range or not integer */
 		return 0;
 	}
-
-	idx = STIX_OOP_TO_SMOOI(pos);
 	if (idx < 1 || idx > STIX_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
 		return 0;
 	}
 
-	/* [NOTE] basicAt: and basicAt:put: used a 1-based index. */
+	/* [NOTE] basicAt: and basicAt:put: uses a 1-based index. */
 	idx = idx - 1;
 
 	switch (STIX_OBJ_GET_FLAGS_TYPE(rcv))
@@ -775,7 +805,7 @@ static int prim_basic_at (stix_t* stix, stix_ooi_t nargs)
 static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, pos, val;
-	stix_ooi_t idx;
+	stix_oow_t idx;
 
 	STIX_ASSERT (nargs == 2);
 
@@ -785,18 +815,14 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 		/* the receiver is a special numeric object, not a normal pointer */
 		return 0;
 	}
-
 	pos = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	if (!STIX_OOP_IS_SMOOI(pos))
-	{
-/* TODO: handle LargeInteger */
-		/* the position must be an integer */
-		return 0;
-	}
-
 	val = ACTIVE_STACK_GET(stix, stix->sp);
 
-	idx = STIX_OOP_TO_SMOOI(pos);
+	if (stix_inttooow (stix, pos, &idx) <= 0)
+	{
+		/* integer out of range or not integer */
+		return 0;
+	}
 	if (idx < 1 || idx > STIX_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
@@ -811,7 +837,7 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 		return 0;
 	}
 
-	/* [NOTE] basicAt: and basicAt:put: used a 1-based index. */
+	/* [NOTE] basicAt: and basicAt:put: uses a 1-based index. */
 	idx = idx - 1;
 
 	switch (STIX_OBJ_GET_FLAGS_TYPE(rcv))
@@ -847,7 +873,7 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 			break;
 
 		case STIX_OBJ_TYPE_WORD:
-			/* TODO: handle largeINteger  */
+			/* TODO: handle LargeInteger */
 			if (!STIX_OOP_IS_SMOOI(val))
 			{
 				/* the value is not a number */
@@ -1306,168 +1332,104 @@ static int prim_integer_bitshift (stix_t* stix, stix_ooi_t nargs)
 
 static int prim_integer_eq (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_t rcv, arg;
+	stix_oop_t rcv, arg, res;
 
 	STIX_ASSERT (nargs == 1);
 
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
-	{
-		ACTIVE_STACK_POP (stix);
-		if (STIX_OOP_TO_SMOOI(rcv) == STIX_OOP_TO_SMOOI(arg))
-		{
-			ACTIVE_STACK_SETTOP (stix, stix->_true);
-		}
-		else
-		{
-			ACTIVE_STACK_SETTOP (stix, stix->_false);
-		}
-		
-		return 1;
-	}
+	res = stix_eqints (stix, rcv, arg);
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-/* TODO: handle LargeInteger */
-	return 0;
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
 }
 
 static int prim_integer_ne (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_t rcv, arg;
+	stix_oop_t rcv, arg, res;
 
 	STIX_ASSERT (nargs == 1);
 
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
-	{
-		ACTIVE_STACK_POP (stix);
-		if (STIX_OOP_TO_SMOOI(rcv) != STIX_OOP_TO_SMOOI(arg))
-		{
-			ACTIVE_STACK_SETTOP (stix, stix->_true);
-		}
-		else
-		{
-			ACTIVE_STACK_SETTOP (stix, stix->_false);
-		}
-		
-		return 1;
-	}
+	res = stix_neints (stix, rcv, arg);
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-/* TODO: handle LargeInteger */
-	return 0;
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
 }
+
 static int prim_integer_lt (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_t rcv, arg;
+	stix_oop_t rcv, arg, res;
 
 	STIX_ASSERT (nargs == 1);
 
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
-	{
-		ACTIVE_STACK_POP (stix);
-		if (STIX_OOP_TO_SMOOI(rcv) < STIX_OOP_TO_SMOOI(arg))
-		{
-			ACTIVE_STACK_SETTOP (stix, stix->_true);
-		}
-		else
-		{
-			ACTIVE_STACK_SETTOP (stix, stix->_false);
-		}
-		
-		return 1;
-	}
+	res = stix_ltints (stix, rcv, arg);
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-/* TODO: handle LargeInteger */
-	return 0;
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
 }
 
 static int prim_integer_gt (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_t rcv, arg;
+	stix_oop_t rcv, arg, res;
 
 	STIX_ASSERT (nargs == 1);
 
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
-	{
-		ACTIVE_STACK_POP (stix);
-		if (STIX_OOP_TO_SMOOI(rcv) > STIX_OOP_TO_SMOOI(arg))
-		{
-			ACTIVE_STACK_SETTOP (stix, stix->_true);
-		}
-		else
-		{
-			ACTIVE_STACK_SETTOP (stix, stix->_false);
-		}
-		
-		return 1;
-	}
+	res = stix_gtints (stix, rcv, arg);
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-/* TODO: handle LargeInteger */
-	return 0;
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
 }
 
 static int prim_integer_le (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_t rcv, arg;
+	stix_oop_t rcv, arg, res;
 
 	STIX_ASSERT (nargs == 1);
 
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
-	{
-		ACTIVE_STACK_POP (stix);
-		if (STIX_OOP_TO_SMOOI(rcv) <= STIX_OOP_TO_SMOOI(arg))
-		{
-			ACTIVE_STACK_SETTOP (stix, stix->_true);
-		}
-		else
-		{
-			ACTIVE_STACK_SETTOP (stix, stix->_false);
-		}
-		
-		return 1;
-	}
+	res = stix_leints (stix, rcv, arg);
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-/* TODO: handle LargeInteger */
-	return 0;
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
 }
 
 static int prim_integer_ge (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_t rcv, arg;
+	stix_oop_t rcv, arg, res;
 
 	STIX_ASSERT (nargs == 1);
 
 	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
 	arg = ACTIVE_STACK_GET(stix, stix->sp);
 
-	if (STIX_OOP_IS_SMOOI(rcv) && STIX_OOP_IS_SMOOI(arg))
-	{
-		ACTIVE_STACK_POP (stix);
-		if (STIX_OOP_TO_SMOOI(rcv) >= STIX_OOP_TO_SMOOI(arg))
-		{
-			ACTIVE_STACK_SETTOP (stix, stix->_true);
-		}
-		else
-		{
-			ACTIVE_STACK_SETTOP (stix, stix->_false);
-		}
-		
-		return 1;
-	}
+	res = stix_geints (stix, rcv, arg);
+	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	return 0;
+	ACTIVE_STACK_POP (stix);
+	ACTIVE_STACK_SETTOP (stix, res);
+	return 1;
 }
 
 static int prim_integer_inttostr (stix_t* stix, stix_ooi_t nargs)
@@ -1829,6 +1791,9 @@ static prim_t primitives[] =
 
 	{   0,   prim_basic_new,            "_basic_new"           },
 	{   1,   prim_basic_new_with_size,  "_basic_new_with_size" },
+	{   0,   prim_ngc_new,              "_ngc_new"             },
+	{   1,   prim_ngc_new_with_size,    "_ngc_new_with_size"   },
+	{   0,   prim_ngc_dispose,          "_ngc_dispose"         },
 	{   0,   prim_shallow_copy,         "_shallow_copy"        },
 
 	{   0,   prim_basic_size,           "_basic_size"          },

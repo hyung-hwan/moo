@@ -43,6 +43,18 @@
 		self primitiveFailed.
 	}
 
+	#method(#class) ngcNew
+	{
+		<primitive: #_ngc_new>
+		self primitiveFailed.
+	}
+
+	#method(#class) ngcNew: anInteger
+	{
+		<primitive: #_ngc_new_with_size>
+		self primitiveFailed.
+	}
+
 	#method(#class) new
 	{
 		| x |
@@ -66,6 +78,11 @@
 		^self.
 	}
 
+	#method ngcDispose
+	{
+		<primitive: #_ngc_dispose>
+		self primitiveFailed.
+	}
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 	#method shallowCopy

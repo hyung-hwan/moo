@@ -1117,6 +1117,22 @@ int stix_utf8toucs (
 /* ========================================================================= */
 /* bigint.c                                                                    */
 /* ========================================================================= */
+int stix_isint (
+	stix_t*    stix,
+	stix_oop_t x
+);
+
+int stix_inttooow (
+	stix_t*     stix,
+	stix_oop_t  x,
+	stix_oow_t* w
+);
+
+stix_oop_t stix_oowtoint (
+	stix_t*     stix,
+	stix_oow_t  w
+);
+
 stix_oop_t stix_addints (
 	stix_t*    stix,
 	stix_oop_t x,
@@ -1178,6 +1194,42 @@ stix_oop_t stix_bitinvint (
 );
 
 stix_oop_t stix_bitshiftint (
+	stix_t*    stix,
+	stix_oop_t x,
+	stix_oop_t y
+);
+
+stix_oop_t stix_eqints (
+	stix_t* stix,
+	stix_oop_t x,
+	stix_oop_t y
+);
+
+stix_oop_t stix_neints (
+	stix_t*    stix,
+	stix_oop_t x,
+	stix_oop_t y
+);
+
+stix_oop_t stix_gtints (
+	stix_t*    stix,
+	stix_oop_t x,
+	stix_oop_t y
+);
+
+stix_oop_t stix_geints (
+	stix_t*    stix,
+	stix_oop_t x,
+	stix_oop_t y
+);
+
+stix_oop_t stix_ltints (
+	stix_t*    stix,
+	stix_oop_t x,
+	stix_oop_t y
+);
+
+stix_oop_t stix_leints (
 	stix_t*    stix,
 	stix_oop_t x,
 	stix_oop_t y
