@@ -1659,6 +1659,7 @@ static int emit_single_param_instruction (stix_t* stix, int cmd, stix_oow_t para
 		case BCODE_PUSH_LITERAL_0:
 			if (param_1 < 8)
 			{
+				/* low 3 bits to hold the parameter */
 				bc = (stix_oob_t)(cmd & 0xF8) | (stix_oob_t)param_1;
 				goto write_short;
 			}
@@ -1678,6 +1679,7 @@ static int emit_single_param_instruction (stix_t* stix, int cmd, stix_oow_t para
 		case BCODE_JUMP_IF_FALSE_0:
 			if (param_1 < 4)
 			{
+				/* low 2 bits to hold the parameter */
 				bc = (stix_oob_t)(cmd & 0xFC) | (stix_oob_t)param_1;
 				goto write_short;
 			}
@@ -1730,7 +1732,7 @@ static int emit_double_param_instruction (stix_t* stix, int cmd, stix_oow_t para
 		case BCODE_POP_INTO_OBJVAR_0:
 		case BCODE_SEND_MESSAGE_0:
 		case BCODE_SEND_MESSAGE_TO_SUPER_0:
-			if (param_1 < 8 && param_2 < 0xFF)
+			if (param_1 < 4 && param_2 < 0xFF)
 			{
 				/* low 2 bits of the instruction code is the first parameter */
 				bc = (stix_oob_t)(cmd & 0xFC) | (stix_oob_t)param_1;

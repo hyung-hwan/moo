@@ -229,6 +229,19 @@
 		<primitive: #snd_open>
 	}
 
+	#method(#class) a: a b: b c: c
+	{
+		c dump.
+	}
+
+	#method(#class) a: a b: b c: c d: d e: e f: f g: g h: h
+	{
+		h dump.
+	}
+	#method(#class) a: a b: b c: c d: d e: e f: f g: g
+	{
+		g dump.
+	}
 	#method(#class) main
 	{
 "
@@ -392,6 +405,8 @@ PROCESS TESTING
 (2r1000000000000000000000000000100000000000000000000000000000000000000000000000 bitAt: 129) dump.
 (2r1000000000000000000000000000100000000000000000000000000000000000000000000000 bitAt: 16rFFFFFFFFFFFFFFFF1) dump.
 
+		##self a: 1 b: 2 c: 3 d: 4 e: 5 f: 6 g: 7.
+		##self a: 1 b: 2 c: 3.
 "
 		FFI isNil dump.
 		FFI notNil dump.

@@ -198,10 +198,28 @@
 
 #class(#liword) LargePositiveInteger(LargeInteger)
 {
+	#method abs
+	{
+		^self.
+	}
+
+	#method sign
+	{
+		^1.
+	}
 }
 
 #class(#liword) LargeNegativeInteger(LargeInteger)
 {
+	#method abs
+	{
+		^self negated.
+	}
+	
+	#method sign
+	{
+		^-1.
+	}
 }
 
 

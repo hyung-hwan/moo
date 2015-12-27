@@ -2035,6 +2035,195 @@ done:
 }
 
 /* ------------------------------------------------------------------------- */
+static int send_message (stix_t* stix, stix_oop_char_t selector, int to_super, stix_ooi_t nargs)
+{
+	stix_oocs_t mthname;
+	stix_oop_t receiver;
+	stix_oop_method_t method;
+	stix_ooi_t preamble, preamble_code;
+
+	STIX_ASSERT (STIX_OOP_IS_POINTER(selector));
+	STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(selector) == STIX_OBJ_TYPE_CHAR);
+	STIX_ASSERT (STIX_CLASSOF(stix, selector) == stix->_symbol);
+
+	receiver = ACTIVE_STACK_GET(stix, stix->sp - nargs);
+#if defined(STIX_DEBUG_EXEC)
+printf (" RECEIVER = ");
+print_object(stix, receiver);
+printf ("\n");
+#endif
+
+	mthname.ptr = selector->slot;
+	mthname.len = STIX_OBJ_GET_SIZE(selector);
+	method = find_method (stix, receiver, &mthname, to_super);
+	if (!method) 
+	{
+/* TODO: implement doesNotUnderstand: XXXXX  instead of returning -1. */
+stix_oop_t c;
+
+c = STIX_CLASSOF(stix,receiver);
+printf ("ERROR [NOT IMPLEMENTED YET] - receiver [");
+print_object (stix, receiver);
+printf ("] class ");
+print_object (stix, c);
+printf (" doesNotUnderstand: [");
+print_oocs (&mthname);
+printf ("]\n");
+
+		return -1;
+	}
+
+	STIX_ASSERT (STIX_OOP_TO_SMOOI(method->tmpr_nargs) == nargs);
+
+	preamble = STIX_OOP_TO_SMOOI(method->preamble);
+	preamble_code = STIX_METHOD_GET_PREAMBLE_CODE(preamble);
+	switch (preamble_code)
+	{
+		case STIX_METHOD_PREAMBLE_RETURN_RECEIVER:
+			DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_RECEIVER");
+			ACTIVE_STACK_POPS (stix, nargs); /* pop arguments only*/
+			break;
+
+		case STIX_METHOD_PREAMBLE_RETURN_NIL:
+			DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_NIL");
+			ACTIVE_STACK_POPS (stix, nargs);
+			ACTIVE_STACK_SETTOP (stix, stix->_nil);
+			break;
+
+		case STIX_METHOD_PREAMBLE_RETURN_TRUE:
+			DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_TRUE");
+			ACTIVE_STACK_POPS (stix, nargs);
+			ACTIVE_STACK_SETTOP (stix, stix->_true);
+			break;
+
+		case STIX_METHOD_PREAMBLE_RETURN_FALSE:
+			DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_FALSE");
+			ACTIVE_STACK_POPS (stix, nargs);
+			ACTIVE_STACK_SETTOP (stix, stix->_false);
+			break;
+
+		case STIX_METHOD_PREAMBLE_RETURN_INDEX:
+			DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_INDEX %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
+			ACTIVE_STACK_POPS (stix, nargs);
+			ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
+			break;
+
+		case STIX_METHOD_PREAMBLE_RETURN_NEGINDEX:
+			DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_NEGINDEX %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
+			ACTIVE_STACK_POPS (stix, nargs);
+			ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(-STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
+			break;
+
+		case STIX_METHOD_PREAMBLE_RETURN_INSTVAR:
+		{
+			stix_oop_oop_t rcv;
+
+			ACTIVE_STACK_POPS (stix, nargs); /* pop arguments only */
+
+			DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_INSTVAR %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
+
+			/* replace the receiver by an instance variable of the receiver */
+			rcv = (stix_oop_oop_t)ACTIVE_STACK_GETTOP(stix);
+			STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(rcv) == STIX_OBJ_TYPE_OOP);
+			STIX_ASSERT (STIX_OBJ_GET_SIZE(rcv) > STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
+
+			if (rcv == (stix_oop_oop_t)stix->active_context)
+			{
+				/* the active context object doesn't keep
+				 * the most up-to-date information in the 
+				 * 'ip' and 'sp' field. commit these fields
+				 * when the object to be accessed is 
+				 * the active context. this manual commit
+				 * is required because this premable handling
+				 * skips activation of a new method context
+				 * that would commit these fields. 
+				 */
+				STORE_ACTIVE_IP (stix);
+				STORE_ACTIVE_SP (stix);
+			}
+
+			/* this accesses the instance variable of the receiver */
+			ACTIVE_STACK_SET (stix, stix->sp, rcv->slot[STIX_METHOD_GET_PREAMBLE_INDEX(preamble)]);
+			break;
+		}
+
+
+		case STIX_METHOD_PREAMBLE_PRIMITIVE:
+		{
+			stix_ooi_t prim_no;
+
+			prim_no = STIX_METHOD_GET_PREAMBLE_INDEX(preamble);
+			DBGOUT_EXEC_1 ("METHOD_PREAMBLE_PRIMITIVE %d", (int)prim_no);
+
+			if (prim_no >= 0 && prim_no < STIX_COUNTOF(primitives) && 
+			    (primitives[prim_no].nargs < 0 || primitives[prim_no].nargs == nargs))
+			{
+				int n;
+
+				stix_pushtmp (stix, (stix_oop_t*)&method);
+				n = primitives[prim_no].handler (stix, nargs);
+				stix_poptmp (stix);
+				if (n <= -1) return -1; /* hard primitive failure */
+				if (n >= 1) break; /* primitive ok */
+			}
+
+			/* soft primitive failure */
+			if (activate_new_method (stix, method) <= -1) return -1;
+			break;
+		}
+
+		case STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE:
+		{
+			stix_ooi_t prim_name_index;
+			stix_oop_t name;
+			stix_prim_impl_t handler;
+			register stix_oow_t w;
+
+			prim_name_index = STIX_METHOD_GET_PREAMBLE_INDEX(preamble);
+			DBGOUT_EXEC_1 ("METHOD_PREAMBLE_NAMED_PRIMITIVE %d", (int)prim_name_index);
+
+			name = method->slot[prim_name_index];
+
+			STIX_ASSERT (STIX_ISTYPEOF(stix,name,STIX_OBJ_TYPE_CHAR));
+			STIX_ASSERT (STIX_OBJ_GET_FLAGS_EXTRA(name));
+			STIX_ASSERT (STIX_CLASSOF(stix,name) == stix->_symbol);
+
+			/* merge two SmallIntegers to get a full pointer */
+			w = (stix_oow_t)STIX_OOP_TO_SMOOI(method->preamble_data[0]) << (STIX_OOW_BITS / 2) | 
+					(stix_oow_t)STIX_OOP_TO_SMOOI(method->preamble_data[1]);
+			handler = (stix_prim_impl_t)w;
+			if (!handler) handler = query_prim_module (stix, ((stix_oop_char_t)name)->slot, STIX_OBJ_GET_SIZE(name));
+
+			if (handler)
+			{
+				int n;
+
+				/* split a pointer to two OOP fields as SmallIntegers for storing. */
+				method->preamble_data[0] = STIX_SMOOI_TO_OOP((stix_oow_t)handler >> (STIX_OOW_BITS / 2));
+				method->preamble_data[1] = STIX_SMOOI_TO_OOP((stix_oow_t)handler & STIX_LBMASK(stix_oow_t, STIX_OOW_BITS / 2));
+
+				stix_pushtmp (stix, (stix_oop_t*)&method);
+				n = handler (stix, nargs);
+				stix_poptmp (stix);
+				if (n <= -1) return -1; /* hard primitive failure */
+				if (n >= 1) break; /* primitive ok*/
+			}
+
+			/* soft primitive failure or handler not found*/
+			if (activate_new_method (stix, method) <= -1) return -1;
+			break;
+		}
+
+		default:
+			STIX_ASSERT (preamble_code == STIX_METHOD_PREAMBLE_NONE);
+			if (activate_new_method (stix, method) <= -1) return -1;
+			break;
+	}
+
+	return 0;
+}
+
+/* ------------------------------------------------------------------------- */
 
 int stix_execute (stix_t* stix)
 {
@@ -2501,6 +2690,8 @@ printf ("\n");
 			/* -------------------------------------------------------- */
 			case BCODE_SEND_MESSAGE_X:
 			case BCODE_SEND_MESSAGE_TO_SUPER_X:
+				/* b1 -> number of arguments 
+				 * b2 -> selector index stored in the literal frame */
 				FETCH_PARAM_CODE_TO (stix, b1);
 				FETCH_PARAM_CODE_TO (stix, b2);
 				goto handle_send_message;
@@ -2514,205 +2705,21 @@ printf ("\n");
 			case BCODE_SEND_MESSAGE_TO_SUPER_2:
 			case BCODE_SEND_MESSAGE_TO_SUPER_3:
 			{
-				/* b1 -> number of arguments 
-				 * b2 -> index to the selector stored in the literal frame
-				 */
-				stix_oocs_t mthname;
-				stix_oop_t newrcv;
-				stix_oop_method_t newmth;
 				stix_oop_char_t selector;
-				stix_ooi_t preamble, preamble_code;
 
-
-			handle_send_message:
 				b1 = bcode & 0x3; /* low 2 bits */
 				FETCH_BYTE_CODE_TO (stix, b2);
 
+			handle_send_message:
 				/* get the selector from the literal frame */
 				selector = (stix_oop_char_t)stix->active_method->slot[b2];
-
 
 #if defined(STIX_DEBUG_EXEC)
 printf ("SEND_MESSAGE%s TO RECEIVER AT STACKPOS=%d NARGS=%d SELECTOR=", (((bcode >> 2) & 1)? "_TO_SUPER": ""), (int)(stix->sp - b1), (int)b1);
 print_object (stix, (stix_oop_t)selector);
 fflush (stdout);
 #endif
-				STIX_ASSERT (STIX_CLASSOF(stix, selector) == stix->_symbol);
-				newrcv = ACTIVE_STACK_GET(stix, stix->sp - b1);
-
-#if defined(STIX_DEBUG_EXEC)
-printf (" RECEIVER = ");
-print_object(stix, newrcv);
-printf ("\n");
-#endif
-				mthname.ptr = selector->slot;
-				mthname.len = STIX_OBJ_GET_SIZE(selector);
-				newmth = find_method (stix, newrcv, &mthname, ((bcode >> 2) & 1));
-				if (!newmth) 
-				{
-/* TODO: implement doesNotUnderstand: XXXXX  instead of returning -1. */
-stix_oop_t c;
-
-c = STIX_CLASSOF(stix,newrcv);
-
-printf ("ERROR [NOT IMPLEMENTED YET] - receiver [");
-print_object (stix, newrcv);
-printf ("] class ");
-print_object (stix, c);
-printf (" doesNotUnderstand: [");
-print_oocs (&mthname);
-printf ("]\n");
-					goto oops;
-				}
-
-				STIX_ASSERT (STIX_OOP_TO_SMOOI(newmth->tmpr_nargs) == b1);
-
-				preamble = STIX_OOP_TO_SMOOI(newmth->preamble);
-				preamble_code = STIX_METHOD_GET_PREAMBLE_CODE(preamble);
-				switch (preamble_code)
-				{
-					case STIX_METHOD_PREAMBLE_RETURN_RECEIVER:
-						DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_RECEIVER");
-						ACTIVE_STACK_POPS (stix, b1); /* pop arguments only*/
-						break;
-
-					case STIX_METHOD_PREAMBLE_RETURN_NIL:
-						DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_NIL");
-						ACTIVE_STACK_POPS (stix, b1);
-						ACTIVE_STACK_SETTOP (stix, stix->_nil);
-						break;
-
-					case STIX_METHOD_PREAMBLE_RETURN_TRUE:
-						DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_TRUE");
-						ACTIVE_STACK_POPS (stix, b1);
-						ACTIVE_STACK_SETTOP (stix, stix->_true);
-						break;
-
-					case STIX_METHOD_PREAMBLE_RETURN_FALSE:
-						DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_FALSE");
-						ACTIVE_STACK_POPS (stix, b1);
-						ACTIVE_STACK_SETTOP (stix, stix->_false);
-						break;
-
-					case STIX_METHOD_PREAMBLE_RETURN_INDEX:
-						DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_INDEX %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
-						ACTIVE_STACK_POPS (stix, b1);
-						ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
-						break;
-
-					case STIX_METHOD_PREAMBLE_RETURN_NEGINDEX:
-						DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_NEGINDEX %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
-						ACTIVE_STACK_POPS (stix, b1);
-						ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(-STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
-						break;
-
-					case STIX_METHOD_PREAMBLE_RETURN_INSTVAR:
-					{
-						stix_oop_oop_t rcv;
-
-						ACTIVE_STACK_POPS (stix, b1); /* pop arguments only */
-
-						DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_INSTVAR %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
-
-						/* replace the receiver by an instance variable of the receiver */
-						rcv = (stix_oop_oop_t)ACTIVE_STACK_GETTOP(stix);
-						STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(rcv) == STIX_OBJ_TYPE_OOP);
-						STIX_ASSERT (STIX_OBJ_GET_SIZE(rcv) > STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
-
-						if (rcv == (stix_oop_oop_t)stix->active_context)
-						{
-							/* the active context object doesn't keep
-							 * the most up-to-date information in the 
-							 * 'ip' and 'sp' field. commit these fields
-							 * when the object to be accessed is 
-							 * the active context. this manual commit
-							 * is required because this premable handling
-							 * skips activation of a new method context
-							 * that would commit these fields. 
-							 */
-							STORE_ACTIVE_IP (stix);
-							STORE_ACTIVE_SP (stix);
-						}
-
-						/* this accesses the instance variable of the receiver */
-						ACTIVE_STACK_SET (stix, stix->sp, rcv->slot[STIX_METHOD_GET_PREAMBLE_INDEX(preamble)]);
-						break;
-					}
-
-
-					case STIX_METHOD_PREAMBLE_PRIMITIVE:
-					{
-						stix_ooi_t prim_no;
-
-						prim_no = STIX_METHOD_GET_PREAMBLE_INDEX(preamble);
-						DBGOUT_EXEC_1 ("METHOD_PREAMBLE_PRIMITIVE %d", (int)prim_no);
-
-						if (prim_no >= 0 && prim_no < STIX_COUNTOF(primitives) && 
-						    (primitives[prim_no].nargs < 0 || primitives[prim_no].nargs == b1))
-						{
-							int n;
-
-							stix_pushtmp (stix, (stix_oop_t*)&newmth);
-							n = primitives[prim_no].handler (stix, b1);
-							stix_poptmp (stix);
-							if (n <= -1) goto oops;
-							if (n >= 1) break;
-						}
-
-						/* primitive handler failed */
-						if (activate_new_method (stix, newmth) <= -1) goto oops;
-						break;
-					}
-
-					case STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE:
-					{
-						stix_ooi_t prim_name_index;
-						stix_oop_t name;
-						stix_prim_impl_t handler;
-						register stix_oow_t w;
-
-						prim_name_index = STIX_METHOD_GET_PREAMBLE_INDEX(preamble);
-						DBGOUT_EXEC_1 ("METHOD_PREAMBLE_NAMED_PRIMITIVE %d", (int)prim_name_index);
-
-						name = newmth->slot[prim_name_index];
-
-						STIX_ASSERT (STIX_ISTYPEOF(stix,name,STIX_OBJ_TYPE_CHAR));
-						STIX_ASSERT (STIX_OBJ_GET_FLAGS_EXTRA(name));
-						STIX_ASSERT (STIX_CLASSOF(stix,name) == stix->_symbol);
-
-						/* merge two SmallIntegers to get a full pointer */
-						w = (stix_oow_t)STIX_OOP_TO_SMOOI(newmth->preamble_data[0]) << (STIX_OOW_BITS / 2) | 
-						          (stix_oow_t)STIX_OOP_TO_SMOOI(newmth->preamble_data[1]);
-						handler = (stix_prim_impl_t)w;
-						if (!handler) handler = query_prim_module (stix, ((stix_oop_char_t)name)->slot, STIX_OBJ_GET_SIZE(name));
-
-						if (handler)
-						{
-							int n;
-
-							/* split a pointer to two OOP fields as SmallIntegers for storing. */
-							newmth->preamble_data[0] = STIX_SMOOI_TO_OOP((stix_oow_t)handler >> (STIX_OOW_BITS / 2));
-							newmth->preamble_data[1] = STIX_SMOOI_TO_OOP((stix_oow_t)handler & STIX_LBMASK(stix_oow_t, STIX_OOW_BITS / 2));
-
-							stix_pushtmp (stix, (stix_oop_t*)&newmth);
-							n = handler (stix, b1);
-							stix_poptmp (stix);
-							if (n <= -1) goto oops;
-							if (n >= 1) break;
-						}
-						
-
-						/* primitive handler failed or not found*/
-						if (activate_new_method (stix, newmth) <= -1) goto oops;
-						break;
-					}
-
-					default:
-						STIX_ASSERT (preamble_code == STIX_METHOD_PREAMBLE_NONE);
-						if (activate_new_method (stix, newmth) <= -1) goto oops;
-						break;
-				}
-
+				if (send_message (stix, selector, ((bcode >> 2) & 1), b1) <= -1) goto oops;
 				break; /* CMD_SEND_MESSAGE */
 			}
 
