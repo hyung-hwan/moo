@@ -483,40 +483,42 @@ struct stix_context_t
 	 * this context object has been activated. a new method context
 	 * is activated as a result of normal message sending and a block
 	 * context is activated when it is sent 'value'. it's set to
-	 * nil if a block context created haven't received 'value'. */
+	 * nil if a block context created hasn't received 'value'. */
 	stix_oop_t         sender;
 
 	/* SmallInteger, instruction pointer */
 	stix_oop_t         ip;
 
 	/* SmallInteger, stack pointer */
-	stix_oop_t         sp;       /* stack pointer */
+	stix_oop_t         sp;
 
 	/* SmallInteger. Number of temporaries.
 	 * For a block context, it's inclusive of the temporaries
 	 * defined its 'home'. */
-	stix_oop_t         ntmprs;   /* SmallInteger. */
+	stix_oop_t         ntmprs;
 
 	/* CompiledMethod for a method context, 
 	 * SmallInteger for a block context */
 	stix_oop_t         method_or_nargs;
 
 	/* it points to the receiver of the message for a method context.
-	 * a block context created but not activated has nil in this field.
-	 * if a block context is activated by 'value', it points to the
-	 * block context object used as a base for shallow-copy. */
+	 * a block context created but not yet activated has nil in this 
+	 * field. if a block context is activated by 'value', it points 
+	 * to the block context object used as a base for shallow-copy. */
 	stix_oop_t         receiver_or_source;
 
 	/* it is set to nil for a method context.
 	 * for a block context, it points to the active context at the 
-	 * moment the block context was created. */
+	 * moment the block context was created. that is, it ponts to 
+	 * a method context where the block has been defined. an activated
+	 * block context copies this field from the source. */
 	stix_oop_t         home;
 
 	/* when a method context is created, it is set to itself.
 	 * no change is made when the method context is activated.
-	 * when a block context is created, it is set to nil.
-	 * when the block context is shallow-copied for activation,
-	 * it is set to the origin of the active context at that moment */
+	 * when a block context is created, it is set to the origin
+	 * of the active context. when the block context is shallow-copied
+	 * for activation, it is set to the origin of the source block contxt. */
 	stix_oop_context_t origin; 
 
 	/* variable indexed part */

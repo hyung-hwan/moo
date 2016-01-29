@@ -63,21 +63,25 @@
 	#method value
 	{
 		<primitive: #_block_value>
+		self primitiveFailed.
 	}
 
 	#method value: a 
 	{
 		<primitive: #_block_value>
+		self primitiveFailed.
 	}
 
 	#method value: a value: b
 	{
 		<primitive: #_block_value>
+		self primitiveFailed.
 	}
 
 	#method value: a value: b value: c
 	{
 		<primitive: #_block_value>
+		self primitiveFailed.
 	}
 
 	#method ifTrue: aBlock

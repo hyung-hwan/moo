@@ -297,7 +297,7 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 
 	ctx->sender = (stix_oop_t)stix->active_context; 
 	ctx->ip = STIX_SMOOI_TO_OOP(0);
-	/* the stack front has temporary variables including arguments.
+	/* the front part of a stack has temporary variables including arguments.
 	 *
 	 * New Context
 	 *
@@ -919,6 +919,7 @@ static int __block_value (stix_t* stix, stix_ooi_t nargs, stix_ooi_t num_first_a
 	org_blkctx = (stix_oop_context_t)ACTIVE_STACK_GET(stix, stix->sp - nargs);
 	if (STIX_CLASSOF(stix, org_blkctx) != stix->_block_context)
 	{
+		/* the receiver must be a block context */
 #if defined(STIX_DEBUG_EXEC)
 printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 #endif
@@ -954,7 +955,7 @@ printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 	blkctx = (stix_oop_context_t) stix_instantiate (stix, stix->_block_context, STIX_NULL, CONTEXT_STACK_SIZE); 
 	if (!blkctx) return -1;
 
-	/* getting org_blkctx again to be GC-safe for stix_instantiate() above */
+	/* get org_blkctx again to be GC-safe for stix_instantiate() above */
 	org_blkctx = (stix_oop_context_t)ACTIVE_STACK_GET(stix, stix->sp - nargs); 
 	STIX_ASSERT (STIX_CLASSOF(stix, org_blkctx) == stix->_block_context);
 
@@ -979,6 +980,8 @@ printf ("~~~~~~~~~~ BLOCK VALUING %p TO NEW BLOCK %p\n", org_blkctx, blkctx);
 /* TODO: check the stack size of a block context to see if it's large enough to hold arguments */
 	if (num_first_arg_elems > 0)
 	{
+		/* the first argument should be an array. this function is ordered
+		 * to pass array elements to the new block */
 		stix_oop_oop_t xarg;
 		STIX_ASSERT (nargs == 1);
 		xarg = (stix_oop_oop_t)ACTIVE_STACK_GETTOP (stix);
@@ -2324,9 +2327,18 @@ printf ("BCODE = %x\n", bcode);
 			handle_tempvar:
 
 			#if defined(STIX_USE_CTXTEMPVAR)
+				/* when CTXTEMPVAR inststructions are used, the above 
+				 * instructions are used only for temporary access 
+				 * outside a block. i can assume that the temporary
+				 * variable index is pointing to one of temporaries
+				 * in the relevant method context */
 				ctx = stix->active_context->origin;
 				bx = b1;
+				STIX_ASSERT (STIX_CLASSOF(stix, ctx) == stix->_method_context);
 			#else
+				/* otherwise, the index may point to a temporaries
+				 * declared inside a block */
+
 				if (stix->active_context->home != stix->_nil)
 				{
 					/* this code assumes that the method context and
@@ -2852,7 +2864,7 @@ printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
 			case BCODE_RETURN_FROM_BLOCK:
 				DBGOUT_EXEC_0 ("RETURN_FROM_BLOCK");
 
-				STIX_ASSERT(STIX_CLASSOF(stix, stix->active_context)  == stix->_block_context);
+				STIX_ASSERT(STIX_CLASSOF(stix, stix->active_context) == stix->_block_context);
 
 				if (stix->active_context == stix->processor->active->initial_context)
 				{
@@ -2906,6 +2918,7 @@ printf ("TERMINATE A PROCESS............\n");
 				 * the number of temporaries of a home context */
 				blkctx->ntmprs = STIX_SMOOI_TO_OOP(b2);
 
+
 				blkctx->home = (stix_oop_t)stix->active_context;
 				blkctx->receiver_or_source = stix->_nil; /* no source */
 
@@ -2951,15 +2964,16 @@ printf ("TERMINATE A PROCESS............\n");
 				STIX_ASSERT (rctx == stix->active_context);
 
 				/* [NOTE]
-				 *  blkctx->caller is left to nil. it is set to the 
+				 *  blkctx->sender is left to nil. it is set to the 
 				 *  active context before it gets activated. see
 				 *  prim_block_value().
 				 *
 				 *  blkctx->home is set here to the active context.
 				 *  it's redundant to have them pushed to the stack
 				 *  though it is to emulate the message sending of
-				 *  blockCopy:withNtmprs:. 
-				 *  TODO: devise a new byte code to eliminate stack pushing.
+				 *  blockCopy:withNtmprs:. BCODE_MAKE_BLOCK has been
+				 *  added to replace BCODE_SEND_BLOCK_COPY and pusing
+				 *  arguments to the stack.
 				 *
 				 *  blkctx->origin is set here by copying the origin
 				 *  of the active context.

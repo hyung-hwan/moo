@@ -2932,7 +2932,9 @@ static int store_tmpr_count_for_block (stix_t* stix, stix_oow_t tmpr_count)
 		stix->c->mth.blk_tmprcnt = tmp;
 	}
 
-	/* [NOTE] i don't increment blk_depth here */
+	/* [NOTE] i don't increment blk_depth here. it's updated
+	 *        by the caller after this function has been called for
+	 *        a new block entered. */
 	stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth] = tmpr_count;
 	return 0;
 }
@@ -3027,23 +3029,24 @@ static int compile_block_expression (stix_t* stix)
 		return -1;
 	}
 
-	/* store the accumulated number of temporaries for the current block */
+	/* store the accumulated number of temporaries for the current block.
+	 * block depth is not rasised as it's not entering a new block but
+	 * updating the temporaries count for the current block. */
 	if (store_tmpr_count_for_block (stix, stix->c->mth.tmpr_count) <= -1) return -1;
 
 #if defined(STIX_USE_MAKE_BLOCK)
 printf ("\tmake_block nargs %d ntmprs %d\n", (int)block_arg_count, (int)stix->c->mth.tmpr_count /*block_tmpr_count*/);
 	if (emit_double_param_instruction(stix, BCODE_MAKE_BLOCK, block_arg_count, stix->c->mth.tmpr_count/*block_tmpr_count*/) <= -1) return -1;
 #else
-printf ("\tpush_context nargs %d ntmprs %d\n", (int)block_arg_count, (int)stix->c->mth.tmpr_count /*block_tmpr_count*/);
-printf ("\tpush smint %d\n", (int)block_arg_count);
-printf ("\tpush smint %d\n", (int)stix->c->mth.tmpr_count /*block_tmpr_count*/);
+printf ("\tpush_context\n");
+printf ("\tpush smint nargs=%d\n", (int)block_arg_count);
+printf ("\tpush smint ntmprs=%d\n", (int)stix->c->mth.tmpr_count /*block_tmpr_count*/);
 printf ("\tsend_block_copy\n");
 	if (emit_byte_instruction(stix, BCODE_PUSH_CONTEXT) <= -1 ||
 	    emit_push_smint_literal(stix, block_arg_count) <= -1 ||
 	    emit_push_smint_literal(stix, stix->c->mth.tmpr_count/*block_tmpr_count*/) <= -1 ||
 	    emit_byte_instruction(stix, BCODE_SEND_BLOCK_COPY) <= -1) return -1;
 #endif
-	
 
 printf ("\tjump\n");
 	/* insert dummy instructions before replacing them with a jump instruction */
@@ -3123,7 +3126,7 @@ printf ("\tfixed jump offset to %u\n", (unsigned int)jump_offset);
 }
 
 
-static int add_to_balit_buffer (stix_t* stix, stix_oob_t b)
+static int add_to_byte_array_literal_buffer (stix_t* stix, stix_oob_t b)
 {
 	if (stix->c->mth.balit_count >= stix->c->mth.balit_capa)
 	{
@@ -3138,11 +3141,12 @@ static int add_to_balit_buffer (stix_t* stix, stix_oob_t b)
 		stix->c->mth.balit = tmp;
 	}
 
+/* TODO: overflow check of stix->c->mth.balit_count itself */
 	stix->c->mth.balit[stix->c->mth.balit_count++] = b;
 	return 0;
 }
 
-static int add_to_arlit_buffer (stix_t* stix, stix_oop_t item)
+static int add_to_array_literal_buffer (stix_t* stix, stix_oop_t item)
 {
 	if (stix->c->mth.arlit_count >= stix->c->mth.arlit_capa)
 	{
@@ -3190,7 +3194,7 @@ static int __read_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
 			return -1;
 		}
 
-		if (add_to_balit_buffer(stix, tmp) <= -1) return -1;
+		if (add_to_byte_array_literal_buffer(stix, tmp) <= -1) return -1;
 		GET_TOKEN (stix);
 	}
 
@@ -3287,7 +3291,7 @@ static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
 				goto done;
 		}
 
-		if (!lit || add_to_arlit_buffer(stix, lit) <= -1) return -1;
+		if (!lit || add_to_array_literal_buffer(stix, lit) <= -1) return -1;
 		info.len++;
 
 		GET_TOKEN (stix);
@@ -3397,6 +3401,8 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 				{
 					stix_oow_t i;
 
+					/* if a temporary variable is accessed inside a block,
+					 * use a special instruction to indicate it */
 					STIX_ASSERT (var.pos < stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth]);
 					for (i = stix->c->mth.blk_depth; i > 0; i--)
 					{
@@ -3935,6 +3941,8 @@ printf ("\n");
 					{
 						stix_oow_t i;
 
+						/* if a temporary variable is accessed inside a block,
+						 * use a special instruction to indicate it */
 						STIX_ASSERT (var.pos < stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth]);
 						for (i = stix->c->mth.blk_depth; i > 0; i--)
 						{
@@ -4883,7 +4891,7 @@ printf ("\n");
 	while (stix->c->tok.type == STIX_IOTOK_SYMLIT)
 	{
 		lit = stix_makesymbol (stix, stix->c->tok.name.ptr, stix->c->tok.name.len);
-		if (!lit || add_to_arlit_buffer (stix, lit) <= -1) return -1;
+		if (!lit || add_to_array_literal_buffer (stix, lit) <= -1) return -1;
 
 		GET_TOKEN (stix);
 
@@ -4944,7 +4952,7 @@ printf ("\n");
 				/*
 				 * for this definition, #pooldic MyPoolDic { #a := 10. #b := 20 },
 				 * arlit_buffer contains (#a 10 #b 20) when the 'while' loop is over. */
-				if (add_to_arlit_buffer(stix, lit) <= -1) return -1;
+				if (add_to_array_literal_buffer(stix, lit) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
 

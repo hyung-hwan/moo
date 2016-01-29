@@ -242,6 +242,12 @@
 	{
 		g dump.
 	}
+
+	#method(#class) getABlock
+	{
+		^ [ 'a block returned by getABlock' dump. ^ self]
+	}
+
 	#method(#class) main
 	{
 "
@@ -254,6 +260,17 @@
 		ffi close.
 "
 
+
+		## ---------------------------------------------------------------
+		## getABlock has returned.
+		## aBlock's home context is getABlock. getABlock has returned
+		## when 'aBlock value' is executed. so when aBlock is really 
+		## executed, ^self is a double return attempt. should this be made
+		## illegal??
+		|aBlock|
+		aBlock := self getABlock.
+		aBlock value.
+		## ---------------------------------------------------------------
 
 "
 PROCESS TESTING
@@ -408,6 +425,23 @@ PROCESS TESTING
 		##self a: 1 b: 2 c: 3 d: 4 e: 5 f: 6 g: 7.
 		##self a: 1 b: 2 c: 3.
 
+[1 + [100 + 200] value] value dump.
+
+
+'====================' dump.
+[
+	| a b |
+	'--------------' dump.
+	[a := 20.  b := [ a + 20 ]. b value.] value dump.
+	a dump.
+	b dump.
+] value.
+'====================' dump.
+([ :a :b | "a := 20."  b := [ a + 20 ]. b value.] value: 99 value: 100) dump.
+'====================' dump.
+[ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] value dump.  ## not sufficient arguments. it must fail
+
+
 "
 		FFI isNil dump.
 		FFI notNil dump.
@@ -416,7 +450,6 @@ PROCESS TESTING
 		nil class dump.
 		nil class class class dump.
 "
-
 	}
 }
 
@@ -441,7 +474,7 @@ mc1		p1 -> bc1 is created based on mc1 (mc1 blockCopy:)
 		   bc1->source := nil.
 		   
 mc1		p2 -> bc2 is shallow-copied of bc1. (bc1 value)
-		   bc2->caller := mc1. (mc1 is the active context at p2 time)
+		   bc2->caller := mc1. (mc1 is the active context at p2 point)
 		   bc2->origin := bc1->origin.
 		   bc2->home := bc1->home.
 		   bc2->source := bc1.
@@ -449,12 +482,11 @@ mc1		p2 -> bc2 is shallow-copied of bc1. (bc1 value)
 bc2		bc3 is created based on bc2. (bc2 blockCopy:)
 		   bc3->caller := nil 
 		   bc3->origin := bc2->origin
-		   //bc3->home := bc2. 
-		   bc3->home := bc2->source. (the active context is a block context. take from the block context's source */
+		   bc3->home := bc2. (the active context is a block context).
 		   bc3->source := nil.
 
 bc2		bc4 is shallow-copied of bc3.   (bc3 value)
-		   bc4->caller := bc2. (bc2 is the active context at p2 time)
+		   bc4->caller := bc2. (bc2 is the active context at p2 point)
 		   bc4->origin := bc3->origin
 		   bc4->home := bc3->home
 		   bc4->source = bc3.
