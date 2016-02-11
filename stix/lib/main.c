@@ -449,6 +449,8 @@ int main (int argc, char* argv[])
 		stix_setoption (stix, STIX_SYMTAB_SIZE, &tab_size);
 		tab_size = 5000;
 		stix_setoption (stix, STIX_SYSDIC_SIZE, &tab_size);
+		tab_size = 5000;
+		stix_setoption (stix, STIX_PROCSTK_SIZE, &tab_size);
 	}
 
 	{

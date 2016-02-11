@@ -106,7 +106,6 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 {
 	stix_oop_process_t proc;
 
-/* TODO: do something about the stack. */
 	stix_pushtmp (stix, (stix_oop_t*)&c);
 	proc = (stix_oop_process_t)stix_instantiate (stix, stix->_process, STIX_NULL, stix->option.dfl_procstk_size);
 	stix_poptmp (stix);
@@ -114,6 +113,7 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 
 	proc->state = STIX_SMOOI_TO_OOP(0);
 	proc->initial_context = c;
+	proc->sp = STIX_SMOOI_TO_OOP(-1);
 
 	return proc;
 }
@@ -516,12 +516,12 @@ TODO: overcome this problem
 
 	/* the initial context starts the life of the entire VM
 	 * and is not really worked on except that it is used to call the
-	 * initial method. so it doesn't really require any extra stack space.
-	 * TODO: verify this theory of mine. */
+	 * initial method. so it doesn't really require any extra stack space. */
+/* TODO: verify this theory of mine. */
 	stix->ip = 0;
 	stix->sp = -1;
 
-	ctx->origin = ctx;
+	ctx->origin = ctx; /* point to self */
 	ctx->method_or_nargs = (stix_oop_t)mth; /* fake. help SWITCH_ACTIVE_CONTEXT() not fail*/
 
 	/* [NOTE]
@@ -540,7 +540,7 @@ TODO: overcome this problem
 	STORE_ACTIVE_SP (stix); /* stix->active_context->sp = STIX_SMOOI_TO_OOP(stix->sp) */
 
 	stix_pushtmp (stix, (stix_oop_t*)&mth);
-	/* call start_initial_process() intead of start_new_process() */
+	/* call start_initial_process() instead of start_new_process() */
 	proc = start_initial_process (stix, ctx); 
 	stix_poptmp (stix);
 	if (!proc) return -1;
@@ -899,6 +899,10 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 
 static int __block_value (stix_t* stix, stix_ooi_t nargs, stix_ooi_t num_first_arg_elems, stix_oop_context_t* pblkctx)
 {
+	/* prepare a new block context for activation.
+	 * the receiver must be a block context which becomes the base
+	 * for a new block context. */
+
 	stix_oop_context_t blkctx, org_blkctx;
 	stix_ooi_t local_ntmprs, i;
 	stix_ooi_t actual_arg_count;
@@ -1036,6 +1040,12 @@ printf ("<<ENTERING BLOCK>>\n");
 
 static int prim_block_new_process (stix_t* stix, stix_ooi_t nargs)
 {
+	/* create a new process from a block context.
+	 * the receiver must be be a block.
+	 *   [ 1 + 2 ] newProcess.
+	 *   [ :a :b | a + b ] newProcess: #(1 2)
+	 */
+
 	int x;
 	stix_oop_context_t blkctx;
 	stix_oop_process_t proc;
@@ -1055,6 +1065,8 @@ static int prim_block_new_process (stix_t* stix, stix_ooi_t nargs)
 		xarg = ACTIVE_STACK_GETTOP(stix);
 		if (!STIX_ISTYPEOF(stix,xarg,STIX_OBJ_TYPE_OOP))
 		{
+			/* the only optional argument must be an OOP-indexable 
+			 * object like an array */
 			return 0;
 		}
 
@@ -1064,35 +1076,15 @@ static int prim_block_new_process (stix_t* stix, stix_ooi_t nargs)
 	/* this primitive creates a new process with a block as if the block
 	 * is sent the value message */
 	x = __block_value (stix, nargs, num_first_arg_elems, &blkctx);
-	if (x <= 0) return x; /* hard failure and soft failure */
+	if (x <= 0) return x; /* both hard failure and soft failure */
 
 	proc = make_process (stix, blkctx);
-	if (!proc) return -1; /* hard failure */ /* TOOD: can't this be a soft failure? */
+	if (!proc) return -1; /* hard failure */ /* TOOD: can't this be treated as a soft failure? */
 
 	/* __block_value() has popped all arguments and the receiver. 
 	 * PUSH the return value instead of changing the stack top */
 	ACTIVE_STACK_PUSH (stix, (stix_oop_t)proc);
 	return 1;
-
-#if 0
-	stix_oop_process_t proc;
-	stix_oop_context_t rcv;
-
-	rcv = (stix_oop_context_t)ACTIVE_STACK_GETTOP(stix);
-	if (STIX_CLASSOF(stix, rcv) != stix->_block_context)
-	{
-#if defined(STIX_DEBUG_EXEC)
-printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
-#endif
-		return 0;
-	}
-
-	proc = make_process (stix, rcv);
-	if (!proc) return -1; /* hard failure */ /* TOOD: can't this be a soft failure? */
-
-	ACTIVE_STACK_SETTOP (stix, (stix_oop_t)proc);
-	return 1;
-#endif
 }
 
 static int prim_integer_add (stix_t* stix, stix_ooi_t nargs)
@@ -2352,6 +2344,8 @@ printf ("BCODE = %x\n", bcode);
 
 					do
 					{
+						/* ntmprs contains the number of defined temporaries 
+						 * including those defined in the home context */
 						home_ntmprs = STIX_OOP_TO_SMOOI(((stix_oop_context_t)home)->ntmprs);
 						if (b1 >= home_ntmprs) break;
 
@@ -2365,6 +2359,8 @@ printf ("BCODE = %x\n", bcode);
 					}
 					while (1);
 
+					/* bx is the actual index within the actual context 
+					 * containing the temporary */
 					bx = b1 - home_ntmprs;
 				}
 				else
@@ -2376,7 +2372,7 @@ printf ("BCODE = %x\n", bcode);
 
 				if ((bcode >> 4) & 1)
 				{
-					/* push - bit 4 on*/
+					/* push - bit 4 on */
 					DBGOUT_EXEC_1 ("PUSH_TEMPVAR %d", (int)b1);
 					ACTIVE_STACK_PUSH (stix, ctx->slot[bx]);
 				}
@@ -2836,7 +2832,7 @@ printf ("<<LEAVING>> SP=%d\n", (int)stix->sp);
 
 				if (stix->processor->active->initial_context == stix->active_context)
 				{
-/* TODO: terminate a proces... */
+/* TODO: terminate a process... */
 printf ("TERMINATING XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n");
 				}
 				else
@@ -2895,12 +2891,11 @@ printf ("TERMINATE A PROCESS............\n");
 				STIX_ASSERT (b1 >= 0);
 				STIX_ASSERT (b2 >= b1);
 
-				/* the block context object created here is used
-				 * as a base object for block context activation.
-				 * prim_block_value() clones a block 
-				 * context and activates the cloned context.
-				 * this base block context is created with no 
-				 * stack for this reason. */
+				/* the block context object created here is used as a base
+				 * object for block context activation. prim_block_value()
+				 * clones a block context and activates the cloned context.
+				 * this base block context is created with no stack for 
+				 * this reason */
 				blkctx = (stix_oop_context_t)stix_instantiate (stix, stix->_block_context, STIX_NULL, 0); 
 				if (!blkctx) return -1;
 
@@ -2909,8 +2904,8 @@ printf ("TERMINATE A PROCESS............\n");
 				 * depending on STIX_BCODE_LONG_PARAM_SIZE. change 'ip' to point to
 				 * the instruction after the jump. */
 				blkctx->ip = STIX_SMOOI_TO_OOP(stix->ip + STIX_BCODE_LONG_PARAM_SIZE + 1);
-				/* stack pointer below the bottom. this block context has an
-				 * empty stack anyway. */
+				/* stack pointer below the bottom. this base block context
+				 * has an empty stack anyway. */
 				blkctx->sp = STIX_SMOOI_TO_OOP(-1);
 				/* the number of arguments for a block context is local to the block */
 				blkctx->method_or_nargs = STIX_SMOOI_TO_OOP(b1);
@@ -2918,11 +2913,14 @@ printf ("TERMINATE A PROCESS............\n");
 				 * the number of temporaries of a home context */
 				blkctx->ntmprs = STIX_SMOOI_TO_OOP(b2);
 
-
-				blkctx->home = (stix_oop_t)stix->active_context;
-				blkctx->receiver_or_source = stix->_nil; /* no source */
+				/* set the home context where it's defined */
+				blkctx->home = (stix_oop_t)stix->active_context; 
+				/* no source for a base block context. */
+				blkctx->receiver_or_source = stix->_nil; 
 
 				blkctx->origin = stix->active_context->origin;
+
+				/* push the new block context to the stack of the active context */
 				ACTIVE_STACK_PUSH (stix, (stix_oop_t)blkctx);
 				break;
 			}

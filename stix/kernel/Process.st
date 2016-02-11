@@ -26,7 +26,7 @@
 
 #class(#pointer) Process(Object)
 {
-	#dcl initial active state prev next.
+	#dcl initial active state prev next sp.
 
 	#method new
 	{

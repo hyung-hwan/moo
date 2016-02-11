@@ -89,6 +89,10 @@ int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_oow_t heapsz, const stix_vm
 	stix->mmgr = mmgr;
 	stix->vmprim = *vmprim;
 
+	stix->option.dfl_symtab_size = STIX_DFL_SYMTAB_SIZE;
+	stix->option.dfl_sysdic_size = STIX_DFL_SYSDIC_SIZE;
+	stix->option.dfl_procstk_size = STIX_DFL_PROCSTK_SIZE;
+
 	/*stix->permheap = stix_makeheap (stix, what is the best size???);
 	if (!stix->curheap) goto oops; */
 	stix->curheap = stix_makeheap (stix, heapsz);
@@ -171,18 +175,40 @@ int stix_setoption (stix_t* stix, stix_option_t id, const void* value)
 			return 0;
 
 		case STIX_SYMTAB_SIZE:
+		{
+			stix_oow_t w;
+
+			w = *(stix_oow_t*)value;
+			if (w <= 0 || w > STIX_SMOOI_MAX) goto einval;
+
 			stix->option.dfl_symtab_size = *(stix_oow_t*)value;
 			return 0;
+		}
 
 		case STIX_SYSDIC_SIZE:
+		{
+			stix_oow_t w;
+
+			w = *(stix_oow_t*)value;
+			if (w <= 0 || w > STIX_SMOOI_MAX) goto einval;
+
 			stix->option.dfl_sysdic_size = *(stix_oow_t*)value;
 			return 0;
+		}
 
 		case STIX_PROCSTK_SIZE:
+		{
+			stix_oow_t w;
+
+			w = *(stix_oow_t*)value;
+			if (w <= 0 || w > STIX_SMOOI_MAX) goto einval;
+
 			stix->option.dfl_procstk_size = *(stix_oow_t*)value;
 			return 0;
+		}
 	}
 
+einval:
 	stix->errnum = STIX_EINVAL;
 	return -1;
 }

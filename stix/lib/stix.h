@@ -71,6 +71,14 @@ enum stix_option_t
 };
 typedef enum stix_option_t stix_option_t;
 
+enum stix_option_dflval_t
+{
+	STIX_DFL_SYMTAB_SIZE = 5000,
+	STIX_DFL_SYSDIC_SIZE = 5000,
+	STIX_DFL_PROCSTK_SIZE = 5000
+};
+typedef enum stix_option_dflval_t stix_option_dflval_t;
+
 enum stix_trait_t
 {
 	/* perform no garbage collection when the heap is full. 
@@ -502,31 +510,31 @@ struct stix_context_t
 	stix_oop_t         method_or_nargs;
 
 	/* it points to the receiver of the message for a method context.
-	 * a block context created but not yet activated has nil in this 
+	 * a base block context(created but not yet activated) has nil in this 
 	 * field. if a block context is activated by 'value', it points 
 	 * to the block context object used as a base for shallow-copy. */
 	stix_oop_t         receiver_or_source;
 
 	/* it is set to nil for a method context.
 	 * for a block context, it points to the active context at the 
-	 * moment the block context was created. that is, it ponts to 
-	 * a method context where the block has been defined. an activated
-	 * block context copies this field from the source. */
+	 * moment the block context was created. that is, it points to 
+	 * a method context where the base block has been defined. 
+	 * an activated block context copies this field from the source. */
 	stix_oop_t         home;
 
-	/* when a method context is created, it is set to itself.
-	 * no change is made when the method context is activated.
-	 * when a block context is created, it is set to the origin
-	 * of the active context. when the block context is shallow-copied
-	 * for activation, it is set to the origin of the source block contxt. */
+	/* when a method context is created, it is set to itself. no change is
+	 * made when the method context is activated. when a block context is 
+	 * created (when MAKE_BLOCK or BLOCK_COPY is executed), it is set to the
+	 * origin of the active context. when the block context is shallow-copied
+	 * for activation (when it is sent 'value'), it is set to the origin of
+	 * the source block context. */
 	stix_oop_context_t origin; 
 
 	/* variable indexed part */
 	stix_oop_t         slot[1]; /* stack */
 };
 
-
-#define STIX_PROCESS_NAMED_INSTVARS 5
+#define STIX_PROCESS_NAMED_INSTVARS 6
 typedef struct stix_process_t stix_process_t;
 typedef struct stix_process_t* stix_oop_process_t;
 struct stix_process_t
@@ -537,6 +545,9 @@ struct stix_process_t
 	stix_oop_t         state;
 	stix_oop_process_t prev;
 	stix_oop_process_t next;
+
+	/* stack pointer. SmallInteger */
+	stix_oop_t         sp; 
 
 	/* == variable indexed part == */
 	stix_oop_t slot[1]; /* process stack */

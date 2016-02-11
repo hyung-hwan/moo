@@ -3838,18 +3838,6 @@ static int compile_message_expression (stix_t* stix, int to_super)
 	}
 	while (1);
 
-#if 0
-	if (compile_keyword_message(stix, to_super) <= -1) return -1;
-
-	while (stix->c->tok.type == STIX_IOTOK_SEMICOLON) 
-	{
-		printf ("\tpop_stacktop for cascading\n");
-		if (emit_byte_instruction(stix, CODE_POP_STACKTOP) <= -1) return -1;
-		GET_TOKEN (stix);
-		if (compile_keyword_message(stix, 0) <= -1) return -1;
-	}
-#endif
-
 done:
 	return 0;
 }
@@ -3862,6 +3850,8 @@ static int compile_basic_expression (stix_t* stix, const stix_oocs_t* ident, con
 	int to_super;
 
 	if (compile_expression_primary(stix, ident, ident_loc, ident_dotted, &to_super) <= -1) return -1;
+
+#if 0
 	if (stix->c->tok.type != STIX_IOTOK_EOF && 
 	    stix->c->tok.type != STIX_IOTOK_RBRACE && 
 	    stix->c->tok.type != STIX_IOTOK_PERIOD &&
@@ -3869,6 +3859,14 @@ static int compile_basic_expression (stix_t* stix, const stix_oocs_t* ident, con
 	{
 		if (compile_message_expression(stix, to_super) <= -1) return -1;
 	}
+#else
+	if (stix->c->tok.type == STIX_IOTOK_IDENT ||
+	    stix->c->tok.type == STIX_IOTOK_BINSEL ||
+	    stix->c->tok.type == STIX_IOTOK_KEYWORD)
+	{
+		if (compile_message_expression(stix, to_super) <= -1) return -1;
+	}
+#endif
 
 	return 0;
 }
