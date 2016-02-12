@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
-    Copyright (c) 2014-2015 Chung, Hyung-Hwan. All rights reserved.
+    Copyright (c) 2014-2016 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -33,7 +33,11 @@
 
 /* TODO: context's stack overflow check in various part of this file */
 /* TOOD: determine the right stack size */
-#define CONTEXT_STACK_SIZE 96
+#if defined(STIX_USE_PROCSTK)
+#	define CONTEXT_STACK_SIZE 0
+#else
+#	define CONTEXT_STACK_SIZE 96
+#endif
 
 #define LOAD_IP(stix, v_ctx) ((stix)->ip = STIX_OOP_TO_SMOOI((v_ctx)->ip))
 #define STORE_IP(stix, v_ctx) ((v_ctx)->ip = STIX_SMOOI_TO_OOP((stix)->ip))
@@ -44,53 +48,79 @@
 #define LOAD_ACTIVE_IP(stix) LOAD_IP(stix, (stix)->active_context)
 #define STORE_ACTIVE_IP(stix) STORE_IP(stix, (stix)->active_context)
 
-#define LOAD_ACTIVE_SP(stix) LOAD_SP(stix, (stix)->active_context)
-#define STORE_ACTIVE_SP(stix) STORE_SP(stix, (stix)->active_context)
+#if defined(STIX_USE_PROCSTK)
+	#define LOAD_ACTIVE_SP(stix) LOAD_SP(stix, (stix)->processor->active)
+	#define STORE_ACTIVE_SP(stix) STORE_SP(stix, (stix)->processor->active)
 
+	#define ACTIVE_STACK_PUSH(stix,v) \
+		do { \
+			(stix)->sp = (stix)->sp + 1; \
+			(stix)->processor->active->slot[(stix)->sp] = v; \
+		} while (0)
 
-#define ACTIVE_STACK_PUSH(stix,v) \
-	do { \
-		(stix)->sp = (stix)->sp + 1; \
-		(stix)->active_context->slot[(stix)->sp] = v; \
-	} while (0)
+	#define ACTIVE_STACK_GET(stix,v_sp) ((stix)->processor->active->slot[v_sp])
+	#define ACTIVE_STACK_SET(stix,v_sp,v_obj) ((stix)->processor->active->slot[v_sp] = v_obj)
+
+#else
+	#define LOAD_ACTIVE_SP(stix) LOAD_SP(stix, (stix)->active_context)
+	#define STORE_ACTIVE_SP(stix) STORE_SP(stix, (stix)->active_context)
+
+	#define ACTIVE_STACK_PUSH(stix,v) \
+		do { \
+			(stix)->sp = (stix)->sp + 1; \
+			(stix)->active_context->slot[(stix)->sp] = v; \
+		} while (0)
+
+	#define ACTIVE_STACK_GET(stix,v_sp) ((stix)->active_context->slot[v_sp])
+	#define ACTIVE_STACK_SET(stix,v_sp,v_obj) ((stix)->active_context->slot[v_sp] = v_obj)
+#endif
+
+#define ACTIVE_STACK_GETTOP(stix) ACTIVE_STACK_GET(stix, (stix)->sp)
+#define ACTIVE_STACK_SETTOP(stix,v_obj) ACTIVE_STACK_SET(stix, (stix)->sp, v_obj)
 
 #define ACTIVE_STACK_POP(stix) ((stix)->sp = (stix)->sp - 1)
 #define ACTIVE_STACK_UNPOP(stix) ((stix)->sp = (stix)->sp + 1)
 #define ACTIVE_STACK_POPS(stix,count) ((stix)->sp = (stix)->sp - (count))
-
-#define ACTIVE_STACK_GET(stix,v_sp) ((stix)->active_context->slot[v_sp])
-#define ACTIVE_STACK_SET(stix,v_sp,v_obj) ((stix)->active_context->slot[v_sp] = v_obj)
-#define ACTIVE_STACK_GETTOP(stix) ACTIVE_STACK_GET(stix, (stix)->sp)
-#define ACTIVE_STACK_SETTOP(stix,v_obj) ACTIVE_STACK_SET(stix, (stix)->sp, v_obj)
-
 #define ACTIVE_STACK_ISEMPTY(stix) ((stix)->sp <= -1)
 
-#define SWITCH_ACTIVE_CONTEXT(stix,v_ctx) \
-	do \
-	{ \
-		STORE_ACTIVE_IP (stix); \
-		STORE_ACTIVE_SP (stix); \
-		(stix)->active_context = (v_ctx); \
-		(stix)->active_method = (stix_oop_method_t)(stix)->active_context->origin->method_or_nargs; \
-		SET_ACTIVE_METHOD_CODE(stix); \
-		LOAD_ACTIVE_IP (stix); \
-		LOAD_ACTIVE_SP (stix); \
-	} while (0) \
+#if defined(STIX_USE_PROCSTK)
+	#define SWITCH_ACTIVE_CONTEXT(stix,v_ctx) \
+		do \
+		{ \
+			STORE_ACTIVE_IP (stix); \
+			(stix)->active_context = (v_ctx); \
+			(stix)->active_method = (stix_oop_method_t)(stix)->active_context->origin->method_or_nargs; \
+			SET_ACTIVE_METHOD_CODE(stix); \
+			LOAD_ACTIVE_IP (stix); \
+		} while (0)
+#else
+	#define SWITCH_ACTIVE_CONTEXT(stix,v_ctx) \
+		do \
+		{ \
+			STORE_ACTIVE_IP (stix); \
+			STORE_ACTIVE_SP (stix); \
+			(stix)->active_context = (v_ctx); \
+			(stix)->active_method = (stix_oop_method_t)(stix)->active_context->origin->method_or_nargs; \
+			SET_ACTIVE_METHOD_CODE(stix); \
+			LOAD_ACTIVE_IP (stix); \
+			LOAD_ACTIVE_SP (stix); \
+		} while (0)
+#endif
 
 #define FETCH_BYTE_CODE(stix) ((stix)->active_code[(stix)->ip++])
 #define FETCH_BYTE_CODE_TO(stix, v_ooi) (v_ooi = FETCH_BYTE_CODE(stix))
 #if (STIX_BCODE_LONG_PARAM_SIZE == 2)
-#define FETCH_PARAM_CODE_TO(stix, v_ooi) \
-	do { \
-		v_ooi = FETCH_BYTE_CODE(stix); \
-		v_ooi = (v_ooi << 8) | FETCH_BYTE_CODE(stix); \
-	} while (0)
+#	define FETCH_PARAM_CODE_TO(stix, v_ooi) \
+		do { \
+			v_ooi = FETCH_BYTE_CODE(stix); \
+			v_ooi = (v_ooi << 8) | FETCH_BYTE_CODE(stix); \
+		} while (0)
 #else
-#define FETCH_PARAM_CODE_TO(stix, v_ooi) (v_ooi = FETCH_BYTE_CODE(stix))
+#	define FETCH_PARAM_CODE_TO(stix, v_ooi) (v_ooi = FETCH_BYTE_CODE(stix))
 #endif
 
 
-#if defined(STIX_DEBUG_EXEC)
+#if defined(STIX_DEBUG_EXEC_001)
 #	define DBGOUT_EXEC_0(fmt) printf(fmt "\n")
 #	define DBGOUT_EXEC_1(fmt,a1) printf(fmt "\n",a1)
 #	define DBGOUT_EXEC_2(fmt,a1,a2) printf(fmt "\n", a1, a2)
@@ -115,6 +145,9 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 	proc->initial_context = c;
 	proc->sp = STIX_SMOOI_TO_OOP(-1);
 
+#if defined(STIX_DEBUG_PROCESSOR)
+printf ("PROCESS %p SIZE => %ld\n", proc, (long int)STIX_OBJ_GET_SIZE(proc));
+#endif
 	return proc;
 }
 
@@ -126,16 +159,32 @@ static void switch_process (stix_t* stix, stix_oop_process_t proc)
 printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_context);
 #endif
 
-/* store the active context to the active process */
-STIX_ASSERT ((stix_oop_t)stix->processor->active != stix->_nil);
-stix->processor->active->active_context = stix->active_context;
+	#if defined(STIX_USE_PROCSTK)
+		STORE_ACTIVE_SP(stix);
+	#else
+		/* nothing special */
+	#endif
 
+		/* store the active context to the active process */
+		STIX_ASSERT ((stix_oop_t)stix->processor->active != stix->_nil);
+		stix->processor->active->active_context = stix->active_context;
+
+		/* switch the active process */
+		/*TODO: set the state to RUNNING */
+		stix->processor->active = proc;
+
+	#if defined(STIX_USE_PROCSTK)
+		LOAD_ACTIVE_SP(stix);
+	#else
+		/* nothing special */
+	#endif
+
+		/* switch the active context */
 		SWITCH_ACTIVE_CONTEXT (stix, proc->active_context);
+
 #if defined(STIX_DEBUG_PROCESSOR)
 printf ("ACTUAL PROCESS SWITCHING AF...%d %p\n", (int)stix->ip, stix->active_context);
 #endif
-		/*TODO: set the state to RUNNING */
-		stix->processor->active = proc;
 	}
 }
 
@@ -174,11 +223,13 @@ static STIX_INLINE int register_new_process (stix_t* stix, stix_oop_process_t pr
 	{
 		/* the process schedule has no process.
 		 * it is the first process */
+		STIX_ASSERT (stix->processor->active == stix->nil_process);
+
 		stix->processor->head = proc;
 		stix->processor->tail = proc;
-		stix->processor->tally  = STIX_SMOOI_TO_OOP(1);
+		stix->processor->tally = STIX_SMOOI_TO_OOP(1);
 #if defined(STIX_DEBUG_PROCESSOR)
-printf ("ADD NEW PROCESS X - %d\n", (int)1);
+printf ("ADDED FIRST NEW PROCESS - %d\n", (int)1);
 #endif
 	}
 	else if (tally >= STIX_SMOOI_MAX)
@@ -196,7 +247,7 @@ printf ("TOO MANY PROCESS\n");
 		stix->processor->head = proc;
 		stix->processor->tally = STIX_SMOOI_TO_OOP(tally + 1);
 #if defined(STIX_DEBUG_PROCESSOR)
-printf ("ADD NEW PROCESS Y - %d\n", (int)tally + 1);
+printf ("ADDED NEW PROCESS - %d\n", (int)tally + 1);
 #endif
 	}
 
@@ -222,35 +273,27 @@ static int schedule_process (stix_t* stix, stix_oop_process_t proc)
 	return 0;
 }
 
-#if 0
-static stix_oop_process_t start_new_process (stix_t* stix, stix_oop_context_t c)
-{
-	stix_oop_process_t proc;
-
-	proc = make_process (stix, c);
-	if (!proc) return STIX_NULL;
-
-	if (schedule_process (stix, proc) <= -1) return STIX_NULL;
-	return proc;
-}
-#endif
-
 static stix_oop_process_t start_initial_process (stix_t* stix, stix_oop_context_t c)
 {
 	stix_oop_process_t proc;
+
+	/* there must be no active process when this function is called */
+	STIX_ASSERT (stix->processor->tally == STIX_SMOOI_TO_OOP(0));
+	STIX_ASSERT (stix->processor->active == stix->nil_process);
 
 	proc = make_process (stix, c);
 	if (!proc) return STIX_NULL;
 
 	if (register_new_process (stix, proc) <= -1) return STIX_NULL;
 
+	/*TODO: set the state to RUNNING */
+	stix->processor->active = proc;
+
 	/* do somthing that schedule_process() would do with less overhead */
 	STIX_ASSERT ((stix_oop_t)proc->active_context != stix->_nil);
 	STIX_ASSERT (proc->active_context == proc->initial_context);
 	SWITCH_ACTIVE_CONTEXT (stix, proc->active_context);
-	/*TODO: set the state to RUNNING */
-	stix->processor->active = proc;
-	
+
 	return proc;
 }
 
@@ -287,11 +330,15 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 
 	STIX_ASSERT (ntmprs >= 0);
 	STIX_ASSERT (nargs <= ntmprs);
+#if defined(STIX_USE_PROCSTK)
+	/* nothing special */
+#else
 	STIX_ASSERT (stix->sp >= 0);
 	STIX_ASSERT (stix->sp >= nargs);
+#endif
 
 	stix_pushtmp (stix, (stix_oop_t*)&mth);
-	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_method_context, STIX_NULL, CONTEXT_STACK_SIZE);
+	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_method_context, STIX_NULL, ntmprs + CONTEXT_STACK_SIZE);
 	stix_poptmp (stix);
 	if (!ctx) return -1;
 
@@ -359,53 +406,13 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 
 	STIX_ASSERT (stix->sp >= -1);
 
-	/* swtich the active context */
+	/* switch the active context */
 	SWITCH_ACTIVE_CONTEXT (stix, ctx);
 
-#if defined(STIX_DEBUG_EXEC)
+#if defined(STIX_DEBUG_EXEC_001)
 printf ("<<ENTERING>> SP=%d\n", (int)stix->sp);
 #endif
 	return 0;
-
-#if 0
-reuse_context:
-	/* force the class to become a method context */
-	ctx->_class = stix->_method_context;
-
-	ctx->receiver_or_source = ACTIVE_STACK_GET(stix, stix->sp - nargs);
-#if defined(STIX_DEBUG_EXEC)
-printf ("####### REUSING CONTEXT INSTEAD OF <<ENTERING>> WITH RECEIVER ");
-print_object (stix, ctx->receiver_or_source);
-printf ("\n");
-#endif
-
-	for (i = 0; i < nargs; i++)
-	{
-		ctx->slot[i] = ACTIVE_STACK_GET (stix, stix->sp - nargs + i + 1);
-#if defined(STIX_DEBUG_EXEC)
-printf ("REUSING ARGUMENT %d - ", (int)i);
-print_object (stix, ctx->slot[i]);
-printf ("\n");
-#endif
-	}
-	for (; i <= stix->sp; i++) ctx->slot[i] = stix->_nil;
-	/* keep the sender 
-	ctx->sender = 
-	*/
-	
-	ctx->ntmprs = STIX_SMOOI_TO_OOP(ntmprs);
-	ctx->method_or_nargs = (stix_oop_t)mth;
-	ctx->home = stix->_nil;
-	ctx->origin = ctx;
-
-	/* let SWITCH_ACTIVE_CONTEXT() fill 'ctx->ip' and 'ctx->sp' by putting
-	 * the values to stix->ip and stix->sp */
-	stix->ip = 0;
-	stix->sp = ntmprs - 1;
-	SWITCH_ACTIVE_CONTEXT (stix, ctx);
-
-	return 0;
-#endif
 }
 
 static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const stix_oocs_t* message, int super)
@@ -417,7 +424,7 @@ static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const s
 	int dic_no;
 /* TODO: implement method lookup cache */
 
-#if defined(STIX_DEBUG_EXEC)
+#if defined(STIX_DEBUG_EXEC_002)
 printf ("==== FINDING METHOD FOR %p [", receiver);
 print_oocs (message);
 printf ("] in ");
@@ -429,7 +436,7 @@ printf ("] in ");
 		/* receiver is a class object */
 		c = receiver; 
 		dic_no = STIX_CLASS_MTHDIC_CLASS;
-#if defined(STIX_DEBUG_EXEC)
+#if defined(STIX_DEBUG_EXEC_002)
 printf ("class method dictioanry of ");
 print_object(stix, (stix_oop_t)((stix_oop_class_t)c)->name); 
 printf ("\n");
@@ -439,7 +446,7 @@ printf ("\n");
 	{
 		c = (stix_oop_t)cls;
 		dic_no = STIX_CLASS_MTHDIC_INSTANCE;
-#if defined(STIX_DEBUG_EXEC)
+#if defined(STIX_DEBUG_EXEC_002)
 printf ("instance method dictioanry of ");
 print_object(stix, (stix_oop_t)((stix_oop_class_t)c)->name);
 printf ("\n");
@@ -478,7 +485,7 @@ not_found:
 	return STIX_NULL;
 }
 
-static int activate_initial_context (stix_t* stix, const stix_oocs_t* objname, const stix_oocs_t* mthname)
+static int start_initial_process_and_context (stix_t* stix, const stix_oocs_t* objname, const stix_oocs_t* mthname)
 {
 	/* the initial context is a fake context. if objname is 'Stix' and
 	 * mthname is 'main', this function emulates message sending 'Stix main'.
@@ -521,6 +528,8 @@ TODO: overcome this problem
 	stix->ip = 0;
 	stix->sp = -1;
 
+	ctx->ip = STIX_SMOOI_TO_OOP(0); /* point to the beginning */
+	ctx->sp = STIX_SMOOI_TO_OOP(-1); /* pointer to -1 below the bottom */
 	ctx->origin = ctx; /* point to self */
 	ctx->method_or_nargs = (stix_oop_t)mth; /* fake. help SWITCH_ACTIVE_CONTEXT() not fail*/
 
@@ -530,21 +539,35 @@ TODO: overcome this problem
 	 *  the main execution loop for breaking out of the loop */
 
 	STIX_ASSERT (stix->active_context == STIX_NULL);
-	/* i can't use SWITCH_ACTIVE_CONTEXT() macro as there is no active 
-	 * context before switching. let's force set active_context to ctx
-	 * directly. */
+	STIX_ASSERT (stix->active_method == STIX_NULL);
+
+	/* stix_gc() uses stix->processor when stix->active_context
+	 * is not NULL. at this poinst, stix->processor should point to
+	 * an instance of ProcessScheduler. */
+	STIX_ASSERT ((stix_oop_t)stix->processor != stix->_nil);
+	STIX_ASSERT (stix->processor->tally == STIX_SMOOI_TO_OOP(0));
+
+	/* start_initial_process() calls the SWITCH_ACTIVE_CONTEXT() macro.
+	 * the macro assumes a non-null value in stix->active_context.
+	 * let's force set active_context to ctx directly. */
 	stix->active_context = ctx;
-	ACTIVE_STACK_PUSH (stix, ass->value); /* push the receiver */
 
-	STORE_ACTIVE_IP (stix); /* stix->active_context->ip = STIX_SMOOI_TO_OOP(stix->ip) */
-	STORE_ACTIVE_SP (stix); /* stix->active_context->sp = STIX_SMOOI_TO_OOP(stix->sp) */
-
+	stix_pushtmp (stix, (stix_oop_t*)&ctx);
 	stix_pushtmp (stix, (stix_oop_t*)&mth);
-	/* call start_initial_process() instead of start_new_process() */
+	stix_pushtmp (stix, (stix_oop_t*)&ass);
 	proc = start_initial_process (stix, ctx); 
-	stix_poptmp (stix);
+	stix_poptmps (stix, 3);
 	if (!proc) return -1;
 
+	ACTIVE_STACK_PUSH (stix, ass->value); /* push the receiver */
+	STORE_ACTIVE_SP (stix); /* stix->active_context->sp = STIX_SMOOI_TO_OOP(stix->sp) */
+
+	STIX_ASSERT (stix->processor->active == proc);
+	STIX_ASSERT (stix->processor->active->initial_context == ctx);
+	STIX_ASSERT (stix->processor->active->active_context == ctx);
+	STIX_ASSERT (stix->active_context == ctx);
+
+	/* emulate the message sending */
 	return activate_new_method (stix, mth);
 }
 
@@ -907,7 +930,6 @@ static int __block_value (stix_t* stix, stix_ooi_t nargs, stix_ooi_t num_first_a
 	stix_ooi_t local_ntmprs, i;
 	stix_ooi_t actual_arg_count;
 
-
 	actual_arg_count = (num_first_arg_elems > 0)? num_first_arg_elems: nargs;
 
 	/* TODO: find a better way to support a reentrant block context. */
@@ -924,7 +946,7 @@ static int __block_value (stix_t* stix, stix_ooi_t nargs, stix_ooi_t num_first_a
 	if (STIX_CLASSOF(stix, org_blkctx) != stix->_block_context)
 	{
 		/* the receiver must be a block context */
-#if defined(STIX_DEBUG_EXEC)
+#if defined(STIX_DEBUG_EXEC_001)
 printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 #endif
 		return 0;
@@ -938,7 +960,7 @@ printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 		 * For example, [thisContext value] value.
 		 */
 		STIX_ASSERT (STIX_OBJ_GET_SIZE(org_blkctx) > STIX_CONTEXT_NAMED_INSTVARS);
-#if defined(STIX_DEBUG_EXEC)
+#if defined(STIX_DEBUG_EXEC_001)
 printf ("PRIM REVALUING AN BLOCKCONTEXT\n");
 #endif
 		return 0;
@@ -948,15 +970,22 @@ printf ("PRIM REVALUING AN BLOCKCONTEXT\n");
 	if (STIX_OOP_TO_SMOOI(org_blkctx->method_or_nargs) != actual_arg_count /* nargs */)
 	{
 		/* the number of argument doesn't match */
-#if defined(STIX_DEBUG_EXEC)
+#if defined(STIX_DEBUG_EXEC_001)
 /* TODO: better handling of primitive failure */
 printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 #endif
 		return 0;
 	}
 
+	/* the number of temporaries stored in the block context
+	 * accumulates the number of temporaries starting from the origin.
+	 * simple calculation is needed to find the number of local temporaries */
+	local_ntmprs = STIX_OOP_TO_SMOOI(org_blkctx->ntmprs) -
+	               STIX_OOP_TO_SMOOI(((stix_oop_context_t)org_blkctx->home)->ntmprs);
+	STIX_ASSERT (local_ntmprs >= actual_arg_count);
+
 	/* create a new block context to clone org_blkctx */
-	blkctx = (stix_oop_context_t) stix_instantiate (stix, stix->_block_context, STIX_NULL, CONTEXT_STACK_SIZE); 
+	blkctx = (stix_oop_context_t) stix_instantiate (stix, stix->_block_context, STIX_NULL, local_ntmprs + CONTEXT_STACK_SIZE); 
 	if (!blkctx) return -1;
 
 	/* get org_blkctx again to be GC-safe for stix_instantiate() above */
@@ -976,9 +1005,6 @@ printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 	blkctx->receiver_or_source = (stix_oop_t)org_blkctx;
 	blkctx->home = org_blkctx->home;
 	blkctx->origin = org_blkctx->origin;
-#if defined(STIX_DEBUG_EXEC)
-printf ("~~~~~~~~~~ BLOCK VALUING %p TO NEW BLOCK %p\n", org_blkctx, blkctx);
-#endif
 #endif
 
 /* TODO: check the stack size of a block context to see if it's large enough to hold arguments */
@@ -1005,18 +1031,9 @@ printf ("~~~~~~~~~~ BLOCK VALUING %p TO NEW BLOCK %p\n", org_blkctx, blkctx);
 		}
 	}
 	ACTIVE_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
-	
 
 	STIX_ASSERT (blkctx->home != stix->_nil);
-
-	/* the number of temporaries stored in the block context
-	 * accumulates the number of temporaries starting from the origin.
-	 * simple calculation is needed to find the number of local temporaries */
-	local_ntmprs = STIX_OOP_TO_SMOOI(blkctx->ntmprs) -
-	               STIX_OOP_TO_SMOOI(((stix_oop_context_t)blkctx->home)->ntmprs);
-	STIX_ASSERT (local_ntmprs >= nargs);
-
-	blkctx->sp = STIX_SMOOI_TO_OOP(local_ntmprs);
+	blkctx->sp = STIX_SMOOI_TO_OOP(local_ntmprs - 1);
 	blkctx->sender = (stix_oop_t)stix->active_context;
 
 	*pblkctx = blkctx;
@@ -1031,8 +1048,8 @@ static int prim_block_value (stix_t* stix, stix_ooi_t nargs)
 	x = __block_value (stix, nargs, 0, &blkctx);
 	if (x <= 0) return x; /* hard failure and soft failure */
 
-#if defined(STIX_DEBUG_EXEC)
-printf ("<<ENTERING BLOCK>>\n");
+#if defined(STIX_DEBUG_EXEC_001)
+printf ("<<ENTERING BLOCK>> SP=%ld\n", (long int)stix->sp);
 #endif
 	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)blkctx);
 	return 1;
@@ -2007,7 +2024,8 @@ static int send_message (stix_t* stix, stix_oop_char_t selector, int to_super, s
 	STIX_ASSERT (STIX_CLASSOF(stix, selector) == stix->_symbol);
 
 	receiver = ACTIVE_STACK_GET(stix, stix->sp - nargs);
-#if defined(STIX_DEBUG_EXEC)
+
+#if defined(STIX_DEBUG_EXEC_001)
 printf (" RECEIVER = ");
 print_object(stix, receiver);
 printf ("\n");
@@ -2687,7 +2705,7 @@ printf ("\n");
 				/* get the selector from the literal frame */
 				selector = (stix_oop_char_t)stix->active_method->slot[b2];
 
-#if defined(STIX_DEBUG_EXEC)
+#if defined(STIX_DEBUG_EXEC_001)
 printf ("SEND_MESSAGE%s TO RECEIVER AT STACKPOS=%d NARGS=%d SELECTOR=", (((bcode >> 2) & 1)? "_TO_SUPER": ""), (int)(stix->sp - b1), (int)b1);
 print_object (stix, (stix_oop_t)selector);
 fflush (stdout);
@@ -2784,7 +2802,7 @@ fflush (stdout);
 				return_value = stix->active_context->origin->receiver_or_source;
 
 			handle_return:
-#if defined(STIX_DEBUG_EXEC)
+#if defined(STIX_DEBUG_EXEC_001)
 printf ("<<LEAVING>> SP=%d\n", (int)stix->sp);
 #endif
 
@@ -2847,10 +2865,16 @@ printf ("TERMINATING XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n");
 						/* the sending context of the intial context has been set to nil.
 						 * use this fact to tell an initial context from a normal context. */
 						STIX_ASSERT (stix->active_context->receiver_or_source == stix->_nil);
-#if defined(STIX_DEBUG_EXEC)
+#if defined(STIX_DEBUG_EXEC_001)
 printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
 #endif
+
+printf ("TERMINATING SP.... %ld\n", (long int)stix->sp);
+					#if defined(STIX_USE_PROCSTK)
+						/* nothing special */
+					#else
 						STIX_ASSERT (stix->sp == 0);
+					#endif
 						goto done;
 					}
 				}
@@ -2864,15 +2888,28 @@ printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
 
 				if (stix->active_context == stix->processor->active->initial_context)
 				{
-					/* TODO: terminate the process */
+					/* TODO: terminate the process. can this happen? */
 printf ("TERMINATE A PROCESS............\n");
 /* **************************************** */
 				}
 				else
 				{
-					return_value = ACTIVE_STACK_GETTOP(stix);
+#if defined(STIX_DEBUG_EXEC_001)
+printf ("<<LEAVING BLOCK>>\n");
+#endif
+				#if defined(STIX_USE_PROCSTK)
+					/* the process stack is shared. the return value 
+					 * doesn't need to get moved. */
 					SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->sender);
-					ACTIVE_STACK_PUSH (stix, return_value);
+				#else
+					/* NOTE: GC must not performed between here and */
+					return_value = ACTIVE_STACK_GETTOP(stix);
+					ACTIVE_STACK_POP (stix); /* pop off the return value */
+
+					SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->sender);
+					ACTIVE_STACK_PUSH (stix, return_value); /* push it to the sender */
+					/* NOTE: here. if so, return_value will point to a garbage. */
+				#endif
 				}
 
 				break;
@@ -3048,7 +3085,11 @@ oops:
 
 int stix_invoke (stix_t* stix, const stix_oocs_t* objname, const stix_oocs_t* mthname)
 {
-	if (activate_initial_context (stix, objname, mthname) <= -1) return -1;
+	if (start_initial_process_and_context (stix, objname, mthname) <= -1) return -1;
 	return stix_execute (stix);
+/* TODO: reset stix->active_context & stix->active_method to STIX_NULL 
+* 
+* TODO: remove the process. set processor->tally to zero. processor->active to nil_process... 
+*/
 }
 

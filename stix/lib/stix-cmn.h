@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
-    Copyright (c) 2014-2015 Chung, Hyung-Hwan. All rights reserved.
+    Copyright (c) s2014-2016 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -373,34 +373,6 @@ typedef stix_ucs_t               stix_oocs_t;
  */
 /*#define STIX_BITS_MAX(type,nbits) ((((type)1) << (nbits)) - 1)*/
 #define STIX_BITS_MAX(type,nbits) ((~(type)0) >> (STIX_SIZEOF(type) * 8 - (nbits)))
-
-/* =========================================================================
- * POINTER MANIPULATION MACROS
- * ========================================================================= */
-
-/*
-#if defined(__MSDOS__)
-#	define STIX_INCPTR(type,base,inc)  (((type __huge*)base) + (inc))
-#	define STIX_DECPTR(type,base,inc)  (((type __huge*)base) - (inc))
-#	define STIX_GTPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) > ((type __huge*)ptr2))
-#	define STIX_GEPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) >= ((type __huge*)ptr2))
-#	define STIX_LTPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) < ((type __huge*)ptr2))
-#	define STIX_LEPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) <= ((type __huge*)ptr2))
-#	define STIX_EQPTR(type,ptr1,ptr2)  (((type __huge*)ptr1) == ((type __huge*)ptr2))
-#	define STIX_SUBPTR(type,ptr1,ptr2) (((type __huge*)ptr1) - ((type __huge*)ptr2))
-#else 
-*/
-#	define STIX_INCPTR(type,base,inc)  (((type*)base) + (inc))
-#	define STIX_DECPTR(type,base,inc)  (((type*)base) - (inc))
-#	define STIX_GTPTR(type,ptr1,ptr2)  (((type*)ptr1) > ((type*)ptr2))
-#	define STIX_GEPTR(type,ptr1,ptr2)  (((type*)ptr1) >= ((type*)ptr2))
-#	define STIX_LTPTR(type,ptr1,ptr2)  (((type*)ptr1) < ((type*)ptr2))
-#	define STIX_LEPTR(type,ptr1,ptr2)  (((type*)ptr1) <= ((type*)ptr2))
-#	define STIX_EQPTR(type,ptr1,ptr2)  (((type*)ptr1) == ((type*)ptr2))
-#	define STIX_SUBPTR(type,ptr1,ptr2) (((type*)ptr1) - ((type*)ptr2))
-/*
-#endif
-*/
 
 /* =========================================================================
  * MMGR

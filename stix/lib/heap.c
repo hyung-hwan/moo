@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
-    Copyright (c) 2014-2015 Chung, Hyung-Hwan. All rights reserved.
+    Copyright (c) 2014-2016 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -42,11 +42,11 @@ stix_heap_t* stix_makeheap (stix_t* stix, stix_oow_t size)
 	heap->base = (stix_uint8_t*)(heap + 1);
 	/* adjust the initial allocation pointer to a multiple of the oop size */
 	heap->ptr = (stix_uint8_t*)STIX_ALIGN(((stix_uintptr_t)heap->base), STIX_SIZEOF(stix_oop_t));
-	heap->limit = STIX_INCPTR(stix_uint8_t, heap->base, size); /*heap->base + size;*/
+	heap->limit = heap->base + size;
 
 	STIX_ASSERT (heap->ptr >= heap->base);
-	STIX_ASSERT (STIX_GTPTR(stix_uint8_t, heap->limit, heap->base)); /* heap->limit >= heap->base */
-	STIX_ASSERT (STIX_SUBPTR(stix_uint8_t, heap->limit, heap->base) == size);
+	STIX_ASSERT (heap->limit >= heap->base ); 
+	STIX_ASSERT (heap->limit - heap->base == size);
 
 	/* if size is too small, heap->ptr may go past heap->limit even at 
 	 * this moment depending on the alignment of heap->base. subsequent
@@ -65,10 +65,9 @@ void* stix_allocheapmem (stix_t* stix, stix_heap_t* heap, stix_oow_t size)
 {
 	stix_uint8_t* ptr;
 
+//printf ("heap ptr %p  %p %lld %lld\n", heap->ptr, heap->limit, (long long int)size, (long long int)(heap->limit - heap->ptr));
 	/* check the heap size limit */
-	/*if (heap->ptr >= heap->limit || heap->limit - heap->ptr < size)*/
-	if (STIX_GEPTR(stix_uint8_t, heap->ptr, heap->limit) || 
-	    STIX_SUBPTR(stix_uint8_t, heap->limit, heap->ptr) < size)
+	if (heap->ptr >= heap->limit || heap->limit - heap->ptr < size)
 	{
 		stix->errnum = STIX_EOOMEM;
 		return STIX_NULL;
@@ -76,7 +75,7 @@ void* stix_allocheapmem (stix_t* stix, stix_heap_t* heap, stix_oow_t size)
 
 	/* allocation is as simple as moving the heap pointer */
 	ptr = heap->ptr;
-	heap->ptr = STIX_INCPTR (stix_uint8_t, heap->ptr, size); /*heap->ptr += size;*/
+	heap->ptr += size;
 
 	return ptr;
 }

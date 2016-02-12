@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
-    Copyright (c) 2014-2015 Chung, Hyung-Hwan. All rights reserved.
+    Copyright (c) 2014-2016 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -542,12 +542,10 @@ struct stix_process_t
 	STIX_OBJ_HEADER;
 	stix_oop_context_t initial_context;
 	stix_oop_context_t active_context;
-	stix_oop_t         state;
+	stix_oop_t         state; /* SmallInteger */
 	stix_oop_process_t prev;
 	stix_oop_process_t next;
-
-	/* stack pointer. SmallInteger */
-	stix_oop_t         sp; 
+	stix_oop_t         sp;    /* stack pointer. SmallInteger */
 
 	/* == variable indexed part == */
 	stix_oop_t slot[1]; /* process stack */
@@ -749,6 +747,7 @@ struct stix_t
 	stix_oop_set_t symtab; /* system-wide symbol table. instance of SymbolSet */
 	stix_oop_set_t sysdic; /* system dictionary. instance of SystemDictionary */
 	stix_oop_process_scheduler_t processor; /* instance of ProcessScheduler */
+	stix_oop_process_t nil_process; /* instance of Process */
 
 	stix_oop_t* tmp_stack[256]; /* stack for temporaries */
 	stix_oow_t tmp_count;

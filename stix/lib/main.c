@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
-    Copyright (c) 2014-2015 Chung, Hyung-Hwan. All rights reserved.
+    Copyright (c) 2014-2016 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -434,7 +434,7 @@ int main (int argc, char* argv[])
 	lt_dlinit ();
 #endif
 
-	stix = stix_open (&sys_mmgr, STIX_SIZEOF(xtn_t), 512000lu, &vmprim, STIX_NULL);
+	stix = stix_open (&sys_mmgr, STIX_SIZEOF(xtn_t), 2048000lu, &vmprim, STIX_NULL);
 	if (!stix)
 	{
 		printf ("cannot open stix\n");
@@ -449,7 +449,7 @@ int main (int argc, char* argv[])
 		stix_setoption (stix, STIX_SYMTAB_SIZE, &tab_size);
 		tab_size = 5000;
 		stix_setoption (stix, STIX_SYSDIC_SIZE, &tab_size);
-		tab_size = 5000;
+		tab_size = 60;
 		stix_setoption (stix, STIX_PROCSTK_SIZE, &tab_size);
 	}
 

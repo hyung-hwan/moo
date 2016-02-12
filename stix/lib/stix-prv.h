@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
-    Copyright (c) 2014-2015 Chung, Hyung-Hwan. All rights reserved.
+    Copyright (c) 2014-2016 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -49,11 +49,18 @@
  * object instead of putting in in a separate byte array. */
 #define STIX_USE_OBJECT_TRAILER
 
+/* define this to use the stack allocated inside process stack */
+#define STIX_USE_PROCSTK
+
 /* this is for gc debugging */
 /*#define STIX_DEBUG_PROCESSOR*/
 #define STIX_DEBUG_GC_001
-/*#define STIX_DEBUG_EXEC*/
+/*#define STIX_DEBUG_GC_002*/
+#define STIX_DEBUG_COMP_001
+/*#define STIX_DEBUG_EXEC_001*/
+/*#define STIX_DEBUG_EXEC_002*/
 #define STIX_PROFILE_EXEC
+
 
 /* limit the maximum object size such that:
  *   1. an index to an object field can be represented in a small integer.

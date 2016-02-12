@@ -25,7 +25,6 @@ endif
 
 pkgincludedir = $(includedir)
 pkglibdir = $(libdir)
-pkgbindir = $(bindir)
 
 pkginclude_HEADERS = \
 	stix-cfg.h \
@@ -56,11 +55,11 @@ libstix_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 libstix_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libstix_la_LIBADD = $(LIBADD_LIB_COMMON)
 
-pkgbin_PROGRAMS = stix
+bin_PROGRAMS = stix
 stix_SOURCES = main.c
 stix_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 stix_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-stix_LDADD = $(LIBADD_LIB_COMMON) -lstix -ldyncall_s
+stix_LDADD = $(LIBADD_LIB_COMMON) -lstix #-ldyncall_s
 
 if ENABLE_STATIC_MODULE
 

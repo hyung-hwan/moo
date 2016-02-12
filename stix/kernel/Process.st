@@ -59,6 +59,10 @@
 		^Processor resume: self.
 	}
 
+	#method sp
+	{
+		^sp.
+	}
 }
 
 #class ProcessScheduler(Object)

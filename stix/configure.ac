@@ -14,7 +14,7 @@ dnl use CC and CPP for compilation tests with .c test programs.
 AC_LANG(C)
 
 dnl initialize automake
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects foreign])
 AM_PROG_AR
 
 dnl enable silent rules if automake supports them.
@@ -47,13 +47,13 @@ AC_CHECK_TOOL(ECHO, echo)
 dnl avoid "'/bin/rm: cannot remove `libtoolT': No such file or directory"
 RM="$RM -f"
 
-dnl initialize libtool
-LT_INIT
-AC_SUBST(LIBTOOL_DEPS)
-
 dnl 'recursive' type seems to have problems in setting LT_CONFIG_H
 dnl so i use the classic 'subproject' type here
 LT_CONFIG_LTDL_DIR([libltdl])
+
+dnl initialize libtool
+LT_INIT
+AC_SUBST(LIBTOOL_DEPS)
 
 save_CFLAGS="$CFLAGS"
 save_LDFLAGS="$LDFLAGS"

@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
-    Copyright (c) 2014-2015 Chung, Hyung-Hwan. All rights reserved.
+    Copyright (c) 2014-2016 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -186,8 +186,7 @@ stix_oop_t stix_moveoop (stix_t* stix, stix_oop_t oop)
 
 static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 {
-	/*while (ptr < stix->newheap->ptr)*/
-	while (STIX_LTPTR(stix_uint8_t, ptr, stix->newheap->ptr))
+	while (ptr < stix->newheap->ptr)
 	{
 		stix_oow_t i;
 		stix_oow_t nbytes_aligned;
@@ -225,11 +224,21 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 			if ((stix->_method_context && STIX_OBJ_GET_CLASS(oop) == stix->_method_context) ||
 			    (stix->_block_context && STIX_OBJ_GET_CLASS(oop) == stix->_block_context))
 			{
-				/* the stack in the context object doesn't need to be 
+				/* the stack in a context object doesn't need to be 
 				 * scanned in full. the slots above the stack pointer 
 				 * are garbages. */
 				size = STIX_CONTEXT_NAMED_INSTVARS +
 				       STIX_OOP_TO_SMOOI(((stix_oop_context_t)oop)->sp) + 1;
+				STIX_ASSERT (size <= STIX_OBJ_GET_SIZE(oop)); 
+			}
+			else if (stix->_process && STIX_OBJ_GET_CLASS(oop) == stix->_process)
+			{
+				/* the stack in a process object doesn't need to be 
+				 * scanned in full. the slots above the stack pointer 
+				 * are garbages. */
+				size = STIX_PROCESS_NAMED_INSTVARS +
+				       STIX_OOP_TO_SMOOI(((stix_oop_process_t)oop)->sp) + 1;
+				STIX_ASSERT (size <= STIX_OBJ_GET_SIZE(oop));
 			}
 			else
 			{
@@ -244,8 +253,7 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 			}
 		}
 
-		/*ptr = ptr + STIX_SIZEOF(stix_obj_t) + nbytes_aligned;*/
-		ptr = STIX_INCPTR (stix_uint8_t, ptr, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
+		ptr = ptr + STIX_SIZEOF(stix_obj_t) + nbytes_aligned;
 	}
 
 	/* return the pointer to the beginning of the free space in the heap */
@@ -268,14 +276,24 @@ void stix_gc (stix_t* stix)
 
 	if (stix->active_context)
 	{
-		/* store the stack pointer to the actual active context */
 /* TODO: verify if this is correct */
+	#if defined(STIX_USE_PROCSTK)
+		/*STIX_ASSERT ((stix_oop_t)stix->processor != stix->_nil);
+		if ((stix_oop_t)stix->processor->active != stix->_nil)*/
+			stix->processor->active->sp = STIX_SMOOI_TO_OOP(stix->sp);
+	#else
+		/* store the stack pointer to the active context */
 		stix->active_context->sp = STIX_SMOOI_TO_OOP(stix->sp);
+	#endif
+
+		/* store the instruction pointer to the active context */
 		stix->active_context->ip = STIX_SMOOI_TO_OOP(stix->ip);
 	}
 
-/*printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
-	stix->curheap->base, stix->curheap->ptr, stix->newheap->base, stix->newheap->ptr);*/
+#if defined(STIX_DEBUG_GC_002)
+printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
+	stix->curheap->base, stix->curheap->ptr, stix->newheap->base, stix->newheap->ptr); 
+#endif
 	/* TODO: allocate common objects like _nil and the root dictionary 
 	 *       in the permanant heap.  minimize moving around */
 	old_nil = stix->_nil;
@@ -315,14 +333,17 @@ void stix_gc (stix_t* stix)
 
 	stix->sysdic = (stix_oop_set_t) stix_moveoop (stix, (stix_oop_t)stix->sysdic);
 	stix->processor = (stix_oop_process_scheduler_t) stix_moveoop (stix, (stix_oop_t)stix->processor);
+	stix->nil_process = (stix_oop_process_t) stix_moveoop (stix, (stix_oop_t)stix->nil_process);
 
 	for (i = 0; i < stix->tmp_count; i++)
 	{
 		*stix->tmp_stack[i] = stix_moveoop (stix, *stix->tmp_stack[i]);
 	}
 
-	stix->active_context = (stix_oop_context_t)stix_moveoop (stix, (stix_oop_t)stix->active_context);
-	stix->active_method = (stix_oop_method_t)stix_moveoop (stix, (stix_oop_t)stix->active_method);
+	if (stix->active_context)
+		stix->active_context = (stix_oop_context_t)stix_moveoop (stix, (stix_oop_t)stix->active_context);
+	if (stix->active_method)
+		stix->active_method = (stix_oop_method_t)stix_moveoop (stix, (stix_oop_t)stix->active_method);
 
 	for (cb = stix->cblist; cb; cb = cb->next)
 	{

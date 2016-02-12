@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
-    Copyright (c) 2014-2015 Chung, Hyung-Hwan. All rights reserved.
+    Copyright (c) 2014-2016 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -145,6 +145,19 @@ enum voca_id_t
 	VOCA_EOF
 };
 typedef enum voca_id_t voca_id_t;
+
+#if defined(STIX_DEBUG_COMP_001)
+#	define DBGOUT_COMP_0(fmt) printf(fmt "\n")
+#	define DBGOUT_COMP_1(fmt,a1) printf(fmt "\n",a1)
+#	define DBGOUT_COMP_2(fmt,a1,a2) printf(fmt "\n", a1, a2)
+#	define DBGOUT_COMP_3(fmt,a1,a2,a3) printf(fmt "\n", a1, a2, a3)
+#else
+#	define DBGOUT_COMP_0(fmt)
+#	define DBGOUT_COMP_1(fmt,a1)
+#	define DBGOUT_COMP_2(fmt,a1,a2)
+#	define DBGOUT_COMP_3(fmt,a1,a2,a3)
+#endif
+
 
 static int compile_block_statement (stix_t* stix);
 static int compile_method_statement (stix_t* stix);
@@ -1780,37 +1793,36 @@ static int emit_push_smint_literal (stix_t* stix, stix_ooi_t i)
 	switch (i)
 	{
 		case -1:
-printf ("\tpush negone\n");
+			DBGOUT_COMP_0("\tpush negone");
 			return emit_byte_instruction (stix, BCODE_PUSH_NEGONE);
 
 		case 0:
-printf ("\tpush zero\n");
+			DBGOUT_COMP_0("\tpush zero");
 			return emit_byte_instruction (stix, BCODE_PUSH_ZERO);
 
 		case 1:
-printf ("\tpush one\n");
+			DBGOUT_COMP_0("\tpush one");
 			return emit_byte_instruction (stix, BCODE_PUSH_ONE);
 
 		case 2:
-printf ("\tpush two\n");
+			DBGOUT_COMP_0("\tpush two");
 			return emit_byte_instruction (stix, BCODE_PUSH_TWO);
 	}
 
 	if (i >= 0 && i <= MAX_CODE_PARAM)
 	{
-printf ("\tpush intlit %d\n", (int)i);
+		DBGOUT_COMP_1("\tpush intlit %d", (int)i);
 		return emit_single_param_instruction(stix, BCODE_PUSH_INTLIT, i);
 	}
 	else if (i < 0 && i >= -(stix_ooi_t)MAX_CODE_PARAM)
 	{
-printf ("\tpush negintlit %d\n", (int)i);
+		DBGOUT_COMP_1("\tpush negintlit %d", (int)i);
 		return emit_single_param_instruction(stix, BCODE_PUSH_NEGINTLIT, -i);
 	}
 
-
 	if (add_literal(stix, STIX_SMOOI_TO_OOP(i), &index) <= -1 ||
 	    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
-printf ("\tpush litral_0 %d\n", (int)index);
+	DBGOUT_COMP_1("\tpush litral_0 %d", (int)index);
 
 	return 0;
 }
@@ -3035,20 +3047,20 @@ static int compile_block_expression (stix_t* stix)
 	if (store_tmpr_count_for_block (stix, stix->c->mth.tmpr_count) <= -1) return -1;
 
 #if defined(STIX_USE_MAKE_BLOCK)
-printf ("\tmake_block nargs %d ntmprs %d\n", (int)block_arg_count, (int)stix->c->mth.tmpr_count /*block_tmpr_count*/);
+	DBGOUT_COMP_2 ("\tmake_block nargs %d ntmprs %d", (int)block_arg_count, (int)stix->c->mth.tmpr_count /*block_tmpr_count*/);
 	if (emit_double_param_instruction(stix, BCODE_MAKE_BLOCK, block_arg_count, stix->c->mth.tmpr_count/*block_tmpr_count*/) <= -1) return -1;
 #else
-printf ("\tpush_context\n");
-printf ("\tpush smint nargs=%d\n", (int)block_arg_count);
-printf ("\tpush smint ntmprs=%d\n", (int)stix->c->mth.tmpr_count /*block_tmpr_count*/);
-printf ("\tsend_block_copy\n");
+	DBGOUT_COMP_0("\tpush_context");
+	DBGOUT_COMP_1("\tpush smint nargs=%d", (int)block_arg_count);
+	DBGOUT_COMP_1("\tpush smint ntmprs=%d", (int)stix->c->mth.tmpr_count /*block_tmpr_count*/);
+	DBGOUT_COMP_0("\tsend_block_copy");
 	if (emit_byte_instruction(stix, BCODE_PUSH_CONTEXT) <= -1 ||
 	    emit_push_smint_literal(stix, block_arg_count) <= -1 ||
 	    emit_push_smint_literal(stix, stix->c->mth.tmpr_count/*block_tmpr_count*/) <= -1 ||
 	    emit_byte_instruction(stix, BCODE_SEND_BLOCK_COPY) <= -1) return -1;
 #endif
 
-printf ("\tjump\n");
+	DBGOUT_COMP_0 ("\tjump_forward_0");
 	/* insert dummy instructions before replacing them with a jump instruction */
 	jump_inst_pos = stix->c->mth.code.len;
 	/* specifying MAX_CODE_JUMP causes emit_single_param_instruction() to 
@@ -3059,6 +3071,7 @@ printf ("\tjump\n");
 	if (stix->c->tok.type == STIX_IOTOK_RBRACK)
 	{
 		/* the block is empty */
+		DBGOUT_COMP_0("\tpush_nil");
 		if (emit_byte_instruction (stix, BCODE_PUSH_NIL) <= -1) return -1;
 	}
 	else 
@@ -3072,6 +3085,7 @@ printf ("\tjump\n");
 			{
 				GET_TOKEN (stix);
 				if (stix->c->tok.type == STIX_IOTOK_RBRACK) break;
+				DBGOUT_COMP_0("\tpop_stacktop");
 				if (emit_byte_instruction(stix, BCODE_POP_STACKTOP) <= -1) return -1;
 			}
 			else
@@ -3080,10 +3094,11 @@ printf ("\tjump\n");
 				return -1;
 			}
 		}
-
-printf ("\treturn_from_block\n");
-		if (emit_byte_instruction(stix, BCODE_RETURN_FROM_BLOCK) <= -1) return -1;
 	}
+
+	DBGOUT_COMP_0("\treturn_from_block");
+	if (emit_byte_instruction(stix, BCODE_RETURN_FROM_BLOCK) <= -1) return -1;
+
 
 	block_code_size = stix->c->mth.code.len - jump_inst_pos - (STIX_BCODE_LONG_PARAM_SIZE + 1);
 	if (block_code_size > MAX_CODE_JUMP * 2)
@@ -3097,7 +3112,7 @@ printf ("\treturn_from_block\n");
 
 		if (block_code_size > MAX_CODE_JUMP)
 		{
-printf ("\tfixed jump to jump2\n");
+			DBGOUT_COMP_0("\tfixed jump_forward to jump2_forward");
 			stix->c->mth.code.ptr[jump_inst_pos] = BCODE_JUMP2_FORWARD;
 			jump_offset = block_code_size - MAX_CODE_JUMP;
 		}
@@ -3106,7 +3121,7 @@ printf ("\tfixed jump to jump2\n");
 			jump_offset = block_code_size;
 		}
 
-printf ("\tfixed jump offset to %u\n", (unsigned int)jump_offset);
+		DBGOUT_COMP_1("\tfixed jump offset to %u", (unsigned int)jump_offset);
 
 	#if (STIX_BCODE_LONG_PARAM_SIZE == 2)
 		stix->c->mth.code.ptr[jump_inst_pos + 1] = jump_offset >> 8;
@@ -3331,7 +3346,7 @@ static int compile_byte_array_literal (stix_t* stix)
 	if (read_byte_array_literal(stix, &lit) <= -1 ||
 	    add_literal(stix, lit, &index) <= -1 ||
 	    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
-printf ("\tpush_literal byte_array\n");
+	DBGOUT_COMP_0("\tpush_literal byte_array");
 
 	GET_TOKEN (stix);
 	return 0;
@@ -3367,7 +3382,7 @@ static int compile_array_literal (stix_t* stix)
 	if (read_array_literal(stix, &lit) <= -1 ||
 	    add_literal(stix, lit, &index) <= -1 ||
 	    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
-printf ("\tpush_literal array\n");
+	DBGOUT_COMP_0("\tpush_literal array");
 
 	GET_TOKEN (stix);
 	return 0;
@@ -3408,7 +3423,7 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 					{
 						if (var.pos >= stix->c->mth.blk_tmprcnt[i - 1])
 						{
-printf ("\tpush ctxtempvar %d %d\n", (int)(stix->c->mth.blk_depth - i), (int)(var.pos - stix->c->mth.blk_tmprcnt[i - 1]));
+							DBGOUT_COMP_2("\tpush ctxtempvar %d %d", (int)(stix->c->mth.blk_depth - i), (int)(var.pos - stix->c->mth.blk_tmprcnt[i - 1]));
 							if (emit_double_param_instruction(stix, BCODE_PUSH_CTXTEMPVAR_0, stix->c->mth.blk_depth - i, var.pos - stix->c->mth.blk_tmprcnt[i - 1]) <= -1) return -1;
 							goto temporary_done;
 						}
@@ -3417,7 +3432,7 @@ printf ("\tpush ctxtempvar %d %d\n", (int)(stix->c->mth.blk_depth - i), (int)(va
 			#endif
 
 				if (emit_single_param_instruction(stix, BCODE_PUSH_TEMPVAR_0, var.pos) <= -1) return -1;
-printf ("\tpush tempvar %d\n", (int)var.pos);
+				DBGOUT_COMP_1("\tpush tempvar %d", (int)var.pos);
 			temporary_done:
 				break;
 			}
@@ -3425,13 +3440,13 @@ printf ("\tpush tempvar %d\n", (int)var.pos);
 			case VAR_INSTANCE:
 			case VAR_CLASSINST:
 				if (emit_single_param_instruction(stix, BCODE_PUSH_INSTVAR_0, var.pos) <= -1) return -1;
-printf ("\tpush instvar %d\n", (int)var.pos);
+				DBGOUT_COMP_1("\tpush instvar %d", (int)var.pos);
 				break;
 
 			case VAR_CLASS:
 				if (add_literal(stix, (stix_oop_t)var.cls, &index) <= -1 ||
 				    emit_double_param_instruction(stix, BCODE_PUSH_OBJVAR_0, var.pos, index) <= -1) return -1;
-printf ("\tpush objvar %d %d\n", (int)var.pos, (int)index);
+				DBGOUT_COMP_2("\tpush objvar %d %d", (int)var.pos, (int)index);
 				break;
 
 			case VAR_GLOBAL:
@@ -3446,7 +3461,7 @@ printf ("\tpush objvar %d %d\n", (int)var.pos, (int)index);
 				 */
 				if (add_literal(stix, (stix_oop_t)var.gbl, &index) <= -1 ||
 				    emit_single_param_instruction(stix, BCODE_PUSH_OBJECT_0, index) <= -1) return -1;
-printf ("\tpush object %d\n", (int)index);
+				DBGOUT_COMP_1("\tpush object %d", (int)index);
 				break;
 
 			default:
@@ -3469,38 +3484,38 @@ printf ("\tpush object %d\n", (int)index);
 				goto handle_ident;
 
 			case STIX_IOTOK_SELF:
-printf ("\tpush receiver...\n");
+				DBGOUT_COMP_0("\tpush receiver");
 				if (emit_byte_instruction(stix, BCODE_PUSH_RECEIVER) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
 
 			case STIX_IOTOK_SUPER:
-printf ("\tpush receiver(super)...\n");
+				DBGOUT_COMP_0("\tpush receiver(super)");
 				if (emit_byte_instruction(stix, BCODE_PUSH_RECEIVER) <= -1) return -1;
 				GET_TOKEN (stix);
 				*to_super = 1;
 				break;
 
 			case STIX_IOTOK_NIL:
-printf ("\tpush nil...\n");
+				DBGOUT_COMP_0("\tpush nil");
 				if (emit_byte_instruction(stix, BCODE_PUSH_NIL) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
 
 			case STIX_IOTOK_TRUE:
-printf ("\tpush true...\n");
+				DBGOUT_COMP_0("\tpush true");
 				if (emit_byte_instruction(stix, BCODE_PUSH_TRUE) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
 
 			case STIX_IOTOK_FALSE:
-printf ("\tpush false...\n");
+				DBGOUT_COMP_0("\tpush false");
 				if (emit_byte_instruction(stix, BCODE_PUSH_FALSE) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
 
 			case STIX_IOTOK_THIS_CONTEXT:
-printf ("\tpush context...\n");
+				DBGOUT_COMP_0("\tpush context");
 				if (emit_byte_instruction(stix, BCODE_PUSH_CONTEXT) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
@@ -3509,21 +3524,21 @@ printf ("\tpush context...\n");
 				STIX_ASSERT (stix->c->tok.name.len == 1);
 				if (add_character_literal(stix, stix->c->tok.name.ptr[0], &index) <= -1 ||
 				    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
-printf ("\tpush character literal %d\n", (int)index);
+				DBGOUT_COMP_1("\tpush character literal %d", (int)index);
 				GET_TOKEN (stix);
 				break;
 
 			case STIX_IOTOK_STRLIT:
 				if (add_string_literal(stix, &stix->c->tok.name, &index) <= -1 ||
 				    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
-printf ("\tpush string literal %d\n", (int)index);
+				DBGOUT_COMP_1("\tpush string literal %d", (int)index);
 				GET_TOKEN (stix);
 				break;
 
 			case STIX_IOTOK_SYMLIT:
 				if (add_symbol_literal(stix, &stix->c->tok.name, &index) <= -1 ||
 				    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
-printf ("\tpush symbol literal %d\n", (int)index);
+				DBGOUT_COMP_1("\tpush symbol literal %d", (int)index);
 				GET_TOKEN (stix);
 				break;
 
@@ -3545,7 +3560,7 @@ printf ("\tpush symbol literal %d\n", (int)index);
 				{
 					if (add_literal(stix, tmp, &index) <= -1 ||
 					    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
-printf ("\tpush_literal_0 %d\n", (int)index);
+					DBGOUT_COMP_1("\tpush_literal_0 %d", (int)index);
 				}
 
 				GET_TOKEN (stix);
@@ -3822,7 +3837,7 @@ static int compile_message_expression (stix_t* stix, int to_super)
 
 		if (stix->c->tok.type == STIX_IOTOK_SEMICOLON)
 		{
-			printf ("\tdup_stacktop for cascading\n");
+			DBGOUT_COMP_0("\tdup_stacktop for cascading");
 			stix->c->mth.code.ptr[noop_pos] = BCODE_DUP_STACKTOP;
 			if (emit_byte_instruction(stix, BCODE_POP_STACKTOP) <= -1) return -1;
 			GET_TOKEN(stix);
@@ -3946,7 +3961,7 @@ printf ("\n");
 						{
 							if (var.pos >= stix->c->mth.blk_tmprcnt[i - 1])
 							{
-printf ("\t%s_into_ctxtempvar %d %d\n", (pop? "pop":"store"), (int)(stix->c->mth.blk_depth - i), (int)(var.pos - stix->c->mth.blk_tmprcnt[i - 1]));
+								DBGOUT_COMP_3("\t%s_into_ctxtempvar %d %d", (pop? "pop":"store"), (int)(stix->c->mth.blk_depth - i), (int)(var.pos - stix->c->mth.blk_tmprcnt[i - 1]));
 								if (emit_double_param_instruction(stix, (pop? BCODE_POP_INTO_CTXTEMPVAR_0: BCODE_STORE_INTO_CTXTEMPVAR_0), stix->c->mth.blk_depth - i, var.pos - stix->c->mth.blk_tmprcnt[i - 1]) <= -1) return -1;
 								goto temporary_done;
 							}
@@ -3954,7 +3969,7 @@ printf ("\t%s_into_ctxtempvar %d %d\n", (pop? "pop":"store"), (int)(stix->c->mth
 					}
 				#endif
 
-printf ("\t%s_into_tempvar %d\n", (pop? "pop":"store"), (int)var.pos);
+					DBGOUT_COMP_2("\t%s_into_tempvar %d", (pop? "pop":"store"), (int)var.pos);
 					if (emit_single_param_instruction (stix, (pop? BCODE_POP_INTO_TEMPVAR_0: BCODE_STORE_INTO_TEMPVAR_0), var.pos) <= -1) goto oops;
 
 				temporary_done:
@@ -3964,7 +3979,7 @@ printf ("\t%s_into_tempvar %d\n", (pop? "pop":"store"), (int)var.pos);
 
 				case VAR_INSTANCE:
 				case VAR_CLASSINST:
-printf ("\t%s_into_instvar %d\n", (pop? "pop":"store"), (int)var.pos);
+					DBGOUT_COMP_2("\t%s_into_instvar %d", (pop? "pop":"store"), (int)var.pos);
 					if (emit_single_param_instruction (stix, (pop? BCODE_POP_INTO_INSTVAR_0: BCODE_STORE_INTO_INSTVAR_0), var.pos) <= -1) goto oops;
 					ret = pop;
 					break;
@@ -3972,14 +3987,14 @@ printf ("\t%s_into_instvar %d\n", (pop? "pop":"store"), (int)var.pos);
 				case VAR_CLASS:
 					if (add_literal (stix, (stix_oop_t)var.cls, &index) <= -1 ||
 					    emit_double_param_instruction (stix, (pop? BCODE_POP_INTO_OBJVAR_0: BCODE_STORE_INTO_OBJVAR_0), var.pos, index) <= -1) goto oops;
-printf ("\t%s_into_objvar %d %d\n", (pop? "pop":"store"), (int)var.pos, (int)index);
+					DBGOUT_COMP_3("\t%s_into_objvar %d %d", (pop? "pop":"store"), (int)var.pos, (int)index);
 					ret = pop;
 					break;
 
 				case VAR_GLOBAL:
 					if (add_literal(stix, (stix_oop_t)var.gbl, &index) <= -1 ||
 					    emit_single_param_instruction(stix, (pop? BCODE_POP_INTO_OBJECT_0: BCODE_STORE_INTO_OBJECT_0), index) <= -1) return -1;
-printf ("\t%s_into_object %d\n", (pop? "pop":"store"), (int)index);
+					DBGOUT_COMP_2("\t%s_into_object %d", (pop? "pop":"store"), (int)index);
 					ret = pop;
 					break;
 
@@ -4021,7 +4036,7 @@ static int compile_block_statement (stix_t* stix)
 		/* handle the return statement */
 		GET_TOKEN (stix);
 		if (compile_method_expression(stix, 0) <= -1) return -1;
-printf ("\treturn_stacktop\n");
+		DBGOUT_COMP_0("\treturn_stacktop");
 		return emit_byte_instruction (stix, BCODE_RETURN_STACKTOP);
 	}
 	else
@@ -4042,7 +4057,7 @@ static int compile_method_statement (stix_t* stix)
 		/* handle the return statement */
 		GET_TOKEN (stix);
 		if (compile_method_expression(stix, 0) <= -1) return -1;
-printf ("\treturn_stacktop\n");
+		DBGOUT_COMP_0("\treturn_stacktop");
 		return emit_byte_instruction (stix, BCODE_RETURN_STACKTOP);
 	}
 	else 
@@ -4059,8 +4074,13 @@ printf ("\treturn_stacktop\n");
 		if (n <= -1) return -1;
 
 		/* if n is 1, no stack popping is required */
-if (n == 0) printf ("\tpop_stacktop\n");
-		return (n == 0)? emit_byte_instruction (stix, BCODE_POP_STACKTOP): 0;
+		if (n == 0)
+		{
+			DBGOUT_COMP_0("\tpop_stacktop");
+			return emit_byte_instruction (stix, BCODE_POP_STACKTOP);
+		}
+
+		return 0;
 	}
 }
 
