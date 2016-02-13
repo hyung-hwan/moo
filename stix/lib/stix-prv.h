@@ -57,6 +57,7 @@
 #define STIX_DEBUG_GC_001
 /*#define STIX_DEBUG_GC_002*/
 #define STIX_DEBUG_COMP_001
+/*#define STIX_DEBUG_COMP_002*/
 /*#define STIX_DEBUG_EXEC_001*/
 /*#define STIX_DEBUG_EXEC_002*/
 #define STIX_PROFILE_EXEC

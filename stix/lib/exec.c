@@ -237,6 +237,7 @@ printf ("ADDED FIRST NEW PROCESS - %d\n", (int)1);
 #if defined(STIX_DEBUG_PROCESSOR)
 printf ("TOO MANY PROCESS\n");
 #endif
+
 		stix->errnum = STIX_EPFULL;
 		return -1;
 	}
@@ -256,9 +257,60 @@ printf ("ADDED NEW PROCESS - %d\n", (int)tally + 1);
 	return 0;
 }
 
+static void remove_terminated_process (stix_t* stix, stix_oop_process_t proc)
+{
+/* TODO:
+ * can a main process be killed?
+ * can the only process be killed? if so, terminate VM??? */
+
+	if (proc->state == STIX_SMOOI_TO_OOP(1))
+	{
+		stix_ooi_t tally;
+
+		tally = STIX_OOP_TO_SMOOI(stix->processor->tally);
+		STIX_ASSERT (tally >= 2); /* the main process must not reach here */
+
+		/* the state must be alive */
+		if ((stix_oop_t)proc->prev != stix->_nil) proc->prev->next = proc->next;
+		else stix->processor->head = proc->next;
+		if ((stix_oop_t)proc->next != stix->_nil) proc->next->prev = proc->prev;
+		else stix->processor->tail = proc->prev;
+
+		proc->state = STIX_SMOOI_TO_OOP(-1); /* killed */
+		proc->sp = STIX_SMOOI_TO_OOP(-1); /* invalidate the process stack */
+
+		tally--;
+		stix->processor->tally = STIX_SMOOI_TO_OOP(tally);
+/* TODO: allow the last process to be killed like this??? */
+		if (tally <= 0) 
+		{
+			stix->processor->active = stix->nil_process;
+		}
+		else
+		{
+			stix_oop_process_t new_proc;
+
+			if ((stix_oop_t)proc->next == stix->_nil) 
+				new_proc = stix->processor->head;
+			else new_proc = proc->next;
+
+			switch_process (stix, new_proc);
+		}
+
+		proc->prev = (stix_oop_process_t)stix->_nil;
+		proc->next = (stix_oop_process_t)stix->_nil;
+	}
+}
+
 static int schedule_process (stix_t* stix, stix_oop_process_t proc)
 {
-	if (proc->state == STIX_SMOOI_TO_OOP(0))
+	if (proc->state == STIX_SMOOI_TO_OOP(-1))
+	{
+		/* the process is terminated already */
+		stix->errnum = STIX_EINVAL; /* TODO: more specialized error code? */
+		return -1;
+	}
+	else if (proc->state == STIX_SMOOI_TO_OOP(0))
 	{
 		/* the process is not scheduled at all. it must not exist in the
 		 * process list of the process scheduler. */
@@ -1479,8 +1531,9 @@ static int prim_processor_schedule (stix_t* stix, stix_ooi_t nargs)
 		return 0;
 	}
 
-	if (!schedule_process (stix, (stix_oop_process_t)arg)) 
+	if (schedule_process (stix, (stix_oop_process_t)arg) <= -1) 
 	{
+printf ("PROCESS SCHEDULE FAILURE...\n");
 /* TODO: Can this be a soft failure? */
 		return (stix->errnum == STIX_EPFULL)? 0: -1;
 	}
@@ -2851,7 +2904,8 @@ printf ("<<LEAVING>> SP=%d\n", (int)stix->sp);
 				if (stix->processor->active->initial_context == stix->active_context)
 				{
 /* TODO: terminate a process... */
-printf ("TERMINATING XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n");
+printf ("TERMINATING A PROCESS RETURNING\n");
+					remove_terminated_process (stix, stix->processor->active);
 				}
 				else
 				{
@@ -2862,7 +2916,7 @@ printf ("TERMINATING XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n");
 
 					if (stix->active_context->sender == stix->_nil)
 					{
-						/* the sending context of the intial context has been set to nil.
+						/* the sender of the intial context is nil.
 						 * use this fact to tell an initial context from a normal context. */
 						STIX_ASSERT (stix->active_context->receiver_or_source == stix->_nil);
 #if defined(STIX_DEBUG_EXEC_001)
@@ -2870,10 +2924,12 @@ printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
 #endif
 
 printf ("TERMINATING SP.... %ld\n", (long int)stix->sp);
+
 					#if defined(STIX_USE_PROCSTK)
-						/* nothing special */
+						/* TODO: */
 					#else
-						STIX_ASSERT (stix->sp == 0);
+						/* the stack contains the final return value so the stack pointer must be 0. */
+						STIX_ASSERT (stix->sp == 0); 
 					#endif
 						goto done;
 					}
@@ -2889,7 +2945,8 @@ printf ("TERMINATING SP.... %ld\n", (long int)stix->sp);
 				if (stix->active_context == stix->processor->active->initial_context)
 				{
 					/* TODO: terminate the process. can this happen? */
-printf ("TERMINATE A PROCESS............\n");
+printf ("TERMINATE A PROCESS RETURNING FROM BLOCK\n");
+					remove_terminated_process (stix, stix->processor->active);
 /* **************************************** */
 				}
 				else
