@@ -257,7 +257,7 @@ printf ("ADDED NEW PROCESS - %d\n", (int)tally + 1);
 	return 0;
 }
 
-static void remove_terminated_process (stix_t* stix, stix_oop_process_t proc)
+static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 {
 /* TODO:
  * can a main process be killed?
@@ -1156,6 +1156,56 @@ static int prim_block_new_process (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
+static int prim_process_terminate (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv;
+	STIX_ASSERT (nargs == 0);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+	if (STIX_CLASSOF(stix,rcv) != stix->_process) return 0;
+
+	terminate_process (stix, (stix_oop_process_t)rcv);
+
+	/* keep the receiver in the stack top */
+	return 1;
+}
+
+static int prim_processor_schedule (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	arg = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (rcv != (stix_oop_t)stix->processor || STIX_CLASSOF(stix,arg) != stix->_process)
+	{
+		return 0;
+	}
+
+	if (schedule_process (stix, (stix_oop_process_t)arg) <= -1) 
+	{
+printf ("PROCESS SCHEDULE FAILURE...\n");
+/* TODO: Can this be a soft failure? */
+		return (stix->errnum == STIX_EPFULL)? 0: -1;
+	}
+
+	return 1;
+}
+
+static int prim_processor_remove (stix_t* stix, stix_ooi_t nargs)
+{
+/* TODO: */
+	return 0;
+}
+
+static int prim_processor_sleep (stix_t* stix, stix_ooi_t nargs)
+{
+/* TODO: */
+	return 0;
+}
+
 static int prim_integer_add (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
@@ -1517,43 +1567,6 @@ static int prim_integer_inttostr (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int prim_processor_schedule (stix_t* stix, stix_ooi_t nargs)
-{
-	stix_oop_t rcv, arg;
-
-	STIX_ASSERT (nargs == 1);
-
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
-
-	if (rcv != (stix_oop_t)stix->processor || STIX_CLASSOF(stix,arg) != stix->_process)
-	{
-		return 0;
-	}
-
-	if (schedule_process (stix, (stix_oop_process_t)arg) <= -1) 
-	{
-printf ("PROCESS SCHEDULE FAILURE...\n");
-/* TODO: Can this be a soft failure? */
-		return (stix->errnum == STIX_EPFULL)? 0: -1;
-	}
-
-	return 1;
-}
-
-static int prim_processor_remove (stix_t* stix, stix_ooi_t nargs)
-{
-/* TODO: */
-	return 0;
-}
-
-static int prim_processor_sleep (stix_t* stix, stix_ooi_t nargs)
-{
-/* TODO: */
-	return 0;
-}
-
-
 static int prim_ffi_open (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
@@ -1869,6 +1882,12 @@ static prim_t primitives[] =
 	{  -1,   prim_block_value,          "_block_value"         },
 	{  -1,   prim_block_new_process,    "_block_new_process"   },
 
+	{   0,   prim_process_terminate,    "_process_terminate"   },
+
+	{   1,   prim_processor_schedule,   "_processor_schedule"  },
+	{   1,   prim_processor_remove,     "_processor_remove"    },
+	{   1,   prim_processor_sleep,      "_processor_sleep"     },
+
 	{   1,   prim_integer_add,          "_integer_add"         },
 	{   1,   prim_integer_sub,          "_integer_sub"         },
 	{   1,   prim_integer_mul,          "_integer_mul"         },
@@ -1890,10 +1909,6 @@ static prim_t primitives[] =
 	{   1,   prim_integer_le,           "_integer_le"          },
 	{   1,   prim_integer_ge,           "_integer_ge"          },
 	{   1,   prim_integer_inttostr,     "_integer_inttostr"    },
-
-	{   1,   prim_processor_schedule,   "_processor_schedule"  },
-	{   1,   prim_processor_remove,     "_processor_remove"    },
-	{   1,   prim_processor_sleep,      "_processor_sleep"     },
 
 	{   1,   prim_ffi_open,             "_ffi_open"            },
 	{   1,   prim_ffi_close,            "_ffi_close"           },
@@ -2905,7 +2920,7 @@ printf ("<<LEAVING>> SP=%d\n", (int)stix->sp);
 				{
 /* TODO: terminate a process... */
 printf ("TERMINATING A PROCESS RETURNING\n");
-					remove_terminated_process (stix, stix->processor->active);
+					terminate_process (stix, stix->processor->active);
 				}
 				else
 				{
@@ -2944,9 +2959,9 @@ printf ("TERMINATING SP.... %ld\n", (long int)stix->sp);
 
 				if (stix->active_context == stix->processor->active->initial_context)
 				{
-					/* TODO: terminate the process. can this happen? */
+					/* TODO: terminate the process. */
 printf ("TERMINATE A PROCESS RETURNING FROM BLOCK\n");
-					remove_terminated_process (stix, stix->processor->active);
+					terminate_process (stix, stix->processor->active);
 /* **************************************** */
 				}
 				else

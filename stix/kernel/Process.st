@@ -59,6 +59,12 @@
 		^Processor resume: self.
 	}
 
+	#method terminate
+	{
+		<primitive: #_process_terminate>
+		self primitiveFailed
+	}
+
 	#method sp
 	{
 		^sp.
@@ -111,11 +117,6 @@
 	{
 		"<primitive: #_processor_remove>"
 "TODO: "
-	}
-
-	#method suspendActive
-	{
-		" TODO: .........."
 	}
 
 	"
