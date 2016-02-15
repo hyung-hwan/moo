@@ -194,7 +194,7 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 
 		oop = (stix_oop_t)ptr;
 
-#if defined(STIX_USE_OBJECT_TRAILER)
+	#if defined(STIX_USE_OBJECT_TRAILER)
 		if (STIX_OBJ_GET_FLAGS_TRAILER(oop))
 		{
 			stix_oow_t nbytes;
@@ -209,11 +209,11 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 		}
 		else
 		{
-#endif
+	#endif
 			nbytes_aligned = STIX_ALIGN (STIX_OBJ_BYTESOF(oop), STIX_SIZEOF(stix_oop_t));
-#if defined(STIX_USE_OBJECT_TRAILER)
+	#if defined(STIX_USE_OBJECT_TRAILER)
 		}
-#endif
+	#endif
 
 		STIX_OBJ_SET_CLASS (oop, stix_moveoop(stix, STIX_OBJ_GET_CLASS(oop)));
 		if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_OOP)
@@ -221,6 +221,17 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 			stix_oop_oop_t xtmp;
 			stix_oow_t size;
 
+		#if defined(STIX_USE_PROCSTK)
+			if (stix->_process && STIX_OBJ_GET_CLASS(oop) == stix->_process)
+			{
+				/* the stack in a process object doesn't need to be 
+				 * scanned in full. the slots above the stack pointer 
+				 * are garbages. */
+				size = STIX_PROCESS_NAMED_INSTVARS +
+				       STIX_OOP_TO_SMOOI(((stix_oop_process_t)oop)->sp) + 1;
+				STIX_ASSERT (size <= STIX_OBJ_GET_SIZE(oop));
+			}
+		#else
 			if ((stix->_method_context && STIX_OBJ_GET_CLASS(oop) == stix->_method_context) ||
 			    (stix->_block_context && STIX_OBJ_GET_CLASS(oop) == stix->_block_context))
 			{
@@ -231,15 +242,7 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 				       STIX_OOP_TO_SMOOI(((stix_oop_context_t)oop)->sp) + 1;
 				STIX_ASSERT (size <= STIX_OBJ_GET_SIZE(oop)); 
 			}
-			else if (stix->_process && STIX_OBJ_GET_CLASS(oop) == stix->_process)
-			{
-				/* the stack in a process object doesn't need to be 
-				 * scanned in full. the slots above the stack pointer 
-				 * are garbages. */
-				size = STIX_PROCESS_NAMED_INSTVARS +
-				       STIX_OOP_TO_SMOOI(((stix_oop_process_t)oop)->sp) + 1;
-				STIX_ASSERT (size <= STIX_OBJ_GET_SIZE(oop));
-			}
+		#endif
 			else
 			{
 				size = STIX_OBJ_GET_SIZE(oop);

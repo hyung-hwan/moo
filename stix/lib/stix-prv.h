@@ -54,7 +54,7 @@
 
 /* this is for gc debugging */
 /*#define STIX_DEBUG_PROCESSOR*/
-/*#define STIX_DEBUG_GC_001*/
+#define STIX_DEBUG_GC_001
 /*#define STIX_DEBUG_GC_002*/
 #define STIX_DEBUG_COMP_001
 /*#define STIX_DEBUG_COMP_002*/
