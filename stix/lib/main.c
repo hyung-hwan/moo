@@ -457,6 +457,7 @@ int main (int argc, char* argv[])
 		int trait = 0;
 
 		/*trait |= STIX_NOGC;*/
+		trait |= STIX_AWAIT_PROCS;
 		stix_setoption (stix, STIX_TRAIT, &trait);
 	}
 

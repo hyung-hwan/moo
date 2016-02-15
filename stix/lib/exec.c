@@ -26,6 +26,12 @@
 
 #include "stix-prv.h"
 
+#define PROCESS_STATE_RUNNING 3
+#define PROCESS_STATE_BLOCKED 2
+#define PROCESS_STATE_SUSPENDED 1
+#define PROCESS_STATE_CREATED 0
+#define PROCESS_STATE_TERMINATED -1
+
 #if defined(USE_DYNCALL)
 /* TODO: defined dcAllocMem and dcFreeMeme before builing the dynload and dyncall library */
 #	include <dyncall.h> /* TODO: remove this. make dyXXXX calls to callbacks */
@@ -141,7 +147,7 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 	stix_poptmp (stix);
 	if (!proc) return STIX_NULL;
 
-	proc->state = STIX_SMOOI_TO_OOP(0);
+	proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_CREATED);
 	proc->initial_context = c;
 	proc->sp = STIX_SMOOI_TO_OOP(-1);
 
@@ -155,6 +161,9 @@ static void switch_process (stix_t* stix, stix_oop_process_t proc)
 {
 	if (stix->processor->active != proc)
 	{
+		STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED) ||
+		             proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_BLOCKED));
+
 #if defined(STIX_DEBUG_PROCESSOR)
 printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_context);
 #endif
@@ -165,12 +174,14 @@ printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_con
 		/* nothing special */
 	#endif
 
-		/* store the active context to the active process */
+		/* store the current active context to the current process.
+		 * it is the suspended context of the process to be suspended */
 		STIX_ASSERT ((stix_oop_t)stix->processor->active != stix->_nil);
-		stix->processor->active->active_context = stix->active_context;
+		stix->processor->active->suspended_context = stix->active_context;
+		stix->processor->active->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED);
 
-		/* switch the active process */
-		/*TODO: set the state to RUNNING */
+		/* activate the given process */
+		proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING);
 		stix->processor->active = proc;
 
 	#if defined(STIX_USE_PROCSTK)
@@ -179,8 +190,8 @@ printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_con
 		/* nothing special */
 	#endif
 
-		/* switch the active context */
-		SWITCH_ACTIVE_CONTEXT (stix, proc->active_context);
+		/* activate the suspended context of the new process */
+		SWITCH_ACTIVE_CONTEXT (stix, proc->suspended_context);
 
 #if defined(STIX_DEBUG_PROCESSOR)
 printf ("ACTUAL PROCESS SWITCHING AF...%d %p\n", (int)stix->ip, stix->active_context);
@@ -213,10 +224,11 @@ static STIX_INLINE int register_new_process (stix_t* stix, stix_oop_process_t pr
 	 * link it to the processor's process list. */
 	stix_ooi_t tally;
 
-	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(0));
 	STIX_ASSERT ((stix_oop_t)proc->prev == stix->_nil);
 	STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
-	STIX_ASSERT ((stix_oop_t)proc->active_context == stix->_nil);
+
+	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_CREATED));
+	STIX_ASSERT ((stix_oop_t)proc->suspended_context == stix->_nil);
 
 	tally = STIX_OOP_TO_SMOOI(stix->processor->tally);
 	if (tally <= 0)
@@ -252,8 +264,8 @@ printf ("ADDED NEW PROCESS - %d\n", (int)tally + 1);
 #endif
 	}
 
-	proc->state = STIX_SMOOI_TO_OOP(1); /* TODO: change the code properly... changing state alone doesn't help */
-	proc->active_context = proc->initial_context;
+	proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED);
+	proc->suspended_context = proc->initial_context;
 	return 0;
 }
 
@@ -263,12 +275,13 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
  * can a main process be killed?
  * can the only process be killed? if so, terminate VM??? */
 
-	if (proc->state == STIX_SMOOI_TO_OOP(1))
+	if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING) ||
+	    proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED) ||
+	    proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_BLOCKED))
 	{
 		stix_ooi_t tally;
 
 		tally = STIX_OOP_TO_SMOOI(stix->processor->tally);
-		STIX_ASSERT (tally >= 2); /* the main process must not reach here */
 
 		/* the state must be alive */
 		if ((stix_oop_t)proc->prev != stix->_nil) proc->prev->next = proc->next;
@@ -276,14 +289,15 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 		if ((stix_oop_t)proc->next != stix->_nil) proc->next->prev = proc->prev;
 		else stix->processor->tail = proc->prev;
 
-		proc->state = STIX_SMOOI_TO_OOP(-1); /* killed */
+		proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_TERMINATED);
+		if (proc == stix->processor->active) proc->suspended_context = stix->active_context; /* not needed but just in case */
 		proc->sp = STIX_SMOOI_TO_OOP(-1); /* invalidate the process stack */
 
 		tally--;
 		stix->processor->tally = STIX_SMOOI_TO_OOP(tally);
-/* TODO: allow the last process to be killed like this??? */
 		if (tally <= 0) 
 		{
+			/* no more process left in the system */
 			stix->processor->active = stix->nil_process;
 		}
 		else
@@ -304,13 +318,13 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 
 static int schedule_process (stix_t* stix, stix_oop_process_t proc)
 {
-	if (proc->state == STIX_SMOOI_TO_OOP(-1))
+	if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_TERMINATED))
 	{
 		/* the process is terminated already */
 		stix->errnum = STIX_EINVAL; /* TODO: more specialized error code? */
 		return -1;
 	}
-	else if (proc->state == STIX_SMOOI_TO_OOP(0))
+	else if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_CREATED))
 	{
 		/* the process is not scheduled at all. it must not exist in the
 		 * process list of the process scheduler. */
@@ -342,9 +356,9 @@ static stix_oop_process_t start_initial_process (stix_t* stix, stix_oop_context_
 	stix->processor->active = proc;
 
 	/* do somthing that schedule_process() would do with less overhead */
-	STIX_ASSERT ((stix_oop_t)proc->active_context != stix->_nil);
-	STIX_ASSERT (proc->active_context == proc->initial_context);
-	SWITCH_ACTIVE_CONTEXT (stix, proc->active_context);
+	STIX_ASSERT ((stix_oop_t)proc->suspended_context != stix->_nil);
+	STIX_ASSERT (proc->suspended_context == proc->initial_context);
+	SWITCH_ACTIVE_CONTEXT (stix, proc->initial_context);
 
 	return proc;
 }
@@ -394,7 +408,7 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	stix_poptmp (stix);
 	if (!ctx) return -1;
 
-	ctx->sender = (stix_oop_t)stix->active_context; 
+	ctx->sender = stix->active_context; 
 	ctx->ip = STIX_SMOOI_TO_OOP(0);
 	/* the front part of a stack has temporary variables including arguments.
 	 *
@@ -616,7 +630,7 @@ TODO: overcome this problem
 
 	STIX_ASSERT (stix->processor->active == proc);
 	STIX_ASSERT (stix->processor->active->initial_context == ctx);
-	STIX_ASSERT (stix->processor->active->active_context == ctx);
+	STIX_ASSERT (stix->processor->active->suspended_context == ctx);
 	STIX_ASSERT (stix->active_context == ctx);
 
 	/* emulate the message sending */
@@ -1086,7 +1100,7 @@ printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 
 	STIX_ASSERT (blkctx->home != stix->_nil);
 	blkctx->sp = STIX_SMOOI_TO_OOP(local_ntmprs - 1);
-	blkctx->sender = (stix_oop_t)stix->active_context;
+	blkctx->sender = stix->active_context;
 
 	*pblkctx = blkctx;
 	return 1;
@@ -2285,13 +2299,13 @@ int stix_execute (stix_t* stix)
 
 	while (1)
 	{
-#if 0
-printf ("IP<BF> => %d\n", (int)stix->ip);
-#endif
-switch_to_next_process (stix);
-#if 0
-printf ("IP<AF> => %d\n", (int)stix->ip);
-#endif
+		if (stix->processor->active == stix->nil_process) 
+		{
+			/* no more process in the system */
+			STIX_ASSERT (stix->processor->tally = STIX_SMOOI_TO_OOP(0));
+			break;
+		}
+		switch_to_next_process (stix);
 
 		FETCH_BYTE_CODE_TO (stix, bcode);
 		/*while (bcode == BCODE_NOOP) FETCH_BYTE_CODE_TO (stix, bcode);*/
@@ -2874,6 +2888,7 @@ fflush (stdout);
 printf ("<<LEAVING>> SP=%d\n", (int)stix->sp);
 #endif
 
+			#if 0
 				/* put the instruction pointer back to the return
 				 * instruction (RETURN_RECEIVER or RETURN_RECEIVER)
 				 * if a context returns into this context again,
@@ -2915,25 +2930,101 @@ printf ("<<LEAVING>> SP=%d\n", (int)stix->sp);
 				 *
 				 */
 				stix->ip--; 
+			#else
+				if (stix->active_context->origin == stix->processor->active->initial_context->origin)
+				{
+					/* method return from a processified block
+					 * 
+ 					 * #method(#class) main
+					 * {
+					 *    [^100] newProcess resume.
+					 *    '1111' dump.
+					 *    '1111' dump.
+					 *    '1111' dump.
+					 *    ^300.
+					 * }
+					 * 
+					 * ^100 doesn't terminate a main process as the block
+					 * has been processified. on the other hand, ^100
+					 * in the following program causes main to exit.
+					 * 
+					 * #method(#class) main
+					 * {
+					 *    [^100] value.
+					 *    '1111' dump.
+					 *    '1111' dump.
+					 *    '1111' dump.
+					 *    ^300.
+					 * }
+					 */
 
-				if (stix->processor->active->initial_context == stix->active_context)
-				{
-/* TODO: terminate a process... */
-printf ("TERMINATING A PROCESS RETURNING\n");
+					STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context) == stix->_block_context);
+					STIX_ASSERT (STIX_CLASSOF(stix, stix->processor->active->initial_context) == stix->_block_context);
+
+					/* place the instruction pointer back at the return instruction.
+					 * even if the context is reentered, it will just return.
+					 *stix->ip--;*/
+
+
+#if defined(STIX_DEBUG_EXEC_002)
+printf ("TERMINATING A PROCESS RETURNING old_active context %p\n", stix->active_context);
+#endif
 					terminate_process (stix, stix->processor->active);
+#if defined(STIX_DEBUG_EXEC_002)
+printf ("TERMINATED A PROCESS RETURNING %lld new active_context %p\n", (long long int)stix->ip, stix->active_context);
+#endif
 				}
-				else
+				else 
 				{
-					SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->origin->sender);
+					if (stix->active_context->origin->ip == STIX_SMOOI_TO_OOP(STIX_SMOOI_MIN))
+					{
+printf ("ERROR: CAN'T RETURN FROM DEAD METHOD CONTEXT orgin->ip %ld origin->sender->ip %ld\n",
+		(long int)STIX_OOP_TO_SMOOI(stix->active_context->origin->ip), (long int)STIX_OOP_TO_SMOOI(stix->active_context->origin->sender->ip));
+printf ("ERROR: CAN'T RETURN FROM DEAD METHOD CONTEXT origin %p origin->sender %p\n", stix->active_context->origin, stix->active_context->origin->sender);
+printf ("ERROR: CAN'T RETURN FROM DEAD METHOD CONTEXT\n");
+						
+						/* TODO: proper error handling  */
+						stix->errnum = STIX_EINTERN; /* TODO: this should be caughtable at the stix level... */
+						return -1;
+					}
+
+					/* set the instruction pointer to an invalid value.
+					 * this is stored into the current method context
+					 * before context switching and marks a dead context */
+					if (stix->active_context->origin == stix->active_context)
+					{
+						/* returning from a method */
+#if defined(STIX_DEBUG_EXEC_002)
+printf (">>>>>>>>>>>>> METHOD RETURN...\n");
+#endif
+						STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context) == stix->_method_context);
+						stix->ip = STIX_SMOOI_MIN;
+					}
+					else
+					{
+						/* method return from within a block(including a non-local return) */
+						STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context) == stix->_block_context);
+#if defined(STIX_DEBUG_EXEC_002)
+printf (">>>>>>>>>>>>>>>> METHOD RETURN FROM WITHIN A BLOCK. NON-LOCAL RETURN.. RESETTUBG IP OF CONTEXT %p.\n", stix->active_context->origin);
+#endif
+						stix->active_context->origin->ip = STIX_SMOOI_TO_OOP(STIX_SMOOI_MIN);
+					}
+
+					SWITCH_ACTIVE_CONTEXT (stix, stix->active_context->origin->sender);
 
 					/* push the return value to the stack of the new active context */
 					ACTIVE_STACK_PUSH (stix, return_value);
 
-					if (stix->active_context->sender == stix->_nil)
+					if ((stix_oop_t)stix->active_context->sender == stix->_nil)
 					{
 						/* the sender of the intial context is nil.
 						 * use this fact to tell an initial context from a normal context. */
 						STIX_ASSERT (stix->active_context->receiver_or_source == stix->_nil);
+
+						/* when sender is nil, the following condition must be true.
+						 * but it's not always true the other way around */
+						STIX_ASSERT (stix->active_context == stix->processor->active->initial_context);
+
 #if defined(STIX_DEBUG_EXEC_001)
 printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
 #endif
@@ -2946,10 +3037,20 @@ printf ("TERMINATING SP.... %ld\n", (long int)stix->sp);
 						/* the stack contains the final return value so the stack pointer must be 0. */
 						STIX_ASSERT (stix->sp == 0); 
 					#endif
-						goto done;
+
+						if (stix->option.trait & STIX_AWAIT_PROCS)
+							terminate_process (stix, stix->processor->active);
+						else
+							goto done;
+
+
+						/* TODO: store the return value to the VM register.
+						 * the caller to stix_execute() can fetch it to return it to the system */
 					}
 				}
+			#endif
 
+				
 				break;
 
 			case BCODE_RETURN_FROM_BLOCK:
@@ -2959,10 +3060,14 @@ printf ("TERMINATING SP.... %ld\n", (long int)stix->sp);
 
 				if (stix->active_context == stix->processor->active->initial_context)
 				{
-					/* TODO: terminate the process. */
+#if defined(STIX_DEBUG_EXEC_002)
 printf ("TERMINATE A PROCESS RETURNING FROM BLOCK\n");
+#endif
 					terminate_process (stix, stix->processor->active);
-/* **************************************** */
+#if defined(STIX_DEBUG_EXEC_002)
+
+printf ("TERMINATED A PROCESS RETURNING FROM BLOCK %lld new active_context %p\n", (long long int)stix->ip, stix->active_context);
+#endif
 				}
 				else
 				{

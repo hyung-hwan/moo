@@ -245,7 +245,7 @@
 
 	#method(#class) getABlock
 	{
-		^ [ 'a block returned by getABlock' dump. ^ self]
+		^ [ 'a block returned by getABlock' dump. "^ self"]
 	}
 
 	#method(#class) main
