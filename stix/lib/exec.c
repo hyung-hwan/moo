@@ -432,7 +432,11 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	 *
 	 * if no temporaries exist, the initial sp is -1.
 	 */
+#if defined(STIX_USE_PROCSTK)
+	/* ctx->sp will be set further down */
+#else
 	ctx->sp = STIX_SMOOI_TO_OOP(ntmprs - 1);
+#endif
 	ctx->ntmprs = STIX_SMOOI_TO_OOP(ntmprs);
 	ctx->method_or_nargs = (stix_oop_t)mth;
 	/* the 'home' field of a method context is always stix->_nil.
@@ -471,6 +475,14 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	ACTIVE_STACK_POP (stix);
 
 	STIX_ASSERT (stix->sp >= -1);
+
+#if defined(STIX_USE_PROCSTK)
+	/* when process stack is used, the stack pointer in a context
+	 * is a stack pointer of a process before it is activated */
+	ctx->sp = STIX_SMOOI_TO_OOP(stix->sp);
+#else
+	/* do nothing */
+#endif
 
 	/* switch the active context */
 	SWITCH_ACTIVE_CONTEXT (stix, ctx);
@@ -3010,6 +3022,13 @@ printf (">>>>>>>>>>>>>>>> METHOD RETURN FROM WITHIN A BLOCK. NON-LOCAL RETURN.. 
 						stix->active_context->origin->ip = STIX_SMOOI_TO_OOP(STIX_SMOOI_MIN);
 					}
 
+					STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context->origin) == stix->_method_context);
+				#if defined(STIX_USE_PROCSTK)
+					/* restore the stack pointer */
+					stix->sp = STIX_OOP_TO_SMOOI(stix->active_context->origin->sp);
+				#else
+					/* do nothing */
+				#endif
 					SWITCH_ACTIVE_CONTEXT (stix, stix->active_context->origin->sender);
 
 					/* push the return value to the stack of the new active context */
@@ -3026,17 +3045,12 @@ printf (">>>>>>>>>>>>>>>> METHOD RETURN FROM WITHIN A BLOCK. NON-LOCAL RETURN.. 
 						STIX_ASSERT (stix->active_context == stix->processor->active->initial_context);
 
 #if defined(STIX_DEBUG_EXEC_001)
-printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>>\n");
+printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>> TERMINATING SP => %ld\n", (long int)stix->sp);
 #endif
 
-printf ("TERMINATING SP.... %ld\n", (long int)stix->sp);
 
-					#if defined(STIX_USE_PROCSTK)
-						/* TODO: */
-					#else
 						/* the stack contains the final return value so the stack pointer must be 0. */
 						STIX_ASSERT (stix->sp == 0); 
-					#endif
 
 						if (stix->option.trait & STIX_AWAIT_PROCS)
 							terminate_process (stix, stix->processor->active);

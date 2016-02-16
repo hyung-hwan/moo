@@ -500,7 +500,9 @@ struct stix_context_t
 	/* SmallInteger, instruction pointer */
 	stix_oop_t          ip;
 
-	/* SmallInteger, stack pointer */
+	/* SmallInteger, stack pointer.
+	 * For a method context, this pointer stores the stack pointer
+	 * of the active process before it gets activated. */
 	stix_oop_t          sp;
 
 	/* SmallInteger. Number of temporaries.
