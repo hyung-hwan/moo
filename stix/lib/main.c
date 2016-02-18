@@ -586,6 +586,9 @@ printf ("%p\n", a);
 				printf ("ERROR: cannot compile code - %d\n", stix_geterrnum(stix));
 			}
 			stix_close (stix);
+#if defined(USE_LTDL)
+			lt_dlexit ();
+#endif
 			return -1;
 		}
 	}

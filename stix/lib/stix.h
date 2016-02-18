@@ -539,21 +539,34 @@ struct stix_context_t
 	stix_oop_t          slot[1]; /* stack */
 };
 
-#define STIX_PROCESS_NAMED_INSTVARS 6
+
+#define STIX_PROCESS_NAMED_INSTVARS 7
 typedef struct stix_process_t stix_process_t;
 typedef struct stix_process_t* stix_oop_process_t;
 struct stix_process_t
 {
 	STIX_OBJ_HEADER;
 	stix_oop_context_t initial_context;
-	stix_oop_context_t suspended_context;
+	stix_oop_context_t runnable_context;
 	stix_oop_t         state; /* SmallInteger */
 	stix_oop_process_t prev;
 	stix_oop_process_t next;
 	stix_oop_t         sp;    /* stack pointer. SmallInteger */
+	stix_oop_process_t sem_next;
 
 	/* == variable indexed part == */
 	stix_oop_t slot[1]; /* process stack */
+};
+
+#define STIX_SEMAPHORE_NAMED_INSTVARS 3
+typedef struct stix_semaphore_t stix_semaphore_t;
+typedef struct stix_semaphore_t* stix_oop_semaphore_t;
+struct stix_semaphore_t
+{
+	STIX_OBJ_HEADER;
+	stix_oop_t count; /* SmallInteger */
+	stix_oop_process_t waiting_head; /* nil or Process */
+	stix_oop_process_t waiting_tail; /* nil or Process */
 };
 
 #define STIX_PROCESS_SCHEDULER_NAMED_INSTVARS 4
@@ -739,6 +752,7 @@ struct stix_t
 	stix_oop_t _method_context; /* MethodContext */
 	stix_oop_t _block_context; /* BlockContext */
 	stix_oop_t _process; /* Process */
+	stix_oop_t _semaphore; /* Semaphore */
 	stix_oop_t _process_scheduler; /* ProcessScheduler */
 	stix_oop_t _true_class; /* True */
 	stix_oop_t _false_class; /* False */
@@ -785,8 +799,8 @@ extern "C" {
 
 STIX_EXPORT stix_t* stix_open (
 	stix_mmgr_t*         mmgr,
-	stix_oow_t          xtnsize,
-	stix_oow_t          heapsize,
+	stix_oow_t           xtnsize,
+	stix_oow_t           heapsize,
 	const stix_vmprim_t* vmprim,
 	stix_errnum_t*       errnum
 );
@@ -798,7 +812,7 @@ STIX_EXPORT void stix_close (
 STIX_EXPORT int stix_init (
 	stix_t*              vm,
 	stix_mmgr_t*         mmgr,
-	stix_oow_t          heapsize,
+	stix_oow_t           heapsize,
 	const stix_vmprim_t* vmprim
 );
 

@@ -26,10 +26,11 @@
 
 #include "stix-prv.h"
 
+ 
 #define PROCESS_STATE_RUNNING 3
-#define PROCESS_STATE_BLOCKED 2
-#define PROCESS_STATE_SUSPENDED 1
-#define PROCESS_STATE_CREATED 0
+#define PROCESS_STATE_WAITING 2
+#define PROCESS_STATE_RUNNABLE 1
+#define PROCESS_STATE_SUSPENDED 0
 #define PROCESS_STATE_TERMINATED -1
 
 #if defined(USE_DYNCALL)
@@ -138,6 +139,8 @@
 #	define DBGOUT_EXEC_3(fmt,a1,a2,a3)
 #endif
 
+
+
 static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 {
 	stix_oop_process_t proc;
@@ -147,7 +150,7 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 	stix_poptmp (stix);
 	if (!proc) return STIX_NULL;
 
-	proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_CREATED);
+	proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED);
 	proc->initial_context = c;
 	proc->sp = STIX_SMOOI_TO_OOP(-1);
 
@@ -161,8 +164,8 @@ static void switch_process (stix_t* stix, stix_oop_process_t proc)
 {
 	if (stix->processor->active != proc)
 	{
-		STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED) ||
-		             proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_BLOCKED));
+		STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE) ||
+		             proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_WAITING));
 
 #if defined(STIX_DEBUG_PROCESSOR)
 printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_context);
@@ -177,8 +180,8 @@ printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_con
 		/* store the current active context to the current process.
 		 * it is the suspended context of the process to be suspended */
 		STIX_ASSERT ((stix_oop_t)stix->processor->active != stix->_nil);
-		stix->processor->active->suspended_context = stix->active_context;
-		stix->processor->active->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED);
+		stix->processor->active->runnable_context = stix->active_context;
+		stix->processor->active->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE);
 
 		/* activate the given process */
 		proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING);
@@ -191,7 +194,7 @@ printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_con
 	#endif
 
 		/* activate the suspended context of the new process */
-		SWITCH_ACTIVE_CONTEXT (stix, proc->suspended_context);
+		SWITCH_ACTIVE_CONTEXT (stix, proc->runnable_context);
 
 #if defined(STIX_DEBUG_PROCESSOR)
 printf ("ACTUAL PROCESS SWITCHING AF...%d %p\n", (int)stix->ip, stix->active_context);
@@ -218,7 +221,7 @@ printf ("SWITCHING TO THE NEXT PROCESS\n");
 	}
 }
 
-static STIX_INLINE int register_new_process (stix_t* stix, stix_oop_process_t proc)
+static STIX_INLINE int insert_into_processor (stix_t* stix, stix_oop_process_t proc)
 {
 	/* the process is not scheduled at all. 
 	 * link it to the processor's process list. */
@@ -227,11 +230,11 @@ static STIX_INLINE int register_new_process (stix_t* stix, stix_oop_process_t pr
 	STIX_ASSERT ((stix_oop_t)proc->prev == stix->_nil);
 	STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
 
-	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_CREATED));
-	STIX_ASSERT ((stix_oop_t)proc->suspended_context == stix->_nil);
+	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED));
+	STIX_ASSERT ((stix_oop_t)proc->runnable_context == stix->_nil);
 
 	tally = STIX_OOP_TO_SMOOI(stix->processor->tally);
-	if (tally <= 0)
+	if (tally == 0)
 	{
 		/* the process schedule has no process.
 		 * it is the first process */
@@ -239,34 +242,57 @@ static STIX_INLINE int register_new_process (stix_t* stix, stix_oop_process_t pr
 
 		stix->processor->head = proc;
 		stix->processor->tail = proc;
-		stix->processor->tally = STIX_SMOOI_TO_OOP(1);
-#if defined(STIX_DEBUG_PROCESSOR)
-printf ("ADDED FIRST NEW PROCESS - %d\n", (int)1);
-#endif
 	}
-	else if (tally >= STIX_SMOOI_MAX)
-	{
-#if defined(STIX_DEBUG_PROCESSOR)
-printf ("TOO MANY PROCESS\n");
-#endif
-
-		stix->errnum = STIX_EPFULL;
-		return -1;
-	}
-	else
+	else if (tally < STIX_SMOOI_MAX)
 	{
 		proc->next = stix->processor->head;
 		stix->processor->head->prev = proc;
 		stix->processor->head = proc;
 		stix->processor->tally = STIX_SMOOI_TO_OOP(tally + 1);
+	}
+	else if (tally < 0)
+	{
+		stix->errnum = STIX_EINTERN;
+		return -1;
+	}
+	else
+	{
 #if defined(STIX_DEBUG_PROCESSOR)
-printf ("ADDED NEW PROCESS - %d\n", (int)tally + 1);
+printf ("TOO MANY PROCESS\n");
 #endif
+		stix->errnum = STIX_EPFULL;
+		return -1;
 	}
 
-	proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED);
-	proc->suspended_context = proc->initial_context;
+	tally++;
+	stix->processor->tally = STIX_SMOOI_TO_OOP(tally);
+#if defined(STIX_DEBUG_PROCESSOR)
+printf ("INSERTED PROCESS %d TO PROCESSOR\n", (int)tally);
+#endif
+
 	return 0;
+}
+
+static STIX_INLINE void delete_from_processor (stix_t* stix, stix_oop_process_t proc)
+{
+	stix_ooi_t tally;
+
+	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING) ||
+	             proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE));
+
+	tally = STIX_OOP_TO_SMOOI(stix->processor->tally);
+	STIX_ASSERT (tally > 0);
+
+	if ((stix_oop_t)proc->prev != stix->_nil) proc->prev->next = proc->next;
+	else stix->processor->head = proc->next;
+	if ((stix_oop_t)proc->next != stix->_nil) proc->next->prev = proc->prev;
+	else stix->processor->tail = proc->prev;
+
+	proc->prev = (stix_oop_process_t)stix->_nil;
+	proc->next = (stix_oop_process_t)stix->_nil;
+
+	tally--;
+	stix->processor->tally = STIX_SMOOI_TO_OOP(tally);
 }
 
 static void terminate_process (stix_t* stix, stix_oop_process_t proc)
@@ -276,21 +302,20 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
  * can the only process be killed? if so, terminate VM??? */
 
 	if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING) ||
-	    proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED) ||
-	    proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_BLOCKED))
+	    proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE) ||
+	    proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_WAITING)) /* TODO: is it safe to terminate a waiting process? */
 	{
 		stix_ooi_t tally;
 
 		tally = STIX_OOP_TO_SMOOI(stix->processor->tally);
 
-		/* the state must be alive */
 		if ((stix_oop_t)proc->prev != stix->_nil) proc->prev->next = proc->next;
 		else stix->processor->head = proc->next;
 		if ((stix_oop_t)proc->next != stix->_nil) proc->next->prev = proc->prev;
 		else stix->processor->tail = proc->prev;
 
 		proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_TERMINATED);
-		if (proc == stix->processor->active) proc->suspended_context = stix->active_context; /* not needed but just in case */
+		if (proc == stix->processor->active) proc->runnable_context = stix->active_context; /* not needed but just in case */
 		proc->sp = STIX_SMOOI_TO_OOP(-1); /* invalidate the process stack */
 
 		tally--;
@@ -316,7 +341,7 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 	}
 }
 
-static int schedule_process (stix_t* stix, stix_oop_process_t proc)
+static int resume_process (stix_t* stix, stix_oop_process_t proc)
 {
 	if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_TERMINATED))
 	{
@@ -324,11 +349,15 @@ static int schedule_process (stix_t* stix, stix_oop_process_t proc)
 		stix->errnum = STIX_EINVAL; /* TODO: more specialized error code? */
 		return -1;
 	}
-	else if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_CREATED))
+	else if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED))
 	{
 		/* the process is not scheduled at all. it must not exist in the
 		 * process list of the process scheduler. */
-		if (register_new_process (stix, proc) <= -1) return -1;
+		if (insert_into_processor (stix, proc) <= -1) return -1;
+
+		/* SUSPENED -> RUNNING */
+		proc->runnable_context = proc->initial_context;
+		proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE);
 		switch_process (stix, proc);
 	}
 	else if (stix->processor->active != proc)
@@ -337,6 +366,85 @@ static int schedule_process (stix_t* stix, stix_oop_process_t proc)
 	}
 
 	return 0;
+}
+
+static void suspend_process (stix_t* stix, stix_oop_process_t proc)
+{
+	if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING) ||
+	    proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE))
+	{
+		/* RUNNING/RUNNABLE -> SUSPENDED */
+		delete_from_processor (stix, proc);
+		proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED);
+	}
+#if 0
+	else
+	{
+		stix->errnum = STIX_EINVAL; /* TODO: more specialized error code? */
+		return -1;
+	}
+#endif
+}
+
+static void schedule_process (stix_t* stix, stix_oop_process_t proc)
+{
+	/* RUNNABLE -> RUNNING */
+}
+
+static void signal_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
+{
+	stix_oop_process_t proc;
+	stix_ooi_t count;
+
+	if ((stix_oop_t)sem->waiting_head == stix->_nil)
+	{
+		count = STIX_OOP_TO_SMOOI(sem->count);
+		count++;
+		sem->count = STIX_SMOOI_TO_OOP(count);
+	}
+	else
+	{
+		proc = sem->waiting_head;
+		sem->waiting_head = proc->sem_next;
+		if ((stix_oop_t)sem->waiting_head == stix->_nil)
+			sem->waiting_tail = (stix_oop_process_t)stix->_nil;
+
+		proc->sem_next = (stix_oop_process_t)stix->_nil;
+		resume_process (stix, proc);
+	}
+}
+
+static void await_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
+{
+	stix_oop_process_t proc;
+	stix_ooi_t count;
+
+	count = STIX_OOP_TO_SMOOI(sem->count);
+	if (count > 0)
+	{
+		count--;
+		sem->count = STIX_SMOOI_TO_OOP(count);
+	}
+	else
+	{
+		proc = stix->processor->active;
+		STIX_ASSERT ((stix_oop_t)proc->sem_next == stix->_nil);
+
+		if ((stix_oop_t)sem->waiting_tail == stix->_nil)
+		{
+			STIX_ASSERT ((stix_oop_t)sem->waiting_head == stix->_nil);
+			sem->waiting_head = proc;
+		}
+		else
+		{
+			STIX_ASSERT ((stix_oop_t)sem->waiting_head != stix->_nil);
+			sem->waiting_tail->sem_next = proc;
+		}
+		sem->waiting_tail = proc;
+
+		suspend_process (stix, proc);
+		STIX_ASSERT (stix->processor->active != proc);
+	}
 }
 
 static stix_oop_process_t start_initial_process (stix_t* stix, stix_oop_context_t c)
@@ -350,14 +458,14 @@ static stix_oop_process_t start_initial_process (stix_t* stix, stix_oop_context_
 	proc = make_process (stix, c);
 	if (!proc) return STIX_NULL;
 
-	if (register_new_process (stix, proc) <= -1) return STIX_NULL;
-
-	/*TODO: set the state to RUNNING */
+	if (insert_into_processor (stix, proc) <= -1) return STIX_NULL;
+	proc->runnable_context = proc->initial_context;
+	proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING); /* skip RUNNABLE and go to RUNNING */
 	stix->processor->active = proc;
 
-	/* do somthing that schedule_process() would do with less overhead */
-	STIX_ASSERT ((stix_oop_t)proc->suspended_context != stix->_nil);
-	STIX_ASSERT (proc->suspended_context == proc->initial_context);
+	/* do somthing that resume_process() would do with less overhead */
+	STIX_ASSERT ((stix_oop_t)proc->runnable_context != stix->_nil);
+	STIX_ASSERT (proc->runnable_context == proc->initial_context);
 	SWITCH_ACTIVE_CONTEXT (stix, proc->initial_context);
 
 	return proc;
@@ -642,7 +750,7 @@ TODO: overcome this problem
 
 	STIX_ASSERT (stix->processor->active == proc);
 	STIX_ASSERT (stix->processor->active->initial_context == ctx);
-	STIX_ASSERT (stix->processor->active->suspended_context == ctx);
+	STIX_ASSERT (stix->processor->active->runnable_context == ctx);
 	STIX_ASSERT (stix->active_context == ctx);
 
 	/* emulate the message sending */
@@ -1196,6 +1304,34 @@ static int prim_process_terminate (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
+static int prim_semaphore_signal (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv;
+	STIX_ASSERT (nargs == 0);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+	if (STIX_CLASSOF(stix,rcv) != stix->_semaphore) return 0;
+
+	signal_semaphore (stix, (stix_oop_semaphore_t)rcv);
+
+	/* keep the receiver in the stack top */
+	return 1;
+}
+
+static int prim_semaphore_wait (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv;
+	STIX_ASSERT (nargs == 0);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+	if (STIX_CLASSOF(stix,rcv) != stix->_semaphore) return 0;
+
+	await_semaphore (stix, (stix_oop_semaphore_t)rcv);
+
+	/* keep the receiver in the stack top */
+	return 1;
+}
+
 static int prim_processor_schedule (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
@@ -1210,7 +1346,7 @@ static int prim_processor_schedule (stix_t* stix, stix_ooi_t nargs)
 		return 0;
 	}
 
-	if (schedule_process (stix, (stix_oop_process_t)arg) <= -1) 
+	if (resume_process (stix, (stix_oop_process_t)arg) <= -1) 
 	{
 printf ("PROCESS SCHEDULE FAILURE...\n");
 /* TODO: Can this be a soft failure? */
@@ -1909,6 +2045,8 @@ static prim_t primitives[] =
 	{  -1,   prim_block_new_process,    "_block_new_process"   },
 
 	{   0,   prim_process_terminate,    "_process_terminate"   },
+	{   0,   prim_semaphore_signal,     "_semaphore_signal"    },
+	{   0,   prim_semaphore_wait,       "_semaphore_wait"      },
 
 	{   1,   prim_processor_schedule,   "_processor_schedule"  },
 	{   1,   prim_processor_remove,     "_processor_remove"    },

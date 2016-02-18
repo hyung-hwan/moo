@@ -324,6 +324,7 @@ printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
 	stix->_association       = stix_moveoop (stix, stix->_association);
 	stix->_method_context    = stix_moveoop (stix, stix->_method_context);
 	stix->_block_context     = stix_moveoop (stix, stix->_block_context);
+	stix->_semaphore         = stix_moveoop (stix, stix->_semaphore);
 	stix->_process           = stix_moveoop (stix, stix->_process);
 	stix->_process_scheduler = stix_moveoop (stix, stix->_process_scheduler);
 	stix->_true_class        = stix_moveoop (stix, stix->_true_class);

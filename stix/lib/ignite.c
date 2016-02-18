@@ -137,6 +137,7 @@ static int ignite_1 (stix_t* stix)
 	stix->_method_context    = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 	stix->_block_context     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_CONTEXT_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
 	stix->_process           = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_PROCESS_NAMED_INSTVARS, 1, STIX_OBJ_TYPE_OOP));
+	stix->_semaphore         = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_SEMAPHORE_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 	stix->_process_scheduler = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(STIX_PROCESS_SCHEDULER_NAMED_INSTVARS, 0, STIX_OBJ_TYPE_OOP));
 	stix->_true_class        = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_false_class       = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
@@ -158,7 +159,7 @@ static int ignite_1 (stix_t* stix)
 	    !stix->_method_dictionary || !stix->_method            || !stix->_association ||
 
 	    !stix->_method_context    || !stix->_block_context     || 
-	    !stix->_process           || !stix->_process_scheduler ||
+	    !stix->_process           || !stix->_semaphore         || !stix->_process_scheduler ||
 
 	    !stix->_true_class        || !stix->_false_class       || 
 	    !stix->_character         || !stix->_small_integer     || 
@@ -249,6 +250,7 @@ static int ignite_3 (stix_t* stix)
 		{ 13, { 'M','e','t','h','o','d','C','o','n','t','e','x','t'              } },
 		{ 12, { 'B','l','o','c','k','C','o','n','t','e','x','t'                  } },
 		{  7, { 'P','r','o','c','e','s','s'                                      } },
+		{  9, { 'S','e','m','a','p','h','o','r','e'                              } },
 		{ 16, { 'P','r','o','c','e','s','s','S','c','h','e','d','u','l','e','r'  } },
 		{  4, { 'T','r','u','e'                                                  } },
 		{  5, { 'F','a','l','s','e'                                              } },

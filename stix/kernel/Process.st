@@ -1,3 +1,5 @@
+
+
 #class Delay(Object)
 {
 ## TODO: support milliseconds or nanoseconds
@@ -26,7 +28,7 @@
 
 #class(#pointer) Process(Object)
 {
-	#dcl initial active state prev next sp.
+	#dcl initial_context runnable_context state prev next sp sem_next.
 
 	#method new
 	{
@@ -68,6 +70,27 @@
 	#method sp
 	{
 		^sp.
+	}
+}
+
+#class Semaphore(Object)
+{
+	#dcl count waiting_head waiting_tail.
+
+	#method initialize
+	{
+	}
+
+	#method signal 
+	{
+		<primitive: #_semaphore_signal>
+		self primitiveFailed.
+	}
+
+	#method wait
+	{
+		<primitive: #_semaphore_wait>
+		self primitiveFailed.
 	}
 }
 
