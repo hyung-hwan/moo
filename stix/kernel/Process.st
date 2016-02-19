@@ -28,7 +28,7 @@
 
 #class(#pointer) Process(Object)
 {
-	#dcl initial_context runnable_context state prev next sp sem_next.
+	#dcl initial_context current_context state prev next sp sem_next.
 
 	#method new
 	{
@@ -58,12 +58,21 @@
 
 	#method resume
 	{
-		^Processor resume: self.
+		<primitive: #_process_resume>
+		self primitiveFailed
+
+		##^Processor resume: self.
 	}
 
 	#method terminate
 	{
 		<primitive: #_process_terminate>
+		self primitiveFailed
+	}
+
+	#method yield
+	{
+		<primitive: #_process_yield>
 		self primitiveFailed
 	}
 
@@ -96,7 +105,7 @@
 
 #class ProcessScheduler(Object)
 {
-	#dcl tally head tail active.
+	#dcl tally active runnable.
 
 	#method new
 	{

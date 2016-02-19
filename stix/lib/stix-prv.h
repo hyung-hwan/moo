@@ -237,6 +237,27 @@
 #endif
 
 
+#define LIST_INIT(prefix,pl) ((pl)->prefix ## prev = (pl)->prefix ## next = (pl))
+#define LIST_HEAD(prefix,pl) ((pl)->prefix ## next)
+#define LIST_TAIL(prefix,pl) ((pl)->prefix ## prev)
+#define LIST_NEXT(prefix,pl) ((pl)->prefix ## next)
+#define LIST_PREV(prefix,pl) ((pl)->prefix ## prev)
+#define LIST_ISEMPTY(prefix,pl) (LIST_HEAD(prefix,pl) == (pl))
+
+#define LIST_CHAIN(prefix,p,x,n) do { \
+	stix_oop_process_t pp = (p), nn = (n); \
+	(x)->prefix ## prev = (p); \
+	(x)->prefix ## next = (n); \
+	nn->prefix ## prev = (x); \
+	pp->prefix ## next = (x); \
+} while(0)
+
+#define LIST_UNCHAIN(prefix,x) do { \
+	stix_oop_process_t pp = (x)->prefix ## prev, nn = (x)->prefix ## next; \
+	nn->prefix ## prev = pp; pp->prefix ## next = nn; \
+} while (0)
+
+
 #if defined(STIX_INCLUDE_COMPILER)
 
 /* ========================================================================= */

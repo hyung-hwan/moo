@@ -198,7 +198,6 @@ static int ignite_2 (stix_t* stix)
 	if (!tmp) return -1;
 	stix->sysdic = (stix_oop_set_t)tmp;
 
-
 	/* Create a nil process used to simplify nil check in GC.
 	 * only accessible by VM. not exported via the global dictionary. */
 	tmp = (stix_oop_t)stix_instantiate (stix, stix->_process, STIX_NULL, 0);
@@ -210,9 +209,15 @@ static int ignite_2 (stix_t* stix)
 	tmp = (stix_oop_t)stix_instantiate (stix, stix->_process_scheduler, STIX_NULL, 0);
 	if (!tmp) return -1;
 	stix->processor = (stix_oop_process_scheduler_t)tmp;
-	/* initialize the tally field to 0, keep other fields as nils */
 	stix->processor->tally = STIX_SMOOI_TO_OOP(0);
 	stix->processor->active = stix->nil_process;
+
+	/* Initialize a runnbale process list */
+	tmp = (stix_oop_t)stix_instantiate (stix, stix->_process, STIX_NULL, 0);
+	if (!tmp) return -1;
+	stix->processor->runnable = (stix_oop_process_t)tmp;
+	stix->processor->runnable->sp = STIX_SMOOI_TO_OOP(-1);
+	LIST_INIT (p_, stix->processor->runnable);
 
 	/* Export the system dictionary via the first class variable of the Stix class */
 	((stix_oop_class_t)stix->_apex)->slot[0] = (stix_oop_t)stix->sysdic;

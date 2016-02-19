@@ -547,10 +547,10 @@ struct stix_process_t
 {
 	STIX_OBJ_HEADER;
 	stix_oop_context_t initial_context;
-	stix_oop_context_t runnable_context;
+	stix_oop_context_t current_context;
 	stix_oop_t         state; /* SmallInteger */
-	stix_oop_process_t prev;
-	stix_oop_process_t next;
+	stix_oop_process_t p_prev;
+	stix_oop_process_t p_next;
 	stix_oop_t         sp;    /* stack pointer. SmallInteger */
 	stix_oop_process_t sem_next;
 
@@ -569,18 +569,16 @@ struct stix_semaphore_t
 	stix_oop_process_t waiting_tail; /* nil or Process */
 };
 
-#define STIX_PROCESS_SCHEDULER_NAMED_INSTVARS 4
+#define STIX_PROCESS_SCHEDULER_NAMED_INSTVARS 3
 typedef struct stix_process_scheduler_t stix_process_scheduler_t;
 typedef struct stix_process_scheduler_t* stix_oop_process_scheduler_t;
 struct stix_process_scheduler_t
 {
 	STIX_OBJ_HEADER;
-	stix_oop_t tally;
-	stix_oop_process_t head;
-	stix_oop_process_t tail;
-	stix_oop_process_t active;
+	stix_oop_t tally; /* SmallInteger, the number of runnable processes */
+	stix_oop_process_t active; /*  pointer to an active process in the runnable process list */
+	stix_oop_process_t runnable; /* runnable process list */
 };
-
 
 /**
  * The STIX_CLASSOF() macro return the class of an object including a numeric
@@ -777,6 +775,7 @@ struct stix_t
 	stix_oob_t* active_code;
 	stix_ooi_t sp;
 	stix_ooi_t ip;
+	int proc_switched; /* TODO: this is temporary. implement something else to skip immediate context switching */
 	/* == END EXECUTION REGISTERS == */
 
 	/* == BIGINT CONVERSION == */
