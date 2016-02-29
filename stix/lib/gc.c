@@ -339,6 +339,11 @@ printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
 	stix->processor = (stix_oop_process_scheduler_t) stix_moveoop (stix, (stix_oop_t)stix->processor);
 	stix->nil_process = (stix_oop_process_t) stix_moveoop (stix, (stix_oop_t)stix->nil_process);
 
+	for (i = 0; i < stix->sem_count; i++)
+	{
+		stix->sem_list[i] = stix_moveoop (stix, stix->sem_list[i]);
+	}
+
 	for (i = 0; i < stix->tmp_count; i++)
 	{
 		*stix->tmp_stack[i] = stix_moveoop (stix, *stix->tmp_stack[i]);

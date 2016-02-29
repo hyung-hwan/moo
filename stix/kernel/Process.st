@@ -88,6 +88,7 @@
 
 	#method initialize
 	{
+		count := 0.
 	}
 
 	#method signal 

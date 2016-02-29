@@ -160,7 +160,7 @@ printf ("PROCESS %p SIZE => %ld\n", proc, (long int)STIX_OBJ_GET_SIZE(proc));
 	return proc;
 }
 
-static void switch_to_process (stix_t* stix, stix_oop_process_t proc)
+static void switch_to_process (stix_t* stix, stix_oop_process_t proc, int new_state_for_old_active)
 {
 	/* the new process must not be the currently active process */
 	STIX_ASSERT (stix->processor->active != proc);
@@ -183,7 +183,8 @@ printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_con
 	 * it is the suspended context of the process to be suspended */
 	STIX_ASSERT ((stix_oop_t)stix->processor->active != stix->_nil);
 	stix->processor->active->current_context = stix->active_context;
-	stix->processor->active->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE);
+	/*stix->processor->active->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE);*/
+	stix->processor->active->state = STIX_SMOOI_TO_OOP(new_state_for_old_active);
 
 	/* activate the given process */
 	proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING);
@@ -219,7 +220,7 @@ static STIX_INLINE void switch_to_next_runnable_process (stix_t* stix)
 	stix_oop_process_t nrp;
 
 	nrp = find_next_runnable_process (stix);
-	if (nrp != stix->processor->active) switch_to_process (stix, nrp);
+	if (nrp != stix->processor->active) switch_to_process (stix, nrp, PROCESS_STATE_RUNNABLE);
 }
 
 static STIX_INLINE int chain_into_processor (stix_t* stix, stix_oop_process_t proc)
@@ -306,7 +307,7 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 			}
 			else
 			{
-				switch_to_process (stix, nrp);
+				switch_to_process (stix, nrp, PROCESS_STATE_TERMINATED);
 			}
 		}
 		else
@@ -331,6 +332,7 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 
 static void resume_process (stix_t* stix, stix_oop_process_t proc)
 {
+printf ("TO RESUME PROCESS = %p %d\n", proc, STIX_OOP_TO_SMOOI(proc->state));
 	if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED))
 	{
 		/* SUSPENED ---> RUNNING */
@@ -340,7 +342,7 @@ static void resume_process (stix_t* stix, stix_oop_process_t proc)
 
 		chain_into_processor (stix, proc); /* TODO: error check */
 
-		proc->current_context = proc->initial_context;
+		/*proc->current_context = proc->initial_context;*/
 		proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE);
 
 		/*switch_to_process (stix, proc);*/
@@ -351,7 +353,7 @@ static void resume_process (stix_t* stix, stix_oop_process_t proc)
 		/* RUNNABLE ---> RUNNING */
 		/* TODO: should i allow this? */
 		STIX_ASSERT (stix->processor->active != proc);
-		switch_to_process (stix, proc);
+		switch_to_process (stix, proc, PROCESS_STATE_RUNNABLE);
 	}
 #endif
 }
@@ -370,17 +372,19 @@ static void suspend_process (stix_t* stix, stix_oop_process_t proc)
 			nrp = find_next_runnable_process (stix);
 
 			unchain_from_processor (stix, proc);
-			proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED);
-			proc->current_context = stix->active_context;
-
+printf ("TO SUSPEND...%p %d\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));
 			if (nrp == proc)
 			{
 				/* no runnable process after suspension */
 				STIX_ASSERT (stix->processor->active == stix->nil_process);
+printf ("NO RUNNABLE PROCESS AFTER SUPSENDISION\n");
+
+				proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED);
+				proc->current_context = stix->active_context;
 			}
 			else
 			{
-				switch_to_process (stix, nrp);
+				switch_to_process (stix, nrp, PROCESS_STATE_SUSPENDED);
 			}
 		}
 		else
@@ -404,8 +408,26 @@ static void yield_process (stix_t* stix, stix_oop_process_t proc)
 		nrp = find_next_runnable_process (stix); 
 		/* if there are more than 1 runnable processes, the next
 		 * runnable process must be different from proc */
-		if (nrp != proc) switch_to_process (stix, proc);
+		if (nrp != proc) 
+		{
+			switch_to_process (stix, nrp, PROCESS_STATE_RUNNABLE);
+		}
 	}
+}
+
+static int async_signal_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
+{
+	if (stix->sem_count > STIX_COUNTOF(stix->sem_list))
+	{
+		/* TOO MANY ASYNC SEMAPHORES.. */
+	/* TODO: PROPER ERROR HANDLING */
+		stix->errnum = STIX_ESYSMEM;
+		return -1;
+	}
+
+	stix->sem_list[stix->sem_count] = sem;
+	stix->sem_count++;
+	return 0;
 }
 
 static void signal_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
@@ -415,12 +437,15 @@ static void signal_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
 
 	if ((stix_oop_t)sem->waiting_head == stix->_nil)
 	{
+printf ("signal semaphore...1111\n");
+		/* no process is waiting on this semaphore */
 		count = STIX_OOP_TO_SMOOI(sem->count);
 		count++;
 		sem->count = STIX_SMOOI_TO_OOP(count);
 	}
 	else
 	{
+printf ("signal semaphore...2222\n");
 		proc = sem->waiting_head;
 		sem->waiting_head = proc->sem_next;
 		if ((stix_oop_t)sem->waiting_head == stix->_nil)
@@ -439,14 +464,18 @@ static void await_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
 	count = STIX_OOP_TO_SMOOI(sem->count);
 	if (count > 0)
 	{
+		/* it's already signalled */
 		count--;
 		sem->count = STIX_SMOOI_TO_OOP(count);
+printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - NO SUSPENDING ...................\n");
 	}
 	else
 	{
+		/* not signaled. need to wait */
 		proc = stix->processor->active;
 		STIX_ASSERT ((stix_oop_t)proc->sem_next == stix->_nil);
 
+		/* add the active process to the semaphore's waiting list */
 		if ((stix_oop_t)sem->waiting_tail == stix->_nil)
 		{
 			STIX_ASSERT ((stix_oop_t)sem->waiting_head == stix->_nil);
@@ -459,7 +488,8 @@ static void await_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
 		}
 		sem->waiting_tail = proc;
 
-		suspend_process (stix, proc);
+printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - SUEPENDING PROCESS...............\n");
+		suspend_process (stix, proc); /* suspend the active process */
 		STIX_ASSERT (stix->processor->active != proc);
 	}
 }
@@ -2496,6 +2526,7 @@ int stix_execute (stix_t* stix)
 		{
 			/* no more process in the system */
 			STIX_ASSERT (stix->processor->tally = STIX_SMOOI_TO_OOP(0));
+printf ("NO MORE RUNNABLE PROCESS...\n");
 			break;
 		}
 /*
@@ -2504,6 +2535,12 @@ int stix_execute (stix_t* stix)
 IDLEING WAITING FOR PROCESS WAKE-UP...
 		}
 */
+
+		while (stix->sem_count > 0)
+		{
+			--stix->sem_count;
+			signal_semaphore (stix, stix->sem_list[stix->sem_count]);
+		}
 
 		/* TODO: implement different process switching scheme - time-slice or clock based??? */
 		if (!stix->proc_switched) { switch_to_next_runnable_process (stix); }

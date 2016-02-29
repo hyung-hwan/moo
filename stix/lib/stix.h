@@ -766,6 +766,9 @@ struct stix_t
 	stix_oop_process_scheduler_t processor; /* instance of ProcessScheduler */
 	stix_oop_process_t nil_process; /* instance of Process */
 
+	stix_oop_semaphore_t sem_list[256]; /* TODO: make it dynamic */
+	stix_oow_t sem_count;
+
 	stix_oop_t* tmp_stack[256]; /* stack for temporaries */
 	stix_oow_t tmp_count;
 

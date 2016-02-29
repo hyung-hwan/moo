@@ -199,13 +199,23 @@
 		self > 0 ifTrue: [^1].
 		^0.
 	}
+
 }
 
-#class SmallInteger(Number)
+
+#class Integer(Number)
+{
+	#method timesRepeat: aBlock
+	{
+		1 to: self by: 1 do: [ :count | aBlock value ].
+	}
+}
+
+#class SmallInteger(Integer)
 {
 }
 
-#class(#liword) LargeInteger(Number)
+#class(#liword) LargeInteger(Integer)
 {
 }
 
