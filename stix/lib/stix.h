@@ -543,33 +543,38 @@ struct stix_context_t
 #define STIX_PROCESS_NAMED_INSTVARS 7
 typedef struct stix_process_t stix_process_t;
 typedef struct stix_process_t* stix_oop_process_t;
+
+#define STIX_SEMAPHORE_NAMED_INSTVARS 3
+typedef struct stix_semaphore_t stix_semaphore_t;
+typedef struct stix_semaphore_t* stix_oop_semaphore_t;
+
 struct stix_process_t
 {
 	STIX_OBJ_HEADER;
 	stix_oop_context_t initial_context;
 	stix_oop_context_t current_context;
+
 	stix_oop_t         state; /* SmallInteger */
+	stix_oop_t         sp;    /* stack pointer. SmallInteger */
+
 	stix_oop_process_t p_prev;
 	stix_oop_process_t p_next;
-	stix_oop_t         sp;    /* stack pointer. SmallInteger */
-	stix_oop_process_t sem_next;
+
+	stix_oop_semaphore_t sem;
 
 	/* == variable indexed part == */
 	stix_oop_t slot[1]; /* process stack */
 };
 
-#define STIX_SEMAPHORE_NAMED_INSTVARS 3
-typedef struct stix_semaphore_t stix_semaphore_t;
-typedef struct stix_semaphore_t* stix_oop_semaphore_t;
 struct stix_semaphore_t
 {
 	STIX_OBJ_HEADER;
 	stix_oop_t count; /* SmallInteger */
-	stix_oop_process_t waiting_head; /* nil or Process */
-	stix_oop_process_t waiting_tail; /* nil or Process */
+	stix_oop_process_t waiting_head;
+	stix_oop_process_t waiting_tail;
 };
 
-#define STIX_PROCESS_SCHEDULER_NAMED_INSTVARS 3
+#define STIX_PROCESS_SCHEDULER_NAMED_INSTVARS 4
 typedef struct stix_process_scheduler_t stix_process_scheduler_t;
 typedef struct stix_process_scheduler_t* stix_oop_process_scheduler_t;
 struct stix_process_scheduler_t
@@ -577,7 +582,8 @@ struct stix_process_scheduler_t
 	STIX_OBJ_HEADER;
 	stix_oop_t tally; /* SmallInteger, the number of runnable processes */
 	stix_oop_process_t active; /*  pointer to an active process in the runnable process list */
-	stix_oop_process_t runnable; /* runnable process list */
+	stix_oop_process_t runnable_head; /* runnable process list */
+	stix_oop_process_t runnable_tail; /* runnable process list */
 };
 
 /**

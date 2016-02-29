@@ -28,7 +28,7 @@
 
 #class(#pointer) Process(Object)
 {
-	#dcl initial_context current_context state prev next sp sem_next.
+	#dcl initial_context current_context state sp prev next sem.
 
 	#method new
 	{
@@ -106,7 +106,7 @@
 
 #class ProcessScheduler(Object)
 {
-	#dcl tally active runnable.
+	#dcl tally active runnable_head runnable_tail.
 
 	#method new
 	{

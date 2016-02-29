@@ -212,13 +212,6 @@ static int ignite_2 (stix_t* stix)
 	stix->processor->tally = STIX_SMOOI_TO_OOP(0);
 	stix->processor->active = stix->nil_process;
 
-	/* Initialize a runnbale process list */
-	tmp = (stix_oop_t)stix_instantiate (stix, stix->_process, STIX_NULL, 0);
-	if (!tmp) return -1;
-	stix->processor->runnable = (stix_oop_process_t)tmp;
-	stix->processor->runnable->sp = STIX_SMOOI_TO_OOP(-1);
-	LIST_INIT (p_, stix->processor->runnable);
-
 	/* Export the system dictionary via the first class variable of the Stix class */
 	((stix_oop_class_t)stix->_apex)->slot[0] = (stix_oop_t)stix->sysdic;
 
