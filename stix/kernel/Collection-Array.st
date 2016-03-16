@@ -29,6 +29,11 @@
 	{
 		1 to: self size do: [:i | aBlock value: (self at: i)].
 	}
+
+	#method copy: anArray
+	{
+		1 to: (anArray size) do: [:i | self at: i put: (anArray at: i) ].
+	}
 }
 
 #class(#character) String(Array)

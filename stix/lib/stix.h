@@ -544,7 +544,7 @@ struct stix_context_t
 typedef struct stix_process_t stix_process_t;
 typedef struct stix_process_t* stix_oop_process_t;
 
-#define STIX_SEMAPHORE_NAMED_INSTVARS 3
+#define STIX_SEMAPHORE_NAMED_INSTVARS 5
 typedef struct stix_semaphore_t stix_semaphore_t;
 typedef struct stix_semaphore_t* stix_oop_semaphore_t;
 
@@ -557,8 +557,8 @@ struct stix_process_t
 	stix_oop_t         state; /* SmallInteger */
 	stix_oop_t         sp;    /* stack pointer. SmallInteger */
 
-	stix_oop_process_t p_prev;
-	stix_oop_process_t p_next;
+	stix_oop_process_t prev;
+	stix_oop_process_t next;
 
 	stix_oop_semaphore_t sem;
 
@@ -572,9 +572,11 @@ struct stix_semaphore_t
 	stix_oop_t count; /* SmallInteger */
 	stix_oop_process_t waiting_head;
 	stix_oop_process_t waiting_tail;
+	stix_oop_t sempq_index;
+	stix_oop_t sempq_firing_time;
 };
 
-#define STIX_PROCESS_SCHEDULER_NAMED_INSTVARS 4
+#define STIX_PROCESS_SCHEDULER_NAMED_INSTVARS 5
 typedef struct stix_process_scheduler_t stix_process_scheduler_t;
 typedef struct stix_process_scheduler_t* stix_oop_process_scheduler_t;
 struct stix_process_scheduler_t
@@ -584,6 +586,7 @@ struct stix_process_scheduler_t
 	stix_oop_process_t active; /*  pointer to an active process in the runnable process list */
 	stix_oop_process_t runnable_head; /* runnable process list */
 	stix_oop_process_t runnable_tail; /* runnable process list */
+	stix_oop_t sempq; /* SemaphoreHeap */
 };
 
 /**
@@ -772,8 +775,14 @@ struct stix_t
 	stix_oop_process_scheduler_t processor; /* instance of ProcessScheduler */
 	stix_oop_process_t nil_process; /* instance of Process */
 
-	stix_oop_semaphore_t sem_list[256]; /* TODO: make it dynamic */
-	stix_oow_t sem_count;
+	stix_oop_semaphore_t* sem_list;
+	stix_oow_t sem_list_count;
+	stix_oow_t sem_list_capa;
+
+	/* semaphores sorted according to expiry */
+	stix_oop_semaphore_t* sem_heap;
+	stix_oow_t sem_heap_count;
+	stix_oow_t sem_heap_capa;
 
 	stix_oop_t* tmp_stack[256]; /* stack for temporaries */
 	stix_oow_t tmp_count;

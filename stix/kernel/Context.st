@@ -111,17 +111,17 @@
 
 		## less block context before whileTrue: is recursively sent.
 		## whileTrue: is sent in a method context.
-##		(self value) ifFalse: [^nil].
-##		aBlock value. 
-##		self whileTrue: aBlock.
+		(self value) ifFalse: [^nil].
+		aBlock value. 
+		self whileTrue: aBlock.
 
 ## ----------------------------------------------------------------------------
 
 ## ----------------------------------------------------------------------------
-		| pc sp xsp |
+"		| pc sp xsp |
 
 		sp := thisContext sp.
-		sp := sp - 1. "decrement sp by 1 becuase thisContext pushed above affects the sp method"
+		sp := sp - 1. ## decrement sp by 1 becuase thisContext pushed above affects the sp method
 		pc := thisContext pc.
 		self value ifFalse: [ ^nil "^self" ].
 		aBlock value.
@@ -131,7 +131,7 @@
 		## this +2 or - 3 above is dependent on the byte code instruction size used for 'store'  
 		## +2 to skip STORE_INTO_TEMP(pc) and POP_STACKTOP.
 		## TODO: make it independent of the byte code size 
-
+"
 ## ----------------------------------------------------------------------------
 
 ##        #<label>:

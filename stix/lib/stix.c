@@ -129,6 +129,20 @@ void stix_fini (stix_t* stix)
 {
 	stix_cb_t* cb;
 
+	if (stix->sem_list)
+	{
+		stix_freemem (stix, stix->sem_list);
+		stix->sem_list_capa = 0;
+		stix->sem_list_count = 0;
+	}
+
+	if (stix->sem_heap)
+	{
+		stix_freemem (stix, stix->sem_heap);
+		stix->sem_heap_capa = 0;
+		stix->sem_heap_count = 0;
+	}
+
 	for (cb = stix->cblist; cb; cb = cb->next)
 	{
 		if (cb->fini) cb->fini (stix);

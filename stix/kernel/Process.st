@@ -1,31 +1,4 @@
 
-
-#class Delay(Object)
-{
-## TODO: support milliseconds or nanoseconds
-	#dcl delay.
-
-	#method(#class) forSeconds: anInteger
-	{
-		^super basicNew initWith: anInteger.
-	}
-
-	#method initWith: anInteger
-	{
-		self.delay := anInteger.
-	}
-
-	#method wait
-	{
-		Processor sleep: self.delay.
-	}
-
-	#method resume
-	{
-		" TODO: .............. "
-	}
-}
-
 #class(#pointer) Process(Object)
 {
 	#dcl initial_context current_context state sp prev next sem.
@@ -84,11 +57,13 @@
 
 #class Semaphore(Object)
 {
-	#dcl count waiting_head waiting_tail.
+	#dcl count waiting_head waiting_tail heapIndex fireTime.
 
 	#method initialize
 	{
-		count := 0.
+		self.count := 0.
+		self.heapIndex := 0.
+		self.fireTime := 0.
 	}
 
 	#method signal 
@@ -102,11 +77,195 @@
 		<primitive: #_semaphore_wait>
 		self primitiveFailed.
 	}
+
+	#method heapIndex
+	{
+		^heapIndex
+	}
+
+	#method heapIndex: anIndex
+	{
+		heapIndex := anIndex
+	}
+
+	#method fireTime
+	{
+		^fireTime
+	}
+
+	#method fireTime: anInteger
+	{
+		self.fireTime := anInteger.
+	}
+
+	#method youngerThan: aSemaphore
+	{
+		^self.fireTime < (aSemaphore fireTime)
+	}
+}
+
+#class SemaphoreHeap(Object)
+{
+	#dcl arr size.
+
+	#method initialize
+	{
+		self.size := 0.
+		self.arr := Array new: 100.
+	}
+
+	#method size
+	{
+		^self.size
+	}
+
+	#method insert: aSemaphore
+	{
+		self.size >= (self.arr size) ifTrue: [
+			| newarr newsize |
+			newsize := (self.arr size) * 2.
+			newarr := Array new: newsize.
+			newarr copy: self.arr.
+			self.arr := newarr.
+		].
+
+		self.size := self.size + 1.
+		self.arr at: self.size put: aSemaphore.
+		aSemaphore heapIndex: self.size.
+
+		^self siftUp: self.size.
+	}
+
+	#method popTop
+	{
+		| top |
+
+		top := self.arr at: 1.
+		self deleteAt: 1.
+		^top
+	}
+
+	#method updateAt: anIndex
+	{
+	}
+
+	#method deleteAt: anIndex
+	{
+		| item |
+
+		item := self.arr at: anIndex.
+		item heapIndex: -1.
+
+		(anIndex == self.size) 
+			ifTrue: [
+				"the last item"
+				self.arr at: self.size put: nil.
+				self.size := self.size - 1
+			]
+			ifFalse: [
+				| xitem |
+
+				xitem := self.arr at: self.size.
+				self.arr at: anIndex put: xitem.
+				xitem heapIndex: anIndex.
+				self.arr at: self.size put: nil.
+				self.size := self.size - 1.
+
+				(xitem youngerThan: item) 
+					ifTrue: [self siftUp: anIndex ]
+					ifFalse: [self siftDown: anIndex ]
+			]
+	}
+
+	#method parentIndex: anIndex
+	{
+		## ^(anIndex - 1) quo: 2
+		^anIndex quo: 2
+	}
+
+	#method leftChildIndex: anIndex
+	{
+		## ^(anIndex * 2) + 1.
+		^(anIndex * 2).
+	}
+
+	#method rightChildIndex: anIndex
+	{
+		## ^(anIndex * 2) + 2.
+		^(anIndex * 2) + 1.
+	}
+
+	#method siftUp: anIndex
+	{
+		| pindex cindex par cur |
+
+		anIndex <= 1 ifTrue: [ ^anIndex ].
+
+		cindex := anIndex.
+		pindex := self parentIndex: anIndex.
+
+		par := self.arr at: pindex.
+		cur := self.arr at: cindex.
+
+		[ cur youngerThan: par ] whileTrue: [
+
+			cindex := pindex.
+			pindex := self parentIndex: pindex.
+
+			par := self.arr at: pindex.
+			cur := self.arr at: cindex.
+		].
+
+		self.arr at: cindex put: cur.
+		cur heapIndex: cindex.
+
+		^cindex
+	}
+
+	#method siftDown: anIndex
+	{
+		| base capa cindex item |
+
+
+		base := self.size quo: 2.
+		(anIndex > base) ifTrue: [^anIndex].
+
+		cindex := anIndex.
+		item := self.arr at: cindex.
+
+		[ cindex < base ] whileTrue: [
+			| left right younger xitem |
+
+			left := self leftChildIndex: cindex.
+			right := self rightChildIndex: cindex.
+
+			((right <= self.size) and: [(self.arr at: right) youngerThan: (self.arr at: left)])
+				ifTrue: [ younger := right ]
+				ifFalse: [ younger := left ].
+
+			xitem := self.arr at: younger.
+			(item youngerThan: xitem) 
+				ifTrue: [
+					"break the loop"
+					base := anIndex 
+				]
+				ifFalse: [
+					self.arr at: cindex put: xitem.
+					xitem heapIndex: cindex.
+					cindex := younger.
+				]
+		].
+
+		self.arr at: cindex put: item.
+		item heapIndex: cindex.
+
+		^cindex
+	}
 }
 
 #class ProcessScheduler(Object)
 {
-	#dcl tally active runnable_head runnable_tail.
+	#dcl tally active runnable_head runnable_tail sem_heap.
 
 	#method new
 	{
@@ -159,4 +318,9 @@
 		self primitiveFailed
 	}
 	"
+
+	#method signal: aSemaphore after: anInteger
+	{
+		self.sem_heap add: aSemaphore withTimeout: anInteger.
+	}
 }

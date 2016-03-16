@@ -210,7 +210,7 @@ static STIX_INLINE stix_oop_process_t find_next_runnable_process (stix_t* stix)
 {
 	stix_oop_process_t npr;
 	STIX_ASSERT (stix->processor->active->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING));
-	npr = stix->processor->active->p_next;
+	npr = stix->processor->active->next;
 	if ((stix_oop_t)npr == stix->_nil) npr = stix->processor->runnable_head;
 	return npr;
 }
@@ -229,8 +229,8 @@ static STIX_INLINE int chain_into_processor (stix_t* stix, stix_oop_process_t pr
 	 * link it to the processor's process list. */
 	stix_ooi_t tally;
 
-	STIX_ASSERT ((stix_oop_t)proc->p_prev == stix->_nil);
-	STIX_ASSERT ((stix_oop_t)proc->p_next == stix->_nil);
+	STIX_ASSERT ((stix_oop_t)proc->prev == stix->_nil);
+	STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
 
 	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED));
 
@@ -249,8 +249,8 @@ printf ("TOO MANY PROCESS\n");
 	/* append to the runnable list */
 	if (tally > 0)
 	{
-		proc->p_prev = stix->processor->runnable_tail;
-		stix->processor->runnable_tail->p_next = proc;
+		proc->prev = stix->processor->runnable_tail;
+		stix->processor->runnable_tail->next = proc;
 	}
 	else
 	{
@@ -277,13 +277,13 @@ static STIX_INLINE void unchain_from_processor (stix_t* stix, stix_oop_process_t
 	tally = STIX_OOP_TO_SMOOI(stix->processor->tally);
 	STIX_ASSERT (tally > 0);
 
-	if ((stix_oop_t)proc->p_prev != stix->_nil) proc->p_prev->p_next = proc->p_next;
-	else stix->processor->runnable_head = proc->p_next;
-	if ((stix_oop_t)proc->p_next != stix->_nil) proc->p_next->p_prev = proc->p_prev;
-	else stix->processor->runnable_tail = proc->p_prev;
+	if ((stix_oop_t)proc->prev != stix->_nil) proc->prev->next = proc->next;
+	else stix->processor->runnable_head = proc->next;
+	if ((stix_oop_t)proc->next != stix->_nil) proc->next->prev = proc->prev;
+	else stix->processor->runnable_tail = proc->prev;
 
-	proc->p_prev = (stix_oop_process_t)stix->_nil;
-	proc->p_next = (stix_oop_process_t)stix->_nil;
+	proc->prev = (stix_oop_process_t)stix->_nil;
+	proc->next = (stix_oop_process_t)stix->_nil;
 
 	tally--;
 	if (tally == 0) stix->processor->active = stix->nil_process;
@@ -295,8 +295,8 @@ static STIX_INLINE void chain_into_semaphore (stix_t* stix, stix_oop_process_t p
 	/* append a process to the process list of a semaphore*/
 
 	STIX_ASSERT ((stix_oop_t)proc->sem == stix->_nil);
-	STIX_ASSERT ((stix_oop_t)proc->p_prev == stix->_nil);
-	STIX_ASSERT ((stix_oop_t)proc->p_next == stix->_nil);
+	STIX_ASSERT ((stix_oop_t)proc->prev == stix->_nil);
+	STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
 
 	if ((stix_oop_t)sem->waiting_head == stix->_nil)
 	{
@@ -305,8 +305,8 @@ static STIX_INLINE void chain_into_semaphore (stix_t* stix, stix_oop_process_t p
 	}
 	else
 	{
-		proc->p_prev = sem->waiting_tail;
-		sem->waiting_tail->p_next = proc;
+		proc->prev = sem->waiting_tail;
+		sem->waiting_tail->next = proc;
 	}
 	sem->waiting_tail = proc;
 
@@ -320,13 +320,13 @@ static STIX_INLINE void unchain_from_semaphore (stix_t* stix, stix_oop_process_t
 	STIX_ASSERT ((stix_oop_t)proc->sem != stix->_nil);
 
 	sem = proc->sem;
-	if ((stix_oop_t)proc->p_prev != stix->_nil) proc->p_prev->p_next = proc->p_next;
-	else sem->waiting_head = proc->p_next;
-	if ((stix_oop_t)proc->p_next != stix->_nil) proc->p_next->p_prev = proc->p_prev;
-	else sem->waiting_tail = proc->p_prev;
+	if ((stix_oop_t)proc->prev != stix->_nil) proc->prev->next = proc->next;
+	else sem->waiting_head = proc->next;
+	if ((stix_oop_t)proc->next != stix->_nil) proc->next->prev = proc->prev;
+	else sem->waiting_tail = proc->prev;
 
-	proc->p_prev = (stix_oop_process_t)stix->_nil;
-	proc->p_next = (stix_oop_process_t)stix->_nil;
+	proc->prev = (stix_oop_process_t)stix->_nil;
+	proc->next = (stix_oop_process_t)stix->_nil;
 }
 
 static void terminate_process (stix_t* stix, stix_oop_process_t proc)
@@ -392,8 +392,8 @@ printf ("TO RESUME PROCESS = %p %d\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state)
 	{
 		/* SUSPENED ---> RUNNING */
 
-		STIX_ASSERT ((stix_oop_t)proc->p_prev == stix->_nil);
-		STIX_ASSERT ((stix_oop_t)proc->p_next == stix->_nil);
+		STIX_ASSERT ((stix_oop_t)proc->prev == stix->_nil);
+		STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
 
 		chain_into_processor (stix, proc); /* TODO: error check */
 
@@ -472,16 +472,21 @@ static void yield_process (stix_t* stix, stix_oop_process_t proc)
 
 static int async_signal_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
 {
-	if (stix->sem_count > STIX_COUNTOF(stix->sem_list))
+	if (stix->sem_list_count >= stix->sem_list_capa)
 	{
-		/* TOO MANY ASYNC SEMAPHORES.. */
-	/* TODO: PROPER ERROR HANDLING */
-		stix->errnum = STIX_ESYSMEM;
-		return -1;
+		stix_oow_t new_capa;
+		stix_oop_semaphore_t* tmp;
+
+		new_capa = stix->sem_list_capa * 2; /* TODO: overflow check.. */
+		tmp = stix_reallocmem (stix, stix->sem_list, STIX_SIZEOF(stix_oop_semaphore_t) * new_capa);
+		if (!tmp) return -1;
+
+		stix->sem_list = tmp;
+		stix->sem_list_capa = new_capa;
 	}
 
-	stix->sem_list[stix->sem_count] = sem;
-	stix->sem_count++;
+	stix->sem_list[stix->sem_list_count] = sem;
+	stix->sem_list_count++;
 	return 0;
 }
 
@@ -502,13 +507,6 @@ printf ("signal semaphore...1111\n");
 	{
 printf ("signal semaphore...2222\n");
 		proc = sem->waiting_head;
-/*
-		sem->waiting_head = proc->semp_next;
-		if ((stix_oop_t)sem->waiting_head == stix->_nil)
-			sem->waiting_tail = (stix_oop_process_t)stix->_nil;
-
-		proc->semp_next = (stix_oop_process_t)stix->_nil;
-*/
 		unchain_from_semaphore (stix, proc);
 		resume_process (stix, proc); /* TODO: error check */
 	}
@@ -2585,10 +2583,10 @@ IDLEING WAITING FOR PROCESS WAKE-UP...
 		}
 */
 
-		while (stix->sem_count > 0)
+		while (stix->sem_list_count > 0)
 		{
-			--stix->sem_count;
-			signal_semaphore (stix, stix->sem_list[stix->sem_count]);
+			--stix->sem_list_count;
+			signal_semaphore (stix, stix->sem_list[stix->sem_list_count]);
 		}
 
 		/* TODO: implement different process switching scheme - time-slice or clock based??? */
