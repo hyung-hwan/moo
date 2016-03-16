@@ -146,6 +146,13 @@
 ##		self value ifTrue: [ aBlock value. thisContext restart. ].
 	}
 
+	#method whileFalse: aBlock
+	{
+		(self value) ifTrue: [^nil].
+		aBlock value. 
+		self whileFalse: aBlock.
+	}
+
 	#method pc
 	{
 		^ip

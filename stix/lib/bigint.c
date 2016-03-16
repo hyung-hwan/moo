@@ -439,7 +439,9 @@ static STIX_INLINE stix_oop_t make_bigint_with_intmax (stix_t* stix, stix_intmax
 
 stix_oop_t stix_oowtoint (stix_t* stix, stix_oow_t w)
 {
-	if (STIX_IN_SMOOI_RANGE(w))
+	STIX_ASSERT (STIX_TYPE_IS_UNSIGNED(stix_oow_t));
+	/*if (STIX_IN_SMOOI_RANGE(w))*/
+	if (w <= STIX_SMOOI_MAX)
 	{
 		return STIX_SMOOI_TO_OOP(w);
 	}

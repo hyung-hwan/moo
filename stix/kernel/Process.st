@@ -119,6 +119,11 @@
 		^self.size
 	}
 
+	#method at: anIndex
+	{
+		^self.arr at: anIndex.
+	}
+
 	#method insert: aSemaphore
 	{
 		self.size >= (self.arr size) ifTrue: [
@@ -197,27 +202,36 @@
 
 	#method siftUp: anIndex
 	{
-		| pindex cindex par cur |
+		| pindex cindex par item stop |
 
-		anIndex <= 1 ifTrue: [ ^anIndex ].
+		(anIndex <= 1) ifTrue: [ ^anIndex ].
 
-		cindex := anIndex.
-		pindex := self parentIndex: anIndex.
+		pindex := anIndex.
+		item := self.arr at: anIndex.
 
-		par := self.arr at: pindex.
-		cur := self.arr at: cindex.
-
-		[ cur youngerThan: par ] whileTrue: [
+		stop := false.
+		[ stop ] whileFalse: [
 
 			cindex := pindex.
-			pindex := self parentIndex: pindex.
 
-			par := self.arr at: pindex.
-			cur := self.arr at: cindex.
+			(cindex > 1)
+				ifTrue: [
+					pindex := self parentIndex: cindex.
+					par := self.arr at: pindex.
+
+					(item youngerThan: par) 
+						ifTrue: [
+							## move the parent down
+							self.arr at: cindex put: par.
+							par heapIndex: cindex.
+						]
+						ifFalse: [ stop := true ].
+				]
+				ifFalse: [ stop := true ].
 		].
 
-		self.arr at: cindex put: cur.
-		cur heapIndex: cindex.
+		self.arr at: cindex put: item.
+		item heapIndex: cindex.
 
 		^cindex
 	}
@@ -226,8 +240,7 @@
 	{
 		| base capa cindex item |
 
-
-		base := self.size quo: 2.
+		base := (self.size quo: 2) + 1.
 		(anIndex > base) ifTrue: [^anIndex].
 
 		cindex := anIndex.
