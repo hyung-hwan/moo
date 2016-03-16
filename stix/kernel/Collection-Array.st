@@ -5,6 +5,11 @@
 		^self basicSize.
 	}
 
+	#method ubound
+	{
+		^(self basicSize - 1).
+	}
+
 	#method at: anInteger
 	{
 		^self basicAt: anInteger.
@@ -17,22 +22,22 @@
 
 	#method first
 	{
-		^self at: 1.
+		^self at: 0.
 	}
 
 	#method last
 	{
-		^self at: self size.
+		^self at: (self ubound).
 	}
 
 	#method do: aBlock
 	{
-		1 to: self size do: [:i | aBlock value: (self at: i)].
+		0 to: (self ubound) do: [:i | aBlock value: (self at: i)].
 	}
 
 	#method copy: anArray
 	{
-		1 to: (anArray size) do: [:i | self at: i put: (anArray at: i) ].
+		0 to: (anArray ubound) do: [:i | self at: i put: (anArray at: i) ].
 	}
 }
 

@@ -62,7 +62,7 @@
 	#method initialize
 	{
 		self.count := 0.
-		self.heapIndex := 0.
+		self.heapIndex := -1.
 		self.fireTime := 0.
 	}
 
@@ -126,7 +126,10 @@
 
 	#method insert: aSemaphore
 	{
-		self.size >= (self.arr size) ifTrue: [
+		| index |
+
+		index := self.size.
+		(index >= (self.arr size)) ifTrue: [
 			| newarr newsize |
 			newsize := (self.arr size) * 2.
 			newarr := Array new: newsize.
@@ -134,19 +137,19 @@
 			self.arr := newarr.
 		].
 
+		self.arr at: index put: aSemaphore.
+		aSemaphore heapIndex: index.
 		self.size := self.size + 1.
-		self.arr at: self.size put: aSemaphore.
-		aSemaphore heapIndex: self.size.
 
-		^self siftUp: self.size.
+		^self siftUp: index
 	}
 
 	#method popTop
 	{
 		| top |
 
-		top := self.arr at: 1.
-		self deleteAt: 1.
+		top := self.arr at: 0.
+		self deleteAt: 0.
 		^top
 	}
 
@@ -161,11 +164,11 @@
 		item := self.arr at: anIndex.
 		item heapIndex: -1.
 
+		self.size := self.size - 1.
 		(anIndex == self.size) 
 			ifTrue: [
 				"the last item"
 				self.arr at: self.size put: nil.
-				self.size := self.size - 1
 			]
 			ifFalse: [
 				| xitem |
@@ -174,7 +177,6 @@
 				self.arr at: anIndex put: xitem.
 				xitem heapIndex: anIndex.
 				self.arr at: self.size put: nil.
-				self.size := self.size - 1.
 
 				(xitem youngerThan: item) 
 					ifTrue: [self siftUp: anIndex ]
@@ -184,27 +186,24 @@
 
 	#method parentIndex: anIndex
 	{
-		## ^(anIndex - 1) quo: 2
-		^anIndex quo: 2
+		^(anIndex - 1) quo: 2
 	}
 
 	#method leftChildIndex: anIndex
 	{
-		## ^(anIndex * 2) + 1.
-		^(anIndex * 2).
+		^(anIndex * 2) + 1.
 	}
 
 	#method rightChildIndex: anIndex
 	{
-		## ^(anIndex * 2) + 2.
-		^(anIndex * 2) + 1.
+		 ^(anIndex * 2) + 2.
 	}
 
 	#method siftUp: anIndex
 	{
 		| pindex cindex par item stop |
 
-		(anIndex <= 1) ifTrue: [ ^anIndex ].
+		(anIndex <= 0) ifTrue: [ ^anIndex ].
 
 		pindex := anIndex.
 		item := self.arr at: anIndex.
@@ -214,7 +213,7 @@
 
 			cindex := pindex.
 
-			(cindex > 1)
+			(cindex > 0)
 				ifTrue: [
 					pindex := self parentIndex: cindex.
 					par := self.arr at: pindex.
@@ -240,8 +239,8 @@
 	{
 		| base capa cindex item |
 
-		base := (self.size quo: 2) + 1.
-		(anIndex > base) ifTrue: [^anIndex].
+		base := self.size quo: 2.
+		(anIndex >= base) ifTrue: [^anIndex].
 
 		cindex := anIndex.
 		item := self.arr at: cindex.
@@ -252,7 +251,7 @@
 			left := self leftChildIndex: cindex.
 			right := self rightChildIndex: cindex.
 
-			((right <= self.size) and: [(self.arr at: right) youngerThan: (self.arr at: left)])
+			((right < self.size) and: [(self.arr at: right) youngerThan: (self.arr at: left)])
 				ifTrue: [ younger := right ]
 				ifFalse: [ younger := left ].
 

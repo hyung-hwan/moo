@@ -1059,17 +1059,14 @@ static int prim_basic_at (stix_t* stix, stix_ooi_t nargs)
 	pos = ACTIVE_STACK_GET(stix, stix->sp);
 	if (stix_inttooow (stix, pos, &idx) <= 0)
 	{
-		/* integer out of range or not integer */
+		/* negative integer or not integer */
 		return 0;
 	}
-	if (idx < 1 || idx > STIX_OBJ_GET_SIZE(rcv))
+	if (idx >= STIX_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
 		return 0;
 	}
-
-	/* [NOTE] basicAt: and basicAt:put: uses a 1-based index. */
-	idx = idx - 1;
 
 	switch (STIX_OBJ_GET_FLAGS_TYPE(rcv))
 	{
@@ -1123,10 +1120,10 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 
 	if (stix_inttooow (stix, pos, &idx) <= 0)
 	{
-		/* integer out of range or not integer */
+		/* negative integer or not integer */
 		return 0;
 	}
-	if (idx < 1 || idx > STIX_OBJ_GET_SIZE(rcv))
+	if (idx >= STIX_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
 		return 0;
@@ -1139,9 +1136,6 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 		/* read-only object */ /* TODO: DEVISE A WAY TO PASS a proper error from the primitive handler to STIX */
 		return 0;
 	}
-
-	/* [NOTE] basicAt: and basicAt:put: uses a 1-based index. */
-	idx = idx - 1;
 
 	switch (STIX_OBJ_GET_FLAGS_TYPE(rcv))
 	{
