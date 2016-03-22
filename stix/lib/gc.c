@@ -341,7 +341,12 @@ printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
 
 	for (i = 0; i < stix->sem_list_count; i++)
 	{
-		stix->sem_list[i] = stix_moveoop (stix, stix->sem_list[i]);
+		stix->sem_list[i] = (stix_oop_semaphore_t)stix_moveoop (stix, stix->sem_list[i]);
+	}
+
+	for (i = 0; i < stix->sem_heap_count; i++)
+	{
+		stix->sem_heap[i] = (stix_oop_semaphore_t)stix_moveoop (stix, stix->sem_heap[i]);
 	}
 
 	for (i = 0; i < stix->tmp_count; i++)

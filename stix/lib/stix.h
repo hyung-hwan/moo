@@ -52,6 +52,8 @@ enum stix_errnum_t
 	STIX_ENOENT,  /**< no matching entry */
 	STIX_EDFULL,  /**< dictionary full */
 	STIX_EPFULL,  /**< processor full */
+	STIX_ESHFULL, /**< semaphore heap full */
+	STIX_ESLFULL, /**< semaphore list full */
 	STIX_EDIVBY0, /**< divide by zero */
 	STIX_EIOERR,  /**< I/O error */
 	STIX_EECERR,  /**< encoding conversion error */
@@ -544,7 +546,7 @@ struct stix_context_t
 typedef struct stix_process_t stix_process_t;
 typedef struct stix_process_t* stix_oop_process_t;
 
-#define STIX_SEMAPHORE_NAMED_INSTVARS 5
+#define STIX_SEMAPHORE_NAMED_INSTVARS 6
 typedef struct stix_semaphore_t stix_semaphore_t;
 typedef struct stix_semaphore_t* stix_oop_semaphore_t;
 
@@ -572,8 +574,9 @@ struct stix_semaphore_t
 	stix_oop_t count; /* SmallInteger */
 	stix_oop_process_t waiting_head;
 	stix_oop_process_t waiting_tail;
-	stix_oop_t sempq_index;
-	stix_oop_t sempq_firing_time;
+	stix_oop_t heap_index; /* index to the heap */
+	stix_oop_t heap_ftime_sec; /* firing time */
+	stix_oop_t heap_ftime_nsec; /* firing time */
 };
 
 #define STIX_PROCESS_SCHEDULER_NAMED_INSTVARS 5
@@ -775,11 +778,12 @@ struct stix_t
 	stix_oop_process_scheduler_t processor; /* instance of ProcessScheduler */
 	stix_oop_process_t nil_process; /* instance of Process */
 
+	/* pending asynchronous semaphores */
 	stix_oop_semaphore_t* sem_list;
 	stix_oow_t sem_list_count;
 	stix_oow_t sem_list_capa;
 
-	/* semaphores sorted according to expiry */
+	/* semaphores sorted according to time-out */
 	stix_oop_semaphore_t* sem_heap;
 	stix_oow_t sem_heap_count;
 	stix_oow_t sem_heap_capa;

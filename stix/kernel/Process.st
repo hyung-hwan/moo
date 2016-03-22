@@ -57,13 +57,14 @@
 
 #class Semaphore(Object)
 {
-	#dcl count waiting_head waiting_tail heapIndex fireTime.
+	#dcl count waiting_head waiting_tail heapIndex fireTimeSec fireTimeNsec.
 
 	#method initialize
 	{
 		self.count := 0.
 		self.heapIndex := -1.
-		self.fireTime := 0.
+		self.fireTimeSec := 0.
+		self.fireTimeNsec := 0.
 	}
 
 	#method signal 
@@ -90,17 +91,17 @@
 
 	#method fireTime
 	{
-		^fireTime
+		^fireTimeSec
 	}
 
 	#method fireTime: anInteger
 	{
-		self.fireTime := anInteger.
+		self.fireTimeSec := anInteger.
 	}
 
 	#method youngerThan: aSemaphore
 	{
-		^self.fireTime < (aSemaphore fireTime)
+		^self.fireTimeSec < (aSemaphore fireTime)
 	}
 }
 
@@ -153,8 +154,19 @@
 		^top
 	}
 
-	#method updateAt: anIndex
+	#method updateAt: anIndex with: aSemaphore
 	{
+		| item |
+
+		item := self.arr at: anIndex.
+		item heapIndex: -1.
+
+		self.arr at: anIndex put: aSemaphore.
+		aSemaphore heapIndex: anIndex.
+
+		^(aSemaphore youngerThan: item)
+			ifTrue: [ self siftUp: anIndex ]
+			ifFalse: [ self siftDown: anIndex ].
 	}
 
 	#method deleteAt: anIndex
@@ -333,6 +345,13 @@
 
 	#method signal: aSemaphore after: anInteger
 	{
-		self.sem_heap add: aSemaphore withTimeout: anInteger.
+		<primitive: #_processor_add_timed_semaphore>
+		self primitiveFailed.
+	}
+
+	#method signal: aSemaphore after: aSecond and: aNanoSecond
+	{
+		<primitive: #_processor_add_timed_semaphore>
+		self primitiveFailed.
 	}
 }

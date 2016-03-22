@@ -26,12 +26,29 @@
 
 #include "stix-prv.h"
 
- 
-#define PROCESS_STATE_RUNNING 3
-#define PROCESS_STATE_WAITING 2
-#define PROCESS_STATE_RUNNABLE 1
-#define PROCESS_STATE_SUSPENDED 0
-#define PROCESS_STATE_TERMINATED -1
+/* TODO: remove this header after having changed clock_gettime() to a 
+ *       platform independent function */
+#include <time.h>
+
+#define PROC_STATE_RUNNING 3
+#define PROC_STATE_WAITING 2
+#define PROC_STATE_RUNNABLE 1
+#define PROC_STATE_SUSPENDED 0
+#define PROC_STATE_TERMINATED -1
+
+#define SEM_LIST_INC 256
+#define SEM_HEAP_INC 256
+#define SEM_LIST_MAX (SEM_LIST_INC * 1000)
+#define SEM_HEAP_MAX (SEM_HEAP_INC * 1000)
+
+#define SEM_HEAP_PARENT(x) (((x) - 1) / 2)
+#define SEM_HEAP_LEFT(x)   ((x) * 2 + 1)
+#define SEM_HEAP_RIGHT(x)  ((x) * 2 + 2)
+
+#define SEM_HEAP_EARLIER_THAN(stx,x,y) ( \
+	(STIX_OOP_TO_SMOOI((x)->heap_ftime_sec) < STIX_OOP_TO_SMOOI((y)->heap_ftime_sec)) || \
+	(STIX_OOP_TO_SMOOI((x)->heap_ftime_sec) == STIX_OOP_TO_SMOOI((y)->heap_ftime_sec) && STIX_OOP_TO_SMOOI((x)->heap_ftime_nsec) < STIX_OOP_TO_SMOOI((y)->heap_ftime_nsec)) \
+)
 
 #if defined(USE_DYNCALL)
 /* TODO: defined dcAllocMem and dcFreeMeme before builing the dynload and dyncall library */
@@ -149,7 +166,7 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 	stix_poptmp (stix);
 	if (!proc) return STIX_NULL;
 
-	proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED);
+	proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_SUSPENDED);
 	proc->initial_context = c;
 	proc->current_context = c;
 	proc->sp = STIX_SMOOI_TO_OOP(-1);
@@ -166,8 +183,8 @@ static void switch_to_process (stix_t* stix, stix_oop_process_t proc, int new_st
 	STIX_ASSERT (stix->processor->active != proc);
 
 	/* the new process must be in the runnable state */
-	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE) ||
-	             proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_WAITING));
+	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE) ||
+	             proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_WAITING));
 
 #if defined(STIX_DEBUG_PROCESSOR)
 printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_context);
@@ -183,11 +200,11 @@ printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_con
 	 * it is the suspended context of the process to be suspended */
 	STIX_ASSERT ((stix_oop_t)stix->processor->active != stix->_nil);
 	stix->processor->active->current_context = stix->active_context;
-	/*stix->processor->active->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE);*/
+	/*stix->processor->active->state = STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE);*/
 	stix->processor->active->state = STIX_SMOOI_TO_OOP(new_state_for_old_active);
 
 	/* activate the given process */
-	proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING);
+	proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_RUNNING);
 	stix->processor->active = proc;
 
 #if defined(STIX_USE_PROCSTK)
@@ -209,7 +226,7 @@ printf ("ACTUAL PROCESS SWITCHING AF...%d %p\n", (int)stix->ip, stix->active_con
 static STIX_INLINE stix_oop_process_t find_next_runnable_process (stix_t* stix)
 {
 	stix_oop_process_t npr;
-	STIX_ASSERT (stix->processor->active->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING));
+	STIX_ASSERT (stix->processor->active->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNING));
 	npr = stix->processor->active->next;
 	if ((stix_oop_t)npr == stix->_nil) npr = stix->processor->runnable_head;
 	return npr;
@@ -220,7 +237,7 @@ static STIX_INLINE void switch_to_next_runnable_process (stix_t* stix)
 	stix_oop_process_t nrp;
 
 	nrp = find_next_runnable_process (stix);
-	if (nrp != stix->processor->active) switch_to_process (stix, nrp, PROCESS_STATE_RUNNABLE);
+	if (nrp != stix->processor->active) switch_to_process (stix, nrp, PROC_STATE_RUNNABLE);
 }
 
 static STIX_INLINE int chain_into_processor (stix_t* stix, stix_oop_process_t proc)
@@ -232,7 +249,7 @@ static STIX_INLINE int chain_into_processor (stix_t* stix, stix_oop_process_t pr
 	STIX_ASSERT ((stix_oop_t)proc->prev == stix->_nil);
 	STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
 
-	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED));
+	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_SUSPENDED));
 
 	tally = STIX_OOP_TO_SMOOI(stix->processor->tally);
 
@@ -271,8 +288,8 @@ static STIX_INLINE void unchain_from_processor (stix_t* stix, stix_oop_process_t
 {
 	stix_ooi_t tally;
 
-	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING) ||
-	             proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE));
+	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNING) ||
+	             proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
 
 	tally = STIX_OOP_TO_SMOOI(stix->processor->tally);
 	STIX_ASSERT (tally > 0);
@@ -327,12 +344,14 @@ static STIX_INLINE void unchain_from_semaphore (stix_t* stix, stix_oop_process_t
 
 	proc->prev = (stix_oop_process_t)stix->_nil;
 	proc->next = (stix_oop_process_t)stix->_nil;
+
+	proc->sem = (stix_oop_semaphore_t)stix->_nil;
 }
 
 static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 {
-	if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING) ||
-	    proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE))
+	if (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNING) ||
+	    proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE))
 	{
 		/* RUNNING/RUNNABLE ---> TERMINATED */
 		if (proc == stix->processor->active)
@@ -342,7 +361,7 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 			nrp = find_next_runnable_process (stix);
 
 			unchain_from_processor (stix, proc);
-			proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_TERMINATED);
+			proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_TERMINATED);
 			proc->sp = STIX_SMOOI_TO_OOP(-1); /* invalidate the process stack */
 			proc->current_context = proc->initial_context; /* not needed but just in case */
 
@@ -357,20 +376,20 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 			}
 			else
 			{
-				switch_to_process (stix, nrp, PROCESS_STATE_TERMINATED);
+				switch_to_process (stix, nrp, PROC_STATE_TERMINATED);
 			}
 		}
 		else
 		{
 			unchain_from_processor (stix, proc);
-			proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_TERMINATED);
+			proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_TERMINATED);
 			proc->sp = STIX_SMOOI_TO_OOP(-1); /* invalidate the process stack */
 		}
 	}
-	else if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED))
+	else if (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_SUSPENDED))
 	{
 		/* SUSPENDED ---> TERMINATED */
-		proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_TERMINATED);
+		proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_TERMINATED);
 		proc->sp = STIX_SMOOI_TO_OOP(-1); /* invalidate the proce stack */
 
 		if ((stix_oop_t)proc->sem != stix->_nil)
@@ -378,7 +397,7 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 			unchain_from_semaphore (stix, proc);
 		}
 	}
-	else if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_WAITING))
+	else if (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_WAITING))
 	{
 		/* WAITING ---> TERMINATED */
 		/* TODO: */
@@ -388,35 +407,36 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 static void resume_process (stix_t* stix, stix_oop_process_t proc)
 {
 printf ("TO RESUME PROCESS = %p %d\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));
-	if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED))
+	if (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_SUSPENDED))
 	{
 		/* SUSPENED ---> RUNNING */
 
+printf ("TO RESUME PROCESS = %p %d SUSPENED ----> RUNNING\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));
 		STIX_ASSERT ((stix_oop_t)proc->prev == stix->_nil);
 		STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
 
 		chain_into_processor (stix, proc); /* TODO: error check */
 
 		/*proc->current_context = proc->initial_context;*/
-		proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE);
+		proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE);
 
 		/*switch_to_process (stix, proc);*/
 	}
 #if 0
-	else if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE))
+	else if (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE))
 	{
 		/* RUNNABLE ---> RUNNING */
 		/* TODO: should i allow this? */
 		STIX_ASSERT (stix->processor->active != proc);
-		switch_to_process (stix, proc, PROCESS_STATE_RUNNABLE);
+		switch_to_process (stix, proc, PROC_STATE_RUNNABLE);
 	}
 #endif
 }
 
 static void suspend_process (stix_t* stix, stix_oop_process_t proc)
 {
-	if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING) ||
-	    proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNABLE))
+	if (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNING) ||
+	    proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE))
 	{
 		/* RUNNING/RUNNABLE ---> SUSPENDED */
 
@@ -434,25 +454,25 @@ printf ("TO SUSPEND...%p %d\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));
 				STIX_ASSERT (stix->processor->active == stix->nil_process);
 printf ("NO RUNNABLE PROCESS AFTER SUPSENDISION\n");
 
-				proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED);
+				proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_SUSPENDED);
 				proc->current_context = stix->active_context;
 			}
 			else
 			{
-				switch_to_process (stix, nrp, PROCESS_STATE_SUSPENDED);
+				switch_to_process (stix, nrp, PROC_STATE_SUSPENDED);
 			}
 		}
 		else
 		{
 			unchain_from_processor (stix, proc);
-			proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_SUSPENDED);
+			proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_SUSPENDED);
 		}
 	}
 }
 
 static void yield_process (stix_t* stix, stix_oop_process_t proc)
 {
-	if (proc->state == STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING))
+	if (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNING))
 	{
 		/* RUNNING --> RUNNABLE */
 
@@ -465,19 +485,25 @@ static void yield_process (stix_t* stix, stix_oop_process_t proc)
 		 * runnable process must be different from proc */
 		if (nrp != proc) 
 		{
-			switch_to_process (stix, nrp, PROCESS_STATE_RUNNABLE);
+			switch_to_process (stix, nrp, PROC_STATE_RUNNABLE);
 		}
 	}
 }
 
 static int async_signal_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
 {
+	if (stix->sem_list_count >= SEM_LIST_MAX)
+	{
+		stix->errnum = STIX_ESLFULL;
+		return -1;
+	}
+
 	if (stix->sem_list_count >= stix->sem_list_capa)
 	{
 		stix_oow_t new_capa;
 		stix_oop_semaphore_t* tmp;
 
-		new_capa = stix->sem_list_capa * 2; /* TODO: overflow check.. */
+		new_capa = stix->sem_list_capa + SEM_LIST_INC; /* TODO: overflow check.. */
 		tmp = stix_reallocmem (stix, stix->sem_list, STIX_SIZEOF(stix_oop_semaphore_t) * new_capa);
 		if (!tmp) return -1;
 
@@ -541,6 +567,152 @@ printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - SUEPENDING ACTIVE PROCESS.............
 	}
 }
 
+static void sift_up_sem_heap (stix_t* stix, stix_ooi_t index)
+{
+	if (index > 0)
+	{
+		stix_ooi_t parent;
+		stix_oop_semaphore_t sem, parsem;
+
+		parent = SEM_HEAP_PARENT(index);
+		sem = stix->sem_heap[index];
+		parsem = stix->sem_heap[parent];
+		if (SEM_HEAP_EARLIER_THAN(stix, sem, parsem))
+		{
+			do
+			{
+				/* move down the parent to the current position */
+				parsem->heap_index = STIX_SMOOI_TO_OOP(index);
+				stix->sem_heap[index] = parsem;
+
+				/* traverse up */
+				index = parent;
+				if (index <= 0) break;
+
+				parent = SEM_HEAP_PARENT(parent);
+				parsem = stix->sem_heap[parent];
+			}
+			while (SEM_HEAP_EARLIER_THAN(stix, sem, parsem));
+
+			sem->heap_index = STIX_SMOOI_TO_OOP(index);
+			stix->sem_heap[index] = sem;
+		}
+	}
+}
+
+static void sift_down_sem_heap (stix_t* stix, stix_ooi_t index)
+{
+	stix_ooi_t base = stix->sem_heap_count / 2;
+
+	if (index < base) /* at least 1 child is under the 'index' position */
+	{
+		stix_ooi_t left, right, child;
+		stix_oop_semaphore_t sem, chisem;
+
+		sem = stix->sem_heap[index];
+		do
+		{
+			left = SEM_HEAP_LEFT(index);
+			right = SEM_HEAP_RIGHT(index);
+
+			if (right < stix->sem_heap_count && SEM_HEAP_EARLIER_THAN(stix, stix->sem_heap[left], stix->sem_heap[right]))
+			{
+				child = right;
+			}
+			else
+			{
+				child = left;
+			}
+
+			chisem = stix->sem_heap[child];
+			if (SEM_HEAP_EARLIER_THAN(stix, sem, chisem)) break;
+
+			chisem->heap_index = STIX_SMOOI_TO_OOP(index);
+			stix->sem_heap[index ] = chisem;
+
+			index = child;
+		}
+		while (index < base);
+
+		sem->heap_index = STIX_SMOOI_TO_OOP(index);
+		stix->sem_heap[index] = sem;
+	}
+}
+
+static int add_to_sem_heap (stix_t* stix, stix_oop_semaphore_t sem)
+{
+	stix_ooi_t index;
+
+	if (stix->sem_heap_count >= SEM_HEAP_MAX)
+	{
+		stix->errnum = STIX_ESHFULL;
+		return -1;
+	}
+
+	if (stix->sem_heap_count >= stix->sem_heap_capa)
+	{
+		stix_oow_t new_capa;
+		stix_oop_semaphore_t* tmp;
+
+		/* no overflow check when calculating the new capacity
+		 * owing to SEM_HEAP_MAX check above */
+		new_capa = stix->sem_heap_capa + SEM_HEAP_INC;
+		tmp = stix_reallocmem (stix, stix->sem_heap, STIX_SIZEOF(stix_oop_semaphore_t) * new_capa);
+		if (!tmp) return -1;
+
+		stix->sem_heap = tmp;
+		stix->sem_heap_capa = new_capa;
+	}
+
+	STIX_ASSERT (stix->sem_heap_count <= STIX_SMOOI_MAX);
+
+	index = stix->sem_heap_count;
+	stix->sem_heap[index] = sem;
+	sem->heap_index = STIX_SMOOI_TO_OOP(index);
+	stix->sem_heap_count++;
+
+	sift_up_sem_heap (stix, index);
+	return 0;
+}
+
+static void delete_from_sem_heap (stix_t* stix, stix_ooi_t index)
+{
+	stix_oop_semaphore_t sem, lastsem;
+
+	sem = stix->sem_heap[index];
+	sem->heap_index = STIX_SMOOI_TO_OOP(-1);
+
+	stix->sem_heap_count--;
+	if (stix->sem_heap_count > 0 && index != stix->sem_heap_count)
+	{
+		/* move the last item to the deletion position */
+		lastsem = stix->sem_heap[stix->sem_heap_count];
+		lastsem->heap_index = STIX_SMOOI_TO_OOP(index);
+		stix->sem_heap[index] = lastsem;
+
+		if (SEM_HEAP_EARLIER_THAN(stix, lastsem, sem)) 
+			sift_up_sem_heap (stix, index);
+		else
+			sift_down_sem_heap (stix, index);
+	}
+}
+
+static void update_sem_heap (stix_t* stix, stix_ooi_t index, stix_oop_semaphore_t newsem)
+{
+	stix_oop_semaphore_t sem;
+
+	sem = stix->sem_heap[index];
+	sem->heap_index = STIX_SMOOI_TO_OOP(-1);
+
+	newsem->heap_index = STIX_SMOOI_TO_OOP(index);
+	stix->sem_heap[index] = newsem;
+
+	if (SEM_HEAP_EARLIER_THAN(stix, newsem, sem))
+		sift_up_sem_heap (stix, index);
+	else
+		sift_down_sem_heap (stix, index);
+}
+
 static stix_oop_process_t start_initial_process (stix_t* stix, stix_oop_context_t c)
 {
 	stix_oop_process_t proc;
@@ -553,7 +725,7 @@ static stix_oop_process_t start_initial_process (stix_t* stix, stix_oop_context_
 	if (!proc) return STIX_NULL;
 
 	if (chain_into_processor (stix, proc) <= -1) return STIX_NULL;
-	proc->state = STIX_SMOOI_TO_OOP(PROCESS_STATE_RUNNING); /* skip RUNNABLE and go to RUNNING */
+	proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_RUNNING); /* skip RUNNABLE and go to RUNNING */
 	stix->processor->active = proc;
 
 	/* do somthing that resume_process() would do with less overhead */
@@ -1478,6 +1650,101 @@ static int prim_processor_sleep (stix_t* stix, stix_ooi_t nargs)
 	return 0;
 }
 
+static int prim_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, sec, nsec;
+	stix_oop_semaphore_t sem;
+	struct timespec ts, ft;
+
+	STIX_ASSERT (nargs >= 2 || nargs <= 3);
+
+	if (nargs == 3) 
+	{
+		nsec = ACTIVE_STACK_GET (stix, stix->sp);
+		if (!STIX_OOP_IS_SMOOI(nsec)) return 0;
+	}
+	else nsec = STIX_SMOOI_TO_OOP(0);
+
+	sec = ACTIVE_STACK_GET(stix, stix->sp - nargs + 2);
+	sem = (stix_oop_semaphore_t)ACTIVE_STACK_GET(stix, stix->sp - nargs + 1);
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - nargs);
+
+	if (rcv != (stix_oop_t)stix->processor) return 0;
+	if (STIX_CLASSOF(stix,sem) != stix->_semaphore) return 0;
+	if (!STIX_OOP_IS_SMOOI(sec)) return 0;
+
+	if (STIX_OOP_IS_SMOOI(sem->heap_index) && 
+	    sem->heap_index != STIX_SMOOI_TO_OOP(-1))
+	{
+		delete_from_sem_heap (stix, STIX_OOP_TO_SMOOI(sem->heap_index));
+		STIX_ASSERT(sem->heap_index == STIX_SMOOI_TO_OOP(-1));
+
+		/*
+		Is this more desired???
+		ACTIVE_STACK_POPS (stix, nargs);
+		ACTIVE_STACK_SETTOP (stix, stix->_false);
+		return 1;
+		*/
+	}
+
+/* TODO: make clock_gettime to be platform independent 
+ * 
+ * this code assumes that the monotonic clock returns a small value
+ * that can fit into a small integer, even after some addtions... */
+	if (clock_gettime (CLOCK_MONOTONIC, &ts) == -1)
+	{
+		/* TODO: soft error handling */
+printf ("clock_gettime() failure....\n");
+		return 0;
+	}
+
+	ft.tv_nsec = ts.tv_nsec + STIX_OOP_TO_SMOOI(nsec);
+	ft.tv_sec = ts.tv_sec + STIX_OOP_TO_SMOOI(sec);
+	while (ft.tv_nsec >= 1000000000)
+	{
+		ft.tv_sec++;
+		ft.tv_nsec -= 1000000000;
+	}
+
+	if (ft.tv_sec < 0 || ft.tv_sec > STIX_SMOOI_MAX) 
+	{
+		/* soft error - cannot represent the expiry time in
+		 *              a small integer. */
+		return 0;
+	}
+
+	sem->heap_ftime_sec = STIX_SMOOI_TO_OOP(ft.tv_sec);
+	sem->heap_ftime_nsec = STIX_SMOOI_TO_OOP(ft.tv_nsec);
+
+	if (add_to_sem_heap (stix, sem) <= -1) return -1;
+
+	ACTIVE_STACK_POPS (stix, nargs);
+	return 1;
+}
+
+static int prim_processor_del_time_semaphore (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv;
+	stix_oop_semaphore_t sem;
+
+	STIX_ASSERT (nargs == 1);
+
+	sem = (stix_oop_semaphore_t)ACTIVE_STACK_GET(stix, stix->sp - 1);
+	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (rcv != (stix_oop_t)stix->processor) return 0;
+	if (STIX_CLASSOF(stix,sem) != stix->_semaphore) return 0;
+
+	if (STIX_OOP_IS_SMOOI(sem->heap_index) && 
+	    sem->heap_index != STIX_SMOOI_TO_OOP(-1))
+	{
+		delete_from_sem_heap (stix, STIX_OOP_TO_SMOOI(sem));
+		STIX_ASSERT(sem->heap_index == STIX_SMOOI_TO_OOP(-1));
+	}
+
+	return 1;
+}
+
 static int prim_integer_add (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
@@ -2123,10 +2390,11 @@ printf ("wrong function name...\n");
 	return 1;
 }
 
-
+#define MAX_NARGS STIX_TYPE_MAX(stix_ooi_t)
 struct prim_t
 {
-	stix_ooi_t          nargs;   /* expected number of arguments */
+	stix_ooi_t          min_nargs;   /* expected number of arguments */
+	stix_ooi_t          max_nargs;   /* expected number of arguments */
 	stix_prim_impl_t    handler;
 	const char*         name;    /* the name is supposed to be 7-bit ascii only */
 };
@@ -2134,62 +2402,64 @@ typedef struct prim_t prim_t;
 
 static prim_t primitives[] =
 {
-	{  -1,   prim_dump,                 "_dump"                },
-	{   1,   prim_identical,            "_identical"           },
-	{   1,   prim_not_identical,        "_not_identical"       },
-	{   0,   prim_class,                "_class"               },
+	{   0, MAX_NARGS,  prim_dump,                 "_dump"                },
 
-	{   0,   prim_basic_new,            "_basic_new"           },
-	{   1,   prim_basic_new_with_size,  "_basic_new_with_size" },
-	{   0,   prim_ngc_new,              "_ngc_new"             },
-	{   1,   prim_ngc_new_with_size,    "_ngc_new_with_size"   },
-	{   0,   prim_ngc_dispose,          "_ngc_dispose"         },
-	{   0,   prim_shallow_copy,         "_shallow_copy"        },
+	{   1,  1,  prim_identical,            "_identical"           },
+	{   1,  1,  prim_not_identical,        "_not_identical"       },
+	{   0,  0,  prim_class,                "_class"               },
 
-	{   0,   prim_basic_size,           "_basic_size"          },
-	{   1,   prim_basic_at,             "_basic_at"            },
-	{   2,   prim_basic_at_put,         "_basic_at_put"        },
+	{   0,  0,  prim_basic_new,            "_basic_new"           },
+	{   1,  1,  prim_basic_new_with_size,  "_basic_new_with_size" },
+	{   0,  0,  prim_ngc_new,              "_ngc_new"             },
+	{   1,  1,  prim_ngc_new_with_size,    "_ngc_new_with_size"   },
+	{   0,  0,  prim_ngc_dispose,          "_ngc_dispose"         },
+	{   0,  0,  prim_shallow_copy,         "_shallow_copy"        },
+
+	{   0,  0,  prim_basic_size,           "_basic_size"          },
+	{   1,  1,  prim_basic_at,             "_basic_at"            },
+	{   2,  2,  prim_basic_at_put,         "_basic_at_put"        },
 
 
-	{  -1,   prim_block_value,          "_block_value"         },
-	{  -1,   prim_block_new_process,    "_block_new_process"   },
+	{   0, MAX_NARGS,  prim_block_value,          "_block_value"         },
+	{   0, MAX_NARGS,  prim_block_new_process,    "_block_new_process"   },
 
-	{   0,   prim_process_resume,       "_process_resume"       },
-	{   0,   prim_process_terminate,    "_process_terminate"   },
-	{   0,   prim_process_yield,        "_process_yield"       },
-	{   0,   prim_semaphore_signal,     "_semaphore_signal"    },
-	{   0,   prim_semaphore_wait,       "_semaphore_wait"      },
+	{   0,  0,  prim_process_resume,       "_process_resume"       },
+	{   0,  0,  prim_process_terminate,    "_process_terminate"   },
+	{   0,  0,  prim_process_yield,        "_process_yield"       },
+	{   0,  0,  prim_semaphore_signal,     "_semaphore_signal"    },
+	{   0,  0,  prim_semaphore_wait,       "_semaphore_wait"      },
 
-	{   1,   prim_processor_schedule,   "_processor_schedule"  },
-	{   1,   prim_processor_remove,     "_processor_remove"    },
-	{   1,   prim_processor_sleep,      "_processor_sleep"     },
+	{   1,  1,  prim_processor_schedule,            "_processor_schedule"            },
+	{   1,  1,  prim_processor_remove,              "_processor_remove"              },
+	{   1,  1,  prim_processor_sleep,               "_processor_sleep"               },
+	{   2,  3,  prim_processor_add_timed_semaphore, "_processor_add_timed_semaphore" },
 
-	{   1,   prim_integer_add,          "_integer_add"         },
-	{   1,   prim_integer_sub,          "_integer_sub"         },
-	{   1,   prim_integer_mul,          "_integer_mul"         },
-	{   1,   prim_integer_quo,          "_integer_quo"         },
-	{   1,   prim_integer_rem,          "_integer_rem"         },
-	{   1,   prim_integer_quo2,         "_integer_quo2"        },
-	{   1,   prim_integer_rem2,         "_integer_rem2"        },
-	{   0,   prim_integer_negated,      "_integer_negated"     },
-	{   1,   prim_integer_bitat,        "_integer_bitat"       },
-	{   1,   prim_integer_bitand,       "_integer_bitand"      },
-	{   1,   prim_integer_bitor,        "_integer_bitor"       },
-	{   1,   prim_integer_bitxor,       "_integer_bitxor"      },
-	{   0,   prim_integer_bitinv,       "_integer_bitinv"      },
-	{   1,   prim_integer_bitshift,     "_integer_bitshift"    },
-	{   1,   prim_integer_eq,           "_integer_eq"          },
-	{   1,   prim_integer_ne,           "_integer_ne"          },
-	{   1,   prim_integer_lt,           "_integer_lt"          },
-	{   1,   prim_integer_gt,           "_integer_gt"          },
-	{   1,   prim_integer_le,           "_integer_le"          },
-	{   1,   prim_integer_ge,           "_integer_ge"          },
-	{   1,   prim_integer_inttostr,     "_integer_inttostr"    },
+	{   1,  1,  prim_integer_add,          "_integer_add"         },
+	{   1,  1,  prim_integer_sub,          "_integer_sub"         },
+	{   1,  1,  prim_integer_mul,          "_integer_mul"         },
+	{   1,  1,  prim_integer_quo,          "_integer_quo"         },
+	{   1,  1,  prim_integer_rem,          "_integer_rem"         },
+	{   1,  1,  prim_integer_quo2,         "_integer_quo2"        },
+	{   1,  1,  prim_integer_rem2,         "_integer_rem2"        },
+	{   0,  0,  prim_integer_negated,      "_integer_negated"     },
+	{   1,  1,  prim_integer_bitat,        "_integer_bitat"       },
+	{   1,  1,  prim_integer_bitand,       "_integer_bitand"      },
+	{   1,  1,  prim_integer_bitor,        "_integer_bitor"       },
+	{   1,  1,  prim_integer_bitxor,       "_integer_bitxor"      },
+	{   0,  0,  prim_integer_bitinv,       "_integer_bitinv"      },
+	{   1,  1,  prim_integer_bitshift,     "_integer_bitshift"    },
+	{   1,  1,  prim_integer_eq,           "_integer_eq"          },
+	{   1,  1,  prim_integer_ne,           "_integer_ne"          },
+	{   1,  1,  prim_integer_lt,           "_integer_lt"          },
+	{   1,  1,  prim_integer_gt,           "_integer_gt"          },
+	{   1,  1,  prim_integer_le,           "_integer_le"          },
+	{   1,  1,  prim_integer_ge,           "_integer_ge"          },
+	{   1,  1,  prim_integer_inttostr,     "_integer_inttostr"    },
 
-	{   1,   prim_ffi_open,             "_ffi_open"            },
-	{   1,   prim_ffi_close,            "_ffi_close"           },
-	{   2,   prim_ffi_getsym,           "_ffi_getsym"          },
-	{   3,   prim_ffi_call,             "_ffi_call"            }
+	{   1,  1,  prim_ffi_open,             "_ffi_open"            },
+	{   1,  1,  prim_ffi_close,            "_ffi_close"           },
+	{   2,  2,  prim_ffi_getsym,           "_ffi_getsym"          },
+	{   3,  3,  prim_ffi_call,             "_ffi_call"            }
 	
 };
 
@@ -2478,7 +2748,7 @@ printf ("]\n");
 			DBGOUT_EXEC_1 ("METHOD_PREAMBLE_PRIMITIVE %d", (int)prim_no);
 
 			if (prim_no >= 0 && prim_no < STIX_COUNTOF(primitives) && 
-			    (primitives[prim_no].nargs < 0 || primitives[prim_no].nargs == nargs))
+			    (nargs >= primitives[prim_no].min_nargs && nargs <= primitives[prim_no].max_nargs))
 			{
 				int n;
 
@@ -2568,8 +2838,43 @@ int stix_execute (stix_t* stix)
 			/* no more process in the system */
 			STIX_ASSERT (stix->processor->tally = STIX_SMOOI_TO_OOP(0));
 printf ("NO MORE RUNNABLE PROCESS...\n");
+
+
+			if (stix->sem_heap_count > 0)
+			{
+				struct timespec now, ft;
+
+				clock_gettime (CLOCK_MONOTONIC, &now);
+
+				do
+				{
+					STIX_ASSERT (STIX_OOP_IS_SMOOI(stix->sem_heap[0]->heap_ftime_sec));
+					STIX_ASSERT (STIX_OOP_IS_SMOOI(stix->sem_heap[0]->heap_ftime_nsec));
+
+					ft.tv_sec = STIX_OOP_TO_SMOOI(stix->sem_heap[0]->heap_ftime_sec);
+					ft.tv_nsec = STIX_OOP_TO_SMOOI(stix->sem_heap[0]->heap_ftime_nsec);
+
+					if (ft.tv_sec < now.tv_sec || (ft.tv_sec == now.tv_sec && ft.tv_nsec <= now.tv_nsec))
+					{
+						signal_semaphore (stix, stix->sem_heap[0]);
+						delete_from_sem_heap (stix, 0);
+					}
+					else 
+					{
+/* THIS PART IS JUST EXPERIMENTAL... PROPER WAITING WITH IO MULTIPLEXER IS NEEDED ... */
+						sleep (ft.tv_sec - now.tv_sec);
+						signal_semaphore (stix, stix->sem_heap[0]);
+						delete_from_sem_heap (stix, 0);
+						goto carry_on_switching;
+					}
+				} 
+				while (stix->sem_heap_count > 0);
+			}
+
 			break;
 		}
+
+carry_on_switching:
 /*
 		else if (stix->processor->active == stix->idle_process)
 		{
@@ -2579,9 +2884,15 @@ IDLEING WAITING FOR PROCESS WAKE-UP...
 
 		while (stix->sem_list_count > 0)
 		{
+			/* handle async signals */
 			--stix->sem_list_count;
 			signal_semaphore (stix, stix->sem_list[stix->sem_list_count]);
 		}
+		/*
+		if (semaphore heap has pending request)
+		{
+			signal them...
+		}*/
 
 		/* TODO: implement different process switching scheme - time-slice or clock based??? */
 		if (!stix->proc_switched) { switch_to_next_runnable_process (stix); }
