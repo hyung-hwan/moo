@@ -177,17 +177,10 @@ printf ("PROCESS %p SIZE => %ld\n", proc, (long int)STIX_OBJ_GET_SIZE(proc));
 	return proc;
 }
 
-static void switch_to_process (stix_t* stix, stix_oop_process_t proc, int new_state_for_old_active)
+static STIX_INLINE void sleep_active_process (stix_t* stix, int state)
 {
-	/* the new process must not be the currently active process */
-	STIX_ASSERT (stix->processor->active != proc);
-
-	/* the new process must be in the runnable state */
-	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE) ||
-	             proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_WAITING));
-
 #if defined(STIX_DEBUG_PROCESSOR)
-printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_context);
+printf ("PROCESS-SWITCHING: PUT ACTIVE_CONTEXT TO SLEEP..%d %p\n", (int)stix->ip, stix->active_context);
 #endif
 
 #if defined(STIX_USE_PROCSTK)
@@ -198,11 +191,13 @@ printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_con
 
 	/* store the current active context to the current process.
 	 * it is the suspended context of the process to be suspended */
-	STIX_ASSERT ((stix_oop_t)stix->processor->active != stix->_nil);
+	STIX_ASSERT (stix->processor->active != stix->nil_process);
 	stix->processor->active->current_context = stix->active_context;
-	/*stix->processor->active->state = STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE);*/
-	stix->processor->active->state = STIX_SMOOI_TO_OOP(new_state_for_old_active);
+	stix->processor->active->state = STIX_SMOOI_TO_OOP(state);
+}
 
+static STIX_INLINE void wake_new_process (stix_t* stix, stix_oop_process_t proc)
+{
 	/* activate the given process */
 	proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_RUNNING);
 	stix->processor->active = proc;
@@ -217,8 +212,21 @@ printf ("ACTUAL PROCESS SWITCHING BF...%d %p\n", (int)stix->ip, stix->active_con
 	SWITCH_ACTIVE_CONTEXT (stix, proc->current_context);
 
 #if defined(STIX_DEBUG_PROCESSOR)
-printf ("ACTUAL PROCESS SWITCHING AF...%d %p\n", (int)stix->ip, stix->active_context);
+printf ("PROCESS-SWITCHING: WAKE NEW PROCESS...%d %p\n", (int)stix->ip, stix->active_context);
 #endif
+}
+
+static void switch_to_process (stix_t* stix, stix_oop_process_t proc, int new_state_for_old_active)
+{
+	/* the new process must not be the currently active process */
+	STIX_ASSERT (stix->processor->active != proc);
+
+	/* the new process must be in the runnable state */
+	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE) ||
+	             proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_WAITING));
+
+	sleep_active_process (stix, new_state_for_old_active);
+	wake_new_process (stix, proc);
 
 	stix->proc_switched = 1;
 }
@@ -284,7 +292,7 @@ printf ("INSERTED PROCESS %d TO PROCESSOR\n", (int)tally);
 	return 0;
 }
 
-static STIX_INLINE void unchain_from_processor (stix_t* stix, stix_oop_process_t proc)
+static STIX_INLINE void unchain_from_processor (stix_t* stix, stix_oop_process_t proc, int state)
 {
 	stix_ooi_t tally;
 
@@ -301,6 +309,7 @@ static STIX_INLINE void unchain_from_processor (stix_t* stix, stix_oop_process_t
 
 	proc->prev = (stix_oop_process_t)stix->_nil;
 	proc->next = (stix_oop_process_t)stix->_nil;
+	proc->state = STIX_SMOOI_TO_OOP(state);
 
 	tally--;
 	if (tally == 0) stix->processor->active = stix->nil_process;
@@ -360,8 +369,7 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 
 			nrp = find_next_runnable_process (stix);
 
-			unchain_from_processor (stix, proc);
-			proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_TERMINATED);
+			unchain_from_processor (stix, proc, PROC_STATE_TERMINATED);
 			proc->sp = STIX_SMOOI_TO_OOP(-1); /* invalidate the process stack */
 			proc->current_context = proc->initial_context; /* not needed but just in case */
 
@@ -381,8 +389,7 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 		}
 		else
 		{
-			unchain_from_processor (stix, proc);
-			proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_TERMINATED);
+			unchain_from_processor (stix, proc, PROC_STATE_TERMINATED);
 			proc->sp = STIX_SMOOI_TO_OOP(-1); /* invalidate the process stack */
 		}
 	}
@@ -446,26 +453,36 @@ static void suspend_process (stix_t* stix, stix_oop_process_t proc)
 
 			nrp = find_next_runnable_process (stix);
 
-			unchain_from_processor (stix, proc);
 printf ("TO SUSPEND...%p %d\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));
 			if (nrp == proc)
 			{
 				/* no runnable process after suspension */
-				STIX_ASSERT (stix->processor->active == stix->nil_process);
 printf ("NO RUNNABLE PROCESS AFTER SUPSENDISION\n");
+				sleep_active_process (stix, PROC_STATE_RUNNABLE);
+				unchain_from_processor (stix, proc, PROC_STATE_SUSPENDED);
 
-				proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_SUSPENDED);
-				proc->current_context = stix->active_context;
+				/* the last has been unchained from the processor and
+				 * set to SUSPENDED. the active process must be the nil
+				 * nil process */
+				STIX_ASSERT (stix->processor->active == stix->nil_process);
 			}
 			else
 			{
+printf ("SWITCHING TO XXXXXXXXXXXXXXXXXXXXx\n");
+				/* keep the unchained process at the runnable state for
+				 * the immediate call to switch_to_process() below */
+				unchain_from_processor (stix, proc, PROC_STATE_RUNNABLE);
+				/* unchain_from_processor() leaves the active process
+				 * untouched unless the unchained process is the last
+				 * process. so calling switch_to_process() which expects
+				 * the active process to be valid is safe */
+				STIX_ASSERT (stix->processor->active != stix->nil_process);
 				switch_to_process (stix, nrp, PROC_STATE_SUSPENDED);
 			}
 		}
 		else
 		{
-			unchain_from_processor (stix, proc);
-			proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_SUSPENDED);
+			unchain_from_processor (stix, proc, PROC_STATE_SUSPENDED);
 		}
 	}
 }
@@ -2861,10 +2878,22 @@ printf ("NO MORE RUNNABLE PROCESS...\n");
 					}
 					else 
 					{
+						stix_oop_process_t proc;
+
 /* THIS PART IS JUST EXPERIMENTAL... PROPER WAITING WITH IO MULTIPLEXER IS NEEDED ... */
 						sleep (ft.tv_sec - now.tv_sec);
+
+						proc = stix->sem_heap[0]->waiting_head;
+
 						signal_semaphore (stix, stix->sem_heap[0]);
 						delete_from_sem_heap (stix, 0);
+
+STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
+STIX_ASSERT (proc == stix->processor->runnable_head);
+
+						wake_new_process (stix, proc);
+						stix->proc_switched = 1;
+
 						goto carry_on_switching;
 					}
 				} 
