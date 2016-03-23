@@ -296,6 +296,8 @@ static STIX_INLINE void unchain_from_processor (stix_t* stix, stix_oop_process_t
 {
 	stix_ooi_t tally;
 
+	/* the processor's process chain must be composed of running/runnable
+	 * processes only */
 	STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNING) ||
 	             proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
 
@@ -461,9 +463,9 @@ printf ("NO RUNNABLE PROCESS AFTER SUPSENDISION\n");
 				sleep_active_process (stix, PROC_STATE_RUNNABLE);
 				unchain_from_processor (stix, proc, PROC_STATE_SUSPENDED);
 
-				/* the last has been unchained from the processor and
-				 * set to SUSPENDED. the active process must be the nil
-				 * nil process */
+				/* the last running/runnable process has been unchained 
+				 * from the processor and set to SUSPENDED. the active
+				 * process must be the nil nil process */
 				STIX_ASSERT (stix->processor->active == stix->nil_process);
 			}
 			else
@@ -474,8 +476,8 @@ printf ("SWITCHING TO XXXXXXXXXXXXXXXXXXXXx\n");
 				unchain_from_processor (stix, proc, PROC_STATE_RUNNABLE);
 				/* unchain_from_processor() leaves the active process
 				 * untouched unless the unchained process is the last
-				 * process. so calling switch_to_process() which expects
-				 * the active process to be valid is safe */
+				 * running/runnable process. so calling switch_to_process()
+				 * which expects the active process to be valid is safe */
 				STIX_ASSERT (stix->processor->active != stix->nil_process);
 				switch_to_process (stix, nrp, PROC_STATE_SUSPENDED);
 			}
@@ -2850,60 +2852,75 @@ int stix_execute (stix_t* stix)
 
 	while (1)
 	{
+#if 0
 		if (stix->processor->active == stix->nil_process) 
 		{
 			/* no more process in the system */
 			STIX_ASSERT (stix->processor->tally = STIX_SMOOI_TO_OOP(0));
 printf ("NO MORE RUNNABLE PROCESS...\n");
+		}
+#endif
 
+		if (stix->sem_heap_count > 0)
+		{
+			struct timespec now, ft;
 
-			if (stix->sem_heap_count > 0)
+			clock_gettime (CLOCK_MONOTONIC, &now);
+
+			do
 			{
-				struct timespec now, ft;
+				STIX_ASSERT (STIX_OOP_IS_SMOOI(stix->sem_heap[0]->heap_ftime_sec));
+				STIX_ASSERT (STIX_OOP_IS_SMOOI(stix->sem_heap[0]->heap_ftime_nsec));
 
-				clock_gettime (CLOCK_MONOTONIC, &now);
+				ft.tv_sec = STIX_OOP_TO_SMOOI(stix->sem_heap[0]->heap_ftime_sec);
+				ft.tv_nsec = STIX_OOP_TO_SMOOI(stix->sem_heap[0]->heap_ftime_nsec);
 
-				do
+				if (ft.tv_sec < now.tv_sec || (ft.tv_sec == now.tv_sec && ft.tv_nsec <= now.tv_nsec))
 				{
-					STIX_ASSERT (STIX_OOP_IS_SMOOI(stix->sem_heap[0]->heap_ftime_sec));
-					STIX_ASSERT (STIX_OOP_IS_SMOOI(stix->sem_heap[0]->heap_ftime_nsec));
+					stix_oop_process_t proc;
 
-					ft.tv_sec = STIX_OOP_TO_SMOOI(stix->sem_heap[0]->heap_ftime_sec);
-					ft.tv_nsec = STIX_OOP_TO_SMOOI(stix->sem_heap[0]->heap_ftime_nsec);
+					proc = stix->sem_heap[0]->waiting_head;
 
-					if (ft.tv_sec < now.tv_sec || (ft.tv_sec == now.tv_sec && ft.tv_nsec <= now.tv_nsec))
+					signal_semaphore (stix, stix->sem_heap[0]);
+					delete_from_sem_heap (stix, 0);
+
+					if (stix->processor->active == stix->nil_process)
 					{
-						signal_semaphore (stix, stix->sem_heap[0]);
-						delete_from_sem_heap (stix, 0);
-					}
-					else 
-					{
-						stix_oop_process_t proc;
-
-/* THIS PART IS JUST EXPERIMENTAL... PROPER WAITING WITH IO MULTIPLEXER IS NEEDED ... */
-						sleep (ft.tv_sec - now.tv_sec);
-
-						proc = stix->sem_heap[0]->waiting_head;
-
-						signal_semaphore (stix, stix->sem_heap[0]);
-						delete_from_sem_heap (stix, 0);
-
 STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
 STIX_ASSERT (proc == stix->processor->runnable_head);
 
 						wake_new_process (stix, proc);
 						stix->proc_switched = 1;
-
-						goto carry_on_switching;
 					}
-				} 
-				while (stix->sem_heap_count > 0);
-			}
-
+				}
+				else if (stix->processor->active == stix->nil_process)
+				{
+/* THIS PART IS JUST EXPERIMENTAL... PROPER WAITING WITH IO MULTIPLEXER IS NEEDED ... */
+					ft.tv_sec -= now.tv_sec;
+					ft.tv_nsec -= now.tv_nsec;
+					while (ft.tv_nsec < 0)
+					{
+						ft.tv_sec--;
+						ft.tv_nsec += 1000000000;
+					}
+					nanosleep (&ft, STIX_NULL);
+					clock_gettime (CLOCK_MONOTONIC, &now);
+				}
+				else 
+				{
+					break;
+				}
+			} 
+			while (stix->sem_heap_count > 0);
+		}
+		else if (stix->processor->active == stix->nil_process) 
+		{
+			/* no more waiting semaphore and no more process */
+			STIX_ASSERT (stix->processor->tally = STIX_SMOOI_TO_OOP(0));
+printf ("REALLY NO MORE RUNNABLE PROCESS...\n");
 			break;
 		}
 
-carry_on_switching:
 /*
 		else if (stix->processor->active == stix->idle_process)
 		{
