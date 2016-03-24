@@ -157,6 +157,21 @@
 #endif
 
 
+static STIX_INLINE void vm_gettime (stix_ntime_t* now)
+{
+	struct timespec ts;
+	clock_gettime (CLOCK_MONOTONIC, &ts);
+	STIX_INITNTIME(now, ts.tv_sec, ts.tv_nsec);
+}
+
+static STIX_INLINE void vm_sleep (const stix_ntime_t* dur)
+{
+	struct timespec ts;
+	ts.tv_sec = dur->sec;
+	ts.tv_nsec = dur->nsec;
+	nanosleep (&ts, STIX_NULL);
+}
+
 static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 {
 	stix_oop_process_t proc;
@@ -415,12 +430,11 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 
 static void resume_process (stix_t* stix, stix_oop_process_t proc)
 {
-printf ("TO RESUME PROCESS = %p %d\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));
 	if (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_SUSPENDED))
 	{
 		/* SUSPENED ---> RUNNING */
 
-printf ("TO RESUME PROCESS = %p %d SUSPENED ----> RUNNING\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));
+//printf ("TO RESUME PROCESS = %p %d SUSPENED ----> RUNNING\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));
 		STIX_ASSERT ((stix_oop_t)proc->prev == stix->_nil);
 		STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
 
@@ -429,7 +443,7 @@ printf ("TO RESUME PROCESS = %p %d SUSPENED ----> RUNNING\n", proc, (int)STIX_OO
 		/*proc->current_context = proc->initial_context;*/
 		proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE);
 
-		/*switch_to_process (stix, proc);*/
+		/* don't switch to this process. just set the state to RUNNING */
 	}
 #if 0
 	else if (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE))
@@ -455,11 +469,11 @@ static void suspend_process (stix_t* stix, stix_oop_process_t proc)
 
 			nrp = find_next_runnable_process (stix);
 
-printf ("TO SUSPEND...%p %d\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));
+//printf ("TO SUSPEND...%p %d\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));
 			if (nrp == proc)
 			{
 				/* no runnable process after suspension */
-printf ("NO RUNNABLE PROCESS AFTER SUPSENDISION\n");
+//printf ("NO RUNNABLE PROCESS AFTER SUPSENDISION\n");
 				sleep_active_process (stix, PROC_STATE_RUNNABLE);
 				unchain_from_processor (stix, proc, PROC_STATE_SUSPENDED);
 
@@ -470,7 +484,7 @@ printf ("NO RUNNABLE PROCESS AFTER SUPSENDISION\n");
 			}
 			else
 			{
-printf ("SWITCHING TO XXXXXXXXXXXXXXXXXXXXx\n");
+//printf ("SWITCHING TO XXXXXXXXXXXXXXXXXXXXx\n");
 				/* keep the unchained process at the runnable state for
 				 * the immediate call to switch_to_process() below */
 				unchain_from_processor (stix, proc, PROC_STATE_RUNNABLE);
@@ -535,25 +549,34 @@ static int async_signal_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
 	return 0;
 }
 
-static void signal_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
+static stix_oop_process_t signal_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
 {
 	stix_oop_process_t proc;
 	stix_ooi_t count;
 
 	if ((stix_oop_t)sem->waiting_head == stix->_nil)
 	{
-printf ("signal semaphore...1111\n");
+//printf ("signal semaphore...1111\n");
 		/* no process is waiting on this semaphore */
 		count = STIX_OOP_TO_SMOOI(sem->count);
 		count++;
 		sem->count = STIX_SMOOI_TO_OOP(count);
+
+		/* no process has been resumed */
+		return stix->_nil;
 	}
 	else
 	{
-printf ("signal semaphore...2222\n");
 		proc = sem->waiting_head;
+
+		/* [NOTE] no GC must occur as 'proc' isn't protected with stix_pushtmp(). */
+
 		unchain_from_semaphore (stix, proc);
 		resume_process (stix, proc); /* TODO: error check */
+//printf ("signal semaphore...2222 DONE -> resumed process -> proc state %d\n", (int)STIX_OOP_TO_SMOOI(proc->state));
+
+		/* return the resumed process */
+		return proc;
 	}
 }
 
@@ -568,20 +591,23 @@ static void await_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
 		/* it's already signalled */
 		count--;
 		sem->count = STIX_SMOOI_TO_OOP(count);
-printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - NO SUSPENDING ...................\n");
+//printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - NO SUSPENDING ...................\n");
 	}
 	else
 	{
 		/* not signaled. need to wait */
 		proc = stix->processor->active;
 
-printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - SUEPENDING ACTIVE PROCESS...............\n");
+//printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - SUEPENDING ACTIVE PROCESS..........state=>[%d].....PROC %p\n", (int)STIX_OOP_TO_SMOOI(proc->state), proc);
 		/* suspend the active process */
 		suspend_process (stix, proc); 
 
-		/* link the suspened process to the semaphore's process list */
+		/* link the suspended process to the semaphore's process list */
 		chain_into_semaphore (stix, proc, sem); 
 
+		STIX_ASSERT (sem->waiting_tail == proc);
+
+//printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - SUEPENDING ACTIVE PROCESS....XX......state=>[%d]..PROC %p\n", (int)STIX_OOP_TO_SMOOI(proc->state), proc);
 		STIX_ASSERT (stix->processor->active != proc);
 	}
 }
@@ -708,6 +734,7 @@ static void delete_from_sem_heap (stix_t* stix, stix_ooi_t index)
 		lastsem = stix->sem_heap[stix->sem_heap_count];
 		lastsem->heap_index = STIX_SMOOI_TO_OOP(index);
 		stix->sem_heap[index] = lastsem;
+
 
 		if (SEM_HEAP_EARLIER_THAN(stix, lastsem, sem)) 
 			sift_up_sem_heap (stix, index);
@@ -1657,23 +1684,11 @@ static int prim_processor_schedule (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int prim_processor_remove (stix_t* stix, stix_ooi_t nargs)
-{
-/* TODO: */
-	return 0;
-}
-
-static int prim_processor_sleep (stix_t* stix, stix_ooi_t nargs)
-{
-/* TODO: */
-	return 0;
-}
-
 static int prim_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, sec, nsec;
 	stix_oop_semaphore_t sem;
-	struct timespec ts, ft;
+	stix_ntime_t now, ft;
 
 	STIX_ASSERT (nargs >= 2 || nargs <= 3);
 
@@ -1710,30 +1725,17 @@ static int prim_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
  * 
  * this code assumes that the monotonic clock returns a small value
  * that can fit into a small integer, even after some addtions... */
-	if (clock_gettime (CLOCK_MONOTONIC, &ts) == -1)
+	vm_gettime (&now);
+	STIX_ADDNTIMESNS (&ft, &now, STIX_OOP_TO_SMOOI(sec), STIX_OOP_TO_SMOOI(nsec));
+	if (ft.sec < 0 || ft.sec > STIX_SMOOI_MAX) 
 	{
-		/* TODO: soft error handling */
-printf ("clock_gettime() failure....\n");
-		return 0;
-	}
-
-	ft.tv_nsec = ts.tv_nsec + STIX_OOP_TO_SMOOI(nsec);
-	ft.tv_sec = ts.tv_sec + STIX_OOP_TO_SMOOI(sec);
-	while (ft.tv_nsec >= 1000000000)
-	{
-		ft.tv_sec++;
-		ft.tv_nsec -= 1000000000;
-	}
-
-	if (ft.tv_sec < 0 || ft.tv_sec > STIX_SMOOI_MAX) 
-	{
-		/* soft error - cannot represent the expiry time in
+		/* soft error - cannot represent the e:xpiry time in
 		 *              a small integer. */
 		return 0;
 	}
 
-	sem->heap_ftime_sec = STIX_SMOOI_TO_OOP(ft.tv_sec);
-	sem->heap_ftime_nsec = STIX_SMOOI_TO_OOP(ft.tv_nsec);
+	sem->heap_ftime_sec = STIX_SMOOI_TO_OOP(ft.sec);
+	sem->heap_ftime_nsec = STIX_SMOOI_TO_OOP(ft.nsec);
 
 	if (add_to_sem_heap (stix, sem) <= -1) return -1;
 
@@ -1741,15 +1743,20 @@ printf ("clock_gettime() failure....\n");
 	return 1;
 }
 
-static int prim_processor_del_time_semaphore (stix_t* stix, stix_ooi_t nargs)
+static int prim_processor_remove_semaphore (stix_t* stix, stix_ooi_t nargs)
 {
+	/* remove a semaphore from processor's signal scheduling */
+
 	stix_oop_t rcv;
 	stix_oop_semaphore_t sem;
 
 	STIX_ASSERT (nargs == 1);
 
-	sem = (stix_oop_semaphore_t)ACTIVE_STACK_GET(stix, stix->sp - 1);
-	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+	sem = (stix_oop_semaphore_t)ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+
+/* TODO: remove a semaphore from IO handler if it's registered...
+ *       remove a semaphore from XXXXXXXXXXXXXX */
 
 	if (rcv != (stix_oop_t)stix->processor) return 0;
 	if (STIX_CLASSOF(stix,sem) != stix->_semaphore) return 0;
@@ -1757,10 +1764,12 @@ static int prim_processor_del_time_semaphore (stix_t* stix, stix_ooi_t nargs)
 	if (STIX_OOP_IS_SMOOI(sem->heap_index) && 
 	    sem->heap_index != STIX_SMOOI_TO_OOP(-1))
 	{
-		delete_from_sem_heap (stix, STIX_OOP_TO_SMOOI(sem));
+		/* the semaphore is in the timed semaphore heap */
+		delete_from_sem_heap (stix, STIX_OOP_TO_SMOOI(sem->heap_index));
 		STIX_ASSERT(sem->heap_index == STIX_SMOOI_TO_OOP(-1));
 	}
 
+	ACTIVE_STACK_POPS (stix, nargs);
 	return 1;
 }
 
@@ -2448,10 +2457,9 @@ static prim_t primitives[] =
 	{   0,  0,  prim_semaphore_signal,     "_semaphore_signal"    },
 	{   0,  0,  prim_semaphore_wait,       "_semaphore_wait"      },
 
-	{   1,  1,  prim_processor_schedule,            "_processor_schedule"            },
-	{   1,  1,  prim_processor_remove,              "_processor_remove"              },
-	{   1,  1,  prim_processor_sleep,               "_processor_sleep"               },
-	{   2,  3,  prim_processor_add_timed_semaphore, "_processor_add_timed_semaphore" },
+	{   1,  1,  prim_processor_schedule,               "_processor_schedule"            },
+	{   2,  3,  prim_processor_add_timed_semaphore,    "_processor_add_timed_semaphore" },
+	{   1,  1,  prim_processor_remove_semaphore,       "_processor_remove_semaphore" },
 
 	{   1,  1,  prim_integer_add,          "_integer_add"         },
 	{   1,  1,  prim_integer_sub,          "_integer_sub"         },
@@ -2852,42 +2860,45 @@ int stix_execute (stix_t* stix)
 
 	while (1)
 	{
-#if 0
-		if (stix->processor->active == stix->nil_process) 
-		{
-			/* no more process in the system */
-			STIX_ASSERT (stix->processor->tally = STIX_SMOOI_TO_OOP(0));
-printf ("NO MORE RUNNABLE PROCESS...\n");
-		}
-#endif
-
 		if (stix->sem_heap_count > 0)
 		{
-			struct timespec now, ft;
-
-			clock_gettime (CLOCK_MONOTONIC, &now);
+			stix_ntime_t ft, now;
+			vm_gettime (&now);
 
 			do
 			{
 				STIX_ASSERT (STIX_OOP_IS_SMOOI(stix->sem_heap[0]->heap_ftime_sec));
 				STIX_ASSERT (STIX_OOP_IS_SMOOI(stix->sem_heap[0]->heap_ftime_nsec));
 
-				ft.tv_sec = STIX_OOP_TO_SMOOI(stix->sem_heap[0]->heap_ftime_sec);
-				ft.tv_nsec = STIX_OOP_TO_SMOOI(stix->sem_heap[0]->heap_ftime_nsec);
+				STIX_INITNTIME (&ft,
+					STIX_OOP_TO_SMOOI(stix->sem_heap[0]->heap_ftime_sec),
+					STIX_OOP_TO_SMOOI(stix->sem_heap[0]->heap_ftime_nsec)
+				);
 
-				if (ft.tv_sec < now.tv_sec || (ft.tv_sec == now.tv_sec && ft.tv_nsec <= now.tv_nsec))
+				if (STIX_CMPNTIME(&ft, (stix_ntime_t*)&now) <= 0)
 				{
 					stix_oop_process_t proc;
 
-					proc = stix->sem_heap[0]->waiting_head;
+					/* waited long enough. signal the semaphore */
 
-					signal_semaphore (stix, stix->sem_heap[0]);
+					proc = signal_semaphore (stix, stix->sem_heap[0]);
+					/* [NOTE] no stix_pushtmp() on proc. no GC must occur
+					 *        in the following line until it's used for
+					 *        wake_new_process() below. */
 					delete_from_sem_heap (stix, 0);
 
-					if (stix->processor->active == stix->nil_process)
+					/* if no process is waiting on the semaphore, 
+					 * signal_semaphore() returns stix->_nil. */
+
+					if (stix->processor->active == stix->nil_process && (stix_oop_t)proc != stix->_nil)
 					{
-STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
-STIX_ASSERT (proc == stix->processor->runnable_head);
+						/* this is the only runnable process. 
+						 * switch the process to the running state.
+						 * it uses wake_new_process() instead of
+						 * switch_to_process() as there is no running 
+						 * process at this moment */
+						STIX_ASSERT (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
+						STIX_ASSERT (proc == stix->processor->runnable_head);
 
 						wake_new_process (stix, proc);
 						stix->proc_switched = 1;
@@ -2895,16 +2906,9 @@ STIX_ASSERT (proc == stix->processor->runnable_head);
 				}
 				else if (stix->processor->active == stix->nil_process)
 				{
-/* THIS PART IS JUST EXPERIMENTAL... PROPER WAITING WITH IO MULTIPLEXER IS NEEDED ... */
-					ft.tv_sec -= now.tv_sec;
-					ft.tv_nsec -= now.tv_nsec;
-					while (ft.tv_nsec < 0)
-					{
-						ft.tv_sec--;
-						ft.tv_nsec += 1000000000;
-					}
-					nanosleep (&ft, STIX_NULL);
-					clock_gettime (CLOCK_MONOTONIC, &now);
+					STIX_SUBNTIME (&ft, &ft, (stix_ntime_t*)&now);
+					vm_sleep (&ft); /* TODO: change this to i/o multiplexer??? */
+					vm_gettime (&now);
 				}
 				else 
 				{
@@ -2920,13 +2924,6 @@ STIX_ASSERT (proc == stix->processor->runnable_head);
 printf ("REALLY NO MORE RUNNABLE PROCESS...\n");
 			break;
 		}
-
-/*
-		else if (stix->processor->active == stix->idle_process)
-		{
-IDLEING WAITING FOR PROCESS WAKE-UP...
-		}
-*/
 
 		while (stix->sem_list_count > 0)
 		{
@@ -3704,7 +3701,6 @@ printf ("TERMINATE A PROCESS RETURNING FROM BLOCK\n");
 #endif
 					terminate_process (stix, stix->processor->active);
 #if defined(STIX_DEBUG_EXEC_002)
-
 printf ("TERMINATED A PROCESS RETURNING FROM BLOCK %lld new active_context %p\n", (long long int)stix->ip, stix->active_context);
 #endif
 				}

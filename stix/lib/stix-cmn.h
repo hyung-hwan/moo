@@ -316,6 +316,83 @@ typedef stix_ucs_t               stix_oocs_t;
 #define STIX_OOCH_IS_UCH
 
 
+
+/* =========================================================================
+ * TIME-RELATED TYPES
+ * =========================================================================*/
+#define STIX_MSECS_PER_SEC  (1000)
+#define STIX_MSECS_PER_MIN  (STIX_MSECS_PER_SEC * STIX_SECS_PER_MIN)
+#define STIX_MSECS_PER_HOUR (STIX_MSECS_PER_SEC * STIX_SECS_PER_HOUR)
+#define STIX_MSECS_PER_DAY  (STIX_MSECS_PER_SEC * STIX_SECS_PER_DAY)
+
+#define STIX_USECS_PER_MSEC (1000)
+#define STIX_NSECS_PER_USEC (1000)
+#define STIX_NSECS_PER_MSEC (STIX_NSECS_PER_USEC * STIX_USECS_PER_MSEC)
+#define STIX_USECS_PER_SEC  (STIX_USECS_PER_MSEC * STIX_MSECS_PER_SEC)
+#define STIX_NSECS_PER_SEC  (STIX_NSECS_PER_USEC * STIX_USECS_PER_MSEC * STIX_MSECS_PER_SEC)
+
+#define STIX_SECNSEC_TO_MSEC(sec,nsec) \
+        (((qse_long_t)(sec) * STIX_MSECS_PER_SEC) + ((qse_long_t)(nsec) / STIX_NSECS_PER_MSEC))
+
+#define STIX_SECNSEC_TO_USEC(sec,nsec) \
+        (((qse_long_t)(sec) * STIX_USECS_PER_SEC) + ((qse_long_t)(nsec) / STIX_NSECS_PER_USEC))
+
+#define STIX_SEC_TO_MSEC(sec) ((sec) * STIX_MSECS_PER_SEC)
+#define STIX_MSEC_TO_SEC(sec) ((sec) / STIX_MSECS_PER_SEC)
+
+#define STIX_USEC_TO_NSEC(usec) ((usec) * STIX_NSECS_PER_USEC)
+#define STIX_NSEC_TO_USEC(nsec) ((nsec) / STIX_NSECS_PER_USEC)
+
+#define STIX_MSEC_TO_NSEC(msec) ((msec) * STIX_NSECS_PER_MSEC)
+#define STIX_NSEC_TO_MSEC(nsec) ((nsec) / STIX_NSECS_PER_MSEC)
+
+#define STIX_SEC_TO_NSEC(sec) ((sec) * STIX_NSECS_PER_SEC)
+#define STIX_NSEC_TO_SEC(nsec) ((nsec) / STIX_NSECS_PER_SEC)
+
+#define STIX_SEC_TO_USEC(sec) ((sec) * STIX_USECS_PER_SEC)
+#define STIX_USEC_TO_SEC(usec) ((usec) / STIX_USECS_PER_SEC)
+
+typedef struct stix_ntime_t stix_ntime_t;
+struct stix_ntime_t
+{
+	stix_intptr_t  sec;
+	stix_int32_t   nsec; /* nanoseconds */
+};
+
+#define STIX_INITNTIME(c,s,ns) (((c)->sec = (s)), ((c)->nsec = (ns)))
+#define STIX_CLEARNTIME(c) STIX_INITNTIME(c, 0, 0)
+
+#define STIX_ADDNTIME(c,a,b) \
+	do { \
+		(c)->sec = (a)->sec + (b)->sec; \
+		(c)->nsec = (a)->nsec + (b)->nsec; \
+		while ((c)->nsec >= STIX_NSECS_PER_SEC) { (c)->sec++; (c)->nsec -= STIX_NSECS_PER_SEC; } \
+	} while(0)
+
+#define STIX_ADDNTIMESNS(c,a,s,ns) \
+	do { \
+		(c)->sec = (a)->sec + (s); \
+		(c)->nsec = (a)->nsec + (ns); \
+		while ((c)->nsec >= STIX_NSECS_PER_SEC) { (c)->sec++; (c)->nsec -= STIX_NSECS_PER_SEC; } \
+	} while(0)
+
+#define STIX_SUBNTIME(c,a,b) \
+	do { \
+		(c)->sec = (a)->sec - (b)->sec; \
+		(c)->nsec = (a)->nsec - (b)->nsec; \
+		while ((c)->nsec < 0) { (c)->sec--; (c)->nsec += STIX_NSECS_PER_SEC; } \
+	} while(0)
+
+#define STIX_SUBNTIMESNS(c,a,s,ns) \
+	do { \
+		(c)->sec = (a)->sec - s; \
+		(c)->nsec = (a)->nsec - ns; \
+		while ((c)->nsec < 0) { (c)->sec--; (c)->nsec += STIX_NSECS_PER_SEC; } \
+	} while(0)
+
+
+#define STIX_CMPNTIME(a,b) (((a)->sec == (b)->sec)? ((a)->nsec - (b)->nsec): ((a)->sec - (b)->sec))
+
 /* =========================================================================
  * PRIMITIVE MACROS
  * ========================================================================= */

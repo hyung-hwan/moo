@@ -53,6 +53,15 @@
 	{
 		^sp.
 	}
+
+	#method sleep: seconds
+	{
+		| s |
+		s := Semaphore new.
+		Processor signal: s after: seconds.
+		## Processor activeProcess dump.
+		s wait.
+	}
 }
 
 #class Semaphore(Object)
@@ -67,6 +76,8 @@
 		self.fireTimeNsec := 0.
 	}
 
+	## ==================================================================
+
 	#method signal 
 	{
 		<primitive: #_semaphore_signal>
@@ -78,6 +89,20 @@
 		<primitive: #_semaphore_wait>
 		self primitiveFailed.
 	}
+
+	#method waitWithTimeout: seconds
+	{
+		<primitive: #_semaphore_wait>
+		self primitiveFailed
+	}
+
+	#method waitWithTimeout: seconds and: nanoSeconds
+	{
+		<primitive: #_semaphore_wait>
+		self primitiveFailed
+	}
+
+	## ==================================================================
 
 	#method heapIndex
 	{
@@ -302,12 +327,6 @@
 		^self.active.
 	}
 
-	#method sleep: anInteger
-	{
-		<primitive: #_processor_sleep>
-		self primitiveFailed.
-	}
-
 	#method resume: aProcess
 	{
 		<primitive: #_processor_schedule>
@@ -329,12 +348,6 @@
 		"
 	}
 
-	#method remove: aProcess
-	{
-		"<primitive: #_processor_remove>"
-"TODO: "
-	}
-
 	"
 	#method yield
 	{
@@ -354,4 +367,17 @@
 		<primitive: #_processor_add_timed_semaphore>
 		self primitiveFailed.
 	}
+
+	#method unsignal: aSemaphore
+	{
+		<primitive: #_processor_remove_semaphore>
+		self primitiveFailed.
+	}
+
+	"#method signal: aSemaphore onInput: file
+	{
+	}"
+	"#method signal: aSemaphore onOutput: file
+	{
+	}"
 }
