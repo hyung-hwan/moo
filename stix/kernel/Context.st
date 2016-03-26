@@ -181,9 +181,10 @@
 
 
 	"------ TODO: -------------------------------------"
-	#method on: anError do: anExceptionBlock
+	#method on: anException do: anExceptionBlock
 	{
-		"TODO: handle if anError is an ErrorSet .."
+		<primitive: #block_on_do>
+		self primitiveFailed.
 	}
 
 	#method ensure: aBlock

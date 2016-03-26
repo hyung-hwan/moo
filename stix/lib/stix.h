@@ -485,7 +485,7 @@ struct stix_method_t
 #define STIX_METHOD_PREAMBLE_INDEX_MAX 0xFFFF
 #define STIX_OOI_IN_PREAMBLE_INDEX_RANGE(num) ((num) >= STIX_METHOD_PREAMBLE_INDEX_MIN && (num) <= STIX_METHOD_PREAMBLE_INDEX_MAX)
 
-#define STIX_CONTEXT_NAMED_INSTVARS 8
+#define STIX_CONTEXT_NAMED_INSTVARS 10
 typedef struct stix_context_t stix_context_t;
 typedef struct stix_context_t* stix_oop_context_t;
 struct stix_context_t
@@ -536,6 +536,10 @@ struct stix_context_t
 	 * for activation (when it is sent 'value'), it is set to the origin of
 	 * the source block context. */
 	stix_oop_context_t  origin; 
+
+	/* each even position (0, 2, 4, etc) contains an exception class
+	 * each odd position (1, 3, 5, etc) contains an exception handler block */
+	stix_oop_t          exception_info; 
 
 	/* variable indexed part */
 	stix_oop_t          slot[1]; /* stack */

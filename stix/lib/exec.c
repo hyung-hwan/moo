@@ -563,7 +563,7 @@ static stix_oop_process_t signal_semaphore (stix_t* stix, stix_oop_semaphore_t s
 		sem->count = STIX_SMOOI_TO_OOP(count);
 
 		/* no process has been resumed */
-		return stix->_nil;
+		return (stix_oop_process_t)stix->_nil;
 	}
 	else
 	{
@@ -1412,13 +1412,13 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int __block_value (stix_t* stix, stix_ooi_t nargs, stix_ooi_t num_first_arg_elems, stix_oop_context_t* pblkctx)
+static int __block_value (stix_t* stix, stix_ooi_t rcv_blkctx_offset, stix_ooi_t nargs, stix_ooi_t num_first_arg_elems, stix_oop_context_t* pblkctx)
 {
 	/* prepare a new block context for activation.
 	 * the receiver must be a block context which becomes the base
 	 * for a new block context. */
 
-	stix_oop_context_t blkctx, org_blkctx;
+	stix_oop_context_t rcv_blkctx, blkctx;
 	stix_ooi_t local_ntmprs, i;
 	stix_ooi_t actual_arg_count;
 
@@ -1434,8 +1434,8 @@ static int __block_value (stix_t* stix, stix_ooi_t nargs, stix_ooi_t num_first_a
 	 * itself. Let me simply clone a block context to allow reentrancy like this
 	 * while the block context is active
 	 */
-	org_blkctx = (stix_oop_context_t)ACTIVE_STACK_GET(stix, stix->sp - nargs);
-	if (STIX_CLASSOF(stix, org_blkctx) != stix->_block_context)
+	rcv_blkctx = (stix_oop_context_t)ACTIVE_STACK_GET(stix, stix->sp - rcv_blkctx_offset);
+	if (STIX_CLASSOF(stix, rcv_blkctx) != stix->_block_context)
 	{
 		/* the receiver must be a block context */
 #if defined(STIX_DEBUG_EXEC_001)
@@ -1444,22 +1444,21 @@ printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 		return 0;
 	}
 
-	if (org_blkctx->receiver_or_source != stix->_nil)
+	if (rcv_blkctx->receiver_or_source != stix->_nil)
 	{
 		/* the 'source' field is not nil.
 		 * this block context has already been activated once.
 		 * you can't send 'value' again to reactivate it.
-		 * For example, [thisContext value] value.
-		 */
-		STIX_ASSERT (STIX_OBJ_GET_SIZE(org_blkctx) > STIX_CONTEXT_NAMED_INSTVARS);
+		 * For example, [thisContext value] value. */
+		STIX_ASSERT (STIX_OBJ_GET_SIZE(rcv_blkctx) > STIX_CONTEXT_NAMED_INSTVARS);
 #if defined(STIX_DEBUG_EXEC_001)
 printf ("PRIM REVALUING AN BLOCKCONTEXT\n");
 #endif
 		return 0;
 	}
-	STIX_ASSERT (STIX_OBJ_GET_SIZE(org_blkctx) == STIX_CONTEXT_NAMED_INSTVARS);
+	STIX_ASSERT (STIX_OBJ_GET_SIZE(rcv_blkctx) == STIX_CONTEXT_NAMED_INSTVARS);
 
-	if (STIX_OOP_TO_SMOOI(org_blkctx->method_or_nargs) != actual_arg_count /* nargs */)
+	if (STIX_OOP_TO_SMOOI(rcv_blkctx->method_or_nargs) != actual_arg_count /* nargs */)
 	{
 		/* the number of argument doesn't match */
 #if defined(STIX_DEBUG_EXEC_001)
@@ -1472,31 +1471,31 @@ printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 	/* the number of temporaries stored in the block context
 	 * accumulates the number of temporaries starting from the origin.
 	 * simple calculation is needed to find the number of local temporaries */
-	local_ntmprs = STIX_OOP_TO_SMOOI(org_blkctx->ntmprs) -
-	               STIX_OOP_TO_SMOOI(((stix_oop_context_t)org_blkctx->home)->ntmprs);
+	local_ntmprs = STIX_OOP_TO_SMOOI(rcv_blkctx->ntmprs) -
+	               STIX_OOP_TO_SMOOI(((stix_oop_context_t)rcv_blkctx->home)->ntmprs);
 	STIX_ASSERT (local_ntmprs >= actual_arg_count);
 
-	/* create a new block context to clone org_blkctx */
+	/* create a new block context to clone rcv_blkctx */
 	blkctx = (stix_oop_context_t) stix_instantiate (stix, stix->_block_context, STIX_NULL, local_ntmprs + CONTEXT_STACK_SIZE); 
 	if (!blkctx) return -1;
 
-	/* get org_blkctx again to be GC-safe for stix_instantiate() above */
-	org_blkctx = (stix_oop_context_t)ACTIVE_STACK_GET(stix, stix->sp - nargs); 
-	STIX_ASSERT (STIX_CLASSOF(stix, org_blkctx) == stix->_block_context);
+	/* get rcv_blkctx again to be GC-safe for stix_instantiate() above */
+	rcv_blkctx = (stix_oop_context_t)ACTIVE_STACK_GET(stix, stix->sp - rcv_blkctx_offset); 
+	STIX_ASSERT (STIX_CLASSOF(stix, rcv_blkctx) == stix->_block_context);
 
 #if 0
 	/* shallow-copy the named part including home, origin, etc. */
 	for (i = 0; i < STIX_CONTEXT_NAMED_INSTVARS; i++)
 	{
-		((stix_oop_oop_t)blkctx)->slot[i] = ((stix_oop_oop_t)org_blkctx)->slot[i];
+		((stix_oop_oop_t)blkctx)->slot[i] = ((stix_oop_oop_t)rcv_blkctx)->slot[i];
 	}
 #else
-	blkctx->ip = org_blkctx->ip;
-	blkctx->ntmprs = org_blkctx->ntmprs;
-	blkctx->method_or_nargs = org_blkctx->method_or_nargs;
-	blkctx->receiver_or_source = (stix_oop_t)org_blkctx;
-	blkctx->home = org_blkctx->home;
-	blkctx->origin = org_blkctx->origin;
+	blkctx->ip = rcv_blkctx->ip;
+	blkctx->ntmprs = rcv_blkctx->ntmprs;
+	blkctx->method_or_nargs = rcv_blkctx->method_or_nargs;
+	blkctx->receiver_or_source = (stix_oop_t)rcv_blkctx;
+	blkctx->home = rcv_blkctx->home;
+	blkctx->origin = rcv_blkctx->origin;
 #endif
 
 /* TODO: check the stack size of a block context to see if it's large enough to hold arguments */
@@ -1537,7 +1536,7 @@ static int prim_block_value (stix_t* stix, stix_ooi_t nargs)
 	int x;
 	stix_oop_context_t blkctx;
 
-	x = __block_value (stix, nargs, 0, &blkctx);
+	x = __block_value (stix, nargs, nargs, 0, &blkctx);
 	if (x <= 0) return x; /* hard failure and soft failure */
 
 #if defined(STIX_DEBUG_EXEC_001)
@@ -1556,7 +1555,7 @@ static int prim_block_new_process (stix_t* stix, stix_ooi_t nargs)
 	 */
 
 	int x;
-	stix_oop_context_t blkctx;
+	stix_oop_context_t rcv_blkctx, blkctx;
 	stix_oop_process_t proc;
 	stix_ooi_t num_first_arg_elems = 0;
 
@@ -1582,9 +1581,19 @@ static int prim_block_new_process (stix_t* stix, stix_ooi_t nargs)
 		num_first_arg_elems = STIX_OBJ_GET_SIZE(xarg);
 	}
 
+	rcv_blkctx = (stix_oop_context_t)ACTIVE_STACK_GET(stix, stix->sp - nargs);
+	if (STIX_CLASSOF(stix, rcv_blkctx) != stix->_block_context)
+	{
+		/* the receiver must be a block context */
+#if defined(STIX_DEBUG_EXEC_001)
+printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
+#endif
+		return 0;
+	}
+
 	/* this primitive creates a new process with a block as if the block
 	 * is sent the value message */
-	x = __block_value (stix, nargs, num_first_arg_elems, &blkctx);
+	x = __block_value (stix, nargs, nargs, num_first_arg_elems, &blkctx);
 	if (x <= 0) return x; /* both hard failure and soft failure */
 
 	proc = make_process (stix, blkctx);
@@ -1593,6 +1602,40 @@ static int prim_block_new_process (stix_t* stix, stix_ooi_t nargs)
 	/* __block_value() has popped all arguments and the receiver. 
 	 * PUSH the return value instead of changing the stack top */
 	ACTIVE_STACK_PUSH (stix, (stix_oop_t)proc);
+	return 1;
+}
+
+static int prim_block_on_do (stix_t* stix, stix_ooi_t nargs)
+{
+	int x;
+	stix_oop_t exblk, excls;
+	stix_oop_context_t blkctx;
+
+	STIX_ASSERT (nargs == 2);
+
+	exblk = ACTIVE_STACK_GET(stix, stix->sp);
+	excls = ACTIVE_STACK_GET(stix, stix->sp - 1);
+
+	stix_pushtmp (stix, &exblk);
+	stix_pushtmp (stix, &excls);
+	x = __block_value (stix, nargs, 0, 0, &blkctx);
+	stix_poptmps (stix, 2);
+	if (x <= 0) return x; /* hard failure and soft failure */
+
+	/* TOOD: implement zero-cost exception handling. 
+	 *       this implementation requires allocation of a new array
+	 *       every time on:do: is executed */
+	/*
+	 * stix_pushtmp (stix, &blkctx);
+	blkctx->exception_info = stix_instantiate (stix, stix->_array, );
+	stix_poptmp (stix);
+	 */
+	
+
+#if defined(STIX_DEBUG_EXEC_001)
+printf ("<<ENTERING BLOCK>> SP=%ld\n", (long int)stix->sp);
+#endif
+	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)blkctx);
 	return 1;
 }
 
@@ -2450,8 +2493,9 @@ static prim_t primitives[] =
 
 	{   0, MAX_NARGS,  prim_block_value,          "_block_value"         },
 	{   0, MAX_NARGS,  prim_block_new_process,    "_block_new_process"   },
+	{   2,  2,         prim_block_on_do,          "_block_on_do"         },
 
-	{   0,  0,  prim_process_resume,       "_process_resume"       },
+	{   0,  0,  prim_process_resume,       "_process_resume"      },
 	{   0,  0,  prim_process_terminate,    "_process_terminate"   },
 	{   0,  0,  prim_process_yield,        "_process_yield"       },
 	{   0,  0,  prim_semaphore_signal,     "_semaphore_signal"    },
