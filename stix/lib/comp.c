@@ -87,6 +87,7 @@ static struct voca_t
 	{  9, { 'c','l','a','s','s','i','n','s','t'                           } },
 	{  3, { 'd','c','l'                                                   } },
 	{  7, { 'd','e','c','l','a','r','e'                                   } },
+	{  9, { 'e','x','c','e','p','t','i','o','n'                           } },
 	{  6, { 'e','x','t','e','n','d'                                       } },
 	{  5, { 'f','a','l','s','e'                                           } },
 	{  8, { 'h','a','l','f','w','o','r','d'                               } },
@@ -120,6 +121,7 @@ enum voca_id_t
 	VOCA_CLASSINST,
 	VOCA_DCL,
 	VOCA_DECLARE,
+	VOCA_EXCEPTION,
 	VOCA_EXTEND,
 	VOCA_FALSE,
 	VOCA_HALFWORD,
@@ -2606,7 +2608,8 @@ static int compile_method_temporaries (stix_t* stix)
 static int compile_method_primitive (stix_t* stix)
 {
 	/* 
-	 * method-primitive := "<"  "primitive:" integer ">"
+	 * method-primitive := "<"  "primitive:" integer ">" |
+	 *                     "<"  "exception" ">"
 	 */
 	stix_ooi_t prim_no;
 	const stix_ooch_t* ptr, * end;
@@ -2618,80 +2621,84 @@ static int compile_method_primitive (stix_t* stix)
 	}
 
 	GET_TOKEN (stix);
-	if (!is_token_keyword(stix, VOCA_PRIMITIVE_COLON))
+print_oocs (&stix->c->tok.name);
+printf ("]]]]]]]]]]]]]]]]]]]]]]\n");
+	if (is_token_keyword(stix, VOCA_PRIMITIVE_COLON))
 	{
-		set_syntax_error (stix, STIX_SYNERR_PRIMITIVE, &stix->c->tok.loc, &stix->c->tok.name);
-		return -1;
-	}
+		GET_TOKEN (stix); 
+		switch (stix->c->tok.type)
+		{
+			case STIX_IOTOK_NUMLIT: /* TODO: allow only an integer */
+	/*TODO: more checks the validity of the primitive number. support number with radix and so on support more extensive syntax. support primitive name, not number*/
+				ptr = stix->c->tok.name.ptr;
+				end = ptr + stix->c->tok.name.len;
+				prim_no = 0;
+				while (ptr < end && is_digitchar(*ptr)) 
+				{
+					prim_no = prim_no * 10 + (*ptr - '0');
+					if (!STIX_OOI_IN_PREAMBLE_INDEX_RANGE(prim_no))
+					{
+						set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
+						return -1;
+					}
 
-/* TODO: other modifiers than primitive: ? 
- * <primitive: 10>
- * <primitive: #primitive_name>
- * <some-other-modifier: xxxx>
- */
+					ptr++;
+				}
 
-	GET_TOKEN (stix); 
-	switch (stix->c->tok.type)
-	{
-		case STIX_IOTOK_NUMLIT: /* TODO: allow only an integer */
-/*TODO: more checks the validity of the primitive number. support number with radix and so on support more extensive syntax. support primitive name, not number*/
-			ptr = stix->c->tok.name.ptr;
-			end = ptr + stix->c->tok.name.len;
-			prim_no = 0;
-			while (ptr < end && is_digitchar(*ptr)) 
-			{
-				prim_no = prim_no * 10 + (*ptr - '0');
-				if (!STIX_OOI_IN_PREAMBLE_INDEX_RANGE(prim_no))
+				stix->c->mth.prim_no = prim_no;
+				break;
+	 
+			case STIX_IOTOK_SYMLIT:
+				prim_no = stix_getprimno (stix, &stix->c->tok.name);
+				if (prim_no <= -1)
+				{
+					const stix_ooch_t* us;
+					/* the primitive is not found */
+					us = stix_findoochar (stix->c->tok.name.ptr, stix->c->tok.name.len, '_');
+					if (us > stix->c->tok.name.ptr && us < stix->c->tok.name.ptr + stix->c->tok.name.len - 1)
+					{
+						stix_oow_t lit_idx;
+						/* the symbol literal contains an underscore.
+						 * and it is none of the first of the last character */
+						if (add_symbol_literal(stix, &stix->c->tok.name, &lit_idx) >= 0 &&
+						    STIX_OOI_IN_PREAMBLE_INDEX_RANGE(lit_idx))
+						{
+							stix->c->mth.prim_type = 2; /* named primitive */
+							stix->c->mth.prim_no = lit_idx;
+							break;
+						}
+					}
+
+					set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
+					return -1;
+				}
+				else if (!STIX_OOI_IN_PREAMBLE_INDEX_RANGE(prim_no))
 				{
 					set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
 					return -1;
 				}
 
-				ptr++;
-			}
+				stix->c->mth.prim_type = 1; 
+				stix->c->mth.prim_no = prim_no;
+				break;
 
-			stix->c->mth.prim_no = prim_no;
-			break;
- 
-		case STIX_IOTOK_SYMLIT:
-			prim_no = stix_getprimno (stix, &stix->c->tok.name);
-			if (prim_no <= -1)
-			{
-				const stix_ooch_t* us;
-				/* the primitive is not found */
-				us = stix_findoochar (stix->c->tok.name.ptr, stix->c->tok.name.len, '_');
-				if (us > stix->c->tok.name.ptr && us < stix->c->tok.name.ptr + stix->c->tok.name.len - 1)
-				{
-					stix_oow_t lit_idx;
-					/* the symbol literal contains an underscore.
-					 * and it is none of the first of the last character */
-					if (add_symbol_literal(stix, &stix->c->tok.name, &lit_idx) >= 0 &&
-					    STIX_OOI_IN_PREAMBLE_INDEX_RANGE(lit_idx))
-					{
-						stix->c->mth.prim_type = 2; /* named primitive */
-						stix->c->mth.prim_no = lit_idx;
-						break;
-					}
-				}
-
-				set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
+			default:
+				set_syntax_error (stix, STIX_SYNERR_INTEGER, &stix->c->tok.loc, &stix->c->tok.name);
 				return -1;
-			}
-			else if (!STIX_OOI_IN_PREAMBLE_INDEX_RANGE(prim_no))
-			{
-				set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
-				return -1;
-			}
+		}
 
-			stix->c->mth.prim_type = 1; 
-			stix->c->mth.prim_no = prim_no;
-			break;
-
-		default:
-			set_syntax_error (stix, STIX_SYNERR_INTEGER, &stix->c->tok.loc, &stix->c->tok.name);
-			return -1;
 	}
-
+	else if (is_token_word(stix, VOCA_EXCEPTION))
+	{
+/* TODO: exception handler is supposed to be used by BlockContext on:do:. 
+ *       it needs to check the number of arguments at least */
+		stix->c->mth.prim_type = 3;
+	}
+	else
+	{
+		set_syntax_error (stix, STIX_SYNERR_PRIMITIVE, &stix->c->tok.loc, &stix->c->tok.name);
+		return -1;
+	}
 
 	GET_TOKEN (stix);
 	if (!is_token_binary_selector(stix, VOCA_GT)) 
@@ -4273,11 +4280,16 @@ static int add_compiled_method (stix_t* stix)
 		preamble_code = STIX_METHOD_PREAMBLE_PRIMITIVE;
 		preamble_index = stix->c->mth.prim_no;
 	}
-	else
+	else if (stix->c->mth.prim_type == 2)
 	{
-		STIX_ASSERT (stix->c->mth.prim_type == 2);
 		preamble_code = STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE;
 		preamble_index = stix->c->mth.prim_no;
+	}
+	else 
+	{
+		STIX_ASSERT (stix->c->mth.prim_type == 3);
+		preamble_code = STIX_METHOD_PREAMBLE_EXCEPTION;
+		preamble_index = 0;
 	}
 
 	STIX_ASSERT (STIX_OOI_IN_PREAMBLE_INDEX_RANGE(preamble_index));

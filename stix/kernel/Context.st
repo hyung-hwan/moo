@@ -1,10 +1,16 @@
 #class(#pointer) Context(Apex)
 {
+	#dcl sender ip sp ntmprs.
+
+	#method sender
+	{
+		^self.sender
+	}
 }
 
 #class(#pointer) MethodContext(Context)
 {
-	#dcl sender ip sp ntmprs method receiver home origin.
+	#dcl method receiver home origin.
 
 	#method pc
 	{
@@ -33,11 +39,16 @@
 		sp := aSP.
 		##sp := sp - 1.
 	}
+
+	#method isHandlerContext
+	{
+		^self.method primitive == 512
+	}
 }
 
 #class(#pointer) BlockContext(Context)
 {
-	#dcl caller ip sp ntmprs nargs source  home origin.
+	#dcl nargs source home origin.
 
 	#method fork
 	{
@@ -146,11 +157,23 @@
 ##		self value ifTrue: [ aBlock value. thisContext restart. ].
 	}
 
+	#method whileTrue
+	{
+		(self value) ifFalse: [^nil].
+		self whileTrue.
+	}
+
 	#method whileFalse: aBlock
 	{
 		(self value) ifTrue: [^nil].
 		aBlock value. 
 		self whileFalse: aBlock.
+	}
+
+	#method whileFalse
+	{
+		(self value) ifTrue: [^nil].
+		self whileFalse.
 	}
 
 	#method pc
@@ -179,16 +202,30 @@
 	}
 
 
-
 	"------ TODO: -------------------------------------"
 	#method on: anException do: anExceptionBlock
 	{
-		<primitive: #block_on_do>
-		self primitiveFailed.
+		| handlerActive |
+		<exception>
+		handlerActive := true.
+
+(thisContext basicAt: 9) dump.
+
+		^self value.
 	}
 
 	#method ensure: aBlock
 	{
+		"##
+		| complete returnValue |
+		<ensure>
+
+		returnValue := self valueNoContextSwitch.
+		complete ifNil: [
+			complete := true.
+			aBlock value.
+		].
+		^returnValue. ##"
 	}
 
 	#method ifCurtailed: aBlock
@@ -198,3 +235,78 @@
 	"------ TODO: -------------------------------------"
 }
 
+#class Exception(Object)
+{
+	#dcl signalContext handlerContext messageText.
+
+	#method(#class) signal
+	{
+		self new signal
+	}
+
+	#method(#class) signal: text
+	{
+		self new signal: text
+	}
+
+	#method signal 
+	{
+		self.signalContext := thisContext.
+		self isHandled
+			ifTrue: [ self handle ]
+			ifFalse: [ self notHandled ].
+	}
+
+	#method signal: text
+	{
+		self.messageText := text.
+		self signal.
+	}
+
+	#method isHandled
+	{
+		^self handlerContext notNil
+	}
+
+	#method handle
+	{
+		self return: (self.handlerContext handlerBlock value: self)
+	}
+
+	#method notHandle
+	{
+'EXCEPTION NOT HANDLED' dump.
+## TODO: debug the current process???? "
+Processor activeProcess terminate.
+	}
+
+	#method handlerContext
+	{
+		(self.handlerContext notNil) ifTrue: [ ^self.handlerContext ].
+		^self handlerContextStartingFrom: self.signalContext sender.
+	}
+
+	#method handlerContextStartingFrom: aContext
+	{
+		## Find exception handling context starting from a given context
+
+		| ctx |
+
+		ctx := aContext.
+		[ ctx notNil ]
+			whileTrue: [
+				(ctx handles: self) ifTrue: [ ^self.handlerContext := ctx ].
+				ctx := ctx sender
+			].
+		^nil
+	}
+	
+	#method return: anObject
+	{
+		Processor return: anObject to: (self.handlerContext parent)
+	}
+}
+
+#class NoSuchMessageException(Exception)
+{
+}

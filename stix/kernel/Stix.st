@@ -254,6 +254,11 @@
 #class(#pointer) CompiledMethod(Object)
 {
 	#dcl owner preamble preamble_data_1 preamble_data_2 ntmprs nargs code source.
+
+	#method preamble
+	{
+		^self.preamble
+	}
 }
 
 #include 'Context.st'.

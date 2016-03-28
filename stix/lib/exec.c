@@ -1608,32 +1608,43 @@ printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 static int prim_block_on_do (stix_t* stix, stix_ooi_t nargs)
 {
 	int x;
-	stix_oop_t exblk, excls;
+	stix_oop_oop_t exarr;
 	stix_oop_context_t blkctx;
+	stix_ooi_t i, j;
 
-	STIX_ASSERT (nargs == 2);
+	STIX_ASSERT (nargs >= 2);
 
-	exblk = ACTIVE_STACK_GET(stix, stix->sp);
-	excls = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	if ((stix_oow_t)nargs & 1) return 0; /* it expects even number of arguments */
 
-	stix_pushtmp (stix, &exblk);
-	stix_pushtmp (stix, &excls);
+	//for (i = 0; i < nargs; i += 2)
+	//{
+	//	exblk = ACTIVE_STACK_GET(stix, stix->sp);
+	//	excls = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	//}
+
 	x = __block_value (stix, nargs, 0, 0, &blkctx);
-	stix_poptmps (stix, 2);
 	if (x <= 0) return x; /* hard failure and soft failure */
 
 	/* TOOD: implement zero-cost exception handling. 
 	 *       this implementation requires allocation of a new array
 	 *       every time on:do: is executed */
-	/*
-	 * stix_pushtmp (stix, &blkctx);
-	blkctx->exception_info = stix_instantiate (stix, stix->_array, );
+
+	stix_pushtmp (stix, (stix_oop_t*)&blkctx);
+	exarr = (stix_oop_oop_t)stix_instantiate (stix, stix->_array, STIX_NULL, nargs);
 	stix_poptmp (stix);
-	 */
-	
+	if (!exarr) return -1; /* hard failure */ /* TOOD: can't this be treated as a soft failure? */
+
+	for (i = nargs, j = 0; i > 0;)
+	{
+		--i;
+		exarr->slot[j++] = ACTIVE_STACK_GET(stix, stix->sp - i);
+		--i;
+		exarr->slot[j++] = ACTIVE_STACK_GET(stix, stix->sp - i);
+	}
+
 
 #if defined(STIX_DEBUG_EXEC_001)
-printf ("<<ENTERING BLOCK>> SP=%ld\n", (long int)stix->sp);
+printf ("<<ENTERING BLOCK BY ON:DO:>> SP=%ld\n", (long int)stix->sp);
 #endif
 	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)blkctx);
 	return 1;
@@ -1813,6 +1824,25 @@ static int prim_processor_remove_semaphore (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	ACTIVE_STACK_POPS (stix, nargs);
+	return 1;
+}
+
+static int prim_processor_return_to (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, ret, ctx;
+
+	STIX_ASSERT (nargs == 2);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 2);
+	ret = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	ctx = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (rcv != (stix_oop_t)stix->processor) return 0;
+/* TODO: check if ctx is a block context or a method context */
+
+	ACTIVE_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
+	SWITCH_ACTIVE_CONTEXT (stix, ctx);
+
 	return 1;
 }
 
@@ -2493,7 +2523,7 @@ static prim_t primitives[] =
 
 	{   0, MAX_NARGS,  prim_block_value,          "_block_value"         },
 	{   0, MAX_NARGS,  prim_block_new_process,    "_block_new_process"   },
-	{   2,  2,         prim_block_on_do,          "_block_on_do"         },
+	{   2, MAX_NARGS,  prim_block_on_do,          "_block_on_do"         },
 
 	{   0,  0,  prim_process_resume,       "_process_resume"      },
 	{   0,  0,  prim_process_terminate,    "_process_terminate"   },
@@ -2504,6 +2534,7 @@ static prim_t primitives[] =
 	{   1,  1,  prim_processor_schedule,               "_processor_schedule"            },
 	{   2,  3,  prim_processor_add_timed_semaphore,    "_processor_add_timed_semaphore" },
 	{   1,  1,  prim_processor_remove_semaphore,       "_processor_remove_semaphore" },
+	{   2,  2,  prim_processor_return_to,              "_processor_return_to" },
 
 	{   1,  1,  prim_integer_add,          "_integer_add"         },
 	{   1,  1,  prim_integer_sub,          "_integer_sub"         },
@@ -2878,7 +2909,8 @@ printf ("]\n");
 		}
 
 		default:
-			STIX_ASSERT (preamble_code == STIX_METHOD_PREAMBLE_NONE);
+			STIX_ASSERT (preamble_code == STIX_METHOD_PREAMBLE_NONE ||
+			             preamble_code == STIX_METHOD_PREAMBLE_EXCEPTION);
 			if (activate_new_method (stix, method) <= -1) return -1;
 			break;
 	}
@@ -3642,8 +3674,6 @@ printf ("<<LEAVING>> SP=%d\n", (int)stix->sp);
 					/* place the instruction pointer back at the return instruction.
 					 * even if the context is reentered, it will just return.
 					 *stix->ip--;*/
-
-
 #if defined(STIX_DEBUG_EXEC_002)
 printf ("TERMINATING A PROCESS RETURNING old_active context %p\n", stix->active_context);
 #endif
@@ -3659,8 +3689,6 @@ printf ("TERMINATED A PROCESS RETURNING %lld new active_context %p\n", (long lon
 printf ("ERROR: CAN'T RETURN FROM DEAD METHOD CONTEXT orgin->ip %ld origin->sender->ip %ld\n",
 		(long int)STIX_OOP_TO_SMOOI(stix->active_context->origin->ip), (long int)STIX_OOP_TO_SMOOI(stix->active_context->origin->sender->ip));
 printf ("ERROR: CAN'T RETURN FROM DEAD METHOD CONTEXT origin %p origin->sender %p\n", stix->active_context->origin, stix->active_context->origin->sender);
-printf ("ERROR: CAN'T RETURN FROM DEAD METHOD CONTEXT\n");
-						
 						/* TODO: proper error handling  */
 						stix->errnum = STIX_EINTERN; /* TODO: this should be caughtable at the stix level... */
 						return -1;
@@ -3714,7 +3742,6 @@ printf (">>>>>>>>>>>>>>>> METHOD RETURN FROM WITHIN A BLOCK. NON-LOCAL RETURN.. 
 printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>> TERMINATING SP => %ld\n", (long int)stix->sp);
 #endif
 
-
 						/* the stack contains the final return value so the stack pointer must be 0. */
 						STIX_ASSERT (stix->sp == 0); 
 
@@ -3723,14 +3750,12 @@ printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>> TERMINATING SP => %ld\n", (long 
 						else
 							goto done;
 
-
 						/* TODO: store the return value to the VM register.
 						 * the caller to stix_execute() can fetch it to return it to the system */
 					}
 				}
 			#endif
 
-				
 				break;
 
 			case BCODE_RETURN_FROM_BLOCK:

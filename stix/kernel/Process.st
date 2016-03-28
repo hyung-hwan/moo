@@ -380,4 +380,10 @@
 	"#method signal: aSemaphore onOutput: file
 	{
 	}"
+
+	#method return: anObject to: aContext
+	{
+		<primitive: #_processor_return_to>
+		self primitiveFailed.
+	}
 }
