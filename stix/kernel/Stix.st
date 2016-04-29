@@ -259,6 +259,11 @@
 	{
 		^self.preamble
 	}
+
+	#method preambleCode
+	{
+		^self.preamble bitAnd: 16rFF.
+	}
 }
 
 #include 'Context.st'.

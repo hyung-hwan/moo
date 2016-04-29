@@ -6,6 +6,21 @@
 	{
 		^self.sender
 	}
+
+"	#method isHandlerContext
+	{
+		return ^false
+	}"
+
+	#method handles: anException
+	{
+		^false.
+	}
+
+##	#method parent
+##	{
+##		^self.sender
+##	}
 }
 
 #class(#pointer) MethodContext(Context)
@@ -40,9 +55,27 @@
 		##sp := sp - 1.
 	}
 
+##	#method methodName
+##	{
+##		^self.method basicAt: 0.
+##	}
+
 	#method isHandlerContext
 	{
-		^self.method primitive == 512
+		## 10 - STIX_METHOD_PREAMBLE_EXCEPTION in VM.
+		^self.method preambleCode == 10. 
+	}
+
+	#method handles: anException
+	{
+		(self isHandlerContext) ifTrue: [^true]. ## TODO: check if xxxx
+		^false
+	}
+
+	#method handlerBlock
+	{
+		## for this to work, self must be a handler context.
+		^self basicAt: 9
 	}
 }
 
@@ -201,7 +234,6 @@
 		ip := source pc.
 	}
 
-
 	"------ TODO: -------------------------------------"
 	#method on: anException do: anExceptionBlock
 	{
@@ -209,10 +241,17 @@
 		<exception>
 		handlerActive := true.
 
-(thisContext basicAt: 9) dump.
+thisContext isHandlerContext dump.
+(thisContext basicSize) dump.
+(thisContext basicAt: 8) dump.  ## this should be anException
+(thisContext basicAt: 9) dump.  ## this should be anExceptionBlock
+(thisContext basicAt: 10) dump.  ## this should be handlerActive
+'on:do: ok.............' dump.
 
 		^self value.
 	}
+
+	
 
 	#method ensure: aBlock
 	{
@@ -273,9 +312,9 @@
 		self return: (self.handlerContext handlerBlock value: self)
 	}
 
-	#method notHandle
+	#method notHandled
 	{
-'EXCEPTION NOT HANDLED' dump.
+'####################### EXCEPTION NOT HANDLED ###############################' dump.
 ## TODO: debug the current process???? "
 Processor activeProcess terminate.
 	}
