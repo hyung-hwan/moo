@@ -79,15 +79,14 @@ build_triplet = @build@
 host_triplet = @host@
 subdir = .
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
-	$(top_srcdir)/configure $(am__configure_deps) COPYING INSTALL \
-	ac/ar-lib ac/compile ac/config.guess ac/config.sub ac/depcomp \
+	$(top_srcdir)/configure $(am__configure_deps) ac/ar-lib \
+	ac/compile ac/config.guess ac/config.sub ac/depcomp \
 	ac/install-sh ac/missing ac/ltmain.sh $(top_srcdir)/ac/ar-lib \
 	$(top_srcdir)/ac/compile $(top_srcdir)/ac/config.guess \
 	$(top_srcdir)/ac/config.sub $(top_srcdir)/ac/install-sh \
 	$(top_srcdir)/ac/ltmain.sh $(top_srcdir)/ac/missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/argz.m4 \
-	$(top_srcdir)/m4/ax_check_sign.m4 \
 	$(top_srcdir)/m4/ax_cxx_namespace.m4 \
 	$(top_srcdir)/m4/ax_numval.m4 $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltdl.m4 $(top_srcdir)/m4/ltoptions.m4 \
@@ -284,11 +283,8 @@ RANLIB = @RANLIB@
 RM = @RM@
 RMDIR = @RMDIR@
 SED = @SED@
-SENDFILE_LIBS = @SENDFILE_LIBS@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
-SOCKET_LIBS = @SOCKET_LIBS@
-SSL_LIBS = @SSL_LIBS@
 STIX_PROJECT_AUTHOR = @STIX_PROJECT_AUTHOR@
 STIX_PROJECT_URL = @STIX_PROJECT_URL@
 STIX_SIZEOF_CHAR = @STIX_SIZEOF_CHAR@

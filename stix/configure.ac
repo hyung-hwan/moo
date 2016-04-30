@@ -155,15 +155,6 @@ dnl check header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([stddef.h wchar.h wctype.h errno.h signal.h fcntl.h dirent.h])
 AC_CHECK_HEADERS([time.h sys/time.h utime.h spawn.h execinfo.h ucontext.h])
-AC_CHECK_HEADERS([sys/resource.h sys/wait.h sys/syscall.h sys/ioctl.h])
-AC_CHECK_HEADERS([sys/sendfile.h sys/epoll.h sys/event.h])
-AC_CHECK_HEADERS([sys/sysctl.h sys/socket.h sys/sockio.h sys/un.h])
-AC_CHECK_HEADERS([ifaddrs.h tiuser.h linux/netfilter_ipv4.h netinet/sctp.h])
-AC_CHECK_HEADERS([net/if.h net/if_dl.h], [], [], [
-	#include <sys/types.h>
-	#include <sys/socket.h>])
-AC_CHECK_HEADERS([sys/stropts.h sys/macstat.h linux/ethtool.h linux/sockios.h])
-AC_CHECK_HEADERS([quadmath.h crt_externs.h sys/prctl.h uci.h])
 
 dnl check data types
 dnl AC_CHECK_TYPE([wchar_t], 
@@ -173,118 +164,10 @@ dnl	[],
 dnl	[#include <stddef.h>])
 
 dnl check functions
-AC_CHECK_FUNCS([uselocale])
-AC_CHECK_FUNCS([mbrlen mbrtowc wcrtomb])
-AC_CHECK_FUNCS([mbsnrtowcs mbsrtowcs wcsnrtombs wcsrtombs])
-AC_CHECK_FUNCS([wctype iswctype wctrans towctrans])
-AC_CHECK_FUNCS([isblank iswblank])
-AC_CHECK_FUNCS([lseek64 stat64 fstat64 lstat64 ftruncate64 readdir64 dirfd])
-AC_CHECK_FUNCS([lstat fchmod fsync ftruncate])
-AC_CHECK_FUNCS([timegm timelocal localtime_r gettimeofday settimeofday])
-AC_CHECK_FUNCS([utime utimes futimes lutimes futimens])
-AC_CHECK_FUNCS([sysconf prctl fdopendir setrlimit getrlimit getpgid getpgrp])
+AC_CHECK_FUNCS([gettimeofday settimeofday clock_gettime clock_settime])
 AC_CHECK_FUNCS([backtrace backtrace_symbols])
-AC_CHECK_FUNCS([fork vfork posix_spawn gettid nanosleep select])
 AC_CHECK_FUNCS([makecontext swapcontext getcontext setcontext])
 AC_CHECK_FUNCS([snprintf _vsnprintf _vsnwprintf])
-
-OLDLIBS="$LIBS"
-LIBS="$LIBM $LIBS"
-AC_CHECK_FUNCS([powl fmodl sinl cosl tanl sinhl coshl tanhl asinl acosl atanl atan2l logl log10l expl sqrtl ceill floorl roundl])
-AC_CHECK_FUNCS([pow fmod sin cos tan sinh cosh tanh asin acos atan atan2 log log10 exp sqrt ceil floor round])
-AC_CHECK_FUNCS([powf fmodf sinf cosf tanf sinhf coshf tanhf asinf acosf atanf atan2f logf log10f expf sqrtf ceilf floorf roundf])
-LIBS="$OLDLIBS"
-
-dnl OLDLIBS="$LIBS"
-dnl AC_SEARCH_LIBS([connect], [socket])
-dnl LIBS="$OLDLIBS"
-dnl if test "$ac_cv_search_connect" != "none required" -a "$ac_cv_search_connect" != "no"
-dnl then
-dnl	SOCKET_LIBS="$SOCKET_LIBS -lsocket"
-dnl fi
-dnl AC_SUBST(SOCKET_LIBS)
-AC_CHECK_FUNCS([connect gethostbyname])
-if test "x$ac_cv_func_gethostbyname" = "xno"
-then
-	AC_CHECK_LIB([nsl], [gethostbyname], [
-		SOCKET_LIBS="$SOCKET_LIBS -lnsl"
-		AC_DEFINE(HAVE_GETHOSTBYNAME, 1)
-	])
-fi
-if test "x$ac_cv_func_connect" = "xno"
-then
-	AC_CHECK_LIB([socket], [connect], [
-		SOCKET_LIBS="$SOCKET_LIBS -lsocket"
-		AC_DEFINE(HAVE_CONNECT, 1)
-	]) 
-
-	if test "x$ac_cv_lib_socket_connect" = xno
-	then
-		AC_CHECK_FUNCS([t_connect])
-		if test "x$ac_cv_func_t_connect" = "xno"
-		then
-			AC_CHECK_LIB([nsl_s], [t_connect], [
-				SOCKET_LIBS="$SOCKET_LIBS -lnsl_s"
-				AC_DEFINE(HAVE_T_CONNECT, 1)
-			])
-		fi
-	fi
-fi
-if test "x${platform_win32}" = "xyes"
-then
-	SOCKET_LIBS="$SOCKET_LIBS -lws2_32"
-fi
-AC_SUBST(SOCKET_LIBS)
-
-OLDLIBS="$LIBS"
-LIBS="$SOCKET_LIBS $LIBS"
-AC_CHECK_FUNCS([if_nametoindex if_indextoname getifaddrs])
-LIBS="$OLDLIBS"
-
-dnl check if sendfile and its variants exist in the standard c library
-dnl it inspects the existence of each missing function in the sendfile library.
-AC_CHECK_FUNCS([sendfile sendfile64 sendfilev sendfilev64])
-if test "$ac_cv_func_sendfile" = "no"
-then
-	AC_CHECK_LIB([sendfile], [sendfile], [
-		SENDFILE_LIBS="-lsendfile"
-		dnl only for consistency with AC_CHECK_FUNCS
-		AC_DEFINE(HAVE_SENDFILE, 1)
-	])
-fi
-if test "$ac_cv_func_sendfile64" = "no"
-then
-	AC_CHECK_LIB([sendfile], [sendfile64], [
-		SENDFILE_LIBS="-lsendfile"
-		dnl only for consistency with AC_CHECK_FUNCS
-		AC_DEFINE(HAVE_SENDFILE64, 1)
-	])
-fi
-if test "$ac_cv_func_sendfilev" = "no"
-then
-	AC_CHECK_LIB([sendfile], [sendfilev], [
-		SENDFILE_LIBS="-lsendfile"
-		dnl only for consistency with AC_CHECK_FUNCS
-		AC_DEFINE(HAVE_SENDFILEV, 1)
-	])
-fi
-if test "$ac_cv_func_sendfilev64" = "no"
-then
-	AC_CHECK_LIB([sendfile], [sendfilev64], [
-		SENDFILE_LIBS="-lsendfile"
-		dnl only for consistency with AC_CHECK_FUNCS
-		AC_DEFINE(HAVE_SENDFILEV64, 1)
-	])
-fi
-AC_SUBST(SENDFILE_LIBS)
-
-AC_CHECK_FUNCS([epoll_create epoll_create1])
-if test "$ac_cv_func_epoll_create" = "yes"
-then
-	AC_DEFINE(HAVE_EPOLL, 1, [epoll support])
-fi
-
-AC_CHECK_FUNCS([kqueue kqueue1 kevent])
 
 dnl check is the import library for unicows.dll exists
 dnl this check doesn't look for a particular symbol
@@ -293,76 +176,7 @@ dnl the existence of the libaray.
 AC_CHECK_LIB([unicows], [main], [UNICOWS_LIBS="-lunicows"])
 AC_SUBST(UNICOWS_LIBS)
 
-AC_ARG_ENABLE([ssl], [AS_HELP_STRING([--enable-ssl],[build the library in the ssl mode (default. yes)])],
-	enable_ssl_is=$enableval,enable_ssl_is=yes)
-if test "x$enable_ssl_is" = "xyes"
-then
-	AC_CHECK_HEADERS([openssl/ssl.h openssl/err.h openssl/engine.h])
-
-	dnl check for an SSL library
-	AC_CHECK_FUNCS([SSL_library_init])
-
-	if test "x$ac_cv_func_SSL_library_init" = "xyes"
-	then
-		AC_DEFINE(HAVE_SSL, 1, [ssl support])
-	else
-		AC_CHECK_LIB([ssl], [SSL_library_init], [
-			SSL_LIBS="-lssl"
-			AC_DEFINE(HAVE_SSL, 1, [ssl support])
-
-			dnl additional check
-			AC_CHECK_LIB([crypto], [ERR_get_error], [
-				SSL_LIBS="${SSL_LIBS} -lcrypto"
-			])
-
-			dnl only for consistency with AC_CHECK_FUNCS
-			AC_DEFINE(HAVE_SSL_LIBRARY_INIT, 1)
-		])
-	fi
-
-	OLDLIBS="$LIBS"
-	LIBS="$SSL_LIBS $LIBS"
-	AC_CHECK_FUNCS([ENGINE_cleanup CRYPTO_cleanup_all_ex_data])
-	LIBS="$OLDLIBS"
-fi
-AC_SUBST(SSL_LIBS)
-
-AC_STRUCT_DIRENT_D_TYPE
-AC_CHECK_MEMBERS([DIR.d_fd, DIR.dd_fd],,,[[#include <dirent.h>]])
-AC_CHECK_MEMBERS([struct stat.st_birthtime])
-AC_CHECK_MEMBERS([struct stat.st_mtim.tv_nsec])
-AC_CHECK_MEMBERS([struct stat.st_birthtim.tv_nsec])
-AC_CHECK_MEMBERS([struct stat.st_mtimespec.tv_nsec])
-AC_CHECK_MEMBERS([struct stat.st_birthtimespec.tv_nsec])
-
-
-AC_CHECK_MEMBERS([struct ifreq.ifr_ifindex, struct ifreq.ifr_mtu], [], [],
-	[#include <sys/types.h>
-	 #include <sys/socket.h>
-	 #ifdef HAVE_NET_IF_H
-	 #include <net/if.h>
-	 #endif])
-
-AC_CHECK_TYPES([struct lifconf, struct lifreq, struct if_laddrreq], [], [],
-	[#include <sys/types.h>
-	 #include <sys/socket.h>
-	 #ifdef HAVE_NET_IF_H
-	 #include <net/if.h>
-	 #endif])
-
-AC_CHECK_MEMBERS([struct sockaddr_in6.sin6_scope_id], [], [],
-	[#include <sys/types.h> 
-	 #include <sys/socket.h> 
-	 #include <netinet/in.h>])
-
-AC_CHECK_TYPES([struct timespec], [], [],
-	[#include <sys/types.h>
-	 #ifdef HAVE_TIME_H
-	 #include <time.h>
-	 #endif
-	 #ifdef HAVE_SYS_TIME_H
-	 #include <sys/time.h>
-	 #endif])
+AC_CHECK_LIB([rt], [clock_gettime], [LIBS="$LIBS -lrt"])
 
 AC_MSG_CHECKING([for va_copy])
 AC_TRY_LINK(
@@ -421,53 +235,6 @@ AC_CHECK_SIZEOF(off64_t)
 
 AC_CHECK_SIZEOF(mbstate_t,,[#include <wchar.h>])
 AX_CHECK_NUMVALOF(MB_LEN_MAX,[32],[#include <limits.h>])
-
-if test "x${platform_win32}" = "xyes"
-then
-	AC_CHECK_SIZEOF(struct sockaddr_in,,[
-		#include <winsock2.h>
-		#include <ws2tcpip.h>])
-	AC_CHECK_SIZEOF(struct sockaddr_in6,,[
-		#include <winsock2.h>
-		#include <ws2tcpip.h>])
-	AC_CHECK_SIZEOF(struct sockaddr_un,,[
-		#include <winsock2.h>
-		#include <ws2tcpip.h>])
-	AC_CHECK_SIZEOF(socklen_t,, [
-		#include <winsock2.h>
-		#include <ws2tcpip.h>])
-
-	if test ${ac_cv_sizeof_socklen_t} -gt 0
-	then
-		AX_CHECK_SIGN([socklen_t],
-			[ AC_DEFINE(STIX_SOCKLEN_T_IS_SIGNED, 1, [Define if socklen_t is signed]) ],
-			[ AS_ECHO_N("") ],
-			[#include <winsock2.h>
-			 #include <ws2tcpip.h>])
-	fi
-else
-	AC_CHECK_SIZEOF(struct sockaddr_in,,[
-		#include <sys/socket.h>
-		#include <netinet/in.h>])
-	AC_CHECK_SIZEOF(struct sockaddr_in6,,[
-		#include <sys/socket.h>
-		#include <netinet/in.h>])
-	AC_CHECK_SIZEOF(struct sockaddr_un,,[
-		#include <sys/socket.h>
-		#include <sys/un.h>])
-	AC_CHECK_SIZEOF(socklen_t,, [
-		#include <sys/socket.h>
-		#include <netinet/in.h>])
-
-	if test ${ac_cv_sizeof_socklen_t} -gt 0
-	then
-		AX_CHECK_SIGN([socklen_t],
-			[ AC_DEFINE(STIX_SOCKLEN_T_IS_SIGNED, 1, [Define if socklen_t is signed]) ],
-			[ AS_ECHO_N("") ],
-			[#include <sys/socket.h>])
-	fi
-fi
-
 
 dnl gcc 3.4.3 on opensolaris x86 gave this warning without -msse or 
 dnl something similar.
@@ -689,8 +456,5 @@ echo "  C compiler: ${CC} ${CFLAGS}"
 echo "  C++ compiler: ${CXX} ${CXXFLAGS}"
 echo "  C++ support: ${enable_cxx_is}"
 echo "  Math library: ${LIBM}"
-echo "  Socket library: ${SOCKET_LIBS}"
-echo "  Sendfile library: ${SENDFILE_LIBS}"
-echo "  SSL library: ${SSL_LIBS}"
 echo "-------------------------------------------------------------------------"
 ]
