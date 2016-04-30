@@ -28,7 +28,13 @@
 
 /* TODO: remove this header after having changed clock_gettime() to a 
  *       platform independent function */
-#include <time.h>
+#if defined(HAVE_TIME_H)
+#	include <time.h>
+#endif
+
+#if defined(HAVE_SYS_TIME_H)
+#	include <sys/time.h>
+#endif
 
 #define PROC_STATE_RUNNING 3
 #define PROC_STATE_WAITING 2
@@ -159,9 +165,19 @@
 
 static STIX_INLINE void vm_gettime (stix_ntime_t* now)
 {
+#if defined(HAVE_CLOCK_GETTIME)
 	struct timespec ts;
+	#if defined(CLOCK_MONOTONIC)
 	clock_gettime (CLOCK_MONOTONIC, &ts);
+	#else
+	clock_gettime (CLOCK_REALTIME, &ts);
+	#endif
 	STIX_INITNTIME(now, ts.tv_sec, ts.tv_nsec);
+#else
+	struct timeval tv;
+	gettimeofday (&tv, STIX_NULL);
+	STIX_INITNTIME(now, tv.tv_sec, STIX_USEC_TO_NSEC(tv.tv_usec));
+#endif
 }
 
 static STIX_INLINE void vm_sleep (const stix_ntime_t* dur)

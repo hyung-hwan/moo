@@ -97,8 +97,8 @@
 #		define STIX_MEMCMP(dst,src,size)  memcmp(dst,src,size)
 #	endif
 
-#elif defined(__GNUC__)
-/* TODO: may need to check a gnuc version or use autoconf to check the availibility ? */
+#elif defined(__GNUC__) && (__GNUC__  >= 3 || (defined(__GNUC_MINOR) && __GNUC__ == 2 && __GNUC_MINOR__ >= 91))
+	/* gcc 2.91 or higher */
 #	define STIX_MEMSET(dst,src,size)  __builtin_memset(dst,src,size)
 #	define STIX_MEMCPY(dst,src,size)  __builtin_memcpy(dst,src,size)
 #	define STIX_MEMMOVE(dst,src,size) __builtin_memmove(dst,src,size)
