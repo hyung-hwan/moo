@@ -302,6 +302,12 @@ thisContext isHandlerContext dump.
 		self signal.
 	}
 
+	#method pass
+	{
+		## pass the exception to the outer context
+		## TODO:
+	}
+
 	#method isHandled
 	{
 		^self handlerContext notNil
@@ -309,7 +315,7 @@ thisContext isHandlerContext dump.
 
 	#method handle
 	{
-		self return: (self.handlerContext handlerBlock value: self)
+		Processor return: (self.handlerContext handlerBlock value: self) to: (self.handlerContext sender)
 	}
 
 	#method notHandled
@@ -322,27 +328,22 @@ Processor activeProcess terminate.
 	#method handlerContext
 	{
 		(self.handlerContext notNil) ifTrue: [ ^self.handlerContext ].
-		^self handlerContextStartingFrom: self.signalContext sender.
+		self.handlerContext := self findHandlerContextStartingFrom: self.signalContext.
+		^self.handlerContext.
 	}
 
-	#method handlerContextStartingFrom: aContext
+	#method findHandlerContextStartingFrom: aContext
 	{
 		## Find exception handling context starting from a given context
-
 		| ctx |
 
 		ctx := aContext.
 		[ ctx notNil ]
 			whileTrue: [
-				(ctx handles: self) ifTrue: [ ^self.handlerContext := ctx ].
+				(ctx handles: self) ifTrue: [ ^ ctx ].
 				ctx := ctx sender
 			].
 		^nil
-	}
-	
-	#method return: anObject
-	{
-		Processor return: anObject to: (self.handlerContext parent)
 	}
 }
 

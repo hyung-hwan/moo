@@ -37,8 +37,22 @@
 #class MyObject(TestObject)
 {
 
+	#method(#class) main2
+	{
+		| k |
+		k := ['this is test-011' dump. Exception signal. 8888 dump. ] 
+			on: Exception do: [ :ex | 'Exception occurred' dump.  ex dump. 'Getting back to' dump. 80. ex pass ].
+
+		k dump.
+		'END OF test-011' dump.
+	}
+
 	#method(#class) main
 	{
-		['this is test-011' dump. Exception signal. ] on: Exception do: [ :ex | 'Exception occurred' dump ].
+		'>>>>> BEGINNING OF MAIN' dump.
+		
+		[ self main2 ] on: Exception do: [ :ex | 'EXCEPTION CAUGHT IN MAIN....' dump ].
+
+		'>>>>> END OF MAIN' dump.
 	}
 }
