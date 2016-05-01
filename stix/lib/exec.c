@@ -1854,12 +1854,11 @@ static int prim_processor_return_to (stix_t* stix, stix_ooi_t nargs)
 	ctx = ACTIVE_STACK_GET(stix, stix->sp);
 
 	if (rcv != (stix_oop_t)stix->processor) return 0;
-/* TODO: check if ctx is a block context or a method context */
-	STIX_ASSERT (STIX_CLASSOF(stix, ctx) == stix->_block_context ||
-	             STIX_CLASSOF(stix, ctx) == stix->_method_context);
+
+	if (STIX_CLASSOF(stix, ctx) != stix->_block_context &&
+	    STIX_CLASSOF(stix, ctx) == stix->_method_context) return 0;
 
 	ACTIVE_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
-
 
 	ACTIVE_STACK_PUSH (stix, ret);
 	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)ctx);

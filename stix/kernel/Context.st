@@ -246,7 +246,7 @@ thisContext isHandlerContext dump.
 (thisContext basicAt: 8) dump.  ## this should be anException
 (thisContext basicAt: 9) dump.  ## this should be anExceptionBlock
 (thisContext basicAt: 10) dump.  ## this should be handlerActive
-'on:do: ok.............' dump.
+'on:do: ABOUT TO EVALUE THE RECEIVER BLOCK' dump.
 
 		^self value.
 	}
@@ -291,9 +291,18 @@ thisContext isHandlerContext dump.
 	#method signal 
 	{
 		self.signalContext := thisContext.
-		self isHandled
-			ifTrue: [ self handle ]
-			ifFalse: [ self notHandled ].
+
+		self.handlerContext isNil ifTrue: [
+			self.handlerContext := self findHandlerContextStartingFrom: self.signalContext
+		].
+
+		self.handlerContext isNil 
+			ifTrue: [ self notHandled ]
+			ifFalse: [ self handle ].
+
+		## self isHandled
+		##	ifTrue: [ self handle ]
+		##	ifFalse: [ self notHandled ].
 	}
 
 	#method signal: text
@@ -306,7 +315,32 @@ thisContext isHandlerContext dump.
 	{
 		## pass the exception to the outer context
 		## TODO:
+		self.handlerContext := self findHandlerContextStartingFrom: (self.handlerContext sender).
+		self.handlerContext isNil 
+			ifTrue: [ self notHandled ]
+			ifFalse: [ self handle ].
 	}
+
+	#method return: value
+	{
+		self.handlerContext isNil ifFalse: [
+			Processor return: value to: (self.handlerContext sender)
+		]
+	}
+
+	#method retry
+	{
+		## ##>>> Processor return: nil to: (self.signalContext sender).
+	}
+
+	#method resume
+	{
+		## is this correct???
+		Processor return: nil to: (self.signalContext sender).
+	}
+
+	## ####################################################################
+	## ####################################################################
 
 	#method isHandled
 	{
