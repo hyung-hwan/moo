@@ -219,13 +219,10 @@
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
-	#method(#class) primitiveFailed
-	{
-		## TODO: implement this
-		## PrimitiveFailureError signal.
-		self dump.
-		'primitive failed' dump.
-	}
+	## #method(#class) primitiveFailed
+	## {
+	## 	this method will be added after Exception class has been defined.
+	## }
 
 	#method primitiveFailed
 	{

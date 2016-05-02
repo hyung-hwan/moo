@@ -390,3 +390,17 @@ Processor activeProcess terminate.
 		self signal: 'no such message'.
 	}
 }
+
+
+#extend Apex
+{
+	#method(#class) primitiveFailed
+	{
+		## TODO: implement this
+		## PrimitiveFailureError signal.
+		self dump.
+		##'primitive failed' dump.
+# TODO: define a specialized exception class for primitive failure and use it.
+		Exception signal: 'PRIMITIVE FAILED...'.
+	}
+}

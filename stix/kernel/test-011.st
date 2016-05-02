@@ -168,6 +168,10 @@
 	##	self test12.
 
 		##100 timesRepeat: ['>>>>> END OF MAIN' dump].
+
+		## the following line(return:to:) must cause primitive failure...
+		##[ Processor return: 10 to: 20. ] on: Exception do: [:ex | ex messageText dump].
+
 		'>>>>> END OF MAIN' dump.
 	}
 }
