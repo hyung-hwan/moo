@@ -241,12 +241,12 @@
 		<exception>
 		handlerActive := true.
 
-thisContext isHandlerContext dump.
+"thisContext isHandlerContext dump.
 (thisContext basicSize) dump.
 (thisContext basicAt: 8) dump.  ## this should be anException
 (thisContext basicAt: 9) dump.  ## this should be anExceptionBlock
 (thisContext basicAt: 10) dump.  ## this should be handlerActive
-'on:do: ABOUT TO EVALUE THE RECEIVER BLOCK' dump.
+'on:do: ABOUT TO EVALUE THE RECEIVER BLOCK' dump."
 
 		^self value.
 	}
@@ -288,6 +288,11 @@ thisContext isHandlerContext dump.
 		self new signal: text
 	}
 
+	#method messageText
+	{
+		^self.messageText
+	}
+
 	#method signal 
 	{
 		self.signalContext := thisContext.
@@ -299,10 +304,6 @@ thisContext isHandlerContext dump.
 		self.handlerContext isNil 
 			ifTrue: [ self notHandled ]
 			ifFalse: [ self handle ].
-
-		## self isHandled
-		##	ifTrue: [ self handle ]
-		##	ifFalse: [ self notHandled ].
 	}
 
 	#method signal: text
@@ -314,7 +315,8 @@ thisContext isHandlerContext dump.
 	#method pass
 	{
 		## pass the exception to the outer context
-		## TODO:
+
+		## TODO: Should i change the signalContex to thisContext???
 		self.handlerContext := self findHandlerContextStartingFrom: (self.handlerContext sender).
 		self.handlerContext isNil 
 			ifTrue: [ self notHandled ]
@@ -330,22 +332,22 @@ thisContext isHandlerContext dump.
 
 	#method retry
 	{
-		## ##>>> Processor return: nil to: (self.signalContext sender).
+		## TODO: verify if return:to: causes unnecessary stack growth.
+
+		self.handlerContext pc: 0.
+		Processor return: self to: self.handlerContext.
+		##Processor forceContext: self.handlerContext.
 	}
 
 	#method resume
 	{
+		## TODO: verify if return:to: causes unnecessary stack growth.
 		## is this correct???
-		Processor return: nil to: (self.signalContext sender).
+		Processor return: self to: (self.signalContext sender).
 	}
 
 	## ####################################################################
 	## ####################################################################
-
-	#method isHandled
-	{
-		^self handlerContext notNil
-	}
 
 	#method handle
 	{
@@ -383,4 +385,8 @@ Processor activeProcess terminate.
 
 #class NoSuchMessageException(Exception)
 {
+	#method signal
+	{
+		self signal: 'no such message'.
+	}
 }

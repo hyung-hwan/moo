@@ -202,6 +202,8 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 	proc->current_context = c;
 	proc->sp = STIX_SMOOI_TO_OOP(-1);
 
+	STIX_ASSERT ((stix_oop_t)c->sender == stix->_nil);
+
 #if defined(STIX_DEBUG_PROCESSOR)
 printf ("PROCESS %p SIZE => %ld\n", proc, (long int)STIX_OBJ_GET_SIZE(proc));
 #endif
@@ -804,6 +806,14 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	stix_ooi_t i;
 	stix_ooi_t ntmprs, nargs;
 
+	ntmprs = STIX_OOP_TO_SMOOI(mth->tmpr_count);
+	nargs = STIX_OOP_TO_SMOOI(mth->tmpr_nargs);
+
+	STIX_ASSERT (ntmprs >= 0);
+	STIX_ASSERT (nargs <= ntmprs);
+#if defined(STIX_USE_PROCSTK)
+	/* nothing special */
+#else
 	/* message sending requires a receiver to be pushed. 
 	 * the stack pointer of the sending context cannot be -1.
 	 * if one-argumented message is invoked the stack of the
@@ -826,14 +836,6 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	 *   |                     | slot[stack_size - 1] 
 	 *   +---------------------+
 	 */
-	ntmprs = STIX_OOP_TO_SMOOI(mth->tmpr_count);
-	nargs = STIX_OOP_TO_SMOOI(mth->tmpr_nargs);
-
-	STIX_ASSERT (ntmprs >= 0);
-	STIX_ASSERT (nargs <= ntmprs);
-#if defined(STIX_USE_PROCSTK)
-	/* nothing special */
-#else
 	STIX_ASSERT (stix->sp >= 0);
 	STIX_ASSERT (stix->sp >= nargs);
 #endif
@@ -845,6 +847,10 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 
 	ctx->sender = stix->active_context; 
 	ctx->ip = STIX_SMOOI_TO_OOP(0);
+	
+#if defined(STIX_USE_PROCSTK)
+	/* ctx->sp will be set further down */
+#else
 	/* the front part of a stack has temporary variables including arguments.
 	 *
 	 * New Context
@@ -867,9 +873,6 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	 *
 	 * if no temporaries exist, the initial sp is -1.
 	 */
-#if defined(STIX_USE_PROCSTK)
-	/* ctx->sp will be set further down */
-#else
 	ctx->sp = STIX_SMOOI_TO_OOP(ntmprs - 1);
 #endif
 	ctx->ntmprs = STIX_SMOOI_TO_OOP(ntmprs);
@@ -1013,7 +1016,14 @@ static int start_initial_process_and_context (stix_t* stix, const stix_oocs_t* o
 	stix_oop_process_t proc;
 
 	/* create a fake initial context */
+#if defined(STIX_USE_PROCSTK)
+	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_method_context, STIX_NULL, 0);
+#else
+	/* stack size is set to 1 because it needs sapce to push the receiver 
+	 * referenced by 'objname' */
+/* TODO: increase the stack size to allow arguments to the intial methods */
 	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_method_context, STIX_NULL, 1);
+#endif
 	if (!ctx) return -1;
 
 	ass = stix_lookupsysdic (stix, objname);
@@ -1072,14 +1082,13 @@ TODO: overcome this problem
 	stix_poptmps (stix, 3);
 	if (!proc) return -1;
 
-	ACTIVE_STACK_PUSH (stix, ass->value); /* push the receiver */
+	ACTIVE_STACK_PUSH (stix, ass->value); /* push the receiver - the object referenced by 'objname' */
 	STORE_ACTIVE_SP (stix); /* stix->active_context->sp = STIX_SMOOI_TO_OOP(stix->sp) */
 
 	STIX_ASSERT (stix->processor->active == proc);
 	STIX_ASSERT (stix->processor->active->initial_context == ctx);
 	STIX_ASSERT (stix->processor->active->current_context == ctx);
 	STIX_ASSERT (stix->active_context == ctx);
-
 
 	/* emulate the message sending */
 	return activate_new_method (stix, mth);
@@ -1612,6 +1621,12 @@ printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 	x = __block_value (stix, nargs, nargs, num_first_arg_elems, &blkctx);
 	if (x <= 0) return x; /* both hard failure and soft failure */
 
+	/* reset the sender field to stix->_nil because this block context
+	 * will be the initial context of a new process. you can simply
+	 * inspect the sender field to see if a context is an initial
+	 * context of a process. */
+	blkctx->sender = (stix_oop_context_t)stix->_nil;
+
 	proc = make_process (stix, blkctx);
 	if (!proc) return -1; /* hard failure */ /* TOOD: can't this be treated as a soft failure? */
 
@@ -1856,11 +1871,33 @@ static int prim_processor_return_to (stix_t* stix, stix_ooi_t nargs)
 	if (rcv != (stix_oop_t)stix->processor) return 0;
 
 	if (STIX_CLASSOF(stix, ctx) != stix->_block_context &&
-	    STIX_CLASSOF(stix, ctx) == stix->_method_context) return 0;
+	    STIX_CLASSOF(stix, ctx) != stix->_method_context) return 0;
 
 	ACTIVE_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
 
 	ACTIVE_STACK_PUSH (stix, ret);
+	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)ctx);
+
+	return 1;
+}
+
+static int prim_processor_force_context (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, ctx;
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	ctx = ACTIVE_STACK_GET(stix, stix->sp);
+
+	if (rcv != (stix_oop_t)stix->processor) return 0;
+
+	if (STIX_CLASSOF(stix, ctx) != stix->_block_context &&
+	    STIX_CLASSOF(stix, ctx) != stix->_method_context) return 0;
+
+	ACTIVE_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
+	/* TODO: push nothing??? */
+
 	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)ctx);
 
 	return 1;
@@ -2555,6 +2592,7 @@ static prim_t primitives[] =
 	{   2,  3,  prim_processor_add_timed_semaphore,    "_processor_add_timed_semaphore" },
 	{   1,  1,  prim_processor_remove_semaphore,       "_processor_remove_semaphore" },
 	{   2,  2,  prim_processor_return_to,              "_processor_return_to" },
+	{   1,  1,  prim_processor_force_context,          "_processor_force_context" },
 
 	{   1,  1,  prim_integer_add,          "_integer_add"         },
 	{   1,  1,  prim_integer_sub,          "_integer_sub"         },
@@ -3785,6 +3823,7 @@ printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>> TERMINATING SP => %ld\n", (long 
 
 				if (stix->active_context == stix->processor->active->initial_context)
 				{
+					STIX_ASSERT ((stix_oop_t)stix->active_context->sender == stix->_nil);
 #if defined(STIX_DEBUG_EXEC_002)
 printf ("TERMINATE A PROCESS RETURNING FROM BLOCK\n");
 #endif

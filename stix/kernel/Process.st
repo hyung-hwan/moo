@@ -386,4 +386,11 @@
 		<primitive: #_processor_return_to>
 		self primitiveFailed.
 	}
+
+	#method forceContext: aContext
+	{
+		<primitive: #_processor_force_context>
+		self primitiveFailed.
+	}
+
 }
