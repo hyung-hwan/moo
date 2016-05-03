@@ -416,9 +416,9 @@ struct stix_association_t
 };
 
 #if defined(STIX_USE_OBJECT_TRAILER)
-#	define STIX_METHOD_NAMED_INSTVARS 7
-#else
 #	define STIX_METHOD_NAMED_INSTVARS 8
+#else
+#	define STIX_METHOD_NAMED_INSTVARS 9
 #endif
 typedef struct stix_method_t stix_method_t;
 typedef struct stix_method_t* stix_oop_method_t;
@@ -427,6 +427,8 @@ struct stix_method_t
 	STIX_OBJ_HEADER;
 
 	stix_oop_class_t owner; /* Class */
+
+	stix_oop_char_t  name; /* Symbol, method name */
 
 	/* primitive number */
 	stix_oop_t       preamble; /* SmallInteger */

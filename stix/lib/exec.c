@@ -942,6 +942,8 @@ static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const s
 
 #if defined(STIX_DEBUG_EXEC_002)
 printf ("==== FINDING METHOD FOR %p [", receiver);
+print_object (stix, receiver);
+printf ("] - ["); 
 print_oocs (message);
 printf ("] in ");
 #endif
@@ -949,7 +951,7 @@ printf ("] in ");
 	cls = (stix_oop_class_t)STIX_CLASSOF(stix, receiver);
 	if ((stix_oop_t)cls == stix->_class)
 	{
-		/* receiver is a class object */
+		/* receiver is a class object (an instance of Class) */
 		c = receiver; 
 		dic_no = STIX_CLASS_MTHDIC_CLASS;
 #if defined(STIX_DEBUG_EXEC_002)
@@ -968,7 +970,6 @@ print_object(stix, (stix_oop_t)((stix_oop_class_t)c)->name);
 printf ("\n");
 #endif
 	}
-
 
 	if (c != stix->_nil)
 	{
@@ -997,6 +998,22 @@ printf ("\n");
 	}
 
 not_found:
+	if ((stix_oop_t)cls == stix->_class)
+	{
+		/* the object is an instance of Class. find the method
+		 * in an instance method dictionary of Class also */
+		mthdic = ((stix_oop_class_t)cls)->mthdic[STIX_CLASS_MTHDIC_INSTANCE];
+		STIX_ASSERT ((stix_oop_t)mthdic != stix->_nil);
+		STIX_ASSERT (STIX_CLASSOF(stix, mthdic) == stix->_method_dictionary);
+
+		ass = (stix_oop_association_t)stix_lookupdic (stix, mthdic, message);
+		if (ass) 
+		{
+			STIX_ASSERT (STIX_CLASSOF(stix, ass->value) == stix->_method);
+			return (stix_oop_method_t)ass->value;
+		}
+	}
+
 	stix->errnum = STIX_ENOENT;
 	return STIX_NULL;
 }
@@ -1054,7 +1071,7 @@ TODO: overcome this problem
 	ctx->ip = STIX_SMOOI_TO_OOP(0); /* point to the beginning */
 	ctx->sp = STIX_SMOOI_TO_OOP(-1); /* pointer to -1 below the bottom */
 	ctx->origin = ctx; /* point to self */
-	ctx->method_or_nargs = (stix_oop_t)mth; /* fake. help SWITCH_ACTIVE_CONTEXT() not fail*/
+	ctx->method_or_nargs = (stix_oop_t)mth; /* fake. help SWITCH_ACTIVE_CONTEXT() not fail. TODO: create a static fake method and use it... instead of 'mth' */
 
 	/* [NOTE]
 	 *  the receiver field and the sender field of ctx are nils.

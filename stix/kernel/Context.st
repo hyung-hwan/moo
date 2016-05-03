@@ -7,20 +7,10 @@
 		^self.sender
 	}
 
-"	#method isHandlerContext
+	#method isExceptionHandlerContext
 	{
-		return ^false
-	}"
-
-	#method handles: anException
-	{
-		^false.
+		^false
 	}
-
-##	#method parent
-##	{
-##		^self.sender
-##	}
 }
 
 #class(#pointer) MethodContext(Context)
@@ -29,53 +19,61 @@
 
 	#method pc
 	{
-		^ip
+		^self.ip
 	}
 
 	#method pc: anInteger
 	{
-		ip := anInteger.
-		"sp := sp - 1."  "whould this always work??? "
+		self.ip := anInteger.
+		"self.sp := self.sp - 1."  "whould this always work??? "
 	}
 
 	#method sp
 	{
-		^sp.
+		^self.sp.
 
 	}
 	#method sp: anInteger
 	{
-		sp := anInteger.
+		self.sp := anInteger.
 	}
 
 	#method pc: aPC sp: aSP
 	{
-		ip := aPC.
-		sp := aSP.
+		self.ip := aPC.
+		self.sp := aSP.
 		##sp := sp - 1.
 	}
 
-##	#method methodName
-##	{
-##		^self.method basicAt: 0.
-##	}
+	#method method
+	{
+		^self.method
+	}
 
-	#method isHandlerContext
+	#method isExceptionHandlerContext
 	{
 		## 10 - STIX_METHOD_PREAMBLE_EXCEPTION in VM.
 		^self.method preambleCode == 10. 
 	}
 
-	#method handles: anException
+	#method findExceptionHandlerBlock: anException
 	{
-		(self isHandlerContext) ifTrue: [^true]. ## TODO: check if xxxx
-		^false
-	}
+		## for this to work, self must be an exception handler context.
+		## For a single on:do: call,
+		##   self class specNumInstVars must return 8.
+		##   basicAt: 8 must be the on: argument.
+		##   basicAt: 9 must be the do: argument
 
-	#method handlerBlock
-	{
-		## for this to work, self must be a handler context.
-		^self basicAt: 9
+		(self isExceptionHandlerContext) ifTrue: [
+			| bound exc |
+			## NOTE: if on:do: has a temporary varible, bound must be adjusted to reflect it.
+			bound := self basicSize - 1.
+			8 to: bound by: 2 do: [ :i | 
+				exc := self basicAt: i.
+				((anException == exc) or: [anException inheritsFrom: exc]) ifTrue: [^self basicAt: (i + 1)].
+			]
+		].
+		^nil.
 	}
 }
 
@@ -237,11 +235,11 @@
 	"------ TODO: -------------------------------------"
 	#method on: anException do: anExceptionBlock
 	{
-		| handlerActive |
+"		| handlerActive |"
 		<exception>
-		handlerActive := true.
+"		handlerActive := true.
 
-"thisContext isHandlerContext dump.
+thisContext isExceptionHandlerContext dump.
 (thisContext basicSize) dump.
 (thisContext basicAt: 8) dump.  ## this should be anException
 (thisContext basicAt: 9) dump.  ## this should be anExceptionBlock
@@ -251,7 +249,12 @@
 		^self value.
 	}
 
-	
+	#method on: exc1 do: blk1 on: exc2 do: blk2
+	{
+		<exception>
+		^self value.
+	}
+
 
 	#method ensure: aBlock
 	{
@@ -274,9 +277,11 @@
 	"------ TODO: -------------------------------------"
 }
 
-#class Exception(Object)
+## TODO: is it better to inherit from Object???
+##       or treat Exception specially like UndefinedObject or Class???
+#class Exception(Apex)
 {
-	#dcl signalContext handlerContext messageText.
+	#dcl signalContext handlerContext handlerBlock messageText.
 
 	#method(#class) signal
 	{
@@ -296,14 +301,8 @@
 	#method signal 
 	{
 		self.signalContext := thisContext.
-
-		self.handlerContext isNil ifTrue: [
-			self.handlerContext := self findHandlerContextStartingFrom: self.signalContext
-		].
-
-		self.handlerContext isNil 
-			ifTrue: [ self notHandled ]
-			ifFalse: [ self handle ].
+		self findHandlerContextStartingFrom: self.signalContext.
+		self handleException.
 	}
 
 	#method signal: text
@@ -315,17 +314,17 @@
 	#method pass
 	{
 		## pass the exception to the outer context
-
-		## TODO: Should i change the signalContex to thisContext???
-		self.handlerContext := self findHandlerContextStartingFrom: (self.handlerContext sender).
-		self.handlerContext isNil 
-			ifTrue: [ self notHandled ]
-			ifFalse: [ self handle ].
+		self.signalContext notNil 
+			ifTrue: [ ## it's signaled earlier
+				## TODO: Should i change the signalContex to thisContext???
+				self findHandlerContextStartingFrom: (self.handlerContext sender).
+				self handleException.
+			]
 	}
 
 	#method return: value
 	{
-		self.handlerContext isNil ifFalse: [
+		self.handlerContext notNil ifTrue: [
 			Processor return: value to: (self.handlerContext sender)
 		]
 	}
@@ -333,32 +332,39 @@
 	#method retry
 	{
 		## TODO: verify if return:to: causes unnecessary stack growth.
-
-		self.handlerContext pc: 0.
-		Processor return: self to: self.handlerContext.
-		##Processor forceContext: self.handlerContext.
+		self.handlerContext notNil 
+			ifTrue: [
+				## TODO: should i reset self.handlerContext and self.signalContext to nil? 
+				self.handlerContext pc: 0.
+				Processor return: self to: self.handlerContext.
+				##Processor forceContext: self.handlerContext.
+			]
 	}
 
 	#method resume
 	{
 		## TODO: verify if return:to: causes unnecessary stack growth.
 		## is this correct???
-		Processor return: self to: (self.signalContext sender).
+		self.signalContext notNil
+			ifTrue: [
+				## TODO: should i reset self.handlerContext and self.signalContext to nil? 
+				Processor return: self to: (self.signalContext sender).
+			]
 	}
 
 	## ####################################################################
 	## ####################################################################
-
-	#method handle
+	#method handleException
 	{
-		Processor return: (self.handlerContext handlerBlock value: self) to: (self.handlerContext sender)
-	}
-
-	#method notHandled
-	{
-'####################### EXCEPTION NOT HANDLED ###############################' dump.
-## TODO: debug the current process???? "
-Processor activeProcess terminate.
+		self.handlerContext notNil
+			ifTrue: [ 
+				Processor return: (self.handlerBlock value: self) to: (self.handlerContext sender)
+			]
+			ifFalse: [ 
+				('### EXCEPTION NOT HANDLED #### ', self class name, ' - ', self messageText) dump.
+				## TODO: debug the current process???? "
+				Processor activeProcess terminate.
+			].
 	}
 
 	#method handlerContext
@@ -374,9 +380,17 @@ Processor activeProcess terminate.
 		| ctx |
 
 		ctx := aContext.
-		[ ctx notNil ]
-			whileTrue: [
-				(ctx handles: self) ifTrue: [ ^ ctx ].
+		[ ctx notNil ] whileTrue: [
+				##(ctx handles: self) ifTrue: [ ^ ctx ].
+				(ctx isExceptionHandlerContext) ifTrue: [
+					| blk |
+					blk := ctx findExceptionHandlerBlock: (self class).
+					(blk notNil) ifTrue: [ 
+						self.handlerBlock := blk. 
+						self.handlerContext := ctx. 
+						^ctx 
+					].
+				].
 				ctx := ctx sender
 			].
 		^nil
@@ -385,22 +399,31 @@ Processor activeProcess terminate.
 
 #class NoSuchMessageException(Exception)
 {
-	#method signal
-	{
-		self signal: 'no such message'.
-	}
 }
 
+#class PrimitiveFailureException(Exception)
+{
+}
 
 #extend Apex
 {
 	#method(#class) primitiveFailed
 	{
 		## TODO: implement this
-		## PrimitiveFailureError signal.
-		self dump.
-		##'primitive failed' dump.
-# TODO: define a specialized exception class for primitive failure and use it.
-		Exception signal: 'PRIMITIVE FAILED...'.
+## experimental backtrace...
+| ctx |
+ctx := thisContext.
+[ctx notNil] whileTrue: [
+	(ctx class == MethodContext) 
+		ifTrue: [ (ctx method owner name, ' - ', ctx method name) dump ].
+	## TODO: include blockcontext???
+	ctx := ctx sender.
+].
+		PrimitiveFailureException signal: 'PRIMITIVE FAILED'.
+	}
+  
+	#method(#class) cannotInstantiate
+	{
+		Exception signal: 'Cannot instantiate'.
 	}
 }

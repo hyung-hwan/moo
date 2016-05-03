@@ -74,7 +74,6 @@
 	#method initialize
 	{
 		"a subclass may override this method."
-		
 		^self.
 	}
 
@@ -123,6 +122,7 @@
 	#method basicAt: anInteger
 	{
 		<primitive: #_basic_at>
+## TODO: chagne it to 'self outOfRangeError' or something.
 		self error: 'out of range'.
 	}
 
@@ -219,7 +219,7 @@
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
-	## #method(#class) primitiveFailed
+	## method(#class) primitiveFailed
 	## {
 	## 	this method will be added after Exception class has been defined.
 	## }
@@ -254,4 +254,8 @@
 		self class error: aString.
 	}
 
+	#method cannotInstantiate
+	{
+		self class cannotInstantiate
+	}
 }

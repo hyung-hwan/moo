@@ -253,7 +253,7 @@
 
 #class(#pointer) CompiledMethod(Object)
 {
-	#dcl owner preamble preamble_data_1 preamble_data_2 ntmprs nargs code source.
+	#dcl owner name preamble preamble_data_1 preamble_data_2 ntmprs nargs code source.
 
 	#method preamble
 	{
@@ -263,6 +263,16 @@
 	#method preambleCode
 	{
 		^self.preamble bitAnd: 16rFF.
+	}
+
+	#method owner
+	{
+		^self.owner
+	}
+
+	#method name
+	{
+		^self.name
 	}
 }
 

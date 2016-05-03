@@ -54,14 +54,20 @@
 
 	#method(#class) test3
 	{
-		| k j |
+		| k j g_ex |
 		j := 20.
 		k := [
 			'>>> TEST3 METHOD >>> ' dump.
 			j dump.
 			(j < 25) ifTrue: [ | t | 
-				t := Exception signal: 'bad exceptinon'.  ## when resume, t should get Exception.
-				t := self raise_exception.  ## when resumed, t should get 'self'
+				t := Exception signal: 'bad exceptinon'.  ## when resumed, t should get Exception, the leftover in the stack...
+				t signal: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'. ## so it should be ok to signal again..
+				##t := self raise_exception.  ## when resumed, t should get 'self'
+
+				##g_ex retry. # You should not do these as the following 3 lines make things very complicated.
+				##g_ex signal.
+				##g_ex pass.
+
 				'RESUMED???' dump. 
 				t dump.
 				j dump.
@@ -69,7 +75,7 @@
 
 			'OOOOOOOOOOOOOOOOOOOOOOO' dump.
 			'JJJJJJJJJJJJJJ' dump. 
-		] on: Exception do: [ :ex | 'Exception occurred' dump. ex messageText dump. j := j + 1. ex resume. ].
+		] on: Exception do: [ :ex | 'Exception occurred' dump. ex messageText dump. j := j + 1. g_ex := ex. ex resume. ].
 
 		k dump.
 		'END OF TEST3' dump.
@@ -152,6 +158,7 @@
 		] on: Exception do: [:ex | 'EXCEPTION ----------' dump. ex messageText dump ].
 	}
 
+	
 	#method(#class) main
 	{
 
@@ -163,14 +170,18 @@
 	##	self test3.
 	##	self test4.
 
-		self test5.
+	##	self test5.
 	##	self test11.
 	##	self test12.
-
 		##100 timesRepeat: ['>>>>> END OF MAIN' dump].
 
+		'@@@@@@@@@@@@@@@@@@@@@@@@@@@@' dump.
 		## the following line(return:to:) must cause primitive failure...
-		##[ Processor return: 10 to: 20. ] on: Exception do: [:ex | ex messageText dump].
+		[ Processor return: 10 to: 20. ] on: Exception do: [:ex | ex messageText dump].
+
+		##[ Processor return: 10 to: 20. ] 
+		##	on: PrimitiveFailureException do: [:ex | 'PRIMITIVE FAILURE CAUGHT HERE HERE HERE' dump]
+		##	on: Exception do: [:ex | ex messageText dump].
 
 		'>>>>> END OF MAIN' dump.
 	}

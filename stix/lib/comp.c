@@ -4133,7 +4133,7 @@ printf ("\treturn_receiver\n");
 
 static int add_compiled_method (stix_t* stix)
 {
-	stix_oop_t name; /* selector */
+	stix_oop_char_t name; /* selector */
 	stix_oop_method_t mth; /* method */
 #if defined(STIX_USE_OBJECT_TRAILER)
 	/* nothing extra */
@@ -4144,9 +4144,9 @@ static int add_compiled_method (stix_t* stix)
 	stix_oow_t i;
 	stix_ooi_t preamble_code, preamble_index;
 
-	name = stix_makesymbol (stix, stix->c->mth.name.ptr, stix->c->mth.name.len);
+	name = (stix_oop_char_t)stix_makesymbol (stix, stix->c->mth.name.ptr, stix->c->mth.name.len);
 	if (!name) return -1;
-	stix_pushtmp (stix, &name); tmp_count++;
+	stix_pushtmp (stix, (stix_oop_t*)&name); tmp_count++;
 
 	/* The variadic data part passed to stix_instantiate() is not GC-safe */
 #if defined(STIX_USE_OBJECT_TRAILER)
@@ -4295,6 +4295,7 @@ static int add_compiled_method (stix_t* stix)
 	STIX_ASSERT (STIX_OOI_IN_PREAMBLE_INDEX_RANGE(preamble_index));
 
 	mth->owner = stix->c->cls.self_oop;
+	mth->name = name;
 	mth->preamble = STIX_SMOOI_TO_OOP(STIX_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index));
 	mth->preamble_data[0] = STIX_SMOOI_TO_OOP(0);
 	mth->preamble_data[1] = STIX_SMOOI_TO_OOP(0);
@@ -4314,7 +4315,7 @@ need to write code to collect string.
 
 	stix_poptmps (stix, tmp_count); tmp_count = 0;
 
-	if (!stix_putatdic(stix, stix->c->cls.mthdic_oop[stix->c->mth.type], name, (stix_oop_t)mth)) goto oops;
+	if (!stix_putatdic(stix, stix->c->cls.mthdic_oop[stix->c->mth.type], (stix_oop_t)name, (stix_oop_t)mth)) goto oops;
 	return 0;
 
 oops:
