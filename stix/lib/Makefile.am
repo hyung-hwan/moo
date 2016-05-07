@@ -95,9 +95,9 @@ install-data-hook:
 	@echo "#define _STIX_CFG_H_" >> "$(DESTDIR)$(pkgincludedir)/stix-cfg.h"
 	@$(EGREP) "#define[ ]+STIX_" "$(abs_builddir)/stix-cfg.h" >> "$(DESTDIR)$(pkgincludedir)/stix-cfg.h" 
 	@echo "#endif" >> "$(DESTDIR)$(pkgincludedir)/stix-cfg.h"
-	@$(RM) "$(DESTDIR)$(pkgincludedir)/stix-cfg.h.in"
+	@rm -f "$(DESTDIR)$(pkgincludedir)/stix-cfg.h.in"
 	@$(SED) 's|/\*#define STIX_HAVE_CFG_H\*/|#define STIX_HAVE_CFG_H|' "$(srcdir)/stix-cmn.h" > "$(DESTDIR)$(pkgincludedir)/stix-cmn.h"
 
 uninstall-hook:
-	@$(RM) "$(DESTDIR)$(pkgincludedir)/stix-cfg.h"
+	@rm -f "$(DESTDIR)$(pkgincludedir)/stix-cfg.h"
 

@@ -7,4 +7,4 @@ SUBDIRS = libltdl lib
 DIST_SUBDIRS = $(SUBDIRS) 
 
 distclean-local:
-	$(RM) -r $(top_srcdir)/autom4te.cache
+	@rm -rf $(top_srcdir)/autom4te.cache

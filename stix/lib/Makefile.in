@@ -260,7 +260,6 @@ DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
-ECHO = @ECHO@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -318,8 +317,6 @@ PACKAGE_VERSION_PATCH = @PACKAGE_VERSION_PATCH@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 QUADMATH_LIBS = @QUADMATH_LIBS@
 RANLIB = @RANLIB@
-RM = @RM@
-RMDIR = @RMDIR@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -338,7 +335,6 @@ STIX_SIZEOF_SHORT = @STIX_SIZEOF_SHORT@
 STIX_SIZEOF_VOID_P = @STIX_SIZEOF_VOID_P@
 STIX_SIZEOF_WCHAR_T = @STIX_SIZEOF_WCHAR_T@
 STRIP = @STRIP@
-TRUE = @TRUE@
 UNICOWS_LIBS = @UNICOWS_LIBS@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
@@ -1070,11 +1066,11 @@ install-data-hook:
 	@echo "#define _STIX_CFG_H_" >> "$(DESTDIR)$(pkgincludedir)/stix-cfg.h"
 	@$(EGREP) "#define[ ]+STIX_" "$(abs_builddir)/stix-cfg.h" >> "$(DESTDIR)$(pkgincludedir)/stix-cfg.h" 
 	@echo "#endif" >> "$(DESTDIR)$(pkgincludedir)/stix-cfg.h"
-	@$(RM) "$(DESTDIR)$(pkgincludedir)/stix-cfg.h.in"
+	@rm -f "$(DESTDIR)$(pkgincludedir)/stix-cfg.h.in"
 	@$(SED) 's|/\*#define STIX_HAVE_CFG_H\*/|#define STIX_HAVE_CFG_H|' "$(srcdir)/stix-cmn.h" > "$(DESTDIR)$(pkgincludedir)/stix-cmn.h"
 
 uninstall-hook:
-	@$(RM) "$(DESTDIR)$(pkgincludedir)/stix-cfg.h"
+	@rm -f "$(DESTDIR)$(pkgincludedir)/stix-cfg.h"
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

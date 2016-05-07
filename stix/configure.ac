@@ -33,15 +33,7 @@ dnl determine some key programs
 AC_PROG_INSTALL
 AC_PROG_EGREP
 AC_PROG_LN_S
-
-dnl check other tools
-AC_CHECK_TOOL(RM, rm)
-AC_CHECK_TOOL(RMDIR, rmdir)
-AC_CHECK_TOOL(TRUE, true)
-AC_CHECK_TOOL(ECHO, echo)
-
-dnl avoid "'/bin/rm: cannot remove `libtoolT': No such file or directory"
-RM="$RM -f"
+AC_PROG_SED
 
 dnl 'recursive' type seems to have problems in setting LT_CONFIG_H
 dnl so i use the classic 'subproject' type here
