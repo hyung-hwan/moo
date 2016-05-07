@@ -1,9 +1,5 @@
 dnl AC_PREREQ([2.67])
 
-dnl Make sure you change the version information
-dnl in include/stix/conf_*.h whenever you change the version 
-dnl here. Those files don't depend on autoconf, thus requiring
-dnl manual change.
 AC_INIT([stix],[0.6.0],[Chung, Hyung-Hwan (hyunghwan.chung@gmail.com)],[],[http://code.abiyo.net/@stix])
 
 AC_CONFIG_HEADER([lib/stix-cfg.h])
@@ -360,12 +356,6 @@ AC_DEFINE_UNQUOTED(STIX_SIZEOF_OFF64_T, ${ac_cv_sizeof_off64_t}, [sizeof(off64_t
 
 AC_DEFINE_UNQUOTED(STIX_SIZEOF_MBSTATE_T, ${ac_cv_sizeof_mbstate_t}, [sizeof(mbstate_t)])
 AC_DEFINE_UNQUOTED(STIX_MBLEN_MAX, ${ax_cv_numvalof_MB_LEN_MAX}, [MB_LEN_MAX])
-
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_STRUCT_SOCKADDR_IN, ${ac_cv_sizeof_struct_sockaddr_in}, [sizeof(struct sockaddr_in)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_STRUCT_SOCKADDR_IN6, ${ac_cv_sizeof_struct_sockaddr_in6}, [sizeof(struct sockaddr_in6)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_STRUCT_SOCKADDR_UN, ${ac_cv_sizeof_struct_sockaddr_un}, [sizeof(struct sockaddr_un)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_SOCKLEN_T, ${ac_cv_sizeof_socklen_t}, [sizeof(socklen_t)])
-
 
 stix_package_version_major="`echo ${PACKAGE_VERSION} | cut -d. -f1`"
 stix_package_version_minor="`echo ${PACKAGE_VERSION} | cut -d. -f2`"

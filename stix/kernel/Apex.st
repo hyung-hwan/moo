@@ -201,7 +201,45 @@
 		^true.
 	}
 
-	
+	## -------------------------------------------------------
+	## -------------------------------------------------------
+
+	#method(#class) inheritsFrom: aClass
+	{
+		| c |
+		c := self superclass.
+		[c notNil] whileTrue: [
+			[ c == aClass ] ifTrue: [^true].
+			c := c superclass.
+		].
+		^false
+	}
+
+	#method(#class) isMemberOf: aClass
+	{
+		## a class object is an instance of Class
+		## but Class inherits from Apex. On the other hand,
+		## most of ordinary classes are under Object again under Apex.
+		## special consideration is required here.
+		^aClass == Class
+	}
+
+	#method(#class) isKindOf: aClass
+	{
+		^(self isMemberOf: aClass) or: [self inheritsFrom: aClass].
+	}
+
+	#method isMemberOf: aClass
+	{
+		^self class == aClass
+	}
+
+	#method isKindOf: aClass
+	{
+		^(self isMemberOf: aClass) or: [self class inheritsFrom: aClass].
+	}
+
+
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 	"

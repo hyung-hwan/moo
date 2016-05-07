@@ -3717,6 +3717,7 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 	saved_kwsel_loc = stix->c->tok.loc;
 	saved_kwsel_len = stix->c->mth.kwsels.len;
 
+/* TODO: optimization for ifTrue: ifFalse: whileTrue: whileFalse .. */
 	do 
 	{
 		kw = stix->c->tok.name;

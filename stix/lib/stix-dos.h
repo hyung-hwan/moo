@@ -56,11 +56,6 @@
 #	define STIX_SIZEOF_MBSTATE_T   STIX_SIZEOF_LONG
 #	define STIX_MBLEN_MAX          8
 
-	/* these two have only to be large enough */
-#	define STIX_SIZEOF_STRUCT_SOCKADDR_IN 32
-#	define STIX_SIZEOF_STRUCT_SOCKADDR_IN6 64
-#	define STIX_SIZEOF_SOCKLEN_T 4
-
 #elif defined(__WATCOMC__) && !defined(__386__)
 #	define STIX_SIZEOF_CHAR        1
 #	define STIX_SIZEOF_SHORT       2
@@ -85,11 +80,6 @@
 
 #	define STIX_SIZEOF_MBSTATE_T   STIX_SIZEOF_LONG
 #	define STIX_MBLEN_MAX          8
-
-	/* these two have only to be large enough */
-#	define STIX_SIZEOF_STRUCT_SOCKADDR_IN 32
-#	define STIX_SIZEOF_STRUCT_SOCKADDR_IN6 64
-#	define STIX_SIZEOF_SOCKLEN_T 4
 
 #elif defined(__TURBOC__) 
 /* TODO: be more version specific wchar_t may be available in newer BCC */
@@ -117,11 +107,6 @@
 #	define STIX_SIZEOF_MBSTATE_T   STIX_SIZEOF_LONG
 #	define STIX_MBLEN_MAX          8
 
-	/* these two have only to be large enough */
-#	define STIX_SIZEOF_STRUCT_SOCKADDR_IN 32
-#	define STIX_SIZEOF_STRUCT_SOCKADDR_IN6 64
-#	define STIX_SIZEOF_SOCKLEN_T 4
-
 #elif defined(__ZTC__) && defined(DOS386)
 
 	/* Zortech in DOSX 386 mode (ztc -mx) */
@@ -148,11 +133,6 @@
 
 #	define STIX_SIZEOF_MBSTATE_T   STIX_SIZEOF_LONG
 #	define STIX_MBLEN_MAX          8
-
-	/* these two have only to be large enough */
-#	define STIX_SIZEOF_STRUCT_SOCKADDR_IN 32
-#	define STIX_SIZEOF_STRUCT_SOCKADDR_IN6 64
-#	define STIX_SIZEOF_SOCKLEN_T 4
 
 #else
 #	error Define the size of various data types.

@@ -5,6 +5,8 @@
 #include 'Boolean.st'.
 
 
+#########################################################################################
+
 #class Error(Object)
 {
 	#method(#class) signal: aString
@@ -350,3 +352,7 @@ f isNil ifTrue: [ self error: 'No such function' ].
 }
 
 
+
+#########################################################################################
+
+## #include 'Console.st'

@@ -56,7 +56,7 @@
 		^self.method preambleCode == 10. 
 	}
 
-	#method findExceptionHandlerBlock: anException
+	#method findExceptionHandlerBlock: anExceptionClass
 	{
 		## for this to work, self must be an exception handler context.
 		## For a single on:do: call,
@@ -70,7 +70,7 @@
 			bound := self basicSize - 1.
 			8 to: bound by: 2 do: [ :i | 
 				exc := self basicAt: i.
-				((anException == exc) or: [anException inheritsFrom: exc]) ifTrue: [^self basicAt: (i + 1)].
+				((anExceptionClass == exc) or: [anExceptionClass inheritsFrom: exc]) ifTrue: [^self basicAt: (i + 1)].
 			]
 		].
 		^nil.
@@ -415,13 +415,13 @@ thisContext isExceptionHandlerContext dump.
 ctx := thisContext.
 [ctx notNil] whileTrue: [
 	(ctx class == MethodContext) 
-		ifTrue: [ (ctx method owner name, ' - ', ctx method name) dump ].
+		ifTrue: [ (ctx method owner name, '>>', ctx method name) dump ].
 	## TODO: include blockcontext???
 	ctx := ctx sender.
 ].
 		PrimitiveFailureException signal: 'PRIMITIVE FAILED'.
 	}
-  
+
 	#method(#class) cannotInstantiate
 	{
 		Exception signal: 'Cannot instantiate'.

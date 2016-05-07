@@ -14,6 +14,11 @@
 		^self.
 	}
 
+
+	## ########################################################################
+	## most of the following methods can actuall become class methods of Apex.
+	## ########################################################################
+
 	#method name
 	{
 		^self.name
@@ -31,7 +36,7 @@
 		^self.spec bitShift: -7
 	}
 
-	#method inheritsFrom: aSuperclass
+	"#method inheritsFrom: aSuperclass
 	{
 		| c |
 		c := self superclass.
@@ -40,5 +45,5 @@
 			c := c superclass.
 		].
 		^false
-	}
+	}"
 }

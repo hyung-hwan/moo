@@ -19835,28 +19835,6 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-
-cat >>confdefs.h <<_ACEOF
-#define STIX_SIZEOF_STRUCT_SOCKADDR_IN ${ac_cv_sizeof_struct_sockaddr_in}
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define STIX_SIZEOF_STRUCT_SOCKADDR_IN6 ${ac_cv_sizeof_struct_sockaddr_in6}
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define STIX_SIZEOF_STRUCT_SOCKADDR_UN ${ac_cv_sizeof_struct_sockaddr_un}
-_ACEOF
-
-
-cat >>confdefs.h <<_ACEOF
-#define STIX_SIZEOF_SOCKLEN_T ${ac_cv_sizeof_socklen_t}
-_ACEOF
-
-
-
 stix_package_version_major="`echo ${PACKAGE_VERSION} | cut -d. -f1`"
 stix_package_version_minor="`echo ${PACKAGE_VERSION} | cut -d. -f2`"
 stix_package_version_patch="`echo ${PACKAGE_VERSION} | cut -d. -f3`"

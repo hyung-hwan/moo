@@ -1653,51 +1653,6 @@ printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 	return 1;
 }
 
-static int prim_block_on_do (stix_t* stix, stix_ooi_t nargs)
-{
-	int x;
-	stix_oop_oop_t exarr;
-	stix_oop_context_t blkctx;
-	stix_ooi_t i, j;
-
-	STIX_ASSERT (nargs >= 2);
-
-	if ((stix_oow_t)nargs & 1) return 0; /* it expects even number of arguments */
-
-	//for (i = 0; i < nargs; i += 2)
-	//{
-	//	exblk = ACTIVE_STACK_GET(stix, stix->sp);
-	//	excls = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	//}
-
-	x = __block_value (stix, nargs, 0, 0, &blkctx);
-	if (x <= 0) return x; /* hard failure and soft failure */
-
-	/* TOOD: implement zero-cost exception handling. 
-	 *       this implementation requires allocation of a new array
-	 *       every time on:do: is executed */
-
-	stix_pushtmp (stix, (stix_oop_t*)&blkctx);
-	exarr = (stix_oop_oop_t)stix_instantiate (stix, stix->_array, STIX_NULL, nargs);
-	stix_poptmp (stix);
-	if (!exarr) return -1; /* hard failure */ /* TOOD: can't this be treated as a soft failure? */
-
-	for (i = nargs, j = 0; i > 0;)
-	{
-		--i;
-		exarr->slot[j++] = ACTIVE_STACK_GET(stix, stix->sp - i);
-		--i;
-		exarr->slot[j++] = ACTIVE_STACK_GET(stix, stix->sp - i);
-	}
-
-
-#if defined(STIX_DEBUG_EXEC_001)
-printf ("<<ENTERING BLOCK BY ON:DO:>> SP=%ld\n", (long int)stix->sp);
-#endif
-	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)blkctx);
-	return 1;
-}
-
 static int prim_process_resume (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
@@ -2595,15 +2550,14 @@ static prim_t primitives[] =
 	{   2,  2,  prim_basic_at_put,         "_basic_at_put"        },
 
 
-	{   0, MAX_NARGS,  prim_block_value,          "_block_value"         },
-	{   0, MAX_NARGS,  prim_block_new_process,    "_block_new_process"   },
-	{   2, MAX_NARGS,  prim_block_on_do,          "_block_on_do"         },
+	{   0, MAX_NARGS,  prim_block_value,               "_block_value"         },
+	{   0, MAX_NARGS,  prim_block_new_process,         "_block_new_process"   },
 
-	{   0,  0,  prim_process_resume,       "_process_resume"      },
-	{   0,  0,  prim_process_terminate,    "_process_terminate"   },
-	{   0,  0,  prim_process_yield,        "_process_yield"       },
-	{   0,  0,  prim_semaphore_signal,     "_semaphore_signal"    },
-	{   0,  0,  prim_semaphore_wait,       "_semaphore_wait"      },
+	{   0,  0,  prim_process_resume,                   "_process_resume"      },
+	{   0,  0,  prim_process_terminate,                "_process_terminate"   },
+	{   0,  0,  prim_process_yield,                    "_process_yield"       },
+	{   0,  0,  prim_semaphore_signal,                 "_semaphore_signal"    },
+	{   0,  0,  prim_semaphore_wait,                   "_semaphore_wait"      },
 
 	{   1,  1,  prim_processor_schedule,               "_processor_schedule"            },
 	{   2,  3,  prim_processor_add_timed_semaphore,    "_processor_add_timed_semaphore" },

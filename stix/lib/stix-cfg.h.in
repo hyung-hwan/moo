@@ -480,18 +480,6 @@
 /* sizeof(short) */
 #undef STIX_SIZEOF_SHORT
 
-/* sizeof(socklen_t) */
-#undef STIX_SIZEOF_SOCKLEN_T
-
-/* sizeof(struct sockaddr_in) */
-#undef STIX_SIZEOF_STRUCT_SOCKADDR_IN
-
-/* sizeof(struct sockaddr_in6) */
-#undef STIX_SIZEOF_STRUCT_SOCKADDR_IN6
-
-/* sizeof(struct sockaddr_un) */
-#undef STIX_SIZEOF_STRUCT_SOCKADDR_UN
-
 /* sizeof(void*) */
 #undef STIX_SIZEOF_VOID_P
 

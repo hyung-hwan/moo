@@ -171,13 +171,28 @@
 	##	self test4.
 
 	##	self test5.
-	##	self test11.
+		self test11.
 	##	self test12.
 		##100 timesRepeat: ['>>>>> END OF MAIN' dump].
 
+
+"(Exception isKindOf: Apex) dump.
+(Exception isMemberOf: Apex) dump.
+(Exception isMemberOf: Class) dump.
+(1 isMemberOf: SmallInteger) dump.
+(1 isKindOf: Integer) dump.
+(1 isKindOf: Class) dump.
+(1 isKindOf: Apex) dump.
+(Exception isKindOf: Class) dump.
+(Exception isKindOf: Apex) dump.
+(Exception isKindOf: Object) dump.
+(Exception isKindOf: (Apex new)) dump.
+(Exception isKindOf: (Object new)) dump."
+
+
 		'@@@@@@@@@@@@@@@@@@@@@@@@@@@@' dump.
 		## the following line(return:to:) must cause primitive failure...
-		[ Processor return: 10 to: 20. ] on: Exception do: [:ex | ex messageText dump].
+		##[ Processor return: 10 to: 20. ] on: Exception do: [:ex | ex messageText dump].
 
 		##[ Processor return: 10 to: 20. ] 
 		##	on: PrimitiveFailureException do: [:ex | 'PRIMITIVE FAILURE CAUGHT HERE HERE HERE' dump]
