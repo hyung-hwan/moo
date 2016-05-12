@@ -370,7 +370,7 @@ static char* syntax_error_msg[] =
 	"literal expected"
 };
 
-stix_ooch_t str_stix[] = { 'S', 't', 'i', 'x' };
+stix_ooch_t str_system[] = { 'S', 'y', 's', 't', 'e', 'm' };
 stix_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' };
 stix_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
 
@@ -593,8 +593,8 @@ printf ("%p\n", a);
 		}
 	}
 
-/*	objname.ptr = str_stix;
-	objname.len = 4;*/
+/*	objname.ptr = str_system;
+	objname.len = 6;*/
 	objname.ptr = str_my_object;
 	objname.len = 8;
 	mthname.ptr = str_main;

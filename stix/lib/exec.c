@@ -36,6 +36,10 @@
 #	include <sys/time.h>
 #endif
 
+#if defined(_WIN32)
+#	include <windows.h>
+#endif
+
 #define PROC_STATE_RUNNING 3
 #define PROC_STATE_WAITING 2
 #define PROC_STATE_RUNNABLE 1
@@ -163,7 +167,27 @@
 #endif
 
 
-static STIX_INLINE void vm_gettime (stix_ntime_t* now)
+/* ------------------------------------------------------------------------- */
+
+static void vm_startup (stix_t* stix)
+{
+#if defined(_WIN32)
+	stix->waitable_timer = CreateWaitableTimer(STIX_NULL, TRUE, STIX_NULL);
+#endif
+}
+
+static void vm_cleanup (stix_t* stix)
+{
+#if defined(_WIN32)
+	if (stix->waitable_timer)
+	{
+		CloseHandle (stix->waitable_timer);
+		stix->waitable_timer = STIX_NULL;
+	}	
+#endif
+}
+
+static STIX_INLINE void vm_gettime (stix_t* stix, stix_ntime_t* now)
 {
 #if defined(HAVE_CLOCK_GETTIME)
 	struct timespec ts;
@@ -180,13 +204,32 @@ static STIX_INLINE void vm_gettime (stix_ntime_t* now)
 #endif
 }
 
-static STIX_INLINE void vm_sleep (const stix_ntime_t* dur)
+static STIX_INLINE void vm_sleep (stix_t* stix, const stix_ntime_t* dur)
 {
+#if defined(_WIN32)
+	if (stix->waitable_timer)
+	{
+		LARGE_INTEGER li;
+		li.QuadPart = -STIX_SECNSEC_TO_NSEC(dur->sec, dur->nsec);
+		if(SetWaitableTimer(timer, &li, 0, STIX_NULL, STIX_NULL, FALSE) == FALSE) goto normal_sleep;
+		WaitForSingleObject(timer, INFINITE);
+	}
+	else
+	{
+	normal_sleep:
+		/* fallback to normal Sleep() */
+		Sleep (STIX_SECNSEC_TO_MSEC(dur->sec,dur->nsec));
+	}
+
+#else
 	struct timespec ts;
 	ts.tv_sec = dur->sec;
 	ts.tv_nsec = dur->nsec;
 	nanosleep (&ts, STIX_NULL);
+#endif
 }
+
+/* ------------------------------------------------------------------------- */
 
 static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 {
@@ -1782,7 +1825,7 @@ static int prim_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
  * 
  * this code assumes that the monotonic clock returns a small value
  * that can fit into a small integer, even after some addtions... */
-	vm_gettime (&now);
+	vm_gettime (stix, &now);
 	STIX_ADDNTIMESNS (&ft, &now, STIX_OOP_TO_SMOOI(sec), STIX_OOP_TO_SMOOI(nsec));
 	if (ft.sec < 0 || ft.sec > STIX_SMOOI_MAX) 
 	{
@@ -2961,6 +3004,7 @@ int stix_execute (stix_t* stix)
 
 	STIX_ASSERT (stix->active_context != STIX_NULL);
 
+	vm_startup (stix);
 	stix->proc_switched = 0;
 
 	while (1)
@@ -2968,7 +3012,7 @@ int stix_execute (stix_t* stix)
 		if (stix->sem_heap_count > 0)
 		{
 			stix_ntime_t ft, now;
-			vm_gettime (&now);
+			vm_gettime (stix, &now);
 
 			do
 			{
@@ -3012,8 +3056,8 @@ int stix_execute (stix_t* stix)
 				else if (stix->processor->active == stix->nil_process)
 				{
 					STIX_SUBNTIME (&ft, &ft, (stix_ntime_t*)&now);
-					vm_sleep (&ft); /* TODO: change this to i/o multiplexer??? */
-					vm_gettime (&now);
+					vm_sleep (stix, &ft); /* TODO: change this to i/o multiplexer??? */
+					vm_gettime (stix, &now);
 				}
 				else 
 				{
@@ -3983,6 +4027,7 @@ printf ("UNKNOWN BYTE CODE ENCOUNTERED %x\n", (int)bcode);
 
 done:
 
+	vm_cleanup (stix);
 #if defined(STIX_PROFILE_EXEC)
 	printf ("TOTAL_INST_COUTNER = %lu\n", (unsigned long int)inst_counter);
 #endif

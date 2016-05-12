@@ -169,11 +169,6 @@
 #	define STIX_HAVE_INT64_T
 	typedef unsigned __int64_t  stix_uint64_t;
 	typedef signed __int64_t    stix_int64_t;
-#elif defined(_WIN64) || defined(_WIN32)
-#	define STIX_HAVE_UINT64_T
-#	define STIX_HAVE_INT64_T
-	typedef unsigned __int64  stix_uint64_t;
-	typedef signed __int64    stix_int64_t;
 #else
 	/* no 64-bit integer */
 #endif
@@ -332,10 +327,13 @@ typedef stix_ucs_t               stix_oocs_t;
 #define STIX_NSECS_PER_SEC  (STIX_NSECS_PER_USEC * STIX_USECS_PER_MSEC * STIX_MSECS_PER_SEC)
 
 #define STIX_SECNSEC_TO_MSEC(sec,nsec) \
-        (((qse_long_t)(sec) * STIX_MSECS_PER_SEC) + ((qse_long_t)(nsec) / STIX_NSECS_PER_MSEC))
+        (((stix_intptr_t)(sec) * STIX_MSECS_PER_SEC) + ((stix_intptr_t)(nsec) / STIX_NSECS_PER_MSEC))
 
 #define STIX_SECNSEC_TO_USEC(sec,nsec) \
-        (((qse_long_t)(sec) * STIX_USECS_PER_SEC) + ((qse_long_t)(nsec) / STIX_NSECS_PER_USEC))
+        (((stix_intptr_t)(sec) * STIX_USECS_PER_SEC) + ((stix_intptr_t)(nsec) / STIX_NSECS_PER_USEC))
+
+#define STIX_SECNSEC_TO_NSEC(sec,nsec) \
+        (((stix_intptr_t)(sec) * STIX_NSECS_PER_SEC) + (stix_intptr_t)(nsec))
 
 #define STIX_SEC_TO_MSEC(sec) ((sec) * STIX_MSECS_PER_SEC)
 #define STIX_MSEC_TO_SEC(sec) ((sec) / STIX_MSECS_PER_SEC)
@@ -543,7 +541,11 @@ struct stix_cmgr_t
  * MACROS THAT CHANGES THE BEHAVIORS OF THE C COMPILER/LINKER
  * =========================================================================*/
 
-#if defined(_WIN32) || (defined(__WATCOMC__) && !defined(__WINDOWS_386__))
+#if defined(__BORLANDC__) && (__BORLANDC__ < 0x500)
+#	define STIX_IMPORT
+#	define STIX_EXPORT
+#	define STIX_PRIVATE
+#elif defined(_WIN32) || (defined(__WATCOMC__) && !defined(__WINDOWS_386__))
 #	define STIX_IMPORT __declspec(dllimport)
 #	define STIX_EXPORT __declspec(dllexport)
 #	define STIX_PRIVATE 

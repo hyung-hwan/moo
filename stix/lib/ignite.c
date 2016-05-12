@@ -258,7 +258,7 @@ static int ignite_3 (stix_t* stix)
 		{ 20, { 'L','a','r','g','e','N','e','g','a','t','i','v','e','I','n','t','e','g','e','r' } }
 	};
 
-	static stix_ooch_t str_stix[] = { 'S','t','i','x' };
+	static stix_ooch_t str_system[] = { 'S','y','s','t','e', 'm' };
 	static stix_ooch_t str_processor[] = { 'P', 'r', 'o', 'c', 'e', 's', 's', 'o', 'r' };
 
 	stix_oow_t i;
@@ -280,7 +280,7 @@ static int ignite_3 (stix_t* stix)
 	}
 
 	/* Make the system dictionary available as the global name 'Stix' */
-	sym = stix_makesymbol (stix, str_stix, 4);
+	sym = stix_makesymbol (stix, str_system, 6);
 	if (!sym) return -1;
 	if (!stix_putatsysdic(stix, sym, (stix_oop_t)stix->sysdic)) return -1;
 

@@ -39,7 +39,6 @@ void* stix_allocbytes (stix_t* stix, stix_oow_t size)
 	{
 		stix_gc (stix);
 		ptr = stix_allocheapmem (stix, stix->curheap, size);
-
 /* TODO: grow heap if ptr is still null. */
 	}
 

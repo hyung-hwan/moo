@@ -26,14 +26,13 @@
 
 #include "stix-prv.h"
 
-#define TOKEN_NAME_ALIGN     256
-#define CLASS_BUFFER_ALIGN   8 /* 256 */ /*TODO: change 8 to 256 */
-#define LITERAL_BUFFER_ALIGN 8 /* 256 */
-#define CODE_BUFFER_ALIGN    8 /* 256 */
-#define BALIT_BUFFER_ALIGN   8 /* 256 */
-#define ARLIT_BUFFER_ALIGN   8 /* 256 */
-#define BLK_TMPRCNT_BUFFER_ALIGN 8
-#define POOLDIC_OOP_BUFFER_ALIGN 8
+#define CLASS_BUFFER_ALIGN       64
+#define LITERAL_BUFFER_ALIGN     64
+#define CODE_BUFFER_ALIGN        64
+#define BALIT_BUFFER_ALIGN       64
+#define ARLIT_BUFFER_ALIGN       64
+#define BLK_TMPRCNT_BUFFER_ALIGN 32
+#define POOLDIC_OOP_BUFFER_ALIGN 32
 
 /* initial method dictionary size */
 #define INSTANCE_METHOD_DICTIONARY_SIZE 256 /* TODO: choose the right size */
@@ -643,7 +642,7 @@ static int get_char (stix_t* stix)
 	{
 		/* if the previous charater was a newline,
 		 * increment the line counter and reset column to 1.
-		 * incrementing it line number here instead of
+		 * incrementing the line number here instead of
 		 * updating inp->lxc causes the line number for
 		 * TOK_EOF to be the same line as the lxc newline. */
 		stix->c->curinp->line++;

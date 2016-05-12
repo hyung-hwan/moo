@@ -22,6 +22,11 @@
 		^self.ip
 	}
 
+	#method pcplus1
+	{
+		^self.ip + 1
+	}
+
 	#method pc: anInteger
 	{
 		self.ip := anInteger.
@@ -107,20 +112,27 @@
 		<primitive: #_block_value>
 		self primitiveFailed.
 	}
-
 	#method value: a 
 	{
 		<primitive: #_block_value>
 		self primitiveFailed.
 	}
-
 	#method value: a value: b
 	{
 		<primitive: #_block_value>
 		self primitiveFailed.
 	}
-
 	#method value: a value: b value: c
+	{
+		<primitive: #_block_value>
+		self primitiveFailed.
+	}
+	#method value: a value: b value: c value: d
+	{
+		<primitive: #_block_value>
+		self primitiveFailed.
+	}
+	#method value: a value: b value: c value: d value: e
 	{
 		<primitive: #_block_value>
 		self primitiveFailed.
@@ -143,88 +155,128 @@
 
 	#method whileTrue: aBlock
 	{
-## http://stackoverflow.com/questions/2500483/is-there-a-way-in-a-message-only-language-to-define-a-whiletrue-message-without
+		## --------------------------------------------------
+		## Naive implementation
+		## --------------------------------------------------
+		## (self value) ifFalse: [^nil].
+		## aBlock value. 
+		## self whileTrue: aBlock.
+		## --------------------------------------------------
 
-## ----------------------------------------------------------------------------
+		## --------------------------------------------------
+		## If VM is built without STIX_USE_PROCSTK
+		## --------------------------------------------------
+		## | pc sp |
+		## sp := thisContext sp.
+		## pc := thisContext pcplus1.
+		## self value ifFalse: [ ^nil "^self" ].
+		## aBlock value.
+		## thisContext pc: pc sp: sp.
+		## --------------------------------------------------
 
-##		^(self value) ifTrue: [aBlock value. self whileTrue: aBlock].
-
-## ----------------------------------------------------------------------------
-
-		## less block context before whileTrue: is recursively sent.
-		## whileTrue: is sent in a method context.
-		(self value) ifFalse: [^nil].
-		aBlock value. 
-		self whileTrue: aBlock.
-
-## ----------------------------------------------------------------------------
-
-## ----------------------------------------------------------------------------
-"		| pc sp xsp |
-
-		sp := thisContext sp.
-		sp := sp - 1. ## decrement sp by 1 becuase thisContext pushed above affects the sp method
-		pc := thisContext pc.
-		self value ifFalse: [ ^nil "^self" ].
+		## --------------------------------------------------
+		## If VM is built with STIX_USE_PROCSTK
+		## --------------------------------------------------
+		| pc |
+		pc := thisContext pcplus1.
+		(self value) ifFalse: [ ^nil "^self" ].
 		aBlock value.
-		##thisContext pc: pc - 3 sp: sp.
-		##thisContext pc: pc + 2 sp: sp.   
-		thisContext pc: pc + 1 sp: sp.   
-		## this +2 or - 3 above is dependent on the byte code instruction size used for 'store'  
-		## +2 to skip STORE_INTO_TEMP(pc) and POP_STACKTOP.
-		## TODO: make it independent of the byte code size 
-"
-## ----------------------------------------------------------------------------
-
-##        #<label>:
-##		thisContext pc: #<label> sp: sp.
-##
-##		| pc |
-##		pc := thisContext pc.
-##		^self value ifTrue: [aBlock value. thisContext pc: pc]
-
-## ----------------------------------------------------------------------------
-
-##		self value ifTrue: [ aBlock value. thisContext restart. ].
+		thisContext pc: pc.
+		## --------------------------------------------------
 	}
 
 	#method whileTrue
 	{
-		(self value) ifFalse: [^nil].
-		self whileTrue.
+		## (self value) ifFalse: [^nil].
+		## self whileTrue.
+
+		## --------------------------------------------------
+		## If VM is built with STIX_USE_PROCSTK
+		## --------------------------------------------------
+		| pc |
+		pc := thisContext pcplus1.
+		(self value) ifFalse: [ ^nil "^self" ].
+		thisContext pc: pc.
+		## --------------------------------------------------
 	}
 
 	#method whileFalse: aBlock
 	{
-		(self value) ifTrue: [^nil].
-		aBlock value. 
-		self whileFalse: aBlock.
+		## --------------------------------------------------
+		## Naive implementation
+		## --------------------------------------------------
+		## (self value) ifTrue: [^nil].
+		## aBlock value. 
+		## self whileFalse: aBlock.
+		## --------------------------------------------------
+
+		## --------------------------------------------------
+		## If VM is built without STIX_USE_PROCSTK
+		## --------------------------------------------------
+		## | pc sp |
+		## sp := thisContext sp.
+		## pc := thisContext pcplus1.
+		## self value ifTrue: [ ^nil "^self" ].
+		## aBlock value.
+		## thisContext pc: pc sp: sp.
+		## --------------------------------------------------
+
+		## --------------------------------------------------
+		## If VM is built with STIX_USE_PROCSTK
+		## --------------------------------------------------
+		##  The assignment to 'pc' uses the POP_INTO_TEMPVAR_1.
+		##  It pops a value off the stack top, stores it to the second
+		##  temporary variable(aBlock is the first temporary variable).
+		##  It is a single byte instruction. 'pc' returned by 
+		##  'thisContext pcplus1'' should point to the instruction after
+		##  the POP_INTO_TEMPVAR_0 instruction.
+		##
+		##  It would need the increment of 2 if the pair of 
+		##  STORE_INTO_TEMPVAR_1 and POP_STACKTOP were used. 
+		##  This implementation is subject to the instructions chosen
+		##  by the compiler.
+		##
+		| pc |
+		pc := thisContext pcplus1.
+		(self value) ifTrue: [ ^nil "^self" ].
+		aBlock value.
+		thisContext pc: pc.
+		## --------------------------------------------------
 	}
 
 	#method whileFalse
 	{
-		(self value) ifTrue: [^nil].
-		self whileFalse.
+		## (self value) ifTrue: [^nil].
+		## self whileFalse.
+
+		## --------------------------------------------------
+		## If VM is built with STIX_USE_PROCSTK
+		## --------------------------------------------------
+		| pc |
+		pc := thisContext pcplus1.
+		(self value) ifTrue: [ ^nil "^self" ].
+		thisContext pc: pc.
+		## --------------------------------------------------
 	}
 
 	#method pc
 	{
-		^ip
+		^self.ip
 	}
 
 	#method pc: anInteger
 	{
-		ip := anInteger.
+		self.ip := anInteger.
 	}
 	
 	#method sp
 	{
-		^sp
+		^self.sp
 	}
 
 	#method sp: anInteger
 	{
-		sp := anInteger.
+		self.sp := anInteger.
 	}
 
 	#method restart
@@ -254,7 +306,6 @@ thisContext isExceptionHandlerContext dump.
 		<exception>
 		^self value.
 	}
-
 
 	#method ensure: aBlock
 	{
