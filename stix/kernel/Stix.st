@@ -1,6 +1,4 @@
 #include 'Apex.st'.
-#include 'Object.st'.
-#include 'UndefinedObject.st'.
 #include 'Class.st'.
 #include 'Boolean.st'.
 
@@ -249,9 +247,7 @@
 
 
 #include 'Collection.st'.
-#include 'Collection-ByteArray.st'.
-#include 'Collection-Array.st'.
-#include 'Collection-Set.st'.
+## #include 'Collec~1.st'.
 
 #class(#pointer) CompiledMethod(Object)
 {

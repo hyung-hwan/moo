@@ -297,3 +297,23 @@
 		self class cannotInstantiate
 	}
 }
+
+#class Object(Apex)
+{
+
+}
+
+#class UndefinedObject(Apex)
+{
+	#method isNil
+	{
+		^true
+	}
+
+	#method notNil
+	{
+		^false.
+	}
+}
+
+

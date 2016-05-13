@@ -54,7 +54,7 @@
 
 /* this is for gc debugging */
 /*#define STIX_DEBUG_PROCESSOR*/
-#define STIX_DEBUG_GC_001
+/*#define STIX_DEBUG_GC_001*/
 /*#define STIX_DEBUG_GC_002*/
 #define STIX_DEBUG_COMP_001
 /*#define STIX_DEBUG_COMP_002*/
@@ -96,14 +96,12 @@
 #	else
 #		define STIX_MEMCMP(dst,src,size)  memcmp(dst,src,size)
 #	endif
-
 #elif defined(__GNUC__) && (__GNUC__  >= 3 || (defined(__GNUC_MINOR) && __GNUC__ == 2 && __GNUC_MINOR__ >= 91))
 	/* gcc 2.91 or higher */
 #	define STIX_MEMSET(dst,src,size)  __builtin_memset(dst,src,size)
 #	define STIX_MEMCPY(dst,src,size)  __builtin_memcpy(dst,src,size)
 #	define STIX_MEMMOVE(dst,src,size) __builtin_memmove(dst,src,size)
 #	define STIX_MEMCMP(dst,src,size)  __builtin_memcmp(dst,src,size)
-
 #else
 #	define STIX_MEMSET(dst,src,size)  memset(dst,src,size)
 #	define STIX_MEMCPY(dst,src,size)  memcpy(dst,src,size)

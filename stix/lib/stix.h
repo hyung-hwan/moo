@@ -88,7 +88,7 @@ enum stix_trait_t
 	STIX_NOGC = (1 << 0),
 
 	/* wait for running process when exiting from the main method */
-	STIX_AWAIT_PROCS = (1 << 1),
+	STIX_AWAIT_PROCS = (1 << 1)
 };
 typedef enum stix_trait_t stix_trait_t;
 
@@ -204,7 +204,7 @@ enum stix_obj_type_t
 	STIX_OBJ_TYPE_CHAR,
 	STIX_OBJ_TYPE_BYTE,
 	STIX_OBJ_TYPE_HALFWORD,
-	STIX_OBJ_TYPE_WORD,
+	STIX_OBJ_TYPE_WORD
 
 /*
 	STIX_OBJ_TYPE_UINT8,

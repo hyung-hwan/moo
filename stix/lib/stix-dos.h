@@ -134,6 +134,33 @@
 #	define STIX_SIZEOF_MBSTATE_T   STIX_SIZEOF_LONG
 #	define STIX_MBLEN_MAX          8
 
+#elif defined(_INTELC32_)
+
+	/* Intel C Code Builder 1.0 */
+#	define STIX_SIZEOF_CHAR        1
+#	define STIX_SIZEOF_SHORT       2
+#	define STIX_SIZEOF_INT         4
+#	define STIX_SIZEOF_LONG        4
+#	define STIX_SIZEOF_LONG_LONG   0
+
+#	define STIX_SIZEOF_VOID_P      4
+#	define STIX_SIZEOF_FLOAT       4
+#	define STIX_SIZEOF_DOUBLE      8
+#	define STIX_SIZEOF_LONG_DOUBLE 8
+#	define STIX_SIZEOF_WCHAR_T     1
+
+#	define STIX_SIZEOF___INT8      0
+#	define STIX_SIZEOF___INT16     0
+#	define STIX_SIZEOF___INT32     0
+#	define STIX_SIZEOF___INT64     0
+#	define STIX_SIZEOF___INT128    0
+
+#	define STIX_SIZEOF_OFF64_T     0
+#	define STIX_SIZEOF_OFF_T       4
+
+#	define STIX_SIZEOF_MBSTATE_T   STIX_SIZEOF_LONG
+#	define STIX_MBLEN_MAX          8
+
 #else
 #	error Define the size of various data types.
 #endif

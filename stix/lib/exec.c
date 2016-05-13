@@ -26,18 +26,21 @@
 
 #include "stix-prv.h"
 
-/* TODO: remove this header after having changed clock_gettime() to a 
- *       platform independent function */
-#if defined(HAVE_TIME_H)
-#	include <time.h>
-#endif
-
-#if defined(HAVE_SYS_TIME_H)
-#	include <sys/time.h>
-#endif
 
 #if defined(_WIN32)
 #	include <windows.h>
+#elif defined(__MSDOS__)
+#	include <time.h>
+#else
+	/* TODO: remove this header after having changed clock_gettime() to a 
+	 *       platform independent function */
+#	if defined(HAVE_TIME_H)
+#		include <time.h>
+#	endif
+
+#	if defined(HAVE_SYS_TIME_H)
+#		include <sys/time.h>
+#	endif
 #endif
 
 #define PROC_STATE_RUNNING 3
@@ -183,13 +186,30 @@ static void vm_cleanup (stix_t* stix)
 	{
 		CloseHandle (stix->waitable_timer);
 		stix->waitable_timer = STIX_NULL;
-	}	
+	}
 #endif
 }
 
 static STIX_INLINE void vm_gettime (stix_t* stix, stix_ntime_t* now)
 {
-#if defined(HAVE_CLOCK_GETTIME)
+#if defined(__MSDOS__) && defined(_INTELC32_)
+	clock_t c;
+
+/* TODO: handle overflow?? */
+	c = clock ();
+	now->sec = c / CLOCKS_PER_SEC;
+	#if (CLOCKS_PER_SEC == 1000)
+		now->nsec = STIX_MSEC_TO_NSEC(c % CLOCKS_PER_SEC);
+	#elif (CLOCKS_PER_SEC == 1000000L)
+		now->nsec = STIX_USEC_TO_NSEC(c % CLOCKS_PER_SEC);
+	#elif (CLOCKS_PER_SEC == 1000000000L)
+		now->nsec = (c % CLOCKS_PER_SEC);
+	#else
+	#	error UNSUPPORTED CLOCKS_PER_SEC
+	#endif
+printf ("%05ld %010ld\n", (long)now->sec, (long)now->nsec);
+
+#elif defined(HAVE_CLOCK_GETTIME)
 	struct timespec ts;
 	#if defined(CLOCK_MONOTONIC)
 	clock_gettime (CLOCK_MONOTONIC, &ts);
@@ -220,6 +240,26 @@ static STIX_INLINE void vm_sleep (stix_t* stix, const stix_ntime_t* dur)
 		/* fallback to normal Sleep() */
 		Sleep (STIX_SECNSEC_TO_MSEC(dur->sec,dur->nsec));
 	}
+
+#elif defined(__MSDOS__) && defined(_INTELC32_)
+
+	clock_t c;
+
+	c = clock ();
+	c += dur->sec * CLOCKS_PER_SEC;
+	#if (CLOCKS_PER_SEC == 1000)
+		c += STIX_NSEC_TO_MSEC(dur->nsec);
+	#elif (CLOCKS_PER_SEC == 1000000L)
+		c += STIX_NSEC_TO_USEC(dur->nsec);
+	#elif (CLOCKS_PER_SEC == 1000000000L)
+		c += dur->nsec;
+	#else
+	#	error UNSUPPORTED CLOCKS_PER_SEC
+	#endif
+
+/* TODO: handle clock overvlow */
+/* TODO: check if there is abortion request or interrupt */
+	while (c > clock()) ;
 
 #else
 	struct timespec ts;
@@ -495,7 +535,7 @@ static void resume_process (stix_t* stix, stix_oop_process_t proc)
 	{
 		/* SUSPENED ---> RUNNING */
 
-//printf ("TO RESUME PROCESS = %p %d SUSPENED ----> RUNNING\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));
+/*printf ("TO RESUME PROCESS = %p %d SUSPENED ----> RUNNING\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));*/
 		STIX_ASSERT ((stix_oop_t)proc->prev == stix->_nil);
 		STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
 
@@ -530,11 +570,11 @@ static void suspend_process (stix_t* stix, stix_oop_process_t proc)
 
 			nrp = find_next_runnable_process (stix);
 
-//printf ("TO SUSPEND...%p %d\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));
+/*printf ("TO SUSPEND...%p %d\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));*/
 			if (nrp == proc)
 			{
 				/* no runnable process after suspension */
-//printf ("NO RUNNABLE PROCESS AFTER SUPSENDISION\n");
+/*printf ("NO RUNNABLE PROCESS AFTER SUPSENDISION\n");*/
 				sleep_active_process (stix, PROC_STATE_RUNNABLE);
 				unchain_from_processor (stix, proc, PROC_STATE_SUSPENDED);
 
@@ -545,7 +585,7 @@ static void suspend_process (stix_t* stix, stix_oop_process_t proc)
 			}
 			else
 			{
-//printf ("SWITCHING TO XXXXXXXXXXXXXXXXXXXXx\n");
+/*printf ("SWITCHING TO XXXXXXXXXXXXXXXXXXXXx\n");*/
 				/* keep the unchained process at the runnable state for
 				 * the immediate call to switch_to_process() below */
 				unchain_from_processor (stix, proc, PROC_STATE_RUNNABLE);
@@ -617,7 +657,7 @@ static stix_oop_process_t signal_semaphore (stix_t* stix, stix_oop_semaphore_t s
 
 	if ((stix_oop_t)sem->waiting_head == stix->_nil)
 	{
-//printf ("signal semaphore...1111\n");
+/*printf ("signal semaphore...1111\n");*/
 		/* no process is waiting on this semaphore */
 		count = STIX_OOP_TO_SMOOI(sem->count);
 		count++;
@@ -634,7 +674,7 @@ static stix_oop_process_t signal_semaphore (stix_t* stix, stix_oop_semaphore_t s
 
 		unchain_from_semaphore (stix, proc);
 		resume_process (stix, proc); /* TODO: error check */
-//printf ("signal semaphore...2222 DONE -> resumed process -> proc state %d\n", (int)STIX_OOP_TO_SMOOI(proc->state));
+/*printf ("signal semaphore...2222 DONE -> resumed process -> proc state %d\n", (int)STIX_OOP_TO_SMOOI(proc->state));*/
 
 		/* return the resumed process */
 		return proc;
@@ -652,14 +692,14 @@ static void await_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
 		/* it's already signalled */
 		count--;
 		sem->count = STIX_SMOOI_TO_OOP(count);
-//printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - NO SUSPENDING ...................\n");
+/*printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - NO SUSPENDING ...................\n");*/
 	}
 	else
 	{
 		/* not signaled. need to wait */
 		proc = stix->processor->active;
 
-//printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - SUEPENDING ACTIVE PROCESS..........state=>[%d].....PROC %p\n", (int)STIX_OOP_TO_SMOOI(proc->state), proc);
+/*printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - SUEPENDING ACTIVE PROCESS..........state=>[%d].....PROC %p\n", (int)STIX_OOP_TO_SMOOI(proc->state), proc);*/
 		/* suspend the active process */
 		suspend_process (stix, proc); 
 
@@ -668,7 +708,7 @@ static void await_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
 
 		STIX_ASSERT (sem->waiting_tail == proc);
 
-//printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - SUEPENDING ACTIVE PROCESS....XX......state=>[%d]..PROC %p\n", (int)STIX_OOP_TO_SMOOI(proc->state), proc);
+/*printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - SUEPENDING ACTIVE PROCESS....XX......state=>[%d]..PROC %p\n", (int)STIX_OOP_TO_SMOOI(proc->state), proc);*/
 		STIX_ASSERT (stix->processor->active != proc);
 	}
 }
@@ -1824,12 +1864,12 @@ static int prim_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
 /* TODO: make clock_gettime to be platform independent 
  * 
  * this code assumes that the monotonic clock returns a small value
- * that can fit into a small integer, even after some addtions... */
+ * that can fit into a SmallInteger, even after some addtions... */
 	vm_gettime (stix, &now);
 	STIX_ADDNTIMESNS (&ft, &now, STIX_OOP_TO_SMOOI(sec), STIX_OOP_TO_SMOOI(nsec));
 	if (ft.sec < 0 || ft.sec > STIX_SMOOI_MAX) 
 	{
-		/* soft error - cannot represent the e:xpiry time in
+		/* soft error - cannot represent the exxpiry time in
 		 *              a small integer. */
 		return 0;
 	}
@@ -3805,7 +3845,7 @@ printf (">>>>>>>>>>>>>>>> METHOD RETURN FROM WITHIN A BLOCK. NON-LOCAL RETURN.. 
 					{
 						/* the sender of the intial context is nil.
 						 * use this fact to tell an initial context from a normal context. */
-						STIX_ASSERT (stix->active_context->receiver_or_source == stix->_nil);
+		/*				STIX_ASSERT (stix->active_context->receiver_or_source == stix->_nil);*/
 
 						/* when sender is nil, the following condition must be true.
 						 * but it's not always true the other way around */

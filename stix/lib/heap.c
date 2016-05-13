@@ -65,7 +65,7 @@ void* stix_allocheapmem (stix_t* stix, stix_heap_t* heap, stix_oow_t size)
 {
 	stix_uint8_t* ptr;
 
-//printf ("heap ptr %p  %p %lld %lld\n", heap->ptr, heap->limit, (long long int)size, (long long int)(heap->limit - heap->ptr));
+/*printf ("heap ptr %p  %p %lld %lld\n", heap->ptr, heap->limit, (long long int)size, (long long int)(heap->limit - heap->ptr));*/
 	/* check the heap size limit */
 	if (heap->ptr >= heap->limit || heap->limit - heap->ptr < size)
 	{
