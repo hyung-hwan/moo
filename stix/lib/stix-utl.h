@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
-    Copyright (c) 2014-2015 Chung, Hyung-Hwan. All rights reserved.
+    Copyright (c) 2014-2016 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -71,8 +71,8 @@ stix_oow_t stix_hashuchars (
 
 
 int stix_equalchars (
-	const stix_uch_t*  str1,
-	const stix_uch_t*  str2,
+	const stix_uch_t* str1,
+	const stix_uch_t* str2,
 	stix_oow_t        len
 );
 
@@ -93,49 +93,49 @@ int stix_compucbcstr (
 
 int stix_compucxbcstr (
 	const stix_uch_t* str1,
-	stix_oow_t       len,
+	stix_oow_t        len,
 	const stix_bch_t* str2
 );
 
 void stix_copyuchars (
 	stix_uch_t*       dst,
 	const stix_uch_t* src,
-	stix_oow_t       len
+	stix_oow_t        len
 );
 
 void stix_copybchars (
 	stix_bch_t*       dst,
 	const stix_bch_t* src,
-	stix_oow_t       len
+	stix_oow_t        len
 );
 
 void stix_copybchtouchars (
 	stix_uch_t*       dst,
 	const stix_bch_t* src,
-	stix_oow_t       len
+	stix_oow_t        len
 );
 
 stix_oow_t stix_copyucstr (
 	stix_uch_t*       dst,
-	stix_oow_t       len,
+	stix_oow_t        len,
 	const stix_uch_t* src
 );
 
 stix_oow_t stix_copybcstr (
 	stix_bch_t*       dst,
-	stix_oow_t       len,
+	stix_oow_t        len,
 	const stix_bch_t* src
 );
 
 stix_uch_t* stix_finduchar (
 	const stix_uch_t* ptr,
-	stix_oow_t       len,
+	stix_oow_t        len,
 	stix_uch_t        c
 );
 
 stix_bch_t* stix_findbchar (
 	const stix_bch_t* ptr,
-	stix_oow_t       len,
+	stix_oow_t        len,
 	stix_bch_t        c
 );
 

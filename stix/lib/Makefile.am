@@ -33,24 +33,25 @@ pkginclude_HEADERS = \
 	stix-utl.h \
 	stix.h
 
+noinst_HEADERS = stix-prv.h
+
 pkglib_LTLIBRARIES = libstix.la
 libstix_la_SOURCES = \
-	stix-prv.h \
-	stix-rbt.c \
-	stix-utl.c \
-	stix.c \
-	heap.c \
-	gc.c \
-	obj.c \
-	sym.c \
-	dic.c \
-	proc.c \
 	bigint.c \
-	ignite.c \
-	utf8.c \
 	comp.c \
+	debug.c  \
+	dic.c \
 	exec.c \
-	debug.c 
+	gc.c \
+	heap.c \
+	ignite.c \
+	obj.c \
+	proc.c \
+	rbt.c \
+	stix.c \
+	sym.c \
+	utf8.c \
+	utl.c
 libstix_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 libstix_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libstix_la_LIBADD = $(LIBADD_LIB_COMMON)
