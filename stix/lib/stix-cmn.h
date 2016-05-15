@@ -611,10 +611,21 @@ struct stix_cmgr_t
 /* =========================================================================
  * COMPILER FEATURE TEST MACROS
  * =========================================================================*/
-#if defined(_INTELC32_) && !defined(__has_builtin)
+#if !defined(__has_builtin)
 	/* intel c code builder 1.0 ended up with an error without this override */
 	#define __has_builtin(x) 0
 #endif
+
+/*
+#if !defined(__is_identifier)
+	#define __is_identifier(x) 0
+#endif
+
+#if !defined(__has_attribute)
+	#define __has_attribute(x) 0
+#endif
+*/
+
 
 #if defined(__has_builtin) 
 	#if __has_builtin(__builtin_ctz)
@@ -682,20 +693,8 @@ struct stix_cmgr_t
 
 #endif
 
-/*
-#if !defined(__has_builtin)
-	#define __has_builtin(x) 0
-#endif
 
 
-#if !defined(__is_identifier)
-	#define __is_identifier(x) 0
-#endif
-
-#if !defined(__has_attribute)
-	#define __has_attribute(x) 0
-#endif
-*/
 
 
 

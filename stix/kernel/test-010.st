@@ -59,7 +59,10 @@
 			10 timesRepeat: ['BLOCK #1' dump. Processor activeProcess sleep: 1.].
 			s1 signal
 		] newProcess.
-		t2 := [ 5 timesRepeat: ['BLOCK #2' dump]. s2 signal. ] newProcess.
+		t2 := [ 
+			5 timesRepeat: ['BLOCK #2' dump. "Processor activeProcess sleep: 1." ].
+			'SIGNALLING S2...' dump. s2 signal. 
+		] newProcess.
 
 		t1 resume.
 		t2 resume.
@@ -67,15 +70,18 @@
 		Processor signal: s3 after: 10.
 
 		'STARTED t1 and t2' dump.
-		s1 wait.
-		s2 wait.
 
+		s2 wait.
+		's2 WAITED....' dump.
+		s1 wait.
+		's1 WAITED....' dump.
+		
+
+		'WAITING ON S3...' dump.
 		##Processor unsignal: s3.
 		s3 wait.
 
 		10 timesRepeat: ['WAITED t1 and t2' dump].
-
-		
 		'END OF MAIN' dump.
 	}
 

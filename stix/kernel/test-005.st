@@ -439,8 +439,9 @@ PROCESS TESTING
 '====================' dump.
 ([ :a :b | "a := 20."  b := [ a + 20 ]. b value.] value: 99 value: 100) dump.
 '====================' dump.
-[ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] value dump.  ## not sufficient arguments. it must fail
 
+[ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] value dump.  ## not sufficient arguments. it must fail
+"[ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] on: Exception do: [:ex | 'Exception' dump]."
 
 "
 		FFI isNil dump.

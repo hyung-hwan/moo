@@ -797,6 +797,7 @@ struct stix_t
 	stix_oow_t tmp_count;
 
 	/* == EXECUTION REGISTERS == */
+	stix_oop_context_t initial_context; /* fake initial context */
 	stix_oop_context_t active_context;
 	stix_oop_method_t active_method;
 	stix_oob_t* active_code;

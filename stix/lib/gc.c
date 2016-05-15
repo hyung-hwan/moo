@@ -354,6 +354,8 @@ printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
 		*stix->tmp_stack[i] = stix_moveoop (stix, *stix->tmp_stack[i]);
 	}
 
+	if (stix->initial_context)
+		stix->initial_context = (stix_oop_context_t)stix_moveoop (stix, (stix_oop_t)stix->initial_context);
 	if (stix->active_context)
 		stix->active_context = (stix_oop_context_t)stix_moveoop (stix, (stix_oop_t)stix->active_context);
 	if (stix->active_method)

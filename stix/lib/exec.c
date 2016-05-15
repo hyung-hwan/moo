@@ -207,7 +207,6 @@ static STIX_INLINE void vm_gettime (stix_t* stix, stix_ntime_t* now)
 	#else
 	#	error UNSUPPORTED CLOCKS_PER_SEC
 	#endif
-printf ("%05ld %010ld\n", (long)now->sec, (long)now->nsec);
 
 #elif defined(HAVE_CLOCK_GETTIME)
 	struct timespec ts;
@@ -350,6 +349,7 @@ static void switch_to_process (stix_t* stix, stix_oop_process_t proc, int new_st
 static STIX_INLINE stix_oop_process_t find_next_runnable_process (stix_t* stix)
 {
 	stix_oop_process_t npr;
+
 	STIX_ASSERT (stix->processor->active->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNING));
 	npr = stix->processor->active->next;
 	if ((stix_oop_t)npr == stix->_nil) npr = stix->processor->runnable_head;
@@ -499,6 +499,7 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 			{
 				/* no runnable process after termination */
 				STIX_ASSERT (stix->processor->active == stix->nil_process);
+printf ("NO RUNNABLE PROCESS AFTER PROCESS TERMINATION in terminate_process()...\n");
 			}
 			else
 			{
@@ -574,7 +575,7 @@ static void suspend_process (stix_t* stix, stix_oop_process_t proc)
 			if (nrp == proc)
 			{
 				/* no runnable process after suspension */
-/*printf ("NO RUNNABLE PROCESS AFTER SUPSENDISION\n");*/
+/*printf ("NO RUNNABLE PROCESS AFTER PROCESS SUPSENDISION in suspend_process\n");*/
 				sleep_active_process (stix, PROC_STATE_RUNNABLE);
 				unchain_from_processor (stix, proc, PROC_STATE_SUSPENDED);
 
@@ -3106,7 +3107,8 @@ int stix_execute (stix_t* stix)
 			} 
 			while (stix->sem_heap_count > 0);
 		}
-		else if (stix->processor->active == stix->nil_process) 
+
+		if (stix->processor->active == stix->nil_process) 
 		{
 			/* no more waiting semaphore and no more process */
 			STIX_ASSERT (stix->processor->tally = STIX_SMOOI_TO_OOP(0));
@@ -3841,20 +3843,25 @@ printf (">>>>>>>>>>>>>>>> METHOD RETURN FROM WITHIN A BLOCK. NON-LOCAL RETURN.. 
 					/* push the return value to the stack of the new active context */
 					ACTIVE_STACK_PUSH (stix, return_value);
 
-					if ((stix_oop_t)stix->active_context->sender == stix->_nil)
+					if (stix->active_context == stix->initial_context)
 					{
-						/* the sender of the intial context is nil.
-						 * use this fact to tell an initial context from a normal context. */
-		/*				STIX_ASSERT (stix->active_context->receiver_or_source == stix->_nil);*/
-
-						/* when sender is nil, the following condition must be true.
-						 * but it's not always true the other way around */
+						/* the new active context is the fake initial context.
+						 * this context can't get executed further. */
+						STIX_ASSERT ((stix_oop_t)stix->active_context->sender == stix->_nil);
+						STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context) == stix->_method_context);
+						STIX_ASSERT (stix->active_context->receiver_or_source == stix->_nil);
 						STIX_ASSERT (stix->active_context == stix->processor->active->initial_context);
+						STIX_ASSERT (stix->active_context->origin == stix->processor->active->initial_context->origin);
+						STIX_ASSERT (stix->active_context->origin == stix->active_context);
+
+						/* NOTE: this condition is true for the processified block context also.
+						 *   stix->active_context->origin == stix->processor->active->initial_context->origin
+						 * however, the check here is done after context switching and
+						 * the processified block check is done against the context before switching */
 
 #if defined(STIX_DEBUG_EXEC_001)
-printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>> TERMINATING SP => %ld\n", (long int)stix->sp);
+printf ("<<<RETURNING TO THE INITIAL CONTEXT>>> TERMINATING SP => %ld\n", (long int)stix->sp);
 #endif
-
 						/* the stack contains the final return value so the stack pointer must be 0. */
 						STIX_ASSERT (stix->sp == 0); 
 
@@ -3867,6 +3874,7 @@ printf ("<<<RETURNIGN TO THE INITIAL CONTEXT>>> TERMINATING SP => %ld\n", (long 
 						 * the caller to stix_execute() can fetch it to return it to the system */
 					}
 				}
+
 			#endif
 
 				break;
@@ -4081,11 +4089,21 @@ oops:
 
 int stix_invoke (stix_t* stix, const stix_oocs_t* objname, const stix_oocs_t* mthname)
 {
+	int n;
+
+	STIX_ASSERT (stix->initial_context == STIX_NULL);
+	STIX_ASSERT (stix->active_context == STIX_NULL);
+	STIX_ASSERT (stix->active_method == STIX_NULL);
+
 	if (start_initial_process_and_context (stix, objname, mthname) <= -1) return -1;
-	return stix_execute (stix);
-/* TODO: reset stix->active_context & stix->active_method to STIX_NULL 
-* 
-* TODO: remove the process. set processor->tally to zero. processor->active to nil_process... 
-*/
+	stix->initial_context = stix->processor->active->initial_context;
+
+	n = stix_execute (stix);
+
+/* TODO: reset processor fields. set processor->tally to zero. processor->active to nil_process... */
+	stix->initial_context = STIX_NULL;
+	stix->active_context = STIX_NULL;
+	stix->active_method = STIX_NULL;
+	return n;
 }
 

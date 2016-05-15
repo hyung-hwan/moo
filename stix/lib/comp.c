@@ -2620,8 +2620,6 @@ static int compile_method_primitive (stix_t* stix)
 	}
 
 	GET_TOKEN (stix);
-print_oocs (&stix->c->tok.name);
-printf ("]]]]]]]]]]]]]]]]]]]]]]\n");
 	if (is_token_keyword(stix, VOCA_PRIMITIVE_COLON))
 	{
 		GET_TOKEN (stix); 
