@@ -1,3 +1,10 @@
+#class Exception(Apex)
+{
+	#dcl signalContext handlerContext handlerBlock messageText.
+
+	## To be extended below.
+}
+
 #class(#pointer) Context(Apex)
 {
 	#dcl sender ip sp ntmprs.
@@ -309,20 +316,18 @@ thisContext isExceptionHandlerContext dump.
 
 	#method ensure: aBlock
 	{
-		"##
-		| complete returnValue |
-		<ensure>
 
-		returnValue := self valueNoContextSwitch.
-		complete ifNil: [
-			complete := true.
-			aBlock value.
-		].
-		^returnValue. ##"
+## TODO: ensure that the ensured block is executed after exception handler...
+		| value |
+		value := self on: Exception do: [:ex | aBlock value. ex pass].
+		## value := self valueAndResumeOnUnwind.
+		aBlock value.
+		^value
 	}
 
 	#method ifCurtailed: aBlock
 	{
+		^self on: Exception do: [:ex | aBlock value. ex pass ]
 	}
 
 	"------ TODO: -------------------------------------"
@@ -330,9 +335,9 @@ thisContext isExceptionHandlerContext dump.
 
 ## TODO: is it better to inherit from Object???
 ##       or treat Exception specially like UndefinedObject or Class???
-#class Exception(Apex)
+#extend Exception
 {
-	#dcl signalContext handlerContext handlerBlock messageText.
+	
 
 	#method(#class) signal
 	{
@@ -403,9 +408,8 @@ thisContext isExceptionHandlerContext dump.
 			]
 	}
 
-	## ####################################################################
-	## ####################################################################
-	#method handleException
+	## ####################################################################	## ####################################################################
+  	#method handleException
 	{
 		self.handlerContext notNil
 			ifTrue: [ 
@@ -418,12 +422,12 @@ thisContext isExceptionHandlerContext dump.
 			].
 	}
 
-	#method handlerContext
-	{
-		(self.handlerContext notNil) ifTrue: [ ^self.handlerContext ].
-		self.handlerContext := self findHandlerContextStartingFrom: self.signalContext.
-		^self.handlerContext.
-	}
+##	#method handlerContext
+##	{
+##		(self.handlerContext notNil) ifTrue: [ ^self.handlerContext ].
+##		self findHandlerContextStartingFrom: self.signalContext.
+##		^self.handlerContext.
+##	}
 
 	#method findHandlerContextStartingFrom: aContext
 	{
@@ -444,6 +448,10 @@ thisContext isExceptionHandlerContext dump.
 				].
 				ctx := ctx sender
 			].
+
+		## no handler is found
+		self.handlerBlock := nil.
+		self.handlerContext := nil.
 		^nil
 	}
 }
@@ -470,11 +478,18 @@ ctx := thisContext.
 	## TODO: include blockcontext???
 	ctx := ctx sender.
 ].
+'------ END OF BACKTRACE -----------' dump.
 		PrimitiveFailureException signal: 'PRIMITIVE FAILED'.
 	}
 
 	#method(#class) cannotInstantiate
 	{
 		Exception signal: 'Cannot instantiate'.
+	}
+
+	#method(#class) doesNotUnderstand: messageSymbol
+	{
+		## TODO: implement this properly
+		NoSuchMessageException signal: (messageSymbol, ' not understood by ', (self name)).
 	}
 }

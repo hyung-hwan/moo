@@ -48,6 +48,7 @@ enum stix_errnum_t
 	STIX_ESYSMEM, /**< insufficient system memory */
 	STIX_EOOMEM,  /**< insufficient object memory */
 	STIX_EINVAL,  /**< invalid parameter or data */
+	STIX_EMSGSND, /**< message sending error. even doesNotUnderstand: is not found */
 	STIX_ERANGE,  /**< range error. overflow and underflow */
 	STIX_ENOENT,  /**< no matching entry */
 	STIX_EDFULL,  /**< dictionary full */
@@ -804,6 +805,7 @@ struct stix_t
 	stix_ooi_t sp;
 	stix_ooi_t ip;
 	int proc_switched; /* TODO: this is temporary. implement something else to skip immediate context switching */
+	int switch_proc;
 	/* == END EXECUTION REGISTERS == */
 
 	/* == BIGINT CONVERSION == */
@@ -819,10 +821,12 @@ struct stix_t
 #endif
 };
 
-
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
+#define stix_switchprocess(stix) ((stix)->switch_proc = 1)
+
 
 STIX_EXPORT stix_t* stix_open (
 	stix_mmgr_t*         mmgr,

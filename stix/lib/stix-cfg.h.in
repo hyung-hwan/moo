@@ -115,6 +115,9 @@
 /* Define to 1 if you have the `getcontext' function. */
 #undef HAVE_GETCONTEXT
 
+/* Define to 1 if you have the `getitimer' function. */
+#undef HAVE_GETITIMER
+
 /* Define to 1 if you have the `gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
 
@@ -168,6 +171,9 @@
 
 /* Define to 1 if you have the `setcontext' function. */
 #undef HAVE_SETCONTEXT
+
+/* Define to 1 if you have the `setitimer' function. */
+#undef HAVE_SETITIMER
 
 /* Define to 1 if you have the `settimeofday' function. */
 #undef HAVE_SETTIMEOFDAY

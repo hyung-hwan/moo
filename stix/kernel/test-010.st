@@ -45,7 +45,52 @@
 		'END OF MAIN' dump.
 	}
 
+	
 	#method(#class) main
+	{
+		## test critical region
+		|t1 t2 s1 s2 s3|
+
+		'START OF MAIN' dump.
+
+		s1 := Semaphore new.
+		s2 := Semaphore new.
+
+		t1 := [ 
+			1000 timesRepeat: ['BLOCK #1' dump].
+			##s2 critical: [
+			##	10 timesRepeat: ['BLOCK #1' dump ]
+			##]
+		] newProcess.
+		t2 := [ 
+			1000 timesRepeat: ['BLOCK #2' dump].
+			##s2 critical: [
+			##	10 timesRepeat: ['BLOCK #2' dump. ]
+			##].
+
+			s1 signal.
+		] newProcess.
+
+		t1 resume.
+		t2 resume.
+
+		s1 wait.
+
+		'END OF MAIN' dump.   
+
+"
+		| v1 |
+		'START OF MAIN' dump.
+		##[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump].
+		##['ENSURE TEST' dump] ensure: ['XXXXXXXXX ENSURE XXXXXXXXXXXXXx' dump].
+
+		v1 := [ ['kkk' dump.] ensure: ['XXXXXXXXX ENSURE XXXXXXXXXXXXXx' dump. 30] ] on: Exception do: [:ex | 'EXCEPTION OUTSIDE ENSURE...' dump.  ].
+		v1 dump.
+
+		'END OF MAIN' dump."
+	}
+	
+	#method(#class) main22222
 	{
 		|t1 t2 s1 s2 s3|
 

@@ -54,7 +54,7 @@
 
 /* this is for gc debugging */
 /*#define STIX_DEBUG_PROCESSOR*/
-/*#define STIX_DEBUG_GC_001*/
+#define STIX_DEBUG_GC_001
 /*#define STIX_DEBUG_GC_002*/
 #define STIX_DEBUG_COMP_001
 /*#define STIX_DEBUG_COMP_002*/
@@ -62,6 +62,9 @@
 /*#define STIX_DEBUG_EXEC_002*/
 #define STIX_PROFILE_EXEC
 
+/* allow the caller to drive process switching by calling
+ * stix_switchprocess(). */
+#define STIX_EXTERNAL_PROCESS_SWITCH
 
 /* limit the maximum object size such that:
  *   1. an index to an object field can be represented in a small integer.

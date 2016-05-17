@@ -152,7 +152,7 @@ dnl	[],
 dnl	[#include <stddef.h>])
 
 dnl check functions
-AC_CHECK_FUNCS([gettimeofday settimeofday clock_gettime clock_settime])
+AC_CHECK_FUNCS([gettimeofday settimeofday clock_gettime clock_settime getitimer setitimer])
 AC_CHECK_FUNCS([backtrace backtrace_symbols])
 AC_CHECK_FUNCS([makecontext swapcontext getcontext setcontext])
 AC_CHECK_FUNCS([snprintf _vsnprintf _vsnwprintf])

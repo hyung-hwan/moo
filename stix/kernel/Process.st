@@ -102,6 +102,14 @@
 		self primitiveFailed
 	}
 
+	#method critical: aBlock
+	{
+'CRITICAL....11' dump.
+		self wait.
+'CRITICAL....22' dump.
+		^aBlock ensure: [ self signal ]
+	}
+
 	## ==================================================================
 
 	#method heapIndex

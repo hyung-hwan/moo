@@ -52,6 +52,16 @@
 #	include <unistd.h>
 #	include <ltdl.h>
 #	define USE_LTDL
+
+#	if defined(HAVE_TIME_H)
+#		include <time.h>
+#	endif
+#	if defined(HAVE_SYS_TIME_H)
+#		include <sys/time.h>
+#	endif
+#	if defined(HAVE_SIGNAL_H)
+#		include <signal.h>
+#	endif
 #endif
 
 #if !defined(STIX_DEFAULT_MODPREFIX)
@@ -375,6 +385,52 @@ stix_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' };
 stix_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
 
 
+stix_t* g_stix = STIX_NULL;
+
+static void arrange_process_switching (int sig)
+{
+	if (g_stix) stix_switchprocess (g_stix);
+}
+
+static void setup_tick (void)
+{
+#if defined(HAVE_SETITIMER) && defined(SIGVTALRM) && defined(ITIMER_VIRTUAL)
+	struct itimerval itv;
+	struct sigaction act;
+
+	sigemptyset (&act.sa_mask);
+	act.sa_handler = arrange_process_switching;
+	act.sa_flags = 0;
+	sigaction (SIGVTALRM, &act, STIX_NULL);
+
+	itv.it_interval.tv_sec = 0;
+	itv.it_interval.tv_usec = 100; /* 100 microseconds */
+	itv.it_value.tv_sec = 0;
+	itv.it_value.tv_usec = 100;
+	setitimer (ITIMER_VIRTUAL, &itv, STIX_NULL);
+#endif
+}
+
+static void cancel_tick (void)
+{
+#if defined(HAVE_SETITIMER) && defined(SIGVTALRM) && defined(ITIMER_VIRTUAL)
+	struct itimerval itv;
+	struct sigaction act;
+
+	itv.it_interval.tv_sec = 0;
+	itv.it_interval.tv_usec = 0;
+	itv.it_value.tv_sec = 0;
+	itv.it_value.tv_usec = 0;
+	setitimer (ITIMER_VIRTUAL, &itv, STIX_NULL);
+
+
+	sigemptyset (&act.sa_mask);
+	act.sa_handler = SIG_DFL;
+	act.sa_flags = 0;
+	sigaction (SIGVTALRM, &act, STIX_NULL);
+#endif
+}
+
 int main (int argc, char* argv[])
 {
 	stix_t* stix;
@@ -382,7 +438,7 @@ int main (int argc, char* argv[])
 	stix_oocs_t objname;
 	stix_oocs_t mthname;
 	stix_vmprim_t vmprim;
-	int i;
+	int i, xret;
 
 	printf ("Stix 1.0.0 - max named %lu max indexed %lu max class %lu max classinst %lu oowmax %lu, ooimax %ld ooimin %ld smooimax %ld smooimax %ld\n", 
 		(unsigned long int)STIX_MAX_NAMED_INSTVARS, 
@@ -593,6 +649,11 @@ printf ("%p\n", a);
 		}
 	}
 
+
+	xret = 0;
+	g_stix = stix;
+	setup_tick ();
+
 /*	objname.ptr = str_system;
 	objname.len = 6;*/
 	objname.ptr = str_my_object;
@@ -602,13 +663,11 @@ printf ("%p\n", a);
 	if (stix_invoke (stix, &objname, &mthname) <= -1)
 	{
 		printf ("ERROR: cannot execute code - %d\n", stix_geterrnum(stix));
-		stix_close (stix);
-#if defined(USE_LTDL)
-		lt_dlexit ();
-#endif
-		return -1;
+		xret = -1;
 	}
 
+	cancel_tick ();
+	g_stix = STIX_NULL;
 
 /*	dump_dictionary (stix, stix->sysdic, "System dictionary");*/
 	stix_close (stix);
@@ -620,5 +679,5 @@ printf ("%p\n", a);
 #if defined(_WIN32) && defined(_DEBUG)
 getchar();
 #endif
-	return 0;
+	return xret;
 }

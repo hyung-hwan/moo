@@ -267,14 +267,6 @@
 		self class primitiveFailed.
 	}
 
-	#method(#class) doesNotUnderstand: messageSymbol
-	{
-		## TODO: implement this
-		## UnrecognizedMessage signal.
-		self class dump.
-		'does not understand' dump.
-	}
-
 	#method doesNotUnderstand: messageSymbol
 	{
 		self class doesNotUnderstand: messageSymbol

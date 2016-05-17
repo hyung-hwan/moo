@@ -41,6 +41,7 @@
 #	if defined(HAVE_SYS_TIME_H)
 #		include <sys/time.h>
 #	endif
+
 #endif
 
 #define PROC_STATE_RUNNING 3
@@ -2865,19 +2866,38 @@ printf ("\n");
 	method = find_method (stix, receiver, &mthname, to_super);
 	if (!method) 
 	{
-/* TODO: implement doesNotUnderstand: XXXXX  instead of returning -1. */
-stix_oop_t c;
+		static stix_uch_t fbm[] = { 'd', 'o', 'e', 's', 'N', 'o', 't', 'U', 'n', 'd', 'e', 'r', 's', 't', 'a', 'n', 'd', ':' };
+		mthname.ptr = fbm;
+		mthname.len = 18;
 
-c = STIX_CLASSOF(stix,receiver);
-printf ("ERROR [NOT IMPLEMENTED YET] - receiver [");
-print_object (stix, receiver);
-printf ("] class ");
-print_object (stix, c);
-printf (" doesNotUnderstand: [");
-print_oocs (&mthname);
-printf ("]\n");
+		method = find_method (stix, receiver, &mthname, 0);
+		if (!method)
+		{
+			/* TODO: improve this hard error handling */
+			stix_oop_t c;
 
-		return -1;
+			c = STIX_CLASSOF(stix,receiver);
+			printf ("HARD FAILURE ERROR [IMAGE PROBLEM] - receiver [");
+			print_object (stix, receiver);
+			printf ("] class ");
+			print_object (stix, c);
+			printf (" doesNotUnderstand: [");
+			print_oocs (&mthname);
+			printf ("]\n");
+
+			stix->errnum = STIX_EMSGSND;
+			return -1;
+		}
+		else
+		{
+			/* manipulate the stack as if 'receier doesNotUnderstand: select' 
+			 * has been called. */
+/* TODO: if i manipulate the stack this way here, the stack track for the last call is kind of lost.
+ *       how can i preserve it gracefully? */
+			ACTIVE_STACK_POPS (stix, nargs);
+			nargs = 1;
+			ACTIVE_STACK_PUSH (stix, selector);
+		}
 	}
 
 	STIX_ASSERT (STIX_OOP_TO_SMOOI(method->tmpr_nargs) == nargs);
@@ -3129,7 +3149,13 @@ printf ("REALLY NO MORE RUNNABLE PROCESS...\n");
 		}*/
 
 		/* TODO: implement different process switching scheme - time-slice or clock based??? */
+#if defined(STIX_EXTERNAL_PROCESS_SWITCH)
+		if (!stix->proc_switched && stix->switch_proc) { switch_to_next_runnable_process (stix); }
+		stix->switch_proc = 0;
+#else
 		if (!stix->proc_switched) { switch_to_next_runnable_process (stix); }
+#endif
+
 		stix->proc_switched = 0;
 
 		FETCH_BYTE_CODE_TO (stix, bcode);
