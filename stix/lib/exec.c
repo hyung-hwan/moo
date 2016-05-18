@@ -90,6 +90,7 @@
 	#define LOAD_ACTIVE_SP(stix) LOAD_SP(stix, (stix)->processor->active)
 	#define STORE_ACTIVE_SP(stix) STORE_SP(stix, (stix)->processor->active)
 
+/* TODO: stack bound check when pushing */
 	#define ACTIVE_STACK_PUSH(stix,v) \
 		do { \
 			(stix)->sp = (stix)->sp + 1; \

@@ -45,7 +45,7 @@
 #	define INCL_DOSERRORS
 #	include <os2.h>
 #elif defined(__MSDOS__)
-	/* nothing to include */
+#	include <dos.h>
 #elif defined(macintosh)
 	/* nothing to include */
 #else
@@ -386,14 +386,39 @@ stix_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
 
 stix_t* g_stix = STIX_NULL;
 
+#if defined(__MSDOS__) && defined(_INTELC32_)
+static void (*prev_timer_intr_handler) (void);
+
+#pragma interrupt(timer_intr_handler)
+static void timer_intr_handler (void)
+{
+	/*
+	_XSTACK *stk;
+	int r;
+	stk = (_XSTACK *)_get_stk_frame();
+	r = (unsigned short)stk_ptr->eax;   
+	*/
+
+	/* The timer interrupt (normally) occurs 18.2 times per second. */
+	if (g_stix) stix_switchprocess (g_stix);
+	_chain_intr(prev_timer_intr_handler);
+}
+
+#else
 static void arrange_process_switching (int sig)
 {
 	if (g_stix) stix_switchprocess (g_stix);
 }
+#endif
 
 static void setup_tick (void)
 {
-#if defined(HAVE_SETITIMER) && defined(SIGVTALRM) && defined(ITIMER_VIRTUAL)
+#if defined(__MSDOS__) && defined(_INTELC32_)
+
+	prev_timer_intr_handler = _dos_getvect (0x1C);
+	_dos_setvect (0x1C, timer_intr_handler);
+
+#elif defined(HAVE_SETITIMER) && defined(SIGVTALRM) && defined(ITIMER_VIRTUAL)
 	struct itimerval itv;
 	struct sigaction act;
 
@@ -407,12 +432,19 @@ static void setup_tick (void)
 	itv.it_value.tv_sec = 0;
 	itv.it_value.tv_usec = 100;
 	setitimer (ITIMER_VIRTUAL, &itv, STIX_NULL);
+#else
+
+#	error UNSUPPORTED
 #endif
 }
 
 static void cancel_tick (void)
 {
-#if defined(HAVE_SETITIMER) && defined(SIGVTALRM) && defined(ITIMER_VIRTUAL)
+#if defined(__MSDOS__) && defined(_INTELC32_)
+
+	_dos_setvect (0x1C, prev_timer_intr_handler);
+
+#elif defined(HAVE_SETITIMER) && defined(SIGVTALRM) && defined(ITIMER_VIRTUAL)
 	struct itimerval itv;
 	struct sigaction act;
 
@@ -427,6 +459,9 @@ static void cancel_tick (void)
 	act.sa_handler = SIG_DFL;
 	act.sa_flags = 0;
 	sigaction (SIGVTALRM, &act, STIX_NULL);
+
+#else
+#	error UNSUPPORTED
 #endif
 }
 

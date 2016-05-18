@@ -58,13 +58,13 @@
 		s2 := Semaphore new.
 
 		t1 := [ 
-			10000 timesRepeat: ['BLOCK #1' dump].
+			100 timesRepeat: ['BLOCK #1' dump].
 			##s2 critical: [
 			##	10 timesRepeat: ['BLOCK #1' dump ]
 			##]
 		] newProcess.
 		t2 := [ 
-			10000 timesRepeat: ['BLOCK #2' dump].
+			100 timesRepeat: ['BLOCK #2' dump].
 			##s2 critical: [
 			##	10 timesRepeat: ['BLOCK #2' dump. ]
 			##].

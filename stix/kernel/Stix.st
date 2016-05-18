@@ -246,8 +246,7 @@
 }
 
 
-#include 'Collection.st'.
-## #include 'Collec~1.st'.
+#include 'Collect.st'.
 
 #class(#pointer) CompiledMethod(Object)
 {
