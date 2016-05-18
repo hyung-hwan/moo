@@ -48,26 +48,25 @@
 	
 	#method(#class) main
 	{
-
-	## THIS CRASHES VM. PLEASE CHECK. CRASHES WHEN REPETITION IS 1000
 		|t1 t2 s1 s2 s3|
 
 		'START OF MAIN' dump.
 
 		s1 := Semaphore new.
-		s2 := Semaphore new.
+		s2 := Semaphore forMutualExclusion.
 
 		t1 := [ 
-			100 timesRepeat: ['BLOCK #1' dump].
-			##s2 critical: [
-			##	10 timesRepeat: ['BLOCK #1' dump ]
-			##]
+			##1000 timesRepeat: ['BLOCK #1' dump].
+			s2 critical: [
+				10000 timesRepeat: ['BLOCK #1' dump ].
+				Exception signal: 'Raised Exception at process t1'.
+			]
 		] newProcess.
 		t2 := [ 
-			100 timesRepeat: ['BLOCK #2' dump].
-			##s2 critical: [
-			##	10 timesRepeat: ['BLOCK #2' dump. ]
-			##].
+			##1000 timesRepeat: ['BLOCK #2' dump].
+			s2 critical: [
+				10000 timesRepeat: ['BLOCK #2' dump. ]
+			].
 
 			s1 signal.
 		] newProcess.

@@ -68,6 +68,14 @@
 {
 	#dcl count waiting_head waiting_tail heapIndex fireTimeSec fireTimeNsec.
 
+	#method(#class) forMutualExclusion
+	{
+		| sem |
+		sem := self new.
+		sem signal.
+		^sem
+	}
+
 	#method initialize
 	{
 		self.count := 0.
@@ -104,11 +112,8 @@
 
 	#method critical: aBlock
 	{
-## TODO: implement this
-"
 		self wait.
 		^aBlock ensure: [ self signal ]
-"
 	}
 
 	## ==================================================================
