@@ -48,7 +48,8 @@
 	
 	#method(#class) main
 	{
-		## test critical region
+
+	## THIS CRASHES VM. PLEASE CHECK. CRASHES WHEN REPETITION IS 1000
 		|t1 t2 s1 s2 s3|
 
 		'START OF MAIN' dump.
@@ -57,13 +58,13 @@
 		s2 := Semaphore new.
 
 		t1 := [ 
-			1000 timesRepeat: ['BLOCK #1' dump].
+			10000 timesRepeat: ['BLOCK #1' dump].
 			##s2 critical: [
 			##	10 timesRepeat: ['BLOCK #1' dump ]
 			##]
 		] newProcess.
 		t2 := [ 
-			1000 timesRepeat: ['BLOCK #2' dump].
+			10000 timesRepeat: ['BLOCK #2' dump].
 			##s2 critical: [
 			##	10 timesRepeat: ['BLOCK #2' dump. ]
 			##].
@@ -77,6 +78,18 @@
 		s1 wait.
 
 		'END OF MAIN' dump.   
+
+
+"
+
+		|s1|
+		s1 := Semaphore new.
+		s1 signal.
+		'XXXXXXXXXXXXXXXX' dump.
+		s1 wait.
+"
+
+
 
 "
 		| v1 |

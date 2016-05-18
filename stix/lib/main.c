@@ -380,7 +380,6 @@ static char* syntax_error_msg[] =
 	"literal expected"
 };
 
-stix_ooch_t str_system[] = { 'S', 'y', 's', 't', 'e', 'm' };
 stix_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' };
 stix_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
 
@@ -461,27 +460,6 @@ int main (int argc, char* argv[])
 	}
 #endif
 
-	/*
-	{
-	stix_oop_t k;
-	stix_oow_t x;
-
-	k = STIX_SMOOI_TO_OOP(-1);
-	printf ("%ld %ld %ld %lX\n", (long int)STIX_OOP_TO_SMOOI(k), (long int)STIX_SMOOI_MIN, (long int)STIX_SMOOI_MAX, (long)LONG_MIN);
-
-	k = STIX_SMOOI_TO_OOP(STIX_SMOOI_MAX);
-	printf ("%ld\n", (long int)STIX_OOP_TO_SMOOI(k));
-
-	k = STIX_SMOOI_TO_OOP(STIX_SMOOI_MIN);
-	printf ("%ld\n", (long int)STIX_OOP_TO_SMOOI(k));
-
-	printf ("%u\n", STIX_BITS_MAX(unsigned int, 5));
-	x = STIX_CLASS_SPEC_MAKE (10, 1, STIX_OBJ_TYPE_CHAR);
-	printf ("%lu %lu %lu %lu\n", (unsigned long int)x, (unsigned long int)STIX_SMOOI_TO_OOP(x),
-		(unsigned long int)STIX_CLASS_SPEC_NAMED_INSTVAR(x),
-		(unsigned long int)STIX_CLASS_SPEC_INDEXED_TYPE(x));
-	}*/
-
 	vmprim.mod_open = mod_open;
 	vmprim.mod_close = mod_close;
 	vmprim.mod_getsym = mod_getsym;
@@ -523,63 +501,6 @@ int main (int argc, char* argv[])
 		stix_close (stix);
 		return -1;
 	}
-
-#if 0
-{
-
-/*const stix_bch_t* xxx = "9999999999999999999999999999999999999999999999999999999999999999999999999999999999";*/
-
-//const stix_bch_t* xxx = "2305843009213693953";
-//const stix_bch_t* xxx = "184467440737095516161111";
-const stix_bch_t* xxx = "999999999999999999999999";
-const stix_bch_t* yyy = "1000000000000000000000000000000000000000000000000";
-//const stix_bch_t* yyy = "1290812390812903812903812903812903812903481290381209381290381290381290831290381290381290831209381293712897361287361278631278361278631278631287361278361278";
-
-stix_ooch_t buf[10240];
-stix_oow_t xxxlen;
-stix_oow_t buflen;
-
-xxxlen = stix_countbcstr(xxx);
-buflen = STIX_COUNTOF(buf);
-stix_utf8toucs (xxx, &xxxlen, buf, &buflen);
-dump_object (stix, stix_strtoint (stix, buf, buflen, 10), "STRINT");
-
-xxxlen = stix_countbcstr(yyy);
-buflen = STIX_COUNTOF(buf);
-stix_utf8toucs (yyy, &xxxlen, buf, &buflen);
-dump_object (stix, stix_strtoint (stix, buf, buflen, 3), "STRINT");
-}
-
-{
-stix_ooch_t x[] = { 'X', 't', 'r', 'i', 'n', 'g', '\0' };
-stix_ooch_t y[] = { 'S', 'y', 'm', 'b', 'o', 'l', '\0' };
-stix_oop_t a, b, k;
-
-a = stix_makesymbol (stix, x, 6);
-b = stix_makesymbol (stix, y, 6);
-
-printf ("%p %p\n", a, b);
-
-
-	dump_symbol_table (stix);
-
-/*
-stix_pushtmp (stix, &a);
-stix_pushtmp (stix, &b);
-k = stix_instantiate (stix, stix->_byte_array, STIX_NULL, 100);
-stix_poptmps (stix, 2);
-stix_putatsysdic (stix, a, k);
-*/
-
-stix_gc (stix);
-a = stix_findsymbol (stix, x, 6);
-printf ("%p\n", a);
-	dump_symbol_table (stix);
-
-
-	dump_dictionary (stix, stix->sysdic, "System dictionary");
-}
-#endif
 
 	xtn = stix_getxtn (stix);
 
@@ -654,8 +575,6 @@ printf ("%p\n", a);
 	g_stix = stix;
 	setup_tick ();
 
-/*	objname.ptr = str_system;
-	objname.len = 6;*/
 	objname.ptr = str_my_object;
 	objname.len = 8;
 	mthname.ptr = str_main;
@@ -669,7 +588,6 @@ printf ("%p\n", a);
 	cancel_tick ();
 	g_stix = STIX_NULL;
 
-/*	dump_dictionary (stix, stix->sysdic, "System dictionary");*/
 	stix_close (stix);
 
 #if defined(USE_LTDL)

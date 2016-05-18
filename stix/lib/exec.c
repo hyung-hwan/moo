@@ -1539,6 +1539,45 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
+
+static int prim_context_goto (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv;
+	stix_oop_t pc;
+	stix_oow_t pcw;
+
+	/* this primivie provides the similar functionality to  MethodContext>>pc:
+	 * except that it pops the receiver and arguments and doesn't push a
+	 * return value. it's useful when you want to change the instruction
+	 * pointer while maintaining the stack level before the call */
+
+	STIX_ASSERT (nargs == 1);
+
+	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	if (STIX_CLASSOF(stix, rcv) != stix->_method_context)
+	{
+#if defined(STIX_DEBUG_EXEC_001)
+printf ("prim_context_goto: PRIMITVE RECEIVER IS NOT A METHOD CONTEXT\n");
+#endif
+		return 0;
+	}
+
+	pc = ACTIVE_STACK_GET(stix, stix->sp);
+	if (!STIX_OOP_IS_SMOOI(pc) || STIX_OOP_TO_SMOOI(pc) < 0)
+	{
+#if defined(STIX_DEBUG_EXEC_001)
+printf ("prim_context_goto: PRIMITVE ARGUMENT IS INVALID\n");
+#endif
+		return 0;
+	}
+
+	((stix_oop_context_t)rcv)->ip = pc;
+	LOAD_ACTIVE_IP (stix);
+
+	ACTIVE_STACK_POPS (stix, 2); /* pop both the argument and the receiver */
+	return 1;
+}
+
 static int __block_value (stix_t* stix, stix_ooi_t rcv_blkctx_offset, stix_ooi_t nargs, stix_ooi_t num_first_arg_elems, stix_oop_context_t* pblkctx)
 {
 	/* prepare a new block context for activation.
@@ -2635,6 +2674,7 @@ static prim_t primitives[] =
 	{   2,  2,  prim_basic_at_put,         "_basic_at_put"        },
 
 
+	{   1,  1,  prim_context_goto,                     "_context_goto"        },
 	{   0, MAX_NARGS,  prim_block_value,               "_block_value"         },
 	{   0, MAX_NARGS,  prim_block_new_process,         "_block_new_process"   },
 
@@ -2866,7 +2906,7 @@ printf ("\n");
 	method = find_method (stix, receiver, &mthname, to_super);
 	if (!method) 
 	{
-		static stix_uch_t fbm[] = { 'd', 'o', 'e', 's', 'N', 'o', 't', 'U', 'n', 'd', 'e', 'r', 's', 't', 'a', 'n', 'd', ':' };
+		static stix_ooch_t fbm[] = { 'd', 'o', 'e', 's', 'N', 'o', 't', 'U', 'n', 'd', 'e', 'r', 's', 't', 'a', 'n', 'd', ':' };
 		mthname.ptr = fbm;
 		mthname.len = 18;
 
@@ -2876,6 +2916,7 @@ printf ("\n");
 			/* TODO: improve this hard error handling */
 			stix_oop_t c;
 
+/* TODO: remove this print out.... or have it gracefully returned to the caller side */
 			c = STIX_CLASSOF(stix,receiver);
 			printf ("HARD FAILURE ERROR [IMAGE PROBLEM] - receiver [");
 			print_object (stix, receiver);
@@ -2896,7 +2937,7 @@ printf ("\n");
  *       how can i preserve it gracefully? */
 			ACTIVE_STACK_POPS (stix, nargs);
 			nargs = 1;
-			ACTIVE_STACK_PUSH (stix, selector);
+			ACTIVE_STACK_PUSH (stix, (stix_oop_t)selector);
 		}
 	}
 
@@ -3133,6 +3174,15 @@ int stix_execute (stix_t* stix)
 			/* no more waiting semaphore and no more process */
 			STIX_ASSERT (stix->processor->tally = STIX_SMOOI_TO_OOP(0));
 printf ("REALLY NO MORE RUNNABLE PROCESS...\n");
+
+
+#if 0
+if (there is semaphore awaited.... )
+{
+/* DO SOMETHING */
+}
+#endif
+
 			break;
 		}
 

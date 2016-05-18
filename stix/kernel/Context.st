@@ -34,10 +34,15 @@
 		^self.ip + 1
 	}
 
+	#method goto: anInteger
+	{
+		<primitive: #_context_goto>
+		self primitiveFailed. ## TODO: need to make this a hard failure?
+	}
+
 	#method pc: anInteger
 	{
 		self.ip := anInteger.
-		"self.sp := self.sp - 1."  "whould this always work??? "
 	}
 
 	#method sp
@@ -184,11 +189,18 @@
 		## --------------------------------------------------
 		## If VM is built with STIX_USE_PROCSTK
 		## --------------------------------------------------
-		| pc |
+		| pc sp |
+
 		pc := thisContext pcplus1.
-		(self value) ifFalse: [ ^nil "^self" ].
+		(self value) ifFalse: [ ^nil ].
 		aBlock value.
-		thisContext pc: pc.
+
+		## the pc: method leaves thisContext and pc in the stack after
+		## having changes the instruction poointer.
+		## as a result, the stack keeps growing. the goto method
+		## clears thisContext and pc off the stack unlike normal methods.
+		##thisContext pc: pc.
+		thisContext goto: pc.
 		## --------------------------------------------------
 	}
 
@@ -202,8 +214,8 @@
 		## --------------------------------------------------
 		| pc |
 		pc := thisContext pcplus1.
-		(self value) ifFalse: [ ^nil "^self" ].
-		thisContext pc: pc.
+		(self value) ifFalse: [ ^nil ].
+		thisContext goto: pc.
 		## --------------------------------------------------
 	}
 
@@ -247,7 +259,7 @@
 		pc := thisContext pcplus1.
 		(self value) ifTrue: [ ^nil "^self" ].
 		aBlock value.
-		thisContext pc: pc.
+		thisContext goto: pc.
 		## --------------------------------------------------
 	}
 
@@ -262,7 +274,7 @@
 		| pc |
 		pc := thisContext pcplus1.
 		(self value) ifTrue: [ ^nil "^self" ].
-		thisContext pc: pc.
+		thisContext goto: pc.
 		## --------------------------------------------------
 	}
 
