@@ -27,8 +27,15 @@
 #include "stix-prv.h"
 
 
+/* TODO: remove these headers after having migrated system-dependent functions of of this file */
 #if defined(_WIN32)
 #	include <windows.h>
+#elif defined(__OS2__)
+#	define INCL_DOSMISC
+#	define INCL_DOSDATETIME
+#	define INCL_DOSERRORS
+#	include <os2.h>
+#	include <time.h>
 #elif defined(__MSDOS__)
 #	include <time.h>
 #elif defined(macintosh)
@@ -36,16 +43,12 @@
 #	include <OSUtils.h>
 #	include <Timer.h>
 #else
-	/* TODO: remove this header after having changed clock_gettime() to a 
-	 *       platform independent function */
 #	if defined(HAVE_TIME_H)
 #		include <time.h>
 #	endif
-
 #	if defined(HAVE_SYS_TIME_H)
 #		include <sys/time.h>
 #	endif
-
 #endif
 
 #define PROC_STATE_RUNNING 3
@@ -198,7 +201,20 @@ static void vm_cleanup (stix_t* stix)
 
 static STIX_INLINE void vm_gettime (stix_t* stix, stix_ntime_t* now)
 {
-#if defined(__MSDOS__) && defined(_INTELC32_)
+#if defined(_WIN32)
+
+	/* TODO: */
+
+#elif defined(__OS2__)
+	ULONG out;
+
+/* TODO: handle overflow?? */
+/* TODO: use DosTmrQueryTime() and DosTmrQueryFreq()? */
+	DosQuerySysInfo (QSV_MS_COUNT, QSV_MS_COUNT, &out, STIX_SIZEOF(out)); /* milliseconds */
+	/* it must return NO_ERROR */
+
+	STIX_INITNTIME (now, STIX_MSEC_TO_SEC(out), STIX_MSEC_TO_NSEC(out));
+#elif defined(__MSDOS__) && defined(_INTELC32_)
 	clock_t c;
 
 /* TODO: handle overflow?? */
@@ -253,6 +269,11 @@ static STIX_INLINE void vm_sleep (stix_t* stix, const stix_ntime_t* dur)
 		/* fallback to normal Sleep() */
 		Sleep (STIX_SECNSEC_TO_MSEC(dur->sec,dur->nsec));
 	}
+#elif defined(__OS2__)
+
+	/* TODO: in gui mode, this is not a desirable method??? 
+	 *       this must be made event-driven coupled with the main event loop */
+	DosSleep (STIX_SECNSEC_TO_MSEC(dur->sec,dur->nsec));
 
 #elif defined(macintosh)
 
