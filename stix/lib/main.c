@@ -407,12 +407,16 @@ static void timer_intr_handler (void)
 #elif defined(macintosh)
 
 static TMTask g_tmtask;
+static ProcessSerialNumber g_psn;
+
+#define TMTASK_DELAY 50 /* milliseconds if positive, microseconds(after negation) if negative */
 
 static pascal void timer_intr_handler (TMTask* task)
 {
 	if (g_stix) stix_switchprocess (g_stix);
+	WakeUpProcess (&g_psn);
+	PrimeTime ((QElem*)&g_tmtask, TMTASK_DELAY);
 }
-
 
 #else
 static void arrange_process_switching (int sig)
@@ -430,15 +434,12 @@ static void setup_tick (void)
 
 #elif defined(macintosh)
 
-	long delay = 50;
-
+	GetCurrentProcess (&g_psn);
 	memset (&g_tmtask, 0, STIX_SIZEOF(g_tmtask));
 	g_tmtask.tmAddr = NewTimerProc (timer_intr_handler);
 	InsXTime ((QElem*)&g_tmtask);
 
-	/* if delay is positive, it's in milliseconds.
-	 * if it's negative, it's in negated microsecond */
-	PrimeTime ((QElem*)&g_tmtask, delay);
+	PrimeTime ((QElem*)&g_tmtask, TMTASK_DELAY);
 
 #elif defined(HAVE_SETITIMER) && defined(SIGVTALRM) && defined(ITIMER_VIRTUAL)
 	struct itimerval itv;
