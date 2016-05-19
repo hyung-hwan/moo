@@ -31,6 +31,10 @@
 #	include <windows.h>
 #elif defined(__MSDOS__)
 #	include <time.h>
+#elif defined(macintosh)
+#	include <Types.h>
+#	include <OSUtils.h>
+#	include <Timer.h>
 #else
 	/* TODO: remove this header after having changed clock_gettime() to a 
 	 *       platform independent function */
@@ -209,6 +213,14 @@ static STIX_INLINE void vm_gettime (stix_t* stix, stix_ntime_t* now)
 	#else
 	#	error UNSUPPORTED CLOCKS_PER_SEC
 	#endif
+#elif defined(macintosh)
+	UnsignedWide tick;
+	stix_uint64_t tick64;
+
+	Microseconds (&tick);
+
+	tick64 = *(stix_uint64_t*)&tick;
+	STIX_INITNTIME (now, STIX_USEC_TO_SEC(tick64), STIX_USEC_TO_NSEC(tick64));
 
 #elif defined(HAVE_CLOCK_GETTIME)
 	struct timespec ts;
@@ -241,6 +253,10 @@ static STIX_INLINE void vm_sleep (stix_t* stix, const stix_ntime_t* dur)
 		/* fallback to normal Sleep() */
 		Sleep (STIX_SECNSEC_TO_MSEC(dur->sec,dur->nsec));
 	}
+
+#elif defined(macintosh)
+
+	/* TODO: ... */
 
 #elif defined(__MSDOS__) && defined(_INTELC32_)
 

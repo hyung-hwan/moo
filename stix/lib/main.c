@@ -47,7 +47,7 @@
 #elif defined(__MSDOS__)
 #	include <dos.h>
 #elif defined(macintosh)
-	/* nothing to include */
+#	include <Timer.h>
 #else
 #	include <unistd.h>
 #	include <ltdl.h>
@@ -404,6 +404,16 @@ static void timer_intr_handler (void)
 	_chain_intr(prev_timer_intr_handler);
 }
 
+#elif defined(macintosh)
+
+static TMTask g_tmtask;
+
+static pascal void timer_intr_handler (TMTask* task)
+{
+	if (g_stix) stix_switchprocess (g_stix);
+}
+
+
 #else
 static void arrange_process_switching (int sig)
 {
@@ -417,6 +427,18 @@ static void setup_tick (void)
 
 	prev_timer_intr_handler = _dos_getvect (0x1C);
 	_dos_setvect (0x1C, timer_intr_handler);
+
+#elif defined(macintosh)
+
+	long delay = 50;
+
+	memset (&g_tmtask, 0, STIX_SIZEOF(g_tmtask));
+	g_tmtask.tmAddr = NewTimerProc (timer_intr_handler);
+	InsXTime ((QElem*)&g_tmtask);
+
+	/* if delay is positive, it's in milliseconds.
+	 * if it's negative, it's in negated microsecond */
+	PrimeTime ((QElem*)&g_tmtask, delay);
 
 #elif defined(HAVE_SETITIMER) && defined(SIGVTALRM) && defined(ITIMER_VIRTUAL)
 	struct itimerval itv;
@@ -444,6 +466,10 @@ static void cancel_tick (void)
 
 	_dos_setvect (0x1C, prev_timer_intr_handler);
 
+#elif defined(macintosh)
+	RmvTime ((QElem*)&g_tmtask);
+	/*DisposeTimerProc (g_tmtask.tmAddr);*/
+
 #elif defined(HAVE_SETITIMER) && defined(SIGVTALRM) && defined(ITIMER_VIRTUAL)
 	struct itimerval itv;
 	struct sigaction act;
@@ -453,7 +479,6 @@ static void cancel_tick (void)
 	itv.it_value.tv_sec = 0;
 	itv.it_value.tv_usec = 0;
 	setitimer (ITIMER_VIRTUAL, &itv, STIX_NULL);
-
 
 	sigemptyset (&act.sa_mask);
 	act.sa_handler = SIG_DFL;
