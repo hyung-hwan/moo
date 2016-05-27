@@ -96,38 +96,11 @@
 #if defined(STIX_USE_PROCSTK)
 	#define LOAD_ACTIVE_SP(stix) LOAD_SP(stix, (stix)->processor->active)
 	#define STORE_ACTIVE_SP(stix) STORE_SP(stix, (stix)->processor->active)
-
-/* TODO: stack bound check when pushing */
-	#define ACTIVE_STACK_PUSH(stix,v) \
-		do { \
-			(stix)->sp = (stix)->sp + 1; \
-			(stix)->processor->active->slot[(stix)->sp] = v; \
-		} while (0)
-
-	#define ACTIVE_STACK_GET(stix,v_sp) ((stix)->processor->active->slot[v_sp])
-	#define ACTIVE_STACK_SET(stix,v_sp,v_obj) ((stix)->processor->active->slot[v_sp] = v_obj)
-
 #else
 	#define LOAD_ACTIVE_SP(stix) LOAD_SP(stix, (stix)->active_context)
 	#define STORE_ACTIVE_SP(stix) STORE_SP(stix, (stix)->active_context)
-
-	#define ACTIVE_STACK_PUSH(stix,v) \
-		do { \
-			(stix)->sp = (stix)->sp + 1; \
-			(stix)->active_context->slot[(stix)->sp] = v; \
-		} while (0)
-
-	#define ACTIVE_STACK_GET(stix,v_sp) ((stix)->active_context->slot[v_sp])
-	#define ACTIVE_STACK_SET(stix,v_sp,v_obj) ((stix)->active_context->slot[v_sp] = v_obj)
 #endif
 
-#define ACTIVE_STACK_GETTOP(stix) ACTIVE_STACK_GET(stix, (stix)->sp)
-#define ACTIVE_STACK_SETTOP(stix,v_obj) ACTIVE_STACK_SET(stix, (stix)->sp, v_obj)
-
-#define ACTIVE_STACK_POP(stix) ((stix)->sp = (stix)->sp - 1)
-#define ACTIVE_STACK_UNPOP(stix) ((stix)->sp = (stix)->sp + 1)
-#define ACTIVE_STACK_POPS(stix,count) ((stix)->sp = (stix)->sp - (count))
-#define ACTIVE_STACK_ISEMPTY(stix) ((stix)->sp <= -1)
 
 #if defined(STIX_USE_PROCSTK)
 	#define SWITCH_ACTIVE_CONTEXT(stix,v_ctx) \
@@ -1028,12 +1001,12 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	for (i = nargs; i > 0; )
 	{
 		/* copy argument */
-		ctx->slot[--i] = ACTIVE_STACK_GETTOP (stix);
-		ACTIVE_STACK_POP (stix);
+		ctx->slot[--i] = STIX_STACK_GETTOP (stix);
+		STIX_STACK_POP (stix);
 	}
 	/* copy receiver */
-	ctx->receiver_or_source = ACTIVE_STACK_GETTOP (stix);
-	ACTIVE_STACK_POP (stix);
+	ctx->receiver_or_source = STIX_STACK_GETTOP (stix);
+	STIX_STACK_POP (stix);
 
 	STIX_ASSERT (stix->sp >= -1);
 
@@ -1222,7 +1195,7 @@ TODO: overcome this problem
 	stix_poptmps (stix, 3);
 	if (!proc) return -1;
 
-	ACTIVE_STACK_PUSH (stix, ass->value); /* push the receiver - the object referenced by 'objname' */
+	STIX_STACK_PUSH (stix, ass->value); /* push the receiver - the object referenced by 'objname' */
 	STORE_ACTIVE_SP (stix); /* stix->active_context->sp = STIX_SMOOI_TO_OOP(stix->sp) */
 
 	STIX_ASSERT (stix->processor->active == proc);
@@ -1242,17 +1215,17 @@ static int prim_dump (stix_t* stix, stix_ooi_t nargs)
 	STIX_ASSERT (nargs >=  0);
 
 	printf ("RECEIVER: ");
-	print_object (stix, ACTIVE_STACK_GET(stix, stix->sp - nargs));
+	print_object (stix, STIX_STACK_GET(stix, stix->sp - nargs));
 	printf ("\n");
 	for (i = nargs; i > 0; )
 	{
 		--i;
 		printf ("ARGUMENT: ");
-		print_object (stix, ACTIVE_STACK_GET(stix, stix->sp - i));
+		print_object (stix, STIX_STACK_GET(stix, stix->sp - i));
 		printf ("\n");
 	}
 
-	ACTIVE_STACK_POPS (stix, nargs);
+	STIX_STACK_POPS (stix, nargs);
 	return 1; /* success */
 }
 
@@ -1262,13 +1235,13 @@ static int prim_identical (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	b = (rcv == arg)? stix->_true: stix->_false;
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, b);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, b);
 	return 1;
 }
 
@@ -1278,13 +1251,13 @@ static int prim_not_identical (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	b = (rcv != arg)? stix->_true: stix->_false;
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, b);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, b);
 	return 1;
 }
 
@@ -1293,9 +1266,9 @@ static int prim_class (stix_t* stix, stix_ooi_t nargs)
 	stix_oop_t rcv, c;
 
 	STIX_ASSERT (nargs ==  0);
-	rcv = ACTIVE_STACK_GETTOP (stix);
+	rcv = STIX_STACK_GETTOP (stix);
 	c = STIX_CLASSOF(stix, rcv);
-	ACTIVE_STACK_SETTOP (stix, c);
+	STIX_STACK_SETTOP (stix, c);
 	return 1; /* success */
 }
 
@@ -1305,7 +1278,7 @@ static int prim_basic_new (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs ==  0);
 
-	rcv = ACTIVE_STACK_GETTOP (stix);
+	rcv = STIX_STACK_GETTOP (stix);
 
 	if (STIX_CLASSOF(stix, rcv) != stix->_class) 
 	{
@@ -1317,7 +1290,7 @@ static int prim_basic_new (stix_t* stix, stix_ooi_t nargs)
 	if (!obj) return -1;
 
 	/* emulate 'pop receiver' and 'push result' */
-	ACTIVE_STACK_SETTOP (stix, obj);
+	STIX_STACK_SETTOP (stix, obj);
 	return 1; /* success */
 }
 
@@ -1328,14 +1301,14 @@ static int prim_basic_new_with_size (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs ==  1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
 	if (STIX_CLASSOF(stix, rcv) != stix->_class) 
 	{
 		/* the receiver is not a class object */
 		return 0;
 	}
 
-	szoop = ACTIVE_STACK_GET(stix, stix->sp);
+	szoop = STIX_STACK_GET(stix, stix->sp);
 	if (stix_inttooow (stix, szoop, &size) <= 0)
 	{
 		/* integer out of range or not integer */
@@ -1354,8 +1327,8 @@ static int prim_basic_new_with_size (stix_t* stix, stix_ooi_t nargs)
 
 	/* remove the argument and replace the receiver with a new object
 	 * instantiated */
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, obj);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, obj);
 
 	return 1; /* success */
 }
@@ -1386,11 +1359,11 @@ static int prim_ngc_dispose (stix_t* stix, stix_ooi_t nargs)
 	stix_oop_t rcv;
 
 	STIX_ASSERT (nargs ==  0);
-	rcv = ACTIVE_STACK_GETTOP (stix);
+	rcv = STIX_STACK_GETTOP (stix);
 
 	stix_freemem (stix, rcv);
 
-	ACTIVE_STACK_SETTOP (stix, stix->_nil);
+	STIX_STACK_SETTOP (stix, stix->_nil);
 	return 1; /* success */
 }
 
@@ -1400,13 +1373,13 @@ static int prim_shallow_copy (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs ==  0);
 
-	rcv = ACTIVE_STACK_GETTOP (stix);
+	rcv = STIX_STACK_GETTOP (stix);
 
 	obj = stix_shallowcopy (stix, rcv);
 	if (!obj) return -1;
 
 	/* emulate 'pop receiver' and 'push result' */
-	ACTIVE_STACK_SETTOP (stix, obj);
+	STIX_STACK_SETTOP (stix, obj);
 	return 1; /* success */
 }
 
@@ -1416,11 +1389,11 @@ static int prim_basic_size (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 0);
 
-	rcv = ACTIVE_STACK_GETTOP(stix);
+	rcv = STIX_STACK_GETTOP(stix);
 
 	sz = stix_oowtoint (stix, STIX_OBJ_GET_SIZE(rcv));
 	if (!sz) return -1; /* hard failure */
-	ACTIVE_STACK_SETTOP(stix, sz);
+	STIX_STACK_SETTOP(stix, sz);
 
 	return 1;
 }
@@ -1432,14 +1405,14 @@ static int prim_basic_at (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
 	if (!STIX_OOP_IS_POINTER(rcv))
 	{
 		/* the receiver is a special numeric object, not a normal pointer */
 		return 0;
 	}
 
-	pos = ACTIVE_STACK_GET(stix, stix->sp);
+	pos = STIX_STACK_GET(stix, stix->sp);
 	if (stix_inttooow (stix, pos, &idx) <= 0)
 	{
 		/* negative integer or not integer */
@@ -1480,8 +1453,8 @@ static int prim_basic_at (stix_t* stix, stix_ooi_t nargs)
 			return -1;
 	}
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, v);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, v);
 	return 1;
 }
 
@@ -1492,14 +1465,14 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 2);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 2);
+	rcv = STIX_STACK_GET(stix, stix->sp - 2);
 	if (!STIX_OOP_IS_POINTER(rcv))
 	{
 		/* the receiver is a special numeric object, not a normal pointer */
 		return 0;
 	}
-	pos = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	val = ACTIVE_STACK_GET(stix, stix->sp);
+	pos = STIX_STACK_GET(stix, stix->sp - 1);
+	val = STIX_STACK_GET(stix, stix->sp);
 
 	if (stix_inttooow (stix, pos, &idx) <= 0)
 	{
@@ -1571,9 +1544,9 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 			return -1;
 	}
 
-	ACTIVE_STACK_POPS (stix, 2);
+	STIX_STACK_POPS (stix, 2);
 /* TODO: return receiver or value? */
-	ACTIVE_STACK_SETTOP (stix, val);
+	STIX_STACK_SETTOP (stix, val);
 	return 1;
 }
 
@@ -1591,7 +1564,7 @@ static int prim_context_goto (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
 	if (STIX_CLASSOF(stix, rcv) != stix->_method_context)
 	{
 #if defined(STIX_DEBUG_EXEC_001)
@@ -1600,7 +1573,7 @@ printf ("prim_context_goto: PRIMITVE RECEIVER IS NOT A METHOD CONTEXT\n");
 		return 0;
 	}
 
-	pc = ACTIVE_STACK_GET(stix, stix->sp);
+	pc = STIX_STACK_GET(stix, stix->sp);
 	if (!STIX_OOP_IS_SMOOI(pc) || STIX_OOP_TO_SMOOI(pc) < 0)
 	{
 #if defined(STIX_DEBUG_EXEC_001)
@@ -1612,7 +1585,7 @@ printf ("prim_context_goto: PRIMITVE ARGUMENT IS INVALID\n");
 	((stix_oop_context_t)rcv)->ip = pc;
 	LOAD_ACTIVE_IP (stix);
 
-	ACTIVE_STACK_POPS (stix, 2); /* pop both the argument and the receiver */
+	STIX_STACK_POPS (stix, 2); /* pop both the argument and the receiver */
 	return 1;
 }
 
@@ -1638,7 +1611,7 @@ static int __block_value (stix_t* stix, stix_ooi_t rcv_blkctx_offset, stix_ooi_t
 	 * itself. Let me simply clone a block context to allow reentrancy like this
 	 * while the block context is active
 	 */
-	rcv_blkctx = (stix_oop_context_t)ACTIVE_STACK_GET(stix, stix->sp - rcv_blkctx_offset);
+	rcv_blkctx = (stix_oop_context_t)STIX_STACK_GET(stix, stix->sp - rcv_blkctx_offset);
 	if (STIX_CLASSOF(stix, rcv_blkctx) != stix->_block_context)
 	{
 		/* the receiver must be a block context */
@@ -1684,7 +1657,7 @@ printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 	if (!blkctx) return -1;
 
 	/* get rcv_blkctx again to be GC-safe for stix_instantiate() above */
-	rcv_blkctx = (stix_oop_context_t)ACTIVE_STACK_GET(stix, stix->sp - rcv_blkctx_offset); 
+	rcv_blkctx = (stix_oop_context_t)STIX_STACK_GET(stix, stix->sp - rcv_blkctx_offset); 
 	STIX_ASSERT (STIX_CLASSOF(stix, rcv_blkctx) == stix->_block_context);
 
 #if 0
@@ -1709,7 +1682,7 @@ printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 		 * to pass array elements to the new block */
 		stix_oop_oop_t xarg;
 		STIX_ASSERT (nargs == 1);
-		xarg = (stix_oop_oop_t)ACTIVE_STACK_GETTOP (stix);
+		xarg = (stix_oop_oop_t)STIX_STACK_GETTOP (stix);
 		STIX_ASSERT (STIX_ISTYPEOF(stix,xarg,STIX_OBJ_TYPE_OOP)); 
 		STIX_ASSERT (STIX_OBJ_GET_SIZE(xarg) == num_first_arg_elems); 
 		for (i = 0; i < num_first_arg_elems; i++)
@@ -1722,10 +1695,10 @@ printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 		/* copy the arguments to the stack */
 		for (i = 0; i < nargs; i++)
 		{
-			blkctx->slot[i] = ACTIVE_STACK_GET(stix, stix->sp - nargs + i + 1);
+			blkctx->slot[i] = STIX_STACK_GET(stix, stix->sp - nargs + i + 1);
 		}
 	}
-	ACTIVE_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
+	STIX_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
 
 	STIX_ASSERT (blkctx->home != stix->_nil);
 	blkctx->sp = STIX_SMOOI_TO_OOP(local_ntmprs - 1);
@@ -1774,7 +1747,7 @@ static int prim_block_new_process (stix_t* stix, stix_ooi_t nargs)
 	{
 		stix_oop_t xarg;
 
-		xarg = ACTIVE_STACK_GETTOP(stix);
+		xarg = STIX_STACK_GETTOP(stix);
 		if (!STIX_ISTYPEOF(stix,xarg,STIX_OBJ_TYPE_OOP))
 		{
 			/* the only optional argument must be an OOP-indexable 
@@ -1785,7 +1758,7 @@ static int prim_block_new_process (stix_t* stix, stix_ooi_t nargs)
 		num_first_arg_elems = STIX_OBJ_GET_SIZE(xarg);
 	}
 
-	rcv_blkctx = (stix_oop_context_t)ACTIVE_STACK_GET(stix, stix->sp - nargs);
+	rcv_blkctx = (stix_oop_context_t)STIX_STACK_GET(stix, stix->sp - nargs);
 	if (STIX_CLASSOF(stix, rcv_blkctx) != stix->_block_context)
 	{
 		/* the receiver must be a block context */
@@ -1811,7 +1784,7 @@ printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 
 	/* __block_value() has popped all arguments and the receiver. 
 	 * PUSH the return value instead of changing the stack top */
-	ACTIVE_STACK_PUSH (stix, (stix_oop_t)proc);
+	STIX_STACK_PUSH (stix, (stix_oop_t)proc);
 	return 1;
 }
 
@@ -1820,7 +1793,7 @@ static int prim_process_resume (stix_t* stix, stix_ooi_t nargs)
 	stix_oop_t rcv;
 	STIX_ASSERT (nargs == 0);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp);
 	if (STIX_CLASSOF(stix,rcv) != stix->_process) return 0;
 
 	resume_process (stix, (stix_oop_process_t)rcv); /* TODO: error check */
@@ -1834,7 +1807,7 @@ static int prim_process_terminate (stix_t* stix, stix_ooi_t nargs)
 	stix_oop_t rcv;
 	STIX_ASSERT (nargs == 0);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp);
 	if (STIX_CLASSOF(stix,rcv) != stix->_process) return 0;
 
 	terminate_process (stix, (stix_oop_process_t)rcv);
@@ -1848,7 +1821,7 @@ static int prim_process_yield (stix_t* stix, stix_ooi_t nargs)
 	stix_oop_t rcv;
 	STIX_ASSERT (nargs == 0);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp);
 	if (STIX_CLASSOF(stix,rcv) != stix->_process) return 0;
 
 	yield_process (stix, (stix_oop_process_t)rcv);
@@ -1862,7 +1835,7 @@ static int prim_semaphore_signal (stix_t* stix, stix_ooi_t nargs)
 	stix_oop_t rcv;
 	STIX_ASSERT (nargs == 0);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp);
 	if (STIX_CLASSOF(stix,rcv) != stix->_semaphore) return 0;
 
 	signal_semaphore (stix, (stix_oop_semaphore_t)rcv);
@@ -1876,7 +1849,7 @@ static int prim_semaphore_wait (stix_t* stix, stix_ooi_t nargs)
 	stix_oop_t rcv;
 	STIX_ASSERT (nargs == 0);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp);
 	if (STIX_CLASSOF(stix,rcv) != stix->_semaphore) return 0;
 
 	await_semaphore (stix, (stix_oop_semaphore_t)rcv);
@@ -1891,8 +1864,8 @@ static int prim_processor_schedule (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	if (rcv != (stix_oop_t)stix->processor || STIX_CLASSOF(stix,arg) != stix->_process)
 	{
@@ -1913,14 +1886,14 @@ static int prim_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
 
 	if (nargs == 3) 
 	{
-		nsec = ACTIVE_STACK_GET (stix, stix->sp);
+		nsec = STIX_STACK_GET (stix, stix->sp);
 		if (!STIX_OOP_IS_SMOOI(nsec)) return 0;
 	}
 	else nsec = STIX_SMOOI_TO_OOP(0);
 
-	sec = ACTIVE_STACK_GET(stix, stix->sp - nargs + 2);
-	sem = (stix_oop_semaphore_t)ACTIVE_STACK_GET(stix, stix->sp - nargs + 1);
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - nargs);
+	sec = STIX_STACK_GET(stix, stix->sp - nargs + 2);
+	sem = (stix_oop_semaphore_t)STIX_STACK_GET(stix, stix->sp - nargs + 1);
+	rcv = STIX_STACK_GET(stix, stix->sp - nargs);
 
 	if (rcv != (stix_oop_t)stix->processor) return 0;
 	if (STIX_CLASSOF(stix,sem) != stix->_semaphore) return 0;
@@ -1934,8 +1907,8 @@ static int prim_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
 
 		/*
 		Is this more desired???
-		ACTIVE_STACK_POPS (stix, nargs);
-		ACTIVE_STACK_SETTOP (stix, stix->_false);
+		STIX_STACK_POPS (stix, nargs);
+		STIX_STACK_SETTOP (stix, stix->_false);
 		return 1;
 		*/
 	}
@@ -1958,7 +1931,7 @@ static int prim_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
 
 	if (add_to_sem_heap (stix, sem) <= -1) return -1;
 
-	ACTIVE_STACK_POPS (stix, nargs);
+	STIX_STACK_POPS (stix, nargs);
 	return 1;
 }
 
@@ -1971,8 +1944,8 @@ static int prim_processor_remove_semaphore (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	sem = (stix_oop_semaphore_t)ACTIVE_STACK_GET(stix, stix->sp);
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
+	sem = (stix_oop_semaphore_t)STIX_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
 
 /* TODO: remove a semaphore from IO handler if it's registered...
  *       remove a semaphore from XXXXXXXXXXXXXX */
@@ -1988,7 +1961,7 @@ static int prim_processor_remove_semaphore (stix_t* stix, stix_ooi_t nargs)
 		STIX_ASSERT(sem->heap_index == STIX_SMOOI_TO_OOP(-1));
 	}
 
-	ACTIVE_STACK_POPS (stix, nargs);
+	STIX_STACK_POPS (stix, nargs);
 	return 1;
 }
 
@@ -1998,18 +1971,18 @@ static int prim_processor_return_to (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 2);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 2);
-	ret = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	ctx = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 2);
+	ret = STIX_STACK_GET(stix, stix->sp - 1);
+	ctx = STIX_STACK_GET(stix, stix->sp);
 
 	if (rcv != (stix_oop_t)stix->processor) return 0;
 
 	if (STIX_CLASSOF(stix, ctx) != stix->_block_context &&
 	    STIX_CLASSOF(stix, ctx) != stix->_method_context) return 0;
 
-	ACTIVE_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
+	STIX_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
 
-	ACTIVE_STACK_PUSH (stix, ret);
+	STIX_STACK_PUSH (stix, ret);
 	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)ctx);
 
 	return 1;
@@ -2021,15 +1994,15 @@ static int prim_processor_force_context (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	ctx = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	ctx = STIX_STACK_GET(stix, stix->sp);
 
 	if (rcv != (stix_oop_t)stix->processor) return 0;
 
 	if (STIX_CLASSOF(stix, ctx) != stix->_block_context &&
 	    STIX_CLASSOF(stix, ctx) != stix->_method_context) return 0;
 
-	ACTIVE_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
+	STIX_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
 	/* TODO: push nothing??? */
 
 	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)ctx);
@@ -2043,14 +2016,14 @@ static int prim_integer_add (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_addints (stix, rcv, arg);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2060,14 +2033,14 @@ static int prim_integer_sub (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_subints (stix, rcv, arg);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2077,14 +2050,14 @@ static int prim_integer_mul (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_mulints (stix, rcv, arg);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2094,15 +2067,15 @@ static int prim_integer_quo (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	quo = stix_divints (stix, rcv, arg, 0, STIX_NULL);
 	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 /* TODO: STIX_EDIVBY0 soft or hard failure? */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, quo);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, quo);
 	return 1;
 }
 
@@ -2112,15 +2085,15 @@ static int prim_integer_rem (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	quo = stix_divints (stix, rcv, arg, 0, &rem);
 	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 /* TODO: STIX_EDIVBY0 soft or hard failure? */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, rem);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, rem);
 	return 1;
 }
 
@@ -2130,15 +2103,15 @@ static int prim_integer_quo2 (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	quo = stix_divints (stix, rcv, arg, 1, STIX_NULL);
 	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 /* TODO: STIX_EDIVBY0 soft or hard failure? */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, quo);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, quo);
 	return 1;
 }
 
@@ -2148,15 +2121,15 @@ static int prim_integer_rem2 (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	quo = stix_divints (stix, rcv, arg, 1, &rem);
 	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 /* TODO: STIX_EDIVBY0 soft or hard failure? */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, rem);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, rem);
 	return 1;
 }
 
@@ -2166,12 +2139,12 @@ static int prim_integer_negated (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 0);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_negateint (stix, rcv);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2181,14 +2154,14 @@ static int prim_integer_bitat (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_bitatint (stix, rcv, arg);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2198,14 +2171,14 @@ static int prim_integer_bitand (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_bitandints (stix, rcv, arg);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2215,14 +2188,14 @@ static int prim_integer_bitor (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_bitorints (stix, rcv, arg);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2232,14 +2205,14 @@ static int prim_integer_bitxor (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_bitxorints (stix, rcv, arg);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2249,12 +2222,12 @@ static int prim_integer_bitinv (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 0);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_bitinvint (stix, rcv);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2264,14 +2237,14 @@ static int prim_integer_bitshift (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_bitshiftint (stix, rcv, arg);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2281,14 +2254,14 @@ static int prim_integer_eq (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_eqints (stix, rcv, arg);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2298,14 +2271,14 @@ static int prim_integer_ne (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_neints (stix, rcv, arg);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2315,14 +2288,14 @@ static int prim_integer_lt (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_ltints (stix, rcv, arg);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2332,14 +2305,14 @@ static int prim_integer_gt (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_gtints (stix, rcv, arg);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2349,14 +2322,14 @@ static int prim_integer_le (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_leints (stix, rcv, arg);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2366,14 +2339,14 @@ static int prim_integer_ge (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	res = stix_geints (stix, rcv, arg);
 	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
 
-	ACTIVE_STACK_POP (stix);
-	ACTIVE_STACK_SETTOP (stix, res);
+	STIX_STACK_POP (stix);
+	STIX_STACK_SETTOP (stix, res);
 	return 1;
 }
 
@@ -2384,8 +2357,8 @@ static int prim_integer_inttostr (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	if (!STIX_OOP_IS_SMOOI(arg)) return 0; /* soft failure */
 	radix = STIX_OOP_TO_SMOOI(arg);
@@ -2394,7 +2367,7 @@ static int prim_integer_inttostr (stix_t* stix, stix_ooi_t nargs)
 	str = stix_inttostr (stix, rcv, radix);
 	if (!str) return (stix->errnum == STIX_EINVAL? 0: -1);
 
-	ACTIVE_STACK_SETTOP (stix, str);
+	STIX_STACK_SETTOP (stix, str);
 	return 1;
 }
 
@@ -2405,8 +2378,8 @@ static int prim_ffi_open (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	if (!STIX_ISTYPEOF(stix, arg, STIX_OBJ_TYPE_CHAR))
 	{
@@ -2429,9 +2402,9 @@ static int prim_ffi_open (stix_t* stix, stix_ooi_t nargs)
 		return 0;
 	}
 
-	ACTIVE_STACK_POP (stix);
+	STIX_STACK_POP (stix);
 /* TODO: how to hold an address? as an integer????  or a byte array? fix this not to loose accuracy*/
-	ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(handle));
+	STIX_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(handle));
 
 	return 1;
 }
@@ -2445,8 +2418,8 @@ static int prim_ffi_close (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	arg = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 1);
+	arg = STIX_STACK_GET(stix, stix->sp);
 
 	if (!STIX_OOP_IS_SMOOI(arg))
 	{
@@ -2454,7 +2427,7 @@ static int prim_ffi_close (stix_t* stix, stix_ooi_t nargs)
 		return 0;
 	}
 
-	ACTIVE_STACK_POP (stix);
+	STIX_STACK_POP (stix);
 
 	handle = (void*)STIX_OOP_TO_SMOOI(arg); /* TODO: how to store void* ???. fix this not to loose accuracy */
 	if (stix->vmprim.mod_close) stix->vmprim.mod_close (stix, handle);
@@ -2468,10 +2441,10 @@ static int prim_ffi_call (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 3);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 3);
-	fun = ACTIVE_STACK_GET(stix, stix->sp - 2);
-	sig = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	args = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 3);
+	fun = STIX_STACK_GET(stix, stix->sp - 2);
+	sig = STIX_STACK_GET(stix, stix->sp - 1);
+	args = STIX_STACK_GET(stix, stix->sp);
 
 	if (!STIX_OOP_IS_SMOOI(fun)) /* TODO: how to store pointer  */
 	{
@@ -2570,7 +2543,7 @@ printf ("CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MOD
 
 		}
 
-		ACTIVE_STACK_POPS (stix, nargs);
+		STIX_STACK_POPS (stix, nargs);
 
 		switch (((stix_oop_char_t)sig)->slot[0])
 		{
@@ -2579,7 +2552,7 @@ printf ("CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MOD
 			case 'c':
 			{
 				char r = dcCallChar (dc, f);
-				ACTIVE_STACK_SETTOP (stix, STIX_CHAR_TO_OOP(r));
+				STIX_STACK_SETTOP (stix, STIX_CHAR_TO_OOP(r));
 				break;
 			}
 
@@ -2588,21 +2561,21 @@ printf ("CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MOD
 				int r = dcCallInt (dc, f);
 printf ("CALLED... %d\n", r);
 printf ("CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
-				ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(r));
+				STIX_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(r));
 				break;
 			}
 
 			case 'l':
 			{
 				long r = dcCallLong (dc, f);
-				ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(r));
+				STIX_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(r));
 				break;
 			}
 
 			case 'L':
 			{
 				long long r = dcCallLongLong (dc, f);
-				ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(r));
+				STIX_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(r));
 				break;
 			}
 
@@ -2623,7 +2596,7 @@ printf ("CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
 					return -1; /* TODO: proper error h andling */
 				}
 
-				ACTIVE_STACK_SETTOP (stix, s); 
+				STIX_STACK_SETTOP (stix, s); 
 				break;
 			}
 
@@ -2648,9 +2621,9 @@ static int prim_ffi_getsym (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 2);
 
-	rcv = ACTIVE_STACK_GET(stix, stix->sp - 2);
-	fun = ACTIVE_STACK_GET(stix, stix->sp - 1);
-	hnd = ACTIVE_STACK_GET(stix, stix->sp);
+	rcv = STIX_STACK_GET(stix, stix->sp - 2);
+	fun = STIX_STACK_GET(stix, stix->sp - 1);
+	hnd = STIX_STACK_GET(stix, stix->sp);
 
 	if (!STIX_OOP_IS_SMOOI(hnd)) /* TODO: how to store pointer  */
 	{
@@ -2675,9 +2648,9 @@ printf ("wrong function name...\n");
 		return 0;
 	}
 
-	ACTIVE_STACK_POPS (stix, 2);
+	STIX_STACK_POPS (stix, 2);
 /* TODO: how to hold an address? as an integer????  or a byte array? */
-	ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(sym));
+	STIX_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(sym));
 
 	return 1;
 }
@@ -2931,7 +2904,7 @@ static int send_message (stix_t* stix, stix_oop_char_t selector, int to_super, s
 	STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(selector) == STIX_OBJ_TYPE_CHAR);
 	STIX_ASSERT (STIX_CLASSOF(stix, selector) == stix->_symbol);
 
-	receiver = ACTIVE_STACK_GET(stix, stix->sp - nargs);
+	receiver = STIX_STACK_GET(stix, stix->sp - nargs);
 
 #if defined(STIX_DEBUG_EXEC_001)
 printf (" RECEIVER = ");
@@ -2944,7 +2917,11 @@ printf ("\n");
 	method = find_method (stix, receiver, &mthname, to_super);
 	if (!method) 
 	{
-		static stix_ooch_t fbm[] = { 'd', 'o', 'e', 's', 'N', 'o', 't', 'U', 'n', 'd', 'e', 'r', 's', 't', 'a', 'n', 'd', ':' };
+		static stix_ooch_t fbm[] = { 
+			'd', 'o', 'e', 's', 
+			'N', 'o', 't',
+			'U', 'n', 'd', 'e', 'r', 's', 't', 'a', 'n', 'd', ':'
+		};
 		mthname.ptr = fbm;
 		mthname.len = 18;
 
@@ -2954,7 +2931,7 @@ printf ("\n");
 			/* TODO: improve this hard error handling */
 			stix_oop_t c;
 
-/* TODO: remove this print out.... or have it gracefully returned to the caller side */
+/* TODO: remove this print-out.... or have it gracefully returned to the caller side */
 			c = STIX_CLASSOF(stix,receiver);
 			printf ("HARD FAILURE ERROR [IMAGE PROBLEM] - receiver [");
 			print_object (stix, receiver);
@@ -2973,9 +2950,9 @@ printf ("\n");
 			 * has been called. */
 /* TODO: if i manipulate the stack this way here, the stack track for the last call is kind of lost.
  *       how can i preserve it gracefully? */
-			ACTIVE_STACK_POPS (stix, nargs);
+			STIX_STACK_POPS (stix, nargs);
 			nargs = 1;
-			ACTIVE_STACK_PUSH (stix, (stix_oop_t)selector);
+			STIX_STACK_PUSH (stix, (stix_oop_t)selector);
 		}
 	}
 
@@ -2987,49 +2964,49 @@ printf ("\n");
 	{
 		case STIX_METHOD_PREAMBLE_RETURN_RECEIVER:
 			DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_RECEIVER");
-			ACTIVE_STACK_POPS (stix, nargs); /* pop arguments only*/
+			STIX_STACK_POPS (stix, nargs); /* pop arguments only*/
 			break;
 
 		case STIX_METHOD_PREAMBLE_RETURN_NIL:
 			DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_NIL");
-			ACTIVE_STACK_POPS (stix, nargs);
-			ACTIVE_STACK_SETTOP (stix, stix->_nil);
+			STIX_STACK_POPS (stix, nargs);
+			STIX_STACK_SETTOP (stix, stix->_nil);
 			break;
 
 		case STIX_METHOD_PREAMBLE_RETURN_TRUE:
 			DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_TRUE");
-			ACTIVE_STACK_POPS (stix, nargs);
-			ACTIVE_STACK_SETTOP (stix, stix->_true);
+			STIX_STACK_POPS (stix, nargs);
+			STIX_STACK_SETTOP (stix, stix->_true);
 			break;
 
 		case STIX_METHOD_PREAMBLE_RETURN_FALSE:
 			DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_FALSE");
-			ACTIVE_STACK_POPS (stix, nargs);
-			ACTIVE_STACK_SETTOP (stix, stix->_false);
+			STIX_STACK_POPS (stix, nargs);
+			STIX_STACK_SETTOP (stix, stix->_false);
 			break;
 
 		case STIX_METHOD_PREAMBLE_RETURN_INDEX:
 			DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_INDEX %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
-			ACTIVE_STACK_POPS (stix, nargs);
-			ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
+			STIX_STACK_POPS (stix, nargs);
+			STIX_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
 			break;
 
 		case STIX_METHOD_PREAMBLE_RETURN_NEGINDEX:
 			DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_NEGINDEX %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
-			ACTIVE_STACK_POPS (stix, nargs);
-			ACTIVE_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(-STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
+			STIX_STACK_POPS (stix, nargs);
+			STIX_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(-STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
 			break;
 
 		case STIX_METHOD_PREAMBLE_RETURN_INSTVAR:
 		{
 			stix_oop_oop_t rcv;
 
-			ACTIVE_STACK_POPS (stix, nargs); /* pop arguments only */
+			STIX_STACK_POPS (stix, nargs); /* pop arguments only */
 
 			DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_INSTVAR %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
 
 			/* replace the receiver by an instance variable of the receiver */
-			rcv = (stix_oop_oop_t)ACTIVE_STACK_GETTOP(stix);
+			rcv = (stix_oop_oop_t)STIX_STACK_GETTOP(stix);
 			STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(rcv) == STIX_OBJ_TYPE_OOP);
 			STIX_ASSERT (STIX_OBJ_GET_SIZE(rcv) > STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
 
@@ -3049,7 +3026,7 @@ printf ("\n");
 			}
 
 			/* this accesses the instance variable of the receiver */
-			ACTIVE_STACK_SET (stix, stix->sp, rcv->slot[STIX_METHOD_GET_PREAMBLE_INDEX(preamble)]);
+			STIX_STACK_SET (stix, stix->sp, rcv->slot[STIX_METHOD_GET_PREAMBLE_INDEX(preamble)]);
 			break;
 		}
 
@@ -3276,7 +3253,7 @@ printf ("BCODE = %x\n", bcode);
 			push_instvar:
 				DBGOUT_EXEC_1 ("PUSH_INSTVAR %d", (int)b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->origin->receiver_or_source) == STIX_OBJ_TYPE_OOP);
-				ACTIVE_STACK_PUSH (stix, ((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1]);
+				STIX_STACK_PUSH (stix, ((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1]);
 				break;
 
 			/* ------------------------------------------------- */
@@ -3296,7 +3273,7 @@ printf ("BCODE = %x\n", bcode);
 			store_instvar:
 				DBGOUT_EXEC_1 ("STORE_INTO_INSTVAR %d", (int)b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver_or_source) == STIX_OBJ_TYPE_OOP);
-				((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1] = ACTIVE_STACK_GETTOP(stix);
+				((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1] = STIX_STACK_GETTOP(stix);
 				break;
 
 			/* ------------------------------------------------- */
@@ -3315,8 +3292,8 @@ printf ("BCODE = %x\n", bcode);
 			pop_into_instvar:
 				DBGOUT_EXEC_1 ("POP_INTO_INSTVAR %d", (int)b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver_or_source) == STIX_OBJ_TYPE_OOP);
-				((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1] = ACTIVE_STACK_GETTOP(stix);
-				ACTIVE_STACK_POP (stix);
+				((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1] = STIX_STACK_GETTOP(stix);
+				STIX_STACK_POP (stix);
 				break;
 
 			/* ------------------------------------------------- */
@@ -3413,18 +3390,18 @@ printf ("BCODE = %x\n", bcode);
 				{
 					/* push - bit 4 on */
 					DBGOUT_EXEC_1 ("PUSH_TEMPVAR %d", (int)b1);
-					ACTIVE_STACK_PUSH (stix, ctx->slot[bx]);
+					STIX_STACK_PUSH (stix, ctx->slot[bx]);
 				}
 				else
 				{
 					/* store or pop - bit 5 off */
-					ctx->slot[bx] = ACTIVE_STACK_GETTOP(stix);
+					ctx->slot[bx] = STIX_STACK_GETTOP(stix);
 
 					if ((bcode >> 3) & 1)
 					{
 						/* pop - bit 3 on */
 						DBGOUT_EXEC_1 ("POP_INTO_TEMPVAR %d", (int)b1);
-						ACTIVE_STACK_POP (stix);
+						STIX_STACK_POP (stix);
 					}
 					else
 					{
@@ -3458,7 +3435,7 @@ printf ("BCODE = %x\n", bcode);
 				print_object (stix, stix->active_method->slot[b1]);
 				printf ("\n");
 				*/
-				ACTIVE_STACK_PUSH (stix, stix->active_method->slot[b1]);
+				STIX_STACK_PUSH (stix, stix->active_method->slot[b1]);
 				break;
 
 			/* ------------------------------------------------- */
@@ -3491,13 +3468,13 @@ printf ("BCODE = %x\n", bcode);
 				if ((bcode >> 3) & 1)
 				{
 					/* store or pop */
-					ass->value = ACTIVE_STACK_GETTOP(stix);
+					ass->value = STIX_STACK_GETTOP(stix);
 
 					if ((bcode >> 2) & 1)
 					{
 						/* pop */
 						DBGOUT_EXEC_1("POP_INTO_OBJECT %d", (int)b1);
-						ACTIVE_STACK_POP (stix);
+						STIX_STACK_POP (stix);
 					}
 					else
 					{
@@ -3508,7 +3485,7 @@ printf ("BCODE = %x\n", bcode);
 				{
 					/* push */
 					DBGOUT_EXEC_1("PUSH_OBJECT %d", (int)b1);
-					ACTIVE_STACK_PUSH (stix, ass->value);
+					STIX_STACK_PUSH (stix, ass->value);
 				}
 				break;
 			}
@@ -3562,7 +3539,6 @@ return -1;
 				DBGOUT_EXEC_1 ("JUMP2_FORWARD %d", (int)b1);
 				stix->ip += MAX_CODE_JUMP + b1;
 				break;
-				break;
 
 			case BCODE_JUMP2_BACKWARD:
 				FETCH_PARAM_CODE_TO (stix, b1);
@@ -3609,12 +3585,12 @@ return -1;
 				if ((bcode >> 3) & 1)
 				{
 					/* store or pop */
-					ctx->slot[b2] = ACTIVE_STACK_GETTOP(stix);
+					ctx->slot[b2] = STIX_STACK_GETTOP(stix);
 
 					if ((bcode >> 2) & 1)
 					{
 						/* pop */
-						ACTIVE_STACK_POP (stix);
+						STIX_STACK_POP (stix);
 						DBGOUT_EXEC_2 ("POP_INTO_CTXTEMPVAR %d %d", (int)b1, (int)b2);
 					}
 					else
@@ -3625,7 +3601,7 @@ return -1;
 				else
 				{
 					/* push */
-					ACTIVE_STACK_PUSH (stix, ctx->slot[b2]);
+					STIX_STACK_PUSH (stix, ctx->slot[b2]);
 					DBGOUT_EXEC_2 ("PUSH_CTXTEMPVAR %d %d", (int)b1, (int)b2);
 				}
 /*
@@ -3673,12 +3649,12 @@ printf ("\n");
 				{
 					/* store or pop */
 
-					t->slot[b1] = ACTIVE_STACK_GETTOP(stix);
+					t->slot[b1] = STIX_STACK_GETTOP(stix);
 
 					if ((bcode >> 2) & 1)
 					{
 						/* pop */
-						ACTIVE_STACK_POP (stix);
+						STIX_STACK_POP (stix);
 						DBGOUT_EXEC_2 ("POP_INTO_OBJVAR %d %d", (int)b1, (int)b2);
 					}
 					else
@@ -3690,7 +3666,7 @@ printf ("\n");
 				{
 					/* push */
 					DBGOUT_EXEC_2 ("PUSH_OBJVAR %d %d", (int)b1, (int)b2);
-					ACTIVE_STACK_PUSH (stix, t->slot[b1]);
+					STIX_STACK_PUSH (stix, t->slot[b1]);
 				}
 /*
 print_object (stix, t->slot[b1]);
@@ -3739,59 +3715,59 @@ fflush (stdout);
 
 			case BCODE_PUSH_RECEIVER:
 				DBGOUT_EXEC_0 ("PUSH_RECEIVER");
-				ACTIVE_STACK_PUSH (stix, stix->active_context->origin->receiver_or_source);
+				STIX_STACK_PUSH (stix, stix->active_context->origin->receiver_or_source);
 				break;
 
 			case BCODE_PUSH_NIL:
 				DBGOUT_EXEC_0 ("PUSH_NIL");
-				ACTIVE_STACK_PUSH (stix, stix->_nil);
+				STIX_STACK_PUSH (stix, stix->_nil);
 				break;
 
 			case BCODE_PUSH_TRUE:
 				DBGOUT_EXEC_0 ("PUSH_TRUE");
-				ACTIVE_STACK_PUSH (stix, stix->_true);
+				STIX_STACK_PUSH (stix, stix->_true);
 				break;
 
 			case BCODE_PUSH_FALSE:
 				DBGOUT_EXEC_0 ("PUSH_FALSE");
-				ACTIVE_STACK_PUSH (stix, stix->_false);
+				STIX_STACK_PUSH (stix, stix->_false);
 				break;
 
 			case BCODE_PUSH_CONTEXT:
 				DBGOUT_EXEC_0 ("PUSH_CONTEXT");
-				ACTIVE_STACK_PUSH (stix, (stix_oop_t)stix->active_context);
+				STIX_STACK_PUSH (stix, (stix_oop_t)stix->active_context);
 				break;
 
 			case BCODE_PUSH_NEGONE:
 				DBGOUT_EXEC_0 ("PUSH_NEGONE");
-				ACTIVE_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(-1));
+				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(-1));
 				break;
 
 			case BCODE_PUSH_ZERO:
 				DBGOUT_EXEC_0 ("PUSH_ZERO");
-				ACTIVE_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(0));
+				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(0));
 				break;
 
 			case BCODE_PUSH_ONE:
 				DBGOUT_EXEC_0 ("PUSH_ONE");
-				ACTIVE_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(1));
+				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(1));
 				break;
 
 			case BCODE_PUSH_TWO:
 				DBGOUT_EXEC_0 ("PUSH_TWO");
-				ACTIVE_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(2));
+				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(2));
 				break;
 
 			case BCODE_PUSH_INTLIT:
 				FETCH_PARAM_CODE_TO (stix, b1);
 				DBGOUT_EXEC_1 ("PUSH_INTLIT %d", (int)b1);
-				ACTIVE_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(b1));
+				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(b1));
 				break;
 
 			case BCODE_PUSH_NEGINTLIT:
 				FETCH_PARAM_CODE_TO (stix, b1);
 				DBGOUT_EXEC_1 ("PUSH_NEGINTLIT %d", (int)-b1);
-				ACTIVE_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(-b1));
+				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(-b1));
 				break;
 
 			/* -------------------------------------------------------- */
@@ -3800,22 +3776,22 @@ fflush (stdout);
 			{
 				stix_oop_t t;
 				DBGOUT_EXEC_0 ("DUP_STACKTOP");
-				STIX_ASSERT (!ACTIVE_STACK_ISEMPTY(stix));
-				t = ACTIVE_STACK_GETTOP(stix);
-				ACTIVE_STACK_PUSH (stix, t);
+				STIX_ASSERT (!STIX_STACK_ISEMPTY(stix));
+				t = STIX_STACK_GETTOP(stix);
+				STIX_STACK_PUSH (stix, t);
 				break;
 			}
 
 			case BCODE_POP_STACKTOP:
 				DBGOUT_EXEC_0 ("POP_STACKTOP");
-				STIX_ASSERT (!ACTIVE_STACK_ISEMPTY(stix));
-				ACTIVE_STACK_POP (stix);
+				STIX_ASSERT (!STIX_STACK_ISEMPTY(stix));
+				STIX_STACK_POP (stix);
 				break;
 
 			case BCODE_RETURN_STACKTOP:
 				DBGOUT_EXEC_0 ("RETURN_STACKTOP");
-				return_value = ACTIVE_STACK_GETTOP(stix);
-				ACTIVE_STACK_POP (stix);
+				return_value = STIX_STACK_GETTOP(stix);
+				STIX_STACK_POP (stix);
 				goto handle_return;
 
 			case BCODE_RETURN_RECEIVER:
@@ -3955,7 +3931,7 @@ printf (">>>>>>>>>>>>>>>> METHOD RETURN FROM WITHIN A BLOCK. NON-LOCAL RETURN.. 
 					SWITCH_ACTIVE_CONTEXT (stix, stix->active_context->origin->sender);
 
 					/* push the return value to the stack of the new active context */
-					ACTIVE_STACK_PUSH (stix, return_value);
+					STIX_STACK_PUSH (stix, return_value);
 
 					if (stix->active_context == stix->initial_context)
 					{
@@ -4020,11 +3996,11 @@ printf ("<<LEAVING BLOCK>>\n");
 					SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->sender);
 				#else
 					/* NOTE: GC must not performed between here and */
-					return_value = ACTIVE_STACK_GETTOP(stix);
-					ACTIVE_STACK_POP (stix); /* pop off the return value */
+					return_value = STIX_STACK_GETTOP(stix);
+					STIX_STACK_POP (stix); /* pop off the return value */
 
 					SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->sender);
-					ACTIVE_STACK_PUSH (stix, return_value); /* push it to the sender */
+					STIX_STACK_PUSH (stix, return_value); /* push it to the sender */
 					/* NOTE: here. if so, return_value will point to a garbage. */
 				#endif
 				}
@@ -4075,7 +4051,7 @@ printf ("<<LEAVING BLOCK>>\n");
 				blkctx->origin = stix->active_context->origin;
 
 				/* push the new block context to the stack of the active context */
-				ACTIVE_STACK_PUSH (stix, (stix_oop_t)blkctx);
+				STIX_STACK_PUSH (stix, (stix_oop_t)blkctx);
 				break;
 			}
 
@@ -4090,13 +4066,13 @@ printf ("<<LEAVING BLOCK>>\n");
 				/* it emulates thisContext blockCopy: nargs ofTmprCount: ntmprs */
 				STIX_ASSERT (stix->sp >= 2);
 
-				STIX_ASSERT (STIX_CLASSOF(stix, ACTIVE_STACK_GETTOP(stix)) == stix->_small_integer);
-				ntmprs = STIX_OOP_TO_SMOOI(ACTIVE_STACK_GETTOP(stix));
-				ACTIVE_STACK_POP (stix);
+				STIX_ASSERT (STIX_CLASSOF(stix, STIX_STACK_GETTOP(stix)) == stix->_small_integer);
+				ntmprs = STIX_OOP_TO_SMOOI(STIX_STACK_GETTOP(stix));
+				STIX_STACK_POP (stix);
 
-				STIX_ASSERT (STIX_CLASSOF(stix, ACTIVE_STACK_GETTOP(stix)) == stix->_small_integer);
-				nargs = STIX_OOP_TO_SMOOI(ACTIVE_STACK_GETTOP(stix));
-				ACTIVE_STACK_POP (stix);
+				STIX_ASSERT (STIX_CLASSOF(stix, STIX_STACK_GETTOP(stix)) == stix->_small_integer);
+				nargs = STIX_OOP_TO_SMOOI(STIX_STACK_GETTOP(stix));
+				STIX_STACK_POP (stix);
 
 				STIX_ASSERT (nargs >= 0);
 				STIX_ASSERT (ntmprs >= nargs);
@@ -4112,7 +4088,7 @@ printf ("<<LEAVING BLOCK>>\n");
 
 				/* get the receiver to the block copy message after block context instantiation
 				 * not to get affected by potential GC */
-				rctx = (stix_oop_context_t)ACTIVE_STACK_GETTOP(stix);
+				rctx = (stix_oop_context_t)STIX_STACK_GETTOP(stix);
 				STIX_ASSERT (rctx == stix->active_context);
 
 				/* [NOTE]
@@ -4170,7 +4146,7 @@ printf ("<<LEAVING BLOCK>>\n");
 				blkctx->origin = rctx->origin;
 #endif
 
-				ACTIVE_STACK_SETTOP (stix, (stix_oop_t)blkctx);
+				STIX_STACK_SETTOP (stix, (stix_oop_t)blkctx);
 				break;
 			}
 

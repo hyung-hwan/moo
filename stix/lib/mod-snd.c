@@ -29,36 +29,17 @@
 #include <stix-utl.h>
 
 /* ------------------------------------------------------------------------ */
-
-/* TODO: don't use these macros... */
-#define ACTIVE_STACK_PUSH(stix,v) \
-	do { \
-		(stix)->sp = (stix)->sp + 1; \
-		(stix)->active_context->slot[(stix)->sp] = v; \
-	} while (0)
-
-#define ACTIVE_STACK_POP(stix) ((stix)->sp = (stix)->sp - 1)
-#define ACTIVE_STACK_UNPOP(stix) ((stix)->sp = (stix)->sp + 1)
-#define ACTIVE_STACK_POPS(stix,count) ((stix)->sp = (stix)->sp - (count))
-
-#define ACTIVE_STACK_GET(stix,v_sp) ((stix)->active_context->slot[v_sp])
-#define ACTIVE_STACK_SET(stix,v_sp,v_obj) ((stix)->active_context->slot[v_sp] = v_obj)
-#define ACTIVE_STACK_GETTOP(stix) ACTIVE_STACK_GET(stix, (stix)->sp)
-#define ACTIVE_STACK_SETTOP(stix,v_obj) ACTIVE_STACK_SET(stix, (stix)->sp, v_obj)
-
-
-
 static int prim_open (stix_t* stix, stix_ooi_t nargs)
 {
 printf ("<<<<<<<<<<<SND OPEN>>>>>>>>>>>>>>>>>>\n");
-	ACTIVE_STACK_POPS (stix, nargs);
+	STIX_STACK_POPS (stix, nargs);
 	return 1;
 }
 
 static int prim_close (stix_t* stix, stix_ooi_t nargs)
 {
 printf ("<<<<<<<<<<<<<<<<<<<<SND CLOSE>>>>>>>>>>>>>>>>>>>>>>\n");
-	ACTIVE_STACK_POPS (stix, nargs);
+	STIX_STACK_POPS (stix, nargs);
 	return 1;
 }
 

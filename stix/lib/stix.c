@@ -252,7 +252,6 @@ int stix_getoption (stix_t* stix, stix_option_t id, void* value)
 	return -1;
 }
 
-
 stix_cb_t* stix_regcb (stix_t* stix, stix_cb_t* tmpl)
 {
 	stix_cb_t* actual;

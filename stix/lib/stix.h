@@ -33,6 +33,13 @@
 /* TODO: move this macro out to the build files.... */
 #define STIX_INCLUDE_COMPILER
 
+/* define this to use the stack allocated inside process stack */
+#define STIX_USE_PROCSTK
+
+/* define this to allow an pointer(OOP) object to have trailing bytes 
+ * this is used to embed bytes codes into the back of a compile method
+ * object instead of putting in in a separate byte array. */
+#define STIX_USE_OBJECT_TRAILER
 /* ========================================================================== */
 
 /**
@@ -454,6 +461,19 @@ struct stix_method_t
 	stix_oop_t       slot[1]; /* it stores literals */
 };
 
+#if defined(STIX_USE_OBJECT_TRAILER)
+
+	/* if m is to be type-cast to stix_oop_method_t, the macro must be
+	 * redefined to this:
+	 *   (&((stix_oop_method_t)m)>slot[STIX_OBJ_GET_SIZE(m) + 1 - STIX_METHOD_NAMED_INSTVARS])
+	 */
+#	define STIX_METHOD_GET_CODE_BYTE(m) ((stix_oob_t*)&((stix_oop_oop_t)m)->slot[STIX_OBJ_GET_SIZE(m) + 1])
+#	define STIX_METHOD_GET_CODE_SIZE(m) ((stix_oow_t)((stix_oop_oop_t)m)->slot[STIX_OBJ_GET_SIZE(m)])
+#else
+#	define STIX_METHOD_GET_CODE_BYTE(m) ((m)->code->slot)
+#	define STIX_METHOD_GET_CODE_SIZE(m) STIX_OBJ_GET_SIZE((m)->code)
+#endif
+
 /* The preamble field is composed of a 8-bit code and a 16-bit
  * index. 
  *
@@ -489,7 +509,7 @@ struct stix_method_t
 /* the index is an 16-bit unsigned integer. */
 #define STIX_METHOD_PREAMBLE_INDEX_MIN 0x0000
 #define STIX_METHOD_PREAMBLE_INDEX_MAX 0xFFFF
-#define STIX_OOI_IN_PREAMBLE_INDEX_RANGE(num) ((num) >= STIX_METHOD_PREAMBLE_INDEX_MIN && (num) <= STIX_METHOD_PREAMBLE_INDEX_MAX)
+#define STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(num) ((num) >= STIX_METHOD_PREAMBLE_INDEX_MIN && (num) <= STIX_METHOD_PREAMBLE_INDEX_MAX)
 
 #define STIX_CONTEXT_NAMED_INSTVARS 8
 typedef struct stix_context_t stix_context_t;
@@ -637,15 +657,18 @@ typedef struct stix_t stix_t;
  * ========================================================================= */
 #define STIX_MOD_NAME_LEN_MAX 120
 
-typedef void* (*stix_mod_open_t) (stix_t* stix, const stix_uch_t* name);
+typedef void* (*stix_mod_open_t) (stix_t* stix, const stix_ooch_t* name);
 typedef void (*stix_mod_close_t) (stix_t* stix, void* handle);
-typedef void* (*stix_mod_getsym_t) (stix_t* stix, void* handle, const stix_uch_t* name);
+typedef void* (*stix_mod_getsym_t) (stix_t* stix, void* handle, const stix_ooch_t* name);
+
+typedef void (*stix_log_write_t) (stix_t* stix, int mask, const stix_ooch_t* msg, stix_oow_t len);
 
 struct stix_vmprim_t
 {
 	stix_mod_open_t mod_open;
 	stix_mod_close_t mod_close;
 	stix_mod_getsym_t mod_getsym;
+	stix_log_write_t log_write;
 };
 
 typedef struct stix_vmprim_t stix_vmprim_t;
@@ -654,18 +677,18 @@ typedef struct stix_vmprim_t stix_vmprim_t;
  * IO MANIPULATION
  * ========================================================================= */
 
-/* TODO: MOVE stix_io_impl_t HERE */
+/* TODO: MOVE stix_ioimpl_t HERE */
 
 /* =========================================================================
  * CALLBACK MANIPULATION
  * ========================================================================= */
-typedef void (*stix_cb_impl_t) (stix_t* stix);
+typedef void (*stix_cbimpl_t) (stix_t* stix);
 
 typedef struct stix_cb_t stix_cb_t;
 struct stix_cb_t
 {
-	stix_cb_impl_t gc;
-	stix_cb_impl_t fini;
+	stix_cbimpl_t gc;
+	stix_cbimpl_t fini;
 
 	/* private below */
 	stix_cb_t*     prev;
@@ -820,6 +843,37 @@ struct stix_t
 	stix_compiler_t* c;
 #endif
 };
+
+
+
+#if defined(STIX_USE_PROCSTK)
+/* TODO: stack bound check when pushing */
+	#define STIX_STACK_PUSH(stix,v) \
+		do { \
+			(stix)->sp = (stix)->sp + 1; \
+			(stix)->processor->active->slot[(stix)->sp] = v; \
+		} while (0)
+
+	#define STIX_STACK_GET(stix,v_sp) ((stix)->processor->active->slot[v_sp])
+	#define STIX_STACK_SET(stix,v_sp,v_obj) ((stix)->processor->active->slot[v_sp] = v_obj)
+
+#else
+	#define STIX_STACK_PUSH(stix,v) \
+		do { \
+			(stix)->sp = (stix)->sp + 1; \
+			(stix)->active_context->slot[(stix)->sp] = v; \
+		} while (0)
+
+	#define STIX_STACK_GET(stix,v_sp) ((stix)->active_context->slot[v_sp])
+	#define STIX_STACK_SET(stix,v_sp,v_obj) ((stix)->active_context->slot[v_sp] = v_obj)
+#endif
+
+#define STIX_STACK_GETTOP(stix) STIX_STACK_GET(stix, (stix)->sp)
+#define STIX_STACK_SETTOP(stix,v_obj) STIX_STACK_SET(stix, (stix)->sp, v_obj)
+
+#define STIX_STACK_POP(stix) ((stix)->sp = (stix)->sp - 1)
+#define STIX_STACK_POPS(stix,count) ((stix)->sp = (stix)->sp - (count))
+#define STIX_STACK_ISEMPTY(stix) ((stix)->sp <= -1)
 
 #if defined(__cplusplus)
 extern "C" {
@@ -978,6 +1032,10 @@ STIX_EXPORT void stix_poptmps (
 	stix_oow_t  count
 );
 
+STIX_EXPORT int stix_decode (
+	stix_t*           stix,
+	stix_oop_method_t mth
+);
 
 /* Memory allocation/deallocation functions using stix's MMGR */
 

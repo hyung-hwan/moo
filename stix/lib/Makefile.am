@@ -40,6 +40,7 @@ libstix_la_SOURCES = \
 	bigint.c \
 	comp.c \
 	debug.c  \
+	decode.c \
 	dic.c \
 	exec.c \
 	gc.c \
@@ -82,11 +83,17 @@ LIBADD_MOD_COMMON = -lstix
 
 pkgmodexecdir = $(libdir)
 
-pkgmodexec_LTLIBRARIES = libstix-snd.la
+pkgmodexec_LTLIBRARIES = libstix-snd.la libstix-con.la
+
 libstix_snd_la_SOURCES = mod-snd.c mod-snd.h
 libstix_snd_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
 libstix_snd_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
 libstix_snd_la_LIBADD = $(LIBADD_MOD_COMMON)
+
+libstix_con_la_SOURCES = mod-con.c mod-con.h
+libstix_con_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
+libstix_con_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
+libstix_con_la_LIBADD = $(LIBADD_MOD_COMMON)
 
 endif
 

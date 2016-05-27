@@ -250,7 +250,8 @@
 
 #class(#pointer) CompiledMethod(Object)
 {
-	#dcl owner name preamble preamble_data_1 preamble_data_2 ntmprs nargs code source.
+	## #dcl owner name preamble preamble_data_1 preamble_data_2 ntmprs nargs code source.
+	#dcl owner name preamble preamble_data_1 preamble_data_2 ntmprs nargs source.
 
 	#method preamble
 	{

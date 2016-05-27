@@ -301,7 +301,7 @@ typedef struct stix_ucs_t stix_ucs_t;
 struct stix_bcs_t
 {
 	stix_bch_t* ptr;
-	stix_oow_t len;
+	stix_oow_t  len;
 };
 typedef struct stix_bcs_t stix_bcs_t;
 

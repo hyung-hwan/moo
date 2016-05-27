@@ -159,7 +159,6 @@ typedef enum voca_id_t voca_id_t;
 #	define DBGOUT_COMP_3(fmt,a1,a2,a3)
 #endif
 
-
 static int compile_block_statement (stix_t* stix);
 static int compile_method_statement (stix_t* stix);
 static int compile_method_expression (stix_t* stix, int pop);
@@ -1547,13 +1546,13 @@ static const stix_ooch_t* add_io_name (stix_t* stix, const stix_oocs_t* name)
 
 static int begin_include (stix_t* stix)
 {
-	stix_io_arg_t* arg;
+	stix_ioarg_t* arg;
 	const stix_ooch_t* io_name;
 
 	io_name = add_io_name (stix, &stix->c->tok.name);
 	if (!io_name) return -1;
 
-	arg = (stix_io_arg_t*) stix_callocmem (stix, STIX_SIZEOF(*arg));
+	arg = (stix_ioarg_t*) stix_callocmem (stix, STIX_SIZEOF(*arg));
 	if (!arg) goto oops;
 
 	arg->name = io_name;
@@ -1600,7 +1599,7 @@ oops:
 static int end_include (stix_t* stix)
 {
 	int x;
-	stix_io_arg_t* cur;
+	stix_ioarg_t* cur;
 
 	if (stix->c->curinp == &stix->c->arg) return 0; /* no include */
 
@@ -2633,7 +2632,7 @@ static int compile_method_primitive (stix_t* stix)
 				while (ptr < end && is_digitchar(*ptr)) 
 				{
 					prim_no = prim_no * 10 + (*ptr - '0');
-					if (!STIX_OOI_IN_PREAMBLE_INDEX_RANGE(prim_no))
+					if (!STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(prim_no))
 					{
 						set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
 						return -1;
@@ -2658,7 +2657,7 @@ static int compile_method_primitive (stix_t* stix)
 						/* the symbol literal contains an underscore.
 						 * and it is none of the first of the last character */
 						if (add_symbol_literal(stix, &stix->c->tok.name, &lit_idx) >= 0 &&
-						    STIX_OOI_IN_PREAMBLE_INDEX_RANGE(lit_idx))
+						    STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx))
 						{
 							stix->c->mth.prim_type = 2; /* named primitive */
 							stix->c->mth.prim_no = lit_idx;
@@ -2669,7 +2668,7 @@ static int compile_method_primitive (stix_t* stix)
 					set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
 					return -1;
 				}
-				else if (!STIX_OOI_IN_PREAMBLE_INDEX_RANGE(prim_no))
+				else if (!STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(prim_no))
 				{
 					set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
 					return -1;
@@ -4263,7 +4262,7 @@ static int add_compiled_method (stix_t* stix)
 							preamble_index = (preamble_index << 8) | stix->c->mth.code.ptr[i];
 						}
 
-						if (!STIX_OOI_IN_PREAMBLE_INDEX_RANGE(preamble_index))
+						if (!STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index))
 						{
 							/* the index got out of the range */
 							preamble_code = STIX_METHOD_PREAMBLE_NONE;
@@ -4290,7 +4289,7 @@ static int add_compiled_method (stix_t* stix)
 		preamble_index = 0;
 	}
 
-	STIX_ASSERT (STIX_OOI_IN_PREAMBLE_INDEX_RANGE(preamble_index));
+	STIX_ASSERT (STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index));
 
 	mth->owner = stix->c->cls.self_oop;
 	mth->name = name;
@@ -4311,9 +4310,15 @@ the compiler must collect all source method string collected so far.
 need to write code to collect string.
 */
 
+	/* TODO: if (decoding is enabled... */
+printf (">>>> BYTE CODE.....\n");
+	stix_decode (stix, mth);
+
+
 	stix_poptmps (stix, tmp_count); tmp_count = 0;
 
 	if (!stix_putatdic(stix, stix->c->cls.mthdic_oop[stix->c->mth.type], (stix_oop_t)name, (stix_oop_t)mth)) goto oops;
+
 	return 0;
 
 oops:
@@ -5190,7 +5195,7 @@ static void fini_compiler (stix_t* stix)
 	}
 }
 
-int stix_compile (stix_t* stix, stix_io_impl_t io)
+int stix_compile (stix_t* stix, stix_ioimpl_t io)
 {
 	int n;
 
@@ -5259,7 +5264,7 @@ oops:
 	 * closed. close them */
 	while (stix->c->curinp != &stix->c->arg)
 	{
-		stix_io_arg_t* prev;
+		stix_ioarg_t* prev;
 
 		/* nothing much to do about a close error */
 		stix->c->impl (stix, STIX_IO_CLOSE, stix->c->curinp);
@@ -5279,3 +5284,5 @@ void stix_getsynerr (stix_t* stix, stix_synerr_t* synerr)
 	STIX_ASSERT (stix->c != STIX_NULL);
 	if (synerr) *synerr = stix->c->synerr;
 }
+
+

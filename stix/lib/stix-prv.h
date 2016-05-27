@@ -44,14 +44,6 @@
  * PUSH_CONTEXT, PUSH_INTLIT, PUSH_INTLIT, SEND_BLOCK_COPY */
 #define STIX_USE_MAKE_BLOCK
 
-/* define this to allow an pointer(OOP) object to have trailing bytes 
- * this is used to embed bytes codes into the back of a compile method
- * object instead of putting in in a separate byte array. */
-#define STIX_USE_OBJECT_TRAILER
-
-/* define this to use the stack allocated inside process stack */
-#define STIX_USE_PROCSTK
-
 /* this is for gc debugging */
 /*#define STIX_DEBUG_PROCESSOR*/
 /*#define STIX_DEBUG_GC_001*/
@@ -244,38 +236,38 @@
 /* SOURCE CODE I/O FOR COMPILER                                              */
 /* ========================================================================= */
 
-enum stix_io_cmd_t
+enum stix_iocmd_t
 {
 	STIX_IO_OPEN,
 	STIX_IO_CLOSE,
 	STIX_IO_READ
 };
-typedef enum stix_io_cmd_t stix_io_cmd_t;
+typedef enum stix_iocmd_t stix_iocmd_t;
 
 struct stix_ioloc_t
 {
-	unsigned long     line; /**< line */
-	unsigned long     colm; /**< column */
+	unsigned long      line; /**< line */
+	unsigned long      colm; /**< column */
 	const stix_ooch_t* file; /**< file specified in #include */
 };
 typedef struct stix_ioloc_t stix_ioloc_t;
 
 struct stix_iolxc_t
 {
-	stix_ooci_t    c; /**< character */
+	stix_ooci_t   c; /**< character */
 	stix_ioloc_t  l; /**< location */
 };
 typedef struct stix_iolxc_t stix_iolxc_t;
 
 /*
-enum stix_io_arg_flag_t
+enum stix_ioarg_flag_t
 {
 	STIX_IO_INCLUDED = (1 << 0)
 };
-typedef enum stix_io_arg_flag_t stix_io_arg_flag_t; */
+typedef enum stix_ioarg_flag_t stix_ioarg_flag_t; */
 
-typedef struct stix_io_arg_t stix_io_arg_t;
-struct stix_io_arg_t
+typedef struct stix_ioarg_t stix_ioarg_t;
+struct stix_ioarg_t
 {
 	/** 
 	 * [IN] I/O object name.
@@ -285,7 +277,8 @@ struct stix_io_arg_t
 	const stix_ooch_t* name;   
 
 	/** 
-	 * [OUT] I/O handle set by a handler. 
+	 * [OUT] I/O handle set by an open handler. 
+	 * [IN] I/O handle referenced in read and close handler.
 	 * The source stream handler can set this field when it opens a stream.
 	 * All subsequent operations on the stream see this field as set
 	 * during opening.
@@ -301,7 +294,7 @@ struct stix_io_arg_t
 	 * [IN] points to the data of the includer. It is #STIX_NULL for the
 	 * main stream.
 	 */
-	stix_io_arg_t* includer;
+	stix_ioarg_t* includer;
 
 	/*-----------------------------------------------------------------*/
 	/*----------- from here down, internal use only -------------------*/
@@ -317,10 +310,10 @@ struct stix_io_arg_t
 	/*-----------------------------------------------------------------*/
 };
 
-typedef stix_ooi_t (*stix_io_impl_t) (
+typedef stix_ooi_t (*stix_ioimpl_t) (
 	stix_t*       stix,
-	stix_io_cmd_t  cmd,
-	stix_io_arg_t* arg
+	stix_iocmd_t  cmd,
+	stix_ioarg_t* arg
 );
 
 struct stix_iotok_t
@@ -447,7 +440,7 @@ typedef struct stix_code_t stix_code_t;
 struct stix_compiler_t
 {
 	/* input handler */
-	stix_io_impl_t impl;
+	stix_ioimpl_t impl;
 
 	/* information about the last meaningful character read.
 	 * this is a copy of curinp->lxc if no ungetting is performed.
@@ -461,10 +454,10 @@ struct stix_compiler_t
 	int           nungots;
 
 	/* static input data buffer */
-	stix_io_arg_t  arg;    
+	stix_ioarg_t  arg;    
 
 	/* pointer to the current input data. initially, it points to &arg */
-	stix_io_arg_t* curinp;
+	stix_ioarg_t* curinp;
 
 	/* the last token read */
 	stix_iotok_t  tok;
@@ -1080,6 +1073,35 @@ stix_oow_t stix_utf8touc (
 	stix_uch_t*       uc
 );
 
+/**
+ * The stix_ucstoutf8() function converts a unicode character string \a ucs 
+ * to a UTF8 string and writes it into the buffer pointed to by \a bcs, but
+ * not more than \a bcslen bytes including the terminating null.
+ *
+ * Upon return, \a bcslen is modified to the actual number of bytes written to
+ * \a bcs excluding the terminating null; \a ucslen is modified to the number of
+ * wide characters converted.
+ *
+ * You may pass #STIX_NULL for \a bcs to dry-run conversion or to get the
+ * required buffer size for conversion. -2 is never returned in this case.
+ *
+ * \return
+ * - 0 on full conversion,
+ * - -1 on no or partial conversion for an illegal character encountered,
+ * - -2 on no or partial conversion for a small buffer.
+ *
+ * \code
+ *   const stix_uch_t ucs[] = { 'H', 'e', 'l', 'l', 'o' };
+ *   stix_bch_t bcs[10];
+ *   stix_oow_t ucslen = 5;
+ *   stix_oow_t bcslen = STIX_COUNTOF(bcs);
+ *   n = stix_ucstoutf8 (ucs, &ucslen, bcs, &bcslen);
+ *   if (n <= -1)
+ *   {
+ *      // conversion error
+ *   }
+ * \endcode
+ */
 int stix_ucstoutf8 (
 	const stix_uch_t*    ucs,
 	stix_oow_t*          ucslen,
@@ -1261,7 +1283,7 @@ stix_oop_t stix_inttostr (
 /* ========================================================================= */
 STIX_EXPORT int stix_compile (
 	stix_t*        stix,
-	stix_io_impl_t io
+	stix_ioimpl_t io
 );
 
 STIX_EXPORT void stix_getsynerr (

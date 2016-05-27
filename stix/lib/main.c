@@ -98,6 +98,8 @@ struct xtn_t
 	stix_oow_t bchar_len;
 };
 
+/* ========================================================================= */
+
 static void* sys_alloc (stix_mmgr_t* mmgr, stix_oow_t size)
 {
 	return malloc (size);
@@ -121,8 +123,9 @@ static stix_mmgr_t sys_mmgr =
 	STIX_NULL
 };
 
+/* ========================================================================= */
 
-static STIX_INLINE stix_ooi_t open_input (stix_t* stix, stix_io_arg_t* arg)
+static STIX_INLINE stix_ooi_t open_input (stix_t* stix, stix_ioarg_t* arg)
 {
 	if (arg->includer)
 	{
@@ -165,7 +168,7 @@ static STIX_INLINE stix_ooi_t open_input (stix_t* stix, stix_io_arg_t* arg)
 	return 0;
 }
 
-static STIX_INLINE stix_ooi_t read_input (stix_t* stix, stix_io_arg_t* arg)
+static STIX_INLINE stix_ooi_t read_input (stix_t* stix, stix_ioarg_t* arg)
 {
 	xtn_t* xtn = stix_getxtn(stix);
 	stix_oow_t n, bcslen, ucslen, remlen;
@@ -198,14 +201,14 @@ static STIX_INLINE stix_ooi_t read_input (stix_t* stix, stix_io_arg_t* arg)
 	return ucslen;
 }
 
-static STIX_INLINE stix_ooi_t close_input (stix_t* stix, stix_io_arg_t* arg)
+static STIX_INLINE stix_ooi_t close_input (stix_t* stix, stix_ioarg_t* arg)
 {
 	STIX_ASSERT (arg->handle != STIX_NULL);
 	fclose ((FILE*)arg->handle);
 	return 0;
 }
 
-static stix_ooi_t input_handler (stix_t* stix, stix_io_cmd_t cmd, stix_io_arg_t* arg)
+static stix_ooi_t input_handler (stix_t* stix, stix_iocmd_t cmd, stix_ioarg_t* arg)
 {
 	switch (cmd)
 	{
@@ -223,6 +226,7 @@ static stix_ooi_t input_handler (stix_t* stix, stix_io_cmd_t cmd, stix_io_arg_t*
 			return -1;
 	}
 }
+/* ========================================================================= */
 
 static void* mod_open (stix_t* stix, const stix_ooch_t* name)
 {
@@ -324,6 +328,49 @@ printf ("MOD_GETSYM [%s]\n", &buf[0]);
 #endif
 }
 
+/* ========================================================================= */
+
+static void log_write (stix_t* stix, int mask, const stix_ooch_t* msg, stix_oow_t len)
+{
+#if defined(_WIN32)
+#	error NOT IMPLEMENTED 
+	
+#else
+	stix_bch_t buf[10];
+	stix_oow_t ucslen, bcslen, msgidx;
+	int n;
+
+	msgidx = 0;
+
+	while (1)
+	{
+		ucslen = len;
+		bcslen = STIX_COUNTOF(buf) - len;
+
+		n = stix_ucstoutf8 (&msg[msgidx], &ucslen, buf, &bcslen);
+		if (n == 0)
+		{
+			write (1, buf, bcslen); /*  TODO: write all */
+			break;
+		}
+		else if (n == -2)
+		{
+			STIX_ASSERT (ucslen > 0); /* if this fails, the buffer size must be increased */
+			write (1, buf, bcslen); /* TODO: write all */
+			msgidx += ucslen;
+			len -= ucslen;
+		}
+		else if (n <= -1)
+		{
+			/* conversion error */
+			break;
+		}
+	}
+#endif
+}
+
+/* ========================================================================= */
+
 static char* syntax_error_msg[] = 
 {
 	"no error",
@@ -380,11 +427,16 @@ static char* syntax_error_msg[] =
 	"literal expected"
 };
 
+/* ========================================================================= */
+
 stix_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' };
 stix_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
 
 
 stix_t* g_stix = STIX_NULL;
+
+/* ========================================================================= */
+
 
 #if defined(__MSDOS__) && defined(_INTELC32_)
 static void (*prev_timer_intr_handler) (void);
@@ -491,6 +543,8 @@ static void cancel_tick (void)
 #endif
 }
 
+/* ========================================================================= */
+
 int main (int argc, char* argv[])
 {
 	stix_t* stix;
@@ -524,6 +578,8 @@ int main (int argc, char* argv[])
 	vmprim.mod_open = mod_open;
 	vmprim.mod_close = mod_close;
 	vmprim.mod_getsym = mod_getsym;
+	vmprim.log_write = log_write;
+
 
 #if defined(USE_LTDL)
 	lt_dlinit ();
