@@ -738,6 +738,7 @@ typedef struct stix_prim_mod_data_t stix_prim_mod_data_t;
  * ========================================================================= */
 #if defined(STIX_INCLUDE_COMPILER)
 typedef struct stix_compiler_t stix_compiler_t;
+typedef struct stix_decoder_t stix_decoder_t;
 #endif
 
 struct stix_t
@@ -757,6 +758,14 @@ struct stix_t
 
 	stix_cb_t* cblist;
 	stix_rbt_t pmtable; /* primitive module table */
+
+	struct
+	{
+		stix_ooch_t* ptr;
+		stix_oow_t len;
+		stix_oow_t capa;
+	} log;
+
 	/* ========================= */
 
 	stix_heap_t* permheap; /* TODO: put kernel objects to here */
@@ -841,10 +850,9 @@ struct stix_t
 
 #if defined(STIX_INCLUDE_COMPILER)
 	stix_compiler_t* c;
+	stix_decoder_t* d;
 #endif
 };
-
-
 
 #if defined(STIX_USE_PROCSTK)
 /* TODO: stack bound check when pushing */

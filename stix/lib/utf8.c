@@ -496,7 +496,7 @@ int stix_utf8toucs (const stix_bch_t* bcs, stix_oow_t* bcslen, stix_uch_t* ucs, 
 	}
 }
 
-int stix_ucstoutf8 (const stix_uch_t* ucs, stix_oow_t *ucslen, stix_bch_t* bcs, stix_oow_t* bcslen)
+int stix_ucstoutf8 (const stix_uch_t* ucs, stix_oow_t* ucslen, stix_bch_t* bcs, stix_oow_t* bcslen)
 {
 	if (*ucslen == ~(stix_oow_t)0)
 	{
@@ -514,7 +514,7 @@ int stix_ucstoutf8 (const stix_uch_t* ucs, stix_oow_t *ucslen, stix_bch_t* bcs, 
 stix_oow_t stix_ucslen (const stix_uch_t* ucs)
 {
 	const stix_uch_t* ptr = ucs;
-	while  (*ptr) ptr = STIX_INCPTR(const stix_uch_t, ptr, 1);
-	return STIX_SUBPTR(const stix_uch_t, ptr, ucs);
+	while (*ptr) ptr++;
+	return ptr - ucs;
 }
 */

@@ -133,28 +133,16 @@ am__installdirs = "$(DESTDIR)$(pkglibdir)" \
 	"$(DESTDIR)$(pkgincludedir)"
 LTLIBRARIES = $(pkglib_LTLIBRARIES) $(pkgmodexec_LTLIBRARIES)
 am__DEPENDENCIES_1 =
-@ENABLE_STATIC_MODULE_FALSE@libstix_con_la_DEPENDENCIES =  \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
-am__libstix_con_la_SOURCES_DIST = mod-con.c mod-con.h
-@ENABLE_STATIC_MODULE_FALSE@am_libstix_con_la_OBJECTS =  \
-@ENABLE_STATIC_MODULE_FALSE@	libstix_con_la-mod-con.lo
-libstix_con_la_OBJECTS = $(am_libstix_con_la_OBJECTS)
-AM_V_lt = $(am__v_lt_@AM_V@)
-am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
-am__v_lt_0 = --silent
-am__v_lt_1 = 
-libstix_con_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(AM_CFLAGS) $(CFLAGS) $(libstix_con_la_LDFLAGS) $(LDFLAGS) -o \
-	$@
-@ENABLE_STATIC_MODULE_FALSE@am_libstix_con_la_rpath = -rpath \
-@ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
 @ENABLE_STATIC_MODULE_FALSE@libstix_snd_la_DEPENDENCIES =  \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
 am__libstix_snd_la_SOURCES_DIST = mod-snd.c mod-snd.h
 @ENABLE_STATIC_MODULE_FALSE@am_libstix_snd_la_OBJECTS =  \
 @ENABLE_STATIC_MODULE_FALSE@	libstix_snd_la-mod-snd.lo
 libstix_snd_la_OBJECTS = $(am_libstix_snd_la_OBJECTS)
+AM_V_lt = $(am__v_lt_@AM_V@)
+am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
+am__v_lt_0 = --silent
+am__v_lt_1 = 
 libstix_snd_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(AM_CFLAGS) $(CFLAGS) $(libstix_snd_la_LDFLAGS) $(LDFLAGS) -o \
@@ -165,10 +153,10 @@ am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 libstix_la_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am_libstix_la_OBJECTS = libstix_la-bigint.lo libstix_la-comp.lo \
 	libstix_la-debug.lo libstix_la-decode.lo libstix_la-dic.lo \
-	libstix_la-exec.lo libstix_la-gc.lo libstix_la-heap.lo \
-	libstix_la-ignite.lo libstix_la-obj.lo libstix_la-proc.lo \
-	libstix_la-rbt.lo libstix_la-stix.lo libstix_la-sym.lo \
-	libstix_la-utf8.lo libstix_la-utl.lo
+	libstix_la-exec.lo libstix_la-fmt.lo libstix_la-gc.lo \
+	libstix_la-heap.lo libstix_la-ignite.lo libstix_la-obj.lo \
+	libstix_la-proc.lo libstix_la-rbt.lo libstix_la-stix.lo \
+	libstix_la-sym.lo libstix_la-utf8.lo libstix_la-utl.lo
 libstix_la_OBJECTS = $(am_libstix_la_OBJECTS)
 libstix_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
@@ -214,11 +202,10 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libstix_con_la_SOURCES) $(libstix_snd_la_SOURCES) \
-	$(libstix_la_SOURCES) $(stix_SOURCES)
-DIST_SOURCES = $(am__libstix_con_la_SOURCES_DIST) \
-	$(am__libstix_snd_la_SOURCES_DIST) $(libstix_la_SOURCES) \
+SOURCES = $(libstix_snd_la_SOURCES) $(libstix_la_SOURCES) \
 	$(stix_SOURCES)
+DIST_SOURCES = $(am__libstix_snd_la_SOURCES_DIST) \
+	$(libstix_la_SOURCES) $(stix_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -438,6 +425,7 @@ libstix_la_SOURCES = \
 	decode.c \
 	dic.c \
 	exec.c \
+	fmt.c \
 	gc.c \
 	heap.c \
 	ignite.c \
@@ -471,15 +459,11 @@ stix_LDADD = $(LIBADD_LIB_COMMON) -lstix #-ldyncall_s
 @ENABLE_STATIC_MODULE_FALSE@LDFLAGS_MOD_COMMON = $(LDFLAGS_LIB_COMMON)
 @ENABLE_STATIC_MODULE_FALSE@LIBADD_MOD_COMMON = -lstix
 @ENABLE_STATIC_MODULE_FALSE@pkgmodexecdir = $(libdir)
-@ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES = libstix-snd.la libstix-con.la
+@ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES = libstix-snd.la #libstix-con.la
 @ENABLE_STATIC_MODULE_FALSE@libstix_snd_la_SOURCES = mod-snd.c mod-snd.h
 @ENABLE_STATIC_MODULE_FALSE@libstix_snd_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
 @ENABLE_STATIC_MODULE_FALSE@libstix_snd_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
 @ENABLE_STATIC_MODULE_FALSE@libstix_snd_la_LIBADD = $(LIBADD_MOD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_con_la_SOURCES = mod-con.c mod-con.h
-@ENABLE_STATIC_MODULE_FALSE@libstix_con_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_con_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_con_la_LIBADD = $(LIBADD_MOD_COMMON)
 all: stix-cfg.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -601,9 +585,6 @@ clean-pkgmodexecLTLIBRARIES:
 	  rm -f $${locs}; \
 	}
 
-libstix-con.la: $(libstix_con_la_OBJECTS) $(libstix_con_la_DEPENDENCIES) $(EXTRA_libstix_con_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(libstix_con_la_LINK) $(am_libstix_con_la_rpath) $(libstix_con_la_OBJECTS) $(libstix_con_la_LIBADD) $(LIBS)
-
 libstix-snd.la: $(libstix_snd_la_OBJECTS) $(libstix_snd_la_DEPENDENCIES) $(EXTRA_libstix_snd_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libstix_snd_la_LINK) $(am_libstix_snd_la_rpath) $(libstix_snd_la_OBJECTS) $(libstix_snd_la_LIBADD) $(LIBS)
 
@@ -669,13 +650,13 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_con_la-mod-con.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-bigint.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-comp.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-debug.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-decode.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-dic.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-exec.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-fmt.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-gc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-heap.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-ignite.Plo@am__quote@
@@ -712,13 +693,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
-
-libstix_con_la-mod-con.lo: mod-con.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_con_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_con_la-mod-con.lo -MD -MP -MF $(DEPDIR)/libstix_con_la-mod-con.Tpo -c -o libstix_con_la-mod-con.lo `test -f 'mod-con.c' || echo '$(srcdir)/'`mod-con.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_con_la-mod-con.Tpo $(DEPDIR)/libstix_con_la-mod-con.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='mod-con.c' object='libstix_con_la-mod-con.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_con_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_con_la-mod-con.lo `test -f 'mod-con.c' || echo '$(srcdir)/'`mod-con.c
 
 libstix_snd_la-mod-snd.lo: mod-snd.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_snd_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_snd_la-mod-snd.lo -MD -MP -MF $(DEPDIR)/libstix_snd_la-mod-snd.Tpo -c -o libstix_snd_la-mod-snd.lo `test -f 'mod-snd.c' || echo '$(srcdir)/'`mod-snd.c
@@ -768,6 +742,13 @@ libstix_la-exec.lo: exec.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='exec.c' object='libstix_la-exec.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-exec.lo `test -f 'exec.c' || echo '$(srcdir)/'`exec.c
+
+libstix_la-fmt.lo: fmt.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-fmt.lo -MD -MP -MF $(DEPDIR)/libstix_la-fmt.Tpo -c -o libstix_la-fmt.lo `test -f 'fmt.c' || echo '$(srcdir)/'`fmt.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-fmt.Tpo $(DEPDIR)/libstix_la-fmt.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='fmt.c' object='libstix_la-fmt.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-fmt.lo `test -f 'fmt.c' || echo '$(srcdir)/'`fmt.c
 
 libstix_la-gc.lo: gc.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-gc.lo -MD -MP -MF $(DEPDIR)/libstix_la-gc.Tpo -c -o libstix_la-gc.lo `test -f 'gc.c' || echo '$(srcdir)/'`gc.c
@@ -1097,6 +1078,11 @@ uninstall-am: uninstall-binPROGRAMS uninstall-pkgincludeHEADERS \
 	uninstall-hook uninstall-pkgincludeHEADERS \
 	uninstall-pkglibLTLIBRARIES uninstall-pkgmodexecLTLIBRARIES
 
+
+#libstix_con_la_SOURCES = mod-con.c mod-con.h
+#libstix_con_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
+#libstix_con_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
+#libstix_con_la_LIBADD = $(LIBADD_MOD_COMMON)
 
 install-data-hook:
 	@echo "#ifndef _STIX_CFG_H_" > "$(DESTDIR)$(pkgincludedir)/stix-cfg.h"

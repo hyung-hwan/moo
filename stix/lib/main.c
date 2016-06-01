@@ -329,7 +329,7 @@ printf ("MOD_GETSYM [%s]\n", &buf[0]);
 }
 
 /* ========================================================================= */
-
+ 
 static void log_write (stix_t* stix, int mask, const stix_ooch_t* msg, stix_oow_t len)
 {
 #if defined(_WIN32)
@@ -342,10 +342,10 @@ static void log_write (stix_t* stix, int mask, const stix_ooch_t* msg, stix_oow_
 
 	msgidx = 0;
 
-	while (1)
+	while (len > 0)
 	{
 		ucslen = len;
-		bcslen = STIX_COUNTOF(buf) - len;
+		bcslen = STIX_COUNTOF(buf);
 
 		n = stix_ucstoutf8 (&msg[msgidx], &ucslen, buf, &bcslen);
 		if (n == 0)
@@ -591,7 +591,6 @@ int main (int argc, char* argv[])
 		printf ("cannot open stix\n");
 		return -1;
 	}
-
 
 	{
 		stix_oow_t tab_size;

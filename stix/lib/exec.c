@@ -26,7 +26,6 @@
 
 #include "stix-prv.h"
 
-
 /* TODO: remove these headers after having migrated system-dependent functions of of this file */
 #if defined(_WIN32)
 #	include <windows.h>
@@ -1214,15 +1213,15 @@ static int prim_dump (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs >=  0);
 
-	printf ("RECEIVER: ");
+	stix_bfmtout (stix, "RECEIVER: ");
 	print_object (stix, STIX_STACK_GET(stix, stix->sp - nargs));
-	printf ("\n");
+	stix_bfmtout (stix, "\n");
 	for (i = nargs; i > 0; )
 	{
 		--i;
-		printf ("ARGUMENT: ");
+		stix_bfmtout (stix, "ARGUMENT: ");
 		print_object (stix, STIX_STACK_GET(stix, stix->sp - i));
-		printf ("\n");
+		stix_bfmtout (stix, "\n");
 	}
 
 	STIX_STACK_POPS (stix, nargs);
@@ -2667,7 +2666,7 @@ typedef struct prim_t prim_t;
 
 static prim_t primitives[] =
 {
-	{   0, MAX_NARGS,  prim_dump,                 "_dump"                },
+	{   0, MAX_NARGS,  prim_dump,          "_dump"                },
 
 	{   1,  1,  prim_identical,            "_identical"           },
 	{   1,  1,  prim_not_identical,        "_not_identical"       },

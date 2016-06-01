@@ -573,7 +573,31 @@ struct stix_compiler_t
 	} mth; 
 };
 
+typedef struct stix_bchbuf_t stix_bchbuf_t;
+struct stix_bchbuf_t
+{
+	stix_bch_t  sbuf[128];
+	stix_bch_t* ptr;
+	stix_oow_t  capa;
+};
+
+typedef struct stix_oochbuf_t stix_oochbuf_t;
+struct stix_oochbuf_t
+{
+	stix_ooch_t  sbuf[128];
+	stix_ooch_t* ptr;
+	stix_oow_t   capa;
+};
+
+struct stix_decoder_t
+{
+	stix_oochbuf_t fltout;
+	stix_bchbuf_t fltfmt;
+};
+
 #endif
+
+
 
 #if defined(STIX_USE_OBJECT_TRAILER)
 	/* let it point to the trailer of the method */
@@ -1299,6 +1323,21 @@ int stix_getprimno (
 	const stix_oocs_t* name
 );
 
+/* ========================================================================= */
+/* fmt.c                                                                     */
+/* ========================================================================= */
+stix_ooi_t stix_bfmtout (
+	stix_t*           stix,
+	const stix_bch_t* fmt,
+	...
+);
+
+
+stix_ooi_t stix_oofmtout (
+	stix_t*            stix,
+	const stix_ooch_t* fmt,
+	...
+);
 /* TODO: remove debugging functions */
 /* ========================================================================= */
 /* debug.c                                                                   */
@@ -1308,6 +1347,8 @@ void dump_dictionary (stix_t* stix, stix_oop_set_t dic, const char* title);
 void print_oocs (const stix_oocs_t* name);
 void print_object (stix_t* stix, stix_oop_t oop);
 void dump_object (stix_t* stix, stix_oop_t oop, const char* title);
+
+
 
 #if defined(__cplusplus)
 }

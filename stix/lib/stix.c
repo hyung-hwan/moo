@@ -157,6 +157,16 @@ void stix_fini (stix_t* stix)
 
 	/* deregister all callbacks */
 	while (stix->cblist) stix_deregcb (stix, stix->cblist);
+
+	if (stix->log.ptr) 
+	{
+		/* make sure to flush your log message */
+/* TODO: flush unwritten message */
+
+		stix_freemem (stix, stix->log.ptr);
+		stix->log.capa = 0;
+		stix->log.len = 0;
+	}
 }
 
 stix_mmgr_t* stix_getmmgr (stix_t* stix)

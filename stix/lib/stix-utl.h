@@ -55,7 +55,7 @@ extern "C" {
 
 
 /* ========================================================================= */
-/* stix-utl.c                                                                */
+/* utl.c                                                                */
 /* ========================================================================= */
 stix_oow_t stix_hashbytes (
 	const stix_oob_t* ptr,
@@ -146,6 +146,7 @@ stix_oow_t stix_countucstr (
 stix_oow_t stix_countbcstr (
 	const stix_bch_t* str
 );
+
 
 #if defined(__cplusplus)
 }

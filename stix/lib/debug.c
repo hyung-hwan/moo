@@ -87,41 +87,28 @@ void print_object (stix_t* stix, stix_oop_t oop)
 {
 	if (oop == stix->_nil)
 	{
-		printf ("nil");
+		stix_bfmtout (stix, "nil");
 	}
 	else if (oop == stix->_true)
 	{
-		printf ("true");
+		stix_bfmtout (stix, "true");
 	}
 	else if (oop == stix->_false)
 	{
-		printf ("false");
+		stix_bfmtout (stix, "false");
 	}
 	else if (STIX_OOP_IS_SMOOI(oop))
 	{
-		printf ("%ld", (long int)STIX_OOP_TO_SMOOI(oop));
+		stix_bfmtout (stix, "%zd", STIX_OOP_TO_SMOOI(oop));
 	}
 	else if (STIX_OOP_IS_CHAR(oop))
 	{
-		stix_bch_t bcs[32];
-		stix_uch_t uch;
-		stix_oow_t ucslen, bcslen;
-
-		uch = STIX_OOP_TO_CHAR(oop);
-		bcslen = STIX_COUNTOF(bcs);
-		ucslen = 1;
-		if (stix_ucstoutf8 (&uch, &ucslen, bcs, &bcslen) >= 0)
-		{
-			printf ("$%.*s", (int)bcslen, bcs);
-		}
+		stix_bfmtout (stix, "$%.1C", STIX_OOP_TO_CHAR(oop));
 	}
 	else
 	{
 		stix_oop_class_t c;
-		stix_oocs_t s;
 		stix_oow_t i;
-		stix_bch_t bcs[32];
-		stix_oow_t ucslen, bcslen;
 
 		STIX_ASSERT (STIX_OOP_IS_POINTER(oop));
 		c = (stix_oop_class_t)STIX_OBJ_GET_CLASS(oop); /*STIX_CLASSOF(stix, oop);*/
@@ -129,95 +116,75 @@ void print_object (stix_t* stix, stix_oop_t oop)
 		if ((stix_oop_t)c == stix->_large_negative_integer)
 		{
 			stix_oow_t i;
-			printf ("-16r");
+			stix_bfmtout (stix, "-16r");
 			for (i = STIX_OBJ_GET_SIZE(oop); i > 0;)
 			{
-				printf ("%0*lX", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)oop)->slot[--i]);
+				stix_bfmtout (stix, "%0*lX", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)oop)->slot[--i]);
 			}
 		}
 		else if ((stix_oop_t)c == stix->_large_positive_integer)
 		{
 			stix_oow_t i;
-			printf ("16r");
+			stix_bfmtout (stix, "16r");
 			for (i = STIX_OBJ_GET_SIZE(oop); i > 0;)
 			{
-				printf ("%0*lX", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)oop)->slot[--i]);
+				stix_bfmtout (stix, "%0*lX", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)oop)->slot[--i]);
 			}
 		}
 		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_CHAR)
 		{
-			if ((stix_oop_t)c == stix->_symbol) printf ("#");
-			else if ((stix_oop_t)c == stix->_string) printf ("'");
+			if ((stix_oop_t)c == stix->_symbol) stix_bfmtout (stix, "#");
+			else if ((stix_oop_t)c == stix->_string) stix_bfmtout (stix, "'");
 
-			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
-			{
-				bcslen = STIX_COUNTOF(bcs);
-				ucslen = 1;
-				if (stix_ucstoutf8 (&((stix_oop_char_t)oop)->slot[i], &ucslen, bcs, &bcslen) >= 0)
-				{
-					printf ("%.*s", (int)bcslen, bcs);
-				}
-			}
-			if ((stix_oop_t)c == stix->_string) printf ("'");
+			stix_bfmtout (stix, "%.*S", STIX_OBJ_GET_SIZE(oop), ((stix_oop_char_t)oop)->slot);
+			if ((stix_oop_t)c == stix->_string) stix_bfmtout (stix, "'");
 		}
 		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_BYTE)
 		{
-			printf ("#[");
+			stix_bfmtout (stix, "#[");
 			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
 			{
-				printf (" %d", ((stix_oop_byte_t)oop)->slot[i]);
+				stix_bfmtout (stix, " %d", ((stix_oop_byte_t)oop)->slot[i]);
 			}
-			printf ("]");
+			stix_bfmtout (stix, "]");
 		}
 		
 		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_HALFWORD)
 		{
-			printf ("#[["); /* TODO: fix this symbol */
+			stix_bfmtout (stix, "#[["); /* TODO: fix this symbol */
 			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
 			{
-				printf (" %lX", (unsigned long int)((stix_oop_halfword_t)oop)->slot[i]);
+				stix_bfmtout (stix, " %zX", (stix_oow_t)((stix_oop_halfword_t)oop)->slot[i]);
 			}
-			printf ("]]");
+			stix_bfmtout (stix, "]]");
 		}
 		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_WORD)
 		{
-			printf ("#[[["); /* TODO: fix this symbol */
+			stix_bfmtout (stix, "#[[["); /* TODO: fix this symbol */
 			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
 			{
-				printf (" %lX", (unsigned long int)((stix_oop_word_t)oop)->slot[i]);
+				stix_bfmtout (stix, " %zX", ((stix_oop_word_t)oop)->slot[i]);
 			}
-			printf ("]]]");
+			stix_bfmtout (stix, "]]]");
 		}
 		else if ((stix_oop_t)c == stix->_array)
 		{
-			printf ("#(");
+			stix_bfmtout (stix, "#(");
 			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
 			{
-				printf (" ");
+				stix_bfmtout (stix, " ");
 				print_object (stix, ((stix_oop_oop_t)oop)->slot[i]);
 			}
-			printf (")");
+			stix_bfmtout (stix, ")");
 		}
 		else if ((stix_oop_t)c == stix->_class)
 		{
 			/* print the class name */
-			for (i = 0; i < STIX_OBJ_GET_SIZE(((stix_oop_class_t)oop)->name); i++)
-			{
-				bcslen = STIX_COUNTOF(bcs);
-				ucslen = 1;
-				if (stix_ucstoutf8 (&((stix_oop_class_t)oop)->name->slot[i], &ucslen, bcs, &bcslen) >= 0)
-				{
-					printf ("%.*s", (int)bcslen, bcs);
-				}
-			}
+			stix_bfmtout (stix, "%.*S", STIX_OBJ_GET_SIZE(((stix_oop_class_t)oop)->name), ((stix_oop_class_t)oop)->name->slot);
 		}
 		else
 		{
-			s.ptr = ((stix_oop_char_t)c->name)->slot;
-			s.len = STIX_OBJ_GET_SIZE(c->name);
-			printf ("instance of ");
-			print_oocs (&s);
-			printf ("- (%p)", oop);
+			stix_bfmtout (stix, "instance of %.*S - (%p)", STIX_OBJ_GET_SIZE(c->name), ((stix_oop_char_t)c->name)->slot, oop);
 		}
 	}
 }

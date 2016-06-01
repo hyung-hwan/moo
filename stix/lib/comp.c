@@ -4310,7 +4310,7 @@ the compiler must collect all source method string collected so far.
 need to write code to collect string.
 */
 
-	/* TODO: if (decoding is enabled... */
+	/* TODO: call stix_decode only if decoding is enabled... */
 printf (">>>> BYTE CODE.....\n");
 	stix_decode (stix, mth);
 
@@ -4374,6 +4374,7 @@ static int compile_method_definition (stix_t* stix)
 printf (">>METHOD ");
 print_oocs (&stix->c->mth.name);
 printf ("\n");
+
 	if (stix->c->tok.type != STIX_IOTOK_LBRACE)
 	{
 		/* { expected */

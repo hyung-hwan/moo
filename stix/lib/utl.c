@@ -1,4 +1,3 @@
-
 /*
  * $Id$
  *
@@ -188,4 +187,3 @@ stix_bch_t* stix_findbchar (const stix_bch_t* ptr, stix_oow_t len, stix_bch_t c)
 
 	return STIX_NULL;
 }
-
