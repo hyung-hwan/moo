@@ -49,6 +49,11 @@
 	}
 }
 
+#pooldic ABC 
+{
+	#KKK := 20.
+}
+
 
 #class MyObject(TestObject)
 {
@@ -92,6 +97,7 @@
 
 		s1 wait.
 
+		ABC.KKK dump.
 		'END OF MAIN' dump.   
 
 
@@ -183,3 +189,4 @@
 		]
 	}
 }
+

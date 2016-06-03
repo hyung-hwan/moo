@@ -906,8 +906,14 @@ enum stix_log_mask_t
 };
 typedef enum stix_log_mask_t stix_log_mask_t;
 
-#define STIX_LOG_ENABLED(stix,mask) ((stix)->option.log_mask & mask)
+#define STIX_LOG_ENABLED(stix,mask) ((stix)->option.log_mask & (mask))
 
+
+/*
+#define STIX_DEBUG0(stix,fmt) if (STIX_LOG_ENABLED(stix,STIX_LOG_DEBUG)) stix_logbfmt(stix, STIX_LOG_DEBUG, fmt)
+#define STIX_DEBUG1(stix,fmt,a1)
+#define STIX_DEBUG2(stix,fmt,a1,a2)
+*/
 
 #if defined(__cplusplus)
 extern "C" {

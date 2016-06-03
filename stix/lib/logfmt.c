@@ -130,15 +130,15 @@ static stix_ooch_t ooch_nullstr[] = { '(','n','u','l','l', ')','\0' };
 static stix_bch_t bch_nullstr[] = { '(','n','u','l','l', ')','\0' };
 
 typedef int (*stix_fmtout_putch_t) (
-	stix_t*     stix,
-	int         mask,
-	stix_ooch_t c,
-	stix_oow_t  len
+	stix_t*      stix,
+	unsigned int mask,
+	stix_ooch_t  c,
+	stix_oow_t   len
 );
 
 typedef int (*stix_fmtout_putcs_t) (
 	stix_t*            stix,
-	int                mask,
+	unsigned int       mask,
 	const stix_ooch_t* ptr,
 	stix_oow_t         len
 );
@@ -196,6 +196,7 @@ static int put_ooch (stix_t* stix, unsigned int mask, stix_ooch_t ch, stix_oow_t
 		stix->log.len = 0;
 	}
 
+redo:
 	if (len > stix->log.capa - stix->log.len)
 	{
 		stix_oow_t newcapa;
@@ -210,7 +211,17 @@ static int put_ooch (stix_t* stix, unsigned int mask, stix_ooch_t ch, stix_oow_t
 
 		newcapa = STIX_ALIGN(stix->log.len + len, 512); /* TODO: adjust this capacity */
 		tmp = stix_reallocmem (stix, stix->log.ptr, newcapa * STIX_SIZEOF(*tmp));
-		if (!tmp) return -1;
+		if (!tmp) 
+		{
+			if (stix->log.len > 0)
+			{
+				/* can't expand the buffer. just flush the existing contents */
+				stix->vmprim.log_write (stix, stix->log.last_mask, stix->log.ptr, stix->log.len);
+				stix->log.len = 0;
+				goto redo;
+			}
+			return -1;
+		}
 
 		stix->log.ptr = tmp;
 		stix->log.capa = newcapa;

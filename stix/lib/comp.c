@@ -4545,9 +4545,15 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	{
 		int super_is_nil = 0;
 
-printf ("DEFININING CLASS ");
-print_oocs (&stix->c->cls.name);
-printf ("\n");
+		if (STIX_LOG_ENABLED(stix,STIX_LOG_COMPILER | STIX_LOG_DEBUG))
+		{
+			stix_logbfmt (stix,
+				STIX_LOG_COMPILER | STIX_LOG_DEBUG, 
+				"Defining a class %.*S\n", 
+				stix->c->cls.fqn.len,
+				stix->c->cls.fqn.ptr);
+		}
+
 		if (stix->c->tok.type == STIX_IOTOK_LPAREN)
 		{
 			/* superclass is specified. new class defintion.
@@ -4820,9 +4826,14 @@ static int __compile_pooldic_definition (stix_t* stix)
 		return -1;
 	}
 
-printf ("DEFININING POOL DICTIONARY ");
-print_oocs (&stix->c->cls.name);
-printf ("\n");
+	if (STIX_LOG_ENABLED(stix,STIX_LOG_COMPILER | STIX_LOG_DEBUG))
+	{
+		stix_logbfmt (stix,
+			STIX_LOG_COMPILER | STIX_LOG_DEBUG, 
+			"Defining a pool dictionary %.*S\n", 
+			stix->c->cls.fqn.len,
+			stix->c->cls.fqn.ptr);
+	}
 
 	GET_TOKEN (stix);
 
