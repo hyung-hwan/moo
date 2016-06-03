@@ -26,12 +26,13 @@
 
 #include "stix-prv.h"
 
-#	define DECODE_OUT_0(stix,fmt) stix_bfmtout(stix, "\t" fmt "\n")
-#	define DECODE_OUT_1(stix,fmt,a1) stix_bfmtout(stix, "\t" fmt "\n",a1)
-#	define DECODE_OUT_2(stix,fmt,a1,a2) stix_bfmtout(stix, "\t" fmt "\n", a1, a2)
-#	define DECODE_OUT_3(stix,fmt,a1,a2,a3) stix_bfmtout(stix, "\t" fmt "\n", a1, a2, a3)
 
+#define LOG_MASK_INST (STIX_LOG_COMPILER | STIX_LOG_INFO)
 
+#define LOG_INST_0(stix,fmt) if (STIX_LOG_ENABLED(stix,LOG_MASK_INST)) stix_logbfmt(stix, LOG_MASK_INST, "\t" fmt "\n")
+#define LOG_INST_1(stix,fmt,a1) if (STIX_LOG_ENABLED(stix,LOG_MASK_INST)) stix_logbfmt(stix, LOG_MASK_INST, "\t" fmt "\n",a1)
+#define LOG_INST_2(stix,fmt,a1,a2) if (STIX_LOG_ENABLED(stix,LOG_MASK_INST)) stix_logbfmt(stix, LOG_MASK_INST, "\t" fmt "\n", a1, a2)
+#define LOG_INST_3(stix,fmt,a1,a2,a3) if (STIX_LOG_ENABLED(stix,LOG_MASK_INST)) stix_logbfmt(stix, LOG_MASK_INST, "\t" fmt "\n", a1, a2, a3)
 
 #define FETCH_BYTE_CODE(stix) (cdptr[ip++])
 #define FETCH_BYTE_CODE_TO(stix,v_ooi) (v_ooi = FETCH_BYTE_CODE(stix))
@@ -45,11 +46,8 @@
 #	define FETCH_PARAM_CODE_TO(stix,v_ooi) (v_ooi = FETCH_BYTE_CODE(stix))
 #endif
 
-
-
-
 /* TODO: check if ip shoots beyond the maximum length in fetching code and parameters */
-int stix_decode (stix_t* stix, stix_oop_method_t mth)
+int stix_decode (stix_t* stix, const stix_oocs_t* classfqn, stix_oop_method_t mth)
 {
 	stix_oob_t bcode, * cdptr;
 	stix_oow_t ip = 0, cdlen;
@@ -57,6 +55,9 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth)
  
 	cdptr = STIX_METHOD_GET_CODE_BYTE(mth);
 	cdlen = STIX_METHOD_GET_CODE_SIZE(mth); 
+
+	if (STIX_LOG_ENABLED(stix, LOG_MASK_INST))
+		stix_logbfmt (stix, LOG_MASK_INST, "%.*S>>%O\n", classfqn->len, classfqn->ptr, mth->name);
 
 /* TODO: check if ip increases beyon bcode when fetching parameters too */
 	while (ip < cdlen)
@@ -78,7 +79,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth)
 			case BCODE_PUSH_INSTVAR_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			push_instvar:
-				DECODE_OUT_1 (stix, "push_instvar %zd", b1);
+				LOG_INST_1 (stix, "push_instvar %zd", b1);
 				break;
 
 			/* ------------------------------------------------- */
@@ -96,7 +97,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth)
 			case BCODE_STORE_INTO_INSTVAR_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			store_instvar:
-				DECODE_OUT_1 (stix, "store_into_instvar %zd", b1);
+				LOG_INST_1 (stix, "store_into_instvar %zd", b1);
 				break;
 
 			case BCODE_POP_INTO_INSTVAR_X:
@@ -112,7 +113,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth)
 			case BCODE_POP_INTO_INSTVAR_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			pop_into_instvar:
-				DECODE_OUT_1 (stix, "pop_into_instvar %zd", b1);
+				LOG_INST_1 (stix, "pop_into_instvar %zd", b1);
 				break;
 
 			/* ------------------------------------------------- */
@@ -152,7 +153,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth)
 				if ((bcode >> 4) & 1)
 				{
 					/* push - bit 4 on */
-					DECODE_OUT_1 (stix, "push_tempvar %zd", b1);
+					LOG_INST_1 (stix, "push_tempvar %zd", b1);
 				}
 				else
 				{
@@ -160,11 +161,11 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth)
 					if ((bcode >> 3) & 1)
 					{
 						/* pop - bit 3 on */
-						DECODE_OUT_1 (stix, "pop_into_tempvar %zd", b1);
+						LOG_INST_1 (stix, "pop_into_tempvar %zd", b1);
 					}
 					else
 					{
-						DECODE_OUT_1 (stix, "store_into_tempvar %zd", b1);
+						LOG_INST_1 (stix, "store_into_tempvar %zd", b1);
 					}
 				}
 				break;
@@ -184,7 +185,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth)
 			case BCODE_PUSH_LITERAL_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			push_literal:
-				DECODE_OUT_1 (stix, "push_literal %zd", b1);
+				LOG_INST_1 (stix, "push_literal %zd", b1);
 				break;
 
 			/* ------------------------------------------------- */
@@ -212,16 +213,16 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth)
 				{
 					if ((bcode >> 2) & 1)
 					{
-						DECODE_OUT_1 (stix, "pop_into_object %zd", b1);
+						LOG_INST_1 (stix, "pop_into_object %zd", b1);
 					}
 					else
 					{
-						DECODE_OUT_1 (stix, "store_into_object %zd", b1);
+						LOG_INST_1 (stix, "store_into_object %zd", b1);
 					}
 				}
 				else
 				{
-					DECODE_OUT_1 (stix, "push_object %zd", b1);
+					LOG_INST_1 (stix, "push_object %zd", b1);
 				}
 				break;
 
@@ -229,19 +230,19 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth)
 
 			case BCODE_JUMP_FORWARD_X:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				DECODE_OUT_1 (stix, "jump_forward %zd", b1);
+				LOG_INST_1 (stix, "jump_forward %zd", b1);
 				break;
 
 			case BCODE_JUMP_FORWARD_0:
 			case BCODE_JUMP_FORWARD_1:
 			case BCODE_JUMP_FORWARD_2:
 			case BCODE_JUMP_FORWARD_3:
-				DECODE_OUT_1 (stix, "jump_forward %zd", (bcode & 0x3)); /* low 2 bits */
+				LOG_INST_1 (stix, "jump_forward %zd", (bcode & 0x3)); /* low 2 bits */
 				break;
 
 			case BCODE_JUMP_BACKWARD_X:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				DECODE_OUT_1 (stix, "jump_backward %zd", b1);
+				LOG_INST_1 (stix, "jump_backward %zd", b1);
 				stix->ip += b1;
 				break;
 
@@ -249,7 +250,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth)
 			case BCODE_JUMP_BACKWARD_1:
 			case BCODE_JUMP_BACKWARD_2:
 			case BCODE_JUMP_BACKWARD_3:
-				DECODE_OUT_1 (stix, "jump_backward %zd", (bcode & 0x3)); /* low 2 bits */
+				LOG_INST_1 (stix, "jump_backward %zd", (bcode & 0x3)); /* low 2 bits */
 				break;
 
 			case BCODE_JUMP_IF_TRUE_X:
@@ -262,18 +263,18 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth)
 			case BCODE_JUMP_IF_FALSE_1:
 			case BCODE_JUMP_IF_FALSE_2:
 			case BCODE_JUMP_IF_FALSE_3:
-DECODE_OUT_0 (stix, "<<<<<<<<<<<<<< JUMP NOT IMPLEMENTED YET >>>>>>>>>>>>");
+LOG_INST_0 (stix, "<<<<<<<<<<<<<< JUMP NOT IMPLEMENTED YET >>>>>>>>>>>>");
 stix->errnum = STIX_ENOIMPL;
 return -1;
 
 			case BCODE_JUMP2_FORWARD:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				DECODE_OUT_1 (stix, "jump2_forward %zd", b1);
+				LOG_INST_1 (stix, "jump2_forward %zd", b1);
 				break;
 
 			case BCODE_JUMP2_BACKWARD:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				DECODE_OUT_1 (stix, "jump2_backward %zd", b1);
+				LOG_INST_1 (stix, "jump2_backward %zd", b1);
 				break;
 
 			/* -------------------------------------------------------- */
@@ -306,17 +307,17 @@ return -1;
 
 					if ((bcode >> 2) & 1)
 					{
-						DECODE_OUT_2 (stix, "pop_into_ctxtempvar %zd %zd", b1, b2);
+						LOG_INST_2 (stix, "pop_into_ctxtempvar %zd %zd", b1, b2);
 					}
 					else
 					{
-						DECODE_OUT_2 (stix, "store_into_ctxtempvar %zd %zd", b1, b2);
+						LOG_INST_2 (stix, "store_into_ctxtempvar %zd %zd", b1, b2);
 					}
 				}
 				else
 				{
 					/* push */
-					DECODE_OUT_2 (stix, "push_ctxtempvar %zd %zd", b1, b2);
+					LOG_INST_2 (stix, "push_ctxtempvar %zd %zd", b1, b2);
 				}
 
 				break;
@@ -352,16 +353,16 @@ return -1;
 					/* store or pop */
 					if ((bcode >> 2) & 1)
 					{
-						DECODE_OUT_2 (stix, "pop_into_objvar %zd %zd", b1, b2);
+						LOG_INST_2 (stix, "pop_into_objvar %zd %zd", b1, b2);
 					}
 					else
 					{
-						DECODE_OUT_2 (stix, "store_into_objvar %zd %zd", b1, b2);
+						LOG_INST_2 (stix, "store_into_objvar %zd %zd", b1, b2);
 					}
 				}
 				else
 				{
-					DECODE_OUT_2 (stix, "push_objvar %zd %zd", b1, b2);
+					LOG_INST_2 (stix, "push_objvar %zd %zd", b1, b2);
 				}
 
 				break;
@@ -387,77 +388,77 @@ return -1;
 				FETCH_BYTE_CODE_TO (stix, b2);
 
 			handle_send_message:
-				DECODE_OUT_3 (stix, "send_message%hs %zd @%zd", (((bcode >> 2) & 1)? "_to_super": ""), b1, b2);
+				LOG_INST_3 (stix, "send_message%hs %zd @%zd", (((bcode >> 2) & 1)? "_to_super": ""), b1, b2);
 				break; 
 
 			/* -------------------------------------------------------- */
 
 			case BCODE_PUSH_RECEIVER:
-				DECODE_OUT_0 (stix, "push_receiver");
+				LOG_INST_0 (stix, "push_receiver");
 				break;
 
 			case BCODE_PUSH_NIL:
-				DECODE_OUT_0 (stix, "push_nil");
+				LOG_INST_0 (stix, "push_nil");
 				break;
 
 			case BCODE_PUSH_TRUE:
-				DECODE_OUT_0 (stix, "push_true");
+				LOG_INST_0 (stix, "push_true");
 				break;
 
 			case BCODE_PUSH_FALSE:
-				DECODE_OUT_0 (stix, "push_false");
+				LOG_INST_0 (stix, "push_false");
 				break;
 
 			case BCODE_PUSH_CONTEXT:
-				DECODE_OUT_0 (stix, "push_context");
+				LOG_INST_0 (stix, "push_context");
 				break;
 
 			case BCODE_PUSH_NEGONE:
-				DECODE_OUT_0 (stix, "push_negone");
+				LOG_INST_0 (stix, "push_negone");
 				break;
 
 			case BCODE_PUSH_ZERO:
-				DECODE_OUT_0 (stix, "push_zero");
+				LOG_INST_0 (stix, "push_zero");
 				break;
 
 			case BCODE_PUSH_ONE:
-				DECODE_OUT_0 (stix, "push_one");
+				LOG_INST_0 (stix, "push_one");
 				break;
 
 			case BCODE_PUSH_TWO:
-				DECODE_OUT_0 (stix, "push_two");
+				LOG_INST_0 (stix, "push_two");
 				break;
 
 			case BCODE_PUSH_INTLIT:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				DECODE_OUT_1 (stix, "push_intlit %zd", b1);
+				LOG_INST_1 (stix, "push_intlit %zd", b1);
 				break;
 
 			case BCODE_PUSH_NEGINTLIT:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				DECODE_OUT_1 (stix, "push_negintlit %zd", -b1);
+				LOG_INST_1 (stix, "push_negintlit %zd", -b1);
 				break;
 
 			/* -------------------------------------------------------- */
 
 			case BCODE_DUP_STACKTOP:
-				DECODE_OUT_0 (stix, "dup_stacktop");
+				LOG_INST_0 (stix, "dup_stacktop");
 				break;
 
 			case BCODE_POP_STACKTOP:
-				DECODE_OUT_0 (stix, "pop_stacktop");
+				LOG_INST_0 (stix, "pop_stacktop");
 				break;
 
 			case BCODE_RETURN_STACKTOP:
-				DECODE_OUT_0 (stix, "return_stacktop");
+				LOG_INST_0 (stix, "return_stacktop");
 				break;
 
 			case BCODE_RETURN_RECEIVER:
-				DECODE_OUT_0 (stix, "return_receiver");
+				LOG_INST_0 (stix, "return_receiver");
 				break;
 
 			case BCODE_RETURN_FROM_BLOCK:
-				DECODE_OUT_0 (stix, "return_from_block");
+				LOG_INST_0 (stix, "return_from_block");
 				break;
 
 			case BCODE_MAKE_BLOCK:
@@ -466,7 +467,7 @@ return -1;
 				FETCH_PARAM_CODE_TO (stix, b1);
 				FETCH_PARAM_CODE_TO (stix, b2);
 
-				DECODE_OUT_2 (stix, "make_block %zd %zd", b1, b2);
+				LOG_INST_2 (stix, "make_block %zd %zd", b1, b2);
 
 				STIX_ASSERT (b1 >= 0);
 				STIX_ASSERT (b2 >= b1);
@@ -474,16 +475,16 @@ return -1;
 			
 
 			case BCODE_SEND_BLOCK_COPY:
-				DECODE_OUT_0 (stix, "send_block_copy");
+				LOG_INST_0 (stix, "send_block_copy");
 				break;
 
 			case BCODE_NOOP:
 				/* do nothing */
-				DECODE_OUT_0 (stix, "noop");
+				LOG_INST_0 (stix, "noop");
 				break;
 
 			default:
-				DECODE_OUT_1 (stix, "UNKNOWN BYTE CODE ENCOUNTERED %x", (int)bcode);
+				LOG_INST_1 (stix, "UNKNOWN BYTE CODE ENCOUNTERED %x", (int)bcode);
 				stix->errnum = STIX_EINTERN;
 				break;
 
@@ -493,7 +494,7 @@ return -1;
 	/* print literal frame contents */
 	for (ip = 0; ip < STIX_OBJ_GET_SIZE(mth) - STIX_METHOD_NAMED_INSTVARS; ip++)
 	{
-		DECODE_OUT_2 (stix, " @%-3lu %O", (unsigned long int)ip, mth->slot[ip]);
+		LOG_INST_2 (stix, " @%-3lu %O", (unsigned long int)ip, mth->slot[ip]);
 	}
 
 	return 0;

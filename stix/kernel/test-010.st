@@ -31,6 +31,22 @@
 {
 	#dcl(#class) Q R.
 	#dcl(#classinst) a1 a2.
+
+	#method test999
+	{
+		^self.Q
+	}
+}
+
+#class B.TestObject(Object)
+{
+	#dcl(#class) Q R.
+	#dcl(#classinst) a1 a2.
+
+	#method test000
+	{
+		^self.Q
+	}
 }
 
 

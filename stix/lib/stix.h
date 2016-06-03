@@ -55,6 +55,7 @@ enum stix_errnum_t
 	STIX_ESYSMEM, /**< insufficient system memory */
 	STIX_EOOMEM,  /**< insufficient object memory */
 	STIX_EINVAL,  /**< invalid parameter or data */
+	STIX_ETOOBIG, /**< data too large */
 	STIX_EMSGSND, /**< message sending error. even doesNotUnderstand: is not found */
 	STIX_ERANGE,  /**< range error. overflow and underflow */
 	STIX_ENOENT,  /**< no matching entry */
@@ -75,6 +76,7 @@ typedef enum stix_errnum_t stix_errnum_t;
 enum stix_option_t
 {
 	STIX_TRAIT,
+	STIX_LOG_MASK,
 	STIX_SYMTAB_SIZE,  /* default system table size */
 	STIX_SYSDIC_SIZE,  /* default system dictionary size */
 	STIX_PROCSTK_SIZE  /* default process stack size */
@@ -661,7 +663,7 @@ typedef void* (*stix_mod_open_t) (stix_t* stix, const stix_ooch_t* name);
 typedef void (*stix_mod_close_t) (stix_t* stix, void* handle);
 typedef void* (*stix_mod_getsym_t) (stix_t* stix, void* handle, const stix_ooch_t* name);
 
-typedef void (*stix_log_write_t) (stix_t* stix, int mask, const stix_ooch_t* msg, stix_oow_t len);
+typedef void (*stix_log_write_t) (stix_t* stix, unsigned int mask, const stix_ooch_t* msg, stix_oow_t len);
 
 struct stix_vmprim_t
 {
@@ -748,7 +750,8 @@ struct stix_t
 
 	struct
 	{
-		int trait;
+		unsigned int trait;
+		unsigned int log_mask;
 		stix_oow_t dfl_symtab_size;
 		stix_oow_t dfl_sysdic_size;
 		stix_oow_t dfl_procstk_size; 
@@ -764,6 +767,7 @@ struct stix_t
 		stix_ooch_t* ptr;
 		stix_oow_t len;
 		stix_oow_t capa;
+		int last_mask;
 	} log;
 
 	/* ========================= */
@@ -882,6 +886,28 @@ struct stix_t
 #define STIX_STACK_POP(stix) ((stix)->sp = (stix)->sp - 1)
 #define STIX_STACK_POPS(stix,count) ((stix)->sp = (stix)->sp - (count))
 #define STIX_STACK_ISEMPTY(stix) ((stix)->sp <= -1)
+
+
+/* =========================================================================
+ * STIX VM LOGGING
+ * ========================================================================= */
+
+enum stix_log_mask_t
+{
+	/* for general messages */
+	STIX_LOG_DEBUG    = (1 << 0),
+	STIX_LOG_INFO     = (1 << 1),
+	STIX_LOG_ERROR    = (1 << 2),
+
+	/* for special messages */
+	STIX_LOG_COMPILER = (1 << 8),
+	STIX_LOG_EXECUTOR = (1 << 9),
+	STIX_LOG_DECODER  = (1 << 10)
+};
+typedef enum stix_log_mask_t stix_log_mask_t;
+
+#define STIX_LOG_ENABLED(stix,mask) ((stix)->option.log_mask & mask)
+
 
 #if defined(__cplusplus)
 extern "C" {
@@ -1042,7 +1068,8 @@ STIX_EXPORT void stix_poptmps (
 
 STIX_EXPORT int stix_decode (
 	stix_t*           stix,
-	stix_oop_method_t mth
+	const stix_oocs_t* classfqn,
+	stix_oop_method_t  mth
 );
 
 /* Memory allocation/deallocation functions using stix's MMGR */
@@ -1068,6 +1095,21 @@ STIX_EXPORT void stix_freemem (
 	void*   ptr
 );
 
+
+STIX_EXPORT stix_ooi_t stix_logbfmt (
+	stix_t*           stix,
+	unsigned int      mask,
+	const stix_bch_t* fmt,
+	...
+);
+
+STIX_EXPORT stix_ooi_t stix_logoofmt (
+	stix_t*            stix,
+	unsigned int       mask,
+	const stix_ooch_t* fmt,
+	...
+);
+ 
 #if defined(__cplusplus)
 }
 #endif

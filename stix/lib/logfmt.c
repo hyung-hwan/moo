@@ -129,17 +129,27 @@ static const stix_bch_t hex2ascii_upper[] =
 static stix_ooch_t ooch_nullstr[] = { '(','n','u','l','l', ')','\0' };
 static stix_bch_t bch_nullstr[] = { '(','n','u','l','l', ')','\0' };
 
-typedef int (*stix_fmtout_put_t) (
+typedef int (*stix_fmtout_putch_t) (
 	stix_t*     stix,
-	stix_ooch_t c
+	int         mask,
+	stix_ooch_t c,
+	stix_oow_t  len
+);
+
+typedef int (*stix_fmtout_putcs_t) (
+	stix_t*            stix,
+	int                mask,
+	const stix_ooch_t* ptr,
+	stix_oow_t         len
 );
 
 typedef struct stix_fmtout_t stix_fmtout_t;
 struct stix_fmtout_t
 {
-	stix_oow_t         count; /* out */
-	stix_oow_t         limit; /* in */
-	stix_fmtout_put_t  put;
+	stix_oow_t            count; /* out */
+	int                   mask;  /* in */
+	stix_fmtout_putch_t   putch; /* in */
+	stix_fmtout_putcs_t   putcs; /* in */
 };
 
 /* ------------------------------------------------------------------------- */
@@ -175,16 +185,30 @@ static stix_bch_t* sprintn_upper (stix_bch_t* nbuf, stix_uintmax_t num, int base
 }
 
 /* ------------------------------------------------------------------------- */
-
-static int put_ooch (stix_t* stix, stix_ooch_t ch)
+static int put_ooch (stix_t* stix, unsigned int mask, stix_ooch_t ch, stix_oow_t len)
 {
+	if (len <= 0) return 1;
 
-	if (stix->log.len >= stix->log.capa)
+	if (stix->log.len > 0 && stix->log.last_mask != mask)
+	{
+		/* the mask has changed. commit the buffered text */
+		stix->vmprim.log_write (stix, stix->log.last_mask, stix->log.ptr, stix->log.len);
+		stix->log.len = 0;
+	}
+
+	if (len > stix->log.capa - stix->log.len)
 	{
 		stix_oow_t newcapa;
 		stix_ooch_t* tmp;
 
-		newcapa = stix->log.capa + 512; /* TODO: adjust this capacity */
+		if (len > STIX_TYPE_MAX(stix_oow_t) - stix->log.len) 
+		{
+			/* data too big */
+			stix->errnum = STIX_ETOOBIG;
+			return -1;
+		}
+
+		newcapa = STIX_ALIGN(stix->log.len + len, 512); /* TODO: adjust this capacity */
 		tmp = stix_reallocmem (stix, stix->log.ptr, newcapa * STIX_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
@@ -192,61 +216,111 @@ static int put_ooch (stix_t* stix, stix_ooch_t ch)
 		stix->log.capa = newcapa;
 	}
 
-	stix->log.ptr[stix->log.len++] = ch;
-	if (ch == '\n')
+	while (len > 0)
 	{
-		stix->vmprim.log_write (stix, 0, stix->log.ptr, stix->log.len);
-/* TODO: error handling */
+		stix->log.ptr[stix->log.len++] = ch;
+		len--;
+	}
+
+	stix->log.last_mask = mask;
+	return 1; /* success */
+}
+
+static int put_oocs (stix_t* stix, unsigned int mask, const stix_ooch_t* ptr, stix_oow_t len)
+{
+	if (len <= 0) return 1;
+
+	if (stix->log.len > 0 && stix->log.last_mask != mask)
+	{
+		/* the mask has changed. commit the buffered text */
+		stix->vmprim.log_write (stix, stix->log.last_mask, stix->log.ptr, stix->log.len);
 		stix->log.len = 0;
 	}
 
-	return 1;
+	if (len > stix->log.capa - stix->log.len)
+	{
+		stix_oow_t newcapa;
+		stix_ooch_t* tmp;
+
+		if (len > STIX_TYPE_MAX(stix_oow_t) - stix->log.len) 
+		{
+			/* data too big */
+			stix->errnum = STIX_ETOOBIG;
+			return -1;
+		}
+
+		newcapa = STIX_ALIGN(stix->log.len + len, 512); /* TODO: adjust this capacity */
+		tmp = stix_reallocmem (stix, stix->log.ptr, newcapa * STIX_SIZEOF(*tmp));
+		if (!tmp) return -1;
+
+		stix->log.ptr = tmp;
+		stix->log.capa = newcapa;
+	}
+
+	STIX_MEMCPY (&stix->log.ptr[stix->log.len], ptr, len * STIX_SIZEOF(*ptr));
+	stix->log.len += len;
+
+	stix->log.last_mask = mask;
+	return 1; /* success */
 }
 
 /* ------------------------------------------------------------------------- */
 
 #undef fmtchar_t
-#undef fmtoutv
+#undef logfmtv
 #define fmtchar_t stix_bch_t
-#define fmtoutv stix_bfmtoutv
-#include "fmtoutv.h"
+#define FMTCHAR_IS_BCH
+#define logfmtv stix_logbfmtv
+#include "logfmtv.h"
 
 #undef fmtchar_t
-#undef fmtoutv
+#undef logfmtv
 #define fmtchar_t stix_ooch_t
-#define fmtoutv stix_oofmtoutv
-#include "fmtoutv.h"
+#define logfmtv stix_logoofmtv
+#define FMTCHAR_IS_OOCH
+#include "logfmtv.h"
 
-stix_ooi_t stix_bfmtout (stix_t* stix, const stix_bch_t* fmt, ...)
+stix_ooi_t stix_logbfmt (stix_t* stix, unsigned int mask, const stix_bch_t* fmt, ...)
 {
-	stix_ooi_t x;
+	int x;
 	va_list ap;
 	stix_fmtout_t fo;
 
-	fo.count = 0;
-	fo.limit = STIX_TYPE_MAX(stix_ooi_t);
-	fo.put = put_ooch;
+	fo.mask = mask;
+	fo.putch = put_ooch;
+	fo.putcs = put_oocs;
 
 	va_start (ap, fmt);
-	x = stix_bfmtoutv (stix, fmt, &fo, ap);
+	x = stix_logbfmtv (stix, fmt, &fo, ap);
 	va_end (ap);
 
+	if (stix->log.len > 0 && stix->log.ptr[stix->log.len - 1] == '\n')
+	{
+		stix->vmprim.log_write (stix, stix->log.last_mask, stix->log.ptr, stix->log.len);
+		stix->log.len = 0;
+	}
 	return (x <= -1)? -1: fo.count;
 }
 
-stix_ooi_t stix_oofmtout (stix_t* stix, const stix_ooch_t* fmt, ...)
+stix_ooi_t stix_logoofmt (stix_t* stix, unsigned int mask, const stix_ooch_t* fmt, ...)
 {
-	stix_ooi_t x;
+	int x;
 	va_list ap;
 	stix_fmtout_t fo;
 
-	fo.count = 0;
-	fo.limit = STIX_TYPE_MAX(stix_ooi_t);
-	fo.put = put_ooch;
+	fo.mask = mask;
+	fo.putch = put_ooch;
+	fo.putcs = put_oocs;
 
 	va_start (ap, fmt);
-	x = stix_oofmtoutv (stix, fmt, &fo, ap);
+	x = stix_logoofmtv (stix, fmt, &fo, ap);
 	va_end (ap);
+
+	if (stix->log.len > 0 && stix->log.ptr[stix->log.len - 1] == '\n')
+	{
+		stix->vmprim.log_write (stix, stix->log.last_mask, stix->log.ptr, stix->log.len);
+		stix->log.len = 0;
+	}
 
 	return (x <= -1)? -1: fo.count;
 }

@@ -329,8 +329,8 @@ printf ("MOD_GETSYM [%s]\n", &buf[0]);
 }
 
 /* ========================================================================= */
- 
-static void log_write (stix_t* stix, int mask, const stix_ooch_t* msg, stix_oow_t len)
+
+static void log_write (stix_t* stix, unsigned int mask, const stix_ooch_t* msg, stix_oow_t len)
 {
 #if defined(_WIN32)
 #	error NOT IMPLEMENTED 

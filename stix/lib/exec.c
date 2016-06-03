@@ -1037,7 +1037,7 @@ static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const s
 
 #if defined(STIX_DEBUG_EXEC_002)
 printf ("==== FINDING METHOD FOR %p [", receiver);
-print_object (stix, receiver);
+print_object (stix, 0, receiver);
 printf ("] - ["); 
 print_oocs (message);
 printf ("] in ");
@@ -1051,7 +1051,7 @@ printf ("] in ");
 		dic_no = STIX_CLASS_MTHDIC_CLASS;
 #if defined(STIX_DEBUG_EXEC_002)
 printf ("class method dictioanry of ");
-print_object(stix, (stix_oop_t)((stix_oop_class_t)c)->name); 
+print_object(stix, 0, (stix_oop_t)((stix_oop_class_t)c)->name); 
 printf ("\n");
 #endif
 	}
@@ -1061,7 +1061,7 @@ printf ("\n");
 		dic_no = STIX_CLASS_MTHDIC_INSTANCE;
 #if defined(STIX_DEBUG_EXEC_002)
 printf ("instance method dictioanry of ");
-print_object(stix, (stix_oop_t)((stix_oop_class_t)c)->name);
+print_object(stix, 0, (stix_oop_t)((stix_oop_class_t)c)->name);
 printf ("\n");
 #endif
 	}
@@ -1213,15 +1213,11 @@ static int prim_dump (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs >=  0);
 
-	stix_bfmtout (stix, "RECEIVER: ");
-	print_object (stix, STIX_STACK_GET(stix, stix->sp - nargs));
-	stix_bfmtout (stix, "\n");
+	stix_logbfmt (stix, 0, "RECEIVER: %O\n", STIX_STACK_GET(stix, stix->sp - nargs));
 	for (i = nargs; i > 0; )
 	{
 		--i;
-		stix_bfmtout (stix, "ARGUMENT: ");
-		print_object (stix, STIX_STACK_GET(stix, stix->sp - i));
-		stix_bfmtout (stix, "\n");
+		stix_logbfmt (stix, 0, "ARGUMENT %zd: %O\n", i, STIX_STACK_GET(stix, stix->sp - i));
 	}
 
 	STIX_STACK_POPS (stix, nargs);
@@ -2907,7 +2903,7 @@ static int send_message (stix_t* stix, stix_oop_char_t selector, int to_super, s
 
 #if defined(STIX_DEBUG_EXEC_001)
 printf (" RECEIVER = ");
-print_object(stix, receiver);
+print_object(stix, 0, receiver);
 printf ("\n");
 #endif
 
@@ -2933,9 +2929,9 @@ printf ("\n");
 /* TODO: remove this print-out.... or have it gracefully returned to the caller side */
 			c = STIX_CLASSOF(stix,receiver);
 			printf ("HARD FAILURE ERROR [IMAGE PROBLEM] - receiver [");
-			print_object (stix, receiver);
+			print_object (stix, 0, receiver);
 			printf ("] class ");
-			print_object (stix, c);
+			print_object (stix, 0, c);
 			printf (" doesNotUnderstand: [");
 			print_oocs (&mthname);
 			printf ("]\n");
@@ -3408,7 +3404,7 @@ printf ("BCODE = %x\n", bcode);
 					}
 				}
 				/*
-				print_object (stix, ctx->slot[bx]);
+				print_object (stix, 0, ctx->slot[bx]);
 				printf ("\n");
  				*/
 				break;
@@ -3431,7 +3427,7 @@ printf ("BCODE = %x\n", bcode);
 			push_literal:
 				DBGOUT_EXEC_1 ("PUSH_LITERAL %d", (int)b1);
 				/*
-				print_object (stix, stix->active_method->slot[b1]);
+				print_object (stix, 0, stix->active_method->slot[b1]);
 				printf ("\n");
 				*/
 				STIX_STACK_PUSH (stix, stix->active_method->slot[b1]);
@@ -3703,7 +3699,7 @@ printf ("\n");
 
 #if defined(STIX_DEBUG_EXEC_001)
 printf ("SEND_MESSAGE%s TO RECEIVER AT STACKPOS=%d NARGS=%d SELECTOR=", (((bcode >> 2) & 1)? "_TO_SUPER": ""), (int)(stix->sp - b1), (int)b1);
-print_object (stix, (stix_oop_t)selector);
+print_object (stix, 0, (stix_oop_t)selector);
 fflush (stdout);
 #endif
 				if (send_message (stix, selector, ((bcode >> 2) & 1), b1) <= -1) goto oops;

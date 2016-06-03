@@ -68,19 +68,29 @@
 /* NOTE: data output is aborted if the data limit is reached or 
  *       I/O error occurs  */
 
-#undef PUT_CHAR
+#undef PUT_OOCH
+#undef PUT_OOCS
 
-#define PUT_CHAR(stix,c) do { \
+#define PUT_OOCH(c,n) do { \
 	int xx; \
-	if (data->count >= data->limit) goto done; \
-	if ((xx = data->put (stix, c)) <= -1) goto oops; \
+	if ((xx = data->putch (stix, data->mask, c, n)) <= -1) goto oops; \
 	if (xx == 0) goto done; \
-	data->count++; \
+	data->count += n; \
 } while (0)
 
-int fmtoutv (stix_t* stix, const fmtchar_t* fmt, stix_fmtout_t* data, va_list ap)
+#define PUT_OOCS(ptr,len) do { \
+	int xx; \
+	if ((xx = data->putcs (stix, data->mask, ptr, len)) <= -1) goto oops; \
+	if (xx == 0) goto done; \
+	data->count += len; \
+} while (0)
+
+int logfmtv (stix_t* stix, const fmtchar_t* fmt, stix_fmtout_t* data, va_list ap)
 {
 	const fmtchar_t* percent;
+#if defined(FMTCHAR_IS_OOCH)
+	const fmtchar_t* checkpoint;
+#endif
 	stix_bch_t nbuf[MAXNBUF], bch;
 	const stix_bch_t* nbufp;
 	int n, base, neg, sign;
@@ -111,11 +121,24 @@ int fmtoutv (stix_t* stix, const fmtchar_t* fmt, stix_fmtout_t* data, va_list ap
 
 	while (1)
 	{
+	#if defined(FMTCHAR_IS_OOCH)
+		checkpoint = fmt;
+		while ((ch = *fmt++) != '%' || stop) 
+		{
+			if (ch == '\0') 
+			{
+				PUT_OOCS (checkpoint, fmt - checkpoint - 1);
+				goto done;
+			}
+		}
+		PUT_OOCS (checkpoint, fmt - checkpoint - 1);
+	#else
 		while ((ch = *fmt++) != '%' || stop) 
 		{
 			if (ch == '\0') goto done;
-			PUT_CHAR (stix, ch);
+			PUT_OOCH (ch, 1);
 		}
+	#endif
 		percent = fmt - 1;
 
 		padc = ' '; 
@@ -363,15 +386,9 @@ reswitch:
 		print_lowercase_c:
 			/* precision 0 doesn't kill the letter */
 			width--;
-			if (!(flagc & FLAGC_LEFTADJ) && width > 0)
-			{
-				while (width--) PUT_CHAR (stix, padc);
-			}
-			PUT_CHAR (stix, bch);
-			if ((flagc & FLAGC_LEFTADJ) && width > 0)
-			{
-				while (width--) PUT_CHAR (stix, padc);
-			}
+			if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
+			PUT_OOCH (bch, 1);
+			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
 			break;
 		}
 
@@ -387,17 +404,9 @@ reswitch:
 
 			/* precision 0 doesn't kill the letter */
 			width--;
-			if (!(flagc & FLAGC_LEFTADJ) && width > 0)
-			{
-				while (width--) PUT_CHAR (stix, padc);
-			}
-
-			PUT_CHAR (stix, ooch);
-
-			if ((flagc & FLAGC_LEFTADJ) && width > 0)
-			{
-				while (width--) PUT_CHAR (stix, padc);
-			}
+			if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
+			PUT_OOCH (ooch, 1);
+			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
 			break;
 		}
 
@@ -408,7 +417,7 @@ reswitch:
 
 			/* zeropad must not take effect for 'S' */
 			if (flagc & FLAGC_ZEROPAD) padc = ' ';
-			if (lm_flag & LF_H) goto lowercase_s;
+			if (lm_flag & LF_L) goto uppercase_s;
 		lowercase_s:
 
 			bsp = va_arg (ap, stix_bch_t*);
@@ -429,14 +438,11 @@ reswitch:
 			if ((flagc & FLAGC_DOT) && precision < slen) n = precision;
 			width -= n;
 
-			if (!(flagc & FLAGC_LEFTADJ) && width > 0)
-			{
-				while (width--) PUT_CHAR (stix, padc);
-			}
+			if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
 
 			{
 				stix_ooch_t conv_buf[32]; 
-				stix_oow_t i, conv_len, src_len, tot_len = 0;
+				stix_oow_t conv_len, src_len, tot_len = 0;
 				while (n > 0)
 				{
 					STIX_ASSERT (bslen > tot_len);
@@ -449,19 +455,13 @@ reswitch:
 					tot_len += src_len;
 
 					if (conv_len > n) conv_len = n;
-					for (i = 0; i < conv_len; i++)
-					{
-						PUT_CHAR (stix, conv_buf[i]);
-					}
+					PUT_OOCS (conv_buf, conv_len);
 
 					n -= conv_len;
 				}
 			}
 			
-			if ((flagc & FLAGC_LEFTADJ) && width > 0)
-			{
-				while (width--) PUT_CHAR (stix, padc);
-			}
+			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
 			break;
 		}
 
@@ -471,7 +471,7 @@ reswitch:
 
 			/* zeropad must not take effect for 's' */
 			if (flagc & FLAGC_ZEROPAD) padc = ' ';
-			if (lm_flag & LF_L) goto uppercase_s;
+			if (lm_flag & LF_H) goto lowercase_s;
 		uppercase_s:
 			sp = va_arg (ap, stix_ooch_t*);
 			if (sp == STIX_NULL) sp = ooch_nullstr;
@@ -487,20 +487,14 @@ reswitch:
 
 			width -= n;
 
-			if (!(flagc & FLAGC_LEFTADJ) && width > 0)
-			{
-				while (width--) PUT_CHAR (stix, padc);
-			}
-			while (n--) PUT_CHAR (stix, *sp++);
-			if ((flagc & FLAGC_LEFTADJ) && width > 0)
-			{
-				while (width--) PUT_CHAR (stix, padc);
-			}
+			if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
+			PUT_OOCS (sp, n);
+			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
 			break;
 		}
 
 		case 'O': /* object - ignore precision, width, adjustment */
-			print_object (stix, va_arg (ap, stix_oop_t));
+			print_object (stix, data->mask, va_arg (ap, stix_oop_t));
 			break;
 
 #if 0
@@ -825,61 +819,66 @@ number:
 			numlen = nbufp - nbuf;
 			if ((flagc & FLAGC_DOT) && precision > numlen) 
 			{
-				/* extra zeros fro precision specified */
+				/* extra zeros for precision specified */
 				tmp += (precision - numlen);
 			}
 
 			if (!(flagc & FLAGC_LEFTADJ) && !(flagc & FLAGC_ZEROPAD) && width > 0 && (width -= tmp) > 0)
 			{
-				while (width--) PUT_CHAR (stix, padc);
+				PUT_OOCH (padc, width);
+				width = 0;
 			}
 
-			if (neg) PUT_CHAR (stix, '-');
-			else if (flagc & FLAGC_SIGN) PUT_CHAR (stix, '+');
-			else if (flagc & FLAGC_SPACE) PUT_CHAR (stix, ' ');
+			if (neg) PUT_OOCH ('-', 1);
+			else if (flagc & FLAGC_SIGN) PUT_OOCH ('+', 1);
+			else if (flagc & FLAGC_SPACE) PUT_OOCH (' ', 1);
 
 			if ((flagc & FLAGC_SHARP) && num != 0) 
 			{
 				if (base == 8) 
 				{
-					PUT_CHAR (stix, '0');
+					PUT_OOCH ('0', 1);
 				} 
 				else if (base == 16) 
 				{
-					PUT_CHAR (stix, '0');
-					PUT_CHAR (stix, 'x');
+					PUT_OOCH ('0', 1);
+					PUT_OOCH ('x', 1);
 				}
 			}
 
 			if ((flagc & FLAGC_DOT) && precision > numlen)
 			{
 				/* extra zeros for precision specified */
-				while (numlen < precision) 
-				{
-					PUT_CHAR (stix, '0');
-					numlen++;
-				}
+				PUT_OOCH ('0', precision - numlen);
 			}
 
 			if (!(flagc & FLAGC_LEFTADJ) && width > 0 && (width -= tmp) > 0)
 			{
-				while (width-- > 0) PUT_CHAR (stix, padc);
+				PUT_OOCH (padc, width);
 			}
 
-			while (*nbufp) PUT_CHAR (stix, *nbufp--); /* output actual digits */
+			while (*nbufp) PUT_OOCH (*nbufp--, 1); /* output actual digits */
 
 			if ((flagc & FLAGC_LEFTADJ) && width > 0 && (width -= tmp) > 0)
 			{
-				while (width-- > 0) PUT_CHAR (stix, padc);
+				PUT_OOCH (padc, width);
 			}
 			break;
 
 invalid_format:
-			while (percent < fmt) PUT_CHAR (stix, *percent++);
+		#if defined(FMTCHAR_IS_OOCH)
+			PUT_OOCS (percent, fmt - percent);
+		#else
+			while (percent < fmt) PUT_OOCH (*percent++, 1);
+		#endif
 			break;
 
 		default:
-			while (percent < fmt) PUT_CHAR (stix, *percent++);
+		#if defined(FMTCHAR_IS_OOCH)
+			PUT_OOCS (percent, fmt - percent);
+		#else
+			while (percent < fmt) PUT_OOCH (*percent++, 1);
+		#endif
 			/*
 			 * Since we ignore an formatting argument it is no
 			 * longer safe to obey the remaining formatting
@@ -895,6 +894,6 @@ done:
 	return 0;
 
 oops:
-	return (stix_ooi_t)-1;
+	return -1;
 }
-#undef PUT_CHAR
+#undef PUT_OOCH

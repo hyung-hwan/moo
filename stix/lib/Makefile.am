@@ -43,7 +43,8 @@ libstix_la_SOURCES = \
 	decode.c \
 	dic.c \
 	exec.c \
-	fmt.c \
+	logfmtv.h \
+	logfmt.c \
 	gc.c \
 	heap.c \
 	ignite.c \

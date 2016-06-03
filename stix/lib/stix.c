@@ -89,6 +89,7 @@ int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_oow_t heapsz, const stix_vm
 	stix->mmgr = mmgr;
 	stix->vmprim = *vmprim;
 
+	stix->option.log_mask = ~0u;
 	stix->option.dfl_symtab_size = STIX_DFL_SYMTAB_SIZE;
 	stix->option.dfl_sysdic_size = STIX_DFL_SYSDIC_SIZE;
 	stix->option.dfl_procstk_size = STIX_DFL_PROCSTK_SIZE;
@@ -195,7 +196,11 @@ int stix_setoption (stix_t* stix, stix_option_t id, const void* value)
 	switch (id)
 	{
 		case STIX_TRAIT:
-			stix->option.trait = *(const int*)value;
+			stix->option.trait = *(const unsigned int*)value;
+			return 0;
+
+		case STIX_LOG_MASK:
+			stix->option.log_mask = *(const unsigned int*)value;
 			return 0;
 
 		case STIX_SYMTAB_SIZE:
@@ -242,7 +247,11 @@ int stix_getoption (stix_t* stix, stix_option_t id, void* value)
 	switch  (id)
 	{
 		case STIX_TRAIT:
-			*(int*)value = stix->option.trait;
+			*(unsigned int*)value = stix->option.trait;
+			return 0;
+
+		case STIX_LOG_MASK:
+			*(unsigned int*)value = stix->option.log_mask;
 			return 0;
 
 		case STIX_SYMTAB_SIZE:

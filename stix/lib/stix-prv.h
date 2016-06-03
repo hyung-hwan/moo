@@ -48,8 +48,6 @@
 /*#define STIX_DEBUG_PROCESSOR*/
 /*#define STIX_DEBUG_GC_001*/
 /*#define STIX_DEBUG_GC_002*/
-#define STIX_DEBUG_COMP_001
-/*#define STIX_DEBUG_COMP_002*/
 /*#define STIX_DEBUG_EXEC_001*/
 /*#define STIX_DEBUG_EXEC_002*/
 #define STIX_PROFILE_EXEC
@@ -1306,7 +1304,7 @@ stix_oop_t stix_inttostr (
 /* comp.c                                                                    */
 /* ========================================================================= */
 STIX_EXPORT int stix_compile (
-	stix_t*        stix,
+	stix_t*       stix,
 	stix_ioimpl_t io
 );
 
@@ -1323,21 +1321,6 @@ int stix_getprimno (
 	const stix_oocs_t* name
 );
 
-/* ========================================================================= */
-/* fmt.c                                                                     */
-/* ========================================================================= */
-stix_ooi_t stix_bfmtout (
-	stix_t*           stix,
-	const stix_bch_t* fmt,
-	...
-);
-
-
-stix_ooi_t stix_oofmtout (
-	stix_t*            stix,
-	const stix_ooch_t* fmt,
-	...
-);
 /* TODO: remove debugging functions */
 /* ========================================================================= */
 /* debug.c                                                                   */
@@ -1345,8 +1328,7 @@ stix_ooi_t stix_oofmtout (
 void dump_symbol_table (stix_t* stix);
 void dump_dictionary (stix_t* stix, stix_oop_set_t dic, const char* title);
 void print_oocs (const stix_oocs_t* name);
-void print_object (stix_t* stix, stix_oop_t oop);
-void dump_object (stix_t* stix, stix_oop_t oop, const char* title);
+void print_object (stix_t* stix, unsigned int mask, stix_oop_t oop);
 
 
 
