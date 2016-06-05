@@ -336,7 +336,7 @@ static void log_write (stix_t* stix, unsigned int mask, const stix_ooch_t* msg, 
 #	error NOT IMPLEMENTED 
 	
 #else
-	stix_bch_t buf[10];
+	stix_bch_t buf[256];
 	stix_oow_t ucslen, bcslen, msgidx;
 	int n;
 
@@ -529,12 +529,12 @@ static void cancel_tick (void)
 
 	itv.it_interval.tv_sec = 0;
 	itv.it_interval.tv_usec = 0;
-	itv.it_value.tv_sec = 0;
+	itv.it_value.tv_sec = 0; /* make setitimer() one-shot only */
 	itv.it_value.tv_usec = 0;
 	setitimer (ITIMER_VIRTUAL, &itv, STIX_NULL);
 
-	sigemptyset (&act.sa_mask);
-	act.sa_handler = SIG_DFL;
+	sigemptyset (&act.sa_mask); 
+	act.sa_handler = SIG_IGN; /* ignore the signal potentially fired by the one-shot arrange above */
 	act.sa_flags = 0;
 	sigaction (SIGVTALRM, &act, STIX_NULL);
 
@@ -553,19 +553,6 @@ int main (int argc, char* argv[])
 	stix_oocs_t mthname;
 	stix_vmprim_t vmprim;
 	int i, xret;
-
-	printf ("Stix 1.0.0 - max named %lu max indexed %lu max class %lu max classinst %lu oowmax %lu, ooimax %ld ooimin %ld smooimax %ld smooimax %ld\n", 
-		(unsigned long int)STIX_MAX_NAMED_INSTVARS, 
-		(unsigned long int)STIX_MAX_INDEXED_INSTVARS(STIX_MAX_NAMED_INSTVARS),
-		(unsigned long int)STIX_MAX_CLASSVARS,
-		(unsigned long int)STIX_MAX_CLASSINSTVARS,
-		(unsigned long int)STIX_TYPE_MAX(stix_oow_t),
-		(long int)STIX_TYPE_MAX(stix_ooi_t),
-		(long int)STIX_TYPE_MIN(stix_ooi_t),
-		(long)STIX_SMOOI_MAX, (long)STIX_SMOOI_MIN);
-
-	printf ("STIX_SMOOI_MIN + STIX_SMOOI_MIN => %ld\n", (long)(STIX_SMOOI_MIN + STIX_SMOOI_MIN));
-	printf ("STIX_SMOOI_MIN - STIX_SMOOI_MAX => %ld\n", (long)(STIX_SMOOI_MIN - STIX_SMOOI_MAX));
 
 #if !defined(macintosh)
 	if (argc < 2)
@@ -703,6 +690,9 @@ int main (int argc, char* argv[])
 
 	cancel_tick ();
 	g_stix = STIX_NULL;
+
+stix_dumpsymtab(stix);
+stix_dumpdic(stix, stix->sysdic, "System dictionary");
 
 	stix_close (stix);
 

@@ -46,7 +46,7 @@
 
 /* this is for gc debugging */
 /* #define STIX_DEBUG_GC */
-#define SIIX_DEBUG_COMPILER
+#define STIX_DEBUG_COMPILER
 /*#define STIX_DEBUG_VM_PROCESSOR*/
 /*#define STIX_DEBUG_VM_EXEC*/
 /*#define STIX_DEBUG_VM_METHOD_LOOKUP*/
@@ -1325,11 +1325,8 @@ int stix_getprimno (
 /* ========================================================================= */
 /* debug.c                                                                   */
 /* ========================================================================= */
-void dump_symbol_table (stix_t* stix);
-void dump_dictionary (stix_t* stix, stix_oop_set_t dic, const char* title);
-void print_oocs (const stix_oocs_t* name);
-void print_object (stix_t* stix, unsigned int mask, stix_oop_t oop);
-
+void stix_dumpsymtab (stix_t* stix);
+void stix_dumpdic (stix_t* stix, stix_oop_set_t dic, const stix_bch_t* title);
 
 
 #if defined(__cplusplus)

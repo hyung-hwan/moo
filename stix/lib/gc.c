@@ -399,7 +399,7 @@ void stix_gc (stix_t* stix)
 	{
 		stix_oow_t index;
 		stix_oop_oop_t buc;
-		STIX_LOG0 (stix, STIX_LOG_GC | STIX_LOG_DEBUG, "=== SURVIVING SYMBOLS IN GC ===\n");
+		STIX_LOG0 (stix, STIX_LOG_GC | STIX_LOG_DEBUG, "--------- SURVIVING SYMBOLS IN GC ----------\n");
 		buc = (stix_oop_oop_t) stix->symtab->bucket;
 		for (index = 0; index < STIX_OBJ_GET_SIZE(buc); index++)
 		{
@@ -408,7 +408,7 @@ void stix_gc (stix_t* stix)
 				STIX_LOG1 (stix, STIX_LOG_GC | STIX_LOG_DEBUG, "\t%O\n", buc->slot[index]);
 			}
 		}
-		STIX_LOG0 (stix, STIX_LOG_GC | STIX_LOG_DEBUG, "===============================\n");
+		STIX_LOG0 (stix, STIX_LOG_GC | STIX_LOG_DEBUG, "--------------------------------------------\n");
 	}
 */
 

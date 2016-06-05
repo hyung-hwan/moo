@@ -1079,7 +1079,7 @@ static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const s
 			STIX_ASSERT ((stix_oop_t)mthdic != stix->_nil);
 			STIX_ASSERT (STIX_CLASSOF(stix, mthdic) == stix->_method_dictionary);
 
-/*dump_dictionary (stix, mthdic, "Method dictionary");*/
+/*stix_dumpdic (stix, mthdic, "Method dictionary");*/
 			ass = (stix_oop_association_t)stix_lookupdic (stix, mthdic, message);
 			if (ass) 
 			{
