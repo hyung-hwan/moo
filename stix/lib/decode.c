@@ -27,12 +27,12 @@
 #include "stix-prv.h"
 
 
-#define LOG_MASK_INST (STIX_LOG_COMPILER | STIX_LOG_INFO)
+#define DECODE_LOG_MASK (STIX_LOG_MNEMONIC)
 
-#define LOG_INST_0(stix,fmt) if (STIX_LOG_ENABLED(stix,LOG_MASK_INST)) stix_logbfmt(stix, LOG_MASK_INST, "\t" fmt "\n")
-#define LOG_INST_1(stix,fmt,a1) if (STIX_LOG_ENABLED(stix,LOG_MASK_INST)) stix_logbfmt(stix, LOG_MASK_INST, "\t" fmt "\n",a1)
-#define LOG_INST_2(stix,fmt,a1,a2) if (STIX_LOG_ENABLED(stix,LOG_MASK_INST)) stix_logbfmt(stix, LOG_MASK_INST, "\t" fmt "\n", a1, a2)
-#define LOG_INST_3(stix,fmt,a1,a2,a3) if (STIX_LOG_ENABLED(stix,LOG_MASK_INST)) stix_logbfmt(stix, LOG_MASK_INST, "\t" fmt "\n", a1, a2, a3)
+#define LOG_INST_0(stix,fmt) STIX_LOG0(stix, DECODE_LOG_MASK, "\t" fmt "\n")
+#define LOG_INST_1(stix,fmt,a1) STIX_LOG1(stix, DECODE_LOG_MASK, "\t" fmt "\n",a1)
+#define LOG_INST_2(stix,fmt,a1,a2) STIX_LOG2(stix, DECODE_LOG_MASK, "\t" fmt "\n", a1, a2)
+#define LOG_INST_3(stix,fmt,a1,a2,a3) STIX_LOG3(stix, DECODE_LOG_MASK, "\t" fmt "\n", a1, a2, a3)
 
 #define FETCH_BYTE_CODE(stix) (cdptr[ip++])
 #define FETCH_BYTE_CODE_TO(stix,v_ooi) (v_ooi = FETCH_BYTE_CODE(stix))
@@ -47,7 +47,7 @@
 #endif
 
 /* TODO: check if ip shoots beyond the maximum length in fetching code and parameters */
-int stix_decode (stix_t* stix, const stix_oocs_t* classfqn, stix_oop_method_t mth)
+int stix_decode (stix_t* stix, stix_oop_method_t mth, const stix_oocs_t* classfqn)
 {
 	stix_oob_t bcode, * cdptr;
 	stix_oow_t ip = 0, cdlen;
@@ -56,8 +56,10 @@ int stix_decode (stix_t* stix, const stix_oocs_t* classfqn, stix_oop_method_t mt
 	cdptr = STIX_METHOD_GET_CODE_BYTE(mth);
 	cdlen = STIX_METHOD_GET_CODE_SIZE(mth); 
 
-	if (STIX_LOG_ENABLED(stix, LOG_MASK_INST))
-		stix_logbfmt (stix, LOG_MASK_INST, "%.*S>>%O\n", classfqn->len, classfqn->ptr, mth->name);
+	if (classfqn)
+		STIX_LOG3 (stix, DECODE_LOG_MASK, "%.*S>>%O\n", classfqn->len, classfqn->ptr, mth->name);
+	else
+		STIX_LOG2 (stix, DECODE_LOG_MASK, "%O>>%O\n", mth->owner, mth->name);
 
 /* TODO: check if ip increases beyon bcode when fetching parameters too */
 	while (ip < cdlen)
@@ -185,7 +187,7 @@ int stix_decode (stix_t* stix, const stix_oocs_t* classfqn, stix_oop_method_t mt
 			case BCODE_PUSH_LITERAL_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			push_literal:
-				LOG_INST_1 (stix, "push_literal %zd", b1);
+				LOG_INST_1 (stix, "push_literal @%zd", b1);
 				break;
 
 			/* ------------------------------------------------- */
@@ -213,16 +215,16 @@ int stix_decode (stix_t* stix, const stix_oocs_t* classfqn, stix_oop_method_t mt
 				{
 					if ((bcode >> 2) & 1)
 					{
-						LOG_INST_1 (stix, "pop_into_object %zd", b1);
+						LOG_INST_1 (stix, "pop_into_object @%zd", b1);
 					}
 					else
 					{
-						LOG_INST_1 (stix, "store_into_object %zd", b1);
+						LOG_INST_1 (stix, "store_into_object @%zd", b1);
 					}
 				}
 				else
 				{
-					LOG_INST_1 (stix, "push_object %zd", b1);
+					LOG_INST_1 (stix, "push_object @%zd", b1);
 				}
 				break;
 

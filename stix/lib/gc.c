@@ -293,10 +293,10 @@ void stix_gc (stix_t* stix)
 		stix->active_context->ip = STIX_SMOOI_TO_OOP(stix->ip);
 	}
 
-#if defined(STIX_DEBUG_GC_002)
-printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
-	stix->curheap->base, stix->curheap->ptr, stix->newheap->base, stix->newheap->ptr); 
-#endif
+	STIX_LOG4 (stix, STIX_LOG_GC | STIX_LOG_INFO, 
+		"Starting GC curheap base %p ptr %p newheap base %p ptr %p\n",
+		stix->curheap->base, stix->curheap->ptr, stix->newheap->base, stix->newheap->ptr); 
+
 	/* TODO: allocate common objects like _nil and the root dictionary 
 	 *       in the permanant heap.  minimize moving around */
 	old_nil = stix->_nil;
@@ -395,25 +395,29 @@ printf ("STARTING GC curheap base %p ptr %p newheap base %p ptr %p\n",
 	stix->newheap = tmp;
 
 /*
-{
-stix_oow_t index;
-stix_oop_oop_t buc;
-printf ("=== SURVIVING SYMBOLS ===\n");
-buc = (stix_oop_oop_t) stix->symtab->slot[STIX_SYMTAB_BUCKET];
-for (index = 0; index < buc->size; index++)
-{
-	if ((stix_oop_t)buc->slot[index] != stix->_nil) 
+	if (stix->symtab && STIX_LOG_ENABLED(stix, STIX_LOG_GC | STIX_LOG_DEBUG))
 	{
-		const stix_oop_char_t* p = ((stix_oop_char_t)buc->slot[index])->slot;
-		printf ("SYM [");
-		while (*p) printf ("%c", *p++);
-		printf ("]\n");
+		stix_oow_t index;
+		stix_oop_oop_t buc;
+		STIX_LOG0 (stix, STIX_LOG_GC | STIX_LOG_DEBUG, "=== SURVIVING SYMBOLS IN GC ===\n");
+		buc = (stix_oop_oop_t) stix->symtab->bucket;
+		for (index = 0; index < STIX_OBJ_GET_SIZE(buc); index++)
+		{
+			if ((stix_oop_t)buc->slot[index] != stix->_nil) 
+			{
+				STIX_LOG1 (stix, STIX_LOG_GC | STIX_LOG_DEBUG, "\t%O\n", buc->slot[index]);
+			}
+		}
+		STIX_LOG0 (stix, STIX_LOG_GC | STIX_LOG_DEBUG, "===============================\n");
 	}
-}
-printf ("===========================\n");
-}
 */
+
 	if (stix->active_method) SET_ACTIVE_METHOD_CODE (stix); /* update stix->active_code */
+
+	/* TODO: include some gc statstics like number of live objects, gc performance, etc */
+	STIX_LOG4 (stix, STIX_LOG_GC | STIX_LOG_INFO, 
+		"Finished GC curheap base %p ptr %p newheap base %p ptr %p\n",
+		stix->curheap->base, stix->curheap->ptr, stix->newheap->base, stix->newheap->ptr); 
 }
 
 

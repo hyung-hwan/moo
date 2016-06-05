@@ -264,8 +264,8 @@ reswitch:
 		case 'h': /* short int */
 		case 'l': /* long int */
 		case 'q': /* long long int */
-		case 'j': /* uintmax_t */
-		case 'z': /* size_t */
+		case 'j': /* stix_intmax_t/stix_uintmax_t */
+		case 'z': /* stix_ooi_t/stix_oow_t */
 		case 't': /* ptrdiff_t */
 			if (lm_flag & (LF_LD | LF_QD)) goto invalid_format;
 
@@ -316,7 +316,6 @@ reswitch:
 			flagc |= FLAGC_LENMOD;
 			lm_flag |= LF_QD;
 			goto reswitch;
-			
 		/* end of length modifiers */
 
 		case 'n':

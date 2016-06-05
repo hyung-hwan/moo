@@ -30,7 +30,7 @@ void* stix_allocbytes (stix_t* stix, stix_oow_t size)
 {
 	stix_uint8_t* ptr;
 
-#if defined(STIX_DEBUG_GC_001)
+#if defined(STIX_DEBUG_GC)
 	if (!(stix->option.trait & STIX_NOGC)) stix_gc (stix);
 #endif
 

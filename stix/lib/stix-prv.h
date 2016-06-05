@@ -45,12 +45,12 @@
 #define STIX_USE_MAKE_BLOCK
 
 /* this is for gc debugging */
-/*#define STIX_DEBUG_PROCESSOR*/
-/*#define STIX_DEBUG_GC_001*/
-/*#define STIX_DEBUG_GC_002*/
-/*#define STIX_DEBUG_EXEC_001*/
-/*#define STIX_DEBUG_EXEC_002*/
-#define STIX_PROFILE_EXEC
+/* #define STIX_DEBUG_GC */
+#define SIIX_DEBUG_COMPILER
+/*#define STIX_DEBUG_VM_PROCESSOR*/
+/*#define STIX_DEBUG_VM_EXEC*/
+/*#define STIX_DEBUG_VM_METHOD_LOOKUP*/
+#define STIX_PROFILE_VM
 
 /* allow the caller to drive process switching by calling
  * stix_switchprocess(). */
@@ -64,7 +64,7 @@
 #define STIX_LIMIT_OBJ_SIZE
 
 
-#include <stdio.h> /* TODO: delete these header inclusion lines */
+/* TODO: delete these header inclusion lines */
 #include <string.h>
 #include <assert.h>
 

@@ -26,7 +26,7 @@
 
 #include "stix-prv.h"
 
-#include <stdio.h> /* for snrintf(). used for floating-point number formatting */
+/*#include <stdio.h>*/ /* for snrintf(). used for floating-point number formatting */
 #include <stdarg.h>
 
 #if defined(_MSC_VER) || defined(__BORLANDC__) || (defined(__WATCOMC__) && (__WATCOMC__ < 1200))

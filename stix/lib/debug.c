@@ -184,7 +184,7 @@ void print_object (stix_t* stix, unsigned int mask, stix_oop_t oop)
 		}
 		else
 		{
-			stix_logbfmt (stix, mask, "instance of %.*S - (%p)", STIX_OBJ_GET_SIZE(c->name), ((stix_oop_char_t)c->name)->slot, oop);
+			stix_logbfmt (stix, mask, "instance of %.*S(%p)", STIX_OBJ_GET_SIZE(c->name), ((stix_oop_char_t)c->name)->slot, oop);
 		}
 	}
 }

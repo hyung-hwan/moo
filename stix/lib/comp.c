@@ -4230,8 +4230,9 @@ the compiler must collect all source method string collected so far.
 need to write code to collect string.
 */
 
-	/* TODO: call stix_decode only if decoding is enabled... */
-	stix_decode (stix, &stix->c->cls.fqn, mth);
+#if defined(STIX_DEBUG_COMPILER)
+	stix_decode (stix, mth, &stix->c->cls.fqn);
+#endif
 
 	stix_poptmps (stix, tmp_count); tmp_count = 0;
 
@@ -4545,14 +4546,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	{
 		int super_is_nil = 0;
 
-		if (STIX_LOG_ENABLED(stix,STIX_LOG_COMPILER | STIX_LOG_DEBUG))
-		{
-			stix_logbfmt (stix,
-				STIX_LOG_COMPILER | STIX_LOG_DEBUG, 
-				"Defining a class %.*S\n", 
-				stix->c->cls.fqn.len,
-				stix->c->cls.fqn.ptr);
-		}
+		STIX_INFO2 (stix, "Defining a class %.*S\n", stix->c->cls.fqn.len, stix->c->cls.fqn.ptr);
 
 		if (stix->c->tok.type == STIX_IOTOK_LPAREN)
 		{
@@ -4826,14 +4820,7 @@ static int __compile_pooldic_definition (stix_t* stix)
 		return -1;
 	}
 
-	if (STIX_LOG_ENABLED(stix,STIX_LOG_COMPILER | STIX_LOG_DEBUG))
-	{
-		stix_logbfmt (stix,
-			STIX_LOG_COMPILER | STIX_LOG_DEBUG, 
-			"Defining a pool dictionary %.*S\n", 
-			stix->c->cls.fqn.len,
-			stix->c->cls.fqn.ptr);
-	}
+	STIX_INFO2 (stix, "Defining a pool dictionary %.*S\n", stix->c->cls.fqn.len, stix->c->cls.fqn.ptr);
 
 	GET_TOKEN (stix);
 
@@ -5199,5 +5186,3 @@ void stix_getsynerr (stix_t* stix, stix_synerr_t* synerr)
 	STIX_ASSERT (stix->c != STIX_NULL);
 	if (synerr) *synerr = stix->c->synerr;
 }
-
-

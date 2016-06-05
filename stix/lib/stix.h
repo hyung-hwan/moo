@@ -740,7 +740,6 @@ typedef struct stix_prim_mod_data_t stix_prim_mod_data_t;
  * ========================================================================= */
 #if defined(STIX_INCLUDE_COMPILER)
 typedef struct stix_compiler_t stix_compiler_t;
-typedef struct stix_decoder_t stix_decoder_t;
 #endif
 
 struct stix_t
@@ -854,7 +853,6 @@ struct stix_t
 
 #if defined(STIX_INCLUDE_COMPILER)
 	stix_compiler_t* c;
-	stix_decoder_t* d;
 #endif
 };
 
@@ -894,26 +892,40 @@ struct stix_t
 
 enum stix_log_mask_t
 {
-	/* for general messages */
 	STIX_LOG_DEBUG    = (1 << 0),
 	STIX_LOG_INFO     = (1 << 1),
-	STIX_LOG_ERROR    = (1 << 2),
+	STIX_LOG_WARN     = (1 << 2),
+	STIX_LOG_ERROR    = (1 << 3),
+	STIX_LOG_FATAL    = (1 << 4),
 
-	/* for special messages */
-	STIX_LOG_COMPILER = (1 << 8),
-	STIX_LOG_EXECUTOR = (1 << 9),
-	STIX_LOG_DECODER  = (1 << 10)
+	STIX_LOG_MNEMONIC = (1 << 8), /* bytecode mnemonic */
+	STIX_LOG_GC       = (1 << 9),
+	STIX_LOG_VM       = (1 << 10)
 };
 typedef enum stix_log_mask_t stix_log_mask_t;
 
 #define STIX_LOG_ENABLED(stix,mask) ((stix)->option.log_mask & (mask))
 
+#define STIX_LOG0(stix,mask,fmt) do { if (STIX_LOG_ENABLED(stix,mask)) stix_logbfmt(stix, mask, fmt); } while(0)
+#define STIX_LOG1(stix,mask,fmt,a1) do { if (STIX_LOG_ENABLED(stix,mask)) stix_logbfmt(stix, mask, fmt, a1); } while(0)
+#define STIX_LOG2(stix,mask,fmt,a1,a2) do { if (STIX_LOG_ENABLED(stix,mask)) stix_logbfmt(stix, mask, fmt, a1, a2); } while(0)
+#define STIX_LOG3(stix,mask,fmt,a1,a2,a3) do { if (STIX_LOG_ENABLED(stix,mask)) stix_logbfmt(stix, mask, fmt, a1, a2, a3); } while(0)
+#define STIX_LOG4(stix,mask,fmt,a1,a2,a3,a4) do { if (STIX_LOG_ENABLED(stix,mask)) stix_logbfmt(stix, mask, fmt, a1, a2, a3, a4); } while(0)
+#define STIX_LOG5(stix,mask,fmt,a1,a2,a3,a4,a5) do { if (STIX_LOG_ENABLED(stix,mask)) stix_logbfmt(stix, mask, fmt, a1, a2, a3, a4, a5); } while(0)
 
-/*
-#define STIX_DEBUG0(stix,fmt) if (STIX_LOG_ENABLED(stix,STIX_LOG_DEBUG)) stix_logbfmt(stix, STIX_LOG_DEBUG, fmt)
-#define STIX_DEBUG1(stix,fmt,a1)
-#define STIX_DEBUG2(stix,fmt,a1,a2)
-*/
+#define STIX_DEBUG0(stix,fmt) STIX_LOG0(stix, STIX_LOG_DEBUG, fmt)
+#define STIX_DEBUG1(stix,fmt,a1) STIX_LOG1(stix, STIX_LOG_DEBUG, fmt, a1)
+#define STIX_DEBUG2(stix,fmt,a1,a2) STIX_LOG2(stix, STIX_LOG_DEBUG, fmt, a1, a2)
+#define STIX_DEBUG3(stix,fmt,a1,a2,a3) STIX_LOG3(stix, STIX_LOG_DEBUG, fmt, a1, a2, a3)
+#define STIX_DEBUG4(stix,fmt,a1,a2,a3,a4) STIX_LOG4(stix, STIX_LOG_DEBUG, fmt, a1, a2, a3, a4)
+#define STIX_DEBUG5(stix,fmt,a1,a2,a3,a4,a5) STIX_LOG5(stix, STIX_LOG_DEBUG, fmt, a1, a2, a3, a4, a5)
+
+#define STIX_INFO0(stix,fmt) STIX_LOG0(stix, STIX_LOG_INFO, fmt)
+#define STIX_INFO1(stix,fmt,a1) STIX_LOG1(stix, STIX_LOG_INFO, fmt, a1)
+#define STIX_INFO2(stix,fmt,a1,a2) STIX_LOG2(stix, STIX_LOG_INFO, fmt, a1, a2)
+#define STIX_INFO3(stix,fmt,a1,a2,a3) STIX_LOG3(stix, STIX_LOG_INFO, fmt, a1, a2, a3)
+#define STIX_INFO4(stix,fmt,a1,a2,a3,a4) STIX_LOG4(stix, STIX_LOG_INFO, fmt, a1, a2, a3, a4)
+#define STIX_INFO5(stix,fmt,a1,a2,a3,a4,a5) STIX_LOG5(stix, STIX_LOG_INFO, fmt, a1, a2, a3, a4, a5
 
 #if defined(__cplusplus)
 extern "C" {
@@ -1073,9 +1085,9 @@ STIX_EXPORT void stix_poptmps (
 );
 
 STIX_EXPORT int stix_decode (
-	stix_t*           stix,
-	const stix_oocs_t* classfqn,
-	stix_oop_method_t  mth
+	stix_t*            stix,
+	stix_oop_method_t  mth,
+	const stix_oocs_t* classfqn
 );
 
 /* Memory allocation/deallocation functions using stix's MMGR */

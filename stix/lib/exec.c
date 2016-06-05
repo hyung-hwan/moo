@@ -138,16 +138,19 @@
 #endif
 
 
-#if defined(STIX_DEBUG_EXEC_001)
-#	define DBGOUT_EXEC_0(fmt) printf(fmt "\n")
-#	define DBGOUT_EXEC_1(fmt,a1) printf(fmt "\n",a1)
-#	define DBGOUT_EXEC_2(fmt,a1,a2) printf(fmt "\n", a1, a2)
-#	define DBGOUT_EXEC_3(fmt,a1,a2,a3) printf(fmt "\n", a1, a2, a3)
+#if defined(STIX_DEBUG_VM_EXEC)
+#	define LOG_MASK_INST (STIX_LOG_VM | STIX_LOG_MNEMONIC)
+
+#	define LOG_INST_0(stix,fmt) STIX_LOG0(stix, LOG_MASK_INST, "\t" fmt "\n")
+#	define LOG_INST_1(stix,fmt,a1) STIX_LOG1(stix, LOG_MASK_INST, "\t" fmt "\n",a1)
+#	define LOG_INST_2(stix,fmt,a1,a2) STIX_LOG2(stix, LOG_MASK_INST, "\t" fmt "\n", a1, a2)
+#	define LOG_INST_3(stix,fmt,a1,a2,a3) STIX_LOG3(stix, LOG_MASK_INST, "\t" fmt "\n", a1, a2, a3)
+
 #else
-#	define DBGOUT_EXEC_0(fmt)
-#	define DBGOUT_EXEC_1(fmt,a1)
-#	define DBGOUT_EXEC_2(fmt,a1,a2)
-#	define DBGOUT_EXEC_3(fmt,a1,a2,a3)
+#	define LOG_INST_0(stix,fmt)
+#	define LOG_INST_1(stix,fmt,a1)
+#	define LOG_INST_2(stix,fmt,a1,a2)
+#	define LOG_INST_3(stix,fmt,a1,a2,a3)
 #endif
 
 
@@ -297,16 +300,16 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 
 	STIX_ASSERT ((stix_oop_t)c->sender == stix->_nil);
 
-#if defined(STIX_DEBUG_PROCESSOR)
-printf ("PROCESS %p SIZE => %ld\n", proc, (long int)STIX_OBJ_GET_SIZE(proc));
+#if defined(STIX_DEBUG_VM_PROCESSOR)
+	STIX_LOG2 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - made process %O of size %zd\n", proc, STIX_OBJ_GET_SIZE(proc));
 #endif
 	return proc;
 }
 
 static STIX_INLINE void sleep_active_process (stix_t* stix, int state)
 {
-#if defined(STIX_DEBUG_PROCESSOR)
-printf ("PROCESS-SWITCHING: PUT ACTIVE_CONTEXT TO SLEEP..%d %p\n", (int)stix->ip, stix->active_context);
+#if defined(STIX_DEBUG_VM_PROCESSOR)
+	STIX_LOG3 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - put process %O context %O ip=%zd to sleep\n", stix->processor->active, stix->active_context, stix->ip);
 #endif
 
 #if defined(STIX_USE_PROCSTK)
@@ -337,8 +340,8 @@ static STIX_INLINE void wake_new_process (stix_t* stix, stix_oop_process_t proc)
 	/* activate the suspended context of the new process */
 	SWITCH_ACTIVE_CONTEXT (stix, proc->current_context);
 
-#if defined(STIX_DEBUG_PROCESSOR)
-printf ("PROCESS-SWITCHING: WAKE NEW PROCESS...%d %p\n", (int)stix->ip, stix->active_context);
+#if defined(STIX_DEBUG_VM_PROCESSOR)
+	STIX_LOG3 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - woke up process %O context %O ip=%zd\n", stix->processor->active, stix->active_context, stix->ip);
 #endif
 }
 
@@ -391,8 +394,8 @@ static STIX_INLINE int chain_into_processor (stix_t* stix, stix_oop_process_t pr
 	STIX_ASSERT (tally >= 0);
 	if (tally >= STIX_SMOOI_MAX)
 	{
-#if defined(STIX_DEBUG_PROCESSOR)
-printf ("TOO MANY PROCESS\n");
+#if defined(STIX_DEBUG_VM_PROCESSOR)
+		STIX_LOG0 (stix, STIX_LOG_VM | STIX_LOG_FATAL, "Processor - too many process\n");
 #endif
 		stix->errnum = STIX_EPFULL;
 		return -1;
@@ -412,9 +415,6 @@ printf ("TOO MANY PROCESS\n");
 
 	tally++;
 	stix->processor->tally = STIX_SMOOI_TO_OOP(tally);
-#if defined(STIX_DEBUG_PROCESSOR)
-printf ("INSERTED PROCESS %d TO PROCESSOR\n", (int)tally);
-#endif
 
 	return 0;
 }
@@ -492,6 +492,11 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 	    proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE))
 	{
 		/* RUNNING/RUNNABLE ---> TERMINATED */
+
+	#if defined(STIX_DEBUG_VM_PROCESSOR)
+		STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - process %O RUNNING/RUNNABLE->TERMINATED\n", proc);
+	#endif
+
 		if (proc == stix->processor->active)
 		{
 			stix_oop_process_t nrp;
@@ -510,7 +515,7 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 			{
 				/* no runnable process after termination */
 				STIX_ASSERT (stix->processor->active == stix->nil_process);
-printf ("NO RUNNABLE PROCESS AFTER PROCESS TERMINATION in terminate_process()...\n");
+				STIX_LOG0 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "No runnable process after process termination\n");
 			}
 			else
 			{
@@ -526,6 +531,10 @@ printf ("NO RUNNABLE PROCESS AFTER PROCESS TERMINATION in terminate_process()...
 	else if (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_SUSPENDED))
 	{
 		/* SUSPENDED ---> TERMINATED */
+	#if defined(STIX_DEBUG_VM_PROCESSOR)
+		STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - process %O SUSPENDED->TERMINATED\n", proc);
+	#endif
+
 		proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_TERMINATED);
 		proc->sp = STIX_SMOOI_TO_OOP(-1); /* invalidate the proce stack */
 
@@ -546,10 +555,12 @@ static void resume_process (stix_t* stix, stix_oop_process_t proc)
 	if (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_SUSPENDED))
 	{
 		/* SUSPENED ---> RUNNING */
-
-/*printf ("TO RESUME PROCESS = %p %d SUSPENED ----> RUNNING\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));*/
 		STIX_ASSERT ((stix_oop_t)proc->prev == stix->_nil);
 		STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
+
+	#if defined(STIX_DEBUG_VM_PROCESSOR)
+		STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - process %O SUSPENDED->RUNNING\n", proc);
+	#endif
 
 		chain_into_processor (stix, proc); /* TODO: error check */
 
@@ -558,6 +569,7 @@ static void resume_process (stix_t* stix, stix_oop_process_t proc)
 
 		/* don't switch to this process. just set the state to RUNNING */
 	}
+
 #if 0
 	else if (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE))
 	{
@@ -576,28 +588,29 @@ static void suspend_process (stix_t* stix, stix_oop_process_t proc)
 	{
 		/* RUNNING/RUNNABLE ---> SUSPENDED */
 
+	#if defined(STIX_DEBUG_VM_PROCESSOR)
+		STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - process %O RUNNING/RUNNABLE->SUSPENDED\n", proc);
+	#endif
+
 		if (proc == stix->processor->active)
 		{
 			stix_oop_process_t nrp;
 
 			nrp = find_next_runnable_process (stix);
 
-/*printf ("TO SUSPEND...%p %d\n", proc, (int)STIX_OOP_TO_SMOOI(proc->state));*/
 			if (nrp == proc)
 			{
 				/* no runnable process after suspension */
-/*printf ("NO RUNNABLE PROCESS AFTER PROCESS SUPSENDISION in suspend_process\n");*/
 				sleep_active_process (stix, PROC_STATE_RUNNABLE);
 				unchain_from_processor (stix, proc, PROC_STATE_SUSPENDED);
 
 				/* the last running/runnable process has been unchained 
 				 * from the processor and set to SUSPENDED. the active
-				 * process must be the nil nil process */
+				 * process must be the nil process */
 				STIX_ASSERT (stix->processor->active == stix->nil_process);
 			}
 			else
 			{
-/*printf ("SWITCHING TO XXXXXXXXXXXXXXXXXXXXx\n");*/
 				/* keep the unchained process at the runnable state for
 				 * the immediate call to switch_to_process() below */
 				unchain_from_processor (stix, proc, PROC_STATE_RUNNABLE);
@@ -631,6 +644,9 @@ static void yield_process (stix_t* stix, stix_oop_process_t proc)
 		 * runnable process must be different from proc */
 		if (nrp != proc) 
 		{
+		#if defined(STIX_DEBUG_VM_PROCESSOR)
+			STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - process %O RUNNING->RUNNABLE\n", proc);
+		#endif
 			switch_to_process (stix, nrp, PROC_STATE_RUNNABLE);
 		}
 	}
@@ -669,7 +685,6 @@ static stix_oop_process_t signal_semaphore (stix_t* stix, stix_oop_semaphore_t s
 
 	if ((stix_oop_t)sem->waiting_head == stix->_nil)
 	{
-/*printf ("signal semaphore...1111\n");*/
 		/* no process is waiting on this semaphore */
 		count = STIX_OOP_TO_SMOOI(sem->count);
 		count++;
@@ -686,7 +701,6 @@ static stix_oop_process_t signal_semaphore (stix_t* stix, stix_oop_semaphore_t s
 
 		unchain_from_semaphore (stix, proc);
 		resume_process (stix, proc); /* TODO: error check */
-/*printf ("signal semaphore...2222 DONE -> resumed process -> proc state %d\n", (int)STIX_OOP_TO_SMOOI(proc->state));*/
 
 		/* return the resumed process */
 		return proc;
@@ -704,14 +718,12 @@ static void await_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
 		/* it's already signalled */
 		count--;
 		sem->count = STIX_SMOOI_TO_OOP(count);
-/*printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - NO SUSPENDING ...................\n");*/
 	}
 	else
 	{
 		/* not signaled. need to wait */
 		proc = stix->processor->active;
 
-/*printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - SUEPENDING ACTIVE PROCESS..........state=>[%d].....PROC %p\n", (int)STIX_OOP_TO_SMOOI(proc->state), proc);*/
 		/* suspend the active process */
 		suspend_process (stix, proc); 
 
@@ -720,7 +732,6 @@ static void await_semaphore (stix_t* stix, stix_oop_semaphore_t sem)
 
 		STIX_ASSERT (sem->waiting_tail == proc);
 
-/*printf (">>>>>>>>>>>>>> AWAIT SEMAPHORE - SUEPENDING ACTIVE PROCESS....XX......state=>[%d]..PROC %p\n", (int)STIX_OOP_TO_SMOOI(proc->state), proc);*/
 		STIX_ASSERT (stix->processor->active != proc);
 	}
 }
@@ -847,7 +858,6 @@ static void delete_from_sem_heap (stix_t* stix, stix_ooi_t index)
 		lastsem = stix->sem_heap[stix->sem_heap_count];
 		lastsem->heap_index = STIX_SMOOI_TO_OOP(index);
 		stix->sem_heap[index] = lastsem;
-
 
 		if (SEM_HEAP_EARLIER_THAN(stix, lastsem, sem)) 
 			sift_up_sem_heap (stix, index);
@@ -1020,9 +1030,6 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	/* switch the active context */
 	SWITCH_ACTIVE_CONTEXT (stix, ctx);
 
-#if defined(STIX_DEBUG_EXEC_001)
-printf ("<<ENTERING>> SP=%d\n", (int)stix->sp);
-#endif
 	return 0;
 }
 
@@ -1035,12 +1042,8 @@ static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const s
 	int dic_no;
 /* TODO: implement method lookup cache */
 
-#if defined(STIX_DEBUG_EXEC_002)
-printf ("==== FINDING METHOD FOR %p [", receiver);
-print_object (stix, 0, receiver);
-printf ("] - ["); 
-print_oocs (message);
-printf ("] in ");
+#if defined(STIX_DEBUG_VM_METHOD_LOOKUP)
+	STIX_LOG3 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Method lookup - Finding method %.*S for %O in ", message->len, message->ptr, receiver);
 #endif
 
 	cls = (stix_oop_class_t)STIX_CLASSOF(stix, receiver);
@@ -1049,20 +1052,16 @@ printf ("] in ");
 		/* receiver is a class object (an instance of Class) */
 		c = receiver; 
 		dic_no = STIX_CLASS_MTHDIC_CLASS;
-#if defined(STIX_DEBUG_EXEC_002)
-printf ("class method dictioanry of ");
-print_object(stix, 0, (stix_oop_t)((stix_oop_class_t)c)->name); 
-printf ("\n");
+#if defined(STIX_DEBUG_VM_METHOD_LOOKUP)
+	STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Method lookup - class method dictionary of %O\n", c);
 #endif
 	}
 	else
 	{
 		c = (stix_oop_t)cls;
 		dic_no = STIX_CLASS_MTHDIC_INSTANCE;
-#if defined(STIX_DEBUG_EXEC_002)
-printf ("instance method dictioanry of ");
-print_object(stix, 0, (stix_oop_t)((stix_oop_class_t)c)->name);
-printf ("\n");
+#if defined(STIX_DEBUG_VM_METHOD_LOOKUP)
+	STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Method lookup - instance method dictionary of %O\n", c);
 #endif
 	}
 
@@ -1562,7 +1561,7 @@ static int prim_context_goto (stix_t* stix, stix_ooi_t nargs)
 	rcv = STIX_STACK_GET(stix, stix->sp - 1);
 	if (STIX_CLASSOF(stix, rcv) != stix->_method_context)
 	{
-#if defined(STIX_DEBUG_EXEC_001)
+#if defined(STIX_DEBUG_VM_EXEC)
 printf ("prim_context_goto: PRIMITVE RECEIVER IS NOT A METHOD CONTEXT\n");
 #endif
 		return 0;
@@ -1571,7 +1570,7 @@ printf ("prim_context_goto: PRIMITVE RECEIVER IS NOT A METHOD CONTEXT\n");
 	pc = STIX_STACK_GET(stix, stix->sp);
 	if (!STIX_OOP_IS_SMOOI(pc) || STIX_OOP_TO_SMOOI(pc) < 0)
 	{
-#if defined(STIX_DEBUG_EXEC_001)
+#if defined(STIX_DEBUG_VM_EXEC)
 printf ("prim_context_goto: PRIMITVE ARGUMENT IS INVALID\n");
 #endif
 		return 0;
@@ -1610,7 +1609,7 @@ static int __block_value (stix_t* stix, stix_ooi_t rcv_blkctx_offset, stix_ooi_t
 	if (STIX_CLASSOF(stix, rcv_blkctx) != stix->_block_context)
 	{
 		/* the receiver must be a block context */
-#if defined(STIX_DEBUG_EXEC_001)
+#if defined(STIX_DEBUG_VM_EXEC)
 printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 #endif
 		return 0;
@@ -1623,7 +1622,7 @@ printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 		 * you can't send 'value' again to reactivate it.
 		 * For example, [thisContext value] value. */
 		STIX_ASSERT (STIX_OBJ_GET_SIZE(rcv_blkctx) > STIX_CONTEXT_NAMED_INSTVARS);
-#if defined(STIX_DEBUG_EXEC_001)
+#if defined(STIX_DEBUG_VM_EXEC)
 printf ("PRIM REVALUING AN BLOCKCONTEXT\n");
 #endif
 		return 0;
@@ -1633,7 +1632,7 @@ printf ("PRIM REVALUING AN BLOCKCONTEXT\n");
 	if (STIX_OOP_TO_SMOOI(rcv_blkctx->method_or_nargs) != actual_arg_count /* nargs */)
 	{
 		/* the number of argument doesn't match */
-#if defined(STIX_DEBUG_EXEC_001)
+#if defined(STIX_DEBUG_VM_EXEC)
 /* TODO: better handling of primitive failure */
 printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 #endif
@@ -1711,9 +1710,6 @@ static int prim_block_value (stix_t* stix, stix_ooi_t nargs)
 	x = __block_value (stix, nargs, nargs, 0, &blkctx);
 	if (x <= 0) return x; /* hard failure and soft failure */
 
-#if defined(STIX_DEBUG_EXEC_001)
-printf ("<<ENTERING BLOCK>> SP=%ld\n", (long int)stix->sp);
-#endif
 	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)blkctx);
 	return 1;
 }
@@ -1757,7 +1753,7 @@ static int prim_block_new_process (stix_t* stix, stix_ooi_t nargs)
 	if (STIX_CLASSOF(stix, rcv_blkctx) != stix->_block_context)
 	{
 		/* the receiver must be a block context */
-#if defined(STIX_DEBUG_EXEC_001)
+#if defined(STIX_DEBUG_VM_EXEC)
 printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 #endif
 		return 0;
@@ -2662,22 +2658,22 @@ typedef struct prim_t prim_t;
 
 static prim_t primitives[] =
 {
-	{   0, MAX_NARGS,  prim_dump,          "_dump"                },
+	{   0, MAX_NARGS,  prim_dump,                      "_dump"                },
 
-	{   1,  1,  prim_identical,            "_identical"           },
-	{   1,  1,  prim_not_identical,        "_not_identical"       },
-	{   0,  0,  prim_class,                "_class"               },
+	{   1,  1,  prim_identical,                        "_identical"           },
+	{   1,  1,  prim_not_identical,                    "_not_identical"       },
+	{   0,  0,  prim_class,                            "_class"               },
 
-	{   0,  0,  prim_basic_new,            "_basic_new"           },
-	{   1,  1,  prim_basic_new_with_size,  "_basic_new_with_size" },
-	{   0,  0,  prim_ngc_new,              "_ngc_new"             },
-	{   1,  1,  prim_ngc_new_with_size,    "_ngc_new_with_size"   },
-	{   0,  0,  prim_ngc_dispose,          "_ngc_dispose"         },
-	{   0,  0,  prim_shallow_copy,         "_shallow_copy"        },
+	{   0,  0,  prim_basic_new,                        "_basic_new"           },
+	{   1,  1,  prim_basic_new_with_size,              "_basic_new_with_size" },
+	{   0,  0,  prim_ngc_new,                          "_ngc_new"             },
+	{   1,  1,  prim_ngc_new_with_size,                "_ngc_new_with_size"   },
+	{   0,  0,  prim_ngc_dispose,                      "_ngc_dispose"         },
+	{   0,  0,  prim_shallow_copy,                     "_shallow_copy"        },
 
-	{   0,  0,  prim_basic_size,           "_basic_size"          },
-	{   1,  1,  prim_basic_at,             "_basic_at"            },
-	{   2,  2,  prim_basic_at_put,         "_basic_at_put"        },
+	{   0,  0,  prim_basic_size,                       "_basic_size"          },
+	{   1,  1,  prim_basic_at,                         "_basic_at"            },
+	{   2,  2,  prim_basic_at_put,                     "_basic_at_put"        },
 
 
 	{   1,  1,  prim_context_goto,                     "_context_goto"        },
@@ -2696,32 +2692,32 @@ static prim_t primitives[] =
 	{   2,  2,  prim_processor_return_to,              "_processor_return_to" },
 	{   1,  1,  prim_processor_force_context,          "_processor_force_context" },
 
-	{   1,  1,  prim_integer_add,          "_integer_add"         },
-	{   1,  1,  prim_integer_sub,          "_integer_sub"         },
-	{   1,  1,  prim_integer_mul,          "_integer_mul"         },
-	{   1,  1,  prim_integer_quo,          "_integer_quo"         },
-	{   1,  1,  prim_integer_rem,          "_integer_rem"         },
-	{   1,  1,  prim_integer_quo2,         "_integer_quo2"        },
-	{   1,  1,  prim_integer_rem2,         "_integer_rem2"        },
-	{   0,  0,  prim_integer_negated,      "_integer_negated"     },
-	{   1,  1,  prim_integer_bitat,        "_integer_bitat"       },
-	{   1,  1,  prim_integer_bitand,       "_integer_bitand"      },
-	{   1,  1,  prim_integer_bitor,        "_integer_bitor"       },
-	{   1,  1,  prim_integer_bitxor,       "_integer_bitxor"      },
-	{   0,  0,  prim_integer_bitinv,       "_integer_bitinv"      },
-	{   1,  1,  prim_integer_bitshift,     "_integer_bitshift"    },
-	{   1,  1,  prim_integer_eq,           "_integer_eq"          },
-	{   1,  1,  prim_integer_ne,           "_integer_ne"          },
-	{   1,  1,  prim_integer_lt,           "_integer_lt"          },
-	{   1,  1,  prim_integer_gt,           "_integer_gt"          },
-	{   1,  1,  prim_integer_le,           "_integer_le"          },
-	{   1,  1,  prim_integer_ge,           "_integer_ge"          },
-	{   1,  1,  prim_integer_inttostr,     "_integer_inttostr"    },
+	{   1,  1,  prim_integer_add,                      "_integer_add"         },
+	{   1,  1,  prim_integer_sub,                      "_integer_sub"         },
+	{   1,  1,  prim_integer_mul,                      "_integer_mul"         },
+	{   1,  1,  prim_integer_quo,                      "_integer_quo"         },
+	{   1,  1,  prim_integer_rem,                      "_integer_rem"         },
+	{   1,  1,  prim_integer_quo2,                     "_integer_quo2"        },
+	{   1,  1,  prim_integer_rem2,                     "_integer_rem2"        },
+	{   0,  0,  prim_integer_negated,                  "_integer_negated"     },
+	{   1,  1,  prim_integer_bitat,                    "_integer_bitat"       },
+	{   1,  1,  prim_integer_bitand,                   "_integer_bitand"      },
+	{   1,  1,  prim_integer_bitor,                    "_integer_bitor"       },
+	{   1,  1,  prim_integer_bitxor,                   "_integer_bitxor"      },
+	{   0,  0,  prim_integer_bitinv,                   "_integer_bitinv"      },
+	{   1,  1,  prim_integer_bitshift,                 "_integer_bitshift"    },
+	{   1,  1,  prim_integer_eq,                       "_integer_eq"          },
+	{   1,  1,  prim_integer_ne,                       "_integer_ne"          },
+	{   1,  1,  prim_integer_lt,                       "_integer_lt"          },
+	{   1,  1,  prim_integer_gt,                       "_integer_gt"          },
+	{   1,  1,  prim_integer_le,                       "_integer_le"          },
+	{   1,  1,  prim_integer_ge,                       "_integer_ge"          },
+	{   1,  1,  prim_integer_inttostr,                 "_integer_inttostr"    },
 
-	{   1,  1,  prim_ffi_open,             "_ffi_open"            },
-	{   1,  1,  prim_ffi_close,            "_ffi_close"           },
-	{   2,  2,  prim_ffi_getsym,           "_ffi_getsym"          },
-	{   3,  3,  prim_ffi_call,             "_ffi_call"            }
+	{   1,  1,  prim_ffi_open,                         "_ffi_open"            },
+	{   1,  1,  prim_ffi_close,                        "_ffi_close"           },
+	{   2,  2,  prim_ffi_getsym,                       "_ffi_getsym"          },
+	{   3,  3,  prim_ffi_call,                         "_ffi_call"            }
 	
 };
 
@@ -2901,12 +2897,6 @@ static int send_message (stix_t* stix, stix_oop_char_t selector, int to_super, s
 
 	receiver = STIX_STACK_GET(stix, stix->sp - nargs);
 
-#if defined(STIX_DEBUG_EXEC_001)
-printf (" RECEIVER = ");
-print_object(stix, 0, receiver);
-printf ("\n");
-#endif
-
 	mthname.ptr = selector->slot;
 	mthname.len = STIX_OBJ_GET_SIZE(selector);
 	method = find_method (stix, receiver, &mthname, to_super);
@@ -2923,18 +2913,11 @@ printf ("\n");
 		method = find_method (stix, receiver, &mthname, 0);
 		if (!method)
 		{
-			/* TODO: improve this hard error handling */
-			stix_oop_t c;
-
-/* TODO: remove this print-out.... or have it gracefully returned to the caller side */
-			c = STIX_CLASSOF(stix,receiver);
-			printf ("HARD FAILURE ERROR [IMAGE PROBLEM] - receiver [");
-			print_object (stix, 0, receiver);
-			printf ("] class ");
-			print_object (stix, 0, c);
-			printf (" doesNotUnderstand: [");
-			print_oocs (&mthname);
-			printf ("]\n");
+			/* this must not happen as long as doesNotUnderstand: is implemented under Apex.
+			 * this check should indicate a very serious internal problem */
+			STIX_LOG4 (stix, STIX_LOG_VM | STIX_LOG_FATAL, 
+				"Fatal error - receiver [%O] of class [%O] doesNotUnderstand: [%.*S]\n", 
+				receiver, STIX_CLASSOF(stix, receiver), mthname.len, mthname.ptr);
 
 			stix->errnum = STIX_EMSGSND;
 			return -1;
@@ -2958,36 +2941,38 @@ printf ("\n");
 	switch (preamble_code)
 	{
 		case STIX_METHOD_PREAMBLE_RETURN_RECEIVER:
-			DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_RECEIVER");
+			LOG_INST_0 (stix, "preamble_return_receiver");
 			STIX_STACK_POPS (stix, nargs); /* pop arguments only*/
 			break;
 
 		case STIX_METHOD_PREAMBLE_RETURN_NIL:
-			DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_NIL");
+			LOG_INST_0 (stix, "preamble_return_nil");
 			STIX_STACK_POPS (stix, nargs);
 			STIX_STACK_SETTOP (stix, stix->_nil);
 			break;
 
 		case STIX_METHOD_PREAMBLE_RETURN_TRUE:
-			DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_TRUE");
+			LOG_INST_0 (stix, "preamble_return_true");
 			STIX_STACK_POPS (stix, nargs);
 			STIX_STACK_SETTOP (stix, stix->_true);
 			break;
 
 		case STIX_METHOD_PREAMBLE_RETURN_FALSE:
-			DBGOUT_EXEC_0 ("METHOD_PREAMBLE_RETURN_FALSE");
+			LOG_INST_0 (stix, "preamble_return_false");
 			STIX_STACK_POPS (stix, nargs);
 			STIX_STACK_SETTOP (stix, stix->_false);
 			break;
 
-		case STIX_METHOD_PREAMBLE_RETURN_INDEX:
-			DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_INDEX %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
+		case STIX_METHOD_PREAMBLE_RETURN_INDEX: 
+			/* preamble_index field is used to store a positive integer */
+			LOG_INST_1 (stix, "preamble_return_index %zd", STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
 			STIX_STACK_POPS (stix, nargs);
 			STIX_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
 			break;
 
 		case STIX_METHOD_PREAMBLE_RETURN_NEGINDEX:
-			DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_NEGINDEX %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
+			/* preamble_index field is used to store a negative integer */
+			LOG_INST_1 (stix, "preamble_return_negindex %zd", STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
 			STIX_STACK_POPS (stix, nargs);
 			STIX_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(-STIX_METHOD_GET_PREAMBLE_INDEX(preamble)));
 			break;
@@ -2998,7 +2983,7 @@ printf ("\n");
 
 			STIX_STACK_POPS (stix, nargs); /* pop arguments only */
 
-			DBGOUT_EXEC_1 ("METHOD_PREAMBLE_RETURN_INSTVAR %d", (int)STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
+			LOG_INST_1 (stix, "preamble_return_instvar %zd", STIX_METHOD_GET_PREAMBLE_INDEX(preamble));
 
 			/* replace the receiver by an instance variable of the receiver */
 			rcv = (stix_oop_oop_t)STIX_STACK_GETTOP(stix);
@@ -3025,13 +3010,12 @@ printf ("\n");
 			break;
 		}
 
-
 		case STIX_METHOD_PREAMBLE_PRIMITIVE:
 		{
 			stix_ooi_t prim_no;
 
 			prim_no = STIX_METHOD_GET_PREAMBLE_INDEX(preamble);
-			DBGOUT_EXEC_1 ("METHOD_PREAMBLE_PRIMITIVE %d", (int)prim_no);
+			LOG_INST_1 (stix, "preamble_primitive %zd", prim_no);
 
 			if (prim_no >= 0 && prim_no < STIX_COUNTOF(primitives) && 
 			    (nargs >= primitives[prim_no].min_nargs && nargs <= primitives[prim_no].max_nargs))
@@ -3058,7 +3042,7 @@ printf ("\n");
 			register stix_oow_t w;
 
 			prim_name_index = STIX_METHOD_GET_PREAMBLE_INDEX(preamble);
-			DBGOUT_EXEC_1 ("METHOD_PREAMBLE_NAMED_PRIMITIVE %d", (int)prim_name_index);
+			LOG_INST_1 (stix, "preamble_named_primitive %zd", prim_name_index);
 
 			name = method->slot[prim_name_index];
 
@@ -3110,8 +3094,8 @@ int stix_execute (stix_t* stix)
 	stix_ooi_t b1, b2;
 	stix_oop_t return_value;
 
-#if defined(STIX_PROFILE_EXEC)
-	stix_oow_t inst_counter = 0;
+#if defined(STIX_PROFILE_VM)
+	stix_uintmax_t inst_counter = 0;
 #endif
 
 	STIX_ASSERT (stix->active_context != STIX_NULL);
@@ -3183,8 +3167,7 @@ int stix_execute (stix_t* stix)
 		{
 			/* no more waiting semaphore and no more process */
 			STIX_ASSERT (stix->processor->tally = STIX_SMOOI_TO_OOP(0));
-printf ("REALLY NO MORE RUNNABLE PROCESS...\n");
-
+			STIX_LOG0 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "No more runnable process\n");
 
 #if 0
 if (there is semaphore awaited.... )
@@ -3221,11 +3204,7 @@ if (there is semaphore awaited.... )
 		FETCH_BYTE_CODE_TO (stix, bcode);
 		/*while (bcode == BCODE_NOOP) FETCH_BYTE_CODE_TO (stix, bcode);*/
 
-#if 0
-printf ("BCODE = %x\n", bcode);
-#endif
-
-#if defined(STIX_PROFILE_EXEC)
+#if defined(STIX_PROFILE_VM)
 		inst_counter++;
 #endif
 
@@ -3246,7 +3225,7 @@ printf ("BCODE = %x\n", bcode);
 			case BCODE_PUSH_INSTVAR_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			push_instvar:
-				DBGOUT_EXEC_1 ("PUSH_INSTVAR %d", (int)b1);
+				LOG_INST_1 (stix, "push_instvar %zd", b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->origin->receiver_or_source) == STIX_OBJ_TYPE_OOP);
 				STIX_STACK_PUSH (stix, ((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1]);
 				break;
@@ -3266,7 +3245,7 @@ printf ("BCODE = %x\n", bcode);
 			case BCODE_STORE_INTO_INSTVAR_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			store_instvar:
-				DBGOUT_EXEC_1 ("STORE_INTO_INSTVAR %d", (int)b1);
+				LOG_INST_1 (stix, "store_into_instvar %zd", b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver_or_source) == STIX_OBJ_TYPE_OOP);
 				((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1] = STIX_STACK_GETTOP(stix);
 				break;
@@ -3285,7 +3264,7 @@ printf ("BCODE = %x\n", bcode);
 			case BCODE_POP_INTO_INSTVAR_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			pop_into_instvar:
-				DBGOUT_EXEC_1 ("POP_INTO_INSTVAR %d", (int)b1);
+				LOG_INST_1 (stix, "pop_into_instvar %zd", b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver_or_source) == STIX_OBJ_TYPE_OOP);
 				((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1] = STIX_STACK_GETTOP(stix);
 				STIX_STACK_POP (stix);
@@ -3384,7 +3363,7 @@ printf ("BCODE = %x\n", bcode);
 				if ((bcode >> 4) & 1)
 				{
 					/* push - bit 4 on */
-					DBGOUT_EXEC_1 ("PUSH_TEMPVAR %d", (int)b1);
+					LOG_INST_1 (stix, "push_tempvar %zd", b1);
 					STIX_STACK_PUSH (stix, ctx->slot[bx]);
 				}
 				else
@@ -3395,18 +3374,15 @@ printf ("BCODE = %x\n", bcode);
 					if ((bcode >> 3) & 1)
 					{
 						/* pop - bit 3 on */
-						DBGOUT_EXEC_1 ("POP_INTO_TEMPVAR %d", (int)b1);
+						LOG_INST_1 (stix, "pop_into_tempvar %zd", b1);
 						STIX_STACK_POP (stix);
 					}
 					else
 					{
-						DBGOUT_EXEC_1 ("STORE_INTO_TEMPVAR %d", (int)b1);
+						LOG_INST_1 (stix, "store_into_tempvar %zd", b1);
 					}
 				}
-				/*
-				print_object (stix, 0, ctx->slot[bx]);
-				printf ("\n");
- 				*/
+
 				break;
 			}
 
@@ -3425,11 +3401,7 @@ printf ("BCODE = %x\n", bcode);
 			case BCODE_PUSH_LITERAL_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			push_literal:
-				DBGOUT_EXEC_1 ("PUSH_LITERAL %d", (int)b1);
-				/*
-				print_object (stix, 0, stix->active_method->slot[b1]);
-				printf ("\n");
-				*/
+				LOG_INST_1 (stix, "push_literal @%zd", b1);
 				STIX_STACK_PUSH (stix, stix->active_method->slot[b1]);
 				break;
 
@@ -3468,18 +3440,18 @@ printf ("BCODE = %x\n", bcode);
 					if ((bcode >> 2) & 1)
 					{
 						/* pop */
-						DBGOUT_EXEC_1("POP_INTO_OBJECT %d", (int)b1);
+						LOG_INST_1 (stix, "pop_into_object @%zd", b1);
 						STIX_STACK_POP (stix);
 					}
 					else
 					{
-						DBGOUT_EXEC_1("STORE_INTO_OBJECT %d", (int)b1);
+						LOG_INST_1 (stix, "store_into_object @%zd", b1);
 					}
 				}
 				else
 				{
 					/* push */
-					DBGOUT_EXEC_1("PUSH_OBJECT %d", (int)b1);
+					LOG_INST_1 (stix, "push_object @%zd", b1);
 					STIX_STACK_PUSH (stix, ass->value);
 				}
 				break;
@@ -3489,7 +3461,7 @@ printf ("BCODE = %x\n", bcode);
 
 			case BCODE_JUMP_FORWARD_X:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				DBGOUT_EXEC_1 ("JUMP_FORWARD %d", (int)b1);
+				LOG_INST_1 (stix, "jump_forward %zd", b1);
 				stix->ip += b1;
 				break;
 
@@ -3497,13 +3469,13 @@ printf ("BCODE = %x\n", bcode);
 			case BCODE_JUMP_FORWARD_1:
 			case BCODE_JUMP_FORWARD_2:
 			case BCODE_JUMP_FORWARD_3:
-				DBGOUT_EXEC_1 ("JUMP_FORWARD %d", (int)(bcode & 0x3));
+				LOG_INST_1 (stix, "jump_forward %zd", (bcode & 0x3));
 				stix->ip += (bcode & 0x3); /* low 2 bits */
 				break;
 
 			case BCODE_JUMP_BACKWARD_X:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				DBGOUT_EXEC_1 ("JUMP_BACKWARD %d", (int)b1);
+				LOG_INST_1 (stix, "jump_backward %zd", b1);
 				stix->ip += b1;
 				break;
 
@@ -3511,7 +3483,7 @@ printf ("BCODE = %x\n", bcode);
 			case BCODE_JUMP_BACKWARD_1:
 			case BCODE_JUMP_BACKWARD_2:
 			case BCODE_JUMP_BACKWARD_3:
-				DBGOUT_EXEC_1 ("JUMP_BACKWARD %d", (int)(bcode & 0x3));
+				LOG_INST_1 (stix, "jump_backward %zd", (bcode & 0x3));
 				stix->ip -= (bcode & 0x3); /* low 2 bits */
 				break;
 
@@ -3525,19 +3497,19 @@ printf ("BCODE = %x\n", bcode);
 			case BCODE_JUMP_IF_FALSE_1:
 			case BCODE_JUMP_IF_FALSE_2:
 			case BCODE_JUMP_IF_FALSE_3:
-printf ("<<<<<<<<<<<<<< JUMP NOT IMPLEMENTED YET >>>>>>>>>>>> \n");
+STIX_LOG0 (stix, STIX_LOG_VM | STIX_LOG_FATAL, "<<<<<<<<<<<<<< JUMP NOT IMPLEMENTED YET >>>>>>>>>>>>\n");
 stix->errnum = STIX_ENOIMPL;
 return -1;
 
 			case BCODE_JUMP2_FORWARD:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				DBGOUT_EXEC_1 ("JUMP2_FORWARD %d", (int)b1);
+				LOG_INST_1 (stix, "jump2_forward %zd", b1);
 				stix->ip += MAX_CODE_JUMP + b1;
 				break;
 
 			case BCODE_JUMP2_BACKWARD:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				DBGOUT_EXEC_1 ("JUMP2_BACKWARD %d", (int)b1);
+				LOG_INST_1 (stix, "jump2_backward %zd", b1);
 				stix->ip -= MAX_CODE_JUMP + b1;
 				break;
 
@@ -3586,23 +3558,19 @@ return -1;
 					{
 						/* pop */
 						STIX_STACK_POP (stix);
-						DBGOUT_EXEC_2 ("POP_INTO_CTXTEMPVAR %d %d", (int)b1, (int)b2);
+						LOG_INST_2 (stix, "pop_into_ctxtempvar %zd %zd", b1, b2);
 					}
 					else
 					{
-						DBGOUT_EXEC_2 ("STORE_INTO_CTXTEMPVAR %d %d", (int)b1, (int)b2);
+						LOG_INST_2 (stix, "store_into_ctxtempvar %zd %zd", b1, b2);
 					}
 				}
 				else
 				{
 					/* push */
 					STIX_STACK_PUSH (stix, ctx->slot[b2]);
-					DBGOUT_EXEC_2 ("PUSH_CTXTEMPVAR %d %d", (int)b1, (int)b2);
+					LOG_INST_2 (stix, "push_ctxtempvar %zd %zd", b1, b2);
 				}
-/*
-print_object (stix, ctx->slot[b2]);
-printf ("\n");
-*/
 
 				break;
 			}
@@ -3650,23 +3618,19 @@ printf ("\n");
 					{
 						/* pop */
 						STIX_STACK_POP (stix);
-						DBGOUT_EXEC_2 ("POP_INTO_OBJVAR %d %d", (int)b1, (int)b2);
+						LOG_INST_2 (stix, "pop_into_objvar %zd %zd", b1, b2);
 					}
 					else
 					{
-						DBGOUT_EXEC_2 ("STORE_INTO_OBJVAR %d %d", (int)b1, (int)b2);
+						LOG_INST_2 (stix, "store_into_objvar %zd %zd", b1, b2);
 					}
 				}
 				else
 				{
 					/* push */
-					DBGOUT_EXEC_2 ("PUSH_OBJVAR %d %d", (int)b1, (int)b2);
+					LOG_INST_2 (stix, "push_objvar %zd %zd", b1, b2);
 					STIX_STACK_PUSH (stix, t->slot[b1]);
 				}
-/*
-print_object (stix, t->slot[b1]);
-printf ("\n");
-*/
 				break;
 			}
 
@@ -3697,11 +3661,8 @@ printf ("\n");
 				/* get the selector from the literal frame */
 				selector = (stix_oop_char_t)stix->active_method->slot[b2];
 
-#if defined(STIX_DEBUG_EXEC_001)
-printf ("SEND_MESSAGE%s TO RECEIVER AT STACKPOS=%d NARGS=%d SELECTOR=", (((bcode >> 2) & 1)? "_TO_SUPER": ""), (int)(stix->sp - b1), (int)b1);
-print_object (stix, 0, (stix_oop_t)selector);
-fflush (stdout);
-#endif
+				LOG_INST_3 (stix, "send_message%hs %zd @%zd", (((bcode >> 2) & 1)? "_to_super": ""), b1, b2);
+
 				if (send_message (stix, selector, ((bcode >> 2) & 1), b1) <= -1) goto oops;
 				break; /* CMD_SEND_MESSAGE */
 			}
@@ -3709,59 +3670,59 @@ fflush (stdout);
 			/* -------------------------------------------------------- */
 
 			case BCODE_PUSH_RECEIVER:
-				DBGOUT_EXEC_0 ("PUSH_RECEIVER");
+				LOG_INST_0 (stix, "push_receiver");
 				STIX_STACK_PUSH (stix, stix->active_context->origin->receiver_or_source);
 				break;
 
 			case BCODE_PUSH_NIL:
-				DBGOUT_EXEC_0 ("PUSH_NIL");
+				LOG_INST_0 (stix, "push_nil");
 				STIX_STACK_PUSH (stix, stix->_nil);
 				break;
 
 			case BCODE_PUSH_TRUE:
-				DBGOUT_EXEC_0 ("PUSH_TRUE");
+				LOG_INST_0 (stix, "push_true");
 				STIX_STACK_PUSH (stix, stix->_true);
 				break;
 
 			case BCODE_PUSH_FALSE:
-				DBGOUT_EXEC_0 ("PUSH_FALSE");
+				LOG_INST_0 (stix, "push_false");
 				STIX_STACK_PUSH (stix, stix->_false);
 				break;
 
 			case BCODE_PUSH_CONTEXT:
-				DBGOUT_EXEC_0 ("PUSH_CONTEXT");
+				LOG_INST_0 (stix, "push_context");
 				STIX_STACK_PUSH (stix, (stix_oop_t)stix->active_context);
 				break;
 
 			case BCODE_PUSH_NEGONE:
-				DBGOUT_EXEC_0 ("PUSH_NEGONE");
+				LOG_INST_0 (stix, "push_negone");
 				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(-1));
 				break;
 
 			case BCODE_PUSH_ZERO:
-				DBGOUT_EXEC_0 ("PUSH_ZERO");
+				LOG_INST_0 (stix, "push_zero");
 				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(0));
 				break;
 
 			case BCODE_PUSH_ONE:
-				DBGOUT_EXEC_0 ("PUSH_ONE");
+				LOG_INST_0 (stix, "push_one");
 				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(1));
 				break;
 
 			case BCODE_PUSH_TWO:
-				DBGOUT_EXEC_0 ("PUSH_TWO");
+				LOG_INST_0 (stix, "push_two");
 				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(2));
 				break;
 
 			case BCODE_PUSH_INTLIT:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				DBGOUT_EXEC_1 ("PUSH_INTLIT %d", (int)b1);
+				LOG_INST_1 (stix, "push_intlit %zd", b1);
 				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(b1));
 				break;
 
 			case BCODE_PUSH_NEGINTLIT:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				DBGOUT_EXEC_1 ("PUSH_NEGINTLIT %d", (int)-b1);
+				LOG_INST_1 (stix, "push_negintlit %zd", -b1);
 				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(-b1));
 				break;
 
@@ -3770,7 +3731,7 @@ fflush (stdout);
 			case BCODE_DUP_STACKTOP:
 			{
 				stix_oop_t t;
-				DBGOUT_EXEC_0 ("DUP_STACKTOP");
+				LOG_INST_0 (stix, "dup_stacktop");
 				STIX_ASSERT (!STIX_STACK_ISEMPTY(stix));
 				t = STIX_STACK_GETTOP(stix);
 				STIX_STACK_PUSH (stix, t);
@@ -3778,25 +3739,22 @@ fflush (stdout);
 			}
 
 			case BCODE_POP_STACKTOP:
-				DBGOUT_EXEC_0 ("POP_STACKTOP");
+				LOG_INST_0 (stix, "pop_stacktop");
 				STIX_ASSERT (!STIX_STACK_ISEMPTY(stix));
 				STIX_STACK_POP (stix);
 				break;
 
 			case BCODE_RETURN_STACKTOP:
-				DBGOUT_EXEC_0 ("RETURN_STACKTOP");
+				LOG_INST_0 (stix, "return_stacktop");
 				return_value = STIX_STACK_GETTOP(stix);
 				STIX_STACK_POP (stix);
 				goto handle_return;
 
 			case BCODE_RETURN_RECEIVER:
-				DBGOUT_EXEC_0 ("RETURN_RECEIVER");
+				LOG_INST_0 (stix, "return_receiver");
 				return_value = stix->active_context->origin->receiver_or_source;
 
 			handle_return:
-#if defined(STIX_DEBUG_EXEC_001)
-printf ("<<LEAVING>> SP=%d\n", (int)stix->sp);
-#endif
 
 			#if 0
 				/* put the instruction pointer back to the return
@@ -3874,23 +3832,14 @@ printf ("<<LEAVING>> SP=%d\n", (int)stix->sp);
 					/* place the instruction pointer back at the return instruction.
 					 * even if the context is reentered, it will just return.
 					 *stix->ip--;*/
-#if defined(STIX_DEBUG_EXEC_002)
-printf ("TERMINATING A PROCESS RETURNING old_active context %p\n", stix->active_context);
-#endif
 					terminate_process (stix, stix->processor->active);
-#if defined(STIX_DEBUG_EXEC_002)
-printf ("TERMINATED A PROCESS RETURNING %lld new active_context %p\n", (long long int)stix->ip, stix->active_context);
-#endif
 				}
 				else 
 				{
 					if (stix->active_context->origin->ip == STIX_SMOOI_TO_OOP(STIX_SMOOI_MIN))
 					{
-printf ("ERROR: CAN'T RETURN FROM DEAD METHOD CONTEXT orgin->ip %ld origin->sender->ip %ld\n",
-		(long int)STIX_OOP_TO_SMOOI(stix->active_context->origin->ip), (long int)STIX_OOP_TO_SMOOI(stix->active_context->origin->sender->ip));
-printf ("ERROR: CAN'T RETURN FROM DEAD METHOD CONTEXT origin %p origin->sender %p\n", stix->active_context->origin, stix->active_context->origin->sender);
-						/* TODO: proper error handling  */
-						stix->errnum = STIX_EINTERN; /* TODO: this should be caughtable at the stix level... */
+						STIX_LOG0 (stix, STIX_LOG_VM | STIX_LOG_ERROR, "Error - cannot return from dead context\n");
+						stix->errnum = STIX_EINTERN; /* TODO: make this error catchable at the stix level... */
 						return -1;
 					}
 
@@ -3900,9 +3849,6 @@ printf ("ERROR: CAN'T RETURN FROM DEAD METHOD CONTEXT origin %p origin->sender %
 					if (stix->active_context->origin == stix->active_context)
 					{
 						/* returning from a method */
-#if defined(STIX_DEBUG_EXEC_002)
-printf (">>>>>>>>>>>>> METHOD RETURN...\n");
-#endif
 						STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context) == stix->_method_context);
 						stix->ip = STIX_SMOOI_MIN;
 					}
@@ -3910,9 +3856,6 @@ printf (">>>>>>>>>>>>> METHOD RETURN...\n");
 					{
 						/* method return from within a block(including a non-local return) */
 						STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context) == stix->_block_context);
-#if defined(STIX_DEBUG_EXEC_002)
-printf (">>>>>>>>>>>>>>>> METHOD RETURN FROM WITHIN A BLOCK. NON-LOCAL RETURN.. RESETTUBG IP OF CONTEXT %p.\n", stix->active_context->origin);
-#endif
 						stix->active_context->origin->ip = STIX_SMOOI_TO_OOP(STIX_SMOOI_MIN);
 					}
 
@@ -3941,12 +3884,9 @@ printf (">>>>>>>>>>>>>>>> METHOD RETURN FROM WITHIN A BLOCK. NON-LOCAL RETURN.. 
 
 						/* NOTE: this condition is true for the processified block context also.
 						 *   stix->active_context->origin == stix->processor->active->initial_context->origin
-						 * however, the check here is done after context switching and
-						 * the processified block check is done against the context before switching */
+						 *   however, the check here is done after context switching and the
+						 *   processified block check is done against the context before switching */
 
-#if defined(STIX_DEBUG_EXEC_001)
-printf ("<<<RETURNING TO THE INITIAL CONTEXT>>> TERMINATING SP => %ld\n", (long int)stix->sp);
-#endif
 						/* the stack contains the final return value so the stack pointer must be 0. */
 						STIX_ASSERT (stix->sp == 0); 
 
@@ -3965,26 +3905,25 @@ printf ("<<<RETURNING TO THE INITIAL CONTEXT>>> TERMINATING SP => %ld\n", (long 
 				break;
 
 			case BCODE_RETURN_FROM_BLOCK:
-				DBGOUT_EXEC_0 ("RETURN_FROM_BLOCK");
+				LOG_INST_0 (stix, "return_from_block");
 
 				STIX_ASSERT(STIX_CLASSOF(stix, stix->active_context) == stix->_block_context);
 
 				if (stix->active_context == stix->processor->active->initial_context)
 				{
+					/* the active context to return from is an initial context of
+					 * the active process. this process must have been created 
+					 * over a block using the newProcess method. let's terminate
+					 * the process. */
+
 					STIX_ASSERT ((stix_oop_t)stix->active_context->sender == stix->_nil);
-#if defined(STIX_DEBUG_EXEC_002)
-printf ("TERMINATE A PROCESS RETURNING FROM BLOCK\n");
-#endif
 					terminate_process (stix, stix->processor->active);
-#if defined(STIX_DEBUG_EXEC_002)
-printf ("TERMINATED A PROCESS RETURNING FROM BLOCK %lld new active_context %p\n", (long long int)stix->ip, stix->active_context);
-#endif
 				}
 				else
 				{
-#if defined(STIX_DEBUG_EXEC_001)
-printf ("<<LEAVING BLOCK>>\n");
-#endif
+					/* it is a normal block return as the active block context 
+					 * is not the initial context of a process */
+
 				#if defined(STIX_USE_PROCSTK)
 					/* the process stack is shared. the return value 
 					 * doesn't need to get moved. */
@@ -4011,7 +3950,7 @@ printf ("<<LEAVING BLOCK>>\n");
 				FETCH_PARAM_CODE_TO (stix, b1);
 				FETCH_PARAM_CODE_TO (stix, b2);
 
-				DBGOUT_EXEC_2 ("MAKE_BLOCK %d %d", (int)b1, (int)b2);
+				LOG_INST_2 (stix, "make_block %zd %zd", b1, b2);
 
 				STIX_ASSERT (b1 >= 0);
 				STIX_ASSERT (b2 >= b1);
@@ -4056,7 +3995,7 @@ printf ("<<LEAVING BLOCK>>\n");
 				stix_oop_context_t rctx;
 				stix_oop_context_t blkctx;
 
-				DBGOUT_EXEC_0 ("SEND_BLOCK_COPY");
+				LOG_INST_0 (stix, "send_block_copy");
 
 				/* it emulates thisContext blockCopy: nargs ofTmprCount: ntmprs */
 				STIX_ASSERT (stix->sp >= 2);
@@ -4147,11 +4086,12 @@ printf ("<<LEAVING BLOCK>>\n");
 
 			case BCODE_NOOP:
 				/* do nothing */
+				LOG_INST_0 (stix, "noop");
 				break;
 
 
 			default:
-printf ("UNKNOWN BYTE CODE ENCOUNTERED %x\n", (int)bcode);
+				STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_FATAL, "Fatal error - unknown byte code 0x%zx\n", bcode);
 				stix->errnum = STIX_EINTERN;
 				break;
 
@@ -4161,11 +4101,10 @@ printf ("UNKNOWN BYTE CODE ENCOUNTERED %x\n", (int)bcode);
 done:
 
 	vm_cleanup (stix);
-#if defined(STIX_PROFILE_EXEC)
-	printf ("TOTAL_INST_COUTNER = %lu\n", (unsigned long int)inst_counter);
+#if defined(STIX_PROFILE_VM)
+	STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_INFO, "TOTAL_INST_COUTNER = %zu\n", inst_counter);
 #endif
 	return 0;
-
 
 oops:
 	/* TODO: anything to do here? */
