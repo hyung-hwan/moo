@@ -40,11 +40,19 @@
 	#method(#class) main2
 	{
 		| k |
+		'BEGINNING OF main2' dump.
 		k := ['this is test-011' dump. Exception signal: 'main2 screwed...'. 8888 dump. ] 
-			on: Exception do: [ :ex | 'Exception occurred' dump.  ex messageText dump. 'Getting back to....' dump. "ex return: 9999." ex pass. 'AFTER RETURN' dump. ].
+			on: Exception do: [ :ex | 
+				'Exception occurred' dump.  
+				ex messageText dump.
+				'Getting back to....' dump.
+				"ex return: 9999."
+				ex pass.
+				'AFTER RETURN' dump. 
+			].
 
 		k dump.
-		'END OF test-011' dump.
+		'END OF main2' dump.
 	}
 
 	#method(#class) raise_exception
@@ -138,33 +146,45 @@
 		## exception is raised in a new process. it can't be captured
 		## by an exception handler of a calling process.
 		## exception handling must not cross the process boundary.
+		'BEGINNING OF test11' dump.
 		[ 
 			|p | 
-			p := [Exception signal: 'Sample Exception' ] newProcess.
+			p := [ Exception signal: 'Exception in a new process of test11'.  ] newProcess.
 			'JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ' dump.
 			p resume.
 		] on: Exception do: [:ex | 'EXCEPTION ----------' dump. ex messageText dump ].
+		'END OF test11' dump.
 	}
 
 	#method(#class) test12
 	{
+		'BEGINNING OF test12' dump.
 		[ 
 			|p | 
 			p := [ 
-				[ Exception signal: 'Sample Exception' ] on: Exception do: [:ex | 'EXCEPTION CAUGHT...' dump. ex messageText dump. ]
+				[ Exception signal: 'Exception in a new process of test12' ] 
+					on: Exception do: [:ex | 
+						('EXCEPTION CAUGHT...in test12 ==> ', (ex messageText)) dump.
+					]
 			] newProcess.
 			'JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ' dump.
 			p resume.
 		] on: Exception do: [:ex | 'EXCEPTION ----------' dump. ex messageText dump ].
+		'END OF test12' dump.
 	}
 
-	
 	#method(#class) main
 	{
 
 		'>>>>> BEGINNING OF MAIN' dump.
 
-	##	[ self main2 ] on: Exception do: [ :ex | 'EXCEPTION CAUGHT IN MAIN....' dump. ex messageText dump. "ex pass." ex resume. ].
+		[ self main2 ] on: Exception do: [ :ex | 
+			'EXCEPTION CAUGHT IN MAIN....' dump. 
+			ex messageText dump. 
+			"ex pass." 
+			'Returning back to where the exception has signalled in main2...' dump.
+			ex resume. 
+		].
 
 		'##############################' dump.
 	##	self test3.
@@ -173,7 +193,7 @@
 	##	self test5.
 		self test11.
 	##	self test12.
-		##100 timesRepeat: ['>>>>> END OF MAIN' dump].
+	##	100 timesRepeat: ['>>>>> END OF MAIN' dump].
 
 
 "(Exception isKindOf: Apex) dump.

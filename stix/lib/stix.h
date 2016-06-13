@@ -900,7 +900,7 @@ enum stix_log_mask_t
 
 	STIX_LOG_MNEMONIC = (1 << 8), /* bytecode mnemonic */
 	STIX_LOG_GC       = (1 << 9),
-	STIX_LOG_VM       = (1 << 10)
+	STIX_LOG_IC       = (1 << 10) /* instruction cycle, fetch-decode-execute */
 };
 typedef enum stix_log_mask_t stix_log_mask_t;
 

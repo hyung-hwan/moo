@@ -25,6 +25,10 @@
 
 #class Character(Magnitude)
 {
+	## #method basicSize
+	## {
+	## 	^0
+	## }
 }
 
 #class Number(Magnitude)
@@ -153,7 +157,7 @@
 
 	#method asString
 	{
-		self printStringRadix: 10
+		^self printStringRadix: 10
 	}
 
 	#method printStringRadix: aNumber
@@ -213,6 +217,10 @@
 
 #class SmallInteger(Integer)
 {
+	## #method basicSize
+	## {
+	## 	^0
+	## }
 }
 
 #class(#liword) LargeInteger(Integer)

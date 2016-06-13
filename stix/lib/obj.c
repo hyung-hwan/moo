@@ -35,7 +35,7 @@ void* stix_allocbytes (stix_t* stix, stix_oow_t size)
 #endif
 
 	ptr = stix_allocheapmem (stix, stix->curheap, size);
-	if (!ptr && !(stix->option.trait & STIX_NOGC))
+	if (!ptr && stix->errnum == STIX_EOOMEM && !(stix->option.trait & STIX_NOGC))
 	{
 		stix_gc (stix);
 		ptr = stix_allocheapmem (stix, stix->curheap, size);

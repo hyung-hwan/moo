@@ -67,7 +67,7 @@
 	}
 
 	
-	#method(#class) main
+	#method(#class) main987
 	{
 		|t1 t2 s1 s2 s3|
 
@@ -110,20 +110,43 @@
 		s1 wait.
 "
 
-
-
-"
+	}
+	
+	#method(#class) main
+	{
 		| v1 |
 		'START OF MAIN' dump.
 		##[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump].
 		##['ENSURE TEST' dump] ensure: ['XXXXXXXXX ENSURE XXXXXXXXXXXXXx' dump].
 
-		v1 := [ ['kkk' dump.] ensure: ['XXXXXXXXX ENSURE XXXXXXXXXXXXXx' dump. 30] ] on: Exception do: [:ex | 'EXCEPTION OUTSIDE ENSURE...' dump.  ].
-		v1 dump.
+		##v1 := [ ['kkk' dump.] ensure: ['XXXXXXXXX ENSURE XXXXXXXXXXXXXx' dump. 30] ] on: Exception do: [:ex | 'EXCEPTION OUTSIDE ENSURE...' dump.  ].
+		##v1 dump.
 
-		'END OF MAIN' dump."
+
+		##[ Exception signal: 'simulated error' ] on: Exception do: [:ex | 'CAUGHT...' dump. Exception signal: 'jjjjjjj' ].
+		
+		"[
+				[ Exception signal: 'simulated error' ] ensure: ['ensure 1' dump ].
+		] on: Exception do: [:ex | ('EXCETION - ' , ex messageText) dump. Exception signal: 'qqq'. ]."
+
+		"[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump. Exception signal: 'jjjj']."
+
+		v1 := [
+			| k |
+			k := 99.
+			[
+				[ Exception signal: 'simulated error' ] ensure: [('ensure 1 ', (k asString)) dump ].
+			] ensure: ['ensure 2' dump ].
+		] on: Exception do: [:ex | 
+			('EXCETION - ' , ex messageText) dump.
+			## Exception signal: 'qqq'.
+		].
+
+		'--------------------------------' dump.
+		v1 dump.
+		'END OF MAIN' dump.
 	}
-	
+
 	#method(#class) main22222
 	{
 		|t1 t2 s1 s2 s3|

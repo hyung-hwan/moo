@@ -401,6 +401,12 @@
 		self primitiveFailed.
 	}
 
+	#method returnTo: anObject andEval: aBlock with: arg
+	{
+		<primitive: #_processor_return_to_and_eval>
+		self primitiveFailed.
+	}
+
 	#method forceContext: aContext
 	{
 		<primitive: #_processor_force_context>

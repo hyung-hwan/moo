@@ -328,13 +328,15 @@ thisContext isExceptionHandlerContext dump.
 
 	#method ensure: aBlock
 	{
-
 ## TODO: ensure that the ensured block is executed after exception handler...
-		| value |
-		value := self on: Exception do: [:ex | aBlock value. ex pass].
-		## value := self valueAndResumeOnUnwind.
+		| v |
+		v := self on: Exception do: [:ex | 
+			aBlock value.
+			ex pass
+		].
+
 		aBlock value.
-		^value
+		^v
 	}
 
 	#method ifCurtailed: aBlock
@@ -424,8 +426,21 @@ thisContext isExceptionHandlerContext dump.
   	#method handleException
 	{
 		self.handlerContext notNil
-			ifTrue: [ 
-				Processor return: (self.handlerBlock value: self) to: (self.handlerContext sender)
+			ifTrue: [
+##'RETURNING TO....' dump.
+##self.handlerContext  dump.
+##self.handlerContext sender dump.
+##' ............' dump.
+
+				## arrange to execute the hander block after having returned 
+				## to the sender of the exception handler context.
+				## if handler block is evaluated before returning, an
+				## exception raised in the handler block causes a kind of
+				## a recursive call to here.
+				##Processor return: (self.handlerBlock value: self) to: (self.handlerContext sender)
+				## so use a different primitive method that evaluate the block
+				## after having returned to the given context.
+				Processor returnTo: (self.handlerContext sender) andEval: (self.handlerBlock) with: self.
 			]
 			ifFalse: [ 
 				('### EXCEPTION NOT HANDLED #### ', self class name, ' - ', self messageText) dump.
@@ -434,13 +449,6 @@ thisContext isExceptionHandlerContext dump.
 			].
 	}
 
-##	#method handlerContext
-##	{
-##		(self.handlerContext notNil) ifTrue: [ ^self.handlerContext ].
-##		self findHandlerContextStartingFrom: self.signalContext.
-##		^self.handlerContext.
-##	}
-
 	#method findHandlerContextStartingFrom: aContext
 	{
 		## Find exception handling context starting from a given context
@@ -448,19 +456,21 @@ thisContext isExceptionHandlerContext dump.
 
 		ctx := aContext.
 		[ ctx notNil ] whileTrue: [
-				##(ctx handles: self) ifTrue: [ ^ ctx ].
-				(ctx isExceptionHandlerContext) ifTrue: [
-					| blk |
-					blk := ctx findExceptionHandlerBlock: (self class).
-					(blk notNil) ifTrue: [ 
-						self.handlerBlock := blk. 
-						self.handlerContext := ctx. 
-						^ctx 
-					].
+##ctx dump.
+			##(ctx handles: self) ifTrue: [ ^ ctx ].
+			(ctx isExceptionHandlerContext) ifTrue: [
+				| blk |
+				blk := ctx findExceptionHandlerBlock: (self class).
+				(blk notNil) ifTrue: [ 
+					self.handlerBlock := blk. 
+					self.handlerContext := ctx. 
+##'-------------' dump.
+					^ctx 
 				].
-				ctx := ctx sender
 			].
-
+			ctx := ctx sender
+		].
+##'-------------' dump.
 		## no handler is found
 		self.handlerBlock := nil.
 		self.handlerContext := nil.

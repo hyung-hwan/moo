@@ -342,6 +342,9 @@ static void log_write (stix_t* stix, unsigned int mask, const stix_ooch_t* msg, 
 
 	msgidx = 0;
 
+/* TODO: beautify the log message.
+ *       do classification based on mask. */
+
 	while (len > 0)
 	{
 		ucslen = len;
@@ -691,8 +694,8 @@ int main (int argc, char* argv[])
 	cancel_tick ();
 	g_stix = STIX_NULL;
 
-stix_dumpsymtab(stix);
-stix_dumpdic(stix, stix->sysdic, "System dictionary");
+	/*stix_dumpsymtab(stix);
+	 *stix_dumpdic(stix, stix->sysdic, "System dictionary");*/
 
 	stix_close (stix);
 

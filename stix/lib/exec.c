@@ -139,7 +139,7 @@
 
 
 #if defined(STIX_DEBUG_VM_EXEC)
-#	define LOG_MASK_INST (STIX_LOG_VM | STIX_LOG_MNEMONIC)
+#	define LOG_MASK_INST (STIX_LOG_IC | STIX_LOG_MNEMONIC)
 
 #	define LOG_INST_0(stix,fmt) STIX_LOG0(stix, LOG_MASK_INST, "\t" fmt "\n")
 #	define LOG_INST_1(stix,fmt,a1) STIX_LOG1(stix, LOG_MASK_INST, "\t" fmt "\n",a1)
@@ -301,7 +301,7 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 	STIX_ASSERT ((stix_oop_t)c->sender == stix->_nil);
 
 #if defined(STIX_DEBUG_VM_PROCESSOR)
-	STIX_LOG2 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - made process %O of size %zd\n", proc, STIX_OBJ_GET_SIZE(proc));
+	STIX_LOG2 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Processor - made process %O of size %zd\n", proc, STIX_OBJ_GET_SIZE(proc));
 #endif
 	return proc;
 }
@@ -309,7 +309,7 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 static STIX_INLINE void sleep_active_process (stix_t* stix, int state)
 {
 #if defined(STIX_DEBUG_VM_PROCESSOR)
-	STIX_LOG3 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - put process %O context %O ip=%zd to sleep\n", stix->processor->active, stix->active_context, stix->ip);
+	STIX_LOG3 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Processor - put process %O context %O ip=%zd to sleep\n", stix->processor->active, stix->active_context, stix->ip);
 #endif
 
 #if defined(STIX_USE_PROCSTK)
@@ -341,7 +341,7 @@ static STIX_INLINE void wake_new_process (stix_t* stix, stix_oop_process_t proc)
 	SWITCH_ACTIVE_CONTEXT (stix, proc->current_context);
 
 #if defined(STIX_DEBUG_VM_PROCESSOR)
-	STIX_LOG3 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - woke up process %O context %O ip=%zd\n", stix->processor->active, stix->active_context, stix->ip);
+	STIX_LOG3 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Processor - woke up process %O context %O ip=%zd\n", stix->processor->active, stix->active_context, stix->ip);
 #endif
 }
 
@@ -395,7 +395,7 @@ static STIX_INLINE int chain_into_processor (stix_t* stix, stix_oop_process_t pr
 	if (tally >= STIX_SMOOI_MAX)
 	{
 #if defined(STIX_DEBUG_VM_PROCESSOR)
-		STIX_LOG0 (stix, STIX_LOG_VM | STIX_LOG_FATAL, "Processor - too many process\n");
+		STIX_LOG0 (stix, STIX_LOG_IC | STIX_LOG_FATAL, "Processor - too many process\n");
 #endif
 		stix->errnum = STIX_EPFULL;
 		return -1;
@@ -494,7 +494,7 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 		/* RUNNING/RUNNABLE ---> TERMINATED */
 
 	#if defined(STIX_DEBUG_VM_PROCESSOR)
-		STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - process %O RUNNING/RUNNABLE->TERMINATED\n", proc);
+		STIX_LOG1 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Processor - process %O RUNNING/RUNNABLE->TERMINATED\n", proc);
 	#endif
 
 		if (proc == stix->processor->active)
@@ -515,7 +515,7 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 			{
 				/* no runnable process after termination */
 				STIX_ASSERT (stix->processor->active == stix->nil_process);
-				STIX_LOG0 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "No runnable process after process termination\n");
+				STIX_LOG0 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "No runnable process after process termination\n");
 			}
 			else
 			{
@@ -532,7 +532,7 @@ static void terminate_process (stix_t* stix, stix_oop_process_t proc)
 	{
 		/* SUSPENDED ---> TERMINATED */
 	#if defined(STIX_DEBUG_VM_PROCESSOR)
-		STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - process %O SUSPENDED->TERMINATED\n", proc);
+		STIX_LOG1 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Processor - process %O SUSPENDED->TERMINATED\n", proc);
 	#endif
 
 		proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_TERMINATED);
@@ -559,7 +559,7 @@ static void resume_process (stix_t* stix, stix_oop_process_t proc)
 		STIX_ASSERT ((stix_oop_t)proc->next == stix->_nil);
 
 	#if defined(STIX_DEBUG_VM_PROCESSOR)
-		STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - process %O SUSPENDED->RUNNING\n", proc);
+		STIX_LOG1 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Processor - process %O SUSPENDED->RUNNING\n", proc);
 	#endif
 
 		chain_into_processor (stix, proc); /* TODO: error check */
@@ -589,7 +589,7 @@ static void suspend_process (stix_t* stix, stix_oop_process_t proc)
 		/* RUNNING/RUNNABLE ---> SUSPENDED */
 
 	#if defined(STIX_DEBUG_VM_PROCESSOR)
-		STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - process %O RUNNING/RUNNABLE->SUSPENDED\n", proc);
+		STIX_LOG1 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Processor - process %O RUNNING/RUNNABLE->SUSPENDED\n", proc);
 	#endif
 
 		if (proc == stix->processor->active)
@@ -645,7 +645,7 @@ static void yield_process (stix_t* stix, stix_oop_process_t proc)
 		if (nrp != proc) 
 		{
 		#if defined(STIX_DEBUG_VM_PROCESSOR)
-			STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Processor - process %O RUNNING->RUNNABLE\n", proc);
+			STIX_LOG1 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Processor - process %O RUNNING->RUNNABLE\n", proc);
 		#endif
 			switch_to_process (stix, nrp, PROC_STATE_RUNNABLE);
 		}
@@ -1043,7 +1043,7 @@ static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const s
 /* TODO: implement method lookup cache */
 
 #if defined(STIX_DEBUG_VM_METHOD_LOOKUP)
-	STIX_LOG3 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Method lookup - Finding method %.*S for %O in ", message->len, message->ptr, receiver);
+	STIX_LOG3 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Method lookup - Finding method %.*S for %O in ", message->len, message->ptr, receiver);
 #endif
 
 	cls = (stix_oop_class_t)STIX_CLASSOF(stix, receiver);
@@ -1053,7 +1053,7 @@ static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const s
 		c = receiver; 
 		dic_no = STIX_CLASS_MTHDIC_CLASS;
 #if defined(STIX_DEBUG_VM_METHOD_LOOKUP)
-	STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Method lookup - class method dictionary of %O\n", c);
+	STIX_LOG1 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Method lookup - class method dictionary of %O\n", c);
 #endif
 	}
 	else
@@ -1061,7 +1061,7 @@ static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const s
 		c = (stix_oop_t)cls;
 		dic_no = STIX_CLASS_MTHDIC_INSTANCE;
 #if defined(STIX_DEBUG_VM_METHOD_LOOKUP)
-	STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "Method lookup - instance method dictionary of %O\n", c);
+	STIX_LOG1 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Method lookup - instance method dictionary of %O\n", c);
 #endif
 	}
 
@@ -1379,16 +1379,25 @@ static int prim_shallow_copy (stix_t* stix, stix_ooi_t nargs)
 
 static int prim_basic_size (stix_t* stix, stix_ooi_t nargs)
 {
+	/* return the number of indexable fields */
+
 	stix_oop_t rcv, sz;
 
 	STIX_ASSERT (nargs == 0);
 
 	rcv = STIX_STACK_GETTOP(stix);
 
-	sz = stix_oowtoint (stix, STIX_OBJ_GET_SIZE(rcv));
-	if (!sz) return -1; /* hard failure */
-	STIX_STACK_SETTOP(stix, sz);
+	if (!STIX_OOP_IS_POINTER(rcv))
+	{
+		sz = STIX_SMOOI_TO_OOP(0);
+	}
+	else
+	{
+		sz = stix_oowtoint (stix, STIX_OBJ_GET_SIZE(rcv));
+		if (!sz) return -1; /* hard failure */
+	}
 
+	STIX_STACK_SETTOP(stix, sz);
 	return 1;
 }
 
@@ -1979,6 +1988,33 @@ static int prim_processor_return_to (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
+static int prim_processor_return_to_and_eval (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, ctx, blk, blkarg;
+
+	STIX_ASSERT (nargs == 3);
+
+	rcv = STIX_STACK_GET(stix, stix->sp - 3);
+	ctx = STIX_STACK_GET(stix, stix->sp - 2);
+	blk = STIX_STACK_GET(stix, stix->sp - 1);
+	blkarg = STIX_STACK_GET(stix, stix->sp);
+
+	if (rcv != (stix_oop_t)stix->processor) return 0;
+
+	if (STIX_CLASSOF(stix, ctx) != stix->_block_context &&
+	    STIX_CLASSOF(stix, ctx) != stix->_method_context) return 0;
+
+	if (STIX_CLASSOF(stix, blk) != stix->_block_context) return 0;
+
+	STIX_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
+	STIX_STACK_PUSH (stix, stix->_nil); /* TODO: change the return value.. */
+	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)ctx);
+
+	STIX_STACK_PUSH (stix, blk);
+	STIX_STACK_PUSH (stix, blkarg);
+	return prim_block_value (stix, 1);
+}
+
 static int prim_processor_force_context (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, ctx;
@@ -2358,7 +2394,9 @@ static int prim_integer_inttostr (stix_t* stix, stix_ooi_t nargs)
 	str = stix_inttostr (stix, rcv, radix);
 	if (!str) return (stix->errnum == STIX_EINVAL? 0: -1);
 
+	STIX_STACK_POP (stix);
 	STIX_STACK_SETTOP (stix, str);
+
 	return 1;
 }
 
@@ -2690,6 +2728,7 @@ static prim_t primitives[] =
 	{   2,  3,  prim_processor_add_timed_semaphore,    "_processor_add_timed_semaphore" },
 	{   1,  1,  prim_processor_remove_semaphore,       "_processor_remove_semaphore" },
 	{   2,  2,  prim_processor_return_to,              "_processor_return_to" },
+	{   3,  3,  prim_processor_return_to_and_eval,     "_processor_return_to_and_eval" },
 	{   1,  1,  prim_processor_force_context,          "_processor_force_context" },
 
 	{   1,  1,  prim_integer_add,                      "_integer_add"         },
@@ -2915,7 +2954,7 @@ static int send_message (stix_t* stix, stix_oop_char_t selector, int to_super, s
 		{
 			/* this must not happen as long as doesNotUnderstand: is implemented under Apex.
 			 * this check should indicate a very serious internal problem */
-			STIX_LOG4 (stix, STIX_LOG_VM | STIX_LOG_FATAL, 
+			STIX_LOG4 (stix, STIX_LOG_IC | STIX_LOG_FATAL, 
 				"Fatal error - receiver [%O] of class [%O] doesNotUnderstand: [%.*S]\n", 
 				receiver, STIX_CLASSOF(stix, receiver), mthname.len, mthname.ptr);
 
@@ -3167,7 +3206,7 @@ int stix_execute (stix_t* stix)
 		{
 			/* no more waiting semaphore and no more process */
 			STIX_ASSERT (stix->processor->tally = STIX_SMOOI_TO_OOP(0));
-			STIX_LOG0 (stix, STIX_LOG_VM | STIX_LOG_DEBUG, "No more runnable process\n");
+			STIX_LOG0 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "No more runnable process\n");
 
 #if 0
 if (there is semaphore awaited.... )
@@ -3497,7 +3536,7 @@ if (there is semaphore awaited.... )
 			case BCODE_JUMP_IF_FALSE_1:
 			case BCODE_JUMP_IF_FALSE_2:
 			case BCODE_JUMP_IF_FALSE_3:
-STIX_LOG0 (stix, STIX_LOG_VM | STIX_LOG_FATAL, "<<<<<<<<<<<<<< JUMP NOT IMPLEMENTED YET >>>>>>>>>>>>\n");
+STIX_LOG0 (stix, STIX_LOG_IC | STIX_LOG_FATAL, "<<<<<<<<<<<<<< JUMP NOT IMPLEMENTED YET >>>>>>>>>>>>\n");
 stix->errnum = STIX_ENOIMPL;
 return -1;
 
@@ -3838,7 +3877,7 @@ return -1;
 				{
 					if (stix->active_context->origin->ip == STIX_SMOOI_TO_OOP(STIX_SMOOI_MIN))
 					{
-						STIX_LOG0 (stix, STIX_LOG_VM | STIX_LOG_ERROR, "Error - cannot return from dead context\n");
+						STIX_LOG0 (stix, STIX_LOG_IC | STIX_LOG_ERROR, "Error - cannot return from dead context\n");
 						stix->errnum = STIX_EINTERN; /* TODO: make this error catchable at the stix level... */
 						return -1;
 					}
@@ -4091,10 +4130,9 @@ return -1;
 
 
 			default:
-				STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_FATAL, "Fatal error - unknown byte code 0x%zx\n", bcode);
+				STIX_LOG1 (stix, STIX_LOG_IC | STIX_LOG_FATAL, "Fatal error - unknown byte code 0x%zx\n", bcode);
 				stix->errnum = STIX_EINTERN;
 				break;
-
 		}
 	}
 
@@ -4102,7 +4140,7 @@ done:
 
 	vm_cleanup (stix);
 #if defined(STIX_PROFILE_VM)
-	STIX_LOG1 (stix, STIX_LOG_VM | STIX_LOG_INFO, "TOTAL_INST_COUTNER = %zu\n", inst_counter);
+	STIX_LOG1 (stix, STIX_LOG_IC | STIX_LOG_INFO, "TOTAL_INST_COUTNER = %zu\n", inst_counter);
 #endif
 	return 0;
 
