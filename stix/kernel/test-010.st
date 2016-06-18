@@ -111,7 +111,25 @@
 "
 
 	}
-	
+
+	#method(#class) aaa_123
+	{
+		| v1 |
+		v1 := [
+			| k |
+			k := 99.
+			[
+				[
+					##[ Exception signal: 'simulated error' ] ensure: [('ensure 1 ', (k asString)) dump ].
+					[ ^20 ] ensure: [('ensure 1 ', (k asString)) dump ].
+				] ensure: ['ensure 2' dump ].
+			] ensure: ['ensure 3' dump ].
+		] on: Exception do: [:ex | 
+			('EXCETION - ' , ex messageText) dump.
+			## Exception signal: 'qqq'.
+		].
+		^v1
+	}
 	#method(#class) main
 	{
 		| v1 |
@@ -131,17 +149,21 @@
 
 		"[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump. Exception signal: 'jjjj']."
 
-		v1 := [
+"		v1 := [
 			| k |
 			k := 99.
 			[
-				[ Exception signal: 'simulated error' ] ensure: [('ensure 1 ', (k asString)) dump ].
-			] ensure: ['ensure 2' dump ].
+				[
+					##[ Exception signal: 'simulated error' ] ensure: [('ensure 1 ', (k asString)) dump ].
+					[ ^20 ] ensure: [('ensure 1 ', (k asString)) dump ].
+				] ensure: ['ensure 2' dump ].
+			] ensure: ['ensure 3' dump ].
 		] on: Exception do: [:ex | 
 			('EXCETION - ' , ex messageText) dump.
 			## Exception signal: 'qqq'.
 		].
-
+"
+		v1 := self aaa_123.
 		'--------------------------------' dump.
 		v1 dump.
 		'END OF MAIN' dump.

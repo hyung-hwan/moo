@@ -1672,6 +1672,7 @@ printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 #else
 	blkctx->ip = rcv_blkctx->ip;
 	blkctx->ntmprs = rcv_blkctx->ntmprs;
+	blkctx->ensure_block = rcv_blkctx->ensure_block;
 	blkctx->method_or_nargs = rcv_blkctx->method_or_nargs;
 	blkctx->receiver_or_source = (stix_oop_t)rcv_blkctx;
 	blkctx->home = rcv_blkctx->home;
@@ -3838,7 +3839,23 @@ return -1;
 				 */
 				stix->ip--; 
 			#else
-				if (stix->active_context->origin == stix->processor->active->initial_context->origin)
+				if ((stix_oop_t)stix->active_context->ensure_block != stix->_nil)
+				{
+STIX_LOG0 (stix, STIX_LOG_ERROR, "ABOUT TO EVALUATE ENSURE BLOCK ....\n");
+					STIX_STACK_PUSH (stix, (stix_oop_t)stix->active_context->ensure_block);
+
+stix->active_context->ensure_block = (stix_oop_context_t)stix->_nil;
+stix->ip--;
+					if (prim_block_value (stix, 0) <= 0)
+					{
+						/* TODO: problems in evaluating an ensure-block */
+						/* TODO: ..... */
+						STIX_STACK_POP (stix);
+STIX_LOG0 (stix, STIX_LOG_ERROR, "ERROR ENSURE BLOCK FAILURE....\n");
+					}
+					
+				}
+				else if (stix->active_context->origin == stix->processor->active->initial_context->origin)
 				{
 					/* method return from a processified block
 					 * 
@@ -3924,7 +3941,7 @@ return -1;
 						/* NOTE: this condition is true for the processified block context also.
 						 *   stix->active_context->origin == stix->processor->active->initial_context->origin
 						 *   however, the check here is done after context switching and the
-						 *   processified block check is done against the context before switching */
+						 *   processified block check has been done against the context before switching */
 
 						/* the stack contains the final return value so the stack pointer must be 0. */
 						STIX_ASSERT (stix->sp == 0); 

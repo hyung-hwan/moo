@@ -7,7 +7,7 @@
 
 #class(#pointer) Context(Apex)
 {
-	#dcl sender ip sp ntmprs.
+	#dcl sender ip sp ntmprs ensure_block.
 
 	#method sender
 	{
@@ -75,6 +75,8 @@
 
 	#method findExceptionHandlerBlock: anExceptionClass
 	{
+		## find an exception handler block for a given exception class.
+		##
 		## for this to work, self must be an exception handler context.
 		## For a single on:do: call,
 		##   self class specNumInstVars must return 8.
@@ -85,7 +87,9 @@
 			| bound exc |
 			## NOTE: if on:do: has a temporary varible, bound must be adjusted to reflect it.
 			bound := self basicSize - 1.
-			8 to: bound by: 2 do: [ :i | 
+## TODO: change 9 to a constant when stix is enhanced to support constant definition
+##       or calcuate the minimum size using the class information.
+			9 to: bound by: 2 do: [ :i | 
 				exc := self basicAt: i.
 				((anExceptionClass == exc) or: [anExceptionClass inheritsFrom: exc]) ifTrue: [^self basicAt: (i + 1)].
 			]
@@ -330,6 +334,7 @@ thisContext isExceptionHandlerContext dump.
 	{
 ## TODO: ensure that the ensured block is executed after exception handler...
 		| v |
+		self.ensure_block := aBlock.
 		v := self on: Exception do: [:ex | 
 			aBlock value.
 			ex pass

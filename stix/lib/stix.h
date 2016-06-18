@@ -513,7 +513,7 @@ struct stix_method_t
 #define STIX_METHOD_PREAMBLE_INDEX_MAX 0xFFFF
 #define STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(num) ((num) >= STIX_METHOD_PREAMBLE_INDEX_MIN && (num) <= STIX_METHOD_PREAMBLE_INDEX_MAX)
 
-#define STIX_CONTEXT_NAMED_INSTVARS 8
+#define STIX_CONTEXT_NAMED_INSTVARS 9
 typedef struct stix_context_t stix_context_t;
 typedef struct stix_context_t* stix_oop_context_t;
 struct stix_context_t
@@ -539,6 +539,9 @@ struct stix_context_t
 	 * For a block context, it's inclusive of the temporaries
 	 * defined its 'home'. */
 	stix_oop_t          ntmprs;
+
+	/* **** */
+	stix_oop_context_t  ensure_block; 
 
 	/* CompiledMethod for a method context, 
 	 * SmallInteger for a block context */
