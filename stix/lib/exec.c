@@ -298,6 +298,11 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 	proc->current_context = c;
 	proc->sp = STIX_SMOOI_TO_OOP(-1);
 
+#if 0
+	proc->eb_top = stix->_nil;
+	proc->eb_count = STIX_SMOOI_TO_OOP(-1);
+#endif
+
 	STIX_ASSERT ((stix_oop_t)c->sender == stix->_nil);
 
 #if defined(STIX_DEBUG_VM_PROCESSOR)
@@ -2924,55 +2929,9 @@ done:
 }
 
 /* ------------------------------------------------------------------------- */
-static int send_message (stix_t* stix, stix_oop_char_t selector, int to_super, stix_ooi_t nargs)
+static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t nargs)
 {
-	stix_oocs_t mthname;
-	stix_oop_t receiver;
-	stix_oop_method_t method;
 	stix_ooi_t preamble, preamble_code;
-
-	STIX_ASSERT (STIX_OOP_IS_POINTER(selector));
-	STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(selector) == STIX_OBJ_TYPE_CHAR);
-	STIX_ASSERT (STIX_CLASSOF(stix, selector) == stix->_symbol);
-
-	receiver = STIX_STACK_GET(stix, stix->sp - nargs);
-
-	mthname.ptr = selector->slot;
-	mthname.len = STIX_OBJ_GET_SIZE(selector);
-	method = find_method (stix, receiver, &mthname, to_super);
-	if (!method) 
-	{
-		static stix_ooch_t fbm[] = { 
-			'd', 'o', 'e', 's', 
-			'N', 'o', 't',
-			'U', 'n', 'd', 'e', 'r', 's', 't', 'a', 'n', 'd', ':'
-		};
-		mthname.ptr = fbm;
-		mthname.len = 18;
-
-		method = find_method (stix, receiver, &mthname, 0);
-		if (!method)
-		{
-			/* this must not happen as long as doesNotUnderstand: is implemented under Apex.
-			 * this check should indicate a very serious internal problem */
-			STIX_LOG4 (stix, STIX_LOG_IC | STIX_LOG_FATAL, 
-				"Fatal error - receiver [%O] of class [%O] doesNotUnderstand: [%.*S]\n", 
-				receiver, STIX_CLASSOF(stix, receiver), mthname.len, mthname.ptr);
-
-			stix->errnum = STIX_EMSGSND;
-			return -1;
-		}
-		else
-		{
-			/* manipulate the stack as if 'receier doesNotUnderstand: select' 
-			 * has been called. */
-/* TODO: if i manipulate the stack this way here, the stack track for the last call is kind of lost.
- *       how can i preserve it gracefully? */
-			STIX_STACK_POPS (stix, nargs);
-			nargs = 1;
-			STIX_STACK_PUSH (stix, (stix_oop_t)selector);
-		}
-	}
 
 	STIX_ASSERT (STIX_OOP_TO_SMOOI(method->tmpr_nargs) == nargs);
 
@@ -3126,6 +3085,80 @@ static int send_message (stix_t* stix, stix_oop_char_t selector, int to_super, s
 	return 0;
 }
 
+static int send_message (stix_t* stix, stix_oop_char_t selector, int to_super, stix_ooi_t nargs)
+{
+	stix_oocs_t mthname;
+	stix_oop_t receiver;
+	stix_oop_method_t method;
+
+	STIX_ASSERT (STIX_OOP_IS_POINTER(selector));
+	STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(selector) == STIX_OBJ_TYPE_CHAR);
+	STIX_ASSERT (STIX_CLASSOF(stix, selector) == stix->_symbol);
+
+	receiver = STIX_STACK_GET(stix, stix->sp - nargs);
+
+	mthname.ptr = selector->slot;
+	mthname.len = STIX_OBJ_GET_SIZE(selector);
+	method = find_method (stix, receiver, &mthname, to_super);
+	if (!method) 
+	{
+		static stix_ooch_t fbm[] = { 
+			'd', 'o', 'e', 's', 
+			'N', 'o', 't',
+			'U', 'n', 'd', 'e', 'r', 's', 't', 'a', 'n', 'd', ':'
+		};
+		mthname.ptr = fbm;
+		mthname.len = 18;
+
+		method = find_method (stix, receiver, &mthname, 0);
+		if (!method)
+		{
+			/* this must not happen as long as doesNotUnderstand: is implemented under Apex.
+			 * this check should indicate a very serious internal problem */
+			STIX_LOG4 (stix, STIX_LOG_IC | STIX_LOG_FATAL, 
+				"Fatal error - receiver [%O] of class [%O] does not understand a message [%.*S]\n", 
+				receiver, STIX_CLASSOF(stix, receiver), mthname.len, mthname.ptr);
+
+			stix->errnum = STIX_EMSGSND;
+			return -1;
+		}
+		else
+		{
+			/* manipulate the stack as if 'receier doesNotUnderstand: select' 
+			 * has been called. */
+/* TODO: if i manipulate the stack this way here, the stack track for the last call is kind of lost.
+ *       how can i preserve it gracefully? */
+			STIX_STACK_POPS (stix, nargs);
+			nargs = 1;
+			STIX_STACK_PUSH (stix, (stix_oop_t)selector);
+		}
+	}
+
+	return start_method (stix, method, nargs);
+}
+
+static int send_private_message (stix_t* stix, const stix_ooch_t* nameptr, stix_oow_t namelen, int to_super, stix_ooi_t nargs)
+{
+	stix_oocs_t mthname;
+	stix_oop_t receiver;
+	stix_oop_method_t method;
+
+	receiver = STIX_STACK_GET(stix, stix->sp - nargs);
+
+	mthname.ptr = (stix_ooch_t*)nameptr;
+	mthname.len = namelen;
+	method = find_method (stix, receiver, &mthname, to_super);
+	if (!method)
+	{
+		STIX_LOG4 (stix, STIX_LOG_IC | STIX_LOG_FATAL, 
+			"Fatal error - receiver [%O] of class [%O] does not understand a private message [%.*S]\n", 
+			receiver, STIX_CLASSOF(stix, receiver), mthname.len, mthname.ptr);
+		stix->errnum = STIX_EMSGSND;
+		return -1;
+	}
+
+	return start_method (stix, method, nargs);
+}
 /* ------------------------------------------------------------------------- */
 
 int stix_execute (stix_t* stix)
@@ -3133,6 +3166,9 @@ int stix_execute (stix_t* stix)
 	stix_oob_t bcode;
 	stix_ooi_t b1, b2;
 	stix_oop_t return_value;
+	int unwind_protect;
+	stix_oop_context_t unwind_start;
+	stix_oop_context_t unwind_stop;
 
 #if defined(STIX_PROFILE_VM)
 	stix_uintmax_t inst_counter = 0;
@@ -3795,7 +3831,6 @@ return -1;
 				return_value = stix->active_context->origin->receiver_or_source;
 
 			handle_return:
-
 			#if 0
 				/* put the instruction pointer back to the return
 				 * instruction (RETURN_RECEIVER or RETURN_RECEIVER)
@@ -3839,23 +3874,7 @@ return -1;
 				 */
 				stix->ip--; 
 			#else
-				if ((stix_oop_t)stix->active_context->ensure_block != stix->_nil)
-				{
-STIX_LOG0 (stix, STIX_LOG_ERROR, "ABOUT TO EVALUATE ENSURE BLOCK ....\n");
-					STIX_STACK_PUSH (stix, (stix_oop_t)stix->active_context->ensure_block);
-
-stix->active_context->ensure_block = (stix_oop_context_t)stix->_nil;
-stix->ip--;
-					if (prim_block_value (stix, 0) <= 0)
-					{
-						/* TODO: problems in evaluating an ensure-block */
-						/* TODO: ..... */
-						STIX_STACK_POP (stix);
-STIX_LOG0 (stix, STIX_LOG_ERROR, "ERROR ENSURE BLOCK FAILURE....\n");
-					}
-					
-				}
-				else if (stix->active_context->origin == stix->processor->active->initial_context->origin)
+				if (stix->active_context->origin == stix->processor->active->initial_context->origin)
 				{
 					/* method return from a processified block
 					 * 
@@ -3885,19 +3904,23 @@ STIX_LOG0 (stix, STIX_LOG_ERROR, "ERROR ENSURE BLOCK FAILURE....\n");
 					STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context) == stix->_block_context);
 					STIX_ASSERT (STIX_CLASSOF(stix, stix->processor->active->initial_context) == stix->_block_context);
 
-					/* place the instruction pointer back at the return instruction.
+					/* decrement the instruction pointer back to the return instruction.
 					 * even if the context is reentered, it will just return.
 					 *stix->ip--;*/
+
 					terminate_process (stix, stix->processor->active);
 				}
 				else 
 				{
+#if 0
 					if (stix->active_context->origin->ip == STIX_SMOOI_TO_OOP(STIX_SMOOI_MIN))
 					{
 						STIX_LOG0 (stix, STIX_LOG_IC | STIX_LOG_ERROR, "Error - cannot return from dead context\n");
 						stix->errnum = STIX_EINTERN; /* TODO: make this error catchable at the stix level... */
 						return -1;
 					}
+#endif
+					unwind_protect = 0;
 
 					/* set the instruction pointer to an invalid value.
 					 * this is stored into the current method context
@@ -3910,9 +3933,33 @@ STIX_LOG0 (stix, STIX_LOG_ERROR, "ERROR ENSURE BLOCK FAILURE....\n");
 					}
 					else
 					{
+						stix_oop_context_t ctx;
+
 						/* method return from within a block(including a non-local return) */
 						STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context) == stix->_block_context);
+
+						ctx = stix->active_context;
+						while ((stix_oop_t)ctx != stix->_nil)
+						{
+							if ((stix_oop_t)ctx->ensure_block != stix->_nil) unwind_protect = 1;
+							if (ctx == stix->active_context->origin) goto non_local_return_ok;
+							ctx = ctx->sender;
+						}
+
+						/* cannot return from a method that has returned already */
+						STIX_LOG0 (stix, STIX_LOG_IC | STIX_LOG_ERROR, "Error - cannot return from dead context\n");
+						stix->errnum = STIX_EINTERN; /* TODO: can i make this error catchable at the stix level? */
+						return -1;
+
+					non_local_return_ok:
+STIX_DEBUG0 (stix, "NON_LOCAL RETURN OK...\n");
 						stix->active_context->origin->ip = STIX_SMOOI_TO_OOP(STIX_SMOOI_MIN);
+
+						if (unwind_protect)
+						{
+							unwind_start = stix->active_context;
+							unwind_stop = stix->active_context->origin;
+						}
 					}
 
 					STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context->origin) == stix->_method_context);
@@ -3924,35 +3971,51 @@ STIX_LOG0 (stix, STIX_LOG_ERROR, "ERROR ENSURE BLOCK FAILURE....\n");
 				#endif
 					SWITCH_ACTIVE_CONTEXT (stix, stix->active_context->origin->sender);
 
-					/* push the return value to the stack of the new active context */
-					STIX_STACK_PUSH (stix, return_value);
-
-					if (stix->active_context == stix->initial_context)
+					if (unwind_protect)
 					{
-						/* the new active context is the fake initial context.
-						 * this context can't get executed further. */
-						STIX_ASSERT ((stix_oop_t)stix->active_context->sender == stix->_nil);
-						STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context) == stix->_method_context);
-						STIX_ASSERT (stix->active_context->receiver_or_source == stix->_nil);
-						STIX_ASSERT (stix->active_context == stix->processor->active->initial_context);
-						STIX_ASSERT (stix->active_context->origin == stix->processor->active->initial_context->origin);
-						STIX_ASSERT (stix->active_context->origin == stix->active_context);
+						static stix_ooch_t fbm[] = { 
+							'u', 'n', 'w', 'i', 'n', 'd', 'T', 'o', ':', 
+							'r', 'e', 't', 'u', 'r', 'n', ':'
+						};
 
-						/* NOTE: this condition is true for the processified block context also.
-						 *   stix->active_context->origin == stix->processor->active->initial_context->origin
-						 *   however, the check here is done after context switching and the
-						 *   processified block check has been done against the context before switching */
+						STIX_STACK_PUSH (stix, (stix_oop_t)unwind_start);
+						STIX_STACK_PUSH (stix, (stix_oop_t)unwind_stop);
+						STIX_STACK_PUSH (stix, (stix_oop_t)return_value);
 
-						/* the stack contains the final return value so the stack pointer must be 0. */
-						STIX_ASSERT (stix->sp == 0); 
+						if (send_private_message (stix, fbm, 16, 0, 2) <= -1) return -1;
+					}
+					else
+					{
+						/* push the return value to the stack of the new active context */
+						STIX_STACK_PUSH (stix, return_value);
 
-						if (stix->option.trait & STIX_AWAIT_PROCS)
-							terminate_process (stix, stix->processor->active);
-						else
-							goto done;
+						if (stix->active_context == stix->initial_context)
+						{
+							/* the new active context is the fake initial context.
+							 * this context can't get executed further. */
+							STIX_ASSERT ((stix_oop_t)stix->active_context->sender == stix->_nil);
+							STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context) == stix->_method_context);
+							STIX_ASSERT (stix->active_context->receiver_or_source == stix->_nil);
+							STIX_ASSERT (stix->active_context == stix->processor->active->initial_context);
+							STIX_ASSERT (stix->active_context->origin == stix->processor->active->initial_context->origin);
+							STIX_ASSERT (stix->active_context->origin == stix->active_context);
 
-						/* TODO: store the return value to the VM register.
-						 * the caller to stix_execute() can fetch it to return it to the system */
+							/* NOTE: this condition is true for the processified block context also.
+							 *   stix->active_context->origin == stix->processor->active->initial_context->origin
+							 *   however, the check here is done after context switching and the
+							 *   processified block check has been done against the context before switching */
+
+							/* the stack contains the final return value so the stack pointer must be 0. */
+							STIX_ASSERT (stix->sp == 0); 
+
+							if (stix->option.trait & STIX_AWAIT_PROCS)
+								terminate_process (stix, stix->processor->active);
+							else
+								goto done;
+
+							/* TODO: store the return value to the VM register.
+							 * the caller to stix_execute() can fetch it to return it to the system */
+						}
 					}
 				}
 

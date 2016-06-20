@@ -18,6 +18,11 @@
 	{
 		^false
 	}
+
+	#method ensureBlock
+	{
+		^self.ensure_block
+	}
 }
 
 #class(#pointer) MethodContext(Context)
@@ -307,7 +312,7 @@
 		ip := source pc.
 	}
 
-	"------ TODO: -------------------------------------"
+
 	#method on: anException do: anExceptionBlock
 	{
 "		| handlerActive |"
@@ -339,7 +344,6 @@ thisContext isExceptionHandlerContext dump.
 			aBlock value.
 			ex pass
 		].
-
 		aBlock value.
 		^v
 	}
@@ -349,7 +353,23 @@ thisContext isExceptionHandlerContext dump.
 		^self on: Exception do: [:ex | aBlock value. ex pass ]
 	}
 
-	"------ TODO: -------------------------------------"
+
+	#method unwindTo: aContext return: anObject
+	{
+		## private: called by VM upon unwinding
+		| ctx eb |
+		ctx := self.
+		[ctx ~~ aContext] whileTrue: [
+			eb := ctx ensureBlock.
+			(eb notNil) ifTrue: [eb value].
+			ctx := ctx sender.
+		].
+		eb := ctx ensureBlock.
+		(eb notNil) ifTrue: [eb value].
+
+		^anObject
+	}
+
 }
 
 ## TODO: is it better to inherit from Object???

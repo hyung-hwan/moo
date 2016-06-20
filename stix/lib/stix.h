@@ -595,6 +595,10 @@ struct stix_process_t
 
 	stix_oop_semaphore_t sem;
 
+#if 0
+	stix_oop_context_t eb_top; /* top ensure block */
+	stix_oop_t         eb_count; /* SmallInteger */
+#endif
 	/* == variable indexed part == */
 	stix_oop_t slot[1]; /* process stack */
 };
