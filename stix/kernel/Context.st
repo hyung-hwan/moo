@@ -1,6 +1,6 @@
 #class Exception(Apex)
 {
-	#dcl signalContext handlerContext handlerBlock messageText.
+	#dcl signalContext handlerContext messageText.
 
 	## To be extended below.
 }
@@ -27,6 +27,44 @@
 	#method ensureBlock
 	{
 		^nil
+	}
+
+	#method findExceptionHandlerContext
+	{
+		| ctx |
+		ctx := self.
+		[ ctx isExceptionHandlerContext ifTrue: [^ctx].
+		  ctx := ctx sender.
+		  ctx isNil ] whileFalse.
+		^nil
+	}
+
+	#method findExceptionHandlerBlock
+	{
+		^nil 
+	}
+
+	#method handleException: exception
+	{
+		| excblk retval posact |
+
+		## position of the temporary variable 'active' in MethodContext>>on:do.
+		## for this code to work, it must be the last temporary variable in the method.
+		posact := (self basicSize) - 1. 
+
+		excblk := self findExceptionHandlerBlock: (exception class).
+		(excblk isNil or: [(self basicAt: posact) not]) ifTrue: [ 
+			^self.sender findExceptionHandlerContext handleException: exception
+		].
+
+		exception handlerContext: self.
+
+		self basicAt: posact put: false.
+		[ retval := excblk value: exception ] ensure: [
+			self basicAt: posact put: true
+		].
+
+		##self return: retval.
 	}
 }
 
@@ -351,23 +389,25 @@
 
 	#method on: anException do: anExceptionBlock
 	{
-"		| handlerActive |"
+		| exception_active |
 		<exception>
-"		handlerActive := true.
 
-thisContext isExceptionHandlerContext dump.
+"thisContext isExceptionHandlerContext dump.
 (thisContext basicSize) dump.
 (thisContext basicAt: 8) dump.  ## this should be anException
 (thisContext basicAt: 9) dump.  ## this should be anExceptionBlock
 (thisContext basicAt: 10) dump.  ## this should be handlerActive
 'on:do: ABOUT TO EVALUE THE RECEIVER BLOCK' dump."
 
+		exception_active := true.
 		^self value.
 	}
 
 	#method on: exc1 do: blk1 on: exc2 do: blk2
 	{
+		| active |
 		<exception>
+		active := true.
 		^self value.
 	}
 
@@ -375,7 +415,6 @@ thisContext isExceptionHandlerContext dump.
 	{
 		| v |
 		<ensure>
-		"v := self on: Exception do: [:ex | aBlock value. ex pass ]."
 		v := self value.
 		aBlock value.
 		^v
@@ -408,6 +447,11 @@ thisContext isExceptionHandlerContext dump.
 		self new signal: text
 	}
 
+	#method handlerContext: context
+	{
+		self.handlerContext := context.
+	}
+
 	#method messageText
 	{
 		^self.messageText
@@ -416,8 +460,7 @@ thisContext isExceptionHandlerContext dump.
 	#method signal 
 	{
 		self.signalContext := thisContext.
-		self findHandlerContextStartingFrom: self.signalContext.
-		self handleException.
+		((thisContext sender) findExceptionHandlerContext) handleException: self.
 	}
 
 	#method signal: text
@@ -429,14 +472,11 @@ thisContext isExceptionHandlerContext dump.
 	#method pass
 	{
 		## pass the exception to the outer context
-		self.signalContext notNil 
-			ifTrue: [ ## it's signaled earlier
-				## TODO: Should i change the signalContex to thisContext???
-				self findHandlerContextStartingFrom: (self.handlerContext sender).
-				self handleException.
-			]
+		((self.handlerContext sender) findExceptionHandlerContext) handleException: self.
 	}
 
+"
+TODO: implement these methods....
 	#method return: value
 	{
 		self.handlerContext notNil ifTrue: [
@@ -466,61 +506,8 @@ thisContext isExceptionHandlerContext dump.
 				Processor return: self to: (self.signalContext sender).
 			]
 	}
+"
 
-	## ####################################################################	## ####################################################################
-  	#method handleException
-	{
-		self.handlerContext notNil
-			ifTrue: [
-##'RETURNING TO....' dump.
-##self.handlerContext  dump.
-##self.handlerContext sender dump.
-##' ............' dump.
-
-				## arrange to execute the hander block after having returned 
-				## to the sender of the exception handler context.
-				## if handler block is evaluated before returning, an
-				## exception raised in the handler block causes a kind of
-				## a recursive call to here.
-				##Processor return: (self.handlerBlock value: self) to: (self.handlerContext sender)
-				## so use a different primitive method that evaluate the block
-				## after having returned to the given context.
-				Processor returnTo: (self.handlerContext sender) andEval: (self.handlerBlock) with: self.
-			]
-			ifFalse: [ 
-				('### EXCEPTION NOT HANDLED #### ', self class name, ' - ', self messageText) dump.
-				## TODO: debug the current process???? "
-				Processor activeProcess terminate.
-			].
-	}
-
-	#method findHandlerContextStartingFrom: aContext
-	{
-		## Find exception handling context starting from a given context
-		| ctx |
-
-		ctx := aContext.
-		[ ctx notNil ] whileTrue: [
-##ctx dump.
-			##(ctx handles: self) ifTrue: [ ^ ctx ].
-			(ctx isExceptionHandlerContext) ifTrue: [
-				| blk |
-				blk := ctx findExceptionHandlerBlock: (self class).
-				(blk notNil) ifTrue: [ 
-					self.handlerBlock := blk. 
-					self.handlerContext := ctx. 
-##'-------------' dump.
-					^ctx 
-				].
-			].
-			ctx := ctx sender
-		].
-##'-------------' dump.
-		## no handler is found
-		self.handlerBlock := nil.
-		self.handlerContext := nil.
-		^nil
-	}
 }
 
 #class NoSuchMessageException(Exception)
