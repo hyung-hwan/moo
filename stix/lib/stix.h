@@ -507,13 +507,14 @@ struct stix_method_t
 #define STIX_METHOD_PREAMBLE_PRIMITIVE       8
 #define STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE 9 /* index is an index to the symbol table */
 #define STIX_METHOD_PREAMBLE_EXCEPTION       10
+#define STIX_METHOD_PREAMBLE_ENSURE          11
 
 /* the index is an 16-bit unsigned integer. */
 #define STIX_METHOD_PREAMBLE_INDEX_MIN 0x0000
 #define STIX_METHOD_PREAMBLE_INDEX_MAX 0xFFFF
 #define STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(num) ((num) >= STIX_METHOD_PREAMBLE_INDEX_MIN && (num) <= STIX_METHOD_PREAMBLE_INDEX_MAX)
 
-#define STIX_CONTEXT_NAMED_INSTVARS 9
+#define STIX_CONTEXT_NAMED_INSTVARS 8
 typedef struct stix_context_t stix_context_t;
 typedef struct stix_context_t* stix_oop_context_t;
 struct stix_context_t
@@ -540,8 +541,6 @@ struct stix_context_t
 	 * defined its 'home'. */
 	stix_oop_t          ntmprs;
 
-	/* **** */
-	stix_oop_context_t  ensure_block; 
 
 	/* CompiledMethod for a method context, 
 	 * SmallInteger for a block context */

@@ -7,7 +7,7 @@
 
 #class(#pointer) Context(Apex)
 {
-	#dcl sender ip sp ntmprs ensure_block.
+	#dcl sender ip sp ntmprs.
 
 	#method sender
 	{
@@ -19,9 +19,14 @@
 		^false
 	}
 
+	#method hasEnsureBlock
+	{
+		^false
+	}
+
 	#method ensureBlock
 	{
-		^self.ensure_block
+		^nil
 	}
 }
 
@@ -75,7 +80,22 @@
 	#method isExceptionHandlerContext
 	{
 		## 10 - STIX_METHOD_PREAMBLE_EXCEPTION in VM.
-		^self.method preambleCode == 10. 
+		^self.method preambleCode == 10.
+	}
+
+	#method hasEnsureBlock
+	{
+		## 10 - STIX_METHOD_PREAMBLE_ENSURE in VM.
+		^self.method preambleCode == 11
+	}
+
+	#method ensureBlock
+	{
+## TODO: 9 is the number of named instance variables of a context.
+## TODO: change 9 to a constant when stix is enhanced to support constant definition
+		
+		(self.method preambleCode == 11) ifFalse: [^nil].
+		^self basicAt: 8.
 	}
 
 	#method findExceptionHandlerBlock: anExceptionClass
@@ -92,14 +112,30 @@
 			| bound exc |
 			## NOTE: if on:do: has a temporary varible, bound must be adjusted to reflect it.
 			bound := self basicSize - 1.
-## TODO: change 9 to a constant when stix is enhanced to support constant definition
+## TODO: change 8 to a constant when stix is enhanced to support constant definition
 ##       or calcuate the minimum size using the class information.
-			9 to: bound by: 2 do: [ :i | 
+			8 to: bound by: 2 do: [ :i | 
 				exc := self basicAt: i.
 				((anExceptionClass == exc) or: [anExceptionClass inheritsFrom: exc]) ifTrue: [^self basicAt: (i + 1)].
 			]
 		].
 		^nil.
+	}
+
+	#method unwindTo: aContext return: anObject
+	{
+		## private: called by VM upon unwinding
+		| ctx eb |
+		ctx := self.
+		[ctx ~~ aContext] whileTrue: [
+			eb := ctx ensureBlock.
+			(eb notNil) ifTrue: [eb value].
+			ctx := ctx sender.
+		].
+		eb := ctx ensureBlock.
+		(eb notNil) ifTrue: [eb value].
+
+		^anObject
 	}
 }
 
@@ -107,7 +143,7 @@
 {
 	#dcl nargs source home origin.
 
-	#method fork
+	#method fork 
 	{
 		"crate a new process in the runnable state"
 		^self newProcess resume.
@@ -337,47 +373,31 @@ thisContext isExceptionHandlerContext dump.
 
 	#method ensure: aBlock
 	{
-## TODO: ensure that the ensured block is executed after exception handler...
 		| v |
-		self.ensure_block := aBlock.
-		v := self on: Exception do: [:ex | 
-			aBlock value.
-			ex pass
-		].
+		<ensure>
+		"v := self on: Exception do: [:ex | aBlock value. ex pass ]."
+		v := self value.
 		aBlock value.
 		^v
 	}
 
 	#method ifCurtailed: aBlock
 	{
-		^self on: Exception do: [:ex | aBlock value. ex pass ]
-	}
+		| v ok |
 
-
-	#method unwindTo: aContext return: anObject
-	{
-		## private: called by VM upon unwinding
-		| ctx eb |
-		ctx := self.
-		[ctx ~~ aContext] whileTrue: [
-			eb := ctx ensureBlock.
-			(eb notNil) ifTrue: [eb value].
-			ctx := ctx sender.
-		].
-		eb := ctx ensureBlock.
-		(eb notNil) ifTrue: [eb value].
-
-		^anObject
+		ok := false.
+		[ v := self value. ok := true. ] ensure: [ ok ifFalse: [aBlock value] ].
+		^v.
 	}
 
 }
 
+##
 ## TODO: is it better to inherit from Object???
 ##       or treat Exception specially like UndefinedObject or Class???
+##
 #extend Exception
 {
-	
-
 	#method(#class) signal
 	{
 		self new signal

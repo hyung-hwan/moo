@@ -45,7 +45,7 @@
 #define STIX_USE_MAKE_BLOCK
 
 /* this is for gc debugging */
-/* #define STIX_DEBUG_GC */
+/*#define STIX_DEBUG_GC*/
 #define STIX_DEBUG_COMPILER
 /*#define STIX_DEBUG_VM_PROCESSOR*/
 /*#define STIX_DEBUG_VM_EXEC*/

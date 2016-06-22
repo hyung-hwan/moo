@@ -121,7 +121,7 @@
 			[
 				[
 					##[ Exception signal: 'simulated error' ] ensure: [('ensure 1 ', (k asString)) dump ].
-					[ ^20 ] ensure: [('ensure 1 ', (k asString)) dump ].
+					[ ^ 20 ] ensure: [ ('ensure 1 ', (k asString)) dump. ].
 				] ensure: ['ensure 2' dump ].
 			] ensure: ['ensure 3' dump ].
 		] on: Exception do: [:ex | 
@@ -163,9 +163,11 @@
 			## Exception signal: 'qqq'.
 		].
 "
+
 		v1 := self aaa_123.
 		'--------------------------------' dump.
 		v1 dump.
+		'--------------------------------' dump.
 		'END OF MAIN' dump.
 	}
 

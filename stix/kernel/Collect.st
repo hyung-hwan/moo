@@ -56,12 +56,15 @@
 		## concatenate two strings.
 ## TOOD: make this a primitive for performance.
 		| newsize newstr self_ubound |
+
 		newsize := self basicSize + aString basicSize.
 		##newstr := self class basicNew: newsize.
 		newstr := String basicNew: newsize.  ## TODO: redefine , for symbol... it's a work arouind... symbols are not concatenated to a symbol at this moment.
 		self_ubound := self ubound.
-		0 to: self_ubound do: [:i | newstr at: i put: (self at: i)].
-		0 to: (aString ubound) do: [:i | newstr at: (i + self_ubound + 1) put: (aString at: i)].
+
+		0 to: self_ubound do: [:i | newstr at: i put: (self at: i) ].
+		0 to: (aString ubound) do: [:i | newstr at: (i + self_ubound + 1) put: (aString at: i) ].
+
 		^newstr
 	}
 }

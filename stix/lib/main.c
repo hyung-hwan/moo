@@ -342,6 +342,8 @@ static void log_write (stix_t* stix, unsigned int mask, const stix_ooch_t* msg, 
 
 	msgidx = 0;
 
+/*if (mask & STIX_LOG_GC) return;*/ /* don't show gc logs */
+
 /* TODO: beautify the log message.
  *       do classification based on mask. */
 
@@ -675,7 +677,6 @@ int main (int argc, char* argv[])
 			return -1;
 		}
 	}
-
 
 	xret = 0;
 	g_stix = stix;

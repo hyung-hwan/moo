@@ -86,6 +86,7 @@ static struct voca_t
 	{  9, { 'c','l','a','s','s','i','n','s','t'                           } },
 	{  3, { 'd','c','l'                                                   } },
 	{  7, { 'd','e','c','l','a','r','e'                                   } },
+	{  6, { 'e','n','s','u','r','e',                                      } },
 	{  9, { 'e','x','c','e','p','t','i','o','n'                           } },
 	{  6, { 'e','x','t','e','n','d'                                       } },
 	{  5, { 'f','a','l','s','e'                                           } },
@@ -120,6 +121,7 @@ enum voca_id_t
 	VOCA_CLASSINST,
 	VOCA_DCL,
 	VOCA_DECLARE,
+	VOCA_ENSURE,
 	VOCA_EXCEPTION,
 	VOCA_EXTEND,
 	VOCA_FALSE,
@@ -2667,6 +2669,10 @@ static int compile_method_primitive (stix_t* stix)
  *       it needs to check the number of arguments at least */
 		stix->c->mth.prim_type = 3;
 	}
+	else if (is_token_word(stix, VOCA_ENSURE))
+	{
+		stix->c->mth.prim_type = 4;
+	}
 	else
 	{
 		set_syntax_error (stix, STIX_SYNERR_PRIMITIVE, &stix->c->tok.loc, &stix->c->tok.name);
@@ -4202,10 +4208,15 @@ static int add_compiled_method (stix_t* stix)
 		preamble_code = STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE;
 		preamble_index = stix->c->mth.prim_no;
 	}
+	else if (stix->c->mth.prim_type == 3)
+	{
+		preamble_code = STIX_METHOD_PREAMBLE_EXCEPTION;
+		preamble_index = 0;
+	}
 	else 
 	{
-		STIX_ASSERT (stix->c->mth.prim_type == 3);
-		preamble_code = STIX_METHOD_PREAMBLE_EXCEPTION;
+		STIX_ASSERT (stix->c->mth.prim_type == 4);
+		preamble_code = STIX_METHOD_PREAMBLE_ENSURE;
 		preamble_index = 0;
 	}
 

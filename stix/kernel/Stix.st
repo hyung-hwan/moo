@@ -176,13 +176,13 @@
 				[ i <= end ] whileTrue: [ 
 					aBlock value: i.
 					i := i + step.
-				]
+				].
 			]
 			ifFalse: [
 				[ i >= end ] whileTrue: [
 					aBlock value: i.
 					i := i - step.
-				]
+				].
 			].
 	}
 

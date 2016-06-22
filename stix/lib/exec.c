@@ -1576,7 +1576,7 @@ static int prim_context_goto (stix_t* stix, stix_ooi_t nargs)
 	if (STIX_CLASSOF(stix, rcv) != stix->_method_context)
 	{
 #if defined(STIX_DEBUG_VM_EXEC)
-printf ("prim_context_goto: PRIMITVE RECEIVER IS NOT A METHOD CONTEXT\n");
+STIX_DEBUG0 (stix, "prim_context_goto: PRIMITVE RECEIVER IS NOT A METHOD CONTEXT\n");
 #endif
 		return 0;
 	}
@@ -1585,7 +1585,7 @@ printf ("prim_context_goto: PRIMITVE RECEIVER IS NOT A METHOD CONTEXT\n");
 	if (!STIX_OOP_IS_SMOOI(pc) || STIX_OOP_TO_SMOOI(pc) < 0)
 	{
 #if defined(STIX_DEBUG_VM_EXEC)
-printf ("prim_context_goto: PRIMITVE ARGUMENT IS INVALID\n");
+STIX_DEBUG0 (stix, "prim_context_goto: PRIMITVE ARGUMENT IS INVALID\n");
 #endif
 		return 0;
 	}
@@ -1624,7 +1624,7 @@ static int __block_value (stix_t* stix, stix_ooi_t rcv_blkctx_offset, stix_ooi_t
 	{
 		/* the receiver must be a block context */
 #if defined(STIX_DEBUG_VM_EXEC)
-printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
+STIX_DEBUG0 (stix, "PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 #endif
 		return 0;
 	}
@@ -1637,7 +1637,7 @@ printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 		 * For example, [thisContext value] value. */
 		STIX_ASSERT (STIX_OBJ_GET_SIZE(rcv_blkctx) > STIX_CONTEXT_NAMED_INSTVARS);
 #if defined(STIX_DEBUG_VM_EXEC)
-printf ("PRIM REVALUING AN BLOCKCONTEXT\n");
+STIX_DEBUG0 (stix, "PRIM REVALUING AN BLOCKCONTEXT\n");
 #endif
 		return 0;
 	}
@@ -1648,7 +1648,7 @@ printf ("PRIM REVALUING AN BLOCKCONTEXT\n");
 		/* the number of argument doesn't match */
 #if defined(STIX_DEBUG_VM_EXEC)
 /* TODO: better handling of primitive failure */
-printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
+STIX_DEBUG0 (stix, "PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 #endif
 		return 0;
 	}
@@ -1677,7 +1677,6 @@ printf ("PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 #else
 	blkctx->ip = rcv_blkctx->ip;
 	blkctx->ntmprs = rcv_blkctx->ntmprs;
-	blkctx->ensure_block = rcv_blkctx->ensure_block;
 	blkctx->method_or_nargs = rcv_blkctx->method_or_nargs;
 	blkctx->receiver_or_source = (stix_oop_t)rcv_blkctx;
 	blkctx->home = rcv_blkctx->home;
@@ -1769,7 +1768,7 @@ static int prim_block_new_process (stix_t* stix, stix_ooi_t nargs)
 	{
 		/* the receiver must be a block context */
 #if defined(STIX_DEBUG_VM_EXEC)
-printf ("PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
+STIX_DEBUG0 (stix, "PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 #endif
 		return 0;
 	}
@@ -2489,7 +2488,7 @@ static int prim_ffi_call (stix_t* stix, stix_ooi_t nargs)
 
 	if (!STIX_ISTYPEOF(stix, sig, STIX_OBJ_TYPE_CHAR) || STIX_OBJ_GET_SIZE(sig) <= 0)
 	{
-printf ("wrong signature...\n");
+STIX_DEBUG0 (stix, "FFI: wrong signature...\n");
 		return 0;
 	}
 
@@ -2512,7 +2511,7 @@ printf ("wrong signature...\n");
 		dc = dcNewCallVM (4096);
 		if (!dc) return -1; /* TODO: proper error handling */
 
-printf ("CALLING............%p\n", f);
+STIX_DEBUG1 (stix, "FFI: CALLING............%p\n", f);
 		/*dcMode (dc, DC_CALL_C_DEFAULT);
 		dcReset (dc);*/
 
@@ -2521,7 +2520,7 @@ printf ("CALLING............%p\n", f);
 			if (((stix_oop_char_t)sig)->slot[i] == '|') 
 			{
 				dcMode (dc, DC_CALL_C_ELLIPSIS);
-printf ("CALL MODE 111 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
+STIX_DEBUG0 (stix, "CALL MODE 111 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
 				mode_set = 1;
 				break;
 			}
@@ -2530,14 +2529,14 @@ printf ("CALL MODE 111 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MOD
 
 		for (i = 2; i < STIX_OBJ_GET_SIZE(sig); i++)
 		{
-printf ("CALLING ARG %c\n", ((stix_oop_char_t)sig)->slot[i]);
+STIX_DEBUG1 (stix, "FFI: CALLING ARG %c\n", ((stix_oop_char_t)sig)->slot[i]);
 			switch (((stix_oop_char_t)sig)->slot[i])
 			{
 			/* TODO: support more types... */
 				/*
 				case '|':
 					dcMode (dc, DC_CALL_C_ELLIPSIS_VARARGS);
-printf ("CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
+STIX_DEBUG2 (stix, "CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
 					break;
 				*/
 
@@ -2594,8 +2593,8 @@ printf ("CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MOD
 			case 'i':
 			{
 				int r = dcCallInt (dc, f);
-printf ("CALLED... %d\n", r);
-printf ("CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
+STIX_DEBUG1 (stix, "CALLED... %d\n", r);
+STIX_DEBUG2 (stix, "CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
 				STIX_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(r));
 				break;
 			}
@@ -2668,7 +2667,7 @@ static int prim_ffi_getsym (stix_t* stix, stix_ooi_t nargs)
 
 	if (!STIX_ISTYPEOF(stix,fun,STIX_OBJ_TYPE_CHAR))
 	{
-printf ("wrong function name...\n");
+STIX_DEBUG0 (stix, "wrong function name...\n");
 		return 0;
 	}
 
@@ -3077,7 +3076,8 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 
 		default:
 			STIX_ASSERT (preamble_code == STIX_METHOD_PREAMBLE_NONE ||
-			             preamble_code == STIX_METHOD_PREAMBLE_EXCEPTION);
+			             preamble_code == STIX_METHOD_PREAMBLE_EXCEPTION ||
+			             preamble_code == STIX_METHOD_PREAMBLE_ENSURE);
 			if (activate_new_method (stix, method) <= -1) return -1;
 			break;
 	}
@@ -3912,14 +3912,6 @@ return -1;
 				}
 				else 
 				{
-#if 0
-					if (stix->active_context->origin->ip == STIX_SMOOI_TO_OOP(STIX_SMOOI_MIN))
-					{
-						STIX_LOG0 (stix, STIX_LOG_IC | STIX_LOG_ERROR, "Error - cannot return from dead context\n");
-						stix->errnum = STIX_EINTERN; /* TODO: make this error catchable at the stix level... */
-						return -1;
-					}
-#endif
 					unwind_protect = 0;
 
 					/* set the instruction pointer to an invalid value.
@@ -3941,25 +3933,35 @@ return -1;
 						ctx = stix->active_context;
 						while ((stix_oop_t)ctx != stix->_nil)
 						{
-							if ((stix_oop_t)ctx->ensure_block != stix->_nil) unwind_protect = 1;
+							if (STIX_CLASSOF(stix, ctx) == stix->_method_context)
+							{
+								stix_ooi_t preamble;
+								preamble = STIX_OOP_TO_SMOOI(((stix_oop_method_t)ctx->method_or_nargs)->preamble);
+								if (STIX_METHOD_GET_PREAMBLE_CODE(preamble) == STIX_METHOD_PREAMBLE_ENSURE)
+								{
+									if (!unwind_protect)
+									{
+										unwind_protect = 1;
+										unwind_start = ctx;
+									}
+									unwind_stop = ctx;
+								}
+							}
 							if (ctx == stix->active_context->origin) goto non_local_return_ok;
 							ctx = ctx->sender;
 						}
 
 						/* cannot return from a method that has returned already */
+						STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context->origin) == stix->_method_context);
+						STIX_ASSERT (stix->active_context->origin->ip == STIX_SMOOI_TO_OOP(STIX_SMOOI_MIN));
+
 						STIX_LOG0 (stix, STIX_LOG_IC | STIX_LOG_ERROR, "Error - cannot return from dead context\n");
 						stix->errnum = STIX_EINTERN; /* TODO: can i make this error catchable at the stix level? */
 						return -1;
 
 					non_local_return_ok:
-STIX_DEBUG0 (stix, "NON_LOCAL RETURN OK...\n");
+/*STIX_DEBUG2 (stix, "NON_LOCAL RETURN OK TO... %p %p\n", stix->active_context->origin, stix->active_context->origin->sender);*/
 						stix->active_context->origin->ip = STIX_SMOOI_TO_OOP(STIX_SMOOI_MIN);
-
-						if (unwind_protect)
-						{
-							unwind_start = stix->active_context;
-							unwind_stop = stix->active_context->origin;
-						}
 					}
 
 					STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context->origin) == stix->_method_context);
