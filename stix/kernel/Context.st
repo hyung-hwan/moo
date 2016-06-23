@@ -14,12 +14,12 @@
 		^self.sender
 	}
 
-	#method isExceptionHandlerContext
+	#method isExceptionContext
 	{
 		^false
 	}
 
-	#method hasEnsureBlock
+	#method isEnsureContext
 	{
 		^false
 	}
@@ -29,42 +29,117 @@
 		^nil
 	}
 
-	#method findExceptionHandlerContext
+	#method findExceptionContext
 	{
 		| ctx |
 		ctx := self.
-		[ ctx isExceptionHandlerContext ifTrue: [^ctx].
-		  ctx := ctx sender.
-		  ctx isNil ] whileFalse.
+		[ ctx notNil ] whileTrue: [
+			(ctx isExceptionContext) ifTrue: [^ctx].
+			ctx := ctx sender.
+		].
 		^nil
 	}
 
-	#method findExceptionHandlerBlock
+	#method findEnsureContextAbove: sentinel
 	{
-		^nil 
+		| ctx |
+		ctx := self.
+		[ ctx notNil and: [ctx ~~ sentinel] ] whileTrue: [
+			(ctx isEnsureContext) ifTrue: [^ctx].
+			ctx := ctx sender.
+		].
+		^nil
 	}
 
-	#method handleException: exception
+
+	#method hasSender: context
 	{
-		| excblk retval posact |
+		| s | 
+		(self == context) ifTrue: [^false].
+		s := self.sender.
+		[ s isNil ] whileFalse: [
+			(s == context) ifTrue: [^true].
+			s := s sender.
+		].
+		^false
+	}
 
-		## position of the temporary variable 'active' in MethodContext>>on:do.
-		## for this code to work, it must be the last temporary variable in the method.
-		posact := (self basicSize) - 1. 
+	#method isDead
+	{
+		^self.ip < 0
+	}
 
-		excblk := self findExceptionHandlerBlock: (exception class).
-		(excblk isNil or: [(self basicAt: posact) not]) ifTrue: [ 
-			^self.sender findExceptionHandlerContext handleException: exception
+	#method terminate
+	{
+		self.sender := nil.
+		self.ip = -1;
+	}
+
+	#method terminateTo: prevctx
+	{
+		| ctx sctx |
+		(self hasSender: prevctx) ifTrue: [
+			ctx := self.sender.
+			[ctx ~~ prevctx] whileTrue: [
+				sctx := ctx sender.
+				ctx terminate.
+				ctx := sctx.
+			]
+		].
+		self.sender := prevctx.
+	}
+
+	#method resume: retval through: context
+	{
+		| ctx | 
+		self isDead ifTrue: ["TODO: cannot return" 'CANNOT RETURN' dump.].
+
+		ctx := context.
+		[ ctx notNil ] whileTrue: [
+			| donepos |
+			donepos := ctx basicSize - 1.
+
+			(ctx basicAt: donepos) ifFalse: [
+				| ensblk |
+				ctx basicAt: donepos put: true.
+				ensblk := ctx ensureBlock.
+				thisContext terminateTo: ctx.
+				ensblk value.
+			].
+
+			ctx := ctx findEnsureContextAbove: self.
 		].
 
-		exception handlerContext: self.
+		thisContext terminateTo: self.
+		^retval
+	}
 
-		self basicAt: posact put: false.
-		[ retval := excblk value: exception ] ensure: [
-			self basicAt: posact put: true
+	#method unwindTo: context return: retval
+	{
+		## -------------------------------------------------------------------
+		## <<private>>
+		## private: called by VM upon unwinding
+		## -------------------------------------------------------------------
+
+		| ctx stop |
+		ctx := self.
+		stop := false.
+		[stop] whileFalse: [
+			| eb |
+			eb := ctx ensureBlock.
+			(eb notNil) ifTrue: [
+				| donepos |
+				donepos := ctx basicSize - 1.
+				(ctx basicAt: donepos) ifFalse: [
+					ctx basicAt: donepos put: true.
+					eb value.
+				].
+			].
+			stop := (ctx == context).
+			ctx := ctx sender.
 		].
 
-		##self return: retval.
+		^retval
 	}
 }
 
@@ -98,16 +173,15 @@
 		^self.sp.
 
 	}
-	#method sp: anInteger
+	#method sp: new_sp
 	{
-		self.sp := anInteger.
+		self.sp := new_sp
 	}
 
-	#method pc: aPC sp: aSP
+	#method pc: new_pc sp: new_sp
 	{
-		self.ip := aPC.
-		self.sp := aSP.
-		##sp := sp - 1.
+		self.ip := new_pc.
+		self.sp := new_sp.
 	}
 
 	#method method
@@ -115,13 +189,13 @@
 		^self.method
 	}
 
-	#method isExceptionHandlerContext
+	#method isExceptionContext
 	{
 		## 10 - STIX_METHOD_PREAMBLE_EXCEPTION in VM.
 		^self.method preambleCode == 10.
 	}
 
-	#method hasEnsureBlock
+	#method isEnsureContext
 	{
 		## 10 - STIX_METHOD_PREAMBLE_ENSURE in VM.
 		^self.method preambleCode == 11
@@ -129,14 +203,13 @@
 
 	#method ensureBlock
 	{
-## TODO: 9 is the number of named instance variables of a context.
-## TODO: change 9 to a constant when stix is enhanced to support constant definition
-		
+## TODO: change 8 to a constant when stix is enhanced to support constant definition
 		(self.method preambleCode == 11) ifFalse: [^nil].
 		^self basicAt: 8.
 	}
 
-	#method findExceptionHandlerBlock: anExceptionClass
+
+	#method findExceptionHandlerFor: exception_class
 	{
 		## find an exception handler block for a given exception class.
 		##
@@ -146,7 +219,7 @@
 		##   basicAt: 8 must be the on: argument.
 		##   basicAt: 9 must be the do: argument
 
-		(self isExceptionHandlerContext) ifTrue: [
+		(self isExceptionContext) ifTrue: [
 			| bound exc |
 			## NOTE: if on:do: has a temporary varible, bound must be adjusted to reflect it.
 			bound := self basicSize - 1.
@@ -154,26 +227,64 @@
 ##       or calcuate the minimum size using the class information.
 			8 to: bound by: 2 do: [ :i | 
 				exc := self basicAt: i.
-				((anExceptionClass == exc) or: [anExceptionClass inheritsFrom: exc]) ifTrue: [^self basicAt: (i + 1)].
+				((exception_class == exc) or: [exception_class inheritsFrom: exc]) ifTrue: [^self basicAt: (i + 1)].
 			]
 		].
 		^nil.
 	}
 
-	#method unwindTo: aContext return: anObject
+	#method handleException: exception
 	{
-		## private: called by VM upon unwinding
-		| ctx eb |
-		ctx := self.
-		[ctx ~~ aContext] whileTrue: [
-			eb := ctx ensureBlock.
-			(eb notNil) ifTrue: [eb value].
-			ctx := ctx sender.
-		].
-		eb := ctx ensureBlock.
-		(eb notNil) ifTrue: [eb value].
+		## -------------------------------------------------------------------
+		## <<private>>
+		##   called by Exception>>signal.
+		##   this method only exists in the MethodContext and UndefinedObject.
+		##   the caller must make sure that the receiver object is
+		##   a method context or nil. Exception>>signal invokes this method
+		##   only for an exception context which is a method context. it 
+		##   invokes it for nil when no exception context is found.
+		## -------------------------------------------------------------------
 
-		^anObject
+		| excblk retval actpos |
+
+		## position of the temporary variable 'active' in MethodContext>>on:do.
+		## for this code to work, it must be the last temporary variable in the method.
+		actpos := (self basicSize) - 1. 
+
+		excblk := self findExceptionHandlerFor: (exception class).
+		(excblk isNil or: [(self basicAt: actpos) not]) ifTrue: [ 
+			## self is an exception context but doesn't have a matching
+			## exception handler or the exception context is already
+			## in the middle of evaluation. 
+			^(self.sender findExceptionContext) handleException: exception.
+		].
+
+		exception handlerContext: self.
+
+		## -------------------------------------------------------------------
+		## if an exception occurs within an exception handler block,
+		## the search will reach this context again as the exception block
+		## is evaluated before actual unwinding. set the temporary variable
+		## in the exception context to mask out this context from the search
+		## list.
+		## -------------------------------------------------------------------
+		self basicAt: actpos put: false.
+		[ retval := excblk value: exception ] ensure: [
+			self basicAt: actpos put: true
+		].
+
+		##(self.sender isNil) ifTrue: [ "TODO: CANNOT RETURN" ].
+
+		## -------------------------------------------------------------------
+		## return to self.sender which is a caller of the exception context (on:do:)
+		## pass the first ensure context between thisContext and self.sender.
+		##
+		## [ [Exception signal: 'xxx'] ensure: [20] ] on: Exception do: [:ex | ...]
+		##
+		## -------------------------------------------------------------------
+		##^self.sender resume: retval through: (thisContext findEnsureContextAbove: self.sender).
+		thisContext unwindTo: self.sender return: nil.
+		Processor return: retval to: self.sender.
 	}
 }
 
@@ -392,7 +503,7 @@
 		| exception_active |
 		<exception>
 
-"thisContext isExceptionHandlerContext dump.
+"thisContext isExceptionContext dump.
 (thisContext basicSize) dump.
 (thisContext basicAt: 8) dump.  ## this should be anException
 (thisContext basicAt: 9) dump.  ## this should be anExceptionBlock
@@ -405,19 +516,27 @@
 
 	#method on: exc1 do: blk1 on: exc2 do: blk2
 	{
-		| active |
+		| exception_active |
 		<exception>
-		active := true.
+		exception_active := true.
 		^self value.
 	}
 
 	#method ensure: aBlock
 	{
-		| v |
+		| retval done |
 		<ensure>
-		v := self value.
-		aBlock value.
-		^v
+
+		done := false.
+		retval := self value. 
+
+		## the temporary variable 'done' may get changed
+		## during evaluation for exception handling. 
+		done ifFalse: [
+			done := true.
+			aBlock value.
+		].
+		^retval
 	}
 
 	#method ifCurtailed: aBlock
@@ -457,10 +576,42 @@
 		^self.messageText
 	}
 
-	#method signal 
+	#method __signal 
 	{
 		self.signalContext := thisContext.
-		((thisContext sender) findExceptionHandlerContext) handleException: self.
+		((thisContext sender) findExceptionContext) handleException: self.
+	}
+
+	#method signal
+	{
+		| excctx excblk retval actpos |
+
+		self.signalContext := thisContext.
+
+		excctx := (thisContext sender) findExceptionContext.
+		[excctx notNil] whileTrue: [
+			excblk := excctx findExceptionHandlerFor: (self class).
+			(excblk notNil and: 
+			 [actpos := excctx basicSize - 1. excctx basicAt: actpos]) ifTrue: [
+				self.handlerContext := excctx.
+				excctx basicAt: actpos put: false.
+				[ retval := excblk value: self ] ensure: [ 
+					excctx basicAt: actpos put: true 
+				].
+
+				thisContext unwindTo: (excctx sender) return: nil.
+				Processor return: retval to: (excctx sender).
+			].
+			excctx := (excctx sender) findExceptionContext.
+		].
+
+		## -----------------------------------------------------------------
+		## FATAL ERROR - no exception handler.
+		## -----------------------------------------------------------------
+		thisContext unwindTo: nil return: nil.
+		('### EXCEPTION NOT HANDLED #### ', self class name, ' - ', self messageText) dump.
+		## TODO: debug the current process???? "
+		Processor activeProcess terminate.
 	}
 
 	#method signal: text
@@ -472,7 +623,7 @@
 	#method pass
 	{
 		## pass the exception to the outer context
-		((self.handlerContext sender) findExceptionHandlerContext) handleException: self.
+		((self.handlerContext sender) findExceptionContext) handleException: self.
 	}
 
 "
@@ -507,7 +658,6 @@ TODO: implement these methods....
 			]
 	}
 "
-
 }
 
 #class NoSuchMessageException(Exception)

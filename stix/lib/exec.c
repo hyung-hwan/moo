@@ -3921,7 +3921,7 @@ return -1;
 					{
 						/* returning from a method */
 						STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context) == stix->_method_context);
-						stix->ip = STIX_SMOOI_MIN;
+						stix->ip = -1;
 					}
 					else
 					{
@@ -3953,7 +3953,7 @@ return -1;
 
 						/* cannot return from a method that has returned already */
 						STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context->origin) == stix->_method_context);
-						STIX_ASSERT (stix->active_context->origin->ip == STIX_SMOOI_TO_OOP(STIX_SMOOI_MIN));
+						STIX_ASSERT (stix->active_context->origin->ip == STIX_SMOOI_TO_OOP(-1));
 
 						STIX_LOG0 (stix, STIX_LOG_IC | STIX_LOG_ERROR, "Error - cannot return from dead context\n");
 						stix->errnum = STIX_EINTERN; /* TODO: can i make this error catchable at the stix level? */
@@ -3961,7 +3961,7 @@ return -1;
 
 					non_local_return_ok:
 /*STIX_DEBUG2 (stix, "NON_LOCAL RETURN OK TO... %p %p\n", stix->active_context->origin, stix->active_context->origin->sender);*/
-						stix->active_context->origin->ip = STIX_SMOOI_TO_OOP(STIX_SMOOI_MIN);
+						stix->active_context->origin->ip = STIX_SMOOI_TO_OOP(-1);
 					}
 
 					STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context->origin) == stix->_method_context);
