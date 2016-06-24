@@ -558,12 +558,12 @@
 {
 	#method(#class) signal
 	{
-		self new signal
+		^self new signal
 	}
 
 	#method(#class) signal: text
 	{
-		self new signal: text
+		^self new signal: text
 	}
 
 	#method handlerContext: context
@@ -587,7 +587,6 @@
 		| excctx excblk retval actpos |
 
 		self.signalContext := thisContext.
-
 		excctx := (thisContext sender) findExceptionContext.
 		[excctx notNil] whileTrue: [
 			excblk := excctx findExceptionHandlerFor: (self class).
@@ -608,7 +607,8 @@
 		## -----------------------------------------------------------------
 		## FATAL ERROR - no exception handler.
 		## -----------------------------------------------------------------
-		thisContext unwindTo: nil return: nil.
+		##thisContext unwindTo: nil return: nil.
+		thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
 		('### EXCEPTION NOT HANDLED #### ', self class name, ' - ', self messageText) dump.
 		## TODO: debug the current process???? "
 		Processor activeProcess terminate.
@@ -617,7 +617,7 @@
 	#method signal: text
 	{
 		self.messageText := text.
-		self signal.
+		^self signal.
 	}
 
 	#method pass
@@ -626,38 +626,39 @@
 		((self.handlerContext sender) findExceptionContext) handleException: self.
 	}
 
-"
-TODO: implement these methods....
 	#method return: value
 	{
-		self.handlerContext notNil ifTrue: [
-			Processor return: value to: (self.handlerContext sender)
-		]
+		(self.handlerContext notNil) ifTrue: [
+			Processor return: value to: self.handlerContext.
+		].
 	}
 
 	#method retry
 	{
-		## TODO: verify if return:to: causes unnecessary stack growth.
-		self.handlerContext notNil 
-			ifTrue: [
-				## TODO: should i reset self.handlerContext and self.signalContext to nil? 
-				self.handlerContext pc: 0.
-				Processor return: self to: self.handlerContext.
-				##Processor forceContext: self.handlerContext.
-			]
+## TODO: verify if return:to: causes unnecessary stack growth.
+		(self.handlerContext notNil)  ifTrue: [
+			self.handlerContext pc: 0.
+			Processor return: self to: self.handlerContext.
+		].
+	}
+
+	#method resume: value
+	{
+## TODO: verify if return:to: causes unnecessary stack growth.
+## is this correct???
+		(self.signalContext notNil and: [self.handlerContext notNil]) ifTrue: [
+			| ctx |
+			ctx := self.signalContext sender.
+			self.signalContext := nil.
+			self.handlerContext := nil.
+			Processor return: value to: ctx.
+		].
 	}
 
 	#method resume
 	{
-		## TODO: verify if return:to: causes unnecessary stack growth.
-		## is this correct???
-		self.signalContext notNil
-			ifTrue: [
-				## TODO: should i reset self.handlerContext and self.signalContext to nil? 
-				Processor return: self to: (self.signalContext sender).
-			]
+		^self resume: nil.
 	}
-"
 }
 
 #class NoSuchMessageException(Exception)

@@ -1026,7 +1026,10 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 
 #if defined(STIX_USE_PROCSTK)
 	/* when process stack is used, the stack pointer in a context
-	 * is a stack pointer of a process before it is activated */
+	 * is a stack pointer of a process before it is activated.
+	 * this stack pointer is stored to the context so that it is
+	 * used to restore the process stack pointer upon returning from
+	 * a method context. */
 	ctx->sp = STIX_SMOOI_TO_OOP(stix->sp);
 #else
 	/* do nothing */
@@ -1709,7 +1712,11 @@ STIX_DEBUG0 (stix, "PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 	STIX_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
 
 	STIX_ASSERT (blkctx->home != stix->_nil);
-	blkctx->sp = STIX_SMOOI_TO_OOP(local_ntmprs - 1);
+#if defined(STIX_USE_PROCSTK)
+	blkctx->sp = STIX_SMOOI_TO_OOP(-1); /* not important at all */
+#else
+	blkctx->sp = STIX_SMOOI_TO_OOP(local_ntmprs - 1); 
+#endif
 	blkctx->sender = stix->active_context;
 
 	*pblkctx = blkctx;
@@ -1720,6 +1727,7 @@ static int prim_block_value (stix_t* stix, stix_ooi_t nargs)
 {
 	int x;
 	stix_oop_context_t blkctx;
+	stix_oow_t sp;
 
 	x = __block_value (stix, nargs, nargs, 0, &blkctx);
 	if (x <= 0) return x; /* hard failure and soft failure */
@@ -1967,6 +1975,7 @@ static int prim_processor_remove_semaphore (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	STIX_STACK_POPS (stix, nargs);
+	/* leave the receiver in the stack. ^self */
 	return 1;
 }
 
@@ -1987,58 +1996,17 @@ static int prim_processor_return_to (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
 
+/* TODO: verify if this is correct? does't it correct restore the stack pointer?
+ *       test complex chains of method contexts and block contexts */
+	if (STIX_CLASSOF(stix, ctx) == stix->_method_context)
+	{
+		/* when returning to a method context, load the sp register with 
+		 * the value stored in the context */
+		stix->sp = STIX_OOP_TO_SMOOI(((stix_oop_context_t)ctx)->sp);
+	}
 	STIX_STACK_PUSH (stix, ret);
-	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)ctx);
-
-	return 1;
-}
-
-static int prim_processor_return_to_and_eval (stix_t* stix, stix_ooi_t nargs)
-{
-	stix_oop_t rcv, ctx, blk, blkarg;
-
-	STIX_ASSERT (nargs == 3);
-
-	rcv = STIX_STACK_GET(stix, stix->sp - 3);
-	ctx = STIX_STACK_GET(stix, stix->sp - 2);
-	blk = STIX_STACK_GET(stix, stix->sp - 1);
-	blkarg = STIX_STACK_GET(stix, stix->sp);
-
-	if (rcv != (stix_oop_t)stix->processor) return 0;
-
-	if (STIX_CLASSOF(stix, ctx) != stix->_block_context &&
-	    STIX_CLASSOF(stix, ctx) != stix->_method_context) return 0;
-
-	if (STIX_CLASSOF(stix, blk) != stix->_block_context) return 0;
-
-	STIX_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
-	STIX_STACK_PUSH (stix, stix->_nil); /* TODO: change the return value.. */
-	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)ctx);
-
-	STIX_STACK_PUSH (stix, blk);
-	STIX_STACK_PUSH (stix, blkarg);
-	return prim_block_value (stix, 1);
-}
-
-static int prim_processor_force_context (stix_t* stix, stix_ooi_t nargs)
-{
-	stix_oop_t rcv, ctx;
-
-	STIX_ASSERT (nargs == 1);
-
-	rcv = STIX_STACK_GET(stix, stix->sp - 1);
-	ctx = STIX_STACK_GET(stix, stix->sp);
-
-	if (rcv != (stix_oop_t)stix->processor) return 0;
-
-	if (STIX_CLASSOF(stix, ctx) != stix->_block_context &&
-	    STIX_CLASSOF(stix, ctx) != stix->_method_context) return 0;
-
-	STIX_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
-	/* TODO: push nothing??? */
 
 	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)ctx);
-
 	return 1;
 }
 
@@ -2733,8 +2701,6 @@ static prim_t primitives[] =
 	{   2,  3,  prim_processor_add_timed_semaphore,    "_processor_add_timed_semaphore" },
 	{   1,  1,  prim_processor_remove_semaphore,       "_processor_remove_semaphore" },
 	{   2,  2,  prim_processor_return_to,              "_processor_return_to" },
-	{   3,  3,  prim_processor_return_to_and_eval,     "_processor_return_to_and_eval" },
-	{   1,  1,  prim_processor_force_context,          "_processor_force_context" },
 
 	{   1,  1,  prim_integer_add,                      "_integer_add"         },
 	{   1,  1,  prim_integer_sub,                      "_integer_sub"         },

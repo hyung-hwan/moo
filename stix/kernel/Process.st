@@ -19,14 +19,14 @@
 		^self.next.
 	}
 
-	#method next: aProcess
+	#method next: process
 	{
-		self.next := aProcess.
+		self.next := process.
 	}
 
-	#method prev: aProcess
+	#method prev: process
 	{
-		self.prev := aProcess.
+		self.prev := process.
 	}
 
 	#method resume
@@ -51,7 +51,12 @@
 
 	#method sp
 	{
-		^sp.
+		^self.sp.
+	}
+
+	#method initialContext
+	{
+		^self.initial_context
 	}
 
 	#method sleep: seconds
@@ -341,7 +346,7 @@
 		^self.active.
 	}
 
-	#method resume: aProcess
+	#method resume: process
 	{
 		<primitive: #_processor_schedule>
 		self primitiveFailed.
@@ -349,14 +354,14 @@
 		"The primitive does something like the following in principle:
 		(self.tally = 0)
 			ifTrue: [
-				self.head := aProcess.
-				self.tail := aProcess.
+				self.head := process.
+				self.tail := process.
 				self.tally := 1.
 			]
 			ifFalse: [
-				aProcess next: self.head.
-				self.head prev: aProcess.
-				self.head := aProcess.
+				process next: self.head.
+				self.head prev: process.
+				self.head := process.
 				self.tally := self.tally + 1.
 			].
 		"
@@ -370,47 +375,34 @@
 	}
 	"
 
-	#method signal: aSemaphore after: anInteger
+	#method signal: semaphore after: secs
 	{
 		<primitive: #_processor_add_timed_semaphore>
 		self primitiveFailed.
 	}
 
-	#method signal: aSemaphore after: aSecond and: aNanoSecond
+	#method signal: semaphore after: secs and: nanosecs
 	{
 		<primitive: #_processor_add_timed_semaphore>
 		self primitiveFailed.
 	}
 
-	#method unsignal: aSemaphore
+	#method unsignal: semaphore
 	{
 		<primitive: #_processor_remove_semaphore>
 		self primitiveFailed.
 	}
 
-	"#method signal: aSemaphore onInput: file
+	"#method signal: semaphore onInput: file
 	{
 	}"
-	"#method signal: aSemaphore onOutput: file
+	"#method signal: semaphore onOutput: file
 	{
 	}"
 
-	#method return: anObject to: aContext
+	#method return: object to: context
 	{
 		<primitive: #_processor_return_to>
 		self primitiveFailed.
 	}
-
-	#method returnTo: aContext andEval: aBlock with: arg
-	{
-		<primitive: #_processor_return_to_and_eval>
-		self primitiveFailed.
-	}
-
-	#method forceContext: aContext
-	{
-		<primitive: #_processor_force_context>
-		self primitiveFailed.
-	}
-
 }

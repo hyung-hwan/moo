@@ -39,9 +39,9 @@
 
 	#method(#class) main2
 	{
-		| k |
+		| k q |
 		'BEGINNING OF main2' dump.
-		k := ['this is test-011' dump. Exception signal: 'main2 screwed...'. 8888 dump. ] 
+		k := [ 'this is test-011' dump. q := Exception signal: 'main2 screwed...'. q dump. 8888 dump.  ] 
 			on: Exception do: [ :ex | 
 				'Exception occurred' dump.  
 				ex messageText dump.
@@ -51,6 +51,7 @@
 				'AFTER RETURN' dump. 
 			].
 
+		'k=>>> ' dump.
 		k dump.
 		'END OF main2' dump.
 	}
@@ -149,10 +150,10 @@
 		'BEGINNING OF test11' dump.
 		[ 
 			|p | 
-			p := [ Exception signal: 'Exception in a new process of test11'.  ] newProcess.
+			p := [ 'TEST11 IN NEW PROCESS' dump. Exception signal: 'Exception raised in a new process of test11'.  ] newProcess.
 			'JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ' dump.
-			p resume.
-		] on: Exception do: [:ex | 'EXCEPTION ----------' dump. ex messageText dump ].
+			p resume. ## resume the new process
+		] on: Exception do: [:ex | '---- EXCEPTION IN TEST11. THIS MUST NOT BE PRINTED----------' dump. ex messageText dump ].
 		'END OF test11' dump.
 	}
 
@@ -181,9 +182,10 @@
 		[ self main2 ] on: Exception do: [ :ex | 
 			'EXCEPTION CAUGHT IN MAIN....' dump. 
 			ex messageText dump. 
-			"ex pass." 
+			##ex pass.
 			'Returning back to where the exception has signalled in main2...' dump.
-			ex resume. 
+			##ex resume. 
+			ex resume: 'RESUMED WITH THIS STRING'.
 		].
 
 		'##############################' dump.
@@ -217,6 +219,9 @@
 		##[ Processor return: 10 to: 20. ] 
 		##	on: PrimitiveFailureException do: [:ex | 'PRIMITIVE FAILURE CAUGHT HERE HERE HERE' dump]
 		##	on: Exception do: [:ex | ex messageText dump].
+
+		'SLEEPING FOR 10 seconds ....' dump.
+		Processor activeProcess sleep: 10.
 
 		'>>>>> END OF MAIN' dump.
 	}
