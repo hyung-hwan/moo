@@ -129,25 +129,6 @@
 
 
 /* ------------------------------------------------------------------------- */
-
-static void vm_startup (stix_t* stix)
-{
-#if defined(_WIN32)
-	stix->waitable_timer = CreateWaitableTimer(STIX_NULL, TRUE, STIX_NULL);
-#endif
-}
-
-static void vm_cleanup (stix_t* stix)
-{
-#if defined(_WIN32)
-	if (stix->waitable_timer)
-	{
-		CloseHandle (stix->waitable_timer);
-		stix->waitable_timer = STIX_NULL;
-	}
-#endif
-}
-
 static STIX_INLINE void vm_gettime (stix_t* stix, stix_ntime_t* now)
 {
 #if defined(_WIN32)
@@ -187,18 +168,26 @@ static STIX_INLINE void vm_gettime (stix_t* stix, stix_ntime_t* now)
 	tick64 = *(stix_uint64_t*)&tick;
 	STIX_INITNTIME (now, STIX_USEC_TO_SEC(tick64), STIX_USEC_TO_NSEC(tick64));
 
-#elif defined(HAVE_CLOCK_GETTIME)
+#elif defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
 	struct timespec ts;
-	#if defined(CLOCK_MONOTONIC)
 	clock_gettime (CLOCK_MONOTONIC, &ts);
-	#else
-	clock_gettime (CLOCK_REALTIME, &ts);
-	#endif
 	STIX_INITNTIME(now, ts.tv_sec, ts.tv_nsec);
+
+#elif defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
+	struct timespec ts;
+	clock_gettime (CLOCK_REALTIME, &ts);
+	STIX_INITNTIME(now, ts.tv_sec, ts.tv_nsec);
+	STIX_SUBNTIME (now, now, &stix->vm_time_offset); /* offset */
 #else
 	struct timeval tv;
 	gettimeofday (&tv, STIX_NULL);
 	STIX_INITNTIME(now, tv.tv_sec, STIX_USEC_TO_NSEC(tv.tv_usec));
+
+	/* at the first call, vm_time_offset should be 0. so subtraction takes
+	 * no effect. once it becomes non-zero, it offsets the actual time.
+	 * this is to keep the returned time small enough to be held in a 
+	 * small integer on platforms where the small integer is not large enough */
+	STIX_SUBNTIME (now, now, &stix->vm_time_offset); 
 #endif
 }
 
@@ -253,6 +242,32 @@ static STIX_INLINE void vm_sleep (stix_t* stix, const stix_ntime_t* dur)
 	ts.tv_sec = dur->sec;
 	ts.tv_nsec = dur->nsec;
 	nanosleep (&ts, STIX_NULL);
+#endif
+}
+
+
+static void vm_startup (stix_t* stix)
+{
+	stix_ntime_t now;
+
+#if defined(_WIN32)
+	stix->waitable_timer = CreateWaitableTimer(STIX_NULL, TRUE, STIX_NULL);
+#endif
+
+	/* reset stix->vm_time_offset so that vm_gettime is not affected */
+	STIX_INITNTIME(&stix->vm_time_offset, 0, 0);
+	vm_gettime (stix, &now);
+	stix->vm_time_offset = now;
+}
+
+static void vm_cleanup (stix_t* stix)
+{
+#if defined(_WIN32)
+	if (stix->waitable_timer)
+	{
+		CloseHandle (stix->waitable_timer);
+		stix->waitable_timer = STIX_NULL;
+	}
 #endif
 }
 
@@ -1844,13 +1859,16 @@ static int prim_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
 /* TODO: make clock_gettime to be platform independent 
  * 
  * this code assumes that the monotonic clock returns a small value
- * that can fit into a SmallInteger, even after some addtions... */
+ * that can fit into a SmallInteger, even after some additions... */
 	vm_gettime (stix, &now);
 	STIX_ADDNTIMESNS (&ft, &now, STIX_OOP_TO_SMOOI(sec), STIX_OOP_TO_SMOOI(nsec));
 	if (ft.sec < 0 || ft.sec > STIX_SMOOI_MAX) 
 	{
-		/* soft error - cannot represent the exxpiry time in
+		/* soft error - cannot represent the expiry time in
 		 *              a small integer. */
+		STIX_LOG2 (stix, STIX_LOG_IC | STIX_LOG_ERROR, 
+			"Error - time (%ld) out of range(0 - %zd) when adding a timed semaphore\n",
+			(unsigned long int)ft.sec, (stix_ooi_t)STIX_SMOOI_MAX);
 		return 0;
 	}
 

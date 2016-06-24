@@ -845,6 +845,7 @@ struct stix_t
 	stix_ooi_t ip;
 	int proc_switched; /* TODO: this is temporary. implement something else to skip immediate context switching */
 	int switch_proc;
+	stix_ntime_t vm_time_offset;
 	/* == END EXECUTION REGISTERS == */
 
 	/* == BIGINT CONVERSION == */
