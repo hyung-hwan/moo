@@ -221,7 +221,6 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 			stix_oop_oop_t xtmp;
 			stix_oow_t size;
 
-		#if defined(STIX_USE_PROCSTK)
 			if (stix->_process && STIX_OBJ_GET_CLASS(oop) == stix->_process)
 			{
 				/* the stack in a process object doesn't need to be 
@@ -231,18 +230,6 @@ static stix_uint8_t* scan_new_heap (stix_t* stix, stix_uint8_t* ptr)
 				       STIX_OOP_TO_SMOOI(((stix_oop_process_t)oop)->sp) + 1;
 				STIX_ASSERT (size <= STIX_OBJ_GET_SIZE(oop));
 			}
-		#else
-			if ((stix->_method_context && STIX_OBJ_GET_CLASS(oop) == stix->_method_context) ||
-			    (stix->_block_context && STIX_OBJ_GET_CLASS(oop) == stix->_block_context))
-			{
-				/* the stack in a context object doesn't need to be 
-				 * scanned in full. the slots above the stack pointer 
-				 * are garbages. */
-				size = STIX_CONTEXT_NAMED_INSTVARS +
-				       STIX_OOP_TO_SMOOI(((stix_oop_context_t)oop)->sp) + 1;
-				STIX_ASSERT (size <= STIX_OBJ_GET_SIZE(oop)); 
-			}
-		#endif
 			else
 			{
 				size = STIX_OBJ_GET_SIZE(oop);
@@ -280,14 +267,11 @@ void stix_gc (stix_t* stix)
 	if (stix->active_context)
 	{
 /* TODO: verify if this is correct */
-	#if defined(STIX_USE_PROCSTK)
-		/*STIX_ASSERT ((stix_oop_t)stix->processor != stix->_nil);
-		if ((stix_oop_t)stix->processor->active != stix->_nil)*/
-			stix->processor->active->sp = STIX_SMOOI_TO_OOP(stix->sp);
-	#else
-		/* store the stack pointer to the active context */
-		stix->active_context->sp = STIX_SMOOI_TO_OOP(stix->sp);
-	#endif
+	
+		STIX_ASSERT ((stix_oop_t)stix->processor != stix->_nil);
+		STIX_ASSERT ((stix_oop_t)stix->processor->active != stix->_nil);
+		/* store the stack pointer to the active process */
+		stix->processor->active->sp = STIX_SMOOI_TO_OOP(stix->sp);
 
 		/* store the instruction pointer to the active context */
 		stix->active_context->ip = STIX_SMOOI_TO_OOP(stix->ip);

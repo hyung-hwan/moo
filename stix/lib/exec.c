@@ -50,6 +50,12 @@
 #	endif
 #endif
 
+#if defined(USE_DYNCALL)
+/* TODO: defined dcAllocMem and dcFreeMeme before builing the dynload and dyncall library */
+#	include <dyncall.h> /* TODO: remove this. make dyXXXX calls to callbacks */
+#endif
+
+
 #define PROC_STATE_RUNNING 3
 #define PROC_STATE_WAITING 2
 #define PROC_STATE_RUNNABLE 1
@@ -70,18 +76,6 @@
 	(STIX_OOP_TO_SMOOI((x)->heap_ftime_sec) == STIX_OOP_TO_SMOOI((y)->heap_ftime_sec) && STIX_OOP_TO_SMOOI((x)->heap_ftime_nsec) < STIX_OOP_TO_SMOOI((y)->heap_ftime_nsec)) \
 )
 
-#if defined(USE_DYNCALL)
-/* TODO: defined dcAllocMem and dcFreeMeme before builing the dynload and dyncall library */
-#	include <dyncall.h> /* TODO: remove this. make dyXXXX calls to callbacks */
-#endif
-
-/* TODO: context's stack overflow check in various part of this file */
-/* TOOD: determine the right stack size */
-#if defined(STIX_USE_PROCSTK)
-#	define CONTEXT_STACK_SIZE 0
-#else
-#	define CONTEXT_STACK_SIZE 96
-#endif
 
 #define LOAD_IP(stix, v_ctx) ((stix)->ip = STIX_OOP_TO_SMOOI((v_ctx)->ip))
 #define STORE_IP(stix, v_ctx) ((v_ctx)->ip = STIX_SMOOI_TO_OOP((stix)->ip))
@@ -92,38 +86,18 @@
 #define LOAD_ACTIVE_IP(stix) LOAD_IP(stix, (stix)->active_context)
 #define STORE_ACTIVE_IP(stix) STORE_IP(stix, (stix)->active_context)
 
-#if defined(STIX_USE_PROCSTK)
-	#define LOAD_ACTIVE_SP(stix) LOAD_SP(stix, (stix)->processor->active)
-	#define STORE_ACTIVE_SP(stix) STORE_SP(stix, (stix)->processor->active)
-#else
-	#define LOAD_ACTIVE_SP(stix) LOAD_SP(stix, (stix)->active_context)
-	#define STORE_ACTIVE_SP(stix) STORE_SP(stix, (stix)->active_context)
-#endif
+#define LOAD_ACTIVE_SP(stix) LOAD_SP(stix, (stix)->processor->active)
+#define STORE_ACTIVE_SP(stix) STORE_SP(stix, (stix)->processor->active)
 
-
-#if defined(STIX_USE_PROCSTK)
-	#define SWITCH_ACTIVE_CONTEXT(stix,v_ctx) \
-		do \
-		{ \
-			STORE_ACTIVE_IP (stix); \
-			(stix)->active_context = (v_ctx); \
-			(stix)->active_method = (stix_oop_method_t)(stix)->active_context->origin->method_or_nargs; \
-			SET_ACTIVE_METHOD_CODE(stix); \
-			LOAD_ACTIVE_IP (stix); \
-		} while (0)
-#else
-	#define SWITCH_ACTIVE_CONTEXT(stix,v_ctx) \
-		do \
-		{ \
-			STORE_ACTIVE_IP (stix); \
-			STORE_ACTIVE_SP (stix); \
-			(stix)->active_context = (v_ctx); \
-			(stix)->active_method = (stix_oop_method_t)(stix)->active_context->origin->method_or_nargs; \
-			SET_ACTIVE_METHOD_CODE(stix); \
-			LOAD_ACTIVE_IP (stix); \
-			LOAD_ACTIVE_SP (stix); \
-		} while (0)
-#endif
+#define SWITCH_ACTIVE_CONTEXT(stix,v_ctx) \
+	do \
+	{ \
+		STORE_ACTIVE_IP (stix); \
+		(stix)->active_context = (v_ctx); \
+		(stix)->active_method = (stix_oop_method_t)(stix)->active_context->origin->method_or_nargs; \
+		SET_ACTIVE_METHOD_CODE(stix); \
+		LOAD_ACTIVE_IP (stix); \
+	} while (0)
 
 #define FETCH_BYTE_CODE(stix) ((stix)->active_code[(stix)->ip++])
 #define FETCH_BYTE_CODE_TO(stix, v_ooi) (v_ooi = FETCH_BYTE_CODE(stix))
@@ -317,11 +291,7 @@ static STIX_INLINE void sleep_active_process (stix_t* stix, int state)
 	STIX_LOG3 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Processor - put process %O context %O ip=%zd to sleep\n", stix->processor->active, stix->active_context, stix->ip);
 #endif
 
-#if defined(STIX_USE_PROCSTK)
 	STORE_ACTIVE_SP(stix);
-#else
-	/* nothing special */
-#endif
 
 	/* store the current active context to the current process.
 	 * it is the suspended context of the process to be suspended */
@@ -336,11 +306,7 @@ static STIX_INLINE void wake_new_process (stix_t* stix, stix_oop_process_t proc)
 	proc->state = STIX_SMOOI_TO_OOP(PROC_STATE_RUNNING);
 	stix->processor->active = proc;
 
-#if defined(STIX_USE_PROCSTK)
 	LOAD_ACTIVE_SP(stix);
-#else
-	/* nothing special */
-#endif
 
 	/* activate the suspended context of the new process */
 	SWITCH_ACTIVE_CONTEXT (stix, proc->current_context);
@@ -921,50 +887,21 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 
 	STIX_ASSERT (ntmprs >= 0);
 	STIX_ASSERT (nargs <= ntmprs);
-#if defined(STIX_USE_PROCSTK)
-	/* nothing special */
-#else
-	/* message sending requires a receiver to be pushed. 
-	 * the stack pointer of the sending context cannot be -1.
-	 * if one-argumented message is invoked the stack of the
-	 * sending context looks like this.
-	 *
-	 * Sending Context
-	 *
-	 *   +---------------------+
-	 *   | fixed part          |
-	 *   |                     |
-	 *   |                     |
-	 *   |                     |
-	 *   +---------------------+
-	 *   | ....                | slot[0]
-	 *   | ....                | slot[..]
-	 *   | ....                | slot[..] 
-	 *   | receiver            | slot[..] <-- sp - nargs(1)
-	 *   | arg1                | slot[..] <-- sp
-	 *   | ....                | slot[..] 
-	 *   |                     | slot[stack_size - 1] 
-	 *   +---------------------+
-	 */
-	STIX_ASSERT (stix->sp >= 0);
-	STIX_ASSERT (stix->sp >= nargs);
-#endif
 
 	stix_pushtmp (stix, (stix_oop_t*)&mth);
-	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_method_context, STIX_NULL, ntmprs + CONTEXT_STACK_SIZE);
+	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_method_context, STIX_NULL, ntmprs);
 	stix_poptmp (stix);
 	if (!ctx) return -1;
 
 	ctx->sender = stix->active_context; 
 	ctx->ip = STIX_SMOOI_TO_OOP(0);
-	
-#if defined(STIX_USE_PROCSTK)
 	/* ctx->sp will be set further down */
-#else
-	/* the front part of a stack has temporary variables including arguments.
+
+	/* A context is compose of a fixed part and a variable part.
+	 * the variable part hold temporary varibles including arguments.
 	 *
-	 * New Context
-	 *
+	 * Assuming a method context with 2 arguments and 3 local temporary
+	 * variables, the context will look like this.
 	 *   +---------------------+
 	 *   | fixed part          |
 	 *   |                     |
@@ -973,18 +910,12 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	 *   +---------------------+
 	 *   | tmp1 (arg1)         | slot[0]
 	 *   | tmp2 (arg2)         | slot[1]
-	 *   | ....                | slot[..] 
-	 *   | tmpX                | slot[..]     <-- initial sp
-	 *   |                     | slot[..] 
-	 *   |                     | slot[..] 
-	 *   |                     | slot[stack_size - 2] 
-	 *   |                     | slot[stack_size - 1] 
+	 *   | tmp3                | slot[2] 
+	 *   | tmp4                | slot[3]
+	 *   | tmp5                | slot[4]
 	 *   +---------------------+
-	 *
-	 * if no temporaries exist, the initial sp is -1.
 	 */
-	ctx->sp = STIX_SMOOI_TO_OOP(ntmprs - 1);
-#endif
+
 	ctx->ntmprs = STIX_SMOOI_TO_OOP(ntmprs);
 	ctx->method_or_nargs = (stix_oop_t)mth;
 	/* the 'home' field of a method context is always stix->_nil.
@@ -1024,18 +955,13 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 
 	STIX_ASSERT (stix->sp >= -1);
 
-#if defined(STIX_USE_PROCSTK)
-	/* when process stack is used, the stack pointer in a context
-	 * is a stack pointer of a process before it is activated.
-	 * this stack pointer is stored to the context so that it is
-	 * used to restore the process stack pointer upon returning from
-	 * a method context. */
+	/* the stack pointer in a context is a stack pointer of a process 
+	 * before it is activated. this stack pointer is stored to the context
+	 * so that it is used to restore the process stack pointer upon returning
+	 * from a method context. */
 	ctx->sp = STIX_SMOOI_TO_OOP(stix->sp);
-#else
-	/* do nothing */
-#endif
 
-	/* switch the active context */
+	/* switch the active context to the newly instantiated one*/
 	SWITCH_ACTIVE_CONTEXT (stix, ctx);
 
 	return 0;
@@ -1134,15 +1060,8 @@ static int start_initial_process_and_context (stix_t* stix, const stix_oocs_t* o
 	stix_oop_method_t mth;
 	stix_oop_process_t proc;
 
-	/* create a fake initial context */
-#if defined(STIX_USE_PROCSTK)
+	/* create a fake initial context. */
 	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_method_context, STIX_NULL, 0);
-#else
-	/* stack size is set to 1 because it needs sapce to push the receiver 
-	 * referenced by 'objname' */
-/* TODO: increase the stack size to allow arguments to the intial methods */
-	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_method_context, STIX_NULL, 1);
-#endif
 	if (!ctx) return -1;
 
 	ass = stix_lookupsysdic (stix, objname);
@@ -1664,7 +1583,7 @@ STIX_DEBUG0 (stix, "PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 	STIX_ASSERT (local_ntmprs >= actual_arg_count);
 
 	/* create a new block context to clone rcv_blkctx */
-	blkctx = (stix_oop_context_t) stix_instantiate (stix, stix->_block_context, STIX_NULL, local_ntmprs + CONTEXT_STACK_SIZE); 
+	blkctx = (stix_oop_context_t) stix_instantiate (stix, stix->_block_context, STIX_NULL, local_ntmprs); 
 	if (!blkctx) return -1;
 
 	/* get rcv_blkctx again to be GC-safe for stix_instantiate() above */
@@ -1712,11 +1631,7 @@ STIX_DEBUG0 (stix, "PRIM BlockContext value FAIL - NARGS MISMATCH\n");
 	STIX_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
 
 	STIX_ASSERT (blkctx->home != stix->_nil);
-#if defined(STIX_USE_PROCSTK)
 	blkctx->sp = STIX_SMOOI_TO_OOP(-1); /* not important at all */
-#else
-	blkctx->sp = STIX_SMOOI_TO_OOP(local_ntmprs - 1); 
-#endif
 	blkctx->sender = stix->active_context;
 
 	*pblkctx = blkctx;
@@ -3931,12 +3846,8 @@ return -1;
 					}
 
 					STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context->origin) == stix->_method_context);
-				#if defined(STIX_USE_PROCSTK)
 					/* restore the stack pointer */
 					stix->sp = STIX_OOP_TO_SMOOI(stix->active_context->origin->sp);
-				#else
-					/* do nothing */
-				#endif
 					SWITCH_ACTIVE_CONTEXT (stix, stix->active_context->origin->sender);
 
 					if (unwind_protect)
@@ -4011,19 +3922,9 @@ return -1;
 					/* it is a normal block return as the active block context 
 					 * is not the initial context of a process */
 
-				#if defined(STIX_USE_PROCSTK)
 					/* the process stack is shared. the return value 
 					 * doesn't need to get moved. */
 					SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->sender);
-				#else
-					/* NOTE: GC must not performed between here and */
-					return_value = STIX_STACK_GETTOP(stix);
-					STIX_STACK_POP (stix); /* pop off the return value */
-
-					SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)stix->active_context->sender);
-					STIX_STACK_PUSH (stix, return_value); /* push it to the sender */
-					/* NOTE: here. if so, return_value will point to a garbage. */
-				#endif
 				}
 
 				break;

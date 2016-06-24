@@ -370,18 +370,7 @@
 		## --------------------------------------------------
 
 		## --------------------------------------------------
-		## If VM is built without STIX_USE_PROCSTK
-		## --------------------------------------------------
-		## | pc sp |
-		## sp := thisContext sp.
-		## pc := thisContext pcplus1.
-		## self value ifFalse: [ ^nil "^self" ].
-		## aBlock value.
-		## thisContext pc: pc sp: sp.
-		## --------------------------------------------------
-
-		## --------------------------------------------------
-		## If VM is built with STIX_USE_PROCSTK
+		## Non-recursive implementation
 		## --------------------------------------------------
 		| pc sp |
 
@@ -404,7 +393,7 @@
 		## self whileTrue.
 
 		## --------------------------------------------------
-		## If VM is built with STIX_USE_PROCSTK
+		## Non-recursive implementation
 		## --------------------------------------------------
 		| pc |
 		pc := thisContext pcplus1.
@@ -424,18 +413,7 @@
 		## --------------------------------------------------
 
 		## --------------------------------------------------
-		## If VM is built without STIX_USE_PROCSTK
-		## --------------------------------------------------
-		## | pc sp |
-		## sp := thisContext sp.
-		## pc := thisContext pcplus1.
-		## self value ifTrue: [ ^nil "^self" ].
-		## aBlock value.
-		## thisContext pc: pc sp: sp.
-		## --------------------------------------------------
-
-		## --------------------------------------------------
-		## If VM is built with STIX_USE_PROCSTK
+		## Non-recursive implementation
 		## --------------------------------------------------
 		##  The assignment to 'pc' uses the POP_INTO_TEMPVAR_1.
 		##  It pops a value off the stack top, stores it to the second
@@ -463,7 +441,7 @@
 		## self whileFalse.
 
 		## --------------------------------------------------
-		## If VM is built with STIX_USE_PROCSTK
+		## Non-recursive implementation
 		## --------------------------------------------------
 		| pc |
 		pc := thisContext pcplus1.

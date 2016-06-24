@@ -33,9 +33,6 @@
 /* TODO: move this macro out to the build files.... */
 #define STIX_INCLUDE_COMPILER
 
-/* define this to use the stack allocated inside process stack */
-#define STIX_USE_PROCSTK
-
 /* define this to allow an pointer(OOP) object to have trailing bytes 
  * this is used to embed bytes codes into the back of a compile method
  * object instead of putting in in a separate byte array. */
@@ -531,16 +528,17 @@ struct stix_context_t
 	/* SmallInteger, instruction pointer */
 	stix_oop_t          ip;
 
-	/* SmallInteger, stack pointer.
-	 * For a method context, this pointer stores the stack pointer
-	 * of the active process before it gets activated. */
+	/* SmallInteger, stack pointer. the actual stack pointer is in the active
+	 * process. For a method context, it stores the stack pointer of the active
+	 * process before it gets activated. the stack pointer of the active 
+	 * process is restored using this value upon returning. This field is
+	 * almost useless for a block context. */
 	stix_oop_t          sp;
 
 	/* SmallInteger. Number of temporaries.
 	 * For a block context, it's inclusive of the temporaries
 	 * defined its 'home'. */
 	stix_oop_t          ntmprs;
-
 
 	/* CompiledMethod for a method context, 
 	 * SmallInteger for a block context */
@@ -862,27 +860,16 @@ struct stix_t
 #endif
 };
 
-#if defined(STIX_USE_PROCSTK)
+
 /* TODO: stack bound check when pushing */
-	#define STIX_STACK_PUSH(stix,v) \
-		do { \
-			(stix)->sp = (stix)->sp + 1; \
-			(stix)->processor->active->slot[(stix)->sp] = v; \
-		} while (0)
+#define STIX_STACK_PUSH(stix,v) \
+	do { \
+		(stix)->sp = (stix)->sp + 1; \
+		(stix)->processor->active->slot[(stix)->sp] = v; \
+	} while (0)
 
-	#define STIX_STACK_GET(stix,v_sp) ((stix)->processor->active->slot[v_sp])
-	#define STIX_STACK_SET(stix,v_sp,v_obj) ((stix)->processor->active->slot[v_sp] = v_obj)
-
-#else
-	#define STIX_STACK_PUSH(stix,v) \
-		do { \
-			(stix)->sp = (stix)->sp + 1; \
-			(stix)->active_context->slot[(stix)->sp] = v; \
-		} while (0)
-
-	#define STIX_STACK_GET(stix,v_sp) ((stix)->active_context->slot[v_sp])
-	#define STIX_STACK_SET(stix,v_sp,v_obj) ((stix)->active_context->slot[v_sp] = v_obj)
-#endif
+#define STIX_STACK_GET(stix,v_sp) ((stix)->processor->active->slot[v_sp])
+#define STIX_STACK_SET(stix,v_sp,v_obj) ((stix)->processor->active->slot[v_sp] = v_obj)
 
 #define STIX_STACK_GETTOP(stix) STIX_STACK_GET(stix, (stix)->sp)
 #define STIX_STACK_SETTOP(stix,v_obj) STIX_STACK_SET(stix, (stix)->sp, v_obj)
@@ -890,7 +877,6 @@ struct stix_t
 #define STIX_STACK_POP(stix) ((stix)->sp = (stix)->sp - 1)
 #define STIX_STACK_POPS(stix,count) ((stix)->sp = (stix)->sp - (count))
 #define STIX_STACK_ISEMPTY(stix) ((stix)->sp <= -1)
-
 
 /* =========================================================================
  * STIX VM LOGGING
