@@ -17949,7 +17949,6 @@ esac
 LIBM=$LIBM
 
 
-check some compiler builtins
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking __builtin_memset" >&5
 $as_echo_n "checking __builtin_memset... " >&6; }
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
