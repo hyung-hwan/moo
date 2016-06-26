@@ -128,6 +128,8 @@
 #endif
 
 
+#define __PRIMITIVE_NAME__ (&__FUNCTION__[5])
+
 /* ------------------------------------------------------------------------- */
 static STIX_INLINE void vm_gettime (stix_t* stix, stix_ntime_t* now)
 {
@@ -1495,12 +1497,10 @@ static int prim_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-
 static int prim_context_goto (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 	stix_oop_t pc;
-	stix_oow_t pcw;
 
 	/* this primivie provides the similar functionality to  MethodContext>>pc:
 	 * except that it pops the receiver and arguments and doesn't push a
@@ -1509,21 +1509,20 @@ static int prim_context_goto (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs == 1);
 
+
 	rcv = STIX_STACK_GET(stix, stix->sp - 1);
 	if (STIX_CLASSOF(stix, rcv) != stix->_method_context)
 	{
-#if defined(STIX_DEBUG_VM_EXEC)
-STIX_DEBUG0 (stix, "prim_context_goto: PRIMITVE RECEIVER IS NOT A METHOD CONTEXT\n");
-#endif
+		STIX_LOG2 (stix, STIX_LOG_PRIMITIVE | STIX_LOG_ERROR, 
+			"Error(%hs) - invalid receiver, not a method context- %O\n", __PRIMITIVE_NAME__, rcv);
 		return 0;
 	}
 
 	pc = STIX_STACK_GET(stix, stix->sp);
 	if (!STIX_OOP_IS_SMOOI(pc) || STIX_OOP_TO_SMOOI(pc) < 0)
 	{
-#if defined(STIX_DEBUG_VM_EXEC)
-STIX_DEBUG0 (stix, "prim_context_goto: PRIMITVE ARGUMENT IS INVALID\n");
-#endif
+		STIX_LOG1 (stix, STIX_LOG_PRIMITIVE | STIX_LOG_ERROR,
+			"Error(%hs) - invalid pc\n", __PRIMITIVE_NAME__);
 		return 0;
 	}
 
@@ -1560,9 +1559,8 @@ static int __block_value (stix_t* stix, stix_ooi_t rcv_blkctx_offset, stix_ooi_t
 	if (STIX_CLASSOF(stix, rcv_blkctx) != stix->_block_context)
 	{
 		/* the receiver must be a block context */
-#if defined(STIX_DEBUG_VM_EXEC)
-STIX_DEBUG0 (stix, "PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
-#endif
+		STIX_LOG2 (stix, STIX_LOG_PRIMITIVE | STIX_LOG_ERROR, 
+			"Error(%hs) - invalid receiver, not a block context- %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
 		return 0;
 	}
 
@@ -1573,20 +1571,17 @@ STIX_DEBUG0 (stix, "PRIMITVE VALUE RECEIVER IS NOT A BLOCK CONTEXT\n");
 		 * you can't send 'value' again to reactivate it.
 		 * For example, [thisContext value] value. */
 		STIX_ASSERT (STIX_OBJ_GET_SIZE(rcv_blkctx) > STIX_CONTEXT_NAMED_INSTVARS);
-#if defined(STIX_DEBUG_VM_EXEC)
-STIX_DEBUG0 (stix, "PRIM REVALUING AN BLOCKCONTEXT\n");
-#endif
+		STIX_LOG2 (stix, STIX_LOG_PRIMITIVE | STIX_LOG_ERROR, 
+			"Error(%hs) - re-valuing of a block context - %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
 		return 0;
 	}
 	STIX_ASSERT (STIX_OBJ_GET_SIZE(rcv_blkctx) == STIX_CONTEXT_NAMED_INSTVARS);
 
 	if (STIX_OOP_TO_SMOOI(rcv_blkctx->method_or_nargs) != actual_arg_count /* nargs */)
 	{
-		/* the number of argument doesn't match */
-#if defined(STIX_DEBUG_VM_EXEC)
-/* TODO: better handling of primitive failure */
-STIX_DEBUG0 (stix, "PRIM BlockContext value FAIL - NARGS MISMATCH\n");
-#endif
+		STIX_LOG4 (stix, STIX_LOG_PRIMITIVE | STIX_LOG_ERROR, 
+			"Error(%hs) - wrong number of arguments to a block context %O - expecting %zd, got %zd\n",
+			__PRIMITIVE_NAME__, rcv_blkctx, STIX_OOP_TO_SMOOI(rcv_blkctx->method_or_nargs), actual_arg_count);
 		return 0;
 	}
 
@@ -1866,9 +1861,9 @@ static int prim_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
 	{
 		/* soft error - cannot represent the expiry time in
 		 *              a small integer. */
-		STIX_LOG2 (stix, STIX_LOG_IC | STIX_LOG_ERROR, 
-			"Error - time (%ld) out of range(0 - %zd) when adding a timed semaphore\n",
-			(unsigned long int)ft.sec, (stix_ooi_t)STIX_SMOOI_MAX);
+		STIX_LOG3 (stix, STIX_LOG_PRIMITIVE | STIX_LOG_ERROR, 
+			"Error(%hs) - time (%ld) out of range(0 - %zd) when adding a timed semaphore\n", 
+			__PRIMITIVE_NAME__, (unsigned long int)ft.sec, (stix_ooi_t)STIX_SMOOI_MAX);
 		return 0;
 	}
 

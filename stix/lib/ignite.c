@@ -94,6 +94,7 @@ static int ignite_1 (stix_t* stix)
 	STIX_ASSERT (stix->_nil != STIX_NULL);
 	STIX_ASSERT (STIX_OBJ_GET_CLASS(stix->_nil) == STIX_NULL);
 
+	STIX_ASSERT (stix->_class == STIX_NULL);
 	/* --------------------------------------------------------------
 	 * Class
 	 * The instance of Class can have indexed instance variables 

@@ -815,7 +815,7 @@ number:
 			else if (flagc & FLAGC_SIGN) tmp++;
 			else if (flagc & FLAGC_SPACE) tmp++;
 
-			numlen = nbufp - nbuf;
+			numlen = (int)((const stix_bch_t*)nbufp - (const stix_bch_t*)nbuf);
 			if ((flagc & FLAGC_DOT) && precision > numlen) 
 			{
 				/* extra zeros for precision specified */

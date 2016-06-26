@@ -885,15 +885,16 @@ struct stix_t
 
 enum stix_log_mask_t
 {
-	STIX_LOG_DEBUG    = (1 << 0),
-	STIX_LOG_INFO     = (1 << 1),
-	STIX_LOG_WARN     = (1 << 2),
-	STIX_LOG_ERROR    = (1 << 3),
-	STIX_LOG_FATAL    = (1 << 4),
+	STIX_LOG_DEBUG     = (1 << 0),
+	STIX_LOG_INFO      = (1 << 1),
+	STIX_LOG_WARN      = (1 << 2),
+	STIX_LOG_ERROR     = (1 << 3),
+	STIX_LOG_FATAL     = (1 << 4),
 
-	STIX_LOG_MNEMONIC = (1 << 8), /* bytecode mnemonic */
-	STIX_LOG_GC       = (1 << 9),
-	STIX_LOG_IC       = (1 << 10) /* instruction cycle, fetch-decode-execute */
+	STIX_LOG_MNEMONIC  = (1 << 8), /* bytecode mnemonic */
+	STIX_LOG_GC        = (1 << 9),
+	STIX_LOG_IC        = (1 << 10), /* instruction cycle, fetch-decode-execute */
+	STIX_LOG_PRIMITIVE = (1 << 11)
 };
 typedef enum stix_log_mask_t stix_log_mask_t;
 

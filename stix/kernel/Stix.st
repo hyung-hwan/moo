@@ -283,6 +283,7 @@
 }
 
 #include 'Context.st'.
+#include 'Except.st'.
 #include 'Process.st'.
 
 #class FFI(Object)
