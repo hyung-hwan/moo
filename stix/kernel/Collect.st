@@ -105,10 +105,51 @@
 {
 }
 
-#class SystemDictionary(Dictionary)
+#pooldic Log
 {
+	## -----------------------------------------------------------
+	## these items must follow defintions in stix.h
+	## -----------------------------------------------------------
+	#DEBUG := 1.
+	#INFO  := 2.
+	#WARN  := 4.
+	#ERROR := 8.
+	#FATAL := 16.
 }
 
+#class SystemDictionary(Dictionary)
+{
+	## the following methods may not look suitable to be placed
+	## inside a system dictionary. but they are here for quick and dirty
+	## output production from the stix code.
+	##   System logNl: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'.
+	##
+
+	#dcl(#pooldic) Log.
+
+	#method log: message level: level
+	{
+		<primitive: #_log>
+		## do nothing upon logging failure
+	}
+
+	#method logNl: message level: level
+	{
+		self log: message level: level.
+		self log: S'\n' level: level.
+		^self.
+	}
+
+	#method log: message
+	{
+		^self log: message level: Log.INFO.
+	}
+
+	#method logNl: message
+	{
+		^self logNl: message level: Log.INFO.
+	}
+}
 
 #class Namespace(Set)
 {

@@ -286,6 +286,10 @@
 #include 'Except.st'.
 #include 'Process.st'.
 
+#class Resource(Object)
+{
+}
+
 #class FFI(Object)
 {
 	#dcl name handle funcs.

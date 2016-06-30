@@ -294,7 +294,7 @@ typedef stix_shortptr_t          stix_oohi_t; /* signed half word */
 struct stix_ucs_t
 {
 	stix_uch_t* ptr;
-	stix_oow_t len;
+	stix_oow_t  len;
 };
 typedef struct stix_ucs_t stix_ucs_t;
 

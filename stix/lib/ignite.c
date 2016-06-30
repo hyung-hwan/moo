@@ -149,6 +149,7 @@ static int ignite_1 (stix_t* stix)
 	stix->_small_integer     = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 	stix->_large_positive_integer = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_LIWORD));
 	stix->_large_negative_integer = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_LIWORD));
+	stix->_resource          = alloc_kernel_class (stix, 0, STIX_CLASS_SPEC_MAKE(0, 0, STIX_OBJ_TYPE_OOP));
 
 	if (!stix->_apex              || !stix->_undefined_object  || 
 	    !stix->_object            || !stix->_string            ||
@@ -164,7 +165,7 @@ static int ignite_1 (stix_t* stix)
 
 	    !stix->_true_class        || !stix->_false_class       || 
 	    !stix->_character         || !stix->_small_integer     || 
-	    !stix->_large_positive_integer  || !stix->_large_negative_integer) return -1;
+	    !stix->_large_positive_integer  || !stix->_large_negative_integer || !stix->_resource) return -1;
 
 	STIX_OBJ_SET_CLASS (stix->_nil, stix->_undefined_object);
 	return 0;

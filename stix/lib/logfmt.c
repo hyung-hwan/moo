@@ -299,6 +299,10 @@ static void print_object (stix_t* stix, unsigned int mask, stix_oop_t oop)
 	{
 		stix_logbfmt (stix, mask, "$%.1C", STIX_OOP_TO_CHAR(oop));
 	}
+	else if (STIX_OOP_IS_RSRC(oop))
+	{
+		stix_logbfmt (stix, mask, "%zX", stix->rsrc.ptr[STIX_OOP_TO_RSRC(oop)]);
+	}
 	else
 	{
 		stix_oop_class_t c;
@@ -327,11 +331,81 @@ static void print_object (stix_t* stix, unsigned int mask, stix_oop_t oop)
 		}
 		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_CHAR)
 		{
-			if ((stix_oop_t)c == stix->_symbol) stix_logbfmt (stix, mask, "#");
-			else if ((stix_oop_t)c == stix->_string) stix_logbfmt (stix, mask, "'");
+			if ((stix_oop_t)c == stix->_symbol) 
+			{
+				stix_logbfmt (stix, mask, "#%.*S", STIX_OBJ_GET_SIZE(oop), ((stix_oop_char_t)oop)->slot);
+			}
+			else /*if ((stix_oop_t)c == stix->_string)*/
+			{
+				stix_ooch_t ch;
+				int escape = 0;
 
-			stix_logbfmt (stix, mask, "%.*S", STIX_OBJ_GET_SIZE(oop), ((stix_oop_char_t)oop)->slot);
-			if ((stix_oop_t)c == stix->_string) stix_logbfmt (stix,  mask, "'");
+				for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+				{
+					ch = ((stix_oop_char_t)oop)->slot[i];
+					if (ch < ' ') 
+					{
+						escape = 1;
+						break;
+					}
+				}
+
+				if (escape)
+				{
+					stix_ooch_t escaped;
+
+					stix_logbfmt (stix, mask, "S'");
+					for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+					{
+						ch = ((stix_oop_char_t)oop)->slot[i];
+						if (ch < ' ') 
+						{
+							switch (ch)
+							{
+								case '\0':
+									escaped = '0';
+									break;
+								case '\r':
+									escaped = 'r';
+									break;
+								case '\t':
+									escaped = 't';
+									break;
+								case '\f':
+									escaped = 'f';
+									break;
+								case '\b':
+									escaped = 'b';
+									break;
+								case '\v':
+									escaped = 'v';
+									break;
+								case '\a':
+									escaped = 'a';
+									break;
+								default:
+									escaped = ch;
+									break;
+							}
+
+							if (escaped == ch)
+								stix_logbfmt (stix, mask, "\\x%X", ch);
+							else
+								stix_logbfmt (stix, mask, "\\%C", escaped);
+						}
+						else
+						{
+							stix_logbfmt (stix, mask, "%C", ch);
+						}
+					}
+					
+					stix_logbfmt (stix, mask, "'");
+				}
+				else
+				{
+					stix_logbfmt (stix, mask, "'%.*S'", STIX_OBJ_GET_SIZE(oop), ((stix_oop_char_t)oop)->slot);
+				}
+			}
 		}
 		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_BYTE)
 		{

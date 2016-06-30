@@ -94,8 +94,9 @@ int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_oow_t heapsz, const stix_vm
 	stix->option.dfl_sysdic_size = STIX_DFL_SYSDIC_SIZE;
 	stix->option.dfl_procstk_size = STIX_DFL_PROCSTK_SIZE;
 
+/* TODO: intoduct a permanent heap */
 	/*stix->permheap = stix_makeheap (stix, what is the best size???);
-	if (!stix->curheap) goto oops; */
+	if (!stix->permheap) goto oops; */
 	stix->curheap = stix_makeheap (stix, heapsz);
 	if (!stix->curheap) goto oops;
 	stix->newheap = stix_makeheap (stix, heapsz);
@@ -105,6 +106,11 @@ int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_oow_t heapsz, const stix_vm
 	stix_rbt_setstyle (&stix->pmtable, stix_getrbtstyle(STIX_RBT_STYLE_INLINE_COPIERS));
 
 	fill_bigint_tables (stix);
+
+	stix->tagged_classes[STIX_OOP_TAG_SMINT] = &stix->_small_integer;
+	stix->tagged_classes[STIX_OOP_TAG_CHAR] = &stix->_character;
+	stix->tagged_classes[STIX_OOP_TAG_RSRC] = &stix->_resource;
+
 	return 0;
 
 oops:
@@ -152,9 +158,18 @@ void stix_fini (stix_t* stix)
 	stix_rbt_walk (&stix->pmtable, unload_primitive_module, stix);
 	stix_rbt_fini (&stix->pmtable);
 
+/* TOOD: persistency? storing objects to image file? */
 	stix_killheap (stix, stix->newheap);
 	stix_killheap (stix, stix->curheap);
 	stix_killheap (stix, stix->permheap);
+
+	if (stix->rsrc.ptr)
+	{
+		stix_freemem (stix, stix->rsrc.ptr);
+		stix->rsrc.free = 0;
+		stix->rsrc.capa = 0;
+		stix->rsrc.ptr = STIX_NULL;
+	}
 
 	/* deregister all callbacks */
 	while (stix->cblist) stix_deregcb (stix, stix->cblist);
@@ -331,4 +346,62 @@ void* stix_reallocmem (stix_t* stix, void* ptr, stix_oow_t size)
 void stix_freemem (stix_t* stix, void* ptr)
 {
 	STIX_MMGR_FREE (stix->mmgr, ptr);
+}
+
+
+
+stix_oop_t stix_makersrc (stix_t* stix, stix_oow_t v)
+{
+	stix_oop_t imm;
+	stix_oow_t avail;
+
+	if (stix->rsrc.free >= stix->rsrc.capa)
+	{
+		stix_oow_t* tmp;
+		stix_ooi_t newcapa, i;
+
+		newcapa = stix->rsrc.capa + 256;
+
+		tmp = stix_reallocmem (stix, stix->rsrc.ptr, STIX_SIZEOF(*tmp) * newcapa);
+		if (!tmp) return STIX_NULL;
+
+		for (i = stix->rsrc.capa; i < newcapa; i++) tmp[i] = i + 1;
+		stix->rsrc.free = i;
+		stix->rsrc.ptr = tmp;
+		stix->rsrc.capa = newcapa;
+	}
+
+	avail = stix->rsrc.free;
+	stix->rsrc.free = stix->rsrc.ptr[stix->rsrc.free];
+	stix->rsrc.ptr[avail] = v;
+
+	/* there must not be too many immedates in the whole system. */
+	STIX_ASSERT (STIX_IN_SMOOI_RANGE(avail));
+	return STIX_RSRC_TO_OOP(avail);
+
+	return imm;
+}
+
+void stix_killrsrc (stix_t* stix, stix_oop_t imm)
+{
+	if (STIX_OOP_IS_RSRC(stix))
+	{
+		stix_ooi_t v;
+
+		v = STIX_OOP_TO_RSRC(stix);
+
+		/* the value of v, if properly created by stix_makeimm(), must
+		 * fall in the following range. when storing and loading the values
+		 * from an image file, you must take extra care not to break this
+		 * assertion */
+		STIX_ASSERT (v >= 0 && v < stix->rsrc.capa);
+		stix->rsrc.ptr[v] = stix->rsrc.free;
+		stix->rsrc.free = v;
+	}
+}
+
+stix_oow_t stix_getrsrcval (stix_t* stix, stix_oop_t imm)
+{
+	STIX_ASSERT (STIX_OOP_IS_RSRC(imm));
+	return stix->rsrc.ptr[STIX_OOP_TO_RSRC(imm)];
 }

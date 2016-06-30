@@ -169,22 +169,29 @@ typedef struct stix_obj_word_t*     stix_oop_word_t;
  * of a real OOP are always 0s.
  */
 
-#define STIX_OOP_TAG_BITS  2
-#define STIX_OOP_TAG_SMINT 1
-#define STIX_OOP_TAG_CHAR  2
+#define STIX_OOP_TAG_BITS   2
+#define STIX_OOP_TAG_SMINT  1
+#define STIX_OOP_TAG_CHAR   2
+#define STIX_OOP_TAG_RSRC   3
 
-#define STIX_OOP_IS_NUMERIC(oop) (((stix_oow_t)oop) & (STIX_OOP_TAG_SMINT | STIX_OOP_TAG_CHAR))
-#define STIX_OOP_IS_POINTER(oop) (!STIX_OOP_IS_NUMERIC(oop))
 #define STIX_OOP_GET_TAG(oop) (((stix_oow_t)oop) & STIX_LBMASK(stix_oow_t, STIX_OOP_TAG_BITS))
+#define STIX_OOP_IS_NUMERIC(oop) (STIX_OOP_GET_TAG(oop) != 0)
+#define STIX_OOP_IS_POINTER(oop) (STIX_OOP_GET_TAG(oop) == 0)
 
-#define STIX_OOP_IS_SMOOI(oop) (((stix_ooi_t)oop) & STIX_OOP_TAG_SMINT)
-#define STIX_OOP_IS_CHAR(oop) (((stix_oow_t)oop) & STIX_OOP_TAG_CHAR)
+#define STIX_OOP_IS_SMOOI(oop) (STIX_OOP_GET_TAG(oop) == STIX_OOP_TAG_SMINT)
+#define STIX_OOP_IS_CHAR(oop) (STIX_OOP_GET_TAG(oop) == STIX_OOP_TAG_CHAR)
+#define STIX_OOP_IS_RSRC(oop) (STIX_OOP_GET_TAG(oop) == STIX_OOP_TAG_RSRC)
+
 #define STIX_SMOOI_TO_OOP(num) ((stix_oop_t)((((stix_ooi_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_SMINT))
 #define STIX_OOP_TO_SMOOI(oop) (((stix_ooi_t)oop) >> STIX_OOP_TAG_BITS)
 #define STIX_CHAR_TO_OOP(num) ((stix_oop_t)((((stix_oow_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_CHAR))
 #define STIX_OOP_TO_CHAR(oop) (((stix_oow_t)oop) >> STIX_OOP_TAG_BITS)
 
-/* SMOOI takes up 62 bit on a 64-bit architecture and 30 bits 
+/* RSRC(resurce) is a index to the VM's resource table(stix->rsrc.ptr) */
+#define STIX_RSRC_TO_OOP(num) ((stix_oop_t)((((stix_oow_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_RSRC))
+#define STIX_OOP_TO_RSRC(oop) (((stix_oow_t)oop) >> STIX_OOP_TAG_BITS)
+
+/* SMOOI takes up 62 bits on a 64-bit architecture and 30 bits 
  * on a 32-bit architecture. The absolute value takes up 61 bits and 29 bits
  * respectively for the 1 sign bit. */
 #define STIX_SMOOI_BITS (STIX_OOI_BITS - STIX_OOP_TAG_BITS)
@@ -194,7 +201,7 @@ typedef struct stix_obj_word_t*     stix_oop_word_t;
  * implementation a lot eaisier in many respect. */
 /*#define STIX_SMOOI_MIN (-STIX_SMOOI_MAX - 1)*/
 #define STIX_SMOOI_MIN (-STIX_SMOOI_MAX)
-#define STIX_IN_SMOOI_RANGE(ooi)  ((ooi) >= STIX_SMOOI_MIN && (ooi) <= STIX_SMOOI_MAX)
+#define STIX_IN_SMOOI_RANGE(ooi) ((ooi) >= STIX_SMOOI_MIN && (ooi) <= STIX_SMOOI_MAX)
 
 /* TODO: There are untested code where smint is converted to stix_oow_t.
  *       for example, the spec making macro treats the number as stix_oow_t instead of stix_ooi_t.
@@ -628,10 +635,14 @@ struct stix_process_scheduler_t
  * The STIX_CLASSOF() macro return the class of an object including a numeric
  * object encoded into a pointer.
  */
+/*
 #define STIX_CLASSOF(stix,oop) ( \
 	STIX_OOP_IS_SMOOI(oop)? (stix)->_small_integer: \
 	STIX_OOP_IS_CHAR(oop)? (stix)->_character: STIX_OBJ_GET_CLASS(oop) \
 )
+* */
+#define STIX_CLASSOF(stix,oop) \
+	(STIX_OOP_GET_TAG(oop)? *stix->tagged_classes[STIX_OOP_GET_TAG(oop)]: STIX_OBJ_GET_CLASS(oop))
 
 /**
  * The STIX_BYTESOF() macro returns the size of the payload of
@@ -816,8 +827,11 @@ struct stix_t
 	stix_oop_t _small_integer; /* SmallInteger */
 	stix_oop_t _large_positive_integer; /* LargePositiveInteger */
 	stix_oop_t _large_negative_integer; /* LargeNegativeInteger */
+
+	stix_oop_t _resource;
 	/* == NEVER CHANGE THE ORDER OF FIELDS ABOVE == */
 
+	stix_oop_t* tagged_classes[4];
 	stix_oop_set_t symtab; /* system-wide symbol table. instance of SymbolSet */
 	stix_oop_set_t sysdic; /* system dictionary. instance of SystemDictionary */
 	stix_oop_process_scheduler_t processor; /* instance of ProcessScheduler */
@@ -855,6 +869,15 @@ struct stix_t
 		stix_oow_t multiplier;
 	} bigint[37];
 	/* == END BIGINT CONVERSION == */
+
+	/* == RSRC MANAGEMENT == */
+	struct
+	{
+		stix_oow_t* ptr;
+		stix_oow_t  free;
+		stix_oow_t  capa;
+	} rsrc;
+	/* == END RSRC MANAGEMENT == */
 
 #if defined(STIX_INCLUDE_COMPILER)
 	stix_compiler_t* c;
@@ -894,7 +917,8 @@ enum stix_log_mask_t
 	STIX_LOG_MNEMONIC  = (1 << 8), /* bytecode mnemonic */
 	STIX_LOG_GC        = (1 << 9),
 	STIX_LOG_IC        = (1 << 10), /* instruction cycle, fetch-decode-execute */
-	STIX_LOG_PRIMITIVE = (1 << 11)
+	STIX_LOG_PRIMITIVE = (1 << 11),
+	STIX_LOG_APP       = (1 << 12) /* stix applications, set by stix logging primitive */
 };
 typedef enum stix_log_mask_t stix_log_mask_t;
 

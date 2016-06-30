@@ -128,7 +128,7 @@
 #endif
 
 
-#define __PRIMITIVE_NAME__ (&__FUNCTION__[5])
+#define __PRIMITIVE_NAME__ (&__FUNCTION__[4])
 
 /* ------------------------------------------------------------------------- */
 static STIX_INLINE void vm_gettime (stix_t* stix, stix_ntime_t* now)
@@ -1167,6 +1167,62 @@ static int prim_dump (stix_t* stix, stix_ooi_t nargs)
 	return 1; /* success */
 }
 
+static int prim_log (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t msg, level;
+
+	STIX_ASSERT (nargs >=  2);
+
+	level = STIX_STACK_GET(stix, stix->sp);
+	msg = STIX_STACK_GET(stix, stix->sp - 1);
+
+/* TODO: SUPPORT ARBITRARY NUMBERS OF MESSAGES */
+	if (!STIX_OOP_IS_SMOOI(level)) level = STIX_SMOOI_TO_OOP(STIX_LOG_INFO);
+
+	if (STIX_OOP_IS_POINTER(msg) && STIX_OBJ_GET_FLAGS_TYPE(msg))
+	{
+		stix_ooi_t n;
+		stix_oow_t rem;
+		const stix_ooch_t* ptr;
+
+		rem = STIX_OBJ_GET_SIZE(msg);
+		ptr = ((stix_oop_char_t)msg)->slot;
+
+	start_over:
+		while (rem > 0)
+		{
+			if (*ptr == '\0') 
+			{
+				n = stix_logbfmt (stix, STIX_LOG_APP | STIX_OOP_TO_SMOOI(level), "%C", *ptr);
+				STIX_ASSERT (n == 1);
+				rem -= n;
+				ptr += n;
+				goto start_over;
+			}
+
+			n = stix_logbfmt (stix, STIX_LOG_APP | STIX_OOP_TO_SMOOI(level), "%.*S", rem, ptr);
+			if (n <= -1) break;
+			if (n == 0) 
+			{
+				/* to skip the unprinted character. 
+				 * actually, this check is not needed because of '\0' skipping
+				 * at the beginning  of the loop */
+				n = stix_logbfmt (stix, STIX_LOG_APP | STIX_OOP_TO_SMOOI(level), "%C", *ptr);
+				STIX_ASSERT (n == 1);
+			}
+			rem -= n;
+			ptr += n;
+		}
+	}
+	else
+	{
+		stix_logbfmt (stix, STIX_LOG_APP | STIX_OOP_TO_SMOOI(level), "%O", msg);
+	}
+
+	STIX_STACK_POPS (stix, nargs); /* delete arguments, keep self */
+	return 1;
+}
+
 static int prim_identical (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, b;
@@ -1514,7 +1570,7 @@ static int prim_context_goto (stix_t* stix, stix_ooi_t nargs)
 	if (STIX_CLASSOF(stix, rcv) != stix->_method_context)
 	{
 		STIX_LOG2 (stix, STIX_LOG_PRIMITIVE | STIX_LOG_ERROR, 
-			"Error(%hs) - invalid receiver, not a method context- %O\n", __PRIMITIVE_NAME__, rcv);
+			"Error(%hs) - invalid receiver, not a method context - %O\n", __PRIMITIVE_NAME__, rcv);
 		return 0;
 	}
 
@@ -1560,7 +1616,7 @@ static int __block_value (stix_t* stix, stix_ooi_t rcv_blkctx_offset, stix_ooi_t
 	{
 		/* the receiver must be a block context */
 		STIX_LOG2 (stix, STIX_LOG_PRIMITIVE | STIX_LOG_ERROR, 
-			"Error(%hs) - invalid receiver, not a block context- %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
+			"Error(%hs) - invalid receiver, not a block context - %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
 		return 0;
 	}
 
@@ -1745,6 +1801,8 @@ static int prim_process_terminate (stix_t* stix, stix_ooi_t nargs)
 	stix_oop_t rcv;
 	STIX_ASSERT (nargs == 0);
 
+/* TODO: need to run ensure blocks here..
+ * when it's executed here. it does't have to be in Exception>>handleException when there is no exception handler */
 	rcv = STIX_STACK_GET(stix, stix->sp);
 	if (STIX_CLASSOF(stix,rcv) != stix->_process) return 0;
 
@@ -2598,6 +2656,7 @@ typedef struct prim_t prim_t;
 static prim_t primitives[] =
 {
 	{   0, MAX_NARGS,  prim_dump,                      "_dump"                },
+	{   2,  2,  prim_log,                              "_log"                 },
 
 	{   1,  1,  prim_identical,                        "_identical"           },
 	{   1,  1,  prim_not_identical,                    "_not_identical"       },

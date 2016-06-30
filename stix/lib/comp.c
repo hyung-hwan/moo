@@ -5005,6 +5005,7 @@ static int compile_stream (stix_t* stix)
 		}
 		else if (is_token_symbol(stix, VOCA_POOLDIC))
 		{
+/* TODO: allow #pooldic within #class */
 			/* #pooldic SharedPoolDic { #abc := 20. #defg := 'ayz' } */
 			GET_TOKEN (stix);
 			if (compile_pooldic_definition(stix) <= -1) return -1;
