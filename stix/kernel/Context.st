@@ -246,6 +246,4 @@
 	{
 		ip := self.source pc.
 	}
-
 }
-

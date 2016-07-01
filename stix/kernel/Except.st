@@ -165,6 +165,8 @@
 			].
 			stop := (ctx == context).
 			ctx := ctx sender.
+
+			## stop ifFalse: [ stop := ctx isNil ].
 		].
 
 		^retval

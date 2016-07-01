@@ -557,7 +557,6 @@ static void resume_process (stix_t* stix, stix_oop_process_t proc)
 
 		/* don't switch to this process. just set the state to RUNNING */
 	}
-
 #if 0
 	else if (proc->state == STIX_SMOOI_TO_OOP(PROC_STATE_RUNNABLE))
 	{
@@ -1167,56 +1166,100 @@ static int prim_dump (stix_t* stix, stix_ooi_t nargs)
 	return 1; /* success */
 }
 
+static void log_char_object (stix_t* stix, stix_oow_t mask, stix_oop_char_t msg)
+{
+	stix_ooi_t n;
+	stix_oow_t rem;
+	const stix_ooch_t* ptr;
+
+	STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(msg) == STIX_OBJ_TYPE_CHAR);
+
+	rem = STIX_OBJ_GET_SIZE(msg);
+	ptr = msg->slot;
+
+start_over:
+	while (rem > 0)
+	{
+		if (*ptr == '\0') 
+		{
+			n = stix_logbfmt (stix, mask, "%C", *ptr);
+			STIX_ASSERT (n == 1);
+			rem -= n;
+			ptr += n;
+			goto start_over;
+		}
+
+		n = stix_logbfmt (stix, mask, "%.*S", rem, ptr);
+		if (n <= -1) break;
+		if (n == 0) 
+		{
+			/* to skip the unprinted character. 
+			 * actually, this check is not needed because of '\0' skipping
+			 * at the beginning  of the loop */
+			n = stix_logbfmt (stix, mask, "%C", *ptr);
+			STIX_ASSERT (n == 1);
+		}
+		rem -= n;
+		ptr += n;
+	}
+}
+
 static int prim_log (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t msg, level;
+	stix_oow_t mask;
+	stix_ooi_t k;
 
 	STIX_ASSERT (nargs >=  2);
 
-	level = STIX_STACK_GET(stix, stix->sp);
-	msg = STIX_STACK_GET(stix, stix->sp - 1);
+	level = STIX_STACK_GET(stix, stix->sp - nargs + 1);
+	if (!STIX_OOP_IS_SMOOI(level)) mask = STIX_LOG_APP | STIX_LOG_INFO; 
+	else mask = STIX_LOG_APP | STIX_OOP_TO_SMOOI(level);
 
-/* TODO: SUPPORT ARBITRARY NUMBERS OF MESSAGES */
-	if (!STIX_OOP_IS_SMOOI(level)) level = STIX_SMOOI_TO_OOP(STIX_LOG_INFO);
-
-	if (STIX_OOP_IS_POINTER(msg) && STIX_OBJ_GET_FLAGS_TYPE(msg))
+	for (k = nargs - 1; k > 0; )
 	{
-		stix_ooi_t n;
-		stix_oow_t rem;
-		const stix_ooch_t* ptr;
+		--k;
+		msg = STIX_STACK_GET(stix, stix->sp - k);
 
-		rem = STIX_OBJ_GET_SIZE(msg);
-		ptr = ((stix_oop_char_t)msg)->slot;
-
-	start_over:
-		while (rem > 0)
+		if (msg == stix->_nil || msg == stix->_true || msg == stix->_false) 
 		{
-			if (*ptr == '\0') 
-			{
-				n = stix_logbfmt (stix, STIX_LOG_APP | STIX_OOP_TO_SMOOI(level), "%C", *ptr);
-				STIX_ASSERT (n == 1);
-				rem -= n;
-				ptr += n;
-				goto start_over;
-			}
-
-			n = stix_logbfmt (stix, STIX_LOG_APP | STIX_OOP_TO_SMOOI(level), "%.*S", rem, ptr);
-			if (n <= -1) break;
-			if (n == 0) 
-			{
-				/* to skip the unprinted character. 
-				 * actually, this check is not needed because of '\0' skipping
-				 * at the beginning  of the loop */
-				n = stix_logbfmt (stix, STIX_LOG_APP | STIX_OOP_TO_SMOOI(level), "%C", *ptr);
-				STIX_ASSERT (n == 1);
-			}
-			rem -= n;
-			ptr += n;
+			goto dump_object;
 		}
-	}
-	else
-	{
-		stix_logbfmt (stix, STIX_LOG_APP | STIX_OOP_TO_SMOOI(level), "%O", msg);
+		else if (STIX_OOP_IS_POINTER(msg))
+		{
+			if (STIX_OBJ_GET_FLAGS_TYPE(msg) == STIX_OBJ_TYPE_CHAR)
+			{
+				log_char_object (stix, mask, (stix_oop_char_t)msg);
+			}
+			else if (STIX_OBJ_GET_FLAGS_TYPE(msg) == STIX_OBJ_TYPE_OOP)
+			{
+				/* visit only 1-level down into an array-like object */
+				stix_oop_t inner;
+				stix_oow_t i;
+
+				if (STIX_CLASSOF(stix,msg) == stix->_association) goto dump_object;
+
+				for (i = 0; i < STIX_OBJ_GET_SIZE(msg); i++)
+				{
+					inner = ((stix_oop_oop_t)msg)->slot[i];
+					if (STIX_OOP_IS_POINTER(inner) &&
+					    STIX_OBJ_GET_FLAGS_TYPE(inner) == STIX_OBJ_TYPE_CHAR)
+					{
+						log_char_object (stix, mask, (stix_oop_char_t)inner);
+					}
+					else
+					{
+						stix_logbfmt (stix, mask, "%O", inner);
+					}
+				}
+			}
+			else goto dump_object;
+		}
+		else
+		{
+		dump_object:
+			stix_logbfmt (stix, mask, "%O", msg);
+		}
 	}
 
 	STIX_STACK_POPS (stix, nargs); /* delete arguments, keep self */
@@ -2656,7 +2699,7 @@ typedef struct prim_t prim_t;
 static prim_t primitives[] =
 {
 	{   0, MAX_NARGS,  prim_dump,                      "_dump"                },
-	{   2,  2,  prim_log,                              "_log"                 },
+	{   2, MAX_NARGS,  prim_log,                       "_log"                 },
 
 	{   1,  1,  prim_identical,                        "_identical"           },
 	{   1,  1,  prim_not_identical,                    "_not_identical"       },

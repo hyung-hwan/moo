@@ -182,11 +182,11 @@
 		s3 := Semaphore new.
 
 		t1 := [ 
-			10 timesRepeat: ['BLOCK #1' dump. Processor activeProcess sleep: 1.].
+			10 timesRepeat: ['BLOCK #1' dump. Processor sleepFor: 1.].
 			s1 signal
 		] newProcess.
 		t2 := [ 
-			5 timesRepeat: ['BLOCK #2' dump. "Processor activeProcess sleep: 1." ].
+			5 timesRepeat: ['BLOCK #2' dump. "Processor sleepFor: 1." ].
 			'SIGNALLING S2...' dump. s2 signal. 
 		] newProcess.
 

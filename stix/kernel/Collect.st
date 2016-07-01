@@ -108,8 +108,10 @@
 #pooldic Log
 {
 	## -----------------------------------------------------------
+	## defines log levels
 	## these items must follow defintions in stix.h
 	## -----------------------------------------------------------
+
 	#DEBUG := 1.
 	#INFO  := 2.
 	#WARN  := 4.
@@ -127,27 +129,50 @@
 
 	#dcl(#pooldic) Log.
 
-	#method log: message level: level
+	#method atLevel: level log: message
 	{
 		<primitive: #_log>
 		## do nothing upon logging failure
 	}
 
-	#method logNl: message level: level
+	#method atLevel: level log: message and: message2
 	{
-		self log: message level: level.
-		self log: S'\n' level: level.
-		^self.
+		<primitive: #_log>
+		## do nothing upon logging failure
+	}
+
+	#method atLevel: level log: message and: message2 and: message3
+	{
+		<primitive: #_log>
+		## do nothing upon logging failure
+	}
+
+	#method atLevel: level logNl: message 
+	{
+		## the #_log primitive accepts an array.
+		## so the following lines should work also.
+		## | x |
+		## x := Array new: 2.
+		## x at: 0 put: message.
+		## x at: 1 put: S'\n'.
+		## ^self atLevel: level log: x.
+
+		^self atLevel: level log: message and: S'\n'.
+	}
+
+	#method atLevel: level logNl: message and: message2
+	{
+		^self atLevel: level log: message and: message2 and: S'\n'.
 	}
 
 	#method log: message
 	{
-		^self log: message level: Log.INFO.
+		^self atLevel: Log.INFO log: message.
 	}
 
 	#method logNl: message
 	{
-		^self logNl: message level: Log.INFO.
+		^self atLevel: Log.INFO logNl: message.
 	}
 }
 
@@ -164,3 +189,20 @@
 
 }
 
+#extend Apex
+{
+	## -------------------------------------------------------
+	## Association has been defined now. let's add association
+	## creating methods
+	## -------------------------------------------------------
+
+	#method(#class) -> object
+	{
+		^Association new key: self value: object
+	}
+
+	#method -> object
+	{
+		^Association new key: self value: object
+	}
+}

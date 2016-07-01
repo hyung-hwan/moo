@@ -221,7 +221,7 @@
 		##	on: Exception do: [:ex | ex messageText dump].
 
 		'SLEEPING FOR 10 seconds ....' dump.
-		Processor activeProcess sleep: 10.
+		Processor sleepFor: 10.
 
 		'>>>>> END OF MAIN' dump.
 	}

@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <errno.h>
 
 
 #if defined(_WIN32)
@@ -330,7 +331,7 @@ printf ("MOD_GETSYM [%s]\n", &buf[0]);
 
 /* ========================================================================= */
 
-static void log_write (stix_t* stix, unsigned int mask, const stix_ooch_t* msg, stix_oow_t len)
+static void log_write (stix_t* stix, stix_oow_t mask, const stix_ooch_t* msg, stix_oow_t len)
 {
 #if defined(_WIN32)
 #	error NOT IMPLEMENTED 
@@ -340,30 +341,71 @@ static void log_write (stix_t* stix, unsigned int mask, const stix_ooch_t* msg, 
 	stix_oow_t ucslen, bcslen, msgidx;
 	int n;
 
-	msgidx = 0;
+
+
 
 /*if (mask & STIX_LOG_GC) return;*/ /* don't show gc logs */
 
 /* TODO: beautify the log message.
  *       do classification based on mask. */
 
+/*
+{
+	char ts[32];
+	struct tm tm;
+	time_t now;
+	now = time(NULL);
+	localtime_r (&now, &tm);
+	strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", &tm);
+	write (1, ts, strlen(ts));
+}
+*/
+	msgidx = 0;
 	while (len > 0)
 	{
 		ucslen = len;
 		bcslen = STIX_COUNTOF(buf);
 
 		n = stix_ucstoutf8 (&msg[msgidx], &ucslen, buf, &bcslen);
-		if (n == 0)
+		if (n == 0 || n == -2)
 		{
-			write (1, buf, bcslen); /*  TODO: write all */
-			break;
-		}
-		else if (n == -2)
-		{
+			stix_oow_t rem;
+			const stix_bch_t* ptr;
+			/* n = 0: 
+			 *   converted all successfully 
+			 * n == -2: 
+			 *    buffer not sufficient. not all got converted yet.
+			 *    write what have been converted this round. */
+
 			STIX_ASSERT (ucslen > 0); /* if this fails, the buffer size must be increased */
-			write (1, buf, bcslen); /* TODO: write all */
-			msgidx += ucslen;
-			len -= ucslen;
+
+			/* attempt to write all converted characters */
+			rem = bcslen;
+			ptr = buf;
+			while (rem > 0)
+			{
+				stix_ooi_t wr;
+
+				wr = write (1, ptr, rem); /* TODO: write all */
+				if (wr <= -1)
+				{
+					/*if (errno == EAGAIN || errno == EWOULDBLOCK)
+					{
+						push it to internal buffers? before writing data just converted, need to write buffered data first.
+					}*/
+					break;
+				}
+
+				ptr += wr;
+				rem -= wr;
+			}
+
+			if (n == 0) break;
+			else
+			{
+				msgidx += ucslen;
+				len -= ucslen;
+			}
 		}
 		else if (n <= -1)
 		{

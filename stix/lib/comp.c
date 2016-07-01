@@ -1916,39 +1916,25 @@ static STIX_INLINE int add_class_level_variable (stix_t* stix, var_type_t index,
 
 static STIX_INLINE int add_pool_dictionary (stix_t* stix, const stix_oocs_t* name, stix_oop_set_t pooldic_oop)
 {
-	int n;
-	stix_oow_t saved_len;
-
-	saved_len = stix->c->cls.pooldic.len;
-
-	n = copy_string_to (stix, name, &stix->c->cls.pooldic, &stix->c->cls.pooldic_capa, 1, ' ');
-	if (n >= 0) 
+	if (stix->c->cls.pooldic_count >= stix->c->cls.pooldic_oop_capa)
 	{
-		if (stix->c->cls.pooldic_count >= stix->c->cls.pooldic_oop_capa)
-		{
-			stix_oow_t new_capa;
-			stix_oop_set_t* tmp;
+		stix_oow_t new_capa;
+		stix_oop_set_t* tmp;
 
-			new_capa = STIX_ALIGN(stix->c->cls.pooldic_oop_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
-			tmp = stix_reallocmem (stix, stix->c->cls.pooldic_oops, new_capa * STIX_SIZEOF(stix_oop_set_t));
-			if (!tmp) 
-			{
-				stix->c->cls.pooldic.len = saved_len;
-				return -1;
-			}
+		new_capa = STIX_ALIGN(stix->c->cls.pooldic_oop_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
+		tmp = stix_reallocmem (stix, stix->c->cls.pooldic_oops, new_capa * STIX_SIZEOF(stix_oop_set_t));
+		if (!tmp)  return -1;
 
-			stix->c->cls.pooldic_oop_capa = new_capa;
-			stix->c->cls.pooldic_oops = tmp;
-		}
-
-		stix->c->cls.pooldic_oops[stix->c->cls.pooldic_count] = pooldic_oop;
-		stix->c->cls.pooldic_count++;
-/* TODO: check if pooldic_count overflows */
+		stix->c->cls.pooldic_oop_capa = new_capa;
+		stix->c->cls.pooldic_oops = tmp;
 	}
 
-	return n;
-}
+	stix->c->cls.pooldic_oops[stix->c->cls.pooldic_count] = pooldic_oop;
+	stix->c->cls.pooldic_count++;
+/* TODO: check if pooldic_count overflows */
 
+	return 0;
+}
 
 static stix_ooi_t find_class_level_variable (stix_t* stix, stix_oop_class_t self, const stix_oocs_t* name, var_info_t* var)
 {
@@ -2281,6 +2267,46 @@ wrong_name:
 	return -1;
 }
 
+static int resolve_pooldic (stix_t* stix, int dotted, const stix_oocs_t* name)
+{
+	stix_oocs_t last; /* the last segment */
+	stix_oop_set_t ns_oop; /* name space */
+	stix_oop_association_t ass;
+	stix_oow_t i;
+
+	if (dotted)
+	{
+		if (preprocess_dotted_name(stix, 0, 0, name, &stix->c->tok.loc, &last, &ns_oop) <= -1) return -1;
+	}
+	else
+	{
+		last = *name;
+		/* it falls back to the name space of the class */
+		ns_oop = stix->c->cls.ns_oop; 
+	}
+
+	/* check if the name refers to a pool dictionary */
+	ass = stix_lookupdic (stix, ns_oop, &last);
+	if (!ass || STIX_CLASSOF(stix, ass->value) != stix->_pool_dictionary)
+	{
+		set_syntax_error (stix, STIX_SYNERR_POOLDIC, &stix->c->tok.loc, name);
+		return -1;
+	}
+
+	/* check if the same dictionary pool has been declared for import */
+	for (i = 0; i < stix->c->cls.pooldic_count; i++)
+	{
+		if ((stix_oop_set_t)ass->value == stix->c->cls.pooldic_oops[i])
+		{
+			set_syntax_error (stix, STIX_SYNERR_POOLDICDUP, &stix->c->tok.loc, name);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+
 static int compile_class_level_variables (stix_t* stix)
 {
 	var_type_t dcl_type = VAR_INSTANCE;
@@ -2304,7 +2330,7 @@ static int compile_class_level_variables (stix_t* stix)
 		}
 		else if (is_token_symbol(stix, VOCA_POOLDIC))
 		{
-			/* #dcl(#pooldic) */
+			/* #dcl(#pooldic) - import a pool dictionary */
 			dcl_type = VAR_GLOBAL; /* this is not a real type. use for branching below */
 			GET_TOKEN (stix);
 		}
@@ -2360,6 +2386,12 @@ static int compile_class_level_variables (stix_t* stix)
 			}
 
 			if (add_pool_dictionary(stix, &stix->c->tok.name, (stix_oop_set_t)ass->value) <= -1) return -1;
+			if (copy_string_to (stix, &stix->c->tok.name, &stix->c->cls.pooldic, &stix->c->cls.pooldic_capa, 1, ' ') <= -1)
+			{
+				stix->c->cls.pooldic_count--;
+				return -1;
+			}
+
 			GET_TOKEN (stix);
 		}
 		while (1);
@@ -2401,9 +2433,6 @@ static int compile_class_level_variables (stix_t* stix)
 
 	GET_TOKEN (stix);
 	return 0;
-
-
-
 }
 
 static int compile_unary_method_name (stix_t* stix)
@@ -2761,7 +2790,6 @@ static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_
 	}
 	else 
 	{
-	
 		if (find_class_level_variable(stix, stix->c->cls.self_oop, name, var) >= 0)
 		{
 		class_level_variable:
@@ -4881,11 +4909,9 @@ static int __compile_pooldic_definition (stix_t* stix)
 
 			case STIX_IOTOK_NUMLIT:
 			case STIX_IOTOK_RADNUMLIT:
-			{
 				lit = string_to_num (stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT);
 				if (!lit) return -1;
 				goto add_literal;
-			}
 
 			case STIX_IOTOK_BPAREN: /* #[ */
 				if (read_byte_array_literal(stix, &lit) <= -1) return -1;
@@ -5005,8 +5031,7 @@ static int compile_stream (stix_t* stix)
 		}
 		else if (is_token_symbol(stix, VOCA_POOLDIC))
 		{
-/* TODO: allow #pooldic within #class */
-			/* #pooldic SharedPoolDic { #abc := 20. #defg := 'ayz' } */
+			/* #pooldic SharedPoolDic { #ABC := 20. #DEFG := 'ayz' } */
 			GET_TOKEN (stix);
 			if (compile_pooldic_definition(stix) <= -1) return -1;
 		}

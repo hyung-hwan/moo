@@ -407,7 +407,7 @@ struct stix_class_t
 	stix_oop_char_t classinstvars; /* String */
 	/* == NEVER CHANGE THE ORDER OF 3 ITEMS ABOVE == */
 
-	stix_oop_char_t pooldics;      /* String */
+	stix_oop_char_t pooldics;      /* String - pool dictionaries imported */
 
 	/* [0] - instance methods, MethodDictionary
 	 * [1] - class methods, MethodDictionary */
@@ -678,7 +678,7 @@ typedef void* (*stix_mod_open_t) (stix_t* stix, const stix_ooch_t* name);
 typedef void (*stix_mod_close_t) (stix_t* stix, void* handle);
 typedef void* (*stix_mod_getsym_t) (stix_t* stix, void* handle, const stix_ooch_t* name);
 
-typedef void (*stix_log_write_t) (stix_t* stix, unsigned int mask, const stix_ooch_t* msg, stix_oow_t len);
+typedef void (*stix_log_write_t) (stix_t* stix, stix_oow_t mask, const stix_ooch_t* msg, stix_oow_t len);
 
 struct stix_vmprim_t
 {
@@ -1134,14 +1134,14 @@ STIX_EXPORT void stix_freemem (
 
 STIX_EXPORT stix_ooi_t stix_logbfmt (
 	stix_t*           stix,
-	unsigned int      mask,
+	stix_oow_t        mask,
 	const stix_bch_t* fmt,
 	...
 );
 
 STIX_EXPORT stix_ooi_t stix_logoofmt (
 	stix_t*            stix,
-	unsigned int       mask,
+	stix_oow_t         mask,
 	const stix_ooch_t* fmt,
 	...
 );

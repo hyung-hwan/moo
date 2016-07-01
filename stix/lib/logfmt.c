@@ -131,14 +131,14 @@ static stix_bch_t bch_nullstr[] = { '(','n','u','l','l', ')','\0' };
 
 typedef int (*stix_fmtout_putch_t) (
 	stix_t*      stix,
-	unsigned int mask,
+	stix_oow_t mask,
 	stix_ooch_t  c,
 	stix_oow_t   len
 );
 
 typedef int (*stix_fmtout_putcs_t) (
 	stix_t*            stix,
-	unsigned int       mask,
+	stix_oow_t         mask,
 	const stix_ooch_t* ptr,
 	stix_oow_t         len
 );
@@ -147,7 +147,7 @@ typedef struct stix_fmtout_t stix_fmtout_t;
 struct stix_fmtout_t
 {
 	stix_oow_t            count; /* out */
-	int                   mask;  /* in */
+	stix_oow_t            mask;  /* in */
 	stix_fmtout_putch_t   putch; /* in */
 	stix_fmtout_putcs_t   putcs; /* in */
 };
@@ -185,7 +185,7 @@ static stix_bch_t* sprintn_upper (stix_bch_t* nbuf, stix_uintmax_t num, int base
 }
 
 /* ------------------------------------------------------------------------- */
-static int put_ooch (stix_t* stix, unsigned int mask, stix_ooch_t ch, stix_oow_t len)
+static int put_ooch (stix_t* stix, stix_oow_t mask, stix_ooch_t ch, stix_oow_t len)
 {
 	if (len <= 0) return 1;
 
@@ -237,7 +237,7 @@ redo:
 	return 1; /* success */
 }
 
-static int put_oocs (stix_t* stix, unsigned int mask, const stix_ooch_t* ptr, stix_oow_t len)
+static int put_oocs (stix_t* stix, stix_oow_t mask, const stix_ooch_t* ptr, stix_oow_t len)
 {
 	if (len <= 0) return 1;
 
@@ -277,7 +277,7 @@ static int put_oocs (stix_t* stix, unsigned int mask, const stix_ooch_t* ptr, st
 
 /* ------------------------------------------------------------------------- */
 
-static void print_object (stix_t* stix, unsigned int mask, stix_oop_t oop)
+static void print_object (stix_t* stix, stix_oow_t mask, stix_oop_t oop)
 {
 	if (oop == stix->_nil)
 	{
@@ -365,6 +365,9 @@ static void print_object (stix_t* stix, unsigned int mask, stix_oop_t oop)
 								case '\0':
 									escaped = '0';
 									break;
+								case '\n':
+									escaped = 'n';
+									break;
 								case '\r':
 									escaped = 'r';
 									break;
@@ -450,6 +453,10 @@ static void print_object (stix_t* stix, unsigned int mask, stix_oop_t oop)
 			/* print the class name */
 			stix_logbfmt (stix, mask, "%.*S", STIX_OBJ_GET_SIZE(((stix_oop_class_t)oop)->name), ((stix_oop_class_t)oop)->name->slot);
 		}
+		else if ((stix_oop_t)c == stix->_association)
+		{
+			stix_logbfmt (stix, mask, "%O -> %O", ((stix_oop_association_t)oop)->key, ((stix_oop_association_t)oop)->value);
+		}
 		else
 		{
 			stix_logbfmt (stix, mask, "instance of %.*S(%p)", STIX_OBJ_GET_SIZE(c->name), ((stix_oop_char_t)c->name)->slot, oop);
@@ -473,7 +480,7 @@ static void print_object (stix_t* stix, unsigned int mask, stix_oop_t oop)
 #define FMTCHAR_IS_OOCH
 #include "logfmtv.h"
 
-stix_ooi_t stix_logbfmt (stix_t* stix, unsigned int mask, const stix_bch_t* fmt, ...)
+stix_ooi_t stix_logbfmt (stix_t* stix, stix_oow_t mask, const stix_bch_t* fmt, ...)
 {
 	int x;
 	va_list ap;
@@ -495,7 +502,7 @@ stix_ooi_t stix_logbfmt (stix_t* stix, unsigned int mask, const stix_bch_t* fmt,
 	return (x <= -1)? -1: fo.count;
 }
 
-stix_ooi_t stix_logoofmt (stix_t* stix, unsigned int mask, const stix_ooch_t* fmt, ...)
+stix_ooi_t stix_logoofmt (stix_t* stix, stix_oow_t mask, const stix_ooch_t* fmt, ...)
 {
 	int x;
 	va_list ap;

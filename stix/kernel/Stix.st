@@ -21,6 +21,22 @@
 #class Association(Magnitude)
 {
 	#dcl key value.
+
+	#method key: key value: value
+	{
+		self.key := key.
+		self.value := value.
+	}
+
+	#method key
+	{
+		^self.key
+	}
+
+	#method value
+	{
+		^self.value
+	}
 }
 
 #class Character(Magnitude)

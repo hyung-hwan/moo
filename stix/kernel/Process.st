@@ -37,10 +37,17 @@
 		##^Processor resume: self.
 	}
 
-	#method terminate
+	#method _terminate
 	{
 		<primitive: #_process_terminate>
 		self primitiveFailed
+	}
+
+	#method terminate
+	{
+##search from the top contextof the process down to intial_contextand find ensure blocks and execute them.
+		self.current_context unwindTo: self.initial_context return: nil.
+		^self _terminate
 	}
 
 	#method yield
@@ -57,15 +64,6 @@
 	#method initialContext
 	{
 		^self.initial_context
-	}
-
-	#method sleep: seconds
-	{
-		| s |
-		s := Semaphore new.
-		Processor signal: s after: seconds.
-		## Processor activeProcess dump.
-		s wait.
 	}
 }
 
@@ -404,5 +402,27 @@
 	{
 		<primitive: #_processor_return_to>
 		self primitiveFailed.
+	}
+
+	#method sleepFor: secs
+	{
+		## -----------------------------------------------------
+		## put the calling process to sleep for given seconds.
+		## -----------------------------------------------------
+		| s |
+		s := Semaphore new.
+		self signal: s after: secs.
+		s wait.
+	}
+
+	#method sleepFor: secs and: nanosecs
+	{
+		## -----------------------------------------------------
+		## put the calling process to sleep for given seconds.
+		## -----------------------------------------------------
+		| s |
+		s := Semaphore new.
+		self signal: s after: secs and: nanosecs 
+		s wait.
 	}
 }
