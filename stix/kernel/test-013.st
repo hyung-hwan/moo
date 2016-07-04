@@ -80,7 +80,8 @@
 		v1 := [
 			[    
 				[ 
-					1 to: 10000 by: 1 do: [:i | System logNl: i asString. Processor sleepFor: 5. ]  
+					##1 to: 20000 by: 1 do: [:i | System logNl: i asString. "Processor sleepFor: 1." ]  
+					Processor activeProcess terminate.
 				] ensure: [ System logNl: '<<<PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP>>>' ].
 
 			] ensure: [ System logNl: '<<--------------------->>' ].
@@ -88,9 +89,10 @@
 
 		System logNl: 'RESUMING v1'.
 		v1 resume.
+		Processor sleepFor: 1.
 		v1 terminate.
 
-		##[    
+ 		##[    
 		##	[ Processor activeProcess terminate. ] ensure: [System logNl: '<<<PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP>>>' ].
 		##] ensure: [ System logNl: '<<--------------------->>' ].
 

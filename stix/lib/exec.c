@@ -97,6 +97,7 @@
 		(stix)->active_method = (stix_oop_method_t)(stix)->active_context->origin->method_or_nargs; \
 		SET_ACTIVE_METHOD_CODE(stix); \
 		LOAD_ACTIVE_IP (stix); \
+		(stix)->processor->active->current_context = (stix)->active_context; \
 	} while (0)
 
 #define FETCH_BYTE_CODE(stix) ((stix)->active_code[(stix)->ip++])
@@ -1234,14 +1235,19 @@ static int prim_log (stix_t* stix, stix_ooi_t nargs)
 			else if (STIX_OBJ_GET_FLAGS_TYPE(msg) == STIX_OBJ_TYPE_OOP)
 			{
 				/* visit only 1-level down into an array-like object */
-				stix_oop_t inner;
-				stix_oow_t i;
+				stix_oop_t inner, _class;
+				stix_oow_t i, spec;
 
-				if (STIX_CLASSOF(stix,msg) == stix->_association) goto dump_object;
+				_class = STIX_CLASSOF(stix, msg);
+
+				spec = STIX_OOP_TO_SMOOI(((stix_oop_class_t)_class)->spec);
+				if (STIX_CLASS_SPEC_NAMED_INSTVAR(spec) > 0 || !STIX_CLASS_SPEC_IS_INDEXED(spec)) goto dump_object;
 
 				for (i = 0; i < STIX_OBJ_GET_SIZE(msg); i++)
 				{
 					inner = ((stix_oop_oop_t)msg)->slot[i];
+
+					if (i > 0) stix_logbfmt (stix, mask, " ");
 					if (STIX_OOP_IS_POINTER(inner) &&
 					    STIX_OBJ_GET_FLAGS_TYPE(inner) == STIX_OBJ_TYPE_CHAR)
 					{
@@ -1864,6 +1870,20 @@ static int prim_process_yield (stix_t* stix, stix_ooi_t nargs)
 	if (STIX_CLASSOF(stix,rcv) != stix->_process) return 0;
 
 	yield_process (stix, (stix_oop_process_t)rcv);
+
+	/* keep the receiver in the stack top */
+	return 1;
+}
+
+static int prim_process_suspend (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv;
+	STIX_ASSERT (nargs == 0);
+
+	rcv = STIX_STACK_GET(stix, stix->sp);
+	if (STIX_CLASSOF(stix,rcv) != stix->_process) return 0;
+
+	suspend_process (stix, (stix_oop_process_t)rcv);
 
 	/* keep the receiver in the stack top */
 	return 1;
@@ -2724,6 +2744,7 @@ static prim_t primitives[] =
 	{   0,  0,  prim_process_resume,                   "_process_resume"      },
 	{   0,  0,  prim_process_terminate,                "_process_terminate"   },
 	{   0,  0,  prim_process_yield,                    "_process_yield"       },
+	{   0,  0,  prim_process_suspend,                  "_process_suspend"     },
 	{   0,  0,  prim_semaphore_signal,                 "_semaphore_signal"    },
 	{   0,  0,  prim_semaphore_wait,                   "_semaphore_wait"      },
 

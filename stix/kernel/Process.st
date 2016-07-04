@@ -43,9 +43,38 @@
 		self primitiveFailed
 	}
 
+	#method _suspend
+	{
+		<primitive: #_process_suspend>
+		self primitiveFailed
+	}
+
 	#method terminate
 	{
 ##search from the top contextof the process down to intial_contextand find ensure blocks and execute them.
+		## if a different process calls 'terminate' on a process,
+		## the ensureblock is not executed in the context of the
+		## process being terminated, but in the context of terminatig process.
+		##
+		## 1) process termianted by another process
+		##   p := [ 
+		##       [  1 to: 10000 by: 1 do: [:ex | System logNl: i asString] ] ensure: [System logNl: 'ensured....'] 
+		##   ] newProcess.
+		##   p resume.
+		##   p terminate.
+		##
+		## 2) process terminated by itself
+		##   p := [ 
+		##       [ Processor activeProcess terminate. ] ensure: [System logNl: 'ensured....'] 
+		##   ] newProcess.
+		##   p resume.
+		##   p terminate.
+		## ----------------------------------------------------------------------------------------------------------
+		## the process must be frozen first. while unwinding is performed, 
+		## the process must not be scheduled.
+		## ----------------------------------------------------------------------------------------------------------
+
+		(Processor activeProcess ~~ self) ifTrue: [ self _suspend ].
 		self.current_context unwindTo: self.initial_context return: nil.
 		^self _terminate
 	}

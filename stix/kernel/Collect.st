@@ -170,9 +170,19 @@
 		^self atLevel: Log.INFO log: message.
 	}
 
+	#method log: message and: message2
+	{
+		^self atLevel: Log.INFO log: message and: message2.
+	}
+
 	#method logNl: message
 	{
 		^self atLevel: Log.INFO logNl: message.
+	}
+
+	#method logNl: message and: message2
+	{
+		^self atLevel: Log.INFO logNl: message and: message2.
 	}
 }
 
