@@ -65,7 +65,7 @@
 		##
 		## 2) process terminated by itself
 		##   p := [ 
-		##       [ Processor activeProcess terminate. ] ensure: [System logNl: 'ensured....'] 
+		##       [ thisProcess terminate. ] ensure: [System logNl: 'ensured....'] 
 		##   ] newProcess.
 		##   p resume.
 		##   p terminate.
@@ -74,7 +74,8 @@
 		## the process must not be scheduled.
 		## ----------------------------------------------------------------------------------------------------------
 
-		(Processor activeProcess ~~ self) ifTrue: [ self _suspend ].
+		##(Processor activeProcess ~~ self) ifTrue: [ self _suspend ].
+		(thisProcess ~~ self) ifTrue: [ self _suspend ].
 		self.current_context unwindTo: self.initial_context return: nil.
 		^self _terminate
 	}

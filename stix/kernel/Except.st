@@ -60,10 +60,13 @@
 		## FATAL ERROR - no exception handler.
 		## -----------------------------------------------------------------
 		##thisContext unwindTo: nil return: nil.
-		thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
+		##thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
+		thisContext unwindTo: (thisProcess initialContext) return: nil.
 		('### EXCEPTION NOT HANDLED #### ', self class name, ' - ', self messageText) dump.
 		## TODO: debug the current process???? "
-		Processor activeProcess terminate.
+
+		##Processor activeProcess terminate.
+		thisProcess terminate.
 	}
 
 	#method signal: text

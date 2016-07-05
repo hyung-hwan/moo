@@ -415,6 +415,10 @@ return -1;
 				LOG_INST_0 (stix, "push_context");
 				break;
 
+			case BCODE_PUSH_PROCESS:
+				LOG_INST_0 (stix, "push_process");
+				break;
+
 			case BCODE_PUSH_NEGONE:
 				LOG_INST_0 (stix, "push_negone");
 				break;

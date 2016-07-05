@@ -3787,6 +3787,11 @@ return -1;
 				STIX_STACK_PUSH (stix, (stix_oop_t)stix->active_context);
 				break;
 
+			case BCODE_PUSH_PROCESS:
+				LOG_INST_0 (stix, "push_process");
+				STIX_STACK_PUSH (stix, (stix_oop_t)stix->processor->active);
+				break;
+
 			case BCODE_PUSH_NEGONE:
 				LOG_INST_0 (stix, "push_negone");
 				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(-1));

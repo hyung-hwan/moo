@@ -330,6 +330,7 @@ struct stix_iotok_t
 		STIX_IOTOK_TRUE,
 		STIX_IOTOK_FALSE,
 		STIX_IOTOK_THIS_CONTEXT,
+		STIX_IOTOK_THIS_PROCESS,
 		STIX_IOTOK_IDENT,
 		STIX_IOTOK_IDENT_DOTTED,
 		STIX_IOTOK_BINSEL,
@@ -879,10 +880,11 @@ enum stix_bcode_t
 	BCODE_PUSH_TRUE                = 0x83, /* 131 */
 	BCODE_PUSH_FALSE               = 0x84, /* 132 */
 	BCODE_PUSH_CONTEXT             = 0x85, /* 133 */
-	BCODE_PUSH_NEGONE              = 0x86, /* 134 */
-	BCODE_PUSH_ZERO                = 0x87, /* 135 */
-	BCODE_PUSH_ONE                 = 0x89, /* 137 */
-	BCODE_PUSH_TWO                 = 0x8A, /* 138 */
+	BCODE_PUSH_PROCESS             = 0x86, /* 134 */
+	BCODE_PUSH_NEGONE              = 0x87, /* 135 */
+	BCODE_PUSH_ZERO                = 0x89, /* 137 */
+	BCODE_PUSH_ONE                 = 0x8A, /* 138 */
+	BCODE_PUSH_TWO                 = 0x8B, /* 139 */
 
 	BCODE_PUSH_INTLIT              = 0xB1, /* 177 */
 	BCODE_PUSH_NEGINTLIT           = 0xB2, /* 178 */

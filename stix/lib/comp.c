@@ -103,6 +103,7 @@ static struct voca_t
 	{  4, { 's','e','l','f'                                               } },
 	{  5, { 's','u','p','e','r'                                           } },
 	{ 11, { 't','h','i','s','C','o','n','t','e','x','t'                   } },
+	{ 11, { 't','h','i','s','P','r','o','c','e','s','s'                   } },
 	{  4, { 't','r','u','e'                                               } },
 	{  4, { 'w','o','r','d'                                               } },
 
@@ -138,6 +139,7 @@ enum voca_id_t
 	VOCA_SELF,
 	VOCA_SUPER,
 	VOCA_THIS_CONTEXT,
+	VOCA_THIS_PROCESS,
 	VOCA_TRUE,
 	VOCA_WORD,
 
@@ -292,7 +294,8 @@ static int is_reserved_word (const stix_oocs_t* ucs)
 		VOCA_NIL,
 		VOCA_TRUE,
 		VOCA_FALSE,
-		VOCA_THIS_CONTEXT
+		VOCA_THIS_CONTEXT,
+		VOCA_THIS_PROCESS
 	};
 	int i;
 
@@ -856,6 +859,10 @@ static int get_ident (stix_t* stix, stix_ooci_t char_read_ahead)
 		else if (is_token_word(stix, VOCA_THIS_CONTEXT))
 		{
 			stix->c->tok.type = STIX_IOTOK_THIS_CONTEXT;
+		}
+		else if (is_token_word(stix, VOCA_THIS_PROCESS))
+		{
+			stix->c->tok.type = STIX_IOTOK_THIS_PROCESS;
 		}
 	}
 
@@ -3271,6 +3278,7 @@ static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
 			case STIX_IOTOK_SELF:
 			case STIX_IOTOK_SUPER:
 			case STIX_IOTOK_THIS_CONTEXT:
+			case STIX_IOTOK_THIS_PROCESS:
 				lit = stix_makesymbol (stix, stix->c->tok.name.ptr, stix->c->tok.name.len);
 				break;
 
@@ -3503,6 +3511,11 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 
 			case STIX_IOTOK_THIS_CONTEXT:
 				if (emit_byte_instruction(stix, BCODE_PUSH_CONTEXT) <= -1) return -1;
+				GET_TOKEN (stix);
+				break;
+
+			case STIX_IOTOK_THIS_PROCESS:
+				if (emit_byte_instruction(stix, BCODE_PUSH_PROCESS) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
 
