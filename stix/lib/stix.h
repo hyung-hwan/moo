@@ -198,12 +198,12 @@ typedef struct stix_obj_word_t*     stix_oop_word_t;
 #define STIX_SMOOI_ABS_BITS (STIX_SMOOI_BITS - 1)
 #define STIX_SMOOI_MAX ((stix_ooi_t)(~((stix_oow_t)0) >> (STIX_OOP_TAG_BITS + 1)))
 /* Sacrificing 1 bit pattern for a negative SMOOI makes 
- * implementation a lot eaisier in many respect. */
+ * implementation a lot eaisier in many aspects. */
 /*#define STIX_SMOOI_MIN (-STIX_SMOOI_MAX - 1)*/
 #define STIX_SMOOI_MIN (-STIX_SMOOI_MAX)
 #define STIX_IN_SMOOI_RANGE(ooi) ((ooi) >= STIX_SMOOI_MIN && (ooi) <= STIX_SMOOI_MAX)
 
-/* TODO: There are untested code where smint is converted to stix_oow_t.
+/* TODO: There are untested code where a small integer is converted to stix_oow_t.
  *       for example, the spec making macro treats the number as stix_oow_t instead of stix_ooi_t.
  *       as of this writing, i skip testing that part with the spec value exceeding STIX_SMOOI_MAX.
  *       later, please verify it works, probably by limiting the value ranges in such macros
@@ -901,6 +901,13 @@ struct stix_t
 #define STIX_STACK_POP(stix) ((stix)->sp = (stix)->sp - 1)
 #define STIX_STACK_POPS(stix,count) ((stix)->sp = (stix)->sp - (count))
 #define STIX_STACK_ISEMPTY(stix) ((stix)->sp <= -1)
+
+#define STIX_STACK_GETARG(stix,nargs,idx) STIX_STACK_GET(stix, (stix)->sp - ((nargs) - (idx) - 1))
+#define STIX_STACK_GETRCV(stix,nargs) STIX_STACK_GET(stix, (stix)->sp - nargs);
+
+/* you can't access arguments and receiver after this macro. 
+ * also you must not call this macro more than once */
+#define STIX_STACK_SETRET(stix,nargs,retv) (STIX_STACK_POPS(stix, nargs), STIX_STACK_SETTOP(stix, retv))
 
 /* =========================================================================
  * STIX VM LOGGING
