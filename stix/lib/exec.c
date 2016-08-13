@@ -1163,7 +1163,7 @@ static int prim_dump (stix_t* stix, stix_ooi_t nargs)
 		stix_logbfmt (stix, 0, "ARGUMENT %zd: %O\n", i, STIX_STACK_GET(stix, stix->sp - i));
 	}
 
-	STIX_STACK_POPS (stix, nargs); /* leave the receiver as a return value */
+	STIX_STACK_SETRETTORCV (stix, nargs); /* ^self */
 	return 1; /* success */
 }
 
@@ -1268,7 +1268,7 @@ static int prim_log (stix_t* stix, stix_ooi_t nargs)
 		}
 	}
 
-	STIX_STACK_POPS (stix, nargs); /* delete arguments, keep self */
+	STIX_STACK_SETRETTORCV (stix, nargs); /* ^self */
 	return 1;
 }
 
@@ -1283,8 +1283,7 @@ static int prim_identical (stix_t* stix, stix_ooi_t nargs)
 
 	b = (rcv == arg)? stix->_true: stix->_false;
 
-	STIX_STACK_POP (stix);
-	STIX_STACK_SETTOP (stix, b);
+	STIX_STACK_SETRET (stix, nargs, b);
 	return 1;
 }
 
@@ -1299,8 +1298,7 @@ static int prim_not_identical (stix_t* stix, stix_ooi_t nargs)
 
 	b = (rcv != arg)? stix->_true: stix->_false;
 
-	STIX_STACK_POP (stix);
-	STIX_STACK_SETTOP (stix, b);
+	STIX_STACK_SETRET (stix, nargs, b);
 	return 1;
 }
 
@@ -1309,9 +1307,11 @@ static int prim_class (stix_t* stix, stix_ooi_t nargs)
 	stix_oop_t rcv, c;
 
 	STIX_ASSERT (nargs ==  0);
+
 	rcv = STIX_STACK_GETRCV(stix, nargs);
 	c = STIX_CLASSOF(stix, rcv);
-	STIX_STACK_SETTOP (stix, c);
+
+	STIX_STACK_SETRET (stix, nargs, c);
 	return 1; /* success */
 }
 
@@ -1331,8 +1331,7 @@ static int prim_basic_new (stix_t* stix, stix_ooi_t nargs)
 	obj = stix_instantiate (stix, rcv, STIX_NULL, 0);
 	if (!obj) return -1;
 
-	/* emulate 'pop receiver' and 'push result' */
-	STIX_STACK_SETTOP (stix, obj);
+	STIX_STACK_SETRET (stix, nargs, obj);
 	return 1; /* success */
 }
 
@@ -1957,8 +1956,7 @@ static int prim_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
 
 		/*
 		Is this more desired???
-		STIX_STACK_POPS (stix, nargs);
-		STIX_STACK_SETTOP (stix, stix->_false);
+		STIX_STACK_SETRET (stix, nargs, stix->_false);
 		return 1;
 		*/
 	}
@@ -1984,7 +1982,7 @@ static int prim_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
 
 	if (add_to_sem_heap (stix, sem) <= -1) return -1;
 
-	STIX_STACK_POPS (stix, nargs); /* remove all arguments, ^self */
+	STIX_STACK_SETRETTORCV (stix, nargs); /* ^self */
 	return 1;
 }
 
@@ -2014,7 +2012,7 @@ static int prim_processor_remove_semaphore (stix_t* stix, stix_ooi_t nargs)
 		STIX_ASSERT(sem->heap_index == STIX_SMOOI_TO_OOP(-1));
 	}
 
-	STIX_STACK_POPS (stix, nargs); /* keep the receiver in the stack. ^self */
+	STIX_STACK_SETRETTORCV (stix, nargs); /* ^self */
 	return 1;
 }
 
@@ -2667,9 +2665,8 @@ STIX_DEBUG0 (stix, "wrong function name...\n");
 		return 0;
 	}
 
-	STIX_STACK_POPS (stix, 2);
 /* TODO: how to hold an address? as an integer????  or a byte array? */
-	STIX_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(sym));
+	STIX_STACK_SETRET (stix, nargs, STIX_SMOOI_TO_OOP(sym));
 
 	return 1;
 }
@@ -3109,9 +3106,9 @@ static int send_message (stix_t* stix, stix_oop_char_t selector, int to_super, s
 		}
 		else
 		{
-			/* manipulate the stack as if 'receier doesNotUnderstand: select' 
+			/* manipulate the stack as if 'receier doesNotUnderstand: selector' 
 			 * has been called. */
-/* TODO: if i manipulate the stack this way here, the stack track for the last call is kind of lost.
+/* TODO: if i manipulate the stack this way here, the stack trace for the last call is kind of lost.
  *       how can i preserve it gracefully? */
 			STIX_STACK_POPS (stix, nargs);
 			nargs = 1;

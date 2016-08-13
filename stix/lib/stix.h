@@ -908,7 +908,7 @@ struct stix_t
 /* you can't access arguments and receiver after this macro. 
  * also you must not call this macro more than once */
 #define STIX_STACK_SETRET(stix,nargs,retv) (STIX_STACK_POPS(stix, nargs), STIX_STACK_SETTOP(stix, retv))
-
+#define STIX_STACK_SETRETTORCV(stix,nargs) (STIX_STACK_POPS(stix, nargs))
 /* =========================================================================
  * STIX VM LOGGING
  * ========================================================================= */
