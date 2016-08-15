@@ -89,14 +89,19 @@
 #	endif
 #endif
 
+typedef struct bb_t bb_t;
+struct bb_t
+{
+	char buf[1024];
+	stix_oow_t pos;
+	stix_oow_t len;
+	FILE* fp;
+};
+
 typedef struct xtn_t xtn_t;
 struct xtn_t
 {
-	const char* source_path;
-
-	char bchar_buf[1024];
-	stix_oow_t bchar_pos;
-	stix_oow_t bchar_len;
+	const char* source_path; /* main source file */
 };
 
 /* ========================================================================= */
@@ -128,6 +133,10 @@ static stix_mmgr_t sys_mmgr =
 
 static STIX_INLINE stix_ooi_t open_input (stix_t* stix, stix_ioarg_t* arg)
 {
+	xtn_t* xtn = stix_getxtn(stix);
+	bb_t* bb;
+	FILE* fp;
+
 	if (arg->includer)
 	{
 		/* includee */
@@ -144,69 +153,87 @@ static STIX_INLINE stix_ooi_t open_input (stix_t* stix, stix_ioarg_t* arg)
 /* TODO: make bcs relative to the includer */
 
 #if defined(__MSDOS__) || defined(_WIN32) || defined(__OS2__)
-		arg->handle = fopen (bcs, "rb");
+		fp = fopen (bcs, "rb");
 #else
-		arg->handle = fopen (bcs, "r");
+		fp = fopen (bcs, "r");
 #endif
 	}
 	else
 	{
 		/* main stream */
-		xtn_t* xtn = stix_getxtn(stix);
 #if defined(__MSDOS__) || defined(_WIN32) || defined(__OS2__)
-		arg->handle = fopen (xtn->source_path, "rb");
+		fp = fopen (xtn->source_path, "rb");
 #else
-		arg->handle = fopen (xtn->source_path, "r");
+		fp = fopen (xtn->source_path, "r");
 #endif
 	}
 
-	if (!arg->handle)
+	if (!fp)
 	{
 		stix_seterrnum (stix, STIX_EIOERR);
 		return -1;
 	}
 
+	bb = stix_callocmem (stix, STIX_SIZEOF(*bb));
+	if (!bb)
+	{
+		fclose (fp);
+		return -1;
+	}
+
+	bb->fp = fp;
+	arg->handle = bb;
 	return 0;
 }
+
+static STIX_INLINE stix_ooi_t close_input (stix_t* stix, stix_ioarg_t* arg)
+{
+	xtn_t* xtn = stix_getxtn(stix);
+	bb_t* bb;
+
+	bb = (bb_t*)arg->handle;
+	STIX_ASSERT (bb != STIX_NULL && bb->fp != STIX_NULL);
+
+	fclose (bb->fp);
+	stix_freemem (stix, bb);
+
+	return 0;
+}
+
 
 static STIX_INLINE stix_ooi_t read_input (stix_t* stix, stix_ioarg_t* arg)
 {
 	xtn_t* xtn = stix_getxtn(stix);
+	bb_t* bb;
 	stix_oow_t n, bcslen, ucslen, remlen;
 	int x;
 
-	STIX_ASSERT (arg->handle != STIX_NULL);
-	n = fread (&xtn->bchar_buf[xtn->bchar_len], STIX_SIZEOF(xtn->bchar_buf[0]), STIX_COUNTOF(xtn->bchar_buf) - xtn->bchar_len, arg->handle);
+	bb = (bb_t*)arg->handle;
+	STIX_ASSERT (bb != STIX_NULL && bb->fp != STIX_NULL);
+	n = fread (&bb->buf[bb->len], STIX_SIZEOF(bb->buf[0]), STIX_COUNTOF(bb->buf) - bb->len, bb->fp);
 	if (n == 0)
 	{
-		if (ferror((FILE*)arg->handle))
+		if (ferror((FILE*)bb->fp))
 		{
 			stix_seterrnum (stix, STIX_EIOERR);
 			return -1;
 		}
 	}
 
-	xtn->bchar_len += n;
-	bcslen = xtn->bchar_len;
+	bb->len += n;
+	bcslen = bb->len;
 	ucslen = STIX_COUNTOF(arg->buf);
-	x = stix_utf8toucs (xtn->bchar_buf, &bcslen, arg->buf, &ucslen);
+	x = stix_utf8toucs (bb->buf, &bcslen, arg->buf, &ucslen);
 	if (x <= -1 && ucslen <= 0)
 	{
 		stix_seterrnum (stix, STIX_EECERR);
 		return -1;
 	}
 
-	remlen = xtn->bchar_len - bcslen;
-	if (remlen > 0) memmove (xtn->bchar_buf, &xtn->bchar_buf[bcslen], remlen);
-	xtn->bchar_len = remlen;
+	remlen = bb->len - bcslen;
+	if (remlen > 0) memmove (bb->buf, &bb->buf[bcslen], remlen);
+	bb->len = remlen;
 	return ucslen;
-}
-
-static STIX_INLINE stix_ooi_t close_input (stix_t* stix, stix_ioarg_t* arg)
-{
-	STIX_ASSERT (arg->handle != STIX_NULL);
-	fclose ((FILE*)arg->handle);
-	return 0;
 }
 
 static stix_ooi_t input_handler (stix_t* stix, stix_iocmd_t cmd, stix_ioarg_t* arg)
