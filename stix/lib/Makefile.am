@@ -95,7 +95,7 @@ libstix_snd_la_LIBADD = $(LIBADD_MOD_COMMON)
 libstix_con_la_SOURCES = mod-con.c mod-con.h
 libstix_con_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
 libstix_con_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
-libstix_con_la_LIBADD = $(LIBADD_MOD_COMMON)
+libstix_con_la_LIBADD = $(LIBADD_MOD_COMMON) -ltermcap 
 
 endif
 

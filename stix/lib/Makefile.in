@@ -481,7 +481,7 @@ stix_LDADD = $(LIBADD_LIB_COMMON) -lstix #-ldyncall_s
 @ENABLE_STATIC_MODULE_FALSE@libstix_con_la_SOURCES = mod-con.c mod-con.h
 @ENABLE_STATIC_MODULE_FALSE@libstix_con_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
 @ENABLE_STATIC_MODULE_FALSE@libstix_con_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_con_la_LIBADD = $(LIBADD_MOD_COMMON)
+@ENABLE_STATIC_MODULE_FALSE@libstix_con_la_LIBADD = $(LIBADD_MOD_COMMON) -ltermcap 
 all: stix-cfg.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
