@@ -265,7 +265,7 @@ static void* mod_open (stix_t* stix, const stix_ooch_t* name)
 	stix_oow_t len;
 	void* handle;
 
-/* TODO: using MODPREFIX isn't a good idean for all kind of modules.
+/* TODO: using MODPREFIX isn't a good idea for all kind of modules.
  * OK to use it for a primitive module.
  * NOT OK to use it for a FFI target. 
  * Attempting /home/hyung-hwan/xxx/lib/libstix-libc.so.6 followed by libc.so.6 is bad.
@@ -284,16 +284,18 @@ static void* mod_open (stix_t* stix, const stix_ooch_t* name)
 
 	stix_copybcstr (&buf[bcslen + len], STIX_COUNTOF(buf) - bcslen - len, STIX_DEFAULT_MODPOSTFIX);
 
-printf ("MOD_OPEN %s\n", buf);
 	handle = lt_dlopenext (buf);
 	if (!handle) 
 	{
 		buf[bcslen + len] = '\0';
-printf ("MOD_OPEN %s\n", &buf[len]);
 		handle = lt_dlopenext (&buf[len]);
+		if (handle) STIX_DEBUG2 (stix, "Opened module file %s handle %p\n", &buf[len], handle);
+	}
+	else
+	{
+		STIX_DEBUG2 (stix, "Opened module file %s handle %p\n", buf, handle);
 	}
 
-printf ("MOD_OPEN RET=>%p\n", handle);
 	return handle;
 
 #else
@@ -304,6 +306,7 @@ printf ("MOD_OPEN RET=>%p\n", handle);
 
 static void mod_close (stix_t* stix, void* handle)
 {
+	STIX_DEBUG1 (stix, "Closed module handle %p\n", handle);
 #if defined(USE_LTDL)
 	lt_dlclose (handle);
 #elif defined(_WIN32)
@@ -323,32 +326,35 @@ static void* mod_getsym (stix_t* stix, void* handle, const stix_ooch_t* name)
 	stix_bch_t buf[1024]; /* TODO: use a proper buffer. dynamically allocated if conversion result in too a large value */
 	stix_oow_t ucslen, bcslen;
 	void* sym;
+	const char* symname;
 
 	buf[0] = '_';
 
 	ucslen = ~(stix_oow_t)0;
 	bcslen = STIX_COUNTOF(buf) - 2;
 	stix_ucstoutf8 (name, &ucslen, &buf[1], &bcslen);
-printf ("MOD_GETSYM [%s]\n", &buf[1]);
-	sym = lt_dlsym (handle, &buf[1]);
+	symname = &buf[1];
+	sym = lt_dlsym (handle, symname);
 	if (!sym)
 	{
-printf ("MOD_GETSYM [%s]\n", &buf[0]);
-		sym = lt_dlsym (handle, &buf[0]);
+		symname = &buf[0];
+		sym = lt_dlsym (handle, symname);
 		if (!sym)
 		{
 			buf[bcslen + 1] = '_';
 			buf[bcslen + 2] = '\0';
-printf ("MOD_GETSYM [%s]\n", &buf[1]);
-			sym = lt_dlsym (handle, &buf[1]);
+
+			symname = &buf[1];
+			sym = lt_dlsym (handle, symname);
 			if (!sym)
 			{
-printf ("MOD_GETSYM [%s]\n", &buf[0]);
-				sym = lt_dlsym (handle, &buf[0]);
+				symname = &buf[0];
+				sym = lt_dlsym (handle, symname);
 			}
 		}
 	}
 
+	if (sym) STIX_DEBUG2 (stix, "Loaded module symbol %s from handle %p\n", symname, handle);
 	return sym;
 #else
 	/* TODO: IMPLEMENT THIS */

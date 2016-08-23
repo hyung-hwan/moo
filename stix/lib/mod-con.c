@@ -187,18 +187,37 @@ static int prim_write (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
+static int prim_clear (stix_t* stix, stix_ooi_t nargs)
+{
+	console_t* con;
+
+	con = STIX_OOP_TO_SMOOI(STIX_STACK_GETARG(stix, nargs, 0));
+
+	write (con->fd, con->clear, strlen(con->clear));
+
+	STIX_STACK_SETRETTORCV (stix, nargs);
+	return 1;
+}
+
 static int prim_setcursor (stix_t* stix, stix_ooi_t nargs)
 {
 	console_t* con;
-	stix_ooi_t x, y;
+	stix_oop_oop_t point;
 	char* cup;
 
 	con = STIX_OOP_TO_SMOOI(STIX_STACK_GETARG(stix, nargs, 0));
-	point = STIX_OOP_TO_SMOOI(STIX_STACK_GETARG(stix, nargs, 1));
+	point = STIX_STACK_GETARG(stix, nargs, 1);
 
-	cup = tiparm (con->cup, point->slot[0], point->slot[1]);
+/* TODO: error check, class check, size check.. */
+	if (STIX_OBJ_GET_SIZE(point) != 2)
+	{
+		return 0;
+	}
+
+	cup = tiparm (con->cup, STIX_OOP_TO_SMOOI(point->slot[1]), STIX_OOP_TO_SMOOI(point->slot[0]));
 	write (con->fd, cup, strlen(cup)); /* TODO: error check */
-	free (cup);
+
+	STIX_STACK_SETRETTORCV (stix, nargs);
 	return 1;
 }
 
@@ -213,6 +232,7 @@ struct fnctab_t
 
 static fnctab_t fnctab[] =
 {
+	{ "clear",      prim_clear     },
 	{ "close",      prim_close     },
 	{ "open",       prim_open      },
 	{ "setcursor",  prim_setcursor },
