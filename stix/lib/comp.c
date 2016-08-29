@@ -254,32 +254,6 @@ static STIX_INLINE int is_closing_char (stix_ooci_t c)
 	}
 }
 
-static STIX_INLINE int does_token_name_match (stix_t* stix, voca_id_t id)
-{
-	return stix->c->tok.name.len == vocas[id].len &&
-	       stix_equalchars(stix->c->tok.name.ptr, vocas[id].str, vocas[id].len);
-}
-
-static STIX_INLINE int is_token_symbol (stix_t* stix, voca_id_t id)
-{
-	return stix->c->tok.type == STIX_IOTOK_SYMLIT && does_token_name_match(stix, id);
-}
-
-static STIX_INLINE int is_token_word (stix_t* stix, voca_id_t id)
-{
-	return stix->c->tok.type == STIX_IOTOK_IDENT && does_token_name_match(stix, id);
-}
-
-static STIX_INLINE int is_token_binary_selector (stix_t* stix, voca_id_t id)
-{
-	return stix->c->tok.type == STIX_IOTOK_BINSEL && does_token_name_match(stix, id);
-}
-
-static STIX_INLINE int is_token_keyword (stix_t* stix, voca_id_t id)
-{
-	return stix->c->tok.type == STIX_IOTOK_KEYWORD && does_token_name_match(stix, id);
-}
-
 static STIX_INLINE int is_word (const stix_oocs_t* ucs, voca_id_t id)
 {
 	return ucs->len == vocas[id].len && stix_equalchars(ucs->ptr, vocas[id].str, vocas[id].len);
@@ -559,6 +533,43 @@ static stix_oop_t string_to_num (stix_t* stix, stix_oocs_t* str, int radixed)
 #define ADD_TOKEN_CHAR(stix,c) \
 	do { if (add_token_char(stix, c) <= -1) return -1; } while (0)
 
+#define CLEAR_TOKEN_NAME(stix) ((stix)->c->tok.name.len = 0)
+#define SET_TOKEN_TYPE(stix,tv) ((stix)->c->tok.type = (tv))
+
+#define TOKEN_TYPE(stix)      ((stix)->c->tok.type)
+#define TOKEN_NAME(stix)      (&(stix)->c->tok.name)
+#define TOKEN_NAME_CAPA(stix) ((stix)->c->tok.name_capa)
+#define TOKEN_NAME_PTR(stix)  ((stix)->c->tok.name.ptr)
+#define TOKEN_NAME_LEN(stix)  ((stix)->c->tok.name.len)
+#define TOKEN_LOC(stix)       (&(stix)->c->tok.loc)
+#define LEXER_LOC(stix)       (&(stix)->c->lxc.l)
+
+static STIX_INLINE int does_token_name_match (stix_t* stix, voca_id_t id)
+{
+	return stix->c->tok.name.len == vocas[id].len &&
+	       stix_equalchars(stix->c->tok.name.ptr, vocas[id].str, vocas[id].len);
+}
+
+static STIX_INLINE int is_token_symbol (stix_t* stix, voca_id_t id)
+{
+	return TOKEN_TYPE(stix) == STIX_IOTOK_SYMLIT && does_token_name_match(stix, id);
+}
+
+static STIX_INLINE int is_token_word (stix_t* stix, voca_id_t id)
+{
+	return TOKEN_TYPE(stix) == STIX_IOTOK_IDENT && does_token_name_match(stix, id);
+}
+
+static STIX_INLINE int is_token_binary_selector (stix_t* stix, voca_id_t id)
+{
+	return TOKEN_TYPE(stix) == STIX_IOTOK_BINSEL && does_token_name_match(stix, id);
+}
+
+static STIX_INLINE int is_token_keyword (stix_t* stix, voca_id_t id)
+{
+	return TOKEN_TYPE(stix) == STIX_IOTOK_KEYWORD && does_token_name_match(stix, id);
+}
+
 
 static STIX_INLINE int add_token_str (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
 {
@@ -566,7 +577,7 @@ static STIX_INLINE int add_token_str (stix_t* stix, const stix_ooch_t* ptr, stix
 
 	tmp.ptr = (stix_ooch_t*)ptr;
 	tmp.len = len;
-	return copy_string_to (stix, &tmp, &stix->c->tok.name, &stix->c->tok.name_capa, 1, '\0');
+	return copy_string_to (stix, &tmp, TOKEN_NAME(stix), &TOKEN_NAME_CAPA(stix), 1, '\0');
 }
 
 static STIX_INLINE int add_token_char (stix_t* stix, stix_ooch_t c)
@@ -575,7 +586,7 @@ static STIX_INLINE int add_token_char (stix_t* stix, stix_ooch_t c)
 
 	tmp.ptr = &c;
 	tmp.len = 1;
-	return copy_string_to (stix, &tmp, &stix->c->tok.name, &stix->c->tok.name_capa, 1, '\0');
+	return copy_string_to (stix, &tmp, TOKEN_NAME(stix), &TOKEN_NAME_CAPA(stix), 1, '\0');
 }
 
 static STIX_INLINE void unget_char (stix_t* stix, const stix_iolxc_t* c)
@@ -706,7 +717,7 @@ static int skip_comment (stix_t* stix)
 			if (c == STIX_UCI_EOF)
 			{
 				/* unterminated comment */
-				set_syntax_error (stix, STIX_SYNERR_CMTNC, &stix->c->lxc.l, STIX_NULL);
+				set_syntax_error (stix, STIX_SYNERR_CMTNC, LEXER_LOC(stix), STIX_NULL);
 				return -1;
 			}
 		}
@@ -762,7 +773,7 @@ static int get_ident (stix_t* stix, stix_ooci_t char_read_ahead)
 	stix_ooci_t c;
 
 	c = stix->c->lxc.c;
-	stix->c->tok.type = STIX_IOTOK_IDENT;
+	SET_TOKEN_TYPE (stix, STIX_IOTOK_IDENT);
 
 	if (char_read_ahead != STIX_UCI_EOF)
 	{
@@ -780,7 +791,7 @@ static int get_ident (stix_t* stix, stix_ooci_t char_read_ahead)
 	{
 	read_more_kwsym:
 		ADD_TOKEN_CHAR (stix, c);
-		stix->c->tok.type = STIX_IOTOK_KEYWORD;
+		SET_TOKEN_TYPE (stix, STIX_IOTOK_KEYWORD);
 		GET_CHAR_TO (stix, c);
 
 		if (stix->c->in_array && is_leadidentchar(c)) 
@@ -798,7 +809,7 @@ static int get_ident (stix_t* stix, stix_ooci_t char_read_ahead)
 			else
 			{
 				/* the last character is not a colon */
-				set_syntax_error (stix, STIX_SYNERR_COLON, &stix->c->lxc.l, STIX_NULL);
+				set_syntax_error (stix, STIX_SYNERR_COLON, LEXER_LOC(stix), STIX_NULL);
 				return -1;
 			}
 		}
@@ -816,7 +827,7 @@ static int get_ident (stix_t* stix, stix_ooci_t char_read_ahead)
 
 			if (is_leadidentchar(c))
 			{
-				stix->c->tok.type = STIX_IOTOK_IDENT_DOTTED;
+				SET_TOKEN_TYPE (stix, STIX_IOTOK_IDENT_DOTTED);
 
 				ADD_TOKEN_CHAR (stix, '.');
 				do
@@ -838,31 +849,31 @@ static int get_ident (stix_t* stix, stix_ooci_t char_read_ahead)
 		/* handle reserved words */
 		if (is_token_word(stix, VOCA_SELF))
 		{
-			stix->c->tok.type = STIX_IOTOK_SELF;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_SELF);
 		}
 		else if (is_token_word(stix, VOCA_SUPER))
 		{
-			stix->c->tok.type = STIX_IOTOK_SUPER;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_SUPER);
 		}
 		else if (is_token_word(stix, VOCA_NIL))
 		{
-			stix->c->tok.type = STIX_IOTOK_NIL;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_NIL);
 		}
 		else if (is_token_word(stix, VOCA_TRUE))
 		{
-			stix->c->tok.type = STIX_IOTOK_TRUE;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_TRUE);
 		}
 		else if (is_token_word(stix, VOCA_FALSE))
 		{
-			stix->c->tok.type = STIX_IOTOK_FALSE;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_FALSE);
 		}
 		else if (is_token_word(stix, VOCA_THIS_CONTEXT))
 		{
-			stix->c->tok.type = STIX_IOTOK_THIS_CONTEXT;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_THIS_CONTEXT);
 		}
 		else if (is_token_word(stix, VOCA_THIS_PROCESS))
 		{
-			stix->c->tok.type = STIX_IOTOK_THIS_PROCESS;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_THIS_PROCESS);
 		}
 	}
 
@@ -893,7 +904,7 @@ static int get_numlit (stix_t* stix, int negated)
 	int radix = 0, r;
 
 	c = stix->c->lxc.c;
-	stix->c->tok.type = STIX_IOTOK_NUMLIT;
+	SET_TOKEN_TYPE (stix, STIX_IOTOK_NUMLIT);
 
 /*TODO: support a complex numeric literal */
 	do 
@@ -918,7 +929,7 @@ static int get_numlit (stix_t* stix, int negated)
 		if (radix < 2 || radix > 36)
 		{
 			/* no digit after the radix specifier */
-			set_syntax_error (stix, STIX_SYNERR_RADIX, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_RADIX, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 
@@ -928,7 +939,7 @@ static int get_numlit (stix_t* stix, int negated)
 		if (CHAR_TO_NUM(c, radix) >= radix)
 		{
 			/* no digit after the radix specifier */
-			set_syntax_error (stix, STIX_SYNERR_RADNUMLIT, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_RADNUMLIT, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 
@@ -939,7 +950,7 @@ static int get_numlit (stix_t* stix, int negated)
 		}
 		while (CHAR_TO_NUM(c, radix) < radix);
 
-		stix->c->tok.type = STIX_IOTOK_RADNUMLIT;
+		SET_TOKEN_TYPE (stix, STIX_IOTOK_RADNUMLIT);
 	}
 
 /*
@@ -958,11 +969,11 @@ static int get_charlit (stix_t* stix)
 	stix_ooci_t c = stix->c->lxc.c; /* even a new-line or white space would be taken */
 	if (c == STIX_UCI_EOF) 
 	{
-		set_syntax_error (stix, STIX_SYNERR_CLTNT, &stix->c->lxc.l, STIX_NULL);
+		set_syntax_error (stix, STIX_SYNERR_CLTNT, LEXER_LOC(stix), STIX_NULL);
 		return -1;
 	}
 
-	stix->c->tok.type = STIX_IOTOK_CHARLIT;
+	SET_TOKEN_TYPE (stix, STIX_IOTOK_CHARLIT);
 	ADD_TOKEN_CHAR(stix, c);
 	GET_CHAR (stix);
 	return 0;
@@ -978,7 +989,7 @@ static int get_strlit (stix_t* stix)
 	 */
 
 	stix_ooci_t c = stix->c->lxc.c;
-	stix->c->tok.type = STIX_IOTOK_STRLIT;
+	SET_TOKEN_TYPE (stix, STIX_IOTOK_STRLIT);
 
 	do 
 	{
@@ -990,7 +1001,7 @@ static int get_strlit (stix_t* stix)
 			if (c == STIX_UCI_EOF) 
 			{
 				/* string not closed */
-				set_syntax_error (stix, STIX_SYNERR_STRNC, &stix->c->tok.loc /*&stix->c->lxc.l*/, STIX_NULL);
+				set_syntax_error (stix, STIX_SYNERR_STRNC, TOKEN_LOC(stix) /*&stix->c->lxc.l*/, STIX_NULL);
 				return -1;
 			}
 		} 
@@ -1010,7 +1021,7 @@ static int get_string (stix_t* stix, stix_ooch_t end_char, stix_ooch_t esc_char,
 	stix_oow_t digit_count = 0;
 	stix_ooci_t c_acc = 0;
 
-	stix->c->tok.type = STIX_IOTOK_STRLIT;
+	SET_TOKEN_TYPE (stix, STIX_IOTOK_STRLIT);
 
 	while (1)
 	{
@@ -1018,7 +1029,7 @@ static int get_string (stix_t* stix, stix_ooch_t end_char, stix_ooch_t esc_char,
 
 		if (c == STIX_UCI_EOF)
 		{
-			set_syntax_error (stix, STIX_SYNERR_STRNC, &stix->c->tok.loc /*&stix->c->lxc.l*/, STIX_NULL);
+			set_syntax_error (stix, STIX_SYNERR_STRNC, TOKEN_LOC(stix) /*&stix->c->lxc.l*/, STIX_NULL);
 			return -1;
 		}
 
@@ -1194,7 +1205,7 @@ static int get_binsel (stix_t* stix)
 	}
 	*/
 
-	stix->c->tok.type = STIX_IOTOK_BINSEL;
+	SET_TOKEN_TYPE (stix, STIX_IOTOK_BINSEL);
 	return 0;
 }
 
@@ -1211,9 +1222,9 @@ retry:
 	} 
 	while (n >= 1);
 
-	/* clear the token resetting its location */
-	stix->c->tok.type = STIX_IOTOK_EOF;  /* is it correct? */
-	stix->c->tok.name.len = 0;
+	/* clear the token name, reset its location */
+	SET_TOKEN_TYPE (stix, STIX_IOTOK_EOF); /* is it correct? */
+	CLEAR_TOKEN_NAME (stix);
 
 	stix->c->tok.loc = stix->c->lxc.l;
 	c = stix->c->lxc.c;
@@ -1228,7 +1239,7 @@ retry:
 			if (n <= -1) return -1;
 			if (n >= 1) goto retry;
 
-			stix->c->tok.type = STIX_IOTOK_EOF;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_EOF);
 			ADD_TOKEN_STR(stix, vocas[VOCA_EOF].str, vocas[VOCA_EOF].len);
 			break;
 		}
@@ -1244,19 +1255,19 @@ retry:
 			break;
 
 		case ':':
-			stix->c->tok.type = STIX_IOTOK_COLON;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_COLON);
 			ADD_TOKEN_CHAR (stix, c);
 			GET_CHAR_TO (stix, c);
 			if (c == '=') 
 			{
-				stix->c->tok.type = STIX_IOTOK_ASSIGN;
+				SET_TOKEN_TYPE (stix, STIX_IOTOK_ASSIGN);
 				ADD_TOKEN_CHAR (stix, c);
 				GET_CHAR (stix);
 			}
 			break;
 
 		case '^':
-			stix->c->tok.type = STIX_IOTOK_RETURN;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_RETURN);
 			ADD_TOKEN_CHAR(stix, c);
 			GET_CHAR_TO (stix, c);
 #if 0
@@ -1264,35 +1275,35 @@ retry:
 			if (c == '^')
 			{
 				/* ^^ */
-				stix->c->tok.type == STIX_IOTOK_BLKRET;
+				TOKEN_TYPE(stix) == STIX_IOTOK_BLKRET;
 				ADD_TOKEN_CHAR (stix, c);
 			}
 #endif
 			break;
 
 		case '{': /* extension */
-			stix->c->tok.type = STIX_IOTOK_LBRACE;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_LBRACE);
 			goto single_char_token;
 		case '}': /* extension */
-			stix->c->tok.type = STIX_IOTOK_RBRACE;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_RBRACE);
 			goto single_char_token;
 		case '[':
-			stix->c->tok.type = STIX_IOTOK_LBRACK;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_LBRACK);
 			goto single_char_token;
 		case ']': 
-			stix->c->tok.type = STIX_IOTOK_RBRACK;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_RBRACK);
 			goto single_char_token;
 		case '(':
-			stix->c->tok.type = STIX_IOTOK_LPAREN;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_LPAREN);
 			goto single_char_token;
 		case ')':
-			stix->c->tok.type = STIX_IOTOK_RPAREN;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_RPAREN);
 			goto single_char_token;
 		case '.':
-			stix->c->tok.type = STIX_IOTOK_PERIOD;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_PERIOD);
 			goto single_char_token;
 		case ';':
-			stix->c->tok.type = STIX_IOTOK_SEMICOLON;
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_SEMICOLON);
 			goto single_char_token;
 
 		case '#':  
@@ -1303,20 +1314,20 @@ retry:
 			switch (c)
 			{
 				case STIX_UCI_EOF:
-					set_syntax_error (stix, STIX_SYNERR_HLTNT, &stix->c->lxc.l, STIX_NULL);
+					set_syntax_error (stix, STIX_SYNERR_HLTNT, LEXER_LOC(stix), STIX_NULL);
 					return -1;
 				
 				case '(':
 					/* #( */
 					ADD_TOKEN_CHAR(stix, c);
-					stix->c->tok.type = STIX_IOTOK_APAREN;
+					SET_TOKEN_TYPE (stix, STIX_IOTOK_APAREN);
 					GET_CHAR (stix);
 					break;
 
 				case '[':
 					/* #[ - byte array literal */
 					ADD_TOKEN_CHAR(stix, c);
-					stix->c->tok.type = STIX_IOTOK_BPAREN;
+					SET_TOKEN_TYPE (stix, STIX_IOTOK_BPAREN);
 					GET_CHAR (stix);
 					break;
 
@@ -1324,7 +1335,7 @@ retry:
 					/* quoted symbol literal */
 					GET_CHAR (stix);
 					if (get_strlit(stix) <= -1) return -1;
-					stix->c->tok.type = STIX_IOTOK_SYMLIT;
+					SET_TOKEN_TYPE (stix, STIX_IOTOK_SYMLIT);
 					break;
 
 				default:
@@ -1373,7 +1384,7 @@ retry:
 									/* if a colon is found in the middle of a symbol,
 									 * the last charater is expected to be a colon as well.
 									 * but, the last character is not a colon */
-									set_syntax_error (stix, STIX_SYNERR_COLON, &stix->c->lxc.l, STIX_NULL);
+									set_syntax_error (stix, STIX_SYNERR_COLON, LEXER_LOC(stix), STIX_NULL);
 									return -1;
 								}
 							}
@@ -1410,11 +1421,11 @@ retry:
 					}
 					else
 					{
-						set_syntax_error (stix, STIX_SYNERR_HLTNT, &stix->c->lxc.l, STIX_NULL);
+						set_syntax_error (stix, STIX_SYNERR_HLTNT, LEXER_LOC(stix), STIX_NULL);
 						return -1;
 					}
 
-					stix->c->tok.type = STIX_IOTOK_SYMLIT;
+					SET_TOKEN_TYPE (stix, STIX_IOTOK_SYMLIT);
 					break;
 			}
 
@@ -1436,14 +1447,14 @@ retry:
 				{
 					if (stix->c->tok.name.len != 1)
 					{
-						set_syntax_error (stix, STIX_SYNERR_CHARLIT, &stix->c->tok.loc, &stix->c->tok.name);
+						set_syntax_error (stix, STIX_SYNERR_CHARLIT, TOKEN_LOC(stix), TOKEN_NAME(stix));
 						return -1;
 					}
-					stix->c->tok.type = STIX_IOTOK_CHARLIT;
+					SET_TOKEN_TYPE (stix, STIX_IOTOK_CHARLIT);
 				}
 				else if (saved_c == 'M')
 				{
-					stix->c->tok.type = STIX_IOTOK_SYMLIT;
+					SET_TOKEN_TYPE (stix, STIX_IOTOK_SYMLIT);
 				}
 			}
 			else
@@ -1488,7 +1499,7 @@ retry:
 			else 
 			{
 				stix->c->ilchr = (stix_ooch_t)c;
-				set_syntax_error (stix, STIX_SYNERR_ILCHR, &stix->c->lxc.l, &stix->c->ilchr_ucs);
+				set_syntax_error (stix, STIX_SYNERR_ILCHR, LEXER_LOC(stix), &stix->c->ilchr_ucs);
 				return -1;
 			}
 			break;
@@ -1542,7 +1553,7 @@ static int begin_include (stix_t* stix)
 	stix_ioarg_t* arg;
 	const stix_ooch_t* io_name;
 
-	io_name = add_io_name (stix, &stix->c->tok.name);
+	io_name = add_io_name (stix, TOKEN_NAME(stix));
 	if (!io_name) return -1;
 
 	arg = (stix_ioarg_t*) stix_callocmem (stix, STIX_SIZEOF(*arg));
@@ -1555,15 +1566,15 @@ static int begin_include (stix_t* stix)
 
 	if (stix->c->impl (stix, STIX_IO_OPEN, arg) <= -1) 
 	{
-		set_syntax_error (stix, STIX_SYNERR_INCLUDE, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_INCLUDE, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		goto oops;
 	}
 
 	GET_TOKEN (stix);
-	if (stix->c->tok.type != STIX_IOTOK_PERIOD)
+	if (TOKEN_TYPE(stix) != STIX_IOTOK_PERIOD)
 	{
 		/* check if a period is following the includee name */
-		set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_PERIOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		goto oops;
 	}
 
@@ -2283,7 +2294,7 @@ static int resolve_pooldic (stix_t* stix, int dotted, const stix_oocs_t* name)
 
 	if (dotted)
 	{
-		if (preprocess_dotted_name(stix, 0, 0, name, &stix->c->tok.loc, &last, &ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name(stix, 0, 0, name, TOKEN_LOC(stix), &last, &ns_oop) <= -1) return -1;
 	}
 	else
 	{
@@ -2296,7 +2307,7 @@ static int resolve_pooldic (stix_t* stix, int dotted, const stix_oocs_t* name)
 	ass = stix_lookupdic (stix, ns_oop, &last);
 	if (!ass || STIX_CLASSOF(stix, ass->value) != stix->_pool_dictionary)
 	{
-		set_syntax_error (stix, STIX_SYNERR_POOLDIC, &stix->c->tok.loc, name);
+		set_syntax_error (stix, STIX_SYNERR_POOLDIC, TOKEN_LOC(stix), name);
 		return -1;
 	}
 
@@ -2305,7 +2316,7 @@ static int resolve_pooldic (stix_t* stix, int dotted, const stix_oocs_t* name)
 	{
 		if ((stix_oop_set_t)ass->value == stix->c->cls.pooldic_oops[i])
 		{
-			set_syntax_error (stix, STIX_SYNERR_POOLDICDUP, &stix->c->tok.loc, name);
+			set_syntax_error (stix, STIX_SYNERR_POOLDICDUP, TOKEN_LOC(stix), name);
 			return -1;
 		}
 	}
@@ -2350,7 +2361,7 @@ static int compile_class_level_variables (stix_t* stix)
 {
 	var_type_t dcl_type = VAR_INSTANCE;
 
-	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
+	if (TOKEN_TYPE(stix) == STIX_IOTOK_LPAREN)
 	{
 		/* process variable modifiers */
 		GET_TOKEN (stix);
@@ -2374,9 +2385,9 @@ static int compile_class_level_variables (stix_t* stix)
 			GET_TOKEN (stix);
 		}
 
-		if (stix->c->tok.type != STIX_IOTOK_RPAREN)
+		if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
 		{
-			set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_RPAREN, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 
@@ -2392,11 +2403,11 @@ static int compile_class_level_variables (stix_t* stix)
 
 		do
 		{
-			if (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
+			if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT_DOTTED)
 			{
-				if (preprocess_dotted_name(stix, 0, 0, &stix->c->tok.name, &stix->c->tok.loc, &last, &ns_oop) <= -1) return -1;
+				if (preprocess_dotted_name(stix, 0, 0, TOKEN_NAME(stix), TOKEN_LOC(stix), &last, &ns_oop) <= -1) return -1;
 			}
-			else if (stix->c->tok.type == STIX_IOTOK_IDENT)
+			else if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT)
 			{
 				last = stix->c->tok.name;
 				/* it falls back to the name space of the class */
@@ -2404,7 +2415,7 @@ static int compile_class_level_variables (stix_t* stix)
 			}
 			else break;
 
-			if (import_pool_dictionary(stix, ns_oop, &last, &stix->c->tok.name, &stix->c->tok.loc) <= -1) return -1;
+			if (import_pool_dictionary(stix, ns_oop, &last, TOKEN_NAME(stix), TOKEN_LOC(stix)) <= -1) return -1;
 			GET_TOKEN (stix);
 		}
 		while (1);
@@ -2414,19 +2425,19 @@ static int compile_class_level_variables (stix_t* stix)
 		/* variable declaration */
 		do
 		{
-			if (stix->c->tok.type == STIX_IOTOK_IDENT)
+			if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT)
 			{
 				var_info_t var;
 
-				if (find_class_level_variable(stix, STIX_NULL, &stix->c->tok.name, &var) >= 0 ||
-				    stix_lookupdic (stix, stix->sysdic, &stix->c->tok.name) ||  /* conflicts with a top global name */
-				    stix_lookupdic (stix, stix->c->cls.ns_oop, &stix->c->tok.name)) /* conflicts with a global name in the class'es name space */
+				if (find_class_level_variable(stix, STIX_NULL, TOKEN_NAME(stix), &var) >= 0 ||
+				    stix_lookupdic (stix, stix->sysdic, TOKEN_NAME(stix)) ||  /* conflicts with a top global name */
+				    stix_lookupdic (stix, stix->c->cls.ns_oop, TOKEN_NAME(stix))) /* conflicts with a global name in the class'es name space */
 				{
-					set_syntax_error (stix, STIX_SYNERR_VARNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
+					set_syntax_error (stix, STIX_SYNERR_VARNAMEDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
 					return -1;
 				}
 
-				if (add_class_level_variable(stix, dcl_type, &stix->c->tok.name) <= -1) return -1;
+				if (add_class_level_variable(stix, dcl_type, TOKEN_NAME(stix)) <= -1) return -1;
 			}
 			else
 			{
@@ -2438,9 +2449,9 @@ static int compile_class_level_variables (stix_t* stix)
 		while (1);
 	}
 
-	if (stix->c->tok.type != STIX_IOTOK_PERIOD)
+	if (TOKEN_TYPE(stix) != STIX_IOTOK_PERIOD)
 	{
-		set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_PERIOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
@@ -2453,7 +2464,7 @@ static int compile_unary_method_name (stix_t* stix)
 	STIX_ASSERT (stix->c->mth.name.len == 0);
 	STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
 
-	if (add_method_name_fragment(stix, &stix->c->tok.name) <= -1) return -1;
+	if (add_method_name_fragment(stix, TOKEN_NAME(stix)) <= -1) return -1;
 	GET_TOKEN (stix);
 	return 0;
 }
@@ -2463,14 +2474,14 @@ static int compile_binary_method_name (stix_t* stix)
 	STIX_ASSERT (stix->c->mth.name.len == 0);
 	STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
 
-	if (add_method_name_fragment(stix, &stix->c->tok.name) <= -1) return -1;
+	if (add_method_name_fragment(stix, TOKEN_NAME(stix)) <= -1) return -1;
 	GET_TOKEN (stix);
 
 	/* collect the argument name */
-	if (stix->c->tok.type != STIX_IOTOK_IDENT) 
+	if (TOKEN_TYPE(stix) != STIX_IOTOK_IDENT) 
 	{
 		/* wrong argument name. identifier expected */
-		set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_IDENT, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
@@ -2478,14 +2489,14 @@ static int compile_binary_method_name (stix_t* stix)
 
 	/* no duplication check is performed against class-level variable names.
 	 * a duplcate name will shade a previsouly defined variable. */
-	if (add_temporary_variable(stix, &stix->c->tok.name) <= -1) return -1;
+	if (add_temporary_variable(stix, TOKEN_NAME(stix)) <= -1) return -1;
 	stix->c->mth.tmpr_nargs++;
 
 	STIX_ASSERT (stix->c->mth.tmpr_nargs == 1);
 	/* this check should not be not necessary
 	if (stix->c->mth.tmpr_nargs > MAX_CODE_NARGS)
 	{
-		set_syntax_error (stix, STIX_SYNERR_ARGFLOOD, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_ARGFLOOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 	*/
@@ -2501,28 +2512,28 @@ static int compile_keyword_method_name (stix_t* stix)
 
 	do 
 	{
-		if (add_method_name_fragment(stix, &stix->c->tok.name) <= -1) return -1;
+		if (add_method_name_fragment(stix, TOKEN_NAME(stix)) <= -1) return -1;
 
 		GET_TOKEN (stix);
-		if (stix->c->tok.type != STIX_IOTOK_IDENT) 
+		if (TOKEN_TYPE(stix) != STIX_IOTOK_IDENT) 
 		{
 			/* wrong argument name. identifier is expected */
-			set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_IDENT, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 
-		if (find_temporary_variable(stix, &stix->c->tok.name, STIX_NULL) >= 0)
+		if (find_temporary_variable(stix, TOKEN_NAME(stix), STIX_NULL) >= 0)
 		{
-			set_syntax_error (stix, STIX_SYNERR_ARGNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_ARGNAMEDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 
-		if (add_temporary_variable(stix, &stix->c->tok.name) <= -1) return -1;
+		if (add_temporary_variable(stix, TOKEN_NAME(stix)) <= -1) return -1;
 		stix->c->mth.tmpr_nargs++;
 
 		GET_TOKEN (stix);
 	} 
-	while (stix->c->tok.type == STIX_IOTOK_KEYWORD);
+	while (TOKEN_TYPE(stix) == STIX_IOTOK_KEYWORD);
 
 	return 0;
 }
@@ -2558,7 +2569,7 @@ static int compile_method_name (stix_t* stix)
 
 		default:
 			/* illegal method name  */
-			set_syntax_error (stix, STIX_SYNERR_MTHNAME, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_MTHNAME, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			n = -1;
 	}
 
@@ -2594,20 +2605,20 @@ static int compile_method_temporaries (stix_t* stix)
 	}
 
 	GET_TOKEN (stix);
-	while (stix->c->tok.type == STIX_IOTOK_IDENT) 
+	while (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT) 
 	{
-		if (find_temporary_variable(stix, &stix->c->tok.name, STIX_NULL) >= 0)
+		if (find_temporary_variable(stix, TOKEN_NAME(stix), STIX_NULL) >= 0)
 		{
-			set_syntax_error (stix, STIX_SYNERR_TMPRNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_TMPRNAMEDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 
-		if (add_temporary_variable(stix, &stix->c->tok.name) <= -1) return -1;
+		if (add_temporary_variable(stix, TOKEN_NAME(stix)) <= -1) return -1;
 		stix->c->mth.tmpr_count++;
 
 		if (stix->c->mth.tmpr_count > MAX_CODE_NARGS)
 		{
-			set_syntax_error (stix, STIX_SYNERR_TMPRFLOOD, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_TMPRFLOOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 
@@ -2616,7 +2627,7 @@ static int compile_method_temporaries (stix_t* stix)
 
 	if (!is_token_binary_selector(stix, VOCA_VBAR)) 
 	{
-		set_syntax_error (stix, STIX_SYNERR_VBAR, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_VBAR, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
@@ -2655,7 +2666,7 @@ static int compile_method_primitive (stix_t* stix)
 					prim_no = prim_no * 10 + (*ptr - '0');
 					if (!STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(prim_no))
 					{
-						set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
+						set_syntax_error (stix, STIX_SYNERR_PRIMNO, TOKEN_LOC(stix), TOKEN_NAME(stix));
 						return -1;
 					}
 
@@ -2666,7 +2677,7 @@ static int compile_method_primitive (stix_t* stix)
 				break;
 	 
 			case STIX_IOTOK_SYMLIT:
-				prim_no = stix_getprimno (stix, &stix->c->tok.name);
+				prim_no = stix_getprimno (stix, TOKEN_NAME(stix));
 				if (prim_no <= -1)
 				{
 					const stix_ooch_t* us;
@@ -2677,7 +2688,7 @@ static int compile_method_primitive (stix_t* stix)
 						stix_oow_t lit_idx;
 						/* the symbol literal contains an underscore.
 						 * and it is none of the first of the last character */
-						if (add_symbol_literal(stix, &stix->c->tok.name, &lit_idx) >= 0 &&
+						if (add_symbol_literal(stix, TOKEN_NAME(stix), &lit_idx) >= 0 &&
 						    STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx))
 						{
 							stix->c->mth.prim_type = 2; /* named primitive */
@@ -2686,12 +2697,12 @@ static int compile_method_primitive (stix_t* stix)
 						}
 					}
 
-					set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
+					set_syntax_error (stix, STIX_SYNERR_PRIMNO, TOKEN_LOC(stix), TOKEN_NAME(stix));
 					return -1;
 				}
 				else if (!STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(prim_no))
 				{
-					set_syntax_error (stix, STIX_SYNERR_PRIMNO, &stix->c->tok.loc, &stix->c->tok.name);
+					set_syntax_error (stix, STIX_SYNERR_PRIMNO, TOKEN_LOC(stix), TOKEN_NAME(stix));
 					return -1;
 				}
 
@@ -2700,7 +2711,7 @@ static int compile_method_primitive (stix_t* stix)
 				break;
 
 			default:
-				set_syntax_error (stix, STIX_SYNERR_INTEGER, &stix->c->tok.loc, &stix->c->tok.name);
+				set_syntax_error (stix, STIX_SYNERR_INTEGER, TOKEN_LOC(stix), TOKEN_NAME(stix));
 				return -1;
 		}
 
@@ -2717,14 +2728,14 @@ static int compile_method_primitive (stix_t* stix)
 	}
 	else
 	{
-		set_syntax_error (stix, STIX_SYNERR_PRIMITIVE, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_PRIMITIVE, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
 	GET_TOKEN (stix);
 	if (!is_token_binary_selector(stix, VOCA_GT)) 
 	{
-		set_syntax_error (stix, STIX_SYNERR_GT, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_GT, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
@@ -2924,19 +2935,19 @@ static int compile_block_temporaries (stix_t* stix)
 	}
 
 	GET_TOKEN (stix);
-	while (stix->c->tok.type == STIX_IOTOK_IDENT) 
+	while (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT) 
 	{
-		if (find_temporary_variable(stix, &stix->c->tok.name, STIX_NULL) >= 0)
+		if (find_temporary_variable(stix, TOKEN_NAME(stix), STIX_NULL) >= 0)
 		{
-			set_syntax_error (stix, STIX_SYNERR_TMPRNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_TMPRNAMEDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 
-		if (add_temporary_variable(stix, &stix->c->tok.name) <= -1) return -1;
+		if (add_temporary_variable(stix, TOKEN_NAME(stix)) <= -1) return -1;
 		stix->c->mth.tmpr_count++;
 		if (stix->c->mth.tmpr_count > MAX_CODE_NTMPRS)
 		{
-			set_syntax_error (stix, STIX_SYNERR_TMPRFLOOD, &stix->c->tok.loc, &stix->c->tok.name); 
+			set_syntax_error (stix, STIX_SYNERR_TMPRFLOOD, TOKEN_LOC(stix), TOKEN_NAME(stix)); 
 			return -1;
 		}
 
@@ -2945,7 +2956,7 @@ static int compile_block_temporaries (stix_t* stix)
 
 	if (!is_token_binary_selector(stix, VOCA_VBAR)) 
 	{
-		set_syntax_error (stix, STIX_SYNERR_VBAR, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_VBAR, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
@@ -2990,7 +3001,7 @@ static int compile_block_expression (stix_t* stix)
 	 */
 
 	/* this function expects [ not to be consumed away */
-	STIX_ASSERT (stix->c->tok.type == STIX_IOTOK_LBRACK);
+	STIX_ASSERT (TOKEN_TYPE(stix) == STIX_IOTOK_LBRACK);
 	block_loc = stix->c->tok.loc;
 	GET_TOKEN (stix);
 
@@ -2999,7 +3010,7 @@ static int compile_block_expression (stix_t* stix)
 	STIX_ASSERT (stix->c->mth.blk_depth > 0);
 	STIX_ASSERT (stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth - 1] == saved_tmpr_count);
 
-	if (stix->c->tok.type == STIX_IOTOK_COLON) 
+	if (TOKEN_TYPE(stix) == STIX_IOTOK_COLON) 
 	{
 		colon_loc = stix->c->tok.loc;
 
@@ -3008,35 +3019,35 @@ static int compile_block_expression (stix_t* stix)
 		{
 			GET_TOKEN (stix);
 
-			if (stix->c->tok.type != STIX_IOTOK_IDENT) 
+			if (TOKEN_TYPE(stix) != STIX_IOTOK_IDENT) 
 			{
 				/* wrong argument name. identifier expected */
-				set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
+				set_syntax_error (stix, STIX_SYNERR_IDENT, TOKEN_LOC(stix), TOKEN_NAME(stix));
 				return -1;
 			}
 
 /* TODO: check conflicting names as well */
-			if (find_temporary_variable(stix, &stix->c->tok.name, STIX_NULL) >= 0)
+			if (find_temporary_variable(stix, TOKEN_NAME(stix), STIX_NULL) >= 0)
 			{
-				set_syntax_error (stix, STIX_SYNERR_BLKARGNAMEDUP, &stix->c->tok.loc, &stix->c->tok.name);
+				set_syntax_error (stix, STIX_SYNERR_BLKARGNAMEDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
 				return -1;
 			}
 
-			if (add_temporary_variable(stix, &stix->c->tok.name) <= -1) return -1;
+			if (add_temporary_variable(stix, TOKEN_NAME(stix)) <= -1) return -1;
 			stix->c->mth.tmpr_count++;
 			if (stix->c->mth.tmpr_count > MAX_CODE_NARGS)
 			{
-				set_syntax_error (stix, STIX_SYNERR_BLKARGFLOOD, &stix->c->tok.loc, &stix->c->tok.name); 
+				set_syntax_error (stix, STIX_SYNERR_BLKARGFLOOD, TOKEN_LOC(stix), TOKEN_NAME(stix)); 
 				return -1;
 			}
 
 			GET_TOKEN (stix);
 		} 
-		while (stix->c->tok.type == STIX_IOTOK_COLON);
+		while (TOKEN_TYPE(stix) == STIX_IOTOK_COLON);
 
 		if (!is_token_binary_selector(stix, VOCA_VBAR))
 		{
-			set_syntax_error (stix, STIX_SYNERR_VBAR, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_VBAR, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 
@@ -3086,27 +3097,27 @@ static int compile_block_expression (stix_t* stix)
 	if (emit_single_param_instruction (stix, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
 
 	/* compile statements inside a block */
-	if (stix->c->tok.type == STIX_IOTOK_RBRACK)
+	if (TOKEN_TYPE(stix) == STIX_IOTOK_RBRACK)
 	{
 		/* the block is empty */
 		if (emit_byte_instruction (stix, BCODE_PUSH_NIL) <= -1) return -1;
 	}
 	else 
 	{
-		while (stix->c->tok.type != STIX_IOTOK_EOF)
+		while (TOKEN_TYPE(stix) != STIX_IOTOK_EOF)
 		{
 			if (compile_block_statement(stix) <= -1) return -1;
 
-			if (stix->c->tok.type == STIX_IOTOK_RBRACK) break;
-			else if (stix->c->tok.type == STIX_IOTOK_PERIOD)
+			if (TOKEN_TYPE(stix) == STIX_IOTOK_RBRACK) break;
+			else if (TOKEN_TYPE(stix) == STIX_IOTOK_PERIOD)
 			{
 				GET_TOKEN (stix);
-				if (stix->c->tok.type == STIX_IOTOK_RBRACK) break;
+				if (TOKEN_TYPE(stix) == STIX_IOTOK_RBRACK) break;
 				if (emit_byte_instruction(stix, BCODE_POP_STACKTOP) <= -1) return -1;
 			}
 			else
 			{
-				set_syntax_error (stix, STIX_SYNERR_RBRACK, &stix->c->tok.loc, &stix->c->tok.name);
+				set_syntax_error (stix, STIX_SYNERR_RBRACK, TOKEN_LOC(stix), TOKEN_NAME(stix));
 				return -1;
 			}
 		}
@@ -3200,11 +3211,11 @@ static int __read_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
 
 	stix->c->mth.balit_count = 0;
 
-	while (stix->c->tok.type == STIX_IOTOK_NUMLIT || stix->c->tok.type == STIX_IOTOK_RADNUMLIT)
+	while (TOKEN_TYPE(stix) == STIX_IOTOK_NUMLIT || TOKEN_TYPE(stix) == STIX_IOTOK_RADNUMLIT)
 	{
 		/* TODO: check if the number is an integer */
 
-		if (string_to_smint(stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT, &tmp) <= -1)
+		if (string_to_smint(stix, TOKEN_NAME(stix), TOKEN_TYPE(stix) == STIX_IOTOK_RADNUMLIT, &tmp) <= -1)
 		{
 			/* the token reader reads a valid token. no other errors
 			 * than the range error must not occur */
@@ -3212,12 +3223,12 @@ static int __read_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
 
 			/* if the token is out of the SMOOI range, it's too big or 
 			 * to small to be a byte */
-			set_syntax_error (stix, STIX_SYNERR_BYTERANGE, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_BYTERANGE, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 		else if (tmp < 0 || tmp > 255)
 		{
-			set_syntax_error (stix, STIX_SYNERR_BYTERANGE, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_BYTERANGE, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 
@@ -3225,9 +3236,9 @@ static int __read_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
 		GET_TOKEN (stix);
 	}
 
-	if (stix->c->tok.type != STIX_IOTOK_RBRACK)
+	if (TOKEN_TYPE(stix) != STIX_IOTOK_RBRACK)
 	{
-		set_syntax_error (stix, STIX_SYNERR_RBRACK, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_RBRACK, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
@@ -3263,7 +3274,7 @@ static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
 
 			case STIX_IOTOK_NUMLIT:
 			case STIX_IOTOK_RADNUMLIT:
-				lit = string_to_num (stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT);
+				lit = string_to_num (stix, TOKEN_NAME(stix), TOKEN_TYPE(stix) == STIX_IOTOK_RADNUMLIT);
 				if (!lit) return -1;
 				break;
 
@@ -3327,9 +3338,9 @@ static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
 	while (1);
 
 done:
-	if (stix->c->tok.type != STIX_IOTOK_RPAREN)
+	if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
 	{
-		set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_RPAREN, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
@@ -3484,8 +3495,8 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 			case STIX_IOTOK_IDENT_DOTTED:
 				ident_dotted = 1;
 			case STIX_IOTOK_IDENT:
-				ident = &stix->c->tok.name;
-				ident_loc = &stix->c->tok.loc;
+				ident = TOKEN_NAME(stix);
+				ident_loc = TOKEN_LOC(stix);
 				read_next_token = 1;
 				goto handle_ident;
 
@@ -3533,13 +3544,13 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 				break;
 
 			case STIX_IOTOK_STRLIT:
-				if (add_string_literal(stix, &stix->c->tok.name, &index) <= -1 ||
+				if (add_string_literal(stix, TOKEN_NAME(stix), &index) <= -1 ||
 				    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
 
 			case STIX_IOTOK_SYMLIT:
-				if (add_symbol_literal(stix, &stix->c->tok.name, &index) <= -1 ||
+				if (add_symbol_literal(stix, TOKEN_NAME(stix), &index) <= -1 ||
 				    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
@@ -3551,7 +3562,7 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 				/* TODO: other types of numbers, etc */
 				stix_oop_t tmp;
 
-				tmp = string_to_num (stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT);
+				tmp = string_to_num (stix, TOKEN_NAME(stix), TOKEN_TYPE(stix) == STIX_IOTOK_RADNUMLIT);
 				if (!tmp) return -1;
 
 				if (STIX_OOP_IS_SMOOI(tmp))
@@ -3602,16 +3613,16 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 			case STIX_IOTOK_LPAREN:
 				GET_TOKEN (stix);
 				if (compile_method_expression(stix, 0) <= -1) return -1;
-				if (stix->c->tok.type != STIX_IOTOK_RPAREN)
+				if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
 				{
-					set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
+					set_syntax_error (stix, STIX_SYNERR_RPAREN, TOKEN_LOC(stix), TOKEN_NAME(stix));
 					return -1;
 				}
 				GET_TOKEN (stix);
 				break;
 
 			default:
-				set_syntax_error (stix, STIX_SYNERR_PRIMARY, &stix->c->tok.loc, &stix->c->tok.name);
+				set_syntax_error (stix, STIX_SYNERR_PRIMARY, TOKEN_LOC(stix), TOKEN_NAME(stix));
 				return -1;
 		}
 	}
@@ -3629,15 +3640,15 @@ static int compile_unary_message (stix_t* stix, int to_super)
 {
 	stix_oow_t index;
 
-	STIX_ASSERT (stix->c->tok.type == STIX_IOTOK_IDENT);
+	STIX_ASSERT (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT);
 
 	do
 	{
-		if (add_symbol_literal(stix, &stix->c->tok.name, &index) <= -1 ||
+		if (add_symbol_literal(stix, TOKEN_NAME(stix), &index) <= -1 ||
 		    emit_double_param_instruction(stix, send_message_cmd[to_super], 0, index) <= -1) return -1;
 		GET_TOKEN (stix);
 	}
-	while (stix->c->tok.type == STIX_IOTOK_IDENT);
+	while (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT);
 
 	return 0;
 }
@@ -3653,7 +3664,7 @@ static int compile_binary_message (stix_t* stix, int to_super)
 	stix_oocs_t binsel;
 	stix_oow_t saved_binsels_len, binsel_offset;
 
-	STIX_ASSERT (stix->c->tok.type == STIX_IOTOK_BINSEL);
+	STIX_ASSERT (TOKEN_TYPE(stix) == STIX_IOTOK_BINSEL);
 
 	do
 	{
@@ -3666,7 +3677,7 @@ static int compile_binary_message (stix_t* stix, int to_super)
 
 		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, 0, &to_super2) <= -1) goto oops;
 
-		if (stix->c->tok.type == STIX_IOTOK_IDENT && compile_unary_message(stix, to_super2) <= -1) goto oops;
+		if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT && compile_unary_message(stix, to_super2) <= -1) goto oops;
 
 		/* update the pointer to the cloned selector now 
 		 * to be free from reallocation risk for the recursive call
@@ -3677,7 +3688,7 @@ static int compile_binary_message (stix_t* stix, int to_super)
 
 		stix->c->mth.binsels.len = saved_binsels_len;
 	}
-	while (stix->c->tok.type == STIX_IOTOK_BINSEL);
+	while (TOKEN_TYPE(stix) == STIX_IOTOK_BINSEL);
 
 	return 0;
 
@@ -3713,8 +3724,8 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 		GET_TOKEN (stix);
 
 		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, 0, &to_super2) <= -1) goto oops;
-		if (stix->c->tok.type == STIX_IOTOK_IDENT && compile_unary_message(stix, to_super2) <= -1) goto oops;
-		if (stix->c->tok.type == STIX_IOTOK_BINSEL && compile_binary_message(stix, to_super2) <= -1) goto oops;
+		if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT && compile_unary_message(stix, to_super2) <= -1) goto oops;
+		if (TOKEN_TYPE(stix) == STIX_IOTOK_BINSEL && compile_binary_message(stix, to_super2) <= -1) goto oops;
 
 		kw.ptr = &stix->c->mth.kwsels.ptr[kw_offset];
 		if (nargs >= MAX_CODE_NARGS)
@@ -3729,7 +3740,7 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 
 		nargs++;
 	} 
-	while (stix->c->tok.type == STIX_IOTOK_KEYWORD);
+	while (TOKEN_TYPE(stix) == STIX_IOTOK_KEYWORD);
 
 	kwsel.ptr = &stix->c->mth.kwsels.ptr[saved_kwsel_len];
 	kwsel.len = stix->c->mth.kwsels.len - saved_kwsel_len;
@@ -3775,7 +3786,7 @@ static int compile_message_expression (stix_t* stix, int to_super)
 
 				if (compile_unary_message(stix, to_super) <= -1) return -1;
 
-				if (stix->c->tok.type == STIX_IOTOK_BINSEL)
+				if (TOKEN_TYPE(stix) == STIX_IOTOK_BINSEL)
 				{
 					STIX_ASSERT (stix->c->mth.code.len > noop_pos);
 					STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
@@ -3786,7 +3797,7 @@ static int compile_message_expression (stix_t* stix, int to_super)
 					if (compile_binary_message(stix, to_super) <= -1) return -1;
 				}
 
-				if (stix->c->tok.type == STIX_IOTOK_KEYWORD)
+				if (TOKEN_TYPE(stix) == STIX_IOTOK_KEYWORD)
 				{
 					STIX_ASSERT (stix->c->mth.code.len > noop_pos);
 					STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
@@ -3803,7 +3814,7 @@ static int compile_message_expression (stix_t* stix, int to_super)
 				if (emit_byte_instruction(stix, BCODE_NOOP) <= -1) return -1;
 
 				if (compile_binary_message(stix, to_super) <= -1) return -1;
-				if (stix->c->tok.type == STIX_IOTOK_KEYWORD)
+				if (TOKEN_TYPE(stix) == STIX_IOTOK_KEYWORD)
 				{
 					STIX_ASSERT (stix->c->mth.code.len > noop_pos);
 					STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
@@ -3827,7 +3838,7 @@ static int compile_message_expression (stix_t* stix, int to_super)
 
 		}
 
-		if (stix->c->tok.type == STIX_IOTOK_SEMICOLON)
+		if (TOKEN_TYPE(stix) == STIX_IOTOK_SEMICOLON)
 		{
 			stix->c->mth.code.ptr[noop_pos] = BCODE_DUP_STACKTOP;
 			if (emit_byte_instruction(stix, BCODE_POP_STACKTOP) <= -1) return -1;
@@ -3858,17 +3869,17 @@ static int compile_basic_expression (stix_t* stix, const stix_oocs_t* ident, con
 	if (compile_expression_primary(stix, ident, ident_loc, ident_dotted, &to_super) <= -1) return -1;
 
 #if 0
-	if (stix->c->tok.type != STIX_IOTOK_EOF && 
-	    stix->c->tok.type != STIX_IOTOK_RBRACE && 
-	    stix->c->tok.type != STIX_IOTOK_PERIOD &&
-	    stix->c->tok.type != STIX_IOTOK_SEMICOLON)
+	if (TOKEN_TYPE(stix) != STIX_IOTOK_EOF && 
+	    TOKEN_TYPE(stix) != STIX_IOTOK_RBRACE && 
+	    TOKEN_TYPE(stix) != STIX_IOTOK_PERIOD &&
+	    TOKEN_TYPE(stix) != STIX_IOTOK_SEMICOLON)
 	{
 		if (compile_message_expression(stix, to_super) <= -1) return -1;
 	}
 #else
-	if (stix->c->tok.type == STIX_IOTOK_IDENT ||
-	    stix->c->tok.type == STIX_IOTOK_BINSEL ||
-	    stix->c->tok.type == STIX_IOTOK_KEYWORD)
+	if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT ||
+	    TOKEN_TYPE(stix) == STIX_IOTOK_BINSEL ||
+	    TOKEN_TYPE(stix) == STIX_IOTOK_KEYWORD)
 	{
 		if (compile_message_expression(stix, to_super) <= -1) return -1;
 	}
@@ -3891,8 +3902,8 @@ static int compile_method_expression (stix_t* stix, int pop)
 	STIX_ASSERT (pop == 0 || pop == 1);
 	STIX_MEMSET (&assignee, 0, STIX_SIZEOF(assignee));
 
-	if (stix->c->tok.type == STIX_IOTOK_IDENT ||
-	    stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
+	if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT ||
+	    TOKEN_TYPE(stix) == STIX_IOTOK_IDENT_DOTTED)
 	{
 		stix_ioloc_t assignee_loc;
 		stix_oow_t assignee_offset;
@@ -3905,10 +3916,10 @@ static int compile_method_expression (stix_t* stix, int pop)
 		if (clone_assignee(stix, &assignee, &assignee_offset) <= -1) return -1;
 
 		assignee_loc = stix->c->tok.loc;
-		assignee_dotted = (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED);
+		assignee_dotted = (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT_DOTTED);
 
 		GET_TOKEN (stix);
-		if (stix->c->tok.type == STIX_IOTOK_ASSIGN) 
+		if (TOKEN_TYPE(stix) == STIX_IOTOK_ASSIGN) 
 		{
 			/* assignment expression */
 			var_info_t var;
@@ -4012,7 +4023,7 @@ static int compile_block_statement (stix_t* stix)
 	/* compile_block_statement() is a simpler version of
 	 * of compile_method_statement(). it doesn't cater for
 	 * popping the stack top */
-	if (stix->c->tok.type == STIX_IOTOK_RETURN) 
+	if (TOKEN_TYPE(stix) == STIX_IOTOK_RETURN) 
 	{
 		/* handle the return statement */
 		GET_TOKEN (stix);
@@ -4032,7 +4043,7 @@ static int compile_method_statement (stix_t* stix)
 	 * method-return-statement := "^" method-expression
 	 */
 
-	if (stix->c->tok.type == STIX_IOTOK_RETURN) 
+	if (TOKEN_TYPE(stix) == STIX_IOTOK_RETURN) 
 	{
 		/* handle the return statement */
 		GET_TOKEN (stix);
@@ -4068,28 +4079,28 @@ static int compile_method_statements (stix_t* stix)
 	 * method-statements := method-statement ("." | ("." method-statements))*
 	 */
 
-	if (stix->c->tok.type != STIX_IOTOK_EOF &&
-	    stix->c->tok.type != STIX_IOTOK_RBRACE)
+	if (TOKEN_TYPE(stix) != STIX_IOTOK_EOF &&
+	    TOKEN_TYPE(stix) != STIX_IOTOK_RBRACE)
 	{
 		do
 		{
 			if (compile_method_statement(stix) <= -1) return -1;
 
-			if (stix->c->tok.type == STIX_IOTOK_PERIOD) 
+			if (TOKEN_TYPE(stix) == STIX_IOTOK_PERIOD) 
 			{
 				/* period after a statement */
 				GET_TOKEN (stix);
 
-				if (stix->c->tok.type == STIX_IOTOK_EOF ||
-				    stix->c->tok.type == STIX_IOTOK_RBRACE) break;
+				if (TOKEN_TYPE(stix) == STIX_IOTOK_EOF ||
+				    TOKEN_TYPE(stix) == STIX_IOTOK_RBRACE) break;
 			}
 			else
 			{
-				if (stix->c->tok.type == STIX_IOTOK_EOF ||
-				    stix->c->tok.type == STIX_IOTOK_RBRACE) break;
+				if (TOKEN_TYPE(stix) == STIX_IOTOK_EOF ||
+				    TOKEN_TYPE(stix) == STIX_IOTOK_RBRACE) break;
 
 				/* not a period, EOF, nor } */
-				set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
+				set_syntax_error (stix, STIX_SYNERR_PERIOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
 				return -1;
 			}
 		}
@@ -4324,7 +4335,7 @@ static int compile_method_definition (stix_t* stix)
 	stix->c->mth.blk_depth = 0;
 	stix->c->mth.code.len = 0;
 
-	if (stix->c->tok.type == STIX_IOTOK_LPAREN)
+	if (TOKEN_TYPE(stix) == STIX_IOTOK_LPAREN)
 	{
 		/* process method modifiers  */
 		GET_TOKEN (stix);
@@ -4336,10 +4347,10 @@ static int compile_method_definition (stix_t* stix)
 			GET_TOKEN (stix);
 		}
 
-		if (stix->c->tok.type != STIX_IOTOK_RPAREN)
+		if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
 		{
 			/* ) expected */
-			set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_RPAREN, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 
@@ -4348,10 +4359,10 @@ static int compile_method_definition (stix_t* stix)
 
 	if (compile_method_name(stix) <= -1) return -1;
 
-	if (stix->c->tok.type != STIX_IOTOK_LBRACE)
+	if (TOKEN_TYPE(stix) != STIX_IOTOK_LBRACE)
 	{
 		/* { expected */
-		set_syntax_error (stix, STIX_SYNERR_LBRACE, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_LBRACE, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
@@ -4361,10 +4372,10 @@ static int compile_method_definition (stix_t* stix)
 	    compile_method_primitive(stix) <= -1 ||
 	    compile_method_statements(stix) <= -1) return -1;
 
-	if (stix->c->tok.type != STIX_IOTOK_RBRACE)
+	if (TOKEN_TYPE(stix) != STIX_IOTOK_RBRACE)
 	{
 		/* } expected */
-		set_syntax_error (stix, STIX_SYNERR_RBRACE, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_RBRACE, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 	GET_TOKEN (stix);
@@ -4491,7 +4502,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	 */
 	stix_oop_association_t ass;
 
-	if (!extend && stix->c->tok.type == STIX_IOTOK_LPAREN)
+	if (!extend && TOKEN_TYPE(stix) == STIX_IOTOK_LPAREN)
 	{
 		/* process class modifiers */
 
@@ -4540,27 +4551,27 @@ static int __compile_class_definition (stix_t* stix, int extend)
 			GET_TOKEN (stix);
 		}
 
-		if (stix->c->tok.type != STIX_IOTOK_RPAREN)
+		if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
 		{
-			set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_RPAREN, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 
 		GET_TOKEN (stix);
 	}
 
-	if (stix->c->tok.type != STIX_IOTOK_IDENT &&
-	    stix->c->tok.type != STIX_IOTOK_IDENT_DOTTED)
+	if (TOKEN_TYPE(stix) != STIX_IOTOK_IDENT &&
+	    TOKEN_TYPE(stix) != STIX_IOTOK_IDENT_DOTTED)
 	{
 		/* class name expected. */
-		set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_IDENT, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
 	/* copy the class name */
-	if (set_class_fqn(stix, &stix->c->tok.name) <= -1) return -1;
+	if (set_class_fqn(stix, TOKEN_NAME(stix)) <= -1) return -1;
 	stix->c->cls.fqn_loc = stix->c->tok.loc;
-	if (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
+	if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT_DOTTED)
 	{
 		if (preprocess_dotted_name(stix, extend, 0, &stix->c->cls.fqn, &stix->c->cls.fqn_loc, &stix->c->cls.name, &stix->c->cls.ns_oop) <= -1) return -1;
 	}
@@ -4606,7 +4617,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 
 		STIX_INFO2 (stix, "Defining a class %.*S\n", stix->c->cls.fqn.len, stix->c->cls.fqn.ptr);
 
-		if (stix->c->tok.type == STIX_IOTOK_LPAREN)
+		if (TOKEN_TYPE(stix) == STIX_IOTOK_LPAREN)
 		{
 			/* superclass is specified. new class defintion.
 			 * for example, #class Class(Stix) 
@@ -4615,22 +4626,22 @@ static int __compile_class_definition (stix_t* stix, int extend)
 
 			/* TODO: multiple inheritance */
 
-			if (stix->c->tok.type == STIX_IOTOK_NIL)
+			if (TOKEN_TYPE(stix) == STIX_IOTOK_NIL)
 			{
 				super_is_nil = 1;
 			}
-			else if (stix->c->tok.type != STIX_IOTOK_IDENT &&
-			         stix->c->tok.type != STIX_IOTOK_IDENT_DOTTED)
+			else if (TOKEN_TYPE(stix) != STIX_IOTOK_IDENT &&
+			         TOKEN_TYPE(stix) != STIX_IOTOK_IDENT_DOTTED)
 			{
 				/* superclass name expected */
-				set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
+				set_syntax_error (stix, STIX_SYNERR_IDENT, TOKEN_LOC(stix), TOKEN_NAME(stix));
 				return -1;
 			}
 
-			if (set_superclass_fqn(stix, &stix->c->tok.name) <= -1) return -1;
+			if (set_superclass_fqn(stix, TOKEN_NAME(stix)) <= -1) return -1;
 			stix->c->cls.superfqn_loc = stix->c->tok.loc;
 
-			if (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
+			if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT_DOTTED)
 			{
 				if (preprocess_dotted_name(stix, 1, 0, &stix->c->cls.superfqn, &stix->c->cls.superfqn_loc, &stix->c->cls.supername, &stix->c->cls.superns_oop) <= -1) return -1;
 			}
@@ -4643,9 +4654,9 @@ static int __compile_class_definition (stix_t* stix, int extend)
 			}
 
 			GET_TOKEN (stix);
-			if (stix->c->tok.type != STIX_IOTOK_RPAREN)
+			if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
 			{
-				set_syntax_error (stix, STIX_SYNERR_RPAREN, &stix->c->tok.loc, &stix->c->tok.name);
+				set_syntax_error (stix, STIX_SYNERR_RPAREN, TOKEN_LOC(stix), TOKEN_NAME(stix));
 				return -1;
 			}
 
@@ -4710,9 +4721,9 @@ static int __compile_class_definition (stix_t* stix, int extend)
 		
 	}
 
-	if (stix->c->tok.type != STIX_IOTOK_LBRACE)
+	if (TOKEN_TYPE(stix) != STIX_IOTOK_LBRACE)
 	{
-		set_syntax_error (stix, STIX_SYNERR_LBRACE, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_LBRACE, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
@@ -4739,7 +4750,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 		/* when a class is extended, a new variable cannot be added */
 		if (is_token_symbol(stix, VOCA_DCL) || is_token_symbol(stix, VOCA_DECLARE))
 		{
-			set_syntax_error (stix, STIX_SYNERR_DCLBANNED, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_DCLBANNED, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 
@@ -4819,9 +4830,9 @@ static int __compile_class_definition (stix_t* stix, int extend)
 		if (compile_method_definition(stix) <= -1) return -1;
 	}
 	
-	if (stix->c->tok.type != STIX_IOTOK_RBRACE)
+	if (TOKEN_TYPE(stix) != STIX_IOTOK_RBRACE)
 	{
-		set_syntax_error (stix, STIX_SYNERR_RBRACE, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_RBRACE, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
@@ -4895,20 +4906,20 @@ static int __compile_pooldic_definition (stix_t* stix)
 	stix_ooi_t tally;
 	stix_oow_t i;
 
-	if (stix->c->tok.type != STIX_IOTOK_IDENT && 
-	    stix->c->tok.type != STIX_IOTOK_IDENT_DOTTED)
+	if (TOKEN_TYPE(stix) != STIX_IOTOK_IDENT && 
+	    TOKEN_TYPE(stix) != STIX_IOTOK_IDENT_DOTTED)
 	{
-		set_syntax_error (stix, STIX_SYNERR_IDENT, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_IDENT, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
 	/* [NOTE] 
 	 * reuse stix->c->cls.fqn and related fields are reused 
 	 * to store the pool dictionary name */
-	if (set_class_fqn(stix, &stix->c->tok.name) <= -1) return -1;
+	if (set_class_fqn(stix, TOKEN_NAME(stix)) <= -1) return -1;
 	stix->c->cls.fqn_loc = stix->c->tok.loc;
 
-	if (stix->c->tok.type == STIX_IOTOK_IDENT_DOTTED)
+	if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT_DOTTED)
 	{
 		if (preprocess_dotted_name(stix, 0, 0, &stix->c->cls.fqn, &stix->c->cls.fqn_loc, &stix->c->cls.name, &stix->c->cls.ns_oop) <= -1) return -1;
 	}
@@ -4920,14 +4931,14 @@ static int __compile_pooldic_definition (stix_t* stix)
 	if (stix_lookupdic (stix, stix->c->cls.ns_oop, &stix->c->cls.name))
 	{
 		/* a conflicting entry has been found */
-		set_syntax_error (stix, STIX_SYNERR_POOLDICDUP, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_POOLDICDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
 	GET_TOKEN (stix);
-	if (stix->c->tok.type != STIX_IOTOK_LBRACE)
+	if (TOKEN_TYPE(stix) != STIX_IOTOK_LBRACE)
 	{
-		set_syntax_error (stix, STIX_SYNERR_LBRACE, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_LBRACE, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
@@ -4935,16 +4946,16 @@ static int __compile_pooldic_definition (stix_t* stix)
 
 	GET_TOKEN (stix);
 
-	while (stix->c->tok.type == STIX_IOTOK_SYMLIT)
+	while (TOKEN_TYPE(stix) == STIX_IOTOK_SYMLIT)
 	{
 		lit = stix_makesymbol (stix, stix->c->tok.name.ptr, stix->c->tok.name.len);
 		if (!lit || add_to_array_literal_buffer (stix, lit) <= -1) return -1;
 
 		GET_TOKEN (stix);
 
-		if (stix->c->tok.type != STIX_IOTOK_ASSIGN)
+		if (TOKEN_TYPE(stix) != STIX_IOTOK_ASSIGN)
 		{
-			set_syntax_error (stix, STIX_SYNERR_ASSIGN, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_ASSIGN, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 
@@ -4981,7 +4992,7 @@ static int __compile_pooldic_definition (stix_t* stix)
 
 			case STIX_IOTOK_NUMLIT:
 			case STIX_IOTOK_RADNUMLIT:
-				lit = string_to_num (stix, &stix->c->tok.name, stix->c->tok.type == STIX_IOTOK_RADNUMLIT);
+				lit = string_to_num (stix, TOKEN_NAME(stix), TOKEN_TYPE(stix) == STIX_IOTOK_RADNUMLIT);
 				if (!lit) return -1;
 				goto add_literal;
 
@@ -5002,14 +5013,14 @@ static int __compile_pooldic_definition (stix_t* stix)
 				break;
 
 			default:
-				set_syntax_error (stix, STIX_SYNERR_LITERAL, &stix->c->tok.loc, &stix->c->tok.name);
+				set_syntax_error (stix, STIX_SYNERR_LITERAL, TOKEN_LOC(stix), TOKEN_NAME(stix));
 				return -1;
 		}
 
-		/*if (stix->c->tok.type == STIX_IOTOK_RBRACE) goto done;
-		else*/ if (stix->c->tok.type != STIX_IOTOK_PERIOD)
+		/*if (TOKEN_TYPE(stix) == STIX_IOTOK_RBRACE) goto done;
+		else*/ if (TOKEN_TYPE(stix) != STIX_IOTOK_PERIOD)
 		{
-			set_syntax_error (stix, STIX_SYNERR_PERIOD, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error (stix, STIX_SYNERR_PERIOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 
@@ -5017,9 +5028,9 @@ static int __compile_pooldic_definition (stix_t* stix)
 	}
 
 
-	if (stix->c->tok.type != STIX_IOTOK_RBRACE)
+	if (TOKEN_TYPE(stix) != STIX_IOTOK_RBRACE)
 	{
-		set_syntax_error (stix, STIX_SYNERR_RBRACE, &stix->c->tok.loc, &stix->c->tok.name);
+		set_syntax_error (stix, STIX_SYNERR_RBRACE, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
 
@@ -5076,15 +5087,15 @@ static int compile_stream (stix_t* stix)
 	GET_CHAR (stix);
 	GET_TOKEN (stix);
 
-	while (stix->c->tok.type != STIX_IOTOK_EOF)
+	while (TOKEN_TYPE(stix) != STIX_IOTOK_EOF)
 	{
 		if (is_token_symbol(stix, VOCA_INCLUDE))
 		{
 			/* #include 'xxxx' */
 			GET_TOKEN (stix);
-			if (stix->c->tok.type != STIX_IOTOK_STRLIT)
+			if (TOKEN_TYPE(stix) != STIX_IOTOK_STRLIT)
 			{
-				set_syntax_error (stix, STIX_SYNERR_STRING, &stix->c->tok.loc, &stix->c->tok.name);
+				set_syntax_error (stix, STIX_SYNERR_STRING, TOKEN_LOC(stix), TOKEN_NAME(stix));
 				return -1;
 			}
 			if (begin_include(stix) <= -1) return -1;
@@ -5118,7 +5129,7 @@ static int compile_stream (stix_t* stix)
 
 		else
 		{
-			set_syntax_error(stix, STIX_SYNERR_DIRECTIVE, &stix->c->tok.loc, &stix->c->tok.name);
+			set_syntax_error(stix, STIX_SYNERR_DIRECTIVE, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
 	}
