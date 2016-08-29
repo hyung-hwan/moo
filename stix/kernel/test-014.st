@@ -54,7 +54,10 @@
 	#KKK := 20.
 }
 
-
+#pooldic SRX.ABC
+{
+	#JJJ := 1000.
+}
 #class MyConsole(Console)
 {
 	#method box: origin corner: corner
@@ -62,7 +65,7 @@
 		| tmp |
 		self setCursor: origin.
 		self write: '+'.
-		(corner x - origin x - 2) timesRepeat: [self write: '-'].
+		(corner x - origin x - 1) timesRepeat: [self write: '-'].
 		self write: '+'.
 
 		tmp := Point new.
@@ -80,13 +83,15 @@
 		tmp x: origin x y: corner y.
 		self setCursor: tmp.
 		self write: '+'.
-		(corner x - origin x - 2) timesRepeat: [self write: '-'].
+		(corner x - origin x - 1) timesRepeat: [self write: '-'].
 		self write: '+'.
 	}
 }
 
 #class MyObject(TestObject)
 {
+	#dcl(#pooldic) ABC SRX.ABC.
+
 	#method(#class) main
 	{
 		| v1 v2 |
@@ -99,8 +104,18 @@
 		v1 write: S'하하하하하하하하 좋아좋아 可愛くってしょうがない(^o^) ほのかちゃん、しおりちゃん元気そうだね！ 久しぶりに見た。しおりちゃんどうしたのかな？좋아 하라하하\n'.
 		v1 close.
 
+		self main2.
 		System logNl: S'\0\0\0END OF MAIN\0AB\0\0\0C\0\0\0'.
 	}
 
 }
 
+#extend MyObject
+{
+	#method(#class) main2
+	{
+		System logNl: KKK.
+		System logNl: SRX.ABC.JJJ.
+		System logNl: JJJ.
+	}
+}

@@ -69,7 +69,7 @@ typedef enum var_type_t var_type_t;
 struct var_info_t
 {
 	var_type_t             type;
-	stix_ooi_t           pos; /* not used for VAR_GLOBAL */
+	stix_ooi_t             pos; /* not used for VAR_GLOBAL */
 	stix_oop_class_t       cls; /* useful if type is VAR_CLASS. note STIX_NULL indicates the self class. */
 	stix_oop_association_t gbl; /* used for VAR_GLOBAL only */
 };
@@ -1930,7 +1930,7 @@ static STIX_INLINE int add_pool_dictionary (stix_t* stix, const stix_oocs_t* nam
 
 		new_capa = STIX_ALIGN(stix->c->cls.pooldic_oop_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
 		tmp = stix_reallocmem (stix, stix->c->cls.pooldic_oops, new_capa * STIX_SIZEOF(stix_oop_set_t));
-		if (!tmp)  return -1;
+		if (!tmp) return -1;
 
 		stix->c->cls.pooldic_oop_capa = new_capa;
 		stix->c->cls.pooldic_oops = tmp;
@@ -2313,6 +2313,38 @@ static int resolve_pooldic (stix_t* stix, int dotted, const stix_oocs_t* name)
 	return 0;
 }
 
+static int import_pool_dictionary (stix_t* stix, stix_oop_set_t ns_oop, const stix_oocs_t* tok_lastseg, const stix_oocs_t* tok_name, const stix_ioloc_t* tok_loc)
+{
+	stix_oop_association_t ass;
+	stix_oow_t i;
+
+	/* check if the name refers to a pool dictionary */
+	ass = stix_lookupdic (stix, ns_oop, tok_lastseg);
+	if (!ass || STIX_CLASSOF(stix, ass->value) != stix->_pool_dictionary)
+	{
+		set_syntax_error (stix, STIX_SYNERR_POOLDIC, tok_loc, tok_name);
+		return -1;
+	}
+
+	/* check if the same dictionary pool has been declared for import */
+	for (i = 0; i < stix->c->cls.pooldic_count; i++)
+	{
+		if ((stix_oop_set_t)ass->value == stix->c->cls.pooldic_oops[i])
+		{
+			set_syntax_error (stix, STIX_SYNERR_POOLDICDUP, tok_loc, tok_name);
+			return -1;
+		}
+	}
+
+	if (add_pool_dictionary(stix, tok_name, (stix_oop_set_t)ass->value) <= -1) return -1;
+	if (copy_string_to (stix, tok_name, &stix->c->cls.pooldic, &stix->c->cls.pooldic_capa, 1, ' ') <= -1)
+	{
+		stix->c->cls.pooldic_count--; /* roll back add_pool_dictionary() */
+		return -1;
+	}
+
+	return 0;
+}
 
 static int compile_class_level_variables (stix_t* stix)
 {
@@ -2357,8 +2389,6 @@ static int compile_class_level_variables (stix_t* stix)
 		 * #dcl(#pooldic) ... */
 		stix_oocs_t last;
 		stix_oop_set_t ns_oop;
-		stix_oop_association_t ass;
-		stix_oow_t i;
 
 		do
 		{
@@ -2374,31 +2404,7 @@ static int compile_class_level_variables (stix_t* stix)
 			}
 			else break;
 
-			/* check if the name refers to a pool dictionary */
-			ass = stix_lookupdic (stix, ns_oop, &last);
-			if (!ass || STIX_CLASSOF(stix, ass->value) != stix->_pool_dictionary)
-			{
-				set_syntax_error (stix, STIX_SYNERR_POOLDIC, &stix->c->tok.loc, &stix->c->tok.name);
-				return -1;
-			}
-
-			/* check if the same dictionary pool has been declared for import */
-			for (i = 0; i < stix->c->cls.pooldic_count; i++)
-			{
-				if ((stix_oop_set_t)ass->value == stix->c->cls.pooldic_oops[i])
-				{
-					set_syntax_error (stix, STIX_SYNERR_POOLDICDUP, &stix->c->tok.loc, &stix->c->tok.name);
-					return -1;
-				}
-			}
-
-			if (add_pool_dictionary(stix, &stix->c->tok.name, (stix_oop_set_t)ass->value) <= -1) return -1;
-			if (copy_string_to (stix, &stix->c->tok.name, &stix->c->cls.pooldic, &stix->c->cls.pooldic_capa, 1, ' ') <= -1)
-			{
-				stix->c->cls.pooldic_count--;
-				return -1;
-			}
-
+			if (import_pool_dictionary(stix, ns_oop, &last, &stix->c->tok.name, &stix->c->tok.loc) <= -1) return -1;
 			GET_TOKEN (stix);
 		}
 		while (1);
@@ -4428,15 +4434,15 @@ static int make_defined_class (stix_t* stix)
 	if (!tmp) return -1;
 	stix->c->cls.self_oop->name = (stix_oop_char_t)tmp;
 
-	tmp = stix_makestring (stix, stix->c->cls.vars[0].ptr, stix->c->cls.vars[0].len);
+	tmp = stix_makestring (stix, stix->c->cls.vars[VAR_INSTANCE].ptr, stix->c->cls.vars[VAR_INSTANCE].len);
 	if (!tmp) return -1;
 	stix->c->cls.self_oop->instvars = (stix_oop_char_t)tmp;
 
-	tmp = stix_makestring (stix, stix->c->cls.vars[1].ptr, stix->c->cls.vars[1].len);
+	tmp = stix_makestring (stix, stix->c->cls.vars[VAR_CLASS].ptr, stix->c->cls.vars[VAR_CLASS].len);
 	if (!tmp) return -1;
 	stix->c->cls.self_oop->classvars = (stix_oop_char_t)tmp;
 
-	tmp = stix_makestring (stix, stix->c->cls.vars[2].ptr, stix->c->cls.vars[2].len);
+	tmp = stix_makestring (stix, stix->c->cls.vars[VAR_CLASSINST].ptr, stix->c->cls.vars[VAR_CLASSINST].len);
 	if (!tmp) return -1;
 	stix->c->cls.self_oop->classinstvars = (stix_oop_char_t)tmp;
 
@@ -4728,6 +4734,8 @@ static int __compile_class_definition (stix_t* stix, int extend)
 
 	if (extend)
 	{
+		stix_oop_char_t pds;
+
 		/* when a class is extended, a new variable cannot be added */
 		if (is_token_symbol(stix, VOCA_DCL) || is_token_symbol(stix, VOCA_DECLARE))
 		{
@@ -4738,6 +4746,57 @@ static int __compile_class_definition (stix_t* stix, int extend)
 		/* use the method dictionary of an existing class object */
 		stix->c->cls.mthdic_oop[MTH_INSTANCE] = stix->c->cls.self_oop->mthdic[STIX_CLASS_MTHDIC_INSTANCE];
 		stix->c->cls.mthdic_oop[MTH_CLASS] = stix->c->cls.self_oop->mthdic[STIX_CLASS_MTHDIC_CLASS];
+
+		/* load the pooldic definition from the existing class object */
+		pds = stix->c->cls.self_oop->pooldics;
+		if ((stix_oop_t)pds != stix->_nil)
+		{
+			stix_ooch_t* ptr, * end;
+			
+
+			STIX_ASSERT (STIX_CLASSOF(stix, pds) == stix->_string);
+
+			ptr = pds->slot;
+			end = pds->slot + STIX_OBJ_GET_SIZE(pds);
+
+			/* this loop handles the pooldics string as if it's a pooldic import.
+			 * see compile_class_level_variables() for mostly identical code except token handling */
+			do
+			{
+				stix_oocs_t last, tok;
+				stix_ioloc_t loc;
+				int dotted = 0;
+				stix_oop_set_t ns_oop;
+
+				while (ptr < end && is_spacechar(*ptr)) ptr++;
+				if (ptr >= end) break;
+
+				STIX_MEMSET (&loc, 0, STIX_SIZEOF(loc)); /* fake location */
+
+				tok.ptr = ptr;
+				while (ptr < end && !is_spacechar(*ptr))
+				{
+					if (*ptr == '.') dotted = 1;
+					ptr++;
+				}
+				tok.len = ptr - tok.ptr;
+				STIX_ASSERT (tok.len > 0);
+
+				if (dotted)
+				{
+					if (preprocess_dotted_name(stix, 0, 0, &tok, &loc, &last, &ns_oop) <= -1) return -1;
+				}
+				else
+				{
+					last = tok;
+					/* it falls back to the name space of the class */
+					ns_oop = stix->c->cls.ns_oop; 
+				}
+
+				if (import_pool_dictionary(stix, ns_oop, &last, &tok, &loc) <= -1) return -1;
+			}
+			while (1);
+		}
 	}
 	else
 	{
