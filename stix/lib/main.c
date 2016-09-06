@@ -197,6 +197,7 @@ static STIX_INLINE stix_ooi_t close_input (stix_t* stix, stix_ioarg_t* arg)
 	fclose (bb->fp);
 	stix_freemem (stix, bb);
 
+	arg->handle = STIX_NULL;
 	return 0;
 }
 

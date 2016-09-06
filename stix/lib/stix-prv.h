@@ -244,8 +244,8 @@ typedef enum stix_iocmd_t stix_iocmd_t;
 
 struct stix_ioloc_t
 {
-	unsigned long      line; /**< line */
-	unsigned long      colm; /**< column */
+	unsigned long int  line; /**< line */
+	unsigned long int  colm; /**< column */
 	const stix_ooch_t* file; /**< file specified in #include */
 };
 typedef struct stix_ioloc_t stix_ioloc_t;
@@ -301,8 +301,9 @@ struct stix_ioarg_t
 		int pos, len, state;
 	} b;
 
-	unsigned long line;
-	unsigned long colm;
+	unsigned long int line;
+	unsigned long int colm;
+	stix_ooci_t       nl;
 
 	stix_iolxc_t lxc;
 	/*-----------------------------------------------------------------*/
@@ -344,8 +345,8 @@ struct stix_iotok_t
 		STIX_IOTOK_RBRACK,
 		STIX_IOTOK_LPAREN,
 		STIX_IOTOK_RPAREN,
-		STIX_IOTOK_APAREN, /* #( */
-		STIX_IOTOK_BPAREN, /* #[ */
+		STIX_IOTOK_ARPAREN, /* #( */
+		STIX_IOTOK_BAPAREN, /* #[ */
 		STIX_IOTOK_PERIOD,
 		STIX_IOTOK_SEMICOLON
 	} type;

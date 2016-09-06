@@ -281,8 +281,8 @@ static int is_reserved_word (const stix_oocs_t* ucs)
 	return 0;
 }
 
-static int begin_include (stix_t* fsc);
-static int end_include (stix_t* fsc);
+static int begin_include (stix_t* stix);
+static int end_include (stix_t* stix);
 
 static void set_syntax_error (stix_t* stix, stix_synerrnum_t num, const stix_ioloc_t* loc, const stix_oocs_t* tgt)
 {
@@ -395,7 +395,7 @@ static int find_word_in_string (const stix_oocs_t* haystack, const stix_oocs_t* 
 	 (c >= 'A' && c <= 'Z')? ((c - 'A' + 10 < base)? (c - 'A' + 10): base): \
 	 (c >= 'a' && c <= 'z')? ((c - 'a' + 10 < base)? (c - 'a' + 10): base): base)
 
-static int string_to_smint (stix_t* stix, stix_oocs_t* str, int radixed, stix_ooi_t* num)
+static int string_to_smooi (stix_t* stix, stix_oocs_t* str, int radixed, stix_ooi_t* num)
 {
 	/* it is not a generic conversion function.
 	 * it assumes a certain pre-sanity check on the string
@@ -641,15 +641,31 @@ static int get_char (stix_t* stix)
 		stix->c->curinp->b.len = n;
 	}
 
-	if (stix->c->curinp->lxc.c == STIX_UCI_NL)
+	if (stix->c->curinp->lxc.c == '\n' || stix->c->curinp->lxc.c == '\r')
 	{
-		/* if the previous charater was a newline,
-		 * increment the line counter and reset column to 1.
-		 * incrementing the line number here instead of
-		 * updating inp->lxc causes the line number for
-		 * TOK_EOF to be the same line as the lxc newline. */
-		stix->c->curinp->line++;
-		stix->c->curinp->colm = 1;
+		/* stix->c->curinp->lxc.c is a previous character. the new character
+		 * to be read is still in the buffer (stix->c->curinp->buf).
+		 * stix->cu->curinp->colm has been incremented when the previous
+		 * character has been read. */
+		if (stix->c->curinp->line > 1 && 
+		    stix->c->curinp->colm == 2 &&
+		    stix->c->curinp->nl != stix->c->curinp->lxc.c) 
+		{
+			/* most likely, it's the second character in '\r\n' or '\n\r' 
+			 * sequence. let's not update the line and column number. */
+			/*stix->c->curinp->colm = 1;*/
+		}
+		else
+		{
+			/* if the previous charater was a newline,
+			 * increment the line counter and reset column to 1.
+			 * incrementing the line number here instead of
+			 * updating inp->lxc causes the line number for
+			 * TOK_EOF to be the same line as the lxc newline. */
+			stix->c->curinp->line++;
+			stix->c->curinp->colm = 1;
+			stix->c->curinp->nl = stix->c->curinp->lxc.c;
+		}
 	}
 
 	lc = stix->c->curinp->buf[stix->c->curinp->b.pos++];
@@ -744,7 +760,7 @@ static int skip_comment (stix_t* stix)
 			{
 				break;
 			}
-			else if (c == STIX_UCI_NL)
+			else if (c == '\r' || c == '\n')
 			{
 				GET_CHAR (stix);
 				break;
@@ -1320,14 +1336,14 @@ retry:
 				case '(':
 					/* #( */
 					ADD_TOKEN_CHAR(stix, c);
-					SET_TOKEN_TYPE (stix, STIX_IOTOK_APAREN);
+					SET_TOKEN_TYPE (stix, STIX_IOTOK_ARPAREN);
 					GET_CHAR (stix);
 					break;
 
 				case '[':
 					/* #[ - byte array literal */
 					ADD_TOKEN_CHAR(stix, c);
-					SET_TOKEN_TYPE (stix, STIX_IOTOK_BPAREN);
+					SET_TOKEN_TYPE (stix, STIX_IOTOK_BAPAREN);
 					GET_CHAR (stix);
 					break;
 
@@ -1562,6 +1578,7 @@ static int begin_include (stix_t* stix)
 	arg->name = io_name;
 	arg->line = 1;
 	arg->colm = 1;
+	/*arg->nl = '\0';*/
 	arg->includer = stix->c->curinp;
 
 	if (stix->c->impl (stix, STIX_IO_OPEN, arg) <= -1) 
@@ -2553,7 +2570,7 @@ static int compile_method_name (stix_t* stix)
 	STIX_ASSERT (stix->c->mth.tmpr_count == 0);
 
 	stix->c->mth.name_loc = stix->c->tok.loc;
-	switch (stix->c->tok.type)
+	switch (TOKEN_TYPE(stix))
 	{
 		case STIX_IOTOK_IDENT:
 			n = compile_unary_method_name(stix);
@@ -2654,7 +2671,7 @@ static int compile_method_primitive (stix_t* stix)
 	if (is_token_keyword(stix, VOCA_PRIMITIVE_COLON))
 	{
 		GET_TOKEN (stix); 
-		switch (stix->c->tok.type)
+		switch (TOKEN_TYPE(stix))
 		{
 			case STIX_IOTOK_NUMLIT: /* TODO: allow only an integer */
 	/*TODO: more checks the validity of the primitive number. support number with radix and so on support more extensive syntax. support primitive name, not number*/
@@ -3215,7 +3232,7 @@ static int __read_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
 	{
 		/* TODO: check if the number is an integer */
 
-		if (string_to_smint(stix, TOKEN_NAME(stix), TOKEN_TYPE(stix) == STIX_IOTOK_RADNUMLIT, &tmp) <= -1)
+		if (string_to_smooi(stix, TOKEN_NAME(stix), TOKEN_TYPE(stix) == STIX_IOTOK_RADNUMLIT, &tmp) <= -1)
 		{
 			/* the token reader reads a valid token. no other errors
 			 * than the range error must not occur */
@@ -3268,14 +3285,13 @@ static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
 
 	do
 	{
-		switch (stix->c->tok.type)
+		switch (TOKEN_TYPE(stix))
 		{
 /* TODO: floating pointer number */
 
 			case STIX_IOTOK_NUMLIT:
 			case STIX_IOTOK_RADNUMLIT:
 				lit = string_to_num (stix, TOKEN_NAME(stix), TOKEN_TYPE(stix) == STIX_IOTOK_RADNUMLIT);
-				if (!lit) return -1;
 				break;
 
 			case STIX_IOTOK_CHARLIT:
@@ -3311,7 +3327,7 @@ static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
 				lit = stix->_false;
 				break;
 
-			case STIX_IOTOK_APAREN: /* #( */
+			case STIX_IOTOK_ARPAREN: /* #( */
 			case STIX_IOTOK_LPAREN: /* ( */
 				saved_arlit_count = stix->c->mth.arlit_count;
 /* TODO: get rid of recursion?? */
@@ -3320,7 +3336,7 @@ static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
 				stix->c->mth.arlit_count = saved_arlit_count;
 				break;
 
-			case STIX_IOTOK_BPAREN: /* #[ */
+			case STIX_IOTOK_BAPAREN: /* #[ */
 			case STIX_IOTOK_LBRACK: /* [ */
 				GET_TOKEN (stix);
 				if (__read_byte_array_literal (stix, &lit) <= -1) return -1;
@@ -3490,7 +3506,7 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 	}
 	else
 	{
-		switch (stix->c->tok.type)
+		switch (TOKEN_TYPE(stix))
 		{
 			case STIX_IOTOK_IDENT_DOTTED:
 				ident_dotted = 1;
@@ -3579,12 +3595,12 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 				break;
 			}
 
-			case STIX_IOTOK_BPAREN: /* #[ */
+			case STIX_IOTOK_BAPAREN: /* #[ */
 				/*GET_TOKEN (stix);*/
 				if (compile_byte_array_literal(stix) <= -1) return -1;
 				break;
 
-			case STIX_IOTOK_APAREN: /* #( */
+			case STIX_IOTOK_ARPAREN: /* #( */
 				/*GET_TOKEN (stix);*/
 				if (compile_array_literal(stix) <= -1) return -1;
 				break;
@@ -3776,7 +3792,7 @@ static int compile_message_expression (stix_t* stix, int to_super)
 
 	do
 	{
-		switch (stix->c->tok.type)
+		switch (TOKEN_TYPE(stix))
 		{
 			case STIX_IOTOK_IDENT:
 				/* insert NOOP to change to DUP_STACKTOP if there is a 
@@ -4961,7 +4977,7 @@ static int __compile_pooldic_definition (stix_t* stix)
 
 		GET_TOKEN (stix);
 
-		switch (stix->c->tok.type)
+		switch (TOKEN_TYPE(stix))
 		{
 			case STIX_IOTOK_NIL:
 				lit = stix->_nil;
@@ -4996,11 +5012,11 @@ static int __compile_pooldic_definition (stix_t* stix)
 				if (!lit) return -1;
 				goto add_literal;
 
-			case STIX_IOTOK_BPAREN: /* #[ */
+			case STIX_IOTOK_BAPAREN: /* #[ - byte array parenthesis */
 				if (read_byte_array_literal(stix, &lit) <= -1) return -1;
 				goto add_literal;
 
-			case STIX_IOTOK_APAREN: /* #( */
+			case STIX_IOTOK_ARPAREN: /* #( - array parenthesis */
 				if (read_array_literal(stix, &lit) <= -1) return -1;
 				goto add_literal;
 
