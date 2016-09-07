@@ -669,40 +669,6 @@ static int get_char (stix_t* stix)
 	}
 
 	lc = stix->c->curinp->buf[stix->c->curinp->b.pos++];
-	if (lc == '\n' || lc == '\r')
-	{
-		/* handle common newline conventions.
-		 *   LF+CR
-		 *   CR+LF
-		 *   LF
-		 *   CR
-		 */
-		if (stix->c->curinp->b.pos >= stix->c->curinp->b.len)
-		{
-			n = stix->c->impl (stix, STIX_IO_READ, stix->c->curinp);
-			if (n <= -1) 
-			{
-				stix->c->curinp->b.state = -1;
-				goto done;
-			}
-			else if (n == 0)
-			{
-				stix->c->curinp->b.state = 1;
-				goto done;
-			}
-			else
-			{
-				stix->c->curinp->b.pos = 0;
-				stix->c->curinp->b.len = n;
-			}
-		}
-
-		ec = (lc == '\n')? '\r': '\n';
-		if (stix->c->curinp->buf[stix->c->curinp->b.pos] == ec) stix->c->curinp->b.pos++;
-
-	done:
-		lc = STIX_UCI_NL;
-	}
 
 	stix->c->curinp->lxc.c = lc;
 	stix->c->curinp->lxc.l.line = stix->c->curinp->line;

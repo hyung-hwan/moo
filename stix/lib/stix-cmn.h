@@ -395,7 +395,6 @@ struct stix_ntime_t
  * PRIMITIVE MACROS
  * ========================================================================= */
 #define STIX_UCI_EOF ((stix_ooci_t)-1)
-#define STIX_UCI_NL  ((stix_ooci_t)'\n')
 
 #define STIX_SIZEOF(x) (sizeof(x))
 #define STIX_COUNTOF(x) (sizeof(x) / sizeof(x[0]))
