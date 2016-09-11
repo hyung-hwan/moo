@@ -304,7 +304,7 @@ typedef enum stix_obj_type_t stix_obj_type_t;
 #define STIX_OBJ_GET_FLAGS_EXTRA(oop)      STIX_GETBITS(stix_oow_t, (oop)->_flags, STIX_OBJ_FLAGS_EXTRA_SHIFT,   STIX_OBJ_FLAGS_EXTRA_BITS)
 #define STIX_OBJ_GET_FLAGS_KERNEL(oop)     STIX_GETBITS(stix_oow_t, (oop)->_flags, STIX_OBJ_FLAGS_KERNEL_SHIFT,  STIX_OBJ_FLAGS_KERNEL_BITS)
 #define STIX_OBJ_GET_FLAGS_MOVED(oop)      STIX_GETBITS(stix_oow_t, (oop)->_flags, STIX_OBJ_FLAGS_MOVED_SHIFT,   STIX_OBJ_FLAGS_MOVED_BITS)
-#define STIX_OBJ_GET_FLAGS_NGC(oop)        STIX_GETBITS(stix_oow_t, (oop)->_flags, STIX_OBJ_FLAGS_TRAILER_SHIFT, STIX_OBJ_FLAGS_MOVED_BITS)
+#define STIX_OBJ_GET_FLAGS_NGC(oop)        STIX_GETBITS(stix_oow_t, (oop)->_flags, STIX_OBJ_FLAGS_NGC_SHIFT,     STIX_OBJ_FLAGS_NGC_BITS)
 #define STIX_OBJ_GET_FLAGS_TRAILER(oop)    STIX_GETBITS(stix_oow_t, (oop)->_flags, STIX_OBJ_FLAGS_TRAILER_SHIFT, STIX_OBJ_FLAGS_TRAILER_BITS)
 
 #define STIX_OBJ_SET_FLAGS_TYPE(oop,v)     STIX_SETBITS(stix_oow_t, (oop)->_flags, STIX_OBJ_FLAGS_TYPE_SHIFT,    STIX_OBJ_FLAGS_TYPE_BITS,     v)
@@ -312,7 +312,7 @@ typedef enum stix_obj_type_t stix_obj_type_t;
 #define STIX_OBJ_SET_FLAGS_EXTRA(oop,v)    STIX_SETBITS(stix_oow_t, (oop)->_flags, STIX_OBJ_FLAGS_EXTRA_SHIFT,   STIX_OBJ_FLAGS_EXTRA_BITS,    v)
 #define STIX_OBJ_SET_FLAGS_KERNEL(oop,v)   STIX_SETBITS(stix_oow_t, (oop)->_flags, STIX_OBJ_FLAGS_KERNEL_SHIFT,  STIX_OBJ_FLAGS_KERNEL_BITS,   v)
 #define STIX_OBJ_SET_FLAGS_MOVED(oop,v)    STIX_SETBITS(stix_oow_t, (oop)->_flags, STIX_OBJ_FLAGS_MOVED_SHIFT,   STIX_OBJ_FLAGS_MOVED_BITS,    v)
-#define STIX_OBJ_SET_FLAGS_NGC(oop,v)      STIX_SETBITS(stix_oow_t, (oop)->_flags, STIX_OBJ_FLAGS_NGC_SHIFT,     STIX_OBJ_FLAGS_MOVED_BITS,    v)
+#define STIX_OBJ_SET_FLAGS_NGC(oop,v)      STIX_SETBITS(stix_oow_t, (oop)->_flags, STIX_OBJ_FLAGS_NGC_SHIFT,     STIX_OBJ_FLAGS_NGC_BITS,      v)
 #define STIX_OBJ_SET_FLAGS_TRAILER(oop,v)  STIX_SETBITS(stix_oow_t, (oop)->_flags, STIX_OBJ_FLAGS_TRAILER_SHIFT, STIX_OBJ_FLAGS_TRAILER_BITS,  v)
 
 #define STIX_OBJ_GET_SIZE(oop) ((oop)->_size)

@@ -610,7 +610,7 @@ struct stix_cmgr_t
 /* =========================================================================
  * COMPILER FEATURE TEST MACROS
  * =========================================================================*/
-#if !defined(__has_builtin)
+#if !defined(__has_builtin) && defined(_INTELC32_)
 	/* intel c code builder 1.0 ended up with an error without this override */
 	#define __has_builtin(x) 0
 #endif
@@ -668,10 +668,15 @@ struct stix_cmgr_t
 	#if __has_builtin(__builtin_smulll_overflow)
 		#define STIX_HAVE_BUILTIN_SMULLL_OVERFLOW 
 	#endif
+
+	#if __has_builtin(__builtin_expect)
+		#define STIX_HAVE_BUILTIN_EXPECT
+	#endif
 #elif defined(__GNUC__) && defined(__GNUC_MINOR__)
 
 	#if (__GNUC__ >= 4) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)
 		#define STIX_HAVE_BUILTIN_CTZ
+		#define STIX_HAVE_BUILTIN_EXPECT
 	#endif
 
 	#if (__GNUC__ >= 5)
@@ -692,9 +697,12 @@ struct stix_cmgr_t
 
 #endif
 
-
-
-
-
+#if defined(STIX_HAVE_BUILTIN_EXPECT)
+#	define STIX_LIKELY(x) (__builtin_expect(!!x,1))
+#	define STIX_UNLIKELY(x) (__builtin_expect(!!x,0))
+#else
+#	define STIX_LIKELY(x) (x)
+#	define STIX_UNLIKELY(x) (x)
+#endif
 
 #endif
