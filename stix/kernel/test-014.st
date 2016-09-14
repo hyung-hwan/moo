@@ -95,7 +95,12 @@
 	#method(#class) main
 	{
 		| v1 v2 |
-		System logNl: 'START OF MAIN'.
+
+		v2 := 'have fun'.
+
+		v2 at: 0 put: $H.
+
+		System logNl: ('START OF MAIN - ' , v2).
 
 		v1 := MyConsole output.
 		v1 clear.

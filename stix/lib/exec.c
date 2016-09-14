@@ -3789,6 +3789,11 @@ return -1;
 				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(-b1));
 				break;
 
+			case BCODE_PUSH_CHARLIT:
+				FETCH_PARAM_CODE_TO (stix, b1);
+				LOG_INST_1 (stix, "push_charlit %zd", b1);
+				STIX_STACK_PUSH (stix, STIX_CHAR_TO_OOP(b1));
+				break;
 			/* -------------------------------------------------------- */
 
 			case BCODE_DUP_STACKTOP:

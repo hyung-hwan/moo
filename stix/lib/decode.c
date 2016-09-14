@@ -445,6 +445,10 @@ return -1;
 				LOG_INST_1 (stix, "push_negintlit %zd", -b1);
 				break;
 
+			case BCODE_PUSH_CHARLIT:
+				FETCH_PARAM_CODE_TO (stix, b1);
+				LOG_INST_1 (stix, "push_charlit %zd", b1);
+				break;
 			/* -------------------------------------------------------- */
 
 			case BCODE_DUP_STACKTOP:

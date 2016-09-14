@@ -887,8 +887,10 @@ enum stix_bcode_t
 	BCODE_PUSH_ONE                 = 0x8A, /* 138 */
 	BCODE_PUSH_TWO                 = 0x8B, /* 139 */
 
-	BCODE_PUSH_INTLIT              = 0xB1, /* 177 */
-	BCODE_PUSH_NEGINTLIT           = 0xB2, /* 178 */
+	/* UNUSED - 0xB1 */
+	BCODE_PUSH_INTLIT              = 0xB2, /* 178 */
+	BCODE_PUSH_NEGINTLIT           = 0xB3, /* 179 */
+	BCODE_PUSH_CHARLIT             = 0xB4, /* 180 */
 
 	/* UNUSED 0xE8 - 0xF7 */
 

@@ -1694,6 +1694,7 @@ static int emit_single_param_instruction (stix_t* stix, int cmd, stix_oow_t para
 		case BCODE_JUMP2_BACKWARD:
 		case BCODE_PUSH_INTLIT:
 		case BCODE_PUSH_NEGINTLIT:
+		case BCODE_PUSH_CHARLIT:
 			bc = cmd;
 			goto write_long;
 	}
@@ -1706,9 +1707,14 @@ write_short:
 	return 0;
 
 write_long:
+	if (param_1 > MAX_CODE_PARAM) 
+	{
+		stix->errnum = STIX_ERANGE;
+		return -1;
+	}
 #if (STIX_BCODE_LONG_PARAM_SIZE == 2)
 	if (emit_byte_instruction(stix, bc) <= -1 ||
-	    emit_byte_instruction(stix, param_1 >> 8) <= -1 ||
+	    emit_byte_instruction(stix, (param_1 >> 8) & 0xFF) <= -1 ||
 	    emit_byte_instruction(stix, param_1 & 0xFF) <= -1) return -1;
 #else
 	if (emit_byte_instruction(stix, bc) <= -1 ||
@@ -1759,13 +1765,19 @@ write_short:
 	return 0;
 
 write_long:
+	if (param_1 > MAX_CODE_PARAM || param_2 > MAX_CODE_PARAM) 
+	{
+		stix->errnum = STIX_ERANGE;
+		return -1;
+	}
 #if (STIX_BCODE_LONG_PARAM_SIZE == 2)
 	if (emit_byte_instruction(stix, bc) <= -1 ||
-	    emit_byte_instruction(stix, param_1 >> 8) <= -1 ||
+	    emit_byte_instruction(stix, (param_1 >> 8) & 0xFF) <= -1 ||
 	    emit_byte_instruction(stix, param_1 & 0xFF) <= -1 ||
-	    emit_byte_instruction(stix, param_2 >> 8) <= -1 ||
+	    emit_byte_instruction(stix, (param_2 >> 8) & 0xFF) <= -1 ||
 	    emit_byte_instruction(stix, param_2 & 0xFF) <= -1) return -1;
 #else
+	
 	if (emit_byte_instruction(stix, bc) <= -1 ||
 	    emit_byte_instruction(stix, param_1) <= -1 ||
 	    emit_byte_instruction(stix, param_2) <= -1) return -1;
@@ -1773,7 +1785,7 @@ write_long:
 	return 0;
 }
 
-static int emit_push_smint_literal (stix_t* stix, stix_ooi_t i)
+static int emit_push_smooi_literal (stix_t* stix, stix_ooi_t i)
 {
 	stix_oow_t index;
 
@@ -1807,6 +1819,20 @@ static int emit_push_smint_literal (stix_t* stix, stix_ooi_t i)
 	return 0;
 }
 
+static int emit_push_character_literal (stix_t* stix, stix_ooch_t ch)
+{
+	stix_oow_t index;
+
+	if (ch >= 0 && ch <= MAX_CODE_PARAM)
+	{
+		return emit_single_param_instruction (stix, BCODE_PUSH_CHARLIT, ch);
+	}
+
+	if (add_literal(stix, STIX_CHAR_TO_OOP(ch), &index) <= -1 ||
+	    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+
+	return 0;
+}
 /* ---------------------------------------------------------------------
  * Compiler
  * --------------------------------------------------------------------- */
@@ -1846,11 +1872,6 @@ static int add_literal (stix_t* stix, stix_oop_t lit, stix_oow_t* index)
 	*index = stix->c->mth.literal_count;
 	stix->c->mth.literals[stix->c->mth.literal_count++] = lit;
 	return 0;
-}
-
-static STIX_INLINE int add_character_literal (stix_t* stix, stix_ooch_t ch, stix_oow_t* index)
-{
-	return add_literal (stix, STIX_CHAR_TO_OOP(ch), index);
 }
 
 static int add_string_literal (stix_t* stix, const stix_oocs_t* str, stix_oow_t* index)
@@ -3068,8 +3089,8 @@ static int compile_block_expression (stix_t* stix)
 	if (emit_double_param_instruction(stix, BCODE_MAKE_BLOCK, block_arg_count, stix->c->mth.tmpr_count/*block_tmpr_count*/) <= -1) return -1;
 #else
 	if (emit_byte_instruction(stix, BCODE_PUSH_CONTEXT) <= -1 ||
-	    emit_push_smint_literal(stix, block_arg_count) <= -1 ||
-	    emit_push_smint_literal(stix, stix->c->mth.tmpr_count/*block_tmpr_count*/) <= -1 ||
+	    emit_push_smooi_literal(stix, block_arg_count) <= -1 ||
+	    emit_push_smooi_literal(stix, stix->c->mth.tmpr_count/*block_tmpr_count*/) <= -1 ||
 	    emit_byte_instruction(stix, BCODE_SEND_BLOCK_COPY) <= -1) return -1;
 #endif
 
@@ -3520,8 +3541,7 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 
 			case STIX_IOTOK_CHARLIT:
 				STIX_ASSERT (stix->c->tok.name.len == 1);
-				if (add_character_literal(stix, stix->c->tok.name.ptr[0], &index) <= -1 ||
-				    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				if (emit_push_character_literal(stix, stix->c->tok.name.ptr[0]) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
 
@@ -3549,7 +3569,7 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 
 				if (STIX_OOP_IS_SMOOI(tmp))
 				{
-					if (emit_push_smint_literal(stix, STIX_OOP_TO_SMOOI(tmp)) <= -1) return -1;
+					if (emit_push_smooi_literal(stix, STIX_OOP_TO_SMOOI(tmp)) <= -1) return -1;
 				}
 				else
 				{
