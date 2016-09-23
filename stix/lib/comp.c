@@ -3081,7 +3081,7 @@ static int compile_block_expression (stix_t* stix)
 	}
 
 	/* store the accumulated number of temporaries for the current block.
-	 * block depth is not rasised as it's not entering a new block but
+	 * block depth is not raised as it's not entering a new block but
 	 * updating the temporaries count for the current block. */
 	if (store_tmpr_count_for_block (stix, stix->c->mth.tmpr_count) <= -1) return -1;
 
@@ -3130,6 +3130,7 @@ static int compile_block_expression (stix_t* stix)
 	if (emit_byte_instruction(stix, BCODE_RETURN_FROM_BLOCK) <= -1) return -1;
 
 
+	/* STIX_BCODE_LONG_PARAM_SIZE + 1 => size of the long JUMP_FORWARD instruction */
 	block_code_size = stix->c->mth.code.len - jump_inst_pos - (STIX_BCODE_LONG_PARAM_SIZE + 1);
 	if (block_code_size > MAX_CODE_JUMP * 2)
 	{
@@ -3142,6 +3143,8 @@ static int compile_block_expression (stix_t* stix)
 
 		if (block_code_size > MAX_CODE_JUMP)
 		{
+			/* switch to JUMP2 instruction to allow a bigger jump offset.
+			 * up to twice MAX_CODE_JUMP only */
 			stix->c->mth.code.ptr[jump_inst_pos] = BCODE_JUMP2_FORWARD;
 			jump_offset = block_code_size - MAX_CODE_JUMP;
 		}
