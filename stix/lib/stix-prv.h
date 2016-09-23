@@ -1321,9 +1321,11 @@ STIX_EXPORT void stix_getsynerr (
 /* ========================================================================= */
 /* exec.c                                                                    */
 /* ========================================================================= */
+
 int stix_getprimno (
 	stix_t*            stix,
-	const stix_oocs_t* name
+	const stix_ooch_t* ptr,
+	stix_oow_t         len
 );
 
 /* TODO: remove debugging functions */

@@ -2747,13 +2747,13 @@ static prim_t primitives[] =
 	
 };
 
-int stix_getprimno (stix_t* stix, const stix_oocs_t* name)
+int stix_getprimno (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
 {
 	int i;
 
 	for (i = 0; i < STIX_COUNTOF(primitives); i++)
 	{
-		if (stix_compucxbcstr(name->ptr, name->len, primitives[i].name) == 0)
+		if (stix_compucxbcstr(ptr, len, primitives[i].name) == 0)
 		{
 			return i;
 		}

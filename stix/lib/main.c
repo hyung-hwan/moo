@@ -204,24 +204,31 @@ static STIX_INLINE stix_ooi_t close_input (stix_t* stix, stix_ioarg_t* arg)
 
 static STIX_INLINE stix_ooi_t read_input (stix_t* stix, stix_ioarg_t* arg)
 {
-	xtn_t* xtn = stix_getxtn(stix);
+	/*xtn_t* xtn = hcl_getxtn(hcl);*/
 	bb_t* bb;
-	stix_oow_t n, bcslen, ucslen, remlen;
+	stix_oow_t bcslen, ucslen, remlen;
 	int x;
+
 
 	bb = (bb_t*)arg->handle;
 	STIX_ASSERT (bb != STIX_NULL && bb->fp != STIX_NULL);
-	n = fread (&bb->buf[bb->len], STIX_SIZEOF(bb->buf[0]), STIX_COUNTOF(bb->buf) - bb->len, bb->fp);
-	if (n == 0)
+	do
 	{
-		if (ferror((FILE*)bb->fp))
+		x = fgetc (bb->fp);
+		if (x == EOF)
 		{
-			stix_seterrnum (stix, STIX_EIOERR);
-			return -1;
+			if (ferror((FILE*)bb->fp))
+			{
+				stix_seterrnum (stix, STIX_EIOERR);
+				return -1;
+			}
+			break;
 		}
-	}
 
-	bb->len += n;
+		bb->buf[bb->len++] = x;
+	}
+	while (bb->len < STIX_COUNTOF(bb->buf) && x != '\r' && x != '\n');
+
 	bcslen = bb->len;
 	ucslen = STIX_COUNTOF(arg->buf);
 	x = stix_utf8toucs (bb->buf, &bcslen, arg->buf, &ucslen);
@@ -754,6 +761,7 @@ int main (int argc, char* argv[])
 		}
 	}
 
+	printf ("COMPILE OK. STARTING EXECUTION ...\n");
 	xret = 0;
 	g_stix = stix;
 	setup_tick ();

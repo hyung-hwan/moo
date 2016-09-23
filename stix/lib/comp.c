@@ -80,32 +80,32 @@ static struct voca_t
 	stix_oow_t len;
 	stix_ooch_t str[11];
 } vocas[] = {
-	{  4, { 'b','y','t','e'                                               } },
-	{  9, { 'c','h','a','r','a','c','t','e','r'                           } },
-	{  5, { 'c','l','a','s','s'                                           } },
-	{  9, { 'c','l','a','s','s','i','n','s','t'                           } },
-	{  3, { 'd','c','l'                                                   } },
-	{  7, { 'd','e','c','l','a','r','e'                                   } },
+	{  5, { '#','b','y','t','e'                                           } },
+	{ 10, { '#','c','h','a','r','a','c','t','e','r'                       } },
+	{  6, { '#','c','l','a','s','s'                                       } },
+	{ 10, { '#','c','l','a','s','s','i','n','s','t'                       } },
+	{  4, { '#','d','c','l'                                               } },
+	{  8, { '#','d','e','c','l','a','r','e'                               } },
 	{  6, { 'e','n','s','u','r','e',                                      } },
 	{  9, { 'e','x','c','e','p','t','i','o','n'                           } },
-	{  6, { 'e','x','t','e','n','d'                                       } },
+	{  7, { '#','e','x','t','e','n','d'                                   } },
 	{  5, { 'f','a','l','s','e'                                           } },
-	{  8, { 'h','a','l','f','w','o','r','d'                               } },
-	{  7, { 'i','n','c','l','u','d','e'                                   } },
-	{  6, { 'l','i','w','o','r','d'                                       } },
-	{  4, { 'm','a','i','n'                                               } },
-	{  6, { 'm','e','t','h','o','d'                                       } },
-	{  3, { 'm','t','h'                                                   } },
+	{  9, { '#','h','a','l','f','w','o','r','d'                           } },
+	{  8, { '#','i','n','c','l','u','d','e'                               } },
+	{  7, { '#','l','i','w','o','r','d'                                   } },
+	{  5, { '#','m','a','i','n'                                           } },
+	{  7, { '#','m','e','t','h','o','d'                                   } },
+	{  4, { '#','m','t','h'                                               } },
 	{  3, { 'n','i','l'                                                   } },
-	{  7, { 'p','o','i','n','t','e','r'                                   } },
-	{  7, { 'p','o','o','l','d','i','c'                                   } },
+	{  8, { '#','p','o','i','n','t','e','r'                               } },
+	{  8, { '#','p','o','o','l','d','i','c'                               } },
 	{ 10, { 'p','r','i','m','i','t','i','v','e',':'                       } },
 	{  4, { 's','e','l','f'                                               } },
 	{  5, { 's','u','p','e','r'                                           } },
 	{ 11, { 't','h','i','s','C','o','n','t','e','x','t'                   } },
 	{ 11, { 't','h','i','s','P','r','o','c','e','s','s'                   } },
 	{  4, { 't','r','u','e'                                               } },
-	{  4, { 'w','o','r','d'                                               } },
+	{  5, { '#','w','o','r','d'                                           } },
 
 	{  1, { '|'                                                           } },
 	{  1, { '>'                                                           } },
@@ -546,8 +546,8 @@ static stix_oop_t string_to_num (stix_t* stix, stix_oocs_t* str, int radixed)
 
 static STIX_INLINE int does_token_name_match (stix_t* stix, voca_id_t id)
 {
-	return stix->c->tok.name.len == vocas[id].len &&
-	       stix_equalchars(stix->c->tok.name.ptr, vocas[id].str, vocas[id].len);
+	return TOKEN_NAME_LEN(stix) == vocas[id].len &&
+	       stix_equalchars(TOKEN_NAME_PTR(stix), vocas[id].str, vocas[id].len);
 }
 
 static STIX_INLINE int is_token_symbol (stix_t* stix, voca_id_t id)
@@ -679,7 +679,7 @@ static int get_char (stix_t* stix)
 	return 1; /* indicate that a normal character has been read */
 }
 
-static int skip_spaces (stix_t* stix)
+static STIX_INLINE int skip_spaces (stix_t* stix)
 {
 	while (is_spacechar(stix->c->lxc.c)) GET_CHAR (stix);
 	return 0;
@@ -705,7 +705,7 @@ static int skip_comment (stix_t* stix)
 		}
 		while (c != '"');
 
-		if (c == '"') GET_CHAR (stix);
+		if (c == '"') GET_CHAR (stix); /* keep the next character in lxc */
 		return 1; /* double-quoted comment */
 	}
 
@@ -728,7 +728,7 @@ static int skip_comment (stix_t* stix)
 			}
 			else if (c == '\r' || c == '\n')
 			{
-				GET_CHAR (stix);
+				GET_CHAR (stix); /* keep the first meaningful character in lxc */
 				break;
 			}
 		} 
@@ -737,7 +737,7 @@ static int skip_comment (stix_t* stix)
 		return 1; /* single line comment led by ## or #! */
 	}
 
-	/* unget '#' */
+	/* unget the leading '#' */
 	unget_char (stix, &stix->c->lxc);
 	/* restore the previous state */
 	stix->c->lxc = lc;
@@ -820,12 +820,19 @@ static int get_ident (stix_t* stix, stix_ooci_t char_read_ahead)
 				while (is_identchar(c));
 
 				if (c == '.') goto read_more_seg;
+				else unget_char (stix, &stix->c->lxc); 
 			}
 			else
 			{
 				unget_char (stix, &stix->c->lxc); 
-				stix->c->lxc = period; 
+
+				/* unget the period itself */
+				unget_char (stix, &period); 
 			}
+		}
+		else
+		{
+			unget_char (stix, &stix->c->lxc); 
 		}
 
 		/* handle reserved words */
@@ -935,6 +942,8 @@ static int get_numlit (stix_t* stix, int negated)
 		SET_TOKEN_TYPE (stix, STIX_IOTOK_RADNUMLIT);
 	}
 
+	unget_char (stix, &stix->c->lxc);
+
 /*
  * TODO: handle floating point number
  */
@@ -957,7 +966,6 @@ static int get_charlit (stix_t* stix)
 
 	SET_TOKEN_TYPE (stix, STIX_IOTOK_CHARLIT);
 	ADD_TOKEN_CHAR(stix, c);
-	GET_CHAR (stix);
 	return 0;
 }
 
@@ -989,10 +997,13 @@ static int get_strlit (stix_t* stix)
 		} 
 		while (c != '\'');
 
+		/* 'c' must be a single quote at this point*/
 		GET_CHAR_TO (stix, c);
 	} 
-	while (c == '\'');
+	while (c == '\''); /* if the next character is a single quote,
+	                      it becomes a literal single quote character. */
 
+	unget_char (stix, &stix->c->lxc);
 	return 0;
 }
 
@@ -1088,8 +1099,6 @@ static int get_string (stix_t* stix, stix_ooch_t end_char, stix_ooch_t esc_char,
 		if (escaped == 0 && c == end_char)
 		{
 			/* terminating quote */
-			/*GET_CHAR_TO (stix, c);*/
-			GET_CHAR (stix);
 			break;
 		}
 
@@ -1171,21 +1180,25 @@ static int get_binsel (stix_t* stix)
 	/* special case if a minus is followed by a digit immediately */
 	if (oc == '-' && is_digitchar(stix->c->lxc.c)) return get_numlit (stix, 1);
 
+#if 1
 	/* up to 2 characters only */
 	if (is_binselchar (stix->c->lxc.c)) 
 	{
 		ADD_TOKEN_CHAR (stix, stix->c->lxc.c);
-		GET_CHAR (stix);
 	}
-
+	else
+	{
+		unget_char (stix, &stix->c->lxc);
+	}
+#else
 	/* or up to any occurrences */
-	/*
 	while (is_binselchar(stix->c->lxc.c)) 
 	{
 		ADD_TOKEN_CHAR (stix, c);
 		GET_CHAR (stix);
 	}
-	*/
+	unget_char (stix, &stix->c->lxc);
+#endif
 
 	SET_TOKEN_TYPE (stix, STIX_IOTOK_BINSEL);
 	return 0;
@@ -1197,9 +1210,13 @@ static int get_token (stix_t* stix)
 	int n;
 
 retry:
+	GET_CHAR (stix);
+
 	do 
 	{
-		if (skip_spaces(stix) <= -1) return -1;
+		/* skip spaces */
+		while (is_spacechar(stix->c->lxc.c)) GET_CHAR (stix);
+		/* the first character after the last space is in stix->c->lxc */
 		if ((n = skip_comment(stix)) <= -1) return -1;
 	} 
 	while (n >= 1);
@@ -1207,8 +1224,8 @@ retry:
 	/* clear the token name, reset its location */
 	SET_TOKEN_TYPE (stix, STIX_IOTOK_EOF); /* is it correct? */
 	CLEAR_TOKEN_NAME (stix);
+	stix->c->tok.loc = stix->c->lxc.l; /* remember token location */
 
-	stix->c->tok.loc = stix->c->lxc.l;
 	c = stix->c->lxc.c;
 
 	switch (c)
@@ -1244,21 +1261,29 @@ retry:
 			{
 				SET_TOKEN_TYPE (stix, STIX_IOTOK_ASSIGN);
 				ADD_TOKEN_CHAR (stix, c);
-				GET_CHAR (stix);
+			}
+			else
+			{
+				unget_char (stix, &stix->c->lxc);
 			}
 			break;
 
 		case '^':
 			SET_TOKEN_TYPE (stix, STIX_IOTOK_RETURN);
 			ADD_TOKEN_CHAR(stix, c);
-			GET_CHAR_TO (stix, c);
 #if 0
+			GET_CHAR_TO (stix, c);
+
 /* TODO: support explicit block return */
 			if (c == '^')
 			{
 				/* ^^ */
 				TOKEN_TYPE(stix) == STIX_IOTOK_BLKRET;
 				ADD_TOKEN_CHAR (stix, c);
+			}
+			else
+			{
+				unget_char (stix, &stix->c->lxc);
 			}
 #endif
 			break;
@@ -1289,28 +1314,24 @@ retry:
 			goto single_char_token;
 
 		case '#':  
-			/*
-			 * The hash sign is not the part of the token name.
-			 * ADD_TOKEN_CHAR(stix, c); */
+			ADD_TOKEN_CHAR(stix, c);
 			GET_CHAR_TO (stix, c);
 			switch (c)
 			{
 				case STIX_UCI_EOF:
 					set_syntax_error (stix, STIX_SYNERR_HLTNT, LEXER_LOC(stix), STIX_NULL);
 					return -1;
-				
+
 				case '(':
 					/* #( */
 					ADD_TOKEN_CHAR(stix, c);
 					SET_TOKEN_TYPE (stix, STIX_IOTOK_ARPAREN);
-					GET_CHAR (stix);
 					break;
 
 				case '[':
 					/* #[ - byte array literal */
 					ADD_TOKEN_CHAR(stix, c);
 					SET_TOKEN_TYPE (stix, STIX_IOTOK_BAPAREN);
-					GET_CHAR (stix);
 					break;
 
 				case '\'':
@@ -1334,6 +1355,8 @@ retry:
 							GET_CHAR_TO (stix, c);
 						} 
 						while (is_binselchar(c));
+
+						unget_char (stix, &stix->c->lxc);
 					}
 					else if (is_leadidentchar(c)) 
 					{
@@ -1370,6 +1393,10 @@ retry:
 									return -1;
 								}
 							}
+							else
+							{
+								unget_char (stix, &stix->c->lxc);
+							}
 						}
 						else if (c == '.')
 						{
@@ -1393,12 +1420,17 @@ retry:
 								while (is_identchar(c));
 
 								if (c == '.') goto read_more_seg;
+								else unget_char (stix, &stix->c->lxc);
 							}
 							else
 							{
 								unget_char (stix, &stix->c->lxc); 
-								stix->c->lxc = period; 
+								unget_char (stix, &period); 
 							}
+						}
+						else
+						{
+							unget_char (stix, &stix->c->lxc); 
 						}
 					}
 					else
@@ -1488,14 +1520,13 @@ retry:
 
 		single_char_token:
 			ADD_TOKEN_CHAR(stix, c);
-			GET_CHAR (stix);
 			break;
 	}
 
-/*stix_logbfmt (stix, STIX_FMTOUT_COMPILER | STIX_FMTOUT_DEBUG, "TOKEN: [%.*S]\n", stix->c->tok.name.len, stix->c->tok.name.ptr);*/
+STIX_DEBUG2 (stix, "TOKEN: [%.*S]\n", (stix_ooi_t)stix->c->tok.name.len, stix->c->tok.name.ptr);
+
 	return 0;
 }
-
 
 static void clear_io_names (stix_t* stix)
 {
@@ -1561,14 +1592,14 @@ static int begin_include (stix_t* stix)
 		goto oops;
 	}
 
-	/* switch to theincludee's stream */
+	/* switch to the includee's stream */
 	stix->c->curinp = arg;
 	/* stix->c->depth.incl++; */
 
 	/* read in the first character in the included file. 
 	 * so the next call to get_token() sees the character read
 	 * from this file. */
-	if (get_char(stix) <= -1 || get_token(stix) <= -1) 
+	if (get_token(stix) <= -1) 
 	{
 		end_include (stix); 
 		/* i don't jump to oops since i've called 
@@ -1898,11 +1929,11 @@ static int add_string_literal (stix_t* stix, const stix_oocs_t* str, stix_oow_t*
 	return add_literal (stix, lit, index);
 }
 
-static int add_symbol_literal (stix_t* stix, const stix_oocs_t* str, stix_oow_t* index)
+static int add_symbol_literal (stix_t* stix, const stix_oocs_t* str, int offset, stix_oow_t* index)
 {
 	stix_oop_t tmp;
 
-	tmp = stix_makesymbol (stix, str->ptr, str->len);
+	tmp = stix_makesymbol (stix, str->ptr + offset, str->len - offset);
 	if (!tmp) return -1;
 
 	return add_literal (stix, tmp, index);
@@ -2679,20 +2710,27 @@ static int compile_method_primitive (stix_t* stix)
 
 				stix->c->mth.prim_no = prim_no;
 				break;
-	 
+
 			case STIX_IOTOK_SYMLIT:
-				prim_no = stix_getprimno (stix, TOKEN_NAME(stix));
+			{
+				const stix_ooch_t* tptr;
+				stix_oow_t tlen;
+
+				tptr = TOKEN_NAME_PTR(stix) + 1;
+				tlen = TOKEN_NAME_LEN(stix) - 1;
+
+				prim_no = stix_getprimno (stix, tptr, tlen);
 				if (prim_no <= -1)
 				{
 					const stix_ooch_t* us;
 					/* the primitive is not found */
-					us = stix_findoochar (stix->c->tok.name.ptr, stix->c->tok.name.len, '_');
-					if (us > stix->c->tok.name.ptr && us < stix->c->tok.name.ptr + stix->c->tok.name.len - 1)
+					us = stix_findoochar (tptr, tlen, '_');
+					if (us > tptr && us < tptr + tlen - 1)
 					{
 						stix_oow_t lit_idx;
 						/* the symbol literal contains an underscore.
-						 * and it is none of the first of the last character */
-						if (add_symbol_literal(stix, TOKEN_NAME(stix), &lit_idx) >= 0 &&
+						 * and it is neither the first nor the last character */
+						if (add_symbol_literal(stix, TOKEN_NAME(stix), 1, &lit_idx) >= 0 &&
 						    STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx))
 						{
 							stix->c->mth.prim_type = 2; /* named primitive */
@@ -2713,6 +2751,7 @@ static int compile_method_primitive (stix_t* stix)
 				stix->c->mth.prim_type = 1; 
 				stix->c->mth.prim_no = prim_no;
 				break;
+			}
 
 			default:
 				set_syntax_error (stix, STIX_SYNERR_INTEGER, TOKEN_LOC(stix), TOKEN_NAME(stix));
@@ -3290,19 +3329,22 @@ static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
 				break;
 
 			case STIX_IOTOK_STRLIT:
-				lit = stix_instantiate (stix, stix->_string, stix->c->tok.name.ptr, stix->c->tok.name.len);
+				lit = stix_instantiate (stix, stix->_string, TOKEN_NAME_PTR(stix), TOKEN_NAME_LEN(stix));
+				break;
+
+			case STIX_IOTOK_SYMLIT:
+				lit = stix_makesymbol (stix, TOKEN_NAME_PTR(stix) + 1, TOKEN_NAME_LEN(stix) - 1);
 				break;
 
 			case STIX_IOTOK_IDENT:
 			case STIX_IOTOK_IDENT_DOTTED:
 			case STIX_IOTOK_BINSEL:
 			case STIX_IOTOK_KEYWORD:
-			case STIX_IOTOK_SYMLIT:
 			case STIX_IOTOK_SELF:
 			case STIX_IOTOK_SUPER:
 			case STIX_IOTOK_THIS_CONTEXT:
 			case STIX_IOTOK_THIS_PROCESS:
-				lit = stix_makesymbol (stix, stix->c->tok.name.ptr, stix->c->tok.name.len);
+				lit = stix_makesymbol (stix, TOKEN_NAME_PTR(stix), TOKEN_NAME_LEN(stix));
 				break;
 
 			case STIX_IOTOK_NIL:
@@ -3555,7 +3597,7 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 				break;
 
 			case STIX_IOTOK_SYMLIT:
-				if (add_symbol_literal(stix, TOKEN_NAME(stix), &index) <= -1 ||
+				if (add_symbol_literal(stix, TOKEN_NAME(stix), 1, &index) <= -1 ||
 				    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
@@ -3649,7 +3691,7 @@ static int compile_unary_message (stix_t* stix, int to_super)
 
 	do
 	{
-		if (add_symbol_literal(stix, TOKEN_NAME(stix), &index) <= -1 ||
+		if (add_symbol_literal(stix, TOKEN_NAME(stix), 0, &index) <= -1 ||
 		    emit_double_param_instruction(stix, send_message_cmd[to_super], 0, index) <= -1) return -1;
 		GET_TOKEN (stix);
 	}
@@ -3688,7 +3730,7 @@ static int compile_binary_message (stix_t* stix, int to_super)
 		 * to be free from reallocation risk for the recursive call
 		 * to compile_expression_primary(). */
 		binsel.ptr = &stix->c->mth.binsels.ptr[binsel_offset];
-		if (add_symbol_literal(stix, &binsel, &index) <= -1 ||
+		if (add_symbol_literal(stix, &binsel, 0, &index) <= -1 ||
 		    emit_double_param_instruction(stix, send_message_cmd[to_super], 1, index) <= -1) goto oops;
 
 		stix->c->mth.binsels.len = saved_binsels_len;
@@ -3750,7 +3792,7 @@ static int compile_keyword_message (stix_t* stix, int to_super)
 	kwsel.ptr = &stix->c->mth.kwsels.ptr[saved_kwsel_len];
 	kwsel.len = stix->c->mth.kwsels.len - saved_kwsel_len;
 
-	if (add_symbol_literal(stix, &kwsel, &index) <= -1 ||
+	if (add_symbol_literal(stix, &kwsel, 0, &index) <= -1 ||
 	    emit_double_param_instruction(stix, send_message_cmd[to_super], nargs, index) <= -1) goto oops;
 
 	stix->c->mth.kwsels.len = saved_kwsel_len;
@@ -4953,7 +4995,7 @@ static int __compile_pooldic_definition (stix_t* stix)
 
 	while (TOKEN_TYPE(stix) == STIX_IOTOK_SYMLIT)
 	{
-		lit = stix_makesymbol (stix, stix->c->tok.name.ptr, stix->c->tok.name.len);
+		lit = stix_makesymbol (stix, TOKEN_NAME_PTR(stix) + 1, TOKEN_NAME_LEN(stix) - 1);
 		if (!lit || add_to_array_literal_buffer (stix, lit) <= -1) return -1;
 
 		GET_TOKEN (stix);
@@ -4986,12 +5028,12 @@ static int __compile_pooldic_definition (stix_t* stix)
 				goto add_literal;
 
 			case STIX_IOTOK_STRLIT:
-				lit = stix_instantiate (stix, stix->_string, stix->c->tok.name.ptr, stix->c->tok.name.len);
+				lit = stix_instantiate (stix, stix->_string, TOKEN_NAME_PTR(stix), TOKEN_NAME_LEN(stix));
 				if (!lit) return -1;
 				goto add_literal;
 
 			case STIX_IOTOK_SYMLIT:
-				lit = stix_makesymbol (stix, stix->c->tok.name.ptr, stix->c->tok.name.len);
+				lit = stix_makesymbol (stix, TOKEN_NAME_PTR(stix) + 1, TOKEN_NAME_LEN(stix) - 1);
 				if (!lit) return -1;
 				goto add_literal;
 
@@ -5086,10 +5128,8 @@ static int compile_pooldic_definition (stix_t* stix)
 	return n;
 }
 
-
 static int compile_stream (stix_t* stix)
 {
-	GET_CHAR (stix);
 	GET_TOKEN (stix);
 
 	while (TOKEN_TYPE(stix) != STIX_IOTOK_EOF)
@@ -5131,7 +5171,6 @@ static int compile_stream (stix_t* stix)
 			
 		}
 #endif
-
 		else
 		{
 			set_syntax_error(stix, STIX_SYNERR_DIRECTIVE, TOKEN_LOC(stix), TOKEN_NAME(stix));
