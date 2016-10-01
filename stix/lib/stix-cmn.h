@@ -440,6 +440,9 @@ struct stix_ntime_t
 #define STIX_SETBITS(type,value,offset,length,bits) \
 	(value = (STIX_CLEARBITS(type,value,offset,length) | (((bits) & STIX_LBMASK(type,length)) << (offset))))
 
+#define STIX_FLIPBITS(type,value,offset,length) \
+	(((type)(value)) ^ (STIX_LBMASK(type,length) << (offset)))
+
 #define STIX_ORBITS(type,value,offset,length,bits) \
 	(value = (((type)(value)) | (((bits) & STIX_LBMASK(type,length)) << (offset))))
 
