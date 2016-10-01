@@ -434,7 +434,13 @@ struct stix_ntime_t
 #define STIX_GETBITS(type,value,offset,length) \
 	((((type)(value)) >> (offset)) & STIX_LBMASK(type,length))
 
+#define STIX_CLEARBITS(type,value,offset,length) \
+	(((type)(value)) & ~(STIX_LBMASK(type,length) << (offset)))
+
 #define STIX_SETBITS(type,value,offset,length,bits) \
+	(value = (STIX_CLEARBITS(type,value,offset,length) | (((bits) & STIX_LBMASK(type,length)) << (offset))))
+
+#define STIX_ORBITS(type,value,offset,length,bits) \
 	(value = (((type)(value)) | (((bits) & STIX_LBMASK(type,length)) << (offset))))
 
 
@@ -560,20 +566,18 @@ struct stix_cmgr_t
 #endif
 
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__>=199901L)
+	/* C99 has inline */
 #	define STIX_INLINE inline
 #	define STIX_HAVE_INLINE
 #elif defined(__GNUC__) && defined(__GNUC_GNU_INLINE__)
-		/* gcc disables inline when -std=c89 or -ansi is used. 
-		 * so use __inline__ supported by gcc regardless of the options */
+	/* gcc disables inline when -std=c89 or -ansi is used. 
+	 * so use __inline__ supported by gcc regardless of the options */
 #	define STIX_INLINE /*extern*/ __inline__
 #	define STIX_HAVE_INLINE
 #else
 #	define STIX_INLINE 
 #	undef STIX_HAVE_INLINE
 #endif
-
-
-
 
 /**
  * The STIX_TYPE_IS_SIGNED() macro determines if a type is signed.

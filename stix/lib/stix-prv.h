@@ -63,7 +63,6 @@
  */
 #define STIX_LIMIT_OBJ_SIZE
 
-
 /* TODO: delete these header inclusion lines */
 #include <string.h>
 #include <assert.h>

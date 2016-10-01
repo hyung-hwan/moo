@@ -2693,8 +2693,8 @@ static int compile_method_primitive (stix_t* stix)
 		{
 			case STIX_IOTOK_NUMLIT: /* TODO: allow only an integer */
 	/*TODO: more checks the validity of the primitive number. support number with radix and so on support more extensive syntax. support primitive name, not number*/
-				ptr = stix->c->tok.name.ptr;
-				end = ptr + stix->c->tok.name.len;
+				ptr = TOKEN_NAME_PTR(stix);
+				end = ptr + TOKEN_NAME_LEN(stix);
 				prim_no = 0;
 				while (ptr < end && is_digitchar(*ptr)) 
 				{
@@ -3209,7 +3209,6 @@ static int compile_block_expression (stix_t* stix)
 	return 0;
 }
 
-
 static int add_to_byte_array_literal_buffer (stix_t* stix, stix_oob_t b)
 {
 	if (stix->c->mth.balit_count >= stix->c->mth.balit_capa)
@@ -3324,8 +3323,8 @@ static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
 				break;
 
 			case STIX_IOTOK_CHARLIT:
-				STIX_ASSERT (stix->c->tok.name.len == 1);
-				lit = STIX_CHAR_TO_OOP(stix->c->tok.name.ptr[0]);
+				STIX_ASSERT (TOKEN_NAME_LEN(stix) == 1);
+				lit = STIX_CHAR_TO_OOP(TOKEN_NAME_PTR(stix)[0]);
 				break;
 
 			case STIX_IOTOK_STRLIT:
@@ -3585,8 +3584,8 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 				break;
 
 			case STIX_IOTOK_CHARLIT:
-				STIX_ASSERT (stix->c->tok.name.len == 1);
-				if (emit_push_character_literal(stix, stix->c->tok.name.ptr[0]) <= -1) return -1;
+				STIX_ASSERT (TOKEN_NAME_LEN(stix) == 1);
+				if (emit_push_character_literal(stix, TOKEN_NAME_PTR(stix)[0]) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
 
@@ -5023,8 +5022,8 @@ static int __compile_pooldic_definition (stix_t* stix)
 				goto add_literal;
 
 			case STIX_IOTOK_CHARLIT:
-				STIX_ASSERT (stix->c->tok.name.len == 1);
-				lit = STIX_CHAR_TO_OOP(stix->c->tok.name.ptr[0]);
+				STIX_ASSERT (TOKEN_NAME_LEN(stix) == 1);
+				lit = STIX_CHAR_TO_OOP(TOKEN_NAME_PTR(stix)[0]);
 				goto add_literal;
 
 			case STIX_IOTOK_STRLIT:
