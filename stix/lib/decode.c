@@ -35,23 +35,23 @@
 #define LOG_INST_3(stix,fmt,a1,a2,a3) STIX_LOG3(stix, DECODE_LOG_MASK, "\t" fmt "\n", a1, a2, a3)
 
 #define FETCH_BYTE_CODE(stix) (cdptr[ip++])
-#define FETCH_BYTE_CODE_TO(stix,v_ooi) (v_ooi = FETCH_BYTE_CODE(stix))
+#define FETCH_BYTE_CODE_TO(stix,v_oow) (v_oow = FETCH_BYTE_CODE(stix))
 #if (STIX_BCODE_LONG_PARAM_SIZE == 2)
-#	define FETCH_PARAM_CODE_TO(stix,v_ooi) \
+#	define FETCH_PARAM_CODE_TO(stix,v_oow) \
 		do { \
-			v_ooi = FETCH_BYTE_CODE(stix); \
-			v_ooi = (v_ooi << 8) | FETCH_BYTE_CODE(stix); \
+			v_oow = FETCH_BYTE_CODE(stix); \
+			v_oow = (v_oow << 8) | FETCH_BYTE_CODE(stix); \
 		} while (0)
 #else
-#	define FETCH_PARAM_CODE_TO(stix,v_ooi) (v_ooi = FETCH_BYTE_CODE(stix))
+#	define FETCH_PARAM_CODE_TO(stix,v_oow) (v_oow = FETCH_BYTE_CODE(stix))
 #endif
 
 /* TODO: check if ip shoots beyond the maximum length in fetching code and parameters */
 int stix_decode (stix_t* stix, stix_oop_method_t mth, const stix_oocs_t* classfqn)
 {
 	stix_oob_t bcode, * cdptr;
-	stix_oow_t ip = 0, cdlen;
-	stix_ooi_t b1, b2;
+	stix_ooi_t ip = 0, cdlen; /* byte code length is limited by the compiler. so stix_ooi_t is good enough */
+	stix_oow_t b1, b2;
  
 	cdptr = STIX_METHOD_GET_CODE_BYTE(mth);
 	cdlen = STIX_METHOD_GET_CODE_SIZE(mth); 
@@ -61,7 +61,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth, const stix_oocs_t* classfq
 	else
 		STIX_LOG2 (stix, DECODE_LOG_MASK, "%O>>%O\n", mth->owner, mth->name);
 
-/* TODO: check if ip increases beyon bcode when fetching parameters too */
+/* TODO: check if ip increases beyond bcode when fetching parameters too */
 	while (ip < cdlen)
 	{
 		FETCH_BYTE_CODE_TO(stix, bcode);
@@ -81,7 +81,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth, const stix_oocs_t* classfq
 			case BCODE_PUSH_INSTVAR_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			push_instvar:
-				LOG_INST_1 (stix, "push_instvar %zd", b1);
+				LOG_INST_1 (stix, "push_instvar %zu", b1);
 				break;
 
 			/* ------------------------------------------------- */
@@ -99,7 +99,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth, const stix_oocs_t* classfq
 			case BCODE_STORE_INTO_INSTVAR_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			store_instvar:
-				LOG_INST_1 (stix, "store_into_instvar %zd", b1);
+				LOG_INST_1 (stix, "store_into_instvar %zu", b1);
 				break;
 
 			case BCODE_POP_INTO_INSTVAR_X:
@@ -115,7 +115,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth, const stix_oocs_t* classfq
 			case BCODE_POP_INTO_INSTVAR_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			pop_into_instvar:
-				LOG_INST_1 (stix, "pop_into_instvar %zd", b1);
+				LOG_INST_1 (stix, "pop_into_instvar %zu", b1);
 				break;
 
 			/* ------------------------------------------------- */
@@ -155,7 +155,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth, const stix_oocs_t* classfq
 				if ((bcode >> 4) & 1)
 				{
 					/* push - bit 4 on */
-					LOG_INST_1 (stix, "push_tempvar %zd", b1);
+					LOG_INST_1 (stix, "push_tempvar %zu", b1);
 				}
 				else
 				{
@@ -163,11 +163,11 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth, const stix_oocs_t* classfq
 					if ((bcode >> 3) & 1)
 					{
 						/* pop - bit 3 on */
-						LOG_INST_1 (stix, "pop_into_tempvar %zd", b1);
+						LOG_INST_1 (stix, "pop_into_tempvar %zu", b1);
 					}
 					else
 					{
-						LOG_INST_1 (stix, "store_into_tempvar %zd", b1);
+						LOG_INST_1 (stix, "store_into_tempvar %zu", b1);
 					}
 				}
 				break;
@@ -187,7 +187,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth, const stix_oocs_t* classfq
 			case BCODE_PUSH_LITERAL_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			push_literal:
-				LOG_INST_1 (stix, "push_literal @%zd", b1);
+				LOG_INST_1 (stix, "push_literal @%zu", b1);
 				break;
 
 			/* ------------------------------------------------- */
@@ -215,16 +215,16 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth, const stix_oocs_t* classfq
 				{
 					if ((bcode >> 2) & 1)
 					{
-						LOG_INST_1 (stix, "pop_into_object @%zd", b1);
+						LOG_INST_1 (stix, "pop_into_object @%zu", b1);
 					}
 					else
 					{
-						LOG_INST_1 (stix, "store_into_object @%zd", b1);
+						LOG_INST_1 (stix, "store_into_object @%zu", b1);
 					}
 				}
 				else
 				{
-					LOG_INST_1 (stix, "push_object @%zd", b1);
+					LOG_INST_1 (stix, "push_object @%zu", b1);
 				}
 				break;
 
@@ -232,19 +232,19 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth, const stix_oocs_t* classfq
 
 			case BCODE_JUMP_FORWARD_X:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				LOG_INST_1 (stix, "jump_forward %zd", b1);
+				LOG_INST_1 (stix, "jump_forward %zu", b1);
 				break;
 
 			case BCODE_JUMP_FORWARD_0:
 			case BCODE_JUMP_FORWARD_1:
 			case BCODE_JUMP_FORWARD_2:
 			case BCODE_JUMP_FORWARD_3:
-				LOG_INST_1 (stix, "jump_forward %zd", (bcode & 0x3)); /* low 2 bits */
+				LOG_INST_1 (stix, "jump_forward %zu", (stix_oow_t)(bcode & 0x3)); /* low 2 bits */
 				break;
 
 			case BCODE_JUMP_BACKWARD_X:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				LOG_INST_1 (stix, "jump_backward %zd", b1);
+				LOG_INST_1 (stix, "jump_backward %zu", b1);
 				stix->ip += b1;
 				break;
 
@@ -252,7 +252,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth, const stix_oocs_t* classfq
 			case BCODE_JUMP_BACKWARD_1:
 			case BCODE_JUMP_BACKWARD_2:
 			case BCODE_JUMP_BACKWARD_3:
-				LOG_INST_1 (stix, "jump_backward %zd", (bcode & 0x3)); /* low 2 bits */
+				LOG_INST_1 (stix, "jump_backward %zu", (stix_oow_t)(bcode & 0x3)); /* low 2 bits */
 				break;
 
 			case BCODE_JUMP_IF_TRUE_X:
@@ -271,12 +271,12 @@ return -1;
 
 			case BCODE_JUMP2_FORWARD:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				LOG_INST_1 (stix, "jump2_forward %zd", b1);
+				LOG_INST_1 (stix, "jump2_forward %zu", b1);
 				break;
 
 			case BCODE_JUMP2_BACKWARD:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				LOG_INST_1 (stix, "jump2_backward %zd", b1);
+				LOG_INST_1 (stix, "jump2_backward %zu", b1);
 				break;
 
 			/* -------------------------------------------------------- */
@@ -309,17 +309,17 @@ return -1;
 
 					if ((bcode >> 2) & 1)
 					{
-						LOG_INST_2 (stix, "pop_into_ctxtempvar %zd %zd", b1, b2);
+						LOG_INST_2 (stix, "pop_into_ctxtempvar %zu %zu", b1, b2);
 					}
 					else
 					{
-						LOG_INST_2 (stix, "store_into_ctxtempvar %zd %zd", b1, b2);
+						LOG_INST_2 (stix, "store_into_ctxtempvar %zu %zu", b1, b2);
 					}
 				}
 				else
 				{
 					/* push */
-					LOG_INST_2 (stix, "push_ctxtempvar %zd %zd", b1, b2);
+					LOG_INST_2 (stix, "push_ctxtempvar %zu %zu", b1, b2);
 				}
 
 				break;
@@ -355,16 +355,16 @@ return -1;
 					/* store or pop */
 					if ((bcode >> 2) & 1)
 					{
-						LOG_INST_2 (stix, "pop_into_objvar %zd %zd", b1, b2);
+						LOG_INST_2 (stix, "pop_into_objvar %zu %zu", b1, b2);
 					}
 					else
 					{
-						LOG_INST_2 (stix, "store_into_objvar %zd %zd", b1, b2);
+						LOG_INST_2 (stix, "store_into_objvar %zu %zu", b1, b2);
 					}
 				}
 				else
 				{
-					LOG_INST_2 (stix, "push_objvar %zd %zd", b1, b2);
+					LOG_INST_2 (stix, "push_objvar %zu %zu", b1, b2);
 				}
 
 				break;
@@ -390,7 +390,7 @@ return -1;
 				FETCH_BYTE_CODE_TO (stix, b2);
 
 			handle_send_message:
-				LOG_INST_3 (stix, "send_message%hs %zd @%zd", (((bcode >> 2) & 1)? "_to_super": ""), b1, b2);
+				LOG_INST_3 (stix, "send_message%hs %zu @%zu", (((bcode >> 2) & 1)? "_to_super": ""), b1, b2);
 				break; 
 
 			/* -------------------------------------------------------- */
@@ -437,17 +437,17 @@ return -1;
 
 			case BCODE_PUSH_INTLIT:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				LOG_INST_1 (stix, "push_intlit %zd", b1);
+				LOG_INST_1 (stix, "push_intlit %zu", b1);
 				break;
 
 			case BCODE_PUSH_NEGINTLIT:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				LOG_INST_1 (stix, "push_negintlit %zd", -b1);
+				LOG_INST_1 (stix, "push_negintlit %zu", b1);
 				break;
 
 			case BCODE_PUSH_CHARLIT:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				LOG_INST_1 (stix, "push_charlit %zd", b1);
+				LOG_INST_1 (stix, "push_charlit %zu", b1);
 				break;
 			/* -------------------------------------------------------- */
 
@@ -477,12 +477,11 @@ return -1;
 				FETCH_PARAM_CODE_TO (stix, b1);
 				FETCH_PARAM_CODE_TO (stix, b2);
 
-				LOG_INST_2 (stix, "make_block %zd %zd", b1, b2);
+				LOG_INST_2 (stix, "make_block %zu %zu", b1, b2);
 
 				STIX_ASSERT (b1 >= 0);
 				STIX_ASSERT (b2 >= b1);
 				break;
-			
 
 			case BCODE_SEND_BLOCK_COPY:
 				LOG_INST_0 (stix, "send_block_copy");
@@ -504,7 +503,7 @@ return -1;
 	/* print literal frame contents */
 	for (ip = 0; ip < STIX_OBJ_GET_SIZE(mth) - STIX_METHOD_NAMED_INSTVARS; ip++)
 	{
-		LOG_INST_2 (stix, " @%-3lu %O", (unsigned long int)ip, mth->slot[ip]);
+		LOG_INST_2 (stix, " @%-3zd %O", ip, mth->slot[ip]);
 	}
 
 	return 0;

@@ -28,7 +28,7 @@
 
 #define CLASS_BUFFER_ALIGN       64
 #define LITERAL_BUFFER_ALIGN     64
-#define CODE_BUFFER_ALIGN        64
+#define CODE_BUFFER_ALIGN        512
 #define BALIT_BUFFER_ALIGN       64
 #define ARLIT_BUFFER_ALIGN       64
 #define BLK_TMPRCNT_BUFFER_ALIGN 32
@@ -1655,20 +1655,29 @@ static int end_include (stix_t* stix)
 
 static STIX_INLINE int emit_byte_instruction (stix_t* stix, stix_oob_t code)
 {
-	stix_oow_t i;
+	/* the context object has the ip field. it should be representable
+	 * in a small integer. for simplicity, limit the total byte code length
+	 * to fit in a small integer. because 'ip' points to the next instruction
+	 * to execute, he upper bound should be (max - 1) so that i stays
+	 * at the max when incremented */
+	if (stix->c->mth.code.len == STIX_SMOOI_MAX - 1)
+	{
+		stix->errnum = STIX_EBCFULL; /* byte code too big */
+		return -1;
+	}
 
-	i = stix->c->mth.code.len + 1;
-	if (i > stix->c->mth.code_capa)
+	if (stix->c->mth.code.len >= stix->c->mth.code_capa)
 	{
 		stix_oob_t* tmp;
+		stix_oow_t newcapa;
 
-		i = STIX_ALIGN (i, CODE_BUFFER_ALIGN);
+		newcapa = STIX_ALIGN (stix->c->mth.code.len + 1, CODE_BUFFER_ALIGN);
 
-		tmp = stix_reallocmem (stix, stix->c->mth.code.ptr, i * STIX_SIZEOF(*tmp));
+		tmp = stix_reallocmem (stix, stix->c->mth.code.ptr, newcapa * STIX_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
 		stix->c->mth.code.ptr = tmp;
-		stix->c->mth.code_capa = i;
+		stix->c->mth.code_capa = newcapa;
 	}
 
 	stix->c->mth.code.ptr[stix->c->mth.code.len++] = code;

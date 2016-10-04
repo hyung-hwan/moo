@@ -432,7 +432,7 @@ typedef struct stix_synerr_t stix_synerr_t;
 struct stix_code_t
 {
 	stix_uint8_t* ptr;
-	stix_oow_t   len;
+	stix_oow_t    len;
 };
 typedef struct stix_code_t stix_code_t;
 

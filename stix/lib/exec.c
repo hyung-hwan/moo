@@ -290,15 +290,10 @@ static stix_oop_process_t make_process (stix_t* stix, stix_oop_context_t c)
 	proc->current_context = c;
 	proc->sp = STIX_SMOOI_TO_OOP(-1);
 
-#if 0
-	proc->eb_top = stix->_nil;
-	proc->eb_count = STIX_SMOOI_TO_OOP(-1);
-#endif
-
 	STIX_ASSERT ((stix_oop_t)c->sender == stix->_nil);
 
 #if defined(STIX_DEBUG_VM_PROCESSOR)
-	STIX_LOG2 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Processor - made process %O of size %zd\n", proc, STIX_OBJ_GET_SIZE(proc));
+	STIX_LOG2 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Processor - made process %O of size %zu\n", proc, STIX_OBJ_GET_SIZE(proc));
 #endif
 	return proc;
 }
@@ -1723,7 +1718,7 @@ static int __block_value (stix_t* stix, stix_oop_context_t rcv_blkctx, stix_ooi_
 		/* copy the arguments to the stack */
 		for (i = 0; i < nargs; i++)
 		{
-			blkctx->slot[i] = STIX_STACK_GET(stix, stix->sp - nargs + i + 1);
+			blkctx->slot[i] = STIX_STACK_GETARG(stix, nargs, i);
 		}
 	}
 	STIX_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
@@ -3146,7 +3141,7 @@ static int send_private_message (stix_t* stix, const stix_ooch_t* nameptr, stix_
 int stix_execute (stix_t* stix)
 {
 	stix_oob_t bcode;
-	stix_ooi_t b1, b2;
+	stix_oow_t b1, b2;
 	stix_oop_t return_value;
 	int unwind_protect;
 	stix_oop_context_t unwind_start;
@@ -3283,7 +3278,7 @@ if (there is semaphore awaited.... )
 			case BCODE_PUSH_INSTVAR_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			push_instvar:
-				LOG_INST_1 (stix, "push_instvar %zd", b1);
+				LOG_INST_1 (stix, "push_instvar %zu", b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->origin->receiver_or_source) == STIX_OBJ_TYPE_OOP);
 				STIX_STACK_PUSH (stix, ((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1]);
 				break;
@@ -3303,7 +3298,7 @@ if (there is semaphore awaited.... )
 			case BCODE_STORE_INTO_INSTVAR_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			store_instvar:
-				LOG_INST_1 (stix, "store_into_instvar %zd", b1);
+				LOG_INST_1 (stix, "store_into_instvar %zu", b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver_or_source) == STIX_OBJ_TYPE_OOP);
 				((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1] = STIX_STACK_GETTOP(stix);
 				break;
@@ -3322,7 +3317,7 @@ if (there is semaphore awaited.... )
 			case BCODE_POP_INTO_INSTVAR_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			pop_into_instvar:
-				LOG_INST_1 (stix, "pop_into_instvar %zd", b1);
+				LOG_INST_1 (stix, "pop_into_instvar %zu", b1);
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_TYPE(stix->active_context->receiver_or_source) == STIX_OBJ_TYPE_OOP);
 				((stix_oop_oop_t)stix->active_context->origin->receiver_or_source)->slot[b1] = STIX_STACK_GETTOP(stix);
 				STIX_STACK_POP (stix);
@@ -3421,7 +3416,7 @@ if (there is semaphore awaited.... )
 				if ((bcode >> 4) & 1)
 				{
 					/* push - bit 4 on */
-					LOG_INST_1 (stix, "push_tempvar %zd", b1);
+					LOG_INST_1 (stix, "push_tempvar %zu", b1);
 					STIX_STACK_PUSH (stix, ctx->slot[bx]);
 				}
 				else
@@ -3432,12 +3427,12 @@ if (there is semaphore awaited.... )
 					if ((bcode >> 3) & 1)
 					{
 						/* pop - bit 3 on */
-						LOG_INST_1 (stix, "pop_into_tempvar %zd", b1);
+						LOG_INST_1 (stix, "pop_into_tempvar %zu", b1);
 						STIX_STACK_POP (stix);
 					}
 					else
 					{
-						LOG_INST_1 (stix, "store_into_tempvar %zd", b1);
+						LOG_INST_1 (stix, "store_into_tempvar %zu", b1);
 					}
 				}
 
@@ -3459,7 +3454,7 @@ if (there is semaphore awaited.... )
 			case BCODE_PUSH_LITERAL_7:
 				b1 = bcode & 0x7; /* low 3 bits */
 			push_literal:
-				LOG_INST_1 (stix, "push_literal @%zd", b1);
+				LOG_INST_1 (stix, "push_literal @%zu", b1);
 				STIX_STACK_PUSH (stix, stix->active_method->slot[b1]);
 				break;
 
@@ -3498,18 +3493,18 @@ if (there is semaphore awaited.... )
 					if ((bcode >> 2) & 1)
 					{
 						/* pop */
-						LOG_INST_1 (stix, "pop_into_object @%zd", b1);
+						LOG_INST_1 (stix, "pop_into_object @%zu", b1);
 						STIX_STACK_POP (stix);
 					}
 					else
 					{
-						LOG_INST_1 (stix, "store_into_object @%zd", b1);
+						LOG_INST_1 (stix, "store_into_object @%zu", b1);
 					}
 				}
 				else
 				{
 					/* push */
-					LOG_INST_1 (stix, "push_object @%zd", b1);
+					LOG_INST_1 (stix, "push_object @%zu", b1);
 					STIX_STACK_PUSH (stix, ass->value);
 				}
 				break;
@@ -3519,7 +3514,7 @@ if (there is semaphore awaited.... )
 
 			case BCODE_JUMP_FORWARD_X:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				LOG_INST_1 (stix, "jump_forward %zd", b1);
+				LOG_INST_1 (stix, "jump_forward %zu", b1);
 				stix->ip += b1;
 				break;
 
@@ -3527,13 +3522,13 @@ if (there is semaphore awaited.... )
 			case BCODE_JUMP_FORWARD_1:
 			case BCODE_JUMP_FORWARD_2:
 			case BCODE_JUMP_FORWARD_3:
-				LOG_INST_1 (stix, "jump_forward %zd", (bcode & 0x3));
+				LOG_INST_1 (stix, "jump_forward %zu", (stix_oow_t)(bcode & 0x3));
 				stix->ip += (bcode & 0x3); /* low 2 bits */
 				break;
 
 			case BCODE_JUMP_BACKWARD_X:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				LOG_INST_1 (stix, "jump_backward %zd", b1);
+				LOG_INST_1 (stix, "jump_backward %zu", b1);
 				stix->ip += b1;
 				break;
 
@@ -3541,7 +3536,7 @@ if (there is semaphore awaited.... )
 			case BCODE_JUMP_BACKWARD_1:
 			case BCODE_JUMP_BACKWARD_2:
 			case BCODE_JUMP_BACKWARD_3:
-				LOG_INST_1 (stix, "jump_backward %zd", (bcode & 0x3));
+				LOG_INST_1 (stix, "jump_backward %zu", (stix_oow_t)(bcode & 0x3));
 				stix->ip -= (bcode & 0x3); /* low 2 bits */
 				break;
 
@@ -3561,13 +3556,13 @@ return -1;
 
 			case BCODE_JUMP2_FORWARD:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				LOG_INST_1 (stix, "jump2_forward %zd", b1);
+				LOG_INST_1 (stix, "jump2_forward %zu", b1);
 				stix->ip += MAX_CODE_JUMP + b1;
 				break;
 
 			case BCODE_JUMP2_BACKWARD:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				LOG_INST_1 (stix, "jump2_backward %zd", b1);
+				LOG_INST_1 (stix, "jump2_backward %zu", b1);
 				stix->ip -= MAX_CODE_JUMP + b1;
 				break;
 
@@ -3616,18 +3611,18 @@ return -1;
 					{
 						/* pop */
 						STIX_STACK_POP (stix);
-						LOG_INST_2 (stix, "pop_into_ctxtempvar %zd %zd", b1, b2);
+						LOG_INST_2 (stix, "pop_into_ctxtempvar %zu %zu", b1, b2);
 					}
 					else
 					{
-						LOG_INST_2 (stix, "store_into_ctxtempvar %zd %zd", b1, b2);
+						LOG_INST_2 (stix, "store_into_ctxtempvar %zu %zu", b1, b2);
 					}
 				}
 				else
 				{
 					/* push */
 					STIX_STACK_PUSH (stix, ctx->slot[b2]);
-					LOG_INST_2 (stix, "push_ctxtempvar %zd %zd", b1, b2);
+					LOG_INST_2 (stix, "push_ctxtempvar %zu %zu", b1, b2);
 				}
 
 				break;
@@ -3676,17 +3671,17 @@ return -1;
 					{
 						/* pop */
 						STIX_STACK_POP (stix);
-						LOG_INST_2 (stix, "pop_into_objvar %zd %zd", b1, b2);
+						LOG_INST_2 (stix, "pop_into_objvar %zu %zu", b1, b2);
 					}
 					else
 					{
-						LOG_INST_2 (stix, "store_into_objvar %zd %zd", b1, b2);
+						LOG_INST_2 (stix, "store_into_objvar %zu %zu", b1, b2);
 					}
 				}
 				else
 				{
 					/* push */
-					LOG_INST_2 (stix, "push_objvar %zd %zd", b1, b2);
+					LOG_INST_2 (stix, "push_objvar %zu %zu", b1, b2);
 					STIX_STACK_PUSH (stix, t->slot[b1]);
 				}
 				break;
@@ -3719,7 +3714,7 @@ return -1;
 				/* get the selector from the literal frame */
 				selector = (stix_oop_char_t)stix->active_method->slot[b2];
 
-				LOG_INST_3 (stix, "send_message%hs %zd @%zd", (((bcode >> 2) & 1)? "_to_super": ""), b1, b2);
+				LOG_INST_3 (stix, "send_message%hs %zu @%zu", (((bcode >> 2) & 1)? "_to_super": ""), b1, b2);
 
 				if (send_message (stix, selector, ((bcode >> 2) & 1), b1) <= -1) goto oops;
 				break; /* CMD_SEND_MESSAGE */
@@ -3779,19 +3774,23 @@ return -1;
 
 			case BCODE_PUSH_INTLIT:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				LOG_INST_1 (stix, "push_intlit %zd", b1);
+				LOG_INST_1 (stix, "push_intlit %zu", b1);
 				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(b1));
 				break;
 
 			case BCODE_PUSH_NEGINTLIT:
+			{
+				stix_ooi_t num;
 				FETCH_PARAM_CODE_TO (stix, b1);
-				LOG_INST_1 (stix, "push_negintlit %zd", -b1);
-				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(-b1));
+				num = b1;
+				LOG_INST_1 (stix, "push_negintlit %zu", b1);
+				STIX_STACK_PUSH (stix, STIX_SMOOI_TO_OOP(-num));
 				break;
+			}
 
 			case BCODE_PUSH_CHARLIT:
 				FETCH_PARAM_CODE_TO (stix, b1);
-				LOG_INST_1 (stix, "push_charlit %zd", b1);
+				LOG_INST_1 (stix, "push_charlit %zu", b1);
 				STIX_STACK_PUSH (stix, STIX_CHAR_TO_OOP(b1));
 				break;
 			/* -------------------------------------------------------- */
@@ -4049,7 +4048,7 @@ return -1;
 				FETCH_PARAM_CODE_TO (stix, b1);
 				FETCH_PARAM_CODE_TO (stix, b2);
 
-				LOG_INST_2 (stix, "make_block %zd %zd", b1, b2);
+				LOG_INST_2 (stix, "make_block %zu %zu", b1, b2);
 
 				STIX_ASSERT (b1 >= 0);
 				STIX_ASSERT (b2 >= b1);
@@ -4192,7 +4191,7 @@ return -1;
 			default:
 				STIX_LOG1 (stix, STIX_LOG_IC | STIX_LOG_FATAL, "Fatal error - unknown byte code 0x%zx\n", bcode);
 				stix->errnum = STIX_EINTERN;
-				break;
+				goto oops;
 		}
 	}
 

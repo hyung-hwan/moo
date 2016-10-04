@@ -56,6 +56,7 @@ enum stix_errnum_t
 	STIX_EMSGSND, /**< message sending error. even doesNotUnderstand: is not found */
 	STIX_ERANGE,  /**< range error. overflow and underflow */
 	STIX_ENOENT,  /**< no matching entry */
+	STIX_EBCFULL, /**< byte-code full */
 	STIX_EDFULL,  /**< dictionary full */
 	STIX_EPFULL,  /**< processor full */
 	STIX_ESHFULL, /**< semaphore heap full */
@@ -607,10 +608,6 @@ struct stix_process_t
 
 	stix_oop_semaphore_t sem;
 
-#if 0
-	stix_oop_context_t eb_top; /* top ensure block */
-	stix_oop_t         eb_count; /* SmallInteger */
-#endif
 	/* == variable indexed part == */
 	stix_oop_t slot[1]; /* process stack */
 };

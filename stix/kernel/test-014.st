@@ -122,5 +122,6 @@
 		System logNl: KKK.
 		System logNl: SRX.ABC.JJJ.
 		System logNl: JJJ.
+		System logNl: -200 asString.
 	}
 }
