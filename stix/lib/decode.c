@@ -29,10 +29,10 @@
 
 #define DECODE_LOG_MASK (STIX_LOG_MNEMONIC)
 
-#define LOG_INST_0(stix,fmt) STIX_LOG0(stix, DECODE_LOG_MASK, "\t" fmt "\n")
-#define LOG_INST_1(stix,fmt,a1) STIX_LOG1(stix, DECODE_LOG_MASK, "\t" fmt "\n",a1)
-#define LOG_INST_2(stix,fmt,a1,a2) STIX_LOG2(stix, DECODE_LOG_MASK, "\t" fmt "\n", a1, a2)
-#define LOG_INST_3(stix,fmt,a1,a2,a3) STIX_LOG3(stix, DECODE_LOG_MASK, "\t" fmt "\n", a1, a2, a3)
+#define LOG_INST_0(stix,fmt) STIX_LOG1(stix, DECODE_LOG_MASK, " %06zd " fmt "\n", fetched_instruction_pointer)
+#define LOG_INST_1(stix,fmt,a1) STIX_LOG2(stix, DECODE_LOG_MASK, " %06zd " fmt "\n", fetched_instruction_pointer, a1)
+#define LOG_INST_2(stix,fmt,a1,a2) STIX_LOG3(stix, DECODE_LOG_MASK, " %06zd " fmt "\n", fetched_instruction_pointer, a1, a2)
+#define LOG_INST_3(stix,fmt,a1,a2,a3) STIX_LOG4(stix, DECODE_LOG_MASK, " %06zd " fmt "\n", fetched_instruction_pointer, a1, a2, a3)
 
 #define FETCH_BYTE_CODE(stix) (cdptr[ip++])
 #define FETCH_BYTE_CODE_TO(stix,v_oow) (v_oow = FETCH_BYTE_CODE(stix))
@@ -51,6 +51,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth, const stix_oocs_t* classfq
 {
 	stix_oob_t bcode, * cdptr;
 	stix_ooi_t ip = 0, cdlen; /* byte code length is limited by the compiler. so stix_ooi_t is good enough */
+	stix_ooi_t fetched_instruction_pointer;
 	stix_oow_t b1, b2;
  
 	cdptr = STIX_METHOD_GET_CODE_BYTE(mth);
@@ -64,6 +65,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth, const stix_oocs_t* classfq
 /* TODO: check if ip increases beyond bcode when fetching parameters too */
 	while (ip < cdlen)
 	{
+		fetched_instruction_pointer = ip;
 		FETCH_BYTE_CODE_TO(stix, bcode);
 
 		switch (bcode)
@@ -503,7 +505,7 @@ return -1;
 	/* print literal frame contents */
 	for (ip = 0; ip < STIX_OBJ_GET_SIZE(mth) - STIX_METHOD_NAMED_INSTVARS; ip++)
 	{
-		LOG_INST_2 (stix, " @%-3zd %O", ip, mth->slot[ip]);
+		 STIX_LOG2(stix, DECODE_LOG_MASK, " @%-5zd %O\n", ip, mth->slot[ip]);
 	}
 
 	return 0;

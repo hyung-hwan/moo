@@ -372,6 +372,30 @@ static void* mod_getsym (stix_t* stix, void* handle, const stix_ooch_t* name)
 
 /* ========================================================================= */
 
+static int write_all (int fd, const char* ptr, stix_oow_t len)
+{
+	while (len > 0)
+	{
+		stix_ooi_t wr;
+
+		wr = write (1, ptr, len);
+
+		if (wr <= -1)
+		{
+			/*if (errno == EAGAIN || errno == EWOULDBLOCK)
+			{
+				push it to internal buffers? before writing data just converted, need to write buffered data first.
+			}*/
+			return -1;
+		}
+
+		ptr += wr;
+		len -= wr;
+	}
+
+	return 0;
+}
+
 static void log_write (stix_t* stix, stix_oow_t mask, const stix_ooch_t* msg, stix_oow_t len)
 {
 #if defined(_WIN32)
@@ -381,26 +405,24 @@ static void log_write (stix_t* stix, stix_oow_t mask, const stix_ooch_t* msg, st
 	stix_bch_t buf[256];
 	stix_oow_t ucslen, bcslen, msgidx;
 	int n;
-
-
-
+	char ts[32];
+	struct tm tm, *tmp;
+	time_t now;
 
 /*if (mask & STIX_LOG_GC) return;*/ /* don't show gc logs */
 
 /* TODO: beautify the log message.
  *       do classification based on mask. */
 
-/*
-{
-	char ts[32];
-	struct tm tm;
-	time_t now;
 	now = time(NULL);
-	localtime_r (&now, &tm);
-	strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", &tm);
-	write (1, ts, strlen(ts));
-}
-*/
+#if defined(__MSDOS__)
+	tmp = localtime (&now);
+#else
+	tmp = localtime_r (&now, &tm);
+#endif
+	strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
+	write_all (1, ts, strlen(ts));
+
 	msgidx = 0;
 	while (len > 0)
 	{
@@ -410,8 +432,6 @@ static void log_write (stix_t* stix, stix_oow_t mask, const stix_ooch_t* msg, st
 		n = stix_ucstoutf8 (&msg[msgidx], &ucslen, buf, &bcslen);
 		if (n == 0 || n == -2)
 		{
-			stix_oow_t rem;
-			const stix_bch_t* ptr;
 			/* n = 0: 
 			 *   converted all successfully 
 			 * n == -2: 
@@ -421,25 +441,7 @@ static void log_write (stix_t* stix, stix_oow_t mask, const stix_ooch_t* msg, st
 			STIX_ASSERT (ucslen > 0); /* if this fails, the buffer size must be increased */
 
 			/* attempt to write all converted characters */
-			rem = bcslen;
-			ptr = buf;
-			while (rem > 0)
-			{
-				stix_ooi_t wr;
-
-				wr = write (1, ptr, rem); /* TODO: write all */
-				if (wr <= -1)
-				{
-					/*if (errno == EAGAIN || errno == EWOULDBLOCK)
-					{
-						push it to internal buffers? before writing data just converted, need to write buffered data first.
-					}*/
-					break;
-				}
-
-				ptr += wr;
-				rem -= wr;
-			}
+			if (write_all (1, buf, bcslen) <= -1) break;
 
 			if (n == 0) break;
 			else
@@ -517,11 +519,9 @@ static char* syntax_error_msg[] =
 
 /* ========================================================================= */
 
-stix_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' };
-stix_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
-
-
-stix_t* g_stix = STIX_NULL;
+static stix_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' };
+static stix_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
+static stix_t* g_stix = STIX_NULL;
 
 /* ========================================================================= */
 

@@ -116,18 +116,17 @@
 #if defined(STIX_DEBUG_VM_EXEC)
 #	define LOG_MASK_INST (STIX_LOG_IC | STIX_LOG_MNEMONIC)
 
-#	define LOG_INST_0(stix,fmt) STIX_LOG0(stix, LOG_MASK_INST, "\t" fmt "\n")
-#	define LOG_INST_1(stix,fmt,a1) STIX_LOG1(stix, LOG_MASK_INST, "\t" fmt "\n",a1)
-#	define LOG_INST_2(stix,fmt,a1,a2) STIX_LOG2(stix, LOG_MASK_INST, "\t" fmt "\n", a1, a2)
-#	define LOG_INST_3(stix,fmt,a1,a2,a3) STIX_LOG3(stix, LOG_MASK_INST, "\t" fmt "\n", a1, a2, a3)
-
+/* TODO: for send_message, display the method name. or include the method name before 'ip' */
+#	define LOG_INST_0(stix,fmt) STIX_LOG1(stix, LOG_MASK_INST, " %06zd " fmt "\n", fetched_instruction_pointer)
+#	define LOG_INST_1(stix,fmt,a1) STIX_LOG2(stix, LOG_MASK_INST, " %06zd " fmt "\n",fetched_instruction_pointer, a1)
+#	define LOG_INST_2(stix,fmt,a1,a2) STIX_LOG3(stix, LOG_MASK_INST, " %06zd " fmt "\n", fetched_instruction_pointer, a1, a2)
+#	define LOG_INST_3(stix,fmt,a1,a2,a3) STIX_LOG4(stix, LOG_MASK_INST, " %06zd " fmt "\n", fetched_instruction_pointer, a1, a2, a3)
 #else
 #	define LOG_INST_0(stix,fmt)
 #	define LOG_INST_1(stix,fmt,a1)
 #	define LOG_INST_2(stix,fmt,a1,a2)
 #	define LOG_INST_3(stix,fmt,a1,a2,a3)
 #endif
-
 
 #define __PRIMITIVE_NAME__ (&__FUNCTION__[4])
 
@@ -2909,6 +2908,10 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 {
 	stix_ooi_t preamble, preamble_code;
 
+#if defined(STIX_DEBUG_VM_EXEC)
+	stix_ooi_t fetched_instruction_pointer = 0; /* set it to a fake value */
+#endif
+
 	STIX_ASSERT (STIX_OOP_TO_SMOOI(method->tmpr_nargs) == nargs);
 
 	preamble = STIX_OOP_TO_SMOOI(method->preamble);
@@ -3151,6 +3154,10 @@ int stix_execute (stix_t* stix)
 	stix_uintmax_t inst_counter = 0;
 #endif
 
+#if defined(STIX_DEBUG_VM_EXEC)
+	stix_ooi_t fetched_instruction_pointer;
+#endif
+
 	STIX_ASSERT (stix->active_context != STIX_NULL);
 
 	vm_startup (stix);
@@ -3222,12 +3229,12 @@ int stix_execute (stix_t* stix)
 			STIX_ASSERT (stix->processor->tally = STIX_SMOOI_TO_OOP(0));
 			STIX_LOG0 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "No more runnable process\n");
 
-#if 0
-if (there is semaphore awaited.... )
-{
-/* DO SOMETHING */
-}
-#endif
+			#if 0
+			if (there is semaphore awaited.... )
+			{
+			/* DO SOMETHING */
+			}
+			#endif
 
 			break;
 		}
@@ -3254,6 +3261,9 @@ if (there is semaphore awaited.... )
 
 		stix->proc_switched = 0;
 
+#if defined(STIX_DEBUG_VM_EXEC)
+		fetched_instruction_pointer = stix->ip;
+#endif
 		FETCH_BYTE_CODE_TO (stix, bcode);
 		/*while (bcode == BCODE_NOOP) FETCH_BYTE_CODE_TO (stix, bcode);*/
 
