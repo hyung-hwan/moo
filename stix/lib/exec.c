@@ -1207,14 +1207,13 @@ static int prim_log (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (nargs >=  2);
 
-	level = STIX_STACK_GET(stix, stix->sp - nargs + 1);
+	level = STIX_STACK_GETARG(stix, nargs, 0);
 	if (!STIX_OOP_IS_SMOOI(level)) mask = STIX_LOG_APP | STIX_LOG_INFO; 
 	else mask = STIX_LOG_APP | STIX_OOP_TO_SMOOI(level);
 
-	for (k = nargs - 1; k > 0; )
+	for (k = 1; k < nargs; k++)
 	{
-		--k;
-		msg = STIX_STACK_GET(stix, stix->sp - k);
+		msg = STIX_STACK_GETARG (stix, nargs, k);
 
 		if (msg == stix->_nil || msg == stix->_true || msg == stix->_false) 
 		{

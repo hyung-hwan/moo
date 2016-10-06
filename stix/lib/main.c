@@ -406,6 +406,7 @@ static void log_write (stix_t* stix, stix_oow_t mask, const stix_ooch_t* msg, st
 	stix_oow_t ucslen, bcslen, msgidx;
 	int n;
 	char ts[32];
+	size_t tslen;
 	struct tm tm, *tmp;
 	time_t now;
 
@@ -420,8 +421,13 @@ static void log_write (stix_t* stix, stix_oow_t mask, const stix_ooch_t* msg, st
 #else
 	tmp = localtime_r (&now, &tm);
 #endif
-	strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
-	write_all (1, ts, strlen(ts));
+	tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
+	if (tslen == 0) 
+	{
+		strcpy (ts, "0000-00-00 00:00:00 +0000");
+		tslen = 25; 
+	}
+	write_all (1, ts, tslen);
 
 	msgidx = 0;
 	while (len > 0)
