@@ -210,6 +210,7 @@ AC_CHECK_SIZEOF(__int16_t,,[[]])
 AC_CHECK_SIZEOF(__int32_t,,[[]])
 AC_CHECK_SIZEOF(__int64_t,,[[]])
 AC_CHECK_SIZEOF(__int128_t,,[[]])
+AC_CHECK_SIZEOF(__uint128_t,,[[]])
 dnl AC_CHECK_SIZEOF doesn't work without white-space between void and *
 AC_CHECK_SIZEOF(void *,,[[]])
 AC_CHECK_SIZEOF(float,,[[]])
@@ -252,6 +253,7 @@ then
 		[
 			AC_MSG_RESULT(no)
 			ac_cv_sizeof___int128_t=0
+			ac_cv_sizeof___uint128_t=0
 		]
 	)
 fi
@@ -336,6 +338,7 @@ AC_DEFINE_UNQUOTED(STIX_SIZEOF___INT32, ${ac_cv_sizeof___int32}, [sizeof(__int32
 AC_DEFINE_UNQUOTED(STIX_SIZEOF___INT64, ${ac_cv_sizeof___int64}, [sizeof(__int64)])
 AC_DEFINE_UNQUOTED(STIX_SIZEOF___INT128, ${ac_cv_sizeof___int128}, [sizeof(__int128)])
 AC_DEFINE_UNQUOTED(STIX_SIZEOF___INT128_T, ${ac_cv_sizeof___int128_t}, [sizeof(__int128_t)])
+AC_DEFINE_UNQUOTED(STIX_SIZEOF___UINT128_T, ${ac_cv_sizeof___uint128_t}, [sizeof(__uint128_t)])
 AC_DEFINE_UNQUOTED(STIX_SIZEOF_VOID_P, ${ac_cv_sizeof_void_p}, [sizeof(void*)])
 AC_DEFINE_UNQUOTED(STIX_SIZEOF_FLOAT, ${ac_cv_sizeof_float}, [sizeof(float)])
 AC_DEFINE_UNQUOTED(STIX_SIZEOF_DOUBLE, ${ac_cv_sizeof_double}, [sizeof(double)])
