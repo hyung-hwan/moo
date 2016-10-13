@@ -192,6 +192,13 @@ static int put_ooch (stix_t* stix, stix_oow_t mask, stix_ooch_t ch, stix_oow_t l
 	if (stix->log.len > 0 && stix->log.last_mask != mask)
 	{
 		/* the mask has changed. commit the buffered text */
+
+/* TODO: HANDLE LINE ENDING CONVENTION BETTER... */
+		if (stix->log.ptr[stix->log.len - 1] != '\n')
+		{
+			/* no line ending - append a line terminator */
+			stix->log.ptr[stix->log.len++] = '\n';
+		}
 		stix->vmprim.log_write (stix, stix->log.last_mask, stix->log.ptr, stix->log.len);
 		stix->log.len = 0;
 	}
@@ -224,7 +231,7 @@ redo:
 		}
 
 		stix->log.ptr = tmp;
-		stix->log.capa = newcapa;
+		stix->log.capa = newcapa - 1; /* -1 to handle line ending injection more easily */
 	}
 
 	while (len > 0)
@@ -244,6 +251,13 @@ static int put_oocs (stix_t* stix, stix_oow_t mask, const stix_ooch_t* ptr, stix
 	if (stix->log.len > 0 && stix->log.last_mask != mask)
 	{
 		/* the mask has changed. commit the buffered text */
+/* TODO: HANDLE LINE ENDING CONVENTION BETTER... */
+		if (stix->log.ptr[stix->log.len - 1] != '\n')
+		{
+			/* no line ending - append a line terminator */
+			stix->log.ptr[stix->log.len++] = '\n';
+		}
+
 		stix->vmprim.log_write (stix, stix->log.last_mask, stix->log.ptr, stix->log.len);
 		stix->log.len = 0;
 	}
@@ -265,7 +279,7 @@ static int put_oocs (stix_t* stix, stix_oow_t mask, const stix_ooch_t* ptr, stix
 		if (!tmp) return -1;
 
 		stix->log.ptr = tmp;
-		stix->log.capa = newcapa;
+		stix->log.capa = newcapa - 1; /* -1 to handle line ending injection more easily */
 	}
 
 	STIX_MEMCPY (&stix->log.ptr[stix->log.len], ptr, len * STIX_SIZEOF(*ptr));
