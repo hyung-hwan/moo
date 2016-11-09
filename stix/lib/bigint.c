@@ -24,8 +24,45 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * Copyright (c) 2002 by The XFree86 Project, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *  
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE XFREE86 PROJECT BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
+ * OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+ * Except as contained in this notice, the name of the XFree86 Project shall
+ * not be used in advertising or otherwise to promote the sale, use or other
+ * dealings in this Software without prior written authorization from the
+ * XFree86 Project.
+ *
+ * Author: Paulo César Pereira de Andrade
+ */
+
+
 #include "stix-prv.h"
 
+
+#define ENABLE_KARATSUBA
+#if defined(STIX_DEBUG_BIGINT)
+#	define KARATSUBA_CUTOFF 3
+#else
+#	define KARATSUBA_CUTOFF 32
+#endif
 
 #if (STIX_LIW_BITS == STIX_OOW_BITS)
 	/* nothing special */
@@ -192,7 +229,7 @@ static int is_normalized_integer (stix_t* stix, stix_oop_t oop)
 	return 0;
 }
 
-STIX_INLINE int is_bigint (stix_t* stix, stix_oop_t x)
+STIX_INLINE static int is_bigint (stix_t* stix, stix_oop_t x)
 {
 	stix_oop_t c;
 
@@ -529,15 +566,13 @@ static STIX_INLINE stix_oop_t clone_bigint_to_positive (stix_t* stix, stix_oop_t
 
 static STIX_INLINE stix_oow_t count_effective (stix_liw_t* x, stix_oow_t xs)
 {
-	stix_oow_t i;
-
-	for (i = xs; i > 1; )
-	{
-		--i;
-		if (x[i] != 0) return i + 1;
-	}
-
+#if 0
+	while (xs > 1 && x[xs - 1] == 0) xs--;
+	return xs;
+#else
+	while (xs > 1) { if (x[--xs]) return xs + 1; }
 	return 1;
+#endif
 }
 
 static STIX_INLINE stix_oow_t count_effective_digits (stix_oop_t oop)
@@ -547,7 +582,7 @@ static STIX_INLINE stix_oow_t count_effective_digits (stix_oop_t oop)
 	for (i = STIX_OBJ_GET_SIZE(oop); i > 1; )
 	{
 		--i;
-		if (((stix_oop_liword_t)oop)->slot[i] != 0) return i + 1;
+		if (((stix_oop_liword_t)oop)->slot[i]) return i + 1;
 	}
 
 	return 1;
@@ -618,7 +653,6 @@ static stix_oop_t normalize_bigint (stix_t* stix, stix_oop_t oop)
 
 	return clone_bigint (stix, oop, count);
 }
-
 
 static STIX_INLINE int is_less_unsigned_array (const stix_liw_t* x, stix_oow_t xs, const stix_liw_t* y, stix_oow_t ys)
 {
@@ -733,11 +767,63 @@ static void complement2_unsigned_array (const stix_liw_t* x, stix_oow_t xs, stix
 
 static STIX_INLINE stix_oow_t add_unsigned_array (const stix_liw_t* x, stix_oow_t xs, const stix_liw_t* y, stix_oow_t ys, stix_liw_t* z)
 {
-	stix_oow_t i;
+#if 1
+	register stix_oow_t i;
 	stix_lidw_t w;
-	stix_lidw_t carry = 0;
 
-	STIX_ASSERT (xs >= ys);
+	if (xs < ys)
+	{
+		/* swap x and y */
+		i = xs;
+		xs = ys;
+		ys = i;
+
+		i = (stix_oow_t)x;
+		x = y;
+		y = (stix_liw_t*)i;
+	}
+
+	w = 0;
+	i = 0;
+	while (i < ys)
+	{
+		w += (stix_lidw_t)x[i] + (stix_lidw_t)y[i];
+		z[i++] = w & STIX_LBMASK(stix_lidw_t, STIX_LIW_BITS);
+		w >>= STIX_LIW_BITS;
+	}
+
+	while (w && i < xs)
+	{
+		w += x[i];
+		z[i++] = w & STIX_LBMASK(stix_lidw_t, STIX_LIW_BITS);
+		w >>= STIX_LIW_BITS;
+	}
+
+	while (i < xs)
+	{
+		z[i] = x[i];
+		i++;
+	}
+	if (w) z[i++] = w & STIX_LBMASK(stix_lidw_t, STIX_LIW_BITS);
+	return i;
+
+#else
+	register stix_oow_t i;
+	stix_lidw_t w;
+	stix_liw_t carry = 0;
+
+	if (xs < ys)
+	{
+		/* swap x and y */
+		i = xs;
+		xs = ys;
+		ys = i;
+
+		i = (stix_oow_t)x;
+		x = y;
+		y = (stix_liw_t*)i;
+	}
+
 
 	for (i = 0; i < ys; i++)
 	{
@@ -746,25 +832,81 @@ static STIX_INLINE stix_oow_t add_unsigned_array (const stix_liw_t* x, stix_oow_
 		z[i] = w /*& STIX_LBMASK(stix_lidw_t, STIX_LIW_BITS) */;
 	}
 
-	for (; i < xs; i++)
+	if (x == z)
 	{
-		w = (stix_lidw_t)x[i] + carry;
-		carry = w >> STIX_LIW_BITS;
-		z[i] = w /*& STIX_LBMASK(stix_lidw_t, STIX_LIW_BITS)*/;
+		for (; carry && i < xs; i++)
+		{
+			w = (stix_lidw_t)x[i] + carry;
+			carry = w >> STIX_LIW_BITS;
+			z[i] = w /*& STIX_LBMASK(stix_lidw_t, STIX_LIW_BITS) */;
+		}
+		i = xs;
+	}
+	else
+	{
+		for (; i < xs; i++)
+		{
+			w = (stix_lidw_t)x[i] + carry;
+			carry = w >> STIX_LIW_BITS;
+			z[i] = w /*& STIX_LBMASK(stix_lidw_t, STIX_LIW_BITS)*/;
+		}
 	}
 
-	if (i > 1 && carry == 0) return i - 1;
-	z[i] = carry;
-
-	return i;
+	if (carry) z[i++] = carry;
+	return i; /* the number of effective digits in the result */
+#endif
 }
 
 static STIX_INLINE stix_oow_t subtract_unsigned_array (const stix_liw_t* x, stix_oow_t xs, const stix_liw_t* y, stix_oow_t ys, stix_liw_t* z)
 {
+#if 1
+	stix_oow_t i;
+	stix_lidi_t w = 0;
+
+	if (x == y)
+	{
+		STIX_ASSERT (xs == ys);
+		z[0] = 0;
+		return 1;
+	}
+
+	STIX_ASSERT (!is_less_unsigned_array(x, xs, y, ys));
+
+	for (i = 0; i < ys; i++)
+	{
+		w += (stix_lidi_t)x[i] - (stix_lidi_t)y[i];
+		z[i] = w & STIX_LBMASK(stix_lidw_t, STIX_LIW_BITS);
+		w >>= STIX_LIW_BITS;
+	}
+
+	while (w && i < xs)
+	{
+		w += x[i];
+		z[i++] = w & STIX_LBMASK(stix_lidw_t, STIX_LIW_BITS);
+		w >>= STIX_LIW_BITS;
+	}
+
+	while (i < xs)
+	{
+		z[i] = x[i];
+		i++;
+	}
+
+	while (i > 1 && z[i - 1] == 0) i--;
+	return i;
+
+#else
 	stix_oow_t i;
 	stix_lidw_t w;
 	stix_lidw_t borrow = 0;
 	stix_lidw_t borrowed_word;
+
+	if (x == y)
+	{
+		STIX_ASSERT (xs == ys);
+		z[0] = 0;
+		return 1;
+	}
 
 	STIX_ASSERT (!is_less_unsigned_array(x, xs, y, ys));
 
@@ -799,7 +941,10 @@ static STIX_INLINE stix_oow_t subtract_unsigned_array (const stix_liw_t* x, stix
 	}
 
 	STIX_ASSERT (borrow == 0);
-	return i;
+
+	while (i > 1 && z[i - 1] == 0) i--;
+	return i; /* the number of effective digits in the result */
+#endif
 }
 
 static STIX_INLINE void multiply_unsigned_array (const stix_liw_t* x, stix_oow_t xs, const stix_liw_t* y, stix_oow_t ys, stix_liw_t* z)
@@ -807,9 +952,21 @@ static STIX_INLINE void multiply_unsigned_array (const stix_liw_t* x, stix_oow_t
 	stix_lidw_t v;
 	stix_oow_t pa;
 
-/* TODO: implement Karatsuba  or Toom-Cook 3-way algorithm when the input length is long */
+	if (xs < ys)
+	{
+		stix_oow_t i;
 
-	pa = (xs < ys)? xs: ys;
+		/* swap x and y */
+		i = xs;
+		xs = ys;
+		ys = i;
+
+		i = (stix_oow_t)x;
+		x = y;
+		y = (stix_liw_t*)i;
+	}
+
+	pa = xs;
 	if (pa <= ((stix_oow_t)1 << (STIX_LIDW_BITS - (STIX_LIW_BITS * 2))))
 	{
 		/* Comba(column-array) multiplication */
@@ -840,57 +997,340 @@ static STIX_INLINE void multiply_unsigned_array (const stix_liw_t* x, stix_oow_t
 	}
 	else
 	{
-	#if 1
 		stix_oow_t i, j;
 		stix_liw_t carry;
 
-		for (i = 0; i < ys; i++)
+		for (i = 0; i < xs; i++)
 		{
-			if (y[i] == 0)
+			if (x[i] == 0)
 			{
-				z[xs + i] = 0;
+				z[i + ys] = 0;
 			}
 			else
 			{
 				carry = 0;
-				for (j = 0; j < xs; j++)
+
+				for (j = 0; j < ys; j++)
 				{
-					v = (stix_lidw_t)x[j] * (stix_lidw_t)y[i] + (stix_lidw_t)carry + (stix_lidw_t)z[j + i];
-					z[j + i] = (stix_liw_t)v;
+					v = (stix_lidw_t)x[i] * (stix_lidw_t)y[j] + (stix_lidw_t)carry + (stix_lidw_t)z[i + j];
+					z[i + j] = (stix_liw_t)v;
 					carry = (stix_liw_t)(v >> STIX_LIW_BITS);
 				}
 
-				z[xs + i] = carry;
+				z[i + j] = carry;
 			}
 		}
-
-	#else
-		stix_oow_t i, j, idx;
-		stix_liw_t carry;
-
-		for (i = 0; i < ys; i++)
-		{
-			idx = i;
-
-			for (j = 0; j < xs; j++)
-			{
-				v = (stix_lidw_t)x[j] * (stix_lidw_t)y[i] + (stix_lidw_t)carry + (stix_lidw_t)z[idx];
-				z[idx] = (stix_liw_t)v;
-				carry = (stix_liw_t)(v >> STIX_LIW_BITS);
-				idx++;
-			}
-
-			while (carry > 0)
-			{
-				v = (stix_lidw_t)z[idx] + (stix_lidw_t)carry;
-				z[idx] = (stix_liw_t)v;
-				carry = (stix_liw_t)(v >> STIX_LIW_BITS);
-				idx++;
-			}
-
-		}
-	#endif
 	}
+}
+
+/* KARATSUBA MULTIPLICATION
+ * 
+ * c = |a| * |b|
+ *
+ * Let B represent the radix(2^DIGIT_BITS)
+ * Let n represent half the number of digits
+ *
+ * a = a1 * B^n + a0
+ * b = b1 * B^n + b0
+ * a * b => a1b1 * B^2n + ((a1 + a0)(b1 + b0) - (a0b0 + a1b1)) * B^n + a0b0
+ *
+ * --------------------------------------------------------------------
+ * For example, for 2 number 0xFAC2 and 0xABCD => A848635A
+ *   DIGIT_BITS = 8 (1 byte, each digit is 1 byte long)
+ *   B = 2^8 = 0x100
+ *   n = 1 (half the digits of 2 digit numbers)
+ *   B^n = 0x100 ^ 1 = 0x100
+ *   B^2n = 0x100 ^ 2 = 0x10000
+ *   0xFAC2 = 0xFA * 0x100 + 0xC2
+ *   0xABCD = 0xAB * 0x100 + 0xCD
+ *   a1 = 0xFA, a0 = 0xC2
+ *   b1 = 0xAB, b0 = 0xCD
+ *   a1b1 = 0xFA * 0xAB = 0xA6FE
+ *   a0b0 = 0xC2 * 0xCD = 0x9B5A
+ *   a1 + a0 = 0xFA + 0xC2 = 0x1BC
+ *   b1 + b0 = 0xAB + 0xCD = 0x178
+ * --------------------------------------------------------------------
+ *   (A6FE * 10000) + (((1BC * 178) - (985A + A6FE)) * 100) + 9B5A =
+ *   (A6FE << (8 * 2)) + (((1BC * 178) - (985A + A6FE)) << (8 * 1)) =
+ *   A6FE0000 + 14CC800 + 9B5A = 9848635A 
+ * --------------------------------------------------------------------
+ *
+ * 0xABCD9876 * 0xEFEFABAB => 0xA105C97C9755A8D2
+ * B = 2^8 = 0x100
+ * n = 2
+ * B^n = 0x100 ^ 2 = 0x10000
+ * B^2n = 0x100 ^ 4 = 0x100000000
+ * 0xABCD9876 = 0xABCD * 0x10000 + 0x9876
+ * 0xEFEFABAB = 0xEFEF * 0x10000 + 0xABAB
+ * a1 = 0xABCD, a0 = 0x9876
+ * b1 - 0xEFEF, b0 = 0xABAB
+ * a1b1 = 0xA104C763
+ * a0b0 = 0x663CA8D2
+ * a1 + a0 = 0x14443
+ * b1 + b0 = 0x19B9A
+ * --------------------------------------------------------------------
+ * (A104C763 * 100000000) + (((14443 * 19B9A) - (663CA8D2 + A104C763)) * 10000) + 663CA8D2 =
+ * (A104C763 << (8 * 4)) + (((14443 * 19B9A) - (663CA8D2 + A104C763)) << (8 * 2)) + 663CA8D2 = A105C97C9755A8D2
+ * --------------------------------------------------------------------
+ *
+ *  Multiplying by B is t same as shifting by DIGIT_BITS.
+ *  DIGIT_BITS in this implementation is STIX_LIW_BITS
+ *  B => 2^STIX_LIW_BITS
+ *  X * B^n => X << (STIX_LIW_BITS * n)
+ *  X * B^2n => X << (STIX_LIW_BITS * n * 2)
+ * --------------------------------------------------------------------
+ */
+#define CANNOT_KARATSUBA(xs, ys) \
+	((xs) < KARATSUBA_CUTOFF || (ys) < KARATSUBA_CUTOFF || \
+	((xs) > (ys) && (ys) <= (((xs) + 1) / 2)) || \
+	((xs) < (ys) && (xs) <= (((ys) + 1) / 2)))
+
+static STIX_INLINE stix_oow_t multiply_unsigned_array_karatsuba (stix_t* stix, const stix_liw_t* x, stix_oow_t xs, const stix_liw_t* y, stix_oow_t ys, stix_liw_t* z)
+{
+#if 1
+	stix_lidw_t nshifts;
+	stix_lidw_t ndigits_xh, ndigits_xl;
+	stix_lidw_t ndigits_yh, ndigits_yl;
+	stix_liw_t* tmp[2] = { STIX_NULL, STIX_NULL};
+	stix_liw_t* zsp; 
+	stix_oow_t tmplen[2];
+	stix_oow_t xlen, zcapa;
+
+	zcapa = xs + ys; /* the caller ensures this capacity for z at the minimum*/
+
+	if (xs < ys)
+	{
+		stix_oow_t i;
+
+		/* swap x and y */
+		i = xs;
+		xs = ys;
+		ys = i;
+
+		i = (stix_oow_t)x;
+		x = y;
+		y = (stix_liw_t*)i;
+	}
+
+	/* calculate value of nshifts, that is 2^(STIX_LIW_BITS*nshifts) */
+	nshifts = (xs + 1) / 2;
+
+	ndigits_xl = nshifts; /* ndigits of lower part of x */
+	ndigits_xh = xs - nshifts; /* ndigits of upper part of x */
+	ndigits_yl = nshifts; /* ndigits of lower part of y */
+	ndigits_yh = ys - nshifts; /* ndigits of uppoer part of y */
+
+	STIX_ASSERT (ndigits_xl >= ndigits_xh);
+	STIX_ASSERT (ndigits_yl >= ndigits_yh);
+
+	/* make a temporary buffer for (b0 + b1) and (a1 * b1) */
+	tmplen[0] = ndigits_xh + ndigits_yh;
+	tmplen[1] = ndigits_yl + ndigits_yh + 1; 
+	if (tmplen[1] < tmplen[0]) tmplen[1] = tmplen[0];
+	tmp[1] = stix_callocmem (stix, STIX_SIZEOF(stix_liw_t) * tmplen[1]); /* TODO: should i use the object memory? */
+	if (!tmp[1]) goto oops;
+
+	/* make a temporary for (a0 + a1) and (a0 * b0) */
+	tmplen[0] = ndigits_xl + ndigits_yl + 1;
+	tmp[0] = stix_callocmem (stix, STIX_SIZEOF(stix_liw_t) * tmplen[0]);
+	if (!tmp[0]) goto oops;
+
+	/* tmp[0] = a0 + a1 */
+	tmplen[0] = add_unsigned_array (x, ndigits_xl, x + nshifts, ndigits_xh, tmp[0]);
+
+	/* tmp[1] = b0 + b1 */
+	tmplen[1] = add_unsigned_array (y, ndigits_yl, y + nshifts, ndigits_yh, tmp[1]);
+
+	/*STIX_DEBUG6 (stix, "karatsuba t %p u %p ndigits_xl %d ndigits_xh %d ndigits_yl %d ndigits_yh %d\n", tmp[0], tmp[1], (int)ndigits_xl, (int)ndigits_xh, (int)ndigits_yl, (int)ndigits_yh);*/
+	/*STIX_DEBUG5 (stix, "zcapa %d, tmplen[0] %d tmplen[1] %d nshifts %d total %d\n", (int)zcapa, (int)tmplen[0], (int)tmplen[1], (int)nshifts, (int)(tmplen[0] + tmplen[1] + nshifts));*/
+
+	/* place (a0 + a1) * (b0 + b1) at the shifted position */
+	zsp = z + nshifts;
+	if (CANNOT_KARATSUBA(tmplen[0], tmplen[1]))
+	{
+		multiply_unsigned_array (tmp[0], tmplen[0], tmp[1], tmplen[1], zsp);
+		xlen = count_effective (zsp, tmplen[0] + tmplen[1]);
+	}
+	else 
+	{
+		xlen = multiply_unsigned_array_karatsuba(stix, tmp[0], tmplen[0], tmp[1], tmplen[1], zsp);
+		if (xlen == 0) goto oops;
+	}
+
+	/* tmp[0] = a0 * b0 */
+	tmplen[0] = ndigits_xl + ndigits_yl;
+	STIX_MEMSET (tmp[0], 0, sizeof(stix_liw_t) * tmplen[0]);
+	if (CANNOT_KARATSUBA(ndigits_xl, ndigits_yl))
+	{
+		multiply_unsigned_array (x, ndigits_xl, y, ndigits_yl, tmp[0]);
+		tmplen[0] = count_effective(tmp[0], tmplen[0]);
+	}
+	else
+	{
+		tmplen[0] = multiply_unsigned_array_karatsuba (stix, x, ndigits_xl, y, ndigits_yl, tmp[0]);
+		if (tmplen[0] <= 0) goto oops;
+	}
+
+	/* tmp[1] = a1 * b1 */
+	tmplen[1] = ndigits_xh + ndigits_yh;
+	STIX_MEMSET (tmp[1], 0, sizeof(stix_liw_t) * tmplen[1]);
+	if (CANNOT_KARATSUBA(ndigits_xh, ndigits_yh))
+	{
+		multiply_unsigned_array (x + nshifts, ndigits_xh, y + nshifts, ndigits_yh, tmp[1]);
+		tmplen[1] = count_effective (tmp[1], tmplen[1]);
+	}
+	else
+	{
+		tmplen[1] = multiply_unsigned_array_karatsuba (stix, x + nshifts, ndigits_xh, y + nshifts, ndigits_yh, tmp[1]);
+		if (tmplen[1] <= 0) goto oops;
+	}
+
+	/* (a0+a1)*(b0+b1) -(a0*b0) */
+	xlen = subtract_unsigned_array(zsp, xlen, tmp[0], tmplen[0], zsp);
+
+	/* (a0+a1)*(b0+b1) - (a0*b0) - (a1*b1) */
+	xlen = subtract_unsigned_array(zsp, xlen, tmp[1], tmplen[1], zsp);
+	/* a1b1 is in tmp[1]. add (a1b1 * B^2n) to the high part of 'z' */
+	zsp = z + (nshifts * 2); /* emulate shifting for "* B^2n". */
+	xlen = zcapa - (nshifts * 2);
+	xlen = add_unsigned_array (zsp, xlen, tmp[1], tmplen[1], zsp);
+
+	/* z = z + a0b0. a0b0 is in tmp[0] */
+	xlen = add_unsigned_array(z, zcapa, tmp[0], tmplen[0], z);
+
+	stix_freemem (stix, tmp[1]);
+	stix_freemem (stix, tmp[0]);
+	return count_effective (z, xlen);
+
+oops:
+	if (tmp[1]) stix_freemem (stix, tmp[1]);
+	if (tmp[0]) stix_freemem (stix, tmp[0]);
+	return 0;
+
+#else
+	stix_lidw_t nshifts;
+	stix_lidw_t ndigits_xh, ndigits_xl;
+	stix_lidw_t ndigits_yh, ndigits_yl;
+	stix_liw_t* tmp[3] = { STIX_NULL, STIX_NULL, STIX_NULL };
+	stix_liw_t* zsp; 
+	stix_oow_t tmplen[3];
+	stix_oow_t xlen, zcapa;
+
+	zcapa = xs + ys; /* the caller ensures this capacity for z at the minimum*/
+
+	if (xs < ys)
+	{
+		stix_oow_t i;
+
+		/* swap x and y */
+		i = xs;
+		xs = ys;
+		ys = i;
+
+		i = (stix_oow_t)x;
+		x = y;
+		y = (stix_liw_t*)i;
+	}
+
+	/* calculate value of nshifts, that is 2^(STIX_LIW_BITS*nshifts) */
+	nshifts = (xs + 1) / 2;
+
+	ndigits_xl = nshifts; /* ndigits of lower part of x */
+	ndigits_xh = xs - nshifts; /* ndigits of upper part of x */
+	ndigits_yl = nshifts; /* ndigits of lower part of y */
+	ndigits_yh = ys - nshifts; /* ndigits of uppoer part of y */
+
+	STIX_ASSERT (ndigits_xl >= ndigits_xh);
+	STIX_ASSERT (ndigits_yl >= ndigits_yh);
+
+	/* make a temporary buffer for (b0 + b1) and (a1 * b1) */
+	tmplen[0] = ndigits_yl + ndigits_yh + 1; 
+	tmplen[1] = ndigits_xh + ndigits_yh;
+	if (tmplen[1] < tmplen[0]) tmplen[1] = tmplen[0];
+	tmp[1] = stix_callocmem (stix, STIX_SIZEOF(stix_liw_t) * tmplen[1]);
+	if (!tmp[1]) goto oops;
+
+	/* make a temporary for (a0 + a1) and (a0 * b0) */
+	tmplen[0] = ndigits_xl + ndigits_yl;
+	tmp[0] = stix_callocmem (stix, STIX_SIZEOF(stix_liw_t) * tmplen[0]);
+	if (!tmp[0]) goto oops;
+
+	/* tmp[0] = a0 + a1 */
+	tmplen[0] = add_unsigned_array (x, ndigits_xl, x + nshifts, ndigits_xh, tmp[0]);
+
+	/* tmp[1] = b0 + b1 */
+	tmplen[1] = add_unsigned_array (y, ndigits_yl, y + nshifts, ndigits_yh, tmp[1]);
+
+	/* tmp[2] = (a0 + a1) * (b0 + b1) */
+	tmplen[2] = tmplen[0] + tmplen[1]; 
+	tmp[2] = stix_callocmem (stix, STIX_SIZEOF(stix_liw_t) * tmplen[2]);
+	if (!tmp[2]) goto oops;
+	if (CANNOT_KARATSUBA(tmplen[0], tmplen[1]))
+	{
+		multiply_unsigned_array (tmp[0], tmplen[0], tmp[1], tmplen[1], tmp[2]);
+		xlen = count_effective (tmp[2], tmplen[2]);
+	}
+	else 
+	{
+		xlen = multiply_unsigned_array_karatsuba(stix, tmp[0], tmplen[0], tmp[1], tmplen[1], tmp[2]);
+		if (xlen == 0) goto oops;
+	}
+
+	/* tmp[0] = a0 * b0 */
+	tmplen[0] = ndigits_xl + ndigits_yl;
+	STIX_MEMSET (tmp[0], 0, sizeof(stix_liw_t) * tmplen[0]);
+	if (CANNOT_KARATSUBA(ndigits_xl, ndigits_yl))
+	{
+		multiply_unsigned_array (x, ndigits_xl, y, ndigits_yl, tmp[0]);
+		tmplen[0] = count_effective(tmp[0], tmplen[0]);
+	}
+	else
+	{
+		tmplen[0] = multiply_unsigned_array_karatsuba (stix, x, ndigits_xl, y, ndigits_yl, tmp[0]);
+		if (tmplen[0] <= 0) goto oops;
+	}
+
+	/* tmp[1] = a1 * b1 */
+	tmplen[1] = ndigits_xh + ndigits_yh;
+	STIX_MEMSET (tmp[1], 0, sizeof(stix_liw_t) * tmplen[1]);
+	if (CANNOT_KARATSUBA(ndigits_xh, ndigits_yh))
+	{
+		multiply_unsigned_array (x + nshifts, ndigits_xh, y + nshifts, ndigits_yh, tmp[1]);
+		tmplen[1] = count_effective (tmp[1], tmplen[1]);
+	}
+	else
+	{
+		tmplen[1] = multiply_unsigned_array_karatsuba (stix, x + nshifts, ndigits_xh, y + nshifts, ndigits_yh, tmp[1]);
+		if (tmplen[1] <= 0) goto oops;
+	}
+
+	/* w = w - tmp[0] */
+	xlen = subtract_unsigned_array(tmp[2], xlen, tmp[0], tmplen[0], tmp[2]);
+
+	/* r = w - tmp[1] */
+	zsp = z + nshifts; /* emulate shifting for "* B^n" */
+	xlen = subtract_unsigned_array(tmp[2], xlen, tmp[1], tmplen[1], zsp);
+
+	/* a1b1 is in tmp[1]. add (a1b1 * B^2n) to the high part of 'z' */
+	zsp = z + (nshifts * 2); /* emulate shifting for "* B^2n". */
+	xlen = zcapa - (nshifts * 2);
+	xlen = add_unsigned_array (zsp, xlen, tmp[1], tmplen[1], zsp);
+
+	/* z = z + a0b0. a0b0 is in tmp[0] */
+	xlen = add_unsigned_array(z, zcapa, tmp[0], tmplen[0], z);
+
+	stix_freemem (stix, tmp[2]);
+	stix_freemem (stix, tmp[1]);
+	stix_freemem (stix, tmp[0]);
+
+	return count_effective (z, xlen);
+
+oops:
+	if (tmp[2]) stix_freemem (stix, tmp[2]);
+	if (tmp[1]) stix_freemem (stix, tmp[1]);
+	if (tmp[0]) stix_freemem (stix, tmp[0]);
+	return 0;
+#endif
 }
 
 static STIX_INLINE void lshift_unsigned_array (stix_liw_t* x, stix_oow_t xs, stix_oow_t bits)
@@ -1036,24 +1476,12 @@ static stix_oop_t add_unsigned_integers (stix_t* stix, stix_oop_t x, stix_oop_t 
 	stix_poptmps (stix, 2);
 	if (!z) return STIX_NULL;
 
-	if (as >= bs)
-	{
-		add_unsigned_array (
-			((stix_oop_liword_t)x)->slot, as,
-			((stix_oop_liword_t)y)->slot, bs,
-			((stix_oop_liword_t)z)->slot
-		);
-	}
-	else 
-	{
-		add_unsigned_array (
-			((stix_oop_liword_t)y)->slot, bs,
-			((stix_oop_liword_t)x)->slot, as,
-			((stix_oop_liword_t)z)->slot
-		);
-	}
+	add_unsigned_array (
+		((stix_oop_liword_t)x)->slot, as,
+		((stix_oop_liword_t)y)->slot, bs,
+		((stix_oop_liword_t)z)->slot
+	);
 
-	
 	return z;
 }
 
@@ -1079,12 +1507,12 @@ static stix_oop_t subtract_unsigned_integers (stix_t* stix, stix_oop_t x, stix_o
 static stix_oop_t multiply_unsigned_integers (stix_t* stix, stix_oop_t x, stix_oop_t y)
 {
 	stix_oop_t z;
-	stix_oow_t xz, yz;
+	stix_oow_t xs, ys;
 
-	xz = STIX_OBJ_GET_SIZE(x);
-	yz = STIX_OBJ_GET_SIZE(y);
+	xs = STIX_OBJ_GET_SIZE(x);
+	ys = STIX_OBJ_GET_SIZE(y);
 
-	if (yz > STIX_OBJ_SIZE_MAX - xz)
+	if (ys > STIX_OBJ_SIZE_MAX - xs)
 	{
 		stix->errnum = STIX_EOOMEM; /* TOOD: is it a soft failure or hard failure? */
 		return STIX_NULL;
@@ -1092,14 +1520,29 @@ static stix_oop_t multiply_unsigned_integers (stix_t* stix, stix_oop_t x, stix_o
 
 	stix_pushtmp (stix, &x);
 	stix_pushtmp (stix, &y);
-	z = stix_instantiate (stix, stix->_large_positive_integer, STIX_NULL, xz + yz);
+	z = stix_instantiate (stix, stix->_large_positive_integer, STIX_NULL, xs + ys);
 	stix_poptmps (stix, 2);
 	if (!z) return STIX_NULL;
 
-	multiply_unsigned_array (
-		((stix_oop_liword_t)x)->slot, STIX_OBJ_GET_SIZE(x),
-		((stix_oop_liword_t)y)->slot, STIX_OBJ_GET_SIZE(y),
-		((stix_oop_liword_t)z)->slot);
+#if defined(ENABLE_KARATSUBA)
+	if (CANNOT_KARATSUBA (xs, ys))
+	{
+#endif
+		multiply_unsigned_array (
+			((stix_oop_liword_t)x)->slot, STIX_OBJ_GET_SIZE(x),
+			((stix_oop_liword_t)y)->slot, STIX_OBJ_GET_SIZE(y),
+			((stix_oop_liword_t)z)->slot);
+#if defined(ENABLE_KARATSUBA)
+	}
+	else
+	{
+		if (multiply_unsigned_array_karatsuba (
+			stix,
+			((stix_oop_liword_t)x)->slot, STIX_OBJ_GET_SIZE(x),
+			((stix_oop_liword_t)y)->slot, STIX_OBJ_GET_SIZE(y),
+			((stix_oop_liword_t)z)->slot) == 0) return STIX_NULL;
+	}
+#endif
 	return z;
 }
 

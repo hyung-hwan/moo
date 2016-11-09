@@ -795,6 +795,10 @@ static int get_ident (stix_t* stix, stix_ooci_t char_read_ahead)
 				return -1;
 			}
 		}
+		else
+		{
+			unget_char (stix, &stix->c->lxc); 
+		}
 	}
 	else
 	{

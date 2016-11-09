@@ -50,6 +50,7 @@
 /*#define STIX_DEBUG_VM_PROCESSOR*/
 /*#define STIX_DEBUG_VM_EXEC*/
 /*#define STIX_DEBUG_VM_METHOD_LOOKUP*/
+#define STIX_DEBUG_BIGINT
 #define STIX_PROFILE_VM
 
 /* allow the caller to drive process switching by calling

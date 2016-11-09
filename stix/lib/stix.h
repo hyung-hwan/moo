@@ -126,13 +126,15 @@ typedef struct stix_obj_word_t*     stix_oop_word_t;
 /* ========================================================================= */
 /* BIGINT TYPES AND MACROS                                                   */
 /* ========================================================================= */
-#if STIX_SIZEOF_UINTMAX_T > STIX_SIZEOF_OOW_T
+#if (STIX_SIZEOF_UINTMAX_T > STIX_SIZEOF_OOW_T)
 #	define STIX_USE_FULL_WORD
 #endif
 
 #if defined(STIX_USE_FULL_WORD)
 	typedef stix_oow_t          stix_liw_t; /* large integer word */
+	typedef stix_ooi_t          stix_lii_t;
 	typedef stix_uintmax_t      stix_lidw_t; /* large integer double word */
+	typedef stix_intmax_t       stix_lidi_t;
 #	define STIX_SIZEOF_LIW_T    STIX_SIZEOF_OOW_T
 #	define STIX_SIZEOF_LIDW_T   STIX_SIZEOF_UINTMAX_T
 #	define STIX_LIW_BITS        STIX_OOW_BITS
@@ -143,7 +145,9 @@ typedef struct stix_obj_word_t*     stix_oop_word_t;
 
 #else
 	typedef stix_oohw_t         stix_liw_t;
+	typedef stix_oohi_t         stix_lii_t;
 	typedef stix_oow_t          stix_lidw_t;
+	typedef stix_ooi_t          stix_lidi_t;
 #	define STIX_SIZEOF_LIW_T    STIX_SIZEOF_OOHW_T
 #	define STIX_SIZEOF_LIDW_T   STIX_SIZEOF_OOW_T
 #	define STIX_LIW_BITS        STIX_OOHW_BITS
@@ -944,6 +948,7 @@ typedef enum stix_log_mask_t stix_log_mask_t;
 #define STIX_LOG3(stix,mask,fmt,a1,a2,a3) do { if (STIX_LOG_ENABLED(stix,mask)) stix_logbfmt(stix, mask, fmt, a1, a2, a3); } while(0)
 #define STIX_LOG4(stix,mask,fmt,a1,a2,a3,a4) do { if (STIX_LOG_ENABLED(stix,mask)) stix_logbfmt(stix, mask, fmt, a1, a2, a3, a4); } while(0)
 #define STIX_LOG5(stix,mask,fmt,a1,a2,a3,a4,a5) do { if (STIX_LOG_ENABLED(stix,mask)) stix_logbfmt(stix, mask, fmt, a1, a2, a3, a4, a5); } while(0)
+#define STIX_LOG6(stix,mask,fmt,a1,a2,a3,a4,a5,a6) do { if (STIX_LOG_ENABLED(stix,mask)) stix_logbfmt(stix, mask, fmt, a1, a2, a3, a4, a5, a6); } while(0)
 
 #define STIX_DEBUG0(stix,fmt) STIX_LOG0(stix, STIX_LOG_DEBUG, fmt)
 #define STIX_DEBUG1(stix,fmt,a1) STIX_LOG1(stix, STIX_LOG_DEBUG, fmt, a1)
@@ -951,13 +956,15 @@ typedef enum stix_log_mask_t stix_log_mask_t;
 #define STIX_DEBUG3(stix,fmt,a1,a2,a3) STIX_LOG3(stix, STIX_LOG_DEBUG, fmt, a1, a2, a3)
 #define STIX_DEBUG4(stix,fmt,a1,a2,a3,a4) STIX_LOG4(stix, STIX_LOG_DEBUG, fmt, a1, a2, a3, a4)
 #define STIX_DEBUG5(stix,fmt,a1,a2,a3,a4,a5) STIX_LOG5(stix, STIX_LOG_DEBUG, fmt, a1, a2, a3, a4, a5)
+#define STIX_DEBUG6(stix,fmt,a1,a2,a3,a4,a5,a6) STIX_LOG6(stix, STIX_LOG_DEBUG, fmt, a1, a2, a3, a4, a5, a6)
 
 #define STIX_INFO0(stix,fmt) STIX_LOG0(stix, STIX_LOG_INFO, fmt)
 #define STIX_INFO1(stix,fmt,a1) STIX_LOG1(stix, STIX_LOG_INFO, fmt, a1)
 #define STIX_INFO2(stix,fmt,a1,a2) STIX_LOG2(stix, STIX_LOG_INFO, fmt, a1, a2)
 #define STIX_INFO3(stix,fmt,a1,a2,a3) STIX_LOG3(stix, STIX_LOG_INFO, fmt, a1, a2, a3)
 #define STIX_INFO4(stix,fmt,a1,a2,a3,a4) STIX_LOG4(stix, STIX_LOG_INFO, fmt, a1, a2, a3, a4)
-#define STIX_INFO5(stix,fmt,a1,a2,a3,a4,a5) STIX_LOG5(stix, STIX_LOG_INFO, fmt, a1, a2, a3, a4, a5
+#define STIX_INFO5(stix,fmt,a1,a2,a3,a4,a5) STIX_LOG5(stix, STIX_LOG_INFO, fmt, a1, a2, a3, a4, a5)
+#define STIX_INFO6(stix,fmt,a1,a2,a3,a4,a5,a6) STIX_LOG6(stix, STIX_LOG_INFO, fmt, a1, a2, a3, a4, a5, a6)
 
 #if defined(__cplusplus)
 extern "C" {

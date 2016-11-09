@@ -217,7 +217,8 @@ redo:
 		}
 
 		newcapa = STIX_ALIGN(stix->log.len + len, 512); /* TODO: adjust this capacity */
-		tmp = stix_reallocmem (stix, stix->log.ptr, newcapa * STIX_SIZEOF(*tmp));
+		/* +1 to handle line ending injection more easily */
+		tmp = stix_reallocmem (stix, stix->log.ptr, (newcapa + 1) * STIX_SIZEOF(*tmp)); 
 		if (!tmp) 
 		{
 			if (stix->log.len > 0)
@@ -231,7 +232,7 @@ redo:
 		}
 
 		stix->log.ptr = tmp;
-		stix->log.capa = newcapa - 1; /* -1 to handle line ending injection more easily */
+		stix->log.capa = newcapa; 
 	}
 
 	while (len > 0)
