@@ -350,6 +350,8 @@ void stix_freemem (stix_t* stix, void* ptr)
 
 
 
+/* -------------------------------------------------------------------------- */
+
 stix_oop_t stix_makersrc (stix_t* stix, stix_oow_t v)
 {
 	stix_oop_t imm;
@@ -405,3 +407,62 @@ stix_oow_t stix_getrsrcval (stix_t* stix, stix_oop_t imm)
 	STIX_ASSERT (STIX_OOP_IS_RSRC(imm));
 	return stix->rsrc.ptr[STIX_OOP_TO_RSRC(imm)];
 }
+
+/* -------------------------------------------------------------------------- */
+
+/* add a new primitive method */
+int stix_addmethod (stix_t* stix, stix_oop_t _class, const stix_ooch_t* name, stix_prim_impl_t func)
+{
+	/* NOTE: this function is a subset of add_compiled_method() in comp.c */
+
+	stix_oop_char_t nsym;
+	stix_oop_method_t mth;
+	stix_oop_class_t cls;
+	stix_oow_t tmp_count = 0, i;
+	stix_ooi_t arg_count = 0;
+
+	STIX_ASSERT (STIX_CLASSOF(stix, _class) == stix->_class);
+
+	cls = (stix_oop_class_t)_class;
+
+	/* TODO: check if name is a valid method name */
+	for (i = 0; name[i]; i++)
+	{
+		if (name[i] == ':') arg_count++;
+	}
+	nsym = (stix_oop_char_t)stix_makesymbol (stix, name, i);
+	if (!nsym) return -1;
+
+	stix_pushtmp (stix, (stix_oop_t*)&name); tmp_count++;
+
+#if defined(STIX_USE_OBJECT_TRAILER)
+	mth = (stix_oop_method_t)stix_instantiatewithtrailer (stix, stix->_method, 1, STIX_NULL, 0); 
+#else
+	mth = (stix_oop_method_t)stix_instantiate (stix, stix->_method, STIX_NULL, 1);
+#endif
+	if (!mth) goto oops;
+
+	/* store the symbol name to the literal frame */
+	mth->slot[0] = (stix_oop_t)nsym;
+
+	/* add the primitive as a name primitive with index of -1.
+	 * set the preamble_data to the pointer to the primitive function. */
+	mth->owner = cls;
+	mth->name = nsym;
+	mth->preamble = STIX_SMOOI_TO_OOP(STIX_METHOD_MAKE_PREAMBLE(STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE, -1));
+	mth->preamble_data[0] = STIX_SMOOI_TO_OOP((stix_oow_t)func >> (STIX_OOW_BITS / 2));
+	mth->preamble_data[1] = STIX_SMOOI_TO_OOP((stix_oow_t)func & STIX_LBMASK(stix_oow_t, STIX_OOW_BITS / 2));
+	mth->tmpr_count = STIX_SMOOI_TO_OOP(arg_count);
+	mth->tmpr_nargs = STIX_SMOOI_TO_OOP(arg_count);
+	stix_poptmps (stix, tmp_count); tmp_count = 0;
+
+/* TODO: class method? */
+	/* instance method */
+	if (!stix_putatdic (stix, cls->mthdic[STIX_CLASS_MTHDIC_INSTANCE], (stix_oop_t)nsym, (stix_oop_t)mth)) goto oops;
+	return 0;
+
+oops:
+	stix_poptmps (stix, tmp_count);
+	return -1;
+}
+ 

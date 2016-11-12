@@ -3016,22 +3016,32 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 			stix_ooi_t prim_name_index;
 			stix_oop_t name;
 			stix_prim_impl_t handler;
-			register stix_oow_t w;
+			stix_oow_t w;
+			stix_ooi_t sp, nargs, sb;
+
+			sp = stix->sp;
+			nargs = STIX_OOP_TO_SMOOI(method->tmpr_nargs);
+			sb = stix->sp - nargs - 1; /* stack base before receiver and arguments */
 
 			prim_name_index = STIX_METHOD_GET_PREAMBLE_INDEX(preamble);
 			LOG_INST_1 (stix, "preamble_named_primitive %zd", prim_name_index);
 
-			name = method->slot[prim_name_index];
-
-			STIX_ASSERT (STIX_ISTYPEOF(stix,name,STIX_OBJ_TYPE_CHAR));
-			STIX_ASSERT (STIX_OBJ_GET_FLAGS_EXTRA(name));
-			STIX_ASSERT (STIX_CLASSOF(stix,name) == stix->_symbol);
-
 			/* merge two SmallIntegers to get a full pointer */
 			w = (stix_oow_t)STIX_OOP_TO_SMOOI(method->preamble_data[0]) << (STIX_OOW_BITS / 2) | 
-					(stix_oow_t)STIX_OOP_TO_SMOOI(method->preamble_data[1]);
+			    (stix_oow_t)STIX_OOP_TO_SMOOI(method->preamble_data[1]);
 			handler = (stix_prim_impl_t)w;
-			if (!handler) handler = query_prim_module (stix, ((stix_oop_char_t)name)->slot, STIX_OBJ_GET_SIZE(name));
+			if (handler) goto exec_handler;
+			else
+			{
+				STIX_ASSERT (prim_name_index >= 0);
+				name = method->slot[prim_name_index];
+
+				STIX_ASSERT (STIX_ISTYPEOF(stix,name,STIX_OBJ_TYPE_CHAR));
+				STIX_ASSERT (STIX_OBJ_GET_FLAGS_EXTRA(name));
+				STIX_ASSERT (STIX_CLASSOF(stix,name) == stix->_symbol);
+
+				handler = query_prim_module (stix, ((stix_oop_char_t)name)->slot, STIX_OBJ_GET_SIZE(name));
+			}
 
 			if (handler)
 			{
@@ -3041,15 +3051,42 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 				method->preamble_data[0] = STIX_SMOOI_TO_OOP((stix_oow_t)handler >> (STIX_OOW_BITS / 2));
 				method->preamble_data[1] = STIX_SMOOI_TO_OOP((stix_oow_t)handler & STIX_LBMASK(stix_oow_t, STIX_OOW_BITS / 2));
 
+			exec_handler:
 				stix_pushtmp (stix, (stix_oop_t*)&method);
 				n = handler (stix, nargs);
+				
 				stix_poptmp (stix);
-				if (n <= -1) return -1; /* hard primitive failure */
+				if (n <= -1) 
+				{
+					STIX_DEBUG2 (stix, "Hard failure indicated by primitive function %p - return code %d\n", handler, n);
+					return -1; /* hard primitive failure */
+				}
 				if (n >= 1) break; /* primitive ok*/
 			}
 
-			/* soft primitive failure or handler not found*/
-			if (activate_new_method (stix, method) <= -1) return -1;
+			/* soft primitive failure or handler not found. 
+			 * if handler is not found, 0 must be printed in the debug message. */
+			STIX_DEBUG1 (stix, "Soft failure indicated by primitive function %p\n", handler);
+
+		#if defined(STIX_USE_OBJECT_TRAILER)
+			STIX_ASSERT (STIX_OBJ_GET_FLAGS_TRAILER(method));
+			if (method->slot[STIX_OBJ_GET_SIZE(method)] == 0) /* this trailer size field not a small integer */
+		#else
+			if (method->code == stix->_nil)
+		#endif
+			{
+				/* no byte code to execute */
+/* TODO: what is the best tactics? emulate "self primitiveFailed"? */
+
+				/* force restore stack pointers */
+				stix->sp = sb;
+				STIX_STACK_PUSH (stix, stix->_nil);
+				return -1;
+			}
+			else
+			{
+				if (activate_new_method (stix, method) <= -1) return -1;
+			}
 			break;
 		}
 

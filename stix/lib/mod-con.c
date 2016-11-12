@@ -221,6 +221,34 @@ static int prim_setcursor (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
+
+#if 0
+static int prim_setcursorto (stix_t* stix, stix_ooi_t nargs)
+{
+	console_t* con;
+	stix_oop_oop_t point;
+	char* cup;
+
+	rcv = STIX_STACK_GETRCV(stix, nargs);
+	con = STIX_OOP_TO_SMOOI(
+
+	con = STIX_OOP_TO_SMOOI(STIX_STACK_GETARG(stix, nargs, 0));
+	point = STIX_STACK_GETARG(stix, nargs, 1);
+
+/* TODO: error check, class check, size check.. */
+	if (STIX_OBJ_GET_SIZE(point) != 2)
+	{
+		return 0;
+	}
+
+	cup = tiparm (con->cup, STIX_OOP_TO_SMOOI(point->slot[1]), STIX_OOP_TO_SMOOI(point->slot[0]));
+	write (con->fd, cup, strlen(cup)); /* TODO: error check */
+
+	STIX_STACK_SETRETTORCV (stix, nargs);
+	return 1;
+}
+#endif
+
 /* ------------------------------------------------------------------------ */
 
 typedef struct fnctab_t fnctab_t;
