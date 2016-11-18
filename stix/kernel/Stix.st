@@ -11,6 +11,11 @@
 		"accept an arbitary object instead of a string. 
 		 the object can be sent displayString for string conversion"
 	}
+
+	#method isError
+	{
+		^true
+	}
 }
 
 #class Magnitude(Object)
@@ -379,4 +384,5 @@ f isNil ifTrue: [ self error: 'No such function' ].
 
 #########################################################################################
 
+#include 'Stdio.st'.
 #include 'Console.st'.

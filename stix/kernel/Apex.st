@@ -66,6 +66,8 @@
 	#method(#class) new: anInteger
 	{
 		| x |
+## TODO: check if the class is a fixed class.
+##       if so, raise an exception.
 		x := self basicNew: anInteger.
 		x initialize. "TODO: assess if it's good to call 'initialize' from new."
 		^x.
@@ -175,6 +177,11 @@
 
 	## TODO: add = and ~= for equality check.
 
+
+	## -------------------------------------------------------
+	## COMMON QUERIES
+	## -------------------------------------------------------
+
 	#method isNil
 	{
 		"^self == nil."
@@ -199,6 +206,16 @@
 		"^(self == nil) not"
 		"^self ~= nil."
 		^true.
+	}
+
+	#method isError
+	{
+		^false
+	}
+
+	#method(#class) isError
+	{
+		^false
 	}
 
 	## -------------------------------------------------------
@@ -287,6 +304,7 @@
 	{
 		self class cannotInstantiate
 	}
+
 }
 
 #class Object(Apex)

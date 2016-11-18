@@ -2477,6 +2477,20 @@ static int compile_class_level_variables (stix_t* stix)
 			{
 				var_info_t var;
 
+/*
+TODO: check variability conflict.
+if it's a indexed class, check if the superclass is fixed or index.
+if super is fixed and self is fixed or variable-pointer, no restriction.
+if super is fixed and self is variable-nonpointer, no instance varaible in the super side and in the self side.
+if super is variable-pointer, self must be a variable-pointer. can't be fixed either
+if super is variable-nonpointer, self must be a variable-nonpointer of the same type. can't be fixed either
+if super is variable-nonpointer, no instance variable is allowed.
+				if (stix->c->cls.flags & CLASS_INDEXED)
+				{
+					set_syntax_error (stix, STIX_SYNERR_VARNAMEDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
+					return -1;
+				}
+*/
 				if (find_class_level_variable(stix, STIX_NULL, TOKEN_NAME(stix), &var) >= 0 ||
 				    stix_lookupdic (stix, stix->sysdic, TOKEN_NAME(stix)) ||  /* conflicts with a top global name */
 				    stix_lookupdic (stix, stix->c->cls.ns_oop, TOKEN_NAME(stix))) /* conflicts with a global name in the class'es name space */

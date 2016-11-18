@@ -25,10 +25,8 @@
  */
 
 
-#include "mod-con.h"
+#include "console.h"
 #include <stix-utl.h>
-
-#include "stix-prv.h"  /* TODO: remove this header after refactoring it */
 
 #include <unistd.h>
 #include <fcntl.h> 
@@ -299,7 +297,7 @@ static void unload (stix_t* stix, stix_prim_mod_t* mod)
 }
 
 
-int stix_prim_mod_con (stix_t* stix, stix_prim_mod_t* mod)
+int stix_prim_mod_console (stix_t* stix, stix_prim_mod_t* mod)
 {
 	mod->query = query;
 	mod->unload = unload; 

@@ -57,12 +57,12 @@ extern "C" {
 /* ========================================================================= */
 /* utl.c                                                                */
 /* ========================================================================= */
-stix_oow_t stix_hashbytes (
+STIX_EXPORT stix_oow_t stix_hashbytes (
 	const stix_oob_t* ptr,
 	stix_oow_t        len
 );
 
-stix_oow_t stix_hashuchars (
+STIX_EXPORT stix_oow_t stix_hashuchars (
 	const stix_uch_t*  ptr,
 	stix_oow_t        len
 );
@@ -70,83 +70,170 @@ stix_oow_t stix_hashuchars (
 #define stix_hashbchars(ptr,len) stix_hashbytes(ptr,len)
 
 
-int stix_equalchars (
+STIX_EXPORT int stix_equalchars (
 	const stix_uch_t* str1,
 	const stix_uch_t* str2,
 	stix_oow_t        len
 );
 
-int stix_compucstr (
+STIX_EXPORT int stix_compucstr (
 	const stix_uch_t* str1,
 	const stix_uch_t* str2
 );
 
-int stix_compbcstr (
+STIX_EXPORT int stix_compbcstr (
 	const stix_bch_t* str1,
 	const stix_bch_t* str2
 );
 
-int stix_compucbcstr (
+STIX_EXPORT int stix_compucbcstr (
 	const stix_uch_t* str1,
 	const stix_bch_t* str2
 );
 
-int stix_compucxbcstr (
+STIX_EXPORT int stix_compucxbcstr (
 	const stix_uch_t* str1,
 	stix_oow_t        len,
 	const stix_bch_t* str2
 );
 
-void stix_copyuchars (
+STIX_EXPORT void stix_copyuchars (
 	stix_uch_t*       dst,
 	const stix_uch_t* src,
 	stix_oow_t        len
 );
 
-void stix_copybchars (
+STIX_EXPORT void stix_copybchars (
 	stix_bch_t*       dst,
 	const stix_bch_t* src,
 	stix_oow_t        len
 );
 
-void stix_copybchtouchars (
+STIX_EXPORT void stix_copybchtouchars (
 	stix_uch_t*       dst,
 	const stix_bch_t* src,
 	stix_oow_t        len
 );
 
-stix_oow_t stix_copyucstr (
+STIX_EXPORT stix_oow_t stix_copyucstr (
 	stix_uch_t*       dst,
 	stix_oow_t        len,
 	const stix_uch_t* src
 );
 
-stix_oow_t stix_copybcstr (
+STIX_EXPORT stix_oow_t stix_copybcstr (
 	stix_bch_t*       dst,
 	stix_oow_t        len,
 	const stix_bch_t* src
 );
 
-stix_uch_t* stix_finduchar (
+STIX_EXPORT stix_uch_t* stix_finduchar (
 	const stix_uch_t* ptr,
 	stix_oow_t        len,
 	stix_uch_t        c
 );
 
-stix_bch_t* stix_findbchar (
+STIX_EXPORT stix_bch_t* stix_findbchar (
 	const stix_bch_t* ptr,
 	stix_oow_t        len,
 	stix_bch_t        c
 );
 
-stix_oow_t stix_countucstr (
+STIX_EXPORT stix_oow_t stix_countucstr (
 	const stix_uch_t* str
 );
 
-stix_oow_t stix_countbcstr (
+STIX_EXPORT stix_oow_t stix_countbcstr (
 	const stix_bch_t* str
 );
 
+
+
+/* ========================================================================= */
+/* utf8.c                                                                    */
+/* ========================================================================= */
+STIX_EXPORT stix_oow_t stix_uctoutf8 (
+	stix_uch_t    uc,
+	stix_bch_t*   utf8,
+	stix_oow_t    size
+);
+
+STIX_EXPORT stix_oow_t stix_utf8touc (
+	const stix_bch_t* utf8,
+	stix_oow_t        size,
+	stix_uch_t*       uc
+);
+
+/**
+ * The stix_ucstoutf8() function converts a unicode character string \a ucs 
+ * to a UTF8 string and writes it into the buffer pointed to by \a bcs, but
+ * not more than \a bcslen bytes including the terminating null.
+ *
+ * Upon return, \a bcslen is modified to the actual number of bytes written to
+ * \a bcs excluding the terminating null; \a ucslen is modified to the number of
+ * wide characters converted.
+ *
+ * You may pass #STIX_NULL for \a bcs to dry-run conversion or to get the
+ * required buffer size for conversion. -2 is never returned in this case.
+ *
+ * \return
+ * - 0 on full conversion,
+ * - -1 on no or partial conversion for an illegal character encountered,
+ * - -2 on no or partial conversion for a small buffer.
+ *
+ * \code
+ *   const stix_uch_t ucs[] = { 'H', 'e', 'l', 'l', 'o' };
+ *   stix_bch_t bcs[10];
+ *   stix_oow_t ucslen = 5;
+ *   stix_oow_t bcslen = STIX_COUNTOF(bcs);
+ *   n = stix_ucstoutf8 (ucs, &ucslen, bcs, &bcslen);
+ *   if (n <= -1)
+ *   {
+ *      // conversion error
+ *   }
+ * \endcode
+ */
+STIX_EXPORT int stix_ucstoutf8 (
+	const stix_uch_t*    ucs,
+	stix_oow_t*          ucslen,
+	stix_bch_t*          bcs,
+	stix_oow_t*          bcslen
+);
+
+/**
+ * The stix_utf8toucs() function converts a UTF8 string to a uncide string.
+ *
+ * It never returns -2 if \a ucs is #STIX_NULL.
+ *
+ * \code
+ *  const stix_bch_t* bcs = "test string";
+ *  stix_uch_t ucs[100];
+ *  stix_oow_t ucslen = STIX_COUNTOF(buf), n;
+ *  stix_oow_t bcslen = 11;
+ *  int n;
+ *  n = stix_utf8toucs (bcs, &bcslen, ucs, &ucslen);
+ *  if (n <= -1) { invalid/incomplenete sequence or buffer to small }
+ * \endcode
+ *
+ * For a null-terminated string, you can specify ~(stix_oow_t)0 in
+ * \a bcslen. The destination buffer \a ucs also must be large enough to
+ * store a terminating null. Otherwise, -2 is returned.
+ * 
+ * The resulting \a ucslen can still be greater than 0 even if the return
+ * value is negative. The value indiates the number of characters converted
+ * before the error has occurred.
+ *
+ * \return 0 on success.
+ *         -1 if \a bcs contains an illegal character.
+ *         -2 if the wide-character string buffer is too small.
+ *         -3 if \a bcs is not a complete sequence.
+ */
+STIX_EXPORT int stix_utf8toucs (
+	const stix_bch_t*   bcs,
+	stix_oow_t*         bcslen,
+	stix_uch_t*         ucs,
+	stix_oow_t*         ucslen
+);
 
 #if defined(__cplusplus)
 }

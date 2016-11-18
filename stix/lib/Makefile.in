@@ -128,39 +128,10 @@ am__uninstall_files_from_dir = { \
     || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
-am__installdirs = "$(DESTDIR)$(pkglibdir)" \
-	"$(DESTDIR)$(pkgmodexecdir)" "$(DESTDIR)$(bindir)" \
+am__installdirs = "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(bindir)" \
 	"$(DESTDIR)$(pkgincludedir)"
-LTLIBRARIES = $(pkglib_LTLIBRARIES) $(pkgmodexec_LTLIBRARIES)
+LTLIBRARIES = $(pkglib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
-@ENABLE_STATIC_MODULE_FALSE@libstix_con_la_DEPENDENCIES =  \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
-am__libstix_con_la_SOURCES_DIST = mod-con.c mod-con.h
-@ENABLE_STATIC_MODULE_FALSE@am_libstix_con_la_OBJECTS =  \
-@ENABLE_STATIC_MODULE_FALSE@	libstix_con_la-mod-con.lo
-libstix_con_la_OBJECTS = $(am_libstix_con_la_OBJECTS)
-AM_V_lt = $(am__v_lt_@AM_V@)
-am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
-am__v_lt_0 = --silent
-am__v_lt_1 = 
-libstix_con_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(AM_CFLAGS) $(CFLAGS) $(libstix_con_la_LDFLAGS) $(LDFLAGS) -o \
-	$@
-@ENABLE_STATIC_MODULE_FALSE@am_libstix_con_la_rpath = -rpath \
-@ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
-@ENABLE_STATIC_MODULE_FALSE@libstix_snd_la_DEPENDENCIES =  \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
-am__libstix_snd_la_SOURCES_DIST = mod-snd.c mod-snd.h
-@ENABLE_STATIC_MODULE_FALSE@am_libstix_snd_la_OBJECTS =  \
-@ENABLE_STATIC_MODULE_FALSE@	libstix_snd_la-mod-snd.lo
-libstix_snd_la_OBJECTS = $(am_libstix_snd_la_OBJECTS)
-libstix_snd_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(AM_CFLAGS) $(CFLAGS) $(libstix_snd_la_LDFLAGS) $(LDFLAGS) -o \
-	$@
-@ENABLE_STATIC_MODULE_FALSE@am_libstix_snd_la_rpath = -rpath \
-@ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 libstix_la_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am_libstix_la_OBJECTS = libstix_la-bigint.lo libstix_la-comp.lo \
@@ -170,6 +141,10 @@ am_libstix_la_OBJECTS = libstix_la-bigint.lo libstix_la-comp.lo \
 	libstix_la-proc.lo libstix_la-rbt.lo libstix_la-stix.lo \
 	libstix_la-sym.lo libstix_la-utf8.lo libstix_la-utl.lo
 libstix_la_OBJECTS = $(am_libstix_la_OBJECTS)
+AM_V_lt = $(am__v_lt_@AM_V@)
+am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
+am__v_lt_0 = --silent
+am__v_lt_1 = 
 libstix_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(libstix_la_LDFLAGS) $(LDFLAGS) -o $@
@@ -214,11 +189,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libstix_con_la_SOURCES) $(libstix_snd_la_SOURCES) \
-	$(libstix_la_SOURCES) $(stix_SOURCES)
-DIST_SOURCES = $(am__libstix_con_la_SOURCES_DIST) \
-	$(am__libstix_snd_la_SOURCES_DIST) $(libstix_la_SOURCES) \
-	$(stix_SOURCES)
+SOURCES = $(libstix_la_SOURCES) $(stix_SOURCES)
+DIST_SOURCES = $(libstix_la_SOURCES) $(stix_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -458,30 +430,6 @@ stix_SOURCES = main.c
 stix_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 stix_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 stix_LDADD = $(LIBADD_LIB_COMMON) -lstix #-ldyncall_s
-
-##################################################
-# STATIC MODULES BUILT INTO MAIN LIBRARY
-##################################################
-#libstix_la_SOURCES += \
-#	mod-dir.c mod-dir.h \
-#libstix_la_LIBADD +=
-
-##################################################
-# DYNAMIC MODULES 
-##################################################
-@ENABLE_STATIC_MODULE_FALSE@CPPFLAGS_MOD_COMMON = $(CPPFLAGS_LIB_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@LDFLAGS_MOD_COMMON = $(LDFLAGS_LIB_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@LIBADD_MOD_COMMON = -lstix
-@ENABLE_STATIC_MODULE_FALSE@pkgmodexecdir = $(libdir)
-@ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES = libstix-snd.la libstix-con.la
-@ENABLE_STATIC_MODULE_FALSE@libstix_snd_la_SOURCES = mod-snd.c mod-snd.h
-@ENABLE_STATIC_MODULE_FALSE@libstix_snd_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_snd_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_snd_la_LIBADD = $(LIBADD_MOD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_con_la_SOURCES = mod-con.c mod-con.h
-@ENABLE_STATIC_MODULE_FALSE@libstix_con_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_con_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_con_la_LIBADD = $(LIBADD_MOD_COMMON) -ltermcap 
 all: stix-cfg.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -568,47 +516,6 @@ clean-pkglibLTLIBRARIES:
 	  rm -f $${locs}; \
 	}
 
-install-pkgmodexecLTLIBRARIES: $(pkgmodexec_LTLIBRARIES)
-	@$(NORMAL_INSTALL)
-	@list='$(pkgmodexec_LTLIBRARIES)'; test -n "$(pkgmodexecdir)" || list=; \
-	list2=; for p in $$list; do \
-	  if test -f $$p; then \
-	    list2="$$list2 $$p"; \
-	  else :; fi; \
-	done; \
-	test -z "$$list2" || { \
-	  echo " $(MKDIR_P) '$(DESTDIR)$(pkgmodexecdir)'"; \
-	  $(MKDIR_P) "$(DESTDIR)$(pkgmodexecdir)" || exit 1; \
-	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL) $(INSTALL_STRIP_FLAG) $$list2 '$(DESTDIR)$(pkgmodexecdir)'"; \
-	  $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL) $(INSTALL_STRIP_FLAG) $$list2 "$(DESTDIR)$(pkgmodexecdir)"; \
-	}
-
-uninstall-pkgmodexecLTLIBRARIES:
-	@$(NORMAL_UNINSTALL)
-	@list='$(pkgmodexec_LTLIBRARIES)'; test -n "$(pkgmodexecdir)" || list=; \
-	for p in $$list; do \
-	  $(am__strip_dir) \
-	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f '$(DESTDIR)$(pkgmodexecdir)/$$f'"; \
-	  $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f "$(DESTDIR)$(pkgmodexecdir)/$$f"; \
-	done
-
-clean-pkgmodexecLTLIBRARIES:
-	-test -z "$(pkgmodexec_LTLIBRARIES)" || rm -f $(pkgmodexec_LTLIBRARIES)
-	@list='$(pkgmodexec_LTLIBRARIES)'; \
-	locs=`for p in $$list; do echo $$p; done | \
-	      sed 's|^[^/]*$$|.|; s|/[^/]*$$||; s|$$|/so_locations|' | \
-	      sort -u`; \
-	test -z "$$locs" || { \
-	  echo rm -f $${locs}; \
-	  rm -f $${locs}; \
-	}
-
-libstix-con.la: $(libstix_con_la_OBJECTS) $(libstix_con_la_DEPENDENCIES) $(EXTRA_libstix_con_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(libstix_con_la_LINK) $(am_libstix_con_la_rpath) $(libstix_con_la_OBJECTS) $(libstix_con_la_LIBADD) $(LIBS)
-
-libstix-snd.la: $(libstix_snd_la_OBJECTS) $(libstix_snd_la_DEPENDENCIES) $(EXTRA_libstix_snd_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(libstix_snd_la_LINK) $(am_libstix_snd_la_rpath) $(libstix_snd_la_OBJECTS) $(libstix_snd_la_LIBADD) $(LIBS)
-
 libstix.la: $(libstix_la_OBJECTS) $(libstix_la_DEPENDENCIES) $(EXTRA_libstix_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libstix_la_LINK) -rpath $(pkglibdir) $(libstix_la_OBJECTS) $(libstix_la_LIBADD) $(LIBS)
 install-binPROGRAMS: $(bin_PROGRAMS)
@@ -671,7 +578,6 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_con_la-mod-con.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-bigint.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-comp.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-debug.Plo@am__quote@
@@ -689,7 +595,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-sym.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-utf8.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-utl.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_snd_la-mod-snd.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stix-main.Po@am__quote@
 
 .c.o:
@@ -715,20 +620,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
-
-libstix_con_la-mod-con.lo: mod-con.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_con_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_con_la-mod-con.lo -MD -MP -MF $(DEPDIR)/libstix_con_la-mod-con.Tpo -c -o libstix_con_la-mod-con.lo `test -f 'mod-con.c' || echo '$(srcdir)/'`mod-con.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_con_la-mod-con.Tpo $(DEPDIR)/libstix_con_la-mod-con.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='mod-con.c' object='libstix_con_la-mod-con.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_con_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_con_la-mod-con.lo `test -f 'mod-con.c' || echo '$(srcdir)/'`mod-con.c
-
-libstix_snd_la-mod-snd.lo: mod-snd.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_snd_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_snd_la-mod-snd.lo -MD -MP -MF $(DEPDIR)/libstix_snd_la-mod-snd.Tpo -c -o libstix_snd_la-mod-snd.lo `test -f 'mod-snd.c' || echo '$(srcdir)/'`mod-snd.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_snd_la-mod-snd.Tpo $(DEPDIR)/libstix_snd_la-mod-snd.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='mod-snd.c' object='libstix_snd_la-mod-snd.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_snd_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_snd_la-mod-snd.lo `test -f 'mod-snd.c' || echo '$(srcdir)/'`mod-snd.c
 
 libstix_la-bigint.lo: bigint.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-bigint.lo -MD -MP -MF $(DEPDIR)/libstix_la-bigint.Tpo -c -o libstix_la-bigint.lo `test -f 'bigint.c' || echo '$(srcdir)/'`bigint.c
@@ -976,7 +867,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(HEADERS) stix-cfg.h
 installdirs:
-	for dir in "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(pkgmodexecdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkgincludedir)"; do \
+	for dir in "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkgincludedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -1012,8 +903,7 @@ maintainer-clean-generic:
 clean: clean-am
 
 clean-am: clean-binPROGRAMS clean-generic clean-libtool \
-	clean-pkglibLTLIBRARIES clean-pkgmodexecLTLIBRARIES \
-	mostlyclean-am
+	clean-pkglibLTLIBRARIES mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -1040,8 +930,7 @@ install-dvi: install-dvi-am
 
 install-dvi-am:
 
-install-exec-am: install-binPROGRAMS install-pkglibLTLIBRARIES \
-	install-pkgmodexecLTLIBRARIES
+install-exec-am: install-binPROGRAMS install-pkglibLTLIBRARIES
 
 install-html: install-html-am
 
@@ -1082,31 +971,36 @@ ps: ps-am
 ps-am:
 
 uninstall-am: uninstall-binPROGRAMS uninstall-pkgincludeHEADERS \
-	uninstall-pkglibLTLIBRARIES uninstall-pkgmodexecLTLIBRARIES
+	uninstall-pkglibLTLIBRARIES
 	@$(NORMAL_INSTALL)
 	$(MAKE) $(AM_MAKEFLAGS) uninstall-hook
 .MAKE: all install-am install-data-am install-strip uninstall-am
 
 .PHONY: CTAGS GTAGS TAGS all all-am check check-am clean \
 	clean-binPROGRAMS clean-generic clean-libtool \
-	clean-pkglibLTLIBRARIES clean-pkgmodexecLTLIBRARIES \
-	cscopelist-am ctags ctags-am distclean distclean-compile \
-	distclean-generic distclean-hdr distclean-libtool \
-	distclean-tags distdir dvi dvi-am html html-am info info-am \
-	install install-am install-binPROGRAMS install-data \
-	install-data-am install-data-hook install-dvi install-dvi-am \
-	install-exec install-exec-am install-html install-html-am \
-	install-info install-info-am install-man install-pdf \
-	install-pdf-am install-pkgincludeHEADERS \
-	install-pkglibLTLIBRARIES install-pkgmodexecLTLIBRARIES \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags tags-am uninstall uninstall-am uninstall-binPROGRAMS \
-	uninstall-hook uninstall-pkgincludeHEADERS \
-	uninstall-pkglibLTLIBRARIES uninstall-pkgmodexecLTLIBRARIES
+	clean-pkglibLTLIBRARIES cscopelist-am ctags ctags-am distclean \
+	distclean-compile distclean-generic distclean-hdr \
+	distclean-libtool distclean-tags distdir dvi dvi-am html \
+	html-am info info-am install install-am install-binPROGRAMS \
+	install-data install-data-am install-data-hook install-dvi \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-info install-info-am install-man \
+	install-pdf install-pdf-am install-pkgincludeHEADERS \
+	install-pkglibLTLIBRARIES install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
+	pdf pdf-am ps ps-am tags tags-am uninstall uninstall-am \
+	uninstall-binPROGRAMS uninstall-hook \
+	uninstall-pkgincludeHEADERS uninstall-pkglibLTLIBRARIES
 
+
+##################################################
+# STATIC MODULES BUILT INTO MAIN LIBRARY
+##################################################
+#libstix_la_SOURCES += \
+#	mod-dir.c mod-dir.h \
+#libstix_la_LIBADD +=
 
 install-data-hook:
 	@echo "#ifndef _STIX_CFG_H_" > "$(DESTDIR)$(pkgincludedir)/stix-cfg.h"

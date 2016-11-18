@@ -74,29 +74,6 @@ if ENABLE_STATIC_MODULE
 #	mod-dir.c mod-dir.h \
 #libstix_la_LIBADD +=
 
-else
-##################################################
-# DYNAMIC MODULES 
-##################################################
-
-CPPFLAGS_MOD_COMMON = $(CPPFLAGS_LIB_COMMON)
-LDFLAGS_MOD_COMMON = $(LDFLAGS_LIB_COMMON)
-LIBADD_MOD_COMMON = -lstix
-
-pkgmodexecdir = $(libdir)
-
-pkgmodexec_LTLIBRARIES = libstix-snd.la libstix-con.la
-
-libstix_snd_la_SOURCES = mod-snd.c mod-snd.h
-libstix_snd_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
-libstix_snd_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
-libstix_snd_la_LIBADD = $(LIBADD_MOD_COMMON)
-
-libstix_con_la_SOURCES = mod-con.c mod-con.h
-libstix_con_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
-libstix_con_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
-libstix_con_la_LIBADD = $(LIBADD_MOD_COMMON) -ltermcap 
-
 endif
 
 

@@ -189,9 +189,14 @@ static STIX_INLINE int decode_spec (stix_t* stix, stix_oop_t _class, stix_oow_t 
 
 		if (indexed_type == STIX_OBJ_TYPE_OOP)
 		{
-			if (named_instvar > STIX_MAX_NAMED_INSTVARS ||
-			    vlen > STIX_MAX_INDEXED_INSTVARS(named_instvar))
+			if (named_instvar > STIX_MAX_NAMED_INSTVARS)
 			{
+				STIX_DEBUG3 (stix, "Too many named instance variables for a variable-pointer class %O - %zu/%zu\n", _class, named_instvar, (stix_oow_t)STIX_MAX_NAMED_INSTVARS); 
+				return -1;
+			}
+			if (vlen > STIX_MAX_INDEXED_INSTVARS(named_instvar))
+			{
+				STIX_DEBUG3 (stix, "Too many unnamed instance variables for a variable-pointer class %O - %zu/%zu\n", _class, vlen, (stix_oow_t)STIX_MAX_INDEXED_INSTVARS(named_instvar)); 
 				return -1;
 			}
 
@@ -200,8 +205,16 @@ static STIX_INLINE int decode_spec (stix_t* stix, stix_oop_t _class, stix_oow_t 
 		else
 		{
 			/* a non-pointer indexed class can't have named instance variables */
-			if (named_instvar > 0) return -1;
-			if (vlen > STIX_OBJ_SIZE_MAX) return -1;
+			if (named_instvar > 0) 
+			{
+				STIX_DEBUG1 (stix, "Named instance variables in a variable-nonpointer class %O\n", _class);
+				return -1;
+			}
+			if (vlen > STIX_OBJ_SIZE_MAX) 
+			{
+				STIX_DEBUG3 (stix, "Too many unnamed instance variables for a variable-nonpointer class %O - %zu/%zu\n", _class, vlen, (stix_oow_t)STIX_OBJ_SIZE_MAX); 
+				return -1;
+			}
 		}
 	}
 	else
@@ -209,9 +222,19 @@ static STIX_INLINE int decode_spec (stix_t* stix, stix_oop_t _class, stix_oow_t 
 		/* named instance variables only. treat it as if it is an
 		 * indexable class with no variable data */
 		indexed_type = STIX_OBJ_TYPE_OOP;
-		vlen = 0; /* vlen is not used */
 
-		if (named_instvar > STIX_MAX_NAMED_INSTVARS) return -1;
+		if (vlen > 0)
+		{
+			STIX_DEBUG2 (stix, "Unamed instance variables for a fixed class %O - %zu\n", _class, vlen); 
+			return -1;
+		}
+		/*vlen = 0;*/ /* vlen is not used */
+
+		if (named_instvar > STIX_MAX_NAMED_INSTVARS) 
+		{
+			STIX_DEBUG3 (stix, "Too many named instance variables for a fixed class %O - %zu/%zu\n", _class, named_instvar, (stix_oow_t)STIX_MAX_NAMED_INSTVARS); 
+			return -1;
+		}
 		STIX_ASSERT (named_instvar <= STIX_OBJ_SIZE_MAX);
 	}
 

@@ -1,4 +1,7 @@
-
+##
+## the Class object should be a variable-pointer object because
+## it needs to accomodate class instance variables.
+##
 #class(#pointer) Class(Apex)
 {
 	#dcl spec selfspec superclass subclasses name instvars classvars classinstvars pooldics instmthdic classmthdic.

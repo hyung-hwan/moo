@@ -25,7 +25,7 @@
  */
 
 
-#include "mod-snd.h"
+#include "sound.h"
 #include <stix-utl.h>
 
 /* ------------------------------------------------------------------------ */
@@ -93,7 +93,7 @@ static void unload (stix_t* stix, stix_prim_mod_t* mod)
 }
 
 
-int stix_prim_mod_snd (stix_t* stix, stix_prim_mod_t* mod)
+int stix_prim_mod_sound (stix_t* stix, stix_prim_mod_t* mod)
 {
 	mod->query = query;
 	mod->unload = unload;

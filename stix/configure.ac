@@ -427,6 +427,7 @@ AC_SUBST(STIX_PROJECT_URL, "${PACKAGE_URL}")
 AC_CONFIG_FILES([
 	Makefile 
 	lib/Makefile 
+	mod/Makefile 
 ])
 AC_OUTPUT
 
