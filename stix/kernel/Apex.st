@@ -304,7 +304,6 @@
 	{
 		self class cannotInstantiate
 	}
-
 }
 
 #class Object(Apex)

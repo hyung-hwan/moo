@@ -19,7 +19,8 @@
 
 
 	## ########################################################################
-	## most of the following methods can actuall become class methods of Apex.
+	## most of the following methods can actually become class methods of Apex.
+	## if the instance varibles can be made accessible from the Apex class.
 	## ########################################################################
 
 	#method name

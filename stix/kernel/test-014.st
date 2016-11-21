@@ -124,9 +124,12 @@
 		System logNl: S'\0\0\0END OF MAIN\0AB\0\0\0C\0\0\0'.
 
 
-		v1 := Stdio open: '/tmp/1.txt' for: 'w+'.
+		##v1 := Stdio2 open: '/tmp/1.txt' for: 'w+'.
+		v1 := Stdio2 new open: '/tmp/1.txt' for: 'w+'.
 		v1 xxx.
 		v1 close.
+		nil isNil ifTrue: [ 'NIL NIL NIL' dump. ].
+		(Apex new) notNil ifTrue: [ 'APEX NIL NIL NIL' dump. ].
 	}
 
 }

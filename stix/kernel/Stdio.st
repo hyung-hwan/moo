@@ -1,17 +1,18 @@
 #class(#word) Stdio(Object)
 {
+
 	#method(#class) new: size
 	{
 		##self prohibited
 		##raise exception. prohibited...
-		^nil.
+		^(super new: 1)
 	}
 
 	#method(#class) new
 	{
 		##self prohibited
 		##raise exception. prohibited...
-		^nil.
+		^(super new: 1)
 	}
 
 	#method(#class) open: name for: mode
@@ -35,6 +36,13 @@
 	}
 }
 
-#class(#word) Stdio2 (Stdio)
+#class(#word) Stdio2(Stdio)
 {
+	#method(#class) new
+	{
+		##self prohibited
+		##raise exception. prohibited...
+		^(super new).
+	}
+
 }

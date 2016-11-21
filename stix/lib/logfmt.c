@@ -235,6 +235,7 @@ redo:
 		stix->log.capa = newcapa; 
 	}
 
+
 	while (len > 0)
 	{
 		stix->log.ptr[stix->log.len++] = ch;
@@ -276,11 +277,12 @@ static int put_oocs (stix_t* stix, stix_oow_t mask, const stix_ooch_t* ptr, stix
 		}
 
 		newcapa = STIX_ALIGN(stix->log.len + len, 512); /* TODO: adjust this capacity */
-		tmp = stix_reallocmem (stix, stix->log.ptr, newcapa * STIX_SIZEOF(*tmp));
+		/* +1 to handle line ending injection more easily */
+		tmp = stix_reallocmem (stix, stix->log.ptr, (newcapa + 1) * STIX_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
 		stix->log.ptr = tmp;
-		stix->log.capa = newcapa - 1; /* -1 to handle line ending injection more easily */
+		stix->log.capa = newcapa;
 	}
 
 	STIX_MEMCPY (&stix->log.ptr[stix->log.len], ptr, len * STIX_SIZEOF(*ptr));

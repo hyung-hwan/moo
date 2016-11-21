@@ -987,54 +987,52 @@ static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const s
 	int dic_no;
 /* TODO: implement method lookup cache */
 
-#if defined(STIX_DEBUG_VM_METHOD_LOOKUP)
-	STIX_LOG3 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Method lookup - Finding method %.*S for %O in ", message->len, message->ptr, receiver);
-#endif
-
 	cls = (stix_oop_class_t)STIX_CLASSOF(stix, receiver);
 	if ((stix_oop_t)cls == stix->_class)
 	{
 		/* receiver is a class object (an instance of Class) */
 		c = receiver; 
 		dic_no = STIX_CLASS_MTHDIC_CLASS;
-#if defined(STIX_DEBUG_VM_METHOD_LOOKUP)
-	STIX_LOG1 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Method lookup - class method dictionary of %O\n", c);
-#endif
 	}
 	else
 	{
+		/* receiver is not a class object. so take its class */
 		c = (stix_oop_t)cls;
 		dic_no = STIX_CLASS_MTHDIC_INSTANCE;
-#if defined(STIX_DEBUG_VM_METHOD_LOOKUP)
-	STIX_LOG1 (stix, STIX_LOG_IC | STIX_LOG_DEBUG, "Method lookup - instance method dictionary of %O\n", c);
-#endif
 	}
 
-	if (c != stix->_nil)
+	STIX_ASSERT (c != stix->_nil);
+
+	if (super) 
 	{
-		if (super) 
-		{
-			c = ((stix_oop_class_t)c)->superclass;
-			if (c == stix->_nil) goto not_found;
-		}
-
-		do
-		{
-			mthdic = ((stix_oop_class_t)c)->mthdic[dic_no];
-			STIX_ASSERT ((stix_oop_t)mthdic != stix->_nil);
-			STIX_ASSERT (STIX_CLASSOF(stix, mthdic) == stix->_method_dictionary);
-
-/*stix_dumpdic (stix, mthdic, "Method dictionary");*/
-			ass = (stix_oop_association_t)stix_lookupdic (stix, mthdic, message);
-			if (ass) 
-			{
-				STIX_ASSERT (STIX_CLASSOF(stix, ass->value) == stix->_method);
-				return (stix_oop_method_t)ass->value;
-			}
-			c = ((stix_oop_class_t)c)->superclass;
-		}
-		while (c != stix->_nil);
+		/*
+		stix_oop_method_t m;
+		STIX_ASSERT (STIX_CLASSOF(stix, stix->active_context->origin) == stix->_method_context);
+		m = (stix_oop_method_t)stix->active_context->origin->method_or_nargs;
+		c = ((stix_oop_class_t)m->owner)->superclass;
+		*/
+		STIX_ASSERT (stix->active_method);
+		STIX_ASSERT (stix->active_method->owner);
+		c = ((stix_oop_class_t)stix->active_method->owner)->superclass;
+		if (c == stix->_nil) goto not_found; /* reached the top of the hierarchy */
 	}
+
+	do
+	{
+		mthdic = ((stix_oop_class_t)c)->mthdic[dic_no];
+		STIX_ASSERT ((stix_oop_t)mthdic != stix->_nil);
+		STIX_ASSERT (STIX_CLASSOF(stix, mthdic) == stix->_method_dictionary);
+
+		ass = (stix_oop_association_t)stix_lookupdic (stix, mthdic, message);
+		if (ass) 
+		{
+			/* found the method */
+			STIX_ASSERT (STIX_CLASSOF(stix, ass->value) == stix->_method);
+			return (stix_oop_method_t)ass->value;
+		}
+		c = ((stix_oop_class_t)c)->superclass;
+	}
+	while (c != stix->_nil);
 
 not_found:
 	if ((stix_oop_t)cls == stix->_class)
@@ -1053,6 +1051,7 @@ not_found:
 		}
 	}
 
+	STIX_DEBUG3 (stix, "Method [%.*S] not found for %O\n", message->len, message->ptr, receiver);
 	stix->errnum = STIX_ENOENT;
 	return STIX_NULL;
 }
