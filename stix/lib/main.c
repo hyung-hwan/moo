@@ -144,7 +144,7 @@ static STIX_INLINE stix_ooi_t open_input (stix_t* stix, stix_ioarg_t* arg)
 		stix_oow_t bcslen = STIX_COUNTOF(bcs);
 		stix_oow_t ucslen = ~(stix_oow_t)0;
 
-		if (stix_ucstoutf8 (arg->name, &ucslen, bcs, &bcslen) <= -1)
+		if (stix_oocstobcs (stix, arg->name, &ucslen, bcs, &bcslen) <= -1)
 		{
 			stix_seterrnum (stix, STIX_EECERR);
 			return -1;
@@ -231,7 +231,8 @@ static STIX_INLINE stix_ooi_t read_input (stix_t* stix, stix_ioarg_t* arg)
 
 	bcslen = bb->len;
 	ucslen = STIX_COUNTOF(arg->buf);
-	x = stix_utf8toucs (bb->buf, &bcslen, arg->buf, &ucslen);
+	x = stix_bcstooocs (stix, bb->buf, &bcslen, arg->buf, &ucslen);
+	x = stix_bcstooocs (stix, bb->buf, &bcslen, arg->buf, &ucslen);
 	if (x <= -1 && ucslen <= 0)
 	{
 		stix_seterrnum (stix, STIX_EECERR);
@@ -264,7 +265,7 @@ static stix_ooi_t input_handler (stix_t* stix, stix_iocmd_t cmd, stix_ioarg_t* a
 }
 /* ========================================================================= */
 
-static void* mod_open (stix_t* stix, const stix_ooch_t* name)
+static void* dl_open (stix_t* stix, const stix_ooch_t* name)
 {
 #if defined(USE_LTDL)
 /* TODO: support various platforms */
@@ -279,7 +280,7 @@ static void* mod_open (stix_t* stix, const stix_ooch_t* name)
  * Attempting /home/hyung-hwan/xxx/lib/libstix-libc.so.6 followed by libc.so.6 is bad.
  * Need to accept the type or flags?
  *
- * mod_open (stix, "xxxx", STIX_MOD_EXTERNAL);
+ * dl_open (stix, "xxxx", STIX_MOD_EXTERNAL);
  * if external, don't use DEFAULT_MODPERFIX and MODPOSTFIX???
  */
 
@@ -288,7 +289,7 @@ static void* mod_open (stix_t* stix, const stix_ooch_t* name)
 /* TODO: proper error checking and overflow checking */
 	ucslen = ~(stix_oow_t)0;
 	bcslen = STIX_COUNTOF(buf) - len;
-	stix_ucstoutf8 (name, &ucslen, &buf[len], &bcslen);
+	stix_oocstobcs (stix, name, &ucslen, &buf[len], &bcslen);
 
 	stix_copybcstr (&buf[bcslen + len], STIX_COUNTOF(buf) - bcslen - len, STIX_DEFAULT_MODPOSTFIX);
 
@@ -312,7 +313,7 @@ static void* mod_open (stix_t* stix, const stix_ooch_t* name)
 #endif
 }
 
-static void mod_close (stix_t* stix, void* handle)
+static void dl_close (stix_t* stix, void* handle)
 {
 	STIX_DEBUG1 (stix, "Closed module handle %p\n", handle);
 #if defined(USE_LTDL)
@@ -328,7 +329,7 @@ static void mod_close (stix_t* stix, void* handle)
 #endif
 }
 
-static void* mod_getsym (stix_t* stix, void* handle, const stix_ooch_t* name)
+static void* dl_getsym (stix_t* stix, void* handle, const stix_ooch_t* name)
 {
 #if defined(USE_LTDL)
 	stix_bch_t buf[1024]; /* TODO: use a proper buffer. dynamically allocated if conversion result in too a large value */
@@ -340,7 +341,7 @@ static void* mod_getsym (stix_t* stix, void* handle, const stix_ooch_t* name)
 
 	ucslen = ~(stix_oow_t)0;
 	bcslen = STIX_COUNTOF(buf) - 2;
-	stix_ucstoutf8 (name, &ucslen, &buf[1], &bcslen);
+	stix_oocstobcs (stix, name, &ucslen, &buf[1], &bcslen); /* TODO: error check */
 	symname = &buf[1];
 	sym = lt_dlsym (handle, symname);
 	if (!sym)
@@ -435,7 +436,7 @@ static void log_write (stix_t* stix, stix_oow_t mask, const stix_ooch_t* msg, st
 		ucslen = len;
 		bcslen = STIX_COUNTOF(buf);
 
-		n = stix_ucstoutf8 (&msg[msgidx], &ucslen, buf, &bcslen);
+		n = stix_oocstobcs (stix, &msg[msgidx], &ucslen, buf, &bcslen);
 		if (n == 0 || n == -2)
 		{
 			/* n = 0: 
@@ -656,9 +657,9 @@ int main (int argc, char* argv[])
 	}
 #endif
 
-	vmprim.mod_open = mod_open;
-	vmprim.mod_close = mod_close;
-	vmprim.mod_getsym = mod_getsym;
+	vmprim.dl_open = dl_open;
+	vmprim.dl_close = dl_close;
+	vmprim.dl_getsym = dl_getsym;
 	vmprim.log_write = log_write;
 
 
@@ -728,7 +729,7 @@ int main (int argc, char* argv[])
 				{
 					bcslen = STIX_COUNTOF(bcs);
 					ucslen = ~(stix_oow_t)0;
-					if (stix_ucstoutf8 (synerr.loc.file, &ucslen, bcs, &bcslen) >= 0)
+					if (stix_oocstobcs (stix, synerr.loc.file, &ucslen, bcs, &bcslen) >= 0)
 					{
 						printf ("%.*s ", (int)bcslen, bcs);
 					}
@@ -747,7 +748,7 @@ int main (int argc, char* argv[])
 					bcslen = STIX_COUNTOF(bcs);
 					ucslen = synerr.tgt.len;
 
-					if (stix_ucstoutf8 (synerr.tgt.ptr, &ucslen, bcs, &bcslen) >= 0)
+					if (stix_oocstobcs (stix, synerr.tgt.ptr, &ucslen, bcs, &bcslen) >= 0)
 					{
 						printf (" [%.*s]", (int)bcslen, bcs);
 					}

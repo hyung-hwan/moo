@@ -425,7 +425,7 @@ reswitch:
 			/* get the length */
 			for (bslen = 0; bsp[bslen]; bslen++);
 
-			if (stix_utf8toucs (bsp, &bslen, STIX_NULL, &slen) <= -1)
+			if (stix_bcstooocs (stix, bsp, &bslen, STIX_NULL, &slen) <= -1)
 			{ 
 				/* conversion error */
 				stix->errnum = STIX_EECERR;
@@ -450,7 +450,7 @@ reswitch:
 					conv_len = STIX_COUNTOF(conv_buf);
 
 					/* this must not fail since the dry-run above was successful */
-					stix_utf8toucs (&bsp[tot_len], &src_len, conv_buf, &conv_len);
+					stix_bcstooocs (stix, &bsp[tot_len], &src_len, conv_buf, &conv_len);
 					tot_len += src_len;
 
 					if (conv_len > n) conv_len = n;

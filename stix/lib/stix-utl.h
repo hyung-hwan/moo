@@ -147,21 +147,8 @@ STIX_EXPORT stix_oow_t stix_countbcstr (
 	const stix_bch_t* str
 );
 
-
-
-/* ========================================================================= */
-/* utf8.c                                                                    */
-/* ========================================================================= */
-STIX_EXPORT stix_oow_t stix_uctoutf8 (
-	stix_uch_t    uc,
-	stix_bch_t*   utf8,
-	stix_oow_t    size
-);
-
-STIX_EXPORT stix_oow_t stix_utf8touc (
-	const stix_bch_t* utf8,
-	stix_oow_t        size,
-	stix_uch_t*       uc
+STIX_EXPORT stix_cmgr_t* stix_getutf8cmgr (
+	void
 );
 
 /**
@@ -233,6 +220,22 @@ STIX_EXPORT int stix_utf8toucs (
 	stix_oow_t*         bcslen,
 	stix_uch_t*         ucs,
 	stix_oow_t*         ucslen
+);
+
+
+/* ========================================================================= */
+/* utf8.c                                                                    */
+/* ========================================================================= */
+STIX_EXPORT stix_oow_t stix_uctoutf8 (
+	stix_uch_t    uc,
+	stix_bch_t*   utf8,
+	stix_oow_t    size
+);
+
+STIX_EXPORT stix_oow_t stix_utf8touc (
+	const stix_bch_t* utf8,
+	stix_oow_t        size,
+	stix_uch_t*       uc
 );
 
 #if defined(__cplusplus)

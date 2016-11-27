@@ -59,7 +59,7 @@ static fnctab_t fnctab[] =
 
 /* ------------------------------------------------------------------------ */
 
-static stix_prim_impl_t query (stix_t* stix, stix_prim_mod_t* mod, const stix_ooch_t* name)
+static stix_prim_impl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* name)
 {
 	int left, right, mid, n;
 
@@ -88,12 +88,12 @@ static stix_prim_impl_t query (stix_t* stix, stix_prim_mod_t* mod, const stix_oo
 }
 
 
-static void unload (stix_t* stix, stix_prim_mod_t* mod)
+static void unload (stix_t* stix, stix_mod_t* mod)
 {
 }
 
 
-int stix_prim_mod_sound (stix_t* stix, stix_prim_mod_t* mod)
+int stix_mod_sound (stix_t* stix, stix_mod_t* mod)
 {
 	mod->query = query;
 	mod->unload = unload;

@@ -166,7 +166,7 @@ static int prim_write (stix_t* stix, stix_ooi_t nargs)
 	{
 		ucslen = ucsrem;
 		bcslen = STIX_COUNTOF(bcs);
-		if ((n = stix_ucstoutf8 (&oomsg->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
+		if ((n = stix_oocstobcs (stix, &oomsg->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
 		{
 			if (n != -2 || ucslen <= 0) 
 			{
@@ -267,7 +267,7 @@ static fnctab_t fnctab[] =
 
 /* ------------------------------------------------------------------------ */
 
-static stix_prim_impl_t query (stix_t* stix, stix_prim_mod_t* mod, const stix_ooch_t* name)
+static stix_prim_impl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* name)
 {
 	int left, right, mid, n;
 
@@ -291,13 +291,13 @@ static stix_prim_impl_t query (stix_t* stix, stix_prim_mod_t* mod, const stix_oo
 }
 
 
-static void unload (stix_t* stix, stix_prim_mod_t* mod)
+static void unload (stix_t* stix, stix_mod_t* mod)
 {
 	/* TODO: close all open handle?? */
 }
 
 
-int stix_prim_mod_console (stix_t* stix, stix_prim_mod_t* mod)
+int stix_mod_console (stix_t* stix, stix_mod_t* mod)
 {
 	mod->query = query;
 	mod->unload = unload; 

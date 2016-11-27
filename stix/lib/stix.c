@@ -26,7 +26,6 @@
 
 #include "stix-prv.h"
 
-
 stix_t* stix_open (stix_mmgr_t* mmgr, stix_oow_t xtnsize, stix_oow_t heapsize, const stix_vmprim_t* vmprim, stix_errnum_t* errnum)
 {
 	stix_t* stix;
@@ -87,6 +86,7 @@ int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_oow_t heapsz, const stix_vm
 {
 	STIX_MEMSET (stix, 0, STIX_SIZEOF(*stix));
 	stix->mmgr = mmgr;
+	stix->cmgr = stix_getutf8cmgr ();
 	stix->vmprim = *vmprim;
 
 	stix->option.log_mask = ~0u;
@@ -123,11 +123,16 @@ oops:
 static stix_rbt_walk_t unload_primitive_module (stix_rbt_t* rbt, stix_rbt_pair_t* pair, void* ctx)
 {
 	stix_t* stix = (stix_t*)ctx;
-	stix_prim_mod_data_t* md;
+	stix_mod_data_t* md;
 
 	md = STIX_RBT_VPTR(pair);
 	if (md->mod.unload) md->mod.unload (stix, &md->mod);
-	if (md->handle) stix->vmprim.mod_close (stix, md->handle);
+	if (md->handle) 
+	{
+		stix->vmprim.dl_close (stix, md->handle);
+		STIX_DEBUG2 (stix, "Closed a module [%S] - %p\n", md->name, md->handle);
+		md->handle = STIX_NULL;
+	}
 
 	return STIX_RBT_WALK_FORWARD;
 }
@@ -188,6 +193,16 @@ void stix_fini (stix_t* stix)
 stix_mmgr_t* stix_getmmgr (stix_t* stix)
 {
 	return stix->mmgr;
+}
+
+stix_cmgr_t* stix_getcmgr (stix_t* stix)
+{
+	return stix->cmgr;
+}
+
+void stix_setcmgr (stix_t* stix, stix_cmgr_t* cmgr)
+{
+	stix->cmgr = cmgr;
 }
 
 void* stix_getxtn (stix_t* stix)

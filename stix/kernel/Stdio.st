@@ -1,18 +1,24 @@
-#class(#word) Stdio(Object)
+## #class(#byte) Stdio(Object) from 'stdio'.
+
+#class(#byte) Stdio(Object)
 {
+	#method(#class) _newInstSize
+	{
+		<primitive: #stdio_newInstSize>
+	}
 
 	#method(#class) new: size
 	{
 		##self prohibited
 		##raise exception. prohibited...
-		^(super new: 1)
+		^(super new: (self _newInstSize))
 	}
 
 	#method(#class) new
 	{
 		##self prohibited
 		##raise exception. prohibited...
-		^(super new: 1)
+		^(super new: (self _newInstSize))
 	}
 
 	#method(#class) open: name for: mode
@@ -29,14 +35,17 @@
 	{
 		<primitive: #stdio_close>
 	}
+}
 
-	#method xxx
+#extend Stdio
+{
+	#method xxxx
 	{
 		self basicSize dump.
 	}
 }
 
-#class(#word) Stdio2(Stdio)
+#class(#byte) Stdio2(Stdio)
 {
 	#method(#class) new
 	{

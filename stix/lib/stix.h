@@ -681,19 +681,17 @@ typedef struct stix_t stix_t;
 /* =========================================================================
  * VIRTUAL MACHINE PRIMITIVES
  * ========================================================================= */
-#define STIX_MOD_NAME_LEN_MAX 120
-
-typedef void* (*stix_mod_open_t) (stix_t* stix, const stix_ooch_t* name);
-typedef void (*stix_mod_close_t) (stix_t* stix, void* handle);
-typedef void* (*stix_mod_getsym_t) (stix_t* stix, void* handle, const stix_ooch_t* name);
+typedef void* (*stix_vmprim_opendl_t) (stix_t* stix, const stix_ooch_t* name);
+typedef void (*stix_vmprim_closedl_t) (stix_t* stix, void* handle);
+typedef void* (*stix_vmprim_getdlsym_t) (stix_t* stix, void* handle, const stix_ooch_t* name);
 
 typedef void (*stix_log_write_t) (stix_t* stix, stix_oow_t mask, const stix_ooch_t* msg, stix_oow_t len);
 
 struct stix_vmprim_t
 {
-	stix_mod_open_t mod_open;
-	stix_mod_close_t mod_close;
-	stix_mod_getsym_t mod_getsym;
+	stix_vmprim_opendl_t dl_open;
+	stix_vmprim_closedl_t dl_close;
+	stix_vmprim_getdlsym_t dl_getsym;
 	stix_log_write_t log_write;
 };
 
@@ -725,39 +723,42 @@ struct stix_cb_t
 /* =========================================================================
  * PRIMITIVE MODULE MANIPULATION
  * ========================================================================= */
+#define STIX_MOD_NAME_LEN_MAX 120
+
 typedef int (*stix_prim_impl_t) (stix_t* stix, stix_ooi_t nargs);
 
-typedef struct stix_prim_mod_t stix_prim_mod_t;
+typedef struct stix_mod_t stix_mod_t;
 
-typedef int (*stix_prim_mod_load_t) (
-	stix_t*          stix,
-	stix_prim_mod_t* mod
+typedef int (*stix_mod_load_t) (
+	stix_t*     stix,
+	stix_mod_t* mod
 );
 
-typedef stix_prim_impl_t (*stix_prim_mod_query_t) (
+typedef stix_prim_impl_t (*stix_mod_query_t) (
 	stix_t*           stix,
-	stix_prim_mod_t*  mod,
+	stix_mod_t*       mod,
 	const stix_uch_t* name
 );
 
-typedef void (*stix_prim_mod_unload_t) (
-	stix_t*          stix,
-	stix_prim_mod_t* mod
+typedef void (*stix_mod_unload_t) (
+	stix_t*     stix,
+	stix_mod_t* mod
 );
 
-struct stix_prim_mod_t
+struct stix_mod_t
 {
-	stix_prim_mod_unload_t unload;
-	stix_prim_mod_query_t  query;
-	void*                  ctx;
+	stix_mod_unload_t unload;
+	stix_mod_query_t  query;
+	void*             ctx;
 };
 
-struct stix_prim_mod_data_t 
+struct stix_mod_data_t 
 {
-	void* handle;
-	stix_prim_mod_t mod;
+	stix_ooch_t name[STIX_MOD_NAME_LEN_MAX + 1];
+	void*       handle;
+	stix_mod_t  mod;
 };
-typedef struct stix_prim_mod_data_t stix_prim_mod_data_t;
+typedef struct stix_mod_data_t stix_mod_data_t;
 
 /* =========================================================================
  * STIX VM
@@ -769,6 +770,7 @@ typedef struct stix_compiler_t stix_compiler_t;
 struct stix_t
 {
 	stix_mmgr_t*  mmgr;
+	stix_cmgr_t*  cmgr;
 	stix_errnum_t errnum;
 
 	struct
@@ -982,23 +984,32 @@ STIX_EXPORT stix_t* stix_open (
 );
 
 STIX_EXPORT void stix_close (
-	stix_t* vm
+	stix_t* stix
 );
 
 STIX_EXPORT int stix_init (
-	stix_t*              vm,
+	stix_t*              stix,
 	stix_mmgr_t*         mmgr,
 	stix_oow_t           heapsize,
 	const stix_vmprim_t* vmprim
 );
 
 STIX_EXPORT void stix_fini (
-	stix_t* vm
+	stix_t* stix
 );
 
 
 STIX_EXPORT stix_mmgr_t* stix_getmmgr (
 	stix_t* stix
+);
+
+STIX_EXPORT stix_cmgr_t* stix_getcmgr (
+	stix_t* stix
+);
+
+STIX_EXPORT void stix_setcmgr (
+	stix_t*      stix,
+	stix_cmgr_t* cmgr
 );
 
 STIX_EXPORT void* stix_getxtn (
@@ -1152,6 +1163,31 @@ STIX_EXPORT void stix_freemem (
 	void*   ptr
 );
 
+
+#if defined(STIX_OOCH_IS_UCH)
+#	define stix_oocstobcs(stix,oocs,oocslen,bcs,bcslen) stix_ucstobcs(stix,oocs,oocslen,bcs,bcslen)
+#	define stix_bcstooocs(stix,bcs,bcslen,oocs,oocslen) stix_bcstoucs(stix,bcs,bcslen,oocs,oocslen)
+#else
+#error TODO
+#	define stix_oocstobcs(stix,oocs,oocslen,bcs,bcslen) stix_ucstobcs(stix,oocs,oocslen,bcs,bcslen)
+#	define stix_bcstooocs(stix,bcs,bcslen,oocs,oocslen) stix_bcstoucs(stix,bcs,bcslen,oocs,oocslen)
+#endif
+
+STIX_EXPORT int stix_bcstoucs (
+	stix_t*           stix,
+	const stix_bch_t* bcs,
+	stix_oow_t*       bcslen,
+	stix_uch_t*       ucs,
+	stix_oow_t*       ucslen
+);
+
+STIX_EXPORT int stix_ucstobcs (
+	stix_t*           stix,
+	const stix_uch_t* ucs,
+	stix_oow_t*       ucslen,
+	stix_bch_t*       bcs,
+	stix_oow_t*       bcslen
+);
 
 STIX_EXPORT stix_ooi_t stix_logbfmt (
 	stix_t*           stix,

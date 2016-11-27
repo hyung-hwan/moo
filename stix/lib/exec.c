@@ -2397,7 +2397,7 @@ static int prim_ffi_open (stix_t* stix, stix_ooi_t nargs)
 		return 0;
 	}
 
-	if (!stix->vmprim.mod_open)
+	if (!stix->vmprim.dl_open)
 	{
 		/* TODO: more info on error */
 		return 0;
@@ -2405,7 +2405,7 @@ static int prim_ffi_open (stix_t* stix, stix_ooi_t nargs)
 
 
 /* TODO: check null-termination... */
-	handle = stix->vmprim.mod_open (stix, ((stix_oop_char_t)arg)->slot);
+	handle = stix->vmprim.dl_open (stix, ((stix_oop_char_t)arg)->slot);
 	if (!handle)
 	{
 		/* TODO: more info on error */
@@ -2439,7 +2439,7 @@ static int prim_ffi_close (stix_t* stix, stix_ooi_t nargs)
 	STIX_STACK_POP (stix);
 
 	handle = (void*)STIX_OOP_TO_SMOOI(arg); /* TODO: how to store void* ???. fix this not to loose accuracy */
-	if (stix->vmprim.mod_close) stix->vmprim.mod_close (stix, handle);
+	if (stix->vmprim.dl_close) stix->vmprim.dl_close (stix, handle);
 	return 1;
 }
 
@@ -2538,7 +2538,7 @@ STIX_DEBUG2 (stix, "CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSU
 					stix_bch_t bcs[1024];
 
 					ucslen = STIX_OBJ_GET_SIZE(arr->slot[i - 2]);
-					stix_ucstoutf8 (((stix_oop_char_t)arr->slot[i - 2])->slot, &ucslen, bcs, &bcslen); /* proper string conversion */
+					stix_oocstobcs (stix, ((stix_oop_char_t)arr->slot[i - 2])->slot, &ucslen, bcs, &bcslen); /* proper string conversion */
 
 					bcs[bcslen] = '\0';
 					dcArgPointer (dc, bcs);
@@ -2594,9 +2594,9 @@ STIX_DEBUG2 (stix, "CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_M
 				stix_ooch_t ucs[1024];
 				stix_oop_t s;
 				char* r = dcCallPointer (dc, f);
-				
+
 				bcslen = strlen(r); 
-				stix_utf8toucs (r, &bcslen, ucs, &ucslen); /* proper string conversion */
+				stix_bcstooocs (stix, r, &bcslen, ucs, &ucslen); /* proper string conversion */
 
 				s = stix_makestring(stix, ucs, ucslen)
 				if (!s) 
@@ -2646,12 +2646,12 @@ STIX_DEBUG0 (stix, "wrong function name...\n");
 		return 0;
 	}
 
-	if (!stix->vmprim.mod_getsym)
+	if (!stix->vmprim.dl_getsym)
 	{
 		return 0;
 	}
 
-	sym = stix->vmprim.mod_getsym (stix, (void*)STIX_OOP_TO_SMOOI(hnd), ((stix_oop_char_t)fun)->slot);
+	sym = stix->vmprim.dl_getsym (stix, (void*)STIX_OOP_TO_SMOOI(hnd), ((stix_oop_char_t)fun)->slot);
 	if (!sym)
 	{
 		return 0;
@@ -2755,10 +2755,142 @@ int stix_getprimno (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
 	return -1;
 }
 
+#define MOD_PREFIX "stix_mod_"
+#define MOD_PREFIX_LEN 9
+
+static stix_mod_data_t* open_prim_module (stix_t* stix, const stix_ooch_t* name, stix_oow_t namelen)
+{
+	stix_rbt_pair_t* pair;
+	stix_mod_data_t* mdp;
+	stix_mod_data_t md;
+	stix_mod_load_t load = STIX_NULL;
+
+	/* maximum module name length is STIX_MOD_NAME_LEN_MAX. 
+	 *   MOD_PREFIX_LEN for MOD_PREFIX
+	 *   1 for _ at the end when stix_mod_xxx_ is attempted.
+	 *   1 for the terminating '\0'.
+	 */
+	stix_ooch_t buf[MOD_PREFIX_LEN + STIX_MOD_NAME_LEN_MAX + 1 + 1]; 
+
+	/* the terminating null isn't needed in buf here */
+	stix_copybchtooochars (buf, MOD_PREFIX, MOD_PREFIX_LEN); 
+
+	if (namelen > STIX_COUNTOF(buf) - (MOD_PREFIX_LEN + 1 + 1))
+	{
+		/* module name too long  */
+		stix->errnum = STIX_EINVAL; /* TODO: change the  error number to something more specific */
+		return STIX_NULL;
+	}
+
+	stix_copyoochars (&buf[MOD_PREFIX_LEN], name, namelen);
+	buf[MOD_PREFIX_LEN + namelen] = '\0';
+
+#if defined(STIX_ENABLE_STATIC_MODULE)
+	/* attempt to find a statically linked module */
+
+/*TODO: CHANGE THIS PART */
+
+	/* TODO: binary search ... */
+	for (n = 0; n < STIX_COUNTOF(static_modtab); n++)
+	{
+		if (stix_compoocstr (static_modtab[n].modname, name, name_len....) == 0) 
+		{
+			load = static_modtab[n].modload;
+			break;
+		}
+	}
+
+	if (n >= STIX_COUNTOF(static_modtab))
+	{
+		stix->errnum = STIX_ENOENT;
+		return STIX_NULL;
+	}
+
+	if (load)
+	{
+		/* found the module in the staic module table */
+
+		STIX_MEMSET (&md, 0, STIX_SIZEOF(md));
+		stix_copyoochars (md.name, name, namelen);
+		/* Note md.handle is STIX_NULL for a static module */
+
+		/* i copy-insert 'md' into the table before calling 'load'.
+		 * to pass the same address to load(), query(), etc */
+		pair = stix_rbt_insert (stix->modtab, name, namelen, &md, STIX_SIZEOF(md));
+		if (pair == STIX_NULL)
+		{
+			stix->errnum = STIX_ESYSMEM;
+			return STIX_NULL;
+		}
+
+		mdp = (stix_mod_data_t*)STIX_RBT_VPTR(pair);
+		if (load (&mdp->mod, stix) <= -1)
+		{
+			stix_rbt_delete (stix->modtab, segs[0].ptr, segs[0].len);
+			return STIX_NULL;
+		}
+
+		return mdp;
+	}
+#endif
+
+	/* attempt to find an external module */
+	STIX_MEMSET (&md, 0, STIX_SIZEOF(md));
+	stix_copyoochars (md.name, name, namelen);
+	if (stix->vmprim.dl_open && stix->vmprim.dl_getsym && stix->vmprim.dl_close)
+	{
+		md.handle = stix->vmprim.dl_open (stix, &buf[MOD_PREFIX_LEN]);
+	}
+
+	if (md.handle == STIX_NULL) 
+	{
+		STIX_DEBUG2 (stix, "Cannot open a module [%.*S]\n", namelen, name);
+		stix->errnum = STIX_ENOENT; /* TODO: be more descriptive about the error */
+		return STIX_NULL;
+	}
+
+	/* attempt to get stix_mod_xxx */
+	load = stix->vmprim.dl_getsym (stix, md.handle, buf);
+	if (!load) 
+	{
+		STIX_DEBUG3 (stix, "Cannot get a module symbol [%S] in [%.*S]\n", buf, namelen, name);
+		stix->errnum = STIX_ENOENT; /* TODO: be more descriptive about the error */
+		stix->vmprim.dl_close (stix, md.handle);
+		return STIX_NULL;
+	}
+
+	/* i copy-insert 'md' into the table before calling 'load'.
+	 * to pass the same address to load(), query(), etc */
+	pair = stix_rbt_insert (&stix->pmtable, (void*)name, namelen, &md, STIX_SIZEOF(md));
+	if (pair == STIX_NULL)
+	{
+		STIX_DEBUG2 (stix, "Cannot register a module [%.*S]\n", namelen, name);
+		stix->errnum = STIX_ESYSMEM;
+		stix->vmprim.dl_close (stix, md.handle);
+		return STIX_NULL;
+	}
+
+	mdp = (stix_mod_data_t*)STIX_RBT_VPTR(pair);
+	if (load (stix, &mdp->mod) <= -1)
+	{
+		STIX_DEBUG3 (stix, "Module function [%S] returned failure in [%.*S]\n", buf, namelen, name);
+		stix->errnum = STIX_ENOENT; /* TODO: proper error code and handling */
+		stix_rbt_delete (&stix->pmtable, name, namelen);
+		stix->vmprim.dl_close (stix, mdp->handle);
+		return STIX_NULL;
+	}
+
+	STIX_DEBUG2 (stix, "Opened a module [%S] - %p\n", mdp->name, mdp->handle);
+	/* the module loader must ensure to set a proper query handler */
+	STIX_ASSERT (mdp->mod.query != STIX_NULL);
+
+	return mdp;
+}
+
 static stix_prim_impl_t query_prim_module (stix_t* stix, const stix_ooch_t* name, stix_oow_t len)
 {
 	stix_rbt_pair_t* pair;
-	stix_prim_mod_data_t* mdp;
+	stix_mod_data_t* mdp;
 	const stix_ooch_t* sep;
 	stix_oow_t mod_name_len;
 	stix_prim_impl_t handler;
@@ -2771,133 +2903,24 @@ static stix_prim_impl_t query_prim_module (stix_t* stix, const stix_ooch_t* name
 	pair = stix_rbt_search (&stix->pmtable, name, mod_name_len);
 	if (pair)
 	{
-		mdp = (stix_prim_mod_data_t*)STIX_RBT_VPTR(pair);
+		mdp = (stix_mod_data_t*)STIX_RBT_VPTR(pair);
 	}
 	else
 	{
-		stix_prim_mod_data_t md;
-		stix_prim_mod_load_t load = STIX_NULL;
-
-		/* maximum module name length is STIX_MOD_NAME_LEN_MAX. 
-		 * 16 is decomposed to 14 + 1 + 1.
-		 *   14 for stix_prim_mod_.
-		 *   1 for _ at the end when stix_prim_mod_xxx_ is attempted.
-		 *   1 for the terminating '\0'.
-		 */
-		stix_ooch_t buf[STIX_MOD_NAME_LEN_MAX + 16]; 
-
-		/* the terminating null isn't needed in buf here */
-		stix_copybchtooochars (buf, "stix_prim_mod_", 14); 
-
-		if (mod_name_len > STIX_COUNTOF(buf) - 16)
-		{
-			/* module name too long  */
-			stix->errnum = STIX_EINVAL; /* TODO: change the  error number to something more specific */
-			return STIX_NULL;
-		}
-
-		stix_copyoochars (&buf[14], name, mod_name_len);
-		buf[14 + mod_name_len] = '\0';
-
-#if defined(STIX_ENABLE_STATIC_MODULE)
-		/* attempt to find a statically linked module */
-
-/*TODO: CHANGE THIS PART */
-
-		/* TODO: binary search ... */
-		for (n = 0; n < STIX_COUNTOF(static_modtab); n++)
-		{
-			if (stix_compoocstr (static_modtab[n].modname, name) == 0) 
-			{
-				load = static_modtab[n].modload;
-				break;
-			}
-		}
-
-		if (n >= STIX_COUNTOF(static_modtab))
-		{
-			stix->errnum = STIX_ENOENT;
-			return STIX_NULL;
-		}
-
-		if (load)
-		{
-			/* found the module in the staic module table */
-
-			STIX_MEMSET (&md, 0, STIX_SIZEOF(md));
-			/* Note md.handle is STIX_NULL for a static module */
-
-			/* i copy-insert 'md' into the table before calling 'load'.
-			 * to pass the same address to load(), query(), etc */
-			pair = stix_rbt_insert (stix->modtab, name, mod_name_len, &md, STIX_SIZEOF(md));
-			if (pair == STIX_NULL)
-			{
-				stix->errnum = STIX_ESYSMEM;
-				return STIX_NULL;
-			}
-
-			mdp = (stix_mod_data_t*)STIX_RBT_VPTR(pair);
-			if (load (&mdp->mod, stix) <= -1)
-			{
-				stix_rbt_delete (stix->modtab, segs[0].ptr, segs[0].len);
-				return STIX_NULL;
-			}
-
-			goto done;
-		}
-#endif
-
-		/* attempt to find an external module */
-		STIX_MEMSET (&md, 0, STIX_SIZEOF(md));
-		if (stix->vmprim.mod_open && stix->vmprim.mod_getsym && stix->vmprim.mod_close)
-		{
-			md.handle = stix->vmprim.mod_open (stix, &buf[14]);
-		}
-
-		if (md.handle == STIX_NULL) 
-		{
-			stix->errnum = STIX_ENOENT; /* TODO: be more descriptive about the error */
-			return STIX_NULL;
-		}
-
-		/* attempt to get stix_prim_mod_xxx */
-		load = stix->vmprim.mod_getsym (stix, md.handle, buf);
-		if (!load) 
-		{
-			stix->errnum = STIX_ENOENT; /* TODO: be more descriptive about the error */
-			stix->vmprim.mod_close (stix, md.handle);
-			return STIX_NULL;
-		}
-
-		/* i copy-insert 'md' into the table before calling 'load'.
-		 * to pass the same address to load(), query(), etc */
-		pair = stix_rbt_insert (&stix->pmtable, (void*)name, mod_name_len, &md, STIX_SIZEOF(md));
-		if (pair == STIX_NULL)
-		{
-			stix->errnum = STIX_ESYSMEM;
-			stix->vmprim.mod_close (stix, md.handle);
-			return STIX_NULL;
-		}
-
-		mdp = (stix_prim_mod_data_t*)STIX_RBT_VPTR(pair);
-		if (load (stix, &mdp->mod) <= -1)
-		{
-			stix->errnum = STIX_ENOENT; /* TODO: proper error code and handling */
-			stix_rbt_delete (&stix->pmtable, name, mod_name_len);
-			stix->vmprim.mod_close (stix, mdp->handle);
-			return STIX_NULL;
-		}
-
-		/* the module loader must ensure to set a proper query handler */
-		STIX_ASSERT (mdp->mod.query != STIX_NULL);
+		mdp = open_prim_module (stix, name, mod_name_len);
+		if (!mdp) return STIX_NULL;
 	}
 
 done:
 	if ((handler = mdp->mod.query (stix, &mdp->mod, sep + 1)) == STIX_NULL) 
 	{
+		/* the primitive function is not found */
+		STIX_DEBUG3 (stix, "Cannot find a primitive function [%S] in a module [%.*S]\n", sep + 1, mod_name_len, name);
 		stix->errnum = STIX_ENOENT; /* TODO: proper error code and handling */
 		return STIX_NULL;
 	}
+
+	STIX_DEBUG4 (stix, "Found a primitive function [%S] in a module [%.*S] - %p\n", sep + 1, mod_name_len, name, handler);
 	return handler;
 }
 

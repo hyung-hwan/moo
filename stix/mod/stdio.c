@@ -31,12 +31,18 @@
 #include <stdio.h>
 #include <limits.h>
 
+typedef struct stdio_t stdio_t;
+struct stdio_t
+{
+	STIX_OBJ_HEADER;
+	FILE* fp;
+};
+
 static int prim_open (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_word_t rcv;
 	stix_oop_char_t name;
 	stix_oop_char_t mode;
-	FILE* fp;
+	stdio_t* rcv;
 
 #if defined(STIX_OOCH_IS_UCH)
 	stix_oow_t ucslen, bcslen;
@@ -44,7 +50,7 @@ static int prim_open (stix_t* stix, stix_ooi_t nargs)
 	stix_bch_t modebuf[32]; /* TODO: dynamic-sized conversion?? */
 #endif
 
-	rcv = (stix_oop_word_t)STIX_STACK_GETRCV(stix, nargs);
+	rcv = (stdio_t*)STIX_STACK_GETRCV(stix, nargs);
 	name = (stix_oop_char_t)STIX_STACK_GETARG(stix, nargs, 0);
 	mode = (stix_oop_char_t)STIX_STACK_GETARG(stix, nargs, 1);
 
@@ -52,45 +58,46 @@ static int prim_open (stix_t* stix, stix_ooi_t nargs)
 /* TODO: error check on string conversion */
 	ucslen = STIX_OBJ_GET_SIZE(name);
 	bcslen = STIX_COUNTOF(namebuf) - 1;
-	stix_ucstoutf8 (name->slot, &ucslen, namebuf, &bcslen);
+	stix_oocstobcs (stix, name->slot, &ucslen, namebuf, &bcslen); /* TODO: error check */
 	namebuf[bcslen] = '\0';
 
 	ucslen = STIX_OBJ_GET_SIZE(mode);
 	bcslen = STIX_COUNTOF(modebuf) - 1;
-	stix_ucstoutf8 (mode->slot, &ucslen, modebuf, &bcslen);
+	stix_oocstobcs (stix, mode->slot, &ucslen, modebuf, &bcslen); /* TODO: error check */
 	modebuf[bcslen] = '\0';
 
-STIX_DEBUG2 (stix, "opening %s for %s\n", namebuf, modebuf);
-	fp = fopen (namebuf, modebuf);
+	rcv->fp = fopen (namebuf, modebuf);
 #else
-	fp = fopen (name->slot, mode->slot);
+	rcv->fp = fopen (name->slot, mode->slot);
 #endif
-	if (!fp) 
+	if (!rcv->fp) 
 	{
+STIX_DEBUG2 (stix, "cannot open %s for %s\n", namebuf, modebuf);
 		return -1;  /* TODO: return success with an object instead... */
 	}
 
-	rcv->slot[0] = (stix_oow_t)fp;
+STIX_DEBUG3 (stix, "opened %s for %s - %p\n", namebuf, modebuf, rcv->fp);
 	STIX_STACK_SETRETTORCV (stix, nargs);
 	return 1;
 }
 
 static int prim_close (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_word_t rcv;
+	stdio_t* rcv;
 
-	rcv = (stix_oop_word_t)STIX_STACK_GETRCV(stix, nargs);
-	if (rcv->slot[0])
+	rcv = (stdio_t*)STIX_STACK_GETRCV(stix, nargs);
+	if (rcv->fp)
 	{
-		fclose ((FILE*)rcv->slot[0]);
-		rcv->slot[0] = 0;
+STIX_DEBUG1 (stix, "closing %p\n", rcv->fp);
+		fclose (rcv->fp);
+		rcv->fp = NULL;
 	}
 
 	STIX_STACK_SETRETTORCV (stix, nargs);
 	return 1;
 }
 
-static int prim_write (stix_t* stix, stix_ooi_t nargs)
+static int prim_puts (stix_t* stix, stix_ooi_t nargs)
 {
 	/* return how many bytes have been written.. */
 
@@ -98,6 +105,12 @@ static int prim_write (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
+static int prim_newinstsize (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_ooi_t newinstsize = STIX_SIZEOF(stdio_t) - STIX_SIZEOF(stix_obj_t);
+	STIX_STACK_SETRET (stix, nargs, STIX_SMOOI_TO_OOP(newinstsize)); 
+	return 1;
+}
 /* ------------------------------------------------------------------------ */
 
 typedef struct fnctab_t fnctab_t;
@@ -109,14 +122,15 @@ struct fnctab_t
 
 static fnctab_t fnctab[] =
 {
-	{ "close",      prim_close     },
-	{ "open",       prim_open      },
-	{ "write",      prim_write     }
+	{ "close",       prim_close         },
+	{ "newInstSize", prim_newinstsize   },
+	{ "open",        prim_open          },
+	{ "puts",        prim_puts          }
 };
 
 /* ------------------------------------------------------------------------ */
 
-static stix_prim_impl_t query (stix_t* stix, stix_prim_mod_t* mod, const stix_ooch_t* name)
+static stix_prim_impl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* name)
 {
 	int left, right, mid, n;
 
@@ -150,13 +164,12 @@ static int sanity_check (stix_t* stix)
 }
 #endif
 
-static void unload (stix_t* stix, stix_prim_mod_t* mod)
+static void unload (stix_t* stix, stix_mod_t* mod)
 {
 	/* TODO: close all open handle?? */
 }
 
-
-int stix_prim_mod_stdio (stix_t* stix, stix_prim_mod_t* mod)
+int stix_mod_stdio (stix_t* stix, stix_mod_t* mod)
 {
 	mod->query = query;
 	mod->unload = unload; 
