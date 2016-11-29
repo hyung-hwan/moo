@@ -29,14 +29,14 @@
 #include <stix-utl.h>
 
 /* ------------------------------------------------------------------------ */
-static int prim_open (stix_t* stix, stix_ooi_t nargs)
+static int pf_open (stix_t* stix, stix_ooi_t nargs)
 {
 printf ("<<<<<<<<<<<SND OPEN>>>>>>>>>>>>>>>>>>\n");
 	STIX_STACK_POPS (stix, nargs);
 	return 1;
 }
 
-static int prim_close (stix_t* stix, stix_ooi_t nargs)
+static int pf_close (stix_t* stix, stix_ooi_t nargs)
 {
 printf ("<<<<<<<<<<<<<<<<<<<<SND CLOSE>>>>>>>>>>>>>>>>>>>>>>\n");
 	STIX_STACK_POPS (stix, nargs);
@@ -47,19 +47,19 @@ typedef struct fnctab_t fnctab_t;
 struct fnctab_t
 {
 	const stix_bch_t* name;
-	stix_prim_impl_t handler;
+	stix_pfimpl_t handler;
 };
 
 static fnctab_t fnctab[] =
 {
-	{ "close",      prim_close },
-	{ "open",       prim_open  }
+	{ "close",      pf_close },
+	{ "open",       pf_open  }
 };
 
 
 /* ------------------------------------------------------------------------ */
 
-static stix_prim_impl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* name)
+static stix_pfimpl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* name)
 {
 	int left, right, mid, n;
 

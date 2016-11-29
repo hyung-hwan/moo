@@ -90,6 +90,7 @@ static struct voca_t
 	{  9, { 'e','x','c','e','p','t','i','o','n'                           } },
 	{  7, { '#','e','x','t','e','n','d'                                   } },
 	{  5, { 'f','a','l','s','e'                                           } },
+	{  4, { 'f','r','o','m'                                               } },
 	{  9, { '#','h','a','l','f','w','o','r','d'                           } },
 	{  8, { '#','i','n','c','l','u','d','e'                               } },
 	{  7, { '#','l','i','w','o','r','d'                                   } },
@@ -126,6 +127,7 @@ enum voca_id_t
 	VOCA_EXCEPTION,
 	VOCA_EXTEND,
 	VOCA_FALSE,
+	VOCA_FROM,
 	VOCA_HALFWORD,
 	VOCA_INCLUDE,
 	VOCA_LIWORD,
@@ -254,9 +256,10 @@ static STIX_INLINE int is_closing_char (stix_ooci_t c)
 	}
 }
 
-static STIX_INLINE int is_word (const stix_oocs_t* ucs, voca_id_t id)
+static STIX_INLINE int is_word (const stix_oocs_t* oocs, voca_id_t id)
 {
-	return ucs->len == vocas[id].len && stix_equalchars(ucs->ptr, vocas[id].str, vocas[id].len);
+	return oocs->len == vocas[id].len && 
+	       stix_equaloochars(oocs->ptr, vocas[id].str, vocas[id].len);
 }
 
 static int is_reserved_word (const stix_oocs_t* ucs)
@@ -547,7 +550,7 @@ static stix_oop_t string_to_num (stix_t* stix, stix_oocs_t* str, int radixed)
 static STIX_INLINE int does_token_name_match (stix_t* stix, voca_id_t id)
 {
 	return TOKEN_NAME_LEN(stix) == vocas[id].len &&
-	       stix_equalchars(TOKEN_NAME_PTR(stix), vocas[id].str, vocas[id].len);
+	       stix_equaloochars(TOKEN_NAME_PTR(stix), vocas[id].str, vocas[id].len);
 }
 
 static STIX_INLINE int is_token_symbol (stix_t* stix, voca_id_t id)
@@ -1929,7 +1932,7 @@ static int add_string_literal (stix_t* stix, const stix_oocs_t* str, stix_oow_t*
 
 		if (STIX_CLASSOF(stix, lit) == stix->_string && 
 		    STIX_OBJ_GET_SIZE(lit) == str->len &&
-		    stix_equalchars(((stix_oop_char_t)lit)->slot, str->ptr, str->len)) 
+		    stix_equaloochars(((stix_oop_char_t)lit)->slot, str->ptr, str->len)) 
 		{
 			*index = i;
 			return 0;
@@ -2704,7 +2707,7 @@ static int compile_method_primitive (stix_t* stix)
 	 * method-primitive := "<"  "primitive:" integer ">" |
 	 *                     "<"  "exception" ">"
 	 */
-	stix_ooi_t prim_no;
+	stix_ooi_t pfnum;
 	const stix_ooch_t* ptr, * end;
 
 	if (!is_token_binary_selector(stix, VOCA_LT)) 
@@ -2723,20 +2726,20 @@ static int compile_method_primitive (stix_t* stix)
 	/*TODO: more checks the validity of the primitive number. support number with radix and so on support more extensive syntax. support primitive name, not number*/
 				ptr = TOKEN_NAME_PTR(stix);
 				end = ptr + TOKEN_NAME_LEN(stix);
-				prim_no = 0;
+				pfnum = 0;
 				while (ptr < end && is_digitchar(*ptr)) 
 				{
-					prim_no = prim_no * 10 + (*ptr - '0');
-					if (!STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(prim_no))
+					pfnum = pfnum * 10 + (*ptr - '0');
+					if (!STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
 					{
-						set_syntax_error (stix, STIX_SYNERR_PRIMNO, TOKEN_LOC(stix), TOKEN_NAME(stix));
+						set_syntax_error (stix, STIX_SYNERR_PFNUM, TOKEN_LOC(stix), TOKEN_NAME(stix));
 						return -1;
 					}
 
 					ptr++;
 				}
 
-				stix->c->mth.prim_no = prim_no;
+				stix->c->mth.pfnum = pfnum;
 				break;
 
 			case STIX_IOTOK_SYMLIT:
@@ -2747,11 +2750,12 @@ static int compile_method_primitive (stix_t* stix)
 				tptr = TOKEN_NAME_PTR(stix) + 1;
 				tlen = TOKEN_NAME_LEN(stix) - 1;
 
-				prim_no = stix_getprimno (stix, tptr, tlen);
-				if (prim_no <= -1)
+				/* attempt get a primitive function number by name */
+				pfnum = stix_getpfnum (stix, tptr, tlen);
+				if (pfnum <= -1)
 				{
 					const stix_ooch_t* us;
-					/* the primitive is not found */
+					/* the primitive function is not found */
 					us = stix_findoochar (tptr, tlen, '_');
 					if (us > tptr && us < tptr + tlen - 1)
 					{
@@ -2761,23 +2765,24 @@ static int compile_method_primitive (stix_t* stix)
 						if (add_symbol_literal(stix, TOKEN_NAME(stix), 1, &lit_idx) >= 0 &&
 						    STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx))
 						{
-							stix->c->mth.prim_type = 2; /* named primitive */
-							stix->c->mth.prim_no = lit_idx;
+							stix->c->mth.pftype = 2; /* named primitive */
+							stix->c->mth.pfnum = lit_idx;
 							break;
 						}
 					}
 
-					set_syntax_error (stix, STIX_SYNERR_PRIMNO, TOKEN_LOC(stix), TOKEN_NAME(stix));
+					/* wrong primitive number */
+					set_syntax_error (stix, STIX_SYNERR_PFID, TOKEN_LOC(stix), TOKEN_NAME(stix));
 					return -1;
 				}
-				else if (!STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(prim_no))
+				else if (!STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
 				{
-					set_syntax_error (stix, STIX_SYNERR_PRIMNO, TOKEN_LOC(stix), TOKEN_NAME(stix));
+					set_syntax_error (stix, STIX_SYNERR_PFID, TOKEN_LOC(stix), TOKEN_NAME(stix));
 					return -1;
 				}
 
-				stix->c->mth.prim_type = 1; 
-				stix->c->mth.prim_no = prim_no;
+				stix->c->mth.pftype = 1; 
+				stix->c->mth.pfnum = pfnum;
 				break;
 			}
 
@@ -2791,11 +2796,11 @@ static int compile_method_primitive (stix_t* stix)
 	{
 /* TODO: exception handler is supposed to be used by BlockContext on:do:. 
  *       it needs to check the number of arguments at least */
-		stix->c->mth.prim_type = 3;
+		stix->c->mth.pftype = 3;
 	}
 	else if (is_token_word(stix, VOCA_ENSURE))
 	{
-		stix->c->mth.prim_type = 4;
+		stix->c->mth.pftype = 4;
 	}
 	else
 	{
@@ -2835,7 +2840,8 @@ static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_
 
 		dot = stix_findoochar (name->ptr, name->len, '.');
 		STIX_ASSERT (dot != STIX_NULL);
-		if (dot - (const stix_ooch_t*)name->ptr == 4 && stix_equalchars(name->ptr, vocas[VOCA_SELF].str, 4))
+		if (dot - (const stix_ooch_t*)name->ptr == 4 && 
+		    stix_equaloochars(name->ptr, vocas[VOCA_SELF].str, 4))
 		{
 			/* the dotted name begins with self. */
 			dot = stix_findoochar (dot + 1, name->len - 5, '.');
@@ -4229,7 +4235,7 @@ static int add_compiled_method (stix_t* stix)
 	preamble_code = STIX_METHOD_PREAMBLE_NONE;
 	preamble_index = 0;
 
-	if (stix->c->mth.prim_type <= 0)
+	if (stix->c->mth.pftype <= 0)
 	{
 		/* no primitive is set */
 		if (stix->c->mth.code.len <= 0)
@@ -4330,24 +4336,24 @@ static int add_compiled_method (stix_t* stix)
 			}
 		}
 	}
-	else if (stix->c->mth.prim_type == 1)
+	else if (stix->c->mth.pftype == 1)
 	{
 		preamble_code = STIX_METHOD_PREAMBLE_PRIMITIVE;
-		preamble_index = stix->c->mth.prim_no;
+		preamble_index = stix->c->mth.pfnum;
 	}
-	else if (stix->c->mth.prim_type == 2)
+	else if (stix->c->mth.pftype == 2)
 	{
 		preamble_code = STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE;
-		preamble_index = stix->c->mth.prim_no;
+		preamble_index = stix->c->mth.pfnum;
 	}
-	else if (stix->c->mth.prim_type == 3)
+	else if (stix->c->mth.pftype == 3)
 	{
 		preamble_code = STIX_METHOD_PREAMBLE_EXCEPTION;
 		preamble_index = 0;
 	}
 	else 
 	{
-		STIX_ASSERT (stix->c->mth.prim_type == 4);
+		STIX_ASSERT (stix->c->mth.pftype == 4);
 		preamble_code = STIX_METHOD_PREAMBLE_ENSURE;
 		preamble_index = 0;
 	}
@@ -4404,8 +4410,8 @@ static int compile_method_definition (stix_t* stix)
 	stix->c->mth.literal_count = 0;
 	stix->c->mth.balit_count = 0;
 	stix->c->mth.arlit_count = 0;
-	stix->c->mth.prim_type = 0;
-	stix->c->mth.prim_no = 0;
+	stix->c->mth.pftype = 0;
+	stix->c->mth.pfnum = 0;
 	stix->c->mth.blk_depth = 0;
 	stix->c->mth.code.len = 0;
 
@@ -4562,9 +4568,11 @@ static int make_defined_class (stix_t* stix)
 static int __compile_class_definition (stix_t* stix, int extend)
 {
 	/* 
-	 * class-definition := #class class-modifier? "{" class-body "}"
+	 * class-definition := #class class-modifier? class-name  (class-body | class-module-import)
+	 *
 	 * class-modifier := "(" (#byte | #character | #word | #pointer)? ")"
-	 * class-body := variable-definition* method-definition*
+	 * class-body := "{" variable-definition* method-definition* "}"
+	 * class-module-import := from "module-name-string"
 	 * 
 	 * variable-definition := (#dcl | #declare) variable-modifier? variable-list "."
 	 * variable-modifier := "(" (#class | #classinst)? ")"
@@ -4573,8 +4581,12 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	 * method-definition := (#mth | #method) method-modifier? method-actual-definition
 	 * method-modifier := "(" (#class | #instance)? ")"
 	 * method-actual-definition := method-name "{" method-tempraries? method-primitive? method-statements* "}"
+	 *
+	 * NOTE: when extending a class, class-module-import and variable-definition are not allowed.
 	 */
 	stix_oop_association_t ass;
+	stix_ooch_t modname[STIX_MOD_NAME_LEN_MAX + 1];
+	stix_oow_t modnamelen = 0;
 
 	if (!extend && TOKEN_TYPE(stix) == STIX_IOTOK_LPAREN)
 	{
@@ -4792,7 +4804,27 @@ static int __compile_class_definition (stix_t* stix, int extend)
 				return -1;
 			}
 		}
-		
+
+		if (is_token_word (stix, VOCA_FROM))
+		{
+			GET_TOKEN (stix);
+			if (TOKEN_TYPE(stix) != STIX_IOTOK_STRLIT)
+			{
+				set_syntax_error (stix, STIX_SYNERR_STRING, TOKEN_LOC(stix), TOKEN_NAME(stix));
+				return -1;
+			}
+
+			if (TOKEN_NAME_LEN(stix) < 1 || TOKEN_NAME_LEN(stix) > STIX_MOD_NAME_LEN_MAX)
+			{
+				set_syntax_error (stix, STIX_SYNERR_MODNAME, TOKEN_LOC(stix), TOKEN_NAME(stix));
+				return -1;
+			}
+
+			modnamelen = TOKEN_NAME_LEN(stix);
+			stix_copyoochars (modname, TOKEN_NAME_PTR(stix), modnamelen);
+
+			GET_TOKEN (stix);
+		}
 	}
 
 	if (TOKEN_TYPE(stix) != STIX_IOTOK_LBRACE)
@@ -4895,6 +4927,11 @@ static int __compile_class_definition (stix_t* stix, int extend)
 		}
 
 		if (make_defined_class(stix) <= -1) return -1;
+
+		if (modnamelen > 0)
+		{
+			if (stix_importmod (stix, (stix_oop_t)stix->c->cls.self_oop, modname, modnamelen) <= -1) return -1;
+		}
 	}
 
 	while (is_token_symbol(stix, VOCA_MTH) || is_token_symbol(stix, VOCA_METHOD))

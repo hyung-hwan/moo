@@ -109,7 +109,7 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 		STIX_ASSERT (STIX_CLASSOF(stix,ass->key) == stix->_symbol);
 
 		if (STIX_OBJ_GET_SIZE(key) == STIX_OBJ_GET_SIZE(ass->key) &&
-		    stix_equalchars (key->slot, ((stix_oop_char_t)ass->key)->slot, STIX_OBJ_GET_SIZE(key))) 
+		    stix_equaloochars (key->slot, ((stix_oop_char_t)ass->key)->slot, STIX_OBJ_GET_SIZE(key))) 
 		{
 			/* the value of STIX_NULL indicates no insertion or update. */
 			if (value) ass->value = value; /* update */
@@ -213,7 +213,7 @@ static stix_oop_association_t lookup (stix_t* stix, stix_oop_set_t dic, const st
 		STIX_ASSERT (STIX_CLASSOF(stix,ass->key) == stix->_symbol);
 
 		if (name->len == STIX_OBJ_GET_SIZE(ass->key) &&
-		    stix_equalchars(name->ptr, ((stix_oop_char_t)ass->key)->slot, name->len)) 
+		    stix_equaloochars(name->ptr, ((stix_oop_char_t)ass->key)->slot, name->len)) 
 		{
 			return ass;
 		}

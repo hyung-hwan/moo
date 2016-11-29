@@ -44,7 +44,19 @@ stix_oow_t stix_hashuchars (const stix_uch_t* ptr, stix_oow_t len)
 	return stix_hashbytes ((const stix_oob_t *)ptr, len * STIX_SIZEOF(*ptr));
 }
 
-int stix_equalchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_oow_t len)
+int stix_equaluchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_oow_t len)
+{
+	stix_oow_t i;
+
+	for (i = 0; i < len; i++)
+	{
+		if (str1[i] != str2[i]) return 0;
+	}
+
+	return 1;
+}
+
+int stix_equalbchars (const stix_bch_t* str1, const stix_bch_t* str2, stix_oow_t len)
 {
 	stix_oow_t i;
 

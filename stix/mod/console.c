@@ -48,7 +48,7 @@ struct console_t
 };
 /* ------------------------------------------------------------------------ */
 
-static int prim_open (stix_t* stix, stix_ooi_t nargs)
+static int pf_open (stix_t* stix, stix_ooi_t nargs)
 {
 #if defined(_WIN32)
 	HANDLE h;
@@ -123,7 +123,7 @@ static int prim_open (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int prim_close (stix_t* stix, stix_ooi_t nargs)
+static int pf_close (stix_t* stix, stix_ooi_t nargs)
 {
 #if defined(_WIN32)
 	HANDLE h;
@@ -142,7 +142,7 @@ static int prim_close (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int prim_write (stix_t* stix, stix_ooi_t nargs)
+static int pf_write (stix_t* stix, stix_ooi_t nargs)
 {
 	console_t* con;
 	stix_oop_char_t oomsg;
@@ -185,7 +185,7 @@ static int prim_write (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int prim_clear (stix_t* stix, stix_ooi_t nargs)
+static int pf_clear (stix_t* stix, stix_ooi_t nargs)
 {
 	console_t* con;
 
@@ -197,7 +197,7 @@ static int prim_clear (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int prim_setcursor (stix_t* stix, stix_ooi_t nargs)
+static int pf_setcursor (stix_t* stix, stix_ooi_t nargs)
 {
 	console_t* con;
 	stix_oop_oop_t point;
@@ -221,7 +221,7 @@ static int prim_setcursor (stix_t* stix, stix_ooi_t nargs)
 
 
 #if 0
-static int prim_setcursorto (stix_t* stix, stix_ooi_t nargs)
+static int pf_setcursorto (stix_t* stix, stix_ooi_t nargs)
 {
 	console_t* con;
 	stix_oop_oop_t point;
@@ -253,21 +253,21 @@ typedef struct fnctab_t fnctab_t;
 struct fnctab_t
 {
 	const stix_bch_t* name;
-	stix_prim_impl_t handler;
+	stix_pfimpl_t handler;
 };
 
 static fnctab_t fnctab[] =
 {
-	{ "clear",      prim_clear     },
-	{ "close",      prim_close     },
-	{ "open",       prim_open      },
-	{ "setcursor",  prim_setcursor },
-	{ "write",      prim_write     },
+	{ "clear",      pf_clear     },
+	{ "close",      pf_close     },
+	{ "open",       pf_open      },
+	{ "setcursor",  pf_setcursor },
+	{ "write",      pf_write     },
 };
 
 /* ------------------------------------------------------------------------ */
 
-static stix_prim_impl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* name)
+static stix_pfimpl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* name)
 {
 	int left, right, mid, n;
 
@@ -311,11 +311,11 @@ int stix_mod_console (stix_t* stix, stix_mod_t* mod)
 	c = stix_findclass (stix, "Console");
 	if (!c) c = stix_makeclass (stix, "Console", "x y"); <- provides an API to create a simple class
 
-	stix_addmethod (stix, c, "open",         prim_open);
-	stix_addmethod (stix, c, "close:",       prim_close);
-	stix_addmethod (stix, c, "setCursorTo:", prim_setcursor);
-	stix_addmethod (stix, c, "clear", prim_clear );
-	stix_addmethod (stix, c, "write", prim_write );
+	stix_addmethod (stix, c, "open",         pf_open);
+	stix_addmethod (stix, c, "close:",       pf_close);
+	stix_addmethod (stix, c, "setCursorTo:", pf_setcursor);
+	stix_addmethod (stix, c, "clear", pf_clear );
+	stix_addmethod (stix, c, "write", pf_write );
 
 
 

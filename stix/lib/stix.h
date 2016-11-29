@@ -721,11 +721,15 @@ struct stix_cb_t
 
 
 /* =========================================================================
- * PRIMITIVE MODULE MANIPULATION
+ * MODULE MANIPULATION
  * ========================================================================= */
 #define STIX_MOD_NAME_LEN_MAX 120
 
-typedef int (*stix_prim_impl_t) (stix_t* stix, stix_ooi_t nargs);
+/* primitive function implementation type */
+typedef int (*stix_pfimpl_t) (
+	stix_t*    stix,
+	stix_ooi_t nargs
+);
 
 typedef struct stix_mod_t stix_mod_t;
 
@@ -734,7 +738,13 @@ typedef int (*stix_mod_load_t) (
 	stix_mod_t* mod
 );
 
-typedef stix_prim_impl_t (*stix_mod_query_t) (
+typedef int (*stix_mod_import_t) (
+	stix_t*           stix,
+	stix_mod_t*       mod,
+	stix_oop_t        _class
+);
+
+typedef stix_pfimpl_t (*stix_mod_query_t) (
 	stix_t*           stix,
 	stix_mod_t*       mod,
 	const stix_uch_t* name
@@ -747,16 +757,18 @@ typedef void (*stix_mod_unload_t) (
 
 struct stix_mod_t
 {
-	stix_mod_unload_t unload;
+	stix_mod_import_t import;
 	stix_mod_query_t  query;
+	stix_mod_unload_t unload;
 	void*             ctx;
 };
 
 struct stix_mod_data_t 
 {
-	stix_ooch_t name[STIX_MOD_NAME_LEN_MAX + 1];
-	void*       handle;
-	stix_mod_t  mod;
+	stix_ooch_t      name[STIX_MOD_NAME_LEN_MAX + 1];
+	void*            handle;
+	stix_rbt_pair_t* pair; /* internal backreference to stix->modtab */
+	stix_mod_t       mod;
 };
 typedef struct stix_mod_data_t stix_mod_data_t;
 
@@ -785,7 +797,7 @@ struct stix_t
 	stix_vmprim_t vmprim;
 
 	stix_cb_t* cblist;
-	stix_rbt_t pmtable; /* primitive module table */
+	stix_rbt_t modtab; /* primitive module table */
 
 	struct
 	{

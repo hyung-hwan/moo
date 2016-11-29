@@ -106,7 +106,7 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_ooch_t* ptr, sti
 		STIX_ASSERT (STIX_CLASSOF(stix,symbol) == (stix_oop_t)stix->_symbol);
 
 		if (len == STIX_OBJ_GET_SIZE(symbol) &&
-		    stix_equalchars (ptr, symbol->slot, len))
+		    stix_equaloochars (ptr, symbol->slot, len))
 		{
 			return (stix_oop_t)symbol;
 		}

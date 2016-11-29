@@ -405,7 +405,9 @@ enum stix_synerrnum_t
 	STIX_SYNERR_BLKTMPRFLOOD,  /* too many block temporaries */
 	STIX_SYNERR_BLKARGFLOOD,   /* too many block arguments */
 	STIX_SYNERR_BLKFLOOD,      /* too large block */
-	STIX_SYNERR_PRIMNO,        /* wrong primitive number */
+	STIX_SYNERR_PFNUM,         /* wrong primitive number */
+	STIX_SYNERR_PFID,          /* wrong primitive identifier */
+	STIX_SYNERR_MODNAME,       /* wrong module name */
 	STIX_SYNERR_INCLUDE,       /* #include error */
 	STIX_SYNERR_NAMESPACE,     /* wrong namespace name */
 	STIX_SYNERR_POOLDIC,       /* wrong pool dictionary */
@@ -557,9 +559,9 @@ struct stix_compiler_t
 		stix_oow_t arlit_capa;
 
 		/* 0 for no primitive, 1 for a normal primitive, 2 for a named primitive */
-		int prim_type;
-		/* primitive number */
-		stix_ooi_t prim_no; 
+		int pftype;
+		/* primitive function number */
+		stix_ooi_t pfnum; 
 
 		/* block depth */
 		stix_oow_t blk_depth;
@@ -1236,13 +1238,47 @@ STIX_EXPORT void stix_getsynerr (
 /* exec.c                                                                    */
 /* ========================================================================= */
 
-int stix_getprimno (
+int stix_getpfnum (
 	stix_t*            stix,
 	const stix_ooch_t* ptr,
 	stix_oow_t         len
 );
 
-/* TODO: remove debugging functions */
+
+/* ========================================================================= */
+/* stix.c                                                                    */
+/* ========================================================================= */
+
+stix_mod_data_t* stix_openmod (
+	stix_t*            stix,
+	const stix_ooch_t* name,
+	stix_oow_t         namelen
+);
+
+void stix_closemod (
+	stix_t*            stix,
+	stix_mod_data_t*   mdp
+);
+
+int stix_importmod (
+	stix_t*            stix,
+	stix_oop_t         _class,
+	const stix_ooch_t* name,
+	stix_oow_t         len
+);
+
+/*
+ * The stix_querymodforpfimpl() function finds a primitive function in modules
+ * with a full primitive identifier.
+ */
+stix_pfimpl_t stix_querymodforpfimpl (
+	stix_t*            stix,
+	const stix_ooch_t* pfid,
+	stix_oow_t         pfidlen
+);
+
+
+/* TODO: remove the following debugging functions */
 /* ========================================================================= */
 /* debug.c                                                                   */
 /* ========================================================================= */

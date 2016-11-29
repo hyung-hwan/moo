@@ -35,6 +35,7 @@ extern "C" {
 
 #if defined(STIX_OOCH_IS_UCH)
 #	define stix_hashchars(ptr,len) stix_hashuchars(ptr,len)
+#	define stix_equaloochars(str1,str2,len) stix_equaluchars(str1,str2,len)
 #	define stix_compoocbcstr(str1,str2) stix_compucbcstr(str1,str2)
 #	define stix_compoocstr(str1,str2) stix_compucstr(str1,str2)
 #	define stix_copyoochars(dst,src,len) stix_copyuchars(dst,src,len)
@@ -44,6 +45,7 @@ extern "C" {
 #	define stix_countoocstr(str) stix_countucstr(str)
 #else
 #	define stix_hashchars(ptr,len) stix_hashbchars(ptr,len)
+#	define stix_equaloochars(str1,str2,len) stix_equalbchars(str1,str2,len)
 #	define stix_compoocbcstr(str1,str2) stix_compbcstr(str1,str2)
 #	define stix_compoocstr(str1,str2) stix_compbcstr(str1,str2)
 #	define stix_copyoochars(dst,src,len) stix_copybchars(dst,src,len)
@@ -69,10 +71,19 @@ STIX_EXPORT stix_oow_t stix_hashuchars (
 
 #define stix_hashbchars(ptr,len) stix_hashbytes(ptr,len)
 
-
-STIX_EXPORT int stix_equalchars (
+/**
+ * The stix_equaluchars() function determines equality of two strings
+ * of the same length \a len.
+ */
+STIX_EXPORT int stix_equaluchars (
 	const stix_uch_t* str1,
 	const stix_uch_t* str2,
+	stix_oow_t        len
+);
+
+STIX_EXPORT int stix_equalbchars (
+	const stix_bch_t* str1,
+	const stix_bch_t* str2,
 	stix_oow_t        len
 );
 

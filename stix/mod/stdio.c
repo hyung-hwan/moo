@@ -38,7 +38,7 @@ struct stdio_t
 	FILE* fp;
 };
 
-static int prim_open (stix_t* stix, stix_ooi_t nargs)
+static int pf_open (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_char_t name;
 	stix_oop_char_t mode;
@@ -81,7 +81,7 @@ STIX_DEBUG3 (stix, "opened %s for %s - %p\n", namebuf, modebuf, rcv->fp);
 	return 1;
 }
 
-static int prim_close (stix_t* stix, stix_ooi_t nargs)
+static int pf_close (stix_t* stix, stix_ooi_t nargs)
 {
 	stdio_t* rcv;
 
@@ -97,7 +97,7 @@ STIX_DEBUG1 (stix, "closing %p\n", rcv->fp);
 	return 1;
 }
 
-static int prim_puts (stix_t* stix, stix_ooi_t nargs)
+static int pf_puts (stix_t* stix, stix_ooi_t nargs)
 {
 	/* return how many bytes have been written.. */
 
@@ -105,7 +105,7 @@ static int prim_puts (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int prim_newinstsize (stix_t* stix, stix_ooi_t nargs)
+static int pf_newinstsize (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_ooi_t newinstsize = STIX_SIZEOF(stdio_t) - STIX_SIZEOF(stix_obj_t);
 	STIX_STACK_SETRET (stix, nargs, STIX_SMOOI_TO_OOP(newinstsize)); 
@@ -117,20 +117,25 @@ typedef struct fnctab_t fnctab_t;
 struct fnctab_t
 {
 	const stix_bch_t* name;
-	stix_prim_impl_t handler;
+	stix_pfimpl_t handler;
 };
 
 static fnctab_t fnctab[] =
 {
-	{ "close",       prim_close         },
-	{ "newInstSize", prim_newinstsize   },
-	{ "open",        prim_open          },
-	{ "puts",        prim_puts          }
+	{ "close",       pf_close         },
+	{ "newInstSize", pf_newinstsize   },
+	{ "open",        pf_open          },
+	{ "puts",        pf_puts          }
 };
 
 /* ------------------------------------------------------------------------ */
 
-static stix_prim_impl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* name)
+static int import (stix_t* stix, stix_mod_t* mod, stix_oop_t _class)
+{
+	return 0;
+}
+
+static stix_pfimpl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* name)
 {
 	int left, right, mid, n;
 
@@ -171,6 +176,7 @@ static void unload (stix_t* stix, stix_mod_t* mod)
 
 int stix_mod_stdio (stix_t* stix, stix_mod_t* mod)
 {
+	mod->import = import;
 	mod->query = query;
 	mod->unload = unload; 
 	mod->ctx = STIX_NULL;
@@ -183,11 +189,11 @@ int stix_mod_stdio (stix_t* stix, stix_mod_t* mod)
 	c = stix_findclass (stix, "Console");
 	if (!c) c = stix_makeclass (stix, "Console", "x y"); <- provides an API to create a simple class
 
-	stix_addmethod (stix, c, "open",         prim_open);
-	stix_addmethod (stix, c, "close:",       prim_close);
-	stix_addmethod (stix, c, "setCursorTo:", prim_setcursor);
-	stix_addmethod (stix, c, "clear", prim_clear );
-	stix_addmethod (stix, c, "write", prim_write );
+	stix_addmethod (stix, c, "open",         pf_open);
+	stix_addmethod (stix, c, "close:",       pf_close);
+	stix_addmethod (stix, c, "setCursorTo:", pf_setcursor);
+	stix_addmethod (stix, c, "clear", pf_clear );
+	stix_addmethod (stix, c, "write", pf_write );
 
 
 

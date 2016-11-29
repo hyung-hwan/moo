@@ -102,8 +102,8 @@ int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_oow_t heapsz, const stix_vm
 	stix->newheap = stix_makeheap (stix, heapsz);
 	if (!stix->newheap) goto oops;
 
-	if (stix_rbt_init (&stix->pmtable, mmgr, STIX_SIZEOF(stix_ooch_t), 1) <= -1) goto oops;
-	stix_rbt_setstyle (&stix->pmtable, stix_getrbtstyle(STIX_RBT_STYLE_INLINE_COPIERS));
+	if (stix_rbt_init (&stix->modtab, mmgr, STIX_SIZEOF(stix_ooch_t), 1) <= -1) goto oops;
+	stix_rbt_setstyle (&stix->modtab, stix_getrbtstyle(STIX_RBT_STYLE_INLINE_COPIERS));
 
 	fill_bigint_tables (stix);
 
@@ -120,19 +120,16 @@ oops:
 	return -1;
 }
 
-static stix_rbt_walk_t unload_primitive_module (stix_rbt_t* rbt, stix_rbt_pair_t* pair, void* ctx)
+static stix_rbt_walk_t unload_module (stix_rbt_t* rbt, stix_rbt_pair_t* pair, void* ctx)
 {
 	stix_t* stix = (stix_t*)ctx;
-	stix_mod_data_t* md;
+	stix_mod_data_t* mdp;
 
-	md = STIX_RBT_VPTR(pair);
-	if (md->mod.unload) md->mod.unload (stix, &md->mod);
-	if (md->handle) 
-	{
-		stix->vmprim.dl_close (stix, md->handle);
-		STIX_DEBUG2 (stix, "Closed a module [%S] - %p\n", md->name, md->handle);
-		md->handle = STIX_NULL;
-	}
+	mdp = STIX_RBT_VPTR(pair);
+	STIX_ASSERT (mdp != STIX_NULL);
+
+	mdp->pair = STIX_NULL; /* to prevent stix_closemod() from calling  stix_rbt_delete() */
+	stix_closemod (stix, mdp);
 
 	return STIX_RBT_WALK_FORWARD;
 }
@@ -160,8 +157,8 @@ void stix_fini (stix_t* stix)
 		if (cb->fini) cb->fini (stix);
 	}
 
-	stix_rbt_walk (&stix->pmtable, unload_primitive_module, stix);
-	stix_rbt_fini (&stix->pmtable);
+	stix_rbt_walk (&stix->modtab, unload_module, stix); /* unload all modules */
+	stix_rbt_fini (&stix->modtab);
 
 /* TOOD: persistency? storing objects to image file? */
 	stix_killheap (stix, stix->newheap);
@@ -363,10 +360,9 @@ void stix_freemem (stix_t* stix, void* ptr)
 	STIX_MMGR_FREE (stix->mmgr, ptr);
 }
 
-
-
 /* -------------------------------------------------------------------------- */
 
+/* TODO: remove RSRS code. so far, i find this not useful */
 stix_oop_t stix_makersrc (stix_t* stix, stix_oow_t v)
 {
 	stix_oop_t imm;
@@ -425,8 +421,264 @@ stix_oow_t stix_getrsrcval (stix_t* stix, stix_oop_t imm)
 
 /* -------------------------------------------------------------------------- */
 
+#define MOD_PREFIX "stix_mod_"
+#define MOD_PREFIX_LEN 9
+
+stix_mod_data_t* stix_openmod (stix_t* stix, const stix_ooch_t* name, stix_oow_t namelen)
+{
+	stix_rbt_pair_t* pair;
+	stix_mod_data_t* mdp;
+	stix_mod_data_t md;
+	stix_mod_load_t load = STIX_NULL;
+#if defined(STIX_ENABLE_STATIC_MODULE)
+	int n;
+#endif
+
+	/* maximum module name length is STIX_MOD_NAME_LEN_MAX. 
+	 *   MOD_PREFIX_LEN for MOD_PREFIX
+	 *   1 for _ at the end when stix_mod_xxx_ is attempted.
+	 *   1 for the terminating '\0'.
+	 */
+	stix_ooch_t buf[MOD_PREFIX_LEN + STIX_MOD_NAME_LEN_MAX + 1 + 1]; 
+
+	/* the terminating null isn't needed in buf here */
+	stix_copybchtooochars (buf, MOD_PREFIX, MOD_PREFIX_LEN); 
+
+	if (namelen > STIX_COUNTOF(buf) - (MOD_PREFIX_LEN + 1 + 1))
+	{
+		/* module name too long  */
+		stix->errnum = STIX_EINVAL; /* TODO: change the  error number to something more specific */
+		return STIX_NULL;
+	}
+
+	stix_copyoochars (&buf[MOD_PREFIX_LEN], name, namelen);
+	buf[MOD_PREFIX_LEN + namelen] = '\0';
+
+#if defined(STIX_ENABLE_STATIC_MODULE)
+	/* attempt to find a statically linked module */
+
+/*TODO: CHANGE THIS PART */
+
+	/* TODO: binary search ... */
+	for (n = 0; n < STIX_COUNTOF(static_modtab); n++)
+	{
+		if (stix_compoocstr (static_modtab[n].modname, name, name_len....) == 0) 
+		{
+			load = static_modtab[n].modload;
+			break;
+		}
+	}
+
+	if (n >= STIX_COUNTOF(static_modtab))
+	{
+		stix->errnum = STIX_ENOENT;
+		return STIX_NULL;
+	}
+
+	if (load)
+	{
+		/* found the module in the staic module table */
+
+		STIX_MEMSET (&md, 0, STIX_SIZEOF(md));
+		stix_copyoochars (md.name, name, namelen);
+		/* Note md.handle is STIX_NULL for a static module */
+
+		/* i copy-insert 'md' into the table before calling 'load'.
+		 * to pass the same address to load(), query(), etc */
+		pair = stix_rbt_insert (stix->modtab, name, namelen, &md, STIX_SIZEOF(md));
+		if (pair == STIX_NULL)
+		{
+			stix->errnum = STIX_ESYSMEM;
+			return STIX_NULL;
+		}
+
+		mdp = (stix_mod_data_t*)STIX_RBT_VPTR(pair);
+		if (load (&mdp->mod, stix) <= -1)
+		{
+			stix_rbt_delete (stix->modtab, segs[0].ptr, segs[0].len);
+			return STIX_NULL;
+		}
+
+		return mdp;
+	}
+#endif
+
+	/* attempt to find an external module */
+	STIX_MEMSET (&md, 0, STIX_SIZEOF(md));
+	stix_copyoochars (md.name, name, namelen);
+	if (stix->vmprim.dl_open && stix->vmprim.dl_getsym && stix->vmprim.dl_close)
+	{
+		md.handle = stix->vmprim.dl_open (stix, &buf[MOD_PREFIX_LEN]);
+	}
+
+	if (md.handle == STIX_NULL) 
+	{
+		STIX_DEBUG2 (stix, "Cannot open a module [%.*S]\n", namelen, name);
+		stix->errnum = STIX_ENOENT; /* TODO: be more descriptive about the error */
+		return STIX_NULL;
+	}
+
+	/* attempt to get stix_mod_xxx where xxx is the module name*/
+	load = stix->vmprim.dl_getsym (stix, md.handle, buf);
+	if (!load) 
+	{
+		STIX_DEBUG3 (stix, "Cannot get a module symbol [%S] in [%.*S]\n", buf, namelen, name);
+		stix->errnum = STIX_ENOENT; /* TODO: be more descriptive about the error */
+		stix->vmprim.dl_close (stix, md.handle);
+		return STIX_NULL;
+	}
+
+	/* i copy-insert 'md' into the table before calling 'load'.
+	 * to pass the same address to load(), query(), etc */
+	pair = stix_rbt_insert (&stix->modtab, (void*)name, namelen, &md, STIX_SIZEOF(md));
+	if (pair == STIX_NULL)
+	{
+		STIX_DEBUG2 (stix, "Cannot register a module [%.*S]\n", namelen, name);
+		stix->errnum = STIX_ESYSMEM;
+		stix->vmprim.dl_close (stix, md.handle);
+		return STIX_NULL;
+	}
+
+	mdp = (stix_mod_data_t*)STIX_RBT_VPTR(pair);
+	if (load (stix, &mdp->mod) <= -1)
+	{
+		STIX_DEBUG3 (stix, "Module function [%S] returned failure in [%.*S]\n", buf, namelen, name);
+		stix->errnum = STIX_ENOENT; /* TODO: proper error code and handling */
+		stix_rbt_delete (&stix->modtab, name, namelen);
+		stix->vmprim.dl_close (stix, mdp->handle);
+		return STIX_NULL;
+	}
+
+	mdp->pair = pair;
+
+	STIX_DEBUG2 (stix, "Opened a module [%S] - %p\n", mdp->name, mdp->handle);
+
+	/* the module loader must ensure to set a proper query handler */
+	STIX_ASSERT (mdp->mod.query != STIX_NULL);
+
+	return mdp;
+}
+
+void stix_closemod (stix_t* stix, stix_mod_data_t* mdp)
+{
+	if (mdp->mod.unload) mdp->mod.unload (stix, &mdp->mod);
+
+	if (mdp->handle) 
+	{
+		stix->vmprim.dl_close (stix, mdp->handle);
+		STIX_DEBUG2 (stix, "Closed a module [%S] - %p\n", mdp->name, mdp->handle);
+		mdp->handle = STIX_NULL;
+	}
+
+	if (mdp->pair)
+	{
+		/*mdp->pair = STIX_NULL;*/ /* this reset isn't needed as the area will get freed by stix_rbt_delete()) */
+		stix_rbt_delete (&stix->modtab, mdp->name, stix_countoocstr(mdp->name));
+	}
+}
+
+int stix_importmod (stix_t* stix, stix_oop_t _class, const stix_ooch_t* name, stix_oow_t len)
+{
+	stix_rbt_pair_t* pair;
+	stix_mod_data_t* mdp;
+	int r = 0;
+
+	pair = stix_rbt_search (&stix->modtab, name, len);
+	if (pair)
+	{
+		mdp = (stix_mod_data_t*)STIX_RBT_VPTR(pair);
+		STIX_ASSERT (mdp != STIX_NULL);
+	}
+	else
+	{
+		mdp = stix_openmod (stix, name, len);
+		if (!mdp) 
+		{
+			r = -1;
+			goto done;
+		}
+	}
+
+	if (!mdp->mod.import)
+	{
+		STIX_DEBUG1 (stix, "Cannot import module [%S] - importing not supported by the module\n", mdp->name);
+		stix->errnum = STIX_ENOIMPL;
+		r = -1;
+		goto done;
+	}
+
+	if (mdp->mod.import (stix, &mdp->mod, _class) <= -1)
+	{
+		STIX_DEBUG1 (stix, "Cannot import module [%S] - module's import() returned failure\n", mdp->name);
+		r = -1;
+		goto done;
+	}
+
+done:
+	if (!pair) 
+	{
+		/* clsoe the module if it has been opened in this function. */
+		stix_closemod (stix, mdp);
+	}
+
+	return r;
+}
+
+stix_pfimpl_t stix_querymodforpfimpl (stix_t* stix, const stix_ooch_t* pfid, stix_oow_t pfidlen)
+{
+	/* primitive function identifier
+	 *   _funcname
+	 *   modname_funcname
+	 */
+	stix_rbt_pair_t* pair;
+	stix_mod_data_t* mdp;
+	const stix_ooch_t* sep;
+
+	stix_oow_t mod_name_len;
+	stix_pfimpl_t handler;
+
+	sep = stix_findoochar (pfid, pfidlen, '_');
+	if (!sep)
+	{
+		/* i'm writing a conservative code here. the compiler should 
+		 * guarantee that an underscore is included in an primitive identifer.
+		 * what if the compiler is broken? imagine a buggy compiler rewritten
+		 * in stix itself? */
+		STIX_DEBUG2 (stix, "Internal error - no underscore in a primitive function identifier [%.*S] - buggy compiler?\n", pfidlen, pfid);
+		stix->errnum = STIX_EINTERN;
+		return STIX_NULL;
+	}
+
+	mod_name_len = sep - pfid;
+
+	pair = stix_rbt_search (&stix->modtab, pfid, mod_name_len);
+	if (pair)
+	{
+		mdp = (stix_mod_data_t*)STIX_RBT_VPTR(pair);
+		STIX_ASSERT (mdp != STIX_NULL);
+	}
+	else
+	{
+		mdp = stix_openmod (stix, pfid, mod_name_len);
+		if (!mdp) return STIX_NULL;
+	}
+
+	if ((handler = mdp->mod.query (stix, &mdp->mod, sep + 1)) == STIX_NULL) 
+	{
+		/* the primitive function is not found. keep the module open */
+		STIX_DEBUG2 (stix, "Cannot find a primitive function [%S] in a module [%S]\n", sep + 1, mdp->name);
+		stix->errnum = STIX_ENOENT; /* TODO: proper error code and handling */
+		return STIX_NULL;
+	}
+
+	STIX_DEBUG3 (stix, "Found a primitive function [%S] in a module [%S] - %p\n", sep + 1, mdp->name, handler);
+	return handler;
+}
+
+/* -------------------------------------------------------------------------- */
+
 /* add a new primitive method */
-int stix_addmethod (stix_t* stix, stix_oop_t _class, const stix_ooch_t* name, stix_prim_impl_t func)
+int stix_addmethod (stix_t* stix, stix_oop_t _class, const stix_ooch_t* name, stix_pfimpl_t func)
 {
 	/* NOTE: this function is a subset of add_compiled_method() in comp.c */
 

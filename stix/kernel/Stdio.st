@@ -1,6 +1,4 @@
-## #class(#byte) Stdio(Object) from 'stdio'.
-
-#class(#byte) Stdio(Object)
+#class(#byte) Stdio(Object) from 'stdio'
 {
 	#method(#class) _newInstSize
 	{
