@@ -128,10 +128,18 @@ static fnctab_t fnctab[] =
 	{ "puts",        pf_puts          }
 };
 
+
+static stix_ooch_t voca_open_for[] = { 'o','p','e','n',':','f','o','r',':','\0' };
+static stix_ooch_t voca_open[] = { 'o','p','e','n','\0' };
+static stix_ooch_t voca_close[] = { 'c','l','o','s','e','\0' };
 /* ------------------------------------------------------------------------ */
 
 static int import (stix_t* stix, stix_mod_t* mod, stix_oop_t _class)
 {
+stix_pushtmp (stix, &_class);
+	stix_genpfmethod (stix, mod, _class, STIX_METHOD_INSTANCE, voca_open_for, voca_open);
+	stix_genpfmethod (stix, mod, _class, STIX_METHOD_CLASS, voca_close, voca_close);
+stix_poptmp (stix);
 	return 0;
 }
 
@@ -185,18 +193,6 @@ int stix_mod_stdio (stix_t* stix, stix_mod_t* mod)
 
 #include 'Stix.st'.
 #import 'Console'.
-
-	c = stix_findclass (stix, "Console");
-	if (!c) c = stix_makeclass (stix, "Console", "x y"); <- provides an API to create a simple class
-
-	stix_addmethod (stix, c, "open",         pf_open);
-	stix_addmethod (stix, c, "close:",       pf_close);
-	stix_addmethod (stix, c, "setCursorTo:", pf_setcursor);
-	stix_addmethod (stix, c, "clear", pf_clear );
-	stix_addmethod (stix, c, "write", pf_write );
-
-
-
 
 /* GRAMMER ENHANCEMENT */
 fun abc (a, b, c) <----- this style, register C style method

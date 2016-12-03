@@ -411,7 +411,7 @@ static void log_write (stix_t* stix, stix_oow_t mask, const stix_ooch_t* msg, st
 	struct tm tm, *tmp;
 	time_t now;
 
-/*if (mask & STIX_LOG_GC) return;*/ /* don't show gc logs */
+if (mask & STIX_LOG_GC) return; /* don't show gc logs */
 
 /* TODO: beautify the log message.
  *       do classification based on mask. */

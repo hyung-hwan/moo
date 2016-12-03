@@ -52,6 +52,7 @@ enum stix_errnum_t
 	STIX_ESYSMEM, /**< insufficient system memory */
 	STIX_EOOMEM,  /**< insufficient object memory */
 	STIX_EINVAL,  /**< invalid parameter or data */
+	STIX_EEXIST,  /**< existing/duplicate data */
 	STIX_ETOOBIG, /**< data too large */
 	STIX_EMSGSND, /**< message sending error. even doesNotUnderstand: is not found */
 	STIX_ERANGE,  /**< range error. overflow and underflow */
@@ -158,6 +159,17 @@ typedef struct stix_obj_word_t*     stix_oop_word_t;
 
 #endif
 
+
+
+enum stix_method_type_t
+{
+	STIX_METHOD_INSTANCE,
+	STIX_METHOD_CLASS,
+
+	/* --------------------------- */
+	STIX_METHOD_TYPE_COUNT
+};
+typedef enum stix_method_type_t stix_method_type_t;
 
 /* 
  * OOP encoding
@@ -424,13 +436,11 @@ struct stix_class_t
 
 	/* [0] - instance methods, MethodDictionary
 	 * [1] - class methods, MethodDictionary */
-	stix_oop_set_t  mthdic[2];      
+	stix_oop_set_t  mthdic[STIX_METHOD_TYPE_COUNT];      
 
 	/* indexed part afterwards */
 	stix_oop_t      slot[1];   /* class instance variables and class variables. */
 };
-#define STIX_CLASS_MTHDIC_INSTANCE 0
-#define STIX_CLASS_MTHDIC_CLASS    1
 
 #define STIX_ASSOCIATION_NAMED_INSTVARS 2
 typedef struct stix_association_t stix_association_t;
@@ -757,6 +767,7 @@ typedef void (*stix_mod_unload_t) (
 
 struct stix_mod_t
 {
+	const stix_ooch_t name[STIX_MOD_NAME_LEN_MAX + 1];
 	stix_mod_import_t import;
 	stix_mod_query_t  query;
 	stix_mod_unload_t unload;
@@ -765,7 +776,6 @@ struct stix_mod_t
 
 struct stix_mod_data_t 
 {
-	stix_ooch_t      name[STIX_MOD_NAME_LEN_MAX + 1];
 	void*            handle;
 	stix_rbt_pair_t* pair; /* internal backreference to stix->modtab */
 	stix_mod_t       mod;
@@ -1081,10 +1091,6 @@ STIX_EXPORT void stix_gc (
 	stix_t* stix
 );
 
-STIX_EXPORT stix_oow_t stix_getpayloadbytes (
-	stix_t*    stix,
-	stix_oop_t oop
-);
 
 /**
  * The stix_instantiate() function creates a new object of the class 
@@ -1176,6 +1182,22 @@ STIX_EXPORT void stix_freemem (
 );
 
 
+/* =========================================================================
+ * PRIMITIVE METHOD MANIPULATION
+ * ========================================================================= */
+STIX_EXPORT int stix_genpfmethod (
+	stix_t*            stix,
+	stix_mod_t*        mod,
+	stix_oop_t         _class,
+	stix_method_type_t type,
+	const stix_ooch_t* mthname,
+	const stix_ooch_t* name
+);
+
+/* =========================================================================
+ * STRING ENCODING CONVERSION
+ * ========================================================================= */
+
 #if defined(STIX_OOCH_IS_UCH)
 #	define stix_oocstobcs(stix,oocs,oocslen,bcs,bcslen) stix_ucstobcs(stix,oocs,oocslen,bcs,bcslen)
 #	define stix_bcstooocs(stix,bcs,bcslen,oocs,oocslen) stix_bcstoucs(stix,bcs,bcslen,oocs,oocslen)
@@ -1200,6 +1222,11 @@ STIX_EXPORT int stix_ucstobcs (
 	stix_bch_t*       bcs,
 	stix_oow_t*       bcslen
 );
+
+
+/* =========================================================================
+ * STIX VM LOGGING
+ * ========================================================================= */
 
 STIX_EXPORT stix_ooi_t stix_logbfmt (
 	stix_t*           stix,

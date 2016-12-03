@@ -992,13 +992,13 @@ static stix_oop_method_t find_method (stix_t* stix, stix_oop_t receiver, const s
 	{
 		/* receiver is a class object (an instance of Class) */
 		c = receiver; 
-		dic_no = STIX_CLASS_MTHDIC_CLASS;
+		dic_no = STIX_METHOD_CLASS;
 	}
 	else
 	{
 		/* receiver is not a class object. so take its class */
 		c = (stix_oop_t)cls;
-		dic_no = STIX_CLASS_MTHDIC_INSTANCE;
+		dic_no = STIX_METHOD_INSTANCE;
 	}
 
 	STIX_ASSERT (c != stix->_nil);
@@ -1039,7 +1039,7 @@ not_found:
 	{
 		/* the object is an instance of Class. find the method
 		 * in an instance method dictionary of Class also */
-		mthdic = ((stix_oop_class_t)cls)->mthdic[STIX_CLASS_MTHDIC_INSTANCE];
+		mthdic = ((stix_oop_class_t)cls)->mthdic[STIX_METHOD_INSTANCE];
 		STIX_ASSERT ((stix_oop_t)mthdic != stix->_nil);
 		STIX_ASSERT (STIX_CLASSOF(stix, mthdic) == stix->_method_dictionary);
 
@@ -2893,7 +2893,7 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 				STIX_ASSERT (STIX_OBJ_GET_FLAGS_EXTRA(name));
 				STIX_ASSERT (STIX_CLASSOF(stix,name) == stix->_symbol);
 
-				handler = stix_querymodforpfimpl (stix, ((stix_oop_char_t)name)->slot, STIX_OBJ_GET_SIZE(name));
+				handler = stix_querymod (stix, ((stix_oop_char_t)name)->slot, STIX_OBJ_GET_SIZE(name));
 			}
 
 			if (handler)
@@ -2915,15 +2915,19 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 					return -1; /* hard primitive failure */
 				}
 				if (n >= 1) break; /* primitive ok*/
-			}
 
-			/* soft primitive failure or handler not found. 
-			 * if handler is not found, 0 must be printed in the debug message. */
-			STIX_DEBUG1 (stix, "Soft failure indicated by primitive function %p\n", handler);
+				/* soft primitive failure */
+				STIX_DEBUG1 (stix, "Soft failure indicated by primitive function %p\n", handler);
+			}
+			else
+			{
+				/* no handler found */
+				STIX_DEBUG0 (stix, "Soft failure for non-existent primitive function\n");
+			}
 
 		#if defined(STIX_USE_OBJECT_TRAILER)
 			STIX_ASSERT (STIX_OBJ_GET_FLAGS_TRAILER(method));
-			if (method->slot[STIX_OBJ_GET_SIZE(method)] == 0) /* this trailer size field not a small integer */
+			if (STIX_METHOD_GET_CODE_SIZE(method) == 0) /* this trailer size field not a small integer */
 		#else
 			if (method->code == stix->_nil)
 		#endif

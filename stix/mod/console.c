@@ -302,37 +302,5 @@ int stix_mod_console (stix_t* stix, stix_mod_t* mod)
 	mod->query = query;
 	mod->unload = unload; 
 	mod->ctx = STIX_NULL;
-
-#if 0
-
-#include 'Stix.st'.
-#import 'Console'.
-
-	c = stix_findclass (stix, "Console");
-	if (!c) c = stix_makeclass (stix, "Console", "x y"); <- provides an API to create a simple class
-
-	stix_addmethod (stix, c, "open",         pf_open);
-	stix_addmethod (stix, c, "close:",       pf_close);
-	stix_addmethod (stix, c, "setCursorTo:", pf_setcursor);
-	stix_addmethod (stix, c, "clear", pf_clear );
-	stix_addmethod (stix, c, "write", pf_write );
-
-
-
-
-/* GRAMMER ENHANCEMENT */
-fun abc (a, b, c) <----- this style, register C style method
-{
-}
-
-fun abc: a with: b c: c <----- smalltalk style 
-{
-}
-
-abc->def (a, b, c)   <-------    use ->  as an c style method indicator
-abc abc: a with: b c: c
-
-#endif
-
 	return 0;
 }

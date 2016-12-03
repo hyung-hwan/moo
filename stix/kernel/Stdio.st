@@ -21,18 +21,18 @@
 
 	#method(#class) open: name for: mode
 	{
-		^(super new: 1) open: name for: mode
+		^(self new) open: name for: mode
 	}
 
-	#method open: name for: mode
-	{
-		<primitive: #stdio_open>
-	}
+##	#method open: name for: mode
+##	{
+##		<primitive: #stdio_open>
+##	}
 
-	#method close
-	{
-		<primitive: #stdio_close>
-	}
+##	#method close
+##	{
+##		<primitive: #stdio_close>
+##	}
 }
 
 #extend Stdio

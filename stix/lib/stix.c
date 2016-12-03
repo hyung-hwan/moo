@@ -505,7 +505,7 @@ stix_mod_data_t* stix_openmod (stix_t* stix, const stix_ooch_t* name, stix_oow_t
 
 	/* attempt to find an external module */
 	STIX_MEMSET (&md, 0, STIX_SIZEOF(md));
-	stix_copyoochars (md.name, name, namelen);
+	stix_copyoochars ((stix_ooch_t*)md.mod.name, name, namelen);
 	if (stix->vmprim.dl_open && stix->vmprim.dl_getsym && stix->vmprim.dl_close)
 	{
 		md.handle = stix->vmprim.dl_open (stix, &buf[MOD_PREFIX_LEN]);
@@ -551,7 +551,7 @@ stix_mod_data_t* stix_openmod (stix_t* stix, const stix_ooch_t* name, stix_oow_t
 
 	mdp->pair = pair;
 
-	STIX_DEBUG2 (stix, "Opened a module [%S] - %p\n", mdp->name, mdp->handle);
+	STIX_DEBUG2 (stix, "Opened a module [%S] - %p\n", mdp->mod.name, mdp->handle);
 
 	/* the module loader must ensure to set a proper query handler */
 	STIX_ASSERT (mdp->mod.query != STIX_NULL);
@@ -566,14 +566,14 @@ void stix_closemod (stix_t* stix, stix_mod_data_t* mdp)
 	if (mdp->handle) 
 	{
 		stix->vmprim.dl_close (stix, mdp->handle);
-		STIX_DEBUG2 (stix, "Closed a module [%S] - %p\n", mdp->name, mdp->handle);
+		STIX_DEBUG2 (stix, "Closed a module [%S] - %p\n", mdp->mod.name, mdp->handle);
 		mdp->handle = STIX_NULL;
 	}
 
 	if (mdp->pair)
 	{
 		/*mdp->pair = STIX_NULL;*/ /* this reset isn't needed as the area will get freed by stix_rbt_delete()) */
-		stix_rbt_delete (&stix->modtab, mdp->name, stix_countoocstr(mdp->name));
+		stix_rbt_delete (&stix->modtab, mdp->mod.name, stix_countoocstr(mdp->mod.name));
 	}
 }
 
@@ -582,6 +582,11 @@ int stix_importmod (stix_t* stix, stix_oop_t _class, const stix_ooch_t* name, st
 	stix_rbt_pair_t* pair;
 	stix_mod_data_t* mdp;
 	int r = 0;
+
+	/* stix_openmod(), stix_closemod(), etc calls a user-defined callback.
+	 * i need to protect _class in case the user-defined callback allocates 
+	 * a OOP memory chunk and GC occurs */
+	stix_pushtmp (stix, &_class);
 
 	pair = stix_rbt_search (&stix->modtab, name, len);
 	if (pair)
@@ -601,7 +606,7 @@ int stix_importmod (stix_t* stix, stix_oop_t _class, const stix_ooch_t* name, st
 
 	if (!mdp->mod.import)
 	{
-		STIX_DEBUG1 (stix, "Cannot import module [%S] - importing not supported by the module\n", mdp->name);
+		STIX_DEBUG1 (stix, "Cannot import module [%S] - importing not supported by the module\n", mdp->mod.name);
 		stix->errnum = STIX_ENOIMPL;
 		r = -1;
 		goto done;
@@ -609,7 +614,7 @@ int stix_importmod (stix_t* stix, stix_oop_t _class, const stix_ooch_t* name, st
 
 	if (mdp->mod.import (stix, &mdp->mod, _class) <= -1)
 	{
-		STIX_DEBUG1 (stix, "Cannot import module [%S] - module's import() returned failure\n", mdp->name);
+		STIX_DEBUG1 (stix, "Cannot import module [%S] - module's import() returned failure\n", mdp->mod.name);
 		r = -1;
 		goto done;
 	}
@@ -621,10 +626,11 @@ done:
 		stix_closemod (stix, mdp);
 	}
 
+	stix_poptmp (stix);
 	return r;
 }
 
-stix_pfimpl_t stix_querymodforpfimpl (stix_t* stix, const stix_ooch_t* pfid, stix_oow_t pfidlen)
+stix_pfimpl_t stix_querymod (stix_t* stix, const stix_ooch_t* pfid, stix_oow_t pfidlen)
 {
 	/* primitive function identifier
 	 *   _funcname
@@ -666,41 +672,66 @@ stix_pfimpl_t stix_querymodforpfimpl (stix_t* stix, const stix_ooch_t* pfid, sti
 	if ((handler = mdp->mod.query (stix, &mdp->mod, sep + 1)) == STIX_NULL) 
 	{
 		/* the primitive function is not found. keep the module open */
-		STIX_DEBUG2 (stix, "Cannot find a primitive function [%S] in a module [%S]\n", sep + 1, mdp->name);
+		STIX_DEBUG2 (stix, "Cannot find a primitive function [%S] in a module [%S]\n", sep + 1, mdp->mod.name);
 		stix->errnum = STIX_ENOENT; /* TODO: proper error code and handling */
 		return STIX_NULL;
 	}
 
-	STIX_DEBUG3 (stix, "Found a primitive function [%S] in a module [%S] - %p\n", sep + 1, mdp->name, handler);
+	STIX_DEBUG3 (stix, "Found a primitive function [%S] in a module [%S] - %p\n", sep + 1, mdp->mod.name, handler);
 	return handler;
 }
 
 /* -------------------------------------------------------------------------- */
 
 /* add a new primitive method */
-int stix_addmethod (stix_t* stix, stix_oop_t _class, const stix_ooch_t* name, stix_pfimpl_t func)
+int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_method_type_t type, const stix_ooch_t* mthname, const stix_ooch_t* pfname)
 {
 	/* NOTE: this function is a subset of add_compiled_method() in comp.c */
 
-	stix_oop_char_t nsym;
+	stix_oop_char_t mnsym, pfidsym;
 	stix_oop_method_t mth;
 	stix_oop_class_t cls;
 	stix_oow_t tmp_count = 0, i;
 	stix_ooi_t arg_count = 0;
+	stix_oocs_t cs;
 
 	STIX_ASSERT (STIX_CLASSOF(stix, _class) == stix->_class);
 
 	cls = (stix_oop_class_t)_class;
+	stix_pushtmp (stix, (stix_oop_t*)&cls); tmp_count++;
+	STIX_ASSERT (STIX_CLASSOF(stix, (stix_oop_t)cls->mthdic[type]) == stix->_method_dictionary);
 
-	/* TODO: check if name is a valid method name */
-	for (i = 0; name[i]; i++)
+	for (i = 0; mthname[i]; i++)
 	{
-		if (name[i] == ':') arg_count++;
+		if (mthname[i] == ':') arg_count++;
 	}
-	nsym = (stix_oop_char_t)stix_makesymbol (stix, name, i);
-	if (!nsym) return -1;
+/* TODO: check if name is a valid method name - more checks... */
+/* TOOD: if the method name is a binary selector, it can still have an argument.. so the check below is invalid... */
+	if (arg_count > 0 && mthname[i - 1] != ':') 
+	{
+		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%S] in [%O] - invalid name\n", mthname, cls->name);
+		stix->errnum = STIX_EINVAL;
+		goto oops;
+	}
 
-	stix_pushtmp (stix, (stix_oop_t*)&name); tmp_count++;
+	cs.ptr = (stix_ooch_t*)mthname;
+	cs.len = i;
+	if (stix_lookupdic (stix, cls->mthdic[type], &cs) != STIX_NULL)
+	{
+		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%S] in [%O] - duplicate\n", mthname, cls->name);
+		stix->errnum = STIX_EEXIST;
+		goto oops;
+	}
+
+	mnsym = (stix_oop_char_t)stix_makesymbol (stix, mthname, i);
+	if (!mnsym) goto oops;
+	stix_pushtmp (stix, (stix_oop_t*)&mnsym); tmp_count++;
+
+/* TODO:... */
+/* pfid => mod->name + '_' + pfname */
+	pfidsym = (stix_oop_char_t)stix_makesymbol (stix, pfname, stix_countoocstr(pfname));
+	if (!pfidsym) goto oops;
+	stix_pushtmp (stix, (stix_oop_t*)&pfidsym); tmp_count++;
 
 #if defined(STIX_USE_OBJECT_TRAILER)
 	mth = (stix_oop_method_t)stix_instantiatewithtrailer (stix, stix->_method, 1, STIX_NULL, 0); 
@@ -709,23 +740,23 @@ int stix_addmethod (stix_t* stix, stix_oop_t _class, const stix_ooch_t* name, st
 #endif
 	if (!mth) goto oops;
 
-	/* store the symbol name to the literal frame */
-	mth->slot[0] = (stix_oop_t)nsym;
+	/* store the primitive function name symbol to the literal frame */
+	mth->slot[0] = (stix_oop_t)pfidsym;
 
-	/* add the primitive as a name primitive with index of -1.
-	 * set the preamble_data to the pointer to the primitive function. */
+	/* premable should contain the index to the literal frame - 0 */
 	mth->owner = cls;
-	mth->name = nsym;
-	mth->preamble = STIX_SMOOI_TO_OOP(STIX_METHOD_MAKE_PREAMBLE(STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE, -1));
-	mth->preamble_data[0] = STIX_SMOOI_TO_OOP((stix_oow_t)func >> (STIX_OOW_BITS / 2));
-	mth->preamble_data[1] = STIX_SMOOI_TO_OOP((stix_oow_t)func & STIX_LBMASK(stix_oow_t, STIX_OOW_BITS / 2));
+	mth->name = mnsym;
+	mth->preamble = STIX_SMOOI_TO_OOP(STIX_METHOD_MAKE_PREAMBLE(STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE, 0));
+	mth->preamble_data[0] = STIX_SMOOI_TO_OOP(0);
+	mth->preamble_data[1] = STIX_SMOOI_TO_OOP(0);
 	mth->tmpr_count = STIX_SMOOI_TO_OOP(arg_count);
 	mth->tmpr_nargs = STIX_SMOOI_TO_OOP(arg_count);
 	stix_poptmps (stix, tmp_count); tmp_count = 0;
 
-/* TODO: class method? */
-	/* instance method */
-	if (!stix_putatdic (stix, cls->mthdic[STIX_CLASS_MTHDIC_INSTANCE], (stix_oop_t)nsym, (stix_oop_t)mth)) goto oops;
+/* TODO: emit BCODE_RETURN_NIL ? */
+
+	if (!stix_putatdic (stix, cls->mthdic[type], (stix_oop_t)mnsym, (stix_oop_t)mth)) goto oops;
+
 	return 0;
 
 oops:

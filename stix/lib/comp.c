@@ -45,12 +45,6 @@ enum class_mod_t
 	CLASS_INDEXED   = (1 << 0)
 };
 
-enum mth_type_t
-{
-	MTH_INSTANCE,
-	MTH_CLASS
-};
-
 enum var_type_t
 {
 	/* NEVER Change the order and the value of 3 items below.
@@ -1985,20 +1979,20 @@ static STIX_INLINE int add_class_level_variable (stix_t* stix, var_type_t index,
 
 static STIX_INLINE int add_pool_dictionary (stix_t* stix, const stix_oocs_t* name, stix_oop_set_t pooldic_oop)
 {
-	if (stix->c->cls.pooldic_count >= stix->c->cls.pooldic_oop_capa)
+	if (stix->c->cls.pooldic_count >= stix->c->cls.pooldic_imp_oops_capa)
 	{
 		stix_oow_t new_capa;
 		stix_oop_set_t* tmp;
 
-		new_capa = STIX_ALIGN(stix->c->cls.pooldic_oop_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
-		tmp = stix_reallocmem (stix, stix->c->cls.pooldic_oops, new_capa * STIX_SIZEOF(stix_oop_set_t));
+		new_capa = STIX_ALIGN(stix->c->cls.pooldic_imp_oops_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
+		tmp = stix_reallocmem (stix, stix->c->cls.pooldic_imp_oops, new_capa * STIX_SIZEOF(stix_oop_set_t));
 		if (!tmp) return -1;
 
-		stix->c->cls.pooldic_oop_capa = new_capa;
-		stix->c->cls.pooldic_oops = tmp;
+		stix->c->cls.pooldic_imp_oops_capa = new_capa;
+		stix->c->cls.pooldic_imp_oops = tmp;
 	}
 
-	stix->c->cls.pooldic_oops[stix->c->cls.pooldic_count] = pooldic_oop;
+	stix->c->cls.pooldic_imp_oops[stix->c->cls.pooldic_count] = pooldic_oop;
 	stix->c->cls.pooldic_count++;
 /* TODO: check if pooldic_count overflows */
 
@@ -2195,7 +2189,11 @@ static int add_method_name_fragment (stix_t* stix, const stix_oocs_t* name)
 static int method_exists (stix_t* stix, const stix_oocs_t* name)
 {
 	/* check if the current class contains a method of the given name */
+#ifdef MTHDIC
 	return stix_lookupdic (stix, stix->c->cls.mthdic_oop[stix->c->mth.type], name) != STIX_NULL;
+#else
+	return stix_lookupdic (stix, stix->c->cls.self_oop->mthdic[stix->c->mth.type], name) != STIX_NULL;
+#endif
 }
 
 static int add_temporary_variable (stix_t* stix, const stix_oocs_t* name)
@@ -2365,7 +2363,7 @@ static int resolve_pooldic (stix_t* stix, int dotted, const stix_oocs_t* name)
 	/* check if the same dictionary pool has been declared for import */
 	for (i = 0; i < stix->c->cls.pooldic_count; i++)
 	{
-		if ((stix_oop_set_t)ass->value == stix->c->cls.pooldic_oops[i])
+		if ((stix_oop_set_t)ass->value == stix->c->cls.pooldic_imp_oops[i])
 		{
 			set_syntax_error (stix, STIX_SYNERR_POOLDICDUP, TOKEN_LOC(stix), name);
 			return -1;
@@ -2391,7 +2389,7 @@ static int import_pool_dictionary (stix_t* stix, stix_oop_set_t ns_oop, const st
 	/* check if the same dictionary pool has been declared for import */
 	for (i = 0; i < stix->c->cls.pooldic_count; i++)
 	{
-		if ((stix_oop_set_t)ass->value == stix->c->cls.pooldic_oops[i])
+		if ((stix_oop_set_t)ass->value == stix->c->cls.pooldic_imp_oops[i])
 		{
 			set_syntax_error (stix, STIX_SYNERR_POOLDICDUP, tok_loc, tok_name);
 			return -1;
@@ -2897,7 +2895,7 @@ static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_
 			switch (var->type)
 			{
 				case VAR_INSTANCE:
-					if (stix->c->mth.type == MTH_CLASS)
+					if (stix->c->mth.type == STIX_METHOD_CLASS)
 					{
 						/* a class method cannot access an instance variable */
 						set_syntax_error (stix, STIX_SYNERR_VARINACC, name_loc, name);
@@ -2918,7 +2916,7 @@ static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_
 
 				case VAR_CLASSINST:
 					/* class instance variable can be accessed by only class methods */
-					if (stix->c->mth.type == MTH_INSTANCE)
+					if (stix->c->mth.type == STIX_METHOD_INSTANCE)
 					{
 						/* an instance method cannot access a class-instance variable */
 						set_syntax_error (stix, STIX_SYNERR_VARINACC, name_loc, name);
@@ -2958,7 +2956,7 @@ static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_
 				/* attempt to find the variable in pool dictionaries */
 				for (i = 0; i < stix->c->cls.pooldic_count; i++)
 				{
-					ass = stix_lookupdic (stix, stix->c->cls.pooldic_oops[i], name);
+					ass = stix_lookupdic (stix, stix->c->cls.pooldic_imp_oops[i], name);
 					if (ass)
 					{
 						if (ass2)
@@ -4344,7 +4342,7 @@ static int add_compiled_method (stix_t* stix)
 	else if (stix->c->mth.pftype == 2)
 	{
 		preamble_code = STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE;
-		preamble_index = stix->c->mth.pfnum;
+		preamble_index = stix->c->mth.pfnum; /* index to literal frame */
 	}
 	else if (stix->c->mth.pftype == 3)
 	{
@@ -4385,7 +4383,11 @@ need to write code to collect string.
 
 	stix_poptmps (stix, tmp_count); tmp_count = 0;
 
+#ifdef MTHDIC
 	if (!stix_putatdic(stix, stix->c->cls.mthdic_oop[stix->c->mth.type], (stix_oop_t)name, (stix_oop_t)mth)) goto oops;
+#else
+	if (!stix_putatdic(stix, stix->c->cls.self_oop->mthdic[stix->c->mth.type], (stix_oop_t)name, (stix_oop_t)mth)) goto oops;
+#endif
 
 	return 0;
 
@@ -4397,7 +4399,7 @@ oops:
 static int compile_method_definition (stix_t* stix)
 {
 	/* clear data required to compile a method */
-	stix->c->mth.type = MTH_INSTANCE;
+	stix->c->mth.type = STIX_METHOD_INSTANCE;
 	stix->c->mth.text.len = 0;
 	stix->c->mth.assignees.len = 0;
 	stix->c->mth.binsels.len = 0;
@@ -4423,7 +4425,7 @@ static int compile_method_definition (stix_t* stix)
 		if (is_token_symbol(stix, VOCA_CLASS))
 		{
 			/* #method(#class) */
-			stix->c->mth.type = MTH_CLASS;
+			stix->c->mth.type = STIX_METHOD_CLASS;
 			GET_TOKEN (stix);
 		}
 
@@ -4544,12 +4546,20 @@ static int make_defined_class (stix_t* stix)
 /* TOOD: good dictionary size */
 	tmp = (stix_oop_t)stix_makedic (stix, stix->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
-	stix->c->cls.mthdic_oop[MTH_INSTANCE] = (stix_oop_set_t)tmp;
+#ifdef MTHDIC
+	stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE] = (stix_oop_set_t)tmp;
+#else
+	stix->c->cls.self_oop->mthdic[STIX_METHOD_INSTANCE] = (stix_oop_set_t)tmp;
+#endif
 
 /* TOOD: good dictionary size */
 	tmp = (stix_oop_t)stix_makedic (stix, stix->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
-	stix->c->cls.mthdic_oop[MTH_CLASS] = (stix_oop_set_t)tmp;
+#ifdef MTHDIC
+	stix->c->cls.mthdic_oop[STIX_METHOD_CLASS] = (stix_oop_set_t)tmp;
+#else
+	stix->c->cls.self_oop->mthdic[STIX_METHOD_CLASS] = (stix_oop_set_t)tmp;
+#endif
 
 /* TODO: initialize more fields??? whatelse. */
 
@@ -4814,7 +4824,9 @@ static int __compile_class_definition (stix_t* stix, int extend)
 				return -1;
 			}
 
-			if (TOKEN_NAME_LEN(stix) < 1 || TOKEN_NAME_LEN(stix) > STIX_MOD_NAME_LEN_MAX)
+			if (TOKEN_NAME_LEN(stix) < 1 || 
+			    TOKEN_NAME_LEN(stix) > STIX_MOD_NAME_LEN_MAX ||
+			    stix_findoochar(TOKEN_NAME_PTR(stix), TOKEN_NAME_LEN(stix), '_'))
 			{
 				set_syntax_error (stix, STIX_SYNERR_MODNAME, TOKEN_LOC(stix), TOKEN_NAME(stix));
 				return -1;
@@ -4860,16 +4872,18 @@ static int __compile_class_definition (stix_t* stix, int extend)
 			return -1;
 		}
 
+
+#ifdef MTHDIC
 		/* use the method dictionary of an existing class object */
-		stix->c->cls.mthdic_oop[MTH_INSTANCE] = stix->c->cls.self_oop->mthdic[STIX_CLASS_MTHDIC_INSTANCE];
-		stix->c->cls.mthdic_oop[MTH_CLASS] = stix->c->cls.self_oop->mthdic[STIX_CLASS_MTHDIC_CLASS];
+		stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE] = stix->c->cls.self_oop->mthdic[STIX_METHOD_INSTANCE];
+		stix->c->cls.mthdic_oop[STIX_METHOD_CLASS] = stix->c->cls.self_oop->mthdic[STIX_METHOD_CLASS];
+#endif
 
 		/* load the pooldic definition from the existing class object */
 		pds = stix->c->cls.self_oop->pooldics;
 		if ((stix_oop_t)pds != stix->_nil)
 		{
 			stix_ooch_t* ptr, * end;
-			
 
 			STIX_ASSERT (STIX_CLASSOF(stix, pds) == stix->_string);
 
@@ -4947,12 +4961,15 @@ static int __compile_class_definition (stix_t* stix, int extend)
 		return -1;
 	}
 
+#ifdef MTHDIC
 	if (!extend)
 	{
+		/* link the method dictionaries created to the actual class object */
 /* TODO: anything else to set? */
-		stix->c->cls.self_oop->mthdic[STIX_CLASS_MTHDIC_INSTANCE] = stix->c->cls.mthdic_oop[MTH_INSTANCE];
-		stix->c->cls.self_oop->mthdic[STIX_CLASS_MTHDIC_CLASS] = stix->c->cls.mthdic_oop[MTH_CLASS];
+		stix->c->cls.self_oop->mthdic[STIX_CLASS_MTHDIC_INSTANCE] = stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE];
+		stix->c->cls.self_oop->mthdic[STIX_CLASS_MTHDIC_CLASS] = stix->c->cls.mthdic_oop[STIX_METHOD_CLASS];
 	}
+#endif
 
 	GET_TOKEN (stix);
 	return 0;
@@ -4984,8 +5001,10 @@ static int compile_class_definition (stix_t* stix, int extend)
 
 	stix->c->cls.self_oop = STIX_NULL;
 	stix->c->cls.super_oop = STIX_NULL;
-	stix->c->cls.mthdic_oop[MTH_INSTANCE] = STIX_NULL;
-	stix->c->cls.mthdic_oop[MTH_CLASS] = STIX_NULL;
+#ifdef MTHDIC
+	stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE] = STIX_NULL;
+	stix->c->cls.mthdic_oop[STIX_METHOD_CLASS] = STIX_NULL;
+#endif
 	stix->c->cls.ns_oop = STIX_NULL;
 	stix->c->cls.superns_oop = STIX_NULL;
 	stix->c->mth.literal_count = 0;
@@ -4998,8 +5017,10 @@ static int compile_class_definition (stix_t* stix, int extend)
 	/* reset these oops plus literal pointers not to confuse gc_compiler() */
 	stix->c->cls.self_oop = STIX_NULL;
 	stix->c->cls.super_oop = STIX_NULL;
-	stix->c->cls.mthdic_oop[MTH_INSTANCE] = STIX_NULL;
-	stix->c->cls.mthdic_oop[MTH_CLASS] = STIX_NULL;
+#ifdef MTHDIC
+	stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE] = STIX_NULL;
+	stix->c->cls.mthdic_oop[STIX_METHOD_CLASS] = STIX_NULL;
+#endif
 	stix->c->cls.ns_oop = STIX_NULL;
 	stix->c->cls.superns_oop = STIX_NULL;
 	stix->c->mth.literal_count = 0;
@@ -5152,19 +5173,21 @@ static int __compile_pooldic_definition (stix_t* stix)
 /*TODO: tally and arlit_count range check */
 	/*if (!STIX_IN_SMOOI_RANGE(tally)) ERROR??*/
 
-	stix->c->cls.mthdic_oop[0] = stix_makedic (stix, stix->_pool_dictionary, STIX_ALIGN(tally + 10, POOL_DICTIONARY_SIZE_ALIGN));
-	if (!stix->c->cls.mthdic_oop[0]) return -1;
+	/* i use mthdic_oop[0] when compling #pooldic. it's not a real method dictionary.
+	 * i just use it not to declare another field into the compiler */
+	stix->c->cls.pooldic_oop = stix_makedic (stix, stix->_pool_dictionary, STIX_ALIGN(tally + 10, POOL_DICTIONARY_SIZE_ALIGN));
+	if (!stix->c->cls.pooldic_oop) return -1;
 
 	for (i = 0; i < stix->c->mth.arlit_count; i += 2)
 	{
 		/* TODO: handle duplicate keys? */
-		if (!stix_putatdic(stix, stix->c->cls.mthdic_oop[0], stix->c->mth.arlit[i], stix->c->mth.arlit[i + 1])) return -1;
+		if (!stix_putatdic(stix, stix->c->cls.pooldic_oop, stix->c->mth.arlit[i], stix->c->mth.arlit[i + 1])) return -1;
 	}
 
 	/* eveything seems ok. register the pool dictionary to the main
 	 * system dictionary or to the name space it belongs to */
 	lit = stix_makesymbol (stix, stix->c->cls.name.ptr, stix->c->cls.name.len);
-	if (!lit || !stix_putatdic (stix, stix->c->cls.ns_oop, lit, (stix_oop_t)stix->c->cls.mthdic_oop[0])) return -1;
+	if (!lit || !stix_putatdic (stix, stix->c->cls.ns_oop, lit, (stix_oop_t)stix->c->cls.pooldic_oop)) return -1;
 	return 0;
 }
 
@@ -5176,7 +5199,7 @@ static int compile_pooldic_definition (stix_t* stix)
 	 * i'll be reusing some fields reserved for compling a class */
 	stix->c->cls.name.len = 0;
 	STIX_MEMSET (&stix->c->cls.fqn_loc, 0, STIX_SIZEOF(stix->c->cls.fqn_loc));
-	stix->c->cls.mthdic_oop[0] = STIX_NULL;
+	stix->c->cls.pooldic_oop = STIX_NULL;
 	stix->c->cls.ns_oop = STIX_NULL;
 	stix->c->mth.balit_count = 0;
 	stix->c->mth.arlit_count = 0;
@@ -5184,7 +5207,7 @@ static int compile_pooldic_definition (stix_t* stix)
 	n = __compile_pooldic_definition (stix);
 
 	/* reset these oops plus literal pointers not to confuse gc_compiler() */
-	stix->c->cls.mthdic_oop[0] = STIX_NULL;
+	stix->c->cls.pooldic_oop = STIX_NULL;
 	stix->c->cls.ns_oop = STIX_NULL;
 	stix->c->mth.balit_count = 0;
 	stix->c->mth.arlit_count = 0;
@@ -5258,11 +5281,16 @@ static void gc_compiler (stix_t* stix)
 		if (stix->c->cls.super_oop)
 			stix->c->cls.super_oop = stix_moveoop (stix, stix->c->cls.super_oop);
 
-		if (stix->c->cls.mthdic_oop[MTH_INSTANCE])
-			stix->c->cls.mthdic_oop[MTH_INSTANCE] = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.mthdic_oop[MTH_INSTANCE]);
+#ifdef MTHDIC
+		if (stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE])
+			stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE] = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE]);
 
-		if (stix->c->cls.mthdic_oop[MTH_CLASS])
-			stix->c->cls.mthdic_oop[MTH_CLASS] = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.mthdic_oop[MTH_CLASS]);
+		if (stix->c->cls.mthdic_oop[STIX_METHOD_CLASS])
+			stix->c->cls.mthdic_oop[STIX_METHOD_CLASS] = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.mthdic_oop[STIX_METHOD_CLASS]);
+#endif
+
+		if (stix->c->cls.pooldic_oop)
+			stix->c->cls.pooldic_oop = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.pooldic_oop);
 
 		if (stix->c->cls.ns_oop)
 			stix->c->cls.ns_oop = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.ns_oop);
@@ -5272,7 +5300,7 @@ static void gc_compiler (stix_t* stix)
 
 		for (i = 0; i < stix->c->cls.pooldic_count; i++)
 		{
-			stix->c->cls.pooldic_oops[i] = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.pooldic_oops[i]);
+			stix->c->cls.pooldic_imp_oops[i] = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.pooldic_imp_oops[i]);
 		}
 
 		for (i = 0; i < stix->c->mth.literal_count; i++)
@@ -5306,7 +5334,7 @@ static void fini_compiler (stix_t* stix)
 		}
 
 		if (stix->c->cls.pooldic.ptr) stix_freemem (stix, stix->c->cls.pooldic.ptr);
-		if (stix->c->cls.pooldic_oops) stix_freemem (stix, stix->c->cls.pooldic_oops);
+		if (stix->c->cls.pooldic_imp_oops) stix_freemem (stix, stix->c->cls.pooldic_imp_oops);
 
 		if (stix->c->mth.text.ptr) stix_freemem (stix, stix->c->mth.text.ptr);
 		if (stix->c->mth.assignees.ptr) stix_freemem (stix, stix->c->mth.assignees.ptr);

@@ -45,7 +45,7 @@
 #define STIX_USE_MAKE_BLOCK
 
 /* this is for gc debugging */
-/*#define STIX_DEBUG_GC*/
+#define STIX_DEBUG_GC
 #define STIX_DEBUG_COMPILER
 /*#define STIX_DEBUG_VM_PROCESSOR*/
 /*#define STIX_DEBUG_VM_EXEC*/
@@ -479,8 +479,10 @@ struct stix_compiler_t
 
 		stix_oop_class_t self_oop;
 		stix_oop_t super_oop; /* this may be nil. so the type is stix_oop_t */
-		stix_oop_set_t mthdic_oop[2];
-
+#ifdef MTHDIC
+		stix_oop_set_t mthdic_oop[2]; /* used when compiling a method definition */
+#endif
+		stix_oop_set_t pooldic_oop; /* used when compiling a pooldic definition */
 		stix_oop_set_t ns_oop;
 		stix_oocs_t fqn;
 		stix_oocs_t name;
@@ -503,18 +505,20 @@ struct stix_compiler_t
 		 * var_count[2] - number of class instance variables */
 		stix_oow_t var_count[3];
 
+		/* buffer to hold pooldic import declaration */
 		stix_oocs_t pooldic;
 		stix_oow_t pooldic_capa;
 		stix_oow_t pooldic_count;
 
-		stix_oop_set_t* pooldic_oops;
-		stix_oow_t pooldic_oop_capa;
+		/* used to hold imported pool dictionarie objects */
+		stix_oop_set_t* pooldic_imp_oops; 
+		stix_oow_t pooldic_imp_oops_capa;
 	} cls;
 
-	/* information about a function being comipled */
+	/* information about a method being comipled */
 	struct
 	{
-		int type;
+		stix_method_type_t type;
 
 		/* method source text */
 		stix_oocs_t text;
@@ -590,15 +594,7 @@ struct stix_oochbuf_t
 	stix_oow_t   capa;
 };
 
-struct stix_decoder_t
-{
-	stix_oochbuf_t fltout;
-	stix_bchbuf_t fltfmt;
-};
-
 #endif
-
-
 
 #if defined(STIX_USE_OBJECT_TRAILER)
 	/* let it point to the trailer of the method */
@@ -1268,10 +1264,10 @@ int stix_importmod (
 );
 
 /*
- * The stix_querymodforpfimpl() function finds a primitive function in modules
+ * The stix_querymod() function finds a primitive function in modules
  * with a full primitive identifier.
  */
-stix_pfimpl_t stix_querymodforpfimpl (
+stix_pfimpl_t stix_querymod (
 	stix_t*            stix,
 	const stix_ooch_t* pfid,
 	stix_oow_t         pfidlen
