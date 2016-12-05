@@ -39,9 +39,10 @@ extern "C" {
 #	define stix_compoocbcstr(str1,str2) stix_compucbcstr(str1,str2)
 #	define stix_compoocstr(str1,str2) stix_compucstr(str1,str2)
 #	define stix_copyoochars(dst,src,len) stix_copyuchars(dst,src,len)
-#	define stix_copybchtooochars(dst,src,len) stix_copybchtouchars(dst,src,len)
+#	define stix_copybctooochars(dst,src,len) stix_copybctouchars(dst,src,len)
 #	define stix_copyoocstr(dst,len,src) stix_copyucstr(dst,len,src)
 #	define stix_findoochar(ptr,len,c) stix_finduchar(ptr,len,c)
+#	define stix_rfindoochar(ptr,len,c) stix_rfinduchar(ptr,len,c)
 #	define stix_countoocstr(str) stix_countucstr(str)
 #else
 #	define stix_hashchars(ptr,len) stix_hashbchars(ptr,len)
@@ -49,9 +50,10 @@ extern "C" {
 #	define stix_compoocbcstr(str1,str2) stix_compbcstr(str1,str2)
 #	define stix_compoocstr(str1,str2) stix_compbcstr(str1,str2)
 #	define stix_copyoochars(dst,src,len) stix_copybchars(dst,src,len)
-#	define stix_copybchtooochars(dst,src,len) stix_copybchars(dst,src,len)
+#	define stix_copybctooochars(dst,src,len) stix_copybchars(dst,src,len)
 #	define stix_copyoocstr(dst,len,src) stix_copybcstr(dst,len,src)
 #	define stix_findoochar(ptr,len,c) stix_findbchar(ptr,len,c)
+#	define stix_rfindoochar(ptr,len,c) stix_rfindbchar(ptr,len,c)
 #	define stix_countoocstr(str) stix_countbcstr(str)
 #endif
 
@@ -102,7 +104,7 @@ STIX_EXPORT int stix_compucbcstr (
 	const stix_bch_t* str2
 );
 
-STIX_EXPORT int stix_compucxbcstr (
+STIX_EXPORT int stix_compucharsbcstr (
 	const stix_uch_t* str1,
 	stix_oow_t        len,
 	const stix_bch_t* str2
@@ -120,7 +122,7 @@ STIX_EXPORT void stix_copybchars (
 	stix_oow_t        len
 );
 
-STIX_EXPORT void stix_copybchtouchars (
+STIX_EXPORT void stix_copybctouchars (
 	stix_uch_t*       dst,
 	const stix_bch_t* src,
 	stix_oow_t        len
@@ -150,12 +152,37 @@ STIX_EXPORT stix_bch_t* stix_findbchar (
 	stix_bch_t        c
 );
 
+STIX_EXPORT stix_uch_t* stix_rfinduchar (
+	const stix_uch_t* ptr,
+	stix_oow_t        len,
+	stix_uch_t        c
+);
+
+STIX_EXPORT stix_bch_t* stix_rfindbchar (
+	const stix_bch_t* ptr,
+	stix_oow_t        len,
+	stix_bch_t        c
+);
+
+
 STIX_EXPORT stix_oow_t stix_countucstr (
 	const stix_uch_t* str
 );
 
 STIX_EXPORT stix_oow_t stix_countbcstr (
 	const stix_bch_t* str
+);
+
+STIX_EXPORT int stix_copyoocstrtosbuf (
+	stix_t*            stix,
+	const stix_ooch_t* str,
+	int                id
+);
+
+STIX_EXPORT int stix_concatoocstrtosbuf (
+	stix_t*            stix,
+	const stix_ooch_t* str,
+	int                id
 );
 
 STIX_EXPORT stix_cmgr_t* stix_getutf8cmgr (

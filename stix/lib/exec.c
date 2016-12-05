@@ -2745,7 +2745,7 @@ int stix_getpfnum (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
 
 	for (i = 0; i < STIX_COUNTOF(pftab); i++)
 	{
-		if (stix_compucxbcstr(ptr, len, pftab[i].name) == 0)
+		if (stix_compucharsbcstr(ptr, len, pftab[i].name) == 0)
 		{
 			return i;
 		}

@@ -137,6 +137,7 @@ static stix_rbt_walk_t unload_module (stix_rbt_t* rbt, stix_rbt_pair_t* pair, vo
 void stix_fini (stix_t* stix)
 {
 	stix_cb_t* cb;
+	stix_oow_t i;
 
 	if (stix->sem_list)
 	{
@@ -175,6 +176,17 @@ void stix_fini (stix_t* stix)
 
 	/* deregister all callbacks */
 	while (stix->cblist) stix_deregcb (stix, stix->cblist);
+
+	for (i = 0; i < STIX_COUNTOF(stix->sbuf); i++)
+	{
+		if (stix->sbuf[i].ptr)
+		{
+			stix_freemem (stix, stix->sbuf[i].ptr);
+			stix->sbuf[i].ptr = STIX_NULL;
+			stix->sbuf[i].len = 0;
+			stix->sbuf[i].capa = 0;
+		}
+	}
 
 	if (stix->log.ptr) 
 	{
@@ -442,7 +454,7 @@ stix_mod_data_t* stix_openmod (stix_t* stix, const stix_ooch_t* name, stix_oow_t
 	stix_ooch_t buf[MOD_PREFIX_LEN + STIX_MOD_NAME_LEN_MAX + 1 + 1]; 
 
 	/* the terminating null isn't needed in buf here */
-	stix_copybchtooochars (buf, MOD_PREFIX, MOD_PREFIX_LEN); 
+	stix_copybctooochars (buf, MOD_PREFIX, MOD_PREFIX_LEN); 
 
 	if (namelen > STIX_COUNTOF(buf) - (MOD_PREFIX_LEN + 1 + 1))
 	{
@@ -643,14 +655,14 @@ stix_pfimpl_t stix_querymod (stix_t* stix, const stix_ooch_t* pfid, stix_oow_t p
 	stix_oow_t mod_name_len;
 	stix_pfimpl_t handler;
 
-	sep = stix_findoochar (pfid, pfidlen, '_');
+	sep = stix_findoochar (pfid, pfidlen, '.');
 	if (!sep)
 	{
 		/* i'm writing a conservative code here. the compiler should 
 		 * guarantee that an underscore is included in an primitive identifer.
 		 * what if the compiler is broken? imagine a buggy compiler rewritten
 		 * in stix itself? */
-		STIX_DEBUG2 (stix, "Internal error - no underscore in a primitive function identifier [%.*S] - buggy compiler?\n", pfidlen, pfid);
+		STIX_DEBUG2 (stix, "Internal error - no period in a primitive function identifier [%.*S] - buggy compiler?\n", pfidlen, pfid);
 		stix->errnum = STIX_EINTERN;
 		return STIX_NULL;
 	}
@@ -694,8 +706,11 @@ int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_met
 	stix_oow_t tmp_count = 0, i;
 	stix_ooi_t arg_count = 0;
 	stix_oocs_t cs;
+	static stix_ooch_t dot[] = { '.', '\0' };
 
 	STIX_ASSERT (STIX_CLASSOF(stix, _class) == stix->_class);
+
+	if (!pfname) pfname = mthname;
 
 	cls = (stix_oop_class_t)_class;
 	stix_pushtmp (stix, (stix_oop_t*)&cls); tmp_count++;
@@ -727,10 +742,22 @@ int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_met
 	if (!mnsym) goto oops;
 	stix_pushtmp (stix, (stix_oop_t*)&mnsym); tmp_count++;
 
-/* TODO:... */
-/* pfid => mod->name + '_' + pfname */
-	pfidsym = (stix_oop_char_t)stix_makesymbol (stix, pfname, stix_countoocstr(pfname));
-	if (!pfidsym) goto oops;
+	/* compose a full primitive function identifier to VM's string buffer.
+	 *   pfid => mod->name + '.' + pfname */
+	if (stix_copyoocstrtosbuf(stix, mod->name, 0) <= -1 ||
+	    stix_concatoocstrtosbuf(stix, dot, 0) <= -1 ||
+	    stix_concatoocstrtosbuf(stix, pfname, 0) <=  -1) 
+	{
+		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%S] in [%O] - VM memory shortage\n", mthname, cls->name);
+		return -1;
+	}
+
+	pfidsym = (stix_oop_char_t)stix_makesymbol (stix, stix->sbuf[0].ptr, stix->sbuf[0].len);
+	if (!pfidsym) 
+	{
+		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%S] in [%O] - symbol instantiation failure\n", mthname, cls->name);
+		goto oops;
+	}
 	stix_pushtmp (stix, (stix_oop_t*)&pfidsym); tmp_count++;
 
 #if defined(STIX_USE_OBJECT_TRAILER)
@@ -738,12 +765,16 @@ int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_met
 #else
 	mth = (stix_oop_method_t)stix_instantiate (stix, stix->_method, STIX_NULL, 1);
 #endif
-	if (!mth) goto oops;
+	if (!mth)
+	{
+		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%S] in [%O] - method instantiation failure\n", mthname, cls->name);
+		goto oops;
+	}
 
 	/* store the primitive function name symbol to the literal frame */
 	mth->slot[0] = (stix_oop_t)pfidsym;
 
-	/* premable should contain the index to the literal frame - 0 */
+	/* premable should contain the index to the literal frame which is always 0 */
 	mth->owner = cls;
 	mth->name = mnsym;
 	mth->preamble = STIX_SMOOI_TO_OOP(STIX_METHOD_MAKE_PREAMBLE(STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE, 0));
@@ -751,12 +782,20 @@ int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_met
 	mth->preamble_data[1] = STIX_SMOOI_TO_OOP(0);
 	mth->tmpr_count = STIX_SMOOI_TO_OOP(arg_count);
 	mth->tmpr_nargs = STIX_SMOOI_TO_OOP(arg_count);
-	stix_poptmps (stix, tmp_count); tmp_count = 0;
+
+	
 
 /* TODO: emit BCODE_RETURN_NIL ? */
 
-	if (!stix_putatdic (stix, cls->mthdic[type], (stix_oop_t)mnsym, (stix_oop_t)mth)) goto oops;
+	if (!stix_putatdic (stix, cls->mthdic[type], (stix_oop_t)mnsym, (stix_oop_t)mth)) 
+	{
+		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%S] in [%O] - failed to add to method dictionary\n", mthname, cls->name);
+		goto oops;
+	}
 
+	STIX_DEBUG2 (stix, "Generated primitive function method [%S] in [%O]\n", mthname, cls->name);
+
+	stix_poptmps (stix, tmp_count); tmp_count = 0;
 	return 0;
 
 oops:

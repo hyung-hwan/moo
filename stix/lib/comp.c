@@ -2703,7 +2703,9 @@ static int compile_method_primitive (stix_t* stix)
 {
 	/* 
 	 * method-primitive := "<"  "primitive:" integer ">" |
-	 *                     "<"  "exception" ">"
+	 *                     "<"  "primitive:" symbol ">" |
+	 *                     "<"  "exception" ">" |
+	 *                     "<"  "ensure" ">"
 	 */
 	stix_ooi_t pfnum;
 	const stix_ooch_t* ptr, * end;
@@ -2752,8 +2754,10 @@ static int compile_method_primitive (stix_t* stix)
 				pfnum = stix_getpfnum (stix, tptr, tlen);
 				if (pfnum <= -1)
 				{
+					/* a built-in primitive function is not found 
+					 * check if it is a primitive function identifier */
+#if 0
 					const stix_ooch_t* us;
-					/* the primitive function is not found */
 					us = stix_findoochar (tptr, tlen, '_');
 					if (us > tptr && us < tptr + tlen - 1)
 					{
@@ -2768,6 +2772,18 @@ static int compile_method_primitive (stix_t* stix)
 							break;
 						}
 					}
+#else
+					stix_oow_t lit_idx;
+
+					if (add_symbol_literal(stix, TOKEN_NAME(stix), 1, &lit_idx) >= 0 &&
+					    STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx))
+					{
+						stix->c->mth.pftype = 2; /* named primitive */
+						stix->c->mth.pfnum = lit_idx;
+						break;
+					}
+
+#endif
 
 					/* wrong primitive number */
 					set_syntax_error (stix, STIX_SYNERR_PFID, TOKEN_LOC(stix), TOKEN_NAME(stix));

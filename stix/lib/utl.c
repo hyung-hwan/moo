@@ -28,6 +28,12 @@
 
 #define STIX_BCLEN_MAX 6
 
+/* some naming conventions
+ *  bchars, uchars -> pointer and length
+ *  bcstr, ucstr -> null-terminated string pointer
+ *  bctouchars -> bchars to uchars
+ */
+
 stix_oow_t stix_hashbytes (const stix_oob_t* ptr, stix_oow_t len)
 {
 	stix_oow_t h = 0;
@@ -101,7 +107,7 @@ int stix_compucbcstr (const stix_uch_t* str1, const stix_bch_t* str2)
 	return (*str1 > *str2)? 1: -1;
 }
 
-int stix_compucxbcstr (const stix_uch_t* str1, stix_oow_t len, const stix_bch_t* str2)
+int stix_compucharsbcstr (const stix_uch_t* str1, stix_oow_t len, const stix_bch_t* str2)
 {
 	const stix_uch_t* end = str1 + len;
 	while (str1 < end && *str2 != '\0' && *str1 == *str2) str1++, str2++;
@@ -122,7 +128,7 @@ void stix_copybchars (stix_bch_t* dst, const stix_bch_t* src, stix_oow_t len)
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
-void stix_copybchtouchars (stix_uch_t* dst, const stix_bch_t* src, stix_oow_t len)
+void stix_copybctouchars (stix_uch_t* dst, const stix_bch_t* src, stix_oow_t len)
 {
 	stix_oow_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];
@@ -201,6 +207,73 @@ stix_bch_t* stix_findbchar (const stix_bch_t* ptr, stix_oow_t len, stix_bch_t c)
 
 	return STIX_NULL;
 }
+
+stix_uch_t* stix_rfinduchar (const stix_uch_t* ptr, stix_oow_t len, stix_uch_t c)
+{
+	const stix_uch_t* cur;
+
+	cur = ptr + len;
+	while (cur > ptr)
+	{
+		--cur;
+		if (*cur == c) return (stix_uch_t*)cur;
+	}
+
+	return STIX_NULL;
+}
+
+stix_bch_t* stix_rfindbchar (const stix_bch_t* ptr, stix_oow_t len, stix_bch_t c)
+{
+	const stix_bch_t* cur;
+
+	cur = ptr + len;
+	while (cur > ptr)
+	{
+		--cur;
+		if (*cur == c) return (stix_bch_t*)cur;
+	}
+
+	return STIX_NULL;
+}
+
+/* ----------------------------------------------------------------------- */
+
+int stix_concatoocstrtosbuf (stix_t* stix, const stix_ooch_t* str, int id)
+{
+	stix_sbuf_t* p;
+	stix_oow_t len;
+
+	p = &stix->sbuf[id];
+	len = stix_countoocstr (str);
+
+	if (len > p->capa - p->len)
+	{
+		stix_oow_t newcapa;
+		stix_ooch_t* tmp;
+
+		newcapa = STIX_ALIGN(p->len + len, 512); /* TODO: adjust this capacity */
+
+		/* +1 to handle line ending injection more easily */
+		tmp = stix_reallocmem (stix, p->ptr, (newcapa + 1) * STIX_SIZEOF(*tmp)); 
+		if (!tmp) return -1;
+
+		p->ptr = tmp;
+		p->capa = newcapa;
+	}
+
+	stix_copyoochars (&p->ptr[p->len], str, len);
+	p->len += len;
+	p->ptr[p->len] = '\0';
+
+	return 0;
+}
+
+int stix_copyoocstrtosbuf (stix_t* stix, const stix_ooch_t* str, int id)
+{
+	stix->sbuf[id].len = 0;;
+	return stix_concatoocstrtosbuf (stix, str, id);
+}
+
 
 
 /* ----------------------------------------------------------------------- */

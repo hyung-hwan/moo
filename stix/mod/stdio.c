@@ -116,29 +116,33 @@ static int pf_newinstsize (stix_t* stix, stix_ooi_t nargs)
 typedef struct fnctab_t fnctab_t;
 struct fnctab_t
 {
-	const stix_bch_t* name;
+	const stix_bch_t* mthname;
+	const stix_bch_t* pfname;
 	stix_pfimpl_t handler;
 };
 
 static fnctab_t fnctab[] =
 {
-	{ "close",       pf_close         },
-	{ "newInstSize", pf_newinstsize   },
-	{ "open",        pf_open          },
-	{ "puts",        pf_puts          }
+	{ "_newInstSize", STIX_NULL, pf_newinstsize   },
+	{ "close",        STIX_NULL, pf_close         },
+	{ "open:for:",    STIX_NULL, pf_open          },
+	{ "puts",         STIX_NULL, pf_puts          }
 };
 
 
 static stix_ooch_t voca_open_for[] = { 'o','p','e','n',':','f','o','r',':','\0' };
 static stix_ooch_t voca_open[] = { 'o','p','e','n','\0' };
 static stix_ooch_t voca_close[] = { 'c','l','o','s','e','\0' };
+static stix_ooch_t voca_newInstSize[] = { '_','n','e','w','I','n','s','t','S','i','z','e','\0' };
+
 /* ------------------------------------------------------------------------ */
 
 static int import (stix_t* stix, stix_mod_t* mod, stix_oop_t _class)
 {
 stix_pushtmp (stix, &_class);
-	stix_genpfmethod (stix, mod, _class, STIX_METHOD_INSTANCE, voca_open_for, voca_open);
-	stix_genpfmethod (stix, mod, _class, STIX_METHOD_CLASS, voca_close, voca_close);
+	stix_genpfmethod (stix, mod, _class, STIX_METHOD_CLASS, voca_newInstSize, STIX_NULL);
+	stix_genpfmethod (stix, mod, _class, STIX_METHOD_INSTANCE, voca_open_for, STIX_NULL);
+	stix_genpfmethod (stix, mod, _class, STIX_METHOD_INSTANCE, voca_close, voca_close);
 stix_poptmp (stix);
 	return 0;
 }
@@ -153,7 +157,7 @@ static stix_pfimpl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* na
 	{
 		mid = (left + right) / 2;
 
-		n = stix_compoocbcstr (name, fnctab[mid].name);
+		n = stix_compoocbcstr (name, fnctab[mid].mthname);
 		if (n < 0) right = mid - 1; 
 		else if (n > 0) left = mid + 1;
 		else

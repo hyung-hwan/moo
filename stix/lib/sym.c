@@ -175,7 +175,6 @@ stix_oop_t stix_makesymbol (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len
 {
 	return find_or_make_symbol (stix, ptr, len, 1);
 }
-
 stix_oop_t stix_findsymbol (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
 {
 	return find_or_make_symbol (stix, ptr, len, 0);

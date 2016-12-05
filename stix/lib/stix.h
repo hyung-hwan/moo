@@ -782,6 +782,14 @@ struct stix_mod_data_t
 };
 typedef struct stix_mod_data_t stix_mod_data_t;
 
+struct stix_sbuf_t
+{
+	stix_ooch_t* ptr;
+	stix_oow_t len;
+	stix_oow_t capa;
+};
+typedef struct stix_sbuf_t stix_sbuf_t;
+
 /* =========================================================================
  * STIX VM
  * ========================================================================= */
@@ -911,6 +919,8 @@ struct stix_t
 		stix_oow_t  capa;
 	} rsrc;
 	/* == END RSRC MANAGEMENT == */
+
+	stix_sbuf_t sbuf[64];
 
 #if defined(STIX_INCLUDE_COMPILER)
 	stix_compiler_t* c;

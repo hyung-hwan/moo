@@ -1,9 +1,9 @@
 #class(#byte) Stdio(Object) from 'stdio'
 {
-	#method(#class) _newInstSize
-	{
-		<primitive: #stdio_newInstSize>
-	}
+##	#method(#class) _newInstSize
+##	{
+##		<primitive: #stdio._newInstSize>
+##	}
 
 	#method(#class) new: size
 	{
@@ -26,12 +26,12 @@
 
 ##	#method open: name for: mode
 ##	{
-##		<primitive: #stdio_open>
+##		<primitive: #stdio.open>
 ##	}
 
 ##	#method close
 ##	{
-##		<primitive: #stdio_close>
+##		<primitive: #stdio.close>
 ##	}
 }
 
