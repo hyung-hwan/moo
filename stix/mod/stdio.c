@@ -38,6 +38,13 @@ struct stdio_t
 	FILE* fp;
 };
 
+static int pf_newinstsize (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_ooi_t newinstsize = STIX_SIZEOF(stdio_t) - STIX_SIZEOF(stix_obj_t);
+	STIX_STACK_SETRET (stix, nargs, STIX_SMOOI_TO_OOP(newinstsize)); 
+	return 1;
+}
+
 static int pf_open (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_char_t name;
@@ -97,20 +104,21 @@ STIX_DEBUG1 (stix, "closing %p\n", rcv->fp);
 	return 1;
 }
 
-static int pf_puts (stix_t* stix, stix_ooi_t nargs)
+static int pf_gets (stix_t* stix, stix_ooi_t nargs)
 {
 	/* return how many bytes have been written.. */
-
 	STIX_STACK_SETRETTORCV (stix, nargs);
 	return 1;
 }
 
-static int pf_newinstsize (stix_t* stix, stix_ooi_t nargs)
+static int pf_puts (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_ooi_t newinstsize = STIX_SIZEOF(stdio_t) - STIX_SIZEOF(stix_obj_t);
-	STIX_STACK_SETRET (stix, nargs, STIX_SMOOI_TO_OOP(newinstsize)); 
+	/* return how many bytes have been written.. */
+	STIX_STACK_SETRETTORCV (stix, nargs);
 	return 1;
 }
+
+
 /* ------------------------------------------------------------------------ */
 
 typedef struct fnctab_t fnctab_t;
@@ -125,6 +133,7 @@ static fnctab_t fnctab[] =
 {
 	{ "_newInstSize", STIX_NULL, pf_newinstsize   },
 	{ "close",        STIX_NULL, pf_close         },
+	{ "gets",         STIX_NULL, pf_gets          },
 	{ "open:for:",    STIX_NULL, pf_open          },
 	{ "puts",         STIX_NULL, pf_puts          }
 };

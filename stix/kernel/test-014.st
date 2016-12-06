@@ -130,6 +130,22 @@
 		v1 close.
 		nil isNil ifTrue: [ 'NIL NIL NIL' dump. ].
 		(Apex new) notNil ifTrue: [ 'APEX NIL NIL NIL' dump. ].
+
+
+(*
+		v1 format(10 20 30) isNil 
+procecure call is treated as if it is a unary message...
+
+
+		v1 format(10 , 20  , 30) isNil ifTrue: [
+			xxxx
+		].
+*)
+
+		v1 format(10 . 20) isNil ifFalse: [
+			'Beautiful life' dump.
+		].
+
 	}
 
 }

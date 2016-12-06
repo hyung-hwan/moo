@@ -693,34 +693,57 @@ static int skip_comment (stix_t* stix)
 		do 
 		{
 			GET_CHAR_TO (stix, c); 
-			if (c == STIX_UCI_EOF)
-			{
-				/* unterminated comment */
-				set_syntax_error (stix, STIX_SYNERR_CMTNC, LEXER_LOC(stix), STIX_NULL);
-				return -1;
-			}
+			if (c == STIX_UCI_EOF) goto unterminated;
 		}
 		while (c != '"');
 
 		if (c == '"') GET_CHAR (stix); /* keep the next character in lxc */
 		return 1; /* double-quoted comment */
 	}
-
-	/* handle #! or ## */
-	if (c != '#') return 0; /* not a comment */
-
-	/* save the last character */
-	lc = stix->c->lxc;
-	/* read a new character */
-	GET_CHAR_TO (stix, c);
-
-	if (c == '!' || c == '#') 
+	else if (c == '(')
 	{
+		/* handle (* ... *) */
+		lc = stix->c->lxc;
+		GET_CHAR_TO (stix, c);
+		if (c != '*') goto not_comment;
+
+		do 
+		{
+			GET_CHAR_TO (stix, c);
+			if (c == STIX_UCI_EOF) goto unterminated;
+
+			if (c == '*')
+			{
+				GET_CHAR_TO (stix, c);
+				if (c == STIX_UCI_EOF) goto unterminated;
+
+				if (c == ')')
+				{
+					GET_CHAR (stix); /* keep the first meaningful character in lxc */
+					break;
+				}
+			}
+		} 
+		while (1);
+
+		return 1; /* multi-line comment enclosed in (* and *) */
+	}
+	else if (c == '#')
+	{
+		/* handle #! or ## */
+
+		/* save the last character */
+		lc = stix->c->lxc;
+		/* read a new character */
+		GET_CHAR_TO (stix, c);
+
+		if (c != '!' && c != '#') goto not_comment;
 		do 
 		{
 			GET_CHAR_TO (stix, c);
 			if (c == STIX_UCI_EOF)
 			{
+				/* EOF on the comment line is ok for a single-line comment */
 				break;
 			}
 			else if (c == '\r' || c == '\n')
@@ -733,13 +756,25 @@ static int skip_comment (stix_t* stix)
 
 		return 1; /* single line comment led by ## or #! */
 	}
+	else 
+	{
+		/* not comment. but no next character has been consumed.
+		 * no need to unget a character */
+		return 0;
+	}
 
+not_comment:
 	/* unget the leading '#' */
 	unget_char (stix, &stix->c->lxc);
 	/* restore the previous state */
 	stix->c->lxc = lc;
 
 	return 0;
+
+
+unterminated:
+	set_syntax_error (stix, STIX_SYNERR_CMTNC, LEXER_LOC(stix), STIX_NULL);
+	return -1;
 }
 
 static int get_ident (stix_t* stix, stix_ooci_t char_read_ahead)
@@ -2530,6 +2565,50 @@ static int compile_unary_method_name (stix_t* stix)
 
 	if (add_method_name_fragment(stix, TOKEN_NAME(stix)) <= -1) return -1;
 	GET_TOKEN (stix);
+
+	if (TOKEN_TYPE(stix) == STIX_IOTOK_LPAREN)
+	{
+		/* this is a procedural style method */
+		STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
+
+		if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN) 
+		{
+			do 
+			{
+				GET_TOKEN (stix);
+
+				if (TOKEN_TYPE(stix) != STIX_IOTOK_IDENT) 
+				{
+					/* wrong argument name. identifier is expected */
+					set_syntax_error (stix, STIX_SYNERR_IDENT, TOKEN_LOC(stix), TOKEN_NAME(stix));
+					return -1;
+				}
+
+				if (find_temporary_variable(stix, TOKEN_NAME(stix), STIX_NULL) >= 0)
+				{
+					set_syntax_error (stix, STIX_SYNERR_ARGNAMEDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
+					return -1;
+				}
+
+				if (add_temporary_variable(stix, TOKEN_NAME(stix)) <= -1) return -1;
+				stix->c->mth.tmpr_nargs++;
+
+				GET_TOKEN (stix);
+				if (TOKEN_TYPE(stix) == STIX_IOTOK_RPAREN) break;
+
+				if (TOKEN_TYPE(stix) != STIX_IOTOK_PERIOD)  /* TODO: change PERIOD to soemthing else... */
+				{
+					set_syntax_error (stix, STIX_SYNERR_PERIOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
+					return -1;
+				}
+/* TODO: indicate the method is in the procedural style... Do i need to??? */
+			}
+			while (1);
+		}
+
+		GET_TOKEN (stix);
+	}
+
 	return 0;
 }
 
@@ -3733,14 +3812,44 @@ static stix_oob_t send_message_cmd[] =
 static int compile_unary_message (stix_t* stix, int to_super)
 {
 	stix_oow_t index;
+	stix_oow_t nargs;
 
 	STIX_ASSERT (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT);
 
 	do
 	{
-		if (add_symbol_literal(stix, TOKEN_NAME(stix), 0, &index) <= -1 ||
-		    emit_double_param_instruction(stix, send_message_cmd[to_super], 0, index) <= -1) return -1;
+		nargs = 0;
+		if (add_symbol_literal(stix, TOKEN_NAME(stix), 0, &index) <= -1) return -1;
+
 		GET_TOKEN (stix);
+		if (TOKEN_TYPE(stix) == STIX_IOTOK_LPAREN)
+		{
+			/* parameterized procedure call */
+			GET_TOKEN(stix);
+			if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
+			{
+				do
+				{
+					if (compile_method_expression (stix, 0) <= -1) return -1;
+					nargs++;
+
+					if (TOKEN_TYPE(stix) == STIX_IOTOK_RPAREN) break;
+
+					if (TOKEN_TYPE(stix) != STIX_IOTOK_PERIOD)
+					{
+						set_syntax_error (stix, STIX_SYNERR_PERIOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
+						return -1;
+					}
+
+					GET_TOKEN(stix);
+				}
+				while (1);
+			}
+
+			GET_TOKEN(stix);
+		}
+
+		if (emit_double_param_instruction(stix, send_message_cmd[to_super], nargs, index) <= -1) return -1;
 	}
 	while (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT);
 
