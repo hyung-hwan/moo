@@ -100,7 +100,7 @@
 
 		v2 at: 0 put: $H.
 
-		System logNl: ('START OF MAIN - ' , v2).
+		System logNl: ('START OF MAIN - ' & v2).
 
 		v1 := MyConsole output.
 		v1 clear.
@@ -142,10 +142,12 @@ procecure call is treated as if it is a unary message...
 		].
 *)
 
-		v1 format(10 . 20) isNil ifFalse: [
+		v1 format(10, 20) isNil ifFalse: [
 			'Beautiful life' dump.
 		].
 
+		thisContext varArgCount dump.
+		thisContext varArgCount (10, 20) dump.
 	}
 
 }

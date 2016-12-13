@@ -777,7 +777,8 @@ int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_met
 	/* premable should contain the index to the literal frame which is always 0 */
 	mth->owner = cls;
 	mth->name = mnsym;
-	mth->preamble = STIX_SMOOI_TO_OOP(STIX_METHOD_MAKE_PREAMBLE(STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE, 0));
+/* TODO: premable flag -> VARIADIC, PARUNARY??? */
+	mth->preamble = STIX_SMOOI_TO_OOP(STIX_METHOD_MAKE_PREAMBLE(STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE, 0, 0));
 	mth->preamble_data[0] = STIX_SMOOI_TO_OOP(0);
 	mth->preamble_data[1] = STIX_SMOOI_TO_OOP(0);
 	mth->tmpr_count = STIX_SMOOI_TO_OOP(arg_count);

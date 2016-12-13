@@ -62,7 +62,7 @@
 		##thisContext unwindTo: nil return: nil.
 		##thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
 		thisContext unwindTo: (thisProcess initialContext) return: nil.
-		('### EXCEPTION NOT HANDLED #### ', self class name, ' - ', self messageText) dump.
+		('### EXCEPTION NOT HANDLED #### ' & self class name & ' - ' & self messageText) dump.
 		## TODO: debug the current process???? "
 
 		##Processor activeProcess terminate.
@@ -352,7 +352,7 @@
 ctx := thisContext.
 [ctx notNil] whileTrue: [
 	(ctx class == MethodContext) 
-		ifTrue: [ (ctx method owner name, '>>', ctx method name) dump ].
+		ifTrue: [ (ctx method owner name & '>>' & ctx method name) dump ].
 	## TODO: include blockcontext???
 	ctx := ctx sender.
 ].
@@ -368,7 +368,7 @@ ctx := thisContext.
 	#method(#class) doesNotUnderstand: messageSymbol
 	{
 		## TODO: implement this properly
-		NoSuchMessageException signal: (messageSymbol, ' not understood by ', (self name)).
+		NoSuchMessageException signal: (messageSymbol & ' not understood by ' & (self name)).
 	}
 }
 

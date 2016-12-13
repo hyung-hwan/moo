@@ -51,7 +51,7 @@
 
 #class(#character) String(Array)
 {
-	#method , aString
+	#method & aString
 	{
 		## concatenate two strings.
 ## TOOD: make this a primitive for performance.

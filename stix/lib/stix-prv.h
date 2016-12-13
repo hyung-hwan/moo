@@ -347,6 +347,7 @@ struct stix_iotok_t
 		STIX_IOTOK_ARPAREN, /* #( */
 		STIX_IOTOK_BAPAREN, /* #[ */
 		STIX_IOTOK_PERIOD,
+		STIX_IOTOK_COMMA,
 		STIX_IOTOK_SEMICOLON
 	} type;
 
@@ -377,6 +378,7 @@ enum stix_synerrnum_t
 	STIX_SYNERR_RPAREN,        /* ) expected */
 	STIX_SYNERR_RBRACK,        /* ] expected */
 	STIX_SYNERR_PERIOD,        /* . expected */
+	STIX_SYNERR_COMMA,         /* , expected */
 	STIX_SYNERR_VBAR,          /* | expected */
 	STIX_SYNERR_GT,            /* > expected */
 	STIX_SYNERR_ASSIGN,        /* := expected */
@@ -540,6 +542,9 @@ struct stix_compiler_t
 		stix_oocs_t name;
 		stix_oow_t name_capa;
 		stix_ioloc_t name_loc;
+
+		/* is the unary method followed by parameter list? */
+		int parunary;
 
 		/* single string containing a space separated list of temporaries */
 		stix_oocs_t tmprs; 

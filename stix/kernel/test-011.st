@@ -165,7 +165,7 @@
 			p := [ 
 				[ Exception signal: 'Exception in a new process of test12' ] 
 					on: Exception do: [:ex | 
-						('EXCEPTION CAUGHT...in test12 ==> ', (ex messageText)) dump.
+						('EXCEPTION CAUGHT...in test12 ==> ' & (ex messageText)) dump.
 					]
 			] newProcess.
 			'JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ' dump.

@@ -138,6 +138,7 @@ static int pf_close (stix_t* stix, stix_ooi_t nargs)
 
 	if (con->fd_opened) close (con->fd);
 
+	stix_freemem (stix, con);
 	STIX_STACK_SETRETTORCV (stix, nargs);
 	return 1;
 }

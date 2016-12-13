@@ -11,6 +11,35 @@
 	{
 		^self.ip < 0
 	}
+
+	#method temporaryCount
+	{
+		^self.ntmprs
+	}
+
+(* ---------------------------------
+#method varargCount
+{
+method context,
+
+	
+	^do calculation...
+
+for a block context, it must access homeContext first and call varargCount
+
+	^self.home varargCount...
+}
+
+#method varargAt: index
+{
+method context
+	^do calculation...
+
+block context...
+	^self.home varargAt: index
+}
+
+---------------------------------- *)
 }
 
 #class(#pointer) MethodContext(Context)
@@ -58,11 +87,21 @@
 	{
 		^self.method
 	}
+
+	#method varArgCount
+	{
+		^self basicSize - self class specNumInstVars - self.ntmprs
+	}
 }
 
 #class(#pointer) BlockContext(Context)
 {
 	#dcl nargs source home origin.
+
+	#method varArgCount
+	{
+		^self.home varArgCount
+	}
 
 	#method fork 
 	{

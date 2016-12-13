@@ -120,12 +120,12 @@
 			k := 99.
 			[
 				[
-					##[ Exception signal: 'simulated error' ] ensure: [('ensure 1 ', (k asString)) dump ].
-					[ ^ 20 ] ensure: [ ('ensure 1 ', (k asString)) dump. ].
+					##[ Exception signal: 'simulated error' ] ensure: [('ensure 1 ' & (k asString)) dump ].
+					[ ^ 20 ] ensure: [ ('ensure 1 ' & (k asString)) dump. ].
 				] ensure: ['ensure 2' dump ].
 			] ensure: ['ensure 3' dump ].
 		] on: Exception do: [:ex | 
-			('EXCETION - ' , ex messageText) dump.
+			('EXCETION - ' & ex messageText) dump.
 			## Exception signal: 'qqq'.
 		].
 		^v1
@@ -145,7 +145,7 @@
 		
 		"[
 				[ Exception signal: 'simulated error' ] ensure: ['ensure 1' dump ].
-		] on: Exception do: [:ex | ('EXCETION - ' , ex messageText) dump. Exception signal: 'qqq'. ]."
+		] on: Exception do: [:ex | ('EXCETION - ' & ex messageText) dump. Exception signal: 'qqq'. ]."
 
 		"[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump. Exception signal: 'jjjj']."
 
@@ -154,12 +154,12 @@
 			k := 99.
 			[
 				[
-					##[ Exception signal: 'simulated error' ] ensure: [('ensure 1 ', (k asString)) dump ].
-					[ ^20 ] ensure: [('ensure 1 ', (k asString)) dump ].
+					##[ Exception signal: 'simulated error' ] ensure: [('ensure 1 ' & (k asString)) dump ].
+					[ ^20 ] ensure: [('ensure 1 ' & (k asString)) dump ].
 				] ensure: ['ensure 2' dump ].
 			] ensure: ['ensure 3' dump ].
 		] on: Exception do: [:ex | 
-			('EXCETION - ' , ex messageText) dump.
+			('EXCETION - ' & ex messageText) dump.
 			## Exception signal: 'qqq'.
 		].
 "

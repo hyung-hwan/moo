@@ -160,7 +160,6 @@ typedef struct stix_obj_word_t*     stix_oop_word_t;
 #endif
 
 
-
 enum stix_method_type_t
 {
 	STIX_METHOD_INSTANCE,
@@ -503,8 +502,10 @@ struct stix_method_t
 #	define STIX_METHOD_GET_CODE_SIZE(m) STIX_OBJ_GET_SIZE((m)->code)
 #endif
 
-/* The preamble field is composed of a 8-bit code and a 16-bit
- * index. 
+/* The preamble field is composed of:
+ *    2-bit flag
+ *    6-bit code 
+ *    16-bit index
  *
  * The code can be one of the following values:
  *  0 - no special action
@@ -519,10 +520,12 @@ struct stix_method_t
  *  9 - do named primitive[index]
  * 10 - exception handler
  */
-#define STIX_METHOD_MAKE_PREAMBLE(code,index)  ((((stix_ooi_t)index) << 8) | ((stix_ooi_t)code))
-#define STIX_METHOD_GET_PREAMBLE_CODE(preamble) (((stix_ooi_t)preamble) & 0xFF)
+#define STIX_METHOD_MAKE_PREAMBLE(code,index,flags)  ((((stix_ooi_t)index) << 8) | ((stix_ooi_t)code << 2) | flags)
+#define STIX_METHOD_GET_PREAMBLE_CODE(preamble) ((((stix_ooi_t)preamble) & 0xFF) >> 2)
 #define STIX_METHOD_GET_PREAMBLE_INDEX(preamble) (((stix_ooi_t)preamble) >> 8)
+#define STIX_METHOD_GET_PREAMBLE_FLAGS(preamble) (((stix_ooi_t)preamble) & 0x3)
 
+/* preamble codes */
 #define STIX_METHOD_PREAMBLE_NONE            0
 #define STIX_METHOD_PREAMBLE_RETURN_RECEIVER 1
 #define STIX_METHOD_PREAMBLE_RETURN_NIL      2
@@ -540,6 +543,10 @@ struct stix_method_t
 #define STIX_METHOD_PREAMBLE_INDEX_MIN 0x0000
 #define STIX_METHOD_PREAMBLE_INDEX_MAX 0xFFFF
 #define STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(num) ((num) >= STIX_METHOD_PREAMBLE_INDEX_MIN && (num) <= STIX_METHOD_PREAMBLE_INDEX_MAX)
+
+/* preamble flags */
+#define STIX_METHOD_PREAMBLE_FLAG_PARUNARY (1 << 0)
+#define STIX_METHOD_PREAMBLE_FLAG_VARIADIC (1 << 1)
 
 #define STIX_CONTEXT_NAMED_INSTVARS 8
 typedef struct stix_context_t stix_context_t;
@@ -595,7 +602,7 @@ struct stix_context_t
 	 * the source block context. */
 	stix_oop_context_t  origin; 
 
-	/* variable indexed part */
+	/* variable indexed part - actual arguments and temporaries are placed here */
 	stix_oop_t          slot[1]; /* stack */
 };
 

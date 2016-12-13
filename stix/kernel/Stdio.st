@@ -27,6 +27,7 @@
 	}
 
 
+(* ---------------------
 	#method(#class) input
 	{
 		^(super new) open: 0 for: 'r'
@@ -41,6 +42,7 @@
 	{
 		^(super new) open: 2 for: 'w'
 	}
+------------------------ *)
 
 	(*
 	#method format: fmt with: ...
@@ -49,11 +51,13 @@
 	}
 	*)
 
-	#method format (fmt. args)
+	#method format (fmt, args)
 	{
+		| a b c |
 		'THIS IS FORMAT' dump.
 		fmt dump.
 		args dump.
+		thisContext temporaryCount dump.
 	}
 }
 

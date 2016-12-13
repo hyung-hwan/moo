@@ -193,7 +193,7 @@ static STIX_INLINE int is_binselchar (stix_ooci_t c)
 {
 	/*
 	 * binary-selector-character :=
-	 * 	'!' | '%' | '&' | '*' | '+' | ',' | 
+	 * 	'!' | '%' | '&' | '*' | '+' | 
 	 * 	'/' | '<' | '>' | '=' | '?' | '@' | 
 	 * 	'\' | '~' | '|' | '-'
 	 */
@@ -205,7 +205,6 @@ static STIX_INLINE int is_binselchar (stix_ooci_t c)
 		case '&':
 		case '*':
 		case '+':
-		case ',':
 		case '/': 
 		case '<':
 		case '>':
@@ -1344,6 +1343,9 @@ retry:
 			goto single_char_token;
 		case '.':
 			SET_TOKEN_TYPE (stix, STIX_IOTOK_PERIOD);
+			goto single_char_token;
+		case ',':
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_COMMA);
 			goto single_char_token;
 		case ';':
 			SET_TOKEN_TYPE (stix, STIX_IOTOK_SEMICOLON);
@@ -2596,16 +2598,18 @@ static int compile_unary_method_name (stix_t* stix)
 				GET_TOKEN (stix);
 				if (TOKEN_TYPE(stix) == STIX_IOTOK_RPAREN) break;
 
-				if (TOKEN_TYPE(stix) != STIX_IOTOK_PERIOD)  /* TODO: change PERIOD to soemthing else... */
+				if (TOKEN_TYPE(stix) != STIX_IOTOK_COMMA)
 				{
-					set_syntax_error (stix, STIX_SYNERR_PERIOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
+					set_syntax_error (stix, STIX_SYNERR_COMMA, TOKEN_LOC(stix), TOKEN_NAME(stix));
 					return -1;
 				}
-/* TODO: indicate the method is in the procedural style... Do i need to??? */
+
 			}
 			while (1);
 		}
 
+		/* indicate that the unary method name is followed by a parameter list */
+		stix->c->mth.parunary = 1;
 		GET_TOKEN (stix);
 	}
 
@@ -3835,9 +3839,9 @@ static int compile_unary_message (stix_t* stix, int to_super)
 
 					if (TOKEN_TYPE(stix) == STIX_IOTOK_RPAREN) break;
 
-					if (TOKEN_TYPE(stix) != STIX_IOTOK_PERIOD)
+					if (TOKEN_TYPE(stix) != STIX_IOTOK_COMMA)
 					{
-						set_syntax_error (stix, STIX_SYNERR_PERIOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
+						set_syntax_error (stix, STIX_SYNERR_COMMA, TOKEN_LOC(stix), TOKEN_NAME(stix));
 						return -1;
 					}
 
@@ -3847,6 +3851,10 @@ static int compile_unary_message (stix_t* stix, int to_super)
 			}
 
 			GET_TOKEN(stix);
+
+			/* NOTE: since the actual method may not be known at the compile time,
+			 *       i can't check if nargs will match the number of arguments
+			 *       expected by the method */
 		}
 
 		if (emit_double_param_instruction(stix, send_message_cmd[to_super], nargs, index) <= -1) return -1;
@@ -4326,7 +4334,7 @@ static int add_compiled_method (stix_t* stix)
 #endif
 	stix_oow_t tmp_count = 0;
 	stix_oow_t i;
-	stix_ooi_t preamble_code, preamble_index;
+	stix_ooi_t preamble_code, preamble_index, preamble_flags;
 
 	name = (stix_oop_char_t)stix_makesymbol (stix, stix->c->mth.name.ptr, stix->c->mth.name.len);
 	if (!name) return -1;
@@ -4357,6 +4365,7 @@ static int add_compiled_method (stix_t* stix)
 
 	preamble_code = STIX_METHOD_PREAMBLE_NONE;
 	preamble_index = 0;
+	preamble_flags = 0;
 
 	if (stix->c->mth.pftype <= 0)
 	{
@@ -4481,11 +4490,15 @@ static int add_compiled_method (stix_t* stix)
 		preamble_index = 0;
 	}
 
+
+	if (stix->c->mth.parunary /*&& stix->c->mth.tmpr_nargs > 0*/)
+		preamble_flags |= STIX_METHOD_PREAMBLE_FLAG_PARUNARY;
+
 	STIX_ASSERT (STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index));
 
 	mth->owner = stix->c->cls.self_oop;
 	mth->name = name;
-	mth->preamble = STIX_SMOOI_TO_OOP(STIX_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index));
+	mth->preamble = STIX_SMOOI_TO_OOP(STIX_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index, preamble_flags));
 	mth->preamble_data[0] = STIX_SMOOI_TO_OOP(0);
 	mth->preamble_data[1] = STIX_SMOOI_TO_OOP(0);
 	mth->tmpr_count = STIX_SMOOI_TO_OOP(stix->c->mth.tmpr_count);
@@ -4531,6 +4544,7 @@ static int compile_method_definition (stix_t* stix)
 	stix->c->mth.kwsels.len = 0;
 	stix->c->mth.name.len = 0;
 	STIX_MEMSET (&stix->c->mth.name_loc, 0, STIX_SIZEOF(stix->c->mth.name_loc));
+	stix->c->mth.parunary = 0;
 	stix->c->mth.tmprs.len = 0;
 	stix->c->mth.tmpr_count = 0;
 	stix->c->mth.tmpr_nargs = 0;

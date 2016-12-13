@@ -325,7 +325,7 @@ static void dl_close (stix_t* stix, void* handle)
 #elif defined(__MSDOS__) && defined(QSE_ENABLE_DOS_DYNAMIC_MODULE)
 	FreeModule (handle);
 #else
-        /* nothing to do */
+	/* nothing to do */
 #endif
 }
 
@@ -488,6 +488,7 @@ static char* syntax_error_msg[] =
 	") expected",
 	"] expected",
 	". expected",
+	", expected",
 	"| expected",
 	"> expected",
 	":= expected",

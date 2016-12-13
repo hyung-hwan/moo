@@ -900,6 +900,7 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	STIX_ASSERT (nargs <= ntmprs);
 
 	stix_pushtmp (stix, (stix_oop_t*)&mth);
+/* TODO: check if the method is pused some extra arguments... */
 	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_method_context, STIX_NULL, ntmprs);
 	stix_poptmp (stix);
 	if (!ctx) return -1;
@@ -909,7 +910,7 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	/* ctx->sp will be set further down */
 
 	/* A context is compose of a fixed part and a variable part.
-	 * the variable part hold temporary varibles including arguments.
+	 * the variable part holds temporary varibles including arguments.
 	 *
 	 * Assuming a method context with 2 arguments and 3 local temporary
 	 * variables, the context will look like this.
@@ -2764,7 +2765,14 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 	stix_ooi_t fetched_instruction_pointer = 0; /* set it to a fake value */
 #endif
 
-	STIX_ASSERT (STIX_OOP_TO_SMOOI(method->tmpr_nargs) == nargs);
+	/*STIX_ASSERT (STIX_OOP_TO_SMOOI(method->tmpr_nargs) == nargs);*/
+	if (nargs != STIX_OOP_TO_SMOOI(method->tmpr_nargs))
+	{
+		/* TODO: throw exception??? */
+		STIX_DEBUG1 (stix, "Argument count mismatch [%O]\n", method->name);
+		stix->errnum = STIX_EINVAL;
+		return -1;
+	}
 
 	preamble = STIX_OOP_TO_SMOOI(method->preamble);
 	preamble_code = STIX_METHOD_GET_PREAMBLE_CODE(preamble);
@@ -2907,7 +2915,7 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 			exec_handler:
 				stix_pushtmp (stix, (stix_oop_t*)&method);
 				n = handler (stix, nargs);
-				
+
 				stix_poptmp (stix);
 				if (n <= -1) 
 				{
