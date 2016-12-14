@@ -545,8 +545,7 @@ struct stix_method_t
 #define STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(num) ((num) >= STIX_METHOD_PREAMBLE_INDEX_MIN && (num) <= STIX_METHOD_PREAMBLE_INDEX_MAX)
 
 /* preamble flags */
-#define STIX_METHOD_PREAMBLE_FLAG_PARUNARY (1 << 0)
-#define STIX_METHOD_PREAMBLE_FLAG_VARIADIC (1 << 1)
+#define STIX_METHOD_PREAMBLE_FLAG_VARIADIC (1 << 0)
 
 #define STIX_CONTEXT_NAMED_INSTVARS 8
 typedef struct stix_context_t stix_context_t;
@@ -1208,6 +1207,7 @@ STIX_EXPORT int stix_genpfmethod (
 	stix_oop_t         _class,
 	stix_method_type_t type,
 	const stix_ooch_t* mthname,
+	int                variadic,
 	const stix_ooch_t* name
 );
 

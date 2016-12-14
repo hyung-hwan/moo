@@ -2573,12 +2573,11 @@ static int compile_unary_method_name (stix_t* stix)
 		/* this is a procedural style method */
 		STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
 
-		if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN) 
+		GET_TOKEN (stix);
+		if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
 		{
-			do 
+			do
 			{
-				GET_TOKEN (stix);
-
 				if (TOKEN_TYPE(stix) != STIX_IOTOK_IDENT) 
 				{
 					/* wrong argument name. identifier is expected */
@@ -2594,8 +2593,8 @@ static int compile_unary_method_name (stix_t* stix)
 
 				if (add_temporary_variable(stix, TOKEN_NAME(stix)) <= -1) return -1;
 				stix->c->mth.tmpr_nargs++;
+				GET_TOKEN (stix); 
 
-				GET_TOKEN (stix);
 				if (TOKEN_TYPE(stix) == STIX_IOTOK_RPAREN) break;
 
 				if (TOKEN_TYPE(stix) != STIX_IOTOK_COMMA)
@@ -2604,12 +2603,13 @@ static int compile_unary_method_name (stix_t* stix)
 					return -1;
 				}
 
-			}
+				GET_TOKEN (stix);
+			} 
 			while (1);
 		}
 
 		/* indicate that the unary method name is followed by a parameter list */
-		stix->c->mth.parunary = 1;
+		stix->c->mth.variadic = 1;
 		GET_TOKEN (stix);
 	}
 
@@ -4490,9 +4490,8 @@ static int add_compiled_method (stix_t* stix)
 		preamble_index = 0;
 	}
 
-
-	if (stix->c->mth.parunary /*&& stix->c->mth.tmpr_nargs > 0*/)
-		preamble_flags |= STIX_METHOD_PREAMBLE_FLAG_PARUNARY;
+	if (stix->c->mth.variadic /*&& stix->c->mth.tmpr_nargs > 0*/)
+		preamble_flags |= STIX_METHOD_PREAMBLE_FLAG_VARIADIC;
 
 	STIX_ASSERT (STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index));
 
@@ -4544,7 +4543,7 @@ static int compile_method_definition (stix_t* stix)
 	stix->c->mth.kwsels.len = 0;
 	stix->c->mth.name.len = 0;
 	STIX_MEMSET (&stix->c->mth.name_loc, 0, STIX_SIZEOF(stix->c->mth.name_loc));
-	stix->c->mth.parunary = 0;
+	stix->c->mth.variadic = 0;
 	stix->c->mth.tmprs.len = 0;
 	stix->c->mth.tmpr_count = 0;
 	stix->c->mth.tmpr_nargs = 0;

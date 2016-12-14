@@ -696,7 +696,7 @@ stix_pfimpl_t stix_querymod (stix_t* stix, const stix_ooch_t* pfid, stix_oow_t p
 /* -------------------------------------------------------------------------- */
 
 /* add a new primitive method */
-int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_method_type_t type, const stix_ooch_t* mthname, const stix_ooch_t* pfname)
+int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_method_type_t type, const stix_ooch_t* mthname, int variadic, const stix_ooch_t* pfname)
 {
 	/* NOTE: this function is a subset of add_compiled_method() in comp.c */
 
@@ -706,6 +706,7 @@ int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_met
 	stix_oow_t tmp_count = 0, i;
 	stix_ooi_t arg_count = 0;
 	stix_oocs_t cs;
+	stix_ooi_t preamble_flags = 0;
 	static stix_ooch_t dot[] = { '.', '\0' };
 
 	STIX_ASSERT (STIX_CLASSOF(stix, _class) == stix->_class);
@@ -718,12 +719,17 @@ int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_met
 
 	for (i = 0; mthname[i]; i++)
 	{
-		if (mthname[i] == ':') arg_count++;
+		if (mthname[i] == ':') 
+		{
+			if (variadic) goto oops_inval;
+			arg_count++;
+		}
 	}
 /* TODO: check if name is a valid method name - more checks... */
 /* TOOD: if the method name is a binary selector, it can still have an argument.. so the check below is invalid... */
 	if (arg_count > 0 && mthname[i - 1] != ':') 
 	{
+	oops_inval:
 		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%S] in [%O] - invalid name\n", mthname, cls->name);
 		stix->errnum = STIX_EINVAL;
 		goto oops;
@@ -777,14 +783,12 @@ int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_met
 	/* premable should contain the index to the literal frame which is always 0 */
 	mth->owner = cls;
 	mth->name = mnsym;
-/* TODO: premable flag -> VARIADIC, PARUNARY??? */
-	mth->preamble = STIX_SMOOI_TO_OOP(STIX_METHOD_MAKE_PREAMBLE(STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE, 0, 0));
+	if (variadic) preamble_flags |= STIX_METHOD_PREAMBLE_FLAG_VARIADIC;
+	mth->preamble = STIX_SMOOI_TO_OOP(STIX_METHOD_MAKE_PREAMBLE(STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE, 0, preamble_flags));
 	mth->preamble_data[0] = STIX_SMOOI_TO_OOP(0);
 	mth->preamble_data[1] = STIX_SMOOI_TO_OOP(0);
 	mth->tmpr_count = STIX_SMOOI_TO_OOP(arg_count);
 	mth->tmpr_nargs = STIX_SMOOI_TO_OOP(arg_count);
-
-	
 
 /* TODO: emit BCODE_RETURN_NIL ? */
 

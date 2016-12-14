@@ -887,11 +887,11 @@ static stix_oop_process_t start_initial_process (stix_t* stix, stix_oop_context_
 	return proc;
 }
 
-static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
+static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth, stix_ooi_t actual_nargs)
 {
 	stix_oop_context_t ctx;
-	stix_ooi_t i;
-	stix_ooi_t ntmprs, nargs;
+	stix_ooi_t i, j;
+	stix_ooi_t ntmprs, nargs, actual_ntmprs;
 
 	ntmprs = STIX_OOP_TO_SMOOI(mth->tmpr_count);
 	nargs = STIX_OOP_TO_SMOOI(mth->tmpr_nargs);
@@ -899,9 +899,17 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	STIX_ASSERT (ntmprs >= 0);
 	STIX_ASSERT (nargs <= ntmprs);
 
+	if (actual_nargs > nargs)
+	{
+		/* more arguments than the method specification have been passed in. 
+		 * it must be a variadic unary method. othewise, the compiler is buggy */
+		STIX_ASSERT (STIX_METHOD_GET_PREAMBLE_FLAGS(STIX_OOP_TO_SMOOI(mth->preamble)) & STIX_METHOD_PREAMBLE_FLAG_VARIADIC);
+		actual_ntmprs = ntmprs + (actual_nargs - nargs);
+	}
+	else actual_ntmprs = ntmprs;
+
 	stix_pushtmp (stix, (stix_oop_t*)&mth);
-/* TODO: check if the method is pused some extra arguments... */
-	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_method_context, STIX_NULL, ntmprs);
+	ctx = (stix_oop_context_t)stix_instantiate (stix, stix->_method_context, STIX_NULL, actual_ntmprs);
 	stix_poptmp (stix);
 	if (!ctx) return -1;
 
@@ -955,11 +963,30 @@ static STIX_INLINE int activate_new_method (stix_t* stix, stix_oop_method_t mth)
 	 * Since the number of arguments is 3, stack[sp - 3] points to
 	 * the receiver. When the stack is empty, sp is -1.
 	 */
-	for (i = nargs; i > 0; )
+	if (actual_nargs >= nargs)
 	{
-		/* copy argument */
-		ctx->slot[--i] = STIX_STACK_GETTOP (stix);
-		STIX_STACK_POP (stix);
+		for (i = actual_nargs, j = ntmprs + (actual_nargs - nargs); i > nargs; i--)
+		{
+			/* place variadic arguments after local temporaries */
+			ctx->slot[--j] = STIX_STACK_GETTOP (stix);
+			STIX_STACK_POP (stix);
+		}
+		STIX_ASSERT (i == nargs);
+		while (i > 0)
+		{
+			/* place normal argument before local temporaries */
+			ctx->slot[--i] = STIX_STACK_GETTOP (stix);
+			STIX_STACK_POP (stix);
+		}
+	}
+	else
+	{
+		for (i = actual_nargs; i > 0; )
+		{
+			/* place normal argument before local temporaries */
+			ctx->slot[--i] = STIX_STACK_GETTOP (stix);
+			STIX_STACK_POP (stix);
+		}
 	}
 	/* copy receiver */
 	ctx->receiver_or_source = STIX_STACK_GETTOP (stix);
@@ -1140,7 +1167,7 @@ TODO: overcome this problem
 	STIX_ASSERT (stix->active_context == ctx);
 
 	/* emulate the message sending */
-	return activate_new_method (stix, mth);
+	return activate_new_method (stix, mth, 0);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -2765,16 +2792,26 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 	stix_ooi_t fetched_instruction_pointer = 0; /* set it to a fake value */
 #endif
 
+	preamble = STIX_OOP_TO_SMOOI(method->preamble);
+
 	/*STIX_ASSERT (STIX_OOP_TO_SMOOI(method->tmpr_nargs) == nargs);*/
 	if (nargs != STIX_OOP_TO_SMOOI(method->tmpr_nargs))
 	{
-		/* TODO: throw exception??? */
-		STIX_DEBUG1 (stix, "Argument count mismatch [%O]\n", method->name);
-		stix->errnum = STIX_EINVAL;
-		return -1;
+
+		stix_ooi_t preamble_flags;
+
+		preamble_flags = STIX_METHOD_GET_PREAMBLE_FLAGS(preamble);
+		if (!(preamble_flags & STIX_METHOD_PREAMBLE_FLAG_VARIADIC))
+		{
+/* TODO: better to throw a stix exception so that the caller can catch it??? */
+			STIX_LOG3 (stix, STIX_LOG_IC | STIX_LOG_FATAL, 
+				"Fatal error - Argument count mismatch for a non-variadic method [%O] - %zd expected, %zu given\n",
+				method->name, STIX_OOP_TO_SMOOI(method->tmpr_nargs), nargs);
+			stix->errnum = STIX_EINVAL;
+			return -1;
+		}
 	}
 
-	preamble = STIX_OOP_TO_SMOOI(method->preamble);
 	preamble_code = STIX_METHOD_GET_PREAMBLE_CODE(preamble);
 	switch (preamble_code)
 	{
@@ -2868,7 +2905,7 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 			}
 
 			/* soft primitive failure */
-			if (activate_new_method (stix, method) <= -1) return -1;
+			if (activate_new_method (stix, method, nargs) <= -1) return -1;
 			break;
 		}
 
@@ -2914,6 +2951,12 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 
 			exec_handler:
 				stix_pushtmp (stix, (stix_oop_t*)&method);
+
+				/* the primitive handler is executed without activating the method itself.
+				 * one major difference between the primitive function and the normal method
+				 * invocation is that the primitive function handler should access arguments
+				 * directly in the stack unlik a normal activated method context where the
+				 * arguments are copied to the back. */
 				n = handler (stix, nargs);
 
 				stix_poptmp (stix);
@@ -2950,7 +2993,7 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 			}
 			else
 			{
-				if (activate_new_method (stix, method) <= -1) return -1;
+				if (activate_new_method (stix, method, nargs) <= -1) return -1;
 			}
 			break;
 		}
@@ -2959,7 +3002,7 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 			STIX_ASSERT (preamble_code == STIX_METHOD_PREAMBLE_NONE ||
 			             preamble_code == STIX_METHOD_PREAMBLE_EXCEPTION ||
 			             preamble_code == STIX_METHOD_PREAMBLE_ENSURE);
-			if (activate_new_method (stix, method) <= -1) return -1;
+			if (activate_new_method (stix, method, nargs) <= -1) return -1;
 			break;
 	}
 

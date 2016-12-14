@@ -544,7 +544,7 @@ struct stix_compiler_t
 		stix_ioloc_t name_loc;
 
 		/* is the unary method followed by parameter list? */
-		int parunary;
+		int variadic;
 
 		/* single string containing a space separated list of temporaries */
 		stix_oocs_t tmprs; 

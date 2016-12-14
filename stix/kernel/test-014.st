@@ -146,10 +146,36 @@ procecure call is treated as if it is a unary message...
 			'Beautiful life' dump.
 		].
 
-		thisContext varArgCount dump.
-		thisContext varArgCount (10, 20) dump.
+		self varg_test (10, 20, 30, 40, 50) dump.
+		self varg_test2 (10, 20, 30, 40, 50) dump.
+		self varg_test3 (10, 20, 30, 40, 50) dump.
+		thisContext vargCount dump.
+		thisContext vargCount dump.
 	}
 
+
+	#method(#class) varg_test()
+	{
+		0 to: (thisContext vargCount - 1) do: [:k |
+			(thisContext vargAt: k) dump.
+		].
+		^999
+	}
+	#method(#class) varg_test2(a,b,c)
+	{
+		0 to: (thisContext vargCount - 1) do: [:k |
+			(thisContext vargAt: k) dump.
+		].
+		^a
+	}
+	#method(#class) varg_test3(a,b,c,d,e,f)
+	{
+		0 to: (thisContext vargCount - 1) do: [:k |
+			(thisContext vargAt: k) dump.
+		].
+		## ^b * 100
+		^f
+	}
 }
 
 #extend MyObject

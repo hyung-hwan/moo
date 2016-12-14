@@ -88,9 +88,14 @@ block context...
 		^self.method
 	}
 
-	#method varArgCount
+	#method vargCount
 	{
 		^self basicSize - self class specNumInstVars - self.ntmprs
+	}
+
+	#method vargAt: index
+	{
+		^self basicAt: (index + self class specNumInstVars + self.ntmprs)
 	}
 }
 
@@ -98,9 +103,14 @@ block context...
 {
 	#dcl nargs source home origin.
 
-	#method varArgCount
+	#method vargCount
 	{
-		^self.home varArgCount
+		^self.home vargCount
+	}
+
+	#method vargAt: index
+	{
+		^self.home vargAt: index
 	}
 
 	#method fork 
