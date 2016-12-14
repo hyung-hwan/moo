@@ -31,6 +31,10 @@
 #include <stdio.h>
 #include <limits.h>
 
+/* TODO: remvoe this assert use one defined in stix.h */
+#include <assert.h>
+#define STIX_ASSERT(x) assert(x)
+
 typedef struct stdio_t stdio_t;
 struct stdio_t
 {
@@ -113,7 +117,80 @@ static int pf_gets (stix_t* stix, stix_ooi_t nargs)
 
 static int pf_puts (stix_t* stix, stix_ooi_t nargs)
 {
-	/* return how many bytes have been written.. */
+	stdio_t* rcv;
+	stix_ooi_t i;
+	
+	
+
+	rcv = (stdio_t*)STIX_STACK_GETRCV(stix, nargs);
+
+	for (i = 0; i < nargs; i++)
+	{
+		stix_oop_char_t x;
+		stix_obj_char_t tmpc;
+
+		x = (stix_oop_char_t)STIX_STACK_GETARG(stix, nargs, i);
+		if (STIX_OOP_IS_CHAR(x))
+		{
+			/* do some faking. */
+			STIX_ASSERT (STIX_SIZEOF(tmpc) >= STIX_SIZEOF(stix_obj_t) + STIX_SIZEOF(stix_ooch_t));
+
+			tmpc.slot[0] = STIX_OOP_TO_CHAR(x);
+			x = (stix_oop_char_t)&tmpc;
+			STIX_OBJ_SET_SIZE(x, 1);
+			goto puts_string;
+		}
+		else if (STIX_OOP_IS_POINTER(x) && STIX_OBJ_GET_FLAGS_TYPE(x) == STIX_OBJ_TYPE_CHAR)
+		{
+			int n;
+			stix_oow_t ucspos, ucsrem, ucslen, bcslen;
+			stix_bch_t bcs[1024]; /* TODO: choose a better buffer size */
+
+		puts_string:
+			ucspos = 0;
+			ucsrem = STIX_OBJ_GET_SIZE(x);
+			while (ucsrem > 0)
+			{
+				ucslen = ucsrem;
+				bcslen = STIX_COUNTOF(bcs);
+/* TODO: implement character conversion into stdio and use it */
+				if ((n = stix_oocstobcs (stix, &x->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
+				{
+					if (n != -2 || ucslen <= 0) 
+					{
+/* TODO: 
+ * 
+STIX_STACK_SETRET (stix, nargs, stix->_error);
+return 1;
+ * 
+ */
+						stix_seterrnum (stix, STIX_EECERR);
+						return -1;
+					}
+				}
+
+				fwrite (bcs, bcslen, 1, rcv->fp); 
+/* TODO; error handling...
+STIX_STACK_SETRET (stix, nargs, stix->_error);
+return 1;
+*/
+		/* TODO: abort looping for async processing???? */
+				ucspos += ucslen;
+				ucsrem -= ucslen;
+			}
+		}
+		else
+		{
+/* TODO;
+STIX_STACK_SETRET (stix, nargs, stix->_error);
+return 1;
+*/
+STIX_DEBUG1 (stix, "ARGUMETN ISN INVALID...[%O]\n", x);
+			stix_seterrnum (stix, STIX_EINVAL);
+			return -1;
+		}
+	}
+
 	STIX_STACK_SETRETTORCV (stix, nargs);
 	return 1;
 }
@@ -136,15 +213,16 @@ static fnctab_t fnctab[] =
 	{ "close",        STIX_NULL, 0, pf_close         },
 	{ "gets",         STIX_NULL, 0, pf_gets          },
 	{ "open:for:",    STIX_NULL, 0, pf_open          },
-	{ "puts",         STIX_NULL, 1, pf_puts          }
+	{ "puts",         STIX_NULL, 1, pf_puts          },
+	{ "puts:",        STIX_NULL, 0, pf_puts          }
 };
 
 
 static stix_ooch_t voca_open_for[] = { 'o','p','e','n',':','f','o','r',':','\0' };
-static stix_ooch_t voca_open[] = { 'o','p','e','n','\0' };
 static stix_ooch_t voca_close[] = { 'c','l','o','s','e','\0' };
 static stix_ooch_t voca_newInstSize[] = { '_','n','e','w','I','n','s','t','S','i','z','e','\0' };
-
+static stix_ooch_t voca_puts_v[] = { 'p','u','t','s','\0' };
+static stix_ooch_t voca_puts[] = { 'p','u','t','s',':','\0' };
 /* ------------------------------------------------------------------------ */
 
 static int import (stix_t* stix, stix_mod_t* mod, stix_oop_t _class)
@@ -153,6 +231,8 @@ stix_pushtmp (stix, &_class);
 	stix_genpfmethod (stix, mod, _class, STIX_METHOD_CLASS, voca_newInstSize, 0, STIX_NULL);
 	stix_genpfmethod (stix, mod, _class, STIX_METHOD_INSTANCE, voca_open_for, 0, STIX_NULL);
 	stix_genpfmethod (stix, mod, _class, STIX_METHOD_INSTANCE, voca_close, 0, voca_close);
+	stix_genpfmethod (stix, mod, _class, STIX_METHOD_INSTANCE, voca_puts, 0, STIX_NULL);
+	stix_genpfmethod (stix, mod, _class, STIX_METHOD_INSTANCE, voca_puts_v, 1, STIX_NULL);
 stix_poptmp (stix);
 	return 0;
 }
@@ -168,6 +248,7 @@ static stix_pfimpl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* na
 		mid = (left + right) / 2;
 
 		n = stix_compoocbcstr (name, fnctab[mid].mthname);
+STIX_DEBUG2 (stix, "%S %s\n", name, fnctab[mid].mthname);
 		if (n < 0) right = mid - 1; 
 		else if (n > 0) left = mid + 1;
 		else

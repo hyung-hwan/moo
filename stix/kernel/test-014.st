@@ -126,7 +126,8 @@
 
 		##v1 := Stdio2 open: '/tmp/1.txt' for: 'w+'.
 		v1 := Stdio2 new open: '/tmp/1.txt' for: 'w+'.
-		v1 xxxx.
+		## v1 puts: 'hello'.
+		v1 puts ('hello', 'world', 'good', C'\n', C'\t', 'under my umbrella', C'\n').
 		v1 close.
 		nil isNil ifTrue: [ 'NIL NIL NIL' dump. ].
 		(Apex new) notNil ifTrue: [ 'APEX NIL NIL NIL' dump. ].

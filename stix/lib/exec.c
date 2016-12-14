@@ -2915,10 +2915,9 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 			stix_oop_t name;
 			stix_pfimpl_t handler;
 			stix_oow_t w;
-			stix_ooi_t /*sp,*/ nargs, sb;
+			stix_ooi_t /*sp,*/ sb;
 
 			/*sp = stix->sp;*/
-			nargs = STIX_OOP_TO_SMOOI(method->tmpr_nargs);
 			sb = stix->sp - nargs - 1; /* stack base before receiver and arguments */
 
 			pf_name_index = STIX_METHOD_GET_PREAMBLE_INDEX(preamble);
@@ -2957,6 +2956,7 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 				 * invocation is that the primitive function handler should access arguments
 				 * directly in the stack unlik a normal activated method context where the
 				 * arguments are copied to the back. */
+
 				n = handler (stix, nargs);
 
 				stix_poptmp (stix);
