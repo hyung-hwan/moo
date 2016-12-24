@@ -201,40 +201,45 @@ STIX_DEBUG1 (stix, "ARGUMETN ISN INVALID...[%O]\n", x);
 typedef struct fnctab_t fnctab_t;
 struct fnctab_t
 {
-	const stix_bch_t* mthname;
-	const stix_bch_t* pfname;
+	stix_method_type_t type;
+	stix_ooch_t mthname[15];
 	int variadic;
 	stix_pfimpl_t handler;
 };
 
+#define C STIX_METHOD_CLASS
+#define I STIX_METHOD_INSTANCE
+
 static fnctab_t fnctab[] =
 {
-	{ "_newInstSize", STIX_NULL, 0, pf_newinstsize   },
-	{ "close",        STIX_NULL, 0, pf_close         },
-	{ "gets",         STIX_NULL, 0, pf_gets          },
-	{ "open:for:",    STIX_NULL, 0, pf_open          },
-	{ "puts",         STIX_NULL, 1, pf_puts          },
-	{ "puts:",        STIX_NULL, 0, pf_puts          }
+	{ C, { '_','n','e','w','I','n','s','t','S','i','z','e','\0' }, 0, pf_newinstsize   },
+	{ I, { 'c','l','o','s','e','\0' },                             0, pf_close         },
+	{ I, { 'g','e','t','s','\0' },                                 0, pf_gets          },
+	{ I, { 'o','p','e','n',':','f','o','r',':','\0' },             0, pf_open          },
+	{ I, { 'p','u','t','s','\0' },                                 1, pf_puts          },
+	{ I, { 'p','u','t','s',':','\0' },                             0, pf_puts          }
 };
 
-
-static stix_ooch_t voca_open_for[] = { 'o','p','e','n',':','f','o','r',':','\0' };
-static stix_ooch_t voca_close[] = { 'c','l','o','s','e','\0' };
-static stix_ooch_t voca_newInstSize[] = { '_','n','e','w','I','n','s','t','S','i','z','e','\0' };
-static stix_ooch_t voca_puts_v[] = { 'p','u','t','s','\0' };
-static stix_ooch_t voca_puts[] = { 'p','u','t','s',':','\0' };
 /* ------------------------------------------------------------------------ */
 
 static int import (stix_t* stix, stix_mod_t* mod, stix_oop_t _class)
 {
-stix_pushtmp (stix, &_class);
-	stix_genpfmethod (stix, mod, _class, STIX_METHOD_CLASS, voca_newInstSize, 0, STIX_NULL);
-	stix_genpfmethod (stix, mod, _class, STIX_METHOD_INSTANCE, voca_open_for, 0, STIX_NULL);
-	stix_genpfmethod (stix, mod, _class, STIX_METHOD_INSTANCE, voca_close, 0, voca_close);
-	stix_genpfmethod (stix, mod, _class, STIX_METHOD_INSTANCE, voca_puts, 0, STIX_NULL);
-	stix_genpfmethod (stix, mod, _class, STIX_METHOD_INSTANCE, voca_puts_v, 1, STIX_NULL);
-stix_poptmp (stix);
-	return 0;
+	int ret = 0;
+	stix_oow_t i;
+
+	stix_pushtmp (stix, &_class);
+	for (i = 0; i < STIX_COUNTOF(fnctab); i++)
+	{
+		if (stix_genpfmethod (stix, mod, _class, fnctab[i].type, fnctab[i].mthname, fnctab[i].variadic, STIX_NULL) <= -1) 
+		{
+			/* TODO: delete pfmethod generated??? */
+			ret = -1;
+			break;
+		}
+	}
+
+	stix_poptmp (stix);
+	return ret;
 }
 
 static stix_pfimpl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* name)
@@ -247,8 +252,7 @@ static stix_pfimpl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* na
 	{
 		mid = (left + right) / 2;
 
-		n = stix_compoocbcstr (name, fnctab[mid].mthname);
-STIX_DEBUG2 (stix, "%S %s\n", name, fnctab[mid].mthname);
+		n = stix_compoocstr (name, fnctab[mid].mthname);
 		if (n < 0) right = mid - 1; 
 		else if (n > 0) left = mid + 1;
 		else
@@ -283,26 +287,6 @@ int stix_mod_stdio (stix_t* stix, stix_mod_t* mod)
 	mod->query = query;
 	mod->unload = unload; 
 	mod->ctx = STIX_NULL;
-
-#if 0
-
-#include 'Stix.st'.
-#import 'Console'.
-
-/* GRAMMER ENHANCEMENT */
-fun abc (a, b, c) <----- this style, register C style method
-{
-}
-
-fun abc: a with: b c: c <----- smalltalk style 
-{
-}
-
-abc->def (a, b, c)   <-------    use ->  as an c style method indicator
-abc abc: a with: b c: c
-
-#endif
-
 	return 0;
 }
 

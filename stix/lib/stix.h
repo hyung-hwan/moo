@@ -1006,6 +1006,19 @@ typedef enum stix_log_mask_t stix_log_mask_t;
 #define STIX_INFO5(stix,fmt,a1,a2,a3,a4,a5) STIX_LOG5(stix, STIX_LOG_INFO, fmt, a1, a2, a3, a4, a5)
 #define STIX_INFO6(stix,fmt,a1,a2,a3,a4,a5,a6) STIX_LOG6(stix, STIX_LOG_INFO, fmt, a1, a2, a3, a4, a5, a6)
 
+
+/* =========================================================================
+ * STIX ASSERTION
+ * ========================================================================= */
+#if 0
+#if defined(NDEBUG)
+#	define STIX_ASSERT(expr) ((void)0)
+#else
+#	define STIX_ASSERT(expr) (void)((expr) || \
+	(stix_logbfmt ("%s at %s:%d", #expr, __FILE__, (int)__LINE__), 0))
+#endif
+#endif
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
