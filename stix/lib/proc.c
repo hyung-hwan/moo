@@ -27,8 +27,6 @@
 
 #include "stix-prv.h"
 
-
-
 stix_oop_process_t stix_addnewproc (stix_t* stix)
 {
 	stix_oop_process_t proc;
@@ -37,8 +35,8 @@ stix_oop_process_t stix_addnewproc (stix_t* stix)
 	if (!proc) return STIX_NULL;
 
 	proc->state = STIX_SMOOI_TO_OOP(0);
-	
-	STIX_ASSERT (STIX_OBJ_GET_SIZE(proc) == STIX_PROCESS_NAMED_INSTVARS + stix->option.dfl_procstk_size);
+
+	STIX_ASSERT (stix, STIX_OBJ_GET_SIZE(proc) == STIX_PROCESS_NAMED_INSTVARS + stix->option.dfl_procstk_size);
 	return proc;
 }
 

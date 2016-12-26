@@ -192,7 +192,7 @@ static STIX_INLINE stix_ooi_t close_input (stix_t* stix, stix_ioarg_t* arg)
 	bb_t* bb;
 
 	bb = (bb_t*)arg->handle;
-	STIX_ASSERT (bb != STIX_NULL && bb->fp != STIX_NULL);
+	STIX_ASSERT (stix, bb != STIX_NULL && bb->fp != STIX_NULL);
 
 	fclose (bb->fp);
 	stix_freemem (stix, bb);
@@ -211,7 +211,7 @@ static STIX_INLINE stix_ooi_t read_input (stix_t* stix, stix_ioarg_t* arg)
 
 
 	bb = (bb_t*)arg->handle;
-	STIX_ASSERT (bb != STIX_NULL && bb->fp != STIX_NULL);
+	STIX_ASSERT (stix, bb != STIX_NULL && bb->fp != STIX_NULL);
 	do
 	{
 		x = fgetc (bb->fp);
@@ -445,7 +445,7 @@ if (mask & STIX_LOG_GC) return; /* don't show gc logs */
 			 *    buffer not sufficient. not all got converted yet.
 			 *    write what have been converted this round. */
 
-			STIX_ASSERT (ucslen > 0); /* if this fails, the buffer size must be increased */
+			STIX_ASSERT (stix, ucslen > 0); /* if this fails, the buffer size must be increased */
 
 			/* attempt to write all converted characters */
 			if (write_all (1, buf, bcslen) <= -1) break;

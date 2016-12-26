@@ -481,8 +481,8 @@ return -1;
 
 				LOG_INST_2 (stix, "make_block %zu %zu", b1, b2);
 
-				STIX_ASSERT (b1 >= 0);
-				STIX_ASSERT (b2 >= b1);
+				STIX_ASSERT (stix, b1 >= 0);
+				STIX_ASSERT (stix, b2 >= b1);
 				break;
 
 			case BCODE_SEND_BLOCK_COPY:

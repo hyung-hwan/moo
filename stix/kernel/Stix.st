@@ -4,19 +4,6 @@
 
 #########################################################################################
 
-#class Error(Object)
-{
-	#method(#class) signal: aString
-	{
-		"accept an arbitary object instead of a string. 
-		 the object can be sent displayString for string conversion"
-	}
-
-	#method isError
-	{
-		^true
-	}
-}
 
 #class Magnitude(Object)
 {

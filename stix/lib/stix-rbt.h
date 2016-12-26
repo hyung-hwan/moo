@@ -101,7 +101,7 @@ typedef enum stix_rbt_id_t stix_rbt_id_t;
 typedef void* (*stix_rbt_copier_t) (
 	stix_rbt_t* rbt  /* red-black tree */,
 	void*       dptr /* pointer to a key or a value */, 
-	stix_oow_t dlen /* length of a key or a value */
+	stix_oow_t  dlen /* length of a key or a value */
 );
 
 /**
@@ -109,8 +109,8 @@ typedef void* (*stix_rbt_copier_t) (
  */
 typedef void (*stix_rbt_freeer_t) (
 	stix_rbt_t* rbt,  /**< red-black tree */
-	void*      dptr, /**< pointer to a key or a value */
-	stix_oow_t dlen  /**< length of a key or a value */
+	void*       dptr, /**< pointer to a key or a value */
+	stix_oow_t  dlen  /**< length of a key or a value */
 );
 
 /**
@@ -234,11 +234,11 @@ typedef enum stix_rbt_style_kind_t  stix_rbt_style_kind_t;
  */
 struct stix_rbt_t
 {
-	stix_mmgr_t*            mmgr;
+	stix_t*                 stix;
 	const stix_rbt_style_t* style;
-	stix_oob_t             scale[2];  /**< length scale */
+	stix_oob_t              scale[2];  /**< length scale */
 	stix_rbt_pair_t         xnil;      /**< internal nil node */
-	stix_oow_t             size;      /**< number of pairs */
+	stix_oow_t              size;      /**< number of pairs */
 	stix_rbt_pair_t*        root;      /**< root pair */
 };
 
@@ -293,8 +293,8 @@ STIX_EXPORT const stix_rbt_style_t* stix_getrbtstyle (
  * @return stix_rbt_t pointer on success, STIX_NULL on failure.
  */
 STIX_EXPORT stix_rbt_t* stix_rbt_open (
-	stix_mmgr_t* mmgr,    /**< memory manager */
-	stix_oow_t  xtnsize, /**< extension size in bytes */
+	stix_t*      stix,
+	stix_oow_t   xtnsize, /**< extension size in bytes */
 	int          kscale,  /**< key scale */
 	int          vscale   /**< value scale */
 );
@@ -311,7 +311,7 @@ STIX_EXPORT void stix_rbt_close (
  */
 STIX_EXPORT int stix_rbt_init (
 	stix_rbt_t*  rbt,    /**< red-black tree */
-	stix_mmgr_t* mmgr,   /**< memory manager */
+	stix_t*      stix,
 	int          kscale, /**< key scale */
 	int          vscale  /**< value scale */
 );
@@ -321,10 +321,6 @@ STIX_EXPORT int stix_rbt_init (
  */
 STIX_EXPORT void stix_rbt_fini (
 	stix_rbt_t* rbt  /**< red-black tree */
-);
-
-STIX_EXPORT stix_mmgr_t* stix_rbt_getmmgr (
-	stix_rbt_t* rbt
 );
 
 STIX_EXPORT void* stix_rbt_getxtn (

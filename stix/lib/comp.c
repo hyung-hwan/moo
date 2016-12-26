@@ -405,7 +405,7 @@ static int string_to_smooi (stix_t* stix, stix_oocs_t* str, int radixed, stix_oo
 	ptr = str->ptr,
 	end = str->ptr + str->len;
 
-	STIX_ASSERT (ptr < end);
+	STIX_ASSERT (stix, ptr < end);
 
 	if (*ptr == '+' || *ptr == '-')
 	{
@@ -415,7 +415,7 @@ static int string_to_smooi (stix_t* stix, stix_oocs_t* str, int radixed, stix_oo
 
 	if (radixed)
 	{
-		STIX_ASSERT (ptr < end);
+		STIX_ASSERT (stix, ptr < end);
 
 		base = 0;
 		do
@@ -429,7 +429,7 @@ static int string_to_smooi (stix_t* stix, stix_oocs_t* str, int radixed, stix_oo
 	}
 	else base = 10;
 
-	STIX_ASSERT (ptr < end);
+	STIX_ASSERT (stix, ptr < end);
 
 	value = old_value = 0;
 	while (ptr < end && (v = CHAR_TO_NUM(*ptr, base)) < base)
@@ -452,7 +452,7 @@ static int string_to_smooi (stix_t* stix, stix_oocs_t* str, int radixed, stix_oo
 		return -1;
 	}
 
-	STIX_ASSERT (-STIX_SMOOI_MAX == STIX_SMOOI_MIN);
+	STIX_ASSERT (stix, -STIX_SMOOI_MAX == STIX_SMOOI_MIN);
 	if (value > STIX_SMOOI_MAX) 
 	{
 		stix->errnum = STIX_ERANGE;
@@ -474,7 +474,7 @@ static stix_oop_t string_to_num (stix_t* stix, stix_oocs_t* str, int radixed)
 	ptr = str->ptr,
 	end = str->ptr + str->len;
 
-	STIX_ASSERT (ptr < end);
+	STIX_ASSERT (stix, ptr < end);
 
 	if (*ptr == '+' || *ptr == '-')
 	{
@@ -484,7 +484,7 @@ static stix_oop_t string_to_num (stix_t* stix, stix_oocs_t* str, int radixed)
 
 	if (radixed)
 	{
-		STIX_ASSERT (ptr < end);
+		STIX_ASSERT (stix, ptr < end);
 
 		base = 0;
 		do
@@ -588,7 +588,7 @@ static STIX_INLINE int add_token_char (stix_t* stix, stix_ooch_t c)
 static STIX_INLINE void unget_char (stix_t* stix, const stix_iolxc_t* c)
 {
 	/* Make sure that the unget buffer is large enough */
-	STIX_ASSERT (stix->c->nungots < STIX_COUNTOF(stix->c->ungot));
+	STIX_ASSERT (stix, stix->c->nungots < STIX_COUNTOF(stix->c->ungot));
 	stix->c->ungot[stix->c->nungots++] = *c;
 }
 
@@ -937,7 +937,7 @@ static int get_numlit (stix_t* stix, int negated)
 		{
 			/* collect the potential radix specifier */
 			r = CHAR_TO_NUM (c, 10);
-			STIX_ASSERT (r < 10);
+			STIX_ASSERT (stix, r < 10);
 			radix = radix * 10 + r;
 		}
 
@@ -1570,7 +1570,7 @@ static void clear_io_names (stix_t* stix)
 {
 	stix_iolink_t* cur;
 
-	STIX_ASSERT (stix->c != STIX_NULL);
+	STIX_ASSERT (stix, stix->c != STIX_NULL);
 
 	while (stix->c->io_names)
 	{
@@ -1673,7 +1673,7 @@ static int end_include (stix_t* stix)
 	cur = stix->c->curinp;
 	stix->c->curinp = stix->c->curinp->includer;
 
-	STIX_ASSERT (cur->name != STIX_NULL);
+	STIX_ASSERT (stix, cur->name != STIX_NULL);
 	stix_freemem (stix, cur);
 	/* stix->parse.depth.incl--; */
 
@@ -2047,7 +2047,7 @@ static stix_ooi_t find_class_level_variable (stix_t* stix, stix_oop_class_t self
 
 	if (self)
 	{
-		STIX_ASSERT (STIX_CLASSOF(stix, self) == stix->_class);
+		STIX_ASSERT (stix, STIX_CLASSOF(stix, self) == stix->_class);
 
 		/* [NOTE] 
 		 *  the loop here assumes that the class has the following
@@ -2095,7 +2095,7 @@ static stix_ooi_t find_class_level_variable (stix_t* stix, stix_oop_class_t self
 
 	while (super != stix->_nil)
 	{
-		STIX_ASSERT (STIX_CLASSOF(stix, super) == stix->_class);
+		STIX_ASSERT (stix, STIX_CLASSOF(stix, super) == stix->_class);
 
 		/* [NOTE] 
 		 *  the loop here assumes that the class has the following
@@ -2138,7 +2138,7 @@ done:
 
 		/* the class being compiled has a superclass */
 
-		STIX_ASSERT (STIX_CLASSOF(stix, super) == stix->_class);
+		STIX_ASSERT (stix, STIX_CLASSOF(stix, super) == stix->_class);
 		switch (index)
 		{
 			case VAR_INSTANCE:
@@ -2562,8 +2562,8 @@ if super is variable-nonpointer, no instance variable is allowed.
 
 static int compile_unary_method_name (stix_t* stix)
 {
-	STIX_ASSERT (stix->c->mth.name.len == 0);
-	STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
+	STIX_ASSERT (stix, stix->c->mth.name.len == 0);
+	STIX_ASSERT (stix, stix->c->mth.tmpr_nargs == 0);
 
 	if (add_method_name_fragment(stix, TOKEN_NAME(stix)) <= -1) return -1;
 	GET_TOKEN (stix);
@@ -2571,7 +2571,7 @@ static int compile_unary_method_name (stix_t* stix)
 	if (TOKEN_TYPE(stix) == STIX_IOTOK_LPAREN)
 	{
 		/* this is a procedural style method */
-		STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
+		STIX_ASSERT (stix, stix->c->mth.tmpr_nargs == 0);
 
 		GET_TOKEN (stix);
 		if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
@@ -2618,8 +2618,8 @@ static int compile_unary_method_name (stix_t* stix)
 
 static int compile_binary_method_name (stix_t* stix)
 {
-	STIX_ASSERT (stix->c->mth.name.len == 0);
-	STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
+	STIX_ASSERT (stix, stix->c->mth.name.len == 0);
+	STIX_ASSERT (stix, stix->c->mth.tmpr_nargs == 0);
 
 	if (add_method_name_fragment(stix, TOKEN_NAME(stix)) <= -1) return -1;
 	GET_TOKEN (stix);
@@ -2632,14 +2632,14 @@ static int compile_binary_method_name (stix_t* stix)
 		return -1;
 	}
 
-	STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
+	STIX_ASSERT (stix, stix->c->mth.tmpr_nargs == 0);
 
 	/* no duplication check is performed against class-level variable names.
 	 * a duplcate name will shade a previsouly defined variable. */
 	if (add_temporary_variable(stix, TOKEN_NAME(stix)) <= -1) return -1;
 	stix->c->mth.tmpr_nargs++;
 
-	STIX_ASSERT (stix->c->mth.tmpr_nargs == 1);
+	STIX_ASSERT (stix, stix->c->mth.tmpr_nargs == 1);
 	/* this check should not be not necessary
 	if (stix->c->mth.tmpr_nargs > MAX_CODE_NARGS)
 	{
@@ -2654,8 +2654,8 @@ static int compile_binary_method_name (stix_t* stix)
 
 static int compile_keyword_method_name (stix_t* stix)
 {
-	STIX_ASSERT (stix->c->mth.name.len == 0);
-	STIX_ASSERT (stix->c->mth.tmpr_nargs == 0);
+	STIX_ASSERT (stix, stix->c->mth.name.len == 0);
+	STIX_ASSERT (stix, stix->c->mth.tmpr_nargs == 0);
 
 	do 
 	{
@@ -2697,7 +2697,7 @@ static int compile_method_name (stix_t* stix)
 	 */
 	int n;
 
-	STIX_ASSERT (stix->c->mth.tmpr_count == 0);
+	STIX_ASSERT (stix, stix->c->mth.tmpr_count == 0);
 
 	stix->c->mth.name_loc = stix->c->tok.loc;
 	switch (TOKEN_TYPE(stix))
@@ -2729,7 +2729,7 @@ static int compile_method_name (stix_t* stix)
  		}
 	}
 
-	STIX_ASSERT (stix->c->mth.tmpr_nargs < MAX_CODE_NARGS);
+	STIX_ASSERT (stix, stix->c->mth.tmpr_nargs < MAX_CODE_NARGS);
 	/* the total number of temporaries is equal to the number of 
 	 * arguments after having processed the message pattern. it's because
 	 * stix treats arguments the same as temporaries */
@@ -2936,7 +2936,7 @@ static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_
 		const stix_ooch_t* dot;
 
 		dot = stix_findoochar (name->ptr, name->len, '.');
-		STIX_ASSERT (dot != STIX_NULL);
+		STIX_ASSERT (stix, dot != STIX_NULL);
 		if (dot - (const stix_ooch_t*)name->ptr == 4 && 
 		    stix_equaloochars(name->ptr, vocas[VOCA_SELF].str, 4))
 		{
@@ -3004,8 +3004,8 @@ static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_
 
 				case VAR_CLASS:
 					/* a class variable can be access by both instance methods and class methods */
-					STIX_ASSERT (var->cls != STIX_NULL);
-					STIX_ASSERT (STIX_CLASSOF(stix, var->cls) == stix->_class);
+					STIX_ASSERT (stix, var->cls != STIX_NULL);
+					STIX_ASSERT (stix, STIX_CLASSOF(stix, var->cls) == stix->_class);
 
 					/* increment the position by the number of class instance variables
 					 * as the class variables are placed after the class instance variables */
@@ -3175,14 +3175,14 @@ static int compile_block_expression (stix_t* stix)
 	 */
 
 	/* this function expects [ not to be consumed away */
-	STIX_ASSERT (TOKEN_TYPE(stix) == STIX_IOTOK_LBRACK);
+	STIX_ASSERT (stix, TOKEN_TYPE(stix) == STIX_IOTOK_LBRACK);
 	block_loc = stix->c->tok.loc;
 	GET_TOKEN (stix);
 
 	saved_tmprs_len = stix->c->mth.tmprs.len;
 	saved_tmpr_count = stix->c->mth.tmpr_count;
-	STIX_ASSERT (stix->c->mth.blk_depth > 0);
-	STIX_ASSERT (stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth - 1] == saved_tmpr_count);
+	STIX_ASSERT (stix, stix->c->mth.blk_depth > 0);
+	STIX_ASSERT (stix, stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth - 1] == saved_tmpr_count);
 
 	if (TOKEN_TYPE(stix) == STIX_IOTOK_COLON) 
 	{
@@ -3395,7 +3395,7 @@ static int __read_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
 		{
 			/* the token reader reads a valid token. no other errors
 			 * than the range error must not occur */
-			STIX_ASSERT (stix->errnum == STIX_ERANGE);
+			STIX_ASSERT (stix, stix->errnum == STIX_ERANGE);
 
 			/* if the token is out of the SMOOI range, it's too big or 
 			 * to small to be a byte */
@@ -3454,7 +3454,7 @@ static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
 				break;
 
 			case STIX_IOTOK_CHARLIT:
-				STIX_ASSERT (TOKEN_NAME_LEN(stix) == 1);
+				STIX_ASSERT (stix, TOKEN_NAME_LEN(stix) == 1);
 				lit = STIX_CHAR_TO_OOP(TOKEN_NAME_PTR(stix)[0]);
 				break;
 
@@ -3578,7 +3578,7 @@ static int compile_array_literal (stix_t* stix)
 	stix_oop_t lit;
 	stix_oow_t index;
 
-	STIX_ASSERT (stix->c->mth.arlit_count == 0);
+	STIX_ASSERT (stix, stix->c->mth.arlit_count == 0);
 
 	if (read_array_literal(stix, &lit) <= -1 ||
 	    add_literal(stix, lit, &index) <= -1 ||
@@ -3618,7 +3618,7 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 
 					/* if a temporary variable is accessed inside a block,
 					 * use a special instruction to indicate it */
-					STIX_ASSERT (var.pos < stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth]);
+					STIX_ASSERT (stix, var.pos < stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth]);
 					for (i = stix->c->mth.blk_depth; i > 0; i--)
 					{
 						if (var.pos >= stix->c->mth.blk_tmprcnt[i - 1])
@@ -3715,7 +3715,7 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 				break;
 
 			case STIX_IOTOK_CHARLIT:
-				STIX_ASSERT (TOKEN_NAME_LEN(stix) == 1);
+				STIX_ASSERT (stix, TOKEN_NAME_LEN(stix) == 1);
 				if (emit_push_character_literal(stix, TOKEN_NAME_PTR(stix)[0]) <= -1) return -1;
 				GET_TOKEN (stix);
 				break;
@@ -3818,7 +3818,7 @@ static int compile_unary_message (stix_t* stix, int to_super)
 	stix_oow_t index;
 	stix_oow_t nargs;
 
-	STIX_ASSERT (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT);
+	STIX_ASSERT (stix, TOKEN_TYPE(stix) == STIX_IOTOK_IDENT);
 
 	do
 	{
@@ -3875,7 +3875,7 @@ static int compile_binary_message (stix_t* stix, int to_super)
 	stix_oocs_t binsel;
 	stix_oow_t saved_binsels_len, binsel_offset;
 
-	STIX_ASSERT (TOKEN_TYPE(stix) == STIX_IOTOK_BINSEL);
+	STIX_ASSERT (stix, TOKEN_TYPE(stix) == STIX_IOTOK_BINSEL);
 
 	do
 	{
@@ -3999,7 +3999,7 @@ static int compile_message_expression (stix_t* stix, int to_super)
 
 				if (TOKEN_TYPE(stix) == STIX_IOTOK_BINSEL)
 				{
-					STIX_ASSERT (stix->c->mth.code.len > noop_pos);
+					STIX_ASSERT (stix, stix->c->mth.code.len > noop_pos);
 					STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
 					stix->c->mth.code.len--;
 
@@ -4010,7 +4010,7 @@ static int compile_message_expression (stix_t* stix, int to_super)
 
 				if (TOKEN_TYPE(stix) == STIX_IOTOK_KEYWORD)
 				{
-					STIX_ASSERT (stix->c->mth.code.len > noop_pos);
+					STIX_ASSERT (stix, stix->c->mth.code.len > noop_pos);
 					STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
 					stix->c->mth.code.len--;
 
@@ -4027,7 +4027,7 @@ static int compile_message_expression (stix_t* stix, int to_super)
 				if (compile_binary_message(stix, to_super) <= -1) return -1;
 				if (TOKEN_TYPE(stix) == STIX_IOTOK_KEYWORD)
 				{
-					STIX_ASSERT (stix->c->mth.code.len > noop_pos);
+					STIX_ASSERT (stix, stix->c->mth.code.len > noop_pos);
 					STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
 					stix->c->mth.code.len--;
 
@@ -4058,7 +4058,7 @@ static int compile_message_expression (stix_t* stix, int to_super)
 		else 
 		{
 			/* delete the NOOP instruction inserted  */
-			STIX_ASSERT (stix->c->mth.code.len > noop_pos);
+			STIX_ASSERT (stix, stix->c->mth.code.len > noop_pos);
 			STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
 			stix->c->mth.code.len--;
 			goto done;
@@ -4110,7 +4110,7 @@ static int compile_method_expression (stix_t* stix, int pop)
 	stix_oow_t index;
 	int ret = 0;
 
-	STIX_ASSERT (pop == 0 || pop == 1);
+	STIX_ASSERT (stix, pop == 0 || pop == 1);
 	STIX_MEMSET (&assignee, 0, STIX_SIZEOF(assignee));
 
 	if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT ||
@@ -4164,7 +4164,7 @@ static int compile_method_expression (stix_t* stix, int pop)
 
 						/* if a temporary variable is accessed inside a block,
 						 * use a special instruction to indicate it */
-						STIX_ASSERT (var.pos < stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth]);
+						STIX_ASSERT (stix, var.pos < stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth]);
 						for (i = stix->c->mth.blk_depth; i > 0; i--)
 						{
 							if (var.pos >= stix->c->mth.blk_tmprcnt[i - 1])
@@ -4485,7 +4485,7 @@ static int add_compiled_method (stix_t* stix)
 	}
 	else 
 	{
-		STIX_ASSERT (stix->c->mth.pftype == 4);
+		STIX_ASSERT (stix, stix->c->mth.pftype == 4);
 		preamble_code = STIX_METHOD_PREAMBLE_ENSURE;
 		preamble_index = 0;
 	}
@@ -4493,7 +4493,7 @@ static int add_compiled_method (stix_t* stix)
 	if (stix->c->mth.variadic /*&& stix->c->mth.tmpr_nargs > 0*/)
 		preamble_flags |= STIX_METHOD_PREAMBLE_FLAG_VARIADIC;
 
-	STIX_ASSERT (STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index));
+	STIX_ASSERT (stix, STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index));
 
 	mth->owner = stix->c->cls.self_oop;
 	mth->name = name;
@@ -4625,8 +4625,8 @@ static int make_defined_class (stix_t* stix)
 	{
 		/* this is an internally created class object being defined. */
 
-		STIX_ASSERT (STIX_CLASSOF(stix, stix->c->cls.self_oop) == stix->_class);
-		STIX_ASSERT (STIX_OBJ_GET_FLAGS_KERNEL (stix->c->cls.self_oop) == 1);
+		STIX_ASSERT (stix, STIX_CLASSOF(stix, stix->c->cls.self_oop) == stix->_class);
+		STIX_ASSERT (stix, STIX_OBJ_GET_FLAGS_KERNEL (stix->c->cls.self_oop) == 1);
 
 		if (spec != STIX_OOP_TO_SMOOI(stix->c->cls.self_oop->spec) ||
 		    self_spec != STIX_OOP_TO_SMOOI(stix->c->cls.self_oop->selfspec))
@@ -4647,7 +4647,7 @@ static int make_defined_class (stix_t* stix)
 		just_made = 1;
 		stix->c->cls.self_oop = (stix_oop_class_t)tmp;
 
-		STIX_ASSERT (STIX_CLASSOF(stix, stix->c->cls.self_oop) == stix->_class);
+		STIX_ASSERT (stix, STIX_CLASSOF(stix, stix->c->cls.self_oop) == stix->_class);
 
 		stix->c->cls.self_oop->spec = STIX_SMOOI_TO_OOP(spec);
 		stix->c->cls.self_oop->selfspec = STIX_SMOOI_TO_OOP(self_spec);
@@ -4818,7 +4818,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	if (extend)
 	{
 		/* extending class */
-		STIX_ASSERT (stix->c->cls.flags == 0);
+		STIX_ASSERT (stix, stix->c->cls.flags == 0);
 
 		/*ass = stix_lookupsysdic(stix, &stix->c->cls.name);*/
 		ass = stix_lookupdic(stix, stix->c->cls.ns_oop, &stix->c->cls.name);
@@ -4842,7 +4842,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 
 		stix->c->cls.super_oop = stix->c->cls.self_oop->superclass;
 
-		STIX_ASSERT ((stix_oop_t)stix->c->cls.super_oop == stix->_nil || 
+		STIX_ASSERT (stix, (stix_oop_t)stix->c->cls.super_oop == stix->_nil || 
 		             STIX_CLASSOF(stix, stix->c->cls.super_oop) == stix->_class);
 	}
 	else
@@ -4921,7 +4921,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 		{
 			/* no class of such a name is found. it's a new definition,
 			 * which is normal for most new classes. */
-			STIX_ASSERT (stix->c->cls.self_oop == STIX_NULL);
+			STIX_ASSERT (stix, stix->c->cls.self_oop == STIX_NULL);
 		}
 
 		if (super_is_nil)
@@ -5023,7 +5023,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 		{
 			stix_ooch_t* ptr, * end;
 
-			STIX_ASSERT (STIX_CLASSOF(stix, pds) == stix->_string);
+			STIX_ASSERT (stix, STIX_CLASSOF(stix, pds) == stix->_string);
 
 			ptr = pds->slot;
 			end = pds->slot + STIX_OBJ_GET_SIZE(pds);
@@ -5049,7 +5049,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 					ptr++;
 				}
 				tok.len = ptr - tok.ptr;
-				STIX_ASSERT (tok.len > 0);
+				STIX_ASSERT (stix, tok.len > 0);
 
 				if (dotted)
 				{
@@ -5127,7 +5127,7 @@ static int compile_class_definition (stix_t* stix, int extend)
 	STIX_MEMSET (&stix->c->cls.fqn_loc, 0, STIX_SIZEOF(stix->c->cls.fqn_loc));
 	STIX_MEMSET (&stix->c->cls.superfqn_loc, 0, STIX_SIZEOF(stix->c->cls.superfqn_loc));
 
-	STIX_ASSERT (STIX_COUNTOF(stix->c->cls.var_count) == STIX_COUNTOF(stix->c->cls.vars));
+	STIX_ASSERT (stix, STIX_COUNTOF(stix->c->cls.var_count) == STIX_COUNTOF(stix->c->cls.vars));
 	for (i = 0; i < STIX_COUNTOF(stix->c->cls.var_count); i++) 
 	{
 		stix->c->cls.var_count[i] = 0;
@@ -5246,7 +5246,7 @@ static int __compile_pooldic_definition (stix_t* stix)
 				goto add_literal;
 
 			case STIX_IOTOK_CHARLIT:
-				STIX_ASSERT (TOKEN_NAME_LEN(stix) == 1);
+				STIX_ASSERT (stix, TOKEN_NAME_LEN(stix) == 1);
 				lit = STIX_CHAR_TO_OOP(TOKEN_NAME_PTR(stix)[0]);
 				goto add_literal;
 
@@ -5549,7 +5549,7 @@ int stix_compile (stix_t* stix, stix_ioimpl_t io)
 	if (compile_stream (stix) <= -1) goto oops;
 
 	/* close the stream */
-	STIX_ASSERT (stix->c->curinp == &stix->c->arg);
+	STIX_ASSERT (stix, stix->c->curinp == &stix->c->arg);
 	stix->c->impl (stix, STIX_IO_CLOSE, stix->c->curinp);
 
 	return 0;
@@ -5566,7 +5566,7 @@ oops:
 		stix->c->impl (stix, STIX_IO_CLOSE, stix->c->curinp);
 
 		prev = stix->c->curinp->includer;
-		STIX_ASSERT (stix->c->curinp->name != STIX_NULL);
+		STIX_ASSERT (stix, stix->c->curinp->name != STIX_NULL);
 		STIX_MMGR_FREE (stix->mmgr, stix->c->curinp);
 		stix->c->curinp = prev;
 	}
@@ -5577,6 +5577,6 @@ oops:
 
 void stix_getsynerr (stix_t* stix, stix_synerr_t* synerr)
 {
-	STIX_ASSERT (stix->c != STIX_NULL);
+	STIX_ASSERT (stix, stix->c != STIX_NULL);
 	if (synerr) *synerr = stix->c->synerr;
 }

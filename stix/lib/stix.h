@@ -51,8 +51,17 @@ enum stix_errnum_t
 	STIX_EINTERN, /**< internal error */
 	STIX_ESYSMEM, /**< insufficient system memory */
 	STIX_EOOMEM,  /**< insufficient object memory */
+
 	STIX_EINVAL,  /**< invalid parameter or data */
 	STIX_EEXIST,  /**< existing/duplicate data */
+	STIX_EBUSY, 
+	STIX_EACCES,
+	STIX_EPERM,
+	STIX_ENOTDIR,
+	STIX_EINTR,
+	STIX_EPIPE,
+	STIX_EAGAIN,
+
 	STIX_ETOOBIG, /**< data too large */
 	STIX_EMSGSND, /**< message sending error. even doesNotUnderstand: is not found */
 	STIX_ERANGE,  /**< range error. overflow and underflow */
@@ -188,7 +197,7 @@ typedef enum stix_method_type_t stix_method_type_t;
 #define STIX_OOP_TAG_BITS   2
 #define STIX_OOP_TAG_SMINT  1
 #define STIX_OOP_TAG_CHAR   2
-#define STIX_OOP_TAG_RSRC   3
+#define STIX_OOP_TAG_ERROR  3
 
 #define STIX_OOP_GET_TAG(oop) (((stix_oow_t)oop) & STIX_LBMASK(stix_oow_t, STIX_OOP_TAG_BITS))
 #define STIX_OOP_IS_NUMERIC(oop) (STIX_OOP_GET_TAG(oop) != 0)
@@ -196,16 +205,14 @@ typedef enum stix_method_type_t stix_method_type_t;
 
 #define STIX_OOP_IS_SMOOI(oop) (STIX_OOP_GET_TAG(oop) == STIX_OOP_TAG_SMINT)
 #define STIX_OOP_IS_CHAR(oop) (STIX_OOP_GET_TAG(oop) == STIX_OOP_TAG_CHAR)
-#define STIX_OOP_IS_RSRC(oop) (STIX_OOP_GET_TAG(oop) == STIX_OOP_TAG_RSRC)
+#define STIX_OOP_IS_ERROR(oop) (STIX_OOP_GET_TAG(oop) == STIX_OOP_TAG_ERROR)
 
 #define STIX_SMOOI_TO_OOP(num) ((stix_oop_t)((((stix_ooi_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_SMINT))
 #define STIX_OOP_TO_SMOOI(oop) (((stix_ooi_t)oop) >> STIX_OOP_TAG_BITS)
 #define STIX_CHAR_TO_OOP(num) ((stix_oop_t)((((stix_oow_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_CHAR))
 #define STIX_OOP_TO_CHAR(oop) (((stix_oow_t)oop) >> STIX_OOP_TAG_BITS)
-
-/* RSRC(resurce) is a index to the VM's resource table(stix->rsrc.ptr) */
-#define STIX_RSRC_TO_OOP(num) ((stix_oop_t)((((stix_oow_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_RSRC))
-#define STIX_OOP_TO_RSRC(oop) (((stix_oow_t)oop) >> STIX_OOP_TAG_BITS)
+#define STIX_ERROR_TO_OOP(num) ((stix_oop_t)((((stix_oow_t)(num)) << STIX_OOP_TAG_BITS) | STIX_OOP_TAG_ERROR))
+#define STIX_OOP_TO_ERROR(oop) (((stix_oow_t)oop) >> STIX_OOP_TAG_BITS)
 
 /* SMOOI takes up 62 bits on a 64-bit architecture and 30 bits 
  * on a 32-bit architecture. The absolute value takes up 61 bits and 29 bits
@@ -660,14 +667,8 @@ struct stix_process_scheduler_t
  * The STIX_CLASSOF() macro return the class of an object including a numeric
  * object encoded into a pointer.
  */
-/*
-#define STIX_CLASSOF(stix,oop) ( \
-	STIX_OOP_IS_SMOOI(oop)? (stix)->_small_integer: \
-	STIX_OOP_IS_CHAR(oop)? (stix)->_character: STIX_OBJ_GET_CLASS(oop) \
-)
-* */
 #define STIX_CLASSOF(stix,oop) \
-	(STIX_OOP_GET_TAG(oop)? *stix->tagged_classes[STIX_OOP_GET_TAG(oop)]: STIX_OBJ_GET_CLASS(oop))
+	(STIX_OOP_GET_TAG(oop)? (*stix->tagged_classes[STIX_OOP_GET_TAG(oop)]): STIX_OBJ_GET_CLASS(oop))
 
 /**
  * The STIX_BYTESOF() macro returns the size of the payload of
@@ -691,8 +692,6 @@ struct stix_heap_t
 	stix_uint8_t* limit; /* end of a heap */
 	stix_uint8_t* ptr;   /* next allocation pointer */
 };
-
-typedef struct stix_t stix_t;
 
 /* =========================================================================
  * VIRTUAL MACHINE PRIMITIVES
@@ -788,11 +787,13 @@ struct stix_mod_data_t
 };
 typedef struct stix_mod_data_t stix_mod_data_t;
 
+
+
 struct stix_sbuf_t
 {
 	stix_ooch_t* ptr;
-	stix_oow_t len;
-	stix_oow_t capa;
+	stix_oow_t   len;
+	stix_oow_t   capa;
 };
 typedef struct stix_sbuf_t stix_sbuf_t;
 
@@ -837,13 +838,18 @@ struct stix_t
 	stix_heap_t* curheap;
 	stix_heap_t* newheap;
 
-	/* ========================= */
+	/* =============================================================
+	 * nil, true, false
+	 * ============================================================= */
 	stix_oop_t _nil;  /* pointer to the nil object */
 	stix_oop_t _true;
 	stix_oop_t _false;
 
-	/* == NEVER CHANGE THE ORDER OF FIELDS BELOW == */
-	/* stix_ignite() assumes this order. make sure to update symnames in ignite_3() */
+	/* =============================================================
+	 * KERNEL CLASSES 
+	 *  Be sure to Keep these kernel class pointers registered in the 
+	 *  kernel_classes table in gc.c
+	 * ============================================================= */
 	stix_oop_t _apex; /* Apex */
 	stix_oop_t _undefined_object; /* UndefinedObject */
 	stix_oop_t _class; /* Class */
@@ -867,17 +873,22 @@ struct stix_t
 	stix_oop_t _process; /* Process */
 	stix_oop_t _semaphore; /* Semaphore */
 	stix_oop_t _process_scheduler; /* ProcessScheduler */
+
+	stix_oop_t _error_class; /* Error */
 	stix_oop_t _true_class; /* True */
 	stix_oop_t _false_class; /* False */
 	stix_oop_t _character; /* Character */
-
 	stix_oop_t _small_integer; /* SmallInteger */
+
 	stix_oop_t _large_positive_integer; /* LargePositiveInteger */
 	stix_oop_t _large_negative_integer; /* LargeNegativeInteger */
+	/* =============================================================
+	 * END KERNEL CLASSES 
+	 * ============================================================= */
 
-	stix_oop_t _resource;
-	/* == NEVER CHANGE THE ORDER OF FIELDS ABOVE == */
-
+	/* =============================================================
+	 * KEY SYSTEM DICTIONARIES
+	 * ============================================================= */
 	stix_oop_t* tagged_classes[4];
 	stix_oop_set_t symtab; /* system-wide symbol table. instance of SymbolSet */
 	stix_oop_set_t sysdic; /* system dictionary. instance of SystemDictionary */
@@ -897,7 +908,9 @@ struct stix_t
 	stix_oop_t* tmp_stack[256]; /* stack for temporaries */
 	stix_oow_t tmp_count;
 
-	/* == EXECUTION REGISTERS == */
+	/* =============================================================
+	 * EXECUTION REGISTERS
+	 * ============================================================= */
 	stix_oop_context_t initial_context; /* fake initial context */
 	stix_oop_context_t active_context;
 	stix_oop_method_t active_method;
@@ -907,7 +920,9 @@ struct stix_t
 	int proc_switched; /* TODO: this is temporary. implement something else to skip immediate context switching */
 	int switch_proc;
 	stix_ntime_t vm_time_offset;
-	/* == END EXECUTION REGISTERS == */
+	/* =============================================================
+	 * END EXECUTION REGISTERS
+	 * ============================================================= */
 
 	/* == BIGINT CONVERSION == */
 	struct
@@ -916,15 +931,6 @@ struct stix_t
 		stix_oow_t multiplier;
 	} bigint[37];
 	/* == END BIGINT CONVERSION == */
-
-	/* == RSRC MANAGEMENT == */
-	struct
-	{
-		stix_oow_t* ptr;
-		stix_oow_t  free;
-		stix_oow_t  capa;
-	} rsrc;
-	/* == END RSRC MANAGEMENT == */
 
 	stix_sbuf_t sbuf[64];
 
@@ -958,7 +964,7 @@ struct stix_t
  * also you must not call this macro more than once */
 #define STIX_STACK_SETRET(stix,nargs,retv) (STIX_STACK_POPS(stix, nargs), STIX_STACK_SETTOP(stix, retv))
 #define STIX_STACK_SETRETTORCV(stix,nargs) (STIX_STACK_POPS(stix, nargs))
-
+#define STIX_STACK_SETRETTOERROR(stix,nargs,ec) (STIX_STACK_POPS(stix, nargs), STIX_STACK_SETTOP(stix, STIX_ERROR_TO_OOP(ec)))
 
 /* =========================================================================
  * STIX VM LOGGING
@@ -1010,14 +1016,12 @@ typedef enum stix_log_mask_t stix_log_mask_t;
 /* =========================================================================
  * STIX ASSERTION
  * ========================================================================= */
-#if 0
 #if defined(NDEBUG)
-#	define STIX_ASSERT(expr) ((void)0)
+#	define STIX_ASSERT(stix,expr) ((void)0)
 #else
-#	define STIX_ASSERT(expr) (void)((expr) || \
-	(stix_logbfmt ("%s at %s:%d", #expr, __FILE__, (int)__LINE__), 0))
+#	define STIX_ASSERT(stix,expr) ((void)((expr) || (stix_assertfailed (stix, #expr, __FILE__, __LINE__), 0)))
 #endif
-#endif
+
 
 #if defined(__cplusplus)
 extern "C" {
@@ -1181,28 +1185,23 @@ STIX_EXPORT void stix_poptmps (
 	stix_oow_t  count
 );
 
-STIX_EXPORT int stix_decode (
-	stix_t*            stix,
-	stix_oop_method_t  mth,
-	const stix_oocs_t* classfqn
-);
-
-/* Memory allocation/deallocation functions using stix's MMGR */
-
+/* =========================================================================
+ * SYSTEM MEMORY MANAGEMENT FUCNTIONS VIA MMGR
+ * ========================================================================= */
 STIX_EXPORT void* stix_allocmem (
 	stix_t*     stix,
-	stix_oow_t size
+	stix_oow_t  size
 );
 
 STIX_EXPORT void* stix_callocmem (
 	stix_t*     stix,
-	stix_oow_t size
+	stix_oow_t  size
 );
 
 STIX_EXPORT void* stix_reallocmem (
 	stix_t*     stix,
 	void*       ptr,
-	stix_oow_t size
+	stix_oow_t  size
 );
 
 STIX_EXPORT void stix_freemem (
@@ -1272,6 +1271,28 @@ STIX_EXPORT stix_ooi_t stix_logoofmt (
 	...
 );
  
+/* =========================================================================
+ * MISCELLANEOUS HELPER FUNCTIONS
+ * ========================================================================= */
+
+STIX_EXPORT int stix_decode (
+	stix_t*            stix,
+	stix_oop_method_t  mth,
+	const stix_oocs_t* classfqn
+);
+
+STIX_EXPORT void stix_assertfailed (
+	stix_t*           stix,
+	const stix_bch_t* expr,
+	const stix_bch_t* file,
+	stix_oow_t        line
+);
+
+STIX_EXPORT stix_errnum_t stix_syserrtoerrnum (
+	int e
+);
+
+
 #if defined(__cplusplus)
 }
 #endif

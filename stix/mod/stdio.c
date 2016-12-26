@@ -29,11 +29,8 @@
 #include <stix-utl.h>
 
 #include <stdio.h>
+#include <errno.h>
 #include <limits.h>
-
-/* TODO: remvoe this assert use one defined in stix.h */
-#include <assert.h>
-#define STIX_ASSERT(x) assert(x)
 
 typedef struct stdio_t stdio_t;
 struct stdio_t
@@ -84,7 +81,8 @@ static int pf_open (stix_t* stix, stix_ooi_t nargs)
 	if (!rcv->fp) 
 	{
 STIX_DEBUG2 (stix, "cannot open %s for %s\n", namebuf, modebuf);
-		return -1;  /* TODO: return success with an object instead... */
+		STIX_STACK_SETRETTOERROR (stix, nargs, stix_syserrtoerrnum(errno));
+		return 1;
 	}
 
 STIX_DEBUG3 (stix, "opened %s for %s - %p\n", namebuf, modebuf, rcv->fp);
@@ -119,8 +117,6 @@ static int pf_puts (stix_t* stix, stix_ooi_t nargs)
 {
 	stdio_t* rcv;
 	stix_ooi_t i;
-	
-	
 
 	rcv = (stdio_t*)STIX_STACK_GETRCV(stix, nargs);
 
@@ -133,7 +129,7 @@ static int pf_puts (stix_t* stix, stix_ooi_t nargs)
 		if (STIX_OOP_IS_CHAR(x))
 		{
 			/* do some faking. */
-			STIX_ASSERT (STIX_SIZEOF(tmpc) >= STIX_SIZEOF(stix_obj_t) + STIX_SIZEOF(stix_ooch_t));
+			STIX_ASSERT (stix, STIX_SIZEOF(tmpc) >= STIX_SIZEOF(stix_obj_t) + STIX_SIZEOF(stix_ooch_t));
 
 			tmpc.slot[0] = STIX_OOP_TO_CHAR(x);
 			x = (stix_oop_char_t)&tmpc;

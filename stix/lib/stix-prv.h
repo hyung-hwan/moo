@@ -65,7 +65,6 @@
 
 /* TODO: delete these header inclusion lines */
 #include <string.h>
-#include <assert.h>
 
 #if defined(__has_builtin)
 #	if __has_builtin(__builtin_memset)
@@ -100,8 +99,6 @@
 #	define STIX_MEMMOVE(dst,src,size) memmove(dst,src,size)
 #	define STIX_MEMCMP(dst,src,size)  memcmp(dst,src,size)
 #endif
-
-#define STIX_ASSERT(x)             assert(x)
 
 #define STIX_ALIGN(x,y) ((((x) + (y) - 1) / (y)) * (y))
 
@@ -583,10 +580,13 @@ struct stix_compiler_t
 	} mth; 
 };
 
+
+
+/*
 typedef struct stix_bchbuf_t stix_bchbuf_t;
 struct stix_bchbuf_t
 {
-	stix_bch_t  sbuf[128];
+	stix_bch_t  buf[128];
 	stix_bch_t* ptr;
 	stix_oow_t  capa;
 };
@@ -594,10 +594,11 @@ struct stix_bchbuf_t
 typedef struct stix_oochbuf_t stix_oochbuf_t;
 struct stix_oochbuf_t
 {
-	stix_ooch_t  sbuf[128];
+	stix_ooch_t  buf[128];
 	stix_ooch_t* ptr;
 	stix_oow_t   capa;
 };
+*/
 
 #endif
 

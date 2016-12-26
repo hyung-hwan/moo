@@ -316,16 +316,16 @@ static void print_object (stix_t* stix, stix_oow_t mask, stix_oop_t oop)
 	{
 		stix_logbfmt (stix, mask, "$%.1C", STIX_OOP_TO_CHAR(oop));
 	}
-	else if (STIX_OOP_IS_RSRC(oop))
+	else if (STIX_OOP_IS_ERROR(oop))
 	{
-		stix_logbfmt (stix, mask, "%zX", stix->rsrc.ptr[STIX_OOP_TO_RSRC(oop)]);
+		stix_logbfmt (stix, mask, "E%08zd", STIX_OOP_TO_ERROR(oop));
 	}
 	else
 	{
 		stix_oop_class_t c;
 		stix_oow_t i;
 
-		STIX_ASSERT (STIX_OOP_IS_POINTER(oop));
+		STIX_ASSERT (stix, STIX_OOP_IS_POINTER(oop));
 		c = (stix_oop_class_t)STIX_OBJ_GET_CLASS(oop); /*STIX_CLASSOF(stix, oop);*/
 
 		if ((stix_oop_t)c == stix->_large_negative_integer)

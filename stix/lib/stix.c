@@ -31,7 +31,7 @@ stix_t* stix_open (stix_mmgr_t* mmgr, stix_oow_t xtnsize, stix_oow_t heapsize, c
 	stix_t* stix;
 
 	/* if this assertion fails, correct the type definition in stix.h */
-	STIX_ASSERT (STIX_SIZEOF(stix_oow_t) == STIX_SIZEOF(stix_oop_t));
+	STIX_ASSERT (stix, STIX_SIZEOF(stix_oow_t) == STIX_SIZEOF(stix_oop_t));
 
 	stix = STIX_MMGR_ALLOC (mmgr, STIX_SIZEOF(*stix) + xtnsize);
 	if (stix)
@@ -84,6 +84,8 @@ static void fill_bigint_tables (stix_t* stix)
 
 int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_oow_t heapsz, const stix_vmprim_t* vmprim)
 {
+	int modtab_inited = 0;
+
 	STIX_MEMSET (stix, 0, STIX_SIZEOF(*stix));
 	stix->mmgr = mmgr;
 	stix->cmgr = stix_getutf8cmgr ();
@@ -102,18 +104,20 @@ int stix_init (stix_t* stix, stix_mmgr_t* mmgr, stix_oow_t heapsz, const stix_vm
 	stix->newheap = stix_makeheap (stix, heapsz);
 	if (!stix->newheap) goto oops;
 
-	if (stix_rbt_init (&stix->modtab, mmgr, STIX_SIZEOF(stix_ooch_t), 1) <= -1) goto oops;
+	if (stix_rbt_init (&stix->modtab, stix, STIX_SIZEOF(stix_ooch_t), 1) <= -1) goto oops;
+	modtab_inited = 1;
 	stix_rbt_setstyle (&stix->modtab, stix_getrbtstyle(STIX_RBT_STYLE_INLINE_COPIERS));
 
 	fill_bigint_tables (stix);
 
 	stix->tagged_classes[STIX_OOP_TAG_SMINT] = &stix->_small_integer;
 	stix->tagged_classes[STIX_OOP_TAG_CHAR] = &stix->_character;
-	stix->tagged_classes[STIX_OOP_TAG_RSRC] = &stix->_resource;
+	stix->tagged_classes[STIX_OOP_TAG_ERROR] = &stix->_error_class;
 
 	return 0;
 
 oops:
+	if (modtab_inited) stix_rbt_fini (&stix->modtab);
 	if (stix->newheap) stix_killheap (stix, stix->newheap);
 	if (stix->curheap) stix_killheap (stix, stix->curheap);
 	if (stix->permheap) stix_killheap (stix, stix->permheap);
@@ -126,7 +130,7 @@ static stix_rbt_walk_t unload_module (stix_rbt_t* rbt, stix_rbt_pair_t* pair, vo
 	stix_mod_data_t* mdp;
 
 	mdp = STIX_RBT_VPTR(pair);
-	STIX_ASSERT (mdp != STIX_NULL);
+	STIX_ASSERT (stix, mdp != STIX_NULL);
 
 	mdp->pair = STIX_NULL; /* to prevent stix_closemod() from calling  stix_rbt_delete() */
 	stix_closemod (stix, mdp);
@@ -165,14 +169,6 @@ void stix_fini (stix_t* stix)
 	stix_killheap (stix, stix->newheap);
 	stix_killheap (stix, stix->curheap);
 	stix_killheap (stix, stix->permheap);
-
-	if (stix->rsrc.ptr)
-	{
-		stix_freemem (stix, stix->rsrc.ptr);
-		stix->rsrc.free = 0;
-		stix->rsrc.capa = 0;
-		stix->rsrc.ptr = STIX_NULL;
-	}
 
 	/* deregister all callbacks */
 	while (stix->cblist) stix_deregcb (stix, stix->cblist);
@@ -374,65 +370,6 @@ void stix_freemem (stix_t* stix, void* ptr)
 
 /* -------------------------------------------------------------------------- */
 
-/* TODO: remove RSRS code. so far, i find this not useful */
-stix_oop_t stix_makersrc (stix_t* stix, stix_oow_t v)
-{
-	stix_oop_t imm;
-	stix_oow_t avail;
-
-	if (stix->rsrc.free >= stix->rsrc.capa)
-	{
-		stix_oow_t* tmp;
-		stix_ooi_t newcapa, i;
-
-		newcapa = stix->rsrc.capa + 256;
-
-		tmp = stix_reallocmem (stix, stix->rsrc.ptr, STIX_SIZEOF(*tmp) * newcapa);
-		if (!tmp) return STIX_NULL;
-
-		for (i = stix->rsrc.capa; i < newcapa; i++) tmp[i] = i + 1;
-		stix->rsrc.free = i;
-		stix->rsrc.ptr = tmp;
-		stix->rsrc.capa = newcapa;
-	}
-
-	avail = stix->rsrc.free;
-	stix->rsrc.free = stix->rsrc.ptr[stix->rsrc.free];
-	stix->rsrc.ptr[avail] = v;
-
-	/* there must not be too many immedates in the whole system. */
-	STIX_ASSERT (STIX_IN_SMOOI_RANGE(avail));
-	return STIX_RSRC_TO_OOP(avail);
-
-	return imm;
-}
-
-void stix_killrsrc (stix_t* stix, stix_oop_t imm)
-{
-	if (STIX_OOP_IS_RSRC(stix))
-	{
-		stix_ooi_t v;
-
-		v = STIX_OOP_TO_RSRC(stix);
-
-		/* the value of v, if properly created by stix_makeimm(), must
-		 * fall in the following range. when storing and loading the values
-		 * from an image file, you must take extra care not to break this
-		 * assertion */
-		STIX_ASSERT (v >= 0 && v < stix->rsrc.capa);
-		stix->rsrc.ptr[v] = stix->rsrc.free;
-		stix->rsrc.free = v;
-	}
-}
-
-stix_oow_t stix_getrsrcval (stix_t* stix, stix_oop_t imm)
-{
-	STIX_ASSERT (STIX_OOP_IS_RSRC(imm));
-	return stix->rsrc.ptr[STIX_OOP_TO_RSRC(imm)];
-}
-
-/* -------------------------------------------------------------------------- */
-
 #define MOD_PREFIX "stix_mod_"
 #define MOD_PREFIX_LEN 9
 
@@ -566,7 +503,7 @@ stix_mod_data_t* stix_openmod (stix_t* stix, const stix_ooch_t* name, stix_oow_t
 	STIX_DEBUG2 (stix, "Opened a module [%S] - %p\n", mdp->mod.name, mdp->handle);
 
 	/* the module loader must ensure to set a proper query handler */
-	STIX_ASSERT (mdp->mod.query != STIX_NULL);
+	STIX_ASSERT (stix, mdp->mod.query != STIX_NULL);
 
 	return mdp;
 }
@@ -604,7 +541,7 @@ int stix_importmod (stix_t* stix, stix_oop_t _class, const stix_ooch_t* name, st
 	if (pair)
 	{
 		mdp = (stix_mod_data_t*)STIX_RBT_VPTR(pair);
-		STIX_ASSERT (mdp != STIX_NULL);
+		STIX_ASSERT (stix, mdp != STIX_NULL);
 	}
 	else
 	{
@@ -673,7 +610,7 @@ stix_pfimpl_t stix_querymod (stix_t* stix, const stix_ooch_t* pfid, stix_oow_t p
 	if (pair)
 	{
 		mdp = (stix_mod_data_t*)STIX_RBT_VPTR(pair);
-		STIX_ASSERT (mdp != STIX_NULL);
+		STIX_ASSERT (stix, mdp != STIX_NULL);
 	}
 	else
 	{
@@ -709,13 +646,13 @@ int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_met
 	stix_ooi_t preamble_flags = 0;
 	static stix_ooch_t dot[] = { '.', '\0' };
 
-	STIX_ASSERT (STIX_CLASSOF(stix, _class) == stix->_class);
+	STIX_ASSERT (stix, STIX_CLASSOF(stix, _class) == stix->_class);
 
 	if (!pfname) pfname = mthname;
 
 	cls = (stix_oop_class_t)_class;
 	stix_pushtmp (stix, (stix_oop_t*)&cls); tmp_count++;
-	STIX_ASSERT (STIX_CLASSOF(stix, (stix_oop_t)cls->mthdic[type]) == stix->_method_dictionary);
+	STIX_ASSERT (stix, STIX_CLASSOF(stix, (stix_oop_t)cls->mthdic[type]) == stix->_method_dictionary);
 
 	for (i = 0; mthname[i]; i++)
 	{
@@ -808,3 +745,66 @@ oops:
 	return -1;
 }
  
+/* -------------------------------------------------------------------------- 
+ * SYSTEM DEPENDENT FUNCTIONS - TODO: MOVE THESE ELSE WHERE..........
+ * -------------------------------------------------------------------------- */
+#include <errno.h>
+#include <unistd.h>
+#include <signal.h>
+
+stix_errnum_t stix_syserrtoerrnum (int e)
+{
+	switch (e)
+	{
+		case ENOMEM: return STIX_ESYSMEM;
+		case EINVAL: return STIX_EINVAL;
+		case EBUSY: return STIX_EBUSY;
+		case EACCES: return STIX_EACCES;
+		case EPERM: return STIX_EPERM;
+		case ENOTDIR: return STIX_ENOTDIR;
+		case ENOENT: return STIX_ENOENT;
+		case EEXIST: return STIX_EEXIST;
+		case EINTR:  return STIX_EINTR;
+		case EPIPE:  return STIX_EPIPE;
+	#if defined(EAGAIN) && defined(EWOULDBLOCK) && (EAGAIN != EWOULDBLOCK)
+		case EAGAIN: 
+		case EWOULDBLOCK: return STIX_EAGAIN;
+	#elif defined(EAGAIN)
+		case EAGAIN: return STIX_EAGAIN;
+	#elif defined(EWOULDBLOCK)
+		case EWOULDBLOCK: return STIX_EAGAIN;
+	#endif
+		default:     return STIX_ESYSERR;
+	}
+}
+
+void stix_assertfailed (stix_t* stix, const stix_bch_t* expr, const stix_bch_t* file, stix_oow_t line)
+{
+	stix_logbfmt (stix, STIX_LOG_DEBUG, "ASSERTION FAILURE: %s at %s:%zu\n", expr, file, line);
+
+
+#if defined(_WIN32)
+	ExitProcess (249);
+#elif defined(__OS2__)
+	DosExit (EXIT_PROCESS, 249);
+#elif defined(__DOS__)
+	{
+		union REGS regs;
+		regs.h.ah = DOS_EXIT;
+		regs.h.al = 249;
+		intdos (&regs, &regs);
+	}
+#elif defined(vms) || defined(__vms)
+	lib$stop (SS$_ABORT); /* use SS$_OPCCUS instead? */
+
+	/* this won't be reached since lib$stop() terminates the process */
+	sys$exit (SS$_ABORT); /* this condition code can be shown with
+	                       * 'show symbol $status' from the command-line. */
+#elif defined(macintosh)
+	ExitToShell ();
+#else
+	kill (getpid(), SIGABRT);
+	_exit (1);
+#endif
+
+}

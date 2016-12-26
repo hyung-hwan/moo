@@ -71,10 +71,10 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 		ass = (stix_oop_association_t)oldbuc->slot[--oldsz];
 		if ((stix_oop_t)ass != stix->_nil)
 		{
-			STIX_ASSERT (STIX_CLASSOF(stix,ass) == stix->_association);
+			STIX_ASSERT (stix, STIX_CLASSOF(stix,ass) == stix->_association);
 
 			key = (stix_oop_char_t)ass->key;
-			STIX_ASSERT (STIX_CLASSOF(stix,key) == (stix_oop_t)stix->_symbol);
+			STIX_ASSERT (stix, STIX_CLASSOF(stix,key) == (stix_oop_t)stix->_symbol);
 
 			index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % newsz;
 			while (newbuc->slot[index] != stix->_nil) index = (index + 1) % newsz;
@@ -94,9 +94,9 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 
 	/* the system dictionary is not a generic dictionary.
 	 * it accepts only a symbol as a key. */
-	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
-	STIX_ASSERT (STIX_CLASSOF(stix,dic->tally) == stix->_small_integer);
-	STIX_ASSERT (STIX_CLASSOF(stix,dic->bucket) == stix->_array);
+	STIX_ASSERT (stix, STIX_CLASSOF(stix,key) == stix->_symbol);
+	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->tally) == stix->_small_integer);
+	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->bucket) == stix->_array);
 
 	index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(dic->bucket);
 
@@ -105,8 +105,8 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 	{
 		ass = (stix_oop_association_t)dic->bucket->slot[index];
 
-		STIX_ASSERT (STIX_CLASSOF(stix,ass) == stix->_association);
-		STIX_ASSERT (STIX_CLASSOF(stix,ass->key) == stix->_symbol);
+		STIX_ASSERT (stix, STIX_CLASSOF(stix,ass) == stix->_association);
+		STIX_ASSERT (stix, STIX_CLASSOF(stix,ass->key) == stix->_symbol);
 
 		if (STIX_OBJ_GET_SIZE(key) == STIX_OBJ_GET_SIZE(ass->key) &&
 		    stix_equaloochars (key->slot, ((stix_oop_char_t)ass->key)->slot, STIX_OBJ_GET_SIZE(key))) 
@@ -128,7 +128,7 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 	}
 
 	/* the key is not found. insert it. */
-	STIX_ASSERT (STIX_OOP_IS_SMOOI(dic->tally));
+	STIX_ASSERT (stix, STIX_OOP_IS_SMOOI(dic->tally));
 	tally = STIX_OOP_TO_SMOOI(dic->tally);
 	if (tally >= STIX_SMOOI_MAX)
 	{
@@ -180,7 +180,7 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 
 	/* the current tally must be less than the maximum value. otherwise,
 	 * it overflows after increment below */
-	STIX_ASSERT (tally < STIX_SMOOI_MAX);
+	STIX_ASSERT (stix, tally < STIX_SMOOI_MAX);
 	dic->tally = STIX_SMOOI_TO_OOP(tally + 1);
 	dic->bucket->slot[index] = (stix_oop_t)ass;
 
@@ -200,8 +200,8 @@ static stix_oop_association_t lookup (stix_t* stix, stix_oop_set_t dic, const st
 	stix_oow_t index;
 	stix_oop_association_t ass;
 
-	STIX_ASSERT (STIX_CLASSOF(stix,dic->tally) == stix->_small_integer);
-	STIX_ASSERT (STIX_CLASSOF(stix,dic->bucket) == stix->_array);
+	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->tally) == stix->_small_integer);
+	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->bucket) == stix->_array);
 
 	index = stix_hashchars(name->ptr, name->len) % STIX_OBJ_GET_SIZE(dic->bucket);
 
@@ -209,8 +209,8 @@ static stix_oop_association_t lookup (stix_t* stix, stix_oop_set_t dic, const st
 	{
 		ass = (stix_oop_association_t)dic->bucket->slot[index];
 
-		STIX_ASSERT (STIX_CLASSOF(stix,ass) == stix->_association);
-		STIX_ASSERT (STIX_CLASSOF(stix,ass->key) == stix->_symbol);
+		STIX_ASSERT (stix, STIX_CLASSOF(stix,ass) == stix->_association);
+		STIX_ASSERT (stix, STIX_CLASSOF(stix,ass->key) == stix->_symbol);
 
 		if (name->len == STIX_OBJ_GET_SIZE(ass->key) &&
 		    stix_equaloochars(name->ptr, ((stix_oop_char_t)ass->key)->slot, name->len)) 
@@ -228,13 +228,13 @@ static stix_oop_association_t lookup (stix_t* stix, stix_oop_set_t dic, const st
 
 stix_oop_association_t stix_putatsysdic (stix_t* stix, stix_oop_t key, stix_oop_t value)
 {
-	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
+	STIX_ASSERT (stix, STIX_CLASSOF(stix,key) == stix->_symbol);
 	return find_or_upsert (stix, stix->sysdic, (stix_oop_char_t)key, value);
 }
 
 stix_oop_association_t stix_getatsysdic (stix_t* stix, stix_oop_t key)
 {
-	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
+	STIX_ASSERT (stix, STIX_CLASSOF(stix,key) == stix->_symbol);
 	return find_or_upsert (stix, stix->sysdic, (stix_oop_char_t)key, STIX_NULL);
 }
 
@@ -245,13 +245,13 @@ stix_oop_association_t stix_lookupsysdic (stix_t* stix, const stix_oocs_t* name)
 
 stix_oop_association_t stix_putatdic (stix_t* stix, stix_oop_set_t dic, stix_oop_t key, stix_oop_t value)
 {
-	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
+	STIX_ASSERT (stix, STIX_CLASSOF(stix,key) == stix->_symbol);
 	return find_or_upsert (stix, dic, (stix_oop_char_t)key, value);
 }
 
 stix_oop_association_t stix_getatdic (stix_t* stix, stix_oop_set_t dic, stix_oop_t key)
 {
-	STIX_ASSERT (STIX_CLASSOF(stix,key) == stix->_symbol);
+	STIX_ASSERT (stix, STIX_CLASSOF(stix,key) == stix->_symbol);
 	return find_or_upsert (stix, dic, (stix_oop_char_t)key, STIX_NULL);
 }
 
@@ -265,12 +265,12 @@ stix_oop_set_t stix_makedic (stix_t* stix, stix_oop_t cls, stix_oow_t size)
 	stix_oop_set_t dic;
 	stix_oop_t tmp;
 
-	STIX_ASSERT (STIX_CLASSOF(stix,cls) == stix->_class);
+	STIX_ASSERT (stix, STIX_CLASSOF(stix,cls) == stix->_class);
 
 	dic = (stix_oop_set_t)stix_instantiate (stix, cls, STIX_NULL, 0);
 	if (!dic) return STIX_NULL;
 
-	STIX_ASSERT (STIX_OBJ_GET_SIZE(dic) == STIX_SET_NAMED_INSTVARS);
+	STIX_ASSERT (stix, STIX_OBJ_GET_SIZE(dic) == STIX_SET_NAMED_INSTVARS);
 
 	stix_pushtmp (stix, (stix_oop_t*)&dic);
 	tmp = stix_instantiate (stix, stix->_array, STIX_NULL, size);
@@ -280,8 +280,8 @@ stix_oop_set_t stix_makedic (stix_t* stix, stix_oop_t cls, stix_oow_t size)
 	dic->tally = STIX_SMOOI_TO_OOP(0);
 	dic->bucket = (stix_oop_oop_t)tmp;
 
-	STIX_ASSERT (STIX_OBJ_GET_SIZE(dic) == STIX_SET_NAMED_INSTVARS);
-	STIX_ASSERT (STIX_OBJ_GET_SIZE(dic->bucket) == size);
+	STIX_ASSERT (stix, STIX_OBJ_GET_SIZE(dic) == STIX_SET_NAMED_INSTVARS);
+	STIX_ASSERT (stix, STIX_OBJ_GET_SIZE(dic->bucket) == size);
 
 	return dic;
 }

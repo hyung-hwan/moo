@@ -47,7 +47,6 @@ libstix_la_SOURCES = \
 	logfmt.c \
 	gc.c \
 	heap.c \
-	ignite.c \
 	obj.c \
 	proc.c \
 	rbt.c \

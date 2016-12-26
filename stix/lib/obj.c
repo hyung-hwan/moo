@@ -175,10 +175,10 @@ static STIX_INLINE int decode_spec (stix_t* stix, stix_oop_t _class, stix_oow_t 
 	stix_oow_t named_instvar;
 	stix_obj_type_t indexed_type;
 
-	STIX_ASSERT (STIX_OOP_IS_POINTER(_class));
-	STIX_ASSERT (STIX_CLASSOF(stix, _class) == stix->_class);
+	STIX_ASSERT (stix, STIX_OOP_IS_POINTER(_class));
+	STIX_ASSERT (stix, STIX_CLASSOF(stix, _class) == stix->_class);
 
-	STIX_ASSERT (STIX_OOP_IS_SMOOI(((stix_oop_class_t)_class)->spec));
+	STIX_ASSERT (stix, STIX_OOP_IS_SMOOI(((stix_oop_class_t)_class)->spec));
 	spec = STIX_OOP_TO_SMOOI(((stix_oop_class_t)_class)->spec);
 
 	named_instvar = STIX_CLASS_SPEC_NAMED_INSTVAR(spec); /* size of the named_instvar part */
@@ -200,7 +200,7 @@ static STIX_INLINE int decode_spec (stix_t* stix, stix_oop_t _class, stix_oow_t 
 				return -1;
 			}
 
-			STIX_ASSERT (named_instvar + vlen <= STIX_OBJ_SIZE_MAX);
+			STIX_ASSERT (stix, named_instvar + vlen <= STIX_OBJ_SIZE_MAX);
 		}
 		else
 		{
@@ -235,7 +235,7 @@ static STIX_INLINE int decode_spec (stix_t* stix, stix_oop_t _class, stix_oow_t 
 			STIX_DEBUG3 (stix, "Too many named instance variables for a fixed class %O - %zu/%zu\n", _class, named_instvar, (stix_oow_t)STIX_MAX_NAMED_INSTVARS); 
 			return -1;
 		}
-		STIX_ASSERT (named_instvar <= STIX_OBJ_SIZE_MAX);
+		STIX_ASSERT (stix, named_instvar <= STIX_OBJ_SIZE_MAX);
 	}
 
 	*type = indexed_type;
@@ -250,7 +250,7 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 	stix_oow_t alloclen;
 	stix_oow_t tmp_count = 0;
 
-	STIX_ASSERT (stix->_nil != STIX_NULL);
+	STIX_ASSERT (stix, stix->_nil != STIX_NULL);
 
 	if (decode_spec (stix, _class, vlen, &type, &alloclen) <= -1) 
 	{
@@ -267,7 +267,7 @@ stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, 
 			 * the variable part(indexed instance variables) are allowed. */
 			oop = stix_allocoopobj (stix, alloclen);
 
-			STIX_ASSERT (vptr == STIX_NULL);
+			STIX_ASSERT (stix, vptr == STIX_NULL);
 			/*
 			This function is not GC-safe. so i don't want to initialize
 			the payload of a pointer object. The caller can call this
@@ -319,7 +319,7 @@ stix_oop_t stix_instantiate2 (stix_t* stix, stix_oop_t _class, const void* vptr,
 	stix_oow_t alloclen;
 	stix_oow_t tmp_count = 0;
 
-	STIX_ASSERT (stix->_nil != STIX_NULL);
+	STIX_ASSERT (stix, stix->_nil != STIX_NULL);
 
 	if (decode_spec (stix, _class, vlen, &type, &alloclen) <= -1) 
 	{
@@ -374,7 +374,7 @@ stix_oop_t stix_instantiatewithtrailer (stix_t* stix, stix_oop_t _class, stix_oo
 	stix_oow_t alloclen;
 	stix_oow_t tmp_count = 0;
 
-	STIX_ASSERT (stix->_nil != STIX_NULL);
+	STIX_ASSERT (stix, stix->_nil != STIX_NULL);
 
 	if (decode_spec (stix, _class, vlen, &type, &alloclen) <= -1) 
 	{

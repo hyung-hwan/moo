@@ -332,4 +332,10 @@
 	}
 }
 
-
+#class Error(Apex)
+{
+	#method isError
+	{
+		^true
+	}
+}

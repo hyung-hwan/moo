@@ -64,8 +64,8 @@ static STIX_INLINE __utf8_t* get_utf8_slot (stix_uch_t uc)
 {
 	__utf8_t* cur, * end;
 
-	STIX_ASSERT (STIX_SIZEOF(stix_bch_t) == 1);
-	STIX_ASSERT (STIX_SIZEOF(stix_uch_t) >= 2);
+	/*STIX_ASSERT (stix, STIX_SIZEOF(stix_bch_t) == 1);
+	STIX_ASSERT (stix, STIX_SIZEOF(stix_uch_t) >= 2);*/
 
 	end = utf8_table + STIX_COUNTOF(utf8_table);
 	cur = utf8_table;
@@ -110,10 +110,10 @@ stix_oow_t stix_utf8touc (const stix_bch_t* utf8, stix_oow_t size, stix_uch_t* u
 {
 	__utf8_t* cur, * end;
 
-	STIX_ASSERT (utf8 != STIX_NULL);
-	STIX_ASSERT (size > 0);
-	STIX_ASSERT (STIX_SIZEOF(stix_bch_t) == 1);
-	STIX_ASSERT (STIX_SIZEOF(stix_uch_t) >= 2);
+	/*STIX_ASSERT (stix, utf8 != STIX_NULL);
+	STIX_ASSERT (stix, size > 0);
+	STIX_ASSERT (stix, STIX_SIZEOF(stix_bch_t) == 1);
+	STIX_ASSERT (stix, STIX_SIZEOF(stix_uch_t) >= 2);*/
 
 	end = utf8_table + STIX_COUNTOF(utf8_table);
 	cur = utf8_table;
@@ -176,4 +176,3 @@ stix_oow_t stix_utf8touc (const stix_bch_t* utf8, stix_oow_t size, stix_uch_t* u
 
 	return 0; /* error - invalid sequence */
 }
-

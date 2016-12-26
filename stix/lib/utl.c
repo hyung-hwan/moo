@@ -275,7 +275,6 @@ int stix_copyoocstrtosbuf (stix_t* stix, const stix_ooch_t* str, int id)
 }
 
 
-
 /* ----------------------------------------------------------------------- */
 
 static STIX_INLINE int bcsn_to_ucsn_with_cmgr (
@@ -477,7 +476,7 @@ static STIX_INLINE int ucsn_to_bcsn_with_cmgr (
 			}
 
 			/* it assumes that bcsbuf is large enough to hold a character */
-			STIX_ASSERT (n <= STIX_COUNTOF(bcsbuf));
+			/*STIX_ASSERT (stix, n <= STIX_COUNTOF(bcsbuf));*/
 
 			p++; mlen += n;
 		}
@@ -559,7 +558,7 @@ static int ucs_to_bcs_with_cmgr (
 			}
 
 			/* it assumes that bcs is large enough to hold a character */
-			STIX_ASSERT (n <= STIX_COUNTOF(bcs));
+			/*STIX_ASSERT (stix, n <= STIX_COUNTOF(bcs));*/
 
 			p++; mlen += n;
 		}
@@ -639,4 +638,3 @@ int stix_ucstobcs (stix_t* stix, const stix_uch_t* ucs, stix_oow_t* ucslen, stix
 		return ucsn_to_bcsn_with_cmgr (ucs, ucslen, bcs, bcslen, stix->cmgr);
 	}
 }
-

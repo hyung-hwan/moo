@@ -67,7 +67,7 @@ STIX_INLINE stix_rbt_pair_t* stix_rbt_allocpair (
 	if (kcop == STIX_RBT_COPIER_INLINE) as += KTOB(rbt,klen);
 	if (vcop == STIX_RBT_COPIER_INLINE) as += VTOB(rbt,vlen);
 
-	n = (stix_rbt_pair_t*) STIX_MMGR_ALLOC (rbt->mmgr, as);
+	n = (stix_rbt_pair_t*) STIX_MMGR_ALLOC (rbt->stix->mmgr, as);
 	if (n == STIX_NULL) return STIX_NULL;
 
 	n->color = STIX_RBT_RED;
@@ -90,7 +90,7 @@ STIX_INLINE stix_rbt_pair_t* stix_rbt_allocpair (
 		KPTR(n) = kcop (rbt, kptr, klen);
 		if (KPTR(n) == STIX_NULL)
 		{
-			STIX_MMGR_FREE (rbt->mmgr, n);
+			STIX_MMGR_FREE (rbt->stix->mmgr, n);
 			return STIX_NULL;
 		}
 	}
@@ -114,7 +114,7 @@ STIX_INLINE stix_rbt_pair_t* stix_rbt_allocpair (
 		{
 			if (rbt->style->freeer[STIX_RBT_KEY] != STIX_NULL)
 				rbt->style->freeer[STIX_RBT_KEY] (rbt, KPTR(n), KLEN(n));
-			STIX_MMGR_FREE (rbt->mmgr, n);
+			STIX_MMGR_FREE (rbt->stix->mmgr, n);
 			return STIX_NULL;
 		}
 	}
@@ -128,7 +128,7 @@ STIX_INLINE void stix_rbt_freepair (stix_rbt_t* rbt, stix_rbt_pair_t* pair)
 		rbt->style->freeer[STIX_RBT_KEY] (rbt, KPTR(pair), KLEN(pair));
 	if (rbt->style->freeer[STIX_RBT_VAL] != STIX_NULL)
 		rbt->style->freeer[STIX_RBT_VAL] (rbt, VPTR(pair), VLEN(pair));
-	STIX_MMGR_FREE (rbt->mmgr, pair);
+	STIX_MMGR_FREE (rbt->stix->mmgr, pair);
 }
 
 static stix_rbt_style_t style[] =
@@ -191,16 +191,16 @@ const stix_rbt_style_t* stix_getrbtstyle (stix_rbt_style_kind_t kind)
 	return &style[kind];
 }
 
-stix_rbt_t* stix_rbt_open (stix_mmgr_t* mmgr, stix_oow_t xtnsize, int kscale, int vscale)
+stix_rbt_t* stix_rbt_open (stix_t* stix, stix_oow_t xtnsize, int kscale, int vscale)
 {
 	stix_rbt_t* rbt;
 
-	rbt = (stix_rbt_t*) STIX_MMGR_ALLOC (mmgr, STIX_SIZEOF(stix_rbt_t) + xtnsize);
+	rbt = (stix_rbt_t*) STIX_MMGR_ALLOC (stix->mmgr, STIX_SIZEOF(stix_rbt_t) + xtnsize);
 	if (rbt == STIX_NULL) return STIX_NULL;
 
-	if (stix_rbt_init (rbt, mmgr, kscale, vscale) <= -1)
+	if (stix_rbt_init (rbt, stix, kscale, vscale) <= -1)
 	{
-		STIX_MMGR_FREE (mmgr, rbt);
+		STIX_MMGR_FREE (stix->mmgr, rbt);
 		return STIX_NULL;
 	}
 
@@ -211,14 +211,14 @@ stix_rbt_t* stix_rbt_open (stix_mmgr_t* mmgr, stix_oow_t xtnsize, int kscale, in
 void stix_rbt_close (stix_rbt_t* rbt)
 {
 	stix_rbt_fini (rbt);
-	STIX_MMGR_FREE (rbt->mmgr, rbt);
+	STIX_MMGR_FREE (rbt->stix->mmgr, rbt);
 }
 
-int stix_rbt_init (stix_rbt_t* rbt, stix_mmgr_t* mmgr, int kscale, int vscale)
+int stix_rbt_init (stix_rbt_t* rbt, stix_t* stix, int kscale, int vscale)
 {
 	/* do not zero out the extension */
 	STIX_MEMSET (rbt, 0, STIX_SIZEOF(*rbt));
-	rbt->mmgr = mmgr;
+	rbt->stix = stix;
 
 	rbt->scale[STIX_RBT_KEY] = (kscale < 1)? 1: kscale;
 	rbt->scale[STIX_RBT_VAL] = (vscale < 1)? 1: vscale;
@@ -243,11 +243,6 @@ void stix_rbt_fini (stix_rbt_t* rbt)
 	stix_rbt_clear (rbt);
 }
 
-stix_mmgr_t* stix_rbt_getmmgr (stix_rbt_t* rbt)
-{
-	return rbt->mmgr;
-}
-
 void* stix_rbt_getxtn (stix_rbt_t* rbt)
 {
 	return (void*)(rbt + 1);
@@ -260,7 +255,7 @@ const stix_rbt_style_t* stix_rbt_getstyle (const stix_rbt_t* rbt)
 
 void stix_rbt_setstyle (stix_rbt_t* rbt, const stix_rbt_style_t* style)
 {
-	STIX_ASSERT (style != STIX_NULL);
+	STIX_ASSERT (rbt->stix, style != STIX_NULL);
 	rbt->style = style;
 }
 
@@ -324,7 +319,7 @@ static void rotate (stix_rbt_t* rbt, stix_rbt_pair_t* pivot, int leftwise)
 	stix_rbt_pair_t* parent, * z, * c;
 	int cid1, cid2;
 
-	STIX_ASSERT (pivot != STIX_NULL);
+	STIX_ASSERT (rbt->stix, pivot != STIX_NULL);
 
 	if (leftwise)
 	{
@@ -352,13 +347,13 @@ static void rotate (stix_rbt_t* rbt, stix_rbt_pair_t* pivot, int leftwise)
 		}
 		else
 		{
-			STIX_ASSERT (parent->right == pivot);
+			STIX_ASSERT (rbt->stix, parent->right == pivot);
 			parent->right = z;
 		}
 	}
 	else
 	{
-		STIX_ASSERT (rbt->root == pivot);
+		STIX_ASSERT (rbt->stix, rbt->root == pivot);
 		rbt->root = z;
 	}
 
@@ -379,7 +374,7 @@ static void adjust (stix_rbt_t* rbt, stix_rbt_pair_t* pair)
 		x_par = pair->parent;
 		if (x_par->color == STIX_RBT_BLACK) break;
 
-		STIX_ASSERT (x_par->parent != STIX_NULL);
+		STIX_ASSERT (rbt->stix, x_par->parent != STIX_NULL);
 
 		if (x_par == x_par->parent->child[LEFT])
 		{
@@ -469,7 +464,7 @@ static stix_rbt_pair_t* change_pair_val (
 					}
 					else
 					{
-						STIX_ASSERT (pair->parent->right == pair);
+						STIX_ASSERT (rbt->stix, pair->parent->right == pair);
 						pair->parent->right = p;
 					}
 				}
@@ -542,7 +537,7 @@ static stix_rbt_pair_t* insert (
 	if (x_par == STIX_NULL)
 	{
 		/* the tree contains no pair */
-		STIX_ASSERT (rbt->root == &rbt->xnil);
+		STIX_ASSERT (rbt->stix, rbt->root == &rbt->xnil);
 		rbt->root = x_new;
 	}
 	else
@@ -551,12 +546,12 @@ static stix_rbt_pair_t* insert (
 		int n = rbt->style->comper (rbt, kptr, klen, KPTR(x_par), KLEN(x_par));
 		if (n > 0)
 		{
-			STIX_ASSERT (x_par->right == &rbt->xnil);
+			STIX_ASSERT (rbt->stix, x_par->right == &rbt->xnil);
 			x_par->right = x_new;
 		}
 		else
 		{
-			STIX_ASSERT (x_par->left == &rbt->xnil);
+			STIX_ASSERT (rbt->stix, x_par->left == &rbt->xnil);
 			x_par->left = x_new;
 		}
 
@@ -639,7 +634,7 @@ stix_rbt_pair_t* stix_rbt_cbsert (
 					}
 					else
 					{
-						STIX_ASSERT (tmp.parent->right == x_cur);
+						STIX_ASSERT (rbt->stix, tmp.parent->right == x_cur);
 						tmp.parent->right = x_new;
 					}
 				}
@@ -664,7 +659,7 @@ stix_rbt_pair_t* stix_rbt_cbsert (
 	if (x_par == STIX_NULL)
 	{
 		/* the tree contains no pair */
-		STIX_ASSERT (rbt->root == &rbt->xnil);
+		STIX_ASSERT (rbt->stix, rbt->root == &rbt->xnil);
 		rbt->root = x_new;
 	}
 	else
@@ -673,12 +668,12 @@ stix_rbt_pair_t* stix_rbt_cbsert (
 		int n = rbt->style->comper (rbt, kptr, klen, KPTR(x_par), KLEN(x_par));
 		if (n > 0)
 		{
-			STIX_ASSERT (x_par->right == &rbt->xnil);
+			STIX_ASSERT (rbt->stix, x_par->right == &rbt->xnil);
 			x_par->right = x_new;
 		}
 		else
 		{
-			STIX_ASSERT (x_par->left == &rbt->xnil);
+			STIX_ASSERT (rbt->stix, x_par->left == &rbt->xnil);
 			x_par->left = x_new;
 		}
 
@@ -738,7 +733,7 @@ static void adjust_for_delete (stix_rbt_t* rbt, stix_rbt_pair_t* pair, stix_rbt_
 		}
 		else
 		{
-			STIX_ASSERT (pair == par->right);
+			STIX_ASSERT (rbt->stix, pair == par->right);
 			tmp = par->left;
 			if (tmp->color == STIX_RBT_RED)
 			{
@@ -783,7 +778,7 @@ static void delete_pair (stix_rbt_t* rbt, stix_rbt_pair_t* pair)
 {
 	stix_rbt_pair_t* x, * y, * par;
 
-	STIX_ASSERT (pair && !IS_NIL(rbt,pair));
+	STIX_ASSERT (rbt->stix, pair && !IS_NIL(rbt,pair));
 
 	if (IS_NIL(rbt,pair->left) || IS_NIL(rbt,pair->right))
 	{
@@ -961,7 +956,7 @@ static STIX_INLINE void walk (stix_rbt_t* rbt, walker_t walker, void* ctx, int l
 		else
 		{
 			/* both the left child and the right child have been traversed */
-			STIX_ASSERT (prev == x_cur->child[r]);
+			STIX_ASSERT (rbt->stix, prev == x_cur->child[r]);
 			/* just move up to the parent */
 			prev = x_cur;
 			x_cur = x_cur->parent;

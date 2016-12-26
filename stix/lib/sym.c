@@ -70,8 +70,8 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 		symbol = (stix_oop_char_t)oldbuc->slot[--oldsz];
 		if ((stix_oop_t)symbol != stix->_nil)
 		{
-			STIX_ASSERT (STIX_CLASSOF(stix,symbol) == stix->_symbol);
-			/*STIX_ASSERT (sym->size > 0);*/
+			STIX_ASSERT (stix, STIX_CLASSOF(stix,symbol) == stix->_symbol);
+			/*STIX_ASSERT (stix, sym->size > 0);*/
 
 			index = stix_hashchars(symbol->slot, STIX_OBJ_GET_SIZE(symbol)) % newsz;
 			while (newbuc->slot[index] != stix->_nil) index = (index + 1) % newsz;
@@ -88,7 +88,7 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_ooch_t* ptr, sti
 	stix_oow_t index;
 	stix_oop_char_t symbol;
 
-	STIX_ASSERT (len > 0);
+	STIX_ASSERT (stix, len > 0);
 	if (len <= 0) 
 	{
 		/* i don't allow an empty symbol name */
@@ -96,14 +96,14 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_ooch_t* ptr, sti
 		return STIX_NULL;
 	}
 
-	STIX_ASSERT (STIX_CLASSOF(stix,stix->symtab->bucket) == stix->_array);
+	STIX_ASSERT (stix, STIX_CLASSOF(stix,stix->symtab->bucket) == stix->_array);
 	index = stix_hashchars(ptr, len) % STIX_OBJ_GET_SIZE(stix->symtab->bucket);
 
 	/* find a matching symbol in the open-addressed symbol table */
 	while (stix->symtab->bucket->slot[index] != stix->_nil) 
 	{
 		symbol = (stix_oop_char_t)stix->symtab->bucket->slot[index];
-		STIX_ASSERT (STIX_CLASSOF(stix,symbol) == (stix_oop_t)stix->_symbol);
+		STIX_ASSERT (stix, STIX_CLASSOF(stix,symbol) == (stix_oop_t)stix->_symbol);
 
 		if (len == STIX_OBJ_GET_SIZE(symbol) &&
 		    stix_equaloochars (ptr, symbol->slot, len))
@@ -121,7 +121,7 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_ooch_t* ptr, sti
 	}
 
 	/* make a new symbol and insert it */
-	STIX_ASSERT (STIX_OOP_IS_SMOOI(stix->symtab->tally));
+	STIX_ASSERT (stix, STIX_OOP_IS_SMOOI(stix->symtab->tally));
 	tally = STIX_OOP_TO_SMOOI(stix->symtab->tally);
 	if (tally >= STIX_SMOOI_MAX)
 	{
@@ -163,7 +163,7 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_ooch_t* ptr, sti
 	symbol = (stix_oop_char_t)stix_instantiate(stix, stix->_symbol, ptr, len);
 	if (symbol)
 	{
-		STIX_ASSERT (tally < STIX_SMOOI_MAX);
+		STIX_ASSERT (stix, tally < STIX_SMOOI_MAX);
 		stix->symtab->tally = STIX_SMOOI_TO_OOP(tally + 1);
 		stix->symtab->bucket->slot[index] = (stix_oop_t)symbol;
 	}

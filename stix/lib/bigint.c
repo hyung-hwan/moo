@@ -126,13 +126,13 @@ static STIX_INLINE int oow_mul_overflow (stix_oow_t a, stix_oow_t b, stix_oow_t*
 #endif
 
 #if (STIX_SIZEOF_OOI_T == STIX_SIZEOF_INT) && defined(STIX_HAVE_BUILTIN_SMUL_OVERFLOW)
-#	define smooi_mul_overflow(a,b,c)  __builtin_smul_overflow(a,b,c)
+#	define smooi_mul_overflow(stix,a,b,c)  __builtin_smul_overflow(a,b,c)
 #elif (STIX_SIZEOF_OOI_T == STIX_SIZEOF_LONG) && defined(STIX_HAVE_BUILTIN_SMULL_OVERFLOW)
-#	define smooi_mul_overflow(a,b,c)  __builtin_smull_overflow(a,b,c)
+#	define smooi_mul_overflow(stix,a,b,c)  __builtin_smull_overflow(a,b,c)
 #elif (STIX_SIZEOF_OOI_T == STIX_SIZEOF_LONG_LONG) && defined(STIX_HAVE_BUILTIN_SMULLL_OVERFLOW)
-#	define smooi_mul_overflow(a,b,c)  __builtin_smulll_overflow(a,b,c)
+#	define smooi_mul_overflow(stix,a,b,c)  __builtin_smulll_overflow(a,b,c)
 #else
-static STIX_INLINE int smooi_mul_overflow (stix_ooi_t a, stix_ooi_t b, stix_ooi_t* c)
+static STIX_INLINE int smooi_mul_overflow (stix_t* stix, stix_ooi_t a, stix_ooi_t b, stix_ooi_t* c)
 {
 	/* take note that this function is not supposed to handle
 	 * the whole stix_ooi_t range. it handles the smooi subrange */
@@ -140,8 +140,8 @@ static STIX_INLINE int smooi_mul_overflow (stix_ooi_t a, stix_ooi_t b, stix_ooi_
 #if (STIX_SIZEOF_UINTMAX_T > STIX_SIZEOF_OOI_T)
 	stix_intmax_t k;
 
-	STIX_ASSERT (STIX_IN_SMOOI_RANGE(a));
-	STIX_ASSERT (STIX_IN_SMOOI_RANGE(b));
+	STIX_ASSERT (stix, STIX_IN_SMOOI_RANGE(a));
+	STIX_ASSERT (stix, STIX_IN_SMOOI_RANGE(b));
 
 	k = (stix_intmax_t)a * (stix_intmax_t)b;
 	*c = (stix_ooi_t)k;
@@ -151,8 +151,8 @@ static STIX_INLINE int smooi_mul_overflow (stix_ooi_t a, stix_ooi_t b, stix_ooi_
 
 	stix_ooi_t ua, ub;
 
-	STIX_ASSERT (STIX_IN_SMOOI_RANGE(a));
-	STIX_ASSERT (STIX_IN_SMOOI_RANGE(b));
+	STIX_ASSERT (stix, STIX_IN_SMOOI_RANGE(a));
+	STIX_ASSERT (stix, STIX_IN_SMOOI_RANGE(b));
 
 	*c = a * b;
 
@@ -220,7 +220,7 @@ static int is_normalized_integer (stix_t* stix, stix_oop_t oop)
 			stix_oow_t sz;
 
 			sz = STIX_OBJ_GET_SIZE(oop);
-			STIX_ASSERT (sz >= 1);
+			STIX_ASSERT (stix, sz >= 1);
 
 			return ((stix_oop_liword_t)oop)->slot[sz - 1] == 0? 0: 1;
 		}
@@ -233,7 +233,7 @@ STIX_INLINE static int is_bigint (stix_t* stix, stix_oop_t x)
 {
 	stix_oop_t c;
 
-	STIX_ASSERT (STIX_OOP_IS_POINTER(x));
+	STIX_ASSERT (stix, STIX_OOP_IS_POINTER(x));
 
 /* TODO: is it better to introduce a special integer mark into the class itself */
 /* TODO: or should it check if it's a subclass, subsubclass, subsubsubclass, etc of a large_integer as well? */
@@ -254,12 +254,12 @@ STIX_INLINE int stix_isint (stix_t* stix, stix_oop_t x)
 
 static STIX_INLINE int bigint_to_oow (stix_t* stix, stix_oop_t num, stix_oow_t* w)
 {
-	STIX_ASSERT (STIX_OOP_IS_POINTER(num));
-	STIX_ASSERT (STIX_OBJ_GET_CLASS(num) == stix->_large_positive_integer ||
+	STIX_ASSERT (stix, STIX_OOP_IS_POINTER(num));
+	STIX_ASSERT (stix, STIX_OBJ_GET_CLASS(num) == stix->_large_positive_integer ||
 	             STIX_OBJ_GET_CLASS(num) == stix->_large_negative_integer);
 
 #if (STIX_LIW_BITS == STIX_OOW_BITS)
-	STIX_ASSERT (STIX_OBJ_GET_SIZE(num) >= 1);
+	STIX_ASSERT (stix, STIX_OBJ_GET_SIZE(num) >= 1);
 	if (STIX_OBJ_GET_SIZE(num) == 1)
 	{
 		*w = ((stix_oop_word_t)num)->slot[0];
@@ -272,7 +272,7 @@ static STIX_INLINE int bigint_to_oow (stix_t* stix, stix_oop_t num, stix_oow_t* 
 	 * you must not call this function with an unnormalized
 	 * large integer. */
 
-	STIX_ASSERT (STIX_OBJ_GET_SIZE(num) >= 2);
+	STIX_ASSERT (stix, STIX_OBJ_GET_SIZE(num) >= 2);
 	if (STIX_OBJ_GET_SIZE(num) == 2)
 	{
 		*w = MAKE_WORD (((stix_oop_halfword_t)num)->slot[0], ((stix_oop_halfword_t)num)->slot[1]);
@@ -310,7 +310,7 @@ static STIX_INLINE int integer_to_oow (stix_t* stix, stix_oop_t x, stix_oow_t* w
 		}
 	}
 
-	STIX_ASSERT (is_bigint(stix, x));
+	STIX_ASSERT (stix, is_bigint(stix, x));
 	return bigint_to_oow (stix, x, w);
 }
 
@@ -341,7 +341,7 @@ int stix_inttooow (stix_t* stix, stix_oop_t x, stix_oow_t* w)
 static STIX_INLINE stix_oop_t make_bigint_with_oow (stix_t* stix, stix_oow_t w)
 {
 #if (STIX_LIW_BITS == STIX_OOW_BITS)
-	STIX_ASSERT (STIX_SIZEOF(stix_oow_t) == STIX_SIZEOF(stix_liw_t));
+	STIX_ASSERT (stix, STIX_SIZEOF(stix_oow_t) == STIX_SIZEOF(stix_liw_t));
 	return stix_instantiate (stix, stix->_large_positive_integer, &w, 1);
 #elif (STIX_LIW_BITS == STIX_OOHW_BITS)
 	stix_liw_t hw[2];
@@ -358,7 +358,7 @@ static STIX_INLINE stix_oop_t make_bigint_with_ooi (stix_t* stix, stix_ooi_t i)
 #if (STIX_LIW_BITS == STIX_OOW_BITS)
 	stix_oow_t w;
 
-	STIX_ASSERT (STIX_SIZEOF(stix_oow_t) == STIX_SIZEOF(stix_liw_t));
+	STIX_ASSERT (stix, STIX_SIZEOF(stix_oow_t) == STIX_SIZEOF(stix_liw_t));
 	if (i >= 0)
 	{
 		w = i;
@@ -369,7 +369,7 @@ static STIX_INLINE stix_oop_t make_bigint_with_ooi (stix_t* stix, stix_ooi_t i)
 		/* The caller must ensure that i is greater than the smallest value
 		 * that stix_ooi_t can represent. otherwise, the absolute value 
 		 * cannot be held in stix_ooi_t. */
-		STIX_ASSERT (i > STIX_TYPE_MIN(stix_ooi_t));
+		STIX_ASSERT (stix, i > STIX_TYPE_MIN(stix_ooi_t));
 		w = -i;
 		return stix_instantiate (stix, stix->_large_negative_integer, &w, 1);
 	}
@@ -386,7 +386,7 @@ static STIX_INLINE stix_oop_t make_bigint_with_ooi (stix_t* stix, stix_ooi_t i)
 	}
 	else
 	{
-		STIX_ASSERT (i > STIX_TYPE_MIN(stix_ooi_t));
+		STIX_ASSERT (stix, i > STIX_TYPE_MIN(stix_ooi_t));
 		w = -i;
 		hw[0] = w /*& STIX_LBMASK(stix_oow_t,STIX_LIW_BITS)*/;
 		hw[1] = w >> STIX_LIW_BITS;
@@ -403,8 +403,8 @@ static STIX_INLINE stix_oop_t make_bloated_bigint_with_ooi (stix_t* stix, stix_o
 	stix_oow_t w;
 	stix_oop_t z;
 
-	STIX_ASSERT (extra <= STIX_OBJ_SIZE_MAX - 1); 
-	STIX_ASSERT (STIX_SIZEOF(stix_oow_t) == STIX_SIZEOF(stix_liw_t));
+	STIX_ASSERT (stix, extra <= STIX_OBJ_SIZE_MAX - 1); 
+	STIX_ASSERT (stix, STIX_SIZEOF(stix_oow_t) == STIX_SIZEOF(stix_liw_t));
 	if (i >= 0)
 	{
 		w = i;
@@ -412,7 +412,7 @@ static STIX_INLINE stix_oop_t make_bloated_bigint_with_ooi (stix_t* stix, stix_o
 	}
 	else
 	{
-		STIX_ASSERT (i > STIX_TYPE_MIN(stix_ooi_t));
+		STIX_ASSERT (stix, i > STIX_TYPE_MIN(stix_ooi_t));
 		w = -i;
 		z = stix_instantiate (stix, stix->_large_negative_integer, STIX_NULL, 1 + extra);
 	}
@@ -426,7 +426,7 @@ static STIX_INLINE stix_oop_t make_bloated_bigint_with_ooi (stix_t* stix, stix_o
 	stix_oow_t w;
 	stix_oop_t z;
 
-	STIX_ASSERT (extra <= STIX_OBJ_SIZE_MAX - 2); 
+	STIX_ASSERT (stix, extra <= STIX_OBJ_SIZE_MAX - 2); 
 	if (i >= 0)
 	{
 		w = i;
@@ -436,7 +436,7 @@ static STIX_INLINE stix_oop_t make_bloated_bigint_with_ooi (stix_t* stix, stix_o
 	}
 	else
 	{
-		STIX_ASSERT (i > STIX_TYPE_MIN(stix_ooi_t));
+		STIX_ASSERT (stix, i > STIX_TYPE_MIN(stix_ooi_t));
 		w = -i;
 		hw[0] = w /*& STIX_LBMASK(stix_oow_t,STIX_LIW_BITS)*/;
 		hw[1] = w >> STIX_LIW_BITS;
@@ -460,7 +460,7 @@ static STIX_INLINE stix_oop_t make_bigint_with_intmax (stix_t* stix, stix_intmax
 
 	/* this is not a generic function. it can't handle v 
 	 * if it's STIX_TYPE_MIN(stix_intmax_t) */
-	STIX_ASSERT (v > STIX_TYPE_MIN(stix_intmax_t));
+	STIX_ASSERT (stix, v > STIX_TYPE_MIN(stix_intmax_t));
 
 	ui = (v >= 0)? v: -v;
 	len = 0;
@@ -476,7 +476,7 @@ static STIX_INLINE stix_oop_t make_bigint_with_intmax (stix_t* stix, stix_intmax
 
 stix_oop_t stix_oowtoint (stix_t* stix, stix_oow_t w)
 {
-	STIX_ASSERT (STIX_TYPE_IS_UNSIGNED(stix_oow_t));
+	STIX_ASSERT (stix, STIX_TYPE_IS_UNSIGNED(stix_oow_t));
 	/*if (STIX_IN_SMOOI_RANGE(w))*/
 	if (w <= STIX_SMOOI_MAX)
 	{
@@ -494,7 +494,7 @@ static STIX_INLINE stix_oop_t expand_bigint (stix_t* stix, stix_oop_t oop, stix_
 	stix_oow_t i;
 	stix_oow_t count;
 
-	STIX_ASSERT (STIX_OOP_IS_POINTER(oop));
+	STIX_ASSERT (stix, STIX_OOP_IS_POINTER(oop));
 	count = STIX_OBJ_GET_SIZE(oop);
 
 	if (inc > STIX_OBJ_SIZE_MAX - count)
@@ -521,7 +521,7 @@ static STIX_INLINE stix_oop_t _clone_bigint (stix_t* stix, stix_oop_t oop, stix_
 	stix_oop_t z;
 	stix_oow_t i;
 
-	STIX_ASSERT (STIX_OOP_IS_POINTER(oop));
+	STIX_ASSERT (stix, STIX_OOP_IS_POINTER(oop));
 	if (count <= 0) count = STIX_OBJ_GET_SIZE(oop);
 
 	stix_pushtmp (stix, &oop);
@@ -545,14 +545,14 @@ static STIX_INLINE stix_oop_t clone_bigint_negated (stix_t* stix, stix_oop_t oop
 {
 	stix_oop_t c;
 
-	STIX_ASSERT (STIX_OOP_IS_POINTER(oop));
+	STIX_ASSERT (stix, STIX_OOP_IS_POINTER(oop));
 	if (STIX_OBJ_GET_CLASS(oop) == stix->_large_positive_integer)
 	{
 		c = stix->_large_negative_integer;
 	}
 	else
 	{
-		STIX_ASSERT (STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer);
+		STIX_ASSERT (stix, STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer);
 		c = stix->_large_positive_integer;
 	}
 
@@ -592,7 +592,7 @@ static stix_oop_t normalize_bigint (stix_t* stix, stix_oop_t oop)
 {
 	stix_oow_t count;
 
-	STIX_ASSERT (STIX_OOP_IS_POINTER(oop));
+	STIX_ASSERT (stix, STIX_OOP_IS_POINTER(oop));
 	count = count_effective_digits (oop);
 
 #if (STIX_LIW_BITS == STIX_OOW_BITS)
@@ -607,8 +607,8 @@ static stix_oop_t normalize_bigint (stix_t* stix, stix_oop_t oop)
 		}
 		else
 		{
-			STIX_ASSERT (-STIX_SMOOI_MAX  == STIX_SMOOI_MIN);
-			STIX_ASSERT (STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer);
+			STIX_ASSERT (stix, -STIX_SMOOI_MAX  == STIX_SMOOI_MIN);
+			STIX_ASSERT (stix, STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer);
 			if (w <= STIX_SMOOI_MAX) return STIX_SMOOI_TO_OOP(-(stix_ooi_t)w);
 		}
 	}
@@ -622,7 +622,7 @@ static stix_oop_t normalize_bigint (stix_t* stix, stix_oop_t oop)
 		}
 		else
 		{
-			STIX_ASSERT (STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer);
+			STIX_ASSERT (stix, STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer);
 			return STIX_SMOOI_TO_OOP(-(stix_ooi_t)((stix_oop_liword_t)oop)->slot[0]);
 		}
 	}
@@ -637,8 +637,8 @@ static stix_oop_t normalize_bigint (stix_t* stix, stix_oop_t oop)
 		}
 		else
 		{
-			STIX_ASSERT (-STIX_SMOOI_MAX  == STIX_SMOOI_MIN);
-			STIX_ASSERT (STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer);
+			STIX_ASSERT (stix, -STIX_SMOOI_MAX  == STIX_SMOOI_MIN);
+			STIX_ASSERT (stix, STIX_OBJ_GET_CLASS(oop) == stix->_large_negative_integer);
 			if (w <= STIX_SMOOI_MAX) return STIX_SMOOI_TO_OOP(-(stix_ooi_t)w);
 		}
 	}
@@ -737,7 +737,7 @@ static STIX_INLINE int is_equal (stix_t* stix, stix_oop_t x, stix_oop_t y)
 	       STIX_MEMCMP(((stix_oop_liword_t)x)->slot,  ((stix_oop_liword_t)y)->slot, STIX_OBJ_GET_SIZE(x) * STIX_SIZEOF(stix_liw_t)) == 0;
 }
 
-static void complement2_unsigned_array (const stix_liw_t* x, stix_oow_t xs, stix_liw_t* z)
+static void complement2_unsigned_array (stix_t* stix, const stix_liw_t* x, stix_oow_t xs, stix_liw_t* z)
 {
 	stix_oow_t i;
 	stix_lidw_t w;
@@ -762,7 +762,7 @@ static void complement2_unsigned_array (const stix_liw_t* x, stix_oow_t xs, stix
 	 * this function is not designed to handle such a case.
 	 * in fact, 0 is a small integer and it must not stand a change 
 	 * to be given to this function */
-	STIX_ASSERT (carry == 0);
+	STIX_ASSERT (stix, carry == 0);
 }
 
 static STIX_INLINE stix_oow_t add_unsigned_array (const stix_liw_t* x, stix_oow_t xs, const stix_liw_t* y, stix_oow_t ys, stix_liw_t* z)
@@ -857,7 +857,7 @@ static STIX_INLINE stix_oow_t add_unsigned_array (const stix_liw_t* x, stix_oow_
 #endif
 }
 
-static STIX_INLINE stix_oow_t subtract_unsigned_array (const stix_liw_t* x, stix_oow_t xs, const stix_liw_t* y, stix_oow_t ys, stix_liw_t* z)
+static STIX_INLINE stix_oow_t subtract_unsigned_array (stix_t* stix, const stix_liw_t* x, stix_oow_t xs, const stix_liw_t* y, stix_oow_t ys, stix_liw_t* z)
 {
 #if 1
 	stix_oow_t i;
@@ -865,12 +865,12 @@ static STIX_INLINE stix_oow_t subtract_unsigned_array (const stix_liw_t* x, stix
 
 	if (x == y)
 	{
-		STIX_ASSERT (xs == ys);
+		STIX_ASSERT (stix, xs == ys);
 		z[0] = 0;
 		return 1;
 	}
 
-	STIX_ASSERT (!is_less_unsigned_array(x, xs, y, ys));
+	STIX_ASSERT (stix, !is_less_unsigned_array(x, xs, y, ys));
 
 	for (i = 0; i < ys; i++)
 	{
@@ -903,12 +903,12 @@ static STIX_INLINE stix_oow_t subtract_unsigned_array (const stix_liw_t* x, stix
 
 	if (x == y)
 	{
-		STIX_ASSERT (xs == ys);
+		STIX_ASSERT (stix, xs == ys);
 		z[0] = 0;
 		return 1;
 	}
 
-	STIX_ASSERT (!is_less_unsigned_array(x, xs, y, ys));
+	STIX_ASSERT (stix, !is_less_unsigned_array(x, xs, y, ys));
 
 	borrowed_word = (stix_lidw_t)1 << STIX_LIW_BITS;
 	for (i = 0; i < ys; i++)
@@ -940,7 +940,7 @@ static STIX_INLINE stix_oow_t subtract_unsigned_array (const stix_liw_t* x, stix
 		}
 	}
 
-	STIX_ASSERT (borrow == 0);
+	STIX_ASSERT (stix, borrow == 0);
 
 	while (i > 1 && z[i - 1] == 0) i--;
 	return i; /* the number of effective digits in the result */
@@ -1120,8 +1120,8 @@ static STIX_INLINE stix_oow_t multiply_unsigned_array_karatsuba (stix_t* stix, c
 	ndigits_yl = nshifts; /* ndigits of lower part of y */
 	ndigits_yh = ys - nshifts; /* ndigits of uppoer part of y */
 
-	STIX_ASSERT (ndigits_xl >= ndigits_xh);
-	STIX_ASSERT (ndigits_yl >= ndigits_yh);
+	STIX_ASSERT (stix, ndigits_xl >= ndigits_xh);
+	STIX_ASSERT (stix, ndigits_yl >= ndigits_yh);
 
 	/* make a temporary buffer for (b0 + b1) and (a1 * b1) */
 	tmplen[0] = ndigits_xh + ndigits_yh;
@@ -1186,10 +1186,10 @@ static STIX_INLINE stix_oow_t multiply_unsigned_array_karatsuba (stix_t* stix, c
 	}
 
 	/* (a0+a1)*(b0+b1) -(a0*b0) */
-	xlen = subtract_unsigned_array(zsp, xlen, tmp[0], tmplen[0], zsp);
+	xlen = subtract_unsigned_array(stix, zsp, xlen, tmp[0], tmplen[0], zsp);
 
 	/* (a0+a1)*(b0+b1) - (a0*b0) - (a1*b1) */
-	xlen = subtract_unsigned_array(zsp, xlen, tmp[1], tmplen[1], zsp);
+	xlen = subtract_unsigned_array(stix, zsp, xlen, tmp[1], tmplen[1], zsp);
 	/* a1b1 is in tmp[1]. add (a1b1 * B^2n) to the high part of 'z' */
 	zsp = z + (nshifts * 2); /* emulate shifting for "* B^2n". */
 	xlen = zcapa - (nshifts * 2);
@@ -1240,8 +1240,8 @@ oops:
 	ndigits_yl = nshifts; /* ndigits of lower part of y */
 	ndigits_yh = ys - nshifts; /* ndigits of uppoer part of y */
 
-	STIX_ASSERT (ndigits_xl >= ndigits_xh);
-	STIX_ASSERT (ndigits_yl >= ndigits_yh);
+	STIX_ASSERT (stix, ndigits_xl >= ndigits_xh);
+	STIX_ASSERT (stix, ndigits_yl >= ndigits_yh);
 
 	/* make a temporary buffer for (b0 + b1) and (a1 * b1) */
 	tmplen[0] = ndigits_yl + ndigits_yh + 1; 
@@ -1305,11 +1305,11 @@ oops:
 	}
 
 	/* w = w - tmp[0] */
-	xlen = subtract_unsigned_array(tmp[2], xlen, tmp[0], tmplen[0], tmp[2]);
+	xlen = subtract_unsigned_array(stix, tmp[2], xlen, tmp[0], tmplen[0], tmp[2]);
 
 	/* r = w - tmp[1] */
 	zsp = z + nshifts; /* emulate shifting for "* B^n" */
-	xlen = subtract_unsigned_array(tmp[2], xlen, tmp[1], tmplen[1], zsp);
+	xlen = subtract_unsigned_array(stix, tmp[2], xlen, tmp[1], tmplen[1], zsp);
 
 	/* a1b1 is in tmp[1]. add (a1b1 * B^2n) to the high part of 'z' */
 	zsp = z + (nshifts * 2); /* emulate shifting for "* B^2n". */
@@ -1405,10 +1405,7 @@ static STIX_INLINE void rshift_unsigned_array (stix_liw_t* x, stix_oow_t xs, sti
 		STIX_MEMSET (&x[xs - word_shifts], 0, word_shifts * STIX_SIZEOF(stix_liw_t));
 }
 
-static void divide_unsigned_array (
-	const stix_liw_t* x, stix_oow_t xs, 
-	const stix_liw_t* y, stix_oow_t ys, 
-	stix_liw_t* q, stix_liw_t* r)
+static void divide_unsigned_array (stix_t* stix, const stix_liw_t* x, stix_oow_t xs, const stix_liw_t* y, stix_oow_t ys, stix_liw_t* q, stix_liw_t* r)
 {
 /* TODO: this function needs to be rewritten for performance improvement. 
  *       the binary long division is extremely slow for a big number */
@@ -1430,7 +1427,7 @@ static void divide_unsigned_array (
 
 	stix_oow_t rs, i , j;
 
-	STIX_ASSERT (xs >= ys);
+	STIX_ASSERT (stix, xs >= ys);
 	STIX_MEMSET (q, 0, STIX_SIZEOF(*q) * xs);
 	STIX_MEMSET (r, 0, STIX_SIZEOF(*q) * xs);
 
@@ -1447,7 +1444,7 @@ static void divide_unsigned_array (
 			rs = count_effective (r, xs);
 			if (!is_less_unsigned_array (r, rs, y, ys))
 			{
-				subtract_unsigned_array (r, rs, y, ys, r);
+				subtract_unsigned_array (stix, r, rs, y, ys, r);
 				STIX_SETBITS (stix_liw_t, q[i], j, 1, 1);
 			}
 		}
@@ -1489,7 +1486,7 @@ static stix_oop_t subtract_unsigned_integers (stix_t* stix, stix_oop_t x, stix_o
 {
 	stix_oop_t z;
 
-	STIX_ASSERT (!is_less_unsigned(x, y));
+	STIX_ASSERT (stix, !is_less_unsigned(x, y));
 
 	stix_pushtmp (stix, &x);
 	stix_pushtmp (stix, &y);
@@ -1497,7 +1494,7 @@ static stix_oop_t subtract_unsigned_integers (stix_t* stix, stix_oop_t x, stix_o
 	stix_poptmps (stix, 2);
 	if (!z) return STIX_NULL;
 
-	subtract_unsigned_array (
+	subtract_unsigned_array (stix, 
 		((stix_oop_liword_t)x)->slot, STIX_OBJ_GET_SIZE(x),
 		((stix_oop_liword_t)y)->slot, STIX_OBJ_GET_SIZE(y),
 		((stix_oop_liword_t)z)->slot);
@@ -1551,7 +1548,7 @@ static stix_oop_t divide_unsigned_integers (stix_t* stix, stix_oop_t x, stix_oop
 	stix_oop_t qq, rr;
 
 	/* the caller must ensure that x >= y */
-	STIX_ASSERT (!is_less_unsigned (x, y)); 
+	STIX_ASSERT (stix, !is_less_unsigned (x, y)); 
 	stix_pushtmp (stix, &x);
 	stix_pushtmp (stix, &y);
 	qq = stix_instantiate (stix, stix->_large_positive_integer, STIX_NULL, STIX_OBJ_GET_SIZE(x));
@@ -1566,7 +1563,7 @@ static stix_oop_t divide_unsigned_integers (stix_t* stix, stix_oop_t x, stix_oop
 	stix_poptmps (stix, 3);
 	if (!rr) return STIX_NULL;
 
-	divide_unsigned_array (
+	divide_unsigned_array (stix,
 		((stix_oop_liword_t)x)->slot, STIX_OBJ_GET_SIZE(x),
 		((stix_oop_liword_t)y)->slot, STIX_OBJ_GET_SIZE(y),
 		((stix_oop_liword_t)qq)->slot, ((stix_oop_liword_t)rr)->slot);
@@ -1585,8 +1582,8 @@ stix_oop_t stix_addints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 
 		/* no integer overflow/underflow must occur as the possible integer
 		 * range is narrowed by the tag bits used */
-		STIX_ASSERT (STIX_SMOOI_MAX + STIX_SMOOI_MAX < STIX_TYPE_MAX(stix_ooi_t));
-		STIX_ASSERT (STIX_SMOOI_MIN + STIX_SMOOI_MIN > STIX_TYPE_MIN(stix_ooi_t));
+		STIX_ASSERT (stix, STIX_SMOOI_MAX + STIX_SMOOI_MAX < STIX_TYPE_MAX(stix_ooi_t));
+		STIX_ASSERT (stix, STIX_SMOOI_MIN + STIX_SMOOI_MIN > STIX_TYPE_MIN(stix_ooi_t));
 
 		i = STIX_OOP_TO_SMOOI(x) + STIX_OOP_TO_SMOOI(y);
 		if (STIX_IN_SMOOI_RANGE(i)) return STIX_SMOOI_TO_OOP(i);
@@ -1688,8 +1685,8 @@ stix_oop_t stix_subints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 
 		/* no integer overflow/underflow must occur as the possible integer
 		 * range is narrowed by the tag bits used */
-		STIX_ASSERT (STIX_SMOOI_MAX - STIX_SMOOI_MIN < STIX_TYPE_MAX(stix_ooi_t));
-		STIX_ASSERT (STIX_SMOOI_MIN - STIX_SMOOI_MAX > STIX_TYPE_MIN(stix_ooi_t));
+		STIX_ASSERT (stix, STIX_SMOOI_MAX - STIX_SMOOI_MIN < STIX_TYPE_MAX(stix_ooi_t));
+		STIX_ASSERT (stix, STIX_SMOOI_MIN - STIX_SMOOI_MAX > STIX_TYPE_MIN(stix_ooi_t));
 
 		i = STIX_OOP_TO_SMOOI(x) - STIX_OOP_TO_SMOOI(y);
 		if (STIX_IN_SMOOI_RANGE(i)) return STIX_SMOOI_TO_OOP(i);
@@ -1786,7 +1783,7 @@ stix_oop_t stix_mulints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 
 		xv = STIX_OOP_TO_SMOOI(x);
 		yv = STIX_OOP_TO_SMOOI(y);
-		if (smooi_mul_overflow (xv, yv, &i))
+		if (smooi_mul_overflow (stix, xv, yv, &i))
 		{
 			/* overflowed - convert x and y normal objects and carry on */
 
@@ -1916,7 +1913,7 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 		 */
 
 		q = xv / yv;
-		STIX_ASSERT (STIX_IN_SMOOI_RANGE(q));
+		STIX_ASSERT (stix, STIX_IN_SMOOI_RANGE(q));
 
 		r = xv - yv * q; /* xv % yv; */
 		if (r)
@@ -1941,7 +1938,7 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 					 * change the sign of r to the divisor's sign */
 					r += yv;
 					--q;
-					STIX_ASSERT (r && !IS_SIGN_DIFF(yv, r));
+					STIX_ASSERT (stix, r && !IS_SIGN_DIFF(yv, r));
 				}
 			}
 			else
@@ -1965,14 +1962,14 @@ stix_oop_t stix_divints (stix_t* stix, stix_oop_t x, stix_oop_t y, int modulo, s
 					 * architecture. */
 					r -= yv;
 					++q;
-					STIX_ASSERT (xv && !IS_SIGN_DIFF(xv, r));
+					STIX_ASSERT (stix, xv && !IS_SIGN_DIFF(xv, r));
 				}
 			}
 		}
 
 		if (rem)
 		{
-			STIX_ASSERT (STIX_IN_SMOOI_RANGE(r));
+			STIX_ASSERT (stix, STIX_IN_SMOOI_RANGE(r));
 			*rem = STIX_SMOOI_TO_OOP(r);
 		}
 
@@ -2231,7 +2228,7 @@ stix_oop_t stix_bitatint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 	#if defined(STIX_LIMIT_OBJ_SIZE)
 		if (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer) return STIX_SMOOI_TO_OOP(0);
 
-		STIX_ASSERT (STIX_OBJ_SIZE_BITS_MAX <= STIX_TYPE_MAX(stix_oow_t));
+		STIX_ASSERT (stix, STIX_OBJ_SIZE_BITS_MAX <= STIX_TYPE_MAX(stix_oow_t));
 		if (STIX_OBJ_GET_CLASS(x) == stix->_large_positive_integer)
 		{
 			return STIX_SMOOI_TO_OOP (0);
@@ -2246,7 +2243,7 @@ stix_oop_t stix_bitatint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		if (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer) return STIX_SMOOI_TO_OOP(0);
 
 		sign = bigint_to_oow (stix, y, &w);
-		STIX_ASSERT (sign >= 0);
+		STIX_ASSERT (stix, sign >= 0);
 		if (sign >= 1)
 		{
 			wp = (w - 1) / STIX_LIW_BITS;
@@ -2256,7 +2253,7 @@ stix_oop_t stix_bitatint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		{
 			stix_oop_t quo, rem;
 
-			STIX_ASSERT (sign == 0);
+			STIX_ASSERT (stix, sign == 0);
 
 			stix_pushtmp (stix, &x);
 			y = stix_subints (stix, y, STIX_SMOOI_TO_OOP(1));
@@ -2269,7 +2266,7 @@ stix_oop_t stix_bitatint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 			if (!quo) return STIX_NULL;
 
 			sign = integer_to_oow (stix, quo, &wp);
-			STIX_ASSERT (sign >= 0);
+			STIX_ASSERT (stix, sign >= 0);
 			if (sign == 0)
 			{
 				/* too large. set it to xs so that it gets out of
@@ -2277,9 +2274,9 @@ stix_oop_t stix_bitatint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 				wp = xs;
 			}
 
-			STIX_ASSERT (STIX_OOP_IS_SMOOI(rem));
+			STIX_ASSERT (stix, STIX_OOP_IS_SMOOI(rem));
 			bp = STIX_OOP_TO_SMOOI(rem);
-			STIX_ASSERT (bp >= 0 && bp < STIX_LIW_BITS);
+			STIX_ASSERT (stix, bp >= 0 && bp < STIX_LIW_BITS);
 		}
 
 		if (STIX_OBJ_GET_CLASS(x) == stix->_large_positive_integer)
@@ -2429,7 +2426,7 @@ stix_oop_t stix_bitandints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0] & (stix_liw_t)w[1];
 			}
-			STIX_ASSERT (carry[1] == 0);
+			STIX_ASSERT (stix, carry[1] == 0);
 
 			/* 2's complement on the remaining part of x. the lacking part
 			 * in y is treated as if they are all 1s. */
@@ -2439,7 +2436,7 @@ stix_oop_t stix_bitandints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 				carry[0] = w[0] >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0];
 			}
-			STIX_ASSERT (carry[0] == 0);
+			STIX_ASSERT (stix, carry[0] == 0);
 
 			/* 2's complement on the final result */
 			((stix_oop_liword_t)z)->slot[zs] = ~(stix_liw_t)0;
@@ -2450,7 +2447,7 @@ stix_oop_t stix_bitandints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 				carry[0] = w[0] >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0];
 			}
-			STIX_ASSERT (carry[0] == 0);
+			STIX_ASSERT (stix, carry[0] == 0);
 
 			STIX_OBJ_SET_CLASS (z, stix->_large_negative_integer);
 		}
@@ -2484,7 +2481,7 @@ stix_oop_t stix_bitandints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = ((stix_oop_liword_t)x)->slot[i] & (stix_liw_t)w;
 			}
-			STIX_ASSERT (carry == 0);
+			STIX_ASSERT (stix, carry == 0);
 
 			/* handle the longer part in x than y
 			 * 
@@ -2649,7 +2646,7 @@ stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0] | (stix_liw_t)w[1];
 			}
-			STIX_ASSERT (carry[1] == 0);
+			STIX_ASSERT (stix, carry[1] == 0);
 
 			/* do nothing about the extra part in x and the lacking part
 			 * in y for the reason shown in [NOTE] in the 'else if' block
@@ -2665,7 +2662,7 @@ stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 				carry[0] = w[0] >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0];
 			}
-			STIX_ASSERT (carry[0] == 0);
+			STIX_ASSERT (stix, carry[0] == 0);
 
 			STIX_OBJ_SET_CLASS (z, stix->_large_negative_integer);
 		}
@@ -2689,7 +2686,7 @@ stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
 			}
 
-			STIX_ASSERT (carry == 0);
+			STIX_ASSERT (stix, carry == 0);
 			goto adjust_to_negative;
 		}
 		else if (negy)
@@ -2705,7 +2702,7 @@ stix_oop_t stix_bitorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = ((stix_oop_liword_t)x)->slot[i] | (stix_liw_t)w;
 			}
-			STIX_ASSERT (carry == 0);
+			STIX_ASSERT (stix, carry == 0);
 
 			/* [NOTE]
 			 *  in theory, the lacking part in ys is all 1s when y is
@@ -2867,7 +2864,7 @@ stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0] ^ (stix_liw_t)w[1];
 			}
-			STIX_ASSERT (carry[1] == 0);
+			STIX_ASSERT (stix, carry[1] == 0);
 
 			/* treat the lacking part in y as all 1s */
 			for (; i < xs; i++)
@@ -2876,7 +2873,7 @@ stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 				carry[0] = w[0] >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w[0] ^ (~(stix_liw_t)0);
 			}
-			STIX_ASSERT (carry[0] == 0);
+			STIX_ASSERT (stix, carry[0] == 0);
 		}
 		else if (negx)
 		{
@@ -2898,7 +2895,7 @@ stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
 			}
-			STIX_ASSERT (carry == 0);
+			STIX_ASSERT (stix, carry == 0);
 
 		adjust_to_negative:
 			/* 2's complement on the final result */
@@ -2910,7 +2907,7 @@ stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
 			}
-			STIX_ASSERT (carry == 0);
+			STIX_ASSERT (stix, carry == 0);
 
 			STIX_OBJ_SET_CLASS (z, stix->_large_negative_integer);
 		}
@@ -2927,7 +2924,7 @@ stix_oop_t stix_bitxorints (stix_t* stix, stix_oop_t x, stix_oop_t y)
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = ((stix_oop_liword_t)x)->slot[i] ^ (stix_liw_t)w;
 			}
-			STIX_ASSERT (carry == 0);
+			STIX_ASSERT (stix, carry == 0);
 
 			/* treat the lacking part in y as all 1s */
 			for (; i < xs; i++)
@@ -3017,7 +3014,7 @@ stix_oop_t stix_bitinvint (stix_t* stix, stix_oop_t x)
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = ~(stix_liw_t)w;
 			}
-			STIX_ASSERT (carry == 0);
+			STIX_ASSERT (stix, carry == 0);
 		}
 		else
 		{
@@ -3037,7 +3034,7 @@ stix_oop_t stix_bitinvint (stix_t* stix, stix_oop_t x)
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
 			}
-			STIX_ASSERT (carry == 0);
+			STIX_ASSERT (stix, carry == 0);
 		#else
 			carry = 1;
 			for (i = 0; i < xs; i++)
@@ -3046,9 +3043,9 @@ stix_oop_t stix_bitinvint (stix_t* stix, stix_oop_t x)
 				carry = w >> STIX_LIW_BITS;
 				((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
 			}
-			STIX_ASSERT (i == zs);
+			STIX_ASSERT (stix, i == zs);
 			((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)carry;
-			STIX_ASSERT ((carry >> STIX_LIW_BITS) == 0);
+			STIX_ASSERT (stix, (carry >> STIX_LIW_BITS) == 0);
 		#endif
 
 			STIX_OBJ_SET_CLASS (z, stix->_large_negative_integer);
@@ -3069,7 +3066,7 @@ static STIX_INLINE stix_oop_t rshift_negative_bigint (stix_t* stix, stix_oop_t x
 	stix_lidw_t carry;
 	stix_oow_t i, xs;
 
-	STIX_ASSERT (STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer);
+	STIX_ASSERT (stix, STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer);
 	xs = STIX_OBJ_GET_SIZE(x);
 
 	stix_pushtmp (stix, &x);
@@ -3086,7 +3083,7 @@ static STIX_INLINE stix_oop_t rshift_negative_bigint (stix_t* stix, stix_oop_t x
 		carry = w >> STIX_LIW_BITS;
 		((stix_oop_liword_t)z)->slot[i] = ~(stix_liw_t)w;
 	}
-	STIX_ASSERT (carry == 0);
+	STIX_ASSERT (stix, carry == 0);
 
 	/* shift to the right */
 	rshift_unsigned_array (((stix_oop_liword_t)z)->slot, xs, shift);
@@ -3106,7 +3103,7 @@ static STIX_INLINE stix_oop_t rshift_negative_bigint (stix_t* stix, stix_oop_t x
 		carry = w >> STIX_LIW_BITS;
 		((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
 	}
-	STIX_ASSERT (carry == 0);
+	STIX_ASSERT (stix, carry == 0);
 #else
 	carry = 1;
 	for (i = 0; i < xs; i++)
@@ -3116,7 +3113,7 @@ static STIX_INLINE stix_oop_t rshift_negative_bigint (stix_t* stix, stix_oop_t x
 		((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)w;
 	}
 	((stix_oop_liword_t)z)->slot[i] = (stix_liw_t)carry;
-	STIX_ASSERT ((carry >> STIX_LIW_BITS) == 0);
+	STIX_ASSERT (stix, (carry >> STIX_LIW_BITS) == 0);
 #endif
 
 	return z; /* z is not normalized */
@@ -3132,8 +3129,8 @@ static STIX_INLINE stix_oop_t rshift_negative_bigint_and_normalize (stix_t* stix
 	stix_oow_t shift;
 	int sign;
 
-	STIX_ASSERT (STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer);
-	STIX_ASSERT (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer);
+	STIX_ASSERT (stix, STIX_OBJ_GET_CLASS(x) == stix->_large_negative_integer);
+	STIX_ASSERT (stix, STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer);
 
 	/* for convenience in subtraction below. 
 	 * it could be STIX_TYPE_MAX(stix_oow_t) 
@@ -3162,7 +3159,7 @@ static STIX_INLINE stix_oop_t rshift_negative_bigint_and_normalize (stix_t* stix
 				/* no more shift */
 				return normalize_bigint (stix, z);
 			}
-			STIX_ASSERT (sign <= -1);
+			STIX_ASSERT (stix, sign <= -1);
 		}
 
 		stix_pushtmp (stix, &y);
@@ -3176,7 +3173,7 @@ static STIX_INLINE stix_oop_t rshift_negative_bigint_and_normalize (stix_t* stix
 			stix_ooi_t v;
 
 			v = STIX_OOP_TO_SMOOI(x);
-			STIX_ASSERT (v < 0);
+			STIX_ASSERT (stix, v < 0);
 
 			/* normal right shift of a small negative integer */
 			if (shift >= STIX_OOI_BITS - 1) 
@@ -3199,7 +3196,7 @@ static STIX_INLINE stix_oop_t rshift_negative_bigint_and_normalize (stix_t* stix
 	while (1);
 
 	/* this part must not be reached */
-	STIX_ASSERT (!"internal error - must not happen");
+	STIX_ASSERT (stix, !"internal error - must not happen");
 	stix->errnum = STIX_EINTERN;
 	return STIX_NULL;
 }
@@ -3210,8 +3207,8 @@ static STIX_INLINE stix_oop_t rshift_positive_bigint_and_normalize (stix_t* stix
 	stix_oow_t zs, shift;
 	int sign;
 
-	STIX_ASSERT (STIX_OBJ_GET_CLASS(x) == stix->_large_positive_integer);
-	STIX_ASSERT (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer);
+	STIX_ASSERT (stix, STIX_OBJ_GET_CLASS(x) == stix->_large_positive_integer);
+	STIX_ASSERT (stix, STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer);
 
 	zs = STIX_OBJ_GET_SIZE(x);
 
@@ -3246,7 +3243,7 @@ static STIX_INLINE stix_oop_t rshift_positive_bigint_and_normalize (stix_t* stix
 		else 
 		{
 			if (shift == 0) break;
-			STIX_ASSERT (sign <= -1);
+			STIX_ASSERT (stix, sign <= -1);
 		}
 	}
 	while (1);
@@ -3260,7 +3257,7 @@ static STIX_INLINE stix_oop_t lshift_bigint_and_normalize (stix_t* stix, stix_oo
 	stix_oow_t wshift, shift;
 	int sign;
 
-	STIX_ASSERT (STIX_OBJ_GET_CLASS(y) == stix->_large_positive_integer);
+	STIX_ASSERT (stix, STIX_OBJ_GET_CLASS(y) == stix->_large_positive_integer);
 
 	/* this loop is very inefficient as shifting is repeated
 	 * with lshift_unsigned_array(). however, this part of the
@@ -3300,16 +3297,16 @@ static STIX_INLINE stix_oop_t lshift_bigint_and_normalize (stix_t* stix, stix_oo
 		{
 			if (shift == 0) 
 			{
-				STIX_ASSERT (is_normalized_integer (stix, x));
+				STIX_ASSERT (stix, is_normalized_integer (stix, x));
 				return x;
 			}
-			STIX_ASSERT (sign >= 1);
+			STIX_ASSERT (stix, sign >= 1);
 		}
 	}
 	while (1);
 
 	/* this part must not be reached */
-	STIX_ASSERT (!"internal error - must not happen");
+	STIX_ASSERT (stix, !"internal error - must not happen");
 	stix->errnum = STIX_EINTERN;
 	return STIX_NULL;
 }
@@ -3466,7 +3463,7 @@ stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 					/* the maximum number of bit shifts are guaranteed to be
 					 * small enough to fit into the stix_oow_t type. so i can 
 					 * easily assume that all bits are shifted out */
-					STIX_ASSERT (STIX_OBJ_SIZE_BITS_MAX <= STIX_TYPE_MAX(stix_oow_t));
+					STIX_ASSERT (stix, STIX_OBJ_SIZE_BITS_MAX <= STIX_TYPE_MAX(stix_oow_t));
 					return (negx)? STIX_SMOOI_TO_OOP(-1): STIX_SMOOI_TO_OOP(0);
 				#else
 					if (negx)
@@ -3483,7 +3480,7 @@ stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 					 * small enough to fit into the stix_oow_t type. so i can 
 					 * simply return a failure here becuase it's surely too 
 					 * large after shifting */
-					STIX_ASSERT (STIX_TYPE_MAX(stix_oow_t) >= STIX_OBJ_SIZE_BITS_MAX);
+					STIX_ASSERT (stix, STIX_TYPE_MAX(stix_oow_t) >= STIX_OBJ_SIZE_BITS_MAX);
 					stix->errnum = STIX_EOOMEM; /* is it a soft failure or a hard failure? is this error code proper? */
 					return STIX_NULL;
 				#else
@@ -3510,7 +3507,7 @@ stix_oop_t stix_bitshiftint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 				/* right shift */
 			bigint_and_negative_oow:
 
-				STIX_ASSERT (sign <= -1);
+				STIX_ASSERT (stix, sign <= -1);
 
 				if (negx)
 				{
@@ -3562,7 +3559,7 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 		radix = -radix;
 	}
 
-	STIX_ASSERT (radix >= 2 && radix <= 36);
+	STIX_ASSERT (stix, radix >= 2 && radix <= 36);
 
 	ptr = str;
 	end = str + len;
@@ -3667,7 +3664,7 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 			ptr--;
 		}
 
-		STIX_ASSERT (w <= STIX_TYPE_MAX(stix_liw_t));
+		STIX_ASSERT (stix, w <= STIX_TYPE_MAX(stix_liw_t));
 		if (hwlen == 0 || w > 0) hwp[hwlen++] = w;
 	}
 	else
@@ -3693,7 +3690,7 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 			hwp = hw;
 		}
 
-		STIX_ASSERT (ptr < end);
+		STIX_ASSERT (stix, ptr < end);
 		do
 		{
 			r1 = 0;
@@ -3740,25 +3737,25 @@ stix_oop_t stix_strtoint (stix_t* stix, const stix_ooch_t* str, stix_oow_t len, 
 		while (ptr < end);
 	}
 
-	STIX_ASSERT (hwlen >= 1);
+	STIX_ASSERT (stix, hwlen >= 1);
 
 #if (STIX_LIW_BITS == STIX_OOW_BITS)
 	if (hwlen == 1) 
 	{
 		w = hwp[0];
-		STIX_ASSERT (-STIX_SMOOI_MAX == STIX_SMOOI_MIN);
+		STIX_ASSERT (stix, -STIX_SMOOI_MAX == STIX_SMOOI_MIN);
 		if (w <= STIX_SMOOI_MAX) return STIX_SMOOI_TO_OOP((stix_ooi_t)w * sign);
 	}
 #elif (STIX_LIW_BITS == STIX_OOHW_BITS)
 	if (hwlen == 1) 
 	{
-		STIX_ASSERT (hwp[0] <= STIX_SMOOI_MAX);
+		STIX_ASSERT (stix, hwp[0] <= STIX_SMOOI_MAX);
 		return STIX_SMOOI_TO_OOP((stix_ooi_t)hwp[0] * sign);
 	}
 	else if (hwlen == 2)
 	{
 		w = MAKE_WORD(hwp[0], hwp[1]);
-		STIX_ASSERT (-STIX_SMOOI_MAX == STIX_SMOOI_MIN);
+		STIX_ASSERT (stix, -STIX_SMOOI_MAX == STIX_SMOOI_MIN);
 		if (w <= STIX_SMOOI_MAX) return STIX_SMOOI_TO_OOP((stix_ooi_t)w * sign);
 	}
 #else
@@ -3776,10 +3773,10 @@ oops_einval:
 	return STIX_NULL;
 }
 
-static stix_oow_t oow_to_text (stix_oow_t w, int radix, stix_ooch_t* buf)
+static stix_oow_t oow_to_text (stix_t* stix, stix_oow_t w, int radix, stix_ooch_t* buf)
 {
 	stix_ooch_t* ptr;
-	STIX_ASSERT (radix >= 2 && radix <= 36);
+	STIX_ASSERT (stix, radix >= 2 && radix <= 36);
 
 	ptr = buf;
 	do
@@ -3974,7 +3971,7 @@ stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num, int radix)
 	stix_oow_t xlen = 0, seglen;
 	stix_oop_t s;
 
-	STIX_ASSERT (radix >= 2 && radix <= 36);
+	STIX_ASSERT (stix, radix >= 2 && radix <= 36);
 
 	if (!stix_isint(stix,num)) goto oops_einval;
 	v = integer_to_oow (stix, num, &w);
@@ -3989,7 +3986,7 @@ stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num, int radix)
 		stix_ooch_t buf[STIX_OOW_BITS + 1];
 		stix_oow_t len;
 
-		len = oow_to_text (w, radix, buf);
+		len = oow_to_text (stix, w, radix, buf);
 		if (v < 0) buf[len++] = '-';
 
 		reverse_string (buf, len);
@@ -4038,7 +4035,7 @@ stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num, int radix)
 			while (1);
 		}
 
-		STIX_ASSERT (xpos >= 1);
+		STIX_ASSERT (stix, xpos >= 1);
 		if (STIX_OBJ_GET_CLASS(num) == stix->_large_negative_integer) xbuf[--xpos] = '-';
 
 		s = stix_makestring (stix, &xbuf[xpos], xlen - xpos);
@@ -4082,7 +4079,7 @@ stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num, int radix)
 		{
 			stix_liw_t* tmp;
 
-			divide_unsigned_array (a, as, b, bs, q, r);
+			divide_unsigned_array (stix, a, as, b, bs, q, r);
 
 			/* get 'rs' before 'as' gets changed */
 			rs = count_effective (r, as); 
@@ -4102,19 +4099,19 @@ stix_oop_t stix_inttostr (stix_t* stix, stix_oop_t num, int radix)
 		}
 
 	#if (STIX_LIW_BITS == STIX_OOW_BITS)
-		STIX_ASSERT (rs == 1);
+		STIX_ASSERT (stix, rs == 1);
 		w = r[0];
 	#elif (STIX_LIW_BITS == STIX_OOHW_BITS)
 		if (rs == 1) w = r[0];
 		else 
 		{
-			STIX_ASSERT (rs == 2);
+			STIX_ASSERT (stix, rs == 2);
 			w = MAKE_WORD (r[0], r[1]);
 		}
 	#else
 	#	error UNSUPPORTED LIW BIT SIZE
 	#endif
-		seglen = oow_to_text (w, radix, &xbuf[xlen]);
+		seglen = oow_to_text (stix, w, radix, &xbuf[xlen]);
 		xlen += seglen;
 		if (r == a) break; /* reached the last block */
 

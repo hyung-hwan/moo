@@ -112,11 +112,11 @@ int logfmtv (stix_t* stix, const fmtchar_t* fmt, stix_fmtout_t* data, va_list ap
 	fltfmt = &stix->d->fltfmt;
 	fltout = &stix->d->fltout;
 
-	fltfmt->ptr  = fltfmt->sbuf;
-	fltfmt->capa = STIX_COUNTOF(fltfmt->sbuf) - 1;
+	fltfmt->ptr  = fltfmt->buf;
+	fltfmt->capa = STIX_COUNTOF(fltfmt->buf) - 1;
 
-	fltout->ptr  = fltout->sbuf;
-	fltout->capa = STIX_COUNTOF(fltout->sbuf) - 1;
+	fltout->ptr  = fltout->buf;
+	fltout->capa = STIX_COUNTOF(fltout->buf) - 1;
 #endif
 
 	while (1)
@@ -444,7 +444,7 @@ reswitch:
 				stix_oow_t conv_len, src_len, tot_len = 0;
 				while (n > 0)
 				{
-					STIX_ASSERT (bslen > tot_len);
+					STIX_ASSERT (stix, bslen > tot_len);
 
 					src_len = bslen - tot_len;
 					conv_len = STIX_COUNTOF(conv_buf);
@@ -575,7 +575,7 @@ reswitch:
 			fmtlen = fmt - percent;
 			if (fmtlen > fltfmt->capa)
 			{
-				if (fltfmt->ptr == fltfmt->sbuf)
+				if (fltfmt->ptr == fltfmt->buf)
 				{
 					fltfmt->ptr = STIX_MMGR_ALLOC (STIX_MMGR_GETDFL(), STIX_SIZEOF(*fltfmt->ptr) * (fmtlen + 1));
 					if (fltfmt->ptr == STIX_NULL) goto oops;
@@ -635,7 +635,7 @@ reswitch:
 			newcapa = precision + width + 32;
 			if (fltout->capa < newcapa)
 			{
-				STIX_ASSERT (fltout->ptr == fltout->sbuf);
+				STIX_ASSERT (stix, fltout->ptr == fltout->buf);
 
 				fltout->ptr = STIX_MMGR_ALLOC (STIX_MMGR_GETDFL(), STIX_SIZEOF(char_t) * (newcapa + 1));
 				if (fltout->ptr == STIX_NULL) goto oops;

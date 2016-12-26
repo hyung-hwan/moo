@@ -44,9 +44,9 @@ stix_heap_t* stix_makeheap (stix_t* stix, stix_oow_t size)
 	heap->ptr = (stix_uint8_t*)STIX_ALIGN(((stix_uintptr_t)heap->base), STIX_SIZEOF(stix_oop_t));
 	heap->limit = heap->base + size;
 
-	STIX_ASSERT (heap->ptr >= heap->base);
-	STIX_ASSERT (heap->limit >= heap->base ); 
-	STIX_ASSERT (heap->limit - heap->base == size);
+	STIX_ASSERT (stix, heap->ptr >= heap->base);
+	STIX_ASSERT (stix, heap->limit >= heap->base ); 
+	STIX_ASSERT (stix, heap->limit - heap->base == size);
 
 	/* if size is too small, heap->ptr may go past heap->limit even at 
 	 * this moment depending on the alignment of heap->base. subsequent

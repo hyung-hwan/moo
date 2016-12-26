@@ -66,7 +66,6 @@ static int pf_open (stix_t* stix, stix_ooi_t nargs)
 		/* error */
 	}
 
-	rsrc = stix_makersrc (stix, h);
 
 #else
 
