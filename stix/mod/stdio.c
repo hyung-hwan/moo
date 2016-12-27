@@ -63,15 +63,14 @@ static int pf_open (stix_t* stix, stix_ooi_t nargs)
 	mode = (stix_oop_char_t)STIX_STACK_GETARG(stix, nargs, 1);
 
 #if defined(STIX_OOCH_IS_UCH)
-/* TODO: error check on string conversion */
 	ucslen = STIX_OBJ_GET_SIZE(name);
 	bcslen = STIX_COUNTOF(namebuf) - 1;
-	stix_oocstobcs (stix, name->slot, &ucslen, namebuf, &bcslen); /* TODO: error check */
+	if (stix_convootobchars (stix, name->slot, &ucslen, namebuf, &bcslen) <= -1) goto reterr;
 	namebuf[bcslen] = '\0';
 
 	ucslen = STIX_OBJ_GET_SIZE(mode);
 	bcslen = STIX_COUNTOF(modebuf) - 1;
-	stix_oocstobcs (stix, mode->slot, &ucslen, modebuf, &bcslen); /* TODO: error check */
+	if (stix_convootobchars (stix, mode->slot, &ucslen, modebuf, &bcslen) <= -1) goto reterr;
 	modebuf[bcslen] = '\0';
 
 	rcv->fp = fopen (namebuf, modebuf);
@@ -81,12 +80,16 @@ static int pf_open (stix_t* stix, stix_ooi_t nargs)
 	if (!rcv->fp) 
 	{
 STIX_DEBUG2 (stix, "cannot open %s for %s\n", namebuf, modebuf);
-		STIX_STACK_SETRETTOERROR (stix, nargs, stix_syserrtoerrnum(errno));
-		return 1;
+		stix_seterrnum (stix, stix_syserrtoerrnum(errno));
+		goto reterr;
 	}
 
 STIX_DEBUG3 (stix, "opened %s for %s - %p\n", namebuf, modebuf, rcv->fp);
 	STIX_STACK_SETRETTORCV (stix, nargs);
+	return 1;
+
+reterr:
+	STIX_STACK_SETRETTOERROR (stix, nargs);
 	return 1;
 }
 
@@ -113,7 +116,7 @@ static int pf_gets (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int pf_puts (stix_t* stix, stix_ooi_t nargs)
+static int __pf_puts (stix_t* stix, stix_ooi_t nargs, stix_oow_t limit)
 {
 	stdio_t* rcv;
 	stix_ooi_t i;
@@ -145,31 +148,29 @@ static int pf_puts (stix_t* stix, stix_ooi_t nargs)
 		puts_string:
 			ucspos = 0;
 			ucsrem = STIX_OBJ_GET_SIZE(x);
+			if (ucsrem > limit) ucsrem = limit;
+
 			while (ucsrem > 0)
 			{
 				ucslen = ucsrem;
 				bcslen = STIX_COUNTOF(bcs);
-/* TODO: implement character conversion into stdio and use it */
-				if ((n = stix_oocstobcs (stix, &x->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
+
+/* TODO: implement character conversion into stdio and use it instead of vm's conversion facility. */
+				if ((n = stix_convootobchars (stix, &x->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
 				{
 					if (n != -2 || ucslen <= 0) 
 					{
-/* TODO: 
- * 
-STIX_STACK_SETRET (stix, nargs, stix->_error);
-return 1;
- * 
- */
 						stix_seterrnum (stix, STIX_EECERR);
-						return -1;
+						goto reterr;
 					}
 				}
 
-				fwrite (bcs, bcslen, 1, rcv->fp); 
-/* TODO; error handling...
-STIX_STACK_SETRET (stix, nargs, stix->_error);
-return 1;
-*/
+				if (fwrite (bcs, 1, bcslen, rcv->fp) < bcslen)
+				{
+					stix_seterrnum (stix, stix_syserrtoerrnum(errno));
+					goto reterr;
+				}
+
 		/* TODO: abort looping for async processing???? */
 				ucspos += ucslen;
 				ucsrem -= ucslen;
@@ -177,20 +178,29 @@ return 1;
 		}
 		else
 		{
-/* TODO;
-STIX_STACK_SETRET (stix, nargs, stix->_error);
-return 1;
-*/
-STIX_DEBUG1 (stix, "ARGUMETN ISN INVALID...[%O]\n", x);
 			stix_seterrnum (stix, STIX_EINVAL);
-			return -1;
+			goto reterr;
 		}
 	}
 
 	STIX_STACK_SETRETTORCV (stix, nargs);
 	return 1;
+
+reterr:
+	STIX_STACK_SETRETTOERROR (stix, nargs);
+	return 1;
 }
 
+
+static int pf_putc (stix_t* stix, stix_ooi_t nargs)
+{
+	return __pf_puts (stix, nargs, 1);
+}
+
+static int pf_puts (stix_t* stix, stix_ooi_t nargs)
+{
+	return __pf_puts (stix, nargs, STIX_TYPE_MAX(stix_oow_t));
+}
 
 /* ------------------------------------------------------------------------ */
 
@@ -212,6 +222,8 @@ static fnctab_t fnctab[] =
 	{ I, { 'c','l','o','s','e','\0' },                             0, pf_close         },
 	{ I, { 'g','e','t','s','\0' },                                 0, pf_gets          },
 	{ I, { 'o','p','e','n',':','f','o','r',':','\0' },             0, pf_open          },
+	{ I, { 'p','u','t','c','\0' },                                 1, pf_putc          },
+	{ I, { 'p','u','t','c',':','\0' },                             0, pf_putc          },
 	{ I, { 'p','u','t','s','\0' },                                 1, pf_puts          },
 	{ I, { 'p','u','t','s',':','\0' },                             0, pf_puts          }
 };

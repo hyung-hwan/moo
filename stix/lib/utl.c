@@ -31,7 +31,10 @@
 /* some naming conventions
  *  bchars, uchars -> pointer and length
  *  bcstr, ucstr -> null-terminated string pointer
- *  bctouchars -> bchars to uchars
+ *  btouchars -> bchars to uchars
+ *  utobchars -> uchars to bchars
+ *  btoucstr -> bcstr to ucstr
+ *  utobcstr -> ucstr to bcstr
  */
 
 stix_oow_t stix_hashbytes (const stix_oob_t* ptr, stix_oow_t len)
@@ -128,8 +131,10 @@ void stix_copybchars (stix_bch_t* dst, const stix_bch_t* src, stix_oow_t len)
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
-void stix_copybctouchars (stix_uch_t* dst, const stix_bch_t* src, stix_oow_t len)
+void stix_copybtouchars (stix_uch_t* dst, const stix_bch_t* src, stix_oow_t len)
 {
+	/* copy without conversions.
+	 * use stix_bctouchars() for conversion encoding */
 	stix_oow_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
@@ -572,6 +577,8 @@ static int ucs_to_bcs_with_cmgr (
 	return ret;
 }
 
+/* ----------------------------------------------------------------------- */
+
 static stix_cmgr_t utf8_cmgr =
 {
 	stix_utf8touc,
@@ -583,58 +590,52 @@ stix_cmgr_t* stix_getutf8cmgr (void)
 	return &utf8_cmgr;
 }
 
-int stix_utf8toucs (const stix_bch_t* bcs, stix_oow_t* bcslen, stix_uch_t* ucs, stix_oow_t* ucslen)
+int stix_convutf8touchars (const stix_bch_t* bcs, stix_oow_t* bcslen, stix_uch_t* ucs, stix_oow_t* ucslen)
 {
-	if (*bcslen == ~(stix_oow_t)0)
-	{
-		/* the source is null-terminated. */
-		return bcs_to_ucs_with_cmgr (bcs, bcslen, ucs, ucslen, &utf8_cmgr, 0);
-	}
-	else
-	{
-		/* the source is length bound */
-		return bcsn_to_ucsn_with_cmgr (bcs, bcslen, ucs, ucslen, &utf8_cmgr, 0);
-	}
+	/* the source is length bound */
+	return bcsn_to_ucsn_with_cmgr (bcs, bcslen, ucs, ucslen, &utf8_cmgr, 0);
 }
 
-int stix_ucstoutf8 (const stix_uch_t* ucs, stix_oow_t* ucslen, stix_bch_t* bcs, stix_oow_t* bcslen)
+int stix_convutoutf8chars (const stix_uch_t* ucs, stix_oow_t* ucslen, stix_bch_t* bcs, stix_oow_t* bcslen)
 {
-	if (*ucslen == ~(stix_oow_t)0)
-	{
-		/* null-terminated */
-		return ucs_to_bcs_with_cmgr (ucs, ucslen, bcs, bcslen, &utf8_cmgr);
-	}
-	else
-	{
-		/* length bound */
-		return ucsn_to_bcsn_with_cmgr (ucs, ucslen, bcs, bcslen, &utf8_cmgr);
-	}
+	/* length bound */
+	return ucsn_to_bcsn_with_cmgr (ucs, ucslen, bcs, bcslen, &utf8_cmgr);
 }
 
-int stix_bcstoucs (stix_t* stix, const stix_bch_t* bcs, stix_oow_t* bcslen, stix_uch_t* ucs, stix_oow_t* ucslen)
+int stix_convutf8toucstr (const stix_bch_t* bcs, stix_oow_t* bcslen, stix_uch_t* ucs, stix_oow_t* ucslen)
 {
-	if (*bcslen == ~(stix_oow_t)0)
-	{
-		/* the source is null-terminated. */
-		return bcs_to_ucs_with_cmgr (bcs, bcslen, ucs, ucslen, stix->cmgr, 0);
-	}
-	else
-	{
-		/* the source is length bound */
-		return bcsn_to_ucsn_with_cmgr (bcs, bcslen, ucs, ucslen, stix->cmgr, 0);
-	}
+	/* null-terminated. */
+	return bcs_to_ucs_with_cmgr (bcs, bcslen, ucs, ucslen, &utf8_cmgr, 0);
 }
 
-int stix_ucstobcs (stix_t* stix, const stix_uch_t* ucs, stix_oow_t* ucslen, stix_bch_t* bcs, stix_oow_t* bcslen)
+int stix_convutoutf8cstr (const stix_uch_t* ucs, stix_oow_t* ucslen, stix_bch_t* bcs, stix_oow_t* bcslen)
 {
-	if (*ucslen == ~(stix_oow_t)0)
-	{
-		/* null-terminated */
-		return ucs_to_bcs_with_cmgr (ucs, ucslen, bcs, bcslen, stix->cmgr);
-	}
-	else
-	{
-		/* length bound */
-		return ucsn_to_bcsn_with_cmgr (ucs, ucslen, bcs, bcslen, stix->cmgr);
-	}
+	/* null-terminated */
+	return ucs_to_bcs_with_cmgr (ucs, ucslen, bcs, bcslen, &utf8_cmgr);
+}
+
+/* ----------------------------------------------------------------------- */
+
+int stix_convbtouchars (stix_t* stix, const stix_bch_t* bcs, stix_oow_t* bcslen, stix_uch_t* ucs, stix_oow_t* ucslen)
+{
+	/* length bound */
+	return bcsn_to_ucsn_with_cmgr (bcs, bcslen, ucs, ucslen, stix->cmgr, 0);
+}
+
+int stix_convutobchars (stix_t* stix, const stix_uch_t* ucs, stix_oow_t* ucslen, stix_bch_t* bcs, stix_oow_t* bcslen)
+{
+	/* length bound */
+	return ucsn_to_bcsn_with_cmgr (ucs, ucslen, bcs, bcslen, stix->cmgr);
+}
+
+int stix_convbtoucstr (stix_t* stix, const stix_bch_t* bcs, stix_oow_t* bcslen, stix_uch_t* ucs, stix_oow_t* ucslen)
+{
+	/* null-terminated. */
+	return bcs_to_ucs_with_cmgr (bcs, bcslen, ucs, ucslen, stix->cmgr, 0);
+}
+
+int stix_convutobcstr (stix_t* stix, const stix_uch_t* ucs, stix_oow_t* ucslen, stix_bch_t* bcs, stix_oow_t* bcslen)
+{
+	/* null-terminated */
+	return ucs_to_bcs_with_cmgr (ucs, ucslen, bcs, bcslen, stix->cmgr);
 }

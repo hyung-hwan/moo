@@ -44,16 +44,18 @@
  */
 enum stix_errnum_t
 {
-	STIX_ENOERR,  /**< no error */
-	STIX_EOTHER,  /**< other error */
-	STIX_ENOIMPL, /**< not implemented */
-	STIX_ESYSERR, /**< subsystem error */
-	STIX_EINTERN, /**< internal error */
-	STIX_ESYSMEM, /**< insufficient system memory */
-	STIX_EOOMEM,  /**< insufficient object memory */
+	STIX_ENOERR,   /**< no error */
+	STIX_EGENERIC, /**< generic error */
 
-	STIX_EINVAL,  /**< invalid parameter or data */
-	STIX_EEXIST,  /**< existing/duplicate data */
+	STIX_ENOIMPL,  /**< not implemented */
+	STIX_ESYSERR,  /**< subsystem error */
+	STIX_EINTERN,  /**< internal error */
+	STIX_ESYSMEM,  /**< insufficient system memory */
+	STIX_EOOMEM,   /**< insufficient object memory */
+
+	STIX_EINVAL,   /**< invalid parameter or data */
+	STIX_ENOENT,   /**< data not found */
+	STIX_EEXIST,   /**< existing/duplicate data */
 	STIX_EBUSY, 
 	STIX_EACCES,
 	STIX_EPERM,
@@ -62,21 +64,20 @@ enum stix_errnum_t
 	STIX_EPIPE,
 	STIX_EAGAIN,
 
-	STIX_ETOOBIG, /**< data too large */
-	STIX_EMSGSND, /**< message sending error. even doesNotUnderstand: is not found */
-	STIX_ERANGE,  /**< range error. overflow and underflow */
-	STIX_ENOENT,  /**< no matching entry */
-	STIX_EBCFULL, /**< byte-code full */
-	STIX_EDFULL,  /**< dictionary full */
-	STIX_EPFULL,  /**< processor full */
-	STIX_ESHFULL, /**< semaphore heap full */
-	STIX_ESLFULL, /**< semaphore list full */
-	STIX_EDIVBY0, /**< divide by zero */
-	STIX_EIOERR,  /**< I/O error */
-	STIX_EECERR,  /**< encoding conversion error */
+	STIX_ETOOBIG,  /**< data too large */
+	STIX_EMSGSND,  /**< message sending error. even doesNotUnderstand: is not found */
+	STIX_ERANGE,   /**< range error. overflow and underflow */
+	STIX_EBCFULL,  /**< byte-code full */
+	STIX_EDFULL,   /**< dictionary full */
+	STIX_EPFULL,   /**< processor full */
+	STIX_ESHFULL,  /**< semaphore heap full */
+	STIX_ESLFULL,  /**< semaphore list full */
+	STIX_EDIVBY0,  /**< divide by zero */
+	STIX_EIOERR,   /**< I/O error */
+	STIX_EECERR,   /**< encoding conversion error */
 
 #if defined(STIX_INCLUDE_COMPILER)
-	STIX_ESYNTAX /** < syntax error */
+	STIX_ESYNTAX  /** < syntax error */
 #endif
 };
 typedef enum stix_errnum_t stix_errnum_t;
@@ -962,9 +963,11 @@ struct stix_t
 
 /* you can't access arguments and receiver after this macro. 
  * also you must not call this macro more than once */
-#define STIX_STACK_SETRET(stix,nargs,retv) (STIX_STACK_POPS(stix, nargs), STIX_STACK_SETTOP(stix, retv))
+#define STIX_STACK_SETRET(stix,nargs,retv) (STIX_STACK_POPS(stix, nargs), STIX_STACK_SETTOP(stix, (retv)))
 #define STIX_STACK_SETRETTORCV(stix,nargs) (STIX_STACK_POPS(stix, nargs))
-#define STIX_STACK_SETRETTOERROR(stix,nargs,ec) (STIX_STACK_POPS(stix, nargs), STIX_STACK_SETTOP(stix, STIX_ERROR_TO_OOP(ec)))
+#define STIX_STACK_SETRETTOERROR(stix,nargs) STIX_STACK_SETRET(stix, nargs, STIX_ERROR_TO_OOP(stix->errnum))
+/*#define STIX_STACK_SETRETTOERROR(stix,nargs,ec) STIX_STACK_SETRET(stix, nargs, STIX_ERROR_TO_OOP(ec))*/
+
 
 /* =========================================================================
  * STIX VM LOGGING
@@ -1079,6 +1082,10 @@ STIX_EXPORT stix_errnum_t stix_geterrnum (
 STIX_EXPORT void stix_seterrnum (
 	stix_t*       stix,
 	stix_errnum_t errnum
+);
+
+STIX_EXPORT const stix_ooch_t* stix_geterrstr (
+	stix_t* stix
 );
 
 /**
@@ -1228,15 +1235,19 @@ STIX_EXPORT int stix_genpfmethod (
  * ========================================================================= */
 
 #if defined(STIX_OOCH_IS_UCH)
-#	define stix_oocstobcs(stix,oocs,oocslen,bcs,bcslen) stix_ucstobcs(stix,oocs,oocslen,bcs,bcslen)
-#	define stix_bcstooocs(stix,bcs,bcslen,oocs,oocslen) stix_bcstoucs(stix,bcs,bcslen,oocs,oocslen)
+#	define stix_convootobchars(stix,oocs,oocslen,bcs,bcslen) stix_convutobchars(stix,oocs,oocslen,bcs,bcslen)
+#	define stix_convbtooochars(stix,bcs,bcslen,oocs,oocslen) stix_convbtouchars(stix,bcs,bcslen,oocs,oocslen)
+#	define stix_convootobcstr(stix,oocs,oocslen,bcs,bcslen) stix_convutobcstr(stix,oocs,oocslen,bcs,bcslen)
+#	define stix_convbtooocstr(stix,bcs,bcslen,oocs,oocslen) stix_convbtoucstr(stix,bcs,bcslen,oocs,oocslen)
 #else
 #error TODO
-#	define stix_oocstobcs(stix,oocs,oocslen,bcs,bcslen) stix_ucstobcs(stix,oocs,oocslen,bcs,bcslen)
-#	define stix_bcstooocs(stix,bcs,bcslen,oocs,oocslen) stix_bcstoucs(stix,bcs,bcslen,oocs,oocslen)
+#	define stix_convootobchars(stix,oocs,oocslen,bcs,bcslen) stix_convutobchars(stix,oocs,oocslen,bcs,bcslen)
+#	define stix_convbtooochars(stix,bcs,bcslen,oocs,oocslen) stix_convbtouchars(stix,bcs,bcslen,oocs,oocslen)
+#	define stix_convootobcstr(stix,oocs,oocslen,bcs,bcslen) stix_convutobcstr(stix,oocs,oocslen,bcs,bcslen)
+#	define stix_convbtooocstr(stix,bcs,bcslen,oocs,oocslen) stix_convbtoucstr(stix,bcs,bcslen,oocs,oocslen)
 #endif
 
-STIX_EXPORT int stix_bcstoucs (
+STIX_EXPORT int stix_convbtouchars (
 	stix_t*           stix,
 	const stix_bch_t* bcs,
 	stix_oow_t*       bcslen,
@@ -1244,7 +1255,7 @@ STIX_EXPORT int stix_bcstoucs (
 	stix_oow_t*       ucslen
 );
 
-STIX_EXPORT int stix_ucstobcs (
+STIX_EXPORT int stix_convutobchars (
 	stix_t*           stix,
 	const stix_uch_t* ucs,
 	stix_oow_t*       ucslen,
@@ -1252,6 +1263,31 @@ STIX_EXPORT int stix_ucstobcs (
 	stix_oow_t*       bcslen
 );
 
+
+/**
+ * The stix_convbtoucstr() function converts a null-terminated byte string 
+ * to a wide string.
+ */
+STIX_EXPORT int stix_convbtoucstr (
+	stix_t*           stix,
+	const stix_bch_t* bcs,
+	stix_oow_t*       bcslen,
+	stix_uch_t*       ucs,
+	stix_oow_t*       ucslen
+);
+
+
+/**
+ * The stix_convutobcstr() function converts a null-terminated wide string
+ * to a byte string.
+ */
+int stix_convutobcstr (
+	stix_t*           stix,
+	const stix_uch_t* ucs,
+	stix_oow_t*       ucslen,
+	stix_bch_t*       bcs,
+	stix_oow_t*       bcslen
+);
 
 /* =========================================================================
  * STIX VM LOGGING
@@ -1289,9 +1325,12 @@ STIX_EXPORT void stix_assertfailed (
 );
 
 STIX_EXPORT stix_errnum_t stix_syserrtoerrnum (
-	int e
+	int syserr
 );
 
+STIX_EXPORT const stix_ooch_t* stix_errnumtoerrstr (
+	stix_errnum_t errnum
+);
 
 #if defined(__cplusplus)
 }

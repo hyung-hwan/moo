@@ -166,7 +166,7 @@ static int pf_write (stix_t* stix, stix_ooi_t nargs)
 	{
 		ucslen = ucsrem;
 		bcslen = STIX_COUNTOF(bcs);
-		if ((n = stix_oocstobcs (stix, &oomsg->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
+		if ((n = stix_convootobchars (stix, &oomsg->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
 		{
 			if (n != -2 || ucslen <= 0) 
 			{

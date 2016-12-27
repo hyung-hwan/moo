@@ -39,7 +39,7 @@ extern "C" {
 #	define stix_compoocbcstr(str1,str2) stix_compucbcstr(str1,str2)
 #	define stix_compoocstr(str1,str2) stix_compucstr(str1,str2)
 #	define stix_copyoochars(dst,src,len) stix_copyuchars(dst,src,len)
-#	define stix_copybctooochars(dst,src,len) stix_copybctouchars(dst,src,len)
+#	define stix_copybctooochars(dst,src,len) stix_copybtouchars(dst,src,len)
 #	define stix_copyoocstr(dst,len,src) stix_copyucstr(dst,len,src)
 #	define stix_findoochar(ptr,len,c) stix_finduchar(ptr,len,c)
 #	define stix_rfindoochar(ptr,len,c) stix_rfinduchar(ptr,len,c)
@@ -122,7 +122,7 @@ STIX_EXPORT void stix_copybchars (
 	stix_oow_t        len
 );
 
-STIX_EXPORT void stix_copybctouchars (
+STIX_EXPORT void stix_copybtouchars (
 	stix_uch_t*       dst,
 	const stix_bch_t* src,
 	stix_oow_t        len
@@ -190,7 +190,7 @@ STIX_EXPORT stix_cmgr_t* stix_getutf8cmgr (
 );
 
 /**
- * The stix_ucstoutf8() function converts a unicode character string \a ucs 
+ * The stix_convutoutf8chars() function converts a unicode character string \a ucs 
  * to a UTF8 string and writes it into the buffer pointed to by \a bcs, but
  * not more than \a bcslen bytes including the terminating null.
  *
@@ -211,14 +211,14 @@ STIX_EXPORT stix_cmgr_t* stix_getutf8cmgr (
  *   stix_bch_t bcs[10];
  *   stix_oow_t ucslen = 5;
  *   stix_oow_t bcslen = STIX_COUNTOF(bcs);
- *   n = stix_ucstoutf8 (ucs, &ucslen, bcs, &bcslen);
+ *   n = stix_convutoutf8chars (ucs, &ucslen, bcs, &bcslen);
  *   if (n <= -1)
  *   {
  *      // conversion error
  *   }
  * \endcode
  */
-STIX_EXPORT int stix_ucstoutf8 (
+STIX_EXPORT int stix_convutoutf8chars (
 	const stix_uch_t*    ucs,
 	stix_oow_t*          ucslen,
 	stix_bch_t*          bcs,
@@ -226,7 +226,7 @@ STIX_EXPORT int stix_ucstoutf8 (
 );
 
 /**
- * The stix_utf8toucs() function converts a UTF8 string to a uncide string.
+ * The stix_convutf8touchars() function converts a UTF8 string to a uncide string.
  *
  * It never returns -2 if \a ucs is #STIX_NULL.
  *
@@ -236,13 +236,9 @@ STIX_EXPORT int stix_ucstoutf8 (
  *  stix_oow_t ucslen = STIX_COUNTOF(buf), n;
  *  stix_oow_t bcslen = 11;
  *  int n;
- *  n = stix_utf8toucs (bcs, &bcslen, ucs, &ucslen);
+ *  n = stix_convutf8touchars (bcs, &bcslen, ucs, &ucslen);
  *  if (n <= -1) { invalid/incomplenete sequence or buffer to small }
  * \endcode
- *
- * For a null-terminated string, you can specify ~(stix_oow_t)0 in
- * \a bcslen. The destination buffer \a ucs also must be large enough to
- * store a terminating null. Otherwise, -2 is returned.
  * 
  * The resulting \a ucslen can still be greater than 0 even if the return
  * value is negative. The value indiates the number of characters converted
@@ -253,13 +249,27 @@ STIX_EXPORT int stix_ucstoutf8 (
  *         -2 if the wide-character string buffer is too small.
  *         -3 if \a bcs is not a complete sequence.
  */
-STIX_EXPORT int stix_utf8toucs (
+STIX_EXPORT int stix_convutf8touchars (
 	const stix_bch_t*   bcs,
 	stix_oow_t*         bcslen,
 	stix_uch_t*         ucs,
 	stix_oow_t*         ucslen
 );
 
+
+STIX_EXPORT int stix_convutoutf8cstr (
+	const stix_uch_t*    ucs,
+	stix_oow_t*          ucslen,
+	stix_bch_t*          bcs,
+	stix_oow_t*          bcslen
+);
+
+STIX_EXPORT int stix_convutf8toucstr (
+	const stix_bch_t*   bcs,
+	stix_oow_t*         bcslen,
+	stix_uch_t*         ucs,
+	stix_oow_t*         ucslen
+);
 
 /* ========================================================================= */
 /* utf8.c                                                                    */

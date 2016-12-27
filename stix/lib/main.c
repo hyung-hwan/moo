@@ -142,9 +142,9 @@ static STIX_INLINE stix_ooi_t open_input (stix_t* stix, stix_ioarg_t* arg)
 		/* includee */
 		stix_bch_t bcs[1024]; /* TODO: right buffer size */
 		stix_oow_t bcslen = STIX_COUNTOF(bcs);
-		stix_oow_t ucslen = ~(stix_oow_t)0;
+		stix_oow_t ucslen;
 
-		if (stix_oocstobcs (stix, arg->name, &ucslen, bcs, &bcslen) <= -1)
+		if (stix_convootobcstr (stix, arg->name, &ucslen, bcs, &bcslen) <= -1)
 		{
 			stix_seterrnum (stix, STIX_EECERR);
 			return -1;
@@ -231,8 +231,8 @@ static STIX_INLINE stix_ooi_t read_input (stix_t* stix, stix_ioarg_t* arg)
 
 	bcslen = bb->len;
 	ucslen = STIX_COUNTOF(arg->buf);
-	x = stix_bcstooocs (stix, bb->buf, &bcslen, arg->buf, &ucslen);
-	x = stix_bcstooocs (stix, bb->buf, &bcslen, arg->buf, &ucslen);
+	x = stix_convbtooochars (stix, bb->buf, &bcslen, arg->buf, &ucslen);
+	x = stix_convbtooochars (stix, bb->buf, &bcslen, arg->buf, &ucslen);
 	if (x <= -1 && ucslen <= 0)
 	{
 		stix_seterrnum (stix, STIX_EECERR);
@@ -287,9 +287,8 @@ static void* dl_open (stix_t* stix, const stix_ooch_t* name)
 	len = stix_copybcstr (buf, STIX_COUNTOF(buf), STIX_DEFAULT_MODPREFIX);
 
 /* TODO: proper error checking and overflow checking */
-	ucslen = ~(stix_oow_t)0;
 	bcslen = STIX_COUNTOF(buf) - len;
-	stix_oocstobcs (stix, name, &ucslen, &buf[len], &bcslen);
+	stix_convootobcstr (stix, name, &ucslen, &buf[len], &bcslen);
 
 	stix_copybcstr (&buf[bcslen + len], STIX_COUNTOF(buf) - bcslen - len, STIX_DEFAULT_MODPOSTFIX);
 
@@ -339,9 +338,8 @@ static void* dl_getsym (stix_t* stix, void* handle, const stix_ooch_t* name)
 
 	buf[0] = '_';
 
-	ucslen = ~(stix_oow_t)0;
 	bcslen = STIX_COUNTOF(buf) - 2;
-	stix_oocstobcs (stix, name, &ucslen, &buf[1], &bcslen); /* TODO: error check */
+	stix_convootobcstr (stix, name, &ucslen, &buf[1], &bcslen); /* TODO: error check */
 	symname = &buf[1];
 	sym = lt_dlsym (handle, symname);
 	if (!sym)
@@ -436,7 +434,7 @@ if (mask & STIX_LOG_GC) return; /* don't show gc logs */
 		ucslen = len;
 		bcslen = STIX_COUNTOF(buf);
 
-		n = stix_oocstobcs (stix, &msg[msgidx], &ucslen, buf, &bcslen);
+		n = stix_convootobchars (stix, &msg[msgidx], &ucslen, buf, &bcslen);
 		if (n == 0 || n == -2)
 		{
 			/* n = 0: 
@@ -731,8 +729,7 @@ int main (int argc, char* argv[])
 				if (synerr.loc.file)
 				{
 					bcslen = STIX_COUNTOF(bcs);
-					ucslen = ~(stix_oow_t)0;
-					if (stix_oocstobcs (stix, synerr.loc.file, &ucslen, bcs, &bcslen) >= 0)
+					if (stix_convootobcstr (stix, synerr.loc.file, &ucslen, bcs, &bcslen) >= 0)
 					{
 						printf ("%.*s ", (int)bcslen, bcs);
 					}
@@ -751,7 +748,7 @@ int main (int argc, char* argv[])
 					bcslen = STIX_COUNTOF(bcs);
 					ucslen = synerr.tgt.len;
 
-					if (stix_oocstobcs (stix, synerr.tgt.ptr, &ucslen, bcs, &bcslen) >= 0)
+					if (stix_convootobchars (stix, synerr.tgt.ptr, &ucslen, bcs, &bcslen) >= 0)
 					{
 						printf (" [%.*s]", (int)bcslen, bcs);
 					}

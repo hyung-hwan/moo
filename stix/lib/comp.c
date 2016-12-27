@@ -81,6 +81,7 @@ static struct voca_t
 	{  4, { '#','d','c','l'                                               } },
 	{  8, { '#','d','e','c','l','a','r','e'                               } },
 	{  6, { 'e','n','s','u','r','e',                                      } },
+	{  5, { 'e','r','r','o','r'                                           } },
 	{  9, { 'e','x','c','e','p','t','i','o','n'                           } },
 	{  7, { '#','e','x','t','e','n','d'                                   } },
 	{  5, { 'f','a','l','s','e'                                           } },
@@ -118,6 +119,7 @@ enum voca_id_t
 	VOCA_DCL,
 	VOCA_DECLARE,
 	VOCA_ENSURE,
+	VOCA_ERROR,
 	VOCA_EXCEPTION,
 	VOCA_EXTEND,
 	VOCA_FALSE,
@@ -264,8 +266,9 @@ static int is_reserved_word (const stix_oocs_t* ucs)
 		VOCA_NIL,
 		VOCA_TRUE,
 		VOCA_FALSE,
+		VOCA_ERROR,
 		VOCA_THIS_CONTEXT,
-		VOCA_THIS_PROCESS
+		VOCA_THIS_PROCESS,
 	};
 	int i;
 

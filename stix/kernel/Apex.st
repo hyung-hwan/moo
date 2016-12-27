@@ -332,10 +332,39 @@
 	}
 }
 
+(* --------------------
+#pooldic Error
+{
+	#NONE := error(0).
+	#GENERIC := error(1).
+	#
+}
+------------------- *)
+
 #class Error(Apex)
 {
+	(* ----------------------------
+	TODO: support constant declaration...
+
+	#const
+	{
+		#NONE := error(0).
+		#GENERIC := error(1).
+	}
+	-------------------------------- *)
+
 	#method isError
 	{
 		^true
+	}
+
+	#method asInteger
+	{
+		<primitive: #_error_as_integer>
+	}
+
+	#method asString
+	{
+		<primitive: #_error_as_string>
 	}
 }

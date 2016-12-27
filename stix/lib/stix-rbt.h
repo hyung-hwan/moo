@@ -513,7 +513,7 @@ STIX_EXPORT stix_rbt_pair_t* stix_rbt_update (
 STIX_EXPORT stix_rbt_pair_t* stix_rbt_cbsert (
 	stix_rbt_t*         rbt,      /**< red-black tree */
 	void*               kptr,     /**< key pointer */
-	stix_oow_t         klen,     /**< key length */
+	stix_oow_t          klen,     /**< key length */
 	stix_rbt_cbserter_t cbserter, /**< callback function */
 	void*               ctx       /**< callback context */
 );
@@ -525,7 +525,7 @@ STIX_EXPORT stix_rbt_pair_t* stix_rbt_cbsert (
 STIX_EXPORT int stix_rbt_delete (
 	stix_rbt_t* rbt,   /**< red-black tree */
 	const void* kptr, /**< key pointer */
-	stix_oow_t klen   /**< key size */
+	stix_oow_t  klen   /**< key size */
 );
 
 /**

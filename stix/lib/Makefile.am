@@ -42,6 +42,7 @@ libstix_la_SOURCES = \
 	debug.c  \
 	decode.c \
 	dic.c \
+	err.c \
 	exec.c \
 	logfmtv.h \
 	logfmt.c \

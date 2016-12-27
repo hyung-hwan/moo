@@ -226,6 +226,11 @@ void stix_seterrnum (stix_t* stix, stix_errnum_t errnum)
 	stix->errnum = errnum;
 }
 
+const stix_ooch_t* stix_geterrstr (stix_t* stix)
+{
+	return stix_errnumtoerrstr (stix->errnum);
+}
+
 int stix_setoption (stix_t* stix, stix_option_t id, const void* value)
 {
 	switch (id)
@@ -390,7 +395,9 @@ stix_mod_data_t* stix_openmod (stix_t* stix, const stix_ooch_t* name, stix_oow_t
 	 */
 	stix_ooch_t buf[MOD_PREFIX_LEN + STIX_MOD_NAME_LEN_MAX + 1 + 1]; 
 
-	/* the terminating null isn't needed in buf here */
+	/* copy instead of encoding conversion. MOD_PREFIX must not
+	 * include a character that requires encoding conversion.
+	 * note the terminating null isn't needed in buf here. */
 	stix_copybctooochars (buf, MOD_PREFIX, MOD_PREFIX_LEN); 
 
 	if (namelen > STIX_COUNTOF(buf) - (MOD_PREFIX_LEN + 1 + 1))
@@ -743,68 +750,4 @@ int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_met
 oops:
 	stix_poptmps (stix, tmp_count);
 	return -1;
-}
- 
-/* -------------------------------------------------------------------------- 
- * SYSTEM DEPENDENT FUNCTIONS - TODO: MOVE THESE ELSE WHERE..........
- * -------------------------------------------------------------------------- */
-#include <errno.h>
-#include <unistd.h>
-#include <signal.h>
-
-stix_errnum_t stix_syserrtoerrnum (int e)
-{
-	switch (e)
-	{
-		case ENOMEM: return STIX_ESYSMEM;
-		case EINVAL: return STIX_EINVAL;
-		case EBUSY: return STIX_EBUSY;
-		case EACCES: return STIX_EACCES;
-		case EPERM: return STIX_EPERM;
-		case ENOTDIR: return STIX_ENOTDIR;
-		case ENOENT: return STIX_ENOENT;
-		case EEXIST: return STIX_EEXIST;
-		case EINTR:  return STIX_EINTR;
-		case EPIPE:  return STIX_EPIPE;
-	#if defined(EAGAIN) && defined(EWOULDBLOCK) && (EAGAIN != EWOULDBLOCK)
-		case EAGAIN: 
-		case EWOULDBLOCK: return STIX_EAGAIN;
-	#elif defined(EAGAIN)
-		case EAGAIN: return STIX_EAGAIN;
-	#elif defined(EWOULDBLOCK)
-		case EWOULDBLOCK: return STIX_EAGAIN;
-	#endif
-		default:     return STIX_ESYSERR;
-	}
-}
-
-void stix_assertfailed (stix_t* stix, const stix_bch_t* expr, const stix_bch_t* file, stix_oow_t line)
-{
-	stix_logbfmt (stix, STIX_LOG_DEBUG, "ASSERTION FAILURE: %s at %s:%zu\n", expr, file, line);
-
-
-#if defined(_WIN32)
-	ExitProcess (249);
-#elif defined(__OS2__)
-	DosExit (EXIT_PROCESS, 249);
-#elif defined(__DOS__)
-	{
-		union REGS regs;
-		regs.h.ah = DOS_EXIT;
-		regs.h.al = 249;
-		intdos (&regs, &regs);
-	}
-#elif defined(vms) || defined(__vms)
-	lib$stop (SS$_ABORT); /* use SS$_OPCCUS instead? */
-
-	/* this won't be reached since lib$stop() terminates the process */
-	sys$exit (SS$_ABORT); /* this condition code can be shown with
-	                       * 'show symbol $status' from the command-line. */
-#elif defined(macintosh)
-	ExitToShell ();
-#else
-	kill (getpid(), SIGABRT);
-	_exit (1);
-#endif
-
 }

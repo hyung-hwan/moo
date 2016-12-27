@@ -125,16 +125,15 @@
 
 
 		##v1 := Stdio2 open: '/tmp/1.txt' for: 'w+'.
-		v1 := Stdio2 new open: '/tmp/1.txt' for: 'w+'.
+		v1 := Stdio2 new open: '/tmp/x/1.txt' for: 'w+'.
 		(v1 isError) 
 			ifTrue: [
-				System logNl: ('Error in opening a file....').
+				System logNl: ('Error in opening a file....' & v1 asString). 
 			]
 			ifFalse: [
 				## v1 puts: 'hello'.
 				v1 puts ('hello', 'world', 'good', C'\n', C'\t', 'under my umbrella.', C'\n').
 				v1 close.
-
 
 				(*v1 format(10, 20) isNil ifFalse: [
 				 	'Beautiful life' dump.

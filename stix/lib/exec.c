@@ -2409,25 +2409,45 @@ static int pf_integer_inttostr (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-static int pf_error_as_string (stix_t* stix, stix_ooi_t nargs)
+static int pf_error_as_integer (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_t rcv, str;
+	stix_oop_t rcv;
+	stix_ooi_t ec;
 
 	STIX_ASSERT (stix, nargs == 0);
 
 	rcv = STIX_STACK_GETRCV(stix, nargs);
 	if (!STIX_OOP_IS_ERROR(rcv)) return 0;
 
-	//str = stix_makestring (stix, xxx, xxx);
-	STIX_STACK_SETRET (stix, nargs, str);
+	ec = STIX_OOP_TO_ERROR(rcv);
+	STIX_ASSERT (stix, STIX_IN_SMOOI_RANGE(ec));
+	STIX_STACK_SETRET (stix, nargs, STIX_SMOOI_TO_OOP(ec));
 	return 1;
 }
 
-static int pf_error_text (stix_t* stix, stix_ooi_t nargs)
+static int pf_error_as_string (stix_t* stix, stix_ooi_t nargs)
 {
+	stix_oop_t rcv, ss;
+	stix_ooi_t ec;
+	const stix_ooch_t* s;
 
-	return -1;
+	STIX_ASSERT (stix, nargs == 0);
+
+	rcv = STIX_STACK_GETRCV(stix, nargs);
+	if (!STIX_OOP_IS_ERROR(rcv)) return 0;
+
+	ec = STIX_OOP_TO_ERROR(rcv);
+	STIX_ASSERT (stix, STIX_IN_SMOOI_RANGE(ec));
+
+/* TODO: error string will be mostly the same.. do i really have to call makestring every time? */
+	s = stix_errnumtoerrstr (ec);
+	ss = stix_makestring (stix, s, stix_countoocstr(s));
+	if (!ss) return -1;
+
+	STIX_STACK_SETRET (stix, nargs, ss);
+	return 1;
 }
+
 
 static int pf_ffi_open (stix_t* stix, stix_ooi_t nargs)
 {
@@ -2586,7 +2606,7 @@ STIX_DEBUG2 (stix, "CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSU
 					stix_bch_t bcs[1024];
 
 					ucslen = STIX_OBJ_GET_SIZE(arr->slot[i - 2]);
-					stix_oocstobcs (stix, ((stix_oop_char_t)arr->slot[i - 2])->slot, &ucslen, bcs, &bcslen); /* proper string conversion */
+					stix_convootobchars (stix, ((stix_oop_char_t)arr->slot[i - 2])->slot, &ucslen, bcs, &bcslen); /* proper string conversion */
 
 					bcs[bcslen] = '\0';
 					dcArgPointer (dc, bcs);
@@ -2644,7 +2664,7 @@ STIX_DEBUG2 (stix, "CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_M
 				char* r = dcCallPointer (dc, f);
 
 				bcslen = strlen(r); 
-				stix_bcstooocs (stix, r, &bcslen, ucs, &ucslen); /* proper string conversion */
+				stix_convbtooochars (stix, r, &bcslen, ucs, &ucslen); /* proper string conversion */
 
 				s = stix_makestring(stix, ucs, ucslen)
 				if (!s) 
@@ -2780,8 +2800,9 @@ static pf_t pftab[] =
 	{   1,  1,  pf_integer_ge,                       "_integer_ge"          },
 	{   1,  1,  pf_integer_inttostr,                 "_integer_inttostr"    },
 
+	{   0,  0,  pf_error_as_integer,                 "_error_as_integer"    },
 	{   0,  0,  pf_error_as_string,                  "_error_as_string"     },
-	{   0,  0,  pf_error_text,                       "_error_text"          },
+
 
 	{   1,  1,  pf_ffi_open,                         "_ffi_open"            },
 	{   1,  1,  pf_ffi_close,                        "_ffi_close"           },
