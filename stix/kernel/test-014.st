@@ -125,14 +125,14 @@
 
 
 		##v1 := Stdio2 open: '/tmp/1.txt' for: 'w+'.
-		v1 := Stdio2 new open: '/tmp/x/1.txt' for: 'w+'.
+		v1 := Stdio2 new open: '/tmp/1.txt' for: 'w+'.
 		(v1 isError) 
 			ifTrue: [
 				System logNl: ('Error in opening a file....' & v1 asString). 
 			]
 			ifFalse: [
 				## v1 puts: 'hello'.
-				v1 puts ('hello', 'world', 'good', C'\n', C'\t', 'under my umbrella.', C'\n').
+				v1 puts ('hello', 'world', 'good', C'\n', C'\t', 'under my umbrella 123.', C'\n').
 				v1 close.
 
 				(*v1 format(10, 20) isNil ifFalse: [
@@ -147,6 +147,43 @@
 		self varg_test3 (10, 20, 30, 40, 50) dump.
 		thisContext vargCount dump.
 		thisContext vargCount dump.
+		
+		((2305843009213693951 bitAt: 61) = 0) ifFalse: [ 
+			System logNl: 'Test 1 failed'.
+			thisProcess terminate
+		].
+		
+		((-2305843009213693951 bitAt: 62) = 1) ifFalse: [
+			System logNl: 'Test 2 failed'.
+			thisProcess terminate
+		].
+
+		((2r1000000000000000000000000000100000000000000000000000000000000000000000000000 bitAt: 120) = 0) ifFalse: [
+			System logNl: 'Test 3 failed'.
+			thisProcess terminate
+		].
+
+		((-2r1000000000000000000000000000100000000000000000000000000000000000000000000000 bitAt: 16rFFFFFFFFFFFFFFFF0) = 1) ifFalse: [
+			System logNl: 'Test 4 failed'.
+			thisProcess terminate
+		].
+
+		0 priorTo: 200 do: [:i |
+			| k |
+			k := 1 bitShift: i.
+			## (k printStringRadix: 2) dump.
+			((k bitAt: i) = 1) ifFalse: [
+				System logNl: 'Test 5 failed'.
+				thisProcess terminate.
+			].
+			((k bitAt: i - 1) = 0) ifFalse: [
+				System logNl: 'Test 6 failed'.
+				thisProcess terminate.
+			].
+		].
+		
+		2r100000000_10001111_01010000 dump.
+		16rFFFFFFFF_12345678 dump.
 	}
 
 	#method(#class) varg_test()
@@ -170,6 +207,17 @@
 		].
 		## ^b * 100
 		^f
+	}
+	
+	#method t001(a)
+	{
+		a isNil ifTrue: [^E'1'].
+		(a = 20) ifTrue: [^error].
+		(a = 10) ifTrue: [^10].
+		^a.
+
+		a := error(10).
+		[ a = error(10) ] ifTrue: [....].
 	}
 }
 

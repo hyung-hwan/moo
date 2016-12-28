@@ -79,12 +79,10 @@ static int pf_open (stix_t* stix, stix_ooi_t nargs)
 #endif
 	if (!rcv->fp) 
 	{
-STIX_DEBUG2 (stix, "cannot open %s for %s\n", namebuf, modebuf);
 		stix_seterrnum (stix, stix_syserrtoerrnum(errno));
 		goto reterr;
 	}
 
-STIX_DEBUG3 (stix, "opened %s for %s - %p\n", namebuf, modebuf, rcv->fp);
 	STIX_STACK_SETRETTORCV (stix, nargs);
 	return 1;
 
@@ -100,7 +98,6 @@ static int pf_close (stix_t* stix, stix_ooi_t nargs)
 	rcv = (stdio_t*)STIX_STACK_GETRCV(stix, nargs);
 	if (rcv->fp)
 	{
-STIX_DEBUG1 (stix, "closing %p\n", rcv->fp);
 		fclose (rcv->fp);
 		rcv->fp = NULL;
 	}
@@ -191,7 +188,6 @@ reterr:
 	return 1;
 }
 
-
 static int pf_putc (stix_t* stix, stix_ooi_t nargs)
 {
 	return __pf_puts (stix, nargs, 1);
@@ -201,6 +197,10 @@ static int pf_puts (stix_t* stix, stix_ooi_t nargs)
 {
 	return __pf_puts (stix, nargs, STIX_TYPE_MAX(stix_oow_t));
 }
+
+/*TODO: add print function that can accept ByteArray
+ *      add format function for formatted output  */
+
 
 /* ------------------------------------------------------------------------ */
 

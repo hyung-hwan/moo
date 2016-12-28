@@ -217,7 +217,7 @@ typedef enum stix_method_type_t stix_method_type_t;
 
 /* SMOOI takes up 62 bits on a 64-bit architecture and 30 bits 
  * on a 32-bit architecture. The absolute value takes up 61 bits and 29 bits
- * respectively for the 1 sign bit. */
+ * respectively for the sign bit. */
 #define STIX_SMOOI_BITS (STIX_OOI_BITS - STIX_OOP_TAG_BITS)
 #define STIX_SMOOI_ABS_BITS (STIX_SMOOI_BITS - 1)
 #define STIX_SMOOI_MAX ((stix_ooi_t)(~((stix_oow_t)0) >> (STIX_OOP_TAG_BITS + 1)))
@@ -476,7 +476,6 @@ struct stix_method_t
 
 	/* primitive number */
 	stix_oop_t       preamble; /* SmallInteger */
-
 	stix_oop_t       preamble_data[2]; /* SmallInteger */
 
 	/* number of temporaries including arguments */
@@ -968,7 +967,6 @@ struct stix_t
 #define STIX_STACK_SETRETTOERROR(stix,nargs) STIX_STACK_SETRET(stix, nargs, STIX_ERROR_TO_OOP(stix->errnum))
 /*#define STIX_STACK_SETRETTOERROR(stix,nargs,ec) STIX_STACK_SETRET(stix, nargs, STIX_ERROR_TO_OOP(ec))*/
 
-
 /* =========================================================================
  * STIX VM LOGGING
  * ========================================================================= */
@@ -1056,33 +1054,25 @@ STIX_EXPORT void stix_fini (
 	stix_t* stix
 );
 
+#if defined(STIX_HAVE_INLINE)
+	static STIX_INLINE stix_mmgr_t* stix_getmmgr (stix_t* stix) { return stix->mmgr; }
+	static STIX_INLINE void* stix_getxtn (stix_t* stix) { return (void*)(stix + 1); }
 
-STIX_EXPORT stix_mmgr_t* stix_getmmgr (
-	stix_t* stix
-);
+	static STIX_INLINE stix_cmgr_t* stix_getcmgr (stix_t* stix) { return stix->cmgr; }
+	static STIX_INLINE void stix_setcmgr (stix_t* stix, stix_cmgr_t* cmgr) { stix->cmgr = cmgr; }
 
-STIX_EXPORT stix_cmgr_t* stix_getcmgr (
-	stix_t* stix
-);
+	static STIX_INLINE stix_errnum_t stix_geterrnum (stix_t* stix) { return stix->errnum; }
+	static STIX_INLINE void stix_seterrnum (stix_t* stix, stix_errnum_t errnum) { stix->errnum = errnum; }
+#else
+#	define stix_getmmgr(stix) ((stix)->mmgr)
+#	define stix_getxtn(stix) ((void*)((stix) + 1))
 
-STIX_EXPORT void stix_setcmgr (
-	stix_t*      stix,
-	stix_cmgr_t* cmgr
-);
+#	define stix_getcmgr(stix) ((stix)->cmgr)
+#	define stix_setcmgr(stix,mgr) ((stix)->cmgr = (mgr))
 
-STIX_EXPORT void* stix_getxtn (
-	stix_t* stix
-);
-
-
-STIX_EXPORT stix_errnum_t stix_geterrnum (
-	stix_t* stix
-);
-
-STIX_EXPORT void stix_seterrnum (
-	stix_t*       stix,
-	stix_errnum_t errnum
-);
+#	define stix_geterrnum(stix) ((stix)->errnum)
+#	define stix_seterrnum(stix,num) ((stix)->errnum = (num))
+#endif
 
 STIX_EXPORT const stix_ooch_t* stix_geterrstr (
 	stix_t* stix
@@ -1240,7 +1230,6 @@ STIX_EXPORT int stix_genpfmethod (
 #	define stix_convootobcstr(stix,oocs,oocslen,bcs,bcslen) stix_convutobcstr(stix,oocs,oocslen,bcs,bcslen)
 #	define stix_convbtooocstr(stix,bcs,bcslen,oocs,oocslen) stix_convbtoucstr(stix,bcs,bcslen,oocs,oocslen)
 #else
-#error TODO
 #	define stix_convootobchars(stix,oocs,oocslen,bcs,bcslen) stix_convutobchars(stix,oocs,oocslen,bcs,bcslen)
 #	define stix_convbtooochars(stix,bcs,bcslen,oocs,oocslen) stix_convbtouchars(stix,bcs,bcslen,oocs,oocslen)
 #	define stix_convootobcstr(stix,oocs,oocslen,bcs,bcslen) stix_convutobcstr(stix,oocs,oocslen,bcs,bcslen)

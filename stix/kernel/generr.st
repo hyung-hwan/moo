@@ -2,7 +2,6 @@
 
 #class MyObject(Object)
 {
-
 	#method(#class) main
 	{
 		| s c f |
@@ -56,7 +55,7 @@
 			f puts: S'e'.
 			f puts: (i asString).
 			(i = c) ifFalse: [f puts: S',' ].
-			(((i  + 1) rem: 8) = 0) ifTrue: [ f putc: C'\n' ] ifFalse: [ f putc: C' ' ].
+			(((i + 1) rem: 8) = 0) ifTrue: [ f putc: C'\n' ] ifFalse: [ f putc: C' ' ].
 		].
 		(((c + 1) rem: 8) = 0) ifFalse: [ f putc: C'\n' ].
 		f puts: S'};\n'.

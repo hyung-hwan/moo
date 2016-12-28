@@ -3,8 +3,6 @@
 #include 'Boolean.st'.
 
 #########################################################################################
-
-
 #class Magnitude(Object)
 {
 }
@@ -70,7 +68,6 @@
 		self primitiveFailed.
 	}
 
-
 	#method // aNumber
 	{
 		<primitive: #_integer_quo2>
@@ -127,9 +124,8 @@
 
 	#method bitAt: index
 	{
-		"## index is 1-based"
 		<primitive: #_integer_bitat>
-		^(self bitShift: (index - 1) negated) bitAnd: 1.
+		^(self bitShift: index negated) bitAnd: 1.
 	}
 
 	#method bitAnd: aNumber
@@ -176,7 +172,6 @@
 	#method to: end by: step do: aBlock
 	{
 		| i |
-
 		i := self.
 		(step > 0) 
 			ifTrue: [
@@ -197,6 +192,30 @@
 	{
 		^self to: end by: 1 do: aBlock.
 	}
+	
+	#method priorTo: end by: step do: aBlock
+	{
+		| i |
+		i := self.
+		(step > 0) 
+			ifTrue: [
+				[ i < end ] whileTrue: [ 
+					aBlock value: i.
+					i := i + step.
+				].
+			]
+			ifFalse: [
+				[ i > end ] whileTrue: [
+					aBlock value: i.
+					i := i - step.
+				].
+			].
+	}
+	
+	#method priorTo: end do: aBlock
+	{
+		^self priorTo: end by: 1 do: aBlock.
+	}
 
 	#method abs
 	{
@@ -210,9 +229,7 @@
 		self > 0 ifTrue: [^1].
 		^0.
 	}
-
 }
-
 
 #class Integer(Number)
 {
@@ -260,6 +277,7 @@
 	}
 }
 
+#########################################################################################
 
 #include 'Collect.st'.
 
@@ -293,10 +311,6 @@
 #include 'Except.st'.
 #include 'Process.st'.
 
-#class Resource(Object)
-{
-}
-
 #class FFI(Object)
 {
 	#dcl name handle funcs.
@@ -314,9 +328,9 @@
 		self.handle := self privateOpen: self.name.
 
 		"[ self.handle := self privateOpen: self.name ] 
-			on: Error do: [
+			on: Exception do: [
 			]
-			on: XError do: [
+			on: XException do: [
 			]."
 
 		^self.

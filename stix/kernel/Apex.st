@@ -151,8 +151,8 @@
 
 	#method == anObject
 	{
-		"check if the receiver is identical to anObject.
-		 this doesn't compare the contents"
+		(* check if the receiver is identical to anObject.
+		 * this doesn't compare the contents *)
 		<primitive: #_identical>
 	}
 
@@ -164,8 +164,8 @@
 
 	#method(#class) == anObject
 	{
-		"check if the receiver is identical to anObject.
-		 this doesn't compare the contents"
+		(* check if the receiver is identical to anObject.
+		 * this doesn't compare the contents *)
 		<primitive: #_identical>
 	}
 
@@ -234,10 +234,10 @@
 
 	#method(#class) isMemberOf: aClass
 	{
-		## a class object is an instance of Class
-		## but Class inherits from Apex. On the other hand,
-		## most of ordinary classes are under Object again under Apex.
-		## special consideration is required here.
+		(* a class object is an instance of Class
+		 * but Class inherits from Apex. On the other hand,
+		 * most of ordinary classes are under Object again under Apex.
+		 * special consideration is required here. *)
 		^aClass == Class
 	}
 
@@ -361,6 +361,11 @@
 	#method asInteger
 	{
 		<primitive: #_error_as_integer>
+	}
+	
+	#method asCharacter
+	{
+		<primitive: #_error_as_character>
 	}
 
 	#method asString

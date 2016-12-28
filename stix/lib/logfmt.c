@@ -318,7 +318,7 @@ static void print_object (stix_t* stix, stix_oow_t mask, stix_oop_t oop)
 	}
 	else if (STIX_OOP_IS_ERROR(oop))
 	{
-		stix_logbfmt (stix, mask, "E%08zd", STIX_OOP_TO_ERROR(oop));
+		stix_logbfmt (stix, mask, "error(%zd)", STIX_OOP_TO_ERROR(oop));
 	}
 	else
 	{

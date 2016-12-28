@@ -195,37 +195,6 @@ void stix_fini (stix_t* stix)
 	}
 }
 
-stix_mmgr_t* stix_getmmgr (stix_t* stix)
-{
-	return stix->mmgr;
-}
-
-stix_cmgr_t* stix_getcmgr (stix_t* stix)
-{
-	return stix->cmgr;
-}
-
-void stix_setcmgr (stix_t* stix, stix_cmgr_t* cmgr)
-{
-	stix->cmgr = cmgr;
-}
-
-void* stix_getxtn (stix_t* stix)
-{
-	return (void*)(stix + 1);
-}
-
-
-stix_errnum_t stix_geterrnum (stix_t* stix)
-{
-	return stix->errnum;
-}
-
-void stix_seterrnum (stix_t* stix, stix_errnum_t errnum)
-{
-	stix->errnum = errnum;
-}
-
 const stix_ooch_t* stix_geterrstr (stix_t* stix)
 {
 	return stix_errnumtoerrstr (stix->errnum);

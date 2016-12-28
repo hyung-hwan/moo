@@ -2409,6 +2409,22 @@ static int pf_integer_inttostr (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
+static int pf_error_as_character (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv;
+	stix_ooi_t ec;
+
+	STIX_ASSERT (stix, nargs == 0);
+
+	rcv = STIX_STACK_GETRCV(stix, nargs);
+	if (!STIX_OOP_IS_ERROR(rcv)) return 0;
+
+	ec = STIX_OOP_TO_ERROR(rcv);
+	STIX_ASSERT (stix, STIX_IN_SMOOI_RANGE(ec));
+	STIX_STACK_SETRET (stix, nargs, STIX_CHAR_TO_OOP(ec));
+	return 1;
+}
+
 static int pf_error_as_integer (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
@@ -2800,6 +2816,7 @@ static pf_t pftab[] =
 	{   1,  1,  pf_integer_ge,                       "_integer_ge"          },
 	{   1,  1,  pf_integer_inttostr,                 "_integer_inttostr"    },
 
+	{   0,  0,  pf_error_as_character,               "_error_as_character"  },
 	{   0,  0,  pf_error_as_integer,                 "_error_as_integer"    },
 	{   0,  0,  pf_error_as_string,                  "_error_as_string"     },
 

@@ -2144,7 +2144,7 @@ oops_einval:
 
 stix_oop_t stix_bitatint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 {
-	/* y is 1-based */
+	/* y is 0-based */
 
 	if (STIX_OOP_IS_SMOOI(x) && STIX_OOP_IS_SMOOI(y))
 	{
@@ -2153,16 +2153,18 @@ stix_oop_t stix_bitatint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		v1 = STIX_OOP_TO_SMOOI(x);
 		v2 = STIX_OOP_TO_SMOOI(y);
 
-		if (v2 <= 0) return STIX_SMOOI_TO_OOP(0);
+		if (v2 < 0) return STIX_SMOOI_TO_OOP(0);
 		if (v1 >= 0)
 		{
-			if (v2 >= STIX_SMOOI_BITS) return STIX_SMOOI_TO_OOP(0);
-			v3 = ((stix_oow_t)v1 >> (v2 - 1)) & 1;
+			/* the absolute value may be composed of up to 
+			 * STIX_SMOOI_BITS - 1 bits as there is a sign bit.*/
+			if (v2 >= STIX_SMOOI_BITS - 1) return STIX_SMOOI_TO_OOP(0);
+			v3 = ((stix_oow_t)v1 >> v2) & 1;
 		}
 		else
 		{
-			if (v2 >= STIX_SMOOI_BITS) return STIX_SMOOI_TO_OOP(1);
-			v3 = ((~(stix_oow_t)-v1 + 1) >> (v2 - 1)) & 1;
+			if (v2 >= STIX_SMOOI_BITS - 1) return STIX_SMOOI_TO_OOP(1);
+			v3 = ((~(stix_oow_t)-v1 + 1) >> v2) & 1;
 		}
 		return STIX_SMOOI_TO_OOP(v3);
 	}
@@ -2171,6 +2173,7 @@ stix_oop_t stix_bitatint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		if (!is_bigint(stix, y)) goto oops_einval;
 
 		if (STIX_OBJ_GET_CLASS(y) == stix->_large_negative_integer) return STIX_SMOOI_TO_OOP(0);
+
 		/* y is definitely >= STIX_SMOOI_BITS */
 		if (STIX_OOP_TO_SMOOI(x) >= 0) 
 			return STIX_SMOOI_TO_OOP(0);
@@ -2185,9 +2188,9 @@ stix_oop_t stix_bitatint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		if (!is_bigint(stix, x)) goto oops_einval;
 		v = STIX_OOP_TO_SMOOI(y);
 
-		if (v <= 0) return STIX_SMOOI_TO_OOP(0);
-		wp = (v - 1) / STIX_LIW_BITS;
-		bp = (v - 1) - (wp * STIX_LIW_BITS);
+		if (v < 0) return STIX_SMOOI_TO_OOP(0);
+		wp = v / STIX_LIW_BITS;
+		bp = v - (wp * STIX_LIW_BITS);
 
 		xs = STIX_OBJ_GET_SIZE(x);
 		if (STIX_OBJ_GET_CLASS(x) == stix->_large_positive_integer)
@@ -2246,19 +2249,14 @@ stix_oop_t stix_bitatint (stix_t* stix, stix_oop_t x, stix_oop_t y)
 		STIX_ASSERT (stix, sign >= 0);
 		if (sign >= 1)
 		{
-			wp = (w - 1) / STIX_LIW_BITS;
-			bp = (w - 1) - (wp * STIX_LIW_BITS);
+			wp = w / STIX_LIW_BITS;
+			bp = w - (wp * STIX_LIW_BITS);
 		}
 		else
 		{
 			stix_oop_t quo, rem;
 
 			STIX_ASSERT (stix, sign == 0);
-
-			stix_pushtmp (stix, &x);
-			y = stix_subints (stix, y, STIX_SMOOI_TO_OOP(1));
-			stix_poptmp (stix);
-			if (!y) return STIX_NULL;
 
 			stix_pushtmp (stix, &x);
 			quo = stix_divints (stix, y, STIX_SMOOI_TO_OOP(STIX_LIW_BITS), 0, &rem);

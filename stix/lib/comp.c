@@ -195,18 +195,18 @@ static STIX_INLINE int is_binselchar (stix_ooci_t c)
 {
 	/*
 	 * binary-selector-character :=
-	 * 	'!' | '%' | '&' | '*' | '+' | 
-	 * 	'/' | '<' | '>' | '=' | '?' | '@' | 
-	 * 	'\' | '~' | '|' | '-'
+	 * 	'%' | '&' | '*' | '+' | '-' |
+	 *   '/' | '<' | '>' | '=' | '?' |
+	 *   '@' | '\' | '~' | '|'
 	 */
 
 	switch (c)
 	{
-		case '!':
 		case '%':
 		case '&':
 		case '*':
 		case '+':
+		case '-':
 		case '/': 
 		case '<':
 		case '>':
@@ -216,7 +216,6 @@ static STIX_INLINE int is_binselchar (stix_ooci_t c)
 		case '\\':
 		case '|':
 		case '~':
-		case '-':
 			return 1;
 
 		default:
@@ -894,6 +893,10 @@ static int get_ident (stix_t* stix, stix_ooci_t char_read_ahead)
 		{
 			SET_TOKEN_TYPE (stix, STIX_IOTOK_FALSE);
 		}
+		else if (is_token_word(stix, VOCA_ERROR))
+		{
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_ERRLIT);
+		}
 		else if (is_token_word(stix, VOCA_THIS_CONTEXT))
 		{
 			SET_TOKEN_TYPE (stix, STIX_IOTOK_THIS_CONTEXT);
@@ -929,6 +932,7 @@ static int get_numlit (stix_t* stix, int negated)
 
 	stix_ooci_t c;
 	int radix = 0, r;
+	
 
 	c = stix->c->lxc.c;
 	SET_TOKEN_TYPE (stix, STIX_IOTOK_NUMLIT);
@@ -946,6 +950,19 @@ static int get_numlit (stix_t* stix, int negated)
 
 		ADD_TOKEN_CHAR(stix, c);
 		GET_CHAR_TO (stix, c);
+		if (c == '_')
+		{
+			stix_iolxc_t underscore;
+			underscore = stix->c->lxc;
+			GET_CHAR_TO(stix, c);
+			if (!is_digitchar(c))
+			{
+				unget_char (stix, &stix->c->lxc);
+				unget_char (stix, &underscore);
+				break;
+			}
+			else continue;
+		}
 	} 
 	while (is_digitchar(c));
 
@@ -974,6 +991,19 @@ static int get_numlit (stix_t* stix, int negated)
 		{
 			ADD_TOKEN_CHAR(stix, c);
 			GET_CHAR_TO (stix, c);
+			if (c == '_') 
+			{
+				stix_iolxc_t underscore;
+				underscore = stix->c->lxc;
+				GET_CHAR_TO(stix, c);
+				if (CHAR_TO_NUM(c, radix) >= radix)
+				{
+					unget_char (stix, &stix->c->lxc);
+					unget_char (stix, &underscore);
+					break;
+				}
+				else continue;
+			}
 		}
 		while (CHAR_TO_NUM(c, radix) < radix);
 
@@ -3492,6 +3522,11 @@ static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
 				lit = stix->_false;
 				break;
 
+			case STIX_IOTOK_ERRLIT:
+/* AAAAAAAAA */
+				lit = string_to_num (stix, TOKEN_NAME(stix), TOKEN_TYPE(stix) == STIX_IOTOK_RADNUMLIT);
+				break;
+
 			case STIX_IOTOK_ARPAREN: /* #( */
 			case STIX_IOTOK_LPAREN: /* ( */
 				saved_arlit_count = stix->c->mth.arlit_count;
@@ -3705,6 +3740,10 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 			case STIX_IOTOK_FALSE:
 				if (emit_byte_instruction(stix, BCODE_PUSH_FALSE) <= -1) return -1;
 				GET_TOKEN (stix);
+				break;
+
+			case STIX_IOTOK_ERRLIT:
+/* AAAAAA */
 				break;
 
 			case STIX_IOTOK_THIS_CONTEXT:
@@ -5246,6 +5285,10 @@ static int __compile_pooldic_definition (stix_t* stix)
 
 			case STIX_IOTOK_FALSE:
 				lit = stix->_false;
+				goto add_literal;
+
+			case STIX_IOTOK_ERRLIT:
+/* AAAAAAAAAAAA */
 				goto add_literal;
 
 			case STIX_IOTOK_CHARLIT:

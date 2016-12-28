@@ -131,6 +131,25 @@ static stix_mmgr_t sys_mmgr =
 
 /* ========================================================================= */
 
+#if defined(_WIN32) || defined(__OS2__) || defined(__DOS__)
+#	define IS_PATH_SEP(c) ((c) == '/' || (c) == '\\')
+#else
+#	define IS_PATH_SEP(c) ((c) == '/')
+#endif
+
+
+static const stix_bch_t* get_base_name (const stix_bch_t* path)
+{
+	const stix_bch_t* p, * last = STIX_NULL;
+
+	for (p = path; *p != '\0'; p++)
+	{
+		if (IS_PATH_SEP(*p)) last = p;
+	}
+
+	return (last == STIX_NULL)? path: (last + 1);
+}
+
 static STIX_INLINE stix_ooi_t open_input (stix_t* stix, stix_ioarg_t* arg)
 {
 	xtn_t* xtn = stix_getxtn(stix);
@@ -140,18 +159,19 @@ static STIX_INLINE stix_ooi_t open_input (stix_t* stix, stix_ioarg_t* arg)
 	if (arg->includer)
 	{
 		/* includee */
+
 		stix_bch_t bcs[1024]; /* TODO: right buffer size */
 		stix_oow_t bcslen = STIX_COUNTOF(bcs);
 		stix_oow_t ucslen;
 
 		if (stix_convootobcstr (stix, arg->name, &ucslen, bcs, &bcslen) <= -1)
-		{
+		{ 
 			stix_seterrnum (stix, STIX_EECERR);
 			return -1;
 		}
 
+		
 /* TODO: make bcs relative to the includer */
-
 #if defined(__MSDOS__) || defined(_WIN32) || defined(__OS2__)
 		fp = fopen (bcs, "rb");
 #else
