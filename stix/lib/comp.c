@@ -505,6 +505,26 @@ static stix_oop_t string_to_num (stix_t* stix, stix_oocs_t* str, int radixed)
 	return stix_strtoint (stix, ptr, end - ptr, base);
 }
 
+static stix_oop_t string_to_error (stix_t* stix, stix_oocs_t* str)
+{
+	stix_ooi_t num = 0;
+	const stix_ooch_t* ptr, * end;
+
+	ptr = str->ptr,
+	end = str->ptr + str->len;
+
+	/* i assume that the input is in the form of error(NNN)
+	 * all other letters are non-digits except the NNN part.
+	 * i just skip all non-digit letters for simplicity sake. */
+	while (ptr < end)
+	{
+		if (is_digitchar(*ptr)) num = num * 10 + (*ptr - '0');
+		ptr++;
+	}
+
+	return STIX_ERROR_TO_OOP(num);
+}
+
 /* ---------------------------------------------------------------------
  * Tokenizer 
  * --------------------------------------------------------------------- */
@@ -802,7 +822,37 @@ static int get_ident (stix_t* stix, stix_ooci_t char_read_ahead)
 	} 
 	while (is_identchar(c));
 
-	if (c == ':') 
+	if (c == '(' && is_token_word(stix, VOCA_ERROR))
+	{
+		/* error(NN) */
+		ADD_TOKEN_CHAR (stix, c);
+		GET_CHAR_TO (stix, c);
+		if (!is_digitchar(c))
+		{
+			ADD_TOKEN_CHAR (stix, c);
+			set_syntax_error (stix, STIX_SYNERR_ERRLIT, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			return -1;
+		}
+
+		do
+		{
+			ADD_TOKEN_CHAR (stix, c);
+			GET_CHAR_TO (stix, c);
+		}
+		while (is_digitchar(c));
+
+		if (c != ')')
+		{
+			set_syntax_error (stix, STIX_SYNERR_RPAREN, LEXER_LOC(stix), STIX_NULL);
+			return -1;
+		}
+
+/* TODO: error number range check */
+
+		ADD_TOKEN_CHAR (stix, c);
+		SET_TOKEN_TYPE (stix, STIX_IOTOK_ERRLIT);
+	}
+	else if (c == ':') 
 	{
 	read_more_kwsym:
 		ADD_TOKEN_CHAR (stix, c);
@@ -895,7 +945,7 @@ static int get_ident (stix_t* stix, stix_ooci_t char_read_ahead)
 		}
 		else if (is_token_word(stix, VOCA_ERROR))
 		{
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_ERRLIT);
+			SET_TOKEN_TYPE (stix, STIX_IOTOK_ERROR);
 		}
 		else if (is_token_word(stix, VOCA_THIS_CONTEXT))
 		{
@@ -3522,9 +3572,12 @@ static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
 				lit = stix->_false;
 				break;
 
+			case STIX_IOTOK_ERROR:
+				lit = STIX_ERROR_TO_OOP(STIX_EGENERIC);
+				break;
+
 			case STIX_IOTOK_ERRLIT:
-/* AAAAAAAAA */
-				lit = string_to_num (stix, TOKEN_NAME(stix), TOKEN_TYPE(stix) == STIX_IOTOK_RADNUMLIT);
+				lit = string_to_error (stix, TOKEN_NAME(stix));
 				break;
 
 			case STIX_IOTOK_ARPAREN: /* #( */
@@ -3742,9 +3795,25 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 				GET_TOKEN (stix);
 				break;
 
-			case STIX_IOTOK_ERRLIT:
-/* AAAAAA */
+			case STIX_IOTOK_ERROR:
+				if (add_literal(stix, STIX_ERROR_TO_OOP(STIX_EGENERIC), &index) <= -1 ||
+				    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				GET_TOKEN (stix);
 				break;
+
+			case STIX_IOTOK_ERRLIT:
+			{
+				stix_oop_t tmp;
+
+				tmp = string_to_error (stix, TOKEN_NAME(stix));
+				if (!tmp) return -1;
+
+				if (add_literal(stix, tmp, &index) <= -1 ||
+				    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+
+				GET_TOKEN (stix);
+				break;
+			}
 
 			case STIX_IOTOK_THIS_CONTEXT:
 				if (emit_byte_instruction(stix, BCODE_PUSH_CONTEXT) <= -1) return -1;
@@ -5287,8 +5356,12 @@ static int __compile_pooldic_definition (stix_t* stix)
 				lit = stix->_false;
 				goto add_literal;
 
+			case STIX_IOTOK_ERROR:
+				lit = STIX_ERROR_TO_OOP(STIX_EGENERIC);
+				goto add_literal;
+
 			case STIX_IOTOK_ERRLIT:
-/* AAAAAAAAAAAA */
+				lit = string_to_error (stix, TOKEN_NAME(stix));
 				goto add_literal;
 
 			case STIX_IOTOK_CHARLIT:

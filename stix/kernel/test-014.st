@@ -184,6 +184,12 @@
 		
 		2r100000000_10001111_01010000 dump.
 		16rFFFFFFFF_12345678 dump.
+		
+		(v1 := self t001()) isError ifTrue: [('t001 Error 111....' & v1 asInteger asString) dump].
+		(v1 := self t001(10)) isError ifTrue: [('t001 Error 222....' & v1 asInteger asString) dump].
+		(v1 := self t001(20)) isError ifTrue: [('t001 Error 333....' & v1 asInteger asString) dump].
+		error(9999) dump.
+		error(9999) asInteger dump.
 	}
 
 	#method(#class) varg_test()
@@ -209,15 +215,18 @@
 		^f
 	}
 	
-	#method t001(a)
+	#method(#class) t001(a)
 	{
-		a isNil ifTrue: [^E'1'].
+		a isNil ifTrue: [^error(10)].
 		(a = 20) ifTrue: [^error].
-		(a = 10) ifTrue: [^10].
+		(a = 10) ifTrue: [^123 asError].
 		^a.
 
-		a := error(10).
-		[ a = error(10) ] ifTrue: [....].
+		#! a := error(10).
+		#! [ a = error(10) ] ifTrue: [....].
+		
+	#!	self t001 (error:10).
+	#!	self t001: (error:10)	
 	}
 }
 

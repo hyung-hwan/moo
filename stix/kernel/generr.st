@@ -4,9 +4,9 @@
 {
 	#method(#class) main
 	{
-		| s c f |
+		| errmsgs synerrmsgs f |
 
-		s := #( 
+		errmsgs := #( 
 			'no error'
 			'generic error'
 
@@ -40,35 +40,107 @@
 			'I/O error'
 			'encoding conversion error'
 		).
+		
+		synerrmsgs := #(
+			'no error'
+			'illegal character'
+			'comment not closed'
+			'string not closed'
+			'no character after $'
+			'no valid character after #'
+			'wrong character literal'
+			'colon expected'
+			'string expected'
+			'invalid radix' 
+			'invalid numeric literal'
+			'byte too small or too large'
+			'wrong error literal'
+			'{ expected'
+			'} expected'
+			'( expected'
+			') expected'
+			'] expected'
+			'. expected'
+			' expected'
+			'| expected'
+			'> expected'
+			':= expected'
+			'identifier expected'
+			'integer expected'
+			'primitive: expected'
+			'wrong directive'
+			'undefined class'
+			'duplicate class'
+			'contradictory class definition'
+			'#dcl not allowed'
+			'wrong method name'
+			'duplicate method name'
+			'duplicate argument name'
+			'duplicate temporary variable name'
+			'duplicate variable name'
+			'duplicate block argument name'
+			'cannot assign to argument'
+			'undeclared variable'
+			'unusable variable in compiled code'
+			'inaccessible variable'
+			'ambiguous variable'
+			'wrong expression primary'
+			'too many temporaries'
+			'too many arguments'
+			'too many block temporaries'
+			'too many block arguments'
+			'too large block'
+			'wrong primitive function number'
+			'wrong primitive function identifier'
+			'wrong module name'
+			'#include error'
+			'wrong namespace name'
+			'wrong pool dictionary name'
+			'duplicate pool dictionary name'
+			'literal expected'
+		).
 
 		f := Stdio open: 'generr.out' for: 'w'.
 		[ f isError ] ifTrue: [ System logNl: 'Cannot open generr.out'. thisProcess terminate. ].
 
-		c := s size - 1.
+		self emitMessages: errmsgs named: 'errstr' on: f.
+		self emitMessages: synerrmsgs named: 'synerrstr' on: f.
+
+		f close.
+	}
+	
+	#method(#class) emitMessages: errmsgs named: name on: f
+	{
+		| c prefix |
+		prefix := name & '_'.
+		
+		c := errmsgs size - 1.
 		0 to: c do: [:i |
-			self printString: (s at: i) index: i on: f.
+			self printString: (errmsgs at: i) prefix: prefix index: i on: f.
 		].
 
-		f puts: S'static stix_ooch_t* errstr[] =\n{\n'.
+		
+		f puts: S'static stix_ooch_t* '.
+		f puts: name.
+		f puts: S'[] =\n{\n'.
 		0 to: c do: [:i |
 			((i rem: 8) = 0) ifTrue: [ f putc: C'\t' ].
-			f puts: S'e'.
+			f puts: prefix.
 			f puts: (i asString).
 			(i = c) ifFalse: [f puts: S',' ].
 			(((i + 1) rem: 8) = 0) ifTrue: [ f putc: C'\n' ] ifFalse: [ f putc: C' ' ].
 		].
 		(((c + 1) rem: 8) = 0) ifFalse: [ f putc: C'\n' ].
 		f puts: S'};\n'.
-
-		f close.
 	}
 
-	#method(#class) printString: s index: index on: f
+	#method(#class) printString: s prefix: prefix index: index on: f
 	{
 		| c  |
 		c := s size - 1.
 
-		f puts: 'static stix_ooch_t e'.
+		f puts: 'static stix_ooch_t '.
+		f puts: prefix.
 		f puts: index asString.
 		f puts: '[] = {'.
 

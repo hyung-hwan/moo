@@ -229,23 +229,6 @@
 /* ========================================================================= */
 /* SOURCE CODE I/O FOR COMPILER                                              */
 /* ========================================================================= */
-
-enum stix_iocmd_t
-{
-	STIX_IO_OPEN,
-	STIX_IO_CLOSE,
-	STIX_IO_READ
-};
-typedef enum stix_iocmd_t stix_iocmd_t;
-
-struct stix_ioloc_t
-{
-	unsigned long int  line; /**< line */
-	unsigned long int  colm; /**< column */
-	const stix_ooch_t* file; /**< file specified in #include */
-};
-typedef struct stix_ioloc_t stix_ioloc_t;
-
 struct stix_iolxc_t
 {
 	stix_ooci_t   c; /**< character */
@@ -260,7 +243,6 @@ enum stix_ioarg_flag_t
 };
 typedef enum stix_ioarg_flag_t stix_ioarg_flag_t; */
 
-typedef struct stix_ioarg_t stix_ioarg_t;
 struct stix_ioarg_t
 {
 	/** 
@@ -305,23 +287,19 @@ struct stix_ioarg_t
 	/*-----------------------------------------------------------------*/
 };
 
-typedef stix_ooi_t (*stix_ioimpl_t) (
-	stix_t*       stix,
-	stix_iocmd_t  cmd,
-	stix_ioarg_t* arg
-);
-
 struct stix_iotok_t
 {
 	enum
 	{
 		STIX_IOTOK_EOF,
-		STIX_IOTOK_ERRLIT,
+		
 		STIX_IOTOK_CHARLIT,
 		STIX_IOTOK_STRLIT,
 		STIX_IOTOK_SYMLIT,
 		STIX_IOTOK_NUMLIT,
 		STIX_IOTOK_RADNUMLIT,
+		STIX_IOTOK_ERRLIT, /* error(NN) */
+		STIX_IOTOK_ERROR, /* error */
 		STIX_IOTOK_NIL,
 		STIX_IOTOK_SELF,
 		STIX_IOTOK_SUPER,
@@ -356,80 +334,11 @@ struct stix_iotok_t
 };
 typedef struct stix_iotok_t stix_iotok_t;
 
-enum stix_synerrnum_t
-{
-	STIX_SYNERR_NOERR,
-	STIX_SYNERR_ILCHR,         /* illegal character */
-	STIX_SYNERR_CMTNC,         /* comment not closed */
-	STIX_SYNERR_STRNC,         /* string not closed */
-	STIX_SYNERR_CLTNT,         /* character literal not terminated */
-	STIX_SYNERR_HLTNT,         /* hased literal not terminated */
-	STIX_SYNERR_CHARLIT,       /* wrong character literal */
-	STIX_SYNERR_COLON,         /* : expected */
-	STIX_SYNERR_STRING,        /* string expected */
-	STIX_SYNERR_RADIX,         /* invalid radix */
-	STIX_SYNERR_RADNUMLIT,     /* invalid numeric literal with radix */
-	STIX_SYNERR_BYTERANGE,     /* byte too small or too large */
-	STIX_SYNERR_LBRACE,        /* { expected */
-	STIX_SYNERR_RBRACE,        /* } expected */
-	STIX_SYNERR_LPAREN,        /* ( expected */
-	STIX_SYNERR_RPAREN,        /* ) expected */
-	STIX_SYNERR_RBRACK,        /* ] expected */
-	STIX_SYNERR_PERIOD,        /* . expected */
-	STIX_SYNERR_COMMA,         /* , expected */
-	STIX_SYNERR_VBAR,          /* | expected */
-	STIX_SYNERR_GT,            /* > expected */
-	STIX_SYNERR_ASSIGN,        /* := expected */
-	STIX_SYNERR_IDENT,         /* identifier expected */
-	STIX_SYNERR_INTEGER,       /* integer expected */
-	STIX_SYNERR_PRIMITIVE,     /* primitive: expected */
-	STIX_SYNERR_DIRECTIVE,     /* wrong directive */
-	STIX_SYNERR_CLASSUNDEF,    /* undefined class */
-	STIX_SYNERR_CLASSDUP,      /* duplicate class */
-	STIX_SYNERR_CLASSCONTRA,   /* contradictory class */
-	STIX_SYNERR_DCLBANNED,     /* #dcl not allowed */
-	STIX_SYNERR_MTHNAME,       /* wrong method name */
-	STIX_SYNERR_MTHNAMEDUP,    /* duplicate method name */
-	STIX_SYNERR_ARGNAMEDUP,    /* duplicate argument name */
-	STIX_SYNERR_TMPRNAMEDUP,   /* duplicate temporary variable name */
-	STIX_SYNERR_VARNAMEDUP,    /* duplicate variable name */
-	STIX_SYNERR_BLKARGNAMEDUP, /* duplicate block argument name */
-	STIX_SYNERR_VARARG,        /* cannot assign to argument */
-	STIX_SYNERR_VARUNDCL,      /* undeclared variable */
-	STIX_SYNERR_VARUNUSE,      /* unsuable variable in compiled code */
-	STIX_SYNERR_VARINACC,      /* inaccessible variable - e.g. accessing an instance variable from a class method is not allowed. */
-	STIX_SYNERR_VARAMBIG,      /* ambiguious variable - e.g. the variable is found in multiple pool dictionaries imported */
-	STIX_SYNERR_PRIMARY,       /* wrong expression primary */
-	STIX_SYNERR_TMPRFLOOD,     /* too many temporaries */
-	STIX_SYNERR_ARGFLOOD,      /* too many arguments */
-	STIX_SYNERR_BLKTMPRFLOOD,  /* too many block temporaries */
-	STIX_SYNERR_BLKARGFLOOD,   /* too many block arguments */
-	STIX_SYNERR_BLKFLOOD,      /* too large block */
-	STIX_SYNERR_PFNUM,         /* wrong primitive number */
-	STIX_SYNERR_PFID,          /* wrong primitive identifier */
-	STIX_SYNERR_MODNAME,       /* wrong module name */
-	STIX_SYNERR_INCLUDE,       /* #include error */
-	STIX_SYNERR_NAMESPACE,     /* wrong namespace name */
-	STIX_SYNERR_POOLDIC,       /* wrong pool dictionary */
-	STIX_SYNERR_POOLDICDUP,    /* duplicate pool dictionary */
-	STIX_SYNERR_LITERAL        /* literal expected */
-};
-typedef enum stix_synerrnum_t stix_synerrnum_t;
-
 typedef struct stix_iolink_t stix_iolink_t;
 struct stix_iolink_t
 {
 	stix_iolink_t* link;
 };
-
-struct stix_synerr_t
-{
-	stix_synerrnum_t num;
-	stix_ioloc_t     loc;
-	stix_oocs_t       tgt;
-};
-typedef struct stix_synerr_t stix_synerr_t;
-
 
 struct stix_code_t
 {
@@ -1222,19 +1131,6 @@ stix_oop_t stix_inttostr (
 	stix_t*      stix,
 	stix_oop_t   num,
 	int          radix
-);
-
-/* ========================================================================= */
-/* comp.c                                                                    */
-/* ========================================================================= */
-STIX_EXPORT int stix_compile (
-	stix_t*       stix,
-	stix_ioimpl_t io
-);
-
-STIX_EXPORT void stix_getsynerr (
-	stix_t*        stix,
-	stix_synerr_t* synerr
 );
 
 /* ========================================================================= */

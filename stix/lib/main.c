@@ -486,67 +486,6 @@ if (mask & STIX_LOG_GC) return; /* don't show gc logs */
 
 /* ========================================================================= */
 
-static char* syntax_error_msg[] = 
-{
-	"no error",
-	"illegal character",
-	"comment not closed",
-	"string not closed",
-	"no character after $",
-	"no valid character after #",
-	"wrong character literal",
-	"colon expected",
-	"string expected",
-	"invalid radix", 
-	"invalid numeric literal",
-	"byte too small or too large",
-	"{ expected",
-	"} expected",
-	"( expected",
-	") expected",
-	"] expected",
-	". expected",
-	", expected",
-	"| expected",
-	"> expected",
-	":= expected",
-	"identifier expected",
-	"integer expected",
-	"primitive: expected",
-	"wrong directive",
-	"undefined class",
-	"duplicate class",
-	"contradictory class definition",
-	"#dcl not allowed",
-	"wrong method name",
-	"duplicate method name",
-	"duplicate argument name",
-	"duplicate temporary variable name",
-	"duplicate variable name",
-	"duplicate block argument name",
-	"cannot assign to argument",
-	"undeclared variable",
-	"unusable variable in compiled code",
-	"inaccessible variable",
-	"ambiguous variable",
-	"wrong expression primary",
-	"too many temporaries",
-	"too many arguments",
-	"too many block temporaries",
-	"too many block arguments",
-	"too large block",
-	"wrong primitive function number",
-	"wrong primitive function identifier",
-	"wrong module name",
-	"#include error",
-	"wrong namespace name",
-	"wrong pool dictionary name",
-	"duplicate pool dictionary name",
-	"literal expected"
-};
-
-/* ========================================================================= */
-
 static stix_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' };
 static stix_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
 static stix_t* g_stix = STIX_NULL;
@@ -760,9 +699,15 @@ int main (int argc, char* argv[])
 				}
 
 
-				printf ("syntax error at line %lu column %lu - %s", 
-					(unsigned long int)synerr.loc.line, (unsigned long int)synerr.loc.colm,
-					syntax_error_msg[synerr.num]);
+				printf ("syntax error at line %lu column %lu - ", 
+					(unsigned long int)synerr.loc.line, (unsigned long int)synerr.loc.colm);
+
+				bcslen = STIX_COUNTOF(bcs);
+				if (stix_convootobcstr (stix, stix_synerrnumtoerrstr(synerr.num), &ucslen, bcs, &bcslen) >= 0)
+				{
+					printf (" [%.*s]", (int)bcslen, bcs);
+				}
+
 				if (synerr.tgt.len > 0)
 				{
 					bcslen = STIX_COUNTOF(bcs);

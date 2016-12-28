@@ -245,6 +245,16 @@
 	## {
 	## 	^0
 	## }
+	
+	#method asError
+	{
+		<primitive: #_smooi_as_error>
+	}
+	
+	#method asCharacter
+	{
+		<primitive: #_smooi_as_character>
+	}
 }
 
 #class(#liword) LargeInteger(Integer)
