@@ -37,6 +37,7 @@ extern "C" {
 #	define stix_hashchars(ptr,len) stix_hashuchars(ptr,len)
 #	define stix_equaloochars(str1,str2,len) stix_equaluchars(str1,str2,len)
 #	define stix_compoocbcstr(str1,str2) stix_compucbcstr(str1,str2)
+#	define stix_compoocharsbcstr(str1,len1,str2) stix_compucharsbcstr(str1,len1,str2)
 #	define stix_compoocstr(str1,str2) stix_compucstr(str1,str2)
 #	define stix_copyoochars(dst,src,len) stix_copyuchars(dst,src,len)
 #	define stix_copybctooochars(dst,src,len) stix_copybtouchars(dst,src,len)
@@ -48,6 +49,7 @@ extern "C" {
 #	define stix_hashchars(ptr,len) stix_hashbchars(ptr,len)
 #	define stix_equaloochars(str1,str2,len) stix_equalbchars(str1,str2,len)
 #	define stix_compoocbcstr(str1,str2) stix_compbcstr(str1,str2)
+#	define stix_compoocharsbcstr(str1,len1,str2) stix_compbcharsbcstr(str1,len1,str2)
 #	define stix_compoocstr(str1,str2) stix_compbcstr(str1,str2)
 #	define stix_copyoochars(dst,src,len) stix_copybchars(dst,src,len)
 #	define stix_copybctooochars(dst,src,len) stix_copybchars(dst,src,len)
@@ -106,6 +108,12 @@ STIX_EXPORT int stix_compucbcstr (
 
 STIX_EXPORT int stix_compucharsbcstr (
 	const stix_uch_t* str1,
+	stix_oow_t        len,
+	const stix_bch_t* str2
+);
+
+STIX_EXPORT int stix_compbcharsbcstr (
+	const stix_bch_t* str1,
 	stix_oow_t        len,
 	const stix_bch_t* str2
 );

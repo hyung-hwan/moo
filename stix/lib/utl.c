@@ -119,6 +119,15 @@ int stix_compucharsbcstr (const stix_uch_t* str1, stix_oow_t len, const stix_bch
 	return (*str1 > *str2)? 1: -1;
 }
 
+int stix_compbcharsbcstr (const stix_bch_t* str1, stix_oow_t len, const stix_bch_t* str2)
+{
+	const stix_bch_t* end = str1 + len;
+	while (str1 < end && *str2 != '\0' && *str1 == *str2) str1++, str2++;
+	if (str1 == end && *str2 == '\0') return 0;
+	if (*str1 == *str2) return (str1 < end)? 1: -1;
+	return (*str1 > *str2)? 1: -1;
+}
+
 void stix_copyuchars (stix_uch_t* dst, const stix_uch_t* src, stix_oow_t len)
 {
 	stix_oow_t i;

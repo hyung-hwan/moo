@@ -5,7 +5,7 @@ CPPFLAGS_COMMON = \
 	-I$(abs_builddir)/../lib \
 	-I$(abs_srcdir) \
 	-I$(abs_srcdir)/../lib \
-	-I$(includedir)
+	-I$(includedir) -fPIC
 
 if WIN32
 # you must adjust the value of DEFAULT_MODPOSTFIX according 
@@ -21,10 +21,13 @@ if ENABLE_STATIC_MODULE
 # STATIC MODULES BUILT INTO MAIN LIBRARY
 ##################################################
 
-noinst_LIBRARIES = libstix-stdio.a
+noinst_LTLIBRARIES = libstix-console.la libstix-stdio.la
 
-libstix_stdio_a_SOURCES = stdio.c 
-libstix_stdio_a_CPPFLAGS = $(CPPFLAGS_COMMON)
+libstix_console_la_SOURCES = console.c 
+libstix_console_la_CPPFLAGS = $(CPPFLAGS_COMMON)
+
+libstix_stdio_la_SOURCES = stdio.c 
+libstix_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 
 else
 

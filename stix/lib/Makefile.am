@@ -60,8 +60,8 @@ libstix_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libstix_la_LIBADD = $(LIBADD_LIB_COMMON)
 
 if ENABLE_STATIC_MODULE
-libstix_la_LDFLAGS += -I$(abs_builddir)/../mod
-libstix_la_LIBADD += -lstix-stdio
+libstix_la_LDFLAGS += -L$(abs_builddir)/../mod
+libstix_la_LIBADD += -lstix-console -lstix-stdio -ltermcap
 endif
 
 bin_PROGRAMS = stix

@@ -347,6 +347,23 @@ void stix_freemem (stix_t* stix, void* ptr)
 #define MOD_PREFIX "stix_mod_"
 #define MOD_PREFIX_LEN 9
 
+#if defined(STIX_ENABLE_STATIC_MODULE)
+
+#include "../mod/console.h"
+#include "../mod/_stdio.h"
+
+static struct
+{
+	stix_bch_t* modname;
+	int (*modload) (stix_t* stix, stix_mod_t* mod);
+}
+static_modtab[] = 
+{
+	{ "console", stix_mod_console },
+	{ "stdio",  stix_mod_stdio },
+};
+#endif
+
 stix_mod_data_t* stix_openmod (stix_t* stix, const stix_ooch_t* name, stix_oow_t namelen)
 {
 	stix_rbt_pair_t* pair;
@@ -387,7 +404,7 @@ stix_mod_data_t* stix_openmod (stix_t* stix, const stix_ooch_t* name, stix_oow_t
 	/* TODO: binary search ... */
 	for (n = 0; n < STIX_COUNTOF(static_modtab); n++)
 	{
-		if (stix_compoocstr (static_modtab[n].modname, name, name_len....) == 0) 
+		if (stix_compoocharsbcstr (name, namelen, static_modtab[n].modname) == 0) 
 		{
 			load = static_modtab[n].modload;
 			break;
@@ -405,12 +422,12 @@ stix_mod_data_t* stix_openmod (stix_t* stix, const stix_ooch_t* name, stix_oow_t
 		/* found the module in the staic module table */
 
 		STIX_MEMSET (&md, 0, STIX_SIZEOF(md));
-		stix_copyoochars (md.name, name, namelen);
+		stix_copyoochars ((stix_ooch_t*)md.mod.name, name, namelen);
 		/* Note md.handle is STIX_NULL for a static module */
 
 		/* i copy-insert 'md' into the table before calling 'load'.
 		 * to pass the same address to load(), query(), etc */
-		pair = stix_rbt_insert (stix->modtab, name, namelen, &md, STIX_SIZEOF(md));
+		pair = stix_rbt_insert (&stix->modtab, (stix_ooch_t*)name, namelen, &md, STIX_SIZEOF(md));
 		if (pair == STIX_NULL)
 		{
 			stix->errnum = STIX_ESYSMEM;
@@ -418,9 +435,9 @@ stix_mod_data_t* stix_openmod (stix_t* stix, const stix_ooch_t* name, stix_oow_t
 		}
 
 		mdp = (stix_mod_data_t*)STIX_RBT_VPTR(pair);
-		if (load (&mdp->mod, stix) <= -1)
+		if (load (stix, &mdp->mod) <= -1)
 		{
-			stix_rbt_delete (stix->modtab, segs[0].ptr, segs[0].len);
+			stix_rbt_delete (&stix->modtab, (stix_ooch_t*)name, namelen);
 			return STIX_NULL;
 		}
 

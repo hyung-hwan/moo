@@ -83,8 +83,8 @@ host_triplet = @host@
 # to the first number in -version-info above
 @WIN32_TRUE@am__append_1 = -DSTIX_DEFAULT_MODPREFIX=\"libstix-\" -DSTIX_DEFAULT_MODPOSTFIX=\"-1\"
 @WIN32_FALSE@am__append_2 = -DSTIX_DEFAULT_MODPREFIX=\"$(libdir)/libstix-\" -DSTIX_DEFAULT_MODPOSTFIX=\"\"
-@ENABLE_STATIC_MODULE_TRUE@am__append_3 = -I$(abs_builddir)/../mod
-@ENABLE_STATIC_MODULE_TRUE@am__append_4 = -lstix-stdio
+@ENABLE_STATIC_MODULE_TRUE@am__append_3 = -L$(abs_builddir)/../mod
+@ENABLE_STATIC_MODULE_TRUE@am__append_4 = -lstix-console -lstix-stdio -ltermcap
 bin_PROGRAMS = stix$(EXEEXT)
 subdir = lib
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
