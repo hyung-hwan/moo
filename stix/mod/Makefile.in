@@ -160,7 +160,7 @@ libstix_console_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 @ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
 @ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_DEPENDENCIES =  \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
-am__libstix_stdio_la_SOURCES_DIST = stdio.c
+am__libstix_stdio_la_SOURCES_DIST = stdio.c m-stdio.h
 @ENABLE_STATIC_MODULE_FALSE@am_libstix_stdio_la_OBJECTS =  \
 @ENABLE_STATIC_MODULE_FALSE@	libstix_stdio_la-stdio.lo
 libstix_stdio_la_OBJECTS = $(am_libstix_stdio_la_OBJECTS)
@@ -412,7 +412,7 @@ CPPFLAGS_COMMON = -I$(abs_builddir) -I$(abs_builddir)/../lib \
 @ENABLE_STATIC_MODULE_FALSE@LIBADD_COMMON = -lstix
 @ENABLE_STATIC_MODULE_FALSE@pkgmodexecdir = $(libdir)
 @ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES = libstix-stdio.la libstix-console.la
-@ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_SOURCES = stdio.c 
+@ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_SOURCES = stdio.c m-stdio.h
 @ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 @ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_LDFLAGS = $(LDFLAGS_COMMON)
 @ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_LIBADD = $(LIBADD_COMMON)

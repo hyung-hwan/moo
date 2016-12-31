@@ -25,7 +25,7 @@
  */
 
 
-#include <stix.h>
+#include "_stdio.h"
 #include <stix-utl.h>
 
 #include <stdio.h>

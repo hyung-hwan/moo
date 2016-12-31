@@ -38,7 +38,7 @@ pkgmodexecdir = $(libdir)
 
 pkgmodexec_LTLIBRARIES = libstix-stdio.la libstix-console.la
 
-libstix_stdio_la_SOURCES = stdio.c 
+libstix_stdio_la_SOURCES = stdio.c m-stdio.h
 libstix_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libstix_stdio_la_LDFLAGS = $(LDFLAGS_COMMON)
 libstix_stdio_la_LIBADD = $(LIBADD_COMMON)
