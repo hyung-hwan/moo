@@ -525,7 +525,7 @@ int stix_importmod (stix_t* stix, stix_oop_t _class, const stix_ooch_t* name, st
 		if (!mdp) 
 		{
 			r = -1;
-			goto done;
+			goto done2;
 		}
 	}
 
@@ -547,10 +547,11 @@ int stix_importmod (stix_t* stix, stix_oop_t _class, const stix_ooch_t* name, st
 done:
 	if (!pair) 
 	{
-		/* clsoe the module if it has been opened in this function. */
+		/* close the module if it has been opened in this function. */
 		stix_closemod (stix, mdp);
 	}
 
+done2:
 	stix_poptmp (stix);
 	return r;
 }
