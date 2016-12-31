@@ -158,18 +158,6 @@ libstix_console_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(LDFLAGS) -o $@
 @ENABLE_STATIC_MODULE_FALSE@am_libstix_console_la_rpath = -rpath \
 @ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
-@ENABLE_STATIC_MODULE_FALSE@libstix_sound_la_DEPENDENCIES =  \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
-am__libstix_sound_la_SOURCES_DIST = sound.c sound.h
-@ENABLE_STATIC_MODULE_FALSE@am_libstix_sound_la_OBJECTS =  \
-@ENABLE_STATIC_MODULE_FALSE@	libstix_sound_la-sound.lo
-libstix_sound_la_OBJECTS = $(am_libstix_sound_la_OBJECTS)
-libstix_sound_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
-	$(AM_CFLAGS) $(CFLAGS) $(libstix_sound_la_LDFLAGS) $(LDFLAGS) \
-	-o $@
-@ENABLE_STATIC_MODULE_FALSE@am_libstix_sound_la_rpath = -rpath \
-@ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
 @ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_DEPENDENCIES =  \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
 am__libstix_stdio_la_SOURCES_DIST = stdio.c
@@ -217,10 +205,9 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(libstix_stdio_a_SOURCES) $(libstix_console_la_SOURCES) \
-	$(libstix_sound_la_SOURCES) $(libstix_stdio_la_SOURCES)
+	$(libstix_stdio_la_SOURCES)
 DIST_SOURCES = $(am__libstix_stdio_a_SOURCES_DIST) \
 	$(am__libstix_console_la_SOURCES_DIST) \
-	$(am__libstix_sound_la_SOURCES_DIST) \
 	$(am__libstix_stdio_la_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
@@ -424,15 +411,11 @@ CPPFLAGS_COMMON = -I$(abs_builddir) -I$(abs_builddir)/../lib \
 @ENABLE_STATIC_MODULE_FALSE@LDFLAGS_COMMON = -L$(abs_builddir)/../lib -L$(libdir) -version-info 1:0:0 -no-undefined
 @ENABLE_STATIC_MODULE_FALSE@LIBADD_COMMON = -lstix
 @ENABLE_STATIC_MODULE_FALSE@pkgmodexecdir = $(libdir)
-@ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES = libstix-stdio.la libstix-sound.la libstix-console.la
+@ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES = libstix-stdio.la libstix-console.la
 @ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_SOURCES = stdio.c 
 @ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 @ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_LDFLAGS = $(LDFLAGS_COMMON)
 @ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_LIBADD = $(LIBADD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_sound_la_SOURCES = sound.c sound.h
-@ENABLE_STATIC_MODULE_FALSE@libstix_sound_la_CPPFLAGS = $(CPPFLAGS_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_sound_la_LDFLAGS = $(LDFLAGS_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_sound_la_LIBADD = $(LIBADD_COMMON)
 @ENABLE_STATIC_MODULE_FALSE@libstix_console_la_SOURCES = console.c console.h
 @ENABLE_STATIC_MODULE_FALSE@libstix_console_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 @ENABLE_STATIC_MODULE_FALSE@libstix_console_la_LDFLAGS = $(LDFLAGS_COMMON)
@@ -518,9 +501,6 @@ clean-pkgmodexecLTLIBRARIES:
 libstix-console.la: $(libstix_console_la_OBJECTS) $(libstix_console_la_DEPENDENCIES) $(EXTRA_libstix_console_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libstix_console_la_LINK) $(am_libstix_console_la_rpath) $(libstix_console_la_OBJECTS) $(libstix_console_la_LIBADD) $(LIBS)
 
-libstix-sound.la: $(libstix_sound_la_OBJECTS) $(libstix_sound_la_DEPENDENCIES) $(EXTRA_libstix_sound_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(libstix_sound_la_LINK) $(am_libstix_sound_la_rpath) $(libstix_sound_la_OBJECTS) $(libstix_sound_la_LIBADD) $(LIBS)
-
 libstix-stdio.la: $(libstix_stdio_la_OBJECTS) $(libstix_stdio_la_DEPENDENCIES) $(EXTRA_libstix_stdio_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libstix_stdio_la_LINK) $(am_libstix_stdio_la_rpath) $(libstix_stdio_la_OBJECTS) $(libstix_stdio_la_LIBADD) $(LIBS)
 
@@ -531,7 +511,6 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_console_la-console.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_sound_la-sound.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_stdio_a-stdio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_stdio_la-stdio.Plo@am__quote@
 
@@ -579,13 +558,6 @@ libstix_console_la-console.lo: console.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='console.c' object='libstix_console_la-console.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_console_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_console_la-console.lo `test -f 'console.c' || echo '$(srcdir)/'`console.c
-
-libstix_sound_la-sound.lo: sound.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_sound_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_sound_la-sound.lo -MD -MP -MF $(DEPDIR)/libstix_sound_la-sound.Tpo -c -o libstix_sound_la-sound.lo `test -f 'sound.c' || echo '$(srcdir)/'`sound.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_sound_la-sound.Tpo $(DEPDIR)/libstix_sound_la-sound.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sound.c' object='libstix_sound_la-sound.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_sound_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_sound_la-sound.lo `test -f 'sound.c' || echo '$(srcdir)/'`sound.c
 
 libstix_stdio_la-stdio.lo: stdio.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_stdio_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_stdio_la-stdio.lo -MD -MP -MF $(DEPDIR)/libstix_stdio_la-stdio.Tpo -c -o libstix_stdio_la-stdio.lo `test -f 'stdio.c' || echo '$(srcdir)/'`stdio.c

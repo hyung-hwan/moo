@@ -36,17 +36,12 @@ LIBADD_COMMON = -lstix
 
 pkgmodexecdir = $(libdir)
 
-pkgmodexec_LTLIBRARIES = libstix-stdio.la libstix-sound.la libstix-console.la
+pkgmodexec_LTLIBRARIES = libstix-stdio.la libstix-console.la
 
 libstix_stdio_la_SOURCES = stdio.c 
 libstix_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libstix_stdio_la_LDFLAGS = $(LDFLAGS_COMMON)
 libstix_stdio_la_LIBADD = $(LIBADD_COMMON)
-
-libstix_sound_la_SOURCES = sound.c sound.h
-libstix_sound_la_CPPFLAGS = $(CPPFLAGS_COMMON)
-libstix_sound_la_LDFLAGS = $(LDFLAGS_COMMON)
-libstix_sound_la_LIBADD = $(LIBADD_COMMON)
 
 libstix_console_la_SOURCES = console.c console.h
 libstix_console_la_CPPFLAGS = $(CPPFLAGS_COMMON)
