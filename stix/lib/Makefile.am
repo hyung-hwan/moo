@@ -3,7 +3,7 @@ AUTOMAKE_OPTIONS = nostdinc
 CPPFLAGS_ALL_COMMON = \
 	-I$(abs_builddir) \
 	-I$(abs_srcdir) \
-	-I$(includedir)	
+	-I$(includedir)
 
 LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(libdir)
 
@@ -59,22 +59,16 @@ libstix_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 libstix_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libstix_la_LIBADD = $(LIBADD_LIB_COMMON)
 
+if ENABLE_STATIC_MODULE
+libstix_la_LDFLAGS += -I$(abs_builddir)/../mod
+libstix_la_LIBADD += -lstix-stdio
+endif
+
 bin_PROGRAMS = stix
 stix_SOURCES = main.c
 stix_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 stix_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 stix_LDADD = $(LIBADD_LIB_COMMON) -lstix #-ldyncall_s
-
-if ENABLE_STATIC_MODULE
-
-##################################################
-# STATIC MODULES BUILT INTO MAIN LIBRARY
-##################################################
-#libstix_la_SOURCES += \
-#	mod-dir.c mod-dir.h \
-#libstix_la_LIBADD +=
-
-endif
 
 
 install-data-hook:

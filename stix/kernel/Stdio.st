@@ -24,22 +24,21 @@
 	{
 		^(self new) open: name for: mode
 	}
-
-
+	
 (* ---------------------
-	#method(#class) input
+	#method(#class) stdin
 	{
 		self.in isNil ifTrue: [ self.in := ^(super new) open: 0 for: 'r' ].
 		^self.in.
 	}
 
-	#method(#class) output
+	#method(#class) stdout
 	{
 		self.out isNil ifTrue: [ self.out := ^(super new) open: 1 for: 'w' ].
 		^self.out.
 	}
 
-	#method(#class) error
+	#method(#class) stderr
 	{
 		self.err isNil ifTrue: [ self.err := ^(super new) open: 2 for: 'w' ].
 		^self.err.
@@ -53,13 +52,17 @@
 	}
 	*)
 
-	#method format (fmt, args)
+	#method format (fmt)
 	{
-		| a b c |
+		| a b c ubound |
 		'THIS IS FORMAT' dump.
 		fmt dump.
-		args dump.
+		
 		thisContext temporaryCount dump.
+		ubound := thisContext vargCount - 1.
+		0 to: ubound do: [:k |
+			(thisContext vargAt: k) dump.
+		].
 	}
 }
 

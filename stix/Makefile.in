@@ -359,7 +359,8 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTION = foreign
 ACLOCAL_AMFLAGS = -I m4
 EXTRA_DIST = 
-SUBDIRS = libltdl mod lib
+@ENABLE_STATIC_MODULE_FALSE@SUBDIRS = libltdl lib mod
+@ENABLE_STATIC_MODULE_TRUE@SUBDIRS = libltdl mod lib
 DIST_SUBDIRS = $(SUBDIRS) 
 all: all-recursive
 

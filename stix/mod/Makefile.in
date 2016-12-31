@@ -14,6 +14,7 @@
 
 @SET_MAKE@
 
+
 VPATH = @srcdir@
 am__is_gnu_make = test -n '$(MAKEFILE_LIST)' && test -n '$(MAKELEVEL)'
 am__make_running_with_option = \
@@ -99,6 +100,18 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/lib/stix-cfg.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+LIBRARIES = $(noinst_LIBRARIES)
+ARFLAGS = cru
+AM_V_AR = $(am__v_AR_@AM_V@)
+am__v_AR_ = $(am__v_AR_@AM_DEFAULT_V@)
+am__v_AR_0 = @echo "  AR      " $@;
+am__v_AR_1 = 
+libstix_stdio_a_AR = $(AR) $(ARFLAGS)
+libstix_stdio_a_LIBADD =
+am__libstix_stdio_a_SOURCES_DIST = stdio.c
+@ENABLE_STATIC_MODULE_TRUE@am_libstix_stdio_a_OBJECTS =  \
+@ENABLE_STATIC_MODULE_TRUE@	libstix_stdio_a-stdio.$(OBJEXT)
+libstix_stdio_a_OBJECTS = $(am_libstix_stdio_a_OBJECTS)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -203,9 +216,10 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libstix_console_la_SOURCES) $(libstix_sound_la_SOURCES) \
-	$(libstix_stdio_la_SOURCES)
-DIST_SOURCES = $(am__libstix_console_la_SOURCES_DIST) \
+SOURCES = $(libstix_stdio_a_SOURCES) $(libstix_console_la_SOURCES) \
+	$(libstix_sound_la_SOURCES) $(libstix_stdio_la_SOURCES)
+DIST_SOURCES = $(am__libstix_stdio_a_SOURCES_DIST) \
+	$(am__libstix_console_la_SOURCES_DIST) \
 	$(am__libstix_sound_la_SOURCES_DIST) \
 	$(am__libstix_stdio_la_SOURCES_DIST)
 am__can_run_installinfo = \
@@ -393,48 +407,36 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = nostdinc
-CPPFLAGS_ALL_COMMON = \
-	-I$(abs_builddir) \
-	-I$(abs_srcdir) \
-	-I$(abs_srcdir)/../lib \
-	-I$(includedir)	
-
-LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(libdir)
-
-##################################################
-# MAIN LIBRARY 
-##################################################
-CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) $(LTDLINCL) \
+CPPFLAGS_COMMON = -I$(abs_builddir) -I$(abs_builddir)/../lib \
+	-I$(abs_srcdir) -I$(abs_srcdir)/../lib -I$(includedir) \
 	$(am__append_1) $(am__append_2)
-LDFLAGS_LIB_COMMON = $(LDFLAGS_ALL_COMMON) -version-info 1:0:0 -no-undefined
-LIBADD_LIB_COMMON = $(LIBM) $(LIBLTDL) 
 
 ##################################################
 # STATIC MODULES BUILT INTO MAIN LIBRARY
 ##################################################
-#libstix_la_SOURCES += mod-dir.c mod-dir.h \
-#libstix_la_LIBADD +=
+@ENABLE_STATIC_MODULE_TRUE@noinst_LIBRARIES = libstix-stdio.a
+@ENABLE_STATIC_MODULE_TRUE@libstix_stdio_a_SOURCES = stdio.c 
+@ENABLE_STATIC_MODULE_TRUE@libstix_stdio_a_CPPFLAGS = $(CPPFLAGS_COMMON)
 
 ##################################################
 # DYNAMIC MODULES 
 ##################################################
-@ENABLE_STATIC_MODULE_FALSE@CPPFLAGS_MOD_COMMON = $(CPPFLAGS_LIB_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@LDFLAGS_MOD_COMMON = $(LDFLAGS_LIB_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@LIBADD_MOD_COMMON = -lstix
+@ENABLE_STATIC_MODULE_FALSE@LDFLAGS_COMMON = -L$(abs_builddir)/../lib -L$(libdir) -version-info 1:0:0 -no-undefined
+@ENABLE_STATIC_MODULE_FALSE@LIBADD_COMMON = -lstix
 @ENABLE_STATIC_MODULE_FALSE@pkgmodexecdir = $(libdir)
 @ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES = libstix-stdio.la libstix-sound.la libstix-console.la
 @ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_SOURCES = stdio.c 
-@ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_LIBADD = $(LIBADD_MOD_COMMON)
+@ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
+@ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_LDFLAGS = $(LDFLAGS_COMMON)
+@ENABLE_STATIC_MODULE_FALSE@libstix_stdio_la_LIBADD = $(LIBADD_COMMON)
 @ENABLE_STATIC_MODULE_FALSE@libstix_sound_la_SOURCES = sound.c sound.h
-@ENABLE_STATIC_MODULE_FALSE@libstix_sound_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_sound_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_sound_la_LIBADD = $(LIBADD_MOD_COMMON)
+@ENABLE_STATIC_MODULE_FALSE@libstix_sound_la_CPPFLAGS = $(CPPFLAGS_COMMON)
+@ENABLE_STATIC_MODULE_FALSE@libstix_sound_la_LDFLAGS = $(LDFLAGS_COMMON)
+@ENABLE_STATIC_MODULE_FALSE@libstix_sound_la_LIBADD = $(LIBADD_COMMON)
 @ENABLE_STATIC_MODULE_FALSE@libstix_console_la_SOURCES = console.c console.h
-@ENABLE_STATIC_MODULE_FALSE@libstix_console_la_CPPFLAGS = $(CPPFLAGS_MOD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_console_la_LDFLAGS = $(LDFLAGS_MOD_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libstix_console_la_LIBADD = $(LIBADD_MOD_COMMON) -ltermcap 
+@ENABLE_STATIC_MODULE_FALSE@libstix_console_la_CPPFLAGS = $(CPPFLAGS_COMMON)
+@ENABLE_STATIC_MODULE_FALSE@libstix_console_la_LDFLAGS = $(LDFLAGS_COMMON)
+@ENABLE_STATIC_MODULE_FALSE@libstix_console_la_LIBADD = $(LIBADD_COMMON) -ltermcap 
 all: all-am
 
 .SUFFIXES:
@@ -469,6 +471,14 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
+
+clean-noinstLIBRARIES:
+	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
+
+libstix-stdio.a: $(libstix_stdio_a_OBJECTS) $(libstix_stdio_a_DEPENDENCIES) $(EXTRA_libstix_stdio_a_DEPENDENCIES) 
+	$(AM_V_at)-rm -f libstix-stdio.a
+	$(AM_V_AR)$(libstix_stdio_a_AR) libstix-stdio.a $(libstix_stdio_a_OBJECTS) $(libstix_stdio_a_LIBADD)
+	$(AM_V_at)$(RANLIB) libstix-stdio.a
 
 install-pkgmodexecLTLIBRARIES: $(pkgmodexec_LTLIBRARIES)
 	@$(NORMAL_INSTALL)
@@ -522,6 +532,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_console_la-console.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_sound_la-sound.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_stdio_a-stdio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_stdio_la-stdio.Plo@am__quote@
 
 .c.o:
@@ -547,6 +558,20 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
+
+libstix_stdio_a-stdio.o: stdio.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_stdio_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_stdio_a-stdio.o -MD -MP -MF $(DEPDIR)/libstix_stdio_a-stdio.Tpo -c -o libstix_stdio_a-stdio.o `test -f 'stdio.c' || echo '$(srcdir)/'`stdio.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_stdio_a-stdio.Tpo $(DEPDIR)/libstix_stdio_a-stdio.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='stdio.c' object='libstix_stdio_a-stdio.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_stdio_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_stdio_a-stdio.o `test -f 'stdio.c' || echo '$(srcdir)/'`stdio.c
+
+libstix_stdio_a-stdio.obj: stdio.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_stdio_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_stdio_a-stdio.obj -MD -MP -MF $(DEPDIR)/libstix_stdio_a-stdio.Tpo -c -o libstix_stdio_a-stdio.obj `if test -f 'stdio.c'; then $(CYGPATH_W) 'stdio.c'; else $(CYGPATH_W) '$(srcdir)/stdio.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_stdio_a-stdio.Tpo $(DEPDIR)/libstix_stdio_a-stdio.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='stdio.c' object='libstix_stdio_a-stdio.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_stdio_a_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_stdio_a-stdio.obj `if test -f 'stdio.c'; then $(CYGPATH_W) 'stdio.c'; else $(CYGPATH_W) '$(srcdir)/stdio.c'; fi`
 
 libstix_console_la-console.lo: console.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_console_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_console_la-console.lo -MD -MP -MF $(DEPDIR)/libstix_console_la-console.Tpo -c -o libstix_console_la-console.lo `test -f 'console.c' || echo '$(srcdir)/'`console.c
@@ -659,7 +684,7 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(LTLIBRARIES)
+all-am: Makefile $(LIBRARIES) $(LTLIBRARIES)
 installdirs:
 	for dir in "$(DESTDIR)$(pkgmodexecdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
@@ -696,8 +721,8 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-libtool clean-pkgmodexecLTLIBRARIES \
-	mostlyclean-am
+clean-am: clean-generic clean-libtool clean-noinstLIBRARIES \
+	clean-pkgmodexecLTLIBRARIES mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -768,8 +793,9 @@ uninstall-am: uninstall-pkgmodexecLTLIBRARIES
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS TAGS all all-am check check-am clean clean-generic \
-	clean-libtool clean-pkgmodexecLTLIBRARIES cscopelist-am ctags \
-	ctags-am distclean distclean-compile distclean-generic \
+	clean-libtool clean-noinstLIBRARIES \
+	clean-pkgmodexecLTLIBRARIES cscopelist-am ctags ctags-am \
+	distclean distclean-compile distclean-generic \
 	distclean-libtool distclean-tags distdir dvi dvi-am html \
 	html-am info info-am install install-am install-data \
 	install-data-am install-dvi install-dvi-am install-exec \

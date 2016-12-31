@@ -83,6 +83,8 @@ host_triplet = @host@
 # to the first number in -version-info above
 @WIN32_TRUE@am__append_1 = -DSTIX_DEFAULT_MODPREFIX=\"libstix-\" -DSTIX_DEFAULT_MODPOSTFIX=\"-1\"
 @WIN32_FALSE@am__append_2 = -DSTIX_DEFAULT_MODPREFIX=\"$(libdir)/libstix-\" -DSTIX_DEFAULT_MODPOSTFIX=\"\"
+@ENABLE_STATIC_MODULE_TRUE@am__append_3 = -I$(abs_builddir)/../mod
+@ENABLE_STATIC_MODULE_TRUE@am__append_4 = -lstix-stdio
 bin_PROGRAMS = stix$(EXEEXT)
 subdir = lib
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
@@ -133,7 +135,7 @@ am__installdirs = "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(bindir)" \
 LTLIBRARIES = $(pkglib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-libstix_la_DEPENDENCIES = $(am__DEPENDENCIES_2)
+libstix_la_DEPENDENCIES = $(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
 am_libstix_la_OBJECTS = libstix_la-bigint.lo libstix_la-comp.lo \
 	libstix_la-debug.lo libstix_la-decode.lo libstix_la-dic.lo \
 	libstix_la-err.lo libstix_la-exec.lo libstix_la-logfmt.lo \
@@ -383,7 +385,7 @@ AUTOMAKE_OPTIONS = nostdinc
 CPPFLAGS_ALL_COMMON = \
 	-I$(abs_builddir) \
 	-I$(abs_srcdir) \
-	-I$(includedir)	
+	-I$(includedir)
 
 LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(libdir)
 
@@ -424,8 +426,8 @@ libstix_la_SOURCES = \
 	utl.c
 
 libstix_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
-libstix_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-libstix_la_LIBADD = $(LIBADD_LIB_COMMON)
+libstix_la_LDFLAGS = $(LDFLAGS_LIB_COMMON) $(am__append_3)
+libstix_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_4)
 stix_SOURCES = main.c
 stix_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 stix_LDFLAGS = $(LDFLAGS_LIB_COMMON)
@@ -994,13 +996,6 @@ uninstall-am: uninstall-binPROGRAMS uninstall-pkgincludeHEADERS \
 	uninstall-binPROGRAMS uninstall-hook \
 	uninstall-pkgincludeHEADERS uninstall-pkglibLTLIBRARIES
 
-
-##################################################
-# STATIC MODULES BUILT INTO MAIN LIBRARY
-##################################################
-#libstix_la_SOURCES += \
-#	mod-dir.c mod-dir.h \
-#libstix_la_LIBADD +=
 
 install-data-hook:
 	@echo "#ifndef _STIX_CFG_H_" > "$(DESTDIR)$(pkgincludedir)/stix-cfg.h"
