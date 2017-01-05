@@ -51,21 +51,28 @@
 
 #class(#character) String(Array)
 {
-	#method & aString
+	#method & string
 	{
-		## concatenate two strings.
-## TOOD: make this a primitive for performance.
-		| newsize newstr self_ubound |
+		(* TOOD: make this a primitive for performance. *)
+		
+		(* concatenate two strings. *)
+		| newsize newstr cursize appsize |
 
-		newsize := self basicSize + aString basicSize.
-		##newstr := self class basicNew: newsize.
-		newstr := String basicNew: newsize.  ## TODO: redefine , for symbol... it's a work arouind... symbols are not concatenated to a symbol at this moment.
-		self_ubound := self ubound.
+		cursize := self basicSize.
+		appsize := string basicSize.
+		newsize := cursize + appsize.
+		(*newstr := self class basicNew: newsize.*)
+		newstr := String basicNew: newsize.
 
-		0 to: self_ubound do: [:i | newstr at: i put: (self at: i) ].
-		0 to: (aString ubound) do: [:i | newstr at: (i + self_ubound + 1) put: (aString at: i) ].
+		0 priorTo: cursize do: [:i | newstr at: i put: (self at: i) ].
+		0 priorTo: appsize do: [:i | newstr at: (i + cursize) put: (string at: i) ].
 
 		^newstr
+	}
+	
+	#method asString
+	{
+		^self
 	}
 }
 
@@ -73,6 +80,18 @@
 
 #class(#character) Symbol(String)
 {
+	#method asString
+	{
+		(* TODO: make this a primitive for performance *)
+
+		(* convert a symbol to a string *)
+		| size str |
+		size := self basicSize.
+		str := String basicNew: size.
+		
+		0 priorTo: size do: [:i | str at: i put: (self at: i) ].
+		^str.
+	}
 }
 
 ## -------------------------------------------------------------------------------
@@ -95,6 +114,94 @@
 #class Set(Collection)
 {
 	#dcl tally bucket.
+	
+	#method initialize
+	{
+		self.tally := 0.
+		self.bucket := Array new: 100. 
+	}
+
+	#method size
+	{
+		^self.tally
+	}
+
+	#method at: key
+	{
+		| ass |
+		ass := self __find: key or_upsert: false with: nil.
+		(ass notNil) ifTrue: [^ass value].
+		^ErrorCode.NOENT
+	}
+
+	#method at: key ifAbsent: error_block
+	{
+		| ass |
+		ass := self __find: key or_upsert: false with: nil.
+		(ass notNil) ifTrue: [^ass value].
+		^error_block value.
+	}
+
+	#method at: key put: value
+	{
+		self __find: key or_upsert: true with: value.
+		^value
+	}
+
+	#method __find: key or_upsert: upsert with: value
+	{
+		| hv ass bs index ntally |
+
+		bs := self.bucket size.
+		hv := key hash.
+		index := hv rem: bs.
+
+		[(ass := self.bucket at: index) notNil] 
+			whileTrue: [
+				[key == ass key] ifTrue: [
+					(* found *)
+					upsert ifTrue: [ass value: value].
+					^ass
+				].
+				index := (index + 1) rem: bs.
+			].
+
+		upsert ifFalse: [^nil].
+
+		ntally := self.tally + 1.
+		(ntally >= bs) ifTrue: [
+			(* expand the bucket *)
+			
+		].
+		
+		ass := Association key: key value: value.
+		self.tally := ntally.
+		self.bucket at: index put: ass.
+		
+		^ass
+	}
+
+	#method do: block
+	{
+		| bs |
+
+		bs := self.bucket size.
+		0 priorTo: bs by: 1 do: [:i |
+			| ass |
+			(ass := self.bucket at: i) notNil ifTrue: [block value: ass value]
+		].
+	}
+	
+	#method keysAndValuesDo: block
+	{
+		| bs |
+
+		bs := self.bucket size.
+		0 priorTo: bs by: 1 do: [:i |
+			| ass |
+			(ass := self.bucket at: i) notNil ifTrue: [block value: ass key value: ass value]
+		].	
+	}
 }
 
 #class SymbolSet(Set)

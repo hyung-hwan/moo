@@ -28,6 +28,11 @@
 		^self.messageText
 	}
 
+	#method asString
+	{
+		^(self class name) & ' - ' & self.messageText.
+	}
+
 	#method __signal 
 	{
 		self.signalContext := thisContext.
@@ -36,24 +41,24 @@
 
 	#method signal
 	{
-		| excctx excblk retval actpos |
+		| exctx exblk retval actpos |
 
 		self.signalContext := thisContext.
-		excctx := (thisContext sender) findExceptionContext.
-		[excctx notNil] whileTrue: [
-			excblk := excctx findExceptionHandlerFor: (self class).
-			(excblk notNil and: 
-			 [actpos := excctx basicSize - 1. excctx basicAt: actpos]) ifTrue: [
-				self.handlerContext := excctx.
-				excctx basicAt: actpos put: false.
-				[ retval := excblk value: self ] ensure: [ 
-					excctx basicAt: actpos put: true 
+		exctx := (thisContext sender) findExceptionContext.
+		[exctx notNil] whileTrue: [
+			exblk := exctx findExceptionHandlerFor: (self class).
+			(exblk notNil and: 
+			 [actpos := exctx basicSize - 1. exctx basicAt: actpos]) ifTrue: [
+				self.handlerContext := exctx.
+				exctx basicAt: actpos put: false.
+				[ retval := exblk value: self ] ensure: [ 
+					exctx basicAt: actpos put: true 
 				].
 
-				thisContext unwindTo: (excctx sender) return: nil.
-				Processor return: retval to: (excctx sender).
+				thisContext unwindTo: (exctx sender) return: nil.
+				Processor return: retval to: (exctx sender).
 			].
-			excctx := (excctx sender) findExceptionContext.
+			exctx := (exctx sender) findExceptionContext.
 		].
 
 		## -----------------------------------------------------------------
@@ -195,6 +200,14 @@
 	#method ensureBlock
 	{
 ## TODO: change 8 to a constant when stix is enhanced to support constant definition
+
+		(* [ value-block ] ensure: [ ensure-block ]
+		 * assuming ensure block is a parameter the ensure: method to a 
+		 * block context, the first parameter is placed after the fixed
+		 * instance variables of the method context. As MethodContex has
+		 * 8 instance variables, the ensure block must be at the 9th position
+		 * which translates to index 8 *)
+
 		(self.method preambleCode == 11) ifFalse: [^nil].
 		^self basicAt: 8.
 	}
@@ -202,21 +215,26 @@
 
 	#method findExceptionHandlerFor: exception_class
 	{
-		## find an exception handler block for a given exception class.
-		##
-		## for this to work, self must be an exception handler context.
-		## For a single on:do: call,
-		##   self class specNumInstVars must return 8.
-		##   basicAt: 8 must be the on: argument.
-		##   basicAt: 9 must be the do: argument
+		(* find an exception handler block for a given exception class.
+		 *
+		 * for this to work, self must be an exception handler context.
+		 * For a single on:do: call,
+		 *   self class specNumInstVars must return 8.(i.e.MethodContext has 8 instance variables.)
+		 *   basicAt: 8 must be the on: argument.
+		 *   basicAt: 9 must be the do: argument  *)
 
-		(self isExceptionContext) ifTrue: [
-			| bound exc |
-			## NOTE: if on:do: has a temporary varible, bound must be adjusted to reflect it.
-			bound := self basicSize - 1.
 ## TODO: change 8 to a constant when stix is enhanced to support constant definition
 ##       or calcuate the minimum size using the class information.
-			8 to: bound by: 2 do: [ :i | 
+
+		(self isExceptionContext) ifTrue: [
+			| size exc |
+
+			(* NOTE: the following loop scans all parameters to the on:do: method.
+			 *       if the on:do: method contains local temporary variables,
+			 *       those must be skipped from scanning. *)
+
+			size := self basicSize.
+			8 priorTo: size by: 2 do: [ :i | 
 				exc := self basicAt: i.
 				((exception_class == exc) or: [exception_class inheritsFrom: exc]) ifTrue: [^self basicAt: (i + 1)].
 			]
@@ -226,20 +244,20 @@
 
 	#method handleException: exception
 	{
-		## -------------------------------------------------------------------
-		## <<private>>
-		##   called by Exception>>signal.
-		##   this method only exists in the MethodContext and UndefinedObject.
-		##   the caller must make sure that the receiver object is
-		##   a method context or nil. Exception>>signal invokes this method
-		##   only for an exception context which is a method context. it 
-		##   invokes it for nil when no exception context is found.
-		## -------------------------------------------------------------------
+		(* -----------------------------------------------------------------
+		 * <<private>>
+		 *   called by Exception>>signal.
+		 *   this method only exists in the MethodContext and UndefinedObject.
+		 *   the caller must make sure that the receiver object is
+		 *   a method context or nil. Exception>>signal invokes this method
+		 *   only for an exception context which is a method context. it 
+		 *   invokes it for nil when no exception context is found.
+		 * ---------------------------------------------------------------- *)
 
 		| excblk retval actpos |
 
-		## position of the temporary variable 'active' in MethodContext>>on:do.
-		## for this code to work, it must be the last temporary variable in the method.
+		(* position of the temporary variable 'active' in MethodContext>>on:do.
+		 * for this code to work, it must be the last temporary variable in the method. *)
 		actpos := (self basicSize) - 1. 
 
 		excblk := self findExceptionHandlerFor: (exception class).
@@ -252,13 +270,13 @@
 
 		exception handlerContext: self.
 
-		## -------------------------------------------------------------------
-		## if an exception occurs within an exception handler block,
-		## the search will reach this context again as the exception block
-		## is evaluated before actual unwinding. set the temporary variable
-		## in the exception context to mask out this context from the search
-		## list.
-		## -------------------------------------------------------------------
+		(* -----------------------------------------------------------------
+		 * if an exception occurs within an exception handler block,
+		 * the search will reach this context again as the exception block
+		 * is evaluated before actual unwinding. set the temporary variable
+		 * in the exception context to mask out this context from the search
+		 * list.
+		 * ---------------------------------------------------------------- *)
 		self basicAt: actpos put: false.
 		[ retval := excblk value: exception ] ensure: [
 			self basicAt: actpos put: true
@@ -266,13 +284,11 @@
 
 		##(self.sender isNil) ifTrue: [ "TODO: CANNOT RETURN" ].
 
-		## -------------------------------------------------------------------
-		## return to self.sender which is a caller of the exception context (on:do:)
-		## pass the first ensure context between thisContext and self.sender.
-		##
-		## [ [Exception signal: 'xxx'] ensure: [20] ] on: Exception do: [:ex | ...]
-		##
-		## -------------------------------------------------------------------
+		(* -----------------------------------------------------------------
+		 * return to self.sender which is a caller of the exception context (on:do:)
+		 * pass the first ensure context between thisContext and self.sender.
+		 * [ [Exception signal: 'xxx'] ensure: [20] ] on: Exception do: [:ex | ...]
+		 * ---------------------------------------------------------------- *)
 		thisContext unwindTo: self.sender return: nil.
 		Processor return: retval to: self.sender.
 	}
@@ -286,13 +302,14 @@
 		| exception_active |
 		<exception>
 
-"thisContext isExceptionContext dump.
+(* ------------------------------- 
+thisContext isExceptionContext dump.
 (thisContext basicSize) dump.
 (thisContext basicAt: 8) dump.  ## this should be anException
 (thisContext basicAt: 9) dump.  ## this should be anExceptionBlock
 (thisContext basicAt: 10) dump.  ## this should be handlerActive
-'on:do: ABOUT TO EVALUE THE RECEIVER BLOCK' dump."
-
+'on:do: ABOUT TO EVALUE THE RECEIVER BLOCK' dump.
+---------------------------------- *)
 		exception_active := true.
 		^self value.
 	}
@@ -334,11 +351,27 @@
 
 
 ##============================================================================
+#class InstantiationFailureException(Exception)
+{
+}
+
 #class NoSuchMessageException(Exception)
 {
 }
 
 #class PrimitiveFailureException(Exception)
+{
+}
+
+#class IndexOutOfRangeException(Exception)
+{
+}
+
+#class SubclassResponsibilityException(Exception)
+{
+}
+
+#class ErrorExceptionizationFailureException(Exception)
 {
 }
 
@@ -362,14 +395,29 @@ ctx := thisContext.
 
 	#method(#class) cannotInstantiate
 	{
-		Exception signal: 'Cannot instantiate'.
+## TOOD: accept a class
+		InstantiationFailureException signal: 'Cannot instantiate'.
 	}
 
-	#method(#class) doesNotUnderstand: messageSymbol
+	#method(#class) doesNotUnderstand: message_name
 	{
 		## TODO: implement this properly
-		NoSuchMessageException signal: (messageSymbol & ' not understood by ' & (self name)).
+		NoSuchMessageException signal: (message_name & ' not understood by ' & (self name)).
+	}
+
+	#method(#class) index: index outOfRange: ubound
+	{
+		IndexOutOfRangeException signal: 'Out of range'.
+	}
+
+	#method(#class) subclassResponsibility: message_name
+	{
+		SubclassResponsibilityException signal: ('Subclass must implment ' & message_name).
+	}
+
+	#method(#class) cannotExceptionizeError
+	{
+## todo: accept the object
+		ErrorExceptionizationFailureException signal: 'Cannot exceptionize an error'
 	}
 }
-
-

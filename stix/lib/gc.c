@@ -370,7 +370,7 @@ static void compact_symbol_table (stix_t* stix, stix_oop_t _nil)
 
 			STIX_ASSERT (stix, STIX_CLASSOF(stix,symbol) == stix->_symbol);
 
-			z = stix_hashchars(symbol->slot, STIX_OBJ_GET_SIZE(symbol)) % bucket_size;
+			z = stix_hashoochars(symbol->slot, STIX_OBJ_GET_SIZE(symbol)) % bucket_size;
 
 			/* move an element if necessary */
 			if ((y > x && (z <= x || z > y)) ||

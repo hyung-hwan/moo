@@ -226,7 +226,7 @@
 		#! [ a = error(10) ] ifTrue: [....].
 		
 	#!	self t001 (error:10).
-	#!	self t001: (error:10)	
+	#!	self t001: (error:10)
 	}
 }
 

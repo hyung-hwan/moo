@@ -48,11 +48,6 @@ stix_oow_t stix_hashbytes (const stix_oob_t* ptr, stix_oow_t len)
 	return h;
 }
 
-stix_oow_t stix_hashuchars (const stix_uch_t* ptr, stix_oow_t len)
-{
-	return stix_hashbytes ((const stix_oob_t *)ptr, len * STIX_SIZEOF(*ptr));
-}
-
 int stix_equaluchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_oow_t len)
 {
 	stix_oow_t i;

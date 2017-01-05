@@ -11,6 +11,10 @@
 {
 	#dcl key value.
 
+	#method(#class) key: key value: value
+	{
+		^self new key: key value: value
+	}
 	#method key: key value: value
 	{
 		self.key := key.
@@ -154,6 +158,9 @@
 
 	#method bitShift: aNumber
 	{
+		(* positive number for left shift. 
+		 * negative number for right shift *)
+
 		<primitive: #_integer_bitshift>
 		self primitiveFailed.
 	}
@@ -303,7 +310,7 @@
 
 	#method preambleCode
 	{
-		^self.preamble bitAnd: 16rFF.
+		^(self.preamble bitAnd: 16rFF) bitShift: -2.
 	}
 
 	#method owner

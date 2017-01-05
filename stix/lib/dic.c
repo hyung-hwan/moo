@@ -76,7 +76,7 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 			key = (stix_oop_char_t)ass->key;
 			STIX_ASSERT (stix, STIX_CLASSOF(stix,key) == (stix_oop_t)stix->_symbol);
 
-			index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % newsz;
+			index = stix_hashoochars(key->slot, STIX_OBJ_GET_SIZE(key)) % newsz;
 			while (newbuc->slot[index] != stix->_nil) index = (index + 1) % newsz;
 			newbuc->slot[index] = (stix_oop_t)ass;
 		}
@@ -98,7 +98,7 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->tally) == stix->_small_integer);
 	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->bucket) == stix->_array);
 
-	index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(dic->bucket);
+	index = stix_hashoochars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(dic->bucket);
 
 	/* find */
 	while (dic->bucket->slot[index] != stix->_nil) 
@@ -164,7 +164,7 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 		dic->bucket = bucket;
 
 		/* recalculate the index for the expanded bucket */
-		index = stix_hashchars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(dic->bucket);
+		index = stix_hashoochars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(dic->bucket);
 
 		while (dic->bucket->slot[index] != stix->_nil) 
 			index = (index + 1) % STIX_OBJ_GET_SIZE(dic->bucket);
@@ -203,7 +203,7 @@ static stix_oop_association_t lookup (stix_t* stix, stix_oop_set_t dic, const st
 	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->tally) == stix->_small_integer);
 	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->bucket) == stix->_array);
 
-	index = stix_hashchars(name->ptr, name->len) % STIX_OBJ_GET_SIZE(dic->bucket);
+	index = stix_hashoochars(name->ptr, name->len) % STIX_OBJ_GET_SIZE(dic->bucket);
 
 	while (dic->bucket->slot[index] != stix->_nil) 
 	{

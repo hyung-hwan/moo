@@ -121,29 +121,41 @@
 		self primitiveFailed.
 	}
 
-	#method basicAt: anInteger
+	#method basicAt: index
 	{
 		<primitive: #_basic_at>
-## TODO: chagne it to 'self outOfRangeError' or something.
-		self error: 'out of range'.
+		self index: index outOfRange: (self basicSize).
 	}
 
-	#method basicAt: anInteger put: anObject
+	#method basicAt: index put: anObject
 	{
 		<primitive: #_basic_at_put>
-		self error: 'out of range'.
+		self index: index outOfRange: (self basicSize).
 	}
 
-	#method(#class) basicAt: anInteger
+	#method(#class) basicAt: index
 	{
 		<primitive: #_basic_at>
-		self error: 'out of range'.
+		self index: index outOfRange: (self basicSize).
 	}
 
-	#method(#class) basicAt: anInteger put: anObject
+	#method(#class) basicAt: index put: anObject
 	{
 		<primitive: #_basic_at_put>
-		self error: 'out of range'.
+		self index: index outOfRange: (self basicSize).
+	}
+
+	## -------------------------------------------------------
+	## -------------------------------------------------------
+	#method(#class) hash
+	{
+		<primitive: #_hash>
+		self subclassResponsibility: #hash
+	}
+	#method hash
+	{
+		<primitive: #_hash>
+		self subclassResponsibility: #hash
 	}
 
 	## -------------------------------------------------------
@@ -271,7 +283,6 @@
 	"
 
 	## -------------------------------------------------------
-	## -------------------------------------------------------
 
 	## method(#class) primitiveFailed
 	## {
@@ -300,9 +311,30 @@
 		self class error: aString.
 	}
 
+	#method index: index outOfRange: ubound
+	{
+		self class index: index outOfRange: ubound.
+	}
+
 	#method cannotInstantiate
 	{
 		self class cannotInstantiate
+	}
+
+	#method subclassResponsibility: message_name
+	{
+		self class subclassResponsibility: message_name
+	}
+
+	#method cannotExceptionizeError
+	{
+		self class cannotExceptionizeError
+	}
+
+	#method exceptionizeError: trueOrFalse
+	{
+		<primitive: #_exceptionize_error>
+		self class cannotExceptionizeError
 	}
 }
 
@@ -332,14 +364,14 @@
 	}
 }
 
-(* --------------------
-#pooldic Error
+
+#pooldic ErrorCode
 {
+(* migrate it into Error class *)
 	#NONE := error(0).
 	#GENERIC := error(1).
-	#
+	#NOENT := error(2).
 }
-------------------- *)
 
 #class Error(Apex)
 {

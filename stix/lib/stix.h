@@ -526,7 +526,10 @@ struct stix_method_t
  *  8 - do primitive[index]
  *  9 - do named primitive[index]
  * 10 - exception handler
+ * 11 - ensure block
  */
+
+/* NOTE: changing preamble code bit structure requires changes to CompiledMethod>>preambleCode */
 #define STIX_METHOD_MAKE_PREAMBLE(code,index,flags)  ((((stix_ooi_t)index) << 8) | ((stix_ooi_t)code << 2) | flags)
 #define STIX_METHOD_GET_PREAMBLE_CODE(preamble) ((((stix_ooi_t)preamble) & 0xFF) >> 2)
 #define STIX_METHOD_GET_PREAMBLE_INDEX(preamble) (((stix_ooi_t)preamble) >> 8)
@@ -543,8 +546,9 @@ struct stix_method_t
 #define STIX_METHOD_PREAMBLE_RETURN_INSTVAR  7
 #define STIX_METHOD_PREAMBLE_PRIMITIVE       8
 #define STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE 9 /* index is an index to the symbol table */
-#define STIX_METHOD_PREAMBLE_EXCEPTION       10
-#define STIX_METHOD_PREAMBLE_ENSURE          11
+
+#define STIX_METHOD_PREAMBLE_EXCEPTION       10 /* NOTE changing this requires changes in Except.st */
+#define STIX_METHOD_PREAMBLE_ENSURE          11 /* NOTE changing this requires changes in Except.st */
 
 /* the index is an 16-bit unsigned integer. */
 #define STIX_METHOD_PREAMBLE_INDEX_MIN 0x0000
@@ -554,6 +558,9 @@ struct stix_method_t
 /* preamble flags */
 #define STIX_METHOD_PREAMBLE_FLAG_VARIADIC (1 << 0)
 
+/* NOTE: if you change the number of instance variables for stix_context_t,
+ *       you need to change the defintion of BlockContext and MethodContext.
+ *       plus, you need to update various exception handling code in MethodContext */
 #define STIX_CONTEXT_NAMED_INSTVARS 8
 typedef struct stix_context_t stix_context_t;
 typedef struct stix_context_t* stix_oop_context_t;

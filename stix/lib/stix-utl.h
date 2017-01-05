@@ -33,47 +33,49 @@
 extern "C" {
 #endif
 
-#if defined(STIX_OOCH_IS_UCH)
-#	define stix_hashchars(ptr,len) stix_hashuchars(ptr,len)
-#	define stix_equaloochars(str1,str2,len) stix_equaluchars(str1,str2,len)
-#	define stix_compoocbcstr(str1,str2) stix_compucbcstr(str1,str2)
-#	define stix_compoocharsbcstr(str1,len1,str2) stix_compucharsbcstr(str1,len1,str2)
-#	define stix_compoocstr(str1,str2) stix_compucstr(str1,str2)
-#	define stix_copyoochars(dst,src,len) stix_copyuchars(dst,src,len)
-#	define stix_copybctooochars(dst,src,len) stix_copybtouchars(dst,src,len)
-#	define stix_copyoocstr(dst,len,src) stix_copyucstr(dst,len,src)
-#	define stix_findoochar(ptr,len,c) stix_finduchar(ptr,len,c)
-#	define stix_rfindoochar(ptr,len,c) stix_rfinduchar(ptr,len,c)
-#	define stix_countoocstr(str) stix_countucstr(str)
-#else
-#	define stix_hashchars(ptr,len) stix_hashbchars(ptr,len)
-#	define stix_equaloochars(str1,str2,len) stix_equalbchars(str1,str2,len)
-#	define stix_compoocbcstr(str1,str2) stix_compbcstr(str1,str2)
-#	define stix_compoocharsbcstr(str1,len1,str2) stix_compbcharsbcstr(str1,len1,str2)
-#	define stix_compoocstr(str1,str2) stix_compbcstr(str1,str2)
-#	define stix_copyoochars(dst,src,len) stix_copybchars(dst,src,len)
-#	define stix_copybctooochars(dst,src,len) stix_copybchars(dst,src,len)
-#	define stix_copyoocstr(dst,len,src) stix_copybcstr(dst,len,src)
-#	define stix_findoochar(ptr,len,c) stix_findbchar(ptr,len,c)
-#	define stix_rfindoochar(ptr,len,c) stix_rfindbchar(ptr,len,c)
-#	define stix_countoocstr(str) stix_countbcstr(str)
-#endif
-
-
-/* ========================================================================= */
-/* utl.c                                                                */
-/* ========================================================================= */
 STIX_EXPORT stix_oow_t stix_hashbytes (
 	const stix_oob_t* ptr,
 	stix_oow_t        len
 );
 
-STIX_EXPORT stix_oow_t stix_hashuchars (
-	const stix_uch_t*  ptr,
+#if defined(STIX_HAVE_INLINE)
+	static STIX_INLINE stix_oow_t stix_hashbchars (const stix_bch_t* ptr, stix_oow_t len)
+	{
+		return stix_hashbytes((const stix_oob_t*)ptr,len * STIX_SIZEOF(stix_bch_t));
+	}
+
+	static STIX_INLINE stix_oow_t stix_hashuchars (const stix_uch_t* ptr, stix_oow_t len)
+	{
+		return stix_hashbytes((const stix_oob_t*)ptr,len * STIX_SIZEOF(stix_uch_t));
+	}
+
+	static STIX_INLINE stix_oow_t stix_hashwords (const stix_oow_t* ptr, stix_oow_t len)
+	{
+		return stix_hashbytes((const stix_oob_t*)ptr, len * STIX_SIZEOF(stix_oow_t));
+	}
+
+	static STIX_INLINE stix_oow_t stix_hashhalfwords (const stix_oohw_t* ptr, stix_oow_t len)
+	{
+		return stix_hashbytes((const stix_oob_t*)ptr, len * STIX_SIZEOF(stix_oohw_t));
+	}
+#else
+#	define stix_hashbchars(ptr,len) stix_hashbytes((const stix_oob_t*)ptr,len * STIX_SIZEOF(stix_bch_t))
+#	define stix_hashuchars(ptr,len) stix_hashbytes((const stix_oob_t*)ptr,len * STIX_SIZEOF(stix_uch_t))
+#	define stix_hashwords(ptr,len) stix_hashbytes((const stix_oob_t*)ptr, len * STIX_SIZEOF(stix_oow_t))
+#	define stix_hashhalfwords(ptr,len) stix_hashbytes((const stix_oob_t*)ptr, len * STIX_SIZEOF(stix_oohw_t))
+#endif
+
+#if defined(STIX_OOCH_IS_UCH)
+#	define stix_hashoochars(ptr,len) stix_hashuchars(ptr,len)
+#else
+#	define stix_hashoochars(ptr,len) stix_hashbchars(ptr,len)
+#endif
+
+
+STIX_EXPORT stix_oow_t stix_hashwords (
+	const stix_oow_t* ptr,
 	stix_oow_t        len
 );
-
-#define stix_hashbchars(ptr,len) stix_hashbytes(ptr,len)
 
 /**
  * The stix_equaluchars() function determines equality of two strings
@@ -181,6 +183,33 @@ STIX_EXPORT stix_oow_t stix_countbcstr (
 	const stix_bch_t* str
 );
 
+#if defined(STIX_OOCH_IS_UCH)
+#	define stix_equaloochars(str1,str2,len) stix_equaluchars(str1,str2,len)
+#	define stix_compoocbcstr(str1,str2) stix_compucbcstr(str1,str2)
+#	define stix_compoocharsbcstr(str1,len1,str2) stix_compucharsbcstr(str1,len1,str2)
+#	define stix_compoocstr(str1,str2) stix_compucstr(str1,str2)
+#	define stix_copyoochars(dst,src,len) stix_copyuchars(dst,src,len)
+#	define stix_copybctooochars(dst,src,len) stix_copybtouchars(dst,src,len)
+#	define stix_copyoocstr(dst,len,src) stix_copyucstr(dst,len,src)
+#	define stix_findoochar(ptr,len,c) stix_finduchar(ptr,len,c)
+#	define stix_rfindoochar(ptr,len,c) stix_rfinduchar(ptr,len,c)
+#	define stix_countoocstr(str) stix_countucstr(str)
+#else
+
+#	define stix_equaloochars(str1,str2,len) stix_equalbchars(str1,str2,len)
+#	define stix_compoocbcstr(str1,str2) stix_compbcstr(str1,str2)
+#	define stix_compoocharsbcstr(str1,len1,str2) stix_compbcharsbcstr(str1,len1,str2)
+#	define stix_compoocstr(str1,str2) stix_compbcstr(str1,str2)
+#	define stix_copyoochars(dst,src,len) stix_copybchars(dst,src,len)
+#	define stix_copybctooochars(dst,src,len) stix_copybchars(dst,src,len)
+#	define stix_copyoocstr(dst,len,src) stix_copybcstr(dst,len,src)
+#	define stix_findoochar(ptr,len,c) stix_findbchar(ptr,len,c)
+#	define stix_rfindoochar(ptr,len,c) stix_rfindbchar(ptr,len,c)
+#	define stix_countoocstr(str) stix_countbcstr(str)
+#endif
+
+
+
 STIX_EXPORT int stix_copyoocstrtosbuf (
 	stix_t*            stix,
 	const stix_ooch_t* str,
@@ -279,9 +308,8 @@ STIX_EXPORT int stix_convutf8toucstr (
 	stix_oow_t*         ucslen
 );
 
-/* ========================================================================= */
-/* utf8.c                                                                    */
-/* ========================================================================= */
+
+
 STIX_EXPORT stix_oow_t stix_uctoutf8 (
 	stix_uch_t    uc,
 	stix_bch_t*   utf8,
@@ -293,6 +321,7 @@ STIX_EXPORT stix_oow_t stix_utf8touc (
 	stix_oow_t        size,
 	stix_uch_t*       uc
 );
+
 
 #if defined(__cplusplus)
 }

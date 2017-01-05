@@ -1613,6 +1613,87 @@ static int pf_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
+static int pf_hash (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv;
+	stix_oow_t hv;
+
+	STIX_ASSERT (stix, nargs == 0);
+	rcv = STIX_STACK_GETRCV(stix, nargs);
+
+	switch (STIX_OOP_GET_TAG(rcv))
+	{
+		case STIX_OOP_TAG_SMINT:
+			hv = STIX_OOP_TO_CHAR(rcv);
+			break;
+
+		case STIX_OOP_TAG_CHAR:
+			hv = STIX_OOP_TO_CHAR(rcv);
+			break;
+
+		case STIX_OOP_TAG_ERROR:
+			hv = STIX_OOP_TO_ERROR(rcv);
+			break;
+
+		default:
+		{
+			int type;
+
+			STIX_ASSERT (stix, STIX_OOP_IS_POINTER(rcv));
+			type = STIX_OBJ_GET_FLAGS_TYPE(rcv);
+			switch (type)
+			{
+				case STIX_OBJ_TYPE_BYTE:
+					hv = stix_hashbytes(((stix_oop_byte_t)rcv)->slot, STIX_OBJ_GET_SIZE(rcv));
+					break;
+
+				case STIX_OBJ_TYPE_CHAR:
+					hv = stix_hashoochars (((stix_oop_char_t)rcv)->slot, STIX_OBJ_GET_SIZE(rcv));
+					break;
+
+				case STIX_OBJ_TYPE_HALFWORD:
+					hv = stix_hashhalfwords(((stix_oop_halfword_t)rcv)->slot, STIX_OBJ_GET_SIZE(rcv));
+					break;
+
+				case STIX_OBJ_TYPE_WORD:
+					hv = stix_hashwords(((stix_oop_word_t)rcv)->slot, STIX_OBJ_GET_SIZE(rcv));
+					break;
+
+				default:
+					/* STIX_OBJ_TYPE_OOP, ... */
+					STIX_DEBUG1 (stix, "<pf_hash> Cannot hash an object of type %d\n", type);
+					return 0;
+			}
+			break;
+		}
+	}
+
+	hv %= STIX_SMOOI_MAX;
+	STIX_STACK_SETRET (stix, nargs, STIX_SMOOI_TO_OOP(hv));
+	return 1;
+}
+
+static int pf_exceptionize_error (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv;
+
+	STIX_ASSERT (stix, nargs == 1);
+
+	rcv = STIX_STACK_GETRCV(stix, nargs);
+	if (!STIX_OOP_IS_POINTER(rcv))
+	{
+		/* the receiver is a special numeric object, not a normal pointer.
+		 * excceptionization is not supported for small integers, characters, and errors.
+		 * first of all, methods of these classes must not return errors */
+		return 0;
+	}
+
+// TODO: .......
+//	STIX_OBJ_SET_FLAGS_EXTRA (rcv, xxx);
+	STIX_STACK_SETRETTORCV (stix, nargs);
+	return 1;
+}
+
 static int pf_context_goto (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
@@ -2496,7 +2577,6 @@ static int pf_error_as_string (stix_t* stix, stix_ooi_t nargs)
 	return 1;
 }
 
-
 static int pf_ffi_open (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
@@ -2809,6 +2889,9 @@ static pf_t pftab[] =
 	{   1,  1,  pf_basic_at,                         "_basic_at"            },
 	{   2,  2,  pf_basic_at_put,                     "_basic_at_put"        },
 
+	{   0,  0,  pf_hash,                             "_hash"                },
+
+	{   1,  1,  pf_exceptionize_error,               "_exceptionize_error"  },
 
 	{   1,  1,  pf_context_goto,                     "_context_goto"        },
 	{   0, MAX_NARGS,  pf_block_value,               "_block_value"         },
@@ -2854,7 +2937,6 @@ static pf_t pftab[] =
 	{   0,  0,  pf_error_as_character,               "_error_as_character"  },
 	{   0,  0,  pf_error_as_integer,                 "_error_as_integer"    },
 	{   0,  0,  pf_error_as_string,                  "_error_as_string"     },
-
 
 	{   1,  1,  pf_ffi_open,                         "_ffi_open"            },
 	{   1,  1,  pf_ffi_close,                        "_ffi_close"           },
