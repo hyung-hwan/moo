@@ -10,10 +10,16 @@ class Association(Magnitude)
 	{
 		^self new key: key value: value
 	}
+	
 	method key: key value: value
 	{
 		self.key := key.
 		self.value := value.
+	}
+	
+	method value: value
+	{
+		self.value := value
 	}
 
 	method key

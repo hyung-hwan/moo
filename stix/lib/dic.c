@@ -88,7 +88,7 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, stix_oop_char_t key, stix_oop_t value)
 {
 	stix_ooi_t tally;
-	stix_oow_t index;
+	stix_oow_t hv, index;
 	stix_oop_association_t ass;
 	stix_oow_t tmp_count = 0;
 
@@ -98,7 +98,8 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->tally) == stix->_small_integer);
 	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->bucket) == stix->_array);
 
-	index = stix_hashoochars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(dic->bucket);
+	hv = stix_hashoochars(key->slot, STIX_OBJ_GET_SIZE(key));
+	index = hv % STIX_OBJ_GET_SIZE(dic->bucket);
 
 	/* find */
 	while (dic->bucket->slot[index] != stix->_nil) 
@@ -164,7 +165,7 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 		dic->bucket = bucket;
 
 		/* recalculate the index for the expanded bucket */
-		index = stix_hashoochars(key->slot, STIX_OBJ_GET_SIZE(key)) % STIX_OBJ_GET_SIZE(dic->bucket);
+		index = hv % STIX_OBJ_GET_SIZE(dic->bucket);
 
 		while (dic->bucket->slot[index] != stix->_nil) 
 			index = (index + 1) % STIX_OBJ_GET_SIZE(dic->bucket);

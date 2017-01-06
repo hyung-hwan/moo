@@ -127,34 +127,12 @@ class Set(Collection)
 	method initialize
 	{
 		self.tally := 0.
-		self.bucket := Array new: 100. 
+		self.bucket := Array new: 128.  (* TODO: initial size *)
 	}
 
 	method size
 	{
 		^self.tally
-	}
-
-	method at: key
-	{
-		| ass |
-		ass := self __find: key or_upsert: false with: nil.
-		(ass notNil) ifTrue: [^ass value].
-		^ErrorCode.NOENT
-	}
-
-	method at: key ifAbsent: error_block
-	{
-		| ass |
-		ass := self __find: key or_upsert: false with: nil.
-		(ass notNil) ifTrue: [^ass value].
-		^error_block value.
-	}
-
-	method at: key put: value
-	{
-		self __find: key or_upsert: true with: value.
-		^value
 	}
 
 	method __find: key or_upsert: upsert with: value
@@ -179,8 +157,23 @@ class Set(Collection)
 
 		ntally := self.tally + 1.
 		(ntally >= bs) ifTrue: [
+			| newbuc newsz |
 			(* expand the bucket *)
-			
+			newsz := bs + 123. (* TODO: keep this growth policy in sync with VM(dic.c) *)
+			newbuc := Array new: newsz.
+			0 priorTo: bs do: [:i |
+				ass := self.bucket at: i.
+				(ass notNil) ifTrue: [
+					index := (ass key hash) rem: newsz.
+					[(newbuc at: index) notNil] whileTrue: [index := (index + 1) rem: newsz].
+					newbuc at: index put: ass
+				]
+			].
+
+			self.bucket := newbuc.
+			bs := self.bucket size.
+			index := hv rem: bs.
+			[(self.bucket at: index) notNil] whileTrue: [index := (index + 1) rem: bs ].
 		].
 		
 		ass := Association key: key value: value.
@@ -188,6 +181,71 @@ class Set(Collection)
 		self.bucket at: index put: ass.
 		
 		^ass
+	}
+
+	method at: key
+	{
+		| ass |
+		ass := self __find: key or_upsert: false with: nil.
+		(ass notNil) ifTrue: [^ass value].
+		^ErrorCode.NOENT
+	}
+
+	method at: key ifAbsent: error_block
+	{
+		| ass |
+		ass := self __find: key or_upsert: false with: nil.
+		(ass notNil) ifTrue: [^ass value].
+		^error_block value.
+	}
+
+	method at: key put: value
+	{
+		self __find: key or_upsert: true with: value.
+		^value
+	}
+
+	method includesKey: key
+	{
+		| ass |
+		ass := self __find: key or_upsert: false with: nil.
+		^ass notNil
+	}
+
+	method includesAssociation: assoc
+	{
+		| ass |
+		ass := self __find: (assoc key) or_upsert: false with: nil.
+		^ass = assoc.
+	}
+	
+	method includesKey: key value: value
+	{
+		| ass |
+		ass := self __find: key or_upsert: false with: nil.
+		^ass key = key and: [ass value = value]
+	}
+	
+	method removeKey: key
+	{
+(* TODO: *)
+self subclassResponsbility: #removeKey
+	}
+
+	method removeKey: key ifAbsent: error_block
+	{
+(* TODO: *)
+self subclassResponsbility: #removeKey
+	}
+
+	method remove: assoc
+	{
+		^self removeKey: (assoc key)
+	}
+
+	method remove: assoc ifAbsent: error_block
+	{
+		^self removeKey: (assoc key) ifAbsent: error_block
 	}
 
 	method do: block
