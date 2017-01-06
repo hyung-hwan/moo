@@ -1668,7 +1668,7 @@ retry:
 			break;
 	}
 
-STIX_DEBUG2 (stix, "TOKEN: [%.*S]\n", (stix_ooi_t)stix->c->tok.name.len, stix->c->tok.name.ptr);
+STIX_DEBUG2 (stix, "TOKEN: [%.*js]\n", (stix_ooi_t)stix->c->tok.name.len, stix->c->tok.name.ptr);
 
 	return 0;
 }
@@ -4976,7 +4976,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	{
 		int super_is_nil = 0;
 
-		STIX_INFO2 (stix, "Defining a class %.*S\n", stix->c->cls.fqn.len, stix->c->cls.fqn.ptr);
+		STIX_INFO2 (stix, "Defining a class %.*js\n", stix->c->cls.fqn.len, stix->c->cls.fqn.ptr);
 
 		if (TOKEN_TYPE(stix) == STIX_IOTOK_LPAREN)
 		{
@@ -5338,7 +5338,7 @@ static int __compile_pooldic_definition (stix_t* stix)
 		return -1;
 	}
 
-	STIX_INFO2 (stix, "Defining a pool dictionary %.*S\n", stix->c->cls.fqn.len, stix->c->cls.fqn.ptr);
+	STIX_INFO2 (stix, "Defining a pool dictionary %.*js\n", stix->c->cls.fqn.len, stix->c->cls.fqn.ptr);
 
 	GET_TOKEN (stix);
 

@@ -58,7 +58,7 @@ int stix_decode (stix_t* stix, stix_oop_method_t mth, const stix_oocs_t* classfq
 	cdlen = STIX_METHOD_GET_CODE_SIZE(mth); 
 
 	if (classfqn)
-		STIX_LOG3 (stix, DECODE_LOG_MASK, "%.*S>>%O\n", classfqn->len, classfqn->ptr, mth->name);
+		STIX_LOG3 (stix, DECODE_LOG_MASK, "%.*js>>%O\n", classfqn->len, classfqn->ptr, mth->name);
 	else
 		STIX_LOG2 (stix, DECODE_LOG_MASK, "%O>>%O\n", mth->owner, mth->name);
 

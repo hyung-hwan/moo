@@ -126,12 +126,12 @@ static const stix_bch_t hex2ascii_upper[] =
 	'N','O','P','Q','R','S','T','U','V','W','X','H','Z'
 };
 
-static stix_ooch_t ooch_nullstr[] = { '(','n','u','l','l', ')','\0' };
+static stix_uch_t uch_nullstr[] = { '(','n','u','l','l', ')','\0' };
 static stix_bch_t bch_nullstr[] = { '(','n','u','l','l', ')','\0' };
 
 typedef int (*stix_fmtout_putch_t) (
 	stix_t*      stix,
-	stix_oow_t mask,
+	stix_oow_t   mask,
 	stix_ooch_t  c,
 	stix_oow_t   len
 );
@@ -350,7 +350,7 @@ static void print_object (stix_t* stix, stix_oow_t mask, stix_oop_t oop)
 		{
 			if ((stix_oop_t)c == stix->_symbol) 
 			{
-				stix_logbfmt (stix, mask, "#%.*S", STIX_OBJ_GET_SIZE(oop), ((stix_oop_char_t)oop)->slot);
+				stix_logbfmt (stix, mask, "#%.*js", STIX_OBJ_GET_SIZE(oop), ((stix_oop_char_t)oop)->slot);
 			}
 			else /*if ((stix_oop_t)c == stix->_string)*/
 			{
@@ -411,11 +411,11 @@ static void print_object (stix_t* stix, stix_oow_t mask, stix_oop_t oop)
 							if (escaped == ch)
 								stix_logbfmt (stix, mask, "\\x%X", ch);
 							else
-								stix_logbfmt (stix, mask, "\\%C", escaped);
+								stix_logbfmt (stix, mask, "\\%jc", escaped);
 						}
 						else
 						{
-							stix_logbfmt (stix, mask, "%C", ch);
+							stix_logbfmt (stix, mask, "%jc", ch);
 						}
 					}
 					
@@ -423,7 +423,7 @@ static void print_object (stix_t* stix, stix_oow_t mask, stix_oop_t oop)
 				}
 				else
 				{
-					stix_logbfmt (stix, mask, "'%.*S'", STIX_OBJ_GET_SIZE(oop), ((stix_oop_char_t)oop)->slot);
+					stix_logbfmt (stix, mask, "'%.*js'", STIX_OBJ_GET_SIZE(oop), ((stix_oop_char_t)oop)->slot);
 				}
 			}
 		}
@@ -468,7 +468,7 @@ static void print_object (stix_t* stix, stix_oow_t mask, stix_oop_t oop)
 		else if ((stix_oop_t)c == stix->_class)
 		{
 			/* print the class name */
-			stix_logbfmt (stix, mask, "%.*S", STIX_OBJ_GET_SIZE(((stix_oop_class_t)oop)->name), ((stix_oop_class_t)oop)->name->slot);
+			stix_logbfmt (stix, mask, "%.*js", STIX_OBJ_GET_SIZE(((stix_oop_class_t)oop)->name), ((stix_oop_class_t)oop)->name->slot);
 		}
 		else if ((stix_oop_t)c == stix->_association)
 		{
@@ -476,7 +476,7 @@ static void print_object (stix_t* stix, stix_oow_t mask, stix_oop_t oop)
 		}
 		else
 		{
-			stix_logbfmt (stix, mask, "instance of %.*S(%p)", STIX_OBJ_GET_SIZE(c->name), ((stix_oop_char_t)c->name)->slot, oop);
+			stix_logbfmt (stix, mask, "instance of %.*js(%p)", STIX_OBJ_GET_SIZE(c->name), ((stix_oop_char_t)c->name)->slot, oop);
 		}
 	}
 }
@@ -487,14 +487,21 @@ static void print_object (stix_t* stix, stix_oow_t mask, stix_oop_t oop)
 #undef logfmtv
 #define fmtchar_t stix_bch_t
 #define FMTCHAR_IS_BCH
+#if defined(STIX_OOCH_IS_BCH)
+#	define FMTCHAR_IS_OOCH
+#endif
 #define logfmtv stix_logbfmtv
+
 #include "logfmtv.h"
 
 #undef fmtchar_t
 #undef logfmtv
-#define fmtchar_t stix_ooch_t
-#define logfmtv stix_logoofmtv
-#define FMTCHAR_IS_OOCH
+#define fmtchar_t stix_uch_t
+#define logfmtv stix_logufmtv
+#define FMTCHAR_IS_UCH
+#if defined(STIX_OOCH_IS_UCH)
+#	define FMTCHAR_IS_OOCH
+#endif
 #include "logfmtv.h"
 
 stix_ooi_t stix_logbfmt (stix_t* stix, stix_oow_t mask, const stix_bch_t* fmt, ...)
@@ -519,7 +526,7 @@ stix_ooi_t stix_logbfmt (stix_t* stix, stix_oow_t mask, const stix_bch_t* fmt, .
 	return (x <= -1)? -1: fo.count;
 }
 
-stix_ooi_t stix_logoofmt (stix_t* stix, stix_oow_t mask, const stix_ooch_t* fmt, ...)
+stix_ooi_t stix_logufmt (stix_t* stix, stix_oow_t mask, const stix_uch_t* fmt, ...)
 {
 	int x;
 	va_list ap;
@@ -530,7 +537,7 @@ stix_ooi_t stix_logoofmt (stix_t* stix, stix_oow_t mask, const stix_ooch_t* fmt,
 	fo.putcs = put_oocs;
 
 	va_start (ap, fmt);
-	x = stix_logoofmtv (stix, fmt, &fo, ap);
+	x = stix_logufmtv (stix, fmt, &fo, ap);
 	va_end (ap);
 
 	if (stix->log.len > 0 && stix->log.ptr[stix->log.len - 1] == '\n')

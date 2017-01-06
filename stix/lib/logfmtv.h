@@ -378,7 +378,9 @@ reswitch:
 			/* zeropad must not take effect for 'c' */
 			if (flagc & FLAGC_ZEROPAD) padc = ' '; 
 			if (lm_flag & LF_L) goto uppercase_c;
-
+		#if defined(STIX_OOCH_IS_UCH)
+			if (lm_flag & LF_J) goto uppercase_c;
+		#endif
 		lowercase_c:
 			bch = STIX_SIZEOF(stix_bch_t) < STIX_SIZEOF(int)? va_arg(ap, int): va_arg(ap, stix_bch_t);
 
@@ -393,13 +395,16 @@ reswitch:
 
 		case 'C':
 		{
-			stix_ooch_t ooch;
+			stix_uch_t ooch;
 
 			/* zeropad must not take effect for 'C' */
 			if (flagc & FLAGC_ZEROPAD) padc = ' ';
 			if (lm_flag & LF_H) goto lowercase_c;
+		#if defined(STIX_OOCH_IS_BCH)
+			if (lm_flag & LF_J) goto lowercase_c;
+		#endif
 		uppercase_c:
-			ooch = STIX_SIZEOF(stix_ooch_t) < STIX_SIZEOF(int)? va_arg(ap, int): va_arg(ap, stix_ooch_t);
+			ooch = STIX_SIZEOF(stix_uch_t) < STIX_SIZEOF(int)? va_arg(ap, int): va_arg(ap, stix_uch_t);
 
 			/* precision 0 doesn't kill the letter */
 			width--;
@@ -417,11 +422,15 @@ reswitch:
 			/* zeropad must not take effect for 'S' */
 			if (flagc & FLAGC_ZEROPAD) padc = ' ';
 			if (lm_flag & LF_L) goto uppercase_s;
+		#if defined(STIX_OOCH_IS_UCH)
+			if (lm_flag & LF_J) goto uppercase_s;
+		#endif
 		lowercase_s:
 
 			bsp = va_arg (ap, stix_bch_t*);
 			if (bsp == STIX_NULL) bsp = bch_nullstr;
 
+		#if defined(STIX_OOCH_IS_UCH)
 			/* get the length */
 			for (bslen = 0; bsp[bslen]; bslen++);
 
@@ -461,34 +470,94 @@ reswitch:
 			}
 			
 			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
-			break;
-		}
-
-		case 'S':
-		{
-			const stix_ooch_t* sp;
-
-			/* zeropad must not take effect for 's' */
-			if (flagc & FLAGC_ZEROPAD) padc = ' ';
-			if (lm_flag & LF_H) goto lowercase_s;
-		uppercase_s:
-			sp = va_arg (ap, stix_ooch_t*);
-			if (sp == STIX_NULL) sp = ooch_nullstr;
-
+		#else
 			if (flagc & FLAGC_DOT)
 			{
-				for (n = 0; n < precision && sp[n]; n++);
+				for (n = 0; n < precision && bsp[n]; n++);
 			}
 			else
 			{
-				for (n = 0; sp[n]; n++);
+				for (n = 0; bsp[n]; n++);
 			}
 
 			width -= n;
 
 			if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
-			PUT_OOCS (sp, n);
+			PUT_OOCS (bsp, n);
 			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
+		#endif
+			break;
+		}
+
+		case 'S':
+		{
+			const stix_uch_t* usp;
+			stix_oow_t uslen, slen;
+
+			/* zeropad must not take effect for 's' */
+			if (flagc & FLAGC_ZEROPAD) padc = ' ';
+			if (lm_flag & LF_H) goto lowercase_s;
+		#if defined(STIX_OOCH_IS_UCH)
+			if (lm_flag & LF_J) goto lowercase_s;
+		#endif
+		uppercase_s:
+			usp = va_arg (ap, stix_uch_t*);
+			if (usp == STIX_NULL) usp = uch_nullstr;
+
+		#if defined(STIX_OOCH_IS_BCH)
+			/* get the length */
+			for (uslen = 0; usp[uslen]; uslen++);
+
+			if (stix_convutooochars (stix, usp, &uslen, STIX_NULL, &slen) <= -1)
+			{ 
+				/* conversion error */
+				stix->errnum = STIX_EECERR;
+				goto oops;
+			}
+
+			/* slen holds the length after conversion */
+			n = slen;
+			if ((flagc & FLAGC_DOT) && precision < slen) n = precision;
+			width -= n;
+
+			if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
+			{
+				stix_ooch_t conv_buf[32]; 
+				stix_oow_t conv_len, src_len, tot_len = 0;
+				while (n > 0)
+				{
+					STIX_ASSERT (stix, uslen > tot_len);
+
+					src_len = uslen - tot_len;
+					conv_len = STIX_COUNTOF(conv_buf);
+
+					/* this must not fail since the dry-run above was successful */
+					stix_convutooochars (stix, &usp[tot_len], &src_len, conv_buf, &conv_len);
+					tot_len += src_len;
+
+					if (conv_len > n) conv_len = n;
+					PUT_OOCS (conv_buf, conv_len);
+
+					n -= conv_len;
+				}
+			}
+			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
+		#else
+			if (flagc & FLAGC_DOT)
+			{
+				for (n = 0; n < precision && usp[n]; n++);
+			}
+			else
+			{
+				for (n = 0; usp[n]; n++);
+			}
+
+			width -= n;
+
+			if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
+			PUT_OOCS (usp, n);
+			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
+		#endif
 			break;
 		}
 
@@ -721,7 +790,7 @@ handle_nosign:
 				 * This is just a work-around for it */
 				int i;
 				for (i = 0, num = 0; i < STIX_SIZEOF(stix_uintmax_t) / STIX_SIZEOF(stix_oow_t); i++)
-				{	
+				{
 				#if defined(STIX_ENDIAN_BIG)
 					num = num << (8 * STIX_SIZEOF(stix_oow_t)) | (va_arg (ap, stix_oow_t));
 				#else

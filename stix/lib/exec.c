@@ -1079,7 +1079,7 @@ not_found:
 		}
 	}
 
-	STIX_DEBUG3 (stix, "Method [%.*S] not found for %O\n", message->len, message->ptr, receiver);
+	STIX_DEBUG3 (stix, "Method [%.*js] not found for %O\n", message->len, message->ptr, receiver);
 	stix->errnum = STIX_ENOENT;
 	return STIX_NULL;
 }
@@ -1204,21 +1204,21 @@ start_over:
 	{
 		if (*ptr == '\0') 
 		{
-			n = stix_logbfmt (stix, mask, "%C", *ptr);
+			n = stix_logbfmt (stix, mask, "%jc", *ptr);
 			STIX_ASSERT (stix, n == 1);
 			rem -= n;
 			ptr += n;
 			goto start_over;
 		}
 
-		n = stix_logbfmt (stix, mask, "%.*S", rem, ptr);
+		n = stix_logbfmt (stix, mask, "%.*js", rem, ptr);
 		if (n <= -1) break;
 		if (n == 0) 
 		{
 			/* to skip the unprinted character. 
-			 * actually, this check is not needed because of '\0' skipping
+			 * actually, this check is not needed because of '\0' skipped
 			 * at the beginning  of the loop */
-			n = stix_logbfmt (stix, mask, "%C", *ptr);
+			n = stix_logbfmt (stix, mask, "%jc", *ptr);
 			STIX_ASSERT (stix, n == 1);
 		}
 		rem -= n;
@@ -3246,7 +3246,7 @@ static int send_message (stix_t* stix, stix_oop_char_t selector, int to_super, s
 			/* this must not happen as long as doesNotUnderstand: is implemented under Apex.
 			 * this check should indicate a very serious internal problem */
 			STIX_LOG4 (stix, STIX_LOG_IC | STIX_LOG_FATAL, 
-				"Fatal error - receiver [%O] of class [%O] does not understand a message [%.*S]\n", 
+				"Fatal error - receiver [%O] of class [%O] does not understand a message [%.*js]\n", 
 				receiver, STIX_CLASSOF(stix, receiver), mthname.len, mthname.ptr);
 
 			stix->errnum = STIX_EMSGSND;
@@ -3281,7 +3281,7 @@ static int send_private_message (stix_t* stix, const stix_ooch_t* nameptr, stix_
 	if (!method)
 	{
 		STIX_LOG4 (stix, STIX_LOG_IC | STIX_LOG_FATAL, 
-			"Fatal error - receiver [%O] of class [%O] does not understand a private message [%.*S]\n", 
+			"Fatal error - receiver [%O] of class [%O] does not understand a private message [%.*js]\n", 
 			receiver, STIX_CLASSOF(stix, receiver), mthname.len, mthname.ptr);
 		stix->errnum = STIX_EMSGSND;
 		return -1;

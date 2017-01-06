@@ -24,7 +24,6 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 #include "stix-prv.h"
 
 stix_oop_process_t stix_addnewproc (stix_t* stix)

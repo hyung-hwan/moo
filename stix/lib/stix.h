@@ -1341,10 +1341,10 @@ STIX_EXPORT int stix_genpfmethod (
 #	define stix_convootobcstr(stix,oocs,oocslen,bcs,bcslen) stix_convutobcstr(stix,oocs,oocslen,bcs,bcslen)
 #	define stix_convbtooocstr(stix,bcs,bcslen,oocs,oocslen) stix_convbtoucstr(stix,bcs,bcslen,oocs,oocslen)
 #else
-#	define stix_convootobchars(stix,oocs,oocslen,bcs,bcslen) stix_convutobchars(stix,oocs,oocslen,bcs,bcslen)
-#	define stix_convbtooochars(stix,bcs,bcslen,oocs,oocslen) stix_convbtouchars(stix,bcs,bcslen,oocs,oocslen)
-#	define stix_convootobcstr(stix,oocs,oocslen,bcs,bcslen) stix_convutobcstr(stix,oocs,oocslen,bcs,bcslen)
-#	define stix_convbtooocstr(stix,bcs,bcslen,oocs,oocslen) stix_convbtoucstr(stix,bcs,bcslen,oocs,oocslen)
+#	define stix_convootouchars(stix,oocs,oocslen,bcs,bcslen) stix_convbtouchars(stix,oocs,oocslen,bcs,bcslen)
+#	define stix_convutooochars(stix,bcs,bcslen,oocs,oocslen) stix_convutobchars(stix,bcs,bcslen,oocs,oocslen)
+#	define stix_convootoucstr(stix,oocs,oocslen,bcs,bcslen) stix_convbtoucstr(stix,oocs,oocslen,bcs,bcslen)
+#	define stix_convutooocstr(stix,bcs,bcslen,oocs,oocslen) stix_convutobcstr(stix,bcs,bcslen,oocs,oocslen)
 #endif
 
 STIX_EXPORT int stix_convbtouchars (
@@ -1400,13 +1400,19 @@ STIX_EXPORT stix_ooi_t stix_logbfmt (
 	...
 );
 
-STIX_EXPORT stix_ooi_t stix_logoofmt (
+STIX_EXPORT stix_ooi_t stix_logufmt (
 	stix_t*            stix,
 	stix_oow_t         mask,
-	const stix_ooch_t* fmt,
+	const stix_uch_t*  fmt,
 	...
 );
  
+#if defined(STIX_OOCH_IS_UCH)
+#	define stix_logoofmt stix_logufmt
+#else
+#	define stix_logoofmt stix_logbfmt
+#endif
+
 /* =========================================================================
  * MISCELLANEOUS HELPER FUNCTIONS
  * ========================================================================= */

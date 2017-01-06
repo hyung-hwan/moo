@@ -455,7 +455,7 @@ stix_mod_data_t* stix_openmod (stix_t* stix, const stix_ooch_t* name, stix_oow_t
 
 	if (md.handle == STIX_NULL) 
 	{
-		STIX_DEBUG2 (stix, "Cannot open a module [%.*S]\n", namelen, name);
+		STIX_DEBUG2 (stix, "Cannot open a module [%.*js]\n", namelen, name);
 		stix->errnum = STIX_ENOENT; /* TODO: be more descriptive about the error */
 		return STIX_NULL;
 	}
@@ -464,7 +464,7 @@ stix_mod_data_t* stix_openmod (stix_t* stix, const stix_ooch_t* name, stix_oow_t
 	load = stix->vmprim.dl_getsym (stix, md.handle, buf);
 	if (!load) 
 	{
-		STIX_DEBUG3 (stix, "Cannot get a module symbol [%S] in [%.*S]\n", buf, namelen, name);
+		STIX_DEBUG3 (stix, "Cannot get a module symbol [%js] in [%.*js]\n", buf, namelen, name);
 		stix->errnum = STIX_ENOENT; /* TODO: be more descriptive about the error */
 		stix->vmprim.dl_close (stix, md.handle);
 		return STIX_NULL;
@@ -475,7 +475,7 @@ stix_mod_data_t* stix_openmod (stix_t* stix, const stix_ooch_t* name, stix_oow_t
 	pair = stix_rbt_insert (&stix->modtab, (void*)name, namelen, &md, STIX_SIZEOF(md));
 	if (pair == STIX_NULL)
 	{
-		STIX_DEBUG2 (stix, "Cannot register a module [%.*S]\n", namelen, name);
+		STIX_DEBUG2 (stix, "Cannot register a module [%.*js]\n", namelen, name);
 		stix->errnum = STIX_ESYSMEM;
 		stix->vmprim.dl_close (stix, md.handle);
 		return STIX_NULL;
@@ -484,7 +484,7 @@ stix_mod_data_t* stix_openmod (stix_t* stix, const stix_ooch_t* name, stix_oow_t
 	mdp = (stix_mod_data_t*)STIX_RBT_VPTR(pair);
 	if (load (stix, &mdp->mod) <= -1)
 	{
-		STIX_DEBUG3 (stix, "Module function [%S] returned failure in [%.*S]\n", buf, namelen, name);
+		STIX_DEBUG3 (stix, "Module function [%js] returned failure in [%.*js]\n", buf, namelen, name);
 		stix->errnum = STIX_ENOENT; /* TODO: proper error code and handling */
 		stix_rbt_delete (&stix->modtab, name, namelen);
 		stix->vmprim.dl_close (stix, mdp->handle);
@@ -493,7 +493,7 @@ stix_mod_data_t* stix_openmod (stix_t* stix, const stix_ooch_t* name, stix_oow_t
 
 	mdp->pair = pair;
 
-	STIX_DEBUG2 (stix, "Opened a module [%S] - %p\n", mdp->mod.name, mdp->handle);
+	STIX_DEBUG2 (stix, "Opened a module [%js] - %p\n", mdp->mod.name, mdp->handle);
 
 	/* the module loader must ensure to set a proper query handler */
 	STIX_ASSERT (stix, mdp->mod.query != STIX_NULL);
@@ -508,7 +508,7 @@ void stix_closemod (stix_t* stix, stix_mod_data_t* mdp)
 	if (mdp->handle) 
 	{
 		stix->vmprim.dl_close (stix, mdp->handle);
-		STIX_DEBUG2 (stix, "Closed a module [%S] - %p\n", mdp->mod.name, mdp->handle);
+		STIX_DEBUG2 (stix, "Closed a module [%js] - %p\n", mdp->mod.name, mdp->handle);
 		mdp->handle = STIX_NULL;
 	}
 
@@ -548,7 +548,7 @@ int stix_importmod (stix_t* stix, stix_oop_t _class, const stix_ooch_t* name, st
 
 	if (!mdp->mod.import)
 	{
-		STIX_DEBUG1 (stix, "Cannot import module [%S] - importing not supported by the module\n", mdp->mod.name);
+		STIX_DEBUG1 (stix, "Cannot import module [%js] - importing not supported by the module\n", mdp->mod.name);
 		stix->errnum = STIX_ENOIMPL;
 		r = -1;
 		goto done;
@@ -556,7 +556,7 @@ int stix_importmod (stix_t* stix, stix_oop_t _class, const stix_ooch_t* name, st
 
 	if (mdp->mod.import (stix, &mdp->mod, _class) <= -1)
 	{
-		STIX_DEBUG1 (stix, "Cannot import module [%S] - module's import() returned failure\n", mdp->mod.name);
+		STIX_DEBUG1 (stix, "Cannot import module [%js] - module's import() returned failure\n", mdp->mod.name);
 		r = -1;
 		goto done;
 	}
@@ -593,7 +593,7 @@ stix_pfimpl_t stix_querymod (stix_t* stix, const stix_ooch_t* pfid, stix_oow_t p
 		 * guarantee that an underscore is included in an primitive identifer.
 		 * what if the compiler is broken? imagine a buggy compiler rewritten
 		 * in stix itself? */
-		STIX_DEBUG2 (stix, "Internal error - no period in a primitive function identifier [%.*S] - buggy compiler?\n", pfidlen, pfid);
+		STIX_DEBUG2 (stix, "Internal error - no period in a primitive function identifier [%.*js] - buggy compiler?\n", pfidlen, pfid);
 		stix->errnum = STIX_EINTERN;
 		return STIX_NULL;
 	}
@@ -615,12 +615,12 @@ stix_pfimpl_t stix_querymod (stix_t* stix, const stix_ooch_t* pfid, stix_oow_t p
 	if ((handler = mdp->mod.query (stix, &mdp->mod, sep + 1)) == STIX_NULL) 
 	{
 		/* the primitive function is not found. keep the module open */
-		STIX_DEBUG2 (stix, "Cannot find a primitive function [%S] in a module [%S]\n", sep + 1, mdp->mod.name);
+		STIX_DEBUG2 (stix, "Cannot find a primitive function [%js] in a module [%js]\n", sep + 1, mdp->mod.name);
 		stix->errnum = STIX_ENOENT; /* TODO: proper error code and handling */
 		return STIX_NULL;
 	}
 
-	STIX_DEBUG3 (stix, "Found a primitive function [%S] in a module [%S] - %p\n", sep + 1, mdp->mod.name, handler);
+	STIX_DEBUG3 (stix, "Found a primitive function [%js] in a module [%js] - %p\n", sep + 1, mdp->mod.name, handler);
 	return handler;
 }
 
@@ -661,7 +661,7 @@ int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_met
 	if (arg_count > 0 && mthname[i - 1] != ':') 
 	{
 	oops_inval:
-		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%S] in [%O] - invalid name\n", mthname, cls->name);
+		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%js] in [%O] - invalid name\n", mthname, cls->name);
 		stix->errnum = STIX_EINVAL;
 		goto oops;
 	}
@@ -670,7 +670,7 @@ int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_met
 	cs.len = i;
 	if (stix_lookupdic (stix, cls->mthdic[type], &cs) != STIX_NULL)
 	{
-		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%S] in [%O] - duplicate\n", mthname, cls->name);
+		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%js] in [%O] - duplicate\n", mthname, cls->name);
 		stix->errnum = STIX_EEXIST;
 		goto oops;
 	}
@@ -685,14 +685,14 @@ int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_met
 	    stix_concatoocstrtosbuf(stix, dot, 0) <= -1 ||
 	    stix_concatoocstrtosbuf(stix, pfname, 0) <=  -1) 
 	{
-		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%S] in [%O] - VM memory shortage\n", mthname, cls->name);
+		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%js] in [%O] - VM memory shortage\n", mthname, cls->name);
 		return -1;
 	}
 
 	pfidsym = (stix_oop_char_t)stix_makesymbol (stix, stix->sbuf[0].ptr, stix->sbuf[0].len);
 	if (!pfidsym) 
 	{
-		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%S] in [%O] - symbol instantiation failure\n", mthname, cls->name);
+		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%js] in [%O] - symbol instantiation failure\n", mthname, cls->name);
 		goto oops;
 	}
 	stix_pushtmp (stix, (stix_oop_t*)&pfidsym); tmp_count++;
@@ -704,7 +704,7 @@ int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_met
 #endif
 	if (!mth)
 	{
-		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%S] in [%O] - method instantiation failure\n", mthname, cls->name);
+		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%js] in [%O] - method instantiation failure\n", mthname, cls->name);
 		goto oops;
 	}
 
@@ -725,11 +725,11 @@ int stix_genpfmethod (stix_t* stix, stix_mod_t* mod, stix_oop_t _class, stix_met
 
 	if (!stix_putatdic (stix, cls->mthdic[type], (stix_oop_t)mnsym, (stix_oop_t)mth)) 
 	{
-		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%S] in [%O] - failed to add to method dictionary\n", mthname, cls->name);
+		STIX_DEBUG2 (stix, "Cannot generate primitive function method [%js] in [%O] - failed to add to method dictionary\n", mthname, cls->name);
 		goto oops;
 	}
 
-	STIX_DEBUG2 (stix, "Generated primitive function method [%S] in [%O]\n", mthname, cls->name);
+	STIX_DEBUG2 (stix, "Generated primitive function method [%js] in [%O]\n", mthname, cls->name);
 
 	stix_poptmps (stix, tmp_count); tmp_count = 0;
 	return 0;
