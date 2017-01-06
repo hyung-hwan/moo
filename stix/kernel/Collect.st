@@ -87,6 +87,20 @@ class(#character) Symbol(String)
 		0 priorTo: size do: [:i | str at: i put: (self at: i) ].
 		^str.
 	}
+
+	method = anObject
+	{
+		(* for a symbol, equality check is the same as the identity check *)
+		<primitive: #_identical>
+		self primitiveFailed.
+	}
+
+	method ~= anObject
+	{
+		(* for a symbol, equality check is the same as the identity check *)
+		<primitive: #_not_identical>
+		^(self == anObject) not.
+	}
 }
 
 ## -------------------------------------------------------------------------------
@@ -179,7 +193,6 @@ class Set(Collection)
 	method do: block
 	{
 		| bs |
-
 		bs := self.bucket size.
 		0 priorTo: bs by: 1 do: [:i |
 			| ass |
@@ -187,10 +200,19 @@ class Set(Collection)
 		].
 	}
 	
+	method keysDo: block
+	{
+		| bs |
+		bs := self.bucket size.
+		0 priorTo: bs by: 1 do: [:i |
+			| ass |
+			(ass := self.bucket at: i) notNil ifTrue: [block value: ass key]
+		].
+	}
+
 	method keysAndValuesDo: block
 	{
 		| bs |
-
 		bs := self.bucket size.
 		0 priorTo: bs by: 1 do: [:i |
 			| ass |
@@ -289,8 +311,14 @@ class SystemDictionary(Dictionary)
 
 	method at: key
 	{
-		(key class = Symbol) ifTrue: [InvalidArgumentException signal: 'argument is not a symbol'].
+		(key class ~= Symbol) ifTrue: [InvalidArgumentException signal: 'key is not a symbol'].
 		^super at: key.
+	}
+	
+	method at: key put: value
+	{
+		(key class ~= Symbol) ifTrue: [InvalidArgumentException signal: 'key is not a symbol'].
+		^super at: key put: value
 	}
 }
 

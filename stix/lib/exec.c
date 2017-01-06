@@ -1322,33 +1322,84 @@ static stix_pfrc_t pf_not_identical (stix_t* stix, stix_ooi_t nargs)
 	return STIX_PF_SUCCESS;
 }
 
-static stix_pfrc_t pf_equal (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t _equal_objects (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_t rcv, arg, b;
+	stix_oop_t rcv, arg;
+	int rtag;
 
 	STIX_ASSERT (stix, nargs == 1);
 
 	rcv = STIX_STACK_GETRCV(stix, nargs);
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
+	if (rcv == arg) return 1; /* identical. so equal */
 
-	b = (rcv == arg)? stix->_true: stix->_false;
+	rtag = STIX_OOP_GET_TAG(rcv);
+	if (rtag != STIX_OOP_GET_TAG(arg)) return 0;
 
-	STIX_STACK_SETRET (stix, nargs, b);
-	return STIX_PF_SUCCESS;
+	switch (STIX_OOP_GET_TAG(rcv))
+	{
+		case STIX_OOP_TAG_SMINT:
+			return STIX_OOP_TO_SMOOI(rcv) == STIX_OOP_TO_SMOOI(arg)? 1: 0;
+
+		case STIX_OOP_TAG_CHAR:
+			return STIX_OOP_TO_CHAR(rcv) == STIX_OOP_TO_CHAR(arg)? 1: 0;
+
+		case STIX_OOP_TAG_ERROR:
+			return STIX_OOP_TO_ERROR(rcv) == STIX_OOP_TO_ERROR(arg)? 1: 0;
+
+		default:
+		{
+			STIX_ASSERT (stix, STIX_OOP_IS_POINTER(rcv));
+
+			if (STIX_OBJ_GET_CLASS(rcv) != STIX_OBJ_GET_CLASS(arg)) return 0; /* different class, not equal */
+			STIX_ASSERT (stix, STIX_OBJ_GET_FLAGS_TYPE(rcv) == STIX_OBJ_GET_FLAGS_TYPE(arg));
+
+			if (STIX_OBJ_GET_CLASS(rcv) == stix->_class && rcv != arg) 
+			{
+				/* a class object are supposed to be unique */
+				return 0;
+			}
+			if (STIX_OBJ_GET_SIZE(rcv) != STIX_OBJ_GET_SIZE(arg)) return 0; /* different size, not equal */
+
+			switch (STIX_OBJ_GET_FLAGS_TYPE(rcv))
+			{
+				case STIX_OBJ_TYPE_BYTE:
+				case STIX_OBJ_TYPE_CHAR:
+				case STIX_OBJ_TYPE_HALFWORD:
+				case STIX_OBJ_TYPE_WORD:
+					return (STIX_MEMCMP (((stix_oop_byte_t)rcv)->slot, ((stix_oop_byte_t)arg)->slot, STIX_BYTESOF(stix,rcv)) == 0)? 1: 0;
+
+				default:
+					if (rcv == stix->_nil) return arg == stix->_nil? 1: 0;
+					if (rcv == stix->_true) return arg == stix->_true? 1: 0;
+					if (rcv == stix->_false) return arg == stix->_false? 1: 0;
+					
+					/* STIX_OBJ_TYPE_OOP, ... */
+					STIX_DEBUG1 (stix, "<_equal_objects> Cannot compare objects of type %d\n", (int)STIX_OBJ_GET_FLAGS_TYPE(rcv));
+					return -1;
+			}
+		}
+	}
 }
 
+static stix_pfrc_t pf_equal (stix_t* stix, stix_ooi_t nargs)
+{
+	int n;
+
+	n = _equal_objects (stix, nargs);
+	if (n <= -1) return STIX_PF_FAILURE;
+
+	STIX_STACK_SETRET (stix, nargs, (n? stix->_true: stix->_false));
+	return STIX_PF_SUCCESS;
+}
 static stix_pfrc_t pf_not_equal (stix_t* stix, stix_ooi_t nargs)
 {
-	stix_oop_t rcv, arg, b;
+	int n;
 
-	STIX_ASSERT (stix, nargs == 1);
+	n = _equal_objects (stix, nargs);
+	if (n <= -1) return STIX_PF_FAILURE;
 
-	rcv = STIX_STACK_GETRCV(stix, nargs);
-	arg = STIX_STACK_GETARG(stix, nargs, 0);
-
-	b = (rcv != arg)? stix->_true: stix->_false;
-
-	STIX_STACK_SETRET (stix, nargs, b);
+	STIX_STACK_SETRET (stix, nargs, (n? stix->_false: stix->_true));
 	return STIX_PF_SUCCESS;
 }
 
@@ -1651,7 +1702,7 @@ static stix_pfrc_t pf_hash (stix_t* stix, stix_ooi_t nargs)
 	switch (STIX_OOP_GET_TAG(rcv))
 	{
 		case STIX_OOP_TAG_SMINT:
-			hv = STIX_OOP_TO_CHAR(rcv);
+			hv = STIX_OOP_TO_SMOOI(rcv);
 			break;
 
 		case STIX_OOP_TAG_CHAR:
@@ -1695,7 +1746,10 @@ static stix_pfrc_t pf_hash (stix_t* stix, stix_ooi_t nargs)
 		}
 	}
 
-	hv %= STIX_SMOOI_MAX;
+	/* stix_hashxxx() functions should limit the return value to fall 
+	 * in the range between 0 and STIX_SMOOI_MAX inclusive */
+	STIX_ASSERT (stix, hv >= 0 && hv <= STIX_SMOOI_MAX);
+
 	STIX_STACK_SETRET (stix, nargs, STIX_SMOOI_TO_OOP(hv));
 	return STIX_PF_SUCCESS;
 }

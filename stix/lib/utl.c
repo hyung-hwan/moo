@@ -45,7 +45,9 @@ stix_oow_t stix_hashbytes (const stix_oob_t* ptr, stix_oow_t len)
 	bp = ptr; be = bp + len;
 	while (bp < be) h = h * 31 + *bp++;
 
-	return h;
+	/* constrain the hash value to be representable in a small integer
+	 * for convenience sake */
+	return h % ((stix_oow_t)STIX_SMOOI_MAX + 1);
 }
 
 int stix_equaluchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_oow_t len)
