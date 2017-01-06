@@ -1,90 +1,90 @@
-#class Boolean(Object)
+class Boolean(Object)
 {
-	"TODO: do i need to really define methods defined in True and False here?
-	       and call subclassResponsibiltiy?"
+	(* TODO: do i need to really define methods defined in True and False here?
+	       and call subclassResponsibiltiy?" *)
 }
 
-#class True(Boolean)
+class True(Boolean)
 {
-	#method not
+	method not
 	{
 		^false
 	}
 
-	#method & aBoolean
+	method & aBoolean
 	{
 		^aBoolean
 	}
 
-	#method | aBoolean
+	method | aBoolean
 	{
 		^true
 	}
 
-	#method and: aBlock
+	method and: aBlock
 	{
 		^aBlock value
 	}
 
-	#method or: aBlock
+	method or: aBlock
 	{
 		^true
 	}
 
-	#method ifTrue: trueBlock ifFalse: falseBlock
+	method ifTrue: trueBlock ifFalse: falseBlock
 	{
 		^trueBlock value.
 	}
 
-	#method ifTrue: trueBlock
+	method ifTrue: trueBlock
 	{
 		^trueBlock value.
 	}
 
-	#method ifFalse: falseBlock
+	method ifFalse: falseBlock
 	{
 		^nil.
 	}
 }
 
-#class False(Boolean)
+class False(Boolean)
 {
-	#method not
+	method not
 	{
 		^true
 	}
 
-	#method & aBoolean
+	method & aBoolean
 	{
 		^false
 	}
 
-	#method | aBoolean
+	method | aBoolean
 	{
 		^aBoolean
 	}
 
-	#method and: aBlock
+	method and: aBlock
 	{
 		^false
 	}
 
-	#method or: aBlock
+	method or: aBlock
 	{
 		^aBlock value
 	}
 
-	#method ifTrue: trueBlock ifFalse: falseBlock
+	method ifTrue: trueBlock ifFalse: falseBlock
 	{
 		^falseBlock value.
 	}
 
-	#method ifTrue: trueBlock
+	method ifTrue: trueBlock
 	{
 		^nil.
 	}
 
-	#method ifFalse: falseBlock
+	method ifFalse: falseBlock
 	{
 		^falseBlock value.
 	}

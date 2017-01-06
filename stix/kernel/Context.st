@@ -1,24 +1,24 @@
-#class(#pointer) Context(Apex)
+class(#pointer) Context(Apex)
 {
-	#dcl sender ip sp ntmprs.
+	dcl sender ip sp ntmprs.
 
-	#method sender
+	method sender
 	{
 		^self.sender
 	}
 
-	#method isDead
+	method isDead
 	{
 		^self.ip < 0
 	}
 
-	#method temporaryCount
+	method temporaryCount
 	{
 		^self.ntmprs
 	}
 
 (* ---------------------------------
-#method varargCount
+method varargCount
 {
 method context,
 
@@ -30,7 +30,7 @@ for a block context, it must access homeContext first and call varargCount
 	^self.home varargCount...
 }
 
-#method varargAt: index
+method varargAt: index
 {
 method context
 	^do calculation...
@@ -42,91 +42,91 @@ block context...
 ---------------------------------- *)
 }
 
-#class(#pointer) MethodContext(Context)
+class(#pointer) MethodContext(Context)
 {
-	#dcl method receiver home origin.
+	dcl method receiver home origin.
 
-	#method pc
+	method pc
 	{
 		^self.ip
 	}
 
-	#method pcplus1
+	method pcplus1
 	{
 		^self.ip + 1
 	}
 
-	#method goto: anInteger
+	method goto: anInteger
 	{
 		<primitive: #_context_goto>
 		self primitiveFailed. ## TODO: need to make this a hard failure?
 	}
 
-	#method pc: anInteger
+	method pc: anInteger
 	{
 		self.ip := anInteger.
 	}
 
-	#method sp
+	method sp
 	{
 		^self.sp.
 
 	}
-	#method sp: new_sp
+	method sp: new_sp
 	{
 		self.sp := new_sp
 	}
 
-	#method pc: new_pc sp: new_sp
+	method pc: new_pc sp: new_sp
 	{
 		self.ip := new_pc.
 		self.sp := new_sp.
 	}
 
-	#method method
+	method method
 	{
 		^self.method
 	}
 
-	#method vargCount
+	method vargCount
 	{
 		^self basicSize - self class specNumInstVars - self.ntmprs
 	}
 
-	#method vargAt: index
+	method vargAt: index
 	{
 		^self basicAt: (index + self class specNumInstVars + self.ntmprs)
 	}
 }
 
-#class(#pointer) BlockContext(Context)
+class(#pointer) BlockContext(Context)
 {
-	#dcl nargs source home origin.
+	dcl nargs source home origin.
 
-	#method vargCount
+	method vargCount
 	{
 		^self.home vargCount
 	}
 
-	#method vargAt: index
+	method vargAt: index
 	{
 		^self.home vargAt: index
 	}
 
-	#method fork 
+	method fork 
 	{
 		"crate a new process in the runnable state"
 		^self newProcess resume.
 	}
 
-	#method newProcess
+	method newProcess
 	{
 		"create a new process in the suspended state"
 		<primitive: #_block_new_process>
 		self primitiveFailed.
 	}
 
-	#method newProcessWith: anArray
+	method newProcessWith: anArray
 	{
 		"create a new process in the suspended state passing the elements
 		 of anArray as block arguments"
@@ -134,53 +134,53 @@ block context...
 		self primitiveFailed.
 	}
 
-	#method value
+	method value
 	{
 		<primitive: #_block_value>
 		self primitiveFailed.
 	}
-	#method value: a 
+	method value: a 
 	{
 		<primitive: #_block_value>
 		self primitiveFailed.
 	}
-	#method value: a value: b
+	method value: a value: b
 	{
 		<primitive: #_block_value>
 		self primitiveFailed.
 	}
-	#method value: a value: b value: c
+	method value: a value: b value: c
 	{
 		<primitive: #_block_value>
 		self primitiveFailed.
 	}
-	#method value: a value: b value: c value: d
+	method value: a value: b value: c value: d
 	{
 		<primitive: #_block_value>
 		self primitiveFailed.
 	}
-	#method value: a value: b value: c value: d value: e
+	method value: a value: b value: c value: d value: e
 	{
 		<primitive: #_block_value>
 		self primitiveFailed.
 	}
 
-	#method ifTrue: aBlock
+	method ifTrue: aBlock
 	{
 		^(self value) ifTrue: aBlock.
 	}
 
-	#method ifFalse: aBlock
+	method ifFalse: aBlock
 	{
 		^(self value) ifFalse: aBlock.
 	}
 
-	#method ifTrue: trueBlock ifFalse: falseBlock
+	method ifTrue: trueBlock ifFalse: falseBlock
 	{
 		^(self value) ifTrue: trueBlock ifFalse: falseBlock
 	}
 
-	#method whileTrue: aBlock
+	method whileTrue: aBlock
 	{
 		## --------------------------------------------------
 		## Naive implementation
@@ -208,7 +208,7 @@ block context...
 		## --------------------------------------------------
 	}
 
-	#method whileTrue
+	method whileTrue
 	{
 		## (self value) ifFalse: [^nil].
 		## self whileTrue.
@@ -223,7 +223,7 @@ block context...
 		## --------------------------------------------------
 	}
 
-	#method whileFalse: aBlock
+	method whileFalse: aBlock
 	{
 		## --------------------------------------------------
 		## Naive implementation
@@ -256,7 +256,7 @@ block context...
 		## --------------------------------------------------
 	}
 
-	#method whileFalse
+	method whileFalse
 	{
 		## (self value) ifTrue: [^nil].
 		## self whileFalse.
@@ -271,28 +271,55 @@ block context...
 		## --------------------------------------------------
 	}
 
-	#method pc
+	method pc
 	{
 		^self.ip
 	}
 
-	#method pc: anInteger
+	method pc: anInteger
 	{
 		self.ip := anInteger.
 	}
 	
-	#method sp
+	method sp
 	{
 		^self.sp
 	}
 
-	#method sp: anInteger
+	method sp: anInteger
 	{
 		self.sp := anInteger.
 	}
 
-	#method restart
+	method restart
 	{
 		ip := self.source pc.
+	}
+}
+
+
+class(#pointer) CompiledMethod(Object)
+{
+	## dcl owner name preamble preamble_data_1 preamble_data_2 ntmprs nargs code source.
+	dcl owner name preamble preamble_data_1 preamble_data_2 ntmprs nargs source.
+
+	method preamble
+	{
+		^self.preamble
+	}
+
+	method preambleCode
+	{
+		^(self.preamble bitAnd: 16rFF) bitShift: -2.
+	}
+
+	method owner
+	{
+		^self.owner
+	}
+
+	method name
+	{
+		^self.name
 	}
 }

@@ -324,12 +324,12 @@ int stix_inttooow (stix_t* stix, stix_oop_t x, stix_oow_t* w)
 		if (v < 0)
 		{
 			*w = -v;
-			return -1;
+			return -1; /* negative number  negated - kind of an error */
 		}
 		else
 		{
 			*w = v;
-			return 1;
+			return 1; /* zero or positive number */
 		}
 	}
 

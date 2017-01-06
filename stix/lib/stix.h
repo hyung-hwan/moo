@@ -747,8 +747,16 @@ struct stix_cb_t
  * ========================================================================= */
 #define STIX_MOD_NAME_LEN_MAX 120
 
+enum stix_pfrc_t
+{
+	STIX_PF_HARD_FAILURE = -1,
+	STIX_PF_FAILURE      = 0,
+	STIX_PF_SUCCESS      = 1
+};
+typedef enum stix_pfrc_t stix_pfrc_t;
+
 /* primitive function implementation type */
-typedef int (*stix_pfimpl_t) (
+typedef stix_pfrc_t (*stix_pfimpl_t) (
 	stix_t*    stix,
 	stix_ooi_t nargs
 );
@@ -1088,6 +1096,7 @@ enum stix_synerrnum_t
 	STIX_SYNERR_CLASSUNDEF,    /* undefined class */
 	STIX_SYNERR_CLASSDUP,      /* duplicate class */
 	STIX_SYNERR_CLASSCONTRA,   /* contradictory class */
+	STIX_SYNERR_CLASSNAME,     /* wrong class name */
 	STIX_SYNERR_DCLBANNED,     /* #dcl not allowed */
 	STIX_SYNERR_MTHNAME,       /* wrong method name */
 	STIX_SYNERR_MTHNAMEDUP,    /* duplicate method name */

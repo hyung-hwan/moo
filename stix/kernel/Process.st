@@ -1,35 +1,35 @@
 
-#class(#pointer) Process(Object)
+class(#pointer) Process(Object)
 {
-	#dcl initial_context current_context state sp prev next sem.
+	dcl initial_context current_context state sp prev next sem.
 
-	#method new
+	method new
 	{
 		"instantiation is not allowed"
 		^nil. "TODO: raise an exception"
 	}
 
-	#method prev
+	method prev
 	{
 		^self.prev.
 	}
 
-	#method next
+	method next
 	{
 		^self.next.
 	}
 
-	#method next: process
+	method next: process
 	{
 		self.next := process.
 	}
 
-	#method prev: process
+	method prev: process
 	{
 		self.prev := process.
 	}
 
-	#method resume
+	method resume
 	{
 		<primitive: #_process_resume>
 		self primitiveFailed
@@ -37,19 +37,19 @@
 		##^Processor resume: self.
 	}
 
-	#method _terminate
+	method _terminate
 	{
 		<primitive: #_process_terminate>
 		self primitiveFailed
 	}
 
-	#method _suspend
+	method _suspend
 	{
 		<primitive: #_process_suspend>
 		self primitiveFailed
 	}
 
-	#method terminate
+	method terminate
 	{
 ##search from the top contextof the process down to intial_contextand find ensure blocks and execute them.
 		## if a different process calls 'terminate' on a process,
@@ -80,28 +80,28 @@
 		^self _terminate
 	}
 
-	#method yield
+	method yield
 	{
 		<primitive: #_process_yield>
 		self primitiveFailed
 	}
 
-	#method sp
+	method sp
 	{
 		^self.sp.
 	}
 
-	#method initialContext
+	method initialContext
 	{
 		^self.initial_context
 	}
 }
 
-#class Semaphore(Object)
+class Semaphore(Object)
 {
-	#dcl count waiting_head waiting_tail heapIndex fireTimeSec fireTimeNsec.
+	dcl count waiting_head waiting_tail heapIndex fireTimeSec fireTimeNsec.
 
-	#method(#class) forMutualExclusion
+	method(#class) forMutualExclusion
 	{
 		| sem |
 		sem := self new.
@@ -109,7 +109,7 @@
 		^sem
 	}
 
-	#method initialize
+	method initialize
 	{
 		self.count := 0.
 		self.heapIndex := -1.
@@ -119,31 +119,31 @@
 
 	## ==================================================================
 
-	#method signal 
+	method signal 
 	{
 		<primitive: #_semaphore_signal>
 		self primitiveFailed.
 	}
 
-	#method wait
+	method wait
 	{
 		<primitive: #_semaphore_wait>
 		self primitiveFailed.
 	}
 
-	#method waitWithTimeout: seconds
+	method waitWithTimeout: seconds
 	{
 		<primitive: #_semaphore_wait>
 		self primitiveFailed
 	}
 
-	#method waitWithTimeout: seconds and: nanoSeconds
+	method waitWithTimeout: seconds and: nanoSeconds
 	{
 		<primitive: #_semaphore_wait>
 		self primitiveFailed
 	}
 
-	#method critical: aBlock
+	method critical: aBlock
 	{
 		self wait.
 		^aBlock ensure: [ self signal ]
@@ -151,53 +151,53 @@
 
 	## ==================================================================
 
-	#method heapIndex
+	method heapIndex
 	{
 		^heapIndex
 	}
 
-	#method heapIndex: anIndex
+	method heapIndex: anIndex
 	{
 		heapIndex := anIndex
 	}
 
-	#method fireTime
+	method fireTime
 	{
 		^fireTimeSec
 	}
 
-	#method fireTime: anInteger
+	method fireTime: anInteger
 	{
 		self.fireTimeSec := anInteger.
 	}
 
-	#method youngerThan: aSemaphore
+	method youngerThan: aSemaphore
 	{
 		^self.fireTimeSec < (aSemaphore fireTime)
 	}
 }
 
-#class SemaphoreHeap(Object)
+class SemaphoreHeap(Object)
 {
-	#dcl arr size.
+	dcl arr size.
 
-	#method initialize
+	method initialize
 	{
 		self.size := 0.
 		self.arr := Array new: 100.
 	}
 
-	#method size
+	method size
 	{
 		^self.size
 	}
 
-	#method at: anIndex
+	method at: anIndex
 	{
 		^self.arr at: anIndex.
 	}
 
-	#method insert: aSemaphore
+	method insert: aSemaphore
 	{
 		| index |
 
@@ -217,7 +217,7 @@
 		^self siftUp: index
 	}
 
-	#method popTop
+	method popTop
 	{
 		| top |
 
@@ -226,7 +226,7 @@
 		^top
 	}
 
-	#method updateAt: anIndex with: aSemaphore
+	method updateAt: anIndex with: aSemaphore
 	{
 		| item |
 
@@ -241,7 +241,7 @@
 			ifFalse: [ self siftDown: anIndex ].
 	}
 
-	#method deleteAt: anIndex
+	method deleteAt: anIndex
 	{
 		| item |
 
@@ -268,22 +268,22 @@
 			]
 	}
 
-	#method parentIndex: anIndex
+	method parentIndex: anIndex
 	{
 		^(anIndex - 1) quo: 2
 	}
 
-	#method leftChildIndex: anIndex
+	method leftChildIndex: anIndex
 	{
 		^(anIndex * 2) + 1.
 	}
 
-	#method rightChildIndex: anIndex
+	method rightChildIndex: anIndex
 	{
 		 ^(anIndex * 2) + 2.
 	}
 
-	#method siftUp: anIndex
+	method siftUp: anIndex
 	{
 		| pindex cindex par item stop |
 
@@ -319,7 +319,7 @@
 		^cindex
 	}
 
-	#method siftDown: anIndex
+	method siftDown: anIndex
 	{
 		| base capa cindex item |
 
@@ -359,22 +359,22 @@
 	}
 }
 
-#class ProcessScheduler(Object)
+class ProcessScheduler(Object)
 {
-	#dcl tally active runnable_head runnable_tail sem_heap.
+	dcl tally active runnable_head runnable_tail sem_heap.
 
-	#method new
+	method new
 	{
 		"instantiation is not allowed"
 		^nil. "TODO: raise an exception"
 	}
 
-	#method activeProcess
+	method activeProcess
 	{
 		^self.active.
 	}
 
-	#method resume: process
+	method resume: process
 	{
 		<primitive: #_processor_schedule>
 		self primitiveFailed.
@@ -396,45 +396,45 @@
 	}
 
 	"
-	#method yield
+	method yield
 	{
 		<primitive: #_processor_yield>
 		self primitiveFailed
 	}
 	"
 
-	#method signal: semaphore after: secs
+	method signal: semaphore after: secs
 	{
 		<primitive: #_processor_add_timed_semaphore>
 		self primitiveFailed.
 	}
 
-	#method signal: semaphore after: secs and: nanosecs
+	method signal: semaphore after: secs and: nanosecs
 	{
 		<primitive: #_processor_add_timed_semaphore>
 		self primitiveFailed.
 	}
 
-	#method unsignal: semaphore
+	method unsignal: semaphore
 	{
 		<primitive: #_processor_remove_semaphore>
 		self primitiveFailed.
 	}
 
-	"#method signal: semaphore onInput: file
+	"method signal: semaphore onInput: file
 	{
 	}"
-	"#method signal: semaphore onOutput: file
+	"method signal: semaphore onOutput: file
 	{
 	}"
 
-	#method return: object to: context
+	method return: object to: context
 	{
 		<primitive: #_processor_return_to>
 		self primitiveFailed.
 	}
 
-	#method sleepFor: secs
+	method sleepFor: secs
 	{
 		## -----------------------------------------------------
 		## put the calling process to sleep for given seconds.
@@ -445,7 +445,7 @@
 		s wait.
 	}
 
-	#method sleepFor: secs and: nanosecs
+	method sleepFor: secs and: nanosecs
 	{
 		## -----------------------------------------------------
 		## put the calling process to sleep for given seconds.

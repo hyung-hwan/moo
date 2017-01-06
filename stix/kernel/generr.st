@@ -1,8 +1,8 @@
 #include 'Stix.st'.
 
-#class MyObject(Object)
+class MyObject(Object)
 {
-	#method(#class) main
+	method(#class) main
 	{
 		| errmsgs synerrmsgs f |
 
@@ -72,7 +72,8 @@
 			'undefined class'
 			'duplicate class'
 			'contradictory class definition'
-			'#dcl not allowed'
+			'wrong class name'
+			'dcl not allowed'
 			'wrong method name'
 			'duplicate method name'
 			'duplicate argument name'
@@ -109,7 +110,7 @@
 		f close.
 	}
 	
-	#method(#class) emitMessages: errmsgs named: name on: f
+	method(#class) emitMessages: errmsgs named: name on: f
 	{
 		| c prefix |
 		prefix := name & '_'.
@@ -134,7 +135,7 @@
 		f puts: S'};\n'.
 	}
 
-	#method(#class) printString: s prefix: prefix index: index on: f
+	method(#class) printString: s prefix: prefix index: index on: f
 	{
 		| c  |
 		c := s size - 1.

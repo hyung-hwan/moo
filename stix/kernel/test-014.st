@@ -9,58 +9,58 @@
 ##       use #extend to extend a class
 ##       using #class for both feels confusing.
 
-#extend Apex
+extend Apex
 {
 
 }
 
-#extend SmallInteger
+extend SmallInteger
 {
-	#method getTrue: anInteger
+	method getTrue: anInteger
 	{
 		^anInteger + 9999.
 	}
 
-	#method inc
+	method inc
 	{
 		^self + 1.
 	}
 }
 
-#class TestObject(Object)
+class TestObject(Object)
 {
-	#dcl(#class) Q R.
-	#dcl(#classinst) a1 a2.
+	dcl(#class) Q R.
+	dcl(#classinst) a1 a2.
 
-	#method test999
+	method test999
 	{
 		^self.Q
 	}
 }
 
-#class B.TestObject(Object)
+class B.TestObject(Object)
 {
-	#dcl(#class) Q R.
-	#dcl(#classinst) a1 a2.
+	dcl(#class) Q R.
+	dcl(#classinst) a1 a2.
 
-	#method test000
+	method test000
 	{
 		^self.Q
 	}
 }
 
-#pooldic ABC 
+pooldic ABC 
 {
 	#KKK := 20.
 }
 
-#pooldic SRX.ABC
+pooldic SRX.ABC
 {
 	#JJJ := 1000.
 }
-#class MyConsole(Console)
+class MyConsole(Console)
 {
-	#method box: origin corner: corner
+	method box: origin corner: corner
 	{
 		| tmp |
 		self setCursor: origin.
@@ -88,11 +88,11 @@
 	}
 }
 
-#class MyObject(TestObject)
+class MyObject(TestObject)
 {
-	#dcl(#pooldic) ABC SRX.ABC.
+	dcl(#pooldic) ABC SRX.ABC.
 
-	#method(#class) main
+	method(#class) main
 	{
 		| v1 v2 |
 
@@ -190,23 +190,26 @@
 		(v1 := self t001(20)) isError ifTrue: [('t001 Error 333....' & v1 asInteger asString) dump].
 		error(9999) dump.
 		error(9999) asInteger dump.
+
+		v2 := (16rFFFFFFFF_FFFFFFFF_FFFFFFFF_FFFFFFFF_FFFFFFFF_FFFFFFFF) basicAt: 1 put: 1; yourself.
+		v2 dump.
 	}
 
-	#method(#class) varg_test()
+	method(#class) varg_test()
 	{
 		0 to: (thisContext vargCount - 1) do: [:k |
 			(thisContext vargAt: k) dump.
 		].
 		^999
 	}
-	#method(#class) varg_test2(a,b,c)
+	method(#class) varg_test2(a,b,c)
 	{
 		0 to: (thisContext vargCount - 1) do: [:k |
 			(thisContext vargAt: k) dump.
 		].
 		^a
 	}
-	#method(#class) varg_test3(a,b,c,d,e,f)
+	method(#class) varg_test3(a,b,c,d,e,f)
 	{
 		0 to: (thisContext vargCount - 1) do: [:k |
 			(thisContext vargAt: k) dump.
@@ -215,7 +218,7 @@
 		^f
 	}
 	
-	#method(#class) t001(a)
+	method(#class) t001(a)
 	{
 		a isNil ifTrue: [^error(10)].
 		(a = 20) ifTrue: [^error].
@@ -230,9 +233,9 @@
 	}
 }
 
-#extend MyObject
+extend MyObject
 {
-	#method(#class) main2
+	method(#class) main2
 	{
 		System logNl: KKK.
 		System logNl: SRX.ABC.JJJ.

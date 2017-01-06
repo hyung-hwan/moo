@@ -1171,7 +1171,7 @@ TODO: overcome this problem
 }
 
 /* ------------------------------------------------------------------------- */
-static int pf_dump (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_dump (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_ooi_t i;
 
@@ -1185,7 +1185,7 @@ static int pf_dump (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	STIX_STACK_SETRETTORCV (stix, nargs); /* ^self */
-	return 1; /* success */
+	return STIX_PF_SUCCESS;
 }
 
 static void log_char_object (stix_t* stix, stix_oow_t mask, stix_oop_char_t msg)
@@ -1226,7 +1226,7 @@ start_over:
 	}
 }
 
-static int pf_log (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_log (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t msg, level;
 	stix_oow_t mask;
@@ -1289,10 +1289,10 @@ static int pf_log (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	STIX_STACK_SETRETTORCV (stix, nargs); /* ^self */
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_identical (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_identical (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, b;
 
@@ -1304,10 +1304,10 @@ static int pf_identical (stix_t* stix, stix_ooi_t nargs)
 	b = (rcv == arg)? stix->_true: stix->_false;
 
 	STIX_STACK_SETRET (stix, nargs, b);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_not_identical (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_not_identical (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, b;
 
@@ -1319,10 +1319,40 @@ static int pf_not_identical (stix_t* stix, stix_ooi_t nargs)
 	b = (rcv != arg)? stix->_true: stix->_false;
 
 	STIX_STACK_SETRET (stix, nargs, b);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_class (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_equal (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg, b;
+
+	STIX_ASSERT (stix, nargs == 1);
+
+	rcv = STIX_STACK_GETRCV(stix, nargs);
+	arg = STIX_STACK_GETARG(stix, nargs, 0);
+
+	b = (rcv == arg)? stix->_true: stix->_false;
+
+	STIX_STACK_SETRET (stix, nargs, b);
+	return STIX_PF_SUCCESS;
+}
+
+static stix_pfrc_t pf_not_equal (stix_t* stix, stix_ooi_t nargs)
+{
+	stix_oop_t rcv, arg, b;
+
+	STIX_ASSERT (stix, nargs == 1);
+
+	rcv = STIX_STACK_GETRCV(stix, nargs);
+	arg = STIX_STACK_GETARG(stix, nargs, 0);
+
+	b = (rcv != arg)? stix->_true: stix->_false;
+
+	STIX_STACK_SETRET (stix, nargs, b);
+	return STIX_PF_SUCCESS;
+}
+
+static stix_pfrc_t pf_class (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, c;
 
@@ -1332,10 +1362,10 @@ static int pf_class (stix_t* stix, stix_ooi_t nargs)
 	c = STIX_CLASSOF(stix, rcv);
 
 	STIX_STACK_SETRET (stix, nargs, c);
-	return 1; /* success */
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_basic_new (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_basic_new (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, obj;
 
@@ -1345,17 +1375,17 @@ static int pf_basic_new (stix_t* stix, stix_ooi_t nargs)
 	if (STIX_CLASSOF(stix, rcv) != stix->_class) 
 	{
 		/* the receiver is not a class object */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	obj = stix_instantiate (stix, rcv, STIX_NULL, 0);
-	if (!obj) return -1;
+	if (!obj) return STIX_PF_HARD_FAILURE;
 
 	STIX_STACK_SETRET (stix, nargs, obj);
-	return 1; /* success */
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_basic_new_with_size (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_basic_new_with_size (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, szoop, obj;
 	stix_oow_t size;
@@ -1366,14 +1396,14 @@ static int pf_basic_new_with_size (stix_t* stix, stix_ooi_t nargs)
 	if (STIX_CLASSOF(stix, rcv) != stix->_class) 
 	{
 		/* the receiver is not a class object */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	szoop = STIX_STACK_GETARG(stix, nargs, 0);
 	if (stix_inttooow (stix, szoop, &size) <= 0)
 	{
 		/* integer out of range or not integer */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	/* stix_instantiate() ignores size if the instance specification 
@@ -1383,34 +1413,30 @@ static int pf_basic_new_with_size (stix_t* stix, stix_ooi_t nargs)
 	obj = stix_instantiate (stix, rcv, STIX_NULL, size);
 	if (!obj) 
 	{
-		return -1; /* hard failure */
+		return STIX_PF_HARD_FAILURE;
 	}
 
 	STIX_STACK_SETRET (stix, nargs, obj);
-	return 1; /* success */
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_ngc_new (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_ngc_new (stix_t* stix, stix_ooi_t nargs)
 {
-	int n;
+/* TODO: implement this.
+ * if NGC is allowed for non-OOP objects, GC issues get very simple.
+* 
+* also allow NGC code in non-safe mode. in safe mode, ngc_new is same as normal new.
+* ngc_dispose should not do anything in safe mode. */
+	return pf_basic_new (stix, nargs);
 
-	n = pf_basic_new (stix, nargs);
-	if (n <= 0) return n;
-
-	return 1;
 }
 
-static int pf_ngc_new_with_size (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_ngc_new_with_size (stix_t* stix, stix_ooi_t nargs)
 {
-	int n;
-
-	n = pf_basic_new_with_size (stix, nargs);
-	if (n <= 0) return n;
-
-	return 1;
+	return pf_basic_new_with_size (stix, nargs);
 }
 
-static int pf_ngc_dispose (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_ngc_dispose (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 
@@ -1420,26 +1446,24 @@ static int pf_ngc_dispose (stix_t* stix, stix_ooi_t nargs)
 	stix_freemem (stix, rcv);
 
 	STIX_STACK_SETRET (stix, nargs, stix->_nil);
-	return 1; /* success */
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_shallow_copy (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_shallow_copy (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, obj;
 
 	STIX_ASSERT (stix, nargs ==  0);
-
 	rcv = STIX_STACK_GETRCV (stix, nargs);
 
 	obj = stix_shallowcopy (stix, rcv);
-	if (!obj) return -1;
+	if (!obj) return STIX_PF_HARD_FAILURE;
 
-	/* emulate 'pop receiver' and 'push result' */
 	STIX_STACK_SETRET (stix, nargs, obj);
-	return 1; /* success */
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_basic_size (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_basic_size (stix_t* stix, stix_ooi_t nargs)
 {
 	/* return the number of indexable fields */
 
@@ -1456,14 +1480,14 @@ static int pf_basic_size (stix_t* stix, stix_ooi_t nargs)
 	else
 	{
 		sz = stix_oowtoint (stix, STIX_OBJ_GET_SIZE(rcv));
-		if (!sz) return -1; /* hard failure */
+		if (!sz) return STIX_PF_HARD_FAILURE; /* hard failure */
 	}
 
 	STIX_STACK_SETRET(stix, nargs, sz);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_basic_at (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_basic_at (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, pos, v;
 	stix_oow_t idx;
@@ -1474,19 +1498,19 @@ static int pf_basic_at (stix_t* stix, stix_ooi_t nargs)
 	if (!STIX_OOP_IS_POINTER(rcv))
 	{
 		/* the receiver is a special numeric object, not a normal pointer */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	pos = STIX_STACK_GETARG(stix, nargs, 0);
 	if (stix_inttooow (stix, pos, &idx) <= 0)
 	{
 		/* negative integer or not integer */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 	if (idx >= STIX_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	switch (STIX_OBJ_GET_FLAGS_TYPE(rcv))
@@ -1505,8 +1529,8 @@ static int pf_basic_at (stix_t* stix, stix_ooi_t nargs)
 			break;
 
 		case STIX_OBJ_TYPE_WORD:
-			/* TODO: LargeInteger if the word is too large */
-			v = STIX_SMOOI_TO_OOP(((stix_oop_word_t)rcv)->slot[idx]);
+			v = stix_oowtoint (stix, ((stix_oop_word_t)rcv)->slot[idx]);
+			if (!v) return STIX_PF_HARD_FAILURE;
 			break;
 
 		case STIX_OBJ_TYPE_OOP:
@@ -1515,14 +1539,14 @@ static int pf_basic_at (stix_t* stix, stix_ooi_t nargs)
 
 		default:
 			stix->errnum = STIX_EINTERN;
-			return -1;
+			return STIX_PF_HARD_FAILURE;
 	}
 
 	STIX_STACK_SETRET (stix, nargs, v);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_basic_at_put (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, pos, val;
 	stix_oow_t idx;
@@ -1533,7 +1557,7 @@ static int pf_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 	if (!STIX_OOP_IS_POINTER(rcv))
 	{
 		/* the receiver is a special numeric object, not a normal pointer */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 	pos = STIX_STACK_GETARG(stix, nargs, 0);
 	val = STIX_STACK_GETARG(stix, nargs, 1);
@@ -1541,12 +1565,12 @@ static int pf_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 	if (stix_inttooow (stix, pos, &idx) <= 0)
 	{
 		/* negative integer or not integer */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 	if (idx >= STIX_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	if (STIX_OBJ_GET_CLASS(rcv) == stix->_symbol)
@@ -1554,7 +1578,7 @@ static int pf_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 /* TODO: disallow change of some key kernel objects???? */
 		/* TODO: is it better to introduct a read-only mark in the object header instead of this class check??? */
 		/* read-only object */ /* TODO: DEVISE A WAY TO PASS a proper error from the primitive handler to STIX */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	switch (STIX_OBJ_GET_FLAGS_TYPE(rcv))
@@ -1563,7 +1587,7 @@ static int pf_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 			if (!STIX_OOP_IS_SMOOI(val))
 			{
 				/* the value is not a character */
-				return 0;
+				return STIX_PF_FAILURE;
 			}
 /* TOOD: must I check the range of the value? */
 			((stix_oop_char_t)rcv)->slot[idx] = STIX_OOP_TO_SMOOI(val);
@@ -1573,7 +1597,7 @@ static int pf_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 			if (!STIX_OOP_IS_CHAR(val))
 			{
 				/* the value is not a character */
-				return 0;
+				return STIX_PF_FAILURE;
 			}
 			((stix_oop_char_t)rcv)->slot[idx] = STIX_OOP_TO_CHAR(val);
 			break;
@@ -1582,7 +1606,7 @@ static int pf_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 			if (!STIX_OOP_IS_SMOOI(val))
 			{
 				/* the value is not a number */
-				return 0;
+				return STIX_PF_FAILURE;
 			}
 
 			/* if the small integer is too large, it will get truncated */
@@ -1590,14 +1614,17 @@ static int pf_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 			break;
 
 		case STIX_OBJ_TYPE_WORD:
-			/* TODO: handle LargeInteger */
-			if (!STIX_OOP_IS_SMOOI(val))
+		{
+			stix_oow_t w;
+
+			if (stix_inttooow (stix, val, &w) <= 0)
 			{
-				/* the value is not a number */
-				return 0;
+				/* the value is not a number, out of range, or negative */
+				return STIX_PF_FAILURE;
 			}
-			((stix_oop_word_t)rcv)->slot[idx] = STIX_OOP_TO_SMOOI(val);
+			((stix_oop_word_t)rcv)->slot[idx] = w;
 			break;
+		}
 
 		case STIX_OBJ_TYPE_OOP:
 			((stix_oop_oop_t)rcv)->slot[idx] = val;
@@ -1605,15 +1632,15 @@ static int pf_basic_at_put (stix_t* stix, stix_ooi_t nargs)
 
 		default:
 			stix->errnum = STIX_EINTERN;
-			return -1;
+			return STIX_PF_HARD_FAILURE;
 	}
 
 /* TODO: return receiver or value? */
 	STIX_STACK_SETRET (stix, nargs, val);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_hash (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_hash (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 	stix_oow_t hv;
@@ -1662,7 +1689,7 @@ static int pf_hash (stix_t* stix, stix_ooi_t nargs)
 				default:
 					/* STIX_OBJ_TYPE_OOP, ... */
 					STIX_DEBUG1 (stix, "<pf_hash> Cannot hash an object of type %d\n", type);
-					return 0;
+					return STIX_PF_FAILURE;
 			}
 			break;
 		}
@@ -1670,10 +1697,10 @@ static int pf_hash (stix_t* stix, stix_ooi_t nargs)
 
 	hv %= STIX_SMOOI_MAX;
 	STIX_STACK_SETRET (stix, nargs, STIX_SMOOI_TO_OOP(hv));
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_exceptionize_error (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_exceptionize_error (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 
@@ -1685,16 +1712,16 @@ static int pf_exceptionize_error (stix_t* stix, stix_ooi_t nargs)
 		/* the receiver is a special numeric object, not a normal pointer.
 		 * excceptionization is not supported for small integers, characters, and errors.
 		 * first of all, methods of these classes must not return errors */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 // TODO: .......
 //	STIX_OBJ_SET_FLAGS_EXTRA (rcv, xxx);
 	STIX_STACK_SETRETTORCV (stix, nargs);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_context_goto (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_context_goto (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 	stix_oop_t pc;
@@ -1711,7 +1738,7 @@ static int pf_context_goto (stix_t* stix, stix_ooi_t nargs)
 	{
 		STIX_LOG2 (stix, STIX_LOG_PRIMITIVE | STIX_LOG_ERROR, 
 			"Error(%hs) - invalid receiver, not a method context - %O\n", __PRIMITIVE_NAME__, rcv);
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	pc = STIX_STACK_GETARG(stix, nargs, 0);
@@ -1719,7 +1746,7 @@ static int pf_context_goto (stix_t* stix, stix_ooi_t nargs)
 	{
 		STIX_LOG1 (stix, STIX_LOG_PRIMITIVE | STIX_LOG_ERROR,
 			"Error(%hs) - invalid pc\n", __PRIMITIVE_NAME__);
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	((stix_oop_context_t)rcv)->ip = pc;
@@ -1727,10 +1754,10 @@ static int pf_context_goto (stix_t* stix, stix_ooi_t nargs)
 
 	STIX_ASSERT (stix, nargs + 1 == 2);
 	STIX_STACK_POPS (stix, 2); /* pop both the argument and the receiver */
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int __block_value (stix_t* stix, stix_oop_context_t rcv_blkctx, stix_ooi_t nargs, stix_ooi_t num_first_arg_elems, stix_oop_context_t* pblkctx)
+static stix_pfrc_t __block_value (stix_t* stix, stix_oop_context_t rcv_blkctx, stix_ooi_t nargs, stix_ooi_t num_first_arg_elems, stix_oop_context_t* pblkctx)
 {
 	/* prepare a new block context for activation.
 	 * the receiver must be a block context which becomes the base
@@ -1764,7 +1791,7 @@ static int __block_value (stix_t* stix, stix_oop_context_t rcv_blkctx, stix_ooi_
 		STIX_ASSERT (stix, STIX_OBJ_GET_SIZE(rcv_blkctx) > STIX_CONTEXT_NAMED_INSTVARS);
 		STIX_LOG2 (stix, STIX_LOG_PRIMITIVE | STIX_LOG_ERROR, 
 			"Error(%hs) - re-valuing of a block context - %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 	STIX_ASSERT (stix, STIX_OBJ_GET_SIZE(rcv_blkctx) == STIX_CONTEXT_NAMED_INSTVARS);
 
@@ -1773,7 +1800,7 @@ static int __block_value (stix_t* stix, stix_oop_context_t rcv_blkctx, stix_ooi_
 		STIX_LOG4 (stix, STIX_LOG_PRIMITIVE | STIX_LOG_ERROR, 
 			"Error(%hs) - wrong number of arguments to a block context %O - expecting %zd, got %zd\n",
 			__PRIMITIVE_NAME__, rcv_blkctx, STIX_OOP_TO_SMOOI(rcv_blkctx->method_or_nargs), actual_arg_count);
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	/* the number of temporaries stored in the block context
@@ -1787,7 +1814,7 @@ static int __block_value (stix_t* stix, stix_oop_context_t rcv_blkctx, stix_ooi_
 	stix_pushtmp (stix, (stix_oop_t*)&rcv_blkctx);
 	blkctx = (stix_oop_context_t) stix_instantiate (stix, stix->_block_context, STIX_NULL, local_ntmprs); 
 	stix_poptmp (stix);
-	if (!blkctx) return -1;
+	if (!blkctx) return STIX_PF_HARD_FAILURE;
 
 #if 0
 	/* shallow-copy the named part including home, origin, etc. */
@@ -1834,12 +1861,12 @@ static int __block_value (stix_t* stix, stix_oop_context_t rcv_blkctx, stix_ooi_
 	blkctx->sender = stix->active_context;
 
 	*pblkctx = blkctx;
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_block_value (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_block_value (stix_t* stix, stix_ooi_t nargs)
 {
-	int x;
+	stix_pfrc_t x;
 	stix_oop_context_t rcv_blkctx, blkctx;
 
 	rcv_blkctx = (stix_oop_context_t)STIX_STACK_GETRCV(stix, nargs);
@@ -1848,17 +1875,17 @@ static int pf_block_value (stix_t* stix, stix_ooi_t nargs)
 		/* the receiver must be a block context */
 		STIX_LOG2 (stix, STIX_LOG_PRIMITIVE | STIX_LOG_ERROR, 
 			"Error(%hs) - invalid receiver, not a block context - %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	x = __block_value (stix, rcv_blkctx, nargs, 0, &blkctx);
-	if (x <= 0) return x; /* hard failure and soft failure */
+	if (x <= STIX_PF_FAILURE) return x; /* hard failure and soft failure */
 
 	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)blkctx);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_block_new_process (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_block_new_process (stix_t* stix, stix_ooi_t nargs)
 {
 	/* create a new process from a block context.
 	 * the receiver must be be a block.
@@ -1875,7 +1902,7 @@ static int pf_block_new_process (stix_t* stix, stix_ooi_t nargs)
 	{
 		/* too many arguments */
 /* TODO: proper error handling */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	if (nargs == 1)
@@ -1887,7 +1914,7 @@ static int pf_block_new_process (stix_t* stix, stix_ooi_t nargs)
 		{
 			/* the only optional argument must be an OOP-indexable 
 			 * object like an array */
-			return 0;
+			return STIX_PF_FAILURE;
 		}
 
 		num_first_arg_elems = STIX_OBJ_GET_SIZE(xarg);
@@ -1899,7 +1926,7 @@ static int pf_block_new_process (stix_t* stix, stix_ooi_t nargs)
 		/* the receiver must be a block context */
 		STIX_LOG2 (stix, STIX_LOG_PRIMITIVE | STIX_LOG_ERROR, 
 			"Error(%hs) - invalid receiver, not a block context - %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	/* this primitive creates a new process with a block as if the block
@@ -1914,29 +1941,29 @@ static int pf_block_new_process (stix_t* stix, stix_ooi_t nargs)
 	blkctx->sender = (stix_oop_context_t)stix->_nil;
 
 	proc = make_process (stix, blkctx);
-	if (!proc) return -1; /* hard failure */ /* TOOD: can't this be treated as a soft failure? */
+	if (!proc) return STIX_PF_HARD_FAILURE; /* hard failure */ /* TOOD: can't this be treated as a soft failure? */
 
 	/* __block_value() has popped all arguments and the receiver. 
 	 * PUSH the return value instead of changing the stack top */
 	STIX_STACK_PUSH (stix, (stix_oop_t)proc);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_process_resume (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_process_resume (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 	STIX_ASSERT (stix, nargs == 0);
 
 	rcv = STIX_STACK_GETRCV(stix, nargs);
-	if (STIX_CLASSOF(stix,rcv) != stix->_process) return 0;
+	if (STIX_CLASSOF(stix,rcv) != stix->_process) return STIX_PF_FAILURE;
 
 	resume_process (stix, (stix_oop_process_t)rcv); /* TODO: error check */
 
 	/* keep the receiver in the stack top */
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_process_terminate (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_process_terminate (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 	STIX_ASSERT (stix, nargs == 0);
@@ -1944,71 +1971,71 @@ static int pf_process_terminate (stix_t* stix, stix_ooi_t nargs)
 /* TODO: need to run ensure blocks here..
  * when it's executed here. it does't have to be in Exception>>handleException when there is no exception handler */
 	rcv = STIX_STACK_GETRCV(stix, nargs);
-	if (STIX_CLASSOF(stix,rcv) != stix->_process) return 0;
+	if (STIX_CLASSOF(stix,rcv) != stix->_process) return STIX_PF_FAILURE;
 
 	terminate_process (stix, (stix_oop_process_t)rcv);
 
 	/* keep the receiver in the stack top */
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_process_yield (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_process_yield (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 	STIX_ASSERT (stix, nargs == 0);
 
 	rcv = STIX_STACK_GETRCV(stix, nargs);
-	if (STIX_CLASSOF(stix,rcv) != stix->_process) return 0;
+	if (STIX_CLASSOF(stix,rcv) != stix->_process) return STIX_PF_FAILURE;
 
 	yield_process (stix, (stix_oop_process_t)rcv);
 
 	/* keep the receiver in the stack top */
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_process_suspend (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_process_suspend (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 	STIX_ASSERT (stix, nargs == 0);
 
 	rcv = STIX_STACK_GETRCV(stix, nargs);
-	if (STIX_CLASSOF(stix,rcv) != stix->_process) return 0;
+	if (STIX_CLASSOF(stix,rcv) != stix->_process) return STIX_PF_FAILURE;
 
 	suspend_process (stix, (stix_oop_process_t)rcv);
 
 	/* keep the receiver in the stack top */
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_semaphore_signal (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_semaphore_signal (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 	STIX_ASSERT (stix, nargs == 0);
 
 	rcv = STIX_STACK_GETRCV(stix, nargs);
-	if (STIX_CLASSOF(stix,rcv) != stix->_semaphore) return 0;
+	if (STIX_CLASSOF(stix,rcv) != stix->_semaphore) return STIX_PF_FAILURE;
 
 	signal_semaphore (stix, (stix_oop_semaphore_t)rcv);
 
 	/* keep the receiver in the stack top */
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_semaphore_wait (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_semaphore_wait (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 	STIX_ASSERT (stix, nargs == 0);
 
 	rcv = STIX_STACK_GETRCV(stix, nargs);
-	if (STIX_CLASSOF(stix,rcv) != stix->_semaphore) return 0;
+	if (STIX_CLASSOF(stix,rcv) != stix->_semaphore) return STIX_PF_FAILURE;
 
 	await_semaphore (stix, (stix_oop_semaphore_t)rcv);
 
 	/* keep the receiver in the stack top */
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_processor_schedule (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_processor_schedule (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
 
@@ -2019,14 +2046,14 @@ static int pf_processor_schedule (stix_t* stix, stix_ooi_t nargs)
 
 	if (rcv != (stix_oop_t)stix->processor || STIX_CLASSOF(stix,arg) != stix->_process)
 	{
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	resume_process (stix, (stix_oop_process_t)arg); /* TODO: error check */
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, sec, nsec;
 	stix_oop_semaphore_t sem;
@@ -2037,7 +2064,7 @@ static int pf_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
 	if (nargs == 3) 
 	{
 		nsec = STIX_STACK_GETARG (stix, nargs, 2);
-		if (!STIX_OOP_IS_SMOOI(nsec)) return 0;
+		if (!STIX_OOP_IS_SMOOI(nsec)) return STIX_PF_FAILURE;
 	}
 	else nsec = STIX_SMOOI_TO_OOP(0);
 
@@ -2045,9 +2072,9 @@ static int pf_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
 	sem = (stix_oop_semaphore_t)STIX_STACK_GETARG(stix, nargs, 0);
 	rcv = STIX_STACK_GETRCV(stix, nargs);
 
-	if (rcv != (stix_oop_t)stix->processor) return 0;
-	if (STIX_CLASSOF(stix,sem) != stix->_semaphore) return 0;
-	if (!STIX_OOP_IS_SMOOI(sec)) return 0;
+	if (rcv != (stix_oop_t)stix->processor) return STIX_PF_FAILURE;
+	if (STIX_CLASSOF(stix,sem) != stix->_semaphore) return STIX_PF_FAILURE;
+	if (!STIX_OOP_IS_SMOOI(sec)) return STIX_PF_FAILURE;
 
 	if (STIX_OOP_IS_SMOOI(sem->heap_index) && 
 	    sem->heap_index != STIX_SMOOI_TO_OOP(-1))
@@ -2058,7 +2085,7 @@ static int pf_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
 		/*
 		Is this more desired???
 		STIX_STACK_SETRET (stix, nargs, stix->_false);
-		return 1;
+		return STIX_PF_SUCCESS;
 		*/
 	}
 
@@ -2075,19 +2102,19 @@ static int pf_processor_add_timed_semaphore (stix_t* stix, stix_ooi_t nargs)
 		STIX_LOG3 (stix, STIX_LOG_PRIMITIVE | STIX_LOG_ERROR, 
 			"Error(%hs) - time (%ld) out of range(0 - %zd) when adding a timed semaphore\n", 
 			__PRIMITIVE_NAME__, (unsigned long int)ft.sec, (stix_ooi_t)STIX_SMOOI_MAX);
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	sem->heap_ftime_sec = STIX_SMOOI_TO_OOP(ft.sec);
 	sem->heap_ftime_nsec = STIX_SMOOI_TO_OOP(ft.nsec);
 
-	if (add_to_sem_heap (stix, sem) <= -1) return -1;
+	if (add_to_sem_heap (stix, sem) <= -1) return STIX_PF_HARD_FAILURE;
 
 	STIX_STACK_SETRETTORCV (stix, nargs); /* ^self */
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_processor_remove_semaphore (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_processor_remove_semaphore (stix_t* stix, stix_ooi_t nargs)
 {
 	/* remove a semaphore from processor's signal scheduling */
 
@@ -2102,8 +2129,8 @@ static int pf_processor_remove_semaphore (stix_t* stix, stix_ooi_t nargs)
 /* TODO: remove a semaphore from IO handler if it's registered...
  *       remove a semaphore from XXXXXXXXXXXXXX */
 
-	if (rcv != (stix_oop_t)stix->processor) return 0;
-	if (STIX_CLASSOF(stix,sem) != stix->_semaphore) return 0;
+	if (rcv != (stix_oop_t)stix->processor) return STIX_PF_FAILURE;
+	if (STIX_CLASSOF(stix,sem) != stix->_semaphore) return STIX_PF_FAILURE;
 
 	if (STIX_OOP_IS_SMOOI(sem->heap_index) && 
 	    sem->heap_index != STIX_SMOOI_TO_OOP(-1))
@@ -2114,10 +2141,10 @@ static int pf_processor_remove_semaphore (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	STIX_STACK_SETRETTORCV (stix, nargs); /* ^self */
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_processor_return_to (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_processor_return_to (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, ret, ctx;
 
@@ -2127,10 +2154,10 @@ static int pf_processor_return_to (stix_t* stix, stix_ooi_t nargs)
 	ret = STIX_STACK_GETARG(stix, nargs, 0);
 	ctx = STIX_STACK_GETARG(stix, nargs, 1);
 
-	if (rcv != (stix_oop_t)stix->processor) return 0;
+	if (rcv != (stix_oop_t)stix->processor) return STIX_PF_FAILURE;
 
 	if (STIX_CLASSOF(stix, ctx) != stix->_block_context &&
-	    STIX_CLASSOF(stix, ctx) != stix->_method_context) return 0;
+	    STIX_CLASSOF(stix, ctx) != stix->_method_context) return STIX_PF_FAILURE;
 
 	STIX_STACK_POPS (stix, nargs + 1); /* pop arguments and receiver */
 /* TODO: verify if this is correct? does't it correct restore the stack pointer?
@@ -2144,10 +2171,10 @@ static int pf_processor_return_to (stix_t* stix, stix_ooi_t nargs)
 	STIX_STACK_PUSH (stix, ret);
 
 	SWITCH_ACTIVE_CONTEXT (stix, (stix_oop_context_t)ctx);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_add (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_add (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
 
@@ -2157,13 +2184,13 @@ static int pf_integer_add (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	res = stix_addints (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_sub (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_sub (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
 
@@ -2173,13 +2200,13 @@ static int pf_integer_sub (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	res = stix_subints (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_mul (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_mul (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
 
@@ -2189,13 +2216,13 @@ static int pf_integer_mul (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	res = stix_mulints (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_quo (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_quo (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, quo;
 
@@ -2205,14 +2232,14 @@ static int pf_integer_quo (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	quo = stix_divints (stix, rcv, arg, 0, STIX_NULL);
-	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!quo) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 /* TODO: STIX_EDIVBY0 soft or hard failure? */
 
 	STIX_STACK_SETRET (stix, nargs, quo);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_rem (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_rem (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, quo, rem;
 
@@ -2222,14 +2249,14 @@ static int pf_integer_rem (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	quo = stix_divints (stix, rcv, arg, 0, &rem);
-	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!quo) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 /* TODO: STIX_EDIVBY0 soft or hard failure? */
 
 	STIX_STACK_SETRET (stix, nargs, rem);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_quo2 (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_quo2 (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, quo;
 
@@ -2239,14 +2266,14 @@ static int pf_integer_quo2 (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	quo = stix_divints (stix, rcv, arg, 1, STIX_NULL);
-	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!quo) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 /* TODO: STIX_EDIVBY0 soft or hard failure? */
 
 	STIX_STACK_SETRET (stix, nargs, quo);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_rem2 (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_rem2 (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, quo, rem;
 
@@ -2256,14 +2283,14 @@ static int pf_integer_rem2 (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	quo = stix_divints (stix, rcv, arg, 1, &rem);
-	if (!quo) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!quo) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 /* TODO: STIX_EDIVBY0 soft or hard failure? */
 
 	STIX_STACK_SETRET (stix, nargs, rem);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_negated (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_negated (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, res;
 
@@ -2272,13 +2299,13 @@ static int pf_integer_negated (stix_t* stix, stix_ooi_t nargs)
 	rcv = STIX_STACK_GETRCV(stix, nargs);
 
 	res = stix_negateint (stix, rcv);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_bitat (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_bitat (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
 
@@ -2288,13 +2315,13 @@ static int pf_integer_bitat (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	res = stix_bitatint (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_bitand (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_bitand (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
 
@@ -2304,13 +2331,13 @@ static int pf_integer_bitand (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	res = stix_bitandints (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_bitor (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_bitor (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
 
@@ -2320,13 +2347,13 @@ static int pf_integer_bitor (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	res = stix_bitorints (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_bitxor (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_bitxor (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
 
@@ -2336,13 +2363,13 @@ static int pf_integer_bitxor (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	res = stix_bitxorints (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_bitinv (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_bitinv (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, res;
 
@@ -2351,13 +2378,13 @@ static int pf_integer_bitinv (stix_t* stix, stix_ooi_t nargs)
 	rcv = STIX_STACK_GETRCV(stix, nargs);
 
 	res = stix_bitinvint (stix, rcv);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_bitshift (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_bitshift (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
 
@@ -2367,13 +2394,13 @@ static int pf_integer_bitshift (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	res = stix_bitshiftint (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_eq (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_eq (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
 
@@ -2383,13 +2410,13 @@ static int pf_integer_eq (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	res = stix_eqints (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_ne (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_ne (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
 
@@ -2399,13 +2426,13 @@ static int pf_integer_ne (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	res = stix_neints (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_lt (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_lt (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
 
@@ -2415,13 +2442,13 @@ static int pf_integer_lt (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	res = stix_ltints (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_gt (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_gt (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
 
@@ -2431,13 +2458,13 @@ static int pf_integer_gt (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	res = stix_gtints (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_le (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_le (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
 
@@ -2447,13 +2474,13 @@ static int pf_integer_le (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	res = stix_leints (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_ge (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_ge (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, res;
 
@@ -2463,13 +2490,13 @@ static int pf_integer_ge (stix_t* stix, stix_ooi_t nargs)
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
 	res = stix_geints (stix, rcv, arg);
-	if (!res) return (stix->errnum == STIX_EINVAL? 0: -1); /* soft or hard failure */
+	if (!res) return (stix->errnum == STIX_EINVAL? STIX_PF_FAILURE: STIX_PF_HARD_FAILURE);
 
 	STIX_STACK_SETRET (stix, nargs, res);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_integer_inttostr (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_integer_inttostr (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg, str;
 	stix_ooi_t radix;
@@ -2479,18 +2506,18 @@ static int pf_integer_inttostr (stix_t* stix, stix_ooi_t nargs)
 	rcv = STIX_STACK_GETRCV(stix, nargs);
 	arg = STIX_STACK_GETARG(stix, nargs, 0);
 
-	if (!STIX_OOP_IS_SMOOI(arg)) return 0; /* soft failure */
+	if (!STIX_OOP_IS_SMOOI(arg)) return STIX_PF_FAILURE;
 	radix = STIX_OOP_TO_SMOOI(arg);
 
-	if (radix < 2 || radix > 36) return 0; /* soft failure */
+	if (radix < 2 || radix > 36) return STIX_PF_FAILURE;
 	str = stix_inttostr (stix, rcv, radix);
 	if (!str) return (stix->errnum == STIX_EINVAL? 0: -1);
 
 	STIX_STACK_SETRET (stix, nargs, str);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_smooi_as_character (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_smooi_as_character (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 	stix_ooi_t ec;
@@ -2498,15 +2525,15 @@ static int pf_smooi_as_character (stix_t* stix, stix_ooi_t nargs)
 	STIX_ASSERT (stix, nargs == 0);
 
 	rcv = STIX_STACK_GETRCV(stix, nargs);
-	if (!STIX_OOP_IS_SMOOI(rcv)) return 0;
+	if (!STIX_OOP_IS_SMOOI(rcv)) return STIX_PF_FAILURE;
 
 	ec = STIX_OOP_TO_SMOOI(rcv);
 	if (ec < 0) ec = 0;
 	STIX_STACK_SETRET (stix, nargs, STIX_CHAR_TO_OOP(ec));
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_smooi_as_error (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_smooi_as_error (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 	stix_ooi_t ec;
@@ -2514,15 +2541,15 @@ static int pf_smooi_as_error (stix_t* stix, stix_ooi_t nargs)
 	STIX_ASSERT (stix, nargs == 0);
 
 	rcv = STIX_STACK_GETRCV(stix, nargs);
-	if (!STIX_OOP_IS_SMOOI(rcv)) return 0;
+	if (!STIX_OOP_IS_SMOOI(rcv)) return STIX_PF_FAILURE;
 
 	ec = STIX_OOP_TO_SMOOI(rcv);
 	if (ec < 0) ec = 0;
 	STIX_STACK_SETRET (stix, nargs, STIX_ERROR_TO_OOP(ec));
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_error_as_character (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_error_as_character (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 	stix_ooi_t ec;
@@ -2530,15 +2557,15 @@ static int pf_error_as_character (stix_t* stix, stix_ooi_t nargs)
 	STIX_ASSERT (stix, nargs == 0);
 
 	rcv = STIX_STACK_GETRCV(stix, nargs);
-	if (!STIX_OOP_IS_ERROR(rcv)) return 0;
+	if (!STIX_OOP_IS_ERROR(rcv)) return STIX_PF_FAILURE;
 
 	ec = STIX_OOP_TO_ERROR(rcv);
 	STIX_ASSERT (stix, STIX_IN_SMOOI_RANGE(ec));
 	STIX_STACK_SETRET (stix, nargs, STIX_CHAR_TO_OOP(ec));
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_error_as_integer (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_error_as_integer (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv;
 	stix_ooi_t ec;
@@ -2546,15 +2573,15 @@ static int pf_error_as_integer (stix_t* stix, stix_ooi_t nargs)
 	STIX_ASSERT (stix, nargs == 0);
 
 	rcv = STIX_STACK_GETRCV(stix, nargs);
-	if (!STIX_OOP_IS_ERROR(rcv)) return 0;
+	if (!STIX_OOP_IS_ERROR(rcv)) return STIX_PF_FAILURE;
 
 	ec = STIX_OOP_TO_ERROR(rcv);
 	STIX_ASSERT (stix, STIX_IN_SMOOI_RANGE(ec));
 	STIX_STACK_SETRET (stix, nargs, STIX_SMOOI_TO_OOP(ec));
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_error_as_string (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_error_as_string (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, ss;
 	stix_ooi_t ec;
@@ -2563,7 +2590,7 @@ static int pf_error_as_string (stix_t* stix, stix_ooi_t nargs)
 	STIX_ASSERT (stix, nargs == 0);
 
 	rcv = STIX_STACK_GETRCV(stix, nargs);
-	if (!STIX_OOP_IS_ERROR(rcv)) return 0;
+	if (!STIX_OOP_IS_ERROR(rcv)) return STIX_PF_FAILURE;
 
 	ec = STIX_OOP_TO_ERROR(rcv);
 	STIX_ASSERT (stix, STIX_IN_SMOOI_RANGE(ec));
@@ -2571,13 +2598,13 @@ static int pf_error_as_string (stix_t* stix, stix_ooi_t nargs)
 /* TODO: error string will be mostly the same.. do i really have to call makestring every time? */
 	s = stix_errnumtoerrstr (ec);
 	ss = stix_makestring (stix, s, stix_countoocstr(s));
-	if (!ss) return -1;
+	if (!ss) return STIX_PF_HARD_FAILURE;
 
 	STIX_STACK_SETRET (stix, nargs, ss);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_ffi_open (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_ffi_open (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
 	void* handle;
@@ -2590,13 +2617,13 @@ static int pf_ffi_open (stix_t* stix, stix_ooi_t nargs)
 	if (!STIX_ISTYPEOF(stix, arg, STIX_OBJ_TYPE_CHAR))
 	{
 		/* TODO: more info on error */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	if (!stix->vmprim.dl_open)
 	{
 		/* TODO: more info on error */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 
@@ -2605,17 +2632,17 @@ static int pf_ffi_open (stix_t* stix, stix_ooi_t nargs)
 	if (!handle)
 	{
 		/* TODO: more info on error */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	STIX_STACK_POP (stix);
 /* TODO: how to hold an address? as an integer????  or a byte array? fix this not to loose accuracy*/
 	STIX_STACK_SETTOP (stix, STIX_SMOOI_TO_OOP(handle));
 
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_ffi_close (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_ffi_close (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, arg;
 	void* handle;
@@ -2629,17 +2656,17 @@ static int pf_ffi_close (stix_t* stix, stix_ooi_t nargs)
 	if (!STIX_OOP_IS_SMOOI(arg))
 	{
 		/* TODO: more info on error */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	STIX_STACK_POP (stix);
 
 	handle = (void*)STIX_OOP_TO_SMOOI(arg); /* TODO: how to store void* ???. fix this not to loose accuracy */
 	if (stix->vmprim.dl_close) stix->vmprim.dl_close (stix, handle);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_ffi_call (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_ffi_call (stix_t* stix, stix_ooi_t nargs)
 {
 #if defined(USE_DYNCALL)
 	stix_oop_t rcv, fun, sig, args;
@@ -2654,19 +2681,19 @@ static int pf_ffi_call (stix_t* stix, stix_ooi_t nargs)
 	if (!STIX_OOP_IS_SMOOI(fun)) /* TODO: how to store pointer  */
 	{
 		/* TODO: more info on error */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	if (!STIX_ISTYPEOF(stix, sig, STIX_OBJ_TYPE_CHAR) || STIX_OBJ_GET_SIZE(sig) <= 0)
 	{
 STIX_DEBUG0 (stix, "FFI: wrong signature...\n");
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	if (STIX_CLASSOF(stix,args) != stix->_array) /* TODO: check if arr is a kind of array??? or check if it's indexed */
 	{
 		/* TODO: more info on error */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	{
@@ -2680,7 +2707,7 @@ STIX_DEBUG0 (stix, "FFI: wrong signature...\n");
 		arr = (stix_oop_oop_t)args;
 
 		dc = dcNewCallVM (4096);
-		if (!dc) return -1; /* TODO: proper error handling */
+		if (!dc) return STIX_PF_HARD_FAILURE; /* TODO: proper error handling */
 
 STIX_DEBUG1 (stix, "FFI: CALLING............%p\n", f);
 		/*dcMode (dc, DC_CALL_C_DEFAULT);
@@ -2798,7 +2825,7 @@ STIX_DEBUG2 (stix, "CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_M
 				if (!s) 
 				{
 					dcFree (dc);
-					return -1; /* TODO: proper error h andling */
+					return STIX_PF_HARD_FAILURE; /* TODO: proper error h andling */
 				}
 
 				STIX_STACK_SETTOP (stix, s); 
@@ -2813,13 +2840,13 @@ STIX_DEBUG2 (stix, "CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_M
 		dcFree (dc);
 	}
 
-	return 1;
+	return STIX_PF_SUCCESS;
 #else
-	return 0;
+	return STIX_PF_FAILURE;
 #endif
 }
 
-static int pf_ffi_getsym (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_ffi_getsym (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_t rcv, hnd, fun;
 	void* sym;
@@ -2833,30 +2860,30 @@ static int pf_ffi_getsym (stix_t* stix, stix_ooi_t nargs)
 	if (!STIX_OOP_IS_SMOOI(hnd)) /* TODO: how to store pointer  */
 	{
 		/* TODO: more info on error */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	if (!STIX_ISTYPEOF(stix,fun,STIX_OBJ_TYPE_CHAR))
 	{
 STIX_DEBUG0 (stix, "wrong function name...\n");
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	if (!stix->vmprim.dl_getsym)
 	{
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	sym = stix->vmprim.dl_getsym (stix, (void*)STIX_OOP_TO_SMOOI(hnd), ((stix_oop_char_t)fun)->slot);
 	if (!sym)
 	{
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 /* TODO: how to hold an address? as an integer????  or a byte array? */
 	STIX_STACK_SETRET (stix, nargs, STIX_SMOOI_TO_OOP(sym));
 
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
 #define MAX_NARGS STIX_TYPE_MAX(stix_ooi_t)
@@ -2876,6 +2903,8 @@ static pf_t pftab[] =
 
 	{   1,  1,  pf_identical,                        "_identical"           },
 	{   1,  1,  pf_not_identical,                    "_not_identical"       },
+	{   1,  1,  pf_equal,                            "_equal"               },
+	{   1,  1,  pf_not_equal,                        "_not_equal"           },
 	{   0,  0,  pf_class,                            "_class"               },
 
 	{   0,  0,  pf_basic_new,                        "_basic_new"           },
@@ -3077,8 +3106,8 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 				stix_pushtmp (stix, (stix_oop_t*)&method);
 				n = pftab[pfnum].handler (stix, nargs);
 				stix_poptmp (stix);
-				if (n <= -1) return -1; /* hard primitive failure */
-				if (n >= 1) break; /* primitive ok */
+				if (n <= STIX_PF_HARD_FAILURE) return -1;
+				if (n >= STIX_PF_SUCCESS) break;
 			}
 
 			/* soft primitive failure */
@@ -3137,12 +3166,12 @@ static int start_method (stix_t* stix, stix_oop_method_t method, stix_oow_t narg
 				n = handler (stix, nargs);
 
 				stix_poptmp (stix);
-				if (n <= -1) 
+				if (n <= STIX_PF_HARD_FAILURE) 
 				{
 					STIX_DEBUG2 (stix, "Hard failure indicated by primitive function %p - return code %d\n", handler, n);
 					return -1; /* hard primitive failure */
 				}
-				if (n >= 1) break; /* primitive ok*/
+				if (n >= STIX_PF_SUCCESS) break; /* primitive ok*/
 
 				/* soft primitive failure */
 				STIX_DEBUG1 (stix, "Soft failure indicated by primitive function %p\n", handler);

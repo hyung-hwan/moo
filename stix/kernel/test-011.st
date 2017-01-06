@@ -9,35 +9,35 @@
 ##       use #extend to extend a class
 ##       using #class for both feels confusing.
 
-#extend Apex
+extend Apex
 {
 
 }
 
-#extend SmallInteger
+extend SmallInteger
 {
-	#method getTrue: anInteger
+	method getTrue: anInteger
 	{
 		^anInteger + 9999.
 	}
 
-	#method inc
+	method inc
 	{
 		^self + 1.
 	}
 }
 
-#class TestObject(Object)
+class TestObject(Object)
 {
-	#dcl(#class) Q R.
-	#dcl(#classinst) a1 a2.
+	dcl(#class) Q R.
+	dcl(#classinst) a1 a2.
 }
 
 
-#class MyObject(TestObject)
+class MyObject(TestObject)
 {
 
-	#method(#class) main2
+	method(#class) main2
 	{
 		| k q |
 		'BEGINNING OF main2' dump.
@@ -56,12 +56,12 @@
 		'END OF main2' dump.
 	}
 
-	#method(#class) raise_exception
+	method(#class) raise_exception
 	{
 		Exception signal: 'bad exceptinon'.
 	}
 
-	#method(#class) test3
+	method(#class) test3
 	{
 		| k j g_ex |
 		j := 20.
@@ -90,7 +90,7 @@
 		'END OF TEST3' dump.
 	}
 
-	#method(#class) test4_1
+	method(#class) test4_1
 	{
 		| k j |
 		j := 20.
@@ -113,7 +113,7 @@
 		'END OF TEST4_1' dump.
 	}
 
-	#method(#class) test4
+	method(#class) test4
 	{
 		'BEGINNING OF TEST4' dump.
 		[ self test4_1 ] on: Exception do: [:ex | 'Excepton in test4_1' dump. ex messageText dump. ex resume].
@@ -121,7 +121,7 @@
 	}
 
 
-	#method(#class) test5
+	method(#class) test5
 	{
 		| k j |
 		'BEGINNING OF TEST5' dump.
@@ -142,7 +142,7 @@
 		'END OF TEST5' dump.
 	}
 
-	#method(#class) test11
+	method(#class) test11
 	{
 		## exception is raised in a new process. it can't be captured
 		## by an exception handler of a calling process.
@@ -157,7 +157,7 @@
 		'END OF test11' dump.
 	}
 
-	#method(#class) test12
+	method(#class) test12
 	{
 		'BEGINNING OF test12' dump.
 		[ 
@@ -174,7 +174,7 @@
 		'END OF test12' dump.
 	}
 
-	#method(#class) main
+	method(#class) main
 	{
 
 		'>>>>> BEGINNING OF MAIN' dump.

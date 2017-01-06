@@ -48,7 +48,7 @@ struct console_t
 };
 /* ------------------------------------------------------------------------ */
 
-static int pf_open (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_open (stix_t* stix, stix_ooi_t nargs)
 {
 #if defined(_WIN32)
 	HANDLE h;
@@ -119,10 +119,10 @@ static int pf_open (stix_t* stix, stix_ooi_t nargs)
 #endif
 
 	STIX_STACK_SETRET (stix, nargs, STIX_SMOOI_TO_OOP((stix_oow_t)con));
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_close (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_close (stix_t* stix, stix_ooi_t nargs)
 {
 #if defined(_WIN32)
 	HANDLE h;
@@ -139,10 +139,10 @@ static int pf_close (stix_t* stix, stix_ooi_t nargs)
 
 	stix_freemem (stix, con);
 	STIX_STACK_SETRETTORCV (stix, nargs);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_write (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_write (stix_t* stix, stix_ooi_t nargs)
 {
 	console_t* con;
 	stix_oop_char_t oomsg;
@@ -157,7 +157,7 @@ static int pf_write (stix_t* stix, stix_ooi_t nargs)
 	if (STIX_CLASSOF(stix,oomsg) != stix->_string)
 	{
 /* TODO: invalid message */
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	ucspos = 0;
@@ -171,7 +171,7 @@ static int pf_write (stix_t* stix, stix_ooi_t nargs)
 			if (n != -2 || ucslen <= 0) 
 			{
 				stix_seterrnum (stix, STIX_EECERR);
-				return -1;
+				return STIX_PF_HARD_FAILURE;
 			}
 		}
 
@@ -182,10 +182,10 @@ static int pf_write (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	STIX_STACK_SETRETTORCV (stix, nargs); /* TODO: change return code */
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_clear (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_clear (stix_t* stix, stix_ooi_t nargs)
 {
 	console_t* con;
 
@@ -194,10 +194,10 @@ static int pf_clear (stix_t* stix, stix_ooi_t nargs)
 	write (con->fd, con->clear, strlen(con->clear));
 
 	STIX_STACK_SETRETTORCV (stix, nargs);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_setcursor (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_setcursor (stix_t* stix, stix_ooi_t nargs)
 {
 	console_t* con;
 	stix_oop_oop_t point;
@@ -209,43 +209,15 @@ static int pf_setcursor (stix_t* stix, stix_ooi_t nargs)
 /* TODO: error check, class check, size check.. */
 	if (STIX_OBJ_GET_SIZE(point) != 2)
 	{
-		return 0;
+		return STIX_PF_FAILURE;
 	}
 
 	cup = tiparm (con->cup, STIX_OOP_TO_SMOOI(point->slot[1]), STIX_OOP_TO_SMOOI(point->slot[0]));
 	write (con->fd, cup, strlen(cup)); /* TODO: error check */
 
 	STIX_STACK_SETRETTORCV (stix, nargs);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
-
-
-#if 0
-static int pf_setcursorto (stix_t* stix, stix_ooi_t nargs)
-{
-	console_t* con;
-	stix_oop_oop_t point;
-	char* cup;
-
-	rcv = STIX_STACK_GETRCV(stix, nargs);
-	con = STIX_OOP_TO_SMOOI(
-
-	con = STIX_OOP_TO_SMOOI(STIX_STACK_GETARG(stix, nargs, 0));
-	point = STIX_STACK_GETARG(stix, nargs, 1);
-
-/* TODO: error check, class check, size check.. */
-	if (STIX_OBJ_GET_SIZE(point) != 2)
-	{
-		return 0;
-	}
-
-	cup = tiparm (con->cup, STIX_OOP_TO_SMOOI(point->slot[1]), STIX_OOP_TO_SMOOI(point->slot[0]));
-	write (con->fd, cup, strlen(cup)); /* TODO: error check */
-
-	STIX_STACK_SETRETTORCV (stix, nargs);
-	return 1;
-}
-#endif
 
 /* ------------------------------------------------------------------------ */
 

@@ -97,32 +97,33 @@ static stix_ooch_t synerrstr_26[] = {'w','r','o','n','g',' ','d','i','r','e','c'
 static stix_ooch_t synerrstr_27[] = {'u','n','d','e','f','i','n','e','d',' ','c','l','a','s','s','\0'};
 static stix_ooch_t synerrstr_28[] = {'d','u','p','l','i','c','a','t','e',' ','c','l','a','s','s','\0'};
 static stix_ooch_t synerrstr_29[] = {'c','o','n','t','r','a','d','i','c','t','o','r','y',' ','c','l','a','s','s',' ','d','e','f','i','n','i','t','i','o','n','\0'};
-static stix_ooch_t synerrstr_30[] = {'#','d','c','l',' ','n','o','t',' ','a','l','l','o','w','e','d','\0'};
-static stix_ooch_t synerrstr_31[] = {'w','r','o','n','g',' ','m','e','t','h','o','d',' ','n','a','m','e','\0'};
-static stix_ooch_t synerrstr_32[] = {'d','u','p','l','i','c','a','t','e',' ','m','e','t','h','o','d',' ','n','a','m','e','\0'};
-static stix_ooch_t synerrstr_33[] = {'d','u','p','l','i','c','a','t','e',' ','a','r','g','u','m','e','n','t',' ','n','a','m','e','\0'};
-static stix_ooch_t synerrstr_34[] = {'d','u','p','l','i','c','a','t','e',' ','t','e','m','p','o','r','a','r','y',' ','v','a','r','i','a','b','l','e',' ','n','a','m','e','\0'};
-static stix_ooch_t synerrstr_35[] = {'d','u','p','l','i','c','a','t','e',' ','v','a','r','i','a','b','l','e',' ','n','a','m','e','\0'};
-static stix_ooch_t synerrstr_36[] = {'d','u','p','l','i','c','a','t','e',' ','b','l','o','c','k',' ','a','r','g','u','m','e','n','t',' ','n','a','m','e','\0'};
-static stix_ooch_t synerrstr_37[] = {'c','a','n','n','o','t',' ','a','s','s','i','g','n',' ','t','o',' ','a','r','g','u','m','e','n','t','\0'};
-static stix_ooch_t synerrstr_38[] = {'u','n','d','e','c','l','a','r','e','d',' ','v','a','r','i','a','b','l','e','\0'};
-static stix_ooch_t synerrstr_39[] = {'u','n','u','s','a','b','l','e',' ','v','a','r','i','a','b','l','e',' ','i','n',' ','c','o','m','p','i','l','e','d',' ','c','o','d','e','\0'};
-static stix_ooch_t synerrstr_40[] = {'i','n','a','c','c','e','s','s','i','b','l','e',' ','v','a','r','i','a','b','l','e','\0'};
-static stix_ooch_t synerrstr_41[] = {'a','m','b','i','g','u','o','u','s',' ','v','a','r','i','a','b','l','e','\0'};
-static stix_ooch_t synerrstr_42[] = {'w','r','o','n','g',' ','e','x','p','r','e','s','s','i','o','n',' ','p','r','i','m','a','r','y','\0'};
-static stix_ooch_t synerrstr_43[] = {'t','o','o',' ','m','a','n','y',' ','t','e','m','p','o','r','a','r','i','e','s','\0'};
-static stix_ooch_t synerrstr_44[] = {'t','o','o',' ','m','a','n','y',' ','a','r','g','u','m','e','n','t','s','\0'};
-static stix_ooch_t synerrstr_45[] = {'t','o','o',' ','m','a','n','y',' ','b','l','o','c','k',' ','t','e','m','p','o','r','a','r','i','e','s','\0'};
-static stix_ooch_t synerrstr_46[] = {'t','o','o',' ','m','a','n','y',' ','b','l','o','c','k',' ','a','r','g','u','m','e','n','t','s','\0'};
-static stix_ooch_t synerrstr_47[] = {'t','o','o',' ','l','a','r','g','e',' ','b','l','o','c','k','\0'};
-static stix_ooch_t synerrstr_48[] = {'w','r','o','n','g',' ','p','r','i','m','i','t','i','v','e',' ','f','u','n','c','t','i','o','n',' ','n','u','m','b','e','r','\0'};
-static stix_ooch_t synerrstr_49[] = {'w','r','o','n','g',' ','p','r','i','m','i','t','i','v','e',' ','f','u','n','c','t','i','o','n',' ','i','d','e','n','t','i','f','i','e','r','\0'};
-static stix_ooch_t synerrstr_50[] = {'w','r','o','n','g',' ','m','o','d','u','l','e',' ','n','a','m','e','\0'};
-static stix_ooch_t synerrstr_51[] = {'#','i','n','c','l','u','d','e',' ','e','r','r','o','r','\0'};
-static stix_ooch_t synerrstr_52[] = {'w','r','o','n','g',' ','n','a','m','e','s','p','a','c','e',' ','n','a','m','e','\0'};
-static stix_ooch_t synerrstr_53[] = {'w','r','o','n','g',' ','p','o','o','l',' ','d','i','c','t','i','o','n','a','r','y',' ','n','a','m','e','\0'};
-static stix_ooch_t synerrstr_54[] = {'d','u','p','l','i','c','a','t','e',' ','p','o','o','l',' ','d','i','c','t','i','o','n','a','r','y',' ','n','a','m','e','\0'};
-static stix_ooch_t synerrstr_55[] = {'l','i','t','e','r','a','l',' ','e','x','p','e','c','t','e','d','\0'};
+static stix_ooch_t synerrstr_30[] = {'w','r','o','n','g',' ','c','l','a','s','s',' ','n','a','m','e','\0'};
+static stix_ooch_t synerrstr_31[] = {'#','d','c','l',' ','n','o','t',' ','a','l','l','o','w','e','d','\0'};
+static stix_ooch_t synerrstr_32[] = {'w','r','o','n','g',' ','m','e','t','h','o','d',' ','n','a','m','e','\0'};
+static stix_ooch_t synerrstr_33[] = {'d','u','p','l','i','c','a','t','e',' ','m','e','t','h','o','d',' ','n','a','m','e','\0'};
+static stix_ooch_t synerrstr_34[] = {'d','u','p','l','i','c','a','t','e',' ','a','r','g','u','m','e','n','t',' ','n','a','m','e','\0'};
+static stix_ooch_t synerrstr_35[] = {'d','u','p','l','i','c','a','t','e',' ','t','e','m','p','o','r','a','r','y',' ','v','a','r','i','a','b','l','e',' ','n','a','m','e','\0'};
+static stix_ooch_t synerrstr_36[] = {'d','u','p','l','i','c','a','t','e',' ','v','a','r','i','a','b','l','e',' ','n','a','m','e','\0'};
+static stix_ooch_t synerrstr_37[] = {'d','u','p','l','i','c','a','t','e',' ','b','l','o','c','k',' ','a','r','g','u','m','e','n','t',' ','n','a','m','e','\0'};
+static stix_ooch_t synerrstr_38[] = {'c','a','n','n','o','t',' ','a','s','s','i','g','n',' ','t','o',' ','a','r','g','u','m','e','n','t','\0'};
+static stix_ooch_t synerrstr_39[] = {'u','n','d','e','c','l','a','r','e','d',' ','v','a','r','i','a','b','l','e','\0'};
+static stix_ooch_t synerrstr_40[] = {'u','n','u','s','a','b','l','e',' ','v','a','r','i','a','b','l','e',' ','i','n',' ','c','o','m','p','i','l','e','d',' ','c','o','d','e','\0'};
+static stix_ooch_t synerrstr_41[] = {'i','n','a','c','c','e','s','s','i','b','l','e',' ','v','a','r','i','a','b','l','e','\0'};
+static stix_ooch_t synerrstr_42[] = {'a','m','b','i','g','u','o','u','s',' ','v','a','r','i','a','b','l','e','\0'};
+static stix_ooch_t synerrstr_43[] = {'w','r','o','n','g',' ','e','x','p','r','e','s','s','i','o','n',' ','p','r','i','m','a','r','y','\0'};
+static stix_ooch_t synerrstr_44[] = {'t','o','o',' ','m','a','n','y',' ','t','e','m','p','o','r','a','r','i','e','s','\0'};
+static stix_ooch_t synerrstr_45[] = {'t','o','o',' ','m','a','n','y',' ','a','r','g','u','m','e','n','t','s','\0'};
+static stix_ooch_t synerrstr_46[] = {'t','o','o',' ','m','a','n','y',' ','b','l','o','c','k',' ','t','e','m','p','o','r','a','r','i','e','s','\0'};
+static stix_ooch_t synerrstr_47[] = {'t','o','o',' ','m','a','n','y',' ','b','l','o','c','k',' ','a','r','g','u','m','e','n','t','s','\0'};
+static stix_ooch_t synerrstr_48[] = {'t','o','o',' ','l','a','r','g','e',' ','b','l','o','c','k','\0'};
+static stix_ooch_t synerrstr_49[] = {'w','r','o','n','g',' ','p','r','i','m','i','t','i','v','e',' ','f','u','n','c','t','i','o','n',' ','n','u','m','b','e','r','\0'};
+static stix_ooch_t synerrstr_50[] = {'w','r','o','n','g',' ','p','r','i','m','i','t','i','v','e',' ','f','u','n','c','t','i','o','n',' ','i','d','e','n','t','i','f','i','e','r','\0'};
+static stix_ooch_t synerrstr_51[] = {'w','r','o','n','g',' ','m','o','d','u','l','e',' ','n','a','m','e','\0'};
+static stix_ooch_t synerrstr_52[] = {'#','i','n','c','l','u','d','e',' ','e','r','r','o','r','\0'};
+static stix_ooch_t synerrstr_53[] = {'w','r','o','n','g',' ','n','a','m','e','s','p','a','c','e',' ','n','a','m','e','\0'};
+static stix_ooch_t synerrstr_54[] = {'w','r','o','n','g',' ','p','o','o','l',' ','d','i','c','t','i','o','n','a','r','y',' ','n','a','m','e','\0'};
+static stix_ooch_t synerrstr_55[] = {'d','u','p','l','i','c','a','t','e',' ','p','o','o','l',' ','d','i','c','t','i','o','n','a','r','y',' ','n','a','m','e','\0'};
+static stix_ooch_t synerrstr_56[] = {'l','i','t','e','r','a','l',' ','e','x','p','e','c','t','e','d','\0'};
 static stix_ooch_t* synerrstr[] =
 {
 	synerrstr_0, synerrstr_1, synerrstr_2, synerrstr_3, synerrstr_4, synerrstr_5, synerrstr_6, synerrstr_7,
@@ -131,7 +132,8 @@ static stix_ooch_t* synerrstr[] =
 	synerrstr_24, synerrstr_25, synerrstr_26, synerrstr_27, synerrstr_28, synerrstr_29, synerrstr_30, synerrstr_31,
 	synerrstr_32, synerrstr_33, synerrstr_34, synerrstr_35, synerrstr_36, synerrstr_37, synerrstr_38, synerrstr_39,
 	synerrstr_40, synerrstr_41, synerrstr_42, synerrstr_43, synerrstr_44, synerrstr_45, synerrstr_46, synerrstr_47,
-	synerrstr_48, synerrstr_49, synerrstr_50, synerrstr_51, synerrstr_52, synerrstr_53, synerrstr_54, synerrstr_55
+	synerrstr_48, synerrstr_49, synerrstr_50, synerrstr_51, synerrstr_52, synerrstr_53, synerrstr_54, synerrstr_55,
+	synerrstr_56 
 };
 #endif
 /* END: GENERATED WITH generr.st */

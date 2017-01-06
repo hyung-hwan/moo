@@ -9,43 +9,43 @@
 ##       use #extend to extend a class
 ##       using #class for both feels confusing.
 
-#extend Apex
+extend Apex
 {
 
 }
 
-#extend SmallInteger
+extend SmallInteger
 {
-	#method getTrue: anInteger
+	method getTrue: anInteger
 	{
 		^anInteger + 9999.
 	}
 
-	#method inc
+	method inc
 	{
 		^self + 1.
 	}
 }
 
-#class TestObject(Object)
+class TestObject(Object)
 {
-	#dcl(#class) Q R.
-	#dcl(#classinst) a1 a2.
+	dcl(#class) Q R.
+	dcl(#classinst) a1 a2.
 }
 
 
-#class MyObject(TestObject)
+class MyObject(TestObject)
 {
 	#declare(#classinst) t1 t2.
 
-	#method(#class) main2
+	method(#class) main2
 	{
 		'START OF MAIN2' dump.
 		t1 value.
 		'END OF MAIN2' dump.
 	}
 
-	#method(#class) main1
+	method(#class) main1
 	{
 		'START OF MAIN1' dump.
 		self main2.
@@ -54,7 +54,7 @@
 		
 	}
 
-	#method(#class) main
+	method(#class) main
 	{
 		'START OF MAIN' dump.
 		t1 := ['BLOCK #1' dump. ^100].

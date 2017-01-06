@@ -1,57 +1,52 @@
-#class Collection(Object)
+
+class Collection(Object)
 {
 }
 
 ## -------------------------------------------------------------------------------
-
-#class(#pointer) Array(Collection)
+class(#pointer) Array(Collection)
 {
-	#method size
+	method size
 	{
-		^self basicSize.
+		^self basicSize
 	}
 
-	#method ubound
-	{
-		^(self basicSize - 1).
-	}
-
-	#method at: anInteger
+	method at: anInteger
 	{
 		^self basicAt: anInteger.
 	}
 
-	#method at: anInteger put: aValue
+	method at: anInteger put: aValue
 	{
 		^self basicAt: anInteger put: aValue.
 	}
 
-	#method first
+	method first
 	{
 		^self at: 0.
 	}
 
-	#method last
+	method last
 	{
-		^self at: (self ubound).
+		^self at: (self basicSize - 1).
 	}
 
-	#method do: aBlock
+	method do: aBlock
 	{
-		0 to: (self ubound) do: [:i | aBlock value: (self at: i)].
+		0 priorTo: (self basicSize) do: [:i | aBlock value: (self at: i)].
 	}
 
-	#method copy: anArray
+	method copy: anArray
 	{
-		0 to: (anArray ubound) do: [:i | self at: i put: (anArray at: i) ].
+		0 priorTo: (anArray basicSize) do: [:i | self at: i put: (anArray at: i) ].
 	}
 }
 
 ## -------------------------------------------------------------------------------
 
-#class(#character) String(Array)
+class(#character) String(Array)
 {
-	#method & string
+	method & string
 	{
 		(* TOOD: make this a primitive for performance. *)
 		
@@ -70,7 +65,7 @@
 		^newstr
 	}
 	
-	#method asString
+	method asString
 	{
 		^self
 	}
@@ -78,9 +73,9 @@
 
 ## -------------------------------------------------------------------------------
 
-#class(#character) Symbol(String)
+class(#character) Symbol(String)
 {
-	#method asString
+	method asString
 	{
 		(* TODO: make this a primitive for performance *)
 
@@ -96,14 +91,14 @@
 
 ## -------------------------------------------------------------------------------
 
-#class(#byte) ByteArray(Collection)
+class(#byte) ByteArray(Collection)
 {
-	#method at: anInteger
+	method at: anInteger
 	{
 		^self basicAt: anInteger.
 	}
 
-	#method at: anInteger put: aValue
+	method at: anInteger put: aValue
 	{
 		^self basicAt: anInteger put: aValue.
 	}
@@ -111,22 +106,22 @@
 
 ## -------------------------------------------------------------------------------
 
-#class Set(Collection)
+class Set(Collection)
 {
-	#dcl tally bucket.
+	dcl tally bucket.
 	
-	#method initialize
+	method initialize
 	{
 		self.tally := 0.
 		self.bucket := Array new: 100. 
 	}
 
-	#method size
+	method size
 	{
 		^self.tally
 	}
 
-	#method at: key
+	method at: key
 	{
 		| ass |
 		ass := self __find: key or_upsert: false with: nil.
@@ -134,7 +129,7 @@
 		^ErrorCode.NOENT
 	}
 
-	#method at: key ifAbsent: error_block
+	method at: key ifAbsent: error_block
 	{
 		| ass |
 		ass := self __find: key or_upsert: false with: nil.
@@ -142,13 +137,13 @@
 		^error_block value.
 	}
 
-	#method at: key put: value
+	method at: key put: value
 	{
 		self __find: key or_upsert: true with: value.
 		^value
 	}
 
-	#method __find: key or_upsert: upsert with: value
+	method __find: key or_upsert: upsert with: value
 	{
 		| hv ass bs index ntally |
 
@@ -158,7 +153,7 @@
 
 		[(ass := self.bucket at: index) notNil] 
 			whileTrue: [
-				[key == ass key] ifTrue: [
+				[key == ass key] ifTrue: [ (* TODO: change it to equality??? *)
 					(* found *)
 					upsert ifTrue: [ass value: value].
 					^ass
@@ -181,7 +176,7 @@
 		^ass
 	}
 
-	#method do: block
+	method do: block
 	{
 		| bs |
 
@@ -192,7 +187,7 @@
 		].
 	}
 	
-	#method keysAndValuesDo: block
+	method keysAndValuesDo: block
 	{
 		| bs |
 
@@ -204,15 +199,15 @@
 	}
 }
 
-#class SymbolSet(Set)
+class SymbolSet(Set)
 {
 }
 
-#class Dictionary(Set)
+class Dictionary(Set)
 {
 }
 
-#pooldic Log
+pooldic Log
 {
 	## -----------------------------------------------------------
 	## defines log levels
@@ -226,7 +221,7 @@
 	#FATAL := 16.
 }
 
-#class SystemDictionary(Dictionary)
+class SystemDictionary(Dictionary)
 {
 	## the following methods may not look suitable to be placed
 	## inside a system dictionary. but they are here for quick and dirty
@@ -234,27 +229,27 @@
 	##   System logNl: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'.
 	##
 
-	#dcl(#pooldic) Log.
+	dcl(#pooldic) Log.
 
-	#method atLevel: level log: message
+	method atLevel: level log: message
 	{
 		<primitive: #_log>
 		## do nothing upon logging failure
 	}
 
-	#method atLevel: level log: message and: message2
+	method atLevel: level log: message and: message2
 	{
 		<primitive: #_log>
 		## do nothing upon logging failure
 	}
 
-	#method atLevel: level log: message and: message2 and: message3
+	method atLevel: level log: message and: message2 and: message3
 	{
 		<primitive: #_log>
 		## do nothing upon logging failure
 	}
 
-	#method atLevel: level logNl: message 
+	method atLevel: level logNl: message 
 	{
 		## the #_log primitive accepts an array.
 		## so the following lines should work also.
@@ -267,58 +262,64 @@
 		^self atLevel: level log: message and: S'\n'.
 	}
 
-	#method atLevel: level logNl: message and: message2
+	method atLevel: level logNl: message and: message2
 	{
 		^self atLevel: level log: message and: message2 and: S'\n'.
 	}
 
-	#method log: message
+	method log: message
 	{
 		^self atLevel: Log.INFO log: message.
 	}
 
-	#method log: message and: message2
+	method log: message and: message2
 	{
 		^self atLevel: Log.INFO log: message and: message2.
 	}
 
-	#method logNl: message
+	method logNl: message
 	{
 		^self atLevel: Log.INFO logNl: message.
 	}
 
-	#method logNl: message and: message2
+	method logNl: message and: message2
 	{
 		^self atLevel: Log.INFO logNl: message and: message2.
 	}
+
+	method at: key
+	{
+		(key class = Symbol) ifTrue: [InvalidArgumentException signal: 'argument is not a symbol'].
+		^super at: key.
+	}
 }
 
-#class Namespace(Set)
+class Namespace(Set)
 {
 }
 
-#class PoolDictionary(Set)
+class PoolDictionary(Set)
 {
 }
 
-#class MethodDictionary(Dictionary)
+class MethodDictionary(Dictionary)
 {
 
 }
 
-#extend Apex
+extend Apex
 {
 	## -------------------------------------------------------
 	## Association has been defined now. let's add association
 	## creating methods
 	## -------------------------------------------------------
 
-	#method(#class) -> object
+	method(#class) -> object
 	{
 		^Association new key: self value: object
 	}
 
-	#method -> object
+	method -> object
 	{
 		^Association new key: self value: object
 	}

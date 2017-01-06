@@ -39,14 +39,14 @@ struct stdio_t
 	FILE* fp;
 };
 
-static int pf_newinstsize (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_newinstsize (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_ooi_t newinstsize = STIX_SIZEOF(stdio_t) - STIX_SIZEOF(stix_obj_t);
 	STIX_STACK_SETRET (stix, nargs, STIX_SMOOI_TO_OOP(newinstsize)); 
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_open (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_open (stix_t* stix, stix_ooi_t nargs)
 {
 	stix_oop_char_t name;
 	stix_oop_char_t mode;
@@ -84,14 +84,14 @@ static int pf_open (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	STIX_STACK_SETRETTORCV (stix, nargs);
-	return 1;
+	return STIX_PF_SUCCESS;
 
 reterr:
 	STIX_STACK_SETRETTOERROR (stix, nargs);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_close (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_close (stix_t* stix, stix_ooi_t nargs)
 {
 	stdio_t* rcv;
 
@@ -103,17 +103,17 @@ static int pf_close (stix_t* stix, stix_ooi_t nargs)
 	}
 
 	STIX_STACK_SETRETTORCV (stix, nargs);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_gets (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_gets (stix_t* stix, stix_ooi_t nargs)
 {
 	/* return how many bytes have been written.. */
 	STIX_STACK_SETRETTORCV (stix, nargs);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int __pf_puts (stix_t* stix, stix_ooi_t nargs, stix_oow_t limit)
+static stix_pfrc_t __pf_puts (stix_t* stix, stix_ooi_t nargs, stix_oow_t limit)
 {
 	stdio_t* rcv;
 	stix_ooi_t i;
@@ -181,19 +181,19 @@ static int __pf_puts (stix_t* stix, stix_ooi_t nargs, stix_oow_t limit)
 	}
 
 	STIX_STACK_SETRETTORCV (stix, nargs);
-	return 1;
+	return STIX_PF_SUCCESS;
 
 reterr:
 	STIX_STACK_SETRETTOERROR (stix, nargs);
-	return 1;
+	return STIX_PF_SUCCESS;
 }
 
-static int pf_putc (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_putc (stix_t* stix, stix_ooi_t nargs)
 {
 	return __pf_puts (stix, nargs, 1);
 }
 
-static int pf_puts (stix_t* stix, stix_ooi_t nargs)
+static stix_pfrc_t pf_puts (stix_t* stix, stix_ooi_t nargs)
 {
 	return __pf_puts (stix, nargs, STIX_TYPE_MAX(stix_oow_t));
 }

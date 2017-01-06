@@ -76,24 +76,24 @@ static struct voca_t
 } vocas[] = {
 	{  5, { '#','b','y','t','e'                                           } },
 	{ 10, { '#','c','h','a','r','a','c','t','e','r'                       } },
+	{  5, { 'c','l','a','s','s'                                           } },
 	{  6, { '#','c','l','a','s','s'                                       } },
 	{ 10, { '#','c','l','a','s','s','i','n','s','t'                       } },
-	{  4, { '#','d','c','l'                                               } },
-	{  8, { '#','d','e','c','l','a','r','e'                               } },
+	{  3, { 'd','c','l'                                                   } },
+	{  7, { 'd','e','c','l','a','r','e'                                   } },
 	{  6, { 'e','n','s','u','r','e',                                      } },
 	{  5, { 'e','r','r','o','r'                                           } },
 	{  9, { 'e','x','c','e','p','t','i','o','n'                           } },
-	{  7, { '#','e','x','t','e','n','d'                                   } },
+	{  6, { 'e','x','t','e','n','d'                                       } },
 	{  5, { 'f','a','l','s','e'                                           } },
 	{  4, { 'f','r','o','m'                                               } },
 	{  9, { '#','h','a','l','f','w','o','r','d'                           } },
 	{  8, { '#','i','n','c','l','u','d','e'                               } },
 	{  7, { '#','l','i','w','o','r','d'                                   } },
-	{  5, { '#','m','a','i','n'                                           } },
-	{  7, { '#','m','e','t','h','o','d'                                   } },
-	{  4, { '#','m','t','h'                                               } },
+	{  6, { 'm','e','t','h','o','d'                                       } },
 	{  3, { 'n','i','l'                                                   } },
 	{  8, { '#','p','o','i','n','t','e','r'                               } },
+	{  7, { 'p','o','o','l','d','i','c'                                   } },
 	{  8, { '#','p','o','o','l','d','i','c'                               } },
 	{ 10, { 'p','r','i','m','i','t','i','v','e',':'                       } },
 	{  4, { 's','e','l','f'                                               } },
@@ -112,10 +112,11 @@ static struct voca_t
 
 enum voca_id_t
 {
-	VOCA_BYTE,
-	VOCA_CHARACTER,
+	VOCA_BYTE_S,
+	VOCA_CHARACTER_S,
 	VOCA_CLASS,
-	VOCA_CLASSINST,
+	VOCA_CLASS_S,
+	VOCA_CLASSINST_S,
 	VOCA_DCL,
 	VOCA_DECLARE,
 	VOCA_ENSURE,
@@ -124,22 +125,21 @@ enum voca_id_t
 	VOCA_EXTEND,
 	VOCA_FALSE,
 	VOCA_FROM,
-	VOCA_HALFWORD,
-	VOCA_INCLUDE,
-	VOCA_LIWORD,
-	VOCA_MAIN,
+	VOCA_HALFWORD_S,
+	VOCA_INCLUDE_S,
+	VOCA_LIWORD_S,
 	VOCA_METHOD,
-	VOCA_MTH,
 	VOCA_NIL,
-	VOCA_POINTER,
+	VOCA_POINTER_S,
 	VOCA_POOLDIC,
+	VOCA_POOLDIC_S,
 	VOCA_PRIMITIVE_COLON,
 	VOCA_SELF,
 	VOCA_SUPER,
 	VOCA_THIS_CONTEXT,
 	VOCA_THIS_PROCESS,
 	VOCA_TRUE,
-	VOCA_WORD,
+	VOCA_WORD_S,
 
 	VOCA_VBAR,
 	VOCA_GT,
@@ -268,6 +268,30 @@ static int is_reserved_word (const stix_oocs_t* ucs)
 		VOCA_ERROR,
 		VOCA_THIS_CONTEXT,
 		VOCA_THIS_PROCESS,
+	};
+	int i;
+
+	for (i = 0; i < STIX_COUNTOF(rw); i++)
+	{
+		if (is_word(ucs, rw[i])) return 1;
+	}
+
+	return 0;
+}
+
+static int is_restricted_word (const stix_oocs_t* ucs)
+{
+	/* not fully reserved. but restricted in a certain context */
+
+	static int rw[] = 
+	{
+		VOCA_CLASS,
+		VOCA_DCL,
+		VOCA_DECLARE,
+		VOCA_EXTEND,
+		VOCA_METHOD,
+		VOCA_POOLDIC,
+		VOCA_FROM
 	};
 	int i;
 
@@ -2535,21 +2559,21 @@ static int compile_class_level_variables (stix_t* stix)
 		/* process variable modifiers */
 		GET_TOKEN (stix);
 
-		if (is_token_symbol(stix, VOCA_CLASS))
+		if (is_token_symbol(stix, VOCA_CLASS_S))
 		{
-			/* #dcl(#class) */
+			/* dcl(#class) */
 			dcl_type = VAR_CLASS;
 			GET_TOKEN (stix);
 		}
-		else if (is_token_symbol(stix, VOCA_CLASSINST))
+		else if (is_token_symbol(stix, VOCA_CLASSINST_S))
 		{
-			/* #dcl(#classinst) */
+			/* dcl(#classinst) */
 			dcl_type = VAR_CLASSINST;
 			GET_TOKEN (stix);
 		}
-		else if (is_token_symbol(stix, VOCA_POOLDIC))
+		else if (is_token_symbol(stix, VOCA_POOLDIC_S))
 		{
-			/* #dcl(#pooldic) - import a pool dictionary */
+			/* dcl(#pooldic) - import a pool dictionary */
 			dcl_type = VAR_GLOBAL; /* this is not a real type. use for branching below */
 			GET_TOKEN (stix);
 		}
@@ -2922,34 +2946,17 @@ static int compile_method_primitive (stix_t* stix)
 				{
 					/* a built-in primitive function is not found 
 					 * check if it is a primitive function identifier */
-#if 0
-					const stix_ooch_t* us;
-					us = stix_findoochar (tptr, tlen, '_');
-					if (us > tptr && us < tptr + tlen - 1)
-					{
-						stix_oow_t lit_idx;
-						/* the symbol literal contains an underscore.
-						 * and it is neither the first nor the last character */
-						if (add_symbol_literal(stix, TOKEN_NAME(stix), 1, &lit_idx) >= 0 &&
-						    STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx))
-						{
-							stix->c->mth.pftype = 2; /* named primitive */
-							stix->c->mth.pfnum = lit_idx;
-							break;
-						}
-					}
-#else
 					stix_oow_t lit_idx;
 
-					if (add_symbol_literal(stix, TOKEN_NAME(stix), 1, &lit_idx) >= 0 &&
+					if (stix_findoochar (tptr, tlen, '.') && 
+					    add_symbol_literal(stix, TOKEN_NAME(stix), 1, &lit_idx) >= 0 &&
 					    STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx))
 					{
-						stix->c->mth.pftype = 2; /* named primitive */
+						/* external named primitive containing a period. */
+						stix->c->mth.pftype = 2; 
 						stix->c->mth.pfnum = lit_idx;
 						break;
 					}
-
-#endif
 
 					/* wrong primitive number */
 					set_syntax_error (stix, STIX_SYNERR_PFID, TOKEN_LOC(stix), TOKEN_NAME(stix));
@@ -4671,9 +4678,9 @@ static int compile_method_definition (stix_t* stix)
 		/* process method modifiers  */
 		GET_TOKEN (stix);
 
-		if (is_token_symbol(stix, VOCA_CLASS))
+		if (is_token_symbol(stix, VOCA_CLASS_S))
 		{
-			/* #method(#class) */
+			/* method(#class) */
 			stix->c->mth.type = STIX_METHOD_CLASS;
 			GET_TOKEN (stix);
 		}
@@ -4837,7 +4844,7 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	 * variable-modifier := "(" (#class | #classinst)? ")"
 	 * variable-list := identifier*
 	 *
-	 * method-definition := (#mth | #method) method-modifier? method-actual-definition
+	 * method-definition := method method-modifier? method-actual-definition
 	 * method-modifier := "(" (#class | #instance)? ")"
 	 * method-actual-definition := method-name "{" method-tempraries? method-primitive? method-statements* "}"
 	 *
@@ -4853,44 +4860,44 @@ static int __compile_class_definition (stix_t* stix, int extend)
 
 		GET_TOKEN (stix);
 
-		if (is_token_symbol(stix, VOCA_BYTE))
+		if (is_token_symbol(stix, VOCA_BYTE_S))
 		{
-			/* #class(#byte) */
+			/* class(#byte) */
 			stix->c->cls.flags |= CLASS_INDEXED;
 			stix->c->cls.indexed_type = STIX_OBJ_TYPE_BYTE;
 			GET_TOKEN (stix);
 		}
-		else if (is_token_symbol(stix, VOCA_CHARACTER))
+		else if (is_token_symbol(stix, VOCA_CHARACTER_S))
 		{
-			/* #class(#character) */
+			/* class(#character) */
 			stix->c->cls.flags |= CLASS_INDEXED;
 			stix->c->cls.indexed_type = STIX_OBJ_TYPE_CHAR;
 			GET_TOKEN (stix);
 		}
-		else if (is_token_symbol(stix, VOCA_HALFWORD))
+		else if (is_token_symbol(stix, VOCA_HALFWORD_S))
 		{
-			/* #class(#halfword) */
+			/* class(#halfword) */
 			stix->c->cls.flags |= CLASS_INDEXED;
 			stix->c->cls.indexed_type = STIX_OBJ_TYPE_HALFWORD;
 			GET_TOKEN (stix);
 		}
-		else if (is_token_symbol(stix, VOCA_WORD))
+		else if (is_token_symbol(stix, VOCA_WORD_S))
 		{
-			/* #class(#word) */
+			/* class(#word) */
 			stix->c->cls.flags |= CLASS_INDEXED;
 			stix->c->cls.indexed_type = STIX_OBJ_TYPE_WORD;
 			GET_TOKEN (stix);
 		}
-		else if (is_token_symbol(stix, VOCA_POINTER))
+		else if (is_token_symbol(stix, VOCA_POINTER_S))
 		{
-			/* #class(#pointer) */
+			/* class(#pointer) */
 			stix->c->cls.flags |= CLASS_INDEXED;
 			stix->c->cls.indexed_type = STIX_OBJ_TYPE_OOP;
 			GET_TOKEN (stix);
 		}
-		else if (is_token_symbol(stix, VOCA_LIWORD))
+		else if (is_token_symbol(stix, VOCA_LIWORD_S))
 		{
-			/* #class(#biatom) */
+			/* class(#liword) */
 			stix->c->cls.flags |= CLASS_INDEXED;
 			stix->c->cls.indexed_type = STIX_OBJ_TYPE_LIWORD;
 			GET_TOKEN (stix);
@@ -4912,6 +4919,15 @@ static int __compile_class_definition (stix_t* stix, int extend)
 		set_syntax_error (stix, STIX_SYNERR_IDENT, TOKEN_LOC(stix), TOKEN_NAME(stix));
 		return -1;
 	}
+
+#if 0
+	if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT && is_restricted_word (TOKEN_NAME(stix)))
+	{
+		/* wrong class name */
+		set_syntax_error (stix, STIX_SYNERR_CLASSNAME, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		return -1;
+	}
+#endif
 
 	/* copy the class name */
 	if (set_class_fqn(stix, TOKEN_NAME(stix)) <= -1) return -1;
@@ -5115,12 +5131,11 @@ static int __compile_class_definition (stix_t* stix, int extend)
 		stix_oop_char_t pds;
 
 		/* when a class is extended, a new variable cannot be added */
-		if (is_token_symbol(stix, VOCA_DCL) || is_token_symbol(stix, VOCA_DECLARE))
+		if (is_token_word(stix, VOCA_DCL) || is_token_word(stix, VOCA_DECLARE))
 		{
 			set_syntax_error (stix, STIX_SYNERR_DCLBANNED, TOKEN_LOC(stix), TOKEN_NAME(stix));
 			return -1;
 		}
-
 
 #ifdef MTHDIC
 		/* use the method dictionary of an existing class object */
@@ -5182,9 +5197,9 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	{
 		/* a new class including an internally defined class object */
 
-		while (is_token_symbol(stix, VOCA_DCL) || is_token_symbol(stix, VOCA_DECLARE))
+		while (is_token_word(stix, VOCA_DCL) || is_token_word(stix, VOCA_DECLARE))
 		{
-			/* variable definition. #dcl or #declare */
+			/* variable definition. dcl or declare */
 			GET_TOKEN (stix);
 			if (compile_class_level_variables(stix) <= -1) return -1;
 		}
@@ -5197,9 +5212,9 @@ static int __compile_class_definition (stix_t* stix, int extend)
 		}
 	}
 
-	while (is_token_symbol(stix, VOCA_MTH) || is_token_symbol(stix, VOCA_METHOD))
+	while (is_token_word(stix, VOCA_METHOD))
 	{
-		/* method definition. #mth or #method */
+		/* method definition. method */
 		GET_TOKEN (stix);
 		if (compile_method_definition(stix) <= -1) return -1;
 	}
@@ -5478,7 +5493,7 @@ static int compile_stream (stix_t* stix)
 
 	while (TOKEN_TYPE(stix) != STIX_IOTOK_EOF)
 	{
-		if (is_token_symbol(stix, VOCA_INCLUDE))
+		if (is_token_symbol(stix, VOCA_INCLUDE_S))
 		{
 			/* #include 'xxxx' */
 			GET_TOKEN (stix);
@@ -5489,21 +5504,21 @@ static int compile_stream (stix_t* stix)
 			}
 			if (begin_include(stix) <= -1) return -1;
 		}
-		else if (is_token_symbol(stix, VOCA_CLASS))
+		else if (is_token_word(stix, VOCA_CLASS))
 		{
-			/* #class Selfclass(Superclass) { } */
+			/* class Selfclass(Superclass) { } */
 			GET_TOKEN (stix);
 			if (compile_class_definition(stix, 0) <= -1) return -1;
 		}
-		else if (is_token_symbol(stix, VOCA_EXTEND))
+		else if (is_token_word(stix, VOCA_EXTEND))
 		{
-			/* #extend Selfclass {} */
+			/* extend Selfclass {} */
 			GET_TOKEN (stix);
 			if (compile_class_definition(stix, 1) <= -1) return -1;
 		}
-		else if (is_token_symbol(stix, VOCA_POOLDIC))
+		else if (is_token_word(stix, VOCA_POOLDIC))
 		{
-			/* #pooldic SharedPoolDic { #ABC := 20. #DEFG := 'ayz' } */
+			/* pooldic SharedPoolDic { #ABC := 20. #DEFG := 'ayz' } */
 			GET_TOKEN (stix);
 			if (compile_pooldic_definition(stix) <= -1) return -1;
 		}

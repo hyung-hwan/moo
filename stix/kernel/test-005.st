@@ -9,50 +9,50 @@
 ##       use #extend to extend a class
 ##       using #class for both feels confusing.
 
-#extend Apex
+extend Apex
 {
 
 }
 
-#extend SmallInteger
+extend SmallInteger
 {
-	#method getTrue: anInteger
+	method getTrue: anInteger
 	{
 		^anInteger + 9999.
 	}
 
-	#method inc
+	method inc
 	{
 		^self + 1.
 	}
 }
 
-#class TestObject(Object)
+class TestObject(Object)
 {
-	#dcl(#class) Q R.
-	#dcl(#classinst) t1 t2.
+	dcl(#class) Q R.
+	dcl(#classinst) t1 t2.
 }
 
 
-#class MyObject(TestObject)
+class MyObject(TestObject)
 {
-	#dcl(#class) C B A.
+	dcl(#class) C B A.
 
-	#method getTrue
+	method getTrue
 	{
 		^true.
 	}
 
-	#method getTrue: anInteger
+	method getTrue: anInteger
 	{
 		^ anInteger
 	}
-	#method getFalse
+	method getFalse
 	{
 		^false
 	}
 
-	#method yyy: aBlock
+	method yyy: aBlock
 	{
 		| a |
 		a := aBlock value.
@@ -62,14 +62,14 @@
 		##a := Stix.MyCOM.HashTable new.
 	}
 
-	#method xxx: aBlock
+	method xxx: aBlock
 	{
 		| a |
 		a := self yyy: aBlock.
 		'KKKKKKKKKKKKKKKKKKKKKKKKKKKKK' dump.
 		^a.
 	}
-	#method(#class) main2 
+	method(#class) main2 
 	{
 		| a b c sum |
 
@@ -139,7 +139,7 @@
 		##a dump.
 	}
 
-	#method(#class) main55
+	method(#class) main55
 	{
 		|a b c|
 
@@ -148,7 +148,7 @@
 ##		[ b < 5 ] whileTrue: [ b dump. b := b + 1 ].
 	}
 
-	#method(#class) getTen
+	method(#class) getTen
 	{
 		^10
 	}
@@ -158,7 +158,7 @@
 " this sample demonstrates what happens when a block context returns to the origin's caller
   after the caller has already returned. "
 
-	#method(#class) xxxx
+	method(#class) xxxx
 	{
 		| g1 g2 |
 		t1 dump.
@@ -168,7 +168,7 @@
 		t1 := t1 + 1. 
 		self xxxx
 	}
-	#method(#class) yyyy
+	method(#class) yyyy
 	{
 		|c1|
 		t1 := 1.
@@ -177,14 +177,14 @@
 		999 dump.
 		^c1.
 	}
-	#method(#class) main66
+	method(#class) main66
 	{
 		self yyyy.
 		t2 := t2 value.  "can t2 return? it should return somewhere into the method context of yyy. but it has already terminated"
 		t2 dump.
 	}
 
-	#method(#class) mainj
+	method(#class) mainj
 	{
 		|k1|
 		t1 := 1.
@@ -195,7 +195,7 @@
 	}
 ## ----------------------------------------------------------------------
 
-	#method(#class) main22
+	method(#class) main22
 	{
 		|a b c d e f g h i j k sum |
 
@@ -224,31 +224,31 @@
 		[self getTen] value dump.
 	}
 
-	#method(#class) abc
+	method(#class) abc
 	{
 		<primitive: #snd_open>
 	}
 
-	#method(#class) a: a b: b c: c
+	method(#class) a: a b: b c: c
 	{
 		c dump.
 	}
 
-	#method(#class) a: a b: b c: c d: d e: e f: f g: g h: h
+	method(#class) a: a b: b c: c d: d e: e f: f g: g h: h
 	{
 		h dump.
 	}
-	#method(#class) a: a b: b c: c d: d e: e f: f g: g
+	method(#class) a: a b: b c: c d: d e: e f: f g: g
 	{
 		g dump.
 	}
 
-	#method(#class) getABlock
+	method(#class) getABlock
 	{
 		^ [ 'a block returned by getABlock' dump. "^ self"]
 	}
 
-	#method(#class) main
+	method(#class) main
 	{
 "
 		| ffi |
@@ -502,12 +502,12 @@ self represents the receiver. that is bc->origin->receiver which is mc1->receive
 
 --------------------------------------------------------------------------------
 
-#method ifTrue: trueBlock
+method ifTrue: trueBlock
 {
 	^trueBlock value.
 }
 
-#method whileTrue: aBlock
+method whileTrue: aBlock
 {
 	(self value) ifTrue: [aBlock value. self whileTrue: aBlock].
 }

@@ -1,46 +1,46 @@
-#class Point(Object)
+class Point(Object)
 {
-	#dcl x y.
+	dcl x y.
 
-	#method(#class) new
+	method(#class) new
 	{
 		^self basicNew x: 0 y: 0.
 	}
-	#method(#class) x: x y: y
+	method(#class) x: x y: y
 	{
 		^self basicNew x: x y: y.
 	}
 
-	#method x 
+	method x 
 	{
 		^self.x
 	}
 
-	#method y
+	method y
 	{
 		^self.y
 	}
 
-	#method x: x
+	method x: x
 	{
 		self.x := x
 	}
 
-	#method y: y
+	method y: y
 	{
 		self.y := y
 	}
 
-	#method x: x y: y
+	method x: x y: y
 	{
 		self.x := x.
 		self.y := y
 	}
 }
 
-#extend SmallInteger
+extend SmallInteger
 {
-	#method @ y
+	method @ y
 	{
 		^Point x: self y: y
 	}
@@ -49,11 +49,11 @@
 
 
 
-#class Console(Object)
+class Console(Object)
 {
-	#dcl handle.
+	dcl handle.
 "
-	#method finalize
+	method finalize
 	{
 		handle notNil ifTrue: [
 			self _close: handle.
@@ -62,12 +62,12 @@
 "
 
 
-##	#method(#class) input
+##	method(#class) input
 ##	{
 ##		^self new _open: filename mode: mode
 ##	}
 
-	#method(#class) output
+	method(#class) output
 	{
 		| c |
 
@@ -76,73 +76,73 @@
 		^c
 	}
 
-##	#method(#class) error
+##	method(#class) error
 ##	{
 ##	}
 
 
-	#method handle: v
+	method handle: v
 	{
 		self.handle := v.
 	}
 
-	#method close
+	method close
 	{
 		self _close: self.handle.
 		self.handle := nil.
 	}
 
-	#method write: text
+	method write: text
 	{
 		^self _writeOn: self.handle text: text.
 	}
 
-	#method clear
+	method clear
 	{
 		^self _clear: self.handle
 	}
-	#method setCursor: point
+	method setCursor: point
 	{
 		^self _setCursor: self.handle point: point.
 	}
 "
-	#method _open: filename mode: mode
+	method _open: filename mode: mode
 	{
 		self.handle := self __open: filename mode: mode.
 		^self.
 	}
 
-	#method __open: filename mode: mode
+	method __open: filename mode: mode
 	{
 		<primitive: #console.open>
 		##StdioException signal: ('cannot open ' & filename).
 	}
 "
 
-	#method _open
+	method _open
 	{
 		<primitive: #console.open>
 	}
 
-	#method _close: handle
+	method _close: handle
 	{
 		<primitive: #console.close>
 		self primitiveFailed.
 	}
 
-	#method _clear: handle
+	method _clear: handle
 	{
 		<primitive: #console.clear>
 		self primitiveFailed.
 	}
 
-	#method _writeOn: handle text: text
+	method _writeOn: handle text: text
 	{
 		<primitive: #console.write>
 		self primitiveFailed.
 	}
 
-	#method _setCursor: handle point: point
+	method _setCursor: handle point: point
 	{
 		<primitive: #console.setcursor>
 		self primitiveFailed.
@@ -151,19 +151,19 @@
 
 
 "
-	#method(#class) open
+	method(#class) open
 	{
 		<primitive: #console.open>
 		self primitiveFailed.
 	}
 
-	#method close
+	method close
 	{
 		<primitive: #console.close>
 		self primitiveFailed.
 	}
 
-	#method setCursorTo: point
+	method setCursorTo: point
 	{
 		<primitive: #console.setcursor>
 		self primitiveFailed.
@@ -195,9 +195,9 @@ Stix define: 'console_write'
 
 ---> produces a method like this internally...
 
-#class Console
+class Console
 {
-	#method write: aString upto: length
+	method write: aString upto: length
 	{
 		<ffi: int console_write (int*, char*, [int, int, char]* )> <== parse the string, create a descriptor table, key is console_write, value is resolved to a function pointer.
 	}

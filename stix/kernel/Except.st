@@ -4,42 +4,42 @@
 ## TODO: is it better to inherit from Object???
 ##       or treat Exception specially like UndefinedObject or Class???
 ##
-#class Exception(Apex)
+class Exception(Apex)
 {
-	#dcl signalContext handlerContext messageText.
+	dcl signalContext handlerContext messageText.
 
-	#method(#class) signal
+	method(#class) signal
 	{
 		^self new signal
 	}
 
-	#method(#class) signal: text
+	method(#class) signal: text
 	{
 		^self new signal: text
 	}
 
-	#method handlerContext: context
+	method handlerContext: context
 	{
 		self.handlerContext := context.
 	}
 
-	#method messageText
+	method messageText
 	{
 		^self.messageText
 	}
 
-	#method asString
+	method asString
 	{
 		^(self class name) & ' - ' & self.messageText.
 	}
 
-	#method __signal 
+	method __signal 
 	{
 		self.signalContext := thisContext.
 		((thisContext sender) findExceptionContext) handleException: self.
 	}
 
-	#method signal
+	method signal
 	{
 		| exctx exblk retval actpos |
 
@@ -74,26 +74,26 @@
 		thisProcess terminate.
 	}
 
-	#method signal: text
+	method signal: text
 	{
 		self.messageText := text.
 		^self signal.
 	}
 
-	#method pass
+	method pass
 	{
 		## pass the exception to the outer context
 		((self.handlerContext sender) findExceptionContext) handleException: self.
 	}
 
-	#method return: value
+	method return: value
 	{
 		(self.handlerContext notNil) ifTrue: [
 			Processor return: value to: self.handlerContext.
 		].
 	}
 
-	#method retry
+	method retry
 	{
 ## TODO: verify if return:to: causes unnecessary stack growth.
 		(self.handlerContext notNil)  ifTrue: [
@@ -102,7 +102,7 @@
 		].
 	}
 
-	#method resume: value
+	method resume: value
 	{
 ## TODO: verify if return:to: causes unnecessary stack growth.
 ## is this correct???
@@ -115,31 +115,31 @@
 		].
 	}
 
-	#method resume
+	method resume
 	{
 		^self resume: nil.
 	}
 }
 
 ##============================================================================
-#extend Context
+extend Context
 {
-	#method isExceptionContext
+	method isExceptionContext
 	{
 		^false
 	}
 
-	#method isEnsureContext
+	method isEnsureContext
 	{
 		^false
 	}
 
-	#method ensureBlock
+	method ensureBlock
 	{
 		^nil
 	}
 
-	#method findExceptionContext
+	method findExceptionContext
 	{
 		| ctx |
 		ctx := self.
@@ -150,7 +150,7 @@
 		^nil
 	}
 
-	#method unwindTo: context return: retval
+	method unwindTo: context return: retval
 	{
 		## -------------------------------------------------------------------
 		## <<private>>
@@ -183,21 +183,21 @@
 }
 
 ##============================================================================
-#extend MethodContext
+extend MethodContext
 {
-	#method isExceptionContext
+	method isExceptionContext
 	{
 		## 10 - STIX_METHOD_PREAMBLE_EXCEPTION in VM.
 		^self.method preambleCode == 10.
 	}
 
-	#method isEnsureContext
+	method isEnsureContext
 	{
 		## 10 - STIX_METHOD_PREAMBLE_ENSURE in VM.
 		^self.method preambleCode == 11
 	}
 
-	#method ensureBlock
+	method ensureBlock
 	{
 ## TODO: change 8 to a constant when stix is enhanced to support constant definition
 
@@ -213,7 +213,7 @@
 	}
 
 
-	#method findExceptionHandlerFor: exception_class
+	method findExceptionHandlerFor: exception_class
 	{
 		(* find an exception handler block for a given exception class.
 		 *
@@ -242,7 +242,7 @@
 		^nil.
 	}
 
-	#method handleException: exception
+	method handleException: exception
 	{
 		(* -----------------------------------------------------------------
 		 * <<private>>
@@ -295,9 +295,9 @@
 }
 
 ##============================================================================
-#extend BlockContext
+extend BlockContext
 {
-	#method on: anException do: anExceptionBlock
+	method on: anException do: anExceptionBlock
 	{
 		| exception_active |
 		<exception>
@@ -314,7 +314,7 @@ thisContext isExceptionContext dump.
 		^self value.
 	}
 
-	#method on: exc1 do: blk1 on: exc2 do: blk2
+	method on: exc1 do: blk1 on: exc2 do: blk2
 	{
 		| exception_active |
 		<exception>
@@ -322,7 +322,7 @@ thisContext isExceptionContext dump.
 		^self value.
 	}
 
-	#method ensure: aBlock
+	method ensure: aBlock
 	{
 		| retval done |
 		<ensure>
@@ -339,7 +339,7 @@ thisContext isExceptionContext dump.
 		^retval
 	}
 
-	#method ifCurtailed: aBlock
+	method ifCurtailed: aBlock
 	{
 		| v ok |
 
@@ -351,33 +351,37 @@ thisContext isExceptionContext dump.
 
 
 ##============================================================================
-#class InstantiationFailureException(Exception)
+class InstantiationFailureException(Exception)
 {
 }
 
-#class NoSuchMessageException(Exception)
+class NoSuchMessageException(Exception)
 {
 }
 
-#class PrimitiveFailureException(Exception)
+class PrimitiveFailureException(Exception)
 {
 }
 
-#class IndexOutOfRangeException(Exception)
+class IndexOutOfRangeException(Exception)
 {
 }
 
-#class SubclassResponsibilityException(Exception)
+class SubclassResponsibilityException(Exception)
 {
 }
 
-#class ErrorExceptionizationFailureException(Exception)
+class InvalidArgumentException(Exception)
 {
 }
 
-#extend Apex
+class ErrorExceptionizationFailureException(Exception)
 {
-	#method(#class) primitiveFailed
+}
+
+extend Apex
+{
+	method(#class) primitiveFailed
 	{
 		## TODO: implement this
 ## experimental backtrace...
@@ -393,29 +397,29 @@ ctx := thisContext.
 		PrimitiveFailureException signal: 'PRIMITIVE FAILED'.
 	}
 
-	#method(#class) cannotInstantiate
+	method(#class) cannotInstantiate
 	{
 ## TOOD: accept a class
 		InstantiationFailureException signal: 'Cannot instantiate'.
 	}
 
-	#method(#class) doesNotUnderstand: message_name
+	method(#class) doesNotUnderstand: message_name
 	{
 		## TODO: implement this properly
 		NoSuchMessageException signal: (message_name & ' not understood by ' & (self name)).
 	}
 
-	#method(#class) index: index outOfRange: ubound
+	method(#class) index: index outOfRange: ubound
 	{
 		IndexOutOfRangeException signal: 'Out of range'.
 	}
 
-	#method(#class) subclassResponsibility: message_name
+	method(#class) subclassResponsibility: message_name
 	{
 		SubclassResponsibilityException signal: ('Subclass must implment ' & message_name).
 	}
 
-	#method(#class) cannotExceptionizeError
+	method(#class) cannotExceptionizeError
 	{
 ## todo: accept the object
 		ErrorExceptionizationFailureException signal: 'Cannot exceptionize an error'

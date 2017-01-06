@@ -9,59 +9,59 @@
 ##       use #extend to extend a class
 ##       using #class for both feels confusing.
 
-#extend Apex
+extend Apex
 {
 
 }
 
-#extend SmallInteger
+extend SmallInteger
 {
-	#method getTrue: anInteger
+	method getTrue: anInteger
 	{
 		^anInteger + 9999.
 	}
 
-	#method inc
+	method inc
 	{
 		^self + 1.
 	}
 }
 
-#class TestObject(Object)
+class TestObject(Object)
 {
-	#dcl(#class) Q R.
-	#dcl(#classinst) t1 t2.
+	dcl(#class) Q R.
+	dcl(#classinst) t1 t2.
 }
 
 
-#class MyObject(TestObject)
+class MyObject(TestObject)
 {
-	#dcl(#class) C B A.
+	dcl(#class) C B A.
 
-	#method getTrue
+	method getTrue
 	{
 		^true.
 	}
 
-	#method getTrue: anInteger
+	method getTrue: anInteger
 	{
 		^ anInteger
 	}
-	#method getFalse
+	method getFalse
 	{
 		^false
 	}
 
-	#method a { ^ 10 }
-	#method b { ^ 20 }
-	#method c { ^ 30 }
+	method a { ^ 10 }
+	method b { ^ 20 }
+	method c { ^ 30 }
 
-	#method(#class) a: a b: b c: c
+	method(#class) a: a b: b c: c
 	{
 		^ a + b + c.
 	}
 
-	#method(#class) getBlock
+	method(#class) getBlock
 	{
 		| a |
 		a := 7777777.
@@ -73,7 +73,7 @@
 		^[self a: a b: 3 c: ([[[^6] value] value ] value)].
 	}
 
-	#method(#class) main
+	method(#class) main
 	{
 "
 		| k | 

@@ -9,55 +9,55 @@
 ##       use #extend to extend a class
 ##       using #class for both feels confusing.
 
-#extend Apex
+extend Apex
 {
 
 }
 
-#extend SmallInteger
+extend SmallInteger
 {
-	#method getTrue: anInteger
+	method getTrue: anInteger
 	{
 		^anInteger + 9999.
 	}
 
-	#method inc
+	method inc
 	{
 		^self + 1.
 	}
 }
 
-#class TestObject(Object)
+class TestObject(Object)
 {
-	#dcl(#class) Q R.
-	#dcl(#classinst) a1 a2.
+	dcl(#class) Q R.
+	dcl(#classinst) a1 a2.
 
-	#method test999
+	method test999
 	{
 		^self.Q
 	}
 }
 
-#class B.TestObject(Object)
+class B.TestObject(Object)
 {
-	#dcl(#class) Q R.
-	#dcl(#classinst) a1 a2.
+	dcl(#class) Q R.
+	dcl(#classinst) a1 a2.
 
-	#method test000
+	method test000
 	{
 		^self.Q
 	}
 }
 
-#pooldic ABC 
+pooldic ABC 
 {
 	#KKK := 20.
 }
 
 
-#class MyObject(TestObject)
+class MyObject(TestObject)
 {
-	#method(#class) main111
+	method(#class) main111
 	{
 		| s3 |
 		s3 := Semaphore new.
@@ -67,7 +67,7 @@
 	}
 
 	
-	#method(#class) main987
+	method(#class) main987
 	{
 		|t1 t2 s1 s2 s3|
 
@@ -112,7 +112,7 @@
 
 	}
 
-	#method(#class) aaa_123
+	method(#class) aaa_123
 	{
 		| v1 |
 		v1 := [
@@ -130,7 +130,7 @@
 		].
 		^v1
 	}
-	#method(#class) main
+	method(#class) main
 	{
 		| v1 |
 		'START OF MAIN' dump.
@@ -171,7 +171,7 @@
 		'END OF MAIN' dump.
 	}
 
-	#method(#class) main22222
+	method(#class) main22222
 	{
 		|t1 t2 s1 s2 s3|
 
@@ -211,7 +211,7 @@
 		'END OF MAIN' dump.
 	}
 
-	#method(#class) test_semaphore_heap
+	method(#class) test_semaphore_heap
 	{
 		| sempq a |
 		sempq := SemaphoreHeap new.

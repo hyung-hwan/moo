@@ -30,7 +30,7 @@ variable-definition := (#dcl | #declare) variable-modifier? variable-list "."
 variable-modifier := "(" (#class | #classinst)? ")"
 variable-list := identifier*
 
-method-definition := (#mth | #method) method-modifier? method-actual-definition
+method-definition := #method method-modifier? method-actual-definition
 method-modifier := "(" (#class | #instance) ")"
 method-actual-definition := method-name "{" method-tempraries? method-primitive? method-statements* "}"
 

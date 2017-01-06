@@ -1,16 +1,16 @@
-#class Apex(nil)
+class Apex(nil)
 {
-	#dcl(#class) sysdic.
+	dcl(#class) sysdic.
 
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
-	#method(#class) dump
+	method(#class) dump
 	{
 		<primitive: #_dump>
 	}
 
-	#method dump
+	method dump
 	{
 		<primitive: #_dump>
 	}
@@ -18,12 +18,12 @@
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
-	#method(#class) yourself
+	method(#class) yourself
 	{
 		^self.
 	}
 
-	#method yourself
+	method yourself
 	{
 		^self.
 	}
@@ -31,31 +31,31 @@
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
-	#method(#class) basicNew
+	method(#class) basicNew
 	{
 		<primitive: #_basic_new>
 		self primitiveFailed.
 	}
 
-	#method(#class) basicNew: anInteger
+	method(#class) basicNew: anInteger
 	{
 		<primitive: #_basic_new_with_size>
 		self primitiveFailed.
 	}
 
-	#method(#class) ngcNew
+	method(#class) ngcNew
 	{
 		<primitive: #_ngc_new>
 		self primitiveFailed.
 	}
 
-	#method(#class) ngcNew: anInteger
+	method(#class) ngcNew: anInteger
 	{
 		<primitive: #_ngc_new_with_size>
 		self primitiveFailed.
 	}
 
-	#method(#class) new
+	method(#class) new
 	{
 		| x |
 		x := self basicNew.
@@ -63,7 +63,7 @@
 		^x.
 	}
 
-	#method(#class) new: anInteger
+	method(#class) new: anInteger
 	{
 		| x |
 ## TODO: check if the class is a fixed class.
@@ -73,20 +73,20 @@
 		^x.
 	}
 
-	#method initialize
+	method initialize
 	{
 		"a subclass may override this method."
 		^self.
 	}
 
-	#method ngcDispose
+	method ngcDispose
 	{
 		<primitive: #_ngc_dispose>
 		self primitiveFailed.
 	}
 	## -------------------------------------------------------
 	## -------------------------------------------------------
-	#method shallowCopy
+	method shallowCopy
 	{
 		<primitive: #_shallow_copy>
 		self primitiveFailed.
@@ -95,12 +95,12 @@
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
-	#method class
+	method class
 	{
 		<primitive: #_class>
 	}
 
-	#method(#class) class
+	method(#class) class
 	{
 		<primitive: #_class>
 		^Class
@@ -109,123 +109,152 @@
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
-	#method basicSize
+	method basicSize
 	{
 		<primitive: #_basic_size>
 		self primitiveFailed.
 	}
 
-	#method(#class) basicSize
+	method(#class) basicSize
 	{
 		<primitive: #_basic_size>
 		self primitiveFailed.
 	}
 
-	#method basicAt: index
+	method basicAt: index
 	{
 		<primitive: #_basic_at>
 		self index: index outOfRange: (self basicSize).
 	}
 
-	#method basicAt: index put: anObject
+	method basicAt: index put: anObject
 	{
 		<primitive: #_basic_at_put>
 		self index: index outOfRange: (self basicSize).
 	}
 
-	#method(#class) basicAt: index
+	method(#class) basicAt: index
 	{
 		<primitive: #_basic_at>
 		self index: index outOfRange: (self basicSize).
 	}
 
-	#method(#class) basicAt: index put: anObject
+	method(#class) basicAt: index put: anObject
 	{
 		<primitive: #_basic_at_put>
 		self index: index outOfRange: (self basicSize).
 	}
 
-	## -------------------------------------------------------
-	## -------------------------------------------------------
-	#method(#class) hash
+	(* ------------------------------------------------------------------
+	 * HASHING
+	 * ------------------------------------------------------------------ *)
+	method hash
 	{
 		<primitive: #_hash>
 		self subclassResponsibility: #hash
 	}
-	#method hash
+	
+	method(#class) hash
 	{
 		<primitive: #_hash>
 		self subclassResponsibility: #hash
 	}
 
-	## -------------------------------------------------------
-	## -------------------------------------------------------
+	(* ------------------------------------------------------------------
+	 * IDENTITY TEST
+	 * ------------------------------------------------------------------ *)
 
-	#method == anObject
+	method == anObject
 	{
 		(* check if the receiver is identical to anObject.
 		 * this doesn't compare the contents *)
 		<primitive: #_identical>
+		self primitiveFailed.
 	}
 
-	#method ~~ anObject
+	method ~~ anObject
 	{
 		<primitive: #_not_identical>
 		^(self == anObject) not.
 	}
 
-	#method(#class) == anObject
+	method(#class) == anObject
 	{
 		(* check if the receiver is identical to anObject.
 		 * this doesn't compare the contents *)
 		<primitive: #_identical>
+		self primitiveFailed.
 	}
 
-	#method(#class) ~~ anObject
+	method(#class) ~~ anObject
 	{
 		<primitive: #_not_identical>
 		^(self == anObject) not.
 	}
 
-	## TODO: add = and ~= for equality check.
+	(* ------------------------------------------------------------------
+	 * EQUALITY TEST
+	 * ------------------------------------------------------------------ *)
+	method = anObject
+	{
+		<primitive: #_equal>
+		self subclassResponsibility: #=
+	}
+	
+	method ~= anObject
+	{
+		<primitive: #_not_equal>
+		^(self = anObject) not.
+	}
 
+	method(#class) = anObject
+	{
+		<primitive: #_equal>
+		self subclassResponsibility: #=
+	}
+	
+	method(#class) ~= anObject
+	{
+		<primitive: #_not_equal>
+		^(self = anObject) not.
+	}
+	
+	(* ------------------------------------------------------------------
+	 * COMMON QUERIES
+	 * ------------------------------------------------------------------ *)
 
-	## -------------------------------------------------------
-	## COMMON QUERIES
-	## -------------------------------------------------------
-
-	#method isNil
+	method isNil
 	{
 		"^self == nil."
 		^false
 	}
 
-	#method notNil
+	method notNil
 	{
 		"^(self == nil) not"
 		"^self ~= nil."
 		^true.
 	}
 
-	#method(#class) isNil
+	method(#class) isNil
 	{
 		"^self == nil."
 		^false
 	}
 
-	#method(#class) notNil
+	method(#class) notNil
 	{
 		"^(self == nil) not"
 		"^self ~= nil."
 		^true.
 	}
 
-	#method isError
+	method isError
 	{
 		^false
 	}
 
-	#method(#class) isError
+	method(#class) isError
 	{
 		^false
 	}
@@ -233,7 +262,7 @@
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
-	#method(#class) inheritsFrom: aClass
+	method(#class) inheritsFrom: aClass
 	{
 		| c |
 		c := self superclass.
@@ -244,7 +273,7 @@
 		^false
 	}
 
-	#method(#class) isMemberOf: aClass
+	method(#class) isMemberOf: aClass
 	{
 		(* a class object is an instance of Class
 		 * but Class inherits from Apex. On the other hand,
@@ -253,109 +282,103 @@
 		^aClass == Class
 	}
 
-	#method(#class) isKindOf: aClass
+	method(#class) isKindOf: aClass
 	{
 		^(self isMemberOf: aClass) or: [self inheritsFrom: aClass].
 	}
 
-	#method isMemberOf: aClass
+	method isMemberOf: aClass
 	{
 		^self class == aClass
 	}
 
-	#method isKindOf: aClass
+	method isKindOf: aClass
 	{
 		^(self isMemberOf: aClass) or: [self class inheritsFrom: aClass].
 	}
 
-	## -------------------------------------------------------
-	## -------------------------------------------------------
-	"
-	#method(#class) respondsTo: selectorSymbol
+	(* -----------------
+	method(#class) respondsTo: selectorSymbol
 	{
 		TODO: find selectorSymbol in the class method dictionary...
 	}
 
-	#method respondsTo: selectorSymbol
+	method respondsTo: selectorSymbol
 	{
 		TODO: find selectorSymbol in the method dictionary...
 	}
-	"
+	------------ *)
 
-	## -------------------------------------------------------
+	method exceptionizeError: trueOrFalse
+	{
+		<primitive: #_exceptionize_error>
+		self class cannotExceptionizeError
+	}
 
-	## method(#class) primitiveFailed
-	## {
-	## 	this method will be added after Exception class has been defined.
-	## }
-
-	#method primitiveFailed
+	(* ------------------------------------------------------------------
+	 * COMMON ERROR/EXCEPTION HANDLERS
+	 * ------------------------------------------------------------------ *)
+	method primitiveFailed
 	{
 		self class primitiveFailed.
 	}
 
-	#method doesNotUnderstand: messageSymbol
+	method doesNotUnderstand: messageSymbol
 	{
 		self class doesNotUnderstand: messageSymbol
 	}
 
-	#method(#class) error: msgText
+	method index: index outOfRange: ubound
+	{
+		self class index: index outOfRange: ubound.
+	}
+
+	method cannotInstantiate
+	{
+		self class cannotInstantiate
+	}
+
+	method subclassResponsibility: message_name
+	{
+		self class subclassResponsibility: message_name
+	}
+
+	method cannotExceptionizeError
+	{
+		self class cannotExceptionizeError
+	}
+
+	method(#class) error: msgText
 	{
 		## TODO: implement this
 		## Error signal: msgText.
 		msgText dump.
 	}
 
-	#method error: aString
+	method error: aString
 	{
 		self class error: aString.
 	}
-
-	#method index: index outOfRange: ubound
-	{
-		self class index: index outOfRange: ubound.
-	}
-
-	#method cannotInstantiate
-	{
-		self class cannotInstantiate
-	}
-
-	#method subclassResponsibility: message_name
-	{
-		self class subclassResponsibility: message_name
-	}
-
-	#method cannotExceptionizeError
-	{
-		self class cannotExceptionizeError
-	}
-
-	#method exceptionizeError: trueOrFalse
-	{
-		<primitive: #_exceptionize_error>
-		self class cannotExceptionizeError
-	}
 }
 
-#class Object(Apex)
+class Object(Apex)
 {
 
 }
 
-#class UndefinedObject(Apex)
+class UndefinedObject(Apex)
 {
-	#method isNil
+	method isNil
 	{
 		^true
 	}
 
-	#method notNil
+	method notNil
 	{
 		^false.
 	}
 
-	#method handleException: exception
+	method handleException: exception
 	{
 		('### EXCEPTION NOT HANDLED #### ' &  exception class name & ' - ' & exception messageText) dump.
 		## TODO: debug the current process???? "
@@ -365,7 +388,7 @@
 }
 
 
-#pooldic ErrorCode
+pooldic ErrorCode
 {
 (* migrate it into Error class *)
 	#NONE := error(0).
@@ -373,7 +396,7 @@
 	#NOENT := error(2).
 }
 
-#class Error(Apex)
+class Error(Apex)
 {
 	(* ----------------------------
 	TODO: support constant declaration...
@@ -385,22 +408,22 @@
 	}
 	-------------------------------- *)
 
-	#method isError
+	method isError
 	{
 		^true
 	}
 
-	#method asInteger
+	method asInteger
 	{
 		<primitive: #_error_as_integer>
 	}
 	
-	#method asCharacter
+	method asCharacter
 	{
 		<primitive: #_error_as_character>
 	}
 
-	#method asString
+	method asString
 	{
 		<primitive: #_error_as_string>
 	}
