@@ -1,5 +1,5 @@
 
-#include 'Moo.st'.
+#include 'Moo.moo'.
 
 #################################################################
 ## MAIN
@@ -57,30 +57,11 @@ class MyObject(TestObject)
 		^[123456789 dump. ^200].
 	}
 
-	method(#class) main2
-	{
-		'START OF MAIN2' dump.
-		##[thisContext dump. ^100] newProcess resume.
-		[ |k| thisContext dump. self zzz. "k := self yyy. k value." ['ok' dump. ^100] value] newProcess resume.
-		'1111' dump.
-		'1111' dump.
-		'1111' dump.
-		'1111' dump.
-		'1111' dump.
-		'EDN OF MAIN2' dump.
-	}
-
-	method(#class) main1
-	{
-		'START OF MAIN1' dump.
-		self main2.
-		'END OF MAIN1' dump.
-	}
-
 	method(#class) main
 	{
 		'START OF MAIN' dump.
-		self main1.
+		['1111111' dump. '111111111' dump. '22222222222' dump. 
+		 '3333333' dump. '444444444' dump. '55555555555' dump] newProcess resume.
 		'EDN OF MAIN' dump.
 	}
 

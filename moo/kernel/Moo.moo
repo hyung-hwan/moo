@@ -1,11 +1,11 @@
-#include 'Apex.st'.
-#include 'Context.st'.
-#include 'Except.st'.
-#include 'Class.st'.
-#include 'Boolean.st'.
-#include 'Magnitu.st'.
-#include 'Collect.st'.
-#include 'Process.st'.
+#include 'Apex.moo'.
+#include 'Context.moo'.
+#include 'Except.moo'.
+#include 'Class.moo'.
+#include 'Boolean.moo'.
+#include 'Magnitu.moo'.
+#include 'Collect.moo'.
+#include 'Process.moo'.
 
 
 class FFI(Object)
@@ -82,5 +82,5 @@ f isNil ifTrue: [ self error: 'No such function' ].
 
 #########################################################################################
 
-#include 'Stdio.st'.
-#include 'Console.st'.
+#include 'Stdio.moo'.
+#include 'Console.moo'.

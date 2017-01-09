@@ -1,4 +1,4 @@
-#include 'Moo.st'.
+#include 'Moo.moo'.
 
 class MyObject(Object)
 {

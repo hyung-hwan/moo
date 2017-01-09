@@ -1,5 +1,5 @@
 
-#include 'Moo.st'.
+#include 'Moo.moo'.
 
 #################################################################
 ## MAIN
@@ -36,30 +36,22 @@ class TestObject(Object)
 
 class MyObject(TestObject)
 {
-	#declare(#classinst) t1 t2 t3.
+	#declare(#classinst) t1 t2.
 	method(#class) xxxx
 	{
 		| g1 g2 |
 		t1 dump.
-		t3 value.
 		t2 := [ g1 := 50. g2 := 100. ^g1 + g2 ].
-		(t1 < 10) ifFalse: [ ^self ].
+		(t1 < 100) ifFalse: [ ^self ].
 		t1 := t1 + 1. 
 		^self xxxx.
 	}
 
 	method(#class) main
 	{
-		t3 := ['1111' dump. ^20.].
-		t1 := 1.
-		self xxxx.
-		'END OF XXX' dump.
-		t2 := t2 value.  
-		'END OF t2 value' dump.
-		t2 dump.
-
-
-		
+		'START OF MAIN' dump.
+		Processor activeProcess terminate.
+		'EDN OF MAIN' dump.
 	}
 
 }

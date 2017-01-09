@@ -1,5 +1,5 @@
 
-#include 'Moo.st'.
+#include 'Moo.moo'.
 
 #################################################################
 ## MAIN
@@ -47,21 +47,9 @@ class MyObject(TestObject)
 		^self xxxx.
 	}
 
-	method(#class) zzz
-	{
-		'zzzzzzzzzzzzzzzzzz' dump.
-		^self.
-	}
-	method(#class) yyy
-	{
-		^[123456789 dump. ^200].
-	}
-
 	method(#class) main
 	{
 		'START OF MAIN' dump.
-		['1111111' dump. '111111111' dump. '22222222222' dump. 
-		 '3333333' dump. '444444444' dump. '55555555555' dump] newProcess resume.
 		'EDN OF MAIN' dump.
 	}
 
