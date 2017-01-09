@@ -985,6 +985,12 @@ stix_oop_association_t stix_lookupdic (
 	const stix_oocs_t* name
 );
 
+int stix_deletedic (
+	stix_t*            stix,
+	stix_oop_set_t     dic,
+	const stix_oocs_t* name
+);
+
 stix_oop_set_t stix_makedic (
 	stix_t*    stix,
 	stix_oop_t cls,
@@ -1000,7 +1006,7 @@ stix_oop_process_t stix_makeproc (
 
 
 /* ========================================================================= */
-/* bigint.c                                                                    */
+/* bigint.c                                                                  */
 /* ========================================================================= */
 int stix_isint (
 	stix_t*    stix,

@@ -259,6 +259,16 @@ class Apex(nil)
 		^false
 	}
 
+	method notError
+	{
+		^true
+	}
+
+	method(#class) notError
+	{
+		^true
+	}
+
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
@@ -320,32 +330,37 @@ class Apex(nil)
 	 * ------------------------------------------------------------------ *)
 	method primitiveFailed
 	{
-		self class primitiveFailed.
-	}
-
-	method doesNotUnderstand: messageSymbol
-	{
-		self class doesNotUnderstand: messageSymbol
-	}
-
-	method index: index outOfRange: ubound
-	{
-		self class index: index outOfRange: ubound.
+		^self class primitiveFailed.
 	}
 
 	method cannotInstantiate
 	{
-		self class cannotInstantiate
+		^self class cannotInstantiate
 	}
 
-	method subclassResponsibility: message_name
+	method doesNotUnderstand: messageSymbol
 	{
-		self class subclassResponsibility: message_name
+		^self class doesNotUnderstand: messageSymbol
+	}
+
+	method index: index outOfRange: ubound
+	{
+		^self class index: index outOfRange: ubound.
+	}
+
+	method subclassResponsibility: method_name
+	{
+		^self class subclassResponsibility: method_name
+	}
+
+	method notImplemented: method_name
+	{
+		^self class notImplemented: method_name
 	}
 
 	method cannotExceptionizeError
 	{
-		self class cannotExceptionizeError
+		^self class cannotExceptionizeError
 	}
 
 	method(#class) error: msgText
@@ -411,6 +426,11 @@ class Error(Apex)
 	method isError
 	{
 		^true
+	}
+
+	method notError
+	{
+		^false
 	}
 
 	method asInteger

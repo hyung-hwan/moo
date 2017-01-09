@@ -145,7 +145,7 @@ class Set(Collection)
 
 		[(ass := self.bucket at: index) notNil] 
 			whileTrue: [
-				[key == ass key] ifTrue: [ (* TODO: change it to equality??? *)
+				(key = ass key) ifTrue: [
 					(* found *)
 					upsert ifTrue: [ass value: value].
 					^ass
@@ -153,7 +153,7 @@ class Set(Collection)
 				index := (index + 1) rem: bs.
 			].
 
-		upsert ifFalse: [^nil].
+		upsert ifFalse: [^ErrorCode.NOENT].
 
 		ntally := self.tally + 1.
 		(ntally >= bs) ifTrue: [
@@ -187,29 +187,42 @@ class Set(Collection)
 	{
 		| ass |
 		ass := self __find: key or_upsert: false with: nil.
-		(ass notNil) ifTrue: [^ass value].
-		^ErrorCode.NOENT
+		(ass isError) ifTrue: [^ass].
+		^ass value
 	}
 
 	method at: key ifAbsent: error_block
 	{
 		| ass |
 		ass := self __find: key or_upsert: false with: nil.
-		(ass notNil) ifTrue: [^ass value].
-		^error_block value.
+		(ass isError) ifTrue: [^error_block value].
+		^ass value
+	}
+
+	method associationAt: key
+	{
+		^self __find: key or_upsert: false with: nil.
+	}
+
+	method associationAt: key ifAbsent: error_block
+	{
+		| ass |
+		ass := self __find: key or_upsert: false with: nil.
+		(ass isError) ifTrue: [^error_block value].
+		^ass
 	}
 
 	method at: key put: value
 	{
-		self __find: key or_upsert: true with: value.
-		^value
+		(* returns the affected/inserted association *)
+		^self __find: key or_upsert: true with: value.
 	}
 
 	method includesKey: key
 	{
 		| ass |
 		ass := self __find: key or_upsert: false with: nil.
-		^ass notNil
+		^ass notError
 	}
 
 	method includesAssociation: assoc
@@ -225,18 +238,98 @@ class Set(Collection)
 		ass := self __find: key or_upsert: false with: nil.
 		^ass key = key and: [ass value = value]
 	}
-	
+
+	method __find_index: key
+	{
+		| bs ass index |
+		
+		bs := self.bucket size.
+		index := (key hash) rem: bs.
+		
+		[(ass := self.bucket at: index) notNil] 
+			whileTrue: [ 
+				(key = ass key) ifTrue: [^index].
+				index := (index + 1) rem: bs.
+			].
+
+		^ErrorCode.NOENT.
+	}
+
+	method __remove_at: index
+	{
+		| bs x y i v |
+
+		bs := self.bucket size.
+		v := self.bucket basicAt: index.
+
+		x := index.
+		y := index.
+		i := 0.
+		[i < self.tally] whileTrue: [
+			| ass z |
+
+			y := (y + 1) rem: bs.
+
+			ass := self.bucket at: i.
+			(ass isNil)
+				ifTrue: [ 
+					(* done. the slot at the current index is nil *)
+					i := self.tally 
+				]
+				ifFalse: [
+					(* get the natural hash index *)
+					z := (ass key hash) rem: bs.
+
+					(* move an element if necessary *)
+					((y > x and: [(z <= x) or: [z > y]]) or: 
+					[(y < x) and: [(z <= x) and: [z > y]]]) ifTrue: [
+						self.bucket at: x put: (self.bucket at: y).
+						x := y.
+					].
+
+					i := i + 1
+				].
+		].
+		
+		self.bucket at: x put: nil.
+		self.tally := self.tally - 1.
+		
+		(* return the affected association *)
+		^v
+	}
+
 	method removeKey: key
 	{
-(* TODO: *)
-self subclassResponsbility: #removeKey
+		| index |
+		index := self __find_index: key.
+		(index isError) ifTrue: [ ^index ].
+		^self __remove_at: index.
 	}
 
 	method removeKey: key ifAbsent: error_block
 	{
-(* TODO: *)
-self subclassResponsbility: #removeKey
+		| index |
+		index := self __find_index: key.
+		(index isError) ifTrue: [ ^error_block value ].
+		^self __remove_at: index.
 	}
+
+	
+	method removeAllKeys
+	{
+		(* remove all items from a dictionary *)
+		| bs |
+		bs := self.bucket size.
+		0 priorTo: bs do: [:i | self.bucket at: i put: nil ].
+		self.tally := 0
+	}
+
+(* TODO: ... keys is an array of keys.
+	method removeAllKeys: keys
+	{
+		self notImplemented: #removeAllKeys:
+	}
+*)
 
 	method remove: assoc
 	{
@@ -247,6 +340,7 @@ self subclassResponsbility: #removeKey
 	{
 		^self removeKey: (assoc key) ifAbsent: error_block
 	}
+
 
 	method do: block
 	{

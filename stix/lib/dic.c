@@ -261,6 +261,72 @@ stix_oop_association_t stix_lookupdic (stix_t* stix, stix_oop_set_t dic, const s
 	return lookup (stix, dic, name);
 }
 
+int stix_deletedic (stix_t* stix, stix_oop_set_t dic, const stix_oocs_t* name)
+{
+	stix_ooi_t tally;
+	stix_oow_t hv, index, bs, i, x, y, z;
+	stix_oop_association_t ass;
+
+	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->tally) == stix->_small_integer);
+	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->bucket) == stix->_array);
+
+	tally = STIX_OOP_TO_SMOOI(dic->tally);
+
+	bs = STIX_OBJ_GET_SIZE(dic->bucket);
+	hv = stix_hashoochars(name->ptr, name->len) % bs;
+	index = hv % bs;
+
+	/* find */
+	while (dic->bucket->slot[index] != stix->_nil) 
+	{
+		ass = (stix_oop_association_t)dic->bucket->slot[index];
+
+		STIX_ASSERT (stix, STIX_CLASSOF(stix,ass) == stix->_association);
+		STIX_ASSERT (stix, STIX_CLASSOF(stix,ass->key) == stix->_symbol);
+
+		if (name->len == STIX_OBJ_GET_SIZE(ass->key) &&
+		    stix_equaloochars(name->ptr, ((stix_oop_char_t)ass->key)->slot, name->len)) 
+		{
+			goto found;
+		}
+
+		index = (index + 1) % bs;
+	}
+
+	stix->errnum = STIX_ENOENT;
+	return -1;
+
+found:
+	/* compact the cluster */
+	for (i = 0, x = index, y = index; i < tally; i++)
+	{
+		y = (y + 1) % bs;
+
+		/* done if the slot at the current index is empty */
+		if (dic->bucket->slot[y] == stix->_nil) break;
+
+		/* get the natural hash index for the data in the slot at
+		 * the current hash index */
+		ass = (stix_oop_association_t)dic->bucket->slot[y];
+		z = stix_hashoochars(((stix_oop_char_t)ass->key)->slot, STIX_OBJ_GET_SIZE(ass->key)) % bs;
+
+		/* move an element if necesary */
+		if ((y > x && (z <= x || z > y)) ||
+		    (y < x && (z <= x && z > y)))
+		{
+			dic->bucket->slot[x] = dic->bucket->slot[y];
+			x = y;
+		}
+	}
+
+	dic->bucket->slot[x] = stix->_nil;
+
+	tally--;
+	dic->tally = STIX_SMOOI_TO_OOP(tally);
+
+	return 0;
+}
+
 stix_oop_set_t stix_makedic (stix_t* stix, stix_oop_t cls, stix_oow_t size)
 {
 	stix_oop_set_t dic;

@@ -351,15 +351,15 @@ thisContext isExceptionContext dump.
 
 
 ##============================================================================
+class PrimitiveFailureException(Exception)
+{
+}
+
 class InstantiationFailureException(Exception)
 {
 }
 
 class NoSuchMessageException(Exception)
-{
-}
-
-class PrimitiveFailureException(Exception)
 {
 }
 
@@ -371,11 +371,15 @@ class SubclassResponsibilityException(Exception)
 {
 }
 
-class InvalidArgumentException(Exception)
+class NotImplementedException(Exception)
 {
 }
 
 class ErrorExceptionizationFailureException(Exception)
+{
+}
+
+class InvalidArgumentException(Exception)
 {
 }
 
@@ -414,11 +418,16 @@ ctx := thisContext.
 		IndexOutOfRangeException signal: 'Out of range'.
 	}
 
-	method(#class) subclassResponsibility: message_name
+	method(#class) subclassResponsibility: method_name
 	{
-		SubclassResponsibilityException signal: ('Subclass must implment ' & message_name).
+		SubclassResponsibilityException signal: ('Subclass must implement ' & method_name).
 	}
 
+	method(#class) notImplemented: method_name
+	{
+		NotImplementedException signal: (method_name & ' not implemented by ' & (self name)).
+	}
+	
 	method(#class) cannotExceptionizeError
 	{
 ## todo: accept the object
