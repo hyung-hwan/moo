@@ -4270,8 +4270,8 @@ static int compile_method_expression (moo_t* moo, int pop)
 			if (compile_method_expression(moo, 0) <= -1) goto oops;
 
 			/* compile_method_expression() is called after clone_assignee().
-			 * clone_assignee() may reallocate a single buffer to hold 
-			 * a series of assigness names. the pointer based operation is
+			 * clone_assignee() may reallocate a single buffer that holds 
+			 * a series of assigness names. this pointer based operation is
 			 * fragile as it can change. use the offset of the cloned
 			 * assignee to update the actual pointer after the recursive
 			 * compile_method_expression() call */
@@ -4280,11 +4280,7 @@ static int compile_method_expression (moo_t* moo, int pop)
 
 			switch (var.type)
 			{
-				case VAR_ARGUMENT:
-					/* assigning to an argument is not allowed */
-					set_syntax_error (moo, MOO_SYNERR_VARARG, &assignee_loc, &assignee);
-					goto oops;
-
+				case VAR_ARGUMENT: /* TODO: consider if assigning to an argument should be disallowed */
 				case VAR_TEMPORARY:
 				{
 				#if defined(MOO_USE_CTXTEMPVAR)

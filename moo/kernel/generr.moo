@@ -80,7 +80,6 @@ class MyObject(Object)
 			'duplicate temporary variable name'
 			'duplicate variable name'
 			'duplicate block argument name'
-			'cannot assign to argument'
 			'undeclared variable'
 			'unusable variable in compiled code'
 			'inaccessible variable'

@@ -1104,7 +1104,6 @@ enum moo_synerrnum_t
 	MOO_SYNERR_TMPRNAMEDUP,   /* duplicate temporary variable name */
 	MOO_SYNERR_VARNAMEDUP,    /* duplicate variable name */
 	MOO_SYNERR_BLKARGNAMEDUP, /* duplicate block argument name */
-	MOO_SYNERR_VARARG,        /* cannot assign to argument */
 	MOO_SYNERR_VARUNDCL,      /* undeclared variable */
 	MOO_SYNERR_VARUNUSE,      /* unsuable variable in compiled code */
 	MOO_SYNERR_VARINACC,      /* inaccessible variable - e.g. accessing an instance variable from a class method is not allowed. */

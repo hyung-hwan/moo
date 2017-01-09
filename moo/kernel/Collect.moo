@@ -123,11 +123,22 @@ class(#byte) ByteArray(Collection)
 class Set(Collection)
 {
 	dcl tally bucket.
-	
+
+	method new: size
+	{
+		^self new initialize: size.
+	}
+
 	method initialize
 	{
+		^self initialize: 128. (* TODO: default initial size *)
+	}
+
+	method initialize: size
+	{
+		(size <= 0) ifTrue: [size := 2].
 		self.tally := 0.
-		self.bucket := Array new: 128.  (* TODO: initial size *)
+		self.bucket := Array new: size.
 	}
 
 	method size
