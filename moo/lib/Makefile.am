@@ -60,14 +60,14 @@ libmoo_la_LIBADD = $(LIBADD_LIB_COMMON)
 
 if ENABLE_STATIC_MODULE
 libmoo_la_LDFLAGS += -L$(abs_builddir)/../mod
-libmoo_la_LIBADD += -lmoo-console -lmoo-stdio -ltermcap
+libmoo_la_LIBADD += -lmoo-console -lmoo-stdio #-ltermcap
 endif
 
 bin_PROGRAMS = moo
 moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 moo_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo #-ldyncall_s
+moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo
 
 
 install-data-hook:

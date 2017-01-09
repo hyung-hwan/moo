@@ -20,14 +20,10 @@ if ENABLE_STATIC_MODULE
 ##################################################
 # STATIC MODULES BUILT INTO MAIN LIBRARY
 ##################################################
+LDFLAGS_COMMON =
+LIBADD_COMMON =
 
-noinst_LTLIBRARIES = libmoo-console.la libmoo-stdio.la
-
-libmoo_console_la_SOURCES = console.c 
-libmoo_console_la_CPPFLAGS = $(CPPFLAGS_COMMON)
-
-libmoo_stdio_la_SOURCES = stdio.c 
-libmoo_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
+noinst_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la
 
 else
 
@@ -38,19 +34,22 @@ LDFLAGS_COMMON = -L$(abs_builddir)/../lib -L$(libdir) -version-info 1:0:0 -no-un
 LIBADD_COMMON = -lmoo
 
 pkgmodexecdir = $(libdir)
+pkgmodexec_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la 
 
-pkgmodexec_LTLIBRARIES = libmoo-stdio.la libmoo-console.la
-
-libmoo_stdio_la_SOURCES = stdio.c _stdio.h
-libmoo_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
-libmoo_stdio_la_LDFLAGS = $(LDFLAGS_COMMON)
-libmoo_stdio_la_LIBADD = $(LIBADD_COMMON)
+endif
 
 libmoo_console_la_SOURCES = console.c console.h
 libmoo_console_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_console_la_LDFLAGS = $(LDFLAGS_COMMON)
 libmoo_console_la_LIBADD = $(LIBADD_COMMON) -ltermcap 
 
-endif
+libmoo_ffi_la_SOURCES = ffi.c _ffi.h
+libmoo_ffi_la_CPPFLAGS = $(CPPFLAGS_COMMON)
+libmoo_ffi_la_LDFLAGS = $(LDFLAGS_COMMON)
+libmoo_ffi_la_LIBADD = $(LIBADD_COMMON) -ldyncall_s 
 
+libmoo_stdio_la_SOURCES = stdio.c _stdio.h
+libmoo_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
+libmoo_stdio_la_LDFLAGS = $(LDFLAGS_COMMON)
+libmoo_stdio_la_LIBADD = $(LIBADD_COMMON)
 

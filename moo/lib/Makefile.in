@@ -84,7 +84,7 @@ host_triplet = @host@
 @WIN32_TRUE@am__append_1 = -DMOO_DEFAULT_MODPREFIX=\"libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"-1\"
 @WIN32_FALSE@am__append_2 = -DMOO_DEFAULT_MODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"\"
 @ENABLE_STATIC_MODULE_TRUE@am__append_3 = -L$(abs_builddir)/../mod
-@ENABLE_STATIC_MODULE_TRUE@am__append_4 = -lmoo-console -lmoo-stdio -ltermcap
+@ENABLE_STATIC_MODULE_TRUE@am__append_4 = -lmoo-console -lmoo-stdio #-ltermcap
 bin_PROGRAMS = moo$(EXEEXT)
 subdir = lib
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
@@ -430,7 +430,7 @@ libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_4)
 moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 moo_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo #-ldyncall_s
+moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo
 all: moo-cfg.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
