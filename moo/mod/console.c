@@ -28,15 +28,18 @@
 #include "console.h"
 #include <moo-utl.h>
 
-#include <unistd.h>
-#include <fcntl.h> 
+#if defined(_WIN32)
 
-#include <stdlib.h> /* getenv */
+#elif defined(__DOS__)
 
-#include <curses.h>
-#include <term.h>
-
-#include <sys/ioctl.h>
+#else
+#	include <unistd.h>
+#	include <fcntl.h> 
+#	include <stdlib.h> /* getenv */
+#	include <curses.h>
+#	include <term.h>
+#	include <sys/ioctl.h>
+#endif
 
 typedef struct console_t console_t;
 struct console_t
@@ -66,7 +69,9 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 		/* error */
 	}
 
-
+#elif defined(__DOS__)
+	moo->errnum = MOO_ENOIMPL;
+	return -1;
 #else
 
 	console_t* con;
@@ -116,9 +121,8 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 	}
 #endif
 
-#endif
-
 	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP((moo_oow_t)con));
+#endif
 	return MOO_PF_SUCCESS;
 }
 
@@ -128,11 +132,14 @@ static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 	HANDLE h;
 
 	h = MOO_STACK_GETARG (moo, nargs, 0);
+#elif defined(__DOS__)
+
+	/* TODO */
+
 #else
-#endif
 	console_t* con;
 
-	con = MOO_OOP_TO_SMOOI(MOO_STACK_GETARG (moo, nargs, 0));
+	con = (console_t*)MOO_OOP_TO_SMOOI(MOO_STACK_GETARG (moo, nargs, 0));
 	/* TODO: sanity check */
 
 	if (con->fd_opened) close (con->fd);
@@ -140,10 +147,15 @@ static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 	moo_freemem (moo, con);
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
+#endif
 }
 
 static moo_pfrc_t pf_write (moo_t* moo, moo_ooi_t nargs)
 {
+#if defined(_WIN32)
+#elif defined(__DOS__)
+
+#else
 	console_t* con;
 	moo_oop_char_t oomsg;
 
@@ -183,10 +195,15 @@ static moo_pfrc_t pf_write (moo_t* moo, moo_ooi_t nargs)
 
 	MOO_STACK_SETRETTORCV (moo, nargs); /* TODO: change return code */
 	return MOO_PF_SUCCESS;
+#endif
 }
 
 static moo_pfrc_t pf_clear (moo_t* moo, moo_ooi_t nargs)
 {
+#if defined(_WIN32)
+#elif defined(__DOS__)
+
+#else
 	console_t* con;
 
 	con = MOO_OOP_TO_SMOOI(MOO_STACK_GETARG(moo, nargs, 0));
@@ -195,10 +212,15 @@ static moo_pfrc_t pf_clear (moo_t* moo, moo_ooi_t nargs)
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
+#endif
 }
 
 static moo_pfrc_t pf_setcursor (moo_t* moo, moo_ooi_t nargs)
 {
+#if defined(_WIN32)
+#elif defined(__DOS__)
+
+#else
 	console_t* con;
 	moo_oop_oop_t point;
 	char* cup;
@@ -217,6 +239,7 @@ static moo_pfrc_t pf_setcursor (moo_t* moo, moo_ooi_t nargs)
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
+#endif
 }
 
 /* ------------------------------------------------------------------------ */
@@ -267,7 +290,6 @@ static void unload (moo_t* moo, moo_mod_t* mod)
 {
 	/* TODO: close all open handle?? */
 }
-
 
 int moo_mod_console (moo_t* moo, moo_mod_t* mod)
 {

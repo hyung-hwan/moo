@@ -32,6 +32,10 @@
 #include <errno.h>
 #include <limits.h>
 
+#if !defined(PATH_MAX)
+#	define PATH_MAX 256
+#endif
+
 typedef struct stdio_t stdio_t;
 struct stdio_t
 {

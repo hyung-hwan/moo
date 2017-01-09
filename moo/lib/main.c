@@ -45,8 +45,9 @@
 #	define INCL_DOSPROCESS
 #	define INCL_DOSERRORS
 #	include <os2.h>
-#elif defined(__MSDOS__)
+#elif defined(__DOS__)
 #	include <dos.h>
+#	include <time.h>
 #elif defined(macintosh)
 #	include <Timer.h>
 #else
@@ -69,9 +70,9 @@
 #	if defined(_WIN32)
 #		define MOO_DEFAULT_MODPREFIX "moo-"
 #	elif defined(__OS2__)
-#		define MOO_DEFAULT_MODPREFIX "st-"
-#	elif defined(__MSDOS__)
-#		define MOO_DEFAULT_MODPREFIX "st-"
+#		define MOO_DEFAULT_MODPREFIX "moo"
+#	elif defined(__DOS__)
+#		define MOO_DEFAULT_MODPREFIX "moo"
 #	else
 #		define MOO_DEFAULT_MODPREFIX "libmoo-"
 #	endif
@@ -82,7 +83,7 @@
 #		define MOO_DEFAULT_MODPOSTFIX ""
 #	elif defined(__OS2__)
 #		define MOO_DEFAULT_MODPOSTFIX ""
-#	elif defined(__MSDOS__)
+#	elif defined(__DOS__)
 #		define MOO_DEFAULT_MODPOSTFIX ""
 #	else
 #		define MOO_DEFAULT_MODPOSTFIX ""
@@ -172,7 +173,7 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 
 		
 /* TODO: make bcs relative to the includer */
-#if defined(__MSDOS__) || defined(_WIN32) || defined(__OS2__)
+#if defined(__DOS__) || defined(_WIN32) || defined(__OS2__)
 		fp = fopen (bcs, "rb");
 #else
 		fp = fopen (bcs, "r");
@@ -181,7 +182,7 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 	else
 	{
 		/* main stream */
-#if defined(__MSDOS__) || defined(_WIN32) || defined(__OS2__)
+#if defined(__DOS__) || defined(_WIN32) || defined(__OS2__)
 		fp = fopen (xtn->source_path, "rb");
 #else
 		fp = fopen (xtn->source_path, "r");
@@ -341,7 +342,7 @@ static void dl_close (moo_t* moo, void* handle)
 	FreeLibrary ((HMODULE)handle);
 #elif defined(__OS2__)
 	DosFreeModule ((HMODULE)handle);
-#elif defined(__MSDOS__) && defined(QSE_ENABLE_DOS_DYNAMIC_MODULE)
+#elif defined(__DOS__) && defined(QSE_ENABLE_DOS_DYNAMIC_MODULE)
 	FreeModule (handle);
 #else
 	/* nothing to do */
@@ -438,13 +439,14 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 	struct tm tm, *tmp;
 	time_t now;
 
+
 if (mask & MOO_LOG_GC) return; /* don't show gc logs */
 
 /* TODO: beautify the log message.
  *       do classification based on mask. */
 
 	now = time(NULL);
-#if defined(__MSDOS__)
+#if defined(__DOS__)
 	tmp = localtime (&now);
 #else
 	tmp = localtime_r (&now, &tm);
@@ -502,7 +504,7 @@ static moo_t* g_moo = MOO_NULL;
 /* ========================================================================= */
 
 
-#if defined(__MSDOS__) && defined(_INTELC32_)
+#if defined(__DOS__) && defined(_INTELC32_)
 static void (*prev_timer_intr_handler) (void);
 
 #pragma interrupt(timer_intr_handler)
@@ -543,7 +545,7 @@ static void arrange_process_switching (int sig)
 
 static void setup_tick (void)
 {
-#if defined(__MSDOS__) && defined(_INTELC32_)
+#if defined(__DOS__) && defined(_INTELC32_)
 
 	prev_timer_intr_handler = _dos_getvect (0x1C);
 	_dos_setvect (0x1C, timer_intr_handler);
@@ -579,7 +581,7 @@ static void setup_tick (void)
 
 static void cancel_tick (void)
 {
-#if defined(__MSDOS__) && defined(_INTELC32_)
+#if defined(__DOS__) && defined(_INTELC32_)
 
 	_dos_setvect (0x1C, prev_timer_intr_handler);
 

@@ -47,10 +47,10 @@ libmoo_la_SOURCES = \
 	logfmt.c \
 	gc.c \
 	heap.c \
+	moo.c \
 	obj.c \
 	proc.c \
 	rbt.c \
-	moo.c \
 	sym.c \
 	utf8.c \
 	utl.c

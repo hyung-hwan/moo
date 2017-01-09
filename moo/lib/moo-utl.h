@@ -59,9 +59,9 @@ MOO_EXPORT moo_oow_t moo_hashbytes (
 		return moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oohw_t));
 	}
 #else
-#	define moo_hashbchars(ptr,len) moo_hashbytes((const moo_oob_t*)ptr,len * MOO_SIZEOF(moo_bch_t))
-#	define moo_hashuchars(ptr,len) moo_hashbytes((const moo_oob_t*)ptr,len * MOO_SIZEOF(moo_uch_t))
-#	define moo_hashwords(ptr,len) moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oow_t))
+#	define moo_hashbchars(ptr,len)    moo_hashbytes((const moo_oob_t*)ptr,len * MOO_SIZEOF(moo_bch_t))
+#	define moo_hashuchars(ptr,len)    moo_hashbytes((const moo_oob_t*)ptr,len * MOO_SIZEOF(moo_uch_t))
+#	define moo_hashwords(ptr,len)     moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oow_t))
 #	define moo_hashhalfwords(ptr,len) moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oohw_t))
 #endif
 
@@ -70,12 +70,6 @@ MOO_EXPORT moo_oow_t moo_hashbytes (
 #else
 #	define moo_hashoochars(ptr,len) moo_hashbchars(ptr,len)
 #endif
-
-
-MOO_EXPORT moo_oow_t moo_hashwords (
-	const moo_oow_t* ptr,
-	moo_oow_t        len
-);
 
 /**
  * The moo_equaluchars() function determines equality of two strings

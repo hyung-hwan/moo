@@ -166,7 +166,12 @@ const moo_ooch_t* moo_synerrnumtoerrstr (moo_synerrnum_t errnum)
 #	include <os2.h>
 #elif defined(__DOS__)
 #	include <dos.h>
-#	include <dosfunc.h>
+#	if defined(_INTELC32_)
+#		define DOS_EXIT 0x4C
+#	else
+#		include <dosfunc.h>
+#	endif
+#	include <errno.h>
 #elif defined(vms) || defined(__vms)
 #	define __NEW_STARLET 1
 #	include <starlet.h> /* (SYS$...) */
@@ -194,9 +199,17 @@ moo_errnum_t moo_syserrtoerrnum (int e)
 		case EPERM: return MOO_EPERM;
 		case ENOTDIR: return MOO_ENOTDIR;
 		case ENOENT: return MOO_ENOENT;
+	#if defined(EEXIST)
 		case EEXIST: return MOO_EEXIST;
+	#endif
+	#if defined(EINTR)
 		case EINTR:  return MOO_EINTR;
+	#endif
+
+	#if defined(EPIPE)
 		case EPIPE:  return MOO_EPIPE;
+	#endif
+
 	#if defined(EAGAIN) && defined(EWOULDBLOCK) && (EAGAIN != EWOULDBLOCK)
 		case EAGAIN: 
 		case EWOULDBLOCK: return MOO_EAGAIN;

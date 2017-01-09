@@ -35,7 +35,7 @@
 #	define INCL_DOSERRORS
 #	include <os2.h>
 #	include <time.h>
-#elif defined(__MSDOS__)
+#elif defined(__DOS__)
 #	include <time.h>
 #elif defined(macintosh)
 #	include <Types.h>
@@ -122,7 +122,12 @@
 #	define LOG_INST_3(moo,fmt,a1,a2,a3)
 #endif
 
-#define __PRIMITIVE_NAME__ (&__FUNCTION__[4])
+#if defined(__DOS__) && defined(_INTELC32_)
+	/* the old intel c code builder doesn't support __FUNCTION__ */
+#	define __PRIMITIVE_NAME__ "<<primitive>>"
+#else
+#	define __PRIMITIVE_NAME__ (&__FUNCTION__[4])
+#endif
 
 /* ------------------------------------------------------------------------- */
 static MOO_INLINE void vm_gettime (moo_t* moo, moo_ntime_t* now)
@@ -140,7 +145,7 @@ static MOO_INLINE void vm_gettime (moo_t* moo, moo_ntime_t* now)
 	/* it must return NO_ERROR */
 
 	MOO_INITNTIME (now, MOO_MSEC_TO_SEC(out), MOO_MSEC_TO_NSEC(out));
-#elif defined(__MSDOS__) && defined(_INTELC32_)
+#elif defined(__DOS__) && defined(_INTELC32_)
 	clock_t c;
 
 /* TODO: handle overflow?? */
@@ -213,7 +218,7 @@ static MOO_INLINE void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 
 	/* TODO: ... */
 
-#elif defined(__MSDOS__) && defined(_INTELC32_)
+#elif defined(__DOS__) && defined(_INTELC32_)
 
 	clock_t c;
 
@@ -1763,8 +1768,8 @@ static moo_pfrc_t pf_exceptionize_error (moo_t* moo, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-// TODO: .......
-//	MOO_OBJ_SET_FLAGS_EXTRA (rcv, xxx);
+/* TODO: .......
+	MOO_OBJ_SET_FLAGS_EXTRA (rcv, xxx); */
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }

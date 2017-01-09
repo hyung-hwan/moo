@@ -37,7 +37,7 @@
 #	include "moo-msw.h"
 #elif defined(__OS2__)
 #	include "moo-os2.h"
-#elif defined(__MSDOS__)
+#elif defined(__DOS__)
 #	include "moo-dos.h"
 #elif defined(macintosh)
 #	include "moo-mac.h" /* class mac os */
@@ -131,7 +131,7 @@
 #	define MOO_HAVE_INT32_T
 	typedef unsigned __int32_t  moo_uint32_t;
 	typedef signed __int32_t    moo_int32_t;
-#elif defined(__MSDOS__)
+#elif defined(__DOS__)
 #	define MOO_HAVE_UINT32_T
 #	define MOO_HAVE_INT32_T
 	typedef unsigned long int   moo_uint32_t;
