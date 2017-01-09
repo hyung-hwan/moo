@@ -401,10 +401,19 @@ static int write_all (int fd, const char* ptr, moo_oow_t len)
 
 		if (wr <= -1)
 		{
-			/*if (errno == EAGAIN || errno == EWOULDBLOCK)
-			{
-				push it to internal buffers? before writing data just converted, need to write buffered data first.
-			}*/
+		#if defined(EAGAIN) && defined(EWOULDBLOCK) && (EAGAIN == EWOULDBLOCK)
+			/* TODO: push it to internal buffers? before writing data just converted, need to write buffered data first. */
+			if (errno == EAGAIN) continue;
+		#else
+
+		#if defined(EAGAIN)
+			if (errno == EAGAIN) continue;
+		#endif
+		#if defined(EWOULDBLOCK)
+			if (errno == EWOULDBLOCK) continue;
+		#endif
+
+		#endif
 			return -1;
 		}
 
