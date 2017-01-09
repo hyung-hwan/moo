@@ -26,62 +26,62 @@
 /* OS/2 for other platforms than x86?
  * If so, the endian should be defined selectively
  */
-#define STIX_ENDIAN_LITTLE
+#define MOO_ENDIAN_LITTLE
 
 #if defined(__WATCOMC__)
-#	define STIX_SIZEOF_CHAR        1
-#	define STIX_SIZEOF_SHORT       2
-#	define STIX_SIZEOF_INT         4
-#	define STIX_SIZEOF_LONG        4
+#	define MOO_SIZEOF_CHAR        1
+#	define MOO_SIZEOF_SHORT       2
+#	define MOO_SIZEOF_INT         4
+#	define MOO_SIZEOF_LONG        4
 #	if (__WATCOMC__ < 1200)
-#		define STIX_SIZEOF_LONG_LONG   0
+#		define MOO_SIZEOF_LONG_LONG   0
 #	else
-#		define STIX_SIZEOF_LONG_LONG   8
+#		define MOO_SIZEOF_LONG_LONG   8
 #	endif
-#	define STIX_SIZEOF_VOID_P      4
-#	define STIX_SIZEOF_FLOAT       4
-#	define STIX_SIZEOF_DOUBLE      8
-#	define STIX_SIZEOF_LONG_DOUBLE 8
-#	define STIX_SIZEOF_WCHAR_T     2
+#	define MOO_SIZEOF_VOID_P      4
+#	define MOO_SIZEOF_FLOAT       4
+#	define MOO_SIZEOF_DOUBLE      8
+#	define MOO_SIZEOF_LONG_DOUBLE 8
+#	define MOO_SIZEOF_WCHAR_T     2
 
-#	define STIX_SIZEOF___INT8      1
-#	define STIX_SIZEOF___INT16     2
-#	define STIX_SIZEOF___INT32     4
-#	define STIX_SIZEOF___INT64     8
-#	define STIX_SIZEOF___INT128    0
+#	define MOO_SIZEOF___INT8      1
+#	define MOO_SIZEOF___INT16     2
+#	define MOO_SIZEOF___INT32     4
+#	define MOO_SIZEOF___INT64     8
+#	define MOO_SIZEOF___INT128    0
 
-#	define STIX_SIZEOF_OFF64_T     0
-#	define STIX_SIZEOF_OFF_T       8
+#	define MOO_SIZEOF_OFF64_T     0
+#	define MOO_SIZEOF_OFF_T       8
 
 /* I don't know the exact mbstate size. 
  * but this should be large enough */
-#	define STIX_SIZEOF_MBSTATE_T   STIX_SIZEOF_LONG
+#	define MOO_SIZEOF_MBSTATE_T   MOO_SIZEOF_LONG
 /* TODO: check the exact value */
-#	define STIX_MBLEN_MAX          8
+#	define MOO_MBLEN_MAX          8
 
 #elif defined(__BORLANDC__)
-#	define STIX_SIZEOF_CHAR        1
-#	define STIX_SIZEOF_SHORT       2
-#	define STIX_SIZEOF_INT         4
-#	define STIX_SIZEOF_LONG        4
-#	define STIX_SIZEOF_LONG_LONG   0
-#	define STIX_SIZEOF_VOID_P      4
-#	define STIX_SIZEOF_FLOAT       4
-#	define STIX_SIZEOF_DOUBLE      8
-#	define STIX_SIZEOF_LONG_DOUBLE 8
-#	define STIX_SIZEOF_WCHAR_T     2
+#	define MOO_SIZEOF_CHAR        1
+#	define MOO_SIZEOF_SHORT       2
+#	define MOO_SIZEOF_INT         4
+#	define MOO_SIZEOF_LONG        4
+#	define MOO_SIZEOF_LONG_LONG   0
+#	define MOO_SIZEOF_VOID_P      4
+#	define MOO_SIZEOF_FLOAT       4
+#	define MOO_SIZEOF_DOUBLE      8
+#	define MOO_SIZEOF_LONG_DOUBLE 8
+#	define MOO_SIZEOF_WCHAR_T     2
 
-#	define STIX_SIZEOF___INT8      0
-#	define STIX_SIZEOF___INT16     0
-#	define STIX_SIZEOF___INT32     0
-#	define STIX_SIZEOF___INT64     0
-#	define STIX_SIZEOF___INT128    0
+#	define MOO_SIZEOF___INT8      0
+#	define MOO_SIZEOF___INT16     0
+#	define MOO_SIZEOF___INT32     0
+#	define MOO_SIZEOF___INT64     0
+#	define MOO_SIZEOF___INT128    0
 
-#	define STIX_SIZEOF_OFF64_T     0
-#	define STIX_SIZEOF_OFF_T       4
+#	define MOO_SIZEOF_OFF64_T     0
+#	define MOO_SIZEOF_OFF_T       4
 
-#	define STIX_SIZEOF_MBSTATE_T   STIX_SIZEOF_LONG
-#	define STIX_MBLEN_MAX          8
+#	define MOO_SIZEOF_MBSTATE_T   MOO_SIZEOF_LONG
+#	define MOO_MBLEN_MAX          8
 
 #else
 #	error Define the size of various data types.

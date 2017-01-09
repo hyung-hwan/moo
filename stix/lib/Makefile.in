@@ -81,14 +81,14 @@ host_triplet = @host@
 
 # you must adjust the value of DEFAULT_MODPOSTFIX according 
 # to the first number in -version-info above
-@WIN32_TRUE@am__append_1 = -DSTIX_DEFAULT_MODPREFIX=\"libstix-\" -DSTIX_DEFAULT_MODPOSTFIX=\"-1\"
-@WIN32_FALSE@am__append_2 = -DSTIX_DEFAULT_MODPREFIX=\"$(libdir)/libstix-\" -DSTIX_DEFAULT_MODPOSTFIX=\"\"
+@WIN32_TRUE@am__append_1 = -DMOO_DEFAULT_MODPREFIX=\"libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"-1\"
+@WIN32_FALSE@am__append_2 = -DMOO_DEFAULT_MODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"\"
 @ENABLE_STATIC_MODULE_TRUE@am__append_3 = -L$(abs_builddir)/../mod
-@ENABLE_STATIC_MODULE_TRUE@am__append_4 = -lstix-console -lstix-stdio -ltermcap
-bin_PROGRAMS = stix$(EXEEXT)
+@ENABLE_STATIC_MODULE_TRUE@am__append_4 = -lmoo-console -lmoo-stdio -ltermcap
+bin_PROGRAMS = moo$(EXEEXT)
 subdir = lib
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
-	$(srcdir)/stix-cfg.h.in $(top_srcdir)/ac/depcomp \
+	$(srcdir)/moo-cfg.h.in $(top_srcdir)/ac/depcomp \
 	$(noinst_HEADERS) $(pkginclude_HEADERS)
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/argz.m4 \
@@ -100,7 +100,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/argz.m4 \
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
-CONFIG_HEADER = stix-cfg.h
+CONFIG_HEADER = moo-cfg.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
@@ -135,28 +135,28 @@ am__installdirs = "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(bindir)" \
 LTLIBRARIES = $(pkglib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-libstix_la_DEPENDENCIES = $(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
-am_libstix_la_OBJECTS = libstix_la-bigint.lo libstix_la-comp.lo \
-	libstix_la-debug.lo libstix_la-decode.lo libstix_la-dic.lo \
-	libstix_la-err.lo libstix_la-exec.lo libstix_la-logfmt.lo \
-	libstix_la-gc.lo libstix_la-heap.lo libstix_la-obj.lo \
-	libstix_la-proc.lo libstix_la-rbt.lo libstix_la-stix.lo \
-	libstix_la-sym.lo libstix_la-utf8.lo libstix_la-utl.lo
-libstix_la_OBJECTS = $(am_libstix_la_OBJECTS)
+libmoo_la_DEPENDENCIES = $(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
+am_libmoo_la_OBJECTS = libmoo_la-bigint.lo libmoo_la-comp.lo \
+	libmoo_la-debug.lo libmoo_la-decode.lo libmoo_la-dic.lo \
+	libmoo_la-err.lo libmoo_la-exec.lo libmoo_la-logfmt.lo \
+	libmoo_la-gc.lo libmoo_la-heap.lo libmoo_la-obj.lo \
+	libmoo_la-proc.lo libmoo_la-rbt.lo libmoo_la-moo.lo \
+	libmoo_la-sym.lo libmoo_la-utf8.lo libmoo_la-utl.lo
+libmoo_la_OBJECTS = $(am_libmoo_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
-libstix_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+libmoo_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(libstix_la_LDFLAGS) $(LDFLAGS) -o $@
+	$(libmoo_la_LDFLAGS) $(LDFLAGS) -o $@
 PROGRAMS = $(bin_PROGRAMS)
-am_stix_OBJECTS = stix-main.$(OBJEXT)
-stix_OBJECTS = $(am_stix_OBJECTS)
-stix_DEPENDENCIES = $(am__DEPENDENCIES_2)
-stix_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+am_moo_OBJECTS = moo-main.$(OBJEXT)
+moo_OBJECTS = $(am_moo_OBJECTS)
+moo_DEPENDENCIES = $(am__DEPENDENCIES_2)
+moo_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(stix_LDFLAGS) $(LDFLAGS) -o $@
+	$(moo_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -191,8 +191,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libstix_la_SOURCES) $(stix_SOURCES)
-DIST_SOURCES = $(libstix_la_SOURCES) $(stix_SOURCES)
+SOURCES = $(libmoo_la_SOURCES) $(moo_SOURCES)
+DIST_SOURCES = $(libmoo_la_SOURCES) $(moo_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -200,7 +200,7 @@ am__can_run_installinfo = \
   esac
 HEADERS = $(noinst_HEADERS) $(pkginclude_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) \
-	$(LISP)stix-cfg.h.in
+	$(LISP)moo-cfg.h.in
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
 # *not* preserved.
@@ -285,6 +285,20 @@ LT_DLPREOPEN = @LT_DLPREOPEN@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
+MOO_PROJECT_AUTHOR = @MOO_PROJECT_AUTHOR@
+MOO_PROJECT_URL = @MOO_PROJECT_URL@
+MOO_SIZEOF_CHAR = @MOO_SIZEOF_CHAR@
+MOO_SIZEOF_DOUBLE = @MOO_SIZEOF_DOUBLE@
+MOO_SIZEOF_FLOAT = @MOO_SIZEOF_FLOAT@
+MOO_SIZEOF_INT = @MOO_SIZEOF_INT@
+MOO_SIZEOF_LONG = @MOO_SIZEOF_LONG@
+MOO_SIZEOF_LONG_DOUBLE = @MOO_SIZEOF_LONG_DOUBLE@
+MOO_SIZEOF_LONG_LONG = @MOO_SIZEOF_LONG_LONG@
+MOO_SIZEOF_OFF64_T = @MOO_SIZEOF_OFF64_T@
+MOO_SIZEOF_OFF_T = @MOO_SIZEOF_OFF_T@
+MOO_SIZEOF_SHORT = @MOO_SIZEOF_SHORT@
+MOO_SIZEOF_VOID_P = @MOO_SIZEOF_VOID_P@
+MOO_SIZEOF_WCHAR_T = @MOO_SIZEOF_WCHAR_T@
 NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
@@ -307,20 +321,6 @@ RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
-STIX_PROJECT_AUTHOR = @STIX_PROJECT_AUTHOR@
-STIX_PROJECT_URL = @STIX_PROJECT_URL@
-STIX_SIZEOF_CHAR = @STIX_SIZEOF_CHAR@
-STIX_SIZEOF_DOUBLE = @STIX_SIZEOF_DOUBLE@
-STIX_SIZEOF_FLOAT = @STIX_SIZEOF_FLOAT@
-STIX_SIZEOF_INT = @STIX_SIZEOF_INT@
-STIX_SIZEOF_LONG = @STIX_SIZEOF_LONG@
-STIX_SIZEOF_LONG_DOUBLE = @STIX_SIZEOF_LONG_DOUBLE@
-STIX_SIZEOF_LONG_LONG = @STIX_SIZEOF_LONG_LONG@
-STIX_SIZEOF_OFF64_T = @STIX_SIZEOF_OFF64_T@
-STIX_SIZEOF_OFF_T = @STIX_SIZEOF_OFF_T@
-STIX_SIZEOF_SHORT = @STIX_SIZEOF_SHORT@
-STIX_SIZEOF_VOID_P = @STIX_SIZEOF_VOID_P@
-STIX_SIZEOF_WCHAR_T = @STIX_SIZEOF_WCHAR_T@
 STRIP = @STRIP@
 UNICOWS_LIBS = @UNICOWS_LIBS@
 VERSION = @VERSION@
@@ -397,15 +397,15 @@ CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) $(LTDLINCL) \
 LDFLAGS_LIB_COMMON = $(LDFLAGS_ALL_COMMON) -version-info 1:0:0 -no-undefined
 LIBADD_LIB_COMMON = $(LIBM) $(LIBLTDL) 
 pkginclude_HEADERS = \
-	stix-cfg.h \
-	stix-cmn.h \
-	stix-rbt.h \
-	stix-utl.h \
-	stix.h
+	moo-cfg.h \
+	moo-cmn.h \
+	moo-rbt.h \
+	moo-utl.h \
+	moo.h
 
-noinst_HEADERS = stix-prv.h
-pkglib_LTLIBRARIES = libstix.la
-libstix_la_SOURCES = \
+noinst_HEADERS = moo-prv.h
+pkglib_LTLIBRARIES = libmoo.la
+libmoo_la_SOURCES = \
 	bigint.c \
 	comp.c \
 	debug.c  \
@@ -420,19 +420,19 @@ libstix_la_SOURCES = \
 	obj.c \
 	proc.c \
 	rbt.c \
-	stix.c \
+	moo.c \
 	sym.c \
 	utf8.c \
 	utl.c
 
-libstix_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
-libstix_la_LDFLAGS = $(LDFLAGS_LIB_COMMON) $(am__append_3)
-libstix_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_4)
-stix_SOURCES = main.c
-stix_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
-stix_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-stix_LDADD = $(LIBADD_LIB_COMMON) -lstix #-ldyncall_s
-all: stix-cfg.h
+libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
+libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON) $(am__append_3)
+libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_4)
+moo_SOURCES = main.c
+moo_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
+moo_LDFLAGS = $(LDFLAGS_LIB_COMMON)
+moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo #-ldyncall_s
+all: moo-cfg.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
@@ -468,20 +468,20 @@ $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
 
-stix-cfg.h: stamp-h1
+moo-cfg.h: stamp-h1
 	@test -f $@ || rm -f stamp-h1
 	@test -f $@ || $(MAKE) $(AM_MAKEFLAGS) stamp-h1
 
-stamp-h1: $(srcdir)/stix-cfg.h.in $(top_builddir)/config.status
+stamp-h1: $(srcdir)/moo-cfg.h.in $(top_builddir)/config.status
 	@rm -f stamp-h1
-	cd $(top_builddir) && $(SHELL) ./config.status lib/stix-cfg.h
-$(srcdir)/stix-cfg.h.in:  $(am__configure_deps) 
+	cd $(top_builddir) && $(SHELL) ./config.status lib/moo-cfg.h
+$(srcdir)/moo-cfg.h.in:  $(am__configure_deps) 
 	($(am__cd) $(top_srcdir) && $(AUTOHEADER))
 	rm -f stamp-h1
 	touch $@
 
 distclean-hdr:
-	-rm -f stix-cfg.h stamp-h1
+	-rm -f moo-cfg.h stamp-h1
 
 install-pkglibLTLIBRARIES: $(pkglib_LTLIBRARIES)
 	@$(NORMAL_INSTALL)
@@ -518,8 +518,8 @@ clean-pkglibLTLIBRARIES:
 	  rm -f $${locs}; \
 	}
 
-libstix.la: $(libstix_la_OBJECTS) $(libstix_la_DEPENDENCIES) $(EXTRA_libstix_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(libstix_la_LINK) -rpath $(pkglibdir) $(libstix_la_OBJECTS) $(libstix_la_LIBADD) $(LIBS)
+libmoo.la: $(libmoo_la_OBJECTS) $(libmoo_la_DEPENDENCIES) $(EXTRA_libmoo_la_DEPENDENCIES) 
+	$(AM_V_CCLD)$(libmoo_la_LINK) -rpath $(pkglibdir) $(libmoo_la_OBJECTS) $(libmoo_la_LIBADD) $(LIBS)
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	@list='$(bin_PROGRAMS)'; test -n "$(bindir)" || list=; \
@@ -570,9 +570,9 @@ clean-binPROGRAMS:
 	echo " rm -f" $$list; \
 	rm -f $$list
 
-stix$(EXEEXT): $(stix_OBJECTS) $(stix_DEPENDENCIES) $(EXTRA_stix_DEPENDENCIES) 
-	@rm -f stix$(EXEEXT)
-	$(AM_V_CCLD)$(stix_LINK) $(stix_OBJECTS) $(stix_LDADD) $(LIBS)
+moo$(EXEEXT): $(moo_OBJECTS) $(moo_DEPENDENCIES) $(EXTRA_moo_DEPENDENCIES) 
+	@rm -f moo$(EXEEXT)
+	$(AM_V_CCLD)$(moo_LINK) $(moo_OBJECTS) $(moo_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -580,24 +580,24 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-bigint.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-comp.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-debug.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-decode.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-dic.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-err.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-exec.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-gc.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-heap.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-logfmt.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-obj.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-proc.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-rbt.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-stix.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-sym.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-utf8.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libstix_la-utl.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stix-main.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-bigint.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-comp.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-debug.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-decode.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-dic.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-err.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-exec.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-gc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-heap.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-logfmt.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-moo.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-obj.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-proc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-rbt.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-sym.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-utf8.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-utl.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/moo-main.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -623,138 +623,138 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
 
-libstix_la-bigint.lo: bigint.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-bigint.lo -MD -MP -MF $(DEPDIR)/libstix_la-bigint.Tpo -c -o libstix_la-bigint.lo `test -f 'bigint.c' || echo '$(srcdir)/'`bigint.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-bigint.Tpo $(DEPDIR)/libstix_la-bigint.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='bigint.c' object='libstix_la-bigint.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-bigint.lo: bigint.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-bigint.lo -MD -MP -MF $(DEPDIR)/libmoo_la-bigint.Tpo -c -o libmoo_la-bigint.lo `test -f 'bigint.c' || echo '$(srcdir)/'`bigint.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-bigint.Tpo $(DEPDIR)/libmoo_la-bigint.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='bigint.c' object='libmoo_la-bigint.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-bigint.lo `test -f 'bigint.c' || echo '$(srcdir)/'`bigint.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-bigint.lo `test -f 'bigint.c' || echo '$(srcdir)/'`bigint.c
 
-libstix_la-comp.lo: comp.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-comp.lo -MD -MP -MF $(DEPDIR)/libstix_la-comp.Tpo -c -o libstix_la-comp.lo `test -f 'comp.c' || echo '$(srcdir)/'`comp.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-comp.Tpo $(DEPDIR)/libstix_la-comp.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='comp.c' object='libstix_la-comp.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-comp.lo: comp.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-comp.lo -MD -MP -MF $(DEPDIR)/libmoo_la-comp.Tpo -c -o libmoo_la-comp.lo `test -f 'comp.c' || echo '$(srcdir)/'`comp.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-comp.Tpo $(DEPDIR)/libmoo_la-comp.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='comp.c' object='libmoo_la-comp.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-comp.lo `test -f 'comp.c' || echo '$(srcdir)/'`comp.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-comp.lo `test -f 'comp.c' || echo '$(srcdir)/'`comp.c
 
-libstix_la-debug.lo: debug.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-debug.lo -MD -MP -MF $(DEPDIR)/libstix_la-debug.Tpo -c -o libstix_la-debug.lo `test -f 'debug.c' || echo '$(srcdir)/'`debug.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-debug.Tpo $(DEPDIR)/libstix_la-debug.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='debug.c' object='libstix_la-debug.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-debug.lo: debug.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-debug.lo -MD -MP -MF $(DEPDIR)/libmoo_la-debug.Tpo -c -o libmoo_la-debug.lo `test -f 'debug.c' || echo '$(srcdir)/'`debug.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-debug.Tpo $(DEPDIR)/libmoo_la-debug.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='debug.c' object='libmoo_la-debug.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-debug.lo `test -f 'debug.c' || echo '$(srcdir)/'`debug.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-debug.lo `test -f 'debug.c' || echo '$(srcdir)/'`debug.c
 
-libstix_la-decode.lo: decode.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-decode.lo -MD -MP -MF $(DEPDIR)/libstix_la-decode.Tpo -c -o libstix_la-decode.lo `test -f 'decode.c' || echo '$(srcdir)/'`decode.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-decode.Tpo $(DEPDIR)/libstix_la-decode.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='decode.c' object='libstix_la-decode.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-decode.lo: decode.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-decode.lo -MD -MP -MF $(DEPDIR)/libmoo_la-decode.Tpo -c -o libmoo_la-decode.lo `test -f 'decode.c' || echo '$(srcdir)/'`decode.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-decode.Tpo $(DEPDIR)/libmoo_la-decode.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='decode.c' object='libmoo_la-decode.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-decode.lo `test -f 'decode.c' || echo '$(srcdir)/'`decode.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-decode.lo `test -f 'decode.c' || echo '$(srcdir)/'`decode.c
 
-libstix_la-dic.lo: dic.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-dic.lo -MD -MP -MF $(DEPDIR)/libstix_la-dic.Tpo -c -o libstix_la-dic.lo `test -f 'dic.c' || echo '$(srcdir)/'`dic.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-dic.Tpo $(DEPDIR)/libstix_la-dic.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='dic.c' object='libstix_la-dic.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-dic.lo: dic.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-dic.lo -MD -MP -MF $(DEPDIR)/libmoo_la-dic.Tpo -c -o libmoo_la-dic.lo `test -f 'dic.c' || echo '$(srcdir)/'`dic.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-dic.Tpo $(DEPDIR)/libmoo_la-dic.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='dic.c' object='libmoo_la-dic.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-dic.lo `test -f 'dic.c' || echo '$(srcdir)/'`dic.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-dic.lo `test -f 'dic.c' || echo '$(srcdir)/'`dic.c
 
-libstix_la-err.lo: err.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-err.lo -MD -MP -MF $(DEPDIR)/libstix_la-err.Tpo -c -o libstix_la-err.lo `test -f 'err.c' || echo '$(srcdir)/'`err.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-err.Tpo $(DEPDIR)/libstix_la-err.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='err.c' object='libstix_la-err.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-err.lo: err.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-err.lo -MD -MP -MF $(DEPDIR)/libmoo_la-err.Tpo -c -o libmoo_la-err.lo `test -f 'err.c' || echo '$(srcdir)/'`err.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-err.Tpo $(DEPDIR)/libmoo_la-err.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='err.c' object='libmoo_la-err.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-err.lo `test -f 'err.c' || echo '$(srcdir)/'`err.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-err.lo `test -f 'err.c' || echo '$(srcdir)/'`err.c
 
-libstix_la-exec.lo: exec.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-exec.lo -MD -MP -MF $(DEPDIR)/libstix_la-exec.Tpo -c -o libstix_la-exec.lo `test -f 'exec.c' || echo '$(srcdir)/'`exec.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-exec.Tpo $(DEPDIR)/libstix_la-exec.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='exec.c' object='libstix_la-exec.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-exec.lo: exec.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-exec.lo -MD -MP -MF $(DEPDIR)/libmoo_la-exec.Tpo -c -o libmoo_la-exec.lo `test -f 'exec.c' || echo '$(srcdir)/'`exec.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-exec.Tpo $(DEPDIR)/libmoo_la-exec.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='exec.c' object='libmoo_la-exec.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-exec.lo `test -f 'exec.c' || echo '$(srcdir)/'`exec.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-exec.lo `test -f 'exec.c' || echo '$(srcdir)/'`exec.c
 
-libstix_la-logfmt.lo: logfmt.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-logfmt.lo -MD -MP -MF $(DEPDIR)/libstix_la-logfmt.Tpo -c -o libstix_la-logfmt.lo `test -f 'logfmt.c' || echo '$(srcdir)/'`logfmt.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-logfmt.Tpo $(DEPDIR)/libstix_la-logfmt.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='logfmt.c' object='libstix_la-logfmt.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-logfmt.lo: logfmt.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-logfmt.lo -MD -MP -MF $(DEPDIR)/libmoo_la-logfmt.Tpo -c -o libmoo_la-logfmt.lo `test -f 'logfmt.c' || echo '$(srcdir)/'`logfmt.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-logfmt.Tpo $(DEPDIR)/libmoo_la-logfmt.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='logfmt.c' object='libmoo_la-logfmt.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-logfmt.lo `test -f 'logfmt.c' || echo '$(srcdir)/'`logfmt.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-logfmt.lo `test -f 'logfmt.c' || echo '$(srcdir)/'`logfmt.c
 
-libstix_la-gc.lo: gc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-gc.lo -MD -MP -MF $(DEPDIR)/libstix_la-gc.Tpo -c -o libstix_la-gc.lo `test -f 'gc.c' || echo '$(srcdir)/'`gc.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-gc.Tpo $(DEPDIR)/libstix_la-gc.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gc.c' object='libstix_la-gc.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-gc.lo: gc.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-gc.lo -MD -MP -MF $(DEPDIR)/libmoo_la-gc.Tpo -c -o libmoo_la-gc.lo `test -f 'gc.c' || echo '$(srcdir)/'`gc.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-gc.Tpo $(DEPDIR)/libmoo_la-gc.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='gc.c' object='libmoo_la-gc.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-gc.lo `test -f 'gc.c' || echo '$(srcdir)/'`gc.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-gc.lo `test -f 'gc.c' || echo '$(srcdir)/'`gc.c
 
-libstix_la-heap.lo: heap.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-heap.lo -MD -MP -MF $(DEPDIR)/libstix_la-heap.Tpo -c -o libstix_la-heap.lo `test -f 'heap.c' || echo '$(srcdir)/'`heap.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-heap.Tpo $(DEPDIR)/libstix_la-heap.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='heap.c' object='libstix_la-heap.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-heap.lo: heap.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-heap.lo -MD -MP -MF $(DEPDIR)/libmoo_la-heap.Tpo -c -o libmoo_la-heap.lo `test -f 'heap.c' || echo '$(srcdir)/'`heap.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-heap.Tpo $(DEPDIR)/libmoo_la-heap.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='heap.c' object='libmoo_la-heap.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-heap.lo `test -f 'heap.c' || echo '$(srcdir)/'`heap.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-heap.lo `test -f 'heap.c' || echo '$(srcdir)/'`heap.c
 
-libstix_la-obj.lo: obj.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-obj.lo -MD -MP -MF $(DEPDIR)/libstix_la-obj.Tpo -c -o libstix_la-obj.lo `test -f 'obj.c' || echo '$(srcdir)/'`obj.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-obj.Tpo $(DEPDIR)/libstix_la-obj.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='obj.c' object='libstix_la-obj.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-obj.lo: obj.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-obj.lo -MD -MP -MF $(DEPDIR)/libmoo_la-obj.Tpo -c -o libmoo_la-obj.lo `test -f 'obj.c' || echo '$(srcdir)/'`obj.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-obj.Tpo $(DEPDIR)/libmoo_la-obj.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='obj.c' object='libmoo_la-obj.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-obj.lo `test -f 'obj.c' || echo '$(srcdir)/'`obj.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-obj.lo `test -f 'obj.c' || echo '$(srcdir)/'`obj.c
 
-libstix_la-proc.lo: proc.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-proc.lo -MD -MP -MF $(DEPDIR)/libstix_la-proc.Tpo -c -o libstix_la-proc.lo `test -f 'proc.c' || echo '$(srcdir)/'`proc.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-proc.Tpo $(DEPDIR)/libstix_la-proc.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='proc.c' object='libstix_la-proc.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-proc.lo: proc.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-proc.lo -MD -MP -MF $(DEPDIR)/libmoo_la-proc.Tpo -c -o libmoo_la-proc.lo `test -f 'proc.c' || echo '$(srcdir)/'`proc.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-proc.Tpo $(DEPDIR)/libmoo_la-proc.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='proc.c' object='libmoo_la-proc.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-proc.lo `test -f 'proc.c' || echo '$(srcdir)/'`proc.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-proc.lo `test -f 'proc.c' || echo '$(srcdir)/'`proc.c
 
-libstix_la-rbt.lo: rbt.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-rbt.lo -MD -MP -MF $(DEPDIR)/libstix_la-rbt.Tpo -c -o libstix_la-rbt.lo `test -f 'rbt.c' || echo '$(srcdir)/'`rbt.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-rbt.Tpo $(DEPDIR)/libstix_la-rbt.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='rbt.c' object='libstix_la-rbt.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-rbt.lo: rbt.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-rbt.lo -MD -MP -MF $(DEPDIR)/libmoo_la-rbt.Tpo -c -o libmoo_la-rbt.lo `test -f 'rbt.c' || echo '$(srcdir)/'`rbt.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-rbt.Tpo $(DEPDIR)/libmoo_la-rbt.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='rbt.c' object='libmoo_la-rbt.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-rbt.lo `test -f 'rbt.c' || echo '$(srcdir)/'`rbt.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-rbt.lo `test -f 'rbt.c' || echo '$(srcdir)/'`rbt.c
 
-libstix_la-stix.lo: stix.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-stix.lo -MD -MP -MF $(DEPDIR)/libstix_la-stix.Tpo -c -o libstix_la-stix.lo `test -f 'stix.c' || echo '$(srcdir)/'`stix.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-stix.Tpo $(DEPDIR)/libstix_la-stix.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='stix.c' object='libstix_la-stix.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-moo.lo: moo.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-moo.lo -MD -MP -MF $(DEPDIR)/libmoo_la-moo.Tpo -c -o libmoo_la-moo.lo `test -f 'moo.c' || echo '$(srcdir)/'`moo.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-moo.Tpo $(DEPDIR)/libmoo_la-moo.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='moo.c' object='libmoo_la-moo.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-stix.lo `test -f 'stix.c' || echo '$(srcdir)/'`stix.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-moo.lo `test -f 'moo.c' || echo '$(srcdir)/'`moo.c
 
-libstix_la-sym.lo: sym.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-sym.lo -MD -MP -MF $(DEPDIR)/libstix_la-sym.Tpo -c -o libstix_la-sym.lo `test -f 'sym.c' || echo '$(srcdir)/'`sym.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-sym.Tpo $(DEPDIR)/libstix_la-sym.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sym.c' object='libstix_la-sym.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-sym.lo: sym.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-sym.lo -MD -MP -MF $(DEPDIR)/libmoo_la-sym.Tpo -c -o libmoo_la-sym.lo `test -f 'sym.c' || echo '$(srcdir)/'`sym.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-sym.Tpo $(DEPDIR)/libmoo_la-sym.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sym.c' object='libmoo_la-sym.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-sym.lo `test -f 'sym.c' || echo '$(srcdir)/'`sym.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-sym.lo `test -f 'sym.c' || echo '$(srcdir)/'`sym.c
 
-libstix_la-utf8.lo: utf8.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-utf8.lo -MD -MP -MF $(DEPDIR)/libstix_la-utf8.Tpo -c -o libstix_la-utf8.lo `test -f 'utf8.c' || echo '$(srcdir)/'`utf8.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-utf8.Tpo $(DEPDIR)/libstix_la-utf8.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='utf8.c' object='libstix_la-utf8.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-utf8.lo: utf8.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-utf8.lo -MD -MP -MF $(DEPDIR)/libmoo_la-utf8.Tpo -c -o libmoo_la-utf8.lo `test -f 'utf8.c' || echo '$(srcdir)/'`utf8.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-utf8.Tpo $(DEPDIR)/libmoo_la-utf8.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='utf8.c' object='libmoo_la-utf8.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-utf8.lo `test -f 'utf8.c' || echo '$(srcdir)/'`utf8.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-utf8.lo `test -f 'utf8.c' || echo '$(srcdir)/'`utf8.c
 
-libstix_la-utl.lo: utl.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libstix_la-utl.lo -MD -MP -MF $(DEPDIR)/libstix_la-utl.Tpo -c -o libstix_la-utl.lo `test -f 'utl.c' || echo '$(srcdir)/'`utl.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libstix_la-utl.Tpo $(DEPDIR)/libstix_la-utl.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='utl.c' object='libstix_la-utl.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-utl.lo: utl.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-utl.lo -MD -MP -MF $(DEPDIR)/libmoo_la-utl.Tpo -c -o libmoo_la-utl.lo `test -f 'utl.c' || echo '$(srcdir)/'`utl.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-utl.Tpo $(DEPDIR)/libmoo_la-utl.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='utl.c' object='libmoo_la-utl.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libstix_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libstix_la-utl.lo `test -f 'utl.c' || echo '$(srcdir)/'`utl.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-utl.lo `test -f 'utl.c' || echo '$(srcdir)/'`utl.c
 
-stix-main.o: main.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stix_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT stix-main.o -MD -MP -MF $(DEPDIR)/stix-main.Tpo -c -o stix-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stix-main.Tpo $(DEPDIR)/stix-main.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='stix-main.o' libtool=no @AMDEPBACKSLASH@
+moo-main.o: main.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT moo-main.o -MD -MP -MF $(DEPDIR)/moo-main.Tpo -c -o moo-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/moo-main.Tpo $(DEPDIR)/moo-main.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='moo-main.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stix_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o stix-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o moo-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
 
-stix-main.obj: main.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stix_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT stix-main.obj -MD -MP -MF $(DEPDIR)/stix-main.Tpo -c -o stix-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/stix-main.Tpo $(DEPDIR)/stix-main.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='stix-main.obj' libtool=no @AMDEPBACKSLASH@
+moo-main.obj: main.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT moo-main.obj -MD -MP -MF $(DEPDIR)/moo-main.Tpo -c -o moo-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/moo-main.Tpo $(DEPDIR)/moo-main.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='moo-main.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(stix_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o stix-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o moo-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -867,7 +867,7 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(HEADERS) stix-cfg.h
+all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(HEADERS) moo-cfg.h
 installdirs:
 	for dir in "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkgincludedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
@@ -998,15 +998,15 @@ uninstall-am: uninstall-binPROGRAMS uninstall-pkgincludeHEADERS \
 
 
 install-data-hook:
-	@echo "#ifndef _STIX_CFG_H_" > "$(DESTDIR)$(pkgincludedir)/stix-cfg.h"
-	@echo "#define _STIX_CFG_H_" >> "$(DESTDIR)$(pkgincludedir)/stix-cfg.h"
-	@$(EGREP) "#define[ ]+STIX_" "$(abs_builddir)/stix-cfg.h" >> "$(DESTDIR)$(pkgincludedir)/stix-cfg.h" 
-	@echo "#endif" >> "$(DESTDIR)$(pkgincludedir)/stix-cfg.h"
-	@rm -f "$(DESTDIR)$(pkgincludedir)/stix-cfg.h.in"
-	@$(SED) 's|/\*#define STIX_HAVE_CFG_H\*/|#define STIX_HAVE_CFG_H|' "$(srcdir)/stix-cmn.h" > "$(DESTDIR)$(pkgincludedir)/stix-cmn.h"
+	@echo "#ifndef _MOO_CFG_H_" > "$(DESTDIR)$(pkgincludedir)/moo-cfg.h"
+	@echo "#define _MOO_CFG_H_" >> "$(DESTDIR)$(pkgincludedir)/moo-cfg.h"
+	@$(EGREP) "#define[ ]+MOO_" "$(abs_builddir)/moo-cfg.h" >> "$(DESTDIR)$(pkgincludedir)/moo-cfg.h" 
+	@echo "#endif" >> "$(DESTDIR)$(pkgincludedir)/moo-cfg.h"
+	@rm -f "$(DESTDIR)$(pkgincludedir)/moo-cfg.h.in"
+	@$(SED) 's|/\*#define MOO_HAVE_CFG_H\*/|#define MOO_HAVE_CFG_H|' "$(srcdir)/moo-cmn.h" > "$(DESTDIR)$(pkgincludedir)/moo-cmn.h"
 
 uninstall-hook:
-	@rm -f "$(DESTDIR)$(pkgincludedir)/stix-cfg.h"
+	@rm -f "$(DESTDIR)$(pkgincludedir)/moo-cfg.h"
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

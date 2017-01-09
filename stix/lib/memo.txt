@@ -4,7 +4,7 @@
  * How to embed in a single threaded web server
  *
 * 
-* stix_exec
+* moo_exec
 *    VM(shceduler) ---> Context1(obj1,method1)
 *                  ---> Context2(obj2,method2)
 *                  ---> Context3(obj3,method3)
@@ -76,7 +76,7 @@ in original smalltalk, a block can't be placed inside the array literal
    array := "("  { number | string | symbol | array | characterConstant }* ")".
 So #(1 2 [^20]) is illegal.
 
-if a block is there, treat it as a valid stix expression and evaluate it.
+if a block is there, treat it as a valid moo expression and evaluate it.
 
 #(1 2 [1 + 2] 5)
 t = Array new: 4.
@@ -92,19 +92,19 @@ Put the right element.
 -----------------------------------------------
 command line
 
-libstix.a
+libmoo.a
 
-stix stix.im Class1.st Class2.st Main.st Main
+moo moo.im Class1.st Class2.st Main.st Main
  --> load the image, compile Class1.st, compile Class2.st compile Main.st
  --> 
 
 
-stix stix.im 
+moo moo.im 
   --> load the image
 
 -------------------------------------------------------------------------
 
-#!/usr/bin/stix
+#!/usr/bin/moo
 
 ###################################
 ## Main.st

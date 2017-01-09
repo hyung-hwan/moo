@@ -385,7 +385,7 @@ pooldic Log
 {
 	## -----------------------------------------------------------
 	## defines log levels
-	## these items must follow defintions in stix.h
+	## these items must follow defintions in moo.h
 	## -----------------------------------------------------------
 
 	#DEBUG := 1.
@@ -399,7 +399,7 @@ class SystemDictionary(Dictionary)
 {
 	## the following methods may not look suitable to be placed
 	## inside a system dictionary. but they are here for quick and dirty
-	## output production from the stix code.
+	## output production from the moo code.
 	##   System logNl: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'.
 	##
 

@@ -1,8 +1,8 @@
 dnl AC_PREREQ([2.67])
 
-AC_INIT([stix],[0.6.0],[Chung, Hyung-Hwan (hyunghwan.chung@gmail.com)],[],[http://code.abiyo.net/@stix])
+AC_INIT([moo],[0.1.0],[Chung, Hyung-Hwan (hyunghwan.chung@gmail.com)],[],[http://code.abiyo.net/@moo])
 
-AC_CONFIG_HEADER([lib/stix-cfg.h])
+AC_CONFIG_HEADER([lib/moo-cfg.h])
 AC_CONFIG_AUX_DIR([ac])
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -83,8 +83,8 @@ then
 fi
 
 dnl indicate the existence of config.h
-CFLAGS="$CFLAGS -DSTIX_HAVE_CFG_H"
-CXXFLAGS="$CXXFLAGS -DSTIX_HAVE_CFG_H"
+CFLAGS="$CFLAGS -DMOO_HAVE_CFG_H"
+CXXFLAGS="$CXXFLAGS -DMOO_HAVE_CFG_H"
 
 dnl make visible the 64-bit interface to the file system
 CFLAGS="$CFLAGS -D_LARGEFILE64_SOURCE"
@@ -234,7 +234,7 @@ dnl so i've added this check to determine if the compiler has
 dnl proper support for __int128_t.
 dnl 
 dnl Changing ac_cv_sizeof___int128_t here doesn't corret SIZEOF___INT128_T
-dnl since it's already generated. It only affects STIX_SIZEOF___INT128_T below.
+dnl since it's already generated. It only affects MOO_SIZEOF___INT128_T below.
 if test ${ac_cv_sizeof___int128_t} -gt 0
 then
 	AC_MSG_CHECKING([__int128_t with %])
@@ -327,65 +327,65 @@ fi
 AC_SUBST(QUADMATH_LIBS)
 
 
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_CHAR, ${ac_cv_sizeof_char}, [sizeof(char)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_SHORT, ${ac_cv_sizeof_short}, [sizeof(short)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_INT, ${ac_cv_sizeof_int}, [sizeof(int)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_LONG, ${ac_cv_sizeof_long}, [sizeof(long)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_LONG_LONG, ${ac_cv_sizeof_long_long}, [sizeof(long long)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF___INT8, ${ac_cv_sizeof___int8}, [sizeof(__int8)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF___INT16, ${ac_cv_sizeof___int16}, [sizeof(__int16)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF___INT32, ${ac_cv_sizeof___int32}, [sizeof(__int32)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF___INT64, ${ac_cv_sizeof___int64}, [sizeof(__int64)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF___INT128, ${ac_cv_sizeof___int128}, [sizeof(__int128)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF___INT128_T, ${ac_cv_sizeof___int128_t}, [sizeof(__int128_t)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF___UINT128_T, ${ac_cv_sizeof___uint128_t}, [sizeof(__uint128_t)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_VOID_P, ${ac_cv_sizeof_void_p}, [sizeof(void*)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_FLOAT, ${ac_cv_sizeof_float}, [sizeof(float)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_DOUBLE, ${ac_cv_sizeof_double}, [sizeof(double)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_LONG_DOUBLE, ${ac_cv_sizeof_long_double}, [sizeof(long double)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF___FLOAT128, ${ac_cv_sizeof___float128}, [sizeof(__float128)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_CHAR, ${ac_cv_sizeof_char}, [sizeof(char)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_SHORT, ${ac_cv_sizeof_short}, [sizeof(short)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_INT, ${ac_cv_sizeof_int}, [sizeof(int)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_LONG, ${ac_cv_sizeof_long}, [sizeof(long)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_LONG_LONG, ${ac_cv_sizeof_long_long}, [sizeof(long long)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF___INT8, ${ac_cv_sizeof___int8}, [sizeof(__int8)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF___INT16, ${ac_cv_sizeof___int16}, [sizeof(__int16)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF___INT32, ${ac_cv_sizeof___int32}, [sizeof(__int32)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF___INT64, ${ac_cv_sizeof___int64}, [sizeof(__int64)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF___INT128, ${ac_cv_sizeof___int128}, [sizeof(__int128)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF___INT128_T, ${ac_cv_sizeof___int128_t}, [sizeof(__int128_t)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF___UINT128_T, ${ac_cv_sizeof___uint128_t}, [sizeof(__uint128_t)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_VOID_P, ${ac_cv_sizeof_void_p}, [sizeof(void*)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_FLOAT, ${ac_cv_sizeof_float}, [sizeof(float)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_DOUBLE, ${ac_cv_sizeof_double}, [sizeof(double)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_LONG_DOUBLE, ${ac_cv_sizeof_long_double}, [sizeof(long double)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF___FLOAT128, ${ac_cv_sizeof___float128}, [sizeof(__float128)])
 
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_WCHAR_T, ${ac_cv_sizeof_wchar_t}, [sizeof(wchar_t)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_OFF_T, ${ac_cv_sizeof_off_t}, [sizeof(off_t)])
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_OFF64_T, ${ac_cv_sizeof_off64_t}, [sizeof(off64_t)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_WCHAR_T, ${ac_cv_sizeof_wchar_t}, [sizeof(wchar_t)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_OFF_T, ${ac_cv_sizeof_off_t}, [sizeof(off_t)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_OFF64_T, ${ac_cv_sizeof_off64_t}, [sizeof(off64_t)])
 
-AC_DEFINE_UNQUOTED(STIX_SIZEOF_MBSTATE_T, ${ac_cv_sizeof_mbstate_t}, [sizeof(mbstate_t)])
-AC_DEFINE_UNQUOTED(STIX_MBLEN_MAX, ${ax_cv_numvalof_MB_LEN_MAX}, [MB_LEN_MAX])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_MBSTATE_T, ${ac_cv_sizeof_mbstate_t}, [sizeof(mbstate_t)])
+AC_DEFINE_UNQUOTED(MOO_MBLEN_MAX, ${ax_cv_numvalof_MB_LEN_MAX}, [MB_LEN_MAX])
 
-stix_package_version_major="`echo ${PACKAGE_VERSION} | cut -d. -f1`"
-stix_package_version_minor="`echo ${PACKAGE_VERSION} | cut -d. -f2`"
-stix_package_version_patch="`echo ${PACKAGE_VERSION} | cut -d. -f3`"
-AC_SUBST(PACKAGE_VERSION_MAJOR, ${stix_package_version_major})
-AC_SUBST(PACKAGE_VERSION_MINOR, ${stix_package_version_minor})
-AC_SUBST(PACKAGE_VERSION_PATCH, ${stix_package_version_patch})
+moo_package_version_major="`echo ${PACKAGE_VERSION} | cut -d. -f1`"
+moo_package_version_minor="`echo ${PACKAGE_VERSION} | cut -d. -f2`"
+moo_package_version_patch="`echo ${PACKAGE_VERSION} | cut -d. -f3`"
+AC_SUBST(PACKAGE_VERSION_MAJOR, ${moo_package_version_major})
+AC_SUBST(PACKAGE_VERSION_MINOR, ${moo_package_version_minor})
+AC_SUBST(PACKAGE_VERSION_PATCH, ${moo_package_version_patch})
 
-AC_DEFINE_UNQUOTED(STIX_PACKAGE_VERSION, "${PACKAGE_VERSION}", [Package version])
-dnl AC_DEFINE_UNQUOTED(STIX_PACKAGE_VERSION_MAJOR, $(echo ${VERSION} | cut -d. -f1), [Major version number])
-dnl AC_DEFINE_UNQUOTED(STIX_PACKAGE_VERSION_MINOR, $(echo ${VERSION} | cut -d. -f2), [Minor version number])
-dnl AC_DEFINE_UNQUOTED(STIX_PACKAGE_VERSION_PATCH, $(echo ${VERSION} | cut -d. -f3), [Patch level])
-AC_DEFINE_UNQUOTED(STIX_PACKAGE_VERSION_MAJOR, ${stix_package_version_major}, [Major version number])
-AC_DEFINE_UNQUOTED(STIX_PACKAGE_VERSION_MINOR, ${stix_package_version_minor}, [Minor version number])
-AC_DEFINE_UNQUOTED(STIX_PACKAGE_VERSION_PATCH, ${stix_package_version_patch}, [Patch level])
+AC_DEFINE_UNQUOTED(MOO_PACKAGE_VERSION, "${PACKAGE_VERSION}", [Package version])
+dnl AC_DEFINE_UNQUOTED(MOO_PACKAGE_VERSION_MAJOR, $(echo ${VERSION} | cut -d. -f1), [Major version number])
+dnl AC_DEFINE_UNQUOTED(MOO_PACKAGE_VERSION_MINOR, $(echo ${VERSION} | cut -d. -f2), [Minor version number])
+dnl AC_DEFINE_UNQUOTED(MOO_PACKAGE_VERSION_PATCH, $(echo ${VERSION} | cut -d. -f3), [Patch level])
+AC_DEFINE_UNQUOTED(MOO_PACKAGE_VERSION_MAJOR, ${moo_package_version_major}, [Major version number])
+AC_DEFINE_UNQUOTED(MOO_PACKAGE_VERSION_MINOR, ${moo_package_version_minor}, [Minor version number])
+AC_DEFINE_UNQUOTED(MOO_PACKAGE_VERSION_PATCH, ${moo_package_version_patch}, [Patch level])
 
-AC_DEFINE_UNQUOTED(STIX_PACKAGE_AUTHOR,"${PACKAGE_BUGREPORT}", [Author])
-AC_DEFINE_UNQUOTED(STIX_PACKAGE_NAME,"${PACKAGE_NAME}", [package name])
-AC_DEFINE_UNQUOTED(STIX_PACKAGE_URL, "${PACKAGE_URL}", [Project URL])
+AC_DEFINE_UNQUOTED(MOO_PACKAGE_AUTHOR,"${PACKAGE_BUGREPORT}", [Author])
+AC_DEFINE_UNQUOTED(MOO_PACKAGE_NAME,"${PACKAGE_NAME}", [package name])
+AC_DEFINE_UNQUOTED(MOO_PACKAGE_URL, "${PACKAGE_URL}", [Project URL])
 
 AC_C_BIGENDIAN(
-	[AC_DEFINE([STIX_ENDIAN_BIG],[],[Big Endian])],
-	[AC_DEFINE([STIX_ENDIAN_LITTLE],[],[Little Endian])],
-	[AC_DEFINE([STIX_ENDIAN_UNKNOWN],[],[Unknown Endian])])
+	[AC_DEFINE([MOO_ENDIAN_BIG],[],[Big Endian])],
+	[AC_DEFINE([MOO_ENDIAN_LITTLE],[],[Little Endian])],
+	[AC_DEFINE([MOO_ENDIAN_UNKNOWN],[],[Unknown Endian])])
 
 AC_ARG_ENABLE([debug], [AS_HELP_STRING([--enable-debug],[build the library in the debug mode (default. no)])],
 	enable_debug_is=$enableval,enable_debug_is=no)
 if test "$enable_debug_is" = "yes"
 then
-	[CFLAGS="$CFLAGS -g -D_DEBUG -UNDEBUG -DSTIX_BUILD_DEBUG -U_FORTIFY_SOURCE"]
-	[CXXFLAGS="$CXXFLAGS -g -D_DEBUG -UNDEBUG -DSTIX_BUILD_DEBUG -U_FORTIFY_SOURCE"]
+	[CFLAGS="$CFLAGS -g -D_DEBUG -UNDEBUG -DMOO_BUILD_DEBUG -U_FORTIFY_SOURCE"]
+	[CXXFLAGS="$CXXFLAGS -g -D_DEBUG -UNDEBUG -DMOO_BUILD_DEBUG -U_FORTIFY_SOURCE"]
 	AC_SUBST(BUILD_MODE, "debug")
 else
-	[CFLAGS="$CFLAGS -DNDEBUG -U_DEBUG -DSTIX_BUILD_RELEASE -U_FORTIFY_SOURCE"]
-	[CXXFLAGS="$CXXFLAGS -DNDEBUG -U_DEBUG -DSTIX_BUILD_RELEASE -U_FORTIFY_SOURCE"]
+	[CFLAGS="$CFLAGS -DNDEBUG -U_DEBUG -DMOO_BUILD_RELEASE -U_FORTIFY_SOURCE"]
+	[CXXFLAGS="$CXXFLAGS -DNDEBUG -U_DEBUG -DMOO_BUILD_RELEASE -U_FORTIFY_SOURCE"]
 	AC_SUBST(BUILD_MODE, "release")
 fi
 
@@ -412,25 +412,25 @@ test "${enable_shared}" = "no" -a "${enable_static}" = "yes" && enable_static_mo
 
 if test "${enable_static_module}" = "yes"
 then
-	AC_DEFINE([STIX_ENABLE_STATIC_MODULE],[],[link modules statically into the main library])
+	AC_DEFINE([MOO_ENABLE_STATIC_MODULE],[],[link modules statically into the main library])
 fi
 AM_CONDITIONAL(ENABLE_STATIC_MODULE, test "${enable_static_module}" = "yes")
 
-AC_SUBST(STIX_SIZEOF_WCHAR_T, $ac_cv_sizeof_wchar_t)
-AC_SUBST(STIX_SIZEOF_LONG_LONG, $ac_cv_sizeof_long_long)
-AC_SUBST(STIX_SIZEOF_LONG, $ac_cv_sizeof_long)
-AC_SUBST(STIX_SIZEOF_INT, $ac_cv_sizeof_int)
-AC_SUBST(STIX_SIZEOF_SHORT, $ac_cv_sizeof_short)
-AC_SUBST(STIX_SIZEOF_CHAR, $ac_cv_sizeof_char)
-AC_SUBST(STIX_SIZEOF_VOID_P, $ac_cv_sizeof_void_p)
-AC_SUBST(STIX_SIZEOF_FLOAT, $ac_cv_sizeof_float)
-AC_SUBST(STIX_SIZEOF_DOUBLE, $ac_cv_sizeof_double)
-AC_SUBST(STIX_SIZEOF_LONG_DOUBLE, $ac_cv_sizeof_long_double)
-AC_SUBST(STIX_SIZEOF_OFF_T, $ac_cv_sizeof_off_t)
-AC_SUBST(STIX_SIZEOF_OFF64_T, $ac_cv_sizeof_off64_t)
+AC_SUBST(MOO_SIZEOF_WCHAR_T, $ac_cv_sizeof_wchar_t)
+AC_SUBST(MOO_SIZEOF_LONG_LONG, $ac_cv_sizeof_long_long)
+AC_SUBST(MOO_SIZEOF_LONG, $ac_cv_sizeof_long)
+AC_SUBST(MOO_SIZEOF_INT, $ac_cv_sizeof_int)
+AC_SUBST(MOO_SIZEOF_SHORT, $ac_cv_sizeof_short)
+AC_SUBST(MOO_SIZEOF_CHAR, $ac_cv_sizeof_char)
+AC_SUBST(MOO_SIZEOF_VOID_P, $ac_cv_sizeof_void_p)
+AC_SUBST(MOO_SIZEOF_FLOAT, $ac_cv_sizeof_float)
+AC_SUBST(MOO_SIZEOF_DOUBLE, $ac_cv_sizeof_double)
+AC_SUBST(MOO_SIZEOF_LONG_DOUBLE, $ac_cv_sizeof_long_double)
+AC_SUBST(MOO_SIZEOF_OFF_T, $ac_cv_sizeof_off_t)
+AC_SUBST(MOO_SIZEOF_OFF64_T, $ac_cv_sizeof_off64_t)
 
-AC_SUBST(STIX_PROJECT_AUTHOR, "${PACKAGE_BUGREPORT}")
-AC_SUBST(STIX_PROJECT_URL, "${PACKAGE_URL}")
+AC_SUBST(MOO_PROJECT_AUTHOR, "${PACKAGE_BUGREPORT}")
+AC_SUBST(MOO_PROJECT_URL, "${PACKAGE_URL}")
 
 AC_CONFIG_FILES([
 	Makefile 

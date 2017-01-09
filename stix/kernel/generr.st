@@ -1,4 +1,4 @@
-#include 'Stix.st'.
+#include 'Moo.st'.
 
 class MyObject(Object)
 {
@@ -121,7 +121,7 @@ class MyObject(Object)
 		].
 
 		
-		f puts: S'static stix_ooch_t* '.
+		f puts: S'static moo_ooch_t* '.
 		f puts: name.
 		f puts: S'[] =\n{\n'.
 		0 to: c do: [:i |
@@ -140,7 +140,7 @@ class MyObject(Object)
 		| c  |
 		c := s size - 1.
 
-		f puts: 'static stix_ooch_t '.
+		f puts: 'static moo_ooch_t '.
 		f puts: prefix.
 		f puts: index asString.
 		f puts: '[] = {'.

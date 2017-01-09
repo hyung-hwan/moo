@@ -24,47 +24,47 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "stix-prv.h"
+#include "moo-prv.h"
 
-void stix_dumpsymtab (stix_t* stix)
+void moo_dumpsymtab (moo_t* moo)
 {
-	stix_oow_t i;
-	stix_oop_char_t symbol;
+	moo_oow_t i;
+	moo_oop_char_t symbol;
 
-	STIX_DEBUG0 (stix, "--------------------------------------------\n");
-	STIX_DEBUG1 (stix, "Stix Symbol Table %zu\n", STIX_OBJ_GET_SIZE(stix->symtab->bucket));
-	STIX_DEBUG0 (stix, "--------------------------------------------\n");
+	MOO_DEBUG0 (moo, "--------------------------------------------\n");
+	MOO_DEBUG1 (moo, "Stix Symbol Table %zu\n", MOO_OBJ_GET_SIZE(moo->symtab->bucket));
+	MOO_DEBUG0 (moo, "--------------------------------------------\n");
 
-	for (i = 0; i < STIX_OBJ_GET_SIZE(stix->symtab->bucket); i++)
+	for (i = 0; i < MOO_OBJ_GET_SIZE(moo->symtab->bucket); i++)
 	{
-		symbol = (stix_oop_char_t)stix->symtab->bucket->slot[i];
- 		if ((stix_oop_t)symbol != stix->_nil)
+		symbol = (moo_oop_char_t)moo->symtab->bucket->slot[i];
+ 		if ((moo_oop_t)symbol != moo->_nil)
 		{
-			STIX_DEBUG2 (stix, " %07zu %O\n", i, symbol);
+			MOO_DEBUG2 (moo, " %07zu %O\n", i, symbol);
 		}
 	}
 
-	STIX_DEBUG0 (stix, "--------------------------------------------\n");
+	MOO_DEBUG0 (moo, "--------------------------------------------\n");
 }
 
-void stix_dumpdic (stix_t* stix, stix_oop_set_t dic, const stix_bch_t* title)
+void moo_dumpdic (moo_t* moo, moo_oop_set_t dic, const moo_bch_t* title)
 {
-	stix_oow_t i, j;
-	stix_oop_association_t ass;
+	moo_oow_t i, j;
+	moo_oop_association_t ass;
 
-	STIX_DEBUG0 (stix, "--------------------------------------------\n");
-	STIX_DEBUG2 (stix, "%s %zu\n", title, STIX_OBJ_GET_SIZE(dic->bucket));
-	STIX_DEBUG0 (stix, "--------------------------------------------\n");
+	MOO_DEBUG0 (moo, "--------------------------------------------\n");
+	MOO_DEBUG2 (moo, "%s %zu\n", title, MOO_OBJ_GET_SIZE(dic->bucket));
+	MOO_DEBUG0 (moo, "--------------------------------------------\n");
 
-	for (i = 0; i < STIX_OBJ_GET_SIZE(dic->bucket); i++)
+	for (i = 0; i < MOO_OBJ_GET_SIZE(dic->bucket); i++)
 	{
-		ass = (stix_oop_association_t)dic->bucket->slot[i];
-		if ((stix_oop_t)ass != stix->_nil)
+		ass = (moo_oop_association_t)dic->bucket->slot[i];
+		if ((moo_oop_t)ass != moo->_nil)
 		{
-			STIX_DEBUG2 (stix, " %07zu %O\n", i, ass->key);
+			MOO_DEBUG2 (moo, " %07zu %O\n", i, ass->key);
 		}
 	}
-	STIX_DEBUG0 (stix, "--------------------------------------------\n");
+	MOO_DEBUG0 (moo, "--------------------------------------------\n");
 }
 
 

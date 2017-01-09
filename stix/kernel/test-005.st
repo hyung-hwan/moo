@@ -1,5 +1,5 @@
 
-#include 'Stix.st'.
+#include 'Moo.st'.
 
 #################################################################
 ## MAIN
@@ -59,7 +59,7 @@ class MyObject(TestObject)
 		^a + 99.
 
 
-		##a := Stix.MyCOM.HashTable new.
+		##a := Moo.MyCOM.HashTable new.
 	}
 
 	method xxx: aBlock

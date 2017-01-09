@@ -24,9 +24,9 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "stix-prv.h"
+#include "moo-prv.h"
 
-#define STIX_BCLEN_MAX 6
+#define MOO_BCLEN_MAX 6
 
 /* some naming conventions
  *  bchars, uchars -> pointer and length
@@ -37,22 +37,22 @@
  *  utobcstr -> ucstr to bcstr
  */
 
-stix_oow_t stix_hashbytes (const stix_oob_t* ptr, stix_oow_t len)
+moo_oow_t moo_hashbytes (const moo_oob_t* ptr, moo_oow_t len)
 {
-	stix_oow_t h = 0;
-	const stix_uint8_t* bp, * be;
+	moo_oow_t h = 0;
+	const moo_uint8_t* bp, * be;
 
 	bp = ptr; be = bp + len;
 	while (bp < be) h = h * 31 + *bp++;
 
 	/* constrain the hash value to be representable in a small integer
 	 * for convenience sake */
-	return h % ((stix_oow_t)STIX_SMOOI_MAX + 1);
+	return h % ((moo_oow_t)MOO_SMOOI_MAX + 1);
 }
 
-int stix_equaluchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_oow_t len)
+int moo_equaluchars (const moo_uch_t* str1, const moo_uch_t* str2, moo_oow_t len)
 {
-	stix_oow_t i;
+	moo_oow_t i;
 
 	for (i = 0; i < len; i++)
 	{
@@ -62,9 +62,9 @@ int stix_equaluchars (const stix_uch_t* str1, const stix_uch_t* str2, stix_oow_t
 	return 1;
 }
 
-int stix_equalbchars (const stix_bch_t* str1, const stix_bch_t* str2, stix_oow_t len)
+int moo_equalbchars (const moo_bch_t* str1, const moo_bch_t* str2, moo_oow_t len)
 {
-	stix_oow_t i;
+	moo_oow_t i;
 
 	for (i = 0; i < len; i++)
 	{
@@ -74,7 +74,7 @@ int stix_equalbchars (const stix_bch_t* str1, const stix_bch_t* str2, stix_oow_t
 	return 1;
 }
 
-int stix_compucstr (const stix_uch_t* str1, const stix_uch_t* str2)
+int moo_compucstr (const moo_uch_t* str1, const moo_uch_t* str2)
 {
 	while (*str1 == *str2)
 	{
@@ -85,7 +85,7 @@ int stix_compucstr (const stix_uch_t* str1, const stix_uch_t* str2)
 	return (*str1 > *str2)? 1: -1;
 }
 
-int stix_compbcstr (const stix_bch_t* str1, const stix_bch_t* str2)
+int moo_compbcstr (const moo_bch_t* str1, const moo_bch_t* str2)
 {
 	while (*str1 == *str2)
 	{
@@ -96,7 +96,7 @@ int stix_compbcstr (const stix_bch_t* str1, const stix_bch_t* str2)
 	return (*str1 > *str2)? 1: -1;
 }
 
-int stix_compucbcstr (const stix_uch_t* str1, const stix_bch_t* str2)
+int moo_compucbcstr (const moo_uch_t* str1, const moo_bch_t* str2)
 {
 	while (*str1 == *str2)
 	{
@@ -107,47 +107,47 @@ int stix_compucbcstr (const stix_uch_t* str1, const stix_bch_t* str2)
 	return (*str1 > *str2)? 1: -1;
 }
 
-int stix_compucharsbcstr (const stix_uch_t* str1, stix_oow_t len, const stix_bch_t* str2)
+int moo_compucharsbcstr (const moo_uch_t* str1, moo_oow_t len, const moo_bch_t* str2)
 {
-	const stix_uch_t* end = str1 + len;
+	const moo_uch_t* end = str1 + len;
 	while (str1 < end && *str2 != '\0' && *str1 == *str2) str1++, str2++;
 	if (str1 == end && *str2 == '\0') return 0;
 	if (*str1 == *str2) return (str1 < end)? 1: -1;
 	return (*str1 > *str2)? 1: -1;
 }
 
-int stix_compbcharsbcstr (const stix_bch_t* str1, stix_oow_t len, const stix_bch_t* str2)
+int moo_compbcharsbcstr (const moo_bch_t* str1, moo_oow_t len, const moo_bch_t* str2)
 {
-	const stix_bch_t* end = str1 + len;
+	const moo_bch_t* end = str1 + len;
 	while (str1 < end && *str2 != '\0' && *str1 == *str2) str1++, str2++;
 	if (str1 == end && *str2 == '\0') return 0;
 	if (*str1 == *str2) return (str1 < end)? 1: -1;
 	return (*str1 > *str2)? 1: -1;
 }
 
-void stix_copyuchars (stix_uch_t* dst, const stix_uch_t* src, stix_oow_t len)
+void moo_copyuchars (moo_uch_t* dst, const moo_uch_t* src, moo_oow_t len)
 {
-	stix_oow_t i;
+	moo_oow_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
-void stix_copybchars (stix_bch_t* dst, const stix_bch_t* src, stix_oow_t len)
+void moo_copybchars (moo_bch_t* dst, const moo_bch_t* src, moo_oow_t len)
 {
-	stix_oow_t i;
+	moo_oow_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
-void stix_copybtouchars (stix_uch_t* dst, const stix_bch_t* src, stix_oow_t len)
+void moo_copybtouchars (moo_uch_t* dst, const moo_bch_t* src, moo_oow_t len)
 {
 	/* copy without conversions.
-	 * use stix_bctouchars() for conversion encoding */
-	stix_oow_t i;
+	 * use moo_bctouchars() for conversion encoding */
+	moo_oow_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
-stix_oow_t stix_copyucstr (stix_uch_t* dst, stix_oow_t len, const stix_uch_t* src)
+moo_oow_t moo_copyucstr (moo_uch_t* dst, moo_oow_t len, const moo_uch_t* src)
 {
-	stix_uch_t* p, * p2;
+	moo_uch_t* p, * p2;
 
 	p = dst; p2 = dst + len - 1;
 
@@ -161,9 +161,9 @@ stix_oow_t stix_copyucstr (stix_uch_t* dst, stix_oow_t len, const stix_uch_t* sr
 	return p - dst;
 }
 
-stix_oow_t stix_copybcstr (stix_bch_t* dst, stix_oow_t len, const stix_bch_t* src)
+moo_oow_t moo_copybcstr (moo_bch_t* dst, moo_oow_t len, const moo_bch_t* src)
 {
-	stix_bch_t* p, * p2;
+	moo_bch_t* p, * p2;
 
 	p = dst; p2 = dst + len - 1;
 
@@ -177,131 +177,131 @@ stix_oow_t stix_copybcstr (stix_bch_t* dst, stix_oow_t len, const stix_bch_t* sr
 	return p - dst;
 }
 
-stix_oow_t stix_countucstr (const stix_uch_t* str)
+moo_oow_t moo_countucstr (const moo_uch_t* str)
 {
-	const stix_uch_t* ptr = str;
+	const moo_uch_t* ptr = str;
 	while (*ptr != '\0') ptr++;
 	return ptr - str;
 }
 
-stix_oow_t stix_countbcstr (const stix_bch_t* str)
+moo_oow_t moo_countbcstr (const moo_bch_t* str)
 {
-	const stix_bch_t* ptr = str;
+	const moo_bch_t* ptr = str;
 	while (*ptr != '\0') ptr++;
 	return ptr - str;
 }
 
-stix_uch_t* stix_finduchar (const stix_uch_t* ptr, stix_oow_t len, stix_uch_t c)
+moo_uch_t* moo_finduchar (const moo_uch_t* ptr, moo_oow_t len, moo_uch_t c)
 {
-	const stix_uch_t* end;
+	const moo_uch_t* end;
 
 	end = ptr + len;
 	while (ptr < end)
 	{
-		if (*ptr == c) return (stix_uch_t*)ptr;
+		if (*ptr == c) return (moo_uch_t*)ptr;
 		ptr++;
 	}
 
-	return STIX_NULL;
+	return MOO_NULL;
 }
 
-stix_bch_t* stix_findbchar (const stix_bch_t* ptr, stix_oow_t len, stix_bch_t c)
+moo_bch_t* moo_findbchar (const moo_bch_t* ptr, moo_oow_t len, moo_bch_t c)
 {
-	const stix_bch_t* end;
+	const moo_bch_t* end;
 
 	end = ptr + len;
 	while (ptr < end)
 	{
-		if (*ptr == c) return (stix_bch_t*)ptr;
+		if (*ptr == c) return (moo_bch_t*)ptr;
 		ptr++;
 	}
 
-	return STIX_NULL;
+	return MOO_NULL;
 }
 
-stix_uch_t* stix_rfinduchar (const stix_uch_t* ptr, stix_oow_t len, stix_uch_t c)
+moo_uch_t* moo_rfinduchar (const moo_uch_t* ptr, moo_oow_t len, moo_uch_t c)
 {
-	const stix_uch_t* cur;
+	const moo_uch_t* cur;
 
 	cur = ptr + len;
 	while (cur > ptr)
 	{
 		--cur;
-		if (*cur == c) return (stix_uch_t*)cur;
+		if (*cur == c) return (moo_uch_t*)cur;
 	}
 
-	return STIX_NULL;
+	return MOO_NULL;
 }
 
-stix_bch_t* stix_rfindbchar (const stix_bch_t* ptr, stix_oow_t len, stix_bch_t c)
+moo_bch_t* moo_rfindbchar (const moo_bch_t* ptr, moo_oow_t len, moo_bch_t c)
 {
-	const stix_bch_t* cur;
+	const moo_bch_t* cur;
 
 	cur = ptr + len;
 	while (cur > ptr)
 	{
 		--cur;
-		if (*cur == c) return (stix_bch_t*)cur;
+		if (*cur == c) return (moo_bch_t*)cur;
 	}
 
-	return STIX_NULL;
+	return MOO_NULL;
 }
 
 /* ----------------------------------------------------------------------- */
 
-int stix_concatoocstrtosbuf (stix_t* stix, const stix_ooch_t* str, int id)
+int moo_concatoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, int id)
 {
-	stix_sbuf_t* p;
-	stix_oow_t len;
+	moo_sbuf_t* p;
+	moo_oow_t len;
 
-	p = &stix->sbuf[id];
-	len = stix_countoocstr (str);
+	p = &moo->sbuf[id];
+	len = moo_countoocstr (str);
 
 	if (len > p->capa - p->len)
 	{
-		stix_oow_t newcapa;
-		stix_ooch_t* tmp;
+		moo_oow_t newcapa;
+		moo_ooch_t* tmp;
 
-		newcapa = STIX_ALIGN(p->len + len, 512); /* TODO: adjust this capacity */
+		newcapa = MOO_ALIGN(p->len + len, 512); /* TODO: adjust this capacity */
 
 		/* +1 to handle line ending injection more easily */
-		tmp = stix_reallocmem (stix, p->ptr, (newcapa + 1) * STIX_SIZEOF(*tmp)); 
+		tmp = moo_reallocmem (moo, p->ptr, (newcapa + 1) * MOO_SIZEOF(*tmp)); 
 		if (!tmp) return -1;
 
 		p->ptr = tmp;
 		p->capa = newcapa;
 	}
 
-	stix_copyoochars (&p->ptr[p->len], str, len);
+	moo_copyoochars (&p->ptr[p->len], str, len);
 	p->len += len;
 	p->ptr[p->len] = '\0';
 
 	return 0;
 }
 
-int stix_copyoocstrtosbuf (stix_t* stix, const stix_ooch_t* str, int id)
+int moo_copyoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, int id)
 {
-	stix->sbuf[id].len = 0;;
-	return stix_concatoocstrtosbuf (stix, str, id);
+	moo->sbuf[id].len = 0;;
+	return moo_concatoocstrtosbuf (moo, str, id);
 }
 
 
 /* ----------------------------------------------------------------------- */
 
-static STIX_INLINE int bcsn_to_ucsn_with_cmgr (
-	const stix_bch_t* bcs, stix_oow_t* bcslen,
-	stix_uch_t* ucs, stix_oow_t* ucslen, stix_cmgr_t* cmgr, int all)
+static MOO_INLINE int bcsn_to_ucsn_with_cmgr (
+	const moo_bch_t* bcs, moo_oow_t* bcslen,
+	moo_uch_t* ucs, moo_oow_t* ucslen, moo_cmgr_t* cmgr, int all)
 {
-	const stix_bch_t* p;
+	const moo_bch_t* p;
 	int ret = 0;
-	stix_oow_t mlen;
+	moo_oow_t mlen;
 
 	if (ucs)
 	{
 		/* destination buffer is specified. 
 		 * copy the conversion result to the buffer */
 
-		stix_uch_t* q, * qend;
+		moo_uch_t* q, * qend;
 
 		p = bcs;
 		q = ucs;
@@ -310,7 +310,7 @@ static STIX_INLINE int bcsn_to_ucsn_with_cmgr (
 
 		while (mlen > 0)
 		{
-			stix_oow_t n;
+			moo_oow_t n;
 
 			if (q >= qend)
 			{
@@ -365,15 +365,15 @@ static STIX_INLINE int bcsn_to_ucsn_with_cmgr (
 		 * a buffer with the size and call this function again with 
 		 * the buffer. */
 
-		stix_uch_t w;
-		stix_oow_t wlen = 0;
+		moo_uch_t w;
+		moo_oow_t wlen = 0;
 
 		p = bcs;
 		mlen = *bcslen;
 
 		while (mlen > 0)
 		{
-			stix_oow_t n;
+			moo_oow_t n;
 
 			n = cmgr->bctouc (p, mlen, &w);
 			if (n == 0)
@@ -409,12 +409,12 @@ static STIX_INLINE int bcsn_to_ucsn_with_cmgr (
 	return ret;
 }
 
-static STIX_INLINE int bcs_to_ucs_with_cmgr (
-	const stix_bch_t* bcs, stix_oow_t* bcslen,
-	stix_uch_t* ucs, stix_oow_t* ucslen, stix_cmgr_t* cmgr, int all)
+static MOO_INLINE int bcs_to_ucs_with_cmgr (
+	const moo_bch_t* bcs, moo_oow_t* bcslen,
+	moo_uch_t* ucs, moo_oow_t* ucslen, moo_cmgr_t* cmgr, int all)
 {
-	const stix_bch_t* bp;
-	stix_oow_t mlen, wlen;
+	const moo_bch_t* bp;
+	moo_oow_t mlen, wlen;
 	int n;
 
 	for (bp = bcs; *bp != '\0'; bp++) /* nothing */ ;
@@ -432,21 +432,21 @@ static STIX_INLINE int bcs_to_ucs_with_cmgr (
 	return n;
 }
 
-static STIX_INLINE int ucsn_to_bcsn_with_cmgr (
-	const stix_uch_t* ucs, stix_oow_t* ucslen,
-	stix_bch_t* bcs, stix_oow_t* bcslen, stix_cmgr_t* cmgr)
+static MOO_INLINE int ucsn_to_bcsn_with_cmgr (
+	const moo_uch_t* ucs, moo_oow_t* ucslen,
+	moo_bch_t* bcs, moo_oow_t* bcslen, moo_cmgr_t* cmgr)
 {
-	const stix_uch_t* p = ucs;
-	const stix_uch_t* end = ucs + *ucslen;
+	const moo_uch_t* p = ucs;
+	const moo_uch_t* end = ucs + *ucslen;
 	int ret = 0; 
 
 	if (bcs)
 	{
-		stix_oow_t rem = *bcslen;
+		moo_oow_t rem = *bcslen;
 
 		while (p < end) 
 		{
-			stix_oow_t n;
+			moo_oow_t n;
 
 			if (rem <= 0)
 			{
@@ -472,14 +472,14 @@ static STIX_INLINE int ucsn_to_bcsn_with_cmgr (
 	}
 	else
 	{
-		stix_bch_t bcsbuf[STIX_BCLEN_MAX];
-		stix_oow_t mlen = 0;
+		moo_bch_t bcsbuf[MOO_BCLEN_MAX];
+		moo_oow_t mlen = 0;
 
 		while (p < end)
 		{
-			stix_oow_t n;
+			moo_oow_t n;
 
-			n = cmgr->uctobc (*p, bcsbuf, STIX_COUNTOF(bcsbuf));
+			n = cmgr->uctobc (*p, bcsbuf, MOO_COUNTOF(bcsbuf));
 			if (n == 0) 
 			{
 				ret = -1;
@@ -487,7 +487,7 @@ static STIX_INLINE int ucsn_to_bcsn_with_cmgr (
 			}
 
 			/* it assumes that bcsbuf is large enough to hold a character */
-			/*STIX_ASSERT (stix, n <= STIX_COUNTOF(bcsbuf));*/
+			/*MOO_ASSERT (moo, n <= MOO_COUNTOF(bcsbuf));*/
 
 			p++; mlen += n;
 		}
@@ -503,19 +503,19 @@ static STIX_INLINE int ucsn_to_bcsn_with_cmgr (
 
 
 static int ucs_to_bcs_with_cmgr (
-	const stix_uch_t* ucs, stix_oow_t* ucslen,
-	stix_bch_t* bcs, stix_oow_t* bcslen, stix_cmgr_t* cmgr)
+	const moo_uch_t* ucs, moo_oow_t* ucslen,
+	moo_bch_t* bcs, moo_oow_t* bcslen, moo_cmgr_t* cmgr)
 {
-	const stix_uch_t* p = ucs;
+	const moo_uch_t* p = ucs;
 	int ret = 0;
 
 	if (bcs)
 	{
-		stix_oow_t rem = *bcslen;
+		moo_oow_t rem = *bcslen;
 
 		while (*p != '\0')
 		{
-			stix_oow_t n;
+			moo_oow_t n;
 
 			if (rem <= 0)
 			{
@@ -554,14 +554,14 @@ static int ucs_to_bcs_with_cmgr (
 	}
 	else
 	{
-		stix_bch_t bcsbuf[STIX_BCLEN_MAX];
-		stix_oow_t mlen = 0;
+		moo_bch_t bcsbuf[MOO_BCLEN_MAX];
+		moo_oow_t mlen = 0;
 
 		while (*p != '\0')
 		{
-			stix_oow_t n;
+			moo_oow_t n;
 
-			n = cmgr->uctobc (*p, bcsbuf, STIX_COUNTOF(bcsbuf));
+			n = cmgr->uctobc (*p, bcsbuf, MOO_COUNTOF(bcsbuf));
 			if (n == 0) 
 			{
 				ret = -1;
@@ -569,7 +569,7 @@ static int ucs_to_bcs_with_cmgr (
 			}
 
 			/* it assumes that bcs is large enough to hold a character */
-			/*STIX_ASSERT (stix, n <= STIX_COUNTOF(bcs));*/
+			/*MOO_ASSERT (moo, n <= MOO_COUNTOF(bcs));*/
 
 			p++; mlen += n;
 		}
@@ -585,36 +585,36 @@ static int ucs_to_bcs_with_cmgr (
 
 /* ----------------------------------------------------------------------- */
 
-static stix_cmgr_t utf8_cmgr =
+static moo_cmgr_t utf8_cmgr =
 {
-	stix_utf8touc,
-	stix_uctoutf8
+	moo_utf8touc,
+	moo_uctoutf8
 };
 
-stix_cmgr_t* stix_getutf8cmgr (void)
+moo_cmgr_t* moo_getutf8cmgr (void)
 {
 	return &utf8_cmgr;
 }
 
-int stix_convutf8touchars (const stix_bch_t* bcs, stix_oow_t* bcslen, stix_uch_t* ucs, stix_oow_t* ucslen)
+int moo_convutf8touchars (const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
 {
 	/* the source is length bound */
 	return bcsn_to_ucsn_with_cmgr (bcs, bcslen, ucs, ucslen, &utf8_cmgr, 0);
 }
 
-int stix_convutoutf8chars (const stix_uch_t* ucs, stix_oow_t* ucslen, stix_bch_t* bcs, stix_oow_t* bcslen)
+int moo_convutoutf8chars (const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t* bcs, moo_oow_t* bcslen)
 {
 	/* length bound */
 	return ucsn_to_bcsn_with_cmgr (ucs, ucslen, bcs, bcslen, &utf8_cmgr);
 }
 
-int stix_convutf8toucstr (const stix_bch_t* bcs, stix_oow_t* bcslen, stix_uch_t* ucs, stix_oow_t* ucslen)
+int moo_convutf8toucstr (const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
 {
 	/* null-terminated. */
 	return bcs_to_ucs_with_cmgr (bcs, bcslen, ucs, ucslen, &utf8_cmgr, 0);
 }
 
-int stix_convutoutf8cstr (const stix_uch_t* ucs, stix_oow_t* ucslen, stix_bch_t* bcs, stix_oow_t* bcslen)
+int moo_convutoutf8cstr (const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t* bcs, moo_oow_t* bcslen)
 {
 	/* null-terminated */
 	return ucs_to_bcs_with_cmgr (ucs, ucslen, bcs, bcslen, &utf8_cmgr);
@@ -622,26 +622,26 @@ int stix_convutoutf8cstr (const stix_uch_t* ucs, stix_oow_t* ucslen, stix_bch_t*
 
 /* ----------------------------------------------------------------------- */
 
-int stix_convbtouchars (stix_t* stix, const stix_bch_t* bcs, stix_oow_t* bcslen, stix_uch_t* ucs, stix_oow_t* ucslen)
+int moo_convbtouchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
 {
 	/* length bound */
-	return bcsn_to_ucsn_with_cmgr (bcs, bcslen, ucs, ucslen, stix->cmgr, 0);
+	return bcsn_to_ucsn_with_cmgr (bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
 }
 
-int stix_convutobchars (stix_t* stix, const stix_uch_t* ucs, stix_oow_t* ucslen, stix_bch_t* bcs, stix_oow_t* bcslen)
+int moo_convutobchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t* bcs, moo_oow_t* bcslen)
 {
 	/* length bound */
-	return ucsn_to_bcsn_with_cmgr (ucs, ucslen, bcs, bcslen, stix->cmgr);
+	return ucsn_to_bcsn_with_cmgr (ucs, ucslen, bcs, bcslen, moo->cmgr);
 }
 
-int stix_convbtoucstr (stix_t* stix, const stix_bch_t* bcs, stix_oow_t* bcslen, stix_uch_t* ucs, stix_oow_t* ucslen)
+int moo_convbtoucstr (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
 {
 	/* null-terminated. */
-	return bcs_to_ucs_with_cmgr (bcs, bcslen, ucs, ucslen, stix->cmgr, 0);
+	return bcs_to_ucs_with_cmgr (bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
 }
 
-int stix_convutobcstr (stix_t* stix, const stix_uch_t* ucs, stix_oow_t* ucslen, stix_bch_t* bcs, stix_oow_t* bcslen)
+int moo_convutobcstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t* bcs, moo_oow_t* bcslen)
 {
 	/* null-terminated */
-	return ucs_to_bcs_with_cmgr (ucs, ucslen, bcs, bcslen, stix->cmgr);
+	return ucs_to_bcs_with_cmgr (ucs, ucslen, bcs, bcslen, moo->cmgr);
 }

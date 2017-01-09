@@ -24,7 +24,7 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "stix-prv.h"
+#include "moo-prv.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,7 +36,7 @@
 #if defined(_WIN32)
 #	include <windows.h>
 #	include <tchar.h>
-#	if defined(STIX_HAVE_CFG_H)
+#	if defined(MOO_HAVE_CFG_H)
 #		include <ltdl.h>
 #		define USE_LTDL
 #	endif
@@ -65,27 +65,27 @@
 #	endif
 #endif
 
-#if !defined(STIX_DEFAULT_MODPREFIX)
+#if !defined(MOO_DEFAULT_MODPREFIX)
 #	if defined(_WIN32)
-#		define STIX_DEFAULT_MODPREFIX "stix-"
+#		define MOO_DEFAULT_MODPREFIX "moo-"
 #	elif defined(__OS2__)
-#		define STIX_DEFAULT_MODPREFIX "st-"
+#		define MOO_DEFAULT_MODPREFIX "st-"
 #	elif defined(__MSDOS__)
-#		define STIX_DEFAULT_MODPREFIX "st-"
+#		define MOO_DEFAULT_MODPREFIX "st-"
 #	else
-#		define STIX_DEFAULT_MODPREFIX "libstix-"
+#		define MOO_DEFAULT_MODPREFIX "libmoo-"
 #	endif
 #endif
 
-#if !defined(STIX_DEFAULT_MODPOSTFIX)
+#if !defined(MOO_DEFAULT_MODPOSTFIX)
 #	if defined(_WIN32)
-#		define STIX_DEFAULT_MODPOSTFIX ""
+#		define MOO_DEFAULT_MODPOSTFIX ""
 #	elif defined(__OS2__)
-#		define STIX_DEFAULT_MODPOSTFIX ""
+#		define MOO_DEFAULT_MODPOSTFIX ""
 #	elif defined(__MSDOS__)
-#		define STIX_DEFAULT_MODPOSTFIX ""
+#		define MOO_DEFAULT_MODPOSTFIX ""
 #	else
-#		define STIX_DEFAULT_MODPOSTFIX ""
+#		define MOO_DEFAULT_MODPOSTFIX ""
 #	endif
 #endif
 
@@ -93,8 +93,8 @@ typedef struct bb_t bb_t;
 struct bb_t
 {
 	char buf[1024];
-	stix_oow_t pos;
-	stix_oow_t len;
+	moo_oow_t pos;
+	moo_oow_t len;
 	FILE* fp;
 };
 
@@ -106,27 +106,27 @@ struct xtn_t
 
 /* ========================================================================= */
 
-static void* sys_alloc (stix_mmgr_t* mmgr, stix_oow_t size)
+static void* sys_alloc (moo_mmgr_t* mmgr, moo_oow_t size)
 {
 	return malloc (size);
 }
 
-static void* sys_realloc (stix_mmgr_t* mmgr, void* ptr, stix_oow_t size)
+static void* sys_realloc (moo_mmgr_t* mmgr, void* ptr, moo_oow_t size)
 {
 	return realloc (ptr, size);
 }
 
-static void sys_free (stix_mmgr_t* mmgr, void* ptr)
+static void sys_free (moo_mmgr_t* mmgr, void* ptr)
 {
 	free (ptr);
 }
 
-static stix_mmgr_t sys_mmgr =
+static moo_mmgr_t sys_mmgr =
 {
 	sys_alloc,
 	sys_realloc,
 	sys_free,
-	STIX_NULL
+	MOO_NULL
 };
 
 /* ========================================================================= */
@@ -138,21 +138,21 @@ static stix_mmgr_t sys_mmgr =
 #endif
 
 
-static const stix_bch_t* get_base_name (const stix_bch_t* path)
+static const moo_bch_t* get_base_name (const moo_bch_t* path)
 {
-	const stix_bch_t* p, * last = STIX_NULL;
+	const moo_bch_t* p, * last = MOO_NULL;
 
 	for (p = path; *p != '\0'; p++)
 	{
 		if (IS_PATH_SEP(*p)) last = p;
 	}
 
-	return (last == STIX_NULL)? path: (last + 1);
+	return (last == MOO_NULL)? path: (last + 1);
 }
 
-static STIX_INLINE stix_ooi_t open_input (stix_t* stix, stix_ioarg_t* arg)
+static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 {
-	xtn_t* xtn = stix_getxtn(stix);
+	xtn_t* xtn = moo_getxtn(moo);
 	bb_t* bb;
 	FILE* fp;
 
@@ -160,13 +160,13 @@ static STIX_INLINE stix_ooi_t open_input (stix_t* stix, stix_ioarg_t* arg)
 	{
 		/* includee */
 
-		stix_bch_t bcs[1024]; /* TODO: right buffer size */
-		stix_oow_t bcslen = STIX_COUNTOF(bcs);
-		stix_oow_t ucslen;
+		moo_bch_t bcs[1024]; /* TODO: right buffer size */
+		moo_oow_t bcslen = MOO_COUNTOF(bcs);
+		moo_oow_t ucslen;
 
-		if (stix_convootobcstr (stix, arg->name, &ucslen, bcs, &bcslen) <= -1)
+		if (moo_convootobcstr (moo, arg->name, &ucslen, bcs, &bcslen) <= -1)
 		{ 
-			stix_seterrnum (stix, STIX_EECERR);
+			moo_seterrnum (moo, MOO_EECERR);
 			return -1;
 		}
 
@@ -190,11 +190,11 @@ static STIX_INLINE stix_ooi_t open_input (stix_t* stix, stix_ioarg_t* arg)
 
 	if (!fp)
 	{
-		stix_seterrnum (stix, STIX_EIOERR);
+		moo_seterrnum (moo, MOO_EIOERR);
 		return -1;
 	}
 
-	bb = stix_callocmem (stix, STIX_SIZEOF(*bb));
+	bb = moo_callocmem (moo, MOO_SIZEOF(*bb));
 	if (!bb)
 	{
 		fclose (fp);
@@ -206,32 +206,32 @@ static STIX_INLINE stix_ooi_t open_input (stix_t* stix, stix_ioarg_t* arg)
 	return 0;
 }
 
-static STIX_INLINE stix_ooi_t close_input (stix_t* stix, stix_ioarg_t* arg)
+static MOO_INLINE moo_ooi_t close_input (moo_t* moo, moo_ioarg_t* arg)
 {
-	xtn_t* xtn = stix_getxtn(stix);
+	xtn_t* xtn = moo_getxtn(moo);
 	bb_t* bb;
 
 	bb = (bb_t*)arg->handle;
-	STIX_ASSERT (stix, bb != STIX_NULL && bb->fp != STIX_NULL);
+	MOO_ASSERT (moo, bb != MOO_NULL && bb->fp != MOO_NULL);
 
 	fclose (bb->fp);
-	stix_freemem (stix, bb);
+	moo_freemem (moo, bb);
 
-	arg->handle = STIX_NULL;
+	arg->handle = MOO_NULL;
 	return 0;
 }
 
 
-static STIX_INLINE stix_ooi_t read_input (stix_t* stix, stix_ioarg_t* arg)
+static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 {
 	/*xtn_t* xtn = hcl_getxtn(hcl);*/
 	bb_t* bb;
-	stix_oow_t bcslen, ucslen, remlen;
+	moo_oow_t bcslen, ucslen, remlen;
 	int x;
 
 
 	bb = (bb_t*)arg->handle;
-	STIX_ASSERT (stix, bb != STIX_NULL && bb->fp != STIX_NULL);
+	MOO_ASSERT (moo, bb != MOO_NULL && bb->fp != MOO_NULL);
 	do
 	{
 		x = fgetc (bb->fp);
@@ -239,7 +239,7 @@ static STIX_INLINE stix_ooi_t read_input (stix_t* stix, stix_ioarg_t* arg)
 		{
 			if (ferror((FILE*)bb->fp))
 			{
-				stix_seterrnum (stix, STIX_EIOERR);
+				moo_seterrnum (moo, MOO_EIOERR);
 				return -1;
 			}
 			break;
@@ -247,15 +247,15 @@ static STIX_INLINE stix_ooi_t read_input (stix_t* stix, stix_ioarg_t* arg)
 
 		bb->buf[bb->len++] = x;
 	}
-	while (bb->len < STIX_COUNTOF(bb->buf) && x != '\r' && x != '\n');
+	while (bb->len < MOO_COUNTOF(bb->buf) && x != '\r' && x != '\n');
 
 	bcslen = bb->len;
-	ucslen = STIX_COUNTOF(arg->buf);
-	x = stix_convbtooochars (stix, bb->buf, &bcslen, arg->buf, &ucslen);
-	x = stix_convbtooochars (stix, bb->buf, &bcslen, arg->buf, &ucslen);
+	ucslen = MOO_COUNTOF(arg->buf);
+	x = moo_convbtooochars (moo, bb->buf, &bcslen, arg->buf, &ucslen);
+	x = moo_convbtooochars (moo, bb->buf, &bcslen, arg->buf, &ucslen);
 	if (x <= -1 && ucslen <= 0)
 	{
-		stix_seterrnum (stix, STIX_EECERR);
+		moo_seterrnum (moo, MOO_EECERR);
 		return -1;
 	}
 
@@ -265,76 +265,76 @@ static STIX_INLINE stix_ooi_t read_input (stix_t* stix, stix_ioarg_t* arg)
 	return ucslen;
 }
 
-static stix_ooi_t input_handler (stix_t* stix, stix_iocmd_t cmd, stix_ioarg_t* arg)
+static moo_ooi_t input_handler (moo_t* moo, moo_iocmd_t cmd, moo_ioarg_t* arg)
 {
 	switch (cmd)
 	{
-		case STIX_IO_OPEN:
-			return open_input (stix, arg);
+		case MOO_IO_OPEN:
+			return open_input (moo, arg);
 			
-		case STIX_IO_CLOSE:
-			return close_input (stix, arg);
+		case MOO_IO_CLOSE:
+			return close_input (moo, arg);
 
-		case STIX_IO_READ:
-			return read_input (stix, arg);
+		case MOO_IO_READ:
+			return read_input (moo, arg);
 
 		default:
-			stix->errnum = STIX_EINTERN;
+			moo->errnum = MOO_EINTERN;
 			return -1;
 	}
 }
 /* ========================================================================= */
 
-static void* dl_open (stix_t* stix, const stix_ooch_t* name)
+static void* dl_open (moo_t* moo, const moo_ooch_t* name)
 {
 #if defined(USE_LTDL)
 /* TODO: support various platforms */
-	stix_bch_t buf[1024]; /* TODO: use a proper path buffer */
-	stix_oow_t ucslen, bcslen;
-	stix_oow_t len;
+	moo_bch_t buf[1024]; /* TODO: use a proper path buffer */
+	moo_oow_t ucslen, bcslen;
+	moo_oow_t len;
 	void* handle;
 
 /* TODO: using MODPREFIX isn't a good idea for all kind of modules.
  * OK to use it for a primitive module.
  * NOT OK to use it for a FFI target. 
- * Attempting /home/hyung-hwan/xxx/lib/libstix-libc.so.6 followed by libc.so.6 is bad.
+ * Attempting /home/hyung-hwan/xxx/lib/libmoo-libc.so.6 followed by libc.so.6 is bad.
  * Need to accept the type or flags?
  *
- * dl_open (stix, "xxxx", STIX_MOD_EXTERNAL);
+ * dl_open (moo, "xxxx", MOO_MOD_EXTERNAL);
  * if external, don't use DEFAULT_MODPERFIX and MODPOSTFIX???
  */
 
-	len = stix_copybcstr (buf, STIX_COUNTOF(buf), STIX_DEFAULT_MODPREFIX);
+	len = moo_copybcstr (buf, MOO_COUNTOF(buf), MOO_DEFAULT_MODPREFIX);
 
 /* TODO: proper error checking and overflow checking */
-	bcslen = STIX_COUNTOF(buf) - len;
-	stix_convootobcstr (stix, name, &ucslen, &buf[len], &bcslen);
+	bcslen = MOO_COUNTOF(buf) - len;
+	moo_convootobcstr (moo, name, &ucslen, &buf[len], &bcslen);
 
-	stix_copybcstr (&buf[bcslen + len], STIX_COUNTOF(buf) - bcslen - len, STIX_DEFAULT_MODPOSTFIX);
+	moo_copybcstr (&buf[bcslen + len], MOO_COUNTOF(buf) - bcslen - len, MOO_DEFAULT_MODPOSTFIX);
 
 	handle = lt_dlopenext (buf);
 	if (!handle) 
 	{
 		buf[bcslen + len] = '\0';
 		handle = lt_dlopenext (&buf[len]);
-		if (handle) STIX_DEBUG2 (stix, "Opened module file %s handle %p\n", &buf[len], handle);
+		if (handle) MOO_DEBUG2 (moo, "Opened module file %s handle %p\n", &buf[len], handle);
 	}
 	else
 	{
-		STIX_DEBUG2 (stix, "Opened module file %s handle %p\n", buf, handle);
+		MOO_DEBUG2 (moo, "Opened module file %s handle %p\n", buf, handle);
 	}
 
 	return handle;
 
 #else
 	/* TODO: implemenent this */
-	return STIX_NULL;
+	return MOO_NULL;
 #endif
 }
 
-static void dl_close (stix_t* stix, void* handle)
+static void dl_close (moo_t* moo, void* handle)
 {
-	STIX_DEBUG1 (stix, "Closed module handle %p\n", handle);
+	MOO_DEBUG1 (moo, "Closed module handle %p\n", handle);
 #if defined(USE_LTDL)
 	lt_dlclose (handle);
 #elif defined(_WIN32)
@@ -348,18 +348,18 @@ static void dl_close (stix_t* stix, void* handle)
 #endif
 }
 
-static void* dl_getsym (stix_t* stix, void* handle, const stix_ooch_t* name)
+static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 {
 #if defined(USE_LTDL)
-	stix_bch_t buf[1024]; /* TODO: use a proper buffer. dynamically allocated if conversion result in too a large value */
-	stix_oow_t ucslen, bcslen;
+	moo_bch_t buf[1024]; /* TODO: use a proper buffer. dynamically allocated if conversion result in too a large value */
+	moo_oow_t ucslen, bcslen;
 	void* sym;
 	const char* symname;
 
 	buf[0] = '_';
 
-	bcslen = STIX_COUNTOF(buf) - 2;
-	stix_convootobcstr (stix, name, &ucslen, &buf[1], &bcslen); /* TODO: error check */
+	bcslen = MOO_COUNTOF(buf) - 2;
+	moo_convootobcstr (moo, name, &ucslen, &buf[1], &bcslen); /* TODO: error check */
 	symname = &buf[1];
 	sym = lt_dlsym (handle, symname);
 	if (!sym)
@@ -381,21 +381,21 @@ static void* dl_getsym (stix_t* stix, void* handle, const stix_ooch_t* name)
 		}
 	}
 
-	if (sym) STIX_DEBUG2 (stix, "Loaded module symbol %s from handle %p\n", symname, handle);
+	if (sym) MOO_DEBUG2 (moo, "Loaded module symbol %s from handle %p\n", symname, handle);
 	return sym;
 #else
 	/* TODO: IMPLEMENT THIS */
-	return STIX_NULL;
+	return MOO_NULL;
 #endif
 }
 
 /* ========================================================================= */
 
-static int write_all (int fd, const char* ptr, stix_oow_t len)
+static int write_all (int fd, const char* ptr, moo_oow_t len)
 {
 	while (len > 0)
 	{
-		stix_ooi_t wr;
+		moo_ooi_t wr;
 
 		wr = write (1, ptr, len);
 
@@ -415,21 +415,21 @@ static int write_all (int fd, const char* ptr, stix_oow_t len)
 	return 0;
 }
 
-static void log_write (stix_t* stix, stix_oow_t mask, const stix_ooch_t* msg, stix_oow_t len)
+static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oow_t len)
 {
 #if defined(_WIN32)
 #	error NOT IMPLEMENTED 
 	
 #else
-	stix_bch_t buf[256];
-	stix_oow_t ucslen, bcslen, msgidx;
+	moo_bch_t buf[256];
+	moo_oow_t ucslen, bcslen, msgidx;
 	int n;
 	char ts[32];
 	size_t tslen;
 	struct tm tm, *tmp;
 	time_t now;
 
-if (mask & STIX_LOG_GC) return; /* don't show gc logs */
+if (mask & MOO_LOG_GC) return; /* don't show gc logs */
 
 /* TODO: beautify the log message.
  *       do classification based on mask. */
@@ -452,9 +452,9 @@ if (mask & STIX_LOG_GC) return; /* don't show gc logs */
 	while (len > 0)
 	{
 		ucslen = len;
-		bcslen = STIX_COUNTOF(buf);
+		bcslen = MOO_COUNTOF(buf);
 
-		n = stix_convootobchars (stix, &msg[msgidx], &ucslen, buf, &bcslen);
+		n = moo_convootobchars (moo, &msg[msgidx], &ucslen, buf, &bcslen);
 		if (n == 0 || n == -2)
 		{
 			/* n = 0: 
@@ -463,7 +463,7 @@ if (mask & STIX_LOG_GC) return; /* don't show gc logs */
 			 *    buffer not sufficient. not all got converted yet.
 			 *    write what have been converted this round. */
 
-			STIX_ASSERT (stix, ucslen > 0); /* if this fails, the buffer size must be increased */
+			MOO_ASSERT (moo, ucslen > 0); /* if this fails, the buffer size must be increased */
 
 			/* attempt to write all converted characters */
 			if (write_all (1, buf, bcslen) <= -1) break;
@@ -486,9 +486,9 @@ if (mask & STIX_LOG_GC) return; /* don't show gc logs */
 
 /* ========================================================================= */
 
-static stix_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' };
-static stix_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
-static stix_t* g_stix = STIX_NULL;
+static moo_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' };
+static moo_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
+static moo_t* g_moo = MOO_NULL;
 
 /* ========================================================================= */
 
@@ -507,7 +507,7 @@ static void timer_intr_handler (void)
 	*/
 
 	/* The timer interrupt (normally) occurs 18.2 times per second. */
-	if (g_stix) stix_switchprocess (g_stix);
+	if (g_moo) moo_switchprocess (g_moo);
 	_chain_intr(prev_timer_intr_handler);
 }
 
@@ -520,7 +520,7 @@ static ProcessSerialNumber g_psn;
 
 static pascal void timer_intr_handler (TMTask* task)
 {
-	if (g_stix) stix_switchprocess (g_stix);
+	if (g_moo) moo_switchprocess (g_moo);
 	WakeUpProcess (&g_psn);
 	PrimeTime ((QElem*)&g_tmtask, TMTASK_DELAY);
 }
@@ -528,7 +528,7 @@ static pascal void timer_intr_handler (TMTask* task)
 #else
 static void arrange_process_switching (int sig)
 {
-	if (g_stix) stix_switchprocess (g_stix);
+	if (g_moo) moo_switchprocess (g_moo);
 }
 #endif
 
@@ -542,7 +542,7 @@ static void setup_tick (void)
 #elif defined(macintosh)
 
 	GetCurrentProcess (&g_psn);
-	memset (&g_tmtask, 0, STIX_SIZEOF(g_tmtask));
+	memset (&g_tmtask, 0, MOO_SIZEOF(g_tmtask));
 	g_tmtask.tmAddr = NewTimerProc (timer_intr_handler);
 	InsXTime ((QElem*)&g_tmtask);
 
@@ -555,13 +555,13 @@ static void setup_tick (void)
 	sigemptyset (&act.sa_mask);
 	act.sa_handler = arrange_process_switching;
 	act.sa_flags = 0;
-	sigaction (SIGVTALRM, &act, STIX_NULL);
+	sigaction (SIGVTALRM, &act, MOO_NULL);
 
 	itv.it_interval.tv_sec = 0;
 	itv.it_interval.tv_usec = 100; /* 100 microseconds */
 	itv.it_value.tv_sec = 0;
 	itv.it_value.tv_usec = 100;
-	setitimer (ITIMER_VIRTUAL, &itv, STIX_NULL);
+	setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
 #else
 
 #	error UNSUPPORTED
@@ -586,12 +586,12 @@ static void cancel_tick (void)
 	itv.it_interval.tv_usec = 0;
 	itv.it_value.tv_sec = 0; /* make setitimer() one-shot only */
 	itv.it_value.tv_usec = 0;
-	setitimer (ITIMER_VIRTUAL, &itv, STIX_NULL);
+	setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
 
 	sigemptyset (&act.sa_mask); 
 	act.sa_handler = SIG_IGN; /* ignore the signal potentially fired by the one-shot arrange above */
 	act.sa_flags = 0;
-	sigaction (SIGVTALRM, &act, STIX_NULL);
+	sigaction (SIGVTALRM, &act, MOO_NULL);
 
 #else
 #	error UNSUPPORTED
@@ -602,11 +602,11 @@ static void cancel_tick (void)
 
 int main (int argc, char* argv[])
 {
-	stix_t* stix;
+	moo_t* moo;
 	xtn_t* xtn;
-	stix_oocs_t objname;
-	stix_oocs_t mthname;
-	stix_vmprim_t vmprim;
+	moo_oocs_t objname;
+	moo_oocs_t mthname;
+	moo_vmprim_t vmprim;
 	int i, xret;
 
 #if !defined(macintosh)
@@ -627,40 +627,40 @@ int main (int argc, char* argv[])
 	lt_dlinit ();
 #endif
 
-	stix = stix_open (&sys_mmgr, STIX_SIZEOF(xtn_t), 2048000lu, &vmprim, STIX_NULL);
-	if (!stix)
+	moo = moo_open (&sys_mmgr, MOO_SIZEOF(xtn_t), 2048000lu, &vmprim, MOO_NULL);
+	if (!moo)
 	{
-		printf ("cannot open stix\n");
+		printf ("cannot open moo\n");
 		return -1;
 	}
 
 	{
-		stix_oow_t tab_size;
+		moo_oow_t tab_size;
 
 		tab_size = 5000;
-		stix_setoption (stix, STIX_SYMTAB_SIZE, &tab_size);
+		moo_setoption (moo, MOO_SYMTAB_SIZE, &tab_size);
 		tab_size = 5000;
-		stix_setoption (stix, STIX_SYSDIC_SIZE, &tab_size);
+		moo_setoption (moo, MOO_SYSDIC_SIZE, &tab_size);
 		tab_size = 600;
-		stix_setoption (stix, STIX_PROCSTK_SIZE, &tab_size);
+		moo_setoption (moo, MOO_PROCSTK_SIZE, &tab_size);
 	}
 
 	{
 		int trait = 0;
 
-		/*trait |= STIX_NOGC;*/
-		trait |= STIX_AWAIT_PROCS;
-		stix_setoption (stix, STIX_TRAIT, &trait);
+		/*trait |= MOO_NOGC;*/
+		trait |= MOO_AWAIT_PROCS;
+		moo_setoption (moo, MOO_TRAIT, &trait);
 	}
 
-	if (stix_ignite(stix) <= -1)
+	if (moo_ignite(moo) <= -1)
 	{
-		printf ("cannot ignite stix - %d\n", stix_geterrnum(stix));
-		stix_close (stix);
+		printf ("cannot ignite moo - %d\n", moo_geterrnum(moo));
+		moo_close (moo);
 		return -1;
 	}
 
-	xtn = stix_getxtn (stix);
+	xtn = moo_getxtn (moo);
 
 #if defined(macintosh)
 	i = 20;
@@ -674,21 +674,21 @@ int main (int argc, char* argv[])
 
 	compile:
 
-		if (stix_compile (stix, input_handler) <= -1)
+		if (moo_compile (moo, input_handler) <= -1)
 		{
-			if (stix->errnum == STIX_ESYNTAX)
+			if (moo->errnum == MOO_ESYNTAX)
 			{
-				stix_synerr_t synerr;
-				stix_bch_t bcs[1024]; /* TODO: right buffer size */
-				stix_oow_t bcslen, ucslen;
+				moo_synerr_t synerr;
+				moo_bch_t bcs[1024]; /* TODO: right buffer size */
+				moo_oow_t bcslen, ucslen;
 
-				stix_getsynerr (stix, &synerr);
+				moo_getsynerr (moo, &synerr);
 
 				printf ("ERROR: ");
 				if (synerr.loc.file)
 				{
-					bcslen = STIX_COUNTOF(bcs);
-					if (stix_convootobcstr (stix, synerr.loc.file, &ucslen, bcs, &bcslen) >= 0)
+					bcslen = MOO_COUNTOF(bcs);
+					if (moo_convootobcstr (moo, synerr.loc.file, &ucslen, bcs, &bcslen) >= 0)
 					{
 						printf ("%.*s ", (int)bcslen, bcs);
 					}
@@ -702,18 +702,18 @@ int main (int argc, char* argv[])
 				printf ("syntax error at line %lu column %lu - ", 
 					(unsigned long int)synerr.loc.line, (unsigned long int)synerr.loc.colm);
 
-				bcslen = STIX_COUNTOF(bcs);
-				if (stix_convootobcstr (stix, stix_synerrnumtoerrstr(synerr.num), &ucslen, bcs, &bcslen) >= 0)
+				bcslen = MOO_COUNTOF(bcs);
+				if (moo_convootobcstr (moo, moo_synerrnumtoerrstr(synerr.num), &ucslen, bcs, &bcslen) >= 0)
 				{
 					printf (" [%.*s]", (int)bcslen, bcs);
 				}
 
 				if (synerr.tgt.len > 0)
 				{
-					bcslen = STIX_COUNTOF(bcs);
+					bcslen = MOO_COUNTOF(bcs);
 					ucslen = synerr.tgt.len;
 
-					if (stix_convootobchars (stix, synerr.tgt.ptr, &ucslen, bcs, &bcslen) >= 0)
+					if (moo_convootobchars (moo, synerr.tgt.ptr, &ucslen, bcs, &bcslen) >= 0)
 					{
 						printf (" [%.*s]", (int)bcslen, bcs);
 					}
@@ -723,9 +723,9 @@ int main (int argc, char* argv[])
 			}
 			else
 			{
-				printf ("ERROR: cannot compile code - %d\n", stix_geterrnum(stix));
+				printf ("ERROR: cannot compile code - %d\n", moo_geterrnum(moo));
 			}
-			stix_close (stix);
+			moo_close (moo);
 #if defined(USE_LTDL)
 			lt_dlexit ();
 #endif
@@ -735,26 +735,26 @@ int main (int argc, char* argv[])
 
 	printf ("COMPILE OK. STARTING EXECUTION ...\n");
 	xret = 0;
-	g_stix = stix;
+	g_moo = moo;
 	setup_tick ();
 
 	objname.ptr = str_my_object;
 	objname.len = 8;
 	mthname.ptr = str_main;
 	mthname.len = 4;
-	if (stix_invoke (stix, &objname, &mthname) <= -1)
+	if (moo_invoke (moo, &objname, &mthname) <= -1)
 	{
-		printf ("ERROR: cannot execute code - %d\n", stix_geterrnum(stix));
+		printf ("ERROR: cannot execute code - %d\n", moo_geterrnum(moo));
 		xret = -1;
 	}
 
 	cancel_tick ();
-	g_stix = STIX_NULL;
+	g_moo = MOO_NULL;
 
-	/*stix_dumpsymtab(stix);
-	 *stix_dumpdic(stix, stix->sysdic, "System dictionary");*/
+	/*moo_dumpsymtab(moo);
+	 *moo_dumpdic(moo, moo->sysdic, "System dictionary");*/
 
-	stix_close (stix);
+	moo_close (moo);
 
 #if defined(USE_LTDL)
 	lt_dlexit ();

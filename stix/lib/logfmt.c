@@ -24,7 +24,7 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "stix-prv.h"
+#include "moo-prv.h"
 
 /*#include <stdio.h>*/ /* for snrintf(). used for floating-point number formatting */
 #include <stdarg.h>
@@ -42,8 +42,8 @@
 floting-point conversion implementation*/
 
 /* Max number conversion buffer length: 
- * stix_intmax_t in base 2, plus NUL byte. */
-#define MAXNBUF (STIX_SIZEOF(stix_intmax_t) * 8 + 1)
+ * moo_intmax_t in base 2, plus NUL byte. */
+#define MAXNBUF (MOO_SIZEOF(moo_intmax_t) * 8 + 1)
 
 enum
 {
@@ -64,8 +64,8 @@ enum
 
 static struct
 {
-	stix_uint8_t flag; /* for single occurrence */
-	stix_uint8_t dflag; /* for double occurrence */
+	moo_uint8_t flag; /* for single occurrence */
+	moo_uint8_t dflag; /* for double occurrence */
 } lm_tab[26] = 
 {
 	{ 0,    0 }, /* a */
@@ -112,44 +112,44 @@ enum
 	FLAGC_LENMOD    = (1 << 10) /* length modifier */
 };
 
-static const stix_bch_t hex2ascii_lower[] = 
+static const moo_bch_t hex2ascii_lower[] = 
 {
 	'0','1','2','3','4','5','6','7','8','9',
 	'a','b','c','d','e','f','g','h','i','j','k','l','m',
 	'n','o','p','q','r','s','t','u','v','w','x','y','z'
 };
 
-static const stix_bch_t hex2ascii_upper[] = 
+static const moo_bch_t hex2ascii_upper[] = 
 {
 	'0','1','2','3','4','5','6','7','8','9',
 	'A','B','C','D','E','F','G','H','I','J','K','L','M',
 	'N','O','P','Q','R','S','T','U','V','W','X','H','Z'
 };
 
-static stix_uch_t uch_nullstr[] = { '(','n','u','l','l', ')','\0' };
-static stix_bch_t bch_nullstr[] = { '(','n','u','l','l', ')','\0' };
+static moo_uch_t uch_nullstr[] = { '(','n','u','l','l', ')','\0' };
+static moo_bch_t bch_nullstr[] = { '(','n','u','l','l', ')','\0' };
 
-typedef int (*stix_fmtout_putch_t) (
-	stix_t*      stix,
-	stix_oow_t   mask,
-	stix_ooch_t  c,
-	stix_oow_t   len
+typedef int (*moo_fmtout_putch_t) (
+	moo_t*      moo,
+	moo_oow_t   mask,
+	moo_ooch_t  c,
+	moo_oow_t   len
 );
 
-typedef int (*stix_fmtout_putcs_t) (
-	stix_t*            stix,
-	stix_oow_t         mask,
-	const stix_ooch_t* ptr,
-	stix_oow_t         len
+typedef int (*moo_fmtout_putcs_t) (
+	moo_t*            moo,
+	moo_oow_t         mask,
+	const moo_ooch_t* ptr,
+	moo_oow_t         len
 );
 
-typedef struct stix_fmtout_t stix_fmtout_t;
-struct stix_fmtout_t
+typedef struct moo_fmtout_t moo_fmtout_t;
+struct moo_fmtout_t
 {
-	stix_oow_t            count; /* out */
-	stix_oow_t            mask;  /* in */
-	stix_fmtout_putch_t   putch; /* in */
-	stix_fmtout_putcs_t   putcs; /* in */
+	moo_oow_t            count; /* out */
+	moo_oow_t            mask;  /* in */
+	moo_fmtout_putch_t   putch; /* in */
+	moo_fmtout_putcs_t   putcs; /* in */
 };
 
 /* ------------------------------------------------------------------------- */
@@ -160,9 +160,9 @@ struct stix_fmtout_t
  * The buffer pointed to by `nbuf' must have length >= MAXNBUF.
  */
 
-static stix_bch_t* sprintn_lower (stix_bch_t* nbuf, stix_uintmax_t num, int base, stix_ooi_t *lenp)
+static moo_bch_t* sprintn_lower (moo_bch_t* nbuf, moo_uintmax_t num, int base, moo_ooi_t *lenp)
 {
-	stix_bch_t* p;
+	moo_bch_t* p;
 
 	p = nbuf;
 	*p = '\0';
@@ -172,9 +172,9 @@ static stix_bch_t* sprintn_lower (stix_bch_t* nbuf, stix_uintmax_t num, int base
 	return p; /* returns the end */
 }
 
-static stix_bch_t* sprintn_upper (stix_bch_t* nbuf, stix_uintmax_t num, int base, stix_ooi_t *lenp)
+static moo_bch_t* sprintn_upper (moo_bch_t* nbuf, moo_uintmax_t num, int base, moo_ooi_t *lenp)
 {
-	stix_bch_t* p;
+	moo_bch_t* p;
 
 	p = nbuf;
 	*p = '\0';
@@ -185,181 +185,181 @@ static stix_bch_t* sprintn_upper (stix_bch_t* nbuf, stix_uintmax_t num, int base
 }
 
 /* ------------------------------------------------------------------------- */
-static int put_ooch (stix_t* stix, stix_oow_t mask, stix_ooch_t ch, stix_oow_t len)
+static int put_ooch (moo_t* moo, moo_oow_t mask, moo_ooch_t ch, moo_oow_t len)
 {
 	if (len <= 0) return 1;
 
-	if (stix->log.len > 0 && stix->log.last_mask != mask)
+	if (moo->log.len > 0 && moo->log.last_mask != mask)
 	{
 		/* the mask has changed. commit the buffered text */
 
 /* TODO: HANDLE LINE ENDING CONVENTION BETTER... */
-		if (stix->log.ptr[stix->log.len - 1] != '\n')
+		if (moo->log.ptr[moo->log.len - 1] != '\n')
 		{
 			/* no line ending - append a line terminator */
-			stix->log.ptr[stix->log.len++] = '\n';
+			moo->log.ptr[moo->log.len++] = '\n';
 		}
-		stix->vmprim.log_write (stix, stix->log.last_mask, stix->log.ptr, stix->log.len);
-		stix->log.len = 0;
+		moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
+		moo->log.len = 0;
 	}
 
 redo:
-	if (len > stix->log.capa - stix->log.len)
+	if (len > moo->log.capa - moo->log.len)
 	{
-		stix_oow_t newcapa;
-		stix_ooch_t* tmp;
+		moo_oow_t newcapa;
+		moo_ooch_t* tmp;
 
-		if (len > STIX_TYPE_MAX(stix_oow_t) - stix->log.len) 
+		if (len > MOO_TYPE_MAX(moo_oow_t) - moo->log.len) 
 		{
 			/* data too big */
-			stix->errnum = STIX_ETOOBIG;
+			moo->errnum = MOO_ETOOBIG;
 			return -1;
 		}
 
-		newcapa = STIX_ALIGN(stix->log.len + len, 512); /* TODO: adjust this capacity */
+		newcapa = MOO_ALIGN(moo->log.len + len, 512); /* TODO: adjust this capacity */
 		/* +1 to handle line ending injection more easily */
-		tmp = stix_reallocmem (stix, stix->log.ptr, (newcapa + 1) * STIX_SIZEOF(*tmp)); 
+		tmp = moo_reallocmem (moo, moo->log.ptr, (newcapa + 1) * MOO_SIZEOF(*tmp)); 
 		if (!tmp) 
 		{
-			if (stix->log.len > 0)
+			if (moo->log.len > 0)
 			{
 				/* can't expand the buffer. just flush the existing contents */
-				stix->vmprim.log_write (stix, stix->log.last_mask, stix->log.ptr, stix->log.len);
-				stix->log.len = 0;
+				moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
+				moo->log.len = 0;
 				goto redo;
 			}
 			return -1;
 		}
 
-		stix->log.ptr = tmp;
-		stix->log.capa = newcapa; 
+		moo->log.ptr = tmp;
+		moo->log.capa = newcapa; 
 	}
 
 
 	while (len > 0)
 	{
-		stix->log.ptr[stix->log.len++] = ch;
+		moo->log.ptr[moo->log.len++] = ch;
 		len--;
 	}
 
-	stix->log.last_mask = mask;
+	moo->log.last_mask = mask;
 	return 1; /* success */
 }
 
-static int put_oocs (stix_t* stix, stix_oow_t mask, const stix_ooch_t* ptr, stix_oow_t len)
+static int put_oocs (moo_t* moo, moo_oow_t mask, const moo_ooch_t* ptr, moo_oow_t len)
 {
 	if (len <= 0) return 1;
 
-	if (stix->log.len > 0 && stix->log.last_mask != mask)
+	if (moo->log.len > 0 && moo->log.last_mask != mask)
 	{
 		/* the mask has changed. commit the buffered text */
 /* TODO: HANDLE LINE ENDING CONVENTION BETTER... */
-		if (stix->log.ptr[stix->log.len - 1] != '\n')
+		if (moo->log.ptr[moo->log.len - 1] != '\n')
 		{
 			/* no line ending - append a line terminator */
-			stix->log.ptr[stix->log.len++] = '\n';
+			moo->log.ptr[moo->log.len++] = '\n';
 		}
 
-		stix->vmprim.log_write (stix, stix->log.last_mask, stix->log.ptr, stix->log.len);
-		stix->log.len = 0;
+		moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
+		moo->log.len = 0;
 	}
 
-	if (len > stix->log.capa - stix->log.len)
+	if (len > moo->log.capa - moo->log.len)
 	{
-		stix_oow_t newcapa;
-		stix_ooch_t* tmp;
+		moo_oow_t newcapa;
+		moo_ooch_t* tmp;
 
-		if (len > STIX_TYPE_MAX(stix_oow_t) - stix->log.len) 
+		if (len > MOO_TYPE_MAX(moo_oow_t) - moo->log.len) 
 		{
 			/* data too big */
-			stix->errnum = STIX_ETOOBIG;
+			moo->errnum = MOO_ETOOBIG;
 			return -1;
 		}
 
-		newcapa = STIX_ALIGN(stix->log.len + len, 512); /* TODO: adjust this capacity */
+		newcapa = MOO_ALIGN(moo->log.len + len, 512); /* TODO: adjust this capacity */
 		/* +1 to handle line ending injection more easily */
-		tmp = stix_reallocmem (stix, stix->log.ptr, (newcapa + 1) * STIX_SIZEOF(*tmp));
+		tmp = moo_reallocmem (moo, moo->log.ptr, (newcapa + 1) * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
-		stix->log.ptr = tmp;
-		stix->log.capa = newcapa;
+		moo->log.ptr = tmp;
+		moo->log.capa = newcapa;
 	}
 
-	STIX_MEMCPY (&stix->log.ptr[stix->log.len], ptr, len * STIX_SIZEOF(*ptr));
-	stix->log.len += len;
+	MOO_MEMCPY (&moo->log.ptr[moo->log.len], ptr, len * MOO_SIZEOF(*ptr));
+	moo->log.len += len;
 
-	stix->log.last_mask = mask;
+	moo->log.last_mask = mask;
 	return 1; /* success */
 }
 
 /* ------------------------------------------------------------------------- */
 
-static void print_object (stix_t* stix, stix_oow_t mask, stix_oop_t oop)
+static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop)
 {
-	if (oop == stix->_nil)
+	if (oop == moo->_nil)
 	{
-		stix_logbfmt (stix, mask, "nil");
+		moo_logbfmt (moo, mask, "nil");
 	}
-	else if (oop == stix->_true)
+	else if (oop == moo->_true)
 	{
-		stix_logbfmt (stix, mask, "true");
+		moo_logbfmt (moo, mask, "true");
 	}
-	else if (oop == stix->_false)
+	else if (oop == moo->_false)
 	{
-		stix_logbfmt (stix, mask, "false");
+		moo_logbfmt (moo, mask, "false");
 	}
-	else if (STIX_OOP_IS_SMOOI(oop))
+	else if (MOO_OOP_IS_SMOOI(oop))
 	{
-		stix_logbfmt (stix, mask, "%zd", STIX_OOP_TO_SMOOI(oop));
+		moo_logbfmt (moo, mask, "%zd", MOO_OOP_TO_SMOOI(oop));
 	}
-	else if (STIX_OOP_IS_CHAR(oop))
+	else if (MOO_OOP_IS_CHAR(oop))
 	{
-		stix_logbfmt (stix, mask, "$%.1C", STIX_OOP_TO_CHAR(oop));
+		moo_logbfmt (moo, mask, "$%.1C", MOO_OOP_TO_CHAR(oop));
 	}
-	else if (STIX_OOP_IS_ERROR(oop))
+	else if (MOO_OOP_IS_ERROR(oop))
 	{
-		stix_logbfmt (stix, mask, "error(%zd)", STIX_OOP_TO_ERROR(oop));
+		moo_logbfmt (moo, mask, "error(%zd)", MOO_OOP_TO_ERROR(oop));
 	}
 	else
 	{
-		stix_oop_class_t c;
-		stix_oow_t i;
+		moo_oop_class_t c;
+		moo_oow_t i;
 
-		STIX_ASSERT (stix, STIX_OOP_IS_POINTER(oop));
-		c = (stix_oop_class_t)STIX_OBJ_GET_CLASS(oop); /*STIX_CLASSOF(stix, oop);*/
+		MOO_ASSERT (moo, MOO_OOP_IS_POINTER(oop));
+		c = (moo_oop_class_t)MOO_OBJ_GET_CLASS(oop); /*MOO_CLASSOF(moo, oop);*/
 
-		if ((stix_oop_t)c == stix->_large_negative_integer)
+		if ((moo_oop_t)c == moo->_large_negative_integer)
 		{
-			stix_oow_t i;
-			stix_logbfmt (stix, mask, "-16r");
-			for (i = STIX_OBJ_GET_SIZE(oop); i > 0;)
+			moo_oow_t i;
+			moo_logbfmt (moo, mask, "-16r");
+			for (i = MOO_OBJ_GET_SIZE(oop); i > 0;)
 			{
-				stix_logbfmt (stix, mask, "%0*lX", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)oop)->slot[--i]);
+				moo_logbfmt (moo, mask, "%0*lX", (int)(MOO_SIZEOF(moo_liw_t) * 2), (unsigned long)((moo_oop_liword_t)oop)->slot[--i]);
 			}
 		}
-		else if ((stix_oop_t)c == stix->_large_positive_integer)
+		else if ((moo_oop_t)c == moo->_large_positive_integer)
 		{
-			stix_oow_t i;
-			stix_logbfmt (stix, mask, "16r");
-			for (i = STIX_OBJ_GET_SIZE(oop); i > 0;)
+			moo_oow_t i;
+			moo_logbfmt (moo, mask, "16r");
+			for (i = MOO_OBJ_GET_SIZE(oop); i > 0;)
 			{
-				stix_logbfmt (stix, mask, "%0*lX", (int)(STIX_SIZEOF(stix_liw_t) * 2), (unsigned long)((stix_oop_liword_t)oop)->slot[--i]);
+				moo_logbfmt (moo, mask, "%0*lX", (int)(MOO_SIZEOF(moo_liw_t) * 2), (unsigned long)((moo_oop_liword_t)oop)->slot[--i]);
 			}
 		}
-		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_CHAR)
+		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_CHAR)
 		{
-			if ((stix_oop_t)c == stix->_symbol) 
+			if ((moo_oop_t)c == moo->_symbol) 
 			{
-				stix_logbfmt (stix, mask, "#%.*js", STIX_OBJ_GET_SIZE(oop), ((stix_oop_char_t)oop)->slot);
+				moo_logbfmt (moo, mask, "#%.*js", MOO_OBJ_GET_SIZE(oop), ((moo_oop_char_t)oop)->slot);
 			}
-			else /*if ((stix_oop_t)c == stix->_string)*/
+			else /*if ((moo_oop_t)c == moo->_string)*/
 			{
-				stix_ooch_t ch;
+				moo_ooch_t ch;
 				int escape = 0;
 
-				for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+				for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
 				{
-					ch = ((stix_oop_char_t)oop)->slot[i];
+					ch = ((moo_oop_char_t)oop)->slot[i];
 					if (ch < ' ') 
 					{
 						escape = 1;
@@ -369,12 +369,12 @@ static void print_object (stix_t* stix, stix_oow_t mask, stix_oop_t oop)
 
 				if (escape)
 				{
-					stix_ooch_t escaped;
+					moo_ooch_t escaped;
 
-					stix_logbfmt (stix, mask, "S'");
-					for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+					moo_logbfmt (moo, mask, "S'");
+					for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
 					{
-						ch = ((stix_oop_char_t)oop)->slot[i];
+						ch = ((moo_oop_char_t)oop)->slot[i];
 						if (ch < ' ') 
 						{
 							switch (ch)
@@ -409,74 +409,74 @@ static void print_object (stix_t* stix, stix_oow_t mask, stix_oop_t oop)
 							}
 
 							if (escaped == ch)
-								stix_logbfmt (stix, mask, "\\x%X", ch);
+								moo_logbfmt (moo, mask, "\\x%X", ch);
 							else
-								stix_logbfmt (stix, mask, "\\%jc", escaped);
+								moo_logbfmt (moo, mask, "\\%jc", escaped);
 						}
 						else
 						{
-							stix_logbfmt (stix, mask, "%jc", ch);
+							moo_logbfmt (moo, mask, "%jc", ch);
 						}
 					}
 					
-					stix_logbfmt (stix, mask, "'");
+					moo_logbfmt (moo, mask, "'");
 				}
 				else
 				{
-					stix_logbfmt (stix, mask, "'%.*js'", STIX_OBJ_GET_SIZE(oop), ((stix_oop_char_t)oop)->slot);
+					moo_logbfmt (moo, mask, "'%.*js'", MOO_OBJ_GET_SIZE(oop), ((moo_oop_char_t)oop)->slot);
 				}
 			}
 		}
-		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_BYTE)
+		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_BYTE)
 		{
-			stix_logbfmt (stix, mask, "#[");
-			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+			moo_logbfmt (moo, mask, "#[");
+			for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
 			{
-				stix_logbfmt (stix, mask, " %d", ((stix_oop_byte_t)oop)->slot[i]);
+				moo_logbfmt (moo, mask, " %d", ((moo_oop_byte_t)oop)->slot[i]);
 			}
-			stix_logbfmt (stix, mask, "]");
+			moo_logbfmt (moo, mask, "]");
 		}
 		
-		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_HALFWORD)
+		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_HALFWORD)
 		{
-			stix_logbfmt (stix, mask, "#[["); /* TODO: fix this symbol/notation */
-			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+			moo_logbfmt (moo, mask, "#[["); /* TODO: fix this symbol/notation */
+			for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
 			{
-				stix_logbfmt (stix, mask, " %zX", (stix_oow_t)((stix_oop_halfword_t)oop)->slot[i]);
+				moo_logbfmt (moo, mask, " %zX", (moo_oow_t)((moo_oop_halfword_t)oop)->slot[i]);
 			}
-			stix_logbfmt (stix, mask, "]]");
+			moo_logbfmt (moo, mask, "]]");
 		}
-		else if (STIX_OBJ_GET_FLAGS_TYPE(oop) == STIX_OBJ_TYPE_WORD)
+		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_WORD)
 		{
-			stix_logbfmt (stix, mask, "#[[["); /* TODO: fix this symbol/notation */
-			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+			moo_logbfmt (moo, mask, "#[[["); /* TODO: fix this symbol/notation */
+			for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
 			{
-				stix_logbfmt (stix, mask, " %zX", ((stix_oop_word_t)oop)->slot[i]);
+				moo_logbfmt (moo, mask, " %zX", ((moo_oop_word_t)oop)->slot[i]);
 			}
-			stix_logbfmt (stix, mask, "]]]");
+			moo_logbfmt (moo, mask, "]]]");
 		}
-		else if ((stix_oop_t)c == stix->_array)
+		else if ((moo_oop_t)c == moo->_array)
 		{
-			stix_logbfmt (stix, mask, "#(");
-			for (i = 0; i < STIX_OBJ_GET_SIZE(oop); i++)
+			moo_logbfmt (moo, mask, "#(");
+			for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
 			{
-				stix_logbfmt (stix, mask, " ");
-				print_object (stix, mask, ((stix_oop_oop_t)oop)->slot[i]);
+				moo_logbfmt (moo, mask, " ");
+				print_object (moo, mask, ((moo_oop_oop_t)oop)->slot[i]);
 			}
-			stix_logbfmt (stix, mask, ")");
+			moo_logbfmt (moo, mask, ")");
 		}
-		else if ((stix_oop_t)c == stix->_class)
+		else if ((moo_oop_t)c == moo->_class)
 		{
 			/* print the class name */
-			stix_logbfmt (stix, mask, "%.*js", STIX_OBJ_GET_SIZE(((stix_oop_class_t)oop)->name), ((stix_oop_class_t)oop)->name->slot);
+			moo_logbfmt (moo, mask, "%.*js", MOO_OBJ_GET_SIZE(((moo_oop_class_t)oop)->name), ((moo_oop_class_t)oop)->name->slot);
 		}
-		else if ((stix_oop_t)c == stix->_association)
+		else if ((moo_oop_t)c == moo->_association)
 		{
-			stix_logbfmt (stix, mask, "%O -> %O", ((stix_oop_association_t)oop)->key, ((stix_oop_association_t)oop)->value);
+			moo_logbfmt (moo, mask, "%O -> %O", ((moo_oop_association_t)oop)->key, ((moo_oop_association_t)oop)->value);
 		}
 		else
 		{
-			stix_logbfmt (stix, mask, "instance of %.*js(%p)", STIX_OBJ_GET_SIZE(c->name), ((stix_oop_char_t)c->name)->slot, oop);
+			moo_logbfmt (moo, mask, "instance of %.*js(%p)", MOO_OBJ_GET_SIZE(c->name), ((moo_oop_char_t)c->name)->slot, oop);
 		}
 	}
 }
@@ -485,65 +485,65 @@ static void print_object (stix_t* stix, stix_oow_t mask, stix_oop_t oop)
 
 #undef fmtchar_t
 #undef logfmtv
-#define fmtchar_t stix_bch_t
+#define fmtchar_t moo_bch_t
 #define FMTCHAR_IS_BCH
-#if defined(STIX_OOCH_IS_BCH)
+#if defined(MOO_OOCH_IS_BCH)
 #	define FMTCHAR_IS_OOCH
 #endif
-#define logfmtv stix_logbfmtv
+#define logfmtv moo_logbfmtv
 
 #include "logfmtv.h"
 
 #undef fmtchar_t
 #undef logfmtv
-#define fmtchar_t stix_uch_t
-#define logfmtv stix_logufmtv
+#define fmtchar_t moo_uch_t
+#define logfmtv moo_logufmtv
 #define FMTCHAR_IS_UCH
-#if defined(STIX_OOCH_IS_UCH)
+#if defined(MOO_OOCH_IS_UCH)
 #	define FMTCHAR_IS_OOCH
 #endif
 #include "logfmtv.h"
 
-stix_ooi_t stix_logbfmt (stix_t* stix, stix_oow_t mask, const stix_bch_t* fmt, ...)
+moo_ooi_t moo_logbfmt (moo_t* moo, moo_oow_t mask, const moo_bch_t* fmt, ...)
 {
 	int x;
 	va_list ap;
-	stix_fmtout_t fo;
+	moo_fmtout_t fo;
 
 	fo.mask = mask;
 	fo.putch = put_ooch;
 	fo.putcs = put_oocs;
 
 	va_start (ap, fmt);
-	x = stix_logbfmtv (stix, fmt, &fo, ap);
+	x = moo_logbfmtv (moo, fmt, &fo, ap);
 	va_end (ap);
 
-	if (stix->log.len > 0 && stix->log.ptr[stix->log.len - 1] == '\n')
+	if (moo->log.len > 0 && moo->log.ptr[moo->log.len - 1] == '\n')
 	{
-		stix->vmprim.log_write (stix, stix->log.last_mask, stix->log.ptr, stix->log.len);
-		stix->log.len = 0;
+		moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
+		moo->log.len = 0;
 	}
 	return (x <= -1)? -1: fo.count;
 }
 
-stix_ooi_t stix_logufmt (stix_t* stix, stix_oow_t mask, const stix_uch_t* fmt, ...)
+moo_ooi_t moo_logufmt (moo_t* moo, moo_oow_t mask, const moo_uch_t* fmt, ...)
 {
 	int x;
 	va_list ap;
-	stix_fmtout_t fo;
+	moo_fmtout_t fo;
 
 	fo.mask = mask;
 	fo.putch = put_ooch;
 	fo.putcs = put_oocs;
 
 	va_start (ap, fmt);
-	x = stix_logufmtv (stix, fmt, &fo, ap);
+	x = moo_logufmtv (moo, fmt, &fo, ap);
 	va_end (ap);
 
-	if (stix->log.len > 0 && stix->log.ptr[stix->log.len - 1] == '\n')
+	if (moo->log.len > 0 && moo->log.ptr[moo->log.len - 1] == '\n')
 	{
-		stix->vmprim.log_write (stix, stix->log.last_mask, stix->log.ptr, stix->log.len);
-		stix->log.len = 0;
+		moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
+		moo->log.len = 0;
 	}
 
 	return (x <= -1)? -1: fo.count;

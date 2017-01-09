@@ -24,23 +24,23 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "stix-rbt.h"
-#include "stix-prv.h"
+#include "moo-rbt.h"
+#include "moo-prv.h"
 
-#define copier_t        stix_rbt_copier_t
-#define freeer_t        stix_rbt_freeer_t
-#define comper_t        stix_rbt_comper_t
-#define keeper_t        stix_rbt_keeper_t
-#define walker_t        stix_rbt_walker_t
-#define cbserter_t      stix_rbt_cbserter_t
+#define copier_t        moo_rbt_copier_t
+#define freeer_t        moo_rbt_freeer_t
+#define comper_t        moo_rbt_comper_t
+#define keeper_t        moo_rbt_keeper_t
+#define walker_t        moo_rbt_walker_t
+#define cbserter_t      moo_rbt_cbserter_t
 
-#define KPTR(p)  STIX_RBT_KPTR(p)
-#define KLEN(p)  STIX_RBT_KLEN(p)
-#define VPTR(p)  STIX_RBT_VPTR(p)
-#define VLEN(p)  STIX_RBT_VLEN(p)
+#define KPTR(p)  MOO_RBT_KPTR(p)
+#define KLEN(p)  MOO_RBT_KLEN(p)
+#define VPTR(p)  MOO_RBT_VPTR(p)
+#define VLEN(p)  MOO_RBT_VLEN(p)
 
-#define KTOB(rbt,len) ((len)*(rbt)->scale[STIX_RBT_KEY])
-#define VTOB(rbt,len) ((len)*(rbt)->scale[STIX_RBT_VAL])
+#define KTOB(rbt,len) ((len)*(rbt)->scale[MOO_RBT_KEY])
+#define VTOB(rbt,len) ((len)*(rbt)->scale[MOO_RBT_VAL])
 
 #define UPSERT 1
 #define UPDATE 2
@@ -55,180 +55,180 @@
 #define rotate_left(rbt,pivot) rotate(rbt,pivot,1);
 #define rotate_right(rbt,pivot) rotate(rbt,pivot,0);
 
-STIX_INLINE stix_rbt_pair_t* stix_rbt_allocpair (
-	stix_rbt_t* rbt, void* kptr, stix_oow_t klen, void* vptr, stix_oow_t vlen)
+MOO_INLINE moo_rbt_pair_t* moo_rbt_allocpair (
+	moo_rbt_t* rbt, void* kptr, moo_oow_t klen, void* vptr, moo_oow_t vlen)
 {
-	stix_rbt_pair_t* n;
+	moo_rbt_pair_t* n;
 
-	copier_t kcop = rbt->style->copier[STIX_RBT_KEY];
-	copier_t vcop = rbt->style->copier[STIX_RBT_VAL];
+	copier_t kcop = rbt->style->copier[MOO_RBT_KEY];
+	copier_t vcop = rbt->style->copier[MOO_RBT_VAL];
 
-	stix_oow_t as = STIX_SIZEOF(stix_rbt_pair_t);
-	if (kcop == STIX_RBT_COPIER_INLINE) as += KTOB(rbt,klen);
-	if (vcop == STIX_RBT_COPIER_INLINE) as += VTOB(rbt,vlen);
+	moo_oow_t as = MOO_SIZEOF(moo_rbt_pair_t);
+	if (kcop == MOO_RBT_COPIER_INLINE) as += KTOB(rbt,klen);
+	if (vcop == MOO_RBT_COPIER_INLINE) as += VTOB(rbt,vlen);
 
-	n = (stix_rbt_pair_t*) STIX_MMGR_ALLOC (rbt->stix->mmgr, as);
-	if (n == STIX_NULL) return STIX_NULL;
+	n = (moo_rbt_pair_t*) MOO_MMGR_ALLOC (rbt->moo->mmgr, as);
+	if (n == MOO_NULL) return MOO_NULL;
 
-	n->color = STIX_RBT_RED;
-	n->parent = STIX_NULL;
+	n->color = MOO_RBT_RED;
+	n->parent = MOO_NULL;
 	n->child[LEFT] = &rbt->xnil;
 	n->child[RIGHT] = &rbt->xnil;
 
 	KLEN(n) = klen;
-	if (kcop == STIX_RBT_COPIER_SIMPLE)
+	if (kcop == MOO_RBT_COPIER_SIMPLE)
 	{
 		KPTR(n) = kptr;
 	}
-	else if (kcop == STIX_RBT_COPIER_INLINE)
+	else if (kcop == MOO_RBT_COPIER_INLINE)
 	{
 		KPTR(n) = n + 1;
-		if (kptr) STIX_MEMCPY (KPTR(n), kptr, KTOB(rbt,klen));
+		if (kptr) MOO_MEMCPY (KPTR(n), kptr, KTOB(rbt,klen));
 	}
 	else
 	{
 		KPTR(n) = kcop (rbt, kptr, klen);
-		if (KPTR(n) == STIX_NULL)
+		if (KPTR(n) == MOO_NULL)
 		{
-			STIX_MMGR_FREE (rbt->stix->mmgr, n);
-			return STIX_NULL;
+			MOO_MMGR_FREE (rbt->moo->mmgr, n);
+			return MOO_NULL;
 		}
 	}
 
 	VLEN(n) = vlen;
-	if (vcop == STIX_RBT_COPIER_SIMPLE)
+	if (vcop == MOO_RBT_COPIER_SIMPLE)
 	{
 		VPTR(n) = vptr;
 	}
-	else if (vcop == STIX_RBT_COPIER_INLINE)
+	else if (vcop == MOO_RBT_COPIER_INLINE)
 	{
 		VPTR(n) = n + 1;
-		if (kcop == STIX_RBT_COPIER_INLINE)
-			VPTR(n) = (stix_oob_t*)VPTR(n) + KTOB(rbt,klen);
-		if (vptr) STIX_MEMCPY (VPTR(n), vptr, VTOB(rbt,vlen));
+		if (kcop == MOO_RBT_COPIER_INLINE)
+			VPTR(n) = (moo_oob_t*)VPTR(n) + KTOB(rbt,klen);
+		if (vptr) MOO_MEMCPY (VPTR(n), vptr, VTOB(rbt,vlen));
 	}
 	else
 	{
 		VPTR(n) = vcop (rbt, vptr, vlen);
-		if (VPTR(n) != STIX_NULL)
+		if (VPTR(n) != MOO_NULL)
 		{
-			if (rbt->style->freeer[STIX_RBT_KEY] != STIX_NULL)
-				rbt->style->freeer[STIX_RBT_KEY] (rbt, KPTR(n), KLEN(n));
-			STIX_MMGR_FREE (rbt->stix->mmgr, n);
-			return STIX_NULL;
+			if (rbt->style->freeer[MOO_RBT_KEY] != MOO_NULL)
+				rbt->style->freeer[MOO_RBT_KEY] (rbt, KPTR(n), KLEN(n));
+			MOO_MMGR_FREE (rbt->moo->mmgr, n);
+			return MOO_NULL;
 		}
 	}
 
 	return n;
 }
 
-STIX_INLINE void stix_rbt_freepair (stix_rbt_t* rbt, stix_rbt_pair_t* pair)
+MOO_INLINE void moo_rbt_freepair (moo_rbt_t* rbt, moo_rbt_pair_t* pair)
 {
-	if (rbt->style->freeer[STIX_RBT_KEY] != STIX_NULL)
-		rbt->style->freeer[STIX_RBT_KEY] (rbt, KPTR(pair), KLEN(pair));
-	if (rbt->style->freeer[STIX_RBT_VAL] != STIX_NULL)
-		rbt->style->freeer[STIX_RBT_VAL] (rbt, VPTR(pair), VLEN(pair));
-	STIX_MMGR_FREE (rbt->stix->mmgr, pair);
+	if (rbt->style->freeer[MOO_RBT_KEY] != MOO_NULL)
+		rbt->style->freeer[MOO_RBT_KEY] (rbt, KPTR(pair), KLEN(pair));
+	if (rbt->style->freeer[MOO_RBT_VAL] != MOO_NULL)
+		rbt->style->freeer[MOO_RBT_VAL] (rbt, VPTR(pair), VLEN(pair));
+	MOO_MMGR_FREE (rbt->moo->mmgr, pair);
 }
 
-static stix_rbt_style_t style[] =
+static moo_rbt_style_t style[] =
 {
 	{
 		{
-			STIX_RBT_COPIER_DEFAULT,
-			STIX_RBT_COPIER_DEFAULT
+			MOO_RBT_COPIER_DEFAULT,
+			MOO_RBT_COPIER_DEFAULT
 		},
 		{
-			STIX_RBT_FREEER_DEFAULT,
-			STIX_RBT_FREEER_DEFAULT
+			MOO_RBT_FREEER_DEFAULT,
+			MOO_RBT_FREEER_DEFAULT
 		},
-		STIX_RBT_COMPER_DEFAULT,
-		STIX_RBT_KEEPER_DEFAULT
+		MOO_RBT_COMPER_DEFAULT,
+		MOO_RBT_KEEPER_DEFAULT
 	},
 
 	{
 		{
-			STIX_RBT_COPIER_INLINE,
-			STIX_RBT_COPIER_INLINE
+			MOO_RBT_COPIER_INLINE,
+			MOO_RBT_COPIER_INLINE
 		},
 		{
-			STIX_RBT_FREEER_DEFAULT,
-			STIX_RBT_FREEER_DEFAULT
+			MOO_RBT_FREEER_DEFAULT,
+			MOO_RBT_FREEER_DEFAULT
 		},
-		STIX_RBT_COMPER_DEFAULT,
-		STIX_RBT_KEEPER_DEFAULT
+		MOO_RBT_COMPER_DEFAULT,
+		MOO_RBT_KEEPER_DEFAULT
 	},
 
 	{
 		{
-			STIX_RBT_COPIER_INLINE,
-			STIX_RBT_COPIER_DEFAULT
+			MOO_RBT_COPIER_INLINE,
+			MOO_RBT_COPIER_DEFAULT
 		},
 		{
-			STIX_RBT_FREEER_DEFAULT,
-			STIX_RBT_FREEER_DEFAULT
+			MOO_RBT_FREEER_DEFAULT,
+			MOO_RBT_FREEER_DEFAULT
 		},
-		STIX_RBT_COMPER_DEFAULT,
-		STIX_RBT_KEEPER_DEFAULT
+		MOO_RBT_COMPER_DEFAULT,
+		MOO_RBT_KEEPER_DEFAULT
 	},
 
 	{
 		{
-			STIX_RBT_COPIER_DEFAULT,
-			STIX_RBT_COPIER_INLINE
+			MOO_RBT_COPIER_DEFAULT,
+			MOO_RBT_COPIER_INLINE
 		},
 		{
-			STIX_RBT_FREEER_DEFAULT,
-			STIX_RBT_FREEER_DEFAULT
+			MOO_RBT_FREEER_DEFAULT,
+			MOO_RBT_FREEER_DEFAULT
 		},
-		STIX_RBT_COMPER_DEFAULT,
-		STIX_RBT_KEEPER_DEFAULT
+		MOO_RBT_COMPER_DEFAULT,
+		MOO_RBT_KEEPER_DEFAULT
 	}
 };
 
-const stix_rbt_style_t* stix_getrbtstyle (stix_rbt_style_kind_t kind)
+const moo_rbt_style_t* moo_getrbtstyle (moo_rbt_style_kind_t kind)
 {
 	return &style[kind];
 }
 
-stix_rbt_t* stix_rbt_open (stix_t* stix, stix_oow_t xtnsize, int kscale, int vscale)
+moo_rbt_t* moo_rbt_open (moo_t* moo, moo_oow_t xtnsize, int kscale, int vscale)
 {
-	stix_rbt_t* rbt;
+	moo_rbt_t* rbt;
 
-	rbt = (stix_rbt_t*) STIX_MMGR_ALLOC (stix->mmgr, STIX_SIZEOF(stix_rbt_t) + xtnsize);
-	if (rbt == STIX_NULL) return STIX_NULL;
+	rbt = (moo_rbt_t*) MOO_MMGR_ALLOC (moo->mmgr, MOO_SIZEOF(moo_rbt_t) + xtnsize);
+	if (rbt == MOO_NULL) return MOO_NULL;
 
-	if (stix_rbt_init (rbt, stix, kscale, vscale) <= -1)
+	if (moo_rbt_init (rbt, moo, kscale, vscale) <= -1)
 	{
-		STIX_MMGR_FREE (stix->mmgr, rbt);
-		return STIX_NULL;
+		MOO_MMGR_FREE (moo->mmgr, rbt);
+		return MOO_NULL;
 	}
 
-	STIX_MEMSET (rbt + 1, 0, xtnsize);
+	MOO_MEMSET (rbt + 1, 0, xtnsize);
 	return rbt;
 }
 
-void stix_rbt_close (stix_rbt_t* rbt)
+void moo_rbt_close (moo_rbt_t* rbt)
 {
-	stix_rbt_fini (rbt);
-	STIX_MMGR_FREE (rbt->stix->mmgr, rbt);
+	moo_rbt_fini (rbt);
+	MOO_MMGR_FREE (rbt->moo->mmgr, rbt);
 }
 
-int stix_rbt_init (stix_rbt_t* rbt, stix_t* stix, int kscale, int vscale)
+int moo_rbt_init (moo_rbt_t* rbt, moo_t* moo, int kscale, int vscale)
 {
 	/* do not zero out the extension */
-	STIX_MEMSET (rbt, 0, STIX_SIZEOF(*rbt));
-	rbt->stix = stix;
+	MOO_MEMSET (rbt, 0, MOO_SIZEOF(*rbt));
+	rbt->moo = moo;
 
-	rbt->scale[STIX_RBT_KEY] = (kscale < 1)? 1: kscale;
-	rbt->scale[STIX_RBT_VAL] = (vscale < 1)? 1: vscale;
+	rbt->scale[MOO_RBT_KEY] = (kscale < 1)? 1: kscale;
+	rbt->scale[MOO_RBT_VAL] = (vscale < 1)? 1: vscale;
 	rbt->size = 0;
 
 	rbt->style = &style[0];
 
 	/* self-initializing nil */
-	STIX_MEMSET(&rbt->xnil, 0, STIX_SIZEOF(rbt->xnil));
-	rbt->xnil.color = STIX_RBT_BLACK;
+	MOO_MEMSET(&rbt->xnil, 0, MOO_SIZEOF(rbt->xnil));
+	rbt->xnil.color = MOO_RBT_BLACK;
 	rbt->xnil.left = &rbt->xnil;
 	rbt->xnil.right = &rbt->xnil;
 
@@ -238,35 +238,35 @@ int stix_rbt_init (stix_rbt_t* rbt, stix_t* stix, int kscale, int vscale)
 	return 0;
 }
 
-void stix_rbt_fini (stix_rbt_t* rbt)
+void moo_rbt_fini (moo_rbt_t* rbt)
 {
-	stix_rbt_clear (rbt);
+	moo_rbt_clear (rbt);
 }
 
-void* stix_rbt_getxtn (stix_rbt_t* rbt)
+void* moo_rbt_getxtn (moo_rbt_t* rbt)
 {
 	return (void*)(rbt + 1);
 }
 
-const stix_rbt_style_t* stix_rbt_getstyle (const stix_rbt_t* rbt)
+const moo_rbt_style_t* moo_rbt_getstyle (const moo_rbt_t* rbt)
 {
 	return rbt->style;
 }
 
-void stix_rbt_setstyle (stix_rbt_t* rbt, const stix_rbt_style_t* style)
+void moo_rbt_setstyle (moo_rbt_t* rbt, const moo_rbt_style_t* style)
 {
-	STIX_ASSERT (rbt->stix, style != STIX_NULL);
+	MOO_ASSERT (rbt->moo, style != MOO_NULL);
 	rbt->style = style;
 }
 
-stix_oow_t stix_rbt_getsize (const stix_rbt_t* rbt)
+moo_oow_t moo_rbt_getsize (const moo_rbt_t* rbt)
 {
 	return rbt->size;
 }
 
-stix_rbt_pair_t* stix_rbt_search (const stix_rbt_t* rbt, const void* kptr, stix_oow_t klen)
+moo_rbt_pair_t* moo_rbt_search (const moo_rbt_t* rbt, const void* kptr, moo_oow_t klen)
 {
-	stix_rbt_pair_t* pair = rbt->root;
+	moo_rbt_pair_t* pair = rbt->root;
 
 	while (!IS_NIL(rbt,pair))
 	{
@@ -277,10 +277,10 @@ stix_rbt_pair_t* stix_rbt_search (const stix_rbt_t* rbt, const void* kptr, stix_
 		else /* if (n < 0) */ pair = pair->left;
 	}
 
-	return STIX_NULL;
+	return MOO_NULL;
 }
 
-static void rotate (stix_rbt_t* rbt, stix_rbt_pair_t* pivot, int leftwise)
+static void rotate (moo_rbt_t* rbt, moo_rbt_pair_t* pivot, int leftwise)
 {
 	/*
 	 * == leftwise rotation
@@ -316,10 +316,10 @@ static void rotate (stix_rbt_t* rbt, stix_rbt_pair_t* pivot, int leftwise)
 	 * is the left child or the right child of its parent,
 	 */
 
-	stix_rbt_pair_t* parent, * z, * c;
+	moo_rbt_pair_t* parent, * z, * c;
 	int cid1, cid2;
 
-	STIX_ASSERT (rbt->stix, pivot != STIX_NULL);
+	MOO_ASSERT (rbt->moo, pivot != MOO_NULL);
 
 	if (leftwise)
 	{
@@ -347,13 +347,13 @@ static void rotate (stix_rbt_t* rbt, stix_rbt_pair_t* pivot, int leftwise)
 		}
 		else
 		{
-			STIX_ASSERT (rbt->stix, parent->right == pivot);
+			MOO_ASSERT (rbt->moo, parent->right == pivot);
 			parent->right = z;
 		}
 	}
 	else
 	{
-		STIX_ASSERT (rbt->stix, rbt->root == pivot);
+		MOO_ASSERT (rbt->moo, rbt->root == pivot);
 		rbt->root = z;
 	}
 
@@ -364,17 +364,17 @@ static void rotate (stix_rbt_t* rbt, stix_rbt_pair_t* pivot, int leftwise)
 	if (!IS_NIL(rbt,c)) c->parent = pivot;
 }
 
-static void adjust (stix_rbt_t* rbt, stix_rbt_pair_t* pair)
+static void adjust (moo_rbt_t* rbt, moo_rbt_pair_t* pair)
 {
 	while (pair != rbt->root)
 	{
-		stix_rbt_pair_t* tmp, * tmp2, * x_par;
+		moo_rbt_pair_t* tmp, * tmp2, * x_par;
 		int leftwise;
 
 		x_par = pair->parent;
-		if (x_par->color == STIX_RBT_BLACK) break;
+		if (x_par->color == MOO_RBT_BLACK) break;
 
-		STIX_ASSERT (rbt->stix, x_par->parent != STIX_NULL);
+		MOO_ASSERT (rbt->moo, x_par->parent != MOO_NULL);
 
 		if (x_par == x_par->parent->child[LEFT])
 		{
@@ -389,11 +389,11 @@ static void adjust (stix_rbt_t* rbt, stix_rbt_pair_t* pair)
 			leftwise = 0;
 		}
 
-		if (tmp->color == STIX_RBT_RED)
+		if (tmp->color == MOO_RBT_RED)
 		{
-			x_par->color = STIX_RBT_BLACK;
-			tmp->color = STIX_RBT_BLACK;
-			x_par->parent->color = STIX_RBT_RED;
+			x_par->color = MOO_RBT_BLACK;
+			tmp->color = MOO_RBT_BLACK;
+			x_par->parent->color = MOO_RBT_RED;
 			pair = x_par->parent;
 		}
 		else
@@ -405,51 +405,51 @@ static void adjust (stix_rbt_t* rbt, stix_rbt_pair_t* pair)
 				x_par = pair->parent;
 			}
 
-			x_par->color = STIX_RBT_BLACK;
-			x_par->parent->color = STIX_RBT_RED;
+			x_par->color = MOO_RBT_BLACK;
+			x_par->parent->color = MOO_RBT_RED;
 			rotate (rbt, x_par->parent, !leftwise);
 		}
 	}
 }
 
-static stix_rbt_pair_t* change_pair_val (
-	stix_rbt_t* rbt, stix_rbt_pair_t* pair, void* vptr, stix_oow_t vlen)
+static moo_rbt_pair_t* change_pair_val (
+	moo_rbt_t* rbt, moo_rbt_pair_t* pair, void* vptr, moo_oow_t vlen)
 {
 	if (VPTR(pair) == vptr && VLEN(pair) == vlen)
 	{
 		/* if the old value and the new value are the same,
 		 * it just calls the handler for this condition.
 		 * No value replacement occurs. */
-		if (rbt->style->keeper != STIX_NULL)
+		if (rbt->style->keeper != MOO_NULL)
 		{
 			rbt->style->keeper (rbt, vptr, vlen);
 		}
 	}
 	else
 	{
-		copier_t vcop = rbt->style->copier[STIX_RBT_VAL];
+		copier_t vcop = rbt->style->copier[MOO_RBT_VAL];
 		void* ovptr = VPTR(pair);
-		stix_oow_t ovlen = VLEN(pair);
+		moo_oow_t ovlen = VLEN(pair);
 
 		/* place the new value according to the copier */
-		if (vcop == STIX_RBT_COPIER_SIMPLE)
+		if (vcop == MOO_RBT_COPIER_SIMPLE)
 		{
 			VPTR(pair) = vptr;
 			VLEN(pair) = vlen;
 		}
-		else if (vcop == STIX_RBT_COPIER_INLINE)
+		else if (vcop == MOO_RBT_COPIER_INLINE)
 		{
 			if (ovlen == vlen)
 			{
-				if (vptr) STIX_MEMCPY (VPTR(pair), vptr, VTOB(rbt,vlen));
+				if (vptr) MOO_MEMCPY (VPTR(pair), vptr, VTOB(rbt,vlen));
 			}
 			else
 			{
 				/* need to reconstruct the pair */
-				stix_rbt_pair_t* p = stix_rbt_allocpair (rbt,
+				moo_rbt_pair_t* p = moo_rbt_allocpair (rbt,
 					KPTR(pair), KLEN(pair),
 					vptr, vlen);
-				if (p == STIX_NULL) return STIX_NULL;
+				if (p == MOO_NULL) return MOO_NULL;
 
 				p->color = pair->color;
 				p->left = pair->left;
@@ -464,7 +464,7 @@ static stix_rbt_pair_t* change_pair_val (
 					}
 					else
 					{
-						STIX_ASSERT (rbt->stix, pair->parent->right == pair);
+						MOO_ASSERT (rbt->moo, pair->parent->right == pair);
 						pair->parent->right = p;
 					}
 				}
@@ -473,34 +473,34 @@ static stix_rbt_pair_t* change_pair_val (
 
 				if (pair == rbt->root) rbt->root = p;
 
-				stix_rbt_freepair (rbt, pair);
+				moo_rbt_freepair (rbt, pair);
 				return p;
 			}
 		}
 		else
 		{
 			void* nvptr = vcop (rbt, vptr, vlen);
-			if (nvptr == STIX_NULL) return STIX_NULL;
+			if (nvptr == MOO_NULL) return MOO_NULL;
 			VPTR(pair) = nvptr;
 			VLEN(pair) = vlen;
 		}
 
 		/* free up the old value */
-		if (rbt->style->freeer[STIX_RBT_VAL] != STIX_NULL)
+		if (rbt->style->freeer[MOO_RBT_VAL] != MOO_NULL)
 		{
-			rbt->style->freeer[STIX_RBT_VAL] (rbt, ovptr, ovlen);
+			rbt->style->freeer[MOO_RBT_VAL] (rbt, ovptr, ovlen);
 		}
 	}
 
 	return pair;
 }
 
-static stix_rbt_pair_t* insert (
-	stix_rbt_t* rbt, void* kptr, stix_oow_t klen, void* vptr, stix_oow_t vlen, int opt)
+static moo_rbt_pair_t* insert (
+	moo_rbt_t* rbt, void* kptr, moo_oow_t klen, void* vptr, moo_oow_t vlen, int opt)
 {
-	stix_rbt_pair_t* x_cur = rbt->root;
-	stix_rbt_pair_t* x_par = STIX_NULL;
-	stix_rbt_pair_t* x_new;
+	moo_rbt_pair_t* x_cur = rbt->root;
+	moo_rbt_pair_t* x_par = MOO_NULL;
+	moo_rbt_pair_t* x_new;
 
 	while (!IS_NIL(rbt,x_cur))
 	{
@@ -519,7 +519,7 @@ static stix_rbt_pair_t* insert (
 
 				case INSERT:
 					/* return failure */
-					return STIX_NULL;
+					return MOO_NULL;
 			}
 		}
 
@@ -529,15 +529,15 @@ static stix_rbt_pair_t* insert (
 		else /* if (n < 0) */ x_cur = x_cur->left;
 	}
 
-	if (opt == UPDATE) return STIX_NULL;
+	if (opt == UPDATE) return MOO_NULL;
 
-	x_new = stix_rbt_allocpair (rbt, kptr, klen, vptr, vlen);
-	if (x_new == STIX_NULL) return STIX_NULL;
+	x_new = moo_rbt_allocpair (rbt, kptr, klen, vptr, vlen);
+	if (x_new == MOO_NULL) return MOO_NULL;
 
-	if (x_par == STIX_NULL)
+	if (x_par == MOO_NULL)
 	{
 		/* the tree contains no pair */
-		STIX_ASSERT (rbt->stix, rbt->root == &rbt->xnil);
+		MOO_ASSERT (rbt->moo, rbt->root == &rbt->xnil);
 		rbt->root = x_new;
 	}
 	else
@@ -546,12 +546,12 @@ static stix_rbt_pair_t* insert (
 		int n = rbt->style->comper (rbt, kptr, klen, KPTR(x_par), KLEN(x_par));
 		if (n > 0)
 		{
-			STIX_ASSERT (rbt->stix, x_par->right == &rbt->xnil);
+			MOO_ASSERT (rbt->moo, x_par->right == &rbt->xnil);
 			x_par->right = x_new;
 		}
 		else
 		{
-			STIX_ASSERT (rbt->stix, x_par->left == &rbt->xnil);
+			MOO_ASSERT (rbt->moo, x_par->left == &rbt->xnil);
 			x_par->left = x_new;
 		}
 
@@ -559,42 +559,42 @@ static stix_rbt_pair_t* insert (
 		adjust (rbt, x_new);
 	}
 
-	rbt->root->color = STIX_RBT_BLACK;
+	rbt->root->color = MOO_RBT_BLACK;
 	rbt->size++;
 	return x_new;
 }
 
-stix_rbt_pair_t* stix_rbt_upsert (
-	stix_rbt_t* rbt, void* kptr, stix_oow_t klen, void* vptr, stix_oow_t vlen)
+moo_rbt_pair_t* moo_rbt_upsert (
+	moo_rbt_t* rbt, void* kptr, moo_oow_t klen, void* vptr, moo_oow_t vlen)
 {
 	return insert (rbt, kptr, klen, vptr, vlen, UPSERT);
 }
 
-stix_rbt_pair_t* stix_rbt_ensert (
-	stix_rbt_t* rbt, void* kptr, stix_oow_t klen, void* vptr, stix_oow_t vlen)
+moo_rbt_pair_t* moo_rbt_ensert (
+	moo_rbt_t* rbt, void* kptr, moo_oow_t klen, void* vptr, moo_oow_t vlen)
 {
 	return insert (rbt, kptr, klen, vptr, vlen, ENSERT);
 }
 
-stix_rbt_pair_t* stix_rbt_insert (
-	stix_rbt_t* rbt, void* kptr, stix_oow_t klen, void* vptr, stix_oow_t vlen)
+moo_rbt_pair_t* moo_rbt_insert (
+	moo_rbt_t* rbt, void* kptr, moo_oow_t klen, void* vptr, moo_oow_t vlen)
 {
 	return insert (rbt, kptr, klen, vptr, vlen, INSERT);
 }
 
 
-stix_rbt_pair_t* stix_rbt_update (
-	stix_rbt_t* rbt, void* kptr, stix_oow_t klen, void* vptr, stix_oow_t vlen)
+moo_rbt_pair_t* moo_rbt_update (
+	moo_rbt_t* rbt, void* kptr, moo_oow_t klen, void* vptr, moo_oow_t vlen)
 {
 	return insert (rbt, kptr, klen, vptr, vlen, UPDATE);
 }
 
-stix_rbt_pair_t* stix_rbt_cbsert (
-	stix_rbt_t* rbt, void* kptr, stix_oow_t klen, cbserter_t cbserter, void* ctx)
+moo_rbt_pair_t* moo_rbt_cbsert (
+	moo_rbt_t* rbt, void* kptr, moo_oow_t klen, cbserter_t cbserter, void* ctx)
 {
-	stix_rbt_pair_t* x_cur = rbt->root;
-	stix_rbt_pair_t* x_par = STIX_NULL;
-	stix_rbt_pair_t* x_new;
+	moo_rbt_pair_t* x_cur = rbt->root;
+	moo_rbt_pair_t* x_par = MOO_NULL;
+	moo_rbt_pair_t* x_new;
 
 	while (!IS_NIL(rbt,x_cur))
 	{
@@ -603,16 +603,16 @@ stix_rbt_pair_t* stix_rbt_cbsert (
 		{
 			/* back up the contents of the current pair
 			 * in case it is reallocated */
-			stix_rbt_pair_t tmp;
+			moo_rbt_pair_t tmp;
 
 			tmp = *x_cur;
 
 			/* call the callback function to manipulate the pair */
 			x_new = cbserter (rbt, x_cur, kptr, klen, ctx);
-			if (x_new == STIX_NULL)
+			if (x_new == MOO_NULL)
 			{
 				/* error returned by the callback function */
-				return STIX_NULL;
+				return MOO_NULL;
 			}
 
 			if (x_new != x_cur)
@@ -634,7 +634,7 @@ stix_rbt_pair_t* stix_rbt_cbsert (
 					}
 					else
 					{
-						STIX_ASSERT (rbt->stix, tmp.parent->right == x_cur);
+						MOO_ASSERT (rbt->moo, tmp.parent->right == x_cur);
 						tmp.parent->right = x_new;
 					}
 				}
@@ -653,13 +653,13 @@ stix_rbt_pair_t* stix_rbt_cbsert (
 		else /* if (n < 0) */ x_cur = x_cur->left;
 	}
 
-	x_new = cbserter (rbt, STIX_NULL, kptr, klen, ctx);
-	if (x_new == STIX_NULL) return STIX_NULL;
+	x_new = cbserter (rbt, MOO_NULL, kptr, klen, ctx);
+	if (x_new == MOO_NULL) return MOO_NULL;
 
-	if (x_par == STIX_NULL)
+	if (x_par == MOO_NULL)
 	{
 		/* the tree contains no pair */
-		STIX_ASSERT (rbt->stix, rbt->root == &rbt->xnil);
+		MOO_ASSERT (rbt->moo, rbt->root == &rbt->xnil);
 		rbt->root = x_new;
 	}
 	else
@@ -668,12 +668,12 @@ stix_rbt_pair_t* stix_rbt_cbsert (
 		int n = rbt->style->comper (rbt, kptr, klen, KPTR(x_par), KLEN(x_par));
 		if (n > 0)
 		{
-			STIX_ASSERT (rbt->stix, x_par->right == &rbt->xnil);
+			MOO_ASSERT (rbt->moo, x_par->right == &rbt->xnil);
 			x_par->right = x_new;
 		}
 		else
 		{
-			STIX_ASSERT (rbt->stix, x_par->left == &rbt->xnil);
+			MOO_ASSERT (rbt->moo, x_par->left == &rbt->xnil);
 			x_par->left = x_new;
 		}
 
@@ -681,51 +681,51 @@ stix_rbt_pair_t* stix_rbt_cbsert (
 		adjust (rbt, x_new);
 	}
 
-	rbt->root->color = STIX_RBT_BLACK;
+	rbt->root->color = MOO_RBT_BLACK;
 	rbt->size++;
 	return x_new;
 }
 
 
-static void adjust_for_delete (stix_rbt_t* rbt, stix_rbt_pair_t* pair, stix_rbt_pair_t* par)
+static void adjust_for_delete (moo_rbt_t* rbt, moo_rbt_pair_t* pair, moo_rbt_pair_t* par)
 {
-	while (pair != rbt->root && pair->color == STIX_RBT_BLACK)
+	while (pair != rbt->root && pair->color == MOO_RBT_BLACK)
 	{
-		stix_rbt_pair_t* tmp;
+		moo_rbt_pair_t* tmp;
 
 		if (pair == par->left)
 		{
 			tmp = par->right;
-			if (tmp->color == STIX_RBT_RED)
+			if (tmp->color == MOO_RBT_RED)
 			{
-				tmp->color = STIX_RBT_BLACK;
-				par->color = STIX_RBT_RED;
+				tmp->color = MOO_RBT_BLACK;
+				par->color = MOO_RBT_RED;
 				rotate_left (rbt, par);
 				tmp = par->right;
 			}
 
-			if (tmp->left->color == STIX_RBT_BLACK &&
-			    tmp->right->color == STIX_RBT_BLACK)
+			if (tmp->left->color == MOO_RBT_BLACK &&
+			    tmp->right->color == MOO_RBT_BLACK)
 			{
-				if (!IS_NIL(rbt,tmp)) tmp->color = STIX_RBT_RED;
+				if (!IS_NIL(rbt,tmp)) tmp->color = MOO_RBT_RED;
 				pair = par;
 				par = pair->parent;
 			}
 			else
 			{
-				if (tmp->right->color == STIX_RBT_BLACK)
+				if (tmp->right->color == MOO_RBT_BLACK)
 				{
 					if (!IS_NIL(rbt,tmp->left))
-						tmp->left->color = STIX_RBT_BLACK;
-					tmp->color = STIX_RBT_RED;
+						tmp->left->color = MOO_RBT_BLACK;
+					tmp->color = MOO_RBT_RED;
 					rotate_right (rbt, tmp);
 					tmp = par->right;
 				}
 
 				tmp->color = par->color;
-				if (!IS_NIL(rbt,par)) par->color = STIX_RBT_BLACK;
-				if (tmp->right->color == STIX_RBT_RED)
-					tmp->right->color = STIX_RBT_BLACK;
+				if (!IS_NIL(rbt,par)) par->color = MOO_RBT_BLACK;
+				if (tmp->right->color == MOO_RBT_RED)
+					tmp->right->color = MOO_RBT_BLACK;
 
 				rotate_left (rbt, par);
 				pair = rbt->root;
@@ -733,37 +733,37 @@ static void adjust_for_delete (stix_rbt_t* rbt, stix_rbt_pair_t* pair, stix_rbt_
 		}
 		else
 		{
-			STIX_ASSERT (rbt->stix, pair == par->right);
+			MOO_ASSERT (rbt->moo, pair == par->right);
 			tmp = par->left;
-			if (tmp->color == STIX_RBT_RED)
+			if (tmp->color == MOO_RBT_RED)
 			{
-				tmp->color = STIX_RBT_BLACK;
-				par->color = STIX_RBT_RED;
+				tmp->color = MOO_RBT_BLACK;
+				par->color = MOO_RBT_RED;
 				rotate_right (rbt, par);
 				tmp = par->left;
 			}
 
-			if (tmp->left->color == STIX_RBT_BLACK &&
-			    tmp->right->color == STIX_RBT_BLACK)
+			if (tmp->left->color == MOO_RBT_BLACK &&
+			    tmp->right->color == MOO_RBT_BLACK)
 			{
-				if (!IS_NIL(rbt,tmp)) tmp->color = STIX_RBT_RED;
+				if (!IS_NIL(rbt,tmp)) tmp->color = MOO_RBT_RED;
 				pair = par;
 				par = pair->parent;
 			}
 			else
 			{
-				if (tmp->left->color == STIX_RBT_BLACK)
+				if (tmp->left->color == MOO_RBT_BLACK)
 				{
 					if (!IS_NIL(rbt,tmp->right))
-						tmp->right->color = STIX_RBT_BLACK;
-					tmp->color = STIX_RBT_RED;
+						tmp->right->color = MOO_RBT_BLACK;
+					tmp->color = MOO_RBT_RED;
 					rotate_left (rbt, tmp);
 					tmp = par->left;
 				}
 				tmp->color = par->color;
-				if (!IS_NIL(rbt,par)) par->color = STIX_RBT_BLACK;
-				if (tmp->left->color == STIX_RBT_RED)
-					tmp->left->color = STIX_RBT_BLACK;
+				if (!IS_NIL(rbt,par)) par->color = MOO_RBT_BLACK;
+				if (tmp->left->color == MOO_RBT_RED)
+					tmp->left->color = MOO_RBT_BLACK;
 
 				rotate_right (rbt, par);
 				pair = rbt->root;
@@ -771,14 +771,14 @@ static void adjust_for_delete (stix_rbt_t* rbt, stix_rbt_pair_t* pair, stix_rbt_
 		}
 	}
 
-	pair->color = STIX_RBT_BLACK;
+	pair->color = MOO_RBT_BLACK;
 }
 
-static void delete_pair (stix_rbt_t* rbt, stix_rbt_pair_t* pair)
+static void delete_pair (moo_rbt_t* rbt, moo_rbt_pair_t* pair)
 {
-	stix_rbt_pair_t* x, * y, * par;
+	moo_rbt_pair_t* x, * y, * par;
 
-	STIX_ASSERT (rbt->stix, pair && !IS_NIL(rbt,pair));
+	MOO_ASSERT (rbt->moo, pair && !IS_NIL(rbt,pair));
 
 	if (IS_NIL(rbt,pair->left) || IS_NIL(rbt,pair->right))
 	{
@@ -810,14 +810,14 @@ static void delete_pair (stix_rbt_t* rbt, stix_rbt_pair_t* pair)
 
 	if (y == pair)
 	{
-		if (y->color == STIX_RBT_BLACK && !IS_NIL(rbt,x))
+		if (y->color == MOO_RBT_BLACK && !IS_NIL(rbt,x))
 			adjust_for_delete (rbt, x, par);
 
-		stix_rbt_freepair (rbt, y);
+		moo_rbt_freepair (rbt, y);
 	}
 	else
 	{
-		if (y->color == STIX_RBT_BLACK && !IS_NIL(rbt,x))
+		if (y->color == MOO_RBT_BLACK && !IS_NIL(rbt,x))
 			adjust_for_delete (rbt, x, par);
 
 #if 1
@@ -854,55 +854,55 @@ static void delete_pair (stix_rbt_t* rbt, stix_rbt_pair_t* pair)
 		if (y->right->parent == pair) y->right->parent = y;
 #endif
 
-		stix_rbt_freepair (rbt, pair);
+		moo_rbt_freepair (rbt, pair);
 	}
 
 	rbt->size--;
 }
 
-int stix_rbt_delete (stix_rbt_t* rbt, const void* kptr, stix_oow_t klen)
+int moo_rbt_delete (moo_rbt_t* rbt, const void* kptr, moo_oow_t klen)
 {
-	stix_rbt_pair_t* pair;
+	moo_rbt_pair_t* pair;
 
-	pair = stix_rbt_search (rbt, kptr, klen);
-	if (pair == STIX_NULL) return -1;
+	pair = moo_rbt_search (rbt, kptr, klen);
+	if (pair == MOO_NULL) return -1;
 
 	delete_pair (rbt, pair);
 	return 0;
 }
 
-void stix_rbt_clear (stix_rbt_t* rbt)
+void moo_rbt_clear (moo_rbt_t* rbt)
 {
 	/* TODO: improve this */
 	while (!IS_NIL(rbt,rbt->root)) delete_pair (rbt, rbt->root);
 }
 
 #if 0
-static STIX_INLINE stix_rbt_walk_t walk_recursively (
-	stix_rbt_t* rbt, walker_t walker, void* ctx, stix_rbt_pair_t* pair)
+static MOO_INLINE moo_rbt_walk_t walk_recursively (
+	moo_rbt_t* rbt, walker_t walker, void* ctx, moo_rbt_pair_t* pair)
 {
 	if (!IS_NIL(rbt,pair->left))
 	{
-		if (walk_recursively (rbt, walker, ctx, pair->left) == STIX_RBT_WALK_STOP)
-			return STIX_RBT_WALK_STOP;
+		if (walk_recursively (rbt, walker, ctx, pair->left) == MOO_RBT_WALK_STOP)
+			return MOO_RBT_WALK_STOP;
 	}
 
-	if (walker (rbt, pair, ctx) == STIX_RBT_WALK_STOP) return STIX_RBT_WALK_STOP;
+	if (walker (rbt, pair, ctx) == MOO_RBT_WALK_STOP) return MOO_RBT_WALK_STOP;
 
 	if (!IS_NIL(rbt,pair->right))
 	{
-		if (walk_recursively (rbt, walker, ctx, pair->right) == STIX_RBT_WALK_STOP)
-			return STIX_RBT_WALK_STOP;
+		if (walk_recursively (rbt, walker, ctx, pair->right) == MOO_RBT_WALK_STOP)
+			return MOO_RBT_WALK_STOP;
 	}
 
-	return STIX_RBT_WALK_FORWARD;
+	return MOO_RBT_WALK_FORWARD;
 }
 #endif
 
-static STIX_INLINE void walk (stix_rbt_t* rbt, walker_t walker, void* ctx, int l, int r)
+static MOO_INLINE void walk (moo_rbt_t* rbt, walker_t walker, void* ctx, int l, int r)
 {
-	stix_rbt_pair_t* x_cur = rbt->root;
-	stix_rbt_pair_t* prev = rbt->root->parent;
+	moo_rbt_pair_t* x_cur = rbt->root;
+	moo_rbt_pair_t* prev = rbt->root->parent;
 
 	while (x_cur && !IS_NIL(rbt,x_cur))
 	{
@@ -918,7 +918,7 @@ static STIX_INLINE void walk (stix_rbt_t* rbt, walker_t walker, void* ctx, int l
 			}
 			else
 			{
-				if (walker (rbt, x_cur, ctx) == STIX_RBT_WALK_STOP) break;
+				if (walker (rbt, x_cur, ctx) == MOO_RBT_WALK_STOP) break;
 
 				if (!IS_NIL(rbt,x_cur->child[r]))
 				{
@@ -938,7 +938,7 @@ static STIX_INLINE void walk (stix_rbt_t* rbt, walker_t walker, void* ctx, int l
 		{
 			/* the left child has been already traversed */
 
-			if (walker (rbt, x_cur, ctx) == STIX_RBT_WALK_STOP) break;
+			if (walker (rbt, x_cur, ctx) == MOO_RBT_WALK_STOP) break;
 
 			if (!IS_NIL(rbt,x_cur->child[r]))
 			{
@@ -956,7 +956,7 @@ static STIX_INLINE void walk (stix_rbt_t* rbt, walker_t walker, void* ctx, int l
 		else
 		{
 			/* both the left child and the right child have been traversed */
-			STIX_ASSERT (rbt->stix, prev == x_cur->child[r]);
+			MOO_ASSERT (rbt->moo, prev == x_cur->child[r]);
 			/* just move up to the parent */
 			prev = x_cur;
 			x_cur = x_cur->parent;
@@ -964,19 +964,19 @@ static STIX_INLINE void walk (stix_rbt_t* rbt, walker_t walker, void* ctx, int l
 	}
 }
 
-void stix_rbt_walk (stix_rbt_t* rbt, walker_t walker, void* ctx)
+void moo_rbt_walk (moo_rbt_t* rbt, walker_t walker, void* ctx)
 {
 	walk (rbt, walker, ctx, LEFT, RIGHT);
 }
 
-void stix_rbt_rwalk (stix_rbt_t* rbt, walker_t walker, void* ctx)
+void moo_rbt_rwalk (moo_rbt_t* rbt, walker_t walker, void* ctx)
 {
 	walk (rbt, walker, ctx, RIGHT, LEFT);
 }
 
-int stix_rbt_dflcomp (const stix_rbt_t* rbt, const void* kptr1, stix_oow_t klen1, const void* kptr2, stix_oow_t klen2)
+int moo_rbt_dflcomp (const moo_rbt_t* rbt, const void* kptr1, moo_oow_t klen1, const void* kptr2, moo_oow_t klen2)
 {
-	stix_oow_t min;
+	moo_oow_t min;
 	int n, nn;
 
 	if (klen1 < klen2)
@@ -990,7 +990,7 @@ int stix_rbt_dflcomp (const stix_rbt_t* rbt, const void* kptr1, stix_oow_t klen1
 		nn = (klen1 == klen2)? 0: 1;
 	}
 
-	n = STIX_MEMCMP (kptr1, kptr2, KTOB(rbt,min));
+	n = MOO_MEMCMP (kptr1, kptr2, KTOB(rbt,min));
 	if (n == 0) n = nn;
 	return n;
 }

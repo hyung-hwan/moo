@@ -24,53 +24,53 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "stix-prv.h"
+#include "moo-prv.h"
 
-stix_heap_t* stix_makeheap (stix_t* stix, stix_oow_t size)
+moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 {
-	stix_heap_t* heap;
+	moo_heap_t* heap;
 
-	heap = (stix_heap_t*)STIX_MMGR_ALLOC(stix->mmgr, STIX_SIZEOF(*heap) + size);
+	heap = (moo_heap_t*)MOO_MMGR_ALLOC(moo->mmgr, MOO_SIZEOF(*heap) + size);
 	if (!heap)
 	{
-		stix->errnum = STIX_ESYSMEM;
-		return STIX_NULL;
+		moo->errnum = MOO_ESYSMEM;
+		return MOO_NULL;
 	}
 
-	STIX_MEMSET (heap, 0, STIX_SIZEOF(*heap) + size);
+	MOO_MEMSET (heap, 0, MOO_SIZEOF(*heap) + size);
 
-	heap->base = (stix_uint8_t*)(heap + 1);
+	heap->base = (moo_uint8_t*)(heap + 1);
 	/* adjust the initial allocation pointer to a multiple of the oop size */
-	heap->ptr = (stix_uint8_t*)STIX_ALIGN(((stix_uintptr_t)heap->base), STIX_SIZEOF(stix_oop_t));
+	heap->ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)heap->base), MOO_SIZEOF(moo_oop_t));
 	heap->limit = heap->base + size;
 
-	STIX_ASSERT (stix, heap->ptr >= heap->base);
-	STIX_ASSERT (stix, heap->limit >= heap->base ); 
-	STIX_ASSERT (stix, heap->limit - heap->base == size);
+	MOO_ASSERT (moo, heap->ptr >= heap->base);
+	MOO_ASSERT (moo, heap->limit >= heap->base ); 
+	MOO_ASSERT (moo, heap->limit - heap->base == size);
 
 	/* if size is too small, heap->ptr may go past heap->limit even at 
 	 * this moment depending on the alignment of heap->base. subsequent
-	 * calls to substix_allocheapmem() are bound to fail. Make sure to
+	 * calls to submoo_allocheapmem() are bound to fail. Make sure to
 	 * pass a heap size large enough */
 
 	return heap;
 }
 
-void stix_killheap (stix_t* stix, stix_heap_t* heap)
+void moo_killheap (moo_t* moo, moo_heap_t* heap)
 {
-	STIX_MMGR_FREE (stix->mmgr, heap);
+	MOO_MMGR_FREE (moo->mmgr, heap);
 }
 
-void* stix_allocheapmem (stix_t* stix, stix_heap_t* heap, stix_oow_t size)
+void* moo_allocheapmem (moo_t* moo, moo_heap_t* heap, moo_oow_t size)
 {
-	stix_uint8_t* ptr;
+	moo_uint8_t* ptr;
 
 	/* check the heap size limit */
 	if (heap->ptr >= heap->limit || heap->limit - heap->ptr < size)
 	{
-		STIX_LOG4 (stix, STIX_LOG_ERROR, "Cannot allocate %zd bytes from heap - ptr %p limit %p size %zd\n", size, heap->ptr, heap->limit, (stix_oow_t)(heap->limit - heap->ptr));
-		stix->errnum = STIX_EOOMEM;
-		return STIX_NULL;
+		MOO_LOG4 (moo, MOO_LOG_ERROR, "Cannot allocate %zd bytes from heap - ptr %p limit %p size %zd\n", size, heap->ptr, heap->limit, (moo_oow_t)(heap->limit - heap->ptr));
+		moo->errnum = MOO_EOOMEM;
+		return MOO_NULL;
 	}
 
 	/* allocation is as simple as moving the heap pointer */

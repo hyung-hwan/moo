@@ -26,7 +26,7 @@
 
 
 #include "_stdio.h"
-#include <stix-utl.h>
+#include <moo-utl.h>
 
 #include <stdio.h>
 #include <errno.h>
@@ -35,42 +35,42 @@
 typedef struct stdio_t stdio_t;
 struct stdio_t
 {
-	STIX_OBJ_HEADER;
+	MOO_OBJ_HEADER;
 	FILE* fp;
 };
 
-static stix_pfrc_t pf_newinstsize (stix_t* stix, stix_ooi_t nargs)
+static moo_pfrc_t pf_newinstsize (moo_t* moo, moo_ooi_t nargs)
 {
-	stix_ooi_t newinstsize = STIX_SIZEOF(stdio_t) - STIX_SIZEOF(stix_obj_t);
-	STIX_STACK_SETRET (stix, nargs, STIX_SMOOI_TO_OOP(newinstsize)); 
-	return STIX_PF_SUCCESS;
+	moo_ooi_t newinstsize = MOO_SIZEOF(stdio_t) - MOO_SIZEOF(moo_obj_t);
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(newinstsize)); 
+	return MOO_PF_SUCCESS;
 }
 
-static stix_pfrc_t pf_open (stix_t* stix, stix_ooi_t nargs)
+static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 {
-	stix_oop_char_t name;
-	stix_oop_char_t mode;
+	moo_oop_char_t name;
+	moo_oop_char_t mode;
 	stdio_t* rcv;
 
-#if defined(STIX_OOCH_IS_UCH)
-	stix_oow_t ucslen, bcslen;
-	stix_bch_t namebuf[PATH_MAX];
-	stix_bch_t modebuf[32]; /* TODO: dynamic-sized conversion?? */
+#if defined(MOO_OOCH_IS_UCH)
+	moo_oow_t ucslen, bcslen;
+	moo_bch_t namebuf[PATH_MAX];
+	moo_bch_t modebuf[32]; /* TODO: dynamic-sized conversion?? */
 #endif
 
-	rcv = (stdio_t*)STIX_STACK_GETRCV(stix, nargs);
-	name = (stix_oop_char_t)STIX_STACK_GETARG(stix, nargs, 0);
-	mode = (stix_oop_char_t)STIX_STACK_GETARG(stix, nargs, 1);
+	rcv = (stdio_t*)MOO_STACK_GETRCV(moo, nargs);
+	name = (moo_oop_char_t)MOO_STACK_GETARG(moo, nargs, 0);
+	mode = (moo_oop_char_t)MOO_STACK_GETARG(moo, nargs, 1);
 
-#if defined(STIX_OOCH_IS_UCH)
-	ucslen = STIX_OBJ_GET_SIZE(name);
-	bcslen = STIX_COUNTOF(namebuf) - 1;
-	if (stix_convootobchars (stix, name->slot, &ucslen, namebuf, &bcslen) <= -1) goto reterr;
+#if defined(MOO_OOCH_IS_UCH)
+	ucslen = MOO_OBJ_GET_SIZE(name);
+	bcslen = MOO_COUNTOF(namebuf) - 1;
+	if (moo_convootobchars (moo, name->slot, &ucslen, namebuf, &bcslen) <= -1) goto reterr;
 	namebuf[bcslen] = '\0';
 
-	ucslen = STIX_OBJ_GET_SIZE(mode);
-	bcslen = STIX_COUNTOF(modebuf) - 1;
-	if (stix_convootobchars (stix, mode->slot, &ucslen, modebuf, &bcslen) <= -1) goto reterr;
+	ucslen = MOO_OBJ_GET_SIZE(mode);
+	bcslen = MOO_COUNTOF(modebuf) - 1;
+	if (moo_convootobchars (moo, mode->slot, &ucslen, modebuf, &bcslen) <= -1) goto reterr;
 	modebuf[bcslen] = '\0';
 
 	rcv->fp = fopen (namebuf, modebuf);
@@ -79,92 +79,92 @@ static stix_pfrc_t pf_open (stix_t* stix, stix_ooi_t nargs)
 #endif
 	if (!rcv->fp) 
 	{
-		stix_seterrnum (stix, stix_syserrtoerrnum(errno));
+		moo_seterrnum (moo, moo_syserrtoerrnum(errno));
 		goto reterr;
 	}
 
-	STIX_STACK_SETRETTORCV (stix, nargs);
-	return STIX_PF_SUCCESS;
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
 
 reterr:
-	STIX_STACK_SETRETTOERROR (stix, nargs);
-	return STIX_PF_SUCCESS;
+	MOO_STACK_SETRETTOERROR (moo, nargs);
+	return MOO_PF_SUCCESS;
 }
 
-static stix_pfrc_t pf_close (stix_t* stix, stix_ooi_t nargs)
+static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 {
 	stdio_t* rcv;
 
-	rcv = (stdio_t*)STIX_STACK_GETRCV(stix, nargs);
+	rcv = (stdio_t*)MOO_STACK_GETRCV(moo, nargs);
 	if (rcv->fp)
 	{
 		fclose (rcv->fp);
 		rcv->fp = NULL;
 	}
 
-	STIX_STACK_SETRETTORCV (stix, nargs);
-	return STIX_PF_SUCCESS;
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
 }
 
-static stix_pfrc_t pf_gets (stix_t* stix, stix_ooi_t nargs)
+static moo_pfrc_t pf_gets (moo_t* moo, moo_ooi_t nargs)
 {
 	/* return how many bytes have been written.. */
-	STIX_STACK_SETRETTORCV (stix, nargs);
-	return STIX_PF_SUCCESS;
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
 }
 
-static stix_pfrc_t __pf_puts (stix_t* stix, stix_ooi_t nargs, stix_oow_t limit)
+static moo_pfrc_t __pf_puts (moo_t* moo, moo_ooi_t nargs, moo_oow_t limit)
 {
 	stdio_t* rcv;
-	stix_ooi_t i;
+	moo_ooi_t i;
 
-	rcv = (stdio_t*)STIX_STACK_GETRCV(stix, nargs);
+	rcv = (stdio_t*)MOO_STACK_GETRCV(moo, nargs);
 
 	for (i = 0; i < nargs; i++)
 	{
-		stix_oop_char_t x;
-		stix_obj_char_t tmpc;
+		moo_oop_char_t x;
+		moo_obj_char_t tmpc;
 
-		x = (stix_oop_char_t)STIX_STACK_GETARG(stix, nargs, i);
-		if (STIX_OOP_IS_CHAR(x))
+		x = (moo_oop_char_t)MOO_STACK_GETARG(moo, nargs, i);
+		if (MOO_OOP_IS_CHAR(x))
 		{
 			/* do some faking. */
-			STIX_ASSERT (stix, STIX_SIZEOF(tmpc) >= STIX_SIZEOF(stix_obj_t) + STIX_SIZEOF(stix_ooch_t));
+			MOO_ASSERT (moo, MOO_SIZEOF(tmpc) >= MOO_SIZEOF(moo_obj_t) + MOO_SIZEOF(moo_ooch_t));
 
-			tmpc.slot[0] = STIX_OOP_TO_CHAR(x);
-			x = (stix_oop_char_t)&tmpc;
-			STIX_OBJ_SET_SIZE(x, 1);
+			tmpc.slot[0] = MOO_OOP_TO_CHAR(x);
+			x = (moo_oop_char_t)&tmpc;
+			MOO_OBJ_SET_SIZE(x, 1);
 			goto puts_string;
 		}
-		else if (STIX_OOP_IS_POINTER(x) && STIX_OBJ_GET_FLAGS_TYPE(x) == STIX_OBJ_TYPE_CHAR)
+		else if (MOO_OOP_IS_POINTER(x) && MOO_OBJ_GET_FLAGS_TYPE(x) == MOO_OBJ_TYPE_CHAR)
 		{
 			int n;
-			stix_oow_t ucspos, ucsrem, ucslen, bcslen;
-			stix_bch_t bcs[1024]; /* TODO: choose a better buffer size */
+			moo_oow_t ucspos, ucsrem, ucslen, bcslen;
+			moo_bch_t bcs[1024]; /* TODO: choose a better buffer size */
 
 		puts_string:
 			ucspos = 0;
-			ucsrem = STIX_OBJ_GET_SIZE(x);
+			ucsrem = MOO_OBJ_GET_SIZE(x);
 			if (ucsrem > limit) ucsrem = limit;
 
 			while (ucsrem > 0)
 			{
 				ucslen = ucsrem;
-				bcslen = STIX_COUNTOF(bcs);
+				bcslen = MOO_COUNTOF(bcs);
 
 /* TODO: implement character conversion into stdio and use it instead of vm's conversion facility. */
-				if ((n = stix_convootobchars (stix, &x->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
+				if ((n = moo_convootobchars (moo, &x->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
 				{
 					if (n != -2 || ucslen <= 0) 
 					{
-						stix_seterrnum (stix, STIX_EECERR);
+						moo_seterrnum (moo, MOO_EECERR);
 						goto reterr;
 					}
 				}
 
 				if (fwrite (bcs, 1, bcslen, rcv->fp) < bcslen)
 				{
-					stix_seterrnum (stix, stix_syserrtoerrnum(errno));
+					moo_seterrnum (moo, moo_syserrtoerrnum(errno));
 					goto reterr;
 				}
 
@@ -175,27 +175,27 @@ static stix_pfrc_t __pf_puts (stix_t* stix, stix_ooi_t nargs, stix_oow_t limit)
 		}
 		else
 		{
-			stix_seterrnum (stix, STIX_EINVAL);
+			moo_seterrnum (moo, MOO_EINVAL);
 			goto reterr;
 		}
 	}
 
-	STIX_STACK_SETRETTORCV (stix, nargs);
-	return STIX_PF_SUCCESS;
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
 
 reterr:
-	STIX_STACK_SETRETTOERROR (stix, nargs);
-	return STIX_PF_SUCCESS;
+	MOO_STACK_SETRETTOERROR (moo, nargs);
+	return MOO_PF_SUCCESS;
 }
 
-static stix_pfrc_t pf_putc (stix_t* stix, stix_ooi_t nargs)
+static moo_pfrc_t pf_putc (moo_t* moo, moo_ooi_t nargs)
 {
-	return __pf_puts (stix, nargs, 1);
+	return __pf_puts (moo, nargs, 1);
 }
 
-static stix_pfrc_t pf_puts (stix_t* stix, stix_ooi_t nargs)
+static moo_pfrc_t pf_puts (moo_t* moo, moo_ooi_t nargs)
 {
-	return __pf_puts (stix, nargs, STIX_TYPE_MAX(stix_oow_t));
+	return __pf_puts (moo, nargs, MOO_TYPE_MAX(moo_oow_t));
 }
 
 /*TODO: add print function that can accept ByteArray
@@ -207,14 +207,14 @@ static stix_pfrc_t pf_puts (stix_t* stix, stix_ooi_t nargs)
 typedef struct fnctab_t fnctab_t;
 struct fnctab_t
 {
-	stix_method_type_t type;
-	stix_ooch_t mthname[15];
+	moo_method_type_t type;
+	moo_ooch_t mthname[15];
 	int variadic;
-	stix_pfimpl_t handler;
+	moo_pfimpl_t handler;
 };
 
-#define C STIX_METHOD_CLASS
-#define I STIX_METHOD_INSTANCE
+#define C MOO_METHOD_CLASS
+#define I MOO_METHOD_INSTANCE
 
 static fnctab_t fnctab[] =
 {
@@ -230,15 +230,15 @@ static fnctab_t fnctab[] =
 
 /* ------------------------------------------------------------------------ */
 
-static int import (stix_t* stix, stix_mod_t* mod, stix_oop_t _class)
+static int import (moo_t* moo, moo_mod_t* mod, moo_oop_t _class)
 {
 	int ret = 0;
-	stix_oow_t i;
+	moo_oow_t i;
 
-	stix_pushtmp (stix, &_class);
-	for (i = 0; i < STIX_COUNTOF(fnctab); i++)
+	moo_pushtmp (moo, &_class);
+	for (i = 0; i < MOO_COUNTOF(fnctab); i++)
 	{
-		if (stix_genpfmethod (stix, mod, _class, fnctab[i].type, fnctab[i].mthname, fnctab[i].variadic, STIX_NULL) <= -1) 
+		if (moo_genpfmethod (moo, mod, _class, fnctab[i].type, fnctab[i].mthname, fnctab[i].variadic, MOO_NULL) <= -1) 
 		{
 			/* TODO: delete pfmethod generated??? */
 			ret = -1;
@@ -246,21 +246,21 @@ static int import (stix_t* stix, stix_mod_t* mod, stix_oop_t _class)
 		}
 	}
 
-	stix_poptmp (stix);
+	moo_poptmp (moo);
 	return ret;
 }
 
-static stix_pfimpl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* name)
+static moo_pfimpl_t query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
 {
 	int left, right, mid, n;
 
-	left = 0; right = STIX_COUNTOF(fnctab) - 1;
+	left = 0; right = MOO_COUNTOF(fnctab) - 1;
 
 	while (left <= right)
 	{
 		mid = (left + right) / 2;
 
-		n = stix_compoocstr (name, fnctab[mid].mthname);
+		n = moo_compoocstr (name, fnctab[mid].mthname);
 		if (n < 0) right = mid - 1; 
 		else if (n > 0) left = mid + 1;
 		else
@@ -269,8 +269,8 @@ static stix_pfimpl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* na
 		}
 	}
 
-	stix->errnum = STIX_ENOENT;
-	return STIX_NULL;
+	moo->errnum = MOO_ENOENT;
+	return MOO_NULL;
 }
 
 #if 0
@@ -279,22 +279,22 @@ static stix_pfimpl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* na
  * check if receiver is at a certain size?
  * etc...
  */
-static int sanity_check (stix_t* stix)
+static int sanity_check (moo_t* moo)
 {
 }
 #endif
 
-static void unload (stix_t* stix, stix_mod_t* mod)
+static void unload (moo_t* moo, moo_mod_t* mod)
 {
 	/* TODO: close all open handle?? */
 }
 
-int stix_mod_stdio (stix_t* stix, stix_mod_t* mod)
+int moo_mod_stdio (moo_t* moo, moo_mod_t* mod)
 {
 	mod->import = import;
 	mod->query = query;
 	mod->unload = unload; 
-	mod->ctx = STIX_NULL;
+	mod->ctx = MOO_NULL;
 	return 0;
 }
 

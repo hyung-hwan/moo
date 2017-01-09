@@ -365,8 +365,8 @@ class Apex(nil)
 
 	method(#class) error: msgText
 	{
-		## TODO: implement this
-		## Error signal: msgText.
+		(* TODO: implement this
+		  Error signal: msgText. *)
 		msgText dump.
 	}
 

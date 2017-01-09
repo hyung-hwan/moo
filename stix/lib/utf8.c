@@ -24,7 +24,7 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "stix-prv.h"
+#include "moo-prv.h"
 
 /*
  * from RFC 2279 UTF-8, a transformation format of ISO 10646
@@ -40,11 +40,11 @@
 
 struct __utf8_t
 {
-	stix_uint32_t  lower;
-	stix_uint32_t  upper;
-	stix_uint8_t   fbyte;  /* mask to the first utf8 byte */
-	stix_uint8_t   mask;
-	stix_uint8_t   fmask;
+	moo_uint32_t  lower;
+	moo_uint32_t  upper;
+	moo_uint8_t   fbyte;  /* mask to the first utf8 byte */
+	moo_uint8_t   mask;
+	moo_uint8_t   fmask;
 	int            length; /* number of bytes */
 };
 
@@ -60,14 +60,14 @@ static __utf8_t utf8_table[] =
 	{0x04000000ul, 0x7FFFFFFFul, 0xFC, 0xFE, 0x01, 6}
 };
 
-static STIX_INLINE __utf8_t* get_utf8_slot (stix_uch_t uc)
+static MOO_INLINE __utf8_t* get_utf8_slot (moo_uch_t uc)
 {
 	__utf8_t* cur, * end;
 
-	/*STIX_ASSERT (stix, STIX_SIZEOF(stix_bch_t) == 1);
-	STIX_ASSERT (stix, STIX_SIZEOF(stix_uch_t) >= 2);*/
+	/*MOO_ASSERT (moo, MOO_SIZEOF(moo_bch_t) == 1);
+	MOO_ASSERT (moo, MOO_SIZEOF(moo_uch_t) >= 2);*/
 
-	end = utf8_table + STIX_COUNTOF(utf8_table);
+	end = utf8_table + MOO_COUNTOF(utf8_table);
 	cur = utf8_table;
 
 	while (cur < end) 
@@ -76,14 +76,14 @@ static STIX_INLINE __utf8_t* get_utf8_slot (stix_uch_t uc)
 		cur++;
 	}
 
-	return STIX_NULL; /* invalid character */
+	return MOO_NULL; /* invalid character */
 }
 
-stix_oow_t stix_uctoutf8 (stix_uch_t uc, stix_bch_t* utf8, stix_oow_t size)
+moo_oow_t moo_uctoutf8 (moo_uch_t uc, moo_bch_t* utf8, moo_oow_t size)
 {
 	__utf8_t* cur = get_utf8_slot (uc);
 
-	if (cur == STIX_NULL) return 0; /* illegal character */
+	if (cur == MOO_NULL) return 0; /* illegal character */
 
 	if (utf8 && cur->length <= size)
 	{
@@ -103,19 +103,19 @@ stix_oow_t stix_uctoutf8 (stix_uch_t uc, stix_bch_t* utf8, stix_oow_t size)
 
 	/* small buffer is also indicated by this return value
 	 * greater than 'size'. */
-	return (stix_oow_t)cur->length;
+	return (moo_oow_t)cur->length;
 }
 
-stix_oow_t stix_utf8touc (const stix_bch_t* utf8, stix_oow_t size, stix_uch_t* uc)
+moo_oow_t moo_utf8touc (const moo_bch_t* utf8, moo_oow_t size, moo_uch_t* uc)
 {
 	__utf8_t* cur, * end;
 
-	/*STIX_ASSERT (stix, utf8 != STIX_NULL);
-	STIX_ASSERT (stix, size > 0);
-	STIX_ASSERT (stix, STIX_SIZEOF(stix_bch_t) == 1);
-	STIX_ASSERT (stix, STIX_SIZEOF(stix_uch_t) >= 2);*/
+	/*MOO_ASSERT (moo, utf8 != MOO_NULL);
+	MOO_ASSERT (moo, size > 0);
+	MOO_ASSERT (moo, MOO_SIZEOF(moo_bch_t) == 1);
+	MOO_ASSERT (moo, MOO_SIZEOF(moo_uch_t) >= 2);*/
 
-	end = utf8_table + STIX_COUNTOF(utf8_table);
+	end = utf8_table + MOO_COUNTOF(utf8_table);
 	cur = utf8_table;
 
 	while (cur < end) 
@@ -133,7 +133,7 @@ stix_oow_t stix_utf8touc (const stix_bch_t* utf8, stix_oow_t size, stix_uch_t* u
 
 				if (uc)
 				{
-					stix_uch_t w;
+					moo_uch_t w;
 
 					w = utf8[0] & cur->fmask;
 					for (i = 1; i < cur->length; i++)
@@ -169,7 +169,7 @@ stix_oow_t stix_utf8touc (const stix_bch_t* utf8, stix_oow_t size, stix_uch_t* u
 			 * and 
 			 *    the incomplete seqeunce error (size < cur->length).
 			 */
-			return (stix_oow_t)cur->length;
+			return (moo_oow_t)cur->length;
 		}
 		cur++;
 	}

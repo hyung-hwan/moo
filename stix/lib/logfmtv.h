@@ -73,50 +73,50 @@
 
 #define PUT_OOCH(c,n) do { \
 	int xx; \
-	if ((xx = data->putch (stix, data->mask, c, n)) <= -1) goto oops; \
+	if ((xx = data->putch (moo, data->mask, c, n)) <= -1) goto oops; \
 	if (xx == 0) goto done; \
 	data->count += n; \
 } while (0)
 
 #define PUT_OOCS(ptr,len) do { \
 	int xx; \
-	if ((xx = data->putcs (stix, data->mask, ptr, len)) <= -1) goto oops; \
+	if ((xx = data->putcs (moo, data->mask, ptr, len)) <= -1) goto oops; \
 	if (xx == 0) goto done; \
 	data->count += len; \
 } while (0)
 
-int logfmtv (stix_t* stix, const fmtchar_t* fmt, stix_fmtout_t* data, va_list ap)
+int logfmtv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_t* data, va_list ap)
 {
 	const fmtchar_t* percent;
 #if defined(FMTCHAR_IS_OOCH)
 	const fmtchar_t* checkpoint;
 #endif
-	stix_bch_t nbuf[MAXNBUF], bch;
-	const stix_bch_t* nbufp;
+	moo_bch_t nbuf[MAXNBUF], bch;
+	const moo_bch_t* nbufp;
 	int n, base, neg, sign;
-	stix_ooi_t tmp, width, precision;
-	stix_ooch_t ch, padc;
+	moo_ooi_t tmp, width, precision;
+	moo_ooch_t ch, padc;
 	int lm_flag, lm_dflag, flagc, numlen;
-	stix_uintmax_t num = 0;
+	moo_uintmax_t num = 0;
 	int stop = 0;
 
 #if 0
-	stix_bchbuf_t* fltfmt;
-	stix_oochbuf_t* fltout;
+	moo_bchbuf_t* fltfmt;
+	moo_oochbuf_t* fltout;
 #endif
-	stix_bch_t* (*sprintn) (stix_bch_t* nbuf, stix_uintmax_t num, int base, stix_ooi_t* lenp);
+	moo_bch_t* (*sprintn) (moo_bch_t* nbuf, moo_uintmax_t num, int base, moo_ooi_t* lenp);
 
 	data->count = 0;
 
 #if 0
-	fltfmt = &stix->d->fltfmt;
-	fltout = &stix->d->fltout;
+	fltfmt = &moo->d->fltfmt;
+	fltout = &moo->d->fltout;
 
 	fltfmt->ptr  = fltfmt->buf;
-	fltfmt->capa = STIX_COUNTOF(fltfmt->buf) - 1;
+	fltfmt->capa = MOO_COUNTOF(fltfmt->buf) - 1;
 
 	fltout->ptr  = fltout->buf;
-	fltout->capa = STIX_COUNTOF(fltout->buf) - 1;
+	fltout->capa = MOO_COUNTOF(fltout->buf) - 1;
 #endif
 
 	while (1)
@@ -200,7 +200,7 @@ reswitch:
 				if (flagc & (FLAGC_STAR2 | FLAGC_PRECISION)) goto invalid_format;
 				flagc |= FLAGC_STAR2;
 
-				precision = va_arg(ap, stix_ooi_t); /* this deviates from the standard printf that accepts 'int' */
+				precision = va_arg(ap, moo_ooi_t); /* this deviates from the standard printf that accepts 'int' */
 				if (precision < 0) 
 				{
 					/* if precision is less than 0, 
@@ -214,7 +214,7 @@ reswitch:
 				if (flagc & (FLAGC_STAR1 | FLAGC_WIDTH)) goto invalid_format;
 				flagc |= FLAGC_STAR1;
 
-				width = va_arg(ap, stix_ooi_t); /* it deviates from the standard printf that accepts 'int' */
+				width = va_arg(ap, moo_ooi_t); /* it deviates from the standard printf that accepts 'int' */
 				if (width < 0) 
 				{
 					/*
@@ -264,8 +264,8 @@ reswitch:
 		case 'h': /* short int */
 		case 'l': /* long int */
 		case 'q': /* long long int */
-		case 'j': /* stix_intmax_t/stix_uintmax_t */
-		case 'z': /* stix_ooi_t/stix_oow_t */
+		case 'j': /* moo_intmax_t/moo_uintmax_t */
+		case 'z': /* moo_ooi_t/moo_oow_t */
 		case 't': /* ptrdiff_t */
 			if (lm_flag & (LF_LD | LF_QD)) goto invalid_format;
 
@@ -320,10 +320,10 @@ reswitch:
 
 		case 'n':
 			if (lm_flag & LF_J) /* j */
-				*(va_arg(ap, stix_intmax_t*)) = data->count;
+				*(va_arg(ap, moo_intmax_t*)) = data->count;
 			else if (lm_flag & LF_Z) /* z */
-				*(va_arg(ap, stix_ooi_t*)) = data->count;
-		#if (STIX_SIZEOF_LONG_LONG > 0)
+				*(va_arg(ap, moo_ooi_t*)) = data->count;
+		#if (MOO_SIZEOF_LONG_LONG > 0)
 			else if (lm_flag & LF_Q) /* ll */
 				*(va_arg(ap, long long int*)) = data->count;
 		#endif
@@ -335,7 +335,7 @@ reswitch:
 				*(va_arg(ap, char*)) = data->count;
 			else if (flagc & FLAGC_LENMOD)
 			{
-				stix->errnum = STIX_EINVAL;
+				moo->errnum = MOO_EINVAL;
 				goto oops;
 			}
 			else
@@ -370,7 +370,7 @@ reswitch:
 			if (width == 0) flagc |= FLAGC_SHARP;
 			else flagc &= ~FLAGC_SHARP;
 
-			num = (stix_uintptr_t)va_arg(ap, void*);
+			num = (moo_uintptr_t)va_arg(ap, void*);
 			goto number;
 
 		case 'c':
@@ -378,11 +378,11 @@ reswitch:
 			/* zeropad must not take effect for 'c' */
 			if (flagc & FLAGC_ZEROPAD) padc = ' '; 
 			if (lm_flag & LF_L) goto uppercase_c;
-		#if defined(STIX_OOCH_IS_UCH)
+		#if defined(MOO_OOCH_IS_UCH)
 			if (lm_flag & LF_J) goto uppercase_c;
 		#endif
 		lowercase_c:
-			bch = STIX_SIZEOF(stix_bch_t) < STIX_SIZEOF(int)? va_arg(ap, int): va_arg(ap, stix_bch_t);
+			bch = MOO_SIZEOF(moo_bch_t) < MOO_SIZEOF(int)? va_arg(ap, int): va_arg(ap, moo_bch_t);
 
 		print_lowercase_c:
 			/* precision 0 doesn't kill the letter */
@@ -395,16 +395,16 @@ reswitch:
 
 		case 'C':
 		{
-			stix_uch_t ooch;
+			moo_uch_t ooch;
 
 			/* zeropad must not take effect for 'C' */
 			if (flagc & FLAGC_ZEROPAD) padc = ' ';
 			if (lm_flag & LF_H) goto lowercase_c;
-		#if defined(STIX_OOCH_IS_BCH)
+		#if defined(MOO_OOCH_IS_BCH)
 			if (lm_flag & LF_J) goto lowercase_c;
 		#endif
 		uppercase_c:
-			ooch = STIX_SIZEOF(stix_uch_t) < STIX_SIZEOF(int)? va_arg(ap, int): va_arg(ap, stix_uch_t);
+			ooch = MOO_SIZEOF(moo_uch_t) < MOO_SIZEOF(int)? va_arg(ap, int): va_arg(ap, moo_uch_t);
 
 			/* precision 0 doesn't kill the letter */
 			width--;
@@ -416,28 +416,28 @@ reswitch:
 
 		case 's':
 		{
-			const stix_bch_t* bsp;
-			stix_oow_t bslen, slen;
+			const moo_bch_t* bsp;
+			moo_oow_t bslen, slen;
 
 			/* zeropad must not take effect for 'S' */
 			if (flagc & FLAGC_ZEROPAD) padc = ' ';
 			if (lm_flag & LF_L) goto uppercase_s;
-		#if defined(STIX_OOCH_IS_UCH)
+		#if defined(MOO_OOCH_IS_UCH)
 			if (lm_flag & LF_J) goto uppercase_s;
 		#endif
 		lowercase_s:
 
-			bsp = va_arg (ap, stix_bch_t*);
-			if (bsp == STIX_NULL) bsp = bch_nullstr;
+			bsp = va_arg (ap, moo_bch_t*);
+			if (bsp == MOO_NULL) bsp = bch_nullstr;
 
-		#if defined(STIX_OOCH_IS_UCH)
+		#if defined(MOO_OOCH_IS_UCH)
 			/* get the length */
 			for (bslen = 0; bsp[bslen]; bslen++);
 
-			if (stix_convbtooochars (stix, bsp, &bslen, STIX_NULL, &slen) <= -1)
+			if (moo_convbtooochars (moo, bsp, &bslen, MOO_NULL, &slen) <= -1)
 			{ 
 				/* conversion error */
-				stix->errnum = STIX_EECERR;
+				moo->errnum = MOO_EECERR;
 				goto oops;
 			}
 
@@ -449,17 +449,17 @@ reswitch:
 			if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
 
 			{
-				stix_ooch_t conv_buf[32]; 
-				stix_oow_t conv_len, src_len, tot_len = 0;
+				moo_ooch_t conv_buf[32]; 
+				moo_oow_t conv_len, src_len, tot_len = 0;
 				while (n > 0)
 				{
-					STIX_ASSERT (stix, bslen > tot_len);
+					MOO_ASSERT (moo, bslen > tot_len);
 
 					src_len = bslen - tot_len;
-					conv_len = STIX_COUNTOF(conv_buf);
+					conv_len = MOO_COUNTOF(conv_buf);
 
 					/* this must not fail since the dry-run above was successful */
-					stix_convbtooochars (stix, &bsp[tot_len], &src_len, conv_buf, &conv_len);
+					moo_convbtooochars (moo, &bsp[tot_len], &src_len, conv_buf, &conv_len);
 					tot_len += src_len;
 
 					if (conv_len > n) conv_len = n;
@@ -491,27 +491,27 @@ reswitch:
 
 		case 'S':
 		{
-			const stix_uch_t* usp;
-			stix_oow_t uslen, slen;
+			const moo_uch_t* usp;
+			moo_oow_t uslen, slen;
 
 			/* zeropad must not take effect for 's' */
 			if (flagc & FLAGC_ZEROPAD) padc = ' ';
 			if (lm_flag & LF_H) goto lowercase_s;
-		#if defined(STIX_OOCH_IS_UCH)
+		#if defined(MOO_OOCH_IS_UCH)
 			if (lm_flag & LF_J) goto lowercase_s;
 		#endif
 		uppercase_s:
-			usp = va_arg (ap, stix_uch_t*);
-			if (usp == STIX_NULL) usp = uch_nullstr;
+			usp = va_arg (ap, moo_uch_t*);
+			if (usp == MOO_NULL) usp = uch_nullstr;
 
-		#if defined(STIX_OOCH_IS_BCH)
+		#if defined(MOO_OOCH_IS_BCH)
 			/* get the length */
 			for (uslen = 0; usp[uslen]; uslen++);
 
-			if (stix_convutooochars (stix, usp, &uslen, STIX_NULL, &slen) <= -1)
+			if (moo_convutooochars (moo, usp, &uslen, MOO_NULL, &slen) <= -1)
 			{ 
 				/* conversion error */
-				stix->errnum = STIX_EECERR;
+				moo->errnum = MOO_EECERR;
 				goto oops;
 			}
 
@@ -522,17 +522,17 @@ reswitch:
 
 			if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
 			{
-				stix_ooch_t conv_buf[32]; 
-				stix_oow_t conv_len, src_len, tot_len = 0;
+				moo_ooch_t conv_buf[32]; 
+				moo_oow_t conv_len, src_len, tot_len = 0;
 				while (n > 0)
 				{
-					STIX_ASSERT (stix, uslen > tot_len);
+					MOO_ASSERT (moo, uslen > tot_len);
 
 					src_len = uslen - tot_len;
-					conv_len = STIX_COUNTOF(conv_buf);
+					conv_len = MOO_COUNTOF(conv_buf);
 
 					/* this must not fail since the dry-run above was successful */
-					stix_convutooochars (stix, &usp[tot_len], &src_len, conv_buf, &conv_len);
+					moo_convutooochars (moo, &usp[tot_len], &src_len, conv_buf, &conv_len);
 					tot_len += src_len;
 
 					if (conv_len > n) conv_len = n;
@@ -562,7 +562,7 @@ reswitch:
 		}
 
 		case 'O': /* object - ignore precision, width, adjustment */
-			print_object (stix, data->mask, va_arg (ap, stix_oop_t));
+			print_object (moo, data->mask, va_arg (ap, moo_oop_t));
 			break;
 
 #if 0
@@ -579,44 +579,44 @@ reswitch:
 		{
 			/* let me rely on snprintf until i implement float-point to string conversion */
 			int q;
-			stix_oow_t fmtlen;
-		#if (STIX_SIZEOF___FLOAT128 > 0) && defined(HAVE_QUADMATH_SNPRINTF)
+			moo_oow_t fmtlen;
+		#if (MOO_SIZEOF___FLOAT128 > 0) && defined(HAVE_QUADMATH_SNPRINTF)
 			__float128 v_qd;
 		#endif
 			long double v_ld;
 			double v_d;
 			int dtype = 0;
-			stix_oow_t newcapa;
+			moo_oow_t newcapa;
 
 			if (lm_flag & LF_J)
 			{
-			#if (STIX_SIZEOF___FLOAT128 > 0) && defined(HAVE_QUADMATH_SNPRINTF) && (STIX_SIZEOF_FLTMAX_T == STIX_SIZEOF___FLOAT128)
-				v_qd = va_arg (ap, stix_fltmax_t);
+			#if (MOO_SIZEOF___FLOAT128 > 0) && defined(HAVE_QUADMATH_SNPRINTF) && (MOO_SIZEOF_FLTMAX_T == MOO_SIZEOF___FLOAT128)
+				v_qd = va_arg (ap, moo_fltmax_t);
 				dtype = LF_QD;
-			#elif STIX_SIZEOF_FLTMAX_T == STIX_SIZEOF_DOUBLE
-				v_d = va_arg (ap, stix_fltmax_t);
-			#elif STIX_SIZEOF_FLTMAX_T == STIX_SIZEOF_LONG_DOUBLE
-				v_ld = va_arg (ap, stix_fltmax_t);
+			#elif MOO_SIZEOF_FLTMAX_T == MOO_SIZEOF_DOUBLE
+				v_d = va_arg (ap, moo_fltmax_t);
+			#elif MOO_SIZEOF_FLTMAX_T == MOO_SIZEOF_LONG_DOUBLE
+				v_ld = va_arg (ap, moo_fltmax_t);
 				dtype = LF_LD;
 			#else
-				#error Unsupported stix_flt_t
+				#error Unsupported moo_flt_t
 			#endif
 			}
 			else if (lm_flag & LF_Z)
 			{
-				/* stix_flt_t is limited to double or long double */
+				/* moo_flt_t is limited to double or long double */
 
 				/* precedence goes to double if sizeof(double) == sizeof(long double) 
 				 * for example, %Lf didn't work on some old platforms.
 				 * so i prefer the format specifier with no modifier.
 				 */
-			#if STIX_SIZEOF_FLT_T == STIX_SIZEOF_DOUBLE
-				v_d = va_arg (ap, stix_flt_t);
-			#elif STIX_SIZEOF_FLT_T == STIX_SIZEOF_LONG_DOUBLE
-				v_ld = va_arg (ap, stix_flt_t);
+			#if MOO_SIZEOF_FLT_T == MOO_SIZEOF_DOUBLE
+				v_d = va_arg (ap, moo_flt_t);
+			#elif MOO_SIZEOF_FLT_T == MOO_SIZEOF_LONG_DOUBLE
+				v_ld = va_arg (ap, moo_flt_t);
 				dtype = LF_LD;
 			#else
-				#error Unsupported stix_flt_t
+				#error Unsupported moo_flt_t
 			#endif
 			}
 			else if (lm_flag & (LF_LD | LF_L))
@@ -624,7 +624,7 @@ reswitch:
 				v_ld = va_arg (ap, long double);
 				dtype = LF_LD;
 			}
-		#if (STIX_SIZEOF___FLOAT128 > 0) && defined(HAVE_QUADMATH_SNPRINTF)
+		#if (MOO_SIZEOF___FLOAT128 > 0) && defined(HAVE_QUADMATH_SNPRINTF)
 			else if (lm_flag & (LF_QD | LF_Q))
 			{
 				v_qd = va_arg (ap, __float128);
@@ -633,7 +633,7 @@ reswitch:
 		#endif
 			else if (flagc & FLAGC_LENMOD)
 			{
-				stix->errnum = STIX_EINVAL;
+				moo->errnum = MOO_EINVAL;
 				goto oops;
 			}
 			else
@@ -646,15 +646,15 @@ reswitch:
 			{
 				if (fltfmt->ptr == fltfmt->buf)
 				{
-					fltfmt->ptr = STIX_MMGR_ALLOC (STIX_MMGR_GETDFL(), STIX_SIZEOF(*fltfmt->ptr) * (fmtlen + 1));
-					if (fltfmt->ptr == STIX_NULL) goto oops;
+					fltfmt->ptr = MOO_MMGR_ALLOC (MOO_MMGR_GETDFL(), MOO_SIZEOF(*fltfmt->ptr) * (fmtlen + 1));
+					if (fltfmt->ptr == MOO_NULL) goto oops;
 				}
 				else
 				{
-					stix_mchar_t* tmpptr;
+					moo_mchar_t* tmpptr;
 
-					tmpptr = STIX_MMGR_REALLOC (STIX_MMGR_GETDFL(), fltfmt->ptr, STIX_SIZEOF(*fltfmt->ptr) * (fmtlen + 1));
-					if (tmpptr == STIX_NULL) goto oops;
+					tmpptr = MOO_MMGR_REALLOC (MOO_MMGR_GETDFL(), fltfmt->ptr, MOO_SIZEOF(*fltfmt->ptr) * (fmtlen + 1));
+					if (tmpptr == MOO_NULL) goto oops;
 					fltfmt->ptr = tmpptr;
 				}
 
@@ -673,22 +673,22 @@ reswitch:
 			if (flagc & FLAGC_STAR1) fltfmt->ptr[fmtlen++] = '*';
 			else if (flagc & FLAGC_WIDTH) 
 			{
-				fmtlen += stix_fmtuintmaxtombs (
+				fmtlen += moo_fmtuintmaxtombs (
 					&fltfmt->ptr[fmtlen], fltfmt->capa - fmtlen, 
-					width, 10, -1, '\0', STIX_NULL);
+					width, 10, -1, '\0', MOO_NULL);
 			}
 			if (flagc & FLAGC_DOT) fltfmt->ptr[fmtlen++] = '.';
 			if (flagc & FLAGC_STAR2) fltfmt->ptr[fmtlen++] = '*';
 			else if (flagc & FLAGC_PRECISION) 
 			{
-				fmtlen += stix_fmtuintmaxtombs (
+				fmtlen += moo_fmtuintmaxtombs (
 					&fltfmt->ptr[fmtlen], fltfmt->capa - fmtlen, 
-					precision, 10, -1, '\0', STIX_NULL);
+					precision, 10, -1, '\0', MOO_NULL);
 			}
 
 			if (dtype == LF_LD)
 				fltfmt->ptr[fmtlen++] = 'L';
-		#if (STIX_SIZEOF___FLOAT128 > 0)
+		#if (MOO_SIZEOF___FLOAT128 > 0)
 			else if (dtype == LF_QD)
 				fltfmt->ptr[fmtlen++] = 'Q';
 		#endif
@@ -704,10 +704,10 @@ reswitch:
 			newcapa = precision + width + 32;
 			if (fltout->capa < newcapa)
 			{
-				STIX_ASSERT (stix, fltout->ptr == fltout->buf);
+				MOO_ASSERT (moo, fltout->ptr == fltout->buf);
 
-				fltout->ptr = STIX_MMGR_ALLOC (STIX_MMGR_GETDFL(), STIX_SIZEOF(char_t) * (newcapa + 1));
-				if (fltout->ptr == STIX_NULL) goto oops;
+				fltout->ptr = MOO_MMGR_ALLOC (MOO_MMGR_GETDFL(), MOO_SIZEOF(char_t) * (newcapa + 1));
+				if (fltout->ptr == MOO_NULL) goto oops;
 				fltout->capa = newcapa;
 			}
 		#endif
@@ -718,23 +718,23 @@ reswitch:
 				if (dtype == LF_LD)
 				{
 				#if defined(HAVE_SNPRINTF)
-					q = snprintf ((stix_mchar_t*)fltout->ptr, fltout->capa + 1, fltfmt->ptr, v_ld);
+					q = snprintf ((moo_mchar_t*)fltout->ptr, fltout->capa + 1, fltfmt->ptr, v_ld);
 				#else
-					q = sprintf ((stix_mchar_t*)fltout->ptr, fltfmt->ptr, v_ld);
+					q = sprintf ((moo_mchar_t*)fltout->ptr, fltfmt->ptr, v_ld);
 				#endif
 				}
-			#if (STIX_SIZEOF___FLOAT128 > 0) && defined(HAVE_QUADMATH_SNPRINTF)
+			#if (MOO_SIZEOF___FLOAT128 > 0) && defined(HAVE_QUADMATH_SNPRINTF)
 				else if (dtype == LF_QD)
 				{
-					q = quadmath_snprintf ((stix_mchar_t*)fltout->ptr, fltout->capa + 1, fltfmt->ptr, v_qd);
+					q = quadmath_snprintf ((moo_mchar_t*)fltout->ptr, fltout->capa + 1, fltfmt->ptr, v_qd);
 				}
 			#endif
 				else
 				{
 				#if defined(HAVE_SNPRINTF)
-					q = snprintf ((stix_mchar_t*)fltout->ptr, fltout->capa + 1, fltfmt->ptr, v_d);
+					q = snprintf ((moo_mchar_t*)fltout->ptr, fltout->capa + 1, fltfmt->ptr, v_d);
 				#else
-					q = sprintf ((stix_mchar_t*)fltout->ptr, fltfmt->ptr, v_d);
+					q = sprintf ((moo_mchar_t*)fltout->ptr, fltfmt->ptr, v_d);
 				#endif
 				}
 				if (q <= -1) goto oops;
@@ -745,27 +745,27 @@ reswitch:
 
 				if (fltout->ptr == fltout->sbuf)
 				{
-					fltout->ptr = STIX_MMGR_ALLOC (STIX_MMGR_GETDFL(), STIX_SIZEOF(char_t) * (newcapa + 1));
-					if (fltout->ptr == STIX_NULL) goto oops;
+					fltout->ptr = MOO_MMGR_ALLOC (MOO_MMGR_GETDFL(), MOO_SIZEOF(char_t) * (newcapa + 1));
+					if (fltout->ptr == MOO_NULL) goto oops;
 				}
 				else
 				{
 					char_t* tmpptr;
 
-					tmpptr = STIX_MMGR_REALLOC (STIX_MMGR_GETDFL(), fltout->ptr, STIX_SIZEOF(char_t) * (newcapa + 1));
-					if (tmpptr == STIX_NULL) goto oops;
+					tmpptr = MOO_MMGR_REALLOC (MOO_MMGR_GETDFL(), fltout->ptr, MOO_SIZEOF(char_t) * (newcapa + 1));
+					if (tmpptr == MOO_NULL) goto oops;
 					fltout->ptr = tmpptr;
 				}
 				fltout->capa = newcapa;
 			}
 
-			if (STIX_SIZEOF(char_t) != STIX_SIZEOF(stix_mchar_t))
+			if (MOO_SIZEOF(char_t) != MOO_SIZEOF(moo_mchar_t))
 			{
 				fltout->ptr[q] = '\0';
 				while (q > 0)
 				{
 					q--;
-					fltout->ptr[q] = ((stix_mchar_t*)fltout->ptr)[q];
+					fltout->ptr[q] = ((moo_mchar_t*)fltout->ptr)[q];
 				}
 			}
 
@@ -783,33 +783,33 @@ handle_nosign:
 			if (lm_flag & LF_J)
 			{
 			#if defined(__GNUC__) && \
-			    (STIX_SIZEOF_UINTMAX_T > STIX_SIZEOF_OOW_T) && \
-			    (STIX_SIZEOF_UINTMAX_T != STIX_SIZEOF_LONG_LONG) && \
-			    (STIX_SIZEOF_UINTMAX_T != STIX_SIZEOF_LONG)
-				/* GCC-compiled binaries crashed when getting stix_uintmax_t with va_arg.
+			    (MOO_SIZEOF_UINTMAX_T > MOO_SIZEOF_OOW_T) && \
+			    (MOO_SIZEOF_UINTMAX_T != MOO_SIZEOF_LONG_LONG) && \
+			    (MOO_SIZEOF_UINTMAX_T != MOO_SIZEOF_LONG)
+				/* GCC-compiled binaries crashed when getting moo_uintmax_t with va_arg.
 				 * This is just a work-around for it */
 				int i;
-				for (i = 0, num = 0; i < STIX_SIZEOF(stix_uintmax_t) / STIX_SIZEOF(stix_oow_t); i++)
+				for (i = 0, num = 0; i < MOO_SIZEOF(moo_uintmax_t) / MOO_SIZEOF(moo_oow_t); i++)
 				{
-				#if defined(STIX_ENDIAN_BIG)
-					num = num << (8 * STIX_SIZEOF(stix_oow_t)) | (va_arg (ap, stix_oow_t));
+				#if defined(MOO_ENDIAN_BIG)
+					num = num << (8 * MOO_SIZEOF(moo_oow_t)) | (va_arg (ap, moo_oow_t));
 				#else
-					register int shift = i * STIX_SIZEOF(stix_oow_t);
-					stix_oow_t x = va_arg (ap, stix_oow_t);
-					num |= (stix_uintmax_t)x << (shift * 8);
+					register int shift = i * MOO_SIZEOF(moo_oow_t);
+					moo_oow_t x = va_arg (ap, moo_oow_t);
+					num |= (moo_uintmax_t)x << (shift * 8);
 				#endif
 				}
 			#else
-				num = va_arg (ap, stix_uintmax_t);
+				num = va_arg (ap, moo_uintmax_t);
 			#endif
 			}
 #if 0
 			else if (lm_flag & LF_T)
-				num = va_arg (ap, stix_ptrdiff_t);
+				num = va_arg (ap, moo_ptrdiff_t);
 #endif
 			else if (lm_flag & LF_Z)
-				num = va_arg (ap, stix_oow_t);
-			#if (STIX_SIZEOF_LONG_LONG > 0)
+				num = va_arg (ap, moo_oow_t);
+			#if (MOO_SIZEOF_LONG_LONG > 0)
 			else if (lm_flag & LF_Q)
 				num = va_arg (ap, unsigned long long int);
 			#endif
@@ -827,34 +827,34 @@ handle_sign:
 			if (lm_flag & LF_J)
 			{
 			#if defined(__GNUC__) && \
-			    (STIX_SIZEOF_INTMAX_T > STIX_SIZEOF_OOI_T) && \
-			    (STIX_SIZEOF_UINTMAX_T != STIX_SIZEOF_LONG_LONG) && \
-			    (STIX_SIZEOF_UINTMAX_T != STIX_SIZEOF_LONG)
-				/* GCC-compiled binraries crashed when getting stix_uintmax_t with va_arg.
+			    (MOO_SIZEOF_INTMAX_T > MOO_SIZEOF_OOI_T) && \
+			    (MOO_SIZEOF_UINTMAX_T != MOO_SIZEOF_LONG_LONG) && \
+			    (MOO_SIZEOF_UINTMAX_T != MOO_SIZEOF_LONG)
+				/* GCC-compiled binraries crashed when getting moo_uintmax_t with va_arg.
 				 * This is just a work-around for it */
 				int i;
-				for (i = 0, num = 0; i < STIX_SIZEOF(stix_intmax_t) / STIX_SIZEOF(stix_oow_t); i++)
+				for (i = 0, num = 0; i < MOO_SIZEOF(moo_intmax_t) / MOO_SIZEOF(moo_oow_t); i++)
 				{
-				#if defined(STIX_ENDIAN_BIG)
-					num = num << (8 * STIX_SIZEOF(stix_oow_t)) | (va_arg (ap, stix_oow_t));
+				#if defined(MOO_ENDIAN_BIG)
+					num = num << (8 * MOO_SIZEOF(moo_oow_t)) | (va_arg (ap, moo_oow_t));
 				#else
-					register int shift = i * STIX_SIZEOF(stix_oow_t);
-					stix_oow_t x = va_arg (ap, stix_oow_t);
-					num |= (stix_uintmax_t)x << (shift * 8);
+					register int shift = i * MOO_SIZEOF(moo_oow_t);
+					moo_oow_t x = va_arg (ap, moo_oow_t);
+					num |= (moo_uintmax_t)x << (shift * 8);
 				#endif
 				}
 			#else
-				num = va_arg (ap, stix_intmax_t);
+				num = va_arg (ap, moo_intmax_t);
 			#endif
 			}
 
 #if 0
 			else if (lm_flag & LF_T)
-				num = va_arg(ap, stix_ptrdiff_t);
+				num = va_arg(ap, moo_ptrdiff_t);
 #endif
 			else if (lm_flag & LF_Z)
-				num = va_arg (ap, stix_ooi_t);
-			#if (STIX_SIZEOF_LONG_LONG > 0)
+				num = va_arg (ap, moo_ooi_t);
+			#if (MOO_SIZEOF_LONG_LONG > 0)
 			else if (lm_flag & LF_Q)
 				num = va_arg (ap, long long int);
 			#endif
@@ -868,10 +868,10 @@ handle_sign:
 				num = va_arg (ap, int);
 
 number:
-			if (sign && (stix_intmax_t)num < 0) 
+			if (sign && (moo_intmax_t)num < 0) 
 			{
 				neg = 1;
-				num = -(stix_intmax_t)num;
+				num = -(moo_intmax_t)num;
 			}
 
 			nbufp = sprintn (nbuf, num, base, &tmp);
@@ -884,7 +884,7 @@ number:
 			else if (flagc & FLAGC_SIGN) tmp++;
 			else if (flagc & FLAGC_SPACE) tmp++;
 
-			numlen = (int)((const stix_bch_t*)nbufp - (const stix_bch_t*)nbuf);
+			numlen = (int)((const moo_bch_t*)nbufp - (const moo_bch_t*)nbuf);
 			if ((flagc & FLAGC_DOT) && precision > numlen) 
 			{
 				/* extra zeros for precision specified */

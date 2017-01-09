@@ -24,16 +24,16 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "stix-prv.h"
+#include "moo-prv.h"
 
-static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
+static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 {
-	stix_oop_oop_t newbuc;
-	stix_oow_t oldsz, newsz, index;
-	stix_oop_association_t ass;
-	stix_oop_char_t key;
+	moo_oop_oop_t newbuc;
+	moo_oow_t oldsz, newsz, index;
+	moo_oop_association_t ass;
+	moo_oop_char_t key;
 
-	oldsz = STIX_OBJ_GET_SIZE(oldbuc);
+	oldsz = MOO_OBJ_GET_SIZE(oldbuc);
 
 	/* TODO: better growth policy? */
 	if (oldsz < 5000) newsz = oldsz + oldsz;
@@ -45,111 +45,111 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 	else if (oldsz < 1600000) newsz = oldsz + (oldsz / 64);
 	else 
 	{
-		stix_oow_t inc, inc_max;
+		moo_oow_t inc, inc_max;
 
 		inc = oldsz / 128;
-		inc_max = STIX_OBJ_SIZE_MAX - oldsz;
+		inc_max = MOO_OBJ_SIZE_MAX - oldsz;
 		if (inc > inc_max) 
 		{
 			if (inc_max > 0) inc = inc_max;
 			else
 			{
-				stix->errnum = STIX_EOOMEM;
-				return STIX_NULL;
+				moo->errnum = MOO_EOOMEM;
+				return MOO_NULL;
 			}
 		}
 		newsz = oldsz + inc;
 	}
 
-	stix_pushtmp (stix, (stix_oop_t*)&oldbuc);
-	newbuc = (stix_oop_oop_t)stix_instantiate (stix, stix->_array, STIX_NULL, newsz); 
-	stix_poptmp (stix);
-	if (!newbuc) return STIX_NULL;
+	moo_pushtmp (moo, (moo_oop_t*)&oldbuc);
+	newbuc = (moo_oop_oop_t)moo_instantiate (moo, moo->_array, MOO_NULL, newsz); 
+	moo_poptmp (moo);
+	if (!newbuc) return MOO_NULL;
 
 	while (oldsz > 0)
 	{
-		ass = (stix_oop_association_t)oldbuc->slot[--oldsz];
-		if ((stix_oop_t)ass != stix->_nil)
+		ass = (moo_oop_association_t)oldbuc->slot[--oldsz];
+		if ((moo_oop_t)ass != moo->_nil)
 		{
-			STIX_ASSERT (stix, STIX_CLASSOF(stix,ass) == stix->_association);
+			MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
 
-			key = (stix_oop_char_t)ass->key;
-			STIX_ASSERT (stix, STIX_CLASSOF(stix,key) == (stix_oop_t)stix->_symbol);
+			key = (moo_oop_char_t)ass->key;
+			MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == (moo_oop_t)moo->_symbol);
 
-			index = stix_hashoochars(key->slot, STIX_OBJ_GET_SIZE(key)) % newsz;
-			while (newbuc->slot[index] != stix->_nil) index = (index + 1) % newsz;
-			newbuc->slot[index] = (stix_oop_t)ass;
+			index = moo_hashoochars(key->slot, MOO_OBJ_GET_SIZE(key)) % newsz;
+			while (newbuc->slot[index] != moo->_nil) index = (index + 1) % newsz;
+			newbuc->slot[index] = (moo_oop_t)ass;
 		}
 	}
 
 	return newbuc;
 }
 
-static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, stix_oop_char_t key, stix_oop_t value)
+static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_set_t dic, moo_oop_char_t key, moo_oop_t value)
 {
-	stix_ooi_t tally;
-	stix_oow_t hv, index;
-	stix_oop_association_t ass;
-	stix_oow_t tmp_count = 0;
+	moo_ooi_t tally;
+	moo_oow_t hv, index;
+	moo_oop_association_t ass;
+	moo_oow_t tmp_count = 0;
 
 	/* the system dictionary is not a generic dictionary.
 	 * it accepts only a symbol as a key. */
-	STIX_ASSERT (stix, STIX_CLASSOF(stix,key) == stix->_symbol);
-	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->tally) == stix->_small_integer);
-	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->bucket) == stix->_array);
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,dic->tally) == moo->_small_integer);
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,dic->bucket) == moo->_array);
 
-	hv = stix_hashoochars(key->slot, STIX_OBJ_GET_SIZE(key));
-	index = hv % STIX_OBJ_GET_SIZE(dic->bucket);
+	hv = moo_hashoochars(key->slot, MOO_OBJ_GET_SIZE(key));
+	index = hv % MOO_OBJ_GET_SIZE(dic->bucket);
 
 	/* find */
-	while (dic->bucket->slot[index] != stix->_nil) 
+	while (dic->bucket->slot[index] != moo->_nil) 
 	{
-		ass = (stix_oop_association_t)dic->bucket->slot[index];
+		ass = (moo_oop_association_t)dic->bucket->slot[index];
 
-		STIX_ASSERT (stix, STIX_CLASSOF(stix,ass) == stix->_association);
-		STIX_ASSERT (stix, STIX_CLASSOF(stix,ass->key) == stix->_symbol);
+		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
+		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);
 
-		if (STIX_OBJ_GET_SIZE(key) == STIX_OBJ_GET_SIZE(ass->key) &&
-		    stix_equaloochars (key->slot, ((stix_oop_char_t)ass->key)->slot, STIX_OBJ_GET_SIZE(key))) 
+		if (MOO_OBJ_GET_SIZE(key) == MOO_OBJ_GET_SIZE(ass->key) &&
+		    moo_equaloochars (key->slot, ((moo_oop_char_t)ass->key)->slot, MOO_OBJ_GET_SIZE(key))) 
 		{
-			/* the value of STIX_NULL indicates no insertion or update. */
+			/* the value of MOO_NULL indicates no insertion or update. */
 			if (value) ass->value = value; /* update */
 			return ass;
 		}
 
-		index = (index + 1) % STIX_OBJ_GET_SIZE(dic->bucket);
+		index = (index + 1) % MOO_OBJ_GET_SIZE(dic->bucket);
 	}
 
 	if (!value)
 	{
-		/* when value is STIX_NULL, perform no insertion.
-		 * the value of STIX_NULL indicates no insertion or update. */
-		stix->errnum = STIX_ENOENT;
-		return STIX_NULL;
+		/* when value is MOO_NULL, perform no insertion.
+		 * the value of MOO_NULL indicates no insertion or update. */
+		moo->errnum = MOO_ENOENT;
+		return MOO_NULL;
 	}
 
 	/* the key is not found. insert it. */
-	STIX_ASSERT (stix, STIX_OOP_IS_SMOOI(dic->tally));
-	tally = STIX_OOP_TO_SMOOI(dic->tally);
-	if (tally >= STIX_SMOOI_MAX)
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(dic->tally));
+	tally = MOO_OOP_TO_SMOOI(dic->tally);
+	if (tally >= MOO_SMOOI_MAX)
 	{
 		/* this built-in dictionary is not allowed to hold more than 
-		 * STIX_SMOOI_MAX items for efficiency sake */
-		stix->errnum = STIX_EDFULL;
-		return STIX_NULL;
+		 * MOO_SMOOI_MAX items for efficiency sake */
+		moo->errnum = MOO_EDFULL;
+		return MOO_NULL;
 	}
 
-	stix_pushtmp (stix, (stix_oop_t*)&dic); tmp_count++;
-	stix_pushtmp (stix, (stix_oop_t*)&key); tmp_count++;
-	stix_pushtmp (stix, &value); tmp_count++;
+	moo_pushtmp (moo, (moo_oop_t*)&dic); tmp_count++;
+	moo_pushtmp (moo, (moo_oop_t*)&key); tmp_count++;
+	moo_pushtmp (moo, &value); tmp_count++;
 
-	/* no conversion to stix_oow_t is necessary for tally + 1.
-	 * the maximum value of tally is checked to be STIX_SMOOI_MAX - 1.
-	 * tally + 1 can produce at most STIX_SMOOI_MAX. above all, 
-	 * STIX_SMOOI_MAX is way smaller than STIX_TYPE_MAX(stix_ooi_t). */
-	if (tally + 1 >= STIX_OBJ_GET_SIZE(dic->bucket))
+	/* no conversion to moo_oow_t is necessary for tally + 1.
+	 * the maximum value of tally is checked to be MOO_SMOOI_MAX - 1.
+	 * tally + 1 can produce at most MOO_SMOOI_MAX. above all, 
+	 * MOO_SMOOI_MAX is way smaller than MOO_TYPE_MAX(moo_ooi_t). */
+	if (tally + 1 >= MOO_OBJ_GET_SIZE(dic->bucket))
 	{
-		stix_oop_oop_t bucket;
+		moo_oop_oop_t bucket;
 
 		/* TODO: make the growth policy configurable instead of growing
 			     it just before it gets full. The polcy can be grow it
@@ -159,133 +159,133 @@ static stix_oop_association_t find_or_upsert (stix_t* stix, stix_oop_set_t dic, 
 		 * make sure that it has at least one free slot left
 		 * after having added a new symbol. this is to help
 		 * traversal end at a _nil slot if no entry is found. */
-		bucket = expand_bucket (stix, dic->bucket);
+		bucket = expand_bucket (moo, dic->bucket);
 		if (!bucket) goto oops;
 
 		dic->bucket = bucket;
 
 		/* recalculate the index for the expanded bucket */
-		index = hv % STIX_OBJ_GET_SIZE(dic->bucket);
+		index = hv % MOO_OBJ_GET_SIZE(dic->bucket);
 
-		while (dic->bucket->slot[index] != stix->_nil) 
-			index = (index + 1) % STIX_OBJ_GET_SIZE(dic->bucket);
+		while (dic->bucket->slot[index] != moo->_nil) 
+			index = (index + 1) % MOO_OBJ_GET_SIZE(dic->bucket);
 	}
 
 	/* create a new assocation of a key and a value since 
 	 * the key isn't found in the root dictionary */
-	ass = (stix_oop_association_t)stix_instantiate (stix, stix->_association, STIX_NULL, 0);
+	ass = (moo_oop_association_t)moo_instantiate (moo, moo->_association, MOO_NULL, 0);
 	if (!ass) goto oops;
 
-	ass->key = (stix_oop_t)key;
+	ass->key = (moo_oop_t)key;
 	ass->value = value;
 
 	/* the current tally must be less than the maximum value. otherwise,
 	 * it overflows after increment below */
-	STIX_ASSERT (stix, tally < STIX_SMOOI_MAX);
-	dic->tally = STIX_SMOOI_TO_OOP(tally + 1);
-	dic->bucket->slot[index] = (stix_oop_t)ass;
+	MOO_ASSERT (moo, tally < MOO_SMOOI_MAX);
+	dic->tally = MOO_SMOOI_TO_OOP(tally + 1);
+	dic->bucket->slot[index] = (moo_oop_t)ass;
 
-	stix_poptmps (stix, tmp_count);
+	moo_poptmps (moo, tmp_count);
 	return ass;
 
 oops:
-	stix_poptmps (stix, tmp_count);
-	return STIX_NULL;
+	moo_poptmps (moo, tmp_count);
+	return MOO_NULL;
 }
 
-static stix_oop_association_t lookup (stix_t* stix, stix_oop_set_t dic, const stix_oocs_t* name)
+static moo_oop_association_t lookup (moo_t* moo, moo_oop_set_t dic, const moo_oocs_t* name)
 {
-	/* this is special version of stix_getatsysdic() that performs
+	/* this is special version of moo_getatsysdic() that performs
 	 * lookup using a plain string specified */
 
-	stix_oow_t index;
-	stix_oop_association_t ass;
+	moo_oow_t index;
+	moo_oop_association_t ass;
 
-	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->tally) == stix->_small_integer);
-	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->bucket) == stix->_array);
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,dic->tally) == moo->_small_integer);
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,dic->bucket) == moo->_array);
 
-	index = stix_hashoochars(name->ptr, name->len) % STIX_OBJ_GET_SIZE(dic->bucket);
+	index = moo_hashoochars(name->ptr, name->len) % MOO_OBJ_GET_SIZE(dic->bucket);
 
-	while (dic->bucket->slot[index] != stix->_nil) 
+	while (dic->bucket->slot[index] != moo->_nil) 
 	{
-		ass = (stix_oop_association_t)dic->bucket->slot[index];
+		ass = (moo_oop_association_t)dic->bucket->slot[index];
 
-		STIX_ASSERT (stix, STIX_CLASSOF(stix,ass) == stix->_association);
-		STIX_ASSERT (stix, STIX_CLASSOF(stix,ass->key) == stix->_symbol);
+		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
+		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);
 
-		if (name->len == STIX_OBJ_GET_SIZE(ass->key) &&
-		    stix_equaloochars(name->ptr, ((stix_oop_char_t)ass->key)->slot, name->len)) 
+		if (name->len == MOO_OBJ_GET_SIZE(ass->key) &&
+		    moo_equaloochars(name->ptr, ((moo_oop_char_t)ass->key)->slot, name->len)) 
 		{
 			return ass;
 		}
 
-		index = (index + 1) % STIX_OBJ_GET_SIZE(dic->bucket);
+		index = (index + 1) % MOO_OBJ_GET_SIZE(dic->bucket);
 	}
 
-	/* when value is STIX_NULL, perform no insertion */
-	stix->errnum = STIX_ENOENT;
-	return STIX_NULL;
+	/* when value is MOO_NULL, perform no insertion */
+	moo->errnum = MOO_ENOENT;
+	return MOO_NULL;
 }
 
-stix_oop_association_t stix_putatsysdic (stix_t* stix, stix_oop_t key, stix_oop_t value)
+moo_oop_association_t moo_putatsysdic (moo_t* moo, moo_oop_t key, moo_oop_t value)
 {
-	STIX_ASSERT (stix, STIX_CLASSOF(stix,key) == stix->_symbol);
-	return find_or_upsert (stix, stix->sysdic, (stix_oop_char_t)key, value);
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);
+	return find_or_upsert (moo, moo->sysdic, (moo_oop_char_t)key, value);
 }
 
-stix_oop_association_t stix_getatsysdic (stix_t* stix, stix_oop_t key)
+moo_oop_association_t moo_getatsysdic (moo_t* moo, moo_oop_t key)
 {
-	STIX_ASSERT (stix, STIX_CLASSOF(stix,key) == stix->_symbol);
-	return find_or_upsert (stix, stix->sysdic, (stix_oop_char_t)key, STIX_NULL);
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);
+	return find_or_upsert (moo, moo->sysdic, (moo_oop_char_t)key, MOO_NULL);
 }
 
-stix_oop_association_t stix_lookupsysdic (stix_t* stix, const stix_oocs_t* name)
+moo_oop_association_t moo_lookupsysdic (moo_t* moo, const moo_oocs_t* name)
 {
-	return lookup (stix, stix->sysdic, name);
+	return lookup (moo, moo->sysdic, name);
 }
 
-stix_oop_association_t stix_putatdic (stix_t* stix, stix_oop_set_t dic, stix_oop_t key, stix_oop_t value)
+moo_oop_association_t moo_putatdic (moo_t* moo, moo_oop_set_t dic, moo_oop_t key, moo_oop_t value)
 {
-	STIX_ASSERT (stix, STIX_CLASSOF(stix,key) == stix->_symbol);
-	return find_or_upsert (stix, dic, (stix_oop_char_t)key, value);
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);
+	return find_or_upsert (moo, dic, (moo_oop_char_t)key, value);
 }
 
-stix_oop_association_t stix_getatdic (stix_t* stix, stix_oop_set_t dic, stix_oop_t key)
+moo_oop_association_t moo_getatdic (moo_t* moo, moo_oop_set_t dic, moo_oop_t key)
 {
-	STIX_ASSERT (stix, STIX_CLASSOF(stix,key) == stix->_symbol);
-	return find_or_upsert (stix, dic, (stix_oop_char_t)key, STIX_NULL);
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);
+	return find_or_upsert (moo, dic, (moo_oop_char_t)key, MOO_NULL);
 }
 
-stix_oop_association_t stix_lookupdic (stix_t* stix, stix_oop_set_t dic, const stix_oocs_t* name)
+moo_oop_association_t moo_lookupdic (moo_t* moo, moo_oop_set_t dic, const moo_oocs_t* name)
 {
-	return lookup (stix, dic, name);
+	return lookup (moo, dic, name);
 }
 
-int stix_deletedic (stix_t* stix, stix_oop_set_t dic, const stix_oocs_t* name)
+int moo_deletedic (moo_t* moo, moo_oop_set_t dic, const moo_oocs_t* name)
 {
-	stix_ooi_t tally;
-	stix_oow_t hv, index, bs, i, x, y, z;
-	stix_oop_association_t ass;
+	moo_ooi_t tally;
+	moo_oow_t hv, index, bs, i, x, y, z;
+	moo_oop_association_t ass;
 
-	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->tally) == stix->_small_integer);
-	STIX_ASSERT (stix, STIX_CLASSOF(stix,dic->bucket) == stix->_array);
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,dic->tally) == moo->_small_integer);
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,dic->bucket) == moo->_array);
 
-	tally = STIX_OOP_TO_SMOOI(dic->tally);
+	tally = MOO_OOP_TO_SMOOI(dic->tally);
 
-	bs = STIX_OBJ_GET_SIZE(dic->bucket);
-	hv = stix_hashoochars(name->ptr, name->len) % bs;
+	bs = MOO_OBJ_GET_SIZE(dic->bucket);
+	hv = moo_hashoochars(name->ptr, name->len) % bs;
 	index = hv % bs;
 
 	/* find */
-	while (dic->bucket->slot[index] != stix->_nil) 
+	while (dic->bucket->slot[index] != moo->_nil) 
 	{
-		ass = (stix_oop_association_t)dic->bucket->slot[index];
+		ass = (moo_oop_association_t)dic->bucket->slot[index];
 
-		STIX_ASSERT (stix, STIX_CLASSOF(stix,ass) == stix->_association);
-		STIX_ASSERT (stix, STIX_CLASSOF(stix,ass->key) == stix->_symbol);
+		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
+		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);
 
-		if (name->len == STIX_OBJ_GET_SIZE(ass->key) &&
-		    stix_equaloochars(name->ptr, ((stix_oop_char_t)ass->key)->slot, name->len)) 
+		if (name->len == MOO_OBJ_GET_SIZE(ass->key) &&
+		    moo_equaloochars(name->ptr, ((moo_oop_char_t)ass->key)->slot, name->len)) 
 		{
 			goto found;
 		}
@@ -293,7 +293,7 @@ int stix_deletedic (stix_t* stix, stix_oop_set_t dic, const stix_oocs_t* name)
 		index = (index + 1) % bs;
 	}
 
-	stix->errnum = STIX_ENOENT;
+	moo->errnum = MOO_ENOENT;
 	return -1;
 
 found:
@@ -303,12 +303,12 @@ found:
 		y = (y + 1) % bs;
 
 		/* done if the slot at the current index is empty */
-		if (dic->bucket->slot[y] == stix->_nil) break;
+		if (dic->bucket->slot[y] == moo->_nil) break;
 
 		/* get the natural hash index for the data in the slot at
 		 * the current hash index */
-		ass = (stix_oop_association_t)dic->bucket->slot[y];
-		z = stix_hashoochars(((stix_oop_char_t)ass->key)->slot, STIX_OBJ_GET_SIZE(ass->key)) % bs;
+		ass = (moo_oop_association_t)dic->bucket->slot[y];
+		z = moo_hashoochars(((moo_oop_char_t)ass->key)->slot, MOO_OBJ_GET_SIZE(ass->key)) % bs;
 
 		/* move an element if necesary */
 		if ((y > x && (z <= x || z > y)) ||
@@ -319,36 +319,36 @@ found:
 		}
 	}
 
-	dic->bucket->slot[x] = stix->_nil;
+	dic->bucket->slot[x] = moo->_nil;
 
 	tally--;
-	dic->tally = STIX_SMOOI_TO_OOP(tally);
+	dic->tally = MOO_SMOOI_TO_OOP(tally);
 
 	return 0;
 }
 
-stix_oop_set_t stix_makedic (stix_t* stix, stix_oop_t cls, stix_oow_t size)
+moo_oop_set_t moo_makedic (moo_t* moo, moo_oop_t cls, moo_oow_t size)
 {
-	stix_oop_set_t dic;
-	stix_oop_t tmp;
+	moo_oop_set_t dic;
+	moo_oop_t tmp;
 
-	STIX_ASSERT (stix, STIX_CLASSOF(stix,cls) == stix->_class);
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,cls) == moo->_class);
 
-	dic = (stix_oop_set_t)stix_instantiate (stix, cls, STIX_NULL, 0);
-	if (!dic) return STIX_NULL;
+	dic = (moo_oop_set_t)moo_instantiate (moo, cls, MOO_NULL, 0);
+	if (!dic) return MOO_NULL;
 
-	STIX_ASSERT (stix, STIX_OBJ_GET_SIZE(dic) == STIX_SET_NAMED_INSTVARS);
+	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(dic) == MOO_SET_NAMED_INSTVARS);
 
-	stix_pushtmp (stix, (stix_oop_t*)&dic);
-	tmp = stix_instantiate (stix, stix->_array, STIX_NULL, size);
-	stix_poptmp (stix);
-	if (!tmp) return STIX_NULL;
+	moo_pushtmp (moo, (moo_oop_t*)&dic);
+	tmp = moo_instantiate (moo, moo->_array, MOO_NULL, size);
+	moo_poptmp (moo);
+	if (!tmp) return MOO_NULL;
 
-	dic->tally = STIX_SMOOI_TO_OOP(0);
-	dic->bucket = (stix_oop_oop_t)tmp;
+	dic->tally = MOO_SMOOI_TO_OOP(0);
+	dic->bucket = (moo_oop_oop_t)tmp;
 
-	STIX_ASSERT (stix, STIX_OBJ_GET_SIZE(dic) == STIX_SET_NAMED_INSTVARS);
-	STIX_ASSERT (stix, STIX_OBJ_GET_SIZE(dic->bucket) == size);
+	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(dic) == MOO_SET_NAMED_INSTVARS);
+	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(dic->bucket) == size);
 
 	return dic;
 }

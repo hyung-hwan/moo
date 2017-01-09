@@ -24,28 +24,28 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "stix-prv.h"
+#include "moo-prv.h"
 
-stix_oop_process_t stix_addnewproc (stix_t* stix)
+moo_oop_process_t moo_addnewproc (moo_t* moo)
 {
-	stix_oop_process_t proc;
+	moo_oop_process_t proc;
 
-	proc = (stix_oop_process_t)stix_instantiate (stix, stix->_process, STIX_NULL, stix->option.dfl_procstk_size);
-	if (!proc) return STIX_NULL;
+	proc = (moo_oop_process_t)moo_instantiate (moo, moo->_process, MOO_NULL, moo->option.dfl_procstk_size);
+	if (!proc) return MOO_NULL;
 
-	proc->state = STIX_SMOOI_TO_OOP(0);
+	proc->state = MOO_SMOOI_TO_OOP(0);
 
-	STIX_ASSERT (stix, STIX_OBJ_GET_SIZE(proc) == STIX_PROCESS_NAMED_INSTVARS + stix->option.dfl_procstk_size);
+	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(proc) == MOO_PROCESS_NAMED_INSTVARS + moo->option.dfl_procstk_size);
 	return proc;
 }
 
-void stix_schedproc (stix_t* stix, stix_oop_process_t proc)
+void moo_schedproc (moo_t* moo, moo_oop_process_t proc)
 {
 	/* TODO: if scheduled, don't add */
-	/*proc->next = stix->_active_process;
+	/*proc->next = moo->_active_process;
 	proc->_active_process = proc;*/
 }
 
-void stix_unschedproc (stix_t* stix, stix_oop_process_t proc)
+void moo_unschedproc (moo_t* moo, moo_oop_process_t proc)
 {
 }

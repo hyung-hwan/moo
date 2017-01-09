@@ -1,4 +1,4 @@
-/* lib/stix-cfg.h.in.  Generated from configure.ac by autoheader.  */
+/* lib/moo-cfg.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define if building universal (internal helper macro) */
 #undef AC_APPLE_UNIVERSAL_BUILD
@@ -315,6 +315,105 @@
 /* Define to the shared library suffix, say, ".dylib". */
 #undef LT_SHARED_EXT
 
+/* link modules statically into the main library */
+#undef MOO_ENABLE_STATIC_MODULE
+
+/* Big Endian */
+#undef MOO_ENDIAN_BIG
+
+/* Little Endian */
+#undef MOO_ENDIAN_LITTLE
+
+/* Unknown Endian */
+#undef MOO_ENDIAN_UNKNOWN
+
+/* MB_LEN_MAX */
+#undef MOO_MBLEN_MAX
+
+/* Author */
+#undef MOO_PACKAGE_AUTHOR
+
+/* package name */
+#undef MOO_PACKAGE_NAME
+
+/* Project URL */
+#undef MOO_PACKAGE_URL
+
+/* Package version */
+#undef MOO_PACKAGE_VERSION
+
+/* Major version number */
+#undef MOO_PACKAGE_VERSION_MAJOR
+
+/* Minor version number */
+#undef MOO_PACKAGE_VERSION_MINOR
+
+/* Patch level */
+#undef MOO_PACKAGE_VERSION_PATCH
+
+/* sizeof(char) */
+#undef MOO_SIZEOF_CHAR
+
+/* sizeof(double) */
+#undef MOO_SIZEOF_DOUBLE
+
+/* sizeof(float) */
+#undef MOO_SIZEOF_FLOAT
+
+/* sizeof(int) */
+#undef MOO_SIZEOF_INT
+
+/* sizeof(long) */
+#undef MOO_SIZEOF_LONG
+
+/* sizeof(long double) */
+#undef MOO_SIZEOF_LONG_DOUBLE
+
+/* sizeof(long long) */
+#undef MOO_SIZEOF_LONG_LONG
+
+/* sizeof(mbstate_t) */
+#undef MOO_SIZEOF_MBSTATE_T
+
+/* sizeof(off64_t) */
+#undef MOO_SIZEOF_OFF64_T
+
+/* sizeof(off_t) */
+#undef MOO_SIZEOF_OFF_T
+
+/* sizeof(short) */
+#undef MOO_SIZEOF_SHORT
+
+/* sizeof(void*) */
+#undef MOO_SIZEOF_VOID_P
+
+/* sizeof(wchar_t) */
+#undef MOO_SIZEOF_WCHAR_T
+
+/* sizeof(__float128) */
+#undef MOO_SIZEOF___FLOAT128
+
+/* sizeof(__int128) */
+#undef MOO_SIZEOF___INT128
+
+/* sizeof(__int128_t) */
+#undef MOO_SIZEOF___INT128_T
+
+/* sizeof(__int16) */
+#undef MOO_SIZEOF___INT16
+
+/* sizeof(__int32) */
+#undef MOO_SIZEOF___INT32
+
+/* sizeof(__int64) */
+#undef MOO_SIZEOF___INT64
+
+/* sizeof(__int8) */
+#undef MOO_SIZEOF___INT8
+
+/* sizeof(__uint128_t) */
+#undef MOO_SIZEOF___UINT128_T
+
 /* Define if dlsym() requires a leading underscore in symbol names. */
 #undef NEED_USCORE
 
@@ -419,105 +518,6 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
-
-/* link modules statically into the main library */
-#undef STIX_ENABLE_STATIC_MODULE
-
-/* Big Endian */
-#undef STIX_ENDIAN_BIG
-
-/* Little Endian */
-#undef STIX_ENDIAN_LITTLE
-
-/* Unknown Endian */
-#undef STIX_ENDIAN_UNKNOWN
-
-/* MB_LEN_MAX */
-#undef STIX_MBLEN_MAX
-
-/* Author */
-#undef STIX_PACKAGE_AUTHOR
-
-/* package name */
-#undef STIX_PACKAGE_NAME
-
-/* Project URL */
-#undef STIX_PACKAGE_URL
-
-/* Package version */
-#undef STIX_PACKAGE_VERSION
-
-/* Major version number */
-#undef STIX_PACKAGE_VERSION_MAJOR
-
-/* Minor version number */
-#undef STIX_PACKAGE_VERSION_MINOR
-
-/* Patch level */
-#undef STIX_PACKAGE_VERSION_PATCH
-
-/* sizeof(char) */
-#undef STIX_SIZEOF_CHAR
-
-/* sizeof(double) */
-#undef STIX_SIZEOF_DOUBLE
-
-/* sizeof(float) */
-#undef STIX_SIZEOF_FLOAT
-
-/* sizeof(int) */
-#undef STIX_SIZEOF_INT
-
-/* sizeof(long) */
-#undef STIX_SIZEOF_LONG
-
-/* sizeof(long double) */
-#undef STIX_SIZEOF_LONG_DOUBLE
-
-/* sizeof(long long) */
-#undef STIX_SIZEOF_LONG_LONG
-
-/* sizeof(mbstate_t) */
-#undef STIX_SIZEOF_MBSTATE_T
-
-/* sizeof(off64_t) */
-#undef STIX_SIZEOF_OFF64_T
-
-/* sizeof(off_t) */
-#undef STIX_SIZEOF_OFF_T
-
-/* sizeof(short) */
-#undef STIX_SIZEOF_SHORT
-
-/* sizeof(void*) */
-#undef STIX_SIZEOF_VOID_P
-
-/* sizeof(wchar_t) */
-#undef STIX_SIZEOF_WCHAR_T
-
-/* sizeof(__float128) */
-#undef STIX_SIZEOF___FLOAT128
-
-/* sizeof(__int128) */
-#undef STIX_SIZEOF___INT128
-
-/* sizeof(__int128_t) */
-#undef STIX_SIZEOF___INT128_T
-
-/* sizeof(__int16) */
-#undef STIX_SIZEOF___INT16
-
-/* sizeof(__int32) */
-#undef STIX_SIZEOF___INT32
-
-/* sizeof(__int64) */
-#undef STIX_SIZEOF___INT64
-
-/* sizeof(__int8) */
-#undef STIX_SIZEOF___INT8
-
-/* sizeof(__uint128_t) */
-#undef STIX_SIZEOF___UINT128_T
 
 /* Version number of package */
 #undef VERSION

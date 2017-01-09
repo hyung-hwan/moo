@@ -24,16 +24,16 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _STIX_LIB_MOD_CONSOLE_H_
-#define _STIX_LIB_MOD_CONSOLE_H_
+#ifndef _MOO_LIB_MOD_CONSOLE_H_
+#define _MOO_LIB_MOD_CONSOLE_H_
 
-#include <stix.h>
+#include <moo.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-STIX_EXPORT int stix_mod_console (stix_t* stix, stix_mod_t* mod);
+MOO_EXPORT int moo_mod_console (moo_t* moo, moo_mod_t* mod);
 
 #if defined(__cplusplus)
 }

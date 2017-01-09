@@ -187,19 +187,19 @@ extend MethodContext
 {
 	method isExceptionContext
 	{
-		## 10 - STIX_METHOD_PREAMBLE_EXCEPTION in VM.
+		## 10 - MOO_METHOD_PREAMBLE_EXCEPTION in VM.
 		^self.method preambleCode == 10.
 	}
 
 	method isEnsureContext
 	{
-		## 10 - STIX_METHOD_PREAMBLE_ENSURE in VM.
+		## 10 - MOO_METHOD_PREAMBLE_ENSURE in VM.
 		^self.method preambleCode == 11
 	}
 
 	method ensureBlock
 	{
-## TODO: change 8 to a constant when stix is enhanced to support constant definition
+## TODO: change 8 to a constant when moo is enhanced to support constant definition
 
 		(* [ value-block ] ensure: [ ensure-block ]
 		 * assuming ensure block is a parameter the ensure: method to a 
@@ -223,7 +223,7 @@ extend MethodContext
 		 *   basicAt: 8 must be the on: argument.
 		 *   basicAt: 9 must be the do: argument  *)
 
-## TODO: change 8 to a constant when stix is enhanced to support constant definition
+## TODO: change 8 to a constant when moo is enhanced to support constant definition
 ##       or calcuate the minimum size using the class information.
 
 		(self isExceptionContext) ifTrue: [

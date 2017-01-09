@@ -26,31 +26,31 @@
 /* This file is for class Mac OS */
 
 /* Mac OS on PPC and m68k uses the big endian mode */
-#define STIX_ENDIAN_BIG 
+#define MOO_ENDIAN_BIG 
 
 #if defined(__MWERKS__)
-#	define STIX_SIZEOF_CHAR        1
-#	define STIX_SIZEOF_SHORT       2
-#	define STIX_SIZEOF_INT         4
-#	define STIX_SIZEOF_LONG        4
-#	define STIX_SIZEOF_LONG_LONG   8
-#	define STIX_SIZEOF_VOID_P      4
-#	define STIX_SIZEOF_FLOAT       4
-#	define STIX_SIZEOF_DOUBLE      8
-#	define STIX_SIZEOF_LONG_DOUBLE 8
-#	define STIX_SIZEOF_WCHAR_T     2
+#	define MOO_SIZEOF_CHAR        1
+#	define MOO_SIZEOF_SHORT       2
+#	define MOO_SIZEOF_INT         4
+#	define MOO_SIZEOF_LONG        4
+#	define MOO_SIZEOF_LONG_LONG   8
+#	define MOO_SIZEOF_VOID_P      4
+#	define MOO_SIZEOF_FLOAT       4
+#	define MOO_SIZEOF_DOUBLE      8
+#	define MOO_SIZEOF_LONG_DOUBLE 8
+#	define MOO_SIZEOF_WCHAR_T     2
 
-#	define STIX_SIZEOF___INT8      1
-#	define STIX_SIZEOF___INT16     2
-#	define STIX_SIZEOF___INT32     4
-#	define STIX_SIZEOF___INT64     8
-#	define STIX_SIZEOF___INT128    0
+#	define MOO_SIZEOF___INT8      1
+#	define MOO_SIZEOF___INT16     2
+#	define MOO_SIZEOF___INT32     4
+#	define MOO_SIZEOF___INT64     8
+#	define MOO_SIZEOF___INT128    0
 
-#	define STIX_SIZEOF_OFF64_T     0
-#	define STIX_SIZEOF_OFF_T       8
+#	define MOO_SIZEOF_OFF64_T     0
+#	define MOO_SIZEOF_OFF_T       8
 
-#	define STIX_SIZEOF_MBSTATE_T   STIX_SIZEOF_LONG
-#	define STIX_MBLEN_MAX          16
+#	define MOO_SIZEOF_MBSTATE_T   MOO_SIZEOF_LONG
+#	define MOO_MBLEN_MAX          16
 
 #else
 #	error Define the size of various data types.

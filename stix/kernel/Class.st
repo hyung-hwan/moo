@@ -33,7 +33,7 @@ class(#pointer) Class(Apex)
 	method specNumInstVars
 	{
 		## shift right by 7 bits.
-		## see stix-prv.h for details.
+		## see moo-prv.h for details.
 		^self.spec bitShift: -7
 	}
 

@@ -24,7 +24,7 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "stix-prv.h"
+#include "moo-prv.h"
 
 #define CLASS_BUFFER_ALIGN       64
 #define LITERAL_BUFFER_ALIGN     64
@@ -48,7 +48,7 @@ enum class_mod_t
 enum var_type_t
 {
 	/* NEVER Change the order and the value of 3 items below.
-	 * stix->c->cls.vars and stix->c->cls.var_count relies on them. */
+	 * moo->c->cls.vars and moo->c->cls.var_count relies on them. */
 	VAR_INSTANCE   = 0,
 	VAR_CLASS      = 1,
 	VAR_CLASSINST  = 2,
@@ -63,16 +63,16 @@ typedef enum var_type_t var_type_t;
 struct var_info_t
 {
 	var_type_t             type;
-	stix_ooi_t             pos; /* not used for VAR_GLOBAL */
-	stix_oop_class_t       cls; /* useful if type is VAR_CLASS. note STIX_NULL indicates the self class. */
-	stix_oop_association_t gbl; /* used for VAR_GLOBAL only */
+	moo_ooi_t             pos; /* not used for VAR_GLOBAL */
+	moo_oop_class_t       cls; /* useful if type is VAR_CLASS. note MOO_NULL indicates the self class. */
+	moo_oop_association_t gbl; /* used for VAR_GLOBAL only */
 };
 typedef struct var_info_t var_info_t;
 
 static struct voca_t
 {
-	stix_oow_t len;
-	stix_ooch_t str[11];
+	moo_oow_t len;
+	moo_ooch_t str[11];
 } vocas[] = {
 	{  5, { '#','b','y','t','e'                                           } },
 	{ 10, { '#','c','h','a','r','a','c','t','e','r'                       } },
@@ -88,6 +88,7 @@ static struct voca_t
 	{  5, { 'f','a','l','s','e'                                           } },
 	{  4, { 'f','r','o','m'                                               } },
 	{  9, { '#','h','a','l','f','w','o','r','d'                           } },
+	{  2, { 'i','f'                                                       } },
 	{  8, { '#','i','n','c','l','u','d','e'                               } },
 	{  7, { '#','l','i','w','o','r','d'                                   } },
 	{  6, { 'm','e','t','h','o','d'                                       } },
@@ -126,6 +127,7 @@ enum voca_id_t
 	VOCA_FALSE,
 	VOCA_FROM,
 	VOCA_HALFWORD_S,
+	VOCA_IF,
 	VOCA_INCLUDE_S,
 	VOCA_LIWORD_S,
 	VOCA_METHOD,
@@ -149,12 +151,12 @@ enum voca_id_t
 };
 typedef enum voca_id_t voca_id_t;
 
-static int compile_block_statement (stix_t* stix);
-static int compile_method_statement (stix_t* stix);
-static int compile_method_expression (stix_t* stix, int pop);
-static int add_literal (stix_t* stix, stix_oop_t lit, stix_oow_t* index);
+static int compile_block_statement (moo_t* moo);
+static int compile_method_statement (moo_t* moo);
+static int compile_method_expression (moo_t* moo, int pop);
+static int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index);
 
-static STIX_INLINE int is_spacechar (stix_ooci_t c)
+static MOO_INLINE int is_spacechar (moo_ooci_t c)
 {
 	/* TODO: handle other space unicode characters */
 	switch (c)
@@ -173,25 +175,25 @@ static STIX_INLINE int is_spacechar (stix_ooci_t c)
 }
 
 
-static STIX_INLINE int is_alphachar (stix_ooci_t c)
+static MOO_INLINE int is_alphachar (moo_ooci_t c)
 {
 /* TODO: support full unicode */
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
-static STIX_INLINE int is_digitchar (stix_ooci_t c)
+static MOO_INLINE int is_digitchar (moo_ooci_t c)
 {
 /* TODO: support full unicode */
 	return (c >= '0' && c <= '9');
 }
 
-static STIX_INLINE int is_alnumchar (stix_ooci_t c)
+static MOO_INLINE int is_alnumchar (moo_ooci_t c)
 {
 /* TODO: support full unicode */
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 }
 
-static STIX_INLINE int is_binselchar (stix_ooci_t c)
+static MOO_INLINE int is_binselchar (moo_ooci_t c)
 {
 	/*
 	 * binary-selector-character :=
@@ -223,17 +225,17 @@ static STIX_INLINE int is_binselchar (stix_ooci_t c)
 	}
 }
 
-static STIX_INLINE int is_leadidentchar (stix_ooci_t c)
+static MOO_INLINE int is_leadidentchar (moo_ooci_t c)
 {
 	return is_alphachar(c) || c == '_';
 }
 
-static STIX_INLINE int is_identchar (stix_ooci_t c)
+static MOO_INLINE int is_identchar (moo_ooci_t c)
 {
 	return is_alnumchar(c) || c == '_';
 }
 
-static STIX_INLINE int is_closing_char (stix_ooci_t c)
+static MOO_INLINE int is_closing_char (moo_ooci_t c)
 {
 	switch (c)
 	{
@@ -250,13 +252,13 @@ static STIX_INLINE int is_closing_char (stix_ooci_t c)
 	}
 }
 
-static STIX_INLINE int is_word (const stix_oocs_t* oocs, voca_id_t id)
+static MOO_INLINE int is_word (const moo_oocs_t* oocs, voca_id_t id)
 {
 	return oocs->len == vocas[id].len && 
-	       stix_equaloochars(oocs->ptr, vocas[id].str, vocas[id].len);
+	       moo_equaloochars(oocs->ptr, vocas[id].str, vocas[id].len);
 }
 
-static int is_reserved_word (const stix_oocs_t* ucs)
+static int is_reserved_word (const moo_oocs_t* ucs)
 {
 	static int rw[] = 
 	{
@@ -268,10 +270,11 @@ static int is_reserved_word (const stix_oocs_t* ucs)
 		VOCA_ERROR,
 		VOCA_THIS_CONTEXT,
 		VOCA_THIS_PROCESS,
+		VOCA_IF
 	};
 	int i;
 
-	for (i = 0; i < STIX_COUNTOF(rw); i++)
+	for (i = 0; i < MOO_COUNTOF(rw); i++)
 	{
 		if (is_word(ucs, rw[i])) return 1;
 	}
@@ -279,7 +282,7 @@ static int is_reserved_word (const stix_oocs_t* ucs)
 	return 0;
 }
 
-static int is_restricted_word (const stix_oocs_t* ucs)
+static int is_restricted_word (const moo_oocs_t* ucs)
 {
 	/* not fully reserved. but restricted in a certain context */
 
@@ -295,7 +298,7 @@ static int is_restricted_word (const stix_oocs_t* ucs)
 	};
 	int i;
 
-	for (i = 0; i < STIX_COUNTOF(rw); i++)
+	for (i = 0; i < MOO_COUNTOF(rw); i++)
 	{
 		if (is_word(ucs, rw[i])) return 1;
 	}
@@ -303,35 +306,35 @@ static int is_restricted_word (const stix_oocs_t* ucs)
 	return 0;
 }
 
-static int begin_include (stix_t* stix);
-static int end_include (stix_t* stix);
+static int begin_include (moo_t* moo);
+static int end_include (moo_t* moo);
 
-static void set_syntax_error (stix_t* stix, stix_synerrnum_t num, const stix_ioloc_t* loc, const stix_oocs_t* tgt)
+static void set_syntax_error (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt)
 {
-	stix->errnum = STIX_ESYNTAX;
-	stix->c->synerr.num = num;
+	moo->errnum = MOO_ESYNTAX;
+	moo->c->synerr.num = num;
 
 	/* The SCO compiler complains of this ternary operation saying:
 	 *    error: operands have incompatible types: op ":" 
 	 * it seems to complain of type mismatch between *loc and
-	 * stix->c->tok.loc due to 'const' prefixed to loc. */
-	/*stix->c->synerr.loc = loc? *loc: stix->c->tok.loc;*/
+	 * moo->c->tok.loc due to 'const' prefixed to loc. */
+	/*moo->c->synerr.loc = loc? *loc: moo->c->tok.loc;*/
 	if (loc)
-		stix->c->synerr.loc = *loc;
+		moo->c->synerr.loc = *loc;
 	else
-		stix->c->synerr.loc = stix->c->tok.loc;
+		moo->c->synerr.loc = moo->c->tok.loc;
 	
-	if (tgt) stix->c->synerr.tgt = *tgt;
+	if (tgt) moo->c->synerr.tgt = *tgt;
 	else 
 	{
-		stix->c->synerr.tgt.ptr = STIX_NULL;
-		stix->c->synerr.tgt.len = 0;
+		moo->c->synerr.tgt.ptr = MOO_NULL;
+		moo->c->synerr.tgt.len = 0;
 	}
 }
 
-static int copy_string_to (stix_t* stix, const stix_oocs_t* src, stix_oocs_t* dst, stix_oow_t* dst_capa, int append, stix_ooch_t add_delim)
+static int copy_string_to (moo_t* moo, const moo_oocs_t* src, moo_oocs_t* dst, moo_oow_t* dst_capa, int append, moo_ooch_t add_delim)
 {
-	stix_oow_t len, pos;
+	moo_oow_t len, pos;
 
 	if (append)
 	{
@@ -347,12 +350,12 @@ static int copy_string_to (stix_t* stix, const stix_oocs_t* src, stix_oocs_t* ds
 
 	if (len > *dst_capa)
 	{
-		stix_ooch_t* tmp;
-		stix_oow_t capa;
+		moo_ooch_t* tmp;
+		moo_oow_t capa;
 
-		capa = STIX_ALIGN(len, CLASS_BUFFER_ALIGN);
+		capa = MOO_ALIGN(len, CLASS_BUFFER_ALIGN);
 
-		tmp = stix_reallocmem (stix, dst->ptr, STIX_SIZEOF(*tmp) * capa);
+		tmp = moo_reallocmem (moo, dst->ptr, MOO_SIZEOF(*tmp) * capa);
 		if (!tmp)  return -1;
 
 		dst->ptr = tmp;
@@ -360,12 +363,12 @@ static int copy_string_to (stix_t* stix, const stix_oocs_t* src, stix_oocs_t* ds
 	}
 
 	if (append && add_delim) dst->ptr[pos++] = add_delim;
-	stix_copyoochars (&dst->ptr[pos], src->ptr, src->len);
+	moo_copyoochars (&dst->ptr[pos], src->ptr, src->len);
 	dst->len = len;
 	return 0;
 }
 
-static int find_word_in_string (const stix_oocs_t* haystack, const stix_oocs_t* name, stix_oow_t* xindex)
+static int find_word_in_string (const moo_oocs_t* haystack, const moo_oocs_t* name, moo_oow_t* xindex)
 {
 	/* this function is inefficient. but considering the typical number
 	 * of arguments and temporary variables, the inefficiency can be 
@@ -373,8 +376,8 @@ static int find_word_in_string (const stix_oocs_t* haystack, const stix_oocs_t* 
 	 * table from a name to an index should be greater than this simple
 	 * inefficient lookup */
 
-	stix_ooch_t* t, * e;
-	stix_oow_t index, i;
+	moo_ooch_t* t, * e;
+	moo_oow_t index, i;
 
 	t = haystack->ptr;
 	e = t + haystack->len;
@@ -417,21 +420,21 @@ static int find_word_in_string (const stix_oocs_t* haystack, const stix_oocs_t* 
 	 (c >= 'A' && c <= 'Z')? ((c - 'A' + 10 < base)? (c - 'A' + 10): base): \
 	 (c >= 'a' && c <= 'z')? ((c - 'a' + 10 < base)? (c - 'a' + 10): base): base)
 
-static int string_to_smooi (stix_t* stix, stix_oocs_t* str, int radixed, stix_ooi_t* num)
+static int string_to_smooi (moo_t* moo, moo_oocs_t* str, int radixed, moo_ooi_t* num)
 {
 	/* it is not a generic conversion function.
 	 * it assumes a certain pre-sanity check on the string
 	 * done by the lexical analyzer */
 
 	int v, negsign, base;
-	const stix_ooch_t* ptr, * end;
-	stix_oow_t value, old_value;
+	const moo_ooch_t* ptr, * end;
+	moo_oow_t value, old_value;
 
 	negsign = 0;
 	ptr = str->ptr,
 	end = str->ptr + str->len;
 
-	STIX_ASSERT (stix, ptr < end);
+	MOO_ASSERT (moo, ptr < end);
 
 	if (*ptr == '+' || *ptr == '-')
 	{
@@ -441,7 +444,7 @@ static int string_to_smooi (stix_t* stix, stix_oocs_t* str, int radixed, stix_oo
 
 	if (radixed)
 	{
-		STIX_ASSERT (stix, ptr < end);
+		MOO_ASSERT (moo, ptr < end);
 
 		base = 0;
 		do
@@ -455,7 +458,7 @@ static int string_to_smooi (stix_t* stix, stix_oocs_t* str, int radixed, stix_oo
 	}
 	else base = 10;
 
-	STIX_ASSERT (stix, ptr < end);
+	MOO_ASSERT (moo, ptr < end);
 
 	value = old_value = 0;
 	while (ptr < end && (v = CHAR_TO_NUM(*ptr, base)) < base)
@@ -464,7 +467,7 @@ static int string_to_smooi (stix_t* stix, stix_oocs_t* str, int radixed, stix_oo
 		if (value < old_value) 
 		{
 			/* overflow must have occurred */
-			stix->errnum = STIX_ERANGE;
+			moo->errnum = MOO_ERANGE;
 			return -1;
 		}
 		old_value = value;
@@ -474,14 +477,14 @@ static int string_to_smooi (stix_t* stix, stix_oocs_t* str, int radixed, stix_oo
 	if (ptr < end)
 	{
 		/* trailing garbage? */
-		stix->errnum = STIX_EINVAL;
+		moo->errnum = MOO_EINVAL;
 		return -1;
 	}
 
-	STIX_ASSERT (stix, -STIX_SMOOI_MAX == STIX_SMOOI_MIN);
-	if (value > STIX_SMOOI_MAX) 
+	MOO_ASSERT (moo, -MOO_SMOOI_MAX == MOO_SMOOI_MIN);
+	if (value > MOO_SMOOI_MAX) 
 	{
-		stix->errnum = STIX_ERANGE;
+		moo->errnum = MOO_ERANGE;
 		return -1;
 	}
 
@@ -491,16 +494,16 @@ static int string_to_smooi (stix_t* stix, stix_oocs_t* str, int radixed, stix_oo
 	return 0;
 }
 
-static stix_oop_t string_to_num (stix_t* stix, stix_oocs_t* str, int radixed)
+static moo_oop_t string_to_num (moo_t* moo, moo_oocs_t* str, int radixed)
 {
 	int negsign, base;
-	const stix_ooch_t* ptr, * end;
+	const moo_ooch_t* ptr, * end;
 
 	negsign = 0;
 	ptr = str->ptr,
 	end = str->ptr + str->len;
 
-	STIX_ASSERT (stix, ptr < end);
+	MOO_ASSERT (moo, ptr < end);
 
 	if (*ptr == '+' || *ptr == '-')
 	{
@@ -510,7 +513,7 @@ static stix_oop_t string_to_num (stix_t* stix, stix_oocs_t* str, int radixed)
 
 	if (radixed)
 	{
-		STIX_ASSERT (stix, ptr < end);
+		MOO_ASSERT (moo, ptr < end);
 
 		base = 0;
 		do
@@ -526,13 +529,13 @@ static stix_oop_t string_to_num (stix_t* stix, stix_oocs_t* str, int radixed)
 
 /* TODO: handle floating point numbers ... etc */
 	if (negsign) base = -base;
-	return stix_strtoint (stix, ptr, end - ptr, base);
+	return moo_strtoint (moo, ptr, end - ptr, base);
 }
 
-static stix_oop_t string_to_error (stix_t* stix, stix_oocs_t* str)
+static moo_oop_t string_to_error (moo_t* moo, moo_oocs_t* str)
 {
-	stix_ooi_t num = 0;
-	const stix_ooch_t* ptr, * end;
+	moo_ooi_t num = 0;
+	const moo_ooch_t* ptr, * end;
 
 	ptr = str->ptr,
 	end = str->ptr + str->len;
@@ -546,156 +549,156 @@ static stix_oop_t string_to_error (stix_t* stix, stix_oocs_t* str)
 		ptr++;
 	}
 
-	return STIX_ERROR_TO_OOP(num);
+	return MOO_ERROR_TO_OOP(num);
 }
 
 /* ---------------------------------------------------------------------
  * Tokenizer 
  * --------------------------------------------------------------------- */
 
-#define GET_CHAR(stix) \
-	do { if (get_char(stix) <= -1) return -1; } while (0)
+#define GET_CHAR(moo) \
+	do { if (get_char(moo) <= -1) return -1; } while (0)
 
-#define GET_CHAR_TO(stix,c) \
+#define GET_CHAR_TO(moo,c) \
 	do { \
-		if (get_char(stix) <= -1) return -1; \
-		c = (stix)->c->lxc.c; \
+		if (get_char(moo) <= -1) return -1; \
+		c = (moo)->c->lxc.c; \
 	} while(0)
 
 
-#define GET_TOKEN(stix) \
-	do { if (get_token(stix) <= -1) return -1; } while (0)
+#define GET_TOKEN(moo) \
+	do { if (get_token(moo) <= -1) return -1; } while (0)
 
-#define GET_TOKEN_WITH_ERRRET(stix, v_ret) \
-	do { if (get_token(stix) <= -1) return v_ret; } while (0)
+#define GET_TOKEN_WITH_ERRRET(moo, v_ret) \
+	do { if (get_token(moo) <= -1) return v_ret; } while (0)
 
-#define ADD_TOKEN_STR(stix,s,l) \
-	do { if (add_token_str(stix, s, l) <= -1) return -1; } while (0)
+#define ADD_TOKEN_STR(moo,s,l) \
+	do { if (add_token_str(moo, s, l) <= -1) return -1; } while (0)
 
-#define ADD_TOKEN_CHAR(stix,c) \
-	do { if (add_token_char(stix, c) <= -1) return -1; } while (0)
+#define ADD_TOKEN_CHAR(moo,c) \
+	do { if (add_token_char(moo, c) <= -1) return -1; } while (0)
 
-#define CLEAR_TOKEN_NAME(stix) ((stix)->c->tok.name.len = 0)
-#define SET_TOKEN_TYPE(stix,tv) ((stix)->c->tok.type = (tv))
+#define CLEAR_TOKEN_NAME(moo) ((moo)->c->tok.name.len = 0)
+#define SET_TOKEN_TYPE(moo,tv) ((moo)->c->tok.type = (tv))
 
-#define TOKEN_TYPE(stix)      ((stix)->c->tok.type)
-#define TOKEN_NAME(stix)      (&(stix)->c->tok.name)
-#define TOKEN_NAME_CAPA(stix) ((stix)->c->tok.name_capa)
-#define TOKEN_NAME_PTR(stix)  ((stix)->c->tok.name.ptr)
-#define TOKEN_NAME_LEN(stix)  ((stix)->c->tok.name.len)
-#define TOKEN_LOC(stix)       (&(stix)->c->tok.loc)
-#define LEXER_LOC(stix)       (&(stix)->c->lxc.l)
+#define TOKEN_TYPE(moo)      ((moo)->c->tok.type)
+#define TOKEN_NAME(moo)      (&(moo)->c->tok.name)
+#define TOKEN_NAME_CAPA(moo) ((moo)->c->tok.name_capa)
+#define TOKEN_NAME_PTR(moo)  ((moo)->c->tok.name.ptr)
+#define TOKEN_NAME_LEN(moo)  ((moo)->c->tok.name.len)
+#define TOKEN_LOC(moo)       (&(moo)->c->tok.loc)
+#define LEXER_LOC(moo)       (&(moo)->c->lxc.l)
 
-static STIX_INLINE int does_token_name_match (stix_t* stix, voca_id_t id)
+static MOO_INLINE int does_token_name_match (moo_t* moo, voca_id_t id)
 {
-	return TOKEN_NAME_LEN(stix) == vocas[id].len &&
-	       stix_equaloochars(TOKEN_NAME_PTR(stix), vocas[id].str, vocas[id].len);
+	return TOKEN_NAME_LEN(moo) == vocas[id].len &&
+	       moo_equaloochars(TOKEN_NAME_PTR(moo), vocas[id].str, vocas[id].len);
 }
 
-static STIX_INLINE int is_token_symbol (stix_t* stix, voca_id_t id)
+static MOO_INLINE int is_token_symbol (moo_t* moo, voca_id_t id)
 {
-	return TOKEN_TYPE(stix) == STIX_IOTOK_SYMLIT && does_token_name_match(stix, id);
+	return TOKEN_TYPE(moo) == MOO_IOTOK_SYMLIT && does_token_name_match(moo, id);
 }
 
-static STIX_INLINE int is_token_word (stix_t* stix, voca_id_t id)
+static MOO_INLINE int is_token_word (moo_t* moo, voca_id_t id)
 {
-	return TOKEN_TYPE(stix) == STIX_IOTOK_IDENT && does_token_name_match(stix, id);
+	return TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && does_token_name_match(moo, id);
 }
 
-static STIX_INLINE int is_token_binary_selector (stix_t* stix, voca_id_t id)
+static MOO_INLINE int is_token_binary_selector (moo_t* moo, voca_id_t id)
 {
-	return TOKEN_TYPE(stix) == STIX_IOTOK_BINSEL && does_token_name_match(stix, id);
+	return TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL && does_token_name_match(moo, id);
 }
 
-static STIX_INLINE int is_token_keyword (stix_t* stix, voca_id_t id)
+static MOO_INLINE int is_token_keyword (moo_t* moo, voca_id_t id)
 {
-	return TOKEN_TYPE(stix) == STIX_IOTOK_KEYWORD && does_token_name_match(stix, id);
+	return TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD && does_token_name_match(moo, id);
 }
 
 
-static STIX_INLINE int add_token_str (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
+static MOO_INLINE int add_token_str (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 {
-	stix_oocs_t tmp;
+	moo_oocs_t tmp;
 
-	tmp.ptr = (stix_ooch_t*)ptr;
+	tmp.ptr = (moo_ooch_t*)ptr;
 	tmp.len = len;
-	return copy_string_to (stix, &tmp, TOKEN_NAME(stix), &TOKEN_NAME_CAPA(stix), 1, '\0');
+	return copy_string_to (moo, &tmp, TOKEN_NAME(moo), &TOKEN_NAME_CAPA(moo), 1, '\0');
 }
 
-static STIX_INLINE int add_token_char (stix_t* stix, stix_ooch_t c)
+static MOO_INLINE int add_token_char (moo_t* moo, moo_ooch_t c)
 {
-	stix_oocs_t tmp;
+	moo_oocs_t tmp;
 
 	tmp.ptr = &c;
 	tmp.len = 1;
-	return copy_string_to (stix, &tmp, TOKEN_NAME(stix), &TOKEN_NAME_CAPA(stix), 1, '\0');
+	return copy_string_to (moo, &tmp, TOKEN_NAME(moo), &TOKEN_NAME_CAPA(moo), 1, '\0');
 }
 
-static STIX_INLINE void unget_char (stix_t* stix, const stix_iolxc_t* c)
+static MOO_INLINE void unget_char (moo_t* moo, const moo_iolxc_t* c)
 {
 	/* Make sure that the unget buffer is large enough */
-	STIX_ASSERT (stix, stix->c->nungots < STIX_COUNTOF(stix->c->ungot));
-	stix->c->ungot[stix->c->nungots++] = *c;
+	MOO_ASSERT (moo, moo->c->nungots < MOO_COUNTOF(moo->c->ungot));
+	moo->c->ungot[moo->c->nungots++] = *c;
 }
 
-static int get_char (stix_t* stix)
+static int get_char (moo_t* moo)
 {
-	stix_ooi_t n;
-	stix_ooci_t lc, ec;
+	moo_ooi_t n;
+	moo_ooci_t lc, ec;
 
-	if (stix->c->nungots > 0)
+	if (moo->c->nungots > 0)
 	{
 		/* something in the unget buffer */
-		stix->c->lxc = stix->c->ungot[--stix->c->nungots];
+		moo->c->lxc = moo->c->ungot[--moo->c->nungots];
 		return 0;
 	}
 
-	if (stix->c->curinp->b.state == -1) 
+	if (moo->c->curinp->b.state == -1) 
 	{
-		stix->c->curinp->b.state = 0;
+		moo->c->curinp->b.state = 0;
 		return -1;
 	}
-	else if (stix->c->curinp->b.state == 1) 
+	else if (moo->c->curinp->b.state == 1) 
 	{
-		stix->c->curinp->b.state = 0;
+		moo->c->curinp->b.state = 0;
 		goto return_eof;
 	}
 
-	if (stix->c->curinp->b.pos >= stix->c->curinp->b.len)
+	if (moo->c->curinp->b.pos >= moo->c->curinp->b.len)
 	{
-		n = stix->c->impl (stix, STIX_IO_READ, stix->c->curinp);
+		n = moo->c->impl (moo, MOO_IO_READ, moo->c->curinp);
 		if (n <= -1) return -1;
 		
 		if (n == 0)
 		{
 		return_eof:
-			stix->c->curinp->lxc.c = STIX_UCI_EOF;
-			stix->c->curinp->lxc.l.line = stix->c->curinp->line;
-			stix->c->curinp->lxc.l.colm = stix->c->curinp->colm;
-			stix->c->curinp->lxc.l.file = stix->c->curinp->name;
-			stix->c->lxc = stix->c->curinp->lxc;
+			moo->c->curinp->lxc.c = MOO_UCI_EOF;
+			moo->c->curinp->lxc.l.line = moo->c->curinp->line;
+			moo->c->curinp->lxc.l.colm = moo->c->curinp->colm;
+			moo->c->curinp->lxc.l.file = moo->c->curinp->name;
+			moo->c->lxc = moo->c->curinp->lxc;
 
 			/* indicate that EOF has been read. lxc.c is also set to EOF. */
 			return 0; 
 		}
 
-		stix->c->curinp->b.pos = 0;
-		stix->c->curinp->b.len = n;
+		moo->c->curinp->b.pos = 0;
+		moo->c->curinp->b.len = n;
 	}
 
-	if (stix->c->curinp->lxc.c == '\n' || stix->c->curinp->lxc.c == '\r')
+	if (moo->c->curinp->lxc.c == '\n' || moo->c->curinp->lxc.c == '\r')
 	{
-		/* stix->c->curinp->lxc.c is a previous character. the new character
-		 * to be read is still in the buffer (stix->c->curinp->buf).
-		 * stix->cu->curinp->colm has been incremented when the previous
+		/* moo->c->curinp->lxc.c is a previous character. the new character
+		 * to be read is still in the buffer (moo->c->curinp->buf).
+		 * moo->cu->curinp->colm has been incremented when the previous
 		 * character has been read. */
-		if (stix->c->curinp->line > 1 && 
-		    stix->c->curinp->colm == 2 &&
-		    stix->c->curinp->nl != stix->c->curinp->lxc.c) 
+		if (moo->c->curinp->line > 1 && 
+		    moo->c->curinp->colm == 2 &&
+		    moo->c->curinp->nl != moo->c->curinp->lxc.c) 
 		{
 			/* most likely, it's the second character in '\r\n' or '\n\r' 
 			 * sequence. let's not update the line and column number. */
-			/*stix->c->curinp->colm = 1;*/
+			/*moo->c->curinp->colm = 1;*/
 		}
 		else
 		{
@@ -704,67 +707,67 @@ static int get_char (stix_t* stix)
 			 * incrementing the line number here instead of
 			 * updating inp->lxc causes the line number for
 			 * TOK_EOF to be the same line as the lxc newline. */
-			stix->c->curinp->line++;
-			stix->c->curinp->colm = 1;
-			stix->c->curinp->nl = stix->c->curinp->lxc.c;
+			moo->c->curinp->line++;
+			moo->c->curinp->colm = 1;
+			moo->c->curinp->nl = moo->c->curinp->lxc.c;
 		}
 	}
 
-	lc = stix->c->curinp->buf[stix->c->curinp->b.pos++];
+	lc = moo->c->curinp->buf[moo->c->curinp->b.pos++];
 
-	stix->c->curinp->lxc.c = lc;
-	stix->c->curinp->lxc.l.line = stix->c->curinp->line;
-	stix->c->curinp->lxc.l.colm = stix->c->curinp->colm++;
-	stix->c->curinp->lxc.l.file = stix->c->curinp->name;
-	stix->c->lxc = stix->c->curinp->lxc;
+	moo->c->curinp->lxc.c = lc;
+	moo->c->curinp->lxc.l.line = moo->c->curinp->line;
+	moo->c->curinp->lxc.l.colm = moo->c->curinp->colm++;
+	moo->c->curinp->lxc.l.file = moo->c->curinp->name;
+	moo->c->lxc = moo->c->curinp->lxc;
 
 	return 1; /* indicate that a normal character has been read */
 }
 
-static STIX_INLINE int skip_spaces (stix_t* stix)
+static MOO_INLINE int skip_spaces (moo_t* moo)
 {
-	while (is_spacechar(stix->c->lxc.c)) GET_CHAR (stix);
+	while (is_spacechar(moo->c->lxc.c)) GET_CHAR (moo);
 	return 0;
 }
 
-static int skip_comment (stix_t* stix)
+static int skip_comment (moo_t* moo)
 {
-	stix_ooci_t c = stix->c->lxc.c;
-	stix_iolxc_t lc;
+	moo_ooci_t c = moo->c->lxc.c;
+	moo_iolxc_t lc;
 
 	if (c == '"')
 	{
 		/* skip up to the closing " */
 		do 
 		{
-			GET_CHAR_TO (stix, c); 
-			if (c == STIX_UCI_EOF) goto unterminated;
+			GET_CHAR_TO (moo, c); 
+			if (c == MOO_UCI_EOF) goto unterminated;
 		}
 		while (c != '"');
 
-		if (c == '"') GET_CHAR (stix); /* keep the next character in lxc */
+		if (c == '"') GET_CHAR (moo); /* keep the next character in lxc */
 		return 1; /* double-quoted comment */
 	}
 	else if (c == '(')
 	{
 		/* handle (* ... *) */
-		lc = stix->c->lxc;
-		GET_CHAR_TO (stix, c);
+		lc = moo->c->lxc;
+		GET_CHAR_TO (moo, c);
 		if (c != '*') goto not_comment;
 
 		do 
 		{
-			GET_CHAR_TO (stix, c);
-			if (c == STIX_UCI_EOF) goto unterminated;
+			GET_CHAR_TO (moo, c);
+			if (c == MOO_UCI_EOF) goto unterminated;
 
 			if (c == '*')
 			{
-				GET_CHAR_TO (stix, c);
-				if (c == STIX_UCI_EOF) goto unterminated;
+				GET_CHAR_TO (moo, c);
+				if (c == MOO_UCI_EOF) goto unterminated;
 
 				if (c == ')')
 				{
-					GET_CHAR (stix); /* keep the first meaningful character in lxc */
+					GET_CHAR (moo); /* keep the first meaningful character in lxc */
 					break;
 				}
 			}
@@ -778,22 +781,22 @@ static int skip_comment (stix_t* stix)
 		/* handle #! or ## */
 
 		/* save the last character */
-		lc = stix->c->lxc;
+		lc = moo->c->lxc;
 		/* read a new character */
-		GET_CHAR_TO (stix, c);
+		GET_CHAR_TO (moo, c);
 
 		if (c != '!' && c != '#') goto not_comment;
 		do 
 		{
-			GET_CHAR_TO (stix, c);
-			if (c == STIX_UCI_EOF)
+			GET_CHAR_TO (moo, c);
+			if (c == MOO_UCI_EOF)
 			{
 				/* EOF on the comment line is ok for a single-line comment */
 				break;
 			}
 			else if (c == '\r' || c == '\n')
 			{
-				GET_CHAR (stix); /* keep the first meaningful character in lxc */
+				GET_CHAR (moo); /* keep the first meaningful character in lxc */
 				break;
 			}
 		} 
@@ -810,87 +813,87 @@ static int skip_comment (stix_t* stix)
 
 not_comment:
 	/* unget the leading '#' */
-	unget_char (stix, &stix->c->lxc);
+	unget_char (moo, &moo->c->lxc);
 	/* restore the previous state */
-	stix->c->lxc = lc;
+	moo->c->lxc = lc;
 
 	return 0;
 
 
 unterminated:
-	set_syntax_error (stix, STIX_SYNERR_CMTNC, LEXER_LOC(stix), STIX_NULL);
+	set_syntax_error (moo, MOO_SYNERR_CMTNC, LEXER_LOC(moo), MOO_NULL);
 	return -1;
 }
 
-static int get_ident (stix_t* stix, stix_ooci_t char_read_ahead)
+static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 {
 	/*
 	 * identifier := alpha-char (alpha-char | digit-char)*
 	 * keyword := identifier ":"
 	 */
 
-	stix_ooci_t c;
+	moo_ooci_t c;
 
-	c = stix->c->lxc.c;
-	SET_TOKEN_TYPE (stix, STIX_IOTOK_IDENT);
+	c = moo->c->lxc.c;
+	SET_TOKEN_TYPE (moo, MOO_IOTOK_IDENT);
 
-	if (char_read_ahead != STIX_UCI_EOF)
+	if (char_read_ahead != MOO_UCI_EOF)
 	{
-		ADD_TOKEN_CHAR(stix, char_read_ahead);
+		ADD_TOKEN_CHAR(moo, char_read_ahead);
 	}
 
 	do 
 	{
-		ADD_TOKEN_CHAR (stix, c);
-		GET_CHAR_TO (stix, c);
+		ADD_TOKEN_CHAR (moo, c);
+		GET_CHAR_TO (moo, c);
 	} 
 	while (is_identchar(c));
 
-	if (c == '(' && is_token_word(stix, VOCA_ERROR))
+	if (c == '(' && is_token_word(moo, VOCA_ERROR))
 	{
 		/* error(NN) */
-		ADD_TOKEN_CHAR (stix, c);
-		GET_CHAR_TO (stix, c);
+		ADD_TOKEN_CHAR (moo, c);
+		GET_CHAR_TO (moo, c);
 		if (!is_digitchar(c))
 		{
-			ADD_TOKEN_CHAR (stix, c);
-			set_syntax_error (stix, STIX_SYNERR_ERRLIT, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			ADD_TOKEN_CHAR (moo, c);
+			set_syntax_error (moo, MOO_SYNERR_ERRLIT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
 		do
 		{
-			ADD_TOKEN_CHAR (stix, c);
-			GET_CHAR_TO (stix, c);
+			ADD_TOKEN_CHAR (moo, c);
+			GET_CHAR_TO (moo, c);
 		}
 		while (is_digitchar(c));
 
 		if (c != ')')
 		{
-			set_syntax_error (stix, STIX_SYNERR_RPAREN, LEXER_LOC(stix), STIX_NULL);
+			set_syntax_error (moo, MOO_SYNERR_RPAREN, LEXER_LOC(moo), MOO_NULL);
 			return -1;
 		}
 
 /* TODO: error number range check */
 
-		ADD_TOKEN_CHAR (stix, c);
-		SET_TOKEN_TYPE (stix, STIX_IOTOK_ERRLIT);
+		ADD_TOKEN_CHAR (moo, c);
+		SET_TOKEN_TYPE (moo, MOO_IOTOK_ERRLIT);
 	}
 	else if (c == ':') 
 	{
 	read_more_kwsym:
-		ADD_TOKEN_CHAR (stix, c);
-		SET_TOKEN_TYPE (stix, STIX_IOTOK_KEYWORD);
-		GET_CHAR_TO (stix, c);
+		ADD_TOKEN_CHAR (moo, c);
+		SET_TOKEN_TYPE (moo, MOO_IOTOK_KEYWORD);
+		GET_CHAR_TO (moo, c);
 
-		if (stix->c->in_array && is_leadidentchar(c)) 
+		if (moo->c->in_array && is_leadidentchar(c)) 
 		{
 			/* when reading an array literal, read as many characters as
 			 * would compose a normal keyword symbol literal */
 			do
 			{
-				ADD_TOKEN_CHAR (stix, c);
-				GET_CHAR_TO (stix, c);
+				ADD_TOKEN_CHAR (moo, c);
+				GET_CHAR_TO (moo, c);
 			}
 			while (is_identchar(c));
 
@@ -898,93 +901,97 @@ static int get_ident (stix_t* stix, stix_ooci_t char_read_ahead)
 			else
 			{
 				/* the last character is not a colon */
-				set_syntax_error (stix, STIX_SYNERR_COLON, LEXER_LOC(stix), STIX_NULL);
+				set_syntax_error (moo, MOO_SYNERR_COLON, LEXER_LOC(moo), MOO_NULL);
 				return -1;
 			}
 		}
 		else
 		{
-			unget_char (stix, &stix->c->lxc); 
+			unget_char (moo, &moo->c->lxc); 
 		}
 	}
 	else
 	{
 		if (c == '.')
 		{
-			stix_iolxc_t period;
+			moo_iolxc_t period;
 
-			period = stix->c->lxc;
+			period = moo->c->lxc;
 
 		read_more_seg:
-			GET_CHAR_TO (stix, c);
+			GET_CHAR_TO (moo, c);
 
 			if (is_leadidentchar(c))
 			{
-				SET_TOKEN_TYPE (stix, STIX_IOTOK_IDENT_DOTTED);
+				SET_TOKEN_TYPE (moo, MOO_IOTOK_IDENT_DOTTED);
 
-				ADD_TOKEN_CHAR (stix, '.');
+				ADD_TOKEN_CHAR (moo, '.');
 				do
 				{
-					ADD_TOKEN_CHAR (stix, c);
-					GET_CHAR_TO (stix, c);
+					ADD_TOKEN_CHAR (moo, c);
+					GET_CHAR_TO (moo, c);
 				}
 				while (is_identchar(c));
 
 				if (c == '.') goto read_more_seg;
-				else unget_char (stix, &stix->c->lxc); 
+				else unget_char (moo, &moo->c->lxc); 
 			}
 			else
 			{
-				unget_char (stix, &stix->c->lxc); 
+				unget_char (moo, &moo->c->lxc); 
 
 				/* unget the period itself */
-				unget_char (stix, &period); 
+				unget_char (moo, &period); 
 			}
 		}
 		else
 		{
-			unget_char (stix, &stix->c->lxc); 
+			unget_char (moo, &moo->c->lxc); 
 		}
 
 		/* handle reserved words */
-		if (is_token_word(stix, VOCA_SELF))
+		if (is_token_word(moo, VOCA_SELF))
 		{
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_SELF);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_SELF);
 		}
-		else if (is_token_word(stix, VOCA_SUPER))
+		else if (is_token_word(moo, VOCA_SUPER))
 		{
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_SUPER);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_SUPER);
 		}
-		else if (is_token_word(stix, VOCA_NIL))
+		else if (is_token_word(moo, VOCA_NIL))
 		{
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_NIL);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_NIL);
 		}
-		else if (is_token_word(stix, VOCA_TRUE))
+		else if (is_token_word(moo, VOCA_TRUE))
 		{
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_TRUE);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_TRUE);
 		}
-		else if (is_token_word(stix, VOCA_FALSE))
+		else if (is_token_word(moo, VOCA_FALSE))
 		{
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_FALSE);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_FALSE);
 		}
-		else if (is_token_word(stix, VOCA_ERROR))
+		else if (is_token_word(moo, VOCA_ERROR))
 		{
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_ERROR);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_ERROR);
 		}
-		else if (is_token_word(stix, VOCA_THIS_CONTEXT))
+		else if (is_token_word(moo, VOCA_THIS_CONTEXT))
 		{
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_THIS_CONTEXT);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_THIS_CONTEXT);
 		}
-		else if (is_token_word(stix, VOCA_THIS_PROCESS))
+		else if (is_token_word(moo, VOCA_THIS_PROCESS))
 		{
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_THIS_PROCESS);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_THIS_PROCESS);
+		}
+		else if (is_token_word(moo, VOCA_IF))
+		{
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_IF);
 		}
 	}
 
 	return 0;
 }
 
-static int get_numlit (stix_t* stix, int negated)
+static int get_numlit (moo_t* moo, int negated)
 {
 	/* 
 	 * number-literal := number | ("-" number)
@@ -1004,12 +1011,12 @@ static int get_numlit (stix_t* stix, int negated)
 	 * fractionalDigits := decimal-integer
 	 */
 
-	stix_ooci_t c;
+	moo_ooci_t c;
 	int radix = 0, r;
 	
 
-	c = stix->c->lxc.c;
-	SET_TOKEN_TYPE (stix, STIX_IOTOK_NUMLIT);
+	c = moo->c->lxc.c;
+	SET_TOKEN_TYPE (moo, MOO_IOTOK_NUMLIT);
 
 /*TODO: support a complex numeric literal */
 	do 
@@ -1018,21 +1025,21 @@ static int get_numlit (stix_t* stix, int negated)
 		{
 			/* collect the potential radix specifier */
 			r = CHAR_TO_NUM (c, 10);
-			STIX_ASSERT (stix, r < 10);
+			MOO_ASSERT (moo, r < 10);
 			radix = radix * 10 + r;
 		}
 
-		ADD_TOKEN_CHAR(stix, c);
-		GET_CHAR_TO (stix, c);
+		ADD_TOKEN_CHAR(moo, c);
+		GET_CHAR_TO (moo, c);
 		if (c == '_')
 		{
-			stix_iolxc_t underscore;
-			underscore = stix->c->lxc;
-			GET_CHAR_TO(stix, c);
+			moo_iolxc_t underscore;
+			underscore = moo->c->lxc;
+			GET_CHAR_TO(moo, c);
 			if (!is_digitchar(c))
 			{
-				unget_char (stix, &stix->c->lxc);
-				unget_char (stix, &underscore);
+				unget_char (moo, &moo->c->lxc);
+				unget_char (moo, &underscore);
 				break;
 			}
 			else continue;
@@ -1047,33 +1054,33 @@ static int get_numlit (stix_t* stix, int negated)
 		if (radix < 2 || radix > 36)
 		{
 			/* no digit after the radix specifier */
-			set_syntax_error (stix, STIX_SYNERR_RADIX, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_RADIX, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		ADD_TOKEN_CHAR(stix, c);
-		GET_CHAR_TO (stix, c);
+		ADD_TOKEN_CHAR(moo, c);
+		GET_CHAR_TO (moo, c);
 
 		if (CHAR_TO_NUM(c, radix) >= radix)
 		{
 			/* no digit after the radix specifier */
-			set_syntax_error (stix, STIX_SYNERR_RADNUMLIT, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_RADNUMLIT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
 		do
 		{
-			ADD_TOKEN_CHAR(stix, c);
-			GET_CHAR_TO (stix, c);
+			ADD_TOKEN_CHAR(moo, c);
+			GET_CHAR_TO (moo, c);
 			if (c == '_') 
 			{
-				stix_iolxc_t underscore;
-				underscore = stix->c->lxc;
-				GET_CHAR_TO(stix, c);
+				moo_iolxc_t underscore;
+				underscore = moo->c->lxc;
+				GET_CHAR_TO(moo, c);
 				if (CHAR_TO_NUM(c, radix) >= radix)
 				{
-					unget_char (stix, &stix->c->lxc);
-					unget_char (stix, &underscore);
+					unget_char (moo, &moo->c->lxc);
+					unget_char (moo, &underscore);
 					break;
 				}
 				else continue;
@@ -1081,10 +1088,10 @@ static int get_numlit (stix_t* stix, int negated)
 		}
 		while (CHAR_TO_NUM(c, radix) < radix);
 
-		SET_TOKEN_TYPE (stix, STIX_IOTOK_RADNUMLIT);
+		SET_TOKEN_TYPE (moo, MOO_IOTOK_RADNUMLIT);
 	}
 
-	unget_char (stix, &stix->c->lxc);
+	unget_char (moo, &moo->c->lxc);
 
 /*
  * TODO: handle floating point number
@@ -1092,26 +1099,26 @@ static int get_numlit (stix_t* stix, int negated)
 	return 0;
 }
 
-static int get_charlit (stix_t* stix)
+static int get_charlit (moo_t* moo)
 {
 	/* 
 	 * character-literal := "$" character
 	 * character := normal-character | "'"
 	 */
 
-	stix_ooci_t c = stix->c->lxc.c; /* even a new-line or white space would be taken */
-	if (c == STIX_UCI_EOF) 
+	moo_ooci_t c = moo->c->lxc.c; /* even a new-line or white space would be taken */
+	if (c == MOO_UCI_EOF) 
 	{
-		set_syntax_error (stix, STIX_SYNERR_CLTNT, LEXER_LOC(stix), STIX_NULL);
+		set_syntax_error (moo, MOO_SYNERR_CLTNT, LEXER_LOC(moo), MOO_NULL);
 		return -1;
 	}
 
-	SET_TOKEN_TYPE (stix, STIX_IOTOK_CHARLIT);
-	ADD_TOKEN_CHAR(stix, c);
+	SET_TOKEN_TYPE (moo, MOO_IOTOK_CHARLIT);
+	ADD_TOKEN_CHAR(moo, c);
 	return 0;
 }
 
-static int get_strlit (stix_t* stix)
+static int get_strlit (moo_t* moo)
 {
 	/* 
 	 * string-literal := single-quote string-character* single-quote
@@ -1120,51 +1127,51 @@ static int get_strlit (stix_t* stix)
 	 * normal-character := character-except-single-quote
 	 */
 
-	stix_ooci_t c = stix->c->lxc.c;
-	SET_TOKEN_TYPE (stix, STIX_IOTOK_STRLIT);
+	moo_ooci_t c = moo->c->lxc.c;
+	SET_TOKEN_TYPE (moo, MOO_IOTOK_STRLIT);
 
 	do 
 	{
 		do 
 		{
-			ADD_TOKEN_CHAR (stix, c);
-			GET_CHAR_TO (stix, c);
+			ADD_TOKEN_CHAR (moo, c);
+			GET_CHAR_TO (moo, c);
 
-			if (c == STIX_UCI_EOF) 
+			if (c == MOO_UCI_EOF) 
 			{
 				/* string not closed */
-				set_syntax_error (stix, STIX_SYNERR_STRNC, TOKEN_LOC(stix) /*&stix->c->lxc.l*/, STIX_NULL);
+				set_syntax_error (moo, MOO_SYNERR_STRNC, TOKEN_LOC(moo) /*&moo->c->lxc.l*/, MOO_NULL);
 				return -1;
 			}
 		} 
 		while (c != '\'');
 
 		/* 'c' must be a single quote at this point*/
-		GET_CHAR_TO (stix, c);
+		GET_CHAR_TO (moo, c);
 	} 
 	while (c == '\''); /* if the next character is a single quote,
 	                      it becomes a literal single quote character. */
 
-	unget_char (stix, &stix->c->lxc);
+	unget_char (moo, &moo->c->lxc);
 	return 0;
 }
 
-static int get_string (stix_t* stix, stix_ooch_t end_char, stix_ooch_t esc_char, int regex, stix_oow_t preescaped)
+static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int regex, moo_oow_t preescaped)
 {
-	stix_ooci_t c;
-	stix_oow_t escaped = preescaped;
-	stix_oow_t digit_count = 0;
-	stix_ooci_t c_acc = 0;
+	moo_ooci_t c;
+	moo_oow_t escaped = preescaped;
+	moo_oow_t digit_count = 0;
+	moo_ooci_t c_acc = 0;
 
-	SET_TOKEN_TYPE (stix, STIX_IOTOK_STRLIT);
+	SET_TOKEN_TYPE (moo, MOO_IOTOK_STRLIT);
 
 	while (1)
 	{
-		GET_CHAR_TO (stix, c);
+		GET_CHAR_TO (moo, c);
 
-		if (c == STIX_UCI_EOF)
+		if (c == MOO_UCI_EOF)
 		{
-			set_syntax_error (stix, STIX_SYNERR_STRNC, TOKEN_LOC(stix) /*&stix->c->lxc.l*/, STIX_NULL);
+			set_syntax_error (moo, MOO_SYNERR_STRNC, TOKEN_LOC(moo) /*&moo->c->lxc.l*/, MOO_NULL);
 			return -1;
 		}
 
@@ -1178,14 +1185,14 @@ static int get_string (stix_t* stix, stix_ooch_t end_char, stix_ooch_t esc_char,
 				{
 					/* should i limit the max to 0xFF/0377? 
 					 * if (c_acc > 0377) c_acc = 0377;*/
-					ADD_TOKEN_CHAR (stix, c_acc);
+					ADD_TOKEN_CHAR (moo, c_acc);
 					escaped = 0;
 				}
 				continue;
 			}
 			else
 			{
-				ADD_TOKEN_CHAR (stix, c_acc);
+				ADD_TOKEN_CHAR (moo, c_acc);
 				escaped = 0;
 			}
 		}
@@ -1197,7 +1204,7 @@ static int get_string (stix_t* stix, stix_ooch_t end_char, stix_ooch_t esc_char,
 				digit_count++;
 				if (digit_count >= escaped) 
 				{
-					ADD_TOKEN_CHAR (stix, c_acc);
+					ADD_TOKEN_CHAR (moo, c_acc);
 					escaped = 0;
 				}
 				continue;
@@ -1208,7 +1215,7 @@ static int get_string (stix_t* stix, stix_ooch_t end_char, stix_ooch_t esc_char,
 				digit_count++;
 				if (digit_count >= escaped) 
 				{
-					ADD_TOKEN_CHAR (stix, c_acc);
+					ADD_TOKEN_CHAR (moo, c_acc);
 					escaped = 0;
 				}
 				continue;
@@ -1219,20 +1226,20 @@ static int get_string (stix_t* stix, stix_ooch_t end_char, stix_ooch_t esc_char,
 				digit_count++;
 				if (digit_count >= escaped) 
 				{
-					ADD_TOKEN_CHAR (stix, c_acc);
+					ADD_TOKEN_CHAR (moo, c_acc);
 					escaped = 0;
 				}
 				continue;
 			}
 			else
 			{
-				stix_ooch_t rc;
+				moo_ooch_t rc;
 
 				rc = (escaped == 2)? 'x':
 				     (escaped == 4)? 'u': 'U';
 				if (digit_count == 0) 
-					ADD_TOKEN_CHAR (stix, rc);
-				else ADD_TOKEN_CHAR (stix, c_acc);
+					ADD_TOKEN_CHAR (moo, rc);
+				else ADD_TOKEN_CHAR (moo, c_acc);
 
 				escaped = 0;
 			}
@@ -1275,14 +1282,14 @@ static int get_string (stix_t* stix, stix_ooch_t end_char, stix_ooch_t esc_char,
 				c_acc = 0;
 				continue;
 			}
-			else if (c == 'u' && STIX_SIZEOF(stix_ooch_t) >= 2) 
+			else if (c == 'u' && MOO_SIZEOF(moo_ooch_t) >= 2) 
 			{
 				escaped = 4;
 				digit_count = 0;
 				c_acc = 0;
 				continue;
 			}
-			else if (c == 'U' && STIX_SIZEOF(stix_ooch_t) >= 4) 
+			else if (c == 'U' && MOO_SIZEOF(moo_ooch_t) >= 4) 
 			{
 				escaped = 8;
 				digit_count = 0;
@@ -1296,194 +1303,194 @@ static int get_string (stix_t* stix, stix_ooch_t end_char, stix_ooch_t esc_char,
 				 * an unhandled escape sequence can be handled 
 				 * outside this function since the escape character 
 				 * is preserved.*/
-				ADD_TOKEN_CHAR (stix, esc_char);
+				ADD_TOKEN_CHAR (moo, esc_char);
 			}
 
 			escaped = 0;
 		}
 
-		ADD_TOKEN_CHAR (stix, c);
+		ADD_TOKEN_CHAR (moo, c);
 	}
 
 	return 0;
 }
 
-static int get_binsel (stix_t* stix)
+static int get_binsel (moo_t* moo)
 {
 	/* 
 	 * binary-selector := binary-selector-character+
 	 */
-	stix_ooci_t oc;
+	moo_ooci_t oc;
 
-	oc = stix->c->lxc.c;
-	ADD_TOKEN_CHAR (stix, oc);
+	oc = moo->c->lxc.c;
+	ADD_TOKEN_CHAR (moo, oc);
 
-	GET_CHAR (stix);
+	GET_CHAR (moo);
 	/* special case if a minus is followed by a digit immediately */
-	if (oc == '-' && is_digitchar(stix->c->lxc.c)) return get_numlit (stix, 1);
+	if (oc == '-' && is_digitchar(moo->c->lxc.c)) return get_numlit (moo, 1);
 
 #if 1
 	/* up to 2 characters only */
-	if (is_binselchar (stix->c->lxc.c)) 
+	if (is_binselchar (moo->c->lxc.c)) 
 	{
-		ADD_TOKEN_CHAR (stix, stix->c->lxc.c);
+		ADD_TOKEN_CHAR (moo, moo->c->lxc.c);
 	}
 	else
 	{
-		unget_char (stix, &stix->c->lxc);
+		unget_char (moo, &moo->c->lxc);
 	}
 #else
 	/* or up to any occurrences */
-	while (is_binselchar(stix->c->lxc.c)) 
+	while (is_binselchar(moo->c->lxc.c)) 
 	{
-		ADD_TOKEN_CHAR (stix, c);
-		GET_CHAR (stix);
+		ADD_TOKEN_CHAR (moo, c);
+		GET_CHAR (moo);
 	}
-	unget_char (stix, &stix->c->lxc);
+	unget_char (moo, &moo->c->lxc);
 #endif
 
-	SET_TOKEN_TYPE (stix, STIX_IOTOK_BINSEL);
+	SET_TOKEN_TYPE (moo, MOO_IOTOK_BINSEL);
 	return 0;
 }
 
-static int get_token (stix_t* stix)
+static int get_token (moo_t* moo)
 {
-	stix_ooci_t c;
+	moo_ooci_t c;
 	int n;
 
 retry:
-	GET_CHAR (stix);
+	GET_CHAR (moo);
 
 	do 
 	{
 		/* skip spaces */
-		while (is_spacechar(stix->c->lxc.c)) GET_CHAR (stix);
-		/* the first character after the last space is in stix->c->lxc */
-		if ((n = skip_comment(stix)) <= -1) return -1;
+		while (is_spacechar(moo->c->lxc.c)) GET_CHAR (moo);
+		/* the first character after the last space is in moo->c->lxc */
+		if ((n = skip_comment(moo)) <= -1) return -1;
 	} 
 	while (n >= 1);
 
 	/* clear the token name, reset its location */
-	SET_TOKEN_TYPE (stix, STIX_IOTOK_EOF); /* is it correct? */
-	CLEAR_TOKEN_NAME (stix);
-	stix->c->tok.loc = stix->c->lxc.l; /* remember token location */
+	SET_TOKEN_TYPE (moo, MOO_IOTOK_EOF); /* is it correct? */
+	CLEAR_TOKEN_NAME (moo);
+	moo->c->tok.loc = moo->c->lxc.l; /* remember token location */
 
-	c = stix->c->lxc.c;
+	c = moo->c->lxc.c;
 
 	switch (c)
 	{
-		case STIX_UCI_EOF:
+		case MOO_UCI_EOF:
 		{
 			int n;
 
-			n = end_include (stix);
+			n = end_include (moo);
 			if (n <= -1) return -1;
 			if (n >= 1) goto retry;
 
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_EOF);
-			ADD_TOKEN_STR(stix, vocas[VOCA_EOF].str, vocas[VOCA_EOF].len);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_EOF);
+			ADD_TOKEN_STR(moo, vocas[VOCA_EOF].str, vocas[VOCA_EOF].len);
 			break;
 		}
 
 		case '$': /* character literal */
-			GET_CHAR (stix);
-			if (get_charlit(stix) <= -1) return -1;
+			GET_CHAR (moo);
+			if (get_charlit(moo) <= -1) return -1;
 			break;
 
 		case '\'': /* string literal */
-			GET_CHAR (stix);
-			if (get_strlit(stix) <= -1) return -1;
+			GET_CHAR (moo);
+			if (get_strlit(moo) <= -1) return -1;
 			break;
 
 		case ':':
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_COLON);
-			ADD_TOKEN_CHAR (stix, c);
-			GET_CHAR_TO (stix, c);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_COLON);
+			ADD_TOKEN_CHAR (moo, c);
+			GET_CHAR_TO (moo, c);
 			if (c == '=') 
 			{
-				SET_TOKEN_TYPE (stix, STIX_IOTOK_ASSIGN);
-				ADD_TOKEN_CHAR (stix, c);
+				SET_TOKEN_TYPE (moo, MOO_IOTOK_ASSIGN);
+				ADD_TOKEN_CHAR (moo, c);
 			}
 			else
 			{
-				unget_char (stix, &stix->c->lxc);
+				unget_char (moo, &moo->c->lxc);
 			}
 			break;
 
 		case '^':
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_RETURN);
-			ADD_TOKEN_CHAR(stix, c);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_RETURN);
+			ADD_TOKEN_CHAR(moo, c);
 #if 0
-			GET_CHAR_TO (stix, c);
+			GET_CHAR_TO (moo, c);
 
 /* TODO: support explicit block return */
 			if (c == '^')
 			{
 				/* ^^ */
-				TOKEN_TYPE(stix) == STIX_IOTOK_BLKRET;
-				ADD_TOKEN_CHAR (stix, c);
+				TOKEN_TYPE(moo) == MOO_IOTOK_BLKRET;
+				ADD_TOKEN_CHAR (moo, c);
 			}
 			else
 			{
-				unget_char (stix, &stix->c->lxc);
+				unget_char (moo, &moo->c->lxc);
 			}
 #endif
 			break;
 
 		case '{': /* extension */
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_LBRACE);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_LBRACE);
 			goto single_char_token;
 		case '}': /* extension */
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_RBRACE);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_RBRACE);
 			goto single_char_token;
 		case '[':
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_LBRACK);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_LBRACK);
 			goto single_char_token;
 		case ']': 
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_RBRACK);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_RBRACK);
 			goto single_char_token;
 		case '(':
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_LPAREN);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_LPAREN);
 			goto single_char_token;
 		case ')':
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_RPAREN);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_RPAREN);
 			goto single_char_token;
 		case '.':
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_PERIOD);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_PERIOD);
 			goto single_char_token;
 		case ',':
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_COMMA);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_COMMA);
 			goto single_char_token;
 		case ';':
-			SET_TOKEN_TYPE (stix, STIX_IOTOK_SEMICOLON);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_SEMICOLON);
 			goto single_char_token;
 
 		case '#':  
-			ADD_TOKEN_CHAR(stix, c);
-			GET_CHAR_TO (stix, c);
+			ADD_TOKEN_CHAR(moo, c);
+			GET_CHAR_TO (moo, c);
 			switch (c)
 			{
-				case STIX_UCI_EOF:
-					set_syntax_error (stix, STIX_SYNERR_HLTNT, LEXER_LOC(stix), STIX_NULL);
+				case MOO_UCI_EOF:
+					set_syntax_error (moo, MOO_SYNERR_HLTNT, LEXER_LOC(moo), MOO_NULL);
 					return -1;
 
 				case '(':
 					/* #( */
-					ADD_TOKEN_CHAR(stix, c);
-					SET_TOKEN_TYPE (stix, STIX_IOTOK_ARPAREN);
+					ADD_TOKEN_CHAR(moo, c);
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_ARPAREN);
 					break;
 
 				case '[':
 					/* #[ - byte array literal */
-					ADD_TOKEN_CHAR(stix, c);
-					SET_TOKEN_TYPE (stix, STIX_IOTOK_BAPAREN);
+					ADD_TOKEN_CHAR(moo, c);
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_BAPAREN);
 					break;
 
 				case '\'':
 					/* quoted symbol literal */
-					GET_CHAR (stix);
-					if (get_strlit(stix) <= -1) return -1;
-					SET_TOKEN_TYPE (stix, STIX_IOTOK_SYMLIT);
+					GET_CHAR (moo);
+					if (get_strlit(moo) <= -1) return -1;
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_SYMLIT);
 					break;
 
 				default:
@@ -1496,19 +1503,19 @@ retry:
 					{
 						do 
 						{
-							ADD_TOKEN_CHAR (stix, c);
-							GET_CHAR_TO (stix, c);
+							ADD_TOKEN_CHAR (moo, c);
+							GET_CHAR_TO (moo, c);
 						} 
 						while (is_binselchar(c));
 
-						unget_char (stix, &stix->c->lxc);
+						unget_char (moo, &moo->c->lxc);
 					}
 					else if (is_leadidentchar(c)) 
 					{
 						do 
 						{
-							ADD_TOKEN_CHAR (stix, c);
-							GET_CHAR_TO (stix, c);
+							ADD_TOKEN_CHAR (moo, c);
+							GET_CHAR_TO (moo, c);
 						} 
 						while (is_identchar(c));
 
@@ -1516,15 +1523,15 @@ retry:
 						{
 							/* keyword symbol - e.g. #ifTrue:ifFalse: */
 						read_more_word:
-							ADD_TOKEN_CHAR (stix, c);
-							GET_CHAR_TO (stix, c);
+							ADD_TOKEN_CHAR (moo, c);
+							GET_CHAR_TO (moo, c);
 
 							if (is_leadidentchar(c))
 							{
 								do 
 								{
-									ADD_TOKEN_CHAR (stix, c);
-									GET_CHAR_TO (stix, c);
+									ADD_TOKEN_CHAR (moo, c);
+									GET_CHAR_TO (moo, c);
 								} 
 								while (is_identchar(c));
 
@@ -1534,57 +1541,57 @@ retry:
 									/* if a colon is found in the middle of a symbol,
 									 * the last charater is expected to be a colon as well.
 									 * but, the last character is not a colon */
-									set_syntax_error (stix, STIX_SYNERR_COLON, LEXER_LOC(stix), STIX_NULL);
+									set_syntax_error (moo, MOO_SYNERR_COLON, LEXER_LOC(moo), MOO_NULL);
 									return -1;
 								}
 							}
 							else
 							{
-								unget_char (stix, &stix->c->lxc);
+								unget_char (moo, &moo->c->lxc);
 							}
 						}
 						else if (c == '.')
 						{
 							/* dotted symbol e.g. #Planet.Earth.Object */
 
-							stix_iolxc_t period;
+							moo_iolxc_t period;
 
-							period = stix->c->lxc;
+							period = moo->c->lxc;
 
 						read_more_seg:
-							GET_CHAR_TO (stix, c);
+							GET_CHAR_TO (moo, c);
 
 							if (is_leadidentchar(c))
 							{
-								ADD_TOKEN_CHAR (stix, '.');
+								ADD_TOKEN_CHAR (moo, '.');
 								do
 								{
-									ADD_TOKEN_CHAR (stix, c);
-									GET_CHAR_TO (stix, c);
+									ADD_TOKEN_CHAR (moo, c);
+									GET_CHAR_TO (moo, c);
 								}
 								while (is_identchar(c));
 
 								if (c == '.') goto read_more_seg;
-								else unget_char (stix, &stix->c->lxc);
+								else unget_char (moo, &moo->c->lxc);
 							}
 							else
 							{
-								unget_char (stix, &stix->c->lxc); 
-								unget_char (stix, &period); 
+								unget_char (moo, &moo->c->lxc); 
+								unget_char (moo, &period); 
 							}
 						}
 						else
 						{
-							unget_char (stix, &stix->c->lxc); 
+							unget_char (moo, &moo->c->lxc); 
 						}
 					}
 					else
 					{
-						set_syntax_error (stix, STIX_SYNERR_HLTNT, LEXER_LOC(stix), STIX_NULL);
+						set_syntax_error (moo, MOO_SYNERR_HLTNT, LEXER_LOC(moo), MOO_NULL);
 						return -1;
 					}
 
-					SET_TOKEN_TYPE (stix, STIX_IOTOK_SYMLIT);
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_SYMLIT);
 					break;
 			}
 
@@ -1594,31 +1601,31 @@ retry:
 		case 'S': /* a string with a C-style escape sequences */
 		case 'M': /* a symbol with a C-style escape sequences */
 		{
-			stix_ooci_t saved_c = c;
+			moo_ooci_t saved_c = c;
 
-			GET_CHAR_TO (stix, c);
+			GET_CHAR_TO (moo, c);
 			if (c == '\'')
 			{
-				/*GET_CHAR (stix);*/
-				if (get_string(stix, '\'', '\\', 0, 0) <= -1) return -1;
+				/*GET_CHAR (moo);*/
+				if (get_string(moo, '\'', '\\', 0, 0) <= -1) return -1;
 
 				if (saved_c == 'C')
 				{
-					if (stix->c->tok.name.len != 1)
+					if (moo->c->tok.name.len != 1)
 					{
-						set_syntax_error (stix, STIX_SYNERR_CHARLIT, TOKEN_LOC(stix), TOKEN_NAME(stix));
+						set_syntax_error (moo, MOO_SYNERR_CHARLIT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
-					SET_TOKEN_TYPE (stix, STIX_IOTOK_CHARLIT);
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_CHARLIT);
 				}
 				else if (saved_c == 'M')
 				{
-					SET_TOKEN_TYPE (stix, STIX_IOTOK_SYMLIT);
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_SYMLIT);
 				}
 			}
 			else
 			{
-				if (get_ident(stix, saved_c) <= -1) return -1;
+				if (get_ident(moo, saved_c) <= -1) return -1;
 			}
 
 			break;
@@ -1628,15 +1635,15 @@ retry:
 
 	/*  case 'R':
 			TODO: regular expression?
-			GET_CHAR_TO (stix, c);
+			GET_CHAR_TO (moo, c);
 			if (c == '\'')
 			{
-				GET_CHAR (stix);
-				if (get_rexlit(stix) <= -1) return -1;
+				GET_CHAR (moo);
+				if (get_rexlit(moo) <= -1) return -1;
 			}
 			else
 			{
-				if (get_ident(stix, 'R') <= -1) return -1;
+				if (get_ident(moo, 'R') <= -1) return -1;
 			}
 			break;
 	 */
@@ -1644,145 +1651,145 @@ retry:
 		default:
 			if (is_leadidentchar(c)) 
 			{
-				if (get_ident(stix, STIX_UCI_EOF) <= -1) return -1;
+				if (get_ident(moo, MOO_UCI_EOF) <= -1) return -1;
 			}
 			else if (is_digitchar(c)) 
 			{
-				if (get_numlit(stix, 0) <= -1) return -1;
+				if (get_numlit(moo, 0) <= -1) return -1;
 			}
 			else if (is_binselchar(c)) 
 			{
 				/* binary selector */
-				if (get_binsel(stix) <= -1) return -1;
+				if (get_binsel(moo) <= -1) return -1;
 			}
 			else 
 			{
-				stix->c->ilchr = (stix_ooch_t)c;
-				set_syntax_error (stix, STIX_SYNERR_ILCHR, LEXER_LOC(stix), &stix->c->ilchr_ucs);
+				moo->c->ilchr = (moo_ooch_t)c;
+				set_syntax_error (moo, MOO_SYNERR_ILCHR, LEXER_LOC(moo), &moo->c->ilchr_ucs);
 				return -1;
 			}
 			break;
 
 		single_char_token:
-			ADD_TOKEN_CHAR(stix, c);
+			ADD_TOKEN_CHAR(moo, c);
 			break;
 	}
 
-STIX_DEBUG2 (stix, "TOKEN: [%.*js]\n", (stix_ooi_t)stix->c->tok.name.len, stix->c->tok.name.ptr);
+MOO_DEBUG2 (moo, "TOKEN: [%.*js]\n", (moo_ooi_t)moo->c->tok.name.len, moo->c->tok.name.ptr);
 
 	return 0;
 }
 
-static void clear_io_names (stix_t* stix)
+static void clear_io_names (moo_t* moo)
 {
-	stix_iolink_t* cur;
+	moo_iolink_t* cur;
 
-	STIX_ASSERT (stix, stix->c != STIX_NULL);
+	MOO_ASSERT (moo, moo->c != MOO_NULL);
 
-	while (stix->c->io_names)
+	while (moo->c->io_names)
 	{
-		cur = stix->c->io_names;
-		stix->c->io_names = cur->link;
-		stix_freemem (stix, cur);
+		cur = moo->c->io_names;
+		moo->c->io_names = cur->link;
+		moo_freemem (moo, cur);
 	}
 }
 
-static const stix_ooch_t* add_io_name (stix_t* stix, const stix_oocs_t* name)
+static const moo_ooch_t* add_io_name (moo_t* moo, const moo_oocs_t* name)
 {
-	stix_iolink_t* link;
-	stix_ooch_t* ptr;
+	moo_iolink_t* link;
+	moo_ooch_t* ptr;
 
-	link = (stix_iolink_t*) stix_callocmem (stix, STIX_SIZEOF(*link) + STIX_SIZEOF(stix_ooch_t) * (name->len + 1));
-	if (!link) return STIX_NULL;
+	link = (moo_iolink_t*) moo_callocmem (moo, MOO_SIZEOF(*link) + MOO_SIZEOF(moo_ooch_t) * (name->len + 1));
+	if (!link) return MOO_NULL;
 
-	ptr = (stix_ooch_t*)(link + 1);
+	ptr = (moo_ooch_t*)(link + 1);
 
-	stix_copyoochars (ptr, name->ptr, name->len);
+	moo_copyoochars (ptr, name->ptr, name->len);
 	ptr[name->len] = '\0';
 
-	link->link = stix->c->io_names;
-	stix->c->io_names = link;
+	link->link = moo->c->io_names;
+	moo->c->io_names = link;
 
 	return ptr;
 }
 
-static int begin_include (stix_t* stix)
+static int begin_include (moo_t* moo)
 {
-	stix_ioarg_t* arg;
-	const stix_ooch_t* io_name;
+	moo_ioarg_t* arg;
+	const moo_ooch_t* io_name;
 
-	io_name = add_io_name (stix, TOKEN_NAME(stix));
+	io_name = add_io_name (moo, TOKEN_NAME(moo));
 	if (!io_name) return -1;
 
-	arg = (stix_ioarg_t*) stix_callocmem (stix, STIX_SIZEOF(*arg));
+	arg = (moo_ioarg_t*) moo_callocmem (moo, MOO_SIZEOF(*arg));
 	if (!arg) goto oops;
 
 	arg->name = io_name;
 	arg->line = 1;
 	arg->colm = 1;
 	/*arg->nl = '\0';*/
-	arg->includer = stix->c->curinp;
+	arg->includer = moo->c->curinp;
 
-	if (stix->c->impl (stix, STIX_IO_OPEN, arg) <= -1) 
+	if (moo->c->impl (moo, MOO_IO_OPEN, arg) <= -1) 
 	{
-		set_syntax_error (stix, STIX_SYNERR_INCLUDE, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_INCLUDE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		goto oops;
 	}
 
-	GET_TOKEN (stix);
-	if (TOKEN_TYPE(stix) != STIX_IOTOK_PERIOD)
+	GET_TOKEN (moo);
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
 	{
 		/* check if a period is following the includee name */
-		set_syntax_error (stix, STIX_SYNERR_PERIOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		goto oops;
 	}
 
 	/* switch to the includee's stream */
-	stix->c->curinp = arg;
-	/* stix->c->depth.incl++; */
+	moo->c->curinp = arg;
+	/* moo->c->depth.incl++; */
 
 	/* read in the first character in the included file. 
 	 * so the next call to get_token() sees the character read
 	 * from this file. */
-	if (get_token(stix) <= -1) 
+	if (get_token(moo) <= -1) 
 	{
-		end_include (stix); 
+		end_include (moo); 
 		/* i don't jump to oops since i've called 
-		 * end_include() which frees stix->c->curinp/arg */
+		 * end_include() which frees moo->c->curinp/arg */
 		return -1;
 	}
 
 	return 0;
 
 oops:
-	if (arg) stix_freemem (stix, arg);
+	if (arg) moo_freemem (moo, arg);
 	return -1;
 }
 
-static int end_include (stix_t* stix)
+static int end_include (moo_t* moo)
 {
 	int x;
-	stix_ioarg_t* cur;
+	moo_ioarg_t* cur;
 
-	if (stix->c->curinp == &stix->c->arg) return 0; /* no include */
+	if (moo->c->curinp == &moo->c->arg) return 0; /* no include */
 
 	/* if it is an included file, close it and
 	 * retry to read a character from an outer file */
 
-	x = stix->c->impl (stix, STIX_IO_CLOSE, stix->c->curinp);
+	x = moo->c->impl (moo, MOO_IO_CLOSE, moo->c->curinp);
 
 	/* if closing has failed, still destroy the
 	 * sio structure first as normal and return
 	 * the failure below. this way, the caller 
-	 * does not call STIX_IO_CLOSE on 
-	 * stix->c->curinp again. */
+	 * does not call MOO_IO_CLOSE on 
+	 * moo->c->curinp again. */
 
-	cur = stix->c->curinp;
-	stix->c->curinp = stix->c->curinp->includer;
+	cur = moo->c->curinp;
+	moo->c->curinp = moo->c->curinp->includer;
 
-	STIX_ASSERT (stix, cur->name != STIX_NULL);
-	stix_freemem (stix, cur);
-	/* stix->parse.depth.incl--; */
+	MOO_ASSERT (moo, cur->name != MOO_NULL);
+	moo_freemem (moo, cur);
+	/* moo->parse.depth.incl--; */
 
 	if (x != 0)
 	{
@@ -1790,7 +1797,7 @@ static int end_include (stix_t* stix)
 		return -1;
 	}
 
-	stix->c->lxc = stix->c->curinp->lxc;
+	moo->c->lxc = moo->c->curinp->lxc;
 	return 1; /* ended the included file successfully */
 }
 
@@ -1798,40 +1805,40 @@ static int end_include (stix_t* stix)
  * Byte-Code Generator
  * --------------------------------------------------------------------- */
 
-static STIX_INLINE int emit_byte_instruction (stix_t* stix, stix_oob_t code)
+static MOO_INLINE int emit_byte_instruction (moo_t* moo, moo_oob_t code)
 {
 	/* the context object has the ip field. it should be representable
 	 * in a small integer. for simplicity, limit the total byte code length
 	 * to fit in a small integer. because 'ip' points to the next instruction
 	 * to execute, he upper bound should be (max - 1) so that i stays
 	 * at the max when incremented */
-	if (stix->c->mth.code.len == STIX_SMOOI_MAX - 1)
+	if (moo->c->mth.code.len == MOO_SMOOI_MAX - 1)
 	{
-		stix->errnum = STIX_EBCFULL; /* byte code too big */
+		moo->errnum = MOO_EBCFULL; /* byte code too big */
 		return -1;
 	}
 
-	if (stix->c->mth.code.len >= stix->c->mth.code_capa)
+	if (moo->c->mth.code.len >= moo->c->mth.code_capa)
 	{
-		stix_oob_t* tmp;
-		stix_oow_t newcapa;
+		moo_oob_t* tmp;
+		moo_oow_t newcapa;
 
-		newcapa = STIX_ALIGN (stix->c->mth.code.len + 1, CODE_BUFFER_ALIGN);
+		newcapa = MOO_ALIGN (moo->c->mth.code.len + 1, CODE_BUFFER_ALIGN);
 
-		tmp = stix_reallocmem (stix, stix->c->mth.code.ptr, newcapa * STIX_SIZEOF(*tmp));
+		tmp = moo_reallocmem (moo, moo->c->mth.code.ptr, newcapa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
-		stix->c->mth.code.ptr = tmp;
-		stix->c->mth.code_capa = newcapa;
+		moo->c->mth.code.ptr = tmp;
+		moo->c->mth.code_capa = newcapa;
 	}
 
-	stix->c->mth.code.ptr[stix->c->mth.code.len++] = code;
+	moo->c->mth.code.ptr[moo->c->mth.code.len++] = code;
 	return 0;
 }
 
-static int emit_single_param_instruction (stix_t* stix, int cmd, stix_oow_t param_1)
+static int emit_single_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1)
 {
-	stix_oob_t bc;
+	moo_oob_t bc;
 
 	switch (cmd)
 	{
@@ -1845,7 +1852,7 @@ static int emit_single_param_instruction (stix_t* stix, int cmd, stix_oow_t para
 			if (param_1 < 8)
 			{
 				/* low 3 bits to hold the parameter */
-				bc = (stix_oob_t)(cmd & 0xF8) | (stix_oob_t)param_1;
+				bc = (moo_oob_t)(cmd & 0xF8) | (moo_oob_t)param_1;
 				goto write_short;
 			}
 			else
@@ -1865,7 +1872,7 @@ static int emit_single_param_instruction (stix_t* stix, int cmd, stix_oow_t para
 			if (param_1 < 4)
 			{
 				/* low 2 bits to hold the parameter */
-				bc = (stix_oob_t)(cmd & 0xFC) | (stix_oob_t)param_1;
+				bc = (moo_oob_t)(cmd & 0xFC) | (moo_oob_t)param_1;
 				goto write_short;
 			}
 			else
@@ -1884,34 +1891,34 @@ static int emit_single_param_instruction (stix_t* stix, int cmd, stix_oow_t para
 			goto write_long;
 	}
 
-	stix->errnum = STIX_EINVAL;
+	moo->errnum = MOO_EINVAL;
 	return -1;
 
 write_short:
-	if (emit_byte_instruction(stix, bc) <= -1) return -1;
+	if (emit_byte_instruction(moo, bc) <= -1) return -1;
 	return 0;
 
 write_long:
 	if (param_1 > MAX_CODE_PARAM) 
 	{
-		stix->errnum = STIX_ERANGE;
+		moo->errnum = MOO_ERANGE;
 		return -1;
 	}
-#if (STIX_BCODE_LONG_PARAM_SIZE == 2)
-	if (emit_byte_instruction(stix, bc) <= -1 ||
-	    emit_byte_instruction(stix, (param_1 >> 8) & 0xFF) <= -1 ||
-	    emit_byte_instruction(stix, param_1 & 0xFF) <= -1) return -1;
+#if (MOO_BCODE_LONG_PARAM_SIZE == 2)
+	if (emit_byte_instruction(moo, bc) <= -1 ||
+	    emit_byte_instruction(moo, (param_1 >> 8) & 0xFF) <= -1 ||
+	    emit_byte_instruction(moo, param_1 & 0xFF) <= -1) return -1;
 #else
-	if (emit_byte_instruction(stix, bc) <= -1 ||
-	    emit_byte_instruction(stix, param_1) <= -1) return -1;
+	if (emit_byte_instruction(moo, bc) <= -1 ||
+	    emit_byte_instruction(moo, param_1) <= -1) return -1;
 #endif
 	return 0;
 }
 
 
-static int emit_double_param_instruction (stix_t* stix, int cmd, stix_oow_t param_1, stix_oow_t param_2)
+static int emit_double_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1, moo_oow_t param_2)
 {
-	stix_oob_t bc;
+	moo_oob_t bc;
 
 	switch (cmd)
 	{
@@ -1926,7 +1933,7 @@ static int emit_double_param_instruction (stix_t* stix, int cmd, stix_oow_t para
 			if (param_1 < 4 && param_2 < 0xFF)
 			{
 				/* low 2 bits of the instruction code is the first parameter */
-				bc = (stix_oob_t)(cmd & 0xFC) | (stix_oob_t)param_1;
+				bc = (moo_oob_t)(cmd & 0xFC) | (moo_oob_t)param_1;
 				goto write_short;
 			}
 			else
@@ -1941,80 +1948,80 @@ static int emit_double_param_instruction (stix_t* stix, int cmd, stix_oow_t para
 			goto write_long;
 	}
 
-	stix->errnum = STIX_EINVAL;
+	moo->errnum = MOO_EINVAL;
 	return -1;
 
 write_short:
-	if (emit_byte_instruction(stix, bc) <= -1 ||
-	    emit_byte_instruction(stix, param_2) <= -1) return -1;
+	if (emit_byte_instruction(moo, bc) <= -1 ||
+	    emit_byte_instruction(moo, param_2) <= -1) return -1;
 	return 0;
 
 write_long:
 	if (param_1 > MAX_CODE_PARAM || param_2 > MAX_CODE_PARAM) 
 	{
-		stix->errnum = STIX_ERANGE;
+		moo->errnum = MOO_ERANGE;
 		return -1;
 	}
-#if (STIX_BCODE_LONG_PARAM_SIZE == 2)
-	if (emit_byte_instruction(stix, bc) <= -1 ||
-	    emit_byte_instruction(stix, (param_1 >> 8) & 0xFF) <= -1 ||
-	    emit_byte_instruction(stix, param_1 & 0xFF) <= -1 ||
-	    emit_byte_instruction(stix, (param_2 >> 8) & 0xFF) <= -1 ||
-	    emit_byte_instruction(stix, param_2 & 0xFF) <= -1) return -1;
+#if (MOO_BCODE_LONG_PARAM_SIZE == 2)
+	if (emit_byte_instruction(moo, bc) <= -1 ||
+	    emit_byte_instruction(moo, (param_1 >> 8) & 0xFF) <= -1 ||
+	    emit_byte_instruction(moo, param_1 & 0xFF) <= -1 ||
+	    emit_byte_instruction(moo, (param_2 >> 8) & 0xFF) <= -1 ||
+	    emit_byte_instruction(moo, param_2 & 0xFF) <= -1) return -1;
 #else
 	
-	if (emit_byte_instruction(stix, bc) <= -1 ||
-	    emit_byte_instruction(stix, param_1) <= -1 ||
-	    emit_byte_instruction(stix, param_2) <= -1) return -1;
+	if (emit_byte_instruction(moo, bc) <= -1 ||
+	    emit_byte_instruction(moo, param_1) <= -1 ||
+	    emit_byte_instruction(moo, param_2) <= -1) return -1;
 #endif
 	return 0;
 }
 
-static int emit_push_smooi_literal (stix_t* stix, stix_ooi_t i)
+static int emit_push_smooi_literal (moo_t* moo, moo_ooi_t i)
 {
-	stix_oow_t index;
+	moo_oow_t index;
 
 	switch (i)
 	{
 		case -1:
-			return emit_byte_instruction (stix, BCODE_PUSH_NEGONE);
+			return emit_byte_instruction (moo, BCODE_PUSH_NEGONE);
 
 		case 0:
-			return emit_byte_instruction (stix, BCODE_PUSH_ZERO);
+			return emit_byte_instruction (moo, BCODE_PUSH_ZERO);
 
 		case 1:
-			return emit_byte_instruction (stix, BCODE_PUSH_ONE);
+			return emit_byte_instruction (moo, BCODE_PUSH_ONE);
 
 		case 2:
-			return emit_byte_instruction (stix, BCODE_PUSH_TWO);
+			return emit_byte_instruction (moo, BCODE_PUSH_TWO);
 	}
 
 	if (i >= 0 && i <= MAX_CODE_PARAM)
 	{
-		return emit_single_param_instruction(stix, BCODE_PUSH_INTLIT, i);
+		return emit_single_param_instruction(moo, BCODE_PUSH_INTLIT, i);
 	}
-	else if (i < 0 && i >= -(stix_ooi_t)MAX_CODE_PARAM)
+	else if (i < 0 && i >= -(moo_ooi_t)MAX_CODE_PARAM)
 	{
-		return emit_single_param_instruction(stix, BCODE_PUSH_NEGINTLIT, -i);
+		return emit_single_param_instruction(moo, BCODE_PUSH_NEGINTLIT, -i);
 	}
 
-	if (add_literal(stix, STIX_SMOOI_TO_OOP(i), &index) <= -1 ||
-	    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+	if (add_literal(moo, MOO_SMOOI_TO_OOP(i), &index) <= -1 ||
+	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 
 	return 0;
 }
 
-static int emit_push_character_literal (stix_t* stix, stix_ooch_t ch)
+static int emit_push_character_literal (moo_t* moo, moo_ooch_t ch)
 {
-	stix_oow_t index;
+	moo_oow_t index;
 
 	if (ch >= 0 && ch <= MAX_CODE_PARAM)
 	{
-		return emit_single_param_instruction (stix, BCODE_PUSH_CHARLIT, ch);
+		return emit_single_param_instruction (moo, BCODE_PUSH_CHARLIT, ch);
 	}
 
-	if (add_literal(stix, STIX_CHAR_TO_OOP(ch), &index) <= -1 ||
-	    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+	if (add_literal(moo, MOO_CHAR_TO_OOP(ch), &index) <= -1 ||
+	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 
 	return 0;
 }
@@ -2023,138 +2030,138 @@ static int emit_push_character_literal (stix_t* stix, stix_ooch_t ch)
  * --------------------------------------------------------------------- */
 
 
-static int add_literal (stix_t* stix, stix_oop_t lit, stix_oow_t* index)
+static int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index)
 {
-	stix_oow_t i;
+	moo_oow_t i;
 
-	for (i = 0; i < stix->c->mth.literal_count; i++) 
+	for (i = 0; i < moo->c->mth.literal_count; i++) 
 	{
 		/* 
 		 * this removes redundancy of symbols, characters, and small integers. 
 		 * more complex redundacy check may be done somewhere else like 
 		 * in add_string_literal().
 		 */
-		if (stix->c->mth.literals[i] == lit) 
+		if (moo->c->mth.literals[i] == lit) 
 		{
 			*index = i;
 			return i;
 		}
 	}
 
-	if (stix->c->mth.literal_count >= stix->c->mth.literal_capa)
+	if (moo->c->mth.literal_count >= moo->c->mth.literal_capa)
 	{
-		stix_oop_t* tmp;
-		stix_oow_t new_capa;
+		moo_oop_t* tmp;
+		moo_oow_t new_capa;
 
-		new_capa = STIX_ALIGN (stix->c->mth.literal_count + 1, LITERAL_BUFFER_ALIGN);
-		tmp = (stix_oop_t*)stix_reallocmem (stix, stix->c->mth.literals, new_capa * STIX_SIZEOF(*tmp));
+		new_capa = MOO_ALIGN (moo->c->mth.literal_count + 1, LITERAL_BUFFER_ALIGN);
+		tmp = (moo_oop_t*)moo_reallocmem (moo, moo->c->mth.literals, new_capa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
-		stix->c->mth.literal_capa = new_capa;
-		stix->c->mth.literals = tmp;
+		moo->c->mth.literal_capa = new_capa;
+		moo->c->mth.literals = tmp;
 	}
 
-	*index = stix->c->mth.literal_count;
-	stix->c->mth.literals[stix->c->mth.literal_count++] = lit;
+	*index = moo->c->mth.literal_count;
+	moo->c->mth.literals[moo->c->mth.literal_count++] = lit;
 	return 0;
 }
 
-static int add_string_literal (stix_t* stix, const stix_oocs_t* str, stix_oow_t* index)
+static int add_string_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* index)
 {
-	stix_oop_t lit;
-	stix_oow_t i;
+	moo_oop_t lit;
+	moo_oow_t i;
 
-	for (i = 0; i < stix->c->mth.literal_count; i++) 
+	for (i = 0; i < moo->c->mth.literal_count; i++) 
 	{
-		lit = stix->c->mth.literals[i];
+		lit = moo->c->mth.literals[i];
 
-		if (STIX_CLASSOF(stix, lit) == stix->_string && 
-		    STIX_OBJ_GET_SIZE(lit) == str->len &&
-		    stix_equaloochars(((stix_oop_char_t)lit)->slot, str->ptr, str->len)) 
+		if (MOO_CLASSOF(moo, lit) == moo->_string && 
+		    MOO_OBJ_GET_SIZE(lit) == str->len &&
+		    moo_equaloochars(((moo_oop_char_t)lit)->slot, str->ptr, str->len)) 
 		{
 			*index = i;
 			return 0;
 		}
 	}
 
-	lit = stix_instantiate (stix, stix->_string, str->ptr, str->len);
+	lit = moo_instantiate (moo, moo->_string, str->ptr, str->len);
 	if (!lit) return -1;
 
-	return add_literal (stix, lit, index);
+	return add_literal (moo, lit, index);
 }
 
-static int add_symbol_literal (stix_t* stix, const stix_oocs_t* str, int offset, stix_oow_t* index)
+static int add_symbol_literal (moo_t* moo, const moo_oocs_t* str, int offset, moo_oow_t* index)
 {
-	stix_oop_t tmp;
+	moo_oop_t tmp;
 
-	tmp = stix_makesymbol (stix, str->ptr + offset, str->len - offset);
+	tmp = moo_makesymbol (moo, str->ptr + offset, str->len - offset);
 	if (!tmp) return -1;
 
-	return add_literal (stix, tmp, index);
+	return add_literal (moo, tmp, index);
 }
 
-static STIX_INLINE int set_class_fqn (stix_t* stix, const stix_oocs_t* name)
+static MOO_INLINE int set_class_fqn (moo_t* moo, const moo_oocs_t* name)
 {
-	if (copy_string_to (stix, name, &stix->c->cls.fqn, &stix->c->cls.fqn_capa, 0, '\0') <= -1) return -1;
-	stix->c->cls.name = stix->c->cls.fqn;
+	if (copy_string_to (moo, name, &moo->c->cls.fqn, &moo->c->cls.fqn_capa, 0, '\0') <= -1) return -1;
+	moo->c->cls.name = moo->c->cls.fqn;
 	return 0;
 }
 
-static STIX_INLINE int set_superclass_fqn (stix_t* stix, const stix_oocs_t* name)
+static MOO_INLINE int set_superclass_fqn (moo_t* moo, const moo_oocs_t* name)
 {
-	if (copy_string_to (stix, name, &stix->c->cls.superfqn, &stix->c->cls.superfqn_capa, 0, '\0') <= -1) return -1;
-	stix->c->cls.supername = stix->c->cls.superfqn;
+	if (copy_string_to (moo, name, &moo->c->cls.superfqn, &moo->c->cls.superfqn_capa, 0, '\0') <= -1) return -1;
+	moo->c->cls.supername = moo->c->cls.superfqn;
 	return 0;
 }
 
-static STIX_INLINE int add_class_level_variable (stix_t* stix, var_type_t index, const stix_oocs_t* name)
+static MOO_INLINE int add_class_level_variable (moo_t* moo, var_type_t index, const moo_oocs_t* name)
 {
 	int n;
 
-	n = copy_string_to (stix, name, &stix->c->cls.vars[index], &stix->c->cls.vars_capa[index], 1, ' ');
+	n = copy_string_to (moo, name, &moo->c->cls.vars[index], &moo->c->cls.vars_capa[index], 1, ' ');
 	if (n >= 0) 
 	{
-		stix->c->cls.var_count[index]++;
-/* TODO: check if it exceeds STIX_MAX_NAMED_INSTVARS, STIX_MAX_CLASSVARS, STIX_MAX_CLASSINSTVARS */
+		moo->c->cls.var_count[index]++;
+/* TODO: check if it exceeds MOO_MAX_NAMED_INSTVARS, MOO_MAX_CLASSVARS, MOO_MAX_CLASSINSTVARS */
 	}
 
 	return n;
 }
 
-static STIX_INLINE int add_pool_dictionary (stix_t* stix, const stix_oocs_t* name, stix_oop_set_t pooldic_oop)
+static MOO_INLINE int add_pool_dictionary (moo_t* moo, const moo_oocs_t* name, moo_oop_set_t pooldic_oop)
 {
-	if (stix->c->cls.pooldic_count >= stix->c->cls.pooldic_imp_oops_capa)
+	if (moo->c->cls.pooldic_count >= moo->c->cls.pooldic_imp_oops_capa)
 	{
-		stix_oow_t new_capa;
-		stix_oop_set_t* tmp;
+		moo_oow_t new_capa;
+		moo_oop_set_t* tmp;
 
-		new_capa = STIX_ALIGN(stix->c->cls.pooldic_imp_oops_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
-		tmp = stix_reallocmem (stix, stix->c->cls.pooldic_imp_oops, new_capa * STIX_SIZEOF(stix_oop_set_t));
+		new_capa = MOO_ALIGN(moo->c->cls.pooldic_imp_oops_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
+		tmp = moo_reallocmem (moo, moo->c->cls.pooldic_imp_oops, new_capa * MOO_SIZEOF(moo_oop_set_t));
 		if (!tmp) return -1;
 
-		stix->c->cls.pooldic_imp_oops_capa = new_capa;
-		stix->c->cls.pooldic_imp_oops = tmp;
+		moo->c->cls.pooldic_imp_oops_capa = new_capa;
+		moo->c->cls.pooldic_imp_oops = tmp;
 	}
 
-	stix->c->cls.pooldic_imp_oops[stix->c->cls.pooldic_count] = pooldic_oop;
-	stix->c->cls.pooldic_count++;
+	moo->c->cls.pooldic_imp_oops[moo->c->cls.pooldic_count] = pooldic_oop;
+	moo->c->cls.pooldic_count++;
 /* TODO: check if pooldic_count overflows */
 
 	return 0;
 }
 
-static stix_ooi_t find_class_level_variable (stix_t* stix, stix_oop_class_t self, const stix_oocs_t* name, var_info_t* var)
+static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, const moo_oocs_t* name, var_info_t* var)
 {
-	stix_oow_t pos;
-	stix_oop_t super;
-	stix_oop_char_t v;
-	stix_oop_char_t* vv;
-	stix_oocs_t hs;
+	moo_oow_t pos;
+	moo_oop_t super;
+	moo_oop_char_t v;
+	moo_oop_char_t* vv;
+	moo_oocs_t hs;
 	int index;
 
 	if (self)
 	{
-		STIX_ASSERT (stix, STIX_CLASSOF(stix, self) == stix->_class);
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, self) == moo->_class);
 
 		/* [NOTE] 
 		 *  the loop here assumes that the class has the following
@@ -2168,13 +2175,13 @@ static stix_ooi_t find_class_level_variable (stix_t* stix, stix_oop_class_t self
 		{
 			v = vv[index];
 			hs.ptr = v->slot;
-			hs.len = STIX_OBJ_GET_SIZE(v);
+			hs.len = MOO_OBJ_GET_SIZE(v);
 
 			if (find_word_in_string(&hs, name, &pos) >= 0)
 			{
 				super = self->superclass;
 
-				/* 'self' may be STIX_NULL if STIX_NULL has been given for it.
+				/* 'self' may be MOO_NULL if MOO_NULL has been given for it.
 				 * the caller must take good care when interpreting the meaning of 
 				 * this field */
 				var->cls = self;
@@ -2190,19 +2197,19 @@ static stix_ooi_t find_class_level_variable (stix_t* stix, stix_oop_class_t self
 		 * find the variable in the compiler's own list */
 		for (index = VAR_INSTANCE; index <= VAR_CLASSINST; index++)
 		{
-			if (find_word_in_string(&stix->c->cls.vars[index], name, &pos) >= 0)
+			if (find_word_in_string(&moo->c->cls.vars[index], name, &pos) >= 0)
 			{
-				super = stix->c->cls.super_oop;
+				super = moo->c->cls.super_oop;
 				var->cls = self;
 				goto done;
 			}
 		}
-		super = stix->c->cls.super_oop;
+		super = moo->c->cls.super_oop;
 	}
 
-	while (super != stix->_nil)
+	while (super != moo->_nil)
 	{
-		STIX_ASSERT (stix, STIX_CLASSOF(stix, super) == stix->_class);
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, super) == moo->_class);
 
 		/* [NOTE] 
 		 *  the loop here assumes that the class has the following
@@ -2211,12 +2218,12 @@ static stix_ooi_t find_class_level_variable (stix_t* stix, stix_oop_class_t self
 		 *    classvars
 		 *    classinstvars
 		 */
-		vv = &((stix_oop_class_t)super)->instvars;
+		vv = &((moo_oop_class_t)super)->instvars;
 		for (index = VAR_INSTANCE; index <= VAR_CLASSINST; index++)
 		{
 			v = vv[index];
 			hs.ptr = v->slot;
-			hs.len = STIX_OBJ_GET_SIZE(v);
+			hs.len = MOO_OBJ_GET_SIZE(v);
 
 			if (find_word_in_string(&hs, name, &pos) >= 0)
 			{
@@ -2226,26 +2233,26 @@ static stix_ooi_t find_class_level_variable (stix_t* stix, stix_oop_class_t self
 				 * class variable. on the other hand, instance variables and
 				 * class instance variables live in the current class being 
 				 * compiled as they are inherited. */
-				var->cls = (index == VAR_CLASS)? (stix_oop_class_t)super: self;
-				super = ((stix_oop_class_t)super)->superclass;
+				var->cls = (index == VAR_CLASS)? (moo_oop_class_t)super: self;
+				super = ((moo_oop_class_t)super)->superclass;
 				goto done;
 			}
 		}
 
-		super = ((stix_oop_class_t)super)->superclass;
+		super = ((moo_oop_class_t)super)->superclass;
 	}
 
-	stix->errnum = STIX_ENOENT;
+	moo->errnum = MOO_ENOENT;
 	return -1;
 
 done:
-	if (super != stix->_nil)
+	if (super != moo->_nil)
 	{
-		stix_oow_t spec;
+		moo_oow_t spec;
 
 		/* the class being compiled has a superclass */
 
-		STIX_ASSERT (stix, STIX_CLASSOF(stix, super) == stix->_class);
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, super) == moo->_class);
 		switch (index)
 		{
 			case VAR_INSTANCE:
@@ -2253,8 +2260,8 @@ done:
 				 * accumulated for inheritance. the position found in the
 				 * local variable string can be adjusted by adding the
 				 * number in the superclass */
-				spec = STIX_OOP_TO_SMOOI(((stix_oop_class_t)super)->spec);
-				pos += STIX_CLASS_SPEC_NAMED_INSTVAR(spec);
+				spec = MOO_OOP_TO_SMOOI(((moo_oop_class_t)super)->spec);
+				pos += MOO_CLASS_SPEC_NAMED_INSTVAR(spec);
 				break;
 
 			case VAR_CLASS:
@@ -2268,8 +2275,8 @@ done:
 				break;
 
 			case VAR_CLASSINST:
-				spec = STIX_OOP_TO_SMOOI(((stix_oop_class_t)super)->selfspec);
-				pos += STIX_CLASS_SELFSPEC_CLASSINSTVAR(spec);
+				spec = MOO_OOP_TO_SMOOI(((moo_oop_class_t)super)->selfspec);
+				pos += MOO_CLASS_SELFSPEC_CLASSINSTVAR(spec);
 				break;
 		}
 	}
@@ -2279,127 +2286,127 @@ done:
 	return pos;
 }
 
-static int clone_assignee (stix_t* stix, const stix_oocs_t* name, stix_oow_t* offset)
+static int clone_assignee (moo_t* moo, const moo_oocs_t* name, moo_oow_t* offset)
 {
 	int n;
-	stix_oow_t old_len;
+	moo_oow_t old_len;
 
-	old_len = stix->c->mth.assignees.len;
-	n = copy_string_to (stix, name, &stix->c->mth.assignees, &stix->c->mth.assignees_capa, 1, '\0');
+	old_len = moo->c->mth.assignees.len;
+	n = copy_string_to (moo, name, &moo->c->mth.assignees, &moo->c->mth.assignees_capa, 1, '\0');
 	if (n <= -1) return -1;
 
 	/* update the pointer to of the name. its length is the same. */
-	/*name->ptr = stix->c->mth.assignees.ptr + old_len;*/
+	/*name->ptr = moo->c->mth.assignees.ptr + old_len;*/
 	*offset = old_len;
 	return 0;
 }
 
-static int clone_binary_selector (stix_t* stix, const stix_oocs_t* name, stix_oow_t* offset)
+static int clone_binary_selector (moo_t* moo, const moo_oocs_t* name, moo_oow_t* offset)
 {
 	int n;
-	stix_oow_t old_len;
+	moo_oow_t old_len;
 
-	old_len = stix->c->mth.binsels.len;
-	n = copy_string_to (stix, name, &stix->c->mth.binsels, &stix->c->mth.binsels_capa, 1, '\0');
+	old_len = moo->c->mth.binsels.len;
+	n = copy_string_to (moo, name, &moo->c->mth.binsels, &moo->c->mth.binsels_capa, 1, '\0');
 	if (n <= -1) return -1;
 
 	/* update the pointer to of the name. its length is the same. */
-	/*name->ptr = stix->c->mth.binsels.ptr + old_len;*/
+	/*name->ptr = moo->c->mth.binsels.ptr + old_len;*/
 	*offset = old_len;
 	return 0;
 }
 
-static int clone_keyword (stix_t* stix, const stix_oocs_t* name, stix_oow_t* offset)
+static int clone_keyword (moo_t* moo, const moo_oocs_t* name, moo_oow_t* offset)
 {
 	int n;
-	stix_oow_t old_len;
+	moo_oow_t old_len;
 
-	old_len = stix->c->mth.kwsels.len;
-	n = copy_string_to (stix, name, &stix->c->mth.kwsels, &stix->c->mth.kwsels_capa, 1, '\0');
+	old_len = moo->c->mth.kwsels.len;
+	n = copy_string_to (moo, name, &moo->c->mth.kwsels, &moo->c->mth.kwsels_capa, 1, '\0');
 	if (n <= -1) return -1;
 
 	/* update the pointer to of the name. its length is the same. */
-	/*name->ptr = stix->c->mth.kwsels.ptr + old_len;*/
+	/*name->ptr = moo->c->mth.kwsels.ptr + old_len;*/
 	*offset = old_len;
 	return 0;
 }
 
-static int add_method_name_fragment (stix_t* stix, const stix_oocs_t* name)
+static int add_method_name_fragment (moo_t* moo, const moo_oocs_t* name)
 {
 	/* method name fragments are concatenated without any delimiters */
-	return copy_string_to (stix, name, &stix->c->mth.name, &stix->c->mth.name_capa, 1, '\0');
+	return copy_string_to (moo, name, &moo->c->mth.name, &moo->c->mth.name_capa, 1, '\0');
 }
 
-static int method_exists (stix_t* stix, const stix_oocs_t* name)
+static int method_exists (moo_t* moo, const moo_oocs_t* name)
 {
 	/* check if the current class contains a method of the given name */
 #ifdef MTHDIC
-	return stix_lookupdic (stix, stix->c->cls.mthdic_oop[stix->c->mth.type], name) != STIX_NULL;
+	return moo_lookupdic (moo, moo->c->cls.mthdic_oop[moo->c->mth.type], name) != MOO_NULL;
 #else
-	return stix_lookupdic (stix, stix->c->cls.self_oop->mthdic[stix->c->mth.type], name) != STIX_NULL;
+	return moo_lookupdic (moo, moo->c->cls.self_oop->mthdic[moo->c->mth.type], name) != MOO_NULL;
 #endif
 }
 
-static int add_temporary_variable (stix_t* stix, const stix_oocs_t* name)
+static int add_temporary_variable (moo_t* moo, const moo_oocs_t* name)
 {
 	/* temporary variable names are added to the string with leading
 	 * space if it's not the first variable */
-	return copy_string_to (stix, name, &stix->c->mth.tmprs, &stix->c->mth.tmprs_capa, 1, ' ');
+	return copy_string_to (moo, name, &moo->c->mth.tmprs, &moo->c->mth.tmprs_capa, 1, ' ');
 }
 
-static STIX_INLINE int find_temporary_variable (stix_t* stix, const stix_oocs_t* name, stix_oow_t* xindex)
+static MOO_INLINE int find_temporary_variable (moo_t* moo, const moo_oocs_t* name, moo_oow_t* xindex)
 {
-	return find_word_in_string (&stix->c->mth.tmprs, name, xindex);
+	return find_word_in_string (&moo->c->mth.tmprs, name, xindex);
 }
 
-static stix_oop_set_t add_namespace (stix_t* stix, stix_oop_set_t dic, const stix_oocs_t* name)
+static moo_oop_set_t add_namespace (moo_t* moo, moo_oop_set_t dic, const moo_oocs_t* name)
 {
-	stix_oow_t tmp_count = 0;
-	stix_oop_t sym;
-	stix_oop_set_t ns;
-	stix_oop_association_t ass;
+	moo_oow_t tmp_count = 0;
+	moo_oop_t sym;
+	moo_oop_set_t ns;
+	moo_oop_association_t ass;
 
-	stix_pushtmp (stix, (stix_oop_t*)&dic); tmp_count++;
+	moo_pushtmp (moo, (moo_oop_t*)&dic); tmp_count++;
 
-	sym = stix_makesymbol (stix, name->ptr, name->len);
+	sym = moo_makesymbol (moo, name->ptr, name->len);
 	if (!sym) goto oops;
 
-	stix_pushtmp (stix, &sym); tmp_count++;
+	moo_pushtmp (moo, &sym); tmp_count++;
 
-	ns = stix_makedic (stix, stix->_namespace, NAMESPACE_SIZE);
+	ns = moo_makedic (moo, moo->_namespace, NAMESPACE_SIZE);
 	if (!ns) goto oops;
 
-	/*stix_pushtmp (stix, &ns); tmp_count++;*/
+	/*moo_pushtmp (moo, &ns); tmp_count++;*/
 
-	ass = stix_putatdic (stix, dic, sym, (stix_oop_t)ns);
+	ass = moo_putatdic (moo, dic, sym, (moo_oop_t)ns);
 	if (!ass) goto oops;
 
-	stix_poptmps (stix, tmp_count);
-	return (stix_oop_set_t)ass->value;
+	moo_poptmps (moo, tmp_count);
+	return (moo_oop_set_t)ass->value;
 
 oops:
-	stix_poptmps (stix, tmp_count);
-	return STIX_NULL;
+	moo_poptmps (moo, tmp_count);
+	return MOO_NULL;
 }
 
-static int preprocess_dotted_name (stix_t* stix, int dont_add_ns, int accept_pooldic_as_ns, const stix_oocs_t* fqn, const stix_ioloc_t* fqn_loc, stix_oocs_t* name, stix_oop_set_t* ns_oop)
+static int preprocess_dotted_name (moo_t* moo, int dont_add_ns, int accept_pooldic_as_ns, const moo_oocs_t* fqn, const moo_ioloc_t* fqn_loc, moo_oocs_t* name, moo_oop_set_t* ns_oop)
 {
-	const stix_ooch_t* ptr, * dot;
-	stix_oow_t len;
-	stix_oocs_t seg;
-	stix_oop_set_t dic;
-	stix_oop_association_t ass;
+	const moo_ooch_t* ptr, * dot;
+	moo_oow_t len;
+	moo_oocs_t seg;
+	moo_oop_set_t dic;
+	moo_oop_association_t ass;
 	int pooldic_gotten = 0;
 
-	dic = stix->sysdic;
+	dic = moo->sysdic;
 	ptr = fqn->ptr;
 	len = fqn->len;
 
 	while (1)
 	{
-		seg.ptr = (stix_ooch_t*)ptr;
+		seg.ptr = (moo_ooch_t*)ptr;
 
-		dot = stix_findoochar (ptr, len, '.');
+		dot = moo_findoochar (ptr, len, '.');
 		if (dot)
 		{
 			if (pooldic_gotten) goto wrong_name;
@@ -2408,23 +2415,23 @@ static int preprocess_dotted_name (stix_t* stix, int dont_add_ns, int accept_poo
 
 			if (is_reserved_word(&seg)) goto wrong_name;
 
-			ass = stix_lookupdic (stix, dic, &seg);
+			ass = moo_lookupdic (moo, dic, &seg);
 			if (ass)
 			{
-				if (STIX_CLASSOF(stix, ass->value) == stix->_namespace || 
-				    (seg.ptr == fqn->ptr && ass->value == (stix_oop_t)stix->sysdic))
+				if (MOO_CLASSOF(moo, ass->value) == moo->_namespace || 
+				    (seg.ptr == fqn->ptr && ass->value == (moo_oop_t)moo->sysdic))
 				{
 					/* ok */
-					dic = (stix_oop_set_t)ass->value;
+					dic = (moo_oop_set_t)ass->value;
 				}
 				else
 				{
-					if (accept_pooldic_as_ns && STIX_CLASSOF(stix, ass->value) == stix->_pool_dictionary)
+					if (accept_pooldic_as_ns && MOO_CLASSOF(moo, ass->value) == moo->_pool_dictionary)
 					{
 						/* A pool dictionary is treated as if it's a name space.
 						 * However, the pool dictionary can only act as a name space
 						 * if it's the second last segment. */
-						dic = (stix_oop_set_t)ass->value;
+						dic = (moo_oop_set_t)ass->value;
 						pooldic_gotten = 1;
 					}
 					else
@@ -2435,7 +2442,7 @@ static int preprocess_dotted_name (stix_t* stix, int dont_add_ns, int accept_poo
 			}
 			else
 			{
-				stix_oop_set_t t;
+				moo_oop_set_t t;
 
 				/* the segment does not exist. add it */
 				if (dont_add_ns)
@@ -2446,7 +2453,7 @@ static int preprocess_dotted_name (stix_t* stix, int dont_add_ns, int accept_poo
 				}
 				
 				/* When definining a new class, add a missing namespace */
-				t = add_namespace (stix, dic, &seg);
+				t = add_namespace (moo, dic, &seg);
 				if (!t) return -1;
 
 				dic = t;
@@ -2474,42 +2481,42 @@ static int preprocess_dotted_name (stix_t* stix, int dont_add_ns, int accept_poo
 wrong_name:
 	seg.len += seg.ptr - fqn->ptr;
 	seg.ptr = fqn->ptr;
-	set_syntax_error (stix, STIX_SYNERR_NAMESPACE, fqn_loc, &seg);
+	set_syntax_error (moo, MOO_SYNERR_NAMESPACE, fqn_loc, &seg);
 	return -1;
 }
 
-static int resolve_pooldic (stix_t* stix, int dotted, const stix_oocs_t* name)
+static int resolve_pooldic (moo_t* moo, int dotted, const moo_oocs_t* name)
 {
-	stix_oocs_t last; /* the last segment */
-	stix_oop_set_t ns_oop; /* name space */
-	stix_oop_association_t ass;
-	stix_oow_t i;
+	moo_oocs_t last; /* the last segment */
+	moo_oop_set_t ns_oop; /* name space */
+	moo_oop_association_t ass;
+	moo_oow_t i;
 
 	if (dotted)
 	{
-		if (preprocess_dotted_name(stix, 0, 0, name, TOKEN_LOC(stix), &last, &ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name(moo, 0, 0, name, TOKEN_LOC(moo), &last, &ns_oop) <= -1) return -1;
 	}
 	else
 	{
 		last = *name;
 		/* it falls back to the name space of the class */
-		ns_oop = stix->c->cls.ns_oop; 
+		ns_oop = moo->c->cls.ns_oop; 
 	}
 
 	/* check if the name refers to a pool dictionary */
-	ass = stix_lookupdic (stix, ns_oop, &last);
-	if (!ass || STIX_CLASSOF(stix, ass->value) != stix->_pool_dictionary)
+	ass = moo_lookupdic (moo, ns_oop, &last);
+	if (!ass || MOO_CLASSOF(moo, ass->value) != moo->_pool_dictionary)
 	{
-		set_syntax_error (stix, STIX_SYNERR_POOLDIC, TOKEN_LOC(stix), name);
+		set_syntax_error (moo, MOO_SYNERR_POOLDIC, TOKEN_LOC(moo), name);
 		return -1;
 	}
 
 	/* check if the same dictionary pool has been declared for import */
-	for (i = 0; i < stix->c->cls.pooldic_count; i++)
+	for (i = 0; i < moo->c->cls.pooldic_count; i++)
 	{
-		if ((stix_oop_set_t)ass->value == stix->c->cls.pooldic_imp_oops[i])
+		if ((moo_oop_set_t)ass->value == moo->c->cls.pooldic_imp_oops[i])
 		{
-			set_syntax_error (stix, STIX_SYNERR_POOLDICDUP, TOKEN_LOC(stix), name);
+			set_syntax_error (moo, MOO_SYNERR_POOLDICDUP, TOKEN_LOC(moo), name);
 			return -1;
 		}
 	}
@@ -2517,99 +2524,99 @@ static int resolve_pooldic (stix_t* stix, int dotted, const stix_oocs_t* name)
 	return 0;
 }
 
-static int import_pool_dictionary (stix_t* stix, stix_oop_set_t ns_oop, const stix_oocs_t* tok_lastseg, const stix_oocs_t* tok_name, const stix_ioloc_t* tok_loc)
+static int import_pool_dictionary (moo_t* moo, moo_oop_set_t ns_oop, const moo_oocs_t* tok_lastseg, const moo_oocs_t* tok_name, const moo_ioloc_t* tok_loc)
 {
-	stix_oop_association_t ass;
-	stix_oow_t i;
+	moo_oop_association_t ass;
+	moo_oow_t i;
 
 	/* check if the name refers to a pool dictionary */
-	ass = stix_lookupdic (stix, ns_oop, tok_lastseg);
-	if (!ass || STIX_CLASSOF(stix, ass->value) != stix->_pool_dictionary)
+	ass = moo_lookupdic (moo, ns_oop, tok_lastseg);
+	if (!ass || MOO_CLASSOF(moo, ass->value) != moo->_pool_dictionary)
 	{
-		set_syntax_error (stix, STIX_SYNERR_POOLDIC, tok_loc, tok_name);
+		set_syntax_error (moo, MOO_SYNERR_POOLDIC, tok_loc, tok_name);
 		return -1;
 	}
 
 	/* check if the same dictionary pool has been declared for import */
-	for (i = 0; i < stix->c->cls.pooldic_count; i++)
+	for (i = 0; i < moo->c->cls.pooldic_count; i++)
 	{
-		if ((stix_oop_set_t)ass->value == stix->c->cls.pooldic_imp_oops[i])
+		if ((moo_oop_set_t)ass->value == moo->c->cls.pooldic_imp_oops[i])
 		{
-			set_syntax_error (stix, STIX_SYNERR_POOLDICDUP, tok_loc, tok_name);
+			set_syntax_error (moo, MOO_SYNERR_POOLDICDUP, tok_loc, tok_name);
 			return -1;
 		}
 	}
 
-	if (add_pool_dictionary(stix, tok_name, (stix_oop_set_t)ass->value) <= -1) return -1;
-	if (copy_string_to (stix, tok_name, &stix->c->cls.pooldic, &stix->c->cls.pooldic_capa, 1, ' ') <= -1)
+	if (add_pool_dictionary(moo, tok_name, (moo_oop_set_t)ass->value) <= -1) return -1;
+	if (copy_string_to (moo, tok_name, &moo->c->cls.pooldic, &moo->c->cls.pooldic_capa, 1, ' ') <= -1)
 	{
-		stix->c->cls.pooldic_count--; /* roll back add_pool_dictionary() */
+		moo->c->cls.pooldic_count--; /* roll back add_pool_dictionary() */
 		return -1;
 	}
 
 	return 0;
 }
 
-static int compile_class_level_variables (stix_t* stix)
+static int compile_class_level_variables (moo_t* moo)
 {
 	var_type_t dcl_type = VAR_INSTANCE;
 
-	if (TOKEN_TYPE(stix) == STIX_IOTOK_LPAREN)
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
 		/* process variable modifiers */
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 
-		if (is_token_symbol(stix, VOCA_CLASS_S))
+		if (is_token_symbol(moo, VOCA_CLASS_S))
 		{
 			/* dcl(#class) */
 			dcl_type = VAR_CLASS;
-			GET_TOKEN (stix);
+			GET_TOKEN (moo);
 		}
-		else if (is_token_symbol(stix, VOCA_CLASSINST_S))
+		else if (is_token_symbol(moo, VOCA_CLASSINST_S))
 		{
 			/* dcl(#classinst) */
 			dcl_type = VAR_CLASSINST;
-			GET_TOKEN (stix);
+			GET_TOKEN (moo);
 		}
-		else if (is_token_symbol(stix, VOCA_POOLDIC_S))
+		else if (is_token_symbol(moo, VOCA_POOLDIC_S))
 		{
 			/* dcl(#pooldic) - import a pool dictionary */
 			dcl_type = VAR_GLOBAL; /* this is not a real type. use for branching below */
-			GET_TOKEN (stix);
+			GET_TOKEN (moo);
 		}
 
-		if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 		{
-			set_syntax_error (stix, STIX_SYNERR_RPAREN, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 	}
 
 	if (dcl_type == VAR_GLOBAL) 
 	{
 		/* pool dictionary import declaration
 		 * #dcl(#pooldic) ... */
-		stix_oocs_t last;
-		stix_oop_set_t ns_oop;
+		moo_oocs_t last;
+		moo_oop_set_t ns_oop;
 
 		do
 		{
-			if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT_DOTTED)
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 			{
-				if (preprocess_dotted_name(stix, 0, 0, TOKEN_NAME(stix), TOKEN_LOC(stix), &last, &ns_oop) <= -1) return -1;
+				if (preprocess_dotted_name(moo, 0, 0, TOKEN_NAME(moo), TOKEN_LOC(moo), &last, &ns_oop) <= -1) return -1;
 			}
-			else if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT)
+			else if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
 			{
-				last = stix->c->tok.name;
+				last = moo->c->tok.name;
 				/* it falls back to the name space of the class */
-				ns_oop = stix->c->cls.ns_oop; 
+				ns_oop = moo->c->cls.ns_oop; 
 			}
 			else break;
 
-			if (import_pool_dictionary(stix, ns_oop, &last, TOKEN_NAME(stix), TOKEN_LOC(stix)) <= -1) return -1;
-			GET_TOKEN (stix);
+			if (import_pool_dictionary(moo, ns_oop, &last, TOKEN_NAME(moo), TOKEN_LOC(moo)) <= -1) return -1;
+			GET_TOKEN (moo);
 		}
 		while (1);
 	}
@@ -2618,7 +2625,7 @@ static int compile_class_level_variables (stix_t* stix)
 		/* variable declaration */
 		do
 		{
-			if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT)
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
 			{
 				var_info_t var;
 
@@ -2631,168 +2638,168 @@ if super is variable-pointer, self must be a variable-pointer. can't be fixed ei
 if super is variable-nonpointer, self must be a variable-nonpointer of the same type. can't be fixed either
 if super is variable-nonpointer, no instance variable is allowed.
 */
-				if (dcl_type == VAR_INSTANCE && (stix->c->cls.flags & CLASS_INDEXED) && (stix->c->cls.indexed_type != STIX_OBJ_TYPE_OOP))
+				if (dcl_type == VAR_INSTANCE && (moo->c->cls.flags & CLASS_INDEXED) && (moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP))
 				{
-					set_syntax_error (stix, STIX_SYNERR_VARNAMEDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
+					set_syntax_error (moo, MOO_SYNERR_VARNAMEDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
-				if (find_class_level_variable(stix, STIX_NULL, TOKEN_NAME(stix), &var) >= 0 ||
-				    stix_lookupdic (stix, stix->sysdic, TOKEN_NAME(stix)) ||  /* conflicts with a top global name */
-				    stix_lookupdic (stix, stix->c->cls.ns_oop, TOKEN_NAME(stix))) /* conflicts with a global name in the class'es name space */
+				if (find_class_level_variable(moo, MOO_NULL, TOKEN_NAME(moo), &var) >= 0 ||
+				    moo_lookupdic (moo, moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
+				    moo_lookupdic (moo, moo->c->cls.ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
 				{
-					set_syntax_error (stix, STIX_SYNERR_VARNAMEDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
+					set_syntax_error (moo, MOO_SYNERR_VARNAMEDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
-				if (add_class_level_variable(stix, dcl_type, TOKEN_NAME(stix)) <= -1) return -1;
+				if (add_class_level_variable(moo, dcl_type, TOKEN_NAME(moo)) <= -1) return -1;
 			}
 			else
 			{
 				break;
 			}
 
-			GET_TOKEN (stix);
+			GET_TOKEN (moo);
 		}
 		while (1);
 	}
 
-	if (TOKEN_TYPE(stix) != STIX_IOTOK_PERIOD)
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
 	{
-		set_syntax_error (stix, STIX_SYNERR_PERIOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
-	GET_TOKEN (stix);
+	GET_TOKEN (moo);
 	return 0;
 }
 
-static int compile_unary_method_name (stix_t* stix)
+static int compile_unary_method_name (moo_t* moo)
 {
-	STIX_ASSERT (stix, stix->c->mth.name.len == 0);
-	STIX_ASSERT (stix, stix->c->mth.tmpr_nargs == 0);
+	MOO_ASSERT (moo, moo->c->mth.name.len == 0);
+	MOO_ASSERT (moo, moo->c->mth.tmpr_nargs == 0);
 
-	if (add_method_name_fragment(stix, TOKEN_NAME(stix)) <= -1) return -1;
-	GET_TOKEN (stix);
+	if (add_method_name_fragment(moo, TOKEN_NAME(moo)) <= -1) return -1;
+	GET_TOKEN (moo);
 
-	if (TOKEN_TYPE(stix) == STIX_IOTOK_LPAREN)
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
 		/* this is a procedural style method */
-		STIX_ASSERT (stix, stix->c->mth.tmpr_nargs == 0);
+		MOO_ASSERT (moo, moo->c->mth.tmpr_nargs == 0);
 
-		GET_TOKEN (stix);
-		if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
+		GET_TOKEN (moo);
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 		{
 			do
 			{
-				if (TOKEN_TYPE(stix) != STIX_IOTOK_IDENT) 
+				if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT) 
 				{
 					/* wrong argument name. identifier is expected */
-					set_syntax_error (stix, STIX_SYNERR_IDENT, TOKEN_LOC(stix), TOKEN_NAME(stix));
+					set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
-				if (find_temporary_variable(stix, TOKEN_NAME(stix), STIX_NULL) >= 0)
+				if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 				{
-					set_syntax_error (stix, STIX_SYNERR_ARGNAMEDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
+					set_syntax_error (moo, MOO_SYNERR_ARGNAMEDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
-				if (add_temporary_variable(stix, TOKEN_NAME(stix)) <= -1) return -1;
-				stix->c->mth.tmpr_nargs++;
-				GET_TOKEN (stix); 
+				if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
+				moo->c->mth.tmpr_nargs++;
+				GET_TOKEN (moo); 
 
-				if (TOKEN_TYPE(stix) == STIX_IOTOK_RPAREN) break;
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN) break;
 
-				if (TOKEN_TYPE(stix) != STIX_IOTOK_COMMA)
+				if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA)
 				{
-					set_syntax_error (stix, STIX_SYNERR_COMMA, TOKEN_LOC(stix), TOKEN_NAME(stix));
+					set_syntax_error (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
-				GET_TOKEN (stix);
+				GET_TOKEN (moo);
 			} 
 			while (1);
 		}
 
 		/* indicate that the unary method name is followed by a parameter list */
-		stix->c->mth.variadic = 1;
-		GET_TOKEN (stix);
+		moo->c->mth.variadic = 1;
+		GET_TOKEN (moo);
 	}
 
 	return 0;
 }
 
-static int compile_binary_method_name (stix_t* stix)
+static int compile_binary_method_name (moo_t* moo)
 {
-	STIX_ASSERT (stix, stix->c->mth.name.len == 0);
-	STIX_ASSERT (stix, stix->c->mth.tmpr_nargs == 0);
+	MOO_ASSERT (moo, moo->c->mth.name.len == 0);
+	MOO_ASSERT (moo, moo->c->mth.tmpr_nargs == 0);
 
-	if (add_method_name_fragment(stix, TOKEN_NAME(stix)) <= -1) return -1;
-	GET_TOKEN (stix);
+	if (add_method_name_fragment(moo, TOKEN_NAME(moo)) <= -1) return -1;
+	GET_TOKEN (moo);
 
 	/* collect the argument name */
-	if (TOKEN_TYPE(stix) != STIX_IOTOK_IDENT) 
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT) 
 	{
 		/* wrong argument name. identifier expected */
-		set_syntax_error (stix, STIX_SYNERR_IDENT, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
-	STIX_ASSERT (stix, stix->c->mth.tmpr_nargs == 0);
+	MOO_ASSERT (moo, moo->c->mth.tmpr_nargs == 0);
 
 	/* no duplication check is performed against class-level variable names.
 	 * a duplcate name will shade a previsouly defined variable. */
-	if (add_temporary_variable(stix, TOKEN_NAME(stix)) <= -1) return -1;
-	stix->c->mth.tmpr_nargs++;
+	if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
+	moo->c->mth.tmpr_nargs++;
 
-	STIX_ASSERT (stix, stix->c->mth.tmpr_nargs == 1);
+	MOO_ASSERT (moo, moo->c->mth.tmpr_nargs == 1);
 	/* this check should not be not necessary
-	if (stix->c->mth.tmpr_nargs > MAX_CODE_NARGS)
+	if (moo->c->mth.tmpr_nargs > MAX_CODE_NARGS)
 	{
-		set_syntax_error (stix, STIX_SYNERR_ARGFLOOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_ARGFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 	*/
 
-	GET_TOKEN (stix);
+	GET_TOKEN (moo);
 	return 0;
 }
 
-static int compile_keyword_method_name (stix_t* stix)
+static int compile_keyword_method_name (moo_t* moo)
 {
-	STIX_ASSERT (stix, stix->c->mth.name.len == 0);
-	STIX_ASSERT (stix, stix->c->mth.tmpr_nargs == 0);
+	MOO_ASSERT (moo, moo->c->mth.name.len == 0);
+	MOO_ASSERT (moo, moo->c->mth.tmpr_nargs == 0);
 
 	do 
 	{
-		if (add_method_name_fragment(stix, TOKEN_NAME(stix)) <= -1) return -1;
+		if (add_method_name_fragment(moo, TOKEN_NAME(moo)) <= -1) return -1;
 
-		GET_TOKEN (stix);
-		if (TOKEN_TYPE(stix) != STIX_IOTOK_IDENT) 
+		GET_TOKEN (moo);
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT) 
 		{
 			/* wrong argument name. identifier is expected */
-			set_syntax_error (stix, STIX_SYNERR_IDENT, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		if (find_temporary_variable(stix, TOKEN_NAME(stix), STIX_NULL) >= 0)
+		if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 		{
-			set_syntax_error (stix, STIX_SYNERR_ARGNAMEDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_ARGNAMEDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		if (add_temporary_variable(stix, TOKEN_NAME(stix)) <= -1) return -1;
-		stix->c->mth.tmpr_nargs++;
+		if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
+		moo->c->mth.tmpr_nargs++;
 
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 	} 
-	while (TOKEN_TYPE(stix) == STIX_IOTOK_KEYWORD);
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD);
 
 	return 0;
 }
 
-static int compile_method_name (stix_t* stix)
+static int compile_method_name (moo_t* moo)
 {
 	/* 
 	 * method-name := unary-method-name | binary-method-name | keyword-method-name
@@ -2804,92 +2811,92 @@ static int compile_method_name (stix_t* stix)
 	 */
 	int n;
 
-	STIX_ASSERT (stix, stix->c->mth.tmpr_count == 0);
+	MOO_ASSERT (moo, moo->c->mth.tmpr_count == 0);
 
-	stix->c->mth.name_loc = stix->c->tok.loc;
-	switch (TOKEN_TYPE(stix))
+	moo->c->mth.name_loc = moo->c->tok.loc;
+	switch (TOKEN_TYPE(moo))
 	{
-		case STIX_IOTOK_IDENT:
-			n = compile_unary_method_name(stix);
+		case MOO_IOTOK_IDENT:
+			n = compile_unary_method_name(moo);
 			break;
 
-		case STIX_IOTOK_BINSEL:
-			n = compile_binary_method_name(stix);
+		case MOO_IOTOK_BINSEL:
+			n = compile_binary_method_name(moo);
 			break;
 
-		case STIX_IOTOK_KEYWORD:
-			n = compile_keyword_method_name(stix);
+		case MOO_IOTOK_KEYWORD:
+			n = compile_keyword_method_name(moo);
 			break;
 
 		default:
 			/* illegal method name  */
-			set_syntax_error (stix, STIX_SYNERR_MTHNAME, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_MTHNAME, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			n = -1;
 	}
 
 	if (n >= 0)
 	{
-		if (method_exists(stix, &stix->c->mth.name)) 
+		if (method_exists(moo, &moo->c->mth.name)) 
  		{
-			set_syntax_error (stix, STIX_SYNERR_MTHNAMEDUP, &stix->c->mth.name_loc, &stix->c->mth.name);
+			set_syntax_error (moo, MOO_SYNERR_MTHNAMEDUP, &moo->c->mth.name_loc, &moo->c->mth.name);
 			return -1;
  		}
 	}
 
-	STIX_ASSERT (stix, stix->c->mth.tmpr_nargs < MAX_CODE_NARGS);
+	MOO_ASSERT (moo, moo->c->mth.tmpr_nargs < MAX_CODE_NARGS);
 	/* the total number of temporaries is equal to the number of 
 	 * arguments after having processed the message pattern. it's because
-	 * stix treats arguments the same as temporaries */
-	stix->c->mth.tmpr_count = stix->c->mth.tmpr_nargs;
+	 * moo treats arguments the same as temporaries */
+	moo->c->mth.tmpr_count = moo->c->mth.tmpr_nargs;
 	return n;
 }
 
-static int compile_method_temporaries (stix_t* stix)
+static int compile_method_temporaries (moo_t* moo)
 {
 	/* 
 	 * method-temporaries := "|" variable-list "|"
 	 * variable-list := identifier*
 	 */
 
-	if (!is_token_binary_selector(stix, VOCA_VBAR)) 
+	if (!is_token_binary_selector(moo, VOCA_VBAR)) 
 	{
 		/* return without doing anything if | is not found.
 		 * this is not an error condition */
 		return 0;
 	}
 
-	GET_TOKEN (stix);
-	while (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT) 
+	GET_TOKEN (moo);
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT) 
 	{
-		if (find_temporary_variable(stix, TOKEN_NAME(stix), STIX_NULL) >= 0)
+		if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 		{
-			set_syntax_error (stix, STIX_SYNERR_TMPRNAMEDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_TMPRNAMEDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		if (add_temporary_variable(stix, TOKEN_NAME(stix)) <= -1) return -1;
-		stix->c->mth.tmpr_count++;
+		if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
+		moo->c->mth.tmpr_count++;
 
-		if (stix->c->mth.tmpr_count > MAX_CODE_NARGS)
+		if (moo->c->mth.tmpr_count > MAX_CODE_NARGS)
 		{
-			set_syntax_error (stix, STIX_SYNERR_TMPRFLOOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_TMPRFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 	}
 
-	if (!is_token_binary_selector(stix, VOCA_VBAR)) 
+	if (!is_token_binary_selector(moo, VOCA_VBAR)) 
 	{
-		set_syntax_error (stix, STIX_SYNERR_VBAR, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_VBAR, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
-	GET_TOKEN (stix);
+	GET_TOKEN (moo);
 	return 0;
 }
 
-static int compile_method_primitive (stix_t* stix)
+static int compile_method_primitive (moo_t* moo)
 {
 	/* 
 	 * method-primitive := "<"  "primitive:" integer ">" |
@@ -2897,120 +2904,120 @@ static int compile_method_primitive (stix_t* stix)
 	 *                     "<"  "exception" ">" |
 	 *                     "<"  "ensure" ">"
 	 */
-	stix_ooi_t pfnum;
-	const stix_ooch_t* ptr, * end;
+	moo_ooi_t pfnum;
+	const moo_ooch_t* ptr, * end;
 
-	if (!is_token_binary_selector(stix, VOCA_LT)) 
+	if (!is_token_binary_selector(moo, VOCA_LT)) 
 	{
 		/* return if < is not seen. it is not an error condition */
 		return 0;
 	}
 
-	GET_TOKEN (stix);
-	if (is_token_keyword(stix, VOCA_PRIMITIVE_COLON))
+	GET_TOKEN (moo);
+	if (is_token_keyword(moo, VOCA_PRIMITIVE_COLON))
 	{
-		GET_TOKEN (stix); 
-		switch (TOKEN_TYPE(stix))
+		GET_TOKEN (moo); 
+		switch (TOKEN_TYPE(moo))
 		{
-			case STIX_IOTOK_NUMLIT: /* TODO: allow only an integer */
+			case MOO_IOTOK_NUMLIT: /* TODO: allow only an integer */
 	/*TODO: more checks the validity of the primitive number. support number with radix and so on support more extensive syntax. support primitive name, not number*/
-				ptr = TOKEN_NAME_PTR(stix);
-				end = ptr + TOKEN_NAME_LEN(stix);
+				ptr = TOKEN_NAME_PTR(moo);
+				end = ptr + TOKEN_NAME_LEN(moo);
 				pfnum = 0;
 				while (ptr < end && is_digitchar(*ptr)) 
 				{
 					pfnum = pfnum * 10 + (*ptr - '0');
-					if (!STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
+					if (!MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
 					{
-						set_syntax_error (stix, STIX_SYNERR_PFNUM, TOKEN_LOC(stix), TOKEN_NAME(stix));
+						set_syntax_error (moo, MOO_SYNERR_PFNUM, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
 					ptr++;
 				}
 
-				stix->c->mth.pfnum = pfnum;
+				moo->c->mth.pfnum = pfnum;
 				break;
 
-			case STIX_IOTOK_SYMLIT:
+			case MOO_IOTOK_SYMLIT:
 			{
-				const stix_ooch_t* tptr;
-				stix_oow_t tlen;
+				const moo_ooch_t* tptr;
+				moo_oow_t tlen;
 
-				tptr = TOKEN_NAME_PTR(stix) + 1;
-				tlen = TOKEN_NAME_LEN(stix) - 1;
+				tptr = TOKEN_NAME_PTR(moo) + 1;
+				tlen = TOKEN_NAME_LEN(moo) - 1;
 
 				/* attempt get a primitive function number by name */
-				pfnum = stix_getpfnum (stix, tptr, tlen);
+				pfnum = moo_getpfnum (moo, tptr, tlen);
 				if (pfnum <= -1)
 				{
 					/* a built-in primitive function is not found 
 					 * check if it is a primitive function identifier */
-					stix_oow_t lit_idx;
+					moo_oow_t lit_idx;
 
-					if (stix_findoochar (tptr, tlen, '.') && 
-					    add_symbol_literal(stix, TOKEN_NAME(stix), 1, &lit_idx) >= 0 &&
-					    STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx))
+					if (moo_findoochar (tptr, tlen, '.') && 
+					    add_symbol_literal(moo, TOKEN_NAME(moo), 1, &lit_idx) >= 0 &&
+					    MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx))
 					{
 						/* external named primitive containing a period. */
-						stix->c->mth.pftype = 2; 
-						stix->c->mth.pfnum = lit_idx;
+						moo->c->mth.pftype = 2; 
+						moo->c->mth.pfnum = lit_idx;
 						break;
 					}
 
 					/* wrong primitive number */
-					set_syntax_error (stix, STIX_SYNERR_PFID, TOKEN_LOC(stix), TOKEN_NAME(stix));
+					set_syntax_error (moo, MOO_SYNERR_PFID, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
-				else if (!STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
+				else if (!MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
 				{
-					set_syntax_error (stix, STIX_SYNERR_PFID, TOKEN_LOC(stix), TOKEN_NAME(stix));
+					set_syntax_error (moo, MOO_SYNERR_PFID, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
-				stix->c->mth.pftype = 1; 
-				stix->c->mth.pfnum = pfnum;
+				moo->c->mth.pftype = 1; 
+				moo->c->mth.pfnum = pfnum;
 				break;
 			}
 
 			default:
-				set_syntax_error (stix, STIX_SYNERR_INTEGER, TOKEN_LOC(stix), TOKEN_NAME(stix));
+				set_syntax_error (moo, MOO_SYNERR_INTEGER, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 		}
 
 	}
-	else if (is_token_word(stix, VOCA_EXCEPTION))
+	else if (is_token_word(moo, VOCA_EXCEPTION))
 	{
 /* TODO: exception handler is supposed to be used by BlockContext on:do:. 
  *       it needs to check the number of arguments at least */
-		stix->c->mth.pftype = 3;
+		moo->c->mth.pftype = 3;
 	}
-	else if (is_token_word(stix, VOCA_ENSURE))
+	else if (is_token_word(moo, VOCA_ENSURE))
 	{
-		stix->c->mth.pftype = 4;
+		moo->c->mth.pftype = 4;
 	}
 	else
 	{
-		set_syntax_error (stix, STIX_SYNERR_PRIMITIVE, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_PRIMITIVE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
-	GET_TOKEN (stix);
-	if (!is_token_binary_selector(stix, VOCA_GT)) 
+	GET_TOKEN (moo);
+	if (!is_token_binary_selector(moo, VOCA_GT)) 
 	{
-		set_syntax_error (stix, STIX_SYNERR_GT, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_GT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
-	GET_TOKEN (stix);
+	GET_TOKEN (moo);
 	return 0;
 }
 
-static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_ioloc_t* name_loc, int name_dotted, var_info_t* var)
+static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* name_loc, int name_dotted, var_info_t* var)
 {
-	stix_oow_t index;
+	moo_oow_t index;
 
-	STIX_MEMSET (var, 0, STIX_SIZEOF(*var));
+	MOO_MEMSET (var, 0, MOO_SIZEOF(*var));
 
 	if (name_dotted)
 	{
@@ -3020,18 +3027,18 @@ static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_
 		 *   A.B.C    - namespace or pool dictionary related reference.
 		 */
 
-		stix_oocs_t last;
-		stix_oop_set_t ns_oop;
-		stix_oop_association_t ass;
-		const stix_ooch_t* dot;
+		moo_oocs_t last;
+		moo_oop_set_t ns_oop;
+		moo_oop_association_t ass;
+		const moo_ooch_t* dot;
 
-		dot = stix_findoochar (name->ptr, name->len, '.');
-		STIX_ASSERT (stix, dot != STIX_NULL);
-		if (dot - (const stix_ooch_t*)name->ptr == 4 && 
-		    stix_equaloochars(name->ptr, vocas[VOCA_SELF].str, 4))
+		dot = moo_findoochar (name->ptr, name->len, '.');
+		MOO_ASSERT (moo, dot != MOO_NULL);
+		if (dot - (const moo_ooch_t*)name->ptr == 4 && 
+		    moo_equaloochars(name->ptr, vocas[VOCA_SELF].str, 4))
 		{
 			/* the dotted name begins with self. */
-			dot = stix_findoochar (dot + 1, name->len - 5, '.');
+			dot = moo_findoochar (dot + 1, name->len - 5, '.');
 			if (!dot)
 			{
 				/* the dotted name is composed of 2 segments only */
@@ -3039,23 +3046,23 @@ static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_
 				last.len = name->len - 5;
 				if (!is_reserved_word(&last))
 				{
-					if (find_class_level_variable(stix, stix->c->cls.self_oop, &last, var) >= 0)
+					if (find_class_level_variable(moo, moo->c->cls.self_oop, &last, var) >= 0)
 					{
 						goto class_level_variable;
 					}
 					else
 					{
 						/* undeclared identifier */
-						set_syntax_error (stix, STIX_SYNERR_VARUNDCL, name_loc, name);
+						set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
 						return -1;
 					}
 				}
 			}
 		}
 
-		if (preprocess_dotted_name (stix, 1, 1, name, name_loc, &last, &ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name (moo, 1, 1, name, name_loc, &last, &ns_oop) <= -1) return -1;
 
-		ass = stix_lookupdic (stix, ns_oop, &last);
+		ass = moo_lookupdic (moo, ns_oop, &last);
 		if (ass)
 		{
 			var->type = VAR_GLOBAL;
@@ -3064,73 +3071,73 @@ static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_
 		else
 		{
 			/* undeclared identifier */
-			set_syntax_error (stix, STIX_SYNERR_VARUNDCL, name_loc, name);
+			set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
 			return -1;
 		}
 
 		return 0;
 	}
 
-	if (find_temporary_variable (stix, name, &index) >= 0)
+	if (find_temporary_variable (moo, name, &index) >= 0)
 	{
-		var->type = (index < stix->c->mth.tmpr_nargs)? VAR_ARGUMENT: VAR_TEMPORARY;
+		var->type = (index < moo->c->mth.tmpr_nargs)? VAR_ARGUMENT: VAR_TEMPORARY;
 		var->pos = index;
 	}
 	else 
 	{
-		if (find_class_level_variable(stix, stix->c->cls.self_oop, name, var) >= 0)
+		if (find_class_level_variable(moo, moo->c->cls.self_oop, name, var) >= 0)
 		{
 		class_level_variable:
 			switch (var->type)
 			{
 				case VAR_INSTANCE:
-					if (stix->c->mth.type == STIX_METHOD_CLASS)
+					if (moo->c->mth.type == MOO_METHOD_CLASS)
 					{
 						/* a class method cannot access an instance variable */
-						set_syntax_error (stix, STIX_SYNERR_VARINACC, name_loc, name);
+						set_syntax_error (moo, MOO_SYNERR_VARINACC, name_loc, name);
 						return -1;
 					}
 					break;
 
 				case VAR_CLASS:
 					/* a class variable can be access by both instance methods and class methods */
-					STIX_ASSERT (stix, var->cls != STIX_NULL);
-					STIX_ASSERT (stix, STIX_CLASSOF(stix, var->cls) == stix->_class);
+					MOO_ASSERT (moo, var->cls != MOO_NULL);
+					MOO_ASSERT (moo, MOO_CLASSOF(moo, var->cls) == moo->_class);
 
 					/* increment the position by the number of class instance variables
 					 * as the class variables are placed after the class instance variables */
-					var->pos += STIX_CLASS_NAMED_INSTVARS + 
-					            STIX_CLASS_SELFSPEC_CLASSINSTVAR(STIX_OOP_TO_SMOOI(var->cls->selfspec));
+					var->pos += MOO_CLASS_NAMED_INSTVARS + 
+					            MOO_CLASS_SELFSPEC_CLASSINSTVAR(MOO_OOP_TO_SMOOI(var->cls->selfspec));
 					break;
 
 				case VAR_CLASSINST:
 					/* class instance variable can be accessed by only class methods */
-					if (stix->c->mth.type == STIX_METHOD_INSTANCE)
+					if (moo->c->mth.type == MOO_METHOD_INSTANCE)
 					{
 						/* an instance method cannot access a class-instance variable */
-						set_syntax_error (stix, STIX_SYNERR_VARINACC, name_loc, name);
+						set_syntax_error (moo, MOO_SYNERR_VARINACC, name_loc, name);
 						return -1;
 					}
 
 					/* to a class object itself, a class-instance variable is
 					 * just an instance variriable. but these are located
 					 * after the named instance variables. */
-					var->pos += STIX_CLASS_NAMED_INSTVARS;
+					var->pos += MOO_CLASS_NAMED_INSTVARS;
 					break;
 
 				default:
 					/* internal error - it must not happen */
-					stix->errnum = STIX_EINTERN;
+					moo->errnum = MOO_EINTERN;
 					return -1;
 			}
 		}
 		else 
 		{
-			stix_oop_association_t ass;
-			/*ass = stix_lookupsysdic (stix, name);*/
-			ass = stix_lookupdic (stix, stix->c->cls.ns_oop, name);
-			if (!ass && stix->c->cls.ns_oop != stix->sysdic) 
-				ass = stix_lookupdic (stix, stix->sysdic, name);
+			moo_oop_association_t ass;
+			/*ass = moo_lookupsysdic (moo, name);*/
+			ass = moo_lookupdic (moo, moo->c->cls.ns_oop, name);
+			if (!ass && moo->c->cls.ns_oop != moo->sysdic) 
+				ass = moo_lookupdic (moo, moo->sysdic, name);
 
 			if (ass)
 			{
@@ -3139,19 +3146,19 @@ static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_
 			}
 			else
 			{
-				stix_oow_t i;
-				stix_oop_association_t ass2 = STIX_NULL;
+				moo_oow_t i;
+				moo_oop_association_t ass2 = MOO_NULL;
 
 				/* attempt to find the variable in pool dictionaries */
-				for (i = 0; i < stix->c->cls.pooldic_count; i++)
+				for (i = 0; i < moo->c->cls.pooldic_count; i++)
 				{
-					ass = stix_lookupdic (stix, stix->c->cls.pooldic_imp_oops[i], name);
+					ass = moo_lookupdic (moo, moo->c->cls.pooldic_imp_oops[i], name);
 					if (ass)
 					{
 						if (ass2)
 						{
 							/* the variable name has been found at least in 2 dictionaries */
-							set_syntax_error (stix, STIX_SYNERR_VARAMBIG, name_loc, name);
+							set_syntax_error (moo, MOO_SYNERR_VARAMBIG, name_loc, name);
 							return -1;
 						}
 						ass2 = ass;
@@ -3166,7 +3173,7 @@ static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_
 				else
 				{
 					/* undeclared identifier */
-					set_syntax_error (stix, STIX_SYNERR_VARUNDCL, name_loc, name);
+					set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
 					return -1;
 				}
 			}
@@ -3177,86 +3184,86 @@ static int get_variable_info (stix_t* stix, const stix_oocs_t* name, const stix_
 	{
 		/* the assignee is not usable because its index is too large 
 		 * to be expressed in byte-codes. */
-		set_syntax_error (stix, STIX_SYNERR_VARUNUSE, name_loc, name);
+		set_syntax_error (moo, MOO_SYNERR_VARUNUSE, name_loc, name);
 		return -1;
 	}
 
 	return 0;
 }
 
-static int compile_block_temporaries (stix_t* stix)
+static int compile_block_temporaries (moo_t* moo)
 {
 	/* 
 	 * block-temporaries := "|" variable-list "|"
 	 * variable-list := identifier*
 	 */
 
-	if (!is_token_binary_selector(stix, VOCA_VBAR)) 
+	if (!is_token_binary_selector(moo, VOCA_VBAR)) 
 	{
 		/* return without doing anything if | is not found.
 		 * this is not an error condition */
 		return 0;
 	}
 
-	GET_TOKEN (stix);
-	while (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT) 
+	GET_TOKEN (moo);
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT) 
 	{
-		if (find_temporary_variable(stix, TOKEN_NAME(stix), STIX_NULL) >= 0)
+		if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 		{
-			set_syntax_error (stix, STIX_SYNERR_TMPRNAMEDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_TMPRNAMEDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		if (add_temporary_variable(stix, TOKEN_NAME(stix)) <= -1) return -1;
-		stix->c->mth.tmpr_count++;
-		if (stix->c->mth.tmpr_count > MAX_CODE_NTMPRS)
+		if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
+		moo->c->mth.tmpr_count++;
+		if (moo->c->mth.tmpr_count > MAX_CODE_NTMPRS)
 		{
-			set_syntax_error (stix, STIX_SYNERR_TMPRFLOOD, TOKEN_LOC(stix), TOKEN_NAME(stix)); 
+			set_syntax_error (moo, MOO_SYNERR_TMPRFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
 			return -1;
 		}
 
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 	}
 
-	if (!is_token_binary_selector(stix, VOCA_VBAR)) 
+	if (!is_token_binary_selector(moo, VOCA_VBAR)) 
 	{
-		set_syntax_error (stix, STIX_SYNERR_VBAR, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_VBAR, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
-	GET_TOKEN (stix);
+	GET_TOKEN (moo);
 	return 0;
 }
 
-static int store_tmpr_count_for_block (stix_t* stix, stix_oow_t tmpr_count)
+static int store_tmpr_count_for_block (moo_t* moo, moo_oow_t tmpr_count)
 {
-	if (stix->c->mth.blk_depth >= stix->c->mth.blk_tmprcnt_capa)
+	if (moo->c->mth.blk_depth >= moo->c->mth.blk_tmprcnt_capa)
 	{
-		stix_oow_t* tmp;
-		stix_oow_t new_capa;
+		moo_oow_t* tmp;
+		moo_oow_t new_capa;
 
-		new_capa = STIX_ALIGN (stix->c->mth.blk_depth + 1, BLK_TMPRCNT_BUFFER_ALIGN);
-		tmp = (stix_oow_t*)stix_reallocmem (stix, stix->c->mth.blk_tmprcnt, new_capa * STIX_SIZEOF(*tmp));
+		new_capa = MOO_ALIGN (moo->c->mth.blk_depth + 1, BLK_TMPRCNT_BUFFER_ALIGN);
+		tmp = (moo_oow_t*)moo_reallocmem (moo, moo->c->mth.blk_tmprcnt, new_capa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
-		stix->c->mth.blk_tmprcnt_capa = new_capa;
-		stix->c->mth.blk_tmprcnt = tmp;
+		moo->c->mth.blk_tmprcnt_capa = new_capa;
+		moo->c->mth.blk_tmprcnt = tmp;
 	}
 
 	/* [NOTE] i don't increment blk_depth here. it's updated
 	 *        by the caller after this function has been called for
 	 *        a new block entered. */
-	stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth] = tmpr_count;
+	moo->c->mth.blk_tmprcnt[moo->c->mth.blk_depth] = tmpr_count;
 	return 0;
 }
 
-static int compile_block_expression (stix_t* stix)
+static int compile_block_expression (moo_t* moo)
 {
-	stix_oow_t jump_inst_pos;
-	stix_oow_t saved_tmpr_count, saved_tmprs_len;
-	stix_oow_t block_arg_count, block_tmpr_count;
-	stix_oow_t block_code_size;
-	stix_ioloc_t block_loc, colon_loc, tmpr_loc;
+	moo_oow_t jump_inst_pos;
+	moo_oow_t saved_tmpr_count, saved_tmprs_len;
+	moo_oow_t block_arg_count, block_tmpr_count;
+	moo_oow_t block_code_size;
+	moo_ioloc_t block_loc, colon_loc, tmpr_loc;
 
 	/*
 	 * block-expression := "[" block-body "]"
@@ -3265,147 +3272,147 @@ static int compile_block_expression (stix_t* stix)
 	 */
 
 	/* this function expects [ not to be consumed away */
-	STIX_ASSERT (stix, TOKEN_TYPE(stix) == STIX_IOTOK_LBRACK);
-	block_loc = stix->c->tok.loc;
-	GET_TOKEN (stix);
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_LBRACK);
+	block_loc = moo->c->tok.loc;
+	GET_TOKEN (moo);
 
-	saved_tmprs_len = stix->c->mth.tmprs.len;
-	saved_tmpr_count = stix->c->mth.tmpr_count;
-	STIX_ASSERT (stix, stix->c->mth.blk_depth > 0);
-	STIX_ASSERT (stix, stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth - 1] == saved_tmpr_count);
+	saved_tmprs_len = moo->c->mth.tmprs.len;
+	saved_tmpr_count = moo->c->mth.tmpr_count;
+	MOO_ASSERT (moo, moo->c->mth.blk_depth > 0);
+	MOO_ASSERT (moo, moo->c->mth.blk_tmprcnt[moo->c->mth.blk_depth - 1] == saved_tmpr_count);
 
-	if (TOKEN_TYPE(stix) == STIX_IOTOK_COLON) 
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_COLON) 
 	{
-		colon_loc = stix->c->tok.loc;
+		colon_loc = moo->c->tok.loc;
 
 		/* block temporary variables */
 		do 
 		{
-			GET_TOKEN (stix);
+			GET_TOKEN (moo);
 
-			if (TOKEN_TYPE(stix) != STIX_IOTOK_IDENT) 
+			if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT) 
 			{
 				/* wrong argument name. identifier expected */
-				set_syntax_error (stix, STIX_SYNERR_IDENT, TOKEN_LOC(stix), TOKEN_NAME(stix));
+				set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
 /* TODO: check conflicting names as well */
-			if (find_temporary_variable(stix, TOKEN_NAME(stix), STIX_NULL) >= 0)
+			if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 			{
-				set_syntax_error (stix, STIX_SYNERR_BLKARGNAMEDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
+				set_syntax_error (moo, MOO_SYNERR_BLKARGNAMEDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
-			if (add_temporary_variable(stix, TOKEN_NAME(stix)) <= -1) return -1;
-			stix->c->mth.tmpr_count++;
-			if (stix->c->mth.tmpr_count > MAX_CODE_NARGS)
+			if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
+			moo->c->mth.tmpr_count++;
+			if (moo->c->mth.tmpr_count > MAX_CODE_NARGS)
 			{
-				set_syntax_error (stix, STIX_SYNERR_BLKARGFLOOD, TOKEN_LOC(stix), TOKEN_NAME(stix)); 
+				set_syntax_error (moo, MOO_SYNERR_BLKARGFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
 				return -1;
 			}
 
-			GET_TOKEN (stix);
+			GET_TOKEN (moo);
 		} 
-		while (TOKEN_TYPE(stix) == STIX_IOTOK_COLON);
+		while (TOKEN_TYPE(moo) == MOO_IOTOK_COLON);
 
-		if (!is_token_binary_selector(stix, VOCA_VBAR))
+		if (!is_token_binary_selector(moo, VOCA_VBAR))
 		{
-			set_syntax_error (stix, STIX_SYNERR_VBAR, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_VBAR, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 	}
 
-	block_arg_count = stix->c->mth.tmpr_count - saved_tmpr_count;
+	block_arg_count = moo->c->mth.tmpr_count - saved_tmpr_count;
 	if (block_arg_count > MAX_CODE_NBLKARGS)
 	{
 		/* while an integer object is pused to indicate the number of
 		 * block arguments, evaluation which is done by message passing
 		 * limits the number of arguments that can be passed. so the
 		 * check is implemented */
-		set_syntax_error (stix, STIX_SYNERR_BLKARGFLOOD, &colon_loc, STIX_NULL); 
+		set_syntax_error (moo, MOO_SYNERR_BLKARGFLOOD, &colon_loc, MOO_NULL); 
 		return -1;
 	}
 
-	tmpr_loc = stix->c->tok.loc;
-	if (compile_block_temporaries(stix) <= -1) return -1;
+	tmpr_loc = moo->c->tok.loc;
+	if (compile_block_temporaries(moo) <= -1) return -1;
 
 	/* this is a block-local temporary count including arguments */
-	block_tmpr_count = stix->c->mth.tmpr_count - saved_tmpr_count;
+	block_tmpr_count = moo->c->mth.tmpr_count - saved_tmpr_count;
 	if (block_tmpr_count > MAX_CODE_NBLKTMPRS)
 	{
-		set_syntax_error (stix, STIX_SYNERR_BLKTMPRFLOOD, &tmpr_loc, STIX_NULL); 
+		set_syntax_error (moo, MOO_SYNERR_BLKTMPRFLOOD, &tmpr_loc, MOO_NULL); 
 		return -1;
 	}
 
 	/* store the accumulated number of temporaries for the current block.
 	 * block depth is not raised as it's not entering a new block but
 	 * updating the temporaries count for the current block. */
-	if (store_tmpr_count_for_block (stix, stix->c->mth.tmpr_count) <= -1) return -1;
+	if (store_tmpr_count_for_block (moo, moo->c->mth.tmpr_count) <= -1) return -1;
 
-#if defined(STIX_USE_MAKE_BLOCK)
-	if (emit_double_param_instruction(stix, BCODE_MAKE_BLOCK, block_arg_count, stix->c->mth.tmpr_count/*block_tmpr_count*/) <= -1) return -1;
+#if defined(MOO_USE_MAKE_BLOCK)
+	if (emit_double_param_instruction(moo, BCODE_MAKE_BLOCK, block_arg_count, moo->c->mth.tmpr_count/*block_tmpr_count*/) <= -1) return -1;
 #else
-	if (emit_byte_instruction(stix, BCODE_PUSH_CONTEXT) <= -1 ||
-	    emit_push_smooi_literal(stix, block_arg_count) <= -1 ||
-	    emit_push_smooi_literal(stix, stix->c->mth.tmpr_count/*block_tmpr_count*/) <= -1 ||
-	    emit_byte_instruction(stix, BCODE_SEND_BLOCK_COPY) <= -1) return -1;
+	if (emit_byte_instruction(moo, BCODE_PUSH_CONTEXT) <= -1 ||
+	    emit_push_smooi_literal(moo, block_arg_count) <= -1 ||
+	    emit_push_smooi_literal(moo, moo->c->mth.tmpr_count/*block_tmpr_count*/) <= -1 ||
+	    emit_byte_instruction(moo, BCODE_SEND_BLOCK_COPY) <= -1) return -1;
 #endif
 
 	/* insert dummy instructions before replacing them with a jump instruction */
-	jump_inst_pos = stix->c->mth.code.len;
+	jump_inst_pos = moo->c->mth.code.len;
 	/* specifying MAX_CODE_JUMP causes emit_single_param_instruction() to 
 	 * produce the long jump instruction (BCODE_JUMP_FORWARD_X) */
-	if (emit_single_param_instruction (stix, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
+	if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
 
 	/* compile statements inside a block */
-	if (TOKEN_TYPE(stix) == STIX_IOTOK_RBRACK)
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK)
 	{
 		/* the block is empty */
-		if (emit_byte_instruction (stix, BCODE_PUSH_NIL) <= -1) return -1;
+		if (emit_byte_instruction (moo, BCODE_PUSH_NIL) <= -1) return -1;
 	}
 	else 
 	{
-		while (TOKEN_TYPE(stix) != STIX_IOTOK_EOF)
+		while (TOKEN_TYPE(moo) != MOO_IOTOK_EOF)
 		{
-			if (compile_block_statement(stix) <= -1) return -1;
+			if (compile_block_statement(moo) <= -1) return -1;
 
-			if (TOKEN_TYPE(stix) == STIX_IOTOK_RBRACK) break;
-			else if (TOKEN_TYPE(stix) == STIX_IOTOK_PERIOD)
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
+			else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
 			{
-				GET_TOKEN (stix);
-				if (TOKEN_TYPE(stix) == STIX_IOTOK_RBRACK) break;
-				if (emit_byte_instruction(stix, BCODE_POP_STACKTOP) <= -1) return -1;
+				GET_TOKEN (moo);
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
+				if (emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) return -1;
 			}
 			else
 			{
-				set_syntax_error (stix, STIX_SYNERR_RBRACK, TOKEN_LOC(stix), TOKEN_NAME(stix));
+				set_syntax_error (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 		}
 	}
 
-	if (emit_byte_instruction(stix, BCODE_RETURN_FROM_BLOCK) <= -1) return -1;
+	if (emit_byte_instruction(moo, BCODE_RETURN_FROM_BLOCK) <= -1) return -1;
 
 
-	/* STIX_BCODE_LONG_PARAM_SIZE + 1 => size of the long JUMP_FORWARD instruction */
-	block_code_size = stix->c->mth.code.len - jump_inst_pos - (STIX_BCODE_LONG_PARAM_SIZE + 1);
+	/* MOO_BCODE_LONG_PARAM_SIZE + 1 => size of the long JUMP_FORWARD instruction */
+	block_code_size = moo->c->mth.code.len - jump_inst_pos - (MOO_BCODE_LONG_PARAM_SIZE + 1);
 	if (block_code_size > MAX_CODE_JUMP * 2)
 	{
-		set_syntax_error (stix, STIX_SYNERR_BLKFLOOD, &block_loc, STIX_NULL); 
+		set_syntax_error (moo, MOO_SYNERR_BLKFLOOD, &block_loc, MOO_NULL); 
 		return -1;
 	}
 	else 
 	{
-		stix_oow_t jump_offset;
+		moo_oow_t jump_offset;
 
 		if (block_code_size > MAX_CODE_JUMP)
 		{
 			/* switch to JUMP2 instruction to allow a bigger jump offset.
 			 * up to twice MAX_CODE_JUMP only */
-			stix->c->mth.code.ptr[jump_inst_pos] = BCODE_JUMP2_FORWARD;
+			moo->c->mth.code.ptr[jump_inst_pos] = BCODE_JUMP2_FORWARD;
 			jump_offset = block_code_size - MAX_CODE_JUMP;
 		}
 		else
@@ -3413,102 +3420,102 @@ static int compile_block_expression (stix_t* stix)
 			jump_offset = block_code_size;
 		}
 
-	#if (STIX_BCODE_LONG_PARAM_SIZE == 2)
-		stix->c->mth.code.ptr[jump_inst_pos + 1] = jump_offset >> 8;
-		stix->c->mth.code.ptr[jump_inst_pos + 2] = jump_offset & 0xFF;
+	#if (MOO_BCODE_LONG_PARAM_SIZE == 2)
+		moo->c->mth.code.ptr[jump_inst_pos + 1] = jump_offset >> 8;
+		moo->c->mth.code.ptr[jump_inst_pos + 2] = jump_offset & 0xFF;
 	#else
-		stix->c->mth.code.ptr[jump_inst_pos + 1] = jump_offset;
+		moo->c->mth.code.ptr[jump_inst_pos + 1] = jump_offset;
 	#endif
 	}
 
 	/* restore the temporary count */
-	stix->c->mth.tmprs.len = saved_tmprs_len;
-	stix->c->mth.tmpr_count = saved_tmpr_count;
+	moo->c->mth.tmprs.len = saved_tmprs_len;
+	moo->c->mth.tmpr_count = saved_tmpr_count;
 
-	GET_TOKEN (stix);
+	GET_TOKEN (moo);
 
 	return 0;
 }
 
-static int add_to_byte_array_literal_buffer (stix_t* stix, stix_oob_t b)
+static int add_to_byte_array_literal_buffer (moo_t* moo, moo_oob_t b)
 {
-	if (stix->c->mth.balit_count >= stix->c->mth.balit_capa)
+	if (moo->c->mth.balit_count >= moo->c->mth.balit_capa)
 	{
-		stix_oob_t* tmp;
-		stix_oow_t new_capa;
+		moo_oob_t* tmp;
+		moo_oow_t new_capa;
 
-		new_capa = STIX_ALIGN (stix->c->mth.balit_count + 1, BALIT_BUFFER_ALIGN);
-		tmp = (stix_oob_t*)stix_reallocmem (stix, stix->c->mth.balit, new_capa * STIX_SIZEOF(*tmp));
+		new_capa = MOO_ALIGN (moo->c->mth.balit_count + 1, BALIT_BUFFER_ALIGN);
+		tmp = (moo_oob_t*)moo_reallocmem (moo, moo->c->mth.balit, new_capa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
-		stix->c->mth.balit_capa = new_capa;
-		stix->c->mth.balit = tmp;
+		moo->c->mth.balit_capa = new_capa;
+		moo->c->mth.balit = tmp;
 	}
 
-/* TODO: overflow check of stix->c->mth.balit_count itself */
-	stix->c->mth.balit[stix->c->mth.balit_count++] = b;
+/* TODO: overflow check of moo->c->mth.balit_count itself */
+	moo->c->mth.balit[moo->c->mth.balit_count++] = b;
 	return 0;
 }
 
-static int add_to_array_literal_buffer (stix_t* stix, stix_oop_t item)
+static int add_to_array_literal_buffer (moo_t* moo, moo_oop_t item)
 {
-	if (stix->c->mth.arlit_count >= stix->c->mth.arlit_capa)
+	if (moo->c->mth.arlit_count >= moo->c->mth.arlit_capa)
 	{
-		stix_oop_t* tmp;
-		stix_oow_t new_capa;
+		moo_oop_t* tmp;
+		moo_oow_t new_capa;
 
-		new_capa = STIX_ALIGN (stix->c->mth.arlit_count + 1, ARLIT_BUFFER_ALIGN);
-		tmp = (stix_oop_t*)stix_reallocmem (stix, stix->c->mth.arlit, new_capa * STIX_SIZEOF(*tmp));
+		new_capa = MOO_ALIGN (moo->c->mth.arlit_count + 1, ARLIT_BUFFER_ALIGN);
+		tmp = (moo_oop_t*)moo_reallocmem (moo, moo->c->mth.arlit, new_capa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
-		stix->c->mth.arlit_capa = new_capa;
-		stix->c->mth.arlit = tmp;
+		moo->c->mth.arlit_capa = new_capa;
+		moo->c->mth.arlit = tmp;
 	}
 
-/* TODO: overflow check of stix->c->mth.arlit_count itself */
-	stix->c->mth.arlit[stix->c->mth.arlit_count++] = item;
+/* TODO: overflow check of moo->c->mth.arlit_count itself */
+	moo->c->mth.arlit[moo->c->mth.arlit_count++] = item;
 	return 0;
 }
 
-static int __read_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
+static int __read_byte_array_literal (moo_t* moo, moo_oop_t* xlit)
 {
-	stix_ooi_t tmp;
-	stix_oop_t ba;
+	moo_ooi_t tmp;
+	moo_oop_t ba;
 
-	stix->c->mth.balit_count = 0;
+	moo->c->mth.balit_count = 0;
 
-	while (TOKEN_TYPE(stix) == STIX_IOTOK_NUMLIT || TOKEN_TYPE(stix) == STIX_IOTOK_RADNUMLIT)
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_NUMLIT || TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT)
 	{
 		/* TODO: check if the number is an integer */
 
-		if (string_to_smooi(stix, TOKEN_NAME(stix), TOKEN_TYPE(stix) == STIX_IOTOK_RADNUMLIT, &tmp) <= -1)
+		if (string_to_smooi(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT, &tmp) <= -1)
 		{
 			/* the token reader reads a valid token. no other errors
 			 * than the range error must not occur */
-			STIX_ASSERT (stix, stix->errnum == STIX_ERANGE);
+			MOO_ASSERT (moo, moo->errnum == MOO_ERANGE);
 
 			/* if the token is out of the SMOOI range, it's too big or 
 			 * to small to be a byte */
-			set_syntax_error (stix, STIX_SYNERR_BYTERANGE, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 		else if (tmp < 0 || tmp > 255)
 		{
-			set_syntax_error (stix, STIX_SYNERR_BYTERANGE, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		if (add_to_byte_array_literal_buffer(stix, tmp) <= -1) return -1;
-		GET_TOKEN (stix);
+		if (add_to_byte_array_literal_buffer(moo, tmp) <= -1) return -1;
+		GET_TOKEN (moo);
 	}
 
-	if (TOKEN_TYPE(stix) != STIX_IOTOK_RBRACK)
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACK)
 	{
-		set_syntax_error (stix, STIX_SYNERR_RBRACK, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
-	ba = stix_instantiate (stix, stix->_byte_array, stix->c->mth.balit, stix->c->mth.balit_count);
+	ba = moo_instantiate (moo, moo->_byte_array, moo->c->mth.balit, moo->c->mth.balit_count);
 	if (!ba) return -1;
 
 	*xlit = ba;
@@ -3517,176 +3524,176 @@ static int __read_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
 
 struct arlit_info_t
 {
-	stix_oow_t pos;
-	stix_oow_t len;
+	moo_oow_t pos;
+	moo_oow_t len;
 };
 
 typedef struct arlit_info_t arlit_info_t;
 
-static int __read_array_literal (stix_t* stix, stix_oop_t* xlit)
+static int __read_array_literal (moo_t* moo, moo_oop_t* xlit)
 {
-	stix_oop_t lit, a;
-	stix_oow_t i, saved_arlit_count;
+	moo_oop_t lit, a;
+	moo_oow_t i, saved_arlit_count;
 	arlit_info_t info;
 
-	info.pos = stix->c->mth.arlit_count;
+	info.pos = moo->c->mth.arlit_count;
 	info.len = 0;
 
 	do
 	{
-		switch (TOKEN_TYPE(stix))
+		switch (TOKEN_TYPE(moo))
 		{
 /* TODO: floating pointer number */
 
-			case STIX_IOTOK_NUMLIT:
-			case STIX_IOTOK_RADNUMLIT:
-				lit = string_to_num (stix, TOKEN_NAME(stix), TOKEN_TYPE(stix) == STIX_IOTOK_RADNUMLIT);
+			case MOO_IOTOK_NUMLIT:
+			case MOO_IOTOK_RADNUMLIT:
+				lit = string_to_num (moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT);
 				break;
 
-			case STIX_IOTOK_CHARLIT:
-				STIX_ASSERT (stix, TOKEN_NAME_LEN(stix) == 1);
-				lit = STIX_CHAR_TO_OOP(TOKEN_NAME_PTR(stix)[0]);
+			case MOO_IOTOK_CHARLIT:
+				MOO_ASSERT (moo, TOKEN_NAME_LEN(moo) == 1);
+				lit = MOO_CHAR_TO_OOP(TOKEN_NAME_PTR(moo)[0]);
 				break;
 
-			case STIX_IOTOK_STRLIT:
-				lit = stix_instantiate (stix, stix->_string, TOKEN_NAME_PTR(stix), TOKEN_NAME_LEN(stix));
+			case MOO_IOTOK_STRLIT:
+				lit = moo_instantiate (moo, moo->_string, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
 				break;
 
-			case STIX_IOTOK_SYMLIT:
-				lit = stix_makesymbol (stix, TOKEN_NAME_PTR(stix) + 1, TOKEN_NAME_LEN(stix) - 1);
+			case MOO_IOTOK_SYMLIT:
+				lit = moo_makesymbol (moo, TOKEN_NAME_PTR(moo) + 1, TOKEN_NAME_LEN(moo) - 1);
 				break;
 
-			case STIX_IOTOK_IDENT:
-			case STIX_IOTOK_IDENT_DOTTED:
-			case STIX_IOTOK_BINSEL:
-			case STIX_IOTOK_KEYWORD:
-			case STIX_IOTOK_SELF:
-			case STIX_IOTOK_SUPER:
-			case STIX_IOTOK_THIS_CONTEXT:
-			case STIX_IOTOK_THIS_PROCESS:
-				lit = stix_makesymbol (stix, TOKEN_NAME_PTR(stix), TOKEN_NAME_LEN(stix));
+			case MOO_IOTOK_IDENT:
+			case MOO_IOTOK_IDENT_DOTTED:
+			case MOO_IOTOK_BINSEL:
+			case MOO_IOTOK_KEYWORD:
+			case MOO_IOTOK_SELF:
+			case MOO_IOTOK_SUPER:
+			case MOO_IOTOK_THIS_CONTEXT:
+			case MOO_IOTOK_THIS_PROCESS:
+				lit = moo_makesymbol (moo, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
 				break;
 
-			case STIX_IOTOK_NIL:
-				lit = stix->_nil;
+			case MOO_IOTOK_NIL:
+				lit = moo->_nil;
 				break;
 
-			case STIX_IOTOK_TRUE:
-				lit = stix->_true;
+			case MOO_IOTOK_TRUE:
+				lit = moo->_true;
 				break;
 
-			case STIX_IOTOK_FALSE:
-				lit = stix->_false;
+			case MOO_IOTOK_FALSE:
+				lit = moo->_false;
 				break;
 
-			case STIX_IOTOK_ERROR:
-				lit = STIX_ERROR_TO_OOP(STIX_EGENERIC);
+			case MOO_IOTOK_ERROR:
+				lit = MOO_ERROR_TO_OOP(MOO_EGENERIC);
 				break;
 
-			case STIX_IOTOK_ERRLIT:
-				lit = string_to_error (stix, TOKEN_NAME(stix));
+			case MOO_IOTOK_ERRLIT:
+				lit = string_to_error (moo, TOKEN_NAME(moo));
 				break;
 
-			case STIX_IOTOK_ARPAREN: /* #( */
-			case STIX_IOTOK_LPAREN: /* ( */
-				saved_arlit_count = stix->c->mth.arlit_count;
+			case MOO_IOTOK_ARPAREN: /* #( */
+			case MOO_IOTOK_LPAREN: /* ( */
+				saved_arlit_count = moo->c->mth.arlit_count;
 /* TODO: get rid of recursion?? */
-				GET_TOKEN (stix);
-				if (__read_array_literal (stix, &lit) <= -1) return -1;
-				stix->c->mth.arlit_count = saved_arlit_count;
+				GET_TOKEN (moo);
+				if (__read_array_literal (moo, &lit) <= -1) return -1;
+				moo->c->mth.arlit_count = saved_arlit_count;
 				break;
 
-			case STIX_IOTOK_BAPAREN: /* #[ */
-			case STIX_IOTOK_LBRACK: /* [ */
-				GET_TOKEN (stix);
-				if (__read_byte_array_literal (stix, &lit) <= -1) return -1;
+			case MOO_IOTOK_BAPAREN: /* #[ */
+			case MOO_IOTOK_LBRACK: /* [ */
+				GET_TOKEN (moo);
+				if (__read_byte_array_literal (moo, &lit) <= -1) return -1;
 				break;
 
 			default:
 				goto done;
 		}
 
-		if (!lit || add_to_array_literal_buffer(stix, lit) <= -1) return -1;
+		if (!lit || add_to_array_literal_buffer(moo, lit) <= -1) return -1;
 		info.len++;
 
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 	}
 	while (1);
 
 done:
-	if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 	{
-		set_syntax_error (stix, STIX_SYNERR_RPAREN, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
-	a = stix_instantiate (stix, stix->_array, STIX_NULL, info.len);
+	a = moo_instantiate (moo, moo->_array, MOO_NULL, info.len);
 	if (!a) return -1;
 
 	for (i = 0; i < info.len; i++)
 	{
-		((stix_oop_oop_t)a)->slot[i] = stix->c->mth.arlit[info.pos + i];
+		((moo_oop_oop_t)a)->slot[i] = moo->c->mth.arlit[info.pos + i];
 	}
 
 	*xlit = a;
 	return 0;
 }
 
-static STIX_INLINE int read_byte_array_literal (stix_t* stix, stix_oop_t* xlit)
+static MOO_INLINE int read_byte_array_literal (moo_t* moo, moo_oop_t* xlit)
 {
-	GET_TOKEN (stix); /* skip #[ and read the next token */
-	return __read_byte_array_literal(stix, xlit);
+	GET_TOKEN (moo); /* skip #[ and read the next token */
+	return __read_byte_array_literal(moo, xlit);
 }
 
-static int compile_byte_array_literal (stix_t* stix)
+static int compile_byte_array_literal (moo_t* moo)
 {
-	stix_oop_t lit;
-	stix_oow_t index;
+	moo_oop_t lit;
+	moo_oow_t index;
 
-	if (read_byte_array_literal(stix, &lit) <= -1 ||
-	    add_literal(stix, lit, &index) <= -1 ||
-	    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+	if (read_byte_array_literal(moo, &lit) <= -1 ||
+	    add_literal(moo, lit, &index) <= -1 ||
+	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 
-	GET_TOKEN (stix);
+	GET_TOKEN (moo);
 	return 0;
 }
 
-static int read_array_literal (stix_t* stix, stix_oop_t* xlit)
+static int read_array_literal (moo_t* moo, moo_oop_t* xlit)
 {
 	int x;
-	stix_oow_t saved_arlit_count;
+	moo_oow_t saved_arlit_count;
 
-	stix->c->in_array = 1;
-	if (get_token(stix) <= -1)
+	moo->c->in_array = 1;
+	if (get_token(moo) <= -1)
 	{
 		/* skip #( and read the next token */
-		stix->c->in_array = 0;
+		moo->c->in_array = 0;
 		return -1;
 	}
-	saved_arlit_count = stix->c->mth.arlit_count;
-	x = __read_array_literal (stix, xlit);
-	stix->c->mth.arlit_count = saved_arlit_count;
-	stix->c->in_array = 0;
+	saved_arlit_count = moo->c->mth.arlit_count;
+	x = __read_array_literal (moo, xlit);
+	moo->c->mth.arlit_count = saved_arlit_count;
+	moo->c->in_array = 0;
 
 	return x;
 }
 
-static int compile_array_literal (stix_t* stix)
+static int compile_array_literal (moo_t* moo)
 {
-	stix_oop_t lit;
-	stix_oow_t index;
+	moo_oop_t lit;
+	moo_oow_t index;
 
-	STIX_ASSERT (stix, stix->c->mth.arlit_count == 0);
+	MOO_ASSERT (moo, moo->c->mth.arlit_count == 0);
 
-	if (read_array_literal(stix, &lit) <= -1 ||
-	    add_literal(stix, lit, &index) <= -1 ||
-	    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+	if (read_array_literal(moo, &lit) <= -1 ||
+	    add_literal(moo, lit, &index) <= -1 ||
+	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 
-	GET_TOKEN (stix);
+	GET_TOKEN (moo);
 	return 0;
 }
 
-static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, const stix_ioloc_t* ident_loc, int ident_dotted, int* to_super)
+static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, const moo_ioloc_t* ident_loc, int ident_dotted, int* to_super)
 {
 	/*
 	 * expression-primary := identifier | literal | block-constructor | ( "(" method-expression ")" )
@@ -3694,7 +3701,7 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 
 	var_info_t var;
 	int read_next_token = 0;
-	stix_oow_t index;
+	moo_oow_t index;
 
 	*to_super = 0;
 
@@ -3702,45 +3709,45 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 	{
 		/* the caller has read the identifier and the next word */
 	handle_ident:
-		if (get_variable_info(stix, ident, ident_loc, ident_dotted, &var) <= -1) return -1;
+		if (get_variable_info(moo, ident, ident_loc, ident_dotted, &var) <= -1) return -1;
 
 		switch (var.type)
 		{
 			case VAR_ARGUMENT:
 			case VAR_TEMPORARY:
 			{
-			#if defined(STIX_USE_CTXTEMPVAR)
-				if (stix->c->mth.blk_depth > 0)
+			#if defined(MOO_USE_CTXTEMPVAR)
+				if (moo->c->mth.blk_depth > 0)
 				{
-					stix_oow_t i;
+					moo_oow_t i;
 
 					/* if a temporary variable is accessed inside a block,
 					 * use a special instruction to indicate it */
-					STIX_ASSERT (stix, var.pos < stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth]);
-					for (i = stix->c->mth.blk_depth; i > 0; i--)
+					MOO_ASSERT (moo, var.pos < moo->c->mth.blk_tmprcnt[moo->c->mth.blk_depth]);
+					for (i = moo->c->mth.blk_depth; i > 0; i--)
 					{
-						if (var.pos >= stix->c->mth.blk_tmprcnt[i - 1])
+						if (var.pos >= moo->c->mth.blk_tmprcnt[i - 1])
 						{
-							if (emit_double_param_instruction(stix, BCODE_PUSH_CTXTEMPVAR_0, stix->c->mth.blk_depth - i, var.pos - stix->c->mth.blk_tmprcnt[i - 1]) <= -1) return -1;
+							if (emit_double_param_instruction(moo, BCODE_PUSH_CTXTEMPVAR_0, moo->c->mth.blk_depth - i, var.pos - moo->c->mth.blk_tmprcnt[i - 1]) <= -1) return -1;
 							goto temporary_done;
 						}
 					}
 				}
 			#endif
 
-				if (emit_single_param_instruction(stix, BCODE_PUSH_TEMPVAR_0, var.pos) <= -1) return -1;
+				if (emit_single_param_instruction(moo, BCODE_PUSH_TEMPVAR_0, var.pos) <= -1) return -1;
 			temporary_done:
 				break;
 			}
 
 			case VAR_INSTANCE:
 			case VAR_CLASSINST:
-				if (emit_single_param_instruction(stix, BCODE_PUSH_INSTVAR_0, var.pos) <= -1) return -1;
+				if (emit_single_param_instruction(moo, BCODE_PUSH_INSTVAR_0, var.pos) <= -1) return -1;
 				break;
 
 			case VAR_CLASS:
-				if (add_literal(stix, (stix_oop_t)var.cls, &index) <= -1 ||
-				    emit_double_param_instruction(stix, BCODE_PUSH_OBJVAR_0, var.pos, index) <= -1) return -1;
+				if (add_literal(moo, (moo_oop_t)var.cls, &index) <= -1 ||
+				    emit_double_param_instruction(moo, BCODE_PUSH_OBJVAR_0, var.pos, index) <= -1) return -1;
 				break;
 
 			case VAR_GLOBAL:
@@ -3753,171 +3760,171 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 				 * the code compiled before the deletion will still access
 				 * the deleted association
 				 */
-				if (add_literal(stix, (stix_oop_t)var.gbl, &index) <= -1 ||
-				    emit_single_param_instruction(stix, BCODE_PUSH_OBJECT_0, index) <= -1) return -1;
+				if (add_literal(moo, (moo_oop_t)var.gbl, &index) <= -1 ||
+				    emit_single_param_instruction(moo, BCODE_PUSH_OBJECT_0, index) <= -1) return -1;
 				break;
 
 			default:
-				stix->errnum = STIX_EINTERN;
+				moo->errnum = MOO_EINTERN;
 				return -1;
 		}
 
-		if (read_next_token) GET_TOKEN (stix);
+		if (read_next_token) GET_TOKEN (moo);
 	}
 	else
 	{
-		switch (TOKEN_TYPE(stix))
+		switch (TOKEN_TYPE(moo))
 		{
-			case STIX_IOTOK_IDENT_DOTTED:
+			case MOO_IOTOK_IDENT_DOTTED:
 				ident_dotted = 1;
-			case STIX_IOTOK_IDENT:
-				ident = TOKEN_NAME(stix);
-				ident_loc = TOKEN_LOC(stix);
+			case MOO_IOTOK_IDENT:
+				ident = TOKEN_NAME(moo);
+				ident_loc = TOKEN_LOC(moo);
 				read_next_token = 1;
 				goto handle_ident;
 
-			case STIX_IOTOK_SELF:
-				if (emit_byte_instruction(stix, BCODE_PUSH_RECEIVER) <= -1) return -1;
-				GET_TOKEN (stix);
+			case MOO_IOTOK_SELF:
+				if (emit_byte_instruction(moo, BCODE_PUSH_RECEIVER) <= -1) return -1;
+				GET_TOKEN (moo);
 				break;
 
-			case STIX_IOTOK_SUPER:
-				if (emit_byte_instruction(stix, BCODE_PUSH_RECEIVER) <= -1) return -1;
-				GET_TOKEN (stix);
+			case MOO_IOTOK_SUPER:
+				if (emit_byte_instruction(moo, BCODE_PUSH_RECEIVER) <= -1) return -1;
+				GET_TOKEN (moo);
 				*to_super = 1;
 				break;
 
-			case STIX_IOTOK_NIL:
-				if (emit_byte_instruction(stix, BCODE_PUSH_NIL) <= -1) return -1;
-				GET_TOKEN (stix);
+			case MOO_IOTOK_NIL:
+				if (emit_byte_instruction(moo, BCODE_PUSH_NIL) <= -1) return -1;
+				GET_TOKEN (moo);
 				break;
 
-			case STIX_IOTOK_TRUE:
-				if (emit_byte_instruction(stix, BCODE_PUSH_TRUE) <= -1) return -1;
-				GET_TOKEN (stix);
+			case MOO_IOTOK_TRUE:
+				if (emit_byte_instruction(moo, BCODE_PUSH_TRUE) <= -1) return -1;
+				GET_TOKEN (moo);
 				break;
 
-			case STIX_IOTOK_FALSE:
-				if (emit_byte_instruction(stix, BCODE_PUSH_FALSE) <= -1) return -1;
-				GET_TOKEN (stix);
+			case MOO_IOTOK_FALSE:
+				if (emit_byte_instruction(moo, BCODE_PUSH_FALSE) <= -1) return -1;
+				GET_TOKEN (moo);
 				break;
 
-			case STIX_IOTOK_ERROR:
-				if (add_literal(stix, STIX_ERROR_TO_OOP(STIX_EGENERIC), &index) <= -1 ||
-				    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
-				GET_TOKEN (stix);
+			case MOO_IOTOK_ERROR:
+				if (add_literal(moo, MOO_ERROR_TO_OOP(MOO_EGENERIC), &index) <= -1 ||
+				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				GET_TOKEN (moo);
 				break;
 
-			case STIX_IOTOK_ERRLIT:
+			case MOO_IOTOK_ERRLIT:
 			{
-				stix_oop_t tmp;
+				moo_oop_t tmp;
 
-				tmp = string_to_error (stix, TOKEN_NAME(stix));
+				tmp = string_to_error (moo, TOKEN_NAME(moo));
 				if (!tmp) return -1;
 
-				if (add_literal(stix, tmp, &index) <= -1 ||
-				    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				if (add_literal(moo, tmp, &index) <= -1 ||
+				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 
-				GET_TOKEN (stix);
+				GET_TOKEN (moo);
 				break;
 			}
 
-			case STIX_IOTOK_THIS_CONTEXT:
-				if (emit_byte_instruction(stix, BCODE_PUSH_CONTEXT) <= -1) return -1;
-				GET_TOKEN (stix);
+			case MOO_IOTOK_THIS_CONTEXT:
+				if (emit_byte_instruction(moo, BCODE_PUSH_CONTEXT) <= -1) return -1;
+				GET_TOKEN (moo);
 				break;
 
-			case STIX_IOTOK_THIS_PROCESS:
-				if (emit_byte_instruction(stix, BCODE_PUSH_PROCESS) <= -1) return -1;
-				GET_TOKEN (stix);
+			case MOO_IOTOK_THIS_PROCESS:
+				if (emit_byte_instruction(moo, BCODE_PUSH_PROCESS) <= -1) return -1;
+				GET_TOKEN (moo);
 				break;
 
-			case STIX_IOTOK_CHARLIT:
-				STIX_ASSERT (stix, TOKEN_NAME_LEN(stix) == 1);
-				if (emit_push_character_literal(stix, TOKEN_NAME_PTR(stix)[0]) <= -1) return -1;
-				GET_TOKEN (stix);
+			case MOO_IOTOK_CHARLIT:
+				MOO_ASSERT (moo, TOKEN_NAME_LEN(moo) == 1);
+				if (emit_push_character_literal(moo, TOKEN_NAME_PTR(moo)[0]) <= -1) return -1;
+				GET_TOKEN (moo);
 				break;
 
-			case STIX_IOTOK_STRLIT:
-				if (add_string_literal(stix, TOKEN_NAME(stix), &index) <= -1 ||
-				    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
-				GET_TOKEN (stix);
+			case MOO_IOTOK_STRLIT:
+				if (add_string_literal(moo, TOKEN_NAME(moo), &index) <= -1 ||
+				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				GET_TOKEN (moo);
 				break;
 
-			case STIX_IOTOK_SYMLIT:
-				if (add_symbol_literal(stix, TOKEN_NAME(stix), 1, &index) <= -1 ||
-				    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
-				GET_TOKEN (stix);
+			case MOO_IOTOK_SYMLIT:
+				if (add_symbol_literal(moo, TOKEN_NAME(moo), 1, &index) <= -1 ||
+				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				GET_TOKEN (moo);
 				break;
 
-			case STIX_IOTOK_NUMLIT:
-			case STIX_IOTOK_RADNUMLIT:
+			case MOO_IOTOK_NUMLIT:
+			case MOO_IOTOK_RADNUMLIT:
 			{
 /* TODO: floating pointer number */
 				/* TODO: other types of numbers, etc */
-				stix_oop_t tmp;
+				moo_oop_t tmp;
 
-				tmp = string_to_num (stix, TOKEN_NAME(stix), TOKEN_TYPE(stix) == STIX_IOTOK_RADNUMLIT);
+				tmp = string_to_num (moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT);
 				if (!tmp) return -1;
 
-				if (STIX_OOP_IS_SMOOI(tmp))
+				if (MOO_OOP_IS_SMOOI(tmp))
 				{
-					if (emit_push_smooi_literal(stix, STIX_OOP_TO_SMOOI(tmp)) <= -1) return -1;
+					if (emit_push_smooi_literal(moo, MOO_OOP_TO_SMOOI(tmp)) <= -1) return -1;
 				}
 				else
 				{
-					if (add_literal(stix, tmp, &index) <= -1 ||
-					    emit_single_param_instruction(stix, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+					if (add_literal(moo, tmp, &index) <= -1 ||
+					    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 				}
 
-				GET_TOKEN (stix);
+				GET_TOKEN (moo);
 				break;
 			}
 
-			case STIX_IOTOK_BAPAREN: /* #[ */
-				/*GET_TOKEN (stix);*/
-				if (compile_byte_array_literal(stix) <= -1) return -1;
+			case MOO_IOTOK_BAPAREN: /* #[ */
+				/*GET_TOKEN (moo);*/
+				if (compile_byte_array_literal(moo) <= -1) return -1;
 				break;
 
-			case STIX_IOTOK_ARPAREN: /* #( */
-				/*GET_TOKEN (stix);*/
-				if (compile_array_literal(stix) <= -1) return -1;
+			case MOO_IOTOK_ARPAREN: /* #( */
+				/*GET_TOKEN (moo);*/
+				if (compile_array_literal(moo) <= -1) return -1;
 				break;
 
 			/* TODO: dynamic array, non constant array #<> or #{} or what is a better bracket? */
 
-			case STIX_IOTOK_LBRACK: /* [ */
+			case MOO_IOTOK_LBRACK: /* [ */
 			{
 				int n;
 
-				/*GET_TOKEN (stix);*/
-				if (store_tmpr_count_for_block (stix, stix->c->mth.tmpr_count) <= -1) return -1;
-				stix->c->mth.blk_depth++;
+				/*GET_TOKEN (moo);*/
+				if (store_tmpr_count_for_block (moo, moo->c->mth.tmpr_count) <= -1) return -1;
+				moo->c->mth.blk_depth++;
 				/*
-				 * stix->c->mth.tmpr_count[0] contains the number of temporaries for a method.
-				 * stix->c->mth.tmpr_count[1] contains the number of temporaries for the block plus the containing method.
+				 * moo->c->mth.tmpr_count[0] contains the number of temporaries for a method.
+				 * moo->c->mth.tmpr_count[1] contains the number of temporaries for the block plus the containing method.
 				 * ...
-				 * stix->c->mth.tmpr_count[n] contains the number of temporaries for the block plus all containing method and blocks.
+				 * moo->c->mth.tmpr_count[n] contains the number of temporaries for the block plus all containing method and blocks.
 				 */
-				n = compile_block_expression(stix);
-				stix->c->mth.blk_depth--;
+				n = compile_block_expression(moo);
+				moo->c->mth.blk_depth--;
 				if (n <= -1) return -1;
 				break;
 			}
 
-			case STIX_IOTOK_LPAREN:
-				GET_TOKEN (stix);
-				if (compile_method_expression(stix, 0) <= -1) return -1;
-				if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
+			case MOO_IOTOK_LPAREN:
+				GET_TOKEN (moo);
+				if (compile_method_expression(moo, 0) <= -1) return -1;
+				if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 				{
-					set_syntax_error (stix, STIX_SYNERR_RPAREN, TOKEN_LOC(stix), TOKEN_NAME(stix));
+					set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
-				GET_TOKEN (stix);
+				GET_TOKEN (moo);
 				break;
 
 			default:
-				set_syntax_error (stix, STIX_SYNERR_PRIMARY, TOKEN_LOC(stix), TOKEN_NAME(stix));
+				set_syntax_error (moo, MOO_SYNERR_PRIMARY, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 		}
 	}
@@ -3925,167 +3932,167 @@ static int compile_expression_primary (stix_t* stix, const stix_oocs_t* ident, c
 	return 0;
 }
 
-static stix_oob_t send_message_cmd[] = 
+static moo_oob_t send_message_cmd[] = 
 {
 	BCODE_SEND_MESSAGE_0,
 	BCODE_SEND_MESSAGE_TO_SUPER_0
 };
 
-static int compile_unary_message (stix_t* stix, int to_super)
+static int compile_unary_message (moo_t* moo, int to_super)
 {
-	stix_oow_t index;
-	stix_oow_t nargs;
+	moo_oow_t index;
+	moo_oow_t nargs;
 
-	STIX_ASSERT (stix, TOKEN_TYPE(stix) == STIX_IOTOK_IDENT);
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_IDENT);
 
 	do
 	{
 		nargs = 0;
-		if (add_symbol_literal(stix, TOKEN_NAME(stix), 0, &index) <= -1) return -1;
+		if (add_symbol_literal(moo, TOKEN_NAME(moo), 0, &index) <= -1) return -1;
 
-		GET_TOKEN (stix);
-		if (TOKEN_TYPE(stix) == STIX_IOTOK_LPAREN)
+		GET_TOKEN (moo);
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 		{
 			/* parameterized procedure call */
-			GET_TOKEN(stix);
-			if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
+			GET_TOKEN(moo);
+			if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 			{
 				do
 				{
-					if (compile_method_expression (stix, 0) <= -1) return -1;
+					if (compile_method_expression (moo, 0) <= -1) return -1;
 					nargs++;
 
-					if (TOKEN_TYPE(stix) == STIX_IOTOK_RPAREN) break;
+					if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN) break;
 
-					if (TOKEN_TYPE(stix) != STIX_IOTOK_COMMA)
+					if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA)
 					{
-						set_syntax_error (stix, STIX_SYNERR_COMMA, TOKEN_LOC(stix), TOKEN_NAME(stix));
+						set_syntax_error (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
-					GET_TOKEN(stix);
+					GET_TOKEN(moo);
 				}
 				while (1);
 			}
 
-			GET_TOKEN(stix);
+			GET_TOKEN(moo);
 
 			/* NOTE: since the actual method may not be known at the compile time,
 			 *       i can't check if nargs will match the number of arguments
 			 *       expected by the method */
 		}
 
-		if (emit_double_param_instruction(stix, send_message_cmd[to_super], nargs, index) <= -1) return -1;
+		if (emit_double_param_instruction(moo, send_message_cmd[to_super], nargs, index) <= -1) return -1;
 	}
-	while (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT);
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT);
 
 	return 0;
 }
 
-static int compile_binary_message (stix_t* stix, int to_super)
+static int compile_binary_message (moo_t* moo, int to_super)
 {
 	/*
 	 * binary-message := binary-selector binary-argument
 	 * binary-argument := expression-primary unary-message*
 	 */
-	stix_oow_t index;
+	moo_oow_t index;
 	int to_super2;
-	stix_oocs_t binsel;
-	stix_oow_t saved_binsels_len, binsel_offset;
+	moo_oocs_t binsel;
+	moo_oow_t saved_binsels_len, binsel_offset;
 
-	STIX_ASSERT (stix, TOKEN_TYPE(stix) == STIX_IOTOK_BINSEL);
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL);
 
 	do
 	{
-		binsel = stix->c->tok.name;
-		saved_binsels_len = stix->c->mth.binsels.len;
+		binsel = moo->c->tok.name;
+		saved_binsels_len = moo->c->mth.binsels.len;
 
-		if (clone_binary_selector(stix, &binsel, &binsel_offset) <= -1) goto oops;
+		if (clone_binary_selector(moo, &binsel, &binsel_offset) <= -1) goto oops;
 
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 
-		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, 0, &to_super2) <= -1) goto oops;
+		if (compile_expression_primary(moo, MOO_NULL, MOO_NULL, 0, &to_super2) <= -1) goto oops;
 
-		if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT && compile_unary_message(stix, to_super2) <= -1) goto oops;
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && compile_unary_message(moo, to_super2) <= -1) goto oops;
 
 		/* update the pointer to the cloned selector now 
 		 * to be free from reallocation risk for the recursive call
 		 * to compile_expression_primary(). */
-		binsel.ptr = &stix->c->mth.binsels.ptr[binsel_offset];
-		if (add_symbol_literal(stix, &binsel, 0, &index) <= -1 ||
-		    emit_double_param_instruction(stix, send_message_cmd[to_super], 1, index) <= -1) goto oops;
+		binsel.ptr = &moo->c->mth.binsels.ptr[binsel_offset];
+		if (add_symbol_literal(moo, &binsel, 0, &index) <= -1 ||
+		    emit_double_param_instruction(moo, send_message_cmd[to_super], 1, index) <= -1) goto oops;
 
-		stix->c->mth.binsels.len = saved_binsels_len;
+		moo->c->mth.binsels.len = saved_binsels_len;
 	}
-	while (TOKEN_TYPE(stix) == STIX_IOTOK_BINSEL);
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL);
 
 	return 0;
 
 oops:
-	stix->c->mth.binsels.len = saved_binsels_len;
+	moo->c->mth.binsels.len = saved_binsels_len;
 	return -1;
 }
 
-static int compile_keyword_message (stix_t* stix, int to_super)
+static int compile_keyword_message (moo_t* moo, int to_super)
 {
 	/*
 	 * keyword-message := (keyword keyword-argument)+
 	 * keyword-argument := expression-primary unary-message* binary-message*
 	 */
 
-	stix_oow_t index;
+	moo_oow_t index;
 	int to_super2;
-	stix_oocs_t kw, kwsel;
-	stix_ioloc_t saved_kwsel_loc;
-	stix_oow_t saved_kwsel_len;
-	stix_oow_t kw_offset;
-	stix_oow_t nargs = 0;
+	moo_oocs_t kw, kwsel;
+	moo_ioloc_t saved_kwsel_loc;
+	moo_oow_t saved_kwsel_len;
+	moo_oow_t kw_offset;
+	moo_oow_t nargs = 0;
 
-	saved_kwsel_loc = stix->c->tok.loc;
-	saved_kwsel_len = stix->c->mth.kwsels.len;
+	saved_kwsel_loc = moo->c->tok.loc;
+	saved_kwsel_len = moo->c->mth.kwsels.len;
 
 /* TODO: optimization for ifTrue: ifFalse: whileTrue: whileFalse .. */
 	do 
 	{
-		kw = stix->c->tok.name;
-		if (clone_keyword(stix, &kw, &kw_offset) <= -1) goto oops;
+		kw = moo->c->tok.name;
+		if (clone_keyword(moo, &kw, &kw_offset) <= -1) goto oops;
 
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 
-		if (compile_expression_primary(stix, STIX_NULL, STIX_NULL, 0, &to_super2) <= -1) goto oops;
-		if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT && compile_unary_message(stix, to_super2) <= -1) goto oops;
-		if (TOKEN_TYPE(stix) == STIX_IOTOK_BINSEL && compile_binary_message(stix, to_super2) <= -1) goto oops;
+		if (compile_expression_primary(moo, MOO_NULL, MOO_NULL, 0, &to_super2) <= -1) goto oops;
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && compile_unary_message(moo, to_super2) <= -1) goto oops;
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL && compile_binary_message(moo, to_super2) <= -1) goto oops;
 
-		kw.ptr = &stix->c->mth.kwsels.ptr[kw_offset];
+		kw.ptr = &moo->c->mth.kwsels.ptr[kw_offset];
 		if (nargs >= MAX_CODE_NARGS)
 		{
 			/* 'kw' points to only one segment of the full keyword message. 
 			 * if it parses an expression like 'aBlock value: 10 with: 20',
 			 * 'kw' may point to 'value:' or 'with:'.
 			 */
-			set_syntax_error (stix, STIX_SYNERR_ARGFLOOD, &saved_kwsel_loc, &kw); 
+			set_syntax_error (moo, MOO_SYNERR_ARGFLOOD, &saved_kwsel_loc, &kw); 
 			goto oops;
 		}
 
 		nargs++;
 	} 
-	while (TOKEN_TYPE(stix) == STIX_IOTOK_KEYWORD);
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD);
 
-	kwsel.ptr = &stix->c->mth.kwsels.ptr[saved_kwsel_len];
-	kwsel.len = stix->c->mth.kwsels.len - saved_kwsel_len;
+	kwsel.ptr = &moo->c->mth.kwsels.ptr[saved_kwsel_len];
+	kwsel.len = moo->c->mth.kwsels.len - saved_kwsel_len;
 
-	if (add_symbol_literal(stix, &kwsel, 0, &index) <= -1 ||
-	    emit_double_param_instruction(stix, send_message_cmd[to_super], nargs, index) <= -1) goto oops;
+	if (add_symbol_literal(moo, &kwsel, 0, &index) <= -1 ||
+	    emit_double_param_instruction(moo, send_message_cmd[to_super], nargs, index) <= -1) goto oops;
 
-	stix->c->mth.kwsels.len = saved_kwsel_len;
+	moo->c->mth.kwsels.len = saved_kwsel_len;
 	return 0;
 
 oops:
-	stix->c->mth.kwsels.len = saved_kwsel_len;
+	moo->c->mth.kwsels.len = saved_kwsel_len;
 	return -1;
 }
 
-static int compile_message_expression (stix_t* stix, int to_super)
+static int compile_message_expression (moo_t* moo, int to_super)
 {
 	/*
 	 * message-expression := single-message cascaded-message
@@ -4101,65 +4108,65 @@ static int compile_message_expression (stix_t* stix, int to_super)
 	 * unary-message := unary-selector
 	 * cascaded-message := (";" single-message)*
 	 */
-	stix_oow_t noop_pos;
+	moo_oow_t noop_pos;
 
 	do
 	{
-		switch (TOKEN_TYPE(stix))
+		switch (TOKEN_TYPE(moo))
 		{
-			case STIX_IOTOK_IDENT:
+			case MOO_IOTOK_IDENT:
 				/* insert NOOP to change to DUP_STACKTOP if there is a 
 				 * cascaded message */
-				noop_pos = stix->c->mth.code.len;
-				if (emit_byte_instruction(stix, BCODE_NOOP) <= -1) return -1;
+				noop_pos = moo->c->mth.code.len;
+				if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
 
-				if (compile_unary_message(stix, to_super) <= -1) return -1;
+				if (compile_unary_message(moo, to_super) <= -1) return -1;
 
-				if (TOKEN_TYPE(stix) == STIX_IOTOK_BINSEL)
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL)
 				{
-					STIX_ASSERT (stix, stix->c->mth.code.len > noop_pos);
-					STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
-					stix->c->mth.code.len--;
+					MOO_ASSERT (moo, moo->c->mth.code.len > noop_pos);
+					MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
+					moo->c->mth.code.len--;
 
-					noop_pos = stix->c->mth.code.len;
-					if (emit_byte_instruction(stix, BCODE_NOOP) <= -1) return -1;
-					if (compile_binary_message(stix, to_super) <= -1) return -1;
+					noop_pos = moo->c->mth.code.len;
+					if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
+					if (compile_binary_message(moo, to_super) <= -1) return -1;
 				}
 
-				if (TOKEN_TYPE(stix) == STIX_IOTOK_KEYWORD)
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD)
 				{
-					STIX_ASSERT (stix, stix->c->mth.code.len > noop_pos);
-					STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
-					stix->c->mth.code.len--;
+					MOO_ASSERT (moo, moo->c->mth.code.len > noop_pos);
+					MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
+					moo->c->mth.code.len--;
 
-					noop_pos = stix->c->mth.code.len;
-					if (emit_byte_instruction(stix, BCODE_NOOP) <= -1) return -1;
-					if (compile_keyword_message(stix, to_super) <= -1) return -1;
-				}
-				break;
-
-			case STIX_IOTOK_BINSEL:
-				noop_pos = stix->c->mth.code.len;
-				if (emit_byte_instruction(stix, BCODE_NOOP) <= -1) return -1;
-
-				if (compile_binary_message(stix, to_super) <= -1) return -1;
-				if (TOKEN_TYPE(stix) == STIX_IOTOK_KEYWORD)
-				{
-					STIX_ASSERT (stix, stix->c->mth.code.len > noop_pos);
-					STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
-					stix->c->mth.code.len--;
-
-					noop_pos = stix->c->mth.code.len;
-					if (emit_byte_instruction(stix, BCODE_NOOP) <= -1) return -1;
-					if (compile_keyword_message(stix, to_super) <= -1) return -1;
+					noop_pos = moo->c->mth.code.len;
+					if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
+					if (compile_keyword_message(moo, to_super) <= -1) return -1;
 				}
 				break;
 
-			case STIX_IOTOK_KEYWORD:
-				noop_pos = stix->c->mth.code.len;
-				if (emit_byte_instruction(stix, BCODE_NOOP) <= -1) return -1;
+			case MOO_IOTOK_BINSEL:
+				noop_pos = moo->c->mth.code.len;
+				if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
 
-				if (compile_keyword_message(stix, to_super) <= -1) return -1;
+				if (compile_binary_message(moo, to_super) <= -1) return -1;
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD)
+				{
+					MOO_ASSERT (moo, moo->c->mth.code.len > noop_pos);
+					MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
+					moo->c->mth.code.len--;
+
+					noop_pos = moo->c->mth.code.len;
+					if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
+					if (compile_keyword_message(moo, to_super) <= -1) return -1;
+				}
+				break;
+
+			case MOO_IOTOK_KEYWORD:
+				noop_pos = moo->c->mth.code.len;
+				if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
+
+				if (compile_keyword_message(moo, to_super) <= -1) return -1;
 				break;
 
 			default:
@@ -4167,18 +4174,18 @@ static int compile_message_expression (stix_t* stix, int to_super)
 
 		}
 
-		if (TOKEN_TYPE(stix) == STIX_IOTOK_SEMICOLON)
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_SEMICOLON)
 		{
-			stix->c->mth.code.ptr[noop_pos] = BCODE_DUP_STACKTOP;
-			if (emit_byte_instruction(stix, BCODE_POP_STACKTOP) <= -1) return -1;
-			GET_TOKEN(stix);
+			moo->c->mth.code.ptr[noop_pos] = BCODE_DUP_STACKTOP;
+			if (emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) return -1;
+			GET_TOKEN(moo);
 		}
 		else 
 		{
 			/* delete the NOOP instruction inserted  */
-			STIX_ASSERT (stix, stix->c->mth.code.len > noop_pos);
-			STIX_MEMMOVE (&stix->c->mth.code.ptr[noop_pos], &stix->c->mth.code.ptr[noop_pos + 1], stix->c->mth.code.len - noop_pos - 1);
-			stix->c->mth.code.len--;
+			MOO_ASSERT (moo, moo->c->mth.code.len > noop_pos);
+			MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
+			moo->c->mth.code.len--;
 			goto done;
 		}
 	}
@@ -4188,74 +4195,79 @@ done:
 	return 0;
 }
 
-static int compile_basic_expression (stix_t* stix, const stix_oocs_t* ident, const stix_ioloc_t* ident_loc, int ident_dotted)
+static int compile_basic_expression (moo_t* moo, const moo_oocs_t* ident, const moo_ioloc_t* ident_loc, int ident_dotted)
 {
 	/*
 	 * basic-expression := expression-primary message-expression?
 	 */
 	int to_super;
 
-	if (compile_expression_primary(stix, ident, ident_loc, ident_dotted, &to_super) <= -1) return -1;
+	if (compile_expression_primary(moo, ident, ident_loc, ident_dotted, &to_super) <= -1) return -1;
 
 #if 0
-	if (TOKEN_TYPE(stix) != STIX_IOTOK_EOF && 
-	    TOKEN_TYPE(stix) != STIX_IOTOK_RBRACE && 
-	    TOKEN_TYPE(stix) != STIX_IOTOK_PERIOD &&
-	    TOKEN_TYPE(stix) != STIX_IOTOK_SEMICOLON)
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_EOF && 
+	    TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE && 
+	    TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD &&
+	    TOKEN_TYPE(moo) != MOO_IOTOK_SEMICOLON)
 	{
-		if (compile_message_expression(stix, to_super) <= -1) return -1;
+		if (compile_message_expression(moo, to_super) <= -1) return -1;
 	}
 #else
-	if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT ||
-	    TOKEN_TYPE(stix) == STIX_IOTOK_BINSEL ||
-	    TOKEN_TYPE(stix) == STIX_IOTOK_KEYWORD)
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT ||
+	    TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL ||
+	    TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD)
 	{
-		if (compile_message_expression(stix, to_super) <= -1) return -1;
+		if (compile_message_expression(moo, to_super) <= -1) return -1;
 	}
 #endif
 
 	return 0;
 }
 
-static int compile_method_expression (stix_t* stix, int pop)
+static int compile_method_expression (moo_t* moo, int pop)
 {
 	/*
-	 * method-expression := method-assignment-expression | basic-expression
+	 * method-expression := method-assignment-expression | basic-expression | if-expression
 	 * method-assignment-expression := identifier ":=" method-expression
+	 * if-expression := if ( ) {  } else { }.
 	 */
 
-	stix_oocs_t assignee;
-	stix_oow_t index;
+	moo_oocs_t assignee;
+	moo_oow_t index;
 	int ret = 0;
 
-	STIX_ASSERT (stix, pop == 0 || pop == 1);
-	STIX_MEMSET (&assignee, 0, STIX_SIZEOF(assignee));
+	MOO_ASSERT (moo, pop == 0 || pop == 1);
+	MOO_MEMSET (&assignee, 0, MOO_SIZEOF(assignee));
 
-	if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT ||
-	    TOKEN_TYPE(stix) == STIX_IOTOK_IDENT_DOTTED)
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_IF)
 	{
-		stix_ioloc_t assignee_loc;
-		stix_oow_t assignee_offset;
+/* TODO: ... */
+	}
+	else if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT ||
+	    TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
+	{
+		moo_ioloc_t assignee_loc;
+		moo_oow_t assignee_offset;
 		int assignee_dotted;
 
 		/* store the assignee name to the internal buffer
 		 * to make it valid after the token buffer has been overwritten */
-		assignee = stix->c->tok.name;
+		assignee = moo->c->tok.name;
 
-		if (clone_assignee(stix, &assignee, &assignee_offset) <= -1) return -1;
+		if (clone_assignee(moo, &assignee, &assignee_offset) <= -1) return -1;
 
-		assignee_loc = stix->c->tok.loc;
-		assignee_dotted = (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT_DOTTED);
+		assignee_loc = moo->c->tok.loc;
+		assignee_dotted = (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED);
 
-		GET_TOKEN (stix);
-		if (TOKEN_TYPE(stix) == STIX_IOTOK_ASSIGN) 
+		GET_TOKEN (moo);
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_ASSIGN) 
 		{
 			/* assignment expression */
 			var_info_t var;
 
-			GET_TOKEN (stix);
+			GET_TOKEN (moo);
 
-			if (compile_method_expression(stix, 0) <= -1) goto oops;
+			if (compile_method_expression(moo, 0) <= -1) goto oops;
 
 			/* compile_method_expression() is called after clone_assignee().
 			 * clone_assignee() may reallocate a single buffer to hold 
@@ -4263,38 +4275,38 @@ static int compile_method_expression (stix_t* stix, int pop)
 			 * fragile as it can change. use the offset of the cloned
 			 * assignee to update the actual pointer after the recursive
 			 * compile_method_expression() call */
-			assignee.ptr = &stix->c->mth.assignees.ptr[assignee_offset];
-			if (get_variable_info(stix, &assignee, &assignee_loc, assignee_dotted, &var) <= -1) goto oops;
+			assignee.ptr = &moo->c->mth.assignees.ptr[assignee_offset];
+			if (get_variable_info(moo, &assignee, &assignee_loc, assignee_dotted, &var) <= -1) goto oops;
 
 			switch (var.type)
 			{
 				case VAR_ARGUMENT:
 					/* assigning to an argument is not allowed */
-					set_syntax_error (stix, STIX_SYNERR_VARARG, &assignee_loc, &assignee);
+					set_syntax_error (moo, MOO_SYNERR_VARARG, &assignee_loc, &assignee);
 					goto oops;
 
 				case VAR_TEMPORARY:
 				{
-				#if defined(STIX_USE_CTXTEMPVAR)
-					if (stix->c->mth.blk_depth > 0)
+				#if defined(MOO_USE_CTXTEMPVAR)
+					if (moo->c->mth.blk_depth > 0)
 					{
-						stix_oow_t i;
+						moo_oow_t i;
 
 						/* if a temporary variable is accessed inside a block,
 						 * use a special instruction to indicate it */
-						STIX_ASSERT (stix, var.pos < stix->c->mth.blk_tmprcnt[stix->c->mth.blk_depth]);
-						for (i = stix->c->mth.blk_depth; i > 0; i--)
+						MOO_ASSERT (moo, var.pos < moo->c->mth.blk_tmprcnt[moo->c->mth.blk_depth]);
+						for (i = moo->c->mth.blk_depth; i > 0; i--)
 						{
-							if (var.pos >= stix->c->mth.blk_tmprcnt[i - 1])
+							if (var.pos >= moo->c->mth.blk_tmprcnt[i - 1])
 							{
-								if (emit_double_param_instruction(stix, (pop? BCODE_POP_INTO_CTXTEMPVAR_0: BCODE_STORE_INTO_CTXTEMPVAR_0), stix->c->mth.blk_depth - i, var.pos - stix->c->mth.blk_tmprcnt[i - 1]) <= -1) return -1;
+								if (emit_double_param_instruction(moo, (pop? BCODE_POP_INTO_CTXTEMPVAR_0: BCODE_STORE_INTO_CTXTEMPVAR_0), moo->c->mth.blk_depth - i, var.pos - moo->c->mth.blk_tmprcnt[i - 1]) <= -1) return -1;
 								goto temporary_done;
 							}
 						}
 					}
 				#endif
 
-					if (emit_single_param_instruction (stix, (pop? BCODE_POP_INTO_TEMPVAR_0: BCODE_STORE_INTO_TEMPVAR_0), var.pos) <= -1) goto oops;
+					if (emit_single_param_instruction (moo, (pop? BCODE_POP_INTO_TEMPVAR_0: BCODE_STORE_INTO_TEMPVAR_0), var.pos) <= -1) goto oops;
 
 				temporary_done:
 					ret = pop;
@@ -4303,24 +4315,24 @@ static int compile_method_expression (stix_t* stix, int pop)
 
 				case VAR_INSTANCE:
 				case VAR_CLASSINST:
-					if (emit_single_param_instruction (stix, (pop? BCODE_POP_INTO_INSTVAR_0: BCODE_STORE_INTO_INSTVAR_0), var.pos) <= -1) goto oops;
+					if (emit_single_param_instruction (moo, (pop? BCODE_POP_INTO_INSTVAR_0: BCODE_STORE_INTO_INSTVAR_0), var.pos) <= -1) goto oops;
 					ret = pop;
 					break;
 
 				case VAR_CLASS:
-					if (add_literal (stix, (stix_oop_t)var.cls, &index) <= -1 ||
-					    emit_double_param_instruction (stix, (pop? BCODE_POP_INTO_OBJVAR_0: BCODE_STORE_INTO_OBJVAR_0), var.pos, index) <= -1) goto oops;
+					if (add_literal (moo, (moo_oop_t)var.cls, &index) <= -1 ||
+					    emit_double_param_instruction (moo, (pop? BCODE_POP_INTO_OBJVAR_0: BCODE_STORE_INTO_OBJVAR_0), var.pos, index) <= -1) goto oops;
 					ret = pop;
 					break;
 
 				case VAR_GLOBAL:
-					if (add_literal(stix, (stix_oop_t)var.gbl, &index) <= -1 ||
-					    emit_single_param_instruction(stix, (pop? BCODE_POP_INTO_OBJECT_0: BCODE_STORE_INTO_OBJECT_0), index) <= -1) return -1;
+					if (add_literal(moo, (moo_oop_t)var.gbl, &index) <= -1 ||
+					    emit_single_param_instruction(moo, (pop? BCODE_POP_INTO_OBJECT_0: BCODE_STORE_INTO_OBJECT_0), index) <= -1) return -1;
 					ret = pop;
 					break;
 
 				default:
-					stix->errnum = STIX_EINTERN;
+					moo->errnum = MOO_EINTERN;
 					goto oops;
 			}
 		}
@@ -4329,55 +4341,55 @@ static int compile_method_expression (stix_t* stix, int pop)
 			/* what is held in assignee is not an assignee any more.
 			 * potentially it is a variable or object reference
 			 * to be pused on to the stack */
-			assignee.ptr = &stix->c->mth.assignees.ptr[assignee_offset];
-			if (compile_basic_expression(stix, &assignee, &assignee_loc, assignee_dotted) <= -1) goto oops;
+			assignee.ptr = &moo->c->mth.assignees.ptr[assignee_offset];
+			if (compile_basic_expression(moo, &assignee, &assignee_loc, assignee_dotted) <= -1) goto oops;
 		}
 	}
 	else 
 	{
 		assignee.len = 0;
-		if (compile_basic_expression(stix, STIX_NULL, STIX_NULL, 0) <= -1) goto oops;
+		if (compile_basic_expression(moo, MOO_NULL, MOO_NULL, 0) <= -1) goto oops;
 	}
 
-	stix->c->mth.assignees.len -= assignee.len;
+	moo->c->mth.assignees.len -= assignee.len;
 	return ret;
 
 oops:
-	stix->c->mth.assignees.len -= assignee.len;
+	moo->c->mth.assignees.len -= assignee.len;
 	return -1;
 }
 
-static int compile_block_statement (stix_t* stix)
+static int compile_block_statement (moo_t* moo)
 {
 	/* compile_block_statement() is a simpler version of
 	 * of compile_method_statement(). it doesn't cater for
 	 * popping the stack top */
-	if (TOKEN_TYPE(stix) == STIX_IOTOK_RETURN) 
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_RETURN) 
 	{
 		/* handle the return statement */
-		GET_TOKEN (stix);
-		if (compile_method_expression(stix, 0) <= -1) return -1;
-		return emit_byte_instruction (stix, BCODE_RETURN_STACKTOP);
+		GET_TOKEN (moo);
+		if (compile_method_expression(moo, 0) <= -1) return -1;
+		return emit_byte_instruction (moo, BCODE_RETURN_STACKTOP);
 	}
 	else
 	{
-		return compile_method_expression(stix, 0);
+		return compile_method_expression(moo, 0);
 	}
 }
 
-static int compile_method_statement (stix_t* stix)
+static int compile_method_statement (moo_t* moo)
 {
 	/*
 	 * method-statement := method-return-statement | method-expression
 	 * method-return-statement := "^" method-expression
 	 */
 
-	if (TOKEN_TYPE(stix) == STIX_IOTOK_RETURN) 
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_RETURN) 
 	{
 		/* handle the return statement */
-		GET_TOKEN (stix);
-		if (compile_method_expression(stix, 0) <= -1) return -1;
-		return emit_byte_instruction (stix, BCODE_RETURN_STACKTOP);
+		GET_TOKEN (moo);
+		if (compile_method_expression(moo, 0) <= -1) return -1;
+		return emit_byte_instruction (moo, BCODE_RETURN_STACKTOP);
 	}
 	else 
 	{
@@ -4389,47 +4401,47 @@ static int compile_method_statement (stix_t* stix)
 		 * can optimize some instruction sequencese. for example, two 
 		 * consecutive store and pop intructions can be transformed to 
 		 * a more specialized single pop-and-store instruction. */
-		n = compile_method_expression(stix, 1);
+		n = compile_method_expression(moo, 1);
 		if (n <= -1) return -1;
 
 		/* if n is 1, no stack popping is required */
 		if (n == 0)
 		{
-			return emit_byte_instruction (stix, BCODE_POP_STACKTOP);
+			return emit_byte_instruction (moo, BCODE_POP_STACKTOP);
 		}
 
 		return 0;
 	}
 }
 
-static int compile_method_statements (stix_t* stix)
+static int compile_method_statements (moo_t* moo)
 {
 	/*
 	 * method-statements := method-statement ("." | ("." method-statements))*
 	 */
 
-	if (TOKEN_TYPE(stix) != STIX_IOTOK_EOF &&
-	    TOKEN_TYPE(stix) != STIX_IOTOK_RBRACE)
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_EOF &&
+	    TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
 		do
 		{
-			if (compile_method_statement(stix) <= -1) return -1;
+			if (compile_method_statement(moo) <= -1) return -1;
 
-			if (TOKEN_TYPE(stix) == STIX_IOTOK_PERIOD) 
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD) 
 			{
 				/* period after a statement */
-				GET_TOKEN (stix);
+				GET_TOKEN (moo);
 
-				if (TOKEN_TYPE(stix) == STIX_IOTOK_EOF ||
-				    TOKEN_TYPE(stix) == STIX_IOTOK_RBRACE) break;
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_EOF ||
+				    TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
 			}
 			else
 			{
-				if (TOKEN_TYPE(stix) == STIX_IOTOK_EOF ||
-				    TOKEN_TYPE(stix) == STIX_IOTOK_RBRACE) break;
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_EOF ||
+				    TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
 
 				/* not a period, EOF, nor } */
-				set_syntax_error (stix, STIX_SYNERR_PERIOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
+				set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 		}
@@ -4438,103 +4450,103 @@ static int compile_method_statements (stix_t* stix)
 
 	/* arrange to return the receiver if execution reached 
 	 * the end of the method without explicit return */
-	return emit_byte_instruction (stix, BCODE_RETURN_RECEIVER);
+	return emit_byte_instruction (moo, BCODE_RETURN_RECEIVER);
 }
 
-static int add_compiled_method (stix_t* stix)
+static int add_compiled_method (moo_t* moo)
 {
-	stix_oop_char_t name; /* selector */
-	stix_oop_method_t mth; /* method */
-#if defined(STIX_USE_OBJECT_TRAILER)
+	moo_oop_char_t name; /* selector */
+	moo_oop_method_t mth; /* method */
+#if defined(MOO_USE_OBJECT_TRAILER)
 	/* nothing extra */
 #else
-	stix_oop_byte_t code;
+	moo_oop_byte_t code;
 #endif
-	stix_oow_t tmp_count = 0;
-	stix_oow_t i;
-	stix_ooi_t preamble_code, preamble_index, preamble_flags;
+	moo_oow_t tmp_count = 0;
+	moo_oow_t i;
+	moo_ooi_t preamble_code, preamble_index, preamble_flags;
 
-	name = (stix_oop_char_t)stix_makesymbol (stix, stix->c->mth.name.ptr, stix->c->mth.name.len);
+	name = (moo_oop_char_t)moo_makesymbol (moo, moo->c->mth.name.ptr, moo->c->mth.name.len);
 	if (!name) return -1;
-	stix_pushtmp (stix, (stix_oop_t*)&name); tmp_count++;
+	moo_pushtmp (moo, (moo_oop_t*)&name); tmp_count++;
 
-	/* The variadic data part passed to stix_instantiate() is not GC-safe */
-#if defined(STIX_USE_OBJECT_TRAILER)
-	mth = (stix_oop_method_t)stix_instantiatewithtrailer (stix, stix->_method, stix->c->mth.literal_count, stix->c->mth.code.ptr, stix->c->mth.code.len);
+	/* The variadic data part passed to moo_instantiate() is not GC-safe */
+#if defined(MOO_USE_OBJECT_TRAILER)
+	mth = (moo_oop_method_t)moo_instantiatewithtrailer (moo, moo->_method, moo->c->mth.literal_count, moo->c->mth.code.ptr, moo->c->mth.code.len);
 #else
-	mth = (stix_oop_method_t)stix_instantiate (stix, stix->_method, STIX_NULL, stix->c->mth.literal_count);
+	mth = (moo_oop_method_t)moo_instantiate (moo, moo->_method, MOO_NULL, moo->c->mth.literal_count);
 #endif
 	if (!mth) goto oops;
 
-	for (i = 0; i < stix->c->mth.literal_count; i++)
+	for (i = 0; i < moo->c->mth.literal_count; i++)
 	{
 		/* let's do the variadic data initialization here */
-		mth->slot[i] = stix->c->mth.literals[i];
+		mth->slot[i] = moo->c->mth.literals[i];
 	}
-	stix_pushtmp (stix, (stix_oop_t*)&mth); tmp_count++;
+	moo_pushtmp (moo, (moo_oop_t*)&mth); tmp_count++;
 
-#if defined(STIX_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_OBJECT_TRAILER)
 	/* do nothing */
 #else
-	code = (stix_oop_byte_t)stix_instantiate (stix, stix->_byte_array, stix->c->mth.code.ptr, stix->c->mth.code.len);
+	code = (moo_oop_byte_t)moo_instantiate (moo, moo->_byte_array, moo->c->mth.code.ptr, moo->c->mth.code.len);
 	if (!code) goto oops;
-	stix_pushtmp (stix, (stix_oop_t*)&code); tmp_count++;
+	moo_pushtmp (moo, (moo_oop_t*)&code); tmp_count++;
 #endif
 
-	preamble_code = STIX_METHOD_PREAMBLE_NONE;
+	preamble_code = MOO_METHOD_PREAMBLE_NONE;
 	preamble_index = 0;
 	preamble_flags = 0;
 
-	if (stix->c->mth.pftype <= 0)
+	if (moo->c->mth.pftype <= 0)
 	{
 		/* no primitive is set */
-		if (stix->c->mth.code.len <= 0)
+		if (moo->c->mth.code.len <= 0)
 		{
-			preamble_code = STIX_METHOD_PREAMBLE_RETURN_RECEIVER;
+			preamble_code = MOO_METHOD_PREAMBLE_RETURN_RECEIVER;
 		}
 		else
 		{
-			if (stix->c->mth.code.ptr[0] == BCODE_RETURN_RECEIVER)
+			if (moo->c->mth.code.ptr[0] == BCODE_RETURN_RECEIVER)
 			{
-				preamble_code = STIX_METHOD_PREAMBLE_RETURN_RECEIVER;
+				preamble_code = MOO_METHOD_PREAMBLE_RETURN_RECEIVER;
 			}
-			else if (stix->c->mth.code.len > 1 && stix->c->mth.code.ptr[1] == BCODE_RETURN_STACKTOP)
+			else if (moo->c->mth.code.len > 1 && moo->c->mth.code.ptr[1] == BCODE_RETURN_STACKTOP)
 			{
-				switch (stix->c->mth.code.ptr[0])
+				switch (moo->c->mth.code.ptr[0])
 				{
 					case BCODE_PUSH_RECEIVER:
-						preamble_code = STIX_METHOD_PREAMBLE_RETURN_RECEIVER;
+						preamble_code = MOO_METHOD_PREAMBLE_RETURN_RECEIVER;
 						break;
 
 					case BCODE_PUSH_NIL:
-						preamble_code = STIX_METHOD_PREAMBLE_RETURN_NIL;
+						preamble_code = MOO_METHOD_PREAMBLE_RETURN_NIL;
 						break;
 
 					case BCODE_PUSH_TRUE:
-						preamble_code = STIX_METHOD_PREAMBLE_RETURN_TRUE;
+						preamble_code = MOO_METHOD_PREAMBLE_RETURN_TRUE;
 						break;
 
 					case BCODE_PUSH_FALSE:
-						preamble_code = STIX_METHOD_PREAMBLE_RETURN_FALSE;
+						preamble_code = MOO_METHOD_PREAMBLE_RETURN_FALSE;
 						break;
 
 					case BCODE_PUSH_NEGONE:
-						preamble_code = STIX_METHOD_PREAMBLE_RETURN_NEGINDEX;
+						preamble_code = MOO_METHOD_PREAMBLE_RETURN_NEGINDEX;
 						preamble_index = 1;
 						break;
 
 					case BCODE_PUSH_ZERO:
-						preamble_code = STIX_METHOD_PREAMBLE_RETURN_INDEX;
+						preamble_code = MOO_METHOD_PREAMBLE_RETURN_INDEX;
 						preamble_index = 0;
 						break;
 
 					case BCODE_PUSH_ONE:
-						preamble_code = STIX_METHOD_PREAMBLE_RETURN_INDEX;
+						preamble_code = MOO_METHOD_PREAMBLE_RETURN_INDEX;
 						preamble_index = 1;
 						break;
 
 					case BCODE_PUSH_TWO:
-						preamble_code = STIX_METHOD_PREAMBLE_RETURN_INDEX;
+						preamble_code = MOO_METHOD_PREAMBLE_RETURN_INDEX;
 						preamble_index = 2;
 						break;
 
@@ -4546,211 +4558,211 @@ static int add_compiled_method (stix_t* stix)
 					case BCODE_PUSH_INSTVAR_5:
 					case BCODE_PUSH_INSTVAR_6:
 					case BCODE_PUSH_INSTVAR_7:
-						preamble_code = STIX_METHOD_PREAMBLE_RETURN_INSTVAR;
-						preamble_index = stix->c->mth.code.ptr[0] & 0x7; /* low 3 bits */
+						preamble_code = MOO_METHOD_PREAMBLE_RETURN_INSTVAR;
+						preamble_index = moo->c->mth.code.ptr[0] & 0x7; /* low 3 bits */
 						break;
 				}
 			}
-			else if (stix->c->mth.code.len > STIX_BCODE_LONG_PARAM_SIZE + 1 &&
-			         stix->c->mth.code.ptr[STIX_BCODE_LONG_PARAM_SIZE + 1] == BCODE_RETURN_STACKTOP)
+			else if (moo->c->mth.code.len > MOO_BCODE_LONG_PARAM_SIZE + 1 &&
+			         moo->c->mth.code.ptr[MOO_BCODE_LONG_PARAM_SIZE + 1] == BCODE_RETURN_STACKTOP)
 			{
 				int i;
-				switch (stix->c->mth.code.ptr[0])
+				switch (moo->c->mth.code.ptr[0])
 				{
 					case BCODE_PUSH_INSTVAR_X:
-						preamble_code = STIX_METHOD_PREAMBLE_RETURN_INSTVAR;
+						preamble_code = MOO_METHOD_PREAMBLE_RETURN_INSTVAR;
 						goto set_preamble_index;
 
 					case BCODE_PUSH_INTLIT:
-						preamble_code = STIX_METHOD_PREAMBLE_RETURN_INDEX;
+						preamble_code = MOO_METHOD_PREAMBLE_RETURN_INDEX;
 						goto set_preamble_index;
 
 					case BCODE_PUSH_NEGINTLIT:
-						preamble_code = STIX_METHOD_PREAMBLE_RETURN_NEGINDEX;
+						preamble_code = MOO_METHOD_PREAMBLE_RETURN_NEGINDEX;
 						goto set_preamble_index;
 
 					set_preamble_index:
 						preamble_index = 0;
-						for (i = 1; i <= STIX_BCODE_LONG_PARAM_SIZE; i++)
+						for (i = 1; i <= MOO_BCODE_LONG_PARAM_SIZE; i++)
 						{
-							preamble_index = (preamble_index << 8) | stix->c->mth.code.ptr[i];
+							preamble_index = (preamble_index << 8) | moo->c->mth.code.ptr[i];
 						}
 
-						if (!STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index))
+						if (!MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index))
 						{
 							/* the index got out of the range */
-							preamble_code = STIX_METHOD_PREAMBLE_NONE;
+							preamble_code = MOO_METHOD_PREAMBLE_NONE;
 							preamble_index = 0;
 						}
 				}
 			}
 		}
 	}
-	else if (stix->c->mth.pftype == 1)
+	else if (moo->c->mth.pftype == 1)
 	{
-		preamble_code = STIX_METHOD_PREAMBLE_PRIMITIVE;
-		preamble_index = stix->c->mth.pfnum;
+		preamble_code = MOO_METHOD_PREAMBLE_PRIMITIVE;
+		preamble_index = moo->c->mth.pfnum;
 	}
-	else if (stix->c->mth.pftype == 2)
+	else if (moo->c->mth.pftype == 2)
 	{
-		preamble_code = STIX_METHOD_PREAMBLE_NAMED_PRIMITIVE;
-		preamble_index = stix->c->mth.pfnum; /* index to literal frame */
+		preamble_code = MOO_METHOD_PREAMBLE_NAMED_PRIMITIVE;
+		preamble_index = moo->c->mth.pfnum; /* index to literal frame */
 	}
-	else if (stix->c->mth.pftype == 3)
+	else if (moo->c->mth.pftype == 3)
 	{
-		preamble_code = STIX_METHOD_PREAMBLE_EXCEPTION;
+		preamble_code = MOO_METHOD_PREAMBLE_EXCEPTION;
 		preamble_index = 0;
 	}
 	else 
 	{
-		STIX_ASSERT (stix, stix->c->mth.pftype == 4);
-		preamble_code = STIX_METHOD_PREAMBLE_ENSURE;
+		MOO_ASSERT (moo, moo->c->mth.pftype == 4);
+		preamble_code = MOO_METHOD_PREAMBLE_ENSURE;
 		preamble_index = 0;
 	}
 
-	if (stix->c->mth.variadic /*&& stix->c->mth.tmpr_nargs > 0*/)
-		preamble_flags |= STIX_METHOD_PREAMBLE_FLAG_VARIADIC;
+	if (moo->c->mth.variadic /*&& moo->c->mth.tmpr_nargs > 0*/)
+		preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_VARIADIC;
 
-	STIX_ASSERT (stix, STIX_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index));
+	MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index));
 
-	mth->owner = stix->c->cls.self_oop;
+	mth->owner = moo->c->cls.self_oop;
 	mth->name = name;
-	mth->preamble = STIX_SMOOI_TO_OOP(STIX_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index, preamble_flags));
-	mth->preamble_data[0] = STIX_SMOOI_TO_OOP(0);
-	mth->preamble_data[1] = STIX_SMOOI_TO_OOP(0);
-	mth->tmpr_count = STIX_SMOOI_TO_OOP(stix->c->mth.tmpr_count);
-	mth->tmpr_nargs = STIX_SMOOI_TO_OOP(stix->c->mth.tmpr_nargs);
+	mth->preamble = MOO_SMOOI_TO_OOP(MOO_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index, preamble_flags));
+	mth->preamble_data[0] = MOO_SMOOI_TO_OOP(0);
+	mth->preamble_data[1] = MOO_SMOOI_TO_OOP(0);
+	mth->tmpr_count = MOO_SMOOI_TO_OOP(moo->c->mth.tmpr_count);
+	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(moo->c->mth.tmpr_nargs);
 
-#if defined(STIX_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_OBJECT_TRAILER)
 	/* do nothing */
 #else
 	mth->code = code;
 #endif
 
-	/*TODO: preserve source??? mth->text = stix->c->mth.text
+	/*TODO: preserve source??? mth->text = moo->c->mth.text
 the compiler must collect all source method string collected so far.
 need to write code to collect string.
 */
 
-#if defined(STIX_DEBUG_COMPILER)
-	stix_decode (stix, mth, &stix->c->cls.fqn);
+#if defined(MOO_DEBUG_COMPILER)
+	moo_decode (moo, mth, &moo->c->cls.fqn);
 #endif
 
-	stix_poptmps (stix, tmp_count); tmp_count = 0;
+	moo_poptmps (moo, tmp_count); tmp_count = 0;
 
 #ifdef MTHDIC
-	if (!stix_putatdic(stix, stix->c->cls.mthdic_oop[stix->c->mth.type], (stix_oop_t)name, (stix_oop_t)mth)) goto oops;
+	if (!moo_putatdic(moo, moo->c->cls.mthdic_oop[moo->c->mth.type], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
 #else
-	if (!stix_putatdic(stix, stix->c->cls.self_oop->mthdic[stix->c->mth.type], (stix_oop_t)name, (stix_oop_t)mth)) goto oops;
+	if (!moo_putatdic(moo, moo->c->cls.self_oop->mthdic[moo->c->mth.type], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
 #endif
 
 	return 0;
 
 oops:
-	stix_poptmps (stix, tmp_count);
+	moo_poptmps (moo, tmp_count);
 	return -1;
 }
 
-static int compile_method_definition (stix_t* stix)
+static int compile_method_definition (moo_t* moo)
 {
 	/* clear data required to compile a method */
-	stix->c->mth.type = STIX_METHOD_INSTANCE;
-	stix->c->mth.text.len = 0;
-	stix->c->mth.assignees.len = 0;
-	stix->c->mth.binsels.len = 0;
-	stix->c->mth.kwsels.len = 0;
-	stix->c->mth.name.len = 0;
-	STIX_MEMSET (&stix->c->mth.name_loc, 0, STIX_SIZEOF(stix->c->mth.name_loc));
-	stix->c->mth.variadic = 0;
-	stix->c->mth.tmprs.len = 0;
-	stix->c->mth.tmpr_count = 0;
-	stix->c->mth.tmpr_nargs = 0;
-	stix->c->mth.literal_count = 0;
-	stix->c->mth.balit_count = 0;
-	stix->c->mth.arlit_count = 0;
-	stix->c->mth.pftype = 0;
-	stix->c->mth.pfnum = 0;
-	stix->c->mth.blk_depth = 0;
-	stix->c->mth.code.len = 0;
+	moo->c->mth.type = MOO_METHOD_INSTANCE;
+	moo->c->mth.text.len = 0;
+	moo->c->mth.assignees.len = 0;
+	moo->c->mth.binsels.len = 0;
+	moo->c->mth.kwsels.len = 0;
+	moo->c->mth.name.len = 0;
+	MOO_MEMSET (&moo->c->mth.name_loc, 0, MOO_SIZEOF(moo->c->mth.name_loc));
+	moo->c->mth.variadic = 0;
+	moo->c->mth.tmprs.len = 0;
+	moo->c->mth.tmpr_count = 0;
+	moo->c->mth.tmpr_nargs = 0;
+	moo->c->mth.literal_count = 0;
+	moo->c->mth.balit_count = 0;
+	moo->c->mth.arlit_count = 0;
+	moo->c->mth.pftype = 0;
+	moo->c->mth.pfnum = 0;
+	moo->c->mth.blk_depth = 0;
+	moo->c->mth.code.len = 0;
 
-	if (TOKEN_TYPE(stix) == STIX_IOTOK_LPAREN)
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
 		/* process method modifiers  */
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 
-		if (is_token_symbol(stix, VOCA_CLASS_S))
+		if (is_token_symbol(moo, VOCA_CLASS_S))
 		{
 			/* method(#class) */
-			stix->c->mth.type = STIX_METHOD_CLASS;
-			GET_TOKEN (stix);
+			moo->c->mth.type = MOO_METHOD_CLASS;
+			GET_TOKEN (moo);
 		}
 
-		if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 		{
 			/* ) expected */
-			set_syntax_error (stix, STIX_SYNERR_RPAREN, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 	}
 
-	if (compile_method_name(stix) <= -1) return -1;
+	if (compile_method_name(moo) <= -1) return -1;
 
-	if (TOKEN_TYPE(stix) != STIX_IOTOK_LBRACE)
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
 	{
 		/* { expected */
-		set_syntax_error (stix, STIX_SYNERR_LBRACE, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
-	GET_TOKEN (stix);
+	GET_TOKEN (moo);
 
-	if (compile_method_temporaries(stix) <= -1 ||
-	    compile_method_primitive(stix) <= -1 ||
-	    compile_method_statements(stix) <= -1) return -1;
+	if (compile_method_temporaries(moo) <= -1 ||
+	    compile_method_primitive(moo) <= -1 ||
+	    compile_method_statements(moo) <= -1) return -1;
 
-	if (TOKEN_TYPE(stix) != STIX_IOTOK_RBRACE)
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
 		/* } expected */
-		set_syntax_error (stix, STIX_SYNERR_RBRACE, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
-	GET_TOKEN (stix);
+	GET_TOKEN (moo);
 
 	/* add a compiled method to the method dictionary */
-	if (add_compiled_method(stix) <= -1) return -1;
+	if (add_compiled_method(moo) <= -1) return -1;
 
 	return 0;
 }
 
-static int make_defined_class (stix_t* stix)
+static int make_defined_class (moo_t* moo)
 {
 	/* this function make a class object with no functions/methods */
 
-	stix_oop_t tmp;
-	stix_oow_t spec, self_spec;
+	moo_oop_t tmp;
+	moo_oow_t spec, self_spec;
 	int just_made = 0;
 
-	spec = STIX_CLASS_SPEC_MAKE (stix->c->cls.var_count[VAR_INSTANCE],  
-	                             ((stix->c->cls.flags & CLASS_INDEXED)? 1: 0),
-	                             stix->c->cls.indexed_type);
+	spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.var_count[VAR_INSTANCE],  
+	                             ((moo->c->cls.flags & CLASS_INDEXED)? 1: 0),
+	                             moo->c->cls.indexed_type);
 
-	self_spec = STIX_CLASS_SELFSPEC_MAKE (stix->c->cls.var_count[VAR_CLASS],
-	                                      stix->c->cls.var_count[VAR_CLASSINST]);
+	self_spec = MOO_CLASS_SELFSPEC_MAKE (moo->c->cls.var_count[VAR_CLASS],
+	                                      moo->c->cls.var_count[VAR_CLASSINST]);
 
-	if (stix->c->cls.self_oop)
+	if (moo->c->cls.self_oop)
 	{
 		/* this is an internally created class object being defined. */
 
-		STIX_ASSERT (stix, STIX_CLASSOF(stix, stix->c->cls.self_oop) == stix->_class);
-		STIX_ASSERT (stix, STIX_OBJ_GET_FLAGS_KERNEL (stix->c->cls.self_oop) == 1);
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->c->cls.self_oop) == moo->_class);
+		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_KERNEL (moo->c->cls.self_oop) == 1);
 
-		if (spec != STIX_OOP_TO_SMOOI(stix->c->cls.self_oop->spec) ||
-		    self_spec != STIX_OOP_TO_SMOOI(stix->c->cls.self_oop->selfspec))
+		if (spec != MOO_OOP_TO_SMOOI(moo->c->cls.self_oop->spec) ||
+		    self_spec != MOO_OOP_TO_SMOOI(moo->c->cls.self_oop->selfspec))
 		{
 			/* it conflicts with internal definition */
-			set_syntax_error (stix, STIX_SYNERR_CLASSCONTRA, &stix->c->cls.fqn_loc, &stix->c->cls.name);
+			set_syntax_error (moo, MOO_SYNERR_CLASSCONTRA, &moo->c->cls.fqn_loc, &moo->c->cls.name);
 			return -1;
 		}
 	}
@@ -4758,63 +4770,63 @@ static int make_defined_class (stix_t* stix)
 	{
 		/* the class variables and class instance variables are placed
 		 * inside the class object after the fixed part. */
-		tmp = stix_instantiate (stix, stix->_class, STIX_NULL,
-		                        stix->c->cls.var_count[VAR_CLASSINST] + stix->c->cls.var_count[VAR_CLASS]);
+		tmp = moo_instantiate (moo, moo->_class, MOO_NULL,
+		                        moo->c->cls.var_count[VAR_CLASSINST] + moo->c->cls.var_count[VAR_CLASS]);
 		if (!tmp) return -1;
 
 		just_made = 1;
-		stix->c->cls.self_oop = (stix_oop_class_t)tmp;
+		moo->c->cls.self_oop = (moo_oop_class_t)tmp;
 
-		STIX_ASSERT (stix, STIX_CLASSOF(stix, stix->c->cls.self_oop) == stix->_class);
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->c->cls.self_oop) == moo->_class);
 
-		stix->c->cls.self_oop->spec = STIX_SMOOI_TO_OOP(spec);
-		stix->c->cls.self_oop->selfspec = STIX_SMOOI_TO_OOP(self_spec);
+		moo->c->cls.self_oop->spec = MOO_SMOOI_TO_OOP(spec);
+		moo->c->cls.self_oop->selfspec = MOO_SMOOI_TO_OOP(self_spec);
 	}
 
 /* TODO: check if the current class definition conflicts with the superclass.
  * if superclass is byte variable, the current class cannot be word variable or something else.
 *  TODO: TODO: TODO:
  */
-	STIX_OBJ_SET_FLAGS_KERNEL (stix->c->cls.self_oop, 2);
+	MOO_OBJ_SET_FLAGS_KERNEL (moo->c->cls.self_oop, 2);
 
-	stix->c->cls.self_oop->superclass = stix->c->cls.super_oop;
+	moo->c->cls.self_oop->superclass = moo->c->cls.super_oop;
 
-	tmp = stix_makesymbol (stix, stix->c->cls.name.ptr, stix->c->cls.name.len);
+	tmp = moo_makesymbol (moo, moo->c->cls.name.ptr, moo->c->cls.name.len);
 	if (!tmp) return -1;
-	stix->c->cls.self_oop->name = (stix_oop_char_t)tmp;
+	moo->c->cls.self_oop->name = (moo_oop_char_t)tmp;
 
-	tmp = stix_makestring (stix, stix->c->cls.vars[VAR_INSTANCE].ptr, stix->c->cls.vars[VAR_INSTANCE].len);
+	tmp = moo_makestring (moo, moo->c->cls.vars[VAR_INSTANCE].ptr, moo->c->cls.vars[VAR_INSTANCE].len);
 	if (!tmp) return -1;
-	stix->c->cls.self_oop->instvars = (stix_oop_char_t)tmp;
+	moo->c->cls.self_oop->instvars = (moo_oop_char_t)tmp;
 
-	tmp = stix_makestring (stix, stix->c->cls.vars[VAR_CLASS].ptr, stix->c->cls.vars[VAR_CLASS].len);
+	tmp = moo_makestring (moo, moo->c->cls.vars[VAR_CLASS].ptr, moo->c->cls.vars[VAR_CLASS].len);
 	if (!tmp) return -1;
-	stix->c->cls.self_oop->classvars = (stix_oop_char_t)tmp;
+	moo->c->cls.self_oop->classvars = (moo_oop_char_t)tmp;
 
-	tmp = stix_makestring (stix, stix->c->cls.vars[VAR_CLASSINST].ptr, stix->c->cls.vars[VAR_CLASSINST].len);
+	tmp = moo_makestring (moo, moo->c->cls.vars[VAR_CLASSINST].ptr, moo->c->cls.vars[VAR_CLASSINST].len);
 	if (!tmp) return -1;
-	stix->c->cls.self_oop->classinstvars = (stix_oop_char_t)tmp;
+	moo->c->cls.self_oop->classinstvars = (moo_oop_char_t)tmp;
 
-	tmp = stix_makestring (stix, stix->c->cls.pooldic.ptr, stix->c->cls.pooldic.len);
+	tmp = moo_makestring (moo, moo->c->cls.pooldic.ptr, moo->c->cls.pooldic.len);
 	if (!tmp) return -1;
-	stix->c->cls.self_oop->pooldics = (stix_oop_char_t)tmp;
+	moo->c->cls.self_oop->pooldics = (moo_oop_char_t)tmp;
 
 /* TOOD: good dictionary size */
-	tmp = (stix_oop_t)stix_makedic (stix, stix->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
+	tmp = (moo_oop_t)moo_makedic (moo, moo->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
 #ifdef MTHDIC
-	stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE] = (stix_oop_set_t)tmp;
+	moo->c->cls.mthdic_oop[MOO_METHOD_INSTANCE] = (moo_oop_set_t)tmp;
 #else
-	stix->c->cls.self_oop->mthdic[STIX_METHOD_INSTANCE] = (stix_oop_set_t)tmp;
+	moo->c->cls.self_oop->mthdic[MOO_METHOD_INSTANCE] = (moo_oop_set_t)tmp;
 #endif
 
 /* TOOD: good dictionary size */
-	tmp = (stix_oop_t)stix_makedic (stix, stix->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
+	tmp = (moo_oop_t)moo_makedic (moo, moo->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
 #ifdef MTHDIC
-	stix->c->cls.mthdic_oop[STIX_METHOD_CLASS] = (stix_oop_set_t)tmp;
+	moo->c->cls.mthdic_oop[MOO_METHOD_CLASS] = (moo_oop_set_t)tmp;
 #else
-	stix->c->cls.self_oop->mthdic[STIX_METHOD_CLASS] = (stix_oop_set_t)tmp;
+	moo->c->cls.self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_set_t)tmp;
 #endif
 
 /* TODO: initialize more fields??? whatelse. */
@@ -4824,14 +4836,14 @@ static int make_defined_class (stix_t* stix)
 	if (just_made)
 	{
 		/* register the class to the system dictionary */
-		/*if (!stix_putatsysdic(stix, (stix_oop_t)stix->c->cls.self_oop->name, (stix_oop_t)stix->c->cls.self_oop)) return -1;*/
-		if (!stix_putatdic(stix, stix->c->cls.ns_oop, (stix_oop_t)stix->c->cls.self_oop->name, (stix_oop_t)stix->c->cls.self_oop)) return -1;
+		/*if (!moo_putatsysdic(moo, (moo_oop_t)moo->c->cls.self_oop->name, (moo_oop_t)moo->c->cls.self_oop)) return -1;*/
+		if (!moo_putatdic(moo, moo->c->cls.ns_oop, (moo_oop_t)moo->c->cls.self_oop->name, (moo_oop_t)moo->c->cls.self_oop)) return -1;
 	}
 
 	return 0;
 }
 
-static int __compile_class_definition (stix_t* stix, int extend)
+static int __compile_class_definition (moo_t* moo, int extend)
 {
 	/* 
 	 * class-definition := #class class-modifier? class-name  (class-body | class-module-import)
@@ -4850,224 +4862,224 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	 *
 	 * NOTE: when extending a class, class-module-import and variable-definition are not allowed.
 	 */
-	stix_oop_association_t ass;
-	stix_ooch_t modname[STIX_MOD_NAME_LEN_MAX + 1];
-	stix_oow_t modnamelen = 0;
+	moo_oop_association_t ass;
+	moo_ooch_t modname[MOO_MOD_NAME_LEN_MAX + 1];
+	moo_oow_t modnamelen = 0;
 
-	if (!extend && TOKEN_TYPE(stix) == STIX_IOTOK_LPAREN)
+	if (!extend && TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
 		/* process class modifiers */
 
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 
-		if (is_token_symbol(stix, VOCA_BYTE_S))
+		if (is_token_symbol(moo, VOCA_BYTE_S))
 		{
 			/* class(#byte) */
-			stix->c->cls.flags |= CLASS_INDEXED;
-			stix->c->cls.indexed_type = STIX_OBJ_TYPE_BYTE;
-			GET_TOKEN (stix);
+			moo->c->cls.flags |= CLASS_INDEXED;
+			moo->c->cls.indexed_type = MOO_OBJ_TYPE_BYTE;
+			GET_TOKEN (moo);
 		}
-		else if (is_token_symbol(stix, VOCA_CHARACTER_S))
+		else if (is_token_symbol(moo, VOCA_CHARACTER_S))
 		{
 			/* class(#character) */
-			stix->c->cls.flags |= CLASS_INDEXED;
-			stix->c->cls.indexed_type = STIX_OBJ_TYPE_CHAR;
-			GET_TOKEN (stix);
+			moo->c->cls.flags |= CLASS_INDEXED;
+			moo->c->cls.indexed_type = MOO_OBJ_TYPE_CHAR;
+			GET_TOKEN (moo);
 		}
-		else if (is_token_symbol(stix, VOCA_HALFWORD_S))
+		else if (is_token_symbol(moo, VOCA_HALFWORD_S))
 		{
 			/* class(#halfword) */
-			stix->c->cls.flags |= CLASS_INDEXED;
-			stix->c->cls.indexed_type = STIX_OBJ_TYPE_HALFWORD;
-			GET_TOKEN (stix);
+			moo->c->cls.flags |= CLASS_INDEXED;
+			moo->c->cls.indexed_type = MOO_OBJ_TYPE_HALFWORD;
+			GET_TOKEN (moo);
 		}
-		else if (is_token_symbol(stix, VOCA_WORD_S))
+		else if (is_token_symbol(moo, VOCA_WORD_S))
 		{
 			/* class(#word) */
-			stix->c->cls.flags |= CLASS_INDEXED;
-			stix->c->cls.indexed_type = STIX_OBJ_TYPE_WORD;
-			GET_TOKEN (stix);
+			moo->c->cls.flags |= CLASS_INDEXED;
+			moo->c->cls.indexed_type = MOO_OBJ_TYPE_WORD;
+			GET_TOKEN (moo);
 		}
-		else if (is_token_symbol(stix, VOCA_POINTER_S))
+		else if (is_token_symbol(moo, VOCA_POINTER_S))
 		{
 			/* class(#pointer) */
-			stix->c->cls.flags |= CLASS_INDEXED;
-			stix->c->cls.indexed_type = STIX_OBJ_TYPE_OOP;
-			GET_TOKEN (stix);
+			moo->c->cls.flags |= CLASS_INDEXED;
+			moo->c->cls.indexed_type = MOO_OBJ_TYPE_OOP;
+			GET_TOKEN (moo);
 		}
-		else if (is_token_symbol(stix, VOCA_LIWORD_S))
+		else if (is_token_symbol(moo, VOCA_LIWORD_S))
 		{
 			/* class(#liword) */
-			stix->c->cls.flags |= CLASS_INDEXED;
-			stix->c->cls.indexed_type = STIX_OBJ_TYPE_LIWORD;
-			GET_TOKEN (stix);
+			moo->c->cls.flags |= CLASS_INDEXED;
+			moo->c->cls.indexed_type = MOO_OBJ_TYPE_LIWORD;
+			GET_TOKEN (moo);
 		}
 
-		if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 		{
-			set_syntax_error (stix, STIX_SYNERR_RPAREN, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 	}
 
-	if (TOKEN_TYPE(stix) != STIX_IOTOK_IDENT &&
-	    TOKEN_TYPE(stix) != STIX_IOTOK_IDENT_DOTTED)
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT &&
+	    TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
 	{
 		/* class name expected. */
-		set_syntax_error (stix, STIX_SYNERR_IDENT, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
 #if 0
-	if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT && is_restricted_word (TOKEN_NAME(stix)))
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && is_restricted_word (TOKEN_NAME(moo)))
 	{
 		/* wrong class name */
-		set_syntax_error (stix, STIX_SYNERR_CLASSNAME, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_CLASSNAME, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 #endif
 
 	/* copy the class name */
-	if (set_class_fqn(stix, TOKEN_NAME(stix)) <= -1) return -1;
-	stix->c->cls.fqn_loc = stix->c->tok.loc;
-	if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT_DOTTED)
+	if (set_class_fqn(moo, TOKEN_NAME(moo)) <= -1) return -1;
+	moo->c->cls.fqn_loc = moo->c->tok.loc;
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 	{
-		if (preprocess_dotted_name(stix, extend, 0, &stix->c->cls.fqn, &stix->c->cls.fqn_loc, &stix->c->cls.name, &stix->c->cls.ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name(moo, extend, 0, &moo->c->cls.fqn, &moo->c->cls.fqn_loc, &moo->c->cls.name, &moo->c->cls.ns_oop) <= -1) return -1;
 	}
 	else
 	{
-		stix->c->cls.ns_oop = stix->sysdic;
+		moo->c->cls.ns_oop = moo->sysdic;
 	}
-	GET_TOKEN (stix); 
+	GET_TOKEN (moo); 
 
 	if (extend)
 	{
 		/* extending class */
-		STIX_ASSERT (stix, stix->c->cls.flags == 0);
+		MOO_ASSERT (moo, moo->c->cls.flags == 0);
 
-		/*ass = stix_lookupsysdic(stix, &stix->c->cls.name);*/
-		ass = stix_lookupdic(stix, stix->c->cls.ns_oop, &stix->c->cls.name);
+		/*ass = moo_lookupsysdic(moo, &moo->c->cls.name);*/
+		ass = moo_lookupdic(moo, moo->c->cls.ns_oop, &moo->c->cls.name);
 		if (ass && 
-		    STIX_CLASSOF(stix, ass->value) == stix->_class &&
-		    STIX_OBJ_GET_FLAGS_KERNEL(ass->value) != 1)
+		    MOO_CLASSOF(moo, ass->value) == moo->_class &&
+		    MOO_OBJ_GET_FLAGS_KERNEL(ass->value) != 1)
 		{
 			/* the value must be a class object.
 			 * and it must be either a user-defined(0) or 
 			 * completed kernel built-in(2). 
 			 * an incomplete kernel built-in class object(1) can not be
 			 * extended */
-			stix->c->cls.self_oop = (stix_oop_class_t)ass->value;
+			moo->c->cls.self_oop = (moo_oop_class_t)ass->value;
 		}
 		else
 		{
 			/* only an existing class can be extended. */
-			set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &stix->c->cls.fqn_loc, &stix->c->cls.name);
+			set_syntax_error (moo, MOO_SYNERR_CLASSUNDEF, &moo->c->cls.fqn_loc, &moo->c->cls.name);
 			return -1;
 		}
 
-		stix->c->cls.super_oop = stix->c->cls.self_oop->superclass;
+		moo->c->cls.super_oop = moo->c->cls.self_oop->superclass;
 
-		STIX_ASSERT (stix, (stix_oop_t)stix->c->cls.super_oop == stix->_nil || 
-		             STIX_CLASSOF(stix, stix->c->cls.super_oop) == stix->_class);
+		MOO_ASSERT (moo, (moo_oop_t)moo->c->cls.super_oop == moo->_nil || 
+		             MOO_CLASSOF(moo, moo->c->cls.super_oop) == moo->_class);
 	}
 	else
 	{
 		int super_is_nil = 0;
 
-		STIX_INFO2 (stix, "Defining a class %.*js\n", stix->c->cls.fqn.len, stix->c->cls.fqn.ptr);
+		MOO_INFO2 (moo, "Defining a class %.*js\n", moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
 
-		if (TOKEN_TYPE(stix) == STIX_IOTOK_LPAREN)
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 		{
 			/* superclass is specified. new class defintion.
 			 * for example, #class Class(Stix) 
 			 */
-			GET_TOKEN (stix); /* read superclass name */
+			GET_TOKEN (moo); /* read superclass name */
 
 			/* TODO: multiple inheritance */
 
-			if (TOKEN_TYPE(stix) == STIX_IOTOK_NIL)
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_NIL)
 			{
 				super_is_nil = 1;
 			}
-			else if (TOKEN_TYPE(stix) != STIX_IOTOK_IDENT &&
-			         TOKEN_TYPE(stix) != STIX_IOTOK_IDENT_DOTTED)
+			else if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT &&
+			         TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
 			{
 				/* superclass name expected */
-				set_syntax_error (stix, STIX_SYNERR_IDENT, TOKEN_LOC(stix), TOKEN_NAME(stix));
+				set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
-			if (set_superclass_fqn(stix, TOKEN_NAME(stix)) <= -1) return -1;
-			stix->c->cls.superfqn_loc = stix->c->tok.loc;
+			if (set_superclass_fqn(moo, TOKEN_NAME(moo)) <= -1) return -1;
+			moo->c->cls.superfqn_loc = moo->c->tok.loc;
 
-			if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT_DOTTED)
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 			{
-				if (preprocess_dotted_name(stix, 1, 0, &stix->c->cls.superfqn, &stix->c->cls.superfqn_loc, &stix->c->cls.supername, &stix->c->cls.superns_oop) <= -1) return -1;
+				if (preprocess_dotted_name(moo, 1, 0, &moo->c->cls.superfqn, &moo->c->cls.superfqn_loc, &moo->c->cls.supername, &moo->c->cls.superns_oop) <= -1) return -1;
 			}
 			else
 			{
 				/* if no fully qualified name is specified for the super class name,
 				 * the name is searched in the name space that the class being defined
-				 * belongs to first and in the 'stix->sysdic'. */
-				stix->c->cls.superns_oop = stix->c->cls.ns_oop;
+				 * belongs to first and in the 'moo->sysdic'. */
+				moo->c->cls.superns_oop = moo->c->cls.ns_oop;
 			}
 
-			GET_TOKEN (stix);
-			if (TOKEN_TYPE(stix) != STIX_IOTOK_RPAREN)
+			GET_TOKEN (moo);
+			if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 			{
-				set_syntax_error (stix, STIX_SYNERR_RPAREN, TOKEN_LOC(stix), TOKEN_NAME(stix));
+				set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
-			GET_TOKEN (stix);
+			GET_TOKEN (moo);
 		}
 		else 
 		{
 			super_is_nil = 1;
 		}
 
-		/*ass = stix_lookupsysdic(stix, &stix->c->cls.name);*/
-		ass = stix_lookupdic (stix, stix->c->cls.ns_oop, &stix->c->cls.name);
+		/*ass = moo_lookupsysdic(moo, &moo->c->cls.name);*/
+		ass = moo_lookupdic (moo, moo->c->cls.ns_oop, &moo->c->cls.name);
 		if (ass)
 		{
-			if (STIX_CLASSOF(stix, ass->value) != stix->_class  ||
-			    STIX_OBJ_GET_FLAGS_KERNEL(ass->value) > 1)
+			if (MOO_CLASSOF(moo, ass->value) != moo->_class  ||
+			    MOO_OBJ_GET_FLAGS_KERNEL(ass->value) > 1)
 			{
 				/* the object found with the name is not a class object 
 				 * or the the class object found is a fully defined kernel 
 				 * class object */
-				set_syntax_error (stix, STIX_SYNERR_CLASSDUP, &stix->c->cls.fqn_loc, &stix->c->cls.name);
+				set_syntax_error (moo, MOO_SYNERR_CLASSDUP, &moo->c->cls.fqn_loc, &moo->c->cls.name);
 				return -1;
 			}
 
-			stix->c->cls.self_oop = (stix_oop_class_t)ass->value;
+			moo->c->cls.self_oop = (moo_oop_class_t)ass->value;
 		}
 		else
 		{
 			/* no class of such a name is found. it's a new definition,
 			 * which is normal for most new classes. */
-			STIX_ASSERT (stix, stix->c->cls.self_oop == STIX_NULL);
+			MOO_ASSERT (moo, moo->c->cls.self_oop == MOO_NULL);
 		}
 
 		if (super_is_nil)
 		{
-			stix->c->cls.super_oop = stix->_nil;
+			moo->c->cls.super_oop = moo->_nil;
 		}
 		else
 		{
-			/* ass = stix_lookupsysdic(stix, &stix->c->cls.supername); */
-			ass = stix_lookupdic (stix, stix->c->cls.superns_oop, &stix->c->cls.supername);
-			if (!ass && stix->c->cls.superns_oop != stix->sysdic)
-				ass = stix_lookupdic (stix, stix->sysdic, &stix->c->cls.supername);
+			/* ass = moo_lookupsysdic(moo, &moo->c->cls.supername); */
+			ass = moo_lookupdic (moo, moo->c->cls.superns_oop, &moo->c->cls.supername);
+			if (!ass && moo->c->cls.superns_oop != moo->sysdic)
+				ass = moo_lookupdic (moo, moo->sysdic, &moo->c->cls.supername);
 			if (ass &&
-			    STIX_CLASSOF(stix, ass->value) == stix->_class &&
-			    STIX_OBJ_GET_FLAGS_KERNEL(ass->value) != 1) 
+			    MOO_CLASSOF(moo, ass->value) == moo->_class &&
+			    MOO_OBJ_GET_FLAGS_KERNEL(ass->value) != 1) 
 			{
 				/* the value found must be a class and it must not be 
 				 * an incomplete internal class object */
-				stix->c->cls.super_oop = ass->value;
+				moo->c->cls.super_oop = ass->value;
 			}
 			else
 			{
@@ -5075,98 +5087,98 @@ static int __compile_class_definition (stix_t* stix, int extend)
 				 * the object found with the name is not a class object. or,
 				 * the class object found is a internally defined kernel
 				 * class object. */
-				set_syntax_error (stix, STIX_SYNERR_CLASSUNDEF, &stix->c->cls.superfqn_loc, &stix->c->cls.superfqn);
+				set_syntax_error (moo, MOO_SYNERR_CLASSUNDEF, &moo->c->cls.superfqn_loc, &moo->c->cls.superfqn);
 				return -1;
 			}
 		}
 
-		if (is_token_word (stix, VOCA_FROM))
+		if (is_token_word (moo, VOCA_FROM))
 		{
-			GET_TOKEN (stix);
-			if (TOKEN_TYPE(stix) != STIX_IOTOK_STRLIT)
+			GET_TOKEN (moo);
+			if (TOKEN_TYPE(moo) != MOO_IOTOK_STRLIT)
 			{
-				set_syntax_error (stix, STIX_SYNERR_STRING, TOKEN_LOC(stix), TOKEN_NAME(stix));
+				set_syntax_error (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
-			if (TOKEN_NAME_LEN(stix) < 1 || 
-			    TOKEN_NAME_LEN(stix) > STIX_MOD_NAME_LEN_MAX ||
-			    stix_findoochar(TOKEN_NAME_PTR(stix), TOKEN_NAME_LEN(stix), '_'))
+			if (TOKEN_NAME_LEN(moo) < 1 || 
+			    TOKEN_NAME_LEN(moo) > MOO_MOD_NAME_LEN_MAX ||
+			    moo_findoochar(TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo), '_'))
 			{
-				set_syntax_error (stix, STIX_SYNERR_MODNAME, TOKEN_LOC(stix), TOKEN_NAME(stix));
+				set_syntax_error (moo, MOO_SYNERR_MODNAME, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
-			modnamelen = TOKEN_NAME_LEN(stix);
-			stix_copyoochars (modname, TOKEN_NAME_PTR(stix), modnamelen);
+			modnamelen = TOKEN_NAME_LEN(moo);
+			moo_copyoochars (modname, TOKEN_NAME_PTR(moo), modnamelen);
 
-			GET_TOKEN (stix);
+			GET_TOKEN (moo);
 		}
 	}
 
-	if (TOKEN_TYPE(stix) != STIX_IOTOK_LBRACE)
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
 	{
-		set_syntax_error (stix, STIX_SYNERR_LBRACE, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
-	if (stix->c->cls.super_oop != stix->_nil)
+	if (moo->c->cls.super_oop != moo->_nil)
 	{
 		/* adjust the instance variable count and the class instance variable
 		 * count to include that of a superclass */
-		stix_oop_class_t c;
-		stix_oow_t spec, self_spec;
+		moo_oop_class_t c;
+		moo_oow_t spec, self_spec;
 
-		c = (stix_oop_class_t)stix->c->cls.super_oop;
-		spec = STIX_OOP_TO_SMOOI(c->spec);
-		self_spec = STIX_OOP_TO_SMOOI(c->selfspec);
-		stix->c->cls.var_count[VAR_INSTANCE] = STIX_CLASS_SPEC_NAMED_INSTVAR(spec);
-		stix->c->cls.var_count[VAR_CLASSINST] = STIX_CLASS_SELFSPEC_CLASSINSTVAR(self_spec);
+		c = (moo_oop_class_t)moo->c->cls.super_oop;
+		spec = MOO_OOP_TO_SMOOI(c->spec);
+		self_spec = MOO_OOP_TO_SMOOI(c->selfspec);
+		moo->c->cls.var_count[VAR_INSTANCE] = MOO_CLASS_SPEC_NAMED_INSTVAR(spec);
+		moo->c->cls.var_count[VAR_CLASSINST] = MOO_CLASS_SELFSPEC_CLASSINSTVAR(self_spec);
 	}
 
-	GET_TOKEN (stix);
+	GET_TOKEN (moo);
 
 	if (extend)
 	{
-		stix_oop_char_t pds;
+		moo_oop_char_t pds;
 
 		/* when a class is extended, a new variable cannot be added */
-		if (is_token_word(stix, VOCA_DCL) || is_token_word(stix, VOCA_DECLARE))
+		if (is_token_word(moo, VOCA_DCL) || is_token_word(moo, VOCA_DECLARE))
 		{
-			set_syntax_error (stix, STIX_SYNERR_DCLBANNED, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_DCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
 #ifdef MTHDIC
 		/* use the method dictionary of an existing class object */
-		stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE] = stix->c->cls.self_oop->mthdic[STIX_METHOD_INSTANCE];
-		stix->c->cls.mthdic_oop[STIX_METHOD_CLASS] = stix->c->cls.self_oop->mthdic[STIX_METHOD_CLASS];
+		moo->c->cls.mthdic_oop[MOO_METHOD_INSTANCE] = moo->c->cls.self_oop->mthdic[MOO_METHOD_INSTANCE];
+		moo->c->cls.mthdic_oop[MOO_METHOD_CLASS] = moo->c->cls.self_oop->mthdic[MOO_METHOD_CLASS];
 #endif
 
 		/* load the pooldic definition from the existing class object */
-		pds = stix->c->cls.self_oop->pooldics;
-		if ((stix_oop_t)pds != stix->_nil)
+		pds = moo->c->cls.self_oop->pooldics;
+		if ((moo_oop_t)pds != moo->_nil)
 		{
-			stix_ooch_t* ptr, * end;
+			moo_ooch_t* ptr, * end;
 
-			STIX_ASSERT (stix, STIX_CLASSOF(stix, pds) == stix->_string);
+			MOO_ASSERT (moo, MOO_CLASSOF(moo, pds) == moo->_string);
 
 			ptr = pds->slot;
-			end = pds->slot + STIX_OBJ_GET_SIZE(pds);
+			end = pds->slot + MOO_OBJ_GET_SIZE(pds);
 
 			/* this loop handles the pooldics string as if it's a pooldic import.
 			 * see compile_class_level_variables() for mostly identical code except token handling */
 			do
 			{
-				stix_oocs_t last, tok;
-				stix_ioloc_t loc;
+				moo_oocs_t last, tok;
+				moo_ioloc_t loc;
 				int dotted = 0;
-				stix_oop_set_t ns_oop;
+				moo_oop_set_t ns_oop;
 
 				while (ptr < end && is_spacechar(*ptr)) ptr++;
 				if (ptr >= end) break;
 
-				STIX_MEMSET (&loc, 0, STIX_SIZEOF(loc)); /* fake location */
+				MOO_MEMSET (&loc, 0, MOO_SIZEOF(loc)); /* fake location */
 
 				tok.ptr = ptr;
 				while (ptr < end && !is_spacechar(*ptr))
@@ -5175,20 +5187,20 @@ static int __compile_class_definition (stix_t* stix, int extend)
 					ptr++;
 				}
 				tok.len = ptr - tok.ptr;
-				STIX_ASSERT (stix, tok.len > 0);
+				MOO_ASSERT (moo, tok.len > 0);
 
 				if (dotted)
 				{
-					if (preprocess_dotted_name(stix, 0, 0, &tok, &loc, &last, &ns_oop) <= -1) return -1;
+					if (preprocess_dotted_name(moo, 0, 0, &tok, &loc, &last, &ns_oop) <= -1) return -1;
 				}
 				else
 				{
 					last = tok;
 					/* it falls back to the name space of the class */
-					ns_oop = stix->c->cls.ns_oop; 
+					ns_oop = moo->c->cls.ns_oop; 
 				}
 
-				if (import_pool_dictionary(stix, ns_oop, &last, &tok, &loc) <= -1) return -1;
+				if (import_pool_dictionary(moo, ns_oop, &last, &tok, &loc) <= -1) return -1;
 			}
 			while (1);
 		}
@@ -5197,31 +5209,31 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	{
 		/* a new class including an internally defined class object */
 
-		while (is_token_word(stix, VOCA_DCL) || is_token_word(stix, VOCA_DECLARE))
+		while (is_token_word(moo, VOCA_DCL) || is_token_word(moo, VOCA_DECLARE))
 		{
 			/* variable definition. dcl or declare */
-			GET_TOKEN (stix);
-			if (compile_class_level_variables(stix) <= -1) return -1;
+			GET_TOKEN (moo);
+			if (compile_class_level_variables(moo) <= -1) return -1;
 		}
 
-		if (make_defined_class(stix) <= -1) return -1;
+		if (make_defined_class(moo) <= -1) return -1;
 
 		if (modnamelen > 0)
 		{
-			if (stix_importmod (stix, (stix_oop_t)stix->c->cls.self_oop, modname, modnamelen) <= -1) return -1;
+			if (moo_importmod (moo, (moo_oop_t)moo->c->cls.self_oop, modname, modnamelen) <= -1) return -1;
 		}
 	}
 
-	while (is_token_word(stix, VOCA_METHOD))
+	while (is_token_word(moo, VOCA_METHOD))
 	{
 		/* method definition. method */
-		GET_TOKEN (stix);
-		if (compile_method_definition(stix) <= -1) return -1;
+		GET_TOKEN (moo);
+		if (compile_method_definition(moo) <= -1) return -1;
 	}
 	
-	if (TOKEN_TYPE(stix) != STIX_IOTOK_RBRACE)
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
-		set_syntax_error (stix, STIX_SYNERR_RBRACE, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -5230,300 +5242,300 @@ static int __compile_class_definition (stix_t* stix, int extend)
 	{
 		/* link the method dictionaries created to the actual class object */
 /* TODO: anything else to set? */
-		stix->c->cls.self_oop->mthdic[STIX_CLASS_MTHDIC_INSTANCE] = stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE];
-		stix->c->cls.self_oop->mthdic[STIX_CLASS_MTHDIC_CLASS] = stix->c->cls.mthdic_oop[STIX_METHOD_CLASS];
+		moo->c->cls.self_oop->mthdic[MOO_CLASS_MTHDIC_INSTANCE] = moo->c->cls.mthdic_oop[MOO_METHOD_INSTANCE];
+		moo->c->cls.self_oop->mthdic[MOO_CLASS_MTHDIC_CLASS] = moo->c->cls.mthdic_oop[MOO_METHOD_CLASS];
 	}
 #endif
 
-	GET_TOKEN (stix);
+	GET_TOKEN (moo);
 	return 0;
 }
 
-static int compile_class_definition (stix_t* stix, int extend)
+static int compile_class_definition (moo_t* moo, int extend)
 {
 	int n;
-	stix_oow_t i;
+	moo_oow_t i;
 
 	/* reset the structure to hold information about a class to be compiled */
-	stix->c->cls.flags = 0;
-	stix->c->cls.indexed_type = STIX_OBJ_TYPE_OOP;
+	moo->c->cls.flags = 0;
+	moo->c->cls.indexed_type = MOO_OBJ_TYPE_OOP;
 
-	stix->c->cls.name.len = 0;
-	stix->c->cls.supername.len = 0;
-	STIX_MEMSET (&stix->c->cls.fqn_loc, 0, STIX_SIZEOF(stix->c->cls.fqn_loc));
-	STIX_MEMSET (&stix->c->cls.superfqn_loc, 0, STIX_SIZEOF(stix->c->cls.superfqn_loc));
+	moo->c->cls.name.len = 0;
+	moo->c->cls.supername.len = 0;
+	MOO_MEMSET (&moo->c->cls.fqn_loc, 0, MOO_SIZEOF(moo->c->cls.fqn_loc));
+	MOO_MEMSET (&moo->c->cls.superfqn_loc, 0, MOO_SIZEOF(moo->c->cls.superfqn_loc));
 
-	STIX_ASSERT (stix, STIX_COUNTOF(stix->c->cls.var_count) == STIX_COUNTOF(stix->c->cls.vars));
-	for (i = 0; i < STIX_COUNTOF(stix->c->cls.var_count); i++) 
+	MOO_ASSERT (moo, MOO_COUNTOF(moo->c->cls.var_count) == MOO_COUNTOF(moo->c->cls.vars));
+	for (i = 0; i < MOO_COUNTOF(moo->c->cls.var_count); i++) 
 	{
-		stix->c->cls.var_count[i] = 0;
-		stix->c->cls.vars[i].len = 0;
+		moo->c->cls.var_count[i] = 0;
+		moo->c->cls.vars[i].len = 0;
 	}
 
-	stix->c->cls.pooldic_count = 0;
-	stix->c->cls.pooldic.len = 0;
+	moo->c->cls.pooldic_count = 0;
+	moo->c->cls.pooldic.len = 0;
 
-	stix->c->cls.self_oop = STIX_NULL;
-	stix->c->cls.super_oop = STIX_NULL;
+	moo->c->cls.self_oop = MOO_NULL;
+	moo->c->cls.super_oop = MOO_NULL;
 #ifdef MTHDIC
-	stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE] = STIX_NULL;
-	stix->c->cls.mthdic_oop[STIX_METHOD_CLASS] = STIX_NULL;
+	moo->c->cls.mthdic_oop[MOO_METHOD_INSTANCE] = MOO_NULL;
+	moo->c->cls.mthdic_oop[MOO_METHOD_CLASS] = MOO_NULL;
 #endif
-	stix->c->cls.ns_oop = STIX_NULL;
-	stix->c->cls.superns_oop = STIX_NULL;
-	stix->c->mth.literal_count = 0;
-	stix->c->mth.balit_count = 0;
-	stix->c->mth.arlit_count = 0;
+	moo->c->cls.ns_oop = MOO_NULL;
+	moo->c->cls.superns_oop = MOO_NULL;
+	moo->c->mth.literal_count = 0;
+	moo->c->mth.balit_count = 0;
+	moo->c->mth.arlit_count = 0;
 
 	/* do main compilation work */
-	n = __compile_class_definition (stix, extend);
+	n = __compile_class_definition (moo, extend);
 
 	/* reset these oops plus literal pointers not to confuse gc_compiler() */
-	stix->c->cls.self_oop = STIX_NULL;
-	stix->c->cls.super_oop = STIX_NULL;
+	moo->c->cls.self_oop = MOO_NULL;
+	moo->c->cls.super_oop = MOO_NULL;
 #ifdef MTHDIC
-	stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE] = STIX_NULL;
-	stix->c->cls.mthdic_oop[STIX_METHOD_CLASS] = STIX_NULL;
+	moo->c->cls.mthdic_oop[MOO_METHOD_INSTANCE] = MOO_NULL;
+	moo->c->cls.mthdic_oop[MOO_METHOD_CLASS] = MOO_NULL;
 #endif
-	stix->c->cls.ns_oop = STIX_NULL;
-	stix->c->cls.superns_oop = STIX_NULL;
-	stix->c->mth.literal_count = 0;
-	stix->c->mth.balit_count = 0;
-	stix->c->mth.arlit_count = 0;
+	moo->c->cls.ns_oop = MOO_NULL;
+	moo->c->cls.superns_oop = MOO_NULL;
+	moo->c->mth.literal_count = 0;
+	moo->c->mth.balit_count = 0;
+	moo->c->mth.arlit_count = 0;
 
-	stix->c->cls.pooldic_count = 0;
+	moo->c->cls.pooldic_count = 0;
 
 	return n;
 }
 
-static int __compile_pooldic_definition (stix_t* stix)
+static int __compile_pooldic_definition (moo_t* moo)
 {
-	stix_oop_t lit;
-	stix_ooi_t tally;
-	stix_oow_t i;
+	moo_oop_t lit;
+	moo_ooi_t tally;
+	moo_oow_t i;
 
-	if (TOKEN_TYPE(stix) != STIX_IOTOK_IDENT && 
-	    TOKEN_TYPE(stix) != STIX_IOTOK_IDENT_DOTTED)
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && 
+	    TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
 	{
-		set_syntax_error (stix, STIX_SYNERR_IDENT, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
 	/* [NOTE] 
-	 * reuse stix->c->cls.fqn and related fields are reused 
+	 * reuse moo->c->cls.fqn and related fields are reused 
 	 * to store the pool dictionary name */
-	if (set_class_fqn(stix, TOKEN_NAME(stix)) <= -1) return -1;
-	stix->c->cls.fqn_loc = stix->c->tok.loc;
+	if (set_class_fqn(moo, TOKEN_NAME(moo)) <= -1) return -1;
+	moo->c->cls.fqn_loc = moo->c->tok.loc;
 
-	if (TOKEN_TYPE(stix) == STIX_IOTOK_IDENT_DOTTED)
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 	{
-		if (preprocess_dotted_name(stix, 0, 0, &stix->c->cls.fqn, &stix->c->cls.fqn_loc, &stix->c->cls.name, &stix->c->cls.ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name(moo, 0, 0, &moo->c->cls.fqn, &moo->c->cls.fqn_loc, &moo->c->cls.name, &moo->c->cls.ns_oop) <= -1) return -1;
 	}
 	else
 	{
-		stix->c->cls.ns_oop = stix->sysdic;
+		moo->c->cls.ns_oop = moo->sysdic;
 	}
 
-	if (stix_lookupdic (stix, stix->c->cls.ns_oop, &stix->c->cls.name))
+	if (moo_lookupdic (moo, moo->c->cls.ns_oop, &moo->c->cls.name))
 	{
 		/* a conflicting entry has been found */
-		set_syntax_error (stix, STIX_SYNERR_POOLDICDUP, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_POOLDICDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
-	GET_TOKEN (stix);
-	if (TOKEN_TYPE(stix) != STIX_IOTOK_LBRACE)
+	GET_TOKEN (moo);
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
 	{
-		set_syntax_error (stix, STIX_SYNERR_LBRACE, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
-	STIX_INFO2 (stix, "Defining a pool dictionary %.*js\n", stix->c->cls.fqn.len, stix->c->cls.fqn.ptr);
+	MOO_INFO2 (moo, "Defining a pool dictionary %.*js\n", moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
 
-	GET_TOKEN (stix);
+	GET_TOKEN (moo);
 
-	while (TOKEN_TYPE(stix) == STIX_IOTOK_SYMLIT)
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_SYMLIT)
 	{
-		lit = stix_makesymbol (stix, TOKEN_NAME_PTR(stix) + 1, TOKEN_NAME_LEN(stix) - 1);
-		if (!lit || add_to_array_literal_buffer (stix, lit) <= -1) return -1;
+		lit = moo_makesymbol (moo, TOKEN_NAME_PTR(moo) + 1, TOKEN_NAME_LEN(moo) - 1);
+		if (!lit || add_to_array_literal_buffer (moo, lit) <= -1) return -1;
 
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 
-		if (TOKEN_TYPE(stix) != STIX_IOTOK_ASSIGN)
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_ASSIGN)
 		{
-			set_syntax_error (stix, STIX_SYNERR_ASSIGN, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_ASSIGN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 
-		switch (TOKEN_TYPE(stix))
+		switch (TOKEN_TYPE(moo))
 		{
-			case STIX_IOTOK_NIL:
-				lit = stix->_nil;
+			case MOO_IOTOK_NIL:
+				lit = moo->_nil;
 				goto add_literal;
 
-			case STIX_IOTOK_TRUE:
-				lit = stix->_true;
+			case MOO_IOTOK_TRUE:
+				lit = moo->_true;
 				goto add_literal;
 
-			case STIX_IOTOK_FALSE:
-				lit = stix->_false;
+			case MOO_IOTOK_FALSE:
+				lit = moo->_false;
 				goto add_literal;
 
-			case STIX_IOTOK_ERROR:
-				lit = STIX_ERROR_TO_OOP(STIX_EGENERIC);
+			case MOO_IOTOK_ERROR:
+				lit = MOO_ERROR_TO_OOP(MOO_EGENERIC);
 				goto add_literal;
 
-			case STIX_IOTOK_ERRLIT:
-				lit = string_to_error (stix, TOKEN_NAME(stix));
+			case MOO_IOTOK_ERRLIT:
+				lit = string_to_error (moo, TOKEN_NAME(moo));
 				goto add_literal;
 
-			case STIX_IOTOK_CHARLIT:
-				STIX_ASSERT (stix, TOKEN_NAME_LEN(stix) == 1);
-				lit = STIX_CHAR_TO_OOP(TOKEN_NAME_PTR(stix)[0]);
+			case MOO_IOTOK_CHARLIT:
+				MOO_ASSERT (moo, TOKEN_NAME_LEN(moo) == 1);
+				lit = MOO_CHAR_TO_OOP(TOKEN_NAME_PTR(moo)[0]);
 				goto add_literal;
 
-			case STIX_IOTOK_STRLIT:
-				lit = stix_instantiate (stix, stix->_string, TOKEN_NAME_PTR(stix), TOKEN_NAME_LEN(stix));
+			case MOO_IOTOK_STRLIT:
+				lit = moo_instantiate (moo, moo->_string, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
 				if (!lit) return -1;
 				goto add_literal;
 
-			case STIX_IOTOK_SYMLIT:
-				lit = stix_makesymbol (stix, TOKEN_NAME_PTR(stix) + 1, TOKEN_NAME_LEN(stix) - 1);
+			case MOO_IOTOK_SYMLIT:
+				lit = moo_makesymbol (moo, TOKEN_NAME_PTR(moo) + 1, TOKEN_NAME_LEN(moo) - 1);
 				if (!lit) return -1;
 				goto add_literal;
 
-			case STIX_IOTOK_NUMLIT:
-			case STIX_IOTOK_RADNUMLIT:
-				lit = string_to_num (stix, TOKEN_NAME(stix), TOKEN_TYPE(stix) == STIX_IOTOK_RADNUMLIT);
+			case MOO_IOTOK_NUMLIT:
+			case MOO_IOTOK_RADNUMLIT:
+				lit = string_to_num (moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT);
 				if (!lit) return -1;
 				goto add_literal;
 
-			case STIX_IOTOK_BAPAREN: /* #[ - byte array parenthesis */
-				if (read_byte_array_literal(stix, &lit) <= -1) return -1;
+			case MOO_IOTOK_BAPAREN: /* #[ - byte array parenthesis */
+				if (read_byte_array_literal(moo, &lit) <= -1) return -1;
 				goto add_literal;
 
-			case STIX_IOTOK_ARPAREN: /* #( - array parenthesis */
-				if (read_array_literal(stix, &lit) <= -1) return -1;
+			case MOO_IOTOK_ARPAREN: /* #( - array parenthesis */
+				if (read_array_literal(moo, &lit) <= -1) return -1;
 				goto add_literal;
 
 			add_literal:
 				/*
 				 * for this definition, #pooldic MyPoolDic { #a := 10. #b := 20 },
 				 * arlit_buffer contains (#a 10 #b 20) when the 'while' loop is over. */
-				if (add_to_array_literal_buffer(stix, lit) <= -1) return -1;
-				GET_TOKEN (stix);
+				if (add_to_array_literal_buffer(moo, lit) <= -1) return -1;
+				GET_TOKEN (moo);
 				break;
 
 			default:
-				set_syntax_error (stix, STIX_SYNERR_LITERAL, TOKEN_LOC(stix), TOKEN_NAME(stix));
+				set_syntax_error (moo, MOO_SYNERR_LITERAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 		}
 
-		/*if (TOKEN_TYPE(stix) == STIX_IOTOK_RBRACE) goto done;
-		else*/ if (TOKEN_TYPE(stix) != STIX_IOTOK_PERIOD)
+		/*if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) goto done;
+		else*/ if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
 		{
-			set_syntax_error (stix, STIX_SYNERR_PERIOD, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		GET_TOKEN (stix);
+		GET_TOKEN (moo);
 	}
 
 
-	if (TOKEN_TYPE(stix) != STIX_IOTOK_RBRACE)
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
-		set_syntax_error (stix, STIX_SYNERR_RBRACE, TOKEN_LOC(stix), TOKEN_NAME(stix));
+		set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
 /*done:*/
-	GET_TOKEN (stix);
+	GET_TOKEN (moo);
 
-	tally = stix->c->mth.arlit_count / 2;
+	tally = moo->c->mth.arlit_count / 2;
 /*TODO: tally and arlit_count range check */
-	/*if (!STIX_IN_SMOOI_RANGE(tally)) ERROR??*/
+	/*if (!MOO_IN_SMOOI_RANGE(tally)) ERROR??*/
 
 	/* i use mthdic_oop[0] when compling #pooldic. it's not a real method dictionary.
 	 * i just use it not to declare another field into the compiler */
-	stix->c->cls.pooldic_oop = stix_makedic (stix, stix->_pool_dictionary, STIX_ALIGN(tally + 10, POOL_DICTIONARY_SIZE_ALIGN));
-	if (!stix->c->cls.pooldic_oop) return -1;
+	moo->c->cls.pooldic_oop = moo_makedic (moo, moo->_pool_dictionary, MOO_ALIGN(tally + 10, POOL_DICTIONARY_SIZE_ALIGN));
+	if (!moo->c->cls.pooldic_oop) return -1;
 
-	for (i = 0; i < stix->c->mth.arlit_count; i += 2)
+	for (i = 0; i < moo->c->mth.arlit_count; i += 2)
 	{
 		/* TODO: handle duplicate keys? */
-		if (!stix_putatdic(stix, stix->c->cls.pooldic_oop, stix->c->mth.arlit[i], stix->c->mth.arlit[i + 1])) return -1;
+		if (!moo_putatdic(moo, moo->c->cls.pooldic_oop, moo->c->mth.arlit[i], moo->c->mth.arlit[i + 1])) return -1;
 	}
 
 	/* eveything seems ok. register the pool dictionary to the main
 	 * system dictionary or to the name space it belongs to */
-	lit = stix_makesymbol (stix, stix->c->cls.name.ptr, stix->c->cls.name.len);
-	if (!lit || !stix_putatdic (stix, stix->c->cls.ns_oop, lit, (stix_oop_t)stix->c->cls.pooldic_oop)) return -1;
+	lit = moo_makesymbol (moo, moo->c->cls.name.ptr, moo->c->cls.name.len);
+	if (!lit || !moo_putatdic (moo, moo->c->cls.ns_oop, lit, (moo_oop_t)moo->c->cls.pooldic_oop)) return -1;
 	return 0;
 }
 
-static int compile_pooldic_definition (stix_t* stix)
+static int compile_pooldic_definition (moo_t* moo)
 {
 	int n;
 
 	/* reset the structure to hold information about a pool dictionary to be compiled.
 	 * i'll be reusing some fields reserved for compling a class */
-	stix->c->cls.name.len = 0;
-	STIX_MEMSET (&stix->c->cls.fqn_loc, 0, STIX_SIZEOF(stix->c->cls.fqn_loc));
-	stix->c->cls.pooldic_oop = STIX_NULL;
-	stix->c->cls.ns_oop = STIX_NULL;
-	stix->c->mth.balit_count = 0;
-	stix->c->mth.arlit_count = 0;
+	moo->c->cls.name.len = 0;
+	MOO_MEMSET (&moo->c->cls.fqn_loc, 0, MOO_SIZEOF(moo->c->cls.fqn_loc));
+	moo->c->cls.pooldic_oop = MOO_NULL;
+	moo->c->cls.ns_oop = MOO_NULL;
+	moo->c->mth.balit_count = 0;
+	moo->c->mth.arlit_count = 0;
 
-	n = __compile_pooldic_definition (stix);
+	n = __compile_pooldic_definition (moo);
 
 	/* reset these oops plus literal pointers not to confuse gc_compiler() */
-	stix->c->cls.pooldic_oop = STIX_NULL;
-	stix->c->cls.ns_oop = STIX_NULL;
-	stix->c->mth.balit_count = 0;
-	stix->c->mth.arlit_count = 0;
+	moo->c->cls.pooldic_oop = MOO_NULL;
+	moo->c->cls.ns_oop = MOO_NULL;
+	moo->c->mth.balit_count = 0;
+	moo->c->mth.arlit_count = 0;
 
 	return n;
 }
 
-static int compile_stream (stix_t* stix)
+static int compile_stream (moo_t* moo)
 {
-	GET_TOKEN (stix);
+	GET_TOKEN (moo);
 
-	while (TOKEN_TYPE(stix) != STIX_IOTOK_EOF)
+	while (TOKEN_TYPE(moo) != MOO_IOTOK_EOF)
 	{
-		if (is_token_symbol(stix, VOCA_INCLUDE_S))
+		if (is_token_symbol(moo, VOCA_INCLUDE_S))
 		{
 			/* #include 'xxxx' */
-			GET_TOKEN (stix);
-			if (TOKEN_TYPE(stix) != STIX_IOTOK_STRLIT)
+			GET_TOKEN (moo);
+			if (TOKEN_TYPE(moo) != MOO_IOTOK_STRLIT)
 			{
-				set_syntax_error (stix, STIX_SYNERR_STRING, TOKEN_LOC(stix), TOKEN_NAME(stix));
+				set_syntax_error (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
-			if (begin_include(stix) <= -1) return -1;
+			if (begin_include(moo) <= -1) return -1;
 		}
-		else if (is_token_word(stix, VOCA_CLASS))
+		else if (is_token_word(moo, VOCA_CLASS))
 		{
 			/* class Selfclass(Superclass) { } */
-			GET_TOKEN (stix);
-			if (compile_class_definition(stix, 0) <= -1) return -1;
+			GET_TOKEN (moo);
+			if (compile_class_definition(moo, 0) <= -1) return -1;
 		}
-		else if (is_token_word(stix, VOCA_EXTEND))
+		else if (is_token_word(moo, VOCA_EXTEND))
 		{
 			/* extend Selfclass {} */
-			GET_TOKEN (stix);
-			if (compile_class_definition(stix, 1) <= -1) return -1;
+			GET_TOKEN (moo);
+			if (compile_class_definition(moo, 1) <= -1) return -1;
 		}
-		else if (is_token_word(stix, VOCA_POOLDIC))
+		else if (is_token_word(moo, VOCA_POOLDIC))
 		{
 			/* pooldic SharedPoolDic { #ABC := 20. #DEFG := 'ayz' } */
-			GET_TOKEN (stix);
-			if (compile_pooldic_definition(stix) <= -1) return -1;
+			GET_TOKEN (moo);
+			if (compile_pooldic_definition(moo) <= -1) return -1;
 		}
 #if 0
-		else if (is_token_symbol(stix, VOCA_MAIN))
+		else if (is_token_symbol(moo, VOCA_MAIN))
 		{
 			/* #main */
 			/* TODO: implement this */
@@ -5532,7 +5544,7 @@ static int compile_stream (stix_t* stix)
 #endif
 		else
 		{
-			set_syntax_error(stix, STIX_SYNERR_DIRECTIVE, TOKEN_LOC(stix), TOKEN_NAME(stix));
+			set_syntax_error(moo, MOO_SYNERR_DIRECTIVE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 	}
@@ -5540,151 +5552,151 @@ static int compile_stream (stix_t* stix)
 	return 0;
 }
 
-static void gc_compiler (stix_t* stix)
+static void gc_compiler (moo_t* moo)
 {
 	/* called when garbage collection is performed */
-	if (stix->c)
+	if (moo->c)
 	{
-		stix_oow_t i;
+		moo_oow_t i;
 
-		if (stix->c->cls.self_oop) 
-			stix->c->cls.self_oop = (stix_oop_class_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.self_oop);
+		if (moo->c->cls.self_oop) 
+			moo->c->cls.self_oop = (moo_oop_class_t)moo_moveoop (moo, (moo_oop_t)moo->c->cls.self_oop);
 
-		if (stix->c->cls.super_oop)
-			stix->c->cls.super_oop = stix_moveoop (stix, stix->c->cls.super_oop);
+		if (moo->c->cls.super_oop)
+			moo->c->cls.super_oop = moo_moveoop (moo, moo->c->cls.super_oop);
 
 #ifdef MTHDIC
-		if (stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE])
-			stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE] = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.mthdic_oop[STIX_METHOD_INSTANCE]);
+		if (moo->c->cls.mthdic_oop[MOO_METHOD_INSTANCE])
+			moo->c->cls.mthdic_oop[MOO_METHOD_INSTANCE] = (moo_oop_set_t)moo_moveoop (moo, (moo_oop_t)moo->c->cls.mthdic_oop[MOO_METHOD_INSTANCE]);
 
-		if (stix->c->cls.mthdic_oop[STIX_METHOD_CLASS])
-			stix->c->cls.mthdic_oop[STIX_METHOD_CLASS] = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.mthdic_oop[STIX_METHOD_CLASS]);
+		if (moo->c->cls.mthdic_oop[MOO_METHOD_CLASS])
+			moo->c->cls.mthdic_oop[MOO_METHOD_CLASS] = (moo_oop_set_t)moo_moveoop (moo, (moo_oop_t)moo->c->cls.mthdic_oop[MOO_METHOD_CLASS]);
 #endif
 
-		if (stix->c->cls.pooldic_oop)
-			stix->c->cls.pooldic_oop = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.pooldic_oop);
+		if (moo->c->cls.pooldic_oop)
+			moo->c->cls.pooldic_oop = (moo_oop_set_t)moo_moveoop (moo, (moo_oop_t)moo->c->cls.pooldic_oop);
 
-		if (stix->c->cls.ns_oop)
-			stix->c->cls.ns_oop = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.ns_oop);
+		if (moo->c->cls.ns_oop)
+			moo->c->cls.ns_oop = (moo_oop_set_t)moo_moveoop (moo, (moo_oop_t)moo->c->cls.ns_oop);
 
-		if (stix->c->cls.superns_oop)
-			stix->c->cls.superns_oop = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.superns_oop);
+		if (moo->c->cls.superns_oop)
+			moo->c->cls.superns_oop = (moo_oop_set_t)moo_moveoop (moo, (moo_oop_t)moo->c->cls.superns_oop);
 
-		for (i = 0; i < stix->c->cls.pooldic_count; i++)
+		for (i = 0; i < moo->c->cls.pooldic_count; i++)
 		{
-			stix->c->cls.pooldic_imp_oops[i] = (stix_oop_set_t)stix_moveoop (stix, (stix_oop_t)stix->c->cls.pooldic_imp_oops[i]);
+			moo->c->cls.pooldic_imp_oops[i] = (moo_oop_set_t)moo_moveoop (moo, (moo_oop_t)moo->c->cls.pooldic_imp_oops[i]);
 		}
 
-		for (i = 0; i < stix->c->mth.literal_count; i++)
+		for (i = 0; i < moo->c->mth.literal_count; i++)
 		{
-			stix->c->mth.literals[i] = stix_moveoop (stix, stix->c->mth.literals[i]);
+			moo->c->mth.literals[i] = moo_moveoop (moo, moo->c->mth.literals[i]);
 		}
 
-		for (i = 0; i < stix->c->mth.arlit_count; i++)
+		for (i = 0; i < moo->c->mth.arlit_count; i++)
 		{
-			stix->c->mth.arlit[i] = stix_moveoop (stix, stix->c->mth.arlit[i]);
+			moo->c->mth.arlit[i] = moo_moveoop (moo, moo->c->mth.arlit[i]);
 		}
 	}
 }
 
-static void fini_compiler (stix_t* stix)
+static void fini_compiler (moo_t* moo)
 {
-	/* called before the stix object is closed */
-	if (stix->c)
+	/* called before the moo object is closed */
+	if (moo->c)
 	{
-		stix_oow_t i;
+		moo_oow_t i;
 
-		clear_io_names (stix);
+		clear_io_names (moo);
 
-		if (stix->c->tok.name.ptr) stix_freemem (stix, stix->c->tok.name.ptr);
-		if (stix->c->cls.fqn.ptr) stix_freemem (stix, stix->c->cls.fqn.ptr);
-		if (stix->c->cls.superfqn.ptr) stix_freemem (stix, stix->c->cls.superfqn.ptr);
+		if (moo->c->tok.name.ptr) moo_freemem (moo, moo->c->tok.name.ptr);
+		if (moo->c->cls.fqn.ptr) moo_freemem (moo, moo->c->cls.fqn.ptr);
+		if (moo->c->cls.superfqn.ptr) moo_freemem (moo, moo->c->cls.superfqn.ptr);
 
-		for (i = 0; i < STIX_COUNTOF(stix->c->cls.vars); i++)
+		for (i = 0; i < MOO_COUNTOF(moo->c->cls.vars); i++)
 		{
-			if (stix->c->cls.vars[i].ptr) stix_freemem (stix, stix->c->cls.vars[i].ptr);
+			if (moo->c->cls.vars[i].ptr) moo_freemem (moo, moo->c->cls.vars[i].ptr);
 		}
 
-		if (stix->c->cls.pooldic.ptr) stix_freemem (stix, stix->c->cls.pooldic.ptr);
-		if (stix->c->cls.pooldic_imp_oops) stix_freemem (stix, stix->c->cls.pooldic_imp_oops);
+		if (moo->c->cls.pooldic.ptr) moo_freemem (moo, moo->c->cls.pooldic.ptr);
+		if (moo->c->cls.pooldic_imp_oops) moo_freemem (moo, moo->c->cls.pooldic_imp_oops);
 
-		if (stix->c->mth.text.ptr) stix_freemem (stix, stix->c->mth.text.ptr);
-		if (stix->c->mth.assignees.ptr) stix_freemem (stix, stix->c->mth.assignees.ptr);
-		if (stix->c->mth.binsels.ptr) stix_freemem (stix, stix->c->mth.binsels.ptr);
-		if (stix->c->mth.kwsels.ptr) stix_freemem (stix, stix->c->mth.kwsels.ptr);
-		if (stix->c->mth.name.ptr) stix_freemem (stix, stix->c->mth.name.ptr);
-		if (stix->c->mth.tmprs.ptr) stix_freemem (stix, stix->c->mth.tmprs.ptr);
-		if (stix->c->mth.code.ptr) stix_freemem (stix, stix->c->mth.code.ptr);
-		if (stix->c->mth.literals) stix_freemem (stix, stix->c->mth.literals);
-		if (stix->c->mth.balit) stix_freemem (stix, stix->c->mth.balit);
-		if (stix->c->mth.arlit) stix_freemem (stix, stix->c->mth.arlit);
-		if (stix->c->mth.blk_tmprcnt) stix_freemem (stix, stix->c->mth.blk_tmprcnt);
+		if (moo->c->mth.text.ptr) moo_freemem (moo, moo->c->mth.text.ptr);
+		if (moo->c->mth.assignees.ptr) moo_freemem (moo, moo->c->mth.assignees.ptr);
+		if (moo->c->mth.binsels.ptr) moo_freemem (moo, moo->c->mth.binsels.ptr);
+		if (moo->c->mth.kwsels.ptr) moo_freemem (moo, moo->c->mth.kwsels.ptr);
+		if (moo->c->mth.name.ptr) moo_freemem (moo, moo->c->mth.name.ptr);
+		if (moo->c->mth.tmprs.ptr) moo_freemem (moo, moo->c->mth.tmprs.ptr);
+		if (moo->c->mth.code.ptr) moo_freemem (moo, moo->c->mth.code.ptr);
+		if (moo->c->mth.literals) moo_freemem (moo, moo->c->mth.literals);
+		if (moo->c->mth.balit) moo_freemem (moo, moo->c->mth.balit);
+		if (moo->c->mth.arlit) moo_freemem (moo, moo->c->mth.arlit);
+		if (moo->c->mth.blk_tmprcnt) moo_freemem (moo, moo->c->mth.blk_tmprcnt);
 
-		stix_freemem (stix, stix->c);
-		stix->c = STIX_NULL;
+		moo_freemem (moo, moo->c);
+		moo->c = MOO_NULL;
 	}
 }
 
-int stix_compile (stix_t* stix, stix_ioimpl_t io)
+int moo_compile (moo_t* moo, moo_ioimpl_t io)
 {
 	int n;
 
 	if (!io)
 	{
-		stix->errnum = STIX_EINVAL;
+		moo->errnum = MOO_EINVAL;
 		return -1;
 	}
 
-	if (!stix->c)
+	if (!moo->c)
 	{
-		stix_cb_t cb, * cbp;
+		moo_cb_t cb, * cbp;
 
-		STIX_MEMSET (&cb, 0, STIX_SIZEOF(cb));
+		MOO_MEMSET (&cb, 0, MOO_SIZEOF(cb));
 		cb.gc = gc_compiler;
 		cb.fini = fini_compiler;
-		cbp = stix_regcb (stix, &cb);
+		cbp = moo_regcb (moo, &cb);
 		if (!cbp) return -1;
 
-		stix->c = stix_callocmem (stix, STIX_SIZEOF(*stix->c));
-		if (!stix->c) 
+		moo->c = moo_callocmem (moo, MOO_SIZEOF(*moo->c));
+		if (!moo->c) 
 		{
-			stix_deregcb (stix, cbp);
+			moo_deregcb (moo, cbp);
 			return -1;
 		}
 
-		stix->c->ilchr_ucs.ptr = &stix->c->ilchr;
-		stix->c->ilchr_ucs.len = 1;
+		moo->c->ilchr_ucs.ptr = &moo->c->ilchr;
+		moo->c->ilchr_ucs.len = 1;
 	}
 
 	/* Some IO names could have been stored in earlier calls to this function.
 	 * I clear such names before i begin this function. i don't clear it
 	 * at the end of this function because i may be referenced as an error
 	 * location */
-	clear_io_names (stix);
+	clear_io_names (moo);
 
 	/* initialize some key fields */
-	stix->c->impl = io;
-	stix->c->nungots = 0;
+	moo->c->impl = io;
+	moo->c->nungots = 0;
 
-	/* The name field and the includer field are STIX_NULL 
+	/* The name field and the includer field are MOO_NULL 
 	 * for the main stream */
-	STIX_MEMSET (&stix->c->arg, 0, STIX_SIZEOF(stix->c->arg));
-	stix->c->arg.line = 1;
-	stix->c->arg.colm = 1;
+	MOO_MEMSET (&moo->c->arg, 0, MOO_SIZEOF(moo->c->arg));
+	moo->c->arg.line = 1;
+	moo->c->arg.colm = 1;
 
 	/* open the top-level stream */
-	n = stix->c->impl (stix, STIX_IO_OPEN, &stix->c->arg);
+	n = moo->c->impl (moo, MOO_IO_OPEN, &moo->c->arg);
 	if (n <= -1) return -1;
 
 	/* the stream is open. set it as the current input stream */
-	stix->c->curinp = &stix->c->arg;
+	moo->c->curinp = &moo->c->arg;
 
 	/* compile the contents of the stream */
-	if (compile_stream (stix) <= -1) goto oops;
+	if (compile_stream (moo) <= -1) goto oops;
 
 	/* close the stream */
-	STIX_ASSERT (stix, stix->c->curinp == &stix->c->arg);
-	stix->c->impl (stix, STIX_IO_CLOSE, stix->c->curinp);
+	MOO_ASSERT (moo, moo->c->curinp == &moo->c->arg);
+	moo->c->impl (moo, MOO_IO_CLOSE, moo->c->curinp);
 
 	return 0;
 
@@ -5692,25 +5704,25 @@ oops:
 	/* an error occurred and control has reached here
 	 * probably, some included files might not have been 
 	 * closed. close them */
-	while (stix->c->curinp != &stix->c->arg)
+	while (moo->c->curinp != &moo->c->arg)
 	{
-		stix_ioarg_t* prev;
+		moo_ioarg_t* prev;
 
 		/* nothing much to do about a close error */
-		stix->c->impl (stix, STIX_IO_CLOSE, stix->c->curinp);
+		moo->c->impl (moo, MOO_IO_CLOSE, moo->c->curinp);
 
-		prev = stix->c->curinp->includer;
-		STIX_ASSERT (stix, stix->c->curinp->name != STIX_NULL);
-		STIX_MMGR_FREE (stix->mmgr, stix->c->curinp);
-		stix->c->curinp = prev;
+		prev = moo->c->curinp->includer;
+		MOO_ASSERT (moo, moo->c->curinp->name != MOO_NULL);
+		MOO_MMGR_FREE (moo->mmgr, moo->c->curinp);
+		moo->c->curinp = prev;
 	}
 
-	stix->c->impl (stix, STIX_IO_CLOSE, stix->c->curinp);
+	moo->c->impl (moo, MOO_IO_CLOSE, moo->c->curinp);
 	return -1;
 }
 
-void stix_getsynerr (stix_t* stix, stix_synerr_t* synerr)
+void moo_getsynerr (moo_t* moo, moo_synerr_t* synerr)
 {
-	STIX_ASSERT (stix, stix->c != STIX_NULL);
-	if (synerr) *synerr = stix->c->synerr;
+	MOO_ASSERT (moo, moo->c != MOO_NULL);
+	if (synerr) *synerr = moo->c->synerr;
 }

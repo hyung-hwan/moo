@@ -187,7 +187,7 @@ class Console(Object)
 }
 
 "
-Stix define: 'console_write' 
+Moo define: 'console_write' 
 	forClass: Console
 	method: 'write: aString upto: length'
 	returns: 'size_t'

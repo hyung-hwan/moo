@@ -24,83 +24,83 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _STIX_PRV_H_
-#define _STIX_PRV_H_
+#ifndef _MOO_PRV_H_
+#define _MOO_PRV_H_
 
-#include "stix.h"
-#include "stix-utl.h"
+#include "moo.h"
+#include "moo-utl.h"
 
 /* you can define this to either 1 or 2 */
-#define STIX_BCODE_LONG_PARAM_SIZE 2
+#define MOO_BCODE_LONG_PARAM_SIZE 2
 
-/* this is useful for debugging. stix_gc() can be called 
- * while stix has not been fully initialized when this is defined*/
-#define STIX_SUPPORT_GC_DURING_IGNITION
+/* this is useful for debugging. moo_gc() can be called 
+ * while moo has not been fully initialized when this is defined*/
+#define MOO_SUPPORT_GC_DURING_IGNITION
 
 /* define this to generate XXXX_CTXTEMVAR instructions */
-#define STIX_USE_CTXTEMPVAR
+#define MOO_USE_CTXTEMPVAR
 
 /* define this to use the MAKE_BLOCK instruction instead of
  * PUSH_CONTEXT, PUSH_INTLIT, PUSH_INTLIT, SEND_BLOCK_COPY */
-#define STIX_USE_MAKE_BLOCK
+#define MOO_USE_MAKE_BLOCK
 
 /* this is for gc debugging */
-#define STIX_DEBUG_GC
-#define STIX_DEBUG_COMPILER
-/*#define STIX_DEBUG_VM_PROCESSOR*/
-/*#define STIX_DEBUG_VM_EXEC*/
-#define STIX_DEBUG_BIGINT
-#define STIX_PROFILE_VM
+#define MOO_DEBUG_GC
+#define MOO_DEBUG_COMPILER
+/*#define MOO_DEBUG_VM_PROCESSOR*/
+/*#define MOO_DEBUG_VM_EXEC*/
+#define MOO_DEBUG_BIGINT
+#define MOO_PROFILE_VM
 
 /* allow the caller to drive process switching by calling
- * stix_switchprocess(). */
-#define STIX_EXTERNAL_PROCESS_SWITCH
+ * moo_switchprocess(). */
+#define MOO_EXTERNAL_PROCESS_SWITCH
 
 /* limit the maximum object size such that:
  *   1. an index to an object field can be represented in a small integer.
  *   2. the maximum number of bits including bit-shifts can be represented
- *      in the stix_oow_t type.
+ *      in the moo_oow_t type.
  */
-#define STIX_LIMIT_OBJ_SIZE
+#define MOO_LIMIT_OBJ_SIZE
 
 /* TODO: delete these header inclusion lines */
 #include <string.h>
 
 #if defined(__has_builtin)
 #	if __has_builtin(__builtin_memset)
-#		define STIX_MEMSET(dst,src,size)  __builtin_memset(dst,src,size)
+#		define MOO_MEMSET(dst,src,size)  __builtin_memset(dst,src,size)
 #	else
-#		define STIX_MEMSET(dst,src,size)  memset(dst,src,size)
+#		define MOO_MEMSET(dst,src,size)  memset(dst,src,size)
 #	endif
 #	if __has_builtin(__builtin_memcpy)
-#		define STIX_MEMCPY(dst,src,size)  __builtin_memcpy(dst,src,size)
+#		define MOO_MEMCPY(dst,src,size)  __builtin_memcpy(dst,src,size)
 #	else
-#		define STIX_MEMCPY(dst,src,size)  memcpy(dst,src,size)
+#		define MOO_MEMCPY(dst,src,size)  memcpy(dst,src,size)
 #	endif
 #	if __has_builtin(__builtin_memmove)
-#		define STIX_MEMMOVE(dst,src,size)  __builtin_memmove(dst,src,size)
+#		define MOO_MEMMOVE(dst,src,size)  __builtin_memmove(dst,src,size)
 #	else
-#		define STIX_MEMMOVE(dst,src,size)  memmove(dst,src,size)
+#		define MOO_MEMMOVE(dst,src,size)  memmove(dst,src,size)
 #	endif
 #	if __has_builtin(__builtin_memcmp)
-#		define STIX_MEMCMP(dst,src,size)  __builtin_memcmp(dst,src,size)
+#		define MOO_MEMCMP(dst,src,size)  __builtin_memcmp(dst,src,size)
 #	else
-#		define STIX_MEMCMP(dst,src,size)  memcmp(dst,src,size)
+#		define MOO_MEMCMP(dst,src,size)  memcmp(dst,src,size)
 #	endif
 #elif defined(__GNUC__) && (__GNUC__  >= 3 || (defined(__GNUC_MINOR) && __GNUC__ == 2 && __GNUC_MINOR__ >= 91))
 	/* gcc 2.91 or higher */
-#	define STIX_MEMSET(dst,src,size)  __builtin_memset(dst,src,size)
-#	define STIX_MEMCPY(dst,src,size)  __builtin_memcpy(dst,src,size)
-#	define STIX_MEMMOVE(dst,src,size) __builtin_memmove(dst,src,size)
-#	define STIX_MEMCMP(dst,src,size)  __builtin_memcmp(dst,src,size)
+#	define MOO_MEMSET(dst,src,size)  __builtin_memset(dst,src,size)
+#	define MOO_MEMCPY(dst,src,size)  __builtin_memcpy(dst,src,size)
+#	define MOO_MEMMOVE(dst,src,size) __builtin_memmove(dst,src,size)
+#	define MOO_MEMCMP(dst,src,size)  __builtin_memcmp(dst,src,size)
 #else
-#	define STIX_MEMSET(dst,src,size)  memset(dst,src,size)
-#	define STIX_MEMCPY(dst,src,size)  memcpy(dst,src,size)
-#	define STIX_MEMMOVE(dst,src,size) memmove(dst,src,size)
-#	define STIX_MEMCMP(dst,src,size)  memcmp(dst,src,size)
+#	define MOO_MEMSET(dst,src,size)  memset(dst,src,size)
+#	define MOO_MEMCPY(dst,src,size)  memcpy(dst,src,size)
+#	define MOO_MEMMOVE(dst,src,size) memmove(dst,src,size)
+#	define MOO_MEMCMP(dst,src,size)  memcmp(dst,src,size)
 #endif
 
-#define STIX_ALIGN(x,y) ((((x) + (y) - 1) / (y)) * (y))
+#define MOO_ALIGN(x,y) ((((x) + (y) - 1) / (y)) * (y))
 
 
 /* ========================================================================= */
@@ -113,54 +113,54 @@
  * named instance variables. If the spec of a class is indexed, the object
  * of the class can be i nstantiated with the size of the indexed part.
  *
- * For example, on a platform where sizeof(stix_oow_t) is 4, 
+ * For example, on a platform where sizeof(moo_oow_t) is 4, 
  * the layout of the spec field of a class as an OOP value looks like this:
  * 
  *  31                           10 9   8 7 6 5 4 3  2           1 0 
  * |number of named instance variables|indexed-type|indexability|oop-tag|
  *
  * the number of named instance variables is stored in high 23 bits.
- * the indexed type takes up bit 3 to bit 8 (assuming STIX_OBJ_TYPE_BITS is 6. 
- * STIX_OBJ_TYPE_XXX enumerators are used to represent actual values).
+ * the indexed type takes up bit 3 to bit 8 (assuming MOO_OBJ_TYPE_BITS is 6. 
+ * MOO_OBJ_TYPE_XXX enumerators are used to represent actual values).
  * and the indexability is stored in bit 2.
  *
  * The maximum number of named(fixed) instance variables for a class is:
- *     2 ^ ((BITS-IN-OOW - STIX_OOP_TAG_BITS) - STIX_OBJ_TYPE_BITS - 1) - 1
+ *     2 ^ ((BITS-IN-OOW - MOO_OOP_TAG_BITS) - MOO_OBJ_TYPE_BITS - 1) - 1
  *
- * STIX_OOP_TAG_BITS are decremented from the number of bits in OOW because
+ * MOO_OOP_TAG_BITS are decremented from the number of bits in OOW because
  * the spec field is always encoded as a small integer.
  *
  * The number of named instance variables can be greater than 0 if the
  * class spec is not indexed or if it's a pointer indexed class
- * (indexed_type == STIX_OBJ_TYPE_OOP)
+ * (indexed_type == MOO_OBJ_TYPE_OOP)
  * 
- * indexed_type is one of the #stix_obj_type_t enumerators.
+ * indexed_type is one of the #moo_obj_type_t enumerators.
  */
 
 /*
- * The STIX_CLASS_SPEC_MAKE() macro creates a class spec value.
- *  _class->spec = STIX_SMOOI_TO_OOP(STIX_CLASS_SPEC_MAKE(0, 1, STIX_OBJ_TYPE_CHAR));
+ * The MOO_CLASS_SPEC_MAKE() macro creates a class spec value.
+ *  _class->spec = MOO_SMOOI_TO_OOP(MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_CHAR));
  */
-#define STIX_CLASS_SPEC_MAKE(named_instvar,is_indexed,indexed_type) ( \
-	(((stix_oow_t)(named_instvar)) << (STIX_OBJ_FLAGS_TYPE_BITS + 1)) |  \
-	(((stix_oow_t)(indexed_type)) << 1) | (((stix_oow_t)is_indexed) & 1) )
+#define MOO_CLASS_SPEC_MAKE(named_instvar,is_indexed,indexed_type) ( \
+	(((moo_oow_t)(named_instvar)) << (MOO_OBJ_FLAGS_TYPE_BITS + 1)) |  \
+	(((moo_oow_t)(indexed_type)) << 1) | (((moo_oow_t)is_indexed) & 1) )
 
 /* what is the number of named instance variables? 
- *  STIX_CLASS_SPEC_NAMED_INSTVAR(STIX_OOP_TO_SMOOI(_class->spec))
+ *  MOO_CLASS_SPEC_NAMED_INSTVAR(MOO_OOP_TO_SMOOI(_class->spec))
  */
-#define STIX_CLASS_SPEC_NAMED_INSTVAR(spec) \
-	(((stix_oow_t)(spec)) >> (STIX_OBJ_FLAGS_TYPE_BITS + 1))
+#define MOO_CLASS_SPEC_NAMED_INSTVAR(spec) \
+	(((moo_oow_t)(spec)) >> (MOO_OBJ_FLAGS_TYPE_BITS + 1))
 
 /* is it a user-indexable class? 
  * all objects can be indexed with basicAt:.
  * this indicates if an object can be instantiated with a dynamic size
  * (new: size) and and can be indexed with at:.
  */
-#define STIX_CLASS_SPEC_IS_INDEXED(spec) (((stix_oow_t)(spec)) & 1)
+#define MOO_CLASS_SPEC_IS_INDEXED(spec) (((moo_oow_t)(spec)) & 1)
 
 /* if so, what is the indexing type? character? pointer? etc? */
-#define STIX_CLASS_SPEC_INDEXED_TYPE(spec) \
-	((((stix_oow_t)(spec)) >> 1) & STIX_LBMASK(stix_oow_t, STIX_OBJ_FLAGS_TYPE_BITS))
+#define MOO_CLASS_SPEC_INDEXED_TYPE(spec) \
+	((((moo_oow_t)(spec)) >> 1) & MOO_LBMASK(moo_oow_t, MOO_OBJ_FLAGS_TYPE_BITS))
 
 /* What is the maximum number of named instance variables?
  * This limit is set so because the number must be encoded into the spec field
@@ -170,11 +170,11 @@
  * type of the spec field in the class object.
  */
 /*
-#define STIX_MAX_NAMED_INSTVARS \
-	STIX_BITS_MAX(stix_oow_t, STIX_OOW_BITS - STIX_OOP_TAG_BITS - (STIX_OBJ_FLAGS_TYPE_BITS + 1) - 1)
+#define MOO_MAX_NAMED_INSTVARS \
+	MOO_BITS_MAX(moo_oow_t, MOO_OOW_BITS - MOO_OOP_TAG_BITS - (MOO_OBJ_FLAGS_TYPE_BITS + 1) - 1)
 */
-#define STIX_MAX_NAMED_INSTVARS \
-	STIX_BITS_MAX(stix_oow_t, STIX_SMOOI_ABS_BITS - (STIX_OBJ_FLAGS_TYPE_BITS + 1))
+#define MOO_MAX_NAMED_INSTVARS \
+	MOO_BITS_MAX(moo_oow_t, MOO_SMOOI_ABS_BITS - (MOO_OBJ_FLAGS_TYPE_BITS + 1))
 
 /* Given the number of named instance variables, what is the maximum number 
  * of indexed instance variables? The number of indexed instance variables
@@ -183,74 +183,74 @@
  * named instance variables. So it's the maximum value of obj->_size minus
  * the number of named instance variables.
  */
-#define STIX_MAX_INDEXED_INSTVARS(named_instvar) (STIX_OBJ_SIZE_MAX - named_instvar)
+#define MOO_MAX_INDEXED_INSTVARS(named_instvar) (MOO_OBJ_SIZE_MAX - named_instvar)
 
 /*
-#define STIX_CLASS_SELFSPEC_MAKE(class_var,classinst_var) \
-	(((stix_oow_t)class_var) << ((STIX_OOW_BITS - STIX_OOP_TAG_BITS) / 2)) | ((stix_oow_t)classinst_var)
+#define MOO_CLASS_SELFSPEC_MAKE(class_var,classinst_var) \
+	(((moo_oow_t)class_var) << ((MOO_OOW_BITS - MOO_OOP_TAG_BITS) / 2)) | ((moo_oow_t)classinst_var)
 */
-#define STIX_CLASS_SELFSPEC_MAKE(class_var,classinst_var) \
-	(((stix_oow_t)class_var) << (STIX_SMOOI_BITS / 2)) | ((stix_oow_t)classinst_var)
+#define MOO_CLASS_SELFSPEC_MAKE(class_var,classinst_var) \
+	(((moo_oow_t)class_var) << (MOO_SMOOI_BITS / 2)) | ((moo_oow_t)classinst_var)
 
 /*
-#define STIX_CLASS_SELFSPEC_CLASSVAR(spec) ((stix_oow_t)spec >> ((STIX_OOW_BITS - STIX_OOP_TAG_BITS) / 2))
-#define STIX_CLASS_SELFSPEC_CLASSINSTVAR(spec) (((stix_oow_t)spec) & STIX_LBMASK(stix_oow_t, (STIX_OOW_BITS - STIX_OOP_TAG_BITS) / 2))
+#define MOO_CLASS_SELFSPEC_CLASSVAR(spec) ((moo_oow_t)spec >> ((MOO_OOW_BITS - MOO_OOP_TAG_BITS) / 2))
+#define MOO_CLASS_SELFSPEC_CLASSINSTVAR(spec) (((moo_oow_t)spec) & MOO_LBMASK(moo_oow_t, (MOO_OOW_BITS - MOO_OOP_TAG_BITS) / 2))
 */
-#define STIX_CLASS_SELFSPEC_CLASSVAR(spec) ((stix_oow_t)spec >> (STIX_SMOOI_BITS / 2))
-#define STIX_CLASS_SELFSPEC_CLASSINSTVAR(spec) (((stix_oow_t)spec) & STIX_LBMASK(stix_oow_t, (STIX_SMOOI_BITS / 2)))
+#define MOO_CLASS_SELFSPEC_CLASSVAR(spec) ((moo_oow_t)spec >> (MOO_SMOOI_BITS / 2))
+#define MOO_CLASS_SELFSPEC_CLASSINSTVAR(spec) (((moo_oow_t)spec) & MOO_LBMASK(moo_oow_t, (MOO_SMOOI_BITS / 2)))
 
 /*
  * yet another -1 in the calculation of the bit numbers for signed nature of
  * a small-integer
  */
 /*
-#define STIX_MAX_CLASSVARS      STIX_BITS_MAX(stix_oow_t, (STIX_OOW_BITS - STIX_OOP_TAG_BITS - 1) / 2)
-#define STIX_MAX_CLASSINSTVARS  STIX_BITS_MAX(stix_oow_t, (STIX_OOW_BITS - STIX_OOP_TAG_BITS - 1) / 2)
+#define MOO_MAX_CLASSVARS      MOO_BITS_MAX(moo_oow_t, (MOO_OOW_BITS - MOO_OOP_TAG_BITS - 1) / 2)
+#define MOO_MAX_CLASSINSTVARS  MOO_BITS_MAX(moo_oow_t, (MOO_OOW_BITS - MOO_OOP_TAG_BITS - 1) / 2)
 */
-#define STIX_MAX_CLASSVARS      STIX_BITS_MAX(stix_oow_t, STIX_SMOOI_ABS_BITS / 2)
-#define STIX_MAX_CLASSINSTVARS  STIX_BITS_MAX(stix_oow_t, STIX_SMOOI_ABS_BITS / 2)
+#define MOO_MAX_CLASSVARS      MOO_BITS_MAX(moo_oow_t, MOO_SMOOI_ABS_BITS / 2)
+#define MOO_MAX_CLASSINSTVARS  MOO_BITS_MAX(moo_oow_t, MOO_SMOOI_ABS_BITS / 2)
 
 
-#if defined(STIX_LIMIT_OBJ_SIZE)
+#if defined(MOO_LIMIT_OBJ_SIZE)
 /* limit the maximum object size such that:
  *   1. an index to an object field can be represented in a small integer.
- *   2. the maximum number of bit shifts can be represented in the stix_oow_t type.
+ *   2. the maximum number of bit shifts can be represented in the moo_oow_t type.
  */
-#	define STIX_OBJ_SIZE_MAX ((stix_oow_t)STIX_SMOOI_MAX)
-#	define STIX_OBJ_SIZE_BITS_MAX (STIX_OBJ_SIZE_MAX * 8)
+#	define MOO_OBJ_SIZE_MAX ((moo_oow_t)MOO_SMOOI_MAX)
+#	define MOO_OBJ_SIZE_BITS_MAX (MOO_OBJ_SIZE_MAX * 8)
 #else
-#	define STIX_OBJ_SIZE_MAX ((stix_oow_t)STIX_TYPE_MAX(stix_oow_t))
-#	define STIX_OBJ_SIZE_BITS_MAX (STIX_OBJ_SIZE_MAX * 8)
+#	define MOO_OBJ_SIZE_MAX ((moo_oow_t)MOO_TYPE_MAX(moo_oow_t))
+#	define MOO_OBJ_SIZE_BITS_MAX (MOO_OBJ_SIZE_MAX * 8)
 #endif
 
 
-#if defined(STIX_INCLUDE_COMPILER)
+#if defined(MOO_INCLUDE_COMPILER)
 
 /* ========================================================================= */
 /* SOURCE CODE I/O FOR COMPILER                                              */
 /* ========================================================================= */
-struct stix_iolxc_t
+struct moo_iolxc_t
 {
-	stix_ooci_t   c; /**< character */
-	stix_ioloc_t  l; /**< location */
+	moo_ooci_t   c; /**< character */
+	moo_ioloc_t  l; /**< location */
 };
-typedef struct stix_iolxc_t stix_iolxc_t;
+typedef struct moo_iolxc_t moo_iolxc_t;
 
 /*
-enum stix_ioarg_flag_t
+enum moo_ioarg_flag_t
 {
-	STIX_IO_INCLUDED = (1 << 0)
+	MOO_IO_INCLUDED = (1 << 0)
 };
-typedef enum stix_ioarg_flag_t stix_ioarg_flag_t; */
+typedef enum moo_ioarg_flag_t moo_ioarg_flag_t; */
 
-struct stix_ioarg_t
+struct moo_ioarg_t
 {
 	/** 
 	 * [IN] I/O object name.
-	 * It is #STIX_NULL for the main stream and points to a non-NULL string
+	 * It is #MOO_NULL for the main stream and points to a non-NULL string
 	 * for an included stream.
 	 */
-	const stix_ooch_t* name;   
+	const moo_ooch_t* name;   
 
 	/** 
 	 * [OUT] I/O handle set by an open handler. 
@@ -264,13 +264,13 @@ struct stix_ioarg_t
 	/**
 	 * [OUT] place data here 
 	 */
-	stix_ooch_t buf[1024];
+	moo_ooch_t buf[1024];
 
 	/**
-	 * [IN] points to the data of the includer. It is #STIX_NULL for the
+	 * [IN] points to the data of the includer. It is #MOO_NULL for the
 	 * main stream.
 	 */
-	stix_ioarg_t* includer;
+	moo_ioarg_t* includer;
 
 	/*-----------------------------------------------------------------*/
 	/*----------- from here down, internal use only -------------------*/
@@ -281,104 +281,105 @@ struct stix_ioarg_t
 
 	unsigned long int line;
 	unsigned long int colm;
-	stix_ooci_t       nl;
+	moo_ooci_t       nl;
 
-	stix_iolxc_t lxc;
+	moo_iolxc_t lxc;
 	/*-----------------------------------------------------------------*/
 };
 
-struct stix_iotok_t
+struct moo_iotok_t
 {
 	enum
 	{
-		STIX_IOTOK_EOF,
+		MOO_IOTOK_EOF,
 		
-		STIX_IOTOK_CHARLIT,
-		STIX_IOTOK_STRLIT,
-		STIX_IOTOK_SYMLIT,
-		STIX_IOTOK_NUMLIT,
-		STIX_IOTOK_RADNUMLIT,
-		STIX_IOTOK_ERRLIT, /* error(NN) */
-		STIX_IOTOK_ERROR, /* error */
-		STIX_IOTOK_NIL,
-		STIX_IOTOK_SELF,
-		STIX_IOTOK_SUPER,
-		STIX_IOTOK_TRUE,
-		STIX_IOTOK_FALSE,
-		STIX_IOTOK_THIS_CONTEXT,
-		STIX_IOTOK_THIS_PROCESS,
-		STIX_IOTOK_IDENT,
-		STIX_IOTOK_IDENT_DOTTED,
-		STIX_IOTOK_BINSEL,
-		STIX_IOTOK_KEYWORD,
-		STIX_IOTOK_ASSIGN,
-		STIX_IOTOK_COLON,
-		STIX_IOTOK_RETURN,
-		STIX_IOTOK_LBRACE,
-		STIX_IOTOK_RBRACE,
-		STIX_IOTOK_LBRACK,
-		STIX_IOTOK_RBRACK,
-		STIX_IOTOK_LPAREN,
-		STIX_IOTOK_RPAREN,
-		STIX_IOTOK_ARPAREN, /* #( */
-		STIX_IOTOK_BAPAREN, /* #[ */
-		STIX_IOTOK_PERIOD,
-		STIX_IOTOK_COMMA,
-		STIX_IOTOK_SEMICOLON
+		MOO_IOTOK_CHARLIT,
+		MOO_IOTOK_STRLIT,
+		MOO_IOTOK_SYMLIT,
+		MOO_IOTOK_NUMLIT,
+		MOO_IOTOK_RADNUMLIT,
+		MOO_IOTOK_ERRLIT, /* error(NN) */
+		MOO_IOTOK_ERROR, /* error */
+		MOO_IOTOK_NIL,
+		MOO_IOTOK_SELF,
+		MOO_IOTOK_SUPER,
+		MOO_IOTOK_TRUE,
+		MOO_IOTOK_FALSE,
+		MOO_IOTOK_THIS_CONTEXT,
+		MOO_IOTOK_THIS_PROCESS,
+		MOO_IOTOK_IF,
+		MOO_IOTOK_IDENT,
+		MOO_IOTOK_IDENT_DOTTED,
+		MOO_IOTOK_BINSEL,
+		MOO_IOTOK_KEYWORD,
+		MOO_IOTOK_ASSIGN,
+		MOO_IOTOK_COLON,
+		MOO_IOTOK_RETURN,
+		MOO_IOTOK_LBRACE,
+		MOO_IOTOK_RBRACE,
+		MOO_IOTOK_LBRACK,
+		MOO_IOTOK_RBRACK,
+		MOO_IOTOK_LPAREN,
+		MOO_IOTOK_RPAREN,
+		MOO_IOTOK_ARPAREN, /* #( */
+		MOO_IOTOK_BAPAREN, /* #[ */
+		MOO_IOTOK_PERIOD,
+		MOO_IOTOK_COMMA,
+		MOO_IOTOK_SEMICOLON
 	} type;
 
-	stix_oocs_t name;
-	stix_oow_t name_capa;
+	moo_oocs_t name;
+	moo_oow_t name_capa;
 
-	stix_ioloc_t loc;
+	moo_ioloc_t loc;
 };
-typedef struct stix_iotok_t stix_iotok_t;
+typedef struct moo_iotok_t moo_iotok_t;
 
-typedef struct stix_iolink_t stix_iolink_t;
-struct stix_iolink_t
+typedef struct moo_iolink_t moo_iolink_t;
+struct moo_iolink_t
 {
-	stix_iolink_t* link;
+	moo_iolink_t* link;
 };
 
-struct stix_code_t
+struct moo_code_t
 {
-	stix_uint8_t* ptr;
-	stix_oow_t    len;
+	moo_uint8_t* ptr;
+	moo_oow_t    len;
 };
-typedef struct stix_code_t stix_code_t;
+typedef struct moo_code_t moo_code_t;
 
-struct stix_compiler_t
+struct moo_compiler_t
 {
 	/* input handler */
-	stix_ioimpl_t impl;
+	moo_ioimpl_t impl;
 
 	/* information about the last meaningful character read.
 	 * this is a copy of curinp->lxc if no ungetting is performed.
 	 * if there is something in the unget buffer, this is overwritten
 	 * by a value from the buffer when the request to read a character
 	 * is served */
-	stix_iolxc_t  lxc;
+	moo_iolxc_t  lxc;
 
 	/* unget buffer */
-	stix_iolxc_t  ungot[10];
+	moo_iolxc_t  ungot[10];
 	int           nungots;
 
 	/* static input data buffer */
-	stix_ioarg_t  arg;    
+	moo_ioarg_t  arg;    
 
 	/* pointer to the current input data. initially, it points to &arg */
-	stix_ioarg_t* curinp;
+	moo_ioarg_t* curinp;
 
 	/* the last token read */
-	stix_iotok_t  tok;
-	stix_iolink_t* io_names;
+	moo_iotok_t  tok;
+	moo_iolink_t* io_names;
 	int in_array;
 
-	stix_synerr_t synerr;
+	moo_synerr_t synerr;
 
 	/* temporary space to handle an illegal character */
-	stix_ooch_t ilchr;
-	stix_oocs_t ilchr_ucs;
+	moo_ooch_t ilchr;
+	moo_oocs_t ilchr_ucs;
 
 	/* information about a class being compiled */
 	struct
@@ -386,141 +387,141 @@ struct stix_compiler_t
 		int flags;
 		int indexed_type;
 
-		stix_oop_class_t self_oop;
-		stix_oop_t super_oop; /* this may be nil. so the type is stix_oop_t */
+		moo_oop_class_t self_oop;
+		moo_oop_t super_oop; /* this may be nil. so the type is moo_oop_t */
 #ifdef MTHDIC
-		stix_oop_set_t mthdic_oop[2]; /* used when compiling a method definition */
+		moo_oop_set_t mthdic_oop[2]; /* used when compiling a method definition */
 #endif
-		stix_oop_set_t pooldic_oop; /* used when compiling a pooldic definition */
-		stix_oop_set_t ns_oop;
-		stix_oocs_t fqn;
-		stix_oocs_t name;
-		stix_oow_t fqn_capa;
-		stix_ioloc_t fqn_loc;
+		moo_oop_set_t pooldic_oop; /* used when compiling a pooldic definition */
+		moo_oop_set_t ns_oop;
+		moo_oocs_t fqn;
+		moo_oocs_t name;
+		moo_oow_t fqn_capa;
+		moo_ioloc_t fqn_loc;
 
-		stix_oop_set_t superns_oop;
-		stix_oocs_t superfqn;
-		stix_oocs_t supername;
-		stix_oow_t superfqn_capa;
-		stix_ioloc_t superfqn_loc;
+		moo_oop_set_t superns_oop;
+		moo_oocs_t superfqn;
+		moo_oocs_t supername;
+		moo_oow_t superfqn_capa;
+		moo_ioloc_t superfqn_loc;
 
 		/* instance variable, class variable, class instance variable */
-		stix_oocs_t vars[3]; 
-		stix_oow_t vars_capa[3];
+		moo_oocs_t vars[3]; 
+		moo_oow_t vars_capa[3];
 
 		/* var_count, unlike vars above, includes superclass counts as well.
 		 * var_count[0] - number of named instance variables
 		 * var_count[1] - number of class variables
 		 * var_count[2] - number of class instance variables */
-		stix_oow_t var_count[3];
+		moo_oow_t var_count[3];
 
 		/* buffer to hold pooldic import declaration */
-		stix_oocs_t pooldic;
-		stix_oow_t pooldic_capa;
-		stix_oow_t pooldic_count;
+		moo_oocs_t pooldic;
+		moo_oow_t pooldic_capa;
+		moo_oow_t pooldic_count;
 
 		/* used to hold imported pool dictionarie objects */
-		stix_oop_set_t* pooldic_imp_oops; 
-		stix_oow_t pooldic_imp_oops_capa;
+		moo_oop_set_t* pooldic_imp_oops; 
+		moo_oow_t pooldic_imp_oops_capa;
 	} cls;
 
 	/* information about a method being comipled */
 	struct
 	{
-		stix_method_type_t type;
+		moo_method_type_t type;
 
 		/* method source text */
-		stix_oocs_t text;
-		stix_oow_t text_capa;
+		moo_oocs_t text;
+		moo_oow_t text_capa;
 
 		/* buffer to store identifier names to be assigned */
-		stix_oocs_t assignees;
-		stix_oow_t assignees_capa;
+		moo_oocs_t assignees;
+		moo_oow_t assignees_capa;
 
 		/* buffer to store binary selectors being worked on */
-		stix_oocs_t binsels;
-		stix_oow_t binsels_capa;
+		moo_oocs_t binsels;
+		moo_oow_t binsels_capa;
 
 		/* buffer to store keyword selectors being worked on */
-		stix_oocs_t kwsels;
-		stix_oow_t kwsels_capa;
+		moo_oocs_t kwsels;
+		moo_oow_t kwsels_capa;
 
 		/* method name */
-		stix_oocs_t name;
-		stix_oow_t name_capa;
-		stix_ioloc_t name_loc;
+		moo_oocs_t name;
+		moo_oow_t name_capa;
+		moo_ioloc_t name_loc;
 
 		/* is the unary method followed by parameter list? */
 		int variadic;
 
 		/* single string containing a space separated list of temporaries */
-		stix_oocs_t tmprs; 
-		stix_oow_t tmprs_capa;
-		stix_oow_t tmpr_count; /* total number of temporaries including arguments */
-		stix_oow_t tmpr_nargs;
+		moo_oocs_t tmprs; 
+		moo_oow_t tmprs_capa;
+		moo_oow_t tmpr_count; /* total number of temporaries including arguments */
+		moo_oow_t tmpr_nargs;
 
 		/* literals */
-		stix_oop_t* literals;
-		stix_oow_t literal_count;
-		stix_oow_t literal_capa;
+		moo_oop_t* literals;
+		moo_oow_t literal_count;
+		moo_oow_t literal_capa;
 
 		/* byte array elements */
-		stix_oob_t* balit;
-		stix_oow_t balit_count;
-		stix_oow_t balit_capa;
+		moo_oob_t* balit;
+		moo_oow_t balit_count;
+		moo_oow_t balit_capa;
 
 		/* array elements */
-		stix_oop_t* arlit;
-		stix_oow_t arlit_count;
-		stix_oow_t arlit_capa;
+		moo_oop_t* arlit;
+		moo_oow_t arlit_count;
+		moo_oow_t arlit_capa;
 
 		/* 0 for no primitive, 1 for a normal primitive, 2 for a named primitive */
 		int pftype;
 		/* primitive function number */
-		stix_ooi_t pfnum; 
+		moo_ooi_t pfnum; 
 
 		/* block depth */
-		stix_oow_t blk_depth;
-		stix_oow_t* blk_tmprcnt;
-		stix_oow_t blk_tmprcnt_capa;
+		moo_oow_t blk_depth;
+		moo_oow_t* blk_tmprcnt;
+		moo_oow_t blk_tmprcnt_capa;
 
 		/* byte code */
-		stix_code_t code;
-		stix_oow_t code_capa;
+		moo_code_t code;
+		moo_oow_t code_capa;
 	} mth; 
 };
 
 
 
 /*
-typedef struct stix_bchbuf_t stix_bchbuf_t;
-struct stix_bchbuf_t
+typedef struct moo_bchbuf_t moo_bchbuf_t;
+struct moo_bchbuf_t
 {
-	stix_bch_t  buf[128];
-	stix_bch_t* ptr;
-	stix_oow_t  capa;
+	moo_bch_t  buf[128];
+	moo_bch_t* ptr;
+	moo_oow_t  capa;
 };
 
-typedef struct stix_oochbuf_t stix_oochbuf_t;
-struct stix_oochbuf_t
+typedef struct moo_oochbuf_t moo_oochbuf_t;
+struct moo_oochbuf_t
 {
-	stix_ooch_t  buf[128];
-	stix_ooch_t* ptr;
-	stix_oow_t   capa;
+	moo_ooch_t  buf[128];
+	moo_ooch_t* ptr;
+	moo_oow_t   capa;
 };
 */
 
 #endif
 
-#if defined(STIX_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_OBJECT_TRAILER)
 	/* let it point to the trailer of the method */
-#	define SET_ACTIVE_METHOD_CODE(stix) ((stix)->active_code = (stix_oob_t*)&(stix)->active_method->slot[STIX_OBJ_GET_SIZE((stix)->active_method) + 1 - STIX_METHOD_NAMED_INSTVARS])
+#	define SET_ACTIVE_METHOD_CODE(moo) ((moo)->active_code = (moo_oob_t*)&(moo)->active_method->slot[MOO_OBJ_GET_SIZE((moo)->active_method) + 1 - MOO_METHOD_NAMED_INSTVARS])
 #else
 	/* let it point to the payload of the code byte array */
-#	define SET_ACTIVE_METHOD_CODE(stix) ((stix)->active_code = (stix)->active_method->code->slot)
+#	define SET_ACTIVE_METHOD_CODE(moo) ((moo)->active_code = (moo)->active_method->code->slot)
 #endif
 
-#if defined(STIX_BCODE_LONG_PARAM_SIZE) && (STIX_BCODE_LONG_PARAM_SIZE == 1)
+#if defined(MOO_BCODE_LONG_PARAM_SIZE) && (MOO_BCODE_LONG_PARAM_SIZE == 1)
 #	define MAX_CODE_INDEX               (0xFFu)
 #	define MAX_CODE_NTMPRS              (0xFFu)
 #	define MAX_CODE_NARGS               (0xFFu)
@@ -528,7 +529,7 @@ struct stix_oochbuf_t
 #	define MAX_CODE_NBLKTMPRS           (0xFFu)
 #	define MAX_CODE_JUMP                (0xFFu)
 #	define MAX_CODE_PARAM               (0xFFu)
-#elif defined(STIX_BCODE_LONG_PARAM_SIZE) && (STIX_BCODE_LONG_PARAM_SIZE == 2)
+#elif defined(MOO_BCODE_LONG_PARAM_SIZE) && (MOO_BCODE_LONG_PARAM_SIZE == 2)
 #	define MAX_CODE_INDEX               (0xFFFFu)
 #	define MAX_CODE_NTMPRS              (0xFFFFu)
 #	define MAX_CODE_NARGS               (0xFFFFu)
@@ -537,7 +538,7 @@ struct stix_oochbuf_t
 #	define MAX_CODE_JUMP                (0xFFFFu)
 #	define MAX_CODE_PARAM               (0xFFFFu)
 #else
-#	error Unsupported STIX_BCODE_LONG_PARAM_SIZE
+#	error Unsupported MOO_BCODE_LONG_PARAM_SIZE
 #endif
 
 
@@ -602,7 +603,7 @@ SHORT INSTRUCTION CODE                                        LONG INSTRUCTION C
 ##
 */
 
-enum stix_bcode_t
+enum moo_bcode_t
 {
 	BCODE_STORE_INTO_INSTVAR_0     = 0x00,
 	BCODE_STORE_INTO_INSTVAR_1     = 0x01,
@@ -827,315 +828,315 @@ extern "C" {
 /* ========================================================================= */
 
 /**
- * The stix_makeheap() function creates a new heap of the \a size bytes.
+ * The moo_makeheap() function creates a new heap of the \a size bytes.
  *
- * \return heap pointer on success and #STIX_NULL on failure.
+ * \return heap pointer on success and #MOO_NULL on failure.
  */
-stix_heap_t* stix_makeheap (
-	stix_t*     stix, 
-	stix_oow_t  size
+moo_heap_t* moo_makeheap (
+	moo_t*     moo, 
+	moo_oow_t  size
 );
 
 /**
- * The stix_killheap() function destroys the heap pointed to by \a heap.
+ * The moo_killheap() function destroys the heap pointed to by \a heap.
  */
-void stix_killheap (
-	stix_t*      stix, 
-	stix_heap_t* heap
+void moo_killheap (
+	moo_t*      moo, 
+	moo_heap_t* heap
 );
 
 /**
- * The stix_allocheapmem() function allocates \a size bytes in the heap pointed
+ * The moo_allocheapmem() function allocates \a size bytes in the heap pointed
  * to by \a heap.
  *
- * \return memory pointer on success and #STIX_NULL on failure.
+ * \return memory pointer on success and #MOO_NULL on failure.
  */
-void* stix_allocheapmem (
-	stix_t*      stix,
-	stix_heap_t* heap,
-	stix_oow_t   size
+void* moo_allocheapmem (
+	moo_t*      moo,
+	moo_heap_t* heap,
+	moo_oow_t   size
 );
 
 
 /* ========================================================================= */
 /* gc.c                                                                     */
 /* ========================================================================= */
-stix_oop_t stix_moveoop (
-	stix_t*     stix,
-	stix_oop_t  oop
+moo_oop_t moo_moveoop (
+	moo_t*     moo,
+	moo_oop_t  oop
 );
 
 /* ========================================================================= */
 /* obj.c                                                                     */
 /* ========================================================================= */
-void* stix_allocbytes (
-	stix_t*     stix,
-	stix_oow_t  size
+void* moo_allocbytes (
+	moo_t*     moo,
+	moo_oow_t  size
 );
 
 /**
- * The stix_allocoopobj() function allocates a raw object composed of \a size
+ * The moo_allocoopobj() function allocates a raw object composed of \a size
  * pointer fields excluding the header.
  */
-stix_oop_t stix_allocoopobj (
-	stix_t*    stix,
-	stix_oow_t size
+moo_oop_t moo_allocoopobj (
+	moo_t*    moo,
+	moo_oow_t size
 );
 
-#if defined(STIX_USE_OBJECT_TRAILER)
-stix_oop_t stix_allocoopobjwithtrailer (
-	stix_t*           stix,
-	stix_oow_t        size,
-	const stix_oob_t* tptr,
-	stix_oow_t        tlen
+#if defined(MOO_USE_OBJECT_TRAILER)
+moo_oop_t moo_allocoopobjwithtrailer (
+	moo_t*           moo,
+	moo_oow_t        size,
+	const moo_oob_t* tptr,
+	moo_oow_t        tlen
 );
 #endif
 
-stix_oop_t stix_alloccharobj (
-	stix_t*            stix,
-	const stix_ooch_t* ptr,
-	stix_oow_t         len
+moo_oop_t moo_alloccharobj (
+	moo_t*            moo,
+	const moo_ooch_t* ptr,
+	moo_oow_t         len
 );
 
-stix_oop_t stix_allocbyteobj (
-	stix_t*           stix,
-	const stix_oob_t* ptr,
-	stix_oow_t        len
+moo_oop_t moo_allocbyteobj (
+	moo_t*           moo,
+	const moo_oob_t* ptr,
+	moo_oow_t        len
 );
 
-stix_oop_t stix_allochalfwordobj (
-	stix_t*            stix,
-	const stix_oohw_t* ptr,
-	stix_oow_t         len
+moo_oop_t moo_allochalfwordobj (
+	moo_t*            moo,
+	const moo_oohw_t* ptr,
+	moo_oow_t         len
 );
 
-stix_oop_t stix_allocwordobj (
-	stix_t*           stix,
-	const stix_oow_t* ptr,
-	stix_oow_t        len
+moo_oop_t moo_allocwordobj (
+	moo_t*           moo,
+	const moo_oow_t* ptr,
+	moo_oow_t        len
 );
 
-#if defined(STIX_USE_OBJECT_TRAILER)
-stix_oop_t stix_instantiatewithtrailer (
-	stix_t*           stix, 
-	stix_oop_t        _class,
-	stix_oow_t        vlen,
-	const stix_oob_t* tptr,
-	stix_oow_t        tlen
+#if defined(MOO_USE_OBJECT_TRAILER)
+moo_oop_t moo_instantiatewithtrailer (
+	moo_t*           moo, 
+	moo_oop_t        _class,
+	moo_oow_t        vlen,
+	const moo_oob_t* tptr,
+	moo_oow_t        tlen
 );
 #endif
 
 /* ========================================================================= */
 /* sym.c                                                                     */
 /* ========================================================================= */
-stix_oop_t stix_makesymbol (
-	stix_t*             stix,
-	const stix_ooch_t*  ptr,
-	stix_oow_t          len
+moo_oop_t moo_makesymbol (
+	moo_t*             moo,
+	const moo_ooch_t*  ptr,
+	moo_oow_t          len
 );
 
-stix_oop_t stix_findsymbol (
-	stix_t*             stix,
-	const stix_ooch_t*  ptr,
-	stix_oow_t          len
+moo_oop_t moo_findsymbol (
+	moo_t*             moo,
+	const moo_ooch_t*  ptr,
+	moo_oow_t          len
 );
 
-stix_oop_t stix_makestring (
-	stix_t*             stix, 
-	const stix_ooch_t*  ptr, 
-	stix_oow_t          len
+moo_oop_t moo_makestring (
+	moo_t*             moo, 
+	const moo_ooch_t*  ptr, 
+	moo_oow_t          len
 );
 
 
 /* ========================================================================= */
 /* dic.c                                                                     */
 /* ========================================================================= */
-stix_oop_association_t stix_putatsysdic (
-	stix_t*     stix,
-	stix_oop_t  key,
-	stix_oop_t  value
+moo_oop_association_t moo_putatsysdic (
+	moo_t*     moo,
+	moo_oop_t  key,
+	moo_oop_t  value
 );
 
-stix_oop_association_t stix_getatsysdic (
-	stix_t*     stix,
-	stix_oop_t  key
+moo_oop_association_t moo_getatsysdic (
+	moo_t*     moo,
+	moo_oop_t  key
 );
 
-stix_oop_association_t stix_lookupsysdic (
-	stix_t*            stix,
-	const stix_oocs_t* name
+moo_oop_association_t moo_lookupsysdic (
+	moo_t*            moo,
+	const moo_oocs_t* name
 );
 
-stix_oop_association_t stix_putatdic (
-	stix_t*        stix,
-	stix_oop_set_t dic,
-	stix_oop_t     key,
-	stix_oop_t     value
+moo_oop_association_t moo_putatdic (
+	moo_t*        moo,
+	moo_oop_set_t dic,
+	moo_oop_t     key,
+	moo_oop_t     value
 );
 
-stix_oop_association_t stix_getatdic (
-	stix_t*        stix,
-	stix_oop_set_t dic,
-	stix_oop_t     key
+moo_oop_association_t moo_getatdic (
+	moo_t*        moo,
+	moo_oop_set_t dic,
+	moo_oop_t     key
 );
 
-stix_oop_association_t stix_lookupdic (
-	stix_t*            stix,
-	stix_oop_set_t     dic,
-	const stix_oocs_t* name
+moo_oop_association_t moo_lookupdic (
+	moo_t*            moo,
+	moo_oop_set_t     dic,
+	const moo_oocs_t* name
 );
 
-int stix_deletedic (
-	stix_t*            stix,
-	stix_oop_set_t     dic,
-	const stix_oocs_t* name
+int moo_deletedic (
+	moo_t*            moo,
+	moo_oop_set_t     dic,
+	const moo_oocs_t* name
 );
 
-stix_oop_set_t stix_makedic (
-	stix_t*    stix,
-	stix_oop_t cls,
-	stix_oow_t size
+moo_oop_set_t moo_makedic (
+	moo_t*    moo,
+	moo_oop_t cls,
+	moo_oow_t size
 );
 
 /* ========================================================================= */
 /* proc.c                                                                    */
 /* ========================================================================= */
-stix_oop_process_t stix_makeproc (
-	stix_t* stix
+moo_oop_process_t moo_makeproc (
+	moo_t* moo
 );
 
 
 /* ========================================================================= */
 /* bigint.c                                                                  */
 /* ========================================================================= */
-int stix_isint (
-	stix_t*    stix,
-	stix_oop_t x
+int moo_isint (
+	moo_t*    moo,
+	moo_oop_t x
 );
 
-int stix_inttooow (
-	stix_t*     stix,
-	stix_oop_t  x,
-	stix_oow_t* w
+int moo_inttooow (
+	moo_t*     moo,
+	moo_oop_t  x,
+	moo_oow_t* w
 );
 
-stix_oop_t stix_oowtoint (
-	stix_t*     stix,
-	stix_oow_t  w
+moo_oop_t moo_oowtoint (
+	moo_t*     moo,
+	moo_oow_t  w
 );
 
-stix_oop_t stix_addints (
-	stix_t*    stix,
-	stix_oop_t x,
-	stix_oop_t y
+moo_oop_t moo_addints (
+	moo_t*    moo,
+	moo_oop_t x,
+	moo_oop_t y
 );
 
-stix_oop_t stix_subints (
-	stix_t*    stix,
-	stix_oop_t x,
-	stix_oop_t y
+moo_oop_t moo_subints (
+	moo_t*    moo,
+	moo_oop_t x,
+	moo_oop_t y
 );
 
-stix_oop_t stix_mulints (
-	stix_t*    stix,
-	stix_oop_t x,
-	stix_oop_t y
+moo_oop_t moo_mulints (
+	moo_t*    moo,
+	moo_oop_t x,
+	moo_oop_t y
 );
 
-stix_oop_t stix_divints (
-	stix_t*     stix,
-	stix_oop_t  x,
-	stix_oop_t  y,
+moo_oop_t moo_divints (
+	moo_t*     moo,
+	moo_oop_t  x,
+	moo_oop_t  y,
 	int         modulo,
-	stix_oop_t* rem
+	moo_oop_t* rem
 );
 
-stix_oop_t stix_negateint (
-	stix_t*    stix,
-	stix_oop_t x
+moo_oop_t moo_negateint (
+	moo_t*    moo,
+	moo_oop_t x
 );
 
-stix_oop_t stix_bitatint (
-	stix_t*    stix,
-	stix_oop_t x,
-	stix_oop_t y
+moo_oop_t moo_bitatint (
+	moo_t*    moo,
+	moo_oop_t x,
+	moo_oop_t y
 );
 
-stix_oop_t stix_bitandints (
-	stix_t*    stix,
-	stix_oop_t x,
-	stix_oop_t y
+moo_oop_t moo_bitandints (
+	moo_t*    moo,
+	moo_oop_t x,
+	moo_oop_t y
 );
 
-stix_oop_t stix_bitorints (
-	stix_t*    stix,
-	stix_oop_t x,
-	stix_oop_t y
+moo_oop_t moo_bitorints (
+	moo_t*    moo,
+	moo_oop_t x,
+	moo_oop_t y
 );
 
-stix_oop_t stix_bitxorints (
-	stix_t*    stix,
-	stix_oop_t x,
-	stix_oop_t y
+moo_oop_t moo_bitxorints (
+	moo_t*    moo,
+	moo_oop_t x,
+	moo_oop_t y
 );
 
-stix_oop_t stix_bitinvint (
-	stix_t*    stix,
-	stix_oop_t x
+moo_oop_t moo_bitinvint (
+	moo_t*    moo,
+	moo_oop_t x
 );
 
-stix_oop_t stix_bitshiftint (
-	stix_t*    stix,
-	stix_oop_t x,
-	stix_oop_t y
+moo_oop_t moo_bitshiftint (
+	moo_t*    moo,
+	moo_oop_t x,
+	moo_oop_t y
 );
 
-stix_oop_t stix_eqints (
-	stix_t* stix,
-	stix_oop_t x,
-	stix_oop_t y
+moo_oop_t moo_eqints (
+	moo_t* moo,
+	moo_oop_t x,
+	moo_oop_t y
 );
 
-stix_oop_t stix_neints (
-	stix_t*    stix,
-	stix_oop_t x,
-	stix_oop_t y
+moo_oop_t moo_neints (
+	moo_t*    moo,
+	moo_oop_t x,
+	moo_oop_t y
 );
 
-stix_oop_t stix_gtints (
-	stix_t*    stix,
-	stix_oop_t x,
-	stix_oop_t y
+moo_oop_t moo_gtints (
+	moo_t*    moo,
+	moo_oop_t x,
+	moo_oop_t y
 );
 
-stix_oop_t stix_geints (
-	stix_t*    stix,
-	stix_oop_t x,
-	stix_oop_t y
+moo_oop_t moo_geints (
+	moo_t*    moo,
+	moo_oop_t x,
+	moo_oop_t y
 );
 
-stix_oop_t stix_ltints (
-	stix_t*    stix,
-	stix_oop_t x,
-	stix_oop_t y
+moo_oop_t moo_ltints (
+	moo_t*    moo,
+	moo_oop_t x,
+	moo_oop_t y
 );
 
-stix_oop_t stix_leints (
-	stix_t*    stix,
-	stix_oop_t x,
-	stix_oop_t y
+moo_oop_t moo_leints (
+	moo_t*    moo,
+	moo_oop_t x,
+	moo_oop_t y
 );
 
-stix_oop_t stix_strtoint (
-	stix_t*            stix,
-	const stix_ooch_t* str,
-	stix_oow_t         len,
+moo_oop_t moo_strtoint (
+	moo_t*            moo,
+	const moo_ooch_t* str,
+	moo_oow_t         len,
 	int                radix
 );
 
-stix_oop_t stix_inttostr (
-	stix_t*      stix,
-	stix_oop_t   num,
+moo_oop_t moo_inttostr (
+	moo_t*      moo,
+	moo_oop_t   num,
 	int          radix
 );
 
@@ -1143,43 +1144,43 @@ stix_oop_t stix_inttostr (
 /* exec.c                                                                    */
 /* ========================================================================= */
 
-int stix_getpfnum (
-	stix_t*            stix,
-	const stix_ooch_t* ptr,
-	stix_oow_t         len
+int moo_getpfnum (
+	moo_t*            moo,
+	const moo_ooch_t* ptr,
+	moo_oow_t         len
 );
 
 
 /* ========================================================================= */
-/* stix.c                                                                    */
+/* moo.c                                                                    */
 /* ========================================================================= */
 
-stix_mod_data_t* stix_openmod (
-	stix_t*            stix,
-	const stix_ooch_t* name,
-	stix_oow_t         namelen
+moo_mod_data_t* moo_openmod (
+	moo_t*            moo,
+	const moo_ooch_t* name,
+	moo_oow_t         namelen
 );
 
-void stix_closemod (
-	stix_t*            stix,
-	stix_mod_data_t*   mdp
+void moo_closemod (
+	moo_t*            moo,
+	moo_mod_data_t*   mdp
 );
 
-int stix_importmod (
-	stix_t*            stix,
-	stix_oop_t         _class,
-	const stix_ooch_t* name,
-	stix_oow_t         len
+int moo_importmod (
+	moo_t*            moo,
+	moo_oop_t         _class,
+	const moo_ooch_t* name,
+	moo_oow_t         len
 );
 
 /*
- * The stix_querymod() function finds a primitive function in modules
+ * The moo_querymod() function finds a primitive function in modules
  * with a full primitive identifier.
  */
-stix_pfimpl_t stix_querymod (
-	stix_t*            stix,
-	const stix_ooch_t* pfid,
-	stix_oow_t         pfidlen
+moo_pfimpl_t moo_querymod (
+	moo_t*            moo,
+	const moo_ooch_t* pfid,
+	moo_oow_t         pfidlen
 );
 
 
@@ -1187,8 +1188,8 @@ stix_pfimpl_t stix_querymod (
 /* ========================================================================= */
 /* debug.c                                                                   */
 /* ========================================================================= */
-void stix_dumpsymtab (stix_t* stix);
-void stix_dumpdic (stix_t* stix, stix_oop_set_t dic, const stix_bch_t* title);
+void moo_dumpsymtab (moo_t* moo);
+void moo_dumpdic (moo_t* moo, moo_oop_set_t dic, const moo_bch_t* title);
 
 
 #if defined(__cplusplus)

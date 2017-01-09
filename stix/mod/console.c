@@ -26,7 +26,7 @@
 
 
 #include "console.h"
-#include <stix-utl.h>
+#include <moo-utl.h>
 
 #include <unistd.h>
 #include <fcntl.h> 
@@ -48,11 +48,11 @@ struct console_t
 };
 /* ------------------------------------------------------------------------ */
 
-static stix_pfrc_t pf_open (stix_t* stix, stix_ooi_t nargs)
+static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 {
 #if defined(_WIN32)
 	HANDLE h;
-	stix_ooi_t immv;
+	moo_ooi_t immv;
 
 	h = GetStdHandle(STD_INPUT_HANDLE);
 	if (h == INVALID_HANDLE_VALUE) return 0;
@@ -60,7 +60,7 @@ static stix_pfrc_t pf_open (stix_t* stix, stix_ooi_t nargs)
 	{
 	}
 
-	imm = stix_makeimm (stix, h);
+	imm = moo_makeimm (moo, h);
 	if (imm <= -1) 
 	{
 		/* error */
@@ -73,7 +73,7 @@ static stix_pfrc_t pf_open (stix_t* stix, stix_ooi_t nargs)
 	int err;
 	char* term;
 
-	con = stix_callocmem (stix, STIX_SIZEOF(*con));
+	con = moo_callocmem (moo, MOO_SIZEOF(*con));
 	if (!con) return 0;
 
 	if (isatty(1))
@@ -86,7 +86,7 @@ static stix_pfrc_t pf_open (stix_t* stix, stix_ooi_t nargs)
 		if (con->fd == -1)
 		{
 			/* TODO: failed to open /dev/stdout */
-			stix_freemem (stix, con);
+			moo_freemem (moo, con);
 			return 0;
 		}
 
@@ -118,60 +118,60 @@ static stix_pfrc_t pf_open (stix_t* stix, stix_ooi_t nargs)
 
 #endif
 
-	STIX_STACK_SETRET (stix, nargs, STIX_SMOOI_TO_OOP((stix_oow_t)con));
-	return STIX_PF_SUCCESS;
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP((moo_oow_t)con));
+	return MOO_PF_SUCCESS;
 }
 
-static stix_pfrc_t pf_close (stix_t* stix, stix_ooi_t nargs)
+static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 {
 #if defined(_WIN32)
 	HANDLE h;
 
-	h = STIX_STACK_GETARG (stix, nargs, 0);
+	h = MOO_STACK_GETARG (moo, nargs, 0);
 #else
 #endif
 	console_t* con;
 
-	con = STIX_OOP_TO_SMOOI(STIX_STACK_GETARG (stix, nargs, 0));
+	con = MOO_OOP_TO_SMOOI(MOO_STACK_GETARG (moo, nargs, 0));
 	/* TODO: sanity check */
 
 	if (con->fd_opened) close (con->fd);
 
-	stix_freemem (stix, con);
-	STIX_STACK_SETRETTORCV (stix, nargs);
-	return STIX_PF_SUCCESS;
+	moo_freemem (moo, con);
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
 }
 
-static stix_pfrc_t pf_write (stix_t* stix, stix_ooi_t nargs)
+static moo_pfrc_t pf_write (moo_t* moo, moo_ooi_t nargs)
 {
 	console_t* con;
-	stix_oop_char_t oomsg;
+	moo_oop_char_t oomsg;
 
-	stix_oow_t ucspos, ucsrem, ucslen, bcslen;
-	stix_bch_t bcs[1024];
+	moo_oow_t ucspos, ucsrem, ucslen, bcslen;
+	moo_bch_t bcs[1024];
 	int n;
 
-	con = STIX_OOP_TO_SMOOI(STIX_STACK_GETARG (stix, nargs, 0));
-	oomsg = (stix_oop_char_t)STIX_STACK_GETARG (stix, nargs, 1);
+	con = MOO_OOP_TO_SMOOI(MOO_STACK_GETARG (moo, nargs, 0));
+	oomsg = (moo_oop_char_t)MOO_STACK_GETARG (moo, nargs, 1);
 
-	if (STIX_CLASSOF(stix,oomsg) != stix->_string)
+	if (MOO_CLASSOF(moo,oomsg) != moo->_string)
 	{
 /* TODO: invalid message */
-		return STIX_PF_FAILURE;
+		return MOO_PF_FAILURE;
 	}
 
 	ucspos = 0;
-	ucsrem = STIX_OBJ_GET_SIZE(oomsg);
+	ucsrem = MOO_OBJ_GET_SIZE(oomsg);
 	while (ucsrem > 0)
 	{
 		ucslen = ucsrem;
-		bcslen = STIX_COUNTOF(bcs);
-		if ((n = stix_convootobchars (stix, &oomsg->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
+		bcslen = MOO_COUNTOF(bcs);
+		if ((n = moo_convootobchars (moo, &oomsg->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
 		{
 			if (n != -2 || ucslen <= 0) 
 			{
-				stix_seterrnum (stix, STIX_EECERR);
-				return STIX_PF_HARD_FAILURE;
+				moo_seterrnum (moo, MOO_EECERR);
+				return MOO_PF_HARD_FAILURE;
 			}
 		}
 
@@ -181,42 +181,42 @@ static stix_pfrc_t pf_write (stix_t* stix, stix_ooi_t nargs)
 		ucsrem -= ucslen;
 	}
 
-	STIX_STACK_SETRETTORCV (stix, nargs); /* TODO: change return code */
-	return STIX_PF_SUCCESS;
+	MOO_STACK_SETRETTORCV (moo, nargs); /* TODO: change return code */
+	return MOO_PF_SUCCESS;
 }
 
-static stix_pfrc_t pf_clear (stix_t* stix, stix_ooi_t nargs)
+static moo_pfrc_t pf_clear (moo_t* moo, moo_ooi_t nargs)
 {
 	console_t* con;
 
-	con = STIX_OOP_TO_SMOOI(STIX_STACK_GETARG(stix, nargs, 0));
+	con = MOO_OOP_TO_SMOOI(MOO_STACK_GETARG(moo, nargs, 0));
 
 	write (con->fd, con->clear, strlen(con->clear));
 
-	STIX_STACK_SETRETTORCV (stix, nargs);
-	return STIX_PF_SUCCESS;
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
 }
 
-static stix_pfrc_t pf_setcursor (stix_t* stix, stix_ooi_t nargs)
+static moo_pfrc_t pf_setcursor (moo_t* moo, moo_ooi_t nargs)
 {
 	console_t* con;
-	stix_oop_oop_t point;
+	moo_oop_oop_t point;
 	char* cup;
 
-	con = STIX_OOP_TO_SMOOI(STIX_STACK_GETARG(stix, nargs, 0));
-	point = STIX_STACK_GETARG(stix, nargs, 1);
+	con = MOO_OOP_TO_SMOOI(MOO_STACK_GETARG(moo, nargs, 0));
+	point = MOO_STACK_GETARG(moo, nargs, 1);
 
 /* TODO: error check, class check, size check.. */
-	if (STIX_OBJ_GET_SIZE(point) != 2)
+	if (MOO_OBJ_GET_SIZE(point) != 2)
 	{
-		return STIX_PF_FAILURE;
+		return MOO_PF_FAILURE;
 	}
 
-	cup = tiparm (con->cup, STIX_OOP_TO_SMOOI(point->slot[1]), STIX_OOP_TO_SMOOI(point->slot[0]));
+	cup = tiparm (con->cup, MOO_OOP_TO_SMOOI(point->slot[1]), MOO_OOP_TO_SMOOI(point->slot[0]));
 	write (con->fd, cup, strlen(cup)); /* TODO: error check */
 
-	STIX_STACK_SETRETTORCV (stix, nargs);
-	return STIX_PF_SUCCESS;
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -224,8 +224,8 @@ static stix_pfrc_t pf_setcursor (stix_t* stix, stix_ooi_t nargs)
 typedef struct fnctab_t fnctab_t;
 struct fnctab_t
 {
-	const stix_bch_t* name;
-	stix_pfimpl_t handler;
+	const moo_bch_t* name;
+	moo_pfimpl_t handler;
 };
 
 static fnctab_t fnctab[] =
@@ -239,17 +239,17 @@ static fnctab_t fnctab[] =
 
 /* ------------------------------------------------------------------------ */
 
-static stix_pfimpl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* name)
+static moo_pfimpl_t query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
 {
 	int left, right, mid, n;
 
-	left = 0; right = STIX_COUNTOF(fnctab) - 1;
+	left = 0; right = MOO_COUNTOF(fnctab) - 1;
 
 	while (left <= right)
 	{
 		mid = (left + right) / 2;
 
-		n = stix_compoocbcstr (name, fnctab[mid].name);
+		n = moo_compoocbcstr (name, fnctab[mid].name);
 		if (n < 0) right = mid - 1; 
 		else if (n > 0) left = mid + 1;
 		else
@@ -258,21 +258,21 @@ static stix_pfimpl_t query (stix_t* stix, stix_mod_t* mod, const stix_ooch_t* na
 		}
 	}
 
-	stix->errnum = STIX_ENOENT;
-	return STIX_NULL;
+	moo->errnum = MOO_ENOENT;
+	return MOO_NULL;
 }
 
 
-static void unload (stix_t* stix, stix_mod_t* mod)
+static void unload (moo_t* moo, moo_mod_t* mod)
 {
 	/* TODO: close all open handle?? */
 }
 
 
-int stix_mod_console (stix_t* stix, stix_mod_t* mod)
+int moo_mod_console (moo_t* moo, moo_mod_t* mod)
 {
 	mod->query = query;
 	mod->unload = unload; 
-	mod->ctx = STIX_NULL;
+	mod->ctx = MOO_NULL;
 	return 0;
 }

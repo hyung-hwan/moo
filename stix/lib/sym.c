@@ -24,15 +24,15 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "stix-prv.h"
+#include "moo-prv.h"
 
-static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
+static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 {
-	stix_oop_oop_t newbuc;
-	stix_oow_t oldsz, newsz, index;
-	stix_oop_char_t symbol;
+	moo_oop_oop_t newbuc;
+	moo_oow_t oldsz, newsz, index;
+	moo_oop_char_t symbol;
 
-	oldsz = STIX_OBJ_GET_SIZE(oldbuc);
+	oldsz = MOO_OBJ_GET_SIZE(oldbuc);
 
 /* TODO: better growth policy? */
 	if (oldsz < 5000) newsz = oldsz + oldsz;
@@ -44,100 +44,100 @@ static stix_oop_oop_t expand_bucket (stix_t* stix, stix_oop_oop_t oldbuc)
 	else if (oldsz < 1600000) newsz = oldsz + (oldsz / 64);
 	else 
 	{
-		stix_oow_t inc, inc_max;
+		moo_oow_t inc, inc_max;
 
 		inc = oldsz / 128;
-		inc_max = STIX_OBJ_SIZE_MAX - oldsz;
+		inc_max = MOO_OBJ_SIZE_MAX - oldsz;
 		if (inc > inc_max) 
 		{
 			if (inc_max > 0) inc = inc_max;
 			else
 			{
-				stix->errnum = STIX_EOOMEM;
-				return STIX_NULL;
+				moo->errnum = MOO_EOOMEM;
+				return MOO_NULL;
 			}
 		}
 		newsz = oldsz + inc;
 	}
 
-	stix_pushtmp (stix, (stix_oop_t*)&oldbuc);
-	newbuc = (stix_oop_oop_t)stix_instantiate (stix, stix->_array, STIX_NULL, newsz); 
-	stix_poptmp (stix);
-	if (!newbuc) return STIX_NULL;
+	moo_pushtmp (moo, (moo_oop_t*)&oldbuc);
+	newbuc = (moo_oop_oop_t)moo_instantiate (moo, moo->_array, MOO_NULL, newsz); 
+	moo_poptmp (moo);
+	if (!newbuc) return MOO_NULL;
 
 	while (oldsz > 0)
 	{
-		symbol = (stix_oop_char_t)oldbuc->slot[--oldsz];
-		if ((stix_oop_t)symbol != stix->_nil)
+		symbol = (moo_oop_char_t)oldbuc->slot[--oldsz];
+		if ((moo_oop_t)symbol != moo->_nil)
 		{
-			STIX_ASSERT (stix, STIX_CLASSOF(stix,symbol) == stix->_symbol);
-			/*STIX_ASSERT (stix, sym->size > 0);*/
+			MOO_ASSERT (moo, MOO_CLASSOF(moo,symbol) == moo->_symbol);
+			/*MOO_ASSERT (moo, sym->size > 0);*/
 
-			index = stix_hashoochars(symbol->slot, STIX_OBJ_GET_SIZE(symbol)) % newsz;
-			while (newbuc->slot[index] != stix->_nil) index = (index + 1) % newsz;
-			newbuc->slot[index] = (stix_oop_t)symbol;
+			index = moo_hashoochars(symbol->slot, MOO_OBJ_GET_SIZE(symbol)) % newsz;
+			while (newbuc->slot[index] != moo->_nil) index = (index + 1) % newsz;
+			newbuc->slot[index] = (moo_oop_t)symbol;
 		}
 	}
 
 	return newbuc;
 }
 
-static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len, int create)
+static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, int create)
 {
-	stix_ooi_t tally;
-	stix_oow_t index;
-	stix_oop_char_t symbol;
+	moo_ooi_t tally;
+	moo_oow_t index;
+	moo_oop_char_t symbol;
 
-	STIX_ASSERT (stix, len > 0);
+	MOO_ASSERT (moo, len > 0);
 	if (len <= 0) 
 	{
 		/* i don't allow an empty symbol name */
-		stix->errnum = STIX_EINVAL;
-		return STIX_NULL;
+		moo->errnum = MOO_EINVAL;
+		return MOO_NULL;
 	}
 
-	STIX_ASSERT (stix, STIX_CLASSOF(stix,stix->symtab->bucket) == stix->_array);
-	index = stix_hashoochars(ptr, len) % STIX_OBJ_GET_SIZE(stix->symtab->bucket);
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,moo->symtab->bucket) == moo->_array);
+	index = moo_hashoochars(ptr, len) % MOO_OBJ_GET_SIZE(moo->symtab->bucket);
 
 	/* find a matching symbol in the open-addressed symbol table */
-	while (stix->symtab->bucket->slot[index] != stix->_nil) 
+	while (moo->symtab->bucket->slot[index] != moo->_nil) 
 	{
-		symbol = (stix_oop_char_t)stix->symtab->bucket->slot[index];
-		STIX_ASSERT (stix, STIX_CLASSOF(stix,symbol) == (stix_oop_t)stix->_symbol);
+		symbol = (moo_oop_char_t)moo->symtab->bucket->slot[index];
+		MOO_ASSERT (moo, MOO_CLASSOF(moo,symbol) == (moo_oop_t)moo->_symbol);
 
-		if (len == STIX_OBJ_GET_SIZE(symbol) &&
-		    stix_equaloochars (ptr, symbol->slot, len))
+		if (len == MOO_OBJ_GET_SIZE(symbol) &&
+		    moo_equaloochars (ptr, symbol->slot, len))
 		{
-			return (stix_oop_t)symbol;
+			return (moo_oop_t)symbol;
 		}
 
-		index = (index + 1) % STIX_OBJ_GET_SIZE(stix->symtab->bucket);
+		index = (index + 1) % MOO_OBJ_GET_SIZE(moo->symtab->bucket);
 	}
 
 	if (!create) 
 	{
-		stix->errnum = STIX_ENOENT;
-		return STIX_NULL;
+		moo->errnum = MOO_ENOENT;
+		return MOO_NULL;
 	}
 
 	/* make a new symbol and insert it */
-	STIX_ASSERT (stix, STIX_OOP_IS_SMOOI(stix->symtab->tally));
-	tally = STIX_OOP_TO_SMOOI(stix->symtab->tally);
-	if (tally >= STIX_SMOOI_MAX)
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->symtab->tally));
+	tally = MOO_OOP_TO_SMOOI(moo->symtab->tally);
+	if (tally >= MOO_SMOOI_MAX)
 	{
 		/* this built-in table is not allowed to hold more than 
-		 * STIX_SMOOI_MAX items for efficiency sake */
-		stix->errnum = STIX_EDFULL;
-		return STIX_NULL;
+		 * MOO_SMOOI_MAX items for efficiency sake */
+		moo->errnum = MOO_EDFULL;
+		return MOO_NULL;
 	}
 
-	/* no conversion to stix_oow_t is necessary for tally + 1.
-	 * the maximum value of tally is checked to be STIX_SMOOI_MAX - 1.
-	 * tally + 1 can produce at most STIX_SMOOI_MAX. above all, 
-	 * STIX_SMOOI_MAX is way smaller than STIX_TYPE_MAX(stix_ooi_t). */
-	if (tally + 1 >= STIX_OBJ_GET_SIZE(stix->symtab->bucket))
+	/* no conversion to moo_oow_t is necessary for tally + 1.
+	 * the maximum value of tally is checked to be MOO_SMOOI_MAX - 1.
+	 * tally + 1 can produce at most MOO_SMOOI_MAX. above all, 
+	 * MOO_SMOOI_MAX is way smaller than MOO_TYPE_MAX(moo_ooi_t). */
+	if (tally + 1 >= MOO_OBJ_GET_SIZE(moo->symtab->bucket))
 	{
-		stix_oop_oop_t bucket;
+		moo_oop_oop_t bucket;
 
 		/* TODO: make the growth policy configurable instead of growing
 			     it just before it gets full. The polcy can be grow it
@@ -147,40 +147,40 @@ static stix_oop_t find_or_make_symbol (stix_t* stix, const stix_ooch_t* ptr, sti
 		 * make sure that it has at least one free slot left
 		 * after having added a new symbol. this is to help
 		 * traversal end at a _nil slot if no entry is found. */
-		bucket = expand_bucket(stix, stix->symtab->bucket);
-		if (!bucket) return STIX_NULL;
+		bucket = expand_bucket(moo, moo->symtab->bucket);
+		if (!bucket) return MOO_NULL;
 
-		stix->symtab->bucket = bucket;
+		moo->symtab->bucket = bucket;
 
 		/* recalculate the index for the expanded bucket */
-		index = stix_hashoochars(ptr, len) % STIX_OBJ_GET_SIZE(stix->symtab->bucket);
+		index = moo_hashoochars(ptr, len) % MOO_OBJ_GET_SIZE(moo->symtab->bucket);
 
-		while (stix->symtab->bucket->slot[index] != stix->_nil) 
-			index = (index + 1) % STIX_OBJ_GET_SIZE(stix->symtab->bucket);
+		while (moo->symtab->bucket->slot[index] != moo->_nil) 
+			index = (index + 1) % MOO_OBJ_GET_SIZE(moo->symtab->bucket);
 	}
 
 	/* create a new symbol since it isn't found in the symbol table */
-	symbol = (stix_oop_char_t)stix_instantiate(stix, stix->_symbol, ptr, len);
+	symbol = (moo_oop_char_t)moo_instantiate(moo, moo->_symbol, ptr, len);
 	if (symbol)
 	{
-		STIX_ASSERT (stix, tally < STIX_SMOOI_MAX);
-		stix->symtab->tally = STIX_SMOOI_TO_OOP(tally + 1);
-		stix->symtab->bucket->slot[index] = (stix_oop_t)symbol;
+		MOO_ASSERT (moo, tally < MOO_SMOOI_MAX);
+		moo->symtab->tally = MOO_SMOOI_TO_OOP(tally + 1);
+		moo->symtab->bucket->slot[index] = (moo_oop_t)symbol;
 	}
 
-	return (stix_oop_t)symbol;
+	return (moo_oop_t)symbol;
 }
 
-stix_oop_t stix_makesymbol (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
+moo_oop_t moo_makesymbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 {
-	return find_or_make_symbol (stix, ptr, len, 1);
+	return find_or_make_symbol (moo, ptr, len, 1);
 }
-stix_oop_t stix_findsymbol (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
+moo_oop_t moo_findsymbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 {
-	return find_or_make_symbol (stix, ptr, len, 0);
+	return find_or_make_symbol (moo, ptr, len, 0);
 }
 
-stix_oop_t stix_makestring (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
+moo_oop_t moo_makestring (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 {
-	return stix_instantiate (stix, stix->_string, ptr, len);
+	return moo_instantiate (moo, moo->_string, ptr, len);
 }

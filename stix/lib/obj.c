@@ -24,195 +24,195 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "stix-prv.h"
+#include "moo-prv.h"
 
-void* stix_allocbytes (stix_t* stix, stix_oow_t size)
+void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 {
-	stix_uint8_t* ptr;
+	moo_uint8_t* ptr;
 
-#if defined(STIX_DEBUG_GC)
-	if (!(stix->option.trait & STIX_NOGC)) stix_gc (stix);
+#if defined(MOO_DEBUG_GC)
+	if (!(moo->option.trait & MOO_NOGC)) moo_gc (moo);
 #endif
 
-	ptr = stix_allocheapmem (stix, stix->curheap, size);
-	if (!ptr && stix->errnum == STIX_EOOMEM && !(stix->option.trait & STIX_NOGC))
+	ptr = moo_allocheapmem (moo, moo->curheap, size);
+	if (!ptr && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_NOGC))
 	{
-		stix_gc (stix);
-		ptr = stix_allocheapmem (stix, stix->curheap, size);
+		moo_gc (moo);
+		ptr = moo_allocheapmem (moo, moo->curheap, size);
 /* TODO: grow heap if ptr is still null. */
 	}
 
 	return ptr;
 }
 
-stix_oop_t stix_allocoopobj (stix_t* stix, stix_oow_t size)
+moo_oop_t moo_allocoopobj (moo_t* moo, moo_oow_t size)
 {
-	stix_oop_oop_t hdr;
-	stix_oow_t nbytes, nbytes_aligned;
+	moo_oop_oop_t hdr;
+	moo_oow_t nbytes, nbytes_aligned;
 
-	nbytes = size * STIX_SIZEOF(stix_oop_t);
+	nbytes = size * MOO_SIZEOF(moo_oop_t);
 
 	/* this isn't really necessary since nbytes must be 
 	 * aligned already. */
-	nbytes_aligned = STIX_ALIGN(nbytes, STIX_SIZEOF(stix_oop_t)); 
+	nbytes_aligned = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t)); 
 
 	/* making the number of bytes to allocate a multiple of
-	 * STIX_SIZEOF(stix_oop_t) will guarantee the starting address
+	 * MOO_SIZEOF(moo_oop_t) will guarantee the starting address
 	 * of the allocated space to be an even number. 
-	 * see STIX_OOP_IS_NUMERIC() and STIX_OOP_IS_POINTER() */
-	hdr = stix_allocbytes (stix, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
-	if (!hdr) return STIX_NULL;
+	 * see MOO_OOP_IS_NUMERIC() and MOO_OOP_IS_POINTER() */
+	hdr = moo_allocbytes (moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
+	if (!hdr) return MOO_NULL;
 
-	hdr->_flags = STIX_OBJ_MAKE_FLAGS(STIX_OBJ_TYPE_OOP, STIX_SIZEOF(stix_oop_t), 0, 0, 0, 0, 0);
-	STIX_OBJ_SET_SIZE (hdr, size);
-	STIX_OBJ_SET_CLASS (hdr, stix->_nil);
+	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, 0, 0, 0);
+	MOO_OBJ_SET_SIZE (hdr, size);
+	MOO_OBJ_SET_CLASS (hdr, moo->_nil);
 
-	while (size > 0) hdr->slot[--size] = stix->_nil;
+	while (size > 0) hdr->slot[--size] = moo->_nil;
 
-	return (stix_oop_t)hdr;
+	return (moo_oop_t)hdr;
 }
 
-#if defined(STIX_USE_OBJECT_TRAILER)
-stix_oop_t stix_allocoopobjwithtrailer (stix_t* stix, stix_oow_t size, const stix_oob_t* bptr, stix_oow_t blen)
+#if defined(MOO_USE_OBJECT_TRAILER)
+moo_oop_t moo_allocoopobjwithtrailer (moo_t* moo, moo_oow_t size, const moo_oob_t* bptr, moo_oow_t blen)
 {
-	stix_oop_oop_t hdr;
-	stix_oow_t nbytes, nbytes_aligned;
-	stix_oow_t i;
+	moo_oop_oop_t hdr;
+	moo_oow_t nbytes, nbytes_aligned;
+	moo_oow_t i;
 
-	/* +1 for the trailer size of the stix_oow_t type */
-	nbytes = (size + 1) * STIX_SIZEOF(stix_oop_t) + blen;
-	nbytes_aligned = STIX_ALIGN(nbytes, STIX_SIZEOF(stix_oop_t)); 
+	/* +1 for the trailer size of the moo_oow_t type */
+	nbytes = (size + 1) * MOO_SIZEOF(moo_oop_t) + blen;
+	nbytes_aligned = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t)); 
 
-	hdr = stix_allocbytes (stix, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
-	if (!hdr) return STIX_NULL;
+	hdr = moo_allocbytes (moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
+	if (!hdr) return MOO_NULL;
 
-	hdr->_flags = STIX_OBJ_MAKE_FLAGS(STIX_OBJ_TYPE_OOP, STIX_SIZEOF(stix_oop_t), 0, 0, 0, 0, 1);
-	STIX_OBJ_SET_SIZE (hdr, size);
-	STIX_OBJ_SET_CLASS (hdr, stix->_nil);
+	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, 0, 0, 1);
+	MOO_OBJ_SET_SIZE (hdr, size);
+	MOO_OBJ_SET_CLASS (hdr, moo->_nil);
 
-	for (i = 0; i < size; i++) hdr->slot[i] = stix->_nil;
+	for (i = 0; i < size; i++) hdr->slot[i] = moo->_nil;
 
 	/* [NOTE] this is not converted to a SmallInteger object */
-	hdr->slot[size] = (stix_oop_t)blen; 
+	hdr->slot[size] = (moo_oop_t)blen; 
 
 	if (bptr)
 	{
-		STIX_MEMCPY (&hdr->slot[size + 1], bptr, blen);
+		MOO_MEMCPY (&hdr->slot[size + 1], bptr, blen);
 	}
 	else
 	{
-		STIX_MEMSET (&hdr->slot[size + 1], 0, blen);
+		MOO_MEMSET (&hdr->slot[size + 1], 0, blen);
 	}
 
-	return (stix_oop_t)hdr;
+	return (moo_oop_t)hdr;
 }
 #endif
 
-static STIX_INLINE stix_oop_t alloc_numeric_array (stix_t* stix, const void* ptr, stix_oow_t len, stix_obj_type_t type, stix_oow_t unit, int extra)
+static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, moo_oow_t len, moo_obj_type_t type, moo_oow_t unit, int extra)
 {
 	/* allocate a variable object */
 
-	stix_oop_t hdr;
-	stix_oow_t xbytes, nbytes, nbytes_aligned;
+	moo_oop_t hdr;
+	moo_oow_t xbytes, nbytes, nbytes_aligned;
 
 	xbytes = len * unit; 
 	/* 'extra' indicates an extra unit to append at the end.
 	 * it's useful to store a string with a terminating null */
 	nbytes = extra? xbytes + len: xbytes; 
-	nbytes_aligned = STIX_ALIGN(nbytes, STIX_SIZEOF(stix_oop_t));
+	nbytes_aligned = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t));
 /* TODO: check overflow in size calculation*/
 
 	/* making the number of bytes to allocate a multiple of
-	 * STIX_SIZEOF(stix_oop_t) will guarantee the starting address
+	 * MOO_SIZEOF(moo_oop_t) will guarantee the starting address
 	 * of the allocated space to be an even number. 
-	 * see STIX_OOP_IS_NUMERIC() and STIX_OOP_IS_POINTER() */
-	hdr = stix_allocbytes (stix, STIX_SIZEOF(stix_obj_t) + nbytes_aligned);
-	if (!hdr) return STIX_NULL;
+	 * see MOO_OOP_IS_NUMERIC() and MOO_OOP_IS_POINTER() */
+	hdr = moo_allocbytes (moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
+	if (!hdr) return MOO_NULL;
 
-	hdr->_flags = STIX_OBJ_MAKE_FLAGS(type, unit, extra, 0, 0, 0, 0);
+	hdr->_flags = MOO_OBJ_MAKE_FLAGS(type, unit, extra, 0, 0, 0, 0);
 	hdr->_size = len;
-	STIX_OBJ_SET_SIZE (hdr, len);
-	STIX_OBJ_SET_CLASS (hdr, stix->_nil);
+	MOO_OBJ_SET_SIZE (hdr, len);
+	MOO_OBJ_SET_CLASS (hdr, moo->_nil);
 
 	if (ptr)
 	{
 		/* copy data */
-		STIX_MEMCPY (hdr + 1, ptr, xbytes);
-		STIX_MEMSET ((stix_uint8_t*)(hdr + 1) + xbytes, 0, nbytes_aligned - xbytes);
+		MOO_MEMCPY (hdr + 1, ptr, xbytes);
+		MOO_MEMSET ((moo_uint8_t*)(hdr + 1) + xbytes, 0, nbytes_aligned - xbytes);
 	}
 	else
 	{
 		/* initialize with zeros when the string pointer is not given */
-		STIX_MEMSET ((hdr + 1), 0, nbytes_aligned);
+		MOO_MEMSET ((hdr + 1), 0, nbytes_aligned);
 	}
 
 	return hdr;
 }
 
-stix_oop_t stix_alloccharobj (stix_t* stix, const stix_ooch_t* ptr, stix_oow_t len)
+moo_oop_t moo_alloccharobj (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 {
-	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_CHAR, STIX_SIZEOF(stix_ooch_t), 1);
+	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_CHAR, MOO_SIZEOF(moo_ooch_t), 1);
 }
 
-stix_oop_t stix_allocbyteobj (stix_t* stix, const stix_oob_t* ptr, stix_oow_t len)
+moo_oop_t moo_allocbyteobj (moo_t* moo, const moo_oob_t* ptr, moo_oow_t len)
 {
-	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_BYTE, STIX_SIZEOF(stix_oob_t), 0);
+	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_BYTE, MOO_SIZEOF(moo_oob_t), 0);
 }
 
-stix_oop_t stix_allochalfwordobj (stix_t* stix, const stix_oohw_t* ptr, stix_oow_t len)
+moo_oop_t moo_allochalfwordobj (moo_t* moo, const moo_oohw_t* ptr, moo_oow_t len)
 {
-	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_HALFWORD, STIX_SIZEOF(stix_oohw_t), 0);
+	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_HALFWORD, MOO_SIZEOF(moo_oohw_t), 0);
 }
 
-stix_oop_t stix_allocwordobj (stix_t* stix, const stix_oow_t* ptr, stix_oow_t len)
+moo_oop_t moo_allocwordobj (moo_t* moo, const moo_oow_t* ptr, moo_oow_t len)
 {
-	return alloc_numeric_array (stix, ptr, len, STIX_OBJ_TYPE_WORD, STIX_SIZEOF(stix_oow_t), 0);
+	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_WORD, MOO_SIZEOF(moo_oow_t), 0);
 }
 
-static STIX_INLINE int decode_spec (stix_t* stix, stix_oop_t _class, stix_oow_t vlen, stix_obj_type_t* type, stix_oow_t* outlen)
+static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_t _class, moo_oow_t vlen, moo_obj_type_t* type, moo_oow_t* outlen)
 {
-	stix_oow_t spec;
-	stix_oow_t named_instvar;
-	stix_obj_type_t indexed_type;
+	moo_oow_t spec;
+	moo_oow_t named_instvar;
+	moo_obj_type_t indexed_type;
 
-	STIX_ASSERT (stix, STIX_OOP_IS_POINTER(_class));
-	STIX_ASSERT (stix, STIX_CLASSOF(stix, _class) == stix->_class);
+	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(_class));
+	MOO_ASSERT (moo, MOO_CLASSOF(moo, _class) == moo->_class);
 
-	STIX_ASSERT (stix, STIX_OOP_IS_SMOOI(((stix_oop_class_t)_class)->spec));
-	spec = STIX_OOP_TO_SMOOI(((stix_oop_class_t)_class)->spec);
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(((moo_oop_class_t)_class)->spec));
+	spec = MOO_OOP_TO_SMOOI(((moo_oop_class_t)_class)->spec);
 
-	named_instvar = STIX_CLASS_SPEC_NAMED_INSTVAR(spec); /* size of the named_instvar part */
+	named_instvar = MOO_CLASS_SPEC_NAMED_INSTVAR(spec); /* size of the named_instvar part */
 
-	if (STIX_CLASS_SPEC_IS_INDEXED(spec)) 
+	if (MOO_CLASS_SPEC_IS_INDEXED(spec)) 
 	{
-		indexed_type = STIX_CLASS_SPEC_INDEXED_TYPE(spec);
+		indexed_type = MOO_CLASS_SPEC_INDEXED_TYPE(spec);
 
-		if (indexed_type == STIX_OBJ_TYPE_OOP)
+		if (indexed_type == MOO_OBJ_TYPE_OOP)
 		{
-			if (named_instvar > STIX_MAX_NAMED_INSTVARS)
+			if (named_instvar > MOO_MAX_NAMED_INSTVARS)
 			{
-				STIX_DEBUG3 (stix, "Too many named instance variables for a variable-pointer class %O - %zu/%zu\n", _class, named_instvar, (stix_oow_t)STIX_MAX_NAMED_INSTVARS); 
+				MOO_DEBUG3 (moo, "Too many named instance variables for a variable-pointer class %O - %zu/%zu\n", _class, named_instvar, (moo_oow_t)MOO_MAX_NAMED_INSTVARS); 
 				return -1;
 			}
-			if (vlen > STIX_MAX_INDEXED_INSTVARS(named_instvar))
+			if (vlen > MOO_MAX_INDEXED_INSTVARS(named_instvar))
 			{
-				STIX_DEBUG3 (stix, "Too many unnamed instance variables for a variable-pointer class %O - %zu/%zu\n", _class, vlen, (stix_oow_t)STIX_MAX_INDEXED_INSTVARS(named_instvar)); 
+				MOO_DEBUG3 (moo, "Too many unnamed instance variables for a variable-pointer class %O - %zu/%zu\n", _class, vlen, (moo_oow_t)MOO_MAX_INDEXED_INSTVARS(named_instvar)); 
 				return -1;
 			}
 
-			STIX_ASSERT (stix, named_instvar + vlen <= STIX_OBJ_SIZE_MAX);
+			MOO_ASSERT (moo, named_instvar + vlen <= MOO_OBJ_SIZE_MAX);
 		}
 		else
 		{
 			/* a non-pointer indexed class can't have named instance variables */
 			if (named_instvar > 0) 
 			{
-				STIX_DEBUG1 (stix, "Named instance variables in a variable-nonpointer class %O\n", _class);
+				MOO_DEBUG1 (moo, "Named instance variables in a variable-nonpointer class %O\n", _class);
 				return -1;
 			}
-			if (vlen > STIX_OBJ_SIZE_MAX) 
+			if (vlen > MOO_OBJ_SIZE_MAX) 
 			{
-				STIX_DEBUG3 (stix, "Too many unnamed instance variables for a variable-nonpointer class %O - %zu/%zu\n", _class, vlen, (stix_oow_t)STIX_OBJ_SIZE_MAX); 
+				MOO_DEBUG3 (moo, "Too many unnamed instance variables for a variable-nonpointer class %O - %zu/%zu\n", _class, vlen, (moo_oow_t)MOO_OBJ_SIZE_MAX); 
 				return -1;
 			}
 		}
@@ -221,21 +221,21 @@ static STIX_INLINE int decode_spec (stix_t* stix, stix_oop_t _class, stix_oow_t 
 	{
 		/* named instance variables only. treat it as if it is an
 		 * indexable class with no variable data */
-		indexed_type = STIX_OBJ_TYPE_OOP;
+		indexed_type = MOO_OBJ_TYPE_OOP;
 
 		if (vlen > 0)
 		{
-			STIX_DEBUG2 (stix, "Unamed instance variables for a fixed class %O - %zu\n", _class, vlen); 
+			MOO_DEBUG2 (moo, "Unamed instance variables for a fixed class %O - %zu\n", _class, vlen); 
 			return -1;
 		}
 		/*vlen = 0;*/ /* vlen is not used */
 
-		if (named_instvar > STIX_MAX_NAMED_INSTVARS) 
+		if (named_instvar > MOO_MAX_NAMED_INSTVARS) 
 		{
-			STIX_DEBUG3 (stix, "Too many named instance variables for a fixed class %O - %zu/%zu\n", _class, named_instvar, (stix_oow_t)STIX_MAX_NAMED_INSTVARS); 
+			MOO_DEBUG3 (moo, "Too many named instance variables for a fixed class %O - %zu/%zu\n", _class, named_instvar, (moo_oow_t)MOO_MAX_NAMED_INSTVARS); 
 			return -1;
 		}
-		STIX_ASSERT (stix, named_instvar <= STIX_OBJ_SIZE_MAX);
+		MOO_ASSERT (moo, named_instvar <= MOO_OBJ_SIZE_MAX);
 	}
 
 	*type = indexed_type;
@@ -243,162 +243,162 @@ static STIX_INLINE int decode_spec (stix_t* stix, stix_oop_t _class, stix_oow_t 
 	return 0; 
 }
 
-stix_oop_t stix_instantiate (stix_t* stix, stix_oop_t _class, const void* vptr, stix_oow_t vlen)
+moo_oop_t moo_instantiate (moo_t* moo, moo_oop_t _class, const void* vptr, moo_oow_t vlen)
 {
-	stix_oop_t oop;
-	stix_obj_type_t type;
-	stix_oow_t alloclen;
-	stix_oow_t tmp_count = 0;
+	moo_oop_t oop;
+	moo_obj_type_t type;
+	moo_oow_t alloclen;
+	moo_oow_t tmp_count = 0;
 
-	STIX_ASSERT (stix, stix->_nil != STIX_NULL);
+	MOO_ASSERT (moo, moo->_nil != MOO_NULL);
 
-	if (decode_spec (stix, _class, vlen, &type, &alloclen) <= -1) 
+	if (decode_spec (moo, _class, vlen, &type, &alloclen) <= -1) 
 	{
-		stix->errnum = STIX_EINVAL;
-		return STIX_NULL;
+		moo->errnum = MOO_EINVAL;
+		return MOO_NULL;
 	}
 
-	stix_pushtmp (stix, &_class); tmp_count++;
+	moo_pushtmp (moo, &_class); tmp_count++;
 
 	switch (type)
 	{
-		case STIX_OBJ_TYPE_OOP:
+		case MOO_OBJ_TYPE_OOP:
 			/* both the fixed part(named instance variables) and 
 			 * the variable part(indexed instance variables) are allowed. */
-			oop = stix_allocoopobj (stix, alloclen);
+			oop = moo_allocoopobj (moo, alloclen);
 
-			STIX_ASSERT (stix, vptr == STIX_NULL);
+			MOO_ASSERT (moo, vptr == MOO_NULL);
 			/*
 			This function is not GC-safe. so i don't want to initialize
 			the payload of a pointer object. The caller can call this
 			function and initialize payloads then.
 			if (oop && vptr && vlen > 0)
 			{
-				stix_oop_oop_t hdr = (stix_oop_oop_t)oop;
-				STIX_MEMCPY (&hdr->slot[named_instvar], vptr, vlen * STIX_SIZEOF(stix_oop_t));
+				moo_oop_oop_t hdr = (moo_oop_oop_t)oop;
+				MOO_MEMCPY (&hdr->slot[named_instvar], vptr, vlen * MOO_SIZEOF(moo_oop_t));
 			}
 
 			For the above code to work, it should protect the elements of 
-			the vptr array with stix_pushtmp(). So it might be better 
+			the vptr array with moo_pushtmp(). So it might be better 
 			to disallow a non-NULL vptr when indexed_type is OOP. See
 			the assertion above this comment block.
 			*/
 			break;
 
-		case STIX_OBJ_TYPE_CHAR:
-			oop = stix_alloccharobj (stix, vptr, alloclen);
+		case MOO_OBJ_TYPE_CHAR:
+			oop = moo_alloccharobj (moo, vptr, alloclen);
 			break;
 
-		case STIX_OBJ_TYPE_BYTE:
-			oop = stix_allocbyteobj (stix, vptr, alloclen);
+		case MOO_OBJ_TYPE_BYTE:
+			oop = moo_allocbyteobj (moo, vptr, alloclen);
 			break;
 
-		case STIX_OBJ_TYPE_HALFWORD:
-			oop = stix_allochalfwordobj (stix, vptr, alloclen);
+		case MOO_OBJ_TYPE_HALFWORD:
+			oop = moo_allochalfwordobj (moo, vptr, alloclen);
 			break;
 
-		case STIX_OBJ_TYPE_WORD:
-			oop = stix_allocwordobj (stix, vptr, alloclen);
+		case MOO_OBJ_TYPE_WORD:
+			oop = moo_allocwordobj (moo, vptr, alloclen);
 			break;
 
 		default:
-			stix->errnum = STIX_EINTERN;
-			oop = STIX_NULL;
+			moo->errnum = MOO_EINTERN;
+			oop = MOO_NULL;
 			break;
 	}
 
-	if (oop) STIX_OBJ_SET_CLASS (oop, _class);
-	stix_poptmps (stix, tmp_count);
+	if (oop) MOO_OBJ_SET_CLASS (oop, _class);
+	moo_poptmps (moo, tmp_count);
 	return oop;
 }
 
-stix_oop_t stix_instantiate2 (stix_t* stix, stix_oop_t _class, const void* vptr, stix_oow_t vlen, int ngc)
+moo_oop_t moo_instantiate2 (moo_t* moo, moo_oop_t _class, const void* vptr, moo_oow_t vlen, int ngc)
 {
-	stix_oop_t oop;
-	stix_obj_type_t type;
-	stix_oow_t alloclen;
-	stix_oow_t tmp_count = 0;
+	moo_oop_t oop;
+	moo_obj_type_t type;
+	moo_oow_t alloclen;
+	moo_oow_t tmp_count = 0;
 
-	STIX_ASSERT (stix, stix->_nil != STIX_NULL);
+	MOO_ASSERT (moo, moo->_nil != MOO_NULL);
 
-	if (decode_spec (stix, _class, vlen, &type, &alloclen) <= -1) 
+	if (decode_spec (moo, _class, vlen, &type, &alloclen) <= -1) 
 	{
-		stix->errnum = STIX_EINVAL;
-		return STIX_NULL;
+		moo->errnum = MOO_EINVAL;
+		return MOO_NULL;
 	}
 
-	stix_pushtmp (stix, &_class); tmp_count++;
+	moo_pushtmp (moo, &_class); tmp_count++;
 
 /* TODO: support NGC */
 	switch (type)
 	{
-		case STIX_OBJ_TYPE_OOP:
+		case MOO_OBJ_TYPE_OOP:
 			/* NOTE: vptr is not used for GC unsafety */
-			oop = stix_allocoopobj (stix, alloclen);
+			oop = moo_allocoopobj (moo, alloclen);
 			break;
 
-		case STIX_OBJ_TYPE_CHAR:
-			oop = stix_alloccharobj (stix, vptr, alloclen);
+		case MOO_OBJ_TYPE_CHAR:
+			oop = moo_alloccharobj (moo, vptr, alloclen);
 			break;
 
-		case STIX_OBJ_TYPE_BYTE:
-			oop = stix_allocbyteobj (stix, vptr, alloclen);
+		case MOO_OBJ_TYPE_BYTE:
+			oop = moo_allocbyteobj (moo, vptr, alloclen);
 			break;
 
-		case STIX_OBJ_TYPE_HALFWORD:
-			oop = stix_allochalfwordobj (stix, vptr, alloclen);
+		case MOO_OBJ_TYPE_HALFWORD:
+			oop = moo_allochalfwordobj (moo, vptr, alloclen);
 			break;
 
-		case STIX_OBJ_TYPE_WORD:
-			oop = stix_allocwordobj (stix, vptr, alloclen);
+		case MOO_OBJ_TYPE_WORD:
+			oop = moo_allocwordobj (moo, vptr, alloclen);
 			break;
 
 		default:
-			stix->errnum = STIX_EINTERN;
-			oop = STIX_NULL;
+			moo->errnum = MOO_EINTERN;
+			oop = MOO_NULL;
 			break;
 	}
 
-	if (oop) STIX_OBJ_SET_CLASS (oop, _class);
-	stix_poptmps (stix, tmp_count);
+	if (oop) MOO_OBJ_SET_CLASS (oop, _class);
+	moo_poptmps (moo, tmp_count);
 	return oop;
 }
 
 
-#if defined(STIX_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_OBJECT_TRAILER)
 
-stix_oop_t stix_instantiatewithtrailer (stix_t* stix, stix_oop_t _class, stix_oow_t vlen, const stix_oob_t* tptr, stix_oow_t tlen)
+moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_t _class, moo_oow_t vlen, const moo_oob_t* tptr, moo_oow_t tlen)
 {
-	stix_oop_t oop;
-	stix_obj_type_t type;
-	stix_oow_t alloclen;
-	stix_oow_t tmp_count = 0;
+	moo_oop_t oop;
+	moo_obj_type_t type;
+	moo_oow_t alloclen;
+	moo_oow_t tmp_count = 0;
 
-	STIX_ASSERT (stix, stix->_nil != STIX_NULL);
+	MOO_ASSERT (moo, moo->_nil != MOO_NULL);
 
-	if (decode_spec (stix, _class, vlen, &type, &alloclen) <= -1) 
+	if (decode_spec (moo, _class, vlen, &type, &alloclen) <= -1) 
 	{
-		stix->errnum = STIX_EINVAL;
-		return STIX_NULL;
+		moo->errnum = MOO_EINVAL;
+		return MOO_NULL;
 	}
 
-	stix_pushtmp (stix, &_class); tmp_count++;
+	moo_pushtmp (moo, &_class); tmp_count++;
 
 	switch (type)
 	{
-		case STIX_OBJ_TYPE_OOP:
+		case MOO_OBJ_TYPE_OOP:
 			/* NOTE: vptr is not used for GC unsafety */
-			oop = stix_allocoopobjwithtrailer(stix, alloclen, tptr, tlen);
+			oop = moo_allocoopobjwithtrailer(moo, alloclen, tptr, tlen);
 			break;
 
 		default:
-			stix->errnum = STIX_EINTERN;
-			oop = STIX_NULL;
+			moo->errnum = MOO_EINTERN;
+			oop = MOO_NULL;
 			break;
 	}
 
-	if (oop) STIX_OBJ_SET_CLASS (oop, _class);
-	stix_poptmps (stix, tmp_count);
+	if (oop) MOO_OBJ_SET_CLASS (oop, _class);
+	moo_poptmps (moo, tmp_count);
 	return oop;
 }
 #endif
