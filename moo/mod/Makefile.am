@@ -41,7 +41,7 @@ pkgmodexecdir = $(libdir)
 
 pkgmodexec_LTLIBRARIES = libmoo-stdio.la libmoo-console.la
 
-libmoo_stdio_la_SOURCES = stdio.c m-stdio.h
+libmoo_stdio_la_SOURCES = stdio.c _stdio.h
 libmoo_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_stdio_la_LDFLAGS = $(LDFLAGS_COMMON)
 libmoo_stdio_la_LIBADD = $(LIBADD_COMMON)

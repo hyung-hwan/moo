@@ -27,7 +27,6 @@ pkgincludedir = $(includedir)
 pkglibdir = $(libdir)
 
 pkginclude_HEADERS = \
-	moo-cfg.h \
 	moo-cmn.h \
 	moo-rbt.h \
 	moo-utl.h \

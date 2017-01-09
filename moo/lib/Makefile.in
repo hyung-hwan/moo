@@ -397,7 +397,6 @@ CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) $(LTDLINCL) \
 LDFLAGS_LIB_COMMON = $(LDFLAGS_ALL_COMMON) -version-info 1:0:0 -no-undefined
 LIBADD_LIB_COMMON = $(LIBM) $(LIBLTDL) 
 pkginclude_HEADERS = \
-	moo-cfg.h \
 	moo-cmn.h \
 	moo-rbt.h \
 	moo-utl.h \

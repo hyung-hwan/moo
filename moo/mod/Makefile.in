@@ -150,7 +150,7 @@ libmoo_console_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 @ENABLE_STATIC_MODULE_TRUE@am_libmoo_console_la_rpath =
 @ENABLE_STATIC_MODULE_FALSE@libmoo_stdio_la_DEPENDENCIES =  \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
-am__libmoo_stdio_la_SOURCES_DIST = stdio.c m-stdio.h
+am__libmoo_stdio_la_SOURCES_DIST = stdio.c _stdio.h
 @ENABLE_STATIC_MODULE_FALSE@am_libmoo_stdio_la_OBJECTS =  \
 @ENABLE_STATIC_MODULE_FALSE@	libmoo_stdio_la-stdio.lo
 @ENABLE_STATIC_MODULE_TRUE@am_libmoo_stdio_la_OBJECTS =  \
@@ -397,7 +397,7 @@ CPPFLAGS_COMMON = -I$(abs_builddir) -I$(abs_builddir)/../lib \
 @ENABLE_STATIC_MODULE_TRUE@libmoo_console_la_SOURCES = console.c 
 @ENABLE_STATIC_MODULE_FALSE@libmoo_console_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 @ENABLE_STATIC_MODULE_TRUE@libmoo_console_la_CPPFLAGS = $(CPPFLAGS_COMMON)
-@ENABLE_STATIC_MODULE_FALSE@libmoo_stdio_la_SOURCES = stdio.c m-stdio.h
+@ENABLE_STATIC_MODULE_FALSE@libmoo_stdio_la_SOURCES = stdio.c _stdio.h
 @ENABLE_STATIC_MODULE_TRUE@libmoo_stdio_la_SOURCES = stdio.c 
 @ENABLE_STATIC_MODULE_FALSE@libmoo_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 @ENABLE_STATIC_MODULE_TRUE@libmoo_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)

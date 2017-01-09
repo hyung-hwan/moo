@@ -408,13 +408,13 @@ AC_ARG_ENABLE([static-module],
 	enable_static_module_is=no
 )
 
-test "${enable_shared}" = "no" -a "${enable_static}" = "yes" && enable_static_module="yes"
+test "${enable_shared}" = "no" -a "${enable_static}" = "yes" && enable_static_module_is="yes"
 
-if test "${enable_static_module}" = "yes"
+if test "${enable_static_module_is}" = "yes"
 then
 	AC_DEFINE([MOO_ENABLE_STATIC_MODULE],[],[link modules statically into the main library])
 fi
-AM_CONDITIONAL(ENABLE_STATIC_MODULE, test "${enable_static_module}" = "yes")
+AM_CONDITIONAL(ENABLE_STATIC_MODULE, test "${enable_static_module_is}" = "yes")
 
 AC_SUBST(MOO_SIZEOF_WCHAR_T, $ac_cv_sizeof_wchar_t)
 AC_SUBST(MOO_SIZEOF_LONG_LONG, $ac_cv_sizeof_long_long)
