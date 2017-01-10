@@ -24,114 +24,126 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if 0
-
 #include "_ffi.h"
 #include <moo-utl.h>
 
-#if defined(USE_DYNCALL)
+#include <errno.h>
+#include <string.h>
+
+#define HAVE_DYNCALL
+
+#if defined(HAVE_DYNCALL)
 /* TODO: defined dcAllocMem and dcFreeMeme before builing the dynload and dyncall library */
 #	include <dyncall.h> /* TODO: remove this. make dyXXXX calls to callbacks */
 #endif
 
 
-	{   1,  1,  pf_ffi_open,                         "_ffi_open"            },
-	{   1,  1,  pf_ffi_close,                        "_ffi_close"           },
-	{   2,  2,  pf_ffi_getsym,                       "_ffi_getsym"          },
-	{   3,  3,  pf_ffi_call,                         "_ffi_call"            }
-
-
-
-static moo_pfrc_t pf_ffi_open (moo_t* moo, moo_ooi_t nargs)
+typedef struct ffi_t ffi_t;
+struct ffi_t
 {
-	moo_oop_t rcv, arg;
+	MOO_OBJ_HEADER;
 	void* handle;
+};
+
+static moo_pfrc_t pf_newinstsize (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_ooi_t newinstsize = MOO_SIZEOF(ffi_t) - MOO_SIZEOF(moo_obj_t);
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(newinstsize)); 
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
+{
+#if defined(HAVE_DYNCALL)
+	ffi_t* rcv;
+	moo_oop_t arg;
 
 	MOO_ASSERT (moo, nargs == 1);
 
-	rcv = MOO_STACK_GETRCV(moo, nargs);
+	rcv = (ffi_t*)MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	if (!MOO_ISTYPEOF(moo, arg, MOO_OBJ_TYPE_CHAR))
+	if (!MOO_ISTYPEOF(moo, arg, MOO_OBJ_TYPE_CHAR) || !MOO_OBJ_GET_FLAGS_EXTRA(arg)) /* TODO: better null check instead of FLAGS_EXTREA check */
 	{
-		/* TODO: more info on error */
-		return MOO_PF_FAILURE;
+		moo_seterrnum (moo, MOO_EINVAL);
+		goto reterr;
 	}
 
 	if (!moo->vmprim.dl_open)
 	{
-		/* TODO: more info on error */
-		return MOO_PF_FAILURE;
+		moo_seterrnum (moo, MOO_ENOIMPL);
+		goto reterr;
 	}
 
+	rcv->handle = moo->vmprim.dl_open (moo, ((moo_oop_char_t)arg)->slot, 0);
+	if (!rcv->handle) goto reterr;
 
-/* TODO: check null-termination... */
-	handle = moo->vmprim.dl_open (moo, ((moo_oop_char_t)arg)->slot);
-	if (!handle)
-	{
-		/* TODO: more info on error */
-		return MOO_PF_FAILURE;
-	}
-
-	MOO_STACK_POP (moo);
-/* TODO: how to hold an address? as an integer????  or a byte array? fix this not to loose accuracy*/
-	MOO_STACK_SETTOP (moo, MOO_SMOOI_TO_OOP(handle));
-
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
+
+reterr:
+	MOO_STACK_SETRETTOERROR (moo, nargs);
+	return MOO_PF_SUCCESS;
+#else
+	moo_seterrnum (moo, MOO_ENOIMPL);
+	return MOO_PF_FAILURE;
+#endif
 }
 
-static moo_pfrc_t pf_ffi_close (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_oop_t rcv, arg;
-	void* handle;
+#if defined(HAVE_DYNCALL)
+	ffi_t* rcv;
 
-	MOO_ASSERT (moo, nargs == 1);
+	MOO_ASSERT (moo, nargs == 0);
 
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	arg = MOO_STACK_GETARG(moo, nargs, 0);
+	rcv = (ffi_t*)MOO_STACK_GETRCV(moo, nargs);
 
-
-	if (!MOO_OOP_IS_SMOOI(arg))
+	if (!moo->vmprim.dl_open)
 	{
-		/* TODO: more info on error */
-		return MOO_PF_FAILURE;
+		moo_seterrnum (moo, MOO_ENOIMPL);
+		return MOO_PF_SUCCESS;
 	}
 
-	MOO_STACK_POP (moo);
+	moo->vmprim.dl_close (moo, rcv->handle);
+	rcv->handle = MOO_NULL;
 
-	handle = (void*)MOO_OOP_TO_SMOOI(arg); /* TODO: how to store void* ???. fix this not to loose accuracy */
-	if (moo->vmprim.dl_close) moo->vmprim.dl_close (moo, handle);
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
+
+#else
+	moo_seterrnum (moo, MOO_ENOIMPL);
+	return MOO_PF_FAILURE;
+#endif
 }
 
-static moo_pfrc_t pf_ffi_call (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 {
-#if defined(USE_DYNCALL)
-	moo_oop_t rcv, fun, sig, args;
+#if defined(HAVE_DYNCALL)
+	ffi_t* rcv;
+	moo_oop_t fun, sig, args;
 
-	MOO_ASSERT (moo, nargs == 3);
-
-	rcv = MOO_STACK_GET(moo, moo->sp - 3);
-	fun = MOO_STACK_GET(moo, moo->sp - 2);
-	sig = MOO_STACK_GET(moo, moo->sp - 1);
-	args = MOO_STACK_GET(moo, moo->sp);
-
-	if (!MOO_OOP_IS_SMOOI(fun)) /* TODO: how to store pointer  */
+	if (nargs < 3)
 	{
-		/* TODO: more info on error */
-		return MOO_PF_FAILURE;
+		moo_seterrnum (moo, MOO_EINVAL);
+		goto reterr;
 	}
+
+	rcv = (ffi_t*)MOO_STACK_GETRCV(moo, nargs);
+	fun = MOO_STACK_GETARG(moo, nargs, 0);
+	sig = MOO_STACK_GETARG(moo, nargs, 1);
+	args = MOO_STACK_GETARG(moo, nargs, 2);
 
 	if (!MOO_ISTYPEOF(moo, sig, MOO_OBJ_TYPE_CHAR) || MOO_OBJ_GET_SIZE(sig) <= 0)
 	{
-MOO_DEBUG0 (moo, "FFI: wrong signature...\n");
-		return MOO_PF_FAILURE;
+		moo_seterrnum (moo, MOO_EINVAL);
+		goto reterr;
 	}
 
-	if (MOO_CLASSOF(moo,args) != moo->_array) /* TODO: check if arr is a kind of array??? or check if it's indexed */
+	if (MOO_OBJ_GET_SIZE(sig) > 1 && MOO_CLASSOF(moo,args) != moo->_array) /* TODO: check if arr is a kind of array??? or check if it's indexed */
 	{
-		/* TODO: more info on error */
-		return MOO_PF_FAILURE;
+		moo_seterrnum (moo, MOO_EINVAL);
+		goto reterr;
 	}
 
 	{
@@ -145,7 +157,11 @@ MOO_DEBUG0 (moo, "FFI: wrong signature...\n");
 		arr = (moo_oop_oop_t)args;
 
 		dc = dcNewCallVM (4096);
-		if (!dc) return MOO_PF_HARD_FAILURE; /* TODO: proper error handling */
+		if (!dc) 
+		{
+			moo_seterrnum (moo, moo_syserrtoerrnum(errno));
+			goto reterr;
+		}
 
 MOO_DEBUG1 (moo, "FFI: CALLING............%p\n", f);
 		/*dcMode (dc, DC_CALL_C_DEFAULT);
@@ -193,6 +209,9 @@ MOO_DEBUG2 (moo, "CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPP
 					dcArgLongLong (dc, MOO_OOP_TO_SMOOI(arr->slot[i - 2]));
 					break;
 
+#if 0
+				case 'B': /* byte array */
+#endif
 				case 's':
 				{
 					moo_oow_t bcslen, ucslen;
@@ -213,8 +232,6 @@ MOO_DEBUG2 (moo, "CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPP
 
 		}
 
-		MOO_STACK_POPS (moo, nargs);
-
 		switch (((moo_oop_char_t)sig)->slot[0])
 		{
 /* TODO: support more types... */
@@ -222,7 +239,7 @@ MOO_DEBUG2 (moo, "CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPP
 			case 'c':
 			{
 				char r = dcCallChar (dc, f);
-				MOO_STACK_SETTOP (moo, MOO_CHAR_TO_OOP(r));
+				MOO_STACK_SETRET (moo, nargs, MOO_CHAR_TO_OOP(r));
 				break;
 			}
 
@@ -231,25 +248,31 @@ MOO_DEBUG2 (moo, "CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPP
 				int r = dcCallInt (dc, f);
 MOO_DEBUG1 (moo, "CALLED... %d\n", r);
 MOO_DEBUG2 (moo, "CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
-				MOO_STACK_SETTOP (moo, MOO_SMOOI_TO_OOP(r));
+				MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(r));
 				break;
 			}
 
 			case 'l':
 			{
 				long r = dcCallLong (dc, f);
-				MOO_STACK_SETTOP (moo, MOO_SMOOI_TO_OOP(r));
+				MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(r));
 				break;
 			}
 
 			case 'L':
 			{
 				long long r = dcCallLongLong (dc, f);
-				MOO_STACK_SETTOP (moo, MOO_SMOOI_TO_OOP(r));
+				MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(r));
 				break;
 			}
 
-			case 's':
+#if 0
+			case 'b': /* byte array */
+			{
+			}
+#endif
+
+			case 'B':
 			{
 				moo_oow_t bcslen, ucslen;
 				moo_ooch_t ucs[1024];
@@ -257,21 +280,23 @@ MOO_DEBUG2 (moo, "CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MOD
 				char* r = dcCallPointer (dc, f);
 
 				bcslen = strlen(r); 
-				moo_convbtooochars (moo, r, &bcslen, ucs, &ucslen); /* proper string conversion */
+				moo_convbtooochars (moo, r, &bcslen, ucs, &ucslen); /* error check... */
 
-				s = moo_makestring(moo, ucs, ucslen)
+				s = moo_makestring(moo, ucs, ucslen);
 				if (!s) 
 				{
 					dcFree (dc);
 					return MOO_PF_HARD_FAILURE; /* TODO: proper error h andling */
 				}
 
-				MOO_STACK_SETTOP (moo, s); 
+				MOO_STACK_SETRET (moo, nargs, s); 
 				break;
 			}
 
 			default:
-				/* TOOD: ERROR HANDLING */
+
+				moo_seterrnum (moo, MOO_EINVAL);
+				goto reterr;
 				break;
 		}
 
@@ -279,48 +304,137 @@ MOO_DEBUG2 (moo, "CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MOD
 	}
 
 	return MOO_PF_SUCCESS;
+
+reterr:
+	MOO_STACK_SETRETTOERROR (moo, nargs);
+	return MOO_PF_SUCCESS;
+
 #else
+	moo_seterrnum (moo, MOO_ENOIMPL);
 	return MOO_PF_FAILURE;
 #endif
 }
 
-static moo_pfrc_t pf_ffi_getsym (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_getsym (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_oop_t rcv, hnd, fun;
+#if defined(HAVE_DYNCALL)
+	ffi_t* rcv;
+	moo_oop_t fun;
 	void* sym;
 
-	MOO_ASSERT (moo, nargs == 2);
+	MOO_ASSERT (moo, nargs == 1);
 
-	rcv = MOO_STACK_GET(moo, moo->sp - 2);
-	fun = MOO_STACK_GET(moo, moo->sp - 1);
-	hnd = MOO_STACK_GET(moo, moo->sp);
-
-	if (!MOO_OOP_IS_SMOOI(hnd)) /* TODO: how to store pointer  */
-	{
-		/* TODO: more info on error */
-		return MOO_PF_FAILURE;
-	}
+	rcv = (ffi_t*)MOO_STACK_GETRCV(moo, nargs);
+	fun = MOO_STACK_GETARG(moo, nargs, 0);
 
 	if (!MOO_ISTYPEOF(moo,fun,MOO_OBJ_TYPE_CHAR))
 	{
-MOO_DEBUG0 (moo, "wrong function name...\n");
-		return MOO_PF_FAILURE;
+		moo_seterrnum (moo, MOO_EINVAL);
+		goto reterr;
 	}
 
 	if (!moo->vmprim.dl_getsym)
 	{
-		return MOO_PF_FAILURE;
+		moo_seterrnum (moo, MOO_ENOIMPL);
+		goto reterr;
 	}
 
-	sym = moo->vmprim.dl_getsym (moo, (void*)MOO_OOP_TO_SMOOI(hnd), ((moo_oop_char_t)fun)->slot);
-	if (!sym)
-	{
-		return MOO_PF_FAILURE;
-	}
+	sym = moo->vmprim.dl_getsym (moo, rcv->handle, ((moo_oop_char_t)fun)->slot);
+	if (!sym) goto reterr;
 
 /* TODO: how to hold an address? as an integer????  or a byte array? */
-	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(sym));
-
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP((moo_oow_t)sym));
 	return MOO_PF_SUCCESS;
-}
+
+reterr:
+	MOO_STACK_SETRETTOERROR (moo, nargs);
+	return MOO_PF_SUCCESS;
+
+#else
+	moo_seterrnum (moo, MOO_ENOIMPL);
+	return MOO_PF_FAILURE;
 #endif
+}
+
+/* ------------------------------------------------------------------------ */
+
+typedef struct fnctab_t fnctab_t;
+struct fnctab_t
+{
+	moo_method_type_t type;
+	moo_ooch_t mthname[15];
+	int variadic;
+	moo_pfimpl_t handler;
+};
+
+#define C MOO_METHOD_CLASS
+#define I MOO_METHOD_INSTANCE
+
+static fnctab_t fnctab[] =
+{
+	{ C, { '_','n','e','w','I','n','s','t','S','i','z','e','\0' },         0, pf_newinstsize   },
+	{ I, { 'c','a','l','l','\0' },                                         1, pf_call          },
+	{ I, { 'c','a','l','l',':','s','i','g',':','w','i','t','h',':','\0' }, 0, pf_call          },
+	{ I, { 'c','l','o','s','e','\0' },                                     0, pf_close         },
+	{ I, { 'g','e','t','s','y','m',':','\0' },                             0, pf_getsym        },
+	{ I, { 'o','p','e','n',':','\0' },                                     0, pf_open          }
+};
+
+/* ------------------------------------------------------------------------ */
+
+static int import (moo_t* moo, moo_mod_t* mod, moo_oop_t _class)
+{
+	int ret = 0;
+	moo_oow_t i;
+
+	moo_pushtmp (moo, &_class);
+	for (i = 0; i < MOO_COUNTOF(fnctab); i++)
+	{
+		if (moo_genpfmethod (moo, mod, _class, fnctab[i].type, fnctab[i].mthname, fnctab[i].variadic, MOO_NULL) <= -1) 
+		{
+			/* TODO: delete pfmethod generated??? */
+			ret = -1;
+			break;
+		}
+	}
+
+	moo_poptmp (moo);
+	return ret;
+}
+
+static moo_pfimpl_t query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
+{
+	int left, right, mid, n;
+
+	left = 0; right = MOO_COUNTOF(fnctab) - 1;
+
+	while (left <= right)
+	{
+		mid = (left + right) / 2;
+
+		n = moo_compoocstr (name, fnctab[mid].mthname);
+		if (n < 0) right = mid - 1; 
+		else if (n > 0) left = mid + 1;
+		else
+		{
+			return fnctab[mid].handler;
+		}
+	}
+
+	moo->errnum = MOO_ENOENT;
+	return MOO_NULL;
+}
+
+static void unload (moo_t* moo, moo_mod_t* mod)
+{
+	/* TODO: close all open libraries...?? */
+}
+
+int moo_mod_ffi (moo_t* moo, moo_mod_t* mod)
+{
+	mod->import = import;
+	mod->query = query;
+	mod->unload = unload; 
+	mod->ctx = MOO_NULL;
+	return 0;
+}

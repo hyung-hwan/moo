@@ -1,4 +1,5 @@
-class(#byte) Stdio(Object) from 'stdio'
+
+class(#byte) Stdio(Module) from 'stdio'
 {
 	dcl(#class) in out err.
 
@@ -8,17 +9,6 @@ class(#byte) Stdio(Object) from 'stdio'
 	 *   method open: name for: mode { <primitive: #stdio.open> }
 	 *   method close { <primitive: #stdio.close> }
 	 *)
-
-	method(#class) new: size
-	{
-		## ignore the specified size
-		^(super new: (self _newInstSize))
-	}
-
-	method(#class) new
-	{
-		^(super new: (self _newInstSize))
-	}
 
 	method(#class) open: name for: mode
 	{

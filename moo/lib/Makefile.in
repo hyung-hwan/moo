@@ -84,7 +84,7 @@ host_triplet = @host@
 @WIN32_TRUE@am__append_1 = -DMOO_DEFAULT_MODPREFIX=\"libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"-1\"
 @WIN32_FALSE@am__append_2 = -DMOO_DEFAULT_MODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"\"
 @ENABLE_STATIC_MODULE_TRUE@am__append_3 = -L$(abs_builddir)/../mod
-@ENABLE_STATIC_MODULE_TRUE@am__append_4 = -lmoo-console -lmoo-stdio #-ltermcap
+@ENABLE_STATIC_MODULE_TRUE@am__append_4 = -lmoo-ffi -lmoo-console -lmoo-stdio 
 bin_PROGRAMS = moo$(EXEEXT)
 subdir = lib
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \

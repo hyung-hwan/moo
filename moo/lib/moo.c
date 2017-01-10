@@ -350,6 +350,7 @@ void moo_freemem (moo_t* moo, void* ptr)
 #if defined(MOO_ENABLE_STATIC_MODULE)
 
 #include "../mod/console.h"
+#include "../mod/_ffi.h"
 #include "../mod/_stdio.h"
 
 static struct
@@ -360,7 +361,8 @@ static struct
 static_modtab[] = 
 {
 	{ "console", moo_mod_console },
-	{ "stdio",  moo_mod_stdio },
+	{ "ffi",     moo_mod_ffi },
+	{ "stdio",   moo_mod_stdio },
 };
 #endif
 
@@ -450,7 +452,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	moo_copyoochars ((moo_ooch_t*)md.mod.name, name, namelen);
 	if (moo->vmprim.dl_open && moo->vmprim.dl_getsym && moo->vmprim.dl_close)
 	{
-		md.handle = moo->vmprim.dl_open (moo, &buf[MOD_PREFIX_LEN]);
+		md.handle = moo->vmprim.dl_open (moo, &buf[MOD_PREFIX_LEN], MOO_VMPRIM_OPENDL_PFMOD);
 	}
 
 	if (md.handle == MOO_NULL) 

@@ -79,10 +79,10 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 
-# you must adjust the value of DEFAULT_MODPOSTFIX according 
+# you must adjust the value of DEFAULT_PFMODPOSTFIX according 
 # to the first number in -version-info above
-@WIN32_TRUE@am__append_1 = -DMOO_DEFAULT_MODPREFIX=\"libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"-1\"
-@WIN32_FALSE@am__append_2 = -DMOO_DEFAULT_MODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"\"
+@WIN32_TRUE@am__append_1 = -DMOO_DEFAULT_PFMODPREFIX=\"libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"-1\"
+@WIN32_FALSE@am__append_2 = -DMOO_DEFAULT_PFMODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"\"
 subdir = mod
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/ac/depcomp
@@ -397,7 +397,7 @@ CPPFLAGS_COMMON = -I$(abs_builddir) -I$(abs_builddir)/../lib \
 ##################################################
 # STATIC MODULES BUILT INTO MAIN LIBRARY
 ##################################################
-@ENABLE_STATIC_MODULE_TRUE@LDFLAGS_COMMON = 
+@ENABLE_STATIC_MODULE_TRUE@LDFLAGS_COMMON = -L$(libdir) -version-info 1:0:0 -no-undefined
 @ENABLE_STATIC_MODULE_FALSE@LIBADD_COMMON = -lmoo
 @ENABLE_STATIC_MODULE_TRUE@LIBADD_COMMON = 
 @ENABLE_STATIC_MODULE_TRUE@noinst_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la

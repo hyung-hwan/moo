@@ -41,7 +41,7 @@ class MyObject(Object)
 {
 	method(#class) main
 	{
-		| d a |
+		| d a ffi |
 
 		(*k := Mill new.
 		k register: #abc call: [ Dictionary new ].
@@ -83,5 +83,13 @@ class MyObject(Object)
 		(*[
 			[Exception hash dump] ensure: ['xxxx' dump].
 		] on: Exception do: [:ex | ('Exception caught - ' & ex asString) dump ].*)
+
+		ffi := FFI new: '/lib64/libc.so.6'.
+		(ffi isError) 
+			ifTrue: [System logNl: 'cannot open libc.so' ]
+			ifFalse: [
+				(ffi call: #getpid  signature: 'i' arguments: nil) dump.
+				ffi close.
+			]
 	}
 }

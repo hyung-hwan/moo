@@ -44,6 +44,7 @@
  * PUSH_CONTEXT, PUSH_INTLIT, PUSH_INTLIT, SEND_BLOCK_COPY */
 #define MOO_USE_MAKE_BLOCK
 
+#if !defined(NDEBUG)
 /* this is for gc debugging */
 #define MOO_DEBUG_GC
 #define MOO_DEBUG_COMPILER
@@ -51,6 +52,7 @@
 /*#define MOO_DEBUG_VM_EXEC*/
 #define MOO_DEBUG_BIGINT
 #define MOO_PROFILE_VM
+#endif
 
 /* allow the caller to drive process switching by calling
  * moo_switchprocess(). */
@@ -929,24 +931,11 @@ moo_oop_t moo_instantiatewithtrailer (
 /* ========================================================================= */
 /* sym.c                                                                     */
 /* ========================================================================= */
-moo_oop_t moo_makesymbol (
-	moo_t*             moo,
-	const moo_ooch_t*  ptr,
-	moo_oow_t          len
-);
-
 moo_oop_t moo_findsymbol (
 	moo_t*             moo,
 	const moo_ooch_t*  ptr,
 	moo_oow_t          len
 );
-
-moo_oop_t moo_makestring (
-	moo_t*             moo, 
-	const moo_ooch_t*  ptr, 
-	moo_oow_t          len
-);
-
 
 /* ========================================================================= */
 /* dic.c                                                                     */

@@ -8,11 +8,11 @@ CPPFLAGS_COMMON = \
 	-I$(includedir) -fPIC
 
 if WIN32
-# you must adjust the value of DEFAULT_MODPOSTFIX according 
+# you must adjust the value of DEFAULT_PFMODPOSTFIX according 
 # to the first number in -version-info above
-CPPFLAGS_COMMON += -DMOO_DEFAULT_MODPREFIX=\"libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"-1\"
+CPPFLAGS_COMMON += -DMOO_DEFAULT_PFMODPREFIX=\"libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"-1\"
 else
-CPPFLAGS_COMMON += -DMOO_DEFAULT_MODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"\"
+CPPFLAGS_COMMON += -DMOO_DEFAULT_PFMODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"\"
 endif
 
 if ENABLE_STATIC_MODULE
@@ -20,7 +20,7 @@ if ENABLE_STATIC_MODULE
 ##################################################
 # STATIC MODULES BUILT INTO MAIN LIBRARY
 ##################################################
-LDFLAGS_COMMON =
+LDFLAGS_COMMON =-L$(libdir) -version-info 1:0:0 -no-undefined
 LIBADD_COMMON =
 
 noinst_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la

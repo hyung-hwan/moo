@@ -60,7 +60,7 @@ libmoo_la_LIBADD = $(LIBADD_LIB_COMMON)
 
 if ENABLE_STATIC_MODULE
 libmoo_la_LDFLAGS += -L$(abs_builddir)/../mod
-libmoo_la_LIBADD += -lmoo-console -lmoo-stdio #-ltermcap
+libmoo_la_LIBADD += -lmoo-ffi -lmoo-console -lmoo-stdio 
 endif
 
 bin_PROGRAMS = moo

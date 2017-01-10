@@ -66,27 +66,27 @@
 #	endif
 #endif
 
-#if !defined(MOO_DEFAULT_MODPREFIX)
+#if !defined(MOO_DEFAULT_PFMODPREFIX)
 #	if defined(_WIN32)
-#		define MOO_DEFAULT_MODPREFIX "moo-"
+#		define MOO_DEFAULT_PFMODPREFIX "moo-"
 #	elif defined(__OS2__)
-#		define MOO_DEFAULT_MODPREFIX "moo"
+#		define MOO_DEFAULT_PFMODPREFIX "moo"
 #	elif defined(__DOS__)
-#		define MOO_DEFAULT_MODPREFIX "moo"
+#		define MOO_DEFAULT_PFMODPREFIX "moo"
 #	else
-#		define MOO_DEFAULT_MODPREFIX "libmoo-"
+#		define MOO_DEFAULT_PFMODPREFIX "libmoo-"
 #	endif
 #endif
 
-#if !defined(MOO_DEFAULT_MODPOSTFIX)
+#if !defined(MOO_DEFAULT_PFMODPOSTFIX)
 #	if defined(_WIN32)
-#		define MOO_DEFAULT_MODPOSTFIX ""
+#		define MOO_DEFAULT_PFMODPOSTFIX ""
 #	elif defined(__OS2__)
-#		define MOO_DEFAULT_MODPOSTFIX ""
+#		define MOO_DEFAULT_PFMODPOSTFIX ""
 #	elif defined(__DOS__)
-#		define MOO_DEFAULT_MODPOSTFIX ""
+#		define MOO_DEFAULT_PFMODPOSTFIX ""
 #	else
-#		define MOO_DEFAULT_MODPOSTFIX ""
+#		define MOO_DEFAULT_PFMODPOSTFIX ""
 #	endif
 #endif
 
@@ -286,43 +286,54 @@ static moo_ooi_t input_handler (moo_t* moo, moo_iocmd_t cmd, moo_ioarg_t* arg)
 }
 /* ========================================================================= */
 
-static void* dl_open (moo_t* moo, const moo_ooch_t* name)
+static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 {
 #if defined(USE_LTDL)
 /* TODO: support various platforms */
 	moo_bch_t buf[1024]; /* TODO: use a proper path buffer */
 	moo_oow_t ucslen, bcslen;
-	moo_oow_t len;
 	void* handle;
 
-/* TODO: using MODPREFIX isn't a good idea for all kind of modules.
- * OK to use it for a primitive module.
- * NOT OK to use it for a FFI target. 
- * Attempting /home/hyung-hwan/xxx/lib/libmoo-libc.so.6 followed by libc.so.6 is bad.
- * Need to accept the type or flags?
- *
- * dl_open (moo, "xxxx", MOO_MOD_EXTERNAL);
- * if external, don't use DEFAULT_MODPERFIX and MODPOSTFIX???
- */
-
-	len = moo_copybcstr (buf, MOO_COUNTOF(buf), MOO_DEFAULT_MODPREFIX);
-
-/* TODO: proper error checking and overflow checking */
-	bcslen = MOO_COUNTOF(buf) - len;
-	moo_convootobcstr (moo, name, &ucslen, &buf[len], &bcslen);
-
-	moo_copybcstr (&buf[bcslen + len], MOO_COUNTOF(buf) - bcslen - len, MOO_DEFAULT_MODPOSTFIX);
-
-	handle = lt_dlopenext (buf);
-	if (!handle) 
+	if (flags & MOO_VMPRIM_OPENDL_PFMOD)
 	{
-		buf[bcslen + len] = '\0';
-		handle = lt_dlopenext (&buf[len]);
-		if (handle) MOO_DEBUG2 (moo, "Opened module file %s handle %p\n", &buf[len], handle);
+		moo_oow_t len;
+
+		/* opening a primitive function module */
+		len = moo_copybcstr (buf, MOO_COUNTOF(buf), MOO_DEFAULT_PFMODPREFIX);
+
+		bcslen = MOO_COUNTOF(buf) - len;
+		if (moo_convootobcstr (moo, name, &ucslen, &buf[len], &bcslen) <= -1) return MOO_NULL;
+
+		moo_copybcstr (&buf[bcslen + len], MOO_COUNTOF(buf) - bcslen - len, MOO_DEFAULT_PFMODPOSTFIX);
+
+		handle = lt_dlopenext (buf);
+		if (!handle) 
+		{
+			MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %hs\n", buf, name, lt_dlerror());
+			buf[bcslen + len] = '\0';
+			handle = lt_dlopenext (&buf[len]);
+			if (!handle) MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %s\n", &buf[len], name, lt_dlerror());
+			else MOO_DEBUG3 (moo, "Opened(ext) DL %hs[%js] handle %p\n", &buf[len], name, handle);
+		}
+		else
+		{
+			MOO_DEBUG3 (moo, "Opened(ext) DL %hs[%js] handle %p\n", buf, name, handle);
+		}
 	}
 	else
 	{
-		MOO_DEBUG2 (moo, "Opened module file %s handle %p\n", buf, handle);
+		/* opening a raw shared object */
+		bcslen = MOO_COUNTOF(buf);
+		if (moo_convootobcstr (moo, name, &ucslen, buf, &bcslen) <= -1) return MOO_NULL;
+		handle = lt_dlopenext (buf);
+		if (!handle) 
+		{
+			MOO_DEBUG2 (moo, "Failed to open(ext) DL %hs - %hs\n", buf, lt_dlerror());
+			handle = lt_dlopen (buf);
+			if (!handle) MOO_DEBUG2 (moo, "Failed to open DL %hs - %s\n", buf, lt_dlerror());
+			else MOO_DEBUG2 (moo, "Opened DL %hs handle %p\n", buf, handle);
+		}
+		else MOO_DEBUG2 (moo, "Opened(ext) DL %hs handle %p\n", buf, handle);
 	}
 
 	return handle;
@@ -335,7 +346,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name)
 
 static void dl_close (moo_t* moo, void* handle)
 {
-	MOO_DEBUG1 (moo, "Closed module handle %p\n", handle);
+	MOO_DEBUG1 (moo, "Closed DL handle %p\n", handle);
 #if defined(USE_LTDL)
 	lt_dlclose (handle);
 #elif defined(_WIN32)

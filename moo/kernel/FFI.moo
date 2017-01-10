@@ -1,69 +1,48 @@
+class(#byte) _FFI(Module) from 'ffi'
+{
+}
+
 class FFI(Object)
 {
-	dcl name handle funcs.
+	dcl name ffi funcs.
 
 	method(#class) new: aString
 	{
 		^self new open: aString.
 	}
 
-	method open: aString
+	method initialize 
 	{
 		self.funcs := Dictionary new.
-		self.name := aString.
+		self.ffi := _FFI new.
+	}
 
-		self.handle := self privateOpen: self.name.
+	method open: name
+	{
+		| x |
+		self.funcs removeAllKeys.
+		self.name := name.
 
-		"[ self.handle := self privateOpen: self.name ] 
-			on: Exception do: [
-			]
-			on: XException do: [
-			]."
+		x := self.ffi open: name.
+		(x isError) ifTrue: [^x].
 
 		^self.
 	}
 
 	method close
 	{
-		self privateClose: self.handle.
-		self.handle := nil.
+		self.ffi close.
 	}
 
-	method call: aFunctionName withSig: aString withArgs: anArray
+	method call: name signature: sig arguments: args
 	{
 		| f |
-
-	##	f := self.funcs at: aFunctionName.
-	##	f isNil ifTrue: [
-	##		f := self privateGetSymbol: aFunctionName in: self.handle.
-	##		f isNil ifTrue: [ self error: 'No such function' ].
-	##		self.funcs at: aFunctionName put: f.
-	##	].
-f := self privateGetSymbol: aFunctionName in: self.handle.
-f isNil ifTrue: [ self error: 'No such function' ].
-
-		^self privateCall: f withSig: aString withArgs: anArray
-	}
-
-	method privateOpen: aString
-	{
-		<primitive: #_ffi_open>
-		^nil. ## TODO: Error signal: 'can not open'
-	}
-
-	method privateClose: aHandle
-	{
-		<primitive: #_ffi_close>
-	}
-
-	method privateCall: aSymbol withSig: aString withArgs: anArray
-	{
-		<primitive: #_ffi_call>
-	}
-
-	method privateGetSymbol: aString in: aHandle
-	{
-		<primitive: #_ffi_getsym>
-		^nil.
+		f := self.funcs at: name.
+		(f isError) ifTrue: [
+			f := self.ffi getsym: name.
+			(f isError) ifTrue: [^f].
+			self.funcs at: name put: f.
+		].
+		^self.ffi call: f sig: sig with: args
 	}
 }

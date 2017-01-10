@@ -8,7 +8,8 @@
 #include 'Process.moo'.
 
 (* -------------------------------------------------------------------------- *)
+#include 'Module.moo'.
 
-(*#include 'FFI.moo'.*)
+#include 'FFI.moo'.
 #include 'Stdio.moo'.
 #include 'Console.moo'.

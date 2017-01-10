@@ -703,7 +703,13 @@ struct moo_heap_t
 /* =========================================================================
  * VIRTUAL MACHINE PRIMITIVES
  * ========================================================================= */
-typedef void* (*moo_vmprim_opendl_t) (moo_t* moo, const moo_ooch_t* name);
+enum moo_vmprim_opendl_flag_t
+{
+	MOO_VMPRIM_OPENDL_PFMOD = (1 << 0)
+};
+typedef enum moo_vmprim_opendl_flag_t moo_vmprim_opendl_flag_t;
+
+typedef void* (*moo_vmprim_opendl_t) (moo_t* moo, const moo_ooch_t* name, int flags);
 typedef void (*moo_vmprim_closedl_t) (moo_t* moo, void* handle);
 typedef void* (*moo_vmprim_getdlsym_t) (moo_t* moo, void* handle, const moo_ooch_t* name);
 
@@ -1277,7 +1283,24 @@ MOO_EXPORT int moo_invoke (
 	const moo_oocs_t* mthname
 );
 
-/* Temporary OOP management  */
+/* =========================================================================
+ * COMMON OBJECT MANAGEMENT FUNCTIONS
+ * ========================================================================= */
+MOO_EXPORT moo_oop_t moo_makesymbol (
+	moo_t*             moo,
+	const moo_ooch_t*  ptr,
+	moo_oow_t          len
+);
+
+MOO_EXPORT moo_oop_t moo_makestring (
+	moo_t*             moo, 
+	const moo_ooch_t*  ptr, 
+	moo_oow_t          len
+);
+
+/* =========================================================================
+ * TEMPORARY OOP MANAGEMENT FUNCTIONS
+ * ========================================================================= */
 MOO_EXPORT void moo_pushtmp (
 	moo_t*     moo,
 	moo_oop_t* oop_ptr
