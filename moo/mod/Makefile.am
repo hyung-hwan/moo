@@ -46,7 +46,7 @@ libmoo_console_la_LIBADD = $(LIBADD_COMMON) -ltermcap
 libmoo_ffi_la_SOURCES = ffi.c _ffi.h
 libmoo_ffi_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_ffi_la_LDFLAGS = $(LDFLAGS_COMMON)
-libmoo_ffi_la_LIBADD = $(LIBADD_COMMON) -ldyncall_s 
+libmoo_ffi_la_LIBADD = $(LIBADD_COMMON) $(DYNCALL_LIBS)
 
 libmoo_stdio_la_SOURCES = stdio.c _stdio.h
 libmoo_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)

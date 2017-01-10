@@ -666,6 +666,7 @@ PACKAGE_VERSION_MINOR
 PACKAGE_VERSION_MAJOR
 QUADMATH_LIBS
 UNICOWS_LIBS
+DYNCALL_LIBS
 LIBM
 WIN32_FALSE
 WIN32_TRUE
@@ -18194,6 +18195,18 @@ fi
 
 done
 
+for ac_header in dyncall.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "dyncall.h" "ac_cv_header_dyncall_h" "$ac_includes_default"
+if test "x$ac_cv_header_dyncall_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_DYNCALL_H 1
+_ACEOF
+
+fi
+
+done
+
 
 
 for ac_func in gettimeofday settimeofday clock_gettime clock_settime getitimer setitimer
@@ -18243,6 +18256,54 @@ _ACEOF
 
 fi
 done
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for dcNewCallVM in -ldyncall_s" >&5
+$as_echo_n "checking for dcNewCallVM in -ldyncall_s... " >&6; }
+if ${ac_cv_lib_dyncall_s_dcNewCallVM+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ldyncall_s  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char dcNewCallVM ();
+int
+main ()
+{
+return dcNewCallVM ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_dyncall_s_dcNewCallVM=yes
+else
+  ac_cv_lib_dyncall_s_dcNewCallVM=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_dyncall_s_dcNewCallVM" >&5
+$as_echo "$ac_cv_lib_dyncall_s_dcNewCallVM" >&6; }
+if test "x$ac_cv_lib_dyncall_s_dcNewCallVM" = xyes; then :
+
+		DYNCALL_LIBS="-ldyncall_s"
+
+$as_echo "#define HAVE_DYNCALL_LIB 1" >>confdefs.h
+
+
+
+fi
+
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lunicows" >&5

@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
-    Copyright (c) 2014-2016 Chung, Hyung-Hwan. All rights reserved.
+    Copyright (c) 2014-2017 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -30,9 +30,11 @@
 #include <errno.h>
 #include <string.h>
 
-#define HAVE_DYNCALL
+#if defined(HAVE_DYNCALL_LIB) && defined(HAVE_DYNCALL_H)
+#	define USE_DYNCALL
+#endif
 
-#if defined(HAVE_DYNCALL)
+#if defined(USE_DYNCALL)
 #	include <dyncall.h>
 #endif
 
@@ -54,7 +56,7 @@ static moo_pfrc_t pf_newinstsize (moo_t* moo, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 {
-#if defined(HAVE_DYNCALL)
+#if defined(USE_DYNCALL)
 	ffi_t* rcv;
 	moo_oop_t name;
 
@@ -91,13 +93,14 @@ reterr:
 	return MOO_PF_SUCCESS;
 #else
 	moo_seterrnum (moo, MOO_ENOIMPL);
-	return MOO_PF_FAILURE;
+	MOO_STACK_SETRETTOERROR (moo, nargs);
+	return MOO_PF_SUCCESS;
 #endif
 }
 
 static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 {
-#if defined(HAVE_DYNCALL)
+#if defined(USE_DYNCALL)
 	ffi_t* rcv;
 
 	if (nargs != 0)
@@ -128,13 +131,14 @@ reterr:
 
 #else
 	moo_seterrnum (moo, MOO_ENOIMPL);
-	return MOO_PF_FAILURE;
+	MOO_STACK_SETRETTOERROR (moo, nargs);
+	return MOO_PF_SUCCESS;
 #endif
 }
 
 static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 {
-#if defined(HAVE_DYNCALL)
+#if defined(USE_DYNCALL)
 	ffi_t* rcv;
 	moo_oop_t fun, sig, args;
 
@@ -343,13 +347,14 @@ reterr:
 
 #else
 	moo_seterrnum (moo, MOO_ENOIMPL);
-	return MOO_PF_FAILURE;
+	MOO_STACK_SETRETTOERROR (moo, nargs);
+	return MOO_PF_SUCCESS;
 #endif
 }
 
 static moo_pfrc_t pf_getsym (moo_t* moo, moo_ooi_t nargs)
 {
-#if defined(HAVE_DYNCALL)
+#if defined(USE_DYNCALL)
 	ffi_t* rcv;
 	moo_oop_t name;
 	void* sym;
@@ -390,7 +395,8 @@ reterr:
 
 #else
 	moo_seterrnum (moo, MOO_ENOIMPL);
-	return MOO_PF_FAILURE;
+	MOO_STACK_SETRETTOERROR (moo, nargs);
+	return MOO_PF_SUCCESS;
 #endif
 }
 

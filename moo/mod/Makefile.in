@@ -143,7 +143,8 @@ libmoo_console_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 @ENABLE_STATIC_MODULE_FALSE@am_libmoo_console_la_rpath = -rpath \
 @ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
 @ENABLE_STATIC_MODULE_TRUE@am_libmoo_console_la_rpath =
-libmoo_ffi_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
+libmoo_ffi_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_libmoo_ffi_la_OBJECTS = libmoo_ffi_la-ffi.lo
 libmoo_ffi_la_OBJECTS = $(am_libmoo_ffi_la_OBJECTS)
 libmoo_ffi_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
@@ -250,6 +251,7 @@ DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
+DYNCALL_LIBS = @DYNCALL_LIBS@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
@@ -410,7 +412,7 @@ libmoo_console_la_LIBADD = $(LIBADD_COMMON) -ltermcap
 libmoo_ffi_la_SOURCES = ffi.c _ffi.h
 libmoo_ffi_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_ffi_la_LDFLAGS = $(LDFLAGS_COMMON)
-libmoo_ffi_la_LIBADD = $(LIBADD_COMMON) -ldyncall_s 
+libmoo_ffi_la_LIBADD = $(LIBADD_COMMON) $(DYNCALL_LIBS)
 libmoo_stdio_la_SOURCES = stdio.c _stdio.h
 libmoo_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_stdio_la_LDFLAGS = $(LDFLAGS_COMMON)

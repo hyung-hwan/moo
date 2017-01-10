@@ -4,10 +4,9 @@
 
 CFLAGS := /D__DOS__ /DMOO_ENABLE_STATIC_MODULE /DNDEBUG /I..\lib
 
-#	ffi.c \
-
 SRCS := \
 	console.c \
+	ffi.c \
 	stdio.c
 
 OBJS := $(SRCS:.c=.obj)

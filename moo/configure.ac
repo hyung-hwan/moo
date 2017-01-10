@@ -143,6 +143,7 @@ dnl check header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([stddef.h wchar.h wctype.h errno.h signal.h fcntl.h dirent.h])
 AC_CHECK_HEADERS([time.h sys/time.h utime.h spawn.h execinfo.h ucontext.h])
+AC_CHECK_HEADERS([dyncall.h])
 
 dnl check data types
 dnl AC_CHECK_TYPE([wchar_t], 
@@ -156,6 +157,14 @@ AC_CHECK_FUNCS([gettimeofday settimeofday clock_gettime clock_settime getitimer 
 AC_CHECK_FUNCS([backtrace backtrace_symbols])
 AC_CHECK_FUNCS([makecontext swapcontext getcontext setcontext])
 AC_CHECK_FUNCS([snprintf _vsnprintf _vsnwprintf])
+
+AC_CHECK_LIB([dyncall_s], [dcNewCallVM], 
+	[
+		DYNCALL_LIBS="-ldyncall_s"
+		AC_DEFINE([HAVE_DYNCALL_LIB], [1], [dyncall library is available])	
+	]
+)
+AC_SUBST(DYNCALL_LIBS)
 
 dnl check is the import library for unicows.dll exists
 dnl this check doesn't look for a particular symbol
