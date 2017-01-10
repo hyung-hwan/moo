@@ -33,10 +33,10 @@
 #define HAVE_DYNCALL
 
 #if defined(HAVE_DYNCALL)
-/* TODO: defined dcAllocMem and dcFreeMeme before builing the dynload and dyncall library */
-#	include <dyncall.h> /* TODO: remove this. make dyXXXX calls to callbacks */
+#	include <dyncall.h>
 #endif
 
+typedef void* ptr_t;
 
 typedef struct ffi_t ffi_t;
 struct ffi_t
@@ -56,14 +56,18 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 {
 #if defined(HAVE_DYNCALL)
 	ffi_t* rcv;
-	moo_oop_t arg;
+	moo_oop_t name;
 
-	MOO_ASSERT (moo, nargs == 1);
+	if (nargs != 1)
+	{
+		moo_seterrnum (moo, MOO_EINVAL);
+		goto reterr;
+	}
 
 	rcv = (ffi_t*)MOO_STACK_GETRCV(moo, nargs);
-	arg = MOO_STACK_GETARG(moo, nargs, 0);
+	name = MOO_STACK_GETARG(moo, nargs, 0);
 
-	if (!MOO_ISTYPEOF(moo, arg, MOO_OBJ_TYPE_CHAR) || !MOO_OBJ_GET_FLAGS_EXTRA(arg)) /* TODO: better null check instead of FLAGS_EXTREA check */
+	if (!MOO_ISTYPEOF(moo, name, MOO_OBJ_TYPE_CHAR) || !MOO_OBJ_GET_FLAGS_EXTRA(name)) /* TODO: better null check instead of FLAGS_EXTREA check */
 	{
 		moo_seterrnum (moo, MOO_EINVAL);
 		goto reterr;
@@ -75,9 +79,10 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 		goto reterr;
 	}
 
-	rcv->handle = moo->vmprim.dl_open (moo, ((moo_oop_char_t)arg)->slot, 0);
+	rcv->handle = moo->vmprim.dl_open (moo, ((moo_oop_char_t)name)->slot, 0);
 	if (!rcv->handle) goto reterr;
 
+	MOO_DEBUG3 (moo, "<ffi.open> %.*js => %p\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, rcv->handle);
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 
@@ -95,20 +100,30 @@ static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 #if defined(HAVE_DYNCALL)
 	ffi_t* rcv;
 
-	MOO_ASSERT (moo, nargs == 0);
+	if (nargs != 0)
+	{
+		moo_seterrnum (moo, MOO_EINVAL);
+		goto reterr;
+	}
 
 	rcv = (ffi_t*)MOO_STACK_GETRCV(moo, nargs);
 
 	if (!moo->vmprim.dl_open)
 	{
 		moo_seterrnum (moo, MOO_ENOIMPL);
-		return MOO_PF_SUCCESS;
+		goto reterr;
 	}
+
+	MOO_DEBUG1 (moo, "<ffi.close> %p\n", rcv->handle);
 
 	moo->vmprim.dl_close (moo, rcv->handle);
 	rcv->handle = MOO_NULL;
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+
+reterr:
+	MOO_STACK_SETRETTOERROR (moo, nargs);
 	return MOO_PF_SUCCESS;
 
 #else
@@ -153,7 +168,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 		moo_oop_oop_t arr;
 		int mode_set;
 
-		f = MOO_OOP_TO_SMOOI(fun); /* TODO: decode pointer properly */
+		f = MOO_OOP_TO_SMPTR(fun); 
 		arr = (moo_oop_oop_t)args;
 
 		dc = dcNewCallVM (4096);
@@ -163,11 +178,12 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 			goto reterr;
 		}
 
-MOO_DEBUG1 (moo, "FFI: CALLING............%p\n", f);
+		MOO_DEBUG2 (moo, "<ffi.call> %p in %p\n", f, rcv->handle);
+
 		/*dcMode (dc, DC_CALL_C_DEFAULT);
 		dcReset (dc);*/
 
-		/*for (i = 2; i < MOO_OBJ_GET_SIZE(sig); i++)
+		/*for (i = 1; i < MOO_OBJ_GET_SIZE(sig); i++)
 		{
 			if (((moo_oop_char_t)sig)->slot[i] == '|') 
 			{
@@ -179,7 +195,7 @@ MOO_DEBUG0 (moo, "CALL MODE 111 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPP
 		}
 		if (!mode_set) */ dcMode (dc, DC_CALL_C_DEFAULT);
 
-		for (i = 2; i < MOO_OBJ_GET_SIZE(sig); i++)
+		for (i = 1; i < MOO_OBJ_GET_SIZE(sig); i++)
 		{
 MOO_DEBUG1 (moo, "FFI: CALLING ARG %c\n", ((moo_oop_char_t)sig)->slot[i]);
 			switch (((moo_oop_char_t)sig)->slot[i])
@@ -194,19 +210,22 @@ MOO_DEBUG2 (moo, "CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPP
 
 				case 'c':
 					/* TODO: sanity check on the argument type */
-					dcArgChar (dc, MOO_OOP_TO_CHAR(arr->slot[i - 2]));
+					dcArgChar (dc, MOO_OOP_TO_CHAR(arr->slot[i - 1]));
 					break;
 
 				case 'i':
-					dcArgInt (dc, MOO_OOP_TO_SMOOI(arr->slot[i - 2]));
+/* TODO: use moo_inttoooi () */
+					dcArgInt (dc, MOO_OOP_TO_SMOOI(arr->slot[i - 1]));
 					break;
 
 				case 'l':
-					dcArgLong (dc, MOO_OOP_TO_SMOOI(arr->slot[i - 2]));
+/* TODO: use moo_inttoooi () */
+					dcArgLong (dc, MOO_OOP_TO_SMOOI(arr->slot[i - 1]));
 					break;
 
 				case 'L':
-					dcArgLongLong (dc, MOO_OOP_TO_SMOOI(arr->slot[i - 2]));
+/* TODO: use moo_inttoooi () */
+					dcArgLongLong (dc, MOO_OOP_TO_SMOOI(arr->slot[i - 1]));
 					break;
 
 #if 0
@@ -217,7 +236,7 @@ MOO_DEBUG2 (moo, "CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPP
 					moo_oow_t bcslen, ucslen;
 					moo_bch_t bcs[1024];
 
-					ucslen = MOO_OBJ_GET_SIZE(arr->slot[i - 2]);
+					ucslen = MOO_OBJ_GET_SIZE(arr->slot[i - 1]);
 					moo_convootobchars (moo, ((moo_oop_char_t)arr->slot[i - 2])->slot, &ucslen, bcs, &bcslen); /* proper string conversion */
 
 					bcs[bcslen] = '\0';
@@ -245,26 +264,39 @@ MOO_DEBUG2 (moo, "CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPP
 
 			case 'i':
 			{
-				int r = dcCallInt (dc, f);
-MOO_DEBUG1 (moo, "CALLED... %d\n", r);
-MOO_DEBUG2 (moo, "CALL ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
-				MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(r));
+				moo_oop_t r;
+				r = moo_ooitoint (moo, dcCallInt (dc, f));
+				if (!r) return MOO_PF_HARD_FAILURE;
+				MOO_STACK_SETRET (moo, nargs, r);
 				break;
 			}
 
 			case 'l':
 			{
-				long r = dcCallLong (dc, f);
-				MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(r));
+				moo_oop_t r;
+				r = moo_ooitoint (moo, dcCallLong (dc, f));
+				if (!r) return MOO_PF_HARD_FAILURE;
+				MOO_STACK_SETRET (moo, nargs, r);
 				break;
 			}
 
+		#if (STIX_SIZEOF_LONG_LONG > 0)
 			case 'L':
 			{
 				long long r = dcCallLongLong (dc, f);
-				MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(r));
+				mod_oop_t r;
+
+			#if STIX_SIZEOF_LONG_LONG <= STIX_SIZEOF_LONG
+				r = moo_ooitoint (moo, dcCallLongLong (dc, f));
+			#else
+			#	error TODO:...
+			#endif
+				if (!rr) return MOD_PF_HARD_FAILURE;
+
+				MOO_STACK_SETRET (moo, nargs, r);
 				break;
 			}
+		#endif
 
 #if 0
 			case 'b': /* byte array */
@@ -319,15 +351,19 @@ static moo_pfrc_t pf_getsym (moo_t* moo, moo_ooi_t nargs)
 {
 #if defined(HAVE_DYNCALL)
 	ffi_t* rcv;
-	moo_oop_t fun;
+	moo_oop_t name;
 	void* sym;
 
-	MOO_ASSERT (moo, nargs == 1);
+	if (nargs != 1)
+	{
+		moo_seterrnum (moo, MOO_EINVAL);
+		goto reterr;
+	}
 
 	rcv = (ffi_t*)MOO_STACK_GETRCV(moo, nargs);
-	fun = MOO_STACK_GETARG(moo, nargs, 0);
+	name = MOO_STACK_GETARG(moo, nargs, 0);
 
-	if (!MOO_ISTYPEOF(moo,fun,MOO_OBJ_TYPE_CHAR))
+	if (!MOO_ISTYPEOF(moo,name,MOO_OBJ_TYPE_CHAR)) /* TODO: null check on the symbol name? */
 	{
 		moo_seterrnum (moo, MOO_EINVAL);
 		goto reterr;
@@ -339,11 +375,13 @@ static moo_pfrc_t pf_getsym (moo_t* moo, moo_ooi_t nargs)
 		goto reterr;
 	}
 
-	sym = moo->vmprim.dl_getsym (moo, rcv->handle, ((moo_oop_char_t)fun)->slot);
+	sym = moo->vmprim.dl_getsym (moo, rcv->handle, ((moo_oop_char_t)name)->slot);
 	if (!sym) goto reterr;
 
-/* TODO: how to hold an address? as an integer????  or a byte array? */
-	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP((moo_oow_t)sym));
+	MOO_DEBUG4 (moo, "<ffi.getsym> %.*js => %p in %p\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, sym, rcv->handle);
+
+	MOO_ASSERT (moo, MOO_IN_SMPTR_RANGE(sym));
+	MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP(sym));
 	return MOO_PF_SUCCESS;
 
 reterr:
@@ -427,7 +465,7 @@ static moo_pfimpl_t query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
 
 static void unload (moo_t* moo, moo_mod_t* mod)
 {
-	/* TODO: close all open libraries...?? */
+	/* TODO: anything? close open open dll handles? For that, pf_open must store the value it returns to mod->ctx or somewhere..*/
 }
 
 int moo_mod_ffi (moo_t* moo, moo_mod_t* mod)

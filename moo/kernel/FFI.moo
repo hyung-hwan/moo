@@ -1,5 +1,13 @@
 class(#byte) _FFI(Module) from 'ffi'
 {
+	(* 
+	 * the ffi module installs the following methods 
+	 *   method(#class) _newInstSize
+	 *   method open: name
+	 *   method close
+	 *   method call
+	 *   method call: func sig: sig with: args.
+	 *)
 }
 
 class FFI(Object)
@@ -43,6 +51,8 @@ class FFI(Object)
 			(f isError) ifTrue: [^f].
 			self.funcs at: name put: f.
 		].
-		^self.ffi call: f sig: sig with: args
+
+		(*^self.ffi call: f sig: sig with: args*)
+		^self.ffi call(f, sig, args)
 	}
 }

@@ -110,7 +110,7 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 
 	fill_bigint_tables (moo);
 
-	moo->tagged_classes[MOO_OOP_TAG_SMINT] = &moo->_small_integer;
+	moo->tagged_classes[MOO_OOP_TAG_SMOOI] = &moo->_small_integer;
 	moo->tagged_classes[MOO_OOP_TAG_CHAR] = &moo->_character;
 	moo->tagged_classes[MOO_OOP_TAG_ERROR] = &moo->_error_class;
 

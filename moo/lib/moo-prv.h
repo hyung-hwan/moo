@@ -1009,11 +1009,6 @@ int moo_inttooow (
 	moo_oow_t* w
 );
 
-moo_oop_t moo_oowtoint (
-	moo_t*     moo,
-	moo_oow_t  w
-);
-
 moo_oop_t moo_addints (
 	moo_t*    moo,
 	moo_oop_t x,

@@ -1337,7 +1337,7 @@ static moo_pfrc_t _equal_objects (moo_t* moo, moo_ooi_t nargs)
 
 	switch (MOO_OOP_GET_TAG(rcv))
 	{
-		case MOO_OOP_TAG_SMINT:
+		case MOO_OOP_TAG_SMOOI:
 			return MOO_OOP_TO_SMOOI(rcv) == MOO_OOP_TO_SMOOI(arg)? 1: 0;
 
 		case MOO_OOP_TAG_CHAR:
@@ -1700,7 +1700,7 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_ooi_t nargs)
 
 	switch (MOO_OOP_GET_TAG(rcv))
 	{
-		case MOO_OOP_TAG_SMINT:
+		case MOO_OOP_TAG_SMOOI:
 			hv = MOO_OOP_TO_SMOOI(rcv);
 			break;
 

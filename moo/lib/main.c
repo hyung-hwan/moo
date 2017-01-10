@@ -325,15 +325,19 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		/* opening a raw shared object */
 		bcslen = MOO_COUNTOF(buf);
 		if (moo_convootobcstr (moo, name, &ucslen, buf, &bcslen) <= -1) return MOO_NULL;
-		handle = lt_dlopenext (buf);
-		if (!handle) 
+
+		if (moo_findbchar (buf, bcslen, '.'))
 		{
-			MOO_DEBUG2 (moo, "Failed to open(ext) DL %hs - %hs\n", buf, lt_dlerror());
 			handle = lt_dlopen (buf);
 			if (!handle) MOO_DEBUG2 (moo, "Failed to open DL %hs - %s\n", buf, lt_dlerror());
 			else MOO_DEBUG2 (moo, "Opened DL %hs handle %p\n", buf, handle);
 		}
-		else MOO_DEBUG2 (moo, "Opened(ext) DL %hs handle %p\n", buf, handle);
+		else
+		{
+			handle = lt_dlopenext (buf);
+			if (!handle) MOO_DEBUG2 (moo, "Failed to open(ext) DL %hs - %s\n", buf, lt_dlerror());
+			else MOO_DEBUG2 (moo, "Opened(ext) DL %hs handle %p\n", buf, handle);
+		}
 	}
 
 	return handle;
@@ -755,7 +759,7 @@ int main (int argc, char* argv[])
 		}
 	}
 
-	printf ("COMPILE OK. STARTING EXECUTION ...\n");
+	MOO_DEBUG0 (moo, "COMPILE OK. STARTING EXECUTION...\n");
 	xret = 0;
 	g_moo = moo;
 	setup_tick ();

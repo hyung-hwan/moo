@@ -28,6 +28,7 @@
 #include "console.h"
 #include <moo-utl.h>
 
+#include <string.h>
 #if defined(_WIN32)
 
 #elif defined(__DOS__)

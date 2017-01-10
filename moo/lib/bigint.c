@@ -488,6 +488,18 @@ moo_oop_t moo_oowtoint (moo_t* moo, moo_oow_t w)
 	}
 }
 
+moo_oop_t moo_ooitoint (moo_t* moo, moo_ooi_t i)
+{
+	if (MOO_IN_SMOOI_RANGE(i))
+	{
+		return MOO_SMOOI_TO_OOP(i);
+	}
+	else
+	{
+		return make_bigint_with_ooi (moo, i);
+	}
+}
+
 static MOO_INLINE moo_oop_t expand_bigint (moo_t* moo, moo_oop_t oop, moo_oow_t inc)
 {
 	moo_oop_t z;

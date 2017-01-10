@@ -196,7 +196,7 @@ typedef enum moo_method_type_t moo_method_type_t;
  */
 
 #define MOO_OOP_TAG_BITS   2
-#define MOO_OOP_TAG_SMINT  1
+#define MOO_OOP_TAG_SMOOI  1
 #define MOO_OOP_TAG_CHAR   2
 #define MOO_OOP_TAG_ERROR  3
 
@@ -204,11 +204,11 @@ typedef enum moo_method_type_t moo_method_type_t;
 #define MOO_OOP_IS_NUMERIC(oop) (MOO_OOP_GET_TAG(oop) != 0)
 #define MOO_OOP_IS_POINTER(oop) (MOO_OOP_GET_TAG(oop) == 0)
 
-#define MOO_OOP_IS_SMOOI(oop) (MOO_OOP_GET_TAG(oop) == MOO_OOP_TAG_SMINT)
+#define MOO_OOP_IS_SMOOI(oop) (MOO_OOP_GET_TAG(oop) == MOO_OOP_TAG_SMOOI)
 #define MOO_OOP_IS_CHAR(oop) (MOO_OOP_GET_TAG(oop) == MOO_OOP_TAG_CHAR)
 #define MOO_OOP_IS_ERROR(oop) (MOO_OOP_GET_TAG(oop) == MOO_OOP_TAG_ERROR)
 
-#define MOO_SMOOI_TO_OOP(num) ((moo_oop_t)((((moo_ooi_t)(num)) << MOO_OOP_TAG_BITS) | MOO_OOP_TAG_SMINT))
+#define MOO_SMOOI_TO_OOP(num) ((moo_oop_t)((((moo_ooi_t)(num)) << MOO_OOP_TAG_BITS) | MOO_OOP_TAG_SMOOI))
 #define MOO_OOP_TO_SMOOI(oop) (((moo_ooi_t)oop) >> MOO_OOP_TAG_BITS)
 #define MOO_CHAR_TO_OOP(num) ((moo_oop_t)((((moo_oow_t)(num)) << MOO_OOP_TAG_BITS) | MOO_OOP_TAG_CHAR))
 #define MOO_OOP_TO_CHAR(oop) (((moo_oow_t)oop) >> MOO_OOP_TAG_BITS)
@@ -226,6 +226,17 @@ typedef enum moo_method_type_t moo_method_type_t;
 /*#define MOO_SMOOI_MIN (-MOO_SMOOI_MAX - 1)*/
 #define MOO_SMOOI_MIN (-MOO_SMOOI_MAX)
 #define MOO_IN_SMOOI_RANGE(ooi) ((ooi) >= MOO_SMOOI_MIN && (ooi) <= MOO_SMOOI_MAX)
+
+
+/* SMPTR is a special SMOOI value which has been devised to
+ * encode an address value whose low MOO_OOP_TAG_BITS bits are 0. 
+ * its class is still SmallInteger. A pointer returned by most of
+ * system functions would be aligned to the pointer size. 
+ * you can use tthe followings macros when storing such a pointer
+ * in a small integer without loss. */
+#define MOO_IN_SMPTR_RANGE(ptr) ((((moo_oow_t)ptr) & MOO_LBMASK(moo_oow_t, MOO_OOP_TAG_BITS)) == 0)
+#define MOO_SMPTR_TO_OOP(ptr) ((moo_oop_t)(((moo_oow_t)ptr) | MOO_OOP_TAG_SMOOI))
+#define MOO_OOP_TO_SMPTR(oop) ((void*)(((moo_oow_t)oop) & ~MOO_LBMASK(moo_oow_t, MOO_OOP_TAG_BITS)))
 
 /* TODO: There are untested code where a small integer is converted to moo_oow_t.
  *       for example, the spec making macro treats the number as moo_oow_t instead of moo_ooi_t.
@@ -1296,6 +1307,17 @@ MOO_EXPORT moo_oop_t moo_makestring (
 	moo_t*             moo, 
 	const moo_ooch_t*  ptr, 
 	moo_oow_t          len
+);
+
+
+MOO_EXPORT moo_oop_t moo_oowtoint (
+	moo_t*     moo,
+	moo_oow_t  w
+);
+
+MOO_EXPORT moo_oop_t moo_ooitoint (
+	moo_t*    moo,
+	moo_ooi_t i
 );
 
 /* =========================================================================
