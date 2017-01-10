@@ -56,7 +56,6 @@ static moo_pfrc_t pf_newinstsize (moo_t* moo, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 {
-#if defined(USE_DYNCALL)
 	ffi_t* rcv;
 	moo_oop_t name;
 
@@ -91,16 +90,10 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 reterr:
 	MOO_STACK_SETRETTOERROR (moo, nargs);
 	return MOO_PF_SUCCESS;
-#else
-	moo_seterrnum (moo, MOO_ENOIMPL);
-	MOO_STACK_SETRETTOERROR (moo, nargs);
-	return MOO_PF_SUCCESS;
-#endif
 }
 
 static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 {
-#if defined(USE_DYNCALL)
 	ffi_t* rcv;
 
 	if (nargs != 0)
@@ -128,12 +121,6 @@ static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 reterr:
 	MOO_STACK_SETRETTOERROR (moo, nargs);
 	return MOO_PF_SUCCESS;
-
-#else
-	moo_seterrnum (moo, MOO_ENOIMPL);
-	MOO_STACK_SETRETTOERROR (moo, nargs);
-	return MOO_PF_SUCCESS;
-#endif
 }
 
 static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
@@ -354,7 +341,6 @@ reterr:
 
 static moo_pfrc_t pf_getsym (moo_t* moo, moo_ooi_t nargs)
 {
-#if defined(USE_DYNCALL)
 	ffi_t* rcv;
 	moo_oop_t name;
 	void* sym;
@@ -392,12 +378,6 @@ static moo_pfrc_t pf_getsym (moo_t* moo, moo_ooi_t nargs)
 reterr:
 	MOO_STACK_SETRETTOERROR (moo, nargs);
 	return MOO_PF_SUCCESS;
-
-#else
-	moo_seterrnum (moo, MOO_ENOIMPL);
-	MOO_STACK_SETRETTOERROR (moo, nargs);
-	return MOO_PF_SUCCESS;
-#endif
 }
 
 /* ------------------------------------------------------------------------ */
