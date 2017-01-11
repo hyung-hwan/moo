@@ -122,12 +122,36 @@ reterr:
 	MOO_STACK_SETRETTOERROR (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
+/*
+struct bcstr_node_t
+{
+	stix_bch_t* ptr;
+	bcstr_node_t* next;
+};
 
+static bcstr_node_t* dupbcstr (moo_t* moo, bcstr_node_t* bcstr, const moo_bch_t* ptr)
+{
+	
+	moo_freemem (
+}
+ 
+static void free_bcstr_node (moo_t* moo, bcstr_node_t* bcstr)
+{
+	moo_freemem (moo, bcstr->ptr);
+	moo_freemem (moo, bcstr);
+}
+*/
 static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 {
 #if defined(USE_DYNCALL)
 	ffi_t* rcv;
 	moo_oop_t fun, sig, args;
+	DCCallVM* dc = MOO_NULL;
+	moo_oow_t i, j;
+	void* f;
+	moo_oop_oop_t arr;
+	int ellipsis = 0;
+	struct bcstr_node_t* bcstr;
 
 	if (nargs < 3)
 	{
@@ -146,191 +170,219 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 		goto reterr;
 	}
 
+#if 0
 	if (MOO_OBJ_GET_SIZE(sig) > 1 && MOO_CLASSOF(moo,args) != moo->_array) /* TODO: check if arr is a kind of array??? or check if it's indexed */
 	{
 		moo_seterrnum (moo, MOO_EINVAL);
 		goto reterr;
 	}
+#endif
 
+	f = MOO_OOP_TO_SMPTR(fun); 
+	arr = (moo_oop_oop_t)args;
+
+	dc = dcNewCallVM (4096); /* TODO: right size? */
+	if (!dc) 
 	{
-		moo_oow_t i;
-		DCCallVM* dc;
-		void* f;
-		moo_oop_oop_t arr;
-		int mode_set;
+		moo_seterrnum (moo, moo_syserrtoerrnum(errno));
+		goto reterr;
+	}
 
-		f = MOO_OOP_TO_SMPTR(fun); 
-		arr = (moo_oop_oop_t)args;
+	MOO_DEBUG2 (moo, "<ffi.call> %p in %p\n", f, rcv->handle);
 
-		dc = dcNewCallVM (4096);
-		if (!dc) 
+	/*dcMode (dc, DC_CALL_C_DEFAULT);
+	dcReset (dc);*/
+
+	i = 0;
+	if (i < MOO_OBJ_GET_SIZE(sig) && ((moo_oop_char_t)sig)->slot[i] == '|') 
+	{
+		dcMode (dc, DC_CALL_C_ELLIPSIS);
+		if (dcGetError(dc) != DC_ERROR_NONE)
 		{
-			moo_seterrnum (moo, moo_syserrtoerrnum(errno));
+			/* the error code should be DC_ERROR_UNSUPPORTED_MODE */
+			moo_seterrnum (moo, MOO_ENOIMPL);
+			goto reterr;
+		}
+		dcReset (dc);
+		ellipsis = 1;
+		i++;
+	}
+
+	for (j = 0; i < MOO_OBJ_GET_SIZE(sig); i++)
+	{
+		moo_ooch_t fmtc;
+
+		fmtc = ((moo_oop_char_t)sig)->slot[i];
+
+		if (fmtc == ')') 
+		{
+			i++;
+			break;
+		}
+		else if (fmtc == '|')
+		{
+			if (ellipsis)
+			{
+				dcMode (dc, DC_CALL_C_ELLIPSIS_VARARGS);
+
+				if (dcGetError(dc) != DC_ERROR_NONE) 
+				{
+					/* the error code should be DC_ERROR_UNSUPPORTED_MODE */
+					moo_seterrnum (moo, MOO_ENOIMPL);
+					goto reterr;
+				}
+			}
+			continue;
+		}
+
+		if (j >= MOO_OBJ_GET_SIZE(arr))
+		{
+			moo_seterrnum (moo, MOO_EINVAL);
 			goto reterr;
 		}
 
-		MOO_DEBUG2 (moo, "<ffi.call> %p in %p\n", f, rcv->handle);
-
-		/*dcMode (dc, DC_CALL_C_DEFAULT);
-		dcReset (dc);*/
-
-		/*for (i = 1; i < MOO_OBJ_GET_SIZE(sig); i++)
+		switch (fmtc)
 		{
-			if (((moo_oop_char_t)sig)->slot[i] == '|') 
-			{
-				dcMode (dc, DC_CALL_C_ELLIPSIS);
-MOO_DEBUG0 (moo, "CALL MODE 111 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
-				mode_set = 1;
-				break;
-			}
-		}
-		if (!mode_set) */ dcMode (dc, DC_CALL_C_DEFAULT);
-
-		for (i = 1; i < MOO_OBJ_GET_SIZE(sig); i++)
-		{
-MOO_DEBUG1 (moo, "FFI: CALLING ARG %c\n", ((moo_oop_char_t)sig)->slot[i]);
-			switch (((moo_oop_char_t)sig)->slot[i])
-			{
-			/* TODO: support more types... */
-				/*
-				case '|':
-					dcMode (dc, DC_CALL_C_ELLIPSIS_VARARGS);
-MOO_DEBUG2 (moo, "CALL MODE 222 ERROR %d %d\n", dcGetError (dc), DC_ERROR_UNSUPPORTED_MODE);
-					break;
-				*/
-
-				case 'c':
-					/* TODO: sanity check on the argument type */
-					dcArgChar (dc, MOO_OOP_TO_CHAR(arr->slot[i - 1]));
-					break;
-
-				case 'i':
-/* TODO: use moo_inttoooi () */
-					dcArgInt (dc, MOO_OOP_TO_SMOOI(arr->slot[i - 1]));
-					break;
-
-				case 'l':
-/* TODO: use moo_inttoooi () */
-					dcArgLong (dc, MOO_OOP_TO_SMOOI(arr->slot[i - 1]));
-					break;
-
-				case 'L':
-/* TODO: use moo_inttoooi () */
-					dcArgLongLong (dc, MOO_OOP_TO_SMOOI(arr->slot[i - 1]));
-					break;
-
-#if 0
-				case 'B': /* byte array */
-#endif
-				case 's':
-				{
-					moo_oow_t bcslen, ucslen;
-					moo_bch_t bcs[1024];
-
-					ucslen = MOO_OBJ_GET_SIZE(arr->slot[i - 1]);
-					moo_convootobchars (moo, ((moo_oop_char_t)arr->slot[i - 2])->slot, &ucslen, bcs, &bcslen); /* proper string conversion */
-
-					bcs[bcslen] = '\0';
-					dcArgPointer (dc, bcs);
-					break;
-				}
-
-				default:
-					/* TODO: ERROR HANDLING */
-					break;
-			}
-
-		}
-
-		switch (((moo_oop_char_t)sig)->slot[0])
-		{
-/* TODO: support more types... */
-/* TODO: proper return value conversion */
+		/* TODO: support more types... */
 			case 'c':
-			{
-				char r = dcCallChar (dc, f);
-				MOO_STACK_SETRET (moo, nargs, MOO_CHAR_TO_OOP(r));
+				/* TODO: sanity check on the argument type */
+				dcArgChar (dc, MOO_OOP_TO_CHAR(arr->slot[j]));
+				j++;
 				break;
-			}
 
 			case 'i':
-			{
-				moo_oop_t r;
-				r = moo_ooitoint (moo, dcCallInt (dc, f));
-				if (!r) return MOO_PF_HARD_FAILURE;
-				MOO_STACK_SETRET (moo, nargs, r);
+/* TODO: use moo_inttoooi () */
+				dcArgInt (dc, MOO_OOP_TO_SMOOI(arr->slot[j]));
+				j++;
 				break;
-			}
 
 			case 'l':
-			{
-				moo_oop_t r;
-				r = moo_ooitoint (moo, dcCallLong (dc, f));
-				if (!r) return MOO_PF_HARD_FAILURE;
-				MOO_STACK_SETRET (moo, nargs, r);
+/* TODO: use moo_inttoooi () */
+				dcArgLong (dc, MOO_OOP_TO_SMOOI(arr->slot[j]));
+				j++;
 				break;
-			}
 
-		#if (STIX_SIZEOF_LONG_LONG > 0)
 			case 'L':
-			{
-				long long r = dcCallLongLong (dc, f);
-				mod_oop_t r;
-
-			#if STIX_SIZEOF_LONG_LONG <= STIX_SIZEOF_LONG
-				r = moo_ooitoint (moo, dcCallLongLong (dc, f));
-			#else
-			#	error TODO:...
-			#endif
-				if (!rr) return MOD_PF_HARD_FAILURE;
-
-				MOO_STACK_SETRET (moo, nargs, r);
+/* TODO: use moo_inttoooi () */
+				dcArgLongLong (dc, MOO_OOP_TO_SMOOI(arr->slot[j]));
+				j++;
 				break;
-			}
-		#endif
 
 #if 0
-			case 'b': /* byte array */
-			{
-			}
+			case 'B': /* byte array */
 #endif
-
-			case 'B':
+			case 's':
 			{
 				moo_oow_t bcslen, ucslen;
-				moo_ooch_t ucs[1024];
-				moo_oop_t s;
-				char* r = dcCallPointer (dc, f);
+				moo_bch_t bcs[1024]; /*TODO: dynamic length.... */
 
-				bcslen = strlen(r); 
-				moo_convbtooochars (moo, r, &bcslen, ucs, &ucslen); /* error check... */
+				ucslen = MOO_OBJ_GET_SIZE(arr->slot[j]);
+				bcslen = MOO_COUNTOF(bcs);
+				moo_convootobcstr (moo, ((moo_oop_char_t)arr->slot[j])->slot, &ucslen, bcs, &bcslen); /* proper string conversion */
 
-				s = moo_makestring(moo, ucs, ucslen);
-				if (!s) 
-				{
-					dcFree (dc);
-					return MOO_PF_HARD_FAILURE; /* TODO: proper error h andling */
-				}
-
-				MOO_STACK_SETRET (moo, nargs, s); 
+				bcs[bcslen] = '\0';
+				dcArgPointer (dc, bcs);
+				j++;
 				break;
 			}
 
 			default:
-
-				moo_seterrnum (moo, MOO_EINVAL);
-				goto reterr;
+				/* TODO: ERROR HANDLING */
 				break;
 		}
-
-		dcFree (dc);
 	}
 
+	if (i >= MOO_OBJ_GET_SIZE(sig)) goto call_void;
+
+	switch (((moo_oop_char_t)sig)->slot[i])
+	{
+/* TODO: support more types... */
+/* TODO: proper return value conversion */
+		case 'c':
+		{
+			char r = dcCallChar (dc, f);
+			MOO_STACK_SETRET (moo, nargs, MOO_CHAR_TO_OOP(r));
+			break;
+		}
+
+		case 'i':
+		{
+			moo_oop_t r;
+
+			r = moo_ooitoint (moo, dcCallInt (dc, f));
+			if (!r) goto oops;
+			MOO_STACK_SETRET (moo, nargs, r);
+			break;
+		}
+
+		case 'l':
+		{
+			moo_oop_t r;
+			r = moo_ooitoint (moo, dcCallLong (dc, f));
+			if (!r) goto oops;
+			MOO_STACK_SETRET (moo, nargs, r);
+			break;
+		}
+
+	#if (STIX_SIZEOF_LONG_LONG > 0)
+		case 'L':
+		{
+			long long r = dcCallLongLong (dc, f);
+			mod_oop_t r;
+
+		#if STIX_SIZEOF_LONG_LONG <= STIX_SIZEOF_LONG
+			r = moo_ooitoint (moo, dcCallLongLong (dc, f));
+		#else
+		#	error TODO:...
+		#endif
+			if (!rr) goto oops;
+
+			MOO_STACK_SETRET (moo, nargs, r);
+			break;
+		}
+	#endif
+
+#if 0
+		case 'B': /* byte array */
+		{
+		}
+#endif
+
+		case 's':
+		{
+			moo_oow_t bcslen, ucslen;
+			moo_ooch_t ucs[1024]; /* TOOD: buffer size... */
+			moo_oop_t s;
+			char* r = dcCallPointer (dc, f);
+
+			bcslen = strlen(r); 
+			moo_convbtooochars (moo, r, &bcslen, ucs, &ucslen); /* error check... */
+
+			s = moo_makestring(moo, ucs, ucslen);
+			if (!s) goto oops;
+
+			MOO_STACK_SETRET (moo, nargs, s); 
+			break;
+		}
+
+		default:
+		call_void:
+			dcCallVoid (dc, f);
+			MOO_STACK_SETRETTORCV (moo, nargs);
+			break;
+	}
+
+	dcFree (dc);
 	return MOO_PF_SUCCESS;
 
 reterr:
+	if (dc) dcFree(dc);
 	MOO_STACK_SETRETTOERROR (moo, nargs);
 	return MOO_PF_SUCCESS;
+
+oops:
+	if (dc) dcFree(dc);
+	return MOO_PF_HARD_FAILURE;
 
 #else
 	moo_seterrnum (moo, MOO_ENOIMPL);

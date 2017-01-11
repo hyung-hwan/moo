@@ -45,7 +45,7 @@ struct __utf8_t
 	moo_uint8_t   fbyte;  /* mask to the first utf8 byte */
 	moo_uint8_t   mask;
 	moo_uint8_t   fmask;
-	int            length; /* number of bytes */
+	int           length; /* number of bytes */
 };
 
 typedef struct __utf8_t __utf8_t;

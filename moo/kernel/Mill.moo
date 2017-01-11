@@ -88,7 +88,8 @@ class MyObject(Object)
 		(ffi isError) 
 			ifTrue: [System logNl: 'cannot open libc.so' ]
 			ifFalse: [
-				(ffi call: #getpid  signature: 'i' arguments: nil) dump.
+				(ffi call: #getpid  signature: ')i' arguments: nil) dump.
+				(ffi call: #printf signature: 's|iis)i' arguments: #(S'A=>%d B=>%d Hello, world %s\n' 1 2 'fly away')) dump.
 				ffi close.
 			]
 	}

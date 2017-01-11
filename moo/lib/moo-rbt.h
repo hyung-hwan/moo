@@ -29,14 +29,14 @@
 
 #include "moo-cmn.h"
 
-/**@file
+/**\file
  * This file provides a red-black tree encapsulated in the #moo_rbt_t type that
  * implements a self-balancing binary search tree.Its interface is very close 
  * to #moo_htb_t.
  *
  * This sample code adds a series of keys and values and print them
  * in descending key order.
- * @code
+ * \code
  * #include <moo/cmn/rbt.h>
  * #include <moo/cmn/mem.h>
  * #include <moo/cmn/sio.h>
@@ -67,7 +67,7 @@
  *   moo_rbt_close (s1);
  *   return 0;
  * }
- * @endcode
+ * \endcode
  */
 
 typedef struct moo_rbt_t moo_rbt_t;
@@ -99,9 +99,9 @@ typedef enum moo_rbt_id_t moo_rbt_id_t;
  * The moo_rbt_copier_t type defines a pair contruction callback.
  */
 typedef void* (*moo_rbt_copier_t) (
-	moo_rbt_t* rbt  /* red-black tree */,
-	void*       dptr /* pointer to a key or a value */, 
-	moo_oow_t  dlen /* length of a key or a value */
+	moo_rbt_t* rbt  /**< red-black tree */,
+	void*      dptr /**< pointer to a key or a value */, 
+	moo_oow_t  dlen /**< length of a key or a value */
 );
 
 /**
@@ -109,7 +109,7 @@ typedef void* (*moo_rbt_copier_t) (
  */
 typedef void (*moo_rbt_freeer_t) (
 	moo_rbt_t* rbt,  /**< red-black tree */
-	void*       dptr, /**< pointer to a key or a value */
+	void*      dptr, /**< pointer to a key or a value */
 	moo_oow_t  dlen  /**< length of a key or a value */
 );
 
@@ -123,9 +123,9 @@ typedef void (*moo_rbt_freeer_t) (
 typedef int (*moo_rbt_comper_t) (
 	const moo_rbt_t* rbt,    /**< red-black tree */ 
 	const void*      kptr1,  /**< key pointer */
-	moo_oow_t       klen1,  /**< key length */ 
+	moo_oow_t        klen1,  /**< key length */ 
 	const void*      kptr2,  /**< key pointer */
-	moo_oow_t       klen2   /**< key length */
+	moo_oow_t        klen2   /**< key length */
 );
 
 /**
@@ -152,8 +152,8 @@ typedef moo_rbt_walk_t (*moo_rbt_walker_t) (
 /**
  * The moo_rbt_cbserter_t type defines a callback function for moo_rbt_cbsert().
  * The moo_rbt_cbserter() function calls it to allocate a new pair for the 
- * key pointed to by @a kptr of the length @a klen and the callback context
- * @a ctx. The second parameter @a pair is passed the pointer to the existing
+ * key pointed to by \a kptr of the length \a klen and the callback context
+ * \a ctx. The second parameter \a pair is passed the pointer to the existing
  * pair for the key or #MOO_NULL in case of no existing key. The callback
  * must return a pointer to a new or a reallocated pair. When reallocating the
  * existing pair, this callback must destroy the existing pair and return the 
@@ -162,9 +162,9 @@ typedef moo_rbt_walk_t (*moo_rbt_walker_t) (
 typedef moo_rbt_pair_t* (*moo_rbt_cbserter_t) (
 	moo_rbt_t*      rbt,    /**< red-black tree */
 	moo_rbt_pair_t* pair,   /**< pair pointer */
-	void*            kptr,   /**< key pointer */
-	moo_oow_t      klen,   /**< key length */
-	void*            ctx     /**< callback context */
+	void*           kptr,   /**< key pointer */
+	moo_oow_t       klen,   /**< key length */
+	void*           ctx     /**< callback context */
 );
 
 /**
@@ -177,7 +177,7 @@ struct moo_rbt_pair_t
 {
 	struct
 	{
-		void*       ptr;
+		void*     ptr;
 		moo_oow_t len;
 	} key;
 
@@ -290,13 +290,13 @@ MOO_EXPORT const moo_rbt_style_t* moo_getrbtstyle (
 
 /**
  * The moo_rbt_open() function creates a red-black tree.
- * @return moo_rbt_t pointer on success, MOO_NULL on failure.
+ * \return moo_rbt_t pointer on success, MOO_NULL on failure.
  */
 MOO_EXPORT moo_rbt_t* moo_rbt_open (
 	moo_t*      moo,
 	moo_oow_t   xtnsize, /**< extension size in bytes */
-	int          kscale,  /**< key scale */
-	int          vscale   /**< value scale */
+	int         kscale,  /**< key scale */
+	int         vscale   /**< value scale */
 );
 
 /**
@@ -312,8 +312,8 @@ MOO_EXPORT void moo_rbt_close (
 MOO_EXPORT int moo_rbt_init (
 	moo_rbt_t*  rbt,    /**< red-black tree */
 	moo_t*      moo,
-	int          kscale, /**< key scale */
-	int          vscale  /**< value scale */
+	int         kscale, /**< key scale */
+	int         vscale  /**< value scale */
 );
 
 /**
@@ -357,13 +357,13 @@ MOO_EXPORT moo_oow_t moo_rbt_getsize (
  * The moo_rbt_search() function searches red-black tree to find a pair with a 
  * matching key. It returns the pointer to the pair found. If it fails
  * to find one, it returns MOO_NULL.
- * @return pointer to the pair with a maching key, 
+ * \return pointer to the pair with a maching key, 
  *         or MOO_NULL if no match is found.
  */
 MOO_EXPORT moo_rbt_pair_t* moo_rbt_search (
 	const moo_rbt_t* rbt,   /**< red-black tree */
-	const void*       kptr,  /**< key pointer */
-	moo_oow_t       klen   /**< the size of the key */
+	const void*      kptr,  /**< key pointer */
+	moo_oow_t        klen   /**< the size of the key */
 );
 
 /**
@@ -371,56 +371,56 @@ MOO_EXPORT moo_rbt_pair_t* moo_rbt_search (
  * matching key. If one is found, it updates the pair. Otherwise, it inserts
  * a new pair with the key and the value given. It returns the pointer to the 
  * pair updated or inserted.
- * @return a pointer to the updated or inserted pair on success, 
+ * \return a pointer to the updated or inserted pair on success, 
  *         MOO_NULL on failure. 
  */
 MOO_EXPORT moo_rbt_pair_t* moo_rbt_upsert (
 	moo_rbt_t* rbt,   /**< red-black tree */
-	void*       kptr,  /**< key pointer */
-	moo_oow_t klen,  /**< key length */
-	void*       vptr,  /**< value pointer */
-	moo_oow_t vlen   /**< value length */
+	void*      kptr,  /**< key pointer */
+	moo_oow_t  klen,  /**< key length */
+	void*      vptr,  /**< value pointer */
+	moo_oow_t  vlen   /**< value length */
 );
 
 /**
  * The moo_rbt_ensert() function inserts a new pair with the key and the value
  * given. If there exists a pair with the key given, the function returns 
  * the pair containing the key.
- * @return pointer to a pair on success, MOO_NULL on failure. 
+ * \return pointer to a pair on success, MOO_NULL on failure. 
  */
 MOO_EXPORT moo_rbt_pair_t* moo_rbt_ensert (
 	moo_rbt_t* rbt,   /**< red-black tree */
-	void*       kptr,  /**< key pointer */
-	moo_oow_t klen,  /**< key length */
-	void*       vptr,  /**< value pointer */
-	moo_oow_t vlen   /**< value length */
+	void*      kptr,  /**< key pointer */
+	moo_oow_t  klen,  /**< key length */
+	void*      vptr,  /**< value pointer */
+	moo_oow_t  vlen   /**< value length */
 );
 
 /**
  * The moo_rbt_insert() function inserts a new pair with the key and the value
  * given. If there exists a pair with the key given, the function returns 
  * MOO_NULL without channging the value.
- * @return pointer to the pair created on success, MOO_NULL on failure. 
+ * \return pointer to the pair created on success, MOO_NULL on failure. 
  */
 MOO_EXPORT moo_rbt_pair_t* moo_rbt_insert (
 	moo_rbt_t* rbt,   /**< red-black tree */
-	void*       kptr,  /**< key pointer */
-	moo_oow_t klen,  /**< key length */
-	void*       vptr,  /**< value pointer */
-	moo_oow_t vlen   /**< value length */
+	void*      kptr,  /**< key pointer */
+	moo_oow_t  klen,  /**< key length */
+	void*      vptr,  /**< value pointer */
+	moo_oow_t  vlen   /**< value length */
 );
 
 /**
  * The moo_rbt_update() function updates the value of an existing pair
  * with a matching key.
- * @return pointer to the pair on success, MOO_NULL on no matching pair
+ * \return pointer to the pair on success, MOO_NULL on no matching pair
  */
 MOO_EXPORT moo_rbt_pair_t* moo_rbt_update (
 	moo_rbt_t* rbt,   /**< red-black tree */
 	void*      kptr,  /**< key pointer */
-	moo_oow_t klen,  /**< key length */
+	moo_oow_t  klen,  /**< key length */
 	void*      vptr,  /**< value pointer */
-	moo_oow_t vlen   /**< value length */
+	moo_oow_t  vlen   /**< value length */
 );
 
 /**
@@ -431,7 +431,7 @@ MOO_EXPORT moo_rbt_pair_t* moo_rbt_update (
  * a new pair if the key is not found and appends the new value to the
  * existing value delimited by a comma if the key is found.
  *
- * @code
+ * \code
  * moo_rbt_walk_t print_map_pair (moo_rbt_t* map, moo_rbt_pair_t* pair, void* ctx)
  * {
  *   moo_printf (MOO_T("%.*s[%d] => %.*s[%d]\n"),
@@ -508,24 +508,24 @@ MOO_EXPORT moo_rbt_pair_t* moo_rbt_update (
  *   moo_rbt_close (s1);
  *   return 0;
  * }
- * @endcode
+ * \endcode
  */
 MOO_EXPORT moo_rbt_pair_t* moo_rbt_cbsert (
 	moo_rbt_t*         rbt,      /**< red-black tree */
-	void*               kptr,     /**< key pointer */
+	void*              kptr,     /**< key pointer */
 	moo_oow_t          klen,     /**< key length */
 	moo_rbt_cbserter_t cbserter, /**< callback function */
-	void*               ctx       /**< callback context */
+	void*              ctx       /**< callback context */
 );
 
 /**
  * The moo_rbt_delete() function deletes a pair with a matching key 
- * @return 0 on success, -1 on failure
+ * \return 0 on success, -1 on failure
  */
 MOO_EXPORT int moo_rbt_delete (
-	moo_rbt_t* rbt,   /**< red-black tree */
-	const void* kptr, /**< key pointer */
-	moo_oow_t  klen   /**< key size */
+	moo_rbt_t*  rbt,   /**< red-black tree */
+	const void* kptr,  /**< key pointer */
+	moo_oow_t   klen   /**< key size */
 );
 
 /**
@@ -542,7 +542,7 @@ MOO_EXPORT void moo_rbt_clear (
 MOO_EXPORT void moo_rbt_walk (
 	moo_rbt_t*       rbt,    /**< red-black tree */
 	moo_rbt_walker_t walker, /**< callback function for each pair */
-	void*             ctx     /**< pointer to user-specific data */
+	void*            ctx     /**< pointer to user-specific data */
 );
 
 /**
@@ -552,32 +552,32 @@ MOO_EXPORT void moo_rbt_walk (
 MOO_EXPORT void moo_rbt_rwalk (
 	moo_rbt_t*       rbt,    /**< red-black tree */
 	moo_rbt_walker_t walker, /**< callback function for each pair */
-	void*             ctx     /**< pointer to user-specific data */
+	void*            ctx     /**< pointer to user-specific data */
 );
 
 /**
  * The moo_rbt_allocpair() function allocates a pair for a key and a value 
- * given. But it does not chain the pair allocated into the red-black tree @a rbt.
+ * given. But it does not chain the pair allocated into the red-black tree \a rbt.
  * Use this function at your own risk. 
  *
  * Take note of he following special behavior when the copier is 
  * #MOO_RBT_COPIER_INLINE.
- * - If @a kptr is #MOO_NULL, the key space of the size @a klen is reserved but
+ * - If \a kptr is #MOO_NULL, the key space of the size \a klen is reserved but
  *   not propagated with any data.
- * - If @a vptr is #MOO_NULL, the value space of the size @a vlen is reserved
+ * - If \a vptr is #MOO_NULL, the value space of the size \a vlen is reserved
  *   but not propagated with any data.
  */
 MOO_EXPORT moo_rbt_pair_t* moo_rbt_allocpair (
-	moo_rbt_t* rbt,
+	moo_rbt_t*  rbt,
 	void*       kptr, 
-	moo_oow_t klen,
+	moo_oow_t   klen,
 	void*       vptr,
-	moo_oow_t vlen
+	moo_oow_t   vlen
 );
 
 /**
  * The moo_rbt_freepair() function destroys a pair. But it does not detach
- * the pair destroyed from the red-black tree @a rbt. Use this function at your
+ * the pair destroyed from the red-black tree \a rbt. Use this function at your
  * own risk.
  */
 MOO_EXPORT void moo_rbt_freepair (
@@ -590,10 +590,10 @@ MOO_EXPORT void moo_rbt_freepair (
  */
 MOO_EXPORT int moo_rbt_dflcomp (
 	const moo_rbt_t* rbt,
-	const void*       kptr1,
-	moo_oow_t       klen1,
-	const void*       kptr2,
-	moo_oow_t       klen2
+	const void*      kptr1,
+	moo_oow_t        klen1,
+	const void*      kptr2,
+	moo_oow_t        klen2 
 );
 
 #if defined(__cplusplus)
