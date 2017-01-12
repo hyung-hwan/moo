@@ -122,6 +122,7 @@ reterr:
 	MOO_STACK_SETRETTOERROR (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
+
 /*
 struct bcstr_node_t
 {
@@ -141,6 +142,7 @@ static void free_bcstr_node (moo_t* moo, bcstr_node_t* bcstr)
 	moo_freemem (moo, bcstr);
 }
 */
+
 static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 {
 #if defined(USE_DYNCALL)

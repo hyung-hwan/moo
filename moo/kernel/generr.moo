@@ -13,7 +13,6 @@ class MyObject(Object)
 			'not implemented'
 			'subsystem error'
 			'internal error that should never have happened'
-
 			'insufficient system memory'
 			'insufficient object memory'
 
@@ -39,6 +38,7 @@ class MyObject(Object)
 			'divide by zero'
 			'I/O error'
 			'encoding conversion error'
+			'buffer full'
 		).
 		
 		synerrmsgs := #(

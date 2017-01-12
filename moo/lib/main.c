@@ -165,13 +165,8 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 		moo_oow_t bcslen = MOO_COUNTOF(bcs);
 		moo_oow_t ucslen;
 
-		if (moo_convootobcstr (moo, arg->name, &ucslen, bcs, &bcslen) <= -1)
-		{ 
-			moo_seterrnum (moo, MOO_EECERR);
-			return -1;
-		}
+		if (moo_convootobcstr (moo, arg->name, &ucslen, bcs, &bcslen) <= -1) return -1;
 
-		
 /* TODO: make bcs relative to the includer */
 #if defined(__DOS__) || defined(_WIN32) || defined(__OS2__)
 		fp = fopen (bcs, "rb");
@@ -230,7 +225,6 @@ static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 	moo_oow_t bcslen, ucslen, remlen;
 	int x;
 
-
 	bb = (bb_t*)arg->handle;
 	MOO_ASSERT (moo, bb != MOO_NULL && bb->fp != MOO_NULL);
 	do
@@ -253,12 +247,9 @@ static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 	bcslen = bb->len;
 	ucslen = MOO_COUNTOF(arg->buf);
 	x = moo_convbtooochars (moo, bb->buf, &bcslen, arg->buf, &ucslen);
-	x = moo_convbtooochars (moo, bb->buf, &bcslen, arg->buf, &ucslen);
-	if (x <= -1 && ucslen <= 0)
-	{
-		moo_seterrnum (moo, MOO_EECERR);
-		return -1;
-	}
+	if (x <= -1 && ucslen <= 0) return -1;
+	/* if ucslen is greater than 0, i see that some characters have been
+	 * converted properly */
 
 	remlen = bb->len - bcslen;
 	if (remlen > 0) memmove (bb->buf, &bb->buf[bcslen], remlen);
@@ -681,7 +672,7 @@ int main (int argc, char* argv[])
 
 	if (moo_ignite(moo) <= -1)
 	{
-		printf ("cannot ignite moo - %d\n", moo_geterrnum(moo));
+		moo_logbfmt (moo, MOO_LOG_ERROR, "cannot ignite moo - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
 		moo_close (moo);
 		return -1;
 	}
@@ -724,7 +715,6 @@ int main (int argc, char* argv[])
 					printf ("%s ", xtn->source_path);
 				}
 
-
 				printf ("syntax error at line %lu column %lu - ", 
 					(unsigned long int)synerr.loc.line, (unsigned long int)synerr.loc.colm);
 
@@ -749,7 +739,7 @@ int main (int argc, char* argv[])
 			}
 			else
 			{
-				printf ("ERROR: cannot compile code - %d\n", moo_geterrnum(moo));
+				moo_logbfmt (moo, MOO_LOG_ERROR, "ERROR: cannot compile code - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
 			}
 			moo_close (moo);
 #if defined(USE_LTDL)
@@ -770,7 +760,7 @@ int main (int argc, char* argv[])
 	mthname.len = 4;
 	if (moo_invoke (moo, &objname, &mthname) <= -1)
 	{
-		printf ("ERROR: cannot execute code - %d\n", moo_geterrnum(moo));
+		moo_logbfmt (moo, MOO_LOG_ERROR, "ERROR: cannot execute code - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
 		xret = -1;
 	}
 

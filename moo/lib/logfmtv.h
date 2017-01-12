@@ -434,12 +434,7 @@ reswitch:
 			/* get the length */
 			for (bslen = 0; bsp[bslen]; bslen++);
 
-			if (moo_convbtooochars (moo, bsp, &bslen, MOO_NULL, &slen) <= -1)
-			{ 
-				/* conversion error */
-				moo->errnum = MOO_EECERR;
-				goto oops;
-			}
+			if (moo_convbtooochars (moo, bsp, &bslen, MOO_NULL, &slen) <= -1) goto oops;
 
 			/* slen holds the length after conversion */
 			n = slen;
@@ -508,12 +503,7 @@ reswitch:
 			/* get the length */
 			for (uslen = 0; usp[uslen]; uslen++);
 
-			if (moo_convutooochars (moo, usp, &uslen, MOO_NULL, &slen) <= -1)
-			{ 
-				/* conversion error */
-				moo->errnum = MOO_EECERR;
-				goto oops;
-			}
+			if (moo_convutooochars (moo, usp, &uslen, MOO_NULL, &slen) <= -1) goto oops;
 
 			/* slen holds the length after conversion */
 			n = slen;

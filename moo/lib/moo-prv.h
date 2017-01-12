@@ -364,7 +364,7 @@ struct moo_compiler_t
 
 	/* unget buffer */
 	moo_iolxc_t  ungot[10];
-	int           nungots;
+	int          nungots;
 
 	/* static input data buffer */
 	moo_ioarg_t  arg;    

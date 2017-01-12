@@ -75,6 +75,7 @@ enum moo_errnum_t
 	MOO_EDIVBY0,  /**< divide by zero */
 	MOO_EIOERR,   /**< I/O error */
 	MOO_EECERR,   /**< encoding conversion error */
+	MOO_EBUFFULL, /**< buffer full */
 
 #if defined(MOO_INCLUDE_COMPILER)
 	MOO_ESYNTAX  /** < syntax error */
@@ -1214,7 +1215,7 @@ MOO_EXPORT const moo_ooch_t* moo_geterrstr (
 MOO_EXPORT int moo_getoption (
 	moo_t*        moo,
 	moo_option_t  id,
-	void*          value
+	void*         value
 );
 
 /**
@@ -1351,13 +1352,13 @@ MOO_EXPORT void* moo_callocmem (
 );
 
 MOO_EXPORT void* moo_reallocmem (
-	moo_t*     moo,
+	moo_t*      moo,
 	void*       ptr,
-	moo_oow_t  size
+	moo_oow_t   size
 );
 
 MOO_EXPORT void moo_freemem (
-	moo_t* moo,
+	moo_t*  moo,
 	void*   ptr
 );
 
@@ -1371,7 +1372,7 @@ MOO_EXPORT int moo_genpfmethod (
 	moo_oop_t         _class,
 	moo_method_type_t type,
 	const moo_ooch_t* mthname,
-	int                variadic,
+	int               variadic,
 	const moo_ooch_t* name
 );
 
@@ -1482,7 +1483,12 @@ MOO_EXPORT const moo_ooch_t* moo_errnumtoerrstr (
 	moo_errnum_t errnum
 );
 
+
 #if defined(MOO_INCLUDE_COMPILER)
+
+/* =========================================================================
+ * COMPILER FUNCTIONS
+ * ========================================================================= */
 
 MOO_EXPORT int moo_compile (
 	moo_t*       moo,

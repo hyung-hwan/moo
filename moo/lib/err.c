@@ -58,12 +58,13 @@ static moo_ooch_t errstr_24[] = {'s','e','m','a','p','h','o','r','e',' ','l','i'
 static moo_ooch_t errstr_25[] = {'d','i','v','i','d','e',' ','b','y',' ','z','e','r','o','\0'};
 static moo_ooch_t errstr_26[] = {'I','/','O',' ','e','r','r','o','r','\0'};
 static moo_ooch_t errstr_27[] = {'e','n','c','o','d','i','n','g',' ','c','o','n','v','e','r','s','i','o','n',' ','e','r','r','o','r','\0'};
+static moo_ooch_t errstr_28[] = {'b','u','f','f','e','r',' ','f','u','l','l','\0'};
 static moo_ooch_t* errstr[] =
 {
 	errstr_0, errstr_1, errstr_2, errstr_3, errstr_4, errstr_5, errstr_6, errstr_7,
 	errstr_8, errstr_9, errstr_10, errstr_11, errstr_12, errstr_13, errstr_14, errstr_15,
 	errstr_16, errstr_17, errstr_18, errstr_19, errstr_20, errstr_21, errstr_22, errstr_23,
-	errstr_24, errstr_25, errstr_26, errstr_27 
+	errstr_24, errstr_25, errstr_26, errstr_27, errstr_28
 };
 
 #if defined(MOO_INCLUDE_COMPILER)

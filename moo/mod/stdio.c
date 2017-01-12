@@ -159,11 +159,7 @@ static moo_pfrc_t __pf_puts (moo_t* moo, moo_ooi_t nargs, moo_oow_t limit)
 /* TODO: implement character conversion into stdio and use it instead of vm's conversion facility. */
 				if ((n = moo_convootobchars (moo, &x->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
 				{
-					if (n != -2 || ucslen <= 0) 
-					{
-						moo_seterrnum (moo, MOO_EECERR);
-						goto reterr;
-					}
+					if (n != -2 || ucslen <= 0) goto reterr;
 				}
 
 				if (fwrite (bcs, 1, bcslen, rcv->fp) < bcslen)

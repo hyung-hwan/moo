@@ -181,11 +181,7 @@ static moo_pfrc_t pf_write (moo_t* moo, moo_ooi_t nargs)
 		bcslen = MOO_COUNTOF(bcs);
 		if ((n = moo_convootobchars (moo, &oomsg->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
 		{
-			if (n != -2 || ucslen <= 0) 
-			{
-				moo_seterrnum (moo, MOO_EECERR);
-				return MOO_PF_HARD_FAILURE;
-			}
+			if (n != -2 || ucslen <= 0) return MOO_PF_HARD_FAILURE;
 		}
 
 		write (con->fd, bcs, bcslen); /* TODO: error handling */

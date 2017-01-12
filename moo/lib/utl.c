@@ -625,23 +625,87 @@ int moo_convutoutf8cstr (const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t* bcs
 int moo_convbtouchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
 {
 	/* length bound */
-	return bcsn_to_ucsn_with_cmgr (bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
+	int n;
+
+	n = bcsn_to_ucsn_with_cmgr (bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
+
+	/* -1: illegal character, -2, buffer too small, -3: incomplete sequence */
+	moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+
+	return n;
 }
 
 int moo_convutobchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t* bcs, moo_oow_t* bcslen)
 {
 	/* length bound */
-	return ucsn_to_bcsn_with_cmgr (ucs, ucslen, bcs, bcslen, moo->cmgr);
+	int n;
+
+	n = ucsn_to_bcsn_with_cmgr (ucs, ucslen, bcs, bcslen, moo->cmgr);
+	moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+
+	return n;
 }
 
 int moo_convbtoucstr (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
 {
 	/* null-terminated. */
-	return bcs_to_ucs_with_cmgr (bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
+	int n;
+
+	n = bcs_to_ucs_with_cmgr (bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
+	moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+
+	return n;
 }
 
 int moo_convutobcstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t* bcs, moo_oow_t* bcslen)
 {
 	/* null-terminated */
-	return ucs_to_bcs_with_cmgr (ucs, ucslen, bcs, bcslen, moo->cmgr);
+	int n;
+
+	n = ucs_to_bcs_with_cmgr (ucs, ucslen, bcs, bcslen, moo->cmgr);
+	moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+
+	return n;
+}
+
+/* ----------------------------------------------------------------------- */
+
+moo_uch_t* moo_dupbtouchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t bcslen, moo_oow_t* ucslen)
+{
+	moo_oow_t inlen, reqlen;
+	moo_uch_t* ptr;
+
+	inlen = bcslen;
+	if (moo_convbtouchars (moo, bcs, &inlen, MOO_NULL, &reqlen) <= -1) 
+	{
+		/* note it's also an error if no full conversion is possible in this function */
+		return MOO_NULL;
+	}
+
+	ptr = moo_allocmem (moo, reqlen * MOO_SIZEOF(moo_uch_t));
+	if (!ptr) return MOO_NULL;
+
+	inlen = bcslen;
+	moo_convbtouchars (moo, bcs, &inlen, ptr, ucslen);
+	return ptr;
+}
+
+moo_bch_t* moo_duputobchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t ucslen, moo_oow_t* bcslen)
+{
+	moo_oow_t inlen, reqlen;
+	moo_bch_t* ptr;
+
+	inlen = ucslen;
+	if (moo_convutobchars (moo, ucs, &inlen, MOO_NULL, &reqlen) <= -1) 
+	{
+		/* note it's also an error if no full conversion is possible in this function */
+		return MOO_NULL;
+	}
+
+	ptr = moo_allocmem (moo, reqlen * MOO_SIZEOF(moo_bch_t));
+	if (!ptr) return MOO_NULL;
+
+	inlen = ucslen;
+	moo_convutobchars (moo, ucs, &inlen, ptr, bcslen);
+	return ptr;
 }
