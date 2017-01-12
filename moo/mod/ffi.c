@@ -243,11 +243,12 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 /* TOOD: check if arg is a string. */
 /* TODO: free all duplicated strings after call */
 			#if defined(MOO_OOCH_IS_UCH)
-				ptr = moo_dupootobchars (moo, ((moo_oop_char_t)arg)->slot, MOO_OBJ_GET_SIZE(arg), MOO_NULL);
-				if (!ptr) goto softfail; /* out of system memory or conversion error - soft failure */
+				ptr = moo_dupootobchars (moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg), MOO_NULL);
 			#else
-				ptr = moo_dupoochars (moo, ((moo_oop_char_t)arg)->slot, MOO_OBJ_GET_SIZE(arg));
+				ptr = MOO_OBJ_GET_CHAR_SLOT(arg);
+				/*ptr = moo_dupoochars (moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg));*/
 			#endif
+				if (!ptr) goto softfail; /* out of system memory or conversion error - soft failure */
 
 				dcArgPointer (dc, ptr);
 				j++;
@@ -259,11 +260,12 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 				moo_uch_t* ptr;
 
 			#if defined(MOO_OOCH_IS_UCH)
-				ptr = moo_dupoochars (moo, ((moo_oop_char_t)arg)->slot, MOO_OBJ_GET_SIZE(arg));
+				ptr = MOO_OBJ_GET_CHAR_SLOT(arg);
+				/*ptr = moo_dupoochars (moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg));*/
 			#else
-				ptr = moo_dupootouchars (moo, ((moo_oop_char_t)arg)->slot, MOO_OBJ_GET_SIZE(arg), MOO_NULL);
-				if (!ptr) goto softfail; /* out of system memory or conversion error - soft failure */
+				ptr = moo_dupootouchars (moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg), MOO_NULL);
 			#endif
+				if (!ptr) goto softfail; /* out of system memory or conversion error - soft failure */
 
 				dcArgPointer (dc, ptr);
 				j++;

@@ -69,12 +69,12 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 #if defined(MOO_OOCH_IS_UCH)
 	ucslen = MOO_OBJ_GET_SIZE(name);
 	bcslen = MOO_COUNTOF(namebuf) - 1;
-	if (moo_convootobchars (moo, name->slot, &ucslen, namebuf, &bcslen) <= -1) goto reterr;
+	if (moo_convootobchars (moo, name->slot, &ucslen, namebuf, &bcslen) <= -1) goto softfail;
 	namebuf[bcslen] = '\0';
 
 	ucslen = MOO_OBJ_GET_SIZE(mode);
 	bcslen = MOO_COUNTOF(modebuf) - 1;
-	if (moo_convootobchars (moo, mode->slot, &ucslen, modebuf, &bcslen) <= -1) goto reterr;
+	if (moo_convootobchars (moo, mode->slot, &ucslen, modebuf, &bcslen) <= -1) goto softfail;
 	modebuf[bcslen] = '\0';
 
 	rcv->fp = fopen (namebuf, modebuf);
@@ -84,13 +84,13 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 	if (!rcv->fp) 
 	{
 		moo_seterrnum (moo, moo_syserrtoerrnum(errno));
-		goto reterr;
+		goto softfail;
 	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 
-reterr:
+softfail:
 	MOO_STACK_SETRETTOERROR (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
@@ -159,13 +159,13 @@ static moo_pfrc_t __pf_puts (moo_t* moo, moo_ooi_t nargs, moo_oow_t limit)
 /* TODO: implement character conversion into stdio and use it instead of vm's conversion facility. */
 				if ((n = moo_convootobchars (moo, &x->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
 				{
-					if (n != -2 || ucslen <= 0) goto reterr;
+					if (n != -2 || ucslen <= 0) goto softfail;
 				}
 
 				if (fwrite (bcs, 1, bcslen, rcv->fp) < bcslen)
 				{
 					moo_seterrnum (moo, moo_syserrtoerrnum(errno));
-					goto reterr;
+					goto softfail;
 				}
 
 		/* TODO: abort looping for async processing???? */
@@ -176,14 +176,14 @@ static moo_pfrc_t __pf_puts (moo_t* moo, moo_ooi_t nargs, moo_oow_t limit)
 		else
 		{
 			moo_seterrnum (moo, MOO_EINVAL);
-			goto reterr;
+			goto softfail;
 		}
 	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 
-reterr:
+softfail:
 	MOO_STACK_SETRETTOERROR (moo, nargs);
 	return MOO_PF_SUCCESS;
 }

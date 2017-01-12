@@ -413,12 +413,19 @@ struct moo_obj_word_t
 	moo_oow_t slot[1];
 };
 
+#define MOO_OBJ_GET_OOP_SLOT(oop)      (((moo_oop_oop_t)(oop))->slot)
+#define MOO_OBJ_GET_CHAR_SLOT(oop)     (((moo_oop_char_t)(oop))->slot)
+#define MOO_OBJ_GET_BYTE_SLOT(oop)     (((moo_oop_byte_t)(oop))->slot)
+#define MOO_OBJ_GET_HALFWORD_SLOT(oop) (((moo_oop_halfword_t)(oop))->slot)
+#define MOO_OBJ_GET_WORD_SLOT(oop)     (((moo_oop_word_t)(oop))->slot)
+
 typedef struct moo_trailer_t moo_trailer_t;
 struct moo_trailer_t
 {
 	moo_oow_t size;
 	moo_oob_t slot[1];
 };
+
 
 #define MOO_SET_NAMED_INSTVARS 2
 typedef struct moo_set_t moo_set_t;
