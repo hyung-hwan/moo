@@ -672,40 +672,117 @@ int moo_convutobcstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_b
 
 moo_uch_t* moo_dupbtouchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t bcslen, moo_oow_t* ucslen)
 {
-	moo_oow_t inlen, reqlen;
+	moo_oow_t inlen, outlen;
 	moo_uch_t* ptr;
 
 	inlen = bcslen;
-	if (moo_convbtouchars (moo, bcs, &inlen, MOO_NULL, &reqlen) <= -1) 
+	if (moo_convbtouchars (moo, bcs, &inlen, MOO_NULL, &outlen) <= -1) 
 	{
-		/* note it's also an error if no full conversion is possible in this function */
+		/* note it's also an error if no full conversion is made in this function */
 		return MOO_NULL;
 	}
 
-	ptr = moo_allocmem (moo, reqlen * MOO_SIZEOF(moo_uch_t));
+	ptr = moo_allocmem (moo, (outlen + 1) * MOO_SIZEOF(moo_uch_t));
 	if (!ptr) return MOO_NULL;
 
 	inlen = bcslen;
-	moo_convbtouchars (moo, bcs, &inlen, ptr, ucslen);
+	moo_convbtouchars (moo, bcs, &inlen, ptr, &outlen);
+
+	/* moo_convbtouchars() doesn't null-terminate the target. 
+	 * but in moo_dupbtouchars(), i allocate space. so i don't mind
+	 * null-terminating it with 1 extra character overhead */
+	ptr[outlen] = '\0'; 
+	if (ucslen) *ucslen = outlen;
 	return ptr;
 }
 
 moo_bch_t* moo_duputobchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t ucslen, moo_oow_t* bcslen)
 {
-	moo_oow_t inlen, reqlen;
+	moo_oow_t inlen, outlen;
 	moo_bch_t* ptr;
 
 	inlen = ucslen;
-	if (moo_convutobchars (moo, ucs, &inlen, MOO_NULL, &reqlen) <= -1) 
+	if (moo_convutobchars (moo, ucs, &inlen, MOO_NULL, &outlen) <= -1) 
 	{
-		/* note it's also an error if no full conversion is possible in this function */
+		/* note it's also an error if no full conversion is made in this function */
 		return MOO_NULL;
 	}
 
-	ptr = moo_allocmem (moo, reqlen * MOO_SIZEOF(moo_bch_t));
+	ptr = moo_allocmem (moo, (outlen + 1) * MOO_SIZEOF(moo_bch_t));
 	if (!ptr) return MOO_NULL;
 
 	inlen = ucslen;
-	moo_convutobchars (moo, ucs, &inlen, ptr, bcslen);
+	moo_convutobchars (moo, ucs, &inlen, ptr, &outlen);
+
+	ptr[outlen] = '\0';
+	if (bcslen) *bcslen = outlen;
 	return ptr;
 }
+
+moo_uch_t* moo_dupbtoucstr (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* ucslen)
+{
+	moo_oow_t inlen, outlen;
+	moo_uch_t* ptr;
+
+	if (moo_convbtoucstr (moo, bcs, &inlen, MOO_NULL, &outlen) <= -1) 
+	{
+		/* note it's also an error if no full conversion is made in this function */
+		return MOO_NULL;
+	}
+
+	outlen++;
+	ptr = moo_allocmem (moo, outlen * MOO_SIZEOF(moo_uch_t));
+	if (!ptr) return MOO_NULL;
+
+	moo_convbtoucstr (moo, bcs, &inlen, ptr, &outlen);
+	if (ucslen) *ucslen = outlen;
+	return ptr;
+}
+
+moo_bch_t* moo_duputobcstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* bcslen)
+{
+	moo_oow_t inlen, outlen;
+	moo_bch_t* ptr;
+
+	if (moo_convutobcstr (moo, ucs, &inlen, MOO_NULL, &outlen) <= -1) 
+	{
+		/* note it's also an error if no full conversion is made in this function */
+		return MOO_NULL;
+	}
+
+	outlen++;
+	ptr = moo_allocmem (moo, outlen * MOO_SIZEOF(moo_bch_t));
+	if (!ptr) return MOO_NULL;
+
+	moo_convutobcstr (moo, ucs, &inlen, ptr, &outlen);
+	if (bcslen) *bcslen = outlen;
+	return ptr;
+}
+
+
+/* ----------------------------------------------------------------------- */
+
+moo_uch_t* moo_dupuchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t ucslen)
+{
+	moo_uch_t* ptr;
+
+	ptr = moo_allocmem (moo, (ucslen + 1) * MOO_SIZEOF(moo_uch_t));
+	if (!ptr) return MOO_NULL;
+
+	moo_copyuchars (ptr, ucs, ucslen);
+	ptr[ucslen] = '\0';
+	return ptr;
+}
+
+moo_bch_t* moo_dupbchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t bcslen)
+{
+	moo_bch_t* ptr;
+
+	ptr = moo_allocmem (moo, (bcslen + 1) * MOO_SIZEOF(moo_bch_t));
+	if (!ptr) return MOO_NULL;
+
+	moo_copybchars (ptr, bcs, bcslen);
+	ptr[bcslen] = '\0';
+	return ptr;
+}
+

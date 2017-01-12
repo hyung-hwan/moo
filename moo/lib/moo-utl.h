@@ -303,7 +303,6 @@ MOO_EXPORT int moo_convutf8toucstr (
 );
 
 
-
 MOO_EXPORT moo_oow_t moo_uctoutf8 (
 	moo_uch_t    uc,
 	moo_bch_t*   utf8,

@@ -1434,6 +1434,66 @@ int moo_convutobcstr (
 	moo_oow_t*       bcslen
 );
 
+
+#if defined(MOO_OOCH_IS_UCH)
+#	define moo_dupootobchars(moo,oocs,oocslen,bcslen) moo_duputobchars(moo,oocs,oocslen,bcslen)
+#	define moo_dupbtooochars(moo,bcs,bcslen,oocslen) moo_dupbtouchars(moo,bcs,bcslen,oocslen)
+#	define moo_dupootobcstr(moo,oocs,bcslen) moo_duputobcstr(moo,oocs,bcslen)
+#	define moo_dupbtooocstr(moo,bcs,oocslen) moo_dupbtoucstr(moo,bcs,oocslen)
+#else
+#	define moo_dupootouchars(moo,oocs,oocslen,ucslen) moo_dupbtouchars(moo,oocs,oocslen,ucslen)
+#	define moo_duputooochars(moo,ucs,ucslen,oocslen) moo_duputobchars(moo,ucs,ucslen,oocslen)
+#	define moo_dupootoucstr(moo,oocs,ucslen) moo_dupbtoucstr(moo,oocs,ucslen)
+#	define moo_duputooocstr(moo,ucs,oocslen) moo_duputobcstr(moo,ucs,oocslen)
+#endif
+
+
+MOO_EXPORT moo_uch_t* moo_dupbtouchars (
+	moo_t*           moo,
+	const moo_bch_t* bcs,
+	moo_oow_t        bcslen,
+	moo_oow_t*       ucslen
+);
+
+MOO_EXPORT moo_bch_t* moo_duputobchars (
+	moo_t*           moo,
+	const moo_uch_t* ucs,
+	moo_oow_t        ucslen,
+	moo_oow_t*       bcslen
+);
+
+MOO_EXPORT moo_uch_t* moo_dupbtoucstr (
+	moo_t*           moo,
+	const moo_bch_t* bcs,
+	moo_oow_t*       ucslen /* optional: length of returned string */
+);
+
+MOO_EXPORT moo_bch_t* moo_duputobcstr (
+	moo_t*           moo,
+	const moo_uch_t* ucs,
+	moo_oow_t*       bcslen /* optional: length of returned string */
+);
+
+
+#if defined(MOO_OOCH_IS_UCH)
+#	define moo_dupoochars(moo,oocs,oocslen) moo_dupuchars(moo,oocs,oocslen)
+#else
+#	define moo_dupoochars(moo,oocs,oocslen) moo_dupbchars(moo,oocs,oocslen)
+#endif
+
+MOO_EXPORT moo_uch_t* moo_dupuchars (
+	moo_t*           moo,
+	const moo_uch_t* ucs,
+	moo_oow_t        ucslen
+);
+
+MOO_EXPORT moo_bch_t* moo_dupbchars (
+	moo_t*           moo,
+	const moo_bch_t* bcs,
+	moo_oow_t        bcslen
+);
+
+
 /* =========================================================================
  * MOO VM LOGGING
  * ========================================================================= */

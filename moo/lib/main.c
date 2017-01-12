@@ -651,6 +651,7 @@ int main (int argc, char* argv[])
 		return -1;
 	}
 
+
 	{
 		moo_oow_t tab_size;
 
