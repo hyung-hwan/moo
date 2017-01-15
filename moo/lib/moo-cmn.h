@@ -561,7 +561,7 @@ typedef struct moo_t moo_t;
 #	define MOO_IMPORT
 #	define MOO_EXPORT
 #	define MOO_PRIVATE
-#elif defined(_WIN32) || (defined(__WATCOMC__) && !defined(__WINDOWS_386__))
+#elif defined(_WIN32) || (defined(__WATCOMC__) && (__WATCOMC__ >= 1000) && !defined(__WINDOWS_386__))
 #	define MOO_IMPORT __declspec(dllimport)
 #	define MOO_EXPORT __declspec(dllexport)
 #	define MOO_PRIVATE 

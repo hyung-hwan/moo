@@ -195,10 +195,16 @@ moo_errnum_t moo_syserrtoerrnum (int e)
 	{
 		case ENOMEM: return MOO_ESYSMEM;
 		case EINVAL: return MOO_EINVAL;
+	#if defined(EBUSY)
 		case EBUSY: return MOO_EBUSY;
+	#endif
 		case EACCES: return MOO_EACCES;
+	#if defined(EPERM)
 		case EPERM: return MOO_EPERM;
+	#endif
+	#if defined(ENOTDIR)
 		case ENOTDIR: return MOO_ENOTDIR;
+	#endif
 		case ENOENT: return MOO_ENOENT;
 	#if defined(EEXIST)
 		case EEXIST: return MOO_EEXIST;

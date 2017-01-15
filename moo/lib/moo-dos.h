@@ -47,7 +47,11 @@
 #	define MOO_SIZEOF___INT8      1
 #	define MOO_SIZEOF___INT16     2
 #	define MOO_SIZEOF___INT32     4
-#	define MOO_SIZEOF___INT64     8
+#	if (__WATCOMC__ < 1000)
+#		define MOO_SIZEOF___INT64     0
+#	else
+#		define MOO_SIZEOF___INT64     8
+#	endif
 #	define MOO_SIZEOF___INT128    0
 
 #	define MOO_SIZEOF_OFF64_T     0

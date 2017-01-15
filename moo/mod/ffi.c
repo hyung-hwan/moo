@@ -38,14 +38,42 @@
 #	include <dyncall.h>
 #endif
 
-typedef void* ptr_t;
+typedef struct link_t link_t;
+struct link_t
+{
+	link_t* next;
+};
 
 typedef struct ffi_t ffi_t;
 struct ffi_t
 {
 	MOO_OBJ_HEADER;
 	void* handle;
+
+#if defined(USE_DYNCALL)
+	DCCallVM* dc;
+#endif
+	link_t* ca; /* call arguments duplicated */
 };
+
+
+static MOO_INLINE void link_ca (ffi_t* ffi, void* ptr)
+{
+	link_t* l = (link_t*)((moo_oob_t*)ptr - MOO_SIZEOF_VOID_P);
+	l->next = ffi->ca;
+	ffi->ca = l;
+}
+
+static void free_linked_cas (moo_t* moo, ffi_t* ffi)
+{
+	while (ffi->ca)
+	{
+		link_t* ptr;
+		ptr = ffi->ca;
+		ffi->ca = ptr->next;
+		moo_freemem (moo, ptr);
+	}
+}
 
 static moo_pfrc_t pf_newinstsize (moo_t* moo, moo_ooi_t nargs)
 {
@@ -58,6 +86,10 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 {
 	ffi_t* rcv;
 	moo_oop_t name;
+	void* handle;
+#if defined(USE_DYNCALL)
+	DCCallVM* dc;
+#endif
 
 	if (nargs != 1)
 	{
@@ -80,8 +112,27 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 		goto softfail;
 	}
 
-	rcv->handle = moo->vmprim.dl_open (moo, ((moo_oop_char_t)name)->slot, 0);
-	if (!rcv->handle) goto softfail;
+	if (rcv->handle)
+	{
+		moo_seterrnum (moo, MOO_EPERM); /* no allowed to open again */
+		goto softfail;
+	}
+
+	handle = moo->vmprim.dl_open (moo, ((moo_oop_char_t)name)->slot, 0);
+	if (!handle) goto softfail;
+
+#if defined(USE_DYNCALL)
+	dc = dcNewCallVM (4096); /* TODO: right size?  */
+	if (!dc) 
+	{
+		moo_seterrnum (moo, moo_syserrtoerrnum(errno));
+		moo->vmprim.dl_close (moo, handle);
+		goto softfail;
+	}
+#endif
+
+	rcv->handle = handle;
+	rcv->dc = dc;
 
 	MOO_DEBUG3 (moo, "<ffi.open> %.*js => %p\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, rcv->handle);
 	MOO_STACK_SETRETTORCV (moo, nargs);
@@ -112,6 +163,13 @@ static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 
 	MOO_DEBUG1 (moo, "<ffi.close> %p\n", rcv->handle);
 
+	free_linked_cas (moo, rcv);
+
+#if defined(USE_DYNCALL)
+	dcFree (rcv->dc);
+	rcv->dc = MOO_NULL;
+#endif
+
 	moo->vmprim.dl_close (moo, rcv->handle);
 	rcv->handle = MOO_NULL;
 
@@ -128,15 +186,14 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 #if defined(USE_DYNCALL)
 	ffi_t* rcv;
 	moo_oop_t fun, sig, args;
-	DCCallVM* dc = MOO_NULL;
 	moo_oow_t i, j;
 	void* f;
 	moo_oop_oop_t arr;
 	int ellipsis = 0;
 
-	if (nargs < 3) goto inval;
-
 	rcv = (ffi_t*)MOO_STACK_GETRCV(moo, nargs);
+
+	if (nargs < 3) goto inval;
 	fun = MOO_STACK_GETARG(moo, nargs, 0);
 	sig = MOO_STACK_GETARG(moo, nargs, 1);
 	args = MOO_STACK_GETARG(moo, nargs, 2);
@@ -151,26 +208,19 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 	f = MOO_OOP_TO_SMPTR(fun); 
 	arr = (moo_oop_oop_t)args;
 
-	dc = dcNewCallVM (4096); /* TODO: right size? */
-	if (!dc) 
-	{
-		moo_seterrnum (moo, moo_syserrtoerrnum(errno));
-		goto softfail;
-	}
-
 	MOO_DEBUG2 (moo, "<ffi.call> %p in %p\n", f, rcv->handle);
 
-	dcMode (dc, DC_CALL_C_DEFAULT);
-	dcReset (dc);
+	dcMode (rcv->dc, DC_CALL_C_DEFAULT);
+	dcReset (rcv->dc);
 
 	i = 0;
 	if (i < MOO_OBJ_GET_SIZE(sig) && ((moo_oop_char_t)sig)->slot[i] == '|') 
 	{
-		dcMode (dc, DC_CALL_C_ELLIPSIS);
+		dcMode (rcv->dc, DC_CALL_C_ELLIPSIS);
 
 		/* the error code should be DC_ERROR_UNSUPPORTED_MODE */
-		if (dcGetError(dc) != DC_ERROR_NONE) goto noimpl;
-		dcReset (dc);
+		if (dcGetError(rcv->dc) != DC_ERROR_NONE) goto noimpl;
+		dcReset (rcv->dc);
 		ellipsis = 1;
 		i++;
 	}
@@ -191,10 +241,10 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 		{
 			if (ellipsis)
 			{
-				dcMode (dc, DC_CALL_C_ELLIPSIS_VARARGS);
+				dcMode (rcv->dc, DC_CALL_C_ELLIPSIS_VARARGS);
 
 				/* the error code should be DC_ERROR_UNSUPPORTED_MODE */
-				if (dcGetError(dc) != DC_ERROR_NONE) goto noimpl;
+				if (dcGetError(rcv->dc) != DC_ERROR_NONE) goto noimpl;
 			}
 			continue;
 		}
@@ -207,31 +257,49 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 		{
 		/* TODO: support more types... */
 			case 'c':
-
 				if (!MOO_OOP_IS_CHAR(arg)) goto inval;
-				dcArgChar (dc, MOO_OOP_TO_CHAR(arr->slot[j]));
+				dcArgChar (rcv->dc, MOO_OOP_TO_CHAR(arr->slot[j]));
 				j++;
 				break;
 
+/* TODO: added unsigned types */
 			case 'i':
-/* TODO: use moo_inttoooi () */
-				if (!MOO_OOP_IS_SMOOI(arg)) goto inval;
-				dcArgInt (dc, MOO_OOP_TO_SMOOI(arg));
+			{
+				moo_ooi_t v;
+				if (moo_inttoooi(moo, arg, &v) == 0) goto inval;
+				dcArgInt (rcv->dc, i);
 				j++;
 				break;
+			}
 
 			case 'l':
-/* TODO: sanity check on the argument type - check if arr->slot[j] is SMOOI or bigint... */
-/* TODO: use moo_inttoooi () */
-				dcArgLong (dc, MOO_OOP_TO_SMOOI(arg));
+			{
+				moo_ooi_t v;
+			arg_as_long:
+				if (moo_inttoooi(moo, arg, &v) == 0) goto inval;
+				dcArgLong (rcv->dc, v);
 				j++;
 				break;
+			}
 
 			case 'L':
-/* TODO: use moo_inttoooi () */
-				dcArgLongLong (dc, MOO_OOP_TO_SMOOI(arg));
+			{
+			#if (MOO_SIZEOF_LONG_LONG > 0)
+			#	if (MOO_SIZEOF_LONG_LONG <= MOO_SIZEOF_OOI_T)
+				moo_ooi_t v;
+				if (moo_inttoooi(moo, arg, &v) == 0) goto inval;
+			#	else
+				/* TODO: moo_intmax_t v;
+				if (moo_inttointmax (moo, arg, &v) == 0) goto inval; */
+			#	error UNSUPPORTED MOO_SIZEOF_LONG_LONG.
+			#	endif
+				dcArgLongLong (rcv->dc, v);
 				j++;
 				break;
+			#else
+				goto arg_as_long;
+			#endif
+			}
 
 #if 0
 			case 'B': /* byte array */
@@ -241,16 +309,18 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 				moo_bch_t* ptr;
 
 /* TOOD: check if arg is a string. */
-/* TODO: free all duplicated strings after call */
+
 			#if defined(MOO_OOCH_IS_UCH)
-				ptr = moo_dupootobchars (moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg), MOO_NULL);
+				ptr = moo_dupootobcharswithheadroom (moo, MOO_SIZEOF_VOID_P, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg), MOO_NULL);
+				if (!ptr) goto softfail; /* out of system memory or conversion error - soft failure */
+				link_ca (rcv, ptr);
 			#else
 				ptr = MOO_OBJ_GET_CHAR_SLOT(arg);
-				/*ptr = moo_dupoochars (moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg));*/
+				/*ptr = moo_dupoochars (moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg));
+				if (!ptr) goto softfail;*/ /* out of system memory or conversion error - soft failure */
 			#endif
-				if (!ptr) goto softfail; /* out of system memory or conversion error - soft failure */
 
-				dcArgPointer (dc, ptr);
+				dcArgPointer (rcv->dc, ptr);
 				j++;
 				break;
 			}
@@ -261,20 +331,22 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 
 			#if defined(MOO_OOCH_IS_UCH)
 				ptr = MOO_OBJ_GET_CHAR_SLOT(arg);
-				/*ptr = moo_dupoochars (moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg));*/
+				/*ptr = moo_dupoochars (moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg));
+				if (!ptr) goto softfail; */ /* out of system memory or conversion error - soft failure */
 			#else
-				ptr = moo_dupootouchars (moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg), MOO_NULL);
-			#endif
+				ptr = moo_dupootoucharswithheadroom (moo, MOO_SIZEOF_VOID_P, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg), MOO_NULL);
 				if (!ptr) goto softfail; /* out of system memory or conversion error - soft failure */
+				link_ca (rcv, ptr);
+			#endif
 
-				dcArgPointer (dc, ptr);
+				dcArgPointer (rcv->dc, ptr);
 				j++;
 				break;
 			}
 
 			default:
-				/* TODO: ERROR HANDLING */
-				break;
+				/* invalid argument signature specifier */
+				goto inval;
 		}
 	}
 
@@ -288,7 +360,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 /* TODO: proper return value conversion */
 		case 'c':
 		{
-			char r = dcCallChar (dc, f);
+			char r = dcCallChar (rcv->dc, f);
 			MOO_STACK_SETRET (moo, nargs, MOO_CHAR_TO_OOP(r));
 			break;
 		}
@@ -297,7 +369,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 		{
 			moo_oop_t r;
 
-			r = moo_ooitoint (moo, dcCallInt (dc, f));
+			r = moo_ooitoint (moo, dcCallInt (rcv->dc, f));
 			if (!r) goto hardfail;
 			MOO_STACK_SETRET (moo, nargs, r);
 			break;
@@ -306,29 +378,30 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 		case 'l':
 		{
 			moo_oop_t r;
-			r = moo_ooitoint (moo, dcCallLong (dc, f));
+		ret_as_long:
+			r = moo_ooitoint (moo, dcCallLong (rcv->dc, f));
 			if (!r) goto hardfail;
 			MOO_STACK_SETRET (moo, nargs, r);
 			break;
 		}
 
-	#if (STIX_SIZEOF_LONG_LONG > 0)
 		case 'L':
 		{
-			long long r = dcCallLongLong (dc, f);
-			mod_oop_t r;
-
-		#if STIX_SIZEOF_LONG_LONG <= STIX_SIZEOF_LONG
-			r = moo_ooitoint (moo, dcCallLongLong (dc, f));
-		#else
-		#	error TODO:...
-		#endif
-			if (!rr) goto hardfail;
-
+		#if (MOO_SIZEOF_LONG_LONG > 0)
+			moo_oop_t r;
+		#	if (MOO_SIZEOF_LONG_LONG <= MOO_SIZEOF_OOI_T)
+			r = moo_ooitoint (moo, dcCallLongLong (rcv->dc, f));
+		#	else
+		#	error UNSUPPORTED MOO_SIZEOF_LONG_LONG
+		#	endif
+			if (!r) goto hardfail;
 			MOO_STACK_SETRET (moo, nargs, r);
 			break;
+		#else
+			goto ret_as_long;
+		#endif
 		}
-	#endif
+	
 
 #if 0
 		case 'B': /* byte array */
@@ -340,20 +413,19 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 		{
 			moo_oop_t s;
 			moo_bch_t* r;
-			moo_ooch_t* ptr;
-			moo_oow_t len;
 
-			r = dcCallPointer (dc, f);
+			r = dcCallPointer (rcv->dc, f);
 
 		#if defined(MOO_OOCH_IS_UCH)
-			ptr = moo_dupbtooocstr (moo, r, &len);
-			if (!ptr) goto softfail; /* out of system memory or conversion error - still soft failure */
-			s = moo_makestring(moo, ptr, len);
-			moo_freemem (moo, ptr); 
+			s = moo_makestringwithbchars (moo, r, moo_countbcstr(r));
 		#else
 			s = moo_makestring(moo, r, moo_countbcstr(r));
 		#endif
-			if (!s) goto hardfail; /* out of object memory - hard failure*/
+			if (!s) 
+			{
+				if (moo->errnum == MOO_EOOMEM) goto hardfail; /* out of object memory - hard failure*/
+				goto softfail;
+			}
 
 			MOO_STACK_SETRET (moo, nargs, s); 
 			break;
@@ -363,20 +435,20 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 		{
 			moo_oop_t s;
 			moo_uch_t* r;
-			moo_ooch_t* ptr;
-			moo_oow_t len;
+			
 
-			r = dcCallPointer (dc, f);
+			r = dcCallPointer (rcv->dc, f);
 
 		#if defined(MOO_OOCH_IS_UCH)
 			s = moo_makestring(moo, r, moo_countucstr(r));
 		#else
-			ptr = moo_dupbtooocstr (moo, r, &len);
-			if (!ptr) goto softfail; /* out of system memory or conversion error - still soft failure */
-			s = moo_makestring(moo, ptr, len);
-			moo_freemem (moo, ptr); 
+			s = moo_makestringwithuchars(moo, r, moo_countucstr(r));
 		#endif
-			if (!s) goto hardfail; /* out of object memory - hard failure*/
+			if (!s) 
+			{
+				if (moo->errnum == MOO_EOOMEM) goto hardfail; /* out of object memory - hard failure*/
+				goto softfail;
+			}
 
 			MOO_STACK_SETRET (moo, nargs, s); 
 			break;
@@ -384,13 +456,12 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 
 		default:
 		call_void:
-			dcCallVoid (dc, f);
+			dcCallVoid (rcv->dc, f);
 			MOO_STACK_SETRETTORCV (moo, nargs);
 			break;
 	}
 
-/* TODO: free all duplicated string arguments... */
-	dcFree (dc);
+	free_linked_cas (moo, rcv);
 	return MOO_PF_SUCCESS;
 
 noimpl:
@@ -402,14 +473,12 @@ inval:
 	goto softfail;
 
 softfail:
-/* TODO: free all duplicated string arguments... */
-	if (dc) dcFree(dc);
+	free_linked_cas (moo, rcv);
 	MOO_STACK_SETRETTOERROR (moo, nargs);
 	return MOO_PF_SUCCESS;
 
 hardfail:
-/* TODO: free all duplicated string arguments... */
-	if (dc) dcFree(dc);
+	free_linked_cas (moo, rcv);
 	return MOO_PF_HARD_FAILURE;
 
 #else
@@ -434,7 +503,7 @@ static moo_pfrc_t pf_getsym (moo_t* moo, moo_ooi_t nargs)
 	rcv = (ffi_t*)MOO_STACK_GETRCV(moo, nargs);
 	name = MOO_STACK_GETARG(moo, nargs, 0);
 
-	if (!MOO_ISTYPEOF(moo,name,MOO_OBJ_TYPE_CHAR)) /* TODO: null check on the symbol name? */
+	if (!MOO_ISTYPEOF(moo,name,MOO_OBJ_TYPE_CHAR)) /* TODO: null check on the symbol name? is '\0' contained in the middle of the name? */
 	{
 		moo_seterrnum (moo, MOO_EINVAL);
 		goto softfail;

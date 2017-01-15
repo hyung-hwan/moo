@@ -1311,21 +1311,45 @@ MOO_EXPORT moo_oop_t moo_makesymbol (
 	moo_oow_t          len
 );
 
-MOO_EXPORT moo_oop_t moo_makestring (
-	moo_t*             moo, 
-	const moo_ooch_t*  ptr, 
-	moo_oow_t          len
+MOO_EXPORT moo_oop_t moo_makestringwithuchars (
+	moo_t*            moo, 
+	const moo_uch_t*  ptr, 
+	moo_oow_t         len
 );
 
+MOO_EXPORT moo_oop_t moo_makestringwithbchars (
+	moo_t*            moo, 
+	const moo_bch_t*  ptr, 
+	moo_oow_t         len
+);
+
+#if defined(MOO_OOCH_IS_UCH)
+#	define moo_makestring(moo,ptr,len) moo_makestringwithuchars(moo,ptr,len)
+#else
+#	define moo_makestring(moo,ptr,len) moo_makestringwithbchars(moo,ptr,len)
+#endif
 
 MOO_EXPORT moo_oop_t moo_oowtoint (
-	moo_t*     moo,
-	moo_oow_t  w
+	moo_t*    moo,
+	moo_oow_t w
 );
 
 MOO_EXPORT moo_oop_t moo_ooitoint (
 	moo_t*    moo,
 	moo_ooi_t i
+);
+
+
+MOO_EXPORT int moo_inttooow (
+	moo_t*     moo,
+	moo_oop_t  x,
+	moo_oow_t* w
+);
+
+MOO_EXPORT int moo_inttoooi (
+	moo_t*     moo,
+	moo_oop_t  x,
+	moo_ooi_t* i
 );
 
 /* =========================================================================
@@ -1443,17 +1467,37 @@ int moo_convutobcstr (
 
 
 #if defined(MOO_OOCH_IS_UCH)
+#	define moo_dupootobcharswithheadroom(moo,hrb,oocs,oocslen,bcslen) moo_duputobcharswithheadroom(moo,hrb,oocs,oocslen,bcslen)
+#	define moo_dupbtooocharswithheadroom(moo,hrb,bcs,bcslen,oocslen) moo_dupbtoucharswithheadroom(moo,hrb,bcs,bcslen,oocslen)
 #	define moo_dupootobchars(moo,oocs,oocslen,bcslen) moo_duputobchars(moo,oocs,oocslen,bcslen)
 #	define moo_dupbtooochars(moo,bcs,bcslen,oocslen) moo_dupbtouchars(moo,bcs,bcslen,oocslen)
 #	define moo_dupootobcstr(moo,oocs,bcslen) moo_duputobcstr(moo,oocs,bcslen)
 #	define moo_dupbtooocstr(moo,bcs,oocslen) moo_dupbtoucstr(moo,bcs,oocslen)
 #else
+#	define moo_dupootoucharswithheadroom(moo,hrb,oocs,oocslen,ucslen) moo_dupbtoucharswithheadroom(moo,hrb,oocs,oocslen,ucslen)
+#	define moo_duputooocharswithheadroom(moo,hrb,ucs,ucslen,oocslen) moo_duputobcharswithheadroom(moo,hrb,ucs,ucslen,oocslen)
 #	define moo_dupootouchars(moo,oocs,oocslen,ucslen) moo_dupbtouchars(moo,oocs,oocslen,ucslen)
 #	define moo_duputooochars(moo,ucs,ucslen,oocslen) moo_duputobchars(moo,ucs,ucslen,oocslen)
 #	define moo_dupootoucstr(moo,oocs,ucslen) moo_dupbtoucstr(moo,oocs,ucslen)
 #	define moo_duputooocstr(moo,ucs,oocslen) moo_duputobcstr(moo,ucs,oocslen)
 #endif
 
+
+MOO_EXPORT moo_uch_t* moo_dupbtoucharswithheadroom (
+	moo_t*           moo,
+	moo_oow_t        headroom_bytes,
+	const moo_bch_t* bcs,
+	moo_oow_t        bcslen,
+	moo_oow_t*       ucslen
+);
+
+MOO_EXPORT moo_bch_t* moo_duputobcharswithheadroom (
+	moo_t*           moo,
+	moo_oow_t        headroom_bytes,
+	const moo_uch_t* ucs,
+	moo_oow_t        ucslen,
+	moo_oow_t*       bcslen
+);
 
 MOO_EXPORT moo_uch_t* moo_dupbtouchars (
 	moo_t*           moo,

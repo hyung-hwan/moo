@@ -1003,12 +1003,6 @@ int moo_isint (
 	moo_oop_t x
 );
 
-int moo_inttooow (
-	moo_t*     moo,
-	moo_oop_t  x,
-	moo_oow_t* w
-);
-
 moo_oop_t moo_addints (
 	moo_t*    moo,
 	moo_oop_t x,

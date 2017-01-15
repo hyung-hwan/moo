@@ -122,7 +122,7 @@
 #	define LOG_INST_3(moo,fmt,a1,a2,a3)
 #endif
 
-#if defined(__DOS__) && defined(_INTELC32_)
+#if defined(__DOS__) && (defined(_INTELC32_) || (defined(__WATCOMC__) && (__WATCOMC__ <= 1000)))
 	/* the old intel c code builder doesn't support __FUNCTION__ */
 #	define __PRIMITIVE_NAME__ "<<primitive>>"
 #else
@@ -145,13 +145,15 @@ static MOO_INLINE void vm_gettime (moo_t* moo, moo_ntime_t* now)
 	/* it must return NO_ERROR */
 
 	MOO_INITNTIME (now, MOO_MSEC_TO_SEC(out), MOO_MSEC_TO_NSEC(out));
-#elif defined(__DOS__) && defined(_INTELC32_)
+#elif defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
 	clock_t c;
 
 /* TODO: handle overflow?? */
 	c = clock ();
 	now->sec = c / CLOCKS_PER_SEC;
-	#if (CLOCKS_PER_SEC == 1000)
+	#if (CLOCKS_PER_SEC == 100)
+		now->nsec = MOO_MSEC_TO_NSEC((c % CLOCKS_PER_SEC) * 10);
+	#elif (CLOCKS_PER_SEC == 1000)
 		now->nsec = MOO_MSEC_TO_NSEC(c % CLOCKS_PER_SEC);
 	#elif (CLOCKS_PER_SEC == 1000000L)
 		now->nsec = MOO_USEC_TO_NSEC(c % CLOCKS_PER_SEC);
@@ -218,13 +220,16 @@ static MOO_INLINE void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 
 	/* TODO: ... */
 
-#elif defined(__DOS__) && defined(_INTELC32_)
+#elif defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
 
 	clock_t c;
 
 	c = clock ();
 	c += dur->sec * CLOCKS_PER_SEC;
-	#if (CLOCKS_PER_SEC == 1000)
+
+	#if (CLOCKS_PER_SEC == 100)
+		c += MOO_NSEC_TO_MSEC(dur->nsec) / 10;
+	#elif (CLOCKS_PER_SEC == 1000)
 		c += MOO_NSEC_TO_MSEC(dur->nsec);
 	#elif (CLOCKS_PER_SEC == 1000000L)
 		c += MOO_NSEC_TO_USEC(dur->nsec);

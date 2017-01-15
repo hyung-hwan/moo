@@ -48,6 +48,7 @@
 #elif defined(__DOS__)
 #	include <dos.h>
 #	include <time.h>
+#	include <io.h>
 #elif defined(macintosh)
 #	include <Timer.h>
 #else
@@ -510,11 +511,20 @@ static moo_t* g_moo = MOO_NULL;
 /* ========================================================================= */
 
 
-#if defined(__DOS__) && defined(_INTELC32_)
-static void (*prev_timer_intr_handler) (void);
+#if defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
 
+#if defined(_INTELC32_)
+static void (*prev_timer_intr_handler) (void);
+#else
+static void (__interrupt *prev_timer_intr_handler) (void);
+#endif
+
+#if defined(_INTELC32_)
 #pragma interrupt(timer_intr_handler)
 static void timer_intr_handler (void)
+#else
+static void __interrupt timer_intr_handler (void)
+#endif
 {
 	/*
 	_XSTACK *stk;
@@ -551,7 +561,7 @@ static void arrange_process_switching (int sig)
 
 static void setup_tick (void)
 {
-#if defined(__DOS__) && defined(_INTELC32_)
+#if defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
 
 	prev_timer_intr_handler = _dos_getvect (0x1C);
 	_dos_setvect (0x1C, timer_intr_handler);
@@ -587,7 +597,7 @@ static void setup_tick (void)
 
 static void cancel_tick (void)
 {
-#if defined(__DOS__) && defined(_INTELC32_)
+#if defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
 
 	_dos_setvect (0x1C, prev_timer_intr_handler);
 

@@ -338,6 +338,18 @@ int moo_inttooow (moo_t* moo, moo_oop_t x, moo_oow_t* w)
 	return 0; /* not convertable - too big, too small, or not an integer */
 }
 
+int moo_inttoooi (moo_t* moo, moo_oop_t x, moo_ooi_t* i)
+{
+	moo_oow_t w;
+	int n;
+
+	n = moo_inttooow (moo, x, &w);
+	if (n < 0) *i = -w;
+	else if (n > 0) *i = w;
+
+	return n;
+}
+
 static MOO_INLINE moo_oop_t make_bigint_with_oow (moo_t* moo, moo_oow_t w)
 {
 #if (MOO_LIW_BITS == MOO_OOW_BITS)

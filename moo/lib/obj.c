@@ -142,7 +142,7 @@ static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, mo
 	}
 	else
 	{
-		/* initialize with zeros when the string pointer is not given */
+		/* initialize with zeros when the data pointer is NULL */
 		MOO_MEMSET ((hdr + 1), 0, nbytes_aligned);
 	}
 
