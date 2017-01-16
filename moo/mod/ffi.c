@@ -132,7 +132,10 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 #endif
 
 	rcv->handle = handle;
+
+#if defined(USE_DYNCALL)
 	rcv->dc = dc;
+#endif
 
 	MOO_DEBUG3 (moo, "<ffi.open> %.*js => %p\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, rcv->handle);
 	MOO_STACK_SETRETTORCV (moo, nargs);
