@@ -420,7 +420,7 @@ static MOO_INLINE moo_oop_t make_bloated_bigint_with_ooi (moo_t* moo, moo_ooi_t 
 	if (i >= 0)
 	{
 		w = i;
-		z =moo_instantiate (moo, moo->_large_positive_integer, MOO_NULL, 1 + extra);
+		z = moo_instantiate (moo, moo->_large_positive_integer, MOO_NULL, 1 + extra);
 	}
 	else
 	{

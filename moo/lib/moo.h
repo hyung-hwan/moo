@@ -284,7 +284,7 @@ typedef enum moo_obj_type_t moo_obj_type_t;
  *   unit: the size of a payload item in bytes. 
  *   extra: 0 or 1. 1 indicates that the payload contains 1 more
  *          item than the value of the size field. used for a 
- *          terminating null in a variable-char object. internel
+ *          terminating null in a variable-character object. internel
  *          use only.
  *   kernel: 0 or 1. indicates that the object is a kernel object.
  *           VM disallows layout changes of a kernel object.
@@ -1471,6 +1471,9 @@ int moo_convutobcstr (
 #	define moo_dupbtooocharswithheadroom(moo,hrb,bcs,bcslen,oocslen) moo_dupbtoucharswithheadroom(moo,hrb,bcs,bcslen,oocslen)
 #	define moo_dupootobchars(moo,oocs,oocslen,bcslen) moo_duputobchars(moo,oocs,oocslen,bcslen)
 #	define moo_dupbtooochars(moo,bcs,bcslen,oocslen) moo_dupbtouchars(moo,bcs,bcslen,oocslen)
+
+#	define moo_dupootobcstrwithheadroom(moo,hrb,oocs,bcslen) moo_duputobcstrwithheadroom(moo,hrb,oocs,bcslen)
+#	define moo_dupbtooocstrwithheadroom(moo,hrb,bcs,oocslen) moo_dupbtoucstrwithheadroom(moo,hrb,bcs,oocslen)
 #	define moo_dupootobcstr(moo,oocs,bcslen) moo_duputobcstr(moo,oocs,bcslen)
 #	define moo_dupbtooocstr(moo,bcs,oocslen) moo_dupbtoucstr(moo,bcs,oocslen)
 #else
@@ -1478,6 +1481,9 @@ int moo_convutobcstr (
 #	define moo_duputooocharswithheadroom(moo,hrb,ucs,ucslen,oocslen) moo_duputobcharswithheadroom(moo,hrb,ucs,ucslen,oocslen)
 #	define moo_dupootouchars(moo,oocs,oocslen,ucslen) moo_dupbtouchars(moo,oocs,oocslen,ucslen)
 #	define moo_duputooochars(moo,ucs,ucslen,oocslen) moo_duputobchars(moo,ucs,ucslen,oocslen)
+
+#	define moo_dupootoucstrwithheadroom(moo,hrb,oocs,ucslen) moo_dupbtoucstrwithheadroom(moo,hrb,oocs,ucslen)
+#	define moo_duputooocstrwithheadroom(moo,hrb,ucs,oocslen) moo_duputobcstrwithheadroom(moo,hrb,ucs,oocslen)
 #	define moo_dupootoucstr(moo,oocs,ucslen) moo_dupbtoucstr(moo,oocs,ucslen)
 #	define moo_duputooocstr(moo,ucs,oocslen) moo_duputobcstr(moo,ucs,oocslen)
 #endif
@@ -1511,6 +1517,21 @@ MOO_EXPORT moo_bch_t* moo_duputobchars (
 	const moo_uch_t* ucs,
 	moo_oow_t        ucslen,
 	moo_oow_t*       bcslen
+);
+
+
+MOO_EXPORT moo_uch_t* moo_dupbtoucstrwithheadroom (
+	moo_t*           moo,
+	moo_oow_t        headroom_bytes,
+	const moo_bch_t* bcs,
+	moo_oow_t*       ucslen
+);
+
+MOO_EXPORT moo_bch_t* moo_duputobcstrwithheadroom (
+	moo_t*           moo,
+	moo_oow_t        headroom_bytes,
+	const moo_uch_t* ucs,
+	moo_oow_t* bcslen
 );
 
 MOO_EXPORT moo_uch_t* moo_dupbtoucstr (

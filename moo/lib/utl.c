@@ -732,7 +732,10 @@ moo_bch_t* moo_duputobchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t ucslen,
 	return moo_duputobcharswithheadroom (moo, 0, ucs, ucslen, bcslen);
 }
 
-moo_uch_t* moo_dupbtoucstr (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* ucslen)
+
+/* ----------------------------------------------------------------------- */
+
+MOO_INLINE moo_uch_t* moo_dupbtoucstrwithheadroom (moo_t* moo, moo_oow_t headroom_bytes, const moo_bch_t* bcs, moo_oow_t* ucslen)
 {
 	moo_oow_t inlen, outlen;
 	moo_uch_t* ptr;
@@ -744,7 +747,7 @@ moo_uch_t* moo_dupbtoucstr (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* ucslen)
 	}
 
 	outlen++;
-	ptr = moo_allocmem (moo, outlen * MOO_SIZEOF(moo_uch_t));
+	ptr = moo_allocmem (moo, headroom_bytes + (outlen * MOO_SIZEOF(moo_uch_t)));
 	if (!ptr) return MOO_NULL;
 
 	moo_convbtoucstr (moo, bcs, &inlen, ptr, &outlen);
@@ -752,7 +755,12 @@ moo_uch_t* moo_dupbtoucstr (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* ucslen)
 	return ptr;
 }
 
-moo_bch_t* moo_duputobcstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* bcslen)
+moo_uch_t* moo_dupbtoucstr (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* ucslen)
+{
+	return moo_dupbtoucstrwithheadroom (moo, 0, bcs, ucslen);
+}
+
+MOO_INLINE moo_bch_t* moo_duputobcstrwithheadroom (moo_t* moo, moo_oow_t headroom_bytes, const moo_uch_t* ucs, moo_oow_t* bcslen)
 {
 	moo_oow_t inlen, outlen;
 	moo_bch_t* ptr;
@@ -764,14 +772,20 @@ moo_bch_t* moo_duputobcstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* bcslen)
 	}
 
 	outlen++;
-	ptr = moo_allocmem (moo, outlen * MOO_SIZEOF(moo_bch_t));
+	ptr = moo_allocmem (moo, headroom_bytes + (outlen * MOO_SIZEOF(moo_bch_t)));
 	if (!ptr) return MOO_NULL;
+
+	ptr = (moo_bch_t*)((moo_oob_t*)ptr + headroom_bytes);
 
 	moo_convutobcstr (moo, ucs, &inlen, ptr, &outlen);
 	if (bcslen) *bcslen = outlen;
 	return ptr;
 }
 
+moo_bch_t* moo_duputobcstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* bcslen)
+{
+	return moo_duputobcstrwithheadroom (moo, 0, ucs, bcslen);
+}
 /* ----------------------------------------------------------------------- */
 
 moo_uch_t* moo_dupuchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t ucslen)

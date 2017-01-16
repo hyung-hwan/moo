@@ -100,7 +100,7 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 	rcv = (ffi_t*)MOO_STACK_GETRCV(moo, nargs);
 	name = MOO_STACK_GETARG(moo, nargs, 0);
 
-	if (!MOO_ISTYPEOF(moo, name, MOO_OBJ_TYPE_CHAR) || !MOO_OBJ_GET_FLAGS_EXTRA(name)) /* TODO: better null check instead of FLAGS_EXTREA check */
+	if (!MOO_ISTYPEOF(moo, name, MOO_OBJ_TYPE_CHAR))
 	{
 		moo_seterrnum (moo, MOO_EINVAL);
 		goto softfail;
@@ -198,6 +198,8 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 	sig = MOO_STACK_GETARG(moo, nargs, 1);
 	args = MOO_STACK_GETARG(moo, nargs, 2);
 
+	/* the signature must not be empty. at least the return type must be
+	 * specified */
 	if (!MOO_ISTYPEOF(moo, sig, MOO_OBJ_TYPE_CHAR) || MOO_OBJ_GET_SIZE(sig) <= 0) goto inval;
 
 #if 0
@@ -308,7 +310,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 			{
 				moo_bch_t* ptr;
 
-/* TOOD: check if arg is a string. */
+				if (!MOO_ISTYPEOF(moo,arg,MOO_OBJ_TYPE_CHAR)) goto inval;
 
 			#if defined(MOO_OOCH_IS_UCH)
 				ptr = moo_dupootobcharswithheadroom (moo, MOO_SIZEOF_VOID_P, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg), MOO_NULL);
@@ -328,6 +330,8 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 			case 'S':
 			{
 				moo_uch_t* ptr;
+
+				if (!MOO_ISTYPEOF(moo,arg,MOO_OBJ_TYPE_CHAR)) goto inval;
 
 			#if defined(MOO_OOCH_IS_UCH)
 				ptr = MOO_OBJ_GET_CHAR_SLOT(arg);
@@ -349,8 +353,6 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 				goto inval;
 		}
 	}
-
-/* TODO: clean up strings duplicated... using moo_dupootobchars... */
 
 	if (i >= MOO_OBJ_GET_SIZE(sig)) goto call_void;
 
@@ -435,7 +437,6 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 		{
 			moo_oop_t s;
 			moo_uch_t* r;
-			
 
 			r = dcCallPointer (rcv->dc, f);
 
@@ -503,7 +504,7 @@ static moo_pfrc_t pf_getsym (moo_t* moo, moo_ooi_t nargs)
 	rcv = (ffi_t*)MOO_STACK_GETRCV(moo, nargs);
 	name = MOO_STACK_GETARG(moo, nargs, 0);
 
-	if (!MOO_ISTYPEOF(moo,name,MOO_OBJ_TYPE_CHAR)) /* TODO: null check on the symbol name? is '\0' contained in the middle of the name? */
+	if (!MOO_ISTYPEOF(moo,name,MOO_OBJ_TYPE_CHAR))
 	{
 		moo_seterrnum (moo, MOO_EINVAL);
 		goto softfail;
