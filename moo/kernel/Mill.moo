@@ -39,7 +39,7 @@ dcl obj.
 
 class MyObject(Object)
 {
-	method(#class) main
+	method(#class) mainxx
 	{
 		| d a ffi |
 
@@ -85,6 +85,7 @@ class MyObject(Object)
 		] on: Exception do: [:ex | ('Exception caught - ' & ex asString) dump ].*)
 
 		ffi := FFI new: '/lib64/libc.so.6'.
+		(*
 		(ffi isError) 
 			ifTrue: [System logNl: 'cannot open libc.so' ]
 			ifFalse: [
@@ -92,6 +93,51 @@ class MyObject(Object)
 				(ffi call: #printf signature: 's|iis)i' arguments: #(S'A=>%d B=>%d Hello, world %s\n' 1 2 'fly away')) dump.
 				(ffi call: #printf signature: 's|iis)i' arguments: #(S'A=>%d B=>%d Hello, world %s\n' 1 2 'jump down')) dump.
 				ffi close.
-			]
+			].
+		*)
+		if (ffi isError)
+		{
+			System logNl: 'cannot open libc.so'
+		}
+		else
+		{
+			(ffi call: #getpid  signature: ')i' arguments: nil) dump.
+			(ffi call: #printf signature: 's|iis)i' arguments: #(S'A=>%d B=>%d Hello, world %s\n' 1 2 'fly away')) dump.
+			(ffi call: #printf signature: 's|iis)i' arguments: #(S'A=>%d B=>%d Hello, world %s\n' 1 2 'jump down')) dump.
+			ffi close.
+		}.
+		(('abcd' == 'abcd') ifTrue: [1] ifFalse: [2]) dump.
+
+	}
+	
+	method(#class) main
+	{
+		|a k|
+		a := 
+			if ([System logNl: 'xxxx'. 'abcd' == 'bcde'. false] value) 
+			{ 
+				System logNl: 'XXXXXXXXX'.
+				1111 
+			}
+			elsif ('abcd' ~= 'abcd')
+			{
+				System logNl: 'second if'.
+			}
+			elsif ([k := 20. System logNl: 'k => ' & (k asString). k + 20. true] value)
+			{
+				System logNl: 'THIRID forever.............' & (k asString)
+			}
+			elsif (true = true)
+			{
+				System logNl: 'forever.............'
+			}
+			else
+			{
+				System logNl: 'NO MATCH'.
+				[true] value.
+			}.
+		
+		a dump.
+		System logNl: 'DONE DONE DONE...'.
 	}
 }

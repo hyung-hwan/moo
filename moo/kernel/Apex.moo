@@ -406,9 +406,16 @@ class UndefinedObject(Apex)
 pooldic ErrorCode
 {
 (* migrate it into Error class *)
-	#NONE := error(0).
-	#GENERIC := error(1).
-	#NOENT := error(2).
+	#NONE      := error(0).
+	#GENERIC   := error(1).
+	#NOIMPL    := error(2).
+	#SYSERR    := error(3).
+	#INTERN    := error(4).
+	#SYSMEM    := error(5).
+	#OOMEM     := error(6).
+	#INVAL     := error(7).
+	#NOENT     := error(8).
+(* add more items... *)
 }
 
 class Error(Apex)

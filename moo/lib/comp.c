@@ -81,6 +81,8 @@ static struct voca_t
 	{ 10, { '#','c','l','a','s','s','i','n','s','t'                       } },
 	{  3, { 'd','c','l'                                                   } },
 	{  7, { 'd','e','c','l','a','r','e'                                   } },
+	{  4, { 'e','l','s','e'                                               } },
+	{  5, { 'e','l','s','i','f'                                           } },
 	{  6, { 'e','n','s','u','r','e',                                      } },
 	{  5, { 'e','r','r','o','r'                                           } },
 	{  9, { 'e','x','c','e','p','t','i','o','n'                           } },
@@ -120,6 +122,8 @@ enum voca_id_t
 	VOCA_CLASSINST_S,
 	VOCA_DCL,
 	VOCA_DECLARE,
+	VOCA_ELSE,
+	VOCA_ELSIF,
 	VOCA_ENSURE,
 	VOCA_ERROR,
 	VOCA_EXCEPTION,
@@ -985,6 +989,14 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		else if (is_token_word(moo, VOCA_IF))
 		{
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_IF);
+		}
+		else if (is_token_word(moo, VOCA_ELSE))
+		{
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_ELSE);
+		}
+		else if (is_token_word(moo, VOCA_ELSIF))
+		{
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_ELSIF);
 		}
 	}
 
@@ -1867,8 +1879,8 @@ static int emit_single_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1
 		case BCODE_POP_INTO_OBJECT_0:
 		case BCODE_JUMP_FORWARD_0:
 		case BCODE_JUMP_BACKWARD_0:
-		case BCODE_JUMP_IF_TRUE_0:
-		case BCODE_JUMP_IF_FALSE_0:
+		case BCODE_JUMP_FORWARD_IF_FALSE_0:
+		case BCODE_JUMP_BACKWARD_IF_FALSE_0:
 			if (param_1 < 4)
 			{
 				/* low 2 bits to hold the parameter */
@@ -3257,12 +3269,49 @@ static int store_tmpr_count_for_block (moo_t* moo, moo_oow_t tmpr_count)
 	return 0;
 }
 
+
+static int patch_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oob_t jump2_inst, moo_ioloc_t* errloc)
+{
+	moo_oow_t code_size;
+	moo_oow_t jump_offset;
+
+	/* MOO_BCODE_LONG_PARAM_SIZE + 1 => size of the long JUMP_FORWARD instruction */
+	code_size = moo->c->mth.code.len - jip - (MOO_BCODE_LONG_PARAM_SIZE + 1);
+	if (code_size > MAX_CODE_JUMP * 2)
+	{
+		/* TODO: accept the location and pass it to set_syntax_error.
+		 *       change error code or get it as a parameter */
+		set_syntax_error (moo, MOO_SYNERR_BLKFLOOD, errloc, MOO_NULL); 
+		return -1;
+	}
+
+	if (code_size > MAX_CODE_JUMP)
+	{
+		/* switch to JUMP2 instruction to allow a bigger jump offset.
+		 * up to twice MAX_CODE_JUMP only */
+		moo->c->mth.code.ptr[jip] = jump2_inst;
+		jump_offset = code_size - MAX_CODE_JUMP;
+	}
+	else
+	{
+		jump_offset = code_size;
+	}
+
+#if (MOO_BCODE_LONG_PARAM_SIZE == 2)
+	moo->c->mth.code.ptr[jip + 1] = jump_offset >> 8;
+	moo->c->mth.code.ptr[jip + 2] = jump_offset & 0xFF;
+#else
+	moo->c->mth.code.ptr[jip + 1] = jump_offset;
+#endif
+
+	return 0;
+}
+
 static int compile_block_expression (moo_t* moo)
 {
 	moo_oow_t jump_inst_pos;
 	moo_oow_t saved_tmpr_count, saved_tmprs_len;
 	moo_oow_t block_arg_count, block_tmpr_count;
-	moo_oow_t block_code_size;
 	moo_ioloc_t block_loc, colon_loc, tmpr_loc;
 
 	/*
@@ -3273,7 +3322,7 @@ static int compile_block_expression (moo_t* moo)
 
 	/* this function expects [ not to be consumed away */
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_LBRACK);
-	block_loc = moo->c->tok.loc;
+	block_loc = *TOKEN_LOC(moo);
 	GET_TOKEN (moo);
 
 	saved_tmprs_len = moo->c->mth.tmprs.len;
@@ -3397,6 +3446,8 @@ static int compile_block_expression (moo_t* moo)
 	if (emit_byte_instruction(moo, BCODE_RETURN_FROM_BLOCK) <= -1) return -1;
 
 
+	if (patch_jump_instruction (moo, jump_inst_pos, BCODE_JUMP2_FORWARD, &block_loc) <= -1) return -1;
+#if 0
 	/* MOO_BCODE_LONG_PARAM_SIZE + 1 => size of the long JUMP_FORWARD instruction */
 	block_code_size = moo->c->mth.code.len - jump_inst_pos - (MOO_BCODE_LONG_PARAM_SIZE + 1);
 	if (block_code_size > MAX_CODE_JUMP * 2)
@@ -3427,6 +3478,7 @@ static int compile_block_expression (moo_t* moo)
 		moo->c->mth.code.ptr[jump_inst_pos + 1] = jump_offset;
 	#endif
 	}
+#endif
 
 	/* restore the temporary count */
 	moo->c->mth.tmprs.len = saved_tmprs_len;
@@ -4224,12 +4276,147 @@ static int compile_basic_expression (moo_t* moo, const moo_oocs_t* ident, const 
 	return 0;
 }
 
+static int compile_braced_block (moo_t* moo)
+{
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
+	{
+		set_syntax_error (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+	GET_TOKEN (moo);
+
+	while (TOKEN_TYPE(moo) != MOO_IOTOK_EOF)
+	{
+		if (compile_block_statement(moo) <= -1) return -1;
+
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
+		else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
+		{
+			GET_TOKEN (moo);
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
+			if (emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) return -1;
+		}
+		else
+		{
+			set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
+	}
+
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
+	{
+		set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+	return 0;
+}
+
+static int compile_conditional (moo_t* moo)
+{
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_LPAREN)
+	{
+		set_syntax_error (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+	GET_TOKEN (moo);
+	if (compile_method_expression(moo, 0) <= -1) return -1;
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
+	{
+		set_syntax_error (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+	return 0;
+}
+
+static int compile_if_expression (moo_t* moo)
+{
+moo_oow_t jumptoend[100];
+moo_oow_t jumptoend_count = 0;
+
+	moo_oow_t i;
+	moo_oow_t jumptonext;
+	moo_ioloc_t if_loc, brace_loc;
+
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_IF);
+	if_loc = *TOKEN_LOC(moo);
+
+/* TODO: simple optimization to check if the conditional is true or false */
+	GET_TOKEN (moo); /* get ( */
+	if (compile_conditional (moo) <= -1) return -1;
+
+	/* insert dummy instructions before replacing them with a jump instruction */
+	jumptonext = moo->c->mth.code.len;
+	/* specifying MAX_CODE_JUMP causes emit_single_param_instruction() to 
+	 * produce the long jump instruction (BCODE_JUMP_FORWARD_X) */
+	if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_IF_FALSE_0, MAX_CODE_JUMP) <= -1) return -1;
+
+	GET_TOKEN (moo); /* get { */
+	brace_loc = *TOKEN_LOC(moo);
+	if (compile_braced_block (moo) <= -1) return -1;
+
+	/* emit code to jump to the end */
+	jumptoend[jumptoend_count++] = moo->c->mth.code.len;
+	if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
+
+	GET_TOKEN (moo);
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_ELSIF)
+	{
+		if (patch_jump_instruction (moo, jumptonext, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) return -1;
+
+		GET_TOKEN (moo);
+		if (compile_conditional(moo) <= -1) return -1;
+
+		/* emit code to jump to the next elsif or else */
+		jumptonext = moo->c->mth.code.len;
+		if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_IF_FALSE_0, MAX_CODE_JUMP) <= -1) return -1;
+
+		GET_TOKEN (moo); /* get { */
+		brace_loc = *TOKEN_LOC(moo);
+		if (compile_braced_block(moo) <= -1) return -1;
+
+		/* emit code to jump to the end */
+		jumptoend[jumptoend_count++] = moo->c->mth.code.len;
+		if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
+
+		GET_TOKEN (moo);
+	}
+
+	if (patch_jump_instruction (moo, jumptonext, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) return -1;
+
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_ELSE)
+	{
+		GET_TOKEN (moo);
+		if (compile_braced_block (moo) <= -1) return -1;
+		GET_TOKEN (moo);
+	}
+	else
+	{
+		/* emit code to push nil if no 'else' part exists */
+		if (emit_byte_instruction (moo, BCODE_PUSH_NIL) <= -1) return -1;
+	}
+
+	/* patch instructions that jumps to the end of if expression */
+	for (i = 0; i < jumptoend_count; i++)
+	{
+		/* pass if_loc to every call to patch_jump_instruction().
+		 * it's harmless because if the first call doesn't flood, the subseqent 
+		 * call will never flood either. */
+		if (patch_jump_instruction (moo, jumptoend[i], BCODE_JUMP2_FORWARD_IF_FALSE, &if_loc) <= -1) return -1;
+	}
+
+	return 0;
+}
+
 static int compile_method_expression (moo_t* moo, int pop)
 {
 	/*
 	 * method-expression := method-assignment-expression | basic-expression | if-expression
 	 * method-assignment-expression := identifier ":=" method-expression
-	 * if-expression := if ( ) {  } else { }.
+	 * if-expression := if ( ) {  } elsif { } else { }
 	 */
 
 	moo_oocs_t assignee;
@@ -4241,10 +4428,10 @@ static int compile_method_expression (moo_t* moo, int pop)
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_IF)
 	{
-/* TODO: ... */
+		if (compile_if_expression (moo) <= -1) return -1;
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT ||
-	    TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
+	         TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 	{
 		moo_ioloc_t assignee_loc;
 		moo_oow_t assignee_offset;
@@ -4396,7 +4583,10 @@ static int compile_method_statement (moo_t* moo)
 		 * that the stack top will eventually be popped off. the compiler
 		 * can optimize some instruction sequencese. for example, two 
 		 * consecutive store and pop intructions can be transformed to 
-		 * a more specialized single pop-and-store instruction. */
+		 * a more specialized single pop-and-store instruction. 
+		 * the compile_method_expression() function emits POP_INTO_XXX 
+		 * instructions if the second parameter is 1 whenever possible and 
+		 * STORE_INTO_XXX if it's 0.*/
 		n = compile_method_expression(moo, 1);
 		if (n <= -1) return -1;
 
