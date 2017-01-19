@@ -4278,6 +4278,7 @@ static int compile_basic_expression (moo_t* moo, const moo_oocs_t* ident, const 
 
 static int compile_braced_block (moo_t* moo)
 {
+	moo_oow_t code_start;
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
 	{
 		set_syntax_error (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -4286,22 +4287,32 @@ static int compile_braced_block (moo_t* moo)
 
 	GET_TOKEN (moo);
 
-	while (TOKEN_TYPE(moo) != MOO_IOTOK_EOF)
+	code_start = moo->c->mth.code.len;
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
-		if (compile_block_statement(moo) <= -1) return -1;
+		while (TOKEN_TYPE(moo) != MOO_IOTOK_EOF)
+		{
+			if (compile_block_statement(moo) <= -1) return -1;
 
-		if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
-		else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
-		{
-			GET_TOKEN (moo);
 			if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
-			if (emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) return -1;
+			else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
+			{
+				GET_TOKEN (moo);
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
+				if (emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) return -1;
+			}
+			else
+			{
+				set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				return -1;
+			}
 		}
-		else
-		{
-			set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
-			return -1;
-		}
+	}
+
+	if (moo->c->mth.code.len == code_start)
+	{
+		/* the block doesn't contain an instruction at all */
+		if (emit_byte_instruction(moo, BCODE_PUSH_NIL) <= -1) return -1;
 	}
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
@@ -4367,7 +4378,7 @@ moo_oow_t jumptoend_count = 0;
 	{
 		if (patch_jump_instruction (moo, jumptonext, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) return -1;
 
-		GET_TOKEN (moo);
+		GET_TOKEN (moo); /* get ( */
 		if (compile_conditional(moo) <= -1) return -1;
 
 		/* emit code to jump to the next elsif or else */
@@ -4382,16 +4393,16 @@ moo_oow_t jumptoend_count = 0;
 		jumptoend[jumptoend_count++] = moo->c->mth.code.len;
 		if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
 
-		GET_TOKEN (moo);
+		GET_TOKEN (moo); /* get the next token after } */
 	}
 
 	if (patch_jump_instruction (moo, jumptonext, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) return -1;
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_ELSE)
 	{
-		GET_TOKEN (moo);
+		GET_TOKEN (moo); /* get { */
 		if (compile_braced_block (moo) <= -1) return -1;
-		GET_TOKEN (moo);
+		GET_TOKEN (moo); /* get the next token after } */
 	}
 	else
 	{

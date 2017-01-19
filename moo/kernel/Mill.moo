@@ -138,6 +138,13 @@ class MyObject(Object)
 			}.
 		
 		a dump.
+		
+		(if (false) { 10 } else { 16rFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF}) dump.
+		
 		System logNl: 'DONE DONE DONE...'.
+		
+		
+		(if (false) {} else {1.} ) dump.
+		Processor sleepFor: 20.
 	}
 }

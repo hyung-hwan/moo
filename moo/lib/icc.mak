@@ -31,8 +31,13 @@ EXEFILE=moo.exe
 MODFILE=..\mod\moomod.lib
 RSPFILE := $(EXEFILE,B,S/.*/&.RSP/)
 
-all: $(OBJS)
+
+all: $(OBJS) hlt.obj
 	echo $(OBJS) > $(RSPFILE)
+	echo hlt.obj >> $(RSPFILE)
 	echo $(MODFILE) >> $(RSPFILE)
 	echo $(LDFLAGS) >> $(RSPFILE)
 	$(CC) @$(RSPFILE) /e $(EXEFILE)
+
+hlt.obj: hlt.asm
+	386asm -twocase hlt.asm

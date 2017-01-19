@@ -194,6 +194,15 @@ static MOO_INLINE void vm_gettime (moo_t* moo, moo_ntime_t* now)
 #endif
 }
 
+#if defined(__DOS__) 
+#	if defined(_INTELC32_) 
+	void _halt_cpu (void);
+#	elif defined(__WATCOMC__)
+	void _halt_cpu (void);
+#	pragma aux _halt_cpu = "hlt"
+#	endif
+#endif
+
 static MOO_INLINE void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 {
 #if defined(_WIN32)
@@ -241,7 +250,10 @@ static MOO_INLINE void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 
 /* TODO: handle clock overvlow */
 /* TODO: check if there is abortion request or interrupt */
-	while (c > clock()) ;
+	while (c > clock()) 
+	{
+		_halt_cpu();
+	}
 
 #else
 	struct timespec ts;

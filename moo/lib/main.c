@@ -455,10 +455,11 @@ if (mask & MOO_LOG_GC) return; /* don't show gc logs */
 	now = time(NULL);
 #if defined(__DOS__)
 	tmp = localtime (&now);
+	tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S ", tmp); /* no timezone info */
 #else
 	tmp = localtime_r (&now, &tm);
-#endif
 	tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
+#endif
 	if (tslen == 0) 
 	{
 		strcpy (ts, "0000-00-00 00:00:00 +0000");
@@ -535,7 +536,7 @@ static void __interrupt timer_intr_handler (void)
 
 	/* The timer interrupt (normally) occurs 18.2 times per second. */
 	if (g_moo) moo_switchprocess (g_moo);
-	_chain_intr(prev_timer_intr_handler);
+	_chain_intr (prev_timer_intr_handler);
 }
 
 #elif defined(macintosh)

@@ -80,4 +80,3 @@ install-data-hook:
 
 uninstall-hook:
 	@rm -f "$(DESTDIR)$(pkgincludedir)/moo-cfg.h"
-
