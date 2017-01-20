@@ -4278,6 +4278,8 @@ static int compile_basic_expression (moo_t* moo, const moo_oocs_t* ident, const 
 
 static int compile_braced_block (moo_t* moo)
 {
+	/* handle a code block enclosed in { } */
+
 	moo_oow_t code_start;
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
 	{
@@ -4343,83 +4345,160 @@ static int compile_conditional (moo_t* moo)
 	return 0;
 }
 
+
+typedef struct oow_pool_chunk_t oow_pool_chunk_t;
+struct oow_pool_chunk_t
+{
+	moo_oow_t buf[16];
+	oow_pool_chunk_t* next;
+};
+
+typedef struct oow_pool_t oow_pool_t;
+struct oow_pool_t
+{
+	oow_pool_chunk_t static_chunk;
+	oow_pool_chunk_t* head;
+	oow_pool_chunk_t* tail;
+	moo_oow_t count;
+};
+
+static void init_oow_pool (moo_t* moo, oow_pool_t* pool)
+{
+	pool->count = 0;
+	pool->static_chunk.next = MOO_NULL;
+	pool->head = &pool->static_chunk;
+	pool->tail = &pool->static_chunk;
+}
+
+static void fini_oow_pool (moo_t* moo, oow_pool_t* pool)
+{
+	oow_pool_chunk_t* chunk, * next;
+
+	/* dispose all chunks except the first static one */
+	chunk = pool->head->next;
+	while (chunk)
+	{
+		next = chunk->next;
+		moo_freemem (moo, chunk);
+		chunk = next;
+	}
+
+	/* this doesn't reinitialize the pool. call init_oow_pool() 
+	 * to reuse it */
+}
+
+static int add_to_oow_pool (moo_t* moo, oow_pool_t* pool, moo_oow_t v)
+{
+	moo_oow_t idx;
+
+	idx = pool->count % MOO_COUNTOF(pool->static_chunk.buf);
+	if (pool->count > 0 && idx == 0)
+	{
+		oow_pool_chunk_t* chunk;
+
+		chunk = moo_allocmem (moo, MOO_SIZEOF(pool->static_chunk));
+		if (!chunk) return -1;
+
+		chunk->next = MOO_NULL;
+		pool->tail->next = chunk;
+		pool->tail = chunk;
+	}
+
+	pool->tail->buf[idx] = v;
+	pool->count++;
+
+	return 0;
+}
+
 static int compile_if_expression (moo_t* moo)
 {
-moo_oow_t jumptoend[100];
-moo_oow_t jumptoend_count = 0;
+	oow_pool_t jumptoend;
+	oow_pool_chunk_t* jumptoend_chunk;
+	moo_oow_t i, j;
 
-	moo_oow_t i;
 	moo_oow_t jumptonext;
 	moo_ioloc_t if_loc, brace_loc;
 
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_IF);
 	if_loc = *TOKEN_LOC(moo);
 
+	init_oow_pool (moo, &jumptoend);
+
 /* TODO: simple optimization to check if the conditional is true or false */
 	GET_TOKEN (moo); /* get ( */
-	if (compile_conditional (moo) <= -1) return -1;
+	if (compile_conditional (moo) <= -1) goto oops;
 
-	/* insert dummy instructions before replacing them with a jump instruction */
 	jumptonext = moo->c->mth.code.len;
 	/* specifying MAX_CODE_JUMP causes emit_single_param_instruction() to 
 	 * produce the long jump instruction (BCODE_JUMP_FORWARD_X) */
-	if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_IF_FALSE_0, MAX_CODE_JUMP) <= -1) return -1;
+	if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_IF_FALSE_0, MAX_CODE_JUMP) <= -1) goto oops;
 
 	GET_TOKEN (moo); /* get { */
 	brace_loc = *TOKEN_LOC(moo);
-	if (compile_braced_block (moo) <= -1) return -1;
+	if (compile_braced_block (moo) <= -1) goto oops;
 
 	/* emit code to jump to the end */
-	jumptoend[jumptoend_count++] = moo->c->mth.code.len;
-	if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
+	/*jumptoend[jumptoend_count++] = moo->c->mth.code.len;*/
+	if (add_to_oow_pool(moo, &jumptoend, moo->c->mth.code.len) <= -1) goto oops;
+	if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) goto oops;
 
 	GET_TOKEN (moo);
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_ELSIF)
 	{
-		if (patch_jump_instruction (moo, jumptonext, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) return -1;
+		if (patch_jump_instruction (moo, jumptonext, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) goto oops;
 
 		GET_TOKEN (moo); /* get ( */
-		if (compile_conditional(moo) <= -1) return -1;
+		if (compile_conditional(moo) <= -1) goto oops;
 
 		/* emit code to jump to the next elsif or else */
 		jumptonext = moo->c->mth.code.len;
-		if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_IF_FALSE_0, MAX_CODE_JUMP) <= -1) return -1;
+		if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_IF_FALSE_0, MAX_CODE_JUMP) <= -1) goto oops;
 
 		GET_TOKEN (moo); /* get { */
 		brace_loc = *TOKEN_LOC(moo);
-		if (compile_braced_block(moo) <= -1) return -1;
+		if (compile_braced_block(moo) <= -1) goto oops;
 
 		/* emit code to jump to the end */
-		jumptoend[jumptoend_count++] = moo->c->mth.code.len;
-		if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
+		/*jumptoend[jumptoend_count++] = moo->c->mth.code.len;*/
+		if (add_to_oow_pool(moo, &jumptoend, moo->c->mth.code.len) <= -1) goto oops;
+		if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) goto oops;
 
 		GET_TOKEN (moo); /* get the next token after } */
 	}
 
-	if (patch_jump_instruction (moo, jumptonext, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) return -1;
+	if (patch_jump_instruction (moo, jumptonext, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) goto oops;
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_ELSE)
 	{
 		GET_TOKEN (moo); /* get { */
-		if (compile_braced_block (moo) <= -1) return -1;
+		if (compile_braced_block (moo) <= -1) goto oops;
 		GET_TOKEN (moo); /* get the next token after } */
 	}
 	else
 	{
 		/* emit code to push nil if no 'else' part exists */
-		if (emit_byte_instruction (moo, BCODE_PUSH_NIL) <= -1) return -1;
+		if (emit_byte_instruction (moo, BCODE_PUSH_NIL) <= -1) goto oops;
 	}
 
 	/* patch instructions that jumps to the end of if expression */
-	for (i = 0; i < jumptoend_count; i++)
+	for (jumptoend_chunk = jumptoend.head, i = 0; jumptoend_chunk; jumptoend_chunk = jumptoend_chunk->next)
 	{
 		/* pass if_loc to every call to patch_jump_instruction().
 		 * it's harmless because if the first call doesn't flood, the subseqent 
 		 * call will never flood either. */
-		if (patch_jump_instruction (moo, jumptoend[i], BCODE_JUMP2_FORWARD_IF_FALSE, &if_loc) <= -1) return -1;
+		for (j = 0; j < MOO_COUNTOF(jumptoend.static_chunk.buf) && i < jumptoend.count; j++)
+		{
+			if (patch_jump_instruction (moo, jumptoend_chunk->buf[j], BCODE_JUMP2_FORWARD_IF_FALSE, &if_loc) <= -1) goto oops;
+			i++;
+		}
 	}
 
+	fini_oow_pool (moo, &jumptoend);
 	return 0;
+
+oops:
+	fini_oow_pool (moo, &jumptoend);
+	return -1;
 }
 
 static int compile_method_expression (moo_t* moo, int pop)
