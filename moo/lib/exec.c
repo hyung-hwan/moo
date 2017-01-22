@@ -3887,6 +3887,9 @@ int moo_execute (moo_t* moo)
 					{
 						/* returning from a method */
 						MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context) == moo->_method_context);
+
+						/* mark that the context is dead. it will be 
+						 * save to the context object by SWITCH_ACTIVE_CONTEXT() */
 						moo->ip = -1;
 					}
 					else
@@ -3927,13 +3930,24 @@ int moo_execute (moo_t* moo)
 
 					non_local_return_ok:
 /*MOO_DEBUG2 (moo, "NON_LOCAL RETURN OK TO... %p %p\n", moo->active_context->origin, moo->active_context->origin->sender);*/
-						moo->active_context->origin->ip = MOO_SMOOI_TO_OOP(-1);
+						if (bcode != BCODE_LOCAL_RETURN)
+						{
+							/* mark that the context is dead */
+							moo->active_context->origin->ip = MOO_SMOOI_TO_OOP(-1);
+						}
 					}
 
 					MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context->origin) == moo->_method_context);
-					/* restore the stack pointer */
-					moo->sp = MOO_OOP_TO_SMOOI(moo->active_context->origin->sp);
-					SWITCH_ACTIVE_CONTEXT (moo, moo->active_context->origin->sender);
+					if (bcode == BCODE_LOCAL_RETURN && moo->active_context != moo->active_context->origin)
+					{
+						SWITCH_ACTIVE_CONTEXT (moo, moo->active_context->origin);
+					}
+					else
+					{
+						/* restore the stack pointer */
+						moo->sp = MOO_OOP_TO_SMOOI(moo->active_context->origin->sp);
+						SWITCH_ACTIVE_CONTEXT (moo, moo->active_context->origin->sender);
+					}
 
 					if (unwind_protect)
 					{
@@ -3984,8 +3998,13 @@ int moo_execute (moo_t* moo)
 				}
 
 			#endif
-
 				break;
+
+			case BCODE_LOCAL_RETURN:
+				LOG_INST_0 (moo, "local_return");
+				return_value = MOO_STACK_GETTOP(moo);
+				MOO_STACK_POP (moo);
+				goto handle_return;
 
 			case BCODE_RETURN_FROM_BLOCK:
 				LOG_INST_0 (moo, "return_from_block");
@@ -4129,29 +4148,22 @@ int moo_execute (moo_t* moo)
 				blkctx->home = (moo_oop_t)rctx;
 				blkctx->receiver_or_source = moo->_nil;
 
-#if 0
-				if (rctx->home == moo->_nil)
-				{
-					/* the context that receives the blockCopy message is a method context */
-					MOO_ASSERT (moo, MOO_CLASSOF(moo, rctx) == moo->_method_context);
-					MOO_ASSERT (moo, rctx == (moo_oop_t)moo->active_context);
-					blkctx->origin = (moo_oop_context_t)rctx;
-				}
-				else
-				{
-					/* a block context is active */
-					MOO_ASSERT (moo, MOO_CLASSOF(moo, rctx) == moo->_block_context);
-					blkctx->origin = ((moo_oop_block_context_t)rctx)->origin;
-				}
-#else
-
 				/* [NOTE]
 				 * the origin of a method context is set to itself
 				 * when it's created. so it's safe to simply copy
-				 * the origin field this way.
+				 * the origin field this way. 
+				 *
+				 * if the context that receives the blockCopy message 
+				 * is a method context, the following conditions are all true.
+				 *   rctx->home == moo->_nil
+				 *   MOO_CLASSOF(moo, rctx) == moo->_method_context
+				 *   rctx == (moo_oop_t)moo->active_context
+				 *   rctx == rctx->origin
+				 *
+				 * if it is a block context, the following condition is true.
+				 *   MOO_CLASSOF(moo, rctx) == moo->_block_context
 				 */
 				blkctx->origin = rctx->origin;
-#endif
 
 				MOO_STACK_SETTOP (moo, (moo_oop_t)blkctx);
 				break;

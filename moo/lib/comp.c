@@ -1432,21 +1432,18 @@ retry:
 		case '^':
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_RETURN);
 			ADD_TOKEN_CHAR(moo, c);
-#if 0
 			GET_CHAR_TO (moo, c);
 
-/* TODO: support explicit block return */
 			if (c == '^')
 			{
 				/* ^^ */
-				TOKEN_TYPE(moo) == MOO_IOTOK_BLKRET;
+				TOKEN_TYPE(moo) = MOO_IOTOK_LOCAL_RETURN;
 				ADD_TOKEN_CHAR (moo, c);
 			}
 			else
 			{
 				unget_char (moo, &moo->c->lxc);
 			}
-#endif
 			break;
 
 		case '{': /* extension */
@@ -4644,6 +4641,12 @@ static int compile_block_statement (moo_t* moo)
 		if (compile_method_expression(moo, 0) <= -1) return -1;
 		return emit_byte_instruction (moo, BCODE_RETURN_STACKTOP);
 	}
+	else if (TOKEN_TYPE(moo) == MOO_IOTOK_LOCAL_RETURN)
+	{
+		GET_TOKEN (moo);
+		if (compile_method_expression(moo, 0) <= -1) return -1;
+		return emit_byte_instruction (moo, BCODE_LOCAL_RETURN);
+	}
 	else
 	{
 		return compile_method_expression(moo, 0);
@@ -4663,6 +4666,12 @@ static int compile_method_statement (moo_t* moo)
 		GET_TOKEN (moo);
 		if (compile_method_expression(moo, 0) <= -1) return -1;
 		return emit_byte_instruction (moo, BCODE_RETURN_STACKTOP);
+	}
+	else if (TOKEN_TYPE(moo) == MOO_IOTOK_LOCAL_RETURN)
+	{
+		GET_TOKEN (moo);
+		if (compile_method_expression(moo, 0) <= -1) return -1;
+		return emit_byte_instruction (moo, BCODE_LOCAL_RETURN);
 	}
 	else 
 	{

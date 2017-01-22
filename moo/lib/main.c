@@ -414,12 +414,12 @@ static int write_all (int fd, const char* ptr, moo_oow_t len)
 			if (errno == EAGAIN) continue;
 		#else
 
-		#if defined(EAGAIN)
+			#if defined(EAGAIN)
 			if (errno == EAGAIN) continue;
-		#endif
-		#if defined(EWOULDBLOCK)
+			#endif
+			#if defined(EWOULDBLOCK)
 			if (errno == EWOULDBLOCK) continue;
-		#endif
+			#endif
 
 		#endif
 			return -1;
@@ -456,15 +456,20 @@ if (mask & MOO_LOG_GC) return; /* don't show gc logs */
 #if defined(__DOS__)
 	tmp = localtime (&now);
 	tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S ", tmp); /* no timezone info */
+	if (tslen == 0) 
+	{
+		strcpy (ts, "0000-00-00 00:00:00");
+		tslen = 19; 
+	}
 #else
 	tmp = localtime_r (&now, &tm);
 	tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
-#endif
 	if (tslen == 0) 
 	{
 		strcpy (ts, "0000-00-00 00:00:00 +0000");
 		tslen = 25; 
 	}
+#endif
 	write_all (1, ts, tslen);
 
 	msgidx = 0;
@@ -582,7 +587,7 @@ static void setup_tick (void)
 
 	sigemptyset (&act.sa_mask);
 	act.sa_handler = arrange_process_switching;
-	act.sa_flags = 0;
+	act.sa_flags = SA_RESTART;
 	sigaction (SIGVTALRM, &act, MOO_NULL);
 
 	itv.it_interval.tv_sec = 0;

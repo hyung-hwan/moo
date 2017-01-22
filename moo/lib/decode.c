@@ -491,6 +491,10 @@ int moo_decode (moo_t* moo, moo_oop_method_t mth, const moo_oocs_t* classfqn)
 				LOG_INST_0 (moo, "return_from_block");
 				break;
 
+			case BCODE_LOCAL_RETURN:
+				LOG_INST_0 (moo, "local_return");
+				break;
+
 			case BCODE_MAKE_BLOCK:
 				/* b1 - number of block arguments
 				 * b2 - number of block temporaries */

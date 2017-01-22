@@ -113,6 +113,9 @@ class MyObject(Object)
 	method(#class) main
 	{
 		|a k|
+		
+		
+		'BEGINNING OF main...........' dump.
 		a := 
 			if ([System logNl: 'xxxx'. 'abcd' == 'bcde'. false] value) 
 			{ 
@@ -145,6 +148,26 @@ class MyObject(Object)
 		
 		
 		(if (false) {} else {1.} ) dump.
-		Processor sleepFor: 20.
+		
+		'TESTING ^^....' dump.
+		a := 10.
+		([
+			a := a + 3.
+			if (a > 10) {^^99 }
+		] value) dump.
+
+		a := 5.
+		##((a < 20) ifTrue: [ 1. if (a < 20) { ^^50 }. 90. ]) dump.
+		([true] whileTrue: [
+			[
+			'aaa' dump.
+			if (a > 20) { ^^506070 }.
+			a := a + 1.
+			'bbb' dump.
+			] ensure: [('xxxxx' & a asString) dump].
+		]) dump.
+		
+		'---------- END ------------' dump.
+		##Processor sleepFor: 20.
 	}
 }

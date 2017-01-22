@@ -315,7 +315,8 @@ struct moo_iotok_t
 		MOO_IOTOK_KEYWORD,
 		MOO_IOTOK_ASSIGN,
 		MOO_IOTOK_COLON,
-		MOO_IOTOK_RETURN,
+		MOO_IOTOK_RETURN, /* ^ */
+		MOO_IOTOK_LOCAL_RETURN, /* ^^ */
 		MOO_IOTOK_LBRACE,
 		MOO_IOTOK_RBRACE,
 		MOO_IOTOK_LBRACK,
@@ -813,11 +814,12 @@ enum moo_bcode_t
 
 	/* -------------------------------------- */
 
-	BCODE_DUP_STACKTOP             = 0xF8,
-	BCODE_POP_STACKTOP             = 0xF9,
-	BCODE_RETURN_STACKTOP          = 0xFA, /* ^something */
-	BCODE_RETURN_RECEIVER          = 0xFB, /* ^self */
-	BCODE_RETURN_FROM_BLOCK        = 0xFC, /* return the stack top from a block */
+	BCODE_DUP_STACKTOP             = 0xF7,
+	BCODE_POP_STACKTOP             = 0xF8,
+	BCODE_RETURN_STACKTOP          = 0xF9, /* ^something */
+	BCODE_RETURN_RECEIVER          = 0xFA, /* ^self */
+	BCODE_RETURN_FROM_BLOCK        = 0xFB, /* return the stack top from a block */
+	BCODE_LOCAL_RETURN             = 0xFC,
 	BCODE_MAKE_BLOCK               = 0xFD,
 	BCODE_SEND_BLOCK_COPY          = 0xFE,
 	BCODE_NOOP                     = 0xFF
