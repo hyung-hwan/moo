@@ -331,7 +331,11 @@ struct moo_iotok_t
 
 		MOO_IOTOK_IF,
 		MOO_IOTOK_ELSE,
-		MOO_IOTOK_ELSIF
+		MOO_IOTOK_ELSIF,
+
+		MOO_IOTOK_WHILE,
+		MOO_IOTOK_BREAK,
+		MOO_IOTOK_CONTINUE
 	} type;
 
 	moo_oocs_t name;

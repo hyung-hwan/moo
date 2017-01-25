@@ -159,13 +159,21 @@ class MyObject(Object)
 		a := 5.
 		##((a < 20) ifTrue: [ 1. if (a < 20) { ^^50 }. 90. ]) dump.
 		([true] whileTrue: [
-			[
-			'aaa' dump.
-			if (a > 20) { ^^506070 }.
-			a := a + 1.
-			'bbb' dump.
-			] ensure: [('xxxxx' & a asString) dump].
+			[true] whileTrue: [
+				[
+				'aaa' dump.
+				if (a > 20) { ^^506070 }.
+				a := a + 1.
+				'bbb' dump.
+				] ensure: [('xxxxx' & a asString) dump].
+			]
 		]) dump.
+
+		a := 5.
+		while (true) {
+			System logNl: a asString.
+			a := a + 100000000000000.
+		}.
 		
 		'---------- END ------------' dump.
 		##Processor sleepFor: 20.

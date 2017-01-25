@@ -3937,15 +3937,18 @@ int moo_execute (moo_t* moo)
 						}
 					}
 
+					/* the origin must always be a method context for both an active block context 
+					 * or an active method context */
 					MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context->origin) == moo->_method_context);
+
+					/* restore the stack pointer */
+					moo->sp = MOO_OOP_TO_SMOOI(moo->active_context->origin->sp);
 					if (bcode == BCODE_LOCAL_RETURN && moo->active_context != moo->active_context->origin)
 					{
 						SWITCH_ACTIVE_CONTEXT (moo, moo->active_context->origin);
 					}
 					else
 					{
-						/* restore the stack pointer */
-						moo->sp = MOO_OOP_TO_SMOOI(moo->active_context->origin->sp);
 						SWITCH_ACTIVE_CONTEXT (moo, moo->active_context->origin->sender);
 					}
 
