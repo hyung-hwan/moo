@@ -3334,6 +3334,33 @@ static int patch_long_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_o
 	return 0;
 }
 
+static int push_loop (moo_t* moo, moo_oow_t startpos)
+{
+	moo_loop_t* loop;
+
+	loop = moo_callocmem (moo, MOO_SIZEOF(*loop));
+	if (!loop) return -1;
+
+	loop->startpos = startpos;
+	loop->next = moo->c->mth.loop;
+	moo->c->mth.loop = loop;
+
+	return 0;
+}
+
+static void pop_loop (moo_t* moo, moo_oow_t endpos)
+{
+	moo_loop_t* loop;
+
+	loop = moo->c->mth.loop;
+	MOO_ASSERT (moo, loop != MOO_NULL);
+	moo->c->mth.loop = loop->next;
+
+
+/* TODO: update all break instructions... */
+	moo_freemem (moo, loop);
+}
+
 static int compile_block_expression (moo_t* moo)
 {
 	moo_oow_t jump_inst_pos;
@@ -3349,6 +3376,12 @@ static int compile_block_expression (moo_t* moo)
 
 	/* this function expects [ not to be consumed away */
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_LBRACK);
+
+	if (moo->c->mth.loop) 
+	{
+		/* this block is placed inside the {} loop */
+		moo->c->mth.loop->blkcount++; 
+	}
 	block_loc = *TOKEN_LOC(moo);
 	GET_TOKEN (moo);
 
@@ -3472,46 +3505,19 @@ static int compile_block_expression (moo_t* moo)
 
 	if (emit_byte_instruction(moo, BCODE_RETURN_FROM_BLOCK) <= -1) return -1;
 
-
 	if (patch_long_forward_jump_instruction (moo, jump_inst_pos, BCODE_JUMP2_FORWARD, &block_loc) <= -1) return -1;
-#if 0
-	/* MOO_BCODE_LONG_PARAM_SIZE + 1 => size of the long JUMP_FORWARD instruction */
-	block_code_size = moo->c->mth.code.len - jump_inst_pos - (MOO_BCODE_LONG_PARAM_SIZE + 1);
-	if (block_code_size > MAX_CODE_JUMP * 2)
-	{
-		set_syntax_error (moo, MOO_SYNERR_BLKFLOOD, &block_loc, MOO_NULL); 
-		return -1;
-	}
-	else 
-	{
-		moo_oow_t jump_offset;
-
-		if (block_code_size > MAX_CODE_JUMP)
-		{
-			/* switch to JUMP2 instruction to allow a bigger jump offset.
-			 * up to twice MAX_CODE_JUMP only */
-			moo->c->mth.code.ptr[jump_inst_pos] = BCODE_JUMP2_FORWARD;
-			jump_offset = block_code_size - MAX_CODE_JUMP;
-		}
-		else
-		{
-			jump_offset = block_code_size;
-		}
-
-	#if (MOO_BCODE_LONG_PARAM_SIZE == 2)
-		moo->c->mth.code.ptr[jump_inst_pos + 1] = jump_offset >> 8;
-		moo->c->mth.code.ptr[jump_inst_pos + 2] = jump_offset & 0xFF;
-	#else
-		moo->c->mth.code.ptr[jump_inst_pos + 1] = jump_offset;
-	#endif
-	}
-#endif
 
 	/* restore the temporary count */
 	moo->c->mth.tmprs.len = saved_tmprs_len;
 	moo->c->mth.tmpr_count = saved_tmpr_count;
 
-	GET_TOKEN (moo);
+	if (moo->c->mth.loop) 
+	{
+		MOO_ASSERT (moo, moo->c->mth.loop->blkcount > 0);
+		moo->c->mth.loop->blkcount--;
+	}
+
+	GET_TOKEN (moo); /* read the next token after ] */
 
 	return 0;
 }
@@ -4569,6 +4575,9 @@ static int compile_while_expression (moo_t* moo)
 		if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_IF_FALSE_0, MAX_CODE_JUMP) <= -1) goto oops;
 	}
 
+	/* remember information about this while loop. */
+	if (push_loop (moo, precondpos) <= -1) goto oops;
+
 	GET_TOKEN (moo); /* get { */
 	brace_loc = *TOKEN_LOC(moo);
 	prebbpos = moo->c->mth.code.len;
@@ -4617,6 +4626,8 @@ static int compile_while_expression (moo_t* moo)
 	/* push nil as a result of the while expression. TODO: is it the best value? anything else? */
 	if (emit_byte_instruction (moo, BCODE_PUSH_NIL) <= -1) goto oops;
 
+	/* destroy the loop information stored earlier in this function */
+	pop_loop (moo, moo->c->mth.code.len);
 	return 0;
 
 oops:
@@ -4765,16 +4776,52 @@ static int compile_block_statement (moo_t* moo)
 	 * popping the stack top */
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_RETURN) 
 	{
-		/* handle the return statement */
+		/* ^ - return - return to the sender of the origin */
 		GET_TOKEN (moo);
 		if (compile_method_expression(moo, 0) <= -1) return -1;
 		return emit_byte_instruction (moo, BCODE_RETURN_STACKTOP);
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_LOCAL_RETURN)
 	{
+		/* ^^ - local return - return to the origin */
 		GET_TOKEN (moo);
 		if (compile_method_expression(moo, 0) <= -1) return -1;
 		return emit_byte_instruction (moo, BCODE_LOCAL_RETURN);
+	}
+	else if (TOKEN_TYPE(moo) == MOO_IOTOK_BREAK)
+	{
+		/* TODO: compile break */
+		if (!moo->c->mth.loop)
+		{
+			/* break outside a loop */
+			return -1;
+		}
+		if (moo->c->mth.loop->blkcount > 0)
+		{
+			/* break cannot cross boundary of a block */
+			return -1;
+		}
+
+		GET_TOKEN (moo);
+moo->errnum = MOO_ENOIMPL;
+return -1;
+	}
+	else if (TOKEN_TYPE(moo) == MOO_IOTOK_CONTINUE)
+	{
+		/* TODO: compile continue */
+		if (!moo->c->mth.loop)
+		{
+			/* continue outside a loop */
+			return -1;
+		}
+		if (moo->c->mth.loop->blkcount > 0)
+		{
+			/* continue cannot cross boundary of a block */
+			return -1;
+		}
+
+		GET_TOKEN (moo);
+		return emit_backward_jump_instruction (moo, moo->c->mth.code.len - moo->c->mth.loop->startpos);
 	}
 	else
 	{

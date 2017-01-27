@@ -351,12 +351,21 @@ struct moo_iolink_t
 	moo_iolink_t* link;
 };
 
+typedef struct moo_code_t moo_code_t;
 struct moo_code_t
 {
 	moo_uint8_t* ptr;
 	moo_oow_t    len;
 };
-typedef struct moo_code_t moo_code_t;
+
+typedef struct moo_loop_t moo_loop_t;
+struct moo_loop_t
+{
+	moo_oow_t startpos;
+	/* TODO: links of break instructions */
+	moo_oow_t blkcount; /* number of inner blocks enclosed in squre brackets */
+	moo_loop_t* next;
+};
 
 struct moo_compiler_t
 {
@@ -494,6 +503,9 @@ struct moo_compiler_t
 		moo_oow_t blk_depth;
 		moo_oow_t* blk_tmprcnt;
 		moo_oow_t blk_tmprcnt_capa;
+
+		/* information about loop constructs */
+		moo_loop_t* loop;
 
 		/* byte code */
 		moo_code_t code;

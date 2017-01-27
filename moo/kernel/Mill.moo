@@ -169,12 +169,20 @@ class MyObject(Object)
 			]
 		]) dump.
 
+		(*
 		a := 5.
 		while (true) {
 			System logNl: a asString.
 			a := a + 100000000000000.
-		}.
+		}.*)
 		
+		a := 5.
+		while (true)
+		{
+			a := a + 1.
+			if (a < 9) { continue }.
+			a dump;
+		}.
 		'---------- END ------------' dump.
 		##Processor sleepFor: 20.
 	}
