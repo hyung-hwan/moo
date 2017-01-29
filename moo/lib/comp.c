@@ -4841,7 +4841,7 @@ static int compile_special_statement (moo_t* moo)
 		return emit_backward_jump_instruction (moo, moo->c->mth.code.len - moo->c->mth.loop->startpos);
 	}
 
-	return 9999;
+	return 9999; /* to indicate that no special stament has been seen and processed */
 }
 
 static int compile_block_statement (moo_t* moo)
@@ -4870,7 +4870,6 @@ static int compile_method_statement (moo_t* moo)
 
 	if (n == 9999)
 	{
-/* TODO: optimization. if expresssion is a literal, no push and pop are required */
 		/* the second parameter to compile_method_expression() indicates 
 		 * that the stack top will eventually be popped off. the compiler
 		 * can optimize some instruction sequencese. for example, two 
@@ -4879,13 +4878,43 @@ static int compile_method_statement (moo_t* moo)
 		 * the compile_method_expression() function emits POP_INTO_XXX 
 		 * instructions if the second parameter is 1 whenever possible and 
 		 * STORE_INTO_XXX if it's 0.*/
+		moo_oow_t preexprpos;
+
+		preexprpos = moo->c->mth.code.len;
 		n = compile_method_expression(moo, 1);
 		if (n <= -1) return -1;
 
-		/* if n is 1, no stack popping is required */
+		/* if n is 1, no stack popping is required as POP_INTO_XXX has been
+		 * emitted in place of STORE_INTO_XXX. */
 		if (n == 0)
 		{
-			return emit_byte_instruction (moo, BCODE_POP_STACKTOP);
+			if (preexprpos + 1 == moo->c->mth.code.len)
+			{
+/* TODO: MORE optimization. if expresssion is a literal, no push and pop are required. check for multie-byte instructions as well */
+				switch (moo->c->mth.code.ptr[preexprpos])
+				{
+					case BCODE_PUSH_NIL:
+					case BCODE_PUSH_TRUE:
+					case BCODE_PUSH_FALSE:
+					case BCODE_PUSH_CONTEXT:
+					case BCODE_PUSH_PROCESS:
+					case BCODE_PUSH_NEGONE:
+					case BCODE_PUSH_ZERO:
+					case BCODE_PUSH_ONE:
+					case BCODE_PUSH_TWO:
+						/* eliminate the unneeded push instruction */
+						n = 0;
+						moo->c->mth.code.len = preexprpos;
+						break;
+					default:
+						goto pop_stacktop;
+				}
+			}
+			else
+			{
+			pop_stacktop:
+				return emit_byte_instruction (moo, BCODE_POP_STACKTOP);
+			}
 		}
 	}
 

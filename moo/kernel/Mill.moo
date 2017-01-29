@@ -183,6 +183,15 @@ class MyObject(Object)
 			if (a > 20) { break }.
 			a dump.
 		}.
+
+		nil.
+		1.
+		0.
+		self.
+		thisProcess.
+		thisContext.
+		nil.
+		nil.
 		'---------- END ------------' dump.
 		##Processor sleepFor: 20.
 	}
