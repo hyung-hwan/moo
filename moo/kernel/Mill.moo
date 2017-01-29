@@ -180,8 +180,8 @@ class MyObject(Object)
 		while (true)
 		{
 			a := a + 1.
-			if (a < 9) { continue }.
-			a dump;
+			if (a > 20) { break }.
+			a dump.
 		}.
 		'---------- END ------------' dump.
 		##Processor sleepFor: 20.

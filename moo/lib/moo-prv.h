@@ -358,12 +358,28 @@ struct moo_code_t
 	moo_oow_t    len;
 };
 
+typedef struct moo_oow_pool_chunk_t moo_oow_pool_chunk_t;
+struct moo_oow_pool_chunk_t
+{
+	moo_oow_t buf[16];
+	moo_oow_pool_chunk_t* next;
+};
+
+typedef struct moo_oow_pool_t moo_oow_pool_t;
+struct moo_oow_pool_t
+{
+	moo_oow_pool_chunk_t  static_chunk;
+	moo_oow_pool_chunk_t* head;
+	moo_oow_pool_chunk_t* tail;
+	moo_oow_t             count;
+};
+
 typedef struct moo_loop_t moo_loop_t;
 struct moo_loop_t
 {
 	moo_oow_t startpos;
-	/* TODO: links of break instructions */
-	moo_oow_t blkcount; /* number of inner blocks enclosed in squre brackets */
+	moo_oow_pool_t break_ip_pool; /* a pool that holds break instruction pointer */
+	moo_oow_t blkcount; /* number of inner blocks enclosed in square brackets */
 	moo_loop_t* next;
 };
 

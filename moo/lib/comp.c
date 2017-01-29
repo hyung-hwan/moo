@@ -562,6 +562,59 @@ static moo_oop_t string_to_error (moo_t* moo, moo_oocs_t* str)
 	return MOO_ERROR_TO_OOP(num);
 }
 
+
+/* ---------------------------------------------------------------------
+ * SOME PRIVIATE UTILITILES
+ * --------------------------------------------------------------------- */
+
+static void init_oow_pool (moo_t* moo, moo_oow_pool_t* pool)
+{
+	pool->count = 0;
+	pool->static_chunk.next = MOO_NULL;
+	pool->head = &pool->static_chunk;
+	pool->tail = &pool->static_chunk;
+}
+
+static void fini_oow_pool (moo_t* moo, moo_oow_pool_t* pool)
+{
+	moo_oow_pool_chunk_t* chunk, * next;
+
+	/* dispose all chunks except the first static one */
+	chunk = pool->head->next;
+	while (chunk)
+	{
+		next = chunk->next;
+		moo_freemem (moo, chunk);
+		chunk = next;
+	}
+
+	/* this doesn't reinitialize the pool. call init_oow_pool() 
+	 * to reuse it */
+}
+
+static int add_to_oow_pool (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t v)
+{
+	moo_oow_t idx;
+
+	idx = pool->count % MOO_COUNTOF(pool->static_chunk.buf);
+	if (pool->count > 0 && idx == 0)
+	{
+		moo_oow_pool_chunk_t* chunk;
+
+		chunk = moo_allocmem (moo, MOO_SIZEOF(pool->static_chunk));
+		if (!chunk) return -1;
+
+		chunk->next = MOO_NULL;
+		pool->tail->next = chunk;
+		pool->tail = chunk;
+	}
+
+	pool->tail->buf[idx] = v;
+	pool->count++;
+
+	return 0;
+}
+
 /* ---------------------------------------------------------------------
  * Tokenizer 
  * --------------------------------------------------------------------- */
@@ -3341,6 +3394,7 @@ static int push_loop (moo_t* moo, moo_oow_t startpos)
 	loop = moo_callocmem (moo, MOO_SIZEOF(*loop));
 	if (!loop) return -1;
 
+	init_oow_pool (moo, &loop->break_ip_pool);
 	loop->startpos = startpos;
 	loop->next = moo->c->mth.loop;
 	moo->c->mth.loop = loop;
@@ -3348,17 +3402,44 @@ static int push_loop (moo_t* moo, moo_oow_t startpos)
 	return 0;
 }
 
-static void pop_loop (moo_t* moo, moo_oow_t endpos)
+static int pop_loop (moo_t* moo, int patch_break)
 {
 	moo_loop_t* loop;
 
+	/* this function must be called when moo->c->mth.code.len is pointing
+	 * to the intended target position because patch_long_forward_jump_instruction()
+	 * patches jumps using the current value in moo->c->mth.code.len */
+
+	MOO_ASSERT (moo, moo->c->mth.loop != MOO_NULL);
 	loop = moo->c->mth.loop;
-	MOO_ASSERT (moo, loop != MOO_NULL);
 	moo->c->mth.loop = loop->next;
 
+	if (patch_break)
+	{
+		/* patch the jump instructions emitted for 'break' */
+		moo_oow_pool_chunk_t* chunk;
+		moo_oow_t i, j;
 
-/* TODO: update all break instructions... */
+		for (chunk = loop->break_ip_pool.head, i = 0; chunk; chunk = chunk->next)
+		{
+			for (j = 0; j < MOO_COUNTOF(loop->break_ip_pool.static_chunk.buf) && i < loop->break_ip_pool.count; j++)
+			{
+				if (patch_long_forward_jump_instruction (moo, chunk->buf[j], BCODE_JUMP2_FORWARD, MOO_NULL) <= -1) return -1;
+				i++;
+			}
+		}
+	}
+
+	fini_oow_pool (moo, &loop->break_ip_pool);
 	moo_freemem (moo, loop);
+	return 0;
+}
+
+static MOO_INLINE int inject_break_to_loop (moo_t* moo)
+{
+	if (add_to_oow_pool (moo, &moo->c->mth.loop->break_ip_pool, moo->c->mth.code.len) <= -1 ||
+	    emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
+	return 0;
 }
 
 static int compile_block_expression (moo_t* moo)
@@ -4380,74 +4461,10 @@ static int compile_conditional (moo_t* moo)
 	return 0;
 }
 
-typedef struct oow_pool_chunk_t oow_pool_chunk_t;
-struct oow_pool_chunk_t
-{
-	moo_oow_t buf[16];
-	oow_pool_chunk_t* next;
-};
-
-typedef struct oow_pool_t oow_pool_t;
-struct oow_pool_t
-{
-	oow_pool_chunk_t static_chunk;
-	oow_pool_chunk_t* head;
-	oow_pool_chunk_t* tail;
-	moo_oow_t count;
-};
-
-static void init_oow_pool (moo_t* moo, oow_pool_t* pool)
-{
-	pool->count = 0;
-	pool->static_chunk.next = MOO_NULL;
-	pool->head = &pool->static_chunk;
-	pool->tail = &pool->static_chunk;
-}
-
-static void fini_oow_pool (moo_t* moo, oow_pool_t* pool)
-{
-	oow_pool_chunk_t* chunk, * next;
-
-	/* dispose all chunks except the first static one */
-	chunk = pool->head->next;
-	while (chunk)
-	{
-		next = chunk->next;
-		moo_freemem (moo, chunk);
-		chunk = next;
-	}
-
-	/* this doesn't reinitialize the pool. call init_oow_pool() 
-	 * to reuse it */
-}
-
-static int add_to_oow_pool (moo_t* moo, oow_pool_t* pool, moo_oow_t v)
-{
-	moo_oow_t idx;
-
-	idx = pool->count % MOO_COUNTOF(pool->static_chunk.buf);
-	if (pool->count > 0 && idx == 0)
-	{
-		oow_pool_chunk_t* chunk;
-
-		chunk = moo_allocmem (moo, MOO_SIZEOF(pool->static_chunk));
-		if (!chunk) return -1;
-
-		chunk->next = MOO_NULL;
-		pool->tail->next = chunk;
-		pool->tail = chunk;
-	}
-
-	pool->tail->buf[idx] = v;
-	pool->count++;
-
-	return 0;
-}
-
 static int compile_if_expression (moo_t* moo)
 {
-	oow_pool_t jumptoend;
-	oow_pool_chunk_t* jumptoend_chunk;
+	moo_oow_pool_t jumptoend;
+	moo_oow_pool_chunk_t* jumptoend_chunk;
 	moo_oow_t i, j;
 
 	moo_oow_t jumptonext;
@@ -4539,7 +4556,7 @@ static int compile_while_expression (moo_t* moo)
 {
 	moo_ioloc_t while_loc, brace_loc;
 	moo_oow_t precondpos, postcondpos, prebbpos, postbbpos;
-	int cond_style = 0;
+	int cond_style = 0, loop_pushed = 0;
 
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_WHILE);
 	while_loc = *TOKEN_LOC(moo);
@@ -4577,6 +4594,7 @@ static int compile_while_expression (moo_t* moo)
 
 	/* remember information about this while loop. */
 	if (push_loop (moo, precondpos) <= -1) goto oops;
+	loop_pushed = 1;
 
 	GET_TOKEN (moo); /* get { */
 	brace_loc = *TOKEN_LOC(moo);
@@ -4623,14 +4641,16 @@ static int compile_while_expression (moo_t* moo)
 		moo->c->mth.code.len = precondpos;
 	}
 
+	/* destroy the loop information stored earlier in this function */
+	pop_loop (moo, 1);
+
 	/* push nil as a result of the while expression. TODO: is it the best value? anything else? */
 	if (emit_byte_instruction (moo, BCODE_PUSH_NIL) <= -1) goto oops;
 
-	/* destroy the loop information stored earlier in this function */
-	pop_loop (moo, moo->c->mth.code.len);
 	return 0;
 
 oops:
+	if (loop_pushed) pop_loop (moo, 0);
 	return -1;
 }
 
@@ -4769,11 +4789,8 @@ oops:
 	return -1;
 }
 
-static int compile_block_statement (moo_t* moo)
+static int compile_special_statement (moo_t* moo)
 {
-	/* compile_block_statement() is a simpler version of
-	 * of compile_method_statement(). it doesn't cater for
-	 * popping the stack top */
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_RETURN) 
 	{
 		/* ^ - return - return to the sender of the origin */
@@ -4790,70 +4807,70 @@ static int compile_block_statement (moo_t* moo)
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_BREAK)
 	{
-		/* TODO: compile break */
 		if (!moo->c->mth.loop)
 		{
 			/* break outside a loop */
+			set_syntax_error (moo, MOO_SYNERR_NOTINLOOP, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 		if (moo->c->mth.loop->blkcount > 0)
 		{
 			/* break cannot cross boundary of a block */
+			set_syntax_error (moo, MOO_SYNERR_INBLOCK, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		GET_TOKEN (moo);
-moo->errnum = MOO_ENOIMPL;
-return -1;
+		GET_TOKEN (moo); /* read the next token to break */
+		return inject_break_to_loop (moo);
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_CONTINUE)
 	{
-		/* TODO: compile continue */
 		if (!moo->c->mth.loop)
 		{
-			/* continue outside a loop */
+			set_syntax_error (moo, MOO_SYNERR_NOTINLOOP, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 		if (moo->c->mth.loop->blkcount > 0)
 		{
 			/* continue cannot cross boundary of a block */
+			set_syntax_error (moo, MOO_SYNERR_INBLOCK, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		GET_TOKEN (moo);
+		GET_TOKEN (moo); /* read the next token to continue */
 		return emit_backward_jump_instruction (moo, moo->c->mth.code.len - moo->c->mth.loop->startpos);
 	}
-	else
-	{
-		return compile_method_expression(moo, 0);
-	}
+
+	return 9999;
+}
+
+static int compile_block_statement (moo_t* moo)
+{
+	/* compile_block_statement() is a simpler version of
+	 * of compile_method_statement(). it doesn't cater for
+	 * popping the stack top */
+	int n;
+	n = compile_special_statement(moo);
+	if (n <= -1) return -1;
+	if (n == 9999) n = compile_method_expression(moo, 0);
+	return n;
 }
 
 static int compile_method_statement (moo_t* moo)
 {
+
 	/*
-	 * method-statement := method-return-statement | method-expression
+	 * method-statement := method-return-statement | break | continue | method-expression
 	 * method-return-statement := "^" method-expression
 	 */
+	int n;
 
-	if (TOKEN_TYPE(moo) == MOO_IOTOK_RETURN) 
-	{
-		/* handle the return statement */
-		GET_TOKEN (moo);
-		if (compile_method_expression(moo, 0) <= -1) return -1;
-		return emit_byte_instruction (moo, BCODE_RETURN_STACKTOP);
-	}
-	else if (TOKEN_TYPE(moo) == MOO_IOTOK_LOCAL_RETURN)
-	{
-		GET_TOKEN (moo);
-		if (compile_method_expression(moo, 0) <= -1) return -1;
-		return emit_byte_instruction (moo, BCODE_LOCAL_RETURN);
-	}
-	else 
+	n = compile_special_statement(moo);
+	if (n <= -1) return -1;
+
+	if (n == 9999)
 	{
 /* TODO: optimization. if expresssion is a literal, no push and pop are required */
-		int n;
-
 		/* the second parameter to compile_method_expression() indicates 
 		 * that the stack top will eventually be popped off. the compiler
 		 * can optimize some instruction sequencese. for example, two 
@@ -4870,9 +4887,9 @@ static int compile_method_statement (moo_t* moo)
 		{
 			return emit_byte_instruction (moo, BCODE_POP_STACKTOP);
 		}
-
-		return 0;
 	}
+
+	return n;
 }
 
 static int compile_method_statements (moo_t* moo)

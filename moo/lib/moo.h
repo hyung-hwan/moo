@@ -1146,7 +1146,9 @@ enum moo_synerrnum_t
 	MOO_SYNERR_NAMESPACE,     /* wrong namespace name */
 	MOO_SYNERR_POOLDIC,       /* wrong pool dictionary */
 	MOO_SYNERR_POOLDICDUP,    /* duplicate pool dictionary */
-	MOO_SYNERR_LITERAL        /* literal expected */
+	MOO_SYNERR_LITERAL,       /* literal expected */
+	MOO_SYNERR_NOTINLOOP,     /* break or continue not within a loop */
+	MOO_SYNERR_INBLOCK        /* break or continue within a block */
 };
 typedef enum moo_synerrnum_t moo_synerrnum_t;
 

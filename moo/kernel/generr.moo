@@ -98,6 +98,8 @@ class MyObject(Object)
 			'wrong pool dictionary name'
 			'duplicate pool dictionary name'
 			'literal expected'
+			'break or continue not within a loop'
+			'break or continue within a block'
 		).
 
 		f := Stdio open: 'generr.out' for: 'w'.
