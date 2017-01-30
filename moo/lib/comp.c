@@ -83,6 +83,7 @@ static struct voca_t
 	{  8, { 'c','o','n','t','i','n','u','e'                               } },
 	{  3, { 'd','c','l'                                                   } },
 	{  7, { 'd','e','c','l','a','r','e'                                   } },
+	{  2, { 'd','o'                                                       } },
 	{  4, { 'e','l','s','e'                                               } },
 	{  5, { 'e','l','s','i','f'                                           } },
 	{  6, { 'e','n','s','u','r','e',                                      } },
@@ -127,6 +128,7 @@ enum voca_id_t
 	VOCA_CONTINUE,
 	VOCA_DCL,
 	VOCA_DECLARE,
+	VOCA_DO,
 	VOCA_ELSE,
 	VOCA_ELSIF,
 	VOCA_ENSURE,
@@ -245,11 +247,13 @@ static MOO_INLINE int is_identchar (moo_ooci_t c)
 	return is_alnumchar(c) || c == '_';
 }
 
+#if 0
 static MOO_INLINE int is_closing_char (moo_ooci_t c)
 {
 	switch (c)
 	{
 		case '.':
+		case '}':
 		case ']':
 		case ')':
 		case ';':
@@ -261,6 +265,7 @@ static MOO_INLINE int is_closing_char (moo_ooci_t c)
 			return 0;
 	}
 }
+#endif
 
 static MOO_INLINE int is_word (const moo_oocs_t* oocs, voca_id_t id)
 {
@@ -1060,6 +1065,10 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		else if (is_token_word(moo, VOCA_WHILE))
 		{
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_WHILE);
+		}
+		else if (is_token_word(moo, VOCA_DO))
+		{
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_DO);
 		}
 		else if (is_token_word(moo, VOCA_BREAK))
 		{
@@ -1945,10 +1954,6 @@ static int emit_single_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1
 		case BCODE_PUSH_OBJECT_0:
 		case BCODE_STORE_INTO_OBJECT_0:
 		case BCODE_POP_INTO_OBJECT_0:
-		case BCODE_JUMP_FORWARD_0:
-		case BCODE_JUMP_BACKWARD_0:
-		case BCODE_JUMP_FORWARD_IF_FALSE_0:
-		case BCODE_JUMP_BACKWARD_IF_FALSE_0:
 			if (param_1 < 4)
 			{
 				/* low 2 bits to hold the parameter */
@@ -1957,13 +1962,40 @@ static int emit_single_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1
 			}
 			else
 			{
-				/* convert the code to a long version */
+				/* convert the instruction to a long version (_X) */
 				bc = cmd | 0x80;
+				goto write_long;
+			}
+
+
+		case BCODE_JUMP_FORWARD_0:
+		case BCODE_JUMP_BACKWARD_0:
+		case BCODE_JUMP_FORWARD_IF_FALSE_0:
+		case BCODE_JUMP_BACKWARD_IF_FALSE_0:
+		case BCODE_JUMP_BACKWARD_IF_TRUE_0:
+			if (param_1 < 4)
+			{
+				/* low 2 bits to hold the parameter */
+				bc = (moo_oob_t)(cmd & 0xFC) | (moo_oob_t)param_1;
+				goto write_short;
+			}
+			else
+			{
+				/* convert the instruction to a long version (_X) */
+				bc = cmd | 0x80;
+				if (param_1 > MAX_CODE_JUMP)
+				{
+					cmd = cmd + 1; /* convert to a JUMP2 instruction */
+					param_1 = param_1 - MAX_CODE_JUMP;
+				}
 				goto write_long;
 			}
 
 		case BCODE_JUMP2_FORWARD:
 		case BCODE_JUMP2_BACKWARD:
+		case BCODE_JUMP2_FORWARD_IF_FALSE:
+		case BCODE_JUMP2_BACKWARD_IF_FALSE:
+		case BCODE_JUMP2_BACKWARD_IF_TRUE:
 		case BCODE_PUSH_INTLIT:
 		case BCODE_PUSH_NEGINTLIT:
 		case BCODE_PUSH_CHARLIT:
@@ -1994,7 +2026,6 @@ write_long:
 #endif
 	return 0;
 }
-
 
 static int emit_double_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1, moo_oow_t param_2)
 {
@@ -2106,15 +2137,64 @@ static int emit_push_character_literal (moo_t* moo, moo_ooch_t ch)
 	return 0;
 }
 
-static MOO_INLINE int emit_backward_jump_instruction (moo_t* moo, moo_oow_t offset)
+static MOO_INLINE int emit_backward_jump_instruction (moo_t* moo, int cmd, moo_oow_t offset)
 {
 	moo_oow_t adj;
-	/* BCODE_JUMP_BACKWARD_0 can use low 2 bits to encode the jump offset. 
-	 * so it can encode 0, 1, 2, 3. the instruction itself is 1 byte long.
-	 * the 0, 1, 2 can get emitted u*/
-	adj = (offset < 3)? 1: (MOO_BCODE_LONG_PARAM_SIZE + 1);
-	return emit_single_param_instruction (moo, BCODE_JUMP_BACKWARD_0, offset + adj);
 
+	MOO_ASSERT (moo, cmd == BCODE_JUMP_BACKWARD_0 ||
+	                 cmd == BCODE_JUMP_BACKWARD_IF_FALSE_0 ||
+	                 cmd == BCODE_JUMP_BACKWARD_IF_TRUE_0);
+	
+	/* the short BCODE_JUMP_BACKWARD instructions use low 2 bits to encode 
+	 * the jump offset. so it can encode 0, 1, 2, 3. the instruction itself 
+	 * is 1 byte long. the offset value of 0, 1, 2 can get encoded into the
+	 * instruction, which result in 1, 2, 3 when combined with the length 1
+	 * of the instruction itself */
+
+
+	adj = (offset < 3)? 1: (MOO_BCODE_LONG_PARAM_SIZE + 1);
+	return emit_single_param_instruction (moo, cmd, offset + adj);
+}
+
+static int patch_long_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oow_t jt, moo_oob_t jump2_inst, moo_ioloc_t* errloc)
+{
+	moo_oow_t code_size;
+	moo_oow_t jump_offset;
+
+	/* jip - jump instruction pointer, jt - jump target *
+	 * 
+	 * when this jump instruction is executed, the instruction pointer advances
+	 * to the next instruction. so the actual jump size gets offset by the size
+	 * of this jump instruction. MOO_BCODE_LONG_PARAM_SIZE + 1 is the size of
+	 * the long JUMP_FORWARD instruction */
+	code_size = jt - jip - (MOO_BCODE_LONG_PARAM_SIZE + 1);
+	if (code_size > MAX_CODE_JUMP * 2)
+	{
+		/* TODO: change error code or get it as a parameter */
+		set_syntax_error (moo, MOO_SYNERR_BLKFLOOD, errloc, MOO_NULL); 
+		return -1;
+	}
+
+	if (code_size > MAX_CODE_JUMP)
+	{
+		/* switch to JUMP2 instruction to allow a bigger jump offset.
+		 * up to twice MAX_CODE_JUMP only */
+		moo->c->mth.code.ptr[jip] = jump2_inst;
+		jump_offset = code_size - MAX_CODE_JUMP;
+	}
+	else
+	{
+		jump_offset = code_size;
+	}
+
+#if (MOO_BCODE_LONG_PARAM_SIZE == 2)
+	moo->c->mth.code.ptr[jip + 1] = jump_offset >> 8;
+	moo->c->mth.code.ptr[jip + 2] = jump_offset & 0xFF;
+#else
+	moo->c->mth.code.ptr[jip + 1] = jump_offset;
+#endif
+
+	return 0;
 }
 /* ---------------------------------------------------------------------
  * Compiler
@@ -3348,46 +3428,7 @@ static int store_tmpr_count_for_block (moo_t* moo, moo_oow_t tmpr_count)
 	return 0;
 }
 
-static int patch_long_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oob_t jump2_inst, moo_ioloc_t* errloc)
-{
-	moo_oow_t code_size;
-	moo_oow_t jump_offset;
-
-	/* when this jump instruction is executed, the instruction pointer advances
-	 * to the next instruction. so the actual jump size gets offset by the size
-	 * of this jump instruction. MOO_BCODE_LONG_PARAM_SIZE + 1 is the size of
-	 * the long JUMP_FORWARD instruction */
-	code_size = moo->c->mth.code.len - jip - (MOO_BCODE_LONG_PARAM_SIZE + 1);
-	if (code_size > MAX_CODE_JUMP * 2)
-	{
-		/* TODO: change error code or get it as a parameter */
-		set_syntax_error (moo, MOO_SYNERR_BLKFLOOD, errloc, MOO_NULL); 
-		return -1;
-	}
-
-	if (code_size > MAX_CODE_JUMP)
-	{
-		/* switch to JUMP2 instruction to allow a bigger jump offset.
-		 * up to twice MAX_CODE_JUMP only */
-		moo->c->mth.code.ptr[jip] = jump2_inst;
-		jump_offset = code_size - MAX_CODE_JUMP;
-	}
-	else
-	{
-		jump_offset = code_size;
-	}
-
-#if (MOO_BCODE_LONG_PARAM_SIZE == 2)
-	moo->c->mth.code.ptr[jip + 1] = jump_offset >> 8;
-	moo->c->mth.code.ptr[jip + 2] = jump_offset & 0xFF;
-#else
-	moo->c->mth.code.ptr[jip + 1] = jump_offset;
-#endif
-
-	return 0;
-}
-
-static int push_loop (moo_t* moo, moo_oow_t startpos)
+static int push_loop (moo_t* moo, moo_loop_type_t type, moo_oow_t startpos)
 {
 	moo_loop_t* loop;
 
@@ -3395,6 +3436,8 @@ static int push_loop (moo_t* moo, moo_oow_t startpos)
 	if (!loop) return -1;
 
 	init_oow_pool (moo, &loop->break_ip_pool);
+	init_oow_pool (moo, &loop->continue_ip_pool);
+	loop->type = type;
 	loop->startpos = startpos;
 	loop->next = moo->c->mth.loop;
 	moo->c->mth.loop = loop;
@@ -3402,42 +3445,68 @@ static int push_loop (moo_t* moo, moo_oow_t startpos)
 	return 0;
 }
 
-static int pop_loop (moo_t* moo, int patch_break)
+static int update_loop_jumps (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t jt)
+{
+	/* patch the jump instructions emitted for 'break' */
+	moo_oow_pool_chunk_t* chunk;
+	moo_oow_t i, j;
+
+	for (chunk = pool->head, i = 0; chunk; chunk = chunk->next)
+	{
+		for (j = 0; j < MOO_COUNTOF(pool->static_chunk.buf) && i < pool->count; j++)
+		{
+			if (patch_long_forward_jump_instruction (moo, chunk->buf[j], jt, BCODE_JUMP2_FORWARD, MOO_NULL) <= -1) return -1;
+			i++;
+		}
+	}
+
+	return 0;
+}
+
+static MOO_INLINE int update_loop_breaks (moo_t* moo, moo_oow_t jt)
+{
+	return update_loop_jumps (moo, &moo->c->mth.loop->break_ip_pool, jt);
+}
+
+static MOO_INLINE int update_loop_continues (moo_t* moo, moo_oow_t jt)
+{
+	return update_loop_jumps (moo, &moo->c->mth.loop->continue_ip_pool, jt);
+}
+
+
+static MOO_INLINE moo_loop_t* unlink_loop (moo_t* moo)
 {
 	moo_loop_t* loop;
-
-	/* this function must be called when moo->c->mth.code.len is pointing
-	 * to the intended target position because patch_long_forward_jump_instruction()
-	 * patches jumps using the current value in moo->c->mth.code.len */
 
 	MOO_ASSERT (moo, moo->c->mth.loop != MOO_NULL);
 	loop = moo->c->mth.loop;
 	moo->c->mth.loop = loop->next;
 
-	if (patch_break)
-	{
-		/* patch the jump instructions emitted for 'break' */
-		moo_oow_pool_chunk_t* chunk;
-		moo_oow_t i, j;
+	return loop;
+}
 
-		for (chunk = loop->break_ip_pool.head, i = 0; chunk; chunk = chunk->next)
-		{
-			for (j = 0; j < MOO_COUNTOF(loop->break_ip_pool.static_chunk.buf) && i < loop->break_ip_pool.count; j++)
-			{
-				if (patch_long_forward_jump_instruction (moo, chunk->buf[j], BCODE_JUMP2_FORWARD, MOO_NULL) <= -1) return -1;
-				i++;
-			}
-		}
-	}
-
+static MOO_INLINE void free_loop (moo_t* moo, moo_loop_t* loop)
+{
+	fini_oow_pool (moo, &loop->continue_ip_pool);
 	fini_oow_pool (moo, &loop->break_ip_pool);
 	moo_freemem (moo, loop);
-	return 0;
+}
+
+static MOO_INLINE void pop_loop (moo_t* moo)
+{
+	free_loop (moo, unlink_loop (moo));
 }
 
 static MOO_INLINE int inject_break_to_loop (moo_t* moo)
 {
 	if (add_to_oow_pool (moo, &moo->c->mth.loop->break_ip_pool, moo->c->mth.code.len) <= -1 ||
+	    emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
+	return 0;
+}
+
+static MOO_INLINE int inject_continue_to_loop (moo_t* moo)
+{
+	if (add_to_oow_pool (moo, &moo->c->mth.loop->continue_ip_pool, moo->c->mth.code.len) <= -1 ||
 	    emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
 	return 0;
 }
@@ -3586,7 +3655,7 @@ static int compile_block_expression (moo_t* moo)
 
 	if (emit_byte_instruction(moo, BCODE_RETURN_FROM_BLOCK) <= -1) return -1;
 
-	if (patch_long_forward_jump_instruction (moo, jump_inst_pos, BCODE_JUMP2_FORWARD, &block_loc) <= -1) return -1;
+	if (patch_long_forward_jump_instruction (moo, jump_inst_pos, moo->c->mth.code.len, BCODE_JUMP2_FORWARD, &block_loc) <= -1) return -1;
 
 	/* restore the temporary count */
 	moo->c->mth.tmprs.len = saved_tmprs_len;
@@ -4395,8 +4464,8 @@ static int compile_braced_block (moo_t* moo)
 	/* handle a code block enclosed in { } */
 
 /*TODO: support local variable declaration inside {} */
-
 	moo_oow_t code_start;
+
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
 	{
 		set_syntax_error (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -4496,7 +4565,7 @@ static int compile_if_expression (moo_t* moo)
 	GET_TOKEN (moo);
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_ELSIF)
 	{
-		if (patch_long_forward_jump_instruction (moo, jumptonext, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) goto oops;
+		if (patch_long_forward_jump_instruction (moo, jumptonext, moo->c->mth.code.len, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) goto oops;
 
 		GET_TOKEN (moo); /* get ( */
 		if (compile_conditional(moo) <= -1) goto oops;
@@ -4517,7 +4586,7 @@ static int compile_if_expression (moo_t* moo)
 		GET_TOKEN (moo); /* get the next token after } */
 	}
 
-	if (patch_long_forward_jump_instruction (moo, jumptonext, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) goto oops;
+	if (patch_long_forward_jump_instruction (moo, jumptonext, moo->c->mth.code.len, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) goto oops;
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_ELSE)
 	{
@@ -4539,7 +4608,7 @@ static int compile_if_expression (moo_t* moo)
 		 * call will never flood either. */
 		for (j = 0; j < MOO_COUNTOF(jumptoend.static_chunk.buf) && i < jumptoend.count; j++)
 		{
-			if (patch_long_forward_jump_instruction (moo, jumptoend_chunk->buf[j], BCODE_JUMP2_FORWARD_IF_FALSE, &if_loc) <= -1) goto oops;
+			if (patch_long_forward_jump_instruction (moo, jumptoend_chunk->buf[j], moo->c->mth.code.len, BCODE_JUMP2_FORWARD_IF_FALSE, &if_loc) <= -1) goto oops;
 			i++;
 		}
 	}
@@ -4561,7 +4630,7 @@ static int compile_while_expression (moo_t* moo)
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_WHILE);
 	while_loc = *TOKEN_LOC(moo);
 
-	GET_TOKEN (moo); /* get ( */
+	GET_TOKEN (moo); /* get (, verification is done inside compile_conditional() */
 	precondpos = moo->c->mth.code.len;
 	if (compile_conditional (moo) <= -1) goto oops;
 
@@ -4593,7 +4662,7 @@ static int compile_while_expression (moo_t* moo)
 	}
 
 	/* remember information about this while loop. */
-	if (push_loop (moo, precondpos) <= -1) goto oops;
+	if (push_loop (moo, MOO_LOOP_WHILE, precondpos) <= -1) goto oops;
 	loop_pushed = 1;
 
 	GET_TOKEN (moo); /* get { */
@@ -4617,7 +4686,7 @@ static int compile_while_expression (moo_t* moo)
 	}
 
 	/* emit code to jump back to the condition */
-	if (emit_backward_jump_instruction (moo, moo->c->mth.code.len - precondpos) <= -1) 
+	if (emit_backward_jump_instruction (moo, BCODE_JUMP_BACKWARD_0, moo->c->mth.code.len - precondpos) <= -1) 
 	{
 		if (moo->errnum == MOO_ERANGE) 
 		{
@@ -4631,7 +4700,7 @@ static int compile_while_expression (moo_t* moo)
 	if (cond_style != 1)
 	{
 		/* patch the jump instruction. */
-		if (patch_long_forward_jump_instruction (moo, postcondpos, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) goto oops;
+		if (patch_long_forward_jump_instruction (moo, postcondpos, moo->c->mth.code.len, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) goto oops;
 	}
 
 	if (cond_style == -1) 
@@ -4641,8 +4710,12 @@ static int compile_while_expression (moo_t* moo)
 		moo->c->mth.code.len = precondpos;
 	}
 
-	/* destroy the loop information stored earlier in this function */
-	pop_loop (moo, 1);
+	/* patch the jump instructions for break */
+	if (update_loop_breaks (moo, moo->c->mth.code.len) <= -1) goto oops;
+
+	/* destroy the loop information stored earlier in this function  */
+	pop_loop (moo);
+	loop_pushed = 0;
 
 	/* push nil as a result of the while expression. TODO: is it the best value? anything else? */
 	if (emit_byte_instruction (moo, BCODE_PUSH_NIL) <= -1) goto oops;
@@ -4650,7 +4723,117 @@ static int compile_while_expression (moo_t* moo)
 	return 0;
 
 oops:
-	if (loop_pushed) pop_loop (moo, 0);
+	if (loop_pushed) pop_loop (moo);
+	return -1;
+}
+
+static int compile_do_while_expression (moo_t* moo)
+{
+	moo_ioloc_t do_loc;
+	moo_oow_t precondpos, postcondpos, prebbpos, postbbpos;
+	int jbinst = 0, loop_pushed = 0;
+	moo_loop_t* loop = MOO_NULL;
+
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_DO);
+	do_loc = *TOKEN_LOC(moo);
+
+	GET_TOKEN (moo); /* get { */
+	prebbpos = moo->c->mth.code.len;
+
+	/* remember information about this loop. 
+	 * position of the conditional is not known yet.*/
+	if (push_loop (moo, MOO_LOOP_DO_WHILE, prebbpos) <= -1) goto oops;
+	loop_pushed = 1;
+
+	if (compile_braced_block(moo) <= -1) goto oops;
+
+	GET_TOKEN (moo); /* get the next token after } */
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_WHILE)
+	{
+		set_syntax_error (moo, MOO_SYNERR_WHILE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		goto oops;
+	}
+	GET_TOKEN (moo); /* get ( */
+	postbbpos = moo->c->mth.code.len;
+
+	if (prebbpos + 1 == postbbpos && moo->c->mth.code.ptr[prebbpos] == BCODE_PUSH_NIL)
+	{
+		/* optimization -
+		 *  the braced block is kind of empty as it only pushes nil.
+		 *  get rid of this push instruction and don't generate the POP_STACKTOP */
+		moo->c->mth.code.len = prebbpos;
+		precondpos = prebbpos;
+	}
+	else if (prebbpos < postbbpos)
+	{
+		/* emit code to pop the value pushed by the braced block */
+		if (emit_byte_instruction (moo, BCODE_POP_STACKTOP) <= -1) goto oops;
+	}
+
+	precondpos = moo->c->mth.code.len;
+
+	/* update jump instructions emitted for continue */
+	if (update_loop_continues (moo, precondpos) <= -1) goto oops;
+	/* cannnot destroy the loop information because of pending jump updates
+	 * for break. but need to unlink it as the conditional is not really
+	 * part of the loop body */
+	loop = unlink_loop (moo); 
+
+	if (compile_conditional (moo) <= -1) goto oops;
+	postcondpos = moo->c->mth.code.len;
+	jbinst = BCODE_JUMP_BACKWARD_IF_TRUE_0;
+	if (precondpos + 1 == postcondpos)
+	{
+		/* simple optimization - 
+		 *   if the conditional is known to be true, emit the absolute jump instruction.
+		 *   if it is known to be false, kill all generated instructions. */
+		if (moo->c->mth.code.ptr[precondpos] == BCODE_PUSH_TRUE)
+		{
+			/* the conditional is always true. eliminate PUSH_TRUE and emit an absolute jump */
+			moo->c->mth.code.len = precondpos;
+			postcondpos = precondpos;
+			jbinst = BCODE_JUMP_BACKWARD_0;
+		}
+		else if (moo->c->mth.code.ptr[precondpos] == BCODE_PUSH_FALSE)
+		{
+			/* the conditional is always false. eliminate PUSH_FALSE and don't emit jump */
+			moo->c->mth.code.len = precondpos;
+			postcondpos = precondpos;
+			goto skip_emitting_jump_backward;
+		}
+	}
+
+	if (emit_backward_jump_instruction (moo, jbinst, moo->c->mth.code.len - prebbpos) <= -1) 
+	{
+		if (moo->errnum == MOO_ERANGE) 
+		{
+			/* the jump offset is out of the representable range by the offset
+			 * portion of the jump instruction */
+			set_syntax_error (moo, MOO_SYNERR_BLKFLOOD, &do_loc, MOO_NULL);
+		}
+		goto oops;
+	}
+
+skip_emitting_jump_backward:
+	GET_TOKEN (moo); /* get the next token after ) */
+
+	/* update jump instructions emitted for break */
+	if (update_loop_jumps (moo, &loop->break_ip_pool, moo->c->mth.code.len) <= -1) return -1;
+	free_loop (moo, loop);
+	loop = MOO_NULL;
+	loop_pushed = 0;
+
+	/* push nil as a result of the while expression. TODO: is it the best value? anything else? */
+	if (emit_byte_instruction (moo, BCODE_PUSH_NIL) <= -1) goto oops;
+
+	return 0;
+
+oops:
+	if (loop_pushed) 
+	{
+		if (loop) free_loop (moo, loop);
+		else pop_loop (moo);
+	}
 	return -1;
 }
 
@@ -4676,6 +4859,10 @@ static int compile_method_expression (moo_t* moo, int pop)
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_WHILE)
 	{
 		if (compile_while_expression (moo) <= -1) return -1;
+	}
+	else if (TOKEN_TYPE(moo) == MOO_IOTOK_DO)
+	{
+		if (compile_do_while_expression (moo) <= -1) return -1;
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT ||
 	         TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
@@ -4838,10 +5025,13 @@ static int compile_special_statement (moo_t* moo)
 		}
 
 		GET_TOKEN (moo); /* read the next token to continue */
-		return emit_backward_jump_instruction (moo, moo->c->mth.code.len - moo->c->mth.loop->startpos);
+
+		return (moo->c->mth.loop->type == MOO_LOOP_DO_WHILE)?
+			inject_continue_to_loop (moo): /* in a do-while loop, the position to the conditional is not known yet */
+			emit_backward_jump_instruction (moo, BCODE_JUMP_BACKWARD_0, moo->c->mth.code.len - moo->c->mth.loop->startpos);
 	}
 
-	return 9999; /* to indicate that no special stament has been seen and processed */
+	return 9999; /* to indicate that no special statement has been seen and processed */
 }
 
 static int compile_block_statement (moo_t* moo)
@@ -4858,7 +5048,6 @@ static int compile_block_statement (moo_t* moo)
 
 static int compile_method_statement (moo_t* moo)
 {
-
 	/*
 	 * method-statement := method-return-statement | break | continue | method-expression
 	 * method-return-statement := "^" method-expression

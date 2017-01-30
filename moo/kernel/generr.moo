@@ -100,6 +100,7 @@ class MyObject(Object)
 			'literal expected'
 			'break or continue not within a loop'
 			'break or continue within a block'
+			'while expected'
 		).
 
 		f := Stdio open: 'generr.out' for: 'w'.

@@ -176,14 +176,29 @@ class MyObject(Object)
 			a := a + 100000000000000.
 		}.*)
 		
+		(*
 		a := 5.
-		while (true)
+		a := while (true)
 		{
 			a := a + 1.
-			if (a > 20) { break }.
+			##if (a > 20) { break if (true) { break. }. }.
+			if (a > 20) { 
+				^if (true) { break } else {10}.   ## return gets ignored for break.
+			}.
 			a dump.
 		}.
+		a dump.*)
+		a := 5.
+	do {
+		a := do {
+			('in loop.....' & a asString) dump.
+			if (a > 5) { break }.
+			a := a + 1.
+		} while(a < 10).
+	} while (false).
+		a dump.
 
+		## these should be elimited by the compiler.
 		nil.
 		1.
 		0.
@@ -192,6 +207,8 @@ class MyObject(Object)
 		thisContext.
 		nil.
 		nil.
+		## end of elimination.
+		
 		'---------- END ------------' dump.
 		##Processor sleepFor: 20.
 	}
