@@ -4530,63 +4530,94 @@ static int compile_conditional (moo_t* moo)
 	return 0;
 }
 
+#define INVALID_IP MOO_TYPE_MAX(moo_oow_t)
+
 static int compile_if_expression (moo_t* moo)
 {
 	moo_oow_pool_t jumptoend;
 	moo_oow_pool_chunk_t* jumptoend_chunk;
 	moo_oow_t i, j;
-
-	moo_oow_t jumptonext;
+	moo_oow_t jumptonext, precondpos, postcondpos, endoftrueblock;
+	int falseblock;
 	moo_ioloc_t if_loc, brace_loc;
 
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_IF);
 	if_loc = *TOKEN_LOC(moo);
 
 	init_oow_pool (moo, &jumptoend);
+	jumptonext = INVALID_IP;
+	endoftrueblock = INVALID_IP;
 
-/* TODO: simple optimization to check if the conditional is true or false */
-	GET_TOKEN (moo); /* get ( */
-	if (compile_conditional (moo) <= -1) goto oops;
-
-	jumptonext = moo->c->mth.code.len;
-	/* specifying MAX_CODE_JUMP causes emit_single_param_instruction() to 
-	 * produce the long jump instruction (BCODE_JUMP_FORWARD_X) */
-	if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_IF_FALSE_0, MAX_CODE_JUMP) <= -1) goto oops;
-
-	GET_TOKEN (moo); /* get { */
-	brace_loc = *TOKEN_LOC(moo);
-	if (compile_braced_block (moo) <= -1) goto oops;
-
-	/* emit code to jump to the end */
-	/*jumptoend[jumptoend_count++] = moo->c->mth.code.len;*/
-	if (add_to_oow_pool(moo, &jumptoend, moo->c->mth.code.len) <= -1) goto oops;
-	if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) goto oops;
-
-	GET_TOKEN (moo);
-	while (TOKEN_TYPE(moo) == MOO_IOTOK_ELSIF)
+	do
 	{
-		if (patch_long_forward_jump_instruction (moo, jumptonext, moo->c->mth.code.len, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) goto oops;
+		int falseblock = 0;
 
 		GET_TOKEN (moo); /* get ( */
-		if (compile_conditional(moo) <= -1) goto oops;
+		precondpos = moo->c->mth.code.len;
 
-		/* emit code to jump to the next elsif or else */
-		jumptonext = moo->c->mth.code.len;
-		if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_IF_FALSE_0, MAX_CODE_JUMP) <= -1) goto oops;
+		if (jumptonext != INVALID_IP &&
+		    patch_long_forward_jump_instruction (moo, jumptonext, precondpos, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) goto oops;
+
+		if (compile_conditional(moo) <= -1) goto oops;
+		postcondpos = moo->c->mth.code.len;
+
+		if (precondpos + 1 == postcondpos && moo->c->mth.code.ptr[precondpos] == BCODE_PUSH_TRUE)
+		{
+			/* do not generate jump */
+			jumptonext = INVALID_IP;
+			falseblock = 0;
+
+			/* eliminate PUSH_TRUE as well */
+			moo->c->mth.code.len = precondpos;
+			postcondpos = precondpos;
+		}
+		else if (precondpos + 1 == postcondpos && moo->c->mth.code.ptr[precondpos] == BCODE_PUSH_FALSE)
+		{
+			jumptonext = INVALID_IP;
+			/* mark that the conditional is false. instructions will get eliminated below */
+			falseblock = 1; 
+		}
+		else
+		{
+			/* remember position of the jump_forward_if_false instruction to be generated */
+			jumptonext = moo->c->mth.code.len; 
+			/* specifying MAX_CODE_JUMP causes emit_single_param_instruction() to 
+			 * produce the long jump instruction (BCODE_JUMP_FORWARD_X) */
+			if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_IF_FALSE_0, MAX_CODE_JUMP) <= -1) goto oops;
+		}
 
 		GET_TOKEN (moo); /* get { */
 		brace_loc = *TOKEN_LOC(moo);
 		if (compile_braced_block(moo) <= -1) goto oops;
 
-		/* emit code to jump to the end */
-		/*jumptoend[jumptoend_count++] = moo->c->mth.code.len;*/
-		if (add_to_oow_pool(moo, &jumptoend, moo->c->mth.code.len) <= -1) goto oops;
-		if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) goto oops;
+		if (jumptonext == INVALID_IP)
+		{
+			if (falseblock) 
+			{
+				moo->c->mth.code.len = precondpos;
+				postcondpos = precondpos;
+			}
+			else if (endoftrueblock == INVALID_IP) 
+			{
+				/* update the end position of the first true block */
+				endoftrueblock = moo->c->mth.code.len;
+			}
+		}
+		else
+		{
+			if (endoftrueblock == INVALID_IP)
+			{
+				/* emit an instruction to jump to the end */
+				if (add_to_oow_pool(moo, &jumptoend, moo->c->mth.code.len) <= -1) goto oops;
+				if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) goto oops;
+			}
+		}
 
 		GET_TOKEN (moo); /* get the next token after } */
-	}
+	} while (TOKEN_TYPE(moo) == MOO_IOTOK_ELSIF);
 
-	if (patch_long_forward_jump_instruction (moo, jumptonext, moo->c->mth.code.len, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) goto oops;
+	if (jumptonext != INVALID_IP &&
+	    patch_long_forward_jump_instruction (moo, jumptonext, moo->c->mth.code.len, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) goto oops;
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_ELSE)
 	{
@@ -4596,8 +4627,14 @@ static int compile_if_expression (moo_t* moo)
 	}
 	else
 	{
-		/* emit code to push nil if no 'else' part exists */
+		/* emit an instruction to push nil if no 'else' part exists */
 		if (emit_byte_instruction (moo, BCODE_PUSH_NIL) <= -1) goto oops;
+	}
+
+	if (endoftrueblock != INVALID_IP)
+	{
+		/* eliminate all instructions after the end of the first true block found */
+		moo->c->mth.code.len = endoftrueblock;
 	}
 
 	/* patch instructions that jumps to the end of if expression */
@@ -4819,7 +4856,7 @@ skip_emitting_jump_backward:
 
 	/* update jump instructions emitted for break */
 	if (update_loop_jumps (moo, &loop->break_ip_pool, moo->c->mth.code.len) <= -1) return -1;
-	free_loop (moo, loop);
+	free_loop (moo, loop); /* destroy the unlinked loop information */
 	loop = MOO_NULL;
 	loop_pushed = 0;
 

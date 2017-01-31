@@ -176,7 +176,11 @@ class MyObject(Object)
 			a := a + 100000000000000.
 		}.*)
 		
-		(*
+		
+		a := if(false) { 10 } elsif (false) { 20 } elsif (false) { 30} else { 40}.
+		##a := if(false) { 999 } else { 888 }.
+		a dump.
+
 		a := 5.
 		a := while (true)
 		{
@@ -187,12 +191,12 @@ class MyObject(Object)
 			}.
 			a dump.
 		}.
-		a dump.*)
+		a dump.
 		a := 5.
 	do {
 		a := do {
 			('in loop.....' & a asString) dump.
-			if (a > 5) { break }.
+			##if (a > 5) { break }.
 			a := a + 1.
 		} while(a < 10).
 	} while (false).

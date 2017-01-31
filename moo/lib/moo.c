@@ -96,7 +96,7 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 	moo->option.dfl_sysdic_size = MOO_DFL_SYSDIC_SIZE;
 	moo->option.dfl_procstk_size = MOO_DFL_PROCSTK_SIZE;
 
-/* TODO: intoduct a permanent heap */
+/* TODO: introduce a permanent heap */
 	/*moo->permheap = moo_makeheap (moo, what is the best size???);
 	if (!moo->permheap) goto oops; */
 	moo->curheap = moo_makeheap (moo, heapsz);
