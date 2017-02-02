@@ -97,7 +97,9 @@ struct bb_t
 	char buf[1024];
 	moo_oow_t pos;
 	moo_oow_t len;
+
 	FILE* fp;
+	moo_bch_t* fn;
 };
 
 typedef struct xtn_t xtn_t;
@@ -156,56 +158,63 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 {
 	xtn_t* xtn = moo_getxtn(moo);
 	bb_t* bb;
-	FILE* fp;
 
+
+/* TOOD: support predefined include directory as well */
 	if (arg->includer)
 	{
 		/* includee */
+		moo_oow_t ucslen, bcslen, parlen;
+		const moo_bch_t* fn, * fb;
 
-		moo_bch_t bcs[1024]; /* TODO: right buffer size */
-		moo_oow_t bcslen = MOO_COUNTOF(bcs);
-		moo_oow_t ucslen;
+		if (moo_convootobcstr (moo, arg->name, &ucslen, MOO_NULL, &bcslen) <= -1) return -1;
 
-		if (moo_convootobcstr (moo, arg->name, &ucslen, bcs, &bcslen) <= -1) return -1;
+		fn = ((bb_t*)arg->includer->handle)->fn;
 
-/* TODO: make bcs relative to the includer */
-#if defined(__DOS__) || defined(_WIN32) || defined(__OS2__)
-		fp = fopen (bcs, "rb");
-#else
-		fp = fopen (bcs, "r");
-#endif
+		fb = get_base_name (fn);
+		parlen = fb - fn;
+
+		bb = moo_callocmem (moo, MOO_SIZEOF(*bb) + (MOO_SIZEOF(moo_bch_t) * (parlen + bcslen + 1)));
+		if (!bb) return -1;
+
+		bb->fn = (moo_bch_t*)(bb + 1);
+		moo_copybchars (bb->fn, fn, parlen);
+		moo_convootobcstr (moo, arg->name, &ucslen, &bb->fn[parlen], &bcslen);
 	}
 	else
 	{
 		/* main stream */
-#if defined(__DOS__) || defined(_WIN32) || defined(__OS2__)
-		fp = fopen (xtn->source_path, "rb");
-#else
-		fp = fopen (xtn->source_path, "r");
-#endif
+		moo_oow_t pathlen;
+
+		pathlen = moo_countbcstr (xtn->source_path);
+
+		bb = moo_callocmem (moo, MOO_SIZEOF(*bb) + (MOO_SIZEOF(moo_bch_t) * (pathlen + 1)));
+		if (!bb) return -1;
+
+		bb->fn = (moo_bch_t*)(bb + 1);
+		moo_copybcstr (bb->fn, pathlen + 1, xtn->source_path);
 	}
 
-	if (!fp)
+#if defined(__DOS__) || defined(_WIN32) || defined(__OS2__)
+	bb->fp = fopen (bb->fn, "rb");
+#else
+	bb->fp = fopen (bb->fn, "r");
+#endif
+	if (!bb->fp)
 	{
+		fclose (bb->fp);
+		moo_freemem (moo, bb);
 		moo_seterrnum (moo, MOO_EIOERR);
 		return -1;
 	}
 
-	bb = moo_callocmem (moo, MOO_SIZEOF(*bb));
-	if (!bb)
-	{
-		fclose (fp);
-		return -1;
-	}
-
-	bb->fp = fp;
 	arg->handle = bb;
 	return 0;
 }
 
 static MOO_INLINE moo_ooi_t close_input (moo_t* moo, moo_ioarg_t* arg)
 {
-	xtn_t* xtn = moo_getxtn(moo);
+	/*xtn_t* xtn = moo_getxtn(moo);*/
 	bb_t* bb;
 
 	bb = (bb_t*)arg->handle;
