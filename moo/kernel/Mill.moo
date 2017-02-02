@@ -212,7 +212,7 @@ class MyObject(Object)
 		nil.
 		nil.
 		## end of elimination.
-		
+
 		'---------- END ------------' dump.
 		##Processor sleepFor: 20.
 	}

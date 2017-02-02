@@ -167,108 +167,136 @@ class(#pointer) BlockContext(Context)
 
 	method ifTrue: aBlock
 	{
-		^(self value) ifTrue: aBlock.
+		##^(self value) ifTrue: aBlock.
+		^if (self value) { aBlock value }.
+		
 	}
 
 	method ifFalse: aBlock
 	{
-		^(self value) ifFalse: aBlock.
+		##^(self value) ifFalse: aBlock.
+		^if (self value) { (* nothing *) } else { aBlock value }.
 	}
 
 	method ifTrue: trueBlock ifFalse: falseBlock
 	{
-		^(self value) ifTrue: trueBlock ifFalse: falseBlock
+		##^(self value) ifTrue: trueBlock ifFalse: falseBlock
+		^if (self value) { trueBlock value } else { falseBlock value }.
 	}
 
 	method whileTrue: aBlock
 	{
-		## --------------------------------------------------
-		## Naive implementation
-		## --------------------------------------------------
-		## (self value) ifFalse: [^nil].
-		## aBlock value. 
-		## self whileTrue: aBlock.
-		## --------------------------------------------------
+		(* --------------------------------------------------
+		 * Naive recursive implementation
+		 * --------------------------------------------------
+		(self value) ifFalse: [^nil].
+		aBlock value. 
+		self whileTrue: aBlock.
+		 * -------------------------------------------------- *)
 
-		## --------------------------------------------------
-		## Non-recursive implementation
-		## --------------------------------------------------
+		(* --------------------------------------------------
+		 * Non-recursive implementation
+		 * --------------------------------------------------
 		| pc sp |
 
 		pc := thisContext pcplus1.
 		(self value) ifFalse: [ ^nil ].
 		aBlock value.
 
-		## the pc: method leaves thisContext and pc in the stack after
-		## having changes the instruction poointer.
-		## as a result, the stack keeps growing. the goto method
-		## clears thisContext and pc off the stack unlike normal methods.
-		##thisContext pc: pc.
+		 * the pc: method leaves thisContext and pc in the stack after
+		 * having changes the instruction poointer.
+		 * as a result, the stack keeps growing. the goto method
+		 * clears thisContext and pc off the stack unlike normal methods.
+		 * thisContext pc: pc.
 		thisContext goto: pc.
-		## --------------------------------------------------
+		 * -------------------------------------------------- *(
+
+		(* --------------------------------------------------
+		 * Imperative implementation - == true or ~~ false? match the VM implementation
+		 * -------------------------------------------------- *)
+		while ((self value) ~~ false) { aBlock value }.
 	}
 
 	method whileTrue
 	{
-		## (self value) ifFalse: [^nil].
-		## self whileTrue.
+		(* --------------------------------------------------
+		 * Naive recursive implementation
+		 * --------------------------------------------------
+		(self value) ifFalse: [^nil].
+		self whileTrue.
+		 * -------------------------------------------------- */
 
-		## --------------------------------------------------
-		## Non-recursive implementation
-		## --------------------------------------------------
+		(* --------------------------------------------------
+		 * Non-recursive implementation
+		 * --------------------------------------------------
 		| pc |
 		pc := thisContext pcplus1.
 		(self value) ifFalse: [ ^nil ].
 		thisContext goto: pc.
-		## --------------------------------------------------
+		 * -------------------------------------------------- */
+		 
+		(* --------------------------------------------------
+		 * Imperative implementation
+		 * -------------------------------------------------- *)
+		while ((self value) ~~ false) { }.
 	}
 
 	method whileFalse: aBlock
 	{
-		## --------------------------------------------------
-		## Naive implementation
-		## --------------------------------------------------
-		## (self value) ifTrue: [^nil].
-		## aBlock value. 
-		## self whileFalse: aBlock.
-		## --------------------------------------------------
+		(* --------------------------------------------------
+		 * Naive recursive implementation
+		 * --------------------------------------------------
+		 (self value) ifTrue: [^nil].
+		 aBlock value. 
+		 self whileFalse: aBlock.
+		 * -------------------------------------------------- *)
 
-		## --------------------------------------------------
-		## Non-recursive implementation
-		## --------------------------------------------------
-		##  The assignment to 'pc' uses the POP_INTO_TEMPVAR_1.
-		##  It pops a value off the stack top, stores it to the second
-		##  temporary variable(aBlock is the first temporary variable).
-		##  It is a single byte instruction. 'pc' returned by 
-		##  'thisContext pcplus1'' should point to the instruction after
-		##  the POP_INTO_TEMPVAR_0 instruction.
-		##
-		##  It would need the increment of 2 if the pair of 
-		##  STORE_INTO_TEMPVAR_1 and POP_STACKTOP were used. 
-		##  This implementation is subject to the instructions chosen
-		##  by the compiler.
-		##
+		(* --------------------------------------------------
+		 * Non-recursive implementation
+		 * --------------------------------------------------
+		 *  The assignment to 'pc' uses the POP_INTO_TEMPVAR_1.
+		 *  It pops a value off the stack top, stores it to the second
+		 *  temporary variable(aBlock is the first temporary variable).
+		 *  It is a single byte instruction. 'pc' returned by 
+		 *  'thisContext pcplus1'' should point to the instruction after
+		 *  the POP_INTO_TEMPVAR_0 instruction.
+		 *
+		 *  It would need the increment of 2 if the pair of 
+		 *  STORE_INTO_TEMPVAR_1 and POP_STACKTOP were used. 
+		 *  This implementation is subject to the instructions chosen
+		 *  by the compiler.
+		 * --------------------------------------------------
 		| pc |
 		pc := thisContext pcplus1.
 		(self value) ifTrue: [ ^nil "^self" ].
 		aBlock value.
 		thisContext goto: pc.
-		## --------------------------------------------------
+		 * -------------------------------------------------- *)
+
+		(* --------------------------------------------------
+		 * Imperative implementation
+		 * -------------------------------------------------- *)
+		while ((self value) == false) { aBlock value }.
 	}
 
 	method whileFalse
 	{
-		## (self value) ifTrue: [^nil].
-		## self whileFalse.
+		(* --------------------------------------------------
+		 * Naive recursive implementation
+		 * --------------------------------------------------
+		(self value) ifTrue: [^nil].
+		self whileFalse.
+		 * -------------------------------------------------- *)
 
-		## --------------------------------------------------
-		## Non-recursive implementation
-		## --------------------------------------------------
+		(* --------------------------------------------------
+		 * Non-recursive implementation
+		 * -------------------------------------------------- 
 		| pc |
 		pc := thisContext pcplus1.
 		(self value) ifTrue: [ ^nil "^self" ].
 		thisContext goto: pc.
-		## --------------------------------------------------
+		* -------------------------------------------------- *)
+		while ((self value) == false) { }.
 	}
 
 	method pc
