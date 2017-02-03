@@ -93,8 +93,10 @@ host_triplet = @host@
 # to the first number in -version-info above
 @WIN32_TRUE@am__append_1 = -DMOO_DEFAULT_MODPREFIX=\"libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"-1\"
 @WIN32_FALSE@am__append_2 = -DMOO_DEFAULT_MODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"\"
-@ENABLE_STATIC_MODULE_TRUE@am__append_3 = -L$(abs_builddir)/../mod
-@ENABLE_STATIC_MODULE_TRUE@am__append_4 = -lmoo-ffi -lmoo-console -lmoo-stdio 
+@ENABLE_STATIC_MODULE_TRUE@am__append_3 = -lmoo-ffi -lmoo-console -lmoo-stdio 
+@ENABLE_STATIC_MODULE_FALSE@libmoo_la_DEPENDENCIES =  \
+@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_2) \
+@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
 bin_PROGRAMS = moo$(EXEEXT)
 subdir = lib
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -144,7 +146,6 @@ am__installdirs = "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(bindir)" \
 LTLIBRARIES = $(pkglib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-libmoo_la_DEPENDENCIES = $(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
 am_libmoo_la_OBJECTS = libmoo_la-bigint.lo libmoo_la-comp.lo \
 	libmoo_la-debug.lo libmoo_la-decode.lo libmoo_la-dic.lo \
 	libmoo_la-err.lo libmoo_la-exec.lo libmoo_la-logfmt.lo \
@@ -400,7 +401,8 @@ CPPFLAGS_ALL_COMMON = \
 	-I$(abs_srcdir) \
 	-I$(includedir)
 
-LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(libdir)
+@ENABLE_STATIC_MODULE_FALSE@LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(libdir)
+@ENABLE_STATIC_MODULE_TRUE@LDFLAGS_ALL_COMMON = -L$(abs_builddir)/../mod -L$(abs_builddir) -L$(libdir)
 
 ##################################################
 # MAIN LIBRARY 
@@ -438,8 +440,13 @@ libmoo_la_SOURCES = \
 	utl.c
 
 libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
-libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON) $(am__append_3)
-libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_4)
+libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
+libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_3)
+@ENABLE_STATIC_MODULE_TRUE@libmoo_la_DEPENDENCIES = \
+@ENABLE_STATIC_MODULE_TRUE@	$(abs_builddir)/../mod/libmoo-ffi.la \
+@ENABLE_STATIC_MODULE_TRUE@	$(abs_builddir)/../mod/libmoo-console.la \
+@ENABLE_STATIC_MODULE_TRUE@	$(abs_builddir)/../mod/libmoo-stdio.la
+
 moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 moo_LDFLAGS = $(LDFLAGS_LIB_COMMON)

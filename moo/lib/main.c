@@ -157,7 +157,7 @@ static const moo_bch_t* get_base_name (const moo_bch_t* path)
 static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 {
 	xtn_t* xtn = moo_getxtn(moo);
-	bb_t* bb;
+	bb_t* bb = MOO_NULL;
 
 
 /* TOOD: support predefined include directory as well */
@@ -167,7 +167,11 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 		moo_oow_t ucslen, bcslen, parlen;
 		const moo_bch_t* fn, * fb;
 
-		if (moo_convootobcstr (moo, arg->name, &ucslen, MOO_NULL, &bcslen) <= -1) return -1;
+	#if defined(MOO_OOCH_IS_UCH)
+		if (moo_convootobcstr (moo, arg->name, &ucslen, MOO_NULL, &bcslen) <= -1) goto oops;
+	#else
+		bcslen = moo_countbcstr (arg->name);
+	#endif
 
 		fn = ((bb_t*)arg->includer->handle)->fn;
 
@@ -175,11 +179,15 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 		parlen = fb - fn;
 
 		bb = moo_callocmem (moo, MOO_SIZEOF(*bb) + (MOO_SIZEOF(moo_bch_t) * (parlen + bcslen + 1)));
-		if (!bb) return -1;
+		if (!bb) goto oops;
 
 		bb->fn = (moo_bch_t*)(bb + 1);
 		moo_copybchars (bb->fn, fn, parlen);
+	#if defined(MOO_OOCH_IS_UCH)
 		moo_convootobcstr (moo, arg->name, &ucslen, &bb->fn[parlen], &bcslen);
+	#else
+		moo_copybcstr (&bb->fn[parlen], bcslen + 1, arg->name);
+	#endif
 	}
 	else
 	{
@@ -189,7 +197,7 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 		pathlen = moo_countbcstr (xtn->source_path);
 
 		bb = moo_callocmem (moo, MOO_SIZEOF(*bb) + (MOO_SIZEOF(moo_bch_t) * (pathlen + 1)));
-		if (!bb) return -1;
+		if (!bb) goto oops;
 
 		bb->fn = (moo_bch_t*)(bb + 1);
 		moo_copybcstr (bb->fn, pathlen + 1, xtn->source_path);
@@ -203,13 +211,16 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 	if (!bb->fp)
 	{
 		fclose (bb->fp);
-		moo_freemem (moo, bb);
 		moo_seterrnum (moo, MOO_EIOERR);
-		return -1;
+		goto oops;
 	}
 
 	arg->handle = bb;
 	return 0;
+
+oops:
+	if (bb) moo_freemem (moo, bb);
+	return -1;
 }
 
 static MOO_INLINE moo_ooi_t close_input (moo_t* moo, moo_ioarg_t* arg)
@@ -254,12 +265,18 @@ static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 	}
 	while (bb->len < MOO_COUNTOF(bb->buf) && x != '\r' && x != '\n');
 
+#if defined(MOO_OOCH_IS_UCH)
 	bcslen = bb->len;
 	ucslen = MOO_COUNTOF(arg->buf);
 	x = moo_convbtooochars (moo, bb->buf, &bcslen, arg->buf, &ucslen);
 	if (x <= -1 && ucslen <= 0) return -1;
 	/* if ucslen is greater than 0, i see that some characters have been
 	 * converted properly */
+#else
+	bcslen = (bb->len < MOO_COUNTOF(arg->buf))? bb->len: MOO_COUNTOF(arg->buf);
+	ucslen = bcslen;
+	moo_copybchars (arg->buf, bb->buf, bcslen);
+#endif
 
 	remlen = bb->len - bcslen;
 	if (remlen > 0) memmove (bb->buf, &bb->buf[bcslen], remlen);
@@ -303,8 +320,12 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		len = moo_copybcstr (buf, MOO_COUNTOF(buf), MOO_DEFAULT_PFMODPREFIX);
 
 		bcslen = MOO_COUNTOF(buf) - len;
+	#if defined(MOO_OOCH_IS_UCH)
 		if (moo_convootobcstr (moo, name, &ucslen, &buf[len], &bcslen) <= -1) return MOO_NULL;
-
+	#else
+		bcslen = moo_copybcstr (&buf[len], bcslen, name);
+	#endif
+ 
 		moo_copybcstr (&buf[bcslen + len], MOO_COUNTOF(buf) - bcslen - len, MOO_DEFAULT_PFMODPOSTFIX);
 
 		handle = lt_dlopenext (buf);
@@ -324,8 +345,12 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 	else
 	{
 		/* opening a raw shared object */
+	#if defined(MOO_OOCH_IS_UCH)
 		bcslen = MOO_COUNTOF(buf);
 		if (moo_convootobcstr (moo, name, &ucslen, buf, &bcslen) <= -1) return MOO_NULL;
+	#else
+		bcslen = moo_copybcstr (buf, MOO_COUNTOF(buf), name);
+	#endif
 
 		if (moo_findbchar (buf, bcslen, '.'))
 		{
@@ -376,7 +401,11 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 	buf[0] = '_';
 
 	bcslen = MOO_COUNTOF(buf) - 2;
+#if defined(MOO_OOCH_IS_UCH)
 	moo_convootobcstr (moo, name, &ucslen, &buf[1], &bcslen); /* TODO: error check */
+#else
+	bcslen = moo_copybcstr (&buf[1], bcslen, name);
+#endif
 	symname = &buf[1];
 	sym = lt_dlsym (handle, symname);
 	if (!sym)
@@ -402,6 +431,8 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 	return sym;
 #else
 	/* TODO: IMPLEMENT THIS */
+	MOO_DEBUG2 (moo, "Dynamic loading not implemented - Cannot loaded module symbol %s from handle %p\n", symname, handle);
+	moo_seterrnum (moo, MOO_ENOIMPL);
 	return MOO_NULL;
 #endif
 }
@@ -481,6 +512,7 @@ if (mask & MOO_LOG_GC) return; /* don't show gc logs */
 #endif
 	write_all (1, ts, tslen);
 
+#if defined(MOO_OOCH_IS_UCH)
 	msgidx = 0;
 	while (len > 0)
 	{
@@ -514,6 +546,10 @@ if (mask & MOO_LOG_GC) return; /* don't show gc logs */
 			break;
 		}
 	}
+#else
+	write_all (1, msg, len);
+#endif
+
 #endif
 }
 
@@ -730,11 +766,15 @@ int main (int argc, char* argv[])
 				printf ("ERROR: ");
 				if (synerr.loc.file)
 				{
+				#if defined(MOO_OOCH_IS_UCH)
 					bcslen = MOO_COUNTOF(bcs);
 					if (moo_convootobcstr (moo, synerr.loc.file, &ucslen, bcs, &bcslen) >= 0)
 					{
 						printf ("%.*s ", (int)bcslen, bcs);
 					}
+				#else
+					printf ("%s ", synerr.loc.file);
+				#endif
 				}
 				else
 				{
@@ -745,20 +785,28 @@ int main (int argc, char* argv[])
 					(unsigned long int)synerr.loc.line, (unsigned long int)synerr.loc.colm);
 
 				bcslen = MOO_COUNTOF(bcs);
+			#if defined(MOO_OOCH_IS_UCH)
 				if (moo_convootobcstr (moo, moo_synerrnumtoerrstr(synerr.num), &ucslen, bcs, &bcslen) >= 0)
 				{
 					printf (" [%.*s]", (int)bcslen, bcs);
 				}
+			#else
+				printf (" [%s]", moo_synerrnumtoerrstr(synerr.num));
+			#endif
 
 				if (synerr.tgt.len > 0)
 				{
 					bcslen = MOO_COUNTOF(bcs);
 					ucslen = synerr.tgt.len;
 
+				#if defined(MOO_OOCH_IS_UCH)
 					if (moo_convootobchars (moo, synerr.tgt.ptr, &ucslen, bcs, &bcslen) >= 0)
 					{
 						printf (" [%.*s]", (int)bcslen, bcs);
 					}
+				#else
+					printf (" [%.*s]", (int)synerr.tgt.len, synerr.tgt.ptr);
+				#endif
 
 				}
 				printf ("\n");

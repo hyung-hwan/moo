@@ -4538,7 +4538,6 @@ static int compile_if_expression (moo_t* moo)
 	moo_oow_pool_chunk_t* jumptoend_chunk;
 	moo_oow_t i, j;
 	moo_oow_t jumptonext, precondpos, postcondpos, endoftrueblock;
-	int falseblock;
 	moo_ioloc_t if_loc, brace_loc;
 
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_IF);
@@ -6191,7 +6190,7 @@ static int __compile_pooldic_definition (moo_t* moo)
 	/*if (!MOO_IN_SMOOI_RANGE(tally)) ERROR??*/
 
 	/* i use mthdic_oop[0] when compling #pooldic. it's not a real method dictionary.
-	 * i just use it not to declare another field into the compiler */
+	 * i just use it to avoid declaring another field into the compiler */
 	moo->c->cls.pooldic_oop = moo_makedic (moo, moo->_pool_dictionary, MOO_ALIGN(tally + 10, POOL_DICTIONARY_SIZE_ALIGN));
 	if (!moo->c->cls.pooldic_oop) return -1;
 

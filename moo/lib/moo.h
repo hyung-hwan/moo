@@ -800,9 +800,9 @@ typedef int (*moo_mod_import_t) (
 );
 
 typedef moo_pfimpl_t (*moo_mod_query_t) (
-	moo_t*           moo,
-	moo_mod_t*       mod,
-	const moo_uch_t* name
+	moo_t*            moo,
+	moo_mod_t*        mod,
+	const moo_ooch_t* name
 );
 
 typedef void (*moo_mod_unload_t) (
@@ -816,12 +816,12 @@ struct moo_mod_t
 	moo_mod_import_t import;
 	moo_mod_query_t  query;
 	moo_mod_unload_t unload;
-	void*             ctx;
+	void*            ctx;
 };
 
 struct moo_mod_data_t 
 {
-	void*            handle;
+	void*           handle;
 	moo_rbt_pair_t* pair; /* internal backreference to moo->modtab */
 	moo_mod_t       mod;
 };

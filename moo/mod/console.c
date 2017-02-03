@@ -173,6 +173,7 @@ static moo_pfrc_t pf_write (moo_t* moo, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
+#if defined(MOO_OOCH_IS_UCH)
 	ucspos = 0;
 	ucsrem = MOO_OBJ_GET_SIZE(oomsg);
 	while (ucsrem > 0)
@@ -189,6 +190,9 @@ static moo_pfrc_t pf_write (moo_t* moo, moo_ooi_t nargs)
 		ucspos += ucslen;
 		ucsrem -= ucslen;
 	}
+#else
+	write (con->fd, oomsg->slot, MOO_OBJ_GET_SIZE(oomsg)); /* TODO: error handling. incomplete write handling */
+#endif
 
 	MOO_STACK_SETRETTORCV (moo, nargs); /* TODO: change return code */
 	return MOO_PF_SUCCESS;

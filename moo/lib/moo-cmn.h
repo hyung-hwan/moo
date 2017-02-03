@@ -275,8 +275,8 @@
  * BASIC MOO TYPES
  * =========================================================================*/
 
-typedef char                     moo_bch_t;
-typedef int                      moo_bci_t;
+typedef char                    moo_bch_t;
+typedef int                     moo_bci_t;
 
 typedef moo_uint16_t            moo_uch_t; /* TODO ... wchar_t??? */
 typedef moo_int32_t             moo_uci_t;
@@ -308,11 +308,18 @@ struct moo_bcs_t
 };
 typedef struct moo_bcs_t moo_bcs_t;
 
-typedef moo_uch_t               moo_ooch_t;
-typedef moo_uci_t               moo_ooci_t;
-typedef moo_ucs_t               moo_oocs_t;
-#define MOO_OOCH_IS_UCH
 
+#if 0
+	typedef moo_bch_t               moo_ooch_t;
+	typedef moo_bci_t               moo_ooci_t;
+	typedef moo_bcs_t               moo_oocs_t;
+#	define MOO_OOCH_IS_BCH
+#else
+	typedef moo_uch_t               moo_ooch_t;
+	typedef moo_uci_t               moo_ooci_t;
+	typedef moo_ucs_t               moo_oocs_t;
+#	define MOO_OOCH_IS_UCH
+#endif
 
 
 /* =========================================================================

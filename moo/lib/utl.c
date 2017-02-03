@@ -127,12 +127,14 @@ int moo_compbcharsbcstr (const moo_bch_t* str1, moo_oow_t len, const moo_bch_t* 
 
 void moo_copyuchars (moo_uch_t* dst, const moo_uch_t* src, moo_oow_t len)
 {
+	/* take note of no forced null termination */
 	moo_oow_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
 void moo_copybchars (moo_bch_t* dst, const moo_bch_t* src, moo_oow_t len)
 {
+	/* take note of no forced null termination */
 	moo_oow_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }

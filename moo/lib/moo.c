@@ -401,8 +401,6 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 #if defined(MOO_ENABLE_STATIC_MODULE)
 	/* attempt to find a statically linked module */
 
-/*TODO: CHANGE THIS PART */
-
 	/* TODO: binary search ... */
 	for (n = 0; n < MOO_COUNTOF(static_modtab); n++)
 	{

@@ -5,7 +5,11 @@ CPPFLAGS_ALL_COMMON = \
 	-I$(abs_srcdir) \
 	-I$(includedir)
 
+if ENABLE_STATIC_MODULE
+LDFLAGS_ALL_COMMON = -L$(abs_builddir)/../mod -L$(abs_builddir) -L$(libdir)
+else
 LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(libdir)
+endif
 
 ##################################################
 # MAIN LIBRARY 
@@ -59,8 +63,11 @@ libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libmoo_la_LIBADD = $(LIBADD_LIB_COMMON)
 
 if ENABLE_STATIC_MODULE
-libmoo_la_LDFLAGS += -L$(abs_builddir)/../mod
 libmoo_la_LIBADD += -lmoo-ffi -lmoo-console -lmoo-stdio 
+libmoo_la_DEPENDENCIES = \
+	$(abs_builddir)/../mod/libmoo-ffi.la \
+	$(abs_builddir)/../mod/libmoo-console.la \
+	$(abs_builddir)/../mod/libmoo-stdio.la
 endif
 
 bin_PROGRAMS = moo
