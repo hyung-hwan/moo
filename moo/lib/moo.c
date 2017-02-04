@@ -345,7 +345,7 @@ void moo_freemem (moo_t* moo, void* ptr)
 /* -------------------------------------------------------------------------- */
 
 #define MOD_PREFIX "moo_mod_"
-#define MOD_PREFIX_LEN 9
+#define MOD_PREFIX_LEN 8
 
 #if defined(MOO_ENABLE_STATIC_MODULE)
 
@@ -485,7 +485,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	if (load (moo, &mdp->mod) <= -1)
 	{
 		MOO_DEBUG3 (moo, "Module function [%js] returned failure in [%.*js]\n", buf, namelen, name);
-		moo->errnum = MOO_ENOENT; /* TODO: proper error code and handling */
+		moo->errnum = MOO_ENOENT; /* TODO: proper/better error code and handling */
 		moo_rbt_delete (&moo->modtab, name, namelen);
 		moo->vmprim.dl_close (moo, mdp->handle);
 		return MOO_NULL;

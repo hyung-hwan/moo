@@ -5,7 +5,8 @@
 # /zmod486 - 80486 instructions
 # /zfloatsync - FPU is operand-synchronized with the CPU
 # /m create map file
-CFLAGS :=  /D__DOS__ /DMOO_ENABLE_STATIC_MODULE /DNDEBUG /g /zmod486  /m
+# /g produce debug info
+CFLAGS :=  /D__DOS__ /DMOO_ENABLE_STATIC_MODULE /DNDEBUG 
 LDFLAGS := /xnovm /xregion=12m
 
 SRCS := \

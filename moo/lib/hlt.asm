@@ -8,7 +8,7 @@ ASSUME CS:PROG_CODE
 PUBLIC _halt_cpu
 
 _halt_cpu PROC NEAR
-;	HLT ; this will cause #GP(0) as it's privileged. TODO: find a way to raise privilege level.
+	;HLT ; this will cause #GP(0) as CPL is set to 3 by intel dos extender.
 	;MOV AX, CS
 	;AND AX, 3
 	RET
