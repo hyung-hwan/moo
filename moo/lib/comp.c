@@ -3993,7 +3993,6 @@ static int compile_array_expression (moo_t* moo)
 		index = 0;
 		do
 		{
-/* TODO: check if index exceeds the index that the BCODE_POP_INTO_ARRAY and BCODE_MAKE_ARRAY can support */
 			if (compile_method_expression (moo, 0) <= -1) return -1;
 			if (emit_single_param_instruction (moo, BCODE_POP_INTO_ARRAY, index) <= -1) return -1;
 			index++;

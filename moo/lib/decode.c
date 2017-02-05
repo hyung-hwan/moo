@@ -488,6 +488,18 @@ int moo_decode (moo_t* moo, moo_oop_method_t mth, const moo_oocs_t* classfqn)
 				break;
 			/* -------------------------------------------------------- */
 
+			case BCODE_MAKE_ASSOCIATION:
+				LOG_INST_0 (moo, "make_association");
+				break;
+
+			case BCODE_POP_INTO_ASSOCIATION_KEY:
+				LOG_INST_0 (moo, "pop_into_association_key");
+				break;
+
+			case BCODE_POP_INTO_ASSOCIATION_VALUE:
+				LOG_INST_0 (moo, "pop_into_association_value");
+				break;
+
 			case BCODE_MAKE_ARRAY:
 				FETCH_PARAM_CODE_TO (moo, b1);
 				LOG_INST_1 (moo, "make_array %zu", b1);

@@ -215,14 +215,33 @@ class MyObject(Object)
 		## end of elimination.
 
 		a :=999.
-		a := #{ 
+		a := #{
 			1, 
 			2,
 			a,
 			4,
 			1 + 1,
-			2 + 2
+			#{ 1, 2, #{a, a := a + 1, a, if (a > 10) { a + 20 } }, 3},
+			2 + 2,
+			#'a b c'
 		}.
+		
+		(* Dictionary ???
+		a := #{
+			"a": 20,
+			b : 30
+		}. 
+		a := #{
+			{ key, value },
+			{ key, value },
+			{ key, value },
+			{ key, value }
+		}
+		*)
+		
+		abc := { key, value }.
+		{ key, value } dump.
+		
 		a do: [ :v | v dump].
 
 (*
