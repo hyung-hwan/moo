@@ -159,7 +159,6 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 	xtn_t* xtn = moo_getxtn(moo);
 	bb_t* bb = MOO_NULL;
 
-
 /* TOOD: support predefined include directory as well */
 	if (arg->includer)
 	{

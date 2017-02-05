@@ -40,6 +40,8 @@
 #define NAMESPACE_SIZE 128 /* TODO: choose the right size */
 #define POOL_DICTIONARY_SIZE_ALIGN 128
 
+#define INVALID_IP MOO_TYPE_MAX(moo_oow_t)
+
 enum class_mod_t
 {
 	CLASS_INDEXED   = (1 << 0)
@@ -957,7 +959,10 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		if (moo->c->in_array && is_leadidentchar(c)) 
 		{
 			/* when reading an array literal, read as many characters as
-			 * would compose a normal keyword symbol literal */
+			 * would compose a normal keyword symbol literal.
+			 * for example, in #(a #b:c: x:y:) x:y: is not preceded
+			 * by #. in an array literal, it should still be treated as 
+			 * a symbol. */
 			do
 			{
 				ADD_TOKEN_CHAR (moo, c);
@@ -1564,15 +1569,21 @@ retry:
 					return -1;
 
 				case '(':
-					/* #( */
+					/* #( - array literal */
 					ADD_TOKEN_CHAR(moo, c);
-					SET_TOKEN_TYPE (moo, MOO_IOTOK_ARPAREN);
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_APAREN);
 					break;
 
 				case '[':
 					/* #[ - byte array literal */
 					ADD_TOKEN_CHAR(moo, c);
 					SET_TOKEN_TYPE (moo, MOO_IOTOK_BAPAREN);
+					break;
+
+				case '{':
+					/* #{ - array expression */
+					ADD_TOKEN_CHAR(moo, c);
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_ABRACE);
 					break;
 
 				case '\'':
@@ -1999,10 +2010,13 @@ static int emit_single_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1
 		case BCODE_PUSH_INTLIT:
 		case BCODE_PUSH_NEGINTLIT:
 		case BCODE_PUSH_CHARLIT:
+		case BCODE_MAKE_ARRAY:
+		case BCODE_POP_INTO_ARRAY:
 			bc = cmd;
 			goto write_long;
 	}
 
+	MOO_DEBUG1 (moo, "Invalid single param instruction opcode %d\n", (int)cmd);
 	moo->errnum = MOO_EINVAL;
 	return -1;
 
@@ -2059,6 +2073,7 @@ static int emit_double_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1
 			goto write_long;
 	}
 
+	MOO_DEBUG1 (moo, "Invalid double param instruction opcode %d\n", (int)cmd);
 	moo->errnum = MOO_EINVAL;
 	return -1;
 
@@ -3798,6 +3813,7 @@ static int __read_array_literal (moo_t* moo, moo_oop_t* xlit)
 				lit = moo_makesymbol (moo, TOKEN_NAME_PTR(moo) + 1, TOKEN_NAME_LEN(moo) - 1);
 				break;
 
+/*
 			case MOO_IOTOK_IDENT:
 			case MOO_IOTOK_IDENT_DOTTED:
 			case MOO_IOTOK_BINSEL:
@@ -3806,8 +3822,38 @@ static int __read_array_literal (moo_t* moo, moo_oop_t* xlit)
 			case MOO_IOTOK_SUPER:
 			case MOO_IOTOK_THIS_CONTEXT:
 			case MOO_IOTOK_THIS_PROCESS:
+			case MOO_IOTOK_DO:
+			case MOO_IOTOK_WHILE:
+			case MOO_IOTOK_BREAK:
+			case MOO_IOTOK_CONTINUE:
+			case MOO_IOTOK_IF:
+			case MOO_IOTOK_ELSE:
+			case MOO_IOTOK_ELSIF:
 				lit = moo_makesymbol (moo, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
 				break;
+*/
+/*		
+a := #(1 2 3 self 5)
+a := #(1 2 3 #(1 2 3) self)
+
+a := #(1, 2, 3, self, 5) <---- is array constant? is array non constant?
+if array constant contains a comma, produce MAKE_ARRAY
+if array literal contains no comma, it's just a literal array.
+what to do with a single element array? no problem if the element is still a literal.
+should i allow expression or something like that here???
+
+#(( abc ))
+
+#(1, 2)
+* 
+
+make array 10.
+push 10
+put array at 1.
+push 20
+put array at 2
+if index is too large, switch to at:put? (or don't care as it's too large???).
+*/
 
 			case MOO_IOTOK_NIL:
 				lit = moo->_nil;
@@ -3821,16 +3867,16 @@ static int __read_array_literal (moo_t* moo, moo_oop_t* xlit)
 				lit = moo->_false;
 				break;
 
-			case MOO_IOTOK_ERROR:
+			case MOO_IOTOK_ERROR: /* error */
 				lit = MOO_ERROR_TO_OOP(MOO_EGENERIC);
 				break;
 
-			case MOO_IOTOK_ERRLIT:
+			case MOO_IOTOK_ERRLIT: /* error(X) */
 				lit = string_to_error (moo, TOKEN_NAME(moo));
 				break;
 
-			case MOO_IOTOK_ARPAREN: /* #( */
-			case MOO_IOTOK_LPAREN: /* ( */
+			case MOO_IOTOK_APAREN: /* #( */
+			/*case MOO_IOTOK_LPAREN:*/ /* ( */
 				saved_arlit_count = moo->c->mth.arlit_count;
 /* TODO: get rid of recursion?? */
 				GET_TOKEN (moo);
@@ -3839,7 +3885,7 @@ static int __read_array_literal (moo_t* moo, moo_oop_t* xlit)
 				break;
 
 			case MOO_IOTOK_BAPAREN: /* #[ */
-			case MOO_IOTOK_LBRACK: /* [ */
+			/*case MOO_IOTOK_LBRACK:*/ /* [ */
 				GET_TOKEN (moo);
 				if (__read_byte_array_literal (moo, &lit) <= -1) return -1;
 				break;
@@ -3925,6 +3971,63 @@ static int compile_array_literal (moo_t* moo)
 	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 
 	GET_TOKEN (moo);
+	return 0;
+}
+
+static int compile_array_expression (moo_t* moo)
+{
+	moo_oow_t maip;
+	moo_ioloc_t aeloc;
+
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_ABRACE);
+
+	maip = moo->c->mth.code.len;
+	if (emit_single_param_instruction(moo, BCODE_MAKE_ARRAY, 0) <= -1) return -1;
+
+	aeloc = *TOKEN_LOC(moo);
+	GET_TOKEN (moo); /* read a token after #{ */
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
+	{
+		moo_oow_t index;
+
+		index = 0;
+		do
+		{
+/* TODO: check if index exceeds the index that the BCODE_POP_INTO_ARRAY and BCODE_MAKE_ARRAY can support */
+			if (compile_method_expression (moo, 0) <= -1) return -1;
+			if (emit_single_param_instruction (moo, BCODE_POP_INTO_ARRAY, index) <= -1) return -1;
+			index++;
+
+			if (index > MAX_CODE_PARAM)
+			{
+				set_syntax_error (moo, MOO_SYNERR_ARREXPFLOOD, &aeloc, MOO_NULL);
+				return -1;
+			}
+
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
+
+			if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA)
+			{
+				set_syntax_error (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				return -1;
+			}
+
+			GET_TOKEN (moo);
+		} 
+		while (1);
+
+	/* TODO: devise a double_param MAKE_ARRAY to increase the number of elementes supported... */
+		/* patch the MAKE_ARRAY instruction */
+	#if (MOO_BCODE_LONG_PARAM_SIZE == 2)
+		moo->c->mth.code.ptr[maip + 1] = index >> 8;
+		moo->c->mth.code.ptr[maip + 2] = index & 0xFF;
+	#else
+		moo->c->mth.code.ptr[maip + 1] = index;
+	#endif
+
+	}
+
+	GET_TOKEN (moo); /* read a token after } */
 	return 0;
 }
 
@@ -4121,12 +4224,14 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				if (compile_byte_array_literal(moo) <= -1) return -1;
 				break;
 
-			case MOO_IOTOK_ARPAREN: /* #( */
+			case MOO_IOTOK_APAREN: /* #( */
 				/*GET_TOKEN (moo);*/
 				if (compile_array_literal(moo) <= -1) return -1;
 				break;
 
-			/* TODO: dynamic array, non constant array #<> or #{} or what is a better bracket? */
+			case MOO_IOTOK_ABRACE: /* #{ */
+				if (compile_array_expression(moo) <= -1) return -1;
+				break;
 
 			case MOO_IOTOK_LBRACK: /* [ */
 			{
@@ -4520,7 +4625,11 @@ static int compile_conditional (moo_t* moo)
 	}
 
 	GET_TOKEN (moo);
+
+	/* a weird expression like this is also allowed for the call to  compile_method_expression() 
+	 *   if (if (a == 10) { ^20 }) { ^40 }. */
 	if (compile_method_expression(moo, 0) <= -1) return -1;
+
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 	{
 		set_syntax_error (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -4529,8 +4638,6 @@ static int compile_conditional (moo_t* moo)
 
 	return 0;
 }
-
-#define INVALID_IP MOO_TYPE_MAX(moo_oow_t)
 
 static int compile_if_expression (moo_t* moo)
 {
@@ -4876,9 +4983,11 @@ oops:
 static int compile_method_expression (moo_t* moo, int pop)
 {
 	/*
-	 * method-expression := method-assignment-expression | basic-expression | if-expression
+	 * method-expression := method-assignment-expression | basic-expression | if-expression | while-expression | do-while-expression
 	 * method-assignment-expression := identifier ":=" method-expression
 	 * if-expression := if ( ) {  } elsif { } else { }
+	 * while-expression := while () {}
+	 * do-while-expression := do { } while ()
 	 */
 
 	moo_oocs_t assignee;
@@ -6144,11 +6253,11 @@ static int __compile_pooldic_definition (moo_t* moo)
 				if (!lit) return -1;
 				goto add_literal;
 
-			case MOO_IOTOK_BAPAREN: /* #[ - byte array parenthesis */
+			case MOO_IOTOK_BAPAREN: /* #[ - byte array literal parenthesis */
 				if (read_byte_array_literal(moo, &lit) <= -1) return -1;
 				goto add_literal;
 
-			case MOO_IOTOK_ARPAREN: /* #( - array parenthesis */
+			case MOO_IOTOK_APAREN: /* #( - array literal parenthesis */
 				if (read_array_literal(moo, &lit) <= -1) return -1;
 				goto add_literal;
 

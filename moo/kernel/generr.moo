@@ -90,6 +90,7 @@ class MyObject(Object)
 			'too many block temporaries'
 			'too many block arguments'
 			'too large block'
+			'too large array expression'
 			'wrong primitive function number'
 			'wrong primitive function identifier'
 			'wrong module name'

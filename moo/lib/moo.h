@@ -1139,6 +1139,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_BLKTMPRFLOOD,  /* too many block temporaries */
 	MOO_SYNERR_BLKARGFLOOD,   /* too many block arguments */
 	MOO_SYNERR_BLKFLOOD,      /* too large block */
+	MOO_SYNERR_ARREXPFLOOD,   /* too large array expression */
 	MOO_SYNERR_PFNUM,         /* wrong primitive number */
 	MOO_SYNERR_PFID,          /* wrong primitive identifier */
 	MOO_SYNERR_MODNAME,       /* wrong module name */

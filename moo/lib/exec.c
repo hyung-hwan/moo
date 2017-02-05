@@ -3795,6 +3795,35 @@ int moo_execute (moo_t* moo)
 				break;
 			/* -------------------------------------------------------- */
 
+			case BCODE_MAKE_ARRAY:
+			{
+				moo_oop_t t;
+
+				FETCH_PARAM_CODE_TO (moo, b1);
+				LOG_INST_1 (moo, "make_array %zu", b1);
+
+				/* create an empty array */
+				t = moo_instantiate (moo, moo->_array, MOO_NULL, b1);
+				if (!t) goto oops;
+
+				MOO_STACK_PUSH (moo, t); /* push the array created */
+				break;
+			}
+
+			case BCODE_POP_INTO_ARRAY:
+			{
+				moo_oop_t t1, t2;
+
+				FETCH_PARAM_CODE_TO (moo, b1);
+				LOG_INST_1 (moo, "pop_into_array %zu", b1);
+
+				t1 = MOO_STACK_GETTOP(moo);
+				MOO_STACK_POP (moo);
+				t2 = MOO_STACK_GETTOP(moo);
+				((moo_oop_oop_t)t2)->slot[b1] = t1;
+				break;
+			}
+
 			case BCODE_DUP_STACKTOP:
 			{
 				moo_oop_t t;
@@ -3951,7 +3980,7 @@ int moo_execute (moo_t* moo)
 
 						MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_ERROR, "Error - cannot return from dead context\n");
 						moo->errnum = MOO_EINTERN; /* TODO: can i make this error catchable at the moo level? */
-						return -1;
+						goto oops;
 
 					non_local_return_ok:
 /*MOO_DEBUG2 (moo, "NON_LOCAL RETURN OK TO... %p %p\n", moo->active_context->origin, moo->active_context->origin->sender);*/
@@ -3988,7 +4017,7 @@ int moo_execute (moo_t* moo)
 						MOO_STACK_PUSH (moo, (moo_oop_t)unwind_stop);
 						MOO_STACK_PUSH (moo, (moo_oop_t)return_value);
 
-						if (send_private_message (moo, fbm, 16, 0, 2) <= -1) return -1;
+						if (send_private_message (moo, fbm, 16, 0, 2) <= -1) goto oops;
 					}
 					else
 					{
@@ -4081,7 +4110,7 @@ int moo_execute (moo_t* moo)
 				 * this base block context is created with no stack for 
 				 * this reason */
 				blkctx = (moo_oop_context_t)moo_instantiate (moo, moo->_block_context, MOO_NULL, 0); 
-				if (!blkctx) return -1;
+				if (!blkctx) goto oops;
 
 				/* the long forward jump instruction has the format of 
 				 *   11000100 KKKKKKKK or 11000100 KKKKKKKK KKKKKKKK 
@@ -4138,7 +4167,7 @@ int moo_execute (moo_t* moo)
 				 * this base block context is created with no 
 				 * stack for this reason. */
 				blkctx = (moo_oop_context_t)moo_instantiate (moo, moo->_block_context, MOO_NULL, 0); 
-				if (!blkctx) return -1;
+				if (!blkctx) goto oops;
 
 				/* get the receiver to the block copy message after block context instantiation
 				 * not to get affected by potential GC */

@@ -488,6 +488,16 @@ int moo_decode (moo_t* moo, moo_oop_method_t mth, const moo_oocs_t* classfqn)
 				break;
 			/* -------------------------------------------------------- */
 
+			case BCODE_MAKE_ARRAY:
+				FETCH_PARAM_CODE_TO (moo, b1);
+				LOG_INST_1 (moo, "make_array %zu", b1);
+				break;
+
+			case BCODE_POP_INTO_ARRAY:
+				FETCH_PARAM_CODE_TO (moo, b1);
+				LOG_INST_1 (moo, "pop_into_array %zu", b1);
+				break;
+
 			case BCODE_DUP_STACKTOP:
 				LOG_INST_0 (moo, "dup_stacktop");
 				break;

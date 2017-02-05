@@ -192,14 +192,15 @@ class MyObject(Object)
 			a dump.
 		}.
 		a dump.
+		
 		a := 5.
-	do {
-		a := do {
-			('in loop.....' & a asString) dump.
-			##if (a > 5) { break }.
-			a := a + 1.
-		} while(a < 10).
-	} while (false).
+		do {
+			a := do {
+				('in loop.....' & a asString) dump.
+				##if (a > 5) { break }.
+				a := a + 1.
+			} while(a < 10).
+		} while (false).
 		a dump.
 
 		## these should be elimited by the compiler.
@@ -213,6 +214,24 @@ class MyObject(Object)
 		nil.
 		## end of elimination.
 
+		a :=999.
+		a := #{ 
+			1, 
+			2,
+			a,
+			4,
+			1 + 1,
+			2 + 2
+		}.
+		a do: [ :v | v dump].
+
+(*
+		## how to handle return inside 'if' like the following???
+		## what happens to the stack?
+		a := if ((k := 20) == 10) {99} else { 100}.
+		k dump.
+		a dump.
+*)
 		'---------- END ------------' dump.
 		##Processor sleepFor: 20.
 	}

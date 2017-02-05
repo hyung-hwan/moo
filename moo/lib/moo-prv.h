@@ -323,8 +323,9 @@ struct moo_iotok_t
 		MOO_IOTOK_RBRACK,
 		MOO_IOTOK_LPAREN,
 		MOO_IOTOK_RPAREN,
-		MOO_IOTOK_ARPAREN, /* #( */
+		MOO_IOTOK_APAREN,  /* #( */
 		MOO_IOTOK_BAPAREN, /* #[ */
+		MOO_IOTOK_ABRACE,  /* #{ */
 		MOO_IOTOK_PERIOD,
 		MOO_IOTOK_COMMA,
 		MOO_IOTOK_SEMICOLON,
@@ -862,6 +863,8 @@ enum moo_bcode_t
 
 	/* -------------------------------------- */
 
+	BCODE_MAKE_ARRAY               = 0xF5, /* 245 */
+	BCODE_POP_INTO_ARRAY           = 0xF6, /* 246 */
 	BCODE_DUP_STACKTOP             = 0xF7,
 	BCODE_POP_STACKTOP             = 0xF8,
 	BCODE_RETURN_STACKTOP          = 0xF9, /* ^something */
