@@ -1508,6 +1508,16 @@ retry:
 				SET_TOKEN_TYPE (moo, MOO_IOTOK_ASSIGN);
 				ADD_TOKEN_CHAR (moo, c);
 			}
+			else if (c == '{')
+			{
+				SET_TOKEN_TYPE (moo, MOO_IOTOK_DICBRACE);
+				ADD_TOKEN_CHAR (moo, c);
+			}
+			else if (c == '(')
+			{
+				SET_TOKEN_TYPE (moo, MOO_IOTOK_ASSPAREN);
+				ADD_TOKEN_CHAR (moo, c);
+			}
 			else
 			{
 				unget_char (moo, &moo->c->lxc);
@@ -1577,7 +1587,7 @@ retry:
 				case '[':
 					/* #[ - byte array literal */
 					ADD_TOKEN_CHAR(moo, c);
-					SET_TOKEN_TYPE (moo, MOO_IOTOK_BAPAREN);
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_BABRACK);
 					break;
 
 				case '{':
@@ -2185,7 +2195,7 @@ static int patch_long_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_o
 	code_size = jt - jip - (MOO_BCODE_LONG_PARAM_SIZE + 1);
 	if (code_size > MAX_CODE_JUMP * 2)
 	{
-		/* TODO: change error code or get it as a parameter */
+/* TODO: change error code or get it as a parameter */
 		set_syntax_error (moo, MOO_SYNERR_BLKFLOOD, errloc, MOO_NULL); 
 		return -1;
 	}
@@ -2211,6 +2221,32 @@ static int patch_long_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_o
 
 	return 0;
 }
+
+static void eliminate_instructions (moo_t* moo, moo_oow_t start, moo_oow_t end)
+{
+	moo_oow_t last;
+
+	MOO_ASSERT (moo, moo->c->mth.code.len >= 1);
+
+MOO_DEBUG2 (moo, "ELIMINATE INSTRUCTION FROM %zu TO %zu\n", start, end);
+	last = moo->c->mth.code.len - 1;
+
+	if (end >= last)
+	{
+		/* eliminate all instructions starting from the start index.
+		 * setting the length to the start length will achieve this */
+		moo->c->mth.code.len = start;
+	}
+	else
+	{
+		/* eliminate a chunk in the middle of the instruction buffer.
+		 * some copying is required */
+		if (end > last) end = last;
+		MOO_MEMMOVE (&moo->c->mth.code.ptr[start], &moo->c->mth.code.ptr[end + 1], moo->c->mth.code.len - end - 1);
+		moo->c->mth.code.len--;
+	}
+}
+
 /* ---------------------------------------------------------------------
  * Compiler
  * --------------------------------------------------------------------- */
@@ -3884,7 +3920,7 @@ if index is too large, switch to at:put? (or don't care as it's too large???).
 				moo->c->mth.arlit_count = saved_arlit_count;
 				break;
 
-			case MOO_IOTOK_BAPAREN: /* #[ */
+			case MOO_IOTOK_BABRACK: /* #[ */
 			/*case MOO_IOTOK_LBRACK:*/ /* [ */
 				GET_TOKEN (moo);
 				if (__read_byte_array_literal (moo, &lit) <= -1) return -1;
@@ -4218,7 +4254,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				break;
 			}
 
-			case MOO_IOTOK_BAPAREN: /* #[ */
+			case MOO_IOTOK_BABRACK: /* #[ */
 				/*GET_TOKEN (moo);*/
 				if (compile_byte_array_literal(moo) <= -1) return -1;
 				break;
@@ -4464,8 +4500,10 @@ static int compile_message_expression (moo_t* moo, int to_super)
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL)
 				{
 					MOO_ASSERT (moo, moo->c->mth.code.len > noop_pos);
-					MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
-					moo->c->mth.code.len--;
+					/*MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
+					moo->c->mth.code.len--;*/
+					/* eliminate the NOOP instruction */
+					eliminate_instructions (moo, noop_pos, noop_pos);
 
 					noop_pos = moo->c->mth.code.len;
 					if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
@@ -4475,8 +4513,10 @@ static int compile_message_expression (moo_t* moo, int to_super)
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD)
 				{
 					MOO_ASSERT (moo, moo->c->mth.code.len > noop_pos);
-					MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
-					moo->c->mth.code.len--;
+					/*MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
+					moo->c->mth.code.len--;*/
+					/* eliminate the NOOP instruction */
+					eliminate_instructions (moo, noop_pos, noop_pos);
 
 					noop_pos = moo->c->mth.code.len;
 					if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
@@ -4492,8 +4532,10 @@ static int compile_message_expression (moo_t* moo, int to_super)
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD)
 				{
 					MOO_ASSERT (moo, moo->c->mth.code.len > noop_pos);
-					MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
-					moo->c->mth.code.len--;
+					/*MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
+					moo->c->mth.code.len--;*/
+					/* eliminate the NOOP instruction */
+					eliminate_instructions (moo, noop_pos, noop_pos);
 
 					noop_pos = moo->c->mth.code.len;
 					if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
@@ -4521,10 +4563,11 @@ static int compile_message_expression (moo_t* moo, int to_super)
 		}
 		else 
 		{
-			/* delete the NOOP instruction inserted  */
 			MOO_ASSERT (moo, moo->c->mth.code.len > noop_pos);
-			MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
-			moo->c->mth.code.len--;
+			/*MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
+			moo->c->mth.code.len--;*/
+			/* eliminate the NOOP instruction */
+			eliminate_instructions (moo, noop_pos, noop_pos);
 			goto done;
 		}
 	}
@@ -4673,7 +4716,7 @@ static int compile_if_expression (moo_t* moo)
 			falseblock = 0;
 
 			/* eliminate PUSH_TRUE as well */
-			moo->c->mth.code.len = precondpos;
+			eliminate_instructions (moo, precondpos, moo->c->mth.code.len - 1);
 			postcondpos = precondpos;
 		}
 		else if (precondpos + 1 == postcondpos && moo->c->mth.code.ptr[precondpos] == BCODE_PUSH_FALSE)
@@ -4699,7 +4742,9 @@ static int compile_if_expression (moo_t* moo)
 		{
 			if (falseblock) 
 			{
-				moo->c->mth.code.len = precondpos;
+				/* the conditional was false. elimiate instructions emitted
+				 * for the block attached to the conditional */
+				eliminate_instructions (moo, precondpos, moo->c->mth.code.len - 1);
 				postcondpos = precondpos;
 			}
 			else if (endoftrueblock == INVALID_IP) 
@@ -4713,8 +4758,8 @@ static int compile_if_expression (moo_t* moo)
 			if (endoftrueblock == INVALID_IP)
 			{
 				/* emit an instruction to jump to the end */
-				if (add_to_oow_pool(moo, &jumptoend, moo->c->mth.code.len) <= -1) goto oops;
-				if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) goto oops;
+				if (add_to_oow_pool(moo, &jumptoend, moo->c->mth.code.len) <= -1 ||
+				    emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) goto oops;
 			}
 		}
 
@@ -4739,7 +4784,7 @@ static int compile_if_expression (moo_t* moo)
 	if (endoftrueblock != INVALID_IP)
 	{
 		/* eliminate all instructions after the end of the first true block found */
-		moo->c->mth.code.len = endoftrueblock;
+		eliminate_instructions (moo, endoftrueblock, moo->c->mth.code.len - 1);
 	}
 
 	/* patch instructions that jumps to the end of if expression */
@@ -4777,6 +4822,7 @@ static int compile_while_expression (moo_t* moo)
 	if (compile_conditional (moo) <= -1) goto oops;
 
 	postcondpos = moo->c->mth.code.len;
+#if 0
 	if (precondpos + 1 == postcondpos)
 	{
 		/* simple optimization - 
@@ -4786,7 +4832,7 @@ static int compile_while_expression (moo_t* moo)
 		{
 			/* the conditional is always true */
 			cond_style = 1;
-			moo->c->mth.code.len = precondpos;
+			eliminate_instructions (moo, precondpos, moo->c->mth.code.len - 1);
 			postcondpos = precondpos;
 		}
 		else if (moo->c->mth.code.ptr[precondpos] == BCODE_PUSH_FALSE)
@@ -4795,6 +4841,7 @@ static int compile_while_expression (moo_t* moo)
 			cond_style = -1;
 		}
 	}
+#endif
 
 	if (cond_style != 1)
 	{
@@ -4819,7 +4866,7 @@ static int compile_while_expression (moo_t* moo)
 		/* optimization -
 		 *  the braced block is kind of empty as it only pushes nil.
 		 *  get rid of this push instruction and don't generate the POP_STACKTOP */
-		moo->c->mth.code.len = prebbpos;
+		eliminate_instructions (moo, prebbpos, moo->c->mth.code.len - 1);
 	}
 	else if (prebbpos < postbbpos)
 	{
@@ -4841,15 +4888,15 @@ static int compile_while_expression (moo_t* moo)
 
 	if (cond_style != 1)
 	{
-		/* patch the jump instruction. */
+		/* patch the jump instruction */
 		if (patch_long_forward_jump_instruction (moo, postcondpos, moo->c->mth.code.len, BCODE_JUMP2_FORWARD_IF_FALSE, &brace_loc) <= -1) goto oops;
 	}
 
 	if (cond_style == -1) 
 	{
-		/* optimization - get rid of code generated for the while
-		 * loop including the conditional */
-		moo->c->mth.code.len = precondpos;
+		/* optimization - get rid of instructions generated for the while
+		 * loop including the conditional as the condition was false */
+		eliminate_instructions (moo, precondpos, moo->c->mth.code.len - 1);
 	}
 
 	/* patch the jump instructions for break */
@@ -4903,7 +4950,7 @@ static int compile_do_while_expression (moo_t* moo)
 		/* optimization -
 		 *  the braced block is kind of empty as it only pushes nil.
 		 *  get rid of this push instruction and don't generate the POP_STACKTOP */
-		moo->c->mth.code.len = prebbpos;
+		eliminate_instructions (moo, prebbpos, moo->c->mth.code.len - 1);
 		precondpos = prebbpos;
 	}
 	else if (prebbpos < postbbpos)
@@ -4932,14 +4979,14 @@ static int compile_do_while_expression (moo_t* moo)
 		if (moo->c->mth.code.ptr[precondpos] == BCODE_PUSH_TRUE)
 		{
 			/* the conditional is always true. eliminate PUSH_TRUE and emit an absolute jump */
-			moo->c->mth.code.len = precondpos;
+			eliminate_instructions (moo, precondpos, moo->c->mth.code.len - 1);
 			postcondpos = precondpos;
 			jbinst = BCODE_JUMP_BACKWARD_0;
 		}
 		else if (moo->c->mth.code.ptr[precondpos] == BCODE_PUSH_FALSE)
 		{
 			/* the conditional is always false. eliminate PUSH_FALSE and don't emit jump */
-			moo->c->mth.code.len = precondpos;
+			eliminate_instructions (moo, precondpos, moo->c->mth.code.len - 1);
 			postcondpos = precondpos;
 			goto skip_emitting_jump_backward;
 		}
@@ -5237,7 +5284,7 @@ static int compile_method_statement (moo_t* moo)
 					case BCODE_PUSH_TWO:
 						/* eliminate the unneeded push instruction */
 						n = 0;
-						moo->c->mth.code.len = preexprpos;
+						eliminate_instructions (moo, preexprpos, moo->c->mth.code.len - 1);
 						break;
 					default:
 						goto pop_stacktop;
@@ -6252,7 +6299,7 @@ static int __compile_pooldic_definition (moo_t* moo)
 				if (!lit) return -1;
 				goto add_literal;
 
-			case MOO_IOTOK_BAPAREN: /* #[ - byte array literal parenthesis */
+			case MOO_IOTOK_BABRACK: /* #[ - byte array literal parenthesis */
 				if (read_byte_array_literal(moo, &lit) <= -1) return -1;
 				goto add_literal;
 

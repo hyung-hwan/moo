@@ -979,11 +979,11 @@ struct moo_t
 #endif
 };
 
-
-/* TODO: stack bound check when pushing */
+/* TODO: proper stack bound check when pushing */
 #define MOO_STACK_PUSH(moo,v) \
 	do { \
 		(moo)->sp = (moo)->sp + 1; \
+		MOO_ASSERT (moo, (moo)->sp < (unsigned int)(MOO_OBJ_GET_SIZE((moo)->processor->active) - MOO_PROCESS_NAMED_INSTVARS)); \
 		(moo)->processor->active->slot[(moo)->sp] = v; \
 	} while (0)
 

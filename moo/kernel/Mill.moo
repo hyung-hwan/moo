@@ -110,7 +110,8 @@ class MyObject(Object)
 
 	}
 	
-	method(#class) main
+	
+	method(#class) main_xx
 	{
 		|a k|
 		
@@ -214,6 +215,17 @@ class MyObject(Object)
 		nil.
 		## end of elimination.
 
+		## PROBLEM: the following double loop will exhaust the stack 
+		while (true)
+		{
+			while (true) 
+			{ 
+				##[:j :q | (j + q) dump] value: (if (true) { 20 }) value: (if (true) { break }).
+				(1 + (if (false) {} else { break })) dump.
+			}.
+		}.
+
+		
 		a :=999.
 		a := #{
 			1, 
@@ -228,19 +240,20 @@ class MyObject(Object)
 		
 		(* Dictionary ???
 		a := #{
-			"a": 20,
-			b : 30
-		}. 
-		a := #{
-			{ key, value },
-			{ key, value },
-			{ key, value },
-			{ key, value }
+			:( key, value ),
+			:( key, value ),
+			:( key, value ),
+			:( key, value )
+		}
+		
+		a := :{
+			:( key, value ),
 		}
 		*)
-		
-		abc := { key, value }.
-		{ key, value } dump.
+
+
+	(*	abc := { key, value }.
+		{ key, value } dump. *)
 		
 		a do: [ :v | v dump].
 
@@ -254,4 +267,22 @@ class MyObject(Object)
 		'---------- END ------------' dump.
 		##Processor sleepFor: 20.
 	}
+	
+	method(#class) main
+	{
+			## PROBLEM: the following double loop will exhaust the stack 
+		while (true)
+		{
+		##111 dump.
+			while (true) 
+			{ 
+				##[:j :q | (j + q) dump] value: (if (true) { 20 }) value: (if (true) { break }).
+				(1 + (if (false) {} else { break })) dump.
+				##break.
+				##[:j :q | (j + q) dump] value: 10 value: 20.
+				##if (false) {} else { break }.
+			}.
+		}.
+	}
+## 
 }

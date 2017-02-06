@@ -323,9 +323,11 @@ struct moo_iotok_t
 		MOO_IOTOK_RBRACK,
 		MOO_IOTOK_LPAREN,
 		MOO_IOTOK_RPAREN,
-		MOO_IOTOK_APAREN,  /* #( */
-		MOO_IOTOK_BAPAREN, /* #[ */
-		MOO_IOTOK_ABRACE,  /* #{ */
+		MOO_IOTOK_APAREN,   /* #( - array literal */
+		MOO_IOTOK_BABRACK,  /* #[ - byte array literal */
+		MOO_IOTOK_ABRACE,   /* #{ - array expression */
+		MOO_IOTOK_DICBRACE, /* :{ - dictionary expression */
+		MOO_IOTOK_ASSPAREN, /* :( - association expression */
 		MOO_IOTOK_PERIOD,
 		MOO_IOTOK_COMMA,
 		MOO_IOTOK_SEMICOLON,
