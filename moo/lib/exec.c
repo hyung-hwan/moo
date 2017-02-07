@@ -3715,7 +3715,6 @@ int moo_execute (moo_t* moo)
 				selector = (moo_oop_char_t)moo->active_method->slot[b2];
 
 				LOG_INST_3 (moo, "send_message%hs %zu @%zu", (((bcode >> 2) & 1)? "_to_super": ""), b1, b2);
-
 				if (send_message (moo, selector, ((bcode >> 2) & 1), b1) <= -1) goto oops;
 				break; /* CMD_SEND_MESSAGE */
 			}
@@ -3794,6 +3793,34 @@ int moo_execute (moo_t* moo)
 				MOO_STACK_PUSH (moo, MOO_CHAR_TO_OOP(b1));
 				break;
 			/* -------------------------------------------------------- */
+
+			case BCODE_MAKE_DICTIONARY:
+			{
+				moo_oop_t t;
+
+				FETCH_PARAM_CODE_TO (moo, b1);
+				LOG_INST_1 (moo, "make_dictionary %zu", b1);
+
+				/* create an empty array */
+				t = (moo_oop_t)moo_makedic (moo, moo->_dictionary, b1 + 10); /* TODO: find a better value than +10 for initial dictionary sizing */
+				if (!t) goto oops;
+
+				MOO_STACK_PUSH (moo, t); /* push the array created */
+				break;
+			}
+
+			case BCODE_POP_INTO_DICTIONARY:
+			{
+				moo_oop_t t1, t2;
+
+				LOG_INST_0 (moo, "pop_into_dictionary");
+
+				t1 = MOO_STACK_GETTOP(moo);
+				MOO_STACK_POP (moo);
+				t2 = MOO_STACK_GETTOP(moo);
+				moo_putatdic (moo, (moo_oop_set_t)t2, ((moo_oop_association_t)t1)->key, ((moo_oop_association_t)t1)->value); /* TODO: 1. erorr check 2. reuse association as it it */
+				break;
+			}
 
 			case BCODE_MAKE_ASSOCIATION:
 			{

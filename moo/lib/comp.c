@@ -2020,6 +2020,7 @@ static int emit_single_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1
 		case BCODE_PUSH_INTLIT:
 		case BCODE_PUSH_NEGINTLIT:
 		case BCODE_PUSH_CHARLIT:
+		case BCODE_MAKE_DICTIONARY:
 		case BCODE_MAKE_ARRAY:
 		case BCODE_POP_INTO_ARRAY:
 			bc = cmd;
@@ -4059,10 +4060,125 @@ static int compile_array_expression (moo_t* moo)
 	#else
 		moo->c->mth.code.ptr[maip + 1] = index;
 	#endif
-
 	}
 
 	GET_TOKEN (moo); /* read a token after } */
+	return 0;
+}
+
+static int compile_association_expression (moo_t* moo)
+{
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_ASSPAREN);
+
+	GET_TOKEN (moo); /* read a token after #{ */
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
+	{
+		/* key is required */
+		set_syntax_error (moo, MOO_SYNERR_NOASSKEY, TOKEN_LOC(moo), MOO_NULL);
+		return -1;
+	}
+
+	if (emit_byte_instruction (moo, BCODE_MAKE_ASSOCIATION) <= -1) return -1;
+
+	if (compile_method_expression (moo, 0) <= -1) return -1;
+	if (emit_byte_instruction (moo, BCODE_POP_INTO_ASSOCIATION_KEY) <= -1) return -1;
+
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
+	{
+		/* no comma, no value is specified.  */
+		goto done;
+	}
+	else if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA)
+	{
+		set_syntax_error (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+	GET_TOKEN (moo); /* read a token after the comma */
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
+	{
+		set_syntax_error (moo, MOO_SYNERR_NOASSVALUE, TOKEN_LOC(moo), MOO_NULL);
+		return -1;
+	}
+
+	if (compile_method_expression (moo, 0) <= -1) return -1;
+	if (emit_byte_instruction (moo, BCODE_POP_INTO_ASSOCIATION_VALUE) <= -1) return -1;
+
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
+	{
+		set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+done:
+	GET_TOKEN (moo);
+	return 0;
+}
+
+static int compile_dictionary_expression (moo_t* moo)
+{
+	moo_oow_t mdip;
+
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_DICBRACE);
+
+	GET_TOKEN (moo); /* read a token after :{ */
+
+	mdip = moo->c->mth.code.len;
+	if (emit_single_param_instruction (moo, BCODE_MAKE_DICTIONARY, 0) <= -1) return -1;
+
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
+	{
+		moo_oow_t count;
+
+		count = 0;
+		do
+		{
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_ASSPAREN)
+			{
+				moo_oow_t si;
+				static moo_ooch_t msg[] = { '_', '_', 'a','s','s','o','c','P','u','t',':' };
+				moo_oocs_t x;
+
+				x.ptr = msg;
+				x.len = 11;
+			/* if the method returns self, i don't need DUP_STACKTOP and POP_STACKTOP 
+				if (emit_byte_instruction (moo, BCODE_DUP_STACKTOP) <= -1 ||
+				    compile_association_expression(moo) <= -1 ||
+				    add_symbol_literal(moo, &x, 0, &si) <= -1 ||
+				    emit_double_param_instruction (moo, BCODE_SEND_MESSAGE_0, 1, si) <= -1 ||
+				    emit_byte_instruction (moo, BCODE_POP_STACKTOP) <= -1) return -1; */
+				if (compile_association_expression(moo) <= -1 ||
+				    add_symbol_literal(moo, &x, 0, &si) <= -1 ||
+				    emit_double_param_instruction (moo, BCODE_SEND_MESSAGE_0, 1, si) <= -1) return -1;
+				count++;
+			}
+			else
+			{
+				set_syntax_error (moo, MOO_SYNERR_NOASSOC, TOKEN_LOC(moo), MOO_NULL);
+				return -1;
+			}
+
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA)
+			{
+				GET_TOKEN(moo);
+			}
+		}
+		while (1);
+
+		/* count is just a hint unlike in array */
+		if (count > MAX_CODE_PARAM) count = MAX_CODE_PARAM;
+
+		/* patch the MAKE_DICTIONARY instruction */
+	#if (MOO_BCODE_LONG_PARAM_SIZE == 2)
+		moo->c->mth.code.ptr[mdip + 1] = count >> 8;
+		moo->c->mth.code.ptr[mdip + 2] = count & 0xFF;
+	#else
+		moo->c->mth.code.ptr[mdip + 1] = count;
+	#endif
+	}
+
+	GET_TOKEN (moo);
 	return 0;
 }
 
@@ -4266,6 +4382,14 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 
 			case MOO_IOTOK_ABRACE: /* #{ */
 				if (compile_array_expression(moo) <= -1) return -1;
+				break;
+
+			case MOO_IOTOK_ASSPAREN: /* :( */
+				if (compile_association_expression(moo) <= -1) return -1;
+				break;
+
+			case MOO_IOTOK_DICBRACE: /* :{ */
+				if (compile_dictionary_expression(moo) <= -1) return -1;
 				break;
 
 			case MOO_IOTOK_LBRACK: /* [ */

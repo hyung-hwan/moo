@@ -146,6 +146,26 @@ class Set(Collection)
 		^self.tally
 	}
 
+	method __make_expanded_bucket: bs
+	{
+		| newbuc newsz ass index |
+
+		(* expand the bucket *)
+		newsz := bs + 128. (* TODO: keep this growth policy in sync with VM(dic.c) *)
+		newbuc := Array new: newsz.
+		0 priorTo: bs do: [:i |
+			ass := self.bucket at: i.
+			(ass notNil) ifTrue: [
+				index := (ass key hash) rem: newsz.
+				[(newbuc at: index) notNil] whileTrue: [index := (index + 1) rem: newsz].
+				newbuc at: index put: ass
+			]
+		].
+
+		^newbuc.
+	}
+	
+	
 	method __find: key or_upsert: upsert with: value
 	{
 		| hv ass bs index ntally |
@@ -164,28 +184,17 @@ class Set(Collection)
 				index := (index + 1) rem: bs.
 			].
 
-		upsert ifFalse: [^ErrorCode.NOENT].
+		##upsert ifFalse: [^ErrorCode.NOENT].
+		if (upsert) {} else { ^ErrorCode.NOENT }.
 
 		ntally := self.tally + 1.
-		(ntally >= bs) ifTrue: [
-			| newbuc newsz |
-			(* expand the bucket *)
-			newsz := bs + 123. (* TODO: keep this growth policy in sync with VM(dic.c) *)
-			newbuc := Array new: newsz.
-			0 priorTo: bs do: [:i |
-				ass := self.bucket at: i.
-				(ass notNil) ifTrue: [
-					index := (ass key hash) rem: newsz.
-					[(newbuc at: index) notNil] whileTrue: [index := (index + 1) rem: newsz].
-					newbuc at: index put: ass
-				]
-			].
-
-			self.bucket := newbuc.
+		if (ntally >= bs)
+		{
+			self.bucket := self __make_expanded_bucket: bs.
 			bs := self.bucket size.
 			index := hv rem: bs.
 			[(self.bucket at: index) notNil] whileTrue: [index := (index + 1) rem: bs ].
-		].
+		}.
 		
 		ass := Association key: key value: value.
 		self.tally := ntally.
@@ -194,6 +203,46 @@ class Set(Collection)
 		^ass
 	}
 
+	(* __assocPut: is a special internal method used by VM to add an association
+	 * to a dictionary with the dictionary/association expression notation.
+	 * :{ :( 1, 20 ), :( #moo, 999) } *)
+	method __assocPut: assoc
+	{
+		| hv ass bs index ntally key |
+
+		key := assoc key.
+		bs := self.bucket size.
+		hv := key hash.
+		index := hv rem: bs.
+
+		[(ass := self.bucket at: index) notNil] 
+			whileTrue: [
+				(key = ass key) ifTrue: [
+					(* found *)
+					self.bucket at: index put: assoc.
+					##^assoc.
+					^self.
+				].
+				index := (index + 1) rem: bs.
+			].
+
+		(* not found *)
+		ntally := self.tally + 1.
+		if (ntally >= bs) 
+		{
+			self.bucket := self __make_expanded_bucket: bs.
+			bs := self.bucket size.
+			index := hv rem: bs.
+			[(self.bucket at: index) notNil] whileTrue: [index := (index + 1) rem: bs ].
+		}.
+
+		self.tally := ntally.
+		self.bucket at: index put: assoc.
+		
+		##^assoc.
+		^self.
+	}
+	
 	method at: key
 	{
 		| ass |
@@ -210,15 +259,15 @@ class Set(Collection)
 		^ass value
 	}
 
-	method associationAt: key
+	method associationAt: assoc
 	{
-		^self __find: key or_upsert: false with: nil.
+		^self __find: (assoc key) or_upsert: false with: nil.
 	}
 
-	method associationAt: key ifAbsent: error_block
+	method associationAt: assoc ifAbsent: error_block
 	{
 		| ass |
-		ass := self __find: key or_upsert: false with: nil.
+		ass := self __find: (assoc key) or_upsert: false with: nil.
 		(ass isError) ifTrue: [^error_block value].
 		^ass
 	}

@@ -92,9 +92,10 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_set_t dic, moo_
 	moo_oop_association_t ass;
 	moo_oow_t tmp_count = 0;
 
-	/* the system dictionary is not a generic dictionary.
-	 * it accepts only a symbol as a key. */
-	MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);
+	/* the builtin dictionary is not a generic dictionary.
+	 * it accepts only a symbol or something similar as a key. */
+	/*MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);*/
+	MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(key));
 	MOO_ASSERT (moo, MOO_CLASSOF(moo,dic->tally) == moo->_small_integer);
 	MOO_ASSERT (moo, MOO_CLASSOF(moo,dic->bucket) == moo->_array);
 
@@ -107,9 +108,11 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_set_t dic, moo_
 		ass = (moo_oop_association_t)dic->bucket->slot[index];
 
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
-		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);
+		/*MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);*/
+		MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(ass->key));
 
-		if (MOO_OBJ_GET_SIZE(key) == MOO_OBJ_GET_SIZE(ass->key) &&
+		if (MOO_OBJ_GET_CLASS(key) == MOO_OBJ_GET_CLASS(ass->key) && 
+		    MOO_OBJ_GET_SIZE(key) == MOO_OBJ_GET_SIZE(ass->key) &&
 		    moo_equaloochars (key->slot, ((moo_oop_char_t)ass->key)->slot, MOO_OBJ_GET_SIZE(key))) 
 		{
 			/* the value of MOO_NULL indicates no insertion or update. */
@@ -211,7 +214,8 @@ static moo_oop_association_t lookup (moo_t* moo, moo_oop_set_t dic, const moo_oo
 		ass = (moo_oop_association_t)dic->bucket->slot[index];
 
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
-		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);
+		/*MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);*/
+		MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(ass->key));
 
 		if (name->len == MOO_OBJ_GET_SIZE(ass->key) &&
 		    moo_equaloochars(name->ptr, ((moo_oop_char_t)ass->key)->slot, name->len)) 
@@ -246,13 +250,15 @@ moo_oop_association_t moo_lookupsysdic (moo_t* moo, const moo_oocs_t* name)
 
 moo_oop_association_t moo_putatdic (moo_t* moo, moo_oop_set_t dic, moo_oop_t key, moo_oop_t value)
 {
-	MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);
+	/*MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);*/
+	MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(key));
 	return find_or_upsert (moo, dic, (moo_oop_char_t)key, value);
 }
 
 moo_oop_association_t moo_getatdic (moo_t* moo, moo_oop_set_t dic, moo_oop_t key)
 {
-	MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);
+	/*MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol); */
+	MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(key));
 	return find_or_upsert (moo, dic, (moo_oop_char_t)key, MOO_NULL);
 }
 
@@ -282,7 +288,8 @@ int moo_deletedic (moo_t* moo, moo_oop_set_t dic, const moo_oocs_t* name)
 		ass = (moo_oop_association_t)dic->bucket->slot[index];
 
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
-		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);
+		/*MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);*/
+		MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(ass->key));
 
 		if (name->len == MOO_OBJ_GET_SIZE(ass->key) &&
 		    moo_equaloochars(name->ptr, ((moo_oop_char_t)ass->key)->slot, name->len)) 

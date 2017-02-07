@@ -268,9 +268,15 @@ class MyObject(Object)
 		##Processor sleepFor: 20.
 	}
 	
+	
+	
 	method(#class) main
 	{
+		|a|
+		
+		a := 100.
 			## PROBLEM: the following double loop will exhaust the stack 
+			(*
 		while (true)
 		{
 		##111 dump.
@@ -282,7 +288,39 @@ class MyObject(Object)
 				##[:j :q | (j + q) dump] value: 10 value: 20.
 				##if (false) {} else { break }.
 			}.
+		}.*)
+		
+		##:() dump. ## missing association key
+		##:(a+10,) dump. ## missing association value.
+		##:(1,2,3) dump. ## ) expecte where , is
+		##:(a+100,a*99) dump.
+		##:(a+a+100,a*a*99) dump.
+
+		a := :{
+			:('aaa', 10),
+			:('bbb', 20),
+			:('bbb', 30),
+			:(#bbb, 40),
+			##:(5, 99),
+			:('ccc', 890)
 		}.
+		
+		(*a removeKey: 'bbb'.
+		a remove: :(#bbb).*)
+		
+		a keysAndValuesDo: [:k :v |
+			k dump.
+			v dump.
+			'------------' dump.
+		].
+
+		(a associationAt: :(#aaa)) dump.
 	}
-## 
 }
+
+(*
+pooldic XXD {
+	#abc := #(1 2 3).
+	#def := #{ 1, 3, 4 }. ## syntax error - literal expected where #{ is
+}
+*)

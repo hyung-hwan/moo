@@ -102,6 +102,9 @@ class MyObject(Object)
 			'break or continue not within a loop'
 			'break or continue within a block'
 			'while expected'
+			'missing association key'
+			'missing association value'
+			'missing association'
 		).
 
 		f := Stdio open: 'generr.out' for: 'w'.

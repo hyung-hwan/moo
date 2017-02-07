@@ -91,6 +91,7 @@ static kernel_class_info_t kernel_classes[] =
 	{  5, { 'A','r','r','a','y'                                                             }, MOO_OFFSETOF(moo_t,_array) },
 	{  9, { 'B','y','t','e','A','r','r','a','y'                                             }, MOO_OFFSETOF(moo_t,_byte_array) },
 	{  9, { 'S','y','m','b','o','l','S','e','t'                                             }, MOO_OFFSETOF(moo_t,_symbol_set) },
+	{ 10, { 'D','i','c','t','i','o','n','a','r','y'                                         }, MOO_OFFSETOF(moo_t, _dictionary) },
 	{ 16, { 'S','y','s','t','e','m','D','i','c','t','i','o','n','a','r','y'                 }, MOO_OFFSETOF(moo_t, _system_dictionary) },
 
 	{  9, { 'N','a','m','e','s','p','a','c','e'                                             }, MOO_OFFSETOF(moo_t, _namespace) },
@@ -176,6 +177,7 @@ static int ignite_1 (moo_t* moo)
 	moo->_array             = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_OOP));
 	moo->_byte_array        = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_BYTE));
 	moo->_symbol_set        = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+	moo->_dictionary        = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
 	moo->_system_dictionary = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
 
 	moo->_namespace         = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
@@ -205,7 +207,8 @@ static int ignite_1 (moo_t* moo)
 	    !moo->_object            || !moo->_string            ||
 
 	    !moo->_symbol            || !moo->_array             ||
-	    !moo->_byte_array        || !moo->_symbol_set        || !moo->_system_dictionary || 
+	    !moo->_byte_array        || !moo->_symbol_set        ||
+	    !moo->_dictionary        || !moo->_system_dictionary || 
 
 	    !moo->_namespace         || !moo->_pool_dictionary   ||
 	    !moo->_method_dictionary || !moo->_method            || !moo->_association ||

@@ -360,6 +360,11 @@ typedef enum moo_obj_type_t moo_obj_type_t;
 /* [NOTE] this macro doesn't include the size of the trailer */
 #define MOO_OBJ_BYTESOF(oop) ((MOO_OBJ_GET_SIZE(oop) + MOO_OBJ_GET_FLAGS_EXTRA(oop)) * MOO_OBJ_GET_FLAGS_UNIT(oop))
 
+#define MOO_OBJ_IS_CHAR_POINTER(oop)     (MOO_OOP_IS_POINTER(oop) && (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_CHAR))
+#define MOO_OBJ_IS_BYTE_POINTER(oop)     (MOO_OOP_IS_POINTER(oop) && (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_BYTE))
+#define MOO_OBJ_IS_HALFWORD_POINTER(oop) (MOO_OOP_IS_POINTER(oop) && (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_HALFWORD))
+#define MOO_OBJ_IS_WORD_POINTER(oop)     (MOO_OOP_IS_POINTER(oop) && (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_WORD))
+
 /* [NOTE] this macro doesn't check the range of the actual value.
  *        make sure that the value of each bit fields given falls within the 
  *        possible range of the defined bits */
@@ -900,6 +905,7 @@ struct moo_t
 	moo_oop_t _array; /* Array */
 	moo_oop_t _byte_array; /* ByteArray */
 	moo_oop_t _symbol_set; /* SymbolSet */
+	moo_oop_t _dictionary;
 	moo_oop_t _system_dictionary; /* SystemDictionary */
 
 	moo_oop_t _namespace; /* Namespace */
@@ -1150,7 +1156,10 @@ enum moo_synerrnum_t
 	MOO_SYNERR_LITERAL,       /* literal expected */
 	MOO_SYNERR_NOTINLOOP,     /* break or continue not within a loop */
 	MOO_SYNERR_INBLOCK,       /* break or continue within a block */
-	MOO_SYNERR_WHILE          /* while expected */
+	MOO_SYNERR_WHILE,         /* while expected */
+	MOO_SYNERR_NOASSKEY,      /* missing association key */
+	MOO_SYNERR_NOASSVALUE,    /* missing association value */
+	MOO_SYNERR_NOASSOC,       /* missing association */
 };
 typedef enum moo_synerrnum_t moo_synerrnum_t;
 
