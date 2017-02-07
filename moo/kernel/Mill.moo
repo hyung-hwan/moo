@@ -308,6 +308,7 @@ class MyObject(Object)
 		(*a removeKey: 'bbb'.
 		a remove: :(#bbb).*)
 		
+		1 to: 100 do: [ :i | a at: i put: (i * 2) ].
 		a keysAndValuesDo: [:k :v |
 			k dump.
 			v dump.

@@ -4141,7 +4141,10 @@ static int compile_dictionary_expression (moo_t* moo)
 
 				x.ptr = msg;
 				x.len = 11;
-			/* if the method returns self, i don't need DUP_STACKTOP and POP_STACKTOP 
+				/* [ATTENTION] 
+				 *  if the method returns self, i don't need DUP_STACKTOP and POP_STACKTOP.
+				 *  if the method retruns something else, DUP_STACKTOP and POP_STACKTOP is needed
+				 *  to emulate message cascading.
 				if (emit_byte_instruction (moo, BCODE_DUP_STACKTOP) <= -1 ||
 				    compile_association_expression(moo) <= -1 ||
 				    add_symbol_literal(moo, &x, 0, &si) <= -1 ||
