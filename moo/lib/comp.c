@@ -4136,11 +4136,11 @@ static int compile_dictionary_expression (moo_t* moo)
 			if (TOKEN_TYPE(moo) == MOO_IOTOK_ASSPAREN)
 			{
 				moo_oow_t si;
-				static moo_ooch_t msg[] = { '_', '_', 'a','s','s','o','c','P','u','t',':' };
+				static moo_ooch_t msg[] = { '_', '_','p','u','t','_','a','s','s','o','c',':' }; /* don't put '\0' at the back */
 				moo_oocs_t x;
 
 				x.ptr = msg;
-				x.len = 11;
+				x.len = MOO_COUNTOF(msg);
 				/* [ATTENTION] 
 				 *  if the method returns self, i don't need DUP_STACKTOP and POP_STACKTOP.
 				 *  if the method retruns something else, DUP_STACKTOP and POP_STACKTOP is needed

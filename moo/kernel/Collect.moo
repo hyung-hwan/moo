@@ -211,10 +211,10 @@ class Set(Collection)
 		^ass
 	}
 
-	(* __assocPut: is a special internal method used by VM to add an association
+	(* __put_assoc: is a special internal method used by VM to add an association
 	 * to a dictionary with the dictionary/association expression notation.
 	 * :{ :( 1, 20 ), :( #moo, 999) } *)
-	method __assocPut: assoc
+	method __put_assoc: assoc
 	{
 		| hv ass bs index ntally key |
 

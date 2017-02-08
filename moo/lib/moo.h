@@ -1159,7 +1159,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_WHILE,         /* while expected */
 	MOO_SYNERR_NOASSKEY,      /* missing association key */
 	MOO_SYNERR_NOASSVALUE,    /* missing association value */
-	MOO_SYNERR_NOASSOC,       /* missing association */
+	MOO_SYNERR_NOASSOC        /* missing association */
 };
 typedef enum moo_synerrnum_t moo_synerrnum_t;
 
