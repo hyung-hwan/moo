@@ -306,19 +306,21 @@ static moo_ooi_t input_handler (moo_t* moo, moo_iocmd_t cmd, moo_ioarg_t* arg)
 static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 {
 #if defined(USE_LTDL)
-	moo_bch_t stbuf[128];
-	moo_bch_t* bufptr;
+	moo_bch_t stabuf[128], * bufptr;
 	moo_oow_t ucslen, bcslen, bufcapa;
 	void* handle;
 
+	#if defined(MOO_OOCH_IS_UCH)
 	if (moo_convootobcstr (moo, name, &ucslen, MOO_NULL, &bufcapa) <= -1) return MOO_NULL;
 	/* +1 for terminating null. but it's not needed because MOO_COUNTOF(MOO_DEFAULT_PFMODPREFIX)
 	 * and MOO_COUNTOF(MOO_DEFAULT_PFMODPOSTIFX) include the terminating nulls. Never mind about
 	 * the extra 2 characters. */
+	#else
+	bufcapa = moo_countbcstr (name);
+	#endif
 	bufcapa += MOO_COUNTOF(MOO_DEFAULT_PFMODPREFIX) + MOO_COUNTOF(MOO_DEFAULT_PFMODPOSTFIX) + 1; 
 
-
-	if (bufcapa <= MOO_COUNTOF(stbuf)) bufptr = stbuf;
+	if (bufcapa <= MOO_COUNTOF(stabuf)) bufptr = stabuf;
 	else
 	{
 		bufptr = moo_allocmem (moo, bufcapa * MOO_SIZEOF(*bufptr));
@@ -329,7 +331,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 	{
 		moo_oow_t len;
 
-		/* opening a primitive function module */
+		/* opening a primitive function module - mostly libmoo-xxxx */
 		len = moo_copybcstr (bufptr, bufcapa, MOO_DEFAULT_PFMODPREFIX);
 
 		bcslen = bufcapa - len;
@@ -379,7 +381,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		}
 	}
 
-	if (bufptr != stbuf) moo_freemem (moo, bufptr);
+	if (bufptr != stabuf) moo_freemem (moo, bufptr);
 	return handle;
 
 #else
@@ -396,6 +398,7 @@ static void dl_close (moo_t* moo, void* handle)
 #if defined(USE_LTDL)
 	MOO_DEBUG1 (moo, "Closed DL handle %p\n", handle);
 	lt_dlclose (handle);
+
 #else
 	/* TODO: implemenent this */
 	MOO_DEBUG1 (moo, "Dynamic loading not implemented - cannot close handle %p\n", handle);
@@ -405,45 +408,64 @@ static void dl_close (moo_t* moo, void* handle)
 static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 {
 #if defined(USE_LTDL)
-	moo_bch_t buf[1024]; /* TODO: use a proper buffer. dynamically allocated if conversion result in too a large value */
-	moo_oow_t ucslen, bcslen;
+	moo_bch_t stabuf[64], * bufptr;
+	moo_oow_t bufcapa, ucslen, bcslen;
+	const moo_bch_t* symname;
 	void* sym;
-	const char* symname;
 
-	buf[0] = '_';
+	#if defined(MOO_OOCH_IS_UCH)
+	if (moo_convootobcstr (moo, name, &ucslen, MOO_NULL, &bcslen) <= -1) return MOO_NULL;
+	#else
+	bcslen = moo_countbcstr (name);
+	#endif
 
-	bcslen = MOO_COUNTOF(buf) - 2;
-#if defined(MOO_OOCH_IS_UCH)
-	if (moo_convootobcstr (moo, name, &ucslen, &buf[1], &bcslen) <= -1) return MOO_NULL;
-#else
-	bcslen = moo_copybcstr (&buf[1], bcslen, name);
-#endif
-	symname = &buf[1];
+	if (bcslen >= MOO_COUNTOF(stabuf) - 2)
+	{
+		bufcapa = bcslen + 3;
+		bufptr = moo_allocmem (moo, bufcapa * MOO_SIZEOF(*bufptr));
+		if (!bufptr) return MOO_NULL;
+	}
+	else
+	{
+		bufcapa = MOO_COUNTOF(stabuf);
+		bufptr = stabuf;
+	}
+
+	bcslen = bufcapa - 1;
+	#if defined(MOO_OOCH_IS_UCH)
+	moo_convootobcstr (moo, name, &ucslen, &bufptr[1], &bcslen);
+	#else
+	bcslen = moo_copybcstr (&bufptr[1], bcslen, name);
+	#endif
+
+	symname = &bufptr[1]; /* try the name as it is */
 	sym = lt_dlsym (handle, symname);
 	if (!sym)
 	{
-		symname = &buf[0];
+		bufptr[0] = '_';
+		symname = &bufptr[0]; /* try _name */
 		sym = lt_dlsym (handle, symname);
 		if (!sym)
 		{
-			buf[bcslen + 1] = '_';
-			buf[bcslen + 2] = '\0';
+			bufptr[bcslen + 1] = '_'; 
+			bufptr[bcslen + 2] = '\0';
 
-			symname = &buf[1];
+			symname = &bufptr[1]; /* try name_ */
 			sym = lt_dlsym (handle, symname);
 			if (!sym)
 			{
-				symname = &buf[0];
+				symname = &bufptr[0]; /* try _name_ */
 				sym = lt_dlsym (handle, symname);
 			}
 		}
 	}
 
-	if (sym) MOO_DEBUG2 (moo, "Loaded module symbol %s from handle %p\n", symname, handle);
+	if (sym) MOO_DEBUG3 (moo, "Loaded module symbol %js from handle %p - %hs\n", name, handle, symname);
+	if (bufptr != stabuf) moo_freemem (moo, bufptr);
 	return sym;
 #else
 	/* TODO: IMPLEMENT THIS */
-	MOO_DEBUG2 (moo, "Dynamic loading not implemented - Cannot load module %js from handle %p\n", name, handle);
+	MOO_DEBUG2 (moo, "Dynamic loading not implemented - Cannot load module symbol %js from handle %p\n", name, handle);
 	moo_seterrnum (moo, MOO_ENOIMPL);
 	return MOO_NULL;
 #endif
@@ -451,6 +473,13 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 
 /* ========================================================================= */
 
+#if defined(_WIN32)
+#	error NOT IMPLEMENTED 
+	
+#elif defined(macintosh)
+#	error NOT IMPLEMENTED
+
+#else
 static int write_all (int fd, const char* ptr, moo_oow_t len)
 {
 	while (len > 0)
@@ -483,12 +512,15 @@ static int write_all (int fd, const char* ptr, moo_oow_t len)
 
 	return 0;
 }
+#endif
 
 static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oow_t len)
 {
 #if defined(_WIN32)
 #	error NOT IMPLEMENTED 
 	
+#elif defined(macintosh)
+#	error NOT IMPLEMENTED
 #else
 	moo_bch_t buf[256];
 	moo_oow_t ucslen, bcslen, msgidx;
@@ -572,7 +604,6 @@ static moo_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
 static moo_t* g_moo = MOO_NULL;
 
 /* ========================================================================= */
-
 
 #if defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
 

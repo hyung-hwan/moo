@@ -483,17 +483,22 @@ static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop)
 
 /* ------------------------------------------------------------------------- */
 
+#undef FMTCHAR_IS_BCH
+#undef FMTCHAR_IS_UCH
+#undef FMTCHAR_IS_OOCH
 #undef fmtchar_t
 #undef logfmtv
 #define fmtchar_t moo_bch_t
+#define logfmtv moo_logbfmtv
 #define FMTCHAR_IS_BCH
 #if defined(MOO_OOCH_IS_BCH)
 #	define FMTCHAR_IS_OOCH
 #endif
-#define logfmtv moo_logbfmtv
-
 #include "logfmtv.h"
 
+#undef FMTCHAR_IS_BCH
+#undef FMTCHAR_IS_UCH
+#undef FMTCHAR_IS_OOCH
 #undef fmtchar_t
 #undef logfmtv
 #define fmtchar_t moo_uch_t
@@ -502,7 +507,7 @@ static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop)
 #if defined(MOO_OOCH_IS_UCH)
 #	define FMTCHAR_IS_OOCH
 #endif
-#include "logfmtv.h"
+#include "logfmtv.h" 
 
 moo_ooi_t moo_logbfmt (moo_t* moo, moo_oow_t mask, const moo_bch_t* fmt, ...)
 {
