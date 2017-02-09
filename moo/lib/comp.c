@@ -1912,7 +1912,7 @@ static int end_include (moo_t* moo)
 }
 
 /* ---------------------------------------------------------------------
- * Byte-Code Generator
+ * Byte-Code Manipulation Functions
  * --------------------------------------------------------------------- */
 
 static MOO_INLINE int emit_byte_instruction (moo_t* moo, moo_oob_t code)
@@ -2223,35 +2223,160 @@ static int patch_long_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_o
 	return 0;
 }
 
+static int push_loop (moo_t* moo, moo_loop_type_t type, moo_oow_t startpos)
+{
+	moo_loop_t* loop;
+
+	loop = moo_callocmem (moo, MOO_SIZEOF(*loop));
+	if (!loop) return -1;
+
+	init_oow_pool (moo, &loop->break_ip_pool);
+	init_oow_pool (moo, &loop->continue_ip_pool);
+	loop->type = type;
+	loop->startpos = startpos;
+	loop->next = moo->c->mth.loop;
+	moo->c->mth.loop = loop;
+
+	return 0;
+}
+
+static int update_loop_jumps (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t jt)
+{
+	/* patch the jump instructions emitted for 'break' or 'continue' */
+	moo_oow_pool_chunk_t* chunk;
+	moo_oow_t i, j;
+
+	for (chunk = pool->head, i = 0; chunk; chunk = chunk->next)
+	{
+		for (j = 0; j < MOO_COUNTOF(pool->static_chunk.buf) && i < pool->count; j++)
+		{
+			if (chunk->buf[j] != INVALID_IP &&
+			    patch_long_forward_jump_instruction (moo, chunk->buf[j], jt, BCODE_JUMP2_FORWARD, MOO_NULL) <= -1) return -1;
+			i++;
+		}
+	}
+
+	return 0;
+}
+
+static void adjust_loop_jumps_for_elimination (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t start, moo_oow_t end)
+{
+	/* update the jump instruction positions emitted for 'break' or 'continue' */
+	moo_oow_pool_chunk_t* chunk;
+	moo_oow_t i, j;
+
+	for (chunk = pool->head, i = 0; chunk; chunk = chunk->next)
+	{
+		for (j = 0; j < MOO_COUNTOF(pool->static_chunk.buf) && i < pool->count; j++)
+		{
+			if (chunk->buf[j] != INVALID_IP)
+			{
+				if (chunk->buf[j] >= start && chunk->buf[j] <= end) 
+				{
+					/* invalidate the instruction position */
+					chunk->buf[j] = INVALID_IP;
+				}
+				else if (chunk->buf[j] > end && chunk->buf[j] < moo->c->mth.code.len)
+				{
+					/* decrement the instruction position */
+					chunk->buf[j] -= end - start + 1;
+				}
+			}
+			i++;
+		}
+	}
+}
+
+static MOO_INLINE int update_loop_breaks (moo_t* moo, moo_oow_t jt)
+{
+	return update_loop_jumps (moo, &moo->c->mth.loop->break_ip_pool, jt);
+}
+
+static MOO_INLINE int update_loop_continues (moo_t* moo, moo_oow_t jt)
+{
+	return update_loop_jumps (moo, &moo->c->mth.loop->continue_ip_pool, jt);
+}
+
+static MOO_INLINE void adjust_all_loop_jumps_for_elimination (moo_t* moo, moo_oow_t start, moo_oow_t end)
+{
+	moo_loop_t* loop;
+
+	loop = moo->c->mth.loop;
+	while (loop)
+	{
+		adjust_loop_jumps_for_elimination (moo, &loop->break_ip_pool, start, end);
+		adjust_loop_jumps_for_elimination (moo, &loop->continue_ip_pool, start, end);
+		loop = loop->next;
+	}
+}
+
+static MOO_INLINE moo_loop_t* unlink_loop (moo_t* moo)
+{
+	moo_loop_t* loop;
+
+	MOO_ASSERT (moo, moo->c->mth.loop != MOO_NULL);
+	loop = moo->c->mth.loop;
+	moo->c->mth.loop = loop->next;
+
+	return loop;
+}
+
+static MOO_INLINE void free_loop (moo_t* moo, moo_loop_t* loop)
+{
+	fini_oow_pool (moo, &loop->continue_ip_pool);
+	fini_oow_pool (moo, &loop->break_ip_pool);
+	moo_freemem (moo, loop);
+}
+
+static MOO_INLINE void pop_loop (moo_t* moo)
+{
+	free_loop (moo, unlink_loop (moo));
+}
+
+static MOO_INLINE int inject_break_to_loop (moo_t* moo)
+{
+	if (add_to_oow_pool (moo, &moo->c->mth.loop->break_ip_pool, moo->c->mth.code.len) <= -1 ||
+	    emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
+	return 0;
+}
+
+static MOO_INLINE int inject_continue_to_loop (moo_t* moo)
+{
+	if (add_to_oow_pool (moo, &moo->c->mth.loop->continue_ip_pool, moo->c->mth.code.len) <= -1 ||
+	    emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
+	return 0;
+}
+
+
 static void eliminate_instructions (moo_t* moo, moo_oow_t start, moo_oow_t end)
 {
 	moo_oow_t last;
 
 	MOO_ASSERT (moo, moo->c->mth.code.len >= 1);
 
-MOO_DEBUG2 (moo, "ELIMINATE INSTRUCTION FROM %zu TO %zu\n", start, end);
 	last = moo->c->mth.code.len - 1;
 
+	
 	if (end >= last)
 	{
 		/* eliminate all instructions starting from the start index.
 		 * setting the length to the start length will achieve this */
+		adjust_all_loop_jumps_for_elimination (moo, start, last);
 		moo->c->mth.code.len = start;
 	}
 	else
 	{
 		/* eliminate a chunk in the middle of the instruction buffer.
 		 * some copying is required */
-		if (end > last) end = last;
+		adjust_all_loop_jumps_for_elimination (moo, start, end);
 		MOO_MEMMOVE (&moo->c->mth.code.ptr[start], &moo->c->mth.code.ptr[end + 1], moo->c->mth.code.len - end - 1);
-		moo->c->mth.code.len--;
+		moo->c->mth.code.len -= end - start + 1;
 	}
 }
 
 /* ---------------------------------------------------------------------
  * Compiler
  * --------------------------------------------------------------------- */
-
 
 static int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index)
 {
@@ -3477,89 +3602,6 @@ static int store_tmpr_count_for_block (moo_t* moo, moo_oow_t tmpr_count)
 	 *        by the caller after this function has been called for
 	 *        a new block entered. */
 	moo->c->mth.blk_tmprcnt[moo->c->mth.blk_depth] = tmpr_count;
-	return 0;
-}
-
-static int push_loop (moo_t* moo, moo_loop_type_t type, moo_oow_t startpos)
-{
-	moo_loop_t* loop;
-
-	loop = moo_callocmem (moo, MOO_SIZEOF(*loop));
-	if (!loop) return -1;
-
-	init_oow_pool (moo, &loop->break_ip_pool);
-	init_oow_pool (moo, &loop->continue_ip_pool);
-	loop->type = type;
-	loop->startpos = startpos;
-	loop->next = moo->c->mth.loop;
-	moo->c->mth.loop = loop;
-
-	return 0;
-}
-
-static int update_loop_jumps (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t jt)
-{
-	/* patch the jump instructions emitted for 'break' */
-	moo_oow_pool_chunk_t* chunk;
-	moo_oow_t i, j;
-
-	for (chunk = pool->head, i = 0; chunk; chunk = chunk->next)
-	{
-		for (j = 0; j < MOO_COUNTOF(pool->static_chunk.buf) && i < pool->count; j++)
-		{
-			if (patch_long_forward_jump_instruction (moo, chunk->buf[j], jt, BCODE_JUMP2_FORWARD, MOO_NULL) <= -1) return -1;
-			i++;
-		}
-	}
-
-	return 0;
-}
-
-static MOO_INLINE int update_loop_breaks (moo_t* moo, moo_oow_t jt)
-{
-	return update_loop_jumps (moo, &moo->c->mth.loop->break_ip_pool, jt);
-}
-
-static MOO_INLINE int update_loop_continues (moo_t* moo, moo_oow_t jt)
-{
-	return update_loop_jumps (moo, &moo->c->mth.loop->continue_ip_pool, jt);
-}
-
-
-static MOO_INLINE moo_loop_t* unlink_loop (moo_t* moo)
-{
-	moo_loop_t* loop;
-
-	MOO_ASSERT (moo, moo->c->mth.loop != MOO_NULL);
-	loop = moo->c->mth.loop;
-	moo->c->mth.loop = loop->next;
-
-	return loop;
-}
-
-static MOO_INLINE void free_loop (moo_t* moo, moo_loop_t* loop)
-{
-	fini_oow_pool (moo, &loop->continue_ip_pool);
-	fini_oow_pool (moo, &loop->break_ip_pool);
-	moo_freemem (moo, loop);
-}
-
-static MOO_INLINE void pop_loop (moo_t* moo)
-{
-	free_loop (moo, unlink_loop (moo));
-}
-
-static MOO_INLINE int inject_break_to_loop (moo_t* moo)
-{
-	if (add_to_oow_pool (moo, &moo->c->mth.loop->break_ip_pool, moo->c->mth.code.len) <= -1 ||
-	    emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
-	return 0;
-}
-
-static MOO_INLINE int inject_continue_to_loop (moo_t* moo)
-{
-	if (add_to_oow_pool (moo, &moo->c->mth.loop->continue_ip_pool, moo->c->mth.code.len) <= -1 ||
-	    emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
 	return 0;
 }
 

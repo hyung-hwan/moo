@@ -316,6 +316,15 @@ class MyObject(Object)
 		].
 
 		(a associationAt: :(#aaa)) dump.
+		
+		while (true) 
+		{
+			while (true)
+			{
+				[:j :q | (j + q) dump] value: (if (true) { 20 }) value: (if (true) { break }).
+				(1 + (if (false) {} else { break })) dump.
+			}
+		}
 	}
 }
 
