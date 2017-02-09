@@ -88,14 +88,16 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+@ENABLE_LIBLTDL_TRUE@am__append_1 = $(LTDLINCL)
+@ENABLE_LIBLTDL_TRUE@am__append_2 = $(LIBLTDL)
 
 # you must adjust the value of DEFAULT_MODPOSTFIX according 
 # to the first number in -version-info above
-@WIN32_TRUE@am__append_1 = -DMOO_DEFAULT_MODPREFIX=\"libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"-1\"
-@WIN32_FALSE@am__append_2 = -DMOO_DEFAULT_MODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"\"
-@ENABLE_STATIC_MODULE_TRUE@am__append_3 = -lmoo-ffi -lmoo-console -lmoo-stdio 
+@WIN32_TRUE@am__append_3 = -DMOO_DEFAULT_MODPREFIX=\"libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"-1\"
+@WIN32_FALSE@am__append_4 = -DMOO_DEFAULT_MODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"\"
+@ENABLE_STATIC_MODULE_TRUE@am__append_5 = -lmoo-ffi -lmoo-console -lmoo-stdio 
 @ENABLE_STATIC_MODULE_FALSE@libmoo_la_DEPENDENCIES =  \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_2) \
+@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_3) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
 bin_PROGRAMS = moo$(EXEEXT)
 subdir = lib
@@ -145,7 +147,8 @@ am__installdirs = "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(bindir)" \
 	"$(DESTDIR)$(pkgincludedir)"
 LTLIBRARIES = $(pkglib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
-am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+@ENABLE_LIBLTDL_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
+am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2)
 am_libmoo_la_OBJECTS = libmoo_la-bigint.lo libmoo_la-comp.lo \
 	libmoo_la-debug.lo libmoo_la-decode.lo libmoo_la-dic.lo \
 	libmoo_la-err.lo libmoo_la-exec.lo libmoo_la-logfmt.lo \
@@ -163,7 +166,7 @@ libmoo_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 PROGRAMS = $(bin_PROGRAMS)
 am_moo_OBJECTS = moo-main.$(OBJEXT)
 moo_OBJECTS = $(am_moo_OBJECTS)
-moo_DEPENDENCIES = $(am__DEPENDENCIES_2)
+moo_DEPENDENCIES = $(am__DEPENDENCIES_3)
 moo_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(moo_LDFLAGS) $(LDFLAGS) -o $@
@@ -407,10 +410,10 @@ CPPFLAGS_ALL_COMMON = \
 ##################################################
 # MAIN LIBRARY 
 ##################################################
-CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) $(LTDLINCL) \
-	$(am__append_1) $(am__append_2)
+CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) $(am__append_1) \
+	$(am__append_3) $(am__append_4)
 LDFLAGS_LIB_COMMON = $(LDFLAGS_ALL_COMMON) -version-info 1:0:0 -no-undefined
-LIBADD_LIB_COMMON = $(LIBM) $(LIBLTDL) 
+LIBADD_LIB_COMMON = $(LIBM) $(am__append_2)
 pkginclude_HEADERS = \
 	moo-cmn.h \
 	moo-rbt.h \
@@ -441,7 +444,7 @@ libmoo_la_SOURCES = \
 
 libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_3)
+libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_5)
 @ENABLE_STATIC_MODULE_TRUE@libmoo_la_DEPENDENCIES = \
 @ENABLE_STATIC_MODULE_TRUE@	$(abs_builddir)/../mod/libmoo-ffi.la \
 @ENABLE_STATIC_MODULE_TRUE@	$(abs_builddir)/../mod/libmoo-console.la \
