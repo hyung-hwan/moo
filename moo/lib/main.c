@@ -209,7 +209,6 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 #endif
 	if (!bb->fp)
 	{
-		fclose (bb->fp);
 		moo_seterrnum (moo, MOO_EIOERR);
 		goto oops;
 	}
@@ -218,7 +217,11 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 	return 0;
 
 oops:
-	if (bb) moo_freemem (moo, bb);
+	if (bb) 
+	{
+		if (bb->fp) fclose (bb->fp);
+		moo_freemem (moo, bb);
+	}
 	return -1;
 }
 
