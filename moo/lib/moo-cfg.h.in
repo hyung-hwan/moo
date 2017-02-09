@@ -323,6 +323,9 @@
 /* Define to the shared archive member specification, say "(shr.o)". */
 #undef LT_SHARED_LIB_MEMBER
 
+/* use libltdl */
+#undef MOO_ENABLE_LIBLTDL
+
 /* link modules statically into the main library */
 #undef MOO_ENABLE_STATIC_MODULE
 

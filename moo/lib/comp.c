@@ -5039,11 +5039,11 @@ static int compile_while_expression (moo_t* moo)
 	}
 	else if (prebbpos < postbbpos)
 	{
-		/* emit code to pop the value pushed by the braced block */
+		/* emit an instruction to pop the value pushed by the braced block */
 		if (emit_byte_instruction (moo, BCODE_POP_STACKTOP) <= -1) goto oops;
 	}
 
-	/* emit code to jump back to the condition */
+	/* emit an instruction to jump back to the condition */
 	if (emit_backward_jump_instruction (moo, BCODE_JUMP_BACKWARD_0, moo->c->mth.code.len - precondpos) <= -1) 
 	{
 		if (moo->errnum == MOO_ERANGE) 

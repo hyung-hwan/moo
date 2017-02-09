@@ -87,6 +87,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+@ENABLE_STATIC_MODULE_TRUE@am__append_1 = mod lib
+@ENABLE_STATIC_MODULE_FALSE@am__append_2 = lib mod
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_namespace.m4 \
@@ -372,8 +374,8 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTION = foreign
 ACLOCAL_AMFLAGS = -I m4
 EXTRA_DIST = 
-@ENABLE_STATIC_MODULE_FALSE@SUBDIRS = libltdl lib mod
-@ENABLE_STATIC_MODULE_TRUE@SUBDIRS = libltdl mod lib
+@ENABLE_LIBLTDL_FALSE@SUBDIRS = $(am__append_1) $(am__append_2)
+@ENABLE_LIBLTDL_TRUE@SUBDIRS = libltdl $(am__append_1) $(am__append_2)
 DIST_SUBDIRS = $(SUBDIRS) 
 all: all-recursive
 

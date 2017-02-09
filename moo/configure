@@ -656,6 +656,8 @@ MOO_SIZEOF_INT
 MOO_SIZEOF_LONG
 MOO_SIZEOF_LONG_LONG
 MOO_SIZEOF_WCHAR_T
+ENABLE_LIBLTDL_FALSE
+ENABLE_LIBLTDL_TRUE
 ENABLE_STATIC_MODULE_FALSE
 ENABLE_STATIC_MODULE_TRUE
 ENABLE_CXX_FALSE
@@ -831,6 +833,7 @@ enable_ltdl_install
 enable_debug
 enable_cxx
 enable_static_module
+enable_libltdl
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1481,6 +1484,7 @@ Optional Features:
                           available (default. yes)
   --enable-static-module  build modules statically into the main
                           library(default. no)
+  --enable-libltdl        use libltdl(default. yes)
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -18386,6 +18390,7 @@ fi
 	LIBS="$save_LIBS"
 fi
 
+
 if test "$ac_test_CFLAGS" != "set"
 then
 	if test "$GCC" = "yes"
@@ -20565,7 +20570,6 @@ else
 
 fi
 
-
 test "${enable_shared}" = "no" -a "${enable_static}" = "yes" && enable_static_module_is="yes"
 
 if test "${enable_static_module_is}" = "yes"
@@ -20580,6 +20584,30 @@ fi
 else
   ENABLE_STATIC_MODULE_TRUE='#'
   ENABLE_STATIC_MODULE_FALSE=
+fi
+
+
+
+# Check whether --enable-libltdl was given.
+if test "${enable_libltdl+set}" = set; then :
+  enableval=$enable_libltdl; enable_libltdl_is=$enableval
+else
+  enable_libltdl_is=yes
+
+fi
+
+if test "${enable_libltdl_is}" = "yes"
+then
+
+$as_echo "#define MOO_ENABLE_LIBLTDL /**/" >>confdefs.h
+
+fi
+ if test "${enable_libltdl_is}" = "yes"; then
+  ENABLE_LIBLTDL_TRUE=
+  ENABLE_LIBLTDL_FALSE='#'
+else
+  ENABLE_LIBLTDL_TRUE='#'
+  ENABLE_LIBLTDL_FALSE=
 fi
 
 
@@ -20792,6 +20820,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${ENABLE_STATIC_MODULE_TRUE}" && test -z "${ENABLE_STATIC_MODULE_FALSE}"; then
   as_fn_error $? "conditional \"ENABLE_STATIC_MODULE\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${ENABLE_LIBLTDL_TRUE}" && test -z "${ENABLE_LIBLTDL_FALSE}"; then
+  as_fn_error $? "conditional \"ENABLE_LIBLTDL\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

@@ -36,7 +36,7 @@
 #if defined(_WIN32)
 #	include <windows.h>
 #	include <tchar.h>
-#	if defined(MOO_HAVE_CFG_H)
+#	if defined(MOO_HAVE_CFG_H) && defined(MOO_ENABLE_LIBLTDL)
 #		include <ltdl.h>
 #		define USE_LTDL
 #	endif
@@ -53,8 +53,13 @@
 #	include <Timer.h>
 #else
 #	include <unistd.h>
-#	include <ltdl.h>
-#	define USE_LTDL
+#	if defined(MOO_ENABLE_LIBLTDL)
+#		include <ltdl.h>
+#		define USE_LTDL
+#	else
+#		include <dlfcn.h>
+#		error NOT IMPLEMENTED
+#	endif
 
 #	if defined(HAVE_TIME_H)
 #		include <time.h>

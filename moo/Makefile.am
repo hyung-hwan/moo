@@ -3,10 +3,16 @@ ACLOCAL_AMFLAGS = -I m4
 
 EXTRA_DIST =
 
-if ENABLE_STATIC_MODULE
-SUBDIRS = libltdl mod lib
+if ENABLE_LIBLTDL
+SUBDIRS = libltdl
 else
-SUBDIRS = libltdl lib mod
+SUBDIRS = 
+endif
+
+if ENABLE_STATIC_MODULE
+SUBDIRS += mod lib
+else
+SUBDIRS += lib mod
 endif
 
 DIST_SUBDIRS = $(SUBDIRS) 
