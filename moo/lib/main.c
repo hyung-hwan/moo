@@ -43,13 +43,18 @@
 #elif defined(__OS2__)
 #	define INCL_DOSMODULEMGR
 #	define INCL_DOSPROCESS
+#	define INCL_DOSMISC
+#	define INCL_DOSDATETIME
 #	define INCL_DOSERRORS
 #	include <os2.h>
+#	include <time.h>
 #elif defined(__DOS__)
 #	include <dos.h>
 #	include <time.h>
 #	include <io.h>
 #elif defined(macintosh)
+#	include <Types.h>
+#	include <OSUtils.h>
 #	include <Timer.h>
 #else
 #	include <unistd.h>
@@ -482,10 +487,10 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 /* ========================================================================= */
 
 #if defined(_WIN32)
-#	error NOT IMPLEMENTED 
-	
+	/* nothing to do */
+
 #elif defined(macintosh)
-#	error NOT IMPLEMENTED
+	/* nothing to do */
 
 #else
 static int write_all (int fd, const char* ptr, moo_oow_t len)
@@ -605,10 +610,148 @@ if (mask & MOO_LOG_GC) return; /* don't show gc logs */
 #endif
 }
 
+
 /* ========================================================================= */
 
-static moo_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' };
-static moo_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
+static void vm_gettime (moo_t* moo, moo_ntime_t* now)
+{
+#if defined(_WIN32)
+	/* TODO: */
+#elif defined(__OS2__)
+	ULONG out;
+
+/* TODO: handle overflow?? */
+/* TODO: use DosTmrQueryTime() and DosTmrQueryFreq()? */
+	DosQuerySysInfo (QSV_MS_COUNT, QSV_MS_COUNT, &out, MOO_SIZEOF(out)); /* milliseconds */
+	/* it must return NO_ERROR */
+	MOO_INITNTIME (now, MOO_MSEC_TO_SEC(out), MOO_MSEC_TO_NSEC(out));
+#elif defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
+	clock_t c;
+
+/* TODO: handle overflow?? */
+	c = clock ();
+	now->sec = c / CLOCKS_PER_SEC;
+	#if (CLOCKS_PER_SEC == 100)
+		now->nsec = MOO_MSEC_TO_NSEC((c % CLOCKS_PER_SEC) * 10);
+	#elif (CLOCKS_PER_SEC == 1000)
+		now->nsec = MOO_MSEC_TO_NSEC(c % CLOCKS_PER_SEC);
+	#elif (CLOCKS_PER_SEC == 1000000L)
+		now->nsec = MOO_USEC_TO_NSEC(c % CLOCKS_PER_SEC);
+	#elif (CLOCKS_PER_SEC == 1000000000L)
+		now->nsec = (c % CLOCKS_PER_SEC);
+	#else
+	#	error UNSUPPORTED CLOCKS_PER_SEC
+	#endif
+#elif defined(macintosh)
+	UnsignedWide tick;
+	moo_uint64_t tick64;
+	Microseconds (&tick);
+	tick64 = *(moo_uint64_t*)&tick;
+	MOO_INITNTIME (now, MOO_USEC_TO_SEC(tick64), MOO_USEC_TO_NSEC(tick64));
+#elif defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
+	struct timespec ts;
+	clock_gettime (CLOCK_MONOTONIC, &ts);
+	MOO_INITNTIME(now, ts.tv_sec, ts.tv_nsec);
+#elif defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
+	struct timespec ts;
+	clock_gettime (CLOCK_REALTIME, &ts);
+	MOO_INITNTIME(now, ts.tv_sec, ts.tv_nsec);
+#else
+	struct timeval tv;
+	gettimeofday (&tv, MOO_NULL);
+	MOO_INITNTIME(now, tv.tv_sec, MOO_USEC_TO_NSEC(tv.tv_usec));
+#endif
+}
+
+#if defined(__DOS__) 
+#	if defined(_INTELC32_) 
+	void _halt_cpu (void);
+#	elif defined(__WATCOMC__)
+	void _halt_cpu (void);
+#	pragma aux _halt_cpu = "hlt"
+#	endif
+#endif
+
+static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
+{
+#if defined(_WIN32)
+	if (moo->waitable_timer)
+	{
+		LARGE_INTEGER li;
+		li.QuadPart = -MOO_SECNSEC_TO_NSEC(dur->sec, dur->nsec);
+		if(SetWaitableTimer(timer, &li, 0, MOO_NULL, MOO_NULL, FALSE) == FALSE) goto normal_sleep;
+		WaitForSingleObject(timer, INFINITE);
+	}
+	else
+	{
+	normal_sleep:
+		/* fallback to normal Sleep() */
+		Sleep (MOO_SECNSEC_TO_MSEC(dur->sec,dur->nsec));
+	}
+#elif defined(__OS2__)
+
+	/* TODO: in gui mode, this is not a desirable method??? 
+	 *       this must be made event-driven coupled with the main event loop */
+	DosSleep (MOO_SECNSEC_TO_MSEC(dur->sec,dur->nsec));
+
+#elif defined(macintosh)
+
+	/* TODO: ... */
+
+#elif defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
+
+	clock_t c;
+
+	c = clock ();
+	c += dur->sec * CLOCKS_PER_SEC;
+
+	#if (CLOCKS_PER_SEC == 100)
+		c += MOO_NSEC_TO_MSEC(dur->nsec) / 10;
+	#elif (CLOCKS_PER_SEC == 1000)
+		c += MOO_NSEC_TO_MSEC(dur->nsec);
+	#elif (CLOCKS_PER_SEC == 1000000L)
+		c += MOO_NSEC_TO_USEC(dur->nsec);
+	#elif (CLOCKS_PER_SEC == 1000000000L)
+		c += dur->nsec;
+	#else
+	#	error UNSUPPORTED CLOCKS_PER_SEC
+	#endif
+
+/* TODO: handle clock overvlow */
+/* TODO: check if there is abortion request or interrupt */
+	while (c > clock()) 
+	{
+		_halt_cpu();
+	}
+
+#else
+	struct timespec ts;
+	ts.tv_sec = dur->sec;
+	ts.tv_nsec = dur->nsec;
+	nanosleep (&ts, MOO_NULL);
+#endif
+}
+
+static void vm_startup (moo_t* moo)
+{
+#if defined(_WIN32)
+	moo->waitable_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
+#endif
+}
+
+static void vm_cleanup (moo_t* moo)
+{
+#if defined(_WIN32)
+	if (moo->waitable_timer)
+	{
+		CloseHandle (moo->waitable_timer);
+		moo->waitable_timer = MOO_NULL;
+	}
+#endif
+}
+
+/* ========================================================================= */
+
 static moo_t* g_moo = MOO_NULL;
 
 /* ========================================================================= */
@@ -731,6 +874,9 @@ static void cancel_tick (void)
 
 int main (int argc, char* argv[])
 {
+	static moo_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' }; /*TODO: make this an argument */
+	static moo_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
+
 	moo_t* moo;
 	xtn_t* xtn;
 	moo_oocs_t objname;
@@ -750,7 +896,10 @@ int main (int argc, char* argv[])
 	vmprim.dl_close = dl_close;
 	vmprim.dl_getsym = dl_getsym;
 	vmprim.log_write = log_write;
-
+	vmprim.vm_gettime = vm_gettime;
+	vmprim.vm_sleep = vm_sleep;
+	vmprim.vm_startup = vm_startup;
+	vmprim.vm_cleanup = vm_cleanup;
 
 #if defined(USE_LTDL)
 	lt_dlinit ();

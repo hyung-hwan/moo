@@ -26,31 +26,6 @@
 
 #include "moo-prv.h"
 
-/* TODO: remove these headers after having migrated system-dependent functions of of this file */
-#if defined(_WIN32)
-#	include <windows.h>
-#elif defined(__OS2__)
-#	define INCL_DOSMISC
-#	define INCL_DOSDATETIME
-#	define INCL_DOSERRORS
-#	include <os2.h>
-#	include <time.h>
-#elif defined(__DOS__)
-#	include <time.h>
-#elif defined(macintosh)
-#	include <Types.h>
-#	include <OSUtils.h>
-#	include <Timer.h>
-#else
-#	if defined(HAVE_TIME_H)
-#		include <time.h>
-#	endif
-#	if defined(HAVE_SYS_TIME_H)
-#		include <sys/time.h>
-#	endif
-#endif
-
-
 #define PROC_STATE_RUNNING 3
 #define PROC_STATE_WAITING 2
 #define PROC_STATE_RUNNABLE 1
@@ -132,161 +107,28 @@
 /* ------------------------------------------------------------------------- */
 static MOO_INLINE void vm_gettime (moo_t* moo, moo_ntime_t* now)
 {
-#if defined(_WIN32)
-
-	/* TODO: */
-
-#elif defined(__OS2__)
-	ULONG out;
-
-/* TODO: handle overflow?? */
-/* TODO: use DosTmrQueryTime() and DosTmrQueryFreq()? */
-	DosQuerySysInfo (QSV_MS_COUNT, QSV_MS_COUNT, &out, MOO_SIZEOF(out)); /* milliseconds */
-	/* it must return NO_ERROR */
-
-	MOO_INITNTIME (now, MOO_MSEC_TO_SEC(out), MOO_MSEC_TO_NSEC(out));
-#elif defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
-	clock_t c;
-
-/* TODO: handle overflow?? */
-	c = clock ();
-	now->sec = c / CLOCKS_PER_SEC;
-	#if (CLOCKS_PER_SEC == 100)
-		now->nsec = MOO_MSEC_TO_NSEC((c % CLOCKS_PER_SEC) * 10);
-	#elif (CLOCKS_PER_SEC == 1000)
-		now->nsec = MOO_MSEC_TO_NSEC(c % CLOCKS_PER_SEC);
-	#elif (CLOCKS_PER_SEC == 1000000L)
-		now->nsec = MOO_USEC_TO_NSEC(c % CLOCKS_PER_SEC);
-	#elif (CLOCKS_PER_SEC == 1000000000L)
-		now->nsec = (c % CLOCKS_PER_SEC);
-	#else
-	#	error UNSUPPORTED CLOCKS_PER_SEC
-	#endif
-#elif defined(macintosh)
-	UnsignedWide tick;
-	moo_uint64_t tick64;
-
-	Microseconds (&tick);
-
-	tick64 = *(moo_uint64_t*)&tick;
-	MOO_INITNTIME (now, MOO_USEC_TO_SEC(tick64), MOO_USEC_TO_NSEC(tick64));
-
-#elif defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
-	struct timespec ts;
-	clock_gettime (CLOCK_MONOTONIC, &ts);
-	MOO_INITNTIME(now, ts.tv_sec, ts.tv_nsec);
-
-#elif defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
-	struct timespec ts;
-	clock_gettime (CLOCK_REALTIME, &ts);
-	MOO_INITNTIME(now, ts.tv_sec, ts.tv_nsec);
-	MOO_SUBNTIME (now, now, &moo->vm_time_offset); /* offset */
-#else
-	struct timeval tv;
-	gettimeofday (&tv, MOO_NULL);
-	MOO_INITNTIME(now, tv.tv_sec, MOO_USEC_TO_NSEC(tv.tv_usec));
-
-	/* at the first call, vm_time_offset should be 0. so subtraction takes
-	 * no effect. once it becomes non-zero, it offsets the actual time.
-	 * this is to keep the returned time small enough to be held in a 
-	 * small integer on platforms where the small integer is not large enough */
-	MOO_SUBNTIME (now, now, &moo->vm_time_offset); 
-#endif
+	moo->vmprim.vm_gettime (moo, now);
+	/* in vm_startup(), moo->exec_start_time has been set to the time of
+	 * that moment. time returned here becomes relative to moo->exec_start_time
+	 * and is kept small such that it can get reprensed in a small integer */
+	MOO_SUBNTIME (now, now, &moo->exec_start_time);  /* now = now - exec_start_time */
 }
-
-#if defined(__DOS__) 
-#	if defined(_INTELC32_) 
-	void _halt_cpu (void);
-#	elif defined(__WATCOMC__)
-	void _halt_cpu (void);
-#	pragma aux _halt_cpu = "hlt"
-#	endif
-#endif
 
 static MOO_INLINE void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 {
-#if defined(_WIN32)
-	if (moo->waitable_timer)
-	{
-		LARGE_INTEGER li;
-		li.QuadPart = -MOO_SECNSEC_TO_NSEC(dur->sec, dur->nsec);
-		if(SetWaitableTimer(timer, &li, 0, MOO_NULL, MOO_NULL, FALSE) == FALSE) goto normal_sleep;
-		WaitForSingleObject(timer, INFINITE);
-	}
-	else
-	{
-	normal_sleep:
-		/* fallback to normal Sleep() */
-		Sleep (MOO_SECNSEC_TO_MSEC(dur->sec,dur->nsec));
-	}
-#elif defined(__OS2__)
-
-	/* TODO: in gui mode, this is not a desirable method??? 
-	 *       this must be made event-driven coupled with the main event loop */
-	DosSleep (MOO_SECNSEC_TO_MSEC(dur->sec,dur->nsec));
-
-#elif defined(macintosh)
-
-	/* TODO: ... */
-
-#elif defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
-
-	clock_t c;
-
-	c = clock ();
-	c += dur->sec * CLOCKS_PER_SEC;
-
-	#if (CLOCKS_PER_SEC == 100)
-		c += MOO_NSEC_TO_MSEC(dur->nsec) / 10;
-	#elif (CLOCKS_PER_SEC == 1000)
-		c += MOO_NSEC_TO_MSEC(dur->nsec);
-	#elif (CLOCKS_PER_SEC == 1000000L)
-		c += MOO_NSEC_TO_USEC(dur->nsec);
-	#elif (CLOCKS_PER_SEC == 1000000000L)
-		c += dur->nsec;
-	#else
-	#	error UNSUPPORTED CLOCKS_PER_SEC
-	#endif
-
-/* TODO: handle clock overvlow */
-/* TODO: check if there is abortion request or interrupt */
-	while (c > clock()) 
-	{
-		_halt_cpu();
-	}
-
-#else
-	struct timespec ts;
-	ts.tv_sec = dur->sec;
-	ts.tv_nsec = dur->nsec;
-	nanosleep (&ts, MOO_NULL);
-#endif
+	moo->vmprim.vm_sleep (moo, dur);
 }
 
-
-static void vm_startup (moo_t* moo)
+static MOO_INLINE void vm_startup (moo_t* moo)
 {
-	moo_ntime_t now;
-
-#if defined(_WIN32)
-	moo->waitable_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
-#endif
-
-	/* reset moo->vm_time_offset so that vm_gettime is not affected */
-	MOO_INITNTIME(&moo->vm_time_offset, 0, 0);
-	vm_gettime (moo, &now);
-	moo->vm_time_offset = now;
+	moo->vmprim.vm_startup (moo);
+	moo->vmprim.vm_gettime (moo, &moo->exec_start_time);
 }
 
-static void vm_cleanup (moo_t* moo)
+static MOO_INLINE void vm_cleanup (moo_t* moo)
 {
-#if defined(_WIN32)
-	if (moo->waitable_timer)
-	{
-		CloseHandle (moo->waitable_timer);
-		moo->waitable_timer = MOO_NULL;
-	}
-#endif
+	vm_gettime (moo, &moo->exec_end_time);
+	moo->vmprim.vm_cleanup (moo);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -2159,10 +2001,8 @@ static moo_pfrc_t pf_processor_add_timed_semaphore (moo_t* moo, moo_ooi_t nargs)
 		*/
 	}
 
-/* TODO: make clock_gettime to be platform independent 
- * 
- * this code assumes that the monotonic clock returns a small value
- * that can fit into a SmallInteger, even after some additions... */
+	/* this code assumes that the monotonic clock returns a small value
+	 * that can fit into a SmallInteger, even after some additions... */
 	vm_gettime (moo, &now);
 	MOO_ADDNTIMESNS (&ft, &now, MOO_OOP_TO_SMOOI(sec), MOO_OOP_TO_SMOOI(nsec));
 	if (ft.sec < 0 || ft.sec > MOO_SMOOI_MAX) 

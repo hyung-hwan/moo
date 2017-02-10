@@ -315,9 +315,8 @@ class MyObject(Object)
 			'------------' dump.
 		].
 
-		
-		(a associationAt: :(#aaa)) dump.
 
+		(a associationAt: :(#aaa)) dump.
 		(*
 		while (true) 
 		{
@@ -327,6 +326,8 @@ class MyObject(Object)
 				(1 + (if (false) {} else { break })) dump.
 			}
 		}*)
+		
+		Processor sleepFor: 20.
 	}
 }
 

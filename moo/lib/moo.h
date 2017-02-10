@@ -739,12 +739,22 @@ typedef void* (*moo_vmprim_getdlsym_t) (moo_t* moo, void* handle, const moo_ooch
 
 typedef void (*moo_log_write_t) (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oow_t len);
 
+typedef void (*moo_vmprim_sleep_t) (moo_t* moo, const moo_ntime_t* duration);
+typedef void (*moo_vmprim_gettime_t) (moo_t* moo, moo_ntime_t* now);
+typedef void (*moo_vmprim_startup_t) (moo_t* moo);
+typedef void (*moo_vmprim_cleanup_t) (moo_t* moo);
+
 struct moo_vmprim_t
 {
-	moo_vmprim_opendl_t dl_open;
-	moo_vmprim_closedl_t dl_close;
+	moo_vmprim_opendl_t   dl_open;
+	moo_vmprim_closedl_t  dl_close;
 	moo_vmprim_getdlsym_t dl_getsym;
-	moo_log_write_t log_write;
+	moo_log_write_t       log_write;
+
+	moo_vmprim_gettime_t vm_gettime;
+	moo_vmprim_sleep_t   vm_sleep;
+	moo_vmprim_startup_t vm_startup;
+	moo_vmprim_cleanup_t vm_cleanup;
 };
 
 typedef struct moo_vmprim_t moo_vmprim_t;
@@ -967,7 +977,8 @@ struct moo_t
 	moo_ooi_t ip;
 	int proc_switched; /* TODO: this is temporary. implement something else to skip immediate context switching */
 	int switch_proc;
-	moo_ntime_t vm_time_offset;
+	moo_ntime_t exec_start_time;
+	moo_ntime_t exec_end_time;
 	/* =============================================================
 	 * END EXECUTION REGISTERS
 	 * ============================================================= */
