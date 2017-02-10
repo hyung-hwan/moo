@@ -4177,24 +4177,8 @@ static int compile_dictionary_expression (moo_t* moo)
 		{
 			if (TOKEN_TYPE(moo) == MOO_IOTOK_ASSPAREN)
 			{
-				moo_oow_t si;
-				static moo_ooch_t msg[] = { '_', '_','p','u','t','_','a','s','s','o','c',':' }; /* don't put '\0' at the back */
-				moo_oocs_t x;
-
-				x.ptr = msg;
-				x.len = MOO_COUNTOF(msg);
-				/* [ATTENTION] 
-				 *  if the method returns self, i don't need DUP_STACKTOP and POP_STACKTOP.
-				 *  if the method retruns something else, DUP_STACKTOP and POP_STACKTOP is needed
-				 *  to emulate message cascading.
-				if (emit_byte_instruction (moo, BCODE_DUP_STACKTOP) <= -1 ||
-				    compile_association_expression(moo) <= -1 ||
-				    add_symbol_literal(moo, &x, 0, &si) <= -1 ||
-				    emit_double_param_instruction (moo, BCODE_SEND_MESSAGE_0, 1, si) <= -1 ||
-				    emit_byte_instruction (moo, BCODE_POP_STACKTOP) <= -1) return -1; */
 				if (compile_association_expression(moo) <= -1 ||
-				    add_symbol_literal(moo, &x, 0, &si) <= -1 ||
-				    emit_double_param_instruction (moo, BCODE_SEND_MESSAGE_0, 1, si) <= -1) return -1;
+				    emit_byte_instruction (moo, BCODE_POP_INTO_DICTIONARY) <= -1) return -1;
 				count++;
 			}
 			else

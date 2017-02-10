@@ -272,7 +272,7 @@ class MyObject(Object)
 	
 	method(#class) main
 	{
-		|a|
+		|a i |
 		
 		a := 100.
 			## PROBLEM: the following double loop will exhaust the stack 
@@ -304,19 +304,21 @@ class MyObject(Object)
 			##:(5, 99),
 			:('ccc', 890)
 		}.
-		
+
 		(*a removeKey: 'bbb'.
 		a remove: :(#bbb).*)
-		
-		1 to: 100 do: [ :i | a at: i put: (i * 2) ].
+
+		##1 to: 100 do: [ :i | a at: i put: (i * 2) ].
 		a keysAndValuesDo: [:k :v |
 			k dump.
 			v dump.
 			'------------' dump.
 		].
 
-		(a associationAt: :(#aaa)) dump.
 		
+		(a associationAt: :(#aaa)) dump.
+
+		(*
 		while (true) 
 		{
 			while (true)
@@ -324,7 +326,7 @@ class MyObject(Object)
 				[:j :q | (j + q) dump] value: (if (true) { 20 }) value: (if (true) { break }).
 				(1 + (if (false) {} else { break })) dump.
 			}
-		}
+		}*)
 	}
 }
 

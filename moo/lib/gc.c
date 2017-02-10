@@ -279,6 +279,8 @@ static int ignite_3 (moo_t* moo)
 
 	static moo_ooch_t str_system[] = { 'S','y','s','t','e', 'm' };
 	static moo_ooch_t str_processor[] = { 'P', 'r', 'o', 'c', 'e', 's', 's', 'o', 'r' };
+	static moo_ooch_t str_dicnew[] = { 'n', 'e', 'w', ':' };
+	static moo_ooch_t str_dicputassoc[] = { 'p', 'u', 't', '_', 'a', 's', 's', 'o', 'c', ':' };
 
 	moo_oow_t i;
 	moo_oop_t sym, cls;
@@ -295,15 +297,23 @@ static int ignite_3 (moo_t* moo)
 		moo_ptr++;
 	}
 
-	/* Make the system dictionary available as the global name 'Stix' */
-	sym = moo_makesymbol (moo, str_system, 6);
+	/* Make the system dictionary available as the global name 'System' */
+	sym = moo_makesymbol (moo, str_system, MOO_COUNTOF(str_system));
 	if (!sym) return -1;
 	if (!moo_putatsysdic(moo, sym, (moo_oop_t)moo->sysdic)) return -1;
 
 	/* Make the process scheduler avaialble as the global name 'Processor' */
-	sym = moo_makesymbol (moo, str_processor, 9);
+	sym = moo_makesymbol (moo, str_processor, MOO_COUNTOF(str_processor));
 	if (!sym) return -1;
 	if (!moo_putatsysdic(moo, sym, (moo_oop_t)moo->processor)) return -1;
+
+	sym = moo_makesymbol (moo, str_dicnew, MOO_COUNTOF(str_dicnew));
+	if (!sym) return -1;
+	moo->dicnewsym = sym;
+
+	sym = moo_makesymbol (moo, str_dicputassoc, MOO_COUNTOF(str_dicputassoc));
+	if (!sym) return -1;
+	moo->dicputassocsym = sym;
 
 	return 0;
 }
@@ -600,9 +610,11 @@ void moo_gc (moo_t* moo)
 		*(moo_oop_t*)((moo_uint8_t*)moo + kernel_classes[i].offset) = tmp;
 	}
 
-	moo->sysdic = (moo_oop_set_t) moo_moveoop (moo, (moo_oop_t)moo->sysdic);
-	moo->processor = (moo_oop_process_scheduler_t) moo_moveoop (moo, (moo_oop_t)moo->processor);
-	moo->nil_process = (moo_oop_process_t) moo_moveoop (moo, (moo_oop_t)moo->nil_process);
+	moo->sysdic = (moo_oop_set_t)moo_moveoop (moo, (moo_oop_t)moo->sysdic);
+	moo->processor = (moo_oop_process_scheduler_t)moo_moveoop (moo, (moo_oop_t)moo->processor);
+	moo->nil_process = (moo_oop_process_t)moo_moveoop (moo, (moo_oop_t)moo->nil_process);
+	moo->dicnewsym = (moo_oop_char_t)moo_moveoop (moo, (moo_oop_t)moo->dicnewsym);
+	moo->dicputassocsym = (moo_oop_char_t)moo_moveoop (moo, (moo_oop_t)moo->dicputassocsym);
 
 	for (i = 0; i < moo->sem_list_count; i++)
 	{
