@@ -720,11 +720,12 @@ typedef struct moo_t moo_t;
 #endif
 
 #if defined(MOO_HAVE_BUILTIN_EXPECT)
-#	define MOO_LIKELY(x) (__builtin_expect(!!x,1))
-#	define MOO_UNLIKELY(x) (__builtin_expect(!!x,0))
+#	define MOO_LIKELY(x) (__builtin_expect(!!(x),1))
+#	define MOO_UNLIKELY(x) (__builtin_expect(!!(x),0))
 #else
 #	define MOO_LIKELY(x) (x)
 #	define MOO_UNLIKELY(x) (x)
 #endif
+
 
 #endif

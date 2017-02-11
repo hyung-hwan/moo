@@ -873,17 +873,17 @@ enum moo_bcode_t
 
 	/* -------------------------------------- */
 
-	BCODE_MAKE_ARRAY               = 0xF5, /* 245 */
-	BCODE_POP_INTO_ARRAY           = 0xF6, /* 246 */
-	BCODE_DUP_STACKTOP             = 0xF7,
-	BCODE_POP_STACKTOP             = 0xF8,
-	BCODE_RETURN_STACKTOP          = 0xF9, /* ^something */
-	BCODE_RETURN_RECEIVER          = 0xFA, /* ^self */
-	BCODE_RETURN_FROM_BLOCK        = 0xFB, /* return the stack top from a block */
-	BCODE_LOCAL_RETURN             = 0xFC,
-	BCODE_MAKE_BLOCK               = 0xFD,
-	BCODE_SEND_BLOCK_COPY          = 0xFE,
-	BCODE_NOOP                     = 0xFF
+	BCODE_MAKE_ARRAY                 = 0xF5, /* 245 */
+	BCODE_POP_INTO_ARRAY             = 0xF6, /* 246 */
+	BCODE_DUP_STACKTOP               = 0xF7,
+	BCODE_POP_STACKTOP               = 0xF8,
+	BCODE_RETURN_STACKTOP            = 0xF9, /* ^something */
+	BCODE_RETURN_RECEIVER            = 0xFA, /* ^self */
+	BCODE_RETURN_FROM_BLOCK          = 0xFB, /* return the stack top from a block */
+	BCODE_LOCAL_RETURN               = 0xFC,
+	BCODE_MAKE_BLOCK                 = 0xFD,
+	BCODE_SEND_BLOCK_COPY            = 0xFE,
+	BCODE_NOOP                       = 0xFF
 };
 
 #if defined(__cplusplus)
@@ -1181,7 +1181,7 @@ moo_oop_t moo_strtoint (
 moo_oop_t moo_inttostr (
 	moo_t*      moo,
 	moo_oop_t   num,
-	int          radix
+	int         radix
 );
 
 /* ========================================================================= */

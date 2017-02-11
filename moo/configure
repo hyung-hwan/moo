@@ -18566,8 +18566,8 @@ esac
 LIBM=$LIBM
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking __builtin_memset" >&5
-$as_echo_n "checking __builtin_memset... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for __builtin_memset" >&5
+$as_echo_n "checking for __builtin_memset... " >&6; }
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -18592,8 +18592,8 @@ $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking __builtin_memcpy" >&5
-$as_echo_n "checking __builtin_memcpy... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for __builtin_memcpy" >&5
+$as_echo_n "checking for __builtin_memcpy... " >&6; }
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -18618,8 +18618,8 @@ $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking __builtin_memmove" >&5
-$as_echo_n "checking __builtin_memmove... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for __builtin_memmove" >&5
+$as_echo_n "checking for __builtin_memmove... " >&6; }
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -18644,8 +18644,8 @@ $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking __builtin_memcmp" >&5
-$as_echo_n "checking __builtin_memcmp... " >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for __builtin_memcmp" >&5
+$as_echo_n "checking for __builtin_memcmp... " >&6; }
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -18662,6 +18662,32 @@ if ac_fn_c_try_compile "$LINENO"; then :
 $as_echo "yes" >&6; }
 
 $as_echo "#define HAVE___BUILTIN_MEMCMP 1" >>confdefs.h
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking computed goto usability" >&5
+$as_echo_n "checking computed goto usability... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+void *jp = &&jpt; goto *jp; 1; jpt: 2;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+$as_echo "#define HAVE_COMPUTED_GOTO 1" >>confdefs.h
 
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5

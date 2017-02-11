@@ -329,6 +329,23 @@ class MyObject(Object)
 		
 		Processor sleepFor: 20.
 	}
+	
+	(*
+	#method(#class) main
+	{
+		| event |
+		
+		Timer fire: [ 'Timer job' dump. ] in: 3000.
+		
+		GUI on: #XXX do: [:evt | ... ].
+		GUI on: #YYYY do: [:evt | ... ].
+
+		while (true)
+		{
+			event := GUI waitForEvent.
+			GUI dispatchEvent: event.
+		}
+	}*)
 }
 
 (*

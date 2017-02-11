@@ -57,6 +57,9 @@
 /* Define to 1 if you have the `closedir' function. */
 #undef HAVE_CLOSEDIR
 
+/* computed gotos */
+#undef HAVE_COMPUTED_GOTO
+
 /* Define to 1 if you have the `coshq' function. */
 #undef HAVE_COSHQ
 

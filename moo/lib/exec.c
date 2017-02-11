@@ -2914,6 +2914,106 @@ static int send_private_message (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_
 }
 /* ------------------------------------------------------------------------- */
 
+static MOO_INLINE int switch_process_if_needed (moo_t* moo)
+{
+	if (moo->sem_heap_count > 0)
+	{
+		moo_ntime_t ft, now;
+		vm_gettime (moo, &now);
+
+		do
+		{
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->sem_heap[0]->heap_ftime_sec));
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->sem_heap[0]->heap_ftime_nsec));
+
+			MOO_INITNTIME (&ft,
+				MOO_OOP_TO_SMOOI(moo->sem_heap[0]->heap_ftime_sec),
+				MOO_OOP_TO_SMOOI(moo->sem_heap[0]->heap_ftime_nsec)
+			);
+
+			if (MOO_CMPNTIME(&ft, (moo_ntime_t*)&now) <= 0)
+			{
+				moo_oop_process_t proc;
+
+				/* waited long enough. signal the semaphore */
+
+				proc = signal_semaphore (moo, moo->sem_heap[0]);
+				/* [NOTE] no moo_pushtmp() on proc. no GC must occur
+				 *        in the following line until it's used for
+				 *        wake_new_process() below. */
+				delete_from_sem_heap (moo, 0);
+
+				/* if no process is waiting on the semaphore, 
+				 * signal_semaphore() returns moo->_nil. */
+
+				if (moo->processor->active == moo->nil_process && (moo_oop_t)proc != moo->_nil)
+				{
+					/* this is the only runnable process. 
+					 * switch the process to the running state.
+					 * it uses wake_new_process() instead of
+					 * switch_to_process() as there is no running 
+					 * process at this moment */
+					MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
+					MOO_ASSERT (moo, proc == moo->processor->runnable_head);
+
+					wake_new_process (moo, proc);
+					moo->proc_switched = 1;
+				}
+			}
+			else if (moo->processor->active == moo->nil_process)
+			{
+				MOO_SUBNTIME (&ft, &ft, (moo_ntime_t*)&now);
+				vm_sleep (moo, &ft); /* TODO: change this to i/o multiplexer??? */
+				vm_gettime (moo, &now);
+			}
+			else 
+			{
+				break;
+			}
+		} 
+		while (moo->sem_heap_count > 0);
+	}
+
+	if (moo->processor->active == moo->nil_process) 
+	{
+		/* no more waiting semaphore and no more process */
+		MOO_ASSERT (moo, moo->processor->tally = MOO_SMOOI_TO_OOP(0));
+		MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "No more runnable process\n");
+
+		#if 0
+		if (there is semaphore awaited.... )
+		{
+		/* DO SOMETHING */
+		}
+		#endif
+
+		return 0;
+	}
+
+	while (moo->sem_list_count > 0)
+	{
+		/* handle async signals */
+		--moo->sem_list_count;
+		signal_semaphore (moo, moo->sem_list[moo->sem_list_count]);
+	}
+	/*
+	if (semaphore heap has pending request)
+	{
+		signal them...
+	}*/
+
+	/* TODO: implement different process switching scheme - time-slice or clock based??? */
+#if defined(MOO_EXTERNAL_PROCESS_SWITCH)
+	if (!moo->proc_switched && moo->switch_proc) { switch_to_next_runnable_process (moo); }
+	moo->switch_proc = 0;
+#else
+	if (!moo->proc_switched) { switch_to_next_runnable_process (moo); }
+#endif
+
+	moo->proc_switched = 0;
+	return 1;
+}
+
 int moo_execute (moo_t* moo)
 {
 	moo_oob_t bcode;
@@ -2922,6 +3022,7 @@ int moo_execute (moo_t* moo)
 	int unwind_protect;
 	moo_oop_context_t unwind_start;
 	moo_oop_context_t unwind_stop;
+	int vm_startup_called = 0;
 
 #if defined(MOO_PROFILE_VM)
 	moo_uintmax_t inst_counter = 0;
@@ -2934,105 +3035,12 @@ int moo_execute (moo_t* moo)
 	MOO_ASSERT (moo, moo->active_context != MOO_NULL);
 
 	vm_startup (moo);
+	vm_startup_called = 1;
 	moo->proc_switched = 0;
 
 	while (1)
 	{
-		if (moo->sem_heap_count > 0)
-		{
-			moo_ntime_t ft, now;
-			vm_gettime (moo, &now);
-
-			do
-			{
-				MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->sem_heap[0]->heap_ftime_sec));
-				MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->sem_heap[0]->heap_ftime_nsec));
-
-				MOO_INITNTIME (&ft,
-					MOO_OOP_TO_SMOOI(moo->sem_heap[0]->heap_ftime_sec),
-					MOO_OOP_TO_SMOOI(moo->sem_heap[0]->heap_ftime_nsec)
-				);
-
-				if (MOO_CMPNTIME(&ft, (moo_ntime_t*)&now) <= 0)
-				{
-					moo_oop_process_t proc;
-
-					/* waited long enough. signal the semaphore */
-
-					proc = signal_semaphore (moo, moo->sem_heap[0]);
-					/* [NOTE] no moo_pushtmp() on proc. no GC must occur
-					 *        in the following line until it's used for
-					 *        wake_new_process() below. */
-					delete_from_sem_heap (moo, 0);
-
-					/* if no process is waiting on the semaphore, 
-					 * signal_semaphore() returns moo->_nil. */
-
-					if (moo->processor->active == moo->nil_process && (moo_oop_t)proc != moo->_nil)
-					{
-						/* this is the only runnable process. 
-						 * switch the process to the running state.
-						 * it uses wake_new_process() instead of
-						 * switch_to_process() as there is no running 
-						 * process at this moment */
-						MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
-						MOO_ASSERT (moo, proc == moo->processor->runnable_head);
-
-						wake_new_process (moo, proc);
-						moo->proc_switched = 1;
-					}
-				}
-				else if (moo->processor->active == moo->nil_process)
-				{
-					MOO_SUBNTIME (&ft, &ft, (moo_ntime_t*)&now);
-					vm_sleep (moo, &ft); /* TODO: change this to i/o multiplexer??? */
-					vm_gettime (moo, &now);
-				}
-				else 
-				{
-					break;
-				}
-			} 
-			while (moo->sem_heap_count > 0);
-		}
-
-		if (moo->processor->active == moo->nil_process) 
-		{
-			/* no more waiting semaphore and no more process */
-			MOO_ASSERT (moo, moo->processor->tally = MOO_SMOOI_TO_OOP(0));
-			MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "No more runnable process\n");
-
-			#if 0
-			if (there is semaphore awaited.... )
-			{
-			/* DO SOMETHING */
-			}
-			#endif
-
-			break;
-		}
-
-		while (moo->sem_list_count > 0)
-		{
-			/* handle async signals */
-			--moo->sem_list_count;
-			signal_semaphore (moo, moo->sem_list[moo->sem_list_count]);
-		}
-		/*
-		if (semaphore heap has pending request)
-		{
-			signal them...
-		}*/
-
-		/* TODO: implement different process switching scheme - time-slice or clock based??? */
-#if defined(MOO_EXTERNAL_PROCESS_SWITCH)
-		if (!moo->proc_switched && moo->switch_proc) { switch_to_next_runnable_process (moo); }
-		moo->switch_proc = 0;
-#else
-		if (!moo->proc_switched) { switch_to_next_runnable_process (moo); }
-#endif
-
-		moo->proc_switched = 0;
+		if (switch_process_if_needed(moo) == 0) break; /* no more runnable process */
 
 #if defined(MOO_DEBUG_VM_EXEC)
 		fetched_instruction_pointer = moo->ip;
@@ -3804,7 +3812,7 @@ int moo_execute (moo_t* moo)
 				 */
 				moo->ip--; 
 			#else
-				if (moo->active_context->origin == moo->processor->active->initial_context->origin)
+				if (MOO_UNLIKELY(moo->active_context->origin == moo->processor->active->initial_context->origin))
 				{
 					/* method return from a processified block
 					 * 
@@ -4141,7 +4149,6 @@ int moo_execute (moo_t* moo)
 				LOG_INST_0 (moo, "noop");
 				break;
 
-
 			default:
 				MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_FATAL, "Fatal error - unknown byte code 0x%zx\n", bcode);
 				moo->errnum = MOO_EINTERN;
@@ -4158,7 +4165,7 @@ done:
 	return 0;
 
 oops:
-	/* TODO: anything to do here? */
+	if (vm_startup_called) vm_cleanup (moo);
 	return -1;
 }
 
@@ -4182,3 +4189,14 @@ int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname
 	return n;
 }
 
+#if 0
+int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname)
+{
+/* TODO: .... */
+	/* call 
+	 * 	System initializeClasses
+	 * and invoke 
+	 *   objname mthname
+	 */
+}
+#endif

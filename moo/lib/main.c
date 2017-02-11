@@ -116,6 +116,9 @@ typedef struct xtn_t xtn_t;
 struct xtn_t
 {
 	const char* source_path; /* main source file */
+#if defined(_WIN32)
+	HANDLE waitable_timer;
+#endif
 };
 
 /* ========================================================================= */
@@ -675,7 +678,8 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 {
 #if defined(_WIN32)
-	if (moo->waitable_timer)
+	xtn_t* xtn = moo_getxtn(moo);
+	if (xtn->waitable_timer)
 	{
 		LARGE_INTEGER li;
 		li.QuadPart = -MOO_SECNSEC_TO_NSEC(dur->sec, dur->nsec);
@@ -735,17 +739,19 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 static void vm_startup (moo_t* moo)
 {
 #if defined(_WIN32)
-	moo->waitable_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+	xtn->waitable_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
 #endif
 }
 
 static void vm_cleanup (moo_t* moo)
 {
 #if defined(_WIN32)
-	if (moo->waitable_timer)
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+	if (xtn->waitable_timer)
 	{
-		CloseHandle (moo->waitable_timer);
-		moo->waitable_timer = MOO_NULL;
+		CloseHandle (xtn->waitable_timer);
+		xtn->waitable_timer = MOO_NULL;
 	}
 #endif
 }
