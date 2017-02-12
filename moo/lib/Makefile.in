@@ -453,7 +453,7 @@ libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_5)
 moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 moo_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo -lxcb
+moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo 
 all: moo-cfg.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
