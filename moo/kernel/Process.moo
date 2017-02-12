@@ -99,7 +99,7 @@ class(#pointer) Process(Object)
 
 class Semaphore(Object)
 {
-	dcl count waiting_head waiting_tail heapIndex fireTimeSec fireTimeNsec.
+	dcl count waiting_head waiting_tail heapIndex fireTimeSec fireTimeNsec ioIndex ioData ioMask.
 
 	method(#class) forMutualExclusion
 	{
@@ -112,9 +112,14 @@ class Semaphore(Object)
 	method initialize
 	{
 		self.count := 0.
+		
 		self.heapIndex := -1.
 		self.fireTimeSec := 0.
 		self.fireTimeNsec := 0.
+		
+		self.ioIndex := -1.
+		self.ioData := nil.
+		self.ioMask := 0.
 	}
 
 	## ==================================================================

@@ -34,7 +34,7 @@ LDFLAGS_COMMON = -L$(abs_builddir)/../lib -L$(libdir) -version-info 1:0:0 -no-un
 LIBADD_COMMON = -lmoo
 
 pkgmodexecdir = $(libdir)
-pkgmodexec_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la 
+pkgmodexec_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la  libmoo-x11.la
 
 endif
 
@@ -53,3 +53,7 @@ libmoo_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_stdio_la_LDFLAGS = $(LDFLAGS_COMMON)
 libmoo_stdio_la_LIBADD = $(LIBADD_COMMON)
 
+libmoo_x11_la_SOURCES = x11.c _x11.h
+libmoo_x11_la_CPPFLAGS = $(CPPFLAGS_COMMON)
+libmoo_x11_la_LDFLAGS = $(LDFLAGS_COMMON)
+libmoo_x11_la_LIBADD = $(LIBADD_COMMON) -lxcb

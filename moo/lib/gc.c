@@ -626,6 +626,11 @@ void moo_gc (moo_t* moo)
 		moo->sem_heap[i] = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_heap[i]);
 	}
 
+	for (i = 0; i < moo->sem_io_count; i++)
+	{
+		moo->sem_io[i] = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_io[i]);
+	}
+
 	for (i = 0; i < moo->tmp_count; i++)
 	{
 		*moo->tmp_stack[i] = moo_moveoop (moo, *moo->tmp_stack[i]);

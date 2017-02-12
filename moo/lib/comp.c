@@ -287,7 +287,13 @@ static int is_reserved_word (const moo_oocs_t* ucs)
 		VOCA_ERROR,
 		VOCA_THIS_CONTEXT,
 		VOCA_THIS_PROCESS,
-		VOCA_IF
+		VOCA_IF,
+		VOCA_ELSE,
+		VOCA_ELSIF,
+		VOCA_WHILE,
+		VOCA_DO,
+		VOCA_BREAK,
+		VOCA_CONTINUE
 	};
 	int i;
 
@@ -2737,6 +2743,34 @@ oops:
 	return MOO_NULL;
 }
 
+static moo_oop_set_t add_nsdic_to_class (moo_t* moo, moo_oop_class_t c, const moo_oocs_t* name)
+{
+	moo_oow_t tmp_count = 0;
+	moo_oop_t sym;
+	moo_oop_set_t ns;
+
+	moo_pushtmp (moo, (moo_oop_t*)&c); tmp_count++;
+
+	sym = moo_makesymbol (moo, name->ptr, name->len);
+	if (!sym) goto oops;
+
+	moo_pushtmp (moo, &sym); tmp_count++;
+
+	ns = moo_makedic (moo, moo->_namespace, NAMESPACE_SIZE);
+	if (!ns) goto oops;
+
+	/*moo_pushtmp (moo, &ns); tmp_count++;*/
+
+	c->nsdic = ns;
+
+	moo_poptmps (moo, tmp_count);
+	return ns;
+
+oops:
+	moo_poptmps (moo, tmp_count);
+	return MOO_NULL;
+}
+
 static int preprocess_dotted_name (moo_t* moo, int dont_add_ns, int accept_pooldic_as_ns, const moo_oocs_t* fqn, const moo_ioloc_t* fqn_loc, moo_oocs_t* name, moo_oop_set_t* ns_oop)
 {
 	const moo_ooch_t* ptr, * dot;
@@ -2769,8 +2803,32 @@ static int preprocess_dotted_name (moo_t* moo, int dont_add_ns, int accept_poold
 				if (MOO_CLASSOF(moo, ass->value) == moo->_namespace || 
 				    (seg.ptr == fqn->ptr && ass->value == (moo_oop_t)moo->sysdic))
 				{
-					/* ok */
+					/* ok - the current segment is a namespace name or
+					 *      it is the first segment and is System */
 					dic = (moo_oop_set_t)ass->value;
+				}
+				else if (MOO_CLASSOF(moo, ass->value) == moo->_class)
+				{
+					/* the segment is a class name. use the nsdic field.
+					 *   class X {}
+					 *   class X.Y {}
+					 *  when processing X in X.Y, this part is reached. */
+					dic = ((moo_oop_class_t)ass->value)->nsdic;
+					if ((moo_oop_t)dic == moo->_nil)
+					{
+						/* the nsdic field is still nil. no namespace dictionary
+						 * has been attached to the class */
+						moo_oop_set_t t;
+
+						if (dont_add_ns) goto wrong_name;
+
+						/* attach a new namespace dictionary to the nsdic field
+						 * of the class */
+						t = add_nsdic_to_class (moo, (moo_oop_class_t)ass->value, &seg);
+						if (!t) return -1;
+
+						dic = t;
+					}
 				}
 				else
 				{

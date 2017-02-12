@@ -24,8 +24,8 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _MOO_MOD_CONSOLE_H_
-#define _MOO_MOD_CONSOLE_H_
+#ifndef _MOO_MOD_X11_H_
+#define _MOO_MOD_X11_H_
 
 #include <moo.h>
 
@@ -33,7 +33,7 @@
 extern "C" {
 #endif
 
-MOO_EXPORT int moo_mod_console (moo_t* moo, moo_mod_t* mod);
+MOO_EXPORT int moo_mod_x11 (moo_t* moo, moo_mod_t* mod);
 
 #if defined(__cplusplus)
 }

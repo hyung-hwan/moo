@@ -75,6 +75,8 @@
 #	if defined(HAVE_SIGNAL_H)
 #		include <signal.h>
 #	endif
+
+#	include <sys/epoll.h>
 #endif
 
 #if !defined(MOO_DEFAULT_PFMODPREFIX)
@@ -118,6 +120,8 @@ struct xtn_t
 	const char* source_path; /* main source file */
 #if defined(_WIN32)
 	HANDLE waitable_timer;
+#else
+	int ep; /* epoll */
 #endif
 };
 
@@ -616,6 +620,56 @@ if (mask & MOO_LOG_GC) return; /* don't show gc logs */
 
 /* ========================================================================= */
 
+static int vm_startup (moo_t* moo)
+{
+#if defined(_WIN32)
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+	xtn->waitable_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
+
+#else
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+
+	xtn->ep = epoll_create1 (EPOLL_CLOEXEC);
+	if (xtn->ep == -1) 
+	{
+		MOO_DEBUG0 (moo, "Cannot create epoll\n");
+		moo_syserrtoerrnum (errno);
+		goto oops;
+	}
+
+	return 0;
+
+oops:
+	if (xtn->ep >= 0)
+	{
+		close (xtn->ep);
+		xtn->ep = -1;
+	}
+
+	return -1;
+#endif
+}
+
+static void vm_cleanup (moo_t* moo)
+{
+#if defined(_WIN32)
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+	if (xtn->waitable_timer)
+	{
+		CloseHandle (xtn->waitable_timer);
+		xtn->waitable_timer = MOO_NULL;
+	}
+#else
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+
+	if (xtn->ep)
+	{
+		close (xtn->ep);
+		xtn->ep = -1;
+	}
+#endif
+}
+
 static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 {
 #if defined(_WIN32)
@@ -729,6 +783,7 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 	}
 
 #else
+	
 	struct timespec ts;
 	ts.tv_sec = dur->sec;
 	ts.tv_nsec = dur->nsec;
@@ -736,26 +791,43 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 #endif
 }
 
-static void vm_startup (moo_t* moo)
+static int mux_add (moo_t* moo)
 {
-#if defined(_WIN32)
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
-	xtn->waitable_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
-#endif
-}
+	struct epoll_event ev;
 
-static void vm_cleanup (moo_t* moo)
-{
-#if defined(_WIN32)
-	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
-	if (xtn->waitable_timer)
+	ev.events = EPOLLIN | EPOLLOUT;
+	ev.data.u64 = 10;
+
+/*
+	if (epoll_ctl (xtn->ep, EPOLL_CTL_DEL, 000, &ev) == -1)
 	{
-		CloseHandle (xtn->waitable_timer);
-		xtn->waitable_timer = MOO_NULL;
+		moo_syserrtoerrnum (errno);
+		return -1;
 	}
-#endif
+*/
+	return 0;
 }
 
+static void mux_del (moo_t* moo)
+{
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+	struct epoll_event ev;
+/*	epoll_ctl (xtn->ep, EPOLL_CTL_DEL, 00, &ev);*/
+}
+
+static void mux_wait (moo_t* moo, const moo_ntime_t* dur)
+{
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+	int tmout = 0;
+
+	if (dur) tmout = MOO_SECNSEC_TO_MSEC(dur->sec, dur->nsec);
+/*
+	if (epoll_wait (xtn->ep, xtn->evt_ptr, xtn->evt_capa, tmout) > 0)
+	{
+	}
+*/
+}
 /* ========================================================================= */
 
 static moo_t* g_moo = MOO_NULL;
@@ -902,10 +974,14 @@ int main (int argc, char* argv[])
 	vmprim.dl_close = dl_close;
 	vmprim.dl_getsym = dl_getsym;
 	vmprim.log_write = log_write;
-	vmprim.vm_gettime = vm_gettime;
-	vmprim.vm_sleep = vm_sleep;
+
 	vmprim.vm_startup = vm_startup;
 	vmprim.vm_cleanup = vm_cleanup;
+	vmprim.vm_gettime = vm_gettime;
+	vmprim.vm_sleep = vm_sleep;
+	vmprim.mux_add = mux_add;
+	vmprim.mux_del = mux_del;
+	vmprim.mux_wait = mux_wait;
 
 #if defined(USE_LTDL)
 	lt_dlinit ();

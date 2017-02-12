@@ -442,7 +442,7 @@ struct moo_set_t
 	moo_oop_oop_t bucket; /* Array */
 };
 
-#define MOO_CLASS_NAMED_INSTVARS 11
+#define MOO_CLASS_NAMED_INSTVARS 12
 typedef struct moo_class_t moo_class_t;
 typedef struct moo_class_t* moo_oop_class_t;
 struct moo_class_t
@@ -468,6 +468,9 @@ struct moo_class_t
 	/* [0] - instance methods, MethodDictionary
 	 * [1] - class methods, MethodDictionary */
 	moo_oop_set_t  mthdic[MOO_METHOD_TYPE_COUNT];      
+
+	/* dictionary used for namespacing */
+	moo_oop_set_t  nsdic;
 
 	/* indexed part afterwards */
 	moo_oop_t      slot[1];   /* class instance variables and class variables. */
@@ -648,7 +651,7 @@ struct moo_context_t
 typedef struct moo_process_t moo_process_t;
 typedef struct moo_process_t* moo_oop_process_t;
 
-#define MOO_SEMAPHORE_NAMED_INSTVARS 6
+#define MOO_SEMAPHORE_NAMED_INSTVARS 9
 typedef struct moo_semaphore_t moo_semaphore_t;
 typedef struct moo_semaphore_t* moo_oop_semaphore_t;
 
@@ -673,12 +676,18 @@ struct moo_process_t
 struct moo_semaphore_t
 {
 	MOO_OBJ_HEADER;
+
 	moo_oop_t count; /* SmallInteger */
 	moo_oop_process_t waiting_head;
 	moo_oop_process_t waiting_tail;
+
 	moo_oop_t heap_index; /* index to the heap */
 	moo_oop_t heap_ftime_sec; /* firing time */
 	moo_oop_t heap_ftime_nsec; /* firing time */
+
+	moo_oop_t io_index; 
+	moo_oop_t io_data;
+	moo_oop_t io_mask; /* SmallInteger */
 };
 
 #define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 5
@@ -733,28 +742,36 @@ enum moo_vmprim_opendl_flag_t
 };
 typedef enum moo_vmprim_opendl_flag_t moo_vmprim_opendl_flag_t;
 
-typedef void* (*moo_vmprim_opendl_t) (moo_t* moo, const moo_ooch_t* name, int flags);
-typedef void (*moo_vmprim_closedl_t) (moo_t* moo, void* handle);
-typedef void* (*moo_vmprim_getdlsym_t) (moo_t* moo, void* handle, const moo_ooch_t* name);
+typedef void* (*moo_vmprim_dlopen_t) (moo_t* moo, const moo_ooch_t* name, int flags);
+typedef void (*moo_vmprim_dlclose_t) (moo_t* moo, void* handle);
+typedef void* (*moo_vmprim_dlsym_t) (moo_t* moo, void* handle, const moo_ooch_t* name);
 
 typedef void (*moo_log_write_t) (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oow_t len);
 
-typedef void (*moo_vmprim_sleep_t) (moo_t* moo, const moo_ntime_t* duration);
-typedef void (*moo_vmprim_gettime_t) (moo_t* moo, moo_ntime_t* now);
-typedef void (*moo_vmprim_startup_t) (moo_t* moo);
+typedef int (*moo_vmprim_startup_t) (moo_t* moo);
 typedef void (*moo_vmprim_cleanup_t) (moo_t* moo);
+typedef void (*moo_vmprim_gettime_t) (moo_t* moo, moo_ntime_t* now);
+typedef void (*moo_vmprim_sleep_t) (moo_t* moo, const moo_ntime_t* duration);
+
+typedef int (*moo_vmprim_muxadd_t) (moo_t* moo);
+typedef void (*moo_vmprim_muxdel_t) (moo_t* moo);
+typedef void (*moo_vmprim_muxwait_t) (moo_t* moo, const moo_ntime_t* duration);
 
 struct moo_vmprim_t
 {
-	moo_vmprim_opendl_t   dl_open;
-	moo_vmprim_closedl_t  dl_close;
-	moo_vmprim_getdlsym_t dl_getsym;
+	moo_vmprim_dlopen_t   dl_open;
+	moo_vmprim_dlclose_t  dl_close;
+	moo_vmprim_dlsym_t    dl_getsym;
 	moo_log_write_t       log_write;
 
-	moo_vmprim_gettime_t vm_gettime;
-	moo_vmprim_sleep_t   vm_sleep;
-	moo_vmprim_startup_t vm_startup;
-	moo_vmprim_cleanup_t vm_cleanup;
+	moo_vmprim_startup_t  vm_startup;
+	moo_vmprim_cleanup_t  vm_cleanup;
+	moo_vmprim_gettime_t  vm_gettime;
+	moo_vmprim_sleep_t    vm_sleep;
+
+	moo_vmprim_muxadd_t   mux_add;
+	moo_vmprim_muxdel_t   mux_del;
+	moo_vmprim_muxwait_t  mux_wait;
 };
 
 typedef struct moo_vmprim_t moo_vmprim_t;
@@ -958,10 +975,17 @@ struct moo_t
 	moo_oow_t sem_list_count;
 	moo_oow_t sem_list_capa;
 
-	/* semaphores sorted according to time-out */
+	/* semaphores sorted according to time-out. 
+	 * organize entries using heap as the earliest entry
+	 * needs to be checked first */
 	moo_oop_semaphore_t* sem_heap;
 	moo_oow_t sem_heap_count;
 	moo_oow_t sem_heap_capa;
+
+	/* semaphores for I/O handling. plain array */
+	moo_oop_semaphore_t* sem_io;
+	moo_oow_t sem_io_count;
+	moo_oow_t sem_io_capa;
 
 	moo_oop_t* tmp_stack[256]; /* stack for temporaries */
 	moo_oow_t tmp_count;
@@ -977,6 +1001,7 @@ struct moo_t
 	moo_ooi_t ip;
 	int proc_switched; /* TODO: this is temporary. implement something else to skip immediate context switching */
 	int switch_proc;
+	int abort_req;
 	moo_ntime_t exec_start_time;
 	moo_ntime_t exec_end_time;
 	/* =============================================================

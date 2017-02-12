@@ -157,6 +157,13 @@ void moo_fini (moo_t* moo)
 		moo->sem_heap_count = 0;
 	}
 
+	if (moo->sem_io)
+	{
+		moo_freemem (moo, moo->sem_io);
+		moo->sem_io_capa = 0;
+		moo->sem_io_count = 0;
+	}
+
 	for (cb = moo->cblist; cb; cb = cb->next)
 	{
 		if (cb->fini) cb->fini (moo);

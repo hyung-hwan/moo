@@ -32,10 +32,14 @@
 #define PROC_STATE_SUSPENDED 0
 #define PROC_STATE_TERMINATED -1
 
+/* TODO: adjust these max semaphore pointer buffer capacity,
+ *       proably depending on the object memory size? */
 #define SEM_LIST_INC 256
 #define SEM_HEAP_INC 256
+#define SEM_IO_INC 256
 #define SEM_LIST_MAX (SEM_LIST_INC * 1000)
 #define SEM_HEAP_MAX (SEM_HEAP_INC * 1000)
+#define SEM_IO_MAX (SEM_IO_INC * 1000)
 
 #define SEM_HEAP_PARENT(x) (((x) - 1) / 2)
 #define SEM_HEAP_LEFT(x)   ((x) * 2 + 1)
@@ -59,8 +63,7 @@
 #define STORE_ACTIVE_SP(moo) STORE_SP(moo, (moo)->processor->active)
 
 #define SWITCH_ACTIVE_CONTEXT(moo,v_ctx) \
-	do \
-	{ \
+	do { \
 		STORE_ACTIVE_IP (moo); \
 		(moo)->active_context = (v_ctx); \
 		(moo)->active_method = (moo_oop_method_t)(moo)->active_context->origin->method_or_nargs; \
@@ -105,12 +108,27 @@
 #endif
 
 /* ------------------------------------------------------------------------- */
+static MOO_INLINE int vm_startup (moo_t* moo)
+{
+	if (moo->vmprim.vm_startup (moo) <= -1) return -1;
+	moo->vmprim.vm_gettime (moo, &moo->exec_start_time); /* raw time. no adjustment */
+	return 0;
+}
+
+static MOO_INLINE void vm_cleanup (moo_t* moo)
+{
+	moo->vmprim.vm_gettime (moo, &moo->exec_end_time); /* raw time. no adjustment */
+	moo->vmprim.vm_cleanup (moo);
+}
+
 static MOO_INLINE void vm_gettime (moo_t* moo, moo_ntime_t* now)
 {
 	moo->vmprim.vm_gettime (moo, now);
 	/* in vm_startup(), moo->exec_start_time has been set to the time of
-	 * that moment. time returned here becomes relative to moo->exec_start_time
-	 * and is kept small such that it can get reprensed in a small integer */
+	 * that moment. time returned here get offset by moo->exec_start_time and 
+	 * thus becomes relative to it. this way, it is kept small such that it
+	 * can be represented in a small integer with leaving almost zero chance
+	 * of overflow. */
 	MOO_SUBNTIME (now, now, &moo->exec_start_time);  /* now = now - exec_start_time */
 }
 
@@ -119,16 +137,9 @@ static MOO_INLINE void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 	moo->vmprim.vm_sleep (moo, dur);
 }
 
-static MOO_INLINE void vm_startup (moo_t* moo)
+static MOO_INLINE void vm_mux_wait (moo_t* moo, const moo_ntime_t* dur)
 {
-	moo->vmprim.vm_startup (moo);
-	moo->vmprim.vm_gettime (moo, &moo->exec_start_time);
-}
-
-static MOO_INLINE void vm_cleanup (moo_t* moo)
-{
-	vm_gettime (moo, &moo->exec_end_time);
-	moo->vmprim.vm_cleanup (moo);
+	moo->vmprim.mux_wait (moo, dur);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -539,10 +550,12 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 		/* [NOTE] no GC must occur as 'proc' isn't protected with moo_pushtmp(). */
 
+		/* detach a process from a semaphore waiting list and 
+		 * make it runnable */
 		unchain_from_semaphore (moo, proc);
 		resume_process (moo, proc); /* TODO: error check */
 
-		/* return the resumed process */
+		/* return the resumed(runnable) process */
 		return proc;
 	}
 }
@@ -706,6 +719,8 @@ static void delete_from_sem_heap (moo_t* moo, moo_ooi_t index)
 	}
 }
 
+#if 0
+/* unused */
 static void update_sem_heap (moo_t* moo, moo_ooi_t index, moo_oop_semaphore_t newsem)
 {
 	moo_oop_semaphore_t sem;
@@ -720,6 +735,67 @@ static void update_sem_heap (moo_t* moo, moo_ooi_t index, moo_oop_semaphore_t ne
 		sift_up_sem_heap (moo, index);
 	else
 		sift_down_sem_heap (moo, index);
+}
+#endif
+
+static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
+{
+	moo_ooi_t index;
+
+	if (moo->sem_io_count >= SEM_IO_MAX)
+	{
+		moo->errnum = MOO_ESHFULL;
+		return -1;
+	}
+
+	if (moo->sem_io_count >= moo->sem_io_capa)
+	{
+		moo_oow_t new_capa;
+		moo_oop_semaphore_t* tmp;
+
+		/* no overflow check when calculating the new capacity
+		 * owing to SEM_IO_MAX check above */
+		new_capa = moo->sem_io_capa + SEM_IO_INC;
+		tmp = moo_reallocmem (moo, moo->sem_io, MOO_SIZEOF(moo_oop_semaphore_t) * new_capa);
+		if (!tmp) return -1;
+
+		moo->sem_io = tmp;
+		moo->sem_io_capa = new_capa;
+	}
+
+	MOO_ASSERT (moo, moo->sem_io_count <= MOO_SMOOI_MAX);
+
+	if (moo->vmprim.mux_add (moo) <= -1) /*TODO: pass data */
+	{
+		return -1;
+	}
+
+	index = moo->sem_io_count;
+	moo->sem_io[index] = sem;
+	sem->heap_index = MOO_SMOOI_TO_OOP(index);
+	moo->sem_io_count++;
+
+	return 0;
+}
+
+static void delete_from_sem_io (moo_t* moo, moo_ooi_t index)
+{
+
+	moo_oop_semaphore_t sem, lastsem;
+
+	sem = moo->sem_io[index];
+	sem->io_index = MOO_SMOOI_TO_OOP(-1);
+
+	moo->vmprim.mux_del (moo); /* TODO: pass data... */
+
+	moo->sem_io_count--;
+	if (moo->sem_io_count > 0 && index != moo->sem_io_count)
+	{
+		/* move the last item to the deletion position */
+		lastsem = moo->sem_io[moo->sem_io_count];
+		lastsem->io_index = MOO_SMOOI_TO_OOP(index);
+		moo->sem_io[index] = lastsem;
+	}
 }
 
 static moo_oop_process_t start_initial_process (moo_t* moo, moo_oop_context_t c)
@@ -1984,13 +2060,15 @@ static moo_pfrc_t pf_processor_add_timed_semaphore (moo_t* moo, moo_ooi_t nargs)
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 
-	if (rcv != (moo_oop_t)moo->processor) return MOO_PF_FAILURE;
-	if (MOO_CLASSOF(moo,sem) != moo->_semaphore) return MOO_PF_FAILURE;
-	if (!MOO_OOP_IS_SMOOI(sec)) return MOO_PF_FAILURE;
+	/* ProcessScheduler>>signal:after: calls this primitive function. */
+	if (rcv != (moo_oop_t)moo->processor || 
+	    MOO_CLASSOF(moo,sem) != moo->_semaphore || 
+	    !MOO_OOP_IS_SMOOI(sec)) return MOO_PF_FAILURE;
 
 	if (MOO_OOP_IS_SMOOI(sem->heap_index) && 
 	    sem->heap_index != MOO_SMOOI_TO_OOP(-1))
 	{
+		/* if the semaphore is already been added. remove it first */
 		delete_from_sem_heap (moo, MOO_OOP_TO_SMOOI(sem->heap_index));
 		MOO_ASSERT (moo, sem->heap_index == MOO_SMOOI_TO_OOP(-1));
 
@@ -2002,7 +2080,7 @@ static moo_pfrc_t pf_processor_add_timed_semaphore (moo_t* moo, moo_ooi_t nargs)
 	}
 
 	/* this code assumes that the monotonic clock returns a small value
-	 * that can fit into a SmallInteger, even after some additions... */
+	 * that can fit into a SmallInteger, even after some additions. */
 	vm_gettime (moo, &now);
 	MOO_ADDNTIMESNS (&ft, &now, MOO_OOP_TO_SMOOI(sec), MOO_OOP_TO_SMOOI(nsec));
 	if (ft.sec < 0 || ft.sec > MOO_SMOOI_MAX) 
@@ -2019,6 +2097,42 @@ static moo_pfrc_t pf_processor_add_timed_semaphore (moo_t* moo, moo_ooi_t nargs)
 	sem->heap_ftime_nsec = MOO_SMOOI_TO_OOP(ft.nsec);
 
 	if (add_to_sem_heap (moo, sem) <= -1) return MOO_PF_HARD_FAILURE;
+
+	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_processor_add_io_semaphore (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, sec, nsec;
+	moo_oop_semaphore_t sem;
+
+	MOO_ASSERT (moo, nargs == 3);
+
+	nsec = MOO_STACK_GETARG (moo, nargs, 2);
+	if (!MOO_OOP_IS_SMOOI(nsec)) return MOO_PF_FAILURE;
+
+	sec = MOO_STACK_GETARG(moo, nargs, 1);
+	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+
+	/* ProcessScheduler>>signal:after: calls this primitive function. */
+	if (rcv != (moo_oop_t)moo->processor || 
+	    MOO_CLASSOF(moo,sem) != moo->_semaphore || 
+	    !MOO_OOP_IS_SMOOI(sec)) return MOO_PF_FAILURE;
+
+	if (MOO_OOP_IS_SMOOI(sem->io_index) && 
+	    sem->io_index != MOO_SMOOI_TO_OOP(-1))
+	{
+		/* remove it if it's already added for IO */
+		delete_from_sem_io (moo, MOO_OOP_TO_SMOOI(sem->io_index));
+		MOO_ASSERT (moo, sem->io_index == MOO_SMOOI_TO_OOP(-1));
+	}
+
+/* TOOD: sanity check on argument 2 and 3 */
+	sem->io_data = MOO_STACK_GETARG(moo, nargs, 1);
+	sem->io_mask = MOO_STACK_GETARG(moo, nargs, 2);
+	if (add_to_sem_io (moo, sem) <= -1) return MOO_PF_HARD_FAILURE;
 
 	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
 	return MOO_PF_SUCCESS;
@@ -2048,6 +2162,13 @@ static moo_pfrc_t pf_processor_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 		/* the semaphore is in the timed semaphore heap */
 		delete_from_sem_heap (moo, MOO_OOP_TO_SMOOI(sem->heap_index));
 		MOO_ASSERT (moo, sem->heap_index == MOO_SMOOI_TO_OOP(-1));
+	}
+
+	if (MOO_OOP_IS_SMOOI(sem->io_index) &&
+	    sem->io_index != MOO_SMOOI_TO_OOP(-1))
+	{
+		delete_from_sem_io (moo, MOO_OOP_TO_SMOOI(sem->heap_index));
+		MOO_ASSERT (moo, sem->io_index == MOO_SMOOI_TO_OOP(-1));
 	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
@@ -2564,6 +2685,7 @@ static pf_t pftab[] =
 
 	{   1,  1,  pf_processor_schedule,               "_processor_schedule"            },
 	{   2,  3,  pf_processor_add_timed_semaphore,    "_processor_add_timed_semaphore" },
+	{   3,  3,  pf_processor_add_io_semaphore,       "_processor_add_io_semaphore" },
 	{   1,  1,  pf_processor_remove_semaphore,       "_processor_remove_semaphore" },
 	{   2,  2,  pf_processor_return_to,              "_processor_return_to" },
 
@@ -2918,7 +3040,9 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 {
 	if (moo->sem_heap_count > 0)
 	{
+		/* handle timed semaphores */
 		moo_ntime_t ft, now;
+
 		vm_gettime (moo, &now);
 
 		do
@@ -2956,23 +3080,31 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 					MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
 					MOO_ASSERT (moo, proc == moo->processor->runnable_head);
 
-					wake_new_process (moo, proc);
+					wake_new_process (moo, proc); /* switch to running */
 					moo->proc_switched = 1;
 				}
 			}
 			else if (moo->processor->active == moo->nil_process)
 			{
+				/* no running process */
 				MOO_SUBNTIME (&ft, &ft, (moo_ntime_t*)&now);
-				vm_sleep (moo, &ft); /* TODO: change this to i/o multiplexer??? */
+
+				if (moo->sem_io_count > 0)
+					vm_mux_wait (moo, &ft);
+				else
+					vm_sleep (moo, &ft); /* TODO: change this to i/o multiplexer??? */
 				vm_gettime (moo, &now);
 			}
 			else 
 			{
+				/* there is a running process. go on */
 				break;
 			}
 		} 
-		while (moo->sem_heap_count > 0);
+		while (moo->sem_heap_count > 0 && !moo->abort_req);
 	}
+
+	if (moo->sem_io_count > 0) vm_mux_wait (moo, MOO_NULL);
 
 	if (moo->processor->active == moo->nil_process) 
 	{
@@ -3034,11 +3166,13 @@ int moo_execute (moo_t* moo)
 
 	MOO_ASSERT (moo, moo->active_context != MOO_NULL);
 
-	vm_startup (moo);
+	if (vm_startup(moo) <= -1) goto oops;
 	vm_startup_called = 1;
-	moo->proc_switched = 0;
 
-	while (1)
+	moo->proc_switched = 0;
+	moo->abort_req = 0;
+
+	while (!moo->abort_req)
 	{
 		if (switch_process_if_needed(moo) == 0) break; /* no more runnable process */
 
@@ -4157,7 +4291,6 @@ int moo_execute (moo_t* moo)
 	}
 
 done:
-
 	vm_cleanup (moo);
 #if defined(MOO_PROFILE_VM)
 	MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_INFO, "TOTAL_INST_COUTNER = %zu\n", inst_counter);
@@ -4167,6 +4300,11 @@ done:
 oops:
 	if (vm_startup_called) vm_cleanup (moo);
 	return -1;
+}
+
+int moo_abort (moo_t* moo)
+{
+	moo->abort_req = 1;
 }
 
 int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname)

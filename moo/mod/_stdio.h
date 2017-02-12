@@ -24,8 +24,8 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _MOO_LIB_MOD_STDIO_H_
-#define _MOO_LIB_MOD_STDIO_H_
+#ifndef _MOO_MOD_STDIO_H_
+#define _MOO_MOD_STDIO_H_
 
 #include <moo.h>
 

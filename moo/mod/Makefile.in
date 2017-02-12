@@ -172,6 +172,14 @@ libmoo_stdio_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 @ENABLE_STATIC_MODULE_FALSE@am_libmoo_stdio_la_rpath = -rpath \
 @ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
 @ENABLE_STATIC_MODULE_TRUE@am_libmoo_stdio_la_rpath =
+libmoo_x11_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
+am_libmoo_x11_la_OBJECTS = libmoo_x11_la-x11.lo
+libmoo_x11_la_OBJECTS = $(am_libmoo_x11_la_OBJECTS)
+libmoo_x11_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(libmoo_x11_la_LDFLAGS) $(LDFLAGS) -o $@
+@ENABLE_STATIC_MODULE_FALSE@am_libmoo_x11_la_rpath = -rpath \
+@ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -207,9 +215,9 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(libmoo_console_la_SOURCES) $(libmoo_ffi_la_SOURCES) \
-	$(libmoo_stdio_la_SOURCES)
+	$(libmoo_stdio_la_SOURCES) $(libmoo_x11_la_SOURCES)
 DIST_SOURCES = $(libmoo_console_la_SOURCES) $(libmoo_ffi_la_SOURCES) \
-	$(libmoo_stdio_la_SOURCES)
+	$(libmoo_stdio_la_SOURCES) $(libmoo_x11_la_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -415,7 +423,7 @@ CPPFLAGS_COMMON = -I$(abs_builddir) -I$(abs_builddir)/../lib \
 @ENABLE_STATIC_MODULE_TRUE@LIBADD_COMMON = 
 @ENABLE_STATIC_MODULE_TRUE@noinst_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la
 @ENABLE_STATIC_MODULE_FALSE@pkgmodexecdir = $(libdir)
-@ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la 
+@ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la  libmoo-x11.la
 libmoo_console_la_SOURCES = console.c console.h
 libmoo_console_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_console_la_LDFLAGS = $(LDFLAGS_COMMON)
@@ -428,6 +436,10 @@ libmoo_stdio_la_SOURCES = stdio.c _stdio.h
 libmoo_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_stdio_la_LDFLAGS = $(LDFLAGS_COMMON)
 libmoo_stdio_la_LIBADD = $(LIBADD_COMMON)
+libmoo_x11_la_SOURCES = x11.c _x11.h
+libmoo_x11_la_CPPFLAGS = $(CPPFLAGS_COMMON)
+libmoo_x11_la_LDFLAGS = $(LDFLAGS_COMMON)
+libmoo_x11_la_LIBADD = $(LIBADD_COMMON) -lxcb
 all: all-am
 
 .SUFFIXES:
@@ -517,6 +529,9 @@ libmoo-ffi.la: $(libmoo_ffi_la_OBJECTS) $(libmoo_ffi_la_DEPENDENCIES) $(EXTRA_li
 libmoo-stdio.la: $(libmoo_stdio_la_OBJECTS) $(libmoo_stdio_la_DEPENDENCIES) $(EXTRA_libmoo_stdio_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libmoo_stdio_la_LINK) $(am_libmoo_stdio_la_rpath) $(libmoo_stdio_la_OBJECTS) $(libmoo_stdio_la_LIBADD) $(LIBS)
 
+libmoo-x11.la: $(libmoo_x11_la_OBJECTS) $(libmoo_x11_la_DEPENDENCIES) $(EXTRA_libmoo_x11_la_DEPENDENCIES) 
+	$(AM_V_CCLD)$(libmoo_x11_la_LINK) $(am_libmoo_x11_la_rpath) $(libmoo_x11_la_OBJECTS) $(libmoo_x11_la_LIBADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -526,6 +541,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_console_la-console.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_ffi_la-ffi.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_stdio_la-stdio.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_x11_la-x11.Plo@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -571,6 +587,13 @@ libmoo_stdio_la-stdio.lo: stdio.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='stdio.c' object='libmoo_stdio_la-stdio.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_stdio_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_stdio_la-stdio.lo `test -f 'stdio.c' || echo '$(srcdir)/'`stdio.c
+
+libmoo_x11_la-x11.lo: x11.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_x11_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_x11_la-x11.lo -MD -MP -MF $(DEPDIR)/libmoo_x11_la-x11.Tpo -c -o libmoo_x11_la-x11.lo `test -f 'x11.c' || echo '$(srcdir)/'`x11.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_x11_la-x11.Tpo $(DEPDIR)/libmoo_x11_la-x11.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='x11.c' object='libmoo_x11_la-x11.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_x11_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_x11_la-x11.lo `test -f 'x11.c' || echo '$(srcdir)/'`x11.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
