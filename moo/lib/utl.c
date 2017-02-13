@@ -631,8 +631,11 @@ int moo_convbtouchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_
 
 	n = bcsn_to_ucsn_with_cmgr (bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
 
-	/* -1: illegal character, -2, buffer too small, -3: incomplete sequence */
-	moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+	if (n <= -1)
+	{
+		/* -1: illegal character, -2: buffer too small, -3: incomplete sequence */
+		moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+	}
 
 	return n;
 }
@@ -643,7 +646,11 @@ int moo_convutobchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_
 	int n;
 
 	n = ucsn_to_bcsn_with_cmgr (ucs, ucslen, bcs, bcslen, moo->cmgr);
-	moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+
+	if (n <= -1)
+	{
+		moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+	}
 
 	return n;
 }
@@ -654,7 +661,11 @@ int moo_convbtoucstr (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_u
 	int n;
 
 	n = bcs_to_ucs_with_cmgr (bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
-	moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+
+	if (n <= -1)
+	{
+		moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+	}
 
 	return n;
 }
@@ -665,7 +676,11 @@ int moo_convutobcstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_b
 	int n;
 
 	n = ucs_to_bcs_with_cmgr (ucs, ucslen, bcs, bcslen, moo->cmgr);
-	moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+
+	if (n <= -1)
+	{
+		moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+	}
 
 	return n;
 }

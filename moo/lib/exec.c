@@ -2871,31 +2871,34 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			/*sp = moo->sp;*/
 			sb = moo->sp - nargs - 1; /* stack base before receiver and arguments */
 
+		#if !defined(NDEBUG)
 			pf_name_index = MOO_METHOD_GET_PREAMBLE_INDEX(preamble);
 			LOG_INST_1 (moo, "preamble_named_primitive %zd", pf_name_index);
+			MOO_ASSERT (moo, pf_name_index >= 0);
 
-			/* merge two SmallIntegers to get a full pointer */
+			name = method->slot[pf_name_index];
+			MOO_ASSERT (moo, MOO_ISTYPEOF(moo,name,MOO_OBJ_TYPE_CHAR));
+			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_EXTRA(name));
+			MOO_ASSERT (moo, MOO_CLASSOF(moo,name) == moo->_symbol);
+		#endif
+
+			/* merge two SmallIntegers to get a full pointer from the cached data */
 			w = (moo_oow_t)MOO_OOP_TO_SMOOI(method->preamble_data[0]) << (MOO_OOW_BITS / 2) | 
 			    (moo_oow_t)MOO_OOP_TO_SMOOI(method->preamble_data[1]);
 			handler = (moo_pfimpl_t)w;
 			if (handler) goto exec_handler;
-			else
-			{
-				MOO_ASSERT (moo, pf_name_index >= 0);
-				name = method->slot[pf_name_index];
 
-				MOO_ASSERT (moo, MOO_ISTYPEOF(moo,name,MOO_OBJ_TYPE_CHAR));
-				MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_EXTRA(name));
-				MOO_ASSERT (moo, MOO_CLASSOF(moo,name) == moo->_symbol);
+		#if defined(NDEBUG)
+			pf_name_index = MOO_METHOD_GET_PREAMBLE_INDEX(preamble);
+			name = method->slot[pf_name_index];
+		#endif
 
-				handler = moo_querymod (moo, ((moo_oop_char_t)name)->slot, MOO_OBJ_GET_SIZE(name));
-			}
-
+			handler = moo_querymod (moo, ((moo_oop_char_t)name)->slot, MOO_OBJ_GET_SIZE(name));
 			if (handler)
 			{
 				int n;
 
-				/* split a pointer to two OOP fields as SmallIntegers for storing. */
+				/* split a pointer to two OOP fields as SmallIntegers for storing/caching. */
 				method->preamble_data[0] = MOO_SMOOI_TO_OOP((moo_oow_t)handler >> (MOO_OOW_BITS / 2));
 				method->preamble_data[1] = MOO_SMOOI_TO_OOP((moo_oow_t)handler & MOO_LBMASK(moo_oow_t, MOO_OOW_BITS / 2));
 
@@ -2913,18 +2916,18 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				moo_poptmp (moo);
 				if (n <= MOO_PF_HARD_FAILURE) 
 				{
-					MOO_DEBUG2 (moo, "Hard failure indicated by primitive function %p - return code %d\n", handler, n);
+					MOO_DEBUG4 (moo, "Hard failure indicated by primitive function %p - %.*js - return code %d\n", handler, MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, n);
 					return -1; /* hard primitive failure */
 				}
 				if (n >= MOO_PF_SUCCESS) break; /* primitive ok*/
 
 				/* soft primitive failure */
-				MOO_DEBUG1 (moo, "Soft failure indicated by primitive function %p\n", handler);
+				MOO_DEBUG3 (moo, "Soft failure indicated by primitive function %p - %.*js\n", handler, MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot);
 			}
 			else
 			{
 				/* no handler found */
-				MOO_DEBUG0 (moo, "Soft failure for non-existent primitive function\n");
+				MOO_DEBUG2 (moo, "Soft failure for non-existent primitive function - %.*js\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot);
 			}
 
 		#if defined(MOO_USE_OBJECT_TRAILER)

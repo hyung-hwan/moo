@@ -1081,13 +1081,27 @@ typedef enum moo_log_mask_t moo_log_mask_t;
 #define MOO_LOG5(moo,mask,fmt,a1,a2,a3,a4,a5) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1, a2, a3, a4, a5); } while(0)
 #define MOO_LOG6(moo,mask,fmt,a1,a2,a3,a4,a5,a6) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1, a2, a3, a4, a5, a6); } while(0)
 
-#define MOO_DEBUG0(moo,fmt) MOO_LOG0(moo, MOO_LOG_DEBUG, fmt)
-#define MOO_DEBUG1(moo,fmt,a1) MOO_LOG1(moo, MOO_LOG_DEBUG, fmt, a1)
-#define MOO_DEBUG2(moo,fmt,a1,a2) MOO_LOG2(moo, MOO_LOG_DEBUG, fmt, a1, a2)
-#define MOO_DEBUG3(moo,fmt,a1,a2,a3) MOO_LOG3(moo, MOO_LOG_DEBUG, fmt, a1, a2, a3)
-#define MOO_DEBUG4(moo,fmt,a1,a2,a3,a4) MOO_LOG4(moo, MOO_LOG_DEBUG, fmt, a1, a2, a3, a4)
-#define MOO_DEBUG5(moo,fmt,a1,a2,a3,a4,a5) MOO_LOG5(moo, MOO_LOG_DEBUG, fmt, a1, a2, a3, a4, a5)
-#define MOO_DEBUG6(moo,fmt,a1,a2,a3,a4,a5,a6) MOO_LOG6(moo, MOO_LOG_DEBUG, fmt, a1, a2, a3, a4, a5, a6)
+#if defined(NDEBUG)
+	/* [NOTE]
+	 *  get rid of debugging message totally regardless of
+	 *  the log mask in the release build.
+	 */
+#	define MOO_DEBUG0(moo,fmt)
+#	define MOO_DEBUG1(moo,fmt,a1)
+#	define MOO_DEBUG2(moo,fmt,a1,a2)
+#	define MOO_DEBUG3(moo,fmt,a1,a2,a3)
+#	define MOO_DEBUG4(moo,fmt,a1,a2,a3,a4)
+#	define MOO_DEBUG5(moo,fmt,a1,a2,a3,a4,a5)
+#	define MOO_DEBUG6(moo,fmt,a1,a2,a3,a4,a5,a6)
+#else
+#	define MOO_DEBUG0(moo,fmt) MOO_LOG0(moo, MOO_LOG_DEBUG, fmt)
+#	define MOO_DEBUG1(moo,fmt,a1) MOO_LOG1(moo, MOO_LOG_DEBUG, fmt, a1)
+#	define MOO_DEBUG2(moo,fmt,a1,a2) MOO_LOG2(moo, MOO_LOG_DEBUG, fmt, a1, a2)
+#	define MOO_DEBUG3(moo,fmt,a1,a2,a3) MOO_LOG3(moo, MOO_LOG_DEBUG, fmt, a1, a2, a3)
+#	define MOO_DEBUG4(moo,fmt,a1,a2,a3,a4) MOO_LOG4(moo, MOO_LOG_DEBUG, fmt, a1, a2, a3, a4)
+#	define MOO_DEBUG5(moo,fmt,a1,a2,a3,a4,a5) MOO_LOG5(moo, MOO_LOG_DEBUG, fmt, a1, a2, a3, a4, a5)
+#	define MOO_DEBUG6(moo,fmt,a1,a2,a3,a4,a5,a6) MOO_LOG6(moo, MOO_LOG_DEBUG, fmt, a1, a2, a3, a4, a5, a6)
+#endif
 
 #define MOO_INFO0(moo,fmt) MOO_LOG0(moo, MOO_LOG_INFO, fmt)
 #define MOO_INFO1(moo,fmt,a1) MOO_LOG1(moo, MOO_LOG_INFO, fmt, a1)

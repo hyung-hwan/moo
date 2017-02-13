@@ -359,6 +359,7 @@ void moo_freemem (moo_t* moo, void* ptr)
 #include "../mod/console.h"
 #include "../mod/_ffi.h"
 #include "../mod/_stdio.h"
+#include "../mod/_x11.h"
 
 static struct
 {
@@ -367,9 +368,11 @@ static struct
 }
 static_modtab[] = 
 {
-	{ "console", moo_mod_console },
-	{ "ffi",     moo_mod_ffi },
-	{ "stdio",   moo_mod_stdio },
+	{ "console",    moo_mod_console },
+	{ "ffi",        moo_mod_ffi },
+	{ "stdio",      moo_mod_stdio },
+	{ "x11",        moo_mod_x11 },
+	{ "x11.win",    moo_mod_x11_win }
 };
 #endif
 
@@ -420,8 +423,10 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 
 	if (n >= MOO_COUNTOF(static_modtab))
 	{
+		MOO_DEBUG2 (moo, "Cannot find a static module [%.*js]\n", namelen, name);
 		moo->errnum = MOO_ENOENT;
 		return MOO_NULL;
+/* TODO: fall back to find dynamic module further on supported platforms instead of returning error here... */
 	}
 
 	if (load)
@@ -593,11 +598,11 @@ moo_pfimpl_t moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen
 	moo_oow_t mod_name_len;
 	moo_pfimpl_t handler;
 
-	sep = moo_findoochar (pfid, pfidlen, '.');
+	sep = moo_rfindoochar (pfid, pfidlen, '.');
 	if (!sep)
 	{
 		/* i'm writing a conservative code here. the compiler should 
-		 * guarantee that an underscore is included in an primitive identifer.
+		 * guarantee that a period is included in an primitive identifer.
 		 * what if the compiler is broken? imagine a buggy compiler rewritten
 		 * in moo itself? */
 		MOO_DEBUG2 (moo, "Internal error - no period in a primitive function identifier [%.*js] - buggy compiler?\n", pfidlen, pfid);
@@ -607,6 +612,10 @@ moo_pfimpl_t moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen
 
 	mod_name_len = sep - pfid;
 
+	/* the first through the segment before the last compose a module id.
+	 * the last segment is the primitive function name.
+	 * for instance, in con.window.open, con.window is a module id and
+	 * open is the primitive function name. */
 	pair = moo_rbt_search (&moo->modtab, pfid, mod_name_len);
 	if (pair)
 	{
@@ -615,13 +624,14 @@ moo_pfimpl_t moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen
 	}
 	else
 	{
+		/* open a module using the part before the last period */
 		mdp = moo_openmod (moo, pfid, mod_name_len);
 		if (!mdp) return MOO_NULL;
 	}
 
 	if ((handler = mdp->mod.query (moo, &mdp->mod, sep + 1)) == MOO_NULL) 
 	{
-		/* the primitive function is not found. keep the module open */
+		/* the primitive function is not found. but keep the module open even if it's opened above */
 		MOO_DEBUG2 (moo, "Cannot find a primitive function [%js] in a module [%js]\n", sep + 1, mdp->mod.name);
 		moo->errnum = MOO_ENOENT; /* TODO: proper error code and handling */
 		return MOO_NULL;
@@ -696,6 +706,8 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_t _class, moo_method_ty
 		return -1;
 	}
 
+MOO_DEBUG3 (moo, ">>>> PFGEN X11 [%.*js] %js\n", moo->sbuf[0].len, moo->sbuf[0].ptr, mod->name);
+
 	pfidsym = (moo_oop_char_t)moo_makesymbol (moo, moo->sbuf[0].ptr, moo->sbuf[0].len);
 	if (!pfidsym) 
 	{
@@ -728,7 +740,7 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_t _class, moo_method_ty
 	mth->tmpr_count = MOO_SMOOI_TO_OOP(arg_count);
 	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(arg_count);
 
-/* TODO: emit BCODE_RETURN_NIL ? */
+/* TODO: emit BCODE_RETURN_NIL as a fallback or self primitiveFailed? or anything else?? */
 
 	if (!moo_putatdic (moo, cls->mthdic[type], (moo_oop_t)mnsym, (moo_oop_t)mth)) 
 	{

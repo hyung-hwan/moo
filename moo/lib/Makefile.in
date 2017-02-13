@@ -95,7 +95,7 @@ host_triplet = @host@
 # to the first number in -version-info above
 @WIN32_TRUE@am__append_3 = -DMOO_DEFAULT_MODPREFIX=\"libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"-1\"
 @WIN32_FALSE@am__append_4 = -DMOO_DEFAULT_MODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"\"
-@ENABLE_STATIC_MODULE_TRUE@am__append_5 = -lmoo-ffi -lmoo-console -lmoo-stdio 
+@ENABLE_STATIC_MODULE_TRUE@am__append_5 = -lmoo-ffi -lmoo-console -lmoo-stdio  -lmoo-x11
 @ENABLE_STATIC_MODULE_FALSE@libmoo_la_DEPENDENCIES =  \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_3) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
@@ -448,7 +448,8 @@ libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_5)
 @ENABLE_STATIC_MODULE_TRUE@libmoo_la_DEPENDENCIES = \
 @ENABLE_STATIC_MODULE_TRUE@	$(abs_builddir)/../mod/libmoo-ffi.la \
 @ENABLE_STATIC_MODULE_TRUE@	$(abs_builddir)/../mod/libmoo-console.la \
-@ENABLE_STATIC_MODULE_TRUE@	$(abs_builddir)/../mod/libmoo-stdio.la
+@ENABLE_STATIC_MODULE_TRUE@	$(abs_builddir)/../mod/libmoo-stdio.la \
+@ENABLE_STATIC_MODULE_TRUE@	$(abs_builddir)/../mod/libmoo-x11.la
 
 moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)

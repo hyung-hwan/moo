@@ -349,7 +349,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 
 	if (flags & MOO_VMPRIM_OPENDL_PFMOD)
 	{
-		moo_oow_t len;
+		moo_oow_t len, i, xlen;
 
 		/* opening a primitive function module - mostly libmoo-xxxx */
 		len = moo_copybcstr (bufptr, bufcapa, MOO_DEFAULT_PFMODPREFIX);
@@ -360,16 +360,43 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 	#else
 		bcslen = moo_copybcstr (&bufptr[len], bcslen, name);
 	#endif
- 
-		moo_copybcstr (&bufptr[bcslen + len], bufcapa - bcslen - len, MOO_DEFAULT_PFMODPOSTFIX);
 
+		/* length including the prefix and the name. but excluding the postfix */
+		xlen  = len + bcslen; 
+
+		/* convert a period(.) to a dash(-) */
+		for (i = len; i < xlen; i++) 
+		{
+			if (bufptr[i] == '.') bufptr[i] = '-';
+		}
+ 
+	retry:
+		moo_copybcstr (&bufptr[xlen], bufcapa - xlen, MOO_DEFAULT_PFMODPOSTFIX);
+
+		/* both prefix and postfix attached. for instance, libmoo-xxx */
 		handle = lt_dlopenext (bufptr);
 		if (!handle) 
 		{
 			MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %hs\n", bufptr, name, lt_dlerror());
-			bufptr[bcslen + len] = '\0';
+
+			/* try without prefix and postfix */
+			bufptr[xlen] = '\0';
 			handle = lt_dlopenext (&bufptr[len]);
-			if (!handle) MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %s\n", &bufptr[len], name, lt_dlerror());
+			if (!handle) 
+			{
+				moo_bch_t* dash;
+				MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %s\n", &bufptr[len], name, lt_dlerror());
+				dash = moo_rfindbchar (bufptr, moo_countbcstr(bufptr), '-');
+				if (dash) 
+				{
+					/* remove a segment at the back. 
+					 * [NOTE] a dash contained in the original name before
+					 *        period-to-dash transformation may cause extraneous/wrong
+					 *        loading reattempts. */
+					xlen = dash - bufptr;
+					goto retry;
+				}
+			}
 			else MOO_DEBUG3 (moo, "Opened(ext) DL %hs[%js] handle %p\n", &bufptr[len], name, handle);
 		}
 		else
@@ -429,7 +456,7 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 {
 #if defined(USE_LTDL)
 	moo_bch_t stabuf[64], * bufptr;
-	moo_oow_t bufcapa, ucslen, bcslen;
+	moo_oow_t bufcapa, ucslen, bcslen, i;
 	const moo_bch_t* symname;
 	void* sym;
 
@@ -457,6 +484,9 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 	#else
 	bcslen = moo_copybcstr (&bufptr[1], bcslen, name);
 	#endif
+
+	/* convert a period(.) to an underscore(_) */
+	for (i = 1; i <= bcslen; i++) if (bufptr[i] == '.') bufptr[i] = '_';
 
 	symname = &bufptr[1]; /* try the name as it is */
 	sym = lt_dlsym (handle, symname);

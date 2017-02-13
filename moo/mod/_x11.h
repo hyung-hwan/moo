@@ -34,6 +34,7 @@ extern "C" {
 #endif
 
 MOO_EXPORT int moo_mod_x11 (moo_t* moo, moo_mod_t* mod);
+MOO_EXPORT int moo_mod_x11_win (moo_t* moo, moo_mod_t* mod);
 
 #if defined(__cplusplus)
 }

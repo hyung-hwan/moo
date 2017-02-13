@@ -180,6 +180,7 @@ libmoo_x11_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(libmoo_x11_la_LDFLAGS) $(LDFLAGS) -o $@
 @ENABLE_STATIC_MODULE_FALSE@am_libmoo_x11_la_rpath = -rpath \
 @ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
+@ENABLE_STATIC_MODULE_TRUE@am_libmoo_x11_la_rpath =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -421,7 +422,7 @@ CPPFLAGS_COMMON = -I$(abs_builddir) -I$(abs_builddir)/../lib \
 @ENABLE_STATIC_MODULE_TRUE@LDFLAGS_COMMON = -L$(libdir) -version-info 1:0:0 -no-undefined
 @ENABLE_STATIC_MODULE_FALSE@LIBADD_COMMON = -lmoo
 @ENABLE_STATIC_MODULE_TRUE@LIBADD_COMMON = 
-@ENABLE_STATIC_MODULE_TRUE@noinst_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la
+@ENABLE_STATIC_MODULE_TRUE@noinst_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la libmoo-x11.la
 @ENABLE_STATIC_MODULE_FALSE@pkgmodexecdir = $(libdir)
 @ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la  libmoo-x11.la
 libmoo_console_la_SOURCES = console.c console.h

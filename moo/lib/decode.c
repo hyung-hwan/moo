@@ -26,13 +26,20 @@
 
 #include "moo-prv.h"
 
-
-#define DECODE_LOG_MASK (MOO_LOG_MNEMONIC)
-
-#define LOG_INST_0(moo,fmt) MOO_LOG1(moo, DECODE_LOG_MASK, " %06zd " fmt "\n", fetched_instruction_pointer)
-#define LOG_INST_1(moo,fmt,a1) MOO_LOG2(moo, DECODE_LOG_MASK, " %06zd " fmt "\n", fetched_instruction_pointer, a1)
-#define LOG_INST_2(moo,fmt,a1,a2) MOO_LOG3(moo, DECODE_LOG_MASK, " %06zd " fmt "\n", fetched_instruction_pointer, a1, a2)
-#define LOG_INST_3(moo,fmt,a1,a2,a3) MOO_LOG4(moo, DECODE_LOG_MASK, " %06zd " fmt "\n", fetched_instruction_pointer, a1, a2, a3)
+#if defined(NDEBUG)
+	/* get rid of instruction logging regardless of the log mask
+	 * in the release build */
+#	define LOG_INST_0(moo,fmt)
+#	define LOG_INST_1(moo,fmt,a1)
+#	define LOG_INST_2(moo,fmt,a1,a2)
+#	define LOG_INST_3(moo,fmt,a1,a2,a3)
+#else
+#	define DECODE_LOG_MASK (MOO_LOG_MNEMONIC)
+#	define LOG_INST_0(moo,fmt) MOO_LOG1(moo, DECODE_LOG_MASK, " %06zd " fmt "\n", fetched_instruction_pointer)
+#	define LOG_INST_1(moo,fmt,a1) MOO_LOG2(moo, DECODE_LOG_MASK, " %06zd " fmt "\n", fetched_instruction_pointer, a1)
+#	define LOG_INST_2(moo,fmt,a1,a2) MOO_LOG3(moo, DECODE_LOG_MASK, " %06zd " fmt "\n", fetched_instruction_pointer, a1, a2)
+#	define LOG_INST_3(moo,fmt,a1,a2,a3) MOO_LOG4(moo, DECODE_LOG_MASK, " %06zd " fmt "\n", fetched_instruction_pointer, a1, a2, a3)
+#endif
 
 #define FETCH_BYTE_CODE(moo) (cdptr[ip++])
 #define FETCH_BYTE_CODE_TO(moo,v_oow) (v_oow = FETCH_BYTE_CODE(moo))

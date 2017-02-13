@@ -32,12 +32,34 @@
 
 #include <xcb/xcb.h>
 
+#define C MOO_METHOD_CLASS
+#define I MOO_METHOD_INSTANCE
+
+typedef struct fnctab_t fnctab_t;
+struct fnctab_t
+{
+	moo_method_type_t type;
+	moo_ooch_t mthname[25];
+	int variadic;
+	moo_pfimpl_t handler;
+};
+
+
 typedef struct x11_t x11_t;
 struct x11_t
 {
 	MOO_OBJ_HEADER;
 	xcb_connection_t* c;
 };
+
+typedef struct x11_window_t x11_window_t;
+struct x11_window_t
+{
+	MOO_OBJ_HEADER;
+	xcb_window_t w;
+};
+
+/* ------------------------------------------------------------------------ */
 
 static moo_pfrc_t pf_newinstsize (moo_t* moo, moo_ooi_t nargs)
 {
@@ -113,14 +135,51 @@ softfail:
 
 /* ------------------------------------------------------------------------ */
 
-typedef struct fnctab_t fnctab_t;
-struct fnctab_t
+static moo_pfrc_t pf_win_newinstsize (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_method_type_t type;
-	moo_ooch_t mthname[15];
-	int variadic;
-	moo_pfimpl_t handler;
-};
+	moo_ooi_t newinstsize = MOO_SIZEOF(x11_window_t) - MOO_SIZEOF(moo_obj_t);
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(newinstsize)); 
+MOO_DEBUG0 (moo, "x11.window.newinstsize....\n");
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_win_create (moo_t* moo, moo_ooi_t nargs)
+{
+	MOO_STACK_SETRET (moo, nargs, moo->_nil); 
+#if 0
+	screen = xcb_setup_roots_iterator(xcb_get_setup(x11->c)).data;
+	x11->mw = xcb_generate_id (xtn->c);
+
+	xcb_create_window (x11->c, 
+		XCB_COPY_FROM_PARENT,
+		xtn->mw,
+		screen->root,
+		0, 0, 300, 300, 10,
+		XCB_WINDOW_CLASS_INPUT_OUTPUT,
+		screen->root_visual,
+		0, MOO_NULL);
+
+	xcb_map_window (xtn->xcb, xtn->mw);
+	xcb_flush (xtn->xcb);
+
+	xcb_generic_event_t* evt;
+	while ((evt = xcb_poll_for_event(xtn->xcb, 0)) 
+	{
+		/* TODO: dispatch event read */
+	}
+#endif
+MOO_DEBUG0 (moo, "x11.window.create....\n");
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_win_destroy (moo_t* moo, moo_ooi_t nargs)
+{
+	MOO_STACK_SETRET (moo, nargs, moo->_nil); 
+MOO_DEBUG0 (moo, "x11.window.destroy....\n");
+	return MOO_PF_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------ */
 
 
 static moo_pfimpl_t search_fnctab (moo_t* moo, const fnctab_t* fnctab, moo_oow_t fnclen, const moo_ooch_t* name)
@@ -167,9 +226,6 @@ static int import_fnctab (moo_t* moo, moo_mod_t* mod, moo_oop_t _class, const fn
 }
 
 
-#define C MOO_METHOD_CLASS
-#define I MOO_METHOD_INSTANCE
-
 /* ------------------------------------------------------------------------ */
 
 static fnctab_t x11_fnctab[] =
@@ -178,7 +234,6 @@ static fnctab_t x11_fnctab[] =
 	{ I, { 'c','o','n','n','e','c','t','\0' },                             0, pf_connect       },
 	{ I, { 'd','i','s','c','o','n','n','e','c','t','\0' },                 0, pf_disconnect    }
 };
-
 
 static int x11_import (moo_t* moo, moo_mod_t* mod, moo_oop_t _class)
 {
@@ -204,58 +259,35 @@ int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)
 	return 0;
 }
 
+/* ------------------------------------------------------------------------ */
 
-#if 0
-
-	screen = xcb_setup_roots_iterator(xcb_get_setup(x11->c)).data;
-	x11->mw = xcb_generate_id (xtn->c);
-
-	xcb_create_window (x11->c, 
-		XCB_COPY_FROM_PARENT,
-		xtn->mw,
-		screen->root,
-		0, 0, 300, 300, 10,
-		XCB_WINDOW_CLASS_INPUT_OUTPUT,
-		screen->root_visual,
-		0, MOO_NULL);
-
-	xcb_map_window (xtn->xcb, xtn->mw);
-	xcb_flush (xtn->xcb);
-
-	xcb_generic_event_t* evt;
-	while ((evt = xcb_poll_for_event(xtn->xcb, 0)) 
-	{
-		/* TODO: dispatch event read */
-	}
-
-static fnctab_t x11_window_fnctab[] =
+static fnctab_t x11_win_fnctab[] =
 {
-	{ C, { '_','n','e','w','I','n','s','t','S','i','z','e','\0' },         0, pf_newinstsize   },
-	{ I, { 'c','o','n','n','e','c','t','\0' },                             0, pf_connect       },
-	{ I, { 'd','i','s','c','o','n','n','e','c','t','\0' },                 0, pf_disconnect    }
+	{ C, { '_','n','e','w','I','n','s','t','S','i','z','e','\0' },         0, pf_win_newinstsize   },
+	{ I, { 'c','r','e','a','t','e','\0' },                                 0, pf_win_create        },
+	{ I, { 'd','i','s','t','r','o','y','\0' },                             0, pf_win_destroy       }
 };
 
-static int x11_window_import (moo_t* moo, moo_mod_t* mod, moo_oop_t _class)
+static int x11_win_import (moo_t* moo, moo_mod_t* mod, moo_oop_t _class)
 {
-	return import_fnctab (moo, mod, _class, x11_window_fnctab, MOO_COUNTOF(x11_window_fnctab));
+	return import_fnctab (moo, mod, _class, x11_win_fnctab, MOO_COUNTOF(x11_win_fnctab));
 }
 
-static moo_pfimpl_t x11_window_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
+static moo_pfimpl_t x11_win_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
 {
-	return search_fnctab (moo, x11_window_fnctab, MOO_COUNTOF(x11_window_fnctab), name);
+	return search_fnctab (moo, x11_win_fnctab, MOO_COUNTOF(x11_win_fnctab), name);
 }
 
-static void windowunload (moo_t* moo, moo_mod_t* mod)
+static void x11_win_unload (moo_t* moo, moo_mod_t* mod)
 {
 	/* TODO: anything? */
 }
 
-int moo_mod_x11_window (moo_t* moo, moo_mod_t* mod)
+int moo_mod_x11_win (moo_t* moo, moo_mod_t* mod)
 {
-	mod->import = x11_window_import;
-	mod->query = x11_window_query;
-	mod->unload = x11_window_unload; 
+	mod->import = x11_win_import;
+	mod->query = x11_win_query;
+	mod->unload = x11_win_unload; 
 	mod->ctx = MOO_NULL;
 	return 0;
 }
-#endif

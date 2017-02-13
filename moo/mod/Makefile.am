@@ -23,7 +23,7 @@ if ENABLE_STATIC_MODULE
 LDFLAGS_COMMON =-L$(libdir) -version-info 1:0:0 -no-undefined
 LIBADD_COMMON =
 
-noinst_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la
+noinst_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la libmoo-x11.la
 
 else
 
