@@ -102,8 +102,6 @@
 #	define MOO_MEMCMP(dst,src,size)  memcmp(dst,src,size)
 #endif
 
-#define MOO_ALIGN(x,y) ((((x) + (y) - 1) / (y)) * (y))
-
 
 /* ========================================================================= */
 /* CLASS SPEC ENCODING                                                       */
@@ -113,7 +111,7 @@
  * The spec field of a class object encodes the number of the fixed part
  * and the type of the indexed part. The fixed part is the number of
  * named instance variables. If the spec of a class is indexed, the object
- * of the class can be i nstantiated with the size of the indexed part.
+ * of the class can be instantiated with the size of the indexed part.
  *
  * For example, on a platform where sizeof(moo_oow_t) is 4, 
  * the layout of the spec field of a class as an OOP value looks like this:

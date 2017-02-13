@@ -628,6 +628,15 @@ typedef struct moo_t moo_t;
 #define MOO_TYPE_MIN(type) \
 	((MOO_TYPE_IS_SIGNED(type)? MOO_TYPE_SIGNED_MIN(type): MOO_TYPE_UNSIGNED_MIN(type)))
 
+/* round up a positive integer x to the nearst multiple of y */
+#define MOO_ALIGN(x,y) ((((x) + (y) - 1) / (y)) * (y))
+
+/* round up a positive integer x to the nearst multiple of y where
+ * y must be a multiple of a power of 2*/
+#define MOO_ALIGN_POW2(x,y) ((((x) + (y) - 1)) & ~((y) - 1))
+
+#define MOO_IS_UNALIGNED_POW2(x,y) ((x) & ((y) - 1))
+#define MOO_IS_ALIGNED_POW2(x,y) (!MOO_IS_UNALIGNED_POW2(x,y))
 
 /* =========================================================================
  * COMPILER FEATURE TEST MACROS
