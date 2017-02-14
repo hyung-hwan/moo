@@ -5555,7 +5555,7 @@ static int add_compiled_method (moo_t* moo)
 {
 	moo_oop_char_t name; /* selector */
 	moo_oop_method_t mth; /* method */
-#if defined(MOO_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_METHOD_TRAILER)
 	/* nothing extra */
 #else
 	moo_oop_byte_t code;
@@ -5569,7 +5569,7 @@ static int add_compiled_method (moo_t* moo)
 	moo_pushtmp (moo, (moo_oop_t*)&name); tmp_count++;
 
 	/* The variadic data part passed to moo_instantiate() is not GC-safe */
-#if defined(MOO_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_METHOD_TRAILER)
 	mth = (moo_oop_method_t)moo_instantiatewithtrailer (moo, moo->_method, moo->c->mth.literal_count, moo->c->mth.code.ptr, moo->c->mth.code.len);
 #else
 	mth = (moo_oop_method_t)moo_instantiate (moo, moo->_method, MOO_NULL, moo->c->mth.literal_count);
@@ -5583,7 +5583,7 @@ static int add_compiled_method (moo_t* moo)
 	}
 	moo_pushtmp (moo, (moo_oop_t*)&mth); tmp_count++;
 
-#if defined(MOO_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_METHOD_TRAILER)
 	/* do nothing */
 #else
 	code = (moo_oop_byte_t)moo_instantiate (moo, moo->_byte_array, moo->c->mth.code.ptr, moo->c->mth.code.len);
@@ -5614,6 +5614,14 @@ static int add_compiled_method (moo_t* moo)
 				{
 					case BCODE_PUSH_RECEIVER:
 						preamble_code = MOO_METHOD_PREAMBLE_RETURN_RECEIVER;
+						break;
+
+					case BCODE_PUSH_CONTEXT:
+						preamble_code = MOO_METHOD_PREAMBLE_RETURN_CONTEXT;
+						break;
+
+					case BCODE_PUSH_PROCESS:
+						preamble_code = MOO_METHOD_PREAMBLE_RETURN_PROCESS;
 						break;
 
 					case BCODE_PUSH_NIL:
@@ -5731,7 +5739,7 @@ static int add_compiled_method (moo_t* moo)
 	mth->tmpr_count = MOO_SMOOI_TO_OOP(moo->c->mth.tmpr_count);
 	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(moo->c->mth.tmpr_nargs);
 
-#if defined(MOO_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_METHOD_TRAILER)
 	/* do nothing */
 #else
 	mth->code = code;
@@ -5926,6 +5934,9 @@ static int make_defined_class (moo_t* moo)
 #else
 	moo->c->cls.self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_set_t)tmp;
 #endif
+
+	/* [NOTE] don't create a dictionary on the nsdic. keep it to be nil */
+	/* [NOTE] don't set the trsize field yet here. */
 
 /* TODO: initialize more fields??? whatelse. */
 
@@ -6167,7 +6178,6 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		}
 		else
 		{
-			/* ass = moo_lookupsysdic(moo, &moo->c->cls.supername); */
 			ass = moo_lookupdic (moo, moo->c->cls.superns_oop, &moo->c->cls.supername);
 			if (!ass && moo->c->cls.superns_oop != moo->sysdic)
 				ass = moo_lookupdic (moo, moo->sysdic, &moo->c->cls.supername);
@@ -6176,8 +6186,21 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			    MOO_OBJ_GET_FLAGS_KERNEL(ass->value) != 1) 
 			{
 				/* the value found must be a class and it must not be 
-				 * an incomplete internal class object */
+				 * an incomplete internal class object. 
+				 *  0(non-kernel object)
+				 *  1(incomplete kernel object),
+				 *  2(complete kernel object) */
 				moo->c->cls.super_oop = ass->value;
+
+				/* the superclass became known. */
+				if (((moo_oop_class_t)moo->c->cls.super_oop)->trsize != moo->_nil &&
+				    (moo->c->cls.flags & CLASS_INDEXED) &&
+				    moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP)
+				{
+					/* non-pointer object cannot inherit from a superclass with trailer size set */
+					set_syntax_error (moo, MOO_SYNERR_CLASSTRSIZE, &moo->c->cls.fqn_loc, &moo->c->cls.fqn);
+					return -1;
+				}
 			}
 			else
 			{
@@ -6319,6 +6342,15 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		if (modnamelen > 0)
 		{
 			if (moo_importmod (moo, (moo_oop_t)moo->c->cls.self_oop, modname, modnamelen) <= -1) return -1;
+		}
+
+		if (moo->c->cls.self_oop->trsize == moo->_nil &&
+		    moo->c->cls.self_oop->superclass != moo->_nil)
+		{
+			/* [NOTE] 
+			 *  update the trailer size field after module importing 
+			 *  as the importer can set the trailer size legitimately */
+			moo->c->cls.self_oop->trsize = ((moo_oop_class_t)moo->c->cls.self_oop->superclass)->trsize;
 		}
 	}
 

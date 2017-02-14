@@ -1350,59 +1350,48 @@ static moo_pfrc_t pf_class (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
+static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_oop_t rcv, obj;
+	moo_oop_t _class, szoop, obj;
+	moo_oow_t size = 0, trsz = 0;
 
-	MOO_ASSERT (moo, nargs ==  0);
-
-	rcv = MOO_STACK_GETRCV (moo, nargs);
-	if (MOO_CLASSOF(moo, rcv) != moo->_class) 
+	_class = MOO_STACK_GETRCV(moo, nargs);
+	if (MOO_CLASSOF(moo, _class) != moo->_class) 
 	{
 		/* the receiver is not a class object */
-		return MOO_PF_FAILURE;
+		MOO_DEBUG0 (moo, "<pf_basic_new> Receiver is not a class\n");
+		goto inval;
 	}
 
-	obj = moo_instantiate (moo, rcv, MOO_NULL, 0);
-	if (!obj) return MOO_PF_HARD_FAILURE;
-
-	MOO_STACK_SETRET (moo, nargs, obj);
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_basic_new_with_size (moo_t* moo, moo_ooi_t nargs)
-{
-	moo_oop_t rcv, szoop, obj;
-	moo_oow_t size;
-
-	MOO_ASSERT (moo, nargs ==  1);
-
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo, rcv) != moo->_class) 
+	if (nargs >= 1)
 	{
-		/* the receiver is not a class object */
-		return MOO_PF_FAILURE;
+		szoop = MOO_STACK_GETARG(moo, nargs, 0);
+		if (moo_inttooow (moo, szoop, &size) <= 0)
+		{
+			/* integer out of range or not integer */
+			MOO_DEBUG0 (moo, "<pf_basic_new> Size out of range or not integer\n");
+			goto inval;
+		}
 	}
 
-	szoop = MOO_STACK_GETARG(moo, nargs, 0);
-	if (moo_inttooow (moo, szoop, &size) <= 0)
-	{
-		/* integer out of range or not integer */
-		return MOO_PF_FAILURE;
-	}
+	if (MOO_OOP_IS_SMOOI(((moo_oop_class_t)_class)->trsize)) 
+		trsz = MOO_OOP_TO_SMOOI(((moo_oop_class_t)_class)->trsize);
 
 	/* moo_instantiate() ignores size if the instance specification 
 	 * disallows indexed(variable) parts. */
 	/* TODO: should i check the specification before calling 
 	 *       moo_instantiate()? */
-	obj = moo_instantiate (moo, rcv, MOO_NULL, size);
-	if (!obj) 
-	{
-		return MOO_PF_HARD_FAILURE;
-	}
+MOO_DEBUG2 (moo, "<basic new> SIZE ... %d   TRSZ %d\n", (int)size, (int)trsz);
+	obj = trsz <= 0? moo_instantiate (moo, _class, MOO_NULL, size):
+	                 moo_instantiatewithtrailer (moo, _class, size, MOO_NULL, trsz);
+	if (!obj) return MOO_PF_HARD_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, obj);
 	return MOO_PF_SUCCESS;
+
+inval:
+	moo->errnum = MOO_EINVAL;
+	return MOO_PF_FAILURE;
 }
 
 static moo_pfrc_t pf_ngc_new (moo_t* moo, moo_ooi_t nargs)
@@ -1414,11 +1403,6 @@ static moo_pfrc_t pf_ngc_new (moo_t* moo, moo_ooi_t nargs)
 * ngc_dispose should not do anything in safe mode. */
 	return pf_basic_new (moo, nargs);
 
-}
-
-static moo_pfrc_t pf_ngc_new_with_size (moo_t* moo, moo_ooi_t nargs)
-{
-	return pf_basic_new_with_size (moo, nargs);
 }
 
 static moo_pfrc_t pf_ngc_dispose (moo_t* moo, moo_ooi_t nargs)
@@ -1827,7 +1811,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 		moo_oop_oop_t xarg;
 		MOO_ASSERT (moo, nargs == 1);
 		xarg = (moo_oop_oop_t)MOO_STACK_GETTOP (moo);
-		MOO_ASSERT (moo, MOO_ISTYPEOF(moo,xarg,MOO_OBJ_TYPE_OOP)); 
+		MOO_ASSERT (moo, MOO_OBJ_IS_OOP_POINTER(xarg));
 		MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(xarg) == num_first_arg_elems); 
 		for (i = 0; i < num_first_arg_elems; i++)
 		{
@@ -1890,6 +1874,7 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_ooi_t nargs)
 	{
 		/* too many arguments */
 /* TODO: proper error handling */
+		moo->errnum = MOO_EINVAL;
 		return MOO_PF_FAILURE;
 	}
 
@@ -1898,10 +1883,11 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_ooi_t nargs)
 		moo_oop_t xarg;
 
 		xarg = MOO_STACK_GETARG(moo, nargs, 0);
-		if (!MOO_ISTYPEOF(moo,xarg,MOO_OBJ_TYPE_OOP))
+		if (!MOO_OBJ_IS_OOP_POINTER(xarg))
 		{
 			/* the only optional argument must be an OOP-indexable 
 			 * object like an array */
+			moo->errnum = MOO_EINVAL;
 			return MOO_PF_FAILURE;
 		}
 
@@ -1914,6 +1900,7 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_ooi_t nargs)
 		/* the receiver must be a block context */
 		MOO_LOG2 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
 			"Error(%hs) - invalid receiver, not a block context - %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
+		moo->errnum = MOO_EINVAL;
 		return MOO_PF_FAILURE;
 	}
 
@@ -2657,10 +2644,8 @@ static pf_t pftab[] =
 	{   1,  1,  pf_not_equal,                        "_not_equal"           },
 	{   0,  0,  pf_class,                            "_class"               },
 
-	{   0,  0,  pf_basic_new,                        "_basic_new"           },
-	{   1,  1,  pf_basic_new_with_size,              "_basic_new_with_size" },
-	{   0,  0,  pf_ngc_new,                          "_ngc_new"             },
-	{   1,  1,  pf_ngc_new_with_size,                "_ngc_new_with_size"   },
+	{   0,  1,  pf_basic_new,                        "_basic_new"           },
+	{   0,  1,  pf_ngc_new,                          "_ngc_new"             },
 	{   0,  0,  pf_ngc_dispose,                      "_ngc_dispose"         },
 	{   0,  0,  pf_shallow_copy,                     "_shallow_copy"        },
 
@@ -2771,6 +2756,21 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			MOO_STACK_POPS (moo, nargs); /* pop arguments only*/
 			break;
 
+		/* [NOTE] this is useless becuase  it returns a caller's context
+		 *        as the callee's context has not been created yet. 
+		case MOO_METHOD_PREAMBLE_RETURN_CONTEXT:
+			LOG_INST_0 (moo, "preamble_return_context");
+			MOO_STACK_POPS (moo, nargs);
+			MOO_STACK_SETTOP (moo, (moo_oop_t)moo->active_context);
+			break;
+		*/
+
+		case MOO_METHOD_PREAMBLE_RETURN_PROCESS:
+			LOG_INST_0 (moo, "preamble_return_process");
+			MOO_STACK_POPS (moo, nargs);
+			MOO_STACK_SETTOP (moo, (moo_oop_t)moo->processor->active);
+			break;
+
 		case MOO_METHOD_PREAMBLE_RETURN_NIL:
 			LOG_INST_0 (moo, "preamble_return_nil");
 			MOO_STACK_POPS (moo, nargs);
@@ -2877,7 +2877,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			MOO_ASSERT (moo, pf_name_index >= 0);
 
 			name = method->slot[pf_name_index];
-			MOO_ASSERT (moo, MOO_ISTYPEOF(moo,name,MOO_OBJ_TYPE_CHAR));
+			MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(name));
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_EXTRA(name));
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,name) == moo->_symbol);
 		#endif
@@ -2930,7 +2930,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				MOO_DEBUG2 (moo, "Soft failure for non-existent primitive function - %.*js\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot);
 			}
 
-		#if defined(MOO_USE_OBJECT_TRAILER)
+		#if defined(MOO_USE_METHOD_TRAILER)
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TRAILER(method));
 			if (MOO_METHOD_GET_CODE_SIZE(method) == 0) /* this trailer size field not a small integer */
 		#else
@@ -2954,8 +2954,9 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 
 		default:
 			MOO_ASSERT (moo, preamble_code == MOO_METHOD_PREAMBLE_NONE ||
-			             preamble_code == MOO_METHOD_PREAMBLE_EXCEPTION ||
-			             preamble_code == MOO_METHOD_PREAMBLE_ENSURE);
+			                 preamble_code == MOO_METHOD_PREAMBLE_RETURN_CONTEXT ||
+			                 preamble_code == MOO_METHOD_PREAMBLE_EXCEPTION ||
+			                 preamble_code == MOO_METHOD_PREAMBLE_ENSURE);
 			if (activate_new_method (moo, method, nargs) <= -1) return -1;
 			break;
 	}

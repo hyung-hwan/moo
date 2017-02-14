@@ -73,6 +73,7 @@ class MyObject(Object)
 			'duplicate class'
 			'contradictory class definition'
 			'wrong class name'
+			'non-pointer class inheriting superclass with trailer size set'
 			'dcl not allowed'
 			'wrong method name'
 			'duplicate method name'

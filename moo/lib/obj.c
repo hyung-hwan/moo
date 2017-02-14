@@ -72,7 +72,7 @@ moo_oop_t moo_allocoopobj (moo_t* moo, moo_oow_t size)
 	return (moo_oop_t)hdr;
 }
 
-#if defined(MOO_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_METHOD_TRAILER)
 moo_oop_t moo_allocoopobjwithtrailer (moo_t* moo, moo_oow_t size, const moo_oob_t* bptr, moo_oow_t blen)
 {
 	moo_oop_oop_t hdr;
@@ -333,7 +333,7 @@ moo_oop_t moo_instantiate2 (moo_t* moo, moo_oop_t _class, const void* vptr, moo_
 	switch (type)
 	{
 		case MOO_OBJ_TYPE_OOP:
-			/* NOTE: vptr is not used for GC unsafety */
+			/* [NOTE] vptr is not used for GC unsafety. read comment in moo_instantiate() */
 			oop = moo_allocoopobj (moo, alloclen);
 			break;
 
@@ -365,7 +365,7 @@ moo_oop_t moo_instantiate2 (moo_t* moo, moo_oop_t _class, const void* vptr, moo_
 }
 
 
-#if defined(MOO_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_METHOD_TRAILER)
 
 moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_t _class, moo_oow_t vlen, const moo_oob_t* tptr, moo_oow_t tlen)
 {
@@ -387,12 +387,16 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_t _class, moo_oow_t vl
 	switch (type)
 	{
 		case MOO_OBJ_TYPE_OOP:
-			/* NOTE: vptr is not used for GC unsafety */
 			oop = moo_allocoopobjwithtrailer(moo, alloclen, tptr, tlen);
 			break;
 
 		default:
-			moo->errnum = MOO_EINTERN;
+			MOO_DEBUG3 (moo, "Not allowed to instantiate a non-pointer object of the %.*js class with trailer %zu\n",
+				MOO_OBJ_GET_SIZE(((moo_oop_class_t)_class)->name),
+				MOO_OBJ_GET_CHAR_SLOT(((moo_oop_class_t)_class)->name),
+				tlen);
+
+			moo->errnum = MOO_EPERM;
 			oop = MOO_NULL;
 			break;
 	}

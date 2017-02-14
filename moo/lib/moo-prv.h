@@ -562,7 +562,7 @@ struct moo_oochbuf_t
 
 #endif
 
-#if defined(MOO_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_METHOD_TRAILER)
 	/* let it point to the trailer of the method */
 #	define SET_ACTIVE_METHOD_CODE(moo) ((moo)->active_code = (moo_oob_t*)&(moo)->active_method->slot[MOO_OBJ_GET_SIZE((moo)->active_method) + 1 - MOO_METHOD_NAMED_INSTVARS])
 #else
@@ -949,7 +949,7 @@ moo_oop_t moo_allocoopobj (
 	moo_oow_t size
 );
 
-#if defined(MOO_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_METHOD_TRAILER)
 moo_oop_t moo_allocoopobjwithtrailer (
 	moo_t*           moo,
 	moo_oow_t        size,
@@ -982,7 +982,7 @@ moo_oop_t moo_allocwordobj (
 	moo_oow_t        len
 );
 
-#if defined(MOO_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_METHOD_TRAILER)
 moo_oop_t moo_instantiatewithtrailer (
 	moo_t*           moo, 
 	moo_oop_t        _class,

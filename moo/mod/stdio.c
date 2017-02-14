@@ -39,30 +39,22 @@
 typedef struct stdio_t stdio_t;
 struct stdio_t
 {
-	MOO_OBJ_HEADER;
 	FILE* fp;
 };
-
-static moo_pfrc_t pf_newinstsize (moo_t* moo, moo_ooi_t nargs)
-{
-	moo_ooi_t newinstsize = MOO_SIZEOF(stdio_t) - MOO_SIZEOF(moo_obj_t);
-	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(newinstsize)); 
-	return MOO_PF_SUCCESS;
-}
 
 static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_char_t name;
 	moo_oop_char_t mode;
-	stdio_t* rcv;
+	stdio_t* stdio;
 
 #if defined(MOO_OOCH_IS_UCH)
 	moo_oow_t ucslen, bcslen;
 	moo_bch_t namebuf[PATH_MAX];
-	moo_bch_t modebuf[32]; /* TODO: dynamic-sized conversion?? */
+	moo_bch_t modebuf[32]; /* TODO: mode should not be long but use dynamic-sized conversion?? */
 #endif
 
-	rcv = (stdio_t*)MOO_STACK_GETRCV(moo, nargs);
+	stdio = (stdio_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 	name = (moo_oop_char_t)MOO_STACK_GETARG(moo, nargs, 0);
 	mode = (moo_oop_char_t)MOO_STACK_GETARG(moo, nargs, 1);
 
@@ -77,11 +69,11 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 	if (moo_convootobchars (moo, mode->slot, &ucslen, modebuf, &bcslen) <= -1) goto softfail;
 	modebuf[bcslen] = '\0';
 
-	rcv->fp = fopen (namebuf, modebuf);
+	stdio->fp = fopen (namebuf, modebuf);
 #else
-	rcv->fp = fopen (name->slot, mode->slot);
+	stdio->fp = fopen (name->slot, mode->slot);
 #endif
-	if (!rcv->fp) 
+	if (!stdio->fp) 
 	{
 		moo_seterrnum (moo, moo_syserrtoerrnum(errno));
 		goto softfail;
@@ -97,13 +89,13 @@ softfail:
 
 static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 {
-	stdio_t* rcv;
+	stdio_t* stdio;
 
-	rcv = (stdio_t*)MOO_STACK_GETRCV(moo, nargs);
-	if (rcv->fp)
+	stdio = (stdio_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+	if (stdio->fp)
 	{
-		fclose (rcv->fp);
-		rcv->fp = NULL;
+		fclose (stdio->fp);
+		stdio->fp = NULL;
 	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
@@ -112,17 +104,17 @@ static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_gets (moo_t* moo, moo_ooi_t nargs)
 {
-	/* return how many bytes have been written.. */
+	/* TODO: ...*/
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
 static moo_pfrc_t __pf_puts (moo_t* moo, moo_ooi_t nargs, moo_oow_t limit)
 {
-	stdio_t* rcv;
+	stdio_t* stdio;
 	moo_ooi_t i;
 
-	rcv = (stdio_t*)MOO_STACK_GETRCV(moo, nargs);
+	stdio = (stdio_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
 	for (i = 0; i < nargs; i++)
 	{
@@ -163,7 +155,7 @@ static moo_pfrc_t __pf_puts (moo_t* moo, moo_ooi_t nargs, moo_oow_t limit)
 					if (n != -2 || ucslen <= 0) goto softfail;
 				}
 
-				if (fwrite (bcs, 1, bcslen, rcv->fp) < bcslen)
+				if (fwrite (bcs, 1, bcslen, stdio->fp) < bcslen)
 				{
 					moo_seterrnum (moo, moo_syserrtoerrnum(errno));
 					goto softfail;
@@ -175,7 +167,7 @@ static moo_pfrc_t __pf_puts (moo_t* moo, moo_ooi_t nargs, moo_oow_t limit)
 			}
 		#else
 		puts_string:
-			if (fwrite (x->slot, 1, MOO_OBJ_GET_SIZE(x), rcv->fp) < MOO_OBJ_GET_SIZE(x))
+			if (fwrite (x->slot, 1, MOO_OBJ_GET_SIZE(x), stdio->fp) < MOO_OBJ_GET_SIZE(x))
 			{
 				moo_seterrnum (moo, moo_syserrtoerrnum(errno));
 				moo_seterrnum (moo, moo_syserrtoerrnum(errno));
@@ -228,7 +220,6 @@ struct fnctab_t
 
 static fnctab_t fnctab[] =
 {
-	{ C, { '_','n','e','w','I','n','s','t','S','i','z','e','\0' }, 0, pf_newinstsize   },
 	{ I, { 'c','l','o','s','e','\0' },                             0, pf_close         },
 	{ I, { 'g','e','t','s','\0' },                                 0, pf_gets          },
 	{ I, { 'o','p','e','n',':','f','o','r',':','\0' },             0, pf_open          },
@@ -244,6 +235,8 @@ static int import (moo_t* moo, moo_mod_t* mod, moo_oop_t _class)
 {
 	int ret = 0;
 	moo_oow_t i;
+
+	if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(stdio_t)) <= -1) return -1;
 
 	moo_pushtmp (moo, &_class);
 	for (i = 0; i < MOO_COUNTOF(fnctab); i++)

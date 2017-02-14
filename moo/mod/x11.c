@@ -48,25 +48,16 @@ struct fnctab_t
 typedef struct x11_t x11_t;
 struct x11_t
 {
-	MOO_OBJ_HEADER;
 	xcb_connection_t* c;
 };
 
-typedef struct x11_window_t x11_window_t;
-struct x11_window_t
+typedef struct x11_win_t x11_win_t;
+struct x11_win_t
 {
-	MOO_OBJ_HEADER;
 	xcb_window_t w;
 };
 
 /* ------------------------------------------------------------------------ */
-
-static moo_pfrc_t pf_newinstsize (moo_t* moo, moo_ooi_t nargs)
-{
-	moo_ooi_t newinstsize = MOO_SIZEOF(x11_t) - MOO_SIZEOF(moo_obj_t);
-	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(newinstsize)); 
-	return MOO_PF_SUCCESS;
-}
 
 static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 {
@@ -84,7 +75,7 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 	/*
 	name = MOO_STACK_GETARG(moo, nargs, 0);
 
-	if (!MOO_ISTYPEOF(moo, name, MOO_OBJ_TYPE_CHAR))
+	if (!MOO_OBJ_IS_CHAR_POINTER(name)) 
 	{
 		moo_seterrnum (moo, MOO_EINVAL);
 		goto softfail;
@@ -135,14 +126,6 @@ softfail:
 
 /* ------------------------------------------------------------------------ */
 
-static moo_pfrc_t pf_win_newinstsize (moo_t* moo, moo_ooi_t nargs)
-{
-	moo_ooi_t newinstsize = MOO_SIZEOF(x11_window_t) - MOO_SIZEOF(moo_obj_t);
-	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(newinstsize)); 
-MOO_DEBUG0 (moo, "x11.window.newinstsize....\n");
-	return MOO_PF_SUCCESS;
-}
-
 static moo_pfrc_t pf_win_create (moo_t* moo, moo_ooi_t nargs)
 {
 	MOO_STACK_SETRET (moo, nargs, moo->_nil); 
@@ -180,7 +163,6 @@ MOO_DEBUG0 (moo, "x11.window.destroy....\n");
 }
 
 /* ------------------------------------------------------------------------ */
-
 
 static moo_pfimpl_t search_fnctab (moo_t* moo, const fnctab_t* fnctab, moo_oow_t fnclen, const moo_ooch_t* name)
 {
@@ -230,13 +212,13 @@ static int import_fnctab (moo_t* moo, moo_mod_t* mod, moo_oop_t _class, const fn
 
 static fnctab_t x11_fnctab[] =
 {
-	{ C, { '_','n','e','w','I','n','s','t','S','i','z','e','\0' },         0, pf_newinstsize   },
 	{ I, { 'c','o','n','n','e','c','t','\0' },                             0, pf_connect       },
 	{ I, { 'd','i','s','c','o','n','n','e','c','t','\0' },                 0, pf_disconnect    }
 };
 
 static int x11_import (moo_t* moo, moo_mod_t* mod, moo_oop_t _class)
 {
+	if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(x11_t)) <= -1) return -1;
 	return import_fnctab (moo, mod, _class, x11_fnctab, MOO_COUNTOF(x11_fnctab));
 }
 
@@ -263,13 +245,13 @@ int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)
 
 static fnctab_t x11_win_fnctab[] =
 {
-	{ C, { '_','n','e','w','I','n','s','t','S','i','z','e','\0' },         0, pf_win_newinstsize   },
 	{ I, { 'c','r','e','a','t','e','\0' },                                 0, pf_win_create        },
 	{ I, { 'd','i','s','t','r','o','y','\0' },                             0, pf_win_destroy       }
 };
 
 static int x11_win_import (moo_t* moo, moo_mod_t* mod, moo_oop_t _class)
 {
+	if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(x11_win_t)) <= -1) return -1;
 	return import_fnctab (moo, mod, _class, x11_win_fnctab, MOO_COUNTOF(x11_win_fnctab));
 }
 

@@ -36,7 +36,7 @@
 /* define this to allow an pointer(OOP) object to have trailing bytes 
  * this is used to embed bytes codes into the back of a compile method
  * object instead of putting in in a separate byte array. */
-#define MOO_USE_OBJECT_TRAILER
+#define MOO_USE_METHOD_TRAILER
 /* ========================================================================== */
 
 /**
@@ -187,7 +187,7 @@ typedef enum moo_method_type_t moo_method_type_t;
  * but some simple numeric values are also encoded into OOP using a simple
  * bit-shifting and masking.
  *
- * A real OOP is stored without any bit-shifting while a non-OOP value encoded
+ * A real OOP is stored without any bit-shifting while a non-pointer value encoded
  * in an OOP is bit-shifted to the left by 2 and the 2 least-significant bits
  * are set to 1 or 2.
  * 
@@ -286,9 +286,10 @@ typedef enum moo_obj_type_t moo_obj_type_t;
  *          item than the value of the size field. used for a 
  *          terminating null in a variable-character object. internel
  *          use only.
- *   kernel: 0 or 1. indicates that the object is a kernel object.
+ *   kernel: 0, 1, or 2. indicates that the object is a kernel object.
  *           VM disallows layout changes of a kernel object.
- *           internal use only.
+ *           internal use only. during ignition, it's set to 1.
+ *           when full definition is available, it's set to 2.
  *   moved: 0 or 1. used by GC. internal use only.
  *   ngc: 0 or 1, used by GC. internal use only.
  *   trailer: 0 or 1. indicates that there are trailing bytes
@@ -360,6 +361,7 @@ typedef enum moo_obj_type_t moo_obj_type_t;
 /* [NOTE] this macro doesn't include the size of the trailer */
 #define MOO_OBJ_BYTESOF(oop) ((MOO_OBJ_GET_SIZE(oop) + MOO_OBJ_GET_FLAGS_EXTRA(oop)) * MOO_OBJ_GET_FLAGS_UNIT(oop))
 
+#define MOO_OBJ_IS_OOP_POINTER(oop)     (MOO_OOP_IS_POINTER(oop) && (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP))
 #define MOO_OBJ_IS_CHAR_POINTER(oop)     (MOO_OOP_IS_POINTER(oop) && (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_CHAR))
 #define MOO_OBJ_IS_BYTE_POINTER(oop)     (MOO_OOP_IS_POINTER(oop) && (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_BYTE))
 #define MOO_OBJ_IS_HALFWORD_POINTER(oop) (MOO_OOP_IS_POINTER(oop) && (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_HALFWORD))
@@ -431,6 +433,8 @@ struct moo_trailer_t
 	moo_oob_t slot[1];
 };
 
+#define MOO_OBJ_GET_TRAILER_BYTE(oop) ((moo_oob_t*)&((moo_oop_oop_t)oop)->slot[MOO_OBJ_GET_SIZE(oop) + 1])
+#define MOO_OBJ_GET_TRAILER_SIZE(oop) ((moo_oow_t)((moo_oop_oop_t)oop)->slot[MOO_OBJ_GET_SIZE(oop)])
 
 #define MOO_SET_NAMED_INSTVARS 2
 typedef struct moo_set_t moo_set_t;
@@ -442,7 +446,7 @@ struct moo_set_t
 	moo_oop_oop_t bucket; /* Array */
 };
 
-#define MOO_CLASS_NAMED_INSTVARS 12
+#define MOO_CLASS_NAMED_INSTVARS 13
 typedef struct moo_class_t moo_class_t;
 typedef struct moo_class_t* moo_oop_class_t;
 struct moo_class_t
@@ -469,8 +473,8 @@ struct moo_class_t
 	 * [1] - class methods, MethodDictionary */
 	moo_oop_set_t  mthdic[MOO_METHOD_TYPE_COUNT];      
 
-	/* dictionary used for namespacing */
-	moo_oop_set_t  nsdic;
+	moo_oop_set_t  nsdic; /* dictionary used for namespacing */
+	moo_oop_t      trsize; /* trailer size for new instances */
 
 	/* indexed part afterwards */
 	moo_oop_t      slot[1];   /* class instance variables and class variables. */
@@ -486,7 +490,7 @@ struct moo_association_t
 	moo_oop_t value;
 };
 
-#if defined(MOO_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_METHOD_TRAILER)
 #	define MOO_METHOD_NAMED_INSTVARS 8
 #else
 #	define MOO_METHOD_NAMED_INSTVARS 9
@@ -511,7 +515,7 @@ struct moo_method_t
 	/* number of arguments in temporaries */
 	moo_oop_t       tmpr_nargs; /* SmallInteger */
 
-#if defined(MOO_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_METHOD_TRAILER)
 	/* no code field is used */
 #else
 	moo_oop_byte_t  code; /* ByteArray */
@@ -523,14 +527,17 @@ struct moo_method_t
 	moo_oop_t       slot[1]; /* it stores literals */
 };
 
-#if defined(MOO_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_METHOD_TRAILER)
 
 	/* if m is to be type-cast to moo_oop_method_t, the macro must be
 	 * redefined to this:
 	 *   (&((moo_oop_method_t)m)>slot[MOO_OBJ_GET_SIZE(m) + 1 - MOO_METHOD_NAMED_INSTVARS])
 	 */
-#	define MOO_METHOD_GET_CODE_BYTE(m) ((moo_oob_t*)&((moo_oop_oop_t)m)->slot[MOO_OBJ_GET_SIZE(m) + 1])
-#	define MOO_METHOD_GET_CODE_SIZE(m) ((moo_oow_t)((moo_oop_oop_t)m)->slot[MOO_OBJ_GET_SIZE(m)])
+
+	/*((moo_oob_t*)&((moo_oop_oop_t)m)->slot[MOO_OBJ_GET_SIZE(m) + 1])*/
+#	define MOO_METHOD_GET_CODE_BYTE(m) MOO_OBJ_GET_TRAILER_BYTE(m)
+	/*((moo_oow_t)((moo_oop_oop_t)m)->slot[MOO_OBJ_GET_SIZE(m)])*/
+#	define MOO_METHOD_GET_CODE_SIZE(m) MOO_OBJ_GET_TRAILER_SIZE(m) 
 #else
 #	define MOO_METHOD_GET_CODE_BYTE(m) ((m)->code->slot)
 #	define MOO_METHOD_GET_CODE_SIZE(m) MOO_OBJ_GET_SIZE((m)->code)
@@ -544,16 +551,18 @@ struct moo_method_t
  * The code can be one of the following values:
  *  0 - no special action
  *  1 - return self
- *  2 - return nil
- *  3 - return true
- *  4 - return false 
- *  5 - return index.
- *  6 - return -index.
- *  7 - return instvar[index] 
- *  8 - do primitive[index]
- *  9 - do named primitive[index]
- * 10 - exception handler
- * 11 - ensure block
+ *  2 - return thisContext (not used)
+ *  3 - return thisProcess
+ *  4 - return nil
+ *  5 - return true
+ *  6 - return false 
+ *  7 - return index.
+ *  8 - return -index.
+ *  9 - return instvar[index] 
+ * 10 - do primitive[index]
+ * 11 - do named primitive[index]
+ * 12 - exception handler
+ * 13 - ensure block
  */
 
 /* NOTE: changing preamble code bit structure requires changes to CompiledMethod>>preambleCode */
@@ -563,19 +572,21 @@ struct moo_method_t
 #define MOO_METHOD_GET_PREAMBLE_FLAGS(preamble) (((moo_ooi_t)preamble) & 0x3)
 
 /* preamble codes */
-#define MOO_METHOD_PREAMBLE_NONE            0
-#define MOO_METHOD_PREAMBLE_RETURN_RECEIVER 1
-#define MOO_METHOD_PREAMBLE_RETURN_NIL      2
-#define MOO_METHOD_PREAMBLE_RETURN_TRUE     3
-#define MOO_METHOD_PREAMBLE_RETURN_FALSE    4
-#define MOO_METHOD_PREAMBLE_RETURN_INDEX    5
-#define MOO_METHOD_PREAMBLE_RETURN_NEGINDEX 6
-#define MOO_METHOD_PREAMBLE_RETURN_INSTVAR  7
-#define MOO_METHOD_PREAMBLE_PRIMITIVE       8
-#define MOO_METHOD_PREAMBLE_NAMED_PRIMITIVE 9 /* index is an index to the symbol table */
+#define MOO_METHOD_PREAMBLE_NONE                0
+#define MOO_METHOD_PREAMBLE_RETURN_RECEIVER     1
+#define MOO_METHOD_PREAMBLE_RETURN_CONTEXT      2
+#define MOO_METHOD_PREAMBLE_RETURN_PROCESS      3
+#define MOO_METHOD_PREAMBLE_RETURN_NIL          4
+#define MOO_METHOD_PREAMBLE_RETURN_TRUE         5
+#define MOO_METHOD_PREAMBLE_RETURN_FALSE        6
+#define MOO_METHOD_PREAMBLE_RETURN_INDEX        7
+#define MOO_METHOD_PREAMBLE_RETURN_NEGINDEX     8
+#define MOO_METHOD_PREAMBLE_RETURN_INSTVAR      9
+#define MOO_METHOD_PREAMBLE_PRIMITIVE           10
+#define MOO_METHOD_PREAMBLE_NAMED_PRIMITIVE     11 /* index is an index to the symbol table */
 
-#define MOO_METHOD_PREAMBLE_EXCEPTION       10 /* NOTE changing this requires changes in Except.st */
-#define MOO_METHOD_PREAMBLE_ENSURE          11 /* NOTE changing this requires changes in Except.st */
+#define MOO_METHOD_PREAMBLE_EXCEPTION           12 /* NOTE changing this requires changes in Except.st */
+#define MOO_METHOD_PREAMBLE_ENSURE              13 /* NOTE changing this requires changes in Except.st */
 
 /* the index is an 16-bit unsigned integer. */
 #define MOO_METHOD_PREAMBLE_INDEX_MIN 0x0000
@@ -718,11 +729,6 @@ struct moo_process_scheduler_t
 #define MOO_BYTESOF(moo,oop) \
 	(MOO_OOP_IS_NUMERIC(oop)? MOO_SIZEOF(moo_oow_t): MOO_OBJ_BYTESOF(oop))
 
-/**
- * The MOO_ISTYPEOF() macro is a safe replacement for MOO_OBJ_GET_FLAGS_TYPE()
- */
-#define MOO_ISTYPEOF(moo,oop,type) \
-	(!MOO_OOP_IS_NUMERIC(oop) && MOO_OBJ_GET_FLAGS_TYPE(oop) == (type))
 
 typedef struct moo_heap_t moo_heap_t;
 
@@ -1042,7 +1048,7 @@ struct moo_t
 #define MOO_STACK_ISEMPTY(moo) ((moo)->sp <= -1)
 
 #define MOO_STACK_GETARG(moo,nargs,idx) MOO_STACK_GET(moo, (moo)->sp - ((nargs) - (idx) - 1))
-#define MOO_STACK_GETRCV(moo,nargs) MOO_STACK_GET(moo, (moo)->sp - nargs);
+#define MOO_STACK_GETRCV(moo,nargs) MOO_STACK_GET(moo, (moo)->sp - nargs)
 
 /* you can't access arguments and receiver after this macro. 
  * also you must not call this macro more than once */
@@ -1180,6 +1186,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_CLASSDUP,      /* duplicate class */
 	MOO_SYNERR_CLASSCONTRA,   /* contradictory class */
 	MOO_SYNERR_CLASSNAME,     /* wrong class name */
+	MOO_SYNERR_CLASSTRSIZE,   /* non-pointer class inheriting a superclass with trailer size set */
 	MOO_SYNERR_DCLBANNED,     /* #dcl not allowed */
 	MOO_SYNERR_MTHNAME,       /* wrong method name */
 	MOO_SYNERR_MTHNAMEDUP,    /* duplicate method name */
@@ -1323,13 +1330,15 @@ MOO_EXPORT void moo_gc (
 
 
 /**
- * The moo_instantiate() function creates a new object of the class 
+ * The moo_instantiate() function creates a new object instance of the class 
  * \a _class. The size of the fixed part is taken from the information
- * contained in the class defintion. The \a vlen parameter specifies 
- * the length of the variable part. The \a vptr parameter points to 
- * the memory area to copy into the variable part of the new object.
- * If \a vptr is #MOO_NULL, the variable part is initialized to 0 or
- * an equivalent value depending on the type.
+ * contained in the class defintion. The \a vlen parameter specifies the length
+ * of the variable part. The \a vptr parameter points to the memory area to
+ * copy into the variable part of the new object. If \a vptr is #MOO_NULL,
+ * the variable part is initialized to 0 or an equivalent value depending
+ * on the type. \a vptr is not used when the new instance is of the 
+ * #MOO_OBJ_TYPE_OOP type.
+ * 
  */
 MOO_EXPORT moo_oop_t moo_instantiate (
 	moo_t*          moo,
@@ -1415,6 +1424,22 @@ MOO_EXPORT int moo_inttoooi (
 	moo_t*     moo,
 	moo_oop_t  x,
 	moo_ooi_t* i
+);
+
+
+/* =========================================================================
+ * TRAILER MANAGEMENT
+ * ========================================================================= */
+MOO_EXPORT int moo_setclasstrsize (
+	moo_t*      moo,
+	moo_oop_t   _class,
+	moo_oow_t   size
+);
+
+MOO_EXPORT void* moo_getobjtrailer (
+	moo_t*      moo,
+	moo_oop_t   obj,
+	moo_oow_t*  size
 );
 
 /* =========================================================================

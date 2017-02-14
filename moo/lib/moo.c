@@ -537,7 +537,7 @@ int moo_importmod (moo_t* moo, moo_oop_t _class, const moo_ooch_t* name, moo_oow
 	moo_mod_data_t* mdp;
 	int r = 0;
 
-	/* moo_openmod(), moo_closemod(), etc calls a user-defined callback.
+	/* moo_openmod(), moo_closemod(), etc call a user-defined callback.
 	 * i need to protect _class in case the user-defined callback allocates 
 	 * a OOP memory chunk and GC occurs */
 	moo_pushtmp (moo, &_class);
@@ -706,8 +706,6 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_t _class, moo_method_ty
 		return -1;
 	}
 
-MOO_DEBUG3 (moo, ">>>> PFGEN X11 [%.*js] %js\n", moo->sbuf[0].len, moo->sbuf[0].ptr, mod->name);
-
 	pfidsym = (moo_oop_char_t)moo_makesymbol (moo, moo->sbuf[0].ptr, moo->sbuf[0].len);
 	if (!pfidsym) 
 	{
@@ -716,7 +714,7 @@ MOO_DEBUG3 (moo, ">>>> PFGEN X11 [%.*js] %js\n", moo->sbuf[0].len, moo->sbuf[0].
 	}
 	moo_pushtmp (moo, (moo_oop_t*)&pfidsym); tmp_count++;
 
-#if defined(MOO_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_METHOD_TRAILER)
 	mth = (moo_oop_method_t)moo_instantiatewithtrailer (moo, moo->_method, 1, MOO_NULL, 0); 
 #else
 	mth = (moo_oop_method_t)moo_instantiate (moo, moo->_method, MOO_NULL, 1);
@@ -756,4 +754,79 @@ MOO_DEBUG3 (moo, ">>>> PFGEN X11 [%.*js] %js\n", moo->sbuf[0].len, moo->sbuf[0].
 oops:
 	moo_poptmps (moo, tmp_count);
 	return -1;
+}
+
+int moo_setclasstrsize (moo_t* moo, moo_oop_t _class, moo_oow_t size)
+{
+	register moo_oop_class_t c;
+	moo_oop_class_t sc;
+	moo_oow_t spec;
+
+	MOO_ASSERT (moo, MOO_CLASSOF(moo, _class) == moo->_class);
+	MOO_ASSERT (moo, size <= MOO_SMOOI_MAX);
+
+	c = (moo_oop_class_t)_class;
+	if ((moo_oop_t)c == moo->_method) 
+	{
+		/* the bytes code emitted by the compiler go to the trailer part
+		 * regardless of the trailer size. you're not allowed to change it */
+		MOO_DEBUG3 (moo, "Not allowed to set trailer size to %zu on the %.*js class\n", 
+			size,
+			MOO_OBJ_GET_SIZE(c->name),
+			MOO_OBJ_GET_CHAR_SLOT(c->name));
+		goto eperm;
+	}
+
+	spec = MOO_OOP_TO_SMOOI(c->spec);
+	if (MOO_CLASS_SPEC_IS_INDEXED(spec) && MOO_CLASS_SPEC_INDEXED_TYPE(spec) != MOO_OBJ_TYPE_OOP)
+	{
+		MOO_DEBUG3 (moo, "Not allowed to set trailer size to %zu on the %.*js class representing a non-pointer object\n", 
+			size,
+			MOO_OBJ_GET_SIZE(c->name),
+			MOO_OBJ_GET_CHAR_SLOT(c->name));
+		goto eperm;
+	}
+
+	if (c->trsize != moo->_nil)
+	{
+		MOO_DEBUG3 (moo, "Not allowed to reset trailer size to %zu on the %.*js class\n", 
+			size,
+			MOO_OBJ_GET_SIZE(c->name),
+			MOO_OBJ_GET_CHAR_SLOT(c->name));
+		goto eperm;
+	}
+	
+
+	sc = (moo_oop_class_t)c->superclass;
+	if (MOO_OOP_IS_SMOOI(sc->trsize) && size < MOO_OOP_TO_SMOOI(sc->trsize))
+	{
+		MOO_DEBUG6 (moo, "Not allowed to set the trailer size of %.*js to be smaller(%zu) than that(%zu) of the superclass %.*js\n",
+			size,
+			MOO_OBJ_GET_SIZE(c->name),
+			MOO_OBJ_GET_CHAR_SLOT(c->name),
+			MOO_OOP_TO_SMOOI(sc->trsize),
+			MOO_OBJ_GET_SIZE(sc->name),
+			MOO_OBJ_GET_CHAR_SLOT(sc->name));
+		goto eperm;
+	}
+
+	/* you can only set the trailer size once when it's not set yet */
+	c->trsize = MOO_SMOOI_TO_OOP(size);
+	MOO_DEBUG3 (moo, "Set trailer size to %zu on the %.*js class\n", 
+		size,
+		MOO_OBJ_GET_SIZE(c->name),
+		MOO_OBJ_GET_CHAR_SLOT(c->name));
+	return 0;
+
+eperm:
+	moo->errnum = MOO_EPERM;
+	return -1;
+}
+
+void* moo_getobjtrailer (moo_t* moo, moo_oop_t obj, moo_oow_t* size)
+{
+	if (!MOO_OBJ_IS_OOP_POINTER(obj) || !MOO_OBJ_GET_FLAGS_TRAILER(obj)) return MOO_NULL;
+
+	if (size) *size = MOO_OBJ_GET_TRAILER_SIZE(obj);
+	return MOO_OBJ_GET_TRAILER_BYTE(obj);
 }

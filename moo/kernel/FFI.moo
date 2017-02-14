@@ -1,4 +1,4 @@
-class(#byte) _FFI(Module) from 'ffi'
+class _FFI(Object) from 'ffi'
 {
 	(* 
 	 * the ffi module installs the following methods 

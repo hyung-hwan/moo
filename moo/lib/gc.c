@@ -408,7 +408,7 @@ static MOO_INLINE moo_oow_t get_payload_bytes (moo_t* moo, moo_oop_t oop)
 {
 	moo_oow_t nbytes_aligned;
 
-#if defined(MOO_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_METHOD_TRAILER)
 	if (MOO_OBJ_GET_FLAGS_TRAILER(oop))
 	{
 		moo_oow_t nbytes;
@@ -438,7 +438,7 @@ static MOO_INLINE moo_oow_t get_payload_bytes (moo_t* moo, moo_oop_t oop)
 #endif
 		/* calculate the payload size in bytes */
 		nbytes_aligned = MOO_ALIGN (MOO_OBJ_BYTESOF(oop), MOO_SIZEOF(moo_oop_t));
-#if defined(MOO_USE_OBJECT_TRAILER)
+#if defined(MOO_USE_METHOD_TRAILER)
 	}
 #endif
 
@@ -506,7 +506,7 @@ static moo_uint8_t* scan_new_heap (moo_t* moo, moo_uint8_t* ptr)
 
 		oop = (moo_oop_t)ptr;
 
-	#if defined(MOO_USE_OBJECT_TRAILER)
+	#if defined(MOO_USE_METHOD_TRAILER)
 		if (MOO_OBJ_GET_FLAGS_TRAILER(oop))
 		{
 			moo_oow_t nbytes;
@@ -523,7 +523,7 @@ static moo_uint8_t* scan_new_heap (moo_t* moo, moo_uint8_t* ptr)
 		{
 	#endif
 			nbytes_aligned = MOO_ALIGN (MOO_OBJ_BYTESOF(oop), MOO_SIZEOF(moo_oop_t));
-	#if defined(MOO_USE_OBJECT_TRAILER)
+	#if defined(MOO_USE_METHOD_TRAILER)
 		}
 	#endif
 

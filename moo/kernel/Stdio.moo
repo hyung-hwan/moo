@@ -1,5 +1,5 @@
 
-class(#byte) Stdio(Module) from 'stdio'
+class Stdio(Object) from 'stdio'
 {
 	dcl(#class) in out err.
 
@@ -63,7 +63,7 @@ extend Stdio
 	}
 }
 
-class(#byte) Stdio2(Stdio)
+class Stdio2(Stdio)
 {
 	method(#class) new
 	{

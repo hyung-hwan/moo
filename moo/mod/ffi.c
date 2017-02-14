@@ -47,7 +47,6 @@ struct link_t
 typedef struct ffi_t ffi_t;
 struct ffi_t
 {
-	MOO_OBJ_HEADER;
 	void* handle;
 
 #if defined(USE_DYNCALL)
@@ -75,16 +74,9 @@ static void free_linked_cas (moo_t* moo, ffi_t* ffi)
 	}
 }
 
-static moo_pfrc_t pf_newinstsize (moo_t* moo, moo_ooi_t nargs)
-{
-	moo_ooi_t newinstsize = MOO_SIZEOF(ffi_t) - MOO_SIZEOF(moo_obj_t);
-	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(newinstsize)); 
-	return MOO_PF_SUCCESS;
-}
-
 static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 {
-	ffi_t* rcv;
+	ffi_t* ffi;
 	moo_oop_t name;
 	void* handle;
 #if defined(USE_DYNCALL)
@@ -97,10 +89,10 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 		goto softfail;
 	}
 
-	rcv = (ffi_t*)MOO_STACK_GETRCV(moo, nargs);
+	ffi = (ffi_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 	name = MOO_STACK_GETARG(moo, nargs, 0);
 
-	if (!MOO_ISTYPEOF(moo, name, MOO_OBJ_TYPE_CHAR))
+	if (!MOO_OBJ_IS_CHAR_POINTER(name))
 	{
 		moo_seterrnum (moo, MOO_EINVAL);
 		goto softfail;
@@ -112,7 +104,7 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 		goto softfail;
 	}
 
-	if (rcv->handle)
+	if (ffi->handle)
 	{
 		moo_seterrnum (moo, MOO_EPERM); /* no allowed to open again */
 		goto softfail;
@@ -131,13 +123,13 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 	}
 #endif
 
-	rcv->handle = handle;
+	ffi->handle = handle;
 
 #if defined(USE_DYNCALL)
-	rcv->dc = dc;
+	ffi->dc = dc;
 #endif
 
-	MOO_DEBUG3 (moo, "<ffi.open> %.*js => %p\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, rcv->handle);
+	MOO_DEBUG3 (moo, "<ffi.open> %.*js => %p\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, ffi->handle);
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 
@@ -148,7 +140,7 @@ softfail:
 
 static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 {
-	ffi_t* rcv;
+	ffi_t* ffi;
 
 	if (nargs != 0)
 	{
@@ -156,7 +148,7 @@ static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 		goto softfail;
 	}
 
-	rcv = (ffi_t*)MOO_STACK_GETRCV(moo, nargs);
+	ffi = (ffi_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
 	if (!moo->vmprim.dl_open)
 	{
@@ -164,17 +156,17 @@ static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 		goto softfail;
 	}
 
-	MOO_DEBUG1 (moo, "<ffi.close> %p\n", rcv->handle);
+	MOO_DEBUG1 (moo, "<ffi.close> %p\n", ffi->handle);
 
-	free_linked_cas (moo, rcv);
+	free_linked_cas (moo, ffi);
 
 #if defined(USE_DYNCALL)
-	dcFree (rcv->dc);
-	rcv->dc = MOO_NULL;
+	dcFree (ffi->dc);
+	ffi->dc = MOO_NULL;
 #endif
 
-	moo->vmprim.dl_close (moo, rcv->handle);
-	rcv->handle = MOO_NULL;
+	moo->vmprim.dl_close (moo, ffi->handle);
+	ffi->handle = MOO_NULL;
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
@@ -187,14 +179,14 @@ softfail:
 static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 {
 #if defined(USE_DYNCALL)
-	ffi_t* rcv;
+	ffi_t* ffi;
 	moo_oop_t fun, sig, args;
 	moo_oow_t i, j;
 	void* f;
 	moo_oop_oop_t arr;
 	int ellipsis = 0;
 
-	rcv = (ffi_t*)MOO_STACK_GETRCV(moo, nargs);
+	ffi = (ffi_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
 	if (nargs < 3) goto inval;
 	fun = MOO_STACK_GETARG(moo, nargs, 0);
@@ -203,7 +195,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 
 	/* the signature must not be empty. at least the return type must be
 	 * specified */
-	if (!MOO_ISTYPEOF(moo, sig, MOO_OBJ_TYPE_CHAR) || MOO_OBJ_GET_SIZE(sig) <= 0) goto inval;
+	if (!MOO_OBJ_IS_CHAR_POINTER(sig) || MOO_OBJ_GET_SIZE(sig) <= 0) goto inval;
 
 #if 0
 	/* TODO: check if arr is a kind of array??? or check if it's indexed */
@@ -213,19 +205,19 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 	f = MOO_OOP_TO_SMPTR(fun); 
 	arr = (moo_oop_oop_t)args;
 
-	MOO_DEBUG2 (moo, "<ffi.call> %p in %p\n", f, rcv->handle);
+	MOO_DEBUG2 (moo, "<ffi.call> %p in %p\n", f, ffi->handle);
 
-	dcMode (rcv->dc, DC_CALL_C_DEFAULT);
-	dcReset (rcv->dc);
+	dcMode (ffi->dc, DC_CALL_C_DEFAULT);
+	dcReset (ffi->dc);
 
 	i = 0;
 	if (i < MOO_OBJ_GET_SIZE(sig) && ((moo_oop_char_t)sig)->slot[i] == '|') 
 	{
-		dcMode (rcv->dc, DC_CALL_C_ELLIPSIS);
+		dcMode (ffi->dc, DC_CALL_C_ELLIPSIS);
 
 		/* the error code should be DC_ERROR_UNSUPPORTED_MODE */
-		if (dcGetError(rcv->dc) != DC_ERROR_NONE) goto noimpl;
-		dcReset (rcv->dc);
+		if (dcGetError(ffi->dc) != DC_ERROR_NONE) goto noimpl;
+		dcReset (ffi->dc);
 		ellipsis = 1;
 		i++;
 	}
@@ -246,10 +238,10 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 		{
 			if (ellipsis)
 			{
-				dcMode (rcv->dc, DC_CALL_C_ELLIPSIS_VARARGS);
+				dcMode (ffi->dc, DC_CALL_C_ELLIPSIS_VARARGS);
 
 				/* the error code should be DC_ERROR_UNSUPPORTED_MODE */
-				if (dcGetError(rcv->dc) != DC_ERROR_NONE) goto noimpl;
+				if (dcGetError(ffi->dc) != DC_ERROR_NONE) goto noimpl;
 			}
 			continue;
 		}
@@ -263,7 +255,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 		/* TODO: support more types... */
 			case 'c':
 				if (!MOO_OOP_IS_CHAR(arg)) goto inval;
-				dcArgChar (rcv->dc, MOO_OOP_TO_CHAR(arr->slot[j]));
+				dcArgChar (ffi->dc, MOO_OOP_TO_CHAR(arr->slot[j]));
 				j++;
 				break;
 
@@ -272,7 +264,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 			{
 				moo_ooi_t v;
 				if (moo_inttoooi(moo, arg, &v) == 0) goto inval;
-				dcArgInt (rcv->dc, i);
+				dcArgInt (ffi->dc, i);
 				j++;
 				break;
 			}
@@ -282,7 +274,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 				moo_ooi_t v;
 			arg_as_long:
 				if (moo_inttoooi(moo, arg, &v) == 0) goto inval;
-				dcArgLong (rcv->dc, v);
+				dcArgLong (ffi->dc, v);
 				j++;
 				break;
 			}
@@ -298,7 +290,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 				if (moo_inttointmax (moo, arg, &v) == 0) goto inval; */
 			#	error UNSUPPORTED MOO_SIZEOF_LONG_LONG.
 			#	endif
-				dcArgLongLong (rcv->dc, v);
+				dcArgLongLong (ffi->dc, v);
 				j++;
 				break;
 			#else
@@ -313,19 +305,19 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 			{
 				moo_bch_t* ptr;
 
-				if (!MOO_ISTYPEOF(moo,arg,MOO_OBJ_TYPE_CHAR)) goto inval;
+				if (!MOO_OBJ_IS_CHAR_POINTER(arg)) goto inval;
 
 			#if defined(MOO_OOCH_IS_UCH)
 				ptr = moo_dupootobcharswithheadroom (moo, MOO_SIZEOF_VOID_P, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg), MOO_NULL);
 				if (!ptr) goto softfail; /* out of system memory or conversion error - soft failure */
-				link_ca (rcv, ptr);
+				link_ca (ffi, ptr);
 			#else
 				ptr = MOO_OBJ_GET_CHAR_SLOT(arg);
 				/*ptr = moo_dupoochars (moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg));
 				if (!ptr) goto softfail;*/ /* out of system memory or conversion error - soft failure */
 			#endif
 
-				dcArgPointer (rcv->dc, ptr);
+				dcArgPointer (ffi->dc, ptr);
 				j++;
 				break;
 			}
@@ -334,7 +326,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 			{
 				moo_uch_t* ptr;
 
-				if (!MOO_ISTYPEOF(moo,arg,MOO_OBJ_TYPE_CHAR)) goto inval;
+				if (!MOO_OBJ_IS_CHAR_POINTER(arg)) goto inval;
 
 			#if defined(MOO_OOCH_IS_UCH)
 				ptr = MOO_OBJ_GET_CHAR_SLOT(arg);
@@ -343,10 +335,10 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 			#else
 				ptr = moo_dupootoucharswithheadroom (moo, MOO_SIZEOF_VOID_P, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg), MOO_NULL);
 				if (!ptr) goto softfail; /* out of system memory or conversion error - soft failure */
-				link_ca (rcv, ptr);
+				link_ca (ffi, ptr);
 			#endif
 
-				dcArgPointer (rcv->dc, ptr);
+				dcArgPointer (ffi->dc, ptr);
 				j++;
 				break;
 			}
@@ -365,7 +357,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 /* TODO: proper return value conversion */
 		case 'c':
 		{
-			char r = dcCallChar (rcv->dc, f);
+			char r = dcCallChar (ffi->dc, f);
 			MOO_STACK_SETRET (moo, nargs, MOO_CHAR_TO_OOP(r));
 			break;
 		}
@@ -374,7 +366,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 		{
 			moo_oop_t r;
 
-			r = moo_ooitoint (moo, dcCallInt (rcv->dc, f));
+			r = moo_ooitoint (moo, dcCallInt (ffi->dc, f));
 			if (!r) goto hardfail;
 			MOO_STACK_SETRET (moo, nargs, r);
 			break;
@@ -384,7 +376,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 		{
 			moo_oop_t r;
 		ret_as_long:
-			r = moo_ooitoint (moo, dcCallLong (rcv->dc, f));
+			r = moo_ooitoint (moo, dcCallLong (ffi->dc, f));
 			if (!r) goto hardfail;
 			MOO_STACK_SETRET (moo, nargs, r);
 			break;
@@ -395,7 +387,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 		#if (MOO_SIZEOF_LONG_LONG > 0)
 			moo_oop_t r;
 		#	if (MOO_SIZEOF_LONG_LONG <= MOO_SIZEOF_OOI_T)
-			r = moo_ooitoint (moo, dcCallLongLong (rcv->dc, f));
+			r = moo_ooitoint (moo, dcCallLongLong (ffi->dc, f));
 		#	else
 		#	error UNSUPPORTED MOO_SIZEOF_LONG_LONG
 		#	endif
@@ -419,7 +411,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 			moo_oop_t s;
 			moo_bch_t* r;
 
-			r = dcCallPointer (rcv->dc, f);
+			r = dcCallPointer (ffi->dc, f);
 
 		#if defined(MOO_OOCH_IS_UCH)
 			s = moo_makestringwithbchars (moo, r, moo_countbcstr(r));
@@ -441,7 +433,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 			moo_oop_t s;
 			moo_uch_t* r;
 
-			r = dcCallPointer (rcv->dc, f);
+			r = dcCallPointer (ffi->dc, f);
 
 		#if defined(MOO_OOCH_IS_UCH)
 			s = moo_makestring(moo, r, moo_countucstr(r));
@@ -460,12 +452,12 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 
 		default:
 		call_void:
-			dcCallVoid (rcv->dc, f);
+			dcCallVoid (ffi->dc, f);
 			MOO_STACK_SETRETTORCV (moo, nargs);
 			break;
 	}
 
-	free_linked_cas (moo, rcv);
+	free_linked_cas (moo, ffi);
 	return MOO_PF_SUCCESS;
 
 noimpl:
@@ -477,12 +469,12 @@ inval:
 	goto softfail;
 
 softfail:
-	free_linked_cas (moo, rcv);
+	free_linked_cas (moo, ffi);
 	MOO_STACK_SETRETTOERROR (moo, nargs);
 	return MOO_PF_SUCCESS;
 
 hardfail:
-	free_linked_cas (moo, rcv);
+	free_linked_cas (moo, ffi);
 	return MOO_PF_HARD_FAILURE;
 
 #else
@@ -494,7 +486,7 @@ hardfail:
 
 static moo_pfrc_t pf_getsym (moo_t* moo, moo_ooi_t nargs)
 {
-	ffi_t* rcv;
+	ffi_t* ffi;
 	moo_oop_t name;
 	void* sym;
 
@@ -504,10 +496,10 @@ static moo_pfrc_t pf_getsym (moo_t* moo, moo_ooi_t nargs)
 		goto softfail;
 	}
 
-	rcv = (ffi_t*)MOO_STACK_GETRCV(moo, nargs);
+	ffi = (ffi_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 	name = MOO_STACK_GETARG(moo, nargs, 0);
 
-	if (!MOO_ISTYPEOF(moo,name,MOO_OBJ_TYPE_CHAR))
+	if (!MOO_OBJ_IS_CHAR_POINTER(name))
 	{
 		moo_seterrnum (moo, MOO_EINVAL);
 		goto softfail;
@@ -519,10 +511,10 @@ static moo_pfrc_t pf_getsym (moo_t* moo, moo_ooi_t nargs)
 		goto softfail;
 	}
 
-	sym = moo->vmprim.dl_getsym (moo, rcv->handle, ((moo_oop_char_t)name)->slot);
+	sym = moo->vmprim.dl_getsym (moo, ffi->handle, ((moo_oop_char_t)name)->slot);
 	if (!sym) goto softfail;
 
-	MOO_DEBUG4 (moo, "<ffi.getsym> %.*js => %p in %p\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, sym, rcv->handle);
+	MOO_DEBUG4 (moo, "<ffi.getsym> %.*js => %p in %p\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, sym, ffi->handle);
 
 	MOO_ASSERT (moo, MOO_IN_SMPTR_RANGE(sym));
 	MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP(sym));
@@ -549,7 +541,6 @@ struct fnctab_t
 
 static fnctab_t fnctab[] =
 {
-	{ C, { '_','n','e','w','I','n','s','t','S','i','z','e','\0' },         0, pf_newinstsize   },
 	{ I, { 'c','a','l','l','\0' },                                         1, pf_call          },
 	{ I, { 'c','a','l','l',':','s','i','g',':','w','i','t','h',':','\0' }, 0, pf_call          },
 	{ I, { 'c','l','o','s','e','\0' },                                     0, pf_close         },
@@ -563,6 +554,8 @@ static int import (moo_t* moo, moo_mod_t* mod, moo_oop_t _class)
 {
 	int ret = 0;
 	moo_oow_t i;
+
+	if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(ffi_t)) <= -1) return -1;
 
 	moo_pushtmp (moo, &_class);
 	for (i = 0; i < MOO_COUNTOF(fnctab); i++)

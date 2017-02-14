@@ -31,15 +31,20 @@ class Apex(nil)
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
+	method(#class) __trailer_size
+	{
+		^0
+	}
+	
 	method(#class) basicNew
 	{
 		<primitive: #_basic_new>
 		self primitiveFailed.
 	}
-
-	method(#class) basicNew: anInteger
+	
+	method(#class) basicNew: size
 	{
-		<primitive: #_basic_new_with_size>
+		<primitive: #_basic_new>
 		self primitiveFailed.
 	}
 
@@ -51,7 +56,7 @@ class Apex(nil)
 
 	method(#class) ngcNew: anInteger
 	{
-		<primitive: #_ngc_new_with_size>
+		<primitive: #_ngc_new>
 		self primitiveFailed.
 	}
 
