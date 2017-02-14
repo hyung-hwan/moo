@@ -1394,6 +1394,10 @@ MOO_EXPORT int moo_invoke (
 	const moo_oocs_t* mthname
 );
 
+MOO_EXPORT void moo_abort (
+	moo_t* moo
+);
+
 /* =========================================================================
  * COMMON OBJECT MANAGEMENT FUNCTIONS
  * ========================================================================= */

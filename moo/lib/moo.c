@@ -799,7 +799,6 @@ moo_pfimpl_t moo_findpfimpl (moo_t* moo, const moo_pfinfo_t* pfinfo, moo_oow_t p
 	return MOO_NULL;
 }
 
-
 /* -------------------------------------------------------------------------- */
 
 int moo_setclasstrsize (moo_t* moo, moo_oop_t _class, moo_oow_t size)
@@ -835,13 +834,12 @@ int moo_setclasstrsize (moo_t* moo, moo_oop_t _class, moo_oow_t size)
 
 	if (c->trsize != moo->_nil)
 	{
-		MOO_DEBUG3 (moo, "Not allowed to reset trailer size to %zu on the %.*js class\n", 
+		MOO_DEBUG3 (moo, "Not allowed to re-set trailer size to %zu on the %.*js class\n", 
 			size,
 			MOO_OBJ_GET_SIZE(c->name),
 			MOO_OBJ_GET_CHAR_SLOT(c->name));
 		goto eperm;
 	}
-	
 
 	sc = (moo_oop_class_t)c->superclass;
 	if (MOO_OOP_IS_SMOOI(sc->trsize) && size < MOO_OOP_TO_SMOOI(sc->trsize))
@@ -869,11 +867,9 @@ eperm:
 	return -1;
 }
 
-
 void* moo_getobjtrailer (moo_t* moo, moo_oop_t obj, moo_oow_t* size)
 {
 	if (!MOO_OBJ_IS_OOP_POINTER(obj) || !MOO_OBJ_GET_FLAGS_TRAILER(obj)) return MOO_NULL;
-
 	if (size) *size = MOO_OBJ_GET_TRAILER_SIZE(obj);
 	return MOO_OBJ_GET_TRAILER_BYTE(obj);
 }

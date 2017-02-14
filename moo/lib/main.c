@@ -978,6 +978,18 @@ static void cancel_tick (void)
 #endif
 }
 
+static void handle_term (int sig)
+{
+	if (g_moo) moo_abort (g_moo);
+}
+
+static void setup_term (void)
+{
+	struct sigaction sa;
+	sa.sa_handler = handle_term;
+	sigaction (SIGINT, &sa, MOO_NULL);
+}
+
 /* ========================================================================= */
 
 int main (int argc, char* argv[])
@@ -1139,6 +1151,7 @@ int main (int argc, char* argv[])
 	xret = 0;
 	g_moo = moo;
 	setup_tick ();
+	setup_term ();
 
 	objname.ptr = str_my_object;
 	objname.len = 8;

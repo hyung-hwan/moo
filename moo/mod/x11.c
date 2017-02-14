@@ -62,7 +62,7 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 		goto softfail;
 	}
 
-	x11 = (x11_t*)MOO_STACK_GETRCV(moo, nargs);
+	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 	/*
 	name = MOO_STACK_GETARG(moo, nargs, 0);
 
@@ -100,7 +100,7 @@ static moo_pfrc_t pf_disconnect (moo_t* moo, moo_ooi_t nargs)
 		goto softfail;
 	}
 
-	x11 = (x11_t*)MOO_STACK_GETRCV(moo, nargs);
+	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
 	MOO_DEBUG1 (moo, "<x11.disconnect> %p\n", x11->c);
 
