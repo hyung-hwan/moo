@@ -756,6 +756,52 @@ oops:
 	return -1;
 }
 
+int moo_genpfmethods (moo_t* moo, moo_mod_t* mod, moo_oop_t _class, const moo_pfinfo_t* pfinfo, moo_oow_t pfcount)
+{
+	int ret = 0;
+	moo_oow_t i;
+
+	moo_pushtmp (moo, &_class);
+	for (i = 0; i < pfcount; i++)
+	{
+		if (moo_genpfmethod (moo, mod, _class, pfinfo[i].type, pfinfo[i].mthname, pfinfo[i].variadic, MOO_NULL) <= -1) 
+		{
+			/* TODO: delete pfmethod generated??? */
+			ret = -1;
+			break;
+		}
+	}
+
+	moo_poptmp (moo);
+	return ret;
+}
+
+moo_pfimpl_t moo_findpfimpl (moo_t* moo, const moo_pfinfo_t* pfinfo, moo_oow_t pfcount, const moo_ooch_t* name)
+{
+	int left, right, mid, n;
+
+	left = 0; right = pfcount - 1;
+
+	while (left <= right)
+	{
+		mid = (left + right) / 2;
+
+		n = moo_compoocstr (name, pfinfo[mid].mthname);
+		if (n < 0) right = mid - 1; 
+		else if (n > 0) left = mid + 1;
+		else
+		{
+			return pfinfo[mid].handler;
+		}
+	}
+
+	moo->errnum = MOO_ENOENT;
+	return MOO_NULL;
+}
+
+
+/* -------------------------------------------------------------------------- */
+
 int moo_setclasstrsize (moo_t* moo, moo_oop_t _class, moo_oow_t size)
 {
 	register moo_oop_class_t c;
@@ -822,6 +868,7 @@ eperm:
 	moo->errnum = MOO_EPERM;
 	return -1;
 }
+
 
 void* moo_getobjtrailer (moo_t* moo, moo_oop_t obj, moo_oow_t* size)
 {

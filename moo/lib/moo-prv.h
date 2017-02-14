@@ -982,16 +982,6 @@ moo_oop_t moo_allocwordobj (
 	moo_oow_t        len
 );
 
-#if defined(MOO_USE_METHOD_TRAILER)
-moo_oop_t moo_instantiatewithtrailer (
-	moo_t*           moo, 
-	moo_oop_t        _class,
-	moo_oow_t        vlen,
-	const moo_oob_t* tptr,
-	moo_oow_t        tlen
-);
-#endif
-
 /* ========================================================================= */
 /* sym.c                                                                     */
 /* ========================================================================= */

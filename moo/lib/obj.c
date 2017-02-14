@@ -364,10 +364,7 @@ moo_oop_t moo_instantiate2 (moo_t* moo, moo_oop_t _class, const void* vptr, moo_
 	return oop;
 }
 
-
-#if defined(MOO_USE_METHOD_TRAILER)
-
-moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_t _class, moo_oow_t vlen, const moo_oob_t* tptr, moo_oow_t tlen)
+moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_t _class, moo_oow_t vlen, const moo_oob_t* trptr, moo_oow_t trlen)
 {
 	moo_oop_t oop;
 	moo_obj_type_t type;
@@ -387,14 +384,14 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_t _class, moo_oow_t vl
 	switch (type)
 	{
 		case MOO_OBJ_TYPE_OOP:
-			oop = moo_allocoopobjwithtrailer(moo, alloclen, tptr, tlen);
+			oop = moo_allocoopobjwithtrailer(moo, alloclen, trptr, trlen);
 			break;
 
 		default:
 			MOO_DEBUG3 (moo, "Not allowed to instantiate a non-pointer object of the %.*js class with trailer %zu\n",
 				MOO_OBJ_GET_SIZE(((moo_oop_class_t)_class)->name),
 				MOO_OBJ_GET_CHAR_SLOT(((moo_oop_class_t)_class)->name),
-				tlen);
+				trlen);
 
 			moo->errnum = MOO_EPERM;
 			oop = MOO_NULL;
@@ -405,5 +402,4 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_t _class, moo_oow_t vl
 	moo_poptmps (moo, tmp_count);
 	return oop;
 }
-#endif
 

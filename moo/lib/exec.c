@@ -1353,7 +1353,7 @@ static moo_pfrc_t pf_class (moo_t* moo, moo_ooi_t nargs)
 static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t _class, szoop, obj;
-	moo_oow_t size = 0, trsz = 0;
+	moo_oow_t size = 0; /* size of the variable/indexed part */
 
 	_class = MOO_STACK_GETRCV(moo, nargs);
 	if (MOO_CLASSOF(moo, _class) != moo->_class) 
@@ -1375,15 +1375,17 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 	}
 
 	if (MOO_OOP_IS_SMOOI(((moo_oop_class_t)_class)->trsize)) 
-		trsz = MOO_OOP_TO_SMOOI(((moo_oop_class_t)_class)->trsize);
-
-	/* moo_instantiate() ignores size if the instance specification 
-	 * disallows indexed(variable) parts. */
-	/* TODO: should i check the specification before calling 
-	 *       moo_instantiate()? */
-MOO_DEBUG2 (moo, "<basic new> SIZE ... %d   TRSZ %d\n", (int)size, (int)trsz);
-	obj = trsz <= 0? moo_instantiate (moo, _class, MOO_NULL, size):
-	                 moo_instantiatewithtrailer (moo, _class, size, MOO_NULL, trsz);
+	{
+		obj = moo_instantiatewithtrailer (moo, _class, size, MOO_NULL, MOO_OOP_TO_SMOOI(((moo_oop_class_t)_class)->trsize));
+	}
+	else 
+	{
+		/* moo_instantiate() will ignore size if the instance specification 
+		 * disallows indexed(variable) parts. */
+		/* TODO: should i check the specification before calling 
+		*       moo_instantiate()? */
+		obj = moo_instantiate (moo, _class, MOO_NULL, size);
+	}
 	if (!obj) return MOO_PF_HARD_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, obj);
@@ -1402,7 +1404,6 @@ static moo_pfrc_t pf_ngc_new (moo_t* moo, moo_ooi_t nargs)
 * also allow NGC code in non-safe mode. in safe mode, ngc_new is same as normal new.
 * ngc_dispose should not do anything in safe mode. */
 	return pf_basic_new (moo, nargs);
-
 }
 
 static moo_pfrc_t pf_ngc_dispose (moo_t* moo, moo_ooi_t nargs)
@@ -2629,7 +2630,7 @@ struct pf_t
 	moo_ooi_t       min_nargs;   /* expected number of arguments */
 	moo_ooi_t       max_nargs;   /* expected number of arguments */
 	moo_pfimpl_t    handler;
-	const char*      name;    /* the name is supposed to be 7-bit ascii only */
+	const char*     name;        /* the name is supposed to be 7-bit ascii only */
 };
 typedef struct pf_t pf_t;
 

@@ -35,15 +35,6 @@
 #define C MOO_METHOD_CLASS
 #define I MOO_METHOD_INSTANCE
 
-typedef struct fnctab_t fnctab_t;
-struct fnctab_t
-{
-	moo_method_type_t type;
-	moo_ooch_t mthname[25];
-	int variadic;
-	moo_pfimpl_t handler;
-};
-
 
 typedef struct x11_t x11_t;
 struct x11_t
@@ -164,53 +155,7 @@ MOO_DEBUG0 (moo, "x11.window.destroy....\n");
 
 /* ------------------------------------------------------------------------ */
 
-static moo_pfimpl_t search_fnctab (moo_t* moo, const fnctab_t* fnctab, moo_oow_t fnclen, const moo_ooch_t* name)
-{
-	int left, right, mid, n;
-
-	left = 0; right = fnclen - 1;
-
-	while (left <= right)
-	{
-		mid = (left + right) / 2;
-
-		n = moo_compoocstr (name, fnctab[mid].mthname);
-		if (n < 0) right = mid - 1; 
-		else if (n > 0) left = mid + 1;
-		else
-		{
-			return fnctab[mid].handler;
-		}
-	}
-
-	moo->errnum = MOO_ENOENT;
-	return MOO_NULL;
-}
-
-static int import_fnctab (moo_t* moo, moo_mod_t* mod, moo_oop_t _class, const fnctab_t* fnctab, moo_oow_t fnclen)
-{
-	int ret = 0;
-	moo_oow_t i;
-
-	moo_pushtmp (moo, &_class);
-	for (i = 0; i < fnclen; i++)
-	{
-		if (moo_genpfmethod (moo, mod, _class, fnctab[i].type, fnctab[i].mthname, fnctab[i].variadic, MOO_NULL) <= -1) 
-		{
-			/* TODO: delete pfmethod generated??? */
-			ret = -1;
-			break;
-		}
-	}
-
-	moo_poptmp (moo);
-	return ret;
-}
-
-
-/* ------------------------------------------------------------------------ */
-
-static fnctab_t x11_fnctab[] =
+static moo_pfinfo_t x11_pfinfo[] =
 {
 	{ I, { 'c','o','n','n','e','c','t','\0' },                             0, pf_connect       },
 	{ I, { 'd','i','s','c','o','n','n','e','c','t','\0' },                 0, pf_disconnect    }
@@ -218,13 +163,13 @@ static fnctab_t x11_fnctab[] =
 
 static int x11_import (moo_t* moo, moo_mod_t* mod, moo_oop_t _class)
 {
-	if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(x11_t)) <= -1) return -1;
-	return import_fnctab (moo, mod, _class, x11_fnctab, MOO_COUNTOF(x11_fnctab));
+	if (moo_setclasstrsize(moo, _class, MOO_SIZEOF(x11_t)) <= -1) return -1;
+	return moo_genpfmethods(moo, mod, _class, x11_pfinfo, MOO_COUNTOF(x11_pfinfo));
 }
 
 static moo_pfimpl_t x11_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
 {
-	return search_fnctab (moo, x11_fnctab, MOO_COUNTOF(x11_fnctab), name);
+	return moo_findpfimpl (moo, x11_pfinfo, MOO_COUNTOF(x11_pfinfo), name);
 }
 
 static void x11_unload (moo_t* moo, moo_mod_t* mod)
@@ -243,7 +188,7 @@ int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)
 
 /* ------------------------------------------------------------------------ */
 
-static fnctab_t x11_win_fnctab[] =
+static moo_pfinfo_t x11_win_pfinfo[] =
 {
 	{ I, { 'c','r','e','a','t','e','\0' },                                 0, pf_win_create        },
 	{ I, { 'd','i','s','t','r','o','y','\0' },                             0, pf_win_destroy       }
@@ -251,13 +196,13 @@ static fnctab_t x11_win_fnctab[] =
 
 static int x11_win_import (moo_t* moo, moo_mod_t* mod, moo_oop_t _class)
 {
-	if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(x11_win_t)) <= -1) return -1;
-	return import_fnctab (moo, mod, _class, x11_win_fnctab, MOO_COUNTOF(x11_win_fnctab));
+	if (moo_setclasstrsize(moo, _class, MOO_SIZEOF(x11_win_t)) <= -1) return -1;
+	return moo_genpfmethods(moo, mod, _class, x11_win_pfinfo, MOO_COUNTOF(x11_win_pfinfo));
 }
 
 static moo_pfimpl_t x11_win_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
 {
-	return search_fnctab (moo, x11_win_fnctab, MOO_COUNTOF(x11_win_fnctab), name);
+	return moo_findpfimpl(moo, x11_win_pfinfo, MOO_COUNTOF(x11_win_pfinfo), name);
 }
 
 static void x11_win_unload (moo_t* moo, moo_mod_t* mod)

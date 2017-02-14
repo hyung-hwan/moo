@@ -245,45 +245,23 @@ static moo_pfrc_t pf_setcursor (moo_t* moo, moo_ooi_t nargs)
 
 /* ------------------------------------------------------------------------ */
 
-typedef struct fnctab_t fnctab_t;
-struct fnctab_t
-{
-	const moo_bch_t* name;
-	moo_pfimpl_t handler;
-};
+#define C MOO_METHOD_CLASS
+#define I MOO_METHOD_INSTANCE
 
-static fnctab_t fnctab[] =
+static moo_pfinfo_t pfinfos[] =
 {
-	{ "clear",      pf_clear     },
-	{ "close",      pf_close     },
-	{ "open",       pf_open      },
-	{ "setcursor",  pf_setcursor },
-	{ "write",      pf_write     },
+	{ I, { 'c','l','e','a','r','\0' },                 0, pf_clear         },
+	{ I, { 'c','l','o','s','e','\0' },                 0, pf_close         },
+	{ I, { 'o','p','e','n','\0' },                     0, pf_open          },
+	{ I, { 's','e','t','c','u','r','s','o','r','\0' }, 0, pf_setcursor     },
+	{ I, { 'w','r','i','t','e','\0' },                 0, pf_write         }
 };
 
 /* ------------------------------------------------------------------------ */
 
 static moo_pfimpl_t query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
 {
-	int left, right, mid, n;
-
-	left = 0; right = MOO_COUNTOF(fnctab) - 1;
-
-	while (left <= right)
-	{
-		mid = (left + right) / 2;
-
-		n = moo_compoocbcstr (name, fnctab[mid].name);
-		if (n < 0) right = mid - 1; 
-		else if (n > 0) left = mid + 1;
-		else
-		{
-			return fnctab[mid].handler;
-		}
-	}
-
-	moo->errnum = MOO_ENOENT;
-	return MOO_NULL;
+	return moo_findpfimpl(moo, pfinfos, MOO_COUNTOF(pfinfos), name);
 }
 
 

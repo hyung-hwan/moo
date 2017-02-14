@@ -206,19 +206,10 @@ static moo_pfrc_t pf_puts (moo_t* moo, moo_ooi_t nargs)
 
 /* ------------------------------------------------------------------------ */
 
-typedef struct fnctab_t fnctab_t;
-struct fnctab_t
-{
-	moo_method_type_t type;
-	moo_ooch_t mthname[15];
-	int variadic;
-	moo_pfimpl_t handler;
-};
-
 #define C MOO_METHOD_CLASS
 #define I MOO_METHOD_INSTANCE
 
-static fnctab_t fnctab[] =
+static moo_pfinfo_t pfinfos[] =
 {
 	{ I, { 'c','l','o','s','e','\0' },                             0, pf_close         },
 	{ I, { 'g','e','t','s','\0' },                                 0, pf_gets          },
@@ -230,50 +221,15 @@ static fnctab_t fnctab[] =
 };
 
 /* ------------------------------------------------------------------------ */
-
 static int import (moo_t* moo, moo_mod_t* mod, moo_oop_t _class)
 {
-	int ret = 0;
-	moo_oow_t i;
-
 	if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(stdio_t)) <= -1) return -1;
-
-	moo_pushtmp (moo, &_class);
-	for (i = 0; i < MOO_COUNTOF(fnctab); i++)
-	{
-		if (moo_genpfmethod (moo, mod, _class, fnctab[i].type, fnctab[i].mthname, fnctab[i].variadic, MOO_NULL) <= -1) 
-		{
-			/* TODO: delete pfmethod generated??? */
-			ret = -1;
-			break;
-		}
-	}
-
-	moo_poptmp (moo);
-	return ret;
+	return moo_genpfmethods (moo, mod, _class, pfinfos, MOO_COUNTOF(pfinfos));
 }
 
 static moo_pfimpl_t query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
 {
-	int left, right, mid, n;
-
-	left = 0; right = MOO_COUNTOF(fnctab) - 1;
-
-	while (left <= right)
-	{
-		mid = (left + right) / 2;
-
-		n = moo_compoocstr (name, fnctab[mid].mthname);
-		if (n < 0) right = mid - 1; 
-		else if (n > 0) left = mid + 1;
-		else
-		{
-			return fnctab[mid].handler;
-		}
-	}
-
-	moo->errnum = MOO_ENOENT;
-	return MOO_NULL;
+	return moo_findpfimpl (moo, pfinfos, MOO_COUNTOF(pfinfos), name);
 }
 
 #if 0
