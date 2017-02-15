@@ -169,7 +169,7 @@ moo_oop_t moo_allocwordobj (moo_t* moo, const moo_oow_t* ptr, moo_oow_t len)
 	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_WORD, MOO_SIZEOF(moo_oow_t), 0);
 }
 
-static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_t _class, moo_oow_t vlen, moo_obj_type_t* type, moo_oow_t* outlen)
+static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t vlen, moo_obj_type_t* type, moo_oow_t* outlen)
 {
 	moo_oow_t spec;
 	moo_oow_t named_instvar;
@@ -178,8 +178,8 @@ static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_t _class, moo_oow_t vlen,
 	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(_class));
 	MOO_ASSERT (moo, MOO_CLASSOF(moo, _class) == moo->_class);
 
-	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(((moo_oop_class_t)_class)->spec));
-	spec = MOO_OOP_TO_SMOOI(((moo_oop_class_t)_class)->spec);
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(_class->spec));
+	spec = MOO_OOP_TO_SMOOI(_class->spec);
 
 	named_instvar = MOO_CLASS_SPEC_NAMED_INSTVAR(spec); /* size of the named_instvar part */
 
@@ -243,7 +243,7 @@ static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_t _class, moo_oow_t vlen,
 	return 0; 
 }
 
-moo_oop_t moo_instantiate (moo_t* moo, moo_oop_t _class, const void* vptr, moo_oow_t vlen)
+moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr, moo_oow_t vlen)
 {
 	moo_oop_t oop;
 	moo_obj_type_t type;
@@ -258,7 +258,7 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_t _class, const void* vptr, moo_o
 		return MOO_NULL;
 	}
 
-	moo_pushtmp (moo, &_class); tmp_count++;
+	moo_pushtmp (moo, (moo_oop_t*)&_class); tmp_count++;
 
 	switch (type)
 	{
@@ -307,12 +307,13 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_t _class, const void* vptr, moo_o
 			break;
 	}
 
-	if (oop) MOO_OBJ_SET_CLASS (oop, _class);
+	if (oop) MOO_OBJ_SET_CLASS (oop, (moo_oop_t)_class);
 	moo_poptmps (moo, tmp_count);
 	return oop;
 }
 
-moo_oop_t moo_instantiate2 (moo_t* moo, moo_oop_t _class, const void* vptr, moo_oow_t vlen, int ngc)
+/* TODO: ... */
+moo_oop_t moo_instantiate2 (moo_t* moo, moo_oop_class_t _class, const void* vptr, moo_oow_t vlen, int ngc)
 {
 	moo_oop_t oop;
 	moo_obj_type_t type;
@@ -327,7 +328,7 @@ moo_oop_t moo_instantiate2 (moo_t* moo, moo_oop_t _class, const void* vptr, moo_
 		return MOO_NULL;
 	}
 
-	moo_pushtmp (moo, &_class); tmp_count++;
+	moo_pushtmp (moo, (moo_oop_t*)&_class); tmp_count++;
 
 /* TODO: support NGC */
 	switch (type)
@@ -364,7 +365,7 @@ moo_oop_t moo_instantiate2 (moo_t* moo, moo_oop_t _class, const void* vptr, moo_
 	return oop;
 }
 
-moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_t _class, moo_oow_t vlen, const moo_oob_t* trptr, moo_oow_t trlen)
+moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_class_t _class, moo_oow_t vlen, const moo_oob_t* trptr, moo_oow_t trlen)
 {
 	moo_oop_t oop;
 	moo_obj_type_t type;
@@ -379,7 +380,7 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_t _class, moo_oow_t vl
 		return MOO_NULL;
 	}
 
-	moo_pushtmp (moo, &_class); tmp_count++;
+	moo_pushtmp (moo, (moo_oop_t*)&_class); tmp_count++;
 
 	switch (type)
 	{
@@ -389,8 +390,8 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_t _class, moo_oow_t vl
 
 		default:
 			MOO_DEBUG3 (moo, "Not allowed to instantiate a non-pointer object of the %.*js class with trailer %zu\n",
-				MOO_OBJ_GET_SIZE(((moo_oop_class_t)_class)->name),
-				MOO_OBJ_GET_CHAR_SLOT(((moo_oop_class_t)_class)->name),
+				MOO_OBJ_GET_SIZE(_class->name),
+				MOO_OBJ_GET_CHAR_SLOT(_class->name),
 				trlen);
 
 			moo->errnum = MOO_EPERM;

@@ -328,7 +328,7 @@ static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop)
 		MOO_ASSERT (moo, MOO_OOP_IS_POINTER(oop));
 		c = (moo_oop_class_t)MOO_OBJ_GET_CLASS(oop); /*MOO_CLASSOF(moo, oop);*/
 
-		if ((moo_oop_t)c == moo->_large_negative_integer)
+		if (c == moo->_large_negative_integer)
 		{
 			moo_oow_t i;
 			moo_logbfmt (moo, mask, "-16r");
@@ -337,7 +337,7 @@ static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop)
 				moo_logbfmt (moo, mask, "%0*lX", (int)(MOO_SIZEOF(moo_liw_t) * 2), (unsigned long)((moo_oop_liword_t)oop)->slot[--i]);
 			}
 		}
-		else if ((moo_oop_t)c == moo->_large_positive_integer)
+		else if (c == moo->_large_positive_integer)
 		{
 			moo_oow_t i;
 			moo_logbfmt (moo, mask, "16r");
@@ -348,7 +348,7 @@ static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop)
 		}
 		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_CHAR)
 		{
-			if ((moo_oop_t)c == moo->_symbol) 
+			if (c == moo->_symbol) 
 			{
 				moo_logbfmt (moo, mask, "#%.*js", MOO_OBJ_GET_SIZE(oop), ((moo_oop_char_t)oop)->slot);
 			}
@@ -455,7 +455,7 @@ static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop)
 			}
 			moo_logbfmt (moo, mask, "]]]");
 		}
-		else if ((moo_oop_t)c == moo->_array)
+		else if (c == moo->_array)
 		{
 			moo_logbfmt (moo, mask, "#(");
 			for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
@@ -465,12 +465,12 @@ static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop)
 			}
 			moo_logbfmt (moo, mask, ")");
 		}
-		else if ((moo_oop_t)c == moo->_class)
+		else if (c == moo->_class)
 		{
 			/* print the class name */
 			moo_logbfmt (moo, mask, "%.*js", MOO_OBJ_GET_SIZE(((moo_oop_class_t)oop)->name), ((moo_oop_class_t)oop)->name->slot);
 		}
-		else if ((moo_oop_t)c == moo->_association)
+		else if (c == moo->_association)
 		{
 			moo_logbfmt (moo, mask, "%O -> %O", ((moo_oop_association_t)oop)->key, ((moo_oop_association_t)oop)->value);
 		}

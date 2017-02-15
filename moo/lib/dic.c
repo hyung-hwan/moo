@@ -74,7 +74,7 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
 
 			key = (moo_oop_char_t)ass->key;
-			MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == (moo_oop_t)moo->_symbol);
+			MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);
 
 			index = moo_hashoochars(key->slot, MOO_OBJ_GET_SIZE(key)) % newsz;
 			while (newbuc->slot[index] != moo->_nil) index = (index + 1) % newsz;
@@ -334,14 +334,14 @@ found:
 	return 0;
 }
 
-moo_oop_set_t moo_makedic (moo_t* moo, moo_oop_t cls, moo_oow_t size)
+moo_oop_set_t moo_makedic (moo_t* moo, moo_oop_class_t _class, moo_oow_t size)
 {
 	moo_oop_set_t dic;
 	moo_oop_t tmp;
 
-	MOO_ASSERT (moo, MOO_CLASSOF(moo,cls) == moo->_class);
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,_class) == moo->_class);
 
-	dic = (moo_oop_set_t)moo_instantiate (moo, cls, MOO_NULL, 0);
+	dic = (moo_oop_set_t)moo_instantiate (moo, _class, MOO_NULL, 0);
 	if (!dic) return MOO_NULL;
 
 	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(dic) == MOO_SET_NAMED_INSTVARS);

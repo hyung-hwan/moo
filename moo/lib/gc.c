@@ -120,7 +120,7 @@ static kernel_class_info_t kernel_classes[] =
  * BOOTSTRAPPER
  * ----------------------------------------------------------------------- */
 
-static moo_oop_t alloc_kernel_class (moo_t* moo, moo_oow_t indexed_classvars, moo_oow_t spec)
+static moo_oop_class_t alloc_kernel_class (moo_t* moo, moo_oow_t indexed_classvars, moo_oow_t spec)
 {
 	moo_oop_class_t c;
 
@@ -128,11 +128,11 @@ static moo_oop_t alloc_kernel_class (moo_t* moo, moo_oow_t indexed_classvars, mo
 	if (!c) return MOO_NULL;
 
 	MOO_OBJ_SET_FLAGS_KERNEL (c, 1);
-	MOO_OBJ_SET_CLASS (c, moo->_class);
+	MOO_OBJ_SET_CLASS (c, (moo_oop_t)moo->_class);
 	c->spec = MOO_SMOOI_TO_OOP(spec); 
 	c->selfspec = MOO_SMOOI_TO_OOP(MOO_CLASS_SELFSPEC_MAKE(indexed_classvars, 0));
 
-	return (moo_oop_t)c;
+	return c;
 }
 
 static int ignite_1 (moo_t* moo)
@@ -154,7 +154,7 @@ static int ignite_1 (moo_t* moo)
 	if (!moo->_class) return -1;
 
 	MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(moo->_class) == MOO_NULL);
-	MOO_OBJ_SET_CLASS (moo->_class, moo->_class);
+	MOO_OBJ_SET_CLASS (moo->_class, (moo_oop_t)moo->_class);
 
 	/* --------------------------------------------------------------
 	 * Apex            - proto-object with 1 class variable.
@@ -220,7 +220,7 @@ static int ignite_1 (moo_t* moo)
 	    !moo->_character         || !moo->_small_integer     || 
 	    !moo->_large_positive_integer  || !moo->_large_negative_integer) return -1;
 
-	MOO_OBJ_SET_CLASS (moo->_nil, moo->_undefined_object);
+	MOO_OBJ_SET_CLASS (moo->_nil, (moo_oop_t)moo->_undefined_object);
 	return 0;
 }
 
@@ -268,7 +268,7 @@ static int ignite_2 (moo_t* moo)
 	moo->processor->active = moo->nil_process;
 
 	/* Export the system dictionary via the first class variable of the Stix class */
-	((moo_oop_class_t)moo->_apex)->slot[0] = (moo_oop_t)moo->sysdic;
+	moo->_apex->slot[0] = (moo_oop_t)moo->sysdic;
 
 	return 0;
 }
@@ -309,11 +309,11 @@ static int ignite_3 (moo_t* moo)
 
 	sym = moo_makesymbol (moo, str_dicnew, MOO_COUNTOF(str_dicnew));
 	if (!sym) return -1;
-	moo->dicnewsym = sym;
+	moo->dicnewsym = (moo_oop_char_t)sym;
 
 	sym = moo_makesymbol (moo, str_dicputassoc, MOO_COUNTOF(str_dicputassoc));
 	if (!sym) return -1;
-	moo->dicputassocsym = sym;
+	moo->dicputassocsym = (moo_oop_char_t)sym;
 
 	return 0;
 }
@@ -459,7 +459,7 @@ moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
 		 * the class field has been updated to the new object
 		 * in the 'else' block below. i can simply return it
 		 * without further migration. */
-		return MOO_OBJ_GET_CLASS(oop);
+		return (moo_oop_t)MOO_OBJ_GET_CLASS(oop);
 	}
 	else
 	{
@@ -527,7 +527,7 @@ static moo_uint8_t* scan_new_heap (moo_t* moo, moo_uint8_t* ptr)
 		}
 	#endif
 
-		MOO_OBJ_SET_CLASS (oop, moo_moveoop(moo, MOO_OBJ_GET_CLASS(oop)));
+		MOO_OBJ_SET_CLASS (oop, moo_moveoop(moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop)));
 		if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP)
 		{
 			moo_oop_oop_t xtmp;
@@ -732,7 +732,7 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 		moo_oop_t z;
 		moo_oop_class_t c;
 
-		c = (moo_oop_class_t)MOO_OBJ_GET_CLASS(oop);
+		c = MOO_OBJ_GET_CLASS(oop);
 		moo_pushtmp (moo, &oop);
 		z = moo_instantiate (moo, (moo_oop_t)c, MOO_NULL, MOO_OBJ_GET_SIZE(oop) - MOO_CLASS_SPEC_NAMED_INSTVAR(MOO_OOP_TO_SMOOI(c->spec)));
 		moo_poptmp(moo);

@@ -821,42 +821,74 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 #endif
 }
 
-static int mux_add (moo_t* moo)
+static int mux_add (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 	struct epoll_event ev;
+	moo_ooi_t mask;
 
-	ev.events = EPOLLIN | EPOLLOUT;
-	ev.data.u64 = 10;
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index));
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_handle));
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_mask));
 
-/*
-	if (epoll_ctl (xtn->ep, EPOLL_CTL_DEL, 000, &ev) == -1)
+	mask = MOO_OOP_TO_SMOOI(sem->io_mask);
+	ev.events = 0;
+	if (mask & 1) ev.events |= EPOLLIN; /*TODO: define io mask constants... */
+	if (mask & 2) ev.events |= EPOLLOUT;
+	ev.data.ptr = (void*)MOO_OOP_TO_SMOOI(sem->io_index);
+
+	if (ev.events == 0) 
 	{
-		moo_syserrtoerrnum (errno);
+		MOO_DEBUG2 (moo, "<mux_add> Invalid semaphore mask %zd on handle %zd\n", mask, MOO_OOP_TO_SMOOI(sem->io_handle));
+		moo_seterrnum (moo, MOO_EINVAL);
 		return -1;
 	}
-*/
+	
+	if (epoll_ctl (xtn->ep, EPOLL_CTL_ADD, MOO_OOP_TO_SMOOI(sem->io_handle), &ev) == -1)
+	{
+		moo_seterrnum (moo, moo_syserrtoerrnum (errno));
+		MOO_DEBUG2 (moo, "<mux_add> epoll_ctl failure on handle %zd - %hs\n", MOO_OOP_TO_SMOOI(sem->io_handle), strerror(errno));
+		return -1;
+	}
+
 	return 0;
 }
 
-static void mux_del (moo_t* moo)
+static void mux_del (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 	struct epoll_event ev;
-/*	epoll_ctl (xtn->ep, EPOLL_CTL_DEL, 00, &ev);*/
+
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index));
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_handle));
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_mask));
+
+	epoll_ctl (xtn->ep, EPOLL_CTL_DEL, MOO_OOP_TO_SMOOI(sem->io_handle), &ev);
 }
 
-static void mux_wait (moo_t* moo, const moo_ntime_t* dur)
+static void mux_wait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_cb_t muxwcb)
 {
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
-	int tmout = 0;
+	int tmout = 0, n;
+	struct epoll_event ev[32]; /*TODO: make it into xtn->evt_ptr or somewhere else as a dynamically allocated memory block */
 
 	if (dur) tmout = MOO_SECNSEC_TO_MSEC(dur->sec, dur->nsec);
-/*
-	if (epoll_wait (xtn->ep, xtn->evt_ptr, xtn->evt_capa, tmout) > 0)
+
+	n = epoll_wait (xtn->ep, ev, MOO_COUNTOF(ev), tmout);
+	while (n > 0)
 	{
+		int mask;
+
+		--n;
+
+		mask = 0;
+		if (ev[n].events & EPOLLIN) mask |= 1; /* TODO define constants for IO Mask */
+		if (ev[n].events & EPOLLOUT) mask |= 2;
+		if (ev[n].events & EPOLLERR) mask |= 4;
+		if (ev[n].events & EPOLLHUP) mask |= 8;
+
+		muxwcb (moo, mask, ev[n].data.ptr);
 	}
-*/
 }
 /* ========================================================================= */
 

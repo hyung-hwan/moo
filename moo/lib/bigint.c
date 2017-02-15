@@ -209,7 +209,7 @@ static int is_normalized_integer (moo_t* moo, moo_oop_t oop)
 	if (MOO_OOP_IS_SMOOI(oop)) return 1;
 	if (MOO_OOP_IS_POINTER(oop))
 	{
-		moo_oop_t c;
+		moo_oop_class_t c;
 /* TODO: is it better to introduce a special integer mark into the class itself */
 /* TODO: or should it check if it's a subclass, subsubclass, subsubsubclass, etc of a large_integer as well? */
 		c = MOO_OBJ_GET_CLASS(oop);
@@ -231,7 +231,7 @@ static int is_normalized_integer (moo_t* moo, moo_oop_t oop)
 
 MOO_INLINE static int is_bigint (moo_t* moo, moo_oop_t x)
 {
-	moo_oop_t c;
+	moo_oop_class_t c;
 
 	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(x));
 
@@ -540,7 +540,7 @@ static MOO_INLINE moo_oop_t expand_bigint (moo_t* moo, moo_oop_t oop, moo_oow_t 
 }
 
 
-static MOO_INLINE moo_oop_t _clone_bigint (moo_t* moo, moo_oop_t oop, moo_oow_t count, moo_oop_t _class)
+static MOO_INLINE moo_oop_t _clone_bigint (moo_t* moo, moo_oop_t oop, moo_oow_t count, moo_oop_class_t _class)
 {
 	moo_oop_t z;
 	moo_oow_t i;
@@ -567,20 +567,20 @@ static MOO_INLINE moo_oop_t clone_bigint (moo_t* moo, moo_oop_t oop, moo_oow_t c
 
 static MOO_INLINE moo_oop_t clone_bigint_negated (moo_t* moo, moo_oop_t oop, moo_oow_t count)
 {
-	moo_oop_t c;
+	moo_oop_class_t _class;
 
 	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(oop));
 	if (MOO_OBJ_GET_CLASS(oop) == moo->_large_positive_integer)
 	{
-		c = moo->_large_negative_integer;
+		_class = moo->_large_negative_integer;
 	}
 	else
 	{
 		MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(oop) == moo->_large_negative_integer);
-		c = moo->_large_positive_integer;
+		_class = moo->_large_positive_integer;
 	}
 
-	return _clone_bigint (moo, oop, count, c);
+	return _clone_bigint (moo, oop, count, _class);
 }
 
 static MOO_INLINE moo_oop_t clone_bigint_to_positive (moo_t* moo, moo_oop_t oop, moo_oow_t count)

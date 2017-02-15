@@ -6341,7 +6341,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 		if (modnamelen > 0)
 		{
-			if (moo_importmod (moo, (moo_oop_t)moo->c->cls.self_oop, modname, modnamelen) <= -1) return -1;
+			if (moo_importmod (moo, moo->c->cls.self_oop, modname, modnamelen) <= -1) return -1;
 		}
 
 		if (moo->c->cls.self_oop->trsize == moo->_nil &&

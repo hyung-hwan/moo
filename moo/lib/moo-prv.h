@@ -1036,9 +1036,9 @@ int moo_deletedic (
 );
 
 moo_oop_set_t moo_makedic (
-	moo_t*    moo,
-	moo_oop_t cls,
-	moo_oow_t size
+	moo_t*          moo,
+	moo_oop_class_t _class,
+	moo_oow_t       size
 );
 
 /* ========================================================================= */
@@ -1047,7 +1047,6 @@ moo_oop_set_t moo_makedic (
 moo_oop_process_t moo_makeproc (
 	moo_t* moo
 );
-
 
 /* ========================================================================= */
 /* bigint.c                                                                  */
@@ -1200,7 +1199,7 @@ void moo_closemod (
 
 int moo_importmod (
 	moo_t*            moo,
-	moo_oop_t         _class,
+	moo_oop_class_t   _class,
 	const moo_ooch_t* name,
 	moo_oow_t         len
 );

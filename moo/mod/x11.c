@@ -94,12 +94,6 @@ static moo_pfrc_t pf_disconnect (moo_t* moo, moo_ooi_t nargs)
 {
 	x11_t* x11;
 
-	if (nargs != 0)
-	{
-		moo_seterrnum (moo, MOO_EINVAL);
-		goto softfail;
-	}
-
 	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
 	MOO_DEBUG1 (moo, "<x11.disconnect> %p\n", x11->c);
@@ -115,33 +109,86 @@ softfail:
 	return MOO_PF_SUCCESS;
 }
 
-/* ------------------------------------------------------------------------ */
-
-static moo_pfrc_t pf_win_create (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_getfd (moo_t* moo, moo_ooi_t nargs)
 {
-	MOO_STACK_SETRET (moo, nargs, moo->_nil); 
-#if 0
+	x11_t* x11;
+
+	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+	MOO_DEBUG1 (moo, "<x11.getfd> %p\n", x11->c);
+
+	if (x11->c)
+	{
+		int c;
+
+		c = xcb_get_file_descriptor(x11->c);
+		if (!MOO_IN_SMOOI_RANGE(c)) goto error;
+		MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(c));
+	}
+	else
+	{
+	error:
+		MOO_STACK_SETRETTOERROR (moo, nargs); /* TODO: be more specific about error code */
+	}
+
+	return MOO_PF_SUCCESS;
+}
+
+
+static moo_pfrc_t pf_getevent (moo_t* moo, moo_ooi_t nargs)
+{
+	x11_t* x11;
+	xcb_generic_event_t* evt;
+
+	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+	MOO_DEBUG1 (moo, "<x11.__getevent> %p\n", x11->c);
+
+	evt = xcb_poll_for_event(x11->c);
+	if (evt)
+	{
+		MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(evt->response_type)); /* TODO: translate evt to the event object */
+	}
+	else
+	{
+		MOO_STACK_SETRET (moo, nargs, moo->_nil);
+	}
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_makewin (moo_t* moo, moo_ooi_t nargs)
+{
+	x11_t* x11;
+	xcb_screen_t* screen;
+	xcb_window_t win;
+
+	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+	MOO_DEBUG1 (moo, "<x11.__makewin> %p\n", x11->c);
+
 	screen = xcb_setup_roots_iterator(xcb_get_setup(x11->c)).data;
-	x11->mw = xcb_generate_id (xtn->c);
+	win = xcb_generate_id (x11->c);
 
 	xcb_create_window (x11->c, 
 		XCB_COPY_FROM_PARENT,
-		xtn->mw,
+		win,
 		screen->root,
 		0, 0, 300, 300, 10,
 		XCB_WINDOW_CLASS_INPUT_OUTPUT,
 		screen->root_visual,
 		0, MOO_NULL);
 
-	xcb_map_window (xtn->xcb, xtn->mw);
-	xcb_flush (xtn->xcb);
+/*TODO: use xcb_request_check() for error handling */
+	xcb_map_window (x11->c, win);
+	xcb_flush (x11->c);
 
-	xcb_generic_event_t* evt;
-	while ((evt = xcb_poll_for_event(xtn->xcb, 0)) 
-	{
-		/* TODO: dispatch event read */
-	}
-#endif
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(win)); /* TODO: write this function to return a window handle... */
+	return MOO_PF_SUCCESS;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
+static moo_pfrc_t pf_win_create (moo_t* moo, moo_ooi_t nargs)
+{
+	MOO_STACK_SETRET (moo, nargs, moo->_nil); 
 MOO_DEBUG0 (moo, "x11.window.create....\n");
 	return MOO_PF_SUCCESS;
 }
@@ -153,15 +200,20 @@ MOO_DEBUG0 (moo, "x11.window.destroy....\n");
 	return MOO_PF_SUCCESS;
 }
 
+
 /* ------------------------------------------------------------------------ */
 
 static moo_pfinfo_t x11_pfinfo[] =
 {
+	{ I, { '_','_','g','e','t','e','v','e','n','t','\0'},                  0, pf_getevent      },
+	{ I, { '_','_','m','a','k','e','w','i','n','\0'},                      0, pf_makewin       },
 	{ I, { 'c','o','n','n','e','c','t','\0' },                             0, pf_connect       },
-	{ I, { 'd','i','s','c','o','n','n','e','c','t','\0' },                 0, pf_disconnect    }
+	{ I, { 'd','i','s','c','o','n','n','e','c','t','\0' },                 0, pf_disconnect    },
+	{ I, { 'g','e','t','f','d','\0' },                                     0, pf_getfd         }
+	
 };
 
-static int x11_import (moo_t* moo, moo_mod_t* mod, moo_oop_t _class)
+static int x11_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
 	if (moo_setclasstrsize(moo, _class, MOO_SIZEOF(x11_t)) <= -1) return -1;
 	return moo_genpfmethods(moo, mod, _class, x11_pfinfo, MOO_COUNTOF(x11_pfinfo));
@@ -194,7 +246,7 @@ static moo_pfinfo_t x11_win_pfinfo[] =
 	{ I, { 'd','i','s','t','r','o','y','\0' },                             0, pf_win_destroy       }
 };
 
-static int x11_win_import (moo_t* moo, moo_mod_t* mod, moo_oop_t _class)
+static int x11_win_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
 	if (moo_setclasstrsize(moo, _class, MOO_SIZEOF(x11_win_t)) <= -1) return -1;
 	return moo_genpfmethods(moo, mod, _class, x11_win_pfinfo, MOO_COUNTOF(x11_win_pfinfo));

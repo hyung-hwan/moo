@@ -103,7 +103,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 	while (moo->symtab->bucket->slot[index] != moo->_nil) 
 	{
 		symbol = (moo_oop_char_t)moo->symtab->bucket->slot[index];
-		MOO_ASSERT (moo, MOO_CLASSOF(moo,symbol) == (moo_oop_t)moo->_symbol);
+		MOO_ASSERT (moo, MOO_CLASSOF(moo,symbol) == moo->_symbol);
 
 		if (len == MOO_OBJ_GET_SIZE(symbol) &&
 		    moo_equaloochars (ptr, symbol->slot, len))

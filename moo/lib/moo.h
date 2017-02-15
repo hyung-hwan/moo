@@ -353,10 +353,10 @@ typedef enum moo_obj_type_t moo_obj_type_t;
 #define MOO_OBJ_SET_FLAGS_TRAILER(oop,v)  MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_TRAILER_SHIFT, MOO_OBJ_FLAGS_TRAILER_BITS,  v)
 
 #define MOO_OBJ_GET_SIZE(oop) ((oop)->_size)
-#define MOO_OBJ_GET_CLASS(oop) ((oop)->_class)
+#define MOO_OBJ_GET_CLASS(oop) ((moo_oop_class_t)((oop)->_class))
 
 #define MOO_OBJ_SET_SIZE(oop,v) ((oop)->_size = (v))
-#define MOO_OBJ_SET_CLASS(oop,c) ((oop)->_class = (c))
+#define MOO_OBJ_SET_CLASS(oop,c) ((oop)->_class = (moo_oop_t)(c))
 
 /* [NOTE] this macro doesn't include the size of the trailer */
 #define MOO_OBJ_BYTESOF(oop) ((MOO_OBJ_GET_SIZE(oop) + MOO_OBJ_GET_FLAGS_EXTRA(oop)) * MOO_OBJ_GET_FLAGS_UNIT(oop))
@@ -697,7 +697,7 @@ struct moo_semaphore_t
 	moo_oop_t heap_ftime_nsec; /* firing time */
 
 	moo_oop_t io_index; 
-	moo_oop_t io_data;
+	moo_oop_t io_handle;
 	moo_oop_t io_mask; /* SmallInteger */
 };
 
@@ -759,9 +759,11 @@ typedef void (*moo_vmprim_cleanup_t) (moo_t* moo);
 typedef void (*moo_vmprim_gettime_t) (moo_t* moo, moo_ntime_t* now);
 typedef void (*moo_vmprim_sleep_t) (moo_t* moo, const moo_ntime_t* duration);
 
-typedef int (*moo_vmprim_muxadd_t) (moo_t* moo);
-typedef void (*moo_vmprim_muxdel_t) (moo_t* moo);
-typedef void (*moo_vmprim_muxwait_t) (moo_t* moo, const moo_ntime_t* duration);
+typedef int (*moo_vmprim_muxadd_t) (moo_t* moo, moo_oop_semaphore_t sem);
+typedef void (*moo_vmprim_muxdel_t) (moo_t* moo, moo_oop_semaphore_t sem);
+
+typedef void (*moo_vmprim_muxwait_cb_t) (moo_t* moo, int mask, void* ctx);
+typedef void (*moo_vmprim_muxwait_t) (moo_t* moo, const moo_ntime_t* duration, moo_vmprim_muxwait_cb_t muxwcb);
 
 struct moo_vmprim_t
 {
@@ -844,7 +846,7 @@ typedef int (*moo_mod_load_t) (
 typedef int (*moo_mod_import_t) (
 	moo_t*           moo,
 	moo_mod_t*       mod,
-	moo_oop_t        _class
+	moo_oop_class_t  _class
 );
 
 typedef moo_pfimpl_t (*moo_mod_query_t) (
@@ -938,39 +940,39 @@ struct moo_t
 	 *  Be sure to Keep these kernel class pointers registered in the 
 	 *  kernel_classes table in gc.c
 	 * ============================================================= */
-	moo_oop_t _apex; /* Apex */
-	moo_oop_t _undefined_object; /* UndefinedObject */
-	moo_oop_t _class; /* Class */
-	moo_oop_t _object; /* Object */
-	moo_oop_t _string; /* String */
+	moo_oop_class_t _apex; /* Apex */
+	moo_oop_class_t _undefined_object; /* UndefinedObject */
+	moo_oop_class_t _class; /* Class */
+	moo_oop_class_t _object; /* Object */
+	moo_oop_class_t _string; /* String */
 
-	moo_oop_t _symbol; /* Symbol */
-	moo_oop_t _array; /* Array */
-	moo_oop_t _byte_array; /* ByteArray */
-	moo_oop_t _symbol_set; /* SymbolSet */
-	moo_oop_t _dictionary;
-	moo_oop_t _system_dictionary; /* SystemDictionary */
+	moo_oop_class_t _symbol; /* Symbol */
+	moo_oop_class_t _array; /* Array */
+	moo_oop_class_t _byte_array; /* ByteArray */
+	moo_oop_class_t _symbol_set; /* SymbolSet */
+	moo_oop_class_t _dictionary;
+	moo_oop_class_t _system_dictionary; /* SystemDictionary */
 
-	moo_oop_t _namespace; /* Namespace */
-	moo_oop_t _pool_dictionary; /* PoolDictionary */
-	moo_oop_t _method_dictionary; /* MethodDictionary */
-	moo_oop_t _method; /* CompiledMethod */
-	moo_oop_t _association; /* Association */
+	moo_oop_class_t _namespace; /* Namespace */
+	moo_oop_class_t _pool_dictionary; /* PoolDictionary */
+	moo_oop_class_t _method_dictionary; /* MethodDictionary */
+	moo_oop_class_t _method; /* CompiledMethod */
+	moo_oop_class_t _association; /* Association */
 
-	moo_oop_t _method_context; /* MethodContext */
-	moo_oop_t _block_context; /* BlockContext */
-	moo_oop_t _process; /* Process */
-	moo_oop_t _semaphore; /* Semaphore */
-	moo_oop_t _process_scheduler; /* ProcessScheduler */
+	moo_oop_class_t _method_context; /* MethodContext */
+	moo_oop_class_t _block_context; /* BlockContext */
+	moo_oop_class_t _process; /* Process */
+	moo_oop_class_t _semaphore; /* Semaphore */
+	moo_oop_class_t _process_scheduler; /* ProcessScheduler */
 
-	moo_oop_t _error_class; /* Error */
-	moo_oop_t _true_class; /* True */
-	moo_oop_t _false_class; /* False */
-	moo_oop_t _character; /* Character */
-	moo_oop_t _small_integer; /* SmallInteger */
+	moo_oop_class_t _error_class; /* Error */
+	moo_oop_class_t _true_class; /* True */
+	moo_oop_class_t _false_class; /* False */
+	moo_oop_class_t _character; /* Character */
+	moo_oop_class_t _small_integer; /* SmallInteger */
 
-	moo_oop_t _large_positive_integer; /* LargePositiveInteger */
-	moo_oop_t _large_negative_integer; /* LargeNegativeInteger */
+	moo_oop_class_t _large_positive_integer; /* LargePositiveInteger */
+	moo_oop_class_t _large_negative_integer; /* LargeNegativeInteger */
 	/* =============================================================
 	 * END KERNEL CLASSES 
 	 * ============================================================= */
@@ -978,7 +980,7 @@ struct moo_t
 	/* =============================================================
 	 * KEY SYSTEM DICTIONARIES
 	 * ============================================================= */
-	moo_oop_t* tagged_classes[4];
+	moo_oop_class_t* tagged_classes[4];
 	moo_oop_set_t symtab; /* system-wide symbol table. instance of SymbolSet */
 	moo_oop_set_t sysdic; /* system dictionary. instance of SystemDictionary */
 	moo_oop_process_scheduler_t processor; /* instance of ProcessScheduler */
@@ -1351,15 +1353,15 @@ MOO_EXPORT void moo_gc (
  * 
  */
 MOO_EXPORT moo_oop_t moo_instantiate (
-	moo_t*          moo,
-	moo_oop_t       _class,
+	moo_t*           moo,
+	moo_oop_class_t  _class,
 	const void*      vptr,
-	moo_oow_t       vlen
+	moo_oow_t        vlen
 );
 
 MOO_EXPORT moo_oop_t moo_instantiatewithtrailer (
 	moo_t*           moo, 
-	moo_oop_t        _class,
+	moo_oop_class_t  _class,
 	moo_oow_t        vlen,
 	const moo_oob_t* trptr,
 	moo_oow_t        trlen
@@ -1453,9 +1455,9 @@ MOO_EXPORT int moo_inttoooi (
  * TRAILER MANAGEMENT
  * ========================================================================= */
 MOO_EXPORT int moo_setclasstrsize (
-	moo_t*      moo,
-	moo_oop_t   _class,
-	moo_oow_t   size
+	moo_t*          moo,
+	moo_oop_class_t _class,
+	moo_oow_t       size
 );
 
 MOO_EXPORT void* moo_getobjtrailer (
@@ -1505,14 +1507,13 @@ MOO_EXPORT void moo_freemem (
 	void*   ptr
 );
 
-
 /* =========================================================================
  * PRIMITIVE METHOD MANIPULATION
  * ========================================================================= */
 MOO_EXPORT int moo_genpfmethod (
 	moo_t*            moo,
 	moo_mod_t*        mod,
-	moo_oop_t         _class,
+	moo_oop_class_t   _class,
 	moo_method_type_t type,
 	const moo_ooch_t* mthname,
 	int               variadic,
@@ -1522,7 +1523,7 @@ MOO_EXPORT int moo_genpfmethod (
 MOO_EXPORT int moo_genpfmethods (
 	moo_t*              moo,
 	moo_mod_t*          mod,
-	moo_oop_t           _class,
+	moo_oop_class_t     _class,
 	const moo_pfinfo_t* pfinfo,
 	moo_oow_t           pfcount
 );

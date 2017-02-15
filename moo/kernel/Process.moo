@@ -426,12 +426,21 @@ class ProcessScheduler(Object)
 		self primitiveFailed.
 	}
 
-	"method signal: semaphore onInput: file
+	method signal: semaphore onInput: file
 	{
-	}"
-	"method signal: semaphore onOutput: file
+		<primitive: #_processor_add_input_semaphore>
+		self primitiveFailed.
+	}
+	method signal: semaphore onOutput: file
 	{
-	}"
+		<primitive: #_processor_add_output_semaphore>
+		self primitiveFailed.
+	}
+	method signal: semaphore onInOutput: file
+	{
+		<primitive: #_processor_add_inoutput_semaphore>
+		self primitiveFailed.
+	}
 
 	method return: object to: context
 	{

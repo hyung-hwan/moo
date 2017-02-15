@@ -107,6 +107,8 @@
 #	define __PRIMITIVE_NAME__ (&__FUNCTION__[4])
 #endif
 
+static void signal_io_semaphore (moo_t* moo, int mask, void* ctx);
+
 /* ------------------------------------------------------------------------- */
 static MOO_INLINE int vm_startup (moo_t* moo)
 {
@@ -139,7 +141,7 @@ static MOO_INLINE void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 
 static MOO_INLINE void vm_mux_wait (moo_t* moo, const moo_ntime_t* dur)
 {
-	moo->vmprim.mux_wait (moo, dur);
+	moo->vmprim.mux_wait (moo, dur, signal_io_semaphore);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -741,6 +743,7 @@ static void update_sem_heap (moo_t* moo, moo_ooi_t index, moo_oop_semaphore_t ne
 static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	moo_ooi_t index;
+	int n;
 
 	if (moo->sem_io_count >= SEM_IO_MAX)
 	{
@@ -764,18 +767,24 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 	}
 
 	MOO_ASSERT (moo, moo->sem_io_count <= MOO_SMOOI_MAX);
-
-	if (moo->vmprim.mux_add (moo) <= -1) /*TODO: pass data */
-	{
-		return -1;
-	}
+	MOO_ASSERT (moo, sem->io_index == MOO_SMOOI_TO_OOP(-1));
 
 	index = moo->sem_io_count;
 	moo->sem_io[index] = sem;
-	sem->heap_index = MOO_SMOOI_TO_OOP(index);
+	sem->io_index = MOO_SMOOI_TO_OOP(index);
 	moo->sem_io_count++;
 
-	return 0;
+	moo_pushtmp (moo, (moo_oop_t*)&sem);
+	n = moo->vmprim.mux_add (moo, sem);
+	moo_poptmp (moo);
+	if (n <= -1) 
+	{
+		/* roll back */
+		sem->io_index = MOO_SMOOI_TO_OOP(-1);
+		moo->sem_io_count--;
+	}
+MOO_DEBUG1 (moo, "ADDED TO SEM IO => sem_io_count => %d\n", (int)moo->sem_io_count);
+	return n;
 }
 
 static void delete_from_sem_io (moo_t* moo, moo_ooi_t index)
@@ -784,9 +793,10 @@ static void delete_from_sem_io (moo_t* moo, moo_ooi_t index)
 	moo_oop_semaphore_t sem, lastsem;
 
 	sem = moo->sem_io[index];
+	moo_pushtmp (moo, (moo_oop_t*)&sem);
+	moo->vmprim.mux_del (moo, sem); 
+	moo_poptmp (moo);
 	sem->io_index = MOO_SMOOI_TO_OOP(-1);
-
-	moo->vmprim.mux_del (moo); /* TODO: pass data... */
 
 	moo->sem_io_count--;
 	if (moo->sem_io_count > 0 && index != moo->sem_io_count)
@@ -797,6 +807,41 @@ static void delete_from_sem_io (moo_t* moo, moo_ooi_t index)
 		moo->sem_io[index] = lastsem;
 	}
 }
+
+
+static void signal_io_semaphore (moo_t* moo, int mask, void* ctx)
+{
+	moo_oow_t sem_io_index = (moo_oow_t)ctx;
+
+/* TODO: sanity check on the index. conditional handling on mask */
+	if (sem_io_index < moo->sem_io_count)
+	{
+		moo_oop_semaphore_t sem;
+		moo_oop_process_t proc;
+
+		sem = moo->sem_io[sem_io_index];
+		proc = signal_semaphore (moo, sem);
+
+		if (moo->processor->active == moo->nil_process && (moo_oop_t)proc != moo->_nil)
+		{
+			/* this is the only runnable process. 
+			 * switch the process to the running state.
+			 * it uses wake_new_process() instead of
+			 * switch_to_process() as there is no running 
+			 * process at this moment */
+			MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
+			MOO_ASSERT (moo, proc == moo->processor->runnable_head);
+
+			wake_new_process (moo, proc); /* switch to running */
+			moo->proc_switched = 1;
+		}
+	}
+	else
+	{
+		MOO_LOG1 (moo, MOO_LOG_WARN, "Warning - Invalid semaphore index %zu\n", sem_io_index);
+	}
+}
+/* ------------------------------------------------------------------------- */
 
 static moo_oop_process_t start_initial_process (moo_t* moo, moo_oop_context_t c)
 {
@@ -949,8 +994,8 @@ static moo_oop_method_t find_method (moo_t* moo, moo_oop_t receiver, const moo_o
 	int dic_no;
 /* TODO: implement method lookup cache */
 
-	cls = (moo_oop_class_t)MOO_CLASSOF(moo, receiver);
-	if ((moo_oop_t)cls == moo->_class)
+	cls = MOO_CLASSOF(moo, receiver);
+	if (cls == moo->_class)
 	{
 		/* receiver is a class object (an instance of Class) */
 		c = receiver; 
@@ -997,7 +1042,7 @@ static moo_oop_method_t find_method (moo_t* moo, moo_oop_t receiver, const moo_o
 	while (c != moo->_nil);
 
 not_found:
-	if ((moo_oop_t)cls == moo->_class)
+	if (cls == moo->_class)
 	{
 		/* the object is an instance of Class. find the method
 		 * in an instance method dictionary of Class also */
@@ -1189,7 +1234,8 @@ static moo_pfrc_t pf_log (moo_t* moo, moo_ooi_t nargs)
 			else if (MOO_OBJ_GET_FLAGS_TYPE(msg) == MOO_OBJ_TYPE_OOP)
 			{
 				/* visit only 1-level down into an array-like object */
-				moo_oop_t inner, _class;
+				moo_oop_t inner;
+				moo_oop_class_t _class;
 				moo_oow_t i, spec;
 
 				_class = MOO_CLASSOF(moo, msg);
@@ -1339,23 +1385,25 @@ static moo_pfrc_t pf_not_equal (moo_t* moo, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_class (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_oop_t rcv, c;
+	moo_oop_t rcv;
+	moo_oop_class_t _class;
 
 	MOO_ASSERT (moo, nargs ==  0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	c = MOO_CLASSOF(moo, rcv);
+	_class = MOO_CLASSOF(moo, rcv);
 
-	MOO_STACK_SETRET (moo, nargs, c);
+	MOO_STACK_SETRET (moo, nargs, (moo_oop_t)_class);
 	return MOO_PF_SUCCESS;
 }
 
 static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_oop_t _class, szoop, obj;
+	moo_oop_class_t _class;
+	moo_oop_t szoop, obj;
 	moo_oow_t size = 0; /* size of the variable/indexed part */
 
-	_class = MOO_STACK_GETRCV(moo, nargs);
+	_class = (moo_oop_class_t)MOO_STACK_GETRCV(moo, nargs);
 	if (MOO_CLASSOF(moo, _class) != moo->_class) 
 	{
 		/* the receiver is not a class object */
@@ -2091,24 +2139,20 @@ static moo_pfrc_t pf_processor_add_timed_semaphore (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_processor_add_io_semaphore (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t __processor_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, int mask)
 {
-	moo_oop_t rcv, sec, nsec;
+	moo_oop_t rcv, fd;
 	moo_oop_semaphore_t sem;
 
-	MOO_ASSERT (moo, nargs == 3);
+	MOO_ASSERT (moo, nargs == 2);
 
-	nsec = MOO_STACK_GETARG (moo, nargs, 2);
-	if (!MOO_OOP_IS_SMOOI(nsec)) return MOO_PF_FAILURE;
-
-	sec = MOO_STACK_GETARG(moo, nargs, 1);
+	fd = MOO_STACK_GETARG(moo, nargs, 1);
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 
-	/* ProcessScheduler>>signal:after: calls this primitive function. */
 	if (rcv != (moo_oop_t)moo->processor || 
 	    MOO_CLASSOF(moo,sem) != moo->_semaphore || 
-	    !MOO_OOP_IS_SMOOI(sec)) return MOO_PF_FAILURE;
+	    !MOO_OOP_IS_SMOOI(fd)) return MOO_PF_FAILURE;
 
 	if (MOO_OOP_IS_SMOOI(sem->io_index) && 
 	    sem->io_index != MOO_SMOOI_TO_OOP(-1))
@@ -2118,13 +2162,27 @@ static moo_pfrc_t pf_processor_add_io_semaphore (moo_t* moo, moo_ooi_t nargs)
 		MOO_ASSERT (moo, sem->io_index == MOO_SMOOI_TO_OOP(-1));
 	}
 
-/* TOOD: sanity check on argument 2 and 3 */
-	sem->io_data = MOO_STACK_GETARG(moo, nargs, 1);
-	sem->io_mask = MOO_STACK_GETARG(moo, nargs, 2);
-	if (add_to_sem_io (moo, sem) <= -1) return MOO_PF_HARD_FAILURE;
+	sem->io_handle = fd;
+	sem->io_mask = MOO_SMOOI_TO_OOP(mask);
+	if (add_to_sem_io (moo, sem) <= -1) return MOO_PF_HARD_FAILURE; /*TODO: let it return SUCESS but SETRET(error()); */
 
 	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
 	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_processor_add_input_semaphore (moo_t* moo, moo_ooi_t nargs)
+{
+	return __processor_add_io_semaphore (moo, nargs, 1);
+}
+
+static moo_pfrc_t pf_processor_add_output_semaphore (moo_t* moo, moo_ooi_t nargs)
+{
+	return __processor_add_io_semaphore (moo, nargs, 2);
+}
+
+static moo_pfrc_t pf_processor_add_inoutput_semaphore (moo_t* moo, moo_ooi_t nargs)
+{
+	return __processor_add_io_semaphore (moo, nargs, 3);
 }
 
 static moo_pfrc_t pf_processor_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
@@ -2156,7 +2214,7 @@ static moo_pfrc_t pf_processor_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 	if (MOO_OOP_IS_SMOOI(sem->io_index) &&
 	    sem->io_index != MOO_SMOOI_TO_OOP(-1))
 	{
-		delete_from_sem_io (moo, MOO_OOP_TO_SMOOI(sem->heap_index));
+		delete_from_sem_io (moo, MOO_OOP_TO_SMOOI(sem->io_index));
 		MOO_ASSERT (moo, sem->io_index == MOO_SMOOI_TO_OOP(-1));
 	}
 
@@ -2672,7 +2730,9 @@ static pf_t pftab[] =
 
 	{   1,  1,  pf_processor_schedule,               "_processor_schedule"            },
 	{   2,  3,  pf_processor_add_timed_semaphore,    "_processor_add_timed_semaphore" },
-	{   3,  3,  pf_processor_add_io_semaphore,       "_processor_add_io_semaphore" },
+	{   2,  2,  pf_processor_add_input_semaphore,    "_processor_add_input_semaphore" },
+	{   2,  2,  pf_processor_add_output_semaphore,   "_processor_add_output_semaphore" },
+	{   2,  2,  pf_processor_add_inoutput_semaphore, "_processor_add_inoutput_semaphore" },
 	{   1,  1,  pf_processor_remove_semaphore,       "_processor_remove_semaphore" },
 	{   2,  2,  pf_processor_return_to,              "_processor_return_to" },
 
@@ -2710,6 +2770,7 @@ int moo_getpfnum (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 {
 	int i;
 
+/* TODO: have the pftable sorted alphabetically and do binary search */
 	for (i = 0; i < MOO_COUNTOF(pftab); i++)
 	{
 		if (moo_compoocharsbcstr(ptr, len, pftab[i].name) == 0)
@@ -3096,9 +3157,15 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				MOO_SUBNTIME (&ft, &ft, (moo_ntime_t*)&now);
 
 				if (moo->sem_io_count > 0)
+				{
+MOO_DEBUG0 (moo, "ABOUT TO CALL VM_MUX_WAIT()\n");
 					vm_mux_wait (moo, &ft);
+				}
 				else
-					vm_sleep (moo, &ft); /* TODO: change this to i/o multiplexer??? */
+				{
+MOO_DEBUG0 (moo, "ABOUT TO CALL VM_MUX_SLEEP()\n");
+					vm_sleep (moo, &ft);
+				}
 				vm_gettime (moo, &now);
 			}
 			else 
@@ -3106,7 +3173,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				/* there is a running process. go on */
 				break;
 			}
-		} 
+		}
 		while (moo->sem_heap_count > 0 && !moo->abort_req);
 	}
 
@@ -3795,7 +3862,7 @@ int moo_execute (moo_t* moo)
 				t = (moo_oop_t)moo_makedic (moo, moo->_dictionary, b1 + 10);
 				MOO_STACK_PUSH (moo, t);
 				 */
-				MOO_STACK_PUSH (moo, moo->_dictionary);
+				MOO_STACK_PUSH (moo, (moo_oop_t)moo->_dictionary);
 				MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(b1));
 				if (send_message (moo, moo->dicnewsym, 0, 1) <= -1) goto oops;
 				break;

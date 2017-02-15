@@ -531,7 +531,7 @@ void moo_closemod (moo_t* moo, moo_mod_data_t* mdp)
 	}
 }
 
-int moo_importmod (moo_t* moo, moo_oop_t _class, const moo_ooch_t* name, moo_oow_t len)
+int moo_importmod (moo_t* moo, moo_oop_class_t _class, const moo_ooch_t* name, moo_oow_t len)
 {
 	moo_rbt_pair_t* pair;
 	moo_mod_data_t* mdp;
@@ -540,7 +540,7 @@ int moo_importmod (moo_t* moo, moo_oop_t _class, const moo_ooch_t* name, moo_oow
 	/* moo_openmod(), moo_closemod(), etc call a user-defined callback.
 	 * i need to protect _class in case the user-defined callback allocates 
 	 * a OOP memory chunk and GC occurs */
-	moo_pushtmp (moo, &_class);
+	moo_pushtmp (moo, (moo_oop_t*)&_class);
 
 	pair = moo_rbt_search (&moo->modtab, name, len);
 	if (pair)
@@ -644,13 +644,12 @@ moo_pfimpl_t moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen
 /* -------------------------------------------------------------------------- */
 
 /* add a new primitive method */
-int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_t _class, moo_method_type_t type, const moo_ooch_t* mthname, int variadic, const moo_ooch_t* pfname)
+int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_method_type_t type, const moo_ooch_t* mthname, int variadic, const moo_ooch_t* pfname)
 {
 	/* NOTE: this function is a subset of add_compiled_method() in comp.c */
 
 	moo_oop_char_t mnsym, pfidsym;
 	moo_oop_method_t mth;
-	moo_oop_class_t cls;
 	moo_oow_t tmp_count = 0, i;
 	moo_ooi_t arg_count = 0;
 	moo_oocs_t cs;
@@ -661,9 +660,8 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_t _class, moo_method_ty
 
 	if (!pfname) pfname = mthname;
 
-	cls = (moo_oop_class_t)_class;
-	moo_pushtmp (moo, (moo_oop_t*)&cls); tmp_count++;
-	MOO_ASSERT (moo, MOO_CLASSOF(moo, (moo_oop_t)cls->mthdic[type]) == moo->_method_dictionary);
+	moo_pushtmp (moo, (moo_oop_t*)&_class); tmp_count++;
+	MOO_ASSERT (moo, MOO_CLASSOF(moo, (moo_oop_t)_class->mthdic[type]) == moo->_method_dictionary);
 
 	for (i = 0; mthname[i]; i++)
 	{
@@ -678,16 +676,16 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_t _class, moo_method_ty
 	if (arg_count > 0 && mthname[i - 1] != ':') 
 	{
 	oops_inval:
-		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - invalid name\n", mthname, cls->name);
+		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - invalid name\n", mthname, _class->name);
 		moo->errnum = MOO_EINVAL;
 		goto oops;
 	}
 
 	cs.ptr = (moo_ooch_t*)mthname;
 	cs.len = i;
-	if (moo_lookupdic (moo, cls->mthdic[type], &cs) != MOO_NULL)
+	if (moo_lookupdic (moo, _class->mthdic[type], &cs) != MOO_NULL)
 	{
-		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - duplicate\n", mthname, cls->name);
+		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - duplicate\n", mthname, _class->name);
 		moo->errnum = MOO_EEXIST;
 		goto oops;
 	}
@@ -702,14 +700,14 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_t _class, moo_method_ty
 	    moo_concatoocstrtosbuf(moo, dot, 0) <= -1 ||
 	    moo_concatoocstrtosbuf(moo, pfname, 0) <=  -1) 
 	{
-		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - VM memory shortage\n", mthname, cls->name);
+		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - VM memory shortage\n", mthname, _class->name);
 		return -1;
 	}
 
 	pfidsym = (moo_oop_char_t)moo_makesymbol (moo, moo->sbuf[0].ptr, moo->sbuf[0].len);
 	if (!pfidsym) 
 	{
-		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - symbol instantiation failure\n", mthname, cls->name);
+		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - symbol instantiation failure\n", mthname, _class->name);
 		goto oops;
 	}
 	moo_pushtmp (moo, (moo_oop_t*)&pfidsym); tmp_count++;
@@ -721,7 +719,7 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_t _class, moo_method_ty
 #endif
 	if (!mth)
 	{
-		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - method instantiation failure\n", mthname, cls->name);
+		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - method instantiation failure\n", mthname, _class->name);
 		goto oops;
 	}
 
@@ -729,7 +727,7 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_t _class, moo_method_ty
 	mth->slot[0] = (moo_oop_t)pfidsym;
 
 	/* premable should contain the index to the literal frame which is always 0 */
-	mth->owner = cls;
+	mth->owner = _class;
 	mth->name = mnsym;
 	if (variadic) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_VARIADIC;
 	mth->preamble = MOO_SMOOI_TO_OOP(MOO_METHOD_MAKE_PREAMBLE(MOO_METHOD_PREAMBLE_NAMED_PRIMITIVE, 0, preamble_flags));
@@ -740,13 +738,13 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_t _class, moo_method_ty
 
 /* TODO: emit BCODE_RETURN_NIL as a fallback or self primitiveFailed? or anything else?? */
 
-	if (!moo_putatdic (moo, cls->mthdic[type], (moo_oop_t)mnsym, (moo_oop_t)mth)) 
+	if (!moo_putatdic (moo, _class->mthdic[type], (moo_oop_t)mnsym, (moo_oop_t)mth)) 
 	{
-		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - failed to add to method dictionary\n", mthname, cls->name);
+		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - failed to add to method dictionary\n", mthname, _class->name);
 		goto oops;
 	}
 
-	MOO_DEBUG2 (moo, "Generated primitive function method [%js] in [%O]\n", mthname, cls->name);
+	MOO_DEBUG2 (moo, "Generated primitive function method [%js] in [%O]\n", mthname, _class->name);
 
 	moo_poptmps (moo, tmp_count); tmp_count = 0;
 	return 0;
@@ -756,12 +754,12 @@ oops:
 	return -1;
 }
 
-int moo_genpfmethods (moo_t* moo, moo_mod_t* mod, moo_oop_t _class, const moo_pfinfo_t* pfinfo, moo_oow_t pfcount)
+int moo_genpfmethods (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, const moo_pfinfo_t* pfinfo, moo_oow_t pfcount)
 {
 	int ret = 0;
 	moo_oow_t i;
 
-	moo_pushtmp (moo, &_class);
+	moo_pushtmp (moo, (moo_oop_t*)&_class);
 	for (i = 0; i < pfcount; i++)
 	{
 		if (moo_genpfmethod (moo, mod, _class, pfinfo[i].type, pfinfo[i].mthname, pfinfo[i].variadic, MOO_NULL) <= -1) 
@@ -801,53 +799,51 @@ moo_pfimpl_t moo_findpfimpl (moo_t* moo, const moo_pfinfo_t* pfinfo, moo_oow_t p
 
 /* -------------------------------------------------------------------------- */
 
-int moo_setclasstrsize (moo_t* moo, moo_oop_t _class, moo_oow_t size)
+int moo_setclasstrsize (moo_t* moo, moo_oop_class_t _class, moo_oow_t size)
 {
-	register moo_oop_class_t c;
 	moo_oop_class_t sc;
 	moo_oow_t spec;
 
 	MOO_ASSERT (moo, MOO_CLASSOF(moo, _class) == moo->_class);
 	MOO_ASSERT (moo, size <= MOO_SMOOI_MAX);
 
-	c = (moo_oop_class_t)_class;
-	if ((moo_oop_t)c == moo->_method) 
+	if (_class == moo->_method) 
 	{
 		/* the bytes code emitted by the compiler go to the trailer part
 		 * regardless of the trailer size. you're not allowed to change it */
 		MOO_DEBUG3 (moo, "Not allowed to set trailer size to %zu on the %.*js class\n", 
 			size,
-			MOO_OBJ_GET_SIZE(c->name),
-			MOO_OBJ_GET_CHAR_SLOT(c->name));
+			MOO_OBJ_GET_SIZE(_class->name),
+			MOO_OBJ_GET_CHAR_SLOT(_class->name));
 		goto eperm;
 	}
 
-	spec = MOO_OOP_TO_SMOOI(c->spec);
+	spec = MOO_OOP_TO_SMOOI(_class->spec);
 	if (MOO_CLASS_SPEC_IS_INDEXED(spec) && MOO_CLASS_SPEC_INDEXED_TYPE(spec) != MOO_OBJ_TYPE_OOP)
 	{
 		MOO_DEBUG3 (moo, "Not allowed to set trailer size to %zu on the %.*js class representing a non-pointer object\n", 
 			size,
-			MOO_OBJ_GET_SIZE(c->name),
-			MOO_OBJ_GET_CHAR_SLOT(c->name));
+			MOO_OBJ_GET_SIZE(_class->name),
+			MOO_OBJ_GET_CHAR_SLOT(_class->name));
 		goto eperm;
 	}
 
-	if (c->trsize != moo->_nil)
+	if (_class->trsize != moo->_nil)
 	{
 		MOO_DEBUG3 (moo, "Not allowed to re-set trailer size to %zu on the %.*js class\n", 
 			size,
-			MOO_OBJ_GET_SIZE(c->name),
-			MOO_OBJ_GET_CHAR_SLOT(c->name));
+			MOO_OBJ_GET_SIZE(_class->name),
+			MOO_OBJ_GET_CHAR_SLOT(_class->name));
 		goto eperm;
 	}
 
-	sc = (moo_oop_class_t)c->superclass;
+	sc = (moo_oop_class_t)_class->superclass;
 	if (MOO_OOP_IS_SMOOI(sc->trsize) && size < MOO_OOP_TO_SMOOI(sc->trsize))
 	{
 		MOO_DEBUG6 (moo, "Not allowed to set the trailer size of %.*js to be smaller(%zu) than that(%zu) of the superclass %.*js\n",
 			size,
-			MOO_OBJ_GET_SIZE(c->name),
-			MOO_OBJ_GET_CHAR_SLOT(c->name),
+			MOO_OBJ_GET_SIZE(_class->name),
+			MOO_OBJ_GET_CHAR_SLOT(_class->name),
 			MOO_OOP_TO_SMOOI(sc->trsize),
 			MOO_OBJ_GET_SIZE(sc->name),
 			MOO_OBJ_GET_CHAR_SLOT(sc->name));
@@ -855,11 +851,11 @@ int moo_setclasstrsize (moo_t* moo, moo_oop_t _class, moo_oow_t size)
 	}
 
 	/* you can only set the trailer size once when it's not set yet */
-	c->trsize = MOO_SMOOI_TO_OOP(size);
+	_class->trsize = MOO_SMOOI_TO_OOP(size);
 	MOO_DEBUG3 (moo, "Set trailer size to %zu on the %.*js class\n", 
 		size,
-		MOO_OBJ_GET_SIZE(c->name),
-		MOO_OBJ_GET_CHAR_SLOT(c->name));
+		MOO_OBJ_GET_SIZE(_class->name),
+		MOO_OBJ_GET_CHAR_SLOT(_class->name));
 	return 0;
 
 eperm:
