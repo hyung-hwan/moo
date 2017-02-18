@@ -28,9 +28,8 @@
 #include <moo-utl.h>
 
 #include <errno.h>
-#include <string.h>
-
 #include <xcb/xcb.h>
+#include <stdlib.h>
 
 #define C MOO_METHOD_CLASS
 #define I MOO_METHOD_INSTANCE
@@ -40,12 +39,15 @@ typedef struct x11_t x11_t;
 struct x11_t
 {
 	xcb_connection_t* c;
+	xcb_window_t w;
+	xcb_intern_atom_reply_t* dwcr; /* TODO: move this to each window */
 };
 
 typedef struct x11_win_t x11_win_t;
 struct x11_win_t
 {
 	xcb_window_t w;
+	
 };
 
 /* ------------------------------------------------------------------------ */
@@ -63,6 +65,13 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 	}
 
 	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+
+	if (x11->c)
+	{
+		MOO_DEBUG0 (moo, "<x11.connect> Unable to connect multiple times\n");
+		goto softfail;
+	}
+
 	/*
 	name = MOO_STACK_GETARG(moo, nargs, 0);
 
@@ -98,8 +107,11 @@ static moo_pfrc_t pf_disconnect (moo_t* moo, moo_ooi_t nargs)
 
 	MOO_DEBUG1 (moo, "<x11.disconnect> %p\n", x11->c);
 
-	xcb_disconnect (x11->c);
-	x11->c = MOO_NULL;
+	if (x11->c)
+	{
+		xcb_disconnect (x11->c);
+		x11->c = MOO_NULL;
+	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
@@ -145,12 +157,28 @@ static moo_pfrc_t pf_getevent (moo_t* moo, moo_ooi_t nargs)
 	evt = xcb_poll_for_event(x11->c);
 	if (evt)
 	{
-		MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(evt->response_type)); /* TODO: translate evt to the event object */
+		uint8_t evttype = evt->response_type & ~0x80;
+
+		if (evttype == XCB_CLIENT_MESSAGE && 
+		    ((xcb_client_message_event_t*)evt)->data.data32[0] == x11->dwcr->atom)
+		{
+			xcb_unmap_window (x11->c, x11->w);
+			xcb_destroy_window (x11->c, x11->w);
+			xcb_flush (x11->c);
+			MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(9999)); /* TODO: translate evt to the event object */
+		}
+		else
+		{
+			MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(evttype)); /* TODO: translate evt to the event object */
+		}
+		free (evt);
 	}
 	else
 	{
+MOO_DEBUG0(moo, "BBBBBBBBBBBBbb GOT NO EVENT...\n");
 		MOO_STACK_SETRET (moo, nargs, moo->_nil);
 	}
+
 	return MOO_PF_SUCCESS;
 }
 
@@ -158,28 +186,49 @@ static moo_pfrc_t pf_makewin (moo_t* moo, moo_ooi_t nargs)
 {
 	x11_t* x11;
 	xcb_screen_t* screen;
-	xcb_window_t win;
+	uint32_t mask;
+	uint32_t values[2];
+	xcb_intern_atom_cookie_t cookie;
+	xcb_intern_atom_reply_t* reply;
 
 	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 	MOO_DEBUG1 (moo, "<x11.__makewin> %p\n", x11->c);
 
 	screen = xcb_setup_roots_iterator(xcb_get_setup(x11->c)).data;
-	win = xcb_generate_id (x11->c);
+	x11->w = xcb_generate_id (x11->c);
 
-	xcb_create_window (x11->c, 
+	mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
+	values[0] = screen->white_pixel;
+	values[1] = XCB_EVENT_MASK_KEY_RELEASE |
+	            XCB_EVENT_MASK_BUTTON_PRESS |
+	            XCB_EVENT_MASK_EXPOSURE |
+	            /*XCB_EVENT_MASK_POINTER_MOTION |*/
+	            XCB_EVENT_MASK_ENTER_WINDOW |
+	            XCB_EVENT_MASK_LEAVE_WINDOW |
+	            XCB_EVENT_MASK_VISIBILITY_CHANGE;
+	xcb_create_window (
+		x11->c, 
 		XCB_COPY_FROM_PARENT,
-		win,
+		x11->w,
 		screen->root,
 		0, 0, 300, 300, 10,
 		XCB_WINDOW_CLASS_INPUT_OUTPUT,
 		screen->root_visual,
-		0, MOO_NULL);
+		mask, values);
 
-/*TODO: use xcb_request_check() for error handling */
-	xcb_map_window (x11->c, win);
+	cookie = xcb_intern_atom(x11->c, 1, 12, "WM_PROTOCOLS");
+	reply = xcb_intern_atom_reply(x11->c, cookie, 0);
+
+	cookie = xcb_intern_atom(x11->c, 0, 16, "WM_DELETE_WINDOW");
+	x11->dwcr = xcb_intern_atom_reply(x11->c, cookie, 0);
+
+	xcb_change_property(x11->c, XCB_PROP_MODE_REPLACE, x11->w, reply->atom, 4, 32, 1, &x11->dwcr->atom);
+
+/*TODO: use xcb_request_check() for error handling. you need to call create_x11->wdwo_checked(). xxx_checked()... */
+	xcb_map_window (x11->c, x11->w);
 	xcb_flush (x11->c);
 
-	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(win)); /* TODO: write this function to return a window handle... */
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(x11->w)); /* TODO: write this function to return a window handle... */
 	return MOO_PF_SUCCESS;
 }
 

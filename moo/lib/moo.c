@@ -162,6 +162,7 @@ void moo_fini (moo_t* moo)
 		moo_freemem (moo, moo->sem_io);
 		moo->sem_io_capa = 0;
 		moo->sem_io_count = 0;
+		moo->sem_io_wait_count = 0;
 	}
 
 	for (cb = moo->cblist; cb; cb = cb->next)
@@ -173,6 +174,7 @@ void moo_fini (moo_t* moo)
 	moo_rbt_fini (&moo->modtab);
 
 /* TOOD: persistency? storing objects to image file? */
+
 	moo_killheap (moo, moo->newheap);
 	moo_killheap (moo, moo->curheap);
 	moo_killheap (moo, moo->permheap);

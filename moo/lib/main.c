@@ -832,9 +832,10 @@ static int mux_add (moo_t* moo, moo_oop_semaphore_t sem)
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_mask));
 
 	mask = MOO_OOP_TO_SMOOI(sem->io_mask);
-	ev.events = 0;
-	if (mask & 1) ev.events |= EPOLLIN; /*TODO: define io mask constants... */
-	if (mask & 2) ev.events |= EPOLLOUT;
+	ev.events = EPOLLET; /* edge trigger */
+	if (mask & MOO_SEMAPHORE_IO_MASK_INPUT) ev.events |= EPOLLIN; /*TODO: define io mask constants... */
+	if (mask & MOO_SEMAPHORE_IO_MASK_OUTPUT) ev.events |= EPOLLOUT;
+	/* don't check MOO_SEMAPHORE_IO_MASK_ERROR and MOO_SEMAPHORE_IO_MASK_HANGUP as it's implicitly enabled by epoll() */
 	ev.data.ptr = (void*)MOO_OOP_TO_SMOOI(sem->io_index);
 
 	if (ev.events == 0) 
@@ -882,10 +883,10 @@ static void mux_wait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_cb_
 		--n;
 
 		mask = 0;
-		if (ev[n].events & EPOLLIN) mask |= 1; /* TODO define constants for IO Mask */
-		if (ev[n].events & EPOLLOUT) mask |= 2;
-		if (ev[n].events & EPOLLERR) mask |= 4;
-		if (ev[n].events & EPOLLHUP) mask |= 8;
+		if (ev[n].events & EPOLLIN) mask |= MOO_SEMAPHORE_IO_MASK_INPUT; /* TODO define constants for IO Mask */
+		if (ev[n].events & EPOLLOUT) mask |= MOO_SEMAPHORE_IO_MASK_OUTPUT;
+		if (ev[n].events & EPOLLERR) mask |= MOO_SEMAPHORE_IO_MASK_ERROR;
+		if (ev[n].events & EPOLLHUP) mask |= MOO_SEMAPHORE_IO_MASK_HANGUP;
 
 		muxwcb (moo, mask, ev[n].data.ptr);
 	}

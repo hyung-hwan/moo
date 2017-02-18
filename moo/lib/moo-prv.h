@@ -475,6 +475,7 @@ struct moo_compiler_t
 	struct
 	{
 		moo_method_type_t type;
+		int native;
 
 		/* method source text */
 		moo_oocs_t text;

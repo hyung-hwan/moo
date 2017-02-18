@@ -684,6 +684,11 @@ struct moo_process_t
 	moo_oop_t slot[1]; /* process stack */
 };
 
+#define MOO_SEMAPHORE_IO_MASK_INPUT   1
+#define MOO_SEMAPHORE_IO_MASK_OUTPUT  2
+#define MOO_SEMAPHORE_IO_MASK_HANGUP  4
+#define MOO_SEMAPHORE_IO_MASK_ERROR   8
+
 struct moo_semaphore_t
 {
 	MOO_OBJ_HEADER;
@@ -1004,6 +1009,7 @@ struct moo_t
 	moo_oop_semaphore_t* sem_io;
 	moo_oow_t sem_io_count;
 	moo_oow_t sem_io_capa;
+	moo_oow_t sem_io_wait_count;
 
 	moo_oop_t* tmp_stack[256]; /* stack for temporaries */
 	moo_oow_t tmp_count;

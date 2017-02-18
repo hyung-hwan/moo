@@ -99,6 +99,7 @@ static struct voca_t
 	{  8, { '#','i','n','c','l','u','d','e'                               } },
 	{  7, { '#','l','i','w','o','r','d'                                   } },
 	{  6, { 'm','e','t','h','o','d'                                       } },
+	{  7, { '#','n','a','t','i','v','e'                                   } },
 	{  3, { 'n','i','l'                                                   } },
 	{  8, { '#','p','o','i','n','t','e','r'                               } },
 	{  7, { 'p','o','o','l','d','i','c'                                   } },
@@ -144,6 +145,7 @@ enum voca_id_t
 	VOCA_INCLUDE_S,
 	VOCA_LIWORD_S,
 	VOCA_METHOD,
+	VOCA_NATIVE_S,
 	VOCA_NIL,
 	VOCA_POINTER_S,
 	VOCA_POOLDIC,
@@ -5773,6 +5775,7 @@ static int compile_method_definition (moo_t* moo)
 {
 	/* clear data required to compile a method */
 	moo->c->mth.type = MOO_METHOD_INSTANCE;
+	moo->c->mth.native = 0;
 	moo->c->mth.text.len = 0;
 	moo->c->mth.assignees.len = 0;
 	moo->c->mth.binsels.len = 0;
@@ -5794,6 +5797,7 @@ static int compile_method_definition (moo_t* moo)
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
 		/* process method modifiers  */
+	next_modifier:
 		GET_TOKEN (moo);
 
 		if (is_token_symbol(moo, VOCA_CLASS_S))
@@ -5801,6 +5805,17 @@ static int compile_method_definition (moo_t* moo)
 			/* method(#class) */
 			moo->c->mth.type = MOO_METHOD_CLASS;
 			GET_TOKEN (moo);
+		}
+		else if (is_token_symbol(moo, VOCA_NATIVE_S))
+		{
+			/* method(#native) */
+			moo->c->mth.native = 1;
+			GET_TOKEN (moo);
+		}
+
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA)
+		{
+			goto next_modifier;
 		}
 
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
@@ -5815,25 +5830,38 @@ static int compile_method_definition (moo_t* moo)
 
 	if (compile_method_name(moo) <= -1) return -1;
 
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
+	if (moo->c->mth.native)
 	{
-		/* { expected */
-		set_syntax_error (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
-		return -1;
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
+		{
+			/* . expected */
+			set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
+	}
+	else
+	{
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
+		{
+			/* { expected */
+			set_syntax_error (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
+
+		GET_TOKEN (moo);
+
+		if (compile_method_temporaries(moo) <= -1 ||
+		    compile_method_primitive(moo) <= -1 ||
+		    compile_method_statements(moo) <= -1) return -1;
+
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
+		{
+			/* } expected */
+			set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
 	}
 
-	GET_TOKEN (moo);
-
-	if (compile_method_temporaries(moo) <= -1 ||
-	    compile_method_primitive(moo) <= -1 ||
-	    compile_method_statements(moo) <= -1) return -1;
-
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
-	{
-		/* } expected */
-		set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
-		return -1;
-	}
 	GET_TOKEN (moo);
 
 	/* add a compiled method to the method dictionary */

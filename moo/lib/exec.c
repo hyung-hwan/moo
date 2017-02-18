@@ -557,6 +557,8 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 		unchain_from_semaphore (moo, proc);
 		resume_process (moo, proc); /* TODO: error check */
 
+		if (MOO_OOP_TO_SMOOI(sem->io_index) >= 0) moo->sem_io_wait_count--;
+
 		/* return the resumed(runnable) process */
 		return proc;
 	}
@@ -586,6 +588,8 @@ static void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 		chain_into_semaphore (moo, proc, sem); 
 
 		MOO_ASSERT (moo, sem->waiting_tail == proc);
+
+		if (MOO_OOP_TO_SMOOI(sem->io_index) >= 0) moo->sem_io_wait_count++;
 
 		MOO_ASSERT (moo, moo->processor->active != proc);
 	}
@@ -789,7 +793,6 @@ MOO_DEBUG1 (moo, "ADDED TO SEM IO => sem_io_count => %d\n", (int)moo->sem_io_cou
 
 static void delete_from_sem_io (moo_t* moo, moo_ooi_t index)
 {
-
 	moo_oop_semaphore_t sem, lastsem;
 
 	sem = moo->sem_io[index];
@@ -835,6 +838,7 @@ static void signal_io_semaphore (moo_t* moo, int mask, void* ctx)
 			wake_new_process (moo, proc); /* switch to running */
 			moo->proc_switched = 1;
 		}
+
 	}
 	else
 	{
@@ -2172,17 +2176,17 @@ static moo_pfrc_t __processor_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, int
 
 static moo_pfrc_t pf_processor_add_input_semaphore (moo_t* moo, moo_ooi_t nargs)
 {
-	return __processor_add_io_semaphore (moo, nargs, 1);
+	return __processor_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_MASK_INPUT);
 }
 
 static moo_pfrc_t pf_processor_add_output_semaphore (moo_t* moo, moo_ooi_t nargs)
 {
-	return __processor_add_io_semaphore (moo, nargs, 2);
+	return __processor_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_MASK_OUTPUT);
 }
 
 static moo_pfrc_t pf_processor_add_inoutput_semaphore (moo_t* moo, moo_ooi_t nargs)
 {
-	return __processor_add_io_semaphore (moo, nargs, 3);
+	return __processor_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_MASK_INPUT | MOO_SEMAPHORE_IO_MASK_OUTPUT);
 }
 
 static moo_pfrc_t pf_processor_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
@@ -3156,7 +3160,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				/* no running process */
 				MOO_SUBNTIME (&ft, &ft, (moo_ntime_t*)&now);
 
-				if (moo->sem_io_count > 0)
+				if (moo->sem_io_wait_count > 0)
 				{
 MOO_DEBUG0 (moo, "ABOUT TO CALL VM_MUX_WAIT()\n");
 					vm_mux_wait (moo, &ft);
@@ -3177,7 +3181,11 @@ MOO_DEBUG0 (moo, "ABOUT TO CALL VM_MUX_SLEEP()\n");
 		while (moo->sem_heap_count > 0 && !moo->abort_req);
 	}
 
-	if (moo->sem_io_count > 0) vm_mux_wait (moo, MOO_NULL);
+	if (moo->sem_io_wait_count > 0) 
+	{
+MOO_DEBUG0 (moo, "ABOUT TO CALL VM_MUX_WAIT 222()\n");
+		vm_mux_wait (moo, MOO_NULL);
+	}
 
 	if (moo->processor->active == moo->nil_process) 
 	{
@@ -3238,6 +3246,13 @@ int moo_execute (moo_t* moo)
 #endif
 
 	MOO_ASSERT (moo, moo->active_context != MOO_NULL);
+
+/* TODO: initialize semaphore stuffs 
+ *   sem_heap
+ *   sem_io.
+ *   sem_list.
+ * these can be dirty if this function is called again esepcially after failure.
+ */
 
 	if (vm_startup(moo) <= -1) goto oops;
 	vm_startup_called = 1;
