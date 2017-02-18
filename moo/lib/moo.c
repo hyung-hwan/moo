@@ -541,7 +541,8 @@ int moo_importmod (moo_t* moo, moo_oop_class_t _class, const moo_ooch_t* name, m
 
 	/* moo_openmod(), moo_closemod(), etc call a user-defined callback.
 	 * i need to protect _class in case the user-defined callback allocates 
-	 * a OOP memory chunk and GC occurs */
+	 * a OOP memory chunk and GC occurs. */
+
 	moo_pushtmp (moo, (moo_oop_t*)&_class);
 
 	pair = moo_rbt_search (&moo->modtab, name, len);

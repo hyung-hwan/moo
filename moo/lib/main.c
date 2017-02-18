@@ -364,9 +364,9 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		/* length including the prefix and the name. but excluding the postfix */
 		xlen  = len + bcslen; 
 
-		/* convert a period(.) to a dash(-) */
 		for (i = len; i < xlen; i++) 
 		{
+			/* convert a period(.) to a dash(-) */
 			if (bufptr[i] == '.') bufptr[i] = '-';
 		}
  

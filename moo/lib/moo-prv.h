@@ -451,6 +451,9 @@ struct moo_compiler_t
 		moo_oow_t superfqn_capa;
 		moo_ioloc_t superfqn_loc;
 
+		moo_oocs_t modname; /* module name after 'from' */
+		moo_oow_t modname_capa;
+
 		/* instance variable, class variable, class instance variable */
 		moo_oocs_t vars[3]; 
 		moo_oow_t vars_capa[3];

@@ -42,6 +42,12 @@
 
 #define INVALID_IP MOO_TYPE_MAX(moo_oow_t)
 
+#define PFTYPE_NONE       0
+#define PFTYPE_NUMBERED   1
+#define PFTYPE_NAMED      2
+#define PFTYPE_EXCEPTION  3
+#define PFTYPE_ENSURE     4
+
 enum class_mod_t
 {
 	CLASS_INDEXED   = (1 << 0)
@@ -2470,6 +2476,12 @@ static MOO_INLINE int set_superclass_fqn (moo_t* moo, const moo_oocs_t* name)
 	return 0;
 }
 
+static MOO_INLINE int set_class_modname (moo_t* moo, const moo_oocs_t* name)
+{
+	if (copy_string_to (moo, name, &moo->c->cls.modname, &moo->c->cls.modname_capa, 0, '\0') <= -1) return -1;
+	return 0;
+}
+
 static MOO_INLINE int add_class_level_variable (moo_t* moo, var_type_t index, const moo_oocs_t* name)
 {
 	int n;
@@ -3368,7 +3380,7 @@ static int compile_method_primitive (moo_t* moo)
 					    MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx))
 					{
 						/* external named primitive containing a period. */
-						moo->c->mth.pftype = 2; 
+						moo->c->mth.pftype = PFTYPE_NAMED; 
 						moo->c->mth.pfnum = lit_idx;
 						break;
 					}
@@ -3383,7 +3395,7 @@ static int compile_method_primitive (moo_t* moo)
 					return -1;
 				}
 
-				moo->c->mth.pftype = 1; 
+				moo->c->mth.pftype = PFTYPE_NUMBERED; 
 				moo->c->mth.pfnum = pfnum;
 				break;
 			}
@@ -3398,11 +3410,11 @@ static int compile_method_primitive (moo_t* moo)
 	{
 /* TODO: exception handler is supposed to be used by BlockContext on:do:. 
  *       it needs to check the number of arguments at least */
-		moo->c->mth.pftype = 3;
+		moo->c->mth.pftype = PFTYPE_EXCEPTION;
 	}
 	else if (is_token_word(moo, VOCA_ENSURE))
 	{
-		moo->c->mth.pftype = 4;
+		moo->c->mth.pftype = PFTYPE_ENSURE;
 	}
 	else
 	{
@@ -5570,7 +5582,8 @@ static int add_compiled_method (moo_t* moo)
 	if (!name) return -1;
 	moo_pushtmp (moo, (moo_oop_t*)&name); tmp_count++;
 
-	/* The variadic data part passed to moo_instantiate() is not GC-safe */
+	/* The variadic data part passed to moo_instantiate() is not GC-safe. 
+	 * let's delay initialization of variadic data a bit. */
 #if defined(MOO_USE_METHOD_TRAILER)
 	mth = (moo_oop_method_t)moo_instantiatewithtrailer (moo, moo->_method, moo->c->mth.literal_count, moo->c->mth.code.ptr, moo->c->mth.code.len);
 #else
@@ -5706,24 +5719,24 @@ static int add_compiled_method (moo_t* moo)
 			}
 		}
 	}
-	else if (moo->c->mth.pftype == 1)
+	else if (moo->c->mth.pftype == PFTYPE_NUMBERED)
 	{
 		preamble_code = MOO_METHOD_PREAMBLE_PRIMITIVE;
 		preamble_index = moo->c->mth.pfnum;
 	}
-	else if (moo->c->mth.pftype == 2)
+	else if (moo->c->mth.pftype == PFTYPE_NAMED)
 	{
 		preamble_code = MOO_METHOD_PREAMBLE_NAMED_PRIMITIVE;
 		preamble_index = moo->c->mth.pfnum; /* index to literal frame */
 	}
-	else if (moo->c->mth.pftype == 3)
+	else if (moo->c->mth.pftype == PFTYPE_EXCEPTION)
 	{
 		preamble_code = MOO_METHOD_PREAMBLE_EXCEPTION;
 		preamble_index = 0;
 	}
 	else 
 	{
-		MOO_ASSERT (moo, moo->c->mth.pftype == 4);
+		MOO_ASSERT (moo, moo->c->mth.pftype == PFTYPE_ENSURE);
 		preamble_code = MOO_METHOD_PREAMBLE_ENSURE;
 		preamble_index = 0;
 	}
@@ -5789,7 +5802,7 @@ static int compile_method_definition (moo_t* moo)
 	moo->c->mth.literal_count = 0;
 	moo->c->mth.balit_count = 0;
 	moo->c->mth.arlit_count = 0;
-	moo->c->mth.pftype = 0;
+	moo->c->mth.pftype = PFTYPE_NONE;
 	moo->c->mth.pfnum = 0;
 	moo->c->mth.blk_depth = 0;
 	moo->c->mth.code.len = 0;
@@ -5832,12 +5845,33 @@ static int compile_method_definition (moo_t* moo)
 
 	if (moo->c->mth.native)
 	{
+		moo_oow_t lit_idx;
+
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
 		{
 			/* . expected */
 			set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
+
+		/* TODO: i can check if the native method is available at compile time by querying the module.
+		 *       do the check depending on the compiler option */
+
+
+		//moo->c->cls.self_oop->modname + "." + moo->c->mth.name and make symbol.
+#if 0
+		if (add_symbol_literal(moo, xxx, 0, &lit_idx) <= -1 ||
+		    !MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx))
+		{
+			/* TODO: change error code */
+			set_syntax_error (moo, MOO_SYNERR_PFID, TOKEN_LOC(moo), MOO_NULL);
+			return -1;
+		}
+
+		/* external named primitive containing a period. */
+		moo->c->mth.pftype = PFTYPE_NAMED; 
+		moo->c->mth.pfnum = lit_idx;
+#endif
 	}
 	else
 	{
@@ -5929,6 +5963,13 @@ static int make_defined_class (moo_t* moo)
 	if (!tmp) return -1;
 	moo->c->cls.self_oop->name = (moo_oop_char_t)tmp;
 
+	if (moo->c->cls.modname.len > 0)
+	{
+		tmp = moo_makesymbol (moo, moo->c->cls.modname.ptr, moo->c->cls.modname.len);
+		if (!tmp) return -1;
+		moo->c->cls.self_oop->modname = tmp;
+	}
+
 	tmp = moo_makestring (moo, moo->c->cls.vars[VAR_INSTANCE].ptr, moo->c->cls.vars[VAR_INSTANCE].len);
 	if (!tmp) return -1;
 	moo->c->cls.self_oop->instvars = (moo_oop_char_t)tmp;
@@ -6000,8 +6041,6 @@ static int __compile_class_definition (moo_t* moo, int extend)
 	 * NOTE: when extending a class, class-module-import and variable-definition are not allowed.
 	 */
 	moo_oop_association_t ass;
-	moo_ooch_t modname[MOO_MOD_NAME_LEN_MAX + 1];
-	moo_oow_t modnamelen = 0;
 
 	if (!extend && TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
@@ -6096,6 +6135,8 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		/* extending class */
 		MOO_ASSERT (moo, moo->c->cls.flags == 0);
 
+		MOO_INFO2 (moo, "Extending a class %.*js\n", moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
+
 		/*ass = moo_lookupsysdic(moo, &moo->c->cls.name);*/
 		ass = moo_lookupdic(moo, moo->c->cls.ns_oop, &moo->c->cls.name);
 		if (ass && 
@@ -6118,8 +6159,8 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 		moo->c->cls.super_oop = moo->c->cls.self_oop->superclass;
 
-		MOO_ASSERT (moo, (moo_oop_t)moo->c->cls.super_oop == moo->_nil || 
-		             MOO_CLASSOF(moo, moo->c->cls.super_oop) == moo->_class);
+		MOO_ASSERT (moo, moo->c->cls.super_oop == moo->_nil || 
+		                 MOO_CLASSOF(moo, moo->c->cls.super_oop) == moo->_class);
 	}
 	else
 	{
@@ -6243,6 +6284,8 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 		if (is_token_word (moo, VOCA_FROM))
 		{
+			/* handle the module importing(from) part.
+			 *     class XXX from 'mod.name' */
 			GET_TOKEN (moo);
 			if (TOKEN_TYPE(moo) != MOO_IOTOK_STRLIT)
 			{
@@ -6250,16 +6293,20 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				return -1;
 			}
 
-			if (TOKEN_NAME_LEN(moo) < 1 || 
+			if (TOKEN_NAME_LEN(moo) <= 0 || 
 			    TOKEN_NAME_LEN(moo) > MOO_MOD_NAME_LEN_MAX ||
-			    moo_findoochar(TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo), '_'))
+			    moo_findoochar(TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo), '-') )
 			{
+				/* check for a bad module name. 
+				 * also disallow a dash in the name - i like converting
+				 * a period to a dash when mapping the module name to an
+				 * actual module file. disallowing a dash lowers confusion
+				 * when loading a module. */
 				set_syntax_error (moo, MOO_SYNERR_MODNAME, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
-			modnamelen = TOKEN_NAME_LEN(moo);
-			moo_copyoochars (modname, TOKEN_NAME_PTR(moo), modnamelen);
+			if (set_class_modname (moo, TOKEN_NAME(moo)) <= -1) return -1;
 
 			GET_TOKEN (moo);
 		}
@@ -6367,17 +6414,25 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 		if (make_defined_class(moo) <= -1) return -1;
 
-		if (modnamelen > 0)
+		if (moo->c->cls.modname.len > 0)
 		{
-			if (moo_importmod (moo, moo->c->cls.self_oop, modname, modnamelen) <= -1) return -1;
+			MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->c->cls.self_oop->modname) == moo->_symbol);
+			/* [NOTE]
+			 *  even if the modname field is set in the class object itself
+			 *  by make_define_class(), i pass the module name in the compiler
+			 *  memory(not part of the object memory) to moo_importmod().
+			 *  no big overhead as it's already available. but Accessing 
+			 *  this extra module name, i'm free from GC headache */
+			if (moo_importmod (moo, moo->c->cls.self_oop, moo->c->cls.modname.ptr, moo->c->cls.modname.len) <= -1) return -1;
 		}
 
 		if (moo->c->cls.self_oop->trsize == moo->_nil &&
 		    moo->c->cls.self_oop->superclass != moo->_nil)
 		{
-			/* [NOTE] 
-			 *  update the trailer size field after module importing 
-			 *  as the importer can set the trailer size legitimately */
+			/* the trailer size has not been set by the module importer.
+			 * if the superclass has the trailer size set, this class must
+			 * inherit so that the inherited methods work well when they
+			 * access the trailer space */
 			moo->c->cls.self_oop->trsize = ((moo_oop_class_t)moo->c->cls.self_oop->superclass)->trsize;
 		}
 	}
@@ -6419,9 +6474,13 @@ static int compile_class_definition (moo_t* moo, int extend)
 	moo->c->cls.indexed_type = MOO_OBJ_TYPE_OOP;
 
 	moo->c->cls.name.len = 0;
+	moo->c->cls.fqn.len = 0;
 	moo->c->cls.supername.len = 0;
+	moo->c->cls.superfqn.len = 0;
 	MOO_MEMSET (&moo->c->cls.fqn_loc, 0, MOO_SIZEOF(moo->c->cls.fqn_loc));
 	MOO_MEMSET (&moo->c->cls.superfqn_loc, 0, MOO_SIZEOF(moo->c->cls.superfqn_loc));
+
+	moo->c->cls.modname.len = 0;
 
 	MOO_ASSERT (moo, MOO_COUNTOF(moo->c->cls.var_count) == MOO_COUNTOF(moo->c->cls.vars));
 	for (i = 0; i < MOO_COUNTOF(moo->c->cls.var_count); i++) 
@@ -6769,6 +6828,7 @@ static void fini_compiler (moo_t* moo)
 		if (moo->c->tok.name.ptr) moo_freemem (moo, moo->c->tok.name.ptr);
 		if (moo->c->cls.fqn.ptr) moo_freemem (moo, moo->c->cls.fqn.ptr);
 		if (moo->c->cls.superfqn.ptr) moo_freemem (moo, moo->c->cls.superfqn.ptr);
+		if (moo->c->cls.modname.ptr) moo_freemem (moo, moo->c->cls.modname.ptr);
 
 		for (i = 0; i < MOO_COUNTOF(moo->c->cls.vars); i++)
 		{

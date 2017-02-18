@@ -446,7 +446,7 @@ struct moo_set_t
 	moo_oop_oop_t bucket; /* Array */
 };
 
-#define MOO_CLASS_NAMED_INSTVARS 13
+#define MOO_CLASS_NAMED_INSTVARS 14
 typedef struct moo_class_t moo_class_t;
 typedef struct moo_class_t* moo_oop_class_t;
 struct moo_class_t
@@ -460,6 +460,7 @@ struct moo_class_t
 	moo_oop_t      subclasses;    /* Array of subclasses */
 
 	moo_oop_char_t name;          /* Symbol */
+	moo_oop_t modname;            /* Symbol if importing a module. nil if not. */
 
 	/* == NEVER CHANGE THIS ORDER OF 3 ITEMS BELOW == */
 	moo_oop_char_t instvars;      /* String */
