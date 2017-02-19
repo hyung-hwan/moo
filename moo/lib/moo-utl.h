@@ -41,12 +41,12 @@ MOO_EXPORT moo_oow_t moo_hashbytes (
 #if defined(MOO_HAVE_INLINE)
 	static MOO_INLINE moo_oow_t moo_hashbchars (const moo_bch_t* ptr, moo_oow_t len)
 	{
-		return moo_hashbytes((const moo_oob_t*)ptr,len * MOO_SIZEOF(moo_bch_t));
+		return moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_bch_t));
 	}
 
 	static MOO_INLINE moo_oow_t moo_hashuchars (const moo_uch_t* ptr, moo_oow_t len)
 	{
-		return moo_hashbytes((const moo_oob_t*)ptr,len * MOO_SIZEOF(moo_uch_t));
+		return moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_uch_t));
 	}
 
 	static MOO_INLINE moo_oow_t moo_hashwords (const moo_oow_t* ptr, moo_oow_t len)
@@ -59,8 +59,8 @@ MOO_EXPORT moo_oow_t moo_hashbytes (
 		return moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oohw_t));
 	}
 #else
-#	define moo_hashbchars(ptr,len)    moo_hashbytes((const moo_oob_t*)ptr,len * MOO_SIZEOF(moo_bch_t))
-#	define moo_hashuchars(ptr,len)    moo_hashbytes((const moo_oob_t*)ptr,len * MOO_SIZEOF(moo_uch_t))
+#	define moo_hashbchars(ptr,len)    moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_bch_t))
+#	define moo_hashuchars(ptr,len)    moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_uch_t))
 #	define moo_hashwords(ptr,len)     moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oow_t))
 #	define moo_hashhalfwords(ptr,len) moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oohw_t))
 #endif

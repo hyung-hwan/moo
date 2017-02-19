@@ -47,7 +47,6 @@ typedef struct x11_win_t x11_win_t;
 struct x11_win_t
 {
 	xcb_window_t w;
-	
 };
 
 /* ------------------------------------------------------------------------ */
@@ -265,7 +264,8 @@ static moo_pfinfo_t x11_pfinfo[] =
 static int x11_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
 	if (moo_setclasstrsize(moo, _class, MOO_SIZEOF(x11_t)) <= -1) return -1;
-	return moo_genpfmethods(moo, mod, _class, x11_pfinfo, MOO_COUNTOF(x11_pfinfo));
+	/*return moo_genpfmethods(moo, mod, _class, x11_pfinfo, MOO_COUNTOF(x11_pfinfo));*/
+	return 0;
 }
 
 static moo_pfimpl_t x11_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)

@@ -1207,6 +1207,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_CLASSNAME,     /* wrong class name */
 	MOO_SYNERR_CLASSTRSIZE,   /* non-pointer class inheriting a superclass with trailer size set */
 	MOO_SYNERR_DCLBANNED,     /* #dcl not allowed */
+	MOO_SYNERR_NATIVEBANNED,  /* #native not allowed */
 	MOO_SYNERR_MTHNAME,       /* wrong method name */
 	MOO_SYNERR_MTHNAMEDUP,    /* duplicate method name */
 	MOO_SYNERR_ARGNAMEDUP,    /* duplicate argument name */

@@ -5832,6 +5832,12 @@ static int compile_method_definition (moo_t* moo)
 		else if (is_token_symbol(moo, VOCA_NATIVE_S))
 		{
 			/* method(#native) */
+			if (moo->c->cls.self_oop->modname == moo->_nil)
+			{
+				set_syntax_error (moo, MOO_SYNERR_NATIVEBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				return -1;
+			}
+
 			moo->c->mth.native = 1;
 			GET_TOKEN (moo);
 		}
@@ -5855,7 +5861,8 @@ static int compile_method_definition (moo_t* moo)
 
 	if (moo->c->mth.native)
 	{
-		moo_oow_t lit_idx;
+		moo_oow_t litidx, savedlen;
+		moo_oocs_t tmp;
 
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
 		{
@@ -5867,21 +5874,29 @@ static int compile_method_definition (moo_t* moo)
 		/* TODO: i can check if the native method is available at compile time by querying the module.
 		 *       do the check depending on the compiler option */
 
-
-		//moo->c->cls.self_oop->modname + "." + moo->c->mth.name and make symbol.
-#if 0
-		if (add_symbol_literal(moo, xxx, 0, &lit_idx) <= -1 ||
-		    !MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx))
+		/* combine the module name and the method name delimited by a period
+		 * when doing it, let me reuse the cls.modname buffer and restore it
+		 * back once done */
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->c->cls.self_oop->modname) == moo->_symbol);
+		savedlen = moo->c->cls.modname.len;
+		tmp.ptr = ((moo_oop_char_t)moo->c->cls.self_oop->modname)->slot;
+		tmp.len = MOO_OBJ_GET_SIZE(moo->c->cls.self_oop->modname);
+		if (copy_string_to (moo, &tmp, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '\0') <= -1 ||
+		    copy_string_to (moo, &moo->c->mth.name, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '.') <= -1 ||
+		    add_symbol_literal(moo, &moo->c->cls.modname, savedlen, &litidx) <= -1)
 		{
-			/* TODO: change error code */
-			set_syntax_error (moo, MOO_SYNERR_PFID, TOKEN_LOC(moo), MOO_NULL);
+			moo->c->cls.modname.len = savedlen;
 			return -1;
 		}
+		moo->c->cls.modname.len = savedlen;
+
+		/* the symbol added must be the first literal to the current method.
+		 * so this condition must be true. */
+		MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(litidx));
 
 		/* external named primitive containing a period. */
 		moo->c->mth.pftype = PFTYPE_NAMED; 
-		moo->c->mth.pfnum = lit_idx;
-#endif
+		moo->c->mth.pfnum = litidx;
 	}
 	else
 	{
