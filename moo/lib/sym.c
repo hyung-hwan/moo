@@ -88,14 +88,6 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 	moo_oow_t index;
 	moo_oop_char_t symbol;
 
-	MOO_ASSERT (moo, len > 0);
-	if (len <= 0) 
-	{
-		/* i don't allow an empty symbol name */
-		moo->errnum = MOO_EINVAL;
-		return MOO_NULL;
-	}
-
 	MOO_ASSERT (moo, MOO_CLASSOF(moo,moo->symtab->bucket) == moo->_array);
 	index = moo_hashoochars(ptr, len) % MOO_OBJ_GET_SIZE(moo->symtab->bucket);
 
@@ -175,6 +167,7 @@ moo_oop_t moo_makesymbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 {
 	return find_or_make_symbol (moo, ptr, len, 1);
 }
+
 moo_oop_t moo_findsymbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 {
 	return find_or_make_symbol (moo, ptr, len, 0);

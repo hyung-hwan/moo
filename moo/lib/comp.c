@@ -1238,30 +1238,42 @@ static int get_strlit (moo_t* moo)
 	 * normal-character := character-except-single-quote
 	 */
 
-	moo_ooci_t c = moo->c->lxc.c;
-	SET_TOKEN_TYPE (moo, MOO_IOTOK_STRLIT);
+	moo_ooci_t oc, c;
 
-	do 
+	oc = moo->c->lxc.c; /* opening quote */
+
+	SET_TOKEN_TYPE (moo, MOO_IOTOK_STRLIT);
+	GET_CHAR_TO (moo, c);
+
+	if (c != oc)
 	{
 		do 
 		{
-			ADD_TOKEN_CHAR (moo, c);
-			GET_CHAR_TO (moo, c);
-
-			if (c == MOO_UCI_EOF) 
+			do 
 			{
-				/* string not closed */
-				set_syntax_error (moo, MOO_SYNERR_STRNC, TOKEN_LOC(moo) /*&moo->c->lxc.l*/, MOO_NULL);
-				return -1;
-			}
-		} 
-		while (c != '\'');
+			in_strlit:
+				ADD_TOKEN_CHAR (moo, c);
+				GET_CHAR_TO (moo, c);
 
-		/* 'c' must be a single quote at this point*/
+				if (c == MOO_UCI_EOF) 
+				{
+					/* string not closed */
+					set_syntax_error (moo, MOO_SYNERR_STRNC, TOKEN_LOC(moo) /*&moo->c->lxc.l*/, MOO_NULL);
+					return -1;
+				}
+			} 
+			while (c != oc);
+
+			/* 'c' must be a single quote at this point*/
+			GET_CHAR_TO (moo, c);
+		} 
+		while (c == oc); /* if the next character is a single quote, it becomes a literal single quote character. */
+	}
+	else
+	{
 		GET_CHAR_TO (moo, c);
-	} 
-	while (c == '\''); /* if the next character is a single quote,
-	                      it becomes a literal single quote character. */
+		if (c == oc) goto in_strlit;
+	}
 
 	unget_char (moo, &moo->c->lxc);
 	return 0;
@@ -1509,7 +1521,6 @@ retry:
 			break;
 
 		case '\'': /* string literal */
-			GET_CHAR (moo);
 			if (get_strlit(moo) <= -1) return -1;
 			break;
 
@@ -1612,9 +1623,8 @@ retry:
 
 				case '\'':
 					/* quoted symbol literal */
-					GET_CHAR (moo);
-					if (get_strlit(moo) <= -1) return -1;
-					SET_TOKEN_TYPE (moo, MOO_IOTOK_SYMLIT);
+					if (get_strlit(moo) <= -1) return -1; /* reuse the string literal tokenizer */
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_SYMLIT); /* change the symbol type to symbol */
 					break;
 
 				default:
