@@ -1175,70 +1175,73 @@ typedef moo_ooi_t (*moo_ioimpl_t) (
 enum moo_synerrnum_t
 {
 	MOO_SYNERR_NOERR,
-	MOO_SYNERR_ILCHR,         /* illegal character */
-	MOO_SYNERR_CMTNC,         /* comment not closed */
-	MOO_SYNERR_STRNC,         /* string not closed */
-	MOO_SYNERR_CLTNT,         /* character literal not terminated */
-	MOO_SYNERR_HLTNT,         /* hased literal not terminated */
-	MOO_SYNERR_CHARLIT,       /* wrong character literal */
-	MOO_SYNERR_COLON,         /* : expected */
-	MOO_SYNERR_STRING,        /* string expected */
-	MOO_SYNERR_RADIX,         /* invalid radix */
-	MOO_SYNERR_RADNUMLIT,     /* invalid numeric literal with radix */
-	MOO_SYNERR_BYTERANGE,     /* byte too small or too large */
-	MOO_SYNERR_ERRLIT,        /* wrong error literal */
-	MOO_SYNERR_LBRACE,        /* { expected */
-	MOO_SYNERR_RBRACE,        /* } expected */
-	MOO_SYNERR_LPAREN,        /* ( expected */
-	MOO_SYNERR_RPAREN,        /* ) expected */
-	MOO_SYNERR_RBRACK,        /* ] expected */
-	MOO_SYNERR_PERIOD,        /* . expected */
-	MOO_SYNERR_COMMA,         /* , expected */
-	MOO_SYNERR_VBAR,          /* | expected */
-	MOO_SYNERR_GT,            /* > expected */
-	MOO_SYNERR_ASSIGN,        /* := expected */
-	MOO_SYNERR_IDENT,         /* identifier expected */
-	MOO_SYNERR_INTEGER,       /* integer expected */
-	MOO_SYNERR_PRIMITIVE,     /* primitive: expected */
-	MOO_SYNERR_DIRECTIVE,     /* wrong directive */
-	MOO_SYNERR_CLASSUNDEF,    /* undefined class */
-	MOO_SYNERR_CLASSDUP,      /* duplicate class */
-	MOO_SYNERR_CLASSCONTRA,   /* contradictory class */
-	MOO_SYNERR_CLASSNAME,     /* wrong class name */
-	MOO_SYNERR_CLASSTRSIZE,   /* non-pointer class inheriting a superclass with trailer size set */
-	MOO_SYNERR_DCLBANNED,     /* #dcl not allowed */
-	MOO_SYNERR_NATIVEBANNED,  /* #native not allowed */
-	MOO_SYNERR_MTHNAME,       /* wrong method name */
-	MOO_SYNERR_MTHNAMEDUP,    /* duplicate method name */
-	MOO_SYNERR_ARGNAMEDUP,    /* duplicate argument name */
-	MOO_SYNERR_TMPRNAMEDUP,   /* duplicate temporary variable name */
-	MOO_SYNERR_VARNAMEDUP,    /* duplicate variable name */
-	MOO_SYNERR_BLKARGNAMEDUP, /* duplicate block argument name */
-	MOO_SYNERR_VARUNDCL,      /* undeclared variable */
-	MOO_SYNERR_VARUNUSE,      /* unsuable variable in compiled code */
-	MOO_SYNERR_VARINACC,      /* inaccessible variable - e.g. accessing an instance variable from a class method is not allowed. */
-	MOO_SYNERR_VARAMBIG,      /* ambiguious variable - e.g. the variable is found in multiple pool dictionaries imported */
-	MOO_SYNERR_PRIMARY,       /* wrong expression primary */
-	MOO_SYNERR_TMPRFLOOD,     /* too many temporaries */
-	MOO_SYNERR_ARGFLOOD,      /* too many arguments */
-	MOO_SYNERR_BLKTMPRFLOOD,  /* too many block temporaries */
-	MOO_SYNERR_BLKARGFLOOD,   /* too many block arguments */
-	MOO_SYNERR_BLKFLOOD,      /* too large block */
-	MOO_SYNERR_ARREXPFLOOD,   /* too large array expression */
-	MOO_SYNERR_PFNUM,         /* wrong primitive number */
-	MOO_SYNERR_PFID,          /* wrong primitive identifier */
-	MOO_SYNERR_MODNAME,       /* wrong module name */
-	MOO_SYNERR_INCLUDE,       /* #include error */
-	MOO_SYNERR_NAMESPACE,     /* wrong namespace name */
-	MOO_SYNERR_POOLDIC,       /* wrong pool dictionary */
-	MOO_SYNERR_POOLDICDUP,    /* duplicate pool dictionary */
-	MOO_SYNERR_LITERAL,       /* literal expected */
-	MOO_SYNERR_NOTINLOOP,     /* break or continue not within a loop */
-	MOO_SYNERR_INBLOCK,       /* break or continue within a block */
-	MOO_SYNERR_WHILE,         /* while expected */
-	MOO_SYNERR_NOASSKEY,      /* missing association key */
-	MOO_SYNERR_NOASSVALUE,    /* missing association value */
-	MOO_SYNERR_NOASSOC        /* missing association */
+	MOO_SYNERR_ILCHR,           /* illegal character */
+	MOO_SYNERR_CMTNC,           /* comment not closed */
+	MOO_SYNERR_STRNC,           /* string not closed */
+	MOO_SYNERR_CLTNT,           /* character literal not terminated */
+	MOO_SYNERR_HLTNT,           /* hased literal not terminated */
+	MOO_SYNERR_CHARLITINVAL,    /* wrong character literal */
+	MOO_SYNERR_COLON,           /* : expected */
+	MOO_SYNERR_STRING,          /* string expected */
+	MOO_SYNERR_RADIXINVAL,      /* invalid radix */
+	MOO_SYNERR_RADNUMLITINVAL,  /* invalid numeric literal with radix */
+	MOO_SYNERR_BYTERANGE,       /* byte too small or too large */
+	MOO_SYNERR_ERRLITINVAL,     /* wrong error literal */
+	MOO_SYNERR_LBRACE,          /* { expected */
+	MOO_SYNERR_RBRACE,          /* } expected */
+	MOO_SYNERR_LPAREN,          /* ( expected */
+	MOO_SYNERR_RPAREN,          /* ) expected */
+	MOO_SYNERR_RBRACK,          /* ] expected */
+	MOO_SYNERR_PERIOD,          /* . expected */
+	MOO_SYNERR_COMMA,           /* , expected */
+	MOO_SYNERR_VBAR,            /* | expected */
+	MOO_SYNERR_GT,              /* > expected */
+	MOO_SYNERR_ASSIGN,          /* := expected */
+	MOO_SYNERR_IDENT,           /* identifier expected */
+	MOO_SYNERR_INTEGER,         /* integer expected */
+	MOO_SYNERR_PRIMITIVE,       /* primitive: expected */
+	MOO_SYNERR_DIRECTIVEINVAL,  /* wrong directive */
+	MOO_SYNERR_CLASSUNDEF,      /* undefined class */
+	MOO_SYNERR_CLASSDUPL,       /* duplicate class */
+	MOO_SYNERR_CLASSCONTRA,     /* contradictory class */
+	MOO_SYNERR_CLASSNAMEINVAL,  /* wrong class name */
+	MOO_SYNERR_CLASSTRSIZE,     /* non-pointer class inheriting a superclass with trailer size set */
+	MOO_SYNERR_DCLBANNED,       /* #dcl not allowed */
+	MOO_SYNERR_MODIFIER,        /* modifier expected */
+	MOO_SYNERR_MODIFIERINVAL,   /* wrong modifier */
+	MOO_SYNERR_MODIFIERBANNED,  /* modifier not allowed */
+	MOO_SYNERR_MODIFIERDUPL,    /* duplicate modifier */
+	MOO_SYNERR_MTHNAME,         /* wrong method name */
+	MOO_SYNERR_MTHNAMEDUPL,     /* duplicate method name */
+	MOO_SYNERR_ARGNAMEDUPL,     /* duplicate argument name */
+	MOO_SYNERR_TMPRNAMEDUPL,    /* duplicate temporary variable name */
+	MOO_SYNERR_VARNAMEDUPL,     /* duplicate variable name */
+	MOO_SYNERR_BLKARGNAMEDUPL,  /* duplicate block argument name */
+	MOO_SYNERR_VARUNDCL,        /* undeclared variable */
+	MOO_SYNERR_VARUNUSE,        /* unsuable variable in compiled code */
+	MOO_SYNERR_VARINACC,        /* inaccessible variable - e.g. accessing an instance variable from a class method is not allowed. */
+	MOO_SYNERR_VARAMBIG,        /* ambiguious variable - e.g. the variable is found in multiple pool dictionaries imported */
+	MOO_SYNERR_PRIMARYINVAL,    /* wrong expression primary */
+	MOO_SYNERR_TMPRFLOOD,       /* too many temporaries */
+	MOO_SYNERR_ARGFLOOD,        /* too many arguments */
+	MOO_SYNERR_BLKTMPRFLOOD,    /* too many block temporaries */
+	MOO_SYNERR_BLKARGFLOOD,     /* too many block arguments */
+	MOO_SYNERR_BLKFLOOD,        /* too large block */
+	MOO_SYNERR_ARREXPFLOOD,     /* too large array expression */
+	MOO_SYNERR_PFNUMINVAL,      /* wrong primitive number */
+	MOO_SYNERR_PFIDINVAL,       /* wrong primitive identifier */
+	MOO_SYNERR_MODNAMEINVAL,    /* wrong module name */
+	MOO_SYNERR_INCLUDE,         /* #include error */
+	MOO_SYNERR_NAMESPACEINVAL,  /* wrong namespace name */
+	MOO_SYNERR_POOLDICINVAL,    /* wrong pool dictionary */
+	MOO_SYNERR_POOLDICDUPL,     /* duplicate pool dictionary */
+	MOO_SYNERR_LITERAL,         /* literal expected */
+	MOO_SYNERR_NOTINLOOP,       /* break or continue not within a loop */
+	MOO_SYNERR_INBLOCK,         /* break or continue within a block */
+	MOO_SYNERR_WHILE,           /* while expected */
+	MOO_SYNERR_NOASSKEY,        /* missing association key */
+	MOO_SYNERR_NOASSVALUE,      /* missing association value */
+	MOO_SYNERR_NOASSOC          /* missing association */
 };
 typedef enum moo_synerrnum_t moo_synerrnum_t;
 

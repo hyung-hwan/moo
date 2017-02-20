@@ -76,7 +76,7 @@ static void fill_bigint_tables (moo_t* moo)
 		}
 
 		/* safe_ndigits contains the number of digits that never
-		 * cause overflow when computed normally with a native type. */
+		 * cause overflow when computed normally with a primitive type. */
 		moo->bigint[radix].safe_ndigits = safe_ndigits;
 		moo->bigint[radix].multiplier = multiplier;
 	}
@@ -605,7 +605,7 @@ moo_pfimpl_t moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen
 	if (!sep)
 	{
 		/* i'm writing a conservative code here. the compiler should 
-		 * guarantee that a period is included in an primitive identifer.
+		 * guarantee that a period is included in an primitive function identifer.
 		 * what if the compiler is broken? imagine a buggy compiler rewritten
 		 * in moo itself? */
 		MOO_DEBUG2 (moo, "Internal error - no period in a primitive function identifier [%.*js] - buggy compiler?\n", pfidlen, pfid);
@@ -674,6 +674,7 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 			arg_count++;
 		}
 	}
+
 /* TODO: check if name is a valid method name - more checks... */
 /* TOOD: if the method name is a binary selector, it can still have an argument.. so the check below is invalid... */
 	if (arg_count > 0 && mthname[i - 1] != ':') 

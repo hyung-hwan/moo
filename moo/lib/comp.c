@@ -105,12 +105,12 @@ static struct voca_t
 	{  8, { '#','i','n','c','l','u','d','e'                               } },
 	{  7, { '#','l','i','w','o','r','d'                                   } },
 	{  6, { 'm','e','t','h','o','d'                                       } },
-	{  7, { '#','n','a','t','i','v','e'                                   } },
 	{  3, { 'n','i','l'                                                   } },
 	{  8, { '#','p','o','i','n','t','e','r'                               } },
 	{  7, { 'p','o','o','l','d','i','c'                                   } },
 	{  8, { '#','p','o','o','l','d','i','c'                               } },
 	{ 10, { 'p','r','i','m','i','t','i','v','e',':'                       } },
+	{ 10, { '#','p','r','i','m','i','t','i','v','e'                       } },
 	{  4, { 's','e','l','f'                                               } },
 	{  5, { 's','u','p','e','r'                                           } },
 	{ 11, { 't','h','i','s','C','o','n','t','e','x','t'                   } },
@@ -151,12 +151,12 @@ enum voca_id_t
 	VOCA_INCLUDE_S,
 	VOCA_LIWORD_S,
 	VOCA_METHOD,
-	VOCA_NATIVE_S,
 	VOCA_NIL,
 	VOCA_POINTER_S,
 	VOCA_POOLDIC,
 	VOCA_POOLDIC_S,
 	VOCA_PRIMITIVE_COLON,
+	VOCA_PRIMITIVE_S,
 	VOCA_SELF,
 	VOCA_SUPER,
 	VOCA_THIS_CONTEXT,
@@ -941,7 +941,7 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		if (!is_digitchar(c))
 		{
 			ADD_TOKEN_CHAR (moo, c);
-			set_syntax_error (moo, MOO_SYNERR_ERRLIT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			set_syntax_error (moo, MOO_SYNERR_ERRLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -1165,7 +1165,7 @@ static int get_numlit (moo_t* moo, int negated)
 		if (radix < 2 || radix > 36)
 		{
 			/* no digit after the radix specifier */
-			set_syntax_error (moo, MOO_SYNERR_RADIX, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			set_syntax_error (moo, MOO_SYNERR_RADIXINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -1175,7 +1175,7 @@ static int get_numlit (moo_t* moo, int negated)
 		if (CHAR_TO_NUM(c, radix) >= radix)
 		{
 			/* no digit after the radix specifier */
-			set_syntax_error (moo, MOO_SYNERR_RADNUMLIT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			set_syntax_error (moo, MOO_SYNERR_RADNUMLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -1747,7 +1747,7 @@ retry:
 				{
 					if (moo->c->tok.name.len != 1)
 					{
-						set_syntax_error (moo, MOO_SYNERR_CHARLIT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						set_syntax_error (moo, MOO_SYNERR_CHARLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 					SET_TOKEN_TYPE (moo, MOO_IOTOK_CHARLIT);
@@ -2911,7 +2911,7 @@ static int preprocess_dotted_name (moo_t* moo, int dont_add_ns, int accept_poold
 wrong_name:
 	seg.len += seg.ptr - fqn->ptr;
 	seg.ptr = fqn->ptr;
-	set_syntax_error (moo, MOO_SYNERR_NAMESPACE, fqn_loc, &seg);
+	set_syntax_error (moo, MOO_SYNERR_NAMESPACEINVAL, fqn_loc, &seg);
 	return -1;
 }
 
@@ -2937,7 +2937,7 @@ static int resolve_pooldic (moo_t* moo, int dotted, const moo_oocs_t* name)
 	ass = moo_lookupdic (moo, ns_oop, &last);
 	if (!ass || MOO_CLASSOF(moo, ass->value) != moo->_pool_dictionary)
 	{
-		set_syntax_error (moo, MOO_SYNERR_POOLDIC, TOKEN_LOC(moo), name);
+		set_syntax_error (moo, MOO_SYNERR_POOLDICINVAL, TOKEN_LOC(moo), name);
 		return -1;
 	}
 
@@ -2946,7 +2946,7 @@ static int resolve_pooldic (moo_t* moo, int dotted, const moo_oocs_t* name)
 	{
 		if ((moo_oop_set_t)ass->value == moo->c->cls.pooldic_imp_oops[i])
 		{
-			set_syntax_error (moo, MOO_SYNERR_POOLDICDUP, TOKEN_LOC(moo), name);
+			set_syntax_error (moo, MOO_SYNERR_POOLDICDUPL, TOKEN_LOC(moo), name);
 			return -1;
 		}
 	}
@@ -2963,7 +2963,7 @@ static int import_pool_dictionary (moo_t* moo, moo_oop_set_t ns_oop, const moo_o
 	ass = moo_lookupdic (moo, ns_oop, tok_lastseg);
 	if (!ass || MOO_CLASSOF(moo, ass->value) != moo->_pool_dictionary)
 	{
-		set_syntax_error (moo, MOO_SYNERR_POOLDIC, tok_loc, tok_name);
+		set_syntax_error (moo, MOO_SYNERR_POOLDICINVAL, tok_loc, tok_name);
 		return -1;
 	}
 
@@ -2972,7 +2972,7 @@ static int import_pool_dictionary (moo_t* moo, moo_oop_set_t ns_oop, const moo_o
 	{
 		if ((moo_oop_set_t)ass->value == moo->c->cls.pooldic_imp_oops[i])
 		{
-			set_syntax_error (moo, MOO_SYNERR_POOLDICDUP, tok_loc, tok_name);
+			set_syntax_error (moo, MOO_SYNERR_POOLDICDUPL, tok_loc, tok_name);
 			return -1;
 		}
 	}
@@ -3070,7 +3070,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 */
 				if (dcl_type == VAR_INSTANCE && (moo->c->cls.flags & CLASS_INDEXED) && (moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP))
 				{
-					set_syntax_error (moo, MOO_SYNERR_VARNAMEDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
@@ -3078,7 +3078,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 				    moo_lookupdic (moo, moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
 				    moo_lookupdic (moo, moo->c->cls.ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
 				{
-					set_syntax_error (moo, MOO_SYNERR_VARNAMEDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
@@ -3131,7 +3131,7 @@ static int compile_unary_method_name (moo_t* moo)
 
 				if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 				{
-					set_syntax_error (moo, MOO_SYNERR_ARGNAMEDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					set_syntax_error (moo, MOO_SYNERR_ARGNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
@@ -3215,7 +3215,7 @@ static int compile_keyword_method_name (moo_t* moo)
 
 		if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 		{
-			set_syntax_error (moo, MOO_SYNERR_ARGNAMEDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			set_syntax_error (moo, MOO_SYNERR_ARGNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -3268,7 +3268,7 @@ static int compile_method_name (moo_t* moo)
 	{
 		if (method_exists(moo, &moo->c->mth.name)) 
  		{
-			set_syntax_error (moo, MOO_SYNERR_MTHNAMEDUP, &moo->c->mth.name_loc, &moo->c->mth.name);
+			set_syntax_error (moo, MOO_SYNERR_MTHNAMEDUPL, &moo->c->mth.name_loc, &moo->c->mth.name);
 			return -1;
  		}
 	}
@@ -3300,7 +3300,7 @@ static int compile_method_temporaries (moo_t* moo)
 	{
 		if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 		{
-			set_syntax_error (moo, MOO_SYNERR_TMPRNAMEDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			set_syntax_error (moo, MOO_SYNERR_TMPRNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -3359,7 +3359,7 @@ static int compile_method_primitive (moo_t* moo)
 					pfnum = pfnum * 10 + (*ptr - '0');
 					if (!MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
 					{
-						set_syntax_error (moo, MOO_SYNERR_PFNUM, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						set_syntax_error (moo, MOO_SYNERR_PFNUMINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
@@ -3396,12 +3396,12 @@ static int compile_method_primitive (moo_t* moo)
 					}
 
 					/* wrong primitive number */
-					set_syntax_error (moo, MOO_SYNERR_PFID, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 				else if (!MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
 				{
-					set_syntax_error (moo, MOO_SYNERR_PFID, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
@@ -3640,7 +3640,7 @@ static int compile_block_temporaries (moo_t* moo)
 	{
 		if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 		{
-			set_syntax_error (moo, MOO_SYNERR_TMPRNAMEDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			set_syntax_error (moo, MOO_SYNERR_TMPRNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -3735,7 +3735,7 @@ static int compile_block_expression (moo_t* moo)
 /* TODO: check conflicting names as well */
 			if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 			{
-				set_syntax_error (moo, MOO_SYNERR_BLKARGNAMEDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				set_syntax_error (moo, MOO_SYNERR_BLKARGNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
@@ -4534,7 +4534,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				break;
 
 			default:
-				set_syntax_error (moo, MOO_SYNERR_PRIMARY, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				set_syntax_error (moo, MOO_SYNERR_PRIMARYINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 		}
 	}
@@ -5798,7 +5798,7 @@ static int compile_method_definition (moo_t* moo)
 {
 	/* clear data required to compile a method */
 	moo->c->mth.type = MOO_METHOD_INSTANCE;
-	moo->c->mth.native = 0;
+	moo->c->mth.primitive = 0;
 	moo->c->mth.text.len = 0;
 	moo->c->mth.assignees.len = 0;
 	moo->c->mth.binsels.len = 0;
@@ -5820,31 +5820,62 @@ static int compile_method_definition (moo_t* moo)
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
 		/* process method modifiers  */
-	next_modifier:
 		GET_TOKEN (moo);
 
-		if (is_token_symbol(moo, VOCA_CLASS_S))
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 		{
-			/* method(#class) */
-			moo->c->mth.type = MOO_METHOD_CLASS;
-			GET_TOKEN (moo);
-		}
-		else if (is_token_symbol(moo, VOCA_NATIVE_S))
-		{
-			/* method(#native) */
-			if (moo->c->cls.self_oop->modname == moo->_nil)
+			do
 			{
-				set_syntax_error (moo, MOO_SYNERR_NATIVEBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
-				return -1;
+				if (is_token_symbol(moo, VOCA_CLASS_S))
+				{
+					/* method(#class) */
+					if (moo->c->mth.type == MOO_METHOD_CLASS)
+					{
+						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						return -1;
+					}
+
+					moo->c->mth.type = MOO_METHOD_CLASS;
+					GET_TOKEN (moo);
+				}
+				else if (is_token_symbol(moo, VOCA_PRIMITIVE_S))
+				{
+					/* method(#primitive) */
+					if (moo->c->cls.self_oop->modname == moo->_nil)
+					{
+						MOO_DEBUG2 (moo, "Disallowed #primitive method modifier in the class %.*js without 'from'\n", 
+							MOO_OBJ_GET_SIZE(moo->c->cls.self_oop->name),
+							MOO_OBJ_GET_CHAR_SLOT(moo->c->cls.self_oop->name));
+						set_syntax_error (moo, MOO_SYNERR_MODIFIERBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						return -1;
+					}
+
+					if (moo->c->mth.primitive)
+					{
+						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						return -1;
+					}
+
+					moo->c->mth.primitive = 1;
+					GET_TOKEN (moo);
+				}
+				else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
+				{
+					/* no modifier is present */
+					set_syntax_error (moo, MOO_SYNERR_MODIFIER, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					return -1;
+				}
+				else
+				{
+					/* invalid modifier */
+					set_syntax_error (moo, MOO_SYNERR_MODIFIERINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					return -1;
+				}
+
+				if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA) break; /* hopefully ) */
+				GET_TOKEN (moo); /* get the token after , */
 			}
-
-			moo->c->mth.native = 1;
-			GET_TOKEN (moo);
-		}
-
-		if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA)
-		{
-			goto next_modifier;
+			while (1);
 		}
 
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
@@ -5859,8 +5890,11 @@ static int compile_method_definition (moo_t* moo)
 
 	if (compile_method_name(moo) <= -1) return -1;
 
-	if (moo->c->mth.native)
+	if (moo->c->mth.primitive)
 	{
+		/* the primitive method must be of this form
+		 *  method(#primitive) method_name.
+		 */
 		moo_oow_t litidx, savedlen;
 		moo_oocs_t tmp;
 
@@ -5871,7 +5905,7 @@ static int compile_method_definition (moo_t* moo)
 			return -1;
 		}
 
-		/* TODO: i can check if the native method is available at compile time by querying the module.
+		/* TODO: i can check if the primitive method is available at compile time by querying the module.
 		 *       do the check depending on the compiler option */
 
 		/* combine the module name and the method name delimited by a period
@@ -5879,7 +5913,7 @@ static int compile_method_definition (moo_t* moo)
 		 * back once done */
 		MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->c->cls.self_oop->modname) == moo->_symbol);
 		savedlen = moo->c->cls.modname.len;
-		tmp.ptr = ((moo_oop_char_t)moo->c->cls.self_oop->modname)->slot;
+		tmp.ptr = MOO_OBJ_GET_CHAR_SLOT(moo->c->cls.self_oop->modname);
 		tmp.len = MOO_OBJ_GET_SIZE(moo->c->cls.self_oop->modname);
 		if (copy_string_to (moo, &tmp, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '\0') <= -1 ||
 		    copy_string_to (moo, &moo->c->mth.name, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '.') <= -1 ||
@@ -6137,7 +6171,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && is_restricted_word (TOKEN_NAME(moo)))
 	{
 		/* wrong class name */
-		set_syntax_error (moo, MOO_SYNERR_CLASSNAME, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		set_syntax_error (moo, MOO_SYNERR_CLASSNAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 #endif
@@ -6253,7 +6287,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				/* the object found with the name is not a class object 
 				 * or the the class object found is a fully defined kernel 
 				 * class object */
-				set_syntax_error (moo, MOO_SYNERR_CLASSDUP, &moo->c->cls.fqn_loc, &moo->c->cls.name);
+				set_syntax_error (moo, MOO_SYNERR_CLASSDUPL, &moo->c->cls.fqn_loc, &moo->c->cls.name);
 				return -1;
 			}
 
@@ -6327,7 +6361,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				 * a period to a dash when mapping the module name to an
 				 * actual module file. disallowing a dash lowers confusion
 				 * when loading a module. */
-				set_syntax_error (moo, MOO_SYNERR_MODNAME, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				set_syntax_error (moo, MOO_SYNERR_MODNAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
@@ -6581,7 +6615,7 @@ static int __compile_pooldic_definition (moo_t* moo)
 	if (moo_lookupdic (moo, moo->c->cls.ns_oop, &moo->c->cls.name))
 	{
 		/* a conflicting entry has been found */
-		set_syntax_error (moo, MOO_SYNERR_POOLDICDUP, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		set_syntax_error (moo, MOO_SYNERR_POOLDICDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -6786,7 +6820,7 @@ static int compile_stream (moo_t* moo)
 #endif
 		else
 		{
-			set_syntax_error(moo, MOO_SYNERR_DIRECTIVE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			set_syntax_error(moo, MOO_SYNERR_DIRECTIVEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 	}
