@@ -765,6 +765,7 @@ typedef void (*moo_vmprim_cleanup_t) (moo_t* moo);
 typedef void (*moo_vmprim_gettime_t) (moo_t* moo, moo_ntime_t* now);
 typedef void (*moo_vmprim_sleep_t) (moo_t* moo, const moo_ntime_t* duration);
 
+
 typedef int (*moo_vmprim_muxadd_t) (moo_t* moo, moo_oop_semaphore_t sem);
 typedef void (*moo_vmprim_muxdel_t) (moo_t* moo, moo_oop_semaphore_t sem);
 
@@ -778,6 +779,7 @@ struct moo_vmprim_t
 	moo_vmprim_dlsym_t    dl_getsym;
 	moo_log_write_t       log_write;
 
+
 	moo_vmprim_startup_t  vm_startup;
 	moo_vmprim_cleanup_t  vm_cleanup;
 	moo_vmprim_gettime_t  vm_gettime;
@@ -786,6 +788,8 @@ struct moo_vmprim_t
 	moo_vmprim_muxadd_t   mux_add;
 	moo_vmprim_muxdel_t   mux_del;
 	moo_vmprim_muxwait_t  mux_wait;
+
+	
 };
 
 typedef struct moo_vmprim_t moo_vmprim_t;

@@ -80,7 +80,7 @@ bin_PROGRAMS = moo
 moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 moo_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo 
+moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo -lpthread
 
 
 install-data-hook:
