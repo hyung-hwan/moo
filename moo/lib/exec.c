@@ -139,9 +139,9 @@ static MOO_INLINE void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 	moo->vmprim.vm_sleep (moo, dur);
 }
 
-static MOO_INLINE void vm_mux_wait (moo_t* moo, const moo_ntime_t* dur)
+static MOO_INLINE void vm_vm_muxwait (moo_t* moo, const moo_ntime_t* dur)
 {
-	moo->vmprim.mux_wait (moo, dur, signal_io_semaphore);
+	moo->vmprim.vm_muxwait (moo, dur, signal_io_semaphore);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -779,7 +779,7 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 	moo->sem_io_count++;
 
 	moo_pushtmp (moo, (moo_oop_t*)&sem);
-	n = moo->vmprim.mux_add (moo, sem);
+	n = moo->vmprim.vm_muxadd (moo, sem);
 	moo_poptmp (moo);
 	if (n <= -1) 
 	{
@@ -797,7 +797,7 @@ static void delete_from_sem_io (moo_t* moo, moo_ooi_t index)
 
 	sem = moo->sem_io[index];
 	moo_pushtmp (moo, (moo_oop_t*)&sem);
-	moo->vmprim.mux_del (moo, sem); 
+	moo->vmprim.vm_muxdel (moo, sem); 
 	moo_poptmp (moo);
 	sem->io_index = MOO_SMOOI_TO_OOP(-1);
 
@@ -3163,7 +3163,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				if (moo->sem_io_wait_count > 0)
 				{
 MOO_DEBUG0 (moo, "ABOUT TO CALL VM_MUX_WAIT()\n");
-					vm_mux_wait (moo, &ft);
+					vm_vm_muxwait (moo, &ft);
 				}
 				else
 				{
@@ -3184,7 +3184,7 @@ MOO_DEBUG0 (moo, "ABOUT TO CALL VM_MUX_SLEEP()\n");
 	if (moo->sem_io_wait_count > 0) 
 	{
 MOO_DEBUG0 (moo, "ABOUT TO CALL VM_MUX_WAIT 222()\n");
-		vm_mux_wait (moo, MOO_NULL);
+		vm_vm_muxwait (moo, MOO_NULL);
 	}
 
 	if (moo->processor->active == moo->nil_process) 
