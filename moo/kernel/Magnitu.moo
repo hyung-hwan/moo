@@ -187,65 +187,105 @@ class Number(Magnitude)
 		self primitiveFailed.
 	}
 
-	method to: end by: step do: aBlock
+	method to: end by: step do: block
 	{
 		| i |
 		i := self.
+		(*
 		(step > 0) 
 			ifTrue: [
 				[ i <= end ] whileTrue: [ 
-					aBlock value: i.
+					block value: i.
 					i := i + step.
 				].
 			]
 			ifFalse: [
 				[ i >= end ] whileTrue: [
-					aBlock value: i.
+					block value: i.
 					i := i - step.
 				].
 			].
+		*)
+		if (step > 0)
+		{
+			while (i <= end)
+			{
+				block value: i.
+				i := i + step.
+			}
+		}
+		else
+		{
+			while ( i => end)
+			{
+				block value: i.
+				i := i - step.
+			}
+		}
 	}
 
-	method to: end do: aBlock
+	method to: end do: block
 	{
-		^self to: end by: 1 do: aBlock.
+		^self to: end by: 1 do: block.
 	}
 	
-	method priorTo: end by: step do: aBlock
+	method priorTo: end by: step do: block
 	{
 		| i |
 		i := self.
+		(*
 		(step > 0) 
 			ifTrue: [
 				[ i < end ] whileTrue: [ 
-					aBlock value: i.
+					block value: i.
 					i := i + step.
 				].
 			]
 			ifFalse: [
 				[ i > end ] whileTrue: [
-					aBlock value: i.
+					block value: i.
 					i := i - step.
 				].
 			].
+		*)
+		if (step > 0)
+		{
+			while (i < end)
+			{
+				block value: i.
+				i := i + step.
+			}
+		}
+		else
+		{
+			while ( i > end)
+			{
+				block value: i.
+				i := i - step.
+			}
+		}
 	}
 	
-	method priorTo: end do: aBlock
+	method priorTo: end do: block
 	{
-		^self priorTo: end by: 1 do: aBlock.
+		^self priorTo: end by: 1 do: block.
 	}
 
 	method abs
 	{
-		self < 0 ifTrue: [^self negated].
-		^self.
+		(*self < 0 ifTrue: [^self negated].
+		^self.*)
+		^if (self < 0) { self negated } else { self }
 	}
 
 	method sign
 	{
-		self < 0 ifTrue: [^-1].
+		(* self < 0 ifTrue: [^-1].
 		self > 0 ifTrue: [^1].
-		^0.
+		^0.*)
+		^if (self < 0) { -1 }
+		 elsif (self > 0) { 1 }
+		 else { 0 }
 	}
 }
 
@@ -281,26 +321,12 @@ class(#liword) LargeInteger(Integer)
 
 class(#liword) LargePositiveInteger(LargeInteger)
 {
-	method abs
-	{
-		^self.
-	}
-
-	method sign
-	{
-		^1.
-	}
+	method abs { ^self }
+	method sign { ^1 }
 }
 
 class(#liword) LargeNegativeInteger(LargeInteger)
 {
-	method abs
-	{
-		^self negated.
-	}
-	
-	method sign
-	{
-		^-1.
-	}
+	method abs { ^self negated }
+	method sign { ^-1 }
 }

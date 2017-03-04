@@ -225,7 +225,7 @@ static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t
 
 		if (vlen > 0)
 		{
-			MOO_DEBUG2 (moo, "Unamed instance variables for a fixed class %O - %zu\n", _class, vlen); 
+			MOO_DEBUG2 (moo, "Unnamed instance variables for a fixed class %O - %zu\n", _class, vlen); 
 			return -1;
 		}
 		/*vlen = 0;*/ /* vlen is not used */

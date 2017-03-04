@@ -3162,12 +3162,10 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 
 				if (moo->sem_io_wait_count > 0)
 				{
-MOO_DEBUG0 (moo, "ABOUT TO CALL VM_MUX_WAIT()\n");
 					vm_vm_muxwait (moo, &ft);
 				}
 				else
 				{
-MOO_DEBUG0 (moo, "ABOUT TO CALL VM_MUX_SLEEP()\n");
 					vm_sleep (moo, &ft);
 				}
 				vm_gettime (moo, &now);
@@ -3183,7 +3181,6 @@ MOO_DEBUG0 (moo, "ABOUT TO CALL VM_MUX_SLEEP()\n");
 
 	if (moo->sem_io_wait_count > 0) 
 	{
-MOO_DEBUG0 (moo, "ABOUT TO CALL VM_MUX_WAIT 222()\n");
 		vm_vm_muxwait (moo, MOO_NULL);
 	}
 

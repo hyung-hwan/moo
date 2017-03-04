@@ -588,3 +588,141 @@ extend Apex
 		^Association new key: self value: object
 	}
 }
+
+## -------------------------------------------------------------------------------
+
+class Link(Object)
+{
+	dcl prev next value.
+	
+	method(#class) new: value
+	{
+		| x | 
+		x := self new.
+		x value: value.
+		^x
+	}
+
+	method prev { ^self.prev }
+	method next { ^self.next }
+	method value { ^self.value }
+	method prev: link { self.prev := link }
+	method next: link { self.next := link }
+	method value: value { self.value := value }
+}
+
+class LinkedList(Collection)
+{
+	dcl first last tally.
+
+	method initialize
+	{
+		self.tally := 0.
+	}
+	
+	method size
+	{
+		^self.tally
+	}
+
+	method first
+	{
+		^self.first
+	}
+
+	method last
+	{
+		^self.last
+	}
+
+	method insertLink: link at: pos
+	{
+		if (pos isNil)
+		{
+			(* add link at the back *)
+			if (self.tally == 0)
+			{
+				self.first := link.
+				self.last := link.
+				link prev: nil.
+			}
+			else
+			{
+				link prev: self.last.
+				self.last next: link.
+				self.last := link.
+			}.
+			link next: nil.
+		}
+		else
+		{
+			(* insert the link before pos *)
+			link next: pos.
+			link prev: pos prev.
+			if (pos prev notNil) { pos prev next: link }
+			else { self.first := link }.
+			pos prev: link
+		}.
+
+		self.tally := self.tally + 1.
+		^link
+	}
+
+	method insert: value at: pos
+	{
+		^self insertLink: (Link new: value) at: pos
+	}
+	
+	method addFirst: value
+	{
+		^self insert: value at: self.first
+	}
+	
+	method addLast: value
+	{
+		^self insert: value at: nil
+	}
+
+	method addFirstLink: link
+	{
+		^self insertLink: link at: self.first
+	}
+	
+	method addLastLink: link
+	{
+		^self insertLink: link at: nil
+	}
+	
+	method removeLink: link
+	{
+		if (link next notNil) { link next prev: link prev }
+		else { self.last := link prev }.
+		
+		if (link prev notNil) { link prev next: link next }
+		else { self.first := link next }.
+		
+		self.tally := self.tally - 1.
+	}
+
+	method removeFirst
+	{
+		^self removeLink: self.first
+	}
+
+	method removeLast
+	{
+		^self removeLink: self.last
+	}
+	
+	method do: block
+	{
+		| link next |
+		link := self.first.
+		while (link notNil)
+		{
+			next := link next.
+			block value: link value.
+			link := next.
+		}
+	}
+}

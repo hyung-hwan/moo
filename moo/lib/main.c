@@ -134,6 +134,7 @@ struct xtn_t
 #if defined(USE_THREAD)
 	int p[2]; /* pipe for signaling */
 	pthread_t iothr;
+	int iothr_up;
 	int iothr_abort;
 	struct
 	{
@@ -800,7 +801,8 @@ static int vm_startup (moo_t* moo)
 	pthread_cond_init (&xtn->ev.cnd2, MOO_NULL);
 
 	xtn->iothr_abort = 0;
-	pthread_create (&xtn->iothr, MOO_NULL, iothr_main, moo);
+	xtn->iothr_up = 0;
+	/*pthread_create (&xtn->iothr, MOO_NULL, iothr_main, moo);*/
 #endif
 
 	return 0;
@@ -837,9 +839,13 @@ static void vm_cleanup (moo_t* moo)
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 
 #if defined(USE_THREAD)
-	write (xtn->p[1], "Q", 1);
-	pthread_cond_signal (&xtn->ev.cnd);
-	pthread_join (xtn->iothr, MOO_NULL);
+	if (xtn->iothr_up)
+	{
+		write (xtn->p[1], "Q", 1);
+		pthread_cond_signal (&xtn->ev.cnd);
+		pthread_join (xtn->iothr, MOO_NULL);
+		xtn->iothr_up = 0;
+	}
 	pthread_cond_destroy (&xtn->ev.cnd);
 	pthread_cond_destroy (&xtn->ev.cnd2);
 	pthread_mutex_destroy (&xtn->ev.mtx);
@@ -973,6 +979,18 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 #if defined(USE_THREAD)
 	int n;
 
+	/* create a thread if mux wait is started at least once. */
+	if (!xtn->iothr_up) 
+	{
+		xtn->iothr_up = 1;
+		if (pthread_create (&xtn->iothr, MOO_NULL, iothr_main, moo) != 0)
+		{
+			MOO_LOG2 (moo, MOO_LOG_WARN, "Warning: pthread_create failure - %d, %hs\n", errno, strerror(errno));
+			xtn->iothr_up = 0;
+/* TODO: switch to the non-threaded mode? */
+		}
+	}
+
 	if (xtn->ev.len <= 0) 
 	{
 		struct timespec ts;
@@ -1016,6 +1034,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 			else if (muxwcb)
 			{
 				int mask = 0;
+
 				if (xtn->ev.buf[n].events & EPOLLIN) mask |= MOO_SEMAPHORE_IO_MASK_INPUT;
 				if (xtn->ev.buf[n].events & EPOLLOUT) mask |= MOO_SEMAPHORE_IO_MASK_OUTPUT;
 				if (xtn->ev.buf[n].events & EPOLLERR) mask |= MOO_SEMAPHORE_IO_MASK_ERROR;
@@ -1048,6 +1067,9 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	{
 		xtn->ev.len = n;
 	}
+
+	/* the muxwcb must be valid all the time in a non-threaded mode */
+	MOO_ASSERT (moo, muxwcb != MOO_NULL);
 
 	while (n > 0)
 	{
@@ -1124,7 +1146,8 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 
 	#if defined(USE_THREAD)
 	/* the sleep callback is called only if there is no IO semaphore 
-	 * waiting. so i can safely use vm_muxwait when USE_THREAD is true */
+	 * waiting. so i can safely call vm_muxwait() wihtout a muxwait callback
+	 * when USE_THREAD is true */
 	vm_muxwait (moo, dur, MOO_NULL);
 	#else
 	struct timespec ts;

@@ -39,14 +39,14 @@ typedef struct x11_t x11_t;
 struct x11_t
 {
 	xcb_connection_t* c;
-	xcb_window_t w;
-	xcb_intern_atom_reply_t* dwcr; /* TODO: move this to each window */
+	xcb_screen_t* screen;
 };
 
 typedef struct x11_win_t x11_win_t;
 struct x11_win_t
 {
-	xcb_window_t w;
+	xcb_window_t id;
+	xcb_intern_atom_reply_t* dwcr;
 };
 
 /* ------------------------------------------------------------------------ */
@@ -89,7 +89,9 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 		goto softfail;
 	}
 
+	x11->screen = xcb_setup_roots_iterator(xcb_get_setup(c)).data;
 	x11->c = c;
+
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 
@@ -158,12 +160,17 @@ static moo_pfrc_t pf_getevent (moo_t* moo, moo_ooi_t nargs)
 	{
 		uint8_t evttype = evt->response_type & ~0x80;
 
-		if (evttype == XCB_CLIENT_MESSAGE && 
+		if (evttype == XCB_CLIENT_MESSAGE)
+#if 0
+&& 
 		    ((xcb_client_message_event_t*)evt)->data.data32[0] == x11->dwcr->atom)
+#endif
 		{
+#if 0
 			xcb_unmap_window (x11->c, x11->w);
 			xcb_destroy_window (x11->c, x11->w);
 			xcb_flush (x11->c);
+#endif
 			MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(9999)); /* TODO: translate evt to the event object */
 		}
 		else
@@ -174,30 +181,33 @@ static moo_pfrc_t pf_getevent (moo_t* moo, moo_ooi_t nargs)
 	}
 	else
 	{
-MOO_DEBUG0(moo, "BBBBBBBBBBBBbb GOT NO EVENT...\n");
 		MOO_STACK_SETRET (moo, nargs, moo->_nil);
 	}
 
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_makewin (moo_t* moo, moo_ooi_t nargs)
+/* ------------------------------------------------------------------------ */
+
+static moo_pfrc_t pf_win_make_on (moo_t* moo, moo_ooi_t nargs)
 {
 	x11_t* x11;
-	xcb_screen_t* screen;
+	x11_win_t* win;
+
 	uint32_t mask;
 	uint32_t values[2];
 	xcb_intern_atom_cookie_t cookie;
 	xcb_intern_atom_reply_t* reply;
 
-	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
-	MOO_DEBUG1 (moo, "<x11.__makewin> %p\n", x11->c);
+MOO_DEBUG0 (moo, "<x11.win._makeon:> %p\n");
 
-	screen = xcb_setup_roots_iterator(xcb_get_setup(x11->c)).data;
-	x11->w = xcb_generate_id (x11->c);
+	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETARG(moo, nargs, 0), MOO_NULL);
+	win = (x11_win_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+
+	win->id = xcb_generate_id (x11->c);
 
 	mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-	values[0] = screen->white_pixel;
+	values[0] = x11->screen->white_pixel;
 	values[1] = XCB_EVENT_MASK_KEY_RELEASE |
 	            XCB_EVENT_MASK_BUTTON_PRESS |
 	            XCB_EVENT_MASK_EXPOSURE |
@@ -208,43 +218,50 @@ static moo_pfrc_t pf_makewin (moo_t* moo, moo_ooi_t nargs)
 	xcb_create_window (
 		x11->c, 
 		XCB_COPY_FROM_PARENT,
-		x11->w,
-		screen->root,
+		win->id,
+		x11->screen->root,
 		0, 0, 300, 300, 10,
 		XCB_WINDOW_CLASS_INPUT_OUTPUT,
-		screen->root_visual,
+		x11->screen->root_visual,
 		mask, values);
 
 	cookie = xcb_intern_atom(x11->c, 1, 12, "WM_PROTOCOLS");
 	reply = xcb_intern_atom_reply(x11->c, cookie, 0);
 
 	cookie = xcb_intern_atom(x11->c, 0, 16, "WM_DELETE_WINDOW");
-	x11->dwcr = xcb_intern_atom_reply(x11->c, cookie, 0);
+	win->dwcr = xcb_intern_atom_reply(x11->c, cookie, 0);
 
-	xcb_change_property(x11->c, XCB_PROP_MODE_REPLACE, x11->w, reply->atom, 4, 32, 1, &x11->dwcr->atom);
+	xcb_change_property(x11->c, XCB_PROP_MODE_REPLACE, win->id, reply->atom, 4, 32, 1, &win->dwcr->atom);
 
 /*TODO: use xcb_request_check() for error handling. you need to call create_x11->wdwo_checked(). xxx_checked()... */
-	xcb_map_window (x11->c, x11->w);
+	xcb_map_window (x11->c, win->id);
 	xcb_flush (x11->c);
 
-	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(x11->w)); /* TODO: write this function to return a window handle... */
+	MOO_STACK_SETRETTORCV (moo, nargs); 
 	return MOO_PF_SUCCESS;
 }
 
-
-/* ------------------------------------------------------------------------ */
-
-static moo_pfrc_t pf_win_create (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_win_kill_on (moo_t* moo, moo_ooi_t nargs)
 {
-	MOO_STACK_SETRET (moo, nargs, moo->_nil); 
-MOO_DEBUG0 (moo, "x11.window.create....\n");
-	return MOO_PF_SUCCESS;
-}
+	x11_t* x11;
+	x11_win_t* win;
 
-static moo_pfrc_t pf_win_destroy (moo_t* moo, moo_ooi_t nargs)
-{
-	MOO_STACK_SETRET (moo, nargs, moo->_nil); 
-MOO_DEBUG0 (moo, "x11.window.destroy....\n");
+	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETARG(moo, nargs, 0), MOO_NULL);
+	win = (x11_win_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+
+	if (!x11->c)
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs); /* More specific error code*/
+		return MOO_PF_SUCCESS;
+	}
+
+/* TODO: check on windows id */
+
+	xcb_unmap_window (x11->c, win->id); /* TODO: check error code */
+	xcb_destroy_window (x11->c, win->id);
+	xcb_flush (x11->c);
+
+	MOO_STACK_SETRETTORCV (moo, nargs); 
 	return MOO_PF_SUCCESS;
 }
 
@@ -253,11 +270,10 @@ MOO_DEBUG0 (moo, "x11.window.destroy....\n");
 
 static moo_pfinfo_t x11_pfinfo[] =
 {
-	{ I, { '_','_','g','e','t','e','v','e','n','t','\0'},                  0, pf_getevent      },
-	{ I, { '_','_','m','a','k','e','w','i','n','\0'},                      0, pf_makewin       },
-	{ I, { 'c','o','n','n','e','c','t','\0' },                             0, pf_connect       },
-	{ I, { 'd','i','s','c','o','n','n','e','c','t','\0' },                 0, pf_disconnect    },
-	{ I, { 'g','e','t','f','d','\0' },                                     0, pf_getfd         }
+	{ I, { '_','g','e','t','e','v','e','n','t','\0'},                  0, pf_getevent      },
+	{ I, { 'c','o','n','n','e','c','t','\0' },                         0, pf_connect       },
+	{ I, { 'd','i','s','c','o','n','n','e','c','t','\0' },             0, pf_disconnect    },
+	{ I, { 'g','e','t','f','d','\0' },                                 0, pf_getfd         }
 	
 };
 
@@ -291,14 +307,15 @@ int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)
 
 static moo_pfinfo_t x11_win_pfinfo[] =
 {
-	{ I, { 'c','r','e','a','t','e','\0' },                                 0, pf_win_create        },
-	{ I, { 'd','i','s','t','r','o','y','\0' },                             0, pf_win_destroy       }
+	{ I, { '_','m','a','k','e','_','o','n',':','\0' },        0, pf_win_make_on       },
+	{ I, { '_','k','i','l','l','_','o','n',':','\0' },        0, pf_win_kill_on       }
 };
 
 static int x11_win_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
 	if (moo_setclasstrsize(moo, _class, MOO_SIZEOF(x11_win_t)) <= -1) return -1;
-	return moo_genpfmethods(moo, mod, _class, x11_win_pfinfo, MOO_COUNTOF(x11_win_pfinfo));
+	/*return moo_genpfmethods(moo, mod, _class, x11_win_pfinfo, MOO_COUNTOF(x11_win_pfinfo));*/
+	return 0;
 }
 
 static moo_pfimpl_t x11_win_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
