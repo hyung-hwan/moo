@@ -6630,9 +6630,9 @@ static int __compile_pooldic_definition (moo_t* moo)
 
 	GET_TOKEN (moo);
 
-	while (TOKEN_TYPE(moo) == MOO_IOTOK_SYMLIT)
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
 	{
-		lit = moo_makesymbol (moo, TOKEN_NAME_PTR(moo) + 1, TOKEN_NAME_LEN(moo) - 1);
+		lit = moo_makesymbol (moo, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
 		if (!lit || add_to_array_literal_buffer (moo, lit) <= -1) return -1;
 
 		GET_TOKEN (moo);

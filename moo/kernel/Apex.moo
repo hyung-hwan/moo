@@ -408,30 +408,33 @@ class UndefinedObject(Apex)
 }
 
 
-pooldic ErrorCode
+
+class Error(Apex)
 {
-(* migrate it into Error class *)
-	#NONE      := error(0).
-	#GENERIC   := error(1).
-	#NOIMPL    := error(2).
-	#SYSERR    := error(3).
-	#INTERN    := error(4).
-	#SYSMEM    := error(5).
-	#OOMEM     := error(6).
-	#INVAL     := error(7).
-	#NOENT     := error(8).
+}
+
+pooldic Error.Code
+{
+	GENERIC   := error(0).
+	NOIMPL    := error(1).
+	SYSERR    := error(2).
+	INTERN    := error(3).
+	SYSMEM    := error(4).
+	OOMEM     := error(5).
+	INVAL     := error(6).
+	NOENT     := error(7).
 (* add more items... *)
 }
 
-class Error(Apex)
+extend Error
 {
 	(* ----------------------------
 	TODO: support constant declaration...
 
 	#const
 	{
-		#NONE := error(0).
-		#GENERIC := error(1).
+		NONE := error(0).
+		GENERIC := error(1).
 	}
 	-------------------------------- *)
 

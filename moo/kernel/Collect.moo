@@ -1,6 +1,42 @@
 
 class Collection(Object)
 {
+	method isEmpty
+	{
+		^self size <= 0
+	}
+
+	method notEmpty
+	{
+		^self size > 0
+	}
+	
+	method size
+	{
+		(* Each subclass must override this method because
+		 * it interates over the all elements for counting *)
+		| count |
+		count := 0.
+		self do: [ :el | count := count + 1 ].
+		^count
+	}
+	
+	method do: block
+	{
+		^self subclassResponsibility: #do
+	}
+	
+	method detect: block
+	{
+		self do: [ :el | if (block value: el) { ^el } ].
+		^Error.Code.NOENT
+	}
+	
+	method detect: block ifNone: exception_block
+	{
+		self do: [ :el | if (block value: el) { ^el } ].
+		^exception_block value.
+	}
 }
 
 ## -------------------------------------------------------------------------------
@@ -193,7 +229,7 @@ class Set(Collection)
 		}.
 
 		##upsert ifFalse: [^ErrorCode.NOENT].
-		if (upsert) {} else { ^ErrorCode.NOENT }.
+		if (upsert) {} else { ^Error.Code.NOENT }.
 
 		ntally := self.tally + 1.
 		if (ntally >= bs)
@@ -280,7 +316,7 @@ class Set(Collection)
 			index := (index + 1) rem: bs.
 		}.
 
-		^ErrorCode.NOENT.
+		^Error.Code.NOENT.
 	}
 
 	method __remove_at: index
@@ -472,11 +508,11 @@ pooldic Log
 	## these items must follow defintions in moo.h
 	## -----------------------------------------------------------
 
-	#DEBUG := 1.
-	#INFO  := 2.
-	#WARN  := 4.
-	#ERROR := 8.
-	#FATAL := 16.
+	DEBUG := 1.
+	INFO  := 2.
+	WARN  := 4.
+	ERROR := 8.
+	FATAL := 16.
 }
 
 class SystemDictionary(Set)
