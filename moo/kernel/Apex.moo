@@ -408,30 +408,39 @@ class UndefinedObject(Apex)
 }
 
 
-
 class Error(Apex)
 {
 }
 
 pooldic Error.Code
 {
-	GENERIC   := error(0).
-	NOIMPL    := error(1).
-	SYSERR    := error(2).
-	INTERN    := error(3).
-	SYSMEM    := error(4).
-	OOMEM     := error(5).
-	INVAL     := error(6).
-	NOENT     := error(7).
+	EGENERIC   := error(0).
+	ENOIMPL    := error(1).
+	ESYSERR    := error(2).
+	EINTERN    := error(3).
+	ESYSMEM    := error(4).
+	EOOMEM     := error(5).
+	EINVAL     := error(6).
+	ENOENT     := error(7).
 (* add more items... *)
 }
+
+(*pooldic Error.Code2 
+{
+	>> CAN I SUPPORT this kind of redefnition? as of now, it's not accepted because 
+	>> Error.Code2.EGENERIC is not a literal. Should i treate pooldic members as a constant
+	>> and treat it as if it's a literal like? then even if the defined value changes,
+	>> the definition here won't see the change... what is the best way to tackle this issue?
+
+	EGENERIC := Error.Code2.EGENERIC.
+}*)
 
 extend Error
 {
 	(* ----------------------------
-	TODO: support constant declaration...
+	TODO: support nested pooldic/constant declaration...
 
-	#const
+	pooldic/const
 	{
 		NONE := error(0).
 		GENERIC := error(1).

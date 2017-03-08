@@ -29,7 +29,7 @@ class Collection(Object)
 	method detect: block
 	{
 		self do: [ :el | if (block value: el) { ^el } ].
-		^Error.Code.NOENT
+		^Error.Code.ENOENT
 	}
 	
 	method detect: block ifNone: exception_block
@@ -229,7 +229,7 @@ class Set(Collection)
 		}.
 
 		##upsert ifFalse: [^ErrorCode.NOENT].
-		if (upsert) {} else { ^Error.Code.NOENT }.
+		if (upsert) {} else { ^Error.Code.ENOENT }.
 
 		ntally := self.tally + 1.
 		if (ntally >= bs)
@@ -316,7 +316,7 @@ class Set(Collection)
 			index := (index + 1) rem: bs.
 		}.
 
-		^Error.Code.NOENT.
+		^Error.Code.ENOENT.
 	}
 
 	method __remove_at: index

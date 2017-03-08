@@ -2795,7 +2795,10 @@ oops:
 	return MOO_NULL;
 }
 
-static int preprocess_dotted_name (moo_t* moo, int dont_add_ns, int accept_pooldic_as_ns, const moo_oocs_t* fqn, const moo_ioloc_t* fqn_loc, moo_oocs_t* name, moo_oop_set_t* ns_oop)
+#define PDN_DONT_ADD_NS (1 << 0)
+#define PDN_ACCEPT_POOLDIC_AS_NS (1 << 1)
+
+static int preprocess_dotted_name (moo_t* moo, int flags, moo_oop_set_t topdic, const moo_oocs_t* fqn, const moo_ioloc_t* fqn_loc, moo_oocs_t* name, moo_oop_set_t* ns_oop)
 {
 	const moo_ooch_t* ptr, * dot;
 	moo_oow_t len;
@@ -2804,7 +2807,7 @@ static int preprocess_dotted_name (moo_t* moo, int dont_add_ns, int accept_poold
 	moo_oop_association_t ass;
 	int pooldic_gotten = 0;
 
-	dic = moo->sysdic;
+	dic = topdic? topdic: moo->sysdic;
 	ptr = fqn->ptr;
 	len = fqn->len;
 
@@ -2844,7 +2847,7 @@ static int preprocess_dotted_name (moo_t* moo, int dont_add_ns, int accept_poold
 						 * has been attached to the class */
 						moo_oop_set_t t;
 
-						if (dont_add_ns) goto wrong_name;
+						if (flags & PDN_DONT_ADD_NS) goto wrong_name;
 
 						/* attach a new namespace dictionary to the nsdic field
 						 * of the class */
@@ -2856,7 +2859,7 @@ static int preprocess_dotted_name (moo_t* moo, int dont_add_ns, int accept_poold
 				}
 				else
 				{
-					if (accept_pooldic_as_ns && MOO_CLASSOF(moo, ass->value) == moo->_pool_dictionary)
+					if ((flags & PDN_ACCEPT_POOLDIC_AS_NS) && MOO_CLASSOF(moo, ass->value) == moo->_pool_dictionary)
 					{
 						/* A pool dictionary is treated as if it's a name space.
 						 * However, the pool dictionary can only act as a name space
@@ -2875,7 +2878,7 @@ static int preprocess_dotted_name (moo_t* moo, int dont_add_ns, int accept_poold
 				moo_oop_set_t t;
 
 				/* the segment does not exist. add it */
-				if (dont_add_ns)
+				if (flags & PDN_DONT_ADD_NS)
 				{
 					/* in '#extend Planet.Earth', it's an error
 					 * if Planet doesn't exist */
@@ -2924,7 +2927,7 @@ static int resolve_pooldic (moo_t* moo, int dotted, const moo_oocs_t* name)
 
 	if (dotted)
 	{
-		if (preprocess_dotted_name(moo, 0, 0, name, TOKEN_LOC(moo), &last, &ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name(moo, 0, MOO_NULL, name, TOKEN_LOC(moo), &last, &ns_oop) <= -1) return -1;
 	}
 	else
 	{
@@ -3011,7 +3014,7 @@ static int compile_class_level_variables (moo_t* moo)
 		else if (is_token_symbol(moo, VOCA_POOLDIC_S))
 		{
 			/* dcl(#pooldic) - import a pool dictionary */
-			dcl_type = VAR_GLOBAL; /* this is not a real type. use for branching below */
+			dcl_type = VAR_GLOBAL; /* this is not a real type. used for branching below */
 			GET_TOKEN (moo);
 		}
 
@@ -3027,7 +3030,7 @@ static int compile_class_level_variables (moo_t* moo)
 	if (dcl_type == VAR_GLOBAL) 
 	{
 		/* pool dictionary import declaration
-		 * #dcl(#pooldic) ... */
+		 * dcl(#pooldic) ... */
 		moo_oocs_t last;
 		moo_oop_set_t ns_oop;
 
@@ -3035,7 +3038,7 @@ static int compile_class_level_variables (moo_t* moo)
 		{
 			if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 			{
-				if (preprocess_dotted_name(moo, 0, 0, TOKEN_NAME(moo), TOKEN_LOC(moo), &last, &ns_oop) <= -1) return -1;
+				if (preprocess_dotted_name(moo, 0, MOO_NULL, TOKEN_NAME(moo), TOKEN_LOC(moo), &last, &ns_oop) <= -1) return -1;
 			}
 			else if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
 			{
@@ -3490,7 +3493,7 @@ static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 			}
 		}
 
-		if (preprocess_dotted_name (moo, 1, 1, name, name_loc, &last, &ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name (moo, PDN_DONT_ADD_NS | PDN_ACCEPT_POOLDIC_AS_NS, MOO_NULL, name, name_loc, &last, &ns_oop) <= -1) return -1;
 
 		ass = moo_lookupdic (moo, ns_oop, &last);
 		if (ass)
@@ -6181,7 +6184,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 	moo->c->cls.fqn_loc = moo->c->tok.loc;
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 	{
-		if (preprocess_dotted_name(moo, extend, 0, &moo->c->cls.fqn, &moo->c->cls.fqn_loc, &moo->c->cls.name, &moo->c->cls.ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name(moo, (extend? PDN_DONT_ADD_NS: 0), MOO_NULL, &moo->c->cls.fqn, &moo->c->cls.fqn_loc, &moo->c->cls.name, &moo->c->cls.ns_oop) <= -1) return -1;
 	}
 	else
 	{
@@ -6253,7 +6256,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 			if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 			{
-				if (preprocess_dotted_name(moo, 1, 0, &moo->c->cls.superfqn, &moo->c->cls.superfqn_loc, &moo->c->cls.supername, &moo->c->cls.superns_oop) <= -1) return -1;
+				if (preprocess_dotted_name(moo, PDN_DONT_ADD_NS, MOO_NULL, &moo->c->cls.superfqn, &moo->c->cls.superfqn_loc, &moo->c->cls.supername, &moo->c->cls.superns_oop) <= -1) return -1;
 			}
 			else
 			{
@@ -6446,7 +6449,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 				if (dotted)
 				{
-					if (preprocess_dotted_name(moo, 0, 0, &tok, &loc, &last, &ns_oop) <= -1) return -1;
+					if (preprocess_dotted_name(moo, 0, MOO_NULL, &tok, &loc, &last, &ns_oop) <= -1) return -1;
 				}
 				else
 				{
@@ -6605,7 +6608,7 @@ static int __compile_pooldic_definition (moo_t* moo)
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 	{
-		if (preprocess_dotted_name(moo, 0, 0, &moo->c->cls.fqn, &moo->c->cls.fqn_loc, &moo->c->cls.name, &moo->c->cls.ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name(moo, 0, MOO_NULL, &moo->c->cls.fqn, &moo->c->cls.fqn_loc, &moo->c->cls.name, &moo->c->cls.ns_oop) <= -1) return -1;
 	}
 	else
 	{
