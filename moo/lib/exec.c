@@ -3893,45 +3893,6 @@ int moo_execute (moo_t* moo)
 				if (send_message (moo, moo->dicputassocsym, 0, 1) <= -1) goto oops; 
 				break;
 
-			case BCODE_MAKE_ASSOCIATION:
-			{
-				moo_oop_t t;
-
-				LOG_INST_0 (moo, "make_association");
-
-				t = moo_instantiate (moo, moo->_association, MOO_NULL, 0);
-				if (!t) goto oops;
-
-				MOO_STACK_PUSH (moo, t); /* push the association created */
-				break;
-			}
-
-			case BCODE_POP_INTO_ASSOCIATION_KEY:
-			{
-				moo_oop_t t1, t2;
-
-				LOG_INST_0 (moo, "pop_into_association_key");
-
-				t1 = MOO_STACK_GETTOP(moo);
-				MOO_STACK_POP (moo);
-				t2 = MOO_STACK_GETTOP(moo);
-				((moo_oop_association_t)t2)->key = t1;
-				break;
-			}
-
-			case BCODE_POP_INTO_ASSOCIATION_VALUE:
-			{
-				moo_oop_t t1, t2;
-
-				LOG_INST_0 (moo, "pop_into_association_value");
-
-				t1 = MOO_STACK_GETTOP(moo);
-				MOO_STACK_POP (moo);
-				t2 = MOO_STACK_GETTOP(moo);
-				((moo_oop_association_t)t2)->value = t1;
-				break;
-			}
-
 			case BCODE_MAKE_ARRAY:
 			{
 				moo_oop_t t;

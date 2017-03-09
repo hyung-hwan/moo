@@ -325,7 +325,6 @@ struct moo_iotok_t
 		MOO_IOTOK_BABRACK,  /* #[ - byte array literal */
 		MOO_IOTOK_ABRACE,   /* #{ - array expression */
 		MOO_IOTOK_DICBRACE, /* :{ - dictionary expression */
-		MOO_IOTOK_ASSPAREN, /* :( - association expression */
 		MOO_IOTOK_PERIOD,
 		MOO_IOTOK_COMMA,
 		MOO_IOTOK_SEMICOLON,
@@ -863,14 +862,13 @@ enum moo_bcode_t
 	BCODE_POP_INTO_OBJVAR_X        = 0xEC, /* 236 ## */
 
 	/* UNUSED 237 */
-
-	BCODE_MAKE_DICTIONARY            = 0xEE, /* 238 */
-	BCODE_POP_INTO_DICTIONARY        = 0xEF, /* 239 */
+	/* UNUSED 238 */
+	/* UNUSED 239 */
 
 	BCODE_SEND_MESSAGE_X             = 0xF0, /* 240 ## */
-	BCODE_MAKE_ASSOCIATION           = 0xF1, /* 241 */
-	BCODE_POP_INTO_ASSOCIATION_KEY   = 0xF2, /* 242 */
-	BCODE_POP_INTO_ASSOCIATION_VALUE = 0xF3, /* 243 */
+	/* UNUSED 241 */
+	BCODE_MAKE_DICTIONARY            = 0xF2, /* 242 */
+	BCODE_POP_INTO_DICTIONARY        = 0xF3, /* 243 */
 	BCODE_SEND_MESSAGE_TO_SUPER_X    = 0xF4, /* 244 ## */
 
 	/* -------------------------------------- */

@@ -219,7 +219,7 @@ static MOO_INLINE int is_binselchar (moo_ooci_t c)
 {
 	/*
 	 * binary-selector-character :=
-	 * 	'%' | '&' | '*' | '+' | '-' |
+	 *   '%' | '&' | '*' | '+' | '-' |
 	 *   '/' | '<' | '>' | '=' | '?' |
 	 *   '@' | '\' | '~' | '|'
 	 */
@@ -965,6 +965,7 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 	}
 	else if (c == ':') 
 	{
+#if 0
 	read_more_kwsym:
 		ADD_TOKEN_CHAR (moo, c);
 		SET_TOKEN_TYPE (moo, MOO_IOTOK_KEYWORD);
@@ -996,6 +997,24 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		{
 			unget_char (moo, &moo->c->lxc); 
 		}
+#else
+		moo_iolxc_t lc = moo->c->lxc;
+
+		GET_CHAR_TO (moo, c);
+
+		if (c == '=' || c == '{')
+		{
+			/* := or :{ appeared after an identifier */
+			unget_char (moo, &moo->c->lxc); 
+			unget_char (moo, &lc);
+		}
+		else
+		{
+			ADD_TOKEN_CHAR (moo, lc.c);
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_KEYWORD);
+			unget_char (moo, &moo->c->lxc); 
+		}
+#endif
 	}
 	else
 	{
@@ -1536,11 +1555,6 @@ retry:
 			else if (c == '{')
 			{
 				SET_TOKEN_TYPE (moo, MOO_IOTOK_DICBRACE);
-				ADD_TOKEN_CHAR (moo, c);
-			}
-			else if (c == '(')
-			{
-				SET_TOKEN_TYPE (moo, MOO_IOTOK_ASSPAREN);
 				ADD_TOKEN_CHAR (moo, c);
 			}
 			else
@@ -3458,6 +3472,7 @@ static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 		 * 
 		 *   self.XXX - instance variable
 		 *   A.B.C    - namespace or pool dictionary related reference.
+		 *   self.B.C - B.C under the current class where B is not an instance variable
 		 */
 
 		moo_oocs_t last;
@@ -4193,55 +4208,6 @@ static int compile_array_expression (moo_t* moo)
 	return 0;
 }
 
-static int compile_association_expression (moo_t* moo)
-{
-	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_ASSPAREN);
-
-	GET_TOKEN (moo); /* read a token after #{ */
-	if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
-	{
-		/* key is required */
-		set_syntax_error (moo, MOO_SYNERR_NOASSKEY, TOKEN_LOC(moo), MOO_NULL);
-		return -1;
-	}
-
-	if (emit_byte_instruction (moo, BCODE_MAKE_ASSOCIATION) <= -1) return -1;
-
-	if (compile_method_expression (moo, 0) <= -1) return -1;
-	if (emit_byte_instruction (moo, BCODE_POP_INTO_ASSOCIATION_KEY) <= -1) return -1;
-
-	if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
-	{
-		/* no comma, no value is specified.  */
-		goto done;
-	}
-	else if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA)
-	{
-		set_syntax_error (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
-		return -1;
-	}
-
-	GET_TOKEN (moo); /* read a token after the comma */
-	if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
-	{
-		set_syntax_error (moo, MOO_SYNERR_NOASSVALUE, TOKEN_LOC(moo), MOO_NULL);
-		return -1;
-	}
-
-	if (compile_method_expression (moo, 0) <= -1) return -1;
-	if (emit_byte_instruction (moo, BCODE_POP_INTO_ASSOCIATION_VALUE) <= -1) return -1;
-
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
-	{
-		set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
-		return -1;
-	}
-
-done:
-	GET_TOKEN (moo);
-	return 0;
-}
-
 static int compile_dictionary_expression (moo_t* moo)
 {
 	moo_oow_t mdip;
@@ -4260,17 +4226,10 @@ static int compile_dictionary_expression (moo_t* moo)
 		count = 0;
 		do
 		{
-			if (TOKEN_TYPE(moo) == MOO_IOTOK_ASSPAREN)
-			{
-				if (compile_association_expression(moo) <= -1 ||
-				    emit_byte_instruction (moo, BCODE_POP_INTO_DICTIONARY) <= -1) return -1;
-				count++;
-			}
-			else
-			{
-				set_syntax_error (moo, MOO_SYNERR_NOASSOC, TOKEN_LOC(moo), MOO_NULL);
-				return -1;
-			}
+			if (compile_method_expression (moo, 0) <= -1 ||
+			    emit_byte_instruction (moo, BCODE_POP_INTO_DICTIONARY) <= -1) return -1;
+
+			count++;
 
 			if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
 			if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA)
@@ -4498,10 +4457,6 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				if (compile_array_expression(moo) <= -1) return -1;
 				break;
 
-			case MOO_IOTOK_ASSPAREN: /* :( */
-				if (compile_association_expression(moo) <= -1) return -1;
-				break;
-
 			case MOO_IOTOK_DICBRACE: /* :{ */
 				if (compile_dictionary_expression(moo) <= -1) return -1;
 				break;
@@ -4689,7 +4644,7 @@ static int compile_keyword_message (moo_t* moo, int to_super)
 
 		nargs++;
 	} 
-	while (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD);
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD) /* loop */;
 
 	kwsel.ptr = &moo->c->mth.kwsels.ptr[saved_kwsel_len];
 	kwsel.len = moo->c->mth.kwsels.len - saved_kwsel_len;

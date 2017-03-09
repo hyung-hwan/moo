@@ -1237,10 +1237,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_LITERAL,         /* literal expected */
 	MOO_SYNERR_NOTINLOOP,       /* break or continue not within a loop */
 	MOO_SYNERR_INBLOCK,         /* break or continue within a block */
-	MOO_SYNERR_WHILE,           /* while expected */
-	MOO_SYNERR_NOASSKEY,        /* missing association key */
-	MOO_SYNERR_NOASSVALUE,      /* missing association value */
-	MOO_SYNERR_NOASSOC          /* missing association */
+	MOO_SYNERR_WHILE            /* while expected */
 };
 typedef enum moo_synerrnum_t moo_synerrnum_t;
 

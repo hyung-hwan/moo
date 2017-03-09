@@ -240,21 +240,17 @@ class MyObject(Object)
 		
 		(* Dictionary ???
 		a := #{
-			:( key, value ),
-			:( key, value ),
-			:( key, value ),
-			:( key, value )
+			key -> value ,
+			key -> value ,
+			key -> value ,
+			key -> value
 		}
 		
 		a := :{
-			:( key, value ),
+			key -> value,
 		}
 		*)
 
-
-	(*	abc := { key, value }.
-		{ key, value } dump. *)
-		
 		a do: [ :v | v dump].
 
 (*
@@ -289,20 +285,16 @@ class MyObject(Object)
 				##if (false) {} else { break }.
 			}.
 		}.*)
-		
-		##:() dump. ## missing association key
-		##:(a+10,) dump. ## missing association value.
-		##:(1,2,3) dump. ## ) expecte where , is
-		##:(a+100,a*99) dump.
-		##:(a+a+100,a*a*99) dump.
+
 
 		a := :{
-			:('aaa', 10),
-			:('bbb', 20),
-			:('bbb', 30),
-			:(#bbb, 40),
-			##:(5, 99),
-			:('ccc', 890)
+			'aaa' -> 10,
+			'bbb' -> 20,
+			'bbb' -> 30,
+			#bbb -> 40,
+			Association key: 12343 value: 129908123,
+			##5 -> 99,
+			'ccc' -> 890
 		}.
 
 		(*a removeKey: 'bbb'.
@@ -315,8 +307,7 @@ class MyObject(Object)
 			'------------' dump.
 		].
 
-
-		(a associationAt: :(#aaa)) dump.
+		(a associationAt: (#aaa -> nil)) dump.
 		(*
 		while (true) 
 		{
@@ -326,7 +317,7 @@ class MyObject(Object)
 				(1 + (if (false) {} else { break })) dump.
 			}
 		}*)
-		
+
 		Processor sleepFor: 20.
 	}
 	
