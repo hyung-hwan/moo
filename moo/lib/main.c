@@ -566,7 +566,7 @@ static int write_all (int fd, const char* ptr, moo_oow_t len)
 	{
 		moo_ooi_t wr;
 
-		wr = write (1, ptr, len);
+		wr = write (fd, ptr, len);
 
 		if (wr <= -1)
 		{
@@ -838,9 +838,11 @@ static void vm_cleanup (moo_t* moo)
 #else
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 
+
 #if defined(USE_THREAD)
 	if (xtn->iothr_up)
 	{
+		xtn->iothr_abort = 1;
 		write (xtn->p[1], "Q", 1);
 		pthread_cond_signal (&xtn->ev.cnd);
 		pthread_join (xtn->iothr, MOO_NULL);
