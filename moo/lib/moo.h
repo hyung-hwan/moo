@@ -840,8 +840,13 @@ struct moo_pfinfo_t
 	moo_pfimpl_t      handler;
 };
 
-
 typedef struct moo_mod_t moo_mod_t;
+
+enum moo_mod_hint_t
+{
+	MOO_MOD_LOAD_FOR_IMPORT = (1 << 0)
+};
+typedef enum moo_mod_hint_t moo_mod_hint_t;
 
 typedef int (*moo_mod_load_t) (
 	moo_t*     moo,
@@ -865,12 +870,22 @@ typedef void (*moo_mod_unload_t) (
 	moo_mod_t* mod
 );
 
+typedef void (*moo_mod_gc_t) (
+	moo_t*     moo,
+	moo_mod_t* mod
+);
+
 struct moo_mod_t
 {
+	/* input */
 	const moo_ooch_t name[MOO_MOD_NAME_LEN_MAX + 1];
+	const int hints; /* bitwised-ORed of moo_mod_hint_t enumerators */
+
+	/* user-defined data */
 	moo_mod_import_t import;
 	moo_mod_query_t  query;
 	moo_mod_unload_t unload;
+	moo_mod_gc_t     gc;
 	void*            ctx;
 };
 
@@ -881,7 +896,6 @@ struct moo_mod_data_t
 	moo_mod_t       mod;
 };
 typedef struct moo_mod_data_t moo_mod_data_t;
-
 
 
 struct moo_sbuf_t
@@ -1065,6 +1079,7 @@ struct moo_t
 #define MOO_STACK_POPS(moo,count) ((moo)->sp = (moo)->sp - (count))
 #define MOO_STACK_ISEMPTY(moo) ((moo)->sp <= -1)
 
+#define MOO_STACK_GETARGSP(moo,nargs,idx) ((moo)->sp - ((nargs) - (idx) - 1))
 #define MOO_STACK_GETARG(moo,nargs,idx) MOO_STACK_GET(moo, (moo)->sp - ((nargs) - (idx) - 1))
 #define MOO_STACK_GETRCV(moo,nargs) MOO_STACK_GET(moo, (moo)->sp - nargs)
 
@@ -1349,6 +1364,15 @@ MOO_EXPORT void moo_gc (
 
 
 /**
+ * The moo_moveoop() function moves an object and returns an updated pointer
+ * after having moved. it must be called in the GC callback context only.
+ */
+MOO_EXPORT moo_oop_t moo_moveoop (
+	moo_t*     moo,
+	moo_oop_t  oop
+);
+
+/**
  * The moo_instantiate() function creates a new object instance of the class 
  * \a _class. The size of the fixed part is taken from the information
  * contained in the class defintion. The \a vlen parameter specifies the length
@@ -1457,6 +1481,11 @@ MOO_EXPORT int moo_inttoooi (
 	moo_ooi_t* i
 );
 
+MOO_EXPORT moo_oop_t moo_findclass (
+	moo_t*            moo,
+	moo_oop_set_t     nsdic,
+	const moo_ooch_t* name
+);
 
 /* =========================================================================
  * TRAILER MANAGEMENT

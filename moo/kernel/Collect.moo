@@ -321,40 +321,33 @@ class Set(Collection)
 
 	method __remove_at: index
 	{
-		| bs x y i v |
+		| bs x y i v ass z |
 
 		bs := self.bucket size.
-		v := self.bucket basicAt: index.
+		v := self.bucket at: index.
 
 		x := index.
 		y := index.
 		i := 0.
-		[i < self.tally] whileTrue: [
-			| ass z |
-
+		while (i < self.tally)
+		{
 			y := (y + 1) rem: bs.
 
-			ass := self.bucket at: i.
-			if (ass isNil)
-			{
-				(* done. the slot at the current index is nil *)
-				i := self.tally 
-			}
-			else
-			{
-				(* get the natural hash index *)
-				z := (ass key hash) rem: bs.
+			ass := self.bucket at: y.
+			if (ass isNil) { (* done. the slot at the current index is nil *) break }.
+			
+			(* get the natural hash index *)
+			z := (ass key hash) rem: bs.
 
-				(* move an element if necessary *)
-				if ((y > x and: [(z <= x) or: [z > y]]) or: [(y < x) and: [(z <= x) and: [z > y]]])
-				{
-					self.bucket at: x put: (self.bucket at: y).
-					x := y.
-				}.
-
-				i := i + 1
+			(* move an element if necessary *)
+			if ((y > x and: [(z <= x) or: [z > y]]) or: [(y < x) and: [(z <= x) and: [z > y]]])
+			{
+				self.bucket at: x put: (self.bucket at: y).
+				x := y.
 			}.
-		].
+			
+			i := i + 1.
+		}.
 		
 		self.bucket at: x put: nil.
 		self.tally := self.tally - 1.
@@ -744,14 +737,15 @@ class LinkedList(Collection)
 		else { self.first := link next }.
 		
 		self.tally := self.tally - 1.
+		^link.
 	}
 
-	method removeFirst
+	method removeFirstLink
 	{
 		^self removeLink: self.first
 	}
 
-	method removeLast
+	method removeLastLink
 	{
 		^self removeLink: self.last
 	}
@@ -766,5 +760,23 @@ class LinkedList(Collection)
 			block value: link value.
 			link := next.
 		}
+	}
+
+	method doOverLink: block
+	{
+		| link next |
+		link := self.first.
+		while (link notNil)
+		{
+			next := link next.
+			block value: link.
+			link := next.
+		}
+	}
+
+	method findLink: value
+	{
+		self doOverLink: [:el | if (el value = value) { ^el }].
+		^Error.Code.ENOENT
 	}
 }

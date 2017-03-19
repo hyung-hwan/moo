@@ -462,6 +462,9 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 	return handle;
 
 #else
+
+
+
 /* TODO: support various platforms */
 	/* TODO: implemenent this */
 	MOO_DEBUG1 (moo, "Dynamic loading not implemented - cannot open %js\n", name);
@@ -1320,11 +1323,12 @@ int main (int argc, char* argv[])
 	}
 #endif
 
+
+	memset (&vmprim, 0, MOO_SIZEOF(vmprim));
 	vmprim.dl_open = dl_open;
 	vmprim.dl_close = dl_close;
 	vmprim.dl_getsym = dl_getsym;
 	vmprim.log_write = log_write;
-
 	vmprim.vm_startup = vm_startup;
 	vmprim.vm_cleanup = vm_cleanup;
 	vmprim.vm_gettime = vm_gettime;

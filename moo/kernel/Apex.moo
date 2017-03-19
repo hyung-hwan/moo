@@ -312,17 +312,86 @@ class Apex(nil)
 		^(self isMemberOf: aClass) or: [self class inheritsFrom: aClass].
 	}
 
-	(* -----------------
-	method(#class) respondsTo: selectorSymbol
+	## -------------------------------------------------------
+	## -------------------------------------------------------
+
+	method(#class) respondsTo: selector
 	{
-		TODO: find selectorSymbol in the class method dictionary...
+		<primitive: #_responds_to>
+		self primitiveFailed
 	}
 
-	method respondsTo: selectorSymbol
+	method respondsTo: selector
 	{
-		TODO: find selectorSymbol in the method dictionary...
+		<primitive: #_responds_to>
+		self primitiveFailed
 	}
-	------------ *)
+
+	## -------------------------------------------------------
+	## -------------------------------------------------------
+
+	method(#class) perform()
+	{
+		<primitive: #_perform>
+		self primitiveFailed
+	}
+	
+	method perform()
+	{
+		<primitive: #_perform>
+		self primitiveFailed
+	}
+	
+	method(#class) perform: selector
+	{
+		<primitive: #_perform>
+		self primitiveFailed
+	}
+	
+	method perform: selector
+	{
+		<primitive: #_perform>
+		self primitiveFailed
+	}
+
+	method(#class) perform: selector with: arg1
+	{
+		<primitive: #_perform>
+		self primitiveFailed
+	}
+
+	method perform: selector with: arg1
+	{
+		<primitive: #_perform>
+		self primitiveFailed
+	}
+
+	method(#class) perform: selector with: arg1 with: arg2
+	{
+		<primitive: #_perform>
+		self primitiveFailed
+	}
+
+	method perform: selector with: arg1 with: arg2
+	{
+		<primitive: #_perform>
+		self primitiveFailed
+	}
+	
+	method(#class) perform: selector with: arg1 with: arg2 with: arg3
+	{
+		<primitive: #_perform>
+		self primitiveFailed
+	}
+
+	method perform: selector with: arg1 with: arg2 with: arg3
+	{
+		<primitive: #_perform>
+		self primitiveFailed
+	}
+
+	## -------------------------------------------------------
+	## -------------------------------------------------------
 
 	method exceptionizeError: trueOrFalse
 	{

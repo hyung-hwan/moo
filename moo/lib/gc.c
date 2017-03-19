@@ -562,6 +562,19 @@ static moo_uint8_t* scan_new_heap (moo_t* moo, moo_uint8_t* ptr)
 	return ptr; 
 }
 
+static moo_rbt_walk_t call_module_gc (moo_rbt_t* rbt, moo_rbt_pair_t* pair, void* ctx)
+{
+	moo_t* moo = (moo_t*)ctx;
+	moo_mod_data_t* mdp;
+
+	mdp = MOO_RBT_VPTR(pair);
+	MOO_ASSERT (moo, mdp != MOO_NULL);
+
+	if (mdp->mod.gc) mdp->mod.gc (moo, &mdp->mod);
+
+	return MOO_RBT_WALK_FORWARD;
+}
+
 void moo_gc (moo_t* moo)
 {
 	/* 
@@ -642,6 +655,8 @@ void moo_gc (moo_t* moo)
 		moo->active_context = (moo_oop_context_t)moo_moveoop (moo, (moo_oop_t)moo->active_context);
 	if (moo->active_method)
 		moo->active_method = (moo_oop_method_t)moo_moveoop (moo, (moo_oop_t)moo->active_method);
+
+	moo_rbt_walk (&moo->modtab, call_module_gc, moo); 
 
 	for (cb = moo->cblist; cb; cb = cb->next)
 	{

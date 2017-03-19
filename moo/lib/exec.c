@@ -108,6 +108,7 @@
 #endif
 
 static void signal_io_semaphore (moo_t* moo, int mask, void* ctx);
+static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_ooi_t nargs);
 
 /* ------------------------------------------------------------------------- */
 static MOO_INLINE int vm_startup (moo_t* moo)
@@ -1521,6 +1522,7 @@ static moo_pfrc_t pf_basic_at (moo_t* moo, moo_ooi_t nargs)
 	if (!MOO_OOP_IS_POINTER(rcv))
 	{
 		/* the receiver is a special numeric object, not a normal pointer */
+		moo->errnum = MOO_EINVAL;
 		return MOO_PF_FAILURE;
 	}
 
@@ -1528,11 +1530,13 @@ static moo_pfrc_t pf_basic_at (moo_t* moo, moo_ooi_t nargs)
 	if (moo_inttooow (moo, pos, &idx) <= 0)
 	{
 		/* negative integer or not integer */
+		moo->errnum = MOO_EINVAL;
 		return MOO_PF_FAILURE;
 	}
 	if (idx >= MOO_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
+		moo->errnum = MOO_ERANGE;
 		return MOO_PF_FAILURE;
 	}
 
@@ -1580,6 +1584,7 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 	if (!MOO_OOP_IS_POINTER(rcv))
 	{
 		/* the receiver is a special numeric object, not a normal pointer */
+		moo->errnum = MOO_EINVAL;
 		return MOO_PF_FAILURE;
 	}
 	pos = MOO_STACK_GETARG(moo, nargs, 0);
@@ -1588,11 +1593,13 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 	if (moo_inttooow (moo, pos, &idx) <= 0)
 	{
 		/* negative integer or not integer */
+		moo->errnum = MOO_EINVAL;
 		return MOO_PF_FAILURE;
 	}
 	if (idx >= MOO_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
+		moo->errnum = MOO_ERANGE;
 		return MOO_PF_FAILURE;
 	}
 
@@ -1601,6 +1608,7 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 /* TODO: disallow change of some key kernel objects???? */
 		/* TODO: is it better to introduct a read-only mark in the object header instead of this class check??? */
 		/* read-only object */ /* TODO: DEVISE A WAY TO PASS a proper error from the primitive handler to MOO */
+		moo->errnum = MOO_EINVAL;
 		return MOO_PF_FAILURE;
 	}
 
@@ -1610,6 +1618,7 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 			if (!MOO_OOP_IS_SMOOI(val))
 			{
 				/* the value is not a character */
+				moo->errnum = MOO_EINVAL;
 				return MOO_PF_FAILURE;
 			}
 /* TOOD: must I check the range of the value? */
@@ -1620,6 +1629,7 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 			if (!MOO_OOP_IS_CHAR(val))
 			{
 				/* the value is not a character */
+				moo->errnum = MOO_EINVAL;
 				return MOO_PF_FAILURE;
 			}
 			((moo_oop_char_t)rcv)->slot[idx] = MOO_OOP_TO_CHAR(val);
@@ -1629,6 +1639,7 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 			if (!MOO_OOP_IS_SMOOI(val))
 			{
 				/* the value is not a number */
+				moo->errnum = MOO_EINVAL;
 				return MOO_PF_FAILURE;
 			}
 
@@ -1643,6 +1654,7 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 			if (moo_inttooow (moo, val, &w) <= 0)
 			{
 				/* the value is not a number, out of range, or negative */
+				moo->errnum = MOO_EINVAL;
 				return MOO_PF_FAILURE;
 			}
 			((moo_oop_word_t)rcv)->slot[idx] = w;
@@ -1712,6 +1724,7 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_ooi_t nargs)
 				default:
 					/* MOO_OBJ_TYPE_OOP, ... */
 					MOO_DEBUG1 (moo, "<pf_hash> Cannot hash an object of type %d\n", type);
+					moo->errnum = MOO_EINVAL;
 					return MOO_PF_FAILURE;
 			}
 			break;
@@ -1723,6 +1736,65 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, hv >= 0 && hv <= MOO_SMOOI_MAX);
 
 	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(hv));
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_responds_to (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, selector;
+	moo_oocs_t mthname;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	selector = MOO_STACK_GETARG(moo, nargs, 0);
+
+	if (MOO_CLASSOF(moo,selector) != moo->_symbol)
+	{
+		moo->errnum = MOO_EINVAL;
+		return MOO_PF_FAILURE;
+	}
+
+	mthname.ptr = MOO_OBJ_GET_CHAR_SLOT(selector);
+	mthname.len = MOO_OBJ_GET_SIZE(selector);
+	if (find_method (moo, rcv, &mthname, 0))
+	{
+		MOO_STACK_SETRET (moo, nargs, moo->_true);
+	}
+	else
+	{
+		MOO_STACK_SETRET (moo, nargs, moo->_false);
+	}
+
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_perform (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t /*rcv,*/ selector;
+	moo_oow_t ssp, esp, i;
+
+	/*rcv = MOO_STACK_GETRCV(moo, nargs);*/
+	selector = MOO_STACK_GETARG(moo, nargs, 0);
+
+	if (MOO_CLASSOF(moo,selector) != moo->_symbol)
+	{
+		moo->errnum = MOO_EINVAL;
+		return MOO_PF_FAILURE;
+	}
+
+	/* remove the selector from the stack */
+	ssp = MOO_STACK_GETARGSP (moo, nargs, 0);
+	esp = MOO_STACK_GETARGSP (moo, nargs, nargs - 1);
+	for (i = ssp; i < esp;)
+	{
+		moo_oop_t t;
+		t = MOO_STACK_GET (moo, i);
+		i++;
+		MOO_STACK_SET(moo, i, t);
+	}
+	MOO_STACK_POP (moo);
+
+	/* emulate message sending */
+	if (send_message (moo, (moo_oop_char_t)selector, 0, nargs - 1) <= -1) return MOO_PF_HARD_FAILURE;
 	return MOO_PF_SUCCESS;
 }
 
@@ -2719,11 +2791,14 @@ static pf_t pftab[] =
 
 	{   0,  0,  pf_hash,                             "_hash"                },
 
+	{   1,  1,  pf_responds_to,                      "_responds_to"         },
+	{   1, MAX_NARGS,  pf_perform,                   "_perform"             },
 	{   1,  1,  pf_exceptionize_error,               "_exceptionize_error"  },
 
 	{   1,  1,  pf_context_goto,                     "_context_goto"        },
 	{   0, MAX_NARGS,  pf_block_value,               "_block_value"         },
 	{   0, MAX_NARGS,  pf_block_new_process,         "_block_new_process"   },
+
 
 	{   0,  0,  pf_process_resume,                   "_process_resume"      },
 	{   0,  0,  pf_process_terminate,                "_process_terminate"   },
@@ -3043,7 +3118,7 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_
 
 	receiver = MOO_STACK_GET(moo, moo->sp - nargs);
 
-	mthname.ptr = selector->slot;
+	mthname.ptr = MOO_OBJ_GET_CHAR_SLOT(selector);
 	mthname.len = MOO_OBJ_GET_SIZE(selector);
 	method = find_method (moo, receiver, &mthname, to_super);
 	if (!method) 

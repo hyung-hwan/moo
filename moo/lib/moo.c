@@ -378,7 +378,7 @@ static_modtab[] =
 };
 #endif
 
-moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namelen)
+moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namelen, int hints)
 {
 	moo_rbt_pair_t* pair;
 	moo_mod_data_t* mdp;
@@ -423,14 +423,6 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 		}
 	}
 
-	if (n >= MOO_COUNTOF(static_modtab))
-	{
-		MOO_DEBUG2 (moo, "Cannot find a static module [%.*js]\n", namelen, name);
-		moo->errnum = MOO_ENOENT;
-		return MOO_NULL;
-/* TODO: fall back to find dynamic module further on supported platforms instead of returning error here... */
-	}
-
 	if (load)
 	{
 		/* found the module in the staic module table */
@@ -449,17 +441,36 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 		}
 
 		mdp = (moo_mod_data_t*)MOO_RBT_VPTR(pair);
+		MOO_ASSERT (moo, MOO_SIZEOF(mdp->mod.hints) == MOO_SIZEOF(int));
+		*(int*)&mdp->mod.hints = hints;
 		if (load (moo, &mdp->mod) <= -1)
 		{
 			moo_rbt_delete (&moo->modtab, (moo_ooch_t*)name, namelen);
 			return MOO_NULL;
 		}
 
+		mdp->pair = pair;
+
+		MOO_DEBUG1 (moo, "Opened a static module [%js]\n", mdp->mod.name);
 		return mdp;
+	}
+	else
+	{
+	#if !defined(MOO_ENABLE_DYNAMIC_MODULE)
+		MOO_DEBUG2 (moo, "Cannot find a static module [%.*js]\n", namelen, name);
+		moo->errnum = MOO_ENOENT;
+		return MOO_NULL;
+	#endif
 	}
 #endif
 
-	/* attempt to find an external module */
+#if !defined(MOO_ENABLE_DYNAMIC_MODULE)
+	MOO_DEBUG2 (moo, "Cannot open module [%.*js] - module loading disabled\n", namelen, name);
+	moo->errnum = MOO_ENOIMPL; /* TODO: is it a good error number for disabled module loading? */
+	return MOO_NULL;
+#endif
+
+	/* attempt to find a dynamic external module */
 	MOO_MEMSET (&md, 0, MOO_SIZEOF(md));
 	moo_copyoochars ((moo_ooch_t*)md.mod.name, name, namelen);
 	if (moo->vmprim.dl_open && moo->vmprim.dl_getsym && moo->vmprim.dl_close)
@@ -496,6 +507,8 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	}
 
 	mdp = (moo_mod_data_t*)MOO_RBT_VPTR(pair);
+	MOO_ASSERT (moo, MOO_SIZEOF(mdp->mod.hints) == MOO_SIZEOF(int));
+	*(int*)&mdp->mod.hints = hints;
 	if (load (moo, &mdp->mod) <= -1)
 	{
 		MOO_DEBUG3 (moo, "Module function [%js] returned failure in [%.*js]\n", buf, namelen, name);
@@ -525,6 +538,10 @@ void moo_closemod (moo_t* moo, moo_mod_data_t* mdp)
 		MOO_DEBUG2 (moo, "Closed a module [%js] - %p\n", mdp->mod.name, mdp->handle);
 		mdp->handle = MOO_NULL;
 	}
+	else
+	{
+		MOO_DEBUG1 (moo, "Closed a static module [%js] - %p\n", mdp->mod.name);
+	}
 
 	if (mdp->pair)
 	{
@@ -537,7 +554,7 @@ int moo_importmod (moo_t* moo, moo_oop_class_t _class, const moo_ooch_t* name, m
 {
 	moo_rbt_pair_t* pair;
 	moo_mod_data_t* mdp;
-	int r = 0;
+	int r = -1;
 
 	/* moo_openmod(), moo_closemod(), etc call a user-defined callback.
 	 * i need to protect _class in case the user-defined callback allocates 
@@ -550,38 +567,36 @@ int moo_importmod (moo_t* moo, moo_oop_class_t _class, const moo_ooch_t* name, m
 	{
 		mdp = (moo_mod_data_t*)MOO_RBT_VPTR(pair);
 		MOO_ASSERT (moo, mdp != MOO_NULL);
+
+		MOO_DEBUG1 (moo, "Cannot import module [%js] - already active\n", mdp->mod.name);
+		moo->errnum = MOO_EPERM;
+		goto done2;
 	}
-	else
-	{
-		mdp = moo_openmod (moo, name, len);
-		if (!mdp) 
-		{
-			r = -1;
-			goto done2;
-		}
-	}
+
+	mdp = moo_openmod (moo, name, len, MOO_MOD_LOAD_FOR_IMPORT);
+	if (!mdp) goto done2;
 
 	if (!mdp->mod.import)
 	{
 		MOO_DEBUG1 (moo, "Cannot import module [%js] - importing not supported by the module\n", mdp->mod.name);
 		moo->errnum = MOO_ENOIMPL;
-		r = -1;
 		goto done;
 	}
 
 	if (mdp->mod.import (moo, &mdp->mod, _class) <= -1)
 	{
 		MOO_DEBUG1 (moo, "Cannot import module [%js] - module's import() returned failure\n", mdp->mod.name);
-		r = -1;
 		goto done;
 	}
 
+	r = 0; /* everything successful */
+
 done:
-	if (!pair) 
-	{
-		/* close the module if it has been opened in this function. */
-		moo_closemod (moo, mdp);
-	}
+	/* close the module opened above.
+	 * [NOTE] if the import callback calls the moo_querymod(), the returned
+	 *        function pointers will get all invalidated here. so never do 
+	 *        anything like that */
+	moo_closemod (moo, mdp);
 
 done2:
 	moo_poptmp (moo);
@@ -615,8 +630,8 @@ moo_pfimpl_t moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen
 
 	mod_name_len = sep - pfid;
 
-	/* the first through the segment before the last compose a module id.
-	 * the last segment is the primitive function name.
+	/* the first segment through the segment before the last compose a
+	 * module id. the last segment is the primitive function name.
 	 * for instance, in con.window.open, con.window is a module id and
 	 * open is the primitive function name. */
 	pair = moo_rbt_search (&moo->modtab, pfid, mod_name_len);
@@ -628,7 +643,7 @@ moo_pfimpl_t moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen
 	else
 	{
 		/* open a module using the part before the last period */
-		mdp = moo_openmod (moo, pfid, mod_name_len);
+		mdp = moo_openmod (moo, pfid, mod_name_len, 0);
 		if (!mdp) return MOO_NULL;
 	}
 
@@ -872,4 +887,23 @@ void* moo_getobjtrailer (moo_t* moo, moo_oop_t obj, moo_oow_t* size)
 	if (!MOO_OBJ_IS_OOP_POINTER(obj) || !MOO_OBJ_GET_FLAGS_TRAILER(obj)) return MOO_NULL;
 	if (size) *size = MOO_OBJ_GET_TRAILER_SIZE(obj);
 	return MOO_OBJ_GET_TRAILER_BYTE(obj);
+}
+
+
+moo_oop_t moo_findclass (moo_t* moo, moo_oop_set_t nsdic, const moo_ooch_t* name)
+{
+	moo_oop_association_t ass;
+	moo_oocs_t n;
+
+	n.ptr = (moo_ooch_t*)name;
+	n.len = moo_countoocstr(name);
+
+	ass = moo_lookupdic (moo, nsdic, &n);
+	if (!ass || MOO_CLASSOF(moo,ass->value) != moo->_class) 
+	{
+		moo->errnum = MOO_ENOENT;
+		return MOO_NULL;
+	}
+
+	return ass->value;
 }

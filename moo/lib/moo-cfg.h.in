@@ -326,7 +326,10 @@
 /* Define to the shared archive member specification, say "(shr.o)". */
 #undef LT_SHARED_LIB_MEMBER
 
-/* use libltdl */
+/* enable dynamic module capability */
+#undef MOO_ENABLE_DYNAMIC_MODULE
+
+/* use libltdl when loading a dynamic module */
 #undef MOO_ENABLE_LIBLTDL
 
 /* link modules statically into the main library */

@@ -660,6 +660,8 @@ ENABLE_LIBLTDL_FALSE
 ENABLE_LIBLTDL_TRUE
 ENABLE_STATIC_MODULE_FALSE
 ENABLE_STATIC_MODULE_TRUE
+ENABLE_DYNAMIC_MODULE_FALSE
+ENABLE_DYNAMIC_MODULE_TRUE
 ENABLE_CXX_FALSE
 ENABLE_CXX_TRUE
 BUILD_MODE
@@ -832,6 +834,7 @@ with_ltdl_lib
 enable_ltdl_install
 enable_debug
 enable_cxx
+enable_dynamic_module
 enable_static_module
 enable_libltdl
 '
@@ -1482,6 +1485,7 @@ Optional Features:
   --enable-debug          build the library in the debug mode (default. no)
   --enable-cxx            build the library for C++ if a C++ compiler is
                           available (default. yes)
+  --enable-dynamic-module enable dynamic module capability(default. yes)
   --enable-static-module  build modules statically into the main
                           library(default. no)
   --enable-libltdl        use libltdl(default. yes)
@@ -20588,6 +20592,31 @@ else
 fi
 
 
+# Check whether --enable-dynamic-module was given.
+if test "${enable_dynamic_module+set}" = set; then :
+  enableval=$enable_dynamic_module; enable_dynamic_module_is=$enableval
+else
+  enable_dynamic_module_is=yes
+
+fi
+
+test "${enable_shared}" = "no" && enable_dynamic_module_is="no"
+
+if test "${enable_dynamic_module_is}" = "yes"
+then
+
+$as_echo "#define MOO_ENABLE_DYNAMIC_MODULE /**/" >>confdefs.h
+
+fi
+ if test "${enable_dynamic_module_is}" = "yes"; then
+  ENABLE_DYNAMIC_MODULE_TRUE=
+  ENABLE_DYNAMIC_MODULE_FALSE='#'
+else
+  ENABLE_DYNAMIC_MODULE_TRUE='#'
+  ENABLE_DYNAMIC_MODULE_FALSE=
+fi
+
+
 # Check whether --enable-static-module was given.
 if test "${enable_static_module+set}" = set; then :
   enableval=$enable_static_module; enable_static_module_is=$enableval
@@ -20611,7 +20640,6 @@ else
   ENABLE_STATIC_MODULE_TRUE='#'
   ENABLE_STATIC_MODULE_FALSE=
 fi
-
 
 
 # Check whether --enable-libltdl was given.
@@ -20842,6 +20870,10 @@ fi
 
 if test -z "${ENABLE_CXX_TRUE}" && test -z "${ENABLE_CXX_FALSE}"; then
   as_fn_error $? "conditional \"ENABLE_CXX\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${ENABLE_DYNAMIC_MODULE_TRUE}" && test -z "${ENABLE_DYNAMIC_MODULE_FALSE}"; then
+  as_fn_error $? "conditional \"ENABLE_DYNAMIC_MODULE\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${ENABLE_STATIC_MODULE_TRUE}" && test -z "${ENABLE_STATIC_MODULE_FALSE}"; then
