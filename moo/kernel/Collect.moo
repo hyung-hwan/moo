@@ -500,86 +500,8 @@ class Dictionary(Set)
 	}
 }
 
-pooldic Log
-{
-	## -----------------------------------------------------------
-	## defines log levels
-	## these items must follow defintions in moo.h
-	## -----------------------------------------------------------
-
-	DEBUG := 1.
-	INFO  := 2.
-	WARN  := 4.
-	ERROR := 8.
-	FATAL := 16.
-}
-
 class SystemDictionary(Set)
 {
-	## the following methods may not look suitable to be placed
-	## inside a system dictionary. but they are here for quick and dirty
-	## output production from the moo code.
-	##   System logNl: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'.
-	##
-
-	dcl(#pooldic) Log.
-
-	method atLevel: level log: message
-	{
-		<primitive: #_log>
-		## do nothing upon logging failure
-	}
-
-	method atLevel: level log: message and: message2
-	{
-		<primitive: #_log>
-		## do nothing upon logging failure
-	}
-
-	method atLevel: level log: message and: message2 and: message3
-	{
-		<primitive: #_log>
-		## do nothing upon logging failure
-	}
-
-	method atLevel: level logNl: message 
-	{
-		## the #_log primitive accepts an array.
-		## so the following lines should work also.
-		## | x |
-		## x := Array new: 2.
-		## x at: 0 put: message.
-		## x at: 1 put: S'\n'.
-		## ^self atLevel: level log: x.
-
-		^self atLevel: level log: message and: S'\n'.
-	}
-
-	method atLevel: level logNl: message and: message2
-	{
-		^self atLevel: level log: message and: message2 and: S'\n'.
-	}
-
-	method log: message
-	{
-		^self atLevel: Log.INFO log: message.
-	}
-
-	method log: message and: message2
-	{
-		^self atLevel: Log.INFO log: message and: message2.
-	}
-
-	method logNl: message
-	{
-		^self atLevel: Log.INFO logNl: message.
-	}
-
-	method logNl: message and: message2
-	{
-		^self atLevel: Log.INFO logNl: message and: message2.
-	}
-
 	method at: key
 	{
 		if (key class ~= Symbol) { InvalidArgumentException signal: 'key is not a symbol' }.

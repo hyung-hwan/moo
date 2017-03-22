@@ -992,6 +992,8 @@ struct moo_t
 
 	moo_oop_class_t _large_positive_integer; /* LargePositiveInteger */
 	moo_oop_class_t _large_negative_integer; /* LargeNegativeInteger */
+
+	moo_oop_class_t _system;
 	/* =============================================================
 	 * END KERNEL CLASSES 
 	 * ============================================================= */

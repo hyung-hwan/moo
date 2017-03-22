@@ -81,16 +81,16 @@ typedef struct kernel_class_info_t kernel_class_info_t;
 
 static kernel_class_info_t kernel_classes[] = 
 {
-	{  4, { 'A','p','e','x'                                                                 }, MOO_OFFSETOF(moo_t,_apex) },
-	{ 15, { 'U','n','d','e','f','i','n','e','d','O','b','j','e','c','t'                     }, MOO_OFFSETOF(moo_t,_undefined_object) },
-	{  5, { 'C','l','a','s','s'                                                             }, MOO_OFFSETOF(moo_t,_class) },
-	{  6, { 'O','b','j','e','c','t'                                                         }, MOO_OFFSETOF(moo_t,_object) },
-	{  6, { 'S','t','r','i','n','g'                                                         }, MOO_OFFSETOF(moo_t,_string) },
+	{  4, { 'A','p','e','x'                                                                 }, MOO_OFFSETOF(moo_t, _apex) },
+	{ 15, { 'U','n','d','e','f','i','n','e','d','O','b','j','e','c','t'                     }, MOO_OFFSETOF(moo_t, _undefined_object) },
+	{  5, { 'C','l','a','s','s'                                                             }, MOO_OFFSETOF(moo_t, _class) },
+	{  6, { 'O','b','j','e','c','t'                                                         }, MOO_OFFSETOF(moo_t, _object) },
+	{  6, { 'S','t','r','i','n','g'                                                         }, MOO_OFFSETOF(moo_t, _string) },
 
-	{  6, { 'S','y','m','b','o','l'                                                         }, MOO_OFFSETOF(moo_t,_symbol) },
-	{  5, { 'A','r','r','a','y'                                                             }, MOO_OFFSETOF(moo_t,_array) },
-	{  9, { 'B','y','t','e','A','r','r','a','y'                                             }, MOO_OFFSETOF(moo_t,_byte_array) },
-	{  9, { 'S','y','m','b','o','l','S','e','t'                                             }, MOO_OFFSETOF(moo_t,_symbol_set) },
+	{  6, { 'S','y','m','b','o','l'                                                         }, MOO_OFFSETOF(moo_t, _symbol) },
+	{  5, { 'A','r','r','a','y'                                                             }, MOO_OFFSETOF(moo_t, _array) },
+	{  9, { 'B','y','t','e','A','r','r','a','y'                                             }, MOO_OFFSETOF(moo_t, _byte_array) },
+	{  9, { 'S','y','m','b','o','l','S','e','t'                                             }, MOO_OFFSETOF(moo_t, _symbol_set) },
 	{ 10, { 'D','i','c','t','i','o','n','a','r','y'                                         }, MOO_OFFSETOF(moo_t, _dictionary) },
 	{ 16, { 'S','y','s','t','e','m','D','i','c','t','i','o','n','a','r','y'                 }, MOO_OFFSETOF(moo_t, _system_dictionary) },
 
@@ -113,7 +113,9 @@ static kernel_class_info_t kernel_classes[] =
 	{ 12, { 'S','m','a','l','l','I','n','t','e','g','e','r'                                 }, MOO_OFFSETOF(moo_t, _small_integer) },
 
 	{ 20, { 'L','a','r','g','e','P','o','s','i','t','i','v','e','I','n','t','e','g','e','r' }, MOO_OFFSETOF(moo_t, _large_positive_integer) },
-	{ 20, { 'L','a','r','g','e','N','e','g','a','t','i','v','e','I','n','t','e','g','e','r' }, MOO_OFFSETOF(moo_t, _large_negative_integer) }
+	{ 20, { 'L','a','r','g','e','N','e','g','a','t','i','v','e','I','n','t','e','g','e','r' }, MOO_OFFSETOF(moo_t, _large_negative_integer) },
+
+	{  6, { 'S','y','s','t','e','m'                                                         }, MOO_OFFSETOF(moo_t, _system) },
 };
 
 /* ----------------------------------------------------------------------- 
@@ -168,7 +170,7 @@ static int ignite_1 (moo_t* moo)
 	 * Character
 	 * SmallIntger
 	 * -------------------------------------------------------------- */
-	moo->_apex              = alloc_kernel_class (moo, 1, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
+	moo->_apex              = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
 	moo->_undefined_object  = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
 	moo->_object            = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
 	moo->_string            = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_CHAR));
@@ -203,6 +205,8 @@ static int ignite_1 (moo_t* moo)
 	moo->_large_positive_integer = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_LIWORD));
 	moo->_large_negative_integer = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_LIWORD));
 
+	moo->_system            = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
+
 	if (!moo->_apex              || !moo->_undefined_object  || 
 	    !moo->_object            || !moo->_string            ||
 
@@ -218,7 +222,7 @@ static int ignite_1 (moo_t* moo)
 
 	    !moo->_true_class        || !moo->_false_class       || 
 	    !moo->_character         || !moo->_small_integer     || 
-	    !moo->_large_positive_integer  || !moo->_large_negative_integer) return -1;
+	    !moo->_large_positive_integer  || !moo->_large_negative_integer || !moo->_system) return -1;
 
 	MOO_OBJ_SET_CLASS (moo->_nil, (moo_oop_t)moo->_undefined_object);
 	return 0;
@@ -267,8 +271,8 @@ static int ignite_2 (moo_t* moo)
 	moo->processor->tally = MOO_SMOOI_TO_OOP(0);
 	moo->processor->active = moo->nil_process;
 
-	/* Export the system dictionary via the first class variable of the Stix class */
-	moo->_apex->slot[0] = (moo_oop_t)moo->sysdic;
+	/* Attach the system dictionary to the nsdic field of the System class */
+	moo->_system->nsdic = moo->sysdic;
 
 	return 0;
 }
@@ -276,8 +280,6 @@ static int ignite_2 (moo_t* moo)
 static int ignite_3 (moo_t* moo)
 {
 	/* Register kernel classes manually created so far to the system dictionary */
-
-	static moo_ooch_t str_system[] = { 'S','y','s','t','e', 'm' };
 	static moo_ooch_t str_processor[] = { 'P', 'r', 'o', 'c', 'e', 's', 's', 'o', 'r' };
 	static moo_ooch_t str_dicnew[] = { 'n', 'e', 'w', ':' };
 	static moo_ooch_t str_dicputassoc[] = { 'p', 'u', 't', '_', 'a', 's', 's', 'o', 'c', ':' };
@@ -296,11 +298,6 @@ static int ignite_3 (moo_t* moo)
 		if (!moo_putatsysdic(moo, sym, cls)) return -1;
 		moo_ptr++;
 	}
-
-	/* Make the system dictionary available as the global name 'System' */
-	sym = moo_makesymbol (moo, str_system, MOO_COUNTOF(str_system));
-	if (!sym) return -1;
-	if (!moo_putatsysdic(moo, sym, (moo_oop_t)moo->sysdic)) return -1;
 
 	/* Make the process scheduler avaialble as the global name 'Processor' */
 	sym = moo_makesymbol (moo, str_processor, MOO_COUNTOF(str_processor));

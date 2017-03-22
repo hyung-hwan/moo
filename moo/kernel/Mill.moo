@@ -318,7 +318,16 @@ class MyObject(Object)
 			}
 		}*)
 
-		Processor sleepFor: 20.
+		System logNl: 'Sleeping start now....'.
+		
+		(* basicAt: 12 to access the nsdic field. use a proper method once it's defined in Class *)
+		(System basicAt: 12) keysAndValuesDo: [:k :v |
+			k dump.
+			v dump.
+			'------------' dump.
+		].
+
+		Processor sleepFor: 3. ## DEBUG VM... VM WAITING FOR 10 SECS instead of 3.
 	}
 	
 	(*
