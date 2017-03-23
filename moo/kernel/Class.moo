@@ -47,4 +47,9 @@ class(#pointer) Class(Apex)
 		].
 		^false
 	}*)
+
+	method nsdic
+	{
+		^self.nsdic
+	}
 }

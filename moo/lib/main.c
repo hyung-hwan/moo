@@ -1014,7 +1014,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 		if (xtn->ev.len <= 0)
 		{
 			/* the event buffer is still empty */
-			pthread_cond_wait (&xtn->ev.cnd2, &xtn->ev.mtx);
+			pthread_cond_timedwait (&xtn->ev.cnd2, &xtn->ev.mtx, &ts);
 		}
 		pthread_mutex_unlock (&xtn->ev.mtx);
 	}
@@ -1151,7 +1151,7 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 
 	#if defined(USE_THREAD)
 	/* the sleep callback is called only if there is no IO semaphore 
-	 * waiting. so i can safely call vm_muxwait() wihtout a muxwait callback
+	 * waiting. so i can safely call vm_muxwait() without a muxwait callback
 	 * when USE_THREAD is true */
 	vm_muxwait (moo, dur, MOO_NULL);
 	#else

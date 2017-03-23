@@ -268,7 +268,11 @@ class MyObject(Object)
 	
 	method(#class) main
 	{
-		|a i |
+		|a i|
+		
+		System _getUint8(1,2).
+		'JJJJJJJJJJ' dump.
+		
 		
 		a := 100.
 			## PROBLEM: the following double loop will exhaust the stack 
@@ -318,16 +322,20 @@ class MyObject(Object)
 			}
 		}*)
 
-		System logNl: 'Sleeping start now....'.
 		
+		
+
 		(* basicAt: 12 to access the nsdic field. use a proper method once it's defined in Class *)
-		(System basicAt: 12) keysAndValuesDo: [:k :v |
+		(System nsdic) keysAndValuesDo: [:k :v |
 			k dump.
 			v dump.
 			'------------' dump.
 		].
 
-		Processor sleepFor: 3. ## DEBUG VM... VM WAITING FOR 10 SECS instead of 3.
+		
+		(System at: #Processor) dump.
+		System logNl: 'Sleeping start now....'.
+		Processor sleepFor: 2.
 	}
 	
 	(*

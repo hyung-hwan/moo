@@ -116,6 +116,7 @@ static struct voca_t
 	{ 11, { 't','h','i','s','C','o','n','t','e','x','t'                   } },
 	{ 11, { 't','h','i','s','P','r','o','c','e','s','s'                   } },
 	{  4, { 't','r','u','e'                                               } },
+	{  9, { '#','v','a','r','i','a','d','i','c'                           } },
 	{  5, { 'w','h','i','l','e'                                           } },
 	{  5, { '#','w','o','r','d'                                           } },
 
@@ -162,6 +163,7 @@ enum voca_id_t
 	VOCA_THIS_CONTEXT,
 	VOCA_THIS_PROCESS,
 	VOCA_TRUE,
+	VOCA_VARIADIC_S,
 	VOCA_WHILE,
 	VOCA_WORD_S,
 
@@ -3169,9 +3171,8 @@ static int compile_unary_method_name (moo_t* moo)
 			while (1);
 		}
 
-		/* indicate that the unary method name is followed by a parameter list */
-		moo->c->mth.variadic = 1;
 		GET_TOKEN (moo);
+		return 9999; /* to indicate the method definition is in a procedural style */
 	}
 
 	return 0;
@@ -3287,7 +3288,14 @@ static int compile_method_name (moo_t* moo)
  		{
 			set_syntax_error (moo, MOO_SYNERR_MTHNAMEDUPL, &moo->c->mth.name_loc, &moo->c->mth.name);
 			return -1;
- 		}
+		}
+
+		/* compile_unary_method_name() returns 9999 if the name is followed by () */
+		if (moo->c->mth.variadic && n != 9999)
+		{
+			set_syntax_error (moo, MOO_SYNERR_VARIADMTHINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+			return -1;
+		}
 	}
 
 	MOO_ASSERT (moo, moo->c->mth.tmpr_nargs < MAX_CODE_NARGS);
@@ -5799,22 +5807,29 @@ static int compile_method_definition (moo_t* moo)
 				else if (is_token_symbol(moo, VOCA_PRIMITIVE_S))
 				{
 					/* method(#primitive) */
-					if (moo->c->cls.self_oop->modname == moo->_nil)
-					{
-						MOO_DEBUG2 (moo, "Disallowed #primitive method modifier in the class %.*js without 'from'\n", 
-							MOO_OBJ_GET_SIZE(moo->c->cls.self_oop->name),
-							MOO_OBJ_GET_CHAR_SLOT(moo->c->cls.self_oop->name));
-						set_syntax_error (moo, MOO_SYNERR_MODIFIERBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
-						return -1;
-					}
-
 					if (moo->c->mth.primitive)
 					{
+						/* #primitive duplicate modifier */
 						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
 					moo->c->mth.primitive = 1;
+
+					GET_TOKEN (moo);
+				}
+				else if (is_token_symbol(moo, VOCA_VARIADIC_S))
+				{
+					/* method(#variadic) */
+					if (moo->c->mth.variadic)
+					{
+						/* #variadic duplicate modifier */
+						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						return -1;
+					}
+
+					moo->c->mth.variadic = 1;
+
 					GET_TOKEN (moo);
 				}
 				else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
@@ -5853,9 +5868,6 @@ static int compile_method_definition (moo_t* moo)
 		/* the primitive method must be of this form
 		 *  method(#primitive) method_name.
 		 */
-		moo_oow_t litidx, savedlen;
-		moo_oocs_t tmp;
-
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
 		{
 			/* . expected */
@@ -5863,32 +5875,73 @@ static int compile_method_definition (moo_t* moo)
 			return -1;
 		}
 
+		if (moo->c->cls.self_oop->modname == moo->_nil)
+		{
+			moo_oow_t savedlen;
+			moo_ooi_t pfnum;
+
+			savedlen = moo->c->cls.modname.len;
+
+			/* primitive identifer = classname_methodname
+			 * let me compose the identifer into the back of the cls.modname buffer.
+			 * i'll revert it when done */
+			if (copy_string_to (moo, &moo->c->cls.name, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '\0') <= -1 ||
+			    copy_string_to (moo, &moo->c->mth.name, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '_') <= -1)
+			{
+				moo->c->cls.modname.len = savedlen;
+				return -1;
+			}
+
+			pfnum = moo_getpfnum (moo, &moo->c->cls.modname.ptr[savedlen], moo->c->cls.modname.len - savedlen);
+			if (pfnum <= -1 || !MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
+			{
+				MOO_DEBUG2 (moo, "Cannot find intrinsic primitive handler - %.*js\n", 
+					moo->c->cls.modname.len - savedlen, &moo->c->cls.modname.ptr[savedlen]);
+				moo->c->cls.modname.len = savedlen;
+				set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+				return -1;
+			}
+
+			moo->c->cls.modname.len = savedlen;
+
+			moo->c->mth.pftype = PFTYPE_NUMBERED; 
+			moo->c->mth.pfnum = pfnum;
+		}
+		else
+		{
+			moo_oow_t litidx, savedlen;
+			moo_oocs_t tmp;
+
+			/* combine the module name and the method name delimited by a period
+			 * when doing it, let me reuse the cls.modname buffer and restore it
+			 * back once done */
+			savedlen = moo->c->cls.modname.len;
+
+			MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->c->cls.self_oop->modname) == moo->_symbol);
+			tmp.ptr = MOO_OBJ_GET_CHAR_SLOT(moo->c->cls.self_oop->modname);
+			tmp.len = MOO_OBJ_GET_SIZE(moo->c->cls.self_oop->modname);
+
 		/* TODO: i can check if the primitive method is available at compile time by querying the module.
 		 *       do the check depending on the compiler option */
 
-		/* combine the module name and the method name delimited by a period
-		 * when doing it, let me reuse the cls.modname buffer and restore it
-		 * back once done */
-		MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->c->cls.self_oop->modname) == moo->_symbol);
-		savedlen = moo->c->cls.modname.len;
-		tmp.ptr = MOO_OBJ_GET_CHAR_SLOT(moo->c->cls.self_oop->modname);
-		tmp.len = MOO_OBJ_GET_SIZE(moo->c->cls.self_oop->modname);
-		if (copy_string_to (moo, &tmp, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '\0') <= -1 ||
-		    copy_string_to (moo, &moo->c->mth.name, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '.') <= -1 ||
-		    add_symbol_literal(moo, &moo->c->cls.modname, savedlen, &litidx) <= -1)
-		{
+			if (copy_string_to (moo, &tmp, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '\0') <= -1 ||
+			    copy_string_to (moo, &moo->c->mth.name, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '.') <= -1 ||
+			    add_symbol_literal(moo, &moo->c->cls.modname, savedlen, &litidx) <= -1)
+			{
+				moo->c->cls.modname.len = savedlen;
+				return -1;
+			}
+
 			moo->c->cls.modname.len = savedlen;
-			return -1;
+			
+			/* the symbol added must be the first literal to the current method.
+			 * so this condition must be true. */
+			MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(litidx));
+
+			/* external named primitive containing a period. */
+			moo->c->mth.pftype = PFTYPE_NAMED; 
+			moo->c->mth.pfnum = litidx;
 		}
-		moo->c->cls.modname.len = savedlen;
-
-		/* the symbol added must be the first literal to the current method.
-		 * so this condition must be true. */
-		MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(litidx));
-
-		/* external named primitive containing a period. */
-		moo->c->mth.pftype = PFTYPE_NAMED; 
-		moo->c->mth.pfnum = litidx;
 	}
 	else
 	{

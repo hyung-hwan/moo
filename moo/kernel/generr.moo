@@ -81,6 +81,7 @@ class MyObject(Object)
 			'duplicate modifier'
 			'wrong method name'
 			'duplicate method name'
+			'invalid variadic method definition'
 			'duplicate argument name'
 			'duplicate temporary variable name'
 			'duplicate variable name'

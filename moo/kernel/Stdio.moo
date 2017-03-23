@@ -42,7 +42,7 @@ class Stdio(Object) from 'stdio'
 	}
 	*)
 
-	method format (fmt)
+	method(#variadic) format (fmt)
 	{
 		| a b c |
 		'THIS IS FORMAT' dump.

@@ -1229,6 +1229,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_MODIFIERDUPL,    /* duplicate modifier */
 	MOO_SYNERR_MTHNAME,         /* wrong method name */
 	MOO_SYNERR_MTHNAMEDUPL,     /* duplicate method name */
+	MOO_SYNERR_VARIADMTHINVAL,  /* invalid variadic method definition */
 	MOO_SYNERR_ARGNAMEDUPL,     /* duplicate argument name */
 	MOO_SYNERR_TMPRNAMEDUPL,    /* duplicate temporary variable name */
 	MOO_SYNERR_VARNAMEDUPL,     /* duplicate variable name */

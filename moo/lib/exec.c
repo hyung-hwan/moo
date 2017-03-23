@@ -1739,6 +1739,139 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+
+static moo_pfrc_t _get_raw_int (moo_t* moo, moo_ooi_t nargs, int size)
+{
+	moo_uint8_t* rawptr;
+	moo_oow_t offset;
+	moo_ooi_t value;
+	moo_oop_t result;
+
+	if (moo_inttooow (moo, MOO_STACK_GETARG(moo, nargs, 0), (moo_oow_t*)&rawptr) <= 0 ||
+	    moo_inttooow (moo, MOO_STACK_GETARG(moo, nargs, 1), &offset) <= 0)
+	{
+		moo->errnum = MOO_EINVAL;
+		return MOO_PF_FAILURE;
+	}
+
+	switch (size)
+	{
+		case 1:
+			value = *(moo_int8_t*)&rawptr[offset];
+			break;
+
+		case 2:
+			value = *(moo_int16_t*)&rawptr[offset];
+			break;
+
+		case 4:
+			value = *(moo_int32_t*)&rawptr[offset];
+			break;
+
+		case 8:
+			value = *(moo_int64_t*)&rawptr[offset];
+			break;
+
+		default:
+			moo->errnum = MOO_EINVAL;
+			return MOO_PF_FAILURE;
+	}
+
+	result = moo_ooitoint (moo, value);
+	if (!result) return MOO_PF_FAILURE;
+
+	MOO_STACK_SETRET (moo, nargs, result);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t _get_raw_uint (moo_t* moo, moo_ooi_t nargs, int size)
+{
+	moo_uint8_t* rawptr;
+	moo_oow_t offset;
+	moo_oow_t value;
+	moo_oop_t result;
+
+MOO_DEBUG1 (moo, "get_raw_uint ..%d\n", size);
+	if (moo_inttooow (moo, MOO_STACK_GETARG(moo, nargs, 0), (moo_oow_t*)&rawptr) <= 0 ||
+	    moo_inttooow (moo, MOO_STACK_GETARG(moo, nargs, 1), &offset) <= 0)
+	{
+MOO_DEBUG0 (moo, "get_raw_uint failure...\n");
+		moo->errnum = MOO_EINVAL;
+		return MOO_PF_FAILURE;
+	}
+
+	switch (size)
+	{
+		case 1:
+			value = *(moo_uint8_t*)&rawptr[offset];
+			break;
+
+		case 2:
+			value = *(moo_uint16_t*)&rawptr[offset];
+			break;
+
+		case 4:
+			value = *(moo_uint32_t*)&rawptr[offset];
+			break;
+
+		case 8:
+			value = *(moo_uint64_t*)&rawptr[offset];
+			break;
+
+		default:
+			moo->errnum = MOO_EINVAL;
+			return MOO_PF_FAILURE;
+	}
+
+	result = moo_oowtoint (moo, value);
+	if (!result) return MOO_PF_FAILURE;
+
+MOO_DEBUG1 (moo, "get_raw_uint failure..%O.\n", result);
+	MOO_STACK_SETRET (moo, nargs, result);
+	return MOO_PF_SUCCESS;
+}
+
+
+static moo_pfrc_t pf_get_int8 (moo_t* moo, moo_ooi_t nargs)
+{
+	return _get_raw_int (moo, nargs, 1);
+}
+
+static moo_pfrc_t pf_get_int16 (moo_t* moo, moo_ooi_t nargs)
+{
+	return _get_raw_int (moo, nargs, 2);
+}
+
+static moo_pfrc_t pf_get_int32 (moo_t* moo, moo_ooi_t nargs)
+{
+	return _get_raw_int (moo, nargs, 4);
+}
+
+static moo_pfrc_t pf_get_int64 (moo_t* moo, moo_ooi_t nargs)
+{
+	return _get_raw_int (moo, nargs, 8);
+}
+
+static moo_pfrc_t pf_get_uint8 (moo_t* moo, moo_ooi_t nargs)
+{
+	return _get_raw_uint (moo, nargs, 1);
+}
+
+static moo_pfrc_t pf_get_uint16 (moo_t* moo, moo_ooi_t nargs)
+{
+	return _get_raw_uint (moo, nargs, 2);
+}
+
+static moo_pfrc_t pf_get_uint32 (moo_t* moo, moo_ooi_t nargs)
+{
+	return _get_raw_uint (moo, nargs, 4);
+}
+
+static moo_pfrc_t pf_get_uint64 (moo_t* moo, moo_ooi_t nargs)
+{
+	return _get_raw_uint (moo, nargs, 8);
+}
+
 static moo_pfrc_t pf_responds_to (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, selector;
@@ -1896,7 +2029,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 	if (MOO_OOP_TO_SMOOI(rcv_blkctx->method_or_nargs) != actual_arg_count /* nargs */)
 	{
 		MOO_LOG4 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
-			"Error(%hs) - wrong number of arguments to a block context %O - expecting %zd, got %zd\n",
+			"Error(%hs) - wrong number of arguments to a block context %O - %zd expected, %zd given\n",
 			__PRIMITIVE_NAME__, rcv_blkctx, MOO_OOP_TO_SMOOI(rcv_blkctx->method_or_nargs), actual_arg_count);
 		return MOO_PF_FAILURE;
 	}
@@ -2759,11 +2892,11 @@ static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_ooi_t nargs)
 }
 
 
-#define MAX_NARGS MOO_TYPE_MAX(moo_ooi_t)
+#define MAX_NARGS MOO_TYPE_MAX(moo_oow_t)
 struct pf_t
 {
-	moo_ooi_t       min_nargs;   /* expected number of arguments */
-	moo_ooi_t       max_nargs;   /* expected number of arguments */
+	moo_oow_t       min_nargs;   /* expected number of arguments */
+	moo_oow_t       max_nargs;   /* expected number of arguments */
 	moo_pfimpl_t    handler;
 	const char*     name;        /* the name is supposed to be 7-bit ascii only */
 };
@@ -2791,6 +2924,26 @@ static pf_t pftab[] =
 
 	{   0,  0,  pf_hash,                             "_hash"                },
 
+	{   2,  2,  pf_get_int8,                         "System__getInt8"       },
+	{   2,  2,  pf_get_int16,                        "System__getInt16"      },
+	{   2,  2,  pf_get_int32,                        "System__getInt32"      },
+	{   2,  2,  pf_get_int64,                        "System__getInt64"      },
+	{   2,  2,  pf_get_uint8,                        "System__getUint8"      },
+	{   2,  2,  pf_get_uint16,                       "System__getUint16"     },
+	{   2,  2,  pf_get_uint32,                       "System__getUint32"     },
+	{   2,  2,  pf_get_uint64,                       "System__getUint64"     },
+
+/*
+	{   3,  3,  pf_put_int8,                         "System__putInt8"       },
+	{   3,  3,  pf_put_int16,                        "System__putInt16"      },
+	{   3,  3,  pf_put_int32,                        "System__putInt32"      },
+	{   3,  3,  pf_put_int64,                        "System__putInt64"      },
+	{   3,  3,  pf_put_uint8,                        "System__putUint8"      },
+	{   3,  3,  pf_put_uint16,                       "System__putUint16"     },
+	{   3,  3,  pf_put_uint32,                       "System__putUint32"     },
+	{   3,  3,  pf_put_uint64,                       "System__putUint64"     },
+*/
+
 	{   1,  1,  pf_responds_to,                      "_responds_to"         },
 	{   1, MAX_NARGS,  pf_perform,                   "_perform"             },
 	{   1,  1,  pf_exceptionize_error,               "_exceptionize_error"  },
@@ -2798,7 +2951,6 @@ static pf_t pftab[] =
 	{   1,  1,  pf_context_goto,                     "_context_goto"        },
 	{   0, MAX_NARGS,  pf_block_value,               "_block_value"         },
 	{   0, MAX_NARGS,  pf_block_new_process,         "_block_new_process"   },
-
 
 	{   0,  0,  pf_process_resume,                   "_process_resume"      },
 	{   0,  0,  pf_process_terminate,                "_process_terminate"   },
@@ -2852,10 +3004,7 @@ int moo_getpfnum (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 /* TODO: have the pftable sorted alphabetically and do binary search */
 	for (i = 0; i < MOO_COUNTOF(pftab); i++)
 	{
-		if (moo_compoocharsbcstr(ptr, len, pftab[i].name) == 0)
-		{
-			return i;
-		}
+		if (moo_compoocharsbcstr(ptr, len, pftab[i].name) == 0) return i;
 	}
 
 	moo->errnum = MOO_ENOENT;
@@ -2866,6 +3015,7 @@ int moo_getpfnum (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 {
 	moo_ooi_t preamble, preamble_code;
+	moo_ooi_t /*sp,*/ stack_base;
 
 #if defined(MOO_DEBUG_VM_EXEC)
 	moo_ooi_t fetched_instruction_pointer = 0; /* set it to a fake value */
@@ -2982,24 +3132,36 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 		{
 			moo_ooi_t pfnum;
 
+			stack_base = moo->sp - nargs - 1; /* stack base before receiver and arguments */
+
 			pfnum = MOO_METHOD_GET_PREAMBLE_INDEX(preamble);
 			LOG_INST_1 (moo, "preamble_primitive %zd", pf_no);
 
-			if (pfnum >= 0 && pfnum < MOO_COUNTOF(pftab) && 
-			    (nargs >= pftab[pfnum].min_nargs && nargs <= pftab[pfnum].max_nargs))
+			if (pfnum >= 0 && pfnum < MOO_COUNTOF(pftab))
 			{
 				int n;
+
+				if ((nargs < pftab[pfnum].min_nargs || nargs > pftab[pfnum].max_nargs))
+				{
+					MOO_DEBUG4 (moo, "Soft failure due to argument count mismatch for primitive function %hs - %zu-%zu expected, %zu given\n",
+						pftab[pfnum].name, pftab[pfnum].min_nargs, pftab[pfnum].max_nargs, nargs);
+					goto activate_primitive_method_body;
+				}
 
 				moo_pushtmp (moo, (moo_oop_t*)&method);
 				n = pftab[pfnum].handler (moo, nargs);
 				moo_poptmp (moo);
 				if (n <= MOO_PF_HARD_FAILURE) return -1;
 				if (n >= MOO_PF_SUCCESS) break;
+
+				MOO_DEBUG2 (moo, "Soft failure indicated by primitive function %p - %hs\n", pftab[pfnum].handler, pftab[pfnum].name);
+			}
+			else
+			{
+				MOO_DEBUG1 (moo, "Cannot call primitive numbered %zd - invalid number\n", pfnum);
 			}
 
-			/* soft primitive failure */
-			if (activate_new_method (moo, method, nargs) <= -1) return -1;
-			break;
+			goto activate_primitive_method_body;
 		}
 
 		case MOO_METHOD_PREAMBLE_NAMED_PRIMITIVE:
@@ -3008,10 +3170,8 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			moo_oop_t name;
 			moo_pfimpl_t handler;
 			moo_oow_t w;
-			moo_ooi_t /*sp,*/ sb;
 
-			/*sp = moo->sp;*/
-			sb = moo->sp - nargs - 1; /* stack base before receiver and arguments */
+			stack_base = moo->sp - nargs - 1; /* stack base before receiver and arguments */
 
 		#if !defined(NDEBUG)
 			pf_name_index = MOO_METHOD_GET_PREAMBLE_INDEX(preamble);
@@ -3072,6 +3232,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				MOO_DEBUG2 (moo, "Soft failure for non-existent primitive function - %.*js\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot);
 			}
 
+		activate_primitive_method_body:
 		#if defined(MOO_USE_METHOD_TRAILER)
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TRAILER(method));
 			if (MOO_METHOD_GET_CODE_SIZE(method) == 0) /* this trailer size field not a small integer */
@@ -3079,11 +3240,10 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			if (method->code == moo->_nil)
 		#endif
 			{
-				/* no byte code to execute */
-/* TODO: what is the best tactics? emulate "self primitiveFailed"? */
-
-				/* force restore stack pointers */
-				moo->sp = sb;
+				/* no byte code to execute - make it a hard failure */
+/* TODO: what is the best tactics? emulate "self primitiveFailed"? or should this be generated by the compiler */
+				MOO_DEBUG0 (moo, "Empty primitive body\n");
+				moo->sp = stack_base; /* force restore stack pointer */
 				MOO_STACK_PUSH (moo, moo->_nil);
 				return -1;
 			}
@@ -3091,6 +3251,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			{
 				if (activate_new_method (moo, method, nargs) <= -1) return -1;
 			}
+
 			break;
 		}
 
