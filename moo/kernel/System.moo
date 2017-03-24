@@ -120,31 +120,5 @@ extend System
 	method(#class,#primitive) _putUint32 (rawptr, offset, value).
 	method(#class,#primitive) _putUint64 (rawptr, offset, value),
 	*)
-
-	(*
-	method(#class) getUint8: rawptr at: offset
-	{
-		<primitive: #_get_uint8>
-	}
-
-	method(#class) getUint16: rawptr at: offset
-	{
-		<primitive: #_get_uint16>
-	}
-
-	method(#class) getUint32: rawptr at: offset
-	{
-		<primitive: #_get_uint32>
-	}
-
-	method(#class) getUint64: rawptr at: offset
-	{
-		<primitive: #_get_uint64>
-	}
-	
-	method(#class) putUint8: value rawptr: rawptr at: offset
-	{
-		<primitive: #_get_uint8>
-	}*)
 }
 

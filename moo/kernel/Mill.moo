@@ -269,11 +269,7 @@ class MyObject(Object)
 	method(#class) main
 	{
 		|a i|
-		
-		System _getUint8(1,2).
-		'JJJJJJJJJJ' dump.
-		
-		
+
 		a := 100.
 			## PROBLEM: the following double loop will exhaust the stack 
 			(*

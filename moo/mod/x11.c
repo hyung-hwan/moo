@@ -34,6 +34,21 @@
 #define C MOO_METHOD_CLASS
 #define I MOO_METHOD_INSTANCE
 
+
+/**
+ * @brief Bit mask to find event type regardless of event source.
+ *
+ * Each event in the X11 protocol contains an 8-bit type code.
+ * The most-significant bit in this code is set if the event was
+ * generated from a SendEvent request. This mask can be used to
+ * determine the type of event regardless of how the event was
+ * generated. See the X11R6 protocol specification for details.
+ */
+#define XCB_EVENT_RESPONSE_TYPE_MASK (0x7f)
+#define XCB_EVENT_RESPONSE_TYPE(e)   (e->response_type &  XCB_EVENT_RESPONSE_TYPE_MASK)
+#define XCB_EVENT_SENT(e)            (e->response_type & ~XCB_EVENT_RESPONSE_TYPE_MASK)
+
+
 typedef struct x11_modctx_t x11_modctx_t;
 struct x11_modctx_t
 {
@@ -55,7 +70,7 @@ typedef struct x11_win_t x11_win_t;
 struct x11_win_t
 {
 	xcb_window_t id;
-	xcb_intern_atom_reply_t* dwcr;
+	xcb_intern_atom_reply_t* dwar;
 };
 
 
@@ -171,54 +186,21 @@ static moo_pfrc_t pf_getevent (moo_t* moo, moo_ooi_t nargs)
 
 	if (evt)
 	{
-		uint8_t evttype = evt->response_type & 0x7F;
+		moo_oop_t llevt;
+		uint8_t evttype;
 
+		evttype = evt->response_type & 0x7F;
 		x11->curevt = evt;
-		if (evttype == XCB_CLIENT_MESSAGE)
+
+		llevt = moo_oowtoint (moo, (moo_oow_t)evt);
+		if (!llevt) 
 		{
-			MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(9999)); /* TODO: translate evt to the event object */
-		}
-		else
-		{
-			MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(evttype)); /* TODO: translate evt to the event object */
+			llevt = MOO_ERROR_TO_OOP(moo->errnum);
+			free (evt);
+			x11->curevt = MOO_NULL;
 		}
 
-#if 0
-		switch (evttype)
-		{
-			case XCB_CLIENT_MESSAGE:
-	#if 0
-				if (((xcb_client_message_event_t*)evt)->data.data32[0] == x11->dwcr->atom)
-				{
-					xcb_unmap_window (x11->c, x11->w);
-					xcb_destroy_window (x11->c, x11->w);
-					xcb_flush (x11->c);
-				}
-	#endif
-				MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(9999)); /* TODO: translate evt to the event object */
-			
-				break;
-
-
-			case XCB_BUTTON_PRESS:
-			case XCB_BUTTON_RELEASE:
-			{
-				xcb_button_press_event_t* bpe = (xcb_button_press_event_t*)evt;
-
-
-				MOO_STACK_SETRET (moo, nargs, e);
-				break;
-			}
-
-			default:
-				MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(evttype)); /* TODO: translate evt to the event object */
-				break;
-		}
-		
-
-		free (evt);
-#endif
-
+		MOO_STACK_SETRET (moo, nargs, llevt);
 	}
 	else if (xcb_connection_has_error(x11->c))
 	{
@@ -227,6 +209,7 @@ static moo_pfrc_t pf_getevent (moo_t* moo, moo_ooi_t nargs)
 	}
 	else
 	{
+		/* nil if there is no event */
 		MOO_STACK_SETRET (moo, nargs, moo->_nil);
 	}
 
@@ -234,6 +217,21 @@ static moo_pfrc_t pf_getevent (moo_t* moo, moo_ooi_t nargs)
 }
 
 /* ------------------------------------------------------------------------ */
+
+static moo_pfrc_t pf_win_get_dwatom (moo_t* moo, moo_ooi_t nargs)
+{
+	x11_win_t* win;
+	moo_oop_t x;
+
+	win = (x11_win_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+
+	x = moo_oowtoint (moo, win->dwar->atom);
+	if (!x) return MOO_PF_HARD_FAILURE;
+
+	MOO_STACK_SETRET (moo, nargs, x);
+	return MOO_PF_SUCCESS;
+
+}
 
 static moo_pfrc_t pf_win_get_id (moo_t* moo, moo_ooi_t nargs)
 {
@@ -247,7 +245,6 @@ static moo_pfrc_t pf_win_get_id (moo_t* moo, moo_ooi_t nargs)
 
 	MOO_STACK_SETRET (moo, nargs, x);
 	return MOO_PF_SUCCESS;
-
 }
 
 static moo_pfrc_t pf_win_kill_on (moo_t* moo, moo_ooi_t nargs)
@@ -287,15 +284,12 @@ static moo_pfrc_t pf_win_make_on (moo_t* moo, moo_ooi_t nargs)
 
 MOO_DEBUG0 (moo, "<x11.win._make_on:> %p\n");
 
-	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETARG(moo, nargs, 0), MOO_NULL);
 	win = (x11_win_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
-	if (!x11->c)
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs); /* TODO: be more specific about error */
-		return MOO_PF_SUCCESS;
-	}
+	if (MOO_STACK_GETARG(moo, nargs, 0) == moo->_nil) goto reterr;
+	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETARG(moo, nargs, 0), MOO_NULL);
 
+	if (!x11->c) goto reterr;
 	win->id = xcb_generate_id (x11->c);
 
 	id = moo_oowtoint (moo, win->id);
@@ -305,6 +299,8 @@ MOO_DEBUG0 (moo, "<x11.win._make_on:> %p\n");
 	values[0] = x11->screen->white_pixel;
 	values[1] = XCB_EVENT_MASK_KEY_RELEASE |
 	            XCB_EVENT_MASK_BUTTON_PRESS |
+	            XCB_EVENT_MASK_BUTTON_RELEASE |
+	            /*XCB_EVENT_MASK_BUTTON_MOTION |*/
 	            XCB_EVENT_MASK_EXPOSURE |
 	            /*XCB_EVENT_MASK_POINTER_MOTION |*/
 	            XCB_EVENT_MASK_ENTER_WINDOW |
@@ -324,15 +320,19 @@ MOO_DEBUG0 (moo, "<x11.win._make_on:> %p\n");
 	reply = xcb_intern_atom_reply(x11->c, cookie, 0);
 
 	cookie = xcb_intern_atom(x11->c, 0, 16, "WM_DELETE_WINDOW");
-	win->dwcr = xcb_intern_atom_reply(x11->c, cookie, 0);
+	win->dwar = xcb_intern_atom_reply(x11->c, cookie, 0);
 
-	xcb_change_property(x11->c, XCB_PROP_MODE_REPLACE, win->id, reply->atom, 4, 32, 1, &win->dwcr->atom);
+	xcb_change_property(x11->c, XCB_PROP_MODE_REPLACE, win->id, reply->atom, 4, 32, 1, &win->dwar->atom);
 
 /*TODO: use xcb_request_check() for error handling. you need to call create_x11->wdwo_checked(). xxx_checked()... */
 	xcb_map_window (x11->c, win->id);
 	xcb_flush (x11->c);
 
 	MOO_STACK_SETRET (moo, nargs, id); 
+	return MOO_PF_SUCCESS;
+
+reterr:
+	MOO_STACK_SETRETTOERROR (moo, nargs); /* TODO: be more specific about error */
 	return MOO_PF_SUCCESS;
 }
 
@@ -440,9 +440,10 @@ int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)
 
 static moo_pfinfo_t x11_win_pfinfo[] =
 {
-	{ I, { '_','g','e','t','_','i','d','\0' },                0, pf_win_get_id    },
-	{ I, { '_','k','i','l','l','_','o','n',':','\0' },        0, pf_win_kill_on   },
-	{ I, { '_','m','a','k','e','_','o','n',':','\0' },        0, pf_win_make_on   }
+	{ I, { '_','g','e','t','_','d','w','a','t','o','m','\0'}, 0, pf_win_get_dwatom },
+	{ I, { '_','g','e','t','_','i','d','\0' },                0, pf_win_get_id      },
+	{ I, { '_','k','i','l','l','_','o','n',':','\0' },        0, pf_win_kill_on     },
+	{ I, { '_','m','a','k','e','_','o','n',':','\0' },        0, pf_win_make_on     }
 };
 
 static int x11_win_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)

@@ -1791,11 +1791,9 @@ static moo_pfrc_t _get_raw_uint (moo_t* moo, moo_ooi_t nargs, int size)
 	moo_oow_t value;
 	moo_oop_t result;
 
-MOO_DEBUG1 (moo, "get_raw_uint ..%d\n", size);
 	if (moo_inttooow (moo, MOO_STACK_GETARG(moo, nargs, 0), (moo_oow_t*)&rawptr) <= 0 ||
 	    moo_inttooow (moo, MOO_STACK_GETARG(moo, nargs, 1), &offset) <= 0)
 	{
-MOO_DEBUG0 (moo, "get_raw_uint failure...\n");
 		moo->errnum = MOO_EINVAL;
 		return MOO_PF_FAILURE;
 	}
@@ -1826,7 +1824,6 @@ MOO_DEBUG0 (moo, "get_raw_uint failure...\n");
 	result = moo_oowtoint (moo, value);
 	if (!result) return MOO_PF_FAILURE;
 
-MOO_DEBUG1 (moo, "get_raw_uint failure..%O.\n", result);
 	MOO_STACK_SETRET (moo, nargs, result);
 	return MOO_PF_SUCCESS;
 }
@@ -1917,11 +1914,10 @@ static moo_pfrc_t pf_perform (moo_t* moo, moo_ooi_t nargs)
 	/* remove the selector from the stack */
 	ssp = MOO_STACK_GETARGSP (moo, nargs, 0);
 	esp = MOO_STACK_GETARGSP (moo, nargs, nargs - 1);
-	for (i = ssp; i < esp;)
+	for (i = ssp; i < esp; i++)
 	{
 		moo_oop_t t;
-		t = MOO_STACK_GET (moo, i);
-		i++;
+		t = MOO_STACK_GET (moo, i + 1);
 		MOO_STACK_SET(moo, i, t);
 	}
 	MOO_STACK_POP (moo);
