@@ -53,8 +53,6 @@ typedef struct x11_modctx_t x11_modctx_t;
 struct x11_modctx_t
 {
 	moo_oop_class_t x11_class;
-	moo_oop_class_t mouse_event_class;
-	moo_oop_class_t key_event_class;
 };
 
 typedef struct x11_t x11_t;
@@ -371,8 +369,7 @@ static void x11_gc (moo_t* moo, moo_mod_t* mod)
 	x11_modctx_t* ctx = mod->ctx;
 
 	MOO_ASSERT (moo, ctx != MOO_NULL);
-	ctx->mouse_event_class = (moo_oop_class_t)moo_moveoop (moo, (moo_oop_t)ctx->mouse_event_class);
-	ctx->key_event_class = (moo_oop_class_t)moo_moveoop (moo, (moo_oop_t)ctx->key_event_class);
+	ctx->x11_class = (moo_oop_class_t)moo_moveoop (moo, (moo_oop_t)ctx->x11_class);
 }
 
 int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)
@@ -387,8 +384,6 @@ int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)
 		x11_modctx_t* ctx;
 
 		static moo_ooch_t name_x11[] = { 'X','1','1','\0' };
-		static moo_ooch_t name_mouse_event[] = { 'M','o','u','s','e','E','v','e','n','t','\0' };
-		static moo_ooch_t name_key_event[] = { 'K','e','y','E','v','e','n','t','\0' };
 
 		ctx = moo_callocmem (moo, MOO_SIZEOF(*ctx));
 		if (!ctx) return -1;
@@ -398,31 +393,8 @@ int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)
 		{
 			/* Not a single X11.XXX has been defined. */
 			MOO_DEBUG0 (moo, "X11 class not found\n");
-		oops:
 			moo_freemem (moo, ctx);
 			return -1;
-		}
-
-		if ((moo_oop_t)ctx->x11_class->nsdic == moo->_nil)
-		{
-			MOO_DEBUG0 (moo, "No class defined in X11\n");
-			goto oops;
-		}
-
-/* TODO: check on instance size... etc */
-/* TODO: tabulate key event classes */
-		ctx->mouse_event_class = (moo_oop_class_t)moo_findclass (moo, ctx->x11_class->nsdic, name_mouse_event);
-		if (!ctx->mouse_event_class)
-		{
-			MOO_DEBUG0 (moo, "X11.MouseEvent class not found\n");
-			goto oops;
-		}
-		ctx->key_event_class = (moo_oop_class_t)moo_findclass (moo, ctx->x11_class->nsdic, name_key_event);
-
-		if (!ctx->key_event_class)
-		{
-			MOO_DEBUG0 (moo, "X11.KeyEvent class not found\n");
-			goto oops;
 		}
 
 		mod->gc = x11_gc;

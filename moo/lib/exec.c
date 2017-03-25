@@ -140,7 +140,7 @@ static MOO_INLINE void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 	moo->vmprim.vm_sleep (moo, dur);
 }
 
-static MOO_INLINE void vm_vm_muxwait (moo_t* moo, const moo_ntime_t* dur)
+static MOO_INLINE void vm_muxwait (moo_t* moo, const moo_ntime_t* dur)
 {
 	moo->vmprim.vm_muxwait (moo, dur, signal_io_semaphore);
 }
@@ -839,7 +839,6 @@ static void signal_io_semaphore (moo_t* moo, int mask, void* ctx)
 			wake_new_process (moo, proc); /* switch to running */
 			moo->proc_switched = 1;
 		}
-
 	}
 	else
 	{
@@ -3368,7 +3367,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				/* [NOTE] no moo_pushtmp() on proc. no GC must occur
 				 *        in the following line until it's used for
 				 *        wake_new_process() below. */
-				delete_from_sem_heap (moo, 0);
+				delete_from_sem_heap (moo, 0); /* moo->sem_heap_count is decremented */
 
 				/* if no process is waiting on the semaphore, 
 				 * signal_semaphore() returns moo->_nil. */
@@ -3394,10 +3393,15 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 
 				if (moo->sem_io_wait_count > 0)
 				{
-					vm_vm_muxwait (moo, &ft);
+					/* no running process but io semaphore being waited on */
+					vm_muxwait (moo, &ft);
+
+					/* if a process has been woken up, 
+					if (moo->processor->active != moo->nil_process) break;
 				}
 				else
 				{
+					/* no running process, no io semaphore */
 					vm_sleep (moo, &ft);
 				}
 				vm_gettime (moo, &now);
@@ -3413,7 +3417,23 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 
 	if (moo->sem_io_wait_count > 0) 
 	{
-		vm_vm_muxwait (moo, MOO_NULL);
+		moo_ntime_t now;
+
+		if (moo->processor->active == moo->nil_process)
+		{
+			/* no runnable process while there is an io semaphore being waited */
+			do
+			{
+				vm_gettime (moo, &now);
+				now.sec += 3;
+				vm_muxwait (moo, &now);
+			}
+			while (moo->processor->active == moo->nil_process && !moo->abort_req);
+		}
+		else
+		{
+			vm_muxwait (moo, MOO_NULL);
+		}
 	}
 
 	if (moo->processor->active == moo->nil_process) 
@@ -3421,23 +3441,17 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 		/* no more waiting semaphore and no more process */
 		MOO_ASSERT (moo, moo->processor->tally = MOO_SMOOI_TO_OOP(0));
 		MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "No more runnable process\n");
-
-		#if 0
-		if (there is semaphore awaited.... )
-		{
-		/* DO SOMETHING */
-		}
-		#endif
-
 		return 0;
 	}
 
+#if 0
 	while (moo->sem_list_count > 0)
 	{
 		/* handle async signals */
 		--moo->sem_list_count;
 		signal_semaphore (moo, moo->sem_list[moo->sem_list_count]);
 	}
+#endif
 	/*
 	if (semaphore heap has pending request)
 	{
