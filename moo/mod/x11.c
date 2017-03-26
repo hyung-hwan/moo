@@ -60,7 +60,6 @@ struct x11_t
 {
 	xcb_connection_t* c;
 	xcb_screen_t* screen;
-
 	xcb_generic_event_t* curevt; /* most recent event received */
 };
 
@@ -69,8 +68,16 @@ struct x11_win_t
 {
 	xcb_window_t id;
 	xcb_intern_atom_reply_t* dwar;
+	xcb_connection_t* c;
 };
 
+typedef struct x11_gc_t x11_gc_t;
+struct x11_gc_t
+{
+	xcb_gcontext_t id;
+	xcb_window_t wid;
+	xcb_connection_t* c;
+};
 
 /* ------------------------------------------------------------------------ */
 
@@ -106,7 +113,7 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 	MOO_DEBUG3 (moo, "<x11.connect> %.*js => %p\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, rcv->handle);
 	*/
 	c = xcb_connect (MOO_NULL, MOO_NULL);
-	if (!c) 
+	if (!c || xcb_connection_has_error(c))
 	{
 		MOO_DEBUG0 (moo, "<x11.connect> Cannot connect to X11 server\n");
 		goto softfail;
@@ -174,6 +181,7 @@ static moo_pfrc_t pf_getevent (moo_t* moo, moo_ooi_t nargs)
 {
 	x11_t* x11;
 	xcb_generic_event_t* evt;
+	int e;
 
 	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 	MOO_DEBUG1 (moo, "<x11.getevent> %p\n", x11->c);
@@ -185,9 +193,9 @@ static moo_pfrc_t pf_getevent (moo_t* moo, moo_ooi_t nargs)
 	if (evt)
 	{
 		moo_oop_t llevt;
-		uint8_t evttype;
+		/*uint8_t evttype;
 
-		evttype = evt->response_type & 0x7F;
+		evttype = evt->response_type & 0x7F;*/
 		x11->curevt = evt;
 
 		llevt = moo_oowtoint (moo, (moo_oow_t)evt);
@@ -200,9 +208,10 @@ static moo_pfrc_t pf_getevent (moo_t* moo, moo_ooi_t nargs)
 
 		MOO_STACK_SETRET (moo, nargs, llevt);
 	}
-	else if (xcb_connection_has_error(x11->c))
+	else if ((e = xcb_connection_has_error(x11->c)))
 	{
 		/* TODO: to be specific about the error */
+MOO_DEBUG1 (moo, "XCB CONNECTION ERROR %d\n", e);
 		MOO_STACK_SETRETTOERROR (moo, nargs);
 	}
 	else
@@ -216,6 +225,152 @@ static moo_pfrc_t pf_getevent (moo_t* moo, moo_ooi_t nargs)
 
 /* ------------------------------------------------------------------------ */
 
+static moo_pfrc_t pf_gc_draw_line (moo_t* moo, moo_ooi_t nargs)
+{
+	x11_gc_t* gc;
+	xcb_point_t pt[2];
+	moo_oop_t a[4];
+
+	gc = (x11_gc_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+
+	a[0] = MOO_STACK_GETARG(moo, nargs, 0);
+	a[1] = MOO_STACK_GETARG(moo, nargs, 1);
+	a[2] = MOO_STACK_GETARG(moo, nargs, 2);
+	a[3] = MOO_STACK_GETARG(moo, nargs, 3);
+	if (!MOO_OOP_IS_SMOOI(a[0]) || !MOO_OOP_IS_SMOOI(a[1]) ||
+	    !MOO_OOP_IS_SMOOI(a[2]) || !MOO_OOP_IS_SMOOI(a[0])) goto reterr;
+
+	pt[0].x = MOO_OOP_TO_SMOOI(a[0]);
+	pt[0].y = MOO_OOP_TO_SMOOI(a[1]);
+	pt[1].x = MOO_OOP_TO_SMOOI(a[2]);
+	pt[1].y = MOO_OOP_TO_SMOOI(a[3]);
+
+	xcb_poly_line (gc->c, XCB_COORD_MODE_ORIGIN, gc->wid, gc->id, 2, pt);
+	xcb_flush (gc->c);
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+
+reterr:
+	MOO_STACK_SETRETTOERROR (moo, nargs); /* More specific error code*/
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_gc_draw_rect (moo_t* moo, moo_ooi_t nargs)
+{
+	x11_gc_t* gc;
+	xcb_rectangle_t r;
+	moo_oop_t a[4];
+
+	gc = (x11_gc_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+
+	a[0] = MOO_STACK_GETARG(moo, nargs, 0);
+	a[1] = MOO_STACK_GETARG(moo, nargs, 1);
+	a[2] = MOO_STACK_GETARG(moo, nargs, 2);
+	a[3] = MOO_STACK_GETARG(moo, nargs, 3);
+	if (!MOO_OOP_IS_SMOOI(a[0]) || !MOO_OOP_IS_SMOOI(a[1]) ||
+	    !MOO_OOP_IS_SMOOI(a[2]) || !MOO_OOP_IS_SMOOI(a[0])) goto reterr;
+
+	r.x = MOO_OOP_TO_SMOOI(a[0]);
+	r.y = MOO_OOP_TO_SMOOI(a[1]);
+	r.width = MOO_OOP_TO_SMOOI(a[2]);
+	r.height = MOO_OOP_TO_SMOOI(a[3]);
+
+	xcb_poly_rectangle (gc->c, gc->wid, gc->id, 1, &r);
+	xcb_flush (gc->c);
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+
+reterr:
+	MOO_STACK_SETRETTOERROR (moo, nargs); /* More specific error code*/
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_gc_set_foreground (moo_t* moo, moo_ooi_t nargs)
+{
+	x11_gc_t* gc;
+	moo_oop_t t;
+	uint32_t value;
+
+	gc = (x11_gc_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+
+	t = MOO_STACK_GETARG(moo, nargs, 0);
+	if (MOO_OOP_IS_SMOOI(t)) goto reterr;
+	value = MOO_OOP_TO_SMOOI(t);
+
+	xcb_change_gc (gc->c, gc->id, XCB_GC_FOREGROUND, &value);
+	xcb_flush (gc->c);
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+
+reterr:
+	MOO_STACK_SETRETTOERROR (moo, nargs); /* More specific error code*/
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_gc_get_id (moo_t* moo, moo_ooi_t nargs)
+{
+	x11_gc_t* gc;
+	moo_oop_t x;
+
+	gc = (x11_gc_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+
+	x = moo_oowtoint (moo, gc->id);
+	if (!x) return MOO_PF_HARD_FAILURE;
+
+	MOO_STACK_SETRET (moo, nargs, x);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_gc_kill (moo_t* moo, moo_ooi_t nargs)
+{
+	x11_gc_t* gc;
+
+	gc = (x11_gc_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+
+/* TODO: check on gc id */
+	xcb_free_gc (gc->c, gc->id);
+	xcb_flush (gc->c);
+
+	MOO_STACK_SETRETTORCV (moo, nargs); 
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_gc_make (moo_t* moo, moo_ooi_t nargs)
+{
+	x11_gc_t* gc;
+	x11_win_t* win;
+	moo_oop_t id;
+	xcb_gcontext_t gcid;
+
+	gc = (x11_gc_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+	win = (x11_win_t*)moo_getobjtrailer(moo, MOO_STACK_GETARG(moo, nargs, 0), MOO_NULL);
+
+	gcid = xcb_generate_id (win->c);
+
+	id = moo_oowtoint (moo, gcid);
+	if (!id) return MOO_PF_HARD_FAILURE;
+
+	xcb_create_gc (win->c, gcid, win->id, 0, 0);
+
+/*TODO: use xcb_request_check() for error handling. xcb_create_gc_checked??? xxx_checked()... */
+	xcb_flush (win->c);
+
+	gc->id = gcid;
+	gc->wid = win->id;
+	gc->c = win->c;
+
+	MOO_STACK_SETRET (moo, nargs, id); 
+	return MOO_PF_SUCCESS;
+
+reterr:
+	MOO_STACK_SETRETTOERROR (moo, nargs); /* TODO: be more specific about error */
+	return MOO_PF_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------ */
 static moo_pfrc_t pf_win_get_dwatom (moo_t* moo, moo_ooi_t nargs)
 {
 	x11_win_t* win;
@@ -228,7 +383,6 @@ static moo_pfrc_t pf_win_get_dwatom (moo_t* moo, moo_ooi_t nargs)
 
 	MOO_STACK_SETRET (moo, nargs, x);
 	return MOO_PF_SUCCESS;
-
 }
 
 static moo_pfrc_t pf_win_get_id (moo_t* moo, moo_ooi_t nargs)
@@ -245,35 +399,28 @@ static moo_pfrc_t pf_win_get_id (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_win_kill_on (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_win_kill (moo_t* moo, moo_ooi_t nargs)
 {
-	x11_t* x11;
 	x11_win_t* win;
 
-	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETARG(moo, nargs, 0), MOO_NULL);
 	win = (x11_win_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
-
-	if (!x11->c)
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs); /* More specific error code*/
-		return MOO_PF_SUCCESS;
-	}
 
 /* TODO: check on windows id */
 
-	xcb_unmap_window (x11->c, win->id); /* TODO: check error code */
-	xcb_destroy_window (x11->c, win->id);
-	xcb_flush (x11->c);
+	xcb_unmap_window (win->c, win->id); /* TODO: check error code */
+	xcb_destroy_window (win->c, win->id);
+	xcb_flush (win->c);
 
 	MOO_STACK_SETRETTORCV (moo, nargs); 
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_win_make_on (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_win_make (moo_t* moo, moo_ooi_t nargs)
 {
 	x11_t* x11;
 	x11_win_t* win;
 	moo_oop_t id;
+	xcb_window_t wid;
 
 	uint32_t mask;
 	uint32_t values[2];
@@ -284,13 +431,12 @@ MOO_DEBUG0 (moo, "<x11.win._make_on:> %p\n");
 
 	win = (x11_win_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
-	if (MOO_STACK_GETARG(moo, nargs, 0) == moo->_nil) goto reterr;
 	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETARG(moo, nargs, 0), MOO_NULL);
+	if (!x11 || !x11->c) goto reterr;
 
-	if (!x11->c) goto reterr;
-	win->id = xcb_generate_id (x11->c);
+	wid = xcb_generate_id (x11->c);
 
-	id = moo_oowtoint (moo, win->id);
+	id = moo_oowtoint (moo, wid);
 	if (!id) return MOO_PF_HARD_FAILURE;
 
 	mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
@@ -307,7 +453,7 @@ MOO_DEBUG0 (moo, "<x11.win._make_on:> %p\n");
 	xcb_create_window (
 		x11->c, 
 		XCB_COPY_FROM_PARENT,
-		win->id,
+		wid,
 		x11->screen->root,
 		0, 0, 300, 300, 10,
 		XCB_WINDOW_CLASS_INPUT_OUTPUT,
@@ -320,11 +466,13 @@ MOO_DEBUG0 (moo, "<x11.win._make_on:> %p\n");
 	cookie = xcb_intern_atom(x11->c, 0, 16, "WM_DELETE_WINDOW");
 	win->dwar = xcb_intern_atom_reply(x11->c, cookie, 0);
 
-	xcb_change_property(x11->c, XCB_PROP_MODE_REPLACE, win->id, reply->atom, 4, 32, 1, &win->dwar->atom);
+	xcb_change_property(x11->c, XCB_PROP_MODE_REPLACE, wid, reply->atom, 4, 32, 1, &win->dwar->atom);
 
-/*TODO: use xcb_request_check() for error handling. you need to call create_x11->wdwo_checked(). xxx_checked()... */
-	xcb_map_window (x11->c, win->id);
+	xcb_map_window (x11->c, wid);
 	xcb_flush (x11->c);
+
+	win->id = wid;
+	win->c = x11->c;
 
 	MOO_STACK_SETRET (moo, nargs, id); 
 	return MOO_PF_SUCCESS;
@@ -333,8 +481,6 @@ reterr:
 	MOO_STACK_SETRETTOERROR (moo, nargs); /* TODO: be more specific about error */
 	return MOO_PF_SUCCESS;
 }
-
-
 
 /* ------------------------------------------------------------------------ */
 
@@ -410,12 +556,54 @@ int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)
 
 /* ------------------------------------------------------------------------ */
 
+static moo_pfinfo_t x11_gc_pfinfo[] =
+{
+	{ I, { '_','d','r','a','w','L','i','n','e' },                              0, pf_gc_draw_line   },
+	{ I, { '_','d','r','a','w','R','e','c','t' },                              0, pf_gc_draw_rect   },
+	{ I, { '_','f','o','r','e','g','r','o','u','n','d',':','\0' },             0, pf_gc_set_foreground },
+	{ I, { '_','g','e','t','_','i','d','\0' },                                 0, pf_gc_get_id      },
+	{ I, { '_','k','i','l','l','\0' },                                         0, pf_gc_kill        },
+	{ I, { '_','m','a','k','e','_','o','n',':','\0' },                         0, pf_gc_make        }
+	
+};
+
+static int x11_gc_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
+{
+	if (moo_setclasstrsize(moo, _class, MOO_SIZEOF(x11_gc_t)) <= -1) return -1;
+	return 0;
+}
+
+static moo_pfimpl_t x11_gc_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
+{
+	return moo_findpfimpl(moo, x11_gc_pfinfo, MOO_COUNTOF(x11_gc_pfinfo), name);
+}
+
+static void x11_gc_unload (moo_t* moo, moo_mod_t* mod)
+{
+	/* anything? */
+}
+
+int moo_mod_x11_gc (moo_t* moo, moo_mod_t* mod)
+{
+	mod->import = x11_gc_import;
+	mod->query = x11_gc_query;
+	mod->unload = x11_gc_unload; 
+	mod->gc = MOO_NULL;
+	mod->ctx = MOO_NULL;
+
+	return 0;
+}
+
+
+/* ------------------------------------------------------------------------ */
+
 static moo_pfinfo_t x11_win_pfinfo[] =
 {
-	{ I, { '_','g','e','t','_','d','w','a','t','o','m','\0'}, 0, pf_win_get_dwatom },
+	{ I, { '_','g','e','t','_','d','w','a','t','o','m','\0'}, 0, pf_win_get_dwatom  },
 	{ I, { '_','g','e','t','_','i','d','\0' },                0, pf_win_get_id      },
-	{ I, { '_','k','i','l','l','_','o','n',':','\0' },        0, pf_win_kill_on     },
-	{ I, { '_','m','a','k','e','_','o','n',':','\0' },        0, pf_win_make_on     }
+
+	{ I, { '_','k','i','l','l','\0' },                        0, pf_win_kill     },
+	{ I, { '_','m','a','k','e','_','o','n',':','\0' },        0, pf_win_make     }
 };
 
 static int x11_win_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)

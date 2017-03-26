@@ -3396,8 +3396,13 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 					/* no running process but io semaphore being waited on */
 					vm_muxwait (moo, &ft);
 
-					/* if a process has been woken up, 
-					if (moo->processor->active != moo->nil_process) break;
+					/* exit early if a process has been woken up. 
+					 * the break in the else part further down will get hit
+					 * eventually even if the following line doesn't exist.
+					 * having the following line causes to skip fireing the
+					 * timed semaphore that would expire between now and the 
+					 * moment the next inspection occurs. */
+					if (moo->processor->active != moo->nil_process) goto finalization;
 				}
 				else
 				{
@@ -3444,6 +3449,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 		return 0;
 	}
 
+finalization:
 #if 0
 	while (moo->sem_list_count > 0)
 	{
