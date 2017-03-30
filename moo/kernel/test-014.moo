@@ -51,12 +51,12 @@ class B.TestObject(Object)
 
 pooldic ABC 
 {
-	#KKK := 20.
+	KKK := 20.
 }
 
 pooldic SRX.ABC
 {
-	#JJJ := 1000.
+	JJJ := 1000.
 }
 class MyConsole(Console)
 {
@@ -125,7 +125,7 @@ class MyObject(TestObject)
 
 
 		##v1 := Stdio2 open: '/tmp/1.txt' for: 'w+'.
-		v1 := Stdio2 new open: '/tmp/1.txt' for: 'w+'.
+		v1 := Stdio2 new open('/tmp/1.txt', 'w+').
 		(v1 isError) 
 			ifTrue: [
 				System logNl: ('Error in opening a file....' & v1 asString). 
@@ -195,21 +195,21 @@ class MyObject(TestObject)
 		v2 dump.
 	}
 
-	method(#class) varg_test()
+	method(#class,#variadic) varg_test()
 	{
 		0 to: (thisContext vargCount - 1) do: [:k |
 			(thisContext vargAt: k) dump.
 		].
 		^999
 	}
-	method(#class) varg_test2(a,b,c)
+	method(#class,#variadic) varg_test2(a,b,c)
 	{
 		0 to: (thisContext vargCount - 1) do: [:k |
 			(thisContext vargAt: k) dump.
 		].
 		^a
 	}
-	method(#class) varg_test3(a,b,c,d,e,f)
+	method(#class,#variadic) varg_test3(a,b,c,d,e,f)
 	{
 		0 to: (thisContext vargCount - 1) do: [:k |
 			(thisContext vargAt: k) dump.
@@ -218,7 +218,7 @@ class MyObject(TestObject)
 		^f
 	}
 	
-	method(#class) t001(a)
+	method(#class,#variadic) t001(a)
 	{
 		a isNil ifTrue: [^error(10)].
 		(a = 20) ifTrue: [^error].

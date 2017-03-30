@@ -79,8 +79,7 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 	int err;
 	char* term;
 
-	con = moo_callocmem (moo, MOO_SIZEOF(*con));
-	if (!con) return 0;
+	con = (console_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
 	if (isatty(1))
 	{
@@ -100,7 +99,7 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 	}
 
 	term = getenv ("TERM");
-	if (term && setupterm (term, con->fd, &err) == OK)
+	if (term && setupterm (term, con->fd, &err) == OK) 
 	{
 	}
 
@@ -122,7 +121,7 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 	}
 #endif
 
-	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP((moo_oow_t)con));
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(con->fd));
 #endif
 	return MOO_PF_SUCCESS;
 }
@@ -140,12 +139,10 @@ static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 #else
 	console_t* con;
 
-	con = (console_t*)MOO_OOP_TO_SMOOI(MOO_STACK_GETARG (moo, nargs, 0));
-	/* TODO: sanity check */
+	con = (console_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
 	if (con->fd_opened) close (con->fd);
 
-	moo_freemem (moo, con);
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 #endif
@@ -158,29 +155,25 @@ static moo_pfrc_t pf_write (moo_t* moo, moo_ooi_t nargs)
 
 #else
 	console_t* con;
-	moo_oop_char_t oomsg;
+	moo_oop_char_t msg;
 
 	moo_oow_t ucspos, ucsrem, ucslen, bcslen;
 	moo_bch_t bcs[1024];
 	int n;
 
-	con = MOO_OOP_TO_SMOOI(MOO_STACK_GETARG (moo, nargs, 0));
-	oomsg = (moo_oop_char_t)MOO_STACK_GETARG (moo, nargs, 1);
+	con = (console_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+	msg = (moo_oop_char_t)MOO_STACK_GETARG (moo, nargs, 0);
 
-	if (MOO_CLASSOF(moo,oomsg) != moo->_string)
-	{
-/* TODO: invalid message */
-		return MOO_PF_FAILURE;
-	}
+	if (!MOO_OBJ_IS_CHAR_POINTER(msg)) goto einval;
 
 #if defined(MOO_OOCH_IS_UCH)
 	ucspos = 0;
-	ucsrem = MOO_OBJ_GET_SIZE(oomsg);
+	ucsrem = MOO_OBJ_GET_SIZE(msg);
 	while (ucsrem > 0)
 	{
 		ucslen = ucsrem;
 		bcslen = MOO_COUNTOF(bcs);
-		if ((n = moo_convootobchars (moo, &oomsg->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
+		if ((n = moo_convootobchars (moo, &msg->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
 		{
 			if (n != -2 || ucslen <= 0) return MOO_PF_HARD_FAILURE;
 		}
@@ -191,10 +184,14 @@ static moo_pfrc_t pf_write (moo_t* moo, moo_ooi_t nargs)
 		ucsrem -= ucslen;
 	}
 #else
-	write (con->fd, oomsg->slot, MOO_OBJ_GET_SIZE(oomsg)); /* TODO: error handling. incomplete write handling */
+	write (con->fd, MOO_GET_OBJ_CHAR_SLOT(msg), MOO_OBJ_GET_SIZE(msg)); /* TODO: error handling. incomplete write handling */
 #endif
 
 	MOO_STACK_SETRETTORCV (moo, nargs); /* TODO: change return code */
+	return MOO_PF_SUCCESS;
+
+einval:
+	MOO_STACK_SETRETTOERROR (moo, nargs); /* TODO: be more specific about the error code */
 	return MOO_PF_SUCCESS;
 #endif
 }
@@ -207,7 +204,7 @@ static moo_pfrc_t pf_clear (moo_t* moo, moo_ooi_t nargs)
 #else
 	console_t* con;
 
-	con = MOO_OOP_TO_SMOOI(MOO_STACK_GETARG(moo, nargs, 0));
+	con = (console_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
 	write (con->fd, con->clear, strlen(con->clear));
 
@@ -223,22 +220,23 @@ static moo_pfrc_t pf_setcursor (moo_t* moo, moo_ooi_t nargs)
 
 #else
 	console_t* con;
-	moo_oop_oop_t point;
+	moo_oop_t x, y;
 	char* cup;
 
-	con = MOO_OOP_TO_SMOOI(MOO_STACK_GETARG(moo, nargs, 0));
-	point = MOO_STACK_GETARG(moo, nargs, 1);
+	con = (console_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+	x = MOO_STACK_GETARG(moo, nargs, 0);
+	y = MOO_STACK_GETARG(moo, nargs, 1);
 
-/* TODO: error check, class check, size check.. */
-	if (MOO_OBJ_GET_SIZE(point) != 2)
-	{
-		return MOO_PF_FAILURE;
-	}
+	if (!MOO_OOP_IS_SMOOI(x) || !MOO_OOP_IS_SMOOI(y)) goto einval;
 
-	cup = tiparm (con->cup, MOO_OOP_TO_SMOOI(point->slot[1]), MOO_OOP_TO_SMOOI(point->slot[0]));
+	cup = tiparm (con->cup, MOO_OOP_TO_SMOOI(y), MOO_OOP_TO_SMOOI(x));
 	write (con->fd, cup, strlen(cup)); /* TODO: error check */
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+
+einval:
+	MOO_STACK_SETRETTOERROR (moo, nargs); /* TODO: be more specific about the error code */
 	return MOO_PF_SUCCESS;
 #endif
 }
@@ -250,18 +248,24 @@ static moo_pfrc_t pf_setcursor (moo_t* moo, moo_ooi_t nargs)
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, { 'c','l','e','a','r','\0' },                 0, pf_clear         },
-	{ I, { 'c','l','o','s','e','\0' },                 0, pf_close         },
-	{ I, { 'o','p','e','n','\0' },                     0, pf_open          },
-	{ I, { 's','e','t','c','u','r','s','o','r','\0' }, 0, pf_setcursor     },
-	{ I, { 'w','r','i','t','e','\0' },                 0, pf_write         }
+	{ I, { '_','c','l','e','a','r','\0' },                 0, { pf_clear,     0,  0 } },
+	{ I, { '_','c','l','o','s','e','\0' },                 0, { pf_close,     0,  0 } },
+	{ I, { '_','o','p','e','n','\0' },                     0, { pf_open,      0,  0 } },
+	{ I, { '_','s','e','t','c','u','r','s','o','r','\0' }, 0, { pf_setcursor, 2,  2 } },
+	{ I, { '_','w','r','i','t','e','\0' },                 0, { pf_write,     1,  1 } }
 };
 
 /* ------------------------------------------------------------------------ */
 
-static moo_pfimpl_t query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
+static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
-	return moo_findpfimpl(moo, pfinfos, MOO_COUNTOF(pfinfos), name);
+	if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(console_t)) <= -1) return -1;
+	return 0;
+}
+
+static moo_pfbase_t* query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
+{
+	return moo_findpfbase(moo, pfinfos, MOO_COUNTOF(pfinfos), name);
 }
 
 
@@ -272,6 +276,7 @@ static void unload (moo_t* moo, moo_mod_t* mod)
 
 int moo_mod_console (moo_t* moo, moo_mod_t* mod)
 {
+	mod->import = import;
 	mod->query = query;
 	mod->unload = unload; 
 	mod->ctx = MOO_NULL;

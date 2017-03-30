@@ -486,10 +486,10 @@ reterr:
 
 static moo_pfinfo_t x11_pfinfo[] =
 {
-	{ I, { '_','c','o','n','n','e','c','t','\0' },                     0, pf_connect       },
-	{ I, { '_','d','i','s','c','o','n','n','e','c','t','\0' },         0, pf_disconnect    },
-	{ I, { '_','g','e','t','_','e','v','e','n','t','\0'},              0, pf_getevent      },
-	{ I, { '_','g','e','t','_','f','d','\0' },                         0, pf_get_fd        }
+	{ I, { '_','c','o','n','n','e','c','t','\0' },                     0, { pf_connect,    0, 0 } },
+	{ I, { '_','d','i','s','c','o','n','n','e','c','t','\0' },         0, { pf_disconnect, 0, 0 } },
+	{ I, { '_','g','e','t','_','e','v','e','n','t','\0'},              0, { pf_getevent,   0, 0 } },
+	{ I, { '_','g','e','t','_','f','d','\0' },                         0, { pf_get_fd,     0, 0 } }
 };
 
 static int x11_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
@@ -499,9 +499,9 @@ static int x11_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 	return 0;
 }
 
-static moo_pfimpl_t x11_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
+static moo_pfbase_t* x11_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
 {
-	return moo_findpfimpl (moo, x11_pfinfo, MOO_COUNTOF(x11_pfinfo), name);
+	return moo_findpfbase (moo, x11_pfinfo, MOO_COUNTOF(x11_pfinfo), name);
 }
 
 static void x11_unload (moo_t* moo, moo_mod_t* mod)
@@ -558,12 +558,12 @@ int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)
 
 static moo_pfinfo_t x11_gc_pfinfo[] =
 {
-	{ I, { '_','d','r','a','w','L','i','n','e' },                              0, pf_gc_draw_line   },
-	{ I, { '_','d','r','a','w','R','e','c','t' },                              0, pf_gc_draw_rect   },
-	{ I, { '_','f','o','r','e','g','r','o','u','n','d',':','\0' },             0, pf_gc_set_foreground },
-	{ I, { '_','g','e','t','_','i','d','\0' },                                 0, pf_gc_get_id      },
-	{ I, { '_','k','i','l','l','\0' },                                         0, pf_gc_kill        },
-	{ I, { '_','m','a','k','e','_','o','n',':','\0' },                         0, pf_gc_make        }
+	{ I, { '_','d','r','a','w','L','i','n','e' },                              0, { pf_gc_draw_line,      4, 4 } },
+	{ I, { '_','d','r','a','w','R','e','c','t' },                              0, { pf_gc_draw_rect,      4, 4 } },
+	{ I, { '_','f','o','r','e','g','r','o','u','n','d',':','\0' },             0, { pf_gc_set_foreground, 1, 1 } },
+	{ I, { '_','g','e','t','_','i','d','\0' },                                 0, { pf_gc_get_id,         0, 0 } },
+	{ I, { '_','k','i','l','l','\0' },                                         0, { pf_gc_kill,           0, 0 } },
+	{ I, { '_','m','a','k','e','_','o','n',':','\0' },                         0, { pf_gc_make,           1, 1 } }
 	
 };
 
@@ -573,9 +573,9 @@ static int x11_gc_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 	return 0;
 }
 
-static moo_pfimpl_t x11_gc_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
+static moo_pfbase_t* x11_gc_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
 {
-	return moo_findpfimpl(moo, x11_gc_pfinfo, MOO_COUNTOF(x11_gc_pfinfo), name);
+	return moo_findpfbase(moo, x11_gc_pfinfo, MOO_COUNTOF(x11_gc_pfinfo), name);
 }
 
 static void x11_gc_unload (moo_t* moo, moo_mod_t* mod)
@@ -599,11 +599,12 @@ int moo_mod_x11_gc (moo_t* moo, moo_mod_t* mod)
 
 static moo_pfinfo_t x11_win_pfinfo[] =
 {
-	{ I, { '_','g','e','t','_','d','w','a','t','o','m','\0'}, 0, pf_win_get_dwatom  },
-	{ I, { '_','g','e','t','_','i','d','\0' },                0, pf_win_get_id      },
+	{ I, { '_','g','e','t','_','d','w','a','t','o','m','\0'}, 0, { pf_win_get_dwatom,   0, 0 } },
+	{ I, { '_','g','e','t','_','i','d','\0' },                0, { pf_win_get_id,       0, 0 } },
 
-	{ I, { '_','k','i','l','l','\0' },                        0, pf_win_kill     },
-	{ I, { '_','m','a','k','e','_','o','n',':','\0' },        0, pf_win_make     }
+	{ I, { '_','k','i','l','l','\0' },                        0, { pf_win_kill,         0, 0 } },
+	{ I, { '_','m','a','k','e','\0' },                        0, { pf_win_make,         1, 1 } },
+	{ I, { '_','m','a','k','e','_','o','n',':','\0' },        0, { pf_win_make,         1, 1 } }
 };
 
 static int x11_win_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
@@ -613,9 +614,9 @@ static int x11_win_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 	return 0;
 }
 
-static moo_pfimpl_t x11_win_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
+static moo_pfbase_t* x11_win_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
 {
-	return moo_findpfimpl(moo, x11_win_pfinfo, MOO_COUNTOF(x11_win_pfinfo), name);
+	return moo_findpfbase(moo, x11_win_pfinfo, MOO_COUNTOF(x11_win_pfinfo), name);
 }
 
 static void x11_win_unload (moo_t* moo, moo_mod_t* mod)

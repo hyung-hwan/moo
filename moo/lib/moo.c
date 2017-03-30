@@ -603,7 +603,7 @@ done2:
 	return r;
 }
 
-moo_pfimpl_t moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen)
+moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen)
 {
 	/* primitive function identifier
 	 *   _funcname
@@ -614,7 +614,7 @@ moo_pfimpl_t moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen
 	const moo_ooch_t* sep;
 
 	moo_oow_t mod_name_len;
-	moo_pfimpl_t handler;
+	moo_pfbase_t* pfbase;
 
 	sep = moo_rfindoochar (pfid, pfidlen, '.');
 	if (!sep)
@@ -647,7 +647,7 @@ moo_pfimpl_t moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen
 		if (!mdp) return MOO_NULL;
 	}
 
-	if ((handler = mdp->mod.query (moo, &mdp->mod, sep + 1)) == MOO_NULL) 
+	if ((pfbase = mdp->mod.query (moo, &mdp->mod, sep + 1)) == MOO_NULL) 
 	{
 		/* the primitive function is not found. but keep the module open even if it's opened above */
 		MOO_DEBUG2 (moo, "Cannot find a primitive function [%js] in a module [%js]\n", sep + 1, mdp->mod.name);
@@ -655,12 +655,13 @@ moo_pfimpl_t moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen
 		return MOO_NULL;
 	}
 
-	MOO_DEBUG3 (moo, "Found a primitive function [%js] in a module [%js] - %p\n", sep + 1, mdp->mod.name, handler);
-	return handler;
+	MOO_DEBUG3 (moo, "Found a primitive function [%js] in a module [%js] - %p\n", sep + 1, mdp->mod.name, pfbase);
+	return pfbase;
 }
 
 /* -------------------------------------------------------------------------- */
 
+#if 0
 /* add a new primitive method */
 int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_method_type_t type, const moo_ooch_t* mthname, int variadic, const moo_ooch_t* pfname)
 {
@@ -792,8 +793,9 @@ int moo_genpfmethods (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, const 
 	moo_poptmp (moo);
 	return ret;
 }
+#endif
 
-moo_pfimpl_t moo_findpfimpl (moo_t* moo, const moo_pfinfo_t* pfinfo, moo_oow_t pfcount, const moo_ooch_t* name)
+moo_pfbase_t* moo_findpfbase (moo_t* moo, const moo_pfinfo_t* pfinfo, moo_oow_t pfcount, const moo_ooch_t* name)
 {
 	int left, right, mid, n;
 
@@ -808,7 +810,7 @@ moo_pfimpl_t moo_findpfimpl (moo_t* moo, const moo_pfinfo_t* pfinfo, moo_oow_t p
 		else if (n > 0) left = mid + 1;
 		else
 		{
-			return pfinfo[mid].handler;
+			return &pfinfo[mid].base;
 		}
 	}
 

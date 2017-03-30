@@ -1202,7 +1202,7 @@ int moo_importmod (
  * The moo_querymod() function finds a primitive function in modules
  * with a full primitive identifier.
  */
-moo_pfimpl_t moo_querymod (
+moo_pfbase_t* moo_querymod (
 	moo_t*            moo,
 	const moo_ooch_t* pfid,
 	moo_oow_t         pfidlen

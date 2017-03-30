@@ -331,6 +331,7 @@ class MyObject(Object)
 		
 		(System at: #Processor) dump.
 		System logNl: 'Sleeping start now....'.
+
 		Processor sleepFor: 2.
 	}
 	

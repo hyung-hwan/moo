@@ -831,13 +831,21 @@ typedef moo_pfrc_t (*moo_pfimpl_t) (
 	moo_ooi_t nargs
 );
 
+typedef struct moo_pfbase_t moo_pfbase_t;
+struct moo_pfbase_t
+{
+	moo_pfimpl_t handler;
+	moo_oow_t    minargs;
+	moo_oow_t    maxargs;
+};
+
 typedef struct moo_pfinfo_t moo_pfinfo_t;
 struct moo_pfinfo_t
 {
 	moo_method_type_t type;
 	moo_ooch_t        mthname[32];
 	int               variadic;
-	moo_pfimpl_t      handler;
+	moo_pfbase_t      base;
 };
 
 typedef struct moo_mod_t moo_mod_t;
@@ -859,7 +867,7 @@ typedef int (*moo_mod_import_t) (
 	moo_oop_class_t  _class
 );
 
-typedef moo_pfimpl_t (*moo_mod_query_t) (
+typedef moo_pfbase_t* (*moo_mod_query_t) (
 	moo_t*            moo,
 	moo_mod_t*        mod,
 	const moo_ooch_t* name
@@ -1559,6 +1567,7 @@ MOO_EXPORT int moo_genpfmethod (
 	const moo_ooch_t* name
 );
 
+/*
 MOO_EXPORT int moo_genpfmethods (
 	moo_t*              moo,
 	moo_mod_t*          mod,
@@ -1566,8 +1575,9 @@ MOO_EXPORT int moo_genpfmethods (
 	const moo_pfinfo_t* pfinfo,
 	moo_oow_t           pfcount
 );
+*/
 
-MOO_EXPORT moo_pfimpl_t moo_findpfimpl (
+MOO_EXPORT moo_pfbase_t* moo_findpfbase (
 	moo_t*              moo,
 	const moo_pfinfo_t* pfinfo,
 	moo_oow_t           pfcount,

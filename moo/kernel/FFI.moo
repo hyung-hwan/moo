@@ -1,13 +1,11 @@
 class _FFI(Object) from 'ffi'
 {
-	(* 
-	 * the ffi module installs the following methods 
-	 *   method(#class) _newInstSize
-	 *   method open: name
-	 *   method close
-	 *   method call
-	 *   method call: func sig: sig with: args.
-	 *)
+	method(#primitive) open(name).
+	method(#primitive) close().
+	method(#primitive) getsym(name).
+	 
+	(* TODO: make call variadic? method(#primitive,#variadic) call (func, sig). *)
+	method(#primitive) call(func, sig, args).
 }
 
 class FFI(Object)
@@ -31,7 +29,7 @@ class FFI(Object)
 		self.funcs removeAllKeys.
 		self.name := name.
 
-		x := self.ffi open: name.
+		x := self.ffi open(name).
 		(x isError) ifTrue: [^x].
 
 		^self.
@@ -47,12 +45,11 @@ class FFI(Object)
 		| f |
 		f := self.funcs at: name.
 		(f isError) ifTrue: [
-			f := self.ffi getsym: name.
+			f := self.ffi getsym(name).
 			(f isError) ifTrue: [^f].
 			self.funcs at: name put: f.
 		].
 
-		(*^self.ffi call: f sig: sig with: args*)
 		^self.ffi call(f, sig, args)
 	}
 }

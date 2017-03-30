@@ -208,28 +208,28 @@ static moo_pfrc_t pf_puts (moo_t* moo, moo_ooi_t nargs)
 
 #define C MOO_METHOD_CLASS
 #define I MOO_METHOD_INSTANCE
+#define MA MOO_TYPE_MAX(moo_oow_t)
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, { 'c','l','o','s','e','\0' },                             0, pf_close         },
-	{ I, { 'g','e','t','s','\0' },                                 0, pf_gets          },
-	{ I, { 'o','p','e','n',':','f','o','r',':','\0' },             0, pf_open          },
-	{ I, { 'p','u','t','c','\0' },                                 1, pf_putc          },
-	{ I, { 'p','u','t','c',':','\0' },                             0, pf_putc          },
-	{ I, { 'p','u','t','s','\0' },                                 1, pf_puts          },
-	{ I, { 'p','u','t','s',':','\0' },                             0, pf_puts          }
+	{ I, { 'c','l','o','s','e','\0' },         0, { pf_close,  0,  0  } },
+	{ I, { 'g','e','t','s','\0' },             0, { pf_gets,   0,  0  } },
+	{ I, { 'o','p','e','n','\0' },             0, { pf_open,   2,  2  } },
+	{ I, { 'p','u','t','c','\0' },             1, { pf_putc,   0,  MA } },
+	{ I, { 'p','u','t','s','\0' },             1, { pf_puts,   0,  MA } }
 };
 
 /* ------------------------------------------------------------------------ */
 static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
 	if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(stdio_t)) <= -1) return -1;
-	return moo_genpfmethods (moo, mod, _class, pfinfos, MOO_COUNTOF(pfinfos));
+	return 0;
+	/*return moo_genpfmethods (moo, mod, _class, pfinfos, MOO_COUNTOF(pfinfos));*/
 }
 
-static moo_pfimpl_t query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
+static moo_pfbase_t* query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
 {
-	return moo_findpfimpl (moo, pfinfos, MOO_COUNTOF(pfinfos), name);
+	return moo_findpfbase (moo, pfinfos, MOO_COUNTOF(pfinfos), name);
 }
 
 #if 0

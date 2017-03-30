@@ -3163,7 +3163,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 		{
 			moo_ooi_t pf_name_index;
 			moo_oop_t name;
-			moo_pfimpl_t handler;
+			moo_pfbase_t* pfbase;
 			moo_oow_t w;
 
 			stack_base = moo->sp - nargs - 1; /* stack base before receiver and arguments */
@@ -3182,22 +3182,22 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			/* merge two SmallIntegers to get a full pointer from the cached data */
 			w = (moo_oow_t)MOO_OOP_TO_SMOOI(method->preamble_data[0]) << (MOO_OOW_BITS / 2) | 
 			    (moo_oow_t)MOO_OOP_TO_SMOOI(method->preamble_data[1]);
-			handler = (moo_pfimpl_t)w;
-			if (handler) goto exec_handler;
+			pfbase = (moo_pfbase_t*)w;
+			if (pfbase) goto exec_handler;
 
 		#if defined(NDEBUG)
 			pf_name_index = MOO_METHOD_GET_PREAMBLE_INDEX(preamble);
 			name = method->slot[pf_name_index];
 		#endif
 
-			handler = moo_querymod (moo, ((moo_oop_char_t)name)->slot, MOO_OBJ_GET_SIZE(name));
-			if (handler)
+			pfbase = moo_querymod (moo, ((moo_oop_char_t)name)->slot, MOO_OBJ_GET_SIZE(name));
+			if (pfbase)
 			{
 				int n;
 
 				/* split a pointer to two OOP fields as SmallIntegers for storing/caching. */
-				method->preamble_data[0] = MOO_SMOOI_TO_OOP((moo_oow_t)handler >> (MOO_OOW_BITS / 2));
-				method->preamble_data[1] = MOO_SMOOI_TO_OOP((moo_oow_t)handler & MOO_LBMASK(moo_oow_t, MOO_OOW_BITS / 2));
+				method->preamble_data[0] = MOO_SMOOI_TO_OOP((moo_oow_t)pfbase >> (MOO_OOW_BITS / 2));
+				method->preamble_data[1] = MOO_SMOOI_TO_OOP((moo_oow_t)pfbase & MOO_LBMASK(moo_oow_t, MOO_OOW_BITS / 2));
 
 			exec_handler:
 				moo_pushtmp (moo, (moo_oop_t*)&method);
@@ -3208,18 +3208,18 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				 * directly in the stack unlik a normal activated method context where the
 				 * arguments are copied to the back. */
 
-				n = handler (moo, nargs);
+				n = pfbase->handler (moo, nargs);
 
 				moo_poptmp (moo);
 				if (n <= MOO_PF_HARD_FAILURE) 
 				{
-					MOO_DEBUG4 (moo, "Hard failure indicated by primitive function %p - %.*js - return code %d\n", handler, MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, n);
+					MOO_DEBUG4 (moo, "Hard failure indicated by primitive function %p - %.*js - return code %d\n", pfbase->handler, MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, n);
 					return -1; /* hard primitive failure */
 				}
 				if (n >= MOO_PF_SUCCESS) break; /* primitive ok*/
 
 				/* soft primitive failure */
-				MOO_DEBUG3 (moo, "Soft failure indicated by primitive function %p - %.*js\n", handler, MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot);
+				MOO_DEBUG3 (moo, "Soft failure indicated by primitive function %p - %.*js\n", pfbase->handler, MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot);
 			}
 			else
 			{

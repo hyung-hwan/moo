@@ -83,11 +83,7 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 	DCCallVM* dc;
 #endif
 
-	if (nargs != 1)
-	{
-		moo_seterrnum (moo, MOO_EINVAL);
-		goto softfail;
-	}
+	MOO_ASSERT (moo, nargs == 1);
 
 	ffi = (ffi_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 	name = MOO_STACK_GETARG(moo, nargs, 0);
@@ -142,11 +138,7 @@ static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 {
 	ffi_t* ffi;
 
-	if (nargs != 0)
-	{
-		moo_seterrnum (moo, MOO_EINVAL);
-		goto softfail;
-	}
+	MOO_ASSERT (moo, nargs == 0);
 
 	ffi = (ffi_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
@@ -188,7 +180,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 
 	ffi = (ffi_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
-	if (nargs < 3) goto inval;
+	MOO_ASSERT (moo, nargs == 3);
 	fun = MOO_STACK_GETARG(moo, nargs, 0);
 	sig = MOO_STACK_GETARG(moo, nargs, 1);
 	args = MOO_STACK_GETARG(moo, nargs, 2);
@@ -490,11 +482,7 @@ static moo_pfrc_t pf_getsym (moo_t* moo, moo_ooi_t nargs)
 	moo_oop_t name;
 	void* sym;
 
-	if (nargs != 1)
-	{
-		moo_seterrnum (moo, MOO_EINVAL);
-		goto softfail;
-	}
+	MOO_ASSERT (moo, nargs == 1);
 
 	ffi = (ffi_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 	name = MOO_STACK_GETARG(moo, nargs, 0);
@@ -539,13 +527,14 @@ struct fnctab_t
 #define C MOO_METHOD_CLASS
 #define I MOO_METHOD_INSTANCE
 
+#define MA MOO_TYPE_MAX(moo_oow_t)
+
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, { 'c','a','l','l','\0' },                                         1, pf_call          },
-	{ I, { 'c','a','l','l',':','s','i','g',':','w','i','t','h',':','\0' }, 0, pf_call          },
-	{ I, { 'c','l','o','s','e','\0' },                                     0, pf_close         },
-	{ I, { 'g','e','t','s','y','m',':','\0' },                             0, pf_getsym        },
-	{ I, { 'o','p','e','n',':','\0' },                                     0, pf_open          }
+	{ I, { 'c','a','l','l','\0' },           0, { pf_call,    3, 3  }  },
+	{ I, { 'c','l','o','s','e','\0' },       0, { pf_close,   0, 0  }  },
+	{ I, { 'g','e','t','s','y','m','\0' },   0, { pf_getsym,  1, 1  }  },
+	{ I, { 'o','p','e','n','\0' },           0, { pf_open,    1, 1  }  }
 };
 
 /* ------------------------------------------------------------------------ */
@@ -553,12 +542,12 @@ static moo_pfinfo_t pfinfos[] =
 static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
 	if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(ffi_t)) <= -1) return -1;
-	return moo_genpfmethods (moo, mod, _class, pfinfos, MOO_COUNTOF(pfinfos));
+	return 0;
 }
 
-static moo_pfimpl_t query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
+static moo_pfbase_t* query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
 {
-	return moo_findpfimpl (moo, pfinfos, MOO_COUNTOF(pfinfos), name);
+	return moo_findpfbase (moo, pfinfos, MOO_COUNTOF(pfinfos), name);
 }
 
 static void unload (moo_t* moo, moo_mod_t* mod)
