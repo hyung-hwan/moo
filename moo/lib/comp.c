@@ -365,7 +365,7 @@ static void set_syntax_error (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t
 	}
 }
 
-static int copy_string_to (moo_t* moo, const moo_oocs_t* src, moo_oocs_t* dst, moo_oow_t* dst_capa, int append, moo_ooch_t add_delim)
+static int copy_string_to (moo_t* moo, const moo_oocs_t* src, moo_oocs_t* dst, moo_oow_t* dst_capa, int append, moo_ooch_t delim_char)
 {
 	moo_oow_t len, pos;
 
@@ -373,7 +373,7 @@ static int copy_string_to (moo_t* moo, const moo_oocs_t* src, moo_oocs_t* dst, m
 	{
 		pos = dst->len;
 		len = dst->len + src->len;
-		if (add_delim != '\0') len++;
+		if (delim_char != '\0') len++;
 	}
 	else
 	{
@@ -395,7 +395,7 @@ static int copy_string_to (moo_t* moo, const moo_oocs_t* src, moo_oocs_t* dst, m
 		*dst_capa = capa;
 	}
 
-	if (append && add_delim) dst->ptr[pos++] = add_delim;
+	if (append && delim_char) dst->ptr[pos++] = delim_char;
 	moo_copyoochars (&dst->ptr[pos], src->ptr, src->len);
 	dst->len = len;
 	return 0;
@@ -2478,7 +2478,7 @@ static int add_string_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* ind
 	return add_literal (moo, lit, index);
 }
 
-static int add_symbol_literal (moo_t* moo, const moo_oocs_t* str, int offset, moo_oow_t* index)
+static int add_symbol_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t offset, moo_oow_t* index)
 {
 	moo_oop_t tmp;
 
@@ -3391,6 +3391,8 @@ static int compile_method_primitive (moo_t* moo)
 					ptr++;
 				}
 
+/* TODO: check if the number points to one of the internal primitive function */
+
 				moo->c->mth.pfnum = pfnum;
 				break;
 
@@ -3409,29 +3411,55 @@ static int compile_method_primitive (moo_t* moo)
 					/* a built-in primitive function is not found 
 					 * check if it is a primitive function identifier */
 					moo_oow_t lit_idx;
+					moo_pfbase_t* pfbase;
 
-					if (moo_findoochar (tptr, tlen, '.') && 
-					    add_symbol_literal(moo, TOKEN_NAME(moo), 1, &lit_idx) >= 0 &&
-					    MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx))
+					if (!moo_rfindoochar (tptr, tlen, '.'))
 					{
-						/* external named primitive containing a period. */
-						moo->c->mth.pftype = PFTYPE_NAMED; 
-						moo->c->mth.pfnum = lit_idx;
-						break;
+						/* wrong primitive functio identifier */
+						set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						return -1;
 					}
 
-					/* wrong primitive number */
-					set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
-					return -1;
+					/* external named primitive containing a period. */
+
+					/* perform some sanity checks. see compile_method_definition() for similar checks */
+					pfbase = moo_querymod (moo, tptr, tlen);
+					if (!pfbase)
+					{
+						MOO_DEBUG2 (moo, "Cannot find module primitive function - %.*js\n", tlen, tptr);
+						set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						return -1;
+					}
+
+					if (moo->c->mth.tmpr_nargs < pfbase->minargs || moo->c->mth.tmpr_nargs > pfbase->maxargs)
+					{
+						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
+							tlen, tptr, pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
+						set_syntax_error (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+						return -1;
+					}
+
+					if (add_symbol_literal(moo, TOKEN_NAME(moo), 1, &lit_idx) <= -1) return -1;
+
+					/* the primitive definition is placed at the very beginning of a method defintion.
+					 * so the index to the symbol registered should be very small like 0 */
+					MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx));
+
+					moo->c->mth.pftype = PFTYPE_NAMED; 
+					moo->c->mth.pfnum = lit_idx;
 				}
 				else if (!MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
 				{
 					set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
+				else
+				{
+	/* TODO: check argument count for this primitive ... */
+					moo->c->mth.pftype = PFTYPE_NUMBERED; 
+					moo->c->mth.pfnum = pfnum;
+				}
 
-				moo->c->mth.pftype = PFTYPE_NUMBERED; 
-				moo->c->mth.pfnum = pfnum;
 				break;
 			}
 
@@ -5877,6 +5905,9 @@ static int compile_method_definition (moo_t* moo)
 
 		if (moo->c->cls.self_oop->modname == moo->_nil)
 		{
+			/* no module name specified in the class definition using 'from'.
+			 * it's a builtin primitive function */
+
 			moo_oow_t savedlen;
 			moo_ooi_t pfnum;
 
@@ -5895,13 +5926,14 @@ static int compile_method_definition (moo_t* moo)
 			pfnum = moo_getpfnum (moo, &moo->c->cls.modname.ptr[savedlen], moo->c->cls.modname.len - savedlen);
 			if (pfnum <= -1 || !MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
 			{
-				MOO_DEBUG2 (moo, "Cannot find intrinsic primitive handler - %.*js\n", 
+				MOO_DEBUG2 (moo, "Cannot find intrinsic primitive function - %.*js\n", 
 					moo->c->cls.modname.len - savedlen, &moo->c->cls.modname.ptr[savedlen]);
-				moo->c->cls.modname.len = savedlen;
 				set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+				moo->c->cls.modname.len = savedlen;
 				return -1;
 			}
 
+/* TODO: check argumetns... */
 			moo->c->cls.modname.len = savedlen;
 
 			moo->c->mth.pftype = PFTYPE_NUMBERED; 
@@ -5911,6 +5943,7 @@ static int compile_method_definition (moo_t* moo)
 		{
 			moo_oow_t litidx, savedlen;
 			moo_oocs_t tmp;
+			moo_pfbase_t* pfbase;
 
 			/* combine the module name and the method name delimited by a period
 			 * when doing it, let me reuse the cls.modname buffer and restore it
@@ -5921,9 +5954,6 @@ static int compile_method_definition (moo_t* moo)
 			tmp.ptr = MOO_OBJ_GET_CHAR_SLOT(moo->c->cls.self_oop->modname);
 			tmp.len = MOO_OBJ_GET_SIZE(moo->c->cls.self_oop->modname);
 
-		/* TODO: i can check if the primitive method is available at compile time by querying the module.
-		 *       do the check depending on the compiler option */
-
 			if (copy_string_to (moo, &tmp, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '\0') <= -1 ||
 			    copy_string_to (moo, &moo->c->mth.name, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '.') <= -1 ||
 			    add_symbol_literal(moo, &moo->c->cls.modname, savedlen, &litidx) <= -1)
@@ -5932,8 +5962,29 @@ static int compile_method_definition (moo_t* moo)
 				return -1;
 			}
 
+			/* check if the primitive function exists at the compile time and perform some checks.
+			 * see compile_method_primitive() for similar checks */
+			pfbase = moo_querymod (moo, &moo->c->cls.modname.ptr[savedlen], moo->c->cls.modname.len - savedlen);
+			if (!pfbase)
+			{
+				MOO_DEBUG2 (moo, "Cannot find module primitive function - %.*js\n", 
+					moo->c->cls.modname.len - savedlen, &moo->c->cls.modname.ptr[savedlen]);
+				set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+				moo->c->cls.modname.len = savedlen;
+				return -1;
+			}
+
+			if (moo->c->mth.tmpr_nargs < pfbase->minargs || moo->c->mth.tmpr_nargs > pfbase->maxargs)
+			{
+				MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
+					moo->c->cls.modname.len - savedlen, &moo->c->cls.modname.ptr[savedlen],
+					pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
+				set_syntax_error (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+				moo->c->cls.modname.len = savedlen;
+				return -1;
+			}
+
 			moo->c->cls.modname.len = savedlen;
-			
 			/* the symbol added must be the first literal to the current method.
 			 * so this condition must be true. */
 			MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(litidx));

@@ -499,9 +499,9 @@ static int x11_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 	return 0;
 }
 
-static moo_pfbase_t* x11_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
+static moo_pfbase_t* x11_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name, moo_oow_t namelen)
 {
-	return moo_findpfbase (moo, x11_pfinfo, MOO_COUNTOF(x11_pfinfo), name);
+	return moo_findpfbase (moo, x11_pfinfo, MOO_COUNTOF(x11_pfinfo), name, namelen);
 }
 
 static void x11_unload (moo_t* moo, moo_mod_t* mod)
@@ -573,9 +573,9 @@ static int x11_gc_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 	return 0;
 }
 
-static moo_pfbase_t* x11_gc_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
+static moo_pfbase_t* x11_gc_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name, moo_oow_t namelen)
 {
-	return moo_findpfbase(moo, x11_gc_pfinfo, MOO_COUNTOF(x11_gc_pfinfo), name);
+	return moo_findpfbase(moo, x11_gc_pfinfo, MOO_COUNTOF(x11_gc_pfinfo), name, namelen);
 }
 
 static void x11_gc_unload (moo_t* moo, moo_mod_t* mod)
@@ -614,9 +614,9 @@ static int x11_win_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 	return 0;
 }
 
-static moo_pfbase_t* x11_win_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
+static moo_pfbase_t* x11_win_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name, moo_oow_t namelen)
 {
-	return moo_findpfbase(moo, x11_win_pfinfo, MOO_COUNTOF(x11_win_pfinfo), name);
+	return moo_findpfbase(moo, x11_win_pfinfo, MOO_COUNTOF(x11_win_pfinfo), name, namelen);
 }
 
 static void x11_win_unload (moo_t* moo, moo_mod_t* mod)

@@ -545,9 +545,9 @@ static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 	return 0;
 }
 
-static moo_pfbase_t* query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name)
+static moo_pfbase_t* query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name, moo_oow_t namelen)
 {
-	return moo_findpfbase (moo, pfinfos, MOO_COUNTOF(pfinfos), name);
+	return moo_findpfbase (moo, pfinfos, MOO_COUNTOF(pfinfos), name, namelen);
 }
 
 static void unload (moo_t* moo, moo_mod_t* mod)

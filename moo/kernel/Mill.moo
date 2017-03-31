@@ -114,8 +114,7 @@ class MyObject(Object)
 	method(#class) main_xx
 	{
 		|a k|
-		
-		
+
 		'BEGINNING OF main...........' dump.
 		a := 
 			if ([System logNl: 'xxxx'. 'abcd' == 'bcde'. false] value) 
@@ -269,6 +268,8 @@ class MyObject(Object)
 	method(#class) main
 	{
 		|a i|
+
+###self main_xx.
 
 		a := 100.
 			## PROBLEM: the following double loop will exhaust the stack 

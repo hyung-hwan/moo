@@ -870,7 +870,8 @@ typedef int (*moo_mod_import_t) (
 typedef moo_pfbase_t* (*moo_mod_query_t) (
 	moo_t*            moo,
 	moo_mod_t*        mod,
-	const moo_ooch_t* name
+	const moo_ooch_t* name,
+	moo_oow_t         namelen
 );
 
 typedef void (*moo_mod_unload_t) (
@@ -1253,8 +1254,9 @@ enum moo_synerrnum_t
 	MOO_SYNERR_BLKARGFLOOD,     /* too many block arguments */
 	MOO_SYNERR_BLKFLOOD,        /* too large block */
 	MOO_SYNERR_ARREXPFLOOD,     /* too large array expression */
-	MOO_SYNERR_PFNUMINVAL,      /* wrong primitive number */
-	MOO_SYNERR_PFIDINVAL,       /* wrong primitive identifier */
+	MOO_SYNERR_PFNUMINVAL,      /* wrong primitive function number */
+	MOO_SYNERR_PFIDINVAL,       /* wrong primitive function identifier */
+	MOO_SYNERR_PFARGDEFINVAL,   /* wrong primitive function argument definition */
 	MOO_SYNERR_MODNAMEINVAL,    /* wrong module name */
 	MOO_SYNERR_INCLUDE,         /* #include error */
 	MOO_SYNERR_NAMESPACEINVAL,  /* wrong namespace name */
@@ -1579,9 +1581,10 @@ MOO_EXPORT int moo_genpfmethods (
 
 MOO_EXPORT moo_pfbase_t* moo_findpfbase (
 	moo_t*              moo,
-	const moo_pfinfo_t* pfinfo,
+	moo_pfinfo_t*       pfinfo,
 	moo_oow_t           pfcount,
-	const moo_ooch_t*   name
+	const moo_ooch_t*   name,
+	moo_oow_t           namelen
 );
 
 /* =========================================================================

@@ -647,7 +647,7 @@ moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidle
 		if (!mdp) return MOO_NULL;
 	}
 
-	if ((pfbase = mdp->mod.query (moo, &mdp->mod, sep + 1)) == MOO_NULL) 
+	if ((pfbase = mdp->mod.query (moo, &mdp->mod, sep + 1, pfidlen - mod_name_len - 1)) == MOO_NULL) 
 	{
 		/* the primitive function is not found. but keep the module open even if it's opened above */
 		MOO_DEBUG2 (moo, "Cannot find a primitive function [%js] in a module [%js]\n", sep + 1, mdp->mod.name);
@@ -655,7 +655,8 @@ moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidle
 		return MOO_NULL;
 	}
 
-	MOO_DEBUG3 (moo, "Found a primitive function [%js] in a module [%js] - %p\n", sep + 1, mdp->mod.name, pfbase);
+	MOO_DEBUG4 (moo, "Found a primitive function [%.*js] in a module [%js] - %p\n",
+		pfidlen - mod_name_len - 1, sep + 1, mdp->mod.name, pfbase);
 	return pfbase;
 }
 
@@ -795,7 +796,7 @@ int moo_genpfmethods (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, const 
 }
 #endif
 
-moo_pfbase_t* moo_findpfbase (moo_t* moo, const moo_pfinfo_t* pfinfo, moo_oow_t pfcount, const moo_ooch_t* name)
+moo_pfbase_t* moo_findpfbase (moo_t* moo, moo_pfinfo_t* pfinfo, moo_oow_t pfcount, const moo_ooch_t* name, moo_oow_t namelen)
 {
 	int left, right, mid, n;
 
@@ -805,13 +806,10 @@ moo_pfbase_t* moo_findpfbase (moo_t* moo, const moo_pfinfo_t* pfinfo, moo_oow_t 
 	{
 		mid = (left + right) / 2;
 
-		n = moo_compoocstr (name, pfinfo[mid].mthname);
+		n = moo_compoocharsoocstr (name, namelen, pfinfo[mid].mthname);
 		if (n < 0) right = mid - 1; 
 		else if (n > 0) left = mid + 1;
-		else
-		{
-			return &pfinfo[mid].base;
-		}
+		else return &pfinfo[mid].base;
 	}
 
 	moo->errnum = MOO_ENOENT;

@@ -99,6 +99,7 @@ class MyObject(Object)
 			'too large array expression'
 			'wrong primitive function number'
 			'wrong primitive function identifier'
+			'wrong primitive function argument definition'
 			'wrong module name'
 			'#include error'
 			'wrong namespace name'
@@ -130,18 +131,15 @@ class MyObject(Object)
 		].
 
 		
-		f puts: S'static moo_ooch_t* '.
-		f puts: name.
-		f puts: S'[] =\n{\n'.
+		f puts(S'static moo_ooch_t* ', name, S'[] =\n{\n').
 		0 to: c do: [:i |
-			((i rem: 8) = 0) ifTrue: [ f putc: C'\t' ].
-			f puts: prefix.
-			f puts: (i asString).
-			(i = c) ifFalse: [f puts: S',' ].
-			(((i + 1) rem: 8) = 0) ifTrue: [ f putc: C'\n' ] ifFalse: [ f putc: C' ' ].
+			((i rem: 8) = 0) ifTrue: [ f putc(C'\t') ].
+			f puts(prefix, (i asString)).
+			(i = c) ifFalse: [f puts(S',') ].
+			(((i + 1) rem: 8) = 0) ifTrue: [ f putc(C'\n') ] ifFalse: [ f putc(C' ') ].
 		].
-		(((c + 1) rem: 8) = 0) ifFalse: [ f putc: C'\n' ].
-		f puts: S'};\n'.
+		(((c + 1) rem: 8) = 0) ifFalse: [ f putc(C'\n') ].
+		f puts(S'};\n').
 	}
 
 	method(#class) printString: s prefix: prefix index: index on: f
@@ -149,18 +147,13 @@ class MyObject(Object)
 		| c  |
 		c := s size - 1.
 
-		f puts: 'static moo_ooch_t '.
-		f puts: prefix.
-		f puts: index asString.
-		f puts: '[] = {'.
+		f puts('static moo_ooch_t ', prefix, index asString, '[] = {').
 
 		0 to: c do: [:i |
-			f putc: $'.
-			f putc: (s at: i).
-			f putc: $'.
-			(i = c) ifFalse: [f putc: $, ].
+			f putc($', (s at: i), $').
+			(i = c) ifFalse: [f putc($,) ].
 		].
 
-		f puts: S',\'\\0\'};\n'.
+		f puts(S',\'\\0\'};\n').
 	}
 }

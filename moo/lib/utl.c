@@ -107,6 +107,15 @@ int moo_compucbcstr (const moo_uch_t* str1, const moo_bch_t* str2)
 	return (*str1 > *str2)? 1: -1;
 }
 
+int moo_compucharsucstr (const moo_uch_t* str1, moo_oow_t len, const moo_uch_t* str2)
+{
+	const moo_uch_t* end = str1 + len;
+	while (str1 < end && *str2 != '\0' && *str1 == *str2) str1++, str2++;
+	if (str1 == end && *str2 == '\0') return 0;
+	if (*str1 == *str2) return (str1 < end)? 1: -1;
+	return (*str1 > *str2)? 1: -1;
+}
+
 int moo_compucharsbcstr (const moo_uch_t* str1, moo_oow_t len, const moo_bch_t* str2)
 {
 	const moo_uch_t* end = str1 + len;
@@ -124,6 +133,16 @@ int moo_compbcharsbcstr (const moo_bch_t* str1, moo_oow_t len, const moo_bch_t* 
 	if (*str1 == *str2) return (str1 < end)? 1: -1;
 	return (*str1 > *str2)? 1: -1;
 }
+
+int moo_compbcharsucstr (const moo_bch_t* str1, moo_oow_t len, const moo_uch_t* str2)
+{
+	const moo_bch_t* end = str1 + len;
+	while (str1 < end && *str2 != '\0' && *str1 == *str2) str1++, str2++;
+	if (str1 == end && *str2 == '\0') return 0;
+	if (*str1 == *str2) return (str1 < end)? 1: -1;
+	return (*str1 > *str2)? 1: -1;
+}
+
 
 void moo_copyuchars (moo_uch_t* dst, const moo_uch_t* src, moo_oow_t len)
 {

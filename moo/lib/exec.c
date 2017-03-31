@@ -2999,6 +2999,9 @@ int moo_getpfnum (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 /* TODO: have the pftable sorted alphabetically and do binary search */
 	for (i = 0; i < MOO_COUNTOF(pftab); i++)
 	{
+		/* moo_compoocharsbcstr() is not aware of multibyte encoding.
+		 * so the names above should be composed of the single byte 
+		 * characters only */
 		if (moo_compoocharsbcstr(ptr, len, pftab[i].name) == 0) return i;
 	}
 
@@ -3190,10 +3193,17 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			name = method->slot[pf_name_index];
 		#endif
 
-			pfbase = moo_querymod (moo, ((moo_oop_char_t)name)->slot, MOO_OBJ_GET_SIZE(name));
+			pfbase = moo_querymod (moo, MOO_OBJ_GET_CHAR_SLOT(name), MOO_OBJ_GET_SIZE(name));
 			if (pfbase)
 			{
 				int n;
+
+				if (nargs < pfbase->minargs || nargs > pfbase->maxargs)
+				{
+					MOO_DEBUG5 (moo, "Soft failure due to argument count mismatch for primitive function %.*js - %zu-%zu expected, %zu given\n",
+						MOO_OBJ_GET_SIZE(name), MOO_OBJ_GET_CHAR_SLOT(name), pfbase->minargs, pfbase->maxargs, nargs);
+					goto activate_primitive_method_body;
+				}
 
 				/* split a pointer to two OOP fields as SmallIntegers for storing/caching. */
 				method->preamble_data[0] = MOO_SMOOI_TO_OOP((moo_oow_t)pfbase >> (MOO_OOW_BITS / 2));

@@ -1,7 +1,7 @@
 class _FFI(Object) from 'ffi'
 {
 	method(#primitive) open(name).
-	method(#primitive) close().
+	method(#primitive) close.
 	method(#primitive) getsym(name).
 	 
 	(* TODO: make call variadic? method(#primitive,#variadic) call (func, sig). *)

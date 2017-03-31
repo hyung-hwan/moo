@@ -102,6 +102,12 @@ MOO_EXPORT int moo_compucbcstr (
 	const moo_bch_t* str2
 );
 
+MOO_EXPORT int moo_compucharsucstr (
+	const moo_uch_t* str1,
+	moo_oow_t        len,
+	const moo_uch_t* str2
+);
+
 MOO_EXPORT int moo_compucharsbcstr (
 	const moo_uch_t* str1,
 	moo_oow_t        len,
@@ -112,6 +118,12 @@ MOO_EXPORT int moo_compbcharsbcstr (
 	const moo_bch_t* str1,
 	moo_oow_t        len,
 	const moo_bch_t* str2
+);
+
+MOO_EXPORT int moo_compbcharsucstr (
+	const moo_bch_t* str1,
+	moo_oow_t        len,
+	const moo_uch_t* str2
 );
 
 MOO_EXPORT void moo_copyuchars (
@@ -181,6 +193,8 @@ MOO_EXPORT moo_oow_t moo_countbcstr (
 #	define moo_equaloochars(str1,str2,len) moo_equaluchars(str1,str2,len)
 #	define moo_compoocbcstr(str1,str2) moo_compucbcstr(str1,str2)
 #	define moo_compoocharsbcstr(str1,len1,str2) moo_compucharsbcstr(str1,len1,str2)
+#	define moo_compoocharsucstr(str1,len1,str2) moo_compucharsucstr(str1,len1,str2)
+#	define moo_compoocharsoocstr(str1,len1,str2) moo_compucharsucstr(str1,len1,str2)
 #	define moo_compoocstr(str1,str2) moo_compucstr(str1,str2)
 #	define moo_copyoochars(dst,src,len) moo_copyuchars(dst,src,len)
 #	define moo_copybctooochars(dst,src,len) moo_copybtouchars(dst,src,len)
@@ -193,6 +207,8 @@ MOO_EXPORT moo_oow_t moo_countbcstr (
 #	define moo_equaloochars(str1,str2,len) moo_equalbchars(str1,str2,len)
 #	define moo_compoocbcstr(str1,str2) moo_compbcstr(str1,str2)
 #	define moo_compoocharsbcstr(str1,len1,str2) moo_compbcharsbcstr(str1,len1,str2)
+#	define moo_compoocharsucstr(str1,len1,str2) moo_compbcharsucstr(str1,len1,str2)
+#	define moo_compoocharsoocstr(str1,len1,str2) moo_compbcharsbcstr(str1,len1,str2)
 #	define moo_compoocstr(str1,str2) moo_compbcstr(str1,str2)
 #	define moo_copyoochars(dst,src,len) moo_copybchars(dst,src,len)
 #	define moo_copybctooochars(dst,src,len) moo_copybchars(dst,src,len)
