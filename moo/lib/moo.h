@@ -596,6 +596,7 @@ struct moo_method_t
 
 /* preamble flags */
 #define MOO_METHOD_PREAMBLE_FLAG_VARIADIC (1 << 0)
+#define MOO_METHOD_PREAMBLE_FLAG_LIBERAL  (1 << 1)
 
 /* NOTE: if you change the number of instance variables for moo_context_t,
  *       you need to change the defintion of BlockContext and MethodContext.

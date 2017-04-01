@@ -145,6 +145,7 @@ class MyObject(TestObject)
 		self varg_test (10, 20, 30, 40, 50) dump.
 		self varg_test2 (10, 20, 30, 40, 50) dump.
 		self varg_test3 (10, 20, 30, 40, 50) dump.
+		self varg_test3 (10, 20, 30, 40, 50, 60, 70, 80, 90, 100) dump.
 		thisContext vargCount dump.
 		thisContext vargCount dump.
 		
@@ -204,21 +205,29 @@ class MyObject(TestObject)
 	}
 	method(#class,#variadic) varg_test2(a,b,c)
 	{
-		0 to: (thisContext vargCount - 1) do: [:k |
+		'varg_test2 start .....' dump.
+		a dump.
+		b dump.
+		c dump.
+		'varg_test2 varg .....' dump.
+		0 priorTo: (thisContext vargCount) do: [:k |
 			(thisContext vargAt: k) dump.
 		].
+		'varg_test2 end .....' dump.
 		^a
 	}
-	method(#class,#variadic) varg_test3(a,b,c,d,e,f)
+	method(#class,#liberal) varg_test3(a,b,c,d,e,f)
 	{
-		0 to: (thisContext vargCount - 1) do: [:k |
+		'varg_test3 start .....' dump.
+		0 priorTo: (thisContext vargCount) do: [:k |
 			(thisContext vargAt: k) dump.
 		].
+		'varg_test3 end .....' dump.
 		## ^b * 100
 		^f
 	}
 	
-	method(#class,#variadic) t001(a)
+	method(#class,#liberal) t001(a)
 	{
 		a isNil ifTrue: [^error(10)].
 		(a = 20) ifTrue: [^error].

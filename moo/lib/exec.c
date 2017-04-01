@@ -885,8 +885,8 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 	if (actual_nargs > nargs)
 	{
 		/* more arguments than the method specification have been passed in. 
-		 * it must be a variadic unary method. othewise, the compiler is buggy */
-		MOO_ASSERT (moo, MOO_METHOD_GET_PREAMBLE_FLAGS(MOO_OOP_TO_SMOOI(mth->preamble)) & MOO_METHOD_PREAMBLE_FLAG_VARIADIC);
+		 * it must be a variadic or liberal unary method. othewise, the compiler is buggy */
+		MOO_ASSERT (moo, MOO_METHOD_GET_PREAMBLE_FLAGS(MOO_OOP_TO_SMOOI(mth->preamble)) & (MOO_METHOD_PREAMBLE_FLAG_VARIADIC | MOO_METHOD_PREAMBLE_FLAG_LIBERAL));
 		actual_ntmprs = ntmprs + (actual_nargs - nargs);
 	}
 	else actual_ntmprs = ntmprs;
@@ -3018,7 +3018,7 @@ moo_pfbase_t* moo_getpfnum (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, mo
 /* ------------------------------------------------------------------------- */
 static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 {
-	moo_ooi_t preamble, preamble_code;
+	moo_ooi_t preamble, preamble_code, preamble_flags;
 	moo_ooi_t /*sp,*/ stack_base;
 
 #if defined(MOO_DEBUG_VM_EXEC)
@@ -3026,16 +3026,22 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 #endif
 
 	preamble = MOO_OOP_TO_SMOOI(method->preamble);
+	preamble_flags = MOO_METHOD_GET_PREAMBLE_FLAGS(preamble);
 
-	if (nargs != MOO_OOP_TO_SMOOI(method->tmpr_nargs))
+	if (preamble_flags & MOO_METHOD_PREAMBLE_FLAG_LIBERAL)
 	{
-
-		moo_ooi_t preamble_flags;
-
-		preamble_flags = MOO_METHOD_GET_PREAMBLE_FLAGS(preamble);
-		if (!(preamble_flags & MOO_METHOD_PREAMBLE_FLAG_VARIADIC))
+		/* do nothing - no argument check */
+	}
+	else if (preamble_flags & MOO_METHOD_PREAMBLE_FLAG_VARIADIC)
+	{
+		if (nargs < MOO_OOP_TO_SMOOI(method->tmpr_nargs)) goto arg_count_mismatch;
+	}
+	else
+	{
+		if (nargs != MOO_OOP_TO_SMOOI(method->tmpr_nargs))
 		{
 /* TODO: better to throw a moo exception so that the caller can catch it??? */
+		arg_count_mismatch:
 			MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_FATAL, 
 				"Fatal error - Argument count mismatch for a non-variadic method [%O] - %zd expected, %zu given\n",
 				method->name, MOO_OOP_TO_SMOOI(method->tmpr_nargs), nargs);

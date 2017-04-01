@@ -103,6 +103,7 @@ static struct voca_t
 	{  9, { '#','h','a','l','f','w','o','r','d'                           } },
 	{  2, { 'i','f'                                                       } },
 	{  8, { '#','i','n','c','l','u','d','e'                               } },
+	{  8, { '#','l','i','b','e','r','a','l'                               } },
 	{  7, { '#','l','i','w','o','r','d'                                   } },
 	{  6, { 'm','e','t','h','o','d'                                       } },
 	{  3, { 'n','i','l'                                                   } },
@@ -150,6 +151,7 @@ enum voca_id_t
 	VOCA_HALFWORD_S,
 	VOCA_IF,
 	VOCA_INCLUDE_S,
+	VOCA_LIBERAL_S,
 	VOCA_LIWORD_S,
 	VOCA_METHOD,
 	VOCA_NIL,
@@ -5752,8 +5754,8 @@ static int add_compiled_method (moo_t* moo)
 		preamble_index = 0;
 	}
 
-	if (moo->c->mth.variadic /*&& moo->c->mth.tmpr_nargs > 0*/)
-		preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_VARIADIC;
+	/*if (moo->c->mth.variadic) */
+	preamble_flags |= moo->c->mth.variadic;
 
 	MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index));
 
@@ -5853,9 +5855,10 @@ static int compile_method_definition (moo_t* moo)
 
 					GET_TOKEN (moo);
 				}
-				else if (is_token_symbol(moo, VOCA_VARIADIC_S))
+				else if (is_token_symbol(moo, VOCA_VARIADIC_S) ||
+				         is_token_symbol(moo, VOCA_LIBERAL_S))
 				{
-					/* method(#variadic) */
+					/* method(#variadic) or method(#liberal) */
 					if (moo->c->mth.variadic)
 					{
 						/* #variadic duplicate modifier */
@@ -5863,7 +5866,10 @@ static int compile_method_definition (moo_t* moo)
 						return -1;
 					}
 
-					moo->c->mth.variadic = 1;
+					if (is_token_symbol(moo, VOCA_LIBERAL_S))
+						moo->c->mth.variadic = MOO_METHOD_PREAMBLE_FLAG_LIBERAL;
+					else
+						moo->c->mth.variadic = MOO_METHOD_PREAMBLE_FLAG_VARIADIC;
 
 					GET_TOKEN (moo);
 				}
@@ -6024,7 +6030,7 @@ static int compile_method_definition (moo_t* moo)
 		GET_TOKEN (moo);
 
 		if (compile_method_temporaries(moo) <= -1 ||
-		    compile_method_progma(moo) <= -1 ||
+		    compile_method_pragma(moo) <= -1 ||
 		    compile_method_statements(moo) <= -1) return -1;
 
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
