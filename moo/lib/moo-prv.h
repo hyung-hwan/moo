@@ -1168,10 +1168,11 @@ moo_oop_t moo_inttostr (
 /* exec.c                                                                    */
 /* ========================================================================= */
 
-int moo_getpfnum (
+moo_pfbase_t* moo_getpfnum (
 	moo_t*            moo,
 	const moo_ooch_t* ptr,
-	moo_oow_t         len
+	moo_oow_t         len,
+	moo_ooi_t*        pfnum
 );
 
 

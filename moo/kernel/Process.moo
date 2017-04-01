@@ -124,18 +124,10 @@ class Semaphore(Object)
 
 	## ==================================================================
 
-	method signal 
-	{
-		<primitive: #_semaphore_signal>
-		self primitiveFailed.
-	}
+	method(#primitive) signal.
+	method(#primitive) wait.
 
-	method wait
-	{
-		<primitive: #_semaphore_wait>
-		self primitiveFailed.
-	}
-
+(*
 	method waitWithTimeout: seconds
 	{
 		<primitive: #_semaphore_wait>
@@ -147,7 +139,7 @@ class Semaphore(Object)
 		<primitive: #_semaphore_wait>
 		self primitiveFailed
 	}
-
+*)
 	method critical: aBlock
 	{
 		self wait.

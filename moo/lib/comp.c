@@ -3351,10 +3351,10 @@ static int compile_method_temporaries (moo_t* moo)
 	return 0;
 }
 
-static int compile_method_primitive (moo_t* moo)
+static int compile_method_pragma (moo_t* moo)
 {
 	/* 
-	 * method-primitive := "<"  "primitive:" integer ">" |
+	 * method-pragma := "<"  "primitive:" integer ">" |
 	 *                     "<"  "primitive:" symbol ">" |
 	 *                     "<"  "exception" ">" |
 	 *                     "<"  "ensure" ">"
@@ -3400,22 +3400,22 @@ static int compile_method_primitive (moo_t* moo)
 			{
 				const moo_ooch_t* tptr;
 				moo_oow_t tlen;
+				moo_pfbase_t* pfbase;
 
 				tptr = TOKEN_NAME_PTR(moo) + 1;
 				tlen = TOKEN_NAME_LEN(moo) - 1;
 
 				/* attempt get a primitive function number by name */
-				pfnum = moo_getpfnum (moo, tptr, tlen);
-				if (pfnum <= -1)
+				pfbase = moo_getpfnum (moo, tptr, tlen, &pfnum);
+				if (!pfbase)
 				{
 					/* a built-in primitive function is not found 
 					 * check if it is a primitive function identifier */
 					moo_oow_t lit_idx;
-					moo_pfbase_t* pfbase;
 
 					if (!moo_rfindoochar (tptr, tlen, '.'))
 					{
-						/* wrong primitive functio identifier */
+						/* wrong primitive function identifier */
 						set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
@@ -3433,7 +3433,7 @@ static int compile_method_primitive (moo_t* moo)
 
 					if (moo->c->mth.tmpr_nargs < pfbase->minargs || moo->c->mth.tmpr_nargs > pfbase->maxargs)
 					{
-						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
+						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method pragma of %.*js - %zd-%zd expected, %zd specified\n", 
 							tlen, tptr, pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
 						set_syntax_error (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
 						return -1;
@@ -3455,7 +3455,14 @@ static int compile_method_primitive (moo_t* moo)
 				}
 				else
 				{
-	/* TODO: check argument count for this primitive ... */
+					if (moo->c->mth.tmpr_nargs < pfbase->minargs || moo->c->mth.tmpr_nargs > pfbase->maxargs)
+					{
+						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method pragma of %.*js - %zd-%zd expected, %zd specified\n", 
+							tlen, tptr, pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
+						set_syntax_error (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+						return -1;
+					}
+
 					moo->c->mth.pftype = PFTYPE_NUMBERED; 
 					moo->c->mth.pfnum = pfnum;
 				}
@@ -5910,6 +5917,7 @@ static int compile_method_definition (moo_t* moo)
 
 			moo_oow_t savedlen;
 			moo_ooi_t pfnum;
+			moo_pfbase_t* pfbase;
 
 			savedlen = moo->c->cls.modname.len;
 
@@ -5923,8 +5931,8 @@ static int compile_method_definition (moo_t* moo)
 				return -1;
 			}
 
-			pfnum = moo_getpfnum (moo, &moo->c->cls.modname.ptr[savedlen], moo->c->cls.modname.len - savedlen);
-			if (pfnum <= -1 || !MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
+			pfbase = moo_getpfnum (moo, &moo->c->cls.modname.ptr[savedlen], moo->c->cls.modname.len - savedlen, &pfnum);
+			if (!pfbase)
 			{
 				MOO_DEBUG2 (moo, "Cannot find intrinsic primitive function - %.*js\n", 
 					moo->c->cls.modname.len - savedlen, &moo->c->cls.modname.ptr[savedlen]);
@@ -5933,9 +5941,19 @@ static int compile_method_definition (moo_t* moo)
 				return -1;
 			}
 
-/* TODO: check argumetns... */
+			if (moo->c->mth.tmpr_nargs < pfbase->minargs || moo->c->mth.tmpr_nargs > pfbase->maxargs)
+			{
+				MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
+					moo->c->cls.modname.len - savedlen, &moo->c->cls.modname.ptr[savedlen],
+					pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
+				set_syntax_error (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+				moo->c->cls.modname.len = savedlen;
+				return -1;
+			}
+
 			moo->c->cls.modname.len = savedlen;
 
+			MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum));
 			moo->c->mth.pftype = PFTYPE_NUMBERED; 
 			moo->c->mth.pfnum = pfnum;
 		}
@@ -6006,7 +6024,7 @@ static int compile_method_definition (moo_t* moo)
 		GET_TOKEN (moo);
 
 		if (compile_method_temporaries(moo) <= -1 ||
-		    compile_method_primitive(moo) <= -1 ||
+		    compile_method_progma(moo) <= -1 ||
 		    compile_method_statements(moo) <= -1) return -1;
 
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
@@ -6157,7 +6175,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 	 *
 	 * method-definition := method method-modifier? method-actual-definition
 	 * method-modifier := "(" (#class | #instance)? ")"
-	 * method-actual-definition := method-name "{" method-tempraries? method-primitive? method-statements* "}"
+	 * method-actual-definition := method-name "{" method-tempraries? method-pragma? method-statements* "}"
 	 *
 	 * NOTE: when extending a class, class-module-import and variable-definition are not allowed.
 	 */

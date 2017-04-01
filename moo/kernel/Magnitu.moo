@@ -304,15 +304,8 @@ class SmallInteger(Integer)
 	## 	^0
 	## }
 	
-	method asError
-	{
-		<primitive: #_smooi_as_error>
-	}
-	
-	method asCharacter
-	{
-		<primitive: #_smooi_as_character>
-	}
+	method(#primitive) asCharacter.
+	method(#primitive) asError.	
 }
 
 class(#liword) LargeInteger(Integer)

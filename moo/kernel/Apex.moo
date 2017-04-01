@@ -328,13 +328,13 @@ class Apex(nil)
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
-	method(#class,#variadic) perform()
+	method(#class,#variadic) perform(selector)
 	{
 		<primitive: #_perform>
 		self primitiveFailed
 	}
-	
-	method(#variadic) perform()
+
+	method(#variadic) perform(selector)
 	{
 		<primitive: #_perform>
 		self primitiveFailed
@@ -481,14 +481,14 @@ class Error(Apex)
 
 pooldic Error.Code
 {
-	EGENERIC   := error(0).
-	ENOIMPL    := error(1).
-	ESYSERR    := error(2).
-	EINTERN    := error(3).
-	ESYSMEM    := error(4).
-	EOOMEM     := error(5).
-	EINVAL     := error(6).
-	ENOENT     := error(7).
+	EGENERIC   := error(1).
+	ENOIMPL    := error(2).
+	ESYSERR    := error(3).
+	EINTERN    := error(4).
+	ESYSMEM    := error(5).
+	EOOMEM     := error(6).
+	EINVAL     := error(7).
+	ENOENT     := error(8).
 (* add more items... *)
 }
 
@@ -524,19 +524,8 @@ extend Error
 		^false
 	}
 
-	method asInteger
-	{
-		<primitive: #_error_as_integer>
-	}
-	
-	method asCharacter
-	{
-		<primitive: #_error_as_character>
-	}
-
-	method asString
-	{
-		<primitive: #_error_as_string>
-	}
+	method(#primitive) asInteger.
+	method(#primitive) asCharacter.
+	method(#primitive) asString.
 }
 

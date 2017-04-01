@@ -1901,6 +1901,8 @@ static moo_pfrc_t pf_perform (moo_t* moo, moo_ooi_t nargs)
 	moo_oop_t /*rcv,*/ selector;
 	moo_oow_t ssp, esp, i;
 
+	MOO_ASSERT (moo, nargs >= 1); /* at least, a selector must be specified */
+
 	/*rcv = MOO_STACK_GETRCV(moo, nargs);*/
 	selector = MOO_STACK_GETARG(moo, nargs, 0);
 
@@ -2886,127 +2888,131 @@ static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-
-#define MAX_NARGS MOO_TYPE_MAX(moo_oow_t)
+#define MA MOO_TYPE_MAX(moo_oow_t)
 struct pf_t
 {
-	moo_oow_t       min_nargs;   /* expected number of arguments */
-	moo_oow_t       max_nargs;   /* expected number of arguments */
-	moo_pfimpl_t    handler;
 	const char*     name;        /* the name is supposed to be 7-bit ascii only */
+	moo_pfbase_t    pfbase;
 };
 typedef struct pf_t pf_t;
 
 static pf_t pftab[] =
 {
-	{   0, MAX_NARGS,  pf_dump,                      "_dump"                },
-	{   2, MAX_NARGS,  pf_log,                       "_log"                 },
+	{  "_dump",                                { pf_dump,                                 0, MA } },
+	{  "_log",                                 { pf_log,                                  2, MA } },
 
-	{   1,  1,  pf_identical,                        "_identical"           },
-	{   1,  1,  pf_not_identical,                    "_not_identical"       },
-	{   1,  1,  pf_equal,                            "_equal"               },
-	{   1,  1,  pf_not_equal,                        "_not_equal"           },
-	{   0,  0,  pf_class,                            "_class"               },
+	{ "_identical",                            { pf_identical,                            1, 1 } },
+	{ "_not_identical",                        { pf_not_identical,                        1, 1 } },
+	{ "_equal",                                { pf_equal,                                1, 1 } },
+	{ "_not_equal",                            { pf_not_equal,                            1, 1 } },
+	{ "_class",                                { pf_class,                                0, 0 } },
 
-	{   0,  1,  pf_basic_new,                        "_basic_new"           },
-	{   0,  1,  pf_ngc_new,                          "_ngc_new"             },
-	{   0,  0,  pf_ngc_dispose,                      "_ngc_dispose"         },
-	{   0,  0,  pf_shallow_copy,                     "_shallow_copy"        },
+	{ "_basic_new",                            { pf_basic_new,                            0, 1 } },
+	{ "_ngc_new",                              { pf_ngc_new,                              0, 1 } },
+	{ "_ngc_dispose",                          { pf_ngc_dispose,                          0, 0 } },
+	{ "_shallow_copy",                         { pf_shallow_copy,                         0, 0 } },
 
-	{   0,  0,  pf_basic_size,                       "_basic_size"          },
-	{   1,  1,  pf_basic_at,                         "_basic_at"            },
-	{   2,  2,  pf_basic_at_put,                     "_basic_at_put"        },
+	{ "_basic_size",                           { pf_basic_size,                           0, 0 } },
+	{ "_basic_at",                             { pf_basic_at,                             1, 1 } },
+	{ "_basic_at_put",                         { pf_basic_at_put,                         2, 2 } },
 
-	{   0,  0,  pf_hash,                             "_hash"                },
+	{ "_hash",                                 { pf_hash,                                 0, 0 } },
 
-	{   2,  2,  pf_get_int8,                         "System__getInt8"       },
-	{   2,  2,  pf_get_int16,                        "System__getInt16"      },
-	{   2,  2,  pf_get_int32,                        "System__getInt32"      },
-	{   2,  2,  pf_get_int64,                        "System__getInt64"      },
-	{   2,  2,  pf_get_uint8,                        "System__getUint8"      },
-	{   2,  2,  pf_get_uint16,                       "System__getUint16"     },
-	{   2,  2,  pf_get_uint32,                       "System__getUint32"     },
-	{   2,  2,  pf_get_uint64,                       "System__getUint64"     },
+	{ "System__getInt8",                       { pf_get_int8,                             2, 2 } },
+	{ "System__getInt16",                      { pf_get_int16,                            2, 2 } },
+	{ "System__getInt32",                      { pf_get_int32,                            2, 2 } },
+	{ "System__getInt64",                      { pf_get_int64,                            2, 2 } },
+	{ "System__getUint8",                      { pf_get_uint8,                            2, 2 } },
+	{ "System__getUint16",                     { pf_get_uint16,                           2, 2 } },
+	{ "System__getUint32",                     { pf_get_uint32,                           2, 2 } },
+	{ "System__getUint64",                     { pf_get_uint64,                           2, 2 } },
 
 /*
-	{   3,  3,  pf_put_int8,                         "System__putInt8"       },
-	{   3,  3,  pf_put_int16,                        "System__putInt16"      },
-	{   3,  3,  pf_put_int32,                        "System__putInt32"      },
-	{   3,  3,  pf_put_int64,                        "System__putInt64"      },
-	{   3,  3,  pf_put_uint8,                        "System__putUint8"      },
-	{   3,  3,  pf_put_uint16,                       "System__putUint16"     },
-	{   3,  3,  pf_put_uint32,                       "System__putUint32"     },
-	{   3,  3,  pf_put_uint64,                       "System__putUint64"     },
+	{ "System__putInt8",                       { pf_put_int8,                             3, 3 } },
+	{ "System__putInt16",                      { pf_put_int16,                            3, 3 } },
+	{ "System__putInt32",                      { pf_put_int32,                            3, 3 } },
+	{ "System__putInt64",                      { pf_put_int64,                            3, 3 } },
+	{ "System__putUint8",                      { pf_put_uint8,                            3, 3 } },
+	{ "System__putUint16",                     { pf_put_uint16,                           3, 3 } },
+	{ "System__putUint32",                     { pf_put_uint32,                           3, 3 } },
+	{ "System__putUint64",                     { pf_put_uint64,                           3, 3 } },
 */
 
-	{   1,  1,  pf_responds_to,                      "_responds_to"         },
-	{   1, MAX_NARGS,  pf_perform,                   "_perform"             },
-	{   1,  1,  pf_exceptionize_error,               "_exceptionize_error"  },
+	{ "_responds_to",                          { pf_responds_to,                          1, 1  } },
+	{ "_perform",                              { pf_perform,                              1, MA } },
+	{ "_exceptionize_error",                   { pf_exceptionize_error,                   1, 1  } },
 
-	{   1,  1,  pf_context_goto,                     "_context_goto"        },
-	{   0, MAX_NARGS,  pf_block_value,               "_block_value"         },
-	{   0, MAX_NARGS,  pf_block_new_process,         "_block_new_process"   },
+	{ "_context_goto",                         { pf_context_goto,                         1, 1  } },
+	{ "_block_value",                          { pf_block_value,                          0, MA } },
+	{ "_block_new_process",                    { pf_block_new_process,                    0, 1  } },
 
-	{   0,  0,  pf_process_resume,                   "_process_resume"      },
-	{   0,  0,  pf_process_terminate,                "_process_terminate"   },
-	{   0,  0,  pf_process_yield,                    "_process_yield"       },
-	{   0,  0,  pf_process_suspend,                  "_process_suspend"     },
-	{   0,  0,  pf_semaphore_signal,                 "_semaphore_signal"    },
-	{   0,  0,  pf_semaphore_wait,                   "_semaphore_wait"      },
+	{ "_process_resume",                       { pf_process_resume,                       0, 0 } },
+	{ "_process_terminate",                    { pf_process_terminate,                    0, 0 } },
+	{ "_process_yield",                        { pf_process_yield,                        0, 0 } },
+	{ "_process_suspend",                      { pf_process_suspend,                      0, 0 } },
 
-	{   1,  1,  pf_processor_schedule,               "_processor_schedule"            },
-	{   2,  3,  pf_processor_add_timed_semaphore,    "_processor_add_timed_semaphore" },
-	{   2,  2,  pf_processor_add_input_semaphore,    "_processor_add_input_semaphore" },
-	{   2,  2,  pf_processor_add_output_semaphore,   "_processor_add_output_semaphore" },
-	{   2,  2,  pf_processor_add_inoutput_semaphore, "_processor_add_inoutput_semaphore" },
-	{   1,  1,  pf_processor_remove_semaphore,       "_processor_remove_semaphore" },
-	{   2,  2,  pf_processor_return_to,              "_processor_return_to" },
+	{ "Semaphore_signal",                      { pf_semaphore_signal,                     0, 0 } },
+	{ "Semaphore_wait",                        { pf_semaphore_wait,                       0, 0 } },
 
-	{   1,  1,  pf_integer_add,                      "_integer_add"         },
-	{   1,  1,  pf_integer_sub,                      "_integer_sub"         },
-	{   1,  1,  pf_integer_mul,                      "_integer_mul"         },
-	{   1,  1,  pf_integer_quo,                      "_integer_quo"         },
-	{   1,  1,  pf_integer_rem,                      "_integer_rem"         },
-	{   1,  1,  pf_integer_quo2,                     "_integer_quo2"        },
-	{   1,  1,  pf_integer_rem2,                     "_integer_rem2"        },
-	{   0,  0,  pf_integer_negated,                  "_integer_negated"     },
-	{   1,  1,  pf_integer_bitat,                    "_integer_bitat"       },
-	{   1,  1,  pf_integer_bitand,                   "_integer_bitand"      },
-	{   1,  1,  pf_integer_bitor,                    "_integer_bitor"       },
-	{   1,  1,  pf_integer_bitxor,                   "_integer_bitxor"      },
-	{   0,  0,  pf_integer_bitinv,                   "_integer_bitinv"      },
-	{   1,  1,  pf_integer_bitshift,                 "_integer_bitshift"    },
-	{   1,  1,  pf_integer_eq,                       "_integer_eq"          },
-	{   1,  1,  pf_integer_ne,                       "_integer_ne"          },
-	{   1,  1,  pf_integer_lt,                       "_integer_lt"          },
-	{   1,  1,  pf_integer_gt,                       "_integer_gt"          },
-	{   1,  1,  pf_integer_le,                       "_integer_le"          },
-	{   1,  1,  pf_integer_ge,                       "_integer_ge"          },
-	{   1,  1,  pf_integer_inttostr,                 "_integer_inttostr"    },
+	{ "_processor_schedule",                   { pf_processor_schedule,                   1, 1 } },
+	{ "_processor_add_timed_semaphore",        { pf_processor_add_timed_semaphore,        2, 3 } },
+	{ "_processor_add_input_semaphore",        { pf_processor_add_input_semaphore,        2, 2 } },
+	{ "_processor_add_output_semaphore",       { pf_processor_add_output_semaphore,       2, 2 } },
+	{ "_processor_add_inoutput_semaphore",     { pf_processor_add_inoutput_semaphore,     2, 2 } },
+	{ "_processor_remove_semaphore",           { pf_processor_remove_semaphore,           1, 1 } },
+	{ "_processor_return_to",                  { pf_processor_return_to,                  2, 2 } },
 
-	{   0,  0,  pf_smooi_as_character,               "_smooi_as_character"  },
-	{   0,  0,  pf_smooi_as_error,                   "_smooi_as_error"      },
+	{ "_integer_add",                          { pf_integer_add,                          1, 1 } },
+	{ "_integer_sub",                          { pf_integer_sub,                          1, 1 } },
+	{ "_integer_mul",                          { pf_integer_mul,                          1, 1 } },
+	{ "_integer_quo",                          { pf_integer_quo,                          1, 1 } },
+	{ "_integer_rem",                          { pf_integer_rem,                          1, 1 } },
+	{ "_integer_quo2",                         { pf_integer_quo2,                         1, 1 } },
+	{ "_integer_rem2",                         { pf_integer_rem2,                         1, 1 } },
+	{ "_integer_negated",                      { pf_integer_negated,                      0, 0 } },
+	{ "_integer_bitat",                        { pf_integer_bitat,                        1, 1 } },
+	{ "_integer_bitand",                       { pf_integer_bitand,                       1, 1 } },
+	{ "_integer_bitor",                        { pf_integer_bitor,                        1, 1 } },
+	{ "_integer_bitxor",                       { pf_integer_bitxor,                       1, 1 } },
+	{ "_integer_bitinv",                       { pf_integer_bitinv,                       0, 0 } },
+	{ "_integer_bitshift",                     { pf_integer_bitshift,                     1, 1 } },
+	{ "_integer_eq",                           { pf_integer_eq,                           1, 1 } },
+	{ "_integer_ne",                           { pf_integer_ne,                           1, 1 } },
+	{ "_integer_lt",                           { pf_integer_lt,                           1, 1 } },
+	{ "_integer_gt",                           { pf_integer_gt,                           1, 1 } },
+	{ "_integer_le",                           { pf_integer_le,                           1, 1 } },
+	{ "_integer_ge",                           { pf_integer_ge,                           1, 1 } },
+	{ "_integer_inttostr",                     { pf_integer_inttostr,                     1, 1 } },
 
-	{   0,  0,  pf_error_as_character,               "_error_as_character"  },
-	{   0,  0,  pf_error_as_integer,                 "_error_as_integer"    },
-	{   0,  0,  pf_error_as_string,                  "_error_as_string"     }
+	{ "Error_asCharacter",                     { pf_error_as_character,                   0, 0 } },
+	{ "Error_asInteger",                       { pf_error_as_integer,                     0, 0 } },
+	{ "Error_asString",                        { pf_error_as_string,                      0, 0 } },
+
+	{ "SmallInteger_asCharacter",              { pf_smooi_as_character,                   0, 0 } },
+	{ "SmallInteger_asError",                  { pf_smooi_as_error,                       0, 0 } }
 };
 
-int moo_getpfnum (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
+moo_pfbase_t* moo_getpfnum (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, moo_ooi_t* pfnum)
 {
-	int i;
+	moo_ooi_t i;
 
 /* TODO: have the pftable sorted alphabetically and do binary search */
+/* TODO: sort pftab and utilize moo_findpfbase? */
 	for (i = 0; i < MOO_COUNTOF(pftab); i++)
 	{
 		/* moo_compoocharsbcstr() is not aware of multibyte encoding.
 		 * so the names above should be composed of the single byte 
 		 * characters only */
-		if (moo_compoocharsbcstr(ptr, len, pftab[i].name) == 0) return i;
+		if (moo_compoocharsbcstr(ptr, len, pftab[i].name) == 0) 
+		{
+			MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(i)); /* this must never be so big */
+			*pfnum = i;
+			return &pftab[i].pfbase;
+		}
 	}
 
 	moo->errnum = MOO_ENOENT;
-	return -1;
+	return MOO_NULL;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -3139,20 +3145,20 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			{
 				int n;
 
-				if ((nargs < pftab[pfnum].min_nargs || nargs > pftab[pfnum].max_nargs))
+				if ((nargs < pftab[pfnum].pfbase.minargs || nargs > pftab[pfnum].pfbase.maxargs))
 				{
 					MOO_DEBUG4 (moo, "Soft failure due to argument count mismatch for primitive function %hs - %zu-%zu expected, %zu given\n",
-						pftab[pfnum].name, pftab[pfnum].min_nargs, pftab[pfnum].max_nargs, nargs);
+						pftab[pfnum].name, pftab[pfnum].pfbase.minargs, pftab[pfnum].pfbase.maxargs, nargs);
 					goto activate_primitive_method_body;
 				}
 
 				moo_pushtmp (moo, (moo_oop_t*)&method);
-				n = pftab[pfnum].handler (moo, nargs);
+				n = pftab[pfnum].pfbase.handler (moo, nargs);
 				moo_poptmp (moo);
 				if (n <= MOO_PF_HARD_FAILURE) return -1;
 				if (n >= MOO_PF_SUCCESS) break;
 
-				MOO_DEBUG2 (moo, "Soft failure indicated by primitive function %p - %hs\n", pftab[pfnum].handler, pftab[pfnum].name);
+				MOO_DEBUG2 (moo, "Soft failure indicated by primitive function %p - %hs\n", pftab[pfnum].pfbase.handler, pftab[pfnum].name);
 			}
 			else
 			{
