@@ -532,4 +532,14 @@ extend Error
 
 class SmallPointer(Object)
 {
+	method(#primitive) asString.
+	
+	method(#primitive) getInt8  (offset).
+	method(#primitive) getInt16 (offset).
+	method(#primitive) getInt32 (offset).
+	method(#primitive) getInt64 (offset).
+	method(#primitive) getUint8 (offset).
+	method(#primitive) getUint16(offset).
+	method(#primitive) getUint32(offset).
+	method(#primitive) getUint64(offset).
 }

@@ -233,7 +233,8 @@ MOO_INLINE static int is_bigint (moo_t* moo, moo_oop_t x)
 {
 	moo_oop_class_t c;
 
-	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(x));
+	/*MOO_ASSERT (moo, MOO_OOP_IS_POINTER(x));*/
+	if (!MOO_OOP_IS_POINTER(x)) return 0;
 
 /* TODO: is it better to introduce a special integer mark into the class itself */
 /* TODO: or should it check if it's a subclass, subsubclass, subsubsubclass, etc of a large_integer as well? */

@@ -198,13 +198,17 @@ static moo_pfrc_t pf_getevent (moo_t* moo, moo_ooi_t nargs)
 		evttype = evt->response_type & 0x7F;*/
 		x11->curevt = evt;
 
+		/*
 		llevt = moo_oowtoint (moo, (moo_oow_t)evt);
 		if (!llevt) 
 		{
 			llevt = MOO_ERROR_TO_OOP(moo->errnum);
 			free (evt);
 			x11->curevt = MOO_NULL;
-		}
+		}*/
+
+		MOO_ASSERT (moo, MOO_IN_SMPTR_RANGE(evt));
+		llevt = MOO_SMPTR_TO_OOP(evt);
 
 		MOO_STACK_SETRET (moo, nargs, llevt);
 	}
