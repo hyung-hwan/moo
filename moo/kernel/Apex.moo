@@ -529,3 +529,7 @@ extend Error
 	method(#primitive) asString.
 }
 
+
+class SmallPointer(Object)
+{
+}

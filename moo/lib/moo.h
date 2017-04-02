@@ -194,50 +194,83 @@ typedef enum moo_method_type_t moo_method_type_t;
  * This scheme works because the object allocators aligns the object size to
  * a multiple of sizeof(moo_oop_t). This way, the 2 least-significant bits
  * of a real OOP are always 0s.
+ *
+ * With 2 bits, i can encode only 3 special types except object pointers. 
+ * Since I need more than 3 special types, I extend the tag bits up to 4 bits
+ * to represent a special data type that doesn't require a range as wide
+ * as a small integer. A unicode character, for instance, only requires 21 
+ * bits at most. An error doesn't need to be as diverse as a small integer.
  */
 
-#define MOO_OOP_TAG_BITS   2
-#define MOO_OOP_TAG_SMOOI  1
-#define MOO_OOP_TAG_CHAR   2
-#define MOO_OOP_TAG_ERROR  3
+#define MOO_OOP_TAG_BITS_LO     2
+#define MOO_OOP_TAG_BITS_HI     2
 
-#define MOO_OOP_GET_TAG(oop) (((moo_oow_t)oop) & MOO_LBMASK(moo_oow_t, MOO_OOP_TAG_BITS))
-#define MOO_OOP_IS_NUMERIC(oop) (MOO_OOP_GET_TAG(oop) != 0)
-#define MOO_OOP_IS_POINTER(oop) (MOO_OOP_GET_TAG(oop) == 0)
+#define MOO_OOP_TAG_SMOOI       1    /* 01 */
+#define MOO_OOP_TAG_SMPTR       2    /* 10 */
+#define MOO_OOP_TAG_EXTENDED    3    /* 11 - internal use only */
+#define MOO_OOP_TAG_CHAR        3    /* 0011 */
+#define MOO_OOP_TAG_ERROR       7    /* 0111 */
+#define MOO_OOP_TAG_HANDLE      11   /* 1011 */
+#define MOO_OOP_TAG_RESERVED1   15   /* 1111 */
 
-#define MOO_OOP_IS_SMOOI(oop) (MOO_OOP_GET_TAG(oop) == MOO_OOP_TAG_SMOOI)
+#define MOO_OOP_GET_TAG_LO(oop) (((moo_oow_t)oop) & MOO_LBMASK(moo_oow_t, MOO_OOP_TAG_BITS_LO))
+#define MOO_OOP_GET_TAG_LOHI(oop) (((moo_oow_t)oop) & MOO_LBMASK(moo_oow_t, MOO_OOP_TAG_BITS_LO + MOO_OOP_TAG_BITS_HI))
+#define MOO_OOP_GET_TAG(oop) (MOO_OOP_GET_TAG_LO(oop) == MOO_OOP_TAG_EXTENDED? MOO_OOP_GET_TAG_LOHI(oop): MOO_OOP_GET_TAG_LO(oop))
+
+#define MOO_OOP_IS_NUMERIC(oop) (MOO_OOP_GET_TAG_LO(oop) != 0)
+#define MOO_OOP_IS_POINTER(oop) (MOO_OOP_GET_TAG_LO(oop) == 0)
+
+#define MOO_OOP_IS_SMOOI(oop) (MOO_OOP_GET_TAG_LO(oop) == MOO_OOP_TAG_SMOOI)
+#define MOO_OOP_IS_SMPTR(oop) (MOO_OOP_GET_TAG_LO(oop) == MOO_OOP_TAG_SMPTR)
+
+#define MOO_SMOOI_TO_OOP(num) ((moo_oop_t)((((moo_ooi_t)(num)) << MOO_OOP_TAG_BITS_LO) | MOO_OOP_TAG_SMOOI))
+#define MOO_OOP_TO_SMOOI(oop) (((moo_ooi_t)oop) >> MOO_OOP_TAG_BITS_LO)
+/*
+#define MOO_SMPTR_TO_OOP(num) ((moo_oop_t)((((moo_ooi_t)(num)) << MOO_OOP_TAG_BITS_LO) | MOO_OOP_TAG_SMPTR))
+#define MOO_OOP_TO_SMPTR(oop) (((moo_ooi_t)oop) >> MOO_OOP_TAG_BITS_LO)
+*/
+#define MOO_SMPTR_TO_OOP(ptr) ((moo_oop_t)(((moo_oow_t)ptr) | MOO_OOP_TAG_SMPTR))
+#define MOO_OOP_TO_SMPTR(oop) ((void*)(((moo_oow_t)oop) & ~MOO_LBMASK(moo_oow_t, MOO_OOP_TAG_BITS_LO)))
+
+
 #define MOO_OOP_IS_CHAR(oop) (MOO_OOP_GET_TAG(oop) == MOO_OOP_TAG_CHAR)
 #define MOO_OOP_IS_ERROR(oop) (MOO_OOP_GET_TAG(oop) == MOO_OOP_TAG_ERROR)
+#define MOO_OOP_IS_HANDLE(oop) (MOO_OOP_GET_TAG(oop) == MOO_OOP_TAG_HANDLE)
 
-#define MOO_SMOOI_TO_OOP(num) ((moo_oop_t)((((moo_ooi_t)(num)) << MOO_OOP_TAG_BITS) | MOO_OOP_TAG_SMOOI))
-#define MOO_OOP_TO_SMOOI(oop) (((moo_ooi_t)oop) >> MOO_OOP_TAG_BITS)
-#define MOO_CHAR_TO_OOP(num) ((moo_oop_t)((((moo_oow_t)(num)) << MOO_OOP_TAG_BITS) | MOO_OOP_TAG_CHAR))
-#define MOO_OOP_TO_CHAR(oop) (((moo_oow_t)oop) >> MOO_OOP_TAG_BITS)
-#define MOO_ERROR_TO_OOP(num) ((moo_oop_t)((((moo_oow_t)(num)) << MOO_OOP_TAG_BITS) | MOO_OOP_TAG_ERROR))
-#define MOO_OOP_TO_ERROR(oop) (((moo_oow_t)oop) >> MOO_OOP_TAG_BITS)
+#define MOO_OOP_TO_CHAR(oop) (((moo_oow_t)oop) >> (MOO_OOP_TAG_BITS_LO + MOO_OOP_TAG_BITS_LO))
+#define MOO_CHAR_TO_OOP(num) ((moo_oop_t)((((moo_oow_t)(num)) << (MOO_OOP_TAG_BITS_LO + MOO_OOP_TAG_BITS_LO)) | MOO_OOP_TAG_CHAR))
+#define MOO_OOP_TO_ERROR(oop) (((moo_oow_t)oop) >> (MOO_OOP_TAG_BITS_LO + MOO_OOP_TAG_BITS_LO))
+#define MOO_ERROR_TO_OOP(num) ((moo_oop_t)((((moo_oow_t)(num)) << (MOO_OOP_TAG_BITS_LO + MOO_OOP_TAG_BITS_LO)) | MOO_OOP_TAG_ERROR))
+#define MOO_OOP_TO_HANDLE(oop) (((moo_oow_t)oop) >> (MOO_OOP_TAG_BITS_LO + MOO_OOP_TAG_BITS_LO))
+#define MOO_HANDLE_TO_OOP(num) ((moo_oop_t)((((moo_oow_t)(num)) << (MOO_OOP_TAG_BITS_LO + MOO_OOP_TAG_BITS_LO)) | MOO_OOP_TAG_ERROR))
+
+/* -------------------------------- */
 
 /* SMOOI takes up 62 bits on a 64-bit architecture and 30 bits 
  * on a 32-bit architecture. The absolute value takes up 61 bits and 29 bits
  * respectively for the sign bit. */
-#define MOO_SMOOI_BITS (MOO_OOI_BITS - MOO_OOP_TAG_BITS)
+#define MOO_SMOOI_BITS (MOO_OOI_BITS - MOO_OOP_TAG_BITS_LO)
 #define MOO_SMOOI_ABS_BITS (MOO_SMOOI_BITS - 1)
-#define MOO_SMOOI_MAX ((moo_ooi_t)(~((moo_oow_t)0) >> (MOO_OOP_TAG_BITS + 1)))
+#define MOO_SMOOI_MAX ((moo_ooi_t)(~((moo_oow_t)0) >> (MOO_OOP_TAG_BITS_LO + 1)))
 /* Sacrificing 1 bit pattern for a negative SMOOI makes 
  * implementation a lot eaisier in many aspects. */
 /*#define MOO_SMOOI_MIN (-MOO_SMOOI_MAX - 1)*/
 #define MOO_SMOOI_MIN (-MOO_SMOOI_MAX)
 #define MOO_IN_SMOOI_RANGE(ooi) ((ooi) >= MOO_SMOOI_MIN && (ooi) <= MOO_SMOOI_MAX)
 
+/* SMPTR is a special value which has been devised to encode an address value
+ * whose low MOO_OOP_TAG_BITS_LO bits are 0. its class is SmallPointer. A pointer
+ * returned by most of system functions would be aligned to the pointer size. 
+ * you can use the followings macros when converting such a pointer without loss. */
+#define MOO_IN_SMPTR_RANGE(ptr) ((((moo_oow_t)ptr) & MOO_LBMASK(moo_oow_t, MOO_OOP_TAG_BITS_LO)) == 0)
 
-/* SMPTR is a special SMOOI value which has been devised to
- * encode an address value whose low MOO_OOP_TAG_BITS bits are 0. 
- * its class is still SmallInteger. A pointer returned by most of
- * system functions would be aligned to the pointer size. 
- * you can use tthe followings macros when storing such a pointer
- * in a small integer without loss. */
-#define MOO_IN_SMPTR_RANGE(ptr) ((((moo_oow_t)ptr) & MOO_LBMASK(moo_oow_t, MOO_OOP_TAG_BITS)) == 0)
-#define MOO_SMPTR_TO_OOP(ptr) ((moo_oop_t)(((moo_oow_t)ptr) | MOO_OOP_TAG_SMOOI))
-#define MOO_OOP_TO_SMPTR(oop) ((void*)(((moo_oow_t)oop) & ~MOO_LBMASK(moo_oow_t, MOO_OOP_TAG_BITS)))
+#define MOO_CHAR_BITS (MOO_OOI_BITS - MOO_OOP_TAG_BITS_LO - MOO_OOP_TAG_BITS_HI)
+#define MOO_CHAR_MIN 0
+#define MOO_CHAR_MAX (~((moo_oow_t)0) >> (MOO_OOP_TAG_BITS_LO + MOO_OOP_TAG_BITS_HI))
+
+#define MOO_ERROR_BITS (MOO_OOI_BITS - MOO_OOP_TAG_BITS_LO - MOO_OOP_TAG_BITS_HI)
+#define MOO_ERROR_MIN 0
+#define MOO_ERROR_MAX (~((moo_oow_t)0) >> (MOO_OOP_TAG_BITS_LO + MOO_OOP_TAG_BITS_HI))
 
 /* TODO: There are untested code where a small integer is converted to moo_oow_t.
  *       for example, the spec making macro treats the number as moo_oow_t instead of moo_ooi_t.
@@ -1003,6 +1036,7 @@ struct moo_t
 	moo_oop_class_t _large_positive_integer; /* LargePositiveInteger */
 	moo_oop_class_t _large_negative_integer; /* LargeNegativeInteger */
 
+	moo_oop_class_t _small_pointer;
 	moo_oop_class_t _system;
 	/* =============================================================
 	 * END KERNEL CLASSES 
@@ -1011,7 +1045,11 @@ struct moo_t
 	/* =============================================================
 	 * KEY SYSTEM DICTIONARIES
 	 * ============================================================= */
-	moo_oop_class_t* tagged_classes[4];
+	/* 2 tag bits(lo) + 2 extended tag bits(hi). not all slots are used
+	 * because the 2 high extended bits are used only if the low tag bits
+	 * are 3 */
+	moo_oop_class_t* tagged_classes[16]; 
+
 	moo_oop_set_t symtab; /* system-wide symbol table. instance of SymbolSet */
 	moo_oop_set_t sysdic; /* system dictionary. instance of SystemDictionary */
 	moo_oop_process_scheduler_t processor; /* instance of ProcessScheduler */

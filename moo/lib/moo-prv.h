@@ -125,9 +125,9 @@
  * and the indexability is stored in bit 2.
  *
  * The maximum number of named(fixed) instance variables for a class is:
- *     2 ^ ((BITS-IN-OOW - MOO_OOP_TAG_BITS) - MOO_OBJ_TYPE_BITS - 1) - 1
+ *     2 ^ ((BITS-IN-OOW - MOO_OOP_TAG_BITS_LO) - MOO_OBJ_TYPE_BITS - 1) - 1
  *
- * MOO_OOP_TAG_BITS are decremented from the number of bits in OOW because
+ * MOO_OOP_TAG_BITS_LO are decremented from the number of bits in OOW because
  * the spec field is always encoded as a small integer.
  *
  * The number of named instance variables can be greater than 0 if the
@@ -171,7 +171,7 @@
  */
 /*
 #define MOO_MAX_NAMED_INSTVARS \
-	MOO_BITS_MAX(moo_oow_t, MOO_OOW_BITS - MOO_OOP_TAG_BITS - (MOO_OBJ_FLAGS_TYPE_BITS + 1) - 1)
+	MOO_BITS_MAX(moo_oow_t, MOO_OOW_BITS - MOO_OOP_TAG_BITS_LO - (MOO_OBJ_FLAGS_TYPE_BITS + 1) - 1)
 */
 #define MOO_MAX_NAMED_INSTVARS \
 	MOO_BITS_MAX(moo_oow_t, MOO_SMOOI_ABS_BITS - (MOO_OBJ_FLAGS_TYPE_BITS + 1))
@@ -187,14 +187,14 @@
 
 /*
 #define MOO_CLASS_SELFSPEC_MAKE(class_var,classinst_var) \
-	(((moo_oow_t)class_var) << ((MOO_OOW_BITS - MOO_OOP_TAG_BITS) / 2)) | ((moo_oow_t)classinst_var)
+	(((moo_oow_t)class_var) << ((MOO_OOW_BITS - MOO_OOP_TAG_BITS_LO) / 2)) | ((moo_oow_t)classinst_var)
 */
 #define MOO_CLASS_SELFSPEC_MAKE(class_var,classinst_var) \
 	(((moo_oow_t)class_var) << (MOO_SMOOI_BITS / 2)) | ((moo_oow_t)classinst_var)
 
 /*
-#define MOO_CLASS_SELFSPEC_CLASSVAR(spec) ((moo_oow_t)spec >> ((MOO_OOW_BITS - MOO_OOP_TAG_BITS) / 2))
-#define MOO_CLASS_SELFSPEC_CLASSINSTVAR(spec) (((moo_oow_t)spec) & MOO_LBMASK(moo_oow_t, (MOO_OOW_BITS - MOO_OOP_TAG_BITS) / 2))
+#define MOO_CLASS_SELFSPEC_CLASSVAR(spec) ((moo_oow_t)spec >> ((MOO_OOW_BITS - MOO_OOP_TAG_BITS_LO) / 2))
+#define MOO_CLASS_SELFSPEC_CLASSINSTVAR(spec) (((moo_oow_t)spec) & MOO_LBMASK(moo_oow_t, (MOO_OOW_BITS - MOO_OOP_TAG_BITS_LO) / 2))
 */
 #define MOO_CLASS_SELFSPEC_CLASSVAR(spec) ((moo_oow_t)spec >> (MOO_SMOOI_BITS / 2))
 #define MOO_CLASS_SELFSPEC_CLASSINSTVAR(spec) (((moo_oow_t)spec) & MOO_LBMASK(moo_oow_t, (MOO_SMOOI_BITS / 2)))
@@ -204,8 +204,8 @@
  * a small-integer
  */
 /*
-#define MOO_MAX_CLASSVARS      MOO_BITS_MAX(moo_oow_t, (MOO_OOW_BITS - MOO_OOP_TAG_BITS - 1) / 2)
-#define MOO_MAX_CLASSINSTVARS  MOO_BITS_MAX(moo_oow_t, (MOO_OOW_BITS - MOO_OOP_TAG_BITS - 1) / 2)
+#define MOO_MAX_CLASSVARS      MOO_BITS_MAX(moo_oow_t, (MOO_OOW_BITS - MOO_OOP_TAG_BITS_LO - 1) / 2)
+#define MOO_MAX_CLASSINSTVARS  MOO_BITS_MAX(moo_oow_t, (MOO_OOW_BITS - MOO_OOP_TAG_BITS_LO - 1) / 2)
 */
 #define MOO_MAX_CLASSVARS      MOO_BITS_MAX(moo_oow_t, MOO_SMOOI_ABS_BITS / 2)
 #define MOO_MAX_CLASSINSTVARS  MOO_BITS_MAX(moo_oow_t, MOO_SMOOI_ABS_BITS / 2)

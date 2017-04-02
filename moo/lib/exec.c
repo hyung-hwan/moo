@@ -1031,7 +1031,12 @@ static moo_oop_method_t find_method (moo_t* moo, moo_oop_t receiver, const moo_o
 	do
 	{
 		mthdic = ((moo_oop_class_t)c)->mthdic[dic_no];
-		MOO_ASSERT (moo, (moo_oop_t)mthdic != moo->_nil);
+
+		/* if a kernel class is not defined in the bootstrapping code,
+		 * the method dictionary is still nil. the initial kernel classes
+		 * must all be defined properly */
+		MOO_ASSERT (moo, (moo_oop_t)mthdic != moo->_nil); 
+
 		MOO_ASSERT (moo, MOO_CLASSOF(moo, mthdic) == moo->_method_dictionary);
 
 		ass = (moo_oop_association_t)moo_lookupdic (moo, mthdic, message);
@@ -1320,10 +1325,13 @@ static moo_pfrc_t _equal_objects (moo_t* moo, moo_ooi_t nargs)
 	rtag = MOO_OOP_GET_TAG(rcv);
 	if (rtag != MOO_OOP_GET_TAG(arg)) return 0;
 
-	switch (MOO_OOP_GET_TAG(rcv))
+	switch (rtag)
 	{
 		case MOO_OOP_TAG_SMOOI:
 			return MOO_OOP_TO_SMOOI(rcv) == MOO_OOP_TO_SMOOI(arg)? 1: 0;
+
+		case MOO_OOP_TAG_SMPTR:
+			return MOO_OOP_TO_SMPTR(rcv) == MOO_OOP_TO_SMPTR(arg)? 1: 0;
 
 		case MOO_OOP_TAG_CHAR:
 			return MOO_OOP_TO_CHAR(rcv) == MOO_OOP_TO_CHAR(arg)? 1: 0;
@@ -1686,6 +1694,10 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_ooi_t nargs)
 	{
 		case MOO_OOP_TAG_SMOOI:
 			hv = MOO_OOP_TO_SMOOI(rcv);
+			break;
+
+		case MOO_OOP_TAG_SMPTR:
+			hv = (moo_oow_t)MOO_OOP_TO_SMPTR(rcv);
 			break;
 
 		case MOO_OOP_TAG_CHAR:
@@ -2828,7 +2840,9 @@ static moo_pfrc_t pf_smooi_as_error (moo_t* moo, moo_ooi_t nargs)
 	if (!MOO_OOP_IS_SMOOI(rcv)) return MOO_PF_FAILURE;
 
 	ec = MOO_OOP_TO_SMOOI(rcv);
-	if (ec < 0) ec = 0;
+	if (ec < MOO_ERROR_MIN) ec = MOO_ERROR_MIN;
+	else if (ec > MOO_ERROR_MAX) ec = MOO_ERROR_MAX;
+
 	MOO_STACK_SETRET (moo, nargs, MOO_ERROR_TO_OOP(ec));
 	return MOO_PF_SUCCESS;
 }
@@ -2844,7 +2858,7 @@ static moo_pfrc_t pf_error_as_character (moo_t* moo, moo_ooi_t nargs)
 	if (!MOO_OOP_IS_ERROR(rcv)) return MOO_PF_FAILURE;
 
 	ec = MOO_OOP_TO_ERROR(rcv);
-	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(ec));
+	MOO_ASSERT (moo, ec >= MOO_CHAR_MIN && ec <= MOO_CHAR_MAX);
 	MOO_STACK_SETRET (moo, nargs, MOO_CHAR_TO_OOP(ec));
 	return MOO_PF_SUCCESS;
 }

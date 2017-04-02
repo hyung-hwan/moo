@@ -312,6 +312,10 @@ static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop)
 	{
 		moo_logbfmt (moo, mask, "%zd", MOO_OOP_TO_SMOOI(oop));
 	}
+	else if (MOO_OOP_IS_SMPTR(oop))
+	{
+		moo_logbfmt (moo, mask, "%p", MOO_OOP_TO_SMPTR(oop));
+	}
 	else if (MOO_OOP_IS_CHAR(oop))
 	{
 		moo_logbfmt (moo, mask, "$%.1C", MOO_OOP_TO_CHAR(oop));

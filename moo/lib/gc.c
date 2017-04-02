@@ -115,6 +115,7 @@ static kernel_class_info_t kernel_classes[] =
 	{ 20, { 'L','a','r','g','e','P','o','s','i','t','i','v','e','I','n','t','e','g','e','r' }, MOO_OFFSETOF(moo_t, _large_positive_integer) },
 	{ 20, { 'L','a','r','g','e','N','e','g','a','t','i','v','e','I','n','t','e','g','e','r' }, MOO_OFFSETOF(moo_t, _large_negative_integer) },
 
+	{ 12, { 'S','m','a','l','l','P','o','i','n','t','e','r'                                 }, MOO_OFFSETOF(moo_t, _small_pointer) },
 	{  6, { 'S','y','s','t','e','m'                                                         }, MOO_OFFSETOF(moo_t, _system) },
 };
 
@@ -205,6 +206,7 @@ static int ignite_1 (moo_t* moo)
 	moo->_large_positive_integer = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_LIWORD));
 	moo->_large_negative_integer = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_LIWORD));
 
+	moo->_small_pointer     = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
 	moo->_system            = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
 
 	if (!moo->_apex              || !moo->_undefined_object  || 
@@ -222,7 +224,8 @@ static int ignite_1 (moo_t* moo)
 
 	    !moo->_true_class        || !moo->_false_class       || 
 	    !moo->_character         || !moo->_small_integer     || 
-	    !moo->_large_positive_integer  || !moo->_large_negative_integer || !moo->_system) return -1;
+	    !moo->_large_positive_integer  || !moo->_large_negative_integer || 
+	    !moo->_small_pointer     || !moo->_system) return -1;
 
 	MOO_OBJ_SET_CLASS (moo->_nil, (moo_oop_t)moo->_undefined_object);
 	return 0;
