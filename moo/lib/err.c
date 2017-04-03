@@ -177,6 +177,7 @@ const moo_ooch_t* moo_synerrnumtoerrstr (moo_synerrnum_t errnum)
 #elif defined(__OS2__)
 #	define INCL_DOSPROCESS
 #	define INCL_DOSFILEMGR
+#	define INCL_DOSERRORS
 #	include <os2.h>
 #elif defined(__DOS__)
 #	include <dos.h>
