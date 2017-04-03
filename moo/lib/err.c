@@ -204,6 +204,28 @@ const moo_ooch_t* moo_synerrnumtoerrstr (moo_synerrnum_t errnum)
 
 moo_errnum_t moo_syserrtoerrnum (int e)
 {
+#if defined(__OS2__)
+	/* APIRET e */
+	switch (e)
+	{
+		case ERROR_NOT_ENOUGH_MEMORY: return MOO_ESYSMEM;
+
+		case ERROR_INVALID_PARAMETER: 
+		case ERROR_INVALID_HANDLE: 
+		case ERROR_INVALID_NAME: return MOO_EINVAL;
+
+		case ERROR_ACCESS_DENIED: 
+		case ERROR_SHARING_VIOLATION: return MOO_EACCES;
+
+		case ERROR_FILE_NOT_FOUND:
+		case ERROR_PATH_NOT_FOUND: return MOO_ENOENT;
+
+		case ERROR_ALREADY_EXISTS: return MOO_EEXIST;
+
+		/*TODO: add more mappings */
+		default: return MOO_ESYSERR;
+	}
+#else
 	switch (e)
 	{
 		case ENOMEM: return MOO_ESYSMEM;
@@ -238,8 +260,9 @@ moo_errnum_t moo_syserrtoerrnum (int e)
 	#elif defined(EWOULDBLOCK)
 		case EWOULDBLOCK: return MOO_EAGAIN;
 	#endif
-		default:     return MOO_ESYSERR;
+		default: return MOO_ESYSERR;
 	}
+#endif
 }
 
 /* -------------------------------------------------------------------------- 
