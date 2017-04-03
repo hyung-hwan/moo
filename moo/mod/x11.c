@@ -126,7 +126,7 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 
 softfail:
-	MOO_STACK_SETRETTOERROR (moo, nargs);
+	MOO_STACK_SETRETTOERRNUM (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -171,7 +171,7 @@ static moo_pfrc_t pf_get_fd (moo_t* moo, moo_ooi_t nargs)
 	else
 	{
 	error:
-		MOO_STACK_SETRETTOERROR (moo, nargs); /* TODO: be more specific about error code */
+		MOO_STACK_SETRETTOERRNUM (moo, nargs); /* TODO: be more specific about error code */
 	}
 
 	return MOO_PF_SUCCESS;
@@ -216,7 +216,7 @@ static moo_pfrc_t pf_getevent (moo_t* moo, moo_ooi_t nargs)
 	{
 		/* TODO: to be specific about the error */
 MOO_DEBUG1 (moo, "XCB CONNECTION ERROR %d\n", e);
-		MOO_STACK_SETRETTOERROR (moo, nargs);
+		MOO_STACK_SETRETTOERRNUM (moo, nargs);
 	}
 	else
 	{
@@ -256,7 +256,7 @@ static moo_pfrc_t pf_gc_draw_line (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 
 reterr:
-	MOO_STACK_SETRETTOERROR (moo, nargs); /* More specific error code*/
+	MOO_STACK_SETRETTOERRNUM (moo, nargs); /* More specific error code*/
 	return MOO_PF_SUCCESS;
 }
 
@@ -287,7 +287,7 @@ static moo_pfrc_t pf_gc_draw_rect (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 
 reterr:
-	MOO_STACK_SETRETTOERROR (moo, nargs); /* More specific error code*/
+	MOO_STACK_SETRETTOERRNUM (moo, nargs); /* More specific error code*/
 	return MOO_PF_SUCCESS;
 }
 
@@ -310,7 +310,7 @@ static moo_pfrc_t pf_gc_set_foreground (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 
 reterr:
-	MOO_STACK_SETRETTOERROR (moo, nargs); /* More specific error code*/
+	MOO_STACK_SETRETTOERRNUM (moo, nargs); /* More specific error code*/
 	return MOO_PF_SUCCESS;
 }
 
@@ -370,7 +370,7 @@ static moo_pfrc_t pf_gc_make (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 
 reterr:
-	MOO_STACK_SETRETTOERROR (moo, nargs); /* TODO: be more specific about error */
+	MOO_STACK_SETRETTOERRNUM (moo, nargs); /* TODO: be more specific about error */
 	return MOO_PF_SUCCESS;
 }
 
@@ -482,7 +482,7 @@ MOO_DEBUG0 (moo, "<x11.win._make_on:> %p\n");
 	return MOO_PF_SUCCESS;
 
 reterr:
-	MOO_STACK_SETRETTOERROR (moo, nargs); /* TODO: be more specific about error */
+	MOO_STACK_SETRETTOERRNUM (moo, nargs); /* TODO: be more specific about error */
 	return MOO_PF_SUCCESS;
 }
 

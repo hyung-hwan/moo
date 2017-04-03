@@ -323,16 +323,20 @@ class MyObject(Object)
 		
 
 		(* basicAt: 12 to access the nsdic field. use a proper method once it's defined in Class *)
-		(System nsdic) keysAndValuesDo: [:k :v |
-			k dump.
-			v dump.
-			'------------' dump.
-		].
+	##	(System nsdic) keysAndValuesDo: [:k :v |
+	##		k dump.
+	##		v dump.
+	##		'------------' dump.
+	##	].
 
 		
 		(System at: #Processor) dump.
 		System logNl: 'Sleeping start now....'.
 
+a := System _malloc(200).
+a dump.
+##System _free(a).
+a free.
 		Processor sleepFor: 2.
 	}
 	

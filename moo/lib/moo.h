@@ -1137,8 +1137,8 @@ struct moo_t
  * also you must not call this macro more than once */
 #define MOO_STACK_SETRET(moo,nargs,retv) (MOO_STACK_POPS(moo, nargs), MOO_STACK_SETTOP(moo, (retv)))
 #define MOO_STACK_SETRETTORCV(moo,nargs) (MOO_STACK_POPS(moo, nargs))
-#define MOO_STACK_SETRETTOERROR(moo,nargs) MOO_STACK_SETRET(moo, nargs, MOO_ERROR_TO_OOP(moo->errnum))
-/*#define MOO_STACK_SETRETTOERROR(moo,nargs,ec) MOO_STACK_SETRET(moo, nargs, MOO_ERROR_TO_OOP(ec))*/
+#define MOO_STACK_SETRETTOERRNUM(moo,nargs) MOO_STACK_SETRET(moo, nargs, MOO_ERROR_TO_OOP(moo->errnum))
+#define MOO_STACK_SETRETTOERROR(moo,nargs,ec) MOO_STACK_SETRET(moo, nargs, MOO_ERROR_TO_OOP(ec))
 
 /* =========================================================================
  * MOO VM LOGGING

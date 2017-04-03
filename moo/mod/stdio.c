@@ -83,7 +83,7 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 
 softfail:
-	MOO_STACK_SETRETTOERROR (moo, nargs);
+	MOO_STACK_SETRETTOERRNUM (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -186,7 +186,7 @@ static moo_pfrc_t __pf_puts (moo_t* moo, moo_ooi_t nargs, moo_oow_t limit)
 	return MOO_PF_SUCCESS;
 
 softfail:
-	MOO_STACK_SETRETTOERROR (moo, nargs);
+	MOO_STACK_SETRETTOERRNUM (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 

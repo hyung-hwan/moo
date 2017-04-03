@@ -2771,6 +2771,84 @@ static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+
+static MOO_INLINE moo_pfrc_t _system_alloc (moo_t* moo, moo_ooi_t nargs, int clear)
+{
+	moo_oop_t tmp;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	tmp = MOO_STACK_GETARG(moo, nargs, 0);
+	if (MOO_OOP_IS_SMOOI(tmp)) 
+	{
+		void* ptr;
+
+		ptr = clear? moo_callocmem (moo, MOO_OOP_TO_SMOOI(tmp)):
+		             moo_allocmem (moo, MOO_OOP_TO_SMOOI(tmp));
+		if (ptr)
+		{
+			MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP(ptr));
+		}
+		else
+		{
+			MOO_STACK_SETRETTOERRNUM (moo, nargs);
+		}
+	}
+	else
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+	}
+
+	return MOO_PF_SUCCESS;
+} 
+
+static moo_pfrc_t pf_system_calloc (moo_t* moo, moo_ooi_t nargs)
+{
+	return _system_alloc (moo, nargs, 1);
+}
+static moo_pfrc_t pf_system_malloc (moo_t* moo, moo_ooi_t nargs)
+{
+	return _system_alloc (moo, nargs, 0);
+}
+
+static moo_pfrc_t pf_system_free (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t tmp;
+	void* rawptr;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	tmp = MOO_STACK_GETARG(moo, nargs, 0);
+	if (MOO_OOP_IS_SMPTR(tmp)) 
+	{
+		moo_freemem (moo, MOO_OOP_TO_SMPTR(tmp));
+	}
+	else if (moo_inttooow(moo, tmp, (moo_oow_t*)&rawptr) >= 1)
+	{
+		moo_freemem (moo, rawptr);
+	}
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_smptr_free (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t tmp;
+
+	MOO_ASSERT (moo, nargs == 0);
+
+	tmp = MOO_STACK_GETRCV(moo, nargs);
+	if (MOO_OOP_IS_SMPTR(tmp)) 
+	{
+		moo_freemem (moo, MOO_OOP_TO_SMPTR(tmp));
+	}
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
+
 #define FETCH_RAW_INT(value, rawptr,offset,size) \
 	switch (size) \
 	{ \
@@ -3068,7 +3146,6 @@ static pf_t pftab[] =
 
 	{ "_hash",                                 { pf_hash,                                 0, 0 } },
 
-	
 	{ "_responds_to",                          { pf_responds_to,                          1, 1  } },
 	{ "_perform",                              { pf_perform,                              1, MA } },
 	{ "_exceptionize_error",                   { pf_exceptionize_error,                   1, 1  } },
@@ -3081,9 +3158,6 @@ static pf_t pftab[] =
 	{ "_process_terminate",                    { pf_process_terminate,                    0, 0 } },
 	{ "_process_yield",                        { pf_process_yield,                        0, 0 } },
 	{ "_process_suspend",                      { pf_process_suspend,                      0, 0 } },
-
-	{ "Semaphore_signal",                      { pf_semaphore_signal,                     0, 0 } },
-	{ "Semaphore_wait",                        { pf_semaphore_wait,                       0, 0 } },
 
 	{ "_processor_schedule",                   { pf_processor_schedule,                   1, 1 } },
 	{ "_processor_add_timed_semaphore",        { pf_processor_add_timed_semaphore,        2, 3 } },
@@ -3119,28 +3193,34 @@ static pf_t pftab[] =
 	{ "Error_asInteger",                       { pf_error_as_integer,                     0, 0 } },
 	{ "Error_asString",                        { pf_error_as_string,                      0, 0 } },
 
+	{ "Semaphore_signal",                      { pf_semaphore_signal,                     0, 0 } },
+	{ "Semaphore_wait",                        { pf_semaphore_wait,                       0, 0 } },
+
 	{ "SmallInteger_asCharacter",              { pf_smooi_as_character,                   0, 0 } },
 	{ "SmallInteger_asError",                  { pf_smooi_as_error,                       0, 0 } },
 
 	{ "SmallPointer_asString",                 { pf_smptr_as_string,                      0, 0 } },
-
-	{ "SmallPointer_getInt8",                  { pf_smptr_get_int8,                       1, 1 } },
+	{ "SmallPointer_free",                     { pf_smptr_free,                           0, 0 } },
 	{ "SmallPointer_getInt16",                 { pf_smptr_get_int16,                      1, 1 } },
 	{ "SmallPointer_getInt32",                 { pf_smptr_get_int32,                      1, 1 } },
 	{ "SmallPointer_getInt64",                 { pf_smptr_get_int64,                      1, 1 } },
-	{ "SmallPointer_getUint8",                 { pf_smptr_get_uint8,                      1, 1 } },
+	{ "SmallPointer_getInt8",                  { pf_smptr_get_int8,                       1, 1 } },
 	{ "SmallPointer_getUint16",                { pf_smptr_get_uint16,                     1, 1 } },
 	{ "SmallPointer_getUint32",                { pf_smptr_get_uint32,                     1, 1 } },
 	{ "SmallPointer_getUint64",                { pf_smptr_get_uint64,                     1, 1 } },
+	{ "SmallPointer_getUint8",                 { pf_smptr_get_uint8,                      1, 1 } },
 
-	{ "System__getInt8",                       { pf_system_get_int8,                      2, 2 } },
+	{ "System__calloc",                        { pf_system_calloc,                        1, 1 } },
+	{ "System__free",                          { pf_system_free,                          1, 1 } },
 	{ "System__getInt16",                      { pf_system_get_int16,                     2, 2 } },
 	{ "System__getInt32",                      { pf_system_get_int32,                     2, 2 } },
 	{ "System__getInt64",                      { pf_system_get_int64,                     2, 2 } },
-	{ "System__getUint8",                      { pf_system_get_uint8,                     2, 2 } },
+	{ "System__getInt8",                       { pf_system_get_int8,                      2, 2 } },
 	{ "System__getUint16",                     { pf_system_get_uint16,                    2, 2 } },
 	{ "System__getUint32",                     { pf_system_get_uint32,                    2, 2 } },
-	{ "System__getUint64",                     { pf_system_get_uint64,                    2, 2 } }
+	{ "System__getUint64",                     { pf_system_get_uint64,                    2, 2 } },
+	{ "System__getUint8",                      { pf_system_get_uint8,                     2, 2 } },
+	{ "System__malloc",                        { pf_system_malloc,                        1, 1 } },
 
 /*
 	{ "System__putInt8",                       { pf_put_int8,                             3, 3 } },
@@ -3152,7 +3232,6 @@ static pf_t pftab[] =
 	{ "System__putUint32",                     { pf_put_uint32,                           3, 3 } },
 	{ "System__putUint64",                     { pf_put_uint64,                           3, 3 } },
 */
-
 };
 
 moo_pfbase_t* moo_getpfnum (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, moo_ooi_t* pfnum)

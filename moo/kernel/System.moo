@@ -100,6 +100,11 @@ extend System
 		^self nsdic at: key put: value
 	}
 
+	(* raw memory allocation *)
+	method(#class,#primitive) _malloc (size).
+	method(#class,#primitive) _calloc (size).
+	method(#class,#primitive) _free (rawptr).
+
 	(* raw memory access *)
 	method(#class,#primitive) _getInt8   (rawptr, offset). ## <primitive: #System__getInt8>
 	method(#class,#primitive) _getInt16  (rawptr, offset).
@@ -120,4 +125,21 @@ extend System
 	method(#class,#primitive) _putUint32 (rawptr, offset, value).
 	method(#class,#primitive) _putUint64 (rawptr, offset, value),
 	*)
+}
+
+
+class SmallPointer(Object)
+{
+	method(#primitive) asString.
+	
+	method(#primitive) getInt8  (offset).
+	method(#primitive) getInt16 (offset).
+	method(#primitive) getInt32 (offset).
+	method(#primitive) getInt64 (offset).
+	method(#primitive) getUint8 (offset).
+	method(#primitive) getUint16(offset).
+	method(#primitive) getUint32(offset).
+	method(#primitive) getUint64(offset).
+	
+	method(#primitive) free.
 }

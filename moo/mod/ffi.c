@@ -130,7 +130,7 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 
 softfail:
-	MOO_STACK_SETRETTOERROR (moo, nargs);
+	MOO_STACK_SETRETTOERRNUM (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -164,7 +164,7 @@ static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 
 softfail:
-	MOO_STACK_SETRETTOERROR (moo, nargs);
+	MOO_STACK_SETRETTOERRNUM (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -462,7 +462,7 @@ inval:
 
 softfail:
 	free_linked_cas (moo, ffi);
-	MOO_STACK_SETRETTOERROR (moo, nargs);
+	MOO_STACK_SETRETTOERRNUM (moo, nargs);
 	return MOO_PF_SUCCESS;
 
 hardfail:
@@ -471,7 +471,7 @@ hardfail:
 
 #else
 	moo_seterrnum (moo, MOO_ENOIMPL);
-	MOO_STACK_SETRETTOERROR (moo, nargs);
+	MOO_STACK_SETRETTOERRNUM (moo, nargs);
 	return MOO_PF_SUCCESS;
 #endif
 }
@@ -509,7 +509,7 @@ static moo_pfrc_t pf_getsym (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 
 softfail:
-	MOO_STACK_SETRETTOERROR (moo, nargs);
+	MOO_STACK_SETRETTOERRNUM (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 

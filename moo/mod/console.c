@@ -191,7 +191,7 @@ static moo_pfrc_t pf_write (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 
 einval:
-	MOO_STACK_SETRETTOERROR (moo, nargs); /* TODO: be more specific about the error code */
+	MOO_STACK_SETRETTOERRNUM (moo, nargs); /* TODO: be more specific about the error code */
 	return MOO_PF_SUCCESS;
 #endif
 }
@@ -236,7 +236,7 @@ static moo_pfrc_t pf_setcursor (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 
 einval:
-	MOO_STACK_SETRETTOERROR (moo, nargs); /* TODO: be more specific about the error code */
+	MOO_STACK_SETRETTOERRNUM (moo, nargs); /* TODO: be more specific about the error code */
 	return MOO_PF_SUCCESS;
 #endif
 }
