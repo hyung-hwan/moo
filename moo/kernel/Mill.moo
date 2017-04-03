@@ -333,10 +333,25 @@ class MyObject(Object)
 		(System at: #Processor) dump.
 		System logNl: 'Sleeping start now....'.
 
+		
 a := System _malloc(200).
-a dump.
+i := 0.
+while (i < 26)
+{
+	a putUint8(i, ($A asInteger + i)).
+	i := i + 1.
+}.
+while (i > 0)
+{
+	i := i - 1.
+	a getUint8(i) asCharacter dump.
+}.
+a getUint32(0) dump.
+
+##a dump.
 ##System _free(a).
 a free.
+
 		Processor sleepFor: 2.
 	}
 	

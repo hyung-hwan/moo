@@ -28,6 +28,7 @@ class MyObject(Object)
 			'resource temporarily unavailable'
 
 			'data too large'
+			'message receiver error'
 			'message sending error'
 			'range error'
 			'byte-code full'

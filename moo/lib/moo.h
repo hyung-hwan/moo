@@ -65,6 +65,7 @@ enum moo_errnum_t
 	MOO_EAGAIN,
 
 	MOO_ETOOBIG,  /**< data too large */
+	MOO_EMSGRCV,  /**< mesasge receiver error */
 	MOO_EMSGSND,  /**< message sending error. even doesNotUnderstand: is not found */
 	MOO_ERANGE,   /**< range error. overflow and underflow */
 	MOO_EBCFULL,  /**< byte-code full */

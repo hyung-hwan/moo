@@ -49,6 +49,8 @@ class Character(Magnitude)
 	## {
 	## 	^0
 	## }
+
+	method(#primitive) asInteger.
 }
 
 class Number(Magnitude)

@@ -325,7 +325,7 @@ int moo_inttooow (moo_t* moo, moo_oop_t x, moo_oow_t* w)
 		if (v < 0)
 		{
 			*w = -v;
-			return -1; /* negative number  negated - kind of an error */
+			return -1; /* negative number negated - kind of an error */
 		}
 		else
 		{

@@ -115,7 +115,6 @@ extend System
 	method(#class,#primitive) _getUint32 (rawptr, offset).
 	method(#class,#primitive) _getUint64 (rawptr, offset).
 
-	(*
 	method(#class,#primitive) _putInt8   (rawptr, offset, value).
 	method(#class,#primitive) _putInt16  (rawptr, offset, value).
 	method(#class,#primitive) _putInt32  (rawptr, offset, value).
@@ -123,8 +122,7 @@ extend System
 	method(#class,#primitive) _putUint8  (rawptr, offset, value).
 	method(#class,#primitive) _putUint16 (rawptr, offset, value).
 	method(#class,#primitive) _putUint32 (rawptr, offset, value).
-	method(#class,#primitive) _putUint64 (rawptr, offset, value),
-	*)
+	method(#class,#primitive) _putUint64 (rawptr, offset, value).
 }
 
 
@@ -132,14 +130,23 @@ class SmallPointer(Object)
 {
 	method(#primitive) asString.
 	
-	method(#primitive) getInt8  (offset).
-	method(#primitive) getInt16 (offset).
-	method(#primitive) getInt32 (offset).
-	method(#primitive) getInt64 (offset).
-	method(#primitive) getUint8 (offset).
-	method(#primitive) getUint16(offset).
-	method(#primitive) getUint32(offset).
-	method(#primitive) getUint64(offset).
+	method(#primitive) getInt8   (offset).
+	method(#primitive) getInt16  (offset).
+	method(#primitive) getInt32  (offset).
+	method(#primitive) getInt64  (offset).
+	method(#primitive) getUint8  (offset).
+	method(#primitive) getUint16 (offset).
+	method(#primitive) getUint32 (offset).
+	method(#primitive) getUint64 (offset).
+	
+	method(#primitive) putInt8   (offset, value).
+	method(#primitive) putInt16  (offset, value).
+	method(#primitive) putInt32  (offset, value).
+	method(#primitive) putInt64  (offset, value).
+	method(#primitive) putUint8  (offset, value).
+	method(#primitive) putUint16 (offset, value).
+	method(#primitive) putUint32 (offset, value).
+	method(#primitive) putUint64 (offset, value).
 	
 	method(#primitive) free.
 }
