@@ -89,16 +89,11 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
 /* TODO: accept display target as a parameter */
-	if (nargs != 0)
-	{
-		moo_seterrnum (moo, MOO_EINVAL);
-		goto softfail;
-	}
-
 	if (x11->c)
 	{
 		MOO_DEBUG0 (moo, "<x11.connect> Unable to connect multiple times\n");
-		goto softfail;
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EEXIST);
+		return MOO_PF_SUCCESS;
 	}
 
 	/*
@@ -112,21 +107,21 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 
 	MOO_DEBUG3 (moo, "<x11.connect> %.*js => %p\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, rcv->handle);
 	*/
+
 	c = xcb_connect (MOO_NULL, MOO_NULL);
 	if (!c || xcb_connection_has_error(c))
 	{
 		MOO_DEBUG0 (moo, "<x11.connect> Cannot connect to X11 server\n");
-		goto softfail;
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ESYSERR);
+		return MOO_PF_SUCCESS;
 	}
 
 	x11->screen = xcb_setup_roots_iterator(xcb_get_setup(c)).data;
 	x11->c = c;
 
-	MOO_STACK_SETRETTORCV (moo, nargs);
-	return MOO_PF_SUCCESS;
+	MOO_ASSERT (moo, MOO_IN_SMPTR_RANGE(c));
 
-softfail:
-	MOO_STACK_SETRETTOERRNUM (moo, nargs);
+	MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP(c));
 	return MOO_PF_SUCCESS;
 }
 
@@ -273,7 +268,11 @@ static moo_pfrc_t pf_gc_draw_rect (moo_t* moo, moo_ooi_t nargs)
 	a[2] = MOO_STACK_GETARG(moo, nargs, 2);
 	a[3] = MOO_STACK_GETARG(moo, nargs, 3);
 	if (!MOO_OOP_IS_SMOOI(a[0]) || !MOO_OOP_IS_SMOOI(a[1]) ||
-	    !MOO_OOP_IS_SMOOI(a[2]) || !MOO_OOP_IS_SMOOI(a[0])) goto reterr;
+	    !MOO_OOP_IS_SMOOI(a[2]) || !MOO_OOP_IS_SMOOI(a[0])) 
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_SUCCESS;
+	}
 
 	r.x = MOO_OOP_TO_SMOOI(a[0]);
 	r.y = MOO_OOP_TO_SMOOI(a[1]);
@@ -285,32 +284,59 @@ static moo_pfrc_t pf_gc_draw_rect (moo_t* moo, moo_ooi_t nargs)
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
+}
 
-reterr:
-	MOO_STACK_SETRETTOERRNUM (moo, nargs); /* More specific error code*/
+
+static moo_pfrc_t pf_gc_fill_rect (moo_t* moo, moo_ooi_t nargs)
+{
+	x11_gc_t* gc;
+	xcb_rectangle_t r;
+	moo_oop_t a[4];
+
+	gc = (x11_gc_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+
+	a[0] = MOO_STACK_GETARG(moo, nargs, 0);
+	a[1] = MOO_STACK_GETARG(moo, nargs, 1);
+	a[2] = MOO_STACK_GETARG(moo, nargs, 2);
+	a[3] = MOO_STACK_GETARG(moo, nargs, 3);
+	if (!MOO_OOP_IS_SMOOI(a[0]) || !MOO_OOP_IS_SMOOI(a[1]) ||
+	    !MOO_OOP_IS_SMOOI(a[2]) || !MOO_OOP_IS_SMOOI(a[0]))
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_SUCCESS;
+	}
+
+	r.x = MOO_OOP_TO_SMOOI(a[0]);
+	r.y = MOO_OOP_TO_SMOOI(a[1]);
+	r.width = MOO_OOP_TO_SMOOI(a[2]);
+	r.height = MOO_OOP_TO_SMOOI(a[3]);
+
+	xcb_poly_fill_rectangle (gc->c, gc->wid, gc->id, 1, &r);
+	xcb_flush (gc->c);
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
 static moo_pfrc_t pf_gc_set_foreground (moo_t* moo, moo_ooi_t nargs)
 {
 	x11_gc_t* gc;
-	moo_oop_t t;
+	moo_oow_t tmpoow;
 	uint32_t value;
 
 	gc = (x11_gc_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
-	t = MOO_STACK_GETARG(moo, nargs, 0);
-	if (MOO_OOP_IS_SMOOI(t)) goto reterr;
-	value = MOO_OOP_TO_SMOOI(t);
+	if (moo_inttooow (moo, MOO_STACK_GETARG(moo, nargs, 0), &tmpoow) <= 0)
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_SUCCESS;
+	}
+	value = tmpoow;
 
 	xcb_change_gc (gc->c, gc->id, XCB_GC_FOREGROUND, &value);
 	xcb_flush (gc->c);
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
-	return MOO_PF_SUCCESS;
-
-reterr:
-	MOO_STACK_SETRETTOERRNUM (moo, nargs); /* More specific error code*/
 	return MOO_PF_SUCCESS;
 }
 
@@ -345,32 +371,46 @@ static moo_pfrc_t pf_gc_kill (moo_t* moo, moo_ooi_t nargs)
 static moo_pfrc_t pf_gc_make (moo_t* moo, moo_ooi_t nargs)
 {
 	x11_gc_t* gc;
-	x11_win_t* win;
-	moo_oop_t id;
+	moo_oop_t t;
+	moo_oow_t tmpoow;
+	xcb_connection_t* c;
+	xcb_window_t wid;
 	xcb_gcontext_t gcid;
-
+	
 	gc = (x11_gc_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
-	win = (x11_win_t*)moo_getobjtrailer(moo, MOO_STACK_GETARG(moo, nargs, 0), MOO_NULL);
 
-	gcid = xcb_generate_id (win->c);
+	t = MOO_STACK_GETARG(moo, nargs, 0);
+	if (!MOO_OOP_IS_SMPTR(t))
+	{
+	einval:
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_SUCCESS;
+	}
+	c = MOO_OOP_TO_SMPTR(t);
 
-	id = moo_oowtoint (moo, gcid);
-	if (!id) return MOO_PF_HARD_FAILURE;
+	t = MOO_STACK_GETARG(moo, nargs, 1);
+	if (moo_inttooow (moo, t, &tmpoow) <= 0) goto einval;
+	wid = tmpoow;
 
-	xcb_create_gc (win->c, gcid, win->id, 0, 0);
+	gcid = xcb_generate_id (c);
+
+	t = moo_oowtoint (moo, gcid);
+	if (!t) 
+	{
+		MOO_STACK_SETRETTOERRNUM (moo, nargs);
+		return MOO_PF_SUCCESS;
+	}
+
+	xcb_create_gc (c, gcid, wid, 0, 0);
 
 /*TODO: use xcb_request_check() for error handling. xcb_create_gc_checked??? xxx_checked()... */
-	xcb_flush (win->c);
+	xcb_flush (c);
 
 	gc->id = gcid;
-	gc->wid = win->id;
-	gc->c = win->c;
+	gc->wid = wid;
+	gc->c = c;
 
-	MOO_STACK_SETRET (moo, nargs, id); 
-	return MOO_PF_SUCCESS;
-
-reterr:
-	MOO_STACK_SETRETTOERRNUM (moo, nargs); /* TODO: be more specific about error */
+	MOO_STACK_SETRET (moo, nargs, t); 
 	return MOO_PF_SUCCESS;
 }
 
@@ -421,9 +461,7 @@ static moo_pfrc_t pf_win_kill (moo_t* moo, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_win_make (moo_t* moo, moo_ooi_t nargs)
 {
-	x11_t* x11;
 	x11_win_t* win;
-	moo_oop_t id;
 	xcb_window_t wid;
 
 	uint32_t mask;
@@ -431,22 +469,60 @@ static moo_pfrc_t pf_win_make (moo_t* moo, moo_ooi_t nargs)
 	xcb_intern_atom_cookie_t cookie;
 	xcb_intern_atom_reply_t* reply;
 
-MOO_DEBUG0 (moo, "<x11.win._make_on:> %p\n");
+	moo_oop_t a0, a1, a2, a3, a4;
+
+	xcb_connection_t* c;
+	xcb_window_t parent;
+	xcb_screen_t* screen;
+
+MOO_DEBUG0 (moo, "<x11.win._make> %p\n");
 
 	win = (x11_win_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
-	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETARG(moo, nargs, 0), MOO_NULL);
-	if (!x11 || !x11->c) goto reterr;
+	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* connection - SmallPointer (xcb_connection_t*) */
+	a1 = MOO_STACK_GETARG(moo, nargs, 1); /* x - SmallInteger */
+	a2 = MOO_STACK_GETARG(moo, nargs, 2); /* y - SmallInteger */
+	a3 = MOO_STACK_GETARG(moo, nargs, 3); /* width - SmallInteger */
+	a4 = MOO_STACK_GETARG(moo, nargs, 4); /* height - SmallInteger */
+	
 
-	wid = xcb_generate_id (x11->c);
+	if (!MOO_OOP_IS_SMPTR(a0) || !MOO_OOP_IS_SMOOI(a1) || 
+	    !MOO_OOP_IS_SMOOI(a2) || !MOO_OOP_IS_SMOOI(a3) || !MOO_OOP_IS_SMOOI(a4))
+	{
+	einval:
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_SUCCESS;
+	}
 
-	id = moo_oowtoint (moo, wid);
-	if (!id) return MOO_PF_HARD_FAILURE;
+	c = MOO_OOP_TO_SMPTR(a0);
+	screen = xcb_setup_roots_iterator(xcb_get_setup(c)).data;
+
+	a0 = MOO_STACK_GETARG(moo, nargs, 5); /* parent - Integer (xcb_window_t - uint32_t) */
+	if (a0 == moo->_nil) 
+	{
+		parent = screen->root;
+	}
+	else
+	{
+		moo_oow_t tmpoow;
+		if (moo_inttooow(moo, a0, &tmpoow) <= 0) goto einval;
+		parent = tmpoow;
+	}
+
+	wid = xcb_generate_id (c);
+
+	a0 = moo_oowtoint (moo, wid);
+	if (!a0) 
+	{
+		MOO_STACK_SETRETTOERRNUM (moo, nargs);
+		return MOO_PF_SUCCESS;
+	}
 
 	mask = XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK;
-	values[0] = x11->screen->white_pixel;
+	values[0] = screen->white_pixel;
 	values[1] = XCB_EVENT_MASK_KEY_RELEASE |
 	            XCB_EVENT_MASK_BUTTON_PRESS |
+	            XCB_EVENT_MASK_BUTTON_RELEASE |
 	            XCB_EVENT_MASK_BUTTON_RELEASE |
 	            /*XCB_EVENT_MASK_BUTTON_MOTION |*/
 	            XCB_EVENT_MASK_EXPOSURE |
@@ -455,34 +531,39 @@ MOO_DEBUG0 (moo, "<x11.win._make_on:> %p\n");
 	            XCB_EVENT_MASK_LEAVE_WINDOW |
 	            XCB_EVENT_MASK_VISIBILITY_CHANGE;
 	xcb_create_window (
-		x11->c, 
+		c,
+		XCB_COPY_FROM_PARENT,          /* depth */
+		wid,                           /* wid */
+		parent,                        /* parent */
+		MOO_OOP_TO_SMOOI(a1),          /* x */
+		MOO_OOP_TO_SMOOI(a2),          /* y */
+		MOO_OOP_TO_SMOOI(a3),          /* width */
+		MOO_OOP_TO_SMOOI(a4),          /* height */
+		1,                             /* border width */
+		XCB_WINDOW_CLASS_INPUT_OUTPUT, /* class */
 		XCB_COPY_FROM_PARENT,
-		wid,
-		x11->screen->root,
-		0, 0, 300, 300, 10,
-		XCB_WINDOW_CLASS_INPUT_OUTPUT,
-		x11->screen->root_visual,
-		mask, values);
+		mask,
+		values
+	);
 
-	cookie = xcb_intern_atom(x11->c, 1, 12, "WM_PROTOCOLS");
-	reply = xcb_intern_atom_reply(x11->c, cookie, 0);
+	if (parent == screen->root)
+	{
+		cookie = xcb_intern_atom(c, 1, 12, "WM_PROTOCOLS");
+		reply = xcb_intern_atom_reply(c, cookie, 0);
 
-	cookie = xcb_intern_atom(x11->c, 0, 16, "WM_DELETE_WINDOW");
-	win->dwar = xcb_intern_atom_reply(x11->c, cookie, 0);
+		cookie = xcb_intern_atom(c, 0, 16, "WM_DELETE_WINDOW");
+		win->dwar = xcb_intern_atom_reply(c, cookie, 0);
 
-	xcb_change_property(x11->c, XCB_PROP_MODE_REPLACE, wid, reply->atom, 4, 32, 1, &win->dwar->atom);
+		xcb_change_property(c, XCB_PROP_MODE_REPLACE, wid, reply->atom, 4, 32, 1, &win->dwar->atom);
+	}
 
-	xcb_map_window (x11->c, wid);
-	xcb_flush (x11->c);
+	xcb_map_window (c, wid);
+	xcb_flush (c);
 
 	win->id = wid;
-	win->c = x11->c;
+	win->c = c;
 
-	MOO_STACK_SETRET (moo, nargs, id); 
-	return MOO_PF_SUCCESS;
-
-reterr:
-	MOO_STACK_SETRETTOERRNUM (moo, nargs); /* TODO: be more specific about error */
+	MOO_STACK_SETRET (moo, nargs, a0); 
 	return MOO_PF_SUCCESS;
 }
 
@@ -564,10 +645,11 @@ static moo_pfinfo_t x11_gc_pfinfo[] =
 {
 	{ I, { '_','d','r','a','w','L','i','n','e' },                              0, { pf_gc_draw_line,      4, 4 } },
 	{ I, { '_','d','r','a','w','R','e','c','t' },                              0, { pf_gc_draw_rect,      4, 4 } },
+	{ I, { '_','f','i','l','l','R','e','c','t' },                              0, { pf_gc_fill_rect,      4, 4 } },
 	{ I, { '_','f','o','r','e','g','r','o','u','n','d',':','\0' },             0, { pf_gc_set_foreground, 1, 1 } },
 	{ I, { '_','g','e','t','_','i','d','\0' },                                 0, { pf_gc_get_id,         0, 0 } },
 	{ I, { '_','k','i','l','l','\0' },                                         0, { pf_gc_kill,           0, 0 } },
-	{ I, { '_','m','a','k','e','_','o','n',':','\0' },                         0, { pf_gc_make,           1, 1 } }
+	{ I, { '_','m','a','k','e','\0' },                                         0, { pf_gc_make,           2, 2 } }
 	
 };
 
@@ -607,8 +689,7 @@ static moo_pfinfo_t x11_win_pfinfo[] =
 	{ I, { '_','g','e','t','_','i','d','\0' },                0, { pf_win_get_id,       0, 0 } },
 
 	{ I, { '_','k','i','l','l','\0' },                        0, { pf_win_kill,         0, 0 } },
-	{ I, { '_','m','a','k','e','\0' },                        0, { pf_win_make,         1, 1 } },
-	{ I, { '_','m','a','k','e','_','o','n',':','\0' },        0, { pf_win_make,         1, 1 } }
+	{ I, { '_','m','a','k','e','\0' },                        0, { pf_win_make,         6, 6 } }
 };
 
 static int x11_win_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)

@@ -336,6 +336,7 @@ int moo_inttooow (moo_t* moo, moo_oop_t x, moo_oow_t* w)
 
 	if (is_bigint(moo, x)) return bigint_to_oow (moo, x, w);
 
+	moo->errnum = MOO_EINVAL;
 	return 0; /* not convertable - too big, too small, or not an integer */
 }
 
