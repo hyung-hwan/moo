@@ -407,7 +407,7 @@ struct moo_ntime_t
 #define MOO_UCI_EOF ((moo_ooci_t)-1)
 
 #define MOO_SIZEOF(x) (sizeof(x))
-#define MOO_COUNTOF(x) (sizeof(x) / sizeof(x[0]))
+#define MOO_COUNTOF(x) (sizeof(x) / sizeof((x)[0]))
 
 /**
  * The MOO_OFFSETOF() macro returns the offset of a field from the beginning

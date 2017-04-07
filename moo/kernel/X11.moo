@@ -4,8 +4,12 @@
 
 class X11(Object) from 'x11'
 {
-	dcl(#class) connection.
-	dcl id.
+	(* The X11 class represents a X11 display *)
+
+	dcl(#class) default_display.
+
+	dcl cid.
+	dcl windows. ## all windows registered
 
 	dcl event_loop_sem event_loop_proc.
 	dcl ll_event_blocks.
@@ -15,19 +19,51 @@ class X11(Object) from 'x11'
 	dcl mouse_event.
 	dcl mouse_wheel_event.
 
-	dcl frames.
-
 	method(#primitive) _connect.
 	method(#primitive) _disconnect.
 	method(#primitive) _get_fd.
 	method(#primitive) _get_event.
-
-	method id { ^self.id }
+	
+	method cid { ^self.cid }
+	method wid { ^nil }
+	method display { ^self }
 }
 
 class X11.Exception(System.Exception)
 {
 }
+
+class X11.Rectangle(Object)
+{
+	dcl x y width height.
+
+	method initialize
+	{
+		self.x := 0.
+		self.y := 0.
+		self.width := 0.
+		self.height := 0.
+	}
+	
+	method x { ^self.x }
+	method y { ^self.y }
+	method width { ^self.width }
+	method height { ^self.height }
+
+	method x: x { self.x := x }
+	method y: y { self.y := y }
+	method width: width { self.width := width }
+	method height: height { self.height := height }
+
+	method x: x y: y width: width height: height 
+	{
+		self.x := x.
+		self.y := y.
+		self.width := width.
+		self.height := height.
+	}
+}
+
 
 ## ---------------------------------------------------------------------------
 ## Event
@@ -43,6 +79,7 @@ pooldic X11.LLEvent
 	LEAVE_NOTIFY      := 8.
 	EXPOSE            := 12.
 	VISIBILITY_NOTIFY := 15.
+	CONFIGURE_NOTIFY  := 22.
 	CLIENT_MESSAGE    := 33.
 }
 
@@ -118,17 +155,27 @@ class X11.FrameEvent(X11.Event)
 ## ---------------------------------------------------------------------------
 ## Graphics Context
 ## ---------------------------------------------------------------------------
+pooldic X11.GCAttr
+{
+	(* see xcb/xproto.h *)
+	GC_FOREGROUND := 4. 
+	GC_BACKGROUND := 8.
+	GC_LINE_WIDTH := 16.
+	GC_LINE_STYLE := 32.
+	GC_FONT       := 16384.
+}
+
 class X11.GC(Object) from 'x11.gc'
 {
 	dcl window id.
 
-	method(#primitive) _make (connection, window).
+	method(#primitive) _make (display, window).
 	method(#primitive) _kill.
 	method(#primitive) _drawLine(x1, y1, x2, y2).
 	method(#primitive) _drawRect(x, y, width, height).
 	method(#primitive) _fillRect(x, y, width, height).
-	method(#primitive) _foreground: color.
-	
+	method(#primitive) _change(gcattr, value).
+
 	method(#class) new: window
 	{
 		^(super new) __open_on: window
@@ -136,7 +183,7 @@ class X11.GC(Object) from 'x11.gc'
 
 	method __open_on: window
 	{
-		if ((id := self _make(window connection id, window id)) isError) 
+		if ((id := self _make(window display cid, window wid)) isError) 
 		{
 			X11.Exception signal: 'cannot make a graphic context'
 		}.
@@ -147,19 +194,44 @@ class X11.GC(Object) from 'x11.gc'
 
 	method close
 	{
-		if (self.window notNil)
+		if (self.id notNil)
 		{
 			self _kill.
+			self.id := nil.
 			self.window := nil.
 		}
+	}
+	
+	method foreground: value
+	{
+		^self _change (X11.GCAttr.GC_FOREGROUND, value)
+	}
+
+	method background: value
+	{
+		^self _change (X11.GCAttr.GC_BACKGROUND, value)
 	}
 }
 
 ## ---------------------------------------------------------------------------
 ## ---------------------------------------------------------------------------
+
+
 class X11.Component(Object)
 {
 	dcl parent.
+
+	method new
+	{
+		## you must call new: parent instead.
+		self cannotInstantiate
+	}
+
+	method new: parent
+	{
+		## you must call new: parent instead.
+		self cannotInstantiate
+	}
 
 	method parent
 	{
@@ -169,6 +241,19 @@ class X11.Component(Object)
 	method parent: parent
 	{
 		self.parent := parent.
+	}
+
+	method display 
+	{ 
+		| p pp |
+		p := self.
+		while ((pp := p parent) notNil) { p := pp }.
+		^p display.
+	}
+
+	method display: display
+	{
+		## do nothing
 	}
 }
 
@@ -185,78 +270,94 @@ class X11.Canvas(Component)
 	}
 }
 
-class X11.Container(Component)
+class X11.WindowedComponent(Component) from 'x11.win'
 {
-	dcl components capacity size.
-
-	method initialize
-	{
-		self.size := 0.
-		self.capacity := 128.
-## TODO: change System.Array to Danamically resized array.
-		self.components := System.Array new: self.capacity.
-	}
-
-	method addComponent: component
-	{
-		| tmp |
-		component parent: self.
-		if (self.size >= self.capacity)
-		{
-			tmp := System.Array new: (self.capacity + 128).
-			tmp copy: self.components.
-			self.capacity := self.capacity + 128.
-			self.components := tmp.
-		}.
-		
-		self.components at: self.size put: component.
-		self.size := self.size + 1.
-	}
-}
-
-class X11.Window(Container) from 'x11.win'
-{
-	dcl id.
-
-	method(#primitive) _get_dwatom.
-	method(#primitive) _get_id.
+	dcl(#class) geom.
+	dcl wid.
 	
-	method(#primitive) _make (connection, x, y, width, height, parent).
-	method(#primitive) _kill.
-
-	method id { ^self.id }
-
-	method connection 
-	{ 
-		| p pp |
-		p := self.
-		while ((pp := p parent) notNil) { p := pp }.
-		^p connection.
-	}
+	method(#primitive) _get_window_dwatom.
+	method(#primitive) _get_window_id.
+	method(#primitive) _make_window (display, x, y, width, height, parent).
+	method(#primitive) _kill_window.
+	method(#primitive) _get_window_geometry (geom).
+	method(#primitive) _set_window_geometry (geom).
+	
+	method wid { ^self.wid }
 
 	method(#class) new: parent
 	{
 		^(super new) __open_on_window: parent
 	}
-	
+
 	method __open_on_window: parent
 	{
-		| id |
-		id := self _make (parent connection id, 5, 5, 100, 100, parent id).
-		if (id isError) { X11.Exception signal: ('cannot make a window - ' & id asString) }.
+		| id disp |
 		
-		self.id := id.
-		self.parent := parent.
-		parent addComponent: self.
+		disp := parent display.
 
-		parent connection addFrame: self.
+		wid := self _make_window (disp cid, 5, 5, 300, 300, parent wid).
+		if (wid isError) { X11.Exception signal: ('cannot make a window - ' & wid asString) }.
 		
+		self.wid := wid.
+		self display: disp.
+
+		if (disp ~= parent) 
+		{
+			self.parent := parent.
+			parent addComponent: self.
+		}.
+
+		disp addWindow: self.
 		self windowOpened.
+	}
+
+	method close
+	{
+		if (self.wid notNil)
+		{
+			self windowClosing.
+
+			self display removeWindow: self.
+			if (self.parent notNil) { self.parent removeComponent: self }.
+
+			self _kill_window.
+			self windowClosed. ## you can't make a primitive call any more
+
+			self.wid := nil.
+			self.parent := nil.
+		}
+	}
+
+	method bounds
+	{
+		| rect |
+		rect := X11.Rectangle new.
+		self _get_window_geometry (rect).
+		^rect.
+	}
+	
+	method bounds: rect
+	{
+		self _set_window_geometry (rect).
+	}
+
+	method windowOpened
+	{
+	}
+	method windowClosing
+	{
+	}
+	method windowClosed
+	{
+	}
+	method windowResized
+	{
 	}
 
 	method expose: event
 	{
-		('EXPOSE  IN WINDOWS....' & (self.id asString) & ' ' & (event x asString) & ' ' & (event y asString) & ' ' & (event width asString) & ' ' & (event height asString))  dump.
+	
+	##	('EXPOSE  IN WINDOWS....' & (self.wid asString) & ' ' & (event x asString) & ' ' & (event y asString) & ' ' & (event width asString) & ' ' & (event height asString))  dump.
 	}
 
 	(* TODO: take the followings out to a seperate mouse listener??? *)
@@ -271,71 +372,62 @@ class X11.Window(Container) from 'x11.win'
 	}
 	method mousePressed: event
 	{
-		('MOUSE PRESSED' & (self.id asString) & ' ' & (event x asString) & ' ' & (event y asString))  dump.
+		('MOUSE PRESSED' & (self.wid asString) & ' ' & (event x asString) & ' ' & (event y asString))  dump.
 	}
 	method mouseReleased: event
 	{
-		('MOUSE RELEASED' & (self.id asString) & ' ' & (event x asString) & ' ' & (event y asString))  dump.
+		('MOUSE RELEASED' & (self.wid asString) & ' ' & (event x asString) & ' ' & (event y asString))  dump.
 	}
 	method mouseWheelMoved: event
 	{
-		('MOUSE WHEEL MOVED' & (self.id asString) & ' ' & (event x asString) & ' ' & (event y asString) &   ' ' & (event amount asString))  dump.
+		('MOUSE WHEEL MOVED' & (self.wid asString) & ' ' & (event x asString) & ' ' & (event y asString) &   ' ' & (event amount asString))  dump.
 	}
-
-
-	method windowOpened
-	{
-	}
-	method windowClosing
-	{
-	}
-	method windowClosed
-	{
-	}
-
 }
 
-class X11.Frame(Window)
+class X11.Container(WindowedComponent)
 {
-	dcl connection.
+	dcl components.
 
-	## method connection: connection { self.connection := connection } 
-	method connection { ^self.connection }
+	method initialize
+	{
+		super initialize.
+		self.components := System.Dictionary new: 128.
+	}
+
+	method addComponent: component
+	{
+	## TODO: the key is component's wid. it's only supported for WindowedCompoennt.
+	##       what is a better key to support Component that's not linked to any window?
+		^self.components at: (component wid) put: component
+	}
+
+	method removeComponent: component
+	{
+		^self.components removeKey: (component wid)
+	}
+	
+	method close
+	{
+		self.components do: [:c | c close ].
+		^super close
+	}
+}
+
+class X11.FrameWindow(Container)
+{
+	dcl display.
+
+	method display { ^self.display }
+	method display: display { self.display := display }
 	
 	method(#class) new
 	{
-		##^(super new) __open_on: X11 connection.
-		^(super new) __open_on: X11 connect.  ## connect if X11 is not connected.
+		super new: X11 defaultDisplay. ## connect if X11 is not connected.
 	}
-
-	method __open_on: connection
+	
+	method(#class) new: display
 	{
-		| id |
-
-		id := self _make(connection id, 10, 20, 500, 600, nil).
-		if (id isError) { X11.Exception signal: ('cannot make a frame - ' & id asString) }.		
-
-		self.id := id.
-		self.connection := connection.
-
-		connection addFrame: self.
-		
-		self windowOpened.
-	}
-
-	method close
-	{
-		if (self.connection notNil)
-		{
-			self windowClosing.
-			self _kill.
-			(* TODO: remove all subcomponents... *)
-			self.connection removeFrame: self.
-			self windowClosed.
-			
-			self.id := 0.
-			self.connection := nil.
-		}
+		^super new: display.
 	}
 
 	##method show: flag
@@ -357,49 +449,68 @@ class X11.Frame(Window)
 	}*)
 }
 
-class X11.Button(Component)
+class X11.Button(WindowedComponent)
 {
 }
 
-
 extend X11
 {
-	method(#class) connect
+	method(#class) new
 	{
-		| c | 
-		if (self.connection isNil) 
-		{
-			c := self new.
-			if (c connect isError) { X11.Exception signal: 'cannot connect' }.
-			self.connection := c.
-		}.
-		^self.connection
-	}
-	
-	method(#class) disconnect
-	{
-		if (self.connection notNil) 
-		{
-			self.connection disconnect.
-			self.connection := nil.
-		}.
-		^self.connection
-	}
-	
-	method(#class) connection
-	{
-		^self.connection
+		^(super new) __connect_to_display: nil.
 	}
 
+	method __connect_to_display: name
+	{
+	## TODO: make use of name to connect to a non-default display.
+		| cid |
+		cid := self _connect.
+		if (cid isError) { X11.Exception signal: 'cannot connect to display' }.
+		self.cid := cid.
+	}
+
+	method close
+	{
+		if (self.cid notNil)
+		{
+			self _disconnect.
+			self.cid := nil.
+		}
+	}
+
+	method(#class) defaultDisplay
+	{
+		| conn |
+		if (self.default_display isNil)
+		{
+			conn := X11 new.
+			##if (conn isError) { X11.Exception signal: 'cannot connect to default display' }.
+			self.default_display := conn.
+		}.
+		
+		^self.default_display
+	}
+
+	method(#class) closeDefaultDisplay
+	{
+		if (self.default_display notNil)
+		{
+			self.default_display close.
+			self.default_display := nil.
+		}
+	}
+	
 	method(#class) enterEventLoop
 	{
-		^self connect enterEventLoop
+		^self defaultDisplay enterEventLoop
 	}
 
 	method initialize
 	{
 		super initialize.
 
+		self.windows := System.Dictionary new: 100.
+		
 		self.expose_event := X11.ExposeEvent new.
 		self.key_event := X11.KeyEvent new.
 		self.mouse_event := X11.MouseEvent new.
@@ -407,64 +518,49 @@ extend X11
 
 		self.ll_event_blocks := System.Dictionary new.
 		self.ll_event_blocks
-			at: X11.LLEvent.KEY_PRESS      put: #__handle_key_event:;
-			at: X11.LLEvent.KEY_RELEASE    put: #__handle_key_event:;
-			at: X11.LLEvent.BUTTON_PRESS   put: #__handle_button_event:;
-			at: X11.LLEvent.BUTTON_RELEASE put: #__handle_button_event:;
-			at: X11.LLEvent.MOTION_NOTIFY  put: #__handle_notify:;
-			at: X11.LLEvent.ENTER_NOTIFY   put: #__handle_notify:;
-			at: X11.LLEvent.LEAVE_NOTIFY   put: #__handle_notify:;
-			at: X11.LLEvent.EXPOSE         put: #__handle_expose:;
-			at: X11.LLEvent.CLIENT_MESSAGE put: #__handle_client_message:.
+			at: X11.LLEvent.KEY_PRESS         put: #__handle_key_event:;
+			at: X11.LLEvent.KEY_RELEASE       put: #__handle_key_event:;
+			at: X11.LLEvent.BUTTON_PRESS      put: #__handle_button_event:;
+			at: X11.LLEvent.BUTTON_RELEASE    put: #__handle_button_event:;
+			at: X11.LLEvent.MOTION_NOTIFY     put: #__handle_notify:;
+			at: X11.LLEvent.ENTER_NOTIFY      put: #__handle_notify:;
+			at: X11.LLEvent.LEAVE_NOTIFY      put: #__handle_notify:;
+			at: X11.LLEvent.EXPOSE            put: #__handle_expose:;
+			at: X11.LLEvent.CONFIGURE_NOTIFY  put: #__handle_configure_notify;
+			at: X11.LLEvent.CLIENT_MESSAGE    put: #__handle_client_message:.
 	}
 
 	method connect
 	{
-		| t |
-		if (self.frames isNil)
+		| cid |
+		if (self.windows isNil)
 		{
-			if ((t := self _connect) isError)  { ^t }.
-			self.id := t.
-			self.frames := System.Dictionary new.
+			if ((cid := self _connect) isError)  { ^cid }.
+			self.cid := cid.
+			self.windows := System.Dictionary new.
 		}
 	}
 
 	method disconnect
 	{
-		if (self.frames notNil)
+		if (self.windows notNil)
 		{
-			self.frames do: [ :frame |
+			self.windows do: [ :frame |
 				frame close.
 			].
-			self.frames := nil.
+			self.windows := nil.
 			self _disconnect.
 		}
 	}
 	
-	method addFrame: frame
+	method addWindow: window
 	{
-		if (frame connection ~= self)
-		{
-			X11.Exception signal: 'Invalid connection in frame to add'.
-		}.
-
-('ADDING NE FRAME ID' & frame id asString) dump.
-		self.frames at: (frame id) put: frame.
+		^self.windows at: (window wid) put: window.
 	}
 
-	method removeFrame: frame
+	method removeWindow: window
 	{
-		if (frame connection ~= self)
-		{
-			X11.Exception signal: 'Invalid connection in frame to remove'.
-		}.
-
-		(*self.frames removeLink: frame backlink.
-		frame connection: nil.
-		frame backlink: nil.*)
-
-('REMOVING NE FRAME ID' & frame id asString) dump.
-		(self.frames removeKey: (frame id)) dump.
+		^self.windows removeKey: (window wid)
 	}
 
 	method enterEventLoop
@@ -477,7 +573,7 @@ extend X11
 				| event ongoing | 
 				
 				ongoing := true.
-				while (self.frames size > 0) 
+				while (self.windows size > 0) 
 				{
 'Waiting for X11 event...' dump.
 					self.event_loop_sem wait.
@@ -568,13 +664,13 @@ extend X11
 			} xcb_expose_event_t;
 		*)
 
-		| wid frame |
+		| wid window |
 
 		##wid := System _getUint32(event, 4). ## window
 		wid := event getUint32(4).
-		frame := self.frames at: wid.
+		window := self.windows at: wid.
 
-		if (frame notError)
+		if (window notError)
 		{
 			(*
 			self.expose_event 
@@ -589,7 +685,7 @@ extend X11
 				width: event getUint16(12)   ## width
 				height: event getUint16(14). ## height
 
-			frame expose: self.expose_event.
+			window expose: self.expose_event.
 		}
 		else
 		{
@@ -619,15 +715,15 @@ extend X11
 			typedef xcb_button_press_event_t xcb_button_release_event_t;
 		*)
 
-		| type wid frame detail |
+		| type wid window detail |
 		type := System _getUint8(event, 0) bitAnd: 16r7F. ## lower 7 bits of response_type
 		wid := System _getUint32(event, 12). ## event
 		##type := event getUint8(0) bitAnd: 16r7F. ## lower 7 bits of response_type
 		##wid := event getUint32(12). ## event
 		
-		frame := self.frames at: wid.
+		window := self.windows at: wid.
 
-		if (frame notError)
+		if (window notError)
 		{
 			##detail := System _getUint8(event, 1).
 			detail := event getUint8(1).
@@ -646,11 +742,11 @@ extend X11
 				
 				if (type == X11.LLEvent.BUTTON_PRESS)
 				{
-					frame mousePressed: self.mouse_event
+					window mousePressed: self.mouse_event
 				}
 				else
 				{
-					frame mouseReleased: self.mouse_event
+					window mouseReleased: self.mouse_event
 				}
 			}
 			elsif (detail == 4 or: [detail == 5])
@@ -667,7 +763,7 @@ extend X11
 						x: event getUint16(24)   ## event_x
 						y: event getUint16(26)   ## event_y
 						amount: (if (detail == 4) { -1 } else { 1 }).
-					frame mouseWheelMoved: self.mouse_wheel_event
+					window mouseWheelMoved: self.mouse_wheel_event
 				}
 			}
 		}
@@ -676,7 +772,30 @@ extend X11
 			System logNl: ('Button event on unknown window - ' & wid asString).
 		}
 	}
-	
+
+	method __handle_configure_notify: event
+	{
+		(*
+		typedef struct xcb_configure_notify_event_t {
+			uint8_t      response_type;
+			uint8_t      pad0;
+			uint16_t     sequence;
+			xcb_window_t event;
+			xcb_window_t window;
+			xcb_window_t above_sibling;
+			int16_t      x;
+			int16_t      y;
+			uint16_t     width;
+			uint16_t     height;
+			uint16_t     border_width;
+			uint8_t      override_redirect;
+			uint8_t      pad1;
+		} xcb_configure_notify_event_t;
+		*)
+
+		
+	}
+
 	method __handle_client_message: event
 	{
 		(*
@@ -695,20 +814,20 @@ extend X11
 				xcb_client_message_data_t data;
 			} xcb_client_message_event_t;
 		*)
-		| type wid frame dw |
+		| type wid window dw |
 		
 		##wid := System _getUint32(event, 4). ## window
 		wid := event getUint32(4). ## window
-		frame := self.frames at: wid.
+		window := self.windows at: wid.
 		
-		if (frame notError)
+		if (window notError)
 		{
 			##dw := System _getUint32(event, 12). ## data.data32[0]
 			dw := event getUint32(12). ## data.data32[0]
-			if (dw == frame _get_dwatom)
+			if (dw == window _get_window_dwatom)
 			{
 				## TODO: call close query callback???
-				frame close.
+				window close.
 			}
 			
 			## TODO: handle other client messages
@@ -751,24 +870,22 @@ extend X11
 }
 
 
-class MyButton(X11.Window)
+class MyButton(X11.Button)
 {
 	method expose: event
 	{
-	|gc|
-	
-
+|gc|
 		super expose: event.
-		
 
+	'XXXXXXXXXXXXXXXXXXXXXXXXXXx' dump.
 gc := X11.GC new: self.	
-gc _foreground: 2.	
+gc foreground: 16rFF8877.	
 gc _fillRect(0, 0, 50, 50).
 gc close.
 	}
 }
 
-class MyFrame(X11.Frame)
+class MyFrame(X11.FrameWindow)
 {
 	dcl gc.
 	dcl b1.
@@ -776,18 +893,20 @@ class MyFrame(X11.Frame)
 
 	method windowOpened
 	{
+		
 		super windowOpened.
+		
 		if (self.gc isNil)
 		{
 			self.gc := X11.GC new: self.
-self.gc _foreground: 10.
+self.gc foreground: 10.
 self.gc _drawLine(10, 20, 30, 40).
 self.gc _drawRect(10, 20, 30, 40).
-self.gc _foreground: 20.
+self.gc foreground: 20.
 self.gc _drawRect(100, 100, 200, 200).
 		}.
 		
-		b1 := MyButton new: self.
+		self.b1 := MyButton new: self.
 	}
 
 	method windowClosing
@@ -802,17 +921,24 @@ self.gc _drawRect(100, 100, 200, 200).
 
 	method expose: event
 	{
+
+		| rect | 
+
 		super expose: event.
 		
 		(*
 		('EXPOSE....' & (self.id asString) & ' ' & (event x asString) & ' ' & (event y asString) & ' ' & (event width asString) & ' ' & (event height asString))  dump.
-
-self.gc _foreground: 2.	
+		
+self.gc foreground: 2.	
 ##self.gc drawLine: (10@20) to: (30@40).
 self.gc _drawLine(10, 20, 300, 400).
 self.gc _drawRect(10, 20, 30, 40).
-self.gc _foreground: 20.
+self.gc foreground: 20.
 self.gc _drawRect(100, 100, 200, 200).*)
+
+		rect := self bounds.
+		rect x: 0; y: 0; height: ((rect height) quo: 2); width: ((rect width) - 2).
+		self.b1 bounds: rect;
 	}
 }
 
@@ -827,7 +953,7 @@ class MyObject(Object)
 	
 	method(#class) main 
 	{
-		| f q |
+		| f q x11 |
 
 		f := 20.
 		(q:=:{ 10 -> 20, 20 -> 30, f + 40 -> self abc, (Association key: 10 value: 49), f -> f })dump.
@@ -845,12 +971,11 @@ class MyObject(Object)
 		f addLastLink: q.
 		(f findLink: 30) prev value dump.
 
-
 		f do: [:v | v dump ].
 		(f size asString & ' elements in list') dump.
 
 		##X11 connect.
-	##	f := MyFrame new.
+	##	f := MyFrame new: d.
 		q := MyFrame new.
 
 	##	MyButton new: q.
@@ -873,5 +998,7 @@ class MyObject(Object)
 		## [ while (true) { '111' dump. Processor sleepFor: 1. } ] fork.
 
 		##X11 disconnect.
+		
+		##X11 closeDefaultDisplay.
 	}
 }

@@ -46,7 +46,7 @@
 
 #if !defined(NDEBUG)
 /* this is for gc debugging */
-#define MOO_DEBUG_GC
+/*#define MOO_DEBUG_GC*/
 #define MOO_DEBUG_COMPILER
 /*#define MOO_DEBUG_VM_PROCESSOR*/
 /*#define MOO_DEBUG_VM_EXEC*/

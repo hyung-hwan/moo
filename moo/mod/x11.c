@@ -318,22 +318,30 @@ static moo_pfrc_t pf_gc_fill_rect (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_gc_set_foreground (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_gc_change (moo_t* moo, moo_ooi_t nargs)
 {
 	x11_gc_t* gc;
+	moo_oop_t t;
 	moo_oow_t tmpoow;
 	uint32_t value;
 
 	gc = (x11_gc_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
-	if (moo_inttooow (moo, MOO_STACK_GETARG(moo, nargs, 0), &tmpoow) <= 0)
+	t = MOO_STACK_GETARG(moo, nargs, 0);
+	if (!MOO_OOP_IS_SMOOI(t))
 	{
+	einval:
 		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
 		return MOO_PF_SUCCESS;
 	}
+
+	if (moo_inttooow (moo, MOO_STACK_GETARG(moo, nargs, 1), &tmpoow) <= 0) goto einval;
 	value = tmpoow;
 
-	xcb_change_gc (gc->c, gc->id, XCB_GC_FOREGROUND, &value);
+	/* XCB_GC_FUNCTION, XCB_GC_PLANE_MASK, XCB_GC_FOREGROUND,  XCB_GC_BACKGROUND, etc 
+	 * this primitive allows only 1 value to be used. you must not specify
+	 * a bitwise-ORed mask of more than 1 XCB_GC_XXX enumerator. */
+	xcb_change_gc (gc->c, gc->id, MOO_OOP_TO_SMOOI(t), &value);
 	xcb_flush (gc->c);
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
@@ -423,9 +431,88 @@ static moo_pfrc_t pf_win_get_dwatom (moo_t* moo, moo_ooi_t nargs)
 	win = (x11_win_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
 	x = moo_oowtoint (moo, win->dwar->atom);
-	if (!x) return MOO_PF_HARD_FAILURE;
+	if (!x) 
+	{
+		MOO_STACK_SETRETTOERRNUM (moo, nargs);
+		return MOO_PF_SUCCESS;
+	}
 
 	MOO_STACK_SETRET (moo, nargs, x);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_win_get_geometry (moo_t* moo, moo_ooi_t nargs)
+{
+	x11_win_t* win;
+	moo_oop_t t;
+	xcb_get_geometry_cookie_t gc;
+	xcb_get_geometry_reply_t* geom;
+
+	win = (x11_win_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+	t = MOO_STACK_GETARG(moo, nargs, 0);
+
+	/* expecting an object composed of 4 object pointers */
+	if (!MOO_OOP_IS_POINTER(t) || MOO_OBJ_GET_FLAGS_TYPE(t) != MOO_OBJ_TYPE_OOP || MOO_OBJ_GET_SIZE(t) != 4)
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_SUCCESS;
+	}
+
+	gc = xcb_get_geometry (win->c, win->id);
+	geom = xcb_get_geometry_reply (win->c, gc, NULL);
+
+	((moo_oop_oop_t)t)->slot[0] = MOO_SMOOI_TO_OOP(geom->x);
+	((moo_oop_oop_t)t)->slot[1] = MOO_SMOOI_TO_OOP(geom->y);
+	((moo_oop_oop_t)t)->slot[2] = MOO_SMOOI_TO_OOP(geom->width);
+	((moo_oop_oop_t)t)->slot[3] = MOO_SMOOI_TO_OOP(geom->height);
+
+	free (geom);
+
+	MOO_STACK_SETRET (moo, nargs, t);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_win_set_geometry (moo_t* moo, moo_ooi_t nargs)
+{
+	x11_win_t* win;
+	moo_oop_t t;
+	uint32_t values[4];
+	int flags = 0, vcount = 0;
+
+	win = (x11_win_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+	t = MOO_STACK_GETARG(moo, nargs, 0);
+
+	/* expecting an object composed of 4 object pointers */
+	if (!MOO_OOP_IS_POINTER(t) || MOO_OBJ_GET_FLAGS_TYPE(t) != MOO_OBJ_TYPE_OOP || MOO_OBJ_GET_SIZE(t) != 4)
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_SUCCESS;
+	}
+
+	if (MOO_OOP_IS_SMOOI(((moo_oop_oop_t)t)->slot[0]))
+	{
+		flags |= XCB_CONFIG_WINDOW_X;
+		values[vcount++] = MOO_OOP_TO_SMOOI(((moo_oop_oop_t)t)->slot[0]);
+	}
+	if (MOO_OOP_IS_SMOOI(((moo_oop_oop_t)t)->slot[1]))
+	{
+		flags |= XCB_CONFIG_WINDOW_Y;
+		values[vcount++] = MOO_OOP_TO_SMOOI(((moo_oop_oop_t)t)->slot[1]);
+	}
+	if (MOO_OOP_IS_SMOOI(((moo_oop_oop_t)t)->slot[2]))
+	{
+		flags |= XCB_CONFIG_WINDOW_WIDTH;
+		values[vcount++] = MOO_OOP_TO_SMOOI(((moo_oop_oop_t)t)->slot[2]);
+	}
+	if (MOO_OOP_IS_SMOOI(((moo_oop_oop_t)t)->slot[3]))
+	{
+		flags |= XCB_CONFIG_WINDOW_HEIGHT;
+		values[vcount++] = MOO_OOP_TO_SMOOI(((moo_oop_oop_t)t)->slot[3]);
+	}
+
+	xcb_configure_window (win->c, win->id, flags, values);
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -437,7 +524,11 @@ static moo_pfrc_t pf_win_get_id (moo_t* moo, moo_ooi_t nargs)
 	win = (x11_win_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
 	x = moo_oowtoint (moo, win->id);
-	if (!x) return MOO_PF_HARD_FAILURE;
+	if (!x) 
+	{
+		MOO_STACK_SETRETTOERRNUM (moo, nargs);
+		return MOO_PF_SUCCESS;
+	}
 
 	MOO_STACK_SETRET (moo, nargs, x);
 	return MOO_PF_SUCCESS;
@@ -454,7 +545,7 @@ static moo_pfrc_t pf_win_kill (moo_t* moo, moo_ooi_t nargs)
 	xcb_unmap_window (win->c, win->id); /* TODO: check error code */
 	xcb_destroy_window (win->c, win->id);
 	xcb_flush (win->c);
-
+	
 	MOO_STACK_SETRETTORCV (moo, nargs); 
 	return MOO_PF_SUCCESS;
 }
@@ -643,10 +734,10 @@ int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)
 
 static moo_pfinfo_t x11_gc_pfinfo[] =
 {
-	{ I, { '_','d','r','a','w','L','i','n','e' },                              0, { pf_gc_draw_line,      4, 4 } },
-	{ I, { '_','d','r','a','w','R','e','c','t' },                              0, { pf_gc_draw_rect,      4, 4 } },
+	{ I, { '_','c','h','a','n','g','e','\0' },                                 0, { pf_gc_change,         2, 2,} },
+	{ I, { '_','d','r','a','w','L','i','n','e','\0' },                         0, { pf_gc_draw_line,      4, 4 } },
+	{ I, { '_','d','r','a','w','R','e','c','t','\0' },                         0, { pf_gc_draw_rect,      4, 4 } },
 	{ I, { '_','f','i','l','l','R','e','c','t' },                              0, { pf_gc_fill_rect,      4, 4 } },
-	{ I, { '_','f','o','r','e','g','r','o','u','n','d',':','\0' },             0, { pf_gc_set_foreground, 1, 1 } },
 	{ I, { '_','g','e','t','_','i','d','\0' },                                 0, { pf_gc_get_id,         0, 0 } },
 	{ I, { '_','k','i','l','l','\0' },                                         0, { pf_gc_kill,           0, 0 } },
 	{ I, { '_','m','a','k','e','\0' },                                         0, { pf_gc_make,           2, 2 } }
@@ -685,11 +776,12 @@ int moo_mod_x11_gc (moo_t* moo, moo_mod_t* mod)
 
 static moo_pfinfo_t x11_win_pfinfo[] =
 {
-	{ I, { '_','g','e','t','_','d','w','a','t','o','m','\0'}, 0, { pf_win_get_dwatom,   0, 0 } },
-	{ I, { '_','g','e','t','_','i','d','\0' },                0, { pf_win_get_id,       0, 0 } },
-
-	{ I, { '_','k','i','l','l','\0' },                        0, { pf_win_kill,         0, 0 } },
-	{ I, { '_','m','a','k','e','\0' },                        0, { pf_win_make,         6, 6 } }
+	{ I, { '_','g','e','t','_','w','i','n','d','o','w','_','d','w','a','t','o','m','\0'},         0, { pf_win_get_dwatom,   0, 0 } },
+	{ I, { '_','g','e','t','_','w','i','n','d','o','w','_','g','e','o','m','e','t','r','y','\0'}, 0, { pf_win_get_geometry, 1, 1 } },
+	{ I, { '_','g','e','t','_','w','i','n','d','o','w','_','i','d','\0' },                        0, { pf_win_get_id,       0, 0 } },
+	{ I, { '_','k','i','l','l','_','w','i','n','d','o','w','\0' },                                0, { pf_win_kill,         0, 0 } },
+	{ I, { '_','m','a','k','e','_','w','i','n','d','o','w','\0' },                                0, { pf_win_make,         6, 6 } },
+	{ I, { '_','s','e','t','_','w','i','n','d','o','w','_','g','e','o','m','e','t','r','y','\0'}, 0, { pf_win_set_geometry, 1, 1 } }
 };
 
 static int x11_win_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)

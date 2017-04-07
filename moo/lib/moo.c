@@ -651,7 +651,7 @@ moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidle
 	if ((pfbase = mdp->mod.query (moo, &mdp->mod, sep + 1, pfidlen - mod_name_len - 1)) == MOO_NULL) 
 	{
 		/* the primitive function is not found. but keep the module open even if it's opened above */
-		MOO_DEBUG2 (moo, "Cannot find a primitive function [%js] in a module [%js]\n", sep + 1, mdp->mod.name);
+		MOO_DEBUG3 (moo, "Cannot find a primitive function [%.*js] in a module [%js]\n", pfidlen - mod_name_len - 1, sep + 1, mdp->mod.name);
 		moo->errnum = MOO_ENOENT; /* TODO: proper error code and handling */
 		return MOO_NULL;
 	}
