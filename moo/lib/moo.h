@@ -800,9 +800,10 @@ typedef void (*moo_vmprim_cleanup_t) (moo_t* moo);
 typedef void (*moo_vmprim_gettime_t) (moo_t* moo, moo_ntime_t* now);
 
 typedef int (*moo_vmprim_muxadd_t) (moo_t* moo, moo_oop_semaphore_t sem);
-typedef void (*moo_vmprim_muxdel_t) (moo_t* moo, moo_oop_semaphore_t sem);
+typedef int (*moo_vmprim_muxmod_t) (moo_t* moo, moo_oop_semaphore_t sem);
+typedef int (*moo_vmprim_muxdel_t) (moo_t* moo, moo_oop_semaphore_t sem);
 
-typedef void (*moo_vmprim_muxwait_cb_t) (moo_t* moo, int mask, void* ctx);
+typedef void (*moo_vmprim_muxwait_cb_t) (moo_t* moo, moo_ooi_t mask, void* ctx);
 typedef void (*moo_vmprim_muxwait_t) (moo_t* moo, const moo_ntime_t* duration, moo_vmprim_muxwait_cb_t muxwcb);
 
 typedef void (*moo_vmprim_sleep_t) (moo_t* moo, const moo_ntime_t* duration);
@@ -818,6 +819,7 @@ struct moo_vmprim_t
 	moo_vmprim_gettime_t  vm_gettime;
 	moo_vmprim_muxadd_t   vm_muxadd;
 	moo_vmprim_muxdel_t   vm_muxdel;
+	moo_vmprim_muxmod_t   vm_muxmod;
 	moo_vmprim_muxwait_t  vm_muxwait;
 	moo_vmprim_sleep_t    vm_sleep;
 };

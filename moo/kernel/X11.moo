@@ -599,7 +599,7 @@ extend X11
 
 				Processor unsignal: self.event_loop_sem.
 				self.event_loop_sem := nil.
-				
+
 				self disconnect.
 			] fork.
 		}
@@ -953,7 +953,7 @@ class MyObject(Object)
 	
 	method(#class) main 
 	{
-		| f q x11 |
+		| f q p disp1 disp2 disp3 |
 
 		f := 20.
 		(q:=:{ 10 -> 20, 20 -> 30, f + 40 -> self abc, (Association key: 10 value: 49), f -> f })dump.
@@ -974,9 +974,15 @@ class MyObject(Object)
 		f do: [:v | v dump ].
 		(f size asString & ' elements in list') dump.
 
+		disp1 := X11 new.
+		disp2 := X11 new.
+		disp3 := X11 new.
+		
 		##X11 connect.
-	##	f := MyFrame new: d.
-		q := MyFrame new.
+		f := MyFrame new: disp2.
+		q := MyFrame new: disp1.
+		p := MyFrame new: disp3.
+		
 
 	##	MyButton new: q.
 	##	MyButton new: f.
@@ -987,7 +993,9 @@ class MyObject(Object)
 		f show.
 *)
 		
-		X11 enterEventLoop. ## this is not a blocking call. it spawns another process.
+		disp1 enterEventLoop. ## this is not a blocking call. it spawns another process.
+		disp2 enterEventLoop.
+		disp3 enterEventLoop.
 
 		(*while (true)
 		{

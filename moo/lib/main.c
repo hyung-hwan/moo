@@ -931,7 +931,7 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 #	endif
 #endif
 
-static int vm_muxadd (moo_t* moo, moo_oop_semaphore_t sem)
+static int _mux_add_or_mod (moo_t* moo, moo_oop_semaphore_t sem, int cmd)
 {
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 	struct epoll_event ev;
@@ -955,7 +955,7 @@ static int vm_muxadd (moo_t* moo, moo_oop_semaphore_t sem)
 		return -1;
 	}
 	
-	if (epoll_ctl (xtn->ep, EPOLL_CTL_ADD, MOO_OOP_TO_SMOOI(sem->io_handle), &ev) == -1)
+	if (epoll_ctl (xtn->ep, cmd, MOO_OOP_TO_SMOOI(sem->io_handle), &ev) == -1)
 	{
 		moo_seterrnum (moo, moo_syserrtoerrnum (errno));
 		MOO_DEBUG2 (moo, "<vm_muxadd> epoll_ctl failure on handle %zd - %hs\n", MOO_OOP_TO_SMOOI(sem->io_handle), strerror(errno));
@@ -965,7 +965,17 @@ static int vm_muxadd (moo_t* moo, moo_oop_semaphore_t sem)
 	return 0;
 }
 
-static void vm_muxdel (moo_t* moo, moo_oop_semaphore_t sem)
+static int vm_muxadd (moo_t* moo, moo_oop_semaphore_t sem)
+{
+	return _mux_add_or_mod (moo, sem, EPOLL_CTL_ADD);
+}
+
+static int vm_muxmod (moo_t* moo, moo_oop_semaphore_t sem)
+{
+	return _mux_add_or_mod (moo, sem, EPOLL_CTL_MOD);
+}
+
+static int vm_muxdel (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 	struct epoll_event ev;
@@ -974,7 +984,14 @@ static void vm_muxdel (moo_t* moo, moo_oop_semaphore_t sem)
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_handle));
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_mask));
 
-	epoll_ctl (xtn->ep, EPOLL_CTL_DEL, MOO_OOP_TO_SMOOI(sem->io_handle), &ev);
+	if (epoll_ctl (xtn->ep, EPOLL_CTL_DEL, MOO_OOP_TO_SMOOI(sem->io_handle), &ev) == -1)
+	{
+		moo_seterrnum (moo, moo_syserrtoerrnum (errno));
+		MOO_DEBUG2 (moo, "<vm_muxdel> epoll_ctl failure on handle %zd - %hs\n", MOO_OOP_TO_SMOOI(sem->io_handle), strerror(errno));
+		return -1;
+	}
+
+	return 0;
 }
 
 static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_cb_t muxwcb)
@@ -1038,7 +1055,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 			}
 			else if (muxwcb)
 			{
-				int mask = 0;
+				moo_ooi_t mask = 0;
 
 				if (xtn->ev.buf[n].events & EPOLLIN) mask |= MOO_SEMAPHORE_IO_MASK_INPUT;
 				if (xtn->ev.buf[n].events & EPOLLOUT) mask |= MOO_SEMAPHORE_IO_MASK_OUTPUT;
@@ -1334,6 +1351,7 @@ int main (int argc, char* argv[])
 	vmprim.vm_gettime = vm_gettime;
 	vmprim.vm_muxadd = vm_muxadd;
 	vmprim.vm_muxdel = vm_muxdel;
+	vmprim.vm_muxmod = vm_muxmod;
 	vmprim.vm_muxwait = vm_muxwait;
 	vmprim.vm_sleep = vm_sleep;
 

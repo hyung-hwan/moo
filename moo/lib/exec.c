@@ -107,7 +107,7 @@
 #	define __PRIMITIVE_NAME__ (&__FUNCTION__[4])
 #endif
 
-static void signal_io_semaphore (moo_t* moo, int mask, void* ctx);
+static void signal_io_semaphore (moo_t* moo, moo_ooi_t mask, void* ctx);
 static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_ooi_t nargs);
 
 /* ------------------------------------------------------------------------- */
@@ -788,32 +788,70 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 		sem->io_index = MOO_SMOOI_TO_OOP(-1);
 		moo->sem_io_count--;
 	}
-MOO_DEBUG1 (moo, "ADDED TO SEM IO => sem_io_count => %d\n", (int)moo->sem_io_count);
+
+MOO_DEBUG3 (moo, "ADDED TO SEM IO => sem_io_count %d handle %d index %d\n", (int)moo->sem_io_count, (int)MOO_OOP_TO_SMOOI(sem->io_handle), (int)MOO_OOP_TO_SMOOI(sem->io_index));
 	return n;
 }
 
-static void delete_from_sem_io (moo_t* moo, moo_ooi_t index)
+static MOO_INLINE int mod_in_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 {
-	moo_oop_semaphore_t sem, lastsem;
+	return moo->vmprim.vm_muxmod (moo, sem);
+}
+
+static int delete_from_sem_io (moo_t* moo, moo_ooi_t index)
+{
+	moo_oop_semaphore_t sem;
+	int x;
 
 	sem = moo->sem_io[index];
+	MOO_ASSERT (moo, index == MOO_OOP_TO_SMOOI(sem->io_index));
+
 	moo_pushtmp (moo, (moo_oop_t*)&sem);
-	moo->vmprim.vm_muxdel (moo, sem); 
+	x = moo->vmprim.vm_muxdel (moo, sem); 
 	moo_poptmp (moo);
+	if (x <= -1) 
+	{
+		MOO_DEBUG2 (moo, "Failed to delete IO semaphore at index %zd on handle %zd\n", index, MOO_OOP_TO_SMOOI(sem->io_handle));
+		return -1;
+	}
+
+	MOO_DEBUG2 (moo, "Deleted IO semaphore at index %zd on handle %zd\n", index, MOO_OOP_TO_SMOOI(sem->io_handle));
 	sem->io_index = MOO_SMOOI_TO_OOP(-1);
 
 	moo->sem_io_count--;
 	if (moo->sem_io_count > 0 && index != moo->sem_io_count)
 	{
-		/* move the last item to the deletion position */
+		moo_oop_semaphore_t lastsem;
+
+		/* move the last item to the deletion position for compaction */
 		lastsem = moo->sem_io[moo->sem_io_count];
 		lastsem->io_index = MOO_SMOOI_TO_OOP(index);
 		moo->sem_io[index] = lastsem;
+
+		moo_pushtmp (moo, (moo_oop_t*)&lastsem);
+		x = moo->vmprim.vm_muxmod (moo, lastsem);
+		moo_poptmp (moo);
+
+		if (x <= -1)
+		{
+			/* unfortunately, i can't roll back gracefully. i'll set the deleted slot to nil */
+			MOO_LOG3 (moo, MOO_LOG_WARN, "Warning - IO sempahore migration failure from %zd to %zd on handle %zd - expect memory waste\n", moo->sem_io_count, MOO_OOP_TO_SMOOI(lastsem->io_index), MOO_OOP_TO_SMOOI(lastsem->io_handle));
+
+			lastsem->io_index = MOO_SMOOI_TO_OOP(moo->sem_io_count);
+			moo->sem_io[moo->sem_io_count] = lastsem;
+			moo->sem_io_count++;
+			moo->sem_io[index] = (moo_oop_semaphore_t)moo->_nil;
+		}
+		else
+		{
+			MOO_DEBUG3 (moo, "Migrated IO semaphore from index %zd to %zd on handle %zd\n", moo->sem_io_count, MOO_OOP_TO_SMOOI(lastsem->io_index), MOO_OOP_TO_SMOOI(lastsem->io_handle));
+		}
 	}
+
+	return 0;
 }
 
-
-static void signal_io_semaphore (moo_t* moo, int mask, void* ctx)
+static void signal_io_semaphore (moo_t* moo, moo_ooi_t mask, void* ctx)
 {
 	moo_oow_t sem_io_index = (moo_oow_t)ctx;
 
@@ -2071,7 +2109,7 @@ static moo_pfrc_t pf_process_resume (moo_t* moo, moo_ooi_t nargs)
 
 	resume_process (moo, (moo_oop_process_t)rcv); /* TODO: error check */
 
-	/* keep the receiver in the stack top */
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -2087,7 +2125,7 @@ static moo_pfrc_t pf_process_terminate (moo_t* moo, moo_ooi_t nargs)
 
 	terminate_process (moo, (moo_oop_process_t)rcv);
 
-	/* keep the receiver in the stack top */
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -2101,7 +2139,7 @@ static moo_pfrc_t pf_process_yield (moo_t* moo, moo_ooi_t nargs)
 
 	yield_process (moo, (moo_oop_process_t)rcv);
 
-	/* keep the receiver in the stack top */
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -2115,7 +2153,7 @@ static moo_pfrc_t pf_process_suspend (moo_t* moo, moo_ooi_t nargs)
 
 	suspend_process (moo, (moo_oop_process_t)rcv);
 
-	/* keep the receiver in the stack top */
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -2125,11 +2163,15 @@ static moo_pfrc_t pf_semaphore_signal (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo,rcv) != moo->_semaphore) return MOO_PF_FAILURE;
+	if (MOO_CLASSOF(moo,rcv) != moo->_semaphore) 
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EMSGRCV);
+		return MOO_PF_SUCCESS;
+	}
 
 	signal_semaphore (moo, (moo_oop_semaphore_t)rcv);
 
-	/* keep the receiver in the stack top */
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -2139,11 +2181,15 @@ static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo,rcv) != moo->_semaphore) return MOO_PF_FAILURE;
+	if (MOO_CLASSOF(moo,rcv) != moo->_semaphore) 
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EMSGRCV);
+		return MOO_PF_SUCCESS;
+	}
 
 	await_semaphore (moo, (moo_oop_semaphore_t)rcv);
 
-	/* keep the receiver in the stack top */
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -2226,7 +2272,7 @@ static moo_pfrc_t pf_processor_add_timed_semaphore (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t __processor_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, int mask)
+static moo_pfrc_t __processor_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_ooi_t mask)
 {
 	moo_oop_t rcv, fd;
 	moo_oop_semaphore_t sem;
@@ -2237,21 +2283,55 @@ static moo_pfrc_t __processor_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, int
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 
-	if (rcv != (moo_oop_t)moo->processor || 
-	    MOO_CLASSOF(moo,sem) != moo->_semaphore || 
-	    !MOO_OOP_IS_SMOOI(fd)) return MOO_PF_FAILURE;
-
-	if (MOO_OOP_IS_SMOOI(sem->io_index) && 
-	    sem->io_index != MOO_SMOOI_TO_OOP(-1))
+	if (rcv != (moo_oop_t)moo->processor)
 	{
-		/* remove it if it's already added for IO */
-		delete_from_sem_io (moo, MOO_OOP_TO_SMOOI(sem->io_index));
-		MOO_ASSERT (moo, sem->io_index == MOO_SMOOI_TO_OOP(-1));
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EMSGRCV);
+		return MOO_PF_SUCCESS;
 	}
 
-	sem->io_handle = fd;
-	sem->io_mask = MOO_SMOOI_TO_OOP(mask);
-	if (add_to_sem_io (moo, sem) <= -1) return MOO_PF_HARD_FAILURE; /*TODO: let it return SUCESS but SETRET(error()); */
+	if (MOO_CLASSOF(moo,sem) != moo->_semaphore || !MOO_OOP_IS_SMOOI(fd))
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_SUCCESS;
+	}
+
+	if (MOO_OOP_IS_SMOOI(sem->io_index) && sem->io_index != MOO_SMOOI_TO_OOP(-1) && sem->io_handle == fd)
+	{
+		moo_ooi_t old_mask;
+
+		old_mask = MOO_OOP_TO_SMOOI(sem->io_mask);
+		if (old_mask != mask)
+		{
+			sem->io_mask = MOO_SMOOI_TO_OOP(mask);
+			if (mod_in_sem_io (moo, sem) <= -1) 
+			{
+				sem->io_mask = MOO_SMOOI_TO_OOP(old_mask);
+				MOO_STACK_SETRETTOERRNUM (moo, nargs);
+				return MOO_PF_SUCCESS;
+			}
+		}
+	}
+	else
+	{
+		if (MOO_OOP_IS_SMOOI(sem->io_index) && sem->io_index != MOO_SMOOI_TO_OOP(-1))
+		{
+			/* remove it if it's already added for IO */
+			if (delete_from_sem_io (moo, MOO_OOP_TO_SMOOI(sem->io_index)) <= -1)
+			{
+				MOO_STACK_SETRETTOERRNUM (moo, nargs);
+				return MOO_PF_SUCCESS;
+			}
+			MOO_ASSERT (moo, sem->io_index == MOO_SMOOI_TO_OOP(-1));
+		}
+
+		sem->io_handle = fd;
+		sem->io_mask = MOO_SMOOI_TO_OOP(mask);
+		if (add_to_sem_io (moo, sem) <= -1) 
+		{
+			MOO_STACK_SETRETTOERRNUM (moo, nargs);
+			return MOO_PF_SUCCESS;
+		}
+	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
 	return MOO_PF_SUCCESS;
@@ -2287,8 +2367,17 @@ static moo_pfrc_t pf_processor_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 /* TODO: remove a semaphore from IO handler if it's registered...
  *       remove a semaphore from XXXXXXXXXXXXXX */
 
-	if (rcv != (moo_oop_t)moo->processor) return MOO_PF_FAILURE;
-	if (MOO_CLASSOF(moo,sem) != moo->_semaphore) return MOO_PF_FAILURE;
+	if (rcv != (moo_oop_t)moo->processor)
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EMSGRCV);
+		return MOO_PF_SUCCESS;
+	}
+
+	if (MOO_CLASSOF(moo,sem) != moo->_semaphore) 
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_SUCCESS;
+	}
 
 	if (MOO_OOP_IS_SMOOI(sem->heap_index) && 
 	    sem->heap_index != MOO_SMOOI_TO_OOP(-1))
@@ -2301,7 +2390,12 @@ static moo_pfrc_t pf_processor_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 	if (MOO_OOP_IS_SMOOI(sem->io_index) &&
 	    sem->io_index != MOO_SMOOI_TO_OOP(-1))
 	{
-		delete_from_sem_io (moo, MOO_OOP_TO_SMOOI(sem->io_index));
+		if (delete_from_sem_io (moo, MOO_OOP_TO_SMOOI(sem->io_index)) <= -1)
+		{
+			MOO_STACK_SETRETTOERRNUM (moo, nargs);
+			return MOO_PF_SUCCESS;
+		}
+
 		MOO_ASSERT (moo, sem->io_index == MOO_SMOOI_TO_OOP(-1));
 	}
 
