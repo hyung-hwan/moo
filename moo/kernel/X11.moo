@@ -145,12 +145,8 @@ class X11.ExposeEvent(X11.Event)
 
 class X11.WindowEvent(X11.Event)
 {
+	dcl width height.
 }
-
-class X11.FrameEvent(X11.Event)
-{
-}
-
 
 ## ---------------------------------------------------------------------------
 ## Graphics Context
@@ -273,7 +269,7 @@ class X11.Canvas(Component)
 class X11.WindowedComponent(Component) from 'x11.win'
 {
 	dcl(#class) geom.
-	dcl wid.
+	dcl wid bounds.
 	
 	method(#primitive) _get_window_dwatom.
 	method(#primitive) _get_window_id.
@@ -284,6 +280,11 @@ class X11.WindowedComponent(Component) from 'x11.win'
 	
 	method wid { ^self.wid }
 
+	method initialize
+	{
+		self.bounds := X11.Rectangle new.
+	}
+
 	method(#class) new: parent
 	{
 		^(super new) __open_on_window: parent
@@ -292,7 +293,7 @@ class X11.WindowedComponent(Component) from 'x11.win'
 	method __open_on_window: parent
 	{
 		| id disp |
-		
+
 		disp := parent display.
 
 		wid := self _make_window (disp cid, 5, 5, 300, 300, parent wid).
@@ -308,6 +309,8 @@ class X11.WindowedComponent(Component) from 'x11.win'
 		}.
 
 		disp addWindow: self.
+
+		self _get_window_geometry (self.bounds).
 		self windowOpened.
 	}
 
@@ -330,15 +333,14 @@ class X11.WindowedComponent(Component) from 'x11.win'
 
 	method bounds
 	{
-		| rect |
-		rect := X11.Rectangle new.
-		self _get_window_geometry (rect).
-		^rect.
+		self _get_window_geometry (self.bounds).
+		^self.bounds
 	}
 	
 	method bounds: rect
 	{
 		self _set_window_geometry (rect).
+		self _get_window_geometry (self.bounds). ## To update bounds
 	}
 
 	method windowOpened
@@ -526,7 +528,7 @@ extend X11
 			at: X11.LLEvent.ENTER_NOTIFY      put: #__handle_notify:;
 			at: X11.LLEvent.LEAVE_NOTIFY      put: #__handle_notify:;
 			at: X11.LLEvent.EXPOSE            put: #__handle_expose:;
-			at: X11.LLEvent.CONFIGURE_NOTIFY  put: #__handle_configure_notify;
+			at: X11.LLEvent.CONFIGURE_NOTIFY  put: #__handle_configure_notify:;
 			at: X11.LLEvent.CLIENT_MESSAGE    put: #__handle_client_message:.
 	}
 
@@ -575,7 +577,7 @@ extend X11
 				ongoing := true.
 				while (self.windows size > 0) 
 				{
-'Waiting for X11 event...' dump.
+###'Waiting for X11 event...' dump.
 					self.event_loop_sem wait.
 					if (ongoing not) { break }.
 
@@ -793,7 +795,23 @@ extend X11
 		} xcb_configure_notify_event_t;
 		*)
 
-		
+		| wid window bounds width height |
+
+		## type := System _getUint8(event, 0) bitAnd: 16r7F. ## lower 7 bits of response_type
+		wid := System _getUint32(event, 4). ## event
+		window := self.windows at: wid.
+
+		if (window notError)
+		{
+			width := System _getUint16(event, 20).
+			height := System _getUint16(event, 22).
+			bounds := window bounds.
+			if (bounds width ~= width or: [bounds height ~= height]) { window windowResized }.
+		}
+		else
+		{
+			System logNl: ('Configure notify event on unknown window - ' & wid asString).
+		}
 	}
 
 	method __handle_client_message: event
@@ -872,16 +890,25 @@ extend X11
 
 class MyButton(X11.Button)
 {
+	method windowOpened
+	{
+		super windowOpened.
+		self repaint.
+	}
+
 	method expose: event
 	{
-|gc|
 		super expose: event.
+		self repaint.
+	}
 
-	'XXXXXXXXXXXXXXXXXXXXXXXXXXx' dump.
-gc := X11.GC new: self.	
-gc foreground: 16rFF8877.	
-gc _fillRect(0, 0, 50, 50).
-gc close.
+	method repaint
+	{
+		|gc|
+		gc := X11.GC new: self.
+		gc foreground: 16rFF8877.
+		gc _fillRect(0, 0, 50, 50).
+		gc close.
 	}
 }
 
@@ -893,9 +920,8 @@ class MyFrame(X11.FrameWindow)
 
 	method windowOpened
 	{
-		
 		super windowOpened.
-		
+
 		if (self.gc isNil)
 		{
 			self.gc := X11.GC new: self.
@@ -907,6 +933,8 @@ self.gc _drawRect(100, 100, 200, 200).
 		}.
 		
 		self.b1 := MyButton new: self.
+
+		self windowResized.
 	}
 
 	method windowClosing
@@ -919,28 +947,32 @@ self.gc _drawRect(100, 100, 200, 200).
 		}*)
 	}
 
-	method expose: event
+	method windowResized
 	{
+		| rect |
 
-		| rect | 
-
-		super expose: event.
-		
-		(*
-		('EXPOSE....' & (self.id asString) & ' ' & (event x asString) & ' ' & (event y asString) & ' ' & (event width asString) & ' ' & (event height asString))  dump.
-		
-self.gc foreground: 2.	
-##self.gc drawLine: (10@20) to: (30@40).
-self.gc _drawLine(10, 20, 300, 400).
-self.gc _drawRect(10, 20, 30, 40).
-self.gc foreground: 20.
-self.gc _drawRect(100, 100, 200, 200).*)
+		super windowResized.
 
 		rect := self bounds.
 		rect x: 0; y: 0; height: ((rect height) quo: 2); width: ((rect width) - 2).
 		self.b1 bounds: rect;
 	}
+
+	method expose: event
+	{
+		super expose: event.
+		(*
+		('EXPOSE....' & (self.id asString) & ' ' & (event x asString) & ' ' & (event y asString) & ' ' & (event width asString) & ' ' & (event height asString))  dump.
+		
+self.gc foreground: 2.
+##self.gc drawLine: (10@20) to: (30@40).
+self.gc _drawLine(10, 20, 300, 400).
+self.gc _drawRect(10, 20, 30, 40).
+self.gc foreground: 20.
+self.gc _drawRect(100, 100, 200, 200).*)
+	}
 }
+
 
 
 

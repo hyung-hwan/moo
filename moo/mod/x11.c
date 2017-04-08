@@ -131,8 +131,6 @@ static moo_pfrc_t pf_disconnect (moo_t* moo, moo_ooi_t nargs)
 
 	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
-	MOO_DEBUG1 (moo, "<x11.disconnect> %p\n", x11->c);
-
 	if (x11->curevt) 
 	{
 		free (x11->curevt); 
@@ -153,7 +151,6 @@ static moo_pfrc_t pf_get_fd (moo_t* moo, moo_ooi_t nargs)
 	x11_t* x11;
 
 	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
-	MOO_DEBUG1 (moo, "<x11.get_fd> %p\n", x11->c);
 
 	if (x11->c)
 	{
@@ -179,7 +176,6 @@ static moo_pfrc_t pf_getevent (moo_t* moo, moo_ooi_t nargs)
 	int e;
 
 	x11 = (x11_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
-	MOO_DEBUG1 (moo, "<x11.getevent> %p\n", x11->c);
 
 	evt = xcb_poll_for_event(x11->c);
 	if (x11->curevt) free (x11->curevt); 
@@ -210,7 +206,7 @@ static moo_pfrc_t pf_getevent (moo_t* moo, moo_ooi_t nargs)
 	else if ((e = xcb_connection_has_error(x11->c)))
 	{
 		/* TODO: to be specific about the error */
-MOO_DEBUG1 (moo, "XCB CONNECTION ERROR %d\n", e);
+		MOO_DEBUG1 (moo, "<x11.getevent> Error detected while getting an event - %d\n", e);
 		MOO_STACK_SETRETTOERRNUM (moo, nargs);
 	}
 	else
@@ -566,8 +562,6 @@ static moo_pfrc_t pf_win_make (moo_t* moo, moo_ooi_t nargs)
 	xcb_window_t parent;
 	xcb_screen_t* screen;
 
-MOO_DEBUG0 (moo, "<x11.win._make> %p\n");
-
 	win = (x11_win_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
 	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* connection - SmallPointer (xcb_connection_t*) */
@@ -617,10 +611,11 @@ MOO_DEBUG0 (moo, "<x11.win._make> %p\n");
 	            XCB_EVENT_MASK_BUTTON_RELEASE |
 	            /*XCB_EVENT_MASK_BUTTON_MOTION |*/
 	            XCB_EVENT_MASK_EXPOSURE |
+	            XCB_EVENT_MASK_STRUCTURE_NOTIFY |
 	            /*XCB_EVENT_MASK_POINTER_MOTION |*/
 	            XCB_EVENT_MASK_ENTER_WINDOW |
-	            XCB_EVENT_MASK_LEAVE_WINDOW |
-	            XCB_EVENT_MASK_VISIBILITY_CHANGE;
+	            XCB_EVENT_MASK_LEAVE_WINDOW/* |
+	            XCB_EVENT_MASK_VISIBILITY_CHANGE */;
 	xcb_create_window (
 		c,
 		XCB_COPY_FROM_PARENT,          /* depth */
