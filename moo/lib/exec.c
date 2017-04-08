@@ -834,8 +834,8 @@ static int delete_from_sem_io (moo_t* moo, moo_ooi_t index)
 
 		if (x <= -1)
 		{
-			/* unfortunately, i can't roll back gracefully. i'll set the deleted slot to nil */
-			MOO_LOG3 (moo, MOO_LOG_WARN, "Warning - IO sempahore migration failure from %zd to %zd on handle %zd - expect memory waste\n", moo->sem_io_count, MOO_OOP_TO_SMOOI(lastsem->io_index), MOO_OOP_TO_SMOOI(lastsem->io_handle));
+			/* unfortunately, i can't roll back gracefully. i nullify the delete slot instead of compaction */
+			MOO_LOG3 (moo, MOO_LOG_WARN, "Warning - IO sempahore migration failure from %zd to %zd on handle %zd - expect VM memory waste\n", moo->sem_io_count, MOO_OOP_TO_SMOOI(lastsem->io_index), MOO_OOP_TO_SMOOI(lastsem->io_handle));
 
 			lastsem->io_index = MOO_SMOOI_TO_OOP(moo->sem_io_count);
 			moo->sem_io[moo->sem_io_count] = lastsem;
@@ -862,6 +862,12 @@ static void signal_io_semaphore (moo_t* moo, moo_ooi_t mask, void* ctx)
 		moo_oop_process_t proc;
 
 		sem = moo->sem_io[sem_io_index];
+		if ((moo_oop_t)sem == moo->_nil) 
+		{
+			/* it's a nullified slot for migration failure in delete_from_sem_io() */
+			goto invalid_semaphore;
+		}
+
 		proc = signal_semaphore (moo, sem);
 
 		if (moo->processor->active == moo->nil_process && (moo_oop_t)proc != moo->_nil)
@@ -880,6 +886,7 @@ static void signal_io_semaphore (moo_t* moo, moo_ooi_t mask, void* ctx)
 	}
 	else
 	{
+	invalid_semaphore:
 		MOO_LOG1 (moo, MOO_LOG_WARN, "Warning - Invalid semaphore index %zu\n", sem_io_index);
 	}
 }
