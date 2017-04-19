@@ -326,6 +326,7 @@ typedef enum moo_obj_type_t moo_obj_type_t;
  *           when full definition is available, it's set to 2.
  *   moved: 0 or 1. used by GC. internal use only.
  *   ngc: 0 or 1, used by GC. internal use only.
+ *   rdonly: 0 or 1. indicates that an object is immutable.
  *   trailer: 0 or 1. indicates that there are trailing bytes
  *            after the object payload. internal use only.
  *
@@ -360,6 +361,7 @@ typedef enum moo_obj_type_t moo_obj_type_t;
 #define MOO_OBJ_FLAGS_KERNEL_BITS  2
 #define MOO_OBJ_FLAGS_MOVED_BITS   1
 #define MOO_OBJ_FLAGS_NGC_BITS     1
+#define MOO_OBJ_FLAGS_RDONLY_BITS  1
 #define MOO_OBJ_FLAGS_TRAILER_BITS 1
 
 #define MOO_OBJ_FLAGS_TYPE_SHIFT    (MOO_OBJ_FLAGS_UNIT_BITS    + MOO_OBJ_FLAGS_UNIT_SHIFT)
@@ -367,7 +369,8 @@ typedef enum moo_obj_type_t moo_obj_type_t;
 #define MOO_OBJ_FLAGS_EXTRA_SHIFT   (MOO_OBJ_FLAGS_KERNEL_BITS  + MOO_OBJ_FLAGS_KERNEL_SHIFT)
 #define MOO_OBJ_FLAGS_KERNEL_SHIFT  (MOO_OBJ_FLAGS_MOVED_BITS   + MOO_OBJ_FLAGS_MOVED_SHIFT)
 #define MOO_OBJ_FLAGS_MOVED_SHIFT   (MOO_OBJ_FLAGS_NGC_BITS     + MOO_OBJ_FLAGS_NGC_SHIFT)
-#define MOO_OBJ_FLAGS_NGC_SHIFT     (MOO_OBJ_FLAGS_TRAILER_BITS + MOO_OBJ_FLAGS_TRAILER_SHIFT)
+#define MOO_OBJ_FLAGS_NGC_SHIFT     (MOO_OBJ_FLAGS_RDONLY_BITS  + MOO_OBJ_FLAGS_RDONLY_SHIFT)
+#define MOO_OBJ_FLAGS_RDONLY_SHIFT  (MOO_OBJ_FLAGS_TRAILER_BITS + MOO_OBJ_FLAGS_TRAILER_SHIFT)
 #define MOO_OBJ_FLAGS_TRAILER_SHIFT (0)
 
 #define MOO_OBJ_GET_FLAGS_TYPE(oop)       MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_TYPE_SHIFT,    MOO_OBJ_FLAGS_TYPE_BITS)
@@ -376,6 +379,7 @@ typedef enum moo_obj_type_t moo_obj_type_t;
 #define MOO_OBJ_GET_FLAGS_KERNEL(oop)     MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_KERNEL_SHIFT,  MOO_OBJ_FLAGS_KERNEL_BITS)
 #define MOO_OBJ_GET_FLAGS_MOVED(oop)      MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_MOVED_SHIFT,   MOO_OBJ_FLAGS_MOVED_BITS)
 #define MOO_OBJ_GET_FLAGS_NGC(oop)        MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_NGC_SHIFT,     MOO_OBJ_FLAGS_NGC_BITS)
+#define MOO_OBJ_GET_FLAGS_RDONLY(oop)     MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_RDONLY_SHIFT,  MOO_OBJ_FLAGS_RDONLY_BITS)
 #define MOO_OBJ_GET_FLAGS_TRAILER(oop)    MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_TRAILER_SHIFT, MOO_OBJ_FLAGS_TRAILER_BITS)
 
 #define MOO_OBJ_SET_FLAGS_TYPE(oop,v)     MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_TYPE_SHIFT,    MOO_OBJ_FLAGS_TYPE_BITS,     v)
@@ -384,6 +388,7 @@ typedef enum moo_obj_type_t moo_obj_type_t;
 #define MOO_OBJ_SET_FLAGS_KERNEL(oop,v)   MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_KERNEL_SHIFT,  MOO_OBJ_FLAGS_KERNEL_BITS,   v)
 #define MOO_OBJ_SET_FLAGS_MOVED(oop,v)    MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_MOVED_SHIFT,   MOO_OBJ_FLAGS_MOVED_BITS,    v)
 #define MOO_OBJ_SET_FLAGS_NGC(oop,v)      MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_NGC_SHIFT,     MOO_OBJ_FLAGS_NGC_BITS,      v)
+#define MOO_OBJ_SET_FLAGS_RDONLY(oop,v)   MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_RDONLY_SHIFT,  MOO_OBJ_FLAGS_RDONLY_BITS,   v)
 #define MOO_OBJ_SET_FLAGS_TRAILER(oop,v)  MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_TRAILER_SHIFT, MOO_OBJ_FLAGS_TRAILER_BITS,  v)
 
 #define MOO_OBJ_GET_SIZE(oop) ((oop)->_size)
@@ -480,7 +485,7 @@ struct moo_set_t
 	moo_oop_oop_t bucket; /* Array */
 };
 
-#define MOO_CLASS_NAMED_INSTVARS 14
+#define MOO_CLASS_NAMED_INSTVARS 16
 typedef struct moo_class_t moo_class_t;
 typedef struct moo_class_t* moo_oop_class_t;
 struct moo_class_t
@@ -509,7 +514,10 @@ struct moo_class_t
 	moo_oop_set_t  mthdic[MOO_METHOD_TYPE_COUNT];      
 
 	moo_oop_set_t  nsdic; /* dictionary used for namespacing */
+	moo_oop_set_t  cdic; /* constant dictionary */
 	moo_oop_t      trsize; /* trailer size for new instances */
+
+	moo_oop_t      initv; /* instial values for new instances */
 
 	/* indexed part afterwards */
 	moo_oop_t      slot[1];   /* class instance variables and class variables. */
@@ -1273,14 +1281,15 @@ enum moo_synerrnum_t
 	MOO_SYNERR_CLASSCONTRA,     /* contradictory class */
 	MOO_SYNERR_CLASSNAMEINVAL,  /* wrong class name */
 	MOO_SYNERR_CLASSTRSIZE,     /* non-pointer class inheriting a superclass with trailer size set */
-	MOO_SYNERR_DCLBANNED,       /* #dcl not allowed */
+	MOO_SYNERR_VARDCLBANNED,    /* variable declaration not allowed */
 	MOO_SYNERR_MODIFIER,        /* modifier expected */
 	MOO_SYNERR_MODIFIERINVAL,   /* wrong modifier */
 	MOO_SYNERR_MODIFIERBANNED,  /* modifier not allowed */
 	MOO_SYNERR_MODIFIERDUPL,    /* duplicate modifier */
-	MOO_SYNERR_MTHNAME,         /* wrong method name */
+	MOO_SYNERR_MTHNAME,         /* method name expected */
 	MOO_SYNERR_MTHNAMEDUPL,     /* duplicate method name */
 	MOO_SYNERR_VARIADMTHINVAL,  /* invalid variadic method definition */
+	MOO_SYNERR_VARNAME,         /* variable name expected */
 	MOO_SYNERR_ARGNAMEDUPL,     /* duplicate argument name */
 	MOO_SYNERR_TMPRNAMEDUPL,    /* duplicate temporary variable name */
 	MOO_SYNERR_VARNAMEDUPL,     /* duplicate variable name */

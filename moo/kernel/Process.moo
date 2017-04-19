@@ -1,7 +1,7 @@
 
 class(#pointer) Process(Object)
 {
-	dcl initial_context current_context state sp prev next sem.
+	var initial_context, current_context, state, sp, prev, next, sem.
 
 	method new
 	{
@@ -99,7 +99,7 @@ class(#pointer) Process(Object)
 
 class Semaphore(Object)
 {
-	dcl count waiting_head waiting_tail heapIndex fireTimeSec fireTimeNsec ioIndex ioData ioMask.
+	var count, waiting_head, waiting_tail, heapIndex, fireTimeSec, fireTimeNsec, ioIndex, ioData, ioMask.
 
 	method(#class) forMutualExclusion
 	{
@@ -176,7 +176,7 @@ class Semaphore(Object)
 
 class SemaphoreHeap(Object)
 {
-	dcl arr size.
+	var arr, size.
 
 	method initialize
 	{
@@ -358,7 +358,7 @@ class SemaphoreHeap(Object)
 
 class ProcessScheduler(Object)
 {
-	dcl tally active runnable_head runnable_tail sem_heap.
+	var tally, active, runnable_head, runnable_tail, sem_heap.
 
 	method new
 	{

@@ -10,7 +10,7 @@ class _FFI(Object) from 'ffi'
 
 class FFI(Object)
 {
-	dcl name ffi funcs.
+	var name, ffi, funcs.
 
 	method(#class) new: aString
 	{

@@ -2,8 +2,8 @@
 
 class Mill(Object)
 {
-	dcl registrar.
-dcl obj.
+	var registrar.
+	var obj.
 
 	method initialize
 	{

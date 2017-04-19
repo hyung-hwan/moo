@@ -133,6 +133,15 @@ class Apex(nil)
 	method basicAt: index put: anObject
 	{
 		<primitive: #_basic_at_put>
+## TODO: proper error handling
+(*
+		if (primitiveError == error(generic))
+		{
+		}
+		else
+		{
+			self index: index outOfRange: (self basicSize).
+		}*)
 		self index: index outOfRange: (self basicSize).
 	}
 
@@ -428,6 +437,11 @@ class Apex(nil)
 	method notImplemented: method_name
 	{
 		^self class notImplemented: method_name
+	}
+	
+	method messageProhibited: method_name
+	{
+		^self class messageProhibited: method_name
 	}
 
 	method cannotExceptionizeError

@@ -4,7 +4,7 @@ class Magnitude(Object)
 
 class Association(Magnitude)
 {
-	dcl key value.
+	var key, value.
 
 	method(#class) key: key value: value
 	{

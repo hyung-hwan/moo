@@ -1,6 +1,6 @@
 class(#pointer) Context(Apex)
 {
-	dcl sender ip sp ntmprs.
+	var sender, ip, sp, ntmprs.
 
 	method sender
 	{
@@ -44,7 +44,7 @@ block context...
 
 class(#pointer) MethodContext(Context)
 {
-	dcl method receiver home origin.
+	var method, receiver, home, origin.
 
 	method pc
 	{
@@ -101,7 +101,7 @@ class(#pointer) MethodContext(Context)
 
 class(#pointer) BlockContext(Context)
 {
-	dcl nargs source home origin.
+	var nargs, source, home, origin.
 
 	method vargCount
 	{
@@ -328,8 +328,8 @@ class(#pointer) BlockContext(Context)
 
 class(#pointer) CompiledMethod(Object)
 {
-	## dcl owner name preamble preamble_data_1 preamble_data_2 ntmprs nargs code source.
-	dcl owner name preamble preamble_data_1 preamble_data_2 ntmprs nargs source.
+	## var owner, name, preamble, preamble_data_1, preamble_data_2, ntmprs, nargs, code, source.
+	var owner, name, preamble, preamble_data_1, preamble_data_2, ntmprs, nargs, source.
 
 	method preamble
 	{

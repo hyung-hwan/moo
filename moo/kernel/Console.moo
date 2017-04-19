@@ -1,7 +1,7 @@
 ## TODO: move Pointe to a separate file 
 class Point(Object)
 {
-	dcl x y.
+	var x, y.
 
 	method(#class) new
 	{

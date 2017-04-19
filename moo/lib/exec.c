@@ -1638,6 +1638,14 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 		moo->errnum = MOO_EINVAL;
 		return MOO_PF_FAILURE;
 	}
+
+	if (MOO_OBJ_GET_FLAGS_RDONLY(rcv))
+	{
+/* TODO: better error handlign */
+		moo->errnum = MOO_EPERM;
+		return MOO_PF_FAILURE;
+	}
+
 	pos = MOO_STACK_GETARG(moo, nargs, 0);
 	val = MOO_STACK_GETARG(moo, nargs, 1);
 

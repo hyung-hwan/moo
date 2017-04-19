@@ -4,7 +4,8 @@
 ##
 class(#pointer) Class(Apex)
 {
-	dcl spec selfspec superclass subclasses name modname instvars classvars classinstvars pooldics instmthdic classmthdic nsdic trsize.
+	var spec, selfspec, superclass, subclasses, name, modname, instvars.
+	var classvars, classinstvars, pooldics, instmthdic, classmthdic, nsdic, cdic, trsize, initv.
 
 	method(#class) basicNew
 	{

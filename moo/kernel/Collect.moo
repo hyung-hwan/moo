@@ -164,7 +164,7 @@ class(#byte) ByteArray(Collection)
 
 class Set(Collection)
 {
-	dcl tally bucket.
+	var tally, bucket.
 
 	method(#class) new: size
 	{
@@ -550,7 +550,7 @@ extend Apex
 
 class Link(Object)
 {
-	dcl prev next value.
+	var prev, next, value.
 	
 	method(#class) new: value
 	{
@@ -570,7 +570,7 @@ class Link(Object)
 
 class LinkedList(Collection)
 {
-	dcl first last tally.
+	var first, last, tally.
 
 	method initialize
 	{

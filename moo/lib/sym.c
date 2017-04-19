@@ -132,8 +132,8 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 		moo_oop_oop_t bucket;
 
 		/* TODO: make the growth policy configurable instead of growing
-			     it just before it gets full. The polcy can be grow it
-			     if it's 70% full */
+		         it just before it gets full. The polcy can be grow it
+		         if it's 70% full */
 
 		/* enlarge the symbol table before it gets full to
 		 * make sure that it has at least one free slot left

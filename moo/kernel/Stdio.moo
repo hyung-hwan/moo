@@ -1,7 +1,7 @@
 
 class Stdio(Object) from 'stdio'
 {
-	dcl(#class) in out err.
+	var(#class) in, out, err.
 
 	method(#primitive) open(name, mode).
 	method(#primitive) close.

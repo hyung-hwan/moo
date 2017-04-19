@@ -38,6 +38,12 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 	if (!ptr && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_NOGC))
 	{
 		moo_gc (moo);
+		MOO_LOG4 (moo, MOO_LOG_INFO,
+			"GC completed - current heap ptr %p limit %p size %zd free %zd\n", 
+			moo->curheap->ptr, moo->curheap->limit,
+			(moo_oow_t)(moo->curheap->limit - moo->curheap->base),
+			(moo_oow_t)(moo->curheap->limit - moo->curheap->ptr)
+		);
 		ptr = moo_allocheapmem (moo, moo->curheap, size);
 /* TODO: grow heap if ptr is still null. */
 	}
@@ -266,6 +272,32 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 			/* both the fixed part(named instance variables) and 
 			 * the variable part(indexed instance variables) are allowed. */
 			oop = moo_allocoopobj (moo, alloclen);
+			if (oop)
+			{
+				/* initialize named instance variables with default values */
+				if (_class->initv != moo->_nil)
+				{
+
+					moo_oow_t i = MOO_OBJ_GET_SIZE(_class->initv);
+
+				#if defined(MOO_SIMPLE_INITV)
+					while (i > 0)
+					{
+						--i;
+						((moo_oop_oop_t)oop)->slot[i] = ((moo_oop_oop_t)_class->initv)->slot[i];
+					}
+				#else
+					moo_pushtmp (moo, (moo_oop_t*)&oop); tmp_count++;
+					while (i > 0)
+					{
+						--i;
+/* TODO: deep copy the object so that the items can be modified without side-effects....  */
+						((moo_oop_oop_t)oop)->slot[i] = ((moo_oop_oop_t)_class->initv)->slot[i];
+					}
+					moo_poptmp (moo); tmp_count--;
+				#endif
+				}
+			}
 
 			MOO_ASSERT (moo, vptr == MOO_NULL);
 			/*

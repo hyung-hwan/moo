@@ -6,18 +6,18 @@ class X11(Object) from 'x11'
 {
 	(* The X11 class represents a X11 display *)
 
-	dcl(#class) default_display.
+	var(#class) default_display.
 
-	dcl cid.
-	dcl windows. ## all windows registered
+	var cid.
+	var windows. ## all windows registered
 
-	dcl event_loop_sem event_loop_proc.
-	dcl ll_event_blocks.
+	var event_loop_sem, event_loop_proc.
+	var ll_event_blocks.
 
-	dcl expose_event.
-	dcl key_event.
-	dcl mouse_event.
-	dcl mouse_wheel_event.
+	var expose_event.
+	var key_event.
+	var mouse_event.
+	var mouse_wheel_event.
 
 	method(#primitive) _connect.
 	method(#primitive) _disconnect.
@@ -35,7 +35,7 @@ class X11.Exception(System.Exception)
 
 class X11.Rectangle(Object)
 {
-	dcl x y width height.
+	var x, y, width, height.
 
 	method initialize
 	{
@@ -79,6 +79,7 @@ pooldic X11.LLEvent
 	LEAVE_NOTIFY      := 8.
 	EXPOSE            := 12.
 	VISIBILITY_NOTIFY := 15.
+	DESTROY_NOTIFY    := 17.
 	CONFIGURE_NOTIFY  := 22.
 	CLIENT_MESSAGE    := 33.
 }
@@ -87,36 +88,56 @@ class X11.Event(Object)
 {
 }
 
-class X11.InputEvent(X11.Event)
+
+class X11.KeyEvent(X11.Event)
 {
 }
 
-class X11.KeyEvent(X11.InputEvent)
+pooldic X11.MouseButton
 {
+	LEFT := 1.
+	MIDDLE := 2.
+	RIGHT := 3.
 }
 
-class X11.MouseEvent(X11.InputEvent)
+class X11.MouseEvent(X11.Event)
 {
-	dcl x y.
+	var x, y, button.
 
-	method x { ^self.x }
-	method y { ^self.y }
+	method x      { ^self.x }
+	method y      { ^self.y }
+	method button { ^self.button } ## X11.MouseButton
 
-	method x: x y: y
+	method initialize
+	{
+		self.x := 0.
+		self.y := 0.
+		self.button := 0.
+	}
+	
+	method x: x y: y button: button
 	{
 		self.x := x.
 		self.y := y.
+		self.button := button.
 	}
 }
 
-class X11.MouseWheelEvent(X11.InputEvent)
+class X11.MouseWheelEvent(X11.Event)
 {
-	dcl x y amount.
+	var x, y, amount.
 	
 	method x { ^self.x }
 	method y { ^self.y }
 	method amount { ^self.amount }
 
+	method initialize 
+	{
+		self.x := 0.
+		self.y := 0.
+		self.amount := 0.
+	}
+	
 	method x: x y: y amount: amount
 	{
 		self.x := x.
@@ -127,13 +148,21 @@ class X11.MouseWheelEvent(X11.InputEvent)
 
 class X11.ExposeEvent(X11.Event)
 {
-	dcl x y width height.
+	var x, y, width, height.
 
 	method x { ^self.x }
 	method y { ^self.y }
 	method width { ^self.width }
 	method height { ^self.height }
-	
+
+	method initialize
+	{
+		self.x := 0.
+		self.y := 0.
+		self.width := 0.
+		self.height := 0.
+	}
+
 	method x: x y: y width: width height: height
 	{
 		self.x := x.
@@ -141,11 +170,6 @@ class X11.ExposeEvent(X11.Event)
 		self.width := width.
 		self.height := height.
 	}
-}
-
-class X11.WindowEvent(X11.Event)
-{
-	dcl width height.
 }
 
 ## ---------------------------------------------------------------------------
@@ -163,7 +187,7 @@ pooldic X11.GCAttr
 
 class X11.GC(Object) from 'x11.gc'
 {
-	dcl window id.
+	var window, id.
 
 	method(#primitive) _make (display, window).
 	method(#primitive) _kill.
@@ -215,7 +239,7 @@ class X11.GC(Object) from 'x11.gc'
 
 class X11.Component(Object)
 {
-	dcl parent.
+	var parent.
 
 	method new
 	{
@@ -268,8 +292,8 @@ class X11.Canvas(Component)
 
 class X11.WindowedComponent(Component) from 'x11.win'
 {
-	dcl(#class) geom.
-	dcl wid bounds.
+	var(#class) geom.
+	var wid, bounds.
 	
 	method(#primitive) _get_window_dwatom.
 	method(#primitive) _get_window_id.
@@ -331,6 +355,11 @@ class X11.WindowedComponent(Component) from 'x11.win'
 		}
 	}
 
+	method cachedBounds
+	{
+		^self.bounds
+	}
+	
 	method bounds
 	{
 		self _get_window_geometry (self.bounds).
@@ -374,7 +403,7 @@ class X11.WindowedComponent(Component) from 'x11.win'
 	}
 	method mousePressed: event
 	{
-		('MOUSE PRESSED' & (self.wid asString) & ' ' & (event x asString) & ' ' & (event y asString))  dump.
+		('MOUSE PRESSED' & (self.wid asString) & ' ' & (event x asString) & ' ' & (event y asString) & ' ' & (event button asString))   dump.
 	}
 	method mouseReleased: event
 	{
@@ -388,7 +417,7 @@ class X11.WindowedComponent(Component) from 'x11.win'
 
 class X11.Container(WindowedComponent)
 {
-	dcl components.
+	var components.
 
 	method initialize
 	{
@@ -417,7 +446,7 @@ class X11.Container(WindowedComponent)
 
 class X11.FrameWindow(Container)
 {
-	dcl display.
+	var display.
 
 	method display { ^self.display }
 	method display: display { self.display := display }
@@ -528,6 +557,7 @@ extend X11
 			at: X11.LLEvent.ENTER_NOTIFY      put: #__handle_notify:;
 			at: X11.LLEvent.LEAVE_NOTIFY      put: #__handle_notify:;
 			at: X11.LLEvent.EXPOSE            put: #__handle_expose:;
+			at: X11.LLEvent.DESTROY_NOTIFY    put: #__handle_destroy_notify:;
 			at: X11.LLEvent.CONFIGURE_NOTIFY  put: #__handle_configure_notify:;
 			at: X11.LLEvent.CLIENT_MESSAGE    put: #__handle_client_message:.
 	}
@@ -583,12 +613,9 @@ extend X11
 
 					while ((event := self _get_event) notNil) 
 					{
-					## XCB_EXPOSE 12
-					## XCB_DESTROY_WINDOW 4
-('EVENT================>' & event asString) dump.
 						if (event isError)
 						{
-							 'Error has occurred in ....' dump.
+							System logNl: ('Error while getting a event from display ' & self.cid asString).
 							ongoing := false.
 							break.
 						}
@@ -638,7 +665,6 @@ extend X11
 		}
 		else
 		{
-('Performing ...' & mthname asString) dump.
 			^self perform (mthname, event).
 			##^self perform: mthname with: event.
 		}
@@ -698,6 +724,7 @@ extend X11
 	method __handle_button_event: event
 	{
 		(*
+			typedef uint8_t xcb_button_t;
 			typedef struct xcb_button_press_event_t {
 				uint8_t         response_type;
 				xcb_button_t    detail;  // uint8_t
@@ -731,16 +758,10 @@ extend X11
 			detail := event getUint8(1).
 			if (detail >= 1 and: [detail <= 3])
 			{
-				(*
 				self.mouse_event 
-					## TODO: encode detail also..
-					x: System _getUint16(event, 24)   ## event_x
-					y: System _getUint16(event, 26).  ## event_y
-				*)
-				self.mouse_event 
-					## TODO: encode detail also..
-					x: event getUint16(24)   ## event_x
-					y: event getUint16(26).  ## event_y
+					x: event getUint16(24)  ## event_x
+					y: event getUint16(26)  ## event_y
+					button: detail.
 				
 				if (type == X11.LLEvent.BUTTON_PRESS)
 				{
@@ -755,12 +776,6 @@ extend X11
 			{
 				if (type == X11.LLEvent.BUTTON_RELEASE)
 				{
-					(*
-					self.mouse_wheel_event
-						x: System _getUint16(event, 24)   ## event_x
-						y: System _getUint16(event, 26)   ## event_y
-						amount: (if (detail == 4) { -1 } else { 1 }).
-					*)
 					self.mouse_wheel_event
 						x: event getUint16(24)   ## event_x
 						y: event getUint16(26)   ## event_y
@@ -775,6 +790,33 @@ extend X11
 		}
 	}
 
+	method __handle_destroy_notify: event
+	{
+		(*
+		typedef struct xcb_destroy_notify_event_t {
+			uint8_t      response_type;
+			uint8_t      pad0;
+			uint16_t     sequence;
+			xcb_window_t event;
+			xcb_window_t window;
+		} xcb_destroy_notify_event_t;
+		*)
+
+		| wid window |
+
+		wid := System _getUint32(event, 4). ## event
+		window := self.windows at: wid.
+
+		if (window notError)
+		{
+			'WINDOW DESTROYED....................' dump.
+		}
+		else
+		{
+			System logNl: ('Destroy notify event on unknown window - ' & wid asString).
+		}
+	}
+	
 	method __handle_configure_notify: event
 	{
 		(*
@@ -805,7 +847,7 @@ extend X11
 		{
 			width := System _getUint16(event, 20).
 			height := System _getUint16(event, 22).
-			bounds := window bounds.
+			bounds := window cachedBounds. ## old bounds before resizing.
 			if (bounds width ~= width or: [bounds height ~= height]) { window windowResized }.
 		}
 		else
@@ -844,7 +886,6 @@ extend X11
 			dw := event getUint32(12). ## data.data32[0]
 			if (dw == window _get_window_dwatom)
 			{
-				## TODO: call close query callback???
 				window close.
 			}
 			
@@ -914,9 +955,9 @@ class MyButton(X11.Button)
 
 class MyFrame(X11.FrameWindow)
 {
-	dcl gc.
-	dcl b1.
-	dcl b2.
+	var gc.
+	var b1.
+	var b2.
 
 	method windowOpened
 	{

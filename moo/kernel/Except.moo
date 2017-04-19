@@ -6,7 +6,7 @@
 ##
 class Exception(Apex)
 {
-	dcl signalContext handlerContext messageText.
+	var signalContext, handlerContext, messageText.
 
 	method(#class) signal
 	{
@@ -383,6 +383,10 @@ class InvalidArgumentException(Exception)
 {
 }
 
+class ProhibitedMessageException(Exception)
+{
+}
+
 extend Apex
 {
 	method(#class) primitiveFailed
@@ -428,6 +432,11 @@ ctx := thisContext.
 		NotImplementedException signal: (method_name & ' not implemented by ' & (self name)).
 	}
 	
+	method(#class) messageProhibited: method_name
+	{
+		ProhibitedMessageException signal: (method_name & ' not allowed for ' & (self name)).
+	}
+
 	method(#class) cannotExceptionizeError
 	{
 ## todo: accept the object

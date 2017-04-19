@@ -44,9 +44,13 @@
  * PUSH_CONTEXT, PUSH_INTLIT, PUSH_INTLIT, SEND_BLOCK_COPY */
 #define MOO_USE_MAKE_BLOCK
 
+/* define this to limit the default values for instance variables
+ * to simple values like numbers or characters */
+#define MOO_SIMPLE_INITV
+
 #if !defined(NDEBUG)
 /* this is for gc debugging */
-/*#define MOO_DEBUG_GC*/
+#define MOO_DEBUG_GC
 #define MOO_DEBUG_COMPILER
 /*#define MOO_DEBUG_VM_PROCESSOR*/
 /*#define MOO_DEBUG_VM_EXEC*/
@@ -434,9 +438,6 @@ struct moo_compiler_t
 
 		moo_oop_class_t self_oop;
 		moo_oop_t super_oop; /* this may be nil. so the type is moo_oop_t */
-#ifdef MTHDIC
-		moo_oop_set_t mthdic_oop[2]; /* used when compiling a method definition */
-#endif
 		moo_oop_set_t pooldic_oop; /* used when compiling a pooldic definition */
 		moo_oop_set_t ns_oop;
 		moo_oocs_t fqn;
@@ -453,15 +454,23 @@ struct moo_compiler_t
 		moo_oocs_t modname; /* module name after 'from' */
 		moo_oow_t modname_capa;
 
-		/* instance variable, class variable, class instance variable */
-		moo_oocs_t vars[3]; 
-		moo_oow_t vars_capa[3];
+		/* instance variable, class variable, class instance variable 
+		 *   var[0] - named instance variables
+		 *   var[1] - class variables
+		 *   var[2] - class instance variables  */
+		struct
+		{
+			moo_oocs_t str;  /* long string containing all variables declared delimited by a space */
+			moo_oow_t  str_capa;
 
-		/* var_count, unlike vars above, includes superclass counts as well.
-		 * var_count[0] - number of named instance variables
-		 * var_count[1] - number of class variables
-		 * var_count[2] - number of class instance variables */
-		moo_oow_t var_count[3];
+			moo_oow_t count; /* the number of variables declared in this class only */
+			moo_oow_t total_count; /* the number of variables declared in this class and superclasses */
+
+			moo_oop_t* initv;
+			moo_oow_t initv_capa;
+			moo_oow_t initv_count;
+			moo_oow_t initv_total_count;
+		} var[3];
 
 		/* buffer to hold pooldic import declaration */
 		moo_oocs_t pooldic;
