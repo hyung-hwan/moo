@@ -280,22 +280,16 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 
 					moo_oow_t i = MOO_OBJ_GET_SIZE(_class->initv);
 
-				#if defined(MOO_SIMPLE_INITV)
+					/* [NOTE] i don't deep-copy initial values.
+					 *   if you change the contents of compound values like arrays,
+					 *   it affects subsequent instantiation of the class. 
+					 *   it's important that the compiler should mark compound initial
+					 *   values read-only. */   
 					while (i > 0)
 					{
 						--i;
 						((moo_oop_oop_t)oop)->slot[i] = ((moo_oop_oop_t)_class->initv)->slot[i];
 					}
-				#else
-					moo_pushtmp (moo, (moo_oop_t*)&oop); tmp_count++;
-					while (i > 0)
-					{
-						--i;
-/* TODO: deep copy the object so that the items can be modified without side-effects....  */
-						((moo_oop_oop_t)oop)->slot[i] = ((moo_oop_oop_t)_class->initv)->slot[i];
-					}
-					moo_poptmp (moo); tmp_count--;
-				#endif
 				}
 			}
 

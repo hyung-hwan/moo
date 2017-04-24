@@ -35,16 +35,8 @@ class X11.Exception(System.Exception)
 
 class X11.Rectangle(Object)
 {
-	var x, y, width, height.
+	var x := 0, y := 0, width := 0, height := 0.
 
-	method initialize
-	{
-		self.x := 0.
-		self.y := 0.
-		self.width := 0.
-		self.height := 0.
-	}
-	
 	method x { ^self.x }
 	method y { ^self.y }
 	method width { ^self.width }
@@ -178,7 +170,7 @@ class X11.ExposeEvent(X11.Event)
 pooldic X11.GCAttr
 {
 	(* see xcb/xproto.h *)
-	GC_FOREGROUND := 4. 
+	GC_FOREGROUND := 4.
 	GC_BACKGROUND := 8.
 	GC_LINE_WIDTH := 16.
 	GC_LINE_STYLE := 32.

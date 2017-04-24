@@ -44,10 +44,6 @@
  * PUSH_CONTEXT, PUSH_INTLIT, PUSH_INTLIT, SEND_BLOCK_COPY */
 #define MOO_USE_MAKE_BLOCK
 
-/* define this to limit the default values for instance variables
- * to simple values like numbers or characters */
-#define MOO_SIMPLE_INITV
-
 #if !defined(NDEBUG)
 /* this is for gc debugging */
 #define MOO_DEBUG_GC
@@ -468,8 +464,16 @@ struct moo_compiler_t
 
 			moo_oop_t* initv;
 			moo_oow_t initv_capa;
-			moo_oow_t initv_count;
-			moo_oow_t initv_total_count;
+			/* initv_count holds the index to the last variable with a 
+			 * default initial value defined in this class only plus one.
+			 * inheritance is handled by the compiler separately using
+			 * the reference to the superclass. so it doesn't include
+			 * the variables defined in the superclass chain.
+			 * for a definition: class ... { var a, b := 0, c },
+			 * initv_count is set to 2 while count is 3. totoal_count
+			 * will be 3 too if there is no variabled defined in the
+			 * superclass chain. */
+			moo_oow_t initv_count;  
 		} var[3];
 
 		/* buffer to hold pooldic import declaration */

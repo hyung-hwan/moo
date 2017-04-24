@@ -3204,12 +3204,8 @@ if super is variable-nonpointer, no instance variable is allowed.
 
 				GET_TOKEN (moo);
 
-				/* default value assignment. only a literal is allowed */
-			#if defined(MOO_SIMPLE_INITV)
+				/* [NOTE] default value assignment. only a literal is allowed */
 				lit = token_to_literal (moo, 1);
-			#else
-				lit = token_to_literal (moo, 0);
-			#endif
 				if (!lit) return -1;
 
 				/* set the initial value for the variable added above */
@@ -6224,7 +6220,7 @@ static int make_defined_class (moo_t* moo)
 	/* this function make a class object with no functions/methods */
 
 	moo_oop_t tmp;
-	moo_oow_t spec, self_spec;
+	moo_oow_t spec, self_spec, initv_count;
 	int just_made = 0;
 
 	spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.var[VAR_INSTANCE].total_count,  
@@ -6311,28 +6307,97 @@ static int make_defined_class (moo_t* moo)
 	if (!tmp) return -1;
 	moo->c->cls.self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_set_t)tmp;
 
-#if 0
-	if (moo->c->cls.var[VAR_INSTANCE].initv_total_count > 0)
+
+	/* create an array of default initial values for instance variables */
+	initv_count = moo->c->cls.var[VAR_INSTANCE].initv_count;
+	if (moo->c->cls.super_oop != moo->_nil && ((moo_oop_class_t)moo->c->cls.super_oop)->initv != moo->_nil)
 	{
-		moo_oow_t i;
+		initv_count += MOO_OBJ_GET_SIZE(((moo_oop_class_t)moo->c->cls.super_oop)->initv);
+	}
+	if (initv_count > 0)
+	{
+		moo_oow_t i, j = 0;
+
+		/* [NOTE]
+		 *  if some elements at the back of a class definition are lacking default values,
+		 *  initv_count is less than total_count. 
+		 *  in the following case(no inheritance for simplicity):
+		 *    class ... { var a, b := 10, c. } 
+		 *  initv_count is 1 whereas total_count is 3. */
+		MOO_ASSERT (moo, initv_count <= moo->c->cls.var[VAR_INSTANCE].total_count);
 
 		tmp = moo_instantiate (moo, moo->_array, MOO_NULL, moo->c->cls.var[VAR_INSTANCE].total_count);
 		if (!tmp) return -1;
-		for (i = 0; i < moo->c->cls.var[VAR_INSTANCE].initv_count; i++)
+
+		if (initv_count > moo->c->cls.var[VAR_INSTANCE].initv_count)
 		{
-			((moo_oop_oop_t)tmp)->slot[i] = moo->c->cls.var[VAR_INSTANCE].initv[i];
+			/* handle default values defined in the superclass chain.
+			 * i merge them into a single array for convenience and
+			 * efficiency of object instantiation by moo_instantiate(). 
+			 * it can avoid looking up superclasses upon instantiaion */
+			moo_oop_oop_t initv;
+			moo_oow_t super_count;
+
+			MOO_ASSERT (moo, moo->c->cls.super_oop != moo->_nil);
+			super_count = initv_count - moo->c->cls.var[VAR_INSTANCE].initv_count;
+			initv = (moo_oop_oop_t)((moo_oop_class_t)moo->c->cls.super_oop)->initv;
+			MOO_ASSERT (moo, MOO_CLASSOF(moo, initv) == moo->_array);
+			for (i = 0; i < super_count; i++)
+			{
+				((moo_oop_oop_t)tmp)->slot[j++] = initv->slot[i];
+			}
 		}
 
-		moo->c->cls.
+		for (i = 0; i < moo->c->cls.var[VAR_INSTANCE].initv_count; i++)
+		{
+			((moo_oop_oop_t)tmp)->slot[j++] = moo->c->cls.var[VAR_INSTANCE].initv[i];
+		}
+
+		moo->c->cls.self_oop->initv = tmp;
+	}
+
+	/* initialize class variables with default initial values */
+	initv_count = moo->c->cls.var[VAR_CLASS].initv_count;
+	if (initv_count > 0)
+	{
+		moo_oow_t i, j;
+		/* name instance variables and class instance variables are placed
+		 * in the front part. let's skip them */
+	#if 0
+		/* this part is almost identical to the actual code after #else
+		 * i keep this for demonstration purpose only */
+		j = MOO_CLASS_NAMED_INSTVARS + moo->c->cls.var[VAR_CLASSINST].total_count;
+		MOO_ASSERT (moo, j + initv_count < MOO_OBJ_GET_SIZE(moo->c->cls.self_oop));
+		for (i = 0; i < initv_count; i++) 
+		{
+			((moo_oop_oop_t)moo->c->cls.self_oop)->slot[j++] = moo->c->cls.var[VAR_CLASS].initv[i];
+		}
+	#else
+		j = moo->c->cls.var[VAR_CLASSINST].total_count;
+		for (i = 0; i < initv_count; i++) 
+		{
+			moo->c->cls.self_oop->slot[j++] = moo->c->cls.var[VAR_CLASS].initv[i];
+		}
+	#endif
+	}
+
+#if 0
+	/* create an array of default values for class instance variables */
+	initv_count = moo->c->cls.var[VAR_CLASSINST].initv_count;
+	if (moo->c->cls.super_oop != moo->_nil && ((moo_oop_class_t)moo->c->cls.super_oop)->initv_ci != moo->_nil)
+	{
+		initv_count += MOO_OBJ_GET_SIZE(((moo_oop_class_t)moo->c->cls.super_oop)->initv_ci);
 	}
 #endif
+
+/* TODO: class instance variables ... */
 
 	/* [NOTE] don't create a dictionary on the nsdic. keep it to be nil.
 	 *        add_nsdic_to_class() instantiates a dictionary if necessary.  */
 
 	/* [NOTE] don't set the trsize field yet here. */
 
-/* TODO: initialize more fields??? whatelse. */
+/* TODO: initialize more fields??? what else. */
 
 /* TODO: update the subclasses field of the superclass if it's not nil */
 
@@ -6659,14 +6724,6 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 		moo->c->cls.var[VAR_INSTANCE].total_count = MOO_CLASS_SPEC_NAMED_INSTVAR(spec);
 		moo->c->cls.var[VAR_CLASSINST].total_count = MOO_CLASS_SELFSPEC_CLASSINSTVAR(self_spec);
-
-		if (c->initv != moo->_nil)
-		{
-			MOO_ASSERT (moo, MOO_CLASSOF(moo, c->initv) == moo->_array);
-			moo->c->cls.var[VAR_INSTANCE].initv_total_count = MOO_OBJ_GET_SIZE(c->initv);
-		}
-
-		/*TODO: moo->c->cls.var[VAR_CLASSINST].total_initv_count =  */
 	}
 
 	GET_TOKEN (moo);
@@ -6693,7 +6750,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			ptr = pds->slot;
 			end = pds->slot + MOO_OBJ_GET_SIZE(pds);
 
-			/* this loop handles the pooldics string as if it's a pooldic import.
+			/* this loop handles the pooldic string as if it's a pooldic import.
 			 * see compile_class_level_variables() for mostly identical code except token handling */
 			do
 			{
@@ -6839,7 +6896,6 @@ static int compile_class_definition (moo_t* moo, int extend)
 		moo->c->cls.var[i].count = 0;
 		moo->c->cls.var[i].total_count = 0;
 		moo->c->cls.var[i].initv_count = 0;
-		moo->c->cls.var[i].initv_total_count = 0;
 
 		/* this reinitialization is needed because set_class_level_variable_initv()
 		 * doesn't fill the gap between the last inserted item and the new item inserted */
@@ -7035,11 +7091,10 @@ static int __compile_pooldic_definition (moo_t* moo)
 
 		GET_TOKEN (moo);
 
-	#if defined(MOO_SIMPLE_INITV)
-		lit = token_to_literal (moo, 1);
-	#else
+		/* [NOTE]
+		 *   values assigned to a pool dictinary member are not read-only
+		 *   unlike the default initial values defined in a class */
 		lit = token_to_literal (moo, 0);
-	#endif
 		if (!lit) return -1;
 
 		/* for this definition, #pooldic MyPoolDic { a := 10. b := 20 },
@@ -7142,7 +7197,7 @@ static int compile_stream (moo_t* moo)
 		}
 		else if (is_token_word(moo, VOCA_POOLDIC))
 		{
-			/* pooldic SharedPoolDic { #ABC := 20. #DEFG := 'ayz' } */
+			/* pooldic SharedPoolDic { ABC := 20. DEFG := 'ayz' } */
 			GET_TOKEN (moo);
 			if (compile_pooldic_definition(moo) <= -1) return -1;
 		}

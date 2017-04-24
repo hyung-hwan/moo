@@ -99,7 +99,15 @@ class(#pointer) Process(Object)
 
 class Semaphore(Object)
 {
-	var count, waiting_head, waiting_tail, heapIndex, fireTimeSec, fireTimeNsec, ioIndex, ioData, ioMask.
+	var count         :=   0, 
+	    waiting_head  := nil,
+	    waiting_tail  := nil,
+	    heapIndex     :=  -1,
+	    fireTimeSec   :=   0,
+	    fireTimeNsec  :=   0,
+	    ioIndex       :=  -1,
+	    ioData        := nil,
+	    ioMask        :=   0.
 
 	method(#class) forMutualExclusion
 	{
@@ -107,19 +115,6 @@ class Semaphore(Object)
 		sem := self new.
 		sem signal.
 		^sem
-	}
-
-	method initialize
-	{
-		self.count := 0.
-		
-		self.heapIndex := -1.
-		self.fireTimeSec := 0.
-		self.fireTimeNsec := 0.
-		
-		self.ioIndex := -1.
-		self.ioData := nil.
-		self.ioMask := 0.
 	}
 
 	## ==================================================================
