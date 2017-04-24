@@ -2545,21 +2545,30 @@ static int set_class_level_variable_initv (moo_t* moo, var_type_t var_type, moo_
 {
 	if (var_index >= moo->c->cls.var[var_type].initv_capa)
 	{
-		moo_oow_t newcapa, i;
+		moo_oow_t newcapa, oldcapa, i;
 		moo_oop_t* tmp;
 
+		oldcapa = moo->c->cls.var[var_type].initv_capa;
 		newcapa = MOO_ALIGN_POW2 ((var_index + 1), 32);
 		tmp = moo_reallocmem (moo, moo->c->cls.var[var_type].initv, newcapa * MOO_SIZEOF(moo_oop_t));
 		if (!tmp) return -1;
 
-		for (i = moo->c->cls.var[var_type].initv_capa; i < newcapa; i++) tmp[i] = moo->_nil;
+		/*for (i = moo->c->cls.var[var_type].initv_capa; i < newcapa; i++) tmp[i] = MOO_NULL;*/
+		MOO_MEMSET (&tmp[oldcapa], 0, (newcapa - oldcapa) * MOO_SIZEOF(moo_oop_t));
 
 		moo->c->cls.var[var_type].initv = tmp;
 		moo->c->cls.var[var_type].initv_capa = newcapa;
 	}
 
 	if (var_index >= moo->c->cls.var[var_type].initv_count) 
+	{
+		moo_oow_t i;
+
+		for (i = moo->c->cls.var[var_type].initv_count; i < var_index; i++) 
+			moo->c->cls.var[var_type].initv[i] = MOO_NULL;
+
 		moo->c->cls.var[var_type].initv_count = var_index + 1;
+	}
 
 	moo->c->cls.var[var_type].initv[var_index] = initv;
 	return 0;
@@ -4236,7 +4245,7 @@ struct arlit_info_t
 
 typedef struct arlit_info_t arlit_info_t;
 
-static int __read_array_literal (moo_t* moo, moo_oop_t* xlit)
+static int __read_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 {
 	moo_oop_t lit, a;
 	moo_oow_t i, saved_arlit_count;
@@ -4279,26 +4288,43 @@ static int __read_array_literal (moo_t* moo, moo_oop_t* xlit)
 			case MOO_IOTOK_NUMLIT:
 			case MOO_IOTOK_RADNUMLIT:
 				lit = string_to_num (moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT);
+				if (rdonly && lit && MOO_OOP_IS_POINTER(lit)) MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
 				break;
 
 			case MOO_IOTOK_SYMLIT:
+				/* moo_makesymbol() sets RDONLY on a symbol. */
 				lit = moo_makesymbol (moo, TOKEN_NAME_PTR(moo) + 1, TOKEN_NAME_LEN(moo) - 1);
 				break;
 
 			case MOO_IOTOK_STRLIT:
 				lit = moo_instantiate (moo, moo->_string, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
+				if (rdonly && lit)
+				{
+					MOO_ASSERT (moo, MOO_OOP_IS_POINTER(lit));
+					MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
+				}
 				break;
 
 			case MOO_IOTOK_BABRACK: /* #[ */
 				GET_TOKEN (moo);
 				if (__read_byte_array_literal (moo, &lit) <= -1) return -1;
+				if (rdonly)
+				{
+					MOO_ASSERT (moo, MOO_OOP_IS_POINTER(lit));
+					MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
+				}
 				break;
 
 			case MOO_IOTOK_APAREN: /* #( */
 				saved_arlit_count = moo->c->mth.arlit_count;
 /* TODO: get rid of recursion?? */
 				GET_TOKEN (moo);
-				if (__read_array_literal (moo, &lit) <= -1) return -1;
+				if (__read_array_literal (moo, rdonly, &lit) <= -1) return -1;
+				if (rdonly)
+				{
+					MOO_ASSERT (moo, lit && MOO_OOP_IS_POINTER(lit));
+					MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
+				}
 				moo->c->mth.arlit_count = saved_arlit_count;
 				break;
 
@@ -4351,7 +4377,7 @@ static int compile_byte_array_literal (moo_t* moo)
 	return 0;
 }
 
-static int read_array_literal (moo_t* moo, moo_oop_t* xlit)
+static int read_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 {
 	int x;
 	moo_oow_t saved_arlit_count;
@@ -4364,7 +4390,7 @@ static int read_array_literal (moo_t* moo, moo_oop_t* xlit)
 		return -1;
 	}
 	saved_arlit_count = moo->c->mth.arlit_count;
-	x = __read_array_literal (moo, xlit);
+	x = __read_array_literal (moo, rdonly, xlit);
 	moo->c->mth.arlit_count = saved_arlit_count;
 	moo->c->in_array = 0;
 
@@ -4378,7 +4404,7 @@ static int compile_array_literal (moo_t* moo)
 
 	MOO_ASSERT (moo, moo->c->mth.arlit_count == 0);
 
-	if (read_array_literal(moo, &lit) <= -1 ||
+	if (read_array_literal(moo, 0, &lit) <= -1 ||
 	    add_literal(moo, lit, &index) <= -1 ||
 	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 
@@ -6277,13 +6303,16 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 			MOO_ASSERT (moo, MOO_CLASSOF(moo, initv) == moo->_array);
 			for (i = 0; i < super_count; i++)
 			{
-				((moo_oop_oop_t)tmp)->slot[j++] = initv->slot[i];
+				if (initv->slot[i]) ((moo_oop_oop_t)tmp)->slot[j] = initv->slot[i];
+				j++;
 			}
 		}
 
 		for (i = 0; i < moo->c->cls.var[var_type].initv_count; i++)
 		{
-			((moo_oop_oop_t)tmp)->slot[j++] = moo->c->cls.var[var_type].initv[i];
+			if (moo->c->cls.var[var_type].initv[i])
+				((moo_oop_oop_t)tmp)->slot[j] = moo->c->cls.var[var_type].initv[i];
+			j++;
 		}
 
 		moo->c->cls.self_oop->initv[var_type] = tmp;
@@ -6384,9 +6413,11 @@ static int make_defined_class (moo_t* moo)
 	if (!tmp) return -1;
 	moo->c->cls.self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_set_t)tmp;
 
+MOO_DEBUG0 (moo, "!00000000000000000000\n");
 	/* store the default intial values for instance variables */
 	if (make_default_initial_values (moo, VAR_INSTANCE) <= -1) return -1;
 
+MOO_DEBUG0 (moo, "!111111111111111111111\n");
 	/* store the default intial values for class instance variables */
 	if (make_default_initial_values (moo, VAR_CLASSINST) <= -1) return -1;
 	if (moo->c->cls.self_oop->initv[VAR_CLASSINST] != moo->_nil)
@@ -6394,6 +6425,7 @@ static int make_defined_class (moo_t* moo)
 		moo_oow_t i, initv_count;
 		moo_oop_oop_t initv;
 
+MOO_DEBUG0 (moo, "!222222222222222222\n");
 		/* apply the default initial values for class instance variables to this class now */
 		initv = (moo_oop_oop_t)moo->c->cls.self_oop->initv[VAR_CLASSINST];
 		MOO_ASSERT (moo, MOO_CLASSOF(moo, initv) == moo->_array);
@@ -6907,7 +6939,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 static int compile_class_definition (moo_t* moo, int extend)
 {
 	int n;
-	moo_oow_t i, j;
+	moo_oow_t i;
 
 	/* reset the structure to hold information about a class to be compiled */
 	moo->c->cls.flags = 0;
@@ -6929,11 +6961,6 @@ static int compile_class_definition (moo_t* moo, int extend)
 		moo->c->cls.var[i].count = 0;
 		moo->c->cls.var[i].total_count = 0;
 		moo->c->cls.var[i].initv_count = 0;
-
-		/* this reinitialization is needed because set_class_level_variable_initv()
-		 * doesn't fill the gap between the last inserted item and the new item inserted */
-		for (j = 0; j < moo->c->cls.var[i].initv_capa; j++)
-			moo->c->cls.var[i].initv[j] = moo->_nil;
 	}
 
 	moo->c->cls.pooldic_count = 0;
@@ -7004,15 +7031,8 @@ static MOO_INLINE moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 		}
 
 		case MOO_IOTOK_SYMLIT:
-		{
-			moo_oop_t lit;
-			lit = moo_makesymbol (moo, TOKEN_NAME_PTR(moo) + 1, TOKEN_NAME_LEN(moo) - 1);
-			if (rdonly && lit)
-			{
-				MOO_ASSERT (moo, MOO_OOP_IS_POINTER(lit));
-				MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
-			}
-		}
+			/* a symbol is always set with RDONLY. no additional check is needed here */
+			return moo_makesymbol (moo, TOKEN_NAME_PTR(moo) + 1, TOKEN_NAME_LEN(moo) - 1);
 
 		case MOO_IOTOK_STRLIT:
 		{
@@ -7041,10 +7061,9 @@ static MOO_INLINE moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 		case MOO_IOTOK_APAREN: /* #( - array literal parenthesis */
 		{
 			moo_oop_t lit;
-			if (read_array_literal(moo, &lit) <= -1) return MOO_NULL;
+			if (read_array_literal(moo, rdonly, &lit) <= -1) return MOO_NULL;
 			if (rdonly)
 			{
-/* TODO: set inner elements of array to RDONLY as well */
 				MOO_ASSERT (moo, lit && MOO_OOP_IS_POINTER(lit));
 				MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
 			}
@@ -7052,7 +7071,7 @@ static MOO_INLINE moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 		}
 
 #if 0
-/* TODO: if a constant name like a pooldic element is specified  */
+/* TODO: if a constant name is specified (constant defined in a class)  */
 		case MOO_IOTOK_IDENT:
 		case MOO_IOTOK_IDENT_DOTTED:
 #endif
@@ -7269,8 +7288,8 @@ static void gc_compiler (moo_t* moo)
 		{
 			for (j = 0; j < moo->c->cls.var[i].initv_count; j++)
 			{
-				register moo_oop_t x = moo_moveoop (moo, moo->c->cls.var[i].initv[j]);
-				moo->c->cls.var[i].initv[j] = x;
+				register moo_oop_t x = moo->c->cls.var[i].initv[j];
+				if (x) moo->c->cls.var[i].initv[j] = moo_moveoop (moo, x);
 			}
 		}
 
