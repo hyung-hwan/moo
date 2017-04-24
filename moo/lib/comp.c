@@ -55,12 +55,12 @@ enum class_mod_t
 
 enum var_type_t
 {
-	/* NEVER Change the order and the value of 3 items below.
-	 * moo->c->cls.var relies on them. */
+	/* == NEVER CHANGE THIS ORDER OF 3 ITEMS BELOW ==
+	 * moo->c->cls.var and some iterations rely on them. */
 	VAR_INSTANCE   = 0,
-	VAR_CLASS      = 1,
-	VAR_CLASSINST  = 2,
-	/* NEVER Change the order and the value of 3 items above. */
+	VAR_CLASSINST  = 1,
+	VAR_CLASS      = 2,
+	/* == NEVER CHANGE THIS ORDER OF 3 ITEMS ABOVE == */
 
 	VAR_GLOBAL,
 	VAR_ARGUMENT,
@@ -2604,11 +2604,11 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 		 *  the loop here assumes that the class has the following
 		 *  fields in the order shown below:
 		 *    instvars
-		 *    classvars
 		 *    classinstvars
+		 *    classvars
 		 */
 		vv = &self->instvars;
-		for (index = VAR_INSTANCE; index <= VAR_CLASSINST; index++)
+		for (index = VAR_INSTANCE; index <= VAR_CLASS; index++)
 		{
 			v = vv[index];
 			hs.ptr = v->slot;
@@ -2632,7 +2632,7 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 	{
 		/* the class definition is not available yet.
 		 * find the variable in the compiler's own list */
-		for (index = VAR_INSTANCE; index <= VAR_CLASSINST; index++)
+		for (index = VAR_INSTANCE; index <= VAR_CLASS; index++)
 		{
 			if (find_word_in_string(&moo->c->cls.var[index].str, name, &pos) >= 0)
 			{
@@ -2656,7 +2656,7 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 		 *    classinstvars
 		 */
 		vv = &((moo_oop_class_t)super)->instvars;
-		for (index = VAR_INSTANCE; index <= VAR_CLASSINST; index++)
+		for (index = VAR_INSTANCE; index <= VAR_CLASS; index++)
 		{
 			v = vv[index];
 			hs.ptr = v->slot;
@@ -2701,6 +2701,11 @@ done:
 				pos += MOO_CLASS_SPEC_NAMED_INSTVAR(spec);
 				break;
 
+			case VAR_CLASSINST:
+				spec = MOO_OOP_TO_SMOOI(((moo_oop_class_t)super)->selfspec);
+				pos += MOO_CLASS_SELFSPEC_CLASSINSTVAR(spec);
+				break;
+
 			case VAR_CLASS:
 				/* [NOTE]
 				 *  no adjustment is needed.
@@ -2709,11 +2714,6 @@ done:
 				 *  the position returned here doesn't consider 
 				 *  class instance variables that can be potentially
 				 *  placed before the class variables. */
-				break;
-
-			case VAR_CLASSINST:
-				spec = MOO_OOP_TO_SMOOI(((moo_oop_class_t)super)->selfspec);
-				pos += MOO_CLASS_SELFSPEC_CLASSINSTVAR(spec);
 				break;
 		}
 	}
@@ -3824,17 +3824,6 @@ static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 					}
 					break;
 
-				case VAR_CLASS:
-					/* a class variable can be accessed by both instance methods and class methods */
-					MOO_ASSERT (moo, var->cls != MOO_NULL);
-					MOO_ASSERT (moo, MOO_CLASSOF(moo, var->cls) == moo->_class);
-
-					/* increment the position by the number of class instance variables
-					 * as the class variables are placed after the class instance variables */
-					var->pos += MOO_CLASS_NAMED_INSTVARS + 
-					            MOO_CLASS_SELFSPEC_CLASSINSTVAR(MOO_OOP_TO_SMOOI(var->cls->selfspec));
-					break;
-
 				case VAR_CLASSINST:
 					/* class instance variable can be accessed by only class methods */
 					if (moo->c->mth.type == MOO_METHOD_INSTANCE)
@@ -3848,6 +3837,17 @@ static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 					 * just an instance variriable. but these are located
 					 * after the named instance variables. */
 					var->pos += MOO_CLASS_NAMED_INSTVARS;
+					break;
+
+				case VAR_CLASS:
+					/* a class variable can be accessed by both instance methods and class methods */
+					MOO_ASSERT (moo, var->cls != MOO_NULL);
+					MOO_ASSERT (moo, MOO_CLASSOF(moo, var->cls) == moo->_class);
+
+					/* increment the position by the number of class instance variables
+					 * as the class variables are placed after the class instance variables */
+					var->pos += MOO_CLASS_NAMED_INSTVARS + 
+					            MOO_CLASS_SELFSPEC_CLASSINSTVAR(MOO_OOP_TO_SMOOI(var->cls->selfspec));
 					break;
 
 				default:
@@ -6233,12 +6233,71 @@ static int compile_method_definition (moo_t* moo)
 	return 0;
 }
 
+static int make_default_initial_values (moo_t* moo, var_type_t var_type)
+{
+	moo_oow_t initv_count;
+
+	MOO_ASSERT (moo, var_type == VAR_INSTANCE || var_type == VAR_CLASSINST);
+	MOO_ASSERT (moo, VAR_INSTANCE == 0);
+	MOO_ASSERT (moo, VAR_CLASSINST == 1);
+
+	initv_count = moo->c->cls.var[var_type].initv_count;
+	if (moo->c->cls.super_oop != moo->_nil && ((moo_oop_class_t)moo->c->cls.super_oop)->initv[var_type] != moo->_nil)
+	{
+		initv_count += MOO_OBJ_GET_SIZE(((moo_oop_class_t)moo->c->cls.super_oop)->initv[var_type]);
+	}
+	if (initv_count > 0)
+	{
+		moo_oow_t i, j = 0;
+		moo_oop_t tmp;
+
+		/* [NOTE]
+		 *  if some elements at the back of a class definition are lacking default values,
+		 *  initv_count is less than total_count. 
+		 *  in the following case(no inheritance for simplicity):
+		 *    class ... { var a, b := 10, c. } 
+		 *  initv_count is 1 whereas total_count is 3. */
+		MOO_ASSERT (moo, initv_count <= moo->c->cls.var[var_type].total_count);
+
+		tmp = moo_instantiate (moo, moo->_array, MOO_NULL, moo->c->cls.var[var_type].total_count);
+		if (!tmp) return -1;
+
+		if (initv_count > moo->c->cls.var[var_type].initv_count)
+		{
+			/* handle default values defined in the superclass chain.
+			 * i merge them into a single array for convenience and
+			 * efficiency of object instantiation by moo_instantiate(). 
+			 * it can avoid looking up superclasses upon instantiaion */
+			moo_oop_oop_t initv;
+			moo_oow_t super_count;
+
+			MOO_ASSERT (moo, moo->c->cls.super_oop != moo->_nil);
+			super_count = initv_count - moo->c->cls.var[var_type].initv_count;
+			initv = (moo_oop_oop_t)((moo_oop_class_t)moo->c->cls.super_oop)->initv[var_type];
+			MOO_ASSERT (moo, MOO_CLASSOF(moo, initv) == moo->_array);
+			for (i = 0; i < super_count; i++)
+			{
+				((moo_oop_oop_t)tmp)->slot[j++] = initv->slot[i];
+			}
+		}
+
+		for (i = 0; i < moo->c->cls.var[var_type].initv_count; i++)
+		{
+			((moo_oop_oop_t)tmp)->slot[j++] = moo->c->cls.var[var_type].initv[i];
+		}
+
+		moo->c->cls.self_oop->initv[var_type] = tmp;
+	}
+
+	return 0;
+}
+
 static int make_defined_class (moo_t* moo)
 {
 	/* this function make a class object with no functions/methods */
 
 	moo_oop_t tmp;
-	moo_oow_t spec, self_spec, initv_count;
+	moo_oow_t spec, self_spec;
 	int just_made = 0;
 
 	spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.var[VAR_INSTANCE].total_count,  
@@ -6325,90 +6384,46 @@ static int make_defined_class (moo_t* moo)
 	if (!tmp) return -1;
 	moo->c->cls.self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_set_t)tmp;
 
+	/* store the default intial values for instance variables */
+	if (make_default_initial_values (moo, VAR_INSTANCE) <= -1) return -1;
 
-	/* create an array of default initial values for instance variables */
-	initv_count = moo->c->cls.var[VAR_INSTANCE].initv_count;
-	if (moo->c->cls.super_oop != moo->_nil && ((moo_oop_class_t)moo->c->cls.super_oop)->initv != moo->_nil)
+	/* store the default intial values for class instance variables */
+	if (make_default_initial_values (moo, VAR_CLASSINST) <= -1) return -1;
+	if (moo->c->cls.self_oop->initv[VAR_CLASSINST] != moo->_nil)
 	{
-		initv_count += MOO_OBJ_GET_SIZE(((moo_oop_class_t)moo->c->cls.super_oop)->initv);
-	}
-	if (initv_count > 0)
-	{
-		moo_oow_t i, j = 0;
+		moo_oow_t i, initv_count;
+		moo_oop_oop_t initv;
 
-		/* [NOTE]
-		 *  if some elements at the back of a class definition are lacking default values,
-		 *  initv_count is less than total_count. 
-		 *  in the following case(no inheritance for simplicity):
-		 *    class ... { var a, b := 10, c. } 
-		 *  initv_count is 1 whereas total_count is 3. */
-		MOO_ASSERT (moo, initv_count <= moo->c->cls.var[VAR_INSTANCE].total_count);
+		/* apply the default initial values for class instance variables to this class now */
+		initv = (moo_oop_oop_t)moo->c->cls.self_oop->initv[VAR_CLASSINST];
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, initv) == moo->_array);
+		initv_count = MOO_OBJ_GET_SIZE(initv);
 
-		tmp = moo_instantiate (moo, moo->_array, MOO_NULL, moo->c->cls.var[VAR_INSTANCE].total_count);
-		if (!tmp) return -1;
-
-		if (initv_count > moo->c->cls.var[VAR_INSTANCE].initv_count)
+		for (i = 0; i < initv_count; i++)
 		{
-			/* handle default values defined in the superclass chain.
-			 * i merge them into a single array for convenience and
-			 * efficiency of object instantiation by moo_instantiate(). 
-			 * it can avoid looking up superclasses upon instantiaion */
-			moo_oop_oop_t initv;
-			moo_oow_t super_count;
-
-			MOO_ASSERT (moo, moo->c->cls.super_oop != moo->_nil);
-			super_count = initv_count - moo->c->cls.var[VAR_INSTANCE].initv_count;
-			initv = (moo_oop_oop_t)((moo_oop_class_t)moo->c->cls.super_oop)->initv;
-			MOO_ASSERT (moo, MOO_CLASSOF(moo, initv) == moo->_array);
-			for (i = 0; i < super_count; i++)
-			{
-				((moo_oop_oop_t)tmp)->slot[j++] = initv->slot[i];
-			}
+			moo->c->cls.self_oop->slot[i] = initv->slot[i];
 		}
-
-		for (i = 0; i < moo->c->cls.var[VAR_INSTANCE].initv_count; i++)
-		{
-			((moo_oop_oop_t)tmp)->slot[j++] = moo->c->cls.var[VAR_INSTANCE].initv[i];
-		}
-
-		moo->c->cls.self_oop->initv = tmp;
 	}
 
 	/* initialize class variables with default initial values */
-	initv_count = moo->c->cls.var[VAR_CLASS].initv_count;
-	if (initv_count > 0)
+	if (moo->c->cls.var[VAR_CLASS].initv_count > 0)
 	{
-		moo_oow_t i, j;
+		moo_oow_t i, j, initv_count;
+
+		initv_count = moo->c->cls.var[VAR_CLASS].initv_count;
+
 		/* name instance variables and class instance variables are placed
-		 * in the front part. let's skip them */
-	#if 0
-		/* this part is almost identical to the actual code after #else
-		 * i keep this for demonstration purpose only */
-		j = MOO_CLASS_NAMED_INSTVARS + moo->c->cls.var[VAR_CLASSINST].total_count;
-		MOO_ASSERT (moo, j + initv_count < MOO_OBJ_GET_SIZE(moo->c->cls.self_oop));
-		for (i = 0; i < initv_count; i++) 
-		{
-			((moo_oop_oop_t)moo->c->cls.self_oop)->slot[j++] = moo->c->cls.var[VAR_CLASS].initv[i];
-		}
-	#else
+		 * in the front part. set j such that they can be skipped. */
 		j = moo->c->cls.var[VAR_CLASSINST].total_count;
+
+		MOO_ASSERT (moo, MOO_CLASS_NAMED_INSTVARS + j + initv_count <= MOO_OBJ_GET_SIZE(moo->c->cls.self_oop));
 		for (i = 0; i < initv_count; i++) 
 		{
-			moo->c->cls.self_oop->slot[j++] = moo->c->cls.var[VAR_CLASS].initv[i];
+			/* ((moo_oop_oop_t)moo->c->cls.self_oop)->slot[MOO_CLASS_NAMED_INSTVARS + j] = moo->c->cls.var[VAR_CLASS].initv[i]; */
+			moo->c->cls.self_oop->slot[j] = moo->c->cls.var[VAR_CLASS].initv[i];
+			j++;
 		}
-	#endif
 	}
-
-#if 0
-	/* create an array of default values for class instance variables */
-	initv_count = moo->c->cls.var[VAR_CLASSINST].initv_count;
-	if (moo->c->cls.super_oop != moo->_nil && ((moo_oop_class_t)moo->c->cls.super_oop)->initv_ci != moo->_nil)
-	{
-		initv_count += MOO_OBJ_GET_SIZE(((moo_oop_class_t)moo->c->cls.super_oop)->initv_ci);
-	}
-#endif
-
-/* TODO: class instance variables ... */
 
 	/* [NOTE] don't create a dictionary on the nsdic. keep it to be nil.
 	 *        add_nsdic_to_class() instantiates a dictionary if necessary.  */
@@ -6819,17 +6834,17 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				GET_TOKEN (moo);
 				if (compile_class_level_variables_vbar(moo, VAR_INSTANCE) <= -1) return -1;
 			}
-			else if (is_token_binary_selector(moo, VOCA_VBAR_PLUS))
-			{
-				/* class variables |+ a b c | */
-				GET_TOKEN (moo);
-				if (compile_class_level_variables_vbar(moo, VAR_CLASS) <= -1) return -1;
-			}
 			else if (is_token_binary_selector(moo, VOCA_VBAR_ASTER))
 			{
 				/* class instance variables |* a b c | */
 				GET_TOKEN (moo);
 				if (compile_class_level_variables_vbar(moo, VAR_CLASSINST) <= -1) return -1;
+			}
+			else if (is_token_binary_selector(moo, VOCA_VBAR_PLUS))
+			{
+				/* class variables |+ a b c | */
+				GET_TOKEN (moo);
+				if (compile_class_level_variables_vbar(moo, VAR_CLASS) <= -1) return -1;
 			}
 			else if (is_token_word(moo, VOCA_DCL) || is_token_word(moo, VOCA_VAR) || is_token_word(moo, VOCA_VARIABLE))
 			{

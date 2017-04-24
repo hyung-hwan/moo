@@ -174,8 +174,8 @@ typedef struct moo_obj_word_t*     moo_oop_word_t;
 
 enum moo_method_type_t
 {
-	MOO_METHOD_INSTANCE,
-	MOO_METHOD_CLASS,
+	MOO_METHOD_INSTANCE = 0,
+	MOO_METHOD_CLASS    = 1,
 
 	/* --------------------------- */
 	MOO_METHOD_TYPE_COUNT
@@ -485,7 +485,7 @@ struct moo_set_t
 	moo_oop_oop_t bucket; /* Array */
 };
 
-#define MOO_CLASS_NAMED_INSTVARS 16
+#define MOO_CLASS_NAMED_INSTVARS 17
 typedef struct moo_class_t moo_class_t;
 typedef struct moo_class_t* moo_oop_class_t;
 struct moo_class_t
@@ -499,12 +499,12 @@ struct moo_class_t
 	moo_oop_t      subclasses;    /* Array of subclasses */
 
 	moo_oop_char_t name;          /* Symbol */
-	moo_oop_t modname;            /* Symbol if importing a module. nil if not. */
+	moo_oop_t      modname;       /* Symbol if importing a module. nil if not. */
 
 	/* == NEVER CHANGE THIS ORDER OF 3 ITEMS BELOW == */
 	moo_oop_char_t instvars;      /* String */
-	moo_oop_char_t classvars;     /* String */
 	moo_oop_char_t classinstvars; /* String */
+	moo_oop_char_t classvars;     /* String */
 	/* == NEVER CHANGE THE ORDER OF 3 ITEMS ABOVE == */
 
 	moo_oop_char_t pooldics;      /* String - pool dictionaries imported */
@@ -517,7 +517,9 @@ struct moo_class_t
 	moo_oop_set_t  cdic; /* constant dictionary */
 	moo_oop_t      trsize; /* trailer size for new instances */
 
-	moo_oop_t      initv; /* instial values for new instances */
+	/* [0] - initial values for instance variables of new instances 
+	 * [1] - initial values for class instance variables */
+	moo_oop_t      initv[2]; 
 
 	/* indexed part afterwards */
 	moo_oop_t      slot[1];   /* class instance variables and class variables. */

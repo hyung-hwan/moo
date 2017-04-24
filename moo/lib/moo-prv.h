@@ -170,7 +170,7 @@
  * type of the spec field in the class object.
  */
 /*
-#define MOO_MAX_NAMED_INSTVARS \
+#define MOO_MAX_NAMED_INSTVARSVARS \
 	MOO_BITS_MAX(moo_oow_t, MOO_OOW_BITS - MOO_OOP_TAG_BITS_LO - (MOO_OBJ_FLAGS_TYPE_BITS + 1) - 1)
 */
 #define MOO_MAX_NAMED_INSTVARS \
@@ -452,8 +452,8 @@ struct moo_compiler_t
 
 		/* instance variable, class variable, class instance variable 
 		 *   var[0] - named instance variables
-		 *   var[1] - class variables
-		 *   var[2] - class instance variables  */
+		 *   var[1] - class instance variables
+		 *   var[2] - class variables */
 		struct
 		{
 			moo_oocs_t str;  /* long string containing all variables declared delimited by a space */

@@ -275,10 +275,9 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 			if (oop)
 			{
 				/* initialize named instance variables with default values */
-				if (_class->initv != moo->_nil)
+				if (_class->initv[0] != moo->_nil)
 				{
-
-					moo_oow_t i = MOO_OBJ_GET_SIZE(_class->initv);
+					moo_oow_t i = MOO_OBJ_GET_SIZE(_class->initv[0]);
 
 					/* [NOTE] i don't deep-copy initial values.
 					 *   if you change the contents of compound values like arrays,
@@ -288,7 +287,7 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 					while (i > 0)
 					{
 						--i;
-						((moo_oop_oop_t)oop)->slot[i] = ((moo_oop_oop_t)_class->initv)->slot[i];
+						((moo_oop_oop_t)oop)->slot[i] = ((moo_oop_oop_t)_class->initv[0])->slot[i];
 					}
 				}
 			}
