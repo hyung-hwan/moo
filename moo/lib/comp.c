@@ -945,12 +945,13 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		ADD_TOKEN_CHAR(moo, char_read_ahead);
 	}
 
-	do 
+	/* while() instead of do..while() because when char_read_ahead is not EOF
+	 * c may not be a identifier character */
+	while (is_identchar(c))
 	{
 		ADD_TOKEN_CHAR (moo, c);
 		GET_CHAR_TO (moo, c);
 	} 
-	while (is_identchar(c));
 
 	if (c == '(' && is_token_word(moo, VOCA_ERROR))
 	{
@@ -3322,9 +3323,26 @@ static int compile_class_level_imports (moo_t* moo)
 			/* it falls back to the name space of the class */
 			ns_oop = moo->c->cls.ns_oop; 
 		}
-		else break;
+		else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
+		{
+			/* no variable name is present */
+			set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
+		else
+		{
+			break;
+		}
 
 		if (import_pool_dictionary(moo, ns_oop, &last, TOKEN_NAME(moo), TOKEN_LOC(moo)) <= -1) return -1;
+		GET_TOKEN (moo);
+
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED || TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
+		{
+			set_syntax_error (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
+		else if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA) break; /* hopefully . */
 		GET_TOKEN (moo);
 	}
 	while (1);

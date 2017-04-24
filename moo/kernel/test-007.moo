@@ -29,14 +29,14 @@ extend SmallInteger
 
 class TestObject(Object)
 {
-	dcl(#class) Q R.
-	dcl(#classinst) t1 t2.
+	var(#class) Q, R.
+	var(#classinst) t1, t2.
 }
 
 
 class MyObject(TestObject)
 {
-	dcl(#class) C B A.
+	var(#class) C, B, A.
 
 	method getTrue
 	{
@@ -65,11 +65,11 @@ class MyObject(TestObject)
 	{
 		| p p2 |
                 'START OF MAIN' dump.
- 		##p := [ :a :b :c :d | a dump. b dump. (c + d) dump. ^10. ] newProcessWith: #(abc def 10 20).
- 		p := [ :a :b :c :d | a dump. b dump. (c + d) dump. ] newProcessWith: #(abc def 10 20).
+ 		##p := [ :a :b :c :d | a dump. b dump. (c + d) dump. ^10. ] newProcessWith: #(#abc #def 10 20).
+ 		p := [ :a :b :c :d | a dump. b dump. (c + d) dump. ] newProcessWith: #(#abc #def 10 20).
  		p2 := [ :a :b :c :d | a dump. b dump. a dump. b dump. (c + d) dump. ^10000 ] newProcessWith: #(
-			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-			BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB 
+			#AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+			#BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB 
 			1000000000000000
 			299999999999999999999999999999999999999999
 		).

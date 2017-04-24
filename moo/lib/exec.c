@@ -104,7 +104,7 @@
 	/* the old intel c code builder doesn't support __FUNCTION__ */
 #	define __PRIMITIVE_NAME__ "<<primitive>>"
 #else
-#	define __PRIMITIVE_NAME__ (&__FUNCTION__[4])
+#	define __PRIMITIVE_NAME__ (&__FUNCTION__[0])
 #endif
 
 static void signal_io_semaphore (moo_t* moo, moo_ooi_t mask, void* ctx);

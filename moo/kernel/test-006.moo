@@ -29,14 +29,14 @@ extend SmallInteger
 
 class TestObject(Object)
 {
-	dcl(#class) Q R.
-	dcl(#classinst) t1 t2.
+	var(#class) Q, R.
+	var(#classinst) t1, t2.
 }
 
 
 class MyObject(TestObject)
 {
-	dcl(#class) C B A.
+	var(#class) C, B, A.
 
 	method getTrue
 	{

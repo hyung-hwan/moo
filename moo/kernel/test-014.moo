@@ -29,8 +29,8 @@ extend SmallInteger
 
 class TestObject(Object)
 {
-	dcl(#class) Q R.
-	dcl(#classinst) a1 a2.
+	var(#class) Q, R.
+	var(#classinst) a1, a2.
 
 	method test999
 	{
@@ -40,8 +40,8 @@ class TestObject(Object)
 
 class B.TestObject(Object)
 {
-	dcl(#class) Q R.
-	dcl(#classinst) a1 a2.
+	dcl(#class) Q, R.
+	dcl(#classinst) a1, a2.
 
 	method test000
 	{
@@ -90,8 +90,9 @@ class MyConsole(Console)
 
 class MyObject(TestObject)
 {
-	dcl(#pooldic) ABC SRX.ABC.
-
+	##import(#pooldic) ABC, SRX.ABC.
+	import ABC, SRX.ABC.
+	
 	method(#class) main
 	{
 		| v1 v2 |

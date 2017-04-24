@@ -29,14 +29,14 @@ extend SmallInteger
 
 class TestObject(Object)
 {
-	dcl(#class) Q R.
-	dcl(#classinst) t1 t2.
+	var(#class) Q, R.
+	var(#classinst) t1, t2.
 }
 
 
 class MyObject(TestObject)
 {
-	dcl(#class) C B A.
+	var(#class) C, B, A.
 
 	method getTrue
 	{
@@ -116,11 +116,11 @@ class MyObject(TestObject)
 
 		#[ 1 2 3] dump.
 		#[ 4 5 6] dump.
-	#(abc:def: 2 'string is good' 3 4 (5 6) (7 (8 9)) 10) dump.
-		#([] #[]) dump.
+	#(#abc:def: 2 'string is good' 3 4 #(5 6) #(7 #(8 9)) 10) dump.
+		#(#[] #[]) dump.
 
 
-	a := #(abc:def: -2 'string is good' 3 #[2 3 4] 4 (5 6) (7 (8 [4 56] 'hello' 9)) 10 -93952 self true false nil thisContext super).
+	a := #(#abc:def: -2 'string is good' 3 #[2 3 4] 4 #(5 6) #(7 #(8 #[4 56] 'hello' 9)) 10 -93952 #self true false nil #thisContext #super).
 	a at: 3 put: 'hello world'; dump.
 
 
@@ -224,10 +224,10 @@ class MyObject(TestObject)
 		[self getTen] value dump.
 	}
 
-	method(#class) abc
+	(*method(#class) abc
 	{
 		<primitive: #snd_open>
-	}
+	}*)
 
 	method(#class) a: a b: b c: c
 	{
@@ -441,16 +441,16 @@ PROCESS TESTING
 '====================' dump.
 
 [ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] value dump.  ## not sufficient arguments. it must fail
-"[ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] on: Exception do: [:ex | 'Exception' dump]."
+##[ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] on: Exception do: [:ex | 'Exception' dump].
 
-"
+(*
 		FFI isNil dump.
 		FFI notNil dump.
 		nil isNil dump.
 		nil notNil dump.
 		nil class dump.
 		nil class class class dump.
-"
+*)
 	}
 }
 

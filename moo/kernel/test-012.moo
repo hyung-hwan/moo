@@ -29,8 +29,8 @@ extend SmallInteger
 
 class TestObject(Object)
 {
-	dcl(#class) Q R.
-	dcl(#classinst) a1 a2.
+	var(#class) Q, R.
+	var(#classinst) a1, a2.
 
 	method test999
 	{
@@ -40,8 +40,8 @@ class TestObject(Object)
 
 class B.TestObject(Object)
 {
-	dcl(#class) Q R.
-	dcl(#classinst) a1 a2.
+	var(#class) Q, R.
+	var(#classinst) a1, a2.
 
 	method test000
 	{
@@ -51,7 +51,7 @@ class B.TestObject(Object)
 
 pooldic ABC 
 {
-	#KKK := 20.
+	KKK := 20.
 }
 
 
@@ -65,12 +65,12 @@ class MyObject(TestObject)
 			k := 99.
 			[
 				[
-					##[ Exception signal: 'simulated error' ] ensure: [('ensure 1 ', (k asString)) dump ].
-					[ ^ 20 ] ensure: [ ('ensure 1 ', (k asString)) dump. ].
+					##[ Exception signal: 'simulated error' ] ensure: [('ensure 1 ' & (k asString)) dump ].
+					[ ^ 20 ] ensure: [ ('ensure 1 ' & (k asString)) dump. ].
 				] ensure: ['ensure 2' dump ].
 			] ensure: ['ensure 3' dump ].
 		] on: Exception do: [:ex | 
-			('EXCETION - ' , ex messageText) dump.
+			('EXCETION - ' & ex messageText) dump.
 			## Exception signal: 'qqq'.
 		].
 		^v1
@@ -88,11 +88,11 @@ class MyObject(TestObject)
 
 		##[ Exception signal: 'simulated error' ] on: Exception do: [:ex | 'CAUGHT...' dump. Exception signal: 'jjjjjjj' ].
 		
-		"[
+		(*[
 				[ Exception signal: 'simulated error' ] ensure: ['ensure 1' dump ].
-		] on: Exception do: [:ex | ('EXCETION - ' , ex messageText) dump. Exception signal: 'qqq'. ]."
+		] on: Exception do: [:ex | ('EXCETION - ' & ex messageText) dump. Exception signal: 'qqq'. ].
 
-		"[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump. Exception signal: 'jjjj']."
+		[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump. Exception signal: 'jjjj']. *)
 
 		v1 := [ 
 			[
@@ -103,7 +103,7 @@ class MyObject(TestObject)
 						[ '@@@@@' dump. 
 						  Exception signal: 'simulated error'.
 						  '^^^^^^' dump. ] ensure: [
-							('ensure 11 ', (k asString)) dump. 
+							('ensure 11 ' & (k asString)) dump. 
 							Exception signal: 'qqq'.
 						].
 
@@ -115,7 +115,7 @@ class MyObject(TestObject)
 					'JJJJJJJJJJJJJJJJJJJJJJJJJJJ' dump.
 				] ensure: ['ensure 3' dump ].
 			] on: Exception do: [:ex | 
-				('>>>> EXCETION - ' , ex messageText) dump.
+				('>>>> EXCETION - ' & ex messageText) dump.
 				ex pass.
 
 				##Exception signal: 'XXXXXXXXXXXXx'.
@@ -125,10 +125,10 @@ class MyObject(TestObject)
 			'ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ' dump.
 		]
 		on: PrimitiveFailureException do: [:ex | 
-			('PRIMITIVE FAILURE EXCETION AT OUTER - ' , ex messageText) dump. 
+			('PRIMITIVE FAILURE EXCETION AT OUTER - ' & ex messageText) dump. 
 		]
 		on: Exception do: [:ex |
-			('>>>> EXCETION AT OUTER - ' , ex messageText) dump.
+			('>>>> EXCETION AT OUTER - ' & ex messageText) dump.
 		].
 
 
