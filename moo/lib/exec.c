@@ -160,6 +160,7 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 	proc->initial_context = c;
 	proc->current_context = c;
 	proc->sp = MOO_SMOOI_TO_OOP(-1);
+	proc->perr = MOO_ERROR_TO_OOP(MOO_ENOERR);
 
 	MOO_ASSERT (moo, (moo_oop_t)c->sender == moo->_nil);
 
@@ -3821,9 +3822,11 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			}
 			else
 			{
+				moo->errnum = MOO_EINVAL;
 				MOO_DEBUG1 (moo, "Cannot call primitive numbered %zd - invalid number\n", pfnum);
 			}
 
+			moo->processor->active->perr = MOO_ERROR_TO_OOP(moo->errnum);
 			goto activate_primitive_method_body;
 		}
 

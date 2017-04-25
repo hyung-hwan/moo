@@ -704,7 +704,7 @@ struct moo_context_t
 };
 
 
-#define MOO_PROCESS_NAMED_INSTVARS 7
+#define MOO_PROCESS_NAMED_INSTVARS 8
 typedef struct moo_process_t moo_process_t;
 typedef struct moo_process_t* moo_oop_process_t;
 
@@ -715,16 +715,17 @@ typedef struct moo_semaphore_t* moo_oop_semaphore_t;
 struct moo_process_t
 {
 	MOO_OBJ_HEADER;
-	moo_oop_context_t initial_context;
-	moo_oop_context_t current_context;
+	moo_oop_context_t   initial_context;
+	moo_oop_context_t   current_context;
 
-	moo_oop_t         state; /* SmallInteger */
-	moo_oop_t         sp;    /* stack pointer. SmallInteger */
+	moo_oop_t           state; /* SmallInteger */
+	moo_oop_t           sp;    /* stack pointer. SmallInteger */
 
-	moo_oop_process_t prev;
-	moo_oop_process_t next;
+	moo_oop_process_t   prev;
+	moo_oop_process_t   next;
 
 	moo_oop_semaphore_t sem;
+	moo_oop_t           perr; /* last error set by a primitive function */
 
 	/* == variable indexed part == */
 	moo_oop_t slot[1]; /* process stack */

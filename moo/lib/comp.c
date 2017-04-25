@@ -3214,8 +3214,13 @@ if super is variable-nonpointer, no instance variable is allowed.
 
 				GET_TOKEN (moo);
 
-				/* [NOTE] default value assignment. only a literal is allowed */
-				lit = token_to_literal (moo, 1);
+				/* [NOTE] default value assignment. only a literal is allowed 
+				 *    the initial values for instance variables and 
+				 *    class instance variables are set to read-only.
+				 *    this is likely to change if the actual initial
+				 *    value assignment upon instantiation employes
+				 *    deep-copying in moo_instantiate() and in the compiler. */
+				lit = token_to_literal (moo, dcl_type != VAR_CLASS);
 				if (!lit) return -1;
 
 				/* set the initial value for the variable added above */
@@ -4310,7 +4315,7 @@ static int __read_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 				if (__read_byte_array_literal (moo, &lit) <= -1) return -1;
 				if (rdonly)
 				{
-					MOO_ASSERT (moo, MOO_OOP_IS_POINTER(lit));
+					MOO_ASSERT (moo, lit && MOO_OOP_IS_POINTER(lit));
 					MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
 				}
 				break;
@@ -7071,7 +7076,9 @@ static MOO_INLINE moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 		}
 
 #if 0
-/* TODO: if a constant name is specified (constant defined in a class)  */
+/* TODO: if a constant name is specified (constant defined in a class) or
+ *       another variable with the default initialization value
+ *    class { var x := 20, y := x. } */
 		case MOO_IOTOK_IDENT:
 		case MOO_IOTOK_IDENT_DOTTED:
 #endif

@@ -1,33 +1,21 @@
 
 class(#pointer) Process(Object)
 {
-	var initial_context, current_context, state, sp, prev, next, sem.
+	var initial_context, current_context, state, sp, prev, next, sem, perr.
 
 	method new
 	{
 		"instantiation is not allowed"
-		^nil. "TODO: raise an exception"
+		^nil. "TODO: raise an exception or return an error"
 	}
 
-	method prev
-	{
-		^self.prev.
-	}
+	method prev { ^self.prev }
+	method next { ^self.next }
 
-	method next
-	{
-		^self.next.
-	}
+	method next: process { self.next := process }
+	method prev: process { self.prev := process }
 
-	method next: process
-	{
-		self.next := process.
-	}
-
-	method prev: process
-	{
-		self.prev := process.
-	}
+	method primError { ^self.perr }
 
 	method resume
 	{

@@ -1,5 +1,39 @@
 class Apex(nil)
 {
+}
+
+class Error(Apex)
+{
+}
+
+pooldic Error.Code
+{
+	ENOERR     := error(0).
+	EGENERIC   := error(1).
+	ENOIMPL    := error(2).
+	ESYSERR    := error(3).
+	EINTERN    := error(4).
+	ESYSMEM    := error(5).
+	EOOMEM     := error(6).
+	EINVAL     := error(7).
+	ENOENT     := error(8).
+	EPERM      := error(12).
+	ERANGE     := error(20).
+(* add more items... *)
+}
+
+(*pooldic Error.Code2 
+{
+	>> CAN I SUPPORT this kind of redefnition? as of now, it's not accepted because 
+	>> Error.Code2.EGENERIC is not a literal. Should i treate pooldic members as a constant
+	>> and treat it as if it's a literal like? then even if the defined value changes,
+	>> the definition here won't see the change... what is the best way to tackle this issue?
+
+	EGENERIC := Error.Code2.EGENERIC.
+}*)
+
+extend Apex
+{
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
@@ -126,35 +160,49 @@ class Apex(nil)
 
 	method basicAt: index
 	{
+		| perr |
+		
 		<primitive: #_basic_at>
-		self index: index outOfRange: (self basicSize).
+
+## TODO: create a common method that translate a primitive error to some standard exceptions of primitive failure.
+		perr := thisProcess primError.
+		if (perr == Error.Code.ERANGE) { self index: index outOfRange: (self basicSize) }
+		elsif (perr == Error.Code.EPERM) { self messageProhibited: #basicAt }
+		else { self primitiveFailed }
 	}
 
 	method basicAt: index put: anObject
 	{
+		| perr |
+		
 		<primitive: #_basic_at_put>
-## TODO: proper error handling
-(*
-		if (primitiveError == error(generic))
-		{
-		}
-		else
-		{
-			self index: index outOfRange: (self basicSize).
-		}*)
-		self index: index outOfRange: (self basicSize).
+
+		perr := thisProcess primError.
+		if (perr == Error.Code.ERANGE) { self index: index outOfRange: (self basicSize) }
+		elsif (perr == Error.Code.EPERM) { self messageProhibited: #basicAt:put: }
+		else { self primitiveFailed }
 	}
 
 	method(#class) basicAt: index
 	{
+		| perr |
 		<primitive: #_basic_at>
-		self index: index outOfRange: (self basicSize).
+
+		perr := thisProcess primError.
+		if (perr == Error.Code.ERANGE) { self index: index outOfRange: (self basicSize) }
+		elsif (perr == Error.Code.EPERM) { self messageProhibited: #basicAt:put: }
+		else { self primitiveFailed }
 	}
 
 	method(#class) basicAt: index put: anObject
 	{
+		| perr |
 		<primitive: #_basic_at_put>
-		self index: index outOfRange: (self basicSize).
+
+		perr := thisProcess primError.
+		if (perr == Error.Code.ERANGE) { self index: index outOfRange: (self basicSize) }
+		elsif (perr == Error.Code.EPERM) { self messageProhibited: #basicAt:put: }
+		else { self primitiveFailed }
 	}
 
 	(* ------------------------------------------------------------------
@@ -489,32 +537,6 @@ class UndefinedObject(Apex)
 }
 
 
-class Error(Apex)
-{
-}
-
-pooldic Error.Code
-{
-	EGENERIC   := error(1).
-	ENOIMPL    := error(2).
-	ESYSERR    := error(3).
-	EINTERN    := error(4).
-	ESYSMEM    := error(5).
-	EOOMEM     := error(6).
-	EINVAL     := error(7).
-	ENOENT     := error(8).
-(* add more items... *)
-}
-
-(*pooldic Error.Code2 
-{
-	>> CAN I SUPPORT this kind of redefnition? as of now, it's not accepted because 
-	>> Error.Code2.EGENERIC is not a literal. Should i treate pooldic members as a constant
-	>> and treat it as if it's a literal like? then even if the defined value changes,
-	>> the definition here won't see the change... what is the best way to tackle this issue?
-
-	EGENERIC := Error.Code2.EGENERIC.
-}*)
 
 extend Error
 {
