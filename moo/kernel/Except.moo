@@ -271,7 +271,7 @@ extend MethodContext
 
 		| excblk retval actpos |
 
-		(* position of the temporary variable 'active' in MethodContext>>on:do.
+		(* position of the temporary variable 'exception_active' in MethodContext>>on:do.
 		 * for this code to work, it must be the last temporary variable in the method. *)
 		actpos := (self basicSize) - 1. 
 

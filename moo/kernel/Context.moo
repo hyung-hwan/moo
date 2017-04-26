@@ -339,7 +339,7 @@ class(#pointer) CompiledMethod(Object)
 	method preambleCode
 	{
 		(* TODO: make this a primtive for performance *)
-		^(self.preamble bitAnd: 16rFF) bitShift: -2.
+		^(self.preamble bitAnd: 16rFF) bitShift: -3.
 	}
 
 	method owner

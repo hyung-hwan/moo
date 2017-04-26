@@ -1466,7 +1466,8 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 	{
 		/* the receiver is not a class object */
 		MOO_DEBUG0 (moo, "<pf_basic_new> Receiver is not a class\n");
-		goto inval;
+		moo->errnum = MOO_EMSGRCV;
+		return MOO_PF_FAILURE;
 	}
 
 	if (nargs >= 1)
@@ -1476,7 +1477,8 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 		{
 			/* integer out of range or not integer */
 			MOO_DEBUG0 (moo, "<pf_basic_new> Size out of range or not integer\n");
-			goto inval;
+			moo->errnum = MOO_EINVAL;
+			return MOO_PF_FAILURE;
 		}
 	}
 
@@ -1492,14 +1494,10 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 		*       moo_instantiate()? */
 		obj = moo_instantiate (moo, _class, MOO_NULL, size);
 	}
-	if (!obj) return MOO_PF_HARD_FAILURE;
+	if (!obj) return MOO_PF_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, obj);
 	return MOO_PF_SUCCESS;
-
-inval:
-	moo->errnum = MOO_EINVAL;
-	return MOO_PF_FAILURE;
 }
 
 static moo_pfrc_t pf_ngc_new (moo_t* moo, moo_ooi_t nargs)
@@ -1533,7 +1531,7 @@ static moo_pfrc_t pf_shallow_copy (moo_t* moo, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV (moo, nargs);
 
 	obj = moo_shallowcopy (moo, rcv);
-	if (!obj) return MOO_PF_HARD_FAILURE;
+	if (!obj) return MOO_PF_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, obj);
 	return MOO_PF_SUCCESS;
@@ -1556,7 +1554,7 @@ static moo_pfrc_t pf_basic_size (moo_t* moo, moo_ooi_t nargs)
 	else
 	{
 		sz = moo_oowtoint (moo, MOO_OBJ_GET_SIZE(rcv));
-		if (!sz) return MOO_PF_HARD_FAILURE; /* hard failure */
+		if (!sz) return MOO_PF_FAILURE;
 	}
 
 	MOO_STACK_SETRET(moo, nargs, sz);
@@ -1609,7 +1607,7 @@ static moo_pfrc_t pf_basic_at (moo_t* moo, moo_ooi_t nargs)
 
 		case MOO_OBJ_TYPE_WORD:
 			v = moo_oowtoint (moo, ((moo_oop_word_t)rcv)->slot[idx]);
-			if (!v) return MOO_PF_HARD_FAILURE;
+			if (!v) return MOO_PF_FAILURE;
 			break;
 
 		case MOO_OBJ_TYPE_OOP:
