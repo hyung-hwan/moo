@@ -93,6 +93,7 @@ static struct voca_t
 	{  8, { 'c','o','n','t','i','n','u','e'                               } },
 	{  3, { 'd','c','l'                                                   } },
 	{  2, { 'd','o'                                                       } },
+	{  5, { '#','d','u','a','l'                                           } },
 	{  4, { 'e','l','s','e'                                               } },
 	{  5, { 'e','l','s','i','f'                                           } },
 	{  6, { 'e','n','s','u','r','e',                                      } },
@@ -147,6 +148,7 @@ enum voca_id_t
 	VOCA_CONTINUE,
 	VOCA_DCL,
 	VOCA_DO,
+	VOCA_DUAL_S,
 	VOCA_ELSE,
 	VOCA_ELSIF,
 	VOCA_ENSURE,
@@ -2786,7 +2788,16 @@ static int add_method_name_fragment (moo_t* moo, const moo_oocs_t* name)
 static int method_exists (moo_t* moo, const moo_oocs_t* name)
 {
 	/* check if the current class contains a method of the given name */
-	return moo_lookupdic (moo, moo->c->cls.self_oop->mthdic[moo->c->mth.type], name) != MOO_NULL;
+	if (moo->c->mth.type == MOO_METHOD_DUAL)
+	{
+		return moo_lookupdic (moo, moo->c->cls.self_oop->mthdic[0], name) != MOO_NULL ||
+		       moo_lookupdic (moo, moo->c->cls.self_oop->mthdic[1], name) != MOO_NULL;
+	}
+	else
+	{
+		MOO_ASSERT (moo, moo->c->mth.type < MOO_COUNTOF(moo->c->cls.self_oop->mthdic));
+		return moo_lookupdic (moo, moo->c->cls.self_oop->mthdic[moo->c->mth.type], name) != MOO_NULL;
+	}
 }
 
 static int add_temporary_variable (moo_t* moo, const moo_oocs_t* name)
@@ -3830,17 +3841,17 @@ static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 			switch (var->type)
 			{
 				case VAR_INSTANCE:
-					if (moo->c->mth.type == MOO_METHOD_CLASS)
+					if (moo->c->mth.type == MOO_METHOD_CLASS || moo->c->mth.type == MOO_METHOD_DUAL)
 					{
-						/* a class method cannot access an instance variable */
+						/* a class(or dual) method cannot access an instance variable */
 						set_syntax_error (moo, MOO_SYNERR_VARINACC, name_loc, name);
 						return -1;
 					}
 					break;
 
 				case VAR_CLASSINST:
-					/* class instance variable can be accessed by only class methods */
-					if (moo->c->mth.type == MOO_METHOD_INSTANCE)
+					/* class instance variable can be accessed by only pure class methods */
+					if (moo->c->mth.type == MOO_METHOD_INSTANCE || moo->c->mth.type == MOO_METHOD_DUAL)
 					{
 						/* an instance method cannot access a class-instance variable */
 						set_syntax_error (moo, MOO_SYNERR_VARINACC, name_loc, name);
@@ -6001,9 +6012,23 @@ need to write code to collect string.
 	moo_decode (moo, mth, &moo->c->cls.fqn);
 #endif
 
-	moo_poptmps (moo, tmp_count); tmp_count = 0;
+	if (moo->c->mth.type == MOO_METHOD_DUAL)
+	{
+		if (!moo_putatdic(moo, moo->c->cls.self_oop->mthdic[0], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
+		if (!moo_putatdic(moo, moo->c->cls.self_oop->mthdic[1], (moo_oop_t)name, (moo_oop_t)mth)) 
+		{
+			/* 'name' is a symbol created of moo->c->mth.name. so use it as a key for deletion */
+			moo_deletedic (moo, moo->c->cls.self_oop->mthdic[0], &moo->c->mth.name);
+			goto oops;
+		}
+	}
+	else
+	{
+		MOO_ASSERT (moo, moo->c->mth.type < MOO_COUNTOF(moo->c->cls.self_oop->mthdic));
+		if (!moo_putatdic(moo, moo->c->cls.self_oop->mthdic[moo->c->mth.type], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
+	}
 
-	if (!moo_putatdic(moo, moo->c->cls.self_oop->mthdic[moo->c->mth.type], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
+	moo_poptmps (moo, tmp_count); tmp_count = 0;
 
 	return 0;
 
@@ -6047,13 +6072,25 @@ static int compile_method_definition (moo_t* moo)
 				if (is_token_symbol(moo, VOCA_CLASS_S))
 				{
 					/* method(#class) */
-					if (moo->c->mth.type == MOO_METHOD_CLASS)
+					if (moo->c->mth.type == MOO_METHOD_CLASS || moo->c->mth.type == MOO_METHOD_DUAL)
 					{
 						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
 					moo->c->mth.type = MOO_METHOD_CLASS;
+					GET_TOKEN (moo);
+				}
+				else if (is_token_symbol(moo, VOCA_DUAL_S))
+				{
+					/* method(#dual) */
+					if (moo->c->mth.type == MOO_METHOD_CLASS || moo->c->mth.type == MOO_METHOD_DUAL)
+					{
+						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						return -1;
+					}
+
+					moo->c->mth.type = MOO_METHOD_DUAL;
 					GET_TOKEN (moo);
 				}
 				else if (is_token_symbol(moo, VOCA_PRIMITIVE_S))
@@ -6418,11 +6455,9 @@ static int make_defined_class (moo_t* moo)
 	if (!tmp) return -1;
 	moo->c->cls.self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_set_t)tmp;
 
-MOO_DEBUG0 (moo, "!00000000000000000000\n");
 	/* store the default intial values for instance variables */
 	if (make_default_initial_values (moo, VAR_INSTANCE) <= -1) return -1;
 
-MOO_DEBUG0 (moo, "!111111111111111111111\n");
 	/* store the default intial values for class instance variables */
 	if (make_default_initial_values (moo, VAR_CLASSINST) <= -1) return -1;
 	if (moo->c->cls.self_oop->initv[VAR_CLASSINST] != moo->_nil)
@@ -6430,7 +6465,6 @@ MOO_DEBUG0 (moo, "!111111111111111111111\n");
 		moo_oow_t i, initv_count;
 		moo_oop_oop_t initv;
 
-MOO_DEBUG0 (moo, "!222222222222222222\n");
 		/* apply the default initial values for class instance variables to this class now */
 		initv = (moo_oop_oop_t)moo->c->cls.self_oop->initv[VAR_CLASSINST];
 		MOO_ASSERT (moo, MOO_CLASSOF(moo, initv) == moo->_array);

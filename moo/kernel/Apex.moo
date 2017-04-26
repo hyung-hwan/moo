@@ -158,7 +158,7 @@ extend Apex
 		self primitiveFailed.
 	}
 
-	method basicAt: index
+	method(#dual) basicAt: index
 	{
 		| perr |
 		
@@ -171,7 +171,7 @@ extend Apex
 		else { self primitiveFailed }
 	}
 
-	method basicAt: index put: anObject
+	method(#dual) basicAt: index put: anObject
 	{
 		| perr |
 		
@@ -183,6 +183,7 @@ extend Apex
 		else { self primitiveFailed }
 	}
 
+	(*
 	method(#class) basicAt: index
 	{
 		| perr |
@@ -194,7 +195,7 @@ extend Apex
 		else { self primitiveFailed }
 	}
 
-	method(#class) basicAt: index put: anObject
+	method(#dual) basicAt: index put: anObject
 	{
 		| perr |
 		<primitive: #_basic_at_put>
@@ -203,7 +204,7 @@ extend Apex
 		if (perr == Error.Code.ERANGE) { self index: index outOfRange: (self basicSize) }
 		elsif (perr == Error.Code.EPERM) { self messageProhibited: #basicAt:put: }
 		else { self primitiveFailed }
-	}
+	}*)
 
 	(* ------------------------------------------------------------------
 	 * HASHING

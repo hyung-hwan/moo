@@ -171,14 +171,11 @@ typedef struct moo_obj_word_t*     moo_oop_word_t;
 
 #endif
 
-
 enum moo_method_type_t
 {
 	MOO_METHOD_INSTANCE = 0,
 	MOO_METHOD_CLASS    = 1,
-
-	/* --------------------------- */
-	MOO_METHOD_TYPE_COUNT
+	MOO_METHOD_DUAL     = 2
 };
 typedef enum moo_method_type_t moo_method_type_t;
 
@@ -511,7 +508,7 @@ struct moo_class_t
 
 	/* [0] - instance methods, MethodDictionary
 	 * [1] - class methods, MethodDictionary */
-	moo_oop_set_t  mthdic[MOO_METHOD_TYPE_COUNT];      
+	moo_oop_set_t  mthdic[2];      
 
 	moo_oop_set_t  nsdic; /* dictionary used for namespacing */
 	moo_oop_set_t  cdic; /* constant dictionary */
