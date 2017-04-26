@@ -6015,6 +6015,7 @@ static int add_compiled_method (moo_t* moo)
 
 	/*if (moo->c->mth.variadic) */
 	preamble_flags |= moo->c->mth.variadic;
+	if (moo->c->mth.type == MOO_METHOD_DUAL) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_DUAL;
 
 	MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index));
 
