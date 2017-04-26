@@ -61,23 +61,30 @@ extend Apex
 	}
 
 	## -------------------------------------------------------
+	## INSTANTIATION & INITIALIZATION
 	## -------------------------------------------------------
-
-	method(#class) __trailer_size
-	{
-		^0
-	}
-	
 	method(#class) basicNew
 	{
+		| perr |
+
 		<primitive: #_basic_new>
 		self primitiveFailed.
+
+	##	perr := thisProcess primError.
+	##	if (perr == xxxx) { self cannotInstantiate }
+	##	else { self primitiveFailed }.
 	}
 	
 	method(#class) basicNew: size
 	{
+		| perr |
+
 		<primitive: #_basic_new>
 		self primitiveFailed.
+
+	##	perr := thisProcess primError.
+	##	if (perr == xxxx) { self cannotInstantiate }
+	##	else { self primitiveFailed }.
 	}
 
 	method(#class) ngcNew
@@ -183,39 +190,10 @@ extend Apex
 		else { self primitiveFailed }
 	}
 
-	(*
-	method(#class) basicAt: index
-	{
-		| perr |
-		<primitive: #_basic_at>
-
-		perr := thisProcess primError.
-		if (perr == Error.Code.ERANGE) { self index: index outOfRange: (self basicSize) }
-		elsif (perr == Error.Code.EPERM) { self messageProhibited: #basicAt:put: }
-		else { self primitiveFailed }
-	}
-
-	method(#dual) basicAt: index put: anObject
-	{
-		| perr |
-		<primitive: #_basic_at_put>
-
-		perr := thisProcess primError.
-		if (perr == Error.Code.ERANGE) { self index: index outOfRange: (self basicSize) }
-		elsif (perr == Error.Code.EPERM) { self messageProhibited: #basicAt:put: }
-		else { self primitiveFailed }
-	}*)
-
 	(* ------------------------------------------------------------------
 	 * HASHING
 	 * ------------------------------------------------------------------ *)
-	method hash
-	{
-		<primitive: #_hash>
-		self subclassResponsibility: #hash
-	}
-	
-	method(#class) hash
+	method(#dual) hash
 	{
 		<primitive: #_hash>
 		self subclassResponsibility: #hash
@@ -225,7 +203,7 @@ extend Apex
 	 * IDENTITY TEST
 	 * ------------------------------------------------------------------ *)
 
-	method == anObject
+	method(#dual) == anObject
 	{
 		(* check if the receiver is identical to anObject.
 		 * this doesn't compare the contents *)
@@ -233,21 +211,7 @@ extend Apex
 		self primitiveFailed.
 	}
 
-	method ~~ anObject
-	{
-		<primitive: #_not_identical>
-		^(self == anObject) not.
-	}
-
-	method(#class) == anObject
-	{
-		(* check if the receiver is identical to anObject.
-		 * this doesn't compare the contents *)
-		<primitive: #_identical>
-		self primitiveFailed.
-	}
-
-	method(#class) ~~ anObject
+	method(#dual) ~~ anObject
 	{
 		<primitive: #_not_identical>
 		^(self == anObject) not.
@@ -256,76 +220,42 @@ extend Apex
 	(* ------------------------------------------------------------------
 	 * EQUALITY TEST
 	 * ------------------------------------------------------------------ *)
-	method = anObject
+	method(#dual) = anObject
 	{
 		<primitive: #_equal>
 		self subclassResponsibility: #=
 	}
 	
-	method ~= anObject
+	method(#dual) ~= anObject
 	{
 		<primitive: #_not_equal>
 		^(self = anObject) not.
 	}
 
-	method(#class) = anObject
-	{
-		<primitive: #_equal>
-		self subclassResponsibility: #=
-	}
-	
-	method(#class) ~= anObject
-	{
-		<primitive: #_not_equal>
-		^(self = anObject) not.
-	}
-	
+
 	(* ------------------------------------------------------------------
 	 * COMMON QUERIES
 	 * ------------------------------------------------------------------ *)
 
-	method isNil
+	method(#dual) isNil
 	{
 		"^self == nil."
 		^false
 	}
 
-	method notNil
+	method(#dual) notNil
 	{
 		"^(self == nil) not"
 		"^self ~= nil."
 		^true.
 	}
 
-	method(#class) isNil
-	{
-		"^self == nil."
-		^false
-	}
-
-	method(#class) notNil
-	{
-		"^(self == nil) not"
-		"^self ~= nil."
-		^true.
-	}
-
-	method isError
+	method(#dual) isError
 	{
 		^false
 	}
 
-	method(#class) isError
-	{
-		^false
-	}
-
-	method notError
-	{
-		^true
-	}
-
-	method(#class) notError
+	method(#dual) notError
 	{
 		^true
 	}
@@ -371,13 +301,7 @@ extend Apex
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
-	method(#class) respondsTo: selector
-	{
-		<primitive: #_responds_to>
-		self primitiveFailed
-	}
-
-	method respondsTo: selector
+	method(#dual) respondsTo: selector
 	{
 		<primitive: #_responds_to>
 		self primitiveFailed
@@ -386,61 +310,32 @@ extend Apex
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
-	method(#class,#variadic) perform(selector)
+	method(#dual,#variadic) perform(selector)
 	{
 		<primitive: #_perform>
 		self primitiveFailed
 	}
 
-	method(#variadic) perform(selector)
+	method(#dual) perform: selector
 	{
 		<primitive: #_perform>
 		self primitiveFailed
 	}
 	
-	method(#class) perform: selector
-	{
-		<primitive: #_perform>
-		self primitiveFailed
-	}
-	
-	method perform: selector
+
+	method(#dual) perform: selector with: arg1
 	{
 		<primitive: #_perform>
 		self primitiveFailed
 	}
 
-	method(#class) perform: selector with: arg1
+	method(#dual) perform: selector with: arg1 with: arg2
 	{
 		<primitive: #_perform>
 		self primitiveFailed
 	}
 
-	method perform: selector with: arg1
-	{
-		<primitive: #_perform>
-		self primitiveFailed
-	}
-
-	method(#class) perform: selector with: arg1 with: arg2
-	{
-		<primitive: #_perform>
-		self primitiveFailed
-	}
-
-	method perform: selector with: arg1 with: arg2
-	{
-		<primitive: #_perform>
-		self primitiveFailed
-	}
-	
-	method(#class) perform: selector with: arg1 with: arg2 with: arg3
-	{
-		<primitive: #_perform>
-		self primitiveFailed
-	}
-
-	method perform: selector with: arg1 with: arg2 with: arg3
+	method(#dual) perform: selector with: arg1 with: arg2 with: arg3
 	{
 		<primitive: #_perform>
 		self primitiveFailed
@@ -458,56 +353,11 @@ extend Apex
 	(* ------------------------------------------------------------------
 	 * COMMON ERROR/EXCEPTION HANDLERS
 	 * ------------------------------------------------------------------ *)
-	method primitiveFailed
-	{
-		^self class primitiveFailed.
-	}
-
-	method cannotInstantiate
-	{
-		^self class cannotInstantiate
-	}
-
-	method doesNotUnderstand: messageSymbol
-	{
-		^self class doesNotUnderstand: messageSymbol
-	}
-
-	method index: index outOfRange: ubound
-	{
-		^self class index: index outOfRange: ubound.
-	}
-
-	method subclassResponsibility: method_name
-	{
-		^self class subclassResponsibility: method_name
-	}
-
-	method notImplemented: method_name
-	{
-		^self class notImplemented: method_name
-	}
-	
-	method messageProhibited: method_name
-	{
-		^self class messageProhibited: method_name
-	}
-
-	method cannotExceptionizeError
-	{
-		^self class cannotExceptionizeError
-	}
-
-	method(#class) error: msgText
+	method(#dual) error: msgText
 	{
 		(* TODO: implement this
 		  Error signal: msgText. *)
 		msgText dump.
-	}
-
-	method error: aString
-	{
-		self class error: aString.
 	}
 }
 

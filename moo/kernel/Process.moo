@@ -3,10 +3,16 @@ class(#pointer) Process(Object)
 {
 	var initial_context, current_context, state, sp, prev, next, sem, perr.
 
-	method new
+	method(#class) basicNew
 	{
-		"instantiation is not allowed"
-		^nil. "TODO: raise an exception or return an error"
+		(* instantiation is not allowed. a process is strictly a VM managed object *)
+		self cannotInstantiate
+	}
+	
+	method(#class) basicNew: size 
+	{
+		(* instantiation is not allowed. a process is strictly a VM managed object *)
+		self cannotInstantiate
 	}
 
 	method prev { ^self.prev }

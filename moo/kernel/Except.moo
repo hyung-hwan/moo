@@ -33,39 +33,51 @@ class Exception(Apex)
 		^(self class name) & ' - ' & self.messageText.
 	}
 
+	(* TODO: remove this....
 	method __signal 
 	{
 		self.signalContext := thisContext.
 		((thisContext sender) findExceptionContext) handleException: self.
-	}
+	}*)
 
 	method signal
 	{
-		| exctx exblk retval actpos |
+		| exctx exblk retval actpos ctx |
 
 		self.signalContext := thisContext.
 		exctx := (thisContext sender) findExceptionContext.
-		[exctx notNil] whileTrue: [
+		
+		##[exctx notNil] whileTrue: [
+		while (exctx notNil)
+		{
 			exblk := exctx findExceptionHandlerFor: (self class).
-			(exblk notNil and: 
-			 [actpos := exctx basicSize - 1. exctx basicAt: actpos]) ifTrue: [
+			if (exblk notNil and: 
+			    [actpos := exctx basicSize - 1. exctx basicAt: actpos])
+			{
 				self.handlerContext := exctx.
 				exctx basicAt: actpos put: false.
-				[ retval := exblk value: self ] ensure: [ 
-					exctx basicAt: actpos put: true 
-				].
-
+				[ retval := exblk value: self ] ensure: [ exctx basicAt: actpos put: true ].
 				thisContext unwindTo: (exctx sender) return: nil.
 				Processor return: retval to: (exctx sender).
-			].
+			}.
 			exctx := (exctx sender) findExceptionContext.
-		].
+		}.
 
 		## -----------------------------------------------------------------
 		## FATAL ERROR - no exception handler.
 		## -----------------------------------------------------------------
 		##thisContext unwindTo: nil return: nil.
 		##thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
+		
+## TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
+ctx := thisContext.
+while (ctx notNil)
+{
+	if (ctx class == MethodContext) { (ctx method owner name & '>>' & ctx method name) dump }.
+	## TODO: include blockcontext???
+	ctx := ctx sender.
+}.
+
 		thisContext unwindTo: (thisProcess initialContext) return: nil.
 		('### EXCEPTION NOT HANDLED #### ' & self class name & ' - ' & self messageText) dump.
 		## TODO: debug the current process???? "
@@ -88,31 +100,31 @@ class Exception(Apex)
 
 	method return: value
 	{
-		(self.handlerContext notNil) ifTrue: [
-			Processor return: value to: self.handlerContext.
-		].
+		if (self.handlerContext notNil) { Processor return: value to: self.handlerContext }
 	}
 
 	method retry
 	{
 ## TODO: verify if return:to: causes unnecessary stack growth.
-		(self.handlerContext notNil)  ifTrue: [
+		if (self.handlerContext notNil) 
+		{
 			self.handlerContext pc: 0.
 			Processor return: self to: self.handlerContext.
-		].
+		}
 	}
 
 	method resume: value
 	{
 ## TODO: verify if return:to: causes unnecessary stack growth.
 ## is this correct???
-		(self.signalContext notNil and: [self.handlerContext notNil]) ifTrue: [
-			| ctx |
+		| ctx |
+		if (self.signalContext notNil and: [self.handlerContext notNil])
+		{
 			ctx := self.signalContext sender.
 			self.signalContext := nil.
 			self.handlerContext := nil.
 			Processor return: value to: ctx.
-		].
+		}.
 	}
 
 	method resume
@@ -143,10 +155,11 @@ extend Context
 	{
 		| ctx |
 		ctx := self.
-		[ ctx notNil ] whileTrue: [
-			(ctx isExceptionContext) ifTrue: [^ctx].
+		while (ctx notNil)
+		{
+			if (ctx isExceptionContext) { ^ctx }.
 			ctx := ctx sender.
-		].
+		}.
 		^nil
 	}
 
@@ -157,26 +170,29 @@ extend Context
 		## private: called by VM upon unwinding
 		## -------------------------------------------------------------------
 
-		| ctx stop |
+		| ctx stop eb pending_pos |
 
 		ctx := self.
 		stop := false.
-		[stop] whileFalse: [
-			| eb |
+		until (stop)
+		{
 			eb := ctx ensureBlock.
-			(eb notNil) ifTrue: [
-				| donepos |
-				donepos := ctx basicSize - 1.
-				(ctx basicAt: donepos) ifFalse: [
-					ctx basicAt: donepos put: true.
+			if (eb notNil)
+			{
+				(* position of the temporary variable in the ensureBlock that indicates
+				 * if the block has been evaluated *)
+				pending_pos := ctx basicSize - 1. 
+				if (ctx basicAt: pending_pos)
+				{
+					ctx basicAt: pending_pos put: false.
 					eb value.
-				].
-			].
+				}
+			}.
 			stop := (ctx == context).
 			ctx := ctx sender.
 
 			## stop ifFalse: [ stop := ctx isNil ].
-		].
+		}.
 
 		^retval
 	}
@@ -207,9 +223,7 @@ extend MethodContext
 		 * instance variables of the method context. As MethodContex has
 		 * 8 instance variables, the ensure block must be at the 9th position
 		 * which translates to index 8 *)
-
-		(self.method preambleCode == 13) ifFalse: [^nil].
-		^self basicAt: 8.
+		^if (self.method preambleCode == 13) { self basicAt: 8 } else { nil }
 	}
 
 
@@ -226,9 +240,10 @@ extend MethodContext
 ## TODO: change 8 to a constant when moo is enhanced to support constant definition
 ##       or calcuate the minimum size using the class information.
 
-		(self isExceptionContext) ifTrue: [
-			| size exc |
-
+		| size exc |
+		
+		if (self isExceptionContext) 
+		{
 			(* NOTE: the following loop scans all parameters to the on:do: method.
 			 *       if the on:do: method contains local temporary variables,
 			 *       those must be skipped from scanning. *)
@@ -236,9 +251,9 @@ extend MethodContext
 			size := self basicSize.
 			8 priorTo: size by: 2 do: [ :i | 
 				exc := self basicAt: i.
-				((exception_class == exc) or: [exception_class inheritsFrom: exc]) ifTrue: [^self basicAt: (i + 1)].
+				if ((exception_class == exc) or: [exception_class inheritsFrom: exc]) { ^self basicAt: (i + 1) }.
 			]
-		].
+		}.
 		^nil.
 	}
 
@@ -261,12 +276,13 @@ extend MethodContext
 		actpos := (self basicSize) - 1. 
 
 		excblk := self findExceptionHandlerFor: (exception class).
-		(excblk isNil or: [(self basicAt: actpos) not]) ifTrue: [ 
+		if (excblk isNil or: [(self basicAt: actpos) not])
+		{
 			## self is an exception context but doesn't have a matching
 			## exception handler or the exception context is already
 			## in the middle of evaluation. 
 			^(self.sender findExceptionContext) handleException: exception.
-		].
+		}.
 
 		exception handlerContext: self.
 
@@ -324,27 +340,24 @@ thisContext isExceptionContext dump.
 
 	method ensure: aBlock
 	{
-		| retval done |
+		| retval pending |
 		<ensure>
 
-		done := false.
+		pending := true.
 		retval := self value. 
 
-		## the temporary variable 'done' may get changed
-		## during evaluation for exception handling. 
-		done ifFalse: [
-			done := true.
-			aBlock value.
-		].
+		(* the temporary variable 'pending' may get changed
+		 * during evaluation for exception handling. 
+		 * it gets chagned in Context>>unwindTo:return: *)
+		if (pending) { pending := false. aBlock value }.
 		^retval
 	}
 
 	method ifCurtailed: aBlock
 	{
-		| v ok |
-
-		ok := false.
-		[ v := self value. ok := true. ] ensure: [ ok ifFalse: [aBlock value] ].
+		| v pending |
+		pending := true.
+		[ v := self value. pending := false. ] ensure: [ if (pending) { aBlock value } ].
 		^v.
 	}
 }
@@ -389,55 +402,50 @@ class ProhibitedMessageException(Exception)
 
 extend Apex
 {
-	method(#class) primitiveFailed
+	method(#dual) primitiveFailed
 	{
-		## TODO: implement this
-## experimental backtrace...
-| ctx |
-ctx := thisContext.
-[ctx notNil] whileTrue: [
-	(ctx class == MethodContext) 
-		ifTrue: [ (ctx method owner name & '>>' & ctx method name) dump ].
-	## TODO: include blockcontext???
-	ctx := ctx sender.
-].
-'------ END OF BACKTRACE -----------' dump.
 		PrimitiveFailureException signal: 'PRIMITIVE FAILED'.
 	}
 
-	method(#class) cannotInstantiate
+	method(#dual) cannotInstantiate
 	{
-## TOOD: accept a class
-		InstantiationFailureException signal: 'Cannot instantiate'.
+		## TODO: use displayString or something like that instead of name....
+		InstantiationFailureException signal: 'Cannot instantiate ' & (self name).
 	}
 
-	method(#class) doesNotUnderstand: message_name
+	method(#dual) doesNotUnderstand: message_name
 	{
 		## TODO: implement this properly
-		NoSuchMessageException signal: (message_name & ' not understood by ' & (self name)).
+		| class_name |
+		class_name := if (self class == Class) { self name } else { self class name }.
+		NoSuchMessageException signal: (message_name & ' not understood by ' & class_name).
 	}
 
-	method(#class) index: index outOfRange: ubound
+	method(#dual) index: index outOfRange: ubound
 	{
 		IndexOutOfRangeException signal: 'Out of range'.
 	}
 
-	method(#class) subclassResponsibility: method_name
+	method(#dual) subclassResponsibility: method_name
 	{
 		SubclassResponsibilityException signal: ('Subclass must implement ' & method_name).
 	}
 
-	method(#class) notImplemented: method_name
+	method(#dual) notImplemented: method_name
 	{
-		NotImplementedException signal: (method_name & ' not implemented by ' & (self name)).
+		| class_name |
+		class_name := if (self class == Class) { self name } else { self class name }.
+		NotImplementedException signal: (method_name & ' not implemented by ' & class_name).
 	}
 	
-	method(#class) messageProhibited: method_name
+	method(#dual) messageProhibited: method_name
 	{
-		ProhibitedMessageException signal: (method_name & ' not allowed for ' & (self name)).
+		| class_name |
+		class_name := if (self class == Class) { self name } else { self class name }.
+		ProhibitedMessageException signal: (method_name & ' not allowed for ' & class_name).
 	}
 
-	method(#class) cannotExceptionizeError
+	method(#dual) cannotExceptionizeError
 	{
 ## todo: accept the object
 		ErrorExceptionizationFailureException signal: 'Cannot exceptionize an error'

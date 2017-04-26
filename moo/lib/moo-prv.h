@@ -334,6 +334,7 @@ struct moo_iotok_t
 		MOO_IOTOK_ELSIF,
 
 		MOO_IOTOK_WHILE,
+		MOO_IOTOK_UNTIL,
 		MOO_IOTOK_DO,
 		MOO_IOTOK_BREAK,
 		MOO_IOTOK_CONTINUE
@@ -637,10 +638,17 @@ SHORT INSTRUCTION CODE                                        LONG INSTRUCTION C
 
 
 68-71    0100 01XX JUMP_FORWARD                               196  1100 0100 XXXXXXXX JUMP_FORWARD_X
+                                                              197  1000 0101 XXXXXXXX JUMP2_FORWARD
 72-75    0100 10XX JUMP_BACKWARD                              200  1100 1000 XXXXXXXX JUMP_BACKWARD_X
+                                                              201  1101 1001 XXXXXXXX JUMP2_BACKWARD
 76-79    0100 11XX JUMP_BACKWARD_IF_FALSE                     204  1100 1100 XXXXXXXX JUMP_BACKWARD_IF_FALSE_X
-80-83    0101 00XX JUMP_FORWARD_IF_FALSE                      208  1101 0000 XXXXXXXX JUMP_FORWARD_IF_FALSE_X
-84-87    0101 01XX JUMP_FORWARD_IF_TRUE                       212  1101 0100 XXXXXXXX JUMP_FORWARD_IF_TRUE_X
+                                                              205  1101 1101 XXXXXXXX JUMP2_BACKWARD_IF_FALSE
+80-83    0101 00XX JUMP_BACKWARD_IF_TRUE                      208  1101 0000 XXXXXXXX JUMP_BACKWARD_IF_TRUE_X
+                                                              209  1101 0001 XXXXXXXX JUMP2_FORWARD_IF_TRUE
+84-87    0101 01XX UNUSED                                     212  1101 0100 XXXXXXXX JUMP_FORWARD_IF_FALSE
+                                                              213  1101 0101 XXXXXXXX JUMP2_FORWARD_IF_FALSE
+                                                              214  1101 0110 XXXXXXXX JUMP_FORWARD_IF_TRUE
+                                                              215  1101 0111 XXXXXXXX JUMP2_FORWARD_IF_TRUE
 
                                                                         vv
 88-91    0101 10XX YYYYYYYY STORE_INTO_CTXTEMPVAR             216  1101 1000 XXXXXXXX YYYYYYYY STORE_INTO_CTXTEMPVAR_X        (bit 3 on, bit 2 off)
@@ -761,25 +769,22 @@ enum moo_bcode_t
 	BCODE_JUMP_FORWARD_2           = 0x46, /* 70 */
 	BCODE_JUMP_FORWARD_3           = 0x47, /* 71 */
 
-	BCODE_JUMP_BACKWARD_0          = 0x48,
-	BCODE_JUMP_BACKWARD_1          = 0x49,
-	BCODE_JUMP_BACKWARD_2          = 0x4A,
-	BCODE_JUMP_BACKWARD_3          = 0x4B,
+	BCODE_JUMP_BACKWARD_0          = 0x48, /* 72 */
+	BCODE_JUMP_BACKWARD_1          = 0x49, /* 73 */
+	BCODE_JUMP_BACKWARD_2          = 0x4A, /* 74 */
+	BCODE_JUMP_BACKWARD_3          = 0x4B, /* 75 */
 
-	BCODE_JUMP_FORWARD_IF_FALSE_0  = 0x4C, /* 76 */
-	BCODE_JUMP_FORWARD_IF_FALSE_1  = 0x4D, /* 77 */
-	BCODE_JUMP_FORWARD_IF_FALSE_2  = 0x4E, /* 78 */
-	BCODE_JUMP_FORWARD_IF_FALSE_3  = 0x4F, /* 79 */
+	BCODE_JUMP_BACKWARD_IF_FALSE_0 = 0x4C, /* 76 */
+	BCODE_JUMP_BACKWARD_IF_FALSE_1 = 0x4D, /* 77 */
+	BCODE_JUMP_BACKWARD_IF_FALSE_2 = 0x4E, /* 78 */
+	BCODE_JUMP_BACKWARD_IF_FALSE_3 = 0x4F, /* 79 */
 
-	BCODE_JUMP_BACKWARD_IF_FALSE_0 = 0x50, /* 80 */
-	BCODE_JUMP_BACKWARD_IF_FALSE_1 = 0x51, /* 81 */
-	BCODE_JUMP_BACKWARD_IF_FALSE_2 = 0x52, /* 82 */
-	BCODE_JUMP_BACKWARD_IF_FALSE_3 = 0x53, /* 83 */
+	BCODE_JUMP_BACKWARD_IF_TRUE_0  = 0x50, /* 80 */
+	BCODE_JUMP_BACKWARD_IF_TRUE_1  = 0x51, /* 81 */
+	BCODE_JUMP_BACKWARD_IF_TRUE_2  = 0x52, /* 82 */
+	BCODE_JUMP_BACKWARD_IF_TRUE_3  = 0x53, /* 83 */
 
-	BCODE_JUMP_BACKWARD_IF_TRUE_0  = 0x54, /* 84 */
-	BCODE_JUMP_BACKWARD_IF_TRUE_1  = 0x55, /* 85 */
-	BCODE_JUMP_BACKWARD_IF_TRUE_2  = 0x56, /* 86 */
-	BCODE_JUMP_BACKWARD_IF_TRUE_3  = 0x57, /* 87 */
+	/* UNUSED  0x54 - 0x57 */
 
 	BCODE_STORE_INTO_CTXTEMPVAR_0  = 0x58, /* 88 */
 	BCODE_STORE_INTO_CTXTEMPVAR_1  = 0x59, /* 89 */
@@ -859,12 +864,15 @@ enum moo_bcode_t
 	BCODE_JUMP_BACKWARD_X          = 0xC8, /* 200 ## */
 	BCODE_JUMP2_BACKWARD           = 0xC9, /* 201 */
 
-	BCODE_JUMP_FORWARD_IF_FALSE_X  = 0xCC, /* 204 ## */
-	BCODE_JUMP2_FORWARD_IF_FALSE   = 0xCD, /* 205 */
-	BCODE_JUMP_BACKWARD_IF_FALSE_X = 0xD0, /* 208 ## */
-	BCODE_JUMP2_BACKWARD_IF_FALSE  = 0xD1, /* 209 */
-	BCODE_JUMP_BACKWARD_IF_TRUE_X  = 0xD4, /* 212 ## */
-	BCODE_JUMP2_BACKWARD_IF_TRUE   = 0xD5, /* 213 */
+	BCODE_JUMP_BACKWARD_IF_FALSE_X = 0xCC, /* 204 ## */
+	BCODE_JUMP2_BACKWARD_IF_FALSE  = 0xCD, /* 205 */
+	BCODE_JUMP_BACKWARD_IF_TRUE_X  = 0xD0, /* 208 ## */
+	BCODE_JUMP2_BACKWARD_IF_TRUE   = 0xD1, /* 209 */
+
+	BCODE_JUMP_FORWARD_IF_FALSE    = 0xD4, /* 212 ## */
+	BCODE_JUMP2_FORWARD_IF_FALSE   = 0xD5, /* 213 */
+	BCODE_JUMP_FORWARD_IF_TRUE     = 0xD6, /* 214 ## */
+	BCODE_JUMP2_FORWARD_IF_TRUE    = 0xD7, /* 215 */
 
 	BCODE_STORE_INTO_CTXTEMPVAR_X  = 0xD8, /* 216 ## */
 	BCODE_POP_INTO_CTXTEMPVAR_X    = 0xDC, /* 220 ## */
@@ -888,7 +896,7 @@ enum moo_bcode_t
 
 	BCODE_MAKE_ARRAY                 = 0xF5, /* 245 */
 	BCODE_POP_INTO_ARRAY             = 0xF6, /* 246 */
-	BCODE_DUP_STACKTOP               = 0xF7,
+	BCODE_DUP_STACKTOP               = 0xF7, /* 247 */
 	BCODE_POP_STACKTOP               = 0xF8,
 	BCODE_RETURN_STACKTOP            = 0xF9, /* ^something */
 	BCODE_RETURN_RECEIVER            = 0xFA, /* ^self */

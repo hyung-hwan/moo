@@ -264,17 +264,6 @@ int moo_decode (moo_t* moo, moo_oop_method_t mth, const moo_oocs_t* classfqn)
 				LOG_INST_1 (moo, "jump_backward %zu", (moo_oow_t)(bcode & 0x3)); /* low 2 bits */
 				break;
 
-			case BCODE_JUMP_FORWARD_IF_FALSE_X:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jump_forward_if_false %zu", b1);
-				break;
-
-			case BCODE_JUMP_FORWARD_IF_FALSE_0:
-			case BCODE_JUMP_FORWARD_IF_FALSE_1:
-			case BCODE_JUMP_FORWARD_IF_FALSE_2:
-			case BCODE_JUMP_FORWARD_IF_FALSE_3:
-				LOG_INST_1 (moo, "jump_forward_if_false %zu", (moo_oow_t)(bcode & 0x3)); /* low 2 bits */
-				break;
 
 			case BCODE_JUMP_BACKWARD_IF_FALSE_X:
 				FETCH_PARAM_CODE_TO (moo, b1);
@@ -298,6 +287,16 @@ int moo_decode (moo_t* moo, moo_oop_method_t mth, const moo_oocs_t* classfqn)
 			case BCODE_JUMP_BACKWARD_IF_TRUE_2:
 			case BCODE_JUMP_BACKWARD_IF_TRUE_3:
 				LOG_INST_1 (moo, "jump_backward_if_true %zu", (moo_oow_t)(bcode & 0x3)); /* low 2 bits */
+				break;
+
+			case BCODE_JUMP_FORWARD_IF_FALSE:
+				FETCH_PARAM_CODE_TO (moo, b1);
+				LOG_INST_1 (moo, "jump_forward_if_false %zu", b1);
+				break;
+
+			case BCODE_JUMP_FORWARD_IF_TRUE:
+				FETCH_PARAM_CODE_TO (moo, b1);
+				LOG_INST_1 (moo, "jump_forward_if_true %zu", b1);
 				break;
 
 			case BCODE_JUMP2_FORWARD:
