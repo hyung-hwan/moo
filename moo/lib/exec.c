@@ -1470,6 +1470,8 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
+/* TOOD: check if _class is set to be instantiatable... if not MOO_EPERM */
+
 	if (nargs >= 1)
 	{
 		szoop = MOO_STACK_GETARG(moo, nargs, 0);
@@ -3003,51 +3005,208 @@ static moo_pfrc_t pf_smptr_free (moo_t* moo, moo_ooi_t nargs)
 }
 
 
-#define FETCH_RAW_INT(var,rawptr,offset,size) \
-	switch (size) \
-	{ \
-		case 1: var = *(moo_int8_t*)&rawptr[offset]; break; \
-		case 2: var = *(moo_int16_t*)&rawptr[offset]; break; \
-		case 4: var = *(moo_int32_t*)&rawptr[offset]; break; \
-		case 8: var = *(moo_int64_t*)&rawptr[offset]; break; \
-		default: var = *(moo_int8_t*)&rawptr[offset]; break; \
+#pragma pack(1)
+struct st_int8_t    { moo_int8_t  v; };
+struct st_int16_t   { moo_int16_t v; };
+struct st_int32_t   { moo_int32_t v; };
+
+struct st_uint8_t   { moo_uint8_t  v; };
+struct st_uint16_t  { moo_uint16_t v; };
+struct st_uint32_t  { moo_uint32_t v; };
+
+#if defined(MOO_HAVE_UINT64_T)
+struct st_int64_t   { moo_int64_t v; };
+struct st_uint64_t  { moo_uint64_t v; };
+#endif
+#if defined(MOO_HAVE_UINT128_T)
+struct st_int128_t   { moo_int128_t v; };
+struct st_uint128_t  { moo_uint128_t v; };
+#endif
+#pragma pack()
+
+
+static MOO_INLINE moo_oop_t _fetch_raw_int (moo_t* moo, moo_int8_t* rawptr, moo_oow_t offset, int size)
+{
+	moo_ooi_t v;
+
+	switch (size)
+	{
+		case 1: 
+			v = ((struct st_int8_t*)&rawptr[offset])->v;
+			break;
+
+		case 2:
+			v = ((struct st_int16_t*)&rawptr[offset])->v;
+			break;
+
+		case 4: 
+			v = ((struct st_int32_t*)&rawptr[offset])->v;
+			break;
+
+	#if defined(MOO_HAVE_INT64_T) &&  (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_INT64_T)
+		case 8: 
+			v = ((struct st_int64_t*)&rawptr[offset])->v;
+			break;
+	#endif
+
+	#if defined(MOO_HAVE_INT128_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_INT128_T)
+		case 16: 
+			v = ((struct st_int128_t*)&rawptr[offset])->v;
+			break;
+	#endif
+
+		default:
+			moo->errnum = MOO_EINVAL;
+			return MOO_NULL;
 	}
 
-#define FETCH_RAW_UINT(var,rawptr,offset,size) \
-	switch (size) \
-	{ \
-		case 1: var = *(moo_uint8_t*)&rawptr[offset]; break; \
-		case 2: var = *(moo_uint16_t*)&rawptr[offset]; break; \
-		case 4: var = *(moo_uint32_t*)&rawptr[offset]; break; \
-		case 8: var = *(moo_uint64_t*)&rawptr[offset]; break; \
-		default: var = *(moo_uint8_t*)&rawptr[offset]; break; \
+	return moo_ooitoint (moo, v);
+}
+
+
+static MOO_INLINE moo_oop_t _fetch_raw_uint (moo_t* moo, moo_uint8_t* rawptr, moo_oow_t offset, int size)
+{
+	moo_oow_t v;
+
+	switch (size)
+	{
+		case 1: 
+			v = ((struct st_uint8_t*)&rawptr[offset])->v;
+			break;
+
+		case 2:
+			v = ((struct st_uint16_t*)&rawptr[offset])->v;
+			break;
+
+		case 4: 
+			v = ((struct st_uint32_t*)&rawptr[offset])->v;
+			break;
+
+	#if defined(MOO_HAVE_UINT64_T) &&  (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_UINT64_T)
+		case 8: 
+			v = ((struct st_uint64_t*)&rawptr[offset])->v;
+			break;
+	#endif
+
+	#if defined(MOO_HAVE_UINT128_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_UINT128_T)
+		case 16: 
+			v = ((struct st_uint128_t*)&rawptr[offset])->v;
+			break;
+	#endif
+
+		default:
+			moo->errnum = MOO_EINVAL;
+			return MOO_NULL;
 	}
 
-#define STORE_RAW_INT(value,rawptr,offset,size) \
-	switch (size) \
-	{ \
-		case 1: *(moo_int8_t*)&rawptr[offset] = value; break; \
-		case 2: *(moo_int16_t*)&rawptr[offset] = value; break; \
-		case 4: *(moo_int32_t*)&rawptr[offset] = value; break; \
-		case 8: *(moo_int64_t*)&rawptr[offset] = value; break; \
-		default: *(moo_int8_t*)&rawptr[offset] = value; break; \
+	return moo_oowtoint (moo, v);
+}
+
+static MOO_INLINE int _store_raw_int (moo_t* moo, moo_uint8_t* rawptr, moo_oow_t offset, int size, moo_oop_t voop)
+{
+	moo_ooi_t w, max, min;
+
+	if (moo_inttoooi (moo, voop, &w) == 0) return -1;
+
+	/* assume 2's complement */
+	max = (moo_ooi_t)(~(moo_oow_t)0 >> ((MOO_SIZEOF_OOW_T - size) * 8  + 1));
+	min = -max - 1;
+MOO_DEBUG2 (moo, "MAX = %zd MIN = %zd\n", max, min);
+
+	if (w > max || w < min) 
+	{
+		moo->errnum = MOO_ERANGE; 
+		return -1;
 	}
 
-#define STORE_RAW_UINT(value,rawptr,offset,size) \
-	switch (size) \
-	{ \
-		case 1: *(moo_uint8_t*)&rawptr[offset] = value; break; \
-		case 2: *(moo_uint16_t*)&rawptr[offset] = value; break; \
-		case 4: *(moo_uint32_t*)&rawptr[offset] = value; break; \
-		case 8: *(moo_uint64_t*)&rawptr[offset] = value; break; \
-		default: *(moo_uint8_t*)&rawptr[offset] = value; break; \
+	switch (size)
+	{ 
+		case 1:
+			((struct st_int8_t*)&rawptr[offset])->v = w;
+			return 0;
+
+		case 2:
+			((struct st_int16_t*)&rawptr[offset])->v = w;
+			return 0;
+
+		case 4:
+			((struct st_int32_t*)&rawptr[offset])->v = w;
+			return 0;
+
+	#if defined(MOO_HAVE_INT64_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_INT64_T)
+		case 8:
+			((struct st_int64_t*)&rawptr[offset])->v = w; 
+			return 0;
+	#endif
+
+	#if defined(MOO_HAVE_INT128_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_INT128_T)
+		case 16:
+			((struct st_int128_t*)&rawptr[offset])->v = w; 
+			return 0;
+	#endif
 	}
+
+	moo->errnum = MOO_EINVAL;
+	return -1;
+}
+
+static MOO_INLINE int _store_raw_uint (moo_t* moo, moo_uint8_t* rawptr, moo_oow_t offset, int size, moo_oop_t voop)
+{
+	int n;
+	moo_oow_t w, max;
+	
+
+	if ((n = moo_inttooow (moo, voop, &w)) <= -1) 
+	{
+		if (n <= -1) moo->errnum = MOO_ERANGE;
+		return -1;
+	}
+
+	max = (~(moo_oow_t)0 >> ((MOO_SIZEOF_OOW_T - size) * 8));
+MOO_DEBUG2 (moo, "MAX = %zx %zx\n", max, max);
+	if (w > max) 
+	{
+		moo->errnum = MOO_ERANGE; 
+		return -1;
+	}
+
+
+	switch (size)
+	{ 
+		case 1:
+			((struct st_uint8_t*)&rawptr[offset])->v = w;
+			return 0;
+
+		case 2:
+			((struct st_uint16_t*)&rawptr[offset])->v = w;
+			return 0;
+
+		case 4:
+			((struct st_uint32_t*)&rawptr[offset])->v = w;
+			return 0;
+
+	#if defined(MOO_HAVE_UINT64_T) &&  (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_UINT64_T)
+		case 8:
+			((struct st_uint64_t*)&rawptr[offset])->v = w;
+			return 0;
+	#endif
+
+	#if defined(MOO_HAVE_UINT128_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_UINT128_T)
+		case 16:
+			((struct st_uint128_t*)&rawptr[offset])->v = w; 
+			return 0;
+	#endif
+	}
+
+	moo->errnum = MOO_EINVAL;
+	return -1;
+}
+
 
 static moo_pfrc_t _get_system_int (moo_t* moo, moo_ooi_t nargs, int size)
 {
-	moo_uint8_t* rawptr;
+	moo_int8_t* rawptr;
 	moo_oow_t offset;
-	moo_ooi_t value;
 	moo_oop_t tmp;
 
 	MOO_ASSERT (moo, nargs == 2);
@@ -3063,10 +3222,8 @@ static moo_pfrc_t _get_system_int (moo_t* moo, moo_ooi_t nargs, int size)
 		return MOO_PF_SUCCESS;
 	}
 
-	FETCH_RAW_INT (value, rawptr, offset, size);
-
-	tmp = moo_ooitoint (moo, value);
-	if (!tmp)
+	tmp = _fetch_raw_int (moo, rawptr, offset, size);
+	if (!tmp) 
 	{
 		MOO_STACK_SETRETTOERRNUM (moo, nargs);
 		return MOO_PF_SUCCESS;
@@ -3080,7 +3237,6 @@ static moo_pfrc_t _get_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
 {
 	moo_uint8_t* rawptr;
 	moo_oow_t offset;
-	moo_oow_t value;
 	moo_oop_t tmp;
 
 	MOO_ASSERT (moo, nargs == 2);
@@ -3096,9 +3252,7 @@ static moo_pfrc_t _get_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
 		return MOO_PF_SUCCESS;
 	}
 
-	FETCH_RAW_UINT (value, rawptr, offset, size);
-
-	tmp = moo_oowtoint (moo, value);
+	tmp = _fetch_raw_uint (moo, rawptr, offset, size);
 	if (!tmp) 
 	{
 		MOO_STACK_SETRETTOERRNUM (moo, nargs);
@@ -3153,7 +3307,6 @@ static moo_pfrc_t _put_system_int (moo_t* moo, moo_ooi_t nargs, int size)
 {
 	moo_uint8_t* rawptr;
 	moo_oow_t offset;
-	moo_ooi_t value;
 	moo_oop_t tmp;
 
 	MOO_ASSERT (moo, nargs == 3);
@@ -3162,10 +3315,13 @@ static moo_pfrc_t _put_system_int (moo_t* moo, moo_ooi_t nargs, int size)
 	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
 	else if (moo_inttooow (moo, tmp, (moo_oow_t*)&rawptr) <= 0) goto einval;
 
-	if (moo_inttooow(moo, MOO_STACK_GETARG(moo, nargs, 1), &offset) <= 0 ||
-	    moo_inttoooi(moo, MOO_STACK_GETARG(moo, nargs, 2), &value) <= 0) goto einval;
+	if (moo_inttooow(moo, MOO_STACK_GETARG(moo, nargs, 1), &offset) <= 0) goto einval;
 
-	STORE_RAW_INT (value, rawptr, offset, size);
+	if (_store_raw_int (moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 2)) <= -1)
+	{
+		MOO_STACK_SETRETTOERRNUM (moo, nargs);
+		return MOO_PF_SUCCESS;
+	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
@@ -3179,7 +3335,6 @@ static moo_pfrc_t _put_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
 {
 	moo_uint8_t* rawptr;
 	moo_oow_t offset;
-	moo_oow_t value;
 	moo_oop_t tmp;
 
 	MOO_ASSERT (moo, nargs == 3);
@@ -3188,10 +3343,13 @@ static moo_pfrc_t _put_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
 	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
 	else if (moo_inttooow (moo, tmp, (moo_oow_t*)&rawptr) <= 0) goto einval;
 
-	if (moo_inttooow(moo, MOO_STACK_GETARG(moo, nargs, 1), &offset) <= 0 ||
-	    moo_inttooow(moo, MOO_STACK_GETARG(moo, nargs, 2), &value) <= 0) goto einval;
+	if (moo_inttooow(moo, MOO_STACK_GETARG(moo, nargs, 1), &offset) <= 0) goto einval;
 
-	STORE_RAW_UINT (value, rawptr, offset, size);
+	if (_store_raw_uint (moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 2)) <= -1)
+	{
+		MOO_STACK_SETRETTOERRNUM (moo, nargs);
+		return MOO_PF_SUCCESS;
+	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
@@ -3245,9 +3403,8 @@ static moo_pfrc_t pf_system_put_uint64 (moo_t* moo, moo_ooi_t nargs)
 static moo_pfrc_t _get_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
 {
 	moo_oop_t rcv;
-	moo_uint8_t* rawptr;
+	moo_int8_t* rawptr;
 	moo_oow_t offset;
-	moo_ooi_t value;
 	moo_oop_t result;
 
 	MOO_ASSERT (moo, nargs == 1);
@@ -3267,12 +3424,10 @@ static moo_pfrc_t _get_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
 
 	rawptr = MOO_OOP_TO_SMPTR(rcv);
 
-	FETCH_RAW_INT (value, rawptr, offset, size);
-
-	result = moo_ooitoint (moo, value);
+	result = _fetch_raw_int (moo, rawptr, offset, size);
 	if (!result) 
 	{
-		MOO_STACK_SETRETTOERRNUM(moo, nargs);
+		MOO_STACK_SETRETTOERRNUM (moo, nargs);
 		return MOO_PF_SUCCESS;
 	}
 
@@ -3285,7 +3440,6 @@ static moo_pfrc_t _get_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 	moo_oop_t rcv;
 	moo_uint8_t* rawptr;
 	moo_oow_t offset;
-	moo_oow_t value;
 	moo_oop_t result;
 
 	MOO_ASSERT (moo, nargs == 1);
@@ -3305,9 +3459,7 @@ static moo_pfrc_t _get_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 
 	rawptr = MOO_OOP_TO_SMPTR(rcv);
 
-	FETCH_RAW_UINT (value, rawptr, offset, size);
-
-	result = moo_oowtoint (moo, value);
+	result = _fetch_raw_uint (moo, rawptr, offset, size);
 	if (!result) 
 	{
 		MOO_STACK_SETRETTOERRNUM(moo, nargs);
@@ -3362,7 +3514,6 @@ static moo_pfrc_t _put_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
 {
 	moo_uint8_t* rawptr;
 	moo_oow_t offset;
-	moo_ooi_t value;
 	moo_oop_t tmp;
 
 	MOO_ASSERT (moo, nargs == 2);
@@ -3370,20 +3521,23 @@ static moo_pfrc_t _put_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
 	tmp = MOO_STACK_GETRCV(moo, nargs);
 	if (!MOO_OOP_IS_SMPTR(tmp)) 
 	{
-		moo->errnum = MOO_EMSGRCV;
-		return MOO_PF_HARD_FAILURE;
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EMSGRCV);
+		return MOO_PF_SUCCESS;
 	}
 
 	rawptr = MOO_OOP_TO_SMPTR(tmp);
 
-	if (moo_inttooow(moo, MOO_STACK_GETARG(moo, nargs, 0), &offset) <= 0 ||
-	    moo_inttoooi(moo, MOO_STACK_GETARG(moo, nargs, 1), &value) <= 0)
+	if (moo_inttooow(moo, MOO_STACK_GETARG(moo, nargs, 0), &offset) <= 0)
 	{
 		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
 		return MOO_PF_SUCCESS;
 	}
 
-	STORE_RAW_INT (value, rawptr, offset, size);
+	if (_store_raw_int (moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 1)) <= -1)
+	{
+		MOO_STACK_SETRETTOERRNUM (moo, nargs);
+		return MOO_PF_SUCCESS;
+	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
@@ -3393,7 +3547,6 @@ static moo_pfrc_t _put_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 {
 	moo_uint8_t* rawptr;
 	moo_oow_t offset;
-	moo_oow_t value;
 	moo_oop_t tmp;
 
 	MOO_ASSERT (moo, nargs == 2);
@@ -3401,20 +3554,23 @@ static moo_pfrc_t _put_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 	tmp = MOO_STACK_GETRCV(moo, nargs);
 	if (!MOO_OOP_IS_SMPTR(tmp)) 
 	{
-		moo->errnum = MOO_EMSGRCV;
-		return MOO_PF_HARD_FAILURE;
+		MOO_STACK_SETRETTOERRNUM (moo, MOO_EMSGRCV);
+		return MOO_PF_SUCCESS;
 	}
 
 	rawptr = MOO_OOP_TO_SMPTR(tmp);
 
-	if (moo_inttooow(moo, MOO_STACK_GETARG(moo, nargs, 0), &offset) <= 0 ||
-	    moo_inttooow(moo, MOO_STACK_GETARG(moo, nargs, 1), &value) <= 0) 
+	if (moo_inttooow(moo, MOO_STACK_GETARG(moo, nargs, 0), &offset) <= 0)
 	{
 		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
 		return MOO_PF_SUCCESS;
 	}
 
-	STORE_RAW_UINT (value, rawptr, offset, size);
+	if (_store_raw_uint (moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 1)) <= -1)
+	{
+		MOO_STACK_SETRETTOERRNUM (moo, nargs);
+		return MOO_PF_SUCCESS;
+	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;

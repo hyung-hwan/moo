@@ -233,17 +233,12 @@ MOO_INLINE static int is_bigint (moo_t* moo, moo_oop_t x)
 {
 	moo_oop_class_t c;
 
-	/*MOO_ASSERT (moo, MOO_OOP_IS_POINTER(x));*/
 	if (!MOO_OOP_IS_POINTER(x)) return 0;
 
 /* TODO: is it better to introduce a special integer mark into the class itself */
 /* TODO: or should it check if it's a subclass, subsubclass, subsubsubclass, etc of a large_integer as well? */
 	c = MOO_OBJ_GET_CLASS(x);
-
-	if (c == moo->_large_positive_integer ||
-	    c == moo->_large_negative_integer) return 1;
-
-	return 0;
+	return (c == moo->_large_positive_integer || c == moo->_large_negative_integer);
 }
 
 MOO_INLINE int moo_isint (moo_t* moo, moo_oop_t x)
@@ -257,7 +252,7 @@ static MOO_INLINE int bigint_to_oow (moo_t* moo, moo_oop_t num, moo_oow_t* w)
 {
 	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(num));
 	MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(num) == moo->_large_positive_integer ||
-	             MOO_OBJ_GET_CLASS(num) == moo->_large_negative_integer);
+	                 MOO_OBJ_GET_CLASS(num) == moo->_large_negative_integer);
 
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
 	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(num) >= 1);
@@ -283,6 +278,7 @@ static MOO_INLINE int bigint_to_oow (moo_t* moo, moo_oop_t num, moo_oow_t* w)
 #	error UNSUPPORTED LIW BIT SIZE
 #endif
 
+	moo->errnum = MOO_ERANGE;
 	return 0; /* not convertable */
 }
 
@@ -346,8 +342,25 @@ int moo_inttoooi (moo_t* moo, moo_oop_t x, moo_ooi_t* i)
 	int n;
 
 	n = moo_inttooow (moo, x, &w);
-	if (n < 0) *i = -w;
-	else if (n > 0) *i = w;
+	if (n < 0) 
+	{
+		MOO_ASSERT (moo, MOO_TYPE_MAX(moo_ooi_t) + MOO_TYPE_MIN(moo_ooi_t) == -1); /* assume 2's complement */
+		if (w > (moo_oow_t)MOO_TYPE_MAX(moo_ooi_t) + 1)
+		{
+			moo->errnum = MOO_ERANGE; /* not convertable. number too small */
+			return 0;
+		}
+		*i = -w;
+	}
+	else if (n > 0) 
+	{
+		if (w > MOO_TYPE_MAX(moo_ooi_t)) 
+		{
+			moo->errnum = MOO_ERANGE; /* not convertable. number too big */
+			return 0;
+		}
+		*i = w;
+	}
 
 	return n;
 }
