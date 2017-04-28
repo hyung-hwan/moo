@@ -338,7 +338,8 @@ a := System _malloc(200).
 i := 0.
 while (i < 26)
 {
-	a putUint32(i, ($A asInteger + i)).
+	a putUint8(i, ($A asInteger + i)).
+	System _putUint8(a, i, ($A asInteger + i)).
 	i := i + 1.
 }.
 while (i > 0)
@@ -347,6 +348,7 @@ while (i > 0)
 	a getUint8(i) asCharacter dump.
 }.
 a getUint32(0) dump.
+a getUint32(1) dump.
 
 ##a dump.
 ##System _free(a).

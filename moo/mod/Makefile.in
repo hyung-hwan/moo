@@ -93,6 +93,10 @@ host_triplet = @host@
 # to the first number in -version-info above
 @WIN32_TRUE@am__append_1 = -DMOO_DEFAULT_PFMODPREFIX=\"libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"-1\"
 @WIN32_FALSE@am__append_2 = -DMOO_DEFAULT_PFMODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"\"
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_3 = libmoo-ffi.la
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_4 = libmoo-x11.la
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_FALSE@am__append_5 = libmoo-ffi.la
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_FALSE@am__append_6 = libmoo-x11.la
 subdir = mod
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_namespace.m4 \
@@ -152,16 +156,19 @@ libmoo_console_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 @ENABLE_STATIC_MODULE_FALSE@am_libmoo_console_la_rpath = -rpath \
 @ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
 @ENABLE_STATIC_MODULE_TRUE@am_libmoo_console_la_rpath =
-libmoo_ffi_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
-am_libmoo_ffi_la_OBJECTS = libmoo_ffi_la-ffi.lo
+@ENABLE_MOD_FFI_TRUE@libmoo_ffi_la_DEPENDENCIES =  \
+@ENABLE_MOD_FFI_TRUE@	$(am__DEPENDENCIES_1) \
+@ENABLE_MOD_FFI_TRUE@	$(am__DEPENDENCIES_1)
+am__libmoo_ffi_la_SOURCES_DIST = ffi.c _ffi.h
+@ENABLE_MOD_FFI_TRUE@am_libmoo_ffi_la_OBJECTS = libmoo_ffi_la-ffi.lo
 libmoo_ffi_la_OBJECTS = $(am_libmoo_ffi_la_OBJECTS)
 libmoo_ffi_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(libmoo_ffi_la_LDFLAGS) $(LDFLAGS) -o $@
-@ENABLE_STATIC_MODULE_FALSE@am_libmoo_ffi_la_rpath = -rpath \
-@ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
-@ENABLE_STATIC_MODULE_TRUE@am_libmoo_ffi_la_rpath =
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_FALSE@am_libmoo_ffi_la_rpath =  \
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_FALSE@	-rpath \
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am_libmoo_ffi_la_rpath =
 libmoo_stdio_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_libmoo_stdio_la_OBJECTS = libmoo_stdio_la-stdio.lo
 libmoo_stdio_la_OBJECTS = $(am_libmoo_stdio_la_OBJECTS)
@@ -172,15 +179,18 @@ libmoo_stdio_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 @ENABLE_STATIC_MODULE_FALSE@am_libmoo_stdio_la_rpath = -rpath \
 @ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
 @ENABLE_STATIC_MODULE_TRUE@am_libmoo_stdio_la_rpath =
-libmoo_x11_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
-am_libmoo_x11_la_OBJECTS = libmoo_x11_la-x11.lo
+@ENABLE_MOD_X11_TRUE@libmoo_x11_la_DEPENDENCIES =  \
+@ENABLE_MOD_X11_TRUE@	$(am__DEPENDENCIES_1)
+am__libmoo_x11_la_SOURCES_DIST = x11.c _x11.h
+@ENABLE_MOD_X11_TRUE@am_libmoo_x11_la_OBJECTS = libmoo_x11_la-x11.lo
 libmoo_x11_la_OBJECTS = $(am_libmoo_x11_la_OBJECTS)
 libmoo_x11_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(libmoo_x11_la_LDFLAGS) $(LDFLAGS) -o $@
-@ENABLE_STATIC_MODULE_FALSE@am_libmoo_x11_la_rpath = -rpath \
-@ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
-@ENABLE_STATIC_MODULE_TRUE@am_libmoo_x11_la_rpath =
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_FALSE@am_libmoo_x11_la_rpath =  \
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_FALSE@	-rpath \
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am_libmoo_x11_la_rpath =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -217,8 +227,9 @@ am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(libmoo_console_la_SOURCES) $(libmoo_ffi_la_SOURCES) \
 	$(libmoo_stdio_la_SOURCES) $(libmoo_x11_la_SOURCES)
-DIST_SOURCES = $(libmoo_console_la_SOURCES) $(libmoo_ffi_la_SOURCES) \
-	$(libmoo_stdio_la_SOURCES) $(libmoo_x11_la_SOURCES)
+DIST_SOURCES = $(libmoo_console_la_SOURCES) \
+	$(am__libmoo_ffi_la_SOURCES_DIST) $(libmoo_stdio_la_SOURCES) \
+	$(am__libmoo_x11_la_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -422,25 +433,29 @@ CPPFLAGS_COMMON = -I$(abs_builddir) -I$(abs_builddir)/../lib \
 @ENABLE_STATIC_MODULE_TRUE@LDFLAGS_COMMON = -L$(libdir) -version-info 1:0:0 -no-undefined
 @ENABLE_STATIC_MODULE_FALSE@LIBADD_COMMON = -lmoo
 @ENABLE_STATIC_MODULE_TRUE@LIBADD_COMMON = 
-@ENABLE_STATIC_MODULE_TRUE@noinst_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la libmoo-x11.la
+@ENABLE_STATIC_MODULE_TRUE@noinst_LTLIBRARIES = libmoo-console.la \
+@ENABLE_STATIC_MODULE_TRUE@	libmoo-stdio.la $(am__append_3) \
+@ENABLE_STATIC_MODULE_TRUE@	$(am__append_4)
 @ENABLE_STATIC_MODULE_FALSE@pkgmodexecdir = $(libdir)
-@ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES = libmoo-console.la libmoo-ffi.la libmoo-stdio.la  libmoo-x11.la
+@ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES =  \
+@ENABLE_STATIC_MODULE_FALSE@	libmoo-console.la libmoo-stdio.la \
+@ENABLE_STATIC_MODULE_FALSE@	$(am__append_5) $(am__append_6)
 libmoo_console_la_SOURCES = console.c console.h
 libmoo_console_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_console_la_LDFLAGS = $(LDFLAGS_COMMON)
 libmoo_console_la_LIBADD = $(LIBADD_COMMON) -ltermcap 
-libmoo_ffi_la_SOURCES = ffi.c _ffi.h
-libmoo_ffi_la_CPPFLAGS = $(CPPFLAGS_COMMON)
-libmoo_ffi_la_LDFLAGS = $(LDFLAGS_COMMON)
-libmoo_ffi_la_LIBADD = $(LIBADD_COMMON) $(DYNCALL_LIBS)
+@ENABLE_MOD_FFI_TRUE@libmoo_ffi_la_SOURCES = ffi.c _ffi.h
+@ENABLE_MOD_FFI_TRUE@libmoo_ffi_la_CPPFLAGS = $(CPPFLAGS_COMMON)
+@ENABLE_MOD_FFI_TRUE@libmoo_ffi_la_LDFLAGS = $(LDFLAGS_COMMON)
+@ENABLE_MOD_FFI_TRUE@libmoo_ffi_la_LIBADD = $(LIBADD_COMMON) $(DYNCALL_LIBS)
 libmoo_stdio_la_SOURCES = stdio.c _stdio.h
 libmoo_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_stdio_la_LDFLAGS = $(LDFLAGS_COMMON)
 libmoo_stdio_la_LIBADD = $(LIBADD_COMMON)
-libmoo_x11_la_SOURCES = x11.c _x11.h
-libmoo_x11_la_CPPFLAGS = $(CPPFLAGS_COMMON)
-libmoo_x11_la_LDFLAGS = $(LDFLAGS_COMMON)
-libmoo_x11_la_LIBADD = $(LIBADD_COMMON) -lxcb
+@ENABLE_MOD_X11_TRUE@libmoo_x11_la_SOURCES = x11.c _x11.h
+@ENABLE_MOD_X11_TRUE@libmoo_x11_la_CPPFLAGS = $(CPPFLAGS_COMMON)
+@ENABLE_MOD_X11_TRUE@libmoo_x11_la_LDFLAGS = $(LDFLAGS_COMMON)
+@ENABLE_MOD_X11_TRUE@libmoo_x11_la_LIBADD = $(LIBADD_COMMON) -lxcb
 all: all-am
 
 .SUFFIXES:

@@ -277,6 +277,9 @@
 /* This value is set to 1 to indicate that the system argz facility works */
 #undef HAVE_WORKING_ARGZ
 
+/* Define to 1 if you have the <xcb/xcb.h> header file. */
+#undef HAVE_XCB_XCB_H
+
 /* Define to 1 if you have the `_vsnprintf' function. */
 #undef HAVE__VSNPRINTF
 
@@ -331,6 +334,12 @@
 
 /* use libltdl when loading a dynamic module */
 #undef MOO_ENABLE_LIBLTDL
+
+/* build mod/ffi */
+#undef MOO_ENABLE_MOD_FFI
+
+/* build mod/x11 */
+#undef MOO_ENABLE_MOD_X11
 
 /* link modules statically into the main library */
 #undef MOO_ENABLE_STATIC_MODULE

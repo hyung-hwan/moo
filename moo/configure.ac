@@ -153,6 +153,7 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS([stddef.h wchar.h wctype.h errno.h signal.h fcntl.h dirent.h])
 AC_CHECK_HEADERS([time.h sys/time.h utime.h spawn.h execinfo.h ucontext.h])
 AC_CHECK_HEADERS([dyncall.h])
+AC_CHECK_HEADERS([xcb/xcb.h])
 
 dnl check data types
 dnl AC_CHECK_TYPE([wchar_t], 
@@ -459,6 +460,30 @@ then
 	AC_DEFINE([MOO_ENABLE_LIBLTDL],[],[use libltdl when loading a dynamic module])
 fi
 AM_CONDITIONAL(ENABLE_LIBLTDL, test "${enable_libltdl_is}" = "yes")
+
+dnl ===== enable-mod-ffi =====
+AC_ARG_ENABLE([mod-ffi],
+	[AS_HELP_STRING([--enable-mod-ffi],[enable mod/ffi (default. yes)])],
+	enable_mod_ffi_is=$enableval,
+	enable_mod_ffi_is=yes
+)
+if test "${enable_mod_ffi_is}" = "yes"
+then
+	AC_DEFINE([MOO_ENABLE_MOD_FFI],[],[build mod/ffi])
+fi
+AM_CONDITIONAL(ENABLE_MOD_FFI, test "${enable_mod_ffi_is}" = "yes")
+
+dnl ===== enable-mod-x11 =====
+AC_ARG_ENABLE([mod-x11],
+	[AS_HELP_STRING([--enable-mod-x11],[enable mod/x11 (default. yes)])],
+	enable_mod_x11_is=$enableval,
+	enable_mod_x11_is=yes
+)
+if test "${enable_mod_x11_is}" = "yes"
+then
+	AC_DEFINE([MOO_ENABLE_MOD_X11],[],[build mod/x11])
+fi
+AM_CONDITIONAL(ENABLE_MOD_X11, test "${enable_mod_x11_is}" = "yes")
 
 AC_SUBST(MOO_SIZEOF_WCHAR_T, $ac_cv_sizeof_wchar_t)
 AC_SUBST(MOO_SIZEOF_LONG_LONG, $ac_cv_sizeof_long_long)

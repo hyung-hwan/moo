@@ -3111,7 +3111,6 @@ static MOO_INLINE int _store_raw_int (moo_t* moo, moo_uint8_t* rawptr, moo_oow_t
 	/* assume 2's complement */
 	max = (moo_ooi_t)(~(moo_oow_t)0 >> ((MOO_SIZEOF_OOW_T - size) * 8  + 1));
 	min = -max - 1;
-MOO_DEBUG2 (moo, "MAX = %zd MIN = %zd\n", max, min);
 
 	if (w > max || w < min) 
 	{
@@ -3156,20 +3155,18 @@ static MOO_INLINE int _store_raw_uint (moo_t* moo, moo_uint8_t* rawptr, moo_oow_
 	moo_oow_t w, max;
 	
 
-	if ((n = moo_inttooow (moo, voop, &w)) <= -1) 
+	if ((n = moo_inttooow (moo, voop, &w)) <= 0) 
 	{
-		if (n <= -1) moo->errnum = MOO_ERANGE;
+		if (n <= -1) moo->errnum = MOO_ERANGE; /* negative number */
 		return -1;
 	}
 
 	max = (~(moo_oow_t)0 >> ((MOO_SIZEOF_OOW_T - size) * 8));
-MOO_DEBUG2 (moo, "MAX = %zx %zx\n", max, max);
 	if (w > max) 
 	{
 		moo->errnum = MOO_ERANGE; 
 		return -1;
 	}
-
 
 	switch (size)
 	{ 
