@@ -58,68 +58,68 @@
 MOO_INLINE moo_rbt_pair_t* moo_rbt_allocpair (
 	moo_rbt_t* rbt, void* kptr, moo_oow_t klen, void* vptr, moo_oow_t vlen)
 {
-	moo_rbt_pair_t* n;
+	moo_rbt_pair_t* pair;
 
 	copier_t kcop = rbt->style->copier[MOO_RBT_KEY];
 	copier_t vcop = rbt->style->copier[MOO_RBT_VAL];
 
 	moo_oow_t as = MOO_SIZEOF(moo_rbt_pair_t);
-	if (kcop == MOO_RBT_COPIER_INLINE) as += KTOB(rbt,klen);
+	if (kcop == MOO_RBT_COPIER_INLINE) as += MOO_ALIGN_POW2(KTOB(rbt,klen), MOO_SIZEOF_VOID_P);
 	if (vcop == MOO_RBT_COPIER_INLINE) as += VTOB(rbt,vlen);
 
-	n = (moo_rbt_pair_t*) MOO_MMGR_ALLOC (rbt->moo->mmgr, as);
-	if (n == MOO_NULL) return MOO_NULL;
+	pair = (moo_rbt_pair_t*) MOO_MMGR_ALLOC (rbt->moo->mmgr, as);
+	if (pair == MOO_NULL) return MOO_NULL;
 
-	n->color = MOO_RBT_RED;
-	n->parent = MOO_NULL;
-	n->child[LEFT] = &rbt->xnil;
-	n->child[RIGHT] = &rbt->xnil;
+	pair->color = MOO_RBT_RED;
+	pair->parent = MOO_NULL;
+	pair->child[LEFT] = &rbt->xnil;
+	pair->child[RIGHT] = &rbt->xnil;
 
-	KLEN(n) = klen;
+	KLEN(pair) = klen;
 	if (kcop == MOO_RBT_COPIER_SIMPLE)
 	{
-		KPTR(n) = kptr;
+		KPTR(pair) = kptr;
 	}
 	else if (kcop == MOO_RBT_COPIER_INLINE)
 	{
-		KPTR(n) = n + 1;
-		if (kptr) MOO_MEMCPY (KPTR(n), kptr, KTOB(rbt,klen));
+		KPTR(pair) = pair + 1;
+		if (kptr) MOO_MEMCPY (KPTR(pair), kptr, KTOB(rbt,klen));
 	}
 	else
 	{
-		KPTR(n) = kcop (rbt, kptr, klen);
-		if (KPTR(n) == MOO_NULL)
+		KPTR(pair) = kcop (rbt, kptr, klen);
+		if (KPTR(pair) == MOO_NULL)
 		{
-			MOO_MMGR_FREE (rbt->moo->mmgr, n);
+			MOO_MMGR_FREE (rbt->moo->mmgr, pair);
 			return MOO_NULL;
 		}
 	}
 
-	VLEN(n) = vlen;
+	VLEN(pair) = vlen;
 	if (vcop == MOO_RBT_COPIER_SIMPLE)
 	{
-		VPTR(n) = vptr;
+		VPTR(pair) = vptr;
 	}
 	else if (vcop == MOO_RBT_COPIER_INLINE)
 	{
-		VPTR(n) = n + 1;
+		VPTR(pair) = pair + 1;
 		if (kcop == MOO_RBT_COPIER_INLINE)
-			VPTR(n) = (moo_oob_t*)VPTR(n) + KTOB(rbt,klen);
-		if (vptr) MOO_MEMCPY (VPTR(n), vptr, VTOB(rbt,vlen));
+			VPTR(pair) = (moo_oob_t*)VPTR(pair) + MOO_ALIGN_POW2(KTOB(rbt,klen), MOO_SIZEOF_VOID_P);
+		if (vptr) MOO_MEMCPY (VPTR(pair), vptr, VTOB(rbt,vlen));
 	}
 	else
 	{
-		VPTR(n) = vcop (rbt, vptr, vlen);
-		if (VPTR(n) != MOO_NULL)
+		VPTR(pair) = vcop (rbt, vptr, vlen);
+		if (VPTR(pair) != MOO_NULL)
 		{
 			if (rbt->style->freeer[MOO_RBT_KEY] != MOO_NULL)
-				rbt->style->freeer[MOO_RBT_KEY] (rbt, KPTR(n), KLEN(n));
-			MOO_MMGR_FREE (rbt->moo->mmgr, n);
+				rbt->style->freeer[MOO_RBT_KEY] (rbt, KPTR(pair), KLEN(pair));
+			MOO_MMGR_FREE (rbt->moo->mmgr, pair);
 			return MOO_NULL;
 		}
 	}
 
-	return n;
+	return pair;
 }
 
 MOO_INLINE void moo_rbt_freepair (moo_rbt_t* rbt, moo_rbt_pair_t* pair)

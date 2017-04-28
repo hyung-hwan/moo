@@ -78,8 +78,24 @@
 #	endif
 
 #	include <unistd.h>
-#	include <sys/epoll.h>
 #	include <fcntl.h>
+
+#if defined(__sun) && defined(__SVR4)
+	/* solaris */
+#	include <sys/devpoll.h>
+#	define USE_DEVPOLL
+#	define XPOLLIN POLLIN
+#	define XPOLLOUT POLLOUT
+#	define XPOLLERR POLLERR
+#	define XPOLLHUP POLLHUP
+#else
+#	include <sys/epoll.h>
+#	define USE_EPOLL
+#	define XPOLLIN EPOLLIN
+#	define XPOLLOUT EPOLLOUT
+#	define XPOLLERR EPOLLERR
+#	define XPOLLHUP EPOLLHUP
+#endif
 
 #	if defined(USE_THREAD)
 #		include <pthread.h>
@@ -129,7 +145,15 @@ struct xtn_t
 #if defined(_WIN32)
 	HANDLE waitable_timer;
 #else
-	int ep; /* epoll */
+
+	int ep; /* /dev/poll or epoll */
+#if defined(USE_DEVPOLL)
+	struct
+	{
+		moo_oow_t capa;
+		moo_ooi_t* ptr;
+	} epd;
+#endif
 
 #if defined(USE_THREAD)
 	int p[2]; /* pipe for signaling */
@@ -138,7 +162,11 @@ struct xtn_t
 	int iothr_abort;
 	struct
 	{
+	#if defined(USE_DEVPOLL)
+		struct pollfd buf[32];
+	#else
 		struct epoll_event buf[32]; /*TODO: make it a dynamically allocated memory block depending on the file descriptor added. */
+	#endif
 		moo_oow_t len;
 		pthread_mutex_t mtx;
 		pthread_cond_t cnd;
@@ -147,7 +175,11 @@ struct xtn_t
 #else
 	struct
 	{
+	#if defined(USE_DEVPOLL)
+		struct pollfd buf[32];
+	#else
 		struct epoll_event buf[32]; /*TODO: make it a dynamically allocated memory block depending on the file descriptor added. */
+	#endif
 		moo_oow_t len;
 	} ev;
 #endif
@@ -463,8 +495,6 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 
 #else
 
-
-
 /* TODO: support various platforms */
 	/* TODO: implemenent this */
 	MOO_DEBUG1 (moo, "Dynamic loading not implemented - cannot open %js\n", name);
@@ -695,9 +725,20 @@ static void* iothr_main (void* arg)
 		if (xtn->ev.len <= 0) /* TODO: no mutex needed for this check? */
 		{
 			int n;
+		#if defined(USE_DEVPOLL)
+			struct dvpoll dvp;
+		#endif
 
 		poll_for_event:
+		
+		#if defined(USE_DEVPOLL)
+			dvp.dp_timeout = 10000; /* milliseconds */
+			dvp.dp_fds = xtn->ev.buf;
+			dvp.dp_nfds = MOO_COUNTOF(xtn->ev.buf);
+			n = ioctl (xtn->ep, DP_POLL, &dvp);
+		#else
 			n = epoll_wait (xtn->ep, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), 10000);
+		#endif
 
 			pthread_mutex_lock (&xtn->ev.mtx);
 			if (n <= -1)
@@ -746,20 +787,36 @@ static int vm_startup (moo_t* moo)
 
 #else
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+#if defined(USE_DEVPOLL)
+	struct pollfd ev;
+#else
 	struct epoll_event ev;
+#endif /* USE_DEVPOLL */
 	int pcount = 0, flag;
 
-#if defined(EPOLL_CLOEXEC)
-	xtn->ep = epoll_create1 (EPOLL_CLOEXEC);
+
+#if defined(USE_DEVPOLL)
+	xtn->ep = open ("/dev/poll", O_RDWR);
+	if (xtn->ep == -1) 
+	{
+		moo_syserrtoerrnum (errno);
+		MOO_DEBUG1 (moo, "Cannot create devpoll - %hs\n", strerror(errno));
+		goto oops;
+	}
 #else
+	#if defined(EPOLL_CLOEXEC)
+	xtn->ep = epoll_create1 (EPOLL_CLOEXEC);
+	#else
 	xtn->ep = epoll_create (1024);
-#endif
+	#endif
 	if (xtn->ep == -1) 
 	{
 		moo_syserrtoerrnum (errno);
 		MOO_DEBUG1 (moo, "Cannot create epoll - %hs\n", strerror(errno));
 		goto oops;
 	}
+#endif /* USE_DEVPOLL */
+
 
 #if defined(EPOLL_CLOEXEC)
 	/* do nothing */
@@ -790,7 +847,18 @@ static int vm_startup (moo_t* moo)
 	if (flag >= 0) fcntl (xtn->p[1], F_SETFL, flag | O_NONBLOCK);
 #endif
 
-	ev.events = EPOLLIN;
+#if defined(USE_DEVPOLL)
+	ev.fd = xtn->p[0];
+	ev.events = XPOLLIN;
+	ev.revents = 0;
+	if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
+	{
+		moo_syserrtoerrnum (errno);
+		MOO_DEBUG1 (moo, "Cannot add a pipe to devpoll - %hs\n", strerror(errno));
+		goto oops;
+	}
+#else
+	ev.events = XPOLLIN;
 	ev.data.ptr = (void*)MOO_TYPE_MAX(moo_oow_t);
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_ADD, xtn->p[0], &ev) == -1)
 	{
@@ -798,6 +866,7 @@ static int vm_startup (moo_t* moo)
 		MOO_DEBUG1 (moo, "Cannot add a pipe to epoll - %hs\n", strerror(errno));
 		goto oops;
 	}
+#endif
 
 	pthread_mutex_init (&xtn->ev.mtx, MOO_NULL);
 	pthread_cond_init (&xtn->ev.cnd, MOO_NULL);
@@ -858,17 +927,35 @@ static void vm_cleanup (moo_t* moo)
 
 	if (xtn->ep)
 	{
-#if defined(USE_THREAD)
+	#if defined(USE_THREAD)
+	#if defined(USE_DEVPOLL)
+		struct pollfd ev;
+		ev.fd = xtn->p[1];
+		ev.events = POLLREMOVE;
+		ev.revents = 0;
+		write (xtn->ep, &ev, MOO_SIZEOF(ev));
+	#else
 		struct epoll_event ev;
 		epoll_ctl (xtn->ep, EPOLL_CTL_DEL, xtn->p[1], &ev);
+	#endif
 
 		close (xtn->p[1]);
 		close (xtn->p[0]);
-#endif
+	#endif /* USE_THREAD */
 
 		close (xtn->ep);
 		xtn->ep = -1;
 	}
+
+	#if defined(USE_DEVPOLL)
+	if (xtn->epd.ptr)
+	{
+		moo_freemem (moo, xtn->epd.ptr);
+		xtn->epd.ptr = MOO_NULL;
+		xtn->epd.capa = 0;
+	}
+	#endif
+
 #endif
 }
 
@@ -931,10 +1018,35 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 #	endif
 #endif
 
+#if defined(USE_DEVPOLL)
+static int secure_devpoll_data_space (moo_t* moo, int fd)
+{
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+	if (fd >= xtn->epd.capa)
+	{
+		moo_oow_t newcapa;
+		moo_ooi_t* tmp;
+
+		newcapa = MOO_ALIGN_POW2 (fd + 1, 256);
+		tmp = moo_reallocmem (moo, xtn->epd.ptr, newcapa * MOO_SIZEOF(*tmp));
+		if (!tmp) return -1;
+
+		xtn->epd.capa = newcapa;
+		xtn->epd.ptr = tmp;
+	}
+
+	return 0;
+}
+#endif
+
 static int _mux_add_or_mod (moo_t* moo, moo_oop_semaphore_t sem, int cmd)
 {
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+#if defined(USE_DEVPOLL)
+	struct pollfd ev;
+#else
 	struct epoll_event ev;
+#endif
 	moo_ooi_t mask;
 
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index));
@@ -942,11 +1054,9 @@ static int _mux_add_or_mod (moo_t* moo, moo_oop_semaphore_t sem, int cmd)
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_mask));
 
 	mask = MOO_OOP_TO_SMOOI(sem->io_mask);
-	ev.events = 0; /*EPOLLET; *//* edge trigger */
-	if (mask & MOO_SEMAPHORE_IO_MASK_INPUT) ev.events |= EPOLLIN; /*TODO: define io mask constants... */
-	if (mask & MOO_SEMAPHORE_IO_MASK_OUTPUT) ev.events |= EPOLLOUT;
-	/* don't check MOO_SEMAPHORE_IO_MASK_ERROR and MOO_SEMAPHORE_IO_MASK_HANGUP as it's implicitly enabled by epoll() */
-	ev.data.ptr = (void*)MOO_OOP_TO_SMOOI(sem->io_index);
+	ev.events = 0; /*EPOLLET; */ /* TODO: use edge trigger(EPOLLLET)? */
+	if (mask & MOO_SEMAPHORE_IO_MASK_INPUT) ev.events |= XPOLLIN; /* TODO: define io mask constants... */
+	if (mask & MOO_SEMAPHORE_IO_MASK_OUTPUT) ev.events |= XPOLLOUT;
 
 	if (ev.events == 0) 
 	{
@@ -954,42 +1064,108 @@ static int _mux_add_or_mod (moo_t* moo, moo_oop_semaphore_t sem, int cmd)
 		moo_seterrnum (moo, MOO_EINVAL);
 		return -1;
 	}
-	
+
+#if defined(USE_DEVPOLL)
+	ev.fd = MOO_OOP_TO_SMOOI(sem->io_handle);
+	ev.revents = 0;
+
+	if (secure_devpoll_data_space (moo, ev.fd) <= -1)
+	{
+			MOO_DEBUG2 (moo, "<vm_muxadd> devpoll data set failure on handle %zd - %hs\n", MOO_OOP_TO_SMOOI(sem->io_handle), strerror(errno));
+			return -1;
+	}
+
+	if (cmd)
+	{
+		int saved_events;
+
+		saved_events = ev.events;
+
+		ev.events = POLLREMOVE;
+		if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
+		{
+			moo_seterrnum (moo, moo_syserrtoerrnum (errno));
+			MOO_DEBUG2 (moo, "<vm_muxadd> devpoll failure on handle %zd - %hs\n", MOO_OOP_TO_SMOOI(sem->io_handle), strerror(errno));
+			return -1;
+		}
+
+		ev.events = saved_events;
+	}
+
+	if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
+	{
+		moo_seterrnum (moo, moo_syserrtoerrnum (errno));
+		MOO_DEBUG2 (moo, "<vm_muxadd> devpoll failure on handle %zd - %hs\n", MOO_OOP_TO_SMOOI(sem->io_handle), strerror(errno));
+		return -1;
+	}
+
+	MOO_ASSERT (moo, ev.fd == MOO_OOP_TO_SMOOI(sem->io_handle));
+	MOO_ASSERT (moo, xtn->epd.capa > ev.fd);
+	xtn->epd.ptr[ev.fd] = MOO_OOP_TO_SMOOI(sem->io_index);
+#else
+	/* don't check MOO_SEMAPHORE_IO_MASK_ERROR and MOO_SEMAPHORE_IO_MASK_HANGUP as it's implicitly enabled by epoll() */
+	ev.data.ptr = (void*)MOO_OOP_TO_SMOOI(sem->io_index);
+
 	if (epoll_ctl (xtn->ep, cmd, MOO_OOP_TO_SMOOI(sem->io_handle), &ev) == -1)
 	{
 		moo_seterrnum (moo, moo_syserrtoerrnum (errno));
 		MOO_DEBUG2 (moo, "<vm_muxadd> epoll_ctl failure on handle %zd - %hs\n", MOO_OOP_TO_SMOOI(sem->io_handle), strerror(errno));
 		return -1;
 	}
+#endif
 
 	return 0;
 }
 
 static int vm_muxadd (moo_t* moo, moo_oop_semaphore_t sem)
 {
+#if defined(USE_DEVPOLL)
+	return _mux_add_or_mod (moo, sem, 0);
+#else
 	return _mux_add_or_mod (moo, sem, EPOLL_CTL_ADD);
+#endif
 }
 
 static int vm_muxmod (moo_t* moo, moo_oop_semaphore_t sem)
 {
+#if defined(USE_DEVPOLL)
+	return _mux_add_or_mod (moo, sem, 1);
+#else
 	return _mux_add_or_mod (moo, sem, EPOLL_CTL_MOD);
+#endif
 }
 
 static int vm_muxdel (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+#if defined(USE_DEVPOLL)
+	struct pollfd ev;
+#else
 	struct epoll_event ev;
+#endif
 
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index));
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_handle));
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_mask));
 
+#if defined(USE_DEVPOLL)
+	ev.fd = MOO_OOP_TO_SMOOI(sem->io_handle);
+	ev.events = POLLREMOVE;
+	ev.revents = 0;
+	if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
+	{
+		moo_seterrnum (moo, moo_syserrtoerrnum (errno));
+		MOO_DEBUG2 (moo, "<vm_muxdel> devpoll failure on handle %zd - %hs\n", MOO_OOP_TO_SMOOI(sem->io_handle), strerror(errno));
+		return -1;
+	}
+#else
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_DEL, MOO_OOP_TO_SMOOI(sem->io_handle), &ev) == -1)
 	{
 		moo_seterrnum (moo, moo_syserrtoerrnum (errno));
 		MOO_DEBUG2 (moo, "<vm_muxdel> epoll_ctl failure on handle %zd - %hs\n", MOO_OOP_TO_SMOOI(sem->io_handle), strerror(errno));
 		return -1;
 	}
+#endif
 
 	return 0;
 }
@@ -1044,7 +1220,11 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 		{
 			--n;
 
+		#if defined(USE_DEVPOLL)
+			if (xtn->ev.buf[n].fd == xtn->p[0])
+		#else
 			if (xtn->ev.buf[n].data.ptr == (void*)MOO_TYPE_MAX(moo_oow_t))
+		#endif
 			{
 				moo_uint8_t u8;
 				while (read (xtn->p[0], &u8, MOO_SIZEOF(u8)) > 0) 
@@ -1055,18 +1235,30 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 			}
 			else if (muxwcb)
 			{
-				moo_ooi_t mask = 0;
+				int revents;
+				moo_ooi_t mask;
 
-				if (xtn->ev.buf[n].events & EPOLLIN) mask |= MOO_SEMAPHORE_IO_MASK_INPUT;
-				if (xtn->ev.buf[n].events & EPOLLOUT) mask |= MOO_SEMAPHORE_IO_MASK_OUTPUT;
-				if (xtn->ev.buf[n].events & EPOLLERR) mask |= MOO_SEMAPHORE_IO_MASK_ERROR;
-				if (xtn->ev.buf[n].events & EPOLLHUP) mask |= MOO_SEMAPHORE_IO_MASK_HANGUP;
+		#if defined(USE_DEVPOLL)
+				revents = xtn->ev.buf[n].revents;
+		#else
+				revents = xtn->ev.buf[n].events;
+		#endif
 
+				mask = 0;
+				if (revents & XPOLLIN) mask |= MOO_SEMAPHORE_IO_MASK_INPUT;
+				if (revents & XPOLLOUT) mask |= MOO_SEMAPHORE_IO_MASK_OUTPUT;
+				if (revents & XPOLLERR) mask |= MOO_SEMAPHORE_IO_MASK_ERROR;
+				if (revents & XPOLLHUP) mask |= MOO_SEMAPHORE_IO_MASK_HANGUP;
+
+		#if defined(USE_DEVPOLL)
+				MOO_ASSERT (moo, xtn->epd.capa > xtn->ev.buf[n].fd);
+				muxwcb (moo, mask, (void*)xtn->epd.ptr[xtn->ev.buf[n].fd]);
+		#else
 				muxwcb (moo, mask, xtn->ev.buf[n].data.ptr);
+		#endif
 			}
 		}
 		while (n > 0);
-
 
 		pthread_mutex_lock (&xtn->ev.mtx);
 		xtn->ev.len = 0;
@@ -1095,16 +1287,29 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 
 	while (n > 0)
 	{
-		int mask;
+		int revents;
+		moo_ooi_t mask;
 
 		--n;
 
+	#if defined(USE_DEVPOLL)
+		revents = xtn->ev.buf[n].revents;
+	#else
+		revetns = xtn->ev.buf[n].events;
+	#endif
+
 		mask = 0;
-		if (xtn->ev.buf[n].events & EPOLLIN) mask |= MOO_SEMAPHORE_IO_MASK_INPUT; /* TODO define constants for IO Mask */
-		if (xtn->ev.buf[n].events & EPOLLOUT) mask |= MOO_SEMAPHORE_IO_MASK_OUTPUT;
-		if (xtn->ev.buf[n].events & EPOLLERR) mask |= MOO_SEMAPHORE_IO_MASK_ERROR;
-		if (xtn->ev.buf[n].events & EPOLLHUP) mask |= MOO_SEMAPHORE_IO_MASK_HANGUP;
+		if (revents & XPOLLIN) mask |= MOO_SEMAPHORE_IO_MASK_INPUT; /* TODO define constants for IO Mask */
+		if (revents & XPOLLOUT) mask |= MOO_SEMAPHORE_IO_MASK_OUTPUT;
+		if (revents & XPOLLERR) mask |= MOO_SEMAPHORE_IO_MASK_ERROR;
+		if (revents & XPOLLHUP) mask |= MOO_SEMAPHORE_IO_MASK_HANGUP;
+
+	#if defined(USE_DEVPOLL)
+		MOO_ASSERT (moo, xtn->epd.capa > xtn->ev.buf[n].fd);
+		muxwcb (moo, mask, (void*)xtn->epd.ptr[xtn->ev.buf[n].fd]);
+	#else
 		muxwcb (moo, mask, xtn->ev.buf[n].data.ptr);
+	#endif
 	}
 
 	xtn->ev.len = 0;

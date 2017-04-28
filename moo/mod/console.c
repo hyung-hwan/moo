@@ -117,7 +117,8 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 
 	write (fd, clear, strlen(clear));
 	/*write (fd, tparm (cup, wsz.ws_row - 1, 0), strlen(tparm (cup, wsz.ws_row - 1, 0)));*/
-	write (fd, tiparm (cup, 0, 0), strlen(tiparm (cup, 0, 0)));
+	/*write (fd, tiparm (cup, 0, 0), strlen(tiparm (cup, 0, 0)));*/
+	write (fd, tparm (cup, 0, 0, 0, 0, 0, 0, 0, 0, 0), strlen(tparm (cup, 0, 0, 0, 0, 0, 0, 0, 0, 0)));
 	}
 #endif
 
@@ -229,7 +230,8 @@ static moo_pfrc_t pf_setcursor (moo_t* moo, moo_ooi_t nargs)
 
 	if (!MOO_OOP_IS_SMOOI(x) || !MOO_OOP_IS_SMOOI(y)) goto einval;
 
-	cup = tiparm (con->cup, MOO_OOP_TO_SMOOI(y), MOO_OOP_TO_SMOOI(x));
+	/*cup = tiparm (con->cup, MOO_OOP_TO_SMOOI(y), MOO_OOP_TO_SMOOI(x));*/
+	cup = tparm (con->cup, MOO_OOP_TO_SMOOI(y), MOO_OOP_TO_SMOOI(x), 0, 0, 0, 0, 0, 0, 0);
 	write (con->fd, cup, strlen(cup)); /* TODO: error check */
 
 	MOO_STACK_SETRETTORCV (moo, nargs);

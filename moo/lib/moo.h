@@ -934,7 +934,7 @@ struct moo_mod_t
 {
 	/* input */
 	const moo_ooch_t name[MOO_MOD_NAME_LEN_MAX + 1];
-	const int hints; /* bitwised-ORed of moo_mod_hint_t enumerators */
+	/*const*/ int hints; /* bitwised-ORed of moo_mod_hint_t enumerators */
 
 	/* user-defined data */
 	moo_mod_import_t import;
