@@ -660,7 +660,11 @@ if (mask & MOO_LOG_GC) return; /* don't show gc logs */
 	}
 #else
 	tmp = localtime_r (&now, &tm);
+	#if defined(__sun) && defined(__SVR4) /* TODO: better check on support of %z */
+	tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %Z ", tmp); 
+	#else
 	tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
+	#endif
 	if (tslen == 0) 
 	{
 		strcpy (ts, "0000-00-00 00:00:00 +0000");
