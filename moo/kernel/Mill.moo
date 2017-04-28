@@ -85,16 +85,6 @@ class MyObject(Object)
 		] on: Exception do: [:ex | ('Exception caught - ' & ex asString) dump ].*)
 
 		ffi := FFI new: '/lib64/libc.so.6'.
-		(*
-		(ffi isError) 
-			ifTrue: [System logNl: 'cannot open libc.so' ]
-			ifFalse: [
-				(ffi call: #getpid  signature: ')i' arguments: nil) dump.
-				(ffi call: #printf signature: 's|iis)i' arguments: #(S'A=>%d B=>%d Hello, world %s\n' 1 2 'fly away')) dump.
-				(ffi call: #printf signature: 's|iis)i' arguments: #(S'A=>%d B=>%d Hello, world %s\n' 1 2 'jump down')) dump.
-				ffi close.
-			].
-		*)
 		if (ffi isError)
 		{
 			System logNl: 'cannot open libc.so'

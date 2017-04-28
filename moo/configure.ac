@@ -213,6 +213,34 @@ AC_TRY_LINK(
 	[AC_MSG_RESULT(no)]
 )
 
+AC_MSG_CHECKING([for strftime %z])
+AC_TRY_RUN(
+	[#include <string.h>
+	 #if defined(HAVE_SYS_TIME_H)
+	 #include <sys/time.h>
+	 #endif
+	 #if defined(HAVE_TIME_H)
+	 #include <time.h>
+	 #endif
+	int main ()
+	{
+		char buf[100];
+		time_t t = 0;
+		strftime (buf, sizeof(buf), "%z", gmtime(&t));
+		return strcmp(buf, "%z") == 0? 1: 0;
+	}],
+	[
+	 	AC_MSG_RESULT(yes)
+		AC_DEFINE([HAVE_STRFTIME_SMALL_Z], [1], [strftime supports %z])
+	],
+	[AC_MSG_RESULT(no)],
+	[
+	 	dnl cross-compiling, assume yes
+	 	AC_MSG_RESULT(unknown)
+		AC_DEFINE([HAVE_STRFTIME_SMALL_Z], [1], [strftime supports %z])
+	]
+)
+
 dnl check the size of primitive data types
 AC_CHECK_SIZEOF(char,,[[]])
 AC_CHECK_SIZEOF(short,,[[]])
