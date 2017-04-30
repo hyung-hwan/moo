@@ -89,17 +89,27 @@
 #	else
 #		define MOO_MEMCMP(dst,src,size)  memcmp(dst,src,size)
 #	endif
-#elif defined(__GNUC__) && (__GNUC__  >= 3 || (defined(__GNUC_MINOR) && __GNUC__ == 2 && __GNUC_MINOR__ >= 91))
-	/* gcc 2.91 or higher */
-#	define MOO_MEMSET(dst,src,size)  __builtin_memset(dst,src,size)
-#	define MOO_MEMCPY(dst,src,size)  __builtin_memcpy(dst,src,size)
-#	define MOO_MEMMOVE(dst,src,size) __builtin_memmove(dst,src,size)
-#	define MOO_MEMCMP(dst,src,size)  __builtin_memcmp(dst,src,size)
 #else
-#	define MOO_MEMSET(dst,src,size)  memset(dst,src,size)
-#	define MOO_MEMCPY(dst,src,size)  memcpy(dst,src,size)
-#	define MOO_MEMMOVE(dst,src,size) memmove(dst,src,size)
-#	define MOO_MEMCMP(dst,src,size)  memcmp(dst,src,size)
+#	if defined(HAVE___BUILTIN_MEMSET)
+#		define MOO_MEMSET(dst,src,size)  __builtin_memset(dst,src,size)
+#	else
+#		define MOO_MEMSET(dst,src,size)  memset(dst,src,size)
+#	endif
+#	if defined(HAVE___BUILTIN_MEMCPY)
+#		define MOO_MEMCPY(dst,src,size)  __builtin_memcpy(dst,src,size)
+#	else
+#		define MOO_MEMCPY(dst,src,size)  memcpy(dst,src,size)
+#	endif
+#	if defined(HAVE___BUILTIN_MEMMOVE)
+#		define MOO_MEMMOVE(dst,src,size)  __builtin_memmove(dst,src,size)
+#	else
+#		define MOO_MEMMOVE(dst,src,size)  memmove(dst,src,size)
+#	endif
+#	if defined(HAVE___BUILTIN_MEMCMP)
+#		define MOO_MEMCMP(dst,src,size)  __builtin_memcmp(dst,src,size)
+#	else
+#		define MOO_MEMCMP(dst,src,size)  memcmp(dst,src,size)
+#	endif
 #endif
 
 

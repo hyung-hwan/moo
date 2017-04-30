@@ -51,7 +51,8 @@
 enum class_mod_t
 {
 	CLASS_INDEXED   = (1 << 0),
-	CLASS_LIMITED   = (1 << 1)
+	CLASS_LIMITED   = (1 << 1),
+	CLASS_FINAL     = (1 << 2)
 };
 
 enum var_type_t
@@ -102,6 +103,7 @@ static struct voca_t
 	{  9, { 'e','x','c','e','p','t','i','o','n'                           } },
 	{  6, { 'e','x','t','e','n','d'                                       } },
 	{  5, { 'f','a','l','s','e'                                           } },
+	{  6, { '#','f','i','n','a','l'                                       } },
 	{  4, { 'f','r','o','m'                                               } },
 	{  9, { '#','h','a','l','f','w','o','r','d'                           } },
 	{  2, { 'i','f'                                                       } },
@@ -159,6 +161,7 @@ enum voca_id_t
 	VOCA_EXCEPTION,
 	VOCA_EXTEND,
 	VOCA_FALSE,
+	VOCA_FINAL_S,
 	VOCA_FROM,
 	VOCA_HALFWORD_S,
 	VOCA_IF,
@@ -6629,6 +6632,16 @@ static int __compile_class_definition (moo_t* moo, int extend)
 					/* class(#liword) */
 					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_LIWORD) <= -1) return -1;
 					GET_TOKEN (moo);
+				}
+				else if (is_token_symbol(moo, VOCA_FINAL_S))
+				{
+					if (moo->c->cls.flags & CLASS_FINAL)
+					{
+						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						return -1;
+					}
+					moo->c->cls.flags |= CLASS_FINAL;
+					GET_TOKEN(moo);
 				}
 				else if (is_token_symbol(moo, VOCA_LIMITED_S))
 				{
