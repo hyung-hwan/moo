@@ -50,7 +50,8 @@
 
 enum class_mod_t
 {
-	CLASS_INDEXED   = (1 << 0)
+	CLASS_INDEXED   = (1 << 0),
+	CLASS_LIMITED   = (1 << 1)
 };
 
 enum var_type_t
@@ -107,6 +108,7 @@ static struct voca_t
 	{  6, { 'i','m','p','o','r','t'                                       } },
 	{  8, { '#','i','n','c','l','u','d','e'                               } },
 	{  8, { '#','l','i','b','e','r','a','l'                               } },
+	{  8, { '#','l','i','m','i','t','e','d'                               } },
 	{  7, { '#','l','i','w','o','r','d'                                   } },
 	{  6, { 'm','e','t','h','o','d'                                       } },
 	{  3, { 'n','i','l'                                                   } },
@@ -163,6 +165,7 @@ enum voca_id_t
 	VOCA_IMPORT,
 	VOCA_INCLUDE_S,
 	VOCA_LIBERAL_S,
+	VOCA_LIMITED_S,
 	VOCA_LIWORD_S,
 	VOCA_METHOD,
 	VOCA_NIL,
@@ -6545,6 +6548,19 @@ static int make_defined_class (moo_t* moo)
 	return 0;
 }
 
+static MOO_INLINE int _set_class_indexed_type (moo_t* moo, moo_obj_type_t type)
+{
+	if (moo->c->cls.flags & CLASS_INDEXED)
+	{
+		set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+	moo->c->cls.flags |= CLASS_INDEXED;
+	moo->c->cls.indexed_type = type;
+	return 0;
+}
+
 static int __compile_class_definition (moo_t* moo, int extend)
 {
 	/* 
@@ -6570,9 +6586,80 @@ static int __compile_class_definition (moo_t* moo, int extend)
 	if (!extend && TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
 		/* process class modifiers */
+		MOO_ASSERT (moo, (moo->c->cls.flags & CLASS_INDEXED) == 0);
 
 		GET_TOKEN (moo);
 
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
+		{
+			do
+			{
+				if (is_token_symbol(moo, VOCA_BYTE_S))
+				{
+					/* class(#byte) */
+					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_BYTE) <= -1) return -1;
+					GET_TOKEN (moo);
+				}
+				else if (is_token_symbol(moo, VOCA_CHARACTER_S))
+				{
+					/* class(#character) */
+					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_CHAR) <= -1) return -1;
+					GET_TOKEN (moo);
+				}
+				else if (is_token_symbol(moo, VOCA_HALFWORD_S))
+				{
+					/* class(#halfword) */
+					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_HALFWORD) <= -1) return -1;
+					GET_TOKEN (moo);
+				}
+				else if (is_token_symbol(moo, VOCA_WORD_S))
+				{
+					/* class(#word) */
+					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_WORD) <= -1) return -1;
+					GET_TOKEN (moo);
+				}
+				else if (is_token_symbol(moo, VOCA_POINTER_S))
+				{
+					/* class(#pointer) */
+					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_OOP) <= -1) return -1;
+					GET_TOKEN (moo);
+				}
+				else if (is_token_symbol(moo, VOCA_LIWORD_S))
+				{
+					/* class(#liword) */
+					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_LIWORD) <= -1) return -1;
+					GET_TOKEN (moo);
+				}
+				else if (is_token_symbol(moo, VOCA_LIMITED_S))
+				{
+					if (moo->c->cls.flags & CLASS_LIMITED)
+					{
+						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						return -1;
+					}
+					moo->c->cls.flags |= CLASS_LIMITED;
+					GET_TOKEN(moo);
+				}
+				else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
+				{
+				/* no modifier is present */
+					set_syntax_error (moo, MOO_SYNERR_MODIFIER, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					return -1;
+				}
+				else
+				{
+				/* invalid modifier */
+					set_syntax_error (moo, MOO_SYNERR_MODIFIERINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					return -1;
+				}
+
+				if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA) break; /* hopefully ) */
+				GET_TOKEN (moo); /* get the token after , */
+			}
+			while (1);
+		}
+
+#if 0
 		if (is_token_symbol(moo, VOCA_BYTE_S))
 		{
 			/* class(#byte) */
@@ -6615,6 +6702,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			moo->c->cls.indexed_type = MOO_OBJ_TYPE_LIWORD;
 			GET_TOKEN (moo);
 		}
+#endif
 
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 		{
