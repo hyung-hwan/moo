@@ -406,7 +406,7 @@ lt__nsmodule_get_header (NSModule module)
   while (i > 0)
     {
       --i;
-      if (strneq (_dyld_get_image_name (i), modname))
+      if (STREQ (_dyld_get_image_name (i), modname))
 	{
 	  mh = _dyld_get_image_header (i);
 	  break;
@@ -455,7 +455,7 @@ lt__match_loadedlib (const char *name)
 
       --i;
       id = lt__header_get_instnam (_dyld_get_image_header (i));
-      if (id && strneq (id, name))
+      if (id && STREQ (id, name))
 	{
 	  mh = _dyld_get_image_header (i);
 	  break;
