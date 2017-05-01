@@ -50,9 +50,9 @@
 
 enum class_mod_t
 {
-	CLASS_INDEXED   = (1 << 0),
+	CLASS_FINAL     = (1 << 0),
 	CLASS_LIMITED   = (1 << 1),
-	CLASS_FINAL     = (1 << 2)
+	CLASS_INDEXED   = (1 << 2)
 };
 
 enum var_type_t
@@ -2739,12 +2739,12 @@ done:
 				 * local variable string can be adjusted by adding the
 				 * number in the superclass */
 				spec = MOO_OOP_TO_SMOOI(((moo_oop_class_t)super)->spec);
-				pos += MOO_CLASS_SPEC_NAMED_INSTVAR(spec);
+				pos += MOO_CLASS_SPEC_NAMED_INSTVARS(spec);
 				break;
 
 			case VAR_CLASSINST:
 				spec = MOO_OOP_TO_SMOOI(((moo_oop_class_t)super)->selfspec);
-				pos += MOO_CLASS_SELFSPEC_CLASSINSTVAR(spec);
+				pos += MOO_CLASS_SELFSPEC_CLASSINSTVARS(spec);
 				break;
 
 			case VAR_CLASS:
@@ -3902,7 +3902,7 @@ static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 					/* increment the position by the number of class instance variables
 					 * as the class variables are placed after the class instance variables */
 					var->pos += MOO_CLASS_NAMED_INSTVARS + 
-					            MOO_CLASS_SELFSPEC_CLASSINSTVAR(MOO_OOP_TO_SMOOI(var->cls->selfspec));
+					            MOO_CLASS_SELFSPEC_CLASSINSTVARS(MOO_OOP_TO_SMOOI(var->cls->selfspec));
 					break;
 
 				default:
@@ -6405,14 +6405,17 @@ static int make_defined_class (moo_t* moo)
 
 	moo_oop_t tmp;
 	moo_oow_t spec, self_spec;
-	int just_made = 0;
+	int just_made = 0, flags;
 
 	spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.var[VAR_INSTANCE].total_count,  
 	                            ((moo->c->cls.flags & CLASS_INDEXED)? 1: 0),
 	                            moo->c->cls.indexed_type);
 
+	flags = 0;
+	if (moo->c->cls.flags & CLASS_FINAL) flags |= MOO_CLASS_SELFSPEC_FLAG_FINAL;
+	if (moo->c->cls.flags & CLASS_LIMITED) flags |= MOO_CLASS_SELFSPEC_FLAG_LIMITED;
 	self_spec = MOO_CLASS_SELFSPEC_MAKE (moo->c->cls.var[VAR_CLASS].total_count,
-	                                     moo->c->cls.var[VAR_CLASSINST].total_count);
+	                                     moo->c->cls.var[VAR_CLASSINST].total_count, flags);
 
 	if (moo->c->cls.self_oop)
 	{
@@ -6672,51 +6675,6 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			while (1);
 		}
 
-#if 0
-		if (is_token_symbol(moo, VOCA_BYTE_S))
-		{
-			/* class(#byte) */
-			moo->c->cls.flags |= CLASS_INDEXED;
-			moo->c->cls.indexed_type = MOO_OBJ_TYPE_BYTE;
-			GET_TOKEN (moo);
-		}
-		else if (is_token_symbol(moo, VOCA_CHARACTER_S))
-		{
-			/* class(#character) */
-			moo->c->cls.flags |= CLASS_INDEXED;
-			moo->c->cls.indexed_type = MOO_OBJ_TYPE_CHAR;
-			GET_TOKEN (moo);
-		}
-		else if (is_token_symbol(moo, VOCA_HALFWORD_S))
-		{
-			/* class(#halfword) */
-			moo->c->cls.flags |= CLASS_INDEXED;
-			moo->c->cls.indexed_type = MOO_OBJ_TYPE_HALFWORD;
-			GET_TOKEN (moo);
-		}
-		else if (is_token_symbol(moo, VOCA_WORD_S))
-		{
-			/* class(#word) */
-			moo->c->cls.flags |= CLASS_INDEXED;
-			moo->c->cls.indexed_type = MOO_OBJ_TYPE_WORD;
-			GET_TOKEN (moo);
-		}
-		else if (is_token_symbol(moo, VOCA_POINTER_S))
-		{
-			/* class(#pointer) */
-			moo->c->cls.flags |= CLASS_INDEXED;
-			moo->c->cls.indexed_type = MOO_OBJ_TYPE_OOP;
-			GET_TOKEN (moo);
-		}
-		else if (is_token_symbol(moo, VOCA_LIWORD_S))
-		{
-			/* class(#liword) */
-			moo->c->cls.flags |= CLASS_INDEXED;
-			moo->c->cls.indexed_type = MOO_OBJ_TYPE_LIWORD;
-			GET_TOKEN (moo);
-		}
-#endif
-
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 		{
 			set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -6801,8 +6759,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		}
 
 		/* superclass is specified. new class defintion.
-		 * for example, #class Class(Stix) 
-		 */
+		 * for example, #class Class(Stix) */
 		GET_TOKEN (moo); /* read superclass name */
 
 		/* TODO: multiple inheritance */
@@ -6895,6 +6852,13 @@ static int __compile_class_definition (moo_t* moo, int extend)
 					set_syntax_error (moo, MOO_SYNERR_CLASSTRSIZE, &moo->c->cls.fqn_loc, &moo->c->cls.fqn);
 					return -1;
 				}
+
+				if (MOO_CLASS_SELFSPEC_FLAGS(MOO_OOP_TO_SMOOI(((moo_oop_class_t)moo->c->cls.super_oop)->selfspec)) & MOO_CLASS_SELFSPEC_FLAG_FINAL)
+				{
+					/* cannot inherit a #final class */
+					set_syntax_error (moo, MOO_SYNERR_CLASSFINAL, &moo->c->cls.fqn_loc, &moo->c->cls.fqn);
+					return -1;
+				}
 			}
 			else
 			{
@@ -6957,8 +6921,8 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		/* [NOTE] class variables are not inherited. 
 		 *        so no data about them are not transferred over */
 
-		moo->c->cls.var[VAR_INSTANCE].total_count = MOO_CLASS_SPEC_NAMED_INSTVAR(spec);
-		moo->c->cls.var[VAR_CLASSINST].total_count = MOO_CLASS_SELFSPEC_CLASSINSTVAR(self_spec);
+		moo->c->cls.var[VAR_INSTANCE].total_count = MOO_CLASS_SPEC_NAMED_INSTVARS(spec);
+		moo->c->cls.var[VAR_CLASSINST].total_count = MOO_CLASS_SELFSPEC_CLASSINSTVARS(self_spec);
 	}
 
 	GET_TOKEN (moo);

@@ -123,17 +123,17 @@ static kernel_class_info_t kernel_classes[] =
  * BOOTSTRAPPER
  * ----------------------------------------------------------------------- */
 
-static moo_oop_class_t alloc_kernel_class (moo_t* moo, moo_oow_t indexed_classvars, moo_oow_t spec)
+static moo_oop_class_t alloc_kernel_class (moo_t* moo, int class_flags, moo_oow_t num_classvars, moo_oow_t spec)
 {
 	moo_oop_class_t c;
 
-	c = (moo_oop_class_t)moo_allocoopobj (moo, MOO_CLASS_NAMED_INSTVARS + indexed_classvars);
+	c = (moo_oop_class_t)moo_allocoopobj (moo, MOO_CLASS_NAMED_INSTVARS + num_classvars);
 	if (!c) return MOO_NULL;
 
 	MOO_OBJ_SET_FLAGS_KERNEL (c, 1);
 	MOO_OBJ_SET_CLASS (c, (moo_oop_t)moo->_class);
 	c->spec = MOO_SMOOI_TO_OOP(spec); 
-	c->selfspec = MOO_SMOOI_TO_OOP(MOO_CLASS_SELFSPEC_MAKE(indexed_classvars, 0));
+	c->selfspec = MOO_SMOOI_TO_OOP(MOO_CLASS_SELFSPEC_MAKE(num_classvars, 0, class_flags));
 
 	return c;
 }
@@ -153,7 +153,7 @@ static int ignite_1 (moo_t* moo)
 	 * The instance of Class can have indexed instance variables 
 	 * which are actually class variables.
 	 * -------------------------------------------------------------- */
-	moo->_class = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_CLASS_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
+	moo->_class = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_CLASS_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
 	if (!moo->_class) return -1;
 
 	MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(moo->_class) == MOO_NULL);
@@ -171,43 +171,52 @@ static int ignite_1 (moo_t* moo)
 	 * Character
 	 * SmallIntger
 	 * -------------------------------------------------------------- */
-	moo->_apex              = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_undefined_object  = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_object            = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_string            = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_CHAR));
+	moo->_apex              = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
+	moo->_undefined_object  = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
+	moo->_object            = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
+	moo->_string            = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_CHAR));
 
-	moo->_symbol            = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_CHAR));
-	moo->_array             = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_OOP));
-	moo->_byte_array        = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_BYTE));
-	moo->_symbol_set        = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_dictionary        = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_system_dictionary = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+	moo->_symbol            = alloc_kernel_class (moo,
+		MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+		0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_CHAR));
 
-	moo->_namespace         = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_pool_dictionary   = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_method_dictionary = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_method            = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_METHOD_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
-	moo->_association       = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_ASSOCIATION_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+	moo->_array             = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_OOP));
+	moo->_byte_array        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_BYTE));
+	moo->_symbol_set        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+	moo->_dictionary        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+	moo->_system_dictionary = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
 
-	moo->_method_context    = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_CONTEXT_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
-	moo->_block_context     = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_CONTEXT_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
-	moo->_process           = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_PROCESS_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
-	moo->_semaphore         = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_SEMAPHORE_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_process_scheduler = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(MOO_PROCESS_SCHEDULER_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+	moo->_namespace         = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+	moo->_pool_dictionary   = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+	moo->_method_dictionary = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+	moo->_method            = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_METHOD_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
+	moo->_association       = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_ASSOCIATION_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
 
-	moo->_error_class       = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_true_class        = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_false_class       = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
+	moo->_method_context    = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_CONTEXT_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
+	moo->_block_context     = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_CONTEXT_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
+
+	moo->_process           = alloc_kernel_class (moo, 
+		MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+		0, MOO_CLASS_SPEC_MAKE(MOO_PROCESS_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
+
+	moo->_semaphore         = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SEMAPHORE_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+	moo->_process_scheduler = alloc_kernel_class (moo,
+		MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+		0, MOO_CLASS_SPEC_MAKE(MOO_PROCESS_SCHEDULER_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+
+	moo->_error_class       = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
+	moo->_true_class        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
+	moo->_false_class       = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
 	/* TOOD: what is a proper spec for Character and SmallInteger?
  	 *       If the fixed part is  0, its instance must be an object of 0 payload fields.
 	 *       Does this make sense? */
-	moo->_character         = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_small_integer     = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_large_positive_integer = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_LIWORD));
-	moo->_large_negative_integer = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_LIWORD));
+	moo->_character         = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
+	moo->_small_integer     = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
+	moo->_large_positive_integer = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_LIWORD));
+	moo->_large_negative_integer = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_LIWORD));
 
-	moo->_small_pointer     = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_system            = alloc_kernel_class (moo, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
+	moo->_small_pointer     = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
+	moo->_system            = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
 
 	if (!moo->_apex              || !moo->_undefined_object  || 
 	    !moo->_object            || !moo->_string            ||
@@ -749,7 +758,7 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 
 		c = MOO_OBJ_GET_CLASS(oop);
 		moo_pushtmp (moo, &oop);
-		z = moo_instantiate (moo, (moo_oop_t)c, MOO_NULL, MOO_OBJ_GET_SIZE(oop) - MOO_CLASS_SPEC_NAMED_INSTVAR(MOO_OOP_TO_SMOOI(c->spec)));
+		z = moo_instantiate (moo, (moo_oop_t)c, MOO_NULL, MOO_OBJ_GET_SIZE(oop) - MOO_CLASS_SPEC_NAMED_INSTVARS(MOO_OOP_TO_SMOOI(c->spec)));
 		moo_poptmp(moo);
 
 		if (!z) return z;

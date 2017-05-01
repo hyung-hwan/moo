@@ -1296,7 +1296,7 @@ static moo_pfrc_t pf_log (moo_t* moo, moo_ooi_t nargs)
 				_class = MOO_CLASSOF(moo, msg);
 
 				spec = MOO_OOP_TO_SMOOI(((moo_oop_class_t)_class)->spec);
-				if (MOO_CLASS_SPEC_NAMED_INSTVAR(spec) > 0 || !MOO_CLASS_SPEC_IS_INDEXED(spec)) goto dump_object;
+				if (MOO_CLASS_SPEC_NAMED_INSTVARS(spec) > 0 || !MOO_CLASS_SPEC_IS_INDEXED(spec)) goto dump_object;
 
 				for (i = 0; i < MOO_OBJ_GET_SIZE(msg); i++)
 				{
@@ -1470,7 +1470,13 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-/* TOOD: check if _class is set to be instantiatable... if not MOO_EPERM */
+	/* check if #limited is set on the class */
+	if (MOO_CLASS_SELFSPEC_FLAGS(MOO_OOP_TO_SMOOI(_class->selfspec)) & MOO_CLASS_SELFSPEC_FLAG_LIMITED)
+	{
+		MOO_DEBUG0 (moo, "<pf_basic_new> Receiver is #limited\n");
+		moo->errnum = MOO_EPERM;
+		return MOO_PF_FAILURE;
+	}
 
 	if (nargs >= 1)
 	{

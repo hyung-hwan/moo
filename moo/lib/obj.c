@@ -187,7 +187,7 @@ static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(_class->spec));
 	spec = MOO_OOP_TO_SMOOI(_class->spec);
 
-	named_instvar = MOO_CLASS_SPEC_NAMED_INSTVAR(spec); /* size of the named_instvar part */
+	named_instvar = MOO_CLASS_SPEC_NAMED_INSTVARS(spec); /* size of the named_instvar part */
 
 	if (MOO_CLASS_SPEC_IS_INDEXED(spec)) 
 	{
@@ -428,4 +428,3 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_class_t _class, moo_oo
 	moo_poptmps (moo, tmp_count);
 	return oop;
 }
-

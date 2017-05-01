@@ -105,11 +105,18 @@ class(#character) String(Array)
 	{
 		^self
 	}
+	
+	(* TODO: Symbol is a #final class. Symbol new is not allowed. To create a symbol programatically, you should
+	 *       build a string and send asSymbol to the string............
+	method asSymbol
+	{
+	}
+	*)
 }
 
 ## -------------------------------------------------------------------------------
 
-class(#character) Symbol(String)
+class(#character,#final,#limited) Symbol(String)
 {
 	method asString
 	{

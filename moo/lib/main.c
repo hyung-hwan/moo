@@ -1549,7 +1549,6 @@ int main (int argc, char* argv[])
 	}
 #endif
 
-
 	memset (&vmprim, 0, MOO_SIZEOF(vmprim));
 	vmprim.dl_open = dl_open;
 	vmprim.dl_close = dl_close;

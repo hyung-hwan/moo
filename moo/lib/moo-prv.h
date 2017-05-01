@@ -156,9 +156,9 @@
 	(((moo_oow_t)(indexed_type)) << 1) | (((moo_oow_t)is_indexed) & 1) )
 
 /* what is the number of named instance variables? 
- *  MOO_CLASS_SPEC_NAMED_INSTVAR(MOO_OOP_TO_SMOOI(_class->spec))
+ *  MOO_CLASS_SPEC_NAMED_INSTVARS(MOO_OOP_TO_SMOOI(_class->spec))
  */
-#define MOO_CLASS_SPEC_NAMED_INSTVAR(spec) \
+#define MOO_CLASS_SPEC_NAMED_INSTVARS(spec) \
 	(((moo_oow_t)(spec)) >> (MOO_OBJ_FLAGS_TYPE_BITS + 1))
 
 /* is it a user-indexable class? 
@@ -179,10 +179,6 @@
  * bits is to consider the sign bit of a small-integer which is a typical
  * type of the spec field in the class object.
  */
-/*
-#define MOO_MAX_NAMED_INSTVARSVARS \
-	MOO_BITS_MAX(moo_oow_t, MOO_OOW_BITS - MOO_OOP_TAG_BITS_LO - (MOO_OBJ_FLAGS_TYPE_BITS + 1) - 1)
-*/
 #define MOO_MAX_NAMED_INSTVARS \
 	MOO_BITS_MAX(moo_oow_t, MOO_SMOOI_ABS_BITS - (MOO_OBJ_FLAGS_TYPE_BITS + 1))
 
@@ -195,30 +191,38 @@
  */
 #define MOO_MAX_INDEXED_INSTVARS(named_instvar) (MOO_OBJ_SIZE_MAX - named_instvar)
 
-/*
-#define MOO_CLASS_SELFSPEC_MAKE(class_var,classinst_var) \
-	(((moo_oow_t)class_var) << ((MOO_OOW_BITS - MOO_OOP_TAG_BITS_LO) / 2)) | ((moo_oow_t)classinst_var)
-*/
-#define MOO_CLASS_SELFSPEC_MAKE(class_var,classinst_var) \
-	(((moo_oow_t)class_var) << (MOO_SMOOI_BITS / 2)) | ((moo_oow_t)classinst_var)
 
 /*
-#define MOO_CLASS_SELFSPEC_CLASSVAR(spec) ((moo_oow_t)spec >> ((MOO_OOW_BITS - MOO_OOP_TAG_BITS_LO) / 2))
-#define MOO_CLASS_SELFSPEC_CLASSINSTVAR(spec) (((moo_oow_t)spec) & MOO_LBMASK(moo_oow_t, (MOO_OOW_BITS - MOO_OOP_TAG_BITS_LO) / 2))
-*/
-#define MOO_CLASS_SELFSPEC_CLASSVAR(spec) ((moo_oow_t)spec >> (MOO_SMOOI_BITS / 2))
-#define MOO_CLASS_SELFSPEC_CLASSINSTVAR(spec) (((moo_oow_t)spec) & MOO_LBMASK(moo_oow_t, (MOO_SMOOI_BITS / 2)))
-
-/*
- * yet another -1 in the calculation of the bit numbers for signed nature of
- * a small-integer
+ * self-specification of a class
+ *   | classinstvars     | classvars         | flags |
+ *
+ * When converted to a small integer
+ *   | sign-bit | classinstvars | classvars | flags | tag |
  */
-/*
-#define MOO_MAX_CLASSVARS      MOO_BITS_MAX(moo_oow_t, (MOO_OOW_BITS - MOO_OOP_TAG_BITS_LO - 1) / 2)
-#define MOO_MAX_CLASSINSTVARS  MOO_BITS_MAX(moo_oow_t, (MOO_OOW_BITS - MOO_OOP_TAG_BITS_LO - 1) / 2)
-*/
-#define MOO_MAX_CLASSVARS      MOO_BITS_MAX(moo_oow_t, MOO_SMOOI_ABS_BITS / 2)
-#define MOO_MAX_CLASSINSTVARS  MOO_BITS_MAX(moo_oow_t, MOO_SMOOI_ABS_BITS / 2)
+#define MOO_CLASS_SELFSPEC_FLAG_BITS (3)
+#define MOO_CLASS_SELFSPEC_CLASSINSTVAR_BITS ((MOO_SMOOI_ABS_BITS - MOO_CLASS_SELFSPEC_FLAG_BITS) / 2)
+#define MOO_CLASS_SELFSPEC_CLASSVAR_BITS (MOO_SMOOI_ABS_BITS - (MOO_CLASS_SELFSPEC_CLASSINSTVAR_BITS + MOO_CLASS_SELFSPEC_FLAG_BITS))
+
+#define MOO_CLASS_SELFSPEC_MAKE(class_var,classinst_var,flag) \
+	((((moo_oow_t)class_var)     << (MOO_CLASS_SELFSPEC_CLASSINSTVAR_BITS + MOO_CLASS_SELFSPEC_FLAG_BITS)) | \
+	 (((moo_oow_t)classinst_var) << (MOO_CLASS_SELFSPEC_FLAG_BITS)) | \
+	 (((moo_oow_t)flag)          << (0)))
+
+#define MOO_CLASS_SELFSPEC_CLASSVARS(spec) \
+	(((moo_oow_t)spec) >> (MOO_CLASS_SELFSPEC_CLASSINSTVAR_BITS + MOO_CLASS_SELFSPEC_FLAG_BITS))
+
+#define MOO_CLASS_SELFSPEC_CLASSINSTVARS(spec) \
+	((((moo_oow_t)spec) >> MOO_CLASS_SELFSPEC_FLAG_BITS) & MOO_LBMASK(moo_oow_t, MOO_CLASS_SELFSPEC_CLASSINSTVAR_BITS))
+
+#define MOO_CLASS_SELFSPEC_FLAGS(spec) \
+	(((moo_oow_t)spec) & MOO_LBMASK(moo_oow_t, MOO_CLASS_SELFSPEC_FLAG_BITS))
+
+#define MOO_CLASS_SELFSPEC_FLAG_FINAL   (1 << 0)
+#define MOO_CLASS_SELFSPEC_FLAG_LIMITED (1 << 1)
+
+
+#define MOO_MAX_CLASSVARS      MOO_BITS_MAX(moo_oow_t, MOO_CLASS_SELFSPEC_CLASSVAR_BITS)
+#define MOO_MAX_CLASSINSTVARS  MOO_BITS_MAX(moo_oow_t, MOO_CLASS_SELFSPEC_CLASSINSTVAR_BITS)
 
 
 #if defined(MOO_LIMIT_OBJ_SIZE)

@@ -1282,6 +1282,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_CLASSCONTRA,     /* contradictory class */
 	MOO_SYNERR_CLASSNAMEINVAL,  /* wrong class name */
 	MOO_SYNERR_CLASSTRSIZE,     /* non-pointer class inheriting a superclass with trailer size set */
+	MOO_SYNERR_CLASSFINAL,      /* cannot inherit a #final class */
 	MOO_SYNERR_VARDCLBANNED,    /* variable declaration not allowed */
 	MOO_SYNERR_MODIFIER,        /* modifier expected */
 	MOO_SYNERR_MODIFIERINVAL,   /* wrong modifier */

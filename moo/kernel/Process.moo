@@ -1,5 +1,5 @@
 
-class(#pointer,#limited) Process(Object)
+class(#pointer,#final,#limited) Process(Object)
 {
 	var initial_context, current_context, state, sp, prev, next, sem, perr.
 
@@ -345,7 +345,7 @@ class SemaphoreHeap(Object)
 	}
 }
 
-class(#limited) ProcessScheduler(Object)
+class(#final,#limited) ProcessScheduler(Object)
 {
 	var tally, active, runnable_head, runnable_tail, sem_heap.
 
