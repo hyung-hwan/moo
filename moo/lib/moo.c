@@ -804,13 +804,17 @@ int moo_genpfmethods (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, const 
 
 moo_pfbase_t* moo_findpfbase (moo_t* moo, moo_pfinfo_t* pfinfo, moo_oow_t pfcount, const moo_ooch_t* name, moo_oow_t namelen)
 {
-	int left, right, mid, n;
+	moo_oow_t left, right, mid;
+	int n;
+
+	/* binary search */
 
 	left = 0; right = pfcount - 1;
 
 	while (left <= right)
 	{
-		mid = (left + right) / 2;
+		/*mid = (left + right) / 2;*/
+		mid = left + ((right - left) / 2);
 
 		n = moo_compoocharsoocstr (name, namelen, pfinfo[mid].mthname);
 		if (n < 0) right = mid - 1; 
@@ -894,7 +898,6 @@ void* moo_getobjtrailer (moo_t* moo, moo_oop_t obj, moo_oow_t* size)
 	if (size) *size = MOO_OBJ_GET_TRAILER_SIZE(obj);
 	return MOO_OBJ_GET_TRAILER_BYTE(obj);
 }
-
 
 moo_oop_t moo_findclass (moo_t* moo, moo_oop_set_t nsdic, const moo_ooch_t* name)
 {

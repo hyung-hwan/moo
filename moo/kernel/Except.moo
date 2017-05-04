@@ -8,6 +8,17 @@ class Exception(Apex)
 {
 	var signalContext, handlerContext, messageText.
 
+(*
+TODO: can i convert 'thisProcess primError' to a relevant exception?
+	var(#class) primExceptTable.
+
+	method(#class) forPrimitiveError: no
+	{
+		^self.primExceptTable at: no
+	}
+*)
+
+
 	method(#class) signal
 	{
 		^self new signal
