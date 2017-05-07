@@ -763,9 +763,8 @@ static int secure_poll_data_space (moo_t* moo, int fd)
 
 static int _add_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_data)
 {
-	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
-
 #if defined(USE_DEVPOLL)
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 	struct pollfd ev;
 
 	if (secure_poll_data_space (moo, fd) <= -1) return -1;
@@ -780,7 +779,10 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 		MOO_DEBUG2 (moo, "Cannot add file descriptor %d to devpoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
+	return 0;
+
 #elif defined(USE_EPOLL)
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 	struct epoll_event ev;
 
 	MOO_ASSERT (moo, xtn->ep >= 0);
@@ -792,25 +794,32 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 		MOO_DEBUG2 (moo, "Cannot add file descriptor %d to epoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
+	return 0;
+
 #elif defined(USE_POLL)
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 
 	if (secure_poll_data_space (moo, fd) <= -1) return -1;
 
 	if (xtn->ev.reg.len >= xtn->ev.reg.capa)
 	{
-		struct pollfd* tmp;
+		struct pollfd* tmp, * tmp2;
 		moo_oow_t newcapa;
 
 		newcapa = MOO_ALIGN_POW2 (xtn->ev.reg.len + 1, 256);
 		tmp = (struct pollfd*)moo_reallocmem (moo, xtn->ev.reg.ptr, newcapa * MOO_SIZEOF(*tmp));
-		if (!tmp)
+		tmp2 = (struct pollfd*)moo_reallocmem (moo, xtn->ev.buf, newcapa * MOO_SIZEOF(*tmp2));
+		if (!tmp || !tmp2)
 		{
 			MOO_DEBUG2 (moo, "Cannot add file descriptor %d to poll - %hs\n", fd, strerror(errno));
+			if (tmp) moo_freemem (moo, tmp);
 			return -1;
 		}
 
 		xtn->ev.reg.ptr = tmp;
 		xtn->ev.reg.capa = newcapa;
+
+		xtn->ev.buf = tmp2;
 	}
 
 	xtn->ev.reg.ptr[xtn->ev.reg.len].fd = fd;
@@ -818,17 +827,21 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 	xtn->ev.reg.ptr[xtn->ev.reg.len].revents = 0;
 	xtn->ev.reg.len++;
 
+	return 0;
+
+#else
+#	error UNSUPPORTED
 #endif
 
-	return 0;
 }
 
 static int _del_poll_fd (moo_t* moo, int fd)
 {
-	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 
 #if defined(USE_DEVPOLL)
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 	struct pollfd ev;
+
 	MOO_ASSERT (moo, xtn->ep >= 0);
 	ev.fd = fd;
 	ev.events = POLLREMOVE;
@@ -841,9 +854,13 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	}
 
 	return 0;
+
 #elif defined(USE_EPOLL)
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 	struct epoll_event ev;
+
 	MOO_ASSERT (moo, xtn->ep >= 0);
+	memset (&ev, 0, MOO_SIZEOF(ev));
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_DEL, fd, &ev) == -1)
 	{
 		moo_syserrtoerrnum (errno);
@@ -851,16 +868,18 @@ static int _del_poll_fd (moo_t* moo, int fd)
 		return -1;
 	}
 	return 0;
+
 #elif defined(USE_POLL)
-	/* TODO: performance boost. no linear search */
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 	moo_oow_t i;
 
+	/* TODO: performance boost. no linear search */
 	for (i = 0; i < xtn->ev.reg.len; i++)
 	{
 		if (xtn->ev.reg.ptr[i].fd == fd)
 		{
-			memmove (&xtn->ev.reg.ptr[i], &xtn->ev.reg.ptr[i+1], (xtn->ev.reg.len - i - 1) * MOO_SIZEOF(*xtn->ev.reg.ptr));
 			xtn->ev.reg.len--;
+			memmove (&xtn->ev.reg.ptr[i], &xtn->ev.reg.ptr[i+1], (xtn->ev.reg.len - i) * MOO_SIZEOF(*xtn->ev.reg.ptr));
 			return 0;
 		}
 	}	
@@ -869,6 +888,8 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	moo_seterrnum (moo, MOO_ENOENT);
 	MOO_DEBUG1 (moo, "Cannot remove file descriptor %d from poll - not found\n", fd);
 	return -1;
+#else
+#	error NOT SUPPORTED
 #endif
 }
 
@@ -900,6 +921,8 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 		MOO_DEBUG2 (moo, "Cannot modify file descriptor %d in epoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
+
+	return 0;
 #elif defined(USE_POLL)
 
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
@@ -917,13 +940,13 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 		}
 	}
 
-	MOO_DEBUG2 (moo, "Cannot modify file descriptor %d in poll - not found\n", fd);
+	MOO_DEBUG1 (moo, "Cannot modify file descriptor %d in poll - not found\n", fd);
 	moo_seterrnum (moo, MOO_ENOENT);
 	return -1;
 
+#else
+#	error NOT SUPPORTED
 #endif
-
-	return 0;
 }
 
 
@@ -1125,7 +1148,7 @@ static void vm_cleanup (moo_t* moo)
 	pthread_cond_destroy (&xtn->ev.cnd2);
 	pthread_mutex_destroy (&xtn->ev.mtx);
 
-	_del_poll_fd (moo, xtn->p[1]);
+	_del_poll_fd (moo, xtn->p[0]);
 	close (xtn->p[1]);
 	close (xtn->p[0]);
 #endif /* USE_THREAD */
@@ -1136,15 +1159,28 @@ static void vm_cleanup (moo_t* moo)
 		close (xtn->ep);
 		xtn->ep = -1;
 	}
+#elif defined(USE_POLL)
+	if (xtn->ev.reg.ptr)
+	{
+		moo_freemem (moo, xtn->ev.reg.ptr);
+		xtn->ev.reg.ptr = MOO_NULL;
+		xtn->ev.reg.len = 0;
+		xtn->ev.reg.capa = 0;
+	}
+	if (xtn->ev.buf)
+	{
+		moo_freemem (moo, xtn->ev.buf);
+		xtn->ev.buf = MOO_NULL;
+	}
+#endif
 
-	#if defined(USE_DEVPOLL)
+#if defined(USE_DEVPOLL) || defined(USE_POLL)
 	if (xtn->epd.ptr)
 	{
 		moo_freemem (moo, xtn->epd.ptr);
 		xtn->epd.ptr = MOO_NULL;
 		xtn->epd.capa = 0;
 	}
-	#endif
 #endif
 
 #endif
@@ -1367,10 +1403,23 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 
 #else
 	int tmout = 0, n;
+	#if defined(USE_DEVPOLL)
+	struct dvpoll dvp;
+	#endif
 
 	if (dur) tmout = MOO_SECNSEC_TO_MSEC(dur->sec, dur->nsec);
 
+	#if defined(USE_DEVPOLL)
+	dvp.dp_timeout = tmout; /* milliseconds */
+	dvp.dp_fds = xtn->ev.buf;
+	dvp.dp_nfds = MOO_COUNTOF(xtn->ev.buf);
+	n = ioctl (xtn->ep, DP_POLL, &dvp);
+	#elif defined(USE_EPOLL)
 	n = epoll_wait (xtn->ep, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), tmout);
+	#elif defined(USE_POLL)
+	memcpy (xtn->ev.buf, xtn->ev.reg.ptr, xtn->ev.reg.len * MOO_SIZEOF(*xtn->ev.buf));
+	n = poll (xtn->ev.buf, xtn->ev.reg.len, tmout);
+	#endif
 
 	if (n <= -1)
 	{
@@ -1400,7 +1449,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	#endif
 
 		mask = 0;
-		if (revents & XPOLLIN) mask |= MOO_SEMAPHORE_IO_MASK_INPUT; /* TODO define constants for IO Mask */
+		if (revents & XPOLLIN) mask |= MOO_SEMAPHORE_IO_MASK_INPUT;
 		if (revents & XPOLLOUT) mask |= MOO_SEMAPHORE_IO_MASK_OUTPUT;
 		if (revents & XPOLLERR) mask |= MOO_SEMAPHORE_IO_MASK_ERROR;
 		if (revents & XPOLLHUP) mask |= MOO_SEMAPHORE_IO_MASK_HANGUP;
@@ -1674,7 +1723,6 @@ int main (int argc, char* argv[])
 		printf ("cannot open moo\n");
 		return -1;
 	}
-
 
 	{
 		moo_oow_t tab_size;

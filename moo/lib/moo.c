@@ -546,7 +546,7 @@ void moo_closemod (moo_t* moo, moo_mod_data_t* mdp)
 	}
 	else
 	{
-		MOO_DEBUG1 (moo, "Closed a static module [%js] - %p\n", mdp->mod.name);
+		MOO_DEBUG1 (moo, "Closed a static module [%js]\n", mdp->mod.name);
 	}
 
 	if (mdp->pair)
