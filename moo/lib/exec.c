@@ -1648,7 +1648,7 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 
 	if (MOO_OBJ_GET_FLAGS_RDONLY(rcv))
 	{
-/* TODO: better error handlign */
+/* TODO: better error handling */
 		moo->errnum = MOO_EPERM;
 		return MOO_PF_FAILURE;
 	}
@@ -1666,15 +1666,6 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 	{
 		/* index out of range */
 		moo->errnum = MOO_ERANGE;
-		return MOO_PF_FAILURE;
-	}
-
-	if (MOO_OBJ_GET_CLASS(rcv) == moo->_symbol)
-	{
-/* TODO: disallow change of some key kernel objects???? */
-		/* TODO: is it better to introduct a read-only mark in the object header instead of this class check??? */
-		/* read-only object */ /* TODO: DEVISE A WAY TO PASS a proper error from the primitive handler to MOO */
-		moo->errnum = MOO_EINVAL;
 		return MOO_PF_FAILURE;
 	}
 

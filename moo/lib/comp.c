@@ -50,9 +50,10 @@
 
 enum class_mod_t
 {
-	CLASS_FINAL     = (1 << 0),
-	CLASS_LIMITED   = (1 << 1),
-	CLASS_INDEXED   = (1 << 2)
+	CLASS_FINAL      = (1 << 0),
+	CLASS_LIMITED    = (1 << 1),
+	CLASS_INDEXED    = (1 << 2),
+	CLASS_IMMUTABLE  = (1 << 3)
 };
 
 enum var_type_t
@@ -107,6 +108,7 @@ static struct voca_t
 	{  4, { 'f','r','o','m'                                               } },
 	{  9, { '#','h','a','l','f','w','o','r','d'                           } },
 	{  2, { 'i','f'                                                       } },
+	{ 10, { '#','i','m','m','u','t','a','b','l','e'                       } },
 	{  6, { 'i','m','p','o','r','t'                                       } },
 	{  8, { '#','i','n','c','l','u','d','e'                               } },
 	{  8, { '#','l','i','b','e','r','a','l'                               } },
@@ -165,6 +167,7 @@ enum voca_id_t
 	VOCA_FROM,
 	VOCA_HALFWORD_S,
 	VOCA_IF,
+	VOCA_IMMUTABLE_S,
 	VOCA_IMPORT,
 	VOCA_INCLUDE_S,
 	VOCA_LIBERAL_S,
@@ -6407,9 +6410,10 @@ static int make_defined_class (moo_t* moo)
 	moo_oow_t spec, self_spec;
 	int just_made = 0, flags;
 
-	spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.var[VAR_INSTANCE].total_count,  
-	                            ((moo->c->cls.flags & CLASS_INDEXED)? 1: 0),
-	                            moo->c->cls.indexed_type);
+	flags = 0;
+	if (moo->c->cls.flags & CLASS_INDEXED) flags |= MOO_CLASS_SPEC_FLAG_INDEXED;
+	if (moo->c->cls.flags & CLASS_IMMUTABLE) flags |= MOO_CLASS_SPEC_FLAG_IMMUTABLE;
+	spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.var[VAR_INSTANCE].total_count, flags, moo->c->cls.indexed_type);
 
 	flags = 0;
 	if (moo->c->cls.flags & CLASS_FINAL) flags |= MOO_CLASS_SELFSPEC_FLAG_FINAL;
@@ -6656,15 +6660,25 @@ static int __compile_class_definition (moo_t* moo, int extend)
 					moo->c->cls.flags |= CLASS_LIMITED;
 					GET_TOKEN(moo);
 				}
+				else if (is_token_symbol(moo, VOCA_IMMUTABLE_S))
+				{
+					if (moo->c->cls.flags & CLASS_IMMUTABLE)
+					{
+						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						return -1;
+					}
+					moo->c->cls.flags |= CLASS_IMMUTABLE;
+					GET_TOKEN(moo);
+				}
 				else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
 				{
-				/* no modifier is present */
+					/* no modifier is present */
 					set_syntax_error (moo, MOO_SYNERR_MODIFIER, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 				else
 				{
-				/* invalid modifier */
+					/* invalid modifier */
 					set_syntax_error (moo, MOO_SYNERR_MODIFIERINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}

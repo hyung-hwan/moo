@@ -116,7 +116,7 @@ class(#character) String(Array)
 
 ## -------------------------------------------------------------------------------
 
-class(#character,#final,#limited) Symbol(String)
+class(#character,#final,#limited,#immutable) Symbol(String)
 {
 	method asString
 	{

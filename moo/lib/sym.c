@@ -158,9 +158,6 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 		MOO_ASSERT (moo, tally < MOO_SMOOI_MAX);
 		moo->symtab->tally = MOO_SMOOI_TO_OOP(tally + 1);
 		moo->symtab->bucket->slot[index] = (moo_oop_t)symbol;
-
-		/* set RDONLY on a symbol */
-		MOO_OBJ_SET_FLAGS_RDONLY (symbol, 1);
 	}
 
 	return (moo_oop_t)symbol;

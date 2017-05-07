@@ -151,26 +151,32 @@
  * The MOO_CLASS_SPEC_MAKE() macro creates a class spec value.
  *  _class->spec = MOO_SMOOI_TO_OOP(MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_CHAR));
  */
-#define MOO_CLASS_SPEC_MAKE(named_instvar,is_indexed,indexed_type) ( \
-	(((moo_oow_t)(named_instvar)) << (MOO_OBJ_FLAGS_TYPE_BITS + 1)) |  \
-	(((moo_oow_t)(indexed_type)) << 1) | (((moo_oow_t)is_indexed) & 1) )
+#define MOO_CLASS_SPEC_MAKE(named_instvar,flags,indexed_type) ( \
+	(((moo_oow_t)(named_instvar)) << (MOO_OBJ_FLAGS_TYPE_BITS + 2)) |  \
+	(((moo_oow_t)(indexed_type)) << 2) | (((moo_oow_t)flags) & 3) )
 
 /* what is the number of named instance variables? 
  *  MOO_CLASS_SPEC_NAMED_INSTVARS(MOO_OOP_TO_SMOOI(_class->spec))
  */
 #define MOO_CLASS_SPEC_NAMED_INSTVARS(spec) \
-	(((moo_oow_t)(spec)) >> (MOO_OBJ_FLAGS_TYPE_BITS + 1))
+	(((moo_oow_t)(spec)) >> (MOO_OBJ_FLAGS_TYPE_BITS + 2))
 
 /* is it a user-indexable class? 
  * all objects can be indexed with basicAt:.
  * this indicates if an object can be instantiated with a dynamic size
  * (new: size) and and can be indexed with at:.
  */
-#define MOO_CLASS_SPEC_IS_INDEXED(spec) (((moo_oow_t)(spec)) & 1)
+#define MOO_CLASS_SPEC_FLAGS(spec) (((moo_oow_t)(spec)) & 3)
 
 /* if so, what is the indexing type? character? pointer? etc? */
 #define MOO_CLASS_SPEC_INDEXED_TYPE(spec) \
-	((((moo_oow_t)(spec)) >> 1) & MOO_LBMASK(moo_oow_t, MOO_OBJ_FLAGS_TYPE_BITS))
+	((((moo_oow_t)(spec)) >> 2) & MOO_LBMASK(moo_oow_t, MOO_OBJ_FLAGS_TYPE_BITS))
+
+#define MOO_CLASS_SPEC_FLAG_INDEXED   (1 << 0)
+#define MOO_CLASS_SPEC_FLAG_IMMUTABLE (1 << 1)
+
+#define MOO_CLASS_SPEC_IS_INDEXED(spec) (MOO_CLASS_SPEC_FLAGS(spec) & MOO_CLASS_SPEC_FLAG_INDEXED)
+#define MOO_CLASS_SPEC_IS_IMMUTABLE(spec) (MOO_CLASS_SPEC_FLAGS(spec) & MOO_CLASS_SPEC_FLAG_IMMUTABLE)
 
 /* What is the maximum number of named instance variables?
  * This limit is set so because the number must be encoded into the spec field
@@ -180,7 +186,7 @@
  * type of the spec field in the class object.
  */
 #define MOO_MAX_NAMED_INSTVARS \
-	MOO_BITS_MAX(moo_oow_t, MOO_SMOOI_ABS_BITS - (MOO_OBJ_FLAGS_TYPE_BITS + 1))
+	MOO_BITS_MAX(moo_oow_t, MOO_SMOOI_ABS_BITS - (MOO_OBJ_FLAGS_TYPE_BITS + 2))
 
 /* Given the number of named instance variables, what is the maximum number 
  * of indexed instance variables? The number of indexed instance variables

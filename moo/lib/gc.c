@@ -174,14 +174,14 @@ static int ignite_1 (moo_t* moo)
 	moo->_apex              = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
 	moo->_undefined_object  = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
 	moo->_object            = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_string            = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_CHAR));
+	moo->_string            = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_CHAR));
 
 	moo->_symbol            = alloc_kernel_class (moo,
 		MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
-		0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_CHAR));
+		0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE, MOO_OBJ_TYPE_CHAR));
 
-	moo->_array             = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_OOP));
-	moo->_byte_array        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_BYTE));
+	moo->_array             = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_OOP));
+	moo->_byte_array        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_BYTE));
 	moo->_symbol_set        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
 	moo->_dictionary        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
 	moo->_system_dictionary = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
@@ -189,15 +189,15 @@ static int ignite_1 (moo_t* moo)
 	moo->_namespace         = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
 	moo->_pool_dictionary   = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
 	moo->_method_dictionary = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_method            = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_METHOD_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
+	moo->_method            = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_METHOD_NAMED_INSTVARS, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_OOP));
 	moo->_association       = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_ASSOCIATION_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
 
-	moo->_method_context    = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_CONTEXT_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
-	moo->_block_context     = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_CONTEXT_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
+	moo->_method_context    = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_CONTEXT_NAMED_INSTVARS, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_OOP));
+	moo->_block_context     = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_CONTEXT_NAMED_INSTVARS, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_OOP));
 
 	moo->_process           = alloc_kernel_class (moo, 
 		MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
-		0, MOO_CLASS_SPEC_MAKE(MOO_PROCESS_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
+		0, MOO_CLASS_SPEC_MAKE(MOO_PROCESS_NAMED_INSTVARS, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_OOP));
 
 	moo->_semaphore         = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SEMAPHORE_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
 	moo->_process_scheduler = alloc_kernel_class (moo,
@@ -212,8 +212,8 @@ static int ignite_1 (moo_t* moo)
 	 *       Does this make sense? */
 	moo->_character         = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
 	moo->_small_integer     = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_large_positive_integer = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_LIWORD));
-	moo->_large_negative_integer = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_LIWORD));
+	moo->_large_positive_integer = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE, MOO_OBJ_TYPE_LIWORD));
+	moo->_large_negative_integer = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE, MOO_OBJ_TYPE_LIWORD));
 
 	moo->_small_pointer     = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
 	moo->_system            = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));

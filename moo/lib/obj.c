@@ -155,22 +155,22 @@ static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, mo
 	return hdr;
 }
 
-moo_oop_t moo_alloccharobj (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
+MOO_INLINE moo_oop_t moo_alloccharobj (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 {
 	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_CHAR, MOO_SIZEOF(moo_ooch_t), 1);
 }
 
-moo_oop_t moo_allocbyteobj (moo_t* moo, const moo_oob_t* ptr, moo_oow_t len)
+MOO_INLINE moo_oop_t moo_allocbyteobj (moo_t* moo, const moo_oob_t* ptr, moo_oow_t len)
 {
 	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_BYTE, MOO_SIZEOF(moo_oob_t), 0);
 }
 
-moo_oop_t moo_allochalfwordobj (moo_t* moo, const moo_oohw_t* ptr, moo_oow_t len)
+MOO_INLINE moo_oop_t moo_allochalfwordobj (moo_t* moo, const moo_oohw_t* ptr, moo_oow_t len)
 {
 	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_HALFWORD, MOO_SIZEOF(moo_oohw_t), 0);
 }
 
-moo_oop_t moo_allocwordobj (moo_t* moo, const moo_oow_t* ptr, moo_oow_t len)
+MOO_INLINE moo_oop_t moo_allocwordobj (moo_t* moo, const moo_oow_t* ptr, moo_oow_t len)
 {
 	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_WORD, MOO_SIZEOF(moo_oow_t), 0);
 }
@@ -332,60 +332,11 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 			break;
 	}
 
-	if (oop) MOO_OBJ_SET_CLASS (oop, (moo_oop_t)_class);
-	moo_poptmps (moo, tmp_count);
-	return oop;
-}
-
-/* TODO: ... */
-moo_oop_t moo_instantiate2 (moo_t* moo, moo_oop_class_t _class, const void* vptr, moo_oow_t vlen, int ngc)
-{
-	moo_oop_t oop;
-	moo_obj_type_t type;
-	moo_oow_t alloclen;
-	moo_oow_t tmp_count = 0;
-
-	MOO_ASSERT (moo, moo->_nil != MOO_NULL);
-
-	if (decode_spec (moo, _class, vlen, &type, &alloclen) <= -1) 
+	if (oop) 
 	{
-		moo->errnum = MOO_EINVAL;
-		return MOO_NULL;
+		MOO_OBJ_SET_CLASS (oop, (moo_oop_t)_class);
+		if (MOO_CLASS_SPEC_IS_IMMUTABLE(MOO_OOP_TO_SMOOI(_class->spec))) MOO_OBJ_SET_FLAGS_RDONLY (oop, 1);
 	}
-
-	moo_pushtmp (moo, (moo_oop_t*)&_class); tmp_count++;
-
-/* TODO: support NGC */
-	switch (type)
-	{
-		case MOO_OBJ_TYPE_OOP:
-			/* [NOTE] vptr is not used for GC unsafety. read comment in moo_instantiate() */
-			oop = moo_allocoopobj (moo, alloclen);
-			break;
-
-		case MOO_OBJ_TYPE_CHAR:
-			oop = moo_alloccharobj (moo, vptr, alloclen);
-			break;
-
-		case MOO_OBJ_TYPE_BYTE:
-			oop = moo_allocbyteobj (moo, vptr, alloclen);
-			break;
-
-		case MOO_OBJ_TYPE_HALFWORD:
-			oop = moo_allochalfwordobj (moo, vptr, alloclen);
-			break;
-
-		case MOO_OBJ_TYPE_WORD:
-			oop = moo_allocwordobj (moo, vptr, alloclen);
-			break;
-
-		default:
-			moo->errnum = MOO_EINTERN;
-			oop = MOO_NULL;
-			break;
-	}
-
-	if (oop) MOO_OBJ_SET_CLASS (oop, _class);
 	moo_poptmps (moo, tmp_count);
 	return oop;
 }
@@ -411,6 +362,26 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_class_t _class, moo_oo
 	{
 		case MOO_OBJ_TYPE_OOP:
 			oop = moo_allocoopobjwithtrailer(moo, alloclen, trptr, trlen);
+			if (oop)
+			{
+				/* initialize named instance variables with default values */
+				if (_class->initv[0] != moo->_nil)
+				{
+					moo_oow_t i = MOO_OBJ_GET_SIZE(_class->initv[0]);
+
+					/* [NOTE] i don't deep-copy initial values.
+					 *   if you change the contents of compound values like arrays,
+					 *   it affects subsequent instantiation of the class. 
+					 *   it's important that the compiler should mark compound initial
+					 *   values read-only. */   
+					while (i > 0)
+					{
+						--i;
+						((moo_oop_oop_t)oop)->slot[i] = ((moo_oop_oop_t)_class->initv[0])->slot[i];
+					}
+				}
+			}
+
 			break;
 
 		default:
@@ -424,7 +395,11 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_class_t _class, moo_oo
 			break;
 	}
 
-	if (oop) MOO_OBJ_SET_CLASS (oop, _class);
+	if (oop)
+	{
+		MOO_OBJ_SET_CLASS (oop, _class);
+		if (MOO_CLASS_SPEC_IS_IMMUTABLE(MOO_OOP_TO_SMOOI(_class->spec))) MOO_OBJ_SET_FLAGS_RDONLY (oop, 1);
+	}
 	moo_poptmps (moo, tmp_count);
 	return oop;
 }

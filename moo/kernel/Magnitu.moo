@@ -291,7 +291,7 @@ class Number(Magnitude)
 	}
 }
 
-class Integer(Number)
+class(#limited) Integer(Number)
 {
 	method timesRepeat: aBlock
 	{
@@ -310,17 +310,17 @@ class SmallInteger(Integer)
 	method(#primitive) asError.	
 }
 
-class(#liword) LargeInteger(Integer)
+class(#liword,#limited) LargeInteger(Integer)
 {
 }
 
-class(#liword) LargePositiveInteger(LargeInteger)
+class(#liword,#immutable) LargePositiveInteger(LargeInteger)
 {
 	method abs { ^self }
 	method sign { ^1 }
 }
 
-class(#liword) LargeNegativeInteger(LargeInteger)
+class(#liword,#immutable) LargeNegativeInteger(LargeInteger)
 {
 	method abs { ^self negated }
 	method sign { ^-1 }
