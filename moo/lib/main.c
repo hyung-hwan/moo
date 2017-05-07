@@ -159,7 +159,10 @@ struct xtn_t
 	HANDLE waitable_timer;
 #else
 
+#if defined(USE_DEVPOLL) || defined(USE_EPOLL)
 	int ep; /* /dev/poll or epoll */
+#endif
+
 #if defined(USE_DEVPOLL)
 	struct
 	{
@@ -176,9 +179,22 @@ struct xtn_t
 	struct
 	{
 	#if defined(USE_DEVPOLL)
-		struct pollfd buf[32];
-	#else
-		struct epoll_event buf[32]; /*TODO: make it a dynamically allocated memory block depending on the file descriptor added. */
+		/*TODO: make it dynamically changeable depending on the number of
+		 *      file descriptors added */
+		struct pollfd buf[64];
+	#elif defined(USE_EPOLL) 
+		/*TODO: make it dynamically changeable depending on the number of
+		 *      file descriptors added */
+		struct epoll_event buf[64];
+	#elif defined(USE_POLL)
+		struct
+		{
+			struct pollfd* ptr;
+			moo_oow_t capa;
+			moo_oow_t len;
+		} reg; /* registrar */
+
+		struct pollfd* buf;
 	#endif
 		moo_oow_t len;
 		pthread_mutex_t mtx;
@@ -729,6 +745,109 @@ if (mask & MOO_LOG_GC) return; /* don't show gc logs */
 
 
 /* ========================================================================= */
+static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
+{
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+
+#if defined(USE_DEVPOLL)
+	struct pollfd ev;
+	MOO_ASSERT (moo, xtn->ep >= 0);
+	ev.fd = fd;
+	ev.events = event_mask;
+	ev.revents = 0;
+	if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
+	{
+		moo_syserrtoerrnum (errno);
+		MOO_DEBUG2 (moo, "Cannot add file descriptor %d to devpoll - %hs\n", fd, strerror(errno));
+		return -1;
+	}
+#elif defined(USE_EPOLL)
+	struct epoll_event ev;
+	MOO_ASSERT (moo, xtn->ep >= 0);
+	ev.events = event_mask;
+	ev.data.ptr = (void*)MOO_TYPE_MAX(moo_oow_t);
+	if (epoll_ctl (xtn->ep, EPOLL_CTL_ADD, fd, &ev) == -1)
+	{
+		moo_syserrtoerrnum (errno);
+		MOO_DEBUG2 (moo, "Cannot add file descriptor %d to epoll - %hs\n", fd, strerror(errno));
+		return -1;
+	}
+#elif defined(USE_POLL)
+	if (xtn->ev.reg.len >= xtn->ev.reg.capa)
+	{
+		struct pollfd* tmp;
+		moo_oow_t newcapa;
+
+		newcapa = MOO_ALIGN_POW2 (xtn->ev.reg.len + 1, 256);
+		tmp = (struct pollfd*)moo_reallocmem (moo, xtn->ev.reg.ptr, newcapa * MOO_SIZEOF(*tmp));
+		if (!tmp)
+		{
+			MOO_DEBUG2 (moo, "Cannot add file descriptor %d to epoll - %hs\n", fd, strerror(errno));
+			return -1;
+		}
+
+		xtn->ev.reg.ptr = tmp;
+		xtn->ev.reg.capa = newcapa;
+	}
+
+	xtn->ev.reg.ptr[xtn->ev.reg.len].fd = fd;
+	xtn->ev.reg.ptr[xtn->ev.reg.len].events = event_mask;
+	xtn->ev.reg.ptr[xtn->ev.reg.len].revents = 0;
+	xtn->ev.reg.len++;
+
+#endif
+
+	return 0;
+}
+
+static int _del_poll_fd (moo_t* moo, int fd)
+{
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+
+#if defined(USE_DEVPOLL)
+	struct pollfd ev;
+	MOO_ASSERT (moo, xtn->ep >= 0);
+	ev.fd = fd;
+	ev.events = POLLREMOVE;
+	ev.revents = 0;
+	if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
+	{
+		moo_syserrtoerrnum (errno);
+		MOO_DEBUG2 (moo, "Cannot remove file descriptor %d from devpoll - %hs\n", fd, strerror(errno));
+		return -1;
+	}
+
+	return 0;
+#elif defined(USE_EPOLL)
+	struct epoll_event ev;
+	MOO_ASSERT (moo, xtn->ep >= 0);
+	if (epoll_ctl (xtn->ep, EPOLL_CTL_DEL, fd, &ev) == -1)
+	{
+		moo_syserrtoerrnum (errno);
+		MOO_DEBUG2 (moo, "Cannot remove file descriptor %d from epoll - %hs\n", fd, strerror(errno));
+		return -1;
+	}
+	return 0;
+#elif defined(USE_POLL)
+	/* TODO: performance boost. no linear search */	
+	moo_oow_t i;
+
+	for (i = 0; i < xtn->ev.reg.len; i++)
+	{
+		if (xtn->ev.reg.ptr[i].fd == fd)
+		{
+			memmove (&xtn->ev.reg.ptr[i], &xtn->ev.reg.ptr[i+1], (xtn->ev.reg.len - i - 1) * MOO_SIZEOF(*xtn->ev.reg.ptr));
+			xtn->ev.reg.len--;
+			return 0;
+		}
+	}	
+
+
+	moo_seterrnum (moo, MOO_ENOENT);
+	MOO_DEBUG1 (moo, "Cannot remove file descriptor %d from poll - not found\n", fd);
+	return -1;
+#endif
+}
 
 #if defined(USE_THREAD)
 static void* iothr_main (void* arg)
@@ -753,8 +872,11 @@ static void* iothr_main (void* arg)
 			dvp.dp_fds = xtn->ev.buf;
 			dvp.dp_nfds = MOO_COUNTOF(xtn->ev.buf);
 			n = ioctl (xtn->ep, DP_POLL, &dvp);
-		#else
+		#elif defined(USE_EPOLL)
 			n = epoll_wait (xtn->ep, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), 10000);
+		#elif defined(USE_POLL)
+			memcpy (xtn->ev.buf, xtn->ev.reg.ptr, xtn->ev.reg.len * MOO_SIZEOF(*xtn->ev.buf));
+			n = poll (xtn->ev.buf, xtn->ev.reg.len, 10000);
 		#endif
 
 			pthread_mutex_lock (&xtn->ev.mtx);
@@ -803,14 +925,9 @@ static int vm_startup (moo_t* moo)
 	xtn->waitable_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
 
 #else
-	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
-#if defined(USE_DEVPOLL)
-	struct pollfd ev;
-#else
-	struct epoll_event ev;
-#endif /* USE_DEVPOLL */
-	int pcount = 0, flag;
 
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+	int pcount = 0, flag;
 
 #if defined(USE_DEVPOLL)
 	xtn->ep = open ("/dev/poll", O_RDWR);
@@ -820,7 +937,11 @@ static int vm_startup (moo_t* moo)
 		MOO_DEBUG1 (moo, "Cannot create devpoll - %hs\n", strerror(errno));
 		goto oops;
 	}
-#else
+
+	flag = fcntl (xtn->ep, F_GETFD);
+	if (flag >= 0) fcntl (xtn->ep, F_SETFD, flag | FD_CLOEXEC);
+
+#elif defined(USE_EPOLL)
 	#if defined(EPOLL_CLOEXEC)
 	xtn->ep = epoll_create1 (EPOLL_CLOEXEC);
 	#else
@@ -832,15 +953,15 @@ static int vm_startup (moo_t* moo)
 		MOO_DEBUG1 (moo, "Cannot create epoll - %hs\n", strerror(errno));
 		goto oops;
 	}
-#endif /* USE_DEVPOLL */
 
-
-#if defined(EPOLL_CLOEXEC)
+	#if defined(EPOLL_CLOEXEC)
 	/* do nothing */
-#else
+	#else
 	flag = fcntl (xtn->ep, F_GETFD);
 	if (flag >= 0) fcntl (xtn->ep, F_SETFD, flag | FD_CLOEXEC);
-#endif
+	#endif
+#endif /* USE_DEVPOLL */
+
 
 #if defined(USE_THREAD)
 	if (pipe (xtn->p) == -1)
@@ -864,26 +985,7 @@ static int vm_startup (moo_t* moo)
 	if (flag >= 0) fcntl (xtn->p[1], F_SETFL, flag | O_NONBLOCK);
 #endif
 
-#if defined(USE_DEVPOLL)
-	ev.fd = xtn->p[0];
-	ev.events = XPOLLIN;
-	ev.revents = 0;
-	if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
-	{
-		moo_syserrtoerrnum (errno);
-		MOO_DEBUG1 (moo, "Cannot add a pipe to devpoll - %hs\n", strerror(errno));
-		goto oops;
-	}
-#else
-	ev.events = XPOLLIN;
-	ev.data.ptr = (void*)MOO_TYPE_MAX(moo_oow_t);
-	if (epoll_ctl (xtn->ep, EPOLL_CTL_ADD, xtn->p[0], &ev) == -1)
-	{
-		moo_syserrtoerrnum (errno);
-		MOO_DEBUG1 (moo, "Cannot add a pipe to epoll - %hs\n", strerror(errno));
-		goto oops;
-	}
-#endif
+	if (_add_poll_fd (moo, xtn->p[0], XPOLLIN) <= -1) goto oops;
 
 	pthread_mutex_init (&xtn->ev.mtx, MOO_NULL);
 	pthread_cond_init (&xtn->ev.cnd, MOO_NULL);
@@ -899,17 +1001,21 @@ static int vm_startup (moo_t* moo)
 oops:
 
 #if defined(USE_THREAD)
-	if (pcount)
+	if (pcount > 0)
 	{
 		close (xtn->p[0]);
 		close (xtn->p[1]);
 	}
 #endif
+
+
+#if defined(USE_DEVPOLL) || defined(USE_EPOLL)
 	if (xtn->ep >= 0)
 	{
 		close (xtn->ep);
 		xtn->ep = -1;
 	}
+#endif
 
 	return -1;
 #endif
@@ -940,26 +1046,15 @@ static void vm_cleanup (moo_t* moo)
 	pthread_cond_destroy (&xtn->ev.cnd);
 	pthread_cond_destroy (&xtn->ev.cnd2);
 	pthread_mutex_destroy (&xtn->ev.mtx);
-#endif
 
+	_del_poll_fd (moo, xtn->p[1]);
+	close (xtn->p[1]);
+	close (xtn->p[0]);
+#endif /* USE_THREAD */
+
+#if defined(USE_DEVPOLL) || defined(USE_EPOLL)
 	if (xtn->ep)
 	{
-	#if defined(USE_THREAD)
-	#if defined(USE_DEVPOLL)
-		struct pollfd ev;
-		ev.fd = xtn->p[1];
-		ev.events = POLLREMOVE;
-		ev.revents = 0;
-		write (xtn->ep, &ev, MOO_SIZEOF(ev));
-	#else
-		struct epoll_event ev;
-		epoll_ctl (xtn->ep, EPOLL_CTL_DEL, xtn->p[1], &ev);
-	#endif
-
-		close (xtn->p[1]);
-		close (xtn->p[0]);
-	#endif /* USE_THREAD */
-
 		close (xtn->ep);
 		xtn->ep = -1;
 	}
@@ -972,6 +1067,7 @@ static void vm_cleanup (moo_t* moo)
 		xtn->epd.capa = 0;
 	}
 	#endif
+#endif
 
 #endif
 }
@@ -1061,21 +1157,22 @@ static int _mux_add_or_mod (moo_t* moo, moo_oop_semaphore_t sem, int cmd)
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 #if defined(USE_DEVPOLL)
 	struct pollfd ev;
-#else
+#elif defined(USE_EPOLL)
 	struct epoll_event ev;
 #endif
 	moo_ooi_t mask;
+	int event_mask;
 
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index));
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_handle));
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_mask));
 
 	mask = MOO_OOP_TO_SMOOI(sem->io_mask);
-	ev.events = 0; /*EPOLLET; */ /* TODO: use edge trigger(EPOLLLET)? */
-	if (mask & MOO_SEMAPHORE_IO_MASK_INPUT) ev.events |= XPOLLIN; /* TODO: define io mask constants... */
-	if (mask & MOO_SEMAPHORE_IO_MASK_OUTPUT) ev.events |= XPOLLOUT;
+	event_mask = 0; /*EPOLLET; */ /* TODO: use edge trigger(EPOLLLET)? */
+	if (mask & MOO_SEMAPHORE_IO_MASK_INPUT) event_mask |= XPOLLIN; 
+	if (mask & MOO_SEMAPHORE_IO_MASK_OUTPUT) event_mask |= XPOLLOUT;
 
-	if (ev.events == 0) 
+	if (event_mask == 0)
 	{
 		MOO_DEBUG2 (moo, "<vm_muxadd> Invalid semaphore mask %zd on handle %zd\n", mask, MOO_OOP_TO_SMOOI(sem->io_handle));
 		moo_seterrnum (moo, MOO_EINVAL);
@@ -1084,31 +1181,27 @@ static int _mux_add_or_mod (moo_t* moo, moo_oop_semaphore_t sem, int cmd)
 
 #if defined(USE_DEVPOLL)
 	ev.fd = MOO_OOP_TO_SMOOI(sem->io_handle);
-	ev.revents = 0;
 
 	if (secure_devpoll_data_space (moo, ev.fd) <= -1)
 	{
-			MOO_DEBUG2 (moo, "<vm_muxadd> devpoll data set failure on handle %zd - %hs\n", MOO_OOP_TO_SMOOI(sem->io_handle), strerror(errno));
-			return -1;
+		MOO_DEBUG2 (moo, "<vm_muxadd> devpoll data set failure on handle %zd - %hs\n", MOO_OOP_TO_SMOOI(sem->io_handle), strerror(errno));
+		return -1;
 	}
 
 	if (cmd)
 	{
-		int saved_events;
-
-		saved_events = ev.events;
-
 		ev.events = POLLREMOVE;
+		ev.revents = 0;
 		if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
 		{
 			moo_seterrnum (moo, moo_syserrtoerrnum (errno));
 			MOO_DEBUG2 (moo, "<vm_muxadd> devpoll failure on handle %zd - %hs\n", MOO_OOP_TO_SMOOI(sem->io_handle), strerror(errno));
 			return -1;
 		}
-
-		ev.events = saved_events;
 	}
 
+	ev.events = event_mask;
+	ev.revents = 0;
 	if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
 	{
 		moo_seterrnum (moo, moo_syserrtoerrnum (errno));
@@ -1119,8 +1212,10 @@ static int _mux_add_or_mod (moo_t* moo, moo_oop_semaphore_t sem, int cmd)
 	MOO_ASSERT (moo, ev.fd == MOO_OOP_TO_SMOOI(sem->io_handle));
 	MOO_ASSERT (moo, xtn->epd.capa > ev.fd);
 	xtn->epd.ptr[ev.fd] = MOO_OOP_TO_SMOOI(sem->io_index);
-#else
-	/* don't check MOO_SEMAPHORE_IO_MASK_ERROR and MOO_SEMAPHORE_IO_MASK_HANGUP as it's implicitly enabled by epoll() */
+#elif defined(USE_EPOLL)
+	/* don't check MOO_SEMAPHORE_IO_MASK_ERROR and MOO_SEMAPHORE_IO_MASK_HANGUP 
+	 * as it's implicitly enabled by epoll() */
+	ev.events = event_mask;
 	ev.data.ptr = (void*)MOO_OOP_TO_SMOOI(sem->io_index);
 
 	if (epoll_ctl (xtn->ep, cmd, MOO_OOP_TO_SMOOI(sem->io_handle), &ev) == -1)
@@ -1129,6 +1224,8 @@ static int _mux_add_or_mod (moo_t* moo, moo_oop_semaphore_t sem, int cmd)
 		MOO_DEBUG2 (moo, "<vm_muxadd> epoll_ctl failure on handle %zd - %hs\n", MOO_OOP_TO_SMOOI(sem->io_handle), strerror(errno));
 		return -1;
 	}
+#elif defined(USE_POLL)
+
 #endif
 
 	return 0;
@@ -1138,7 +1235,7 @@ static int vm_muxadd (moo_t* moo, moo_oop_semaphore_t sem)
 {
 #if defined(USE_DEVPOLL)
 	return _mux_add_or_mod (moo, sem, 0);
-#else
+#elif defined(USE_EPOLL)
 	return _mux_add_or_mod (moo, sem, EPOLL_CTL_ADD);
 #endif
 }
@@ -1147,7 +1244,7 @@ static int vm_muxmod (moo_t* moo, moo_oop_semaphore_t sem)
 {
 #if defined(USE_DEVPOLL)
 	return _mux_add_or_mod (moo, sem, 1);
-#else
+#elif defined(USE_EPOLL)
 	return _mux_add_or_mod (moo, sem, EPOLL_CTL_MOD);
 #endif
 }
@@ -1175,7 +1272,7 @@ static int vm_muxdel (moo_t* moo, moo_oop_semaphore_t sem)
 		MOO_DEBUG2 (moo, "<vm_muxdel> devpoll failure on handle %zd - %hs\n", MOO_OOP_TO_SMOOI(sem->io_handle), strerror(errno));
 		return -1;
 	}
-#else
+#elif defined(USE_EPOLL)
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_DEL, MOO_OOP_TO_SMOOI(sem->io_handle), &ev) == -1)
 	{
 		moo_seterrnum (moo, moo_syserrtoerrnum (errno));
