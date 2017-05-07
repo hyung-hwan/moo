@@ -62,9 +62,11 @@
 #	if defined(MOO_ENABLE_LIBLTDL)
 #		include <ltdl.h>
 #		define USE_LTDL
-#	else
+#	elif defined(HAVE_DLFCN_H)
 #		include <dlfcn.h>
 #		error NOT IMPLEMENTED
+#	else
+#		error UNSUPPORTED DYNAMIC LINKER
 #	endif
 
 #	if defined(HAVE_TIME_H)
@@ -80,27 +82,38 @@
 #	include <unistd.h>
 #	include <fcntl.h>
 
-#if defined(__sun) && defined(__SVR4)
-	/* solaris */
-#	include <sys/devpoll.h>
-#	define USE_DEVPOLL
-#	define XPOLLIN POLLIN
-#	define XPOLLOUT POLLOUT
-#	define XPOLLERR POLLERR
-#	define XPOLLHUP POLLHUP
-#else
-#	include <sys/epoll.h>
-#	define USE_EPOLL
-#	define XPOLLIN EPOLLIN
-#	define XPOLLOUT EPOLLOUT
-#	define XPOLLERR EPOLLERR
-#	define XPOLLHUP EPOLLHUP
-#endif
-
 #	if defined(USE_THREAD)
 #		include <pthread.h>
 #		include <sched.h>
 #	endif
+
+#	if defined(HAVE_SYS_DEVPOLL_H)
+		/* solaris */
+#		include <sys/devpoll.h>
+#		define USE_DEVPOLL
+#		define XPOLLIN POLLIN
+#		define XPOLLOUT POLLOUT
+#		define XPOLLERR POLLERR
+#		define XPOLLHUP POLLHUP
+#	elif defined(HAVE_SYS_EPOLL_H)
+		/* linux */
+#		include <sys/epoll.h>
+#		define USE_EPOLL
+#		define XPOLLIN EPOLLIN
+#		define XPOLLOUT EPOLLOUT
+#		define XPOLLERR EPOLLERR
+#		define XPOLLHUP EPOLLHUP
+#	elif defined(HAVE_POLL_H)
+#		include <poll.h>
+#		define USE_POLL
+#		define XPOLLIN POLLIN
+#		define XPOLLOUT POLLOUT
+#		define XPOLLERR POLLERR
+#		define XPOLLHUP POLLHUP
+#	else
+#		error UNSUPPORTED MULTIPLEXER
+#	endif
+
 #endif
 
 #if !defined(MOO_DEFAULT_PFMODPREFIX)
