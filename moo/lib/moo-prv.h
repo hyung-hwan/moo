@@ -512,6 +512,7 @@ struct moo_compiler_t
 	{
 		moo_method_type_t type;
 		int primitive; /* true if method(#primitive) */
+		int lenient;
 
 		/* method source text */
 		moo_oocs_t text;

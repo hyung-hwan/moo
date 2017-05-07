@@ -3963,7 +3963,11 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				moo_pushtmp (moo, (moo_oop_t*)&method);
 				n = pftab[pfnum].pfbase.handler (moo, nargs);
 				moo_poptmp (moo);
-				if (n <= MOO_PF_HARD_FAILURE) return -1;
+				if (n <= MOO_PF_HARD_FAILURE) 
+				{
+					MOO_DEBUG3 (moo, "Hard failure indicated by primitive function %p - %hs - return code %d\n", pftab[pfnum].pfbase.handler, pftab[pfnum].name, n);
+					return -1;
+				}
 				if (n >= MOO_PF_SUCCESS) break;
 
 				MOO_DEBUG2 (moo, "Soft failure indicated by primitive function %p - %hs\n", pftab[pfnum].pfbase.handler, pftab[pfnum].name);
@@ -3971,61 +3975,56 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			else
 			{
 				moo->errnum = MOO_EINVAL;
-				MOO_DEBUG1 (moo, "Cannot call primitive numbered %zd - invalid number\n", pfnum);
+				MOO_DEBUG1 (moo, "Cannot call primitive function numbered %zd - invalid number\n", pfnum);
 			}
 
-			moo->processor->active->perr = MOO_ERROR_TO_OOP(moo->errnum);
 			goto activate_primitive_method_body;
 		}
 
 		case MOO_METHOD_PREAMBLE_NAMED_PRIMITIVE:
 		{
 			moo_ooi_t pf_name_index;
-			moo_oop_t name;
 			moo_pfbase_t* pfbase;
+			moo_oop_t pfname;
 			moo_oow_t w;
 
 			stack_base = moo->sp - nargs - 1; /* stack base before receiver and arguments */
 
-		#if !defined(NDEBUG)
+			/* index to the primitive function identifier in the literal frame */
 			pf_name_index = MOO_METHOD_GET_PREAMBLE_INDEX(preamble);
-			LOG_INST_1 (moo, "preamble_named_primitive %zd", pf_name_index);
 			MOO_ASSERT (moo, pf_name_index >= 0);
+			pfname = method->slot[pf_name_index];
 
-			name = method->slot[pf_name_index];
-			MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(name));
-			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_EXTRA(name));
-			MOO_ASSERT (moo, MOO_CLASSOF(moo,name) == moo->_symbol);
+		#if !defined(NDEBUG)
+			LOG_INST_1 (moo, "preamble_named_primitive %zd", pf_name_index);
+			MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(pfname));
+			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_EXTRA(pfname));
+			MOO_ASSERT (moo, MOO_CLASSOF(moo,pfname) == moo->_symbol);
 		#endif
 
 			/* merge two SmallIntegers to get a full pointer from the cached data */
 			w = (moo_oow_t)MOO_OOP_TO_SMOOI(method->preamble_data[0]) << (MOO_OOW_BITS / 2) | 
 			    (moo_oow_t)MOO_OOP_TO_SMOOI(method->preamble_data[1]);
 			pfbase = (moo_pfbase_t*)w;
-			if (pfbase) goto exec_handler;
+			if (pfbase) goto exec_handler; /* skip moo_querymod() */
 
-		#if defined(NDEBUG)
-			pf_name_index = MOO_METHOD_GET_PREAMBLE_INDEX(preamble);
-			name = method->slot[pf_name_index];
-		#endif
-
-			pfbase = moo_querymod (moo, MOO_OBJ_GET_CHAR_SLOT(name), MOO_OBJ_GET_SIZE(name));
+			pfbase = moo_querymod (moo, MOO_OBJ_GET_CHAR_SLOT(pfname), MOO_OBJ_GET_SIZE(pfname));
 			if (pfbase)
 			{
 				int n;
-
-				if (nargs < pfbase->minargs || nargs > pfbase->maxargs)
-				{
-					MOO_DEBUG5 (moo, "Soft failure due to argument count mismatch for primitive function %.*js - %zu-%zu expected, %zu given\n",
-						MOO_OBJ_GET_SIZE(name), MOO_OBJ_GET_CHAR_SLOT(name), pfbase->minargs, pfbase->maxargs, nargs);
-					goto activate_primitive_method_body;
-				}
 
 				/* split a pointer to two OOP fields as SmallIntegers for storing/caching. */
 				method->preamble_data[0] = MOO_SMOOI_TO_OOP((moo_oow_t)pfbase >> (MOO_OOW_BITS / 2));
 				method->preamble_data[1] = MOO_SMOOI_TO_OOP((moo_oow_t)pfbase & MOO_LBMASK(moo_oow_t, MOO_OOW_BITS / 2));
 
 			exec_handler:
+				if (nargs < pfbase->minargs || nargs > pfbase->maxargs)
+				{
+					MOO_DEBUG5 (moo, "Soft failure due to argument count mismatch for primitive function %.*js - %zu-%zu expected, %zu given\n",
+						MOO_OBJ_GET_SIZE(pfname), MOO_OBJ_GET_CHAR_SLOT(pfname), pfbase->minargs, pfbase->maxargs, nargs);
+					goto activate_primitive_method_body;
+				}
+
 				moo_pushtmp (moo, (moo_oop_t*)&method);
 
 				/* the primitive handler is executed without activating the method itself.
@@ -4039,21 +4038,31 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				moo_poptmp (moo);
 				if (n <= MOO_PF_HARD_FAILURE) 
 				{
-					MOO_DEBUG4 (moo, "Hard failure indicated by primitive function %p - %.*js - return code %d\n", pfbase->handler, MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, n);
+					MOO_DEBUG4 (moo, "Hard failure indicated by primitive function %p - %.*js - return code %d\n", pfbase->handler, MOO_OBJ_GET_SIZE(pfname), MOO_OBJ_GET_CHAR_SLOT(pfname), n);
 					return -1; /* hard primitive failure */
 				}
 				if (n >= MOO_PF_SUCCESS) break; /* primitive ok*/
 
 				/* soft primitive failure */
-				MOO_DEBUG3 (moo, "Soft failure indicated by primitive function %p - %.*js\n", pfbase->handler, MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot);
+				MOO_DEBUG3 (moo, "Soft failure indicated by primitive function %p - %.*js\n", pfbase->handler, MOO_OBJ_GET_SIZE(pfname), MOO_OBJ_GET_CHAR_SLOT(pfname));
 			}
 			else
 			{
 				/* no handler found */
-				MOO_DEBUG2 (moo, "Soft failure for non-existent primitive function - %.*js\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot);
+				MOO_DEBUG2 (moo, "Soft failure for non-existent primitive function - %.*js\n", MOO_OBJ_GET_SIZE(pfname), MOO_OBJ_GET_CHAR_SLOT(pfname));
 			}
 
 		activate_primitive_method_body:
+			if (MOO_METHOD_GET_PREAMBLE_FLAGS(preamble) & MOO_METHOD_PREAMBLE_FLAG_LENIENT)
+			{
+				/* convert a soft failure to error return */
+				moo->sp = stack_base;
+				MOO_STACK_PUSH (moo, MOO_ERROR_TO_OOP(moo->errnum));
+				break;
+			}
+
+			moo->processor->active->perr = MOO_ERROR_TO_OOP(moo->errnum);
+
 		#if defined(MOO_USE_METHOD_TRAILER)
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TRAILER(method));
 			if (MOO_METHOD_GET_CODE_SIZE(method) == 0) /* this trailer size field not a small integer */
@@ -4062,17 +4071,19 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 		#endif
 			{
 				/* no byte code to execute - make it a hard failure */
-/* TODO: what is the best tactics? emulate "self primitiveFailed"? or should this be generated by the compiler */
+/* TODO: what is the best tactics? emulate "self primitiveFailed"? or should this be generated by the compiler 
+ *       the compiler produces no code for the body of a method(#primitive). so it will reach here if it fails when executed. */
 				MOO_DEBUG0 (moo, "Empty primitive body\n");
+
 				moo->sp = stack_base; /* force restore stack pointer */
 				MOO_STACK_PUSH (moo, moo->_nil);
+
+				/* i assume that the failed primitive handler function set the error number.
+				 * so i don't set it here */
 				return -1;
 			}
-			else
-			{
-				if (activate_new_method (moo, method, nargs) <= -1) return -1;
-			}
 
+			if (activate_new_method (moo, method, nargs) <= -1) return -1;
 			break;
 		}
 

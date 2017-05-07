@@ -111,6 +111,7 @@ static struct voca_t
 	{ 10, { '#','i','m','m','u','t','a','b','l','e'                       } },
 	{  6, { 'i','m','p','o','r','t'                                       } },
 	{  8, { '#','i','n','c','l','u','d','e'                               } },
+	{  8, { '#','l','e','n','i','e','n','t'                               } },
 	{  8, { '#','l','i','b','e','r','a','l'                               } },
 	{  8, { '#','l','i','m','i','t','e','d'                               } },
 	{  7, { '#','l','i','w','o','r','d'                                   } },
@@ -170,6 +171,7 @@ enum voca_id_t
 	VOCA_IMMUTABLE_S,
 	VOCA_IMPORT,
 	VOCA_INCLUDE_S,
+	VOCA_LENIENT_S,
 	VOCA_LIBERAL_S,
 	VOCA_LIMITED_S,
 	VOCA_LIWORD_S,
@@ -3725,7 +3727,7 @@ static int compile_method_pragma (moo_t* moo)
 
 					if (moo->c->mth.tmpr_nargs < pfbase->minargs || moo->c->mth.tmpr_nargs > pfbase->maxargs)
 					{
-						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method pragma of %.*js - %zd-%zd expected, %zd specified\n", 
+						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
 							tlen, tptr, pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
 						set_syntax_error (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
 						return -1;
@@ -3749,7 +3751,7 @@ static int compile_method_pragma (moo_t* moo)
 				{
 					if (moo->c->mth.tmpr_nargs < pfbase->minargs || moo->c->mth.tmpr_nargs > pfbase->maxargs)
 					{
-						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method pragma of %.*js - %zd-%zd expected, %zd specified\n", 
+						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
 							tlen, tptr, pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
 						set_syntax_error (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
 						return -1;
@@ -6025,6 +6027,7 @@ static int add_compiled_method (moo_t* moo)
 	/*if (moo->c->mth.variadic) */
 	preamble_flags |= moo->c->mth.variadic;
 	if (moo->c->mth.type == MOO_METHOD_DUAL) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_DUAL;
+	if (moo->c->mth.lenient) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_LENIENT;
 
 	MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index));
 
@@ -6081,6 +6084,7 @@ static int compile_method_definition (moo_t* moo)
 	/* clear data required to compile a method */
 	moo->c->mth.type = MOO_METHOD_INSTANCE;
 	moo->c->mth.primitive = 0;
+	moo->c->mth.lenient = 0;
 	moo->c->mth.text.len = 0;
 	moo->c->mth.assignees.len = 0;
 	moo->c->mth.binsels.len = 0;
@@ -6143,7 +6147,17 @@ static int compile_method_definition (moo_t* moo)
 					}
 
 					moo->c->mth.primitive = 1;
-
+					GET_TOKEN (moo);
+				}
+				else if (is_token_symbol(moo, VOCA_LENIENT_S))
+				{
+					/* method(#lenient) */
+					if (moo->c->mth.lenient)
+					{
+						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						return -1;
+					}
+					moo->c->mth.lenient = 1;
 					GET_TOKEN (moo);
 				}
 				else if (is_token_symbol(moo, VOCA_VARIADIC_S) ||

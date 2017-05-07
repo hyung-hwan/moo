@@ -586,7 +586,7 @@ struct moo_method_t
 #endif
 
 /* The preamble field is composed of:
- *    3-bit flag
+ *    4-bit flag
  *    5-bit code  (0 to 31)
  *    16-bit index
  *
@@ -607,11 +607,11 @@ struct moo_method_t
  * 13 - ensure block
  */
 
-/* NOTE: changing preamble code bit structure requires changes to CompiledMethod>>preambleCode */
-#define MOO_METHOD_MAKE_PREAMBLE(code,index,flags)  ((((moo_ooi_t)index) << 8) | ((moo_ooi_t)code << 3) | flags)
-#define MOO_METHOD_GET_PREAMBLE_CODE(preamble) ((((moo_ooi_t)preamble) & 0xFF) >> 3)
-#define MOO_METHOD_GET_PREAMBLE_INDEX(preamble) (((moo_ooi_t)preamble) >> 8)
-#define MOO_METHOD_GET_PREAMBLE_FLAGS(preamble) (((moo_ooi_t)preamble) & 0x7)
+/* [NOTE] changing preamble code bit structure requires changes to CompiledMethod>>preambleCode */
+#define MOO_METHOD_MAKE_PREAMBLE(code,index,flags)  ((((moo_ooi_t)index) << 9) | ((moo_ooi_t)code << 4) | flags)
+#define MOO_METHOD_GET_PREAMBLE_CODE(preamble) ((((moo_ooi_t)preamble) >> 4) & 0x1F)
+#define MOO_METHOD_GET_PREAMBLE_INDEX(preamble) (((moo_ooi_t)preamble) >> 9)
+#define MOO_METHOD_GET_PREAMBLE_FLAGS(preamble) (((moo_ooi_t)preamble) & 0xF)
 
 /* preamble codes */
 #define MOO_METHOD_PREAMBLE_NONE                0
@@ -636,9 +636,10 @@ struct moo_method_t
 #define MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(num) ((num) >= MOO_METHOD_PREAMBLE_INDEX_MIN && (num) <= MOO_METHOD_PREAMBLE_INDEX_MAX)
 
 /* preamble flags */
-#define MOO_METHOD_PREAMBLE_FLAG_VARIADIC (1 << 0)
-#define MOO_METHOD_PREAMBLE_FLAG_LIBERAL  (1 << 1)
+#define MOO_METHOD_PREAMBLE_FLAG_VARIADIC (1 << 0)  /* allows variable arguments. but all named paramenters must be passed in */
+#define MOO_METHOD_PREAMBLE_FLAG_LIBERAL  (1 << 1)  /* not all named parameters need to get passed in */
 #define MOO_METHOD_PREAMBLE_FLAG_DUAL     (1 << 2)
+#define MOO_METHOD_PREAMBLE_FLAG_LENIENT  (1 << 3)  /* lenient primitive method - no exception upon failure. return an error instead */
 
 /* NOTE: if you change the number of instance variables for moo_context_t,
  *       you need to change the defintion of BlockContext and MethodContext.

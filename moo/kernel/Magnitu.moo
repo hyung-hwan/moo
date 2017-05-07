@@ -43,7 +43,7 @@ class Association(Magnitude)
 	}
 }
 
-class Character(Magnitude)
+class(#limited) Character(Magnitude)
 {
 	## method basicSize
 	## {
@@ -53,7 +53,7 @@ class Character(Magnitude)
 	method(#primitive) asInteger.
 }
 
-class Number(Magnitude)
+class(#limited) Number(Magnitude)
 {
 	method + aNumber
 	{
@@ -300,7 +300,7 @@ class(#limited) Integer(Number)
 	}
 }
 
-class SmallInteger(Integer)
+class(#limited) SmallInteger(Integer)
 {
 	## method basicSize
 	## {

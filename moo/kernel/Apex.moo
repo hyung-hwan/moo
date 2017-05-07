@@ -2,7 +2,7 @@ class Apex(nil)
 {
 }
 
-class Error(Apex)
+class(#limited) Error(Apex)
 {
 }
 
@@ -37,12 +37,7 @@ extend Apex
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
-	method(#class) dump
-	{
-		<primitive: #_dump>
-	}
-
-	method dump
+	method(#dual) dump
 	{
 		<primitive: #_dump>
 	}
@@ -50,12 +45,7 @@ extend Apex
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
-	method(#class) yourself
-	{
-		^self.
-	}
-
-	method yourself
+	method(#dual) yourself
 	{
 		^self.
 	}
@@ -63,6 +53,15 @@ extend Apex
 	## -------------------------------------------------------
 	## INSTANTIATION & INITIALIZATION
 	## -------------------------------------------------------
+	method(#class,#lenient) _basicNew
+	{
+		<primitive: #_basic_new>
+	}
+	method(#class,#lenient) _basicNew: size
+	{
+		<primitive: #_basic_new>
+	}
+
 	method(#class) basicNew
 	{
 		| perr |
@@ -79,6 +78,7 @@ extend Apex
 	{
 		| perr |
 
+	##	<primitive: #_basicNew>
 		<primitive: #_basic_new>
 		self primitiveFailed.
 

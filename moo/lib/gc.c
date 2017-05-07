@@ -204,14 +204,14 @@ static int ignite_1 (moo_t* moo)
 		MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
 		0, MOO_CLASS_SPEC_MAKE(MOO_PROCESS_SCHEDULER_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
 
-	moo->_error_class       = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
+	moo->_error_class       = alloc_kernel_class (moo, MOO_CLASS_SELFSPEC_FLAG_LIMITED, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
 	moo->_true_class        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
 	moo->_false_class       = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
 	/* TOOD: what is a proper spec for Character and SmallInteger?
  	 *       If the fixed part is  0, its instance must be an object of 0 payload fields.
 	 *       Does this make sense? */
-	moo->_character         = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_small_integer     = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
+	moo->_character         = alloc_kernel_class (moo, MOO_CLASS_SELFSPEC_FLAG_LIMITED, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
+	moo->_small_integer     = alloc_kernel_class (moo, MOO_CLASS_SELFSPEC_FLAG_LIMITED, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
 	moo->_large_positive_integer = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE, MOO_OBJ_TYPE_LIWORD));
 	moo->_large_negative_integer = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE, MOO_OBJ_TYPE_LIWORD));
 
