@@ -285,9 +285,7 @@ class Number(Magnitude)
 		(* self < 0 ifTrue: [^-1].
 		self > 0 ifTrue: [^1].
 		^0.*)
-		^if (self < 0) { -1 }
-		 elsif (self > 0) { 1 }
-		 else { 0 }
+		^if (self < 0) { -1 } elsif (self > 0) { 1 } else { 0 }
 	}
 }
 
@@ -295,7 +293,10 @@ class(#limited) Integer(Number)
 {
 	method timesRepeat: aBlock
 	{
-		1 to: self by: 1 do: [ :count | aBlock value ].
+		## 1 to: self by: 1 do: [ :count | aBlock value ].
+		| count |
+		count := 0.
+		while (count < self) { aBlock value. count := count + 1 }
 	}
 }
 
@@ -307,7 +308,7 @@ class SmallInteger(Integer)
 	## }
 	
 	method(#primitive) asCharacter.
-	method(#primitive) asError.	
+	method(#primitive) asError.
 }
 
 class(#liword,#limited) LargeInteger(Integer)
