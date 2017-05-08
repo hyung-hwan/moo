@@ -36,7 +36,6 @@ extend Apex
 {
 	## -------------------------------------------------------
 	## -------------------------------------------------------
-
 	method(#dual) dump
 	{
 		<primitive: #_dump>
@@ -44,29 +43,22 @@ extend Apex
 
 	## -------------------------------------------------------
 	## -------------------------------------------------------
-
-	method(#dual) yourself
-	{
-		^self.
-	}
+	method(#dual) yourself { ^self }
 
 	## -------------------------------------------------------
 	## INSTANTIATION & INITIALIZATION
 	## -------------------------------------------------------
-	method(#class,#lenient) _basicNew
-	{
-		<primitive: #_basic_new>
-	}
-	method(#class,#lenient) _basicNew: size
-	{
-		<primitive: #_basic_new>
-	}
+	method(#class,#primitive,#lenient) _basicNew.
+	method(#class,#primitive,#lenient) _basicNew: size.
 
+	method(#class,#primitive) basicNew.
+	method(#class,#primitive) basicNew: size.
+	
+	(*
 	method(#class) basicNew
 	{
 		| perr |
-
-		<primitive: #_basic_new>
+		<primitive: #Apex__basicNew>
 		self primitiveFailed.
 
 	##	perr := thisProcess primError.
@@ -77,93 +69,51 @@ extend Apex
 	method(#class) basicNew: size
 	{
 		| perr |
-
-	##	<primitive: #_basicNew>
-		<primitive: #_basic_new>
+		<primitive: #Apex__basicNew:>
 		self primitiveFailed.
 
 	##	perr := thisProcess primError.
 	##	if (perr == xxxx) { self cannotInstantiate }
 	##	else { self primitiveFailed }.
-	}
-
-	method(#class) ngcNew
-	{
-		<primitive: #_ngc_new>
-		self primitiveFailed.
-	}
-
-	method(#class) ngcNew: anInteger
-	{
-		<primitive: #_ngc_new>
-		self primitiveFailed.
-	}
+	}*)
 
 	method(#class) new
 	{
 		| x |
 		x := self basicNew.
-		x initialize. "TODO: assess if it's good to call 'initialize' from new."
+		x initialize. ## TODO: assess if it's good to call 'initialize' from new
 		^x.
 	}
 
 	method(#class) new: anInteger
 	{
 		| x |
-## TODO: check if the class is a fixed class.
-##       if so, raise an exception.
 		x := self basicNew: anInteger.
-		x initialize. "TODO: assess if it's good to call 'initialize' from new."
+		x initialize. ## TODO: assess if it's good to call 'initialize' from new.
 		^x.
 	}
 
 	method initialize
 	{
-		"a subclass may override this method."
+		(* a subclass may override this method *)
 		^self.
 	}
 
-	method ngcDispose
-	{
-		<primitive: #_ngc_dispose>
-		self primitiveFailed.
-	}
 	## -------------------------------------------------------
 	## -------------------------------------------------------
-	method shallowCopy
+	##method(#primitive,#lenient) _shallowCopy.
+	
+	method(#dual) shallowCopy
 	{
 		<primitive: #_shallow_copy>
 		self primitiveFailed.
 	}
 
+	
 	## -------------------------------------------------------
 	## -------------------------------------------------------
-
-	method class
-	{
-		<primitive: #_class>
-	}
-
-	method(#class) class
-	{
-		<primitive: #_class>
-		^Class
-	}
-
-	## -------------------------------------------------------
-	## -------------------------------------------------------
-
-	method basicSize
-	{
-		<primitive: #_basic_size>
-		self primitiveFailed.
-	}
-
-	method(#class) basicSize
-	{
-		<primitive: #_basic_size>
-		self primitiveFailed.
-	}
+	method(#dual,#primitive,#lenient) _basicSize.
+	method(#dual,#primitive) basicSize.
 
 	method(#dual) basicAt: index
 	{
@@ -237,6 +187,8 @@ extend Apex
 	 * COMMON QUERIES
 	 * ------------------------------------------------------------------ *)
 
+	method(#dual,#primitive) class.
+	 
 	method(#dual) isNil
 	{
 		"^self == nil."

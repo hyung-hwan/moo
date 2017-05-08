@@ -156,8 +156,8 @@
 	(((moo_oow_t)(indexed_type)) << 2) | (((moo_oow_t)flags) & 3) )
 
 /* what is the number of named instance variables? 
- *  MOO_CLASS_SPEC_NAMED_INSTVARS(MOO_OOP_TO_SMOOI(_class->spec))
- */
+ *  MOO_CLASS_SPEC_NAMED_INSTVARS(MOO_OOP_TO_SMOOI(_class->spec)) 
+ * ensure to update Class<<specNumInstVars if you change this macro. */
 #define MOO_CLASS_SPEC_NAMED_INSTVARS(spec) \
 	(((moo_oow_t)(spec)) >> (MOO_OBJ_FLAGS_TYPE_BITS + 2))
 

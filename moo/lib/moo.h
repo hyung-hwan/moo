@@ -67,6 +67,7 @@ enum moo_errnum_t
 	MOO_ETOOBIG,  /**< data too large */
 	MOO_EMSGRCV,  /**< mesasge receiver error */
 	MOO_EMSGSND,  /**< message sending error. even doesNotUnderstand: is not found */
+	MOO_ENUMARGS, /**< wrong number of arguments */
 	MOO_ERANGE,   /**< range error. overflow and underflow */
 	MOO_EBCFULL,  /**< byte-code full */
 	MOO_EDFULL,   /**< dictionary full */
@@ -1128,7 +1129,7 @@ struct moo_t
 #define MOO_STACK_PUSH(moo,v) \
 	do { \
 		(moo)->sp = (moo)->sp + 1; \
-		MOO_ASSERT (moo, (moo)->sp < (unsigned int)(MOO_OBJ_GET_SIZE((moo)->processor->active) - MOO_PROCESS_NAMED_INSTVARS)); \
+		MOO_ASSERT (moo, (moo)->sp < (moo_ooi_t)(MOO_OBJ_GET_SIZE((moo)->processor->active) - MOO_PROCESS_NAMED_INSTVARS)); \
 		(moo)->processor->active->slot[(moo)->sp] = v; \
 	} while (0)
 
@@ -1142,8 +1143,11 @@ struct moo_t
 #define MOO_STACK_POPS(moo,count) ((moo)->sp = (moo)->sp - (count))
 #define MOO_STACK_ISEMPTY(moo) ((moo)->sp <= -1)
 
+/* get the stack pointer of the argument at the given index */
 #define MOO_STACK_GETARGSP(moo,nargs,idx) ((moo)->sp - ((nargs) - (idx) - 1))
+/* get the argument at the given index */
 #define MOO_STACK_GETARG(moo,nargs,idx) MOO_STACK_GET(moo, (moo)->sp - ((nargs) - (idx) - 1))
+/* get the receiver of a message */
 #define MOO_STACK_GETRCV(moo,nargs) MOO_STACK_GET(moo, (moo)->sp - nargs)
 
 /* you can't access arguments and receiver after this macro. 

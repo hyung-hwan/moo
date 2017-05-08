@@ -50,22 +50,23 @@ static moo_ooch_t errstr_16[] = {'r','e','s','o','u','r','c','e',' ','t','e','m'
 static moo_ooch_t errstr_17[] = {'d','a','t','a',' ','t','o','o',' ','l','a','r','g','e','\0'};
 static moo_ooch_t errstr_18[] = {'m','e','s','s','a','g','e',' ','r','e','c','e','i','v','e','r',' ','e','r','r','o','r','\0'};
 static moo_ooch_t errstr_19[] = {'m','e','s','s','a','g','e',' ','s','e','n','d','i','n','g',' ','e','r','r','o','r','\0'};
-static moo_ooch_t errstr_20[] = {'r','a','n','g','e',' ','e','r','r','o','r','\0'};
-static moo_ooch_t errstr_21[] = {'b','y','t','e','-','c','o','d','e',' ','f','u','l','l','\0'};
-static moo_ooch_t errstr_22[] = {'d','i','c','t','i','o','n','a','r','y',' ','f','u','l','l','\0'};
-static moo_ooch_t errstr_23[] = {'p','r','o','c','e','s','s','o','r',' ','f','u','l','l','\0'};
-static moo_ooch_t errstr_24[] = {'s','e','m','a','p','h','o','r','e',' ','h','e','a','p',' ','f','u','l','l','\0'};
-static moo_ooch_t errstr_25[] = {'s','e','m','a','p','h','o','r','e',' ','l','i','s','t',' ','f','u','l','l','\0'};
-static moo_ooch_t errstr_26[] = {'d','i','v','i','d','e',' ','b','y',' ','z','e','r','o','\0'};
-static moo_ooch_t errstr_27[] = {'I','/','O',' ','e','r','r','o','r','\0'};
-static moo_ooch_t errstr_28[] = {'e','n','c','o','d','i','n','g',' ','c','o','n','v','e','r','s','i','o','n',' ','e','r','r','o','r','\0'};
-static moo_ooch_t errstr_29[] = {'b','u','f','f','e','r',' ','f','u','l','l','\0'};
+static moo_ooch_t errstr_20[] = {'w','r','o','n','g',' ','n','u','m','b','e','r',' ','o','f',' ','a','r','g','u','m','e','n','t','s','\0'};
+static moo_ooch_t errstr_21[] = {'r','a','n','g','e',' ','e','r','r','o','r','\0'};
+static moo_ooch_t errstr_22[] = {'b','y','t','e','-','c','o','d','e',' ','f','u','l','l','\0'};
+static moo_ooch_t errstr_23[] = {'d','i','c','t','i','o','n','a','r','y',' ','f','u','l','l','\0'};
+static moo_ooch_t errstr_24[] = {'p','r','o','c','e','s','s','o','r',' ','f','u','l','l','\0'};
+static moo_ooch_t errstr_25[] = {'s','e','m','a','p','h','o','r','e',' ','h','e','a','p',' ','f','u','l','l','\0'};
+static moo_ooch_t errstr_26[] = {'s','e','m','a','p','h','o','r','e',' ','l','i','s','t',' ','f','u','l','l','\0'};
+static moo_ooch_t errstr_27[] = {'d','i','v','i','d','e',' ','b','y',' ','z','e','r','o','\0'};
+static moo_ooch_t errstr_28[] = {'I','/','O',' ','e','r','r','o','r','\0'};
+static moo_ooch_t errstr_29[] = {'e','n','c','o','d','i','n','g',' ','c','o','n','v','e','r','s','i','o','n',' ','e','r','r','o','r','\0'};
+static moo_ooch_t errstr_30[] = {'b','u','f','f','e','r',' ','f','u','l','l','\0'};
 static moo_ooch_t* errstr[] =
 {
 	errstr_0, errstr_1, errstr_2, errstr_3, errstr_4, errstr_5, errstr_6, errstr_7,
 	errstr_8, errstr_9, errstr_10, errstr_11, errstr_12, errstr_13, errstr_14, errstr_15,
 	errstr_16, errstr_17, errstr_18, errstr_19, errstr_20, errstr_21, errstr_22, errstr_23,
-	errstr_24, errstr_25, errstr_26, errstr_27, errstr_28, errstr_29
+	errstr_24, errstr_25, errstr_26, errstr_27, errstr_28, errstr_29, errstr_30 
 };
 
 #if defined(MOO_INCLUDE_COMPILER)

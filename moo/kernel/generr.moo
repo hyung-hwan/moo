@@ -30,6 +30,7 @@ class MyObject(Object)
 			'data too large'
 			'message receiver error'
 			'message sending error'
+			'wrong number of arguments'
 			'range error'
 			'byte-code full'
 			'dictionary full'

@@ -35,9 +35,9 @@ class(#pointer) Class(Apex)
 
 	method specNumInstVars
 	{
-		## shift right by 7 bits.
-		## see moo-prv.h for details.
-		^self.spec bitShift: -7
+		## shift right by 8 bits.
+		## see MOO_CLASS_SPEC_NAMED_INSTVARS in moo-prv.h for details.
+		^self.spec bitShift: -8
 	}
 
 	(*method inheritsFrom: aSuperclass

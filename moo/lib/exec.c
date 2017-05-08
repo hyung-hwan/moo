@@ -109,6 +109,7 @@
 
 static void signal_io_semaphore (moo_t* moo, moo_ooi_t mask, void* ctx);
 static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_ooi_t nargs);
+static int send_private_message (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_t namelen, int to_super, moo_ooi_t nargs);
 
 /* ------------------------------------------------------------------------- */
 static MOO_INLINE int vm_startup (moo_t* moo)
@@ -1414,6 +1415,8 @@ static moo_pfrc_t _equal_objects (moo_t* moo, moo_ooi_t nargs)
 					
 					/* MOO_OBJ_TYPE_OOP, ... */
 					MOO_DEBUG1 (moo, "<_equal_objects> Cannot compare objects of type %d\n", (int)MOO_OBJ_GET_FLAGS_TYPE(rcv));
+
+					moo->errnum = MOO_ENOIMPL; /* TODO: better error code */
 					return -1;
 			}
 		}
@@ -1430,6 +1433,7 @@ static moo_pfrc_t pf_equal (moo_t* moo, moo_ooi_t nargs)
 	MOO_STACK_SETRET (moo, nargs, (n? moo->_true: moo->_false));
 	return MOO_PF_SUCCESS;
 }
+
 static moo_pfrc_t pf_not_equal (moo_t* moo, moo_ooi_t nargs)
 {
 	int n;
@@ -1444,14 +1448,8 @@ static moo_pfrc_t pf_not_equal (moo_t* moo, moo_ooi_t nargs)
 static moo_pfrc_t pf_class (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
-	moo_oop_class_t _class;
-
-	MOO_ASSERT (moo, nargs ==  0);
-
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	_class = MOO_CLASSOF(moo, rcv);
-
-	MOO_STACK_SETRET (moo, nargs, (moo_oop_t)_class);
+	MOO_STACK_SETRET (moo, nargs, (moo_oop_t)MOO_CLASSOF(moo, rcv));
 	return MOO_PF_SUCCESS;
 }
 
@@ -1465,7 +1463,7 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 	if (MOO_CLASSOF(moo, _class) != moo->_class) 
 	{
 		/* the receiver is not a class object */
-		MOO_DEBUG0 (moo, "<pf_basic_new> Receiver is not a class\n");
+		MOO_DEBUG1 (moo, "<pf_basic_new> Receiver is not a class - %O\n", _class);
 		moo->errnum = MOO_EMSGRCV;
 		return MOO_PF_FAILURE;
 	}
@@ -1473,7 +1471,7 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 	/* check if #limited is set on the class */
 	if (MOO_CLASS_SELFSPEC_FLAGS(MOO_OOP_TO_SMOOI(_class->selfspec)) & MOO_CLASS_SELFSPEC_FLAG_LIMITED)
 	{
-		MOO_DEBUG0 (moo, "<pf_basic_new> Receiver is #limited\n");
+		MOO_DEBUG1 (moo, "<pf_basic_new> Receiver is #limited - %O\n", _class);
 		moo->errnum = MOO_EPERM;
 		return MOO_PF_FAILURE;
 	}
@@ -1505,29 +1503,6 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 	if (!obj) return MOO_PF_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, obj);
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_ngc_new (moo_t* moo, moo_ooi_t nargs)
-{
-/* TODO: implement this.
- * if NGC is allowed for non-OOP objects, GC issues get very simple.
-* 
-* also allow NGC code in non-safe mode. in safe mode, ngc_new is same as normal new.
-* ngc_dispose should not do anything in safe mode. */
-	return pf_basic_new (moo, nargs);
-}
-
-static moo_pfrc_t pf_ngc_dispose (moo_t* moo, moo_ooi_t nargs)
-{
-	moo_oop_t rcv;
-
-	MOO_ASSERT (moo, nargs ==  0);
-	rcv = MOO_STACK_GETRCV (moo, nargs);
-
-	moo_freemem (moo, rcv);
-
-	MOO_STACK_SETRET (moo, nargs, moo->_nil);
 	return MOO_PF_SUCCESS;
 }
 
@@ -1785,7 +1760,7 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_ooi_t nargs)
 				default:
 					/* MOO_OBJ_TYPE_OOP, ... */
 					MOO_DEBUG1 (moo, "<pf_hash> Cannot hash an object of type %d\n", type);
-					moo->errnum = MOO_EINVAL;
+					moo->errnum = MOO_ENOIMPL; /* TODO: better error code? */
 					return MOO_PF_FAILURE;
 			}
 			break;
@@ -1872,6 +1847,7 @@ static moo_pfrc_t pf_exceptionize_error (moo_t* moo, moo_ooi_t nargs)
 		/* the receiver is a special numeric object, not a normal pointer.
 		 * excceptionization is not supported for small integers, characters, and errors.
 		 * first of all, methods of these classes must not return errors */
+		moo->errnum = MOO_EMSGRCV;
 		return MOO_PF_FAILURE;
 	}
 
@@ -1898,6 +1874,7 @@ static moo_pfrc_t pf_context_goto (moo_t* moo, moo_ooi_t nargs)
 	{
 		MOO_LOG2 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
 			"Error(%hs) - invalid receiver, not a method context - %O\n", __PRIMITIVE_NAME__, rcv);
+		moo->errnum = MOO_EMSGRCV;
 		return MOO_PF_FAILURE;
 	}
 
@@ -1906,6 +1883,7 @@ static moo_pfrc_t pf_context_goto (moo_t* moo, moo_ooi_t nargs)
 	{
 		MOO_LOG1 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR,
 			"Error(%hs) - invalid pc\n", __PRIMITIVE_NAME__);
+		moo->errnum = MOO_EINVAL;
 		return MOO_PF_FAILURE;
 	}
 
@@ -1951,6 +1929,8 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 		MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(rcv_blkctx) > MOO_CONTEXT_NAMED_INSTVARS);
 		MOO_LOG2 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
 			"Error(%hs) - re-valuing of a block context - %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
+
+		moo->errnum = MOO_EPERM;
 		return MOO_PF_FAILURE;
 	}
 	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(rcv_blkctx) == MOO_CONTEXT_NAMED_INSTVARS);
@@ -1960,6 +1940,8 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 		MOO_LOG4 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
 			"Error(%hs) - wrong number of arguments to a block context %O - %zd expected, %zd given\n",
 			__PRIMITIVE_NAME__, rcv_blkctx, MOO_OOP_TO_SMOOI(rcv_blkctx->method_or_nargs), actual_arg_count);
+
+		moo->errnum = MOO_ENUMARGS;
 		return MOO_PF_FAILURE;
 	}
 
@@ -1974,7 +1956,10 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 	moo_pushtmp (moo, (moo_oop_t*)&rcv_blkctx);
 	blkctx = (moo_oop_context_t) moo_instantiate (moo, moo->_block_context, MOO_NULL, local_ntmprs); 
 	moo_poptmp (moo);
-	if (!blkctx) return MOO_PF_HARD_FAILURE;
+	if (!blkctx) 
+	{
+		return MOO_PF_FAILURE;
+	}
 
 #if 0
 	/* shallow-copy the named part including home, origin, etc. */
@@ -2035,6 +2020,7 @@ static moo_pfrc_t pf_block_value (moo_t* moo, moo_ooi_t nargs)
 		/* the receiver must be a block context */
 		MOO_LOG2 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
 			"Error(%hs) - invalid receiver, not a block context - %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
+		moo->errnum = MOO_EMSGRCV;
 		return MOO_PF_FAILURE;
 	}
 
@@ -3686,14 +3672,11 @@ static pf_t pftab[] =
 	{ "_not_identical",                        { pf_not_identical,                        1, 1 } },
 	{ "_equal",                                { pf_equal,                                1, 1 } },
 	{ "_not_equal",                            { pf_not_equal,                            1, 1 } },
-	{ "_class",                                { pf_class,                                0, 0 } },
 
-	{ "_basic_new",                            { pf_basic_new,                            0, 1 } },
-	{ "_ngc_new",                              { pf_ngc_new,                              0, 1 } },
-	{ "_ngc_dispose",                          { pf_ngc_dispose,                          0, 0 } },
+	
 	{ "_shallow_copy",                         { pf_shallow_copy,                         0, 0 } },
 
-	{ "_basic_size",                           { pf_basic_size,                           0, 0 } },
+	
 	{ "_basic_at",                             { pf_basic_at,                             1, 1 } },
 	{ "_basic_at_put",                         { pf_basic_at_put,                         2, 2 } },
 
@@ -3741,6 +3724,14 @@ static pf_t pftab[] =
 	{ "_integer_le",                           { pf_integer_le,                           1, 1 } },
 	{ "_integer_ge",                           { pf_integer_ge,                           1, 1 } },
 	{ "_integer_inttostr",                     { pf_integer_inttostr,                     1, 1 } },
+
+	{ "Apex__basicNew",                        { pf_basic_new,                            0, 0 } },
+	{ "Apex__basicNew:",                       { pf_basic_new,                            1, 1 } },
+	{ "Apex__basicSize",                       { pf_basic_size,                           0, 0 } },
+	{ "Apex_basicNew",                         { pf_basic_new,                            0, 0 } },
+	{ "Apex_basicNew:",                        { pf_basic_new,                            1, 1 } },
+	{ "Apex_basicSize",                        { pf_basic_size,                           0, 0 } },
+	{ "Apex_class",                            { pf_class,                                0, 0 } },
 
 	{ "Character_asInteger",                   { pf_character_as_smooi,                   0, 0 } },
 
@@ -3957,6 +3948,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				{
 					MOO_DEBUG4 (moo, "Soft failure due to argument count mismatch for primitive function %hs - %zu-%zu expected, %zu given\n",
 						pftab[pfnum].name, pftab[pfnum].pfbase.minargs, pftab[pfnum].pfbase.maxargs, nargs);
+					moo->errnum = MOO_ENUMARGS;
 					goto activate_primitive_method_body;
 				}
 
@@ -3974,8 +3966,8 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			}
 			else
 			{
-				moo->errnum = MOO_EINVAL;
-				MOO_DEBUG1 (moo, "Cannot call primitive function numbered %zd - invalid number\n", pfnum);
+				moo->errnum = MOO_ENOENT;
+				MOO_DEBUG1 (moo, "Cannot call primitive function numbered %zd - unknown primitive function number\n", pfnum);
 			}
 
 			goto activate_primitive_method_body;
@@ -3997,10 +3989,10 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 
 		#if !defined(NDEBUG)
 			LOG_INST_1 (moo, "preamble_named_primitive %zd", pf_name_index);
+		#endif
 			MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(pfname));
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_EXTRA(pfname));
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,pfname) == moo->_symbol);
-		#endif
 
 			/* merge two SmallIntegers to get a full pointer from the cached data */
 			w = (moo_oow_t)MOO_OOP_TO_SMOOI(method->preamble_data[0]) << (MOO_OOW_BITS / 2) | 
@@ -4022,6 +4014,8 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				{
 					MOO_DEBUG5 (moo, "Soft failure due to argument count mismatch for primitive function %.*js - %zu-%zu expected, %zu given\n",
 						MOO_OBJ_GET_SIZE(pfname), MOO_OBJ_GET_CHAR_SLOT(pfname), pfbase->minargs, pfbase->maxargs, nargs);
+
+					moo->errnum = MOO_ENUMARGS;
 					goto activate_primitive_method_body;
 				}
 
@@ -4055,25 +4049,28 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 		activate_primitive_method_body:
 			if (MOO_METHOD_GET_PREAMBLE_FLAGS(preamble) & MOO_METHOD_PREAMBLE_FLAG_LENIENT)
 			{
-				/* convert a soft failure to error return */
+				/* convert soft failure to error return */
 				moo->sp = stack_base;
 				MOO_STACK_PUSH (moo, MOO_ERROR_TO_OOP(moo->errnum));
 				break;
 			}
 
+			/* set the error number in the current process for 'thisProcess primError' */
 			moo->processor->active->perr = MOO_ERROR_TO_OOP(moo->errnum);
 
 		#if defined(MOO_USE_METHOD_TRAILER)
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TRAILER(method));
-			if (MOO_METHOD_GET_CODE_SIZE(method) == 0) /* this trailer size field not a small integer */
+			if (MOO_METHOD_GET_CODE_SIZE(method) == 0) /* this trailer size field is not a small integer */
 		#else
 			if (method->code == moo->_nil)
 		#endif
 			{
 				/* no byte code to execute - make it a hard failure */
+#if 0
 /* TODO: what is the best tactics? emulate "self primitiveFailed"? or should this be generated by the compiler 
  *       the compiler produces no code for the body of a method(#primitive). so it will reach here if it fails when executed. */
-				MOO_DEBUG0 (moo, "Empty primitive body\n");
+				MOO_DEBUG2 (moo, "Empty primitive body - %.*js\n", MOO_OBJ_GET_SIZE(method->name), MOO_OBJ_GET_CHAR_SLOT(method->name));
+
 
 				moo->sp = stack_base; /* force restore stack pointer */
 				MOO_STACK_PUSH (moo, moo->_nil);
@@ -4081,6 +4078,27 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				/* i assume that the failed primitive handler function set the error number.
 				 * so i don't set it here */
 				return -1;
+
+#else
+				/* emulate 'self primitiveFailed' */
+				static moo_ooch_t prim_fail_msg[] = { 
+					'p', 'r', 'i', 'm', 'i', 't', 'i', 'v', 'e', 
+					'F', 'a', 'i', 'l', 'e', 'd'
+				};
+				moo_oow_t i;
+
+				MOO_DEBUG2 (moo, "Sending primitiveFailed for empty primitive body - %.*js\n", MOO_OBJ_GET_SIZE(method->name), MOO_OBJ_GET_CHAR_SLOT(method->name));
+
+			//////	//moo->sp = stack_base + 1; /* keep the receiver only. drop all arguments */
+
+//if the primitive handler function screwed the stack??? partially popped??? can't handle excessive pops...
+
+				MOO_STACK_PUSH (moo, moo->_nil); /* fake */
+				for (i = moo->sp; i > stack_base + 2; i--) MOO_STACK_SET (moo, i, MOO_STACK_GET(moo, i - 1));
+				MOO_STACK_SET (moo, stack_base + 2, (moo_oop_t)method->name);
+				if (send_private_message (moo, prim_fail_msg, 15, 0, nargs + 1) <= -1) return -1;
+				break;
+#endif
 			}
 
 			if (activate_new_method (moo, method, nargs) <= -1) return -1;
@@ -4173,6 +4191,7 @@ static int send_private_message (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_
 
 	return start_method (moo, method, nargs);
 }
+
 /* ------------------------------------------------------------------------- */
 
 static MOO_INLINE int switch_process_if_needed (moo_t* moo)

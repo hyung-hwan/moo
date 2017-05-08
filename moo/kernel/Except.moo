@@ -413,8 +413,23 @@ class ProhibitedMessageException(Exception)
 
 extend Apex
 {
-	method(#dual) primitiveFailed
+	method(#dual,#variadic) primitiveFailed()
 	{
+		| a b |
+		
+		thisContext vargCount dump.
+		a := 1.
+		b := thisContext vargCount.
+'PRIMITIVE FAILED............................................' dump.
+self dump.
+		while (a < b)
+		{
+			(thisContext vargAt: a) dump.
+			a := a + 1.
+		}.
+	
+('PRIMITIVE FAILED....' & (thisContext vargAt: 0)) dump.
+	
 		PrimitiveFailureException signal: 'PRIMITIVE FAILED'.
 	}
 
