@@ -53,28 +53,17 @@ extend Apex
 
 	method(#class,#primitive) basicNew.
 	method(#class,#primitive) basicNew: size.
-	
-	(*
-	method(#class) basicNew
-	{
-		| perr |
-		<primitive: #Apex__basicNew>
-		self primitiveFailed.
-
-	##	perr := thisProcess primError.
-	##	if (perr == xxxx) { self cannotInstantiate }
-	##	else { self primitiveFailed }.
-	}
-	
+	(* the following definition is almost equivalent to the simpler definition
+	 *    method(#class,#primitive) basicNew: size.
+	 * found above.
+	 * in the following defintion, the primitiveFailed method is executed 
+	 * from the basicNew: context. but in the simpler definition, it is executed
+	 * in the context of the caller of the basicNew:. the context of the basicNew:
+	 * method is not even created
 	method(#class) basicNew: size
 	{
-		| perr |
 		<primitive: #Apex__basicNew:>
-		self primitiveFailed.
-
-	##	perr := thisProcess primError.
-	##	if (perr == xxxx) { self cannotInstantiate }
-	##	else { self primitiveFailed }.
+		self primitiveFailed(thisContext method)
 	}*)
 
 	method(#class) new

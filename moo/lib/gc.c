@@ -153,7 +153,7 @@ static int ignite_1 (moo_t* moo)
 	 * The instance of Class can have indexed instance variables 
 	 * which are actually class variables.
 	 * -------------------------------------------------------------- */
-	moo->_class = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_CLASS_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
+	moo->_class = alloc_kernel_class (moo, MOO_CLASS_SELFSPEC_FLAG_LIMITED, 0, MOO_CLASS_SPEC_MAKE(MOO_CLASS_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
 	if (!moo->_class) return -1;
 
 	MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(moo->_class) == MOO_NULL);

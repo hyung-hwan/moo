@@ -2,18 +2,12 @@
 ## the Class object should be a variable-pointer object because
 ## it needs to accomodate class instance variables.
 ##
-class(#pointer) Class(Apex)
+class(#pointer,#limited) Class(Apex)
 {
 	var spec, selfspec, superclass, subclasses, name, modname.
 	var instvars, classinstvars, classvars, pooldics.
 	var instmthdic, classmthdic, nsdic, cdic.
 	var trsize, initv, initv_ci.
-
-	method(#class) basicNew
-	{
-		## you must not instantiate a new class this way.
-		self cannotInstantiate.
-	}
 
 	method(#class) initialize
 	{

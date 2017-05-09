@@ -229,21 +229,9 @@ class X11.GC(Object) from 'x11.gc'
 ## ---------------------------------------------------------------------------
 
 
-class X11.Component(Object)
+class(#limited) X11.Component(Object)
 {
 	var parent.
-
-	method new
-	{
-		## you must call new: parent instead.
-		self cannotInstantiate
-	}
-
-	method new: parent
-	{
-		## you must call new: parent instead.
-		self cannotInstantiate
-	}
 
 	method parent
 	{

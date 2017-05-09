@@ -3,18 +3,6 @@ class(#pointer,#final,#limited) Process(Object)
 {
 	var initial_context, current_context, state, sp, prev, next, sem, perr.
 
-	method(#class) basicNew
-	{
-		(* instantiation is not allowed. a process is strictly a VM managed object *)
-		self cannotInstantiate
-	}
-	
-	method(#class) basicNew: size 
-	{
-		(* instantiation is not allowed. a process is strictly a VM managed object *)
-		self cannotInstantiate
-	}
-
 	method prev { ^self.prev }
 	method next { ^self.next }
 

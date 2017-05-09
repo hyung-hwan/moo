@@ -4087,15 +4087,30 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				};
 				moo_oow_t i;
 
-				MOO_DEBUG2 (moo, "Sending primitiveFailed for empty primitive body - %.*js\n", MOO_OBJ_GET_SIZE(method->name), MOO_OBJ_GET_CHAR_SLOT(method->name));
+				if (stack_base != moo->sp - nargs - 1)
+				{
+					/* a primitive function handler must not touch the stack when it returns soft failure */
+					MOO_DEBUG3 (moo, "Stack seems to get corrupted by a primitive handler function - %O<<%.*js\n", method->owner, MOO_OBJ_GET_SIZE(method->name), MOO_OBJ_GET_CHAR_SLOT(method->name));
+					moo->errnum = MOO_EINTERN;
+					return -1;
+				}
 
-			//////	//moo->sp = stack_base + 1; /* keep the receiver only. drop all arguments */
+				MOO_DEBUG3 (moo, "Sending primitiveFailed for empty primitive body - %O<<%.*js\n", method->owner, MOO_OBJ_GET_SIZE(method->name), MOO_OBJ_GET_CHAR_SLOT(method->name));
 
-//if the primitive handler function screwed the stack??? partially popped??? can't handle excessive pops...
+				/* 
+				 *  | arg1     | <---- stack_base + 3
+				 *  | arg0     | <---- stack_base + 2
+				 *  | receiver | <---- stack_base + 1
+				 *  |          | <---- stack_base
+				 */
 
+				/* push out arguments by one slot */
 				MOO_STACK_PUSH (moo, moo->_nil); /* fake */
 				for (i = moo->sp; i > stack_base + 2; i--) MOO_STACK_SET (moo, i, MOO_STACK_GET(moo, i - 1));
-				MOO_STACK_SET (moo, stack_base + 2, (moo_oop_t)method->name);
+				/* inject the method as the first argument */
+				MOO_STACK_SET (moo, stack_base + 2, (moo_oop_t)method);
+
+				/* send primitiveFailed to self */
 				if (send_private_message (moo, prim_fail_msg, 15, 0, nargs + 1) <= -1) return -1;
 				break;
 #endif

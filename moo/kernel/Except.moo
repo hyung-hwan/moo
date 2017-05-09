@@ -379,10 +379,6 @@ class PrimitiveFailureException(Exception)
 {
 }
 
-class InstantiationFailureException(Exception)
-{
-}
-
 class NoSuchMessageException(Exception)
 {
 }
@@ -413,30 +409,22 @@ class ProhibitedMessageException(Exception)
 
 extend Apex
 {
-	method(#dual,#variadic) primitiveFailed()
+	method(#dual,#liberal) primitiveFailed(method)
 	{
-		| a b |
-		
-		thisContext vargCount dump.
-		a := 1.
+		| a b msg |
+
+		(*System logNl: 'Arguments: '.
+		a := 0.
 		b := thisContext vargCount.
-'PRIMITIVE FAILED............................................' dump.
-self dump.
 		while (a < b)
 		{
-			(thisContext vargAt: a) dump.
+			System logNl: (thisContext vargAt: a) asString.
 			a := a + 1.
-		}.
-	
-('PRIMITIVE FAILED....' & (thisContext vargAt: 0)) dump.
-	
-		PrimitiveFailureException signal: 'PRIMITIVE FAILED'.
-	}
-
-	method(#dual) cannotInstantiate
-	{
-		## TODO: use displayString or something like that instead of name....
-		InstantiationFailureException signal: 'Cannot instantiate ' & (self name).
+		}.*)
+		
+		msg := thisProcess primError asString.
+		if (method notNil) { msg := msg & ' - ' & (method owner name) & '<<' & (method name) }.
+		PrimitiveFailureException signal: msg.
 	}
 
 	method(#dual) doesNotUnderstand: message_name
