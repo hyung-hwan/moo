@@ -377,6 +377,28 @@ thisContext isExceptionContext dump.
 ##============================================================================
 class PrimitiveFailureException(Exception)
 {
+	var errcode.
+	
+	method(#class) withErrorCode: code
+	{
+		^(self new) errorCode: code; yourself.
+	}
+	
+	method signal
+	{
+		self.errcode := thisProcess primError.
+		^super signal
+	}
+	
+	method errorCode
+	{
+		^self.errcode
+	}
+	
+	method errorCode: code
+	{
+		self.errcode := code
+	}
 }
 
 class NoSuchMessageException(Exception)
@@ -411,7 +433,7 @@ extend Apex
 {
 	method(#dual,#liberal) primitiveFailed(method)
 	{
-		| a b msg |
+		| a b msg ec ex |
 
 		(*System logNl: 'Arguments: '.
 		a := 0.
@@ -422,9 +444,10 @@ extend Apex
 			a := a + 1.
 		}.*)
 		
-		msg := thisProcess primError asString.
-		if (method notNil) { msg := msg & ' - ' & (method owner name) & '<<' & (method name) }.
-		PrimitiveFailureException signal: msg.
+		ec := thisProcess primError.
+		msg := ec asString.
+		if (method notNil) { msg := msg & ' - ' & (method owner name) & '>>' & (method name) }.
+		(PrimitiveFailureException withErrorCode: ec) signal: msg.
 	}
 
 	method(#dual) doesNotUnderstand: message_name

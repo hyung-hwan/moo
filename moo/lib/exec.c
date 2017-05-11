@@ -109,7 +109,7 @@
 
 static void signal_io_semaphore (moo_t* moo, moo_ooi_t mask, void* ctx);
 static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_ooi_t nargs);
-static int send_private_message (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_t namelen, int to_super, moo_ooi_t nargs);
+static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_t namelen, int to_super, moo_ooi_t nargs);
 
 /* ------------------------------------------------------------------------- */
 static MOO_INLINE int vm_startup (moo_t* moo)
@@ -254,7 +254,7 @@ static MOO_INLINE int chain_into_processor (moo_t* moo, moo_oop_process_t proc)
 #if defined(MOO_DEBUG_VM_PROCESSOR)
 		MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_FATAL, "Processor - too many process\n");
 #endif
-		moo->errnum = MOO_EPFULL;
+		moo_seterrnum (moo, MOO_EPFULL);
 		return -1;
 	}
 
@@ -512,7 +512,7 @@ static int async_signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	if (moo->sem_list_count >= SEM_LIST_MAX)
 	{
-		moo->errnum = MOO_ESLFULL;
+		moo_seterrnum (moo, MOO_ESLFULL);
 		return -1;
 	}
 
@@ -676,7 +676,7 @@ static int add_to_sem_heap (moo_t* moo, moo_oop_semaphore_t sem)
 
 	if (moo->sem_heap_count >= SEM_HEAP_MAX)
 	{
-		moo->errnum = MOO_ESHFULL;
+		moo_seterrnum (moo, MOO_ESHFULL);
 		return -1;
 	}
 
@@ -754,7 +754,7 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 
 	if (moo->sem_io_count >= SEM_IO_MAX)
 	{
-		moo->errnum = MOO_ESHFULL;
+		moo_seterrnum (moo, MOO_ESHFULL);
 		return -1;
 	}
 
@@ -1115,7 +1115,7 @@ not_found:
 	}
 
 	MOO_DEBUG3 (moo, "Method [%.*js] not found for %O\n", message->len, message->ptr, receiver);
-	moo->errnum = MOO_ENOENT;
+	moo_seterrnum (moo, MOO_ENOENT);
 	return MOO_NULL;
 }
 
@@ -1149,7 +1149,7 @@ static int start_initial_process_and_context (moo_t* moo, const moo_oocs_t* objn
 		 * i can't use it as a start-up method.
 TODO: overcome this problem 
 		 */
-		moo->errnum = MOO_EINVAL;
+		moo_seterrnum (moo, MOO_EINVAL);
 		return -1;
 	}
 
@@ -1416,7 +1416,7 @@ static moo_pfrc_t _equal_objects (moo_t* moo, moo_ooi_t nargs)
 					/* MOO_OBJ_TYPE_OOP, ... */
 					MOO_DEBUG1 (moo, "<_equal_objects> Cannot compare objects of type %d\n", (int)MOO_OBJ_GET_FLAGS_TYPE(rcv));
 
-					moo->errnum = MOO_ENOIMPL; /* TODO: better error code */
+					moo_seterrnum (moo, MOO_ENOIMPL); /* TODO: better error code */
 					return -1;
 			}
 		}
@@ -1464,7 +1464,7 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 	{
 		/* the receiver is not a class object */
 		MOO_DEBUG1 (moo, "<pf_basic_new> Receiver is not a class - %O\n", _class);
-		moo->errnum = MOO_EMSGRCV;
+		moo_seterrnum (moo, MOO_EMSGRCV);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1472,7 +1472,7 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 	if (MOO_CLASS_SELFSPEC_FLAGS(MOO_OOP_TO_SMOOI(_class->selfspec)) & MOO_CLASS_SELFSPEC_FLAG_LIMITED)
 	{
 		MOO_DEBUG1 (moo, "<pf_basic_new> Receiver is #limited - %O\n", _class);
-		moo->errnum = MOO_EPERM;
+		moo_seterrnum (moo, MOO_EPERM);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1483,7 +1483,7 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 		{
 			/* integer out of range or not integer */
 			MOO_DEBUG0 (moo, "<pf_basic_new> Size out of range or not integer\n");
-			moo->errnum = MOO_EINVAL;
+			moo_seterrnum (moo, MOO_EINVAL);
 			return MOO_PF_FAILURE;
 		}
 	}
@@ -1555,7 +1555,7 @@ static moo_pfrc_t pf_basic_at (moo_t* moo, moo_ooi_t nargs)
 	if (!MOO_OOP_IS_POINTER(rcv))
 	{
 		/* the receiver is a special numeric object, not a normal pointer */
-		moo->errnum = MOO_EINVAL;
+		moo_seterrnum (moo, MOO_EINVAL);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1563,13 +1563,13 @@ static moo_pfrc_t pf_basic_at (moo_t* moo, moo_ooi_t nargs)
 	if (moo_inttooow (moo, pos, &idx) <= 0)
 	{
 		/* negative integer or not integer */
-		moo->errnum = MOO_EINVAL;
+		moo_seterrnum (moo, MOO_EINVAL);
 		return MOO_PF_FAILURE;
 	}
 	if (idx >= MOO_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
-		moo->errnum = MOO_ERANGE;
+		moo_seterrnum (moo, MOO_ERANGE);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1598,7 +1598,7 @@ static moo_pfrc_t pf_basic_at (moo_t* moo, moo_ooi_t nargs)
 			break;
 
 		default:
-			moo->errnum = MOO_EINTERN;
+			moo_seterrnum (moo, MOO_EINTERN);
 			return MOO_PF_HARD_FAILURE;
 	}
 
@@ -1617,14 +1617,14 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 	if (!MOO_OOP_IS_POINTER(rcv))
 	{
 		/* the receiver is a special numeric object, not a normal pointer */
-		moo->errnum = MOO_EINVAL;
+		moo_seterrnum (moo, MOO_EINVAL);
 		return MOO_PF_FAILURE;
 	}
 
 	if (MOO_OBJ_GET_FLAGS_RDONLY(rcv))
 	{
 /* TODO: better error handling */
-		moo->errnum = MOO_EPERM;
+		moo_seterrnum (moo, MOO_EPERM);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1634,13 +1634,13 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 	if (moo_inttooow (moo, pos, &idx) <= 0)
 	{
 		/* negative integer or not integer */
-		moo->errnum = MOO_EINVAL;
+		moo_seterrnum (moo, MOO_EINVAL);
 		return MOO_PF_FAILURE;
 	}
 	if (idx >= MOO_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
-		moo->errnum = MOO_ERANGE;
+		moo_seterrnum (moo, MOO_ERANGE);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1650,7 +1650,7 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 			if (!MOO_OOP_IS_SMOOI(val))
 			{
 				/* the value is not a character */
-				moo->errnum = MOO_EINVAL;
+				moo_seterrnum (moo, MOO_EINVAL);
 				return MOO_PF_FAILURE;
 			}
 /* TOOD: must I check the range of the value? */
@@ -1661,7 +1661,7 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 			if (!MOO_OOP_IS_CHAR(val))
 			{
 				/* the value is not a character */
-				moo->errnum = MOO_EINVAL;
+				moo_seterrnum (moo, MOO_EINVAL);
 				return MOO_PF_FAILURE;
 			}
 			((moo_oop_char_t)rcv)->slot[idx] = MOO_OOP_TO_CHAR(val);
@@ -1671,7 +1671,7 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 			if (!MOO_OOP_IS_SMOOI(val))
 			{
 				/* the value is not a number */
-				moo->errnum = MOO_EINVAL;
+				moo_seterrnum (moo, MOO_EINVAL);
 				return MOO_PF_FAILURE;
 			}
 
@@ -1686,7 +1686,7 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 			if (moo_inttooow (moo, val, &w) <= 0)
 			{
 				/* the value is not a number, out of range, or negative */
-				moo->errnum = MOO_EINVAL;
+				moo_seterrnum (moo, MOO_EINVAL);
 				return MOO_PF_FAILURE;
 			}
 			((moo_oop_word_t)rcv)->slot[idx] = w;
@@ -1698,7 +1698,7 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 			break;
 
 		default:
-			moo->errnum = MOO_EINTERN;
+			moo_seterrnum (moo, MOO_EINTERN);
 			return MOO_PF_HARD_FAILURE;
 	}
 
@@ -1760,7 +1760,7 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_ooi_t nargs)
 				default:
 					/* MOO_OBJ_TYPE_OOP, ... */
 					MOO_DEBUG1 (moo, "<pf_hash> Cannot hash an object of type %d\n", type);
-					moo->errnum = MOO_ENOIMPL; /* TODO: better error code? */
+					moo_seterrnum (moo, MOO_ENOIMPL); /* TODO: better error code? */
 					return MOO_PF_FAILURE;
 			}
 			break;
@@ -1785,7 +1785,7 @@ static moo_pfrc_t pf_responds_to (moo_t* moo, moo_ooi_t nargs)
 
 	if (MOO_CLASSOF(moo,selector) != moo->_symbol)
 	{
-		moo->errnum = MOO_EINVAL;
+		moo_seterrnum (moo, MOO_EINVAL);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1815,7 +1815,7 @@ static moo_pfrc_t pf_perform (moo_t* moo, moo_ooi_t nargs)
 
 	if (MOO_CLASSOF(moo,selector) != moo->_symbol)
 	{
-		moo->errnum = MOO_EINVAL;
+		moo_seterrnum (moo, MOO_EINVAL);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1847,7 +1847,7 @@ static moo_pfrc_t pf_exceptionize_error (moo_t* moo, moo_ooi_t nargs)
 		/* the receiver is a special numeric object, not a normal pointer.
 		 * excceptionization is not supported for small integers, characters, and errors.
 		 * first of all, methods of these classes must not return errors */
-		moo->errnum = MOO_EMSGRCV;
+		moo_seterrnum (moo, MOO_EMSGRCV);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1874,7 +1874,7 @@ static moo_pfrc_t pf_context_goto (moo_t* moo, moo_ooi_t nargs)
 	{
 		MOO_LOG2 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
 			"Error(%hs) - invalid receiver, not a method context - %O\n", __PRIMITIVE_NAME__, rcv);
-		moo->errnum = MOO_EMSGRCV;
+		moo_seterrnum (moo, MOO_EMSGRCV);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1883,7 +1883,7 @@ static moo_pfrc_t pf_context_goto (moo_t* moo, moo_ooi_t nargs)
 	{
 		MOO_LOG1 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR,
 			"Error(%hs) - invalid pc\n", __PRIMITIVE_NAME__);
-		moo->errnum = MOO_EINVAL;
+		moo_seterrnum (moo, MOO_EINVAL);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1930,7 +1930,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 		MOO_LOG2 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
 			"Error(%hs) - re-valuing of a block context - %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
 
-		moo->errnum = MOO_EPERM;
+		moo_seterrnum (moo, MOO_EPERM);
 		return MOO_PF_FAILURE;
 	}
 	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(rcv_blkctx) == MOO_CONTEXT_NAMED_INSTVARS);
@@ -1941,7 +1941,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 			"Error(%hs) - wrong number of arguments to a block context %O - %zd expected, %zd given\n",
 			__PRIMITIVE_NAME__, rcv_blkctx, MOO_OOP_TO_SMOOI(rcv_blkctx->method_or_nargs), actual_arg_count);
 
-		moo->errnum = MOO_ENUMARGS;
+		moo_seterrnum (moo, MOO_ENUMARGS);
 		return MOO_PF_FAILURE;
 	}
 
@@ -2020,7 +2020,7 @@ static moo_pfrc_t pf_block_value (moo_t* moo, moo_ooi_t nargs)
 		/* the receiver must be a block context */
 		MOO_LOG2 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
 			"Error(%hs) - invalid receiver, not a block context - %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
-		moo->errnum = MOO_EMSGRCV;
+		moo_seterrnum (moo, MOO_EMSGRCV);
 		return MOO_PF_FAILURE;
 	}
 
@@ -2048,7 +2048,7 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_ooi_t nargs)
 	{
 		/* too many arguments */
 /* TODO: proper error handling */
-		moo->errnum = MOO_EINVAL;
+		moo_seterrnum (moo, MOO_EINVAL);
 		return MOO_PF_FAILURE;
 	}
 
@@ -2061,7 +2061,7 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_ooi_t nargs)
 		{
 			/* the only optional argument must be an OOP-indexable 
 			 * object like an array */
-			moo->errnum = MOO_EINVAL;
+			moo_seterrnum (moo, MOO_EINVAL);
 			return MOO_PF_FAILURE;
 		}
 
@@ -2074,7 +2074,7 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_ooi_t nargs)
 		/* the receiver must be a block context */
 		MOO_LOG2 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
 			"Error(%hs) - invalid receiver, not a block context - %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
-		moo->errnum = MOO_EINVAL;
+		moo_seterrnum (moo, MOO_EINVAL);
 		return MOO_PF_FAILURE;
 	}
 
@@ -2785,7 +2785,7 @@ static moo_pfrc_t pf_character_as_smooi (moo_t* moo, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	if (!MOO_OOP_IS_CHAR(rcv)) 
 	{
-		moo->errnum = MOO_EMSGRCV;
+		moo_seterrnum (moo, MOO_EMSGRCV);
 		return MOO_PF_HARD_FAILURE;
 	}
 
@@ -2804,7 +2804,7 @@ static moo_pfrc_t pf_smooi_as_character (moo_t* moo, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	if (!MOO_OOP_IS_SMOOI(rcv)) 
 	{
-		moo->errnum = MOO_EMSGRCV;
+		moo_seterrnum (moo, MOO_EMSGRCV);
 		return MOO_PF_HARD_FAILURE;
 	}
 
@@ -2824,7 +2824,7 @@ static moo_pfrc_t pf_smooi_as_error (moo_t* moo, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	if (!MOO_OOP_IS_SMOOI(rcv))
 	{
-		moo->errnum = MOO_EMSGRCV;
+		moo_seterrnum (moo, MOO_EMSGRCV);
 		return MOO_PF_HARD_FAILURE;
 	}
 
@@ -2846,7 +2846,7 @@ static moo_pfrc_t pf_error_as_character (moo_t* moo, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	if (!MOO_OOP_IS_ERROR(rcv))
 	{
-		moo->errnum = MOO_EMSGRCV;
+		moo_seterrnum (moo, MOO_EMSGRCV);
 		return MOO_PF_HARD_FAILURE;
 	}
 
@@ -2866,7 +2866,7 @@ static moo_pfrc_t pf_error_as_integer (moo_t* moo, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	if (!MOO_OOP_IS_ERROR(rcv)) 
 	{
-		moo->errnum = MOO_EMSGRCV;
+		moo_seterrnum (moo, MOO_EMSGRCV);
 		return MOO_PF_HARD_FAILURE;
 	}
 
@@ -2887,7 +2887,7 @@ static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	if (!MOO_OOP_IS_ERROR(rcv)) 
 	{
-		moo->errnum = MOO_EMSGRCV;
+		moo_seterrnum (moo, MOO_EMSGRCV);
 		return MOO_PF_HARD_FAILURE;
 	}
 
@@ -2977,7 +2977,7 @@ static moo_pfrc_t pf_smptr_free (moo_t* moo, moo_ooi_t nargs)
 	tmp = MOO_STACK_GETRCV(moo, nargs);
 	if (!MOO_OOP_IS_SMPTR(tmp)) 
 	{
-		moo->errnum = MOO_EMSGRCV;
+		moo_seterrnum (moo, MOO_EMSGRCV);
 		return MOO_PF_HARD_FAILURE;
 	}
 
@@ -3039,7 +3039,7 @@ static MOO_INLINE moo_oop_t _fetch_raw_int (moo_t* moo, moo_int8_t* rawptr, moo_
 	#endif
 
 		default:
-			moo->errnum = MOO_EINVAL;
+			moo_seterrnum (moo, MOO_EINVAL);
 			return MOO_NULL;
 	}
 
@@ -3078,7 +3078,7 @@ static MOO_INLINE moo_oop_t _fetch_raw_uint (moo_t* moo, moo_uint8_t* rawptr, mo
 	#endif
 
 		default:
-			moo->errnum = MOO_EINVAL;
+			moo_seterrnum (moo, MOO_EINVAL);
 			return MOO_NULL;
 	}
 
@@ -3097,7 +3097,7 @@ static MOO_INLINE int _store_raw_int (moo_t* moo, moo_uint8_t* rawptr, moo_oow_t
 
 	if (w > max || w < min) 
 	{
-		moo->errnum = MOO_ERANGE; 
+		moo_seterrnum (moo, MOO_ERANGE); 
 		return -1;
 	}
 
@@ -3128,7 +3128,7 @@ static MOO_INLINE int _store_raw_int (moo_t* moo, moo_uint8_t* rawptr, moo_oow_t
 	#endif
 	}
 
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return -1;
 }
 
@@ -3140,14 +3140,14 @@ static MOO_INLINE int _store_raw_uint (moo_t* moo, moo_uint8_t* rawptr, moo_oow_
 
 	if ((n = moo_inttooow (moo, voop, &w)) <= 0) 
 	{
-		if (n <= -1) moo->errnum = MOO_ERANGE; /* negative number */
+		if (n <= -1) moo_seterrnum (moo, MOO_ERANGE); /* negative number */
 		return -1;
 	}
 
 	max = (~(moo_oow_t)0 >> ((MOO_SIZEOF_OOW_T - size) * 8));
 	if (w > max) 
 	{
-		moo->errnum = MOO_ERANGE; 
+		moo_seterrnum (moo, MOO_ERANGE); 
 		return -1;
 	}
 
@@ -3178,7 +3178,7 @@ static MOO_INLINE int _store_raw_uint (moo_t* moo, moo_uint8_t* rawptr, moo_oow_
 	#endif
 	}
 
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return -1;
 }
 
@@ -3392,7 +3392,7 @@ static moo_pfrc_t _get_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	if (!MOO_OOP_IS_SMPTR(rcv))
 	{
-		moo->errnum = MOO_EMSGRCV;
+		moo_seterrnum (moo, MOO_EMSGRCV);
 		return MOO_PF_HARD_FAILURE;
 	}
 
@@ -3427,7 +3427,7 @@ static moo_pfrc_t _get_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	if (!MOO_OOP_IS_SMPTR(rcv))
 	{
-		moo->errnum = MOO_EMSGRCV;
+		moo_seterrnum (moo, MOO_EMSGRCV);
 		return MOO_PF_HARD_FAILURE;
 	}
 
@@ -3637,7 +3637,7 @@ static moo_pfrc_t pf_smptr_as_string (moo_t* moo, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	if (!MOO_OOP_IS_SMPTR(rcv))
 	{
-		moo->errnum = MOO_EMSGRCV;
+		moo_seterrnum (moo, MOO_EMSGRCV);
 		return MOO_PF_HARD_FAILURE;
 	}
 
@@ -3804,7 +3804,7 @@ moo_pfbase_t* moo_getpfnum (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, mo
 		}
 	}
 
-	moo->errnum = MOO_ENOENT;
+	moo_seterrnum (moo, MOO_ENOENT);
 	return MOO_NULL;
 }
 
@@ -3838,7 +3838,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_FATAL, 
 				"Fatal error - Argument count mismatch for a non-variadic method [%O] - %zd expected, %zu given\n",
 				method->name, MOO_OOP_TO_SMOOI(method->tmpr_nargs), nargs);
-			moo->errnum = MOO_EINVAL;
+			moo_seterrnum (moo, MOO_EINVAL);
 			return -1;
 		}
 	}
@@ -3948,7 +3948,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				{
 					MOO_DEBUG4 (moo, "Soft failure due to argument count mismatch for primitive function %hs - %zu-%zu expected, %zu given\n",
 						pftab[pfnum].name, pftab[pfnum].pfbase.minargs, pftab[pfnum].pfbase.maxargs, nargs);
-					moo->errnum = MOO_ENUMARGS;
+					moo_seterrnum (moo, MOO_ENUMARGS);
 					goto activate_primitive_method_body;
 				}
 
@@ -3966,7 +3966,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			}
 			else
 			{
-				moo->errnum = MOO_ENOENT;
+				moo_seterrnum (moo, MOO_ENOENT);
 				MOO_DEBUG1 (moo, "Cannot call primitive function numbered %zd - unknown primitive function number\n", pfnum);
 			}
 
@@ -4015,7 +4015,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 					MOO_DEBUG5 (moo, "Soft failure due to argument count mismatch for primitive function %.*js - %zu-%zu expected, %zu given\n",
 						MOO_OBJ_GET_SIZE(pfname), MOO_OBJ_GET_CHAR_SLOT(pfname), pfbase->minargs, pfbase->maxargs, nargs);
 
-					moo->errnum = MOO_ENUMARGS;
+					moo_seterrnum (moo, MOO_ENUMARGS);
 					goto activate_primitive_method_body;
 				}
 
@@ -4066,21 +4066,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 		#endif
 			{
 				/* no byte code to execute - make it a hard failure */
-#if 0
-/* TODO: what is the best tactics? emulate "self primitiveFailed"? or should this be generated by the compiler 
- *       the compiler produces no code for the body of a method(#primitive). so it will reach here if it fails when executed. */
-				MOO_DEBUG2 (moo, "Empty primitive body - %.*js\n", MOO_OBJ_GET_SIZE(method->name), MOO_OBJ_GET_CHAR_SLOT(method->name));
 
-
-				moo->sp = stack_base; /* force restore stack pointer */
-				MOO_STACK_PUSH (moo, moo->_nil);
-
-				/* i assume that the failed primitive handler function set the error number.
-				 * so i don't set it here */
-				return -1;
-
-#else
-				/* emulate 'self primitiveFailed' */
 				static moo_ooch_t prim_fail_msg[] = { 
 					'p', 'r', 'i', 'm', 'i', 't', 'i', 'v', 'e', 
 					'F', 'a', 'i', 'l', 'e', 'd'
@@ -4091,12 +4077,11 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				{
 					/* a primitive function handler must not touch the stack when it returns soft failure */
 					MOO_DEBUG3 (moo, "Stack seems to get corrupted by a primitive handler function - %O<<%.*js\n", method->owner, MOO_OBJ_GET_SIZE(method->name), MOO_OBJ_GET_CHAR_SLOT(method->name));
-					moo->errnum = MOO_EINTERN;
+					moo_seterrnum (moo, MOO_EINTERN);
 					return -1;
 				}
 
 				MOO_DEBUG3 (moo, "Sending primitiveFailed for empty primitive body - %O<<%.*js\n", method->owner, MOO_OBJ_GET_SIZE(method->name), MOO_OBJ_GET_CHAR_SLOT(method->name));
-
 				/* 
 				 *  | arg1     | <---- stack_base + 3
 				 *  | arg0     | <---- stack_base + 2
@@ -4111,9 +4096,8 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				MOO_STACK_SET (moo, stack_base + 2, (moo_oop_t)method);
 
 				/* send primitiveFailed to self */
-				if (send_private_message (moo, prim_fail_msg, 15, 0, nargs + 1) <= -1) return -1;
+				if (send_message_with_str (moo, prim_fail_msg, 15, 0, nargs + 1) <= -1) return -1;
 				break;
-#endif
 			}
 
 			if (activate_new_method (moo, method, nargs) <= -1) return -1;
@@ -4166,7 +4150,7 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_
 				"Fatal error - receiver [%O] of class [%O] does not understand a message [%.*js]\n", 
 				receiver, MOO_CLASSOF(moo, receiver), mthname.len, mthname.ptr);
 
-			moo->errnum = MOO_EMSGSND;
+			moo_seterrnum (moo, MOO_EMSGSND);
 			return -1;
 		}
 		else
@@ -4184,7 +4168,7 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_
 	return start_method (moo, method, nargs);
 }
 
-static int send_private_message (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_t namelen, int to_super, moo_ooi_t nargs)
+static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_t namelen, int to_super, moo_ooi_t nargs)
 {
 	moo_oocs_t mthname;
 	moo_oop_t receiver;
@@ -4200,7 +4184,7 @@ static int send_private_message (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_
 		MOO_LOG4 (moo, MOO_LOG_IC | MOO_LOG_FATAL, 
 			"Fatal error - receiver [%O] of class [%O] does not understand a private message [%.*js]\n", 
 			receiver, MOO_CLASSOF(moo, receiver), mthname.len, mthname.ptr);
-		moo->errnum = MOO_EMSGSND;
+		moo_seterrnum (moo, MOO_EMSGSND);
 		return -1;
 	}
 
@@ -5207,7 +5191,7 @@ int moo_execute (moo_t* moo)
 						MOO_ASSERT (moo, moo->active_context->origin->ip == MOO_SMOOI_TO_OOP(-1));
 
 						MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_ERROR, "Error - cannot return from dead context\n");
-						moo->errnum = MOO_EINTERN; /* TODO: can i make this error catchable at the moo level? */
+						moo_seterrnum (moo, MOO_EINTERN); /* TODO: can i make this error catchable at the moo level? */
 						goto oops;
 
 					non_local_return_ok:
@@ -5245,7 +5229,7 @@ int moo_execute (moo_t* moo)
 						MOO_STACK_PUSH (moo, (moo_oop_t)unwind_stop);
 						MOO_STACK_PUSH (moo, (moo_oop_t)return_value);
 
-						if (send_private_message (moo, fbm, 16, 0, 2) <= -1) goto oops;
+						if (send_message_with_str (moo, fbm, 16, 0, 2) <= -1) goto oops;
 					}
 					else
 					{
@@ -5461,7 +5445,7 @@ int moo_execute (moo_t* moo)
 
 			default:
 				MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_FATAL, "Fatal error - unknown byte code 0x%zx\n", bcode);
-				moo->errnum = MOO_EINTERN;
+				moo_seterrnum (moo, MOO_EINTERN);
 				goto oops;
 		}
 	}

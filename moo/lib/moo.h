@@ -978,6 +978,12 @@ struct moo_t
 
 	struct
 	{
+		moo_ooch_t buf[2048];
+		moo_oow_t len;
+	} errmsg;
+
+	struct
+	{
 		unsigned int trait;
 		unsigned int log_mask;
 		moo_oow_t dfl_symtab_size;
@@ -997,6 +1003,7 @@ struct moo_t
 		moo_oow_t capa;
 		int last_mask;
 	} log;
+
 
 	/* ========================= */
 
@@ -1340,8 +1347,11 @@ typedef struct moo_synerr_t moo_synerr_t;
 extern "C" {
 #endif
 
-#define moo_switchprocess(moo) ((moo)->switch_proc = 1)
-
+#if defined(MOO_HAVE_INLINE)
+	static MOO_INLINE void moo_switchprocess(moo_t* moo) { moo->switch_proc = 1; }
+#else
+#	define moo_switchprocess(moo) ((moo)->switch_proc = 1)
+#endif
 
 MOO_EXPORT moo_t* moo_open (
 	moo_mmgr_t*         mmgr,
@@ -1374,7 +1384,7 @@ MOO_EXPORT void moo_fini (
 	static MOO_INLINE void moo_setcmgr (moo_t* moo, moo_cmgr_t* cmgr) { moo->cmgr = cmgr; }
 
 	static MOO_INLINE moo_errnum_t moo_geterrnum (moo_t* moo) { return moo->errnum; }
-	static MOO_INLINE void moo_seterrnum (moo_t* moo, moo_errnum_t errnum) { moo->errnum = errnum; }
+	static MOO_INLINE void moo_seterrnum (moo_t* moo, moo_errnum_t errnum) { moo->errnum = errnum; moo->errmsg.len = 0; }
 #else
 #	define moo_getmmgr(moo) ((moo)->mmgr)
 #	define moo_getxtn(moo) ((void*)((moo) + 1))
@@ -1383,8 +1393,28 @@ MOO_EXPORT void moo_fini (
 #	define moo_setcmgr(moo,mgr) ((moo)->cmgr = (mgr))
 
 #	define moo_geterrnum(moo) ((moo)->errnum)
-#	define moo_seterrnum(moo,num) ((moo)->errnum = (num))
+#	define moo_seterrnum(moo,num) ((moo)->errmsg.len = 0, (moo)->errnum = (num),)
 #endif
+
+
+void moo_seterrbfmt (
+	moo_t*           moo,
+	moo_errnum_t     errnum,
+	const moo_bch_t* fmt,
+	...
+);
+
+void moo_seterrufmt (
+	moo_t*           moo,
+	moo_errnum_t     errnum,
+	const moo_uch_t* fmt,
+	...
+);
+
+
+MOO_EXPORT const moo_ooch_t* moo_geterrmsg (
+	moo_t* moo
+);
 
 MOO_EXPORT const moo_ooch_t* moo_geterrstr (
 	moo_t* moo

@@ -318,7 +318,7 @@ reswitch:
 			goto reswitch;
 		/* end of length modifiers */
 
-		case 'n':
+		case 'n': /* number of characters printed so far */
 			if (lm_flag & LF_J) /* j */
 				*(va_arg(ap, moo_intmax_t*)) = data->count;
 			else if (lm_flag & LF_Z) /* z */
@@ -333,11 +333,8 @@ reswitch:
 				*(va_arg(ap, short int*)) = data->count;
 			else if (lm_flag & LF_C) /* hh */
 				*(va_arg(ap, char*)) = data->count;
-			else if (flagc & FLAGC_LENMOD)
-			{
-				moo->errnum = MOO_EINVAL;
-				goto oops;
-			}
+			else if (flagc & FLAGC_LENMOD) 
+				goto invalid_format;
 			else
 				*(va_arg(ap, int*)) = data->count;
 			break;
@@ -623,8 +620,7 @@ reswitch:
 		#endif
 			else if (flagc & FLAGC_LENMOD)
 			{
-				moo->errnum = MOO_EINVAL;
-				goto oops;
+				goto invalid_format;
 			}
 			else
 			{

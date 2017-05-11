@@ -210,6 +210,12 @@ const moo_ooch_t* moo_geterrstr (moo_t* moo)
 	return moo_errnumtoerrstr (moo->errnum);
 }
 
+const moo_ooch_t* moo_geterrmsg (moo_t* moo)
+{
+	if (moo->errmsg.len <= 0) return moo_errnumtoerrstr (moo->errnum);
+	return moo->errmsg.buf;
+}
+
 int moo_setoption (moo_t* moo, moo_option_t id, const void* value)
 {
 	switch (id)
@@ -257,7 +263,7 @@ int moo_setoption (moo_t* moo, moo_option_t id, const void* value)
 	}
 
 einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return -1;
 }
 
@@ -286,7 +292,7 @@ int moo_getoption (moo_t* moo, moo_option_t id, void* value)
 			return 0;
 	};
 
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return -1;
 }
 
@@ -326,7 +332,7 @@ void* moo_allocmem (moo_t* moo, moo_oow_t size)
 	void* ptr;
 
 	ptr = MOO_MMGR_ALLOC (moo->mmgr, size);
-	if (!ptr) moo->errnum = MOO_ESYSMEM;
+	if (!ptr) moo_seterrnum (moo, MOO_ESYSMEM);
 	return ptr;
 }
 
@@ -335,7 +341,7 @@ void* moo_callocmem (moo_t* moo, moo_oow_t size)
 	void* ptr;
 
 	ptr = MOO_MMGR_ALLOC (moo->mmgr, size);
-	if (!ptr) moo->errnum = MOO_ESYSMEM;
+	if (!ptr) moo_seterrnum (moo, MOO_ESYSMEM);
 	else MOO_MEMSET (ptr, 0, size);
 	return ptr;
 }
@@ -343,7 +349,7 @@ void* moo_callocmem (moo_t* moo, moo_oow_t size)
 void* moo_reallocmem (moo_t* moo, void* ptr, moo_oow_t size)
 {
 	ptr = MOO_MMGR_REALLOC (moo->mmgr, ptr, size);
-	if (!ptr) moo->errnum = MOO_ESYSMEM;
+	if (!ptr) moo_seterrnum (moo, MOO_ESYSMEM);
 	return ptr;
 }
 
@@ -408,7 +414,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	if (namelen > MOO_COUNTOF(buf) - (MOD_PREFIX_LEN + 1 + 1))
 	{
 		/* module name too long  */
-		moo->errnum = MOO_EINVAL; /* TODO: change the  error number to something more specific */
+		moo_seterrnum (moo, MOO_EINVAL); /* TODO: change the  error number to something more specific */
 		return MOO_NULL;
 	}
 
@@ -441,7 +447,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 		pair = moo_rbt_insert (&moo->modtab, (moo_ooch_t*)name, namelen, &md, MOO_SIZEOF(md));
 		if (pair == MOO_NULL)
 		{
-			moo->errnum = MOO_ESYSMEM;
+			moo_seterrnum (moo, MOO_ESYSMEM);
 			return MOO_NULL;
 		}
 
@@ -464,7 +470,7 @@ MOO_DEBUG2 (moo, "xxxxxxxxxxxxxxxxxxxxxxxxx %p %d\n", mdp, (int)MOO_IS_ALIGNED_P
 	{
 	#if !defined(MOO_ENABLE_DYNAMIC_MODULE)
 		MOO_DEBUG2 (moo, "Cannot find a static module [%.*js]\n", namelen, name);
-		moo->errnum = MOO_ENOENT;
+		moo_seterrnum (moo, MOO_ENOENT);
 		return MOO_NULL;
 	#endif
 	}
@@ -472,7 +478,7 @@ MOO_DEBUG2 (moo, "xxxxxxxxxxxxxxxxxxxxxxxxx %p %d\n", mdp, (int)MOO_IS_ALIGNED_P
 
 #if !defined(MOO_ENABLE_DYNAMIC_MODULE)
 	MOO_DEBUG2 (moo, "Cannot open module [%.*js] - module loading disabled\n", namelen, name);
-	moo->errnum = MOO_ENOIMPL; /* TODO: is it a good error number for disabled module loading? */
+	moo_seterrnum (moo, MOO_ENOIMPL); /* TODO: is it a good error number for disabled module loading? */
 	return MOO_NULL;
 #endif
 
@@ -487,7 +493,7 @@ MOO_DEBUG2 (moo, "xxxxxxxxxxxxxxxxxxxxxxxxx %p %d\n", mdp, (int)MOO_IS_ALIGNED_P
 	if (md.handle == MOO_NULL) 
 	{
 		MOO_DEBUG2 (moo, "Cannot open a module [%.*js]\n", namelen, name);
-		moo->errnum = MOO_ENOENT; /* TODO: be more descriptive about the error */
+		moo_seterrnum (moo, MOO_ENOENT); /* TODO: be more descriptive about the error */
 		return MOO_NULL;
 	}
 
@@ -496,7 +502,7 @@ MOO_DEBUG2 (moo, "xxxxxxxxxxxxxxxxxxxxxxxxx %p %d\n", mdp, (int)MOO_IS_ALIGNED_P
 	if (!load) 
 	{
 		MOO_DEBUG3 (moo, "Cannot get a module symbol [%js] in [%.*js]\n", buf, namelen, name);
-		moo->errnum = MOO_ENOENT; /* TODO: be more descriptive about the error */
+		moo_seterrnum (moo, MOO_ENOENT); /* TODO: be more descriptive about the error */
 		moo->vmprim.dl_close (moo, md.handle);
 		return MOO_NULL;
 	}
@@ -507,7 +513,7 @@ MOO_DEBUG2 (moo, "xxxxxxxxxxxxxxxxxxxxxxxxx %p %d\n", mdp, (int)MOO_IS_ALIGNED_P
 	if (pair == MOO_NULL)
 	{
 		MOO_DEBUG2 (moo, "Cannot register a module [%.*js]\n", namelen, name);
-		moo->errnum = MOO_ESYSMEM;
+		moo_seterrnum (moo, MOO_ESYSMEM);
 		moo->vmprim.dl_close (moo, md.handle);
 		return MOO_NULL;
 	}
@@ -518,7 +524,7 @@ MOO_DEBUG2 (moo, "xxxxxxxxxxxxxxxxxxxxxxxxx %p %d\n", mdp, (int)MOO_IS_ALIGNED_P
 	if (load (moo, &mdp->mod) <= -1)
 	{
 		MOO_DEBUG3 (moo, "Module function [%js] returned failure in [%.*js]\n", buf, namelen, name);
-		moo->errnum = MOO_ENOENT; /* TODO: proper/better error code and handling */
+		moo_seterrnum (moo, MOO_ENOENT); /* TODO: proper/better error code and handling */
 		moo_rbt_delete (&moo->modtab, name, namelen);
 		moo->vmprim.dl_close (moo, mdp->handle);
 		return MOO_NULL;
@@ -575,7 +581,7 @@ int moo_importmod (moo_t* moo, moo_oop_class_t _class, const moo_ooch_t* name, m
 		MOO_ASSERT (moo, mdp != MOO_NULL);
 
 		MOO_DEBUG1 (moo, "Cannot import module [%js] - already active\n", mdp->mod.name);
-		moo->errnum = MOO_EPERM;
+		moo_seterrnum (moo, MOO_EPERM);
 		goto done2;
 	}
 
@@ -585,7 +591,7 @@ int moo_importmod (moo_t* moo, moo_oop_class_t _class, const moo_ooch_t* name, m
 	if (!mdp->mod.import)
 	{
 		MOO_DEBUG1 (moo, "Cannot import module [%js] - importing not supported by the module\n", mdp->mod.name);
-		moo->errnum = MOO_ENOIMPL;
+		moo_seterrnum (moo, MOO_ENOIMPL);
 		goto done;
 	}
 
@@ -630,7 +636,7 @@ moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidle
 		 * what if the compiler is broken? imagine a buggy compiler rewritten
 		 * in moo itself? */
 		MOO_DEBUG2 (moo, "Internal error - no period in a primitive function identifier [%.*js] - buggy compiler?\n", pfidlen, pfid);
-		moo->errnum = MOO_EINTERN;
+		moo_seterrnum (moo, MOO_EINTERN);
 		return MOO_NULL;
 	}
 
@@ -657,7 +663,7 @@ moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidle
 	{
 		/* the primitive function is not found. but keep the module open even if it's opened above */
 		MOO_DEBUG3 (moo, "Cannot find a primitive function [%.*js] in a module [%js]\n", pfidlen - mod_name_len - 1, sep + 1, mdp->mod.name);
-		moo->errnum = MOO_ENOENT; /* TODO: proper error code and handling */
+		moo_seterrnum (moo, MOO_ENOENT); /* TODO: proper error code and handling */
 		return MOO_NULL;
 	}
 
@@ -704,7 +710,7 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 	{
 	oops_inval:
 		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - invalid name\n", mthname, _class->name);
-		moo->errnum = MOO_EINVAL;
+		moo_seterrnum (moo, MOO_EINVAL);
 		goto oops;
 	}
 
@@ -713,7 +719,7 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 	if (moo_lookupdic (moo, _class->mthdic[type], &cs) != MOO_NULL)
 	{
 		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - duplicate\n", mthname, _class->name);
-		moo->errnum = MOO_EEXIST;
+		moo_seterrnum (moo, MOO_EEXIST);
 		goto oops;
 	}
 
@@ -822,7 +828,7 @@ moo_pfbase_t* moo_findpfbase (moo_t* moo, moo_pfinfo_t* pfinfo, moo_oow_t pfcoun
 		else return &pfinfo[mid].base;
 	}
 
-	moo->errnum = MOO_ENOENT;
+	moo_seterrnum (moo, MOO_ENOENT);
 	return MOO_NULL;
 }
 
@@ -888,7 +894,7 @@ int moo_setclasstrsize (moo_t* moo, moo_oop_class_t _class, moo_oow_t size)
 	return 0;
 
 eperm:
-	moo->errnum = MOO_EPERM;
+	moo_seterrnum (moo, MOO_EPERM);
 	return -1;
 }
 
@@ -910,7 +916,7 @@ moo_oop_t moo_findclass (moo_t* moo, moo_oop_set_t nsdic, const moo_ooch_t* name
 	ass = moo_lookupdic (moo, nsdic, &n);
 	if (!ass || MOO_CLASSOF(moo,ass->value) != moo->_class) 
 	{
-		moo->errnum = MOO_ENOENT;
+		moo_seterrnum (moo, MOO_ENOENT);
 		return MOO_NULL;
 	}
 

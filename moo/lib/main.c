@@ -402,7 +402,7 @@ static moo_ooi_t input_handler (moo_t* moo, moo_iocmd_t cmd, moo_ioarg_t* arg)
 			return read_input (moo, arg);
 
 		default:
-			moo->errnum = MOO_EINTERN;
+			moo_seterrnum (moo, MOO_EINTERN);
 			return -1;
 	}
 }

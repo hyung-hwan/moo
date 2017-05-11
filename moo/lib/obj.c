@@ -260,7 +260,7 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 
 	if (decode_spec (moo, _class, vlen, &type, &alloclen) <= -1) 
 	{
-		moo->errnum = MOO_EINVAL;
+		moo_seterrnum (moo, MOO_EINVAL);
 		return MOO_NULL;
 	}
 
@@ -327,7 +327,7 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 			break;
 
 		default:
-			moo->errnum = MOO_EINTERN;
+			moo_seterrnum (moo, MOO_EINTERN);
 			oop = MOO_NULL;
 			break;
 	}
@@ -352,7 +352,7 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_class_t _class, moo_oo
 
 	if (decode_spec (moo, _class, vlen, &type, &alloclen) <= -1) 
 	{
-		moo->errnum = MOO_EINVAL;
+		moo_seterrnum (moo, MOO_EINVAL);
 		return MOO_NULL;
 	}
 
@@ -390,7 +390,7 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_class_t _class, moo_oo
 				MOO_OBJ_GET_CHAR_SLOT(_class->name),
 				trlen);
 
-			moo->errnum = MOO_EPERM;
+			moo_seterrnum (moo, MOO_EPERM);
 			oop = MOO_NULL;
 			break;
 	}

@@ -54,7 +54,7 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 			if (inc_max > 0) inc = inc_max;
 			else
 			{
-				moo->errnum = MOO_EOOMEM;
+				moo_seterrnum (moo, MOO_EOOMEM);
 				return MOO_NULL;
 			}
 		}
@@ -127,7 +127,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_set_t dic, moo_
 	{
 		/* when value is MOO_NULL, perform no insertion.
 		 * the value of MOO_NULL indicates no insertion or update. */
-		moo->errnum = MOO_ENOENT;
+		moo_seterrnum (moo, MOO_ENOENT);
 		return MOO_NULL;
 	}
 
@@ -138,7 +138,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_set_t dic, moo_
 	{
 		/* this built-in dictionary is not allowed to hold more than 
 		 * MOO_SMOOI_MAX items for efficiency sake */
-		moo->errnum = MOO_EDFULL;
+		moo_seterrnum (moo, MOO_EDFULL);
 		return MOO_NULL;
 	}
 
@@ -227,7 +227,7 @@ static moo_oop_association_t lookup (moo_t* moo, moo_oop_set_t dic, const moo_oo
 	}
 
 	/* when value is MOO_NULL, perform no insertion */
-	moo->errnum = MOO_ENOENT;
+	moo_seterrnum (moo, MOO_ENOENT);
 	return MOO_NULL;
 }
 
@@ -300,7 +300,7 @@ int moo_deletedic (moo_t* moo, moo_oop_set_t dic, const moo_oocs_t* name)
 		index = (index + 1) % bs;
 	}
 
-	moo->errnum = MOO_ENOENT;
+	moo_seterrnum (moo, MOO_ENOENT);
 	return -1;
 
 found:

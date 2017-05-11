@@ -187,6 +187,9 @@ static moo_bch_t* sprintn_upper (moo_bch_t* nbuf, moo_uintmax_t num, int base, m
 /* ------------------------------------------------------------------------- */
 static int put_ooch (moo_t* moo, moo_oow_t mask, moo_ooch_t ch, moo_oow_t len)
 {
+	/* this is not equivalent to put_oocs(moo,mask,&ch, 1);
+	 * this function is to emit a single character multiple times */
+
 	if (len <= 0) return 1;
 
 	if (moo->log.len > 0 && moo->log.last_mask != mask)
@@ -212,7 +215,7 @@ redo:
 		if (len > MOO_TYPE_MAX(moo_oow_t) - moo->log.len) 
 		{
 			/* data too big */
-			moo->errnum = MOO_ETOOBIG;
+			moo_seterrnum (moo, MOO_ETOOBIG);
 			return -1;
 		}
 
@@ -264,6 +267,7 @@ static int put_oocs (moo_t* moo, moo_oow_t mask, const moo_ooch_t* ptr, moo_oow_
 		moo->log.len = 0;
 	}
 
+redo:
 	if (len > moo->log.capa - moo->log.len)
 	{
 		moo_oow_t newcapa;
@@ -272,14 +276,25 @@ static int put_oocs (moo_t* moo, moo_oow_t mask, const moo_ooch_t* ptr, moo_oow_
 		if (len > MOO_TYPE_MAX(moo_oow_t) - moo->log.len) 
 		{
 			/* data too big */
-			moo->errnum = MOO_ETOOBIG;
+			moo_seterrnum (moo, MOO_ETOOBIG);
 			return -1;
 		}
 
 		newcapa = MOO_ALIGN(moo->log.len + len, 512); /* TODO: adjust this capacity */
 		/* +1 to handle line ending injection more easily */
 		tmp = moo_reallocmem (moo, moo->log.ptr, (newcapa + 1) * MOO_SIZEOF(*tmp));
-		if (!tmp) return -1;
+		if (!tmp) 
+		{
+			if (moo->log.len > 0)
+			{
+				/* can't expand the buffer. just flush the existing contents */
+				moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
+				moo->log.len = 0;
+				goto redo;
+			}
+
+			return -1;
+		}
 
 		moo->log.ptr = tmp;
 		moo->log.capa = newcapa;
@@ -556,4 +571,78 @@ moo_ooi_t moo_logufmt (moo_t* moo, moo_oow_t mask, const moo_uch_t* fmt, ...)
 	}
 
 	return (x <= -1)? -1: fo.count;
+}
+
+
+/* -------------------------------------------------------------------------- 
+ * ERROR MESSAGE FORMATTING
+ * -------------------------------------------------------------------------- */
+
+static int put_errch (moo_t* moo, moo_oow_t mask, moo_ooch_t ch, moo_oow_t len)
+{
+	moo_oow_t max;
+
+	max = MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len - 1;
+	if (len > max) len = max;
+
+	if (len <= 0) return 1;
+
+	while (len > 0)
+	{
+		moo->errmsg.buf[moo->errmsg.len++] = ch;
+		len--;
+	}
+	moo->errmsg.buf[moo->errmsg.len] = '\0';
+
+	return 1; /* success */
+}
+
+static int put_errcs (moo_t* moo, moo_oow_t mask, const moo_ooch_t* ptr, moo_oow_t len)
+{
+	moo_oow_t max;
+
+	max = MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len - 1;
+	if (len > max) len = max;
+
+	if (len <= 0) return 1;
+
+	MOO_MEMCPY (&moo->errmsg.buf[moo->errmsg.len], ptr, len * MOO_SIZEOF(*ptr));
+	moo->errmsg.len += len;
+	moo->errmsg.buf[moo->errmsg.len] = '\0';
+
+	return 1; /* success */
+}
+
+void moo_seterrbfmt (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, ...)
+{
+	va_list ap;
+	moo_fmtout_t fo;
+
+	moo->errnum = errnum;
+	moo->errmsg.len = 0;
+
+	fo.mask = 0; /* not used */
+	fo.putch = put_errch;
+	fo.putcs = put_errcs;
+
+	va_start (ap, fmt);
+	moo_logbfmtv (moo, fmt, &fo, ap);
+	va_end (ap);
+}
+
+void moo_seterrufmt (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, ...)
+{
+	va_list ap;
+	moo_fmtout_t fo;
+
+	moo->errnum = errnum;
+	moo->errmsg.len = 0;
+
+	fo.mask = 0; /* not used */
+	fo.putch = put_errch;
+	fo.putcs = put_errcs;
+
+	va_start (ap, fmt);
+	moo_logufmtv (moo, fmt, &fo, ap);
+	va_end (ap);
 }

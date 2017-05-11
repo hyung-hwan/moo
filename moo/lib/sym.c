@@ -53,7 +53,7 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 			if (inc_max > 0) inc = inc_max;
 			else
 			{
-				moo->errnum = MOO_EOOMEM;
+				moo_seterrnum (moo, MOO_EOOMEM);
 				return MOO_NULL;
 			}
 		}
@@ -108,7 +108,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 
 	if (!create) 
 	{
-		moo->errnum = MOO_ENOENT;
+		moo_seterrnum (moo, MOO_ENOENT);
 		return MOO_NULL;
 	}
 
@@ -119,7 +119,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 	{
 		/* this built-in table is not allowed to hold more than 
 		 * MOO_SMOOI_MAX items for efficiency sake */
-		moo->errnum = MOO_EDFULL;
+		moo_seterrnum (moo, MOO_EDFULL);
 		return MOO_NULL;
 	}
 

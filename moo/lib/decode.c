@@ -561,7 +561,7 @@ int moo_decode (moo_t* moo, moo_oop_method_t mth, const moo_oocs_t* classfqn)
 
 			default:
 				LOG_INST_1 (moo, "UNKNOWN BYTE CODE ENCOUNTERED %x", (int)bcode);
-				moo->errnum = MOO_EINTERN;
+				moo_seterrnum (moo, MOO_EINTERN);
 				break;
 
 		}

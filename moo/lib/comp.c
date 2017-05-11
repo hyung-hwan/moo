@@ -377,7 +377,7 @@ static int end_include (moo_t* moo);
 
 static void set_syntax_error (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt)
 {
-	moo->errnum = MOO_ESYNTAX;
+	moo_seterrnum (moo, MOO_ESYNTAX);
 	moo->c->synerr.num = num;
 
 	/* The SCO compiler complains of this ternary operation saying:
@@ -533,7 +533,7 @@ static int string_to_smooi (moo_t* moo, moo_oocs_t* str, int radixed, moo_ooi_t*
 		if (value < old_value) 
 		{
 			/* overflow must have occurred */
-			moo->errnum = MOO_ERANGE;
+			moo_seterrnum (moo, MOO_ERANGE);
 			return -1;
 		}
 		old_value = value;
@@ -543,14 +543,14 @@ static int string_to_smooi (moo_t* moo, moo_oocs_t* str, int radixed, moo_ooi_t*
 	if (ptr < end)
 	{
 		/* trailing garbage? */
-		moo->errnum = MOO_EINVAL;
+		moo_seterrnum (moo, MOO_EINVAL);
 		return -1;
 	}
 
 	MOO_ASSERT (moo, -MOO_SMOOI_MAX == MOO_SMOOI_MIN);
 	if (value > MOO_SMOOI_MAX) 
 	{
-		moo->errnum = MOO_ERANGE;
+		moo_seterrnum (moo, MOO_ERANGE);
 		return -1;
 	}
 
@@ -2002,7 +2002,7 @@ static MOO_INLINE int emit_byte_instruction (moo_t* moo, moo_oob_t code)
 	 * at the max when incremented */
 	if (moo->c->mth.code.len == MOO_SMOOI_MAX - 1)
 	{
-		moo->errnum = MOO_EBCFULL; /* byte code too big */
+		moo_seterrnum (moo, MOO_EBCFULL); /* byte code too big */
 		return -1;
 	}
 
@@ -2118,7 +2118,7 @@ static int emit_single_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1
 	}
 
 	MOO_DEBUG1 (moo, "Invalid single param instruction opcode %d\n", (int)cmd);
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return -1;
 
 write_short:
@@ -2128,7 +2128,7 @@ write_short:
 write_long:
 	if (param_1 > MAX_CODE_PARAM) 
 	{
-		moo->errnum = MOO_ERANGE;
+		moo_seterrnum (moo, MOO_ERANGE);
 		return -1;
 	}
 #if (MOO_BCODE_LONG_PARAM_SIZE == 2)
@@ -2175,7 +2175,7 @@ static int emit_double_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1
 	}
 
 	MOO_DEBUG1 (moo, "Invalid double param instruction opcode %d\n", (int)cmd);
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return -1;
 
 write_short:
@@ -2186,7 +2186,7 @@ write_short:
 write_long:
 	if (param_1 > MAX_CODE_PARAM || param_2 > MAX_CODE_PARAM) 
 	{
-		moo->errnum = MOO_ERANGE;
+		moo_seterrnum (moo, MOO_ERANGE);
 		return -1;
 	}
 #if (MOO_BCODE_LONG_PARAM_SIZE == 2)
@@ -2725,7 +2725,7 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 		super = ((moo_oop_class_t)super)->superclass;
 	}
 
-	moo->errnum = MOO_ENOENT;
+	moo_seterrnum (moo, MOO_ENOENT);
 	return -1;
 
 done:
@@ -3912,7 +3912,7 @@ static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 
 				default:
 					/* internal error - it must not happen */
-					moo->errnum = MOO_EINTERN;
+					moo_seterrnum (moo, MOO_EINTERN);
 					return -1;
 			}
 		}
@@ -4637,7 +4637,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				break;
 
 			default:
-				moo->errnum = MOO_EINTERN;
+				moo_seterrnum (moo, MOO_EINTERN);
 				return -1;
 		}
 
@@ -5648,7 +5648,7 @@ static int compile_method_expression (moo_t* moo, int pop)
 					break;
 
 				default:
-					moo->errnum = MOO_EINTERN;
+					moo_seterrnum (moo, MOO_EINTERN);
 					goto oops;
 			}
 		}
@@ -7539,7 +7539,7 @@ int moo_compile (moo_t* moo, moo_ioimpl_t io)
 
 	if (!io)
 	{
-		moo->errnum = MOO_EINVAL;
+		moo_seterrnum (moo, MOO_EINVAL);
 		return -1;
 	}
 

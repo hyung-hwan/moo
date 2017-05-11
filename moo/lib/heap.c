@@ -33,7 +33,7 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 	heap = (moo_heap_t*)MOO_MMGR_ALLOC(moo->mmgr, MOO_SIZEOF(*heap) + size);
 	if (!heap)
 	{
-		moo->errnum = MOO_ESYSMEM;
+		moo_seterrnum (moo, MOO_ESYSMEM);
 		return MOO_NULL;
 	}
 
@@ -70,7 +70,7 @@ void* moo_allocheapmem (moo_t* moo, moo_heap_t* heap, moo_oow_t size)
 	{
 		MOO_DEBUG5 (moo, "Cannot allocate %zd bytes from heap - ptr %p limit %p size %zd free %zd\n",
 			size, heap->ptr, heap->limit, (moo_oow_t)(heap->limit - heap->base), (moo_oow_t)(heap->limit - heap->ptr));
-		moo->errnum = MOO_EOOMEM;
+		moo_seterrnum (moo, MOO_EOOMEM);
 		return MOO_NULL;
 	}
 

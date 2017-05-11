@@ -278,7 +278,7 @@ static MOO_INLINE int bigint_to_oow (moo_t* moo, moo_oop_t num, moo_oow_t* w)
 #	error UNSUPPORTED LIW BIT SIZE
 #endif
 
-	moo->errnum = MOO_ERANGE;
+	moo_seterrnum (moo, MOO_ERANGE);
 	return 0; /* not convertable */
 }
 
@@ -332,7 +332,7 @@ int moo_inttooow (moo_t* moo, moo_oop_t x, moo_oow_t* w)
 
 	if (is_bigint(moo, x)) return bigint_to_oow (moo, x, w);
 
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return 0; /* not convertable - too big, too small, or not an integer */
 }
 
@@ -347,7 +347,7 @@ int moo_inttoooi (moo_t* moo, moo_oop_t x, moo_ooi_t* i)
 		MOO_ASSERT (moo, MOO_TYPE_MAX(moo_ooi_t) + MOO_TYPE_MIN(moo_ooi_t) == -1); /* assume 2's complement */
 		if (w > (moo_oow_t)MOO_TYPE_MAX(moo_ooi_t) + 1)
 		{
-			moo->errnum = MOO_ERANGE; /* not convertable. number too small */
+			moo_seterrnum (moo, MOO_ERANGE); /* not convertable. number too small */
 			return 0;
 		}
 		*i = -w;
@@ -356,7 +356,7 @@ int moo_inttoooi (moo_t* moo, moo_oop_t x, moo_ooi_t* i)
 	{
 		if (w > MOO_TYPE_MAX(moo_ooi_t)) 
 		{
-			moo->errnum = MOO_ERANGE; /* not convertable. number too big */
+			moo_seterrnum (moo, MOO_ERANGE); /* not convertable. number too big */
 			return 0;
 		}
 		*i = w;
@@ -538,7 +538,7 @@ static MOO_INLINE moo_oop_t expand_bigint (moo_t* moo, moo_oop_t oop, moo_oow_t 
 
 	if (inc > MOO_OBJ_SIZE_MAX - count)
 	{
-		moo->errnum = MOO_EOOMEM; /* TODO: is it a soft failure or a hard failure? is this error code proper? */
+		moo_seterrnum (moo, MOO_EOOMEM); /* TODO: is it a soft failure or a hard failure? is this error code proper? */
 		return MOO_NULL;
 	}
 
@@ -1501,7 +1501,7 @@ static moo_oop_t add_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 	if (zs >= MOO_OBJ_SIZE_MAX)
 	{
-		moo->errnum = MOO_EOOMEM; /* TOOD: is it a soft failure or hard failure? */
+		moo_seterrnum (moo, MOO_EOOMEM); /* TOOD: is it a soft failure or hard failure? */
 		return MOO_NULL;
 	}
 	zs++;
@@ -1550,7 +1550,7 @@ static moo_oop_t multiply_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t 
 
 	if (ys > MOO_OBJ_SIZE_MAX - xs)
 	{
-		moo->errnum = MOO_EOOMEM; /* TOOD: is it a soft failure or hard failure? */
+		moo_seterrnum (moo, MOO_EOOMEM); /* TOOD: is it a soft failure or hard failure? */
 		return MOO_NULL;
 	}
 
@@ -1710,7 +1710,7 @@ moo_oop_t moo_addints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	return normalize_bigint (moo, z);
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -1801,7 +1801,7 @@ moo_oop_t moo_subints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	return normalize_bigint (moo, z);
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -1905,7 +1905,7 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	return normalize_bigint (moo, z);
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -1923,7 +1923,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 
 		if (yv == 0)
 		{
-			moo->errnum = MOO_EDIVBY0;
+			moo_seterrnum (moo, MOO_EDIVBY0);
 			return MOO_NULL;
 		}
 
@@ -2044,7 +2044,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 			switch (v)
 			{
 				case 0:
-					moo->errnum = MOO_EDIVBY0;
+					moo_seterrnum (moo, MOO_EDIVBY0);
 					return MOO_NULL;
 
 				case 1:
@@ -2157,7 +2157,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 	return normalize_bigint (moo, z);
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -2177,7 +2177,7 @@ moo_oop_t moo_negateint (moo_t* moo, moo_oop_t x)
 	}
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -2342,7 +2342,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -2555,7 +2555,7 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -2654,7 +2654,7 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		if (zalloc < zs)
 		{
 			/* overflow in zalloc calculation above */
-			moo->errnum = MOO_EOOMEM; /* TODO: is it a soft failure or hard failure? */
+			moo_seterrnum (moo, MOO_EOOMEM); /* TODO: is it a soft failure or hard failure? */
 			return MOO_NULL;
 		}
 
@@ -2773,7 +2773,7 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -2872,7 +2872,7 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		if (zalloc < zs)
 		{
 			/* overflow in zalloc calculation above */
-			moo->errnum = MOO_EOOMEM; /* TODO: is it a soft failure or hard failure? */
+			moo_seterrnum (moo, MOO_EOOMEM); /* TODO: is it a soft failure or hard failure? */
 			return MOO_NULL;
 		}
 
@@ -2990,7 +2990,7 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -3031,7 +3031,7 @@ moo_oop_t moo_bitinvint (moo_t* moo, moo_oop_t x)
 		if (zalloc < zs)
 		{
 			/* overflow in zalloc calculation above */
-			moo->errnum = MOO_EOOMEM; /* TODO: is it a soft failure or hard failure? */
+			moo_seterrnum (moo, MOO_EOOMEM); /* TODO: is it a soft failure or hard failure? */
 			return MOO_NULL;
 		}
 
@@ -3092,7 +3092,7 @@ moo_oop_t moo_bitinvint (moo_t* moo, moo_oop_t x)
 	}
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -3234,7 +3234,7 @@ static MOO_INLINE moo_oop_t rshift_negative_bigint_and_normalize (moo_t* moo, mo
 
 	/* this part must not be reached */
 	MOO_ASSERT (moo, !"internal error - must not happen");
-	moo->errnum = MOO_EINTERN;
+	moo_seterrnum (moo, MOO_EINTERN);
 	return MOO_NULL;
 }
 
@@ -3344,7 +3344,7 @@ static MOO_INLINE moo_oop_t lshift_bigint_and_normalize (moo_t* moo, moo_oop_t x
 
 	/* this part must not be reached */
 	MOO_ASSERT (moo, !"internal error - must not happen");
-	moo->errnum = MOO_EINTERN;
+	moo_seterrnum (moo, MOO_EINTERN);
 	return MOO_NULL;
 }
 
@@ -3518,7 +3518,7 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 					 * simply return a failure here becuase it's surely too 
 					 * large after shifting */
 					MOO_ASSERT (moo, MOO_TYPE_MAX(moo_oow_t) >= MOO_OBJ_SIZE_BITS_MAX);
-					moo->errnum = MOO_EOOMEM; /* is it a soft failure or a hard failure? is this error code proper? */
+					moo_seterrnum (moo, MOO_EOOMEM); /* is it a soft failure or a hard failure? is this error code proper? */
 					return MOO_NULL;
 				#else
 					return lshift_bigint_and_normalize (moo, x, y);
@@ -3564,7 +3564,7 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -3806,7 +3806,7 @@ moo_oop_t moo_strtoint (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, int ra
 
 oops_einval:
 	if (hwp && hw != hwp) moo_freemem (moo, hwp);
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -3857,7 +3857,7 @@ moo_oop_t moo_eqints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -3878,7 +3878,7 @@ moo_oop_t moo_neints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -3905,7 +3905,7 @@ moo_oop_t moo_gtints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -3932,7 +3932,7 @@ moo_oop_t moo_geints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -3959,7 +3959,7 @@ moo_oop_t moo_ltints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -3986,7 +3986,7 @@ moo_oop_t moo_leints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
 
@@ -4171,6 +4171,6 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 	return s;
 
 oops_einval:
-	moo->errnum = MOO_EINVAL;
+	moo_seterrnum (moo, MOO_EINVAL);
 	return MOO_NULL;
 }
