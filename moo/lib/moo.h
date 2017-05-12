@@ -89,14 +89,19 @@ enum moo_option_t
 {
 	MOO_TRAIT,
 	MOO_LOG_MASK,
+	MOO_LOG_MAXCAPA,
 	MOO_SYMTAB_SIZE,  /* default system table size */
 	MOO_SYSDIC_SIZE,  /* default system dictionary size */
 	MOO_PROCSTK_SIZE  /* default process stack size */
 };
 typedef enum moo_option_t moo_option_t;
 
+/* [NOTE] ensure that it is a power of 2 */
+#define MOO_LOG_CAPA_ALIGN 512
+
 enum moo_option_dflval_t
 {
+	MOO_DFL_LOG_MAXCAPA = MOO_LOG_CAPA_ALIGN * 16,
 	MOO_DFL_SYMTAB_SIZE = 5000,
 	MOO_DFL_SYSDIC_SIZE = 5000,
 	MOO_DFL_PROCSTK_SIZE = 5000
@@ -986,6 +991,7 @@ struct moo_t
 	{
 		unsigned int trait;
 		unsigned int log_mask;
+		moo_oow_t log_maxcapa;
 		moo_oow_t dfl_symtab_size;
 		moo_oow_t dfl_sysdic_size;
 		moo_oow_t dfl_procstk_size; 
@@ -1393,7 +1399,7 @@ MOO_EXPORT void moo_fini (
 #	define moo_setcmgr(moo,mgr) ((moo)->cmgr = (mgr))
 
 #	define moo_geterrnum(moo) ((moo)->errnum)
-#	define moo_seterrnum(moo,num) ((moo)->errmsg.len = 0, (moo)->errnum = (num),)
+#	define moo_seterrnum(moo,num) ((moo)->errmsg.len = 0, (moo)->errnum = (num))
 #endif
 
 

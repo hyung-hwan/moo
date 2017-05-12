@@ -92,11 +92,12 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 	moo->vmprim = *vmprim;
 
 	moo->option.log_mask = ~0u;
+	moo->option.log_maxcapa = MOO_DFL_LOG_MAXCAPA;
 	moo->option.dfl_symtab_size = MOO_DFL_SYMTAB_SIZE;
 	moo->option.dfl_sysdic_size = MOO_DFL_SYSDIC_SIZE;
 	moo->option.dfl_procstk_size = MOO_DFL_PROCSTK_SIZE;
 
-	moo->log.capa = 512; /* TODO: is this a good initial size? */
+	moo->log.capa = MOO_ALIGN_POW2(1, MOO_LOG_CAPA_ALIGN); /* TODO: is this a good initial size? */
 	/* alloate the log buffer in advance though it may get reallocated
 	 * in put_oocs and put_ooch in logfmt.c. this is to let the logging
 	 * routine still function despite some side-effects when
@@ -239,6 +240,10 @@ int moo_setoption (moo_t* moo, moo_option_t id, const void* value)
 			moo->option.log_mask = *(const unsigned int*)value;
 			return 0;
 
+		case MOO_LOG_MAXCAPA:
+			moo->option.log_maxcapa = *(moo_oow_t*)value;
+			return 0;
+
 		case MOO_SYMTAB_SIZE:
 		{
 			moo_oow_t w;
@@ -288,6 +293,10 @@ int moo_getoption (moo_t* moo, moo_option_t id, void* value)
 
 		case MOO_LOG_MASK:
 			*(unsigned int*)value = moo->option.log_mask;
+			return 0;
+
+		case MOO_LOG_MAXCAPA:
+			*(moo_oow_t*)value = moo->option.log_mask;
 			return 0;
 
 		case MOO_SYMTAB_SIZE:

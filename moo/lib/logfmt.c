@@ -222,12 +222,22 @@ redo:
 			len = max;
 		}
 
-		newcapa = MOO_ALIGN_POW2(moo->log.len + len, 512); /* TODO: adjust this capacity */
+		newcapa = MOO_ALIGN_POW2(moo->log.len + len, MOO_LOG_CAPA_ALIGN); /* TODO: adjust this capacity */
+		if (newcapa > moo->option.log_maxcapa) 
+		{
+			/* [NOTE]
+			 * it doesn't adjust newcapa to moo->option.log_maxcapa.
+			 * nor does it cut the input to fit it into the adjusted capacity.
+			 * if maxcapa set is not aligned to MOO_LOG_CAPA_ALIGN,
+			 * the largest buffer capacity may be suboptimal */
+			goto make_do;
+		}
+
 		/* +1 to handle line ending injection more easily */
-		//tmp = moo_reallocmem (moo, moo->log.ptr, (newcapa + 1) * MOO_SIZEOF(*tmp)); 
-tmp = 0;
+		tmp = moo_reallocmem (moo, moo->log.ptr, (newcapa + 1) * MOO_SIZEOF(*tmp)); 
 		if (!tmp) 
 		{
+		make_do:
 			if (moo->log.len > 0)
 			{
 				/* can't expand the buffer. just flush the existing contents */
@@ -246,14 +256,15 @@ tmp = 0;
 				rem += len - moo->log.capa;
 				len = moo->log.capa;
 			}
-			goto out;
-		}
 
-		moo->log.ptr = tmp;
-		moo->log.capa = newcapa; 
+		}
+		else
+		{
+			moo->log.ptr = tmp;
+			moo->log.capa = newcapa; 
+		}
 	}
 
-out:
 	while (len > 0)
 	{
 		moo->log.ptr[moo->log.len++] = ch;
@@ -298,7 +309,6 @@ redo:
 		moo_oow_t newcapa, max;
 		moo_ooch_t* tmp;
 
-
 		max = MOO_TYPE_MAX(moo_oow_t) - moo->log.len;
 		if (len > max) 
 		{
@@ -308,11 +318,21 @@ redo:
 		}
 
 		newcapa = MOO_ALIGN_POW2(moo->log.len + len, 512); /* TODO: adjust this capacity */
+		if (newcapa > moo->option.log_maxcapa)
+		{
+			/* [NOTE]
+			 * it doesn't adjust newcapa to moo->option.log_maxcapa.
+			 * nor does it cut the input to fit it into the adjusted capacity.
+			 * if maxcapa set is not aligned to MOO_LOG_CAPA_ALIGN,
+			 * the largest buffer capacity may be suboptimal */
+			goto make_do;
+		}
+
 		/* +1 to handle line ending injection more easily */
-		//tmp = moo_reallocmem (moo, moo->log.ptr, (newcapa + 1) * MOO_SIZEOF(*tmp));
-tmp = 0;
+		tmp = moo_reallocmem (moo, moo->log.ptr, (newcapa + 1) * MOO_SIZEOF(*tmp));
 		if (!tmp) 
 		{
+		make_do:
 			if (moo->log.len > 0)
 			{
 				/* can't expand the buffer. just flush the existing contents */
@@ -331,14 +351,14 @@ tmp = 0;
 				rem += len - moo->log.capa;
 				len = moo->log.capa;
 			}
-			goto out;
 		}
-
-		moo->log.ptr = tmp;
-		moo->log.capa = newcapa;
+		else
+		{
+			moo->log.ptr = tmp;
+			moo->log.capa = newcapa;
+		}
 	}
 
-out:
 	MOO_MEMCPY (&moo->log.ptr[moo->log.len], ptr, len * MOO_SIZEOF(*ptr));
 	moo->log.len += len;
 	moo->log.last_mask = mask;

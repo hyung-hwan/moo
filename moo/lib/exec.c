@@ -1464,7 +1464,7 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 	{
 		/* the receiver is not a class object */
 		MOO_DEBUG1 (moo, "<pf_basic_new> Receiver is not a class - %O\n", _class);
-		moo_seterrnum (moo, MOO_EMSGRCV);
+		moo_seterrbfmt (moo, MOO_EMSGRCV, "non-class receiver - %O", _class);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1472,7 +1472,7 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 	if (MOO_CLASS_SELFSPEC_FLAGS(MOO_OOP_TO_SMOOI(_class->selfspec)) & MOO_CLASS_SELFSPEC_FLAG_LIMITED)
 	{
 		MOO_DEBUG1 (moo, "<pf_basic_new> Receiver is #limited - %O\n", _class);
-		moo_seterrnum (moo, MOO_EPERM);
+		moo_seterrbfmt (moo, MOO_EPERM, "#limited receiver - %O", _class);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1482,8 +1482,8 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 		if (moo_inttooow (moo, szoop, &size) <= 0)
 		{
 			/* integer out of range or not integer */
-			MOO_DEBUG0 (moo, "<pf_basic_new> Size out of range or not integer\n");
-			moo_seterrnum (moo, MOO_EINVAL);
+			MOO_DEBUG1 (moo, "<pf_basic_new> Size out of range or not integer - %O\n", szoop);
+			moo_seterrbfmt (moo, MOO_EINVAL, "size out of range or not integer - %O", szoop);
 			return MOO_PF_FAILURE;
 		}
 	}
@@ -4076,12 +4076,12 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				if (stack_base != moo->sp - nargs - 1)
 				{
 					/* a primitive function handler must not touch the stack when it returns soft failure */
-					MOO_DEBUG3 (moo, "Stack seems to get corrupted by a primitive handler function - %O<<%.*js\n", method->owner, MOO_OBJ_GET_SIZE(method->name), MOO_OBJ_GET_CHAR_SLOT(method->name));
+					MOO_DEBUG3 (moo, "Stack seems to get corrupted by a primitive handler function - %O>>%.*js\n", method->owner, MOO_OBJ_GET_SIZE(method->name), MOO_OBJ_GET_CHAR_SLOT(method->name));
 					moo_seterrnum (moo, MOO_EINTERN);
 					return -1;
 				}
 
-				MOO_DEBUG3 (moo, "Sending primitiveFailed for empty primitive body - %O<<%.*js\n", method->owner, MOO_OBJ_GET_SIZE(method->name), MOO_OBJ_GET_CHAR_SLOT(method->name));
+				MOO_DEBUG3 (moo, "Sending primitiveFailed for empty primitive body - %O>>%.*js\n", method->owner, MOO_OBJ_GET_SIZE(method->name), MOO_OBJ_GET_CHAR_SLOT(method->name));
 				/* 
 				 *  | arg1     | <---- stack_base + 3
 				 *  | arg0     | <---- stack_base + 2
@@ -4097,10 +4097,12 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 
 				/* send primitiveFailed to self */
 				if (send_message_with_str (moo, prim_fail_msg, 15, 0, nargs + 1) <= -1) return -1;
-				break;
 			}
-
-			if (activate_new_method (moo, method, nargs) <= -1) return -1;
+			else
+			{
+				/* arrange to execute the method body */
+				if (activate_new_method (moo, method, nargs) <= -1) return -1;
+			}
 			break;
 		}
 
