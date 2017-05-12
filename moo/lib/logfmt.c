@@ -189,6 +189,7 @@ static int put_ooch (moo_t* moo, moo_oow_t mask, moo_ooch_t ch, moo_oow_t len)
 {
 	/* this is not equivalent to put_oocs(moo,mask,&ch, 1);
 	 * this function is to emit a single character multiple times */
+	moo_oow_t rem;
 
 	if (len <= 0) return 1;
 
@@ -207,50 +208,73 @@ static int put_ooch (moo_t* moo, moo_oow_t mask, moo_ooch_t ch, moo_oow_t len)
 	}
 
 redo:
+	rem = 0;
 	if (len > moo->log.capa - moo->log.len)
 	{
-		moo_oow_t newcapa;
+		moo_oow_t newcapa, max;
 		moo_ooch_t* tmp;
 
-		if (len > MOO_TYPE_MAX(moo_oow_t) - moo->log.len) 
+		max = MOO_TYPE_MAX(moo_oow_t) - moo->log.len;
+		if (len > max)
 		{
-			/* data too big */
-			moo_seterrnum (moo, MOO_ETOOBIG);
-			return -1;
+			/* data too big. */
+			rem += len - max;
+			len = max;
 		}
 
-		newcapa = MOO_ALIGN(moo->log.len + len, 512); /* TODO: adjust this capacity */
+		newcapa = MOO_ALIGN_POW2(moo->log.len + len, 512); /* TODO: adjust this capacity */
 		/* +1 to handle line ending injection more easily */
-		tmp = moo_reallocmem (moo, moo->log.ptr, (newcapa + 1) * MOO_SIZEOF(*tmp)); 
+		//tmp = moo_reallocmem (moo, moo->log.ptr, (newcapa + 1) * MOO_SIZEOF(*tmp)); 
+tmp = 0;
 		if (!tmp) 
 		{
 			if (moo->log.len > 0)
 			{
 				/* can't expand the buffer. just flush the existing contents */
+				/* TODO: HANDLE LINE ENDING CONVENTION BETTER... */
+				if (moo->log.ptr[moo->log.len - 1] != '\n')
+				{
+					/* no line ending - append a line terminator */
+					moo->log.ptr[moo->log.len++] = '\n';
+				}
 				moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
 				moo->log.len = 0;
-				goto redo;
 			}
-			return -1;
+
+			if (len > moo->log.capa)
+			{
+				rem += len - moo->log.capa;
+				len = moo->log.capa;
+			}
+			goto out;
 		}
 
 		moo->log.ptr = tmp;
 		moo->log.capa = newcapa; 
 	}
 
-
+out:
 	while (len > 0)
 	{
 		moo->log.ptr[moo->log.len++] = ch;
 		len--;
 	}
-
 	moo->log.last_mask = mask;
+
+	if (rem > 0)
+	{
+		len = rem;
+		goto redo;
+	}
+
+	
 	return 1; /* success */
 }
 
 static int put_oocs (moo_t* moo, moo_oow_t mask, const moo_ooch_t* ptr, moo_oow_t len)
 {
+	moo_oow_t rem;
+
 	if (len <= 0) return 1;
 
 	if (moo->log.len > 0 && moo->log.last_mask != mask)
@@ -268,42 +292,64 @@ static int put_oocs (moo_t* moo, moo_oow_t mask, const moo_ooch_t* ptr, moo_oow_
 	}
 
 redo:
+	rem = 0;
 	if (len > moo->log.capa - moo->log.len)
 	{
-		moo_oow_t newcapa;
+		moo_oow_t newcapa, max;
 		moo_ooch_t* tmp;
 
-		if (len > MOO_TYPE_MAX(moo_oow_t) - moo->log.len) 
+
+		max = MOO_TYPE_MAX(moo_oow_t) - moo->log.len;
+		if (len > max) 
 		{
-			/* data too big */
-			moo_seterrnum (moo, MOO_ETOOBIG);
-			return -1;
+			/* data too big. */
+			rem += len - max;
+			len = max;
 		}
 
-		newcapa = MOO_ALIGN(moo->log.len + len, 512); /* TODO: adjust this capacity */
+		newcapa = MOO_ALIGN_POW2(moo->log.len + len, 512); /* TODO: adjust this capacity */
 		/* +1 to handle line ending injection more easily */
-		tmp = moo_reallocmem (moo, moo->log.ptr, (newcapa + 1) * MOO_SIZEOF(*tmp));
+		//tmp = moo_reallocmem (moo, moo->log.ptr, (newcapa + 1) * MOO_SIZEOF(*tmp));
+tmp = 0;
 		if (!tmp) 
 		{
 			if (moo->log.len > 0)
 			{
 				/* can't expand the buffer. just flush the existing contents */
+				/* TODO: HANDLE LINE ENDING CONVENTION BETTER... */
+				if (moo->log.ptr[moo->log.len - 1] != '\n')
+				{
+					/* no line ending - append a line terminator */
+					moo->log.ptr[moo->log.len++] = '\n';
+				}
 				moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
 				moo->log.len = 0;
-				goto redo;
 			}
 
-			return -1;
+			if (len > moo->log.capa)
+			{
+				rem += len - moo->log.capa;
+				len = moo->log.capa;
+			}
+			goto out;
 		}
 
 		moo->log.ptr = tmp;
 		moo->log.capa = newcapa;
 	}
 
+out:
 	MOO_MEMCPY (&moo->log.ptr[moo->log.len], ptr, len * MOO_SIZEOF(*ptr));
 	moo->log.len += len;
-
 	moo->log.last_mask = mask;
+
+	if (rem > 0)
+	{
+		ptr += len;
+		len = rem;
+		goto redo;
+	}
+
 	return 1; /* success */
 }
 

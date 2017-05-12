@@ -637,7 +637,11 @@ static int write_all (int fd, const char* ptr, moo_oow_t len)
 			#if defined(EWOULDBLOCK)
 			if (errno == EWOULDBLOCK) continue;
 			#endif
+		#endif
 
+		#if defined(EINTR)
+			/* TODO: would this interfere with non-blocking nature of this VM? */
+			if (errno == EINTR) continue;
 		#endif
 			return -1;
 		}

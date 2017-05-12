@@ -81,13 +81,15 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 		##thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
 		
 ## TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
+System logNl: '== BACKTRACE =='.
 ctx := thisContext.
 while (ctx notNil)
 {
-	if (ctx class == MethodContext) { (ctx method owner name & '>>' & ctx method name) dump }.
+	if (ctx class == MethodContext) { System logNl: (' ' & ctx method owner name & '>>' & ctx method name) }.
 	## TODO: include blockcontext???
 	ctx := ctx sender.
 }.
+System logNl: '== END OF BACKTRACE =='.
 
 		thisContext unwindTo: (thisProcess initialContext) return: nil.
 		('### EXCEPTION NOT HANDLED #### ' & self class name & ' - ' & self messageText) dump.
