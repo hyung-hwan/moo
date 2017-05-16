@@ -415,6 +415,34 @@ struct moo_loop_t
 	moo_loop_t* next;
 };
 
+typedef struct moo_pooldic_t moo_pooldic_t;
+struct moo_pooldic_t
+{
+	moo_oocs_t name;
+	moo_oocs_t fqn;
+	moo_oow_t fqn_capa;
+	moo_ioloc_t fqn_loc;
+
+	moo_oop_set_t pd_oop;
+	moo_oop_set_t ns_oop;
+};
+
+typedef struct moo_oopbuf_t moo_oopbuf_t;
+struct moo_oopbuf_t
+{
+	moo_oop_t* ptr;
+	moo_oow_t  count;
+	moo_oow_t  capa;
+};
+
+typedef struct moo_oobbuf_t moo_oobbuf_t;
+struct moo_oobbuf_t
+{
+	moo_oob_t* ptr;
+	moo_oow_t  count;
+	moo_oow_t  capa;
+};
+
 struct moo_compiler_t
 {
 	/* input handler */
@@ -440,13 +468,21 @@ struct moo_compiler_t
 	/* the last token read */
 	moo_iotok_t  tok;
 	moo_iolink_t* io_names;
+#if 0
 	int in_array;
+#endif
 
 	moo_synerr_t synerr;
 
-	/* temporary space to handle an illegal character */
+	/* temporary space used when dealing with an illegal character */
 	moo_ooch_t ilchr;
 	moo_oocs_t ilchr_ucs;
+
+	/* workspace to use when reading byte array elements */
+	moo_oobbuf_t balit;
+
+	/* workspace space to use when reading an array */
+	moo_oopbuf_t arlit;
 
 	/* information about a class being compiled */
 	struct
@@ -499,13 +535,20 @@ struct moo_compiler_t
 		} var[3];
 
 		/* buffer to hold pooldic import declaration */
-		moo_oocs_t pooldic;
-		moo_oow_t pooldic_capa;
-		moo_oow_t pooldic_count;
+		struct
+		{
+			moo_oocs_t dcl;
+			moo_oow_t dcl_capa;
+			moo_oow_t dcl_count;
 
-		/* used to hold imported pool dictionarie objects */
-		moo_oop_set_t* pooldic_imp_oops; 
-		moo_oow_t pooldic_imp_oops_capa;
+			/* used to hold imported pool dictionarie objects */
+			moo_oop_set_t* oops; 
+			moo_oow_t oops_capa;
+		} pooldic_imp;
+
+
+		/* pooldic declaration inside class */
+		moo_pooldic_t pooldic;
 	} cls;
 
 	/* information about a method being comipled */
@@ -546,19 +589,8 @@ struct moo_compiler_t
 		moo_oow_t tmpr_nargs;
 
 		/* literals */
-		moo_oop_t* literals;
-		moo_oow_t literal_count;
-		moo_oow_t literal_capa;
+		moo_oopbuf_t literals;
 
-		/* byte array elements */
-		moo_oob_t* balit;
-		moo_oow_t balit_count;
-		moo_oow_t balit_capa;
-
-		/* array elements */
-		moo_oop_t* arlit;
-		moo_oow_t arlit_count;
-		moo_oow_t arlit_capa;
 
 		/* 0 for no primitive, 1 for a normal primitive, 2 for a named primitive */
 		int pftype;

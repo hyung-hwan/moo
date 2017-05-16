@@ -49,7 +49,7 @@ void moo_dumpsymtab (moo_t* moo)
 
 void moo_dumpdic (moo_t* moo, moo_oop_set_t dic, const moo_bch_t* title)
 {
-	moo_oow_t i, j;
+	moo_oow_t i;
 	moo_oop_association_t ass;
 
 	MOO_DEBUG0 (moo, "--------------------------------------------\n");

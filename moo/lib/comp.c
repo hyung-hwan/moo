@@ -688,8 +688,11 @@ static int add_to_oow_pool (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t v)
 #define GET_TOKEN(moo) \
 	do { if (get_token(moo) <= -1) return -1; } while (0)
 
-#define GET_TOKEN_WITH_ERRRET(moo, v_ret) \
-	do { if (get_token(moo) <= -1) return v_ret; } while (0)
+#define GET_TOKEN_RETURN(moo,fail_ret) \
+	do { if (get_token(moo) <= -1) return fail_ret; } while (0)
+
+#define GET_TOKEN_GOTO(moo,fail_label) \
+	do { if (get_token(moo) <= -1) goto fail_label; } while (0)
 
 #define ADD_TOKEN_STR(moo,s,l) \
 	do { if (add_token_str(moo, s, l) <= -1) return -1; } while (0)
@@ -2476,35 +2479,35 @@ static int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index)
 {
 	moo_oow_t i;
 
-	for (i = 0; i < moo->c->mth.literal_count; i++) 
+	for (i = 0; i < moo->c->mth.literals.count; i++) 
 	{
 		/* 
 		 * this removes redundancy of symbols, characters, and small integers. 
 		 * more complex redundacy check may be done somewhere else like 
 		 * in add_string_literal().
 		 */
-		if (moo->c->mth.literals[i] == lit) 
+		if (moo->c->mth.literals.ptr[i] == lit) 
 		{
 			*index = i;
 			return i;
 		}
 	}
 
-	if (moo->c->mth.literal_count >= moo->c->mth.literal_capa)
+	if (moo->c->mth.literals.count >= moo->c->mth.literals.capa)
 	{
 		moo_oop_t* tmp;
 		moo_oow_t new_capa;
 
-		new_capa = MOO_ALIGN (moo->c->mth.literal_count + 1, LITERAL_BUFFER_ALIGN);
-		tmp = (moo_oop_t*)moo_reallocmem (moo, moo->c->mth.literals, new_capa * MOO_SIZEOF(*tmp));
+		new_capa = MOO_ALIGN (moo->c->mth.literals.count + 1, LITERAL_BUFFER_ALIGN);
+		tmp = (moo_oop_t*)moo_reallocmem (moo, moo->c->mth.literals.ptr, new_capa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
-		moo->c->mth.literal_capa = new_capa;
-		moo->c->mth.literals = tmp;
+		moo->c->mth.literals.capa = new_capa;
+		moo->c->mth.literals.ptr = tmp;
 	}
 
-	*index = moo->c->mth.literal_count;
-	moo->c->mth.literals[moo->c->mth.literal_count++] = lit;
+	*index = moo->c->mth.literals.count;
+	moo->c->mth.literals.ptr[moo->c->mth.literals.count++] = lit;
 	return 0;
 }
 
@@ -2513,9 +2516,9 @@ static int add_string_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* ind
 	moo_oop_t lit;
 	moo_oow_t i;
 
-	for (i = 0; i < moo->c->mth.literal_count; i++) 
+	for (i = 0; i < moo->c->mth.literals.count; i++) 
 	{
-		lit = moo->c->mth.literals[i];
+		lit = moo->c->mth.literals.ptr[i];
 
 		if (MOO_CLASSOF(moo, lit) == moo->_string && 
 		    MOO_OBJ_GET_SIZE(lit) == str->len &&
@@ -2559,6 +2562,13 @@ static MOO_INLINE int set_superclass_fqn (moo_t* moo, const moo_oocs_t* name)
 static MOO_INLINE int set_class_modname (moo_t* moo, const moo_oocs_t* name)
 {
 	if (copy_string_to (moo, name, &moo->c->cls.modname, &moo->c->cls.modname_capa, 0, '\0') <= -1) return -1;
+	return 0;
+}
+
+static MOO_INLINE int set_pooldic_fqn (moo_t* moo, moo_pooldic_t* pd, const moo_oocs_t* name)
+{
+	if (copy_string_to (moo, name, &pd->fqn, &pd->fqn_capa, 0, '\0') <= -1) return -1;
+	pd->name = pd->fqn;
 	return 0;
 }
 
@@ -2611,23 +2621,23 @@ static int set_class_level_variable_initv (moo_t* moo, var_type_t var_type, moo_
 	return 0;
 }
 
-static MOO_INLINE int add_pool_dictionary (moo_t* moo, const moo_oocs_t* name, moo_oop_set_t pooldic_oop)
+static MOO_INLINE int add_pooldic_import (moo_t* moo, const moo_oocs_t* name, moo_oop_set_t pooldic_oop)
 {
-	if (moo->c->cls.pooldic_count >= moo->c->cls.pooldic_imp_oops_capa)
+	if (moo->c->cls.pooldic_imp.dcl_count >= moo->c->cls.pooldic_imp.oops_capa)
 	{
 		moo_oow_t new_capa;
 		moo_oop_set_t* tmp;
 
-		new_capa = MOO_ALIGN(moo->c->cls.pooldic_imp_oops_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
-		tmp = moo_reallocmem (moo, moo->c->cls.pooldic_imp_oops, new_capa * MOO_SIZEOF(moo_oop_set_t));
+		new_capa = MOO_ALIGN(moo->c->cls.pooldic_imp.oops_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
+		tmp = moo_reallocmem (moo, moo->c->cls.pooldic_imp.oops, new_capa * MOO_SIZEOF(moo_oop_set_t));
 		if (!tmp) return -1;
 
-		moo->c->cls.pooldic_imp_oops_capa = new_capa;
-		moo->c->cls.pooldic_imp_oops = tmp;
+		moo->c->cls.pooldic_imp.oops_capa = new_capa;
+		moo->c->cls.pooldic_imp.oops = tmp;
 	}
 
-	moo->c->cls.pooldic_imp_oops[moo->c->cls.pooldic_count] = pooldic_oop;
-	moo->c->cls.pooldic_count++;
+	moo->c->cls.pooldic_imp.oops[moo->c->cls.pooldic_imp.dcl_count] = pooldic_oop;
+	moo->c->cls.pooldic_imp.dcl_count++;
 /* TODO: check if pooldic_count overflows */
 
 	return 0;
@@ -3055,9 +3065,9 @@ static int resolve_pooldic (moo_t* moo, int dotted, const moo_oocs_t* name)
 	}
 
 	/* check if the same dictionary pool has been declared for import */
-	for (i = 0; i < moo->c->cls.pooldic_count; i++)
+	for (i = 0; i < moo->c->cls.pooldic_imp.dcl_count; i++)
 	{
-		if ((moo_oop_set_t)ass->value == moo->c->cls.pooldic_imp_oops[i])
+		if ((moo_oop_set_t)ass->value == moo->c->cls.pooldic_imp.oops[i])
 		{
 			set_syntax_error (moo, MOO_SYNERR_POOLDICDUPL, TOKEN_LOC(moo), name);
 			return -1;
@@ -3081,19 +3091,19 @@ static int import_pool_dictionary (moo_t* moo, moo_oop_set_t ns_oop, const moo_o
 	}
 
 	/* check if the same dictionary pool has been declared for import */
-	for (i = 0; i < moo->c->cls.pooldic_count; i++)
+	for (i = 0; i < moo->c->cls.pooldic_imp.dcl_count; i++)
 	{
-		if ((moo_oop_set_t)ass->value == moo->c->cls.pooldic_imp_oops[i])
+		if ((moo_oop_set_t)ass->value == moo->c->cls.pooldic_imp.oops[i])
 		{
 			set_syntax_error (moo, MOO_SYNERR_POOLDICDUPL, tok_loc, tok_name);
 			return -1;
 		}
 	}
 
-	if (add_pool_dictionary(moo, tok_name, (moo_oop_set_t)ass->value) <= -1) return -1;
-	if (copy_string_to (moo, tok_name, &moo->c->cls.pooldic, &moo->c->cls.pooldic_capa, 1, ' ') <= -1)
+	if (add_pooldic_import(moo, tok_name, (moo_oop_set_t)ass->value) <= -1) return -1;
+	if (copy_string_to (moo, tok_name, &moo->c->cls.pooldic_imp.dcl, &moo->c->cls.pooldic_imp.dcl_capa, 1, ' ') <= -1)
 	{
-		moo->c->cls.pooldic_count--; /* roll back add_pool_dictionary() */
+		moo->c->cls.pooldic_imp.dcl_count--; /* roll back add_pool_dictionary() */
 		return -1;
 	}
 
@@ -3876,9 +3886,9 @@ static int find_ident_in_nsdic_and_sysdic (moo_t* moo, const moo_oocs_t* name, c
 		moo_oop_association_t ass2 = MOO_NULL;
 
 		/* attempt to find the variable in pool dictionaries */
-		for (i = 0; i < moo->c->cls.pooldic_count; i++)
+		for (i = 0; i < moo->c->cls.pooldic_imp.dcl_count; i++)
 		{
-			ass = moo_lookupdic (moo, moo->c->cls.pooldic_imp_oops[i], name);
+			ass = moo_lookupdic (moo, moo->c->cls.pooldic_imp.oops[i], name);
 			if (ass)
 			{
 				if (ass2)
@@ -4217,50 +4227,52 @@ static int compile_block_expression (moo_t* moo)
 
 static int add_to_byte_array_literal_buffer (moo_t* moo, moo_oob_t b)
 {
-	if (moo->c->mth.balit_count >= moo->c->mth.balit_capa)
+	if (moo->c->balit.count >= moo->c->balit.capa)
 	{
 		moo_oob_t* tmp;
 		moo_oow_t new_capa;
 
-		new_capa = MOO_ALIGN (moo->c->mth.balit_count + 1, BALIT_BUFFER_ALIGN);
-		tmp = (moo_oob_t*)moo_reallocmem (moo, moo->c->mth.balit, new_capa * MOO_SIZEOF(*tmp));
+		new_capa = MOO_ALIGN (moo->c->balit.count + 1, BALIT_BUFFER_ALIGN);
+		tmp = (moo_oob_t*)moo_reallocmem (moo, moo->c->balit.ptr, new_capa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
-		moo->c->mth.balit_capa = new_capa;
-		moo->c->mth.balit = tmp;
+		moo->c->balit.capa = new_capa;
+		moo->c->balit.ptr = tmp;
 	}
 
-/* TODO: overflow check of moo->c->mth.balit_count itself */
-	moo->c->mth.balit[moo->c->mth.balit_count++] = b;
+/* TODO: overflow check of moo->c->balit.count itself */
+	moo->c->balit.ptr[moo->c->balit.count++] = b;
 	return 0;
 }
 
 static int add_to_array_literal_buffer (moo_t* moo, moo_oop_t item)
 {
-	if (moo->c->mth.arlit_count >= moo->c->mth.arlit_capa)
+	if (moo->c->arlit.count >= moo->c->arlit.capa)
 	{
 		moo_oop_t* tmp;
 		moo_oow_t new_capa;
 
-		new_capa = MOO_ALIGN (moo->c->mth.arlit_count + 1, ARLIT_BUFFER_ALIGN);
-		tmp = (moo_oop_t*)moo_reallocmem (moo, moo->c->mth.arlit, new_capa * MOO_SIZEOF(*tmp));
+		new_capa = MOO_ALIGN (moo->c->arlit.count + 1, ARLIT_BUFFER_ALIGN);
+		tmp = (moo_oop_t*)moo_reallocmem (moo, moo->c->arlit.ptr, new_capa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
-		moo->c->mth.arlit_capa = new_capa;
-		moo->c->mth.arlit = tmp;
+		moo->c->arlit.capa = new_capa;
+		moo->c->arlit.ptr = tmp;
 	}
 
-/* TODO: overflow check of moo->c->mth.arlit_count itself */
-	moo->c->mth.arlit[moo->c->mth.arlit_count++] = item;
+/* TODO: overflow check of moo->c->arlit.count itself */
+	moo->c->arlit.ptr[moo->c->arlit.count++] = item;
 	return 0;
 }
 
-static int __read_byte_array_literal (moo_t* moo, moo_oop_t* xlit)
+static int read_byte_array_literal (moo_t* moo, moo_oop_t* xlit)
 {
 	moo_ooi_t tmp;
 	moo_oop_t ba;
 
-	moo->c->mth.balit_count = 0;
+	moo->c->balit.count = 0;
+
+	GET_TOKEN (moo); /* skip #[ and read the next token */
 
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_NUMLIT || TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT)
 	{
@@ -4293,169 +4305,63 @@ static int __read_byte_array_literal (moo_t* moo, moo_oop_t* xlit)
 		return -1;
 	}
 
-	ba = moo_instantiate (moo, moo->_byte_array, moo->c->mth.balit, moo->c->mth.balit_count);
+	ba = moo_instantiate (moo, moo->_byte_array, moo->c->balit.ptr, moo->c->balit.count);
 	if (!ba) return -1;
 
 	*xlit = ba;
 	return 0;
 }
 
-struct arlit_info_t
-{
-	moo_oow_t pos;
-	moo_oow_t len;
-};
 
-typedef struct arlit_info_t arlit_info_t;
-
-static int __read_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
+static int read_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 {
 	moo_oop_t lit, a;
-	moo_oow_t i, saved_arlit_count;
-	arlit_info_t info;
+	moo_oow_t i, j, saved_arlit_count;
 
-	info.pos = moo->c->mth.arlit_count;
-	info.len = 0;
+	saved_arlit_count = moo->c->arlit.count;
+
+	GET_TOKEN_GOTO (moo, oops); /* skip #( */
 
 	do
 	{
-		/* NOTE: see token_to_literal() for analogous code */
-		switch (TOKEN_TYPE(moo))
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_EOF) 
 		{
-			case MOO_IOTOK_NIL:
-				lit = moo->_nil;
-				break;
-
-			case MOO_IOTOK_TRUE:
-				lit = moo->_true;
-				break;
-
-			case MOO_IOTOK_FALSE:
-				lit = moo->_false;
-				break;
-
-			case MOO_IOTOK_ERROR: /* error */
-				lit = MOO_ERROR_TO_OOP(MOO_EGENERIC);
-				break;
-
-			case MOO_IOTOK_ERRLIT: /* error(X) */
-				lit = string_to_error (moo, TOKEN_NAME(moo));
-				break;
-
-			case MOO_IOTOK_CHARLIT:
-				MOO_ASSERT (moo, TOKEN_NAME_LEN(moo) == 1);
-				lit = MOO_CHAR_TO_OOP(TOKEN_NAME_PTR(moo)[0]);
-				break;
-
-/* TODO: floating pointer number */
-			case MOO_IOTOK_NUMLIT:
-			case MOO_IOTOK_RADNUMLIT:
-				lit = string_to_num (moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT);
-				if (rdonly && lit && MOO_OOP_IS_POINTER(lit)) MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
-				break;
-
-			case MOO_IOTOK_SYMLIT:
-				/* moo_makesymbol() sets RDONLY on a symbol. */
-				lit = moo_makesymbol (moo, TOKEN_NAME_PTR(moo) + 1, TOKEN_NAME_LEN(moo) - 1);
-				break;
-
-			case MOO_IOTOK_STRLIT:
-				lit = moo_instantiate (moo, moo->_string, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
-				if (rdonly && lit)
-				{
-					MOO_ASSERT (moo, MOO_OOP_IS_POINTER(lit));
-					MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
-				}
-				break;
-
-			case MOO_IOTOK_IDENT:
-			{
-				var_info_t var;
-				if (find_ident_in_nsdic_and_sysdic (moo, TOKEN_NAME(moo), TOKEN_LOC(moo), &var) <= -1) return -1;
-				MOO_ASSERT (moo, var.type == VAR_GLOBAL);
-				lit = var.gbl->value;
-				/* [NOTE] i don't mark RDONLY on an array member resolved via an identifier */
-				break;
-			}
-
-			case MOO_IOTOK_IDENT_DOTTED:
-			{
-				var_info_t var;
-				if (find_dotted_ident (moo, TOKEN_NAME(moo), TOKEN_LOC(moo), &var) <= -1) return -1;
-				if (var.type != VAR_GLOBAL)
-				{
-/* TODO: XXXXXXXXXXXXXXXXXXXXXXXXxx */
-					return -1;
-				}
-
-				lit = var.gbl->value;
-				/* [NOTE] i don't mark RDONLY on an array member resolved via an identifier */
-				break;
-			}
-
-			case MOO_IOTOK_BABRACK: /* #[ */
-				GET_TOKEN (moo);
-				if (__read_byte_array_literal (moo, &lit) <= -1) return -1;
-				if (rdonly)
-				{
-					MOO_ASSERT (moo, lit && MOO_OOP_IS_POINTER(lit));
-					MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
-				}
-				break;
-
-			case MOO_IOTOK_APAREN: /* #( */
-				saved_arlit_count = moo->c->mth.arlit_count;
-/* TODO: get rid of recursion?? */
-				GET_TOKEN (moo);
-				if (__read_array_literal (moo, rdonly, &lit) <= -1) return -1;
-				if (rdonly)
-				{
-					MOO_ASSERT (moo, lit && MOO_OOP_IS_POINTER(lit));
-					MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
-				}
-				moo->c->mth.arlit_count = saved_arlit_count;
-				break;
-
-			default:
-				goto done;
+			set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			goto oops;
 		}
+		else if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN) break;
 
-		if (!lit || add_to_array_literal_buffer(moo, lit) <= -1) return -1;
-		info.len++;
+		lit = token_to_literal (moo, rdonly);
+		if (!lit || add_to_array_literal_buffer(moo, lit) <= -1) goto oops;
 
-		GET_TOKEN (moo);
+		GET_TOKEN_GOTO (moo, oops);
 	}
 	while (1);
 
-done:
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
-	{
-		set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
-		return -1;
-	}
+	a = moo_instantiate (moo, moo->_array, MOO_NULL, moo->c->arlit.count - saved_arlit_count);
+	if (!a) goto oops;
 
-	a = moo_instantiate (moo, moo->_array, MOO_NULL, info.len);
-	if (!a) return -1;
-
-	for (i = 0; i < info.len; i++)
+	for (i = saved_arlit_count, j = 0; i < moo->c->arlit.count; i++, j++)
 	{
-		((moo_oop_oop_t)a)->slot[i] = moo->c->mth.arlit[info.pos + i];
+		((moo_oop_oop_t)a)->slot[j] = moo->c->arlit.ptr[i];
 	}
 
 	*xlit = a;
-	return 0;
-}
 
-static MOO_INLINE int read_byte_array_literal (moo_t* moo, moo_oop_t* xlit)
-{
-	GET_TOKEN (moo); /* skip #[ and read the next token */
-	return __read_byte_array_literal(moo, xlit);
+	moo->c->arlit.count = saved_arlit_count;
+	return 0;
+
+oops:
+	moo->c->arlit.count = saved_arlit_count;
+	return -1;
 }
 
 static int compile_byte_array_literal (moo_t* moo)
 {
 	moo_oop_t lit;
 	moo_oow_t index;
+
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_BABRACK);
 
 	if (read_byte_array_literal(moo, &lit) <= -1 ||
 	    add_literal(moo, lit, &index) <= -1 ||
@@ -4465,32 +4371,13 @@ static int compile_byte_array_literal (moo_t* moo)
 	return 0;
 }
 
-static int read_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
-{
-	int x;
-	moo_oow_t saved_arlit_count;
-
-	moo->c->in_array = 1;
-	if (get_token(moo) <= -1)
-	{
-		/* skip #( and read the next token */
-		moo->c->in_array = 0;
-		return -1;
-	}
-	saved_arlit_count = moo->c->mth.arlit_count;
-	x = __read_array_literal (moo, rdonly, xlit);
-	moo->c->mth.arlit_count = saved_arlit_count;
-	moo->c->in_array = 0;
-
-	return x;
-}
-
 static int compile_array_literal (moo_t* moo)
 {
 	moo_oop_t lit;
 	moo_oow_t index;
 
-	MOO_ASSERT (moo, moo->c->mth.arlit_count == 0);
+	MOO_ASSERT (moo, moo->c->arlit.count == 0);
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_APAREN);
 
 	if (read_array_literal(moo, 0, &lit) <= -1 ||
 	    add_literal(moo, lit, &index) <= -1 ||
@@ -5905,16 +5792,16 @@ static int add_compiled_method (moo_t* moo)
 	/* The variadic data part passed to moo_instantiate() is not GC-safe. 
 	 * let's delay initialization of variadic data a bit. */
 #if defined(MOO_USE_METHOD_TRAILER)
-	mth = (moo_oop_method_t)moo_instantiatewithtrailer (moo, moo->_method, moo->c->mth.literal_count, moo->c->mth.code.ptr, moo->c->mth.code.len);
+	mth = (moo_oop_method_t)moo_instantiatewithtrailer (moo, moo->_method, moo->c->mth.literals.count, moo->c->mth.code.ptr, moo->c->mth.code.len);
 #else
-	mth = (moo_oop_method_t)moo_instantiate (moo, moo->_method, MOO_NULL, moo->c->mth.literal_count);
+	mth = (moo_oop_method_t)moo_instantiate (moo, moo->_method, MOO_NULL, moo->c->mth.literals.count);
 #endif
 	if (!mth) goto oops;
 
-	for (i = 0; i < moo->c->mth.literal_count; i++)
+	for (i = 0; i < moo->c->mth.literals.count; i++)
 	{
 		/* let's do the variadic data initialization here */
-		mth->slot[i] = moo->c->mth.literals[i];
+		mth->slot[i] = moo->c->mth.literals.ptr[i];
 	}
 	moo_pushtmp (moo, (moo_oop_t*)&mth); tmp_count++;
 
@@ -6119,6 +6006,8 @@ oops:
 static int compile_method_definition (moo_t* moo)
 {
 	/* clear data required to compile a method */
+	MOO_ASSERT (moo, moo->c->arlit.count == 0);
+
 	moo->c->mth.type = MOO_METHOD_INSTANCE;
 	moo->c->mth.primitive = 0;
 	moo->c->mth.lenient = 0;
@@ -6132,9 +6021,8 @@ static int compile_method_definition (moo_t* moo)
 	moo->c->mth.tmprs.len = 0;
 	moo->c->mth.tmpr_count = 0;
 	moo->c->mth.tmpr_nargs = 0;
-	moo->c->mth.literal_count = 0;
-	moo->c->mth.balit_count = 0;
-	moo->c->mth.arlit_count = 0;
+	moo->c->mth.literals.count = 0;
+	moo->c->balit.count = 0;
 	moo->c->mth.pftype = PFTYPE_NONE;
 	moo->c->mth.pfnum = 0;
 	moo->c->mth.blk_depth = 0;
@@ -6535,7 +6423,7 @@ static int make_defined_class (moo_t* moo)
 	if (!tmp) return -1;
 	moo->c->cls.self_oop->classinstvars = (moo_oop_char_t)tmp;
 
-	tmp = moo_makestring (moo, moo->c->cls.pooldic.ptr, moo->c->cls.pooldic.len);
+	tmp = moo_makestring (moo, moo->c->cls.pooldic_imp.dcl.ptr, moo->c->cls.pooldic_imp.dcl.len);
 	if (!tmp) return -1;
 	moo->c->cls.self_oop->pooldics = (moo_oop_char_t)tmp;
 
@@ -7156,22 +7044,22 @@ static int compile_class_definition (moo_t* moo, int extend)
 	for (i = 0; i < MOO_COUNTOF(moo->c->cls.var); i++) 
 	{
 		moo->c->cls.var[i].str.len = 0;
-
 		moo->c->cls.var[i].count = 0;
 		moo->c->cls.var[i].total_count = 0;
 		moo->c->cls.var[i].initv_count = 0;
 	}
 
-	moo->c->cls.pooldic_count = 0;
-	moo->c->cls.pooldic.len = 0;
+	moo->c->cls.pooldic_imp.dcl_count = 0;
+	moo->c->cls.pooldic_imp.dcl.len = 0;
 
 	moo->c->cls.self_oop = MOO_NULL;
 	moo->c->cls.super_oop = MOO_NULL;
 	moo->c->cls.ns_oop = MOO_NULL;
 	moo->c->cls.superns_oop = MOO_NULL;
-	moo->c->mth.literal_count = 0;
-	moo->c->mth.balit_count = 0;
-	moo->c->mth.arlit_count = 0;
+	moo->c->mth.literals.count = 0;
+	moo->c->balit.count = 0;
+
+	moo->c->arlit.count = 0;
 
 	/* do main compilation work */
 	n = __compile_class_definition (moo, extend);
@@ -7182,23 +7070,24 @@ static int compile_class_definition (moo_t* moo, int extend)
 	moo->c->cls.super_oop = MOO_NULL;
 	moo->c->cls.ns_oop = MOO_NULL;
 	moo->c->cls.superns_oop = MOO_NULL;
-	moo->c->mth.literal_count = 0;
-	moo->c->mth.balit_count = 0;
-	moo->c->mth.arlit_count = 0;
+	moo->c->mth.literals.count = 0;
+	moo->c->balit.count = 0;
 
 	for (i = 0; i < MOO_COUNTOF(moo->c->cls.var); i++) 
 	{
 		moo->c->cls.var[i].initv_count = 0;
 	}
-	moo->c->cls.pooldic_count = 0;
+	moo->c->cls.pooldic_imp.dcl_count = 0;
+	moo->c->cls.pooldic_imp.dcl.len = 0;
+
+	MOO_ASSERT (moo, n <= -1 || (n >= 0 && moo->c->arlit.count == 0));
+	moo->c->arlit.count = 0;
 
 	return n;
 }
 
 static MOO_INLINE moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 {
-	/* NOTE: see __read_array_literal() for analogous code */
-
 	switch (TOKEN_TYPE(moo))
 	{
 		case MOO_IOTOK_NIL:
@@ -7245,6 +7134,38 @@ static MOO_INLINE moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 			return lit;
 		}
 
+#if 0
+/* TODO: if a constant name is specified (constant defined in a class) or
+ *       another variable with the default initialization value
+ *    class { var x := 20, y := x. } */
+		case MOO_IOTOK_IDENT:
+		case MOO_IOTOK_IDENT_DOTTED:
+#endif
+
+		case MOO_IOTOK_IDENT:
+		{
+			var_info_t var;
+			if (find_ident_in_nsdic_and_sysdic (moo, TOKEN_NAME(moo), TOKEN_LOC(moo), &var) <= -1) return MOO_NULL;
+			MOO_ASSERT (moo, var.type == VAR_GLOBAL);
+			/* [NOTE] i don't mark RDONLY on a value resolved via an identifier */
+			return var.gbl->value;
+		}
+
+		case MOO_IOTOK_IDENT_DOTTED:
+		{
+			var_info_t var;
+			if (find_dotted_ident (moo, TOKEN_NAME(moo), TOKEN_LOC(moo), &var) <= -1) return MOO_NULL;
+			if (var.type != VAR_GLOBAL)
+			{
+/* TODO: XXXXXXXXXXXXXXXXXXXXXXXXxx */
+				set_syntax_error (moo, MOO_SYNERR_VARINACC, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				return MOO_NULL;
+			}
+
+			/* [NOTE] i don't mark RDONLY on a value resolved via an identifier */
+			return var.gbl->value;
+		}
+
 		case MOO_IOTOK_BABRACK: /* #[ - byte array literal parenthesis */
 		{
 			moo_oop_t lit;
@@ -7269,14 +7190,6 @@ static MOO_INLINE moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 			return lit;
 		}
 
-#if 0
-/* TODO: if a constant name is specified (constant defined in a class) or
- *       another variable with the default initialization value
- *    class { var x := 20, y := x. } */
-		case MOO_IOTOK_IDENT:
-		case MOO_IOTOK_IDENT_DOTTED:
-#endif
-
 		default:
 			set_syntax_error (moo, MOO_SYNERR_LITERAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return MOO_NULL;
@@ -7288,23 +7201,26 @@ static int __compile_pooldic_definition (moo_t* moo)
 	moo_oop_t lit;
 	moo_ooi_t tally;
 	moo_oow_t i;
+	moo_oow_t saved_arlit_count;
+
+	saved_arlit_count = moo->c->arlit.count;
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && 
 	    TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
 	{
 		set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
-		return -1;
+		goto oops;
 	}
 
 	/* [NOTE] 
 	 * reuse moo->c->cls.fqn and related fields are reused 
 	 * to store the pool dictionary name */
-	if (set_class_fqn(moo, TOKEN_NAME(moo)) <= -1) return -1;
+	if (set_class_fqn(moo, TOKEN_NAME(moo)) <= -1) goto oops;
 	moo->c->cls.fqn_loc = moo->c->tok.loc;
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 	{
-		if (preprocess_dotted_name(moo, 0, MOO_NULL, &moo->c->cls.fqn, &moo->c->cls.fqn_loc, &moo->c->cls.name, &moo->c->cls.ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name(moo, 0, MOO_NULL, &moo->c->cls.fqn, &moo->c->cls.fqn_loc, &moo->c->cls.name, &moo->c->cls.ns_oop) <= -1) goto oops;
 	}
 	else
 	{
@@ -7315,84 +7231,90 @@ static int __compile_pooldic_definition (moo_t* moo)
 	{
 		/* a conflicting entry has been found */
 		set_syntax_error (moo, MOO_SYNERR_POOLDICDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
-		return -1;
+		goto oops;
 	}
 
-	GET_TOKEN (moo);
+	GET_TOKEN_GOTO (moo, oops);
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
 	{
 		set_syntax_error (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
-		return -1;
+		goto oops;
 	}
 
 	MOO_INFO2 (moo, "Defining a pool dictionary %.*js\n", moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
 
-	GET_TOKEN (moo);
+	GET_TOKEN_GOTO (moo, oops);
 
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
 	{
 		lit = moo_makesymbol (moo, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
-		if (!lit || add_to_array_literal_buffer (moo, lit) <= -1) return -1;
+		if (!lit || add_to_array_literal_buffer (moo, lit) <= -1) goto oops;
 
-		GET_TOKEN (moo);
+		GET_TOKEN_GOTO (moo, oops);
 
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_ASSIGN)
 		{
 			set_syntax_error (moo, MOO_SYNERR_ASSIGN, TOKEN_LOC(moo), TOKEN_NAME(moo));
-			return -1;
+			goto oops;
 		}
 
-		GET_TOKEN (moo);
+		GET_TOKEN_GOTO (moo, oops);
 
 		/* [NOTE]
 		 *   values assigned to a pool dictinary member are not read-only
 		 *   unlike the default initial values defined in a class */
 		lit = token_to_literal (moo, 0);
-		if (!lit) return -1;
+		if (!lit) goto oops;
 
 		/* for this definition, #pooldic MyPoolDic { a := 10. b := 20 },
 		 * arlit_buffer contains (#a 10 #b 20) when the 'while' loop is over. */
-		if (add_to_array_literal_buffer(moo, lit) <= -1) return -1;
-		GET_TOKEN (moo);
+		if (add_to_array_literal_buffer(moo, lit) <= -1) goto oops;
+		GET_TOKEN_GOTO (moo, oops);
 
 		/*if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) goto done;
 		else*/ if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
 		{
 			set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
-			return -1;
+			goto oops;
 		}
 
-		GET_TOKEN (moo);
+		GET_TOKEN_GOTO (moo, oops);
 	}
 
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
 		set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
-		return -1;
+		goto oops;
 	}
 
 /*done:*/
-	GET_TOKEN (moo);
+	GET_TOKEN_GOTO (moo, oops);
 
-	tally = moo->c->mth.arlit_count / 2;
+	tally = (moo->c->arlit.count - saved_arlit_count) / 2;
 /*TODO: tally and arlit_count range check */
 	/*if (!MOO_IN_SMOOI_RANGE(tally)) ERROR??*/
 
 	moo->c->cls.pooldic_oop = moo_makedic (moo, moo->_pool_dictionary, MOO_ALIGN(tally + 10, POOL_DICTIONARY_SIZE_ALIGN));
-	if (!moo->c->cls.pooldic_oop) return -1;
+	if (!moo->c->cls.pooldic_oop) goto oops;
 
-	for (i = 0; i < moo->c->mth.arlit_count; i += 2)
+	for (i = saved_arlit_count; i < moo->c->arlit.count; i += 2)
 	{
 		/* TODO: handle duplicate keys? */
-		if (!moo_putatdic(moo, moo->c->cls.pooldic_oop, moo->c->mth.arlit[i], moo->c->mth.arlit[i + 1])) return -1;
+		if (!moo_putatdic(moo, moo->c->cls.pooldic_oop, moo->c->arlit.ptr[i], moo->c->arlit.ptr[i + 1])) goto oops;
 	}
 
 	/* eveything seems ok. register the pool dictionary to the main
 	 * system dictionary or to the name space it belongs to */
 	lit = moo_makesymbol (moo, moo->c->cls.name.ptr, moo->c->cls.name.len);
-	if (!lit || !moo_putatdic (moo, moo->c->cls.ns_oop, lit, (moo_oop_t)moo->c->cls.pooldic_oop)) return -1;
+	if (!lit || !moo_putatdic (moo, moo->c->cls.ns_oop, lit, (moo_oop_t)moo->c->cls.pooldic_oop)) goto oops;
+
+	moo->c->arlit.count = saved_arlit_count;
 	return 0;
+
+oops:
+	moo->c->arlit.count = saved_arlit_count;
+	return -1;
 }
 
 static int compile_pooldic_definition (moo_t* moo)
@@ -7405,24 +7327,181 @@ static int compile_pooldic_definition (moo_t* moo)
 	MOO_MEMSET (&moo->c->cls.fqn_loc, 0, MOO_SIZEOF(moo->c->cls.fqn_loc));
 	moo->c->cls.pooldic_oop = MOO_NULL;
 	moo->c->cls.ns_oop = MOO_NULL;
-	moo->c->mth.balit_count = 0;
-	moo->c->mth.arlit_count = 0;
+	moo->c->balit.count = 0;
+	moo->c->arlit.count = 0;
 
+#if 0
 	/* these 2 are pooldic import information. pooldic definition doesn't
 	 * have another pooldic import in it */
-	moo->c->cls.pooldic_count = 0;
-	moo->c->cls.pooldic.len = 0;
+	moo->c->cls.pooldic_imp.dcl_count = 0;
+	moo->c->cls.pooldic_imp.dcl.len = 0;
+#endif
 
 	n = __compile_pooldic_definition (moo);
 
 	/* reset these oops plus literal pointers not to confuse gc_compiler() */
 	moo->c->cls.pooldic_oop = MOO_NULL;
 	moo->c->cls.ns_oop = MOO_NULL;
-	moo->c->mth.balit_count = 0;
-	moo->c->mth.arlit_count = 0;
 
-	MOO_ASSERT (moo, moo->c->cls.pooldic_count == 0);
-	MOO_ASSERT (moo, moo->c->cls.pooldic.len == 0);
+	MOO_ASSERT (moo, n <= -1 || (n >= 0 && moo->c->balit.count == 0));
+	moo->c->balit.count = 0;
+
+MOO_DEBUG2 (moo, "XXXXXXXXXXXXXXX %d %d\n", (int)n, (int)moo->c->arlit.count);
+	MOO_ASSERT (moo, n <= -1 || (n >= 0 && moo->c->arlit.count == 0));
+	moo->c->arlit.count = 0;
+
+#if 0
+	MOO_ASSERT (moo, moo->c->cls.pooldic_imp.dcl_count == 0);
+	MOO_ASSERT (moo, moo->c->cls.pooldic_imp.dcl.len == 0);
+#endif
+
+	return n;
+}
+
+static int __compile_pooldic_definition_in_class (moo_t* moo, moo_pooldic_t* pd)
+{
+	moo_oop_t lit;
+	moo_ooi_t tally;
+	moo_oow_t i;
+	moo_oow_t saved_arlit_count;
+
+	saved_arlit_count = moo->c->arlit.count;
+
+/* TODO: if calling from within a class, MOO_IOTOK_IDENT_DOTTED must be disallowed */
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && 
+	    TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
+	{
+		set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		goto oops;
+	}
+
+	if (set_pooldic_fqn(moo, pd, TOKEN_NAME(moo)) <= -1) goto oops;
+	pd->fqn_loc = moo->c->tok.loc;
+
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
+	{
+		if (preprocess_dotted_name(moo, 0, MOO_NULL, &pd->fqn, &pd->fqn_loc, &pd->name, &pd->ns_oop) <= -1) goto oops;
+	}
+	else
+	{
+		pd->ns_oop = moo->sysdic;
+	}
+
+	if (moo_lookupdic (moo, pd->ns_oop, &pd->name))
+	{
+		/* a conflicting entry has been found */
+		set_syntax_error (moo, MOO_SYNERR_POOLDICDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		goto oops;
+	}
+
+	GET_TOKEN (moo);
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
+	{
+		set_syntax_error (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		goto oops;
+	}
+
+	MOO_INFO2 (moo, "Defining a pool dictionary %.*js\n", pd->fqn.len, pd->fqn.ptr);
+
+	GET_TOKEN (moo);
+
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
+	{
+		lit = moo_makesymbol (moo, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
+		if (!lit || add_to_array_literal_buffer (moo, lit) <= -1) goto oops;
+
+		GET_TOKEN (moo);
+
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_ASSIGN)
+		{
+			set_syntax_error (moo, MOO_SYNERR_ASSIGN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			goto oops;
+		}
+
+		GET_TOKEN (moo);
+
+		/* [NOTE]
+		 *   values assigned to a pool dictinary member are not read-only
+		 *   unlike the default initial values defined in a class */
+		lit = token_to_literal (moo, 0);
+		if (!lit) goto oops;
+
+		/* for this definition, #pooldic MyPoolDic { a := 10. b := 20 },
+		 * arlit_buffer contains (#a 10 #b 20) when the 'while' loop is over. */
+		if (add_to_array_literal_buffer(moo, lit) <= -1) goto oops;
+		GET_TOKEN (moo);
+
+		/*if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) goto done;
+		else*/ if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
+		{
+			set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			goto oops;
+		}
+
+		GET_TOKEN (moo);
+	}
+
+
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
+	{
+		set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		goto oops;
+	}
+
+/*done:*/
+	GET_TOKEN (moo);
+
+	tally = (moo->c->arlit.count - saved_arlit_count) / 2;
+/*TODO: tally and arlit_count range check */
+	/*if (!MOO_IN_SMOOI_RANGE(tally)) ERROR??*/
+
+	moo->c->cls.pooldic_oop = moo_makedic (moo, moo->_pool_dictionary, MOO_ALIGN(tally + 10, POOL_DICTIONARY_SIZE_ALIGN));
+	if (!moo->c->cls.pooldic_oop) goto oops;
+
+	for (i = saved_arlit_count; i < moo->c->arlit.count; i += 2)
+	{
+		/* TODO: handle duplicate keys? */
+		if (!moo_putatdic(moo, moo->c->cls.pooldic_oop, moo->c->arlit.ptr[i], moo->c->arlit.ptr[i + 1])) goto oops;
+	}
+
+	/* eveything seems ok. register the pool dictionary to the main
+	 * system dictionary or to the name space it belongs to */
+	lit = moo_makesymbol (moo, pd->name.ptr, pd->name.len);
+	if (!lit || !moo_putatdic (moo, pd->ns_oop, lit, (moo_oop_t)pd->pd_oop)) goto oops;
+
+	moo->c->arlit.count = saved_arlit_count;
+	return 0;
+
+oops:
+	moo->c->arlit.count = saved_arlit_count;
+	return -1;
+}
+
+static int compile_pooldic_definition_in_class (moo_t* moo, moo_pooldic_t* pd)
+{
+	int n;
+
+	pd->name.len = 0;
+	pd->fqn.len = 0;
+	MOO_MEMSET (&pd->fqn_loc, 0, MOO_SIZEOF(pd->fqn_loc));
+
+	pd->pd_oop = MOO_NULL;
+	pd->ns_oop = MOO_NULL;
+
+	moo->c->balit.count = 0;
+	moo->c->arlit.count = 0;
+
+	n = __compile_pooldic_definition_in_class (moo, pd);
+
+	/* reset these oops plus literal pointers not to confuse gc_compiler() */
+	pd->pd_oop = MOO_NULL;
+	pd->ns_oop = MOO_NULL;
+
+	MOO_ASSERT (moo, n <= -1 || (n >= 0 && moo->c->balit.count == 0));
+	moo->c->balit.count = 0;
+
+	MOO_ASSERT (moo, n <= -1 || (n >= 0 && moo->c->arlit.count == 0));
+	moo->c->arlit.count = 0;
 
 	return n;
 }
@@ -7520,20 +7599,20 @@ static void gc_compiler (moo_t* moo)
 			moo->c->cls.superns_oop = (moo_oop_set_t)x;
 		}
 
-		for (i = 0; i < moo->c->cls.pooldic_count; i++)
+		for (i = 0; i < moo->c->cls.pooldic_imp.dcl_count; i++)
 		{
-			register moo_oop_t x = moo_moveoop (moo, (moo_oop_t)moo->c->cls.pooldic_imp_oops[i]);
-			moo->c->cls.pooldic_imp_oops[i] = (moo_oop_set_t)x;
+			register moo_oop_t x = moo_moveoop (moo, (moo_oop_t)moo->c->cls.pooldic_imp.oops[i]);
+			moo->c->cls.pooldic_imp.oops[i] = (moo_oop_set_t)x;
 		}
 
-		for (i = 0; i < moo->c->mth.literal_count; i++)
+		for (i = 0; i < moo->c->mth.literals.count; i++)
 		{
-			moo->c->mth.literals[i] = moo_moveoop (moo, moo->c->mth.literals[i]);
+			moo->c->mth.literals.ptr[i] = moo_moveoop (moo, moo->c->mth.literals.ptr[i]);
 		}
 
-		for (i = 0; i < moo->c->mth.arlit_count; i++)
+		for (i = 0; i < moo->c->arlit.count; i++)
 		{
-			moo->c->mth.arlit[i] = moo_moveoop (moo, moo->c->mth.arlit[i]);
+			moo->c->arlit.ptr[i] = moo_moveoop (moo, moo->c->arlit.ptr[i]);
 		}
 	}
 }
@@ -7558,8 +7637,8 @@ static void fini_compiler (moo_t* moo)
 			if (moo->c->cls.var[i].initv) moo_freemem (moo, moo->c->cls.var[i].initv);
 		}
 
-		if (moo->c->cls.pooldic.ptr) moo_freemem (moo, moo->c->cls.pooldic.ptr);
-		if (moo->c->cls.pooldic_imp_oops) moo_freemem (moo, moo->c->cls.pooldic_imp_oops);
+		if (moo->c->cls.pooldic_imp.dcl.ptr) moo_freemem (moo, moo->c->cls.pooldic_imp.dcl.ptr);
+		if (moo->c->cls.pooldic_imp.oops) moo_freemem (moo, moo->c->cls.pooldic_imp.oops);
 
 		if (moo->c->mth.text.ptr) moo_freemem (moo, moo->c->mth.text.ptr);
 		if (moo->c->mth.assignees.ptr) moo_freemem (moo, moo->c->mth.assignees.ptr);
@@ -7568,10 +7647,11 @@ static void fini_compiler (moo_t* moo)
 		if (moo->c->mth.name.ptr) moo_freemem (moo, moo->c->mth.name.ptr);
 		if (moo->c->mth.tmprs.ptr) moo_freemem (moo, moo->c->mth.tmprs.ptr);
 		if (moo->c->mth.code.ptr) moo_freemem (moo, moo->c->mth.code.ptr);
-		if (moo->c->mth.literals) moo_freemem (moo, moo->c->mth.literals);
-		if (moo->c->mth.balit) moo_freemem (moo, moo->c->mth.balit);
-		if (moo->c->mth.arlit) moo_freemem (moo, moo->c->mth.arlit);
+		if (moo->c->mth.literals.ptr) moo_freemem (moo, moo->c->mth.literals.ptr);
 		if (moo->c->mth.blk_tmprcnt) moo_freemem (moo, moo->c->mth.blk_tmprcnt);
+
+		if (moo->c->balit.ptr) moo_freemem (moo, moo->c->balit.ptr);
+		if (moo->c->arlit.ptr) moo_freemem (moo, moo->c->arlit.ptr);
 
 		moo_freemem (moo, moo->c);
 		moo->c = MOO_NULL;
