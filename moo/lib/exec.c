@@ -162,6 +162,7 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 	proc->current_context = c;
 	proc->sp = MOO_SMOOI_TO_OOP(-1);
 	proc->perr = MOO_ERROR_TO_OOP(MOO_ENOERR);
+	proc->perrmsg = moo->_nil;
 
 	MOO_ASSERT (moo, (moo_oop_t)c->sender == moo->_nil);
 
@@ -1472,7 +1473,7 @@ static MOO_INLINE moo_pfrc_t pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 	if (MOO_CLASS_SELFSPEC_FLAGS(MOO_OOP_TO_SMOOI(_class->selfspec)) & MOO_CLASS_SELFSPEC_FLAG_LIMITED)
 	{
 		MOO_DEBUG1 (moo, "<pf_basic_new> Receiver is #limited - %O\n", _class);
-		moo_seterrbfmt (moo, MOO_EPERM, "#limited receiver - %O", _class);
+		moo_seterrbfmt (moo, MOO_EPERM, "limited receiver - %O", _class);
 		return MOO_PF_FAILURE;
 	}
 
@@ -2098,13 +2099,18 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+/* ------------------------------------------------------------------ */
+
 static moo_pfrc_t pf_process_resume (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
-	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo,rcv) != moo->_process) return MOO_PF_FAILURE;
+	if (MOO_CLASSOF(moo,rcv) != moo->_process) 
+	{
+		moo_seterrnum (moo, MOO_EMSGRCV);
+		return MOO_PF_FAILURE;
+	}
 
 	resume_process (moo, (moo_oop_process_t)rcv); /* TODO: error check */
 
@@ -2115,12 +2121,15 @@ static moo_pfrc_t pf_process_resume (moo_t* moo, moo_ooi_t nargs)
 static moo_pfrc_t pf_process_terminate (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
-	MOO_ASSERT (moo, nargs == 0);
 
 /* TODO: need to run ensure blocks here..
  * when it's executed here. it does't have to be in Exception>>handleException when there is no exception handler */
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo,rcv) != moo->_process) return MOO_PF_FAILURE;
+	if (MOO_CLASSOF(moo,rcv) != moo->_process) 
+	{
+		moo_seterrnum (moo, MOO_EMSGRCV);
+		return MOO_PF_FAILURE;
+	}
 
 	terminate_process (moo, (moo_oop_process_t)rcv);
 
@@ -2131,10 +2140,13 @@ static moo_pfrc_t pf_process_terminate (moo_t* moo, moo_ooi_t nargs)
 static moo_pfrc_t pf_process_yield (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
-	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo,rcv) != moo->_process) return MOO_PF_FAILURE;
+	if (MOO_CLASSOF(moo,rcv) != moo->_process) 
+	{
+		moo_seterrnum (moo, MOO_EMSGRCV);
+		return MOO_PF_FAILURE;
+	}
 
 	yield_process (moo, (moo_oop_process_t)rcv);
 
@@ -2145,10 +2157,13 @@ static moo_pfrc_t pf_process_yield (moo_t* moo, moo_ooi_t nargs)
 static moo_pfrc_t pf_process_suspend (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
-	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo,rcv) != moo->_process) return MOO_PF_FAILURE;
+	if (MOO_CLASSOF(moo,rcv) != moo->_process) 
+	{
+		moo_seterrnum (moo, MOO_EMSGRCV);
+		return MOO_PF_FAILURE;
+	}
 
 	suspend_process (moo, (moo_oop_process_t)rcv);
 
@@ -2156,6 +2171,25 @@ static moo_pfrc_t pf_process_suspend (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+static moo_pfrc_t pf_process_primerr_msg (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, msg;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	if (MOO_CLASSOF(moo,rcv) != moo->_process) 
+	{
+		moo_seterrnum (moo, MOO_EMSGRCV);
+		return MOO_PF_FAILURE;
+	}
+
+	msg = moo_makestring (moo, (moo_ooch_t*)MOO_OBJ_GET_TRAILER_BYTE(rcv), moo_countoocstr((moo_ooch_t*)MOO_OBJ_GET_TRAILER_BYTE(rcv)));
+	if (!msg) return MOO_PF_FAILURE;
+
+	MOO_STACK_SETRET (moo, nargs, msg);
+	return MOO_PF_SUCCESS;
+}
+
+/* ------------------------------------------------------------------ */
 static moo_pfrc_t pf_semaphore_signal (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
@@ -2431,6 +2465,8 @@ static moo_pfrc_t pf_processor_return_to (moo_t* moo, moo_ooi_t nargs)
 	SWITCH_ACTIVE_CONTEXT (moo, (moo_oop_context_t)ctx);
 	return MOO_PF_SUCCESS;
 }
+
+/* ------------------------------------------------------------------ */
 
 static moo_pfrc_t pf_integer_add (moo_t* moo, moo_ooi_t nargs)
 {
@@ -2775,6 +2811,8 @@ static moo_pfrc_t pf_integer_inttostr (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+/* ------------------------------------------------------------------ */
+
 static moo_pfrc_t pf_character_as_smooi (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
@@ -2904,6 +2942,36 @@ static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_ooi_t nargs)
 	}
 
 	MOO_STACK_SETRET (moo, nargs, ss);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_strlen (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, ret;
+	moo_oow_t i, limit;
+	moo_ooch_t* ptr;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	if (!MOO_OBJ_IS_CHAR_POINTER(rcv))
+	{
+		moo_seterrnum (moo, MOO_EMSGRCV);
+		return MOO_PF_FAILURE;
+	}
+
+	/* [NOTE] the length check loop is directly implemented
+	 *        here to be able to handle character objects
+	 *        regardless of the existence of the EXTRA flag */
+	limit = MOO_OBJ_GET_SIZE(rcv);
+	ptr = MOO_OBJ_GET_CHAR_SLOT(rcv);
+	for (i = 0; i < limit; i++)
+	{
+		if (*ptr == '\0') break;
+		ptr++;
+	}
+	ret = moo_oowtoint (moo, i);
+	if (!ret) return MOO_PF_FAILURE;
+
+	MOO_STACK_SETRET (moo, nargs, ret);
 	return MOO_PF_SUCCESS;
 }
 
@@ -3690,11 +3758,7 @@ static pf_t pftab[] =
 	{ "_block_value",                          { pf_block_value,                          0, MA } },
 	{ "_block_new_process",                    { pf_block_new_process,                    0, 1  } },
 
-	{ "_process_resume",                       { pf_process_resume,                       0, 0 } },
-	{ "_process_terminate",                    { pf_process_terminate,                    0, 0 } },
-	{ "_process_yield",                        { pf_process_yield,                        0, 0 } },
-	{ "_process_suspend",                      { pf_process_suspend,                      0, 0 } },
-
+	
 	{ "_processor_schedule",                   { pf_processor_schedule,                   1, 1 } },
 	{ "_processor_add_timed_semaphore",        { pf_processor_add_timed_semaphore,        2, 3 } },
 	{ "_processor_add_input_semaphore",        { pf_processor_add_input_semaphore,        2, 2 } },
@@ -3739,6 +3803,11 @@ static pf_t pftab[] =
 	{ "Error_asInteger",                       { pf_error_as_integer,                     0, 0 } },
 	{ "Error_asString",                        { pf_error_as_string,                      0, 0 } },
 
+	{ "Process__suspend",                      { pf_process_suspend,                      0, 0 } },
+	{ "Process__terminate",                    { pf_process_terminate,                    0, 0 } },
+	{ "Process_resume",                        { pf_process_resume,                       0, 0 } },
+	{ "Process_yield",                         { pf_process_yield,                        0, 0 } },
+
 	{ "Semaphore_signal",                      { pf_semaphore_signal,                     0, 0 } },
 	{ "Semaphore_wait",                        { pf_semaphore_wait,                       0, 0 } },
 
@@ -3763,6 +3832,9 @@ static pf_t pftab[] =
 	{ "SmallPointer_putUint16",                { pf_smptr_put_uint16,                     2, 2 } },
 	{ "SmallPointer_putUint32",                { pf_smptr_put_uint32,                     2, 2 } },
 	{ "SmallPointer_putUint64",                { pf_smptr_put_uint64,                     2, 2 } },
+
+	{ "String__strlen",                        { pf_strlen,                               0, 0 } },
+	{ "String_strlen",                         { pf_strlen,                               0, 0 } },
 
 	{ "System__calloc",                        { pf_system_calloc,                        1, 1 } },
 	{ "System__free",                          { pf_system_free,                          1, 1 } },
@@ -4027,6 +4099,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				 * directly in the stack unlik a normal activated method context where the
 				 * arguments are copied to the back. */
 
+				moo_seterrnum (moo, MOO_ENOERR);
 				n = pfbase->handler (moo, nargs);
 
 				moo_poptmp (moo);
@@ -4057,6 +4130,23 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 
 			/* set the error number in the current process for 'thisProcess primError' */
 			moo->processor->active->perr = MOO_ERROR_TO_OOP(moo->errnum);
+			if (moo->errmsg.len > 0)
+			{
+				/* compose an error message string. */
+				/* TODO: i don't like to do this here.
+				 *       is it really a good idea to compose a string here which
+				 *       is not really failure safe without losing integrity???? */
+				moo_oop_t tmp;
+				moo_pushtmp (moo, (moo_oop_t*)&method);
+				tmp = moo_makestring (moo, moo->errmsg.buf, moo->errmsg.len);
+				moo_poptmp (moo);
+				/* [NOTE] carry on even if instantiation fails */
+				moo->processor->active->perrmsg = tmp? tmp: moo->_nil;
+			}
+			else
+			{
+				moo->processor->active->perrmsg = moo->_nil;
+			}
 
 		#if defined(MOO_USE_METHOD_TRAILER)
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TRAILER(method));

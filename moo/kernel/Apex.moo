@@ -90,12 +90,13 @@ extend Apex
 
 	## -------------------------------------------------------
 	## -------------------------------------------------------
-	##method(#primitive,#lenient) _shallowCopy.
+	##method(#dual,#primitive,#lenient) _shallowCopy.
+	##method(#dual,#primitive) shallowCopy.
 	
 	method(#dual) shallowCopy
 	{
 		<primitive: #_shallow_copy>
-		self primitiveFailed.
+		self primitiveFailed(thisContext method).
 	}
 
 	

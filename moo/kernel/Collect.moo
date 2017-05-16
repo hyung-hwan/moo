@@ -112,6 +112,12 @@ class(#character) String(Array)
 	{
 	}
 	*)
+
+
+	(* The strlen method returns the number of characters before a terminating null.
+	 * if no terminating null character exists, it returns the same value as the size method *)
+	method(#primitive,#lenient) _strlen.
+	method(#primitive) strlen.
 }
 
 ## -------------------------------------------------------------------------------

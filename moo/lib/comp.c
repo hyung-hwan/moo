@@ -3797,6 +3797,113 @@ static int compile_method_pragma (moo_t* moo)
 	return 0;
 }
 
+static int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* name_loc, var_info_t* var)
+{
+	/* if a name is dotted,
+	 * 
+	 *   self.XXX - instance variable
+	 *   A.B.C    - namespace or pool dictionary related reference.
+	 *   self.B.C - B.C under the current class where B is not an instance variable
+	 */
+
+	moo_oocs_t last;
+	moo_oop_set_t ns_oop;
+	moo_oop_association_t ass;
+	const moo_ooch_t* dot;
+
+	dot = moo_findoochar (name->ptr, name->len, '.');
+	MOO_ASSERT (moo, dot != MOO_NULL);
+	if (dot - (const moo_ooch_t*)name->ptr == 4 && 
+	    moo_equaloochars(name->ptr, vocas[VOCA_SELF].str, 4))
+	{
+		/* special case. the dotted name begins with self. */
+		dot = moo_findoochar (dot + 1, name->len - 5, '.');
+		if (!dot)
+		{
+			/* the dotted name is composed of 2 segments only */
+			last.ptr = name->ptr + 5;
+			last.len = name->len - 5;
+			if (is_reserved_word(&last))
+			{
+				/* self. is followed by a reserved word.
+				 * a proper variable name is expected. */
+				set_syntax_error (moo, MOO_SYNERR_VARNAME, name_loc, name);
+				return -1;
+			}
+
+			if (find_class_level_variable(moo, moo->c->cls.self_oop, &last, var) >= 0)
+			{
+				/* indicate that it's not a global variable */
+				return 1;
+			}
+			else
+			{
+				/* undeclared identifier */
+				set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
+				return -1;
+			}
+		}
+	}
+
+	if (preprocess_dotted_name (moo, PDN_DONT_ADD_NS | PDN_ACCEPT_POOLDIC_AS_NS, MOO_NULL, name, name_loc, &last, &ns_oop) <= -1) return -1;
+
+	ass = moo_lookupdic (moo, ns_oop, &last);
+	if (!ass)
+	{
+		/* undeclared identifier */
+		set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
+		return -1;
+	}
+
+	var->type = VAR_GLOBAL;
+	var->gbl = ass;
+	return 0;
+}
+
+static int find_ident_in_nsdic_and_sysdic (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* name_loc, var_info_t* var)
+{
+	moo_oop_association_t ass;
+
+	/* find an undotted identifier in dictionaries */
+
+	ass = moo_lookupdic (moo, moo->c->cls.ns_oop, name); /* in the current name space */
+	if (!ass && moo->c->cls.ns_oop != moo->sysdic) 
+		ass = moo_lookupdic (moo, moo->sysdic, name); /* in the top-level system dictionary */
+
+	if (!ass)
+	{
+		moo_oow_t i;
+		moo_oop_association_t ass2 = MOO_NULL;
+
+		/* attempt to find the variable in pool dictionaries */
+		for (i = 0; i < moo->c->cls.pooldic_count; i++)
+		{
+			ass = moo_lookupdic (moo, moo->c->cls.pooldic_imp_oops[i], name);
+			if (ass)
+			{
+				if (ass2)
+				{
+					/* the variable name has been found at least in 2 dictionaries - ambiguous */
+					set_syntax_error (moo, MOO_SYNERR_VARAMBIG, name_loc, name);
+					return -1;
+				}
+				ass2 = ass;
+			}
+		}
+
+		ass = ass2;
+		if (!ass) 
+		{
+			set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
+			return -1;
+		}
+	}
+
+	var->type = VAR_GLOBAL;
+	var->gbl = ass;
+	return 0;
+}
+
 static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* name_loc, int name_dotted, var_info_t* var)
 {
 	moo_oow_t index;
@@ -3805,61 +3912,9 @@ static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 
 	if (name_dotted)
 	{
-		/* if a name is dotted,
-		 * 
-		 *   self.XXX - instance variable
-		 *   A.B.C    - namespace or pool dictionary related reference.
-		 *   self.B.C - B.C under the current class where B is not an instance variable
-		 */
-
-		moo_oocs_t last;
-		moo_oop_set_t ns_oop;
-		moo_oop_association_t ass;
-		const moo_ooch_t* dot;
-
-		dot = moo_findoochar (name->ptr, name->len, '.');
-		MOO_ASSERT (moo, dot != MOO_NULL);
-		if (dot - (const moo_ooch_t*)name->ptr == 4 && 
-		    moo_equaloochars(name->ptr, vocas[VOCA_SELF].str, 4))
-		{
-			/* the dotted name begins with self. */
-			dot = moo_findoochar (dot + 1, name->len - 5, '.');
-			if (!dot)
-			{
-				/* the dotted name is composed of 2 segments only */
-				last.ptr = name->ptr + 5;
-				last.len = name->len - 5;
-				if (!is_reserved_word(&last))
-				{
-					if (find_class_level_variable(moo, moo->c->cls.self_oop, &last, var) >= 0)
-					{
-						goto class_level_variable;
-					}
-					else
-					{
-						/* undeclared identifier */
-						set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
-						return -1;
-					}
-				}
-			}
-		}
-
-		if (preprocess_dotted_name (moo, PDN_DONT_ADD_NS | PDN_ACCEPT_POOLDIC_AS_NS, MOO_NULL, name, name_loc, &last, &ns_oop) <= -1) return -1;
-
-		ass = moo_lookupdic (moo, ns_oop, &last);
-		if (ass)
-		{
-			var->type = VAR_GLOBAL;
-			var->gbl = ass;
-		}
-		else
-		{
-			/* undeclared identifier */
-			set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
-			return -1;
-		}
-
+		int n;
+		if ((n = find_dotted_ident (moo, name, name_loc, var)) <= -1) return -1;
+		if (n >= 1) goto class_level_variable;
 		return 0;
 	}
 
@@ -3918,50 +3973,7 @@ static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 		}
 		else 
 		{
-			moo_oop_association_t ass;
-			/*ass = moo_lookupsysdic (moo, name);*/
-			ass = moo_lookupdic (moo, moo->c->cls.ns_oop, name);
-			if (!ass && moo->c->cls.ns_oop != moo->sysdic) 
-				ass = moo_lookupdic (moo, moo->sysdic, name);
-
-			if (ass)
-			{
-				var->type = VAR_GLOBAL;
-				var->gbl = ass;
-			}
-			else
-			{
-				moo_oow_t i;
-				moo_oop_association_t ass2 = MOO_NULL;
-
-				/* attempt to find the variable in pool dictionaries */
-				for (i = 0; i < moo->c->cls.pooldic_count; i++)
-				{
-					ass = moo_lookupdic (moo, moo->c->cls.pooldic_imp_oops[i], name);
-					if (ass)
-					{
-						if (ass2)
-						{
-							/* the variable name has been found at least in 2 dictionaries */
-							set_syntax_error (moo, MOO_SYNERR_VARAMBIG, name_loc, name);
-							return -1;
-						}
-						ass2 = ass;
-					}
-				}
-
-				if (ass2)
-				{
-					var->type = VAR_GLOBAL;
-					var->gbl = ass2;
-				}
-				else
-				{
-					/* undeclared identifier */
-					set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
-					return -1;
-				}
-			}
+			if (find_ident_in_nsdic_and_sysdic (moo, name, name_loc, var) <= -1) return -1;
 		}
 	}
 
@@ -4355,6 +4367,31 @@ static int __read_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 					MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
 				}
 				break;
+
+			case MOO_IOTOK_IDENT:
+			{
+				var_info_t var;
+				if (find_ident_in_nsdic_and_sysdic (moo, TOKEN_NAME(moo), TOKEN_LOC(moo), &var) <= -1) return -1;
+				MOO_ASSERT (moo, var.type == VAR_GLOBAL);
+				lit = var.gbl->value;
+				/* [NOTE] i don't mark RDONLY on an array member resolved via an identifier */
+				break;
+			}
+
+			case MOO_IOTOK_IDENT_DOTTED:
+			{
+				var_info_t var;
+				if (find_dotted_ident (moo, TOKEN_NAME(moo), TOKEN_LOC(moo), &var) <= -1) return -1;
+				if (var.type != VAR_GLOBAL)
+				{
+/* TODO: XXXXXXXXXXXXXXXXXXXXXXXXxx */
+					return -1;
+				}
+
+				lit = var.gbl->value;
+				/* [NOTE] i don't mark RDONLY on an array member resolved via an identifier */
+				break;
+			}
 
 			case MOO_IOTOK_BABRACK: /* #[ */
 				GET_TOKEN (moo);
@@ -7371,6 +7408,11 @@ static int compile_pooldic_definition (moo_t* moo)
 	moo->c->mth.balit_count = 0;
 	moo->c->mth.arlit_count = 0;
 
+	/* these 2 are pooldic import information. pooldic definition doesn't
+	 * have another pooldic import in it */
+	moo->c->cls.pooldic_count = 0;
+	moo->c->cls.pooldic.len = 0;
+
 	n = __compile_pooldic_definition (moo);
 
 	/* reset these oops plus literal pointers not to confuse gc_compiler() */
@@ -7378,6 +7420,9 @@ static int compile_pooldic_definition (moo_t* moo)
 	moo->c->cls.ns_oop = MOO_NULL;
 	moo->c->mth.balit_count = 0;
 	moo->c->mth.arlit_count = 0;
+
+	MOO_ASSERT (moo, moo->c->cls.pooldic_count == 0);
+	MOO_ASSERT (moo, moo->c->cls.pooldic.len == 0);
 
 	return n;
 }

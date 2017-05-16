@@ -709,7 +709,7 @@ struct moo_context_t
 };
 
 
-#define MOO_PROCESS_NAMED_INSTVARS 8
+#define MOO_PROCESS_NAMED_INSTVARS 9
 typedef struct moo_process_t moo_process_t;
 typedef struct moo_process_t* moo_oop_process_t;
 
@@ -731,6 +731,7 @@ struct moo_process_t
 
 	moo_oop_semaphore_t sem;
 	moo_oop_t           perr; /* last error set by a primitive function */
+	moo_oop_t           perrmsg;
 
 	/* == variable indexed part == */
 	moo_oop_t slot[1]; /* process stack */

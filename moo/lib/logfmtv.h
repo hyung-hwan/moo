@@ -85,7 +85,7 @@
 	data->count += len; \
 } while (0)
 
-int logfmtv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_t* data, va_list ap)
+static int logfmtv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_t* data, va_list ap, outbfmt_t outbfmt)
 {
 	const fmtchar_t* percent;
 #if defined(FMTCHAR_IS_OOCH)
@@ -549,7 +549,7 @@ reswitch:
 		}
 
 		case 'O': /* object - ignore precision, width, adjustment */
-			print_object (moo, data->mask, va_arg (ap, moo_oop_t));
+			print_object (moo, data->mask, va_arg (ap, moo_oop_t), outbfmt);
 			break;
 
 #if 0

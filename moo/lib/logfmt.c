@@ -375,35 +375,37 @@ redo:
 
 /* ------------------------------------------------------------------------- */
 
-static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop)
+typedef moo_ooi_t (*outbfmt_t) (moo_t* moo, moo_oow_t mask, const moo_bch_t* fmt, ...);
+
+static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop, outbfmt_t outbfmt)
 {
 	if (oop == moo->_nil)
 	{
-		moo_logbfmt (moo, mask, "nil");
+		outbfmt (moo, mask, "nil");
 	}
 	else if (oop == moo->_true)
 	{
-		moo_logbfmt (moo, mask, "true");
+		outbfmt (moo, mask, "true");
 	}
 	else if (oop == moo->_false)
 	{
-		moo_logbfmt (moo, mask, "false");
+		outbfmt (moo, mask, "false");
 	}
 	else if (MOO_OOP_IS_SMOOI(oop))
 	{
-		moo_logbfmt (moo, mask, "%zd", MOO_OOP_TO_SMOOI(oop));
+		outbfmt (moo, mask, "%zd", MOO_OOP_TO_SMOOI(oop));
 	}
 	else if (MOO_OOP_IS_SMPTR(oop))
 	{
-		moo_logbfmt (moo, mask, "%p", MOO_OOP_TO_SMPTR(oop));
+		outbfmt (moo, mask, "%p", MOO_OOP_TO_SMPTR(oop));
 	}
 	else if (MOO_OOP_IS_CHAR(oop))
 	{
-		moo_logbfmt (moo, mask, "$%.1C", MOO_OOP_TO_CHAR(oop));
+		outbfmt (moo, mask, "$%.1C", MOO_OOP_TO_CHAR(oop));
 	}
 	else if (MOO_OOP_IS_ERROR(oop))
 	{
-		moo_logbfmt (moo, mask, "error(%zd)", MOO_OOP_TO_ERROR(oop));
+		outbfmt (moo, mask, "error(%zd)", MOO_OOP_TO_ERROR(oop));
 	}
 	else
 	{
@@ -416,26 +418,26 @@ static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop)
 		if (c == moo->_large_negative_integer)
 		{
 			moo_oow_t i;
-			moo_logbfmt (moo, mask, "-16r");
+			outbfmt (moo, mask, "-16r");
 			for (i = MOO_OBJ_GET_SIZE(oop); i > 0;)
 			{
-				moo_logbfmt (moo, mask, "%0*lX", (int)(MOO_SIZEOF(moo_liw_t) * 2), (unsigned long)((moo_oop_liword_t)oop)->slot[--i]);
+				outbfmt (moo, mask, "%0*lX", (int)(MOO_SIZEOF(moo_liw_t) * 2), (unsigned long)((moo_oop_liword_t)oop)->slot[--i]);
 			}
 		}
 		else if (c == moo->_large_positive_integer)
 		{
 			moo_oow_t i;
-			moo_logbfmt (moo, mask, "16r");
+			outbfmt (moo, mask, "16r");
 			for (i = MOO_OBJ_GET_SIZE(oop); i > 0;)
 			{
-				moo_logbfmt (moo, mask, "%0*lX", (int)(MOO_SIZEOF(moo_liw_t) * 2), (unsigned long)((moo_oop_liword_t)oop)->slot[--i]);
+				outbfmt (moo, mask, "%0*lX", (int)(MOO_SIZEOF(moo_liw_t) * 2), (unsigned long)((moo_oop_liword_t)oop)->slot[--i]);
 			}
 		}
 		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_CHAR)
 		{
 			if (c == moo->_symbol) 
 			{
-				moo_logbfmt (moo, mask, "#%.*js", MOO_OBJ_GET_SIZE(oop), ((moo_oop_char_t)oop)->slot);
+				outbfmt (moo, mask, "#%.*js", MOO_OBJ_GET_SIZE(oop), ((moo_oop_char_t)oop)->slot);
 			}
 			else /*if ((moo_oop_t)c == moo->_string)*/
 			{
@@ -456,7 +458,7 @@ static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop)
 				{
 					moo_ooch_t escaped;
 
-					moo_logbfmt (moo, mask, "S'");
+					outbfmt (moo, mask, "S'");
 					for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
 					{
 						ch = ((moo_oop_char_t)oop)->slot[i];
@@ -494,74 +496,74 @@ static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop)
 							}
 
 							if (escaped == ch)
-								moo_logbfmt (moo, mask, "\\x%X", ch);
+								outbfmt (moo, mask, "\\x%X", ch);
 							else
-								moo_logbfmt (moo, mask, "\\%jc", escaped);
+								outbfmt (moo, mask, "\\%jc", escaped);
 						}
 						else
 						{
-							moo_logbfmt (moo, mask, "%jc", ch);
+							outbfmt (moo, mask, "%jc", ch);
 						}
 					}
 					
-					moo_logbfmt (moo, mask, "'");
+					outbfmt (moo, mask, "'");
 				}
 				else
 				{
-					moo_logbfmt (moo, mask, "'%.*js'", MOO_OBJ_GET_SIZE(oop), ((moo_oop_char_t)oop)->slot);
+					outbfmt (moo, mask, "'%.*js'", MOO_OBJ_GET_SIZE(oop), ((moo_oop_char_t)oop)->slot);
 				}
 			}
 		}
 		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_BYTE)
 		{
-			moo_logbfmt (moo, mask, "#[");
+			outbfmt (moo, mask, "#[");
 			for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
 			{
-				moo_logbfmt (moo, mask, " %d", ((moo_oop_byte_t)oop)->slot[i]);
+				outbfmt (moo, mask, " %d", ((moo_oop_byte_t)oop)->slot[i]);
 			}
-			moo_logbfmt (moo, mask, "]");
+			outbfmt (moo, mask, "]");
 		}
 		
 		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_HALFWORD)
 		{
-			moo_logbfmt (moo, mask, "#[["); /* TODO: fix this symbol/notation */
+			outbfmt (moo, mask, "#[["); /* TODO: fix this symbol/notation */
 			for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
 			{
-				moo_logbfmt (moo, mask, " %zX", (moo_oow_t)((moo_oop_halfword_t)oop)->slot[i]);
+				outbfmt (moo, mask, " %zX", (moo_oow_t)((moo_oop_halfword_t)oop)->slot[i]);
 			}
-			moo_logbfmt (moo, mask, "]]");
+			outbfmt (moo, mask, "]]");
 		}
 		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_WORD)
 		{
-			moo_logbfmt (moo, mask, "#[[["); /* TODO: fix this symbol/notation */
+			outbfmt (moo, mask, "#[[["); /* TODO: fix this symbol/notation */
 			for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
 			{
-				moo_logbfmt (moo, mask, " %zX", ((moo_oop_word_t)oop)->slot[i]);
+				outbfmt (moo, mask, " %zX", ((moo_oop_word_t)oop)->slot[i]);
 			}
-			moo_logbfmt (moo, mask, "]]]");
+			outbfmt (moo, mask, "]]]");
 		}
 		else if (c == moo->_array)
 		{
-			moo_logbfmt (moo, mask, "#(");
+			outbfmt (moo, mask, "#(");
 			for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
 			{
-				moo_logbfmt (moo, mask, " ");
-				print_object (moo, mask, ((moo_oop_oop_t)oop)->slot[i]);
+				outbfmt (moo, mask, " ");
+				print_object (moo, mask, ((moo_oop_oop_t)oop)->slot[i], outbfmt);
 			}
-			moo_logbfmt (moo, mask, ")");
+			outbfmt (moo, mask, ")");
 		}
 		else if (c == moo->_class)
 		{
 			/* print the class name */
-			moo_logbfmt (moo, mask, "%.*js", MOO_OBJ_GET_SIZE(((moo_oop_class_t)oop)->name), ((moo_oop_class_t)oop)->name->slot);
+			outbfmt (moo, mask, "%.*js", MOO_OBJ_GET_SIZE(((moo_oop_class_t)oop)->name), ((moo_oop_class_t)oop)->name->slot);
 		}
 		else if (c == moo->_association)
 		{
-			moo_logbfmt (moo, mask, "%O -> %O", ((moo_oop_association_t)oop)->key, ((moo_oop_association_t)oop)->value);
+			outbfmt (moo, mask, "%O -> %O", ((moo_oop_association_t)oop)->key, ((moo_oop_association_t)oop)->value);
 		}
 		else
 		{
-			moo_logbfmt (moo, mask, "instance of %.*js(%p)", MOO_OBJ_GET_SIZE(c->name), ((moo_oop_char_t)c->name)->slot, oop);
+			outbfmt (moo, mask, "instance of %.*js(%p)", MOO_OBJ_GET_SIZE(c->name), ((moo_oop_char_t)c->name)->slot, oop);
 		}
 	}
 }
@@ -574,7 +576,7 @@ static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop)
 #undef fmtchar_t
 #undef logfmtv
 #define fmtchar_t moo_bch_t
-#define logfmtv moo_logbfmtv
+#define logfmtv __logbfmtv
 #define FMTCHAR_IS_BCH
 #if defined(MOO_OOCH_IS_BCH)
 #	define FMTCHAR_IS_OOCH
@@ -587,12 +589,24 @@ static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop)
 #undef fmtchar_t
 #undef logfmtv
 #define fmtchar_t moo_uch_t
-#define logfmtv moo_logufmtv
+#define logfmtv __logufmtv
 #define FMTCHAR_IS_UCH
 #if defined(MOO_OOCH_IS_UCH)
 #	define FMTCHAR_IS_OOCH
 #endif
 #include "logfmtv.h" 
+
+
+static int _logbfmtv (moo_t* moo, const moo_bch_t* fmt, moo_fmtout_t* data, va_list ap)
+{
+	return __logbfmtv (moo, fmt, data, ap, moo_logbfmt);
+}
+
+static int _logufmtv (moo_t* moo, const moo_uch_t* fmt, moo_fmtout_t* data, va_list ap)
+{
+	return __logufmtv (moo, fmt, data, ap, moo_logbfmt);
+}
+
 
 moo_ooi_t moo_logbfmt (moo_t* moo, moo_oow_t mask, const moo_bch_t* fmt, ...)
 {
@@ -605,7 +619,7 @@ moo_ooi_t moo_logbfmt (moo_t* moo, moo_oow_t mask, const moo_bch_t* fmt, ...)
 	fo.putcs = put_oocs;
 
 	va_start (ap, fmt);
-	x = moo_logbfmtv (moo, fmt, &fo, ap);
+	x = _logbfmtv (moo, fmt, &fo, ap);
 	va_end (ap);
 
 	if (moo->log.len > 0 && moo->log.ptr[moo->log.len - 1] == '\n')
@@ -627,7 +641,7 @@ moo_ooi_t moo_logufmt (moo_t* moo, moo_oow_t mask, const moo_uch_t* fmt, ...)
 	fo.putcs = put_oocs;
 
 	va_start (ap, fmt);
-	x = moo_logufmtv (moo, fmt, &fo, ap);
+	x = _logufmtv (moo, fmt, &fo, ap);
 	va_end (ap);
 
 	if (moo->log.len > 0 && moo->log.ptr[moo->log.len - 1] == '\n')
@@ -679,6 +693,35 @@ static int put_errcs (moo_t* moo, moo_oow_t mask, const moo_ooch_t* ptr, moo_oow
 	return 1; /* success */
 }
 
+
+static moo_ooi_t __errbfmtv (moo_t* moo, moo_oow_t mask, const moo_bch_t* fmt, ...);
+
+static int _errbfmtv (moo_t* moo, const moo_bch_t* fmt, moo_fmtout_t* data, va_list ap)
+{
+	return __logbfmtv (moo, fmt, data, ap, __errbfmtv);
+}
+
+static int _errufmtv (moo_t* moo, const moo_uch_t* fmt, moo_fmtout_t* data, va_list ap)
+{
+	return __logufmtv (moo, fmt, data, ap, __errbfmtv);
+}
+
+static moo_ooi_t __errbfmtv (moo_t* moo, moo_oow_t mask, const moo_bch_t* fmt, ...)
+{
+	va_list ap;
+	moo_fmtout_t fo;
+
+	fo.mask = 0; /* not used */
+	fo.putch = put_errch;
+	fo.putcs = put_errcs;
+
+	va_start (ap, fmt);
+	_errbfmtv (moo, fmt, &fo, ap);
+	va_end (ap);
+
+	return fo.count;
+}
+
 void moo_seterrbfmt (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, ...)
 {
 	va_list ap;
@@ -692,7 +735,7 @@ void moo_seterrbfmt (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, ...)
 	fo.putcs = put_errcs;
 
 	va_start (ap, fmt);
-	moo_logbfmtv (moo, fmt, &fo, ap);
+	_errbfmtv (moo, fmt, &fo, ap);
 	va_end (ap);
 }
 
@@ -709,6 +752,6 @@ void moo_seterrufmt (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, ...)
 	fo.putcs = put_errcs;
 
 	va_start (ap, fmt);
-	moo_logufmtv (moo, fmt, &fo, ap);
+	_errufmtv (moo, fmt, &fo, ap);
 	va_end (ap);
 }

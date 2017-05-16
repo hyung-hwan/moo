@@ -1,7 +1,7 @@
 
 class(#pointer,#final,#limited) Process(Object)
 {
-	var initial_context, current_context, state, sp, prev, next, sem, perr.
+	var initial_context, current_context, state, sp, prev, next, sem, perr, perrmsg.
 
 	method prev { ^self.prev }
 	method next { ^self.next }
@@ -10,30 +10,16 @@ class(#pointer,#final,#limited) Process(Object)
 	method prev: process { self.prev := process }
 
 	method primError { ^self.perr }
+	method primErrorMessage { ^self.perrmsg }
 
-	method resume
-	{
-		<primitive: #_process_resume>
-		self primitiveFailed
-
-		##^Processor resume: self.
-	}
-
-	method _terminate
-	{
-		<primitive: #_process_terminate>
-		self primitiveFailed
-	}
-
-	method _suspend
-	{
-		<primitive: #_process_suspend>
-		self primitiveFailed
-	}
+	method(#primitive) resume.
+	method(#primitive) yield.
+	method(#primitive) _terminate.
+	method(#primitive) _suspend.
 
 	method terminate
 	{
-##search from the top contextof the process down to intial_contextand find ensure blocks and execute them.
+##search from the top contextof the process down to intial_context and find ensure blocks and execute them.
 		## if a different process calls 'terminate' on a process,
 		## the ensureblock is not executed in the context of the
 		## process being terminated, but in the context of terminatig process.
@@ -60,12 +46,6 @@ class(#pointer,#final,#limited) Process(Object)
 		(thisProcess ~~ self) ifTrue: [ self _suspend ].
 		self.current_context unwindTo: self.initial_context return: nil.
 		^self _terminate
-	}
-
-	method yield
-	{
-		<primitive: #_process_yield>
-		self primitiveFailed
 	}
 
 	method sp

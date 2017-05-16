@@ -431,12 +431,34 @@ class ProhibitedMessageException(Exception)
 {
 }
 
+(*
+pooldic ErrorToException
+{
+	ErrorCode.EINVAL := InvalidArgumentException.
+	ErrorCode.ENOIMPL := NotImplementedException.
+}
+*)
+
 extend Apex
 {
 	method(#dual,#liberal) primitiveFailed(method)
 	{
 		| a b msg ec ex |
 
+		(* since method is an argument, the caller can call this method
+		 * from a context chain where the method context actually doesn't exist.
+		 * when a primitive method is defined using the #primitive method,
+		 * the VM invokes this primtiveFailed method without creating 
+		 * the context for the primitive method.
+		 *    method(#primitive) xxx.
+		 *    method(#primitive) xxx { <primitive: #_xxx> ^self primitiveFailed(thisContext method). }
+		 * in the former definition, primitiveFailed is called without
+		 * an activate context for the method xxx if the primitive fails.
+		 * on the other handle, in the latter definition, the context
+		 * for the method is activated first before primitiveFailed is 
+		 * invoked. in the context chain, the method for xxx is found.
+		 *)
+		 
 		(*System logNl: 'Arguments: '.
 		a := 0.
 		b := thisContext vargCount.
@@ -445,11 +467,13 @@ extend Apex
 			System logNl: (thisContext vargAt: a) asString.
 			a := a + 1.
 		}.*)
-		
+
 		ec := thisProcess primError.
-		msg := ec asString.
+		msg := thisProcess primErrorMessage.
+		if (msg isNil) { msg := ec asString }.
 		if (method notNil) { msg := msg & ' - ' & (method owner name) & '>>' & (method name) }.
-		(PrimitiveFailureException withErrorCode: ec) signal: msg.
+
+		(PrimitiveFailureException (* in: method *) withErrorCode: ec) signal: msg.
 	}
 
 	method(#dual) doesNotUnderstand: message_name
