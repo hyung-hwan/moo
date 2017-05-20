@@ -94,6 +94,7 @@ class MyObject(Object)
 			'unusable variable in compiled code'
 			'inaccessible variable'
 			'ambiguous variable'
+			'inaccessible self'
 			'wrong expression primary'
 			'too many temporaries'
 			'too many arguments'

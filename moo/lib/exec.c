@@ -1042,7 +1042,7 @@ static moo_oop_method_t find_method (moo_t* moo, moo_oop_t receiver, const moo_o
 	moo_oop_class_t cls;
 	moo_oop_association_t ass;
 	moo_oop_t c;
-	moo_oop_set_t mthdic;
+	moo_oop_dic_t mthdic;
 	int dic_no;
 /* TODO: implement method lookup cache */
 
@@ -5094,7 +5094,7 @@ int moo_execute (moo_t* moo)
 				t1 = MOO_STACK_GETTOP(moo);
 				MOO_STACK_POP (moo);
 				t2 = MOO_STACK_GETTOP(moo);
-				moo_putatdic (moo, (moo_oop_set_t)t2, ((moo_oop_association_t)t1)->key, ((moo_oop_association_t)t1)->value);
+				moo_putatdic (moo, (moo_oop_dic_t)t2, ((moo_oop_association_t)t1)->key, ((moo_oop_association_t)t1)->value);
 				 */
 				if (send_message (moo, moo->dicputassocsym, 0, 1) <= -1) goto oops; 
 				break;

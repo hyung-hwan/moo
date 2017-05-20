@@ -92,8 +92,6 @@ static kernel_class_info_t kernel_classes[] =
 	{  9, { 'B','y','t','e','A','r','r','a','y'                                             }, MOO_OFFSETOF(moo_t, _byte_array) },
 	{  9, { 'S','y','m','b','o','l','S','e','t'                                             }, MOO_OFFSETOF(moo_t, _symbol_set) },
 	{ 10, { 'D','i','c','t','i','o','n','a','r','y'                                         }, MOO_OFFSETOF(moo_t, _dictionary) },
-	{ 16, { 'S','y','s','t','e','m','D','i','c','t','i','o','n','a','r','y'                 }, MOO_OFFSETOF(moo_t, _system_dictionary) },
-
 	{  9, { 'N','a','m','e','s','p','a','c','e'                                             }, MOO_OFFSETOF(moo_t, _namespace) },
 	{ 14, { 'P','o','o','l','D','i','c','t','i','o','n','a','r','y'                         }, MOO_OFFSETOF(moo_t, _pool_dictionary) },
 	{ 16, { 'M','e','t','h','o','d','D','i','c','t','i','o','n','a','r','y'                 }, MOO_OFFSETOF(moo_t, _method_dictionary) },
@@ -182,13 +180,11 @@ static int ignite_1 (moo_t* moo)
 
 	moo->_array             = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_OOP));
 	moo->_byte_array        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_BYTE));
-	moo->_symbol_set        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_dictionary        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_system_dictionary = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-
-	moo->_namespace         = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_pool_dictionary   = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_method_dictionary = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SET_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+	moo->_symbol_set        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_DIC_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+	moo->_dictionary        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_DIC_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+	moo->_namespace         = alloc_kernel_class (moo, MOO_CLASS_SELFSPEC_FLAG_LIMITED, 0, MOO_CLASS_SPEC_MAKE(MOO_NSDIC_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+	moo->_pool_dictionary   = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_DIC_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
+	moo->_method_dictionary = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_DIC_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
 	moo->_method            = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_METHOD_NAMED_INSTVARS, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_OOP));
 	moo->_association       = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_ASSOCIATION_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
 
@@ -222,8 +218,7 @@ static int ignite_1 (moo_t* moo)
 	    !moo->_object            || !moo->_string            ||
 
 	    !moo->_symbol            || !moo->_array             ||
-	    !moo->_byte_array        || !moo->_symbol_set        ||
-	    !moo->_dictionary        || !moo->_system_dictionary || 
+	    !moo->_byte_array        || !moo->_symbol_set        || !moo->_dictionary || 
 
 	    !moo->_namespace         || !moo->_pool_dictionary   ||
 	    !moo->_method_dictionary || !moo->_method            || !moo->_association ||
@@ -252,7 +247,7 @@ static int ignite_2 (moo_t* moo)
 	/* Create the symbol table */
 	tmp = moo_instantiate (moo, moo->_symbol_set, MOO_NULL, 0);
 	if (!tmp) return -1;
-	moo->symtab = (moo_oop_set_t)tmp;
+	moo->symtab = (moo_oop_dic_t)tmp;
 
 	moo->symtab->tally = MOO_SMOOI_TO_OOP(0);
 	/* It's important to assign the result of moo_instantiate() to a temporary
@@ -265,9 +260,9 @@ static int ignite_2 (moo_t* moo)
 	moo->symtab->bucket = (moo_oop_oop_t)tmp;
 
 	/* Create the system dictionary */
-	tmp = (moo_oop_t)moo_makedic (moo, moo->_system_dictionary, moo->option.dfl_sysdic_size);
+	tmp = (moo_oop_t)moo_makensdic (moo, moo->_namespace, moo->option.dfl_sysdic_size);
 	if (!tmp) return -1;
-	moo->sysdic = (moo_oop_set_t)tmp;
+	moo->sysdic = (moo_oop_nsdic_t)tmp;
 
 	/* Create a nil process used to simplify nil check in GC.
 	 * only accessible by VM. not exported via the global dictionary. */
@@ -283,9 +278,6 @@ static int ignite_2 (moo_t* moo)
 	moo->processor->tally = MOO_SMOOI_TO_OOP(0);
 	moo->processor->active = moo->nil_process;
 
-	/* Attach the system dictionary to the nsdic field of the System class */
-	moo->_system->nsdic = moo->sysdic;
-
 	return 0;
 }
 
@@ -297,7 +289,8 @@ static int ignite_3 (moo_t* moo)
 	static moo_ooch_t str_dicputassoc[] = { 'p', 'u', 't', '_', 'a', 's', 's', 'o', 'c', ':' };
 
 	moo_oow_t i;
-	moo_oop_t sym, cls;
+	moo_oop_t sym;
+	moo_oop_class_t cls;
 	moo_oop_t* moo_ptr;
 
 	for (i = 0; i < MOO_COUNTOF(kernel_classes); i++)
@@ -305,11 +298,20 @@ static int ignite_3 (moo_t* moo)
 		sym = moo_makesymbol (moo, kernel_classes[i].name, kernel_classes[i].len);
 		if (!sym) return -1;
 
-		cls = *(moo_oop_t*)((moo_uint8_t*)moo + kernel_classes[i].offset);
+		cls = *(moo_oop_class_t*)((moo_uint8_t*)moo + kernel_classes[i].offset);
+		cls->name = (moo_oop_char_t)sym;
+		cls->nsup = moo->sysdic;
 
-		if (!moo_putatsysdic(moo, sym, cls)) return -1;
+		if (!moo_putatsysdic(moo, sym, (moo_oop_t)cls)) return -1;
 		moo_ptr++;
 	}
+
+	/* Attach the system dictionary to the nsdic field of the System class */
+	moo->_system->nsdic = moo->sysdic;
+	/* Set the name field of the system dictionary */
+	moo->sysdic->name = moo->_system->name;
+	/* Set the owning class field of the system dictionary, it's circular here */
+	moo->sysdic->nsup = (moo_oop_t)moo->_system;
 
 	/* Make the process scheduler avaialble as the global name 'Processor' */
 	sym = moo_makesymbol (moo, str_processor, MOO_COUNTOF(str_processor));
@@ -632,7 +634,7 @@ void moo_gc (moo_t* moo)
 		*(moo_oop_t*)((moo_uint8_t*)moo + kernel_classes[i].offset) = tmp;
 	}
 
-	moo->sysdic = (moo_oop_set_t)moo_moveoop (moo, (moo_oop_t)moo->sysdic);
+	moo->sysdic = (moo_oop_nsdic_t)moo_moveoop (moo, (moo_oop_t)moo->sysdic);
 	moo->processor = (moo_oop_process_scheduler_t)moo_moveoop (moo, (moo_oop_t)moo->processor);
 	moo->nil_process = (moo_oop_process_t)moo_moveoop (moo, (moo_oop_t)moo->nil_process);
 	moo->dicnewsym = (moo_oop_char_t)moo_moveoop (moo, (moo_oop_t)moo->dicnewsym);
@@ -683,7 +685,7 @@ void moo_gc (moo_t* moo)
 	compact_symbol_table (moo, old_nil);
 
 	/* move the symbol table itself */
-	moo->symtab = (moo_oop_set_t)moo_moveoop (moo, (moo_oop_t)moo->symtab);
+	moo->symtab = (moo_oop_dic_t)moo_moveoop (moo, (moo_oop_t)moo->symtab);
 
 	/* scan the new heap again from the end position of
 	 * the previous scan to move referenced objects by 

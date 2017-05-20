@@ -478,19 +478,37 @@ struct moo_trailer_t
 #define MOO_OBJ_GET_TRAILER_BYTE(oop) ((moo_oob_t*)&((moo_oop_oop_t)oop)->slot[MOO_OBJ_GET_SIZE(oop) + 1])
 #define MOO_OBJ_GET_TRAILER_SIZE(oop) ((moo_oow_t)((moo_oop_oop_t)oop)->slot[MOO_OBJ_GET_SIZE(oop)])
 
-#define MOO_SET_NAMED_INSTVARS 2
-typedef struct moo_set_t moo_set_t;
-typedef struct moo_set_t* moo_oop_set_t;
-struct moo_set_t
+#define MOO_DIC_NAMED_INSTVARS 2
+typedef struct moo_dic_t moo_dic_t;
+typedef struct moo_dic_t* moo_oop_dic_t;
+struct moo_dic_t
 {
 	MOO_OBJ_HEADER;
 	moo_oop_t     tally;  /* SmallInteger */
 	moo_oop_oop_t bucket; /* Array */
 };
 
-#define MOO_CLASS_NAMED_INSTVARS 17
+/* [NOTE] the beginning of the moo_nsdic_t structure
+ *        must be identical to the moo_dic_t streucture */
+#define MOO_NSDIC_NAMED_INSTVARS 4
+typedef struct moo_nsdic_t moo_nsdic_t;
+typedef struct moo_nsdic_t* moo_oop_nsdic_t;
+
+#define MOO_CLASS_NAMED_INSTVARS 18
 typedef struct moo_class_t moo_class_t;
 typedef struct moo_class_t* moo_oop_class_t;
+
+struct moo_nsdic_t
+{
+	MOO_OBJ_HEADER;
+	moo_oop_t tally;
+	moo_oop_t bucket;
+	/* same as moo_dic_t so far */
+
+	moo_oop_char_t name; /* a symbol. if it belongs to a class, it will be the same as the name of the class */
+	moo_oop_t nsup; /* a class if it belongs to the class. another nsdic if it doesn't */
+};
+
 struct moo_class_t
 {
 	MOO_OBJ_HEADER;
@@ -514,10 +532,13 @@ struct moo_class_t
 
 	/* [0] - instance methods, MethodDictionary
 	 * [1] - class methods, MethodDictionary */
-	moo_oop_set_t  mthdic[2];      
+	moo_oop_dic_t  mthdic[2];      
 
-	moo_oop_set_t  nsdic; /* dictionary used for namespacing */
-	moo_oop_set_t  cdic; /* constant dictionary */
+	moo_oop_nsdic_t nsup; /* pointer to the upper namespace */
+	moo_oop_nsdic_t nsdic; /* dictionary used for namespacing - may be nil when there are no subitems underneath */
+
+	moo_oop_dic_t  cdic; /* constant dictionary */
+
 	moo_oop_t      trsize; /* trailer size for new instances */
 
 	/* [0] - initial values for instance variables of new instances 
@@ -1041,7 +1062,6 @@ struct moo_t
 	moo_oop_class_t _byte_array; /* ByteArray */
 	moo_oop_class_t _symbol_set; /* SymbolSet */
 	moo_oop_class_t _dictionary;
-	moo_oop_class_t _system_dictionary; /* SystemDictionary */
 
 	moo_oop_class_t _namespace; /* Namespace */
 	moo_oop_class_t _pool_dictionary; /* PoolDictionary */
@@ -1078,8 +1098,8 @@ struct moo_t
 	 * are 3 */
 	moo_oop_class_t* tagged_classes[16]; 
 
-	moo_oop_set_t symtab; /* system-wide symbol table. instance of SymbolSet */
-	moo_oop_set_t sysdic; /* system dictionary. instance of SystemDictionary */
+	moo_oop_dic_t symtab; /* system-wide symbol table. instance of SymbolSet */
+	moo_oop_nsdic_t sysdic; /* system dictionary. instance of Namespace */
 	moo_oop_process_scheduler_t processor; /* instance of ProcessScheduler */
 	moo_oop_process_t nil_process; /* instance of Process */
 	moo_oop_char_t dicnewsym; /* symbol new: for dictionary */
@@ -1319,6 +1339,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_VARUNUSE,        /* unsuable variable in compiled code */
 	MOO_SYNERR_VARINACC,        /* inaccessible variable - e.g. accessing an instance variable from a class method is not allowed. */
 	MOO_SYNERR_VARAMBIG,        /* ambiguious variable - e.g. the variable is found in multiple pool dictionaries imported */
+	MOO_SYNERR_SELFINACC,       /* inaccessible self */
 	MOO_SYNERR_PRIMARYINVAL,    /* wrong expression primary */
 	MOO_SYNERR_TMPRFLOOD,       /* too many temporaries */
 	MOO_SYNERR_ARGFLOOD,        /* too many arguments */
@@ -1591,7 +1612,7 @@ MOO_EXPORT int moo_inttoooi (
 
 MOO_EXPORT moo_oop_t moo_findclass (
 	moo_t*            moo,
-	moo_oop_set_t     nsdic,
+	moo_oop_nsdic_t   nsdic,
 	const moo_ooch_t* name
 );
 

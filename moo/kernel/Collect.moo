@@ -513,8 +513,23 @@ class Dictionary(Set)
 	}
 }
 
-class SystemDictionary(Set)
+(* Namespace is marked with #limited. If a compiler is writeen in moo itself, it must 
+ * call a primitive to instantiate a new namespace rather than sending the new message
+ * to Namespace *)
+class(#limited) Namespace(Set)
 {
+	var name, nsup.
+
+	method name { ^self.name }
+	## method name: name { self.name := name }
+
+	(* nsup points to either the class associated with this namespace or directly
+	 * the upper namespace placed above this namespace. when it points to a class,
+	 * you should inspect the nsup field of the class to reach the actual upper
+	 * namespace *)
+	method nsup { ^self.nsup }
+	## method nsup: nsup { self.nsup := nsup }
+
 	method at: key
 	{
 		if (key class ~= Symbol) { InvalidArgumentException signal: 'key is not a symbol' }.
@@ -528,17 +543,12 @@ class SystemDictionary(Set)
 	}
 }
 
-class Namespace(Set)
-{
-}
-
 class PoolDictionary(Set)
 {
 }
 
 class MethodDictionary(Dictionary)
 {
-
 }
 
 extend Apex

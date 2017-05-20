@@ -6,26 +6,15 @@ class(#pointer,#limited) Class(Apex)
 {
 	var spec, selfspec, superclass, subclasses, name, modname.
 	var instvars, classinstvars, classvars, pooldics.
-	var instmthdic, classmthdic, nsdic, cdic.
+	var instmthdic, classmthdic, nsup, nsdic, cdic.
 	var trsize, initv, initv_ci.
 
-	method(#class) initialize
-	{
-		^self.
-	}
+	method(#class) initialize { ^self }
 
 	(* most of the following methods can actually become class methods of Apex.
 	 * if the instance varibles can be made accessible from the Apex class. *)
-	 
-	method name
-	{
-		^self.name
-	}
-
-	method superclass
-	{
-		^self.superclass
-	}
+	method name { ^self.name }
+	method superclass { ^self.superclass }
 
 	method specNumInstVars
 	{
@@ -45,8 +34,6 @@ class(#pointer,#limited) Class(Apex)
 		^false
 	}*)
 
-	method nsdic
-	{
-		^self.nsdic
-	}
+	method nsup { ^self.nsup }
+	method nsdic { ^self.nsdic }
 }

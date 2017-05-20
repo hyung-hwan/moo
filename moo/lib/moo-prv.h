@@ -423,8 +423,8 @@ struct moo_pooldic_t
 	moo_oow_t fqn_capa;
 	moo_ioloc_t fqn_loc;
 
-	moo_oop_set_t pd_oop;
-	moo_oop_set_t ns_oop;
+	moo_oop_dic_t pd_oop;
+	moo_oop_nsdic_t ns_oop;
 };
 
 typedef struct moo_oopbuf_t moo_oopbuf_t;
@@ -468,10 +468,8 @@ struct moo_compiler_t
 	/* the last token read */
 	moo_iotok_t  tok;
 	moo_iolink_t* io_names;
-#if 0
-	int in_array;
-#endif
 
+	/* syntax error information */
 	moo_synerr_t synerr;
 
 	/* temporary space used when dealing with an illegal character */
@@ -492,14 +490,16 @@ struct moo_compiler_t
 
 		moo_oop_class_t self_oop;
 		moo_oop_t super_oop; /* this may be nil. so the type is moo_oop_t */
-		moo_oop_set_t pooldic_oop; /* used when compiling a pooldic definition */
-		moo_oop_set_t ns_oop;
+#if 0
+		moo_oop_dic_t pooldic_oop; /* used when compiling a pooldic definition */
+#endif
+		moo_oop_nsdic_t ns_oop;
 		moo_oocs_t fqn;
 		moo_oocs_t name;
 		moo_oow_t fqn_capa;
 		moo_ioloc_t fqn_loc;
 
-		moo_oop_set_t superns_oop;
+		moo_oop_nsdic_t superns_oop;
 		moo_oocs_t superfqn;
 		moo_oocs_t supername;
 		moo_oow_t superfqn_capa;
@@ -542,21 +542,23 @@ struct moo_compiler_t
 			moo_oow_t dcl_count;
 
 			/* used to hold imported pool dictionarie objects */
-			moo_oop_set_t* oops; 
+			moo_oop_dic_t* oops; 
 			moo_oow_t oops_capa;
 		} pooldic_imp;
 
-
-		/* pooldic declaration inside class */
-		moo_pooldic_t pooldic;
 	} cls;
+
+	/* pooldic declaration */
+	moo_pooldic_t pooldic;
 
 	/* information about a method being comipled */
 	struct
 	{
+		int active;
+
 		moo_method_type_t type;
 		int primitive; /* true if method(#primitive) */
-		int lenient;
+		int lenient; /* true if method(#lenient) */
 
 		/* method source text */
 		moo_oocs_t text;
@@ -590,7 +592,6 @@ struct moo_compiler_t
 
 		/* literals */
 		moo_oopbuf_t literals;
-
 
 		/* 0 for no primitive, 1 for a normal primitive, 2 for a named primitive */
 		int pftype;
@@ -1080,30 +1081,36 @@ moo_oop_association_t moo_lookupsysdic (
 
 moo_oop_association_t moo_putatdic (
 	moo_t*        moo,
-	moo_oop_set_t dic,
+	moo_oop_dic_t dic,
 	moo_oop_t     key,
 	moo_oop_t     value
 );
 
 moo_oop_association_t moo_getatdic (
 	moo_t*        moo,
-	moo_oop_set_t dic,
+	moo_oop_dic_t dic,
 	moo_oop_t     key
 );
 
 moo_oop_association_t moo_lookupdic (
 	moo_t*            moo,
-	moo_oop_set_t     dic,
+	moo_oop_dic_t     dic,
 	const moo_oocs_t* name
 );
 
 int moo_deletedic (
 	moo_t*            moo,
-	moo_oop_set_t     dic,
+	moo_oop_dic_t     dic,
 	const moo_oocs_t* name
 );
 
-moo_oop_set_t moo_makedic (
+moo_oop_dic_t moo_makedic (
+	moo_t*          moo,
+	moo_oop_class_t _class,
+	moo_oow_t       size
+);
+
+moo_oop_nsdic_t moo_makensdic (
 	moo_t*          moo,
 	moo_oop_class_t _class,
 	moo_oow_t       size
@@ -1290,7 +1297,7 @@ moo_pfbase_t* moo_querymod (
 /* debug.c                                                                   */
 /* ========================================================================= */
 void moo_dumpsymtab (moo_t* moo);
-void moo_dumpdic (moo_t* moo, moo_oop_set_t dic, const moo_bch_t* title);
+void moo_dumpdic (moo_t* moo, moo_oop_dic_t dic, const moo_bch_t* title);
 
 
 #if defined(__cplusplus)
