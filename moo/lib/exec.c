@@ -1262,72 +1262,6 @@ start_over:
 	}
 }
 
-static moo_pfrc_t pf_log (moo_t* moo, moo_ooi_t nargs)
-{
-	moo_oop_t msg, level;
-	moo_oow_t mask;
-	moo_ooi_t k;
-
-	MOO_ASSERT (moo, nargs >=  2);
-
-	level = MOO_STACK_GETARG(moo, nargs, 0);
-	if (!MOO_OOP_IS_SMOOI(level)) mask = MOO_LOG_APP | MOO_LOG_INFO; 
-	else mask = MOO_LOG_APP | MOO_OOP_TO_SMOOI(level);
-
-	for (k = 1; k < nargs; k++)
-	{
-		msg = MOO_STACK_GETARG (moo, nargs, k);
-
-		if (msg == moo->_nil || msg == moo->_true || msg == moo->_false) 
-		{
-			goto dump_object;
-		}
-		else if (MOO_OOP_IS_POINTER(msg))
-		{
-			if (MOO_OBJ_GET_FLAGS_TYPE(msg) == MOO_OBJ_TYPE_CHAR)
-			{
-				log_char_object (moo, mask, (moo_oop_char_t)msg);
-			}
-			else if (MOO_OBJ_GET_FLAGS_TYPE(msg) == MOO_OBJ_TYPE_OOP)
-			{
-				/* visit only 1-level down into an array-like object */
-				moo_oop_t inner;
-				moo_oop_class_t _class;
-				moo_oow_t i, spec;
-
-				_class = MOO_CLASSOF(moo, msg);
-
-				spec = MOO_OOP_TO_SMOOI(((moo_oop_class_t)_class)->spec);
-				if (MOO_CLASS_SPEC_NAMED_INSTVARS(spec) > 0 || !MOO_CLASS_SPEC_IS_INDEXED(spec)) goto dump_object;
-
-				for (i = 0; i < MOO_OBJ_GET_SIZE(msg); i++)
-				{
-					inner = ((moo_oop_oop_t)msg)->slot[i];
-
-					if (i > 0) moo_logbfmt (moo, mask, " ");
-					if (MOO_OOP_IS_POINTER(inner) &&
-					    MOO_OBJ_GET_FLAGS_TYPE(inner) == MOO_OBJ_TYPE_CHAR)
-					{
-						log_char_object (moo, mask, (moo_oop_char_t)inner);
-					}
-					else
-					{
-						moo_logbfmt (moo, mask, "%O", inner);
-					}
-				}
-			}
-			else goto dump_object;
-		}
-		else
-		{
-		dump_object:
-			moo_logbfmt (moo, mask, "%O", msg);
-		}
-	}
-
-	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
-	return MOO_PF_SUCCESS;
-}
 
 static moo_pfrc_t pf_identical (moo_t* moo, moo_ooi_t nargs)
 {
@@ -2975,6 +2909,76 @@ static moo_pfrc_t pf_strlen (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+/* ------------------------------------------------------------------ */
+
+static moo_pfrc_t pf_system_log (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t msg, level;
+	moo_oow_t mask;
+	moo_ooi_t k;
+
+	MOO_ASSERT (moo, nargs >=  2);
+
+/* TODO: enhance this primitive */
+	level = MOO_STACK_GETARG(moo, nargs, 0);
+	if (!MOO_OOP_IS_SMOOI(level)) mask = MOO_LOG_APP | MOO_LOG_INFO; 
+	else mask = MOO_LOG_APP | MOO_OOP_TO_SMOOI(level);
+
+	for (k = 1; k < nargs; k++)
+	{
+		msg = MOO_STACK_GETARG (moo, nargs, k);
+
+		if (msg == moo->_nil || msg == moo->_true || msg == moo->_false) 
+		{
+			goto dump_object;
+		}
+		else if (MOO_OOP_IS_POINTER(msg))
+		{
+			if (MOO_OBJ_GET_FLAGS_TYPE(msg) == MOO_OBJ_TYPE_CHAR)
+			{
+				log_char_object (moo, mask, (moo_oop_char_t)msg);
+			}
+			else if (MOO_OBJ_GET_FLAGS_TYPE(msg) == MOO_OBJ_TYPE_OOP)
+			{
+				/* visit only 1-level down into an array-like object */
+				moo_oop_t inner;
+				moo_oop_class_t _class;
+				moo_oow_t i, spec;
+
+				_class = MOO_CLASSOF(moo, msg);
+
+				spec = MOO_OOP_TO_SMOOI(((moo_oop_class_t)_class)->spec);
+				if (MOO_CLASS_SPEC_NAMED_INSTVARS(spec) > 0 || !MOO_CLASS_SPEC_IS_INDEXED(spec)) goto dump_object;
+
+				for (i = 0; i < MOO_OBJ_GET_SIZE(msg); i++)
+				{
+					inner = ((moo_oop_oop_t)msg)->slot[i];
+
+					if (i > 0) moo_logbfmt (moo, mask, " ");
+					if (MOO_OOP_IS_POINTER(inner) &&
+					    MOO_OBJ_GET_FLAGS_TYPE(inner) == MOO_OBJ_TYPE_CHAR)
+					{
+						log_char_object (moo, mask, (moo_oop_char_t)inner);
+					}
+					else
+					{
+						moo_logbfmt (moo, mask, "%O", inner);
+					}
+				}
+			}
+			else goto dump_object;
+		}
+		else
+		{
+		dump_object:
+			moo_logbfmt (moo, mask, "%O", msg);
+		}
+	}
+
+	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
+	return MOO_PF_SUCCESS;
+}
+
 static MOO_INLINE moo_pfrc_t _system_alloc (moo_t* moo, moo_ooi_t nargs, int clear)
 {
 	moo_oop_t tmp;
@@ -3734,7 +3738,7 @@ typedef struct pf_t pf_t;
 static pf_t pftab[] =
 {
 	{  "_dump",                                { pf_dump,                                 0, MA } },
-	{  "_log",                                 { pf_log,                                  2, MA } },
+	
 
 	{ "_identical",                            { pf_identical,                            1, 1 } },
 	{ "_not_identical",                        { pf_not_identical,                        1, 1 } },
@@ -3855,6 +3859,8 @@ static pf_t pftab[] =
 	{ "System__putUint16",                     { pf_system_put_uint16,                    3, 3 } },
 	{ "System__putUint32",                     { pf_system_put_uint32,                    3, 3 } },
 	{ "System__putUint64",                     { pf_system_put_uint64,                    3, 3 } },
+
+	{ "System_log",                            { pf_system_log,                           2, MA } }
 };
 
 moo_pfbase_t* moo_getpfnum (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, moo_ooi_t* pfnum)

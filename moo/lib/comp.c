@@ -3433,6 +3433,140 @@ static int compile_class_level_imports (moo_t* moo)
 	return 0;
 }
 
+static int compile_class_level_constants (moo_t* moo)
+{
+#if 0
+	if (moo->c->cls.self_oop)
+	{
+		/* the current class has been created already */
+	}
+	else
+	{
+	}
+#endif
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
+	{
+		/* process variable declaration modifiers  */
+		GET_TOKEN (moo);
+
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
+		{
+			do
+			{
+				/* [NOTE] no modifier is supported for constant declarations.
+				 *        the following code is for consistency sake only */
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
+				{
+					/* no modifier is present */
+					set_syntax_error (moo, MOO_SYNERR_MODIFIER, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					return -1;
+				}
+				else
+				{
+					/* invalid modifier */
+					set_syntax_error (moo, MOO_SYNERR_MODIFIERINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					return -1;
+				}
+
+				if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA) break; /* hopefully ) */
+				GET_TOKEN (moo); /* get the token after , */
+			}
+			while (1);
+		}
+
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
+		{
+			/* ) expected */
+			set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
+
+		GET_TOKEN (moo);
+	}
+
+	/* variable declaration */
+	do
+	{
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
+		{
+			var_info_t var;
+
+#if 0
+			if (dcl_type == VAR_INSTANCE && (moo->c->cls.flags & CLASS_INDEXED) && (moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP))
+			{
+				set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				return -1;
+			}
+
+			if (find_class_level_variable(moo, MOO_NULL, TOKEN_NAME(moo), &var) >= 0 ||
+			    moo_lookupdic (moo, (moo_oop_dic_t)moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
+			    moo_lookupdic (moo, (moo_oop_dic_t)moo->c->cls.ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
+			{
+				set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				return -1;
+			}
+
+			if (add_class_level_variable(moo, dcl_type, TOKEN_NAME(moo)) <= -1) return -1;
+#endif
+
+			GET_TOKEN (moo);
+
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_ASSIGN)
+			{
+				moo_oop_t lit;
+
+				GET_TOKEN (moo); /* skip := and go on the the value token */
+
+				/* [NOTE] default value assignment. only a literal is allowed 
+				 *    the initial values for instance variables and 
+				 *    class instance variables are set to read-only.
+				 *    this is likely to change if the actual initial
+				 *    value assignment upon instantiation employes
+				 *    deep-copying in moo_instantiate() and in the compiler. */
+				lit = token_to_literal (moo, 1);
+				if (!lit) return -1;
+
+				/* TODO: store the constannt value... */
+
+				GET_TOKEN (moo);
+			}
+			else
+			{
+				set_syntax_error (moo, MOO_SYNERR_ASSIGN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				return -1;
+			}
+		}
+		else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
+		{
+			/* no variable name is present */
+			set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
+		else
+		{
+			break;
+		}
+
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
+		{
+			set_syntax_error (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
+		else if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA) break; /* hopefully . */
+		GET_TOKEN (moo);
+	}
+	while (1);
+
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
+	{
+		set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+	GET_TOKEN (moo);
+	return 0;
+}
+
 static int compile_unary_method_name (moo_t* moo)
 {
 	MOO_ASSERT (moo, moo->c->mth.name.len == 0);
@@ -3870,7 +4004,7 @@ static int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 					/* indicate that it's not a global variable */
 					return 1;
 				}
-				goto self_no_class_level;
+				goto self_not_class_level;
 			}
 			else
 			{
@@ -3882,8 +4016,8 @@ static int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 		{
 			if (moo->c->cls.self_oop) 
 			{
-			self_no_class_level:
-				top_dic = moo->c->cls.self_oop->nsdic;
+			self_not_class_level:
+				top_dic = moo->c->cls.ns_oop;
 				if ((moo_oop_t)top_dic == moo->_nil) top_dic = MOO_NULL;
 				xname.ptr += 5;
 				xname.len -= 5;
@@ -7070,6 +7204,12 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				GET_TOKEN (moo);
 				if (compile_class_level_imports(moo) <= -1) return -1;
 			}
+			else if (is_token_word(moo, VOCA_CONST) || is_token_word(moo, VOCA_CONSTANT))
+			{
+				/* constant declaration */
+				GET_TOKEN (moo);
+				if (compile_class_level_constants(moo) <= -1) return -1;
+			}
 			else break;
 		}
 		while (1);
@@ -7106,6 +7246,12 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		{
 			GET_TOKEN (moo);
 			if (compile_method_definition(moo) <= -1) return -1;
+		}
+		else if (is_token_word(moo, VOCA_CONST) || is_token_word(moo, VOCA_CONSTANT))
+		{
+			/* constant declaration */
+			GET_TOKEN (moo);
+			if (compile_class_level_constants(moo) <= -1) return -1;
 		}
 		else break;
 	}

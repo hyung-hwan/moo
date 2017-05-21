@@ -296,7 +296,7 @@ int moo_getoption (moo_t* moo, moo_option_t id, void* value)
 			return 0;
 
 		case MOO_LOG_MAXCAPA:
-			*(moo_oow_t*)value = moo->option.log_mask;
+			*(moo_oow_t*)value = moo->option.log_maxcapa;
 			return 0;
 
 		case MOO_SYMTAB_SIZE:

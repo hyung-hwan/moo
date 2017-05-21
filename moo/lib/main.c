@@ -670,9 +670,6 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 	struct tm tm, *tmp;
 	time_t now;
 
-
-if (mask & MOO_LOG_GC) return; /* don't show gc logs */
-
 /* TODO: beautify the log message.
  *       do classification based on mask. */
 
@@ -1737,14 +1734,20 @@ int main (int argc, char* argv[])
 		moo_setoption (moo, MOO_SYSDIC_SIZE, &tab_size);
 		tab_size = 600;
 		moo_setoption (moo, MOO_PROCSTK_SIZE, &tab_size);
+
+		
 	}
 
 	{
-		int trait = 0;
+		unsigned int trait = 0;
 
 		/*trait |= MOO_NOGC;*/
 		trait |= MOO_AWAIT_PROCS;
 		moo_setoption (moo, MOO_TRAIT, &trait);
+
+		/* disable GC logs */
+		trait = ~MOO_LOG_GC;
+		moo_setoption (moo, MOO_LOG_MASK, &trait);
 	}
 
 	if (moo_ignite(moo) <= -1)

@@ -1211,7 +1211,8 @@ enum moo_log_mask_t
 };
 typedef enum moo_log_mask_t moo_log_mask_t;
 
-#define MOO_LOG_ENABLED(moo,mask) ((moo)->option.log_mask & (mask))
+/* all bits must be set to get enabled */
+#define MOO_LOG_ENABLED(moo,mask) (((moo)->option.log_mask & (mask)) == (mask))
 
 #define MOO_LOG0(moo,mask,fmt) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt); } while(0)
 #define MOO_LOG1(moo,mask,fmt,a1) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1); } while(0)

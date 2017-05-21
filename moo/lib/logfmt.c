@@ -607,7 +607,6 @@ static int _logufmtv (moo_t* moo, const moo_uch_t* fmt, moo_fmtout_t* data, va_l
 	return __logufmtv (moo, fmt, data, ap, moo_logbfmt);
 }
 
-
 moo_ooi_t moo_logbfmt (moo_t* moo, moo_oow_t mask, const moo_bch_t* fmt, ...)
 {
 	int x;

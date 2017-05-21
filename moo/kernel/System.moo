@@ -33,21 +33,30 @@ extend System
 	## output production from the moo code.
 	##   System logNl: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'.
 	##
+	method(#class,#variadic,#primitive) log(level,msg1).
+	
+(*
+TODO: how to pass all variadic arguments to another variadic methods???
+	method(#class,#variadic) logInfo (msg1)
+	{
+		^self log (System.Log.INFO,msg1)
+	}
+*)	
 	method(#class) atLevel: level log: message
 	{
-		<primitive: #_log>
+		<primitive: #System_log>
 		## do nothing upon logging failure
 	}
 
 	method(#class) atLevel: level log: message and: message2
 	{
-		<primitive: #_log>
+		<primitive: #System_log>
 		## do nothing upon logging failure
 	}
 
 	method(#class) atLevel: level log: message and: message2 and: message3
 	{
-		<primitive: #_log>
+		<primitive: #System_log>
 		## do nothing upon logging failure
 	}
 
@@ -88,7 +97,7 @@ extend System
 	{
 		^self atLevel: System.Log.INFO logNl: message and: message2.
 	}
-	
+
 	(* nsdic access *)
 	method(#class) at: key
 	{
