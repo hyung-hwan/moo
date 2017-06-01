@@ -67,7 +67,9 @@ enum var_type_t
 
 	VAR_GLOBAL,
 	VAR_ARGUMENT,
-	VAR_TEMPORARY
+	VAR_TEMPORARY,
+
+	VAR_LITERAL /* used when compiling pooldic elements only */
 };
 typedef enum var_type_t var_type_t;
 
@@ -75,8 +77,12 @@ struct var_info_t
 {
 	var_type_t            type;
 	moo_ooi_t             pos; /* not used for VAR_GLOBAL */
-	moo_oop_class_t       cls; /* useful if type is VAR_CLASS. note MOO_NULL indicates the self class. */
-	moo_oop_association_t gbl; /* used for VAR_GLOBAL only */
+	moo_oop_class_t       cls; /* useful if type is VAR_CLASS(class variable). note MOO_NULL indicates the self class. */
+	union 
+	{
+		moo_oop_association_t gbl; /* used for VAR_GLOBAL only */
+		moo_oop_t             lit; /* used for VAR_LITERAL only */
+	} u;
 };
 typedef struct var_info_t var_info_t;
 
@@ -91,8 +97,6 @@ static struct voca_t
 	{  5, { 'c','l','a','s','s'                                           } },
 	{  6, { '#','c','l','a','s','s'                                       } },
 	{ 10, { '#','c','l','a','s','s','i','n','s','t'                       } },
-	{  5, { 'c','o','n','s','t'                                           } },
-	{  8, { 'c','o','n','s','t','a','n','t'                               } },
 	{  8, { 'c','o','n','t','i','n','u','e'                               } },
 	{  3, { 'd','c','l'                                                   } },
 	{  2, { 'd','o'                                                       } },
@@ -123,6 +127,7 @@ static struct voca_t
 	{ 10, { 'p','r','i','m','i','t','i','v','e',':'                       } },
 	{ 10, { '#','p','r','i','m','i','t','i','v','e'                       } },
 	{  4, { 's','e','l','f'                                               } },
+	{  6, { 's','e','l','f','n','s'                                       } },
 	{  5, { 's','u','p','e','r'                                           } },
 	{ 11, { 't','h','i','s','C','o','n','t','e','x','t'                   } },
 	{ 11, { 't','h','i','s','P','r','o','c','e','s','s'                   } },
@@ -151,8 +156,6 @@ enum voca_id_t
 	VOCA_CLASS,
 	VOCA_CLASS_S,
 	VOCA_CLASSINST_S,
-	VOCA_CONST,
-	VOCA_CONSTANT,
 	VOCA_CONTINUE,
 	VOCA_DCL,
 	VOCA_DO,
@@ -183,6 +186,7 @@ enum voca_id_t
 	VOCA_PRIMITIVE_COLON,
 	VOCA_PRIMITIVE_S,
 	VOCA_SELF,
+	VOCA_SELFNS,
 	VOCA_SUPER,
 	VOCA_THIS_CONTEXT,
 	VOCA_THIS_PROCESS,
@@ -210,6 +214,7 @@ static int compile_method_statement (moo_t* moo);
 static int compile_method_expression (moo_t* moo, int pop);
 static int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index);
 static moo_oop_t token_to_literal (moo_t* moo, int rdonly);
+static moo_oop_t find_element_in_compiling_pooldic (moo_t* moo, const moo_oocs_t* name);
 
 static MOO_INLINE int is_spacechar (moo_ooci_t c)
 {
@@ -328,6 +333,7 @@ static int is_reserved_word (const moo_oocs_t* ucs)
 		VOCA_ERROR,
 		VOCA_THIS_CONTEXT,
 		VOCA_THIS_PROCESS,
+		VOCA_SELFNS,
 		VOCA_IF,
 		VOCA_ELSE,
 		VOCA_ELSIF,
@@ -1127,6 +1133,10 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		else if (is_token_word(moo, VOCA_THIS_PROCESS))
 		{
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_THIS_PROCESS);
+		}
+		else if (is_token_word(moo, VOCA_SELFNS))
+		{
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_SELFNS);
 		}
 		else if (is_token_word(moo, VOCA_IF))
 		{
@@ -2594,11 +2604,11 @@ static int set_class_level_variable_initv (moo_t* moo, var_type_t var_type, moo_
 	{
 		moo_oow_t newcapa, oldcapa;
 		/*moo_oow_t i;*/
-		moo_oop_t* tmp;
+		moo_initv_t* tmp;
 
 		oldcapa = moo->c->cls.var[var_type].initv_capa;
 		newcapa = MOO_ALIGN_POW2 ((var_index + 1), 32);
-		tmp = moo_reallocmem (moo, moo->c->cls.var[var_type].initv, newcapa * MOO_SIZEOF(moo_oop_t));
+		tmp = moo_reallocmem (moo, moo->c->cls.var[var_type].initv, newcapa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
 		/*for (i = moo->c->cls.var[var_type].initv_capa; i < newcapa; i++) tmp[i] = MOO_NULL;*/
@@ -2613,12 +2623,16 @@ static int set_class_level_variable_initv (moo_t* moo, var_type_t var_type, moo_
 		moo_oow_t i;
 
 		for (i = moo->c->cls.var[var_type].initv_count; i < var_index; i++) 
-			moo->c->cls.var[var_type].initv[i] = MOO_NULL;
+		{
+			moo->c->cls.var[var_type].initv[i].v = MOO_NULL;
+			moo->c->cls.var[var_type].initv[i].flags = 0;
+		}
 
 		moo->c->cls.var[var_type].initv_count = var_index + 1;
 	}
 
-	moo->c->cls.var[var_type].initv[var_index] = initv;
+	moo->c->cls.var[var_type].initv[var_index].v = initv;
+	moo->c->cls.var[var_type].initv[var_index].flags = 0; /* TODO: set flags properly */
 	return 0;
 }
 
@@ -2674,6 +2688,7 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 			if (find_word_in_string(&hs, name, &pos) >= 0)
 			{
 				super = self->superclass;
+				MOO_ASSERT (moo, super == moo->c->cls.super_oop);
 
 				/* 'self' may be MOO_NULL if MOO_NULL has been given for it.
 				 * the caller must take good care when interpreting the meaning of 
@@ -2684,6 +2699,7 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 		}
 
 		super = self->superclass;
+		MOO_ASSERT (moo, super == moo->c->cls.super_oop);
 	}
 	else
 	{
@@ -2694,7 +2710,7 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 			if (find_word_in_string(&moo->c->cls.var[index].str, name, &pos) >= 0)
 			{
 				super = moo->c->cls.super_oop;
-				var->cls = self;
+				var->cls = MOO_NULL; /* the current class being compiled */
 				goto done;
 			}
 		}
@@ -3276,11 +3292,11 @@ if super is variable-nonpointer, no instance variable is allowed.
 
 				GET_TOKEN (moo);
 
-				/* [NOTE] default value assignment. only a literal is allowed 
+				/* [NOTE] default value assignment. only a literal is allowed.
 				 *    the initial values for instance variables and 
 				 *    class instance variables are set to read-only.
-				 *    this is likely to change if the actual initial
-				 *    value assignment upon instantiation employes
+				 *    I may change this if i get the actual initial
+				 *    value assignment upon instantiation to employ
 				 *    deep-copying in moo_instantiate() and in the compiler. */
 				lit = token_to_literal (moo, dcl_type != VAR_CLASS);
 				if (!lit) return -1;
@@ -3433,139 +3449,6 @@ static int compile_class_level_imports (moo_t* moo)
 	return 0;
 }
 
-static int compile_class_level_constants (moo_t* moo)
-{
-#if 0
-	if (moo->c->cls.self_oop)
-	{
-		/* the current class has been created already */
-	}
-	else
-	{
-	}
-#endif
-	if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
-	{
-		/* process variable declaration modifiers  */
-		GET_TOKEN (moo);
-
-		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
-		{
-			do
-			{
-				/* [NOTE] no modifier is supported for constant declarations.
-				 *        the following code is for consistency sake only */
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
-				{
-					/* no modifier is present */
-					set_syntax_error (moo, MOO_SYNERR_MODIFIER, TOKEN_LOC(moo), TOKEN_NAME(moo));
-					return -1;
-				}
-				else
-				{
-					/* invalid modifier */
-					set_syntax_error (moo, MOO_SYNERR_MODIFIERINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
-					return -1;
-				}
-
-				if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA) break; /* hopefully ) */
-				GET_TOKEN (moo); /* get the token after , */
-			}
-			while (1);
-		}
-
-		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
-		{
-			/* ) expected */
-			set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
-			return -1;
-		}
-
-		GET_TOKEN (moo);
-	}
-
-	/* variable declaration */
-	do
-	{
-		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
-		{
-			var_info_t var;
-
-#if 0
-			if (dcl_type == VAR_INSTANCE && (moo->c->cls.flags & CLASS_INDEXED) && (moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP))
-			{
-				set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
-				return -1;
-			}
-
-			if (find_class_level_variable(moo, MOO_NULL, TOKEN_NAME(moo), &var) >= 0 ||
-			    moo_lookupdic (moo, (moo_oop_dic_t)moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
-			    moo_lookupdic (moo, (moo_oop_dic_t)moo->c->cls.ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
-			{
-				set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
-				return -1;
-			}
-
-			if (add_class_level_variable(moo, dcl_type, TOKEN_NAME(moo)) <= -1) return -1;
-#endif
-
-			GET_TOKEN (moo);
-
-			if (TOKEN_TYPE(moo) == MOO_IOTOK_ASSIGN)
-			{
-				moo_oop_t lit;
-
-				GET_TOKEN (moo); /* skip := and go on the the value token */
-
-				/* [NOTE] default value assignment. only a literal is allowed 
-				 *    the initial values for instance variables and 
-				 *    class instance variables are set to read-only.
-				 *    this is likely to change if the actual initial
-				 *    value assignment upon instantiation employes
-				 *    deep-copying in moo_instantiate() and in the compiler. */
-				lit = token_to_literal (moo, 1);
-				if (!lit) return -1;
-
-				/* TODO: store the constannt value... */
-
-				GET_TOKEN (moo);
-			}
-			else
-			{
-				set_syntax_error (moo, MOO_SYNERR_ASSIGN, TOKEN_LOC(moo), TOKEN_NAME(moo));
-				return -1;
-			}
-		}
-		else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
-		{
-			/* no variable name is present */
-			set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
-			return -1;
-		}
-		else
-		{
-			break;
-		}
-
-		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
-		{
-			set_syntax_error (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
-			return -1;
-		}
-		else if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA) break; /* hopefully . */
-		GET_TOKEN (moo);
-	}
-	while (1);
-
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
-	{
-		set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
-		return -1;
-	}
-
-	GET_TOKEN (moo);
-	return 0;
-}
 
 static int compile_unary_method_name (moo_t* moo)
 {
@@ -3951,7 +3834,64 @@ static int compile_method_pragma (moo_t* moo)
 	return 0;
 }
 
-static int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* name_loc, var_info_t* var)
+static int validate_class_level_variable (moo_t* moo, var_info_t* var, const moo_oocs_t* name, const moo_ioloc_t* name_loc)
+{
+	switch (var->type)
+	{
+		case VAR_INSTANCE:
+			if (moo->c->mth.type == MOO_METHOD_CLASS || moo->c->mth.type == MOO_METHOD_DUAL)
+			{
+				/* a class(or dual) method cannot access an instance variable */
+				set_syntax_error (moo, MOO_SYNERR_VARINACC, name_loc, name);
+				return -1;
+			}
+			break;
+
+		case VAR_CLASSINST:
+			/* class instance variable can be accessed by only pure class methods */
+			if (moo->c->mth.type == MOO_METHOD_INSTANCE || moo->c->mth.type == MOO_METHOD_DUAL)
+			{
+				/* an instance method cannot access a class-instance variable */
+				set_syntax_error (moo, MOO_SYNERR_VARINACC, name_loc, name);
+				return -1;
+			}
+
+			/* to a class object itself, a class-instance variable is
+			 * just an instance variriable. but these are located
+			 * after the named instance variables. */
+			var->pos += MOO_CLASS_NAMED_INSTVARS;
+			break;
+
+		case VAR_CLASS:
+			/* a class variable can be accessed by both instance methods and class methods */
+			MOO_ASSERT (moo, var->cls != MOO_NULL);
+			MOO_ASSERT (moo, MOO_CLASSOF(moo, var->cls) == moo->_class);
+
+			/* increment the position by the number of class instance variables
+			 * as the class variables are placed after the class instance variables */
+			var->pos += MOO_CLASS_NAMED_INSTVARS + 
+					  MOO_CLASS_SELFSPEC_CLASSINSTVARS(MOO_OOP_TO_SMOOI(var->cls->selfspec));
+			break;
+
+		default:
+			/* internal error - it must not happen */
+			moo_seterrnum (moo, MOO_EINTERN);
+			return -1;
+	}
+
+	return 0;
+}
+
+static moo_oow_t is_dotted_ident_prefixed (const moo_oocs_t* name, int voca_id)
+{
+	if (name->len > vocas[voca_id].len &&
+	    moo_equaloochars(name->ptr, vocas[voca_id].str, vocas[voca_id].len) &&
+	    name->ptr[vocas[voca_id].len] == '.') return vocas[voca_id].len;
+
+	return 0;
+}
+
+static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* name_loc, var_info_t* var)
 {
 	/* if a name is dotted,
 	 * 
@@ -3963,7 +3903,8 @@ static int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 	moo_oocs_t last;
 	moo_oop_nsdic_t top_dic, ns_oop;
 	moo_oop_association_t ass;
-	const moo_ooch_t* dot;
+
+	moo_oow_t pxlen;
 
 	moo_oocs_t xname;
 	moo_ioloc_t xname_loc;
@@ -3972,20 +3913,15 @@ static int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 	xname = *name;
 	xname_loc = *name_loc;
 
-	dot = moo_findoochar (name->ptr, name->len, '.');
-	MOO_ASSERT (moo, dot != MOO_NULL);
-	if (dot - (const moo_ooch_t*)name->ptr == 4 && 
-	    moo_equaloochars(name->ptr, vocas[VOCA_SELF].str, 4))
+	if ((pxlen = is_dotted_ident_prefixed (name, VOCA_SELF)) > 0)
 	{
-		/* special case. the dotted name begins with self. 
-		 * the special prefix 'self' is used to refer to the data
-		 * contained in a class or in its instance. */
-		dot = moo_findoochar (dot + 1, name->len - 5, '.');
-		if (!dot)
+		/* the first word in the dotted notation is self */
+
+		if (!moo_findoochar (name->ptr + pxlen + 1, name->len - pxlen - 1, '.'))
 		{
 			/* the dotted name is composed of 2 segments only */
-			last.ptr = name->ptr + 5;
-			last.len = name->len - 5;
+			last.ptr = name->ptr + pxlen + 1;
+			last.len = name->len - pxlen - 1;
 
 			if (is_reserved_word(&last))
 			{
@@ -3995,52 +3931,90 @@ static int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 				return -1;
 			}
 
-			if (moo->c->cls.self_oop)
+			if (moo->c->cls.super_oop)
 			{
-				/* it's probably called from a method or
-				 * a nested pooldic definition inside a class */
+				/* called inside a class definition */
+
+				/* [NOTE] 
+				 *  cls.ns_oop is set when the class name is enountered.
+				 *  cls.super_oop is set when the parent class name is enountered.
+				 *  cls.super_oop may still be MOO_NULL even if cls.ns_oop is not.
+				 *  on the other hand, cls.ns_oop is not MOO_NULL as long as
+				 *  cls.super_oop is not MOO_NULL.
+				 */
+
+				MOO_ASSERT (moo, moo->c->cls.ns_oop != MOO_NULL);
+				MOO_ASSERT (moo, moo->c->pooldic.ns_oop == MOO_NULL);
+				/* moo->c->cls.self_oop may still be MOO_NULL if the class has not been instantiated */
+
 				if (find_class_level_variable(moo, moo->c->cls.self_oop, &last, var) >= 0)
 				{
-					/* indicate that it's not a global variable */
-					return 1;
+					/* if the current class has not been instantiated, 
+					 * no validation nor adjustment of the var->pos field is performed */
+					if (moo->c->cls.self_oop && validate_class_level_variable (moo, var, name, name_loc) <= -1) return -1;
+					return 0;
 				}
-				goto self_not_class_level;
 			}
-			else
+			else if (moo->c->pooldic.ns_oop)
 			{
-				goto self_inacc;
-				
+				moo_oop_t v;
+
+				/* called inside a pooldic definition */
+				MOO_ASSERT (moo, moo->c->cls.ns_oop == MOO_NULL);
+				MOO_ASSERT (moo, moo->c->cls.super_oop == MOO_NULL);
+				MOO_ASSERT (moo, moo->c->cls.self_oop == MOO_NULL);
+				MOO_ASSERT (moo, moo->c->pooldic.pd_oop == MOO_NULL);
+
+				v = find_element_in_compiling_pooldic (moo, &last);
+				if (!v)
+				{
+					set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
+					return -1;
+				}
+
+				var->type = VAR_LITERAL;
+				var->u.lit = v; /* TODO: change this */
+				return 0;
 			}
+		}
+
+		if (!moo->c->cls.self_oop)
+		{
+			/* self is not usable when it's not compiling in a class.
+			 * a pooldic definition cannot contain subdictionaries.
+			 * the pooldic is a terminal point and the items inside
+			 * are final nodes. if self is followed by more than 1 
+			 * subsegments, it's */
+			set_syntax_error (moo, MOO_SYNERR_VARINACC, name_loc, name);
+			return -1;
+		}
+
+		/* namespace that the current class starts */
+		top_dic = moo->c->cls.self_oop->nsdic;
+		pxlen++; /* include . into the length */
+	}
+	else if ((pxlen = is_dotted_ident_prefixed (name, VOCA_SELFNS)) > 0)
+	{
+		/* the first segment is selfns which indicates a namespace that
+		 * the current class belongs to */
+		if (moo->c->cls.ns_oop)
+		{
+			/* compiling in a class definition */
+			top_dic = moo->c->cls.ns_oop;
 		}
 		else
 		{
-			if (moo->c->cls.self_oop) 
-			{
-			self_not_class_level:
-				top_dic = moo->c->cls.ns_oop;
-				if ((moo_oop_t)top_dic == moo->_nil) top_dic = MOO_NULL;
-				xname.ptr += 5;
-				xname.len -= 5;
-				xname_loc.colm += 5;
-			}
-			else
-			{
-			self_inacc:
-				top_dic = moo->c->cls.self_oop->nsdic;
-				if ((moo_oop_t)top_dic == moo->_nil) top_dic = MOO_NULL;
-				xname.ptr += 5;
-				xname.len -= 5;
-				xname_loc.colm += 5;
-#if 0
-				/* called without a class defined. possibly the following cases:
-				 *   used as a value for a pooldic item
-				 *   used as an initial value for a class-level variables */
-				set_syntax_error (moo, MOO_SYNERR_SELFINACC, name_loc, name);
-				return -1;
-#endif
-			}
+			/* compiling in a pooldic definition */
+			MOO_ASSERT (moo, moo->c->pooldic.ns_oop != MOO_NULL);
+			top_dic = moo->c->pooldic.ns_oop;
 		}
+		pxlen++; /* include . into the length */
 	}
+
+	if ((moo_oop_t)top_dic == moo->_nil) top_dic = MOO_NULL;
+	xname.ptr += pxlen;
+	xname.len -= pxlen;
+	xname_loc.colm += pxlen;
 
 	/*if (preprocess_dotted_name (moo, PDN_DONT_ADD_NS | PDN_ACCEPT_POOLDIC_AS_NS, top_dic, name, name_loc, &last, &ns_oop) <= -1) return -1;*/
 	if (preprocess_dotted_name (moo, PDN_DONT_ADD_NS | PDN_ACCEPT_POOLDIC_AS_NS, top_dic, &xname, &xname_loc, &last, &ns_oop) <= -1) return -1;
@@ -4054,136 +4028,123 @@ static int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 	}
 
 	var->type = VAR_GLOBAL;
-	var->gbl = ass;
+	var->u.gbl = ass;
+	return 0;
+}
+
+static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* name_loc, var_info_t* var)
+{
+	moo_oow_t index;
+	moo_oop_association_t ass;
+
+	if (moo->c->cls.self_oop)
+	{
+		/* the current class being compiled has been instantiated.
+		 * look up in the temporary variable list if compiling in a method */
+		if (moo->c->mth.active && find_temporary_variable (moo, name, &index) >= 0)
+		{
+			var->type = (index < moo->c->mth.tmpr_nargs)? VAR_ARGUMENT: VAR_TEMPORARY;
+			var->pos = index;
+			return 0;
+		}
+	}
+
+	if (moo->c->cls.super_oop)
+	{
+		/* called inside a class definition */
+		/* read a comment in find_dotted_ident() for the reason behind
+		 * the if condition above. */
+
+		MOO_ASSERT (moo, moo->c->cls.ns_oop != MOO_NULL);
+		MOO_ASSERT (moo, moo->c->pooldic.ns_oop == MOO_NULL);
+
+		if (find_class_level_variable(moo, moo->c->cls.self_oop, name, var) >= 0)
+		{
+			/* if the current class being compiled has not been instantiated,
+			 * no validation nor adjustment of the var->pos field is performed */
+			return moo->c->cls.self_oop? validate_class_level_variable (moo, var, name, name_loc): 0;
+		}
+	}
+	else if (moo->c->pooldic.ns_oop)
+	{
+		moo_oop_t v;
+
+		/* called inside a pooldic definition */
+		MOO_ASSERT (moo, moo->c->cls.ns_oop == MOO_NULL);
+		MOO_ASSERT (moo, moo->c->cls.super_oop == MOO_NULL);
+		MOO_ASSERT (moo, moo->c->cls.self_oop == MOO_NULL);
+		MOO_ASSERT (moo, moo->c->pooldic.pd_oop == MOO_NULL);
+
+		v = find_element_in_compiling_pooldic (moo, name);
+		if (!v)
+		{
+			set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
+			return -1;
+		}
+
+		var->type = VAR_LITERAL;
+		var->u.lit = v; /* TODO: change this */
+		return 0;
+	}
+
+	/* find an undotted identifier in dictionaries */
+	if (moo->c->cls.ns_oop)
+	{
+		ass = moo_lookupdic (moo, (moo_oop_dic_t)moo->c->cls.ns_oop, name); /* in the current name space */
+		if (!ass && moo->c->cls.ns_oop != moo->sysdic) 
+			ass = moo_lookupdic (moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
+	}
+	else
+	{
+		ass = moo_lookupdic (moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
+	}
+
+	if (!ass)
+	{
+		moo_oow_t i;
+		moo_oop_association_t ass2 = MOO_NULL;
+
+		/* attempt to find the variable in pool dictionaries */
+		for (i = 0; i < moo->c->cls.pooldic_imp.dcl_count; i++)
+		{
+			ass = moo_lookupdic (moo, moo->c->cls.pooldic_imp.oops[i], name);
+			if (ass)
+			{
+				if (ass2)
+				{
+					/* the variable name has been found at least in 2 dictionaries - ambiguous */
+					set_syntax_error (moo, MOO_SYNERR_VARAMBIG, name_loc, name);
+					return -1;
+				}
+				ass2 = ass;
+			}
+		}
+
+		ass = ass2;
+		if (!ass) 
+		{
+			set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
+			return -1;
+		}
+	}
+
+	var->type = VAR_GLOBAL;
+	var->u.gbl = ass;
+
 	return 0;
 }
 
 static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* name_loc, int name_dotted, var_info_t* var)
 {
-	moo_oow_t index;
+	int x;
 
 	MOO_MEMSET (var, 0, MOO_SIZEOF(*var));
 
-	if (name_dotted)
-	{
-		int n;
-		if ((n = find_dotted_ident (moo, name, name_loc, var)) <= -1) return -1;
-		if (n >= 1) goto class_level_variable; /* prefixed with self. */
-		return 0;
-	}
+	x = name_dotted? find_dotted_ident (moo, name, name_loc, var): find_undotted_ident (moo, name, name_loc, var);
+	if (x <= -1) return -1;
 
-	if (!moo->c->cls.self_oop) 
-	{
-		/* it's called before a class is made available. commonly, outside a class.
-		 * no need to check class level variables and temporary variables */
-		goto lookup_in_dics;
-	}
-
-	if (moo->c->mth.active && find_temporary_variable (moo, name, &index) >= 0)
-	{
-		var->type = (index < moo->c->mth.tmpr_nargs)? VAR_ARGUMENT: VAR_TEMPORARY;
-		var->pos = index;
-	}
-	else 
-	{
-		if (find_class_level_variable(moo, moo->c->cls.self_oop, name, var) >= 0)
-		{
-		class_level_variable:
-			switch (var->type)
-			{
-				case VAR_INSTANCE:
-					if (moo->c->mth.type == MOO_METHOD_CLASS || moo->c->mth.type == MOO_METHOD_DUAL)
-					{
-						/* a class(or dual) method cannot access an instance variable */
-						set_syntax_error (moo, MOO_SYNERR_VARINACC, name_loc, name);
-						return -1;
-					}
-					break;
-
-				case VAR_CLASSINST:
-					/* class instance variable can be accessed by only pure class methods */
-					if (moo->c->mth.type == MOO_METHOD_INSTANCE || moo->c->mth.type == MOO_METHOD_DUAL)
-					{
-						/* an instance method cannot access a class-instance variable */
-						set_syntax_error (moo, MOO_SYNERR_VARINACC, name_loc, name);
-						return -1;
-					}
-
-					/* to a class object itself, a class-instance variable is
-					 * just an instance variriable. but these are located
-					 * after the named instance variables. */
-					var->pos += MOO_CLASS_NAMED_INSTVARS;
-					break;
-
-				case VAR_CLASS:
-					/* a class variable can be accessed by both instance methods and class methods */
-					MOO_ASSERT (moo, var->cls != MOO_NULL);
-					MOO_ASSERT (moo, MOO_CLASSOF(moo, var->cls) == moo->_class);
-
-					/* increment the position by the number of class instance variables
-					 * as the class variables are placed after the class instance variables */
-					var->pos += MOO_CLASS_NAMED_INSTVARS + 
-					            MOO_CLASS_SELFSPEC_CLASSINSTVARS(MOO_OOP_TO_SMOOI(var->cls->selfspec));
-					break;
-
-				default:
-					/* internal error - it must not happen */
-					moo_seterrnum (moo, MOO_EINTERN);
-					return -1;
-			}
-		}
-		else 
-		{
-			moo_oop_association_t ass;
-
-		lookup_in_dics:
-			/* find an undotted identifier in dictionaries */
-
-			if (moo->c->cls.ns_oop)
-			{
-				ass = moo_lookupdic (moo, (moo_oop_dic_t)moo->c->cls.ns_oop, name); /* in the current name space */
-				if (!ass && moo->c->cls.ns_oop != moo->sysdic) 
-					ass = moo_lookupdic (moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
-			}
-			else
-			{
-				ass = moo_lookupdic (moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
-			}
-
-			if (!ass)
-			{
-				moo_oow_t i;
-				moo_oop_association_t ass2 = MOO_NULL;
-
-				/* attempt to find the variable in pool dictionaries */
-				for (i = 0; i < moo->c->cls.pooldic_imp.dcl_count; i++)
-				{
-					ass = moo_lookupdic (moo, moo->c->cls.pooldic_imp.oops[i], name);
-					if (ass)
-					{
-						if (ass2)
-						{
-							/* the variable name has been found at least in 2 dictionaries - ambiguous */
-							set_syntax_error (moo, MOO_SYNERR_VARAMBIG, name_loc, name);
-							return -1;
-						}
-						ass2 = ass;
-					}
-				}
-
-				ass = ass2;
-				if (!ass) 
-				{
-					set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
-					return -1;
-				}
-			}
-
-			var->type = VAR_GLOBAL;
-			var->gbl = ass;
-		}
-	}
-
+	/* final validation on the range of pos field. just check regardless of var->type.
+	 * i assume the functions above don't taint the var-type field when it's meaningless. */
 	if (var->pos > MAX_CODE_INDEX)
 	{
 		/* the assignee is not usable because its index is too large 
@@ -4710,6 +4671,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 	{
 		/* the caller has read the identifier and the next word */
 	handle_ident:
+		MOO_ASSERT (moo, moo->c->cls.super_oop != MOO_NULL && moo->c->cls.self_oop != MOO_NULL);
 		if (get_variable_info(moo, ident, ident_loc, ident_dotted, &var) <= -1) return -1;
 
 		switch (var.type)
@@ -4761,7 +4723,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				 * the code compiled before the deletion will still access
 				 * the deleted association
 				 */
-				if (add_literal(moo, (moo_oop_t)var.gbl, &index) <= -1 ||
+				if (add_literal(moo, (moo_oop_t)var.u.gbl, &index) <= -1 ||
 				    emit_single_param_instruction(moo, BCODE_PUSH_OBJECT_0, index) <= -1) return -1;
 				break;
 
@@ -4837,6 +4799,11 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 
 			case MOO_IOTOK_THIS_PROCESS:
 				if (emit_byte_instruction(moo, BCODE_PUSH_PROCESS) <= -1) return -1;
+				GET_TOKEN (moo);
+				break;
+
+			case MOO_IOTOK_SELFNS:
+				if (emit_byte_instruction(moo, BCODE_PUSH_RECEIVER_NS) <= -1) return -1;
 				GET_TOKEN (moo);
 				break;
 
@@ -5725,6 +5692,7 @@ static int compile_method_expression (moo_t* moo, int pop)
 			 * assignee to update the actual pointer after the recursive
 			 * compile_method_expression() call */
 			assignee.ptr = &moo->c->mth.assignees.ptr[assignee_offset];
+			MOO_ASSERT (moo, moo->c->cls.super_oop != MOO_NULL && moo->c->cls.self_oop != MOO_NULL);
 			if (get_variable_info(moo, &assignee, &assignee_loc, assignee_dotted, &var) <= -1) goto oops;
 
 			switch (var.type)
@@ -5771,7 +5739,7 @@ static int compile_method_expression (moo_t* moo, int pop)
 					break;
 
 				case VAR_GLOBAL:
-					if (add_literal(moo, (moo_oop_t)var.gbl, &index) <= -1 ||
+					if (add_literal(moo, (moo_oop_t)var.u.gbl, &index) <= -1 ||
 					    emit_single_param_instruction(moo, (pop? BCODE_POP_INTO_OBJECT_0: BCODE_STORE_INTO_OBJECT_0), index) <= -1) return -1;
 					ret = pop;
 					break;
@@ -6049,6 +6017,10 @@ static int add_compiled_method (moo_t* moo)
 
 					case BCODE_PUSH_PROCESS:
 						preamble_code = MOO_METHOD_PREAMBLE_RETURN_PROCESS;
+						break;
+
+					case BCODE_PUSH_RECEIVER_NS:
+						preamble_code = MOO_METHOD_PREAMBLE_RETURN_RECEIVER_NS;
 						break;
 
 					case BCODE_PUSH_NIL:
@@ -6548,8 +6520,8 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 
 		for (i = 0; i < moo->c->cls.var[var_type].initv_count; i++)
 		{
-			if (moo->c->cls.var[var_type].initv[i])
-				((moo_oop_oop_t)tmp)->slot[j] = moo->c->cls.var[var_type].initv[i];
+			if (moo->c->cls.var[var_type].initv[i].v)
+				((moo_oop_oop_t)tmp)->slot[j] = moo->c->cls.var[var_type].initv[i].v;
 			j++;
 		}
 
@@ -6698,8 +6670,7 @@ static int make_defined_class (moo_t* moo)
 		MOO_ASSERT (moo, MOO_CLASS_NAMED_INSTVARS + j + initv_count <= MOO_OBJ_GET_SIZE(moo->c->cls.self_oop));
 		for (i = 0; i < initv_count; i++) 
 		{
-			/* ((moo_oop_oop_t)moo->c->cls.self_oop)->slot[MOO_CLASS_NAMED_INSTVARS + j] = moo->c->cls.var[VAR_CLASS].initv[i]; */
-			moo->c->cls.self_oop->slot[j] = moo->c->cls.var[VAR_CLASS].initv[i];
+			moo->c->cls.self_oop->slot[j] = moo->c->cls.var[VAR_CLASS].initv[i].v;
 			j++;
 		}
 	}
@@ -6929,6 +6900,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 	else
 	{
 		int super_is_nil = 0;
+		int superfqn_is_dotted;
 
 		MOO_INFO2 (moo, "Defining a class %.*js\n", moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
 
@@ -6959,17 +6931,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		if (set_superclass_fqn(moo, TOKEN_NAME(moo)) <= -1) return -1;
 		moo->c->cls.superfqn_loc = moo->c->tok.loc;
 
-		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
-		{
-			if (preprocess_dotted_name(moo, PDN_DONT_ADD_NS, MOO_NULL, &moo->c->cls.superfqn, &moo->c->cls.superfqn_loc, &moo->c->cls.supername, &moo->c->cls.superns_oop) <= -1) return -1;
-		}
-		else
-		{
-			/* if no fully qualified name is specified for the super class name,
-			 * the name is searched in the name space that the class being defined
-			 * belongs to first and in the 'moo->sysdic'. */
-			moo->c->cls.superns_oop = moo->c->cls.ns_oop;
-		}
+		superfqn_is_dotted = (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED);
 
 		GET_TOKEN (moo);
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
@@ -6980,7 +6942,6 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 		GET_TOKEN (moo);
 
-		/*ass = moo_lookupsysdic(moo, &moo->c->cls.name);*/
 		ass = moo_lookupdic (moo, (moo_oop_dic_t)moo->c->cls.ns_oop, &moo->c->cls.name);
 		if (ass)
 		{
@@ -7009,19 +6970,21 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		}
 		else
 		{
-			ass = moo_lookupdic (moo, (moo_oop_dic_t)moo->c->cls.superns_oop, &moo->c->cls.supername);
-			if (!ass && moo->c->cls.superns_oop != moo->sysdic)
-				ass = moo_lookupdic (moo, (moo_oop_dic_t)moo->sysdic, &moo->c->cls.supername);
-			if (ass &&
-			    MOO_CLASSOF(moo, ass->value) == moo->_class &&
-			    MOO_OBJ_GET_FLAGS_KERNEL(ass->value) != 1) 
+			var_info_t var;
+
+			if (get_variable_info (moo, &moo->c->cls.superfqn, &moo->c->cls.superfqn_loc, superfqn_is_dotted, &var) <= -1) return -1;
+
+
+			if (var.type != VAR_GLOBAL) goto unknown_superclass;
+			if (MOO_CLASSOF(moo, var.u.gbl->value) == moo->_class && MOO_OBJ_GET_FLAGS_KERNEL(var.u.gbl->value) != 1)
 			{
 				/* the value found must be a class and it must not be 
 				 * an incomplete internal class object. 
 				 *  0(non-kernel object)
 				 *  1(incomplete kernel object),
 				 *  2(complete kernel object) */
-				moo->c->cls.super_oop = ass->value;
+
+				moo->c->cls.super_oop = var.u.gbl->value;
 
 				/* the superclass became known. */
 				if (((moo_oop_class_t)moo->c->cls.super_oop)->trsize != moo->_nil &&
@@ -7042,6 +7005,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			}
 			else
 			{
+			unknown_superclass:
 				/* there is no object with such a name. or,
 				 * the object found with the name is not a class object. or,
 				 * the class object found is a internally defined kernel
@@ -7204,12 +7168,6 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				GET_TOKEN (moo);
 				if (compile_class_level_imports(moo) <= -1) return -1;
 			}
-			else if (is_token_word(moo, VOCA_CONST) || is_token_word(moo, VOCA_CONSTANT))
-			{
-				/* constant declaration */
-				GET_TOKEN (moo);
-				if (compile_class_level_constants(moo) <= -1) return -1;
-			}
 			else break;
 		}
 		while (1);
@@ -7246,12 +7204,6 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		{
 			GET_TOKEN (moo);
 			if (compile_method_definition(moo) <= -1) return -1;
-		}
-		else if (is_token_word(moo, VOCA_CONST) || is_token_word(moo, VOCA_CONSTANT))
-		{
-			/* constant declaration */
-			GET_TOKEN (moo);
-			if (compile_class_level_constants(moo) <= -1) return -1;
 		}
 		else break;
 	}
@@ -7385,14 +7337,22 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 		{
 			var_info_t var;
 			if (get_variable_info (moo, TOKEN_NAME(moo), TOKEN_LOC(moo), TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED, &var) <= -1) return MOO_NULL;
-			if (var.type != VAR_GLOBAL)
+			if (var.type == VAR_GLOBAL)
+			{
+				return var.u.gbl->value;
+			}
+			else if (var.type == VAR_LITERAL)
+			{
+				return var.u.lit;
+			}
+			else
 			{
 				set_syntax_error (moo, MOO_SYNERR_VARINACC, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return MOO_NULL;
 			}
 
 			/* [NOTE] i don't mark RDONLY on a value resolved via an identifier */
-			return var.gbl->value;
+			
 		}
 
 		case MOO_IOTOK_BABRACK: /* #[ - byte array literal parenthesis */
@@ -7425,6 +7385,26 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 	}
 }
 
+static moo_oop_t find_element_in_compiling_pooldic (moo_t* moo, const moo_oocs_t* name)
+{
+	moo_oow_t i;
+	moo_oop_char_t s;
+
+	for (i = moo->c->pooldic.start; i < moo->c->pooldic.end; i += 2)
+	{
+		s = (moo_oop_char_t)moo->c->arlit.ptr[i];
+		MOO_ASSERT (moo, MOO_CLASSOF(moo,s) == moo->_symbol);
+		if (MOO_OBJ_GET_SIZE(s) == name->len &&
+		    moo_equaloochars (name->ptr, MOO_OBJ_GET_CHAR_SLOT(s), name->len))
+		{
+			return moo->c->arlit.ptr[i + 1];
+		}
+	}
+
+	moo_seterrnum (moo, MOO_ENOENT);
+	return MOO_NULL;
+}
+
 static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 {
 	moo_oop_t lit;
@@ -7441,14 +7421,9 @@ static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 		goto oops;
 	}
 
-	if (moo->c->cls.self_oop && TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
-	{
-		/* nested pooldic definition in a class definition */
-		set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo)); /* TODO: change error code - plain ident or undotted ident */
-		goto oops;
-	}
-/* TODO: if defined in a class, it also should be imported automatically to the containing class 
- * or import K.X */
+	MOO_ASSERT (moo, moo->c->cls.ns_oop == MOO_NULL);
+	MOO_ASSERT (moo, moo->c->cls.super_oop == MOO_NULL);
+	MOO_ASSERT (moo, moo->c->cls.self_oop == MOO_NULL);
 
 	if (set_pooldic_fqn(moo, pd, TOKEN_NAME(moo)) <= -1) goto oops;
 	pd->fqn_loc = moo->c->tok.loc;
@@ -7480,6 +7455,8 @@ static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 
 	GET_TOKEN (moo);
 
+	pd->start = moo->c->arlit.count;
+	pd->end = moo->c->arlit.count;
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
 	{
 		lit = moo_makesymbol (moo, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
@@ -7504,6 +7481,8 @@ static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 		/* for this definition, #pooldic MyPoolDic { a := 10. b := 20 },
 		 * arlit_buffer contains (#a 10 #b 20) when the 'while' loop is over. */
 		if (add_to_array_literal_buffer(moo, lit) <= -1) goto oops;
+		pd->end = moo->c->arlit.count;
+
 		GET_TOKEN (moo);
 
 		/*if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) goto done;
@@ -7648,8 +7627,8 @@ static void gc_compiler (moo_t* moo)
 		{
 			for (j = 0; j < moo->c->cls.var[i].initv_count; j++)
 			{
-				register moo_oop_t x = moo->c->cls.var[i].initv[j];
-				if (x) moo->c->cls.var[i].initv[j] = moo_moveoop (moo, x);
+				register moo_oop_t x = moo->c->cls.var[i].initv[j].v;
+				if (x) moo->c->cls.var[i].initv[j].v = moo_moveoop (moo, x);
 			}
 		}
 

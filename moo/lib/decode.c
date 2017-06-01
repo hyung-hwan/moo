@@ -463,6 +463,10 @@ int moo_decode (moo_t* moo, moo_oop_method_t mth, const moo_oocs_t* classfqn)
 				LOG_INST_0 (moo, "push_process");
 				break;
 
+			case BCODE_PUSH_RECEIVER_NS:
+				LOG_INST_0 (moo, "push_receiver_ns");
+				break;
+
 			case BCODE_PUSH_NEGONE:
 				LOG_INST_0 (moo, "push_negone");
 				break;
@@ -478,6 +482,7 @@ int moo_decode (moo_t* moo, moo_oop_method_t mth, const moo_oocs_t* classfqn)
 			case BCODE_PUSH_TWO:
 				LOG_INST_0 (moo, "push_two");
 				break;
+
 
 			case BCODE_PUSH_INTLIT:
 				FETCH_PARAM_CODE_TO (moo, b1);

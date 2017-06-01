@@ -217,13 +217,13 @@ extend MethodContext
 	method isExceptionContext
 	{
 		## 12 - MOO_METHOD_PREAMBLE_EXCEPTION in VM.
-		^self.method preambleCode == 12.
+		^self.method preambleCode == 13.
 	}
 
 	method isEnsureContext
 	{
 		## 13 - MOO_METHOD_PREAMBLE_ENSURE in VM.
-		^self.method preambleCode == 13
+		^self.method preambleCode == 14
 	}
 
 	method ensureBlock
@@ -236,7 +236,7 @@ extend MethodContext
 		 * instance variables of the method context. As MethodContex has
 		 * 8 instance variables, the ensure block must be at the 9th position
 		 * which translates to index 8 *)
-		^if (self.method preambleCode == 13) { self basicAt: 8 } else { nil }
+		^if (self.method preambleCode == 14) { self basicAt: 8 } else { nil }
 	}
 
 

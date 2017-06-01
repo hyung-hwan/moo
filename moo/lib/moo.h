@@ -494,7 +494,7 @@ struct moo_dic_t
 typedef struct moo_nsdic_t moo_nsdic_t;
 typedef struct moo_nsdic_t* moo_oop_nsdic_t;
 
-#define MOO_CLASS_NAMED_INSTVARS 18
+#define MOO_CLASS_NAMED_INSTVARS 17
 typedef struct moo_class_t moo_class_t;
 typedef struct moo_class_t* moo_oop_class_t;
 
@@ -536,8 +536,6 @@ struct moo_class_t
 
 	moo_oop_nsdic_t nsup; /* pointer to the upper namespace */
 	moo_oop_nsdic_t nsdic; /* dictionary used for namespacing - may be nil when there are no subitems underneath */
-
-	moo_oop_dic_t  cdic; /* constant dictionary */
 
 	moo_oop_t      trsize; /* trailer size for new instances */
 
@@ -619,7 +617,7 @@ struct moo_method_t
  *
  * The code can be one of the following values:
  *  0 - no special action
- *  1 - return self
+ *  1 - return self (receiver)
  *  2 - return thisContext (not used)
  *  3 - return thisProcess
  *  4 - return nil
@@ -627,11 +625,12 @@ struct moo_method_t
  *  6 - return false 
  *  7 - return index.
  *  8 - return -index.
- *  9 - return instvar[index] 
- * 10 - do primitive[index]
- * 11 - do named primitive[index]
- * 12 - exception handler
- * 13 - ensure block
+ *  9 - return selfns
+ * 10 - return instvar[index] 
+ * 11 - do primitive[index]
+ * 12 - do named primitive[index]
+ * 13 - exception handler
+ * 14 - ensure block
  */
 
 /* [NOTE] changing preamble code bit structure requires changes to CompiledMethod>>preambleCode */
@@ -645,17 +644,17 @@ struct moo_method_t
 #define MOO_METHOD_PREAMBLE_RETURN_RECEIVER     1
 #define MOO_METHOD_PREAMBLE_RETURN_CONTEXT      2
 #define MOO_METHOD_PREAMBLE_RETURN_PROCESS      3
-#define MOO_METHOD_PREAMBLE_RETURN_NIL          4
-#define MOO_METHOD_PREAMBLE_RETURN_TRUE         5
-#define MOO_METHOD_PREAMBLE_RETURN_FALSE        6
-#define MOO_METHOD_PREAMBLE_RETURN_INDEX        7
-#define MOO_METHOD_PREAMBLE_RETURN_NEGINDEX     8
-#define MOO_METHOD_PREAMBLE_RETURN_INSTVAR      9
-#define MOO_METHOD_PREAMBLE_PRIMITIVE           10
-#define MOO_METHOD_PREAMBLE_NAMED_PRIMITIVE     11 /* index is an index to the symbol table */
-
-#define MOO_METHOD_PREAMBLE_EXCEPTION           12 /* NOTE changing this requires changes in Except.st */
-#define MOO_METHOD_PREAMBLE_ENSURE              13 /* NOTE changing this requires changes in Except.st */
+#define MOO_METHOD_PREAMBLE_RETURN_RECEIVER_NS  4
+#define MOO_METHOD_PREAMBLE_RETURN_NIL          5
+#define MOO_METHOD_PREAMBLE_RETURN_TRUE         6
+#define MOO_METHOD_PREAMBLE_RETURN_FALSE        7
+#define MOO_METHOD_PREAMBLE_RETURN_INDEX        8
+#define MOO_METHOD_PREAMBLE_RETURN_NEGINDEX     9
+#define MOO_METHOD_PREAMBLE_RETURN_INSTVAR      10
+#define MOO_METHOD_PREAMBLE_PRIMITIVE           11
+#define MOO_METHOD_PREAMBLE_NAMED_PRIMITIVE     12 /* index is an index to the symbol table */
+#define MOO_METHOD_PREAMBLE_EXCEPTION           13 /* NOTE changing this requires changes in Except.st */
+#define MOO_METHOD_PREAMBLE_ENSURE              14 /* NOTE changing this requires changes in Except.st */
 
 /* the index is an 16-bit unsigned integer. */
 #define MOO_METHOD_PREAMBLE_INDEX_MIN 0x0000

@@ -320,6 +320,7 @@ struct moo_iotok_t
 		MOO_IOTOK_NUMLIT,
 		MOO_IOTOK_RADNUMLIT,
 		MOO_IOTOK_ERRLIT, /* error(NN) */
+
 		MOO_IOTOK_ERROR, /* error */
 		MOO_IOTOK_NIL,
 		MOO_IOTOK_SELF,
@@ -328,13 +329,25 @@ struct moo_iotok_t
 		MOO_IOTOK_FALSE,
 		MOO_IOTOK_THIS_CONTEXT,
 		MOO_IOTOK_THIS_PROCESS,
+		MOO_IOTOK_SELFNS,
+
+		MOO_IOTOK_IF,
+		MOO_IOTOK_ELSE,
+		MOO_IOTOK_ELSIF,
+
+		MOO_IOTOK_WHILE,
+		MOO_IOTOK_UNTIL,
+		MOO_IOTOK_DO,
+		MOO_IOTOK_BREAK,
+		MOO_IOTOK_CONTINUE,
+
 		MOO_IOTOK_IDENT,
 		MOO_IOTOK_IDENT_DOTTED,
 		MOO_IOTOK_BINSEL,
 		MOO_IOTOK_KEYWORD,
 		MOO_IOTOK_ASSIGN,
 		MOO_IOTOK_COLON,
-		MOO_IOTOK_RETURN, /* ^ */
+		MOO_IOTOK_RETURN,       /* ^ */
 		MOO_IOTOK_LOCAL_RETURN, /* ^^ */
 		MOO_IOTOK_LBRACE,
 		MOO_IOTOK_RBRACE,
@@ -348,17 +361,7 @@ struct moo_iotok_t
 		MOO_IOTOK_DICBRACE, /* :{ - dictionary expression */
 		MOO_IOTOK_PERIOD,
 		MOO_IOTOK_COMMA,
-		MOO_IOTOK_SEMICOLON,
-
-		MOO_IOTOK_IF,
-		MOO_IOTOK_ELSE,
-		MOO_IOTOK_ELSIF,
-
-		MOO_IOTOK_WHILE,
-		MOO_IOTOK_UNTIL,
-		MOO_IOTOK_DO,
-		MOO_IOTOK_BREAK,
-		MOO_IOTOK_CONTINUE
+		MOO_IOTOK_SEMICOLON
 	} type;
 
 	moo_oocs_t name;
@@ -425,6 +428,9 @@ struct moo_pooldic_t
 
 	moo_oop_dic_t pd_oop;
 	moo_oop_nsdic_t ns_oop;
+
+	moo_oow_t start;
+	moo_oow_t end;
 };
 
 typedef struct moo_oopbuf_t moo_oopbuf_t;
@@ -441,6 +447,13 @@ struct moo_oobbuf_t
 	moo_oob_t* ptr;
 	moo_oow_t  count;
 	moo_oow_t  capa;
+};
+
+typedef struct moo_initv_t moo_initv_t;
+struct moo_initv_t
+{
+	moo_oop_t v;
+	int flags;
 };
 
 struct moo_compiler_t
@@ -490,9 +503,6 @@ struct moo_compiler_t
 
 		moo_oop_class_t self_oop;
 		moo_oop_t super_oop; /* this may be nil. so the type is moo_oop_t */
-#if 0
-		moo_oop_dic_t pooldic_oop; /* used when compiling a pooldic definition */
-#endif
 		moo_oop_nsdic_t ns_oop;
 		moo_oocs_t fqn;
 		moo_oocs_t name;
@@ -508,10 +518,11 @@ struct moo_compiler_t
 		moo_oocs_t modname; /* module name after 'from' */
 		moo_oow_t modname_capa;
 
-		/* instance variable, class variable, class instance variable 
+		/* instance variable, class variable, class instance variable, constant
 		 *   var[0] - named instance variables
 		 *   var[1] - class instance variables
-		 *   var[2] - class variables */
+		 *   var[2] - class variables 
+		 */
 		struct
 		{
 			moo_oocs_t str;  /* long string containing all variables declared delimited by a space */
@@ -520,7 +531,7 @@ struct moo_compiler_t
 			moo_oow_t count; /* the number of variables declared in this class only */
 			moo_oow_t total_count; /* the number of variables declared in this class and superclasses */
 
-			moo_oop_t* initv;
+			moo_initv_t* initv;
 			moo_oow_t initv_capa;
 			/* initv_count holds the index to the last variable with a 
 			 * default initial value defined in this class only plus one.
@@ -545,7 +556,6 @@ struct moo_compiler_t
 			moo_oop_dic_t* oops; 
 			moo_oow_t oops_capa;
 		} pooldic_imp;
-
 	} cls;
 
 	/* pooldic declaration */
@@ -611,27 +621,6 @@ struct moo_compiler_t
 		moo_oow_t code_capa;
 	} mth; 
 };
-
-
-
-/*
-typedef struct moo_bchbuf_t moo_bchbuf_t;
-struct moo_bchbuf_t
-{
-	moo_bch_t  buf[128];
-	moo_bch_t* ptr;
-	moo_oow_t  capa;
-};
-
-typedef struct moo_oochbuf_t moo_oochbuf_t;
-struct moo_oochbuf_t
-{
-	moo_ooch_t  buf[128];
-	moo_ooch_t* ptr;
-	moo_oow_t   capa;
-};
-*/
-
 #endif
 
 #if defined(MOO_USE_METHOD_TRAILER)
@@ -891,13 +880,14 @@ enum moo_bcode_t
 	BCODE_PUSH_FALSE               = 0x84, /* 132 */
 	BCODE_PUSH_CONTEXT             = 0x85, /* 133 */
 	BCODE_PUSH_PROCESS             = 0x86, /* 134 */
-	BCODE_PUSH_NEGONE              = 0x87, /* 135 */
+	BCODE_PUSH_RECEIVER_NS         = 0x87, /* 135 */
 
 	BCODE_POP_INTO_INSTVAR_X       = 0x88, /* 136 ## */ 
 
-	BCODE_PUSH_ZERO                = 0x89, /* 137 */
-	BCODE_PUSH_ONE                 = 0x8A, /* 138 */
-	BCODE_PUSH_TWO                 = 0x8B, /* 139 */
+	BCODE_PUSH_NEGONE              = 0x89, /* 137 */
+	BCODE_PUSH_ZERO                = 0x8A, /* 138 */
+	BCODE_PUSH_ONE                 = 0x8B, /* 139 */
+	BCODE_PUSH_TWO                 = 0x8C, /* 140 */
 
 	BCODE_PUSH_INSTVAR_X           = 0x90, /* 144 ## */
 	BCODE_PUSH_TEMPVAR_X           = 0x98, /* 152 ## */

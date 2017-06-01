@@ -3944,6 +3944,18 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			MOO_STACK_SETTOP (moo, (moo_oop_t)moo->processor->active);
 			break;
 
+		case MOO_METHOD_PREAMBLE_RETURN_RECEIVER_NS:
+		{
+			moo_oop_t c;
+			LOG_INST_0 (moo, "preamble_return_receiver_ns");
+			MOO_STACK_POPS (moo, nargs); /* pop arguments only*/
+			c = MOO_STACK_GETTOP (moo); /* get receiver */
+			c = (moo_oop_t)MOO_CLASSOF(moo, c);
+			if (c == (moo_oop_t)moo->_class) c = MOO_STACK_GETTOP (moo);
+			MOO_STACK_SETTOP (moo, (moo_oop_t)((moo_oop_class_t)c)->nsup);
+			break;
+		}
+
 		case MOO_METHOD_PREAMBLE_RETURN_NIL:
 			LOG_INST_0 (moo, "preamble_return_nil");
 			MOO_STACK_POPS (moo, nargs);
@@ -5029,6 +5041,16 @@ int moo_execute (moo_t* moo)
 				LOG_INST_0 (moo, "push_process");
 				MOO_STACK_PUSH (moo, (moo_oop_t)moo->processor->active);
 				break;
+
+			case BCODE_PUSH_RECEIVER_NS:
+			{
+				register moo_oop_t c;
+				LOG_INST_0 (moo, "push_receiver_ns");
+				c = (moo_oop_t)MOO_CLASSOF(moo, moo->active_context->origin->receiver_or_source);
+				if (c == (moo_oop_t)moo->_class) c = moo->active_context->origin->receiver_or_source;
+				MOO_STACK_PUSH (moo, (moo_oop_t)((moo_oop_class_t)c)->nsup);
+				break;
+			}
 
 			case BCODE_PUSH_NEGONE:
 				LOG_INST_0 (moo, "push_negone");
