@@ -178,6 +178,12 @@ AC_CHECK_LIB([dyncall_s], [dcNewCallVM],
 )
 AC_SUBST(DYNCALL_LIBS)
 
+save_LIBS="$LIBS"
+AC_SEARCH_LIBS([setupterm], [tinfo termcap curses ncurses ncursesw], [TERMINAL_LIBS="$ac_cv_search_setupterm"])
+LIBS="$save_LIBS"
+AC_SUBST(TERMINAL_LIBS)
+
+
 dnl check is the import library for unicows.dll exists
 dnl this check doesn't look for a particular symbol
 dnl but for the symbol 'main' since i want to check 

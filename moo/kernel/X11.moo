@@ -35,8 +35,13 @@ class X11.Exception(System.Exception)
 
 class X11.Rectangle(Object)
 {
-	var x := 0, y := 0, width := 0, height := 0.
+	var(#get,#set)
+		x      := 0,
+		y      := 0,
+		width  := 0,
+		height := 0.
 
+(*
 	method x { ^self.x }
 	method y { ^self.y }
 	method width { ^self.width }
@@ -46,6 +51,7 @@ class X11.Rectangle(Object)
 	method y: y { self.y := y }
 	method width: width { self.width := width }
 	method height: height { self.height := height }
+*)
 
 	method x: x y: y width: width height: height 
 	{
@@ -94,19 +100,24 @@ pooldic X11.MouseButton
 
 class X11.MouseEvent(X11.Event)
 {
-	var x, y, button.
+	var(#get,#set) 
+		x      := 0,
+		y      := 0,
+		button := 0. ## X11.MouseButton
 
-	method x      { ^self.x }
-	method y      { ^self.y }
-	method button { ^self.button } ## X11.MouseButton
-
-	method initialize
+(*	
+	method initialize 
 	{
 		self.x := 0.
 		self.y := 0.
 		self.button := 0.
 	}
-	
+
+	method x      { ^self.x }
+	method y      { ^self.y }
+	method button { ^self.button } ## X11.MouseButton
+*)
+
 	method x: x y: y button: button
 	{
 		self.x := x.
@@ -117,19 +128,25 @@ class X11.MouseEvent(X11.Event)
 
 class X11.MouseWheelEvent(X11.Event)
 {
-	var x, y, amount.
+	var(#get)
+		x      := 0,
+		y      := 0,
+		amount := 0.
 	
-	method x { ^self.x }
+(*	method x { ^self.x }
 	method y { ^self.y }
 	method amount { ^self.amount }
+*)
 
+(*
 	method initialize 
 	{
 		self.x := 0.
 		self.y := 0.
 		self.amount := 0.
 	}
-	
+*)
+
 	method x: x y: y amount: amount
 	{
 		self.x := x.
@@ -140,8 +157,13 @@ class X11.MouseWheelEvent(X11.Event)
 
 class X11.ExposeEvent(X11.Event)
 {
-	var x, y, width, height.
+	var(#get)
+		x      := 0,
+		y      := 0,
+		width  := 0,
+		height := 0.
 
+(*
 	method x { ^self.x }
 	method y { ^self.y }
 	method width { ^self.width }
@@ -153,7 +175,7 @@ class X11.ExposeEvent(X11.Event)
 		self.y := 0.
 		self.width := 0.
 		self.height := 0.
-	}
+	}*)
 
 	method x: x y: y width: width height: height
 	{

@@ -55,7 +55,7 @@ endif
 libmoo_console_la_SOURCES = console.c console.h
 libmoo_console_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_console_la_LDFLAGS = $(LDFLAGS_COMMON)
-libmoo_console_la_LIBADD = $(LIBADD_COMMON) -ltermcap 
+libmoo_console_la_LIBADD = $(LIBADD_COMMON) $(TERMINAL_LIBS)
 
 if ENABLE_MOD_FFI
 libmoo_ffi_la_SOURCES = ffi.c _ffi.h
