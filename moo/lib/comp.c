@@ -73,11 +73,25 @@ enum var_type_t
 };
 typedef enum var_type_t var_type_t;
 
+enum varacc_type_t
+{
+	VARACC_GETTER = (1 << 0),
+	VARACC_SETTER = (1 << 1)
+};
+typedef enum varacc_type_t varacc_type_t;
+
 struct var_info_t
 {
 	var_type_t            type;
-	moo_ooi_t             pos; /* not used for VAR_GLOBAL */
-	moo_oop_class_t       cls; /* useful if type is VAR_CLASS(class variable). note MOO_NULL indicates the self class. */
+
+	/* not used for VAR_GLOBAL */
+	moo_ooi_t             pos; 
+
+	/* useful if type is VAR_CLASS(class variable). 
+	 * note it may be set to MOO_NULL to indicate the self class when
+	 * the current class being compiled has not been instantiated. */
+	moo_oop_class_t       cls; 
+
 	union 
 	{
 		moo_oop_association_t gbl; /* used for VAR_GLOBAL only */
@@ -98,7 +112,6 @@ static struct voca_t
 	{  6, { '#','c','l','a','s','s'                                       } },
 	{ 10, { '#','c','l','a','s','s','i','n','s','t'                       } },
 	{  8, { 'c','o','n','t','i','n','u','e'                               } },
-	{  3, { 'd','c','l'                                                   } },
 	{  2, { 'd','o'                                                       } },
 	{  5, { '#','d','u','a','l'                                           } },
 	{  4, { 'e','l','s','e'                                               } },
@@ -110,6 +123,7 @@ static struct voca_t
 	{  5, { 'f','a','l','s','e'                                           } },
 	{  6, { '#','f','i','n','a','l'                                       } },
 	{  4, { 'f','r','o','m'                                               } },
+	{  4, { '#','g','e','t'                                               } },
 	{  9, { '#','h','a','l','f','w','o','r','d'                           } },
 	{  2, { 'i','f'                                                       } },
 	{ 10, { '#','i','m','m','u','t','a','b','l','e'                       } },
@@ -128,6 +142,7 @@ static struct voca_t
 	{ 10, { '#','p','r','i','m','i','t','i','v','e'                       } },
 	{  4, { 's','e','l','f'                                               } },
 	{  6, { 's','e','l','f','n','s'                                       } },
+	{  4, { '#','s','e','t'                                               } },
 	{  5, { 's','u','p','e','r'                                           } },
 	{ 11, { 't','h','i','s','C','o','n','t','e','x','t'                   } },
 	{ 11, { 't','h','i','s','P','r','o','c','e','s','s'                   } },
@@ -157,7 +172,6 @@ enum voca_id_t
 	VOCA_CLASS_S,
 	VOCA_CLASSINST_S,
 	VOCA_CONTINUE,
-	VOCA_DCL,
 	VOCA_DO,
 	VOCA_DUAL_S,
 	VOCA_ELSE,
@@ -169,6 +183,7 @@ enum voca_id_t
 	VOCA_FALSE,
 	VOCA_FINAL_S,
 	VOCA_FROM,
+	VOCA_GET_S,
 	VOCA_HALFWORD_S,
 	VOCA_IF,
 	VOCA_IMMUTABLE_S,
@@ -187,6 +202,7 @@ enum voca_id_t
 	VOCA_PRIMITIVE_S,
 	VOCA_SELF,
 	VOCA_SELFNS,
+	VOCA_SET_S,
 	VOCA_SUPER,
 	VOCA_THIS_CONTEXT,
 	VOCA_THIS_PROCESS,
@@ -353,6 +369,7 @@ static int is_reserved_word (const moo_oocs_t* ucs)
 	return 0;
 }
 
+#if 0
 static int is_restricted_word (const moo_oocs_t* ucs)
 {
 	/* not fully reserved. but restricted in a certain context */
@@ -360,7 +377,6 @@ static int is_restricted_word (const moo_oocs_t* ucs)
 	static int rw[] = 
 	{
 		VOCA_CLASS,
-		VOCA_DCL,
 		VOCA_EXTEND,
 		VOCA_FROM,
 		VOCA_IMPORT,
@@ -378,6 +394,7 @@ static int is_restricted_word (const moo_oocs_t* ucs)
 
 	return 0;
 }
+#endif
 
 static int begin_include (moo_t* moo);
 static int end_include (moo_t* moo);
@@ -480,6 +497,35 @@ static int find_word_in_string (const moo_oocs_t* haystack, const moo_oocs_t* na
 				break;
 			}
 			t++;
+		}
+
+		index++;
+	}
+
+	return -1;
+}
+
+static int fetch_word_from_string (const moo_oocs_t* haystack, moo_oow_t xindex, moo_oocs_t* str)
+{
+	moo_ooch_t* t, * e, * ss;
+	moo_oow_t index;
+
+	t = haystack->ptr;
+	e = t + haystack->len;
+	index = 0;
+
+	while (t < e)
+	{
+		while (t < e && is_spacechar(*t)) t++;
+
+		ss = t;
+		while (t < e && !is_spacechar(*t)) t++;
+
+		if (xindex == index)
+		{
+			str->ptr = ss;
+			str->len = t - ss;
+			return 0;
 		}
 
 		index++;
@@ -2598,7 +2644,7 @@ static MOO_INLINE int add_class_level_variable (moo_t* moo, var_type_t var_type,
 	return n;
 }
 
-static int set_class_level_variable_initv (moo_t* moo, var_type_t var_type, moo_oow_t var_index, moo_oop_t initv)
+static int set_class_level_variable_initv (moo_t* moo, var_type_t var_type, moo_oow_t var_index, moo_oop_t initv, int flags)
 {
 	if (var_index >= moo->c->cls.var[var_type].initv_capa)
 	{
@@ -2632,7 +2678,7 @@ static int set_class_level_variable_initv (moo_t* moo, var_type_t var_type, moo_
 	}
 
 	moo->c->cls.var[var_type].initv[var_index].v = initv;
-	moo->c->cls.var[var_type].initv[var_index].flags = 0; /* TODO: set flags properly */
+	moo->c->cls.var[var_type].initv[var_index].flags = flags;
 	return 0;
 }
 
@@ -3158,8 +3204,8 @@ if super is variable-nonpointer, no instance variable is allowed.
 			}
 
 			if (find_class_level_variable(moo, MOO_NULL, TOKEN_NAME(moo), &var) >= 0 ||
-			    moo_lookupdic (moo, (moo_oop_dic_t)moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
-			    moo_lookupdic (moo, (moo_oop_dic_t)moo->c->cls.ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
+			    moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
+			    moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cls.ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
 			{
 				set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
@@ -3189,6 +3235,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 static int compile_class_level_variables (moo_t* moo)
 {
 	var_type_t dcl_type = VAR_INSTANCE;
+	int varacc_type = 0;
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
@@ -3221,6 +3268,30 @@ static int compile_class_level_variables (moo_t* moo)
 					}
 
 					dcl_type = VAR_CLASSINST;
+					GET_TOKEN (moo);
+				}
+				else if (is_token_symbol(moo, VOCA_GET_S))
+				{
+					/* variable(#get) */
+					if (varacc_type & VARACC_GETTER)
+					{
+						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						return -1;
+					}
+
+					varacc_type |= VARACC_GETTER;
+					GET_TOKEN (moo);
+				}
+				else if (is_token_symbol(moo, VOCA_SET_S))
+				{
+					/* variable(#set) */
+					if (varacc_type & VARACC_SETTER)
+					{
+						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						return -1;
+					}
+
+					varacc_type |= VARACC_SETTER;
 					GET_TOKEN (moo);
 				}
 				else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
@@ -3275,8 +3346,8 @@ if super is variable-nonpointer, no instance variable is allowed.
 			}
 
 			if (find_class_level_variable(moo, MOO_NULL, TOKEN_NAME(moo), &var) >= 0 ||
-			    moo_lookupdic (moo, (moo_oop_dic_t)moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
-			    moo_lookupdic (moo, (moo_oop_dic_t)moo->c->cls.ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
+			    moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
+			    moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cls.ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
 			{
 				set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
@@ -3302,9 +3373,15 @@ if super is variable-nonpointer, no instance variable is allowed.
 				if (!lit) return -1;
 
 				/* set the initial value for the variable added above */
-				if (set_class_level_variable_initv (moo, dcl_type, moo->c->cls.var[dcl_type].count - 1, lit) <= -1) return -1;
+				if (set_class_level_variable_initv (moo, dcl_type, moo->c->cls.var[dcl_type].count - 1, lit, varacc_type) <= -1) return -1;
 
 				GET_TOKEN (moo);
+			}
+			else if (varacc_type)
+			{
+				/* this part is to remember the variable access type that indicates
+				 * whether to generate a getter method and a setter method */
+				if (set_class_level_variable_initv (moo, dcl_type, moo->c->cls.var[dcl_type].count - 1, MOO_NULL, varacc_type) <= -1) return -1;
 			}
 		}
 		else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
@@ -4087,6 +4164,7 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 		return 0;
 	}
 
+MOO_DEBUG0 (moo, "2222222222222222\n");
 	/* find an undotted identifier in dictionaries */
 	if (moo->c->cls.ns_oop)
 	{
@@ -4709,6 +4787,11 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				break;
 
 			case VAR_CLASS:
+				/* get_variable_info must not set var.cls to MOO_NULL 
+				 * because the class object pointer should be available
+				 * when a method definition is compiled */
+				MOO_ASSERT (moo, var.cls != MOO_NULL); 
+
 				if (add_literal(moo, (moo_oop_t)var.cls, &index) <= -1 ||
 				    emit_double_param_instruction(moo, BCODE_PUSH_OBJVAR_0, var.pos, index) <= -1) return -1;
 				break;
@@ -6434,15 +6517,8 @@ static int __compile_method_definition (moo_t* moo)
 }
 
 
-static int compile_method_definition (moo_t* moo)
+static void reset_method_data (moo_t* moo)
 {
-	int n;
-
-	/* clear data required to compile a method */
-	MOO_ASSERT (moo, moo->c->balit.count == 0);
-	MOO_ASSERT (moo, moo->c->arlit.count == 0);
-
-	moo->c->mth.active = 1;
 	moo->c->mth.type = MOO_METHOD_INSTANCE;
 	moo->c->mth.primitive = 0;
 	moo->c->mth.lenient = 0;
@@ -6461,6 +6537,18 @@ static int compile_method_definition (moo_t* moo)
 	moo->c->mth.pfnum = 0;
 	moo->c->mth.blk_depth = 0;
 	moo->c->mth.code.len = 0;
+}
+
+static int compile_method_definition (moo_t* moo)
+{
+	int n;
+
+	/* clear data required to compile a method */
+	MOO_ASSERT (moo, moo->c->balit.count == 0);
+	MOO_ASSERT (moo, moo->c->arlit.count == 0);
+
+	moo->c->mth.active = 1;
+	reset_method_data (moo);
 
 	n = __compile_method_definition (moo);
 
@@ -6469,9 +6557,164 @@ static int compile_method_definition (moo_t* moo)
 	return n;
 }
 
+static int make_getter_method (moo_t* moo, const moo_oocs_t* name, const var_info_t* var)
+{
+	MOO_ASSERT (moo, moo->c->balit.count == 0);
+	MOO_ASSERT (moo, moo->c->arlit.count == 0);
+
+	MOO_ASSERT (moo, moo->c->mth.name.len == 0);
+	if (add_method_name_fragment(moo, name) <= -1) return -1;
+
+	switch (var->type)
+	{
+		case VAR_INSTANCE:
+			MOO_ASSERT (moo, moo->c->mth.type == MOO_METHOD_INSTANCE);
+			if (emit_single_param_instruction(moo, BCODE_PUSH_INSTVAR_0, var->pos) <= -1 ||
+			    emit_byte_instruction(moo, BCODE_RETURN_STACKTOP) <= -1) return -1;
+			break;
+
+		case VAR_CLASSINST:
+			MOO_ASSERT (moo, moo->c->mth.type == MOO_METHOD_CLASS);
+			if (emit_single_param_instruction(moo, BCODE_PUSH_INSTVAR_0, var->pos) <= -1 ||
+			    emit_byte_instruction(moo, BCODE_RETURN_STACKTOP) <= -1) return -1;
+			break;
+
+		case VAR_CLASS:
+		{
+			moo_oow_t index;
+			MOO_ASSERT (moo, var->cls != MOO_NULL);
+			MOO_ASSERT (moo, var->cls == moo->c->cls.self_oop);
+			MOO_ASSERT (moo, moo->c->mth.type == MOO_METHOD_CLASS);
+
+			if (add_literal(moo, (moo_oop_t)var->cls, &index) <= -1 ||
+			    emit_double_param_instruction(moo, BCODE_PUSH_OBJVAR_0, var->pos, index) <= -1 ||
+			    emit_byte_instruction(moo, BCODE_RETURN_STACKTOP) <= -1) return -1;
+			break;
+		}
+
+		default:
+			MOO_DEBUG1 (moo, "internal error - invalid variable type in make_getter_method - %d\n", (int)var->type);
+			moo_seterrnum (moo, MOO_EINTERN);
+			return -1;
+	}
+
+	return add_compiled_method (moo);
+}
+
+
+static int make_setter_method (moo_t* moo, const moo_oocs_t* name, const var_info_t* var)
+{
+	static moo_ooch_t colon = ':';
+	static moo_oocs_t colons = { &colon, 1 };
+
+	MOO_ASSERT (moo, moo->c->balit.count == 0);
+	MOO_ASSERT (moo, moo->c->arlit.count == 0);
+
+	MOO_ASSERT (moo, moo->c->mth.name.len == 0);
+	if (add_method_name_fragment(moo, name) <= -1 ||
+	    add_method_name_fragment(moo, &colons) <= -1) return -1;
+
+	switch (var->type)
+	{
+		case VAR_INSTANCE:
+			MOO_ASSERT (moo, moo->c->mth.type == MOO_METHOD_INSTANCE);
+			if (emit_single_param_instruction(moo, BCODE_PUSH_TEMPVAR_0, 0) <= -1 ||
+			    emit_single_param_instruction(moo, BCODE_POP_INTO_INSTVAR_0, var->pos) <= -1 ||
+			    emit_byte_instruction(moo, BCODE_RETURN_RECEIVER) <= -1) return -1;
+			break;
+
+		case VAR_CLASSINST:
+			MOO_ASSERT (moo, moo->c->mth.type == MOO_METHOD_CLASS);
+			if (emit_single_param_instruction(moo, BCODE_PUSH_TEMPVAR_0, 0) <= -1 ||
+			    emit_single_param_instruction(moo, BCODE_POP_INTO_INSTVAR_0, var->pos) <= -1 ||
+			    emit_byte_instruction(moo, BCODE_RETURN_RECEIVER) <= -1) return -1;
+			break;
+
+		case VAR_CLASS:
+		{
+			moo_oow_t index;
+			MOO_ASSERT (moo, var->cls != MOO_NULL);
+			MOO_ASSERT (moo, var->cls == moo->c->cls.self_oop);
+			MOO_ASSERT (moo, moo->c->mth.type == MOO_METHOD_CLASS);
+
+			if (add_literal(moo, (moo_oop_t)var->cls, &index) <= -1 ||
+			    emit_single_param_instruction(moo, BCODE_PUSH_TEMPVAR_0, 0) <= -1 ||
+			    emit_double_param_instruction(moo, BCODE_POP_INTO_OBJVAR_0, var->pos, index) <= -1 ||
+			    emit_byte_instruction(moo, BCODE_RETURN_RECEIVER) <= -1) return -1;
+			break;
+		}
+
+		default:
+			MOO_DEBUG1 (moo, "internal error - invalid variable type in make_setter_method - %d\n", (int)var->type);
+			moo_seterrnum (moo, MOO_EINTERN);
+			return -1;
+	}
+
+	return add_compiled_method (moo);
+}
+
+static int make_getters_and_setters (moo_t* moo)
+{
+	moo_oow_t i, var_type;
+	moo_oocs_t var_name;
+	moo_ioloc_t fake_loc;
+	var_info_t var_info;
+	int x;
+
+	fake_loc.line = 0;
+	fake_loc.colm = 0;
+	for (var_type = VAR_INSTANCE; var_type <= VAR_CLASS; var_type++)
+	{
+		for (i = 0; i < moo->c->cls.var[var_type].initv_count; i++)
+		{
+			if (!moo->c->cls.var[var_type].initv[i].flags) continue;
+
+			/* moo->c->mth.type needs to be set because get_variable_info()
+			 * uses it to validate variable's accessibility */
+			reset_method_data (moo);
+			moo->c->mth.type = (var_type == VAR_INSTANCE? MOO_METHOD_INSTANCE: MOO_METHOD_CLASS);
+
+			/* the following two function calls must not fail unless the compiler
+			 * is buggy. */
+
+			x = fetch_word_from_string (&moo->c->cls.var[var_type].str, i, &var_name);
+			MOO_ASSERT (moo, x >= 0);
+			x = get_variable_info (moo, &var_name, &fake_loc, 0, &var_info);
+			MOO_ASSERT (moo, x >= 0);
+
+			MOO_ASSERT (moo, var_info.type == var_type);
+
+			if (moo->c->cls.var[var_type].initv[i].flags & VARACC_GETTER)
+			{
+				/* the method data has been reset above. */
+				if (make_getter_method (moo, &var_name, &var_info) <= -1) return -1;
+			}
+
+			if (moo->c->cls.var[var_type].initv[i].flags & VARACC_SETTER)
+			{
+				/* i set the method data here because make_getter_method()
+				 * pollutes it if triggered */
+				reset_method_data (moo);
+				moo->c->mth.type = (var_type == VAR_INSTANCE? MOO_METHOD_INSTANCE: MOO_METHOD_CLASS);
+
+				/* hack to simulate a parameter. note i don't manipulate tmprs or tmprs_capa
+				 * because there is no method body code to process. i simply generate a setter
+				 * method */
+				moo->c->mth.tmpr_count = 1; 
+				moo->c->mth.tmpr_nargs = 1;
+
+				MOO_ASSERT (moo, var_info.type == var_type);
+				if (make_setter_method (moo, &var_name, &var_info) <= -1) return -1;
+			}
+		}
+	}
+
+	return 0;
+}
+
 static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 {
-	moo_oow_t initv_count;
+	moo_oow_t initv_count, super_initv_count;
 
 	MOO_ASSERT (moo, var_type == VAR_INSTANCE || var_type == VAR_CLASSINST);
 	MOO_ASSERT (moo, VAR_INSTANCE == 0);
@@ -6480,11 +6723,18 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 	initv_count = moo->c->cls.var[var_type].initv_count;
 	if (moo->c->cls.super_oop != moo->_nil && ((moo_oop_class_t)moo->c->cls.super_oop)->initv[var_type] != moo->_nil)
 	{
-		initv_count += MOO_OBJ_GET_SIZE(((moo_oop_class_t)moo->c->cls.super_oop)->initv[var_type]);
+		super_initv_count = MOO_OBJ_GET_SIZE(((moo_oop_class_t)moo->c->cls.super_oop)->initv[var_type]);
 	}
+	else
+	{
+		super_initv_count = 0;
+		
+	}
+	initv_count += super_initv_count;
+
 	if (initv_count > 0)
 	{
-		moo_oow_t i, j = 0;
+		moo_oow_t i, j;
 		moo_oop_t tmp;
 
 		/* [NOTE]
@@ -6498,24 +6748,28 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 		tmp = moo_instantiate (moo, moo->_array, MOO_NULL, moo->c->cls.var[var_type].total_count);
 		if (!tmp) return -1;
 
-		if (initv_count > moo->c->cls.var[var_type].initv_count)
+		if (super_initv_count > 0)
 		{
 			/* handle default values defined in the superclass chain.
 			 * i merge them into a single array for convenience and
 			 * efficiency of object instantiation by moo_instantiate(). 
 			 * it can avoid looking up superclasses upon instantiaion */
 			moo_oop_oop_t initv;
-			moo_oow_t super_count;
 
+			j = 0;
 			MOO_ASSERT (moo, moo->c->cls.super_oop != moo->_nil);
-			super_count = initv_count - moo->c->cls.var[var_type].initv_count;
 			initv = (moo_oop_oop_t)((moo_oop_class_t)moo->c->cls.super_oop)->initv[var_type];
 			MOO_ASSERT (moo, MOO_CLASSOF(moo, initv) == moo->_array);
-			for (i = 0; i < super_count; i++)
+			for (i = 0; i < super_initv_count; i++)
 			{
 				if (initv->slot[i]) ((moo_oop_oop_t)tmp)->slot[j] = initv->slot[i];
 				j++;
 			}
+		}
+		else
+		{
+			/* superclass chain have variables but no default values are defined */
+			j = moo->c->cls.var[var_type].total_count - moo->c->cls.var[var_type].count;
 		}
 
 		for (i = 0; i < moo->c->cls.var[var_type].initv_count; i++)
@@ -6683,6 +6937,10 @@ static int make_defined_class (moo_t* moo)
 /* TODO: initialize more fields??? what else. */
 
 /* TODO: update the subclasses field of the superclass if it's not nil */
+
+
+	if (make_getters_and_setters (moo) <= -1) return -1;
+	
 
 	if (just_made)
 	{
@@ -7076,7 +7334,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		moo_oop_char_t pds;
 
 		/* when a class is extended, a new variable cannot be added */
-		if (is_token_word(moo, VOCA_DCL) || is_token_word(moo, VOCA_VAR) || is_token_word(moo, VOCA_VARIABLE))
+		if (is_token_word(moo, VOCA_VAR) || is_token_word(moo, VOCA_VARIABLE))
 		{
 			set_syntax_error (moo, MOO_SYNERR_VARDCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
@@ -7156,7 +7414,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				GET_TOKEN (moo);
 				if (compile_class_level_variables_vbar(moo, VAR_CLASS) <= -1) return -1;
 			}
-			else if (is_token_word(moo, VOCA_DCL) || is_token_word(moo, VOCA_VAR) || is_token_word(moo, VOCA_VARIABLE))
+			else if (is_token_word(moo, VOCA_VAR) || is_token_word(moo, VOCA_VARIABLE))
 			{
 				/* variable declaration */
 				GET_TOKEN (moo);
