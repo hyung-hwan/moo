@@ -5,83 +5,33 @@
 ## MAIN
 #################################################################
 
-## TODO: use #define to define a class or use #class to define a class.
-##       use #extend to extend a class
-##       using #class for both feels confusing.
-
-extend Apex
+class MyObject(Object)
 {
+	var(#class) a := 100.
 
-}
-
-extend SmallInteger
-{
-	method getTrue: anInteger
+	method(#class) proc1
 	{
-		^anInteger + 9999.
-	}
-
-	method inc
-	{
-		^self + 1.
-	}
-}
-
-class TestObject(Object)
-{
-	var(#class) Q, R.
-	var(#classinst) a1, a2.
-}
-
-
-class MyObject(TestObject)
-{
-	var(#classinst) t1, t2.
-	method(#class) xxxx
-	{
-		| g1 g2 |
-		t1 dump.
-		t2 := [ g1 := 50. g2 := 100. ^g1 + g2 ].
-		(t1 < 100) ifFalse: [ ^self ].
-		t1 := t1 + 1. 
-		^self xxxx.
-	}
-
-	method(#class) zzz
-	{
-		'zzzzzzzzzzzzzzzzzz' dump.
-		^self.
-	}
-	method(#class) yyy
-	{
-		^[123456789 dump. ^200].
-	}
-
-	method(#class) main2
-	{
-		'START OF MAIN2' dump.
-		##[thisContext dump. ^100] newProcess resume.
-		[ |k| thisContext dump. self zzz. "k := self yyy. k value." ['ok' dump. ^100] value] newProcess resume.
-		'1111' dump.
-		'1111' dump.
-		'1111' dump.
-		'1111' dump.
-		'1111' dump.
-		'EDN OF MAIN2' dump.
-	}
-
-	method(#class) main1
-	{
-		'START OF MAIN1' dump.
-		self main2.
-		'END OF MAIN1' dump.
+		[ Processor sleepFor: 1. a := a + 100 ] newProcess resume.
+		^a
 	}
 
 	method(#class) main
 	{
-		'START OF MAIN' dump.
-		self main1.
-		'EDN OF MAIN' dump.
+		| tc limit |
+
+		tc := #{
+                        ## 0 - 4
+			[ self proc1 == 100 ], 
+			[ Processor sleepFor: 2.  self proc1 == 200 ]
+		}.
+
+		limit := tc size.
+
+		0 priorTo: limit by: 1 do: [ :idx |
+			| tb |
+			tb := tc at: idx.
+			System log(System.Log.INFO, idx asString, (if (tb value) { ' PASS' } else { ' FAIL' }), S'\n').
+		]
 	}
 
 }
