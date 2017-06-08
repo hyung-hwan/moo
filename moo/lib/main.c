@@ -32,7 +32,9 @@
 #include <limits.h>
 #include <errno.h>
 
-#define USE_THREAD
+#if !defined(__DOS__)
+#	define USE_THREAD
+#endif
 
 #if defined(_WIN32)
 #	include <windows.h>
@@ -53,10 +55,19 @@
 #	include <dos.h>
 #	include <time.h>
 #	include <io.h>
+#	include <signal.h>
+
+	/* fake XPOLLXXX values */
+#	define XPOLLIN  (1 << 0)
+#	define XPOLLOUT (1 << 1)
+#	define XPOLLERR (1 << 2)
+#	define XPOLLHUP (1 << 3)
+
 #elif defined(macintosh)
 #	include <Types.h>
 #	include <OSUtils.h>
 #	include <Timer.h>
+
 #else
 
 #	if defined(MOO_ENABLE_LIBLTDL)
@@ -831,7 +842,10 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 	return 0;
 
 #else
-#	error UNSUPPORTED
+
+	MOO_DEBUG1 (moo, "Cannot add file descriptor %d to poll - not implemented\n", fd);
+	moo_seterrnum (moo, MOO_ENOIMPL);
+	return -1;
 #endif
 
 }
@@ -886,11 +900,15 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	}	
 
 
-	moo_seterrnum (moo, MOO_ENOENT);
 	MOO_DEBUG1 (moo, "Cannot remove file descriptor %d from poll - not found\n", fd);
+	moo_seterrnum (moo, MOO_ENOENT);
 	return -1;
+
 #else
-#	error NOT SUPPORTED
+
+	MOO_DEBUG1 (moo, "Cannot remove file descriptor %d from poll - not implemented\n", fd);
+	moo_seterrnum (moo, MOO_ENOIMPL);
+	return -1;
 #endif
 }
 
@@ -946,7 +964,9 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 	return -1;
 
 #else
-#	error NOT SUPPORTED
+	MOO_DEBUG1 (moo, "Cannot modify file descriptor %d in poll - not implemented\n", fd);
+	moo_seterrnum (moo, MOO_ENOIMPL);
+	return -1;
 #endif
 }
 
@@ -1446,7 +1466,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	#elif defined(USE_EPOLL)
 		revents = xtn->ev.buf[n].events;
 	#else
-	#	error UNSUPPORTED
+		revents = 0; /* TODO: fake. unsupported */
 	#endif
 
 		mask = 0;
@@ -1461,7 +1481,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	#elif defined(USE_EPOLL)
 		muxwcb (moo, mask, xtn->ev.buf[n].data.ptr);
 	#else
-	#	error UNSUPPORTED
+		/* TODO: fake. unsupported */
 	#endif
 	}
 
@@ -1672,12 +1692,36 @@ static void handle_term (int sig)
 
 static void setup_term (void)
 {
+#if defined(_WIN32)
+	SetConsoleCtrlHandler (handle_term, TRUE);
+#elif defined(__OS2__)
+	os2_excrr.ExceptionHandler = (ERR)__intr_handler;
+	DosSetExceptionHandler (&os2_excrr); /* TODO: check if NO_ERROR is returned */
+#elif defined(__DOS__)
+	signal (SIGINT, handle_term);
+#else
 	struct sigaction sa;
 	memset (&sa, 0, MOO_SIZEOF(sa));
 	sa.sa_handler = handle_term;
 	sigaction (SIGINT, &sa, MOO_NULL);
+#endif
 }
 
+static void clear_term (void)
+{
+#if defined(_WIN32)
+	SetConsoleCtrlHandler (handle_term, FALSE);
+#elif defined(__OS2__)
+	DosUnsetExceptionHandler (&os2_excrr);
+#elif defined(__DOS__)
+	signal (SIGINT, SIG_DFL);
+#else
+	struct sigaction sa;
+	memset (&sa, 0, MOO_SIZEOF(sa));
+	sa.sa_handler = SIG_DFL;
+	sigaction (SIGINT, &sa, MOO_NULL);
+#endif
+}
 /* ========================================================================= */
 
 int main (int argc, char* argv[])
@@ -1858,6 +1902,7 @@ int main (int argc, char* argv[])
 	}
 
 	cancel_tick ();
+	clear_term ();
 	g_moo = MOO_NULL;
 
 	/*moo_dumpsymtab(moo);

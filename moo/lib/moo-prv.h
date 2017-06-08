@@ -517,6 +517,7 @@ struct moo_compiler_t
 
 		moo_oocs_t modname; /* module name after 'from' */
 		moo_oow_t modname_capa;
+		moo_ioloc_t modname_loc;
 
 		/* instance variable, class variable, class instance variable, constant
 		 *   var[0] - named instance variables

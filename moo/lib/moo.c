@@ -473,7 +473,6 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 
 		mdp = (moo_mod_data_t*)MOO_RBT_VPTR(pair);
 		MOO_ASSERT (moo, MOO_SIZEOF(mdp->mod.hints) == MOO_SIZEOF(int));
-MOO_DEBUG2 (moo, "xxxxxxxxxxxxxxxxxxxxxxxxx %p %d\n", mdp, (int)MOO_IS_ALIGNED_POW2((moo_oow_t)mdp, 8));
 		mdp->mod.hints = hints;
 		if (load (moo, &mdp->mod) <= -1)
 		{

@@ -4164,7 +4164,6 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 		return 0;
 	}
 
-MOO_DEBUG0 (moo, "2222222222222222\n");
 	/* find an undotted identifier in dictionaries */
 	if (moo->c->cls.ns_oop)
 	{
@@ -7298,6 +7297,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			}
 
 			if (set_class_modname (moo, TOKEN_NAME(moo)) <= -1) return -1;
+			moo->c->cls.modname_loc = *TOKEN_LOC(moo);
 
 			GET_TOKEN (moo);
 		}
@@ -7441,7 +7441,11 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			 *  memory(not part of the object memory) to moo_importmod().
 			 *  no big overhead as it's already available. but Accessing 
 			 *  this extra module name, i'm free from GC headache */
-			if (moo_importmod (moo, moo->c->cls.self_oop, moo->c->cls.modname.ptr, moo->c->cls.modname.len) <= -1) return -1;
+			if (moo_importmod (moo, moo->c->cls.self_oop, moo->c->cls.modname.ptr, moo->c->cls.modname.len) <= -1)
+			{
+				set_syntax_error (moo, MOO_SYNERR_MODIMPFAIL, &moo->c->cls.modname_loc, &moo->c->cls.modname);
+				return -1;
+			}
 		}
 
 		if (moo->c->cls.self_oop->trsize == moo->_nil &&

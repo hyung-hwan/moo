@@ -106,6 +106,7 @@ class MyObject(Object)
 			'wrong primitive function identifier'
 			'wrong primitive function argument definition'
 			'wrong module name'
+			'failed to import module'
 			'#include error'
 			'wrong namespace name'
 			'wrong pool dictionary name'

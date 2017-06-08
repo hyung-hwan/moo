@@ -1351,6 +1351,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_PFIDINVAL,       /* wrong primitive function identifier */
 	MOO_SYNERR_PFARGDEFINVAL,   /* wrong primitive function argument definition */
 	MOO_SYNERR_MODNAMEINVAL,    /* wrong module name */
+	MOO_SYNERR_MODIMPFAIL,      /* failed to import module */
 	MOO_SYNERR_INCLUDE,         /* #include error */
 	MOO_SYNERR_NAMESPACEINVAL,  /* wrong namespace name */
 	MOO_SYNERR_POOLDICINVAL,    /* wrong pool dictionary */

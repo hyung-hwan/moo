@@ -7,6 +7,8 @@
 
 class MyObject(Object)
 {
+## TODO: support import in extend??
+
 	var(#class) a := 100.
 
 	method(#class) proc1
@@ -20,7 +22,7 @@ class MyObject(Object)
 		| tc limit |
 
 		tc := #{
-                        ## 0 - 4
+			## 0 - 4
 			[ self proc1 == 100 ], 
 			[ Processor sleepFor: 2.  self proc1 == 200 ]
 		}.
