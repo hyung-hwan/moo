@@ -29,6 +29,42 @@
 
 #include <moo.h>
 
+
+#include <X11/Xlib.h>
+
+/* [NOTE] this header is for internal use only. 
+ * so most of the declarations here don't have the moo_ prefix */
+
+#define MC MOO_METHOD_CLASS
+#define MI MOO_METHOD_INSTANCE
+
+typedef struct x11_t x11_t;
+struct x11_t
+{
+	Display* disp;
+	XEvent* curevt;
+};
+
+typedef struct x11_win_t x11_win_t;
+struct x11_win_t
+{
+	Display* disp;
+	Window wind;
+};
+
+
+typedef struct x11_t* oop_x11_t;
+struct x11_t
+{
+	Display* disp;
+};
+
+typedef struct x11_trailer_t x11_trailer_t;
+struct x11_trailer_t
+{
+	XEvent* curevt;
+};
+
 #if defined(__cplusplus)
 extern "C" {
 #endif

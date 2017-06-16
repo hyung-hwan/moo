@@ -232,6 +232,18 @@ static int ignite_1 (moo_t* moo)
 	    !moo->_small_pointer     || !moo->_system) return -1;
 
 	MOO_OBJ_SET_CLASS (moo->_nil, (moo_oop_t)moo->_undefined_object);
+
+#if defined(MOO_USE_METHOD_TRAILER)
+	/* an instance of a method class stores byte codes in the trailer space
+	 * when compiled with MOO_USE_METHOD_TRAILER. unlike other classes with
+	 * trailer size set, the size of the trailer space is not really determined
+	 * by the traailer size set in the class. the compiler determines the 
+	 * actual size of the trailer space depending on the byte codes generated.
+	 * i should set the following fields to avoid confusion at the GC phase. */
+	moo->_method->trsize = MOO_SMOOI_TO_OOP(0);
+	moo->_method->trgc = MOO_SMPTR_TO_OOP(0);
+#endif
+
 	return 0;
 }
 
@@ -419,7 +431,6 @@ static MOO_INLINE moo_oow_t get_payload_bytes (moo_t* moo, moo_oop_t oop)
 {
 	moo_oow_t nbytes_aligned;
 
-#if defined(MOO_USE_METHOD_TRAILER)
 	if (MOO_OBJ_GET_FLAGS_TRAILER(oop))
 	{
 		moo_oow_t nbytes;
@@ -446,12 +457,9 @@ static MOO_INLINE moo_oow_t get_payload_bytes (moo_t* moo, moo_oop_t oop)
 	}
 	else
 	{
-#endif
 		/* calculate the payload size in bytes */
 		nbytes_aligned = MOO_ALIGN (MOO_OBJ_BYTESOF(oop), MOO_SIZEOF(moo_oop_t));
-#if defined(MOO_USE_METHOD_TRAILER)
 	}
-#endif
 
 	return nbytes_aligned;
 }
@@ -517,7 +525,6 @@ static moo_uint8_t* scan_new_heap (moo_t* moo, moo_uint8_t* ptr)
 
 		oop = (moo_oop_t)ptr;
 
-	#if defined(MOO_USE_METHOD_TRAILER)
 		if (MOO_OBJ_GET_FLAGS_TRAILER(oop))
 		{
 			moo_oow_t nbytes;
@@ -532,11 +539,8 @@ static moo_uint8_t* scan_new_heap (moo_t* moo, moo_uint8_t* ptr)
 		}
 		else
 		{
-	#endif
 			nbytes_aligned = MOO_ALIGN (MOO_OBJ_BYTESOF(oop), MOO_SIZEOF(moo_oop_t));
-	#if defined(MOO_USE_METHOD_TRAILER)
 		}
-	#endif
 
 		MOO_OBJ_SET_CLASS (oop, moo_moveoop(moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop)));
 		if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP)
@@ -564,6 +568,25 @@ static moo_uint8_t* scan_new_heap (moo_t* moo, moo_uint8_t* ptr)
 				if (MOO_OOP_IS_POINTER(xtmp->slot[i]))
 					xtmp->slot[i] = moo_moveoop (moo, xtmp->slot[i]);
 			}
+		}
+
+		if (MOO_OBJ_GET_FLAGS_TRAILER(oop))
+		{
+			moo_oop_class_t c;
+			moo_trgc_t trgc;
+
+			/* i use SMPTR(0) to indicate no trailer gc callback.
+			 * i don't use moo->_nil because c->trgc field may not have
+			 * been updated to a new nil address while moo->_nil could
+			 * have been updated in the process of garbage collection.
+			 * this comment will be invalidated when moo->_nil is 
+			 * stored in a permanent heap or GC gets changed to
+			 * a non-copying collector. no matter what GC implementation
+			 * i choose, using SMPTR(0) for this purpose is safe. */
+			c = MOO_OBJ_GET_CLASS(oop);
+			MOO_ASSERT(moo, MOO_OOP_IS_SMPTR(c->trgc));
+			trgc = MOO_OOP_TO_SMPTR(c->trgc);
+			if (trgc) trgc (moo, oop);
 		}
 
 		ptr = ptr + MOO_SIZEOF(moo_obj_t) + nbytes_aligned;

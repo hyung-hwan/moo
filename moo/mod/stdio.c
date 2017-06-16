@@ -222,9 +222,8 @@ static moo_pfinfo_t pfinfos[] =
 /* ------------------------------------------------------------------------ */
 static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
-	if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(stdio_t)) <= -1) return -1;
+	if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(stdio_t), MOO_NULL) <= -1) return -1;
 	return 0;
-	/*return moo_genpfmethods (moo, mod, _class, pfinfos, MOO_COUNTOF(pfinfos));*/
 }
 
 static moo_pfbase_t* query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name, moo_oow_t namelen)

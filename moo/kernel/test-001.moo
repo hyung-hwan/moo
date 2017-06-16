@@ -108,7 +108,7 @@ extend MyObject
 	{
 		| tc limit |
 		
-		tc := #{
+		tc := %(
 			## 0 - 4
 			[MyObject.Donkey v == 901982],
 			[selfns.MyObject.Donkey v == 901982],
@@ -160,7 +160,7 @@ extend MyObject
 			
 			## 35 - 39
 			[MyObject.System.System.System KING == #KING]
-		}.
+		).
 
 		limit := tc size.
 		MyObject.System.System a: XX.AAAA.

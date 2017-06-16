@@ -451,7 +451,7 @@ class Dictionary(Set)
 {
 	(* [NOTE] 
 	 *  VM require Dictionary to implement new: and __put_assoc
-	 *  for the dictionary expression notation - :{ }
+	 *  for the dictionary expression notation - %{ }
 	 *)
 	
 	## TODO: implement Dictionary as a Hashed List/Table or Red-Black Tree
@@ -466,7 +466,7 @@ class Dictionary(Set)
 	 * to a dictionary with the dictionary/association expression notation
 	 * like this:
 	 *
-	 *   :{ 1 -> 20, #moo -> 999 } 
+	 *   %{ 1 -> 20, #moo -> 999 } 
 	 *
 	 * it must return self for the way VM works.
 	 *)

@@ -345,8 +345,9 @@ struct moo_iotok_t
 		MOO_IOTOK_IDENT_DOTTED,
 		MOO_IOTOK_BINSEL,
 		MOO_IOTOK_KEYWORD,
-		MOO_IOTOK_ASSIGN,
-		MOO_IOTOK_COLON,
+		MOO_IOTOK_ASSIGN,  /* := */
+		MOO_IOTOK_COLON,   /* : */
+		MOO_IOTOK_PERCENT, /* % */
 		MOO_IOTOK_RETURN,       /* ^ */
 		MOO_IOTOK_LOCAL_RETURN, /* ^^ */
 		MOO_IOTOK_LBRACE,
@@ -355,10 +356,10 @@ struct moo_iotok_t
 		MOO_IOTOK_RBRACK,
 		MOO_IOTOK_LPAREN,
 		MOO_IOTOK_RPAREN,
-		MOO_IOTOK_APAREN,   /* #( - array literal */
-		MOO_IOTOK_BABRACK,  /* #[ - byte array literal */
-		MOO_IOTOK_ABRACE,   /* #{ - array expression */
-		MOO_IOTOK_DICBRACE, /* :{ - dictionary expression */
+		MOO_IOTOK_HASHPAREN,   /* #( - array literal */
+		MOO_IOTOK_HASHBRACK,   /* #[ - byte array literal */
+		MOO_IOTOK_PERCPAREN,   /* %{ - array expression */
+		MOO_IOTOK_PERCBRACE,   /* %{ - dictionary expression */
 		MOO_IOTOK_PERIOD,
 		MOO_IOTOK_COMMA,
 		MOO_IOTOK_SEMICOLON
@@ -1009,14 +1010,12 @@ moo_oop_t moo_allocoopobj (
 	moo_oow_t size
 );
 
-#if defined(MOO_USE_METHOD_TRAILER)
 moo_oop_t moo_allocoopobjwithtrailer (
 	moo_t*           moo,
 	moo_oow_t        size,
 	const moo_oob_t* tptr,
 	moo_oow_t        tlen
 );
-#endif
 
 moo_oop_t moo_alloccharobj (
 	moo_t*            moo,

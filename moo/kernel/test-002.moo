@@ -21,11 +21,11 @@ class MyObject(Object)
 	{
 		| tc limit |
 
-		tc := #{
+		tc := %(
 			## 0 - 4
 			[ self proc1 == 100 ], 
 			[ Processor sleepFor: 2.  self proc1 == 200 ]
-		}.
+		).
 
 		limit := tc size.
 

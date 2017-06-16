@@ -7,7 +7,7 @@ class(#pointer,#limited) Class(Apex)
 	var spec, selfspec, superclass, subclasses, name, modname.
 	var instvars, classinstvars, classvars, pooldics.
 	var instmthdic, classmthdic, nsup, nsdic.
-	var trsize, initv, initv_ci.
+	var trsize, trgc, initv, initv_ci.
 
 	method(#class) initialize { ^self }
 

@@ -64,7 +64,7 @@ enum moo_errnum_t
 	MOO_EPIPE,
 	MOO_EAGAIN,
 
-	MOO_ETOOBIG,  /**< data too large */
+	MOO_ENOAVAIL, /**< data not available*/
 	MOO_EMSGRCV,  /**< mesasge receiver error */
 	MOO_EMSGSND,  /**< message sending error. even doesNotUnderstand: is not found */
 	MOO_ENUMARGS, /**< wrong number of arguments */
@@ -494,7 +494,7 @@ struct moo_dic_t
 typedef struct moo_nsdic_t moo_nsdic_t;
 typedef struct moo_nsdic_t* moo_oop_nsdic_t;
 
-#define MOO_CLASS_NAMED_INSTVARS 17
+#define MOO_CLASS_NAMED_INSTVARS 18
 typedef struct moo_class_t moo_class_t;
 typedef struct moo_class_t* moo_oop_class_t;
 
@@ -538,6 +538,7 @@ struct moo_class_t
 	moo_oop_nsdic_t nsdic; /* dictionary used for namespacing - may be nil when there are no subitems underneath */
 
 	moo_oop_t      trsize; /* trailer size for new instances */
+	moo_oop_t      trgc; /* trailer gc callback */
 
 	/* [0] - initial values for instance variables of new instances 
 	 * [1] - initial values for class instance variables */
@@ -980,7 +981,6 @@ struct moo_mod_data_t
 };
 typedef struct moo_mod_data_t moo_mod_data_t;
 
-
 struct moo_sbuf_t
 {
 	moo_ooch_t* ptr;
@@ -988,6 +988,9 @@ struct moo_sbuf_t
 	moo_oow_t   capa;
 };
 typedef struct moo_sbuf_t moo_sbuf_t;
+
+/* special callback to be called for trailer */
+typedef void (*moo_trgc_t) (moo_t* moo, moo_oop_t obj);
 
 /* =========================================================================
  * MOO VM
@@ -1623,7 +1626,8 @@ MOO_EXPORT moo_oop_t moo_findclass (
 MOO_EXPORT int moo_setclasstrsize (
 	moo_t*          moo,
 	moo_oop_class_t _class,
-	moo_oow_t       size
+	moo_oow_t       size,
+	moo_trgc_t      trgc
 );
 
 MOO_EXPORT void* moo_getobjtrailer (

@@ -273,14 +273,18 @@ static MOO_INLINE int is_binselchar (moo_ooci_t c)
 {
 	/*
 	 * binary-selector-character :=
-	 *   '%' | '&' | '*' | '+' | '-' |
-	 *   '/' | '<' | '>' | '=' | '?' |
-	 *   '@' | '\' | '~' | '|'
+	 *   '&' | '*' | '+' | '-' | '/' |
+	 *   '<' | '>' | '=' | '?' | '@' |
+	 *   '\' | '~' | '|'
+	 *
+	 * - a comma is special in moo and doesn't form a binary selector.
+	 * - a percent sign is special in moo and doesn't form a binary selector.
+	 * - an exclamation mark is excluded intentioinally because i can't tell
+	 *   the method symbol #! from the comment introducer #!.
 	 */
 
 	switch (c)
 	{
-		case '%':
 		case '&':
 		case '*':
 		case '+':
@@ -1652,11 +1656,6 @@ retry:
 				SET_TOKEN_TYPE (moo, MOO_IOTOK_ASSIGN);
 				ADD_TOKEN_CHAR (moo, c);
 			}
-			else if (c == '{')
-			{
-				SET_TOKEN_TYPE (moo, MOO_IOTOK_DICBRACE);
-				ADD_TOKEN_CHAR (moo, c);
-			}
 			else
 			{
 				unget_char (moo, &moo->c->lxc);
@@ -1708,6 +1707,34 @@ retry:
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_SEMICOLON);
 			goto single_char_token;
 
+		case '%':
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_PERCENT);
+			ADD_TOKEN_CHAR(moo, c);
+			GET_CHAR_TO (moo, c);
+
+			/* TODO: byte array expression token -> %[ */
+			if (c == '(')
+			{
+				/* %( - array expression */
+				ADD_TOKEN_CHAR(moo, c);
+				SET_TOKEN_TYPE (moo, MOO_IOTOK_PERCPAREN);
+			}
+			else if (c == '{')
+			{
+				/* %{ - dictionary expression */
+				ADD_TOKEN_CHAR(moo, c);
+				SET_TOKEN_TYPE (moo, MOO_IOTOK_PERCBRACE);
+			}
+			else
+			{
+				/* NOTE the percent sign not followed by  ( or } is 
+				 *      meaningless at this moment. however, i return
+				 *      it as a token so that the compiler anyway 
+				 *      will fail eventually */
+				unget_char (moo, &moo->c->lxc);
+			}
+			break;
+
 		case '#':  
 			ADD_TOKEN_CHAR(moo, c);
 			GET_CHAR_TO (moo, c);
@@ -1720,19 +1747,14 @@ retry:
 				case '(':
 					/* #( - array literal */
 					ADD_TOKEN_CHAR(moo, c);
-					SET_TOKEN_TYPE (moo, MOO_IOTOK_APAREN);
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_HASHPAREN);
 					break;
 
 				case '[':
 					/* #[ - byte array literal */
 					ADD_TOKEN_CHAR(moo, c);
-					SET_TOKEN_TYPE (moo, MOO_IOTOK_BABRACK);
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_HASHBRACK);
 					break;
-
-				case '{':
-					/* #{ - array expression */
-					ADD_TOKEN_CHAR(moo, c);
-					SET_TOKEN_TYPE (moo, MOO_IOTOK_ABRACE);
 					break;
 
 				case '\'':
@@ -1923,7 +1945,7 @@ retry:
 			break;
 	}
 
-MOO_DEBUG2 (moo, "TOKEN: [%.*js]\n", (moo_ooi_t)moo->c->tok.name.len, moo->c->tok.name.ptr);
+MOO_DEBUG3 (moo, "TOKEN: [%.*js] %d\n", (moo_ooi_t)moo->c->tok.name.len, moo->c->tok.name.ptr, (int)moo->c->tok.type);
 
 	return 0;
 }
@@ -4604,7 +4626,7 @@ static int compile_byte_array_literal (moo_t* moo)
 	moo_oow_t index;
 
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
-	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_BABRACK);
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_HASHBRACK);
 
 	if (read_byte_array_literal(moo, &lit) <= -1 ||
 	    add_literal(moo, lit, &index) <= -1 ||
@@ -4620,7 +4642,7 @@ static int compile_array_literal (moo_t* moo)
 	moo_oow_t index;
 
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
-	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_APAREN);
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_HASHPAREN);
 
 	if (read_array_literal(moo, 0, &lit) <= -1 ||
 	    add_literal(moo, lit, &index) <= -1 ||
@@ -4635,7 +4657,7 @@ static int compile_array_expression (moo_t* moo)
 	moo_oow_t maip;
 	moo_ioloc_t aeloc;
 
-	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_ABRACE);
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_PERCPAREN);
 
 	maip = moo->c->mth.code.len;
 	if (emit_single_param_instruction(moo, BCODE_MAKE_ARRAY, 0) <= -1) return -1;
@@ -4659,7 +4681,7 @@ static int compile_array_expression (moo_t* moo)
 				return -1;
 			}
 
-			if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN) break;
 
 			if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA)
 			{
@@ -4689,7 +4711,7 @@ static int compile_dictionary_expression (moo_t* moo)
 {
 	moo_oow_t mdip;
 
-	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_DICBRACE);
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_PERCBRACE);
 
 	GET_TOKEN (moo); /* read a token after :{ */
 
@@ -4931,21 +4953,21 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				GET_TOKEN (moo);
 				break;
 
-			case MOO_IOTOK_BABRACK: /* #[ */
+			case MOO_IOTOK_HASHBRACK: /* #[ */
 				/*GET_TOKEN (moo);*/
 				if (compile_byte_array_literal(moo) <= -1) return -1;
 				break;
 
-			case MOO_IOTOK_APAREN: /* #( */
+			case MOO_IOTOK_HASHPAREN: /* #( */
 				/*GET_TOKEN (moo);*/
 				if (compile_array_literal(moo) <= -1) return -1;
 				break;
 
-			case MOO_IOTOK_ABRACE: /* #{ */
+			case MOO_IOTOK_PERCPAREN: /* %( */
 				if (compile_array_expression(moo) <= -1) return -1;
 				break;
 
-			case MOO_IOTOK_DICBRACE: /* :{ */
+			case MOO_IOTOK_PERCBRACE: /* %{ */
 				if (compile_dictionary_expression(moo) <= -1) return -1;
 				break;
 
@@ -6939,7 +6961,6 @@ static int make_defined_class (moo_t* moo)
 
 
 	if (make_getters_and_setters (moo) <= -1) return -1;
-	
 
 	if (just_made)
 	{
@@ -7456,6 +7477,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			 * inherit so that the inherited methods work well when they
 			 * access the trailer space */
 			moo->c->cls.self_oop->trsize = ((moo_oop_class_t)moo->c->cls.self_oop->superclass)->trsize;
+			moo->c->cls.self_oop->trgc = ((moo_oop_class_t)moo->c->cls.self_oop->superclass)->trgc;
 		}
 	}
 
@@ -7614,10 +7636,9 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 			}
 
 			/* [NOTE] i don't mark RDONLY on a value resolved via an identifier */
-			
 		}
 
-		case MOO_IOTOK_BABRACK: /* #[ - byte array literal parenthesis */
+		case MOO_IOTOK_HASHBRACK: /* #[ - byte array literal parenthesis */
 		{
 			moo_oop_t lit;
 			if (read_byte_array_literal(moo, &lit) <= -1) return MOO_NULL;
@@ -7629,7 +7650,7 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 			return lit;
 		}
 
-		case MOO_IOTOK_APAREN: /* #( - array literal parenthesis */
+		case MOO_IOTOK_HASHPAREN: /* #( - array literal parenthesis */
 		{
 			moo_oop_t lit;
 			if (read_array_literal(moo, rdonly, &lit) <= -1) return MOO_NULL;

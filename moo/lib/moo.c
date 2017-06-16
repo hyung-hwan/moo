@@ -829,23 +829,35 @@ int moo_genpfmethods (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, const 
 
 moo_pfbase_t* moo_findpfbase (moo_t* moo, moo_pfinfo_t* pfinfo, moo_oow_t pfcount, const moo_ooch_t* name, moo_oow_t namelen)
 {
-	moo_oow_t left, right, mid;
 	int n;
 
 	/* binary search */
+#if 0
+	/* [NOTE] this algorithm is NOT underflow safe with moo_oow_t types */
+	int left, right, mid;
 
-	left = 0; right = pfcount - 1;
-
-	while (left <= right)
+	for (left = 0, right = pfcount - 1; left <= right; )
 	{
 		/*mid = (left + right) / 2;*/
 		mid = left + ((right - left) / 2);
 
 		n = moo_compoocharsoocstr (name, namelen, pfinfo[mid].mthname);
-		if (n < 0) right = mid - 1; 
+		if (n < 0) right = mid - 1; /* this substraction can make right negative. so i can't use moo_oow_t for the variable */
 		else if (n > 0) left = mid + 1;
 		else return &pfinfo[mid].base;
 	}
+#else
+	/* [NOTE] this algorithm is underflow safe with moo_oow_t types */
+	moo_oow_t base, mid, lim;
+
+	for (base = 0, lim = pfcount; lim > 0; lim >>= 1)
+	{
+		mid = base + (lim >> 1);
+		n = moo_compoocharsoocstr (name, namelen, pfinfo[mid].mthname);
+		if (n == 0) return &pfinfo[mid].base;
+		if (n > 0) { base = mid + 1; lim--; }
+	}
+#endif
 
 	moo_seterrnum (moo, MOO_ENOENT);
 	return MOO_NULL;
@@ -853,14 +865,14 @@ moo_pfbase_t* moo_findpfbase (moo_t* moo, moo_pfinfo_t* pfinfo, moo_oow_t pfcoun
 
 /* -------------------------------------------------------------------------- */
 
-int moo_setclasstrsize (moo_t* moo, moo_oop_class_t _class, moo_oow_t size)
+int moo_setclasstrsize (moo_t* moo, moo_oop_class_t _class, moo_oow_t size, moo_trgc_t trgc)
 {
 	moo_oop_class_t sc;
 	moo_oow_t spec;
 
 	MOO_ASSERT (moo, MOO_CLASSOF(moo, _class) == moo->_class);
-	MOO_ASSERT (moo, size <= MOO_SMOOI_MAX);
-
+	MOO_ASSERT (moo, size <= MOO_SMOOI_MAX);	
+ 
 	if (_class == moo->_method) 
 	{
 		/* the bytes code emitted by the compiler go to the trailer part
@@ -884,12 +896,14 @@ int moo_setclasstrsize (moo_t* moo, moo_oop_class_t _class, moo_oow_t size)
 
 	if (_class->trsize != moo->_nil)
 	{
+		MOO_ASSERT (moo, _class->trgc != moo->_nil);
 		MOO_DEBUG3 (moo, "Not allowed to re-set trailer size to %zu on the %.*js class\n", 
 			size,
 			MOO_OBJ_GET_SIZE(_class->name),
 			MOO_OBJ_GET_CHAR_SLOT(_class->name));
 		goto eperm;
 	}
+	MOO_ASSERT (moo, _class->trgc == moo->_nil);
 
 	sc = (moo_oop_class_t)_class->superclass;
 	if (MOO_OOP_IS_SMOOI(sc->trsize) && size < MOO_OOP_TO_SMOOI(sc->trsize))
@@ -906,10 +920,13 @@ int moo_setclasstrsize (moo_t* moo, moo_oop_class_t _class, moo_oow_t size)
 
 	/* you can only set the trailer size once when it's not set yet */
 	_class->trsize = MOO_SMOOI_TO_OOP(size);
-	MOO_DEBUG3 (moo, "Set trailer size to %zu on the %.*js class\n", 
+	_class->trgc = MOO_SMPTR_TO_OOP(trgc); /* i don't replace NULL by nil for GC safety. */
+
+	MOO_DEBUG5 (moo, "Set trailer size to %zu on the %.*js class with gc callback of %p(%p)\n", 
 		size,
 		MOO_OBJ_GET_SIZE(_class->name),
-		MOO_OBJ_GET_CHAR_SLOT(_class->name));
+		MOO_OBJ_GET_CHAR_SLOT(_class->name),
+		MOO_SMPTR_TO_OOP(trgc), trgc);
 	return 0;
 
 eperm:

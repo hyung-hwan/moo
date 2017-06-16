@@ -78,7 +78,6 @@ moo_oop_t moo_allocoopobj (moo_t* moo, moo_oow_t size)
 	return (moo_oop_t)hdr;
 }
 
-#if defined(MOO_USE_METHOD_TRAILER)
 moo_oop_t moo_allocoopobjwithtrailer (moo_t* moo, moo_oow_t size, const moo_oob_t* bptr, moo_oow_t blen)
 {
 	moo_oop_oop_t hdr;
@@ -112,7 +111,6 @@ moo_oop_t moo_allocoopobjwithtrailer (moo_t* moo, moo_oow_t size, const moo_oob_
 
 	return (moo_oop_t)hdr;
 }
-#endif
 
 static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, moo_oow_t len, moo_obj_type_t type, moo_oow_t unit, int extra)
 {
