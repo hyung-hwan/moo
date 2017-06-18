@@ -38,13 +38,6 @@
 #define MC MOO_METHOD_CLASS
 #define MI MOO_METHOD_INSTANCE
 
-typedef struct x11_t x11_t;
-struct x11_t
-{
-	Display* disp;
-	XEvent* curevt;
-};
-
 typedef struct x11_win_t x11_win_t;
 struct x11_win_t
 {

@@ -2,6 +2,9 @@
 
 class X11(Object) from 'x11'
 {
+	var display_base := nil.
+	var shell_container := nil.
+
 	var windows. ## all windows registered
 
 	var event_loop_sem, event_loop_proc.
@@ -12,15 +15,13 @@ class X11(Object) from 'x11'
 	var mouse_event.
 	var mouse_wheel_event.
 
-	method(#primitive,#liberal) _connect(name).
-	method(#primitive) _disconnect.
-	method(#primitive) _get_base.
-	method(#primitive) _get_fd.
-	method(#primitive) _get_event.
+	method(#class,#primitive,#liberal) _open_display(name).
+	method(#class,#primitive) _close_display(display).
+	method(#class,#primitive) _get_fd(display).
+	method(#class,#primitive) _get_event(display, event).
+	method(#class,#primitive) _create_window(display, window, x, y, width, height, fgcolor, bgcolor).
 
-	method server { ^self }
-	method serverBase { ^self _get_base }
-	method windowBase { ^nil }
+	method(#primitive) _get_evtbuf.
 }
 
 class X11.Exception(System.Exception)
@@ -107,99 +108,147 @@ class X11.ExposeEvent(X11.Event)
 }
 
 
+
 ## ---------------------------------------------------------------------------
-## Window
+## X11 Widgets
 ## ---------------------------------------------------------------------------
+
 class X11.Widget(Object)
 {
-	var(#get,#set) parent.
+	var(#get,#set)
+		parent   := nil,
+		x        := 0,
+		y        := 0,
+		width    := 0,
+		height   := 0,
+		fgcolor  := 0,
+		bgcolor  := 0,
+		realized := false.
 
-	method server
+	method displayOn: grctx
 	{
-		| p pp |
-		p := self.
-		while ((pp := p parent) notNil) { p := pp }.
-		^p server.
 	}
 
-	method serverBase { ^self server serverBase }
-	method windowBase { ^nil}
-
-
-	##method displayOn: gc { }
-}
-
-class X11.Window(selfns.Widget) from 'x11.win'
-{
-	var bounds.
-
-	method(#primitive) _make_window(server, x, y, width, height, parent).
-	method(#primitive) _kill_window.
-	method(#primitive) _get_base.
-	method(#primitive) _get_bounds(rect).
-	method(#primitive) _set_bounds(rect).
-
-	method(#class) new: parent
+	method displayBase
 	{
-		^(super new) __open_on: parent.
+		if (self.parent isNil) { ^nil }.
+		^self.parent displayBase.
 	}
 
-	method initialize
+	method realize
 	{
-		self.bounds := selfns.Rectangle new.
-	}
-
-	method __open_on: parent
-	{
-		| server winbase |
-
-		server := parent server.
-		winbase := self _make_window (server serverBase, 5, 5, 400, 400, parent windowBase).
-
-		(*
-		if (server _make_window (5, 5, 400, 400, parent, self) isError)
-		{
-			X11.Exception signal: 'cannot make a window'
-		}.
-		*)
-
-		if (server ~= parent)
-		{
-			self.parent := parent.
-			self.parent addWidget: self.
-		}.
-
-		server addWindow: self.
-
-		self _get_bounds(self.bounds).
-		self windowOpened.
 	}
 
 	method dispose
 	{
-		if (self windowBase notNil)
+     }
+}
+
+class X11.Label(X11.Widget)
+{
+	var(#get) text := ''.
+
+	method text: text
+	{
+		self.text := text.
+		self displayOn: nil.
+	}
+
+	method displayOn: grctx
+	{
+		## grctx _fillRectangle ().
+		## grctx _drawText (...).
+		## TODO Draw Text...
+	}
+
+	method realize
+	{
+		## if i want to use a window to represent it, it must create window here.
+		## otherwise, do other works in displayOn???
+	}
+
+	method dispose
+	{
+	}
+}
+
+class X11.Composite(X11.Widget)
+{
+	var children.
+
+	method initialize
+	{
+		self.children := LinkedList new.
+	}
+
+	method add: widget
+	{
+		if (widget parent notNil)
 		{
-			self windowClosing.
+			selfns.Exception signal: 'Cannot add an already added widget'.
+		}.
 
-			self server removeWindow: self.
-			if (self.parent notNil) { self.parent removeWidget: self }.
+		self.children addLast: widget.
+		widget parent: self.
+	}
 
-			self _dispose_window.
-			self windowClosed. ## you can't make a primitive call any more
+	method remove: widget
+	{
+		| link |
+		if (widget parent =~ self)
+		{
+			selfns.Exception sinal: 'Cannot remove a foreign widget'
+		}.
 
-			##self.wid := nil.
-			self.parent := nil.
+		## TODO: unmap and destroy...
+		link := self.children findLink: widget.
+		self.children removeLink: link.
+		widget parent: nil.
+	}
+
+	method childrenCount
+	{
+		^self.children size
+	}
+
+	method dispose
+	{
+          self.children do: [:child | child dispose ]
+	}
+}
+
+class X11.Shell(X11.Composite)
+{
+	var(#get) title.
+	var(#get,#set) displayBase.
+
+	method new: title
+	{
+		self.title := title.
+	}
+
+	method title: title
+	{
+		self.title := title.
+		if (self.realized)
+		{
+			## set window title of this window.
 		}
 	}
 
-	method windowBase { ^self _get_base }
-}
-
-class X11.FrameWindow(selfns.Window)
-{
-	method(#class) new: server
+	method realize
 	{
-		^super new: server.
+		| wind |
+		if (self.realized)  { ^self }.
+
+		wind := X11 _create_window(self.displayBase, nil, self.x, self.y, self.width, self.height, self.fgcolor, self.bgcolor).
+		if (wind isError)
+		{
+			self.Exception signal: ('Cannot create shell ' & self.title).
+		}.
+
+		self.children do: [:child | child realize ].
+		self.realized := true.
 	}
 }
 
@@ -210,29 +259,45 @@ extend X11
 {
 	method(#class) new
 	{
-		^(super new) __connect_to_server: nil.
+		^(super new) __connect_to: nil.
 	}
 
-	method __connect_to_server: name
+	method __connect_to: name
 	{
 		| base |
-		base := self _connect(name).
-		if (base isError) { X11.Exception signal: 'cannot connect to server' }.
-		##self.base := base.
+		base := X11 _open_display(name).
+		if (base isError) { self.Exception signal: 'cannot open display' }.
+		self.display_base := base.
 	}
 
-	method close
+	method dispose
 	{
-		if (self _get_base notNil)
+		if (self.display_event notNil)
 		{
-			self _disconnect.
-			##self.cid := nil.
-		}
+			X11 _free_event.
+			self.display_event := nil.
+		}.
+
+		if (self.shell_container notNil)
+		{
+			self.shell_container dispose.
+			self.shell_container := nil.
+		}.
+
+		if (self.display_base notNil)
+		{
+
+			X11 _close_display (self.display_base).
+			self.display_base := nil.
+		}l
 	}
 
 	method initialize
 	{
 		super initialize.
+
+		self.shell_container := self.Composite new.
+		self.display_event := self _alloc_event.
 
 		self.windows := System.Dictionary new: 100.
 
@@ -271,30 +336,25 @@ extend X11
 		}.
 	}
 
-	method connect
+	method addShell: shell
 	{
-		| cid |
-		if (self.windows isNil)
+		if (shell displayBase isNil)
 		{
-			if ((cid := self _connect) isError)  { ^cid }.
-			##self.cid := cid.
-			self.windows := System.Dictionary new.
+			self.shell_container add: shell.
+			shell displayBase: self.display_base.
 		}
 	}
 
-	method disconnect
+	method removeShell: shell
 	{
-		if (self.windows notNil)
+		if (shell displayBase notNil)
 		{
-			self.windows do: [ :frame |
-				frame close.
-			].
-			self.windows := nil.
-			self _disconnect.
+			self.shell_container remove: shell.
+			shell displayBase: nil.
 		}
 	}
 
-	method addWindow: window
+	method registerWindow: window
 	{
 		^self.windows at: (window windowBase) put: window.
 	}
@@ -309,18 +369,18 @@ extend X11
 		if (self.event_loop_sem isNil)
 		{
 			self.event_loop_sem := Semaphore new.
-			Processor signal: self.event_loop_sem onInput: (self _get_fd).
+			Processor signal: self.event_loop_sem onInput: (X11 _get_fd(self.display_base)).
 			self.event_loop_proc := [
 				| event ongoing |
 
 				ongoing := true.
-				while (self.windows size > 0)
+				while (self.shell_container childrenCount > 0)
 				{
 ###'Waiting for X11 event...' dump.
 					self.event_loop_sem wait.
 					if (ongoing not) { break }.
 
-					while ((event := self _get_event) notNil)
+					while (self _get_event(self.display_base, self.display_event))
 					{
 						if (event isError)
 						{
@@ -338,7 +398,8 @@ extend X11
 				Processor unsignal: self.event_loop_sem.
 				self.event_loop_sem := nil.
 
-				self disconnect.
+				self dispose.
+'CLOSING X11 EVENT LOOP' dump.
 			] fork.
 		}
 	}
@@ -408,91 +469,36 @@ extend X11
 	}
 }
 
-class MyWidget(Window)
-{
-}
-
-class MyFrame(X11.FrameWindow)
-{
-	var gc.
 
 
-	method windowOpened
-	{
-		super windowOpened.
-
-		(*
-		if (self.gc isNil)
-		{
-			self.gc := X11.GC new: self.
-self.gc foreground: 10.
-self.gc _drawLine(10, 20, 30, 40).
-self.gc _drawRect(10, 20, 30, 40).
-self.gc foreground: 20.
-self.gc _drawRect(100, 100, 200, 200).
-		}.
-
-		self.b1 := MyWidget new: self.*)
-
-		self windowResized.
-	}
-
-	method windowClosing
-	{
-		super windowClosing.
-		(*if (self.gc notNil)
-		{
-			self.gc close.
-			self.gc := nil.
-		}*)
-	}
-
-	method windowResized
-	{
-		(*
-		| rect |
-
-		super windowResized.
-
-		rect := self bounds.
-		rect x: 0; y: 0; height: ((rect height) quo: 2); width: ((rect width) - 2).
-		self.b1 bounds: rect;*)
-	}
-
-	method expose: event
-	{
-		super expose: event.
-	}
-}
 
 class MyObject(Object)
 {
+	var disp1, shell1, shell2.
+
+	method main1
+	{
+		self.disp1 := X11 new.
+
+		shell1 := (X11.Shell new title: 'Shell 1').
+		shell2 := (X11.Shell new title: 'Shell 2').
+
+		shell1 x: 10; y: 20; width: 100; height: 100.
+		shell2 x: 200; y: 200; width: 200; height: 200.
+
+		self.disp1 addShell: shell1.
+		self.disp1 addShell: shell2.
+
+		self.shell1 add: (X11.Label new text: 'xxxxxxxx').
+		self.shell1 realize.
+		self.shell2 realize.
+
+		self.disp1 enterEventLoop. ## this is not a blocking call. it spawns another process.
+	}
 
 	method(#class) main
 	{
-		| disp1 disp2 disp3 f q p |
-
-		disp1 := X11 new.
-		disp2 := X11 new.
-		disp3 := X11 new.
-
-		f := MyFrame new: disp2.
-		q := MyFrame new: disp1.
-		p := MyFrame new: disp3.
-
-		disp1 enterEventLoop. ## this is not a blocking call. it spawns another process.
-		disp2 enterEventLoop.
-		disp3 enterEventLoop.
-
-		##disp1 := X11 new.
-		##f := MyFrame new.
-		##f add: Button new.
-		##f add: Button new.
-		##g := MyFrame new.
-		##g add: (b := Button new).
-		##disp1 add: f.
-		##disp1 add: g.
-		##disp1 enterEventLoop.
+		^self new main1
 	}
-
 }
+

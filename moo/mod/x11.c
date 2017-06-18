@@ -39,21 +39,36 @@ struct x11_modctx_t
 
 /* ------------------------------------------------------------------------ */
 
-static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
+#if 0
+static moo_pfrc_t pf_get_base (moo_t* moo, moo_ooi_t nargs)
 {
 	x11_trailer_t* x11;
-	Display* disp = MOO_NULL;
-	XEvent* curevt = MOO_NULL;
-	char* dispname = MOO_NULL;
 
 	x11 = (x11_trailer_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
 
 	if (x11->disp)
 	{
-		MOO_DEBUG0 (moo, "<x11.connect> Unable to open a display multiple times\n");
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EEXIST);
-		goto oops;
+		MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP (x11->disp));
 	}
+	else
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOAVAIL);
+	}
+
+	return MOO_PF_SUCCESS;
+}
+
+
+#endif
+
+/* ------------------------------------------------------------------------ */
+
+static moo_pfrc_t pf_open_display (moo_t* moo, moo_ooi_t nargs)
+{
+	x11_trailer_t* x11;
+	Display* disp = MOO_NULL;
+	XEvent* curevt = MOO_NULL;
+	char* dispname = MOO_NULL;
 
 	if (nargs >= 1)
 	{
@@ -96,9 +111,6 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 		goto oops;
 	}
 
-	x11->disp = disp;
-	x11->curevt =  curevt;
-
 	MOO_ASSERT (moo, MOO_IN_SMPTR_RANGE(disp));
 
 	MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP(disp));
@@ -112,57 +124,40 @@ oops:
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_disconnect (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_close_display (moo_t* moo, moo_ooi_t nargs)
 {
-	x11_trailer_t* x11;
+	moo_oop_t a0;
+	
+	a0 = MOO_STACK_GETARG(moo, nargs, 0);
 
-	x11 = (x11_trailer_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
-
-	if (x11->curevt) 
+	if (!MOO_OOP_IS_SMPTR(a0))
 	{
-		moo_freemem (moo, x11->curevt); 
-		x11->curevt = MOO_NULL;
-	}
-
-	if (x11->disp)
-	{
-		XCloseDisplay (x11->disp);
-		x11->disp = MOO_NULL;
-	}
-
-	MOO_STACK_SETRETTORCV (moo, nargs);
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_get_base (moo_t* moo, moo_ooi_t nargs)
-{
-	x11_trailer_t* x11;
-
-	x11 = (x11_trailer_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
-
-	if (x11->disp)
-	{
-		MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP (x11->disp));
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
 	}
 	else
 	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOAVAIL);
+		XCloseDisplay (MOO_OOP_TO_SMPTR(a0));
+		MOO_STACK_SETRETTORCV (moo, nargs);
 	}
-
 	return MOO_PF_SUCCESS;
 }
 
+
 static moo_pfrc_t pf_get_fd (moo_t* moo, moo_ooi_t nargs)
 {
-	x11_trailer_t* x11;
+	moo_oop_t a0;
 
-	x11 = (x11_trailer_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+	a0 = MOO_STACK_GETARG(moo, nargs, 0);
 
-	if (x11->disp)
+	if (!MOO_OOP_IS_SMPTR(a0))
 	{
-		int c;
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+	}
+	else
+	{
+		moo_ooi_t c;
+		c = ConnectionNumber(MOO_OOP_TO_SMPTR(a0));
 
-		c = ConnectionNumber(x11->disp);
 		if (!MOO_IN_SMOOI_RANGE(c))
 		{
 			MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ERANGE);
@@ -172,48 +167,210 @@ static moo_pfrc_t pf_get_fd (moo_t* moo, moo_ooi_t nargs)
 			MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(c));
 		}
 	}
-	else
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOAVAIL);
-	}
 
 	return MOO_PF_SUCCESS;
 }
 
 static moo_pfrc_t pf_get_event (moo_t* moo, moo_ooi_t nargs)
 {
-	x11_trailer_t* x11;
+	
+	moo_oop_t a0, a1;
 
-	x11 = (x11_trailer_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
-	if (XPending(x11->disp))
+	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* display - SmallPointer (Display*) */
+	a1 = MOO_STACK_GETARG(moo, nargs, 1); /* event to return - SmallPointer (XEvent*) */
+
+	
+	if (!MOO_OOP_IS_SMPTR(a0) || !MOO_OOP_IS_SMPTR(a1))
 	{
-		XNextEvent (x11->disp, x11->curevt);
-		MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP(x11->curevt));
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
 	}
 	else
 	{
-		/* nil if there is no event */
-		MOO_STACK_SETRET (moo, nargs, moo->_nil);
+		Display* disp;
+		XEvent*  event;
+
+		disp = MOO_OOP_TO_SMPTR(a0);
+		event = MOO_OOP_TO_SMPTR(a1);
+		if (XPending(disp))
+		{
+			XNextEvent (disp, event);
+			MOO_STACK_SETRET (moo, nargs, moo->_true);
+		}
+		else
+		{
+			/* nil if there is no event */
+			MOO_STACK_SETRET (moo, nargs, moo->_false);
+		}
 	}
 
 	return MOO_PF_SUCCESS;
 }
 
+
+static moo_pfrc_t pf_get_evtbuf (moo_t* moo, moo_ooi_t nargs)
+{
+	x11_trailer_t* tr;
+
+	tr = moo_getobjtrailer (moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
+
+	
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_create_window (moo_t* moo, moo_ooi_t nargs)
+{
+	Window wind; /* Window -> XID, unsigned long */
+
+	Display* disp;
+	int scrn;
+	Window parent;
+	XSetWindowAttributes attrs;
+
+	moo_oop_t a0, a1, a2, a3, a4, a5, a6, a7;
+
+	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* display - SmallPointer (Display*) */
+	a1 = MOO_STACK_GETARG(moo, nargs, 1); /* parent window - Integer or nil (Window) */
+	a2 = MOO_STACK_GETARG(moo, nargs, 2); /* x - SmallInteger */
+	a3 = MOO_STACK_GETARG(moo, nargs, 3); /* y - SmallInteger */
+	a4 = MOO_STACK_GETARG(moo, nargs, 4); /* width - SmallInteger */
+	a5 = MOO_STACK_GETARG(moo, nargs, 5); /* height - SmallInteger */
+	a6 = MOO_STACK_GETARG(moo, nargs, 6); /* fgcolor - SmallInteger */
+	a7 = MOO_STACK_GETARG(moo, nargs, 7); /* bgcolor - SmallInteger */
+
+	if (!MOO_OOP_IS_SMPTR(a0) || 
+	    !MOO_OOP_IS_SMOOI(a2) || !MOO_OOP_IS_SMOOI(a3) || !MOO_OOP_IS_SMOOI(a4) ||
+	    !MOO_OOP_IS_SMOOI(a5) || !MOO_OOP_IS_SMOOI(a6) || !MOO_OOP_IS_SMOOI(a7))
+	{
+	einval:
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		goto done;
+	}
+
+	disp = MOO_OOP_TO_SMPTR(a0);
+
+	if (a1 == moo->_nil) 
+	{
+		scrn = DefaultScreen (disp);
+		parent = RootWindow (disp, scrn);
+	}
+	else
+	{
+		moo_oow_t tmpoow;
+		XWindowAttributes wa;
+		if (moo_inttooow(moo, a1, &tmpoow) <= 0) goto einval;
+
+		parent = tmpoow;
+		XGetWindowAttributes (disp, parent, &wa);
+		MOO_ASSERT (moo, XRootWindowOfScreen(wa.screen) == parent);
+		scrn = XScreenNumberOfScreen(wa.screen);
+	}
+
+	attrs.event_mask = ExposureMask; /* TODO: accept it as a parameter??? */
+	attrs.border_pixel = BlackPixel (disp, scrn); /* TODO: use a6 */
+	attrs.background_pixel = WhitePixel (disp, scrn);/* TODO: use a7 */
+
+	wind = XCreateWindow (
+		disp,
+		parent,
+		MOO_OOP_TO_SMOOI(a2), /* x */
+		MOO_OOP_TO_SMOOI(a3), /* y */
+		MOO_OOP_TO_SMOOI(a4), /* width */
+		MOO_OOP_TO_SMOOI(a5), /* height */
+		1, /* border width */
+		CopyFromParent, /* depth */
+		InputOutput,    /* class */
+		CopyFromParent, /* visual */
+		CWEventMask | CWBackPixel | CWBorderPixel, &attrs);
+	if (!wind)
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ESYSERR);
+		goto done;
+	}
+
+	a0 = moo_oowtoint (moo, wind);
+	if (!a0) 
+	{
+		MOO_STACK_SETRETTOERRNUM (moo, nargs);
+		goto done;
+	}
+
+/* TODO: remvoe this */
+XMapWindow (disp, wind);
+XFlush (disp);
+
+#if 0
+	if (parent == screen->root)
+	{
+		cookie = xcb_intern_atom(c, 1, 12, "WM_PROTOCOLS");
+		reply = xcb_intern_atom_reply(c, cookie, 0);
+
+		cookie = xcb_intern_atom(c, 0, 16, "WM_DELETE_WINDOW");
+		win->dwar = xcb_intern_atom_reply(c, cookie, 0);
+
+		xcb_change_property(c, XCB_PROP_MODE_REPLACE, wid, reply->atom, 4, 32, 1, &win->dwar->atom);
+	}
+#endif
+
+	MOO_STACK_SETRET (moo, nargs, a0); 
+done:
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_destroy_window (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t a0, a1;
+
+
+	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* display - SmallPointer (Display*) */
+	a1 = MOO_STACK_GETARG(moo, nargs, 1); /* window - Integer (Window) */
+
+	if (!MOO_OOP_IS_SMPTR(a0))
+	
+	{
+	einval:
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+	}
+	else
+	{
+		Display* disp;
+		moo_oow_t wind;
+
+		disp = MOO_OOP_TO_SMPTR(a0);
+		if (moo_inttooow(moo, a1, &wind) <= 0) goto einval;
+
+		XUnmapWindow (disp, (Window)wind); 
+		XDestroyWindow (disp, (Window)wind);
+XFlush (disp);
+
+		MOO_STACK_SETRETTORCV (moo, nargs); 
+	}
+	return MOO_PF_SUCCESS;
+}
+
+
 /* ------------------------------------------------------------------------ */
 
 static moo_pfinfo_t x11_pfinfo[] =
 {
+	{ MC, { '_','c','l','o','s','e','_','d','i','s','p','l','a','y','\0' },     0, { pf_close_display,   1, 1 } },
+	{ MC, { '_','c','r','e','a','t','e','_','w','i','n','d','o','w','\0' },     0, { pf_create_window,   8, 8 } },
+	{ MC, { '_','d','e','s','t','r','o','y','_','w','i','n','d','o','w','\0' }, 0, { pf_destroy_window,  2, 2 } },
+	{ MC, { '_','g','e','t','_','e','v','e','n','t','\0'},                      0, { pf_get_event,       2, 2 } },
+	{ MI, { '_','g','e','t','_','e','v','t','b','u','f','\0'},                  0, { pf_get_evtbuf,      0, 0 } },
+	{ MC, { '_','g','e','t','_','f','d','\0' },                                 0, { pf_get_fd,          1, 1 } },
+	{ MC, { '_','o','p','e','n','_','d','i','s','p','l','a','y','\0' },         0, { pf_open_display,    0, 1 } }
+	
 
-	{ MI, { '_','c','o','n','n','e','c','t','\0' },                        0, { pf_connect,    0, 1 } },
-	{ MI, { '_','d','i','s','c','o','n','n','e','c','t','\0' },            0, { pf_disconnect, 0, 0 } },
+#if 0
 	{ MI, { '_','g','e','t','_','b','a','s','e','\0' },                    0, { pf_get_base,   0, 0 } },
-	{ MI, { '_','g','e','t','_','e','v','e','n','t','\0'},                 0, { pf_get_event,  0, 0 } },
-	{ MI, { '_','g','e','t','_','f','d','\0' },                            0, { pf_get_fd,     0, 0 } }
+
+	
+#endif
 };
 
 static int x11_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
-	if (moo_setclasstrsize(moo, _class, MOO_SIZEOF(x11_t), MOO_NULL) <= -1) return -1;
+	if (moo_setclasstrsize(moo, _class, MOO_SIZEOF(x11_trailer_t), MOO_NULL) <= -1) return -1;
 	return 0;
 }
 
@@ -273,4 +430,3 @@ int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)
 }
 
 /* ------------------------------------------------------------------------ */
-
