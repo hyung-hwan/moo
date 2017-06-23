@@ -45,18 +45,37 @@ struct x11_win_t
 	Window wind;
 };
 
+typedef struct x11_llevent_t* oop_x11_llevent_t;
+struct x11_llevent_t
+{
+	MOO_OBJ_HEADER;
+	moo_oop_t type;
+	moo_oop_t window;
+	moo_oop_t x, y, width, height;
+};
 
 typedef struct x11_t* oop_x11_t;
 struct x11_t
 {
-	Display* disp;
+	MOO_OBJ_HEADER;
+
+	moo_oop_t display; /* SMPTR of Display */
+	oop_x11_llevent_t llevent;
+	moo_oop_t key_event;
+	moo_oop_t mouse_event;
+
+	/* in fact, there are more fields */
 };
 
 typedef struct x11_trailer_t x11_trailer_t;
 struct x11_trailer_t
 {
-	XEvent* curevt;
+	XEvent* event;
+	moo_ooi_t connection_number; 
+	Atom wm_delete_window;
 };
+
+
 
 #if defined(__cplusplus)
 extern "C" {

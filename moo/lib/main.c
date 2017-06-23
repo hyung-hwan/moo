@@ -166,28 +166,30 @@ typedef struct xtn_t xtn_t;
 struct xtn_t
 {
 	const char* source_path; /* main source file */
+	int vm_running;
+
 #if defined(_WIN32)
 	HANDLE waitable_timer;
 #else
 
-#if defined(USE_DEVPOLL) || defined(USE_EPOLL)
+	#if defined(USE_DEVPOLL) || defined(USE_EPOLL)
 	int ep; /* /dev/poll or epoll */
-#endif
+	#endif
 
-#if defined(USE_DEVPOLL) || defined(USE_POLL)
+	#if defined(USE_DEVPOLL) || defined(USE_POLL)
 	struct
 	{
 		moo_oow_t capa;
 		moo_ooi_t* ptr;
 	} epd;
-#endif
+	#endif
 
-#if defined(USE_THREAD)
+	#if defined(USE_THREAD)
 	int p[2]; /* pipe for signaling */
 	pthread_t iothr;
 	int iothr_up;
 	int iothr_abort;
-#endif
+	#endif
 
 	struct
 	{
@@ -210,14 +212,12 @@ struct xtn_t
 	#endif
 
 		moo_oow_t len;
-#if defined(USE_THREAD)
+	#if defined(USE_THREAD)
 		pthread_mutex_t mtx;
 		pthread_cond_t cnd;
 		pthread_cond_t cnd2;
-#endif
+	#endif
 	} ev;
-
-
 #endif
 };
 
@@ -749,7 +749,6 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 #endif
 }
 
-
 /* ========================================================================= */
 #if defined(USE_DEVPOLL) || defined(USE_POLL)
 static int secure_poll_data_space (moo_t* moo, int fd)
@@ -1005,7 +1004,8 @@ static void* iothr_main (void* arg)
 			if (n <= -1)
 			{
 				/* TODO: don't use MOO_DEBUG2. it's not thread safe... */
-				MOO_DEBUG2 (moo, "Warning: epoll_wait failure - %d, %hs\n", errno, strerror(errno));
+				/* the following call has a race-condition issue when called in this separate thread */
+				/*MOO_DEBUG2 (moo, "Warning: epoll_wait failure - %d, %hs\n", errno, strerror(errno));*/
 			}
 			else if (n > 0)
 			{
@@ -1094,18 +1094,19 @@ static int vm_startup (moo_t* moo)
 	}
 	pcount = 2;
 
-#if defined(O_CLOEXEC)
+	#if defined(O_CLOEXEC)
 	flag = fcntl (xtn->p[0], F_GETFD);
 	if (flag >= 0) fcntl (xtn->p[0], F_SETFD, flag | FD_CLOEXEC);
 	flag = fcntl (xtn->p[1], F_GETFD);
 	if (flag >= 0) fcntl (xtn->p[1], F_SETFD, flag | FD_CLOEXEC);
-#endif
-#if defined(O_NONBLOCK)
+	#endif
+
+	#if defined(O_NONBLOCK)
 	flag = fcntl (xtn->p[0], F_GETFL);
 	if (flag >= 0) fcntl (xtn->p[0], F_SETFL, flag | O_NONBLOCK);
 	flag = fcntl (xtn->p[1], F_GETFL);
 	if (flag >= 0) fcntl (xtn->p[1], F_SETFL, flag | O_NONBLOCK);
-#endif
+	#endif
 
 	if (_add_poll_fd (moo, xtn->p[0], XPOLLIN, MOO_TYPE_MAX(moo_oow_t)) <= -1) goto oops;
 
@@ -1116,8 +1117,11 @@ static int vm_startup (moo_t* moo)
 	xtn->iothr_abort = 0;
 	xtn->iothr_up = 0;
 	/*pthread_create (&xtn->iothr, MOO_NULL, iothr_main, moo);*/
-#endif
 
+	
+#endif /* USE_THREAD */
+
+	xtn->vm_running = 1;
 	return 0;
 
 oops:
@@ -1155,6 +1159,7 @@ static void vm_cleanup (moo_t* moo)
 #else
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 
+	xtn->vm_running = 0;
 
 #if defined(USE_THREAD)
 	if (xtn->iothr_up)
@@ -1690,7 +1695,7 @@ static void handle_term (int sig)
 	}
 }
 
-static void setup_term (void)
+static void setup_sigterm (void)
 {
 #if defined(_WIN32)
 	SetConsoleCtrlHandler (handle_term, TRUE);
@@ -1707,7 +1712,7 @@ static void setup_term (void)
 #endif
 }
 
-static void clear_term (void)
+static void clear_sigterm (void)
 {
 #if defined(_WIN32)
 	SetConsoleCtrlHandler (handle_term, FALSE);
@@ -1778,8 +1783,6 @@ int main (int argc, char* argv[])
 		moo_setoption (moo, MOO_SYSDIC_SIZE, &tab_size);
 		tab_size = 600;
 		moo_setoption (moo, MOO_PROCSTK_SIZE, &tab_size);
-
-		
 	}
 
 	{
@@ -1796,7 +1799,7 @@ int main (int argc, char* argv[])
 
 	if (moo_ignite(moo) <= -1)
 	{
-		moo_logbfmt (moo, MOO_LOG_ERROR, "cannot ignite moo - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
+		moo_logbfmt (moo, MOO_LOG_ERROR, "ERROR: cannot ignite moo - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
 		moo_close (moo);
 		return -1;
 	}
@@ -1872,6 +1875,7 @@ int main (int argc, char* argv[])
 
 				}
 				printf ("\n");
+				fflush (stdout);
 			}
 			else
 			{
@@ -1889,7 +1893,7 @@ int main (int argc, char* argv[])
 	xret = 0;
 	g_moo = moo;
 	setup_tick ();
-	setup_term ();
+	setup_sigterm ();
 
 	objname.ptr = str_my_object;
 	objname.len = 8;
@@ -1902,7 +1906,7 @@ int main (int argc, char* argv[])
 	}
 
 	cancel_tick ();
-	clear_term ();
+	clear_sigterm ();
 	g_moo = MOO_NULL;
 
 	/*moo_dumpsymtab(moo);

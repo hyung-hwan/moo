@@ -2,26 +2,49 @@
 
 class X11(Object) from 'x11'
 {
+	## =====================================================================
+	## this part of the class must match the internal
+	## definition struct x11_t  defined in _x11.h
+	## ---------------------------------------------------------------------
 	var display_base := nil.
-	var shell_container := nil.
-
-	var windows. ## all windows registered
-
-	var event_loop_sem, event_loop_proc.
-	var ll_event_blocks.
-
+	var llevent.
 	var expose_event.
 	var key_event.
 	var mouse_event.
 	var mouse_wheel_event.
+	## =====================================================================
 
-	method(#class,#primitive,#liberal) _open_display(name).
-	method(#class,#primitive) _close_display(display).
-	method(#class,#primitive) _get_fd(display).
-	method(#class,#primitive) _get_event(display, event).
-	method(#class,#primitive) _create_window(display, window, x, y, width, height, fgcolor, bgcolor).
+	var shell_container := nil.
+	var window_registrar. ## all windows registered
 
-	method(#primitive) _get_evtbuf.
+	var event_loop_sem, event_loop_proc.
+	var llevent_blocks.
+
+	method(#primitive,#liberal) _open_display(name).
+	method(#primitive) _close_display.
+	method(#primitive) _get_fd.
+	method(#primitive) _get_event.
+
+	method(#primitive) _create_window(parent_window, x, y, width, height, fgcolor, bgcolor).
+	method(#primitive) _destroy_window(window).
+
+	##method(#primitive) _fill_rectangle(window, gc, x, y, width, height).
+	method(#primitive) _draw_rectangle(window, gc, x, y, width, height).
+
+	method __create_window(parent_window, x, y, width, height, fgcolor, bgcolor, owner)
+	{
+		| w |
+		w := self _create_window(parent_window, x, y, width, height, fgcolor, bgcolor).
+		if (w notError) { self.window_registrar at: w put: owner }.
+		^w
+	}
+
+	method __close_window(window_handle)
+	{
+		| w |
+		w := self _destroy_window(window_handle).
+		if (w notError) { self.window_registrar removeKey: window_handle }
+	}
 }
 
 class X11.Exception(System.Exception)
@@ -50,7 +73,7 @@ class X11.Rectangle(Object)
 ## ---------------------------------------------------------------------------
 ## Event
 ## ---------------------------------------------------------------------------
-pooldic X11.LLEvent
+pooldic X11.LLEventType
 {
 	KEY_PRESS         := 2.
 	KEY_RELEASE       := 3.
@@ -64,6 +87,11 @@ pooldic X11.LLEvent
 	DESTROY_NOTIFY    := 17.
 	CONFIGURE_NOTIFY  := 22.
 	CLIENT_MESSAGE    := 33.
+}
+
+class X11.LLEvent(Object)
+{
+	var(#get) type := 0, window := 0, x := 0, y := 0, width := 0, height := 0.
 }
 
 class X11.Event(Object)
@@ -110,6 +138,45 @@ class X11.ExposeEvent(X11.Event)
 
 
 ## ---------------------------------------------------------------------------
+## X11 Context
+## ---------------------------------------------------------------------------
+class X11.GraphicsContext(Object)
+{
+	var(#get) widget := nil, gcHandle := nil.
+
+	var(#get,#set)
+		foreground := 0,
+		background := 0,
+		lineWidth  := 1,
+		lineStyle  := 0,
+		fillStyle  := 0.
+
+	method(#class) new: widget
+	{
+		^(super new) __make_gc_on: widget
+	}
+
+	method __make_gc_on: widget
+	{
+		| gc |
+		gc := widget displayServer _create_gc (widget windowHandle).
+		if (gc isError) { selfns.Exception signal: 'Cannot create a graphics context' }.
+		self.gcHandle := gc.
+		self.widget := widget.
+	}
+
+	method fillRectangle(x, y, width, height)
+	{
+		^self.widget displayServer _fill_rectangle (self.widget windowHandle, self.gcHandle, x, y, width, height).
+	}
+
+	method drawRectangle(x, y, width, height)
+	{
+		^self.widget displayServer _draw_rectangle (self.widget windowHandle, self.gcHandle, x, y, width, height).
+	}
+}
+
+## ---------------------------------------------------------------------------
 ## X11 Widgets
 ## ---------------------------------------------------------------------------
 
@@ -125,23 +192,41 @@ class X11.Widget(Object)
 		bgcolor  := 0,
 		realized := false.
 
-	method displayOn: grctx
-	{
-	}
 
-	method displayBase
+	method displayServer
 	{
 		if (self.parent isNil) { ^nil }.
-		^self.parent displayBase.
+		^self.parent displayServer.
+	}
+
+	method windowHandle
+	{
+		(* i assume that a widget doesn't' with a low-level window by default.
+		 * if a widget maps to a window, the widget class must implement the
+		 * windowHandle method to return the low-level window handle.
+		 * if it doesn't map to a window, it piggybacks on the parent's window *)
+		if (self.parent isNil) { ^nil }.
+		^self.parent windowHandle.
+	}
+
+	method paint: paint_event
+	{
 	}
 
 	method realize
 	{
+	## super realize chaining required???
 	}
 
 	method dispose
 	{
-     }
+	## what should be done first? remvoe from container? should dispose be called?
+	## super dispose chaining required?
+		##if (self.parent notNil)
+		##{
+		##	self.parent remove: self.
+		##}
+	}
 }
 
 class X11.Label(X11.Widget)
@@ -151,24 +236,28 @@ class X11.Label(X11.Widget)
 	method text: text
 	{
 		self.text := text.
-		self displayOn: nil.
+		if (self windowHandle notNil) { self paint: nil }
 	}
 
-	method displayOn: grctx
+	method paint: paint_event
 	{
-		## grctx _fillRectangle ().
-		## grctx _drawText (...).
-		## TODO Draw Text...
+		| gc |
+System logNl: 'LABEL GC.......'.
+		gc := selfns.GraphicsContext new: self.
+		gc foreground: 100.
+		gc drawRectangle (self.x, self.y, self.width, self.height).
+		###gc.drawText (self.title)
 	}
 
 	method realize
 	{
 		## if i want to use a window to represent it, it must create window here.
-		## otherwise, do other works in displayOn???
+		## otherwise, do other works in paint:???
 	}
 
 	method dispose
 	{
+
 	}
 }
 
@@ -197,7 +286,7 @@ class X11.Composite(X11.Widget)
 		| link |
 		if (widget parent =~ self)
 		{
-			selfns.Exception sinal: 'Cannot remove a foreign widget'
+			selfns.Exception sinal: 'Cannot remove an unknown widget'
 		}.
 
 		## TODO: unmap and destroy...
@@ -213,14 +302,15 @@ class X11.Composite(X11.Widget)
 
 	method dispose
 	{
-          self.children do: [:child | child dispose ]
+		self.children do: [:child | child dispose ]
 	}
 }
 
 class X11.Shell(X11.Composite)
 {
-	var(#get) title.
-	var(#get,#set) displayBase.
+	var(#get) title := ''.
+	var(#get,#set) displayServer := nil.
+	var(#get) windowHandle := nil.
 
 	method new: title
 	{
@@ -230,7 +320,7 @@ class X11.Shell(X11.Composite)
 	method title: title
 	{
 		self.title := title.
-		if (self.realized)
+		if (self.windowHandle notNil)
 		{
 			## set window title of this window.
 		}
@@ -239,16 +329,36 @@ class X11.Shell(X11.Composite)
 	method realize
 	{
 		| wind |
-		if (self.realized)  { ^self }.
+		if (self.windowHandle notNil)  { ^self }.
 
-		wind := X11 _create_window(self.displayBase, nil, self.x, self.y, self.width, self.height, self.fgcolor, self.bgcolor).
+		wind := self.displayServer __create_window(nil, self.x, self.y, self.width, self.height, self.fgcolor, self.bgcolor, self).
 		if (wind isError)
 		{
 			self.Exception signal: ('Cannot create shell ' & self.title).
 		}.
 
-		self.children do: [:child | child realize ].
-		self.realized := true.
+		self.windowHandle := wind.
+
+		[
+			self.children do: [:child | child realize ].
+		] on: System.Exception do: [:ex |
+			self.displayServer _destroy_window(wind).
+			self.windowHandle := nil.
+			ex pass
+		].
+
+### call displayOn: from the exposure handler...
+self paint: nil.
+	}
+
+	method dispose
+	{
+		super dispose.
+		if (self.windowHandle notNil)
+		{
+			self.displayServer _destroy_window (self.windowHandle).
+			self.windowHandle := nil.
+		}
 	}
 }
 
@@ -264,20 +374,16 @@ extend X11
 
 	method __connect_to: name
 	{
-		| base |
-		base := X11 _open_display(name).
-		if (base isError) { self.Exception signal: 'cannot open display' }.
-		self.display_base := base.
+		if (self _open_display(name) isError)
+		{
+			self.Exception signal: 'cannot open display'
+		}
+.
+		self.display_base dump.
 	}
 
 	method dispose
 	{
-		if (self.display_event notNil)
-		{
-			X11 _free_event.
-			self.display_event := nil.
-		}.
-
 		if (self.shell_container notNil)
 		{
 			self.shell_container dispose.
@@ -286,101 +392,95 @@ extend X11
 
 		if (self.display_base notNil)
 		{
+			self _close_display.
+			##self.display_base := nil.
+		}.
 
-			X11 _close_display (self.display_base).
-			self.display_base := nil.
-		}l
+		## TODO: check if _fini_trailer is not called for some exception throwing...
+		##self _fini_trailer.
 	}
 
 	method initialize
 	{
 		super initialize.
 
-		self.shell_container := self.Composite new.
-		self.display_event := self _alloc_event.
-
-		self.windows := System.Dictionary new: 100.
-
+		self.llevent := self.LLEvent new.
 		self.expose_event := self.ExposeEvent new.
 		self.key_event := self.KeyEvent new.
 		self.mouse_event := self.MouseEvent new.
 		self.mouse_wheel_event := self.MouseWheelEvent new.
 
+		self.shell_container := self.Composite new.
+		self.window_registrar := System.Dictionary new: 100.
+
 		(*
-		self.ll_event_blocks := System.Dictionary new.
-		self.ll_event_blocks
-			at: self.LLEvent.KEY_PRESS         put: #__handle_key_event:;
-			at: self.LLEvent.KEY_RELEASE       put: #__handle_key_event:;
-			at: self.LLEvent.BUTTON_PRESS      put: #__handle_button_event:;
-			at: self.LLEvent.BUTTON_RELEASE    put: #__handle_button_event:;
-			at: self.LLEvent.MOTION_NOTIFY     put: #__handle_notify:;
-			at: self.LLEvent.ENTER_NOTIFY      put: #__handle_notify:;
-			at: self.LLEvent.LEAVE_NOTIFY      put: #__handle_notify:;
-			at: self.LLEvent.EXPOSE            put: #__handle_expose:;
-			at: self.LLEvent.DESTROY_NOTIFY    put: #__handle_destroy_notify:;
-			at: self.LLEvent.CONFIGURE_NOTIFY  put: #__handle_configure_notify:;
-			at: self.LLEvent.CLIENT_MESSAGE    put: #__handle_client_message:.
+
+		self.llevent_blocks := System.Dictionary new.
+		self.llevent_blocks
+			at: self.LLEventType.KEY_PRESS         put: #__handle_key_event:;
+			at: self.LLEventType.KEY_RELEASE       put: #__handle_key_event:;
+			at: self.LLEventType.BUTTON_PRESS      put: #__handle_button_event:;
+			at: self.LLEventType.BUTTON_RELEASE    put: #__handle_button_event:;
+			at: self.LLEventType.MOTION_NOTIFY     put: #__handle_notify:;
+			at: self.LLEventType.ENTER_NOTIFY      put: #__handle_notify:;
+			at: self.LLEventType.LEAVE_NOTIFY      put: #__handle_notify:;
+			at: self.LLEventType.EXPOSE            put: #__handle_expose:;
+			at: self.LLEventType.DESTROY_NOTIFY    put: #__handle_destroy_notify:;
+			at: self.LLEventType.CONFIGURE_NOTIFY  put: #__handle_configure_notify:;
+			at: self.LLEventType.CLIENT_MESSAGE    put: #__handle_client_message:.
 		*)
-		self.ll_event_blocks := %{
-			self.LLEvent.KEY_PRESS         -> #__handle_key_event:,
-			self.LLEvent.KEY_RELEASE       -> #__handle_key_event:,
-			self.LLEvent.BUTTON_PRESS      -> #__handle_button_event:,
-			self.LLEvent.BUTTON_RELEASE    -> #__handle_button_event:,
-			self.LLEvent.MOTION_NOTIFY     -> #__handle_notify:,
-			self.LLEvent.ENTER_NOTIFY      -> #__handle_notify:,
-			self.LLEvent.LEAVE_NOTIFY      -> #__handle_notify:,
-			self.LLEvent.EXPOSE            -> #__handle_expose:,
-			self.LLEvent.DESTROY_NOTIFY    -> #__handle_destroy_notify:,
-			self.LLEvent.CONFIGURE_NOTIFY  -> #__handle_configure_notify:,
-			self.LLEvent.CLIENT_MESSAGE    -> #__handle_client_message:
+		self.llevent_blocks := %{
+			self.LLEventType.KEY_PRESS         -> #__handle_key_event:,
+			self.LLEventType.KEY_RELEASE       -> #__handle_key_event:,
+			self.LLEventType.BUTTON_PRESS      -> #__handle_button_event:,
+			self.LLEventType.BUTTON_RELEASE    -> #__handle_button_event:,
+			self.LLEventType.MOTION_NOTIFY     -> #__handle_notify:,
+			self.LLEventType.ENTER_NOTIFY      -> #__handle_notify:,
+			self.LLEventType.LEAVE_NOTIFY      -> #__handle_notify:,
+			self.LLEventType.EXPOSE            -> #__handle_expose:,
+			self.LLEventType.DESTROY_NOTIFY    -> #__handle_destroy_notify:,
+			self.LLEventType.CONFIGURE_NOTIFY  -> #__handle_configure_notify:,
+			self.LLEventType.CLIENT_MESSAGE    -> #__handle_client_message:
 		}.
+
 	}
 
 	method addShell: shell
 	{
-		if (shell displayBase isNil)
+		if (shell displayServer isNil)
 		{
 			self.shell_container add: shell.
-			shell displayBase: self.display_base.
+			shell displayServer: self.
 		}
 	}
 
 	method removeShell: shell
 	{
-		if (shell displayBase notNil)
+		if (shell displayServer notNil)
 		{
 			self.shell_container remove: shell.
-			shell displayBase: nil.
+			shell displayServer: nil.
 		}
 	}
 
-	method registerWindow: window
-	{
-		^self.windows at: (window windowBase) put: window.
-	}
-
-	method removeWindow: window
-	{
-		^self.windows removeKey: (window windowBase)
-	}
 
 	method enterEventLoop
 	{
 		if (self.event_loop_sem isNil)
 		{
 			self.event_loop_sem := Semaphore new.
-			Processor signal: self.event_loop_sem onInput: (X11 _get_fd(self.display_base)).
+			Processor signal: self.event_loop_sem onInput: (self _get_fd).
 			self.event_loop_proc := [
-				| event ongoing |
+				| evtbuf event ongoing |
 
 				ongoing := true.
 				while (self.shell_container childrenCount > 0)
 				{
-###'Waiting for X11 event...' dump.
+'Waiting for X11 event...' dump.
 					self.event_loop_sem wait.
 					if (ongoing not) { break }.
 
-					while (self _get_event(self.display_base, self.display_event))
+					while ((event := self _get_event) notNil)
 					{
 						if (event isError)
 						{
@@ -421,15 +521,16 @@ extend X11
 
 	method __dispatch_event: event
 	{
+	(*
 		| type mthname |
+
 
 		##type := System _getUint8(event, 0).
 		type := event getUint8(0).
 
-		mthname := self.ll_event_blocks at: (type bitAnd: 16r7F).
+		mthname := self.llevent_blocks at: (type bitAnd: 16r7F).
 		if (mthname isError)
 		{
-			(* unknown event. ignore it *)
 ('IGNORING UNKNOWN LL-EVENT TYPE ' & type asString) dump.
 		}
 		else
@@ -437,6 +538,7 @@ extend X11
 			^self perform (mthname, event).
 			##^self perform: mthname with: event.
 		}
+	*)
 	}
 
 	method __handle_notify: type

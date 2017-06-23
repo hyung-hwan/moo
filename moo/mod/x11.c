@@ -38,37 +38,17 @@ struct x11_modctx_t
 };
 
 /* ------------------------------------------------------------------------ */
-
-#if 0
-static moo_pfrc_t pf_get_base (moo_t* moo, moo_ooi_t nargs)
-{
-	x11_trailer_t* x11;
-
-	x11 = (x11_trailer_t*)moo_getobjtrailer(moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
-
-	if (x11->disp)
-	{
-		MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP (x11->disp));
-	}
-	else
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOAVAIL);
-	}
-
-	return MOO_PF_SUCCESS;
-}
-
-
-#endif
-
-/* ------------------------------------------------------------------------ */
-
 static moo_pfrc_t pf_open_display (moo_t* moo, moo_ooi_t nargs)
 {
-	x11_trailer_t* x11;
+	oop_x11_t x11;
+	x11_trailer_t* tr;
+
 	Display* disp = MOO_NULL;
-	XEvent* curevt = MOO_NULL;
+	XEvent* event = MOO_NULL;
 	char* dispname = MOO_NULL;
+	moo_ooi_t connno;
+
+// TODO: CHECK if the receiver is an X11 object
 
 	if (nargs >= 1)
 	{
@@ -96,8 +76,8 @@ static moo_pfrc_t pf_open_display (moo_t* moo, moo_ooi_t nargs)
 		}
 	}
 
-	curevt = moo_allocmem (moo, MOO_SIZEOF(*x11->curevt));
-	if (!curevt)
+	event = moo_allocmem (moo, MOO_SIZEOF(*event));
+	if (!event)
 	{
 		MOO_STACK_SETRETTOERRNUM (moo, nargs);
 		goto oops;
@@ -106,149 +86,173 @@ static moo_pfrc_t pf_open_display (moo_t* moo, moo_ooi_t nargs)
 	disp = XOpenDisplay(dispname);
 	if (!disp)
 	{
-		MOO_DEBUG1 (moo, "<x11.connect> Cannot connect to X11 server %hs\n", XDisplayName(dispname));
+		MOO_DEBUG1 (moo, "<x11.open_display> Cannot connect to X11 server %hs\n", XDisplayName(dispname));
 		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ESYSERR);
 		goto oops;
 	}
 
-	MOO_ASSERT (moo, MOO_IN_SMPTR_RANGE(disp));
+	if (!MOO_IN_SMPTR_RANGE(disp))
+	{
+		MOO_DEBUG1 (moo, "<x11.open_display> Display pointer to %hs not in small pointer range\n", XDisplayName(dispname));
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ERANGE);
+		goto oops;
+	}
 
-	MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP(disp));
+	connno = ConnectionNumber(disp);
+	if (!MOO_IN_SMOOI_RANGE(connno))
+	{
+		MOO_DEBUG1 (moo, "<x11.open_display> Connection number to %hs out of small integer range\n", XDisplayName(dispname));
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ERANGE);
+		goto oops;
+	}
+
+	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
+
+	tr = (x11_trailer_t*)moo_getobjtrailer (moo, (moo_oop_t)x11, MOO_NULL);
+	tr->event = event;
+	tr->connection_number = connno;
+	tr->wm_delete_window = XInternAtom (disp, "WM_DELETE_WINDOW", False);
+
+	MOO_ASSERT (moo, MOO_IN_SMPTR_RANGE(disp));
+	x11->display = MOO_SMPTR_TO_OOP(disp);
+	MOO_STACK_SETRETTORCV (moo, nargs);
+
 	if (dispname) moo_freemem (moo, dispname);
 	return MOO_PF_SUCCESS;
 
 oops:
 	if (disp) XCloseDisplay (disp);
-	if (curevt) moo_freemem (moo, curevt);
+	if (event) moo_freemem (moo, event);
 	if (dispname) moo_freemem (moo, dispname);
 	return MOO_PF_SUCCESS;
 }
 
 static moo_pfrc_t pf_close_display (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_oop_t a0;
-	
-	a0 = MOO_STACK_GETARG(moo, nargs, 0);
+	oop_x11_t x11;
 
-	if (!MOO_OOP_IS_SMPTR(a0))
+// TODO: CHECK if the receiver is an X11 object
+
+	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
+	if (x11->display != moo->_nil)
 	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		MOO_ASSERT (moo, MOO_OOP_IS_SMPTR(x11->display));
+		XCloseDisplay (MOO_OOP_TO_SMPTR(x11->display));
+		x11->display = moo->_nil;
 	}
-	else
-	{
-		XCloseDisplay (MOO_OOP_TO_SMPTR(a0));
-		MOO_STACK_SETRETTORCV (moo, nargs);
-	}
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
-
 static moo_pfrc_t pf_get_fd (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_oop_t a0;
-
-	a0 = MOO_STACK_GETARG(moo, nargs, 0);
-
-	if (!MOO_OOP_IS_SMPTR(a0))
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
-	}
-	else
-	{
-		moo_ooi_t c;
-		c = ConnectionNumber(MOO_OOP_TO_SMPTR(a0));
-
-		if (!MOO_IN_SMOOI_RANGE(c))
-		{
-			MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ERANGE);
-		}
-		else
-		{
-			MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(c));
-		}
-	}
-
+	x11_trailer_t* tr;
+// TODO: CHECK if the receiver is an X11 object
+	tr = moo_getobjtrailer (moo, MOO_STACK_GETRCV(moo,nargs), MOO_NULL);
+	MOO_STACK_SETRET(moo, nargs, MOO_SMOOI_TO_OOP(tr->connection_number));
 	return MOO_PF_SUCCESS;
 }
 
 static moo_pfrc_t pf_get_event (moo_t* moo, moo_ooi_t nargs)
 {
-	
-	moo_oop_t a0, a1;
+	oop_x11_t x11;
+	x11_trailer_t* tr;
 
-	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* display - SmallPointer (Display*) */
-	a1 = MOO_STACK_GETARG(moo, nargs, 1); /* event to return - SmallPointer (XEvent*) */
+	Display* disp;
+	XEvent*  event;
 
-	
-	if (!MOO_OOP_IS_SMPTR(a0) || !MOO_OOP_IS_SMPTR(a1))
+// TODO: CHECK if the receiver is an X11 object
+	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
+//MOO_ASSERT (moo, MOO_CLASSOF(moo,x11) == modctx->x11_class);
+	tr = moo_getobjtrailer (moo, (moo_oop_t)x11, MOO_NULL);
+
+	disp = MOO_OOP_TO_SMPTR(x11->display);
+	event = tr->event;
+	if (XPending(disp))
 	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		oop_x11_llevent_t e;
+
+		XNextEvent (disp, event);
+
+		e = x11->llevent;
+		e->type = MOO_SMOOI_TO_OOP(event->type);
+		e->window = MOO_SMOOI_TO_OOP(0);
+
+		/* [NOTE] When creating the low-level event object, ensure not to
+		 *        trigger GC directly or indirectly as the GC might be a
+		 *        copying collector which move objects around during collection */
+		switch (event->type)
+		{
+			case ClientMessage:
+				if (event->xclient.data.l[0] == tr->wm_delete_window)
+				{
+					e->window = MOO_SMOOI_TO_OOP(event->xclient.window);
+					/* WINDOW CLSOE EVENT */
+				}
+
+				break;
+
+			case Expose:
+			{
+				e->window = MOO_SMOOI_TO_OOP(event->xexpose.window);
+				e->x = MOO_SMOOI_TO_OOP(event->xexpose.x);
+				e->y = MOO_SMOOI_TO_OOP(event->xexpose.y);
+				e->width = MOO_SMOOI_TO_OOP(event->xexpose.width);
+				e->height = MOO_SMOOI_TO_OOP(event->xexpose.height);
+				break;
+			}
+
+		}
+
+		MOO_STACK_SETRET (moo, nargs, (moo_oop_t)e);
 	}
 	else
 	{
-		Display* disp;
-		XEvent*  event;
-
-		disp = MOO_OOP_TO_SMPTR(a0);
-		event = MOO_OOP_TO_SMPTR(a1);
-		if (XPending(disp))
-		{
-			XNextEvent (disp, event);
-			MOO_STACK_SETRET (moo, nargs, moo->_true);
-		}
-		else
-		{
-			/* nil if there is no event */
-			MOO_STACK_SETRET (moo, nargs, moo->_false);
-		}
+		/* nil if there is no event */
+		MOO_STACK_SETRET (moo, nargs, moo->_nil);
 	}
 
-	return MOO_PF_SUCCESS;
-}
-
-
-static moo_pfrc_t pf_get_evtbuf (moo_t* moo, moo_ooi_t nargs)
-{
-	x11_trailer_t* tr;
-
-	tr = moo_getobjtrailer (moo, MOO_STACK_GETRCV(moo, nargs), MOO_NULL);
-
-	
 	return MOO_PF_SUCCESS;
 }
 
 static moo_pfrc_t pf_create_window (moo_t* moo, moo_ooi_t nargs)
 {
-	Window wind; /* Window -> XID, unsigned long */
-
 	Display* disp;
+	Window wind; /* Window -> XID, unsigned long */
 	int scrn;
 	Window parent;
 	XSetWindowAttributes attrs;
 
-	moo_oop_t a0, a1, a2, a3, a4, a5, a6, a7;
+	oop_x11_t x11;
+	x11_trailer_t* tr;
+	moo_oop_t a0, a1, a2, a3, a4, a5, a6;
 
-	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* display - SmallPointer (Display*) */
-	a1 = MOO_STACK_GETARG(moo, nargs, 1); /* parent window - Integer or nil (Window) */
-	a2 = MOO_STACK_GETARG(moo, nargs, 2); /* x - SmallInteger */
-	a3 = MOO_STACK_GETARG(moo, nargs, 3); /* y - SmallInteger */
-	a4 = MOO_STACK_GETARG(moo, nargs, 4); /* width - SmallInteger */
-	a5 = MOO_STACK_GETARG(moo, nargs, 5); /* height - SmallInteger */
-	a6 = MOO_STACK_GETARG(moo, nargs, 6); /* fgcolor - SmallInteger */
-	a7 = MOO_STACK_GETARG(moo, nargs, 7); /* bgcolor - SmallInteger */
+	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
 
-	if (!MOO_OOP_IS_SMPTR(a0) || 
-	    !MOO_OOP_IS_SMOOI(a2) || !MOO_OOP_IS_SMOOI(a3) || !MOO_OOP_IS_SMOOI(a4) ||
-	    !MOO_OOP_IS_SMOOI(a5) || !MOO_OOP_IS_SMOOI(a6) || !MOO_OOP_IS_SMOOI(a7))
+	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* parent window - Integer or nil (Window) */
+	a1 = MOO_STACK_GETARG(moo, nargs, 1); /* x - SmallInteger */
+	a2 = MOO_STACK_GETARG(moo, nargs, 2); /* y - SmallInteger */
+	a3 = MOO_STACK_GETARG(moo, nargs, 3); /* width - SmallInteger */
+	a4 = MOO_STACK_GETARG(moo, nargs, 4); /* height - SmallInteger */
+	a5 = MOO_STACK_GETARG(moo, nargs, 5); /* fgcolor - SmallInteger */
+	a6 = MOO_STACK_GETARG(moo, nargs, 6); /* bgcolor - SmallInteger */
+
+	if (!MOO_OOP_IS_SMOOI(a1) || !MOO_OOP_IS_SMOOI(a2) || !MOO_OOP_IS_SMOOI(a3) ||
+	    !MOO_OOP_IS_SMOOI(a4) || !MOO_OOP_IS_SMOOI(a5) || !MOO_OOP_IS_SMOOI(a6))
 	{
 	einval:
+		MOO_DEBUG0 (moo, "<x11.create_window> Invalid parameters\n");
 		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
 		goto done;
 	}
 
-	disp = MOO_OOP_TO_SMPTR(a0);
+	tr = moo_getobjtrailer (moo, (moo_oop_t)x11, MOO_NULL);
+	disp = MOO_OOP_TO_SMPTR(x11->display);
 
-	if (a1 == moo->_nil) 
+	/* ScreenCount (disp); -> the number of screens available in this display server */
+
+	if (a0 == moo->_nil) 
 	{
 		scrn = DefaultScreen (disp);
 		parent = RootWindow (disp, scrn);
@@ -257,7 +261,7 @@ static moo_pfrc_t pf_create_window (moo_t* moo, moo_ooi_t nargs)
 	{
 		moo_oow_t tmpoow;
 		XWindowAttributes wa;
-		if (moo_inttooow(moo, a1, &tmpoow) <= 0) goto einval;
+		if (moo_inttooow(moo, a0, &tmpoow) <= 0) goto einval;
 
 		parent = tmpoow;
 		XGetWindowAttributes (disp, parent, &wa);
@@ -265,18 +269,18 @@ static moo_pfrc_t pf_create_window (moo_t* moo, moo_ooi_t nargs)
 		scrn = XScreenNumberOfScreen(wa.screen);
 	}
 
-	attrs.event_mask = ExposureMask; /* TODO: accept it as a parameter??? */
+	attrs.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask; /* TODO: accept it as a parameter??? */
 	attrs.border_pixel = BlackPixel (disp, scrn); /* TODO: use a6 */
 	attrs.background_pixel = WhitePixel (disp, scrn);/* TODO: use a7 */
 
 	wind = XCreateWindow (
 		disp,
 		parent,
-		MOO_OOP_TO_SMOOI(a2), /* x */
-		MOO_OOP_TO_SMOOI(a3), /* y */
-		MOO_OOP_TO_SMOOI(a4), /* width */
-		MOO_OOP_TO_SMOOI(a5), /* height */
-		1, /* border width */
+		MOO_OOP_TO_SMOOI(a1), /* x */
+		MOO_OOP_TO_SMOOI(a2), /* y */
+		MOO_OOP_TO_SMOOI(a3), /* width */
+		MOO_OOP_TO_SMOOI(a4), /* height */
+		0, /* border width */
 		CopyFromParent, /* depth */
 		InputOutput,    /* class */
 		CopyFromParent, /* visual */
@@ -285,6 +289,11 @@ static moo_pfrc_t pf_create_window (moo_t* moo, moo_ooi_t nargs)
 	{
 		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ESYSERR);
 		goto done;
+	}
+
+	if (parent == RootWindow(disp, scrn))
+	{
+		XSetWMProtocols (disp, wind, &tr->wm_delete_window, 1);
 	}
 
 	a0 = moo_oowtoint (moo, wind);
@@ -298,19 +307,6 @@ static moo_pfrc_t pf_create_window (moo_t* moo, moo_ooi_t nargs)
 XMapWindow (disp, wind);
 XFlush (disp);
 
-#if 0
-	if (parent == screen->root)
-	{
-		cookie = xcb_intern_atom(c, 1, 12, "WM_PROTOCOLS");
-		reply = xcb_intern_atom_reply(c, cookie, 0);
-
-		cookie = xcb_intern_atom(c, 0, 16, "WM_DELETE_WINDOW");
-		win->dwar = xcb_intern_atom_reply(c, cookie, 0);
-
-		xcb_change_property(c, XCB_PROP_MODE_REPLACE, wid, reply->atom, 4, 32, 1, &win->dwar->atom);
-	}
-#endif
-
 	MOO_STACK_SETRET (moo, nargs, a0); 
 done:
 	return MOO_PF_SUCCESS;
@@ -318,54 +314,144 @@ done:
 
 static moo_pfrc_t pf_destroy_window (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_oop_t a0, a1;
+	oop_x11_t x11;
+	moo_oop_t a0;
 
+	moo_oow_t wind;
 
-	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* display - SmallPointer (Display*) */
-	a1 = MOO_STACK_GETARG(moo, nargs, 1); /* window - Integer (Window) */
+	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
+	a0 = MOO_STACK_GETARG(moo, nargs, 1); /* window - Integer (Window) */
 
-	if (!MOO_OOP_IS_SMPTR(a0))
-	
+	if (moo_inttooow(moo, a0, &wind) <= 0) 
 	{
-	einval:
+		MOO_DEBUG0 (moo, "<x11.destroy_window> Invalid parameters\n");
 		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
 	}
 	else
 	{
 		Display* disp;
-		moo_oow_t wind;
 
-		disp = MOO_OOP_TO_SMPTR(a0);
-		if (moo_inttooow(moo, a1, &wind) <= 0) goto einval;
-
+		disp = MOO_OOP_TO_SMPTR(x11->display);
 		XUnmapWindow (disp, (Window)wind); 
 		XDestroyWindow (disp, (Window)wind);
-XFlush (disp);
+XFlush (disp); /* TODO: is XFlush() needed here? */
 
 		MOO_STACK_SETRETTORCV (moo, nargs); 
 	}
 	return MOO_PF_SUCCESS;
 }
 
+static moo_pfrc_t pf_create_gc (moo_t* moo, moo_ooi_t nargs)
+{
+	Display* disp;
+	moo_oow_t wind;
+
+	oop_x11_t x11;
+	moo_oop_t a0;
+
+	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
+	disp = MOO_OOP_TO_SMPTR(x11);
+
+	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* parent window - Integer or nil (Window) */
+
+	if (moo_inttooow(moo, a0, &wind) <= 0) 
+	{
+		MOO_DEBUG0 (moo, "<x11.create_gc> Invalid parameters\n");
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+	}
+	else
+	{
+		GC gc;
+
+/* TODO: copy from default GC(DefaultGC...) explicitly??? */
+		gc = XCreateGC (disp, wind, 0, MOO_NULL);
+		if (!MOO_IN_SMPTR_RANGE(gc))
+		{
+			MOO_DEBUG0 (moo, "<x11.create_gc> GC pointer not in small pointer range\n");
+			MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ERANGE);
+		}
+		else
+		{
+			MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP(gc));
+		}
+	}
+
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_destroy_gc (moo_t* moo, moo_ooi_t nargs)
+{
+	oop_x11_t x11;
+	moo_oop_t a0;
+
+	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
+	a0 = MOO_STACK_GETARG(moo, nargs, 1); /* GC */
+
+	if (!MOO_OOP_IS_SMPTR(a0)) 
+	{
+		MOO_DEBUG0 (moo, "<x11.destroy_gc> Invalid parameters\n");
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+	}
+	else
+	{
+		Display* disp;
+		GC gc;
+
+		disp = MOO_OOP_TO_SMPTR(x11->display);
+		gc = MOO_OOP_TO_SMPTR(a0);
+
+		XFreeGC (disp, gc);
+		MOO_STACK_SETRETTORCV (moo, nargs); 
+	}
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_draw_rectangle (moo_t* moo, moo_ooi_t nargs)
+{
+	Display* disp;
+	moo_oow_t wind, gc;
+	moo_oop_t a0, a1, a2, a3, a4, a5;
+
+	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* Window */
+	a1 = MOO_STACK_GETARG(moo, nargs, 1); /* GC */
+	a2 = MOO_STACK_GETARG(moo, nargs, 2); /* x - SmallInteger */
+	a3 = MOO_STACK_GETARG(moo, nargs, 3); /* y - SmallInteger */
+	a4 = MOO_STACK_GETARG(moo, nargs, 4); /* width - SmallInteger */
+	a5 = MOO_STACK_GETARG(moo, nargs, 5); /* height - SmallInteger */
+
+	if (!MOO_OOP_IS_SMOOI(a2) || !MOO_OOP_IS_SMOOI(a3) ||
+	    !MOO_OOP_IS_SMOOI(a4) || !MOO_OOP_IS_SMOOI(a5) ||
+	    moo_inttooow(moo, a0, &wind) <= 0 ||
+	    moo_inttooow(moo, a1, &gc) <= 0)
+	{
+		MOO_DEBUG0 (moo, "<x11.draw_rectangle> Invalid parameters\n");
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_SUCCESS;
+	}
+
+	disp = MOO_OOP_TO_SMPTR(MOO_STACK_GETRCV(moo,nargs));
+	XDrawRectangle (disp, (Window)wind, (GC)gc, 
+		MOO_OOP_TO_SMOOI(a2), MOO_OOP_TO_SMOOI(a3),
+		MOO_OOP_TO_SMOOI(a4), MOO_OOP_TO_SMOOI(a5));
+
+	return MOO_PF_SUCCESS;
+}
 
 /* ------------------------------------------------------------------------ */
 
 static moo_pfinfo_t x11_pfinfo[] =
 {
-	{ MC, { '_','c','l','o','s','e','_','d','i','s','p','l','a','y','\0' },     0, { pf_close_display,   1, 1 } },
-	{ MC, { '_','c','r','e','a','t','e','_','w','i','n','d','o','w','\0' },     0, { pf_create_window,   8, 8 } },
-	{ MC, { '_','d','e','s','t','r','o','y','_','w','i','n','d','o','w','\0' }, 0, { pf_destroy_window,  2, 2 } },
-	{ MC, { '_','g','e','t','_','e','v','e','n','t','\0'},                      0, { pf_get_event,       2, 2 } },
-	{ MI, { '_','g','e','t','_','e','v','t','b','u','f','\0'},                  0, { pf_get_evtbuf,      0, 0 } },
-	{ MC, { '_','g','e','t','_','f','d','\0' },                                 0, { pf_get_fd,          1, 1 } },
-	{ MC, { '_','o','p','e','n','_','d','i','s','p','l','a','y','\0' },         0, { pf_open_display,    0, 1 } }
+	{ MI, { '_','c','l','o','s','e','_','d','i','s','p','l','a','y','\0' },     0, { pf_close_display,   0, 0 } },
+	{ MI, { '_','c','r','e','a','t','e','_','g','c','\0' },                     0, { pf_create_gc,       1, 1 } },
+	{ MI, { '_','c','r','e','a','t','e','_','w','i','n','d','o','w','\0' },     0, { pf_create_window,   7, 7 } },
+	{ MI, { '_','d','e','s','t','r','o','y','_','g','c','\0' },                 0, { pf_destroy_gc,      1, 1 } },
+	{ MI, { '_','d','e','s','t','r','o','y','_','w','i','n','d','o','w','\0' }, 0, { pf_destroy_window,  1, 1 } },
+	{ MI, { '_','d','r','a','w','_','r','e','c','t','a','n','g','l','e','\0' }, 0, { pf_draw_rectangle,  6, 6 } },
+	//{ MI, { '_','f','i','l','l','_','r','e','c','t','a','n','g','l','e','\0' }, 0, { pf_fill_rectangle,  6, 6 } },
+	{ MI, { '_','g','e','t','_','e','v','e','n','t','\0'},                      0, { pf_get_event,       0, 0 } },
+	{ MI, { '_','g','e','t','_','f','d','\0' },                                 0, { pf_get_fd,          0, 0 } },
+	{ MI, { '_','o','p','e','n','_','d','i','s','p','l','a','y','\0' },         0, { pf_open_display,    0, 1 } }
 	
-
-#if 0
-	{ MI, { '_','g','e','t','_','b','a','s','e','\0' },                    0, { pf_get_base,   0, 0 } },
-
-	
-#endif
 };
 
 static int x11_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
