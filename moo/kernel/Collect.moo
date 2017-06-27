@@ -719,9 +719,15 @@ class LinkedList(Collection)
 		}
 	}
 
-	method findLink: value
+	method findEqualLink: value
 	{
 		self doOverLink: [:el | if (el value = value) { ^el }].
+		^Error.Code.ENOENT
+	}
+
+	method findIdenticalLink: value
+	{
+		self doOverLink: [:el | if (el value == value) { ^el }].
 		^Error.Code.ENOENT
 	}
 }

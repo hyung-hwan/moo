@@ -188,6 +188,7 @@ static moo_pfrc_t pf_get_llevent (moo_t* moo, moo_ooi_t nargs)
 			case ClientMessage:
 				if (event->xclient.data.l[0] == tr->wm_delete_window)
 				{
+					e->type = MOO_SMOOI_TO_OOP(65537); /* match SHELL_CLOSE in X11.LLEventType */
 					e->window = MOO_SMOOI_TO_OOP(event->xclient.window);
 					/* WINDOW CLSOE EVENT */
 				}
@@ -219,6 +220,7 @@ static moo_pfrc_t pf_get_llevent (moo_t* moo, moo_ooi_t nargs)
 	else
 	{
 		/* nil if there is no event */
+MOO_DEBUG0 (moo, "NO PENDING EVENT....\n");
 		MOO_STACK_SETRET (moo, nargs, moo->_nil);
 	}
 
@@ -329,7 +331,7 @@ static moo_pfrc_t pf_destroy_window (moo_t* moo, moo_ooi_t nargs)
 	moo_oow_t wind;
 
 	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
-	a0 = MOO_STACK_GETARG(moo, nargs, 1); /* window - Integer (Window) */
+	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* window - Integer (Window) */
 
 	if (moo_inttooow(moo, a0, &wind) <= 0) 
 	{

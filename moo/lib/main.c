@@ -800,6 +800,12 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 
 	MOO_ASSERT (moo, xtn->ep >= 0);
 	ev.events = event_mask;
+	#if defined(USE_THREAD) && defined(EPOLLET)
+	/* epoll_wait may return again if the worker thread consumes events.
+	 * switch to level-trigger. */
+	/* TODO: verify if EPOLLLET is desired */
+	ev.events |= EPOLLET;
+	#endif
 	ev.data.ptr = (void*)event_data;
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_ADD, fd, &ev) == -1)
 	{

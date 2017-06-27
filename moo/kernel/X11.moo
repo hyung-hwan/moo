@@ -38,7 +38,7 @@ class X11(Object) from 'x11'
 		^w
 	}
 
-	method __close_window(window_handle)
+	method __destroy_window(window_handle)
 	{
 		| w |
 		w := self _destroy_window(window_handle).
@@ -86,6 +86,8 @@ pooldic X11.LLEventType
 	DESTROY_NOTIFY    := 17.
 	CONFIGURE_NOTIFY  := 22.
 	CLIENT_MESSAGE    := 33.
+
+	SHELL_CLOSE       := 65537.
 }
 
 class X11.LLEvent(Object)
@@ -208,23 +210,25 @@ class X11.Widget(Object)
 		^self.parent windowHandle.
 	}
 
-	method paint: paint_event
-	{
-	}
 
-	method realize
-	{
-	## super realize chaining required???
-	}
-
+	method realize { }
 	method dispose
 	{
-	## what should be done first? remvoe from container? should dispose be called?
-	## super dispose chaining required?
-		##if (self.parent notNil)
-		##{
-		##	self.parent remove: self.
-		##}
+'Widget dispose XXXXXXXXXXXXXX' dump.
+	}
+
+
+
+	method onPaintEvent: paint_event
+	{
+	}
+
+	method onButtonEvent: event
+	{
+	}
+
+	method onCloseEvent
+	{
 	}
 }
 
@@ -235,10 +239,10 @@ class X11.Label(X11.Widget)
 	method text: text
 	{
 		self.text := text.
-		if (self windowHandle notNil) { self paint: nil }
+		if (self windowHandle notNil) { self onPaintEvent: nil }
 	}
 
-	method paint: paint_event
+	method onPaintEvent: paint_event
 	{
 		| gc |
 System logNl: 'LABEL GC.......'.
@@ -251,12 +255,13 @@ System logNl: 'LABEL GC.......'.
 	method realize
 	{
 		## if i want to use a window to represent it, it must create window here.
-		## otherwise, do other works in paint:???
+		## otherwise, do other works in onPaintEvent:???
 	}
 
 	method dispose
 	{
-
+'Label dispose XXXXXXXXXXXXXX' dump.
+		super dispose.
 	}
 }
 
@@ -283,13 +288,12 @@ class X11.Composite(X11.Widget)
 	method remove: widget
 	{
 		| link |
-		if (widget parent =~ self)
+		if (widget parent ~~ self)
 		{
 			selfns.Exception sinal: 'Cannot remove an unknown widget'
 		}.
 
-		## TODO: unmap and destroy...
-		link := self.children findLink: widget.
+		link := self.children findIdenticalLink: widget.
 		self.children removeLink: link.
 		widget parent: nil.
 	}
@@ -301,7 +305,12 @@ class X11.Composite(X11.Widget)
 
 	method dispose
 	{
-		self.children do: [:child | child dispose ]
+'Composite dispose XXXXXXXXXXXXXX' dump.
+		super dispose.
+		self.children do: [:child |
+			child dispose.
+			self remove: child.
+		]
 	}
 }
 
@@ -328,7 +337,13 @@ class X11.Shell(X11.Composite)
 	method realize
 	{
 		| wind |
+
 		if (self.windowHandle notNil)  { ^self }.
+		if (self.displayServer isNil)
+		{
+			## not added to a display server.
+			X11.Exception signal: 'Cannot realize a shell not added to a display server'
+		}.
 
 		wind := self.displayServer __create_window(nil, self.x, self.y, self.width, self.height, self.fgcolor, self.bgcolor, self).
 		if (wind isError)
@@ -341,23 +356,36 @@ class X11.Shell(X11.Composite)
 		[
 			self.children do: [:child | child realize ].
 		] on: System.Exception do: [:ex |
-			self.displayServer _destroy_window(wind).
+			self.displayServer __destroy_window(wind).
 			self.windowHandle := nil.
 			ex pass
 		].
 
 ### call displayOn: from the exposure handler...
-self paint: nil.
+self onPaintEvent: nil.
 	}
 
 	method dispose
 	{
-		super dispose.
-		if (self.windowHandle notNil)
+'Shell dispose XXXXXXXXXXXXXX' dump.
+		if (self.displayServer notNil)
 		{
-			self.displayServer _destroy_window (self.windowHandle).
-			self.windowHandle := nil.
+			if (self.windowHandle notNil)
+			{
+				super dispose.
+
+				self.displayServer __destroy_window (self.windowHandle).
+				self.windowHandle := nil.
+			}.
+
+			self.displayServer removeShell: self.
 		}
+	}
+
+	method onCloseEvent
+	{
+'ON CLOSE EVENT .............' dump.
+		self dispose.
 	}
 }
 
@@ -394,9 +422,6 @@ extend X11
 			self _close_display.
 			##self.display_base := nil.
 		}.
-
-		## TODO: check if _fini_trailer is not called for some exception throwing...
-		##self _fini_trailer.
 	}
 
 	method initialize
@@ -415,30 +440,31 @@ extend X11
 
 		self.llevent_blocks := System.Dictionary new.
 		self.llevent_blocks
-			at: self.LLEventType.KEY_PRESS         put: #__handle_key_event:;
-			at: self.LLEventType.KEY_RELEASE       put: #__handle_key_event:;
-			at: self.LLEventType.BUTTON_PRESS      put: #__handle_button_event:;
-			at: self.LLEventType.BUTTON_RELEASE    put: #__handle_button_event:;
-			at: self.LLEventType.MOTION_NOTIFY     put: #__handle_notify:;
-			at: self.LLEventType.ENTER_NOTIFY      put: #__handle_notify:;
-			at: self.LLEventType.LEAVE_NOTIFY      put: #__handle_notify:;
-			at: self.LLEventType.EXPOSE            put: #__handle_expose:;
-			at: self.LLEventType.DESTROY_NOTIFY    put: #__handle_destroy_notify:;
-			at: self.LLEventType.CONFIGURE_NOTIFY  put: #__handle_configure_notify:;
-			at: self.LLEventType.CLIENT_MESSAGE    put: #__handle_client_message:.
+			at: self.LLEventType.KEY_PRESS         put: #__handle_key_event:on:;
+			at: self.LLEventType.KEY_RELEASE       put: #__handle_key_event:on:;
+			at: self.LLEventType.BUTTON_PRESS      put: #__handle_button_event:on:;
+			at: self.LLEventType.BUTTON_RELEASE    put: #__handle_button_event:on:;
+			at: self.LLEventType.MOTION_NOTIFY     put: #__handle_notify:on:;
+			at: self.LLEventType.ENTER_NOTIFY      put: #__handle_notify:on:;
+			at: self.LLEventType.LEAVE_NOTIFY      put: #__handle_notify:on:;
+			at: self.LLEventType.EXPOSE            put: #__handle_expose:on:;
+			at: self.LLEventType.DESTROY_NOTIFY    put: #__handle_destroy_notify:on:;
+			at: self.LLEventType.CONFIGURE_NOTIFY  put: #__handle_configure_notify:on:;
+			at: self.LLEventType.CLIENT_MESSAGE    put: #__handle_client_message:on:.
 		*)
 		self.llevent_blocks := %{
-			self.LLEventType.KEY_PRESS         -> #__handle_key_event:,
-			self.LLEventType.KEY_RELEASE       -> #__handle_key_event:,
-			self.LLEventType.BUTTON_PRESS      -> #__handle_button_event:,
-			self.LLEventType.BUTTON_RELEASE    -> #__handle_button_event:,
-			self.LLEventType.MOTION_NOTIFY     -> #__handle_notify:,
-			self.LLEventType.ENTER_NOTIFY      -> #__handle_notify:,
-			self.LLEventType.LEAVE_NOTIFY      -> #__handle_notify:,
-			self.LLEventType.EXPOSE            -> #__handle_expose:,
-			self.LLEventType.DESTROY_NOTIFY    -> #__handle_destroy_notify:,
-			self.LLEventType.CONFIGURE_NOTIFY  -> #__handle_configure_notify:,
-			self.LLEventType.CLIENT_MESSAGE    -> #__handle_client_message:
+			self.LLEventType.KEY_PRESS         -> #__handle_key_event:on:,
+			self.LLEventType.KEY_RELEASE       -> #__handle_key_event:on:,
+			self.LLEventType.BUTTON_PRESS      -> #__handle_button_event:on:,
+			self.LLEventType.BUTTON_RELEASE    -> #__handle_button_event:on:,
+			self.LLEventType.MOTION_NOTIFY     -> #__handle_notify:on:,
+			self.LLEventType.ENTER_NOTIFY      -> #__handle_notify:on:,
+			self.LLEventType.LEAVE_NOTIFY      -> #__handle_notify:on:,
+			self.LLEventType.EXPOSE            -> #__handle_expose:on:,
+			self.LLEventType.DESTROY_NOTIFY    -> #__handle_destroy_notify:on:,
+			self.LLEventType.CONFIGURE_NOTIFY  -> #__handle_configure_notify:on:,
+			self.LLEventType.CLIENT_MESSAGE    -> #__handle_client_message:on:,
+			self.LLEventType.SHELL_CLOSE       -> #__handle_shell_close:on:
 		}.
 
 	}
@@ -460,7 +486,6 @@ extend X11
 			shell displayServer: nil.
 		}
 	}
-
 
 	method enterEventLoop
 	{
@@ -537,36 +562,41 @@ extend X11
 		}.
 
 (llevent window asString) dump.
-		^self perform (mthname, llevent).
+		^self perform (mthname, llevent, widget).
 	}
 
-	method __handle_notify: type
-	{
-		^9999999999
-	}
-
-	method __handle_expose: event
+	method __handle_notify: llevent on: widget
 	{
 	}
 
-	method __handle_button_event: event
+	method __handle_expose: llevent on: widget
 	{
 	}
 
-	method __handle_destroy_notify: event
+	method __handle_button_event: event on: widget
 	{
 	}
 
-	method __handle_configure_notify: event
+	method __handle_destroy_notify: event on: widget
 	{
 	}
 
-	method __handle_client_message: event
+	method __handle_configure_notify: event on: widget
 	{
 	}
 
-	method __handle_key_event: type
+	method __handle_client_message: event on: widget
 	{
+		widget close: event.
+	}
+
+	method __handle_key_event: event on: widget
+	{
+	}
+
+	method __handle_shell_close: llevent on: widget
+	{
+		widget onCloseEvent.
 	}
 }
 
