@@ -70,7 +70,7 @@ libmoo_stdio_la_LDFLAGS = $(LDFLAGS_COMMON)
 libmoo_stdio_la_LIBADD = $(LIBADD_COMMON)
 
 if ENABLE_MOD_X11
-libmoo_x11_la_SOURCES = x11.c x11-win.c _x11.h
+libmoo_x11_la_SOURCES = x11.c _x11.h
 libmoo_x11_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_x11_la_LDFLAGS = $(LDFLAGS_COMMON)
 libmoo_x11_la_LIBADD = $(LIBADD_COMMON) -lX11

@@ -575,26 +575,33 @@ extend X11
 
 class MyObject(Object)
 {
-	var disp1, shell1, shell2.
+	var disp1, disp2, shell1, shell2, shell3.
 
 	method main1
 	{
 		self.disp1 := X11 new.
+		self.disp2 := X11 new.
 
 		shell1 := (X11.Shell new title: 'Shell 1').
 		shell2 := (X11.Shell new title: 'Shell 2').
 
+		shell3 := (X11.Shell new title: 'Shell 3').
+
 		shell1 x: 10; y: 20; width: 100; height: 100.
 		shell2 x: 200; y: 200; width: 200; height: 200.
+		shell3 x: 500; y: 200; width: 200; height: 200.
 
 		self.disp1 addShell: shell1.
 		self.disp1 addShell: shell2.
+		self.disp2 addShell: shell3.
 
 		self.shell1 add: (X11.Label new text: 'xxxxxxxx').
 		self.shell1 realize.
 		self.shell2 realize.
+		self.shell3 realize.
 
 		self.disp1 enterEventLoop. ## this is not a blocking call. it spawns another process.
+		self.disp2 enterEventLoop.
 	}
 
 	method(#class) main

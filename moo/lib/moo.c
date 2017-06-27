@@ -404,7 +404,7 @@ static_modtab[] =
 	{ "stdio",      moo_mod_stdio },
 #if defined(MOO_ENABLE_MOD_X11)
 	{ "x11",        moo_mod_x11 },
-	{ "x11.win",    moo_mod_x11_win },
+	/*{ "x11.win",    moo_mod_x11_win },*/
 #endif
 };
 #endif

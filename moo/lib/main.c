@@ -790,6 +790,8 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 		MOO_DEBUG2 (moo, "Cannot add file descriptor %d to devpoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
+
+	xtn->epd.ptr[fd] = event_data;
 	return 0;
 
 #elif defined(USE_EPOLL)
@@ -838,6 +840,7 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 	xtn->ev.reg.ptr[xtn->ev.reg.len].revents = 0;
 	xtn->ev.reg.len++;
 
+	xtn->epd.ptr[fd] = event_data;
 	return 0;
 
 #else
