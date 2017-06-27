@@ -7,7 +7,6 @@ class X11(Object) from 'x11'
 	## definition struct x11_t  defined in _x11.h
 	## ---------------------------------------------------------------------
 	var display_base := nil.
-	var llevent.
 	var expose_event.
 	var key_event.
 	var mouse_event.
@@ -23,7 +22,7 @@ class X11(Object) from 'x11'
 	method(#primitive,#liberal) _open_display(name).
 	method(#primitive) _close_display.
 	method(#primitive) _get_fd.
-	method(#primitive) _get_event.
+	method(#primitive) _get_llevent(llevent).
 
 	method(#primitive) _create_window(parent_window, x, y, width, height, fgcolor, bgcolor).
 	method(#primitive) _destroy_window(window).
@@ -404,7 +403,6 @@ extend X11
 	{
 		super initialize.
 
-		self.llevent := self.LLEvent new.
 		self.expose_event := self.ExposeEvent new.
 		self.key_event := self.KeyEvent new.
 		self.mouse_event := self.MouseEvent new.
@@ -471,8 +469,9 @@ extend X11
 			self.event_loop_sem := Semaphore new.
 			Processor signal: self.event_loop_sem onInput: (self _get_fd).
 			self.event_loop_proc := [
-				| evtbuf event ongoing |
+				| llevtbuf llevent ongoing |
 
+				llevtbuf := X11.LLEvent new.
 				ongoing := true.
 				while (self.shell_container childrenCount > 0)
 				{
@@ -480,9 +479,9 @@ extend X11
 					self.event_loop_sem wait.
 					if (ongoing not) { break }.
 
-					while ((event := self _get_event) notNil)
+					while ((llevent := self _get_llevent(llevtbuf)) notNil)
 					{
-						if (event isError)
+						if (llevent isError)
 						{
 							##System logNl: ('Error while getting a event from server ' & self.cid asString).
 							ongoing := false.
@@ -490,7 +489,7 @@ extend X11
 						}
 						else
 						{
-							self __dispatch_event: event.
+							self __dispatch_llevent: llevent.
 						}.
 					}.
 				}.
@@ -519,26 +518,26 @@ extend X11
 		self.event_loop_sem signal.
 	}
 
-	method __dispatch_event: event
+	method __dispatch_llevent: llevent
 	{
-	(*
-		| type mthname |
+		| widget mthname |
 
+		widget := self.window_registrar at: llevent window.
+		if (widget isError)
+		{
+			System logNl: 'Event on unknown widget - ' & (llevent window asString).
+			^nil
+		}.
 
-		##type := System _getUint8(event, 0).
-		type := event getUint8(0).
-
-		mthname := self.llevent_blocks at: (type bitAnd: 16r7F).
+		mthname := self.llevent_blocks at: llevent type.
 		if (mthname isError)
 		{
-('IGNORING UNKNOWN LL-EVENT TYPE ' & type asString) dump.
-		}
-		else
-		{
-			^self perform (mthname, event).
-			##^self perform: mthname with: event.
-		}
-	*)
+			System logNl: 'Uknown event type ' & (llevent type asString).
+			^nil
+		}.
+
+(llevent window asString) dump.
+		^self perform (mthname, llevent).
 	}
 
 	method __handle_notify: type

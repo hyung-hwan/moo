@@ -154,7 +154,7 @@ static moo_pfrc_t pf_get_fd (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_get_event (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_get_llevent (moo_t* moo, moo_ooi_t nargs)
 {
 	oop_x11_t x11;
 	x11_trailer_t* tr;
@@ -175,13 +175,14 @@ static moo_pfrc_t pf_get_event (moo_t* moo, moo_ooi_t nargs)
 
 		XNextEvent (disp, event);
 
-		e = x11->llevent;
+		e = (oop_x11_llevent_t)MOO_STACK_GETARG(moo, nargs, 0);
+		/* TOOD: check if e is an instance of X11.LLEvent */
 		e->type = MOO_SMOOI_TO_OOP(event->type);
 		e->window = MOO_SMOOI_TO_OOP(0);
 
-		/* [NOTE] When creating the low-level event object, ensure not to
-		 *        trigger GC directly or indirectly as the GC might be a
-		 *        copying collector which move objects around during collection */
+		/* if the following is going to trigger GC directly or indirectly,
+		 * e must be proteced with moo_pushtmp() first */
+
 		switch (event->type)
 		{
 			case ClientMessage:
@@ -203,6 +204,14 @@ static moo_pfrc_t pf_get_event (moo_t* moo, moo_ooi_t nargs)
 				break;
 			}
 
+			case ButtonPress:
+			case ButtonRelease:
+			{
+				e->window = MOO_SMOOI_TO_OOP(event->xbutton.window);
+				e->x = MOO_SMOOI_TO_OOP(event->xbutton.x);
+				e->y = MOO_SMOOI_TO_OOP(event->xbutton.y);
+				break;
+			}
 		}
 
 		MOO_STACK_SETRET (moo, nargs, (moo_oop_t)e);
@@ -448,8 +457,8 @@ static moo_pfinfo_t x11_pfinfo[] =
 	{ MI, { '_','d','e','s','t','r','o','y','_','w','i','n','d','o','w','\0' }, 0, { pf_destroy_window,  1, 1 } },
 	{ MI, { '_','d','r','a','w','_','r','e','c','t','a','n','g','l','e','\0' }, 0, { pf_draw_rectangle,  6, 6 } },
 	//{ MI, { '_','f','i','l','l','_','r','e','c','t','a','n','g','l','e','\0' }, 0, { pf_fill_rectangle,  6, 6 } },
-	{ MI, { '_','g','e','t','_','e','v','e','n','t','\0'},                      0, { pf_get_event,       0, 0 } },
 	{ MI, { '_','g','e','t','_','f','d','\0' },                                 0, { pf_get_fd,          0, 0 } },
+	{ MI, { '_','g','e','t','_','l','l','e','v','e','n','t','\0'},              0, { pf_get_llevent,     1, 1 } },
 	{ MI, { '_','o','p','e','n','_','d','i','s','p','l','a','y','\0' },         0, { pf_open_display,    0, 1 } }
 	
 };

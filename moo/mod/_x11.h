@@ -60,7 +60,7 @@ struct x11_t
 	MOO_OBJ_HEADER;
 
 	moo_oop_t display; /* SMPTR of Display */
-	oop_x11_llevent_t llevent;
+	moo_oop_t expose_event;
 	moo_oop_t key_event;
 	moo_oop_t mouse_event;
 
