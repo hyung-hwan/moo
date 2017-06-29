@@ -276,9 +276,13 @@
 
 typedef char                    moo_bch_t;
 typedef int                     moo_bci_t;
+#define MOO_SIZEOF_BCH_T MOO_SIZEOF_CHAR
+#define MOO_SIZEOF_BCI_T MOO_SIZEOF_INT
 
 typedef moo_uint16_t            moo_uch_t; /* TODO ... wchar_t??? */
 typedef moo_int32_t             moo_uci_t;
+#define MOO_SIZEOF_UCH_T 2
+#define MOO_SIZEOF_UCI_T 4
 
 typedef moo_uint8_t             moo_oob_t;
 

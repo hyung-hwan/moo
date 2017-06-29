@@ -7,10 +7,6 @@ class X11(Object) from 'x11'
 	## definition struct x11_t  defined in _x11.h
 	## ---------------------------------------------------------------------
 	var display_base := nil.
-	var expose_event.
-	var key_event.
-	var mouse_event.
-	var mouse_wheel_event.
 	## =====================================================================
 
 	var shell_container := nil.
@@ -24,16 +20,21 @@ class X11(Object) from 'x11'
 	method(#primitive) _get_fd.
 	method(#primitive) _get_llevent(llevent).
 
-	method(#primitive) _create_window(parent_window, x, y, width, height, fgcolor, bgcolor).
-	method(#primitive) _destroy_window(window).
+	method(#primitive) _create_window(parent_window_handle, x, y, width, height, fgcolor, bgcolor).
+	method(#primitive) _destroy_window(window_handle).
 
-	##method(#primitive) _fill_rectangle(window, gc, x, y, width, height).
-	method(#primitive) _draw_rectangle(window, gc, x, y, width, height).
+	method(#primitive) _create_gc (window_handle).
+	method(#primitive) _destroy_gc (gc). ## note this one accepts a GC object.
+	method(#primitive) _apply_gc (gc). ## note this one accepts a GC object, not a GC handle.
 
-	method __create_window(parent_window, x, y, width, height, fgcolor, bgcolor, owner)
+	method(#primitive) _draw_rectangle(window_handle, gc_handle, x, y, width, height).
+	method(#primitive) _fill_rectangle(window_handle, gc_handle, x, y, width, height).
+	method(#primitive) _draw_string(gc, x, y, string).
+
+	method __create_window(parent_window_handle, x, y, width, height, fgcolor, bgcolor, owner)
 	{
 		| w |
-		w := self _create_window(parent_window, x, y, width, height, fgcolor, bgcolor).
+		w := self _create_window(parent_window_handle, x, y, width, height, fgcolor, bgcolor).
 		if (w notError) { self.window_registrar at: w put: owner }.
 		^w
 	}
@@ -141,16 +142,41 @@ class X11.ExposeEvent(X11.Event)
 ## ---------------------------------------------------------------------------
 ## X11 Context
 ## ---------------------------------------------------------------------------
-class X11.GraphicsContext(Object)
+pooldic X11.GCLineStyle
 {
+	SOLID       := 0.
+	ON_OFF_DASH := 1.
+	DOUBLE_DASH := 2.
+}
+
+pooldic X11.GCFillStyle
+{
+	SOLID           := 0.
+	TILED           := 1.
+	STIPPLED        := 2.
+	OPAQUE_STIPPLED := 3.
+}
+
+class X11.GC(Object)
+{
+	## note these fields must match the x11_gc_t structure defined in _x11.h
+
 	var(#get) widget := nil, gcHandle := nil.
 
 	var(#get,#set)
 		foreground := 0,
-		background := 0,
+		background := 1,
 		lineWidth  := 1,
-		lineStyle  := 0,
-		fillStyle  := 0.
+		lineStyle  := X11.GCLineStyle.SOLID,
+		fillStyle  := X11.GCFillStyle.SOLID,
+		fontName   := nil.
+
+	var fontPtr := nil.
+
+	method(#class) new
+	{
+		self messageProhibited: #new.
+	}
 
 	method(#class) new: widget
 	{
@@ -160,10 +186,17 @@ class X11.GraphicsContext(Object)
 	method __make_gc_on: widget
 	{
 		| gc |
+widget displayServer dump.
+widget windowHandle dump.
 		gc := widget displayServer _create_gc (widget windowHandle).
 		if (gc isError) { selfns.Exception signal: 'Cannot create a graphics context' }.
 		self.gcHandle := gc.
 		self.widget := widget.
+	}
+
+	method drawRectangle(x, y, width, height)
+	{
+		^self.widget displayServer _draw_rectangle (self.widget windowHandle, self.gcHandle, x, y, width, height).
 	}
 
 	method fillRectangle(x, y, width, height)
@@ -171,9 +204,29 @@ class X11.GraphicsContext(Object)
 		^self.widget displayServer _fill_rectangle (self.widget windowHandle, self.gcHandle, x, y, width, height).
 	}
 
-	method drawRectangle(x, y, width, height)
+	method drawString(x, y, string)
 	{
-		^self.widget displayServer _draw_rectangle (self.widget windowHandle, self.gcHandle, x, y, width, height).
+		^self.widget displayServer _draw_string (self, x, y, string).
+	}
+
+	method dispose
+	{
+		if (self.gcHandle notNil)
+		{
+			self.widget displayServer _destroy_gc (self).
+			self.gcHandle := nil
+		}
+	}
+
+	method apply
+	{
+		if (self.gcHandle notNil)
+		{
+			if (self.widget displayServer _apply_gc (self) isError)
+			{
+				X11.Exception signal: 'Cannot apply GC settings'
+			}
+		}
 	}
 }
 
@@ -183,16 +236,17 @@ class X11.GraphicsContext(Object)
 
 class X11.Widget(Object)
 {
+	var(#get) windowHandle := nil.
+
 	var(#get,#set)
 		parent   := nil,
 		x        := 0,
 		y        := 0,
 		width    := 0,
 		height   := 0,
-		fgcolor  := 0,
+		fgcolor  := 16r1188FF,
 		bgcolor  := 0,
 		realized := false.
-
 
 	method displayServer
 	{
@@ -200,27 +254,53 @@ class X11.Widget(Object)
 		^self.parent displayServer.
 	}
 
-	method windowHandle
+	method parentWindowHandle
 	{
-		(* i assume that a widget doesn't' with a low-level window by default.
-		 * if a widget maps to a window, the widget class must implement the
-		 * windowHandle method to return the low-level window handle.
-		 * if it doesn't map to a window, it piggybacks on the parent's window *)
 		if (self.parent isNil) { ^nil }.
 		^self.parent windowHandle.
 	}
 
-
-	method realize { }
-	method dispose
+	method realize
 	{
-'Widget dispose XXXXXXXXXXXXXX' dump.
+		| disp wind |
+
+		if (self.windowHandle notNil)  { ^self }.
+
+		disp := self displayServer.
+		if (disp isNil)
+		{
+			X11.Exception signal: 'Cannot realize a widget not added to a display server'
+		}.
+
+		wind := disp __create_window(self parentWindowHandle, self.x, self.y, self.width, self.height, self.fgcolor, self.bgcolor, self).
+		if (wind isError)
+		{
+			self.Exception signal: 'Cannot create widget window'.
+		}.
+
+		self.windowHandle := wind.
 	}
 
 
+	method dispose
+	{
+		| disp |
+
+'Widget dispose XXXXXXXXXXXXXX' dump.
+		disp := self displayServer.
+		if (disp notNil)
+		{
+			if (self.windowHandle notNil)
+			{
+				disp __destroy_window (self.windowHandle).
+				self.windowHandle := nil.
+			}.
+		}
+	}
 
 	method onPaintEvent: paint_event
 	{
+System logNl: 'Widget...... onPaintEvent YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY.'.
 	}
 
 	method onButtonEvent: event
@@ -232,6 +312,7 @@ class X11.Widget(Object)
 	}
 }
 
+
 class X11.Label(X11.Widget)
 {
 	var(#get) text := ''.
@@ -242,26 +323,34 @@ class X11.Label(X11.Widget)
 		if (self windowHandle notNil) { self onPaintEvent: nil }
 	}
 
-	method onPaintEvent: paint_event
-	{
-		| gc |
-System logNl: 'LABEL GC.......'.
-		gc := selfns.GraphicsContext new: self.
-		gc foreground: 100.
-		gc drawRectangle (self.x, self.y, self.width, self.height).
-		###gc.drawText (self.title)
-	}
-
 	method realize
 	{
-		## if i want to use a window to represent it, it must create window here.
-		## otherwise, do other works in onPaintEvent:???
+		super realize.
 	}
 
 	method dispose
 	{
 'Label dispose XXXXXXXXXXXXXX' dump.
 		super dispose.
+	}
+
+	method onPaintEvent: paint_event
+	{
+		| gc |
+System logNl: 'LABEL GC...... onPaintEvent YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY.'.
+
+		gc := selfns.GC new: self.
+		[
+			gc foreground: self.fgcolor;
+			   fontName: '-misc-fixed-medium-r-normal-ko-18-120-100-100-c-180-iso10646-1';
+			   apply.
+			gc drawRectangle (0, 0, self.width - 1, self.height - 1).
+			##gc fillRectangle (0, 0, self.width, self.height).
+			##gc drawLine (0, y, CTRLWIDE, y).
+			##gc drawLine (0, y + CHIGH + 4, CTRLWIDE, Y+CHIGH+4).
+
+			gc drawString(10, 10, self.text).
+		] ensure: [ gc dispose ]
 	}
 }
 
@@ -303,13 +392,33 @@ class X11.Composite(X11.Widget)
 		^self.children size
 	}
 
+	method realize
+	{
+		super realize.
+		[
+			self.children do: [:child | child realize ].
+		] on: System.Exception do: [:ex |
+			self dispose.
+			ex pass
+		].
+	}
+
 	method dispose
 	{
 'Composite dispose XXXXXXXXXXXXXX' dump.
-		super dispose.
 		self.children do: [:child |
 			child dispose.
 			self remove: child.
+		].
+		super dispose
+	}
+
+	method onPaintEvent: event
+	{
+		super onPaintEvent: event.
+		self.children do: [:child |
+			## TODO: adjust event relative to each child...
+			child onPaintEvent: event.
 		]
 	}
 }
@@ -318,12 +427,15 @@ class X11.Shell(X11.Composite)
 {
 	var(#get) title := ''.
 	var(#get,#set) displayServer := nil.
-	var(#get) windowHandle := nil.
 
 	method new: title
 	{
 		self.title := title.
 	}
+
+#### TODO:
+#### redefine x:, y:, width:, height: to return actual geometry values...
+####
 
 	method title: title
 	{
@@ -336,50 +448,15 @@ class X11.Shell(X11.Composite)
 
 	method realize
 	{
-		| wind |
-
-		if (self.windowHandle notNil)  { ^self }.
-		if (self.displayServer isNil)
-		{
-			## not added to a display server.
-			X11.Exception signal: 'Cannot realize a shell not added to a display server'
-		}.
-
-		wind := self.displayServer __create_window(nil, self.x, self.y, self.width, self.height, self.fgcolor, self.bgcolor, self).
-		if (wind isError)
-		{
-			self.Exception signal: ('Cannot create shell ' & self.title).
-		}.
-
-		self.windowHandle := wind.
-
-		[
-			self.children do: [:child | child realize ].
-		] on: System.Exception do: [:ex |
-			self.displayServer __destroy_window(wind).
-			self.windowHandle := nil.
-			ex pass
-		].
-
-### call displayOn: from the exposure handler...
-self onPaintEvent: nil.
+'SHELL REALIZE XXXXXXXXXXX' dump.
+		super realize.
 	}
 
 	method dispose
 	{
 'Shell dispose XXXXXXXXXXXXXX' dump.
-		if (self.displayServer notNil)
-		{
-			if (self.windowHandle notNil)
-			{
-				super dispose.
-
-				self.displayServer __destroy_window (self.windowHandle).
-				self.windowHandle := nil.
-			}.
-
-			self.displayServer removeShell: self.
-		}
+		super dispose.
+		self.displayServer removeShell: self.
 	}
 
 	method onCloseEvent
@@ -404,8 +481,7 @@ extend X11
 		if (self _open_display(name) isError)
 		{
 			self.Exception signal: 'cannot open display'
-		}
-.
+		}.
 		self.display_base dump.
 	}
 
@@ -420,18 +496,13 @@ extend X11
 		if (self.display_base notNil)
 		{
 			self _close_display.
-			##self.display_base := nil.
+			self.display_base := nil.
 		}.
 	}
 
 	method initialize
 	{
 		super initialize.
-
-		self.expose_event := self.ExposeEvent new.
-		self.key_event := self.KeyEvent new.
-		self.mouse_event := self.MouseEvent new.
-		self.mouse_wheel_event := self.MouseWheelEvent new.
 
 		self.shell_container := self.Composite new.
 		self.window_registrar := System.Dictionary new: 100.
@@ -519,11 +590,13 @@ extend X11
 					}.
 				}.
 
+'CLOSING X11 EVENT LOOP' dump.
+
 				Processor unsignal: self.event_loop_sem.
 				self.event_loop_sem := nil.
 
 				self dispose.
-'CLOSING X11 EVENT LOOP' dump.
+
 			] fork.
 		}
 	}
@@ -561,7 +634,6 @@ extend X11
 			^nil
 		}.
 
-(llevent window asString) dump.
 		^self perform (mthname, llevent, widget).
 	}
 
@@ -571,6 +643,7 @@ extend X11
 
 	method __handle_expose: llevent on: widget
 	{
+		widget onPaintEvent: llevent
 	}
 
 	method __handle_button_event: event on: widget
@@ -583,6 +656,7 @@ extend X11
 
 	method __handle_configure_notify: event on: widget
 	{
+		widget onPaintEvent: event.
 	}
 
 	method __handle_client_message: event on: widget
@@ -609,6 +683,7 @@ class MyObject(Object)
 
 	method main1
 	{
+		| comp1 |
 		self.disp1 := X11 new.
 		self.disp2 := X11 new.
 
@@ -617,7 +692,7 @@ class MyObject(Object)
 
 		shell3 := (X11.Shell new title: 'Shell 3').
 
-		shell1 x: 10; y: 20; width: 100; height: 100.
+		shell1 x: 10; y: 20; width: 500; height: 500.
 		shell2 x: 200; y: 200; width: 200; height: 200.
 		shell3 x: 500; y: 200; width: 200; height: 200.
 
@@ -625,7 +700,16 @@ class MyObject(Object)
 		self.disp1 addShell: shell2.
 		self.disp2 addShell: shell3.
 
-		self.shell1 add: (X11.Label new text: 'xxxxxxxx').
+		comp1 := X11.Composite new x: 10; y: 10; width: 400; height: 500.
+		self.shell1 add: comp1.
+
+		comp1 add: (X11.Label new text: '간다'; width: 100; height: 100).
+		comp1 add: (X11.Label new text: 'crayon'; x: 90; y: 90; width: 100; height: 100).
+	##	self.shell1 add: (X11.Label new text: 'xxxxxxxx'; width: 100; height: 100).
+		self.shell1 add: (X11.Label new text: 'crayon'; x: 90; y: 90; width: 100; height: 100).
+
+		self.shell2 add: (X11.Label new text: 'crayon'; x: 90; y: 90; width: 100; height: 100).
+		self.shell3 add: (X11.Label new text: 'crayon'; x: 90; y: 90; width: 100; height: 100).
 		self.shell1 realize.
 		self.shell2 realize.
 		self.shell3 realize.

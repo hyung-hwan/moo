@@ -92,6 +92,7 @@
 
 #	include <unistd.h>
 #	include <fcntl.h>
+#	include <locale.h>
 
 #	if defined(USE_THREAD)
 #		include <pthread.h>
@@ -1757,6 +1758,11 @@ int main (int argc, char* argv[])
 		return -1;
 	}
 #endif
+
+	if (!setlocale (LC_ALL, ""))
+	{
+		fprintf (stderr, "Warning: setlocale() error. carrying on.\n");
+	}
 
 	memset (&vmprim, 0, MOO_SIZEOF(vmprim));
 	vmprim.dl_open = dl_open;

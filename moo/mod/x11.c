@@ -27,6 +27,7 @@
 #include "_x11.h"
 #include <moo-utl.h>
 
+#include <X11/Xutil.h>
 #include <errno.h>
 #include <stdlib.h>
 
@@ -36,6 +37,38 @@ struct x11_modctx_t
 {
 	moo_oop_class_t x11_class;
 };
+
+/* TODO: bchars_to_xchar2bstr??? */
+static XChar2b* uchars_to_xchar2bstr (moo_t* moo, const moo_uch_t* inptr, moo_oow_t inlen, moo_oow_t* outlen)
+{
+	moo_uch_t uch;
+	const moo_uch_t* endptr;
+	XChar2b* outbuf, * outptr;
+
+	outbuf = moo_allocmem (moo, (inlen + 1) * MOO_SIZEOF(*outptr));
+	if (!outbuf) return MOO_NULL;
+
+	outptr = outbuf;
+	endptr = inptr + inlen;
+	while (inptr < endptr)
+	{
+		uch = *inptr++;
+
+	#if (MOO_SIZEOF_UCH_T > 2)
+		if (uch > 0xFFFF) uc = 0xFFFD; /* unicode replacement character */
+	#endif
+
+		outptr->byte1 = (uch >> 8) & 0xFF;
+		outptr->byte2 = uch & 0xFF;
+		outptr++;
+	}
+
+	outptr->byte1 = 0;
+	outptr->byte2 = 0;
+
+	if (outlen) *outlen = outptr - outbuf;
+	return outbuf;
+}
 
 /* ------------------------------------------------------------------------ */
 static moo_pfrc_t pf_open_display (moo_t* moo, moo_ooi_t nargs)
@@ -181,7 +214,8 @@ static moo_pfrc_t pf_get_llevent (moo_t* moo, moo_ooi_t nargs)
 		e->window = MOO_SMOOI_TO_OOP(0);
 
 		/* if the following is going to trigger GC directly or indirectly,
-		 * e must be proteced with moo_pushtmp() first */
+		 * e must be proteced with moo_pushtmp(). 
+		 * also x11, tr must be refetched from the stack. */
 
 		switch (event->type)
 		{
@@ -197,11 +231,39 @@ static moo_pfrc_t pf_get_llevent (moo_t* moo, moo_ooi_t nargs)
 
 			case Expose:
 			{
+				XRectangle rect;
+
+				rect.x      = event->xexpose.x;
+				rect.y      = event->xexpose.y;
+				rect.width  = event->xexpose.width;
+				rect.height = event->xexpose.height;
+				if (XCheckWindowEvent (disp, event->xexpose.window, ExposureMask, event))
+				{
+					Region reg;
+
+					/* merge all expose events in the event queue */
+					reg = XCreateRegion ();
+					XUnionRectWithRegion (&rect, reg, reg);
+
+					do
+					{
+						rect.x      = event->xexpose.x;
+						rect.y      = event->xexpose.y;
+						rect.width  = event->xexpose.width;
+						rect.height = event->xexpose.height;
+						XUnionRectWithRegion (&rect, reg, reg);
+					}
+					while (XCheckWindowEvent (disp, event->xexpose.window, ExposureMask, event));
+
+					XClipBox (reg, &rect);
+					XDestroyRegion (reg);
+				}
+
 				e->window = MOO_SMOOI_TO_OOP(event->xexpose.window);
-				e->x = MOO_SMOOI_TO_OOP(event->xexpose.x);
-				e->y = MOO_SMOOI_TO_OOP(event->xexpose.y);
-				e->width = MOO_SMOOI_TO_OOP(event->xexpose.width);
-				e->height = MOO_SMOOI_TO_OOP(event->xexpose.height);
+				e->x = MOO_SMOOI_TO_OOP(rect.x);
+				e->y = MOO_SMOOI_TO_OOP(rect.y);
+				e->width = MOO_SMOOI_TO_OOP(rect.width);
+				e->height = MOO_SMOOI_TO_OOP(rect.height);
 				break;
 			}
 
@@ -255,7 +317,7 @@ static moo_pfrc_t pf_create_window (moo_t* moo, moo_ooi_t nargs)
 	einval:
 		MOO_DEBUG0 (moo, "<x11.create_window> Invalid parameters\n");
 		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
-		goto done;
+		return MOO_PF_SUCCESS;
 	}
 
 	tr = moo_getobjtrailer (moo, (moo_oop_t)x11, MOO_NULL);
@@ -268,19 +330,17 @@ static moo_pfrc_t pf_create_window (moo_t* moo, moo_ooi_t nargs)
 		scrn = DefaultScreen (disp);
 		parent = RootWindow (disp, scrn);
 	}
+	else if (!MOO_OOP_IS_SMOOI(a0)) goto einval;
 	else
 	{
-		moo_oow_t tmpoow;
 		XWindowAttributes wa;
-		if (moo_inttooow(moo, a0, &tmpoow) <= 0) goto einval;
 
-		parent = tmpoow;
+		parent = MOO_OOP_TO_SMOOI(a0);
 		XGetWindowAttributes (disp, parent, &wa);
-		MOO_ASSERT (moo, XRootWindowOfScreen(wa.screen) == parent);
 		scrn = XScreenNumberOfScreen(wa.screen);
 	}
 
-	attrs.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask; /* TODO: accept it as a parameter??? */
+	attrs.event_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | ExposureMask/* | StructureNotifyMask*/; /* TODO: accept it as a parameter??? */
 	attrs.border_pixel = BlackPixel (disp, scrn); /* TODO: use a6 */
 	attrs.background_pixel = WhitePixel (disp, scrn);/* TODO: use a7 */
 
@@ -299,7 +359,7 @@ static moo_pfrc_t pf_create_window (moo_t* moo, moo_ooi_t nargs)
 	if (!wind)
 	{
 		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ESYSERR);
-		goto done;
+		return MOO_PF_SUCCESS;
 	}
 
 	if (parent == RootWindow(disp, scrn))
@@ -307,19 +367,18 @@ static moo_pfrc_t pf_create_window (moo_t* moo, moo_ooi_t nargs)
 		XSetWMProtocols (disp, wind, &tr->wm_delete_window, 1);
 	}
 
-	a0 = moo_oowtoint (moo, wind);
-	if (!a0) 
+	/*if (!MOO_IN_SMOOI_RANGE ((moo_ooi_t)wind))*/
+	if (wind > MOO_SMOOI_MAX)
 	{
-		MOO_STACK_SETRETTOERRNUM (moo, nargs);
-		goto done;
+		XDestroyWindow (disp, wind);
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ERANGE);
+		return MOO_PF_SUCCESS;
 	}
 
-/* TODO: remvoe this */
-XMapWindow (disp, wind);
-XFlush (disp);
+	XMapWindow (disp, wind);
+	XFlush (disp);
 
-	MOO_STACK_SETRET (moo, nargs, a0); 
-done:
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(wind)); 
 	return MOO_PF_SUCCESS;
 }
 
@@ -328,12 +387,10 @@ static moo_pfrc_t pf_destroy_window (moo_t* moo, moo_ooi_t nargs)
 	oop_x11_t x11;
 	moo_oop_t a0;
 
-	moo_oow_t wind;
-
 	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
 	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* window - Integer (Window) */
 
-	if (moo_inttooow(moo, a0, &wind) <= 0) 
+	if (!MOO_OOP_IS_SMOOI(a0)) 
 	{
 		MOO_DEBUG0 (moo, "<x11.destroy_window> Invalid parameters\n");
 		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
@@ -341,11 +398,13 @@ static moo_pfrc_t pf_destroy_window (moo_t* moo, moo_ooi_t nargs)
 	else
 	{
 		Display* disp;
+		Window wind;
 
 		disp = MOO_OOP_TO_SMPTR(x11->display);
-		XUnmapWindow (disp, (Window)wind); 
-		XDestroyWindow (disp, (Window)wind);
-XFlush (disp); /* TODO: is XFlush() needed here? */
+		wind = MOO_OOP_TO_SMOOI(a0);
+
+		XUnmapWindow (disp, wind); 
+		XDestroyWindow (disp, wind);
 
 		MOO_STACK_SETRETTORCV (moo, nargs); 
 	}
@@ -355,96 +414,269 @@ XFlush (disp); /* TODO: is XFlush() needed here? */
 static moo_pfrc_t pf_create_gc (moo_t* moo, moo_ooi_t nargs)
 {
 	Display* disp;
-	moo_oow_t wind;
+	Window wind;
+	GC gc;
+	XWindowAttributes wa;
 
 	oop_x11_t x11;
 	moo_oop_t a0;
 
 	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
-	disp = MOO_OOP_TO_SMPTR(x11);
+	disp = MOO_OOP_TO_SMPTR(x11->display);
 
-	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* parent window - Integer or nil (Window) */
+	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* Window - SmallInteger */
 
-	if (moo_inttooow(moo, a0, &wind) <= 0) 
+	if (!MOO_OOP_IS_SMOOI(a0))
 	{
 		MOO_DEBUG0 (moo, "<x11.create_gc> Invalid parameters\n");
 		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_SUCCESS;
 	}
-	else
+
+	wind = MOO_OOP_TO_SMOOI(a0);
+
+	gc = XCreateGC (disp, wind, 0, MOO_NULL);
+	if (!MOO_IN_SMPTR_RANGE(gc))
 	{
-		GC gc;
-
-/* TODO: copy from default GC(DefaultGC...) explicitly??? */
-		gc = XCreateGC (disp, wind, 0, MOO_NULL);
-		if (!MOO_IN_SMPTR_RANGE(gc))
-		{
-			MOO_DEBUG0 (moo, "<x11.create_gc> GC pointer not in small pointer range\n");
-			MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ERANGE);
-		}
-		else
-		{
-			MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP(gc));
-		}
+		MOO_DEBUG0 (moo, "<x11.create_gc> GC pointer not in small pointer range\n");
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ERANGE);
+		return MOO_PF_SUCCESS;
 	}
 
+/*	XGetWindowAttributes (disp, wind, &wa);
+	XCopyGC (disp, DefaultGC(disp, XScreenNumberOfScreen(wa.screen)), GCForeground | GCBackground | GCLineWidth | GCLineStyle, gc);*/
+
+	MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP(gc));
 	return MOO_PF_SUCCESS;
 }
 
 static moo_pfrc_t pf_destroy_gc (moo_t* moo, moo_ooi_t nargs)
 {
 	oop_x11_t x11;
-	moo_oop_t a0;
+	oop_x11_gc_t gc;
+
+	Display* disp;
+
 
 	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
-	a0 = MOO_STACK_GETARG(moo, nargs, 1); /* GC */
+	gc = (oop_x11_gc_t)MOO_STACK_GETARG(moo, nargs, 0); /* GC object */
 
-	if (!MOO_OOP_IS_SMPTR(a0)) 
+	disp = MOO_OOP_TO_SMPTR(x11->display);
+	if (MOO_OOP_IS_SMPTR(gc->font_ptr))
 	{
-		MOO_DEBUG0 (moo, "<x11.destroy_gc> Invalid parameters\n");
+		XFreeFont (disp, MOO_OOP_TO_SMPTR(gc->font_ptr));
+		gc->font_ptr = moo->_nil;
+	}
+
+	if (MOO_OOP_IS_SMPTR(gc->gc_handle))
+	{
+		XFreeGC (disp, MOO_OOP_TO_SMPTR(gc->gc_handle));
+		gc->gc_handle= moo->_nil;
+	}
+	MOO_STACK_SETRETTORCV (moo, nargs); 
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_apply_gc (moo_t* moo, moo_ooi_t nargs)
+{
+	oop_x11_t x11;
+	oop_x11_gc_t a0;
+
+	Display* disp;
+	GC gc;
+	unsigned long int mask = 0;
+	XGCValues v;
+
+
+	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
+	a0 = (oop_x11_gc_t)MOO_STACK_GETARG(moo, nargs, 0); 
+/* TODO check if a0 is an instance of X11.GC */
+
+	if (!MOO_OOP_IS_SMPTR(a0->gc_handle)) 
+	{
+		MOO_DEBUG0 (moo, "<x11.apply_gc> Invalid parameters\n");
 		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_SUCCESS;
 	}
-	else
+
+	disp = MOO_OOP_TO_SMPTR(x11->display);
+	gc = MOO_OOP_TO_SMPTR(a0->gc_handle);
+
+	if (MOO_OBJ_IS_CHAR_POINTER(a0->font_name) && MOO_OBJ_GET_SIZE(a0->font_name) > 0)
 	{
-		Display* disp;
-		GC gc;
-
-		disp = MOO_OOP_TO_SMPTR(x11->display);
-		gc = MOO_OOP_TO_SMPTR(a0);
-
-		XFreeGC (disp, gc);
-		MOO_STACK_SETRETTORCV (moo, nargs); 
+		XFontStruct* font;
+/* TODO: .... use font_name */
+		font = XLoadQueryFont (disp, "-misc-fixed-medium-r-normal-ko-18-120-100-100-c-180-iso10646-1");
+		if (font)
+		{
+			if (!MOO_IN_SMPTR_RANGE(font))
+			{
+				MOO_DEBUG0 (moo, "<x11.apply_gc> Font pointer not in small pointer range\n");
+				XFreeFont (disp, font);
+				MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ERANGE);
+				return MOO_PF_SUCCESS;
+			}
+			else
+			{
+				XSetFont (disp, gc, font->fid);
+				if (MOO_OOP_IS_SMPTR(a0->font_ptr)) XFreeFont (disp, MOO_OOP_TO_SMPTR(a0->font_ptr));
+				a0->font_ptr = MOO_SMPTR_TO_OOP(font);
+			}
+		}
+		else
+		{
+			MOO_DEBUG2 (moo, "<x11.apply_gc> Cannot laod font - %.*js\n", MOO_OBJ_GET_SIZE(a0->font_name), MOO_OBJ_GET_CHAR_SLOT(a0->font_name));
+			MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ESYSERR);
+			return MOO_PF_SUCCESS;
+		}
 	}
+
+/* TODO: accept mask as an option parameter. then only apply fields that matches this given mask */
+	if (MOO_OOP_IS_SMOOI(a0->foreground))
+	{
+		mask |= GCForeground;
+		v.foreground = MOO_OOP_TO_SMOOI(a0->foreground);
+	}
+	if (MOO_OOP_IS_SMOOI(a0->background))
+	{
+		mask |= GCBackground;
+		v.background = MOO_OOP_TO_SMOOI(a0->background);
+	}
+	if (MOO_OOP_IS_SMOOI(a0->line_width))
+	{
+		mask |= GCLineWidth;
+		v.line_width = MOO_OOP_TO_SMOOI(a0->line_width);
+	}
+	if (MOO_OOP_IS_SMOOI(a0->line_style))
+	{
+		mask |= GCLineStyle;
+		v.line_style = MOO_OOP_TO_SMOOI(a0->line_style);
+	}
+	if (MOO_OOP_IS_SMOOI(a0->fill_style))
+	{
+		mask |= GCFillStyle;
+		v.fill_style = MOO_OOP_TO_SMOOI(a0->fill_style);
+	}
+	XChangeGC (disp, gc, mask, &v);
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
 static moo_pfrc_t pf_draw_rectangle (moo_t* moo, moo_ooi_t nargs)
 {
+	oop_x11_t x11;
 	Display* disp;
-	moo_oow_t wind, gc;
 	moo_oop_t a0, a1, a2, a3, a4, a5;
 
-	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* Window */
-	a1 = MOO_STACK_GETARG(moo, nargs, 1); /* GC */
+	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
+	disp = MOO_OOP_TO_SMPTR(x11->display);
+
+	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* Window - SmallInteger */
+	a1 = MOO_STACK_GETARG(moo, nargs, 1); /* GC - SMPTR */
 	a2 = MOO_STACK_GETARG(moo, nargs, 2); /* x - SmallInteger */
 	a3 = MOO_STACK_GETARG(moo, nargs, 3); /* y - SmallInteger */
 	a4 = MOO_STACK_GETARG(moo, nargs, 4); /* width - SmallInteger */
 	a5 = MOO_STACK_GETARG(moo, nargs, 5); /* height - SmallInteger */
 
-	if (!MOO_OOP_IS_SMOOI(a2) || !MOO_OOP_IS_SMOOI(a3) ||
-	    !MOO_OOP_IS_SMOOI(a4) || !MOO_OOP_IS_SMOOI(a5) ||
-	    moo_inttooow(moo, a0, &wind) <= 0 ||
-	    moo_inttooow(moo, a1, &gc) <= 0)
+	if (!MOO_OOP_IS_SMOOI(a0) || !MOO_OOP_IS_SMPTR(a1) ||
+	    !MOO_OOP_IS_SMOOI(a2) || !MOO_OOP_IS_SMOOI(a3) ||
+	    !MOO_OOP_IS_SMOOI(a4) || !MOO_OOP_IS_SMOOI(a5))
 	{
 		MOO_DEBUG0 (moo, "<x11.draw_rectangle> Invalid parameters\n");
 		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
 		return MOO_PF_SUCCESS;
 	}
 
-	disp = MOO_OOP_TO_SMPTR(MOO_STACK_GETRCV(moo,nargs));
-	XDrawRectangle (disp, (Window)wind, (GC)gc, 
+	XDrawRectangle (disp, (Window)MOO_OOP_TO_SMOOI(a0), (GC)MOO_OOP_TO_SMPTR(a1), 
 		MOO_OOP_TO_SMOOI(a2), MOO_OOP_TO_SMOOI(a3),
 		MOO_OOP_TO_SMOOI(a4), MOO_OOP_TO_SMOOI(a5));
+	return MOO_PF_SUCCESS;
+}
 
+
+static moo_pfrc_t pf_fill_rectangle (moo_t* moo, moo_ooi_t nargs)
+{
+	oop_x11_t x11;
+	Display* disp;
+	moo_oop_t a0, a1, a2, a3, a4, a5;
+
+	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
+	disp = MOO_OOP_TO_SMPTR(x11->display);
+
+	a0 = MOO_STACK_GETARG(moo, nargs, 0); /* Window - SmallInteger */
+	a1 = MOO_STACK_GETARG(moo, nargs, 1); /* GC - SMPTR */
+	a2 = MOO_STACK_GETARG(moo, nargs, 2); /* x - SmallInteger */
+	a3 = MOO_STACK_GETARG(moo, nargs, 3); /* y - SmallInteger */
+	a4 = MOO_STACK_GETARG(moo, nargs, 4); /* width - SmallInteger */
+	a5 = MOO_STACK_GETARG(moo, nargs, 5); /* height - SmallInteger */
+
+	if (!MOO_OOP_IS_SMOOI(a0) || !MOO_OOP_IS_SMPTR(a1) ||
+	    !MOO_OOP_IS_SMOOI(a2) || !MOO_OOP_IS_SMOOI(a3) ||
+	    !MOO_OOP_IS_SMOOI(a4) || !MOO_OOP_IS_SMOOI(a5))
+	{
+		MOO_DEBUG0 (moo, "<x11.fill_rectangle> Invalid parameters\n");
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_SUCCESS;
+	}
+
+	XFillRectangle (disp, (Window)MOO_OOP_TO_SMOOI(a0), (GC)MOO_OOP_TO_SMPTR(a1), 
+		MOO_OOP_TO_SMOOI(a2), MOO_OOP_TO_SMOOI(a3),
+		MOO_OOP_TO_SMOOI(a4), MOO_OOP_TO_SMOOI(a5));
+	return MOO_PF_SUCCESS;
+}
+
+
+static moo_pfrc_t pf_draw_string (moo_t* moo, moo_ooi_t nargs)
+{
+	
+	oop_x11_t x11;
+	oop_x11_gc_t gc;
+	moo_oop_t a1, a2, a3;
+
+	Display* disp;
+	XChar2b* stptr;
+	moo_oow_t stlen;
+	int ascent = 0;
+
+	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
+	disp = MOO_OOP_TO_SMPTR(x11->display);
+
+	gc = (oop_x11_gc_t)MOO_STACK_GETARG(moo, nargs, 0); /* GC object */
+	a1 = MOO_STACK_GETARG(moo, nargs, 1); /* x - SmallInteger */
+	a2 = MOO_STACK_GETARG(moo, nargs, 2); /* y - SmallInteger */
+	a3 = MOO_STACK_GETARG(moo, nargs, 3); /* string */
+
+/* TODO: check if gc is an instance of X11.GC */
+
+	if (!MOO_OOP_IS_SMOOI(a1) || !MOO_OOP_IS_SMOOI(a2) || 
+	    !MOO_OBJ_IS_CHAR_POINTER(a3))
+	{
+		MOO_DEBUG0 (moo, "<x11.draw_string> Invalid parameters\n");
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_SUCCESS;
+	}
+
+/* TODO: draw string chunk by chunk to avoid memory allocation in uchars_to_xchars2bstr */
+	stptr = uchars_to_xchar2bstr (moo, MOO_OBJ_GET_CHAR_SLOT(a3), MOO_OBJ_GET_SIZE(a3), &stlen);
+	if (!stptr)
+	{
+		MOO_DEBUG0 (moo, "<x11.draw_string> Error in converting a string\n");
+		MOO_STACK_SETRETTOERRNUM (moo, nargs);
+		return MOO_PF_SUCCESS;
+	}
+
+	if (MOO_OOP_IS_SMPTR(gc->font_ptr))
+	{
+		int direction, descent;
+		XCharStruct overall;
+		XTextExtents16 (MOO_OOP_TO_SMPTR(gc->font_ptr), stptr, stlen, &direction, &ascent, &descent, &overall);
+	}
+
+	XDrawString16 (disp, (Window)MOO_OOP_TO_SMOOI(((oop_x11_widget_t)gc->widget)->window_handle), MOO_OOP_TO_SMPTR(gc->gc_handle),
+		MOO_OOP_TO_SMOOI(a1), MOO_OOP_TO_SMOOI(a2) + ascent, stptr, stlen);
+
+	moo_freemem (moo, stptr);
 	return MOO_PF_SUCCESS;
 }
 
@@ -452,17 +684,19 @@ static moo_pfrc_t pf_draw_rectangle (moo_t* moo, moo_ooi_t nargs)
 
 static moo_pfinfo_t x11_pfinfo[] =
 {
+	{ MI, { '_','a','p','p','l','y','_','g','c','\0' },                         0, { pf_apply_gc,        1, 1 } },
 	{ MI, { '_','c','l','o','s','e','_','d','i','s','p','l','a','y','\0' },     0, { pf_close_display,   0, 0 } },
 	{ MI, { '_','c','r','e','a','t','e','_','g','c','\0' },                     0, { pf_create_gc,       1, 1 } },
 	{ MI, { '_','c','r','e','a','t','e','_','w','i','n','d','o','w','\0' },     0, { pf_create_window,   7, 7 } },
 	{ MI, { '_','d','e','s','t','r','o','y','_','g','c','\0' },                 0, { pf_destroy_gc,      1, 1 } },
 	{ MI, { '_','d','e','s','t','r','o','y','_','w','i','n','d','o','w','\0' }, 0, { pf_destroy_window,  1, 1 } },
+
 	{ MI, { '_','d','r','a','w','_','r','e','c','t','a','n','g','l','e','\0' }, 0, { pf_draw_rectangle,  6, 6 } },
-	//{ MI, { '_','f','i','l','l','_','r','e','c','t','a','n','g','l','e','\0' }, 0, { pf_fill_rectangle,  6, 6 } },
+	{ MI, { '_','d','r','a','w','_','s','t','r','i','n','g','\0' },             0, { pf_draw_string,     4, 4 } },
+	{ MI, { '_','f','i','l','l','_','r','e','c','t','a','n','g','l','e','\0' }, 0, { pf_fill_rectangle,  6, 6 } },
 	{ MI, { '_','g','e','t','_','f','d','\0' },                                 0, { pf_get_fd,          0, 0 } },
 	{ MI, { '_','g','e','t','_','l','l','e','v','e','n','t','\0'},              0, { pf_get_llevent,     1, 1 } },
 	{ MI, { '_','o','p','e','n','_','d','i','s','p','l','a','y','\0' },         0, { pf_open_display,    0, 1 } }
-	
 };
 
 static int x11_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)

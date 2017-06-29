@@ -38,13 +38,6 @@
 #define MC MOO_METHOD_CLASS
 #define MI MOO_METHOD_INSTANCE
 
-typedef struct x11_win_t x11_win_t;
-struct x11_win_t
-{
-	Display* disp;
-	Window wind;
-};
-
 typedef struct x11_llevent_t* oop_x11_llevent_t;
 struct x11_llevent_t
 {
@@ -54,16 +47,41 @@ struct x11_llevent_t
 	moo_oop_t x, y, width, height;
 };
 
+typedef struct x11_gc_t* oop_x11_gc_t;
+struct x11_gc_t
+{
+	MOO_OBJ_HEADER;
+
+	moo_oop_t widget;
+	moo_oop_t gc_handle;
+
+	moo_oop_t foreground;
+	moo_oop_t background;
+	moo_oop_t line_width;
+	moo_oop_t line_style;
+	moo_oop_t fill_style;
+	moo_oop_t font_name;
+
+	moo_oop_t font_ptr;
+};
+
+typedef struct x11_widget_t* oop_x11_widget_t;
+struct x11_widget_t
+{
+	MOO_OBJ_HEADER;
+
+	moo_oop_t window_handle; /* SmallInteger */
+	moo_oop_t parent;
+
+	/* more fields below */
+};
+
 typedef struct x11_t* oop_x11_t;
 struct x11_t
 {
 	MOO_OBJ_HEADER;
 
 	moo_oop_t display; /* SMPTR of Display */
-	moo_oop_t expose_event;
-	moo_oop_t key_event;
-	moo_oop_t mouse_event;
-
 	/* in fact, there are more fields */
 };
 
@@ -74,8 +92,6 @@ struct x11_trailer_t
 	moo_ooi_t connection_number; 
 	Atom wm_delete_window;
 };
-
-
 
 #if defined(__cplusplus)
 extern "C" {
