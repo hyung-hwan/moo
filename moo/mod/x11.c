@@ -525,7 +525,7 @@ static moo_pfrc_t pf_apply_gc (moo_t* moo, moo_ooi_t nargs)
 		}
 		else
 		{
-			MOO_DEBUG2 (moo, "<x11.apply_gc> Cannot laod font - %.*js\n", MOO_OBJ_GET_SIZE(a0->font_name), MOO_OBJ_GET_CHAR_SLOT(a0->font_name));
+			MOO_DEBUG2 (moo, "<x11.apply_gc> Cannot load font - %.*js\n", MOO_OBJ_GET_SIZE(a0->font_name), MOO_OBJ_GET_CHAR_SLOT(a0->font_name));
 			MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ESYSERR);
 			return MOO_PF_SUCCESS;
 		}

@@ -331,6 +331,9 @@ MOO_EXPORT moo_oow_t moo_utf8touc (
 	moo_uch_t*       uc
 );
 
+MOO_EXPORT int moo_ucwidth (
+	moo_uch_t uc
+);
 
 #if defined(__cplusplus)
 }
