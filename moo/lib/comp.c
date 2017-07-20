@@ -4354,7 +4354,7 @@ static int compile_block_expression (moo_t* moo)
 	{
 		colon_loc = moo->c->tok.loc;
 
-		/* block temporary variables */
+		/* block temporary variables  - argument to blocks */
 		do 
 		{
 			GET_TOKEN (moo);

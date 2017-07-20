@@ -163,6 +163,7 @@ oops:
 static moo_pfrc_t pf_close_display (moo_t* moo, moo_ooi_t nargs)
 {
 	oop_x11_t x11;
+	x11_trailer_t* tr;
 
 // TODO: CHECK if the receiver is an X11 object
 
@@ -172,6 +173,14 @@ static moo_pfrc_t pf_close_display (moo_t* moo, moo_ooi_t nargs)
 		MOO_ASSERT (moo, MOO_OOP_IS_SMPTR(x11->display));
 		XCloseDisplay (MOO_OOP_TO_SMPTR(x11->display));
 		x11->display = moo->_nil;
+	}
+
+
+	tr = moo_getobjtrailer (moo, MOO_STACK_GETRCV(moo,nargs), MOO_NULL);
+	if (tr->event)
+	{
+		moo_freemem (moo, tr->event);
+		tr->event = MOO_NULL;
 	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs);

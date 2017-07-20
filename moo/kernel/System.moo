@@ -10,6 +10,45 @@
 
 class System(Apex)
 {
+	method(#class) startup(class_name, method_name)
+	{
+		| class ret |
+
+		class := System at: class_name.
+		if (class isError)
+		{
+			System error: ('Cannot find the class - ' & class_name).
+		}.
+
+		## start the gc finalizer process
+		[ self __gc_finalizer ] fork.
+
+		## TODO: change the method signature to variadic and pass extra arguments to perform???
+		ret := class perform: method_name.
+
+		#### System logNl: '======= END of startup ==============='.
+		^ret.
+	}
+
+	method(#class) __gc_finalizer
+	{
+		| tmp |
+
+		while (true)
+		{
+## TODO: exit from this loop when there are no other processes running.
+			while ((tmp := self _popCollectable) notError)
+			{
+				## TODO: Do i have to protected this in an exception handler???
+				tmp finalize.
+			}.
+
+			System logNl: 'gc_waiting....'.
+			Processor sleepFor: 1. ## TODO: wait on semaphore instead..
+		}
+	}
+
+	method(#class,#primitive) _popCollectable.
 }
 
 pooldic System.Log

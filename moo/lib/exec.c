@@ -89,10 +89,10 @@
 #	define LOG_MASK_INST (MOO_LOG_IC | MOO_LOG_MNEMONIC)
 
 /* TODO: for send_message, display the method name. or include the method name before 'ip' */
-#	define LOG_INST_0(moo,fmt) MOO_LOG1(moo, LOG_MASK_INST, " %06zd " fmt "\n", fetched_instruction_pointer)
-#	define LOG_INST_1(moo,fmt,a1) MOO_LOG2(moo, LOG_MASK_INST, " %06zd " fmt "\n",fetched_instruction_pointer, a1)
-#	define LOG_INST_2(moo,fmt,a1,a2) MOO_LOG3(moo, LOG_MASK_INST, " %06zd " fmt "\n", fetched_instruction_pointer, a1, a2)
-#	define LOG_INST_3(moo,fmt,a1,a2,a3) MOO_LOG4(moo, LOG_MASK_INST, " %06zd " fmt "\n", fetched_instruction_pointer, a1, a2, a3)
+#	define LOG_INST_0(moo,fmt) MOO_LOG1(moo, LOG_MASK_INST, " %06zd " fmt "\n", (moo)->last_inst_pointer)
+#	define LOG_INST_1(moo,fmt,a1) MOO_LOG2(moo, LOG_MASK_INST, " %06zd " fmt "\n",(moo)->last_inst_pointer, a1)
+#	define LOG_INST_2(moo,fmt,a1,a2) MOO_LOG3(moo, LOG_MASK_INST, " %06zd " fmt "\n", (moo)->last_inst_pointer, a1, a2)
+#	define LOG_INST_3(moo,fmt,a1,a2,a3) MOO_LOG4(moo, LOG_MASK_INST, " %06zd " fmt "\n", (moo)->last_inst_pointer, a1, a2, a3)
 #else
 #	define LOG_INST_0(moo,fmt)
 #	define LOG_INST_1(moo,fmt,a1)
@@ -114,6 +114,7 @@ static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow
 /* ------------------------------------------------------------------------- */
 static MOO_INLINE int vm_startup (moo_t* moo)
 {
+	MOO_DEBUG0 (moo, "VM started up\n");
 	if (moo->vmprim.vm_startup (moo) <= -1) return -1;
 	moo->vmprim.vm_gettime (moo, &moo->exec_start_time); /* raw time. no adjustment */
 	return 0;
@@ -123,6 +124,7 @@ static MOO_INLINE void vm_cleanup (moo_t* moo)
 {
 	moo->vmprim.vm_gettime (moo, &moo->exec_end_time); /* raw time. no adjustment */
 	moo->vmprim.vm_cleanup (moo);
+	MOO_DEBUG0 (moo, "VM cleaned up\n");
 }
 
 static MOO_INLINE void vm_gettime (moo_t* moo, moo_ntime_t* now)
@@ -556,7 +558,7 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 		/* [NOTE] no GC must occur as 'proc' isn't protected with moo_pushtmp(). */
 
-		/* detach a process from a semaphore waiting list and 
+		/* detach a process from a semaphore's waiting list and 
 		 * make it runnable */
 		unchain_from_semaphore (moo, proc);
 		resume_process (moo, proc); /* TODO: error check */
@@ -1130,29 +1132,96 @@ static int start_initial_process_and_context (moo_t* moo, const moo_oocs_t* objn
 	 *    send #main
 	 */
 	moo_oop_context_t ctx;
-	moo_oop_association_t ass;
 	moo_oop_method_t mth;
 	moo_oop_process_t proc;
+#if defined(INVOKE_DIRECTLY)
+	moo_oop_association_t ass;
+#else
+	moo_oop_t s1, s2;
+#endif
+	moo_oow_t tmp_count = 0;
 
-	/* create a fake initial context. */
-	ctx = (moo_oop_context_t)moo_instantiate (moo, moo->_method_context, MOO_NULL, 0);
-	if (!ctx) return -1;
+	moo_oocs_t startup;
+	static moo_ooch_t str_startup[] = { 's', 't', 'a', 'r', 't', 'u', 'p' };
+
+#if defined(INVOKE_DIRECTLY)
+	
 
 	ass = moo_lookupsysdic (moo, objname);
-	if (!ass) return -1;
+	if (!ass || MOO_CLASSOF(moo, ass->value) != moo->_class) 
+	{
+		MOO_DEBUG2 (moo, "Cannot find a class - %.*js", objname->len, objname->ptr);
+		return -1;
+	}
 
 	mth = find_method (moo, ass->value, mthname, 0);
-	if (!mth) return -1;
+	if (!mth) 
+	{
+		MOO_DEBUG4 (moo, "Cannot find a method in %.*js - %.*js", objname->len, objname->ptr, mthname->len, mthname->ptr);
+		return -1;
+	}
 
 	if (MOO_OOP_TO_SMOOI(mth->tmpr_nargs) > 0)
 	{
 		/* this method expects more than 0 arguments. 
 		 * i can't use it as a start-up method.
-TODO: overcome this problem 
+TODO: overcome this problem - accept parameters....
 		 */
+		MOO_DEBUG4 (moo, "Arguments not supported for a startup method - %.*js>>%.*js", objname->len, objname->ptr, mthname->len, mthname->ptr);
 		moo_seterrnum (moo, MOO_EINVAL);
 		return -1;
 	}
+
+	moo_pushtmp (moo, (moo_oop_t*)&mth); tmp_count++;
+	moo_pushtmp (moo, (moo_oop_t*)&ass); tmp_count++;
+#else
+
+	startup.ptr = str_startup;
+	startup.len = 7;
+	mth = find_method (moo, (moo_oop_t)moo->_system, &startup, 0);
+	if (!mth) 
+	{
+		MOO_DEBUG0 (moo, "Cannot find the startup method in the system class");
+		return -1;
+	}
+
+	if (MOO_OOP_TO_SMOOI(mth->tmpr_nargs) != 2)
+	{
+		MOO_DEBUG1 (moo, "Weird argument count %zd for a startup method - should be 2",  MOO_OOP_TO_SMOOI(mth->tmpr_nargs));
+		moo_seterrnum (moo, MOO_EINVAL);
+		return -1;
+	}
+/* TODO: check if it's variadic.... it should be. and accept more than 2... */
+
+	moo_pushtmp (moo, (moo_oop_t*)&mth); tmp_count++;
+	s1 = moo_makesymbol (moo, objname->ptr, objname->len);
+	if (!s1)
+	{
+		moo_poptmps (moo, tmp_count);
+		return -1;
+	}
+
+	moo_pushtmp (moo, (moo_oop_t*)&s1);
+	s2 = moo_makesymbol (moo, mthname->ptr, mthname->len);
+	if (!s2)
+	{
+		moo_poptmps (moo, tmp_count);
+		return -1;
+	}
+
+	moo_pushtmp (moo, (moo_oop_t*)&s2);
+#endif
+
+	/* create a fake initial context. */
+	ctx = (moo_oop_context_t)moo_instantiate (moo, moo->_method_context, MOO_NULL, MOO_OOP_TO_SMOOI(mth->tmpr_nargs));
+	if (!ctx) 
+	{
+		moo_poptmps (moo, tmp_count);
+		return -1;
+	}
+
+	moo_pushtmp (moo, (moo_oop_t*)&ctx); tmp_count++;
+
 
 /* TODO: handle preamble */
 
@@ -1184,17 +1253,20 @@ TODO: overcome this problem
 
 	/* start_initial_process() calls the SWITCH_ACTIVE_CONTEXT() macro.
 	 * the macro assumes a non-null value in moo->active_context.
-	 * let's force set active_context to ctx directly. */
+	 * let's forcefully set active_context to ctx directly. */
 	moo->active_context = ctx;
 
-	moo_pushtmp (moo, (moo_oop_t*)&ctx);
-	moo_pushtmp (moo, (moo_oop_t*)&mth);
-	moo_pushtmp (moo, (moo_oop_t*)&ass);
 	proc = start_initial_process (moo, ctx); 
-	moo_poptmps (moo, 3);
+	moo_poptmps (moo, tmp_count); tmp_count = 0;
 	if (!proc) return -1;
 
+#if defined(INVOKE_DIRECTLY)
 	MOO_STACK_PUSH (moo, ass->value); /* push the receiver - the object referenced by 'objname' */
+#else
+	MOO_STACK_PUSH (moo, (moo_oop_t)moo->_system);
+	MOO_STACK_PUSH (moo, s1);
+	MOO_STACK_PUSH (moo, s2);
+#endif
 	STORE_ACTIVE_SP (moo); /* moo->active_context->sp = MOO_SMOOI_TO_OOP(moo->sp) */
 
 	MOO_ASSERT (moo, moo->processor->active == proc);
@@ -1203,7 +1275,11 @@ TODO: overcome this problem
 	MOO_ASSERT (moo, moo->active_context == ctx);
 
 	/* emulate the message sending */
+#if defined(INVOKE_DIRECTLY)
 	return activate_new_method (moo, mth, 0);
+#else
+	return activate_new_method (moo, mth, 2);
+#endif
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1639,6 +1715,22 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 
 /* TODO: return receiver or value? */
 	MOO_STACK_SETRET (moo, nargs, val);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_add_to_be_finalized (moo_t* moo, moo_ooi_t nargs)
+{
+	/* TODO: check if it has already been added */
+	moo_regfinalizable (moo, MOO_STACK_GETRCV(moo,nargs));
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_remove_to_be_finalized (moo_t* moo, moo_ooi_t nargs)
+{
+	/* TODO: check if it has already been added */
+	moo_deregfinalizable (moo, MOO_STACK_GETRCV(moo,nargs));
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -2979,6 +3071,34 @@ static moo_pfrc_t pf_system_log (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+static moo_pfrc_t pf_system_pop_collectable (moo_t* moo, moo_ooi_t nargs)
+{
+	if (moo->collectable.first)
+	{
+		moo_collectable_t* first;
+
+		first = moo->collectable.first;
+
+		/* TODO: if it's already fininalized, delete it from collectable */
+		MOO_ASSERT (moo, MOO_OOP_IS_POINTER(first->oop));
+		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_GCFIN(first->oop) & MOO_GCFIN_FINALIZABLE);
+
+		MOO_STACK_SETRET (moo, nargs, first->oop);
+		MOO_OBJ_SET_FLAGS_GCFIN (first->oop, MOO_OBJ_GET_FLAGS_GCFIN(first->oop) | MOO_GCFIN_FINALIZED);
+
+MOO_DEBUG1 (moo, "POPPING FINALIZABLE...%O\n", first->oop);
+		MOO_DELETE_FROM_LIST (&moo->collectable, first);
+		moo_freemem (moo, first);
+
+MOO_DEBUG1 (moo, "POPPED FINALIZABLE...%p\n", moo->collectable.first);
+	}
+	else
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
+	}
+	return MOO_PF_SUCCESS;
+}
+
 static MOO_INLINE moo_pfrc_t _system_alloc (moo_t* moo, moo_ooi_t nargs, int clear)
 {
 	moo_oop_t tmp;
@@ -3208,7 +3328,6 @@ static MOO_INLINE int _store_raw_uint (moo_t* moo, moo_uint8_t* rawptr, moo_oow_
 {
 	int n;
 	moo_oow_t w, max;
-	
 
 	if ((n = moo_inttooow (moo, voop, &w)) <= 0) 
 	{
@@ -3793,6 +3912,7 @@ static pf_t pftab[] =
 	{ "_integer_ge",                           { pf_integer_ge,                           1, 1 } },
 	{ "_integer_inttostr",                     { pf_integer_inttostr,                     1, 1 } },
 
+	{ "Apex_addToBeFinalized",                 { pf_add_to_be_finalized,                  0, 0 } },
 	{ "Apex__basicNew",                        { pf_basic_new,                            0, 0 } },
 	{ "Apex__basicNew:",                       { pf_basic_new,                            1, 1 } },
 	{ "Apex__basicSize",                       { pf_basic_size,                           0, 0 } },
@@ -3800,6 +3920,7 @@ static pf_t pftab[] =
 	{ "Apex_basicNew:",                        { pf_basic_new,                            1, 1 } },
 	{ "Apex_basicSize",                        { pf_basic_size,                           0, 0 } },
 	{ "Apex_class",                            { pf_class,                                0, 0 } },
+	{ "Apex_removeToBeFinalized",              { pf_remove_to_be_finalized,               0, 0 } },
 
 	{ "Character_asInteger",                   { pf_character_as_smooi,                   0, 0 } },
 
@@ -3851,6 +3972,7 @@ static pf_t pftab[] =
 	{ "System__getUint64",                     { pf_system_get_uint64,                    2, 2 } },
 	{ "System__getUint8",                      { pf_system_get_uint8,                     2, 2 } },
 	{ "System__malloc",                        { pf_system_malloc,                        1, 1 } },
+	{ "System__popCollectable",                { pf_system_pop_collectable,               0, 0 } },
 	{ "System__putInt8",                       { pf_system_put_int8,                      3, 3 } },
 	{ "System__putInt16",                      { pf_system_put_int16,                     3, 3 } },
 	{ "System__putInt32",                      { pf_system_put_int32,                     3, 3 } },
@@ -3893,7 +4015,8 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 	moo_ooi_t /*sp,*/ stack_base;
 
 #if defined(MOO_DEBUG_VM_EXEC)
-	moo_ooi_t fetched_instruction_pointer = 0; /* set it to a fake value */
+	/* set it to a fake value */
+	moo->last_instruction_pointer = 0; 
 #endif
 
 	preamble = MOO_OOP_TO_SMOOI(method->preamble);
@@ -4441,7 +4564,8 @@ finalization:
 	return 1;
 }
 
-int moo_execute (moo_t* moo)
+
+static int __execute (moo_t* moo)
 {
 	moo_oob_t bcode;
 	moo_oow_t b1, b2;
@@ -4449,15 +4573,6 @@ int moo_execute (moo_t* moo)
 	int unwind_protect;
 	moo_oop_context_t unwind_start;
 	moo_oop_context_t unwind_stop;
-	int vm_startup_called = 0;
-
-#if defined(MOO_PROFILE_VM)
-	moo_uintmax_t inst_counter = 0;
-#endif
-
-#if defined(MOO_DEBUG_VM_EXEC)
-	moo_ooi_t fetched_instruction_pointer;
-#endif
 
 	MOO_ASSERT (moo, moo->active_context != MOO_NULL);
 
@@ -4468,24 +4583,22 @@ int moo_execute (moo_t* moo)
  * these can be dirty if this function is called again esepcially after failure.
  */
 
-	if (vm_startup(moo) <= -1) goto oops;
-	vm_startup_called = 1;
-
-	moo->proc_switched = 0;
-	moo->abort_req = 0;
-
 	while (!moo->abort_req)
 	{
+		/*
+		if (moo->gc_finalization_pending)
+			switch_to_gc_process (xxxx);
+		else */
 		if (switch_process_if_needed(moo) == 0) break; /* no more runnable process */
 
 #if defined(MOO_DEBUG_VM_EXEC)
-		fetched_instruction_pointer = moo->ip;
+		moo->last_inst_pointer = moo->ip;
 #endif
 		FETCH_BYTE_CODE_TO (moo, bcode);
 		/*while (bcode == BCODE_NOOP) FETCH_BYTE_CODE_TO (moo, bcode);*/
 
 #if defined(MOO_PROFILE_VM)
-		inst_counter++;
+		moo->inst_counter++;
 #endif
 
 		switch (bcode)
@@ -5006,7 +5119,7 @@ int moo_execute (moo_t* moo)
 				selector = (moo_oop_char_t)moo->active_method->slot[b2];
 
 				LOG_INST_3 (moo, "send_message%hs %zu @%zu", (((bcode >> 2) & 1)? "_to_super": ""), b1, b2);
-				if (send_message (moo, selector, ((bcode >> 2) & 1), b1) <= -1) goto oops;
+				if (send_message (moo, selector, ((bcode >> 2) & 1), b1) <= -1) return -1;
 				break;
 			}
 
@@ -5110,7 +5223,7 @@ int moo_execute (moo_t* moo)
 				 */
 				MOO_STACK_PUSH (moo, (moo_oop_t)moo->_dictionary);
 				MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(b1));
-				if (send_message (moo, moo->dicnewsym, 0, 1) <= -1) goto oops;
+				if (send_message (moo, moo->dicnewsym, 0, 1) <= -1) return -1;
 				break;
 
 			case BCODE_POP_INTO_DICTIONARY:
@@ -5124,7 +5237,7 @@ int moo_execute (moo_t* moo)
 				t2 = MOO_STACK_GETTOP(moo);
 				moo_putatdic (moo, (moo_oop_dic_t)t2, ((moo_oop_association_t)t1)->key, ((moo_oop_association_t)t1)->value);
 				 */
-				if (send_message (moo, moo->dicputassocsym, 0, 1) <= -1) goto oops; 
+				if (send_message (moo, moo->dicputassocsym, 0, 1) <= -1) return -1;
 				break;
 
 			case BCODE_MAKE_ARRAY:
@@ -5136,7 +5249,7 @@ int moo_execute (moo_t* moo)
 
 				/* create an empty array */
 				t = moo_instantiate (moo, moo->_array, MOO_NULL, b1);
-				if (!t) goto oops;
+				if (!t) return -1;
 
 				MOO_STACK_PUSH (moo, t); /* push the array created */
 				break;
@@ -5312,7 +5425,7 @@ int moo_execute (moo_t* moo)
 
 						MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_ERROR, "Error - cannot return from dead context\n");
 						moo_seterrnum (moo, MOO_EINTERN); /* TODO: can i make this error catchable at the moo level? */
-						goto oops;
+						return -1;
 
 					non_local_return_ok:
 /*MOO_DEBUG2 (moo, "NON_LOCAL RETURN OK TO... %p %p\n", moo->active_context->origin, moo->active_context->origin->sender);*/
@@ -5349,7 +5462,7 @@ int moo_execute (moo_t* moo)
 						MOO_STACK_PUSH (moo, (moo_oop_t)unwind_stop);
 						MOO_STACK_PUSH (moo, (moo_oop_t)return_value);
 
-						if (send_message_with_str (moo, fbm, 16, 0, 2) <= -1) goto oops;
+						if (send_message_with_str (moo, fbm, 16, 0, 2) <= -1) return -1;
 					}
 					else
 					{
@@ -5376,9 +5489,14 @@ int moo_execute (moo_t* moo)
 							MOO_ASSERT (moo, moo->sp == 0); 
 
 							if (moo->option.trait & MOO_AWAIT_PROCS)
+							{
 								terminate_process (moo, moo->processor->active);
+							}
 							else
+							{
+								/* graceful termination of the whole vm */
 								goto done;
+							}
 
 							/* TODO: store the return value to the VM register.
 							 * the caller to moo_execute() can fetch it to return it to the system */
@@ -5442,7 +5560,7 @@ int moo_execute (moo_t* moo)
 				 * this base block context is created with no stack for 
 				 * this reason */
 				blkctx = (moo_oop_context_t)moo_instantiate (moo, moo->_block_context, MOO_NULL, 0); 
-				if (!blkctx) goto oops;
+				if (!blkctx) return -1;
 
 				/* the long forward jump instruction has the format of 
 				 *   11000100 KKKKKKKK or 11000100 KKKKKKKK KKKKKKKK 
@@ -5499,7 +5617,7 @@ int moo_execute (moo_t* moo)
 				 * this base block context is created with no 
 				 * stack for this reason. */
 				blkctx = (moo_oop_context_t)moo_instantiate (moo, moo->_block_context, MOO_NULL, 0); 
-				if (!blkctx) goto oops;
+				if (!blkctx) return -1;
 
 				/* get the receiver to the block copy message after block context instantiation
 				 * not to get affected by potential GC */
@@ -5566,20 +5684,37 @@ int moo_execute (moo_t* moo)
 			default:
 				MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_FATAL, "Fatal error - unknown byte code 0x%zx\n", bcode);
 				moo_seterrnum (moo, MOO_EINTERN);
-				goto oops;
+				return -1;
 		}
 	}
 
 done:
-	vm_cleanup (moo);
-#if defined(MOO_PROFILE_VM)
-	MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_INFO, "TOTAL_INST_COUTNER = %zu\n", inst_counter);
-#endif
 	return 0;
+}
 
-oops:
-	if (vm_startup_called) vm_cleanup (moo);
-	return -1;
+
+int moo_execute (moo_t* moo)
+{
+	int n;
+
+#if defined(MOO_PROFILE_VM)
+	moo->inst_counter = 0;
+#endif
+
+	if (vm_startup(moo) <= -1) return -1;
+
+	moo->proc_switched = 0;
+	moo->abort_req = 0;
+
+	n = __execute (moo);
+
+	vm_cleanup (moo);
+
+#if defined(MOO_PROFILE_VM)
+	MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_INFO, "TOTAL_INST_COUTNER = %zu\n", moo->inst_counter);
+#endif
+
+	return n;
 }
 
 void moo_abort (moo_t* moo)

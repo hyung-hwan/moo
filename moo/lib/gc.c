@@ -117,6 +117,9 @@ static kernel_class_info_t kernel_classes[] =
 	{  6, { 'S','y','s','t','e','m'                                                         }, MOO_OFFSETOF(moo_t, _system) },
 };
 
+
+static void move_finalizable_objects (moo_t* moo);
+
 /* ----------------------------------------------------------------------- 
  * BOOTSTRAPPER
  * ----------------------------------------------------------------------- */
@@ -701,6 +704,11 @@ void moo_gc (moo_t* moo)
 	ptr = (moo_uint8_t*) MOO_ALIGN ((moo_uintptr_t)moo->newheap->base, MOO_SIZEOF(moo_oop_t));
 	ptr = scan_new_heap (moo, ptr);
 
+/* FINALIZATION */
+	move_finalizable_objects (moo);
+	ptr = scan_new_heap (moo, ptr);
+/* END FINALIZATION */
+
 	/* traverse the symbol table for unreferenced symbols.
 	 * if the symbol has not moved to the new heap, the symbol
 	 * is not referenced by any other objects than the symbol 
@@ -808,4 +816,98 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 	}
 
 	return oop;
+}
+
+
+
+int moo_regfinalizable (moo_t* moo, moo_oop_t oop)
+{
+	moo_collectable_t* x;
+
+MOO_DEBUG1 (moo, "ADDING FINALIZABLE... %O\n", oop);
+	if (!MOO_OOP_IS_POINTER(oop) || 
+         (MOO_OBJ_GET_FLAGS_GCFIN(oop) & (MOO_GCFIN_FINALIZABLE | MOO_GCFIN_FINALIZED)))
+	{
+		moo_seterrnum (moo, MOO_EINVAL);
+		return -1;
+	}
+
+	x = moo_allocmem (moo, MOO_SIZEOF(*x));
+	if (!x) return -1;
+
+	MOO_OBJ_SET_FLAGS_GCFIN (oop, MOO_GCFIN_FINALIZABLE);
+	x->oop = oop;
+
+	MOO_APPEND_TO_LIST (&moo->finalizable, x);
+
+MOO_DEBUG1 (moo, "ADDED FINALIZABLE... %O\n", oop);
+	return 0;
+}
+
+
+int moo_deregfinalizable (moo_t* moo, moo_oop_t oop)
+{
+	moo_collectable_t* x;
+
+	if (!MOO_OOP_IS_POINTER(oop) || 
+	    ((MOO_OBJ_GET_FLAGS_GCFIN(oop) & (MOO_GCFIN_FINALIZABLE | MOO_GCFIN_FINALIZED)) != MOO_GCFIN_FINALIZABLE))
+	{
+		moo_seterrnum (moo, MOO_EINVAL);
+		return -1;
+	}
+
+	x = moo->finalizable.first;
+	while (x)
+	{
+		if (x->oop == oop)
+		{
+/* TODO: do i need to clear other flags like GC */
+			MOO_OBJ_SET_FLAGS_GCFIN(oop, (MOO_OBJ_GET_FLAGS_GCFIN(oop) & ~MOO_GCFIN_FINALIZABLE));
+			MOO_DELETE_FROM_LIST (&moo->finalizable, x);
+			return  0;
+		}
+	}
+
+	moo_seterrnum (moo, MOO_ENOENT);
+	return -1;
+}
+
+static void move_finalizable_objects (moo_t* moo)
+{
+	moo_collectable_t* x, * y;
+
+	for (x = moo->collectable.first; x; x = x->next)
+	{
+		x->oop = moo_moveoop (moo, x->oop);
+	}
+
+	for (x = moo->finalizable.first; x; )
+	{
+		y = x->next;
+
+		if (!MOO_OBJ_GET_FLAGS_MOVED(x->oop))
+		{
+/* TODO: if already finalized, don't move, don't add to collectable 
+if (MOVE_OBJ_GET_FLAGS_FINALIZED(x->oop)) continue; 
+* */
+			x->oop = moo_moveoop (moo, x->oop);
+
+			/* it's almost collectable. but don't collect it yet.
+			 * if garbages consist of finalizable objects only, GC should fail miserably */
+
+			/* remove it from the finalizable list */
+			MOO_DELETE_FROM_LIST (&moo->finalizable, x);
+
+			/* add it to the collectable list */
+			MOO_APPEND_TO_LIST (&moo->collectable, x);
+
+			//signal_semaphore (moo, moo->collectable_semaphore);
+		}
+		else
+		{
+			x->oop = moo_moveoop (moo, x->oop);
+		}
+
+		x = y;
+	}
 }

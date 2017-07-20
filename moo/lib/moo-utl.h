@@ -29,6 +29,34 @@
 
 #include "moo-cmn.h"
 
+
+/* ----------------------------------------------------------------------- 
+ * DOUBLY LINKED LIST MACROS
+ * ----------------------------------------------------------------------- */
+#define MOO_APPEND_TO_LIST(list, node) do { \
+	(node)->next = MOO_NULL; \
+	(node)->prev = (list)->last; \
+	if ((list)->first) (list)->last->next = (node); \
+	else (list)->first = (node); \
+	(list)->last = (node); \
+} while(0)
+
+#define MOO_PREPPEND_TO_LIST(list, node) do { \
+	(node)->prev = MOO_NULL; \
+	(node)->next = (list)->first; \
+	if ((list)->last) (list)->first->prev = (node); \
+	else (list)->last = (node); \
+	(list)->first = (node); \
+} while(0)
+
+#define MOO_DELETE_FROM_LIST(list, node) do { \
+	if ((node)->prev) (node)->prev->next = (node)->next; \
+	else (list)->first = (node)->next; \
+	if ((node)->next) (node)->next->prev = (node)->prev; \
+	else (list)->last = (node)->prev; \
+} while(0)
+
+
 #if defined(__cplusplus)
 extern "C" {
 #endif

@@ -311,6 +311,13 @@ enum moo_obj_type_t
 };
 typedef enum moo_obj_type_t moo_obj_type_t;
 
+enum moo_gcfin_t
+{
+	MOO_GCFIN_FINALIZABLE = (1 << 0),
+	MOO_GCFIN_FINALIZED   = (1 << 1)
+};
+typedef enum moo_gcfin_t moo_gcfin_t;
+
 /* =========================================================================
  * Object header structure 
  * 
@@ -330,6 +337,7 @@ typedef enum moo_obj_type_t moo_obj_type_t;
  *   moved: 0 or 1. used by GC. internal use only.
  *   ngc: 0 or 1, used by GC. internal use only.
  *   rdonly: 0 or 1. indicates that an object is immutable.
+ *   gcfin: represents finalzation state.
  *   trailer: 0 or 1. indicates that there are trailing bytes
  *            after the object payload. internal use only.
  *
@@ -358,14 +366,15 @@ typedef enum moo_obj_type_t moo_obj_type_t;
  * size calculation and the access to the payload fields become more complex. 
  * Therefore, i've dropped the idea.
  * ========================================================================= */
-#define MOO_OBJ_FLAGS_TYPE_BITS    6
-#define MOO_OBJ_FLAGS_UNIT_BITS    5
-#define MOO_OBJ_FLAGS_EXTRA_BITS   1
-#define MOO_OBJ_FLAGS_KERNEL_BITS  2
-#define MOO_OBJ_FLAGS_MOVED_BITS   1
-#define MOO_OBJ_FLAGS_NGC_BITS     1
-#define MOO_OBJ_FLAGS_RDONLY_BITS  1
-#define MOO_OBJ_FLAGS_TRAILER_BITS 1
+#define MOO_OBJ_FLAGS_TYPE_BITS     6
+#define MOO_OBJ_FLAGS_UNIT_BITS     5
+#define MOO_OBJ_FLAGS_EXTRA_BITS    1
+#define MOO_OBJ_FLAGS_KERNEL_BITS   2
+#define MOO_OBJ_FLAGS_MOVED_BITS    1
+#define MOO_OBJ_FLAGS_NGC_BITS      1
+#define MOO_OBJ_FLAGS_RDONLY_BITS   1
+#define MOO_OBJ_FLAGS_GCFIN_BITS    2
+#define MOO_OBJ_FLAGS_TRAILER_BITS  1
 
 #define MOO_OBJ_FLAGS_TYPE_SHIFT    (MOO_OBJ_FLAGS_UNIT_BITS    + MOO_OBJ_FLAGS_UNIT_SHIFT)
 #define MOO_OBJ_FLAGS_UNIT_SHIFT    (MOO_OBJ_FLAGS_EXTRA_BITS   + MOO_OBJ_FLAGS_EXTRA_SHIFT)
@@ -373,7 +382,8 @@ typedef enum moo_obj_type_t moo_obj_type_t;
 #define MOO_OBJ_FLAGS_KERNEL_SHIFT  (MOO_OBJ_FLAGS_MOVED_BITS   + MOO_OBJ_FLAGS_MOVED_SHIFT)
 #define MOO_OBJ_FLAGS_MOVED_SHIFT   (MOO_OBJ_FLAGS_NGC_BITS     + MOO_OBJ_FLAGS_NGC_SHIFT)
 #define MOO_OBJ_FLAGS_NGC_SHIFT     (MOO_OBJ_FLAGS_RDONLY_BITS  + MOO_OBJ_FLAGS_RDONLY_SHIFT)
-#define MOO_OBJ_FLAGS_RDONLY_SHIFT  (MOO_OBJ_FLAGS_TRAILER_BITS + MOO_OBJ_FLAGS_TRAILER_SHIFT)
+#define MOO_OBJ_FLAGS_RDONLY_SHIFT  (MOO_OBJ_FLAGS_GCFIN_BITS   + MOO_OBJ_FLAGS_GCFIN_SHIFT)
+#define MOO_OBJ_FLAGS_GCFIN_SHIFT   (MOO_OBJ_FLAGS_TRAILER_BITS + MOO_OBJ_FLAGS_TRAILER_SHIFT)
 #define MOO_OBJ_FLAGS_TRAILER_SHIFT (0)
 
 #define MOO_OBJ_GET_FLAGS_TYPE(oop)       MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_TYPE_SHIFT,    MOO_OBJ_FLAGS_TYPE_BITS)
@@ -383,6 +393,7 @@ typedef enum moo_obj_type_t moo_obj_type_t;
 #define MOO_OBJ_GET_FLAGS_MOVED(oop)      MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_MOVED_SHIFT,   MOO_OBJ_FLAGS_MOVED_BITS)
 #define MOO_OBJ_GET_FLAGS_NGC(oop)        MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_NGC_SHIFT,     MOO_OBJ_FLAGS_NGC_BITS)
 #define MOO_OBJ_GET_FLAGS_RDONLY(oop)     MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_RDONLY_SHIFT,  MOO_OBJ_FLAGS_RDONLY_BITS)
+#define MOO_OBJ_GET_FLAGS_GCFIN(oop)      MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_GCFIN_SHIFT,   MOO_OBJ_FLAGS_GCFIN_BITS)
 #define MOO_OBJ_GET_FLAGS_TRAILER(oop)    MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_TRAILER_SHIFT, MOO_OBJ_FLAGS_TRAILER_BITS)
 
 #define MOO_OBJ_SET_FLAGS_TYPE(oop,v)     MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_TYPE_SHIFT,    MOO_OBJ_FLAGS_TYPE_BITS,     v)
@@ -392,6 +403,7 @@ typedef enum moo_obj_type_t moo_obj_type_t;
 #define MOO_OBJ_SET_FLAGS_MOVED(oop,v)    MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_MOVED_SHIFT,   MOO_OBJ_FLAGS_MOVED_BITS,    v)
 #define MOO_OBJ_SET_FLAGS_NGC(oop,v)      MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_NGC_SHIFT,     MOO_OBJ_FLAGS_NGC_BITS,      v)
 #define MOO_OBJ_SET_FLAGS_RDONLY(oop,v)   MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_RDONLY_SHIFT,  MOO_OBJ_FLAGS_RDONLY_BITS,   v)
+#define MOO_OBJ_SET_FLAGS_GCFIN(oop,v)    MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_GCFIN_SHIFT,   MOO_OBJ_FLAGS_GCFIN_BITS,    v)
 #define MOO_OBJ_SET_FLAGS_TRAILER(oop,v)  MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_TRAILER_SHIFT, MOO_OBJ_FLAGS_TRAILER_BITS,  v)
 
 #define MOO_OBJ_GET_SIZE(oop) ((oop)->_size)
@@ -989,6 +1001,14 @@ struct moo_sbuf_t
 };
 typedef struct moo_sbuf_t moo_sbuf_t;
 
+typedef struct moo_collectable_t moo_collectable_t;
+struct moo_collectable_t
+{
+	moo_oop_t oop;
+	moo_collectable_t* prev;
+	moo_collectable_t* next;
+};
+
 /* special callback to be called for trailer */
 typedef void (*moo_trgc_t) (moo_t* moo, moo_oop_t obj);
 
@@ -1155,6 +1175,21 @@ struct moo_t
 	/* == END BIGINT CONVERSION == */
 
 	moo_sbuf_t sbuf[64];
+
+	struct
+	{
+		moo_collectable_t* first;
+		moo_collectable_t* last;
+	} collectable;
+
+	struct
+	{
+		moo_collectable_t* first;
+		moo_collectable_t* last;
+	} finalizable;
+
+	moo_uintmax_t inst_counter;
+	moo_ooi_t last_inst_pointer;
 
 #if defined(MOO_INCLUDE_COMPILER)
 	moo_compiler_t* c;

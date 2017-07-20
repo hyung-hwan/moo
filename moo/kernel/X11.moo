@@ -300,10 +300,13 @@ class X11.Widget(Object)
 
 	method onPaintEvent: paint_event
 	{
-System logNl: 'Widget...... onPaintEvent YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY.'.
 	}
 
-	method onButtonEvent: event
+	method onMouseButtonEvent: event
+	{
+	}
+
+	method onKeyEvent: event
 	{
 	}
 
@@ -337,20 +340,42 @@ class X11.Label(X11.Widget)
 	method onPaintEvent: paint_event
 	{
 		| gc |
-System logNl: 'LABEL GC...... onPaintEvent YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY.'.
 
 		gc := selfns.GC new: self.
 		[
-			gc foreground: self.fgcolor;
+			gc foreground: self.bgcolor;
 			   fontName: '-misc-fixed-medium-r-normal-ko-18-120-100-100-c-180-iso10646-1';
 			   apply.
+			gc fillRectangle (0, 0, self.width, self.height).
+
+			gc foreground: self.fgcolor; apply.
 			gc drawRectangle (0, 0, self.width - 1, self.height - 1).
-			##gc fillRectangle (0, 0, self.width, self.height).
-			##gc drawLine (0, y, CTRLWIDE, y).
-			##gc drawLine (0, y + CHIGH + 4, CTRLWIDE, Y+CHIGH+4).
 
 			gc drawString(10, 10, self.text).
 		] ensure: [ gc dispose ]
+	}
+}
+
+class X11.Button(X11.Label)
+{
+	method onMouseButtonEvent: llevent
+	{
+		| type x |
+		type := llevent type.
+		if (type == X11.LLEventType.BUTTON_PRESS)
+		{
+			x := self.fgcolor.
+			self.fgcolor := self.bgcolor.
+			self.bgcolor := x.
+			self onPaintEvent: llevent.
+		}
+		elsif (type == X11.LLEventType.BUTTON_RELEASE)
+		{
+			x := self.fgcolor.
+			self.fgcolor := self.bgcolor.
+			self.bgcolor := x.
+			self onPaintEvent: llevent.
+		}
 	}
 }
 
@@ -646,8 +671,9 @@ extend X11
 		widget onPaintEvent: llevent
 	}
 
-	method __handle_button_event: event on: widget
+	method __handle_button_event: llevent on: widget
 	{
+		widget onMouseButtonEvent: llevent
 	}
 
 	method __handle_destroy_notify: event on: widget
@@ -664,8 +690,9 @@ extend X11
 		widget close: event.
 	}
 
-	method __handle_key_event: event on: widget
+	method __handle_key_event: llevent on: widget
 	{
+		widget onKeyEvent: llevent
 	}
 
 	method __handle_shell_close: llevent on: widget
@@ -675,7 +702,18 @@ extend X11
 }
 
 
+class Fx(Object)
+{
+	method initialize
+	{
+		self addToBeFinalized.
+	}
 
+	method finalize
+	{
+		System logNl: 'Greate... FX instance finalized'.
+	}
+}
 
 class MyObject(Object)
 {
@@ -706,16 +744,23 @@ class MyObject(Object)
 		comp1 add: (X11.Label new text: '간다'; width: 100; height: 100).
 		comp1 add: (X11.Label new text: 'crayon'; x: 90; y: 90; width: 100; height: 100).
 	##	self.shell1 add: (X11.Label new text: 'xxxxxxxx'; width: 100; height: 100).
-		self.shell1 add: (X11.Label new text: 'crayon'; x: 90; y: 90; width: 100; height: 100).
+		self.shell1 add: (X11.Button new text: '크레용crayon'; x: 90; y: 90; width: 100; height: 100).
 
-		self.shell2 add: (X11.Label new text: 'crayon'; x: 90; y: 90; width: 100; height: 100).
-		self.shell3 add: (X11.Label new text: 'crayon'; x: 90; y: 90; width: 100; height: 100).
+		self.shell2 add: (X11.Button new text: 'crayon'; x: 90; y: 90; width: 100; height: 100).
+		self.shell3 add: (X11.Button new text: 'crayon'; x: 90; y: 90; width: 100; height: 100).
 		self.shell1 realize.
 		self.shell2 realize.
 		self.shell3 realize.
 
 		self.disp1 enterEventLoop. ## this is not a blocking call. it spawns another process.
 		self.disp2 enterEventLoop.
+
+
+
+		comp1 := Fx new.
+		Fx new.
+		Fx new.
+		Fx new.
 	}
 
 	method(#class) main
