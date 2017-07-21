@@ -314,7 +314,9 @@ typedef enum moo_obj_type_t moo_obj_type_t;
 enum moo_gcfin_t
 {
 	MOO_GCFIN_FINALIZABLE = (1 << 0),
-	MOO_GCFIN_FINALIZED   = (1 << 1)
+	MOO_GCFIN_FINALIZED   = (1 << 1),
+	MOO_GCFIN_RESERVED_0  = (1 << 2),
+	MOO_GCFIN_RESERVED_1  = (1 << 3)
 };
 typedef enum moo_gcfin_t moo_gcfin_t;
 
@@ -373,7 +375,7 @@ typedef enum moo_gcfin_t moo_gcfin_t;
 #define MOO_OBJ_FLAGS_MOVED_BITS    1
 #define MOO_OBJ_FLAGS_NGC_BITS      1
 #define MOO_OBJ_FLAGS_RDONLY_BITS   1
-#define MOO_OBJ_FLAGS_GCFIN_BITS    2
+#define MOO_OBJ_FLAGS_GCFIN_BITS    4
 #define MOO_OBJ_FLAGS_TRAILER_BITS  1
 
 #define MOO_OBJ_FLAGS_TYPE_SHIFT    (MOO_OBJ_FLAGS_UNIT_BITS    + MOO_OBJ_FLAGS_UNIT_SHIFT)
@@ -792,7 +794,7 @@ struct moo_semaphore_t
 	moo_oop_t io_mask; /* SmallInteger */
 };
 
-#define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 5
+#define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 4
 typedef struct moo_process_scheduler_t moo_process_scheduler_t;
 typedef struct moo_process_scheduler_t* moo_oop_process_scheduler_t;
 struct moo_process_scheduler_t
@@ -802,7 +804,7 @@ struct moo_process_scheduler_t
 	moo_oop_process_t active; /*  pointer to an active process in the runnable process list */
 	moo_oop_process_t runnable_head; /* runnable process list */
 	moo_oop_process_t runnable_tail; /* runnable process list */
-	moo_oop_t sempq; /* SemaphoreHeap */
+	/*moo_oop_t sempq;*/ /* SemaphoreHeap */
 };
 
 /**
@@ -1001,12 +1003,12 @@ struct moo_sbuf_t
 };
 typedef struct moo_sbuf_t moo_sbuf_t;
 
-typedef struct moo_collectable_t moo_collectable_t;
-struct moo_collectable_t
+typedef struct moo_finalizable_t moo_finalizable_t;
+struct moo_finalizable_t
 {
 	moo_oop_t oop;
-	moo_collectable_t* prev;
-	moo_collectable_t* next;
+	moo_finalizable_t* prev;
+	moo_finalizable_t* next;
 };
 
 /* special callback to be called for trailer */
@@ -1178,14 +1180,14 @@ struct moo_t
 
 	struct
 	{
-		moo_collectable_t* first;
-		moo_collectable_t* last;
+		moo_finalizable_t* first;
+		moo_finalizable_t* last;
 	} collectable;
 
 	struct
 	{
-		moo_collectable_t* first;
-		moo_collectable_t* last;
+		moo_finalizable_t* first;
+		moo_finalizable_t* last;
 	} finalizable;
 
 	moo_uintmax_t inst_counter;

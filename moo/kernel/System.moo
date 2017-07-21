@@ -32,23 +32,36 @@ class System(Apex)
 
 	method(#class) __gc_finalizer
 	{
-		| tmp |
+		| tmp gc |
 
+		gc := false.
 		while (true)
 		{
-## TODO: exit from this loop when there are no other processes running.
+## TODO: exit from this loop when there are no other processes running except this finalizer process
 			while ((tmp := self _popCollectable) notError)
 			{
 				## TODO: Do i have to protected this in an exception handler???
-				tmp finalize.
+				if (tmp respondsTo: #finalize) { tmp finalize }.
 			}.
 
-			System logNl: 'gc_waiting....'.
-			Processor sleepFor: 1. ## TODO: wait on semaphore instead..
+			(*
+			if (Processor tally == 1 and: [Processor active == thisProcess]) 
+			{
+				if (gc) { break }.
+
+				self collectGarbage.
+		'GC GC GC GC' dump.
+		Processor tally dump.
+				gc := true.
+			}.*)
+
+			##System logNl: 'gc_waiting....'.
+			##Processor sleepFor: 1. ## TODO: wait on semaphore instead..
 		}
 	}
 
 	method(#class,#primitive) _popCollectable.
+	method(#class,#primitive) collectGarbage.
 }
 
 pooldic System.Log

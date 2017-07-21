@@ -618,10 +618,11 @@ extend X11
 'CLOSING X11 EVENT LOOP' dump.
 
 				Processor unsignal: self.event_loop_sem.
+		## TODO: LOOK HERE FOR RACE CONDITION
 				self.event_loop_sem := nil.
-
+				self.event_loop_proc := nil.
+				
 				self dispose.
-
 			] fork.
 		}
 	}
@@ -630,6 +631,7 @@ extend X11
 	{
 		if (self.event_loop_sem notNil)
 		{
+		## TODO: handle race-condition with the part maked 'LOOK HERE FOR RACE CONDITION'
 			self.event_loop_proc terminate.
 			self.event_loop_proc := nil.
 			self.event_loop_sem := nil.
@@ -704,14 +706,19 @@ extend X11
 
 class Fx(Object)
 {
+	var(#class) X := 20.
+	var x.
+
 	method initialize
 	{
+		self.X := self.X + 1.
+		self.x := self.X.
 		self addToBeFinalized.
 	}
 
 	method finalize
 	{
-		System logNl: 'Greate... FX instance finalized'.
+		System logNl: ('Greate... FX instance finalized' & self.x asString).
 	}
 }
 
@@ -722,6 +729,7 @@ class MyObject(Object)
 	method main1
 	{
 		| comp1 |
+
 		self.disp1 := X11 new.
 		self.disp2 := X11 new.
 
@@ -755,11 +763,9 @@ class MyObject(Object)
 		self.disp1 enterEventLoop. ## this is not a blocking call. it spawns another process.
 		self.disp2 enterEventLoop.
 
-
-
 		comp1 := Fx new.
 		Fx new.
-		Fx new.
+		comp1 := Fx new.
 		Fx new.
 	}
 

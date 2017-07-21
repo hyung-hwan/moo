@@ -19,7 +19,7 @@ class(#pointer,#final,#limited) Process(Object)
 
 	method terminate
 	{
-##search from the top contextof the process down to intial_context and find ensure blocks and execute them.
+##search from the top context of the process down to intial_context and find ensure blocks and execute them.
 		## if a different process calls 'terminate' on a process,
 		## the ensureblock is not executed in the context of the
 		## process being terminated, but in the context of terminatig process.
@@ -42,8 +42,8 @@ class(#pointer,#final,#limited) Process(Object)
 		## the process must not be scheduled.
 		## ----------------------------------------------------------------------------------------------------------
 
-		##(Processor activeProcess ~~ self) ifTrue: [ self _suspend ].
-		(thisProcess ~~ self) ifTrue: [ self _suspend ].
+		##if (Processor activeProcess ~~ self) { self _suspend }.
+		if (thisProcess ~~ self) { self _suspend }.
 		self.current_context unwindTo: self.initial_context return: nil.
 		^self _terminate
 	}
@@ -68,7 +68,7 @@ class Semaphore(Object)
 	    fireTimeSec   :=   0,
 	    fireTimeNsec  :=   0,
 	    ioIndex       :=  -1,
-	    ioData        := nil,
+	    ioHandle      := nil,
 	    ioMask        :=   0.
 
 	method(#class) forMutualExclusion
@@ -128,6 +128,11 @@ class Semaphore(Object)
 	method youngerThan: aSemaphore
 	{
 		^self.fireTimeSec < (aSemaphore fireTime)
+	}
+
+	method notYoungerThan: aSemaphore
+	{
+		^self.fireTimeSec >= (aSemaphore fireTime)
 	}
 }
 
@@ -190,36 +195,30 @@ class SemaphoreHeap(Object)
 		self.arr at: anIndex put: aSemaphore.
 		aSemaphore heapIndex: anIndex.
 
-		^(aSemaphore youngerThan: item)
-			ifTrue: [ self siftUp: anIndex ]
-			ifFalse: [ self siftDown: anIndex ].
+		^if (aSemaphore youngerThan: item) { self siftUp: anIndex } else { self siftDown: anIndex }.
 	}
 
 	method deleteAt: anIndex
 	{
-		| item |
+		| item xitem |
 
 		item := self.arr at: anIndex.
 		item heapIndex: -1.
 
 		self.size := self.size - 1.
-		(anIndex == self.size) 
-			ifTrue: [
-				"the last item"
-				self.arr at: self.size put: nil.
-			]
-			ifFalse: [
-				| xitem |
-
-				xitem := self.arr at: self.size.
-				self.arr at: anIndex put: xitem.
-				xitem heapIndex: anIndex.
-				self.arr at: self.size put: nil.
-
-				(xitem youngerThan: item) 
-					ifTrue: [self siftUp: anIndex ]
-					ifFalse: [self siftDown: anIndex ]
-			]
+		if (anIndex == self.size) 
+		{
+			## the last item
+			self.arr at: self.size put: nil.
+		}
+		else
+		{
+			xitem := self.arr at: self.size.
+			self.arr at: anIndex put: xitem.
+			xitem heapIndex: anIndex.
+			self.arr at: self.size put: nil.
+			if (xitem youngerThan: item) { self siftUp: anIndex } else { self siftDown: anIndex }.
+		}
 	}
 
 	method parentIndex: anIndex
@@ -239,34 +238,31 @@ class SemaphoreHeap(Object)
 
 	method siftUp: anIndex
 	{
-		| pindex cindex par item stop |
+		| pindex cindex par item |
 
-		(anIndex <= 0) ifTrue: [ ^anIndex ].
+		if (anIndex <= 0) { ^anIndex }.
 
 		pindex := anIndex.
 		item := self.arr at: anIndex.
 
-		stop := false.
-		[ stop ] whileFalse: [
-
+		while (true)
+		{
 			cindex := pindex.
 
-			(cindex > 0)
-				ifTrue: [
-					pindex := self parentIndex: cindex.
-					par := self.arr at: pindex.
+			if (pindex <= 0) { break }.
 
-					(item youngerThan: par) 
-						ifTrue: [
-							## move the parent down
-							self.arr at: cindex put: par.
-							par heapIndex: cindex.
-						]
-						ifFalse: [ stop := true ].
-				]
-				ifFalse: [ stop := true ].
-		].
+			pindex := self parentIndex: cindex.
+			par := self.arr at: pindex.
 
+			if (item notYoungerThan: par)  { break }.
+
+			## item is younger than the parent. 
+			## move the parent down
+			self.arr at: cindex put: par.
+			par heapIndex: cindex.
+		}.
+
+		## place the item as high as it can
 		self.arr at: cindex put: item.
 		item heapIndex: cindex.
 
@@ -275,36 +271,29 @@ class SemaphoreHeap(Object)
 
 	method siftDown: anIndex
 	{
-		| base capa cindex item |
+		| base capa cindex item 
+		  left right younger xitem |
 
 		base := self.size quo: 2.
-		(anIndex >= base) ifTrue: [^anIndex].
+		if (anIndex >= base) { ^anIndex }.
 
 		cindex := anIndex.
 		item := self.arr at: cindex.
 
-		[ cindex < base ] whileTrue: [
-			| left right younger xitem |
-
+		while (cindex < base) 
+		{
 			left := self leftChildIndex: cindex.
 			right := self rightChildIndex: cindex.
 
-			((right < self.size) and: [(self.arr at: right) youngerThan: (self.arr at: left)])
-				ifTrue: [ younger := right ]
-				ifFalse: [ younger := left ].
+			younger := if ((right < self.size) and: [(self.arr at: right) youngerThan: (self.arr at: left)]) { right } else { left }.
 
 			xitem := self.arr at: younger.
-			(item youngerThan: xitem) 
-				ifTrue: [
-					"break the loop"
-					base := anIndex 
-				]
-				ifFalse: [
-					self.arr at: cindex put: xitem.
-					xitem heapIndex: cindex.
-					cindex := younger.
-				]
-		].
+			if (item youngerThan: xitem)  { break }.
+
+			self.arr at: cindex put: xitem.
+			xitem heapIndex: cindex.
+			cindex := younger.
+		}.
 
 		self.arr at: cindex put: item.
 		item heapIndex: cindex.
@@ -315,13 +304,8 @@ class SemaphoreHeap(Object)
 
 class(#final,#limited) ProcessScheduler(Object)
 {
-	var tally, active, runnable_head, runnable_tail, sem_heap.
-
-	method new
-	{
-		"instantiation is not allowed"
-		^nil. "TODO: raise an exception"
-	}
+	var(#get) tally, active.
+	var runnable_head, runnable_tail (*, sem_heap*).
 
 	method activeProcess
 	{
@@ -333,8 +317,8 @@ class(#final,#limited) ProcessScheduler(Object)
 		<primitive: #_processor_schedule>
 		self primitiveFailed.
 
-		"The primitive does something like the following in principle:
-		(self.tally = 0)
+		(* The primitive does something like the following in principle:
+		(self.tally == 0)
 			ifTrue: [
 				self.head := process.
 				self.tail := process.
@@ -346,16 +330,16 @@ class(#final,#limited) ProcessScheduler(Object)
 				self.head := process.
 				self.tally := self.tally + 1.
 			].
-		"
+		*)
 	}
 
-	"
+	(* -------------------
 	method yield
 	{
 		<primitive: #_processor_yield>
 		self primitiveFailed
 	}
-	"
+	----------------- *)
 
 	method signal: semaphore after: secs
 	{

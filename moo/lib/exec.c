@@ -171,6 +171,7 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 #if defined(MOO_DEBUG_VM_PROCESSOR)
 	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - made process %O of size %zu\n", proc, MOO_OBJ_GET_SIZE(proc));
 #endif
+
 	return proc;
 }
 
@@ -254,9 +255,9 @@ static MOO_INLINE int chain_into_processor (moo_t* moo, moo_oop_process_t proc)
 	MOO_ASSERT (moo, tally >= 0);
 	if (tally >= MOO_SMOOI_MAX)
 	{
-#if defined(MOO_DEBUG_VM_PROCESSOR)
-		MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_FATAL, "Processor - too many process\n");
-#endif
+	#if defined(MOO_DEBUG_VM_PROCESSOR)
+		MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_FATAL, "Processor - too many processes\n");
+	#endif
 		moo_seterrnum (moo, MOO_EPFULL);
 		return -1;
 	}
@@ -713,11 +714,13 @@ static void delete_from_sem_heap (moo_t* moo, moo_ooi_t index)
 {
 	moo_oop_semaphore_t sem, lastsem;
 
+	MOO_ASSERT (moo, index >= 0 && index < moo->sem_heap_count);
+
 	sem = moo->sem_heap[index];
 	sem->heap_index = MOO_SMOOI_TO_OOP(-1);
 
 	moo->sem_heap_count--;
-	if (moo->sem_heap_count > 0 && index != moo->sem_heap_count)
+	if (/*moo->sem_heap_count > 0 &&*/ index != moo->sem_heap_count)
 	{
 		/* move the last item to the deletion position */
 		lastsem = moo->sem_heap[moo->sem_heap_count];
@@ -808,6 +811,7 @@ static int delete_from_sem_io (moo_t* moo, moo_ooi_t index)
 	moo_oop_semaphore_t sem;
 	int x;
 
+	MOO_ASSERT (moo, index >= 0 && index < moo->sem_io_count);
 	sem = moo->sem_io[index];
 	MOO_ASSERT (moo, index == MOO_OOP_TO_SMOOI(sem->io_index));
 
@@ -824,7 +828,7 @@ static int delete_from_sem_io (moo_t* moo, moo_ooi_t index)
 	sem->io_index = MOO_SMOOI_TO_OOP(-1);
 
 	moo->sem_io_count--;
-	if (moo->sem_io_count > 0 && index != moo->sem_io_count)
+	if (/*moo->sem_io_count > 0 &&*/ index != moo->sem_io_count)
 	{
 		moo_oop_semaphore_t lastsem;
 
@@ -3071,11 +3075,18 @@ static moo_pfrc_t pf_system_log (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+static moo_pfrc_t pf_system_collect_garbage (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_gc (moo);
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
 static moo_pfrc_t pf_system_pop_collectable (moo_t* moo, moo_ooi_t nargs)
 {
 	if (moo->collectable.first)
 	{
-		moo_collectable_t* first;
+		moo_finalizable_t* first;
 
 		first = moo->collectable.first;
 
@@ -3086,11 +3097,8 @@ static moo_pfrc_t pf_system_pop_collectable (moo_t* moo, moo_ooi_t nargs)
 		MOO_STACK_SETRET (moo, nargs, first->oop);
 		MOO_OBJ_SET_FLAGS_GCFIN (first->oop, MOO_OBJ_GET_FLAGS_GCFIN(first->oop) | MOO_GCFIN_FINALIZED);
 
-MOO_DEBUG1 (moo, "POPPING FINALIZABLE...%O\n", first->oop);
 		MOO_DELETE_FROM_LIST (&moo->collectable, first);
-		moo_freemem (moo, first);
-
-MOO_DEBUG1 (moo, "POPPED FINALIZABLE...%p\n", moo->collectable.first);
+		moo_freemem (moo, first); /* TODO: move it to the free list instead... */
 	}
 	else
 	{
@@ -3982,6 +3990,7 @@ static pf_t pftab[] =
 	{ "System__putUint32",                     { pf_system_put_uint32,                    3, 3 } },
 	{ "System__putUint64",                     { pf_system_put_uint64,                    3, 3 } },
 
+	{ "System_collectGarbage",                 { pf_system_collect_garbage,               0, 0 } },
 	{ "System_log",                            { pf_system_log,                           2, MA } }
 };
 

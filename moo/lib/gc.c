@@ -551,6 +551,9 @@ static moo_uint8_t* scan_new_heap (moo_t* moo, moo_uint8_t* ptr)
 			moo_oop_oop_t xtmp;
 			moo_oow_t size;
 
+			/* TODO: is it better to use a flag bit in the header to
+			 *       determine that it is an instance of process?
+			 *       for example, if (MOO_OBJ_GET_FLAGS_PROC(oop))... */
 			if (moo->_process && MOO_OBJ_GET_CLASS(oop) == moo->_process)
 			{
 				/* the stack in a process object doesn't need to be 
@@ -620,7 +623,7 @@ void moo_gc (moo_t* moo)
 	 * move objects pointed to by the fields to the new heap.
 	 * finally perform some tricky symbol table clean-up.
 	 */
-	moo_uint8_t* ptr;
+	moo_uint8_t* scan_ptr;
 	moo_heap_t* tmp;
 	moo_oop_t old_nil;
 	moo_oow_t i;
@@ -642,6 +645,8 @@ void moo_gc (moo_t* moo)
 	MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO, 
 		"Starting GC curheap base %p ptr %p newheap base %p ptr %p\n",
 		moo->curheap->base, moo->curheap->ptr, moo->newheap->base, moo->newheap->ptr); 
+
+	scan_ptr = (moo_uint8_t*) MOO_ALIGN ((moo_uintptr_t)moo->newheap->base, MOO_SIZEOF(moo_oop_t));
 
 	/* TODO: allocate common objects like _nil and the root dictionary 
 	 *       in the permanant heap.  minimize moving around */
@@ -701,12 +706,11 @@ void moo_gc (moo_t* moo)
 	}
 
 	/* scan the new heap to move referenced objects */
-	ptr = (moo_uint8_t*) MOO_ALIGN ((moo_uintptr_t)moo->newheap->base, MOO_SIZEOF(moo_oop_t));
-	ptr = scan_new_heap (moo, ptr);
+	scan_ptr = scan_new_heap (moo, scan_ptr);
 
 /* FINALIZATION */
 	move_finalizable_objects (moo);
-	ptr = scan_new_heap (moo, ptr);
+	scan_ptr = scan_new_heap (moo, scan_ptr);
 /* END FINALIZATION */
 
 	/* traverse the symbol table for unreferenced symbols.
@@ -721,7 +725,7 @@ void moo_gc (moo_t* moo)
 	/* scan the new heap again from the end position of
 	 * the previous scan to move referenced objects by 
 	 * the symbol table. */
-	ptr = scan_new_heap (moo, ptr);
+	scan_ptr = scan_new_heap (moo, scan_ptr);
 
 	/* the contents of the current heap is not needed any more.
 	 * reset the upper bound to the base. don't forget to align the heap
@@ -822,11 +826,10 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 
 int moo_regfinalizable (moo_t* moo, moo_oop_t oop)
 {
-	moo_collectable_t* x;
+	moo_finalizable_t* x;
 
-MOO_DEBUG1 (moo, "ADDING FINALIZABLE... %O\n", oop);
-	if (!MOO_OOP_IS_POINTER(oop) || 
-         (MOO_OBJ_GET_FLAGS_GCFIN(oop) & (MOO_GCFIN_FINALIZABLE | MOO_GCFIN_FINALIZED)))
+
+	if (!MOO_OOP_IS_POINTER(oop) || (MOO_OBJ_GET_FLAGS_GCFIN(oop) & (MOO_GCFIN_FINALIZABLE | MOO_GCFIN_FINALIZED)))
 	{
 		moo_seterrnum (moo, MOO_EINVAL);
 		return -1;
@@ -840,17 +843,15 @@ MOO_DEBUG1 (moo, "ADDING FINALIZABLE... %O\n", oop);
 
 	MOO_APPEND_TO_LIST (&moo->finalizable, x);
 
-MOO_DEBUG1 (moo, "ADDED FINALIZABLE... %O\n", oop);
 	return 0;
 }
 
 
 int moo_deregfinalizable (moo_t* moo, moo_oop_t oop)
 {
-	moo_collectable_t* x;
+	moo_finalizable_t* x;
 
-	if (!MOO_OOP_IS_POINTER(oop) || 
-	    ((MOO_OBJ_GET_FLAGS_GCFIN(oop) & (MOO_GCFIN_FINALIZABLE | MOO_GCFIN_FINALIZED)) != MOO_GCFIN_FINALIZABLE))
+	if (!MOO_OOP_IS_POINTER(oop) || ((MOO_OBJ_GET_FLAGS_GCFIN(oop) & (MOO_GCFIN_FINALIZABLE | MOO_GCFIN_FINALIZED)) != MOO_GCFIN_FINALIZABLE))
 	{
 		moo_seterrnum (moo, MOO_EINVAL);
 		return -1;
@@ -861,7 +862,6 @@ int moo_deregfinalizable (moo_t* moo, moo_oop_t oop)
 	{
 		if (x->oop == oop)
 		{
-/* TODO: do i need to clear other flags like GC */
 			MOO_OBJ_SET_FLAGS_GCFIN(oop, (MOO_OBJ_GET_FLAGS_GCFIN(oop) & ~MOO_GCFIN_FINALIZABLE));
 			MOO_DELETE_FROM_LIST (&moo->finalizable, x);
 			return  0;
@@ -874,10 +874,11 @@ int moo_deregfinalizable (moo_t* moo, moo_oop_t oop)
 
 static void move_finalizable_objects (moo_t* moo)
 {
-	moo_collectable_t* x, * y;
+	moo_finalizable_t* x, * y;
 
 	for (x = moo->collectable.first; x; x = x->next)
 	{
+		MOO_ASSERT (moo, (MOO_OBJ_GET_FLAGS_GCFIN(x->oop) & (MOO_GCFIN_FINALIZABLE | MOO_GCFIN_FINALIZED)) == MOO_GCFIN_FINALIZABLE);
 		x->oop = moo_moveoop (moo, x->oop);
 	}
 
@@ -885,15 +886,20 @@ static void move_finalizable_objects (moo_t* moo)
 	{
 		y = x->next;
 
+		MOO_ASSERT (moo, (MOO_OBJ_GET_FLAGS_GCFIN(x->oop) & (MOO_GCFIN_FINALIZABLE | MOO_GCFIN_FINALIZED)) == MOO_GCFIN_FINALIZABLE);
+
 		if (!MOO_OBJ_GET_FLAGS_MOVED(x->oop))
 		{
-/* TODO: if already finalized, don't move, don't add to collectable 
-if (MOVE_OBJ_GET_FLAGS_FINALIZED(x->oop)) continue; 
-* */
-			x->oop = moo_moveoop (moo, x->oop);
+			/* the object has not been moved. it means this object is not reachable
+			 * from the root except this finalizable list. this object would be
+			 * garbage if not for finalizatin. it's almost collectable. but it
+			 * will survive this cycle for finalization.
+			 * 
+			 * if garbages consist of finalizable objects only, GC should fail miserably.
+			 * however this is quite unlikely because some key objects for VM execution 
+			 * like context objects doesn't require finalization. */
 
-			/* it's almost collectable. but don't collect it yet.
-			 * if garbages consist of finalizable objects only, GC should fail miserably */
+			x->oop = moo_moveoop (moo, x->oop);
 
 			/* remove it from the finalizable list */
 			MOO_DELETE_FROM_LIST (&moo->finalizable, x);
@@ -901,6 +907,7 @@ if (MOVE_OBJ_GET_FLAGS_FINALIZED(x->oop)) continue;
 			/* add it to the collectable list */
 			MOO_APPEND_TO_LIST (&moo->collectable, x);
 
+// TODO: singal semaphore..
 			//signal_semaphore (moo, moo->collectable_semaphore);
 		}
 		else
