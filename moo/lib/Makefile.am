@@ -58,7 +58,6 @@ libmoo_la_SOURCES = \
 	heap.c \
 	moo.c \
 	obj.c \
-	proc.c \
 	rbt.c \
 	sym.c \
 	utf8.c \

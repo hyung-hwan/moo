@@ -153,6 +153,7 @@ static MOO_INLINE void vm_muxwait (moo_t* moo, const moo_ntime_t* dur)
 static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 {
 	moo_oop_process_t proc;
+	
 
 	moo_pushtmp (moo, (moo_oop_t*)&c);
 	proc = (moo_oop_process_t)moo_instantiate (moo, moo->_process, MOO_NULL, moo->option.dfl_procstk_size);
@@ -160,6 +161,14 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 	if (!proc) return MOO_NULL;
 
 	proc->state = MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED);
+
+{
+	static moo_ooi_t pid = 1;
+/* TODO: chage this pid allocation scheme... */
+	proc->id = MOO_SMOOI_TO_OOP(pid);
+	pid++;
+}
+
 	proc->initial_context = c;
 	proc->current_context = c;
 	proc->sp = MOO_SMOOI_TO_OOP(-1);
@@ -213,7 +222,7 @@ static void switch_to_process (moo_t* moo, moo_oop_process_t proc, int new_state
 
 	/* the new process must be in the runnable state */
 	MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE) ||
-	             proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_WAITING));
+	                 proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_WAITING));
 
 	sleep_active_process (moo, new_state_for_old_active);
 	wake_new_process (moo, proc);
@@ -223,12 +232,12 @@ static void switch_to_process (moo_t* moo, moo_oop_process_t proc, int new_state
 
 static MOO_INLINE moo_oop_process_t find_next_runnable_process (moo_t* moo)
 {
-	moo_oop_process_t npr;
+	moo_oop_process_t nrp;
 
 	MOO_ASSERT (moo, moo->processor->active->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNING));
-	npr = moo->processor->active->next;
-	if ((moo_oop_t)npr == moo->_nil) npr = moo->processor->runnable_head;
-	return npr;
+	nrp = moo->processor->active->ps.next;
+	if ((moo_oop_t)nrp == moo->_nil) nrp = moo->processor->runnable.first;
+	return nrp;
 }
 
 static MOO_INLINE void switch_to_next_runnable_process (moo_t* moo)
@@ -243,17 +252,17 @@ static MOO_INLINE int chain_into_processor (moo_t* moo, moo_oop_process_t proc)
 {
 	/* the process is not scheduled at all. 
 	 * link it to the processor's process list. */
-	moo_ooi_t tally;
+	moo_ooi_t runnable_count;
 
-	MOO_ASSERT (moo, (moo_oop_t)proc->prev == moo->_nil);
-	MOO_ASSERT (moo, (moo_oop_t)proc->next == moo->_nil);
+	/*MOO_ASSERT (moo, (moo_oop_t)proc->ps.prev == moo->_nil);
+	MOO_ASSERT (moo, (moo_oop_t)proc->ps.next == moo->_nil);*/
 
 	MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED));
 
-	tally = MOO_OOP_TO_SMOOI(moo->processor->tally);
+	runnable_count = MOO_OOP_TO_SMOOI(moo->processor->runnable.count);
 
-	MOO_ASSERT (moo, tally >= 0);
-	if (tally >= MOO_SMOOI_MAX)
+	MOO_ASSERT (moo, runnable_count >= 0);
+	if (runnable_count >= MOO_SMOOI_MAX)
 	{
 	#if defined(MOO_DEBUG_VM_PROCESSOR)
 		MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_FATAL, "Processor - too many processes\n");
@@ -262,48 +271,64 @@ static MOO_INLINE int chain_into_processor (moo_t* moo, moo_oop_process_t proc)
 		return -1;
 	}
 
-	/* append to the runnable list */
-	if (tally > 0)
+	if ((moo_oop_t)proc->ps.next != moo->_nil || (moo_oop_t)proc->ps.prev != moo->_nil || proc == moo->processor->suspended.first)
 	{
-		proc->prev = moo->processor->runnable_tail;
-		moo->processor->runnable_tail->next = proc;
-	}
-	else
-	{
-		moo->processor->runnable_head = proc;
-	}
-	moo->processor->runnable_tail = proc;
+		moo_ooi_t suspended_count;
 
-	tally++;
-	moo->processor->tally = MOO_SMOOI_TO_OOP(tally);
+		suspended_count = MOO_OOP_TO_SMOOI(moo->processor->suspended.count);
+		MOO_DELETE_FROM_OOP_LIST (moo, &moo->processor->suspended, proc, ps);
+
+		suspended_count--;
+		moo->processor->suspended.count = MOO_SMOOI_TO_OOP(suspended_count);
+	}
+
+	/* append to the runnable list */
+	MOO_APPEND_TO_OOP_LIST (moo, &moo->processor->runnable, moo_oop_process_t, proc, ps);
+
+	runnable_count++;
+	moo->processor->runnable.count = MOO_SMOOI_TO_OOP(runnable_count);
 
 	return 0;
 }
 
 static MOO_INLINE void unchain_from_processor (moo_t* moo, moo_oop_process_t proc, int state)
 {
-	moo_ooi_t tally;
+	moo_ooi_t runnable_count;
 
 	/* the processor's process chain must be composed of running/runnable
 	 * processes only */
 	MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNING) ||
-	             proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
+	                 proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
 
-	tally = MOO_OOP_TO_SMOOI(moo->processor->tally);
-	MOO_ASSERT (moo, tally > 0);
+	runnable_count = MOO_OOP_TO_SMOOI(moo->processor->runnable.count);
+	MOO_ASSERT (moo, runnable_count > 0);
 
-	if ((moo_oop_t)proc->prev != moo->_nil) proc->prev->next = proc->next;
-	else moo->processor->runnable_head = proc->next;
-	if ((moo_oop_t)proc->next != moo->_nil) proc->next->prev = proc->prev;
-	else moo->processor->runnable_tail = proc->prev;
+	MOO_DELETE_FROM_OOP_LIST (moo, &moo->processor->runnable, proc, ps);
 
-	proc->prev = (moo_oop_process_t)moo->_nil;
-	proc->next = (moo_oop_process_t)moo->_nil;
+	if (state != PROC_STATE_TERMINATED)
+	{
+		moo_ooi_t suspended_count;
+
+		suspended_count = MOO_OOP_TO_SMOOI(moo->processor->suspended.count);
+
+		/* append to the suspended list */
+		MOO_APPEND_TO_OOP_LIST (moo, &moo->processor->suspended, moo_oop_process_t, proc, ps);
+
+
+		suspended_count++;
+		moo->processor->suspended.count= MOO_SMOOI_TO_OOP(suspended_count);
+	}
+	else
+	{
+		proc->ps.prev = (moo_oop_process_t)moo->_nil;
+		proc->ps.next = (moo_oop_process_t)moo->_nil;
+	}
+
 	proc->state = MOO_SMOOI_TO_OOP(state);
 
-	tally--;
-	if (tally == 0) moo->processor->active = moo->nil_process;
-	moo->processor->tally = MOO_SMOOI_TO_OOP(tally);
+	runnable_count--;
+	if (runnable_count == 0) moo->processor->active = moo->nil_process;
+	moo->processor->runnable.count = MOO_SMOOI_TO_OOP(runnable_count);
 }
 
 static MOO_INLINE void chain_into_semaphore (moo_t* moo, moo_oop_process_t proc, moo_oop_semaphore_t sem)
@@ -311,20 +336,10 @@ static MOO_INLINE void chain_into_semaphore (moo_t* moo, moo_oop_process_t proc,
 	/* append a process to the process list of a semaphore*/
 
 	MOO_ASSERT (moo, (moo_oop_t)proc->sem == moo->_nil);
-	MOO_ASSERT (moo, (moo_oop_t)proc->prev == moo->_nil);
-	MOO_ASSERT (moo, (moo_oop_t)proc->next == moo->_nil);
+	MOO_ASSERT (moo, (moo_oop_t)proc->sem_wait.prev == moo->_nil);
+	MOO_ASSERT (moo, (moo_oop_t)proc->sem_wait.next == moo->_nil);
 
-	if ((moo_oop_t)sem->waiting_head == moo->_nil)
-	{
-		MOO_ASSERT (moo, (moo_oop_t)sem->waiting_tail == moo->_nil);
-		sem->waiting_head = proc;
-	}
-	else
-	{
-		proc->prev = sem->waiting_tail;
-		sem->waiting_tail->next = proc;
-	}
-	sem->waiting_tail = proc;
+	MOO_APPEND_TO_OOP_LIST (moo, &sem->waiting, moo_oop_process_t, proc, sem_wait);
 
 	proc->sem = sem;
 }
@@ -336,14 +351,10 @@ static MOO_INLINE void unchain_from_semaphore (moo_t* moo, moo_oop_process_t pro
 	MOO_ASSERT (moo, (moo_oop_t)proc->sem != moo->_nil);
 
 	sem = proc->sem;
-	if ((moo_oop_t)proc->prev != moo->_nil) proc->prev->next = proc->next;
-	else sem->waiting_head = proc->next;
-	if ((moo_oop_t)proc->next != moo->_nil) proc->next->prev = proc->prev;
-	else sem->waiting_tail = proc->prev;
+	MOO_DELETE_FROM_OOP_LIST (moo, &sem->waiting, proc, sem_wait);
 
-	proc->prev = (moo_oop_process_t)moo->_nil;
-	proc->next = (moo_oop_process_t)moo->_nil;
-
+	proc->sem_wait.prev = (moo_oop_process_t)moo->_nil;
+	proc->sem_wait.next = (moo_oop_process_t)moo->_nil;
 	proc->sem = (moo_oop_semaphore_t)moo->_nil;
 }
 
@@ -415,9 +426,9 @@ static void resume_process (moo_t* moo, moo_oop_process_t proc)
 {
 	if (proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED))
 	{
-		/* SUSPENED ---> RUNNING */
-		MOO_ASSERT (moo, (moo_oop_t)proc->prev == moo->_nil);
-		MOO_ASSERT (moo, (moo_oop_t)proc->next == moo->_nil);
+		/* SUSPENDED ---> RUNNING */
+		/*MOO_ASSERT (moo, (moo_oop_t)proc->ps.prev == moo->_nil);
+		MOO_ASSERT (moo, (moo_oop_t)proc->ps.next == moo->_nil);*/
 
 	#if defined(MOO_DEBUG_VM_PROCESSOR)
 		MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process %O SUSPENDED->RUNNING\n", proc);
@@ -479,7 +490,7 @@ static void suspend_process (moo_t* moo, moo_oop_process_t proc)
 				 * running/runnable process. so calling switch_to_process()
 				 * which expects the active process to be valid is safe */
 				MOO_ASSERT (moo, moo->processor->active != moo->nil_process);
-				switch_to_process (moo, nrp, PROC_STATE_SUSPENDED);
+				switch_to_process (moo, nrp, PROC_STATE_SUSPENDED); 
 			}
 		}
 		else
@@ -543,7 +554,7 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	moo_oop_process_t proc;
 	moo_ooi_t count;
 
-	if ((moo_oop_t)sem->waiting_head == moo->_nil)
+	if ((moo_oop_t)sem->waiting.first == moo->_nil)
 	{
 		/* no process is waiting on this semaphore */
 		count = MOO_OOP_TO_SMOOI(sem->count);
@@ -555,7 +566,7 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	}
 	else
 	{
-		proc = sem->waiting_head;
+		proc = sem->waiting.first;
 
 		/* [NOTE] no GC must occur as 'proc' isn't protected with moo_pushtmp(). */
 
@@ -594,7 +605,7 @@ static void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 		/* link the suspended process to the semaphore's process list */
 		chain_into_semaphore (moo, proc, sem); 
 
-		MOO_ASSERT (moo, sem->waiting_tail == proc);
+		MOO_ASSERT (moo, sem->waiting.last == proc);
 
 		if (MOO_OOP_TO_SMOOI(sem->io_index) >= 0) moo->sem_io_wait_count++;
 
@@ -797,7 +808,6 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 		moo->sem_io_count--;
 	}
 
-MOO_DEBUG3 (moo, "ADDED TO SEM IO => sem_io_count %d handle %d index %d\n", (int)moo->sem_io_count, (int)MOO_OOP_TO_SMOOI(sem->io_handle), (int)MOO_OOP_TO_SMOOI(sem->io_index));
 	return n;
 }
 
@@ -887,7 +897,7 @@ static void signal_io_semaphore (moo_t* moo, moo_ooi_t mask, void* ctx)
 			 * switch_to_process() as there is no running 
 			 * process at this moment */
 			MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
-			MOO_ASSERT (moo, proc == moo->processor->runnable_head);
+			MOO_ASSERT (moo, proc == moo->processor->runnable.first);
 
 			wake_new_process (moo, proc); /* switch to running */
 			moo->proc_switched = 1;
@@ -906,7 +916,7 @@ static moo_oop_process_t start_initial_process (moo_t* moo, moo_oop_context_t c)
 	moo_oop_process_t proc;
 
 	/* there must be no active process when this function is called */
-	MOO_ASSERT (moo, moo->processor->tally == MOO_SMOOI_TO_OOP(0));
+	MOO_ASSERT (moo, moo->processor->runnable.count == MOO_SMOOI_TO_OOP(0));
 	MOO_ASSERT (moo, moo->processor->active == moo->nil_process);
 
 	proc = make_process (moo, c);
@@ -1253,7 +1263,7 @@ TODO: overcome this problem - accept parameters....
 	 * is not NULL. at this poinst, moo->processor should point to
 	 * an instance of ProcessScheduler. */
 	MOO_ASSERT (moo, (moo_oop_t)moo->processor != moo->_nil);
-	MOO_ASSERT (moo, moo->processor->tally == MOO_SMOOI_TO_OOP(0));
+	MOO_ASSERT (moo, moo->processor->runnable.count == MOO_SMOOI_TO_OOP(0));
 
 	/* start_initial_process() calls the SWITCH_ACTIVE_CONTEXT() macro.
 	 * the macro assumes a non-null value in moo->active_context.
@@ -2075,13 +2085,7 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_ooi_t nargs)
 	moo_oop_process_t proc;
 	moo_ooi_t num_first_arg_elems = 0;
 
-	if (nargs > 1)
-	{
-		/* too many arguments */
-/* TODO: proper error handling */
-		moo_seterrnum (moo, MOO_EINVAL);
-		return MOO_PF_FAILURE;
-	}
+	MOO_ASSERT (moo, nargs <= 1);
 
 	if (nargs == 1)
 	{
@@ -2121,7 +2125,7 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_ooi_t nargs)
 	blkctx->sender = (moo_oop_context_t)moo->_nil;
 
 	proc = make_process (moo, blkctx);
-	if (!proc) return MOO_PF_HARD_FAILURE; /* hard failure */ /* TOOD: can't this be treated as a soft failure? */
+	if (!proc) return MOO_PF_HARD_FAILURE; /* hard failure */ /* TOOD: can't this be treated as a soft failure? throw an exception instead?? */
 
 	/* __block_value() has popped all arguments and the receiver. 
 	 * PUSH the return value instead of changing the stack top */
@@ -2198,24 +2202,6 @@ static moo_pfrc_t pf_process_suspend (moo_t* moo, moo_ooi_t nargs)
 	suspend_process (moo, (moo_oop_process_t)rcv);
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_process_primerr_msg (moo_t* moo, moo_ooi_t nargs)
-{
-	moo_oop_t rcv, msg;
-
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo,rcv) != moo->_process) 
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_FAILURE;
-	}
-
-	msg = moo_makestring (moo, (moo_ooch_t*)MOO_OBJ_GET_TRAILER_BYTE(rcv), moo_countoocstr((moo_ooch_t*)MOO_OBJ_GET_TRAILER_BYTE(rcv)));
-	if (!msg) return MOO_PF_FAILURE;
-
-	MOO_STACK_SETRET (moo, nargs, msg);
 	return MOO_PF_SUCCESS;
 }
 
@@ -4477,7 +4463,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 					 * switch_to_process() as there is no running 
 					 * process at this moment */
 					MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
-					MOO_ASSERT (moo, proc == moo->processor->runnable_head);
+					MOO_ASSERT (moo, proc == moo->processor->runnable.first);
 
 					wake_new_process (moo, proc); /* switch to running */
 					moo->proc_switched = 1;
@@ -4541,7 +4527,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 	if (moo->processor->active == moo->nil_process) 
 	{
 		/* no more waiting semaphore and no more process */
-		MOO_ASSERT (moo, moo->processor->tally = MOO_SMOOI_TO_OOP(0));
+		MOO_ASSERT (moo, moo->processor->runnable.count = MOO_SMOOI_TO_OOP(0));
 		MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "No more runnable process\n");
 		return 0;
 	}

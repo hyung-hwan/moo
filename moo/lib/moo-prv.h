@@ -66,7 +66,7 @@
 #define MOO_LIMIT_OBJ_SIZE
 
 
-/* TODO: delete these header inclusion lines */
+/* TODO: delete these header inclusion lines after having revised MOO_MEMXXX macros. */
 #include <string.h>
 
 #if defined(__has_builtin)

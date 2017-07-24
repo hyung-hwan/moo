@@ -1,13 +1,9 @@
 
 class(#pointer,#final,#limited) Process(Object)
 {
-	var initial_context, current_context, state, sp, prev, next, sem, perr, perrmsg.
-
-	method prev { ^self.prev }
-	method next { ^self.next }
-
-	method next: process { self.next := process }
-	method prev: process { self.prev := process }
+	var(#get) initialContext, currentContext, id, state.
+	var(#get) sp, ps_prev, ps_next, sem_wait_prev, sem_wait_next.
+	var sem, perr, perrmsg.
 
 	method primError { ^self.perr }
 	method primErrorMessage { ^self.perrmsg }
@@ -19,7 +15,7 @@ class(#pointer,#final,#limited) Process(Object)
 
 	method terminate
 	{
-##search from the top context of the process down to intial_context and find ensure blocks and execute them.
+		## search from the top context of the process down to intial_context and find ensure blocks and execute them.
 		## if a different process calls 'terminate' on a process,
 		## the ensureblock is not executed in the context of the
 		## process being terminated, but in the context of terminatig process.
@@ -44,18 +40,8 @@ class(#pointer,#final,#limited) Process(Object)
 
 		##if (Processor activeProcess ~~ self) { self _suspend }.
 		if (thisProcess ~~ self) { self _suspend }.
-		self.current_context unwindTo: self.initial_context return: nil.
+		self.currentContext unwindTo: self.initialContext return: nil.
 		^self _terminate
-	}
-
-	method sp
-	{
-		^self.sp.
-	}
-
-	method initialContext
-	{
-		^self.initial_context
 	}
 }
 
@@ -304,8 +290,11 @@ class SemaphoreHeap(Object)
 
 class(#final,#limited) ProcessScheduler(Object)
 {
-	var(#get) tally, active.
-	var runnable_head, runnable_tail (*, sem_heap*).
+	var(#get) active.
+	var(#get) runnable_count.
+	var runnable_head, runnable_tail.
+	var(#get) suspended_count.
+	var suspended_head, suspended_tail.
 
 	method activeProcess
 	{
@@ -325,8 +314,8 @@ class(#final,#limited) ProcessScheduler(Object)
 				self.tally := 1.
 			]
 			ifFalse: [
-				process next: self.head.
-				self.head prev: process.
+				process ps_next: self.head.
+				self.head ps_prev: process.
 				self.head := process.
 				self.tally := self.tally + 1.
 			].

@@ -744,7 +744,7 @@ struct moo_context_t
 };
 
 
-#define MOO_PROCESS_NAMED_INSTVARS 9
+#define MOO_PROCESS_NAMED_INSTVARS 12
 typedef struct moo_process_t moo_process_t;
 typedef struct moo_process_t* moo_oop_process_t;
 
@@ -758,11 +758,21 @@ struct moo_process_t
 	moo_oop_context_t   initial_context;
 	moo_oop_context_t   current_context;
 
+	moo_oop_t           id;    /* SmallInteger */
 	moo_oop_t           state; /* SmallInteger */
 	moo_oop_t           sp;    /* stack pointer. SmallInteger */
 
-	moo_oop_process_t   prev;
-	moo_oop_process_t   next;
+	struct
+	{
+		moo_oop_process_t   prev;
+		moo_oop_process_t   next;
+	} ps; /* links to use with the process scheduler */
+
+	struct
+	{
+		moo_oop_process_t   prev;
+		moo_oop_process_t   next;
+	} sem_wait; /* links to use with a semaphore */
 
 	moo_oop_semaphore_t sem;
 	moo_oop_t           perr; /* last error set by a primitive function */
@@ -782,8 +792,12 @@ struct moo_semaphore_t
 	MOO_OBJ_HEADER;
 
 	moo_oop_t count; /* SmallInteger */
-	moo_oop_process_t waiting_head;
-	moo_oop_process_t waiting_tail;
+
+	struct
+	{
+		moo_oop_process_t first;
+		moo_oop_process_t last;
+	} waiting; /* list of processes waiting on this semaphore */
 
 	moo_oop_t heap_index; /* index to the heap */
 	moo_oop_t heap_ftime_sec; /* firing time */
@@ -794,17 +808,27 @@ struct moo_semaphore_t
 	moo_oop_t io_mask; /* SmallInteger */
 };
 
-#define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 4
+#define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 7
 typedef struct moo_process_scheduler_t moo_process_scheduler_t;
 typedef struct moo_process_scheduler_t* moo_oop_process_scheduler_t;
 struct moo_process_scheduler_t
 {
 	MOO_OBJ_HEADER;
-	moo_oop_t tally; /* SmallInteger, the number of runnable processes */
 	moo_oop_process_t active; /*  pointer to an active process in the runnable process list */
-	moo_oop_process_t runnable_head; /* runnable process list */
-	moo_oop_process_t runnable_tail; /* runnable process list */
-	/*moo_oop_t sempq;*/ /* SemaphoreHeap */
+
+	struct
+	{
+		moo_oop_t count; /* SmallInteger, the number of runnable/running processes */
+		moo_oop_process_t first;
+		moo_oop_process_t last;
+	} runnable; /* runnable process list */
+
+	struct
+	{
+		moo_oop_t count; /* SmallInteger */
+		moo_oop_process_t first;
+		moo_oop_process_t last;
+	} suspended;
 };
 
 /**

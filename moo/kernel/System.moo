@@ -37,26 +37,33 @@ class System(Apex)
 		gc := false.
 		while (true)
 		{
-## TODO: exit from this loop when there are no other processes running except this finalizer process
+
 			while ((tmp := self _popCollectable) notError)
 			{
 				## TODO: Do i have to protected this in an exception handler???
 				if (tmp respondsTo: #finalize) { tmp finalize }.
 			}.
 
-			(*
-			if (Processor tally == 1 and: [Processor active == thisProcess]) 
+			##if (Processor runnable_count == 1 and: [Processor active == thisProcess]) 
+			if (Processor runnable_count == 1 and: [Processor suspended_count == 0])  ## TODO: does it suffer from race condition?
 			{
-				if (gc) { break }.
+				## exit from this loop when there are no other processes running except this finalizer process
+				if (gc) 
+				{ 
+					System logNl: 'Exiting the GC finalization process...'.
+					break 
+				}.
 
 				self collectGarbage.
-		'GC GC GC GC' dump.
-		Processor tally dump.
 				gc := true.
-			}.*)
+			}
+			else
+			{
+				gc := false.
+			}.
 
 			##System logNl: 'gc_waiting....'.
-			##Processor sleepFor: 1. ## TODO: wait on semaphore instead..
+			Processor sleepFor: 1. ## TODO: wait on semaphore instead..
 		}
 	}
 

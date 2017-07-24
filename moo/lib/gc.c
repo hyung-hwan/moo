@@ -290,8 +290,9 @@ static int ignite_2 (moo_t* moo)
 	tmp = (moo_oop_t)moo_instantiate (moo, moo->_process_scheduler, MOO_NULL, 0);
 	if (!tmp) return -1;
 	moo->processor = (moo_oop_process_scheduler_t)tmp;
-	moo->processor->tally = MOO_SMOOI_TO_OOP(0);
 	moo->processor->active = moo->nil_process;
+	moo->processor->runnable.count = MOO_SMOOI_TO_OOP(0);
+	moo->processor->suspended.count = MOO_SMOOI_TO_OOP(0);
 
 	return 0;
 }

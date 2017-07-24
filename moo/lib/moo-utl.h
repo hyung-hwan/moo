@@ -57,6 +57,41 @@
 } while(0)
 
 
+
+
+
+
+#define MOO_APPEND_TO_OOP_LIST(moo, list, node_type, node, _link) do { \
+	(node)->_link.next = (node_type)(moo)->_nil; \
+	(node)->_link.prev = (list)->last; \
+	if ((moo_oop_t)(list)->last != (moo)->_nil) (list)->last->_link.next = (node); \
+	else (list)->first = (node); \
+	(list)->last = (node); \
+} while(0)
+
+#define MOO_PREPPEND_TO_OOP_LIST(moo, list, node_type, node, _link) do { \
+	(node)->_link.prev = (node_type)(moo)->_nil; \
+	(node)->_link.next = (list)->first; \
+	if ((moo_oop_t)(list)->first != (moo)->_nil) (list)->first->_link.prev = (node); \
+	else (list)->last = (node); \
+	(list)->first = (node); \
+} while(0)
+
+#define MOO_DELETE_FROM_OOP_LIST(moo, list, node, _link) do { \
+	if ((moo_oop_t)(node)->_link.prev != (moo)->_nil) (node)->_link.prev->_link.next = (node)->_link.next; \
+	else (list)->first = (node)->_link.next; \
+	if ((moo_oop_t)(node)->_link.next != (moo)->_nil) (node)->_link.next->_link.prev = (node)->_link.prev; \
+	else (list)->last = (node)->_link.prev; \
+} while(0)
+
+/*
+#define MOO_CLEANUP_FROM_OOP_LIST(moo, list, node, _link) do { \
+	MOO_DELETE_FROM_OOP_LIST (moo, list, node, _link); \
+	(node)->link.prev = (node_type)(moo)->_nil; \
+	(node)->link.next = (node_type)(moo)->_nil; \
+} while(0);
+*/
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
