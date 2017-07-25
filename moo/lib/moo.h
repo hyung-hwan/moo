@@ -808,13 +808,14 @@ struct moo_semaphore_t
 	moo_oop_t io_mask; /* SmallInteger */
 };
 
-#define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 7
+#define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 8
 typedef struct moo_process_scheduler_t moo_process_scheduler_t;
 typedef struct moo_process_scheduler_t* moo_oop_process_scheduler_t;
 struct moo_process_scheduler_t
 {
 	MOO_OBJ_HEADER;
 	moo_oop_process_t active; /*  pointer to an active process in the runnable process list */
+	moo_oop_t total_count; /* SmallIntger, total number of processes - runnable/running/suspended */
 
 	struct
 	{
@@ -825,7 +826,7 @@ struct moo_process_scheduler_t
 
 	struct
 	{
-		moo_oop_t count; /* SmallInteger */
+		moo_oop_t count; /* SmallInteger - suspended*/
 		moo_oop_process_t first;
 		moo_oop_process_t last;
 	} suspended;
@@ -1170,6 +1171,11 @@ struct moo_t
 	moo_oow_t sem_io_count;
 	moo_oow_t sem_io_capa;
 	moo_oow_t sem_io_wait_count;
+
+	/* semaphore to notify finalizable objects */
+	moo_oop_semaphore_t sem_gcfin;
+	int sem_gcfin_sigreq;
+	moo_oow_t sem_gcfin_count;
 
 	moo_oop_t* tmp_stack[256]; /* stack for temporaries */
 	moo_oow_t tmp_count;

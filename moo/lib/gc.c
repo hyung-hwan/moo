@@ -291,6 +291,7 @@ static int ignite_2 (moo_t* moo)
 	if (!tmp) return -1;
 	moo->processor = (moo_oop_process_scheduler_t)tmp;
 	moo->processor->active = moo->nil_process;
+	moo->processor->total_count = MOO_SMOOI_TO_OOP(0);
 	moo->processor->runnable.count = MOO_SMOOI_TO_OOP(0);
 	moo->processor->suspended.count = MOO_SMOOI_TO_OOP(0);
 
@@ -687,6 +688,8 @@ void moo_gc (moo_t* moo)
 		moo->sem_io[i] = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_io[i]);
 	}
 
+	moo->sem_gcfin = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_gcfin);
+
 	for (i = 0; i < moo->tmp_count; i++)
 	{
 		*moo->tmp_stack[i] = moo_moveoop (moo, *moo->tmp_stack[i]);
@@ -757,6 +760,8 @@ void moo_gc (moo_t* moo)
 */
 
 	if (moo->active_method) SET_ACTIVE_METHOD_CODE (moo); /* update moo->active_code */
+	/*if (moo->sem_gcfin_count > 0) signal_semaphore (moo, moo->sem_gcfin);*/
+	if (moo->sem_gcfin_count > 0) moo->sem_gcfin_sigreq = 1;
 
 	/* TODO: include some gc statstics like number of live objects, gc performance, etc */
 	MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO, 
@@ -877,6 +882,7 @@ static void move_finalizable_objects (moo_t* moo)
 {
 	moo_finalizable_t* x, * y;
 
+	moo->sem_gcfin_count = 0;
 	for (x = moo->collectable.first; x; x = x->next)
 	{
 		MOO_ASSERT (moo, (MOO_OBJ_GET_FLAGS_GCFIN(x->oop) & (MOO_GCFIN_FINALIZABLE | MOO_GCFIN_FINALIZED)) == MOO_GCFIN_FINALIZABLE);
@@ -908,8 +914,7 @@ static void move_finalizable_objects (moo_t* moo)
 			/* add it to the collectable list */
 			MOO_APPEND_TO_LIST (&moo->collectable, x);
 
-// TODO: singal semaphore..
-			//signal_semaphore (moo, moo->collectable_semaphore);
+			moo->sem_gcfin_count++;
 		}
 		else
 		{

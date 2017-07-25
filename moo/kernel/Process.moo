@@ -290,10 +290,10 @@ class SemaphoreHeap(Object)
 
 class(#final,#limited) ProcessScheduler(Object)
 {
-	var(#get) active.
-	var(#get) runnable_count.
+	var(#get) active, total_count := 0.
+	var(#get) runnable_count := 0.
 	var runnable_head, runnable_tail.
-	var(#get) suspended_count.
+	var(#get) suspended_count := 0.
 	var suspended_head, suspended_tail.
 
 	method activeProcess
@@ -348,6 +348,12 @@ class(#final,#limited) ProcessScheduler(Object)
 		self primitiveFailed.
 	}
 
+	method signalOnGCFin: semaphore
+	{
+		<primitive: #_processor_add_gcfin_semaphore>
+		self primitiveFailed.
+	}
+	
 	method signal: semaphore onInput: file
 	{
 		<primitive: #_processor_add_input_semaphore>

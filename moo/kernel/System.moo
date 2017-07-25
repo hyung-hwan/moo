@@ -32,39 +32,48 @@ class System(Apex)
 
 	method(#class) __gc_finalizer
 	{
-		| tmp gc |
+		| tmp gc fin_sem |
 
 		gc := false.
-		while (true)
-		{
-
-			while ((tmp := self _popCollectable) notError)
+		fin_sem := Semaphore new.
+		
+		Processor signalOnGCFin: fin_sem.
+		[
+			while (true)
 			{
-				## TODO: Do i have to protected this in an exception handler???
-				if (tmp respondsTo: #finalize) { tmp finalize }.
-			}.
-
-			##if (Processor runnable_count == 1 and: [Processor active == thisProcess]) 
-			if (Processor runnable_count == 1 and: [Processor suspended_count == 0])  ## TODO: does it suffer from race condition?
-			{
-				## exit from this loop when there are no other processes running except this finalizer process
-				if (gc) 
-				{ 
-					System logNl: 'Exiting the GC finalization process...'.
-					break 
+				while ((tmp := self _popCollectable) notError)
+				{
+					## TODO: Do i have to protected this in an exception handler???
+					if (tmp respondsTo: #finalize) { tmp finalize }.
 				}.
 
-				self collectGarbage.
-				gc := true.
-			}
-			else
-			{
-				gc := false.
-			}.
+				if (Processor total_count == 1)
+				{
+					## exit from this loop when there are no other processes running except this finalizer process
+					if (gc) 
+					{ 
+						System logNl: 'Exiting the GC finalization process'.
+						break 
+					}.
 
-			##System logNl: 'gc_waiting....'.
-			Processor sleepFor: 1. ## TODO: wait on semaphore instead..
-		}
+					System logNl: 'Forcing garbage collection before termination in ' & (thisProcess id) asString.
+					self collectGarbage.
+					gc := true.
+				}
+				else
+				{
+					gc := false.
+				}.
+
+				##System logNl: '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^gc_waiting....'.
+				##Processor sleepFor: 1. ## TODO: wait on semaphore instead..
+				fin_sem wait.
+				##System logNl: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX gc_waitED....'.
+			}
+		] ensure: [
+			Processor unsignal: fin_sem.
+			System logNl: 'End of GC finalization process'.
+		].
 	}
 
 	method(#class,#primitive) _popCollectable.
