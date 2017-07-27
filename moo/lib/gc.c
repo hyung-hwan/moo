@@ -691,11 +691,17 @@ void moo_gc (moo_t* moo)
 
 	moo->sem_gcfin = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_gcfin);
 
+	for (i = 0; i < moo->proc_map_capa; i++)
+	{
+		moo->proc_map[i] = moo_moveoop (moo, moo->proc_map[i]);
+	}
+
 	for (i = 0; i < moo->tmp_count; i++)
 	{
 		*moo->tmp_stack[i] = moo_moveoop (moo, *moo->tmp_stack[i]);
 	}
 
+	
 	if (moo->initial_context)
 		moo->initial_context = (moo_oop_context_t)moo_moveoop (moo, (moo_oop_t)moo->initial_context);
 	if (moo->active_context)

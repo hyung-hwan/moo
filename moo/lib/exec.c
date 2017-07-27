@@ -32,6 +32,9 @@
 #define PROC_STATE_SUSPENDED 0
 #define PROC_STATE_TERMINATED -1
 
+
+#define PROC_MAP_INC 256
+
 /* TODO: adjust these max semaphore pointer buffer capacity,
  *       proably depending on the object memory size? */
 #define SEM_LIST_INC 256
@@ -155,6 +158,7 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 	moo_oop_process_t proc;
 	moo_ooi_t total_count;
 	moo_ooi_t suspended_count;
+	moo_ooi_t proc_map_free;
 
 	total_count = MOO_OOP_TO_SMOOI(moo->processor->total_count);
 	if (total_count >= MOO_SMOOI_MAX)
@@ -166,6 +170,41 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 		return MOO_NULL;
 	}
 
+	if (moo->proc_map_free <= -1)
+	{
+		moo_oow_t new_capa;
+		moo_ooi_t i, j;
+		moo_oop_t* tmp;
+
+		new_capa = moo->proc_map_capa + PROC_MAP_INC;
+		if (new_capa > MOO_SMOOI_MAX)
+		{
+			if (moo->proc_map_capa >= MOO_SMOOI_MAX)
+			{
+			#if defined(MOO_DEBUG_VM_PROCESSOR)
+				MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_FATAL, "Processor - too many processes\n");
+			#endif
+				moo_seterrnum (moo, MOO_EPFULL);
+				return MOO_NULL;
+			}
+
+			new_capa = MOO_SMOOI_MAX;
+		}
+
+		tmp = moo_reallocmem (moo, moo->proc_map, MOO_SIZEOF(moo_oop_t) * new_capa);
+		if (!tmp) return MOO_NULL;
+
+		moo->proc_map_free = moo->proc_map_capa;
+		for (i = moo->proc_map_capa, j = moo->proc_map_capa + 1; j < new_capa; i++, j++)
+		{
+			tmp[i] = MOO_SMOOI_TO_OOP(j);
+		}
+		tmp[i] = MOO_SMOOI_TO_OOP(-1);
+
+		moo->proc_map = tmp;
+		moo->proc_map_capa = new_capa;
+	}
+
 	moo_pushtmp (moo, (moo_oop_t*)&c);
 	proc = (moo_oop_process_t)moo_instantiate (moo, moo->_process, MOO_NULL, moo->option.dfl_procstk_size);
 	moo_poptmp (moo);
@@ -173,12 +212,12 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 
 	proc->state = MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED);
 
-{
-	static moo_ooi_t pid = 1;
-/* TODO: chage this pid allocation scheme... */
-	proc->id = MOO_SMOOI_TO_OOP(pid);
-	pid++;
-}
+	/* assign a process id to the process */
+	proc_map_free = moo->proc_map_free;
+	proc->id = MOO_SMOOI_TO_OOP(proc_map_free);
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->proc_map[proc_map_free]));
+	moo->proc_map_free = MOO_OOP_TO_SMOOI(moo->proc_map[proc_map_free]);
+	moo->proc_map[proc_map_free] = (moo_oop_t)proc;
 
 	proc->initial_context = c;
 	proc->current_context = c;
@@ -189,7 +228,7 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 	MOO_ASSERT (moo, (moo_oop_t)c->sender == moo->_nil);
 
 #if defined(MOO_DEBUG_VM_PROCESSOR)
-	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - made process %O of size %zu\n", proc, MOO_OBJ_GET_SIZE(proc));
+	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - made process %zd of size %zu\n", MOO_OOP_TO_SMOOI(proc->id), MOO_OBJ_GET_SIZE(proc));
 #endif
 
 	/* a process is created in the SUSPENDED state. chain it to the suspended process list */
@@ -378,6 +417,8 @@ static MOO_INLINE void unchain_from_semaphore (moo_t* moo, moo_oop_process_t pro
 
 static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 {
+	moo_ooi_t pid;
+
 	if (proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNING) ||
 	    proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE))
 	{
@@ -417,9 +458,17 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 			unchain_from_processor (moo, proc, PROC_STATE_TERMINATED);
 			proc->sp = MOO_SMOOI_TO_OOP(-1); /* invalidate the process stack */
 		}
+
+/* TODO: when terminated, clear it from the pid table and set the process id to a negative number */
+		/* i assuem there is no GC since i don't protected proc */
+		pid = MOO_OOP_TO_SMOOI(proc->id);
+		moo->proc_map[pid] = MOO_SMOOI_TO_OOP(moo->proc_map_free);
+		moo->proc_map_free = pid;
 	}
 	else if (proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED))
 	{
+		moo_ooi_t pid;
+
 		/* SUSPENDED ---> TERMINATED */
 	#if defined(MOO_DEBUG_VM_PROCESSOR)
 		MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] SUSPENDED->TERMINATED\n", MOO_OOP_TO_SMOOI(proc->id));
@@ -433,6 +482,11 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 		{
 			unchain_from_semaphore (moo, proc);
 		}
+
+/* TODO: when terminated, clear it from the pid table and set the process id to a negative number */
+		pid = MOO_OOP_TO_SMOOI(proc->id);
+		moo->proc_map[pid] = MOO_SMOOI_TO_OOP(moo->proc_map_free);
+		moo->proc_map_free = pid;
 	}
 #if 0
 	else if (proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_WAITING))

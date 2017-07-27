@@ -52,7 +52,7 @@ class System(Apex)
 					## exit from this loop when there are no other processes running except this finalizer process
 					if (gc) 
 					{ 
-						System logNl: 'Exiting the GC finalization process'.
+						System logNl: 'Exiting the GC finalization process ' & (thisProcess id) asString.
 						break 
 					}.
 
@@ -72,7 +72,7 @@ class System(Apex)
 			}
 		] ensure: [
 			Processor unsignal: fin_sem.
-			System logNl: 'End of GC finalization process'.
+			System logNl: 'End of GC finalization process ' & (thisProcess id) asString.
 		].
 	}
 

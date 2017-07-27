@@ -125,6 +125,7 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 	moo->tagged_classes[MOO_OOP_TAG_CHAR] = &moo->_character;
 	moo->tagged_classes[MOO_OOP_TAG_ERROR] = &moo->_error_class;
 
+	moo->proc_map_free = -1;
 	return 0;
 
 oops:
@@ -178,10 +179,18 @@ void moo_fini (moo_t* moo)
 		moo->sem_io_wait_count = 0;
 	}
 
+	if (moo->proc_map)
+	{
+		moo_freemem (moo, moo->proc_map);
+		moo->proc_map_capa = 0;
+		moo->proc_map_free = -1;
+	}
+
 	for (cb = moo->cblist; cb; cb = cb->next)
 	{
 		if (cb->fini) cb->fini (moo);
 	}
+
 
 	moo_rbt_walk (&moo->modtab, unload_module, moo); /* unload all modules */
 	moo_rbt_fini (&moo->modtab);

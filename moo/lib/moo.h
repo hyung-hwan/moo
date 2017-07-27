@@ -1179,6 +1179,11 @@ struct moo_t
 	moo_oop_t* tmp_stack[256]; /* stack for temporaries */
 	moo_oow_t tmp_count;
 
+
+	moo_oop_t* proc_map;
+	moo_oow_t proc_map_capa;
+	moo_ooi_t proc_map_free;
+
 	/* =============================================================
 	 * EXECUTION REGISTERS
 	 * ============================================================= */
