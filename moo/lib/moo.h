@@ -1175,7 +1175,6 @@ struct moo_t
 	/* semaphore to notify finalizable objects */
 	moo_oop_semaphore_t sem_gcfin;
 	int sem_gcfin_sigreq;
-	moo_oow_t sem_gcfin_count;
 
 	moo_oop_t* tmp_stack[256]; /* stack for temporaries */
 	moo_oow_t tmp_count;

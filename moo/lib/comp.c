@@ -1945,7 +1945,9 @@ retry:
 			break;
 	}
 
-MOO_DEBUG3 (moo, "TOKEN: [%.*js] %d\n", (moo_ooi_t)moo->c->tok.name.len, moo->c->tok.name.ptr, (int)moo->c->tok.type);
+#if defined(MOO_DEBUG_LEXER)
+	MOO_DEBUG3 (moo, "TOKEN: [%.*js] %d\n", (moo_ooi_t)moo->c->tok.name.len, moo->c->tok.name.ptr, (int)moo->c->tok.type);
+#endif
 
 	return 0;
 }

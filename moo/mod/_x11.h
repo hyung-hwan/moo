@@ -63,6 +63,7 @@ struct x11_gc_t
 	moo_oop_t font_name;
 
 	moo_oop_t font_ptr;
+	moo_oop_t font_set; /* XFontSet */
 };
 
 typedef struct x11_widget_t* oop_x11_widget_t;

@@ -36,7 +36,7 @@ class System(Apex)
 
 		gc := false.
 		fin_sem := Semaphore new.
-		
+
 		Processor signalOnGCFin: fin_sem.
 		[
 			while (true)

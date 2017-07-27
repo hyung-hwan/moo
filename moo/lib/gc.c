@@ -118,7 +118,7 @@ static kernel_class_info_t kernel_classes[] =
 };
 
 
-static void move_finalizable_objects (moo_t* moo);
+static moo_oow_t move_finalizable_objects (moo_t* moo);
 
 /* ----------------------------------------------------------------------- 
  * BOOTSTRAPPER
@@ -630,6 +630,7 @@ void moo_gc (moo_t* moo)
 	moo_oop_t old_nil;
 	moo_oow_t i;
 	moo_cb_t* cb;
+	moo_oow_t gcfin_count;
 
 	if (moo->active_context)
 	{
@@ -712,10 +713,11 @@ void moo_gc (moo_t* moo)
 	/* scan the new heap to move referenced objects */
 	scan_ptr = scan_new_heap (moo, scan_ptr);
 
-/* FINALIZATION */
-	move_finalizable_objects (moo);
+	/* check finalizable objects registered and scan the heap again. 
+	 * symbol table compation is placed after this phase assuming that
+	 * no symbol is added to be finalized. */
+	gcfin_count = move_finalizable_objects (moo);
 	scan_ptr = scan_new_heap (moo, scan_ptr);
-/* END FINALIZATION */
 
 	/* traverse the symbol table for unreferenced symbols.
 	 * if the symbol has not moved to the new heap, the symbol
@@ -760,8 +762,7 @@ void moo_gc (moo_t* moo)
 */
 
 	if (moo->active_method) SET_ACTIVE_METHOD_CODE (moo); /* update moo->active_code */
-	/*if (moo->sem_gcfin_count > 0) signal_semaphore (moo, moo->sem_gcfin);*/
-	if (moo->sem_gcfin_count > 0) moo->sem_gcfin_sigreq = 1;
+	if (gcfin_count > 0) moo->sem_gcfin_sigreq = 1;
 
 	/* TODO: include some gc statstics like number of live objects, gc performance, etc */
 	MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO, 
@@ -878,11 +879,11 @@ int moo_deregfinalizable (moo_t* moo, moo_oop_t oop)
 	return -1;
 }
 
-static void move_finalizable_objects (moo_t* moo)
+static moo_oow_t move_finalizable_objects (moo_t* moo)
 {
 	moo_finalizable_t* x, * y;
+	moo_oow_t count = 0;
 
-	moo->sem_gcfin_count = 0;
 	for (x = moo->collectable.first; x; x = x->next)
 	{
 		MOO_ASSERT (moo, (MOO_OBJ_GET_FLAGS_GCFIN(x->oop) & (MOO_GCFIN_FINALIZABLE | MOO_GCFIN_FINALIZED)) == MOO_GCFIN_FINALIZABLE);
@@ -914,7 +915,7 @@ static void move_finalizable_objects (moo_t* moo)
 			/* add it to the collectable list */
 			MOO_APPEND_TO_LIST (&moo->collectable, x);
 
-			moo->sem_gcfin_count++;
+			count++;
 		}
 		else
 		{
@@ -923,4 +924,6 @@ static void move_finalizable_objects (moo_t* moo)
 
 		x = y;
 	}
+
+	return count;
 }

@@ -31,6 +31,7 @@
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
+#include <locale.h>
 
 #if !defined(__DOS__)
 #	define USE_THREAD
@@ -1757,6 +1758,8 @@ int main (int argc, char* argv[])
 		return -1;
 	}
 #endif
+
+	setlocale (LC_ALL, "");
 
 	memset (&vmprim, 0, MOO_SIZEOF(vmprim));
 	vmprim.dl_open = dl_open;

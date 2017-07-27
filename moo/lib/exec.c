@@ -4537,11 +4537,12 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 					 * having the following line causes to skip firing the
 					 * timed semaphore that would expire between now and the 
 					 * moment the next inspection occurs. */
-					if (moo->processor->active != moo->nil_process) goto finalization;
+					if (moo->processor->active != moo->nil_process) goto switch_to_next;
 				}
 				else
 				{
 					/* no running process, no io semaphore */
+					if (moo->sem_gcfin != moo->_nil && moo->sem_gcfin_sigreq) goto signal_sem_gcfin;
 					vm_sleep (moo, &ft);
 				}
 				vm_gettime (moo, &now);
@@ -4576,11 +4577,14 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 		}
 	}
 
-	if (moo->sem_gcfin_sigreq)
+
+	if ((moo_oop_t)moo->sem_gcfin != moo->_nil) 
 	{
-		if ((moo_oop_t)moo->sem_gcfin != moo->_nil) 
+		moo_oop_process_t proc;
+
+		if (moo->sem_gcfin_sigreq)
 		{
-			moo_oop_process_t proc;
+		signal_sem_gcfin:
 			MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Signalled GCFIN semaphore\n");
 			proc = signal_semaphore (moo, moo->sem_gcfin);
 
@@ -4590,23 +4594,46 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				MOO_ASSERT (moo, proc == moo->processor->runnable.first);
 				switch_to_process_from_nil (moo, proc);
 			}
+
+			moo->sem_gcfin_sigreq = 0;
 		}
-		moo->sem_gcfin_sigreq = 0;
-	}
-	else
-	{
-		if ((moo_oop_t)moo->sem_gcfin != moo->_nil && moo->processor->active == moo->nil_process)
+		else
 		{
-			moo_oop_process_t proc;
-			proc = signal_semaphore (moo, moo->sem_gcfin);
-			if ((moo_oop_t)proc != moo->_nil) 
+			/* the gcfin semaphore signalling is not requested and there are 
+			 * no runnable processes nor no waiting semaphores. if there is 
+			 * process waiting on the gcfin semaphore, i will just schedule
+			 * it to run */
+			/* TODO: check if this is the best implementation practice */
+			if (moo->processor->active == moo->nil_process)
 			{
-				MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
-				MOO_ASSERT (moo, proc == moo->processor->runnable.first);
-				switch_to_process_from_nil (moo, proc);
+				MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Signalled GCFIN semaphore without gcfin signal request\n");
+				proc = signal_semaphore (moo, moo->sem_gcfin);
+				if ((moo_oop_t)proc != moo->_nil) 
+				{
+					MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
+					MOO_ASSERT (moo, proc == moo->processor->runnable.first);
+					switch_to_process_from_nil (moo, proc);
+				}
 			}
 		}
 	}
+
+#if 0
+	while (moo->sem_list_count > 0)
+	{
+		/* handle async signals */
+		--moo->sem_list_count;
+		signal_semaphore (moo, moo->sem_list[moo->sem_list_count]);
+		if (moo->processor->active == moo->nil_process)
+		{
+		}
+	}
+	/*
+	if (semaphore heap has pending request)
+	{
+		signal them...
+	}*/
+#endif
 
 	if (moo->processor->active == moo->nil_process) 
 	{
@@ -4616,21 +4643,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 		return 0;
 	}
 
-finalization:
-#if 0
-	while (moo->sem_list_count > 0)
-	{
-		/* handle async signals */
-		--moo->sem_list_count;
-		signal_semaphore (moo, moo->sem_list[moo->sem_list_count]);
-	}
-#endif
-	/*
-	if (semaphore heap has pending request)
-	{
-		signal them...
-	}*/
-
+switch_to_next:
 	/* TODO: implement different process switching scheme - time-slice or clock based??? */
 #if defined(MOO_EXTERNAL_PROCESS_SWITCH)
 	if (!moo->proc_switched && moo->switch_proc) { switch_to_next_runnable_process (moo); }

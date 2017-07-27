@@ -466,7 +466,6 @@ static moo_pfrc_t pf_destroy_gc (moo_t* moo, moo_ooi_t nargs)
 
 	Display* disp;
 
-
 	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
 	gc = (oop_x11_gc_t)MOO_STACK_GETARG(moo, nargs, 0); /* GC object */
 
@@ -475,6 +474,13 @@ static moo_pfrc_t pf_destroy_gc (moo_t* moo, moo_ooi_t nargs)
 	{
 		XFreeFont (disp, MOO_OOP_TO_SMPTR(gc->font_ptr));
 		gc->font_ptr = moo->_nil;
+	}
+
+	if (MOO_OOP_IS_SMPTR(gc->font_set))
+	{
+		XFreeFontSet (disp, MOO_OOP_TO_SMPTR(gc->font_set));
+		gc->font_set = moo->_nil;
+MOO_DEBUG0 (moo, "Freed Font Set\n");
 	}
 
 	if (MOO_OOP_IS_SMPTR(gc->gc_handle))
@@ -496,7 +502,6 @@ static moo_pfrc_t pf_apply_gc (moo_t* moo, moo_ooi_t nargs)
 	unsigned long int mask = 0;
 	XGCValues v;
 
-
 	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
 	a0 = (oop_x11_gc_t)MOO_STACK_GETARG(moo, nargs, 0); 
 /* TODO check if a0 is an instance of X11.GC */
@@ -513,30 +518,66 @@ static moo_pfrc_t pf_apply_gc (moo_t* moo, moo_ooi_t nargs)
 
 	if (MOO_OBJ_IS_CHAR_POINTER(a0->font_name) && MOO_OBJ_GET_SIZE(a0->font_name) > 0)
 	{
-		XFontStruct* font;
-/* TODO: .... use font_name */
-		font = XLoadQueryFont (disp, "-misc-fixed-medium-r-normal-ko-18-120-100-100-c-180-iso10646-1");
-		if (font)
+		XFontSet fs;
+		char **missing_charsets;
+		int num_missing_charsets = 0;
+		char *default_string;
+
+/* TODO: don't create this again  and again */ 
+/* TODO: use font name */
+		fs = XCreateFontSet (disp, "-adobe-*-medium-r-normal-*-14-*-*-*-*-*-*-*,-baekmuk-*-medium-r-normal-*-14-*-*-*-*-*-*-*,-*-*-medium-r-normal-*-*-*-*-*-*-*-*-*",
+			&missing_charsets, &num_missing_charsets, &default_string);
+		if (num_missing_charsets)
 		{
-			if (!MOO_IN_SMPTR_RANGE(font))
+			int i;
+
+			MOO_DEBUG0 (moo, "The following charsets are missing:\n");
+			for(i = 0; i < num_missing_charsets; i++)
+			   MOO_DEBUG1 (moo, "\t%s\n",  missing_charsets[i]);
+			MOO_DEBUG1 (moo, "The string %s will be used in place of any characters from those set\n", default_string);
+			XFreeStringList(missing_charsets);
+		}
+
+		if (fs)
+		{
+/* TODO: error handling. rollback upon failure... etc */
+			MOO_ASSERT (moo, MOO_IN_SMPTR_RANGE(fs));
+			if (MOO_OOP_IS_SMPTR(a0->font_set)) 
 			{
-				MOO_DEBUG0 (moo, "<x11.apply_gc> Font pointer not in small pointer range\n");
-				XFreeFont (disp, font);
-				MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ERANGE);
-				return MOO_PF_SUCCESS;
+MOO_DEBUG0 (moo, "Freed Font Set ..\n");
+				XFreeFontSet (disp, MOO_OOP_TO_SMPTR(a0->font_set));
 			}
-			else
-			{
-				XSetFont (disp, gc, font->fid);
-				if (MOO_OOP_IS_SMPTR(a0->font_ptr)) XFreeFont (disp, MOO_OOP_TO_SMPTR(a0->font_ptr));
-				a0->font_ptr = MOO_SMPTR_TO_OOP(font);
-			}
+			a0->font_set = MOO_SMPTR_TO_OOP (fs);
+MOO_DEBUG0 (moo, "XCreateFontSet ok....\n");
 		}
 		else
 		{
-			MOO_DEBUG2 (moo, "<x11.apply_gc> Cannot load font - %.*js\n", MOO_OBJ_GET_SIZE(a0->font_name), MOO_OBJ_GET_CHAR_SLOT(a0->font_name));
-			MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ESYSERR);
-			return MOO_PF_SUCCESS;
+			XFontStruct* font;
+
+	/* TODO: .... use font_name */
+			font = XLoadQueryFont (disp, "-misc-fixed-medium-r-normal-ko-18-120-100-100-c-180-iso10646-1");
+			if (font)
+			{
+				if (!MOO_IN_SMPTR_RANGE(font))
+				{
+					MOO_DEBUG0 (moo, "<x11.apply_gc> Font pointer not in small pointer range\n");
+					XFreeFont (disp, font);
+					MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ERANGE);
+					return MOO_PF_SUCCESS;
+				}
+				else
+				{
+					XSetFont (disp, gc, font->fid);
+					if (MOO_OOP_IS_SMPTR(a0->font_ptr)) XFreeFont (disp, MOO_OOP_TO_SMPTR(a0->font_ptr));
+					a0->font_ptr = MOO_SMPTR_TO_OOP(font);
+				}
+			}
+			else
+			{
+				MOO_DEBUG2 (moo, "<x11.apply_gc> Cannot load font - %.*js\n", MOO_OBJ_GET_SIZE(a0->font_name), MOO_OBJ_GET_CHAR_SLOT(a0->font_name));
+				MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ESYSERR);
+				return MOO_PF_SUCCESS;
+			}
 		}
 	}
 
@@ -638,15 +679,11 @@ static moo_pfrc_t pf_fill_rectangle (moo_t* moo, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_draw_string (moo_t* moo, moo_ooi_t nargs)
 {
-	
 	oop_x11_t x11;
 	oop_x11_gc_t gc;
 	moo_oop_t a1, a2, a3;
 
 	Display* disp;
-	XChar2b* stptr;
-	moo_oow_t stlen;
-	int ascent = 0;
 
 	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
 	disp = MOO_OOP_TO_SMPTR(x11->display);
@@ -666,26 +703,66 @@ static moo_pfrc_t pf_draw_string (moo_t* moo, moo_ooi_t nargs)
 		return MOO_PF_SUCCESS;
 	}
 
-/* TODO: draw string chunk by chunk to avoid memory allocation in uchars_to_xchars2bstr */
-	stptr = uchars_to_xchar2bstr (moo, MOO_OBJ_GET_CHAR_SLOT(a3), MOO_OBJ_GET_SIZE(a3), &stlen);
-	if (!stptr)
+	if (MOO_OOP_IS_SMPTR(gc->font_set))
 	{
-		MOO_DEBUG0 (moo, "<x11.draw_string> Error in converting a string\n");
-		MOO_STACK_SETRETTOERRNUM (moo, nargs);
-		return MOO_PF_SUCCESS;
+		moo_oow_t ucslen, bcslen;
+		moo_bch_t* bb;
+		int ascent = 10;
+		XRectangle r;
+
+		ucslen = MOO_OBJ_GET_SIZE(a3);
+		if (moo_convootobchars (moo, MOO_OBJ_GET_CHAR_SLOT(a3), &ucslen, MOO_NULL, &bcslen) <= -1 ||
+		    !(bb = moo_allocmem (moo, MOO_SIZEOF(moo_bch_t) * bcslen)))
+		{
+			MOO_DEBUG0 (moo, "<x11.draw_string> Error in converting a string\n");
+			MOO_STACK_SETRETTOERRNUM (moo, nargs);
+			return MOO_PF_SUCCESS;
+		}
+
+	//#if defined(MOO_OOCH_IS_UCH)
+		moo_convootobchars (moo, MOO_OBJ_GET_CHAR_SLOT(a3), &ucslen, bb, &bcslen);
+	//#else
+	//	moo_copybcstr (&bb->fn[parlen], bcslen + 1, arg->name);
+	//#endif
+
+		XmbTextExtents(MOO_OOP_TO_SMPTR(gc->font_set), bb, bcslen, MOO_NULL, &r);
+		ascent = r.height;
+
+		XmbDrawString (disp, (Window)MOO_OOP_TO_SMOOI(((oop_x11_widget_t)gc->widget)->window_handle), 
+			MOO_OOP_TO_SMPTR(gc->font_set), MOO_OOP_TO_SMPTR(gc->gc_handle), 
+			MOO_OOP_TO_SMOOI(a1), MOO_OOP_TO_SMOOI(a2) + ascent,  bb, bcslen);
+
+		moo_freemem (moo, bb);
+	}
+	else
+	{
+		XChar2b* stptr;
+		moo_oow_t stlen;
+		int ascent = 0;
+
+	/* TODO: draw string chunk by chunk to avoid memory allocation in uchars_to_xchars2bstr */
+		stptr = uchars_to_xchar2bstr (moo, MOO_OBJ_GET_CHAR_SLOT(a3), MOO_OBJ_GET_SIZE(a3), &stlen);
+		if (!stptr)
+		{
+			MOO_DEBUG0 (moo, "<x11.draw_string> Error in converting a string\n");
+			MOO_STACK_SETRETTOERRNUM (moo, nargs);
+			return MOO_PF_SUCCESS;
+		}
+
+		if (MOO_OOP_IS_SMPTR(gc->font_ptr))
+		{
+			int direction, descent;
+			XCharStruct overall;
+			XTextExtents16 (MOO_OOP_TO_SMPTR(gc->font_ptr), stptr, stlen, &direction, &ascent, &descent, &overall);
+		}
+
+		XDrawString16 (disp, (Window)MOO_OOP_TO_SMOOI(((oop_x11_widget_t)gc->widget)->window_handle), MOO_OOP_TO_SMPTR(gc->gc_handle),
+			MOO_OOP_TO_SMOOI(a1), MOO_OOP_TO_SMOOI(a2) + ascent, stptr, stlen);
+
+		moo_freemem (moo, stptr);
 	}
 
-	if (MOO_OOP_IS_SMPTR(gc->font_ptr))
-	{
-		int direction, descent;
-		XCharStruct overall;
-		XTextExtents16 (MOO_OOP_TO_SMPTR(gc->font_ptr), stptr, stlen, &direction, &ascent, &descent, &overall);
-	}
-
-	XDrawString16 (disp, (Window)MOO_OOP_TO_SMOOI(((oop_x11_widget_t)gc->widget)->window_handle), MOO_OOP_TO_SMPTR(gc->gc_handle),
-		MOO_OOP_TO_SMOOI(a1), MOO_OOP_TO_SMOOI(a2) + ascent, stptr, stlen);
-
-	moo_freemem (moo, stptr);
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 

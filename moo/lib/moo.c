@@ -386,9 +386,13 @@ void moo_freemem (moo_t* moo, void* ptr)
 #if defined(MOO_ENABLE_STATIC_MODULE)
 
 #include "../mod/console.h"
-#include "../mod/_ffi.h"
+#if defined(MOO_ENABLE_MOD_FFI)
+#	include "../mod/_ffi.h"
+#endif
 #include "../mod/_stdio.h"
-#include "../mod/_x11.h"
+#if defined(MOO_ENABLE_MOD_X11)
+#	include "../mod/_x11.h"
+#endif
 
 static struct
 {

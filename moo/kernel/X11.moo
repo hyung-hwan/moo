@@ -172,6 +172,7 @@ class X11.GC(Object)
 		fontName   := nil.
 
 	var fontPtr := nil.
+	var fontSet := nil.
 
 	method(#class) new
 	{
