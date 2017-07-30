@@ -1182,7 +1182,8 @@ struct moo_t
 
 	moo_oop_t* proc_map;
 	moo_oow_t proc_map_capa;
-	moo_ooi_t proc_map_free;
+	moo_ooi_t proc_map_free_first;
+	moo_ooi_t proc_map_free_last;
 
 	/* =============================================================
 	 * EXECUTION REGISTERS

@@ -33,7 +33,8 @@
 #define PROC_STATE_TERMINATED -1
 
 
-#define PROC_MAP_INC 256
+/* TODO: adjust this process map increment value */
+#define PROC_MAP_INC 64
 
 /* TODO: adjust these max semaphore pointer buffer capacity,
  *       proably depending on the object memory size? */
@@ -153,12 +154,89 @@ static MOO_INLINE void vm_muxwait (moo_t* moo, const moo_ntime_t* dur)
 
 /* ------------------------------------------------------------------------- */
 
+static MOO_INLINE int prepare_to_alloc_pid (moo_t* moo)
+{
+	moo_oow_t new_capa;
+	moo_ooi_t i, j;
+	moo_oop_t* tmp;
+
+	MOO_ASSERT (moo, moo->proc_map_free_first <= -1);
+	MOO_ASSERT (moo, moo->proc_map_free_last <= -1);
+
+	new_capa = moo->proc_map_capa + PROC_MAP_INC;
+	if (new_capa > MOO_SMOOI_MAX)
+	{
+		if (moo->proc_map_capa >= MOO_SMOOI_MAX)
+		{
+		#if defined(MOO_DEBUG_VM_PROCESSOR)
+			MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_FATAL, "Processor - too many processes\n");
+		#endif
+			moo_seterrnum (moo, MOO_EPFULL);
+			return -1;
+		}
+
+		new_capa = MOO_SMOOI_MAX;
+	}
+
+	tmp = moo_reallocmem (moo, moo->proc_map, MOO_SIZEOF(moo_oop_t) * new_capa);
+	if (!tmp) return -1;
+
+	moo->proc_map_free_first = moo->proc_map_capa;
+	for (i = moo->proc_map_capa, j = moo->proc_map_capa + 1; j < new_capa; i++, j++)
+	{
+		tmp[i] = MOO_SMOOI_TO_OOP(j);
+	}
+	tmp[i] = MOO_SMOOI_TO_OOP(-1);
+	moo->proc_map_free_last = i;
+
+	moo->proc_map = tmp;
+	moo->proc_map_capa = new_capa;
+
+
+	return 0;
+}
+
+static MOO_INLINE void alloc_pid (moo_t* moo, moo_oop_process_t proc)
+{
+	moo_ooi_t pid;
+
+	pid = moo->proc_map_free_first;
+	proc->id = MOO_SMOOI_TO_OOP(pid);
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->proc_map[pid]));
+	moo->proc_map_free_first = MOO_OOP_TO_SMOOI(moo->proc_map[pid]);
+	if (moo->proc_map_free_first <= -1) moo->proc_map_free_last = -1;
+	moo->proc_map[pid] = (moo_oop_t)proc;
+
+MOO_DEBUG1 (moo, "PID PID PID ALLOCATED %zd\n", pid);
+}
+
+static MOO_INLINE void free_pid (moo_t* moo, moo_oop_process_t proc)
+{
+	moo_ooi_t pid;
+
+	pid = MOO_OOP_TO_SMOOI(proc->id);
+	MOO_ASSERT (moo, pid < moo->proc_map_capa);
+
+	moo->proc_map[pid] = MOO_SMOOI_TO_OOP(-1);
+	if (moo->proc_map_free_last <= -1)
+	{
+		MOO_ASSERT (moo, moo->proc_map_free_first <= -1);
+		moo->proc_map_free_first = pid;
+	}
+	else
+	{
+		moo->proc_map[moo->proc_map_free_last] = MOO_SMOOI_TO_OOP(pid);
+	}
+	moo->proc_map_free_last = pid;
+
+MOO_DEBUG1 (moo, "PID PID PID FREED %zd\n", pid);
+}
+
 static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 {
 	moo_oop_process_t proc;
 	moo_ooi_t total_count;
 	moo_ooi_t suspended_count;
-	moo_ooi_t proc_map_free;
 
 	total_count = MOO_OOP_TO_SMOOI(moo->processor->total_count);
 	if (total_count >= MOO_SMOOI_MAX)
@@ -170,40 +248,7 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 		return MOO_NULL;
 	}
 
-	if (moo->proc_map_free <= -1)
-	{
-		moo_oow_t new_capa;
-		moo_ooi_t i, j;
-		moo_oop_t* tmp;
-
-		new_capa = moo->proc_map_capa + PROC_MAP_INC;
-		if (new_capa > MOO_SMOOI_MAX)
-		{
-			if (moo->proc_map_capa >= MOO_SMOOI_MAX)
-			{
-			#if defined(MOO_DEBUG_VM_PROCESSOR)
-				MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_FATAL, "Processor - too many processes\n");
-			#endif
-				moo_seterrnum (moo, MOO_EPFULL);
-				return MOO_NULL;
-			}
-
-			new_capa = MOO_SMOOI_MAX;
-		}
-
-		tmp = moo_reallocmem (moo, moo->proc_map, MOO_SIZEOF(moo_oop_t) * new_capa);
-		if (!tmp) return MOO_NULL;
-
-		moo->proc_map_free = moo->proc_map_capa;
-		for (i = moo->proc_map_capa, j = moo->proc_map_capa + 1; j < new_capa; i++, j++)
-		{
-			tmp[i] = MOO_SMOOI_TO_OOP(j);
-		}
-		tmp[i] = MOO_SMOOI_TO_OOP(-1);
-
-		moo->proc_map = tmp;
-		moo->proc_map_capa = new_capa;
-	}
+	if (moo->proc_map_free_first <= -1 && prepare_to_alloc_pid(moo) <= -1) return MOO_NULL;
 
 	moo_pushtmp (moo, (moo_oop_t*)&c);
 	proc = (moo_oop_process_t)moo_instantiate (moo, moo->_process, MOO_NULL, moo->option.dfl_procstk_size);
@@ -213,11 +258,7 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 	proc->state = MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED);
 
 	/* assign a process id to the process */
-	proc_map_free = moo->proc_map_free;
-	proc->id = MOO_SMOOI_TO_OOP(proc_map_free);
-	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->proc_map[proc_map_free]));
-	moo->proc_map_free = MOO_OOP_TO_SMOOI(moo->proc_map[proc_map_free]);
-	moo->proc_map[proc_map_free] = (moo_oop_t)proc;
+	alloc_pid (moo, proc);
 
 	proc->initial_context = c;
 	proc->current_context = c;
@@ -246,7 +287,7 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 static MOO_INLINE void sleep_active_process (moo_t* moo, int state)
 {
 #if defined(MOO_DEBUG_VM_PROCESSOR)
-	MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - put process %O context %O ip=%zd to sleep\n", moo->processor->active, moo->active_context, moo->ip);
+	MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - put process [%zd] context %O ip=%zd to sleep\n", MOO_OOP_TO_SMOOI(moo->processor->active->id), moo->active_context, moo->ip);
 #endif
 
 	STORE_ACTIVE_SP(moo);
@@ -417,8 +458,6 @@ static MOO_INLINE void unchain_from_semaphore (moo_t* moo, moo_oop_process_t pro
 
 static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 {
-	moo_ooi_t pid;
-
 	if (proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNING) ||
 	    proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE))
 	{
@@ -459,16 +498,11 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 			proc->sp = MOO_SMOOI_TO_OOP(-1); /* invalidate the process stack */
 		}
 
-/* TODO: when terminated, clear it from the pid table and set the process id to a negative number */
-		/* i assuem there is no GC since i don't protected proc */
-		pid = MOO_OOP_TO_SMOOI(proc->id);
-		moo->proc_map[pid] = MOO_SMOOI_TO_OOP(moo->proc_map_free);
-		moo->proc_map_free = pid;
+		/* when terminated, clear it from the pid table and set the process id to a negative number */
+		free_pid (moo, proc);
 	}
 	else if (proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED))
 	{
-		moo_ooi_t pid;
-
 		/* SUSPENDED ---> TERMINATED */
 	#if defined(MOO_DEBUG_VM_PROCESSOR)
 		MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] SUSPENDED->TERMINATED\n", MOO_OOP_TO_SMOOI(proc->id));
@@ -483,10 +517,8 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 			unchain_from_semaphore (moo, proc);
 		}
 
-/* TODO: when terminated, clear it from the pid table and set the process id to a negative number */
-		pid = MOO_OOP_TO_SMOOI(proc->id);
-		moo->proc_map[pid] = MOO_SMOOI_TO_OOP(moo->proc_map_free);
-		moo->proc_map_free = pid;
+		/* when terminated, clear it from the pid table and set the process id to a negative number */
+		free_pid (moo, proc);
 	}
 #if 0
 	else if (proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_WAITING))
@@ -533,7 +565,7 @@ static void suspend_process (moo_t* moo, moo_oop_process_t proc)
 		/* RUNNING/RUNNABLE ---> SUSPENDED */
 
 	#if defined(MOO_DEBUG_VM_PROCESSOR)
-		MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process %O RUNNING/RUNNABLE->SUSPENDED\n", proc);
+		MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] RUNNING/RUNNABLE->SUSPENDED\n", MOO_OOP_TO_SMOOI(proc->id));
 	#endif
 
 		if (proc == moo->processor->active)
@@ -4596,7 +4628,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				else
 				{
 					/* no running process, no io semaphore */
-					if (moo->sem_gcfin != moo->_nil && moo->sem_gcfin_sigreq) goto signal_sem_gcfin;
+					if ((moo_oop_t)moo->sem_gcfin != moo->_nil && moo->sem_gcfin_sigreq) goto signal_sem_gcfin;
 					vm_sleep (moo, &ft);
 				}
 				vm_gettime (moo, &now);
@@ -4617,6 +4649,8 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 		if (moo->processor->active == moo->nil_process)
 		{
 			/* no runnable process while there is an io semaphore being waited */
+			if ((moo_oop_t)moo->sem_gcfin != moo->_nil && moo->sem_gcfin_sigreq) goto signal_sem_gcfin;
+
 			do
 			{
 				vm_gettime (moo, &now);
@@ -4630,7 +4664,6 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 			vm_muxwait (moo, MOO_NULL);
 		}
 	}
-
 
 	if ((moo_oop_t)moo->sem_gcfin != moo->_nil) 
 	{
