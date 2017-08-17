@@ -80,7 +80,6 @@ if ENABLE_MOD_X11
 libmoo_la_LIBADD += -lmoo-x11
 libmoo_la_DEPENDENCIES += $(abs_builddir)/../mod/libmoo-x11.la
 endif
-
 endif
 
 bin_PROGRAMS = moo
@@ -88,6 +87,9 @@ moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 moo_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo -lpthread
+if ENABLE_STATIC_MODULE
+moo_DEPENDENCIES = libmoo.la
+endif
 
 
 install-data-hook:

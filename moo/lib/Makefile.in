@@ -106,6 +106,7 @@ host_triplet = @host@
 @ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_8 = -lmoo-x11
 @ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_9 = $(abs_builddir)/../mod/libmoo-x11.la
 bin_PROGRAMS = moo$(EXEEXT)
+@ENABLE_STATIC_MODULE_FALSE@moo_DEPENDENCIES = $(am__DEPENDENCIES_3)
 subdir = lib
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_namespace.m4 \
@@ -172,7 +173,6 @@ libmoo_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 PROGRAMS = $(bin_PROGRAMS)
 am_moo_OBJECTS = moo-main.$(OBJEXT)
 moo_OBJECTS = $(am_moo_OBJECTS)
-moo_DEPENDENCIES = $(am__DEPENDENCIES_3)
 moo_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(moo_LDFLAGS) $(LDFLAGS) -o $@
@@ -459,6 +459,7 @@ moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 moo_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo -lpthread
+@ENABLE_STATIC_MODULE_TRUE@moo_DEPENDENCIES = libmoo.la
 all: moo-cfg.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 

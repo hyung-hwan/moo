@@ -49,7 +49,7 @@
 #define MOO_DEBUG_GC
 /*#define MOO_DEBUG_LEXER*/
 #define MOO_DEBUG_COMPILER
-/*#define MOO_DEBUG_VM_PROCESSOR*/
+#define MOO_DEBUG_VM_PROCESSOR
 /*#define MOO_DEBUG_VM_EXEC*/
 #define MOO_DEBUG_BIGINT
 #define MOO_PROFILE_VM

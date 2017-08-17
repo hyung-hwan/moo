@@ -32,7 +32,19 @@
 #define PROC_STATE_SUSPENDED 0
 #define PROC_STATE_TERMINATED -1
 
+static const char* proc_state_to_string (int state)
+{
+	static const char* str[] = 
+	{
+		"TERMINATED",
+		"SUSPENDED",
+		"RUNNABLE",
+		"WAITING",
+		"RUNNING"
+	};
 
+	return str[state + 1];
+}
 /* TODO: adjust this process map increment value */
 #define PROC_MAP_INC 64
 
@@ -286,15 +298,16 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 
 static MOO_INLINE void sleep_active_process (moo_t* moo, int state)
 {
-#if defined(MOO_DEBUG_VM_PROCESSOR)
-	MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - put process [%zd] context %O ip=%zd to sleep\n", MOO_OOP_TO_SMOOI(moo->processor->active->id), moo->active_context, moo->ip);
-#endif
-
 	STORE_ACTIVE_SP(moo);
 
 	/* store the current active context to the current process.
 	 * it is the suspended context of the process to be suspended */
 	MOO_ASSERT (moo, moo->processor->active != moo->nil_process);
+
+#if defined(MOO_DEBUG_VM_PROCESSOR)
+	MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - active process [%zd] %hs->%hs\n", MOO_OOP_TO_SMOOI(moo->processor->active->id), proc_state_to_string(MOO_OOP_TO_SMOOI(moo->processor->active->state)), proc_state_to_string(state));
+#endif
+
 	moo->processor->active->current_context = moo->active_context;
 	moo->processor->active->state = MOO_SMOOI_TO_OOP(state);
 }
@@ -302,6 +315,11 @@ static MOO_INLINE void sleep_active_process (moo_t* moo, int state)
 static MOO_INLINE void wake_process (moo_t* moo, moo_oop_process_t proc)
 {
 	/* activate the given process */
+#if defined(MOO_DEBUG_VM_PROCESSOR)
+	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->RUNNING\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
+#endif
+
+	MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
 	proc->state = MOO_SMOOI_TO_OOP(PROC_STATE_RUNNING);
 	moo->processor->active = proc;
 
@@ -391,15 +409,29 @@ static MOO_INLINE void unchain_from_processor (moo_t* moo, moo_oop_process_t pro
 	moo_ooi_t suspended_count;
 	moo_ooi_t total_count;
 
-	/* the processor's process chain must be composed of running/runnable
-	 * processes only */
 	MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNING) ||
-	                 proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
+	                 proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE) ||
+	                 proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED));
 
-	runnable_count = MOO_OOP_TO_SMOOI(moo->processor->runnable.count);
-	MOO_ASSERT (moo, runnable_count > 0);
+	MOO_ASSERT (moo, proc->state != MOO_SMOOI_TO_OOP(new_state));
 
-	MOO_DELETE_FROM_OOP_LIST (moo, &moo->processor->runnable, proc, ps);
+	if (proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED))
+	{
+		suspended_count = MOO_OOP_TO_SMOOI(moo->processor->suspended.count);
+		MOO_ASSERT (moo, suspended_count > 0);
+		MOO_DELETE_FROM_OOP_LIST (moo, &moo->processor->suspended, proc, ps);
+		suspended_count--;
+		moo->processor->suspended.count = MOO_SMOOI_TO_OOP(suspended_count);
+	}
+	else
+	{
+		runnable_count = MOO_OOP_TO_SMOOI(moo->processor->runnable.count);
+		MOO_ASSERT (moo, runnable_count > 0);
+		MOO_DELETE_FROM_OOP_LIST (moo, &moo->processor->runnable, proc, ps);
+		runnable_count--;
+		moo->processor->runnable.count = MOO_SMOOI_TO_OOP(runnable_count);
+		if (runnable_count == 0) moo->processor->active = moo->nil_process;
+	}
 
 	if (new_state == PROC_STATE_TERMINATED)
 	{
@@ -423,10 +455,6 @@ static MOO_INLINE void unchain_from_processor (moo_t* moo, moo_oop_process_t pro
 	}
 
 	proc->state = MOO_SMOOI_TO_OOP(new_state);
-
-	runnable_count--;
-	if (runnable_count == 0) moo->processor->active = moo->nil_process;
-	moo->processor->runnable.count = MOO_SMOOI_TO_OOP(runnable_count);
 }
 
 static MOO_INLINE void chain_into_semaphore (moo_t* moo, moo_oop_process_t proc, moo_oop_semaphore_t sem)
@@ -462,9 +490,8 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 	    proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE))
 	{
 		/* RUNNING/RUNNABLE ---> TERMINATED */
-
 	#if defined(MOO_DEBUG_VM_PROCESSOR)
-		MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] RUNNING/RUNNABLE->TERMINATED\n", MOO_OOP_TO_SMOOI(proc->id));
+		MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->TERMINATED\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
 	#endif
 
 		if (proc == moo->processor->active)
@@ -505,7 +532,7 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 	{
 		/* SUSPENDED ---> TERMINATED */
 	#if defined(MOO_DEBUG_VM_PROCESSOR)
-		MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] SUSPENDED->TERMINATED\n", MOO_OOP_TO_SMOOI(proc->id));
+		MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->TERMINATED\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
 	#endif
 
 		/*proc->state = MOO_SMOOI_TO_OOP(PROC_STATE_TERMINATED);*/
@@ -533,12 +560,12 @@ static void resume_process (moo_t* moo, moo_oop_process_t proc)
 {
 	if (proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED))
 	{
-		/* SUSPENDED ---> RUNNING */
+		/* SUSPENDED ---> RUNNABLE */
 		/*MOO_ASSERT (moo, (moo_oop_t)proc->ps.prev == moo->_nil);
 		MOO_ASSERT (moo, (moo_oop_t)proc->ps.next == moo->_nil);*/
 
 	#if defined(MOO_DEBUG_VM_PROCESSOR)
-		MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] SUSPENDED->RUNNING\n", MOO_OOP_TO_SMOOI(proc->id));
+		MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] SUSPENDED->RUNNABLE\n", MOO_OOP_TO_SMOOI(proc->id));
 	#endif
 
 		/* don't switch to this process. just change the state to RUNNABLE.
@@ -565,11 +592,12 @@ static void suspend_process (moo_t* moo, moo_oop_process_t proc)
 		/* RUNNING/RUNNABLE ---> SUSPENDED */
 
 	#if defined(MOO_DEBUG_VM_PROCESSOR)
-		MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] RUNNING/RUNNABLE->SUSPENDED\n", MOO_OOP_TO_SMOOI(proc->id));
+		MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->SUSPENDED\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
 	#endif
 
 		if (proc == moo->processor->active)
 		{
+			/* suspend the active process */
 			moo_oop_process_t nrp;
 
 			nrp = find_next_runnable_process (moo);
@@ -4597,8 +4625,13 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 					 * it uses wake_process() instead of
 					 * switch_to_process() as there is no running 
 					 * process at this moment */
+
+				#if defined(MOO_DEBUG_VM_PROCESSOR)
+					MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - switching to a process [%zd] while no process is active - total runnables %zd\n", MOO_OOP_TO_SMOOI(proc->id), MOO_OOP_TO_SMOOI(moo->processor->runnable.count));
+				#endif
+
 					MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
-					MOO_ASSERT (moo, proc == moo->processor->runnable.first);
+					MOO_ASSERT (moo, proc == moo->processor->runnable.last); /* resume_process() appends to the runnable list */
 				#if 0
 					wake_process (moo, proc); /* switch to running */
 					moo->proc_switched = 1;

@@ -177,6 +177,11 @@ const moo_ooch_t* moo_synerrnumtoerrstr (moo_synerrnum_t errnum)
  * SYSTEM DEPENDENT FUNCTIONS 
  * -------------------------------------------------------------------------- */
 
+#if defined(HAVE_EXECINFO_H)
+#	include <execinfo.h>
+#	include <stdlib.h>
+#endif
+
 #if defined(_WIN32)
 #	include <windows.h>
 #elif defined(__OS2__)
@@ -277,7 +282,31 @@ moo_errnum_t moo_syserrtoerrnum (int e)
 
 void moo_assertfailed (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file, moo_oow_t line)
 {
+#if defined(HAVE_BACKTRACE)
+	void* btarray[128];
+	moo_oow_t btsize;
+	char** btsyms;
+#endif
+
 	moo_logbfmt (moo, MOO_LOG_DEBUG, "ASSERTION FAILURE: %s at %s:%zu\n", expr, file, line);
+
+
+#if defined(HAVE_BACKTRACE)
+	btsize = backtrace (btarray, MOO_COUNTOF(btarray));
+	btsyms = backtrace_symbols (btarray, btsize);
+	if (btsyms)
+	{
+		moo_oow_t i;
+		moo_logbfmt (moo, MOO_LOG_DEBUG, "[BACKTRACE]\n");
+
+		for (i = 0; i < btsize; i++)
+		{
+			moo_logbfmt(moo, MOO_LOG_DEBUG, "  %s\n", btsyms[i]);
+		}
+		free (btsyms);
+	}
+#endif
+
 
 #if defined(_WIN32)
 	ExitProcess (249);
@@ -296,8 +325,11 @@ void moo_assertfailed (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file,
 	sys$exit (SS$_ABORT); /* this condition code can be shown with
 	                       * 'show symbol $status' from the command-line. */
 #elif defined(macintosh)
+
 	ExitToShell ();
+
 #else
+
 	kill (getpid(), SIGABRT);
 	_exit (1);
 #endif
