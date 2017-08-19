@@ -796,7 +796,7 @@ static void sift_down_sem_heap (moo_t* moo, moo_ooi_t index)
 			left = SEM_HEAP_LEFT(index);
 			right = SEM_HEAP_RIGHT(index);
 
-			if (right < moo->sem_heap_count && SEM_HEAP_EARLIER_THAN(moo, moo->sem_heap[left], moo->sem_heap[right]))
+			if (right < moo->sem_heap_count && SEM_HEAP_EARLIER_THAN(moo, moo->sem_heap[right], moo->sem_heap[left]))
 			{
 				child = right;
 			}
@@ -809,7 +809,7 @@ static void sift_down_sem_heap (moo_t* moo, moo_ooi_t index)
 			if (SEM_HEAP_EARLIER_THAN(moo, sem, chisem)) break;
 
 			chisem->heap_index = MOO_SMOOI_TO_OOP(index);
-			moo->sem_heap[index ] = chisem;
+			moo->sem_heap[index] = chisem;
 
 			index = child;
 		}
