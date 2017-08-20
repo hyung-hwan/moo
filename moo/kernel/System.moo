@@ -47,7 +47,8 @@ class System(Apex)
 					if (tmp respondsTo: #finalize) { tmp finalize }.
 				}.
 
-				if (Processor total_count == 1)
+				##if (Processor total_count == 1)
+				if (Processor should_exit)
 				{
 					## exit from this loop when there are no other processes running except this finalizer process
 					if (gc) 

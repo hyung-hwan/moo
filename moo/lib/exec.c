@@ -218,8 +218,6 @@ static MOO_INLINE void alloc_pid (moo_t* moo, moo_oop_process_t proc)
 	moo->proc_map_free_first = MOO_OOP_TO_SMOOI(moo->proc_map[pid]);
 	if (moo->proc_map_free_first <= -1) moo->proc_map_free_last = -1;
 	moo->proc_map[pid] = (moo_oop_t)proc;
-
-MOO_DEBUG1 (moo, "PID PID PID ALLOCATED %zd\n", pid);
 }
 
 static MOO_INLINE void free_pid (moo_t* moo, moo_oop_process_t proc)
@@ -240,8 +238,6 @@ static MOO_INLINE void free_pid (moo_t* moo, moo_oop_process_t proc)
 		moo->proc_map[moo->proc_map_free_last] = MOO_SMOOI_TO_OOP(pid);
 	}
 	moo->proc_map_free_last = pid;
-
-MOO_DEBUG1 (moo, "PID PID PID FREED %zd\n", pid);
 }
 
 static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
@@ -281,7 +277,7 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 	MOO_ASSERT (moo, (moo_oop_t)c->sender == moo->_nil);
 
 #if defined(MOO_DEBUG_VM_PROCESSOR)
-	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - made process %zd of size %zu\n", MOO_OOP_TO_SMOOI(proc->id), MOO_OBJ_GET_SIZE(proc));
+	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process[%zd] **CREATED**->%hs\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
 #endif
 
 	/* a process is created in the SUSPENDED state. chain it to the suspended process list */
@@ -305,7 +301,7 @@ static MOO_INLINE void sleep_active_process (moo_t* moo, int state)
 	MOO_ASSERT (moo, moo->processor->active != moo->nil_process);
 
 #if defined(MOO_DEBUG_VM_PROCESSOR)
-	MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - active process [%zd] %hs->%hs\n", MOO_OOP_TO_SMOOI(moo->processor->active->id), proc_state_to_string(MOO_OOP_TO_SMOOI(moo->processor->active->state)), proc_state_to_string(state));
+	MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->%hs in sleep_active_process\n", MOO_OOP_TO_SMOOI(moo->processor->active->id), proc_state_to_string(MOO_OOP_TO_SMOOI(moo->processor->active->state)), proc_state_to_string(state));
 #endif
 
 	moo->processor->active->current_context = moo->active_context;
@@ -316,7 +312,7 @@ static MOO_INLINE void wake_process (moo_t* moo, moo_oop_process_t proc)
 {
 	/* activate the given process */
 #if defined(MOO_DEBUG_VM_PROCESSOR)
-	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->RUNNING\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
+	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->RUNNING in wake_process\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
 #endif
 
 	MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
@@ -328,7 +324,7 @@ static MOO_INLINE void wake_process (moo_t* moo, moo_oop_process_t proc)
 	/* activate the suspended context of the new process */
 	SWITCH_ACTIVE_CONTEXT (moo, proc->current_context);
 
-#if defined(MOO_DEBUG_VM_PROCESSOR)
+#if defined(MOO_DEBUG_VM_PROCESSOR) && (MOO_DEBUG_VM_PROCESSOR >= 2)
 	MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - woke up process [%zd] context %O ip=%zd\n", MOO_OOP_TO_SMOOI(moo->processor->active->id), moo->active_context, moo->ip);
 #endif
 }
@@ -386,6 +382,11 @@ static MOO_INLINE void chain_into_processor (moo_t* moo, moo_oop_process_t proc,
 	MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED));
 	MOO_ASSERT (moo, new_state == PROC_STATE_RUNNABLE || new_state == PROC_STATE_RUNNING);
 
+
+#if defined(MOO_DEBUG_VM_PROCESSOR)
+	MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->%hs in chain_into_processor\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)), proc_state_to_string(MOO_OOP_TO_SMOOI(new_state)));
+#endif
+
 	runnable_count = MOO_OOP_TO_SMOOI(moo->processor->runnable.count);
 
 	MOO_ASSERT (moo, runnable_count >= 0);
@@ -414,6 +415,10 @@ static MOO_INLINE void unchain_from_processor (moo_t* moo, moo_oop_process_t pro
 	                 proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED));
 
 	MOO_ASSERT (moo, proc->state != MOO_SMOOI_TO_OOP(new_state));
+
+#if defined(MOO_DEBUG_VM_PROCESSOR)
+	MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->%hs in unchain_from_processor\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)), proc_state_to_string(MOO_OOP_TO_SMOOI(new_state)));
+#endif
 
 	if (proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED))
 	{
@@ -491,7 +496,7 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 	{
 		/* RUNNING/RUNNABLE ---> TERMINATED */
 	#if defined(MOO_DEBUG_VM_PROCESSOR)
-		MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->TERMINATED\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
+		MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->TERMINATED in terminate_process\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
 	#endif
 
 		if (proc == moo->processor->active)
@@ -532,7 +537,7 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 	{
 		/* SUSPENDED ---> TERMINATED */
 	#if defined(MOO_DEBUG_VM_PROCESSOR)
-		MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->TERMINATED\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
+		MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->TERMINATED in terminate_process\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
 	#endif
 
 		/*proc->state = MOO_SMOOI_TO_OOP(PROC_STATE_TERMINATED);*/
@@ -565,7 +570,7 @@ static void resume_process (moo_t* moo, moo_oop_process_t proc)
 		MOO_ASSERT (moo, (moo_oop_t)proc->ps.next == moo->_nil);*/
 
 	#if defined(MOO_DEBUG_VM_PROCESSOR)
-		MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] SUSPENDED->RUNNABLE\n", MOO_OOP_TO_SMOOI(proc->id));
+		MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->RUNNABLE in resume_process\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
 	#endif
 
 		/* don't switch to this process. just change the state to RUNNABLE.
@@ -592,7 +597,7 @@ static void suspend_process (moo_t* moo, moo_oop_process_t proc)
 		/* RUNNING/RUNNABLE ---> SUSPENDED */
 
 	#if defined(MOO_DEBUG_VM_PROCESSOR)
-		MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->SUSPENDED\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
+		MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->SUSPENDED in suspend_process\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
 	#endif
 
 		if (proc == moo->processor->active)
@@ -651,7 +656,7 @@ static void yield_process (moo_t* moo, moo_oop_process_t proc)
 		if (nrp != proc) 
 		{
 		#if defined(MOO_DEBUG_VM_PROCESSOR)
-			MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] RUNNING->RUNNABLE\n", MOO_OOP_TO_SMOOI(proc->id));
+			MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->RUNNABLE in yield_process\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)));
 		#endif
 			switch_to_process (moo, nrp, PROC_STATE_RUNNABLE);
 		}
@@ -4626,7 +4631,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 					 * switch_to_process() as there is no running 
 					 * process at this moment */
 
-				#if defined(MOO_DEBUG_VM_PROCESSOR)
+				#if defined(MOO_DEBUG_VM_PROCESSOR) && (MOO_DEBUG_VM_PROCESSOR >= 2)
 					MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - switching to a process [%zd] while no process is active - total runnables %zd\n", MOO_OOP_TO_SMOOI(proc->id), MOO_OOP_TO_SMOOI(moo->processor->runnable.count));
 				#endif
 
@@ -4722,17 +4727,39 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 			/* the gcfin semaphore signalling is not requested and there are 
 			 * no runnable processes nor no waiting semaphores. if there is 
 			 * process waiting on the gcfin semaphore, i will just schedule
-			 * it to run */
+			 * it to run by calling signal_semaphore() on moo->sem_gcfin.
+			 */
 			/* TODO: check if this is the best implementation practice */
 			if (moo->processor->active == moo->nil_process)
 			{
-				MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Signalled GCFIN semaphore without gcfin signal request\n");
+				/* there is no active process. in most cases, the only process left
+				 * should be the gc finalizer process started in the System>>startup.
+				 * if there are other suspended processes at this point, the processes
+				 * are not likely to run again. 
+				 * 
+				 * imagine the following single line program that creates a process 
+				 * but never start it.
+				 *
+				 *    method(#class) main { | p |  p := [] newProcess. }
+				 *
+				 * the gc finalizer process and the process assigned to p exist. 
+				 * when the code reaches here, the 'p' process still is alive
+				 * despite no active process nor no process waiting on timers
+				 * and semaphores. so when the entire program terminates, there
+				 * might still be some suspended processes that are not possible
+				 * to schedule.
+				 */
+
+				MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, 
+					"Signalled GCFIN semaphore without gcfin signal request - total - %zd runnable/running - %zd suspended - %zd\n",
+					MOO_OOP_TO_SMOOI(moo->processor->total_count), MOO_OOP_TO_SMOOI(moo->processor->runnable.count), MOO_OOP_TO_SMOOI(moo->processor->suspended.count));
 				proc = signal_semaphore (moo, moo->sem_gcfin);
 				if ((moo_oop_t)proc != moo->_nil) 
 				{
 					MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
 					MOO_ASSERT (moo, proc == moo->processor->runnable.first);
-					switch_to_process_from_nil (moo, proc);
+					moo->processor->should_exit = moo->_true; /* prepare to inform the gc finalizer process */
+					switch_to_process_from_nil (moo, proc); /* sechedule the gc finalizer process */
 				}
 			}
 		}

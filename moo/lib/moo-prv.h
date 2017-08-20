@@ -46,13 +46,13 @@
 
 #if !defined(NDEBUG)
 /* this is for gc debugging */
-#define MOO_DEBUG_GC
-/*#define MOO_DEBUG_LEXER*/
-#define MOO_DEBUG_COMPILER
-#define MOO_DEBUG_VM_PROCESSOR
+#define MOO_DEBUG_GC 1
+/*#define MOO_DEBUG_LEXER 1*/
+#define MOO_DEBUG_COMPILER 1
+#define MOO_DEBUG_VM_PROCESSOR 1
 /*#define MOO_DEBUG_VM_EXEC*/
-#define MOO_DEBUG_BIGINT
-#define MOO_PROFILE_VM
+#define MOO_DEBUG_BIGINT 1
+#define MOO_PROFILE_VM 1
 #endif
 
 /* allow the caller to drive process switching by calling

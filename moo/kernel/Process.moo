@@ -290,7 +290,7 @@ class SemaphoreHeap(Object)
 
 class(#final,#limited) ProcessScheduler(Object)
 {
-	var(#get) active, total_count := 0.
+	var(#get) active, should_exit := false, total_count := 0.
 	var(#get) runnable_count := 0.
 	var runnable_head, runnable_tail.
 	var(#get) suspended_count := 0.
