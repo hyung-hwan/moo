@@ -58,9 +58,6 @@
 
 
 
-
-
-
 #define MOO_APPEND_TO_OOP_LIST(moo, list, node_type, node, _link) do { \
 	(node)->_link.next = (node_type)(moo)->_nil; \
 	(node)->_link.prev = (list)->last; \
@@ -87,8 +84,8 @@
 /*
 #define MOO_CLEANUP_FROM_OOP_LIST(moo, list, node, _link) do { \
 	MOO_DELETE_FROM_OOP_LIST (moo, list, node, _link); \
-	(node)->link.prev = (node_type)(moo)->_nil; \
-	(node)->link.next = (node_type)(moo)->_nil; \
+	(node)->_link.prev = (node_type)(moo)->_nil; \
+	(node)->_link.next = (node_type)(moo)->_nil; \
 } while(0);
 */
 

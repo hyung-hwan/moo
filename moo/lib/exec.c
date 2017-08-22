@@ -32,7 +32,7 @@
 #define PROC_STATE_SUSPENDED 0
 #define PROC_STATE_TERMINATED -1
 
-static const char* proc_state_to_string (int state)
+static MOO_INLINE const char* proc_state_to_string (int state)
 {
 	static const char* str[] = 
 	{
@@ -45,6 +45,7 @@ static const char* proc_state_to_string (int state)
 
 	return str[state + 1];
 }
+
 /* TODO: adjust this process map increment value */
 #define PROC_MAP_INC 64
 
@@ -751,6 +752,18 @@ static void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 		MOO_ASSERT (moo, moo->processor->active != proc);
 	}
+}
+
+static void await_semaphore_group (moo_t* moo, moo_oop_semaphore_group_t sem_group)
+{
+	moo_oop_oop_t proc;
+
+	/* wait for one of semaphores in the group to be signaled */
+
+	/*MOO_CLASSOF (moo, MOO_CLASSOF(sem_group) == moo->_semaphore_group);*/
+	/* TODO: check if a semaphore has been signalled already.. */
+
+	/* if not,, chain all semaphore into the semaphore list... */
 }
 
 static void sift_up_sem_heap (moo_t* moo, moo_ooi_t index)
@@ -2371,6 +2384,24 @@ static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_ooi_t nargs)
 	}
 
 	await_semaphore (moo, (moo_oop_semaphore_t)rcv);
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_semaphore_group_wait (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv;
+	MOO_ASSERT (moo, nargs == 0);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	if (MOO_CLASSOF(moo,rcv) != moo->_semaphore_group) 
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EMSGRCV);
+		return MOO_PF_SUCCESS;
+	}
+
+	await_semaphore_group (moo, (moo_oop_semaphore_group_t)rcv);
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
@@ -4097,6 +4128,7 @@ static pf_t pftab[] =
 
 	{ "Semaphore_signal",                      { pf_semaphore_signal,                     0, 0 } },
 	{ "Semaphore_wait",                        { pf_semaphore_wait,                       0, 0 } },
+	{ "SemaphoreGroup_wait",                   { pf_semaphore_group_wait,                 0, 0 } },
 
 	{ "SmallInteger_asCharacter",              { pf_smooi_as_character,                   0, 0 } },
 	{ "SmallInteger_asError",                  { pf_smooi_as_error,                       0, 0 } },
@@ -4475,7 +4507,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 					return -1;
 				}
 
-				MOO_DEBUG3 (moo, "Sending primitiveFailed for empty primitive body - %O>>%.*js\n", method->owner, MOO_OBJ_GET_SIZE(method->name), MOO_OBJ_GET_CHAR_SLOT(method->name));
+				MOO_DEBUG3 (moo, "Sending primitiveFailed - %O>>%.*js\n", method->owner, MOO_OBJ_GET_SIZE(method->name), MOO_OBJ_GET_CHAR_SLOT(method->name));
 				/* 
 				 *  | arg1     | <---- stack_base + 3
 				 *  | arg0     | <---- stack_base + 2

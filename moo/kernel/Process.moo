@@ -71,6 +71,7 @@ class Semaphore(Object)
 	method(#primitive) wait.
 
 (*
+TODO: timed wait...
 	method waitWithTimeout: seconds
 	{
 		<primitive: #_semaphore_wait>
@@ -121,6 +122,51 @@ class Semaphore(Object)
 		^self.fireTimeSec >= (aSemaphore fireTime)
 	}
 }
+    
+class SemaphoreGroup(Object)
+{
+	var arr, size := 0.
+
+(* TODO: good idea to a shortcut way to prohibit a certain method in the heirarchy chain?
+
+method(#class,#prohibited) new.
+method(#class,#prohibited) new: size.
+method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibility: #xxxx }
+*)
+
+	method(#class) new { self messageProhibited: #new }
+	method(#class) new: size { self messageProhibited: #new: }
+
+	method(#class,#variadic) with()
+	{
+		| i x arr |
+
+		i := 0.
+		x := thisContext vargCount.
+
+		arr := Array new: x.
+		while (i < x)
+		{
+			arr at: i put: (thisContext vargAt: i).
+			i := i + 1.
+		}.
+
+		^self basicNew initialize: arr.
+	}
+
+	method initialize
+	{
+		self.arr := Array new: 10.
+	}
+
+	method initialize: arr
+	{
+		self.size := arr size.
+		self.arr := arr.
+	}
+
+	method(#primitive) wait.
+}
 
 class SemaphoreHeap(Object)
 {
@@ -144,16 +190,16 @@ class SemaphoreHeap(Object)
 
 	method insert: aSemaphore
 	{
-		| index |
+		| index newarr newsize |
 
 		index := self.size.
-		(index >= (self.arr size)) ifTrue: [
-			| newarr newsize |
+		if (index >= (self.arr size)) 
+		{
 			newsize := (self.arr size) * 2.
 			newarr := Array new: newsize.
 			newarr copy: self.arr.
 			self.arr := newarr.
-		].
+		}.
 
 		self.arr at: index put: aSemaphore.
 		aSemaphore heapIndex: index.

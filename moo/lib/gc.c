@@ -75,46 +75,275 @@ struct kernel_class_info_t
 {
 	moo_oow_t  len;
 	moo_ooch_t name[20];
+	int class_flags;
+
+	int class_spec_named_instvars;
+	int class_spec_flags;
+	int class_spec_indexed_type;
+
 	moo_oow_t  offset;
 };
 typedef struct kernel_class_info_t kernel_class_info_t;
 
 static kernel_class_info_t kernel_classes[] = 
 {
-	{  4, { 'A','p','e','x'                                                                 }, MOO_OFFSETOF(moo_t, _apex) },
-	{ 15, { 'U','n','d','e','f','i','n','e','d','O','b','j','e','c','t'                     }, MOO_OFFSETOF(moo_t, _undefined_object) },
-	{  5, { 'C','l','a','s','s'                                                             }, MOO_OFFSETOF(moo_t, _class) },
-	{  6, { 'O','b','j','e','c','t'                                                         }, MOO_OFFSETOF(moo_t, _object) },
-	{  6, { 'S','t','r','i','n','g'                                                         }, MOO_OFFSETOF(moo_t, _string) },
+	/* --------------------------------------------------------------
+	 * Apex            - proto-object with 1 class variable.
+	 * UndefinedObject - class for the nil object.
+	 * Object          - top of all ordinary objects.
+	 * String
+	 * Symbol
+	 * Array
+	 * ByteArray
+	 * SymbolSet
+	 * Character
+	 * SmallIntger
+	 * -------------------------------------------------------------- */
 
-	{  6, { 'S','y','m','b','o','l'                                                         }, MOO_OFFSETOF(moo_t, _symbol) },
-	{  5, { 'A','r','r','a','y'                                                             }, MOO_OFFSETOF(moo_t, _array) },
-	{  9, { 'B','y','t','e','A','r','r','a','y'                                             }, MOO_OFFSETOF(moo_t, _byte_array) },
-	{  9, { 'S','y','m','b','o','l','S','e','t'                                             }, MOO_OFFSETOF(moo_t, _symbol_set) },
-	{ 10, { 'D','i','c','t','i','o','n','a','r','y'                                         }, MOO_OFFSETOF(moo_t, _dictionary) },
-	{  9, { 'N','a','m','e','s','p','a','c','e'                                             }, MOO_OFFSETOF(moo_t, _namespace) },
-	{ 14, { 'P','o','o','l','D','i','c','t','i','o','n','a','r','y'                         }, MOO_OFFSETOF(moo_t, _pool_dictionary) },
-	{ 16, { 'M','e','t','h','o','d','D','i','c','t','i','o','n','a','r','y'                 }, MOO_OFFSETOF(moo_t, _method_dictionary) },
-	{ 14, { 'C','o','m','p','i','l','e','d','M','e','t','h','o','d'                         }, MOO_OFFSETOF(moo_t, _method) },
-	{ 11, { 'A','s','s','o','c','i','a','t','i','o','n'                                     }, MOO_OFFSETOF(moo_t, _association) },
+	{ 4,
+	  { 'A','p','e','x' },
+	  0,
+	  0,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _apex) },
 
-	{ 13, { 'M','e','t','h','o','d','C','o','n','t','e','x','t'                             }, MOO_OFFSETOF(moo_t, _method_context) },
-	{ 12, { 'B','l','o','c','k','C','o','n','t','e','x','t'                                 }, MOO_OFFSETOF(moo_t, _block_context) },
-	{  7, { 'P','r','o','c','e','s','s'                                                     }, MOO_OFFSETOF(moo_t, _process) },
-	{  9, { 'S','e','m','a','p','h','o','r','e'                                             }, MOO_OFFSETOF(moo_t, _semaphore) },
-	{ 16, { 'P','r','o','c','e','s','s','S','c','h','e','d','u','l','e','r'                 }, MOO_OFFSETOF(moo_t, _process_scheduler) },
+	{ 15,
+	  { 'U','n','d','e','f','i','n','e','d','O','b','j','e','c','t' },
+	  0,
+	  0,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _undefined_object) },
 
-	{  5, { 'E','r','r','o','r'                                                             }, MOO_OFFSETOF(moo_t, _error_class) },
-	{  4, { 'T','r','u','e'                                                                 }, MOO_OFFSETOF(moo_t, _true_class) },
-	{  5, { 'F','a','l','s','e'                                                             }, MOO_OFFSETOF(moo_t, _false_class) },
-	{  9, { 'C','h','a','r','a','c','t','e','r'                                             }, MOO_OFFSETOF(moo_t, _character) },
-	{ 12, { 'S','m','a','l','l','I','n','t','e','g','e','r'                                 }, MOO_OFFSETOF(moo_t, _small_integer) },
+#define KCI_CLASS 2
+	{ 5,
+	  { 'C','l','a','s','s' },
+	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  MOO_CLASS_NAMED_INSTVARS,
+	  1,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _class) },
 
-	{ 20, { 'L','a','r','g','e','P','o','s','i','t','i','v','e','I','n','t','e','g','e','r' }, MOO_OFFSETOF(moo_t, _large_positive_integer) },
-	{ 20, { 'L','a','r','g','e','N','e','g','a','t','i','v','e','I','n','t','e','g','e','r' }, MOO_OFFSETOF(moo_t, _large_negative_integer) },
+	{ 6,
+	  { 'O','b','j','e','c','t' },
+	  0,
+	  0,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _object) },
 
-	{ 12, { 'S','m','a','l','l','P','o','i','n','t','e','r'                                 }, MOO_OFFSETOF(moo_t, _small_pointer) },
-	{  6, { 'S','y','s','t','e','m'                                                         }, MOO_OFFSETOF(moo_t, _system) },
+	{ 6,
+	  { 'S','t','r','i','n','g' },
+	  0,
+	  0,
+	  MOO_CLASS_SPEC_FLAG_INDEXED,
+	  MOO_OBJ_TYPE_CHAR,
+	  MOO_OFFSETOF(moo_t, _string) },
+
+	{ 6,
+	  { 'S','y','m','b','o','l' },   
+	  MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  0,
+	  MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE,
+	  MOO_OBJ_TYPE_CHAR,
+	  MOO_OFFSETOF(moo_t, _symbol) },
+
+	{ 5,
+	  { 'A','r','r','a','y' },
+	  0,
+	  0,
+	  MOO_CLASS_SPEC_FLAG_INDEXED,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _array) },
+
+	{ 9,
+	  { 'B','y','t','e','A','r','r','a','y' },
+	  0,
+	  0,
+	  MOO_CLASS_SPEC_FLAG_INDEXED,
+	  MOO_OBJ_TYPE_BYTE,
+	  MOO_OFFSETOF(moo_t, _byte_array) },
+
+	{ 9,
+	  { 'S','y','m','b','o','l','S','e','t' },
+	  0,
+	  MOO_DIC_NAMED_INSTVARS,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _symbol_set) },
+
+	{ 10,
+	  { 'D','i','c','t','i','o','n','a','r','y' },
+	  0,
+	  MOO_DIC_NAMED_INSTVARS,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _dictionary) },
+
+	{ 9,
+	  { 'N','a','m','e','s','p','a','c','e' },
+	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  MOO_NSDIC_NAMED_INSTVARS,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _namespace) },
+
+	{ 14,
+	  { 'P','o','o','l','D','i','c','t','i','o','n','a','r','y' },
+	  0,
+	  MOO_DIC_NAMED_INSTVARS,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _pool_dictionary) },
+
+	{ 16,
+	  { 'M','e','t','h','o','d','D','i','c','t','i','o','n','a','r','y' },
+	  0,
+	  MOO_DIC_NAMED_INSTVARS,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _method_dictionary) },
+
+	{ 14,
+	  { 'C','o','m','p','i','l','e','d','M','e','t','h','o','d' },
+	  0,
+	  MOO_METHOD_NAMED_INSTVARS,
+	  MOO_CLASS_SPEC_FLAG_INDEXED,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _method) },
+
+
+	{ 11,
+	  { 'A','s','s','o','c','i','a','t','i','o','n' },
+	  0,
+	  MOO_ASSOCIATION_NAMED_INSTVARS,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _association) },
+
+	{ 13,
+	  { 'M','e','t','h','o','d','C','o','n','t','e','x','t' },
+	  0,
+	  MOO_CONTEXT_NAMED_INSTVARS,
+	  MOO_CLASS_SPEC_FLAG_INDEXED,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _method_context) },
+
+	{ 12,
+	  { 'B','l','o','c','k','C','o','n','t','e','x','t' },
+	  0,
+	  MOO_CONTEXT_NAMED_INSTVARS,
+	  MOO_CLASS_SPEC_FLAG_INDEXED,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _block_context) },
+
+	{ 7,
+	  { 'P','r','o','c','e','s','s' },
+	  MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  MOO_PROCESS_NAMED_INSTVARS,
+	  MOO_CLASS_SPEC_FLAG_INDEXED,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _process) },
+
+	{ 9,
+	  { 'S','e','m','a','p','h','o','r','e' },
+	  0,
+	  MOO_SEMAPHORE_NAMED_INSTVARS,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _semaphore) },
+
+	{ 14,
+	  { 'S','e','m','a','p','h','o','r','e','G','r','o','u','p' },
+	  0,
+	  MOO_SEMAPHORE_GROUP_NAMED_INSTVARS,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _semaphore_group) },
+
+	{ 16,
+	  { 'P','r','o','c','e','s','s','S','c','h','e','d','u','l','e','r' },
+	   MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	   MOO_PROCESS_SCHEDULER_NAMED_INSTVARS,
+	   0,
+	   MOO_OBJ_TYPE_OOP,
+	   MOO_OFFSETOF(moo_t, _process_scheduler) },
+
+	{ 5,
+	  { 'E','r','r','o','r' },
+	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  0,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _error_class) },
+
+	{ 4,
+	  { 'T','r','u','e' },
+	  0,
+	  0,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _true_class) },
+
+	{ 5,
+	  { 'F','a','l','s','e' },
+	  0,
+	  0,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _false_class) },
+
+	/* TOOD: what is a proper spec for Character and SmallInteger?
+ 	 *       If the fixed part is  0, its instance must be an object of 0 payload fields.
+	 *       Does this make sense? */
+	{ 9,
+	  { 'C','h','a','r','a','c','t','e','r' },
+	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  0,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _character) },
+
+	{ 12,
+	  { 'S','m','a','l','l','I','n','t','e','g','e','r' },
+	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  0,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _small_integer) },
+
+	{ 20,
+	  { 'L','a','r','g','e','P','o','s','i','t','i','v','e','I','n','t','e','g','e','r' },
+	  0,
+	  0,
+	  MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE,
+	  MOO_OBJ_TYPE_LIWORD,
+	  MOO_OFFSETOF(moo_t, _large_positive_integer) },
+
+	{ 20,
+	  { 'L','a','r','g','e','N','e','g','a','t','i','v','e','I','n','t','e','g','e','r' },
+	  0,
+	  0,
+	  MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE,
+	  MOO_OBJ_TYPE_LIWORD,
+	  MOO_OFFSETOF(moo_t, _large_negative_integer) },
+
+	{ 12,
+	  { 'S','m','a','l','l','P','o','i','n','t','e','r' },
+	  0,
+	  0,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _small_pointer) },
+
+	{ 6,
+	  { 'S','y','s','t','e','m' },
+	  0,
+	  0,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _system) }
 };
 
 
@@ -141,6 +370,8 @@ static moo_oop_class_t alloc_kernel_class (moo_t* moo, int class_flags, moo_oow_
 
 static int ignite_1 (moo_t* moo)
 {
+	moo_oow_t i;
+
 	/*
 	 * Create fundamental class objects with some fields mis-initialized yet.
 	 * Such fields include 'superclass', 'subclasses', 'name', etc.
@@ -154,85 +385,30 @@ static int ignite_1 (moo_t* moo)
 	 * The instance of Class can have indexed instance variables 
 	 * which are actually class variables.
 	 * -------------------------------------------------------------- */
-	moo->_class = alloc_kernel_class (moo, MOO_CLASS_SELFSPEC_FLAG_LIMITED, 0, MOO_CLASS_SPEC_MAKE(MOO_CLASS_NAMED_INSTVARS, 1, MOO_OBJ_TYPE_OOP));
+	moo->_class = alloc_kernel_class (
+		moo, kernel_classes[KCI_CLASS].class_flags, 0, 
+		MOO_CLASS_SPEC_MAKE (kernel_classes[KCI_CLASS].class_spec_named_instvars,
+		                     kernel_classes[KCI_CLASS].class_spec_flags,
+		                     kernel_classes[KCI_CLASS].class_spec_indexed_type));
 	if (!moo->_class) return -1;
 
 	MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(moo->_class) == MOO_NULL);
 	MOO_OBJ_SET_CLASS (moo->_class, (moo_oop_t)moo->_class);
 
-	/* --------------------------------------------------------------
-	 * Apex            - proto-object with 1 class variable.
-	 * UndefinedObject - class for the nil object.
-	 * Object          - top of all ordinary objects.
-	 * String
-	 * Symbol
-	 * Array
-	 * ByteArray
-	 * SymbolSet
-	 * Character
-	 * SmallIntger
-	 * -------------------------------------------------------------- */
-	moo->_apex              = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_undefined_object  = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_object            = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_string            = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_CHAR));
+	for (i = 0; i < MOO_COUNTOF(kernel_classes); i++)
+	{
+		moo_oop_class_t tmp;
 
-	moo->_symbol            = alloc_kernel_class (moo,
-		MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
-		0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE, MOO_OBJ_TYPE_CHAR));
+		if (i == KCI_CLASS) continue; /* skip Class as it's created above */
 
-	moo->_array             = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_OOP));
-	moo->_byte_array        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_BYTE));
-	moo->_symbol_set        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_DIC_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_dictionary        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_DIC_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_namespace         = alloc_kernel_class (moo, MOO_CLASS_SELFSPEC_FLAG_LIMITED, 0, MOO_CLASS_SPEC_MAKE(MOO_NSDIC_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_pool_dictionary   = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_DIC_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_method_dictionary = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_DIC_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_method            = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_METHOD_NAMED_INSTVARS, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_OOP));
-	moo->_association       = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_ASSOCIATION_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-
-	moo->_method_context    = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_CONTEXT_NAMED_INSTVARS, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_OOP));
-	moo->_block_context     = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_CONTEXT_NAMED_INSTVARS, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_OOP));
-
-	moo->_process           = alloc_kernel_class (moo, 
-		MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
-		0, MOO_CLASS_SPEC_MAKE(MOO_PROCESS_NAMED_INSTVARS, MOO_CLASS_SPEC_FLAG_INDEXED, MOO_OBJ_TYPE_OOP));
-
-	moo->_semaphore         = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(MOO_SEMAPHORE_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-	moo->_process_scheduler = alloc_kernel_class (moo,
-		MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
-		0, MOO_CLASS_SPEC_MAKE(MOO_PROCESS_SCHEDULER_NAMED_INSTVARS, 0, MOO_OBJ_TYPE_OOP));
-
-	moo->_error_class       = alloc_kernel_class (moo, MOO_CLASS_SELFSPEC_FLAG_LIMITED, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_true_class        = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_false_class       = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	/* TOOD: what is a proper spec for Character and SmallInteger?
- 	 *       If the fixed part is  0, its instance must be an object of 0 payload fields.
-	 *       Does this make sense? */
-	moo->_character         = alloc_kernel_class (moo, MOO_CLASS_SELFSPEC_FLAG_LIMITED, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_small_integer     = alloc_kernel_class (moo, MOO_CLASS_SELFSPEC_FLAG_LIMITED, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_large_positive_integer = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE, MOO_OBJ_TYPE_LIWORD));
-	moo->_large_negative_integer = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE, MOO_OBJ_TYPE_LIWORD));
-
-	moo->_small_pointer     = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-	moo->_system            = alloc_kernel_class (moo, 0, 0, MOO_CLASS_SPEC_MAKE(0, 0, MOO_OBJ_TYPE_OOP));
-
-	if (!moo->_apex              || !moo->_undefined_object  || 
-	    !moo->_object            || !moo->_string            ||
-
-	    !moo->_symbol            || !moo->_array             ||
-	    !moo->_byte_array        || !moo->_symbol_set        || !moo->_dictionary || 
-
-	    !moo->_namespace         || !moo->_pool_dictionary   ||
-	    !moo->_method_dictionary || !moo->_method            || !moo->_association ||
-
-	    !moo->_method_context    || !moo->_block_context     || 
-	    !moo->_process           || !moo->_semaphore         || !moo->_process_scheduler ||
-
-	    !moo->_true_class        || !moo->_false_class       || 
-	    !moo->_character         || !moo->_small_integer     || 
-	    !moo->_large_positive_integer  || !moo->_large_negative_integer || 
-	    !moo->_small_pointer     || !moo->_system) return -1;
+		tmp = alloc_kernel_class (
+			moo, kernel_classes[i].class_flags, 0,
+			MOO_CLASS_SPEC_MAKE (kernel_classes[i].class_spec_named_instvars,
+			                     kernel_classes[i].class_spec_flags,
+			                     kernel_classes[i].class_spec_indexed_type));
+		if (!tmp) return -1;
+		*(moo_oop_class_t*)((moo_uint8_t*)moo + kernel_classes[i].offset) = tmp;
+	}
 
 	MOO_OBJ_SET_CLASS (moo->_nil, (moo_oop_t)moo->_undefined_object);
 

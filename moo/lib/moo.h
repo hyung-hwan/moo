@@ -808,6 +808,16 @@ struct moo_semaphore_t
 	moo_oop_t io_mask; /* SmallInteger */
 };
 
+#define MOO_SEMAPHORE_GROUP_NAMED_INSTVARS 2
+typedef struct moo_semaphore_group_t moo_semaphore_group_t;
+typedef struct moo_semaphore_group_t* moo_oop_semaphore_group_t;
+struct moo_semaphore_group_t
+{
+	MOO_OBJ_HEADER;
+	moo_oop_t size; /* SmallInteger */
+	moo_oop_oop_t semarr; /* Array of Semaphores */
+};
+
 #define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 9
 typedef struct moo_process_scheduler_t moo_process_scheduler_t;
 typedef struct moo_process_scheduler_t* moo_oop_process_scheduler_t;
@@ -1123,6 +1133,7 @@ struct moo_t
 	moo_oop_class_t _block_context; /* BlockContext */
 	moo_oop_class_t _process; /* Process */
 	moo_oop_class_t _semaphore; /* Semaphore */
+	moo_oop_class_t _semaphore_group; /* SemaphoreGroup */
 	moo_oop_class_t _process_scheduler; /* ProcessScheduler */
 
 	moo_oop_class_t _error_class; /* Error */
