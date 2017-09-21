@@ -90,7 +90,6 @@ static MOO_INLINE const char* proc_state_to_string (int state)
 	} while (0)
 
 #define FETCH_BYTE_CODE(moo) ((moo)->active_code[(moo)->ip++])
-#define FETCH_BYTE_CODE_TO(moo, v_ooi) (v_ooi = FETCH_BYTE_CODE(moo))
 #if (MOO_BCODE_LONG_PARAM_SIZE == 2)
 #	define FETCH_PARAM_CODE_TO(moo, v_ooi) \
 		do { \
@@ -465,15 +464,26 @@ static MOO_INLINE void unchain_from_processor (moo_t* moo, moo_oop_process_t pro
 
 static MOO_INLINE void chain_into_semaphore (moo_t* moo, moo_oop_process_t proc, moo_oop_semaphore_t sem)
 {
-	/* append a process to the process list of a semaphore*/
+	/* append a process to the process list of a semaphore or a semaphore group */
 
+	/* a process chained to a semaphore cannot get chained to
+	 * a semaphore again. a process can get chained to a single semaphore 
+	 * or a single semaphore group only */
 	MOO_ASSERT (moo, (moo_oop_t)proc->sem == moo->_nil);
 	MOO_ASSERT (moo, (moo_oop_t)proc->sem_wait.prev == moo->_nil);
 	MOO_ASSERT (moo, (moo_oop_t)proc->sem_wait.next == moo->_nil);
 
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,sem) == moo->_semaphore ||
+	                 MOO_CLASSOF(moo,sem) == moo->_semaphore_group);
+
+	/* i assume the head part of the semaphore has the same layout as
+	 * the semaphore group */
+	MOO_ASSERT (moo, MOO_OFFSETOF(moo_semaphore_t,waiting) ==
+	                 MOO_OFFSETOF(moo_semaphore_group_t,waiting));
+
 	MOO_APPEND_TO_OOP_LIST (moo, &sem->waiting, moo_oop_process_t, proc, sem_wait);
 
-	proc->sem = sem;
+	proc->sem = (moo_oop_t)sem;
 }
 
 static MOO_INLINE void unchain_from_semaphore (moo_t* moo, moo_oop_process_t proc)
@@ -482,12 +492,22 @@ static MOO_INLINE void unchain_from_semaphore (moo_t* moo, moo_oop_process_t pro
 
 	MOO_ASSERT (moo, (moo_oop_t)proc->sem != moo->_nil);
 
-	sem = proc->sem;
-	MOO_DELETE_FROM_OOP_LIST (moo, &sem->waiting, proc, sem_wait);
+	MOO_ASSERT (moo, MOO_CLASSOF(moo, proc->sem) == moo->_semaphore ||
+	                 MOO_CLASSOF(moo, proc->sem) == moo->_semaphore_group);
+
+	MOO_ASSERT (moo, MOO_OFFSETOF(moo_semaphore_t,waiting) ==
+	                 MOO_OFFSETOF(moo_semaphore_group_t,waiting));
+
+	/* proc->sem may be one of a semaphore or a semaphore group.
+	 * i assume that 'waiting' is defined to the same position 
+	 * in both Semaphore and SemaphoreGroup. there is no need to 
+	 * write different code for each class. */
+	sem = (moo_oop_semaphore_t)proc->sem;  /* semgrp = (moo_oop_semaphore_group_t)proc->sem */
+	MOO_DELETE_FROM_OOP_LIST (moo, &sem->waiting, proc, sem_wait); 
 
 	proc->sem_wait.prev = (moo_oop_process_t)moo->_nil;
 	proc->sem_wait.next = (moo_oop_process_t)moo->_nil;
-	proc->sem = (moo_oop_semaphore_t)moo->_nil;
+	proc->sem = moo->_nil;
 }
 
 static void terminate_process (moo_t* moo, moo_oop_process_t proc)
@@ -695,6 +715,24 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	moo_oop_process_t proc;
 	moo_ooi_t count;
 
+	if ((moo_oop_t)sem->group != moo->_nil)
+	{
+		/* the semaphore belongs to a group */
+		moo_oop_semaphore_group_t semgrp;
+
+		semgrp = sem->group;
+		if ((moo_oop_t)semgrp->waiting.first != moo->_nil)
+		{
+			/* there is a process waiting on the process group */
+			proc = semgrp->waiting.first;
+
+			unchain_from_semaphore (moo, proc);
+			resume_process (moo, proc);
+
+			return proc;
+		}
+	}
+
 	if ((moo_oop_t)sem->waiting.first == moo->_nil)
 	{
 		/* no process is waiting on this semaphore */
@@ -725,6 +763,7 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 static void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 {
+/* TODO: support timeout */
 	moo_oop_process_t proc;
 	moo_ooi_t count;
 
@@ -754,16 +793,62 @@ static void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	}
 }
 
-static void await_semaphore_group (moo_t* moo, moo_oop_semaphore_group_t sem_group)
+static moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore_group_t semgrp)
 {
-	moo_oop_oop_t proc;
-
+/* TODO: support timeout and wait all */
 	/* wait for one of semaphores in the group to be signaled */
 
-	/*MOO_CLASSOF (moo, MOO_CLASSOF(sem_group) == moo->_semaphore_group);*/
-	/* TODO: check if a semaphore has been signalled already.. */
+	moo_oop_process_t proc;
+	moo_oop_semaphore_t sem;
+	moo_ooi_t numsems, sempos, i, count;
 
-	/* if not,, chain all semaphore into the semaphore list... */
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,semgrp) == moo->_semaphore_group);
+
+	/* check if there is a signaled semaphore in the group */
+	numsems = MOO_OOP_TO_SMOOI(semgrp->size);
+	sempos = MOO_OOP_TO_SMOOI(semgrp->pos);
+	for (i = 0; i < numsems; i++)
+	{
+		sem = (moo_oop_semaphore_t)((moo_oop_oop_t)semgrp->semarr)->slot[sempos];
+		sempos = (sempos + 1) % numsems;
+
+		count = MOO_OOP_TO_SMOOI(sem->count);
+		if (count > 0)
+		{
+			count--;
+			sem->count = MOO_SMOOI_TO_OOP(count);
+			semgrp->pos = MOO_SMOOI_TO_OOP(sempos);
+			return (moo_oop_t)sem;
+		}
+	}
+
+	/* no semaphores have been signaled. suspend the current process
+	 * until the at least one of them is signaled */
+	proc = moo->processor->active;
+
+	/* suspend the active process */
+	suspend_process (moo, proc); 
+
+#if 0
+	/* link the suspended process to the semaphore's process list */
+	for (i = 0; i < numsems; i++)
+	{
+		sem = (moo_oop_semaphore_t)((moo_oop_oop_t)semgrp->semarr)->slot[sempos];
+		sempos = (sempos + 1) % numsems;
+		chain_into_semaphore (moo, proc, sem);
+		MOO_ASSERT (moo, sem->waiting.last == proc);
+		if (MOO_OOP_TO_SMOOI(sem->io_index) >= 0) moo->sem_io_wait_count++;
+	}
+#else
+	/* link the suspended process to the semaphore's process list */
+	chain_into_semaphore (moo, proc, (moo_oop_semaphore_t)semgrp); 
+	MOO_ASSERT (moo, semgrp->waiting.last == proc);
+	/*if (MOO_OOP_TO_SMOOI(sem->io_index) >= 0) moo->sem_io_wait_count++;*/
+#endif
+
+
+	MOO_ASSERT (moo, moo->processor->active != proc);
+	return moo->_nil;
 }
 
 static void sift_up_sem_heap (moo_t* moo, moo_ooi_t index)
@@ -2392,6 +2477,8 @@ static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_ooi_t nargs)
 static moo_pfrc_t pf_semaphore_group_wait (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
+	moo_oop_t sem;
+
 	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
@@ -2401,9 +2488,9 @@ static moo_pfrc_t pf_semaphore_group_wait (moo_t* moo, moo_ooi_t nargs)
 		return MOO_PF_SUCCESS;
 	}
 
-	await_semaphore_group (moo, (moo_oop_semaphore_group_t)rcv);
+	sem = await_semaphore_group (moo, (moo_oop_semaphore_group_t)rcv);
 
-	MOO_STACK_SETRETTORCV (moo, nargs);
+	MOO_STACK_SETRET (moo, nargs, sem);
 	return MOO_PF_SUCCESS;
 }
 
@@ -4836,14 +4923,338 @@ switch_to_next:
 }
 
 
+static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_value)
+{
+
+#if 0
+	/* put the instruction pointer back to the return
+	 * instruction (RETURN_RECEIVER or RETURN_RECEIVER)
+	 * if a context returns into this context again,
+	 * it'll be able to return as well again.
+	 * 
+	 * Consider a program like this:
+	 *
+	 * #class MyObject(Object)
+	 * {
+	 *   #declare(#classinst) t1 t2.
+	 *   #method(#class) xxxx
+	 *   {
+	 *     | g1 g2 |
+	 *     t1 dump.
+	 *     t2 := [ g1 := 50. g2 := 100. ^g1 + g2 ].
+	 *     (t1 < 100) ifFalse: [ ^self ].
+	 *     t1 := t1 + 1. 
+	 *     ^self xxxx.
+	 *   }
+	 *   #method(#class) main
+	 *   {
+	 *     t1 := 1.
+	 *     self xxxx.
+	 *     t2 := t2 value.  
+	 *     t2 dump.
+	 *   }
+	 * }
+	 *
+	 * the 'xxxx' method invoked by 'self xxxx' has 
+	 * returned even before 't2 value' is executed.
+	 * the '^' operator makes the active context to
+	 * switch to its 'origin->sender' which is the
+	 * method context of 'xxxx' itself. placing its
+	 * instruction pointer at the 'return' instruction
+	 * helps execute another return when the switching
+	 * occurs.
+	 * 
+	 * TODO: verify if this really works
+	 *
+	 */
+	moo->ip--; 
+#else
+	int unwind_protect;
+	moo_oop_context_t unwind_start;
+	moo_oop_context_t unwind_stop;
+
+	if (MOO_UNLIKELY(moo->active_context->origin == moo->processor->active->initial_context->origin))
+	{
+		/* method return from a processified block
+		 * 
+		 * #method(#class) main
+		 * {
+		 *    [^100] newProcess resume.
+		 *    '1111' dump.
+		 *    '1111' dump.
+		 *    '1111' dump.
+		 *    ^300.
+		 * }
+		 * 
+		 * ^100 doesn't terminate a main process as the block
+		 * has been processified. on the other hand, ^100
+		 * in the following program causes main to exit.
+		 * 
+		 * #method(#class) main
+		 * {
+		 *    [^100] value.
+		 *    '1111' dump.
+		 *    '1111' dump.
+		 *    '1111' dump.
+		 *    ^300.
+		 * }
+		 */
+
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context) == moo->_block_context);
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->processor->active->initial_context) == moo->_block_context);
+
+		/* decrement the instruction pointer back to the return instruction.
+		 * even if the context is reentered, it will just return.
+		 *moo->ip--;*/
+
+		terminate_process (moo, moo->processor->active);
+	}
+	else 
+	{
+		unwind_protect = 0;
+
+		/* set the instruction pointer to an invalid value.
+		 * this is stored into the current method context
+		 * before context switching and marks a dead context */
+		if (moo->active_context->origin == moo->active_context)
+		{
+			/* returning from a method */
+			MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context) == moo->_method_context);
+
+			/* mark that the context is dead. it will be 
+			 * save to the context object by SWITCH_ACTIVE_CONTEXT() */
+			moo->ip = -1;
+		}
+		else
+		{
+			moo_oop_context_t ctx;
+
+			/* method return from within a block(including a non-local return) */
+			MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context) == moo->_block_context);
+
+			ctx = moo->active_context;
+			while ((moo_oop_t)ctx != moo->_nil)
+			{
+				if (MOO_CLASSOF(moo, ctx) == moo->_method_context)
+				{
+					moo_ooi_t preamble;
+					preamble = MOO_OOP_TO_SMOOI(((moo_oop_method_t)ctx->method_or_nargs)->preamble);
+					if (MOO_METHOD_GET_PREAMBLE_CODE(preamble) == MOO_METHOD_PREAMBLE_ENSURE)
+					{
+						if (!unwind_protect)
+						{
+							unwind_protect = 1;
+							unwind_start = ctx;
+						}
+						unwind_stop = ctx;
+					}
+				}
+				if (ctx == moo->active_context->origin) goto non_local_return_ok;
+				ctx = ctx->sender;
+			}
+
+			/* cannot return from a method that has returned already */
+			MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context->origin) == moo->_method_context);
+			MOO_ASSERT (moo, moo->active_context->origin->ip == MOO_SMOOI_TO_OOP(-1));
+
+			MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_ERROR, "Error - cannot return from dead context\n");
+			moo_seterrnum (moo, MOO_EINTERN); /* TODO: can i make this error catchable at the moo level? */
+			return -1;
+
+		non_local_return_ok:
+/*MOO_DEBUG2 (moo, "NON_LOCAL RETURN OK TO... %p %p\n", moo->active_context->origin, moo->active_context->origin->sender);*/
+			if (bcode != BCODE_LOCAL_RETURN)
+			{
+				/* mark that the context is dead */
+				moo->active_context->origin->ip = MOO_SMOOI_TO_OOP(-1);
+			}
+		}
+
+		/* the origin must always be a method context for both an active block context 
+		 * or an active method context */
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context->origin) == moo->_method_context);
+
+		/* restore the stack pointer */
+		moo->sp = MOO_OOP_TO_SMOOI(moo->active_context->origin->sp);
+		if (bcode == BCODE_LOCAL_RETURN && moo->active_context != moo->active_context->origin)
+		{
+			SWITCH_ACTIVE_CONTEXT (moo, moo->active_context->origin);
+		}
+		else
+		{
+			SWITCH_ACTIVE_CONTEXT (moo, moo->active_context->origin->sender);
+		}
+
+		if (unwind_protect)
+		{
+			static moo_ooch_t fbm[] = { 
+				'u', 'n', 'w', 'i', 'n', 'd', 'T', 'o', ':', 
+				'r', 'e', 't', 'u', 'r', 'n', ':'
+			};
+
+			MOO_STACK_PUSH (moo, (moo_oop_t)unwind_start);
+			MOO_STACK_PUSH (moo, (moo_oop_t)unwind_stop);
+			MOO_STACK_PUSH (moo, (moo_oop_t)return_value);
+
+			if (send_message_with_str (moo, fbm, 16, 0, 2) <= -1) return -1;
+		}
+		else
+		{
+			/* push the return value to the stack of the new active context */
+			MOO_STACK_PUSH (moo, return_value);
+
+			if (moo->active_context == moo->initial_context)
+			{
+				/* the new active context is the fake initial context.
+				 * this context can't get executed further. */
+				MOO_ASSERT (moo, (moo_oop_t)moo->active_context->sender == moo->_nil);
+				MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context) == moo->_method_context);
+				MOO_ASSERT (moo, moo->active_context->receiver_or_source == moo->_nil);
+				MOO_ASSERT (moo, moo->active_context == moo->processor->active->initial_context);
+				MOO_ASSERT (moo, moo->active_context->origin == moo->processor->active->initial_context->origin);
+				MOO_ASSERT (moo, moo->active_context->origin == moo->active_context);
+
+				/* NOTE: this condition is true for the processified block context also.
+				 *   moo->active_context->origin == moo->processor->active->initial_context->origin
+				 *   however, the check here is done after context switching and the
+				 *   processified block check has been done against the context before switching */
+
+				/* the stack contains the final return value so the stack pointer must be 0. */
+				MOO_ASSERT (moo, moo->sp == 0); 
+
+				if (moo->option.trait & MOO_AWAIT_PROCS)
+				{
+					terminate_process (moo, moo->processor->active);
+				}
+				else
+				{
+					/* graceful termination of the whole vm */
+					return 0;
+				}
+
+				/* TODO: store the return value to the VM register.
+				 * the caller to moo_execute() can fetch it to return it to the system */
+			}
+		}
+	}
+#endif
+
+	return 1;
+}
+
+
+static MOO_INLINE void do_return_from_block (moo_t* moo)
+{
+	LOG_INST_0 (moo, "return_from_block");
+
+	MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context) == moo->_block_context);
+
+	if (moo->active_context == moo->processor->active->initial_context)
+	{
+		/* the active context to return from is an initial context of
+		 * the active process. this process must have been created 
+		 * over a block using the newProcess method. let's terminate
+		 * the process. */
+
+		MOO_ASSERT (moo, (moo_oop_t)moo->active_context->sender == moo->_nil);
+		terminate_process (moo, moo->processor->active);
+	}
+	else
+	{
+		/* it is a normal block return as the active block context 
+		 * is not the initial context of a process */
+
+		/* the process stack is shared. the return value 
+		 * doesn't need to get moved. */
+		SWITCH_ACTIVE_CONTEXT (moo, (moo_oop_context_t)moo->active_context->sender);
+	}
+}
+
+static MOO_INLINE int make_block (moo_t* moo)
+{
+	moo_oop_context_t blkctx;
+	moo_oob_t b1, b2;
+
+	/* b1 - number of block arguments
+	 * b2 - number of block temporaries */
+	FETCH_PARAM_CODE_TO (moo, b1);
+	FETCH_PARAM_CODE_TO (moo, b2);
+
+	LOG_INST_2 (moo, "make_block %zu %zu", b1, b2);
+
+	MOO_ASSERT (moo, b1 >= 0);
+	MOO_ASSERT (moo, b2 >= b1);
+
+	/* the block context object created here is used as a base
+	 * object for block context activation. pf_block_value()
+	 * clones a block context and activates the cloned context.
+	 * this base block context is created with no stack for 
+	 * this reason */
+	blkctx = (moo_oop_context_t)moo_instantiate (moo, moo->_block_context, MOO_NULL, 0); 
+	if (!blkctx) return -1;
+
+	/* the long forward jump instruction has the format of 
+	 *   11000100 KKKKKKKK or 11000100 KKKKKKKK KKKKKKKK 
+	 * depending on MOO_BCODE_LONG_PARAM_SIZE. change 'ip' to point to
+	 * the instruction after the jump. */
+	blkctx->ip = MOO_SMOOI_TO_OOP(moo->ip + MOO_BCODE_LONG_PARAM_SIZE + 1);
+	/* stack pointer below the bottom. this base block context
+	 * has an empty stack anyway. */
+	blkctx->sp = MOO_SMOOI_TO_OOP(-1);
+	/* the number of arguments for a block context is local to the block */
+	blkctx->method_or_nargs = MOO_SMOOI_TO_OOP(b1);
+	/* the number of temporaries here is an accumulated count including
+	 * the number of temporaries of a home context */
+	blkctx->ntmprs = MOO_SMOOI_TO_OOP(b2);
+
+	/* set the home context where it's defined */
+	blkctx->home = (moo_oop_t)moo->active_context; 
+	/* no source for a base block context. */
+	blkctx->receiver_or_source = moo->_nil; 
+
+	blkctx->origin = moo->active_context->origin;
+
+	/* push the new block context to the stack of the active context */
+	MOO_STACK_PUSH (moo, (moo_oop_t)blkctx);
+	return 0;
+}
+
 static int __execute (moo_t* moo)
 {
 	moo_oob_t bcode;
 	moo_oow_t b1, b2;
 	moo_oop_t return_value;
-	int unwind_protect;
-	moo_oop_context_t unwind_start;
-	moo_oop_context_t unwind_stop;
+
+#if defined(HAVE_LABELS_AS_VALUES)
+	static void* inst_table[256] = 
+	{
+		#include "moo-bct.h"
+	};
+
+#	define BEGIN_DISPATCH_LOOP() __begin_inst_dispatch: 
+#	define END_DISPATCH_LOOP() __end_inst_dispatch:
+#	define EXIT_DISPATCH_LOOP(x) goto __end_inst_dispatch
+#	define NEXT_INST() goto __begin_inst_dispatch
+
+#	define BEGIN_DISPATCH_TABLE() goto *inst_table[bcode];
+#	define END_DISPATCH_TABLE()
+
+#	define ON_INST(code) case_ ## code:
+#	define ON_UNKNOWN_INST() case_ ## DEFAULT:
+
+#else
+#	define BEGIN_DISPATCH_LOOP() __begin_inst_dispatch: 
+#	define END_DISPATCH_LOOP() __end_inst_dispatch:
+#	define EXIT_DISPATCH_LOOP(x) goto __end_inst_dispatch
+#	define NEXT_INST() goto __begin_inst_dispatch
+
+#	define BEGIN_DISPATCH_TABLE() switch (bcode) {
+#	define END_DISPATCH_TABLE()   }
+
+#	define ON_INST(code) case code:
+#	define ON_UNKNOWN_INST()  default:
+
+#endif
 
 	MOO_ASSERT (moo, moo->active_context != MOO_NULL);
 
@@ -4851,1115 +5262,837 @@ static int __execute (moo_t* moo)
  *   sem_heap
  *   sem_io.
  *   sem_list.
- * these can be dirty if this function is called again esepcially after failure.
+ * these can get dirty if this function is called again esepcially after failure.
  */
 
-	while (!moo->abort_req)
-	{
-		/*
-		if (moo->gc_finalization_pending)
-			switch_to_gc_process (xxxx);
-		else */
-		if (switch_process_if_needed(moo) == 0) break; /* no more runnable process */
+	BEGIN_DISPATCH_LOOP()
+		/* stop requested or no more runnable process */
+		if (moo->abort_req || switch_process_if_needed(moo) == 0) EXIT_DISPATCH_LOOP();
 
-#if defined(MOO_DEBUG_VM_EXEC)
+	#if defined(MOO_DEBUG_VM_EXEC)
 		moo->last_inst_pointer = moo->ip;
-#endif
-		FETCH_BYTE_CODE_TO (moo, bcode);
-		/*while (bcode == BCODE_NOOP) FETCH_BYTE_CODE_TO (moo, bcode);*/
+	#endif
 
-#if defined(MOO_PROFILE_VM)
+		bcode = FETCH_BYTE_CODE(moo);
+
+	#if defined(MOO_PROFILE_VM)
 		moo->inst_counter++;
-#endif
+	#endif
 
-		switch (bcode)
+		/* ==== DISPATCH TABLE ==== */
+		BEGIN_DISPATCH_TABLE()
+
+		ON_INST(BCODE_PUSH_INSTVAR_X)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			goto push_instvar;
+		ON_INST(BCODE_PUSH_INSTVAR_0)
+		ON_INST(BCODE_PUSH_INSTVAR_1)
+		ON_INST(BCODE_PUSH_INSTVAR_2)
+		ON_INST(BCODE_PUSH_INSTVAR_3)
+		ON_INST(BCODE_PUSH_INSTVAR_4)
+		ON_INST(BCODE_PUSH_INSTVAR_5)
+		ON_INST(BCODE_PUSH_INSTVAR_6)
+		ON_INST(BCODE_PUSH_INSTVAR_7)
+			b1 = bcode & 0x7; /* low 3 bits */
+		push_instvar:
+			LOG_INST_1 (moo, "push_instvar %zu", b1);
+			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->origin->receiver_or_source) == MOO_OBJ_TYPE_OOP);
+			MOO_STACK_PUSH (moo, ((moo_oop_oop_t)moo->active_context->origin->receiver_or_source)->slot[b1]);
+			NEXT_INST();
+
+		/* ------------------------------------------------- */
+
+		ON_INST(BCODE_STORE_INTO_INSTVAR_X)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			goto store_instvar;
+		ON_INST(BCODE_STORE_INTO_INSTVAR_0)
+		ON_INST(BCODE_STORE_INTO_INSTVAR_1)
+		ON_INST(BCODE_STORE_INTO_INSTVAR_2)
+		ON_INST(BCODE_STORE_INTO_INSTVAR_3)
+		ON_INST(BCODE_STORE_INTO_INSTVAR_4)
+		ON_INST(BCODE_STORE_INTO_INSTVAR_5)
+		ON_INST(BCODE_STORE_INTO_INSTVAR_6)
+		ON_INST(BCODE_STORE_INTO_INSTVAR_7)
+			b1 = bcode & 0x7; /* low 3 bits */
+		store_instvar:
+			LOG_INST_1 (moo, "store_into_instvar %zu", b1);
+			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->receiver_or_source) == MOO_OBJ_TYPE_OOP);
+			((moo_oop_oop_t)moo->active_context->origin->receiver_or_source)->slot[b1] = MOO_STACK_GETTOP(moo);
+			NEXT_INST();
+
+		/* ------------------------------------------------- */
+		ON_INST(BCODE_POP_INTO_INSTVAR_X)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			goto pop_into_instvar;
+		ON_INST(BCODE_POP_INTO_INSTVAR_0)
+		ON_INST(BCODE_POP_INTO_INSTVAR_1)
+		ON_INST(BCODE_POP_INTO_INSTVAR_2)
+		ON_INST(BCODE_POP_INTO_INSTVAR_3)
+		ON_INST(BCODE_POP_INTO_INSTVAR_4)
+		ON_INST(BCODE_POP_INTO_INSTVAR_5)
+		ON_INST(BCODE_POP_INTO_INSTVAR_6)
+		ON_INST(BCODE_POP_INTO_INSTVAR_7)
+			b1 = bcode & 0x7; /* low 3 bits */
+		pop_into_instvar:
+			LOG_INST_1 (moo, "pop_into_instvar %zu", b1);
+			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->receiver_or_source) == MOO_OBJ_TYPE_OOP);
+			((moo_oop_oop_t)moo->active_context->origin->receiver_or_source)->slot[b1] = MOO_STACK_GETTOP(moo);
+			MOO_STACK_POP (moo);
+			NEXT_INST();
+
+		/* ------------------------------------------------- */
+		ON_INST(BCODE_PUSH_TEMPVAR_X)
+		ON_INST(BCODE_STORE_INTO_TEMPVAR_X)
+		ON_INST(BCODE_POP_INTO_TEMPVAR_X)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			goto handle_tempvar;
+
+		ON_INST(BCODE_PUSH_TEMPVAR_0)
+		ON_INST(BCODE_PUSH_TEMPVAR_1)
+		ON_INST(BCODE_PUSH_TEMPVAR_2)
+		ON_INST(BCODE_PUSH_TEMPVAR_3)
+		ON_INST(BCODE_PUSH_TEMPVAR_4)
+		ON_INST(BCODE_PUSH_TEMPVAR_5)
+		ON_INST(BCODE_PUSH_TEMPVAR_6)
+		ON_INST(BCODE_PUSH_TEMPVAR_7)
+		ON_INST(BCODE_STORE_INTO_TEMPVAR_0)
+		ON_INST(BCODE_STORE_INTO_TEMPVAR_1)
+		ON_INST(BCODE_STORE_INTO_TEMPVAR_2)
+		ON_INST(BCODE_STORE_INTO_TEMPVAR_3)
+		ON_INST(BCODE_STORE_INTO_TEMPVAR_4)
+		ON_INST(BCODE_STORE_INTO_TEMPVAR_5)
+		ON_INST(BCODE_STORE_INTO_TEMPVAR_6)
+		ON_INST(BCODE_STORE_INTO_TEMPVAR_7)
+		ON_INST(BCODE_POP_INTO_TEMPVAR_0)
+		ON_INST(BCODE_POP_INTO_TEMPVAR_1)
+		ON_INST(BCODE_POP_INTO_TEMPVAR_2)
+		ON_INST(BCODE_POP_INTO_TEMPVAR_3)
+		ON_INST(BCODE_POP_INTO_TEMPVAR_4)
+		ON_INST(BCODE_POP_INTO_TEMPVAR_5)
+		ON_INST(BCODE_POP_INTO_TEMPVAR_6)
+		ON_INST(BCODE_POP_INTO_TEMPVAR_7)
 		{
-			/* ------------------------------------------------- */
+			moo_oop_context_t ctx;
+			moo_ooi_t bx;
 
-			case BCODE_PUSH_INSTVAR_X:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				goto push_instvar;
-			case BCODE_PUSH_INSTVAR_0:
-			case BCODE_PUSH_INSTVAR_1:
-			case BCODE_PUSH_INSTVAR_2:
-			case BCODE_PUSH_INSTVAR_3:
-			case BCODE_PUSH_INSTVAR_4:
-			case BCODE_PUSH_INSTVAR_5:
-			case BCODE_PUSH_INSTVAR_6:
-			case BCODE_PUSH_INSTVAR_7:
-				b1 = bcode & 0x7; /* low 3 bits */
-			push_instvar:
-				LOG_INST_1 (moo, "push_instvar %zu", b1);
-				MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->origin->receiver_or_source) == MOO_OBJ_TYPE_OOP);
-				MOO_STACK_PUSH (moo, ((moo_oop_oop_t)moo->active_context->origin->receiver_or_source)->slot[b1]);
-				break;
+			b1 = bcode & 0x7; /* low 3 bits */
+		handle_tempvar:
 
-			/* ------------------------------------------------- */
+		#if defined(MOO_USE_CTXTEMPVAR)
+			/* when CTXTEMPVAR inststructions are used, the above 
+			 * instructions are used only for temporary access 
+			 * outside a block. i can assume that the temporary
+			 * variable index is pointing to one of temporaries
+			 * in the relevant method context */
+			ctx = moo->active_context->origin;
+			bx = b1;
+			MOO_ASSERT (moo, MOO_CLASSOF(moo, ctx) == moo->_method_context);
+		#else
+			/* otherwise, the index may point to a temporaries
+			 * declared inside a block */
 
-			case BCODE_STORE_INTO_INSTVAR_X:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				goto store_instvar;
-			case BCODE_STORE_INTO_INSTVAR_0:
-			case BCODE_STORE_INTO_INSTVAR_1:
-			case BCODE_STORE_INTO_INSTVAR_2:
-			case BCODE_STORE_INTO_INSTVAR_3:
-			case BCODE_STORE_INTO_INSTVAR_4:
-			case BCODE_STORE_INTO_INSTVAR_5:
-			case BCODE_STORE_INTO_INSTVAR_6:
-			case BCODE_STORE_INTO_INSTVAR_7:
-				b1 = bcode & 0x7; /* low 3 bits */
-			store_instvar:
-				LOG_INST_1 (moo, "store_into_instvar %zu", b1);
-				MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->receiver_or_source) == MOO_OBJ_TYPE_OOP);
-				((moo_oop_oop_t)moo->active_context->origin->receiver_or_source)->slot[b1] = MOO_STACK_GETTOP(moo);
-				break;
-
-			/* ------------------------------------------------- */
-			case BCODE_POP_INTO_INSTVAR_X:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				goto pop_into_instvar;
-			case BCODE_POP_INTO_INSTVAR_0:
-			case BCODE_POP_INTO_INSTVAR_1:
-			case BCODE_POP_INTO_INSTVAR_2:
-			case BCODE_POP_INTO_INSTVAR_3:
-			case BCODE_POP_INTO_INSTVAR_4:
-			case BCODE_POP_INTO_INSTVAR_5:
-			case BCODE_POP_INTO_INSTVAR_6:
-			case BCODE_POP_INTO_INSTVAR_7:
-				b1 = bcode & 0x7; /* low 3 bits */
-			pop_into_instvar:
-				LOG_INST_1 (moo, "pop_into_instvar %zu", b1);
-				MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->receiver_or_source) == MOO_OBJ_TYPE_OOP);
-				((moo_oop_oop_t)moo->active_context->origin->receiver_or_source)->slot[b1] = MOO_STACK_GETTOP(moo);
-				MOO_STACK_POP (moo);
-				break;
-
-			/* ------------------------------------------------- */
-			case BCODE_PUSH_TEMPVAR_X:
-			case BCODE_STORE_INTO_TEMPVAR_X:
-			case BCODE_POP_INTO_TEMPVAR_X:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				goto handle_tempvar;
-
-			case BCODE_PUSH_TEMPVAR_0:
-			case BCODE_PUSH_TEMPVAR_1:
-			case BCODE_PUSH_TEMPVAR_2:
-			case BCODE_PUSH_TEMPVAR_3:
-			case BCODE_PUSH_TEMPVAR_4:
-			case BCODE_PUSH_TEMPVAR_5:
-			case BCODE_PUSH_TEMPVAR_6:
-			case BCODE_PUSH_TEMPVAR_7:
-			case BCODE_STORE_INTO_TEMPVAR_0:
-			case BCODE_STORE_INTO_TEMPVAR_1:
-			case BCODE_STORE_INTO_TEMPVAR_2:
-			case BCODE_STORE_INTO_TEMPVAR_3:
-			case BCODE_STORE_INTO_TEMPVAR_4:
-			case BCODE_STORE_INTO_TEMPVAR_5:
-			case BCODE_STORE_INTO_TEMPVAR_6:
-			case BCODE_STORE_INTO_TEMPVAR_7:
-			case BCODE_POP_INTO_TEMPVAR_0:
-			case BCODE_POP_INTO_TEMPVAR_1:
-			case BCODE_POP_INTO_TEMPVAR_2:
-			case BCODE_POP_INTO_TEMPVAR_3:
-			case BCODE_POP_INTO_TEMPVAR_4:
-			case BCODE_POP_INTO_TEMPVAR_5:
-			case BCODE_POP_INTO_TEMPVAR_6:
-			case BCODE_POP_INTO_TEMPVAR_7:
+			if (moo->active_context->home != moo->_nil)
 			{
-				moo_oop_context_t ctx;
-				moo_ooi_t bx;
-
-				b1 = bcode & 0x7; /* low 3 bits */
-			handle_tempvar:
-
-			#if defined(MOO_USE_CTXTEMPVAR)
-				/* when CTXTEMPVAR inststructions are used, the above 
-				 * instructions are used only for temporary access 
-				 * outside a block. i can assume that the temporary
-				 * variable index is pointing to one of temporaries
-				 * in the relevant method context */
-				ctx = moo->active_context->origin;
-				bx = b1;
-				MOO_ASSERT (moo, MOO_CLASSOF(moo, ctx) == moo->_method_context);
-			#else
-				/* otherwise, the index may point to a temporaries
-				 * declared inside a block */
-
-				if (moo->active_context->home != moo->_nil)
-				{
-					/* this code assumes that the method context and
-					 * the block context place some key fields in the
-					 * same offset. such fields include 'home', 'ntmprs' */
-					moo_oop_t home;
-					moo_ooi_t home_ntmprs;
-
-					ctx = moo->active_context;
-					home = ctx->home;
-
-					do
-					{
-						/* ntmprs contains the number of defined temporaries 
-						 * including those defined in the home context */
-						home_ntmprs = MOO_OOP_TO_SMOOI(((moo_oop_context_t)home)->ntmprs);
-						if (b1 >= home_ntmprs) break;
-
-						ctx = (moo_oop_context_t)home;
-						home = ((moo_oop_context_t)home)->home;
-						if (home == moo->_nil)
-						{
-							home_ntmprs = 0;
-							break;
-						}
-					}
-					while (1);
-
-					/* bx is the actual index within the actual context 
-					 * containing the temporary */
-					bx = b1 - home_ntmprs;
-				}
-				else
-				{
-					ctx = moo->active_context;
-					bx = b1;
-				}
-			#endif
-
-				if ((bcode >> 4) & 1)
-				{
-					/* push - bit 4 on */
-					LOG_INST_1 (moo, "push_tempvar %zu", b1);
-					MOO_STACK_PUSH (moo, ctx->slot[bx]);
-				}
-				else
-				{
-					/* store or pop - bit 5 off */
-					ctx->slot[bx] = MOO_STACK_GETTOP(moo);
-
-					if ((bcode >> 3) & 1)
-					{
-						/* pop - bit 3 on */
-						LOG_INST_1 (moo, "pop_into_tempvar %zu", b1);
-						MOO_STACK_POP (moo);
-					}
-					else
-					{
-						LOG_INST_1 (moo, "store_into_tempvar %zu", b1);
-					}
-				}
-
-				break;
-			}
-
-			/* ------------------------------------------------- */
-			case BCODE_PUSH_LITERAL_X:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				goto push_literal;
-
-			case BCODE_PUSH_LITERAL_0:
-			case BCODE_PUSH_LITERAL_1:
-			case BCODE_PUSH_LITERAL_2:
-			case BCODE_PUSH_LITERAL_3:
-			case BCODE_PUSH_LITERAL_4:
-			case BCODE_PUSH_LITERAL_5:
-			case BCODE_PUSH_LITERAL_6:
-			case BCODE_PUSH_LITERAL_7:
-				b1 = bcode & 0x7; /* low 3 bits */
-			push_literal:
-				LOG_INST_1 (moo, "push_literal @%zu", b1);
-				MOO_STACK_PUSH (moo, moo->active_method->slot[b1]);
-				break;
-
-			/* ------------------------------------------------- */
-			case BCODE_PUSH_OBJECT_X:
-			case BCODE_STORE_INTO_OBJECT_X:
-			case BCODE_POP_INTO_OBJECT_X:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				goto handle_object;
-
-			case BCODE_PUSH_OBJECT_0:
-			case BCODE_PUSH_OBJECT_1:
-			case BCODE_PUSH_OBJECT_2:
-			case BCODE_PUSH_OBJECT_3:
-			case BCODE_STORE_INTO_OBJECT_0:
-			case BCODE_STORE_INTO_OBJECT_1:
-			case BCODE_STORE_INTO_OBJECT_2:
-			case BCODE_STORE_INTO_OBJECT_3:
-			case BCODE_POP_INTO_OBJECT_0:
-			case BCODE_POP_INTO_OBJECT_1:
-			case BCODE_POP_INTO_OBJECT_2:
-			case BCODE_POP_INTO_OBJECT_3:
-			{
-				moo_oop_association_t ass;
-
-				b1 = bcode & 0x3; /* low 2 bits */
-			handle_object:
-				ass = (moo_oop_association_t)moo->active_method->slot[b1];
-				MOO_ASSERT (moo, MOO_CLASSOF(moo, ass) == moo->_association);
-
-				if ((bcode >> 3) & 1)
-				{
-					/* store or pop */
-					ass->value = MOO_STACK_GETTOP(moo);
-
-					if ((bcode >> 2) & 1)
-					{
-						/* pop */
-						LOG_INST_1 (moo, "pop_into_object @%zu", b1);
-						MOO_STACK_POP (moo);
-					}
-					else
-					{
-						LOG_INST_1 (moo, "store_into_object @%zu", b1);
-					}
-				}
-				else
-				{
-					/* push */
-					LOG_INST_1 (moo, "push_object @%zu", b1);
-					MOO_STACK_PUSH (moo, ass->value);
-				}
-				break;
-			}
-
-			/* -------------------------------------------------------- */
-
-			case BCODE_JUMP_FORWARD_X:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jump_forward %zu", b1);
-				moo->ip += b1;
-				break;
-
-			case BCODE_JUMP_FORWARD_0:
-			case BCODE_JUMP_FORWARD_1:
-			case BCODE_JUMP_FORWARD_2:
-			case BCODE_JUMP_FORWARD_3:
-				LOG_INST_1 (moo, "jump_forward %zu", (moo_oow_t)(bcode & 0x3));
-				moo->ip += (bcode & 0x3); /* low 2 bits */
-				break;
-
-			case BCODE_JUMP_BACKWARD_X:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jump_backward %zu", b1);
-				moo->ip -= b1;
-				break;
-
-			case BCODE_JUMP_BACKWARD_0:
-			case BCODE_JUMP_BACKWARD_1:
-			case BCODE_JUMP_BACKWARD_2:
-			case BCODE_JUMP_BACKWARD_3:
-				LOG_INST_1 (moo, "jump_backward %zu", (moo_oow_t)(bcode & 0x3));
-				moo->ip -= (bcode & 0x3); /* low 2 bits */
-				break;
-
-			case BCODE_JUMP_BACKWARD_IF_FALSE_X:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jump_backward_if_false %zu", b1);
-				if (MOO_STACK_GETTOP(moo) == moo->_false) moo->ip -= b1;
-				MOO_STACK_POP (moo);
-				break;
-
-			case BCODE_JUMP_BACKWARD_IF_FALSE_0:
-			case BCODE_JUMP_BACKWARD_IF_FALSE_1:
-			case BCODE_JUMP_BACKWARD_IF_FALSE_2:
-			case BCODE_JUMP_BACKWARD_IF_FALSE_3:
-				LOG_INST_1 (moo, "jump_backward_if_false %zu", (moo_oow_t)(bcode & 0x3));
-				if (MOO_STACK_GETTOP(moo) == moo->_false) moo->ip -= (bcode & 0x3); /* low 2 bits */
-				MOO_STACK_POP (moo);
-				break;
-
-			case BCODE_JUMP_BACKWARD_IF_TRUE_X:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jump_backward_if_true %zu", b1);
-				/*if (MOO_STACK_GETTOP(moo) == moo->_true) moo->ip -= b1;*/
-				if (MOO_STACK_GETTOP(moo) != moo->_false) moo->ip -= b1;
-				MOO_STACK_POP (moo);
-				break;
-
-			case BCODE_JUMP_BACKWARD_IF_TRUE_0:
-			case BCODE_JUMP_BACKWARD_IF_TRUE_1:
-			case BCODE_JUMP_BACKWARD_IF_TRUE_2:
-			case BCODE_JUMP_BACKWARD_IF_TRUE_3:
-				LOG_INST_1 (moo, "jump_backward_if_true %zu", (moo_oow_t)(bcode & 0x3));
-				/*if (MOO_STACK_GETTOP(moo) == moo->_true) moo->ip -= (bcode & 0x3);*/ /* low 2 bits */
-				if (MOO_STACK_GETTOP(moo) != moo->_false) moo->ip -= (bcode & 0x3);
-				MOO_STACK_POP (moo);
-				break;
-
-			case BCODE_JUMP_FORWARD_IF_FALSE:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jump_forward_if_false %zu", b1);
-				if (MOO_STACK_GETTOP(moo) == moo->_false) moo->ip += b1;
-				MOO_STACK_POP (moo);
-				break;
-
-			case BCODE_JUMP_FORWARD_IF_TRUE:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jump_forward_if_true %zu", b1);
-				/*if (MOO_STACK_GETTOP(moo) == moo->_true) moo->ip += b1;*/
-				if (MOO_STACK_GETTOP(moo) != moo->_false) moo->ip += b1;
-				MOO_STACK_POP (moo);
-				break;
-
-			case BCODE_JUMP2_FORWARD:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jump2_forward %zu", b1);
-				moo->ip += MAX_CODE_JUMP + b1;
-				break;
-
-			case BCODE_JUMP2_BACKWARD:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jump2_backward %zu", b1);
-				moo->ip -= MAX_CODE_JUMP + b1;
-				break;
-
-			case BCODE_JUMP2_FORWARD_IF_FALSE:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jump2_forward_if_false %zu", b1);
-				if (MOO_STACK_GETTOP(moo) == moo->_false) moo->ip += MAX_CODE_JUMP + b1;
-				MOO_STACK_POP (moo);
-				break;
-
-			case BCODE_JUMP2_FORWARD_IF_TRUE:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jump2_forward_if_true %zu", b1);
-				/*if (MOO_STACK_GETTOP(moo) == moo->_true) moo->ip += MAX_CODE_JUMP + b1;*/
-				if (MOO_STACK_GETTOP(moo) != moo->_false) moo->ip += MAX_CODE_JUMP + b1;
-				MOO_STACK_POP (moo);
-				break;
-
-			case BCODE_JUMP2_BACKWARD_IF_FALSE:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jump2_backward_if_false %zu", b1);
-				if (MOO_STACK_GETTOP(moo) == moo->_false) moo->ip -= MAX_CODE_JUMP + b1;
-				MOO_STACK_POP (moo);
-				break;
-
-			case BCODE_JUMP2_BACKWARD_IF_TRUE:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jump2_backward_if_true %zu", b1);
-				/* if (MOO_STACK_GETTOP(moo) == moo->_true) moo->ip -= MAX_CODE_JUMP + b1; */
-				if (MOO_STACK_GETTOP(moo) != moo->_false) moo->ip -= MAX_CODE_JUMP + b1;
-				MOO_STACK_POP (moo);
-				break;
-			/* -------------------------------------------------------- */
-
-			case BCODE_PUSH_CTXTEMPVAR_X:
-			case BCODE_STORE_INTO_CTXTEMPVAR_X:
-			case BCODE_POP_INTO_CTXTEMPVAR_X:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				FETCH_PARAM_CODE_TO (moo, b2);
-				goto handle_ctxtempvar;
-			case BCODE_PUSH_CTXTEMPVAR_0:
-			case BCODE_PUSH_CTXTEMPVAR_1:
-			case BCODE_PUSH_CTXTEMPVAR_2:
-			case BCODE_PUSH_CTXTEMPVAR_3:
-			case BCODE_STORE_INTO_CTXTEMPVAR_0:
-			case BCODE_STORE_INTO_CTXTEMPVAR_1:
-			case BCODE_STORE_INTO_CTXTEMPVAR_2:
-			case BCODE_STORE_INTO_CTXTEMPVAR_3:
-			case BCODE_POP_INTO_CTXTEMPVAR_0:
-			case BCODE_POP_INTO_CTXTEMPVAR_1:
-			case BCODE_POP_INTO_CTXTEMPVAR_2:
-			case BCODE_POP_INTO_CTXTEMPVAR_3:
-			{
-				moo_ooi_t i;
-				moo_oop_context_t ctx;
-
-				b1 = bcode & 0x3; /* low 2 bits */
-				FETCH_BYTE_CODE_TO (moo, b2);
-
-			handle_ctxtempvar:
+				/* this code assumes that the method context and
+				 * the block context place some key fields in the
+				 * same offset. such fields include 'home', 'ntmprs' */
+				moo_oop_t home;
+				moo_ooi_t home_ntmprs;
 
 				ctx = moo->active_context;
-				MOO_ASSERT (moo, (moo_oop_t)ctx != moo->_nil);
-				for (i = 0; i < b1; i++)
+				home = ctx->home;
+
+				do
 				{
-					ctx = (moo_oop_context_t)ctx->home;
+					/* ntmprs contains the number of defined temporaries 
+					 * including those defined in the home context */
+					home_ntmprs = MOO_OOP_TO_SMOOI(((moo_oop_context_t)home)->ntmprs);
+					if (b1 >= home_ntmprs) break;
+
+					ctx = (moo_oop_context_t)home;
+					home = ((moo_oop_context_t)home)->home;
+					if (home == moo->_nil)
+					{
+						home_ntmprs = 0;
+						break;
+					}
 				}
+				while (1);
+
+				/* bx is the actual index within the actual context 
+				 * containing the temporary */
+				bx = b1 - home_ntmprs;
+			}
+			else
+			{
+				ctx = moo->active_context;
+				bx = b1;
+			}
+		#endif
+
+			if ((bcode >> 4) & 1)
+			{
+				/* push - bit 4 on */
+				LOG_INST_1 (moo, "push_tempvar %zu", b1);
+				MOO_STACK_PUSH (moo, ctx->slot[bx]);
+			}
+			else
+			{
+				/* store or pop - bit 5 off */
+				ctx->slot[bx] = MOO_STACK_GETTOP(moo);
 
 				if ((bcode >> 3) & 1)
 				{
-					/* store or pop */
-					ctx->slot[b2] = MOO_STACK_GETTOP(moo);
-
-					if ((bcode >> 2) & 1)
-					{
-						/* pop */
-						MOO_STACK_POP (moo);
-						LOG_INST_2 (moo, "pop_into_ctxtempvar %zu %zu", b1, b2);
-					}
-					else
-					{
-						LOG_INST_2 (moo, "store_into_ctxtempvar %zu %zu", b1, b2);
-					}
+					/* pop - bit 3 on */
+					LOG_INST_1 (moo, "pop_into_tempvar %zu", b1);
+					MOO_STACK_POP (moo);
 				}
 				else
 				{
-					/* push */
-					MOO_STACK_PUSH (moo, ctx->slot[b2]);
-					LOG_INST_2 (moo, "push_ctxtempvar %zu %zu", b1, b2);
+					LOG_INST_1 (moo, "store_into_tempvar %zu", b1);
 				}
-
-				break;
-			}
-			/* -------------------------------------------------------- */
-
-			case BCODE_PUSH_OBJVAR_X:
-			case BCODE_STORE_INTO_OBJVAR_X:
-			case BCODE_POP_INTO_OBJVAR_X:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				FETCH_PARAM_CODE_TO (moo, b2);
-				goto handle_objvar;
-
-			case BCODE_PUSH_OBJVAR_0:
-			case BCODE_PUSH_OBJVAR_1:
-			case BCODE_PUSH_OBJVAR_2:
-			case BCODE_PUSH_OBJVAR_3:
-			case BCODE_STORE_INTO_OBJVAR_0:
-			case BCODE_STORE_INTO_OBJVAR_1:
-			case BCODE_STORE_INTO_OBJVAR_2:
-			case BCODE_STORE_INTO_OBJVAR_3:
-			case BCODE_POP_INTO_OBJVAR_0:
-			case BCODE_POP_INTO_OBJVAR_1:
-			case BCODE_POP_INTO_OBJVAR_2:
-			case BCODE_POP_INTO_OBJVAR_3:
-			{
-				moo_oop_oop_t t;
-
-				/* b1 -> variable index to the object indicated by b2.
-				 * b2 -> object index stored in the literal frame. */
-				b1 = bcode & 0x3; /* low 2 bits */
-				FETCH_BYTE_CODE_TO (moo, b2);
-
-			handle_objvar:
-				t = (moo_oop_oop_t)moo->active_method->slot[b2];
-				MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(t) == MOO_OBJ_TYPE_OOP);
-				MOO_ASSERT (moo, b1 < MOO_OBJ_GET_SIZE(t));
-
-				if ((bcode >> 3) & 1)
-				{
-					/* store or pop */
-
-					t->slot[b1] = MOO_STACK_GETTOP(moo);
-
-					if ((bcode >> 2) & 1)
-					{
-						/* pop */
-						MOO_STACK_POP (moo);
-						LOG_INST_2 (moo, "pop_into_objvar %zu %zu", b1, b2);
-					}
-					else
-					{
-						LOG_INST_2 (moo, "store_into_objvar %zu %zu", b1, b2);
-					}
-				}
-				else
-				{
-					/* push */
-					LOG_INST_2 (moo, "push_objvar %zu %zu", b1, b2);
-					MOO_STACK_PUSH (moo, t->slot[b1]);
-				}
-				break;
 			}
 
-			/* -------------------------------------------------------- */
-			case BCODE_SEND_MESSAGE_X:
-			case BCODE_SEND_MESSAGE_TO_SUPER_X:
-				/* b1 -> number of arguments 
-				 * b2 -> selector index stored in the literal frame */
-				FETCH_PARAM_CODE_TO (moo, b1);
-				FETCH_PARAM_CODE_TO (moo, b2);
-				goto handle_send_message;
-
-			case BCODE_SEND_MESSAGE_0:
-			case BCODE_SEND_MESSAGE_1:
-			case BCODE_SEND_MESSAGE_2:
-			case BCODE_SEND_MESSAGE_3:
-			case BCODE_SEND_MESSAGE_TO_SUPER_0:
-			case BCODE_SEND_MESSAGE_TO_SUPER_1:
-			case BCODE_SEND_MESSAGE_TO_SUPER_2:
-			case BCODE_SEND_MESSAGE_TO_SUPER_3:
-			{
-				moo_oop_char_t selector;
-
-				b1 = bcode & 0x3; /* low 2 bits */
-				FETCH_BYTE_CODE_TO (moo, b2);
-
-			handle_send_message:
-				/* get the selector from the literal frame */
-				selector = (moo_oop_char_t)moo->active_method->slot[b2];
-
-				LOG_INST_3 (moo, "send_message%hs %zu @%zu", (((bcode >> 2) & 1)? "_to_super": ""), b1, b2);
-				if (send_message (moo, selector, ((bcode >> 2) & 1), b1) <= -1) return -1;
-				break;
-			}
-
-			/* -------------------------------------------------------- */
-
-			case BCODE_PUSH_RECEIVER:
-				LOG_INST_0 (moo, "push_receiver");
-				MOO_STACK_PUSH (moo, moo->active_context->origin->receiver_or_source);
-				break;
-
-			case BCODE_PUSH_NIL:
-				LOG_INST_0 (moo, "push_nil");
-				MOO_STACK_PUSH (moo, moo->_nil);
-				break;
-
-			case BCODE_PUSH_TRUE:
-				LOG_INST_0 (moo, "push_true");
-				MOO_STACK_PUSH (moo, moo->_true);
-				break;
-
-			case BCODE_PUSH_FALSE:
-				LOG_INST_0 (moo, "push_false");
-				MOO_STACK_PUSH (moo, moo->_false);
-				break;
-
-			case BCODE_PUSH_CONTEXT:
-				LOG_INST_0 (moo, "push_context");
-				MOO_STACK_PUSH (moo, (moo_oop_t)moo->active_context);
-				break;
-
-			case BCODE_PUSH_PROCESS:
-				LOG_INST_0 (moo, "push_process");
-				MOO_STACK_PUSH (moo, (moo_oop_t)moo->processor->active);
-				break;
-
-			case BCODE_PUSH_RECEIVER_NS:
-			{
-				register moo_oop_t c;
-				LOG_INST_0 (moo, "push_receiver_ns");
-				c = (moo_oop_t)MOO_CLASSOF(moo, moo->active_context->origin->receiver_or_source);
-				if (c == (moo_oop_t)moo->_class) c = moo->active_context->origin->receiver_or_source;
-				MOO_STACK_PUSH (moo, (moo_oop_t)((moo_oop_class_t)c)->nsup);
-				break;
-			}
-
-			case BCODE_PUSH_NEGONE:
-				LOG_INST_0 (moo, "push_negone");
-				MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(-1));
-				break;
-
-			case BCODE_PUSH_ZERO:
-				LOG_INST_0 (moo, "push_zero");
-				MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(0));
-				break;
-
-			case BCODE_PUSH_ONE:
-				LOG_INST_0 (moo, "push_one");
-				MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(1));
-				break;
-
-			case BCODE_PUSH_TWO:
-				LOG_INST_0 (moo, "push_two");
-				MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(2));
-				break;
-
-			case BCODE_PUSH_INTLIT:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "push_intlit %zu", b1);
-				MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(b1));
-				break;
-
-			case BCODE_PUSH_NEGINTLIT:
-			{
-				moo_ooi_t num;
-				FETCH_PARAM_CODE_TO (moo, b1);
-				num = b1;
-				LOG_INST_1 (moo, "push_negintlit %zu", b1);
-				MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(-num));
-				break;
-			}
-
-			case BCODE_PUSH_CHARLIT:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "push_charlit %zu", b1);
-				MOO_STACK_PUSH (moo, MOO_CHAR_TO_OOP(b1));
-				break;
-			/* -------------------------------------------------------- */
-
-			case BCODE_MAKE_DICTIONARY:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "make_dictionary %zu", b1);
-
-				/* Dictionary new: b1 
-				 *  doing this allows users to redefine Dictionary whatever way they like.
-				 *  if i did the followings instead, the internal of Dictionary would get
-				 *  tied to the system dictionary implementation. the system dictionary 
-				 *  implementation is flawed in that it accepts only a variable character
-				 *  object as a key. it's better to invoke 'Dictionary new: ...'.
-				t = (moo_oop_t)moo_makedic (moo, moo->_dictionary, b1 + 10);
-				MOO_STACK_PUSH (moo, t);
-				 */
-				MOO_STACK_PUSH (moo, (moo_oop_t)moo->_dictionary);
-				MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(b1));
-				if (send_message (moo, moo->dicnewsym, 0, 1) <= -1) return -1;
-				break;
-
-			case BCODE_POP_INTO_DICTIONARY:
-				LOG_INST_0 (moo, "pop_into_dictionary");
-
-				/* dic __put_assoc:  assoc
-				 *  whether the system dictinoary implementation is flawed or not,
-				 *  the code would look like this if it were used.
-				t1 = MOO_STACK_GETTOP(moo);
-				MOO_STACK_POP (moo);
-				t2 = MOO_STACK_GETTOP(moo);
-				moo_putatdic (moo, (moo_oop_dic_t)t2, ((moo_oop_association_t)t1)->key, ((moo_oop_association_t)t1)->value);
-				 */
-				if (send_message (moo, moo->dicputassocsym, 0, 1) <= -1) return -1;
-				break;
-
-			case BCODE_MAKE_ARRAY:
-			{
-				moo_oop_t t;
-
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "make_array %zu", b1);
-
-				/* create an empty array */
-				t = moo_instantiate (moo, moo->_array, MOO_NULL, b1);
-				if (!t) return -1;
-
-				MOO_STACK_PUSH (moo, t); /* push the array created */
-				break;
-			}
-
-			case BCODE_POP_INTO_ARRAY:
-			{
-				moo_oop_t t1, t2;
-
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "pop_into_array %zu", b1);
-
-				t1 = MOO_STACK_GETTOP(moo);
-				MOO_STACK_POP (moo);
-				t2 = MOO_STACK_GETTOP(moo);
-				((moo_oop_oop_t)t2)->slot[b1] = t1;
-				break;
-			}
-
-			case BCODE_DUP_STACKTOP:
-			{
-				moo_oop_t t;
-				LOG_INST_0 (moo, "dup_stacktop");
-				MOO_ASSERT (moo, !MOO_STACK_ISEMPTY(moo));
-				t = MOO_STACK_GETTOP(moo);
-				MOO_STACK_PUSH (moo, t);
-				break;
-			}
-
-			case BCODE_POP_STACKTOP:
-				LOG_INST_0 (moo, "pop_stacktop");
-				MOO_ASSERT (moo, !MOO_STACK_ISEMPTY(moo));
-				MOO_STACK_POP (moo);
-				break;
-
-			case BCODE_RETURN_STACKTOP:
-				LOG_INST_0 (moo, "return_stacktop");
-				return_value = MOO_STACK_GETTOP(moo);
-				MOO_STACK_POP (moo);
-				goto handle_return;
-
-			case BCODE_RETURN_RECEIVER:
-				LOG_INST_0 (moo, "return_receiver");
-				return_value = moo->active_context->origin->receiver_or_source;
-
-			handle_return:
-			#if 0
-				/* put the instruction pointer back to the return
-				 * instruction (RETURN_RECEIVER or RETURN_RECEIVER)
-				 * if a context returns into this context again,
-				 * it'll be able to return as well again.
-				 * 
-				 * Consider a program like this:
-				 *
-				 * #class MyObject(Object)
-				 * {
-				 *   #declare(#classinst) t1 t2.
-				 *   #method(#class) xxxx
-				 *   {
-				 *     | g1 g2 |
-				 *     t1 dump.
-				 *     t2 := [ g1 := 50. g2 := 100. ^g1 + g2 ].
-				 *     (t1 < 100) ifFalse: [ ^self ].
-				 *     t1 := t1 + 1. 
-				 *     ^self xxxx.
-				 *   }
-				 *   #method(#class) main
-				 *   {
-				 *     t1 := 1.
-				 *     self xxxx.
-				 *     t2 := t2 value.  
-				 *     t2 dump.
-				 *   }
-				 * }
-				 *
-				 * the 'xxxx' method invoked by 'self xxxx' has 
-				 * returned even before 't2 value' is executed.
-				 * the '^' operator makes the active context to
-				 * switch to its 'origin->sender' which is the
-				 * method context of 'xxxx' itself. placing its
-				 * instruction pointer at the 'return' instruction
-				 * helps execute another return when the switching
-				 * occurs.
-				 * 
-				 * TODO: verify if this really works
-				 *
-				 */
-				moo->ip--; 
-			#else
-				if (MOO_UNLIKELY(moo->active_context->origin == moo->processor->active->initial_context->origin))
-				{
-					/* method return from a processified block
-					 * 
- 					 * #method(#class) main
-					 * {
-					 *    [^100] newProcess resume.
-					 *    '1111' dump.
-					 *    '1111' dump.
-					 *    '1111' dump.
-					 *    ^300.
-					 * }
-					 * 
-					 * ^100 doesn't terminate a main process as the block
-					 * has been processified. on the other hand, ^100
-					 * in the following program causes main to exit.
-					 * 
-					 * #method(#class) main
-					 * {
-					 *    [^100] value.
-					 *    '1111' dump.
-					 *    '1111' dump.
-					 *    '1111' dump.
-					 *    ^300.
-					 * }
-					 */
-
-					MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context) == moo->_block_context);
-					MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->processor->active->initial_context) == moo->_block_context);
-
-					/* decrement the instruction pointer back to the return instruction.
-					 * even if the context is reentered, it will just return.
-					 *moo->ip--;*/
-
-					terminate_process (moo, moo->processor->active);
-				}
-				else 
-				{
-					unwind_protect = 0;
-
-					/* set the instruction pointer to an invalid value.
-					 * this is stored into the current method context
-					 * before context switching and marks a dead context */
-					if (moo->active_context->origin == moo->active_context)
-					{
-						/* returning from a method */
-						MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context) == moo->_method_context);
-
-						/* mark that the context is dead. it will be 
-						 * save to the context object by SWITCH_ACTIVE_CONTEXT() */
-						moo->ip = -1;
-					}
-					else
-					{
-						moo_oop_context_t ctx;
-
-						/* method return from within a block(including a non-local return) */
-						MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context) == moo->_block_context);
-
-						ctx = moo->active_context;
-						while ((moo_oop_t)ctx != moo->_nil)
-						{
-							if (MOO_CLASSOF(moo, ctx) == moo->_method_context)
-							{
-								moo_ooi_t preamble;
-								preamble = MOO_OOP_TO_SMOOI(((moo_oop_method_t)ctx->method_or_nargs)->preamble);
-								if (MOO_METHOD_GET_PREAMBLE_CODE(preamble) == MOO_METHOD_PREAMBLE_ENSURE)
-								{
-									if (!unwind_protect)
-									{
-										unwind_protect = 1;
-										unwind_start = ctx;
-									}
-									unwind_stop = ctx;
-								}
-							}
-							if (ctx == moo->active_context->origin) goto non_local_return_ok;
-							ctx = ctx->sender;
-						}
-
-						/* cannot return from a method that has returned already */
-						MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context->origin) == moo->_method_context);
-						MOO_ASSERT (moo, moo->active_context->origin->ip == MOO_SMOOI_TO_OOP(-1));
-
-						MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_ERROR, "Error - cannot return from dead context\n");
-						moo_seterrnum (moo, MOO_EINTERN); /* TODO: can i make this error catchable at the moo level? */
-						return -1;
-
-					non_local_return_ok:
-/*MOO_DEBUG2 (moo, "NON_LOCAL RETURN OK TO... %p %p\n", moo->active_context->origin, moo->active_context->origin->sender);*/
-						if (bcode != BCODE_LOCAL_RETURN)
-						{
-							/* mark that the context is dead */
-							moo->active_context->origin->ip = MOO_SMOOI_TO_OOP(-1);
-						}
-					}
-
-					/* the origin must always be a method context for both an active block context 
-					 * or an active method context */
-					MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context->origin) == moo->_method_context);
-
-					/* restore the stack pointer */
-					moo->sp = MOO_OOP_TO_SMOOI(moo->active_context->origin->sp);
-					if (bcode == BCODE_LOCAL_RETURN && moo->active_context != moo->active_context->origin)
-					{
-						SWITCH_ACTIVE_CONTEXT (moo, moo->active_context->origin);
-					}
-					else
-					{
-						SWITCH_ACTIVE_CONTEXT (moo, moo->active_context->origin->sender);
-					}
-
-					if (unwind_protect)
-					{
-						static moo_ooch_t fbm[] = { 
-							'u', 'n', 'w', 'i', 'n', 'd', 'T', 'o', ':', 
-							'r', 'e', 't', 'u', 'r', 'n', ':'
-						};
-
-						MOO_STACK_PUSH (moo, (moo_oop_t)unwind_start);
-						MOO_STACK_PUSH (moo, (moo_oop_t)unwind_stop);
-						MOO_STACK_PUSH (moo, (moo_oop_t)return_value);
-
-						if (send_message_with_str (moo, fbm, 16, 0, 2) <= -1) return -1;
-					}
-					else
-					{
-						/* push the return value to the stack of the new active context */
-						MOO_STACK_PUSH (moo, return_value);
-
-						if (moo->active_context == moo->initial_context)
-						{
-							/* the new active context is the fake initial context.
-							 * this context can't get executed further. */
-							MOO_ASSERT (moo, (moo_oop_t)moo->active_context->sender == moo->_nil);
-							MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context) == moo->_method_context);
-							MOO_ASSERT (moo, moo->active_context->receiver_or_source == moo->_nil);
-							MOO_ASSERT (moo, moo->active_context == moo->processor->active->initial_context);
-							MOO_ASSERT (moo, moo->active_context->origin == moo->processor->active->initial_context->origin);
-							MOO_ASSERT (moo, moo->active_context->origin == moo->active_context);
-
-							/* NOTE: this condition is true for the processified block context also.
-							 *   moo->active_context->origin == moo->processor->active->initial_context->origin
-							 *   however, the check here is done after context switching and the
-							 *   processified block check has been done against the context before switching */
-
-							/* the stack contains the final return value so the stack pointer must be 0. */
-							MOO_ASSERT (moo, moo->sp == 0); 
-
-							if (moo->option.trait & MOO_AWAIT_PROCS)
-							{
-								terminate_process (moo, moo->processor->active);
-							}
-							else
-							{
-								/* graceful termination of the whole vm */
-								goto done;
-							}
-
-							/* TODO: store the return value to the VM register.
-							 * the caller to moo_execute() can fetch it to return it to the system */
-						}
-					}
-				}
-
-			#endif
-				break;
-
-			case BCODE_LOCAL_RETURN:
-				LOG_INST_0 (moo, "local_return");
-				return_value = MOO_STACK_GETTOP(moo);
-				MOO_STACK_POP (moo);
-				goto handle_return;
-
-			case BCODE_RETURN_FROM_BLOCK:
-				LOG_INST_0 (moo, "return_from_block");
-
-				MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context) == moo->_block_context);
-
-				if (moo->active_context == moo->processor->active->initial_context)
-				{
-					/* the active context to return from is an initial context of
-					 * the active process. this process must have been created 
-					 * over a block using the newProcess method. let's terminate
-					 * the process. */
-
-					MOO_ASSERT (moo, (moo_oop_t)moo->active_context->sender == moo->_nil);
-					terminate_process (moo, moo->processor->active);
-				}
-				else
-				{
-					/* it is a normal block return as the active block context 
-					 * is not the initial context of a process */
-
-					/* the process stack is shared. the return value 
-					 * doesn't need to get moved. */
-					SWITCH_ACTIVE_CONTEXT (moo, (moo_oop_context_t)moo->active_context->sender);
-				}
-
-				break;
-
-			case BCODE_MAKE_BLOCK:
-			{
-				moo_oop_context_t blkctx;
-
-				/* b1 - number of block arguments
-				 * b2 - number of block temporaries */
-				FETCH_PARAM_CODE_TO (moo, b1);
-				FETCH_PARAM_CODE_TO (moo, b2);
-
-				LOG_INST_2 (moo, "make_block %zu %zu", b1, b2);
-
-				MOO_ASSERT (moo, b1 >= 0);
-				MOO_ASSERT (moo, b2 >= b1);
-
-				/* the block context object created here is used as a base
-				 * object for block context activation. pf_block_value()
-				 * clones a block context and activates the cloned context.
-				 * this base block context is created with no stack for 
-				 * this reason */
-				blkctx = (moo_oop_context_t)moo_instantiate (moo, moo->_block_context, MOO_NULL, 0); 
-				if (!blkctx) return -1;
-
-				/* the long forward jump instruction has the format of 
-				 *   11000100 KKKKKKKK or 11000100 KKKKKKKK KKKKKKKK 
-				 * depending on MOO_BCODE_LONG_PARAM_SIZE. change 'ip' to point to
-				 * the instruction after the jump. */
-				blkctx->ip = MOO_SMOOI_TO_OOP(moo->ip + MOO_BCODE_LONG_PARAM_SIZE + 1);
-				/* stack pointer below the bottom. this base block context
-				 * has an empty stack anyway. */
-				blkctx->sp = MOO_SMOOI_TO_OOP(-1);
-				/* the number of arguments for a block context is local to the block */
-				blkctx->method_or_nargs = MOO_SMOOI_TO_OOP(b1);
-				/* the number of temporaries here is an accumulated count including
-				 * the number of temporaries of a home context */
-				blkctx->ntmprs = MOO_SMOOI_TO_OOP(b2);
-
-				/* set the home context where it's defined */
-				blkctx->home = (moo_oop_t)moo->active_context; 
-				/* no source for a base block context. */
-				blkctx->receiver_or_source = moo->_nil; 
-
-				blkctx->origin = moo->active_context->origin;
-
-				/* push the new block context to the stack of the active context */
-				MOO_STACK_PUSH (moo, (moo_oop_t)blkctx);
-				break;
-			}
-
-			case BCODE_SEND_BLOCK_COPY:
-			{
-				moo_ooi_t nargs, ntmprs;
-				moo_oop_context_t rctx;
-				moo_oop_context_t blkctx;
-
-				LOG_INST_0 (moo, "send_block_copy");
-
-				/* it emulates thisContext blockCopy: nargs ofTmprCount: ntmprs */
-				MOO_ASSERT (moo, moo->sp >= 2);
-
-				MOO_ASSERT (moo, MOO_CLASSOF(moo, MOO_STACK_GETTOP(moo)) == moo->_small_integer);
-				ntmprs = MOO_OOP_TO_SMOOI(MOO_STACK_GETTOP(moo));
-				MOO_STACK_POP (moo);
-
-				MOO_ASSERT (moo, MOO_CLASSOF(moo, MOO_STACK_GETTOP(moo)) == moo->_small_integer);
-				nargs = MOO_OOP_TO_SMOOI(MOO_STACK_GETTOP(moo));
-				MOO_STACK_POP (moo);
-
-				MOO_ASSERT (moo, nargs >= 0);
-				MOO_ASSERT (moo, ntmprs >= nargs);
-
-				/* the block context object created here is used
-				 * as a base object for block context activation.
-				 * pf_block_value() clones a block 
-				 * context and activates the cloned context.
-				 * this base block context is created with no 
-				 * stack for this reason. */
-				blkctx = (moo_oop_context_t)moo_instantiate (moo, moo->_block_context, MOO_NULL, 0); 
-				if (!blkctx) return -1;
-
-				/* get the receiver to the block copy message after block context instantiation
-				 * not to get affected by potential GC */
-				rctx = (moo_oop_context_t)MOO_STACK_GETTOP(moo);
-				MOO_ASSERT (moo, rctx == moo->active_context);
-
-				/* [NOTE]
-				 *  blkctx->sender is left to nil. it is set to the 
-				 *  active context before it gets activated. see
-				 *  pf_block_value().
-				 *
-				 *  blkctx->home is set here to the active context.
-				 *  it's redundant to have them pushed to the stack
-				 *  though it is to emulate the message sending of
-				 *  blockCopy:withNtmprs:. BCODE_MAKE_BLOCK has been
-				 *  added to replace BCODE_SEND_BLOCK_COPY and pusing
-				 *  arguments to the stack.
-				 *
-				 *  blkctx->origin is set here by copying the origin
-				 *  of the active context.
-				 */
-
-				/* the extended jump instruction has the format of 
-				 *   0000XXXX KKKKKKKK or 0000XXXX KKKKKKKK KKKKKKKK 
-				 * depending on MOO_BCODE_LONG_PARAM_SIZE. change 'ip' to point to
-				 * the instruction after the jump. */
-				blkctx->ip = MOO_SMOOI_TO_OOP(moo->ip + MOO_BCODE_LONG_PARAM_SIZE + 1);
-				blkctx->sp = MOO_SMOOI_TO_OOP(-1);
-				/* the number of arguments for a block context is local to the block */
-				blkctx->method_or_nargs = MOO_SMOOI_TO_OOP(nargs);
-				/* the number of temporaries here is an accumulated count including
-				 * the number of temporaries of a home context */
-				blkctx->ntmprs = MOO_SMOOI_TO_OOP(ntmprs);
-
-				blkctx->home = (moo_oop_t)rctx;
-				blkctx->receiver_or_source = moo->_nil;
-
-				/* [NOTE]
-				 * the origin of a method context is set to itself
-				 * when it's created. so it's safe to simply copy
-				 * the origin field this way. 
-				 *
-				 * if the context that receives the blockCopy message 
-				 * is a method context, the following conditions are all true.
-				 *   rctx->home == moo->_nil
-				 *   MOO_CLASSOF(moo, rctx) == moo->_method_context
-				 *   rctx == (moo_oop_t)moo->active_context
-				 *   rctx == rctx->origin
-				 *
-				 * if it is a block context, the following condition is true.
-				 *   MOO_CLASSOF(moo, rctx) == moo->_block_context
-				 */
-				blkctx->origin = rctx->origin;
-
-				MOO_STACK_SETTOP (moo, (moo_oop_t)blkctx);
-				break;
-			}
-
-			case BCODE_NOOP:
-				/* do nothing */
-				LOG_INST_0 (moo, "noop");
-				break;
-
-			default:
-				MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_FATAL, "Fatal error - unknown byte code 0x%zx\n", bcode);
-				moo_seterrnum (moo, MOO_EINTERN);
-				return -1;
+			NEXT_INST();
 		}
-	}
 
-done:
+		/* ------------------------------------------------- */
+		ON_INST(BCODE_PUSH_LITERAL_X)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			goto push_literal;
+
+		ON_INST(BCODE_PUSH_LITERAL_0)
+		ON_INST(BCODE_PUSH_LITERAL_1)
+		ON_INST(BCODE_PUSH_LITERAL_2)
+		ON_INST(BCODE_PUSH_LITERAL_3)
+		ON_INST(BCODE_PUSH_LITERAL_4)
+		ON_INST(BCODE_PUSH_LITERAL_5)
+		ON_INST(BCODE_PUSH_LITERAL_6)
+		ON_INST(BCODE_PUSH_LITERAL_7)
+			b1 = bcode & 0x7; /* low 3 bits */
+		push_literal:
+			LOG_INST_1 (moo, "push_literal @%zu", b1);
+			MOO_STACK_PUSH (moo, moo->active_method->slot[b1]);
+			NEXT_INST();
+
+		/* ------------------------------------------------- */
+		ON_INST(BCODE_PUSH_OBJECT_X)
+		ON_INST(BCODE_STORE_INTO_OBJECT_X)
+		ON_INST(BCODE_POP_INTO_OBJECT_X)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			goto handle_object;
+
+		ON_INST(BCODE_PUSH_OBJECT_0)
+		ON_INST(BCODE_PUSH_OBJECT_1)
+		ON_INST(BCODE_PUSH_OBJECT_2)
+		ON_INST(BCODE_PUSH_OBJECT_3)
+		ON_INST(BCODE_STORE_INTO_OBJECT_0)
+		ON_INST(BCODE_STORE_INTO_OBJECT_1)
+		ON_INST(BCODE_STORE_INTO_OBJECT_2)
+		ON_INST(BCODE_STORE_INTO_OBJECT_3)
+		ON_INST(BCODE_POP_INTO_OBJECT_0)
+		ON_INST(BCODE_POP_INTO_OBJECT_1)
+		ON_INST(BCODE_POP_INTO_OBJECT_2)
+		ON_INST(BCODE_POP_INTO_OBJECT_3)
+		{
+			moo_oop_association_t ass;
+
+			b1 = bcode & 0x3; /* low 2 bits */
+		handle_object:
+			ass = (moo_oop_association_t)moo->active_method->slot[b1];
+			MOO_ASSERT (moo, MOO_CLASSOF(moo, ass) == moo->_association);
+
+			if ((bcode >> 3) & 1)
+			{
+				/* store or pop */
+				ass->value = MOO_STACK_GETTOP(moo);
+
+				if ((bcode >> 2) & 1)
+				{
+					/* pop */
+					LOG_INST_1 (moo, "pop_into_object @%zu", b1);
+					MOO_STACK_POP (moo);
+				}
+				else
+				{
+					LOG_INST_1 (moo, "store_into_object @%zu", b1);
+				}
+			}
+			else
+			{
+				/* push */
+				LOG_INST_1 (moo, "push_object @%zu", b1);
+				MOO_STACK_PUSH (moo, ass->value);
+			}
+			NEXT_INST();
+		}
+
+		/* -------------------------------------------------------- */
+
+		ON_INST(BCODE_JUMP_FORWARD_X)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "jump_forward %zu", b1);
+			moo->ip += b1;
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP_FORWARD_0)
+		ON_INST(BCODE_JUMP_FORWARD_1)
+		ON_INST(BCODE_JUMP_FORWARD_2)
+		ON_INST(BCODE_JUMP_FORWARD_3)
+			LOG_INST_1 (moo, "jump_forward %zu", (moo_oow_t)(bcode & 0x3));
+			moo->ip += (bcode & 0x3); /* low 2 bits */
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP_BACKWARD_X)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "jump_backward %zu", b1);
+			moo->ip -= b1;
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP_BACKWARD_0)
+		ON_INST(BCODE_JUMP_BACKWARD_1)
+		ON_INST(BCODE_JUMP_BACKWARD_2)
+		ON_INST(BCODE_JUMP_BACKWARD_3)
+			LOG_INST_1 (moo, "jump_backward %zu", (moo_oow_t)(bcode & 0x3));
+			moo->ip -= (bcode & 0x3); /* low 2 bits */
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP_BACKWARD_IF_FALSE_X)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "jump_backward_if_false %zu", b1);
+			if (MOO_STACK_GETTOP(moo) == moo->_false) moo->ip -= b1;
+			MOO_STACK_POP (moo);
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP_BACKWARD_IF_FALSE_0)
+		ON_INST(BCODE_JUMP_BACKWARD_IF_FALSE_1)
+		ON_INST(BCODE_JUMP_BACKWARD_IF_FALSE_2)
+		ON_INST(BCODE_JUMP_BACKWARD_IF_FALSE_3)
+			LOG_INST_1 (moo, "jump_backward_if_false %zu", (moo_oow_t)(bcode & 0x3));
+			if (MOO_STACK_GETTOP(moo) == moo->_false) moo->ip -= (bcode & 0x3); /* low 2 bits */
+			MOO_STACK_POP (moo);
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP_BACKWARD_IF_TRUE_X)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "jump_backward_if_true %zu", b1);
+			/*if (MOO_STACK_GETTOP(moo) == moo->_true) moo->ip -= b1;*/
+			if (MOO_STACK_GETTOP(moo) != moo->_false) moo->ip -= b1;
+			MOO_STACK_POP (moo);
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP_BACKWARD_IF_TRUE_0)
+		ON_INST(BCODE_JUMP_BACKWARD_IF_TRUE_1)
+		ON_INST(BCODE_JUMP_BACKWARD_IF_TRUE_2)
+		ON_INST(BCODE_JUMP_BACKWARD_IF_TRUE_3)
+			LOG_INST_1 (moo, "jump_backward_if_true %zu", (moo_oow_t)(bcode & 0x3));
+			/*if (MOO_STACK_GETTOP(moo) == moo->_true) moo->ip -= (bcode & 0x3);*/ /* low 2 bits */
+			if (MOO_STACK_GETTOP(moo) != moo->_false) moo->ip -= (bcode & 0x3);
+			MOO_STACK_POP (moo);
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP_FORWARD_IF_FALSE)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "jump_forward_if_false %zu", b1);
+			if (MOO_STACK_GETTOP(moo) == moo->_false) moo->ip += b1;
+			MOO_STACK_POP (moo);
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP_FORWARD_IF_TRUE)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "jump_forward_if_true %zu", b1);
+			/*if (MOO_STACK_GETTOP(moo) == moo->_true) moo->ip += b1;*/
+			if (MOO_STACK_GETTOP(moo) != moo->_false) moo->ip += b1;
+			MOO_STACK_POP (moo);
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP2_FORWARD)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "jump2_forward %zu", b1);
+			moo->ip += MAX_CODE_JUMP + b1;
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP2_BACKWARD)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "jump2_backward %zu", b1);
+			moo->ip -= MAX_CODE_JUMP + b1;
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP2_FORWARD_IF_FALSE)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "jump2_forward_if_false %zu", b1);
+			if (MOO_STACK_GETTOP(moo) == moo->_false) moo->ip += MAX_CODE_JUMP + b1;
+			MOO_STACK_POP (moo);
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP2_FORWARD_IF_TRUE)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "jump2_forward_if_true %zu", b1);
+			/*if (MOO_STACK_GETTOP(moo) == moo->_true) moo->ip += MAX_CODE_JUMP + b1;*/
+			if (MOO_STACK_GETTOP(moo) != moo->_false) moo->ip += MAX_CODE_JUMP + b1;
+			MOO_STACK_POP (moo);
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP2_BACKWARD_IF_FALSE)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "jump2_backward_if_false %zu", b1);
+			if (MOO_STACK_GETTOP(moo) == moo->_false) moo->ip -= MAX_CODE_JUMP + b1;
+			MOO_STACK_POP (moo);
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP2_BACKWARD_IF_TRUE)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "jump2_backward_if_true %zu", b1);
+			/* if (MOO_STACK_GETTOP(moo) == moo->_true) moo->ip -= MAX_CODE_JUMP + b1; */
+			if (MOO_STACK_GETTOP(moo) != moo->_false) moo->ip -= MAX_CODE_JUMP + b1;
+			MOO_STACK_POP (moo);
+			NEXT_INST();
+		/* -------------------------------------------------------- */
+
+		ON_INST(BCODE_PUSH_CTXTEMPVAR_X)
+		ON_INST(BCODE_STORE_INTO_CTXTEMPVAR_X)
+		ON_INST(BCODE_POP_INTO_CTXTEMPVAR_X)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			FETCH_PARAM_CODE_TO (moo, b2);
+			goto handle_ctxtempvar;
+		ON_INST(BCODE_PUSH_CTXTEMPVAR_0)
+		ON_INST(BCODE_PUSH_CTXTEMPVAR_1)
+		ON_INST(BCODE_PUSH_CTXTEMPVAR_2)
+		ON_INST(BCODE_PUSH_CTXTEMPVAR_3)
+		ON_INST(BCODE_STORE_INTO_CTXTEMPVAR_0)
+		ON_INST(BCODE_STORE_INTO_CTXTEMPVAR_1)
+		ON_INST(BCODE_STORE_INTO_CTXTEMPVAR_2)
+		ON_INST(BCODE_STORE_INTO_CTXTEMPVAR_3)
+		ON_INST(BCODE_POP_INTO_CTXTEMPVAR_0)
+		ON_INST(BCODE_POP_INTO_CTXTEMPVAR_1)
+		ON_INST(BCODE_POP_INTO_CTXTEMPVAR_2)
+		ON_INST(BCODE_POP_INTO_CTXTEMPVAR_3)
+		{
+			moo_ooi_t i;
+			moo_oop_context_t ctx;
+
+			b1 = bcode & 0x3; /* low 2 bits */
+			b2 = FETCH_BYTE_CODE(moo);
+
+		handle_ctxtempvar:
+
+			ctx = moo->active_context;
+			MOO_ASSERT (moo, (moo_oop_t)ctx != moo->_nil);
+			for (i = 0; i < b1; i++)
+			{
+				ctx = (moo_oop_context_t)ctx->home;
+			}
+
+			if ((bcode >> 3) & 1)
+			{
+				/* store or pop */
+				ctx->slot[b2] = MOO_STACK_GETTOP(moo);
+
+				if ((bcode >> 2) & 1)
+				{
+					/* pop */
+					MOO_STACK_POP (moo);
+					LOG_INST_2 (moo, "pop_into_ctxtempvar %zu %zu", b1, b2);
+				}
+				else
+				{
+					LOG_INST_2 (moo, "store_into_ctxtempvar %zu %zu", b1, b2);
+				}
+			}
+			else
+			{
+				/* push */
+				MOO_STACK_PUSH (moo, ctx->slot[b2]);
+				LOG_INST_2 (moo, "push_ctxtempvar %zu %zu", b1, b2);
+			}
+
+			NEXT_INST();
+		}
+		/* -------------------------------------------------------- */
+
+		ON_INST(BCODE_PUSH_OBJVAR_X)
+		ON_INST(BCODE_STORE_INTO_OBJVAR_X)
+		ON_INST(BCODE_POP_INTO_OBJVAR_X)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			FETCH_PARAM_CODE_TO (moo, b2);
+			goto handle_objvar;
+
+		ON_INST(BCODE_PUSH_OBJVAR_0)
+		ON_INST(BCODE_PUSH_OBJVAR_1)
+		ON_INST(BCODE_PUSH_OBJVAR_2)
+		ON_INST(BCODE_PUSH_OBJVAR_3)
+		ON_INST(BCODE_STORE_INTO_OBJVAR_0)
+		ON_INST(BCODE_STORE_INTO_OBJVAR_1)
+		ON_INST(BCODE_STORE_INTO_OBJVAR_2)
+		ON_INST(BCODE_STORE_INTO_OBJVAR_3)
+		ON_INST(BCODE_POP_INTO_OBJVAR_0)
+		ON_INST(BCODE_POP_INTO_OBJVAR_1)
+		ON_INST(BCODE_POP_INTO_OBJVAR_2)
+		ON_INST(BCODE_POP_INTO_OBJVAR_3)
+		{
+			moo_oop_oop_t t;
+
+			/* b1 -> variable index to the object indicated by b2.
+			 * b2 -> object index stored in the literal frame. */
+			b1 = bcode & 0x3; /* low 2 bits */
+			b2 = FETCH_BYTE_CODE(moo);
+
+		handle_objvar:
+			t = (moo_oop_oop_t)moo->active_method->slot[b2];
+			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(t) == MOO_OBJ_TYPE_OOP);
+			MOO_ASSERT (moo, b1 < MOO_OBJ_GET_SIZE(t));
+
+			if ((bcode >> 3) & 1)
+			{
+				/* store or pop */
+				t->slot[b1] = MOO_STACK_GETTOP(moo);
+
+				if ((bcode >> 2) & 1)
+				{
+					/* pop */
+					MOO_STACK_POP (moo);
+					LOG_INST_2 (moo, "pop_into_objvar %zu %zu", b1, b2);
+				}
+				else
+				{
+					LOG_INST_2 (moo, "store_into_objvar %zu %zu", b1, b2);
+				}
+			}
+			else
+			{
+				/* push */
+				LOG_INST_2 (moo, "push_objvar %zu %zu", b1, b2);
+				MOO_STACK_PUSH (moo, t->slot[b1]);
+			}
+			NEXT_INST();
+		}
+
+		/* -------------------------------------------------------- */
+		ON_INST(BCODE_SEND_MESSAGE_X)
+		ON_INST(BCODE_SEND_MESSAGE_TO_SUPER_X)
+			/* b1 -> number of arguments 
+			 * b2 -> selector index stored in the literal frame */
+			FETCH_PARAM_CODE_TO (moo, b1);
+			FETCH_PARAM_CODE_TO (moo, b2);
+			goto handle_send_message;
+
+		ON_INST(BCODE_SEND_MESSAGE_0)
+		ON_INST(BCODE_SEND_MESSAGE_1)
+		ON_INST(BCODE_SEND_MESSAGE_2)
+		ON_INST(BCODE_SEND_MESSAGE_3)
+		ON_INST(BCODE_SEND_MESSAGE_TO_SUPER_0)
+		ON_INST(BCODE_SEND_MESSAGE_TO_SUPER_1)
+		ON_INST(BCODE_SEND_MESSAGE_TO_SUPER_2)
+		ON_INST(BCODE_SEND_MESSAGE_TO_SUPER_3)
+		{
+			moo_oop_char_t selector;
+
+			b1 = bcode & 0x3; /* low 2 bits */
+			b2 = FETCH_BYTE_CODE(moo);
+
+		handle_send_message:
+			/* get the selector from the literal frame */
+			selector = (moo_oop_char_t)moo->active_method->slot[b2];
+
+			LOG_INST_3 (moo, "send_message%hs %zu @%zu", (((bcode >> 2) & 1)? "_to_super": ""), b1, b2);
+			if (send_message (moo, selector, ((bcode >> 2) & 1), b1) <= -1) return -1;
+			NEXT_INST();
+		}
+
+		/* -------------------------------------------------------- */
+
+		ON_INST(BCODE_PUSH_RECEIVER)
+			LOG_INST_0 (moo, "push_receiver");
+			MOO_STACK_PUSH (moo, moo->active_context->origin->receiver_or_source);
+			NEXT_INST();
+
+		ON_INST(BCODE_PUSH_NIL)
+			LOG_INST_0 (moo, "push_nil");
+			MOO_STACK_PUSH (moo, moo->_nil);
+			NEXT_INST();
+
+		ON_INST(BCODE_PUSH_TRUE)
+			LOG_INST_0 (moo, "push_true");
+			MOO_STACK_PUSH (moo, moo->_true);
+			NEXT_INST();
+
+		ON_INST(BCODE_PUSH_FALSE)
+			LOG_INST_0 (moo, "push_false");
+			MOO_STACK_PUSH (moo, moo->_false);
+			NEXT_INST();
+
+		ON_INST(BCODE_PUSH_CONTEXT)
+			LOG_INST_0 (moo, "push_context");
+			MOO_STACK_PUSH (moo, (moo_oop_t)moo->active_context);
+			NEXT_INST();
+
+		ON_INST(BCODE_PUSH_PROCESS)
+			LOG_INST_0 (moo, "push_process");
+			MOO_STACK_PUSH (moo, (moo_oop_t)moo->processor->active);
+			NEXT_INST();
+
+		ON_INST(BCODE_PUSH_RECEIVER_NS)
+		{
+			register moo_oop_t c;
+			LOG_INST_0 (moo, "push_receiver_ns");
+			c = (moo_oop_t)MOO_CLASSOF(moo, moo->active_context->origin->receiver_or_source);
+			if (c == (moo_oop_t)moo->_class) c = moo->active_context->origin->receiver_or_source;
+			MOO_STACK_PUSH (moo, (moo_oop_t)((moo_oop_class_t)c)->nsup);
+			NEXT_INST();
+		}
+
+		ON_INST(BCODE_PUSH_NEGONE)
+			LOG_INST_0 (moo, "push_negone");
+			MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(-1));
+			NEXT_INST();
+
+		ON_INST(BCODE_PUSH_ZERO)
+			LOG_INST_0 (moo, "push_zero");
+			MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(0));
+			NEXT_INST();
+
+		ON_INST(BCODE_PUSH_ONE)
+			LOG_INST_0 (moo, "push_one");
+			MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(1));
+			NEXT_INST();
+
+		ON_INST(BCODE_PUSH_TWO)
+			LOG_INST_0 (moo, "push_two");
+			MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(2));
+			NEXT_INST();
+
+		ON_INST(BCODE_PUSH_INTLIT)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "push_intlit %zu", b1);
+			MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(b1));
+			NEXT_INST();
+
+		ON_INST(BCODE_PUSH_NEGINTLIT)
+		{
+			moo_ooi_t num;
+			FETCH_PARAM_CODE_TO (moo, b1);
+			num = b1;
+			LOG_INST_1 (moo, "push_negintlit %zu", b1);
+			MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(-num));
+			NEXT_INST();
+		}
+
+		ON_INST(BCODE_PUSH_CHARLIT)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "push_charlit %zu", b1);
+			MOO_STACK_PUSH (moo, MOO_CHAR_TO_OOP(b1));
+			NEXT_INST();
+		/* -------------------------------------------------------- */
+
+		ON_INST(BCODE_MAKE_DICTIONARY)
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "make_dictionary %zu", b1);
+
+			/* Dictionary new: b1 
+			 *  doing this allows users to redefine Dictionary whatever way they like.
+			 *  if i did the followings instead, the internal of Dictionary would get
+			 *  tied to the system dictionary implementation. the system dictionary 
+			 *  implementation is flawed in that it accepts only a variable character
+			 *  object as a key. it's better to invoke 'Dictionary new: ...'.
+			t = (moo_oop_t)moo_makedic (moo, moo->_dictionary, b1 + 10);
+			MOO_STACK_PUSH (moo, t);
+			 */
+			MOO_STACK_PUSH (moo, (moo_oop_t)moo->_dictionary);
+			MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(b1));
+			if (send_message (moo, moo->dicnewsym, 0, 1) <= -1) return -1;
+			NEXT_INST();
+
+		ON_INST(BCODE_POP_INTO_DICTIONARY)
+			LOG_INST_0 (moo, "pop_into_dictionary");
+
+			/* dic __put_assoc:  assoc
+			 *  whether the system dictinoary implementation is flawed or not,
+			 *  the code would look like this if it were used.
+			t1 = MOO_STACK_GETTOP(moo);
+			MOO_STACK_POP (moo);
+			t2 = MOO_STACK_GETTOP(moo);
+			moo_putatdic (moo, (moo_oop_dic_t)t2, ((moo_oop_association_t)t1)->key, ((moo_oop_association_t)t1)->value);
+			 */
+			if (send_message (moo, moo->dicputassocsym, 0, 1) <= -1) return -1;
+			NEXT_INST();
+
+		ON_INST(BCODE_MAKE_ARRAY)
+		{
+			moo_oop_t t;
+
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "make_array %zu", b1);
+
+			/* create an empty array */
+			t = moo_instantiate (moo, moo->_array, MOO_NULL, b1);
+			if (!t) return -1;
+
+			MOO_STACK_PUSH (moo, t); /* push the array created */
+			NEXT_INST();
+		}
+
+		ON_INST(BCODE_POP_INTO_ARRAY)
+		{
+			moo_oop_t t1, t2;
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST_1 (moo, "pop_into_array %zu", b1);
+			t1 = MOO_STACK_GETTOP(moo);
+			MOO_STACK_POP (moo);
+			t2 = MOO_STACK_GETTOP(moo);
+			((moo_oop_oop_t)t2)->slot[b1] = t1;
+			NEXT_INST();
+		}
+
+		ON_INST(BCODE_DUP_STACKTOP)
+		{
+			moo_oop_t t;
+			LOG_INST_0 (moo, "dup_stacktop");
+			MOO_ASSERT (moo, !MOO_STACK_ISEMPTY(moo));
+			t = MOO_STACK_GETTOP(moo);
+			MOO_STACK_PUSH (moo, t);
+			NEXT_INST();
+		}
+
+		ON_INST(BCODE_POP_STACKTOP)
+			LOG_INST_0 (moo, "pop_stacktop");
+			MOO_ASSERT (moo, !MOO_STACK_ISEMPTY(moo));
+			MOO_STACK_POP (moo);
+			NEXT_INST();
+
+		ON_INST(BCODE_RETURN_STACKTOP)
+			LOG_INST_0 (moo, "return_stacktop");
+			return_value = MOO_STACK_GETTOP(moo);
+			MOO_STACK_POP (moo);
+			goto handle_return;
+
+		ON_INST(BCODE_RETURN_RECEIVER)
+			LOG_INST_0 (moo, "return_receiver");
+			return_value = moo->active_context->origin->receiver_or_source;
+		handle_return:
+			{
+				int n;
+				if ((n = do_return (moo, bcode, return_value)) <= -1) return -1;
+				if (n == 0) EXIT_DISPATCH_LOOP();
+			}
+			NEXT_INST();
+
+		ON_INST(BCODE_LOCAL_RETURN)
+			LOG_INST_0 (moo, "local_return");
+			return_value = MOO_STACK_GETTOP(moo);
+			MOO_STACK_POP (moo);
+			goto handle_return;
+
+		ON_INST(BCODE_RETURN_FROM_BLOCK)
+			do_return_from_block (moo);
+			NEXT_INST();
+
+		ON_INST(BCODE_MAKE_BLOCK)
+			if (make_block(moo) <= -1) return -1;
+			NEXT_INST();
+
+		ON_INST(BCODE_SEND_BLOCK_COPY)
+		{
+			moo_ooi_t nargs, ntmprs;
+			moo_oop_context_t rctx;
+			moo_oop_context_t blkctx;
+
+			LOG_INST_0 (moo, "send_block_copy");
+
+			/* it emulates thisContext blockCopy: nargs ofTmprCount: ntmprs */
+			MOO_ASSERT (moo, moo->sp >= 2);
+
+			MOO_ASSERT (moo, MOO_CLASSOF(moo, MOO_STACK_GETTOP(moo)) == moo->_small_integer);
+			ntmprs = MOO_OOP_TO_SMOOI(MOO_STACK_GETTOP(moo));
+			MOO_STACK_POP (moo);
+
+			MOO_ASSERT (moo, MOO_CLASSOF(moo, MOO_STACK_GETTOP(moo)) == moo->_small_integer);
+			nargs = MOO_OOP_TO_SMOOI(MOO_STACK_GETTOP(moo));
+			MOO_STACK_POP (moo);
+
+			MOO_ASSERT (moo, nargs >= 0);
+			MOO_ASSERT (moo, ntmprs >= nargs);
+
+			/* the block context object created here is used
+			 * as a base object for block context activation.
+			 * pf_block_value() clones a block 
+			 * context and activates the cloned context.
+			 * this base block context is created with no 
+			 * stack for this reason. */
+			blkctx = (moo_oop_context_t)moo_instantiate (moo, moo->_block_context, MOO_NULL, 0); 
+			if (!blkctx) return -1;
+
+			/* get the receiver to the block copy message after block context instantiation
+			 * not to get affected by potential GC */
+			rctx = (moo_oop_context_t)MOO_STACK_GETTOP(moo);
+			MOO_ASSERT (moo, rctx == moo->active_context);
+
+			/* [NOTE]
+			 *  blkctx->sender is left to nil. it is set to the 
+			 *  active context before it gets activated. see
+			 *  pf_block_value().
+			 *
+			 *  blkctx->home is set here to the active context.
+			 *  it's redundant to have them pushed to the stack
+			 *  though it is to emulate the message sending of
+			 *  blockCopy:withNtmprs:. BCODE_MAKE_BLOCK has been
+			 *  added to replace BCODE_SEND_BLOCK_COPY and pusing
+			 *  arguments to the stack.
+			 *
+			 *  blkctx->origin is set here by copying the origin
+			 *  of the active context.
+			 */
+
+			/* the extended jump instruction has the format of 
+			 *   0000XXXX KKKKKKKK or 0000XXXX KKKKKKKK KKKKKKKK 
+			 * depending on MOO_BCODE_LONG_PARAM_SIZE. change 'ip' to point to
+			 * the instruction after the jump. */
+			blkctx->ip = MOO_SMOOI_TO_OOP(moo->ip + MOO_BCODE_LONG_PARAM_SIZE + 1);
+			blkctx->sp = MOO_SMOOI_TO_OOP(-1);
+			/* the number of arguments for a block context is local to the block */
+			blkctx->method_or_nargs = MOO_SMOOI_TO_OOP(nargs);
+			/* the number of temporaries here is an accumulated count including
+			 * the number of temporaries of a home context */
+			blkctx->ntmprs = MOO_SMOOI_TO_OOP(ntmprs);
+
+			blkctx->home = (moo_oop_t)rctx;
+			blkctx->receiver_or_source = moo->_nil;
+
+			/* [NOTE]
+			 * the origin of a method context is set to itself
+			 * when it's created. so it's safe to simply copy
+			 * the origin field this way. 
+			 *
+			 * if the context that receives the blockCopy message 
+			 * is a method context, the following conditions are all true.
+			 *   rctx->home == moo->_nil
+			 *   MOO_CLASSOF(moo, rctx) == moo->_method_context
+			 *   rctx == (moo_oop_t)moo->active_context
+			 *   rctx == rctx->origin
+			 *
+			 * if it is a block context, the following condition is true.
+			 *   MOO_CLASSOF(moo, rctx) == moo->_block_context
+			 */
+			blkctx->origin = rctx->origin;
+
+			MOO_STACK_SETTOP (moo, (moo_oop_t)blkctx);
+			NEXT_INST();
+		}
+
+		ON_INST(BCODE_NOOP)
+			/* do nothing */
+			LOG_INST_0 (moo, "noop");
+			NEXT_INST();
+
+		ON_UNKNOWN_INST()
+			MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_FATAL, "Fatal error - unknown byte code 0x%zx\n", bcode);
+			moo_seterrnum (moo, MOO_EINTERN);
+			return -1;
+
+		END_DISPATCH_TABLE ()
+		/* ==== END OF DISPATCH TABLE ==== */
+
+	END_DISPATCH_LOOP()
+
 	return 0;
 }
 

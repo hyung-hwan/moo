@@ -47,15 +47,16 @@ class(#pointer,#final,#limited) Process(Object)
 
 class Semaphore(Object)
 {
-	var count         :=   0, 
-	    waiting_head  := nil,
+	var waiting_head  := nil,
 	    waiting_tail  := nil,
+	    count         :=   0,
 	    heapIndex     :=  -1,
 	    fireTimeSec   :=   0,
 	    fireTimeNsec  :=   0,
 	    ioIndex       :=  -1,
 	    ioHandle      := nil,
-	    ioMask        :=   0.
+	    ioMask        :=   0,
+	    group         := nil.
 
 	method(#class) forMutualExclusion
 	{
@@ -122,10 +123,73 @@ TODO: timed wait...
 		^self.fireTimeSec >= (aSemaphore fireTime)
 	}
 }
-    
+
+ 
+(*
+ xxx := Semaphore new.
+ xxx on: #signal do: [ ].
+ 
+ 
+ ========= CASE 1 ====================
+ sg := SemaphoreGroup with (xxx, yyy, zzz).
+ Processor signal: xxx onInput: aaa.
+ Processor signal: yyy onInput: bbb.
+ Processor signal: zzz onOutput: ccc.
+ 
+ while (true)
+ {
+	sem := sg wait.
+	if (sem == xxx)
+	{
+		
+	}
+	elsif (sem == yyy)
+	{
+	}
+	elsif (sem == zzz)
+	{
+	}
+ }
+ 
+ ============ CASE 2====================
+ ### ASSOCIATE CALLBACK WITH SEMAPHORE.
+ 
+ sg := SemaphoreGroup with (xxx, yyy, zzz).
+ 
+ oldaction := xxx signalAction: [ ... ].  ### similar interface like unix system call signal()????   method signalAction: block {} , method signalAction { ^self.signalAction }
+ yyy signalAction: [ ... ].
+ zzz signalAction: [ ... ].
+ 
+ Processor signal: xxx onInput: aaa.
+ Processor signal: yyy onInput: bbb.
+ Processor signal: zzz onOutput: ccc.
+ 
+ 
+ while (true)
+ {
+	sem := sg wait. ### the action associated with the semaphore must get executed.  => wait may be a primitive. the primitive handler may return failure... if so, the actual primitive body can execute the action easily
+ }
+ 
+ 
+ Semaphore>>method wait 
+ {
+	<primitive: #Semaphore_wait>
+	if (errorCode == NO ERROR)
+	{
+		self.signalAction value.  ## which is better???
+		self.sginalAction value: self.
+	}
+ } 
+*)
+ 
+
 class SemaphoreGroup(Object)
 {
-	var arr, size := 0.
+	var waiting_head  := nil,
+	    waiting_tail  := nil,
+	    size := 0,
+	    pos := 0,
+	    semarr := nil.
 
 (* TODO: good idea to a shortcut way to prohibit a certain method in the heirarchy chain?
 
@@ -156,13 +220,13 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 
 	method initialize
 	{
-		self.arr := Array new: 10.
+		self.semarr := Array new: 10.
 	}
 
 	method initialize: arr
 	{
 		self.size := arr size.
-		self.arr := arr.
+		self.semarr := arr.
 	}
 
 	method(#primitive) wait.

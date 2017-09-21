@@ -104,6 +104,19 @@ extend MyObject
 {
 ## TODO: support import in extend??
 
+	method(#class) makeBlock(a,b)
+	{
+		^[:x | a * x + b]
+	}
+
+	method(#class) testMakeBlock
+	{
+		|a b |
+		a := self makeBlock (12, 22).
+		b := self makeBlock (99, 4).
+                ^(a value: 5) * (b value: 6). ## (12 * 5 + 22) * (99 * 6 + 4) => 49036
+	}
+
 	method(#class) main
 	{
 		| tc limit |
@@ -159,7 +172,8 @@ extend MyObject
 			[MyObject.System.System.System.System new kk == #KK],
 			
 			## 35 - 39
-			[MyObject.System.System.System KING == #KING]
+			[MyObject.System.System.System KING == #KING],
+			[self testMakeBlock == 49036]
 		).
 
 		limit := tc size.

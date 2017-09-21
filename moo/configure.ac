@@ -140,11 +140,11 @@ AC_LINK_IFELSE(
 	[AC_MSG_RESULT(no)]
 )
 
-AC_MSG_CHECKING([computed goto usability])
+AC_MSG_CHECKING([labels as values])
 AC_COMPILE_IFELSE(
 	[AC_LANG_PROGRAM( [], [[void *jp = &&jpt; goto *jp; 1; jpt: 2; ]])],
 	[AC_MSG_RESULT(yes)
-	 AC_DEFINE(HAVE_COMPUTED_GOTO, 1, [computed gotos])],
+	 AC_DEFINE(HAVE_LABELS_AS_VALUES, 1, [labels as values])],
 	[AC_MSG_RESULT(no)]
 )
 

@@ -833,9 +833,9 @@ void moo_gc (moo_t* moo)
 	old_nil = moo->_nil;
 
 	/* move _nil and the root object table */
-	moo->_nil               = moo_moveoop (moo, moo->_nil);
-	moo->_true              = moo_moveoop (moo, moo->_true);
-	moo->_false             = moo_moveoop (moo, moo->_false);
+	moo->_nil = moo_moveoop (moo, moo->_nil);
+	moo->_true = moo_moveoop (moo, moo->_true);
+	moo->_false = moo_moveoop (moo, moo->_false);
 
 	for (i = 0; i < MOO_COUNTOF(kernel_classes); i++)
 	{
@@ -878,7 +878,6 @@ void moo_gc (moo_t* moo)
 		*moo->tmp_stack[i] = moo_moveoop (moo, *moo->tmp_stack[i]);
 	}
 
-	
 	if (moo->initial_context)
 		moo->initial_context = (moo_oop_context_t)moo_moveoop (moo, (moo_oop_t)moo->initial_context);
 	if (moo->active_context)
@@ -953,7 +952,6 @@ void moo_gc (moo_t* moo)
 		moo->curheap->base, moo->curheap->ptr, moo->newheap->base, moo->newheap->ptr); 
 }
 
-
 void moo_pushtmp (moo_t* moo, moo_oop_t* oop_ptr)
 {
 	/* if you have too many temporaries pushed, something must be wrong.
@@ -973,7 +971,6 @@ void moo_poptmps (moo_t* moo, moo_oow_t count)
 	MOO_ASSERT (moo, moo->tmp_count >= count);
 	moo->tmp_count -= count;
 }
-
 
 moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 {
@@ -1017,7 +1014,6 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 int moo_regfinalizable (moo_t* moo, moo_oop_t oop)
 {
 	moo_finalizable_t* x;
-
 
 	if (!MOO_OOP_IS_POINTER(oop) || (MOO_OBJ_GET_FLAGS_GCFIN(oop) & (MOO_GCFIN_FINALIZABLE | MOO_GCFIN_FINALIZED)))
 	{

@@ -240,6 +240,7 @@ reswitch:
 
 		case '1': case '2': case '3': case '4':
 		case '5': case '6': case '7': case '8': case '9':
+			if (flagc & FLAGC_LENMOD) goto invalid_format;
 			for (n = 0;; ++fmt) 
 			{
 				n = n * 10 + ch - '0';
@@ -358,6 +359,9 @@ reswitch:
 			sprintn = sprintn_upper;
 		case 'x':
 			base = 16;
+			goto handle_nosign;
+		case 'b':
+			base = 2;
 			goto handle_nosign;
 		/* end of unsigned integer conversions */
 
@@ -889,6 +893,11 @@ number:
 
 			if ((flagc & FLAGC_SHARP) && num != 0) 
 			{
+				if (base == 2) 
+				{
+					PUT_OOCH ('0', 1);
+					PUT_OOCH ('b', 1);
+				}
 				if (base == 8) 
 				{
 					PUT_OOCH ('0', 1);

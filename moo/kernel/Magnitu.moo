@@ -10,13 +10,13 @@ class Association(Magnitude)
 	{
 		^self new key: key value: value
 	}
-	
+
 	method key: key value: value
 	{
 		self.key := key.
 		self.value := value.
 	}
-	
+
 	method value: value
 	{
 		self.value := value
@@ -31,12 +31,12 @@ class Association(Magnitude)
 	{
 		^self.value
 	}
-	
+
 	method = ass
 	{
 		^(self.key = ass key) and: [ self.value = ass value ]
 	}
-	
+
 	method hash
 	{
 		^(self.key hash) + (self.value hash)
@@ -230,7 +230,7 @@ class(#limited) Number(Magnitude)
 	{
 		^self to: end by: 1 do: block.
 	}
-	
+
 	method priorTo: end by: step do: block
 	{
 		| i |
@@ -306,7 +306,7 @@ class(#limited) SmallInteger(Integer)
 	## {
 	## 	^0
 	## }
-	
+
 	method(#primitive) asCharacter.
 	method(#primitive) asError.
 }

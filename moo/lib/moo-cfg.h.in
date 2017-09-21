@@ -57,9 +57,6 @@
 /* Define to 1 if you have the `closedir' function. */
 #undef HAVE_CLOSEDIR
 
-/* computed gotos */
-#undef HAVE_COMPUTED_GOTO
-
 /* Define to 1 if you have the `coshq' function. */
 #undef HAVE_COSHQ
 
@@ -132,6 +129,9 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* labels as values */
+#undef HAVE_LABELS_AS_VALUES
 
 /* Define if you have the libdl library or equivalent. */
 #undef HAVE_LIBDL

@@ -10,7 +10,7 @@ class Collection(Object)
 	{
 		^self size > 0
 	}
-	
+
 	method size
 	{
 		(* Each subclass must override this method because
@@ -20,18 +20,18 @@ class Collection(Object)
 		self do: [ :el | count := count + 1 ].
 		^count
 	}
-	
+
 	method do: block
 	{
 		^self subclassResponsibility: #do
 	}
-	
+
 	method detect: block
 	{
 		self do: [ :el | if (block value: el) { ^el } ].
 		^Error.Code.ENOENT
 	}
-	
+
 	method detect: block ifNone: exception_block
 	{
 		self do: [ :el | if (block value: el) { ^el } ].
@@ -100,19 +100,18 @@ class(#character) String(Array)
 
 		^newstr
 	}
-	
+
 	method asString
 	{
 		^self
 	}
-	
+
 	(* TODO: Symbol is a #final class. Symbol new is not allowed. To create a symbol programatically, you should
 	 *       build a string and send asSymbol to the string............
 	method asSymbol
 	{
 	}
 	*)
-
 
 	(* The strlen method returns the number of characters before a terminating null.
 	 * if no terminating null character exists, it returns the same value as the size method *)
@@ -252,7 +251,7 @@ class Set(Collection)
 			index := hv rem: bs.
 			while ((self.bucket at: index) notNil) { index := (index + 1) rem: bs }.
 		}.
-		
+
 		ass := Association key: key value: value.
 		self.tally := ntally.
 		self.bucket at: index put: ass.

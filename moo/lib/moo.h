@@ -748,9 +748,13 @@ struct moo_context_t
 typedef struct moo_process_t moo_process_t;
 typedef struct moo_process_t* moo_oop_process_t;
 
-#define MOO_SEMAPHORE_NAMED_INSTVARS 9
+#define MOO_SEMAPHORE_NAMED_INSTVARS 10
 typedef struct moo_semaphore_t moo_semaphore_t;
 typedef struct moo_semaphore_t* moo_oop_semaphore_t;
+
+#define MOO_SEMAPHORE_GROUP_NAMED_INSTVARS 5
+typedef struct moo_semaphore_group_t moo_semaphore_group_t;
+typedef struct moo_semaphore_group_t* moo_oop_semaphore_group_t;
 
 struct moo_process_t
 {
@@ -774,9 +778,9 @@ struct moo_process_t
 		moo_oop_process_t   next;
 	} sem_wait; /* links to use with a semaphore */
 
-	moo_oop_semaphore_t sem;
-	moo_oop_t           perr; /* last error set by a primitive function */
-	moo_oop_t           perrmsg;
+	moo_oop_t sem; /* nil, semaphore, or semaphore group */
+	moo_oop_t perr; /* last error set by a primitive function */
+	moo_oop_t perrmsg;
 
 	/* == variable indexed part == */
 	moo_oop_t slot[1]; /* process stack */
@@ -791,13 +795,14 @@ struct moo_semaphore_t
 {
 	MOO_OBJ_HEADER;
 
-	moo_oop_t count; /* SmallInteger */
-
+	/* [IMPORTANT] make sure that the position of 'waiting' in moo_semaphore_t
+	 *             must be exactly the same as its position in moo_semaphore_group_t */
 	struct
 	{
 		moo_oop_process_t first;
 		moo_oop_process_t last;
 	} waiting; /* list of processes waiting on this semaphore */
+	moo_oop_t count; /* SmallInteger */
 
 	moo_oop_t heap_index; /* index to the heap */
 	moo_oop_t heap_ftime_sec; /* firing time */
@@ -806,15 +811,24 @@ struct moo_semaphore_t
 	moo_oop_t io_index; 
 	moo_oop_t io_handle;
 	moo_oop_t io_mask; /* SmallInteger */
+
+	moo_oop_semaphore_group_t group; /* nil or belonging semaphore group */
 };
 
-#define MOO_SEMAPHORE_GROUP_NAMED_INSTVARS 2
-typedef struct moo_semaphore_group_t moo_semaphore_group_t;
-typedef struct moo_semaphore_group_t* moo_oop_semaphore_group_t;
 struct moo_semaphore_group_t
 {
 	MOO_OBJ_HEADER;
+
+	/* [IMPORTANT] make sure that the position of 'waiting' in moo_semaphore_group_t
+	 *             must be exactly the same as its position in moo_semaphore_t */
+	struct
+	{
+		moo_oop_process_t first;
+		moo_oop_process_t last; /* list of processes waiting on this semaphore group */
+	} waiting;
+
 	moo_oop_t size; /* SmallInteger */
+	moo_oop_t pos; /* current processing position */
 	moo_oop_oop_t semarr; /* Array of Semaphores */
 };
 
