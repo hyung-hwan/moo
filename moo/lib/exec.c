@@ -473,6 +473,7 @@ static MOO_INLINE void chain_into_semaphore (moo_t* moo, moo_oop_process_t proc,
 	MOO_ASSERT (moo, (moo_oop_t)proc->sem_wait.prev == moo->_nil);
 	MOO_ASSERT (moo, (moo_oop_t)proc->sem_wait.next == moo->_nil);
 
+	/* a semaphore or a semaphore group must be given for process chaining */
 	MOO_ASSERT (moo, MOO_CLASSOF(moo,sem) == moo->_semaphore ||
 	                 MOO_CLASSOF(moo,sem) == moo->_semaphore_group);
 
@@ -684,6 +685,7 @@ static void yield_process (moo_t* moo, moo_oop_process_t proc)
 	}
 }
 
+#if 0
 static int async_signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	if (moo->sem_list_count >= SEM_LIST_MAX)
@@ -709,6 +711,7 @@ static int async_signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	moo->sem_list_count++;
 	return 0;
 }
+#endif
 
 static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 {
@@ -717,7 +720,7 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 	if ((moo_oop_t)sem->group != moo->_nil)
 	{
-		/* the semaphore belongs to a group */
+		/* the semaphore belongs to a semaphore group */
 		moo_oop_semaphore_group_t semgrp;
 
 		semgrp = sem->group;
@@ -733,6 +736,17 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 		}
 	}
 
+	/* if the semaphore belongs to a semaphore group, no process is waiting
+	 * on the semaphore group. however, a process may still be waiting on
+	 * the semaphore. If a process waits on a semaphore group and another
+	 * process wait on a semaphor that belongs to the semaphore group, the
+	 * process waiting on the group always wins. 
+	 * 
+	 *    TODO: implement a fair scheduling policy. or do i simply have to disallow individual wait on a semaphore belonging to a group?
+	 *       
+	 * if it doesn't belong to a sempahore group, i'm free from the ambiguity
+	 * issue.
+	 */
 	if ((moo_oop_t)sem->waiting.first == moo->_nil)
 	{
 		/* no process is waiting on this semaphore */
@@ -761,11 +775,21 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	}
 }
 
-static void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
+static int await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 {
 /* TODO: support timeout */
 	moo_oop_process_t proc;
 	moo_ooi_t count;
+
+#if 0
+/* TODO: do i have to disallow?? */
+	if ((moo_oop_t)sem->group != moo->_nil)
+	{
+		/* disallow a semaphore in a semaphore group to be waited on */
+		moo_seterrnum (moo, MOO_EPERM);
+		return -1;
+	}
+#endif
 
 	count = MOO_OOP_TO_SMOOI(sem->count);
 	if (count > 0)
@@ -791,6 +815,8 @@ static void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 		MOO_ASSERT (moo, moo->processor->active != proc);
 	}
+
+	return 0;
 }
 
 static moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore_group_t semgrp)
@@ -840,7 +866,7 @@ static moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore_group_t se
 		if (MOO_OOP_TO_SMOOI(sem->io_index) >= 0) moo->sem_io_wait_count++;
 	}
 #else
-	/* link the suspended process to the semaphore's process list */
+	/* link the suspended process to the semaphore group's process list */
 	chain_into_semaphore (moo, proc, (moo_oop_semaphore_t)semgrp); 
 	MOO_ASSERT (moo, semgrp->waiting.last == proc);
 	/*if (MOO_OOP_TO_SMOOI(sem->io_index) >= 0) moo->sem_io_wait_count++;*/
@@ -2468,7 +2494,11 @@ static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_ooi_t nargs)
 		return MOO_PF_SUCCESS;
 	}
 
-	await_semaphore (moo, (moo_oop_semaphore_t)rcv);
+	if (await_semaphore (moo, (moo_oop_semaphore_t)rcv) <= -1)
+	{
+		MOO_STACK_SETRETTOERRNUM (moo, nargs);
+		return -1;
+	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;

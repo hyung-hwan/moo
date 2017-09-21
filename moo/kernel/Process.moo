@@ -55,8 +55,9 @@ class Semaphore(Object)
 	    fireTimeNsec  :=   0,
 	    ioIndex       :=  -1,
 	    ioHandle      := nil,
-	    ioMask        :=   0,
-	    group         := nil.
+	    ioMask        :=   0.
+
+	var(#get,#set) _group := nil.
 
 	method(#class) forMutualExclusion
 	{
@@ -148,7 +149,7 @@ TODO: timed wait...
 	}
 	elsif (sem == zzz)
 	{
-	}
+	}.
  }
  
  ============ CASE 2====================
@@ -225,8 +226,17 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 
 	method initialize: arr
 	{
+		| i sem |
 		self.size := arr size.
 		self.semarr := arr.
+
+		i := 0.
+		while (i < self.size)
+		{
+			sem := self.semarr at: i.
+			sem _group: self.
+			i := i + 1.
+		}
 	}
 
 	method(#primitive) wait.
