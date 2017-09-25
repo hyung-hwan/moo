@@ -32,6 +32,16 @@
 #define PROC_STATE_SUSPENDED 0
 #define PROC_STATE_TERMINATED -1
 
+
+#define MOO_PF_CHECK_RCV(moo,cond) do { \
+	if (!(cond)) { moo_seterrnum((moo), MOO_EMSGRCV); return MOO_PF_HARD_FAILURE; } \
+} while(0)
+
+#define MOO_PF_CHECK_ARGS(moo,nargs,cond) do { \
+	if (!(cond)) { MOO_STACK_SETRETTOERROR ((moo), (nargs), MOO_EINVAL); return MOO_PF_SUCCESS; } \
+} while(0)
+
+
 static MOO_INLINE const char* proc_state_to_string (int state)
 {
 	static const char* str[] = 
@@ -319,7 +329,9 @@ static MOO_INLINE void wake_process (moo_t* moo, moo_oop_process_t proc)
 	proc->state = MOO_SMOOI_TO_OOP(PROC_STATE_RUNNING);
 	moo->processor->active = proc;
 
-	LOAD_ACTIVE_SP(moo);
+	/* load the stack pointer from 'proc'. 
+	 * moo->processor->active points to 'proc' now. */
+	LOAD_ACTIVE_SP(moo); 
 
 	/* activate the suspended context of the new process */
 	SWITCH_ACTIVE_CONTEXT (moo, proc->current_context);
@@ -354,7 +366,6 @@ static MOO_INLINE void switch_to_process_from_nil (moo_t* moo, moo_oop_process_t
 static MOO_INLINE moo_oop_process_t find_next_runnable_process (moo_t* moo)
 {
 	moo_oop_process_t nrp;
-
 	MOO_ASSERT (moo, moo->processor->active->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNING));
 	nrp = moo->processor->active->ps.next;
 	if ((moo_oop_t)nrp == moo->_nil) nrp = moo->processor->runnable.first;
@@ -364,7 +375,6 @@ static MOO_INLINE moo_oop_process_t find_next_runnable_process (moo_t* moo)
 static MOO_INLINE void switch_to_next_runnable_process (moo_t* moo)
 {
 	moo_oop_process_t nrp;
-
 	nrp = find_next_runnable_process (moo);
 	if (nrp != moo->processor->active) switch_to_process (moo, nrp, PROC_STATE_RUNNABLE);
 }
@@ -382,9 +392,12 @@ static MOO_INLINE void chain_into_processor (moo_t* moo, moo_oop_process_t proc,
 	MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED));
 	MOO_ASSERT (moo, new_state == PROC_STATE_RUNNABLE || new_state == PROC_STATE_RUNNING);
 
-
 #if defined(MOO_DEBUG_VM_PROCESSOR)
-	MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process [%zd] %hs->%hs in chain_into_processor\n", MOO_OOP_TO_SMOOI(proc->id), proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)), proc_state_to_string(MOO_OOP_TO_SMOOI(new_state)));
+	MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, 
+		"Processor - process [%zd] %hs->%hs in chain_into_processor\n",
+		MOO_OOP_TO_SMOOI(proc->id),
+		proc_state_to_string(MOO_OOP_TO_SMOOI(proc->state)),
+		proc_state_to_string(new_state));
 #endif
 
 	runnable_count = MOO_OOP_TO_SMOOI(moo->processor->runnable.count);
@@ -732,15 +745,17 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 			unchain_from_semaphore (moo, proc);
 			resume_process (moo, proc);
 
+			/* store the last signaled semaphore into the semaphore group */
+			semgrp->sigsem = sem; 
 			return proc;
 		}
 	}
 
-	/* if the semaphore belongs to a semaphore group, no process is waiting
-	 * on the semaphore group. however, a process may still be waiting on
-	 * the semaphore. If a process waits on a semaphore group and another
-	 * process wait on a semaphor that belongs to the semaphore group, the
-	 * process waiting on the group always wins. 
+	/* if the semaphore belongs to a semaphore group and the control reaches 
+	 * here, no process is waiting on the semaphore group. however, a process
+	 * may still be waiting on the semaphore. If a process waits on a semaphore
+	 * group and another process wait on a semaphor that belongs to the 
+	 * semaphore group, the process waiting on the group always wins. 
 	 * 
 	 *    TODO: implement a fair scheduling policy. or do i simply have to disallow individual wait on a semaphore belonging to a group?
 	 *       
@@ -775,7 +790,7 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	}
 }
 
-static int await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
+static MOO_INLINE int await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 {
 /* TODO: support timeout */
 	moo_oop_process_t proc;
@@ -819,7 +834,7 @@ static int await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	return 0;
 }
 
-static moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore_group_t semgrp)
+static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore_group_t semgrp)
 {
 /* TODO: support timeout and wait all */
 	/* wait for one of semaphores in the group to be signaled */
@@ -843,7 +858,8 @@ static moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore_group_t se
 		{
 			count--;
 			sem->count = MOO_SMOOI_TO_OOP(count);
-			semgrp->pos = MOO_SMOOI_TO_OOP(sempos);
+			semgrp->pos = MOO_SMOOI_TO_OOP(sempos); /* position of the last inspected semaphore */
+			semgrp->sigsem = sem; /* remember the last signaled semaphore */
 			return (moo_oop_t)sem;
 		}
 	}
@@ -855,26 +871,16 @@ static moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore_group_t se
 	/* suspend the active process */
 	suspend_process (moo, proc); 
 
-#if 0
-	/* link the suspended process to the semaphore's process list */
-	for (i = 0; i < numsems; i++)
-	{
-		sem = (moo_oop_semaphore_t)((moo_oop_oop_t)semgrp->semarr)->slot[sempos];
-		sempos = (sempos + 1) % numsems;
-		chain_into_semaphore (moo, proc, sem);
-		MOO_ASSERT (moo, sem->waiting.last == proc);
-		if (MOO_OOP_TO_SMOOI(sem->io_index) >= 0) moo->sem_io_wait_count++;
-	}
-#else
 	/* link the suspended process to the semaphore group's process list */
 	chain_into_semaphore (moo, proc, (moo_oop_semaphore_t)semgrp); 
 	MOO_ASSERT (moo, semgrp->waiting.last == proc);
-	/*if (MOO_OOP_TO_SMOOI(sem->io_index) >= 0) moo->sem_io_wait_count++;*/
-#endif
+	/*if (MOO_OOP_TO_SMOOI(semgrp->io_index) >= 0) moo->semgrp_io_wait_count++;*/
 
-
+	/* the current process will get suspended after the caller (mostly a 
+	 * a primitive function handler) is over as it's added to a suspened
+	 * process list above */
 	MOO_ASSERT (moo, moo->processor->active != proc);
-	return moo->_nil;
+	return moo->_nil; 
 }
 
 static void sift_up_sem_heap (moo_t* moo, moo_ooi_t index)
@@ -1075,7 +1081,7 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 	return n;
 }
 
-static MOO_INLINE int mod_in_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
+static MOO_INLINE int modify_in_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	return moo->vmprim.vm_muxmod (moo, sem);
 }
@@ -1561,7 +1567,8 @@ static moo_pfrc_t pf_dump (moo_t* moo, moo_ooi_t nargs)
 
 	MOO_ASSERT (moo, nargs >=  0);
 
-	moo_logbfmt (moo, 0, "RECEIVER: %O\n", MOO_STACK_GET(moo, moo->sp - nargs));
+	/*moo_logbfmt (moo, 0, "RECEIVER: %O IN PID %d SP %d XSP %d\n", MOO_STACK_GET(moo, moo->sp - nargs), (int)MOO_OOP_TO_SMOOI(moo->processor->active->id), (int)moo->sp, (int)MOO_OOP_TO_SMOOI(moo->processor->active->sp));*/
+	moo_logbfmt (moo, 0, "RECEIVER: %O IN PID %d\n", MOO_STACK_GET(moo, moo->sp - nargs), (int)MOO_OOP_TO_SMOOI(moo->processor->active->id));
 	for (i = nargs; i > 0; )
 	{
 		--i;
@@ -2134,28 +2141,6 @@ static moo_pfrc_t pf_perform (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_exceptionize_error (moo_t* moo, moo_ooi_t nargs)
-{
-	moo_oop_t rcv;
-
-	MOO_ASSERT (moo, nargs == 1);
-
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (!MOO_OOP_IS_POINTER(rcv))
-	{
-		/* the receiver is a special numeric object, not a normal pointer.
-		 * excceptionization is not supported for small integers, characters, and errors.
-		 * first of all, methods of these classes must not return errors */
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_FAILURE;
-	}
-
-/* TODO: .......
-	MOO_OBJ_SET_FLAGS_EXTRA (rcv, xxx); */
-	MOO_STACK_SETRETTORCV (moo, nargs);
-	return MOO_PF_SUCCESS;
-}
-
 static moo_pfrc_t pf_context_goto (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
@@ -2169,13 +2154,7 @@ static moo_pfrc_t pf_context_goto (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, nargs == 1);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo, rcv) != moo->_method_context)
-	{
-		MOO_LOG2 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
-			"Error(%hs) - invalid receiver, not a method context - %O\n", __PRIMITIVE_NAME__, rcv);
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_method_context);
 
 	pc = MOO_STACK_GETARG(moo, nargs, 0);
 	if (!MOO_OOP_IS_SMOOI(pc) || MOO_OOP_TO_SMOOI(pc) < 0)
@@ -2314,14 +2293,7 @@ static moo_pfrc_t pf_block_value (moo_t* moo, moo_ooi_t nargs)
 	moo_oop_context_t rcv_blkctx, blkctx;
 
 	rcv_blkctx = (moo_oop_context_t)MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo, rcv_blkctx) != moo->_block_context)
-	{
-		/* the receiver must be a block context */
-		MOO_LOG2 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
-			"Error(%hs) - invalid receiver, not a block context - %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv_blkctx) == moo->_block_context);
 
 	x = __block_value (moo, rcv_blkctx, nargs, 0, &blkctx);
 	if (x <= MOO_PF_FAILURE) return x; /* hard failure and soft failure */
@@ -2393,20 +2365,32 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_ooi_t nargs)
 
 /* ------------------------------------------------------------------ */
 
+static moo_pfrc_t pf_process_sp (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_process);
+
+	/* commit the SP register of the VM to the active process for accuracy */
+	STORE_ACTIVE_SP (moo);
+	MOO_STACK_SETRET (moo, nargs, moo->processor->active->sp);
+
+	return MOO_PF_SUCCESS;
+}
+
 static moo_pfrc_t pf_process_resume (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo,rcv) != moo->_process) 
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_process);
 
+	/* set the return value before resume_process() in case it changes
+	 * the active process. */
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	resume_process (moo, (moo_oop_process_t)rcv);
 
-	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -2417,15 +2401,13 @@ static moo_pfrc_t pf_process_terminate (moo_t* moo, moo_ooi_t nargs)
 /* TODO: need to run ensure blocks here..
  * when it's executed here. it does't have to be in Exception>>handleException when there is no exception handler */
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo,rcv) != moo->_process) 
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_process);
 
+	/* set the return value before terminate_process() in case it changes
+	 * the active process. */
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	terminate_process (moo, (moo_oop_process_t)rcv);
 
-	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -2434,15 +2416,13 @@ static moo_pfrc_t pf_process_yield (moo_t* moo, moo_ooi_t nargs)
 	moo_oop_t rcv;
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo,rcv) != moo->_process) 
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_process);
 
+	/* set the return value before yield_process() in case it changes
+	 * the active process. */
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	yield_process (moo, (moo_oop_process_t)rcv);
 
-	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -2451,15 +2431,13 @@ static moo_pfrc_t pf_process_suspend (moo_t* moo, moo_ooi_t nargs)
 	moo_oop_t rcv;
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo,rcv) != moo->_process) 
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_process);
 
+	/* set the return value before suspend_process() in case it changes
+	 * the active process. */
+	MOO_STACK_SETRETTORCV (moo, nargs);
 	suspend_process (moo, (moo_oop_process_t)rcv);
 
-	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
@@ -2467,102 +2445,92 @@ static moo_pfrc_t pf_process_suspend (moo_t* moo, moo_ooi_t nargs)
 static moo_pfrc_t pf_semaphore_signal (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
-	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo,rcv) != moo->_semaphore) 
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EMSGRCV);
-		return MOO_PF_SUCCESS;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_semaphore); /* TODO: use moo_iskindof(moo,rcv,moo->_semaphore); */
+
+	/* signal_semaphore() may change the active process though the 
+	 * implementation as of this writing makes runnable the process waiting
+	 * on the signal to be processed. it is safer to set the return value
+	 * before calling signal_sempahore() */
+	MOO_STACK_SETRETTORCV (moo, nargs);
 
 	signal_semaphore (moo, (moo_oop_semaphore_t)rcv);
 
-	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
 static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
-	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo,rcv) != moo->_semaphore) 
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EMSGRCV);
-		return MOO_PF_SUCCESS;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_semaphore);
+
+	/* i must set the return value before calling await_semaphore().
+	 * await_semaphore() may switch the active process and the stack
+	 * manipulation macros target at the active process. i'm not supposed
+	 * to change the return value of a new active process. */
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
 
 	if (await_semaphore (moo, (moo_oop_semaphore_t)rcv) <= -1)
 	{
-		MOO_STACK_SETRETTOERRNUM (moo, nargs);
-		return -1;
+		/* i must switch the top because the return value has been set already */
+		MOO_STACK_SETTOP (moo, MOO_ERROR_TO_OOP(moo->errnum));
+		return MOO_PF_SUCCESS;
 	}
 
-	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
 static moo_pfrc_t pf_semaphore_group_wait (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
-	moo_oop_t sem;
-
-	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo,rcv) != moo->_semaphore_group) 
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EMSGRCV);
-		return MOO_PF_SUCCESS;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_semaphore_group);
 
-	sem = await_semaphore_group (moo, (moo_oop_semaphore_group_t)rcv);
+	/* i must set the return value before calling await_semaphore_group().
+	 * MOO_STACK_SETRETTORCV() manipulates the stack of the currently active
+	 * process(moo->processor->active). moo->processor->active may become
+	 * moo->nil_process if the current active process must get suspended. 
+	 * it is safer to set the return value of the calling method here.
+	 * but the arguments and the receiver information will be lost from 
+	 * the stack from this moment on. */
+	MOO_STACK_SETRETTORCV (moo, nargs);
 
-	MOO_STACK_SETRET (moo, nargs, sem);
+	await_semaphore_group (moo, (moo_oop_semaphore_group_t)rcv);
 	return MOO_PF_SUCCESS;
 }
 
 static moo_pfrc_t pf_processor_schedule (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_oop_t rcv, arg;
+	moo_oop_t arg;
+
+	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->processor);*/
 
 	MOO_ASSERT (moo, nargs == 1);
-
-	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_CLASSOF(moo,arg) == moo->_process);
 
-	if (rcv != (moo_oop_t)moo->processor || MOO_CLASSOF(moo,arg) != moo->_process)
-	{
-		return MOO_PF_FAILURE;
-	}
+	/* set the return value before resume_process() in case it changes the active process */
+	MOO_STACK_SETRETTORCV (moo, nargs);
 
 	resume_process (moo, (moo_oop_process_t)arg);
+
 	return MOO_PF_SUCCESS;
 }
 
 static moo_pfrc_t pf_processor_add_gcfin_semaphore (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_oop_t rcv;
 	moo_oop_semaphore_t sem;
 
+	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->processor);*/
+
 	MOO_ASSERT (moo, nargs == 1);
-
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-
-	if (rcv != (moo_oop_t)moo->processor)
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EMSGRCV);
-		return MOO_PF_SUCCESS;
-	}
-
-	if (MOO_CLASSOF(moo,sem) != moo->_semaphore)
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
-		return MOO_PF_SUCCESS;
-	}
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_CLASSOF(moo,sem) == moo->_semaphore);
 
 /* TODO: no overwriting.. */
 	moo->sem_gcfin = sem;
@@ -2573,27 +2541,31 @@ static moo_pfrc_t pf_processor_add_gcfin_semaphore (moo_t* moo, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_processor_add_timed_semaphore (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_oop_t rcv, sec, nsec;
+	moo_oop_t sec, nsec;
 	moo_oop_semaphore_t sem;
 	moo_ntime_t now, ft;
+
+	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->processor);*/
 
 	MOO_ASSERT (moo, nargs >= 2 || nargs <= 3);
 
 	if (nargs == 3) 
 	{
 		nsec = MOO_STACK_GETARG (moo, nargs, 2);
-		if (!MOO_OOP_IS_SMOOI(nsec)) return MOO_PF_FAILURE;
+		if (!MOO_OOP_IS_SMOOI(nsec)) goto einval;
 	}
 	else nsec = MOO_SMOOI_TO_OOP(0);
 
 	sec = MOO_STACK_GETARG(moo, nargs, 1);
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
-	rcv = MOO_STACK_GETRCV(moo, nargs);
 
 	/* ProcessScheduler>>signal:after: calls this primitive function. */
-	if (rcv != (moo_oop_t)moo->processor || 
-	    MOO_CLASSOF(moo,sem) != moo->_semaphore || 
-	    !MOO_OOP_IS_SMOOI(sec)) return MOO_PF_FAILURE;
+	if (MOO_CLASSOF(moo,sem) != moo->_semaphore || !MOO_OOP_IS_SMOOI(sec))
+	{
+	einval:
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_SUCCESS; 
+	}
 
 	if (MOO_OOP_IS_SMOOI(sem->heap_index) && 
 	    sem->heap_index != MOO_SMOOI_TO_OOP(-1))
@@ -2615,11 +2587,12 @@ static moo_pfrc_t pf_processor_add_timed_semaphore (moo_t* moo, moo_ooi_t nargs)
 	MOO_ADDNTIMESNS (&ft, &now, MOO_OOP_TO_SMOOI(sec), MOO_OOP_TO_SMOOI(nsec));
 	if (ft.sec < 0 || ft.sec > MOO_SMOOI_MAX) 
 	{
-		/* soft error - cannot represent the expiry time in
-		 *              a small integer. */
+		/* soft error - cannot represent the expiry time in a small integer. */
 		MOO_LOG3 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
 			"Error(%hs) - time (%ld) out of range(0 - %zd) when adding a timed semaphore\n", 
 			__PRIMITIVE_NAME__, (unsigned long int)ft.sec, (moo_ooi_t)MOO_SMOOI_MAX);
+
+		moo_seterrnum (moo, MOO_ERANGE);
 		return MOO_PF_FAILURE;
 	}
 
@@ -2634,20 +2607,15 @@ static moo_pfrc_t pf_processor_add_timed_semaphore (moo_t* moo, moo_ooi_t nargs)
 
 static moo_pfrc_t __processor_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_ooi_t mask)
 {
-	moo_oop_t rcv, fd;
+	moo_oop_t fd;
 	moo_oop_semaphore_t sem;
+
+	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->processor);*/
 
 	MOO_ASSERT (moo, nargs == 2);
 
 	fd = MOO_STACK_GETARG(moo, nargs, 1);
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-
-	if (rcv != (moo_oop_t)moo->processor)
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EMSGRCV);
-		return MOO_PF_SUCCESS;
-	}
 
 	if (MOO_CLASSOF(moo,sem) != moo->_semaphore || !MOO_OOP_IS_SMOOI(fd))
 	{
@@ -2659,11 +2627,13 @@ static moo_pfrc_t __processor_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo
 	{
 		moo_ooi_t old_mask;
 
+		/* the semaphore is already linked with the requested IO handle */
+
 		old_mask = MOO_OOP_TO_SMOOI(sem->io_mask);
 		if (old_mask != mask)
 		{
 			sem->io_mask = MOO_SMOOI_TO_OOP(mask);
-			if (mod_in_sem_io (moo, sem) <= -1) 
+			if (modify_in_sem_io(moo, sem) <= -1) 
 			{
 				sem->io_mask = MOO_SMOOI_TO_OOP(old_mask);
 				MOO_STACK_SETRETTOERRNUM (moo, nargs);
@@ -2676,7 +2646,7 @@ static moo_pfrc_t __processor_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo
 		if (MOO_OOP_IS_SMOOI(sem->io_index) && sem->io_index != MOO_SMOOI_TO_OOP(-1))
 		{
 			/* remove it if it's already added for IO */
-			if (delete_from_sem_io (moo, MOO_OOP_TO_SMOOI(sem->io_index)) <= -1)
+			if (delete_from_sem_io(moo, MOO_OOP_TO_SMOOI(sem->io_index)) <= -1)
 			{
 				MOO_STACK_SETRETTOERRNUM (moo, nargs);
 				return MOO_PF_SUCCESS;
@@ -2686,7 +2656,7 @@ static moo_pfrc_t __processor_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo
 
 		sem->io_handle = fd;
 		sem->io_mask = MOO_SMOOI_TO_OOP(mask);
-		if (add_to_sem_io (moo, sem) <= -1) 
+		if (add_to_sem_io(moo, sem) <= -1) 
 		{
 			MOO_STACK_SETRETTOERRNUM (moo, nargs);
 			return MOO_PF_SUCCESS;
@@ -2716,22 +2686,16 @@ static moo_pfrc_t pf_processor_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 {
 	/* remove a semaphore from processor's signal scheduling */
 
-	moo_oop_t rcv;
 	moo_oop_semaphore_t sem;
+
+	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->processor);*/
 
 	MOO_ASSERT (moo, nargs == 1);
 
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
-	rcv = MOO_STACK_GETRCV(moo, nargs);
 
 /* TODO: remove a semaphore from IO handler if it's registered...
  *       remove a semaphore from elsewhere registered too */
-
-	if (rcv != (moo_oop_t)moo->processor)
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EMSGRCV);
-		return MOO_PF_SUCCESS;
-	}
 
 	if (MOO_CLASSOF(moo,sem) != moo->_semaphore) 
 	{
@@ -2755,6 +2719,7 @@ static moo_pfrc_t pf_processor_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 	if (MOO_OOP_IS_SMOOI(sem->io_index) &&
 	    sem->io_index != MOO_SMOOI_TO_OOP(-1))
 	{
+		/* the semaphore is associated with IO */
 		if (delete_from_sem_io (moo, MOO_OOP_TO_SMOOI(sem->io_index)) <= -1)
 		{
 			MOO_STACK_SETRETTOERRNUM (moo, nargs);
@@ -2770,18 +2735,21 @@ static moo_pfrc_t pf_processor_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_processor_return_to (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_oop_t rcv, ret, ctx;
+	moo_oop_t ret, ctx;
+
+	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->processor);*/
 
 	MOO_ASSERT (moo, nargs == 2);
 
-	rcv = MOO_STACK_GETRCV(moo, nargs);
 	ret = MOO_STACK_GETARG(moo, nargs, 0);
 	ctx = MOO_STACK_GETARG(moo, nargs, 1);
 
-	if (rcv != (moo_oop_t)moo->processor) return MOO_PF_FAILURE;
-
 	if (MOO_CLASSOF(moo, ctx) != moo->_block_context &&
-	    MOO_CLASSOF(moo, ctx) != moo->_method_context) return MOO_PF_FAILURE;
+	    MOO_CLASSOF(moo, ctx) != moo->_method_context) 
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
+		return MOO_PF_FAILURE;
+	}
 
 	MOO_STACK_POPS (moo, nargs + 1); /* pop arguments and receiver */
 /* TODO: verify if this is correct? does't it correct restore the stack pointer?
@@ -3153,11 +3121,7 @@ static moo_pfrc_t pf_character_as_smooi (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (!MOO_OOP_IS_CHAR(rcv)) 
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_HARD_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_CHAR(rcv));
 
 	c = MOO_OOP_TO_CHAR(rcv);
 	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(c));
@@ -3172,11 +3136,7 @@ static moo_pfrc_t pf_smooi_as_character (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (!MOO_OOP_IS_SMOOI(rcv)) 
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_HARD_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMOOI(rcv));
 
 	ec = MOO_OOP_TO_SMOOI(rcv);
 	if (ec < 0) ec = 0;
@@ -3192,11 +3152,7 @@ static moo_pfrc_t pf_smooi_as_error (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (!MOO_OOP_IS_SMOOI(rcv))
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_HARD_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMOOI(rcv));
 
 	ec = MOO_OOP_TO_SMOOI(rcv);
 	if (ec < MOO_ERROR_MIN) ec = MOO_ERROR_MIN;
@@ -3214,11 +3170,7 @@ static moo_pfrc_t pf_error_as_character (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (!MOO_OOP_IS_ERROR(rcv))
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_HARD_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_ERROR(rcv));
 
 	ec = MOO_OOP_TO_ERROR(rcv);
 	MOO_ASSERT (moo, ec >= MOO_CHAR_MIN && ec <= MOO_CHAR_MAX);
@@ -3234,11 +3186,7 @@ static moo_pfrc_t pf_error_as_integer (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (!MOO_OOP_IS_ERROR(rcv)) 
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_HARD_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_ERROR(rcv));
 
 	ec = MOO_OOP_TO_ERROR(rcv);
 	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(ec));
@@ -3255,11 +3203,7 @@ static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (!MOO_OOP_IS_ERROR(rcv)) 
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_HARD_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_ERROR(rcv));
 
 	ec = MOO_OOP_TO_ERROR(rcv);
 	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(ec));
@@ -3284,11 +3228,7 @@ static moo_pfrc_t pf_strlen (moo_t* moo, moo_ooi_t nargs)
 	moo_ooch_t* ptr;
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (!MOO_OBJ_IS_CHAR_POINTER(rcv))
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_OBJ_IS_CHAR_POINTER(rcv));
 
 	/* [NOTE] the length check loop is directly implemented
 	 *        here to be able to handle character objects
@@ -3454,6 +3394,8 @@ static moo_pfrc_t pf_system_free (moo_t* moo, moo_ooi_t nargs)
 	moo_oop_t tmp;
 	void* rawptr;
 
+	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->_system);*/
+
 	MOO_ASSERT (moo, nargs == 1);
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
@@ -3477,11 +3419,7 @@ static moo_pfrc_t pf_smptr_free (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, nargs == 0);
 
 	tmp = MOO_STACK_GETRCV(moo, nargs);
-	if (!MOO_OOP_IS_SMPTR(tmp)) 
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_HARD_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(tmp));
 
 	moo_freemem (moo, MOO_OOP_TO_SMPTR(tmp));
 
@@ -3690,8 +3628,9 @@ static moo_pfrc_t _get_system_int (moo_t* moo, moo_ooi_t nargs, int size)
 	moo_oow_t offset;
 	moo_oop_t tmp;
 
-	MOO_ASSERT (moo, nargs == 2);
+	/* MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->_system); */
 
+	MOO_ASSERT (moo, nargs == 2);
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
 	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
 	else if (moo_inttooow (moo, tmp, (moo_oow_t*)&rawptr) <= 0) goto einval;
@@ -3720,8 +3659,9 @@ static moo_pfrc_t _get_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
 	moo_oow_t offset;
 	moo_oop_t tmp;
 
-	MOO_ASSERT (moo, nargs == 2);
+	/* MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->_system); */
 
+	MOO_ASSERT (moo, nargs == 2);
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
 	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
 	else if (moo_inttooow (moo, tmp, (moo_oow_t*)&rawptr) <= 0) goto einval;
@@ -3790,8 +3730,9 @@ static moo_pfrc_t _put_system_int (moo_t* moo, moo_ooi_t nargs, int size)
 	moo_oow_t offset;
 	moo_oop_t tmp;
 
-	MOO_ASSERT (moo, nargs == 3);
+	/* MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->_system); */
 
+	MOO_ASSERT (moo, nargs == 3);
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
 	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
 	else if (moo_inttooow (moo, tmp, (moo_oow_t*)&rawptr) <= 0) goto einval;
@@ -3818,8 +3759,9 @@ static moo_pfrc_t _put_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
 	moo_oow_t offset;
 	moo_oop_t tmp;
 
-	MOO_ASSERT (moo, nargs == 3);
+	/* MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->_system); */
 
+	MOO_ASSERT (moo, nargs == 3);
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
 	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
 	else if (moo_inttooow (moo, tmp, (moo_oow_t*)&rawptr) <= 0) goto einval;
@@ -3891,11 +3833,7 @@ static moo_pfrc_t _get_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
 	MOO_ASSERT (moo, nargs == 1);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (!MOO_OOP_IS_SMPTR(rcv))
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_HARD_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(rcv));
 
 	if (moo_inttooow (moo, MOO_STACK_GETARG(moo, nargs, 0), &offset) <= 0)
 	{
@@ -3926,11 +3864,7 @@ static moo_pfrc_t _get_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 	MOO_ASSERT (moo, nargs == 1);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (!MOO_OOP_IS_SMPTR(rcv))
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_HARD_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(rcv));
 
 	if (moo_inttooow (moo, MOO_STACK_GETARG(moo, nargs, 0), &offset) <= 0)
 	{
@@ -4000,11 +3934,7 @@ static moo_pfrc_t _put_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
 	MOO_ASSERT (moo, nargs == 2);
 
 	tmp = MOO_STACK_GETRCV(moo, nargs);
-	if (!MOO_OOP_IS_SMPTR(tmp)) 
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EMSGRCV);
-		return MOO_PF_SUCCESS;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(tmp));
 
 	rawptr = MOO_OOP_TO_SMPTR(tmp);
 
@@ -4033,11 +3963,7 @@ static moo_pfrc_t _put_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 	MOO_ASSERT (moo, nargs == 2);
 
 	tmp = MOO_STACK_GETRCV(moo, nargs);
-	if (!MOO_OOP_IS_SMPTR(tmp)) 
-	{
-		MOO_STACK_SETRETTOERRNUM (moo, MOO_EMSGRCV);
-		return MOO_PF_SUCCESS;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(tmp));
 
 	rawptr = MOO_OOP_TO_SMPTR(tmp);
 
@@ -4136,11 +4062,7 @@ static moo_pfrc_t pf_smptr_as_string (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, nargs == 0);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	if (!MOO_OOP_IS_SMPTR(rcv))
-	{
-		moo_seterrnum (moo, MOO_EMSGRCV);
-		return MOO_PF_HARD_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(rcv));
 
 	ptr = MOO_OOP_TO_SMPTR(rcv);
 	sprintptr (buf, (moo_oow_t)ptr, &len);
@@ -4185,7 +4107,6 @@ static pf_t pftab[] =
 
 	{ "_responds_to",                          { pf_responds_to,                          1, 1  } },
 	{ "_perform",                              { pf_perform,                              1, MA } },
-	{ "_exceptionize_error",                   { pf_exceptionize_error,                   1, 1  } },
 
 	{ "_context_goto",                         { pf_context_goto,                         1, 1  } },
 	{ "_block_value",                          { pf_block_value,                          0, MA } },
@@ -4238,10 +4159,11 @@ static pf_t pftab[] =
 	{ "Error_asInteger",                       { pf_error_as_integer,                     0, 0 } },
 	{ "Error_asString",                        { pf_error_as_string,                      0, 0 } },
 
-	{ "Process__suspend",                      { pf_process_suspend,                      0, 0 } },
-	{ "Process__terminate",                    { pf_process_terminate,                    0, 0 } },
 	{ "Process_resume",                        { pf_process_resume,                       0, 0 } },
+	{ "Process_sp",                            { pf_process_sp,                           0, 0 } },
+	{ "Process_suspend",                       { pf_process_suspend,                      0, 0 } },
 	{ "Process_yield",                         { pf_process_yield,                        0, 0 } },
+	{ "Process__terminate",                    { pf_process_terminate,                    0, 0 } },
 
 	{ "Semaphore_signal",                      { pf_semaphore_signal,                     0, 0 } },
 	{ "Semaphore_wait",                        { pf_semaphore_wait,                       0, 0 } },

@@ -507,10 +507,4 @@ extend Apex
 		class_name := if (self class == Class) { self name } else { self class name }.
 		ProhibitedMessageException signal: (method_name & ' not allowed for ' & class_name).
 	}
-
-	method(#dual) cannotExceptionizeError
-	{
-## todo: accept the object
-		ErrorExceptionizationFailureException signal: 'Cannot exceptionize an error'
-	}
 }

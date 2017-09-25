@@ -289,15 +289,6 @@ extend Apex
 		self primitiveFailed
 	}
 
-	## -------------------------------------------------------
-	## -------------------------------------------------------
-
-	method exceptionizeError: trueOrFalse
-	{
-		<primitive: #_exceptionize_error>
-		self class cannotExceptionizeError
-	}
-
 	(* ------------------------------------------------------------------
 	 * COMMON ERROR/EXCEPTION HANDLERS
 	 * ------------------------------------------------------------------ *)

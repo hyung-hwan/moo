@@ -752,7 +752,7 @@ typedef struct moo_process_t* moo_oop_process_t;
 typedef struct moo_semaphore_t moo_semaphore_t;
 typedef struct moo_semaphore_t* moo_oop_semaphore_t;
 
-#define MOO_SEMAPHORE_GROUP_NAMED_INSTVARS 5
+#define MOO_SEMAPHORE_GROUP_NAMED_INSTVARS 6
 typedef struct moo_semaphore_group_t moo_semaphore_group_t;
 typedef struct moo_semaphore_group_t* moo_oop_semaphore_group_t;
 
@@ -802,6 +802,8 @@ struct moo_semaphore_t
 		moo_oop_process_t first;
 		moo_oop_process_t last;
 	} waiting; /* list of processes waiting on this semaphore */
+	/* [END IMPORTANT] */
+
 	moo_oop_t count; /* SmallInteger */
 
 	moo_oop_t heap_index; /* index to the heap */
@@ -826,10 +828,12 @@ struct moo_semaphore_group_t
 		moo_oop_process_t first;
 		moo_oop_process_t last; /* list of processes waiting on this semaphore group */
 	} waiting;
+	/* [END IMPORTANT] */
 
 	moo_oop_t size; /* SmallInteger */
 	moo_oop_t pos; /* current processing position */
 	moo_oop_oop_t semarr; /* Array of Semaphores */
+	moo_oop_semaphore_t sigsem; /* Last signaled semaphore */
 };
 
 #define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 9
@@ -1265,10 +1269,14 @@ struct moo_t
 		(moo)->sp = (moo)->sp + 1; \
 		MOO_ASSERT (moo, (moo)->sp < (moo_ooi_t)(MOO_OBJ_GET_SIZE((moo)->processor->active) - MOO_PROCESS_NAMED_INSTVARS)); \
 		(moo)->processor->active->slot[(moo)->sp] = v; \
-	} while (0)
+	} while(0)
 
 #define MOO_STACK_GET(moo,v_sp) ((moo)->processor->active->slot[v_sp])
-#define MOO_STACK_SET(moo,v_sp,v_obj) ((moo)->processor->active->slot[v_sp] = v_obj)
+#define MOO_STACK_SET(moo,v_sp,v_obj) \
+	do { \
+		MOO_ASSERT (moo, (v_sp) < (moo_ooi_t)(MOO_OBJ_GET_SIZE((moo)->processor->active) - MOO_PROCESS_NAMED_INSTVARS)); \
+		(moo)->processor->active->slot[v_sp] = v_obj; \
+	} while(0)
 
 #define MOO_STACK_GETTOP(moo) MOO_STACK_GET(moo, (moo)->sp)
 #define MOO_STACK_SETTOP(moo,v_obj) MOO_STACK_SET(moo, (moo)->sp, v_obj)
@@ -1284,9 +1292,13 @@ struct moo_t
 /* get the receiver of a message */
 #define MOO_STACK_GETRCV(moo,nargs) MOO_STACK_GET(moo, (moo)->sp - nargs)
 
-/* you can't access arguments and receiver after this macro. 
+/* you can't access arguments and receiver after these macros. 
  * also you must not call this macro more than once */
-#define MOO_STACK_SETRET(moo,nargs,retv) (MOO_STACK_POPS(moo, nargs), MOO_STACK_SETTOP(moo, (retv)))
+#define MOO_STACK_SETRET(moo,nargs,retv) \
+	do { \
+		MOO_STACK_POPS(moo, nargs); \
+		MOO_STACK_SETTOP(moo, (retv)); \
+	} while(0)
 #define MOO_STACK_SETRETTORCV(moo,nargs) (MOO_STACK_POPS(moo, nargs))
 #define MOO_STACK_SETRETTOERRNUM(moo,nargs) MOO_STACK_SETRET(moo, nargs, MOO_ERROR_TO_OOP(moo->errnum))
 #define MOO_STACK_SETRETTOERROR(moo,nargs,ec) MOO_STACK_SETRET(moo, nargs, MOO_ERROR_TO_OOP(ec))

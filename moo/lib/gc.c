@@ -461,6 +461,9 @@ static int ignite_2 (moo_t* moo)
 	if (!tmp) return -1;
 	moo->nil_process = (moo_oop_process_t)tmp;
 	moo->nil_process->sp = MOO_SMOOI_TO_OOP(-1);
+	moo->nil_process->id = MOO_SMOOI_TO_OOP(-1);
+	moo->nil_process->perr = MOO_ERROR_TO_OOP(MOO_ENOERR);
+	moo->nil_process->perrmsg = moo->_nil;
 
 	/* Create a process scheduler */
 	tmp = (moo_oop_t)moo_instantiate (moo, moo->_process_scheduler, MOO_NULL, 0);

@@ -2,16 +2,19 @@
 class(#pointer,#final,#limited) Process(Object)
 {
 	var(#get) initialContext, currentContext, id, state.
-	var(#get) sp, ps_prev, ps_next, sem_wait_prev, sem_wait_next.
+	var sp.
+	var(#get) ps_prev, ps_next, sem_wait_prev, sem_wait_next.
 	var sem, perr, perrmsg.
 
 	method primError { ^self.perr }
 	method primErrorMessage { ^self.perrmsg }
 
+	method(#primitive) sp.
+
 	method(#primitive) resume.
 	method(#primitive) yield.
+	method(#primitive) suspend.
 	method(#primitive) _terminate.
-	method(#primitive) _suspend.
 
 	method terminate
 	{
@@ -38,8 +41,8 @@ class(#pointer,#final,#limited) Process(Object)
 		## the process must not be scheduled.
 		## ----------------------------------------------------------------------------------------------------------
 
-		##if (Processor activeProcess ~~ self) { self _suspend }.
-		if (thisProcess ~~ self) { self _suspend }.
+		##if (Processor activeProcess ~~ self) { self suspend }.
+		if (thisProcess ~~ self) { self suspend }.
 		self.currentContext unwindTo: self.initialContext return: nil.
 		^self _terminate
 	}
@@ -191,6 +194,7 @@ class SemaphoreGroup(Object)
 	    size := 0,
 	    pos := 0,
 	    semarr := nil.
+	var(#get,#set) signaledSemaphore := nil.
 
 (* TODO: good idea to a shortcut way to prohibit a certain method in the heirarchy chain?
 
@@ -204,7 +208,7 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 
 	method(#class,#variadic) with()
 	{
-		| i x arr |
+		| i x arr sem |
 
 		i := 0.
 		x := thisContext vargCount.
@@ -212,7 +216,13 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 		arr := Array new: x.
 		while (i < x)
 		{
-			arr at: i put: (thisContext vargAt: i).
+			sem := thisContext vargAt: i.
+			if (sem _group notNil)
+			{
+				System.Exception signal: 'Cannot add a semaphore in a group to another group'
+			}.
+
+			arr at: i put: sem.
 			i := i + 1.
 		}.
 
@@ -514,7 +524,7 @@ class(#final,#limited) ProcessScheduler(Object)
 		## -----------------------------------------------------
 		| s |
 		s := Semaphore new.
-		self signal: s after: secs and: nanosecs 
+		self signal: s after: secs and: nanosecs.
 		s wait.
 	}
 }
