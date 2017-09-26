@@ -752,7 +752,7 @@ typedef struct moo_process_t* moo_oop_process_t;
 typedef struct moo_semaphore_t moo_semaphore_t;
 typedef struct moo_semaphore_t* moo_oop_semaphore_t;
 
-#define MOO_SEMAPHORE_GROUP_NAMED_INSTVARS 6
+#define MOO_SEMAPHORE_GROUP_NAMED_INSTVARS 5
 typedef struct moo_semaphore_group_t moo_semaphore_group_t;
 typedef struct moo_semaphore_group_t* moo_oop_semaphore_group_t;
 
@@ -833,7 +833,6 @@ struct moo_semaphore_group_t
 	moo_oop_t size; /* SmallInteger */
 	moo_oop_t pos; /* current processing position */
 	moo_oop_oop_t semarr; /* Array of Semaphores */
-	moo_oop_semaphore_t sigsem; /* Last signaled semaphore */
 };
 
 #define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 9

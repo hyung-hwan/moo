@@ -79,8 +79,12 @@ class Semaphore(Object)
 TODO: timed wait...
 	method waitWithTimeout: seconds
 	{
-		<primitive: #_semaphore_wait>
-		self primitiveFailed
+		| s |
+		s := Semaphore new.
+		Processor signal: s after: seconds.
+		self waitWithTimedSemaphore: s.
+
+		if (self.
 	}
 
 	method waitWithTimeout: seconds and: nanoSeconds
@@ -89,6 +93,7 @@ TODO: timed wait...
 		self primitiveFailed
 	}
 *)
+
 	method critical: aBlock
 	{
 		self wait.
@@ -194,7 +199,6 @@ class SemaphoreGroup(Object)
 	    size := 0,
 	    pos := 0,
 	    semarr := nil.
-	var(#get,#set) signaledSemaphore := nil.
 
 (* TODO: good idea to a shortcut way to prohibit a certain method in the heirarchy chain?
 
@@ -250,6 +254,36 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 	}
 
 	method(#primitive) wait.
+
+	method waitWithTimeout: seconds
+	{
+		| s r |
+
+		## create an internal semaphore for timeout notification.
+		s := Semaphore new. 
+
+		## grant the partial membership to the internal semaphore.
+		## it's partial because it's not added to self.semarr.
+		s _group: self. 
+
+		## arrange the processor to notify upon timeout.
+		Processor signal: s after: seconds. 
+
+		## wait on the semaphore group.
+		r := self wait.
+
+		## if the internal semaphore has been signaled, 
+		## arrange to return nil to indicate timeout.
+		if (r == s) { r := nil }.
+
+		## nullify the membership
+		s _group: nil. 
+
+		## cancel the notification arrangement in case it didn't time out.
+		Processor unsignal: s.
+
+		^r.
+	} 
 }
 
 class SemaphoreHeap(Object)
