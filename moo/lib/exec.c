@@ -5215,7 +5215,7 @@ static int __execute (moo_t* moo)
 
 #	define BEGIN_DISPATCH_LOOP() __begin_inst_dispatch: 
 #	define END_DISPATCH_LOOP() __end_inst_dispatch:
-#	define EXIT_DISPATCH_LOOP(x) goto __end_inst_dispatch
+#	define EXIT_DISPATCH_LOOP() goto __end_inst_dispatch
 #	define NEXT_INST() goto __begin_inst_dispatch
 
 #	define BEGIN_DISPATCH_TABLE() goto *inst_table[bcode];
@@ -5227,7 +5227,7 @@ static int __execute (moo_t* moo)
 #else
 #	define BEGIN_DISPATCH_LOOP() __begin_inst_dispatch: 
 #	define END_DISPATCH_LOOP() __end_inst_dispatch:
-#	define EXIT_DISPATCH_LOOP(x) goto __end_inst_dispatch
+#	define EXIT_DISPATCH_LOOP() goto __end_inst_dispatch
 #	define NEXT_INST() goto __begin_inst_dispatch
 
 #	define BEGIN_DISPATCH_TABLE() switch (bcode) {
@@ -5248,6 +5248,7 @@ static int __execute (moo_t* moo)
  */
 
 	BEGIN_DISPATCH_LOOP()
+
 		/* stop requested or no more runnable process */
 		if (moo->abort_req || switch_process_if_needed(moo) == 0) EXIT_DISPATCH_LOOP();
 
