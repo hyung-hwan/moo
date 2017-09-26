@@ -142,7 +142,7 @@ AC_LINK_IFELSE(
 
 AC_MSG_CHECKING([labels as values])
 AC_COMPILE_IFELSE(
-	[AC_LANG_PROGRAM( [], [[void *jp = &&jpt; goto *jp; 1; jpt: 2; ]])],
+	[AC_LANG_PROGRAM( [], [[void* jp[] = { &&jpt1, &&jpt2, &&jpt3 }; goto *jp[1]; jpt1: 1; jpt2: 2; jpt3: 3; ]])],
 	[AC_MSG_RESULT(yes)
 	 AC_DEFINE(HAVE_LABELS_AS_VALUES, 1, [labels as values])],
 	[AC_MSG_RESULT(no)]
