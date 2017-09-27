@@ -123,7 +123,12 @@
 #		define XPOLLERR POLLERR
 #		define XPOLLHUP POLLHUP
 #	else
-#		error UNSUPPORTED MULTIPLEXER
+#		define USE_SELECT
+		/* fake XPOLLXXX values */
+#		define XPOLLIN  (1 << 0)
+#		define XPOLLOUT (1 << 1)
+#		define XPOLLERR (1 << 2)
+#		define XPOLLHUP (1 << 3)
 #	endif
 
 #endif
@@ -197,11 +202,11 @@ struct xtn_t
 	#if defined(USE_DEVPOLL)
 		/*TODO: make it dynamically changeable depending on the number of
 		 *      file descriptors added */
-		struct pollfd buf[64];
+		struct pollfd buf[64]; /* buffer for reading events */
 	#elif defined(USE_EPOLL) 
 		/*TODO: make it dynamically changeable depending on the number of
 		 *      file descriptors added */
-		struct epoll_event buf[64];
+		struct epoll_event buf[64]; /* buffer for reading events */
 	#elif defined(USE_POLL)
 		struct
 		{
@@ -210,6 +215,13 @@ struct xtn_t
 			moo_oow_t len;
 		} reg; /* registrar */
 		struct pollfd* buf;
+	#elif defined(USE_SELECT)
+		struct
+		{
+			fd_set rfds;
+			fd_set wfds;
+			int maxfd;
+		} reg;
 	#endif
 
 		moo_oow_t len;
@@ -850,6 +862,18 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 	xtn->epd.ptr[fd] = event_data;
 	return 0;
 
+#elif defined(USE_SELECT)
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+	if (event_mask & XPOLLIN) 
+	{
+		FD_SET (fd, &xtn->ev.reg.rfds);
+		if (fd > xtn->ev.reg.maxfd) xtn->ev.reg.maxfd = fd;
+	}
+	if (event_mask & XPOLLOUT) 
+	{
+		FD_SET (fd, &xtn->ev.reg.wfds);
+		if (fd > xtn->ev.reg.maxfd) xtn->ev.reg.maxfd = fd;
+	}
 #else
 
 	MOO_DEBUG1 (moo, "Cannot add file descriptor %d to poll - not implemented\n", fd);
@@ -906,12 +930,29 @@ static int _del_poll_fd (moo_t* moo, int fd)
 			memmove (&xtn->ev.reg.ptr[i], &xtn->ev.reg.ptr[i+1], (xtn->ev.reg.len - i) * MOO_SIZEOF(*xtn->ev.reg.ptr));
 			return 0;
 		}
-	}	
+	}
 
 
 	MOO_DEBUG1 (moo, "Cannot remove file descriptor %d from poll - not found\n", fd);
 	moo_seterrnum (moo, MOO_ENOENT);
 	return -1;
+
+#elif defined(USE_SELECT)
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+
+	FD_CLR (fd, &xtn->ev.reg.rfds);
+	FD_CLR (fd, &xtn->ev.reg.wfds);
+	if (fd == xtn->ev.reg.maxfd)
+	{
+		int i;
+		/* TODO: any way to make this search faster or to do without the search like this */
+		for (i = fd; i > 0;)
+		{
+			i--;
+			if (FD_ISSET(i, &xtn->ev.reg.rfds) || FD_ISSET(i, &xtn->ev.reg.wfds)) break;
+		}
+		xtn->ev.reg.maxfd = i;
+	}
 
 #else
 
@@ -972,6 +1013,23 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 	moo_seterrnum (moo, MOO_ENOENT);
 	return -1;
 
+#elif defined(USE_SELECT)
+
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+
+	MOO_ASSERT (moo, fd <= xtn->ev.reg.maxfd);
+	MOO_ASSERT (moo, event_mask & (XPOLLIN | XPOLLOUT));
+
+	if (event_mask & XPOLLIN) 
+		FD_SET (fd, &xtn->ev.reg.rfds);
+	else 
+		FD_CLR (fd, &xtn->ev.reg.rfds);
+
+	if (event_mask & XPOLLOUT) 
+		FD_SET (fd, &xtn->ev.reg.wfds);
+	else
+		FD_CLR (fd, &xtn->ev.reg.wfds);
+
 #else
 	MOO_DEBUG1 (moo, "Cannot modify file descriptor %d in poll - not implemented\n", fd);
 	moo_seterrnum (moo, MOO_ENOIMPL);
@@ -994,6 +1052,8 @@ static void* iothr_main (void* arg)
 			int n;
 		#if defined(USE_DEVPOLL)
 			struct dvpoll dvp;
+		#elif defined(USE_SELECT)
+			struct timeval tv;
 		#endif
 
 		poll_for_event:
@@ -1008,6 +1068,10 @@ static void* iothr_main (void* arg)
 		#elif defined(USE_POLL)
 			memcpy (xtn->ev.buf, xtn->ev.reg.ptr, xtn->ev.reg.len * MOO_SIZEOF(*xtn->ev.buf));
 			n = poll (xtn->ev.buf, xtn->ev.reg.len, 10000);
+		#elif defined(USE_SELECT)
+			tv.tv_sec = 10;
+			tv.tv_usec = 0; 
+			n = select (xtn->ev.reg.maxfd + 1, &xtn->ev.reg.rfds, &xtn->ev.reg.wfds, NULL, &tv);
 		#endif
 
 			pthread_mutex_lock (&xtn->ev.mtx);
@@ -1092,6 +1156,10 @@ static int vm_startup (moo_t* moo)
 	flag = fcntl (xtn->ep, F_GETFD);
 	if (flag >= 0) fcntl (xtn->ep, F_SETFD, flag | FD_CLOEXEC);
 	#endif
+#elif defined(USE_SELECT)
+	FD_ZERO (xtn->ev.reg.rfds);
+	FD_ZERO (xtn->ev.reg.wfds);
+	xtn->ev.reg.maxfd = -1;
 #endif /* USE_DEVPOLL */
 
 
@@ -1208,6 +1276,10 @@ static void vm_cleanup (moo_t* moo)
 		moo_freemem (moo, xtn->ev.buf);
 		xtn->ev.buf = MOO_NULL;
 	}
+#elif defined(USE_SELECT)
+	FD_ZERO (xtn->ev.reg.rfds);
+	FD_ZERO (xtn->ev.reg.wfds);
+	xtn->ev.reg.maxfd = -1;
 #endif
 
 #if defined(USE_DEVPOLL) || defined(USE_POLL)
@@ -1441,6 +1513,8 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	int tmout = 0, n;
 	#if defined(USE_DEVPOLL)
 	struct dvpoll dvp;
+	#elif defined(USE_SELECT)
+	struct timeval tv;
 	#endif
 
 	if (dur) tmout = MOO_SECNSEC_TO_MSEC(dur->sec, dur->nsec);
@@ -1455,6 +1529,10 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	#elif defined(USE_POLL)
 	memcpy (xtn->ev.buf, xtn->ev.reg.ptr, xtn->ev.reg.len * MOO_SIZEOF(*xtn->ev.buf));
 	n = poll (xtn->ev.buf, xtn->ev.reg.len, tmout);
+	#elif defined(USE_SELECT)
+	tv.tv_sec = dur->sec;
+	tv.tv_usec = MOO_NSEC_TO_USEC(dur->nsec); 
+	n = select (xtn->ev.reg.maxfd + 1, &xtn->ev.reg.rfds, &xtn->ev.reg.wfds, NULL, &tv);
 	#endif
 
 	if (n <= -1)
