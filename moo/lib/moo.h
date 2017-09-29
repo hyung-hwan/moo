@@ -1729,6 +1729,12 @@ MOO_EXPORT moo_oop_t moo_findclass (
 	const moo_ooch_t* name
 );
 
+MOO_EXPORT int moo_iskindof (
+	moo_t*          moo,
+	moo_oop_t       obj,
+	moo_oop_class_t _class
+);
+
 /* =========================================================================
  * TRAILER MANAGEMENT
  * ========================================================================= */

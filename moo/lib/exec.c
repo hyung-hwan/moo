@@ -2098,6 +2098,27 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+static moo_pfrc_t pf_is_kind_of (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, _class;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	_class = MOO_STACK_GETARG(moo, nargs, 0);
+
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_CLASSOF(moo, _class) == moo->_class);
+
+	if (moo_iskindof(moo, rcv, (moo_oop_class_t)_class))
+	{
+		MOO_STACK_SETRET (moo, nargs, moo->_true);
+	}
+	else
+	{
+		MOO_STACK_SETRET (moo, nargs, moo->_false);
+	}
+
+	return MOO_PF_SUCCESS;
+}
+
 static moo_pfrc_t pf_responds_to (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, selector;
@@ -4135,6 +4156,7 @@ static pf_t pftab[] =
 
 	{ "_hash",                                 { pf_hash,                                 0, 0 } },
 
+	{ "_is_kind_of",                           { pf_is_kind_of,                           1, 1, } },
 	{ "_responds_to",                          { pf_responds_to,                          1, 1  } },
 	{ "_perform",                              { pf_perform,                              1, MA } },
 

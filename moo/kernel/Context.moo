@@ -42,7 +42,7 @@ block context...
 ---------------------------------- *)
 }
 
-class(#pointer) MethodContext(Context)
+class(#pointer,#final,#limited) MethodContext(Context)
 {
 	var method, receiver, home, origin.
 
@@ -99,7 +99,7 @@ class(#pointer) MethodContext(Context)
 	}
 }
 
-class(#pointer) BlockContext(Context)
+class(#pointer,#final,#limited) BlockContext(Context)
 {
 	var nargs, source, home, origin.
 

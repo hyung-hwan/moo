@@ -1,3 +1,6 @@
+##
+## TEST CASES for basic methods
+##
 
 #include 'Moo.moo'.
 
@@ -50,8 +53,30 @@ class MyObject(TestObject)
 
 	method(#class) main
 	{
-		'START OF MAIN' dump.
-		'EDN OF MAIN' dump.
-	}
+		| tc limit |
+		
+		tc := %(
+			## 0 - 4
+			[(Object isKindOf: Class) == true],
+			[(Object isKindOf: Apex) == true],
+			[(Class isKindOf: Class) == true],
+			[(Class isKindOf: Apex) == true],
+			[(Class isKindOf: Object) == false],
 
+			[(Apex isKindOf: Class) == true],
+			[(SmallInteger isKindOf: Integer) == false],
+			[(10 isKindOf: Integer) == true],
+
+			[(Apex isMemberOf: Class) == true],
+			[(Class isMemberOf: Class) == true]
+		).
+
+		limit := tc size.
+
+		0 priorTo: limit by: 1 do: [ :idx |
+			| tb |
+			tb := tc at: idx.
+			System log(System.Log.INFO, idx asString, (if (tb value) { ' PASS' } else { ' FAIL' }), S'\n').
+		]
+	}
 }

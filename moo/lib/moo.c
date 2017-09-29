@@ -973,3 +973,27 @@ moo_oop_t moo_findclass (moo_t* moo, moo_oop_nsdic_t nsdic, const moo_ooch_t* na
 
 	return ass->value;
 }
+
+int moo_iskindof (moo_t* moo, moo_oop_t obj, moo_oop_class_t _class)
+{
+	moo_oop_class_t c;
+
+	c = MOO_CLASSOF(moo,obj); /* c := self class */
+	if (c == moo->_class) 
+	{
+		/* object is a class */
+		if (_class == moo->_class) return 1; 
+	}
+	else
+	{
+		if (c == _class) return 1; 
+	}
+
+	c = (moo_oop_class_t)c->superclass;
+	while ((moo_oop_t)c != moo->_nil)
+	{
+		if (c == _class) return 1;
+		c = (moo_oop_class_t)c->superclass;
+	}
+	return 0;
+}

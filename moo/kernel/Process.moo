@@ -94,12 +94,14 @@ TODO: timed wait...
 	}
 *)
 
+	(* TODO: MIGRATE TO MUTEX...
 	method critical: aBlock
 	{
 		self wait.
 		^aBlock ensure: [ self signal ]
-	}
+	}*)
 
+	
 	## ==================================================================
 
 	method heapIndex
@@ -130,6 +132,26 @@ TODO: timed wait...
 	method notYoungerThan: aSemaphore
 	{
 		^self.fireTimeSec >= (aSemaphore fireTime)
+	}
+}
+
+class Mutex(Semaphore)
+{
+	method(#class) new
+	{
+		| s |
+		s := super new.
+		s signal.
+		^s.
+	}
+
+	method lock  { ^self wait }
+	method unlock { ^self signal }
+
+	method critical: block
+	{
+		self wait.
+		^block ensure: [ self signal ]
 	}
 }
 

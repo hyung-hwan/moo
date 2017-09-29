@@ -215,10 +215,15 @@ extend Apex
 	{
 		| c |
 		c := self superclass.
-		[c notNil] whileTrue: [
+		(* [c notNil] whileTrue: [
 			[ c == aClass ] ifTrue: [^true].
 			c := c superclass.
-		].
+		]. *)
+		while (c notNil)
+		{
+			if (c == aClass) { ^true }.
+			c := c superclass.
+		}.
 		^false
 	}
 
@@ -233,6 +238,7 @@ extend Apex
 
 	method(#class) isKindOf: aClass
 	{
+		<primitive: #_is_kind_of>
 		^(self isMemberOf: aClass) or: [self inheritsFrom: aClass].
 	}
 
@@ -243,6 +249,7 @@ extend Apex
 
 	method isKindOf: aClass
 	{
+		<primitive: #_is_kind_of>
 		^(self isMemberOf: aClass) or: [self class inheritsFrom: aClass].
 	}
 

@@ -1,5 +1,7 @@
-## TODO: use this file as a regress testing source.
-##       rename it to test-001.moo and use it as a test case file.
+##
+## TEST CASES for namespacing
+##
+
 #include 'Moo.moo'.
 
 

@@ -224,7 +224,7 @@ static kernel_class_info_t kernel_classes[] =
 
 	{ 13,
 	  { 'M','e','t','h','o','d','C','o','n','t','e','x','t' },
-	  0,
+	  MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
 	  MOO_CONTEXT_NAMED_INSTVARS,
 	  MOO_CLASS_SPEC_FLAG_INDEXED,
 	  MOO_OBJ_TYPE_OOP,
@@ -232,7 +232,7 @@ static kernel_class_info_t kernel_classes[] =
 
 	{ 12,
 	  { 'B','l','o','c','k','C','o','n','t','e','x','t' },
-	  0,
+	  MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
 	  MOO_CONTEXT_NAMED_INSTVARS,
 	  MOO_CLASS_SPEC_FLAG_INDEXED,
 	  MOO_OBJ_TYPE_OOP,
