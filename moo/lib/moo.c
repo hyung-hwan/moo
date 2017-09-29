@@ -978,6 +978,8 @@ int moo_iskindof (moo_t* moo, moo_oop_t obj, moo_oop_class_t _class)
 {
 	moo_oop_class_t c;
 
+	MOO_ASSERT (moo, MOO_CLASSOF(moo,_class) == moo->_class);
+
 	c = MOO_CLASSOF(moo,obj); /* c := self class */
 	if (c == moo->_class) 
 	{

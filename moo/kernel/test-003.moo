@@ -54,7 +54,7 @@ class MyObject(TestObject)
 	method(#class) main
 	{
 		| tc limit |
-		
+(10 isKindOf: 20) dump.
 		tc := %(
 			## 0 - 4
 			[(Object isKindOf: Class) == true],
@@ -63,9 +63,11 @@ class MyObject(TestObject)
 			[(Class isKindOf: Apex) == true],
 			[(Class isKindOf: Object) == false],
 
+			## 5-9
 			[(Apex isKindOf: Class) == true],
 			[(SmallInteger isKindOf: Integer) == false],
 			[(10 isKindOf: Integer) == true],
+			[(10 isKindOf: 20) == false],
 
 			[(Apex isMemberOf: Class) == true],
 			[(Class isMemberOf: Class) == true]

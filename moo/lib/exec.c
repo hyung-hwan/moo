@@ -2105,9 +2105,8 @@ static moo_pfrc_t pf_is_kind_of (moo_t* moo, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	_class = MOO_STACK_GETARG(moo, nargs, 0);
 
-	MOO_PF_CHECK_ARGS (moo, nargs, MOO_CLASSOF(moo, _class) == moo->_class);
-
-	if (moo_iskindof(moo, rcv, (moo_oop_class_t)_class))
+	if (MOO_CLASSOF(moo, _class) == moo->_class &&
+	    moo_iskindof(moo, rcv, (moo_oop_class_t)_class))
 	{
 		MOO_STACK_SETRET (moo, nargs, moo->_true);
 	}
