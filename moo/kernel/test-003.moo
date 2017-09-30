@@ -54,7 +54,7 @@ class MyObject(TestObject)
 	method(#class) main
 	{
 		| tc limit |
-(10 isKindOf: 20) dump.
+
 		tc := %(
 			## 0 - 4
 			[(Object isKindOf: Class) == true],
@@ -65,12 +65,20 @@ class MyObject(TestObject)
 
 			## 5-9
 			[(Apex isKindOf: Class) == true],
+			[(Apex isKindOf: Apex) == true],
 			[(SmallInteger isKindOf: Integer) == false],
 			[(10 isKindOf: Integer) == true],
 			[(10 isKindOf: 20) == false],
 
-			[(Apex isMemberOf: Class) == true],
-			[(Class isMemberOf: Class) == true]
+			## 10-14
+			[([] isKindOf: BlockContext) == true],
+			[([] isKindOf: MethodContext) == false],
+			[([] isKindOf: Context) == true],
+			[('string' isKindOf: String) == true],
+			[(#symbol isKindOf: String) == true],
+
+			[('string' isKindOf: Symbol) == false],
+			[(#symbol isKindOf: Symbol) == true]
 		).
 
 		limit := tc size.

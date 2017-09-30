@@ -33,10 +33,18 @@
 #define PROC_STATE_TERMINATED -1
 
 
+/* receiver check failure leads to hard failure.
+ * RATIONAL: the primitive handler should be used by relevant classes and
+ *           objects only. if the receiver check fails, you must review
+ *           your class library */
 #define MOO_PF_CHECK_RCV(moo,cond) do { \
 	if (!(cond)) { moo_seterrnum((moo), MOO_EMSGRCV); return MOO_PF_HARD_FAILURE; } \
 } while(0)
 
+/* argument check failure causes the wrapping method to return an error.
+ * RATIONAL: Being a typeless language, it's hard to control the kinds of
+ *           arguments.
+ */
 #define MOO_PF_CHECK_ARGS(moo,nargs,cond) do { \
 	if (!(cond)) { MOO_STACK_SETRETTOERROR ((moo), (nargs), MOO_EINVAL); return MOO_PF_SUCCESS; } \
 } while(0)
@@ -2484,7 +2492,7 @@ static moo_pfrc_t pf_semaphore_signal (moo_t* moo, moo_ooi_t nargs)
 	moo_oop_t rcv;
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_semaphore); /* TODO: use moo_iskindof(moo,rcv,moo->_semaphore); */
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, rcv, moo->_semaphore)); 
 
 	/* signal_semaphore() may change the active process though the 
 	 * implementation as of this writing makes runnable the process waiting
@@ -2502,7 +2510,7 @@ static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_ooi_t nargs)
 	moo_oop_t rcv;
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_semaphore);
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, rcv, moo->_semaphore)); 
 
 	/* i must set the return value before calling await_semaphore().
 	 * await_semaphore() may switch the active process and the stack
@@ -2529,7 +2537,7 @@ static moo_pfrc_t pf_semaphore_group_wait (moo_t* moo, moo_ooi_t nargs)
 	moo_oop_t rcv, sem;
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_semaphore_group);
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, rcv, moo->_semaphore_group)); 
 
 	/* i must set the return value before calling await_semaphore_group().
 	 * MOO_STACK_SETRETTORCV() manipulates the stack of the currently active

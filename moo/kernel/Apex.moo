@@ -239,7 +239,7 @@ extend Apex
 	method(#class) isKindOf: aClass
 	{
 		<primitive: #_is_kind_of>
-		^(self isMemberOf: aClass) or: [self inheritsFrom: aClass].
+		^(self isMemberOf: aClass) or: [self class inheritsFrom: aClass].
 	}
 
 	method isMemberOf: aClass

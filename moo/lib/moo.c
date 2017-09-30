@@ -984,7 +984,7 @@ int moo_iskindof (moo_t* moo, moo_oop_t obj, moo_oop_class_t _class)
 	if (c == moo->_class) 
 	{
 		/* object is a class */
-		if (_class == moo->_class) return 1; 
+		if (_class == moo->_class) return 1; /* obj isKindOf: Class */
 	}
 	else
 	{
