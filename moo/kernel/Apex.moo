@@ -236,18 +236,12 @@ extend Apex
 		^aClass == Class
 	}
 
-	method(#class) isKindOf: aClass
-	{
-		<primitive: #_is_kind_of>
-		^(self isMemberOf: aClass) or: [self class inheritsFrom: aClass].
-	}
-
 	method isMemberOf: aClass
 	{
 		^self class == aClass
 	}
 
-	method isKindOf: aClass
+	method(#dual) isKindOf: aClass
 	{
 		<primitive: #_is_kind_of>
 		^(self isMemberOf: aClass) or: [self class inheritsFrom: aClass].
