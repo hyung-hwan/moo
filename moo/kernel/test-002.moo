@@ -49,6 +49,42 @@ class MyObject(Object)
 		^true
 	}
 
+	method(#class) test_mutex
+	{
+		| mtx sem v p q |
+
+		mtx := Mutex new.
+		sem := Semaphore new.
+
+		p := 0.
+
+		[ mtx lock.
+		  v := 0.
+		  2000 timesRepeat: [v := v + 1. p := p + 1. ].
+		  q := v.
+		  mtx unlock.
+		  sem signal.
+		] fork.
+
+		[ mtx critical: [
+		     v := 0.
+		     2000 timesRepeat: [v := v + 1. p := p + 1. ].
+		     q := v.
+		  ].
+		  sem signal.
+		] fork.
+
+		mtx lock.
+		v := 0.
+		2000 timesRepeat: [v := v + 1. p := p + 1. ].
+		mtx unlock.
+
+		sem wait.
+		sem wait.
+
+		^%( v, p ) ## v must be 2000, p must be 6000
+	}
+
 	method(#class) main
 	{
 		| tc limit |
@@ -57,7 +93,8 @@ class MyObject(Object)
 			## 0 - 4
 			[ self proc1 == 100 ], 
 			[ Processor sleepFor: 2.  self proc1 == 200 ],
-			[ self test_semaphore_heap == true ]
+			[ self test_semaphore_heap == true ],
+			[ self test_mutex = #(2000 6000) ]
 		).
 
 		limit := tc size.

@@ -62,46 +62,11 @@ class Semaphore(Object)
 
 	var(#get,#set) _group := nil.
 
-	method(#class) forMutualExclusion
-	{
-		| sem |
-		sem := self new.
-		sem signal.
-		^sem
-	}
-
 	## ==================================================================
 
 	method(#primitive) signal.
 	method(#primitive) wait.
 
-(*
-TODO: timed wait...
-	method waitWithTimeout: seconds
-	{
-		| s |
-		s := Semaphore new.
-		Processor signal: s after: seconds.
-		self waitWithTimedSemaphore: s.
-
-		if (self.
-	}
-
-	method waitWithTimeout: seconds and: nanoSeconds
-	{
-		<primitive: #_semaphore_wait>
-		self primitiveFailed
-	}
-*)
-
-	(* TODO: MIGRATE TO MUTEX...
-	method critical: aBlock
-	{
-		self wait.
-		^aBlock ensure: [ self signal ]
-	}*)
-
-	
 	## ==================================================================
 
 	method heapIndex
@@ -145,8 +110,14 @@ class Mutex(Semaphore)
 		^s.
 	}
 
-	method lock  { ^self wait }
-	method unlock { ^self signal }
+(*
+TODO: how to prohibit wait and signal???
+	method(#prohibited) wait.
+	method(#prohibited) signal.
+*)
+
+	method lock  { ^super wait }
+	method unlock { ^super signal }
 
 	method critical: block
 	{

@@ -76,6 +76,29 @@ class(#pointer) Array(Collection)
 	{
 		0 priorTo: (anArray basicSize) do: [:i | self at: i put: (anArray at: i) ].
 	}
+
+	method = anArray
+	{
+		| size i |
+		if (self class ~~ anArray class) { ^false }.
+
+		size := self size.
+		if (size ~~ anArray size) { ^false }.
+
+		i := 0.
+		while (i < size)
+		{
+			if ((self at: i) ~= (anArray at: i)) { ^false }.
+			i := i + 1.
+		}.
+
+		^true.
+	}
+
+	method ~= anArray
+	{
+		^(self = anArray) not
+	}
 }
 
 ## -------------------------------------------------------------------------------

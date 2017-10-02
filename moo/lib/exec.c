@@ -494,8 +494,8 @@ static MOO_INLINE void chain_into_semaphore (moo_t* moo, moo_oop_process_t proc,
 	MOO_ASSERT (moo, (moo_oop_t)proc->sem_wait.next == moo->_nil);
 
 	/* a semaphore or a semaphore group must be given for process chaining */
-	MOO_ASSERT (moo, MOO_CLASSOF(moo,sem) == moo->_semaphore ||
-	                 MOO_CLASSOF(moo,sem) == moo->_semaphore_group);
+	MOO_ASSERT (moo, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore) ||
+	                 moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore_group));
 
 	/* i assume the head part of the semaphore has the same layout as
 	 * the semaphore group */
@@ -513,8 +513,8 @@ static MOO_INLINE void unchain_from_semaphore (moo_t* moo, moo_oop_process_t pro
 
 	MOO_ASSERT (moo, (moo_oop_t)proc->sem != moo->_nil);
 
-	MOO_ASSERT (moo, MOO_CLASSOF(moo, proc->sem) == moo->_semaphore ||
-	                 MOO_CLASSOF(moo, proc->sem) == moo->_semaphore_group);
+	MOO_ASSERT (moo, moo_iskindof(moo, proc->sem, moo->_semaphore) ||
+	                 moo_iskindof(moo, proc->sem, moo->_semaphore_group));
 
 	MOO_ASSERT (moo, MOO_OFFSETOF(moo_semaphore_t,waiting) ==
 	                 MOO_OFFSETOF(moo_semaphore_group_t,waiting));
@@ -859,7 +859,7 @@ static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore
 	moo_oop_semaphore_t sem;
 	moo_ooi_t numsems, sempos, i, count;
 
-	MOO_ASSERT (moo, MOO_CLASSOF(moo,semgrp) == moo->_semaphore_group);
+	MOO_ASSERT (moo, moo_iskindof(moo, (moo_oop_t)semgrp, moo->_semaphore_group));
 
 	/* check if there is a signaled semaphore in the group */
 	numsems = MOO_OOP_TO_SMOOI(semgrp->size);
@@ -1673,15 +1673,10 @@ static moo_pfrc_t pf_not_identical (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t _equal_objects (moo_t* moo, moo_ooi_t nargs)
+static int _equal_objects (moo_t* moo, moo_oop_t rcv, moo_oop_t arg)
 {
-	moo_oop_t rcv, arg;
 	int rtag;
 
-	MOO_ASSERT (moo, nargs == 1);
-
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	arg = MOO_STACK_GETARG(moo, nargs, 0);
 	if (rcv == arg) return 1; /* identical. so equal */
 
 	rtag = MOO_OOP_GET_TAG(rcv);
@@ -1721,18 +1716,33 @@ static moo_pfrc_t _equal_objects (moo_t* moo, moo_ooi_t nargs)
 				case MOO_OBJ_TYPE_CHAR:
 				case MOO_OBJ_TYPE_HALFWORD:
 				case MOO_OBJ_TYPE_WORD:
-					return (MOO_MEMCMP (((moo_oop_byte_t)rcv)->slot, ((moo_oop_byte_t)arg)->slot, MOO_BYTESOF(moo,rcv)) == 0)? 1: 0;
+					return (MOO_MEMCMP (MOO_OBJ_GET_BYTE_SLOT(rcv), MOO_OBJ_GET_BYTE_SLOT(arg), MOO_BYTESOF(moo,rcv)) == 0)? 1: 0;
 
 				default:
+				{
 					if (rcv == moo->_nil) return arg == moo->_nil? 1: 0;
 					if (rcv == moo->_true) return arg == moo->_true? 1: 0;
 					if (rcv == moo->_false) return arg == moo->_false? 1: 0;
-					
-					/* MOO_OBJ_TYPE_OOP, ... */
-					MOO_DEBUG1 (moo, "<_equal_objects> Cannot compare objects of type %d\n", (int)MOO_OBJ_GET_FLAGS_TYPE(rcv));
 
+					/* MOO_OBJ_TYPE_OOP, ... */
+					MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(rcv) == MOO_OBJ_TYPE_OOP);
+
+				#if 1
+					MOO_DEBUG1 (moo, "<_equal_objects> Cannot compare objects of type %d\n", (int)MOO_OBJ_GET_FLAGS_TYPE(rcv));
 					moo_seterrnum (moo, MOO_ENOIMPL); /* TODO: better error code */
 					return -1;
+				#else
+					for (i = 0; i < MOO_OBJ_GET_SIZE(rcv); i++)
+					{
+						/* TODO: remove recursion */
+
+						/* NOTE: even if the object implements the equality method, 
+						 * this primitive method doesn't honor it. */
+						if (!_equal_objects(moo, ((moo_oop_oop_t)rcv)->slot[i], ((moo_oop_oop_t)arg)->slot[i])) return 0;
+					}
+					return 1;
+				#endif
+				}
 			}
 		}
 	}
@@ -1740,9 +1750,13 @@ static moo_pfrc_t _equal_objects (moo_t* moo, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_equal (moo_t* moo, moo_ooi_t nargs)
 {
+	moo_oop_t rcv, arg;
 	int n;
 
-	n = _equal_objects (moo, nargs);
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	n = _equal_objects (moo, rcv, arg);
 	if (n <= -1) return MOO_PF_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, (n? moo->_true: moo->_false));
@@ -1751,9 +1765,13 @@ static moo_pfrc_t pf_equal (moo_t* moo, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_not_equal (moo_t* moo, moo_ooi_t nargs)
 {
+	moo_oop_t rcv, arg;
 	int n;
 
-	n = _equal_objects (moo, nargs);
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	n = _equal_objects (moo, rcv, arg);
 	if (n <= -1) return MOO_PF_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, (n? moo->_false: moo->_true));
@@ -2588,7 +2606,7 @@ static moo_pfrc_t pf_processor_add_gcfin_semaphore (moo_t* moo, moo_ooi_t nargs)
 
 	MOO_ASSERT (moo, nargs == 1);
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
-	MOO_PF_CHECK_ARGS (moo, nargs, MOO_CLASSOF(moo,sem) == moo->_semaphore);
+	MOO_PF_CHECK_ARGS (moo, nargs, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
 
 /* TODO: no overwriting.. */
 	moo->sem_gcfin = sem;

@@ -67,16 +67,19 @@ class MyObject(TestObject)
 			[(Apex isKindOf: Class) == true],
 			[(Apex isKindOf: Apex) == true],
 			[(SmallInteger isKindOf: Integer) == false],
-			[(10 isKindOf: Integer) == true],
-			[(10 isKindOf: 20) == false],
+			[(SmallInteger isKindOf: SmallInteger) == false],
+			[(Object isKindOf: SmallInteger) == false],
 
 			## 10-14
+			[(10 isKindOf: Integer) == true],
+			[(10 isKindOf: 20) == false],
 			[([] isKindOf: BlockContext) == true],
 			[([] isKindOf: MethodContext) == false],
 			[([] isKindOf: Context) == true],
+
+			## 15-20
 			[('string' isKindOf: String) == true],
 			[(#symbol isKindOf: String) == true],
-
 			[('string' isKindOf: Symbol) == false],
 			[(#symbol isKindOf: Symbol) == true]
 		).

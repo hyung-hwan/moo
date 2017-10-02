@@ -359,7 +359,7 @@ struct moo_iotok_t
 		MOO_IOTOK_RPAREN,
 		MOO_IOTOK_HASHPAREN,   /* #( - array literal */
 		MOO_IOTOK_HASHBRACK,   /* #[ - byte array literal */
-		MOO_IOTOK_PERCPAREN,   /* %{ - array expression */
+		MOO_IOTOK_PERCPAREN,   /* %( - array expression */
 		MOO_IOTOK_PERCBRACE,   /* %{ - dictionary expression */
 		MOO_IOTOK_PERIOD,
 		MOO_IOTOK_COMMA,
