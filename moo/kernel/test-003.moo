@@ -8,36 +8,7 @@
 ## MAIN
 #################################################################
 
-## TODO: use #define to define a class or use #class to define a class.
-##       use #extend to extend a class
-##       using #class for both feels confusing.
-
-extend Apex
-{
-
-}
-
-extend SmallInteger
-{
-	method getTrue: anInteger
-	{
-		^anInteger + 9999.
-	}
-
-	method inc
-	{
-		^self + 1.
-	}
-}
-
-class TestObject(Object)
-{
-	var(#class) Q, R.
-	var(#classinst) a1, a2.
-}
-
-
-class MyObject(TestObject)
+class MyObject(Object)
 {
 	var(#classinst) t1, t2.
 

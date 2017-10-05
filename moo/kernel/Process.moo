@@ -60,12 +60,21 @@ class Semaphore(Object)
 	    ioHandle      := nil,
 	    ioMask        :=   0.
 
+	var (#get,#set) signalAction := nil.
 	var(#get,#set) _group := nil.
 
 	## ==================================================================
 
 	method(#primitive) signal.
-	method(#primitive) wait.
+	method(#primitive) _wait.
+
+	method wait
+	{
+		| k |
+		k := self _wait.
+		if (self.signalAction notNil) { self.signalAction value: self }.
+		^k
+	}
 
 	## ==================================================================
 
@@ -246,7 +255,15 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 		}
 	}
 
-	method(#primitive) wait.
+	method(#primitive) _wait.
+
+	method wait
+	{
+		| r |
+		r := self wait.
+		if (r signalAction notNil) { r signalAction value: r }.
+		^r
+	}
 
 	method waitWithTimeout: seconds
 	{
@@ -267,7 +284,8 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 
 		## if the internal semaphore has been signaled, 
 		## arrange to return nil to indicate timeout.
-		if (r == s) { r := nil }.
+		if (r == s) { r := nil }
+		elsif (r signalAction notNil) { r signalAction value: r }.
 
 		## nullify the membership
 		s _group: nil. 

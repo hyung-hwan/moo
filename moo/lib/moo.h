@@ -748,7 +748,7 @@ struct moo_context_t
 typedef struct moo_process_t moo_process_t;
 typedef struct moo_process_t* moo_oop_process_t;
 
-#define MOO_SEMAPHORE_NAMED_INSTVARS 10
+#define MOO_SEMAPHORE_NAMED_INSTVARS 11
 typedef struct moo_semaphore_t moo_semaphore_t;
 typedef struct moo_semaphore_t* moo_oop_semaphore_t;
 
@@ -814,6 +814,7 @@ struct moo_semaphore_t
 	moo_oop_t io_handle;
 	moo_oop_t io_mask; /* SmallInteger */
 
+	moo_oop_t signal_action;
 	moo_oop_semaphore_group_t group; /* nil or belonging semaphore group */
 };
 

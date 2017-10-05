@@ -7,8 +7,6 @@
 
 class MyObject(Object)
 {
-## TODO: support import in extend??
-
 	var(#class) a := 100.
 
 	method(#class) proc1
@@ -36,7 +34,6 @@ class MyObject(Object)
 		sempq deleteAt: 50.
 		sempq deleteAt: 100.
 
-	
 		a := -100.
 		[sempq size > 0] whileTrue: [
 			| sem b |
@@ -85,6 +82,27 @@ class MyObject(Object)
 		^%( v, p ) ## v must be 2000, p must be 6000
 	}
 
+(*
+	method(#class) test_sem_sig
+	{
+		| s |
+		s := Semaphore new.
+		s signalAction: [:sem | 'SIGNAL ACTION............' dump. ].
+		[ Processor sleepFor: 1. s signal ] fork.
+		s wait.
+	}
+
+	method(#class) test_semgrp
+	{
+		| sg |
+		sg := SemaphoreGroup new.
+		sg add: s1 withAction: [].
+		sg add: s2 withAction: [].
+		sg add: s3 withAction: [].
+		sg wait.
+	}
+*)
+
 	method(#class) main
 	{
 		| tc limit |
@@ -94,7 +112,9 @@ class MyObject(Object)
 			[ self proc1 == 100 ], 
 			[ Processor sleepFor: 2.  self proc1 == 200 ],
 			[ self test_semaphore_heap == true ],
-			[ self test_mutex = #(2000 6000) ]
+			[ self test_mutex = #(2000 6000) ],
+			####[ self test_sem_sig ],
+			[ a == 300 ]
 		).
 
 		limit := tc size.
@@ -105,5 +125,19 @@ class MyObject(Object)
 			System log(System.Log.INFO, idx asString, (if (tb value) { ' PASS' } else { ' FAIL' }), S'\n').
 		].
 	}
-
 }
+
+
+(*
+s1 := TcpSocket new.
+
+s1 onEvent: #connected do: [
+	s1 write: C'GET / HTTP/1.0\n\r'.
+] 
+s1 onEvent: #written do: [
+]
+
+s1 on: #read do:
+s1 connectTo: '1.2.3.4:45'.
+
+*)

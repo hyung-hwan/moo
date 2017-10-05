@@ -4243,8 +4243,8 @@ static pf_t pftab[] =
 	{ "Process__terminate",                    { pf_process_terminate,                    0, 0 } },
 
 	{ "Semaphore_signal",                      { pf_semaphore_signal,                     0, 0 } },
-	{ "Semaphore_wait",                        { pf_semaphore_wait,                       0, 0 } },
-	{ "SemaphoreGroup_wait",                   { pf_semaphore_group_wait,                 0, 0 } },
+	{ "Semaphore__wait",                       { pf_semaphore_wait,                       0, 0 } },
+	{ "SemaphoreGroup__wait",                  { pf_semaphore_group_wait,                 0, 0 } },
 
 	{ "SmallInteger_asCharacter",              { pf_smooi_as_character,                   0, 0 } },
 	{ "SmallInteger_asError",                  { pf_smooi_as_error,                       0, 0 } },
