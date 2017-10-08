@@ -60,8 +60,11 @@ class Semaphore(Object)
 	    ioHandle      := nil,
 	    ioMask        :=   0.
 
-	var (#get,#set) signalAction := nil.
-	var(#get,#set) _group := nil.
+	var(#get,#set) signalAction := nil.
+
+	var(#get,#set) _group := nil, 
+	               _grm_next := nil,
+	               _grm_prev := nil.
 
 	## ==================================================================
 
@@ -198,69 +201,30 @@ class SemaphoreGroup(Object)
 {
 	var waiting_head  := nil,
 	    waiting_tail  := nil,
-	    size := 0,
-	    pos := 0,
-	    semarr := nil.
+	    first_sem := nil,
+	    last_sem := nil,
+	    first_sigsem := nil,
+	    last_sigsem := nil.
 
 (* TODO: good idea to a shortcut way to prohibit a certain method in the heirarchy chain?
-
 method(#class,#prohibited) new.
 method(#class,#prohibited) new: size.
 method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibility: #xxxx }
 *)
 
+(*
 	method(#class) new { self messageProhibited: #new }
 	method(#class) new: size { self messageProhibited: #new: }
+*)
 
-	method(#class,#variadic) with()
-	{
-		| i x arr sem |
-
-		i := 0.
-		x := thisContext vargCount.
-
-		arr := Array new: x.
-		while (i < x)
-		{
-			sem := thisContext vargAt: i.
-			if (sem _group notNil)
-			{
-				System.Exception signal: 'Cannot add a semaphore in a group to another group'
-			}.
-
-			arr at: i put: sem.
-			i := i + 1.
-		}.
-
-		^self basicNew initialize: arr.
-	}
-
-	method initialize
-	{
-		self.semarr := Array new: 10.
-	}
-
-	method initialize: arr
-	{
-		| i sem |
-		self.size := arr size.
-		self.semarr := arr.
-
-		i := 0.
-		while (i < self.size)
-		{
-			sem := self.semarr at: i.
-			sem _group: self.
-			i := i + 1.
-		}
-	}
-
+	method(#primitive) _addSemaphore: sem.
+	method(#primitive) _removeSemaphore: sem.
 	method(#primitive) _wait.
 
 	method wait
 	{
 		| r |
-		r := self wait.
+		r := self _wait.
 		if (r signalAction notNil) { r signalAction value: r }.
 		^r
 	}
@@ -274,7 +238,8 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 
 		## grant the partial membership to the internal semaphore.
 		## it's partial because it's not added to self.semarr.
-		s _group: self. 
+		##s _group: self. 
+		self _addSemaphore: s.
 
 		## arrange the processor to notify upon timeout.
 		Processor signal: s after: seconds. 
@@ -288,7 +253,8 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 		elsif (r signalAction notNil) { r signalAction value: r }.
 
 		## nullify the membership
-		s _group: nil. 
+		##s _group: nil. 
+		self _removeSemaphore: s.
 
 		## cancel the notification arrangement in case it didn't time out.
 		Processor unsignal: s.

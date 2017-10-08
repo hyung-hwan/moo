@@ -748,11 +748,11 @@ struct moo_context_t
 typedef struct moo_process_t moo_process_t;
 typedef struct moo_process_t* moo_oop_process_t;
 
-#define MOO_SEMAPHORE_NAMED_INSTVARS 11
+#define MOO_SEMAPHORE_NAMED_INSTVARS 13
 typedef struct moo_semaphore_t moo_semaphore_t;
 typedef struct moo_semaphore_t* moo_oop_semaphore_t;
 
-#define MOO_SEMAPHORE_GROUP_NAMED_INSTVARS 5
+#define MOO_SEMAPHORE_GROUP_NAMED_INSTVARS 6
 typedef struct moo_semaphore_group_t moo_semaphore_group_t;
 typedef struct moo_semaphore_group_t* moo_oop_semaphore_group_t;
 
@@ -816,6 +816,11 @@ struct moo_semaphore_t
 
 	moo_oop_t signal_action;
 	moo_oop_semaphore_group_t group; /* nil or belonging semaphore group */
+	struct
+	{
+		moo_oop_semaphore_t prev;
+		moo_oop_semaphore_t next;
+	} grm; /* group membership chain */
 };
 
 struct moo_semaphore_group_t
@@ -831,9 +836,17 @@ struct moo_semaphore_group_t
 	} waiting;
 	/* [END IMPORTANT] */
 
-	moo_oop_t size; /* SmallInteger */
-	moo_oop_t pos; /* current processing position */
-	moo_oop_oop_t semarr; /* Array of Semaphores */
+	struct
+	{
+		moo_oop_semaphore_t first;
+		moo_oop_semaphore_t last;
+	} sems;
+
+	struct
+	{
+		moo_oop_semaphore_t first;
+		moo_oop_semaphore_t last;
+	} sigsems; 
 };
 
 #define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 9

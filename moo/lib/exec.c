@@ -737,13 +737,12 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	moo_oop_process_t proc;
 	moo_ooi_t count;
+	moo_oop_semaphore_group_t semgrp;
 
-	if ((moo_oop_t)sem->group != moo->_nil)
+	semgrp = sem->group;
+	if ((moo_oop_t)semgrp != moo->_nil)
 	{
 		/* the semaphore belongs to a semaphore group */
-		moo_oop_semaphore_group_t semgrp;
-
-		semgrp = sem->group;
 		if ((moo_oop_t)semgrp->waiting.first != moo->_nil)
 		{
 			/* there is a process waiting on the process group */
@@ -752,7 +751,9 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 			unchain_from_semaphore (moo, proc);
 			resume_process (moo, proc);
 
-			/* the waiting process has been suspended after a waiting
+			/* [IMPORTANT] RETURN VALUE of SemaphoreGroup's wait.
+			 * ------------------------------------------------------------
+			 * the waiting process has been suspended after a waiting
 			 * primitive function in Semaphore or SemaphoreGroup.
 			 * the top of the stack of the process must hold the temporary 
 			 * return value set by await_semaphore() or await_semaphore_group().
@@ -773,13 +774,20 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	 * 
 	 *    TODO: implement a fair scheduling policy. or do i simply have to disallow individual wait on a semaphore belonging to a group?
 	 *       
-	 * if it doesn't belong to a sempahore group, i'm free from the ambiguity
-	 * issue.
+	 * if it doesn't belong to a sempahore group, i'm free from the starvation issue.
 	 */
 	if ((moo_oop_t)sem->waiting.first == moo->_nil)
 	{
 		/* no process is waiting on this semaphore */
 		count = MOO_OOP_TO_SMOOI(sem->count);
+		MOO_ASSERT (moo, count >= 0);
+		if (count == 0 && (moo_oop_t)semgrp != moo->_nil)
+		{
+			/* move the semaphore from the unsignaled list to the signaled list
+			 * if the semaphore count has changed from 0 to 1 and it belongs a group. */
+			MOO_DELETE_FROM_OOP_LIST (moo, &semgrp->sems, sem, grm);
+			MOO_APPEND_TO_OOP_LIST (moo, &semgrp->sigsems, moo_oop_semaphore_t, sem, grm);
+		}
 		count++;
 		sem->count = MOO_SMOOI_TO_OOP(count);
 
@@ -806,13 +814,14 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 static MOO_INLINE void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 {
-/* TODO: support timeout */
 	moo_oop_process_t proc;
 	moo_ooi_t count;
+	moo_oop_semaphore_group_t semgrp;
 
+	semgrp = sem->group;
 #if 0
 /* TODO: do i have to disallow?? */
-	if ((moo_oop_t)sem->group != moo->_nil)
+	if ((moo_oop_t)semgrp != moo->_nil)
 	{
 		/* disallow a semaphore in a semaphore group to be waited on */
 		moo_seterrnum (moo, MOO_EPERM);
@@ -826,6 +835,14 @@ static MOO_INLINE void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 		/* it's already signalled */
 		count--;
 		sem->count = MOO_SMOOI_TO_OOP(count);
+
+		if ((moo_oop_t)semgrp != moo->_nil && count == 0)
+		{
+			/* TODO: if i disallow individual wait on a semaphore in a group,
+			 *       this membership manipulation is redundant */
+			MOO_DELETE_FROM_OOP_LIST (moo, &semgrp->sigsems, sem, grm);
+			MOO_APPEND_TO_OOP_LIST (moo, &semgrp->sems, moo_oop_semaphore_t, sem, grm);
+		}
 	}
 	else
 	{
@@ -850,47 +867,43 @@ static MOO_INLINE void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 #endif
 }
 
-static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore_group_t semgrp, const moo_ntime_t* tmout)
+static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore_group_t semgrp)
 {
 /* TODO: support timeout and wait all */
 	/* wait for one of semaphores in the group to be signaled */
 
 	moo_oop_process_t proc;
 	moo_oop_semaphore_t sem;
-	moo_ooi_t numsems, sempos, i, count;
 
 	MOO_ASSERT (moo, moo_iskindof(moo, (moo_oop_t)semgrp, moo->_semaphore_group));
 
-	/* check if there is a signaled semaphore in the group */
-	numsems = MOO_OOP_TO_SMOOI(semgrp->size);
-	sempos = MOO_OOP_TO_SMOOI(semgrp->pos);
-	for (i = 0; i < numsems; i++)
+	sem = semgrp->sigsems.first;
+	if ((moo_oop_t)sem != moo->_nil)
 	{
-		sem = (moo_oop_semaphore_t)((moo_oop_oop_t)semgrp->semarr)->slot[sempos];
-		sempos = (sempos + 1) % numsems;
+		moo_ooi_t count;
 
 		count = MOO_OOP_TO_SMOOI(sem->count);
+		MOO_ASSERT (moo, count > 0);
+		count--;
+		sem->count = MOO_SMOOI_TO_OOP(count);
+
+		MOO_DELETE_FROM_OOP_LIST (moo, &semgrp->sigsems, sem, grm);
 		if (count > 0)
 		{
-			count--;
-			sem->count = MOO_SMOOI_TO_OOP(count);
-			semgrp->pos = MOO_SMOOI_TO_OOP(sempos); /* position of the last inspected semaphore */
-			return (moo_oop_t)sem;
+			/* move the item to the back of signaled semaphore list */
+			MOO_APPEND_TO_OOP_LIST (moo, &semgrp->sigsems, moo_oop_semaphore_t, sem, grm);
 		}
+		else
+		{
+			/* move the semaphore to the unsigned semaphore list */
+			MOO_APPEND_TO_OOP_LIST (moo, &semgrp->sems, moo_oop_semaphore_t, sem, grm);
+		}
+
+		return (moo_oop_t)sem;
 	}
 
 	/* no semaphores have been signaled. suspend the current process
 	 * until the at least one of them is signaled */
-
-#if 0
-	if (tmout)
-	{
-		/* create an internal semaphore for timeout signaling */
-/* TODO: */
-		if (add_to_sem_heap (moo, tmout_sem) <= -1) return MOO_PF_HARD_FAILURE;
-	}
-#endif
-
 	proc = moo->processor->active;
 
 	/* suspend the active process */
@@ -2550,6 +2563,72 @@ static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_semaphore_group_t rcv;
+	moo_oop_semaphore_t sem;
+
+	rcv = (moo_oop_semaphore_group_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)rcv, moo->_semaphore_group)); 
+
+	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG (moo, nargs, 0);
+	MOO_PF_CHECK_ARGS (moo, nargs, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
+
+	if ((moo_oop_t)sem->group == moo->_nil)
+	{
+		if (MOO_OOP_TO_SMOOI(sem->count) > 0)
+		{
+			MOO_APPEND_TO_OOP_LIST (moo, &rcv->sigsems, moo_oop_semaphore_t, sem, grm);
+		}
+		else
+		{
+			MOO_APPEND_TO_OOP_LIST (moo, &rcv->sems, moo_oop_semaphore_t, sem, grm);
+		}
+		sem->group = rcv;
+		MOO_STACK_SETRETTORCV (moo, nargs);
+	}
+	else
+	{
+		/* the semaphore belongs to a group already */
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EPERM);
+	}
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_semaphore_group_t rcv;
+	moo_oop_semaphore_t sem;
+
+	rcv = (moo_oop_semaphore_group_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)rcv, moo->_semaphore_group)); 
+
+	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG (moo, nargs, 0);
+	MOO_PF_CHECK_ARGS (moo, nargs, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
+
+	if ((moo_oop_t)sem->group == moo->_nil)
+	{
+		/* it doesn't belong to a group */
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EPERM);
+	}
+	else
+	{
+		if (MOO_OOP_TO_SMOOI(sem->count) > 0)
+		{
+			MOO_DELETE_FROM_OOP_LIST (moo, &rcv->sigsems, sem, grm);
+		}
+		else
+		{
+			MOO_DELETE_FROM_OOP_LIST (moo, &rcv->sems, sem, grm);
+		}
+
+		sem->group = (moo_oop_semaphore_group_t)moo->_nil;
+		MOO_STACK_SETRETTORCV (moo, nargs);
+	}
+
+	return MOO_PF_SUCCESS;
+}
+
 static moo_pfrc_t pf_semaphore_group_wait (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, sem;
@@ -2566,7 +2645,7 @@ static moo_pfrc_t pf_semaphore_group_wait (moo_t* moo, moo_ooi_t nargs)
 	 * the stack from this moment on. */
 	MOO_STACK_SETRETTORCV (moo, nargs);
 
-	sem = await_semaphore_group (moo, (moo_oop_semaphore_group_t)rcv, MOO_NULL);
+	sem = await_semaphore_group (moo, (moo_oop_semaphore_group_t)rcv);
 	if (sem != moo->_nil)
 	{
 		/* there was a singaled semaphore. the active process won't get
@@ -4244,6 +4323,8 @@ static pf_t pftab[] =
 
 	{ "Semaphore_signal",                      { pf_semaphore_signal,                     0, 0 } },
 	{ "Semaphore__wait",                       { pf_semaphore_wait,                       0, 0 } },
+	{ "SemaphoreGroup__addSemaphore:",         { pf_semaphore_group_add_semaphore,        1, 1 } },
+	{ "SemaphoreGroup__removeSemaphore:",      { pf_semaphore_group_remove_semaphore,     1, 1 } },
 	{ "SemaphoreGroup__wait",                  { pf_semaphore_group_wait,                 0, 0 } },
 
 	{ "SmallInteger_asCharacter",              { pf_smooi_as_character,                   0, 0 } },

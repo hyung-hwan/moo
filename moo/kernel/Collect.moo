@@ -64,17 +64,54 @@ class(#pointer) Array(Collection)
 
 	method last
 	{
-		^self at: (self basicSize - 1).
+		^self at: (self size - 1).
 	}
 
 	method do: aBlock
 	{
-		0 priorTo: (self basicSize) do: [:i | aBlock value: (self at: i)].
+		0 priorTo: (self size) do: [:i | aBlock value: (self at: i)].
 	}
 
 	method copy: anArray
 	{
-		0 priorTo: (anArray basicSize) do: [:i | self at: i put: (anArray at: i) ].
+		0 priorTo: (anArray size) do: [:i | self at: i put: (anArray at: i) ].
+	}
+
+	method copy: anArray from: start to: end
+	{
+		## copy elements from an array 'anArray' starting from 
+		## the index 'start' to the index 'end'.
+
+		| s i ss |
+
+(*
+		s := anArray size.
+
+		if (start < 0) { start := 0 }
+		elsif (start >= s) { start := s - 1 }.
+
+		if (end < 0) { end := 0 }
+		elsif (end >= s) { end := s - 1 }.
+*)
+		i := 0.
+		ss := self size.
+		while (start <= end)
+		{
+			if (i >= ss) { break }.
+			self at: i put: (anArray at: start).
+			i := i + 1.
+			start := start + 1.
+		}.
+	}
+
+	method copyFrom: start to: end
+	{
+		## returns a copy of the receiver starting from the element 
+		## at index 'start' to the element at index 'end'.
+
+		| newsz |
+		newsz := end - start + 1.
+		^(self class new: newsz) copy: self from: start to: end
 	}
 
 	method = anArray

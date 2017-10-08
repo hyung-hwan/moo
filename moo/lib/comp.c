@@ -5531,22 +5531,35 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 	postcondpos = moo->c->mth.code.len;
 	if (precondpos + 1 == postcondpos)
 	{
+		moo_uint8_t inst1, inst2;
+
+		if (is_until_loop)
+		{
+			inst1 = BCODE_PUSH_FALSE;
+			inst2 = BCODE_PUSH_TRUE;
+		}
+		else
+		{
+			inst1 = BCODE_PUSH_TRUE;
+			inst2 = BCODE_PUSH_FALSE;
+		}
+
 		/* simple optimization - 
 		 *   if the conditional is known to be true, emit the absolute jump instruction.
 		 *   if it is known to be false, kill all generated instructions. */
-		if (moo->c->mth.code.ptr[precondpos] == (is_until_loop? BCODE_PUSH_FALSE: BCODE_PUSH_TRUE))
+		if (moo->c->mth.code.ptr[precondpos] == inst1)
 		{
 			/* the conditional is always true for while, or false for until*/
 			cond_style = 1;
 			eliminate_instructions (moo, precondpos, moo->c->mth.code.len - 1);
 			postcondpos = precondpos;
 		}
-		else if (moo->c->mth.code.ptr[precondpos] == (is_until_loop? BCODE_PUSH_TRUE: BCODE_PUSH_FALSE))
+		else if (moo->c->mth.code.ptr[precondpos] == inst2)
 		{
 			/* the conditional is always false for while, or false for until */
 			cond_style = -1;
 		}
-/* TODO: at least check for some literals for optimization. 
+/* TODO: at least check some other literals for optimization. 
  *       most literal values must be evaluate to true. */
 	}
 

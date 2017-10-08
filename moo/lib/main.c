@@ -1771,7 +1771,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	#elif defined(USE_SELECT)
 		revents = xtn->ev.buf[n].events;
 	#else
-		revents = 0; /* TODO: fake. unsupported */
+		revents = 0; /* TODO: fake. unsupported but to compile on such an unsupported system.*/
 	#endif
 
 		mask = 0;
@@ -1790,8 +1790,6 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 		muxwcb (moo, mask, (void*)xtn->epd.ptr[xtn->ev.buf[n].fd]);
 	#elif defined(USE_SELECT)
 		muxwcb (moo, mask, (void*)xtn->epd.data[xtn->ev.buf[n].fd]);
-	#else
-	#	error UNSUPPORTED
 	#endif
 	}
 
