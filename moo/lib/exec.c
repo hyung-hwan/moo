@@ -769,7 +769,7 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	/* if the semaphore belongs to a semaphore group and the control reaches 
 	 * here, no process is waiting on the semaphore group. however, a process
 	 * may still be waiting on the semaphore. If a process waits on a semaphore
-	 * group and another process wait on a semaphor that belongs to the 
+	 * group and another process wait on a semaphore that belongs to the 
 	 * semaphore group, the process waiting on the group always wins. 
 	 * 
 	 *    TODO: implement a fair scheduling policy. or do i simply have to disallow individual wait on a semaphore belonging to a group?
@@ -780,16 +780,17 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	{
 		/* no process is waiting on this semaphore */
 		count = MOO_OOP_TO_SMOOI(sem->count);
-		MOO_ASSERT (moo, count >= 0);
-		if (count == 0 && (moo_oop_t)semgrp != moo->_nil)
-		{
-			/* move the semaphore from the unsignaled list to the signaled list
-			 * if the semaphore count has changed from 0 to 1 and it belongs a group. */
-			MOO_DELETE_FROM_OOP_LIST (moo, &semgrp->sems, sem, grm);
-			MOO_APPEND_TO_OOP_LIST (moo, &semgrp->sigsems, moo_oop_semaphore_t, sem, grm);
-		}
 		count++;
 		sem->count = MOO_SMOOI_TO_OOP(count);
+
+		MOO_ASSERT (moo, count >= 1);
+		if (count == 1 && (moo_oop_t)semgrp != moo->_nil)
+		{
+			/* move the semaphore from the unsignaled list to the signaled list
+			 * if the semaphore count has changed from 0 to 1 in a group */
+			MOO_DELETE_FROM_OOP_LIST (moo, &semgrp->sems[MOO_SEMAPHORE_GROUP_SEMS_UNSIG], sem, grm);
+			MOO_APPEND_TO_OOP_LIST (moo, &semgrp->sems[MOO_SEMAPHORE_GROUP_SEMS_SIG], moo_oop_semaphore_t, sem, grm);
+		}
 
 		/* no process has been resumed */
 		return (moo_oop_process_t)moo->_nil;
@@ -838,10 +839,12 @@ static MOO_INLINE void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 		if ((moo_oop_t)semgrp != moo->_nil && count == 0)
 		{
+			int sems_idx;
 			/* TODO: if i disallow individual wait on a semaphore in a group,
 			 *       this membership manipulation is redundant */
-			MOO_DELETE_FROM_OOP_LIST (moo, &semgrp->sigsems, sem, grm);
-			MOO_APPEND_TO_OOP_LIST (moo, &semgrp->sems, moo_oop_semaphore_t, sem, grm);
+			MOO_DELETE_FROM_OOP_LIST (moo, &semgrp->sems[MOO_SEMAPHORE_GROUP_SEMS_SIG], sem, grm);
+			sems_idx = count > 0? MOO_SEMAPHORE_GROUP_SEMS_SIG: MOO_SEMAPHORE_GROUP_SEMS_UNSIG;
+			MOO_APPEND_TO_OOP_LIST (moo, &semgrp->sems[sems_idx], moo_oop_semaphore_t, sem, grm);
 		}
 	}
 	else
@@ -869,7 +872,6 @@ static MOO_INLINE void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore_group_t semgrp)
 {
-/* TODO: support timeout and wait all */
 	/* wait for one of semaphores in the group to be signaled */
 
 	moo_oop_process_t proc;
@@ -877,27 +879,20 @@ static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore
 
 	MOO_ASSERT (moo, moo_iskindof(moo, (moo_oop_t)semgrp, moo->_semaphore_group));
 
-	sem = semgrp->sigsems.first;
+	sem = semgrp->sems[MOO_SEMAPHORE_GROUP_SEMS_SIG].first;
 	if ((moo_oop_t)sem != moo->_nil)
 	{
 		moo_ooi_t count;
+		int sems_idx;
 
 		count = MOO_OOP_TO_SMOOI(sem->count);
 		MOO_ASSERT (moo, count > 0);
 		count--;
 		sem->count = MOO_SMOOI_TO_OOP(count);
 
-		MOO_DELETE_FROM_OOP_LIST (moo, &semgrp->sigsems, sem, grm);
-		if (count > 0)
-		{
-			/* move the item to the back of signaled semaphore list */
-			MOO_APPEND_TO_OOP_LIST (moo, &semgrp->sigsems, moo_oop_semaphore_t, sem, grm);
-		}
-		else
-		{
-			/* move the semaphore to the unsigned semaphore list */
-			MOO_APPEND_TO_OOP_LIST (moo, &semgrp->sems, moo_oop_semaphore_t, sem, grm);
-		}
+		MOO_DELETE_FROM_OOP_LIST (moo, &semgrp->sems[MOO_SEMAPHORE_GROUP_SEMS_SIG], sem, grm);
+		sems_idx = count > 0? MOO_SEMAPHORE_GROUP_SEMS_SIG: MOO_SEMAPHORE_GROUP_SEMS_UNSIG;
+		MOO_APPEND_TO_OOP_LIST (moo, &semgrp->sems[sems_idx], moo_oop_semaphore_t, sem, grm);
 
 		return (moo_oop_t)sem;
 	}
@@ -2576,20 +2571,21 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
 
 	if ((moo_oop_t)sem->group == moo->_nil)
 	{
-		if (MOO_OOP_TO_SMOOI(sem->count) > 0)
-		{
-			MOO_APPEND_TO_OOP_LIST (moo, &rcv->sigsems, moo_oop_semaphore_t, sem, grm);
-		}
-		else
-		{
-			MOO_APPEND_TO_OOP_LIST (moo, &rcv->sems, moo_oop_semaphore_t, sem, grm);
-		}
+		int sems_idx;
+		sems_idx = MOO_OOP_TO_SMOOI(sem->count) > 0? MOO_SEMAPHORE_GROUP_SEMS_SIG: MOO_SEMAPHORE_GROUP_SEMS_UNSIG;
+		MOO_APPEND_TO_OOP_LIST (moo, &rcv->sems[sems_idx], moo_oop_semaphore_t, sem, grm);
 		sem->group = rcv;
+		MOO_STACK_SETRETTORCV (moo, nargs);
+	}
+	else if (sem->group == rcv)
+	{
+		/* do nothing. don't change the group of the semaphore */
 		MOO_STACK_SETRETTORCV (moo, nargs);
 	}
 	else
 	{
 		/* the semaphore belongs to a group already */
+/* TODO: is it better to move this semaphore to the new group? */
 		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EPERM);
 	}
 	return MOO_PF_SUCCESS;
@@ -2606,24 +2602,21 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG (moo, nargs, 0);
 	MOO_PF_CHECK_ARGS (moo, nargs, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
 
-	if ((moo_oop_t)sem->group == moo->_nil)
+	if (sem->group == rcv)
 	{
-		/* it doesn't belong to a group */
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EPERM);
+		int sems_idx;
+		sems_idx = MOO_OOP_TO_SMOOI(sem->count) > 0? MOO_SEMAPHORE_GROUP_SEMS_SIG: MOO_SEMAPHORE_GROUP_SEMS_UNSIG;
+		MOO_DELETE_FROM_OOP_LIST (moo, &rcv->sems[sems_idx], sem, grm);
+		sem->grm.prev = (moo_oop_semaphore_t)moo->_nil;
+		sem->grm.next = (moo_oop_semaphore_t)moo->_nil;
+		sem->group = (moo_oop_semaphore_group_t)moo->_nil;
+
+		MOO_STACK_SETRETTORCV (moo, nargs);
 	}
 	else
 	{
-		if (MOO_OOP_TO_SMOOI(sem->count) > 0)
-		{
-			MOO_DELETE_FROM_OOP_LIST (moo, &rcv->sigsems, sem, grm);
-		}
-		else
-		{
-			MOO_DELETE_FROM_OOP_LIST (moo, &rcv->sems, sem, grm);
-		}
-
-		sem->group = (moo_oop_semaphore_group_t)moo->_nil;
-		MOO_STACK_SETRETTORCV (moo, nargs);
+		/* it doesn't belong to a group or belongs to a different group */
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EPERM);
 	}
 
 	return MOO_PF_SUCCESS;

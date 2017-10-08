@@ -823,6 +823,9 @@ struct moo_semaphore_t
 	} grm; /* group membership chain */
 };
 
+#define MOO_SEMAPHORE_GROUP_SEMS_UNSIG 0
+#define MOO_SEMAPHORE_GROUP_SEMS_SIG   1
+
 struct moo_semaphore_group_t
 {
 	MOO_OBJ_HEADER;
@@ -840,13 +843,7 @@ struct moo_semaphore_group_t
 	{
 		moo_oop_semaphore_t first;
 		moo_oop_semaphore_t last;
-	} sems;
-
-	struct
-	{
-		moo_oop_semaphore_t first;
-		moo_oop_semaphore_t last;
-	} sigsems; 
+	} sems[2]; /* sems[0] - unsignaled semaphores, sems[1] - signaled semaphores */
 };
 
 #define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 9
