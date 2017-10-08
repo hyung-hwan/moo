@@ -3583,7 +3583,7 @@ static moo_pfrc_t pf_smptr_free (moo_t* moo, moo_ooi_t nargs)
 }
 
 
-#pragma pack(1)
+#include "pack1.h"
 struct st_int8_t    { moo_int8_t  v; };
 struct st_int16_t   { moo_int16_t v; };
 struct st_int32_t   { moo_int32_t v; };
@@ -3600,7 +3600,7 @@ struct st_uint64_t  { moo_uint64_t v; };
 struct st_int128_t   { moo_int128_t v; };
 struct st_uint128_t  { moo_uint128_t v; };
 #endif
-#pragma pack()
+#include "unpack.h"
 
 
 static MOO_INLINE moo_oop_t _fetch_raw_int (moo_t* moo, moo_int8_t* rawptr, moo_oow_t offset, int size)

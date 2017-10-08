@@ -41,7 +41,7 @@ pkginclude_HEADERS = \
 	moo-utl.h \
 	moo.h
 
-noinst_HEADERS = moo-prv.h
+noinst_HEADERS = moo-prv.h pack1.h unpack.h
 
 pkglib_LTLIBRARIES = libmoo.la
 libmoo_la_SOURCES = \
