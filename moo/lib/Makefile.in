@@ -100,11 +100,14 @@ host_triplet = @host@
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_3) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
+@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
 @ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_6 = -lmoo-ffi
 @ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_7 = $(abs_builddir)/../mod/libmoo-ffi.la
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_8 = -lmoo-x11
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_9 = $(abs_builddir)/../mod/libmoo-x11.la
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_8 = -lmoo-sck
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_9 = $(abs_builddir)/../mod/libmoo-sck.la
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_10 = -lmoo-x11
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_11 = $(abs_builddir)/../mod/libmoo-x11.la
 bin_PROGRAMS = moo$(EXEEXT)
 @ENABLE_STATIC_MODULE_FALSE@moo_DEPENDENCIES = $(am__DEPENDENCIES_3)
 subdir = lib
@@ -451,10 +454,11 @@ libmoo_la_SOURCES = \
 libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_5) \
-	$(am__append_6) $(am__append_8)
+	$(am__append_6) $(am__append_8) $(am__append_10)
 @ENABLE_STATIC_MODULE_TRUE@libmoo_la_DEPENDENCIES = $(abs_builddir)/../mod/libmoo-console.la \
 @ENABLE_STATIC_MODULE_TRUE@	$(abs_builddir)/../mod/libmoo-stdio.la \
-@ENABLE_STATIC_MODULE_TRUE@	$(am__append_7) $(am__append_9)
+@ENABLE_STATIC_MODULE_TRUE@	$(am__append_7) $(am__append_9) \
+@ENABLE_STATIC_MODULE_TRUE@	$(am__append_11)
 moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 moo_LDFLAGS = $(LDFLAGS_LIB_COMMON)

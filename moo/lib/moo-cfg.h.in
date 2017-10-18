@@ -350,6 +350,9 @@
 /* build mod/ffi */
 #undef MOO_ENABLE_MOD_FFI
 
+/* build mod/sck */
+#undef MOO_ENABLE_MOD_SCK
+
 /* build mod/x11 */
 #undef MOO_ENABLE_MOD_X11
 

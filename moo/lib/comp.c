@@ -5063,6 +5063,10 @@ static int compile_unary_message (moo_t* moo, int to_super)
 		}
 
 		if (emit_double_param_instruction(moo, send_message_cmd[to_super], nargs, index) <= -1) return -1;
+
+		/* In 'super new xxx', xxx is sent to the object returned by new.
+		 * that means it is not sent to 'super' */
+		to_super = 0;
 	}
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT);
 
@@ -5102,6 +5106,7 @@ static int compile_binary_message (moo_t* moo, int to_super)
 		if (add_symbol_literal(moo, &binsel, 0, &index) <= -1 ||
 		    emit_double_param_instruction(moo, send_message_cmd[to_super], 1, index) <= -1) goto oops;
 
+		to_super = 0; /* In super + 2 - 3, '-' is sent to the return value of '+', not to super */
 		moo->c->mth.binsels.len = saved_binsels_len;
 	}
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL);

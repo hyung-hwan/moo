@@ -76,6 +76,10 @@ if ENABLE_MOD_FFI
 libmoo_la_LIBADD += -lmoo-ffi
 libmoo_la_DEPENDENCIES += $(abs_builddir)/../mod/libmoo-ffi.la
 endif
+if ENABLE_MOD_SCK
+libmoo_la_LIBADD += -lmoo-sck
+libmoo_la_DEPENDENCIES += $(abs_builddir)/../mod/libmoo-sck.la
+endif
 if ENABLE_MOD_X11
 libmoo_la_LIBADD += -lmoo-x11
 libmoo_la_DEPENDENCIES += $(abs_builddir)/../mod/libmoo-x11.la

@@ -509,6 +509,18 @@ then
 fi
 AM_CONDITIONAL(ENABLE_MOD_FFI, test "${enable_mod_ffi_is}" = "yes")
 
+dnl ===== enable-mod-sck =====
+AC_ARG_ENABLE([mod-sck],
+	[AS_HELP_STRING([--enable-mod-sck],[enable mod/sck (default. yes)])],
+	enable_mod_sck_is=$enableval,
+	enable_mod_sck_is=yes
+)
+if test "${enable_mod_sck_is}" = "yes"
+then
+	AC_DEFINE([MOO_ENABLE_MOD_SCK],[],[build mod/sck])
+fi
+AM_CONDITIONAL(ENABLE_MOD_SCK, test "${enable_mod_sck_is}" = "yes")
+
 dnl ===== enable-mod-x11 =====
 AC_ARG_ENABLE([mod-x11],
 	[AS_HELP_STRING([--enable-mod-x11],[enable mod/x11 (default. yes)])],

@@ -230,12 +230,12 @@ void moo_fini (moo_t* moo)
 
 const moo_ooch_t* moo_geterrstr (moo_t* moo)
 {
-	return moo_errnumtoerrstr (moo->errnum);
+	return moo_errnum_to_errstr (moo->errnum);
 }
 
 const moo_ooch_t* moo_geterrmsg (moo_t* moo)
 {
-	if (moo->errmsg.len <= 0) return moo_errnumtoerrstr (moo->errnum);
+	if (moo->errmsg.len <= 0) return moo_errnum_to_errstr (moo->errnum);
 	return moo->errmsg.buf;
 }
 
@@ -400,6 +400,9 @@ void moo_freemem (moo_t* moo, void* ptr)
 #if defined(MOO_ENABLE_MOD_FFI)
 #	include "../mod/_ffi.h"
 #endif
+#if defined(MOO_ENABLE_MOD_SCK)
+#	include "../mod/_sck.h"
+#endif
 #include "../mod/_stdio.h"
 #if defined(MOO_ENABLE_MOD_X11)
 #	include "../mod/_x11.h"
@@ -415,6 +418,9 @@ static_modtab[] =
 	{ "console",    moo_mod_console },
 #if defined(MOO_ENABLE_MOD_FFI)
 	{ "ffi",        moo_mod_ffi },
+#endif
+#if defined(MOO_ENABLE_MOD_SCK)
+	{ "sck",        moo_mod_sck },
 #endif
 	{ "stdio",      moo_mod_stdio },
 #if defined(MOO_ENABLE_MOD_X11)

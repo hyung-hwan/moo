@@ -705,34 +705,39 @@ static moo_pfrc_t pf_draw_string (moo_t* moo, moo_ooi_t nargs)
 
 	if (MOO_OOP_IS_SMPTR(gc->font_set))
 	{
-		moo_oow_t ucslen, bcslen;
+		moo_oow_t bcslen;
 		moo_bch_t* bb;
 		int ascent = 10;
 		XRectangle r;
 
-		ucslen = MOO_OBJ_GET_SIZE(a3);
-		if (moo_convootobchars (moo, MOO_OBJ_GET_CHAR_SLOT(a3), &ucslen, MOO_NULL, &bcslen) <= -1 ||
+	#if defined(MOO_OOCH_IS_UCH)
+		moo_oow_t oocslen;
+
+		oocslen = MOO_OBJ_GET_SIZE(a3);
+		if (moo_convootobchars (moo, MOO_OBJ_GET_CHAR_SLOT(a3), &oocslen, MOO_NULL, &bcslen) <= -1 ||
 		    !(bb = moo_allocmem (moo, MOO_SIZEOF(moo_bch_t) * bcslen)))
 		{
 			MOO_DEBUG0 (moo, "<x11.draw_string> Error in converting a string\n");
 			MOO_STACK_SETRETTOERRNUM (moo, nargs);
 			return MOO_PF_SUCCESS;
 		}
-
-	//#if defined(MOO_OOCH_IS_UCH)
-		moo_convootobchars (moo, MOO_OBJ_GET_CHAR_SLOT(a3), &ucslen, bb, &bcslen);
-	//#else
-	//	moo_copybcstr (&bb->fn[parlen], bcslen + 1, arg->name);
-	//#endif
+		moo_convootobchars (moo, MOO_OBJ_GET_CHAR_SLOT(a3), &oocslen, bb, &bcslen);
+	#else
+		bb = MOO_OBJ_GET_CHAR_SLOT(a3);
+		bcslen = oocslen;
+	#endif
 
 		XmbTextExtents(MOO_OOP_TO_SMPTR(gc->font_set), bb, bcslen, MOO_NULL, &r);
 		ascent = r.height;
 
+		/* what about Xutf8DrawString? */
 		XmbDrawString (disp, (Window)MOO_OOP_TO_SMOOI(((oop_x11_widget_t)gc->widget)->window_handle), 
 			MOO_OOP_TO_SMPTR(gc->font_set), MOO_OOP_TO_SMPTR(gc->gc_handle), 
 			MOO_OOP_TO_SMOOI(a1), MOO_OOP_TO_SMOOI(a2) + ascent,  bb, bcslen);
 
+	#if defined(MOO_OOCH_IS_UCH)
 		moo_freemem (moo, bb);
+	#endif
 	}
 	else
 	{

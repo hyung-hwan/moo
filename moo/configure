@@ -658,6 +658,8 @@ MOO_SIZEOF_LONG_LONG
 MOO_SIZEOF_WCHAR_T
 ENABLE_MOD_X11_FALSE
 ENABLE_MOD_X11_TRUE
+ENABLE_MOD_SCK_FALSE
+ENABLE_MOD_SCK_TRUE
 ENABLE_MOD_FFI_FALSE
 ENABLE_MOD_FFI_TRUE
 ENABLE_LIBLTDL_FALSE
@@ -843,6 +845,7 @@ enable_dynamic_module
 enable_static_module
 enable_libltdl
 enable_mod_ffi
+enable_mod_sck
 enable_mod_x11
 '
       ac_precious_vars='build_alias
@@ -1497,6 +1500,7 @@ Optional Features:
                           library(default. no)
   --enable-libltdl        use libltdl(default. yes)
   --enable-mod-ffi        enable mod/ffi (default. yes)
+  --enable-mod-sck        enable mod/sck (default. yes)
   --enable-mod-x11        enable mod/x11 (default. yes)
 
 Optional Packages:
@@ -20845,6 +20849,29 @@ else
 fi
 
 
+# Check whether --enable-mod-sck was given.
+if test "${enable_mod_sck+set}" = set; then :
+  enableval=$enable_mod_sck; enable_mod_sck_is=$enableval
+else
+  enable_mod_sck_is=yes
+
+fi
+
+if test "${enable_mod_sck_is}" = "yes"
+then
+
+$as_echo "#define MOO_ENABLE_MOD_SCK /**/" >>confdefs.h
+
+fi
+ if test "${enable_mod_sck_is}" = "yes"; then
+  ENABLE_MOD_SCK_TRUE=
+  ENABLE_MOD_SCK_FALSE='#'
+else
+  ENABLE_MOD_SCK_TRUE='#'
+  ENABLE_MOD_SCK_FALSE=
+fi
+
+
 # Check whether --enable-mod-x11 was given.
 if test "${enable_mod_x11+set}" = set; then :
   enableval=$enable_mod_x11; enable_mod_x11_is=$enableval
@@ -21089,6 +21116,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${ENABLE_MOD_FFI_TRUE}" && test -z "${ENABLE_MOD_FFI_FALSE}"; then
   as_fn_error $? "conditional \"ENABLE_MOD_FFI\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${ENABLE_MOD_SCK_TRUE}" && test -z "${ENABLE_MOD_SCK_FALSE}"; then
+  as_fn_error $? "conditional \"ENABLE_MOD_SCK\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${ENABLE_MOD_X11_TRUE}" && test -z "${ENABLE_MOD_X11_FALSE}"; then

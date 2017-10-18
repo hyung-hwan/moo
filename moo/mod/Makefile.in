@@ -94,9 +94,11 @@ host_triplet = @host@
 @WIN32_TRUE@am__append_1 = -DMOO_DEFAULT_PFMODPREFIX=\"libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"-1\"
 @WIN32_FALSE@am__append_2 = -DMOO_DEFAULT_PFMODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"\"
 @ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_3 = libmoo-ffi.la
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_4 = libmoo-x11.la
-@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_FALSE@am__append_5 = libmoo-ffi.la
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_FALSE@am__append_6 = libmoo-x11.la
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_4 = libmoo-sck.la
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_5 = libmoo-x11.la
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_FALSE@am__append_6 = libmoo-ffi.la
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_FALSE@am__append_7 = libmoo-sck.la
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_FALSE@am__append_8 = libmoo-x11.la
 subdir = mod
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_namespace.m4 \
@@ -156,7 +158,6 @@ libmoo_console_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	-o $@
 @ENABLE_STATIC_MODULE_FALSE@am_libmoo_console_la_rpath = -rpath \
 @ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
-@ENABLE_STATIC_MODULE_TRUE@am_libmoo_console_la_rpath =
 @ENABLE_MOD_FFI_TRUE@libmoo_ffi_la_DEPENDENCIES =  \
 @ENABLE_MOD_FFI_TRUE@	$(am__DEPENDENCIES_1) \
 @ENABLE_MOD_FFI_TRUE@	$(am__DEPENDENCIES_1)
@@ -170,6 +171,18 @@ libmoo_ffi_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 @ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_FALSE@	-rpath \
 @ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
 @ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am_libmoo_ffi_la_rpath =
+@ENABLE_MOD_SCK_TRUE@libmoo_sck_la_DEPENDENCIES =  \
+@ENABLE_MOD_SCK_TRUE@	$(am__DEPENDENCIES_1)
+am__libmoo_sck_la_SOURCES_DIST = sck.c _sck.h
+@ENABLE_MOD_SCK_TRUE@am_libmoo_sck_la_OBJECTS = libmoo_sck_la-sck.lo
+libmoo_sck_la_OBJECTS = $(am_libmoo_sck_la_OBJECTS)
+libmoo_sck_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(libmoo_sck_la_LDFLAGS) $(LDFLAGS) -o $@
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_FALSE@am_libmoo_sck_la_rpath =  \
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_FALSE@	-rpath \
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am_libmoo_sck_la_rpath =
 libmoo_stdio_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_libmoo_stdio_la_OBJECTS = libmoo_stdio_la-stdio.lo
 libmoo_stdio_la_OBJECTS = $(am_libmoo_stdio_la_OBJECTS)
@@ -227,9 +240,11 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(libmoo_console_la_SOURCES) $(libmoo_ffi_la_SOURCES) \
-	$(libmoo_stdio_la_SOURCES) $(libmoo_x11_la_SOURCES)
+	$(libmoo_sck_la_SOURCES) $(libmoo_stdio_la_SOURCES) \
+	$(libmoo_x11_la_SOURCES)
 DIST_SOURCES = $(libmoo_console_la_SOURCES) \
-	$(am__libmoo_ffi_la_SOURCES_DIST) $(libmoo_stdio_la_SOURCES) \
+	$(am__libmoo_ffi_la_SOURCES_DIST) \
+	$(am__libmoo_sck_la_SOURCES_DIST) $(libmoo_stdio_la_SOURCES) \
 	$(am__libmoo_x11_la_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
@@ -435,13 +450,14 @@ CPPFLAGS_COMMON = -I$(abs_builddir) -I$(abs_builddir)/../lib \
 @ENABLE_STATIC_MODULE_TRUE@LDFLAGS_COMMON = -L$(libdir) -version-info 1:0:0 -no-undefined
 @ENABLE_STATIC_MODULE_FALSE@LIBADD_COMMON = -lmoo
 @ENABLE_STATIC_MODULE_TRUE@LIBADD_COMMON = 
-@ENABLE_STATIC_MODULE_TRUE@noinst_LTLIBRARIES = libmoo-console.la \
-@ENABLE_STATIC_MODULE_TRUE@	libmoo-stdio.la $(am__append_3) \
-@ENABLE_STATIC_MODULE_TRUE@	$(am__append_4)
+@ENABLE_STATIC_MODULE_TRUE@noinst_LTLIBRARIES = $(am__append_3) \
+@ENABLE_STATIC_MODULE_TRUE@	$(am__append_4) libmoo-stdio.la \
+@ENABLE_STATIC_MODULE_TRUE@	$(am__append_5)
 @ENABLE_STATIC_MODULE_FALSE@pkgmodexecdir = $(libdir)
 @ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES =  \
-@ENABLE_STATIC_MODULE_FALSE@	libmoo-console.la libmoo-stdio.la \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__append_5) $(am__append_6)
+@ENABLE_STATIC_MODULE_FALSE@	libmoo-console.la $(am__append_6) \
+@ENABLE_STATIC_MODULE_FALSE@	$(am__append_7) libmoo-stdio.la \
+@ENABLE_STATIC_MODULE_FALSE@	$(am__append_8)
 libmoo_console_la_SOURCES = console.c console.h
 libmoo_console_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_console_la_LDFLAGS = $(LDFLAGS_COMMON)
@@ -450,6 +466,10 @@ libmoo_console_la_LIBADD = $(LIBADD_COMMON) $(TERMINAL_LIBS)
 @ENABLE_MOD_FFI_TRUE@libmoo_ffi_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 @ENABLE_MOD_FFI_TRUE@libmoo_ffi_la_LDFLAGS = $(LDFLAGS_COMMON)
 @ENABLE_MOD_FFI_TRUE@libmoo_ffi_la_LIBADD = $(LIBADD_COMMON) $(DYNCALL_LIBS)
+@ENABLE_MOD_SCK_TRUE@libmoo_sck_la_SOURCES = sck.c _sck.h
+@ENABLE_MOD_SCK_TRUE@libmoo_sck_la_CPPFLAGS = $(CPPFLAGS_COMMON)
+@ENABLE_MOD_SCK_TRUE@libmoo_sck_la_LDFLAGS = $(LDFLAGS_COMMON)
+@ENABLE_MOD_SCK_TRUE@libmoo_sck_la_LIBADD = $(LIBADD_COMMON)
 libmoo_stdio_la_SOURCES = stdio.c _stdio.h
 libmoo_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_stdio_la_LDFLAGS = $(LDFLAGS_COMMON)
@@ -544,6 +564,9 @@ libmoo-console.la: $(libmoo_console_la_OBJECTS) $(libmoo_console_la_DEPENDENCIES
 libmoo-ffi.la: $(libmoo_ffi_la_OBJECTS) $(libmoo_ffi_la_DEPENDENCIES) $(EXTRA_libmoo_ffi_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libmoo_ffi_la_LINK) $(am_libmoo_ffi_la_rpath) $(libmoo_ffi_la_OBJECTS) $(libmoo_ffi_la_LIBADD) $(LIBS)
 
+libmoo-sck.la: $(libmoo_sck_la_OBJECTS) $(libmoo_sck_la_DEPENDENCIES) $(EXTRA_libmoo_sck_la_DEPENDENCIES) 
+	$(AM_V_CCLD)$(libmoo_sck_la_LINK) $(am_libmoo_sck_la_rpath) $(libmoo_sck_la_OBJECTS) $(libmoo_sck_la_LIBADD) $(LIBS)
+
 libmoo-stdio.la: $(libmoo_stdio_la_OBJECTS) $(libmoo_stdio_la_DEPENDENCIES) $(EXTRA_libmoo_stdio_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libmoo_stdio_la_LINK) $(am_libmoo_stdio_la_rpath) $(libmoo_stdio_la_OBJECTS) $(libmoo_stdio_la_LIBADD) $(LIBS)
 
@@ -558,6 +581,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_console_la-console.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_ffi_la-ffi.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_sck_la-sck.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_stdio_la-stdio.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_x11_la-x11.Plo@am__quote@
 
@@ -598,6 +622,13 @@ libmoo_ffi_la-ffi.lo: ffi.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='ffi.c' object='libmoo_ffi_la-ffi.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_ffi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_ffi_la-ffi.lo `test -f 'ffi.c' || echo '$(srcdir)/'`ffi.c
+
+libmoo_sck_la-sck.lo: sck.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_sck_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_sck_la-sck.lo -MD -MP -MF $(DEPDIR)/libmoo_sck_la-sck.Tpo -c -o libmoo_sck_la-sck.lo `test -f 'sck.c' || echo '$(srcdir)/'`sck.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_sck_la-sck.Tpo $(DEPDIR)/libmoo_sck_la-sck.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sck.c' object='libmoo_sck_la-sck.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_sck_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_sck_la-sck.lo `test -f 'sck.c' || echo '$(srcdir)/'`sck.c
 
 libmoo_stdio_la-stdio.lo: stdio.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_stdio_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_stdio_la-stdio.lo -MD -MP -MF $(DEPDIR)/libmoo_stdio_la-stdio.Tpo -c -o libmoo_stdio_la-stdio.lo `test -f 'stdio.c' || echo '$(srcdir)/'`stdio.c

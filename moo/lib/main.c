@@ -849,7 +849,7 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 	ev.revents = 0;
 	if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
 	{
-		moo_syserrtoerrnum (errno);
+		moo_syserr_to_errnum (errno);
 		MOO_DEBUG2 (moo, "Cannot add file descriptor %d to devpoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
@@ -872,7 +872,7 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 	ev.data.ptr = (void*)event_data;
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_ADD, fd, &ev) == -1)
 	{
-		moo_syserrtoerrnum (errno);
+		moo_syserr_to_errnum (errno);
 		MOO_DEBUG2 (moo, "Cannot add file descriptor %d to epoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
@@ -956,7 +956,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	ev.revents = 0;
 	if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
 	{
-		moo_syserrtoerrnum (errno);
+		moo_syserr_to_errnum (errno);
 		MOO_DEBUG2 (moo, "Cannot remove file descriptor %d from devpoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
@@ -971,7 +971,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	memset (&ev, 0, MOO_SIZEOF(ev));
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_DEL, fd, &ev) == -1)
 	{
-		moo_syserrtoerrnum (errno);
+		moo_syserr_to_errnum (errno);
 		MOO_DEBUG2 (moo, "Cannot remove file descriptor %d from epoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
@@ -1053,7 +1053,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 	ev.data.ptr = (void*)event_data;
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_MOD, fd, &ev) == -1)
 	{
-		moo_syserrtoerrnum (errno);
+		moo_syserr_to_errnum (errno);
 		MOO_DEBUG2 (moo, "Cannot modify file descriptor %d in epoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
@@ -1131,7 +1131,7 @@ static int vm_startup (moo_t* moo)
 	xtn->ep = open ("/dev/poll", O_RDWR);
 	if (xtn->ep == -1) 
 	{
-		moo_syserrtoerrnum (errno);
+		moo_syserr_to_errnum (errno);
 		MOO_DEBUG1 (moo, "Cannot create devpoll - %hs\n", strerror(errno));
 		goto oops;
 	}
@@ -1147,7 +1147,7 @@ static int vm_startup (moo_t* moo)
 	#endif
 	if (xtn->ep == -1) 
 	{
-		moo_syserrtoerrnum (errno);
+		moo_syserr_to_errnum (errno);
 		MOO_DEBUG1 (moo, "Cannot create epoll - %hs\n", strerror(errno));
 		goto oops;
 	}
@@ -1173,7 +1173,7 @@ static int vm_startup (moo_t* moo)
 #if defined(USE_THREAD)
 	if (pipe(xtn->p) == -1)
 	{
-		moo_syserrtoerrnum (errno);
+		moo_syserr_to_errnum (errno);
 		MOO_DEBUG1 (moo, "Cannot create pipes - %hs\n", strerror(errno));
 		goto oops;
 	}
@@ -2156,12 +2156,12 @@ int main (int argc, char* argv[])
 
 				bcslen = MOO_COUNTOF(bcs);
 			#if defined(MOO_OOCH_IS_UCH)
-				if (moo_convootobcstr (moo, moo_synerrnumtoerrstr(synerr.num), &ucslen, bcs, &bcslen) >= 0)
+				if (moo_convootobcstr (moo, moo_synerrnum_to_errstr(synerr.num), &ucslen, bcs, &bcslen) >= 0)
 				{
 					printf (" [%.*s]", (int)bcslen, bcs);
 				}
 			#else
-				printf (" [%s]", moo_synerrnumtoerrstr(synerr.num));
+				printf (" [%s]", moo_synerrnum_to_errstr(synerr.num));
 			#endif
 
 				if (synerr.tgt.len > 0)

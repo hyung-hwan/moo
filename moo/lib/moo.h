@@ -48,10 +48,11 @@ enum moo_errnum_t
 	MOO_EGENERIC, /**< generic error */
 
 	MOO_ENOIMPL,  /**< not implemented */
-	MOO_ESYSERR,  /**< subsystem error */
+	MOO_ESYSERR,  /**< system error */
 	MOO_EINTERN,  /**< internal error */
 	MOO_ESYSMEM,  /**< insufficient system memory */
 	MOO_EOOMEM,   /**< insufficient object memory */
+	MOO_ETYPE,    /**< invalid class/type */
 
 	MOO_EINVAL,   /**< invalid parameter or data */
 	MOO_ENOENT,   /**< data not found */
@@ -966,10 +967,8 @@ struct moo_cb_t
 
 
 /* =========================================================================
- * MODULE MANIPULATION
+ * PRIMITIVE FUNCTIONS
  * ========================================================================= */
-#define MOO_MOD_NAME_LEN_MAX 120
-
 enum moo_pfrc_t
 {
 	MOO_PF_HARD_FAILURE = -1,
@@ -1000,6 +999,28 @@ struct moo_pfinfo_t
 	int               variadic;
 	moo_pfbase_t      base;
 };
+
+
+/* receiver check failure leads to hard failure.
+ * RATIONAL: the primitive handler should be used by relevant classes and
+ *           objects only. if the receiver check fails, you must review
+ *           your class library */
+#define MOO_PF_CHECK_RCV(moo,cond) do { \
+	if (!(cond)) { moo_seterrnum((moo), MOO_EMSGRCV); return MOO_PF_HARD_FAILURE; } \
+} while(0)
+
+/* argument check failure causes the wrapping method to return an error.
+ * RATIONAL: Being a typeless language, it's hard to control the kinds of
+ *           arguments.
+ */
+#define MOO_PF_CHECK_ARGS(moo,nargs,cond) do { \
+	if (!(cond)) { MOO_STACK_SETRETTOERROR ((moo), (nargs), MOO_EINVAL); return MOO_PF_SUCCESS; } \
+} while(0)
+
+/* =========================================================================
+ * MODULE MANIPULATION
+ * ========================================================================= */
+#define MOO_MOD_NAME_LEN_MAX 120
 
 typedef struct moo_mod_t moo_mod_t;
 
@@ -2034,11 +2055,11 @@ MOO_EXPORT void moo_assertfailed (
 	moo_oow_t        line
 );
 
-MOO_EXPORT moo_errnum_t moo_syserrtoerrnum (
+MOO_EXPORT moo_errnum_t moo_syserr_to_errnum (
 	int syserr
 );
 
-MOO_EXPORT const moo_ooch_t* moo_errnumtoerrstr (
+MOO_EXPORT const moo_ooch_t* moo_errnum_to_errstr (
 	moo_errnum_t errnum
 );
 
@@ -2059,7 +2080,7 @@ MOO_EXPORT void moo_getsynerr (
 	moo_synerr_t* synerr
 );
 
-MOO_EXPORT const moo_ooch_t* moo_synerrnumtoerrstr (
+MOO_EXPORT const moo_ooch_t* moo_synerrnum_to_errstr (
 	moo_synerrnum_t errnum
 );
 #endif

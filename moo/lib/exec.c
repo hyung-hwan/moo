@@ -32,24 +32,6 @@
 #define PROC_STATE_SUSPENDED 0
 #define PROC_STATE_TERMINATED -1
 
-
-/* receiver check failure leads to hard failure.
- * RATIONAL: the primitive handler should be used by relevant classes and
- *           objects only. if the receiver check fails, you must review
- *           your class library */
-#define MOO_PF_CHECK_RCV(moo,cond) do { \
-	if (!(cond)) { moo_seterrnum((moo), MOO_EMSGRCV); return MOO_PF_HARD_FAILURE; } \
-} while(0)
-
-/* argument check failure causes the wrapping method to return an error.
- * RATIONAL: Being a typeless language, it's hard to control the kinds of
- *           arguments.
- */
-#define MOO_PF_CHECK_ARGS(moo,nargs,cond) do { \
-	if (!(cond)) { MOO_STACK_SETRETTOERROR ((moo), (nargs), MOO_EINVAL); return MOO_PF_SUCCESS; } \
-} while(0)
-
-
 static MOO_INLINE const char* proc_state_to_string (int state)
 {
 	static const char* str[] = 
@@ -3357,7 +3339,7 @@ static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(ec));
 
 /* TODO: error string will be mostly the same.. do i really have to call makestring every time? */
-	s = moo_errnumtoerrstr (ec);
+	s = moo_errnum_to_errstr (ec);
 	ss = moo_makestring (moo, s, moo_countoocstr(s));
 	if (!ss)
 	{
@@ -4667,7 +4649,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				tmp = moo_makestring (moo, moo->errmsg.buf, moo->errmsg.len);
 				moo_poptmp (moo);
 				/* [NOTE] carry on even if instantiation fails */
-				moo->processor->active->perrmsg = tmp? tmp: moo->_nil;
+				moo->processor->active->perrmsg = tmp? tmp: moo->_nil; /* TODO: set to nil or set to an empty string if instantiation fails? */
 			}
 			else
 			{

@@ -113,7 +113,7 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 	dc = dcNewCallVM (4096); /* TODO: right size?  */
 	if (!dc) 
 	{
-		moo_seterrnum (moo, moo_syserrtoerrnum(errno));
+		moo_seterrnum (moo, moo_syserr_to_errnum(errno));
 		moo->vmprim.dl_close (moo, handle);
 		goto softfail;
 	}

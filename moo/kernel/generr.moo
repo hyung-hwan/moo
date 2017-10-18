@@ -15,6 +15,7 @@ class MyObject(Object)
 			'internal error that should never have happened'
 			'insufficient system memory'
 			'insufficient object memory'
+			'invalid class/type'
 
 			'invalid parameter or argument'
 			'data not found'
