@@ -48,26 +48,28 @@ static moo_ooch_t errstr_14[] = {'n','o','t',' ','a',' ','d','i','r','e','c','t'
 static moo_ooch_t errstr_15[] = {'i','n','t','e','r','r','u','p','t','e','d','\0'};
 static moo_ooch_t errstr_16[] = {'p','i','p','e',' ','e','r','r','o','r','\0'};
 static moo_ooch_t errstr_17[] = {'r','e','s','o','u','r','c','e',' ','t','e','m','p','o','r','a','r','i','l','y',' ','u','n','a','v','a','i','l','a','b','l','e','\0'};
-static moo_ooch_t errstr_18[] = {'d','a','t','a',' ','t','o','o',' ','l','a','r','g','e','\0'};
-static moo_ooch_t errstr_19[] = {'m','e','s','s','a','g','e',' ','r','e','c','e','i','v','e','r',' ','e','r','r','o','r','\0'};
-static moo_ooch_t errstr_20[] = {'m','e','s','s','a','g','e',' ','s','e','n','d','i','n','g',' ','e','r','r','o','r','\0'};
-static moo_ooch_t errstr_21[] = {'w','r','o','n','g',' ','n','u','m','b','e','r',' ','o','f',' ','a','r','g','u','m','e','n','t','s','\0'};
-static moo_ooch_t errstr_22[] = {'r','a','n','g','e',' ','e','r','r','o','r','\0'};
-static moo_ooch_t errstr_23[] = {'b','y','t','e','-','c','o','d','e',' ','f','u','l','l','\0'};
-static moo_ooch_t errstr_24[] = {'d','i','c','t','i','o','n','a','r','y',' ','f','u','l','l','\0'};
-static moo_ooch_t errstr_25[] = {'p','r','o','c','e','s','s','o','r',' ','f','u','l','l','\0'};
-static moo_ooch_t errstr_26[] = {'s','e','m','a','p','h','o','r','e',' ','h','e','a','p',' ','f','u','l','l','\0'};
-static moo_ooch_t errstr_27[] = {'s','e','m','a','p','h','o','r','e',' ','l','i','s','t',' ','f','u','l','l','\0'};
-static moo_ooch_t errstr_28[] = {'d','i','v','i','d','e',' ','b','y',' ','z','e','r','o','\0'};
-static moo_ooch_t errstr_29[] = {'I','/','O',' ','e','r','r','o','r','\0'};
-static moo_ooch_t errstr_30[] = {'e','n','c','o','d','i','n','g',' ','c','o','n','v','e','r','s','i','o','n',' ','e','r','r','o','r','\0'};
-static moo_ooch_t errstr_31[] = {'b','u','f','f','e','r',' ','f','u','l','l','\0'};
+static moo_ooch_t errstr_18[] = {'b','a','d',' ','s','y','s','t','e','m',' ','h','a','n','d','l','e','\0'};
+static moo_ooch_t errstr_19[] = {'d','a','t','a',' ','t','o','o',' ','l','a','r','g','e','\0'};
+static moo_ooch_t errstr_20[] = {'m','e','s','s','a','g','e',' ','r','e','c','e','i','v','e','r',' ','e','r','r','o','r','\0'};
+static moo_ooch_t errstr_21[] = {'m','e','s','s','a','g','e',' ','s','e','n','d','i','n','g',' ','e','r','r','o','r','\0'};
+static moo_ooch_t errstr_22[] = {'w','r','o','n','g',' ','n','u','m','b','e','r',' ','o','f',' ','a','r','g','u','m','e','n','t','s','\0'};
+static moo_ooch_t errstr_23[] = {'r','a','n','g','e',' ','e','r','r','o','r','\0'};
+static moo_ooch_t errstr_24[] = {'b','y','t','e','-','c','o','d','e',' ','f','u','l','l','\0'};
+static moo_ooch_t errstr_25[] = {'d','i','c','t','i','o','n','a','r','y',' ','f','u','l','l','\0'};
+static moo_ooch_t errstr_26[] = {'p','r','o','c','e','s','s','o','r',' ','f','u','l','l','\0'};
+static moo_ooch_t errstr_27[] = {'s','e','m','a','p','h','o','r','e',' ','h','e','a','p',' ','f','u','l','l','\0'};
+static moo_ooch_t errstr_28[] = {'s','e','m','a','p','h','o','r','e',' ','l','i','s','t',' ','f','u','l','l','\0'};
+static moo_ooch_t errstr_29[] = {'d','i','v','i','d','e',' ','b','y',' ','z','e','r','o','\0'};
+static moo_ooch_t errstr_30[] = {'I','/','O',' ','e','r','r','o','r','\0'};
+static moo_ooch_t errstr_31[] = {'e','n','c','o','d','i','n','g',' ','c','o','n','v','e','r','s','i','o','n',' ','e','r','r','o','r','\0'};
+static moo_ooch_t errstr_32[] = {'b','u','f','f','e','r',' ','f','u','l','l','\0'};
 static moo_ooch_t* errstr[] =
 {
 	errstr_0, errstr_1, errstr_2, errstr_3, errstr_4, errstr_5, errstr_6, errstr_7,
 	errstr_8, errstr_9, errstr_10, errstr_11, errstr_12, errstr_13, errstr_14, errstr_15,
 	errstr_16, errstr_17, errstr_18, errstr_19, errstr_20, errstr_21, errstr_22, errstr_23,
-	errstr_24, errstr_25, errstr_26, errstr_27, errstr_28, errstr_29, errstr_30, errstr_31
+	errstr_24, errstr_25, errstr_26, errstr_27, errstr_28, errstr_29, errstr_30, errstr_31,
+	errstr_32 
 };
 
 #if defined(MOO_INCLUDE_COMPILER)
@@ -242,6 +244,7 @@ moo_errnum_t moo_syserr_to_errnum (int e)
 	{
 		case ENOMEM: return MOO_ESYSMEM;
 		case EINVAL: return MOO_EINVAL;
+
 	#if defined(EBUSY)
 		case EBUSY: return MOO_EBUSY;
 	#endif
@@ -272,6 +275,15 @@ moo_errnum_t moo_syserr_to_errnum (int e)
 	#elif defined(EWOULDBLOCK)
 		case EWOULDBLOCK: return MOO_EAGAIN;
 	#endif
+
+	#if defined(EBADF)
+		case EBADF: return MOO_EBADHND;
+	#endif
+
+	#if defined(EIO)
+		case EIO: return MOO_EIOERR;
+	#endif
+
 		default: return MOO_ESYSERR;
 	}
 #endif

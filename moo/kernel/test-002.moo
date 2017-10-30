@@ -132,12 +132,27 @@ class MyObject(Object)
 s1 := TcpSocket new.
 
 s1 onEvent: #connected do: [
-	s1 write: C'GET / HTTP/1.0\n\r'.
+	s1 waitToRead.
+	##s1 beginWrite: C'GET / HTTP/1.0\n\r'.
 ] 
 s1 onEvent: #written do: [
-]
+].
 
-s1 on: #read do:
-s1 connectTo: '1.2.3.4:45'.
+s1 onEvent: #readyToRead do: [
+	
+].
 
+s1 beginConnect: '1.2.3.4:45' onConnected: [ :result | xxxx].
+
+
+####
+s1 beginConnect: destination onConnected: 
+s1 endConnect --> return what?
+s1 endReceive
+s1 beginReceive: buffer callback: [xxxx].
+s1 beginSend: data onEnd: [do this].
+s1 endSend
+
+s1 beginAccept: [callback]
+s1 endAccept -> returns the actual socket
 *)

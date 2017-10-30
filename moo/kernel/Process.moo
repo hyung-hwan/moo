@@ -52,9 +52,11 @@ class Semaphore(Object)
 {
 	var waiting_head  := nil,
 	    waiting_tail  := nil,
-	    count         :=   0,
-	    heapIndex     :=  -1,
-	    fireTimeSec   :=   0,
+	    count         :=   0.
+
+	var(#get,#set) heapIndex := -1.
+
+	var fireTimeSec   :=   0,
 	    fireTimeNsec  :=   0,
 	    ioIndex       :=  -1,
 	    ioHandle      := nil,
@@ -80,16 +82,6 @@ class Semaphore(Object)
 	}
 
 	## ==================================================================
-
-	method heapIndex
-	{
-		^heapIndex
-	}
-
-	method heapIndex: anIndex
-	{
-		heapIndex := anIndex
-	}
 
 	method fireTime
 	{
@@ -221,6 +213,13 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 	method(#primitive) _removeSemaphore: sem.
 	method(#primitive) _wait.
 
+	method addSemaphore: sem
+	{
+		| x |
+		x := self _addSemaphore: sem.
+		if (x isError) { thisProcess primError dump. Exception signal: ('Cannot add a semaphore - ' & thisProcess primError) }.
+		^x
+	}
 	method wait
 	{
 		| r |

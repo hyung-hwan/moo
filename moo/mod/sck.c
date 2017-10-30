@@ -98,15 +98,18 @@ static moo_pfrc_t pf_close_socket (moo_t* moo, moo_ooi_t nargs)
 		if (close(MOO_OOP_TO_SMOOI(sck->handle)) == -1)
 		{
 			MOO_STACK_SETRETTOERROR (moo, nargs, moo_syserr_to_errnum(errno));
-			return MOO_PF_SUCCESS;
 		}
 		else
 		{
 			sck->handle = MOO_SMOOI_TO_OOP(-1);
+			MOO_STACK_SETRETTORCV (moo, nargs);
 		}
 	}
+	else
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EBADHND);
+	}
 
-	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 

@@ -64,6 +64,7 @@ enum moo_errnum_t
 	MOO_EINTR,
 	MOO_EPIPE,
 	MOO_EAGAIN,
+	MOO_EBADHND,
 
 	MOO_ENOAVAIL, /**< data not available*/
 	MOO_EMSGRCV,  /**< mesasge receiver error */

@@ -27,6 +27,7 @@ class MyObject(Object)
 			'interrupted'
 			'pipe error'
 			'resource temporarily unavailable'
+			'bad system handle'
 
 			'data too large'
 			'message receiver error'
