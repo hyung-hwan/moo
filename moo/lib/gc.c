@@ -76,6 +76,7 @@ struct kernel_class_info_t
 	moo_oow_t  len;
 	moo_ooch_t name[20];
 	int class_flags;
+	int class_num_classvars;
 
 	int class_spec_named_instvars;
 	int class_spec_flags;
@@ -105,6 +106,7 @@ static kernel_class_info_t kernel_classes[] =
 	  0,
 	  0,
 	  0,
+	  0,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _apex) },
 
@@ -113,13 +115,15 @@ static kernel_class_info_t kernel_classes[] =
 	  0,
 	  0,
 	  0,
+	  0,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _undefined_object) },
 
-#define KCI_CLASS 2
+#define KCI_CLASS 2 /* index to the Class entry in this table */
 	{ 5,
 	  { 'C','l','a','s','s' },
 	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  0,
 	  MOO_CLASS_NAMED_INSTVARS,
 	  1,
 	  MOO_OBJ_TYPE_OOP,
@@ -130,11 +134,13 @@ static kernel_class_info_t kernel_classes[] =
 	  0,
 	  0,
 	  0,
+	  0,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _object) },
 
 	{ 6,
 	  { 'S','t','r','i','n','g' },
+	  0,
 	  0,
 	  0,
 	  MOO_CLASS_SPEC_FLAG_INDEXED,
@@ -145,12 +151,14 @@ static kernel_class_info_t kernel_classes[] =
 	  { 'S','y','m','b','o','l' },   
 	  MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
 	  0,
+	  0,
 	  MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE,
 	  MOO_OBJ_TYPE_CHAR,
 	  MOO_OFFSETOF(moo_t, _symbol) },
 
 	{ 5,
 	  { 'A','r','r','a','y' },
+	  0,
 	  0,
 	  0,
 	  MOO_CLASS_SPEC_FLAG_INDEXED,
@@ -161,12 +169,14 @@ static kernel_class_info_t kernel_classes[] =
 	  { 'B','y','t','e','A','r','r','a','y' },
 	  0,
 	  0,
+	  0,
 	  MOO_CLASS_SPEC_FLAG_INDEXED,
 	  MOO_OBJ_TYPE_BYTE,
 	  MOO_OFFSETOF(moo_t, _byte_array) },
 
 	{ 9,
 	  { 'S','y','m','b','o','l','S','e','t' },
+	  0,
 	  0,
 	  MOO_DIC_NAMED_INSTVARS,
 	  0,
@@ -176,6 +186,7 @@ static kernel_class_info_t kernel_classes[] =
 	{ 10,
 	  { 'D','i','c','t','i','o','n','a','r','y' },
 	  0,
+	  0,
 	  MOO_DIC_NAMED_INSTVARS,
 	  0,
 	  MOO_OBJ_TYPE_OOP,
@@ -184,6 +195,7 @@ static kernel_class_info_t kernel_classes[] =
 	{ 9,
 	  { 'N','a','m','e','s','p','a','c','e' },
 	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  0,
 	  MOO_NSDIC_NAMED_INSTVARS,
 	  0,
 	  MOO_OBJ_TYPE_OOP,
@@ -191,6 +203,7 @@ static kernel_class_info_t kernel_classes[] =
 
 	{ 14,
 	  { 'P','o','o','l','D','i','c','t','i','o','n','a','r','y' },
+	  0,
 	  0,
 	  MOO_DIC_NAMED_INSTVARS,
 	  0,
@@ -200,6 +213,7 @@ static kernel_class_info_t kernel_classes[] =
 	{ 16,
 	  { 'M','e','t','h','o','d','D','i','c','t','i','o','n','a','r','y' },
 	  0,
+	  0,
 	  MOO_DIC_NAMED_INSTVARS,
 	  0,
 	  MOO_OBJ_TYPE_OOP,
@@ -207,6 +221,7 @@ static kernel_class_info_t kernel_classes[] =
 
 	{ 14,
 	  { 'C','o','m','p','i','l','e','d','M','e','t','h','o','d' },
+	  0,
 	  0,
 	  MOO_METHOD_NAMED_INSTVARS,
 	  MOO_CLASS_SPEC_FLAG_INDEXED,
@@ -217,6 +232,7 @@ static kernel_class_info_t kernel_classes[] =
 	{ 11,
 	  { 'A','s','s','o','c','i','a','t','i','o','n' },
 	  0,
+	  0,
 	  MOO_ASSOCIATION_NAMED_INSTVARS,
 	  0,
 	  MOO_OBJ_TYPE_OOP,
@@ -225,6 +241,7 @@ static kernel_class_info_t kernel_classes[] =
 	{ 13,
 	  { 'M','e','t','h','o','d','C','o','n','t','e','x','t' },
 	  MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  0,
 	  MOO_CONTEXT_NAMED_INSTVARS,
 	  MOO_CLASS_SPEC_FLAG_INDEXED,
 	  MOO_OBJ_TYPE_OOP,
@@ -233,6 +250,7 @@ static kernel_class_info_t kernel_classes[] =
 	{ 12,
 	  { 'B','l','o','c','k','C','o','n','t','e','x','t' },
 	  MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  0,
 	  MOO_CONTEXT_NAMED_INSTVARS,
 	  MOO_CLASS_SPEC_FLAG_INDEXED,
 	  MOO_OBJ_TYPE_OOP,
@@ -241,6 +259,7 @@ static kernel_class_info_t kernel_classes[] =
 	{ 7,
 	  { 'P','r','o','c','e','s','s' },
 	  MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  0,
 	  MOO_PROCESS_NAMED_INSTVARS,
 	  MOO_CLASS_SPEC_FLAG_INDEXED,
 	  MOO_OBJ_TYPE_OOP,
@@ -248,6 +267,7 @@ static kernel_class_info_t kernel_classes[] =
 
 	{ 9,
 	  { 'S','e','m','a','p','h','o','r','e' },
+	  0,
 	  0,
 	  MOO_SEMAPHORE_NAMED_INSTVARS,
 	  0,
@@ -257,6 +277,7 @@ static kernel_class_info_t kernel_classes[] =
 	{ 14,
 	  { 'S','e','m','a','p','h','o','r','e','G','r','o','u','p' },
 	  0,
+	  0,
 	  MOO_SEMAPHORE_GROUP_NAMED_INSTVARS,
 	  0,
 	  MOO_OBJ_TYPE_OOP,
@@ -264,15 +285,17 @@ static kernel_class_info_t kernel_classes[] =
 
 	{ 16,
 	  { 'P','r','o','c','e','s','s','S','c','h','e','d','u','l','e','r' },
-	   MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
-	   MOO_PROCESS_SCHEDULER_NAMED_INSTVARS,
-	   0,
-	   MOO_OBJ_TYPE_OOP,
-	   MOO_OFFSETOF(moo_t, _process_scheduler) },
+	  MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  0,
+	  MOO_PROCESS_SCHEDULER_NAMED_INSTVARS,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _process_scheduler) },
 
 	{ 5,
 	  { 'E','r','r','o','r' },
 	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  0,
 	  0,
 	  0,
 	  MOO_OBJ_TYPE_OOP,
@@ -283,11 +306,13 @@ static kernel_class_info_t kernel_classes[] =
 	  0,
 	  0,
 	  0,
+	  0,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _true_class) },
 
 	{ 5,
 	  { 'F','a','l','s','e' },
+	  0,
 	  0,
 	  0,
 	  0,
@@ -302,12 +327,14 @@ static kernel_class_info_t kernel_classes[] =
 	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
 	  0,
 	  0,
+	  0,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _character) },
 
 	{ 12,
 	  { 'S','m','a','l','l','I','n','t','e','g','e','r' },
 	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  0,
 	  0,
 	  0,
 	  MOO_OBJ_TYPE_OOP,
@@ -317,12 +344,14 @@ static kernel_class_info_t kernel_classes[] =
 	  { 'L','a','r','g','e','P','o','s','i','t','i','v','e','I','n','t','e','g','e','r' },
 	  0,
 	  0,
+	  0,
 	  MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE,
 	  MOO_OBJ_TYPE_LIWORD,
 	  MOO_OFFSETOF(moo_t, _large_positive_integer) },
 
 	{ 20,
 	  { 'L','a','r','g','e','N','e','g','a','t','i','v','e','I','n','t','e','g','e','r' },
+	  0,
 	  0,
 	  0,
 	  MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE,
@@ -334,12 +363,14 @@ static kernel_class_info_t kernel_classes[] =
 	  0,
 	  0,
 	  0,
+	  0,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _small_pointer) },
 
 	{ 6,
 	  { 'S','y','s','t','e','m' },
 	  0,
+	  1, /* asyncsg */
 	  0,
 	  0,
 	  MOO_OBJ_TYPE_OOP,
@@ -386,7 +417,8 @@ static int ignite_1 (moo_t* moo)
 	 * which are actually class variables.
 	 * -------------------------------------------------------------- */
 	moo->_class = alloc_kernel_class (
-		moo, kernel_classes[KCI_CLASS].class_flags, 0, 
+		moo, kernel_classes[KCI_CLASS].class_flags, 
+		kernel_classes[KCI_CLASS].class_num_classvars, 
 		MOO_CLASS_SPEC_MAKE (kernel_classes[KCI_CLASS].class_spec_named_instvars,
 		                     kernel_classes[KCI_CLASS].class_spec_flags,
 		                     kernel_classes[KCI_CLASS].class_spec_indexed_type));
@@ -402,7 +434,8 @@ static int ignite_1 (moo_t* moo)
 		if (i == KCI_CLASS) continue; /* skip Class as it's created above */
 
 		tmp = alloc_kernel_class (
-			moo, kernel_classes[i].class_flags, 0,
+			moo, kernel_classes[i].class_flags,
+			kernel_classes[i].class_num_classvars, 
 			MOO_CLASS_SPEC_MAKE (kernel_classes[i].class_spec_named_instvars,
 			                     kernel_classes[i].class_spec_flags,
 			                     kernel_classes[i].class_spec_indexed_type));

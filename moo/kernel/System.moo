@@ -10,9 +10,27 @@
 
 class System(Apex)
 {
+	var(#class) asyncsg.
+
+	method(#class) addAsyncSemaphore: sem
+	{
+		^self.asyncsg addSemaphore: sem
+	}
+
+	method(#class) removeAsyncSemaphore: sem
+	{
+		^self.asyncsg removeSemaphore: sem
+	}
+	method(#class) handleAsyncEvent
+	{
+		^self.asyncsg wait.
+	}
+
 	method(#class) startup(class_name, method_name)
 	{
 		| class ret |
+
+		self.asyncsg := SemaphoreGroup new.
 
 		class := System at: class_name.
 		if (class isError)
@@ -103,7 +121,7 @@ extend System
 	##   System logNl: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'.
 	##
 	method(#class,#variadic,#primitive) log(level,msg1).
-	
+
 (*
 TODO: how to pass all variadic arguments to another variadic methods???
 	method(#class,#variadic) logInfo (msg1)

@@ -889,7 +889,13 @@ static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore
 	/* link the suspended process to the semaphore group's process list */
 	chain_into_semaphore (moo, proc, (moo_oop_semaphore_t)semgrp); 
 	MOO_ASSERT (moo, semgrp->waiting.last == proc);
-	/*if (MOO_OOP_TO_SMOOI(semgrp->io_index) >= 0) moo->semgrp_io_wait_count++;*/
+
+	if (MOO_OOP_TO_SMOOI(semgrp->sem_io_count) >= 0) 
+	{
+		/* there might be more than 1 IO semaphores in the group
+		 * but i increment moo->sem_io_wait_count by 1 only */
+		moo->sem_io_wait_count++; 
+	}
 
 	/* the current process will get suspended after the caller (mostly a 
 	 * a primitive function handler) is over as it's added to a suspened
@@ -1092,6 +1098,17 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 		sem->io_index = MOO_SMOOI_TO_OOP(-1);
 		moo->sem_io_count--;
 	}
+	else
+	{
+		/* update the number of IO semaphores in a group if necessary */
+		if ((moo_oop_t)sem->group != moo->_nil)
+		{
+			moo_ooi_t count;
+			count = MOO_OOP_TO_SMOOI(sem->group->sem_io_count);
+			count++;
+			sem->group->sem_io_count = MOO_SMOOI_TO_OOP(count);
+		}
+	}
 
 	return n;
 }
@@ -1121,8 +1138,16 @@ static int delete_from_sem_io (moo_t* moo, moo_ooi_t index)
 
 	MOO_DEBUG2 (moo, "Deleted IO semaphore at index %zd on handle %zd\n", index, MOO_OOP_TO_SMOOI(sem->io_handle));
 	sem->io_index = MOO_SMOOI_TO_OOP(-1);
-
 	moo->sem_io_count--;
+	if ((moo_oop_t)sem->group != moo->_nil)
+	{
+		moo_ooi_t count;
+		count = MOO_OOP_TO_SMOOI(sem->group->sem_io_count);
+		MOO_ASSERT (moo, count > 0);
+		count--;
+		sem->group->sem_io_count = MOO_SMOOI_TO_OOP(count);
+	}
+
 	if (/*moo->sem_io_count > 0 &&*/ index != moo->sem_io_count)
 	{
 		moo_oop_semaphore_t lastsem;
@@ -2557,6 +2582,15 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
 		sems_idx = MOO_OOP_TO_SMOOI(sem->count) > 0? MOO_SEMAPHORE_GROUP_SEMS_SIG: MOO_SEMAPHORE_GROUP_SEMS_UNSIG;
 		MOO_APPEND_TO_OOP_LIST (moo, &rcv->sems[sems_idx], moo_oop_semaphore_t, sem, grm);
 		sem->group = rcv;
+
+		if (MOO_OOP_TO_SMOOI(sem->io_index) >=0) 
+		{
+			moo_ooi_t count;
+			count = MOO_OOP_TO_SMOOI(rcv->sem_io_count);
+			count++;
+			rcv->sem_io_count = MOO_SMOOI_TO_OOP(count);
+		}
+
 		MOO_STACK_SETRETTORCV (moo, nargs);
 	}
 	else if (sem->group == rcv)
@@ -2592,6 +2626,14 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 		sem->grm.prev = (moo_oop_semaphore_t)moo->_nil;
 		sem->grm.next = (moo_oop_semaphore_t)moo->_nil;
 		sem->group = (moo_oop_semaphore_group_t)moo->_nil;
+
+		if (MOO_OOP_TO_SMOOI(sem->io_index) >=0) 
+		{
+			moo_ooi_t count;
+			count = MOO_OOP_TO_SMOOI(rcv->sem_io_count);
+			count--;
+			rcv->sem_io_count = MOO_SMOOI_TO_OOP(count);
+		}
 
 		MOO_STACK_SETRETTORCV (moo, nargs);
 	}

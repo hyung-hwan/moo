@@ -945,7 +945,7 @@ static int skip_comment (moo_t* moo)
 				GET_CHAR_TO (moo, c);
 				if (c == MOO_UCI_EOF) goto unterminated;
 
-				if (c == '*') goto check_rparen;
+				if (c == '*') goto check_rparen; /* got another * after * */
 				if (c == ')')
 				{
 					GET_CHAR (moo); /* keep the first meaningful character in lxc */

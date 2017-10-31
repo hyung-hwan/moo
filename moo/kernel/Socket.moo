@@ -52,29 +52,33 @@ extend Socket
 
 	method asyncConnect: connectBlock
 	{
-		| s1 s2 sg |
+		| s1 s2 sg sa |
+
 		s1 := Semaphore new.
 		s2 := Semaphore new.
 
-		s1 signalAction: [:sem | Processor unsignal: s1. connectBlock value: true].
-		s2 signalAction: [:sem | Processor unsignal: s2. connectBlock value: false].
+		sa := [:sem | 
+			Processor unsignal: s1.
+			Processor unsignal: s2.
+			System removeAsyncSemaphore: s1.
+			System removeAsyncSemaphore: s2.
+			connectBlock value: (sem == s1)
+		].
 
+		s1 signalAction: sa.
+		s2 signalAction: sa.
+
+## TODO: unsignal s1 s2, remove them from System when exception occurs.
 		Processor signal: s1 onOutput: self.handle.
 		Processor signal: s2 after: 10.
 
-		sg := SemaphoreGroup new.
-		sg addSemaphore: s1.
-		sg addSemaphore: s2.
-sg addSemaphore: s1.
-sg addSemaphore: 10.
-sg addSemaphore: s1.
+		System addAsyncSemaphore: s1.
+		System addAsyncSemaphore: s2.
 
 		if (self _connect(1, 2, 3) isError)
 		{
 			Exception signal: 'Cannot connect to 1,2,3'.
 		}.
-
-		sg wait.
 	}
 
 	method asyncRead: readBlock
