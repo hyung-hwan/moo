@@ -10,18 +10,42 @@
 
 class MyObject(Object)
 {
-	var(#class) t := 20.
+	var(#class) t1 := 20.
 
 	method(#class) test_terminate
 	{
 		| a s |
 		s := Semaphore new.
-		a := [ self.t := self.t * 9. 
+		a := [ self.t1 := self.t1 * 9. 
 		       s signal.
 		       Processor activeProcess terminate.
-		       self.t := self.t + 20 ] fork.
+		       self.t1 := self.t1 + 20 ] fork.
 		s wait.	
-		^self.t
+		^self.t1
+	}
+
+	method(#class) test_sg
+	{
+		| sg s1 s2 s3 |
+
+		s1 := Semaphore new.
+		s2 := Semaphore new.
+		s3 := Semaphore new.
+
+		sg := SemaphoreGroup new.
+		sg addSemaphore: s1.
+		sg addSemaphore: s2.
+		sg addSemaphore: s3.
+
+		Processor signal: s1 onInput: 0.
+		Processor signal: s2 onInput: 0. ## this should raise an exception.
+		Processor signal: s3 onInput: 0.
+
+		[ sg wait. ] fork.
+		[ sg wait. ] fork.
+		[ sg wait. ] fork.
+
+		sg wait.
 	}
 
 	method(#class) main
@@ -30,7 +54,8 @@ class MyObject(Object)
 
 		tc := %(
 			## 0 - 4
-			[self test_terminate == 180]
+			[self test_terminate == 180],
+			[self test_sg == nil]
 		).
 
 		limit := tc size.
