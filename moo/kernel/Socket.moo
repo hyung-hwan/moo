@@ -111,7 +111,6 @@ sg addSemaphore: s1.
 (****
 class MyObject(Object)
 {
-	
 	method(#class) main
 	{
 		| s |
