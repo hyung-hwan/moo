@@ -1,3 +1,5 @@
+#include 'Moo.moo'.
+
 class Socket(Object) from 'sck'
 {
 	var handle := -1.
@@ -112,7 +114,6 @@ extend Socket
 }
 
 
-(****
 class MyObject(Object)
 {
 	method(#class) main
@@ -128,11 +129,14 @@ class MyObject(Object)
 				'CONNECTED NOW.............' dump.
 			].
 
+			while (true)
+			{
+				System handleAsyncEvent.
+			}.
 			s close dump.
 		] on: Exception do: [:ex | ('Exception - '  & ex messageText) dump ].
 
 		'----- END OF MAIN ------' dump.
 	}
 }
-*****)
 

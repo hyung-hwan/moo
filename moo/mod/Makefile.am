@@ -25,6 +25,8 @@ LIBADD_COMMON =
 
 noinst_LTLIBRARIES =
 
+noinst_LTLIBRARIES += libmoo-console.la
+
 if ENABLE_MOD_FFI
 noinst_LTLIBRARIES += libmoo-ffi.la
 endif
