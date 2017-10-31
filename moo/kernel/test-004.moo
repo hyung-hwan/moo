@@ -1,3 +1,6 @@
+##
+## TEST CASES for basic methods
+##
 
 #include 'Moo.moo'.
 
@@ -5,54 +8,37 @@
 ## MAIN
 #################################################################
 
-## TODO: use #define to define a class or use #class to define a class.
-##       use #extend to extend a class
-##       using #class for both feels confusing.
-
-extend Apex
+class MyObject(Object)
 {
+	var(#class) t := 20.
 
-}
-
-extend SmallInteger
-{
-	method getTrue: anInteger
+	method(#class) test_terminate
 	{
-		^anInteger + 9999.
-	}
-
-	method inc
-	{
-		^self + 1.
-	}
-}
-
-class TestObject(Object)
-{
-	var(#class) Q, R.
-	var(#classinst) a1, a2.
-}
-
-
-class MyObject(TestObject)
-{
-	var(#classinst) t1, t2.
-
-	method(#class) xxxx
-	{
-		| g1 g2 |
-		t1 dump.
-		t2 := [ g1 := 50. g2 := 100. ^g1 + g2 ].
-		(t1 < 100) ifFalse: [ ^self ].
-		t1 := t1 + 1. 
-		^self xxxx.
+		| a s |
+		s := Semaphore new.
+		a := [ self.t := self.t * 9. 
+		       s signal.
+		       Processor activeProcess terminate.
+		       self.t := self.t + 20 ] fork.
+		s wait.	
+		^self.t
 	}
 
 	method(#class) main
 	{
-		'START OF MAIN' dump.
-		Processor activeProcess terminate.
-		'EDN OF MAIN' dump.
-	}
+		| tc limit |
 
+		tc := %(
+			## 0 - 4
+			[self test_terminate == 180]
+		).
+
+		limit := tc size.
+
+		0 priorTo: limit by: 1 do: [ :idx |
+			| tb |
+			tb := tc at: idx.
+			System log(System.Log.INFO, idx asString, (if (tb value) { ' PASS' } else { ' FAIL' }), S'\n').
+		]
+	}
 }
