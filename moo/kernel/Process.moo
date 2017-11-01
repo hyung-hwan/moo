@@ -234,7 +234,7 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 	{
 		| x |
 		x := self _wait.
-		if (x isError) { thisProcess primError dump. Exception signal: ('Cannot remove a semaphore - ' & thisProcess primError) }.
+		if (x isError) { thisProcess primError dump. Exception signal: ('Cannot wait on a semaphore - ' & thisProcess primError) }.
 		if (x signalAction notNil) { x signalAction value: x }.
 		^x
 	}
@@ -263,7 +263,6 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 		elsif (r signalAction notNil) { r signalAction value: r }.
 
 		## nullify the membership
-		##s _group: nil. 
 		self removeSemaphore: s.
 
 		## cancel the notification arrangement in case it didn't time out.
