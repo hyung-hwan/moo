@@ -744,6 +744,7 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 			MOO_ASSERT (moo, MOO_OOP_TO_SMOOI(proc->sp) < (moo_ooi_t)(MOO_OBJ_GET_SIZE(proc) - MOO_PROCESS_NAMED_INSTVARS));
 			proc->slot[MOO_OOP_TO_SMOOI(proc->sp)] = (moo_oop_t)sem;
 
+			if (MOO_OOP_TO_SMOOI(sem->io_index) >= 0) moo->sem_io_wait_count--;
 			return proc;
 		}
 	}
@@ -5052,7 +5053,6 @@ switch_to_next:
 
 static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_value)
 {
-
 #if 0
 	/* put the instruction pointer back to the return
 	 * instruction (RETURN_RECEIVER or RETURN_RECEIVER)

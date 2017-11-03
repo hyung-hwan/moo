@@ -20,7 +20,7 @@ class MyObject(Object)
 		       s signal.
 		       Processor activeProcess terminate.
 		       self.t1 := self.t1 + 20 ] fork.
-		s wait.	
+		s wait.
 		^self.t1
 	}
 
@@ -38,14 +38,15 @@ class MyObject(Object)
 		sg addSemaphore: s3.
 
 		Processor signal: s1 onInput: 0.
-		Processor signal: s2 onInput: 0. ## this should raise an exception.
-		Processor signal: s3 onInput: 0.
+		##Processor signal: s2 onInput: 0. ## this should raise an exception.
+		##Processor signal: s3 onInput: 0.
 
 		[ sg wait. ] fork.
 		[ sg wait. ] fork.
 		[ sg wait. ] fork.
 
 		sg wait.
+sg removeSemaphore: s1.
 	}
 
 	method(#class) main
