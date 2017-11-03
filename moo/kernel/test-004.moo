@@ -33,6 +33,7 @@ class MyObject(Object)
 		s3 := Semaphore new.
 
 		sg := SemaphoreGroup new.
+
 		sg addSemaphore: s1.
 		sg addSemaphore: s2.
 		sg addSemaphore: s3.

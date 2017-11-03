@@ -218,7 +218,7 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 	{
 		| x |
 		x := self _addSemaphore: sem.
-		if (x isError) { thisProcess primError dump. Exception signal: ('Cannot add a semaphore - ' & thisProcess primError) }.
+		if (x isError) { Exception signal: ('Cannot add a semaphore - ' & x asString) }.
 		^x
 	}
 
@@ -226,7 +226,7 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 	{
 		| x |
 		x := self _removeSemaphore: sem.
-		if (x isError) { thisProcess primError dump. Exception signal: ('Cannot remove a semaphore - ' & thisProcess primError) }.
+		if (x isError) { Exception signal: ('Cannot remove a semaphore - ' & x asString) }.
 		^x
 	}
 
@@ -234,7 +234,7 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 	{
 		| x |
 		x := self _wait.
-		if (x isError) { thisProcess primError dump. Exception signal: ('Cannot wait on a semaphore - ' & thisProcess primError) }.
+		if (x isError) { Exception signal: ('Cannot wait on a semaphore - ' & x asString) }.
 		if (x signalAction notNil) { x signalAction value: x }.
 		^x
 	}

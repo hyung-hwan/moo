@@ -816,7 +816,7 @@ static MOO_INLINE void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	count = MOO_OOP_TO_SMOOI(sem->count);
 	if (count > 0)
 	{
-		/* it's already signalled */
+		/* it's already signaled */
 		count--;
 		sem->count = MOO_SMOOI_TO_OOP(count);
 
@@ -881,7 +881,7 @@ static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore
 	}
 
 	/* no semaphores have been signaled. suspend the current process
-	 * until the at least one of them is signaled */
+	 * until at least one of them is signaled */
 	proc = moo->processor->active;
 
 	/* suspend the active process */
@@ -2622,6 +2622,25 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 	if (sem->group == rcv)
 	{
 		int sems_idx;
+
+		if ((moo_oop_t)rcv->waiting.first != moo->_nil)
+		{
+			/* there is a process waiting on this semaphore group.
+			 * i don't allow a semaphore to be removed from the group.
+			 * i want to dodge potential problems arising when removal is allowed.
+			 * 
+			 * for instance, consider this psuedo code.
+			 *   sg addSemaphore: s
+			 *   [ sg wait ] fork.
+			 *   [ sg wait ] fork.
+			 *   [ sg wait ] fork.
+			 *   sg removeSemaphore: s.
+			 * 
+			 */
+			MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EPERM);
+			goto done;
+		}
+
 		sems_idx = MOO_OOP_TO_SMOOI(sem->count) > 0? MOO_SEMAPHORE_GROUP_SEMS_SIG: MOO_SEMAPHORE_GROUP_SEMS_UNSIG;
 		MOO_DELETE_FROM_OOP_LIST (moo, &rcv->sems[sems_idx], sem, grm);
 		sem->grm.prev = (moo_oop_semaphore_t)moo->_nil;
@@ -2632,6 +2651,7 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 		{
 			moo_ooi_t count;
 			count = MOO_OOP_TO_SMOOI(rcv->sem_io_count);
+			MOO_ASSERT (moo, count > 0);
 			count--;
 			rcv->sem_io_count = MOO_SMOOI_TO_OOP(count);
 		}
@@ -2644,6 +2664,7 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EPERM);
 	}
 
+done:
 	return MOO_PF_SUCCESS;
 }
 
@@ -2666,7 +2687,7 @@ static moo_pfrc_t pf_semaphore_group_wait (moo_t* moo, moo_ooi_t nargs)
 	sem = await_semaphore_group (moo, (moo_oop_semaphore_group_t)rcv);
 	if (sem != moo->_nil)
 	{
-		/* there was a singaled semaphore. the active process won't get
+		/* there was a signaled semaphore. the active process won't get
 		 * suspended. change the return value of the current process
 		 * forcibly to the signaled semaphore */
 		MOO_STACK_SETTOP (moo, sem);
@@ -4957,7 +4978,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 		if (moo->sem_gcfin_sigreq)
 		{
 		signal_sem_gcfin:
-			MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Signalled GCFIN semaphore\n");
+			MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Signaled GCFIN semaphore\n");
 			proc = signal_semaphore (moo, moo->sem_gcfin);
 
 			if (moo->processor->active == moo->nil_process && (moo_oop_t)proc != moo->_nil)
@@ -4998,7 +5019,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				 */
 
 				MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, 
-					"Signalled GCFIN semaphore without gcfin signal request - total - %zd runnable/running - %zd suspended - %zd\n",
+					"Signaled GCFIN semaphore without gcfin signal request - total - %zd runnable/running - %zd suspended - %zd\n",
 					MOO_OOP_TO_SMOOI(moo->processor->total_count), MOO_OOP_TO_SMOOI(moo->processor->runnable.count), MOO_OOP_TO_SMOOI(moo->processor->suspended.count));
 				proc = signal_semaphore (moo, moo->sem_gcfin);
 				if ((moo_oop_t)proc != moo->_nil) 

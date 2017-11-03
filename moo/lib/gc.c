@@ -28,7 +28,7 @@
 
 
 /*
- *    Stix .....................
+ *    Apex......................
  *    ^ ^ ^                    :   .......
  *    | | |                    v   v     :
  *    | | +------------------- Class .....
@@ -41,7 +41,7 @@
  *
  * The class hierarchy is roughly as follows:
  * 
- *   Stix
+ *   Apex
  *      Class
  *      NilObject
  *      Object
@@ -66,8 +66,7 @@
  *                     LargePositiveInteger
  *                     LargeNegativeInteger
  * 
- * Stix has no instance variables.
- * Stix has 1 class variable: Sysdic
+ * Apex has no instance variables.
  *  
  */
 
