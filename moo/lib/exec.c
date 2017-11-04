@@ -5074,6 +5074,14 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 		/* no more waiting semaphore and no more process */
 		MOO_ASSERT (moo, moo->processor->runnable.count = MOO_SMOOI_TO_OOP(0));
 		MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "No more runnable process\n");
+		if (MOO_OOP_TO_SMOOI(moo->processor->suspended.count) > 0)
+		{
+			/* there exist suspended processes while no processes are runnable.
+			 * most likely, the running program contains process/semaphore related bugs */
+			MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, 
+				"%zd suspended process(es) found - check your program\n",
+				MOO_OOP_TO_SMOOI(moo->processor->suspended.count));
+		}
 		return 0;
 	}
 
