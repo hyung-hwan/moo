@@ -2584,12 +2584,21 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
 		MOO_APPEND_TO_OOP_LIST (moo, &rcv->sems[sems_idx], moo_oop_semaphore_t, sem, grm);
 		sem->group = rcv;
 
-		if (MOO_OOP_TO_SMOOI(sem->io_index) >=0) 
+		if (MOO_OOP_TO_SMOOI(sem->io_index) >= 0) 
 		{
 			moo_ooi_t count;
 			count = MOO_OOP_TO_SMOOI(rcv->sem_io_count);
+			MOO_ASSERT (moo, count >= 0);
 			count++;
 			rcv->sem_io_count = MOO_SMOOI_TO_OOP(count);
+
+			if (count == 1)
+			{
+				moo_oop_process_t wp;
+				/* TODO: add sem_wait_count to process. no traversal... */
+				for (wp = rcv->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
+					moo->sem_io_wait_count++;
+			}
 		}
 
 		MOO_STACK_SETRETTORCV (moo, nargs);
@@ -2623,6 +2632,7 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 	{
 		int sems_idx;
 
+#if 0
 		if ((moo_oop_t)rcv->waiting.first != moo->_nil)
 		{
 			/* there is a process waiting on this semaphore group.
@@ -2640,6 +2650,7 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 			MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EPERM);
 			goto done;
 		}
+#endif
 
 		sems_idx = MOO_OOP_TO_SMOOI(sem->count) > 0? MOO_SEMAPHORE_GROUP_SEMS_SIG: MOO_SEMAPHORE_GROUP_SEMS_UNSIG;
 		MOO_DELETE_FROM_OOP_LIST (moo, &rcv->sems[sems_idx], sem, grm);
@@ -2654,6 +2665,14 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 			MOO_ASSERT (moo, count > 0);
 			count--;
 			rcv->sem_io_count = MOO_SMOOI_TO_OOP(count);
+
+			if (count == 0)
+			{
+				moo_oop_process_t wp;
+				/* TODO: add sem_wait_count to process. no traversal... */
+				for (wp = rcv->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
+					moo->sem_io_wait_count--;
+			}
 		}
 
 		MOO_STACK_SETRETTORCV (moo, nargs);
