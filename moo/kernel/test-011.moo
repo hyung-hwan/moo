@@ -221,7 +221,7 @@ class MyObject(TestObject)
 		##	on: Exception do: [:ex | ex messageText dump].
 
 		'SLEEPING FOR 10 seconds ....' dump.
-		Processor sleepFor: 10.
+		System sleepForSecs: 10.
 
 		'>>>>> END OF MAIN' dump.
 	}

@@ -38,9 +38,9 @@ class MyObject(Object)
 		sg addSemaphore: s2.
 		sg addSemaphore: s3.
 
-		Processor signal: s1 onInput: 0.
-		##Processor signal: s2 onInput: 0. ## this should raise an exception.
-		##Processor signal: s3 onInput: 0.
+		System signal: s1 onInput: 0.
+		##System signal: s2 onInput: 0. ## this should raise an exception.
+		##System signal: s3 onInput: 0.
 
 		[ sg wait. ] fork.
 		[ sg wait. ] fork.

@@ -61,7 +61,7 @@ class MyObject(TestObject)
 	{
 		| s3 |
 		s3 := Semaphore new.
-		Processor signal: s3 after: 1 and: 50.
+		System signal: s3 afterSecs: 1 nanosecs: 50.
 		s3 wait.
 		'END OF MAIN' dump.
 	}
@@ -182,18 +182,18 @@ class MyObject(TestObject)
 		s3 := Semaphore new.
 
 		t1 := [ 
-			10 timesRepeat: ['BLOCK #1' dump. Processor sleepFor: 1.].
+			10 timesRepeat: ['BLOCK #1' dump. System sleepForSecs: 1.].
 			s1 signal
 		] newProcess.
 		t2 := [ 
-			5 timesRepeat: ['BLOCK #2' dump. "Processor sleepFor: 1." ].
+			5 timesRepeat: ['BLOCK #2' dump. "System sleepForSecs: 1." ].
 			'SIGNALLING S2...' dump. s2 signal. 
 		] newProcess.
 
 		t1 resume.
 		t2 resume.
 
-		Processor signal: s3 after: 10.
+		System signal: s3 after: 10.
 
 		'STARTED t1 and t2' dump.
 
@@ -204,7 +204,7 @@ class MyObject(TestObject)
 		
 
 		'WAITING ON S3...' dump.
-		##Processor unsignal: s3.
+		##System unsignal: s3.
 		s3 wait.
 
 		10 timesRepeat: ['WAITED t1 and t2' dump].

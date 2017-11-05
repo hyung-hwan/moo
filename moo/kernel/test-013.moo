@@ -80,7 +80,7 @@ class MyObject(TestObject)
 		v1 := [
 			[    
 				[ 
-					##1 to: 20000 by: 1 do: [:i | System logNl: i asString. "Processor sleepFor: 1." ]  
+					##1 to: 20000 by: 1 do: [:i | System logNl: i asString. "System sleepForSecs: 1." ]  
 					Processor activeProcess terminate.
 				] ensure: [ System logNl: '<<<PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP>>>' ].
 
@@ -89,7 +89,7 @@ class MyObject(TestObject)
 
 		System logNl: 'RESUMING v1'.
 		v1 resume.
-		Processor sleepFor: 1.
+		System sleepForSecs: 1.
 		v1 terminate.
 
  		##[    

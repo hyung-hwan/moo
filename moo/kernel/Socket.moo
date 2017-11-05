@@ -60,8 +60,8 @@ extend Socket
 		s2 := Semaphore new.
 
 		sa := [:sem | 
-			Processor unsignal: s1.
-			Processor unsignal: s2.
+			System unsignal: s1.
+			System unsignal: s2.
 			System removeAsyncSemaphore: s1.
 			System removeAsyncSemaphore: s2.
 			connectBlock value: (sem == s1)
@@ -71,8 +71,8 @@ extend Socket
 		s2 signalAction: sa.
 
 ## TODO: unsignal s1 s2, remove them from System when exception occurs.
-		Processor signal: s1 onOutput: self.handle.
-		Processor signal: s2 after: 10.
+		System signal: s1 onOutput: self.handle.
+		System signal: s2 after: 10.
 
 		System addAsyncSemaphore: s1.
 		System addAsyncSemaphore: s2.
@@ -92,8 +92,8 @@ extend Socket
 		s1 signalAction: [:sem | readBlock value: true].
 		s2 signalAction: [:sem | readBlock value: false].
 
-		Processor signal: s1 onInput: self.handle.
-		Processor signal: s2 after: 10.
+		System signal: s1 onInput: self.handle.
+		System signal: s2 after: 10.
 	}
 
 (*
@@ -106,8 +106,8 @@ extend Socket
 		s1 signalAction: [:sem | writeBlock value: true].
 		s2 signalAction: [:sem | writeBlock value: false].
 
-		Processor signal: s1 onOutput: self.handle.
-		Processor signal: s2 after: 10.
+		System signal: s1 onOutput: self.handle.
+		System signal: s2 after: 10.
 	}
 *)
 

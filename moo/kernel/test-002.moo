@@ -11,7 +11,7 @@ class MyObject(Object)
 
 	method(#class) proc1
 	{
-		[ Processor sleepFor: 1. a := a + 100 ] newProcess resume.
+		[ System sleepForSecs: 1. a := a + 100 ] newProcess resume.
 		^a
 	}
 
@@ -88,7 +88,7 @@ class MyObject(Object)
 		| s |
 		s := Semaphore new.
 		s signalAction: [:sem | 'SIGNAL ACTION............' dump. ].
-		[ Processor sleepFor: 1. s signal ] fork.
+		[ System sleepForSecs: 1. s signal ] fork.
 		s wait.
 	}
 
@@ -110,7 +110,7 @@ class MyObject(Object)
 		tc := %(
 			## 0 - 4
 			[ self proc1 == 100 ], 
-			[ Processor sleepFor: 2.  self proc1 == 200 ],
+			[ System sleepForSecs: 2.  self proc1 == 200 ],
 			[ self test_semaphore_heap == true ],
 			[ self test_mutex = #(2000 6000) ],
 			####[ self test_sem_sig ],

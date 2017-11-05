@@ -2735,7 +2735,10 @@ static moo_pfrc_t pf_processor_schedule (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_processor_add_gcfin_semaphore (moo_t* moo, moo_ooi_t nargs)
+
+/* ------------------------------------------------------------------ */
+
+static moo_pfrc_t pf_system_add_gcfin_semaphore (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_semaphore_t sem;
 
@@ -2752,33 +2755,24 @@ static moo_pfrc_t pf_processor_add_gcfin_semaphore (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_processor_add_timed_semaphore (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_system_add_timed_semaphore (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t sec, nsec;
 	moo_oop_semaphore_t sem;
 	moo_ntime_t now, ft;
 
-	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->processor);*/
+	/* don't care about the receiver much as the receiver is not used at all.
+	 * however, it's inteded to be called from the System class. */
 
 	MOO_ASSERT (moo, nargs >= 2 || nargs <= 3);
 
-	if (nargs == 3) 
-	{
-		nsec = MOO_STACK_GETARG (moo, nargs, 2);
-		if (!MOO_OOP_IS_SMOOI(nsec)) goto einval;
-	}
-	else nsec = MOO_SMOOI_TO_OOP(0);
-
-	sec = MOO_STACK_GETARG(moo, nargs, 1);
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
+	sec = MOO_STACK_GETARG(moo, nargs, 1);
+	nsec = (nargs == 3? MOO_STACK_GETARG(moo, nargs, 2): MOO_SMOOI_TO_OOP(0));
 
-	/* ProcessScheduler>>signal:after: calls this primitive function. */
-	if (MOO_CLASSOF(moo,sem) != moo->_semaphore || !MOO_OOP_IS_SMOOI(sec))
-	{
-	einval:
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
-		return MOO_PF_SUCCESS; 
-	}
+	MOO_PF_CHECK_ARGS(moo, nargs, 
+		moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore) &&
+		MOO_OOP_IS_SMOOI(sec) && MOO_OOP_IS_SMOOI(nsec));
 
 	if (MOO_OOP_IS_SMOOI(sem->heap_index) && 
 	    sem->heap_index != MOO_SMOOI_TO_OOP(-1))
@@ -2818,7 +2812,7 @@ static moo_pfrc_t pf_processor_add_timed_semaphore (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t __processor_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_ooi_t mask)
+static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_ooi_t mask)
 {
 	moo_oop_t fd;
 	moo_oop_semaphore_t sem;
@@ -2880,22 +2874,22 @@ static moo_pfrc_t __processor_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_processor_add_input_semaphore (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_system_add_input_semaphore (moo_t* moo, moo_ooi_t nargs)
 {
-	return __processor_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_MASK_INPUT);
+	return __system_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_MASK_INPUT);
 }
 
-static moo_pfrc_t pf_processor_add_output_semaphore (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_system_add_output_semaphore (moo_t* moo, moo_ooi_t nargs)
 {
-	return __processor_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_MASK_OUTPUT);
+	return __system_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_MASK_OUTPUT);
 }
 
-static moo_pfrc_t pf_processor_add_inoutput_semaphore (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_system_add_inoutput_semaphore (moo_t* moo, moo_ooi_t nargs)
 {
-	return __processor_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_MASK_INPUT | MOO_SEMAPHORE_IO_MASK_OUTPUT);
+	return __system_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_MASK_INPUT | MOO_SEMAPHORE_IO_MASK_OUTPUT);
 }
 
-static moo_pfrc_t pf_processor_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 {
 	/* remove a semaphore from processor's signal scheduling */
 
@@ -2945,6 +2939,8 @@ static moo_pfrc_t pf_processor_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
 	return MOO_PF_SUCCESS;
 }
+
+/* ------------------------------------------------------------------ */
 
 static moo_pfrc_t pf_processor_return_to (moo_t* moo, moo_ooi_t nargs)
 {
@@ -4326,12 +4322,6 @@ static pf_t pftab[] =
 	{ "_block_value",                          { pf_block_value,                          0, MA } },
 	{ "_block_new_process",                    { pf_block_new_process,                    0, 1  } },
 
-	{ "_processor_add_gcfin_semaphore",        { pf_processor_add_gcfin_semaphore,        1, 1 } },
-	{ "_processor_add_input_semaphore",        { pf_processor_add_input_semaphore,        2, 2 } },
-	{ "_processor_add_inoutput_semaphore",     { pf_processor_add_inoutput_semaphore,     2, 2 } },
-	{ "_processor_add_output_semaphore",       { pf_processor_add_output_semaphore,       2, 2 } },
-	{ "_processor_add_timed_semaphore",        { pf_processor_add_timed_semaphore,        2, 3 } },
-	{ "_processor_remove_semaphore",           { pf_processor_remove_semaphore,           1, 1 } },
 	{ "_processor_return_to",                  { pf_processor_return_to,                  2, 2 } },
 	{ "_processor_schedule",                   { pf_processor_schedule,                   1, 1 } },
 
@@ -4430,6 +4420,14 @@ static pf_t pftab[] =
 	{ "System__putUint16",                     { pf_system_put_uint16,                    3, 3 } },
 	{ "System__putUint32",                     { pf_system_put_uint32,                    3, 3 } },
 	{ "System__putUint64",                     { pf_system_put_uint64,                    3, 3 } },
+
+	{ "System__signal:afterSecs:",             { pf_system_add_timed_semaphore,           2, 2 } },
+	{ "System__signal:afterSecs:nanosecs:",    { pf_system_add_timed_semaphore,           3, 3 } },
+	{ "System__signal:onInput:",               { pf_system_add_input_semaphore,           2, 2 } },
+	{ "System__signal:onInOutput:",            { pf_system_add_inoutput_semaphore,        2, 2 } },
+	{ "System__signal:onOutput:",              { pf_system_add_output_semaphore,          2, 2 } },
+	{ "System__signalOnGCFin:",                { pf_system_add_gcfin_semaphore,           1, 1 } },
+	{ "System__unsignal:",                     { pf_system_remove_semaphore,              1, 1 } },
 
 	{ "System_collectGarbage",                 { pf_system_collect_garbage,               0, 0 } },
 	{ "System_log",                            { pf_system_log,                           2, MA } }

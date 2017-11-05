@@ -55,7 +55,7 @@ class System(Apex)
 		gc := false.
 		fin_sem := Semaphore new.
 
-		Processor signalOnGCFin: fin_sem.
+		self signalOnGCFin: fin_sem.
 		[
 			while (true)
 			{
@@ -85,18 +85,108 @@ class System(Apex)
 				}.
 
 				##System logNl: '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^gc_waiting....'.
-				##Processor sleepFor: 1. ## TODO: wait on semaphore instead..
+				##System sleepForSecs: 1. ## TODO: wait on semaphore instead..
 				fin_sem wait.
 				##System logNl: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX gc_waitED....'.
 			}
 		] ensure: [
-			Processor unsignal: fin_sem.
+			System unsignal: fin_sem.
 			System logNl: 'End of GC finalization process ' & (thisProcess id) asString.
 		].
 	}
 
 	method(#class,#primitive) _popCollectable.
 	method(#class,#primitive) collectGarbage.
+
+	## =======================================================================================
+
+	method(#class,#primitive) _signal: semaphore afterSecs: secs.
+	method(#class,#primitive) _signal: semaphore afterSecs: secs nanosecs: nanosecs.
+	method(#class,#primitive) _signal: semaphore onInOutput: file.
+	method(#class,#primitive) _signal: semaphore onInput: file.
+	method(#class,#primitive) _signal: semaphore onOutput: file.
+	method(#class,#primitive) _signalOnGCFin: semaphore.
+	method(#class,#primitive) _unsignal: semaphore.
+
+	method(#class) signal: semaphore afterSecs: secs
+	{
+		| x |
+		x := self _signal: semaphore afterSecs: secs.
+		if (x isError) { Exception raise: 'Cannot register a semaphore for signaling - ' & (x asString) }.
+		^x
+	}
+
+	method(#class) signal: semaphore afterSecs: secs nanoSecs: nanosecs
+	{
+		| x |
+		x := self _signal: semaphore afterSecs: secs nanosecs: nanosecs.
+		if (x isError) { Exception raise: 'Cannot register a semaphore for signaling - ' & (x asString) }.
+		^x
+	}
+
+	method(#class) signal: semaphore onInput: file
+	{
+		| x |
+		x := self _signal: semaphore onInput: file.
+		if (x isError) { Exception raise: 'Cannot register a semaphore for signaling - ' & (x asString) }.
+		^x
+	}
+
+	method(#class) signal: semaphore onOutput: file
+	{
+		| x |
+		x := self _signal: semaphore onOutput: file.
+		if (x isError) { Exception raise: 'Cannot register a semaphore for signaling - ' & (x asString) }.
+		^x
+	}
+
+	method(#class) signal: semaphore onInOutput: file
+	{
+		| x |
+		x := self _signal: semaphore onInOutput: file.
+		if (x isError) { Exception raise: 'Cannot register a semaphore for signaling - ' & (x asString) }.
+		^x
+	}
+
+	method(#class) signalOnGCFin: semaphore
+	{
+		| x |
+		x := self _signalOnGCFin: semaphore.
+		if (x isError) { Exception raise: 'Cannot register a semaphore for GC finalization - ' & (x asString) }.
+		^x
+	}
+
+	method(#class) unsignal: semaphore
+	{
+		| x |
+		x := self _unsignal: semaphore.
+		if (x isError) { Exception raise: 'Cannot deregister a semaphore from signaling ' & (x asString) }.
+		^x
+	}
+
+
+	## =======================================================================================
+	method(#class) sleepForSecs: secs
+	{
+		## -----------------------------------------------------
+		## put the calling process to sleep for given seconds.
+		## -----------------------------------------------------
+		| s |
+		s := Semaphore new.
+		self signal: s afterSecs: secs.
+		s wait.
+	}
+
+	method(#class) sleepForSecs: secs nanosecs: nanosecs
+	{
+		## -----------------------------------------------------
+		## put the calling process to sleep for given seconds.
+		## -----------------------------------------------------
+		| s |
+		s := Semaphore new.
+		self signal: s afterSecs: secs nanosecs: nanosecs.
+		s wait.
+	}
 }
 
 pooldic System.Log

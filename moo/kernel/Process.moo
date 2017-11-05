@@ -138,9 +138,9 @@ TODO: how to prohibit wait and signal???
  
  ========= CASE 1 ====================
  sg := SemaphoreGroup with (xxx, yyy, zzz).
- Processor signal: xxx onInput: aaa.
- Processor signal: yyy onInput: bbb.
- Processor signal: zzz onOutput: ccc.
+ System signal: xxx onInput: aaa.
+ System signal: yyy onInput: bbb.
+ System signal: zzz onOutput: ccc.
  
  while (true)
  {
@@ -166,9 +166,9 @@ TODO: how to prohibit wait and signal???
  yyy signalAction: [ ... ].
  zzz signalAction: [ ... ].
  
- Processor signal: xxx onInput: aaa.
- Processor signal: yyy onInput: bbb.
- Processor signal: zzz onOutput: ccc.
+ System signal: xxx onInput: aaa.
+ System signal: yyy onInput: bbb.
+ System signal: zzz onOutput: ccc.
  
  
  while (true)
@@ -252,7 +252,7 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 		self addSemaphore: s.
 
 		## arrange the processor to notify upon timeout.
-		Processor signal: s after: seconds. 
+		System signal: s after: seconds.
 
 		## wait on the semaphore group.
 		r := self wait.
@@ -266,7 +266,7 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 		self removeSemaphore: s.
 
 		## cancel the notification arrangement in case it didn't time out.
-		Processor unsignal: s.
+		System unsignal: s.
 
 		^r.
 	} 
@@ -472,79 +472,9 @@ class(#final,#limited) ProcessScheduler(Object)
 		*)
 	}
 
-	(* -------------------
-	method yield
-	{
-		<primitive: #_processor_yield>
-		self primitiveFailed
-	}
-	----------------- *)
-
-	method signal: semaphore after: secs
-	{
-		<primitive: #_processor_add_timed_semaphore>
-		self primitiveFailed.
-	}
-
-	method signal: semaphore after: secs and: nanosecs
-	{
-		<primitive: #_processor_add_timed_semaphore>
-		self primitiveFailed.
-	}
-
-	method unsignal: semaphore
-	{
-		<primitive: #_processor_remove_semaphore>
-		self primitiveFailed.
-	}
-
-	method signalOnGCFin: semaphore
-	{
-		<primitive: #_processor_add_gcfin_semaphore>
-		self primitiveFailed.
-	}
-	
-	method signal: semaphore onInput: file
-	{
-		<primitive: #_processor_add_input_semaphore>
-		self primitiveFailed.
-	}
-	method signal: semaphore onOutput: file
-	{
-		<primitive: #_processor_add_output_semaphore>
-		self primitiveFailed.
-	}
-	method signal: semaphore onInOutput: file
-	{
-		<primitive: #_processor_add_inoutput_semaphore>
-		self primitiveFailed.
-	}
-
 	method return: object to: context
 	{
 		<primitive: #_processor_return_to>
 		self primitiveFailed.
-	}
-
-	method sleepFor: secs
-	{
-		## -----------------------------------------------------
-		## put the calling process to sleep for given seconds.
-		## -----------------------------------------------------
-		| s |
-		s := Semaphore new.
-		self signal: s after: secs.
-		s wait.
-	}
-
-	method sleepFor: secs and: nanosecs
-	{
-		## -----------------------------------------------------
-		## put the calling process to sleep for given seconds.
-		## -----------------------------------------------------
-		| s |
-		s := Semaphore new.
-		self signal: s after: secs and: nanosecs.
-		s wait.
 	}
 }

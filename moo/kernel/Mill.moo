@@ -246,7 +246,7 @@ class MyObject(Object)
 		a dump.
 *)
 		'---------- END ------------' dump.
-		##Processor sleepFor: 20.
+		##System sleepForSecs: 20.
 	}
 	
 	
@@ -340,7 +340,7 @@ a getUint32(1) dump.
 ##System _free(a).
 a free.
 
-		Processor sleepFor: 2.
+		System sleepForSecs: 2.
 	}
 	
 	(*
