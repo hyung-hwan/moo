@@ -57,7 +57,7 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 
 		self.signalContext := thisContext.
 		exctx := (thisContext sender) findExceptionContext.
-		
+
 		##[exctx notNil] whileTrue: [
 		while (exctx notNil)
 		{
@@ -69,7 +69,7 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 				exctx basicAt: actpos put: false.
 				[ retval := exblk value: self ] ensure: [ exctx basicAt: actpos put: true ].
 				thisContext unwindTo: (exctx sender) return: nil.
-				Processor return: retval to: (exctx sender).
+				System return: retval to: (exctx sender).
 			}.
 			exctx := (exctx sender) findExceptionContext.
 		}.
@@ -113,7 +113,7 @@ System logNl: '== END OF BACKTRACE =='.
 
 	method return: value
 	{
-		if (self.handlerContext notNil) { Processor return: value to: self.handlerContext }
+		if (self.handlerContext notNil) { System return: value to: self.handlerContext }
 	}
 
 	method retry
@@ -122,7 +122,7 @@ System logNl: '== END OF BACKTRACE =='.
 		if (self.handlerContext notNil) 
 		{
 			self.handlerContext pc: 0.
-			Processor return: self to: self.handlerContext.
+			System return: self to: self.handlerContext.
 		}
 	}
 
@@ -136,7 +136,7 @@ System logNl: '== END OF BACKTRACE =='.
 			ctx := self.signalContext sender.
 			self.signalContext := nil.
 			self.handlerContext := nil.
-			Processor return: value to: ctx.
+			System return: value to: ctx.
 		}.
 	}
 
@@ -212,31 +212,45 @@ extend Context
 }
 
 ##============================================================================
+pooldic MethodContext.Preamble
+{
+	## this must follow MOO_METHOD_PREAMBLE_EXCEPTION in moo.h
+	EXCEPTION := 13.
+
+	## this must follow MOO_METHOD_PREAMBLE_ENSURE in moo.h
+	ENSURE := 14.
+}
+
+pooldic MethodContext.Index
+{
+	## [ value-block ] ensure: [ ensure-block ]
+	## assuming ensure block is a parameter the ensure: method to a 
+	## block context, the first parameter is placed after the fixed
+	## instance variables of the method context. As MethodContex has
+	## instance variables, the ensure block must be at the 9th position
+	## which translates to index 8 
+	ENSURE := 8.
+
+
+	## [ ... ] on: Exception: do: [:ex | ... ]
+	FIRST_ON := 8.
+}
+
 extend MethodContext
 {
 	method isExceptionContext
 	{
-		## 12 - MOO_METHOD_PREAMBLE_EXCEPTION in VM.
-		^self.method preambleCode == 13.
+		^self.method preambleCode == MethodContext.Preamble.EXCEPTION.
 	}
 
 	method isEnsureContext
 	{
-		## 13 - MOO_METHOD_PREAMBLE_ENSURE in VM.
-		^self.method preambleCode == 14
+		^self.method preambleCode == MethodContext.Preamble.ENSURE.
 	}
 
 	method ensureBlock
 	{
-## TODO: change 8 to a constant when moo is enhanced to support constant definition
-
-		(* [ value-block ] ensure: [ ensure-block ]
-		 * assuming ensure block is a parameter the ensure: method to a 
-		 * block context, the first parameter is placed after the fixed
-		 * instance variables of the method context. As MethodContex has
-		 * 8 instance variables, the ensure block must be at the 9th position
-		 * which translates to index 8 *)
-		^if (self.method preambleCode == 14) { self basicAt: 8 } else { nil }
+		^if (self.method preambleCode == MethodContext.Preamble.ENSURE) { self basicAt: MethodContext.Index.ENSURE } else { nil }
 	}
 
 
@@ -250,10 +264,7 @@ extend MethodContext
 		 *   basicAt: 8 must be the on: argument.
 		 *   basicAt: 9 must be the do: argument  *)
 
-## TODO: change 8 to a constant when moo is enhanced to support constant definition
-##       or calcuate the minimum size using the class information.
-
-		| size exc |
+		| size exc i |
 		
 		if (self isExceptionContext) 
 		{
@@ -262,10 +273,20 @@ extend MethodContext
 			 *       those must be skipped from scanning. *)
 
 			size := self basicSize.
-			8 priorTo: size by: 2 do: [ :i | 
+			##8 priorTo: size by: 2 do: [ :i | 
+			##	exc := self basicAt: i.
+			##	if ((exception_class == exc) or: [exception_class inheritsFrom: exc]) { ^self basicAt: (i + 1) }.
+			##]
+			i := MethodContext.Index.FIRST_ON.
+			while (i < size)
+			{
 				exc := self basicAt: i.
-				if ((exception_class == exc) or: [exception_class inheritsFrom: exc]) { ^self basicAt: (i + 1) }.
-			]
+				if ((exception_class == exc) or: [exception_class inheritsFrom: exc]) 
+				{ 
+					^self basicAt: (i + 1).
+				}.
+				i := i + 2.
+			}.
 		}.
 		^nil.
 	}
@@ -319,7 +340,7 @@ extend MethodContext
 		 * [ [Exception signal: 'xxx'] ensure: [20] ] on: Exception do: [:ex | ...]
 		 * ---------------------------------------------------------------- *)
 		thisContext unwindTo: self.sender return: nil.
-		Processor return: retval to: self.sender.
+		System return: retval to: self.sender.
 	}
 }
 

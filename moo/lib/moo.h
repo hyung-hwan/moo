@@ -1020,6 +1020,9 @@ struct moo_pfinfo_t
 	if (!(cond)) { MOO_STACK_SETRETTOERROR ((moo), (nargs), MOO_EINVAL); return MOO_PF_SUCCESS; } \
 } while(0)
 
+#define MOO_PF_CHECK_ARGS_STRICT(moo,nargs,cond) do { \
+	if (!(cond)) { MOO_STACK_SETRETTOERROR ((moo), (nargs), MOO_EINVAL); return MOO_PF_FAILURE; } \
+} while(0)
 /* =========================================================================
  * MODULE MANIPULATION
  * ========================================================================= */

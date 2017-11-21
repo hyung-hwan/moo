@@ -541,7 +541,14 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 			{
 				/* no runnable process after termination */
 				MOO_ASSERT (moo, moo->processor->active == moo->nil_process);
-				MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "No runnable process after termination - process %zd\n", MOO_OOP_TO_SMOOI(proc->id));
+				MOO_LOG5 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, 
+					"No runnable process after termination of process %zd - total %zd runnable/running %zd suspended %zd - sem_io_wait_count %zu\n", 
+					MOO_OOP_TO_SMOOI(proc->id),
+					MOO_OOP_TO_SMOOI(moo->processor->total_count),
+					MOO_OOP_TO_SMOOI(moo->processor->runnable.count),
+					MOO_OOP_TO_SMOOI(moo->processor->suspended.count),
+					moo->sem_io_wait_count
+				);
 			}
 			else
 			{
@@ -891,7 +898,7 @@ static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore
 	chain_into_semaphore (moo, proc, (moo_oop_semaphore_t)semgrp); 
 	MOO_ASSERT (moo, semgrp->waiting.last == proc);
 
-	if (MOO_OOP_TO_SMOOI(semgrp->sem_io_count) >= 0) 
+	if (MOO_OOP_TO_SMOOI(semgrp->sem_io_count) > 0) 
 	{
 		/* there might be more than 1 IO semaphores in the group
 		 * but i increment moo->sem_io_wait_count by 1 only */
@@ -2597,7 +2604,9 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
 				moo_oop_process_t wp;
 				/* TODO: add sem_wait_count to process. no traversal... */
 				for (wp = rcv->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
+				{
 					moo->sem_io_wait_count++;
+				}
 			}
 		}
 
@@ -2671,7 +2680,9 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 				moo_oop_process_t wp;
 				/* TODO: add sem_wait_count to process. no traversal... */
 				for (wp = rcv->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
+				{
 					moo->sem_io_wait_count--;
+				}
 			}
 		}
 
@@ -2942,7 +2953,7 @@ static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 
 /* ------------------------------------------------------------------ */
 
-static moo_pfrc_t pf_processor_return_to (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_system_return_value_to_context (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t ret, ctx;
 
@@ -2953,15 +2964,11 @@ static moo_pfrc_t pf_processor_return_to (moo_t* moo, moo_ooi_t nargs)
 	ret = MOO_STACK_GETARG(moo, nargs, 0);
 	ctx = MOO_STACK_GETARG(moo, nargs, 1);
 
-	if (MOO_CLASSOF(moo, ctx) != moo->_block_context &&
-	    MOO_CLASSOF(moo, ctx) != moo->_method_context) 
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
-		return MOO_PF_FAILURE;
-	}
+	MOO_PF_CHECK_ARGS_STRICT (moo, nargs, MOO_CLASSOF(moo, ctx) == moo->_block_context ||
+	                                      MOO_CLASSOF(moo, ctx) == moo->_method_context);
 
 	MOO_STACK_POPS (moo, nargs + 1); /* pop arguments and receiver */
-/* TODO: verify if this is correct? does't it correct restore the stack pointer?
+/* TODO: verify if this is correct? does't it correctly restore the stack pointer?
  *       test complex chains of method contexts and block contexts */
 	if (MOO_CLASSOF(moo, ctx) == moo->_method_context)
 	{
@@ -4322,7 +4329,6 @@ static pf_t pftab[] =
 	{ "_block_value",                          { pf_block_value,                          0, MA } },
 	{ "_block_new_process",                    { pf_block_new_process,                    0, 1  } },
 
-	{ "_processor_return_to",                  { pf_processor_return_to,                  2, 2 } },
 	{ "_processor_schedule",                   { pf_processor_schedule,                   1, 1 } },
 
 	{ "_integer_add",                          { pf_integer_add,                          1, 1 } },
@@ -4430,7 +4436,8 @@ static pf_t pftab[] =
 	{ "System__unsignal:",                     { pf_system_remove_semaphore,              1, 1 } },
 
 	{ "System_collectGarbage",                 { pf_system_collect_garbage,               0, 0 } },
-	{ "System_log",                            { pf_system_log,                           2, MA } }
+	{ "System_log",                            { pf_system_log,                           2, MA } },
+	{ "System_return:to:",                     { pf_system_return_value_to_context,       2, 2 } }
 };
 
 moo_pfbase_t* moo_getpfnum (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, moo_ooi_t* pfnum)
@@ -5035,9 +5042,12 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				 * to schedule.
 				 */
 
-				MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, 
-					"Signaled GCFIN semaphore without gcfin signal request - total - %zd runnable/running - %zd suspended - %zd\n",
-					MOO_OOP_TO_SMOOI(moo->processor->total_count), MOO_OOP_TO_SMOOI(moo->processor->runnable.count), MOO_OOP_TO_SMOOI(moo->processor->suspended.count));
+				MOO_LOG4 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, 
+					"Signaled GCFIN semaphore without gcfin signal request - total %zd runnable/running %zd suspended %zd - sem_io_wait_count %zu\n",
+					MOO_OOP_TO_SMOOI(moo->processor->total_count),
+					MOO_OOP_TO_SMOOI(moo->processor->runnable.count),
+					MOO_OOP_TO_SMOOI(moo->processor->suspended.count),
+					moo->sem_io_wait_count);
 				proc = signal_semaphore (moo, moo->sem_gcfin);
 				if ((moo_oop_t)proc != moo->_nil) 
 				{
