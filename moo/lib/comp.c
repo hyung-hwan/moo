@@ -1682,26 +1682,8 @@ retry:
 			break;
 
 		case '{': /* extension */
-#if 0
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_LBRACE);
 			goto single_char_token;
-#else
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_RETURN);
-			ADD_TOKEN_CHAR(moo, c);
-			GET_CHAR_TO (moo, c);
-
-			if (c == '@')
-			{
-				/* {@ */
-				TOKEN_TYPE(moo) = MOO_IOTOK_DEH_BLOCK; /* default exception handling block */ 
-				ADD_TOKEN_CHAR (moo, c);
-			}
-			else
-			{
-				unget_char (moo, &moo->c->lxc);
-			}
-			break;
-#endif
 		case '}': /* extension */
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_RBRACE);
 			goto single_char_token;

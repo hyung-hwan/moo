@@ -6,7 +6,8 @@
 ##
 class Exception(Apex)
 {
-	var signalContext, handlerContext, messageText.
+	var signalContext, handlerContext.
+	var(#get) messageText.
 
 (*
 TODO: can i convert 'thisProcess primError' to a relevant exception?
@@ -17,7 +18,6 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 		^self.primExceptTable at: no
 	}
 *)
-
 
 	method(#class) signal
 	{
@@ -34,22 +34,11 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 		self.handlerContext := context.
 	}
 
-	method messageText
-	{
-		^self.messageText
-	}
 
 	method asString
 	{
 		^(self class name) & ' - ' & self.messageText.
 	}
-
-	(* TODO: remove this....
-	method __signal 
-	{
-		self.signalContext := thisContext.
-		((thisContext sender) findExceptionContext) handleException: self.
-	}*)
 
 	method signal
 	{
@@ -62,8 +51,7 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 		while (exctx notNil)
 		{
 			exblk := exctx findExceptionHandlerFor: (self class).
-			if (exblk notNil and: 
-			    [actpos := exctx basicSize - 1. exctx basicAt: actpos])
+			if (exblk notNil and: [actpos := exctx basicSize - 1. exctx basicAt: actpos])
 			{
 				self.handlerContext := exctx.
 				exctx basicAt: actpos put: false.
@@ -180,7 +168,8 @@ extend Context
 	{
 		## -------------------------------------------------------------------
 		## <<private>>
-		## private: called by VM upon unwinding
+		## private: called by VM upon unwinding as well as by 
+		##          Exception<<signal and Error<<signal
 		## -------------------------------------------------------------------
 
 		| ctx stop eb pending_pos |
@@ -277,7 +266,9 @@ extend MethodContext
 			##	exc := self basicAt: i.
 			##	if ((exception_class == exc) or: [exception_class inheritsFrom: exc]) { ^self basicAt: (i + 1) }.
 			##]
-			i := MethodContext.Index.FIRST_ON.
+			
+			## start scanning from the position of the first parameter
+			i := MethodContext.Index.FIRST_ON. 
 			while (i < size)
 			{
 				exc := self basicAt: i.
@@ -372,6 +363,14 @@ thisContext isExceptionContext dump.
 		^self value.
 	}
 
+	method on: exc1 do: blk1 on: exc2 do: blk2 on: exc3 do: blk3
+	{
+		| exception_active |
+		<exception>
+		exception_active := true.
+		^self value.
+	}
+	
 	method ensure: aBlock
 	{
 		| retval pending |
@@ -393,6 +392,12 @@ thisContext isExceptionContext dump.
 		pending := true.
 		[ v := self value. pending := false. ] ensure: [ if (pending) { aBlock value } ].
 		^v.
+	}
+
+	method catch
+	{
+		^self on: Exception do: [:ex | ex ] 
+		      on: Error do: [:err | err ].
 	}
 }
 
@@ -440,10 +445,6 @@ class NotImplementedException(Exception)
 {
 }
 
-class ErrorExceptionizationFailureException(Exception)
-{
-}
-
 class InvalidArgumentException(Exception)
 {
 }
@@ -451,14 +452,6 @@ class InvalidArgumentException(Exception)
 class ProhibitedMessageException(Exception)
 {
 }
-
-(*
-pooldic ErrorToException
-{
-	ErrorCode.EINVAL := InvalidArgumentException.
-	ErrorCode.ENOIMPL := NotImplementedException.
-}
-*)
 
 extend Apex
 {

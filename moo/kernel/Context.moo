@@ -165,11 +165,11 @@ class(#pointer,#final,#limited) BlockContext(Context)
 		self primitiveFailed.
 	}
 
+
 	method ifTrue: aBlock
 	{
 		##^(self value) ifTrue: aBlock.
 		^if (self value) { aBlock value }.
-		
 	}
 
 	method ifFalse: aBlock

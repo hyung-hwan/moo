@@ -354,4 +354,48 @@ extend Error
 	method(#primitive) asInteger.
 	method(#primitive) asCharacter.
 	method(#primitive) asString.
+
+	method signal
+	{
+		| exctx exblk retval actpos ctx |
+
+		exctx := (thisContext sender) findExceptionContext.
+
+		while (exctx notNil)
+		{
+			exblk := exctx findExceptionHandlerFor: (self class).
+			if (exblk notNil and: [actpos := exctx basicSize - 1. exctx basicAt: actpos])
+			{
+				exctx basicAt: actpos put: false.
+				[ retval := exblk value: self ] ensure: [ exctx basicAt: actpos put: true ].
+				thisContext unwindTo: (exctx sender) return: nil.
+				System return: retval to: (exctx sender).
+			}.
+			exctx := (exctx sender) findExceptionContext.
+		}.
+
+		## -----------------------------------------------------------------
+		## FATAL ERROR - no exception handler.
+		## -----------------------------------------------------------------
+		##thisContext unwindTo: nil return: nil.
+		##thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
+		
+## TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
+System logNl: '== BACKTRACE =='.
+ctx := thisContext.
+while (ctx notNil)
+{
+	if (ctx class == MethodContext) { System logNl: (' ' & ctx method owner name & '>>' & ctx method name) }.
+	## TODO: include blockcontext???
+	ctx := ctx sender.
+}.
+System logNl: '== END OF BACKTRACE =='.
+
+		thisContext unwindTo: (thisProcess initialContext) return: nil.
+		('### ERROR NOT HANDLED #### ' & self class name & ' - ' & self asString) dump.
+		## TODO: debug the current process???? "
+
+		##Processor activeProcess terminate.
+		thisProcess terminate.
+	}
 }
