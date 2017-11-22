@@ -456,7 +456,7 @@ MOO_EXPORT moo_rbt_pair_t* moo_rbt_update (
  *     // in this sample, i will append the new value to the old value 
  *     // separated by a comma
  *     moo_rbt_pair_t* new_pair;
- *     moo_char_t comma = MOO_T(',');
+ *     moo_ooch_t comma = MOO_T(',');
  *     moo_oob_t* vptr;
  * 
  *     // allocate a new pair, but without filling the actual value. 
@@ -467,11 +467,11 @@ MOO_EXPORT moo_rbt_pair_t* moo_rbt_update (
  * 
  *     // fill in the value space 
  *     vptr = new_pair->vptr;
- *     moo_memcpy (vptr, pair->vptr, pair->vlen*MOO_SIZEOF(moo_char_t));
- *     vptr += pair->vlen*MOO_SIZEOF(moo_char_t);
- *     moo_memcpy (vptr, &comma, MOO_SIZEOF(moo_char_t));
- *     vptr += MOO_SIZEOF(moo_char_t);
- *     moo_memcpy (vptr, v->ptr, v->len*MOO_SIZEOF(moo_char_t));
+ *     moo_memcpy (vptr, pair->vptr, pair->vlen*MOO_SIZEOF(moo_ooch_t));
+ *     vptr += pair->vlen*MOO_SIZEOF(moo_ooch_t);
+ *     moo_memcpy (vptr, &comma, MOO_SIZEOF(moo_ooch_t));
+ *     vptr += MOO_SIZEOF(moo_ooch_t);
+ *     moo_memcpy (vptr, v->ptr, v->len*MOO_SIZEOF(moo_ooch_t));
  * 
  *     // this callback requires the old pair to be destroyed 
  *     moo_rbt_freepair (rbt, pair);
@@ -485,12 +485,12 @@ MOO_EXPORT moo_rbt_pair_t* moo_rbt_update (
  * {
  *   moo_rbt_t* s1;
  *   int i;
- *   moo_char_t* keys[] = { MOO_T("one"), MOO_T("two"), MOO_T("three") };
- *   moo_char_t* vals[] = { MOO_T("1"), MOO_T("2"), MOO_T("3"), MOO_T("4"), MOO_T("5") };
+ *   moo_ooch_t* keys[] = { MOO_T("one"), MOO_T("two"), MOO_T("three") };
+ *   moo_ooch_t* vals[] = { MOO_T("1"), MOO_T("2"), MOO_T("3"), MOO_T("4"), MOO_T("5") };
  * 
  *   s1 = moo_rbt_open (
  *     MOO_MMGR_GETDFL(), 0,
- *     MOO_SIZEOF(moo_char_t), MOO_SIZEOF(moo_char_t)
+ *     MOO_SIZEOF(moo_ooch_t), MOO_SIZEOF(moo_ooch_t)
  *   ); // note error check is skipped 
  *   moo_rbt_setstyle (s1, &style1);
  * 

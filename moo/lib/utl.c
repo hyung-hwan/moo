@@ -268,6 +268,28 @@ moo_bch_t* moo_rfindbchar (const moo_bch_t* ptr, moo_oow_t len, moo_bch_t c)
 	return MOO_NULL;
 }
 
+
+moo_uch_t* moo_finducharinucstr (const moo_uch_t* ptr, moo_uch_t c)
+{
+	while (*ptr != '\0')
+	{
+		if (*ptr == c) return (moo_uch_t*)ptr;
+		ptr++;
+	}
+
+	return MOO_NULL;
+}
+
+moo_bch_t* moo_findbcharinbcstr (const moo_bch_t* ptr, moo_bch_t c)
+{
+	while (*ptr != '\0')
+	{
+		if (*ptr == c) return (moo_bch_t*)ptr;
+		ptr++;
+	}
+
+	return MOO_NULL;
+}
 /* ----------------------------------------------------------------------- */
 
 int moo_concatoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, int id)

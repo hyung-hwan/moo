@@ -37,6 +37,7 @@ pkglibdir = $(libdir)
 
 pkginclude_HEADERS = \
 	moo-cmn.h \
+	moo-opt.h \
 	moo-rbt.h \
 	moo-utl.h \
 	moo.h
@@ -58,6 +59,8 @@ libmoo_la_SOURCES = \
 	heap.c \
 	moo.c \
 	obj.c \
+	opt-impl.h \
+	opt.c \
 	rbt.c \
 	sym.c \
 	utf8.c \

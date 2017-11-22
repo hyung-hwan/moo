@@ -240,6 +240,15 @@ MOO_EXPORT moo_bch_t* moo_rfindbchar (
 	moo_bch_t        c
 );
 
+MOO_EXPORT moo_uch_t* moo_finducharinucstr (
+	const moo_uch_t* ptr,
+	moo_uch_t        c
+);
+
+MOO_EXPORT moo_bch_t* moo_findbcharinbcstr (
+	const moo_bch_t* ptr,
+	moo_bch_t        c
+);
 
 MOO_EXPORT moo_oow_t moo_countucstr (
 	const moo_uch_t* str
@@ -261,9 +270,9 @@ MOO_EXPORT moo_oow_t moo_countbcstr (
 #	define moo_copyoocstr(dst,len,src) moo_copyucstr(dst,len,src)
 #	define moo_findoochar(ptr,len,c) moo_finduchar(ptr,len,c)
 #	define moo_rfindoochar(ptr,len,c) moo_rfinduchar(ptr,len,c)
+#	define moo_findoocharinoocstr(ptr,c) moo_finducharinucstr(ptr,c)
 #	define moo_countoocstr(str) moo_countucstr(str)
 #else
-
 #	define moo_equaloochars(str1,str2,len) moo_equalbchars(str1,str2,len)
 #	define moo_compoocbcstr(str1,str2) moo_compbcstr(str1,str2)
 #	define moo_compoocharsbcstr(str1,len1,str2) moo_compbcharsbcstr(str1,len1,str2)
@@ -275,6 +284,7 @@ MOO_EXPORT moo_oow_t moo_countbcstr (
 #	define moo_copyoocstr(dst,len,src) moo_copybcstr(dst,len,src)
 #	define moo_findoochar(ptr,len,c) moo_findbchar(ptr,len,c)
 #	define moo_rfindoochar(ptr,len,c) moo_rfindbchar(ptr,len,c)
+#	define moo_findoocharinoocstr(ptr,c) moo_findbcharinbcstr(ptr,c)
 #	define moo_countoocstr(str) moo_countbcstr(str)
 #endif
 

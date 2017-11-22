@@ -1352,11 +1352,14 @@ enum moo_log_mask_t
 	MOO_LOG_ERROR     = (1 << 3),
 	MOO_LOG_FATAL     = (1 << 4),
 
-	MOO_LOG_MNEMONIC  = (1 << 8), /* bytecode mnemonic */
-	MOO_LOG_GC        = (1 << 9),
-	MOO_LOG_IC        = (1 << 10), /* instruction cycle, fetch-decode-execute */
-	MOO_LOG_PRIMITIVE = (1 << 11),
-	MOO_LOG_APP       = (1 << 12) /* moo applications, set by moo logging primitive */
+	MOO_LOG_MNEMONIC  = (1 << 7), /* bytecode mnemonic */
+	MOO_LOG_GC        = (1 << 8),
+	MOO_LOG_IC        = (1 << 9), /* instruction cycle, fetch-decode-execute */
+	MOO_LOG_PRIMITIVE = (1 << 10),
+	MOO_LOG_APP       = (1 << 11), /* moo applications, set by moo logging primitive */
+
+	MOO_LOG_STDOUT    = (1 << 14), /* write log messages to stdout without timestamp. MOO_LOG_STDOUT wins over MOO_LOG_STDERR. */
+	MOO_LOG_STDERR    = (1 << 15), /* write log messages to stderr without timestamp. */
 };
 typedef enum moo_log_mask_t moo_log_mask_t;
 

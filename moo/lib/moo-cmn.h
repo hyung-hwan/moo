@@ -407,7 +407,9 @@ struct moo_ntime_t
 /* =========================================================================
  * PRIMITIVE MACROS
  * ========================================================================= */
-#define MOO_UCI_EOF ((moo_ooci_t)-1)
+#define MOO_UCI_EOF ((moo_uci_t)-1)
+#define MOO_BCI_EOF ((moo_bci_t)-1)
+#define MOO_OOCI_EOF ((moo_ooci_t)-1)
 
 #define MOO_SIZEOF(x) (sizeof(x))
 #define MOO_COUNTOF(x) (sizeof(x) / sizeof((x)[0]))

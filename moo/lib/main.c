@@ -25,6 +25,7 @@
  */
 
 #include "moo-prv.h"
+#include "moo-opt.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -193,6 +194,8 @@ struct xtn_t
 {
 	const char* source_path; /* main source file */
 	int vm_running;
+
+	int logfd;
 
 #if defined(_WIN32)
 	HANDLE waitable_timer;
@@ -729,37 +732,51 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 	moo_bch_t buf[256];
 	moo_oow_t ucslen, bcslen, msgidx;
 	int n;
-	char ts[32];
-	size_t tslen;
-	struct tm tm, *tmp;
-	time_t now;
+
+	xtn_t* xtn = moo_getxtn(moo);
+	int logfd;
+
+	if (mask & MOO_LOG_STDOUT) logfd = 1;
+	else if (mask & MOO_LOG_STDERR) logfd = 2;
+	else
+	{
+		logfd = xtn->logfd;
+		if (logfd <= -1) return;
+	}
 
 /* TODO: beautify the log message.
  *       do classification based on mask. */
+	if (!(mask & (MOO_LOG_STDOUT | MOO_LOG_STDERR)))
+	{
+		time_t now;
+		char ts[32];
+		size_t tslen;
+		struct tm tm, *tmp;
 
-	now = time(NULL);
-#if defined(__DOS__)
-	tmp = localtime (&now);
-	tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S ", tmp); /* no timezone info */
-	if (tslen == 0) 
-	{
-		strcpy (ts, "0000-00-00 00:00:00");
-		tslen = 19; 
-	}
-#else
-	tmp = localtime_r (&now, &tm);
-	#if defined(HAVE_STRFTIME_SMALL_Z)
-	tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
+		now = time(NULL);
+	#if defined(__DOS__)
+		tmp = localtime (&now);
+		tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S ", tmp); /* no timezone info */
+		if (tslen == 0) 
+		{
+			strcpy (ts, "0000-00-00 00:00:00");
+			tslen = 19; 
+		}
 	#else
-	tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %Z ", tmp); 
+		tmp = localtime_r (&now, &tm);
+		#if defined(HAVE_STRFTIME_SMALL_Z)
+		tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
+		#else
+		tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %Z ", tmp); 
+		#endif
+		if (tslen == 0) 
+		{
+			strcpy (ts, "0000-00-00 00:00:00 +0000");
+			tslen = 25; 
+		}
 	#endif
-	if (tslen == 0) 
-	{
-		strcpy (ts, "0000-00-00 00:00:00 +0000");
-		tslen = 25; 
+		write_all (logfd, ts, tslen);
 	}
-#endif
-	write_all (1, ts, tslen);
 
 #if defined(MOO_OOCH_IS_UCH)
 	msgidx = 0;
@@ -780,7 +797,7 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 			MOO_ASSERT (moo, ucslen > 0); /* if this fails, the buffer size must be increased */
 
 			/* attempt to write all converted characters */
-			if (write_all (1, buf, bcslen) <= -1) break;
+			if (write_all (logfd, buf, bcslen) <= -1) break;
 
 			if (n == 0) break;
 			else
@@ -796,7 +813,7 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 		}
 	}
 #else
-	write_all (1, msg, len);
+	write_all (logfd, msg, len);
 #endif
 
 #endif
@@ -2032,6 +2049,17 @@ static void clear_sigterm (void)
 }
 /* ========================================================================= */
 
+static void close_moo (moo_t* moo)
+{
+	xtn_t* xtn = moo_getxtn(moo);
+	if (xtn->logfd >= 0)
+	{
+		close (xtn->logfd);
+		xtn->logfd = -1;
+	}
+	moo_close (moo);
+}
+
 int main (int argc, char* argv[])
 {
 	static moo_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' }; /*TODO: make this an argument */
@@ -2044,15 +2072,46 @@ int main (int argc, char* argv[])
 	moo_vmprim_t vmprim;
 	int i, xret;
 
+	moo_bci_t c;
+	static moo_bopt_t opt =
+	{
+		"l:",
+		MOO_NULL
+	};
+
+	const char* logfile = MOO_NULL;
+
+	setlocale (LC_ALL, "");
+
 #if !defined(macintosh)
 	if (argc < 2)
 	{
+	print_usage:
 		fprintf (stderr, "Usage: %s filename ...\n", argv[0]);
 		return -1;
 	}
-#endif
 
-	setlocale (LC_ALL, "");
+	while ((c = moo_getbopt (argc, argv, &opt)) != MOO_BCI_EOF)
+	{
+		switch (c)
+		{
+			case 'l':
+				logfile = opt.arg;
+				break;
+
+			case ':':
+				if (opt.lngopt)
+					fprintf (stderr, "bad argument for '%s'\n", opt.lngopt);
+				else
+					fprintf (stderr, "bad argument for '%c'\n", opt.opt);
+
+				return -1;
+
+			default:
+				goto print_usage;
+		}
+	}
+#endif
 
 	memset (&vmprim, 0, MOO_SIZEOF(vmprim));
 	vmprim.dl_open = dl_open;
@@ -2102,14 +2161,27 @@ int main (int argc, char* argv[])
 		moo_setoption (moo, MOO_LOG_MASK, &trait);
 	}
 
+	xtn = moo_getxtn (moo);
+	xtn->logfd = -1;
+
+	if (logfile)
+	{
+		xtn->logfd = open (logfile, O_CREAT | O_WRONLY | O_APPEND , 0644);
+		if (xtn->logfd == -1)
+		{
+			fprintf (stderr, "ERROR: cannot open %s\n", logfile);
+			close_moo (moo);
+			return -1;
+		}
+	}
+
 	if (moo_ignite(moo) <= -1)
 	{
 		moo_logbfmt (moo, MOO_LOG_ERROR, "ERROR: cannot ignite moo - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
-		moo_close (moo);
+		close_moo (moo);
 		return -1;
 	}
 
-	xtn = moo_getxtn (moo);
 
 #if defined(macintosh)
 	i = 20;
@@ -2117,12 +2189,11 @@ int main (int argc, char* argv[])
 	goto compile;
 #endif
 
-	for (i = 1; i < argc; i++)
+	for (i = opt.ind; i < argc; i++)
 	{
 		xtn->source_path = argv[i];
 
 	compile:
-
 		if (moo_compile (moo, input_handler) <= -1)
 		{
 			if (moo->errnum == MOO_ESYNTAX)
@@ -2133,35 +2204,35 @@ int main (int argc, char* argv[])
 
 				moo_getsynerr (moo, &synerr);
 
-				printf ("ERROR: ");
+				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "ERROR: ");
 				if (synerr.loc.file)
 				{
 				#if defined(MOO_OOCH_IS_UCH)
 					bcslen = MOO_COUNTOF(bcs);
 					if (moo_convootobcstr (moo, synerr.loc.file, &ucslen, bcs, &bcslen) >= 0)
 					{
-						printf ("%.*s ", (int)bcslen, bcs);
+						moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "%.*s ", (int)bcslen, bcs);
 					}
 				#else
-					printf ("%s ", synerr.loc.file);
+					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "%s ", synerr.loc.file);
 				#endif
 				}
 				else
 				{
-					printf ("%s ", xtn->source_path);
+					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "%s ", xtn->source_path);
 				}
 
-				printf ("syntax error at line %lu column %lu - ", 
+				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "syntax error at line %lu column %lu - ", 
 					(unsigned long int)synerr.loc.line, (unsigned long int)synerr.loc.colm);
 
 				bcslen = MOO_COUNTOF(bcs);
 			#if defined(MOO_OOCH_IS_UCH)
 				if (moo_convootobcstr (moo, moo_synerrnum_to_errstr(synerr.num), &ucslen, bcs, &bcslen) >= 0)
 				{
-					printf (" [%.*s]", (int)bcslen, bcs);
+					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, " [%.*s]", (int)bcslen, bcs);
 				}
 			#else
-				printf (" [%s]", moo_synerrnum_to_errstr(synerr.num));
+				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, " [%s]", moo_synerrnum_to_errstr(synerr.num));
 			#endif
 
 				if (synerr.tgt.len > 0)
@@ -2172,21 +2243,21 @@ int main (int argc, char* argv[])
 				#if defined(MOO_OOCH_IS_UCH)
 					if (moo_convootobchars (moo, synerr.tgt.ptr, &ucslen, bcs, &bcslen) >= 0)
 					{
-						printf (" [%.*s]", (int)bcslen, bcs);
+						moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, " [%.*s]", (int)bcslen, bcs);
 					}
 				#else
-					printf (" [%.*s]", (int)synerr.tgt.len, synerr.tgt.ptr);
+					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, " [%.*s]", (int)synerr.tgt.len, synerr.tgt.ptr);
 				#endif
 
 				}
-				printf ("\n");
-				fflush (stdout);
+				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "\n");
 			}
 			else
 			{
-				moo_logbfmt (moo, MOO_LOG_ERROR, "ERROR: cannot compile code - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
+				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "ERROR: cannot compile code - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
 			}
-			moo_close (moo);
+
+			close_moo (moo);
 #if defined(USE_LTDL)
 			lt_dlexit ();
 #endif
@@ -2217,7 +2288,7 @@ int main (int argc, char* argv[])
 	/*moo_dumpsymtab(moo);
 	 *moo_dumpdic(moo, moo->sysdic, "System dictionary");*/
 
-	moo_close (moo);
+	close_moo (moo);
 
 #if defined(USE_LTDL)
 	lt_dlexit ();

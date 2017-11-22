@@ -851,7 +851,7 @@ static int get_char (moo_t* moo)
 		if (n == 0)
 		{
 		return_eof:
-			moo->c->curinp->lxc.c = MOO_UCI_EOF;
+			moo->c->curinp->lxc.c = MOO_OOCI_EOF;
 			moo->c->curinp->lxc.l.line = moo->c->curinp->line;
 			moo->c->curinp->lxc.l.colm = moo->c->curinp->colm;
 			moo->c->curinp->lxc.l.file = moo->c->curinp->name;
@@ -920,7 +920,7 @@ static int skip_comment (moo_t* moo)
 		do 
 		{
 			GET_CHAR_TO (moo, c); 
-			if (c == MOO_UCI_EOF) goto unterminated;
+			if (c == MOO_OOCI_EOF) goto unterminated;
 		}
 		while (c != '"');
 
@@ -937,13 +937,13 @@ static int skip_comment (moo_t* moo)
 		do 
 		{
 			GET_CHAR_TO (moo, c);
-			if (c == MOO_UCI_EOF) goto unterminated;
+			if (c == MOO_OOCI_EOF) goto unterminated;
 
 			if (c == '*')
 			{
 			check_rparen:
 				GET_CHAR_TO (moo, c);
-				if (c == MOO_UCI_EOF) goto unterminated;
+				if (c == MOO_OOCI_EOF) goto unterminated;
 
 				if (c == '*') goto check_rparen; /* got another * after * */
 				if (c == ')')
@@ -970,7 +970,7 @@ static int skip_comment (moo_t* moo)
 		do 
 		{
 			GET_CHAR_TO (moo, c);
-			if (c == MOO_UCI_EOF)
+			if (c == MOO_OOCI_EOF)
 			{
 				/* EOF on the comment line is ok for a single-line comment */
 				break;
@@ -1018,7 +1018,7 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 	c = moo->c->lxc.c;
 	SET_TOKEN_TYPE (moo, MOO_IOTOK_IDENT);
 
-	if (char_read_ahead != MOO_UCI_EOF)
+	if (char_read_ahead != MOO_OOCI_EOF)
 	{
 		ADD_TOKEN_CHAR(moo, char_read_ahead);
 	}
@@ -1343,7 +1343,7 @@ static int get_charlit (moo_t* moo)
 	 */
 
 	moo_ooci_t c = moo->c->lxc.c; /* even a new-line or white space would be taken */
-	if (c == MOO_UCI_EOF) 
+	if (c == MOO_OOCI_EOF) 
 	{
 		set_syntax_error (moo, MOO_SYNERR_CLTNT, LEXER_LOC(moo), MOO_NULL);
 		return -1;
@@ -1380,7 +1380,7 @@ static int get_strlit (moo_t* moo)
 				ADD_TOKEN_CHAR (moo, c);
 				GET_CHAR_TO (moo, c);
 
-				if (c == MOO_UCI_EOF) 
+				if (c == MOO_OOCI_EOF) 
 				{
 					/* string not closed */
 					set_syntax_error (moo, MOO_SYNERR_STRNC, TOKEN_LOC(moo) /*&moo->c->lxc.l*/, MOO_NULL);
@@ -1417,7 +1417,7 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 	{
 		GET_CHAR_TO (moo, c);
 
-		if (c == MOO_UCI_EOF)
+		if (c == MOO_OOCI_EOF)
 		{
 			set_syntax_error (moo, MOO_SYNERR_STRNC, TOKEN_LOC(moo) /*&moo->c->lxc.l*/, MOO_NULL);
 			return -1;
@@ -1627,7 +1627,7 @@ retry:
 
 	switch (c)
 	{
-		case MOO_UCI_EOF:
+		case MOO_OOCI_EOF:
 		{
 			int n;
 
@@ -1742,7 +1742,7 @@ retry:
 			GET_CHAR_TO (moo, c);
 			switch (c)
 			{
-				case MOO_UCI_EOF:
+				case MOO_OOCI_EOF:
 					set_syntax_error (moo, MOO_SYNERR_HLTNT, LEXER_LOC(moo), MOO_NULL);
 					return -1;
 
@@ -1923,7 +1923,7 @@ retry:
 		default:
 			if (is_leadidentchar(c)) 
 			{
-				if (get_ident(moo, MOO_UCI_EOF) <= -1) return -1;
+				if (get_ident(moo, MOO_OOCI_EOF) <= -1) return -1;
 			}
 			else if (is_digitchar(c)) 
 			{
