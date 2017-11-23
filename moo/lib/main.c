@@ -196,6 +196,7 @@ struct xtn_t
 	int vm_running;
 
 	int logfd;
+	int logmask;
 
 #if defined(_WIN32)
 	HANDLE waitable_timer;
@@ -735,6 +736,8 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 
 	xtn_t* xtn = moo_getxtn(moo);
 	int logfd;
+
+	if (!(xtn->logmask & mask)) return;
 
 	if (mask & MOO_LOG_STDOUT) logfd = 1;
 	else if (mask & MOO_LOG_STDERR) logfd = 2;
@@ -2060,6 +2063,58 @@ static void close_moo (moo_t* moo)
 	moo_close (moo);
 }
 
+static int handle_logopt (moo_t* moo, const moo_bch_t* str)
+{
+	xtn_t* xtn = moo_getxtn (moo);
+	moo_bch_t* xstr = (moo_bch_t*)str;
+	moo_bch_t* cm, * flt;
+
+	cm = moo_findbcharinbcstr (xstr, ',');
+	if (cm) 
+	{
+		xstr = moo_dupbchars (moo, str, moo_countbcstr(str));
+		if (!xstr) 
+		{
+			fprintf (stderr, "ERROR: out of memory in duplicating %s\n", str);
+			return -1;
+		}
+
+		cm = moo_findbcharinbcstr(xstr, ',');
+		*cm = '\0';
+
+		do
+		{
+			flt = cm + 1;
+
+			cm = moo_findbcharinbcstr(flt, ',');
+			if (cm) *cm = '\0';
+
+			if (moo_compbcstr (flt, "app") == 0) xtn->logmask |= MOO_LOG_APP;
+			else if (moo_compbcstr (flt, "mnemonic") == 0) xtn->logmask |= MOO_LOG_MNEMONIC;
+			else if (moo_compbcstr (flt, "gc") == 0) xtn->logmask |= MOO_LOG_GC;
+			else if (moo_compbcstr (flt, "ic") == 0) xtn->logmask |= MOO_LOG_IC;
+			else if (moo_compbcstr (flt, "primitive") == 0) xtn->logmask |= MOO_LOG_PRIMITIVE;
+
+		}
+		while (cm);
+	}
+	else
+	{
+		xtn->logmask = MOO_LOG_ALL_TYPES;
+	}
+
+	xtn->logfd = open (xstr, O_CREAT | O_WRONLY | O_APPEND , 0644);
+	if (xtn->logfd == -1)
+	{
+		fprintf (stderr, "ERROR: cannot open %s\n", xstr);
+		if (str != xstr) moo_freemem (moo, xstr);
+		return -1;
+	}
+
+	if (str != xstr) moo_freemem (moo, xstr);
+	return 0;
+}
+
 int main (int argc, char* argv[])
 {
 	static moo_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' }; /*TODO: make this an argument */
@@ -2079,7 +2134,7 @@ int main (int argc, char* argv[])
 		MOO_NULL
 	};
 
-	const char* logfile = MOO_NULL;
+	const char* logopt = MOO_NULL;
 
 	setlocale (LC_ALL, "");
 
@@ -2096,7 +2151,7 @@ int main (int argc, char* argv[])
 		switch (c)
 		{
 			case 'l':
-				logfile = opt.arg;
+				logopt = opt.arg;
 				break;
 
 			case ':':
@@ -2134,7 +2189,7 @@ int main (int argc, char* argv[])
 	moo = moo_open (&sys_mmgr, MOO_SIZEOF(xtn_t), 2048000lu, &vmprim, MOO_NULL);
 	if (!moo)
 	{
-		printf ("cannot open moo\n");
+		fprintf (stderr, "ERROR: cannot open moo\n");
 		return -1;
 	}
 
@@ -2164,12 +2219,10 @@ int main (int argc, char* argv[])
 	xtn = moo_getxtn (moo);
 	xtn->logfd = -1;
 
-	if (logfile)
+	if (logopt)
 	{
-		xtn->logfd = open (logfile, O_CREAT | O_WRONLY | O_APPEND , 0644);
-		if (xtn->logfd == -1)
+		if (handle_logopt (moo, logopt) <= -1) 
 		{
-			fprintf (stderr, "ERROR: cannot open %s\n", logfile);
 			close_moo (moo);
 			return -1;
 		}

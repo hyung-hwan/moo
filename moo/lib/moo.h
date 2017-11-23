@@ -1358,8 +1358,14 @@ enum moo_log_mask_t
 	MOO_LOG_PRIMITIVE = (1 << 10),
 	MOO_LOG_APP       = (1 << 11), /* moo applications, set by moo logging primitive */
 
+
+	MOO_LOG_ALL_LEVELS = (MOO_LOG_DEBUG  | MOO_LOG_INFO | MOO_LOG_WARN | MOO_LOG_ERROR | MOO_LOG_FATAL),
+	MOO_LOG_ALL_TYPES = (MOO_LOG_MNEMONIC | MOO_LOG_GC | MOO_LOG_IC | MOO_LOG_PRIMITIVE | MOO_LOG_APP),
+
+
 	MOO_LOG_STDOUT    = (1 << 14), /* write log messages to stdout without timestamp. MOO_LOG_STDOUT wins over MOO_LOG_STDERR. */
 	MOO_LOG_STDERR    = (1 << 15), /* write log messages to stderr without timestamp. */
+
 };
 typedef enum moo_log_mask_t moo_log_mask_t;
 
