@@ -115,21 +115,21 @@ class(#pointer,#final,#limited) BlockContext(Context)
 
 	method fork 
 	{
-		"crate a new process in the runnable state"
+		## crate a new process in the runnable state
 		^self newProcess resume.
 	}
 
 	method newProcess
 	{
-		"create a new process in the suspended state"
+		## create a new process in the suspended state
 		<primitive: #_block_new_process>
 		self primitiveFailed.
 	}
 
 	method newProcessWith: anArray
 	{
-		"create a new process in the suspended state passing the elements
-		 of anArray as block arguments"
+		## create a new process in the suspended state passing the elements
+		## of anArray as block arguments
 		<primitive: #_block_new_process>
 		self primitiveFailed.
 	}
@@ -268,7 +268,7 @@ class(#pointer,#final,#limited) BlockContext(Context)
 		 * --------------------------------------------------
 		| pc |
 		pc := thisContext pcplus1.
-		(self value) ifTrue: [ ^nil "^self" ].
+		(self value) ifTrue: [ ^nil ]. ## ^self
 		aBlock value.
 		thisContext goto: pc.
 		 * -------------------------------------------------- *)
@@ -293,7 +293,7 @@ class(#pointer,#final,#limited) BlockContext(Context)
 		 * -------------------------------------------------- 
 		| pc |
 		pc := thisContext pcplus1.
-		(self value) ifTrue: [ ^nil "^self" ].
+		(self value) ifTrue: [ ^nil ]. ## ^self
 		thisContext goto: pc.
 		* -------------------------------------------------- *)
 		while ((self value) == false) { }.

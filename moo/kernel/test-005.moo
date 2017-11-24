@@ -155,8 +155,8 @@ class MyObject(TestObject)
 
 ## ---------------------------------------------------------------------------
 
-" this sample demonstrates what happens when a block context returns to the origin's caller
-  after the caller has already returned. "
+## this sample demonstrates what happens when a block context returns to the origin's caller
+##  after the caller has already returned. 
 
 	method(#class) xxxx
 	{
@@ -180,7 +180,7 @@ class MyObject(TestObject)
 	method(#class) main66
 	{
 		self yyyy.
-		t2 := t2 value.  "can t2 return? it should return somewhere into the method context of yyy. but it has already terminated"
+		t2 := t2 value.  ## can t2 return? it should return somewhere into the method context of yyy. but it has already terminated
 		t2 dump.
 	}
 
@@ -190,7 +190,7 @@ class MyObject(TestObject)
 		t1 := 1.
 		self xxxx.
 
-		t2 := t2 value.  "can t2 return? it should return somewhere into the method context of yyy. but it has already terminated"
+		t2 := t2 value.  ## can t2 return? it should return somewhere into the method context of yyy. but it has already terminated
 		t2 dump.
 	}
 ## ----------------------------------------------------------------------
@@ -215,7 +215,7 @@ class MyObject(TestObject)
 		(#[3 2 1] at: 3) dump.
 
 
-		## thisContext value. "the message value must be unresolvable as thisContext is a method context"
+		## thisContext value. ## the message value must be unresolvable as thisContext is a method context
 		## [thisContext value] value.
 		'-------------------------' dump.
 		b := 0.
@@ -354,7 +354,9 @@ PROCESS TESTING
 
 (2r1111111111111111111111111111111111111111111111111111111111111111 printStringRadix:2) dump.
 
-"(16rF0FFFF bitOr: 16r111111) dump.
+(*  -----------------------
+
+(16rF0FFFF bitOr: 16r111111) dump.
 
 (16r11 bitOr: 16r20000000000000000000000000000000FFFFFFFFFFFFFFFF11111100000000000000000001) dump.
 ((16r11 bitOr: 16r20000000000000000000000000000000FFFFFFFFFFFFFFFF11111100000000000000000001) bitOr: 16r1100) dump.
@@ -365,7 +367,8 @@ PROCESS TESTING
 ((2r11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111 bitXor: 2r11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111) printStringRadix: 2) dump.
 
 ((2r10101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101 bitAnd: 2r01010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010) printStringRadix: 2) dump.
-"
+
+--------------------- *)
 
 (16rFFFFFFFFFFFFFFFF bitOr: 16rFFFFFFFFFFFFFFFFFFFFFFFF) dump.
 (-16rFFFFFFFFFFFFFFFF bitOr: 16rFFFFFFFFFFFFFFFFFFFFFFFF) dump.

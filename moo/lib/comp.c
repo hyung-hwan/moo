@@ -138,8 +138,10 @@ static struct voca_t
 	{  8, { '#','p','o','i','n','t','e','r'                               } },
 	{  7, { 'p','o','o','l','d','i','c'                                   } },
 	{  8, { '#','p','o','o','l','d','i','c'                               } },
+	{  7, { '#','p','r','a','g','m','a'                                   } },
 	{ 10, { 'p','r','i','m','i','t','i','v','e',':'                       } },
 	{ 10, { '#','p','r','i','m','i','t','i','v','e'                       } },
+	{  2, { 'q','c'                                                       } },
 	{  4, { 's','e','l','f'                                               } },
 	{  6, { 's','e','l','f','n','s'                                       } },
 	{  4, { '#','s','e','t'                                               } },
@@ -198,8 +200,10 @@ enum voca_id_t
 	VOCA_POINTER_S,
 	VOCA_POOLDIC,
 	VOCA_POOLDIC_S,
+	VOCA_PRAGMA_S,
 	VOCA_PRIMITIVE_COLON,
 	VOCA_PRIMITIVE_S,
+	VOCA_QC,
 	VOCA_SELF,
 	VOCA_SELFNS,
 	VOCA_SET_S,
@@ -456,7 +460,7 @@ static int copy_string_to (moo_t* moo, const moo_oocs_t* src, moo_oocs_t* dst, m
 		*dst_capa = capa;
 	}
 
-	if (append && delim_char) dst->ptr[pos++] = delim_char;
+	if (append && delim_char != '\0') dst->ptr[pos++] = delim_char;
 	moo_copyoochars (&dst->ptr[pos], src->ptr, src->len);
 	dst->len = len;
 	return 0;
@@ -914,6 +918,7 @@ static int skip_comment (moo_t* moo)
 	moo_ooci_t c = moo->c->lxc.c;
 	moo_iolxc_t lc;
 
+#if defined(MOO_ENABLE_QUOTED_COMMENT)
 	if (c == '"')
 	{
 		/* skip up to the closing " */
@@ -927,7 +932,9 @@ static int skip_comment (moo_t* moo)
 		if (c == '"') GET_CHAR (moo); /* keep the next character in lxc */
 		return 1; /* double-quoted comment */
 	}
-	else if (c == '(')
+	else 
+#endif
+	if (c == '(')
 	{
 		/* handle (* ... *) */
 		lc = moo->c->lxc;
@@ -1868,6 +1875,13 @@ retry:
 			}
 
 			break;
+
+
+#if !defined(MOO_ENABLE_QUOTED_COMMENT)
+		case '"':
+			if (get_string(moo, '"', '\\', 0, 0) <= -1) return -1;
+			break;
+#endif
 
 		case 'C': /* a character with a C-style escape sequence */
 		case 'S': /* a string with a C-style escape sequences */
@@ -3789,9 +3803,9 @@ static int compile_method_pragma (moo_t* moo)
 {
 	/* 
 	 * method-pragma := "<"  "primitive:" integer ">" |
-	 *                     "<"  "primitive:" symbol ">" |
-	 *                     "<"  "exception" ">" |
-	 *                     "<"  "ensure" ">"
+	 *                  "<"  "primitive:" symbol ">" |
+	 *                  "<"  "exception" ">" |
+	 *                  "<"  "ensure" ">"
 	 */
 	moo_ooi_t pfnum;
 	const moo_ooch_t* ptr, * end;
@@ -6434,14 +6448,38 @@ static int __compile_method_definition (moo_t* moo)
 			moo_oow_t savedlen;
 			moo_ooi_t pfnum;
 			moo_pfbase_t* pfbase;
+			moo_oocs_t mthname;
 
+			
+
+			/* primitive identifer = classname_methodname */
+			 
+			/*
+			 * remove all leading underscores from the method name when building a primitive
+			 * identifer. multiple methods can map to the same primitive handler.
+			 * for class X, you may have method(#primitive) aa and method(#primitive) _aa
+			 * to map to the X_aa primitive handler.
+			 */
+			mthname = moo->c->mth.name;
+			while (mthname.len > 0)
+			{
+				if (*mthname.ptr != '_') break;
+				mthname.ptr++;
+				mthname.len--;
+			}
+			if (mthname.len == 0)
+			{
+				MOO_DEBUG2 (moo, "Invalid primitive function name - %.*js\n", moo->c->mth.name.len, moo->c->mth.name.ptr);
+				set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+				return -1;
+			}
+
+			/* compose the identifer into the back of the cls.modname buffer.
+			 * i'll revert it when done. */
 			savedlen = moo->c->cls.modname.len;
 
-			/* primitive identifer = classname_methodname
-			 * let me compose the identifer into the back of the cls.modname buffer.
-			 * i'll revert it when done */
-			if (copy_string_to (moo, &moo->c->cls.name, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '\0') <= -1 ||
-			    copy_string_to (moo, &moo->c->mth.name, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '_') <= -1)
+			if (copy_string_to(moo, &moo->c->cls.name, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '\0') <= -1 ||
+			    copy_string_to(moo, &mthname, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '_') <= -1)
 			{
 				moo->c->cls.modname.len = savedlen;
 				return -1;
@@ -7862,6 +7900,46 @@ static int compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 	return n;
 }
 
+static int compile_pragma_definition (moo_t* moo)
+{
+	do
+	{
+		GET_TOKEN (moo);
+
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT)
+		{
+			set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
+
+		if (is_token_word(moo, VOCA_QC))
+		{
+			/* #pragma qc */
+			/* TODO: #pragma qc=on, #progma qc=off, #pragma qc(on), $pragma qc(off) */
+/* TODO ... */
+		}
+		else
+		{
+			set_syntax_error (moo, MOO_SYNERR_PRAGMAINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
+
+		GET_TOKEN (moo);
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD) goto done;
+	}
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA);
+	
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
+	{
+		set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+	
+done:
+	GET_TOKEN (moo);
+	return 0;
+}
+
 static int compile_stream (moo_t* moo)
 {
 	GET_TOKEN (moo);
@@ -7878,6 +7956,11 @@ static int compile_stream (moo_t* moo)
 				return -1;
 			}
 			if (begin_include(moo) <= -1) return -1;
+		}
+		else if (is_token_symbol(moo, VOCA_PRAGMA_S))
+		{
+			/*GET_TOKEN (moo);*/
+			if (compile_pragma_definition(moo) <= -1) return -1;
 		}
 		else if (is_token_word(moo, VOCA_CLASS))
 		{

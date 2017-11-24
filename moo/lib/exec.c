@@ -1616,11 +1616,11 @@ static moo_pfrc_t pf_dump (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, nargs >=  0);
 
 	/*moo_logbfmt (moo, 0, "RECEIVER: %O IN PID %d SP %d XSP %d\n", MOO_STACK_GET(moo, moo->sp - nargs), (int)MOO_OOP_TO_SMOOI(moo->processor->active->id), (int)moo->sp, (int)MOO_OOP_TO_SMOOI(moo->processor->active->sp));*/
-	moo_logbfmt (moo, 0, "RECEIVER: %O IN PID %d\n", MOO_STACK_GET(moo, moo->sp - nargs), (int)MOO_OOP_TO_SMOOI(moo->processor->active->id));
+	moo_logbfmt (moo, MOO_LOG_FATAL | MOO_LOG_APP, "RECEIVER: %O IN PID %d\n", MOO_STACK_GET(moo, moo->sp - nargs), (int)MOO_OOP_TO_SMOOI(moo->processor->active->id));
 	for (i = nargs; i > 0; )
 	{
 		--i;
-		moo_logbfmt (moo, 0, "ARGUMENT %zd: %O\n", i, MOO_STACK_GET(moo, moo->sp - i));
+		moo_logbfmt (moo, MOO_LOG_FATAL | MOO_LOG_APP, "ARGUMENT %zd: %O\n", i, MOO_STACK_GET(moo, moo->sp - i));
 	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
@@ -2582,7 +2582,7 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
 	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)rcv, moo->_semaphore_group)); 
 
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG (moo, nargs, 0);
-	MOO_PF_CHECK_ARGS (moo, nargs, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
+	MOO_PF_CHECK_ARGS_STRICT (moo, nargs, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
 
 	if ((moo_oop_t)sem->group == moo->_nil)
 	{
@@ -4354,9 +4354,9 @@ static pf_t pftab[] =
 	{ "_integer_inttostr",                     { pf_integer_inttostr,                     1, 1 } },
 
 	{ "Apex_addToBeFinalized",                 { pf_add_to_be_finalized,                  0, 0 } },
-	{ "Apex__basicNew",                        { pf_basic_new,                            0, 0 } },
-	{ "Apex__basicNew:",                       { pf_basic_new,                            1, 1 } },
-	{ "Apex__basicSize",                       { pf_basic_size,                           0, 0 } },
+	{ "Apex_basicNew",                         { pf_basic_new,                            0, 0 } },
+	{ "Apex_basicNew:",                        { pf_basic_new,                            1, 1 } },
+	{ "Apex_basicSize",                        { pf_basic_size,                           0, 0 } },
 	{ "Apex_basicNew",                         { pf_basic_new,                            0, 0 } },
 	{ "Apex_basicNew:",                        { pf_basic_new,                            1, 1 } },
 	{ "Apex_basicSize",                        { pf_basic_size,                           0, 0 } },
@@ -4373,13 +4373,13 @@ static pf_t pftab[] =
 	{ "Process_sp",                            { pf_process_sp,                           0, 0 } },
 	{ "Process_suspend",                       { pf_process_suspend,                      0, 0 } },
 	{ "Process_yield",                         { pf_process_yield,                        0, 0 } },
-	{ "Process__terminate",                    { pf_process_terminate,                    0, 0 } },
+	{ "Process_terminate",                     { pf_process_terminate,                    0, 0 } },
 
 	{ "Semaphore_signal",                      { pf_semaphore_signal,                     0, 0 } },
-	{ "Semaphore__wait",                       { pf_semaphore_wait,                       0, 0 } },
-	{ "SemaphoreGroup__addSemaphore:",         { pf_semaphore_group_add_semaphore,        1, 1 } },
-	{ "SemaphoreGroup__removeSemaphore:",      { pf_semaphore_group_remove_semaphore,     1, 1 } },
-	{ "SemaphoreGroup__wait",                  { pf_semaphore_group_wait,                 0, 0 } },
+	{ "Semaphore_wait",                        { pf_semaphore_wait,                       0, 0 } },
+	{ "SemaphoreGroup_addSemaphore:",          { pf_semaphore_group_add_semaphore,        1, 1 } },
+	{ "SemaphoreGroup_removeSemaphore:",       { pf_semaphore_group_remove_semaphore,     1, 1 } },
+	{ "SemaphoreGroup_wait",                   { pf_semaphore_group_wait,                 0, 0 } },
 
 	{ "SmallInteger_asCharacter",              { pf_smooi_as_character,                   0, 0 } },
 	{ "SmallInteger_asError",                  { pf_smooi_as_error,                       0, 0 } },
@@ -4403,37 +4403,36 @@ static pf_t pftab[] =
 	{ "SmallPointer_putUint32",                { pf_smptr_put_uint32,                     2, 2 } },
 	{ "SmallPointer_putUint64",                { pf_smptr_put_uint64,                     2, 2 } },
 
-	{ "String__strlen",                        { pf_strlen,                               0, 0 } },
 	{ "String_strlen",                         { pf_strlen,                               0, 0 } },
 
-	{ "System__calloc",                        { pf_system_calloc,                        1, 1 } },
-	{ "System__free",                          { pf_system_free,                          1, 1 } },
-	{ "System__getInt16",                      { pf_system_get_int16,                     2, 2 } },
-	{ "System__getInt32",                      { pf_system_get_int32,                     2, 2 } },
-	{ "System__getInt64",                      { pf_system_get_int64,                     2, 2 } },
-	{ "System__getInt8",                       { pf_system_get_int8,                      2, 2 } },
-	{ "System__getUint16",                     { pf_system_get_uint16,                    2, 2 } },
-	{ "System__getUint32",                     { pf_system_get_uint32,                    2, 2 } },
-	{ "System__getUint64",                     { pf_system_get_uint64,                    2, 2 } },
-	{ "System__getUint8",                      { pf_system_get_uint8,                     2, 2 } },
-	{ "System__malloc",                        { pf_system_malloc,                        1, 1 } },
-	{ "System__popCollectable",                { pf_system_pop_collectable,               0, 0 } },
-	{ "System__putInt8",                       { pf_system_put_int8,                      3, 3 } },
-	{ "System__putInt16",                      { pf_system_put_int16,                     3, 3 } },
-	{ "System__putInt32",                      { pf_system_put_int32,                     3, 3 } },
-	{ "System__putInt64",                      { pf_system_put_int64,                     3, 3 } },
-	{ "System__putUint8",                      { pf_system_put_uint8,                     3, 3 } },
-	{ "System__putUint16",                     { pf_system_put_uint16,                    3, 3 } },
-	{ "System__putUint32",                     { pf_system_put_uint32,                    3, 3 } },
-	{ "System__putUint64",                     { pf_system_put_uint64,                    3, 3 } },
+	{ "System_calloc",                        { pf_system_calloc,                        1, 1 } },
+	{ "System_free",                          { pf_system_free,                          1, 1 } },
+	{ "System_getInt16",                      { pf_system_get_int16,                     2, 2 } },
+	{ "System_getInt32",                      { pf_system_get_int32,                     2, 2 } },
+	{ "System_getInt64",                      { pf_system_get_int64,                     2, 2 } },
+	{ "System_getInt8",                       { pf_system_get_int8,                      2, 2 } },
+	{ "System_getUint16",                     { pf_system_get_uint16,                    2, 2 } },
+	{ "System_getUint32",                     { pf_system_get_uint32,                    2, 2 } },
+	{ "System_getUint64",                     { pf_system_get_uint64,                    2, 2 } },
+	{ "System_getUint8",                      { pf_system_get_uint8,                     2, 2 } },
+	{ "System_malloc",                        { pf_system_malloc,                        1, 1 } },
+	{ "System_popCollectable",                { pf_system_pop_collectable,               0, 0 } },
+	{ "System_putInt8",                       { pf_system_put_int8,                      3, 3 } },
+	{ "System_putInt16",                      { pf_system_put_int16,                     3, 3 } },
+	{ "System_putInt32",                      { pf_system_put_int32,                     3, 3 } },
+	{ "System_putInt64",                      { pf_system_put_int64,                     3, 3 } },
+	{ "System_putUint8",                      { pf_system_put_uint8,                     3, 3 } },
+	{ "System_putUint16",                     { pf_system_put_uint16,                    3, 3 } },
+	{ "System_putUint32",                     { pf_system_put_uint32,                    3, 3 } },
+	{ "System_putUint64",                     { pf_system_put_uint64,                    3, 3 } },
 
-	{ "System__signal:afterSecs:",             { pf_system_add_timed_semaphore,           2, 2 } },
-	{ "System__signal:afterSecs:nanosecs:",    { pf_system_add_timed_semaphore,           3, 3 } },
-	{ "System__signal:onInput:",               { pf_system_add_input_semaphore,           2, 2 } },
-	{ "System__signal:onInOutput:",            { pf_system_add_inoutput_semaphore,        2, 2 } },
-	{ "System__signal:onOutput:",              { pf_system_add_output_semaphore,          2, 2 } },
-	{ "System__signalOnGCFin:",                { pf_system_add_gcfin_semaphore,           1, 1 } },
-	{ "System__unsignal:",                     { pf_system_remove_semaphore,              1, 1 } },
+	{ "System_signal:afterSecs:",             { pf_system_add_timed_semaphore,           2, 2 } },
+	{ "System_signal:afterSecs:nanosecs:",    { pf_system_add_timed_semaphore,           3, 3 } },
+	{ "System_signal:onInput:",               { pf_system_add_input_semaphore,           2, 2 } },
+	{ "System_signal:onInOutput:",            { pf_system_add_inoutput_semaphore,        2, 2 } },
+	{ "System_signal:onOutput:",              { pf_system_add_output_semaphore,          2, 2 } },
+	{ "System_signalOnGCFin:",                { pf_system_add_gcfin_semaphore,           1, 1 } },
+	{ "System_unsignal:",                     { pf_system_remove_semaphore,              1, 1 } },
 
 	{ "System_collectGarbage",                 { pf_system_collect_garbage,               0, 0 } },
 	{ "System_log",                            { pf_system_log,                           2, MA } },
@@ -4751,7 +4750,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			if (method->code == moo->_nil)
 		#endif
 			{
-				/* no byte code to execute - make it a hard failure */
+				/* no byte code to execute - invoke 'self primitiveFailed' */
 
 				static moo_ooch_t prim_fail_msg[] = { 
 					'p', 'r', 'i', 'm', 'i', 't', 'i', 'v', 'e', 

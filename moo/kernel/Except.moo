@@ -80,7 +80,7 @@ while (ctx notNil)
 System logNl: '== END OF BACKTRACE =='.
 
 		thisContext unwindTo: (thisProcess initialContext) return: nil.
-		('### EXCEPTION NOT HANDLED #### ' & self class name & ' - ' & self messageText) dump.
+		('### EXCEPTION NOT HANDLED(Exception) #### ' & self class name & ' - ' & self messageText) dump.
 		## TODO: debug the current process???? "
 
 		##Processor activeProcess terminate.

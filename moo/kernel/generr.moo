@@ -110,6 +110,7 @@ class MyObject(Object)
 			'wrong module name'
 			'failed to import module'
 			'#include error'
+			'wrong pragma name'
 			'wrong namespace name'
 			'wrong pool dictionary name'
 			'duplicate pool dictionary name'

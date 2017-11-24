@@ -2097,10 +2097,12 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 
 		}
 		while (cm);
+
+		xtn->logmask |= MOO_LOG_ALL_LEVELS; /* TODO: parse leves also */
 	}
 	else
 	{
-		xtn->logmask = MOO_LOG_ALL_TYPES;
+		xtn->logmask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;
 	}
 
 	xtn->logfd = open (xstr, O_CREAT | O_WRONLY | O_APPEND , 0644);

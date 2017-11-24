@@ -37,6 +37,12 @@
  * this is used to embed bytes codes into the back of a compile method
  * object instead of putting in in a separate byte array. */
 #define MOO_USE_METHOD_TRAILER
+
+
+/* TODO: turn this to per-file pragma
+ *       for instance, #pragma qc.
+/*#define MOO_ENABLE_QUOTED_COMMENT*/
+
 /* ========================================================================== */
 
 /**
@@ -1021,8 +1027,9 @@ struct moo_pfinfo_t
 } while(0)
 
 #define MOO_PF_CHECK_ARGS_STRICT(moo,nargs,cond) do { \
-	if (!(cond)) { MOO_STACK_SETRETTOERROR ((moo), (nargs), MOO_EINVAL); return MOO_PF_FAILURE; } \
+	if (!(cond)) { moo_seterrnum (moo, MOO_EINVAL); return MOO_PF_FAILURE; } \
 } while(0)
+
 /* =========================================================================
  * MODULE MANIPULATION
  * ========================================================================= */
@@ -1512,6 +1519,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_MODNAMEINVAL,    /* wrong module name */
 	MOO_SYNERR_MODIMPFAIL,      /* failed to import module */
 	MOO_SYNERR_INCLUDE,         /* #include error */
+	MOO_SYNERR_PRAGMAINVAL,     /* wrong pragma name */
 	MOO_SYNERR_NAMESPACEINVAL,  /* wrong namespace name */
 	MOO_SYNERR_POOLDICINVAL,    /* wrong pool dictionary */
 	MOO_SYNERR_POOLDICDUPL,     /* duplicate pool dictionary */

@@ -29,7 +29,7 @@
 
 #include "moo-cmn.h"
 
-/**\file
+/** \file
  * This file provides a red-black tree encapsulated in the #moo_rbt_t type that
  * implements a self-balancing binary search tree.Its interface is very close 
  * to #moo_htb_t.

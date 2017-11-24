@@ -187,14 +187,14 @@ extend Apex
 	 
 	method(#dual) isNil
 	{
-		"^self == nil."
+		## ^self == nil.
 		^false
 	}
 
 	method(#dual) notNil
 	{
-		"^(self == nil) not"
-		"^self ~= nil."
+		## ^(self == nil) not
+		## ^self ~= nil.
 		^true.
 	}
 

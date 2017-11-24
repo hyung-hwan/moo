@@ -210,25 +210,9 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 	method(#class) new: size { self messageProhibited: #new: }
 *)
 
-	method(#primitive) _addSemaphore: sem.
-	method(#primitive) _removeSemaphore: sem.
+	method(#primitive) addSemaphore: sem.
+	method(#primitive) removeSemaphore: sem.
 	method(#primitive) _wait.
-
-	method addSemaphore: sem
-	{
-		| x |
-		x := self _addSemaphore: sem.
-		if (x isError) { Exception signal: ('Cannot add a semaphore - ' & x asString) }.
-		^x
-	}
-
-	method removeSemaphore: sem
-	{
-		| x |
-		x := self _removeSemaphore: sem.
-		if (x isError) { Exception signal: ('Cannot remove a semaphore - ' & x asString) }.
-		^x
-	}
 
 	method wait
 	{
