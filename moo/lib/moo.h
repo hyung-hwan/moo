@@ -38,11 +38,6 @@
  * object instead of putting in in a separate byte array. */
 #define MOO_USE_METHOD_TRAILER
 
-
-/* TODO: turn this to per-file pragma
- *       for instance, #pragma qc.
-/*#define MOO_ENABLE_QUOTED_COMMENT*/
-
 /* ========================================================================== */
 
 /**

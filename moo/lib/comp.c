@@ -135,6 +135,8 @@ static struct voca_t
 	{  7, { '#','l','i','w','o','r','d'                                   } },
 	{  6, { 'm','e','t','h','o','d'                                       } },
 	{  3, { 'n','i','l'                                                   } },
+	{  3, { 'o','f','f'                                                   } },
+	{  2, { 'o','n'                                                       } },
 	{  8, { '#','p','o','i','n','t','e','r'                               } },
 	{  7, { 'p','o','o','l','d','i','c'                                   } },
 	{  8, { '#','p','o','o','l','d','i','c'                               } },
@@ -197,6 +199,8 @@ enum voca_id_t
 	VOCA_LIWORD_S,
 	VOCA_METHOD,
 	VOCA_NIL,
+	VOCA_OFF,
+	VOCA_ON,
 	VOCA_POINTER_S,
 	VOCA_POOLDIC,
 	VOCA_POOLDIC_S,
@@ -918,8 +922,7 @@ static int skip_comment (moo_t* moo)
 	moo_ooci_t c = moo->c->lxc.c;
 	moo_iolxc_t lc;
 
-#if defined(MOO_ENABLE_QUOTED_COMMENT)
-	if (c == '"')
+	if ((moo->c->pragma_flags & MOO_PRAGMA_QC) && c == '"')
 	{
 		/* skip up to the closing " */
 		do 
@@ -932,9 +935,7 @@ static int skip_comment (moo_t* moo)
 		if (c == '"') GET_CHAR (moo); /* keep the next character in lxc */
 		return 1; /* double-quoted comment */
 	}
-	else 
-#endif
-	if (c == '(')
+	else if (c == '(')
 	{
 		/* handle (* ... *) */
 		lc = moo->c->lxc;
@@ -1876,12 +1877,11 @@ retry:
 
 			break;
 
-
-#if !defined(MOO_ENABLE_QUOTED_COMMENT)
 		case '"':
+			/* if QSE_PRAGMA_QC is set, this part should never be reached */
+			MOO_ASSERT (moo, !(moo->c->pragma_flags & MOO_PRAGMA_QC));
 			if (get_string(moo, '"', '\\', 0, 0) <= -1) return -1;
 			break;
-#endif
 
 		case 'C': /* a character with a C-style escape sequence */
 		case 'S': /* a string with a C-style escape sequences */
@@ -7912,11 +7912,54 @@ static int compile_pragma_definition (moo_t* moo)
 			return -1;
 		}
 
+#if 0
+/* TODO: pragma push
+		if (is_token_word(moo, VOCA_PUSH))
+		{
+			/* #pragma push() - saves the pragma flags and keep the existing flags */
+			/* #pragma push(reset) - saves the pragma flags and reset the flags to 0 */
+		
+		}
+		else if (is_token_word(moo, VOCA_POP))
+		{
+			/* #pragma pop() */
+		}
+		else
+#endif
 		if (is_token_word(moo, VOCA_QC))
 		{
-			/* #pragma qc */
-			/* TODO: #pragma qc=on, #progma qc=off, #pragma qc(on), $pragma qc(off) */
-/* TODO ... */
+			/* #pragma qc(on). #pragma qc(off) */
+
+			GET_TOKEN(moo);
+			if (TOKEN_TYPE(moo) != MOO_IOTOK_LPAREN)
+			{
+				set_syntax_error (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				return -1;
+			}
+
+			GET_TOKEN(moo);
+			if (is_token_word(moo, VOCA_ON))
+			{
+				/* #pragma qc(on) */
+				moo->c->pragma_flags |= MOO_PRAGMA_QC;
+			}
+			else if (is_token_word(moo, VOCA_OFF))
+			{
+				/* #pragma qc(off) */
+				moo->c->pragma_flags &= ~MOO_PRAGMA_QC;
+			}
+			else
+			{
+				set_syntax_error (moo, MOO_SYNERR_DIRECTIVEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				return -1;
+			}
+
+			GET_TOKEN(moo);
+			if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
+			{
+				set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				return -1;
+			}
 		}
 		else
 		{
@@ -8145,6 +8188,9 @@ int moo_compile (moo_t* moo, moo_ioimpl_t io)
 	 * location */
 	clear_io_names (moo);
 
+	/* reset pragma flags */
+	moo->c->pragma_flags = 0;
+	
 	/* initialize some key fields */
 	moo->c->impl = io;
 	moo->c->nungots = 0;
