@@ -90,76 +90,46 @@ extend Apex
 
 	## -------------------------------------------------------
 	## -------------------------------------------------------
-	##method(#dual,#primitive,#lenient) _shallowCopy.
-	##method(#dual,#primitive) shallowCopy.
-	
-	method(#dual) shallowCopy
-	{
-		<primitive: #_shallow_copy>
-		self primitiveFailed(thisContext method).
-	}
+	method(#dual,#primitive,#lenient) _shallowCopy.
+	method(#dual,#primitive) shallowCopy.
 
-	
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 	method(#dual,#primitive,#lenient) _basicSize.
 	method(#dual,#primitive) basicSize.
 
-	method(#dual) basicAt: index
-	{
-		| perr |
-		
-		<primitive: #_basic_at>
-
-## TODO: create a common method that translate a primitive error to some standard exceptions of primitive failure.
-		perr := thisProcess primError.
-		if (perr == Error.Code.ERANGE) { self index: index outOfRange: (self basicSize) }
-		elsif (perr == Error.Code.EPERM) { self messageProhibited: #basicAt }
-		else { self primitiveFailed }
-	}
-
-	method(#dual) basicAt: index put: anObject
-	{
-		| perr |
-		
-		<primitive: #_basic_at_put>
-
-		perr := thisProcess primError.
-		if (perr == Error.Code.ERANGE) { self index: index outOfRange: (self basicSize) }
-		elsif (perr == Error.Code.EPERM) { self messageProhibited: #basicAt:put: }
-		else { self primitiveFailed }
-	}
+	method(#dual,#primitive) basicAt: index.
+	method(#dual,#primitive) basicAt: index put: value.
 
 	(* ------------------------------------------------------------------
 	 * FINALIZATION SUPPORT
 	 * ------------------------------------------------------------------ *)
 	method(#dual,#primitive) addToBeFinalized.
-	##method(#dual,#primitive) removeToBeFinalized.
+	method(#dual,#primitive) removeToBeFinalized.
 
 	(* ------------------------------------------------------------------
 	 * HASHING
 	 * ------------------------------------------------------------------ *)
+	method(#dual,#primitive) hash.
+
+	(*
 	method(#dual) hash
 	{
-		<primitive: #_hash>
+		<primitive: #Apex_hash>
 		self subclassResponsibility: #hash
-	}
+	}*)
 
 	(* ------------------------------------------------------------------
 	 * IDENTITY TEST
 	 * ------------------------------------------------------------------ *)
 
-	method(#dual) == anObject
-	{
-		(* check if the receiver is identical to anObject.
-		 * this doesn't compare the contents *)
-		<primitive: #_identical>
-		self primitiveFailed.
-	}
+	## check if the receiver is identical to anObject.
+	## this doesn't compare the contents 
+	method(#dual, #primitive) == anObject.
 
 	method(#dual) ~~ anObject
 	{
-		<primitive: #_not_identical>
+		<primitive: #'Apex_~~'>
 		^(self == anObject) not.
 	}
 
@@ -168,13 +138,13 @@ extend Apex
 	 * ------------------------------------------------------------------ *)
 	method(#dual) = anObject
 	{
-		<primitive: #_equal>
+		<primitive: #'Apex_='>
 		self subclassResponsibility: #=
 	}
 	
 	method(#dual) ~= anObject
 	{
-		<primitive: #_not_equal>
+		<primitive: #'Apex_~='>
 		^(self = anObject) not.
 	}
 
@@ -184,7 +154,7 @@ extend Apex
 	 * ------------------------------------------------------------------ *)
 
 	method(#dual,#primitive) class.
-	 
+
 	method(#dual) isNil
 	{
 		## ^self == nil.
@@ -243,50 +213,41 @@ extend Apex
 
 	method(#dual) isKindOf: aClass
 	{
-		<primitive: #_is_kind_of>
+		<primitive: #Apex_isKindOf:>
 		^(self isMemberOf: aClass) or: [self class inheritsFrom: aClass].
 	}
 
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
-	method(#dual) respondsTo: selector
-	{
-		<primitive: #_responds_to>
-		self primitiveFailed
-	}
+	method(#dual,#primitive) respondsTo: selector.
 
 	## -------------------------------------------------------
 	## -------------------------------------------------------
 
-	method(#dual,#variadic) perform(selector)
-	{
-		<primitive: #_perform>
-		self primitiveFailed
-	}
+	method(#dual,#variadic,#primitive) perform(selector).
 
 	method(#dual) perform: selector
 	{
-		<primitive: #_perform>
+		<primitive: #Apex_perform>
 		self primitiveFailed
 	}
-	
 
 	method(#dual) perform: selector with: arg1
 	{
-		<primitive: #_perform>
+		<primitive: #Apex_perform>
 		self primitiveFailed
 	}
 
 	method(#dual) perform: selector with: arg1 with: arg2
 	{
-		<primitive: #_perform>
+		<primitive: #Apex_perform>
 		self primitiveFailed
 	}
 
 	method(#dual) perform: selector with: arg1 with: arg2 with: arg3
 	{
-		<primitive: #_perform>
+		<primitive: #Apex_perform>
 		self primitiveFailed
 	}
 

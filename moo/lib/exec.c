@@ -1751,8 +1751,7 @@ static int _equal_objects (moo_t* moo, moo_oop_t rcv, moo_oop_t arg)
 					MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(rcv) == MOO_OBJ_TYPE_OOP);
 
 				#if 1
-					MOO_DEBUG1 (moo, "<_equal_objects> Cannot compare objects of type %d\n", (int)MOO_OBJ_GET_FLAGS_TYPE(rcv));
-					moo_seterrnum (moo, MOO_ENOIMPL); /* TODO: better error code */
+					moo_seterrbfmt (moo, MOO_ENOIMPL, "no builtin comparison implemented for %O and %O", rcv, arg); /* TODO: better error code */
 					return -1;
 				#else
 					for (i = 0; i < MOO_OBJ_GET_SIZE(rcv); i++)
@@ -1911,7 +1910,7 @@ static moo_pfrc_t pf_basic_at (moo_t* moo, moo_ooi_t nargs)
 	if (!MOO_OOP_IS_POINTER(rcv))
 	{
 		/* the receiver is a special numeric object, not a normal pointer */
-		moo_seterrnum (moo, MOO_EINVAL);
+		moo_seterrbfmt (moo, MOO_EMSGRCV, "receiver not indexable - %O", rcv);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1919,13 +1918,13 @@ static moo_pfrc_t pf_basic_at (moo_t* moo, moo_ooi_t nargs)
 	if (moo_inttooow (moo, pos, &idx) <= 0)
 	{
 		/* negative integer or not integer */
-		moo_seterrnum (moo, MOO_EINVAL);
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid position - %O", pos);
 		return MOO_PF_FAILURE;
 	}
 	if (idx >= MOO_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
-		moo_seterrnum (moo, MOO_ERANGE);
+		moo_seterrbfmt (moo, MOO_ERANGE, "position out of bound - %O", pos);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1973,14 +1972,14 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 	if (!MOO_OOP_IS_POINTER(rcv))
 	{
 		/* the receiver is a special numeric object, not a normal pointer */
-		moo_seterrnum (moo, MOO_EINVAL);
+		moo_seterrbfmt (moo, MOO_EMSGRCV, "receiver not indexable - %O", rcv);
 		return MOO_PF_FAILURE;
 	}
 
 	if (MOO_OBJ_GET_FLAGS_RDONLY(rcv))
 	{
 /* TODO: better error handling */
-		moo_seterrnum (moo, MOO_EPERM);
+		moo_seterrbfmt (moo, MOO_EPERM, "now allowed to change a read-only object - %O", rcv);
 		return MOO_PF_FAILURE;
 	}
 
@@ -1990,13 +1989,13 @@ static moo_pfrc_t pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 	if (moo_inttooow (moo, pos, &idx) <= 0)
 	{
 		/* negative integer or not integer */
-		moo_seterrnum (moo, MOO_EINVAL);
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid position - %O", pos);
 		return MOO_PF_FAILURE;
 	}
 	if (idx >= MOO_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
-		moo_seterrnum (moo, MOO_ERANGE);
+		moo_seterrbfmt (moo, MOO_ERANGE, "position out of bound - %O", pos);
 		return MOO_PF_FAILURE;
 	}
 
@@ -2131,8 +2130,7 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_ooi_t nargs)
 
 				default:
 					/* MOO_OBJ_TYPE_OOP, ... */
-					MOO_DEBUG1 (moo, "<pf_hash> Cannot hash an object of type %d\n", type);
-					moo_seterrnum (moo, MOO_ENOIMPL); /* TODO: better error code? */
+					moo_seterrbfmt(moo, MOO_ENOIMPL, "no builtin hash implemented for %O", rcv); /* TODO: better error code? */
 					return MOO_PF_FAILURE;
 			}
 			break;
@@ -2177,7 +2175,7 @@ static moo_pfrc_t pf_responds_to (moo_t* moo, moo_ooi_t nargs)
 
 	if (MOO_CLASSOF(moo,selector) != moo->_symbol)
 	{
-		moo_seterrnum (moo, MOO_EINVAL);
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid argument - %O", selector);
 		return MOO_PF_FAILURE;
 	}
 
@@ -2207,7 +2205,7 @@ static moo_pfrc_t pf_perform (moo_t* moo, moo_ooi_t nargs)
 
 	if (MOO_CLASSOF(moo,selector) != moo->_symbol)
 	{
-		moo_seterrnum (moo, MOO_EINVAL);
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid argument - %O", selector);
 		return MOO_PF_FAILURE;
 	}
 
@@ -2227,6 +2225,8 @@ static moo_pfrc_t pf_perform (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+/* ------------------------------------------------------------------ */
+
 static moo_pfrc_t pf_context_goto (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
@@ -2245,9 +2245,7 @@ static moo_pfrc_t pf_context_goto (moo_t* moo, moo_ooi_t nargs)
 	pc = MOO_STACK_GETARG(moo, nargs, 0);
 	if (!MOO_OOP_IS_SMOOI(pc) || MOO_OOP_TO_SMOOI(pc) < 0)
 	{
-		MOO_LOG1 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR,
-			"Error(%hs) - invalid pc\n", __PRIMITIVE_NAME__);
-		moo_seterrnum (moo, MOO_EINVAL);
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid pc - %O", pc);
 		return MOO_PF_FAILURE;
 	}
 
@@ -2258,6 +2256,8 @@ static moo_pfrc_t pf_context_goto (moo_t* moo, moo_ooi_t nargs)
 	MOO_STACK_POPS (moo, 2); /* pop both the argument and the receiver */
 	return MOO_PF_SUCCESS;
 }
+
+/* ------------------------------------------------------------------ */
 
 static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_ooi_t nargs, moo_ooi_t num_first_arg_elems, moo_oop_context_t* pblkctx)
 {
@@ -2291,21 +2291,16 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 		 * you can't send 'value' again to reactivate it.
 		 * For example, [thisContext value] value. */
 		MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(rcv_blkctx) > MOO_CONTEXT_NAMED_INSTVARS);
-		MOO_LOG2 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
-			"Error(%hs) - re-valuing of a block context - %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
-
-		moo_seterrnum (moo, MOO_EPERM);
+		moo_seterrbfmt (moo, MOO_EPERM, "re-valuing of a block context - %O", rcv_blkctx);
 		return MOO_PF_FAILURE;
 	}
 	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(rcv_blkctx) == MOO_CONTEXT_NAMED_INSTVARS);
 
 	if (MOO_OOP_TO_SMOOI(rcv_blkctx->method_or_nargs) != actual_arg_count /* nargs */)
 	{
-		MOO_LOG4 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
-			"Error(%hs) - wrong number of arguments to a block context %O - %zd expected, %zd given\n",
-			__PRIMITIVE_NAME__, rcv_blkctx, MOO_OOP_TO_SMOOI(rcv_blkctx->method_or_nargs), actual_arg_count);
-
-		moo_seterrnum (moo, MOO_ENUMARGS);
+		moo_seterrbfmt (moo, MOO_ENUMARGS,
+			"wrong number of arguments to a block context %O - %zd expected, %zd given",
+			rcv_blkctx, MOO_OOP_TO_SMOOI(rcv_blkctx->method_or_nargs), actual_arg_count);
 		return MOO_PF_FAILURE;
 	}
 
@@ -2320,10 +2315,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 	moo_pushtmp (moo, (moo_oop_t*)&rcv_blkctx);
 	blkctx = (moo_oop_context_t) moo_instantiate (moo, moo->_block_context, MOO_NULL, local_ntmprs); 
 	moo_poptmp (moo);
-	if (!blkctx) 
-	{
-		return MOO_PF_FAILURE;
-	}
+	if (!blkctx) return MOO_PF_FAILURE;
 
 #if 0
 	/* shallow-copy the named part including home, origin, etc. */
@@ -2393,12 +2385,13 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_ooi_t nargs)
 	/* create a new process from a block context.
 	 * the receiver must be be a block.
 	 *   [ 1 + 2 ] newProcess.
-	 *   [ :a :b | a + b ] newProcess: #(1 2)
+	 *   [ :a :b | a + b ] newProcess(1, 2)
 	 */
 
 	int x;
 	moo_oop_context_t rcv_blkctx, blkctx;
 	moo_oop_process_t proc;
+#if 0
 	moo_ooi_t num_first_arg_elems = 0;
 
 	MOO_ASSERT (moo, nargs <= 1);
@@ -2418,20 +2411,18 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_ooi_t nargs)
 
 		num_first_arg_elems = MOO_OBJ_GET_SIZE(xarg);
 	}
+#endif
 
 	rcv_blkctx = (moo_oop_context_t)MOO_STACK_GETRCV(moo, nargs);
-	if (MOO_CLASSOF(moo, rcv_blkctx) != moo->_block_context)
-	{
-		/* the receiver must be a block context */
-		MOO_LOG2 (moo, MOO_LOG_PRIMITIVE | MOO_LOG_ERROR, 
-			"Error(%hs) - invalid receiver, not a block context - %O\n", __PRIMITIVE_NAME__, rcv_blkctx);
-		moo_seterrnum (moo, MOO_EINVAL);
-		return MOO_PF_FAILURE;
-	}
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv_blkctx) == moo->_block_context);
 
 	/* this primitive creates a new process with a block as if the block
 	 * is sent the value message */
+#if 0
 	x = __block_value (moo, rcv_blkctx, nargs, num_first_arg_elems, &blkctx);
+#else
+	x = __block_value (moo, rcv_blkctx, nargs, 0, &blkctx);
+#endif
 	if (x <= 0) return x; /* both hard failure and soft failure */
 
 	/* reset the sender field to moo->_nil because this block context
@@ -2441,7 +2432,7 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_ooi_t nargs)
 	blkctx->sender = (moo_oop_context_t)moo->_nil;
 
 	proc = make_process (moo, blkctx);
-	if (!proc) return MOO_PF_HARD_FAILURE; /* hard failure */ /* TOOD: can't this be treated as a soft failure? throw an exception instead?? */
+	if (!proc) return MOO_PF_FAILURE; /* hard failure */ /* TOOD: can't this be treated as a soft failure? throw an exception instead?? */
 
 	/* __block_value() has popped all arguments and the receiver. 
 	 * PUSH the return value instead of changing the stack top */
@@ -4305,29 +4296,6 @@ typedef struct pf_t pf_t;
 static pf_t pftab[] =
 {
 	{  "_dump",                                { pf_dump,                                 0, MA } },
-	
-
-	{ "_identical",                            { pf_identical,                            1, 1 } },
-	{ "_not_identical",                        { pf_not_identical,                        1, 1 } },
-	{ "_equal",                                { pf_equal,                                1, 1 } },
-	{ "_not_equal",                            { pf_not_equal,                            1, 1 } },
-
-	
-	{ "_shallow_copy",                         { pf_shallow_copy,                         0, 0 } },
-
-	
-	{ "_basic_at",                             { pf_basic_at,                             1, 1 } },
-	{ "_basic_at_put",                         { pf_basic_at_put,                         2, 2 } },
-
-	{ "_hash",                                 { pf_hash,                                 0, 0 } },
-
-	{ "_is_kind_of",                           { pf_is_kind_of,                           1, 1, } },
-	{ "_responds_to",                          { pf_responds_to,                          1, 1  } },
-	{ "_perform",                              { pf_perform,                              1, MA } },
-
-	{ "_context_goto",                         { pf_context_goto,                         1, 1  } },
-	{ "_block_value",                          { pf_block_value,                          0, MA } },
-	{ "_block_new_process",                    { pf_block_new_process,                    0, 1  } },
 
 	{ "_processor_schedule",                   { pf_processor_schedule,                   1, 1 } },
 
@@ -4354,6 +4322,8 @@ static pf_t pftab[] =
 	{ "_integer_inttostr",                     { pf_integer_inttostr,                     1, 1 } },
 
 	{ "Apex_addToBeFinalized",                 { pf_add_to_be_finalized,                  0, 0 } },
+	{ "Apex_basicAt:",                         { pf_basic_at,                             1, 1 } },
+	{ "Apex_basicAt:put:",                     { pf_basic_at_put,                         2, 2 } },
 	{ "Apex_basicNew",                         { pf_basic_new,                            0, 0 } },
 	{ "Apex_basicNew:",                        { pf_basic_new,                            1, 1 } },
 	{ "Apex_basicSize",                        { pf_basic_size,                           0, 0 } },
@@ -4361,7 +4331,20 @@ static pf_t pftab[] =
 	{ "Apex_basicNew:",                        { pf_basic_new,                            1, 1 } },
 	{ "Apex_basicSize",                        { pf_basic_size,                           0, 0 } },
 	{ "Apex_class",                            { pf_class,                                0, 0 } },
+	{ "Apex_hash",                             { pf_hash,                                 0, 0 } },
+	{ "Apex_isKindOf:",                        { pf_is_kind_of,                           1, 1, } },
+	{ "Apex_perform",                          { pf_perform,                              1, MA } },
 	{ "Apex_removeToBeFinalized",              { pf_remove_to_be_finalized,               0, 0 } },
+	{ "Apex_respondsTo:",                      { pf_responds_to,                          1, 1 } },
+	{ "Apex_shallowCopy",                      { pf_shallow_copy,                         0, 0 } },
+
+	{ "Apex_==",                               { pf_identical,                            1, 1 } },
+	{ "Apex_~~",                               { pf_not_identical,                        1, 1 } },
+	{ "Apex_=",                                { pf_equal,                                1, 1 } },
+	{ "Apex_~=",                               { pf_not_equal,                            1, 1 } },
+
+	{ "BlockContext_value",                    { pf_block_value,                          0, MA } },
+	{ "BlockContext_newProcess",               { pf_block_new_process,                    0, MA } },
 
 	{ "Character_asInteger",                   { pf_character_as_smooi,                   0, 0 } },
 
@@ -4369,6 +4352,8 @@ static pf_t pftab[] =
 	{ "Error_asInteger",                       { pf_error_as_integer,                     0, 0 } },
 	{ "Error_asString",                        { pf_error_as_string,                      0, 0 } },
 
+	{ "MethodContext_goto:",                   { pf_context_goto,                         1, 1  } },
+	
 	{ "Process_resume",                        { pf_process_resume,                       0, 0 } },
 	{ "Process_sp",                            { pf_process_sp,                           0, 0 } },
 	{ "Process_suspend",                       { pf_process_suspend,                      0, 0 } },
@@ -4405,34 +4390,34 @@ static pf_t pftab[] =
 
 	{ "String_strlen",                         { pf_strlen,                               0, 0 } },
 
-	{ "System_calloc",                        { pf_system_calloc,                        1, 1 } },
-	{ "System_free",                          { pf_system_free,                          1, 1 } },
-	{ "System_getInt16",                      { pf_system_get_int16,                     2, 2 } },
-	{ "System_getInt32",                      { pf_system_get_int32,                     2, 2 } },
-	{ "System_getInt64",                      { pf_system_get_int64,                     2, 2 } },
-	{ "System_getInt8",                       { pf_system_get_int8,                      2, 2 } },
-	{ "System_getUint16",                     { pf_system_get_uint16,                    2, 2 } },
-	{ "System_getUint32",                     { pf_system_get_uint32,                    2, 2 } },
-	{ "System_getUint64",                     { pf_system_get_uint64,                    2, 2 } },
-	{ "System_getUint8",                      { pf_system_get_uint8,                     2, 2 } },
-	{ "System_malloc",                        { pf_system_malloc,                        1, 1 } },
-	{ "System_popCollectable",                { pf_system_pop_collectable,               0, 0 } },
-	{ "System_putInt8",                       { pf_system_put_int8,                      3, 3 } },
-	{ "System_putInt16",                      { pf_system_put_int16,                     3, 3 } },
-	{ "System_putInt32",                      { pf_system_put_int32,                     3, 3 } },
-	{ "System_putInt64",                      { pf_system_put_int64,                     3, 3 } },
-	{ "System_putUint8",                      { pf_system_put_uint8,                     3, 3 } },
-	{ "System_putUint16",                     { pf_system_put_uint16,                    3, 3 } },
-	{ "System_putUint32",                     { pf_system_put_uint32,                    3, 3 } },
-	{ "System_putUint64",                     { pf_system_put_uint64,                    3, 3 } },
+	{ "System_calloc",                         { pf_system_calloc,                        1, 1 } },
+	{ "System_free",                           { pf_system_free,                          1, 1 } },
+	{ "System_getInt16",                       { pf_system_get_int16,                     2, 2 } },
+	{ "System_getInt32",                       { pf_system_get_int32,                     2, 2 } },
+	{ "System_getInt64",                       { pf_system_get_int64,                     2, 2 } },
+	{ "System_getInt8",                        { pf_system_get_int8,                      2, 2 } },
+	{ "System_getUint16",                      { pf_system_get_uint16,                    2, 2 } },
+	{ "System_getUint32",                      { pf_system_get_uint32,                    2, 2 } },
+	{ "System_getUint64",                      { pf_system_get_uint64,                    2, 2 } },
+	{ "System_getUint8",                       { pf_system_get_uint8,                     2, 2 } },
+	{ "System_malloc",                         { pf_system_malloc,                        1, 1 } },
+	{ "System_popCollectable",                 { pf_system_pop_collectable,               0, 0 } },
+	{ "System_putInt8",                        { pf_system_put_int8,                      3, 3 } },
+	{ "System_putInt16",                       { pf_system_put_int16,                     3, 3 } },
+	{ "System_putInt32",                       { pf_system_put_int32,                     3, 3 } },
+	{ "System_putInt64",                       { pf_system_put_int64,                     3, 3 } },
+	{ "System_putUint8",                       { pf_system_put_uint8,                     3, 3 } },
+	{ "System_putUint16",                      { pf_system_put_uint16,                    3, 3 } },
+	{ "System_putUint32",                      { pf_system_put_uint32,                    3, 3 } },
+	{ "System_putUint64",                      { pf_system_put_uint64,                    3, 3 } },
 
-	{ "System_signal:afterSecs:",             { pf_system_add_timed_semaphore,           2, 2 } },
-	{ "System_signal:afterSecs:nanosecs:",    { pf_system_add_timed_semaphore,           3, 3 } },
-	{ "System_signal:onInput:",               { pf_system_add_input_semaphore,           2, 2 } },
-	{ "System_signal:onInOutput:",            { pf_system_add_inoutput_semaphore,        2, 2 } },
-	{ "System_signal:onOutput:",              { pf_system_add_output_semaphore,          2, 2 } },
-	{ "System_signalOnGCFin:",                { pf_system_add_gcfin_semaphore,           1, 1 } },
-	{ "System_unsignal:",                     { pf_system_remove_semaphore,              1, 1 } },
+	{ "System_signal:afterSecs:",              { pf_system_add_timed_semaphore,           2, 2 } },
+	{ "System_signal:afterSecs:nanosecs:",     { pf_system_add_timed_semaphore,           3, 3 } },
+	{ "System_signal:onInput:",                { pf_system_add_input_semaphore,           2, 2 } },
+	{ "System_signal:onInOutput:",             { pf_system_add_inoutput_semaphore,        2, 2 } },
+	{ "System_signal:onOutput:",               { pf_system_add_output_semaphore,          2, 2 } },
+	{ "System_signalOnGCFin:",                 { pf_system_add_gcfin_semaphore,           1, 1 } },
+	{ "System_unsignal:",                      { pf_system_remove_semaphore,              1, 1 } },
 
 	{ "System_collectGarbage",                 { pf_system_collect_garbage,               0, 0 } },
 	{ "System_log",                            { pf_system_log,                           2, MA } },

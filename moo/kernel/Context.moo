@@ -56,22 +56,20 @@ class(#pointer,#final,#limited) MethodContext(Context)
 		^self.ip + 1
 	}
 
-	method goto: anInteger
-	{
-		<primitive: #_context_goto>
-		self primitiveFailed. ## TODO: need to make this a hard failure?
-	}
-
 	method pc: anInteger
 	{
 		self.ip := anInteger.
 	}
 
+	## it is similar to the pc: method but it doesn't 
+	## push the return value to the stack.
+	method(#primitive) goto: pc.
+
 	method sp
 	{
 		^self.sp.
-
 	}
+
 	method sp: new_sp
 	{
 		self.sp := new_sp
@@ -113,55 +111,43 @@ class(#pointer,#final,#limited) BlockContext(Context)
 		^self.home vargAt: index
 	}
 
+## TODO: how can i pass variadic arguments to newProcess
+## method(#variadic) fork() -> how to pass them to newProcess???
 	method fork 
 	{
 		## crate a new process in the runnable state
 		^self newProcess resume.
 	}
 
-	method newProcess
-	{
-		## create a new process in the suspended state
-		<primitive: #_block_new_process>
-		self primitiveFailed.
-	}
+	## create a new process in the suspended state
+	method(#variadic,#primitive) newProcess().
 
-	method newProcessWith: anArray
-	{
-		## create a new process in the suspended state passing the elements
-		## of anArray as block arguments
-		<primitive: #_block_new_process>
-		self primitiveFailed.
-	}
+	## evaluate the block
+	method(#variadic,#primitive) value().
 
-	method value
-	{
-		<primitive: #_block_value>
-		self primitiveFailed.
-	}
 	method value: a 
 	{
-		<primitive: #_block_value>
+		<primitive: #BlockContext_value>
 		self primitiveFailed.
 	}
 	method value: a value: b
 	{
-		<primitive: #_block_value>
+		<primitive: #BlockContext_value>
 		self primitiveFailed.
 	}
 	method value: a value: b value: c
 	{
-		<primitive: #_block_value>
+		<primitive: #BlockContext_value>
 		self primitiveFailed.
 	}
 	method value: a value: b value: c value: d
 	{
-		<primitive: #_block_value>
+		<primitive: #BlockContext_value>
 		self primitiveFailed.
 	}
 	method value: a value: b value: c value: d value: e
 	{
-		<primitive: #_block_value>
+		<primitive: #BlockContext_value>
 		self primitiveFailed.
 	}
 

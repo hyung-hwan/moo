@@ -205,14 +205,14 @@ class(#character,#final,#limited,#immutable) Symbol(String)
 	method = anObject
 	{
 		(* for a symbol, equality check is the same as the identity check *)
-		<primitive: #_identical>
+		<primitive: #'Apex_=='>
 		self primitiveFailed.
 	}
 
 	method ~= anObject
 	{
 		(* for a symbol, equality check is the same as the identity check *)
-		<primitive: #_not_identical>
+		<primitive: #'Apex_~~'>
 		^(self == anObject) not.
 	}
 }

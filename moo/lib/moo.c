@@ -193,7 +193,6 @@ void moo_fini (moo_t* moo)
 		if (cb->fini) cb->fini (moo);
 	}
 
-
 	moo_rbt_walk (&moo->modtab, unload_module, moo); /* unload all modules */
 	moo_rbt_fini (&moo->modtab);
 

@@ -2098,7 +2098,7 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 		}
 		while (cm);
 
-		xtn->logmask |= MOO_LOG_ALL_LEVELS; /* TODO: parse leves also */
+		xtn->logmask |= MOO_LOG_ALL_LEVELS; /* TODO: parse levels also */
 	}
 	else
 	{
@@ -2130,10 +2130,15 @@ int main (int argc, char* argv[])
 	int i, xret;
 
 	moo_bci_t c;
+	static moo_bopt_lng_t lopt[] =
+	{
+		{ ":log",    'l' },
+		{ MOO_NULL, '\0' }
+	};
 	static moo_bopt_t opt =
 	{
 		"l:",
-		MOO_NULL
+		lopt
 	};
 
 	const char* logopt = MOO_NULL;
@@ -2229,14 +2234,18 @@ int main (int argc, char* argv[])
 			return -1;
 		}
 	}
+	else
+	{
+		/* default logging mask when no logging option is set */
+		xtn->logmask = MOO_LOG_ALL_TYPES | MOO_LOG_ERROR | MOO_LOG_FATAL;
+	}
 
 	if (moo_ignite(moo) <= -1)
 	{
-		moo_logbfmt (moo, MOO_LOG_ERROR, "ERROR: cannot ignite moo - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
+		moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "ERROR: cannot ignite moo - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
 		close_moo (moo);
 		return -1;
 	}
-
 
 #if defined(macintosh)
 	i = 20;
