@@ -1297,6 +1297,24 @@ moo_pfbase_t* moo_querymod (
 );
 
 
+/* ========================================================================= */
+/* pf-basic.c                                                                */
+/* ========================================================================= */
+moo_pfrc_t moo_pf_identical (moo_t* moo, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_not_identical (moo_t* moo, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_equal (moo_t* moo, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_not_equal (moo_t* moo, moo_ooi_t nargs);
+
+moo_pfrc_t moo_pf_basic_new (moo_t* moo, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_shallow_copy (moo_t* moo, moo_ooi_t nargs);
+
+moo_pfrc_t moo_pf_class (moo_t* moo, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_basic_size (moo_t* moo, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_basic_at (moo_t* moo, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_ooi_t nargs);
+
+moo_pfrc_t moo_pf_is_kind_of (moo_t* moo, moo_ooi_t nargs);
+
 /* TODO: remove the following debugging functions */
 /* ========================================================================= */
 /* debug.c                                                                   */
