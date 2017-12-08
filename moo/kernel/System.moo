@@ -288,28 +288,32 @@ TODO: how to pass all variadic arguments to another variadic methods???
 	}
 
 	(* raw memory allocation *)
-	method(#class,#primitive) _malloc (size).
-	method(#class,#primitive) _calloc (size).
-	method(#class,#primitive) _free (rawptr).
+	method(#class,#primitive) malloc (size).
+	method(#class,#primitive) calloc (size).
+	method(#class,#primitive) free (rawptr).
+	
+	method(#class,#primitive) malloc: size.
+	method(#class,#primitive) calloc: size.
+	method(#class,#primitive) free: rawptr.
 
 	(* raw memory access *)
-	method(#class,#primitive) _getInt8   (rawptr, offset). ## <primitive: #System__getInt8>
-	method(#class,#primitive) _getInt16  (rawptr, offset).
-	method(#class,#primitive) _getInt32  (rawptr, offset).
-	method(#class,#primitive) _getInt64  (rawptr, offset).
-	method(#class,#primitive) _getUint8  (rawptr, offset). ## <primitive: #System__getUint8>
-	method(#class,#primitive) _getUint16 (rawptr, offset).
-	method(#class,#primitive) _getUint32 (rawptr, offset).
-	method(#class,#primitive) _getUint64 (rawptr, offset).
+	method(#class,#primitive) getInt8   (rawptr, offset). ## <primitive: #System__getInt8>
+	method(#class,#primitive) getInt16  (rawptr, offset).
+	method(#class,#primitive) getInt32  (rawptr, offset).
+	method(#class,#primitive) getInt64  (rawptr, offset).
+	method(#class,#primitive) getUint8  (rawptr, offset). ## <primitive: #System__getUint8>
+	method(#class,#primitive) getUint16 (rawptr, offset).
+	method(#class,#primitive) getUint32 (rawptr, offset).
+	method(#class,#primitive) getUint64 (rawptr, offset).
 
-	method(#class,#primitive) _putInt8   (rawptr, offset, value).
-	method(#class,#primitive) _putInt16  (rawptr, offset, value).
-	method(#class,#primitive) _putInt32  (rawptr, offset, value).
-	method(#class,#primitive) _putInt64  (rawptr, offset, value).
-	method(#class,#primitive) _putUint8  (rawptr, offset, value).
-	method(#class,#primitive) _putUint16 (rawptr, offset, value).
-	method(#class,#primitive) _putUint32 (rawptr, offset, value).
-	method(#class,#primitive) _putUint64 (rawptr, offset, value).
+	method(#class,#primitive) putInt8   (rawptr, offset, value).
+	method(#class,#primitive) putInt16  (rawptr, offset, value).
+	method(#class,#primitive) putInt32  (rawptr, offset, value).
+	method(#class,#primitive) putInt64  (rawptr, offset, value).
+	method(#class,#primitive) putUint8  (rawptr, offset, value).
+	method(#class,#primitive) putUint16 (rawptr, offset, value).
+	method(#class,#primitive) putUint32 (rawptr, offset, value).
+	method(#class,#primitive) putUint64 (rawptr, offset, value).
 }
 
 
@@ -325,7 +329,7 @@ class SmallPointer(Object)
 	method(#primitive) getUint16 (offset).
 	method(#primitive) getUint32 (offset).
 	method(#primitive) getUint64 (offset).
-	
+
 	method(#primitive) putInt8   (offset, value).
 	method(#primitive) putInt16  (offset, value).
 	method(#primitive) putInt32  (offset, value).

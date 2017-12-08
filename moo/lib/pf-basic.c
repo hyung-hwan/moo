@@ -460,3 +460,32 @@ moo_pfrc_t moo_pf_is_kind_of (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+
+moo_pfrc_t moo_pf_responds_to (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, selector;
+	moo_oocs_t mthname;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	selector = MOO_STACK_GETARG(moo, nargs, 0);
+
+	/*if (MOO_CLASSOF(moo,selector) != moo->_symbol)*/
+	if (!MOO_OOP_IS_POINTER(selector) || !MOO_OBJ_IS_CHAR_POINTER(selector))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid argument - %O", selector);
+		return MOO_PF_FAILURE;
+	}
+
+	mthname.ptr = MOO_OBJ_GET_CHAR_SLOT(selector);
+	mthname.len = MOO_OBJ_GET_SIZE(selector);
+	if (moo_findmethod (moo, rcv, &mthname, 0))
+	{
+		MOO_STACK_SETRET (moo, nargs, moo->_true);
+	}
+	else
+	{
+		MOO_STACK_SETRET (moo, nargs, moo->_false);
+	}
+
+	return MOO_PF_SUCCESS;
+}

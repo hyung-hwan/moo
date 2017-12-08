@@ -1374,7 +1374,7 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 	return 0;
 }
 
-static moo_oop_method_t find_method (moo_t* moo, moo_oop_t receiver, const moo_oocs_t* message, int super)
+moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, const moo_oocs_t* message, int super)
 {
 	moo_oop_class_t cls;
 	moo_oop_association_t ass;
@@ -1488,7 +1488,7 @@ static int start_initial_process_and_context (moo_t* moo, const moo_oocs_t* objn
 		return -1;
 	}
 
-	mth = find_method (moo, ass->value, mthname, 0);
+	mth = moo_findmethod (moo, ass->value, mthname, 0);
 	if (!mth) 
 	{
 		MOO_DEBUG4 (moo, "Cannot find a method in %.*js - %.*js", objname->len, objname->ptr, mthname->len, mthname->ptr);
@@ -1512,7 +1512,7 @@ TODO: overcome this problem - accept parameters....
 
 	startup.ptr = str_startup;
 	startup.len = 7;
-	mth = find_method (moo, (moo_oop_t)moo->_system, &startup, 0);
+	mth = moo_findmethod (moo, (moo_oop_t)moo->_system, &startup, 0);
 	if (!mth) 
 	{
 		MOO_DEBUG0 (moo, "Cannot find the startup method in the system class");
@@ -1749,33 +1749,7 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_ooi_t nargs)
 }
 
 
-static moo_pfrc_t pf_responds_to (moo_t* moo, moo_ooi_t nargs)
-{
-	moo_oop_t rcv, selector;
-	moo_oocs_t mthname;
 
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	selector = MOO_STACK_GETARG(moo, nargs, 0);
-
-	if (MOO_CLASSOF(moo,selector) != moo->_symbol)
-	{
-		moo_seterrbfmt (moo, MOO_EINVAL, "invalid argument - %O", selector);
-		return MOO_PF_FAILURE;
-	}
-
-	mthname.ptr = MOO_OBJ_GET_CHAR_SLOT(selector);
-	mthname.len = MOO_OBJ_GET_SIZE(selector);
-	if (find_method (moo, rcv, &mthname, 0))
-	{
-		MOO_STACK_SETRET (moo, nargs, moo->_true);
-	}
-	else
-	{
-		MOO_STACK_SETRET (moo, nargs, moo->_false);
-	}
-
-	return MOO_PF_SUCCESS;
-}
 
 static moo_pfrc_t pf_perform (moo_t* moo, moo_ooi_t nargs)
 {
@@ -3140,679 +3114,7 @@ static moo_pfrc_t pf_system_pop_collectable (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static MOO_INLINE moo_pfrc_t _system_alloc (moo_t* moo, moo_ooi_t nargs, int clear)
-{
-	moo_oop_t tmp;
 
-	MOO_ASSERT (moo, nargs == 1);
-
-	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (MOO_OOP_IS_SMOOI(tmp)) 
-	{
-		void* ptr;
-
-		ptr = clear? moo_callocmem (moo, MOO_OOP_TO_SMOOI(tmp)):
-		             moo_allocmem (moo, MOO_OOP_TO_SMOOI(tmp));
-		if (ptr)
-		{
-			MOO_ASSERT (moo, MOO_IN_SMPTR_RANGE(ptr));
-			MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP(ptr));
-		}
-		else
-		{
-			MOO_STACK_SETRETTOERRNUM (moo, nargs);
-		}
-	}
-	else
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
-	}
-
-	return MOO_PF_SUCCESS;
-} 
-
-static moo_pfrc_t pf_system_calloc (moo_t* moo, moo_ooi_t nargs)
-{
-	return _system_alloc (moo, nargs, 1);
-}
-static moo_pfrc_t pf_system_malloc (moo_t* moo, moo_ooi_t nargs)
-{
-	return _system_alloc (moo, nargs, 0);
-}
-
-static moo_pfrc_t pf_system_free (moo_t* moo, moo_ooi_t nargs)
-{
-	moo_oop_t tmp;
-	void* rawptr;
-
-	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->_system);*/
-
-	MOO_ASSERT (moo, nargs == 1);
-
-	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (MOO_OOP_IS_SMPTR(tmp)) 
-	{
-		moo_freemem (moo, MOO_OOP_TO_SMPTR(tmp));
-	}
-	else if (moo_inttooow(moo, tmp, (moo_oow_t*)&rawptr) >= 1)
-	{
-		moo_freemem (moo, rawptr);
-	}
-
-	MOO_STACK_SETRETTORCV (moo, nargs);
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_smptr_free (moo_t* moo, moo_ooi_t nargs)
-{
-	moo_oop_t tmp;
-
-	MOO_ASSERT (moo, nargs == 0);
-
-	tmp = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(tmp));
-
-	moo_freemem (moo, MOO_OOP_TO_SMPTR(tmp));
-
-	MOO_STACK_SETRETTORCV (moo, nargs);
-	return MOO_PF_SUCCESS;
-}
-
-
-#include "pack1.h"
-struct st_int8_t    { moo_int8_t  v; };
-struct st_int16_t   { moo_int16_t v; };
-struct st_int32_t   { moo_int32_t v; };
-
-struct st_uint8_t   { moo_uint8_t  v; };
-struct st_uint16_t  { moo_uint16_t v; };
-struct st_uint32_t  { moo_uint32_t v; };
-
-#if defined(MOO_HAVE_UINT64_T)
-struct st_int64_t   { moo_int64_t v; };
-struct st_uint64_t  { moo_uint64_t v; };
-#endif
-#if defined(MOO_HAVE_UINT128_T)
-struct st_int128_t   { moo_int128_t v; };
-struct st_uint128_t  { moo_uint128_t v; };
-#endif
-#include "unpack.h"
-
-
-static MOO_INLINE moo_oop_t _fetch_raw_int (moo_t* moo, moo_int8_t* rawptr, moo_oow_t offset, int size)
-{
-	moo_ooi_t v;
-
-	switch (size)
-	{
-		case 1: 
-			v = ((struct st_int8_t*)&rawptr[offset])->v;
-			break;
-
-		case 2:
-			v = ((struct st_int16_t*)&rawptr[offset])->v;
-			break;
-
-		case 4: 
-			v = ((struct st_int32_t*)&rawptr[offset])->v;
-			break;
-
-	#if defined(MOO_HAVE_INT64_T) &&  (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_INT64_T)
-		case 8: 
-			v = ((struct st_int64_t*)&rawptr[offset])->v;
-			break;
-	#endif
-
-	#if defined(MOO_HAVE_INT128_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_INT128_T)
-		case 16: 
-			v = ((struct st_int128_t*)&rawptr[offset])->v;
-			break;
-	#endif
-
-		default:
-			moo_seterrnum (moo, MOO_EINVAL);
-			return MOO_NULL;
-	}
-
-	return moo_ooitoint (moo, v);
-}
-
-
-static MOO_INLINE moo_oop_t _fetch_raw_uint (moo_t* moo, moo_uint8_t* rawptr, moo_oow_t offset, int size)
-{
-	moo_oow_t v;
-
-	switch (size)
-	{
-		case 1: 
-			v = ((struct st_uint8_t*)&rawptr[offset])->v;
-			break;
-
-		case 2:
-			v = ((struct st_uint16_t*)&rawptr[offset])->v;
-			break;
-
-		case 4: 
-			v = ((struct st_uint32_t*)&rawptr[offset])->v;
-			break;
-
-	#if defined(MOO_HAVE_UINT64_T) &&  (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_UINT64_T)
-		case 8: 
-			v = ((struct st_uint64_t*)&rawptr[offset])->v;
-			break;
-	#endif
-
-	#if defined(MOO_HAVE_UINT128_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_UINT128_T)
-		case 16: 
-			v = ((struct st_uint128_t*)&rawptr[offset])->v;
-			break;
-	#endif
-
-		default:
-			moo_seterrnum (moo, MOO_EINVAL);
-			return MOO_NULL;
-	}
-
-	return moo_oowtoint (moo, v);
-}
-
-static MOO_INLINE int _store_raw_int (moo_t* moo, moo_uint8_t* rawptr, moo_oow_t offset, int size, moo_oop_t voop)
-{
-	moo_ooi_t w, max, min;
-
-	if (moo_inttoooi (moo, voop, &w) == 0) return -1;
-
-	/* assume 2's complement */
-	max = (moo_ooi_t)(~(moo_oow_t)0 >> ((MOO_SIZEOF_OOW_T - size) * 8  + 1));
-	min = -max - 1;
-
-	if (w > max || w < min) 
-	{
-		moo_seterrnum (moo, MOO_ERANGE); 
-		return -1;
-	}
-
-	switch (size)
-	{ 
-		case 1:
-			((struct st_int8_t*)&rawptr[offset])->v = w;
-			return 0;
-
-		case 2:
-			((struct st_int16_t*)&rawptr[offset])->v = w;
-			return 0;
-
-		case 4:
-			((struct st_int32_t*)&rawptr[offset])->v = w;
-			return 0;
-
-	#if defined(MOO_HAVE_INT64_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_INT64_T)
-		case 8:
-			((struct st_int64_t*)&rawptr[offset])->v = w; 
-			return 0;
-	#endif
-
-	#if defined(MOO_HAVE_INT128_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_INT128_T)
-		case 16:
-			((struct st_int128_t*)&rawptr[offset])->v = w; 
-			return 0;
-	#endif
-	}
-
-	moo_seterrnum (moo, MOO_EINVAL);
-	return -1;
-}
-
-static MOO_INLINE int _store_raw_uint (moo_t* moo, moo_uint8_t* rawptr, moo_oow_t offset, int size, moo_oop_t voop)
-{
-	int n;
-	moo_oow_t w, max;
-
-	if ((n = moo_inttooow (moo, voop, &w)) <= 0) 
-	{
-		if (n <= -1) moo_seterrnum (moo, MOO_ERANGE); /* negative number */
-		return -1;
-	}
-
-	max = (~(moo_oow_t)0 >> ((MOO_SIZEOF_OOW_T - size) * 8));
-	if (w > max) 
-	{
-		moo_seterrnum (moo, MOO_ERANGE); 
-		return -1;
-	}
-
-	switch (size)
-	{ 
-		case 1:
-			((struct st_uint8_t*)&rawptr[offset])->v = w;
-			return 0;
-
-		case 2:
-			((struct st_uint16_t*)&rawptr[offset])->v = w;
-			return 0;
-
-		case 4:
-			((struct st_uint32_t*)&rawptr[offset])->v = w;
-			return 0;
-
-	#if defined(MOO_HAVE_UINT64_T) &&  (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_UINT64_T)
-		case 8:
-			((struct st_uint64_t*)&rawptr[offset])->v = w;
-			return 0;
-	#endif
-
-	#if defined(MOO_HAVE_UINT128_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_UINT128_T)
-		case 16:
-			((struct st_uint128_t*)&rawptr[offset])->v = w; 
-			return 0;
-	#endif
-	}
-
-	moo_seterrnum (moo, MOO_EINVAL);
-	return -1;
-}
-
-
-static moo_pfrc_t _get_system_int (moo_t* moo, moo_ooi_t nargs, int size)
-{
-	moo_int8_t* rawptr;
-	moo_oow_t offset;
-	moo_oop_t tmp;
-
-	/* MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->_system); */
-
-	MOO_ASSERT (moo, nargs == 2);
-	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
-	else if (moo_inttooow (moo, tmp, (moo_oow_t*)&rawptr) <= 0) goto einval;
-
-	if (moo_inttooow (moo, MOO_STACK_GETARG(moo, nargs, 1), &offset) <= 0)
-	{
-	einval:
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
-		return MOO_PF_SUCCESS;
-	}
-
-	tmp = _fetch_raw_int (moo, rawptr, offset, size);
-	if (!tmp) 
-	{
-		MOO_STACK_SETRETTOERRNUM (moo, nargs);
-		return MOO_PF_SUCCESS;
-	}
-
-	MOO_STACK_SETRET (moo, nargs, tmp);
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t _get_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
-{
-	moo_uint8_t* rawptr;
-	moo_oow_t offset;
-	moo_oop_t tmp;
-
-	/* MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->_system); */
-
-	MOO_ASSERT (moo, nargs == 2);
-	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
-	else if (moo_inttooow (moo, tmp, (moo_oow_t*)&rawptr) <= 0) goto einval;
-
-	if (moo_inttooow (moo, MOO_STACK_GETARG(moo, nargs, 1), &offset) <= 0) 
-	{
-	einval:
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
-		return MOO_PF_SUCCESS;
-	}
-
-	tmp = _fetch_raw_uint (moo, rawptr, offset, size);
-	if (!tmp) 
-	{
-		MOO_STACK_SETRETTOERRNUM (moo, nargs);
-		return MOO_PF_SUCCESS;
-	}
-
-	MOO_STACK_SETRET (moo, nargs, tmp);
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_system_get_int8 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_system_int (moo, nargs, 1);
-}
-
-static moo_pfrc_t pf_system_get_int16 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_system_int (moo, nargs, 2);
-}
-
-static moo_pfrc_t pf_system_get_int32 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_system_int (moo, nargs, 4);
-}
-
-static moo_pfrc_t pf_system_get_int64 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_system_int (moo, nargs, 8);
-}
-
-static moo_pfrc_t pf_system_get_uint8 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_system_uint (moo, nargs, 1);
-}
-
-static moo_pfrc_t pf_system_get_uint16 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_system_uint (moo, nargs, 2);
-}
-
-static moo_pfrc_t pf_system_get_uint32 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_system_uint (moo, nargs, 4);
-}
-
-static moo_pfrc_t pf_system_get_uint64 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_system_uint (moo, nargs, 8);
-}
-
-static moo_pfrc_t _put_system_int (moo_t* moo, moo_ooi_t nargs, int size)
-{
-	moo_uint8_t* rawptr;
-	moo_oow_t offset;
-	moo_oop_t tmp;
-
-	/* MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->_system); */
-
-	MOO_ASSERT (moo, nargs == 3);
-	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
-	else if (moo_inttooow (moo, tmp, (moo_oow_t*)&rawptr) <= 0) goto einval;
-
-	if (moo_inttooow(moo, MOO_STACK_GETARG(moo, nargs, 1), &offset) <= 0) goto einval;
-
-	if (_store_raw_int (moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 2)) <= -1)
-	{
-		MOO_STACK_SETRETTOERRNUM (moo, nargs);
-		return MOO_PF_SUCCESS;
-	}
-
-	MOO_STACK_SETRETTORCV (moo, nargs);
-	return MOO_PF_SUCCESS;
-
-einval:
-	MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t _put_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
-{
-	moo_uint8_t* rawptr;
-	moo_oow_t offset;
-	moo_oop_t tmp;
-
-	/* MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->_system); */
-
-	MOO_ASSERT (moo, nargs == 3);
-	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
-	else if (moo_inttooow (moo, tmp, (moo_oow_t*)&rawptr) <= 0) goto einval;
-
-	if (moo_inttooow(moo, MOO_STACK_GETARG(moo, nargs, 1), &offset) <= 0) goto einval;
-
-	if (_store_raw_uint (moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 2)) <= -1)
-	{
-		MOO_STACK_SETRETTOERRNUM (moo, nargs);
-		return MOO_PF_SUCCESS;
-	}
-
-	MOO_STACK_SETRETTORCV (moo, nargs);
-	return MOO_PF_SUCCESS;
-
-einval:
-	MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_system_put_int8 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_system_int (moo, nargs, 1);
-}
-
-static moo_pfrc_t pf_system_put_int16 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_system_int (moo, nargs, 2);
-}
-
-static moo_pfrc_t pf_system_put_int32 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_system_int (moo, nargs, 4);
-}
-
-static moo_pfrc_t pf_system_put_int64 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_system_int (moo, nargs, 8);
-}
-
-static moo_pfrc_t pf_system_put_uint8 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_system_uint (moo, nargs, 1);
-}
-
-static moo_pfrc_t pf_system_put_uint16 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_system_uint (moo, nargs, 2);
-}
-
-static moo_pfrc_t pf_system_put_uint32 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_system_uint (moo, nargs, 4);
-}
-
-static moo_pfrc_t pf_system_put_uint64 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_system_uint (moo, nargs, 8);
-}
-
-
-static moo_pfrc_t _get_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
-{
-	moo_oop_t rcv;
-	moo_int8_t* rawptr;
-	moo_oow_t offset;
-	moo_oop_t result;
-
-	MOO_ASSERT (moo, nargs == 1);
-
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(rcv));
-
-	if (moo_inttooow (moo, MOO_STACK_GETARG(moo, nargs, 0), &offset) <= 0)
-	{
-		MOO_STACK_SETRETTOERROR(moo, nargs, MOO_EINVAL);
-		return MOO_PF_SUCCESS;
-	}
-
-	rawptr = MOO_OOP_TO_SMPTR(rcv);
-
-	result = _fetch_raw_int (moo, rawptr, offset, size);
-	if (!result) 
-	{
-		MOO_STACK_SETRETTOERRNUM (moo, nargs);
-		return MOO_PF_SUCCESS;
-	}
-
-	MOO_STACK_SETRET (moo, nargs, result);
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t _get_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
-{
-	moo_oop_t rcv;
-	moo_uint8_t* rawptr;
-	moo_oow_t offset;
-	moo_oop_t result;
-
-	MOO_ASSERT (moo, nargs == 1);
-
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(rcv));
-
-	if (moo_inttooow (moo, MOO_STACK_GETARG(moo, nargs, 0), &offset) <= 0)
-	{
-		MOO_STACK_SETRETTOERROR(moo, nargs, MOO_EINVAL);
-		return MOO_PF_SUCCESS;
-	}
-
-	rawptr = MOO_OOP_TO_SMPTR(rcv);
-
-	result = _fetch_raw_uint (moo, rawptr, offset, size);
-	if (!result) 
-	{
-		MOO_STACK_SETRETTOERRNUM(moo, nargs);
-		return MOO_PF_SUCCESS;
-	}
-
-	MOO_STACK_SETRET (moo, nargs, result);
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_smptr_get_int8 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_smptr_int (moo, nargs, 1);
-}
-
-static moo_pfrc_t pf_smptr_get_int16 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_smptr_int (moo, nargs, 2);
-}
-
-static moo_pfrc_t pf_smptr_get_int32 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_smptr_int (moo, nargs, 4);
-}
-
-static moo_pfrc_t pf_smptr_get_int64 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_smptr_int (moo, nargs, 8);
-}
-
-static moo_pfrc_t pf_smptr_get_uint8 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_smptr_uint (moo, nargs, 1);
-}
-
-static moo_pfrc_t pf_smptr_get_uint16 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_smptr_uint (moo, nargs, 2);
-}
-
-static moo_pfrc_t pf_smptr_get_uint32 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_smptr_uint (moo, nargs, 4);
-}
-
-static moo_pfrc_t pf_smptr_get_uint64 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _get_smptr_uint (moo, nargs, 8);
-}
-
-static moo_pfrc_t _put_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
-{
-	moo_uint8_t* rawptr;
-	moo_oow_t offset;
-	moo_oop_t tmp;
-
-	MOO_ASSERT (moo, nargs == 2);
-
-	tmp = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(tmp));
-
-	rawptr = MOO_OOP_TO_SMPTR(tmp);
-
-	if (moo_inttooow(moo, MOO_STACK_GETARG(moo, nargs, 0), &offset) <= 0)
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
-		return MOO_PF_SUCCESS;
-	}
-
-	if (_store_raw_int (moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 1)) <= -1)
-	{
-		MOO_STACK_SETRETTOERRNUM (moo, nargs);
-		return MOO_PF_SUCCESS;
-	}
-
-	MOO_STACK_SETRETTORCV (moo, nargs);
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t _put_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
-{
-	moo_uint8_t* rawptr;
-	moo_oow_t offset;
-	moo_oop_t tmp;
-
-	MOO_ASSERT (moo, nargs == 2);
-
-	tmp = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(tmp));
-
-	rawptr = MOO_OOP_TO_SMPTR(tmp);
-
-	if (moo_inttooow(moo, MOO_STACK_GETARG(moo, nargs, 0), &offset) <= 0)
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
-		return MOO_PF_SUCCESS;
-	}
-
-	if (_store_raw_uint (moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 1)) <= -1)
-	{
-		MOO_STACK_SETRETTOERRNUM (moo, nargs);
-		return MOO_PF_SUCCESS;
-	}
-
-	MOO_STACK_SETRETTORCV (moo, nargs);
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_smptr_put_int8 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_smptr_int (moo, nargs, 1);
-}
-
-static moo_pfrc_t pf_smptr_put_int16 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_smptr_int (moo, nargs, 2);
-}
-
-static moo_pfrc_t pf_smptr_put_int32 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_smptr_int (moo, nargs, 4);
-}
-
-static moo_pfrc_t pf_smptr_put_int64 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_smptr_int (moo, nargs, 8);
-}
-
-static moo_pfrc_t pf_smptr_put_uint8 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_smptr_uint (moo, nargs, 1);
-}
-
-static moo_pfrc_t pf_smptr_put_uint16 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_smptr_uint (moo, nargs, 2);
-}
-
-static moo_pfrc_t pf_smptr_put_uint32 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_smptr_uint (moo, nargs, 4);
-}
-
-static moo_pfrc_t pf_smptr_put_uint64 (moo_t* moo, moo_ooi_t nargs)
-{
-	return _put_smptr_uint (moo, nargs, 8);
-}
 
 static void sprintptr (moo_ooch_t* nbuf, moo_oow_t num, moo_oow_t *lenp)
 {
@@ -3913,10 +3215,10 @@ static pf_t pftab[] =
 	{ "Apex_basicSize",                        { moo_pf_basic_size,                       0, 0 } },
 	{ "Apex_class",                            { moo_pf_class,                            0, 0 } },
 	{ "Apex_hash",                             { pf_hash,                                 0, 0 } },
-	{ "Apex_isKindOf:",                        { pf_is_kind_of,                           1, 1, } },
+	{ "Apex_isKindOf:",                        { moo_pf_is_kind_of,                       1, 1, } },
 	{ "Apex_perform",                          { pf_perform,                              1, MA } },
 	{ "Apex_removeToBeFinalized",              { pf_remove_to_be_finalized,               0, 0 } },
-	{ "Apex_respondsTo:",                      { pf_responds_to,                          1, 1 } },
+	{ "Apex_respondsTo:",                      { moo_pf_responds_to,                      1, 1 } },
 	{ "Apex_shallowCopy",                      { moo_pf_shallow_copy,                     0, 0 } },
 
 	{ "Apex_==",                               { moo_pf_identical,                        1, 1 } },
@@ -3951,46 +3253,49 @@ static pf_t pftab[] =
 	{ "SmallInteger_asError",                  { pf_smooi_as_error,                       0, 0 } },
 
 	{ "SmallPointer_asString",                 { pf_smptr_as_string,                      0, 0 } },
-	{ "SmallPointer_free",                     { pf_smptr_free,                           0, 0 } },
-	{ "SmallPointer_getInt16",                 { pf_smptr_get_int16,                      1, 1 } },
-	{ "SmallPointer_getInt32",                 { pf_smptr_get_int32,                      1, 1 } },
-	{ "SmallPointer_getInt64",                 { pf_smptr_get_int64,                      1, 1 } },
-	{ "SmallPointer_getInt8",                  { pf_smptr_get_int8,                       1, 1 } },
-	{ "SmallPointer_getUint16",                { pf_smptr_get_uint16,                     1, 1 } },
-	{ "SmallPointer_getUint32",                { pf_smptr_get_uint32,                     1, 1 } },
-	{ "SmallPointer_getUint64",                { pf_smptr_get_uint64,                     1, 1 } },
-	{ "SmallPointer_getUint8",                 { pf_smptr_get_uint8,                      1, 1 } },
-	{ "SmallPointer_putInt8",                  { pf_smptr_put_int8,                       2, 2 } },
-	{ "SmallPointer_putInt16",                 { pf_smptr_put_int16,                      2, 2 } },
-	{ "SmallPointer_putInt32",                 { pf_smptr_put_int32,                      2, 2 } },
-	{ "SmallPointer_putInt64",                 { pf_smptr_put_int64,                      2, 2 } },
-	{ "SmallPointer_putUint8",                 { pf_smptr_put_uint8,                      2, 2 } },
-	{ "SmallPointer_putUint16",                { pf_smptr_put_uint16,                     2, 2 } },
-	{ "SmallPointer_putUint32",                { pf_smptr_put_uint32,                     2, 2 } },
-	{ "SmallPointer_putUint64",                { pf_smptr_put_uint64,                     2, 2 } },
+	{ "SmallPointer_free",                     { moo_pf_smptr_free,                       0, 0 } },
+	{ "SmallPointer_getInt16",                 { moo_pf_smptr_get_int16,                  1, 1 } },
+	{ "SmallPointer_getInt32",                 { moo_pf_smptr_get_int32,                  1, 1 } },
+	{ "SmallPointer_getInt64",                 { moo_pf_smptr_get_int64,                  1, 1 } },
+	{ "SmallPointer_getInt8",                  { moo_pf_smptr_get_int8,                   1, 1 } },
+	{ "SmallPointer_getUint16",                { moo_pf_smptr_get_uint16,                 1, 1 } },
+	{ "SmallPointer_getUint32",                { moo_pf_smptr_get_uint32,                 1, 1 } },
+	{ "SmallPointer_getUint64",                { moo_pf_smptr_get_uint64,                 1, 1 } },
+	{ "SmallPointer_getUint8",                 { moo_pf_smptr_get_uint8,                  1, 1 } },
+	{ "SmallPointer_putInt8",                  { moo_pf_smptr_put_int8,                   2, 2 } },
+	{ "SmallPointer_putInt16",                 { moo_pf_smptr_put_int16,                  2, 2 } },
+	{ "SmallPointer_putInt32",                 { moo_pf_smptr_put_int32,                  2, 2 } },
+	{ "SmallPointer_putInt64",                 { moo_pf_smptr_put_int64,                  2, 2 } },
+	{ "SmallPointer_putUint8",                 { moo_pf_smptr_put_uint8,                  2, 2 } },
+	{ "SmallPointer_putUint16",                { moo_pf_smptr_put_uint16,                 2, 2 } },
+	{ "SmallPointer_putUint32",                { moo_pf_smptr_put_uint32,                 2, 2 } },
+	{ "SmallPointer_putUint64",                { moo_pf_smptr_put_uint64,                 2, 2 } },
 
 	{ "String_strlen",                         { pf_strlen,                               0, 0 } },
 
-	{ "System_calloc",                         { pf_system_calloc,                        1, 1 } },
-	{ "System_free",                           { pf_system_free,                          1, 1 } },
-	{ "System_getInt16",                       { pf_system_get_int16,                     2, 2 } },
-	{ "System_getInt32",                       { pf_system_get_int32,                     2, 2 } },
-	{ "System_getInt64",                       { pf_system_get_int64,                     2, 2 } },
-	{ "System_getInt8",                        { pf_system_get_int8,                      2, 2 } },
-	{ "System_getUint16",                      { pf_system_get_uint16,                    2, 2 } },
-	{ "System_getUint32",                      { pf_system_get_uint32,                    2, 2 } },
-	{ "System_getUint64",                      { pf_system_get_uint64,                    2, 2 } },
-	{ "System_getUint8",                       { pf_system_get_uint8,                     2, 2 } },
-	{ "System_malloc",                         { pf_system_malloc,                        1, 1 } },
+	{ "System_calloc",                         { moo_pf_system_calloc,                    1, 1 } },
+	{ "System_calloc:",                        { moo_pf_system_calloc,                    1, 1 } },
+	{ "System_free",                           { moo_pf_system_free,                      1, 1 } },
+	{ "System_free:",                          { moo_pf_system_free,                      1, 1 } },
+	{ "System_getInt16",                       { moo_pf_system_get_int16,                 2, 2 } },
+	{ "System_getInt32",                       { moo_pf_system_get_int32,                 2, 2 } },
+	{ "System_getInt64",                       { moo_pf_system_get_int64,                 2, 2 } },
+	{ "System_getInt8",                        { moo_pf_system_get_int8,                  2, 2 } },
+	{ "System_getUint16",                      { moo_pf_system_get_uint16,                2, 2 } },
+	{ "System_getUint32",                      { moo_pf_system_get_uint32,                2, 2 } },
+	{ "System_getUint64",                      { moo_pf_system_get_uint64,                2, 2 } },
+	{ "System_getUint8",                       { moo_pf_system_get_uint8,                 2, 2 } },
+	{ "System_malloc",                         { moo_pf_system_malloc,                    1, 1 } },
+	{ "System_malloc:",                        { moo_pf_system_malloc,                    1, 1 } },
 	{ "System_popCollectable",                 { pf_system_pop_collectable,               0, 0 } },
-	{ "System_putInt8",                        { pf_system_put_int8,                      3, 3 } },
-	{ "System_putInt16",                       { pf_system_put_int16,                     3, 3 } },
-	{ "System_putInt32",                       { pf_system_put_int32,                     3, 3 } },
-	{ "System_putInt64",                       { pf_system_put_int64,                     3, 3 } },
-	{ "System_putUint8",                       { pf_system_put_uint8,                     3, 3 } },
-	{ "System_putUint16",                      { pf_system_put_uint16,                    3, 3 } },
-	{ "System_putUint32",                      { pf_system_put_uint32,                    3, 3 } },
-	{ "System_putUint64",                      { pf_system_put_uint64,                    3, 3 } },
+	{ "System_putInt8",                        { moo_pf_system_put_int8,                  3, 3 } },
+	{ "System_putInt16",                       { moo_pf_system_put_int16,                 3, 3 } },
+	{ "System_putInt32",                       { moo_pf_system_put_int32,                 3, 3 } },
+	{ "System_putInt64",                       { moo_pf_system_put_int64,                 3, 3 } },
+	{ "System_putUint8",                       { moo_pf_system_put_uint8,                 3, 3 } },
+	{ "System_putUint16",                      { moo_pf_system_put_uint16,                3, 3 } },
+	{ "System_putUint32",                      { moo_pf_system_put_uint32,                3, 3 } },
+	{ "System_putUint64",                      { moo_pf_system_put_uint64,                3, 3 } },
 
 	{ "System_signal:afterSecs:",              { pf_system_add_timed_semaphore,           2, 2 } },
 	{ "System_signal:afterSecs:nanosecs:",     { pf_system_add_timed_semaphore,           3, 3 } },
@@ -4383,7 +3688,7 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_
 
 	mthname.ptr = MOO_OBJ_GET_CHAR_SLOT(selector);
 	mthname.len = MOO_OBJ_GET_SIZE(selector);
-	method = find_method (moo, receiver, &mthname, to_super);
+	method = moo_findmethod (moo, receiver, &mthname, to_super);
 	if (!method) 
 	{
 		static moo_ooch_t fbm[] = { 
@@ -4394,7 +3699,7 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_
 		mthname.ptr = fbm;
 		mthname.len = 18;
 
-		method = find_method (moo, receiver, &mthname, 0);
+		method = moo_findmethod (moo, receiver, &mthname, 0);
 		if (!method)
 		{
 			/* this must not happen as long as doesNotUnderstand: is implemented under Apex.
@@ -4431,7 +3736,7 @@ static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow
 
 	mthname.ptr = (moo_ooch_t*)nameptr;
 	mthname.len = namelen;
-	method = find_method (moo, receiver, &mthname, to_super);
+	method = moo_findmethod (moo, receiver, &mthname, to_super);
 	if (!method)
 	{
 		MOO_LOG4 (moo, MOO_LOG_IC | MOO_LOG_FATAL, 

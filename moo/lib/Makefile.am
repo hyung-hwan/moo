@@ -62,6 +62,7 @@ libmoo_la_SOURCES = \
 	opt-impl.h \
 	opt.c \
 	pf-basic.c \
+	pf-sys.c \
 	rbt.c \
 	sym.c \
 	utf8.c \

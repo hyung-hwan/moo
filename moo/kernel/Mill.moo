@@ -320,7 +320,7 @@ class MyObject(Object)
 		System logNl: 'Sleeping start now....'.
 
 		
-a := System _malloc(200).
+a := System malloc(200).
 i := 0.
 while (i < 26)
 {
@@ -337,7 +337,7 @@ a getUint32(0) dump.
 a getUint32(1) dump.
 
 ##a dump.
-##System _free(a).
+##System free(a).
 a free.
 
 		System sleepForSecs: 2.
