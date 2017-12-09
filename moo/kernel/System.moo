@@ -314,6 +314,9 @@ TODO: how to pass all variadic arguments to another variadic methods???
 	method(#class,#primitive) putUint16 (rawptr, offset, value).
 	method(#class,#primitive) putUint32 (rawptr, offset, value).
 	method(#class,#primitive) putUint64 (rawptr, offset, value).
+
+	method(#class,#primitive) getBytes (rawptr, offset, byte_array, offset_in_buffer, len_in_buffer).
+	method(#class,#primitive) putBytes (rawptr, offset, byte_array, offset_in_buffer, len_in_buffer).
 }
 
 
@@ -338,6 +341,6 @@ class SmallPointer(Object)
 	method(#primitive) putUint16 (offset, value).
 	method(#primitive) putUint32 (offset, value).
 	method(#primitive) putUint64 (offset, value).
-	
+
 	method(#primitive) free.
 }

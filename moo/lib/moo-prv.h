@@ -1331,6 +1331,9 @@ moo_pfrc_t moo_pf_system_calloc (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_system_free (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_smptr_free (moo_t* moo, moo_ooi_t nargs);
 
+moo_pfrc_t moo_pf_system_get_bytes (moo_t* moo, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_system_put_bytes (moo_t* moo, moo_ooi_t nargs);
+
 moo_pfrc_t moo_pf_system_get_int8 (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_system_get_int16 (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_system_get_int32 (moo_t* moo, moo_ooi_t nargs);

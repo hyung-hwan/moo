@@ -470,7 +470,7 @@ moo_pfrc_t moo_pf_responds_to (moo_t* moo, moo_ooi_t nargs)
 	selector = MOO_STACK_GETARG(moo, nargs, 0);
 
 	/*if (MOO_CLASSOF(moo,selector) != moo->_symbol)*/
-	if (!MOO_OOP_IS_POINTER(selector) || !MOO_OBJ_IS_CHAR_POINTER(selector))
+	if (!MOO_OBJ_IS_CHAR_POINTER(selector))
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid argument - %O", selector);
 		return MOO_PF_FAILURE;
