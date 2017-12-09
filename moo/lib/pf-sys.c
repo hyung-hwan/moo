@@ -967,3 +967,40 @@ moo_pfrc_t moo_pf_smptr_put_bytes (moo_t* moo, moo_ooi_t nargs)
 	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(len_in_buffer));
 	return MOO_PF_SUCCESS;
 }
+
+
+/* ------------------------------------------------------------------------------------- */
+
+moo_pfrc_t moo_pf_system_collect_garbage (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_gc (moo);
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
+moo_pfrc_t moo_pf_system_pop_collectable (moo_t* moo, moo_ooi_t nargs)
+{
+	if (moo->collectable.first)
+	{
+		moo_finalizable_t* first;
+
+		first = moo->collectable.first;
+
+		/* TODO: if it's already fininalized, delete it from collectable */
+		MOO_ASSERT (moo, MOO_OOP_IS_POINTER(first->oop));
+		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_GCFIN(first->oop) & MOO_GCFIN_FINALIZABLE);
+
+		MOO_STACK_SETRET (moo, nargs, first->oop);
+		MOO_OBJ_SET_FLAGS_GCFIN (first->oop, MOO_OBJ_GET_FLAGS_GCFIN(first->oop) | MOO_GCFIN_FINALIZED);
+
+		MOO_DELETE_FROM_LIST (&moo->collectable, first);
+		moo_freemem (moo, first); /* TODO: move it to the free list instead... */
+	}
+	else
+	{
+		/*MOO_STACK_SETRET (moo, nargs, moo->_nil);*/
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
+	}
+
+	return MOO_PF_SUCCESS;
+}

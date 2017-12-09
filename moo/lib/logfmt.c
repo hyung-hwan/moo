@@ -563,7 +563,7 @@ static void print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop, outbfmt_t o
 		}
 		else
 		{
-			outbfmt (moo, mask, "instance of %.*js(%p)", MOO_OBJ_GET_SIZE(c->name), ((moo_oop_char_t)c->name)->slot, oop);
+			outbfmt (moo, mask, "<<%.*js>>", MOO_OBJ_GET_SIZE(c->name), ((moo_oop_char_t)c->name)->slot);
 		}
 	}
 }

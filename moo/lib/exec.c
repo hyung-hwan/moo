@@ -3082,38 +3082,6 @@ static moo_pfrc_t pf_system_log (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_system_collect_garbage (moo_t* moo, moo_ooi_t nargs)
-{
-	moo_gc (moo);
-	MOO_STACK_SETRETTORCV (moo, nargs);
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_system_pop_collectable (moo_t* moo, moo_ooi_t nargs)
-{
-	if (moo->collectable.first)
-	{
-		moo_finalizable_t* first;
-
-		first = moo->collectable.first;
-
-		/* TODO: if it's already fininalized, delete it from collectable */
-		MOO_ASSERT (moo, MOO_OOP_IS_POINTER(first->oop));
-		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_GCFIN(first->oop) & MOO_GCFIN_FINALIZABLE);
-
-		MOO_STACK_SETRET (moo, nargs, first->oop);
-		MOO_OBJ_SET_FLAGS_GCFIN (first->oop, MOO_OBJ_GET_FLAGS_GCFIN(first->oop) | MOO_GCFIN_FINALIZED);
-
-		MOO_DELETE_FROM_LIST (&moo->collectable, first);
-		moo_freemem (moo, first); /* TODO: move it to the free list instead... */
-	}
-	else
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
-	}
-	return MOO_PF_SUCCESS;
-}
-
 
 
 static void sprintptr (moo_ooch_t* nbuf, moo_oow_t num, moo_oow_t *lenp)
@@ -3277,7 +3245,7 @@ static pf_t pftab[] =
 
 	{ "System_calloc",                         { moo_pf_system_calloc,                    1, 1 } },
 	{ "System_calloc:",                        { moo_pf_system_calloc,                    1, 1 } },
-	{ "System_collectGarbage",                 { pf_system_collect_garbage,               0, 0 } },
+	{ "System_collectGarbage",                 { moo_pf_system_collect_garbage,           0, 0 } },
 	{ "System_free",                           { moo_pf_system_free,                      1, 1 } },
 	{ "System_free:",                          { moo_pf_system_free,                      1, 1 } },
 	{ "System_getBytes",                       { moo_pf_system_get_bytes,                 5, 5 } },
@@ -3292,7 +3260,7 @@ static pf_t pftab[] =
 	{ "System_log",                            { pf_system_log,                           2, MA } },
 	{ "System_malloc",                         { moo_pf_system_malloc,                    1, 1 } },
 	{ "System_malloc:",                        { moo_pf_system_malloc,                    1, 1 } },
-	{ "System_popCollectable",                 { pf_system_pop_collectable,               0, 0 } },
+	{ "System_popCollectable",                 { moo_pf_system_pop_collectable,           0, 0 } },
 	{ "System_putBytes",                       { moo_pf_system_put_bytes,                 5, 5 } },
 	{ "System_putInt8",                        { moo_pf_system_put_int8,                  3, 3 } },
 	{ "System_putInt16",                       { moo_pf_system_put_int16,                 3, 3 } },
