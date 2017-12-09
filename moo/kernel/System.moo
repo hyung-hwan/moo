@@ -72,7 +72,7 @@ class System(Apex)
 					if (gc) 
 					{ 
 						System logNl: 'Exiting the GC finalization process ' & (thisProcess id) asString.
-						break 
+						break.
 					}.
 
 					System logNl: 'Forcing garbage collection before termination in ' & (thisProcess id) asString.
@@ -341,6 +341,9 @@ class SmallPointer(Object)
 	method(#primitive) putUint16 (offset, value).
 	method(#primitive) putUint32 (offset, value).
 	method(#primitive) putUint64 (offset, value).
+
+	method(#primitive) getBytes (offset, byte_array, offset_in_buffer, len_in_buffer).
+	method(#primitive) putBytes (offset, byte_array, offset_in_buffer, len_in_buffer).
 
 	method(#primitive) free.
 }

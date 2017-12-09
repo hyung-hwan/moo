@@ -1331,8 +1331,6 @@ moo_pfrc_t moo_pf_system_calloc (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_system_free (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_smptr_free (moo_t* moo, moo_ooi_t nargs);
 
-moo_pfrc_t moo_pf_system_get_bytes (moo_t* moo, moo_ooi_t nargs);
-moo_pfrc_t moo_pf_system_put_bytes (moo_t* moo, moo_ooi_t nargs);
 
 moo_pfrc_t moo_pf_system_get_int8 (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_system_get_int16 (moo_t* moo, moo_ooi_t nargs);
@@ -1354,6 +1352,9 @@ moo_pfrc_t moo_pf_system_put_uint16 (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_system_put_uint32 (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_system_put_uint64 (moo_t* moo, moo_ooi_t nargs);
 
+moo_pfrc_t moo_pf_system_get_bytes (moo_t* moo, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_system_put_bytes (moo_t* moo, moo_ooi_t nargs);
+
 
 moo_pfrc_t moo_pf_smptr_get_int8 (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_smptr_get_int16 (moo_t* moo, moo_ooi_t nargs);
@@ -1374,6 +1375,9 @@ moo_pfrc_t moo_pf_smptr_put_uint8 (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_smptr_put_uint16 (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_smptr_put_uint32 (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_smptr_put_uint64 (moo_t* moo, moo_ooi_t nargs);
+
+moo_pfrc_t moo_pf_smptr_get_bytes (moo_t* moo, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_smptr_put_bytes (moo_t* moo, moo_ooi_t nargs);
 
 /* TODO: remove the following debugging functions */
 /* ========================================================================= */

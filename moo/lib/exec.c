@@ -3254,6 +3254,7 @@ static pf_t pftab[] =
 
 	{ "SmallPointer_asString",                 { pf_smptr_as_string,                      0, 0 } },
 	{ "SmallPointer_free",                     { moo_pf_smptr_free,                       0, 0 } },
+	{ "SmallPointer_getBytes",                 { moo_pf_smptr_get_bytes,                  4, 4 } },
 	{ "SmallPointer_getInt16",                 { moo_pf_smptr_get_int16,                  1, 1 } },
 	{ "SmallPointer_getInt32",                 { moo_pf_smptr_get_int32,                  1, 1 } },
 	{ "SmallPointer_getInt64",                 { moo_pf_smptr_get_int64,                  1, 1 } },
@@ -3262,6 +3263,7 @@ static pf_t pftab[] =
 	{ "SmallPointer_getUint32",                { moo_pf_smptr_get_uint32,                 1, 1 } },
 	{ "SmallPointer_getUint64",                { moo_pf_smptr_get_uint64,                 1, 1 } },
 	{ "SmallPointer_getUint8",                 { moo_pf_smptr_get_uint8,                  1, 1 } },
+	{ "SmallPointer_putBytes",                 { moo_pf_smptr_put_bytes,                  4, 4 } },
 	{ "SmallPointer_putInt8",                  { moo_pf_smptr_put_int8,                   2, 2 } },
 	{ "SmallPointer_putInt16",                 { moo_pf_smptr_put_int16,                  2, 2 } },
 	{ "SmallPointer_putInt32",                 { moo_pf_smptr_put_int32,                  2, 2 } },
@@ -3275,6 +3277,7 @@ static pf_t pftab[] =
 
 	{ "System_calloc",                         { moo_pf_system_calloc,                    1, 1 } },
 	{ "System_calloc:",                        { moo_pf_system_calloc,                    1, 1 } },
+	{ "System_collectGarbage",                 { pf_system_collect_garbage,               0, 0 } },
 	{ "System_free",                           { moo_pf_system_free,                      1, 1 } },
 	{ "System_free:",                          { moo_pf_system_free,                      1, 1 } },
 	{ "System_getBytes",                       { moo_pf_system_get_bytes,                 5, 5 } },
@@ -3286,6 +3289,7 @@ static pf_t pftab[] =
 	{ "System_getUint32",                      { moo_pf_system_get_uint32,                2, 2 } },
 	{ "System_getUint64",                      { moo_pf_system_get_uint64,                2, 2 } },
 	{ "System_getUint8",                       { moo_pf_system_get_uint8,                 2, 2 } },
+	{ "System_log",                            { pf_system_log,                           2, MA } },
 	{ "System_malloc",                         { moo_pf_system_malloc,                    1, 1 } },
 	{ "System_malloc:",                        { moo_pf_system_malloc,                    1, 1 } },
 	{ "System_popCollectable",                 { pf_system_pop_collectable,               0, 0 } },
@@ -3298,18 +3302,14 @@ static pf_t pftab[] =
 	{ "System_putUint16",                      { moo_pf_system_put_uint16,                3, 3 } },
 	{ "System_putUint32",                      { moo_pf_system_put_uint32,                3, 3 } },
 	{ "System_putUint64",                      { moo_pf_system_put_uint64,                3, 3 } },
-
+	{ "System_return:to:",                     { pf_system_return_value_to_context,       2, 2 } },
 	{ "System_signal:afterSecs:",              { pf_system_add_timed_semaphore,           2, 2 } },
 	{ "System_signal:afterSecs:nanosecs:",     { pf_system_add_timed_semaphore,           3, 3 } },
 	{ "System_signal:onInput:",                { pf_system_add_input_semaphore,           2, 2 } },
 	{ "System_signal:onInOutput:",             { pf_system_add_inoutput_semaphore,        2, 2 } },
 	{ "System_signal:onOutput:",               { pf_system_add_output_semaphore,          2, 2 } },
 	{ "System_signalOnGCFin:",                 { pf_system_add_gcfin_semaphore,           1, 1 } },
-	{ "System_unsignal:",                      { pf_system_remove_semaphore,              1, 1 } },
-
-	{ "System_collectGarbage",                 { pf_system_collect_garbage,               0, 0 } },
-	{ "System_log",                            { pf_system_log,                           2, MA } },
-	{ "System_return:to:",                     { pf_system_return_value_to_context,       2, 2 } }
+	{ "System_unsignal:",                      { pf_system_remove_semaphore,              1, 1 } }
 };
 
 moo_pfbase_t* moo_getpfnum (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, moo_ooi_t* pfnum)
