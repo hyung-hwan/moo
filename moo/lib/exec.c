@@ -803,6 +803,12 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	}
 }
 
+static MOO_INLINE int can_await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
+{
+	/* a sempahore that doesn't belong to a gruop can be waited on */
+	return (moo_oop_t)sem->group == moo->_nil;
+}
+
 static MOO_INLINE void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	moo_oop_process_t proc;
@@ -810,15 +816,9 @@ static MOO_INLINE void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	moo_oop_semaphore_group_t semgrp;
 
 	semgrp = sem->group;
-#if 0
-/* TODO: do i have to disallow?? */
-	if ((moo_oop_t)semgrp != moo->_nil)
-	{
-		/* disallow a semaphore in a semaphore group to be waited on */
-		moo_seterrnum (moo, MOO_EPERM);
-		return -1;
-	}
-#endif
+
+	/* the caller of this function ensure that the semaphore doesn't belong to a group */
+	MOO_ASSERT (moo, (moo_oop_t)semgrp == moo->_nil);
 
 	count = MOO_OOP_TO_SMOOI(sem->count);
 	if (count > 0)
@@ -854,10 +854,6 @@ static MOO_INLINE void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 		MOO_ASSERT (moo, moo->processor->active != proc);
 	}
-
-#if 0
-	return 0;
-#endif
 }
 
 static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore_group_t semgrp)
@@ -2102,22 +2098,18 @@ static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, rcv, moo->_semaphore)); 
 
+	if (!can_await_semaphore (moo, (moo_oop_semaphore_t)rcv))
+	{
+		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to wait on a semaphore that belongs to a semaphore group");
+		return MOO_PF_FAILURE;
+	}
+	
 	/* i must set the return value before calling await_semaphore().
 	 * await_semaphore() may switch the active process and the stack
 	 * manipulation macros target at the active process. i'm not supposed
 	 * to change the return value of a new active process. */
 	MOO_STACK_SETRETTORCV (moo, nargs);
-
-#if 0
-	if (await_semaphore (moo, (moo_oop_semaphore_t)rcv) <= -1)
-	{
-		/* i must switch the top because the return value has been set already */
-		MOO_STACK_SETTOP (moo, MOO_ERROR_TO_OOP(moo->errnum));
-		return MOO_PF_SUCCESS;
-	}
-#else
 	await_semaphore (moo, (moo_oop_semaphore_t)rcv);
-#endif
 
 	return MOO_PF_SUCCESS;
 }
@@ -2131,7 +2123,7 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
 	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)rcv, moo->_semaphore_group)); 
 
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG (moo, nargs, 0);
-	MOO_PF_CHECK_ARGS_STRICT (moo, nargs, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
+	MOO_PF_CHECK_ARGS (moo, nargs, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
 
 	if ((moo_oop_t)sem->group == moo->_nil)
 	{
@@ -2170,7 +2162,8 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
 	{
 		/* the semaphore belongs to a group already */
 /* TODO: is it better to move this semaphore to the new group? */
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EPERM);
+		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to relocate a semaphore to a different group");
+		return MOO_PF_FAILURE;
 	}
 	return MOO_PF_SUCCESS;
 }
@@ -2205,8 +2198,8 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 			 *   sg removeSemaphore: s.
 			 * 
 			 */
-			MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EPERM);
-			goto done;
+			moo_seterrbfmt (moo, MOO_EPERM, "not allowed to remove a semaphore from a group being waited on");
+			return MOO_PF_FAILURE;
 		}
 #endif
 
@@ -2236,15 +2229,12 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 		}
 
 		MOO_STACK_SETRETTORCV (moo, nargs);
-	}
-	else
-	{
-		/* it doesn't belong to a group or belongs to a different group */
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EPERM);
+		return MOO_PF_SUCCESS;
 	}
 
-done:
-	return MOO_PF_SUCCESS;
+	/* it doesn't belong to a group or belongs to a different group */
+	moo_seterrbfmt (moo, MOO_EPERM, "not alloed to remove a semaphore from a non-owning group");
+	return MOO_PF_FAILURE;
 }
 
 static moo_pfrc_t pf_semaphore_group_wait (moo_t* moo, moo_ooi_t nargs)
@@ -2377,18 +2367,14 @@ static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_oo
 	moo_oop_t fd;
 	moo_oop_semaphore_t sem;
 
-	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->processor);*/
+	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->system);*/
 
 	MOO_ASSERT (moo, nargs == 2);
 
 	fd = MOO_STACK_GETARG(moo, nargs, 1);
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
 
-	if (MOO_CLASSOF(moo,sem) != moo->_semaphore || !MOO_OOP_IS_SMOOI(fd))
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
-		return MOO_PF_SUCCESS;
-	}
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_CLASSOF(moo,sem) == moo->_semaphore && MOO_OOP_IS_SMOOI(fd));
 
 	if (MOO_OOP_IS_SMOOI(sem->io_index) && sem->io_index != MOO_SMOOI_TO_OOP(-1) && sem->io_handle == fd)
 	{
@@ -2403,8 +2389,8 @@ static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_oo
 			if (modify_in_sem_io(moo, sem) <= -1) 
 			{
 				sem->io_mask = MOO_SMOOI_TO_OOP(old_mask);
-				MOO_STACK_SETRETTOERRNUM (moo, nargs);
-				return MOO_PF_SUCCESS;
+				moo_seterrbfmt (moo, moo->errnum, "cannot modify the handle %zd in the multiplexer", MOO_OOP_TO_SMOOI(sem->io_handle));
+				return MOO_PF_FAILURE;
 			}
 		}
 	}
@@ -2415,8 +2401,8 @@ static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_oo
 			/* remove it if it's already added for IO */
 			if (delete_from_sem_io(moo, MOO_OOP_TO_SMOOI(sem->io_index)) <= -1)
 			{
-				MOO_STACK_SETRETTOERRNUM (moo, nargs);
-				return MOO_PF_SUCCESS;
+				moo_seterrbfmt (moo, moo->errnum, "cannot delete the handle %zd from the multiplexer", MOO_OOP_TO_SMOOI(sem->io_handle));
+				return MOO_PF_FAILURE;
 			}
 			MOO_ASSERT (moo, sem->io_index == MOO_SMOOI_TO_OOP(-1));
 		}
@@ -2425,8 +2411,8 @@ static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_oo
 		sem->io_mask = MOO_SMOOI_TO_OOP(mask);
 		if (add_to_sem_io(moo, sem) <= -1) 
 		{
-			MOO_STACK_SETRETTOERRNUM (moo, nargs);
-			return MOO_PF_SUCCESS;
+			moo_seterrbfmt (moo, moo->errnum, "cannot add the handle %zd to the multiplexer", MOO_OOP_TO_SMOOI(sem->io_handle));
+			return MOO_PF_FAILURE;
 		}
 	}
 
@@ -2460,15 +2446,10 @@ static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, nargs == 1);
 
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
-
+	MOO_PF_CHECK_ARGS(moo, nargs, MOO_CLASSOF(moo,sem) == moo->_semaphore);
+	
 /* TODO: remove a semaphore from IO handler if it's registered...
  *       remove a semaphore from elsewhere registered too */
-
-	if (MOO_CLASSOF(moo,sem) != moo->_semaphore) 
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EINVAL);
-		return MOO_PF_SUCCESS;
-	}
 
 	if (sem == moo->sem_gcfin)
 	{
@@ -2489,8 +2470,8 @@ static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 		/* the semaphore is associated with IO */
 		if (delete_from_sem_io (moo, MOO_OOP_TO_SMOOI(sem->io_index)) <= -1)
 		{
-			MOO_STACK_SETRETTOERRNUM (moo, nargs);
-			return MOO_PF_SUCCESS;
+			moo_seterrbfmt (moo, moo->errnum, "cannot delete the handle %zd from the multiplexer", MOO_OOP_TO_SMOOI(sem->io_handle));
+			return MOO_PF_FAILURE;
 		}
 
 		MOO_ASSERT (moo, sem->io_index == MOO_SMOOI_TO_OOP(-1));
@@ -2513,8 +2494,8 @@ static moo_pfrc_t pf_system_return_value_to_context (moo_t* moo, moo_ooi_t nargs
 	ret = MOO_STACK_GETARG(moo, nargs, 0);
 	ctx = MOO_STACK_GETARG(moo, nargs, 1);
 
-	MOO_PF_CHECK_ARGS_STRICT (moo, nargs, MOO_CLASSOF(moo, ctx) == moo->_block_context ||
-	                                      MOO_CLASSOF(moo, ctx) == moo->_method_context);
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_CLASSOF(moo, ctx) == moo->_block_context ||
+	                               MOO_CLASSOF(moo, ctx) == moo->_method_context);
 
 	MOO_STACK_POPS (moo, nargs + 1); /* pop arguments and receiver */
 /* TODO: verify if this is correct? does't it correctly restore the stack pointer?
@@ -2976,11 +2957,7 @@ static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_ooi_t nargs)
 /* TODO: error string will be mostly the same.. do i really have to call makestring every time? */
 	s = moo_errnum_to_errstr (ec);
 	ss = moo_makestring (moo, s, moo_countoocstr(s));
-	if (!ss)
-	{
-		MOO_STACK_SETRETTOERRNUM (moo, nargs);
-		return MOO_PF_SUCCESS;
-	}
+	if (!ss) return MOO_PF_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, ss);
 	return MOO_PF_SUCCESS;
@@ -3084,60 +3061,6 @@ static moo_pfrc_t pf_system_log (moo_t* moo, moo_ooi_t nargs)
 
 
 
-static void sprintptr (moo_ooch_t* nbuf, moo_oow_t num, moo_oow_t *lenp)
-{
-	static const moo_ooch_t hex2ascii_upper[] = 
-	{
-		'0','1','2','3','4','5','6','7','8','9',
-		'A','B','C','D','E','F','G','H','I','J','K','L','M',
-		'N','O','P','Q','R','S','T','U','V','W','X','H','Z'
-	};
-	moo_ooch_t* p, * end, ch;
-
-	p = nbuf;
-	*p = '\0';
-	do { *++p = hex2ascii_upper[num % 16]; } while (num /= 16);
-	*++p = 'r';
-	*++p = '6';
-	*++p = '1';
-	*lenp = p - nbuf;
-
-	end = p;
-	p = nbuf;
-	while (p <= end)
-	{
-		ch = *p;
-		*p++ = *end;
-		*end-- = ch;
-	}
-}
-
-static moo_pfrc_t pf_smptr_as_string (moo_t* moo, moo_ooi_t nargs)
-{
-	moo_oop_t rcv;
-	void* ptr;
-	moo_ooch_t buf[MOO_SIZEOF_OOW_T * 2 + 4];
-	moo_oow_t len;
-	moo_oop_t ss;
-
-	MOO_ASSERT (moo, nargs == 0);
-
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(rcv));
-
-	ptr = MOO_OOP_TO_SMPTR(rcv);
-	sprintptr (buf, (moo_oow_t)ptr, &len);
-
-	ss = moo_makestring (moo, buf, len);
-	if (!ss)
-	{
-		MOO_STACK_SETRETTOERRNUM(moo, nargs);
-		return MOO_PF_SUCCESS;
-	}
-
-	MOO_STACK_SETRET (moo, nargs, ss);
-	return MOO_PF_SUCCESS;
-}
 
 #define MA MOO_TYPE_MAX(moo_oow_t)
 struct pf_t
@@ -3220,7 +3143,7 @@ static pf_t pftab[] =
 	{ "SmallInteger_asCharacter",              { pf_smooi_as_character,                   0, 0 } },
 	{ "SmallInteger_asError",                  { pf_smooi_as_error,                       0, 0 } },
 
-	{ "SmallPointer_asString",                 { pf_smptr_as_string,                      0, 0 } },
+	{ "SmallPointer_asString",                 { moo_pf_smptr_as_string,                  0, 0 } },
 	{ "SmallPointer_free",                     { moo_pf_smptr_free,                       0, 0 } },
 	{ "SmallPointer_getBytes",                 { moo_pf_smptr_get_bytes,                  4, 4 } },
 	{ "SmallPointer_getInt16",                 { moo_pf_smptr_get_int16,                  1, 1 } },

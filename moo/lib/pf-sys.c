@@ -27,6 +27,44 @@
 
 #include "moo-prv.h"
 
+
+
+moo_pfrc_t moo_pf_system_collect_garbage (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_gc (moo);
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
+moo_pfrc_t moo_pf_system_pop_collectable (moo_t* moo, moo_ooi_t nargs)
+{
+	if (moo->collectable.first)
+	{
+		moo_finalizable_t* first;
+
+		first = moo->collectable.first;
+
+		/* TODO: if it's already fininalized, delete it from collectable */
+		MOO_ASSERT (moo, MOO_OOP_IS_POINTER(first->oop));
+		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_GCFIN(first->oop) & MOO_GCFIN_FINALIZABLE);
+
+		MOO_STACK_SETRET (moo, nargs, first->oop);
+		MOO_OBJ_SET_FLAGS_GCFIN (first->oop, MOO_OBJ_GET_FLAGS_GCFIN(first->oop) | MOO_GCFIN_FINALIZED);
+
+		MOO_DELETE_FROM_LIST (&moo->collectable, first);
+		moo_freemem (moo, first); /* TODO: move it to the free list instead... */
+	}
+	else
+	{
+		/*MOO_STACK_SETRET (moo, nargs, moo->_nil);*/
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
+	}
+
+	return MOO_PF_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------------------- */
+
 static MOO_INLINE moo_pfrc_t _system_alloc (moo_t* moo, moo_ooi_t nargs, int clear)
 {
 	moo_oop_t tmp;
@@ -223,7 +261,7 @@ static MOO_INLINE int _store_raw_int (moo_t* moo, moo_uint8_t* rawptr, moo_oow_t
 
 	if (w > max || w < min) 
 	{
-		moo_seterrbfmt (moo, MOO_ERANGE, "value %jd out of supported range for raw signed memory store",  w);
+		moo_seterrbfmt (moo, MOO_ERANGE, "value %zd out of supported range for raw signed memory store",  w);
 		return -1;
 	}
 
@@ -969,38 +1007,54 @@ moo_pfrc_t moo_pf_smptr_put_bytes (moo_t* moo, moo_ooi_t nargs)
 }
 
 
-/* ------------------------------------------------------------------------------------- */
-
-moo_pfrc_t moo_pf_system_collect_garbage (moo_t* moo, moo_ooi_t nargs)
+static void sprintptr (moo_ooch_t* nbuf, moo_oow_t num, moo_oow_t *lenp)
 {
-	moo_gc (moo);
-	MOO_STACK_SETRETTORCV (moo, nargs);
+	static const moo_ooch_t hex2ascii_upper[] = 
+	{
+		'0','1','2','3','4','5','6','7','8','9',
+		'A','B','C','D','E','F','G','H','I','J','K','L','M',
+		'N','O','P','Q','R','S','T','U','V','W','X','H','Z'
+	};
+	moo_ooch_t* p, * end, ch;
+
+	p = nbuf;
+	*p = '\0';
+	do { *++p = hex2ascii_upper[num % 16]; } while (num /= 16);
+	*++p = 'r';
+	*++p = '6';
+	*++p = '1';
+	*lenp = p - nbuf;
+
+	end = p;
+	p = nbuf;
+	while (p <= end)
+	{
+		ch = *p;
+		*p++ = *end;
+		*end-- = ch;
+	}
+}
+
+moo_pfrc_t moo_pf_smptr_as_string (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv;
+	void* ptr;
+	moo_ooch_t buf[MOO_SIZEOF_OOW_T * 2 + 4];
+	moo_oow_t len;
+	moo_oop_t ss;
+
+	MOO_ASSERT (moo, nargs == 0);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(rcv));
+
+	ptr = MOO_OOP_TO_SMPTR(rcv);
+	sprintptr (buf, (moo_oow_t)ptr, &len);
+
+	ss = moo_makestring (moo, buf, len);
+	if (!ss) return MOO_PF_FAILURE;
+
+	MOO_STACK_SETRET (moo, nargs, ss);
 	return MOO_PF_SUCCESS;
 }
 
-moo_pfrc_t moo_pf_system_pop_collectable (moo_t* moo, moo_ooi_t nargs)
-{
-	if (moo->collectable.first)
-	{
-		moo_finalizable_t* first;
-
-		first = moo->collectable.first;
-
-		/* TODO: if it's already fininalized, delete it from collectable */
-		MOO_ASSERT (moo, MOO_OOP_IS_POINTER(first->oop));
-		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_GCFIN(first->oop) & MOO_GCFIN_FINALIZABLE);
-
-		MOO_STACK_SETRET (moo, nargs, first->oop);
-		MOO_OBJ_SET_FLAGS_GCFIN (first->oop, MOO_OBJ_GET_FLAGS_GCFIN(first->oop) | MOO_GCFIN_FINALIZED);
-
-		MOO_DELETE_FROM_LIST (&moo->collectable, first);
-		moo_freemem (moo, first); /* TODO: move it to the free list instead... */
-	}
-	else
-	{
-		/*MOO_STACK_SETRET (moo, nargs, moo->_nil);*/
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
-	}
-
-	return MOO_PF_SUCCESS;
-}
