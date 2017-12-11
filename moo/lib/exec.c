@@ -2098,7 +2098,7 @@ static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, rcv, moo->_semaphore)); 
 
-	if (!can_await_semaphore (moo, (moo_oop_semaphore_t)rcv))
+	if (!can_await_semaphore(moo, (moo_oop_semaphore_t)rcv))
 	{
 		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to wait on a semaphore that belongs to a semaphore group");
 		return MOO_PF_FAILURE;
@@ -2165,6 +2165,7 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
 		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to relocate a semaphore to a different group");
 		return MOO_PF_FAILURE;
 	}
+	
 	return MOO_PF_SUCCESS;
 }
 
@@ -2296,7 +2297,12 @@ static moo_pfrc_t pf_system_add_gcfin_semaphore (moo_t* moo, moo_ooi_t nargs)
 
 	MOO_ASSERT (moo, nargs == 1);
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
-	MOO_PF_CHECK_ARGS (moo, nargs, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
+
+	if (!moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "parameter not a kind of semaphore - %O", sem);
+		return MOO_PF_FAILURE;
+	}
 
 /* TODO: no overwriting.. */
 	moo->sem_gcfin = sem;
@@ -2320,9 +2326,23 @@ static moo_pfrc_t pf_system_add_timed_semaphore (moo_t* moo, moo_ooi_t nargs)
 	sec = MOO_STACK_GETARG(moo, nargs, 1);
 	nsec = (nargs == 3? MOO_STACK_GETARG(moo, nargs, 2): MOO_SMOOI_TO_OOP(0));
 
-	MOO_PF_CHECK_ARGS(moo, nargs, 
-		moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore) &&
-		MOO_OOP_IS_SMOOI(sec) && MOO_OOP_IS_SMOOI(nsec));
+	if (!moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "parameter not a kind of semaphore - %O", sem);
+		return MOO_PF_FAILURE;
+	}
+
+	if (!MOO_OOP_IS_SMOOI(sec))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid second - %O", sec);
+		return MOO_PF_FAILURE;
+	}
+
+	if (!MOO_OOP_IS_SMOOI(sec))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid nanosecond - %O", nsec);
+		return MOO_PF_FAILURE;
+	}
 
 	if (MOO_OOP_IS_SMOOI(sem->heap_index) && 
 	    sem->heap_index != MOO_SMOOI_TO_OOP(-1))
@@ -2374,7 +2394,19 @@ static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_oo
 	fd = MOO_STACK_GETARG(moo, nargs, 1);
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
 
-	MOO_PF_CHECK_ARGS (moo, nargs, MOO_CLASSOF(moo,sem) == moo->_semaphore && MOO_OOP_IS_SMOOI(fd));
+
+	if (!moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "parameter not a kind of semaphore - %O", sem);
+		return MOO_PF_FAILURE;
+	}
+
+	if (!MOO_OOP_IS_SMOOI(fd))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "IO handle not a small integer - %O", fd);
+		return MOO_PF_FAILURE;
+	}
+
 
 	if (MOO_OOP_IS_SMOOI(sem->io_index) && sem->io_index != MOO_SMOOI_TO_OOP(-1) && sem->io_handle == fd)
 	{
@@ -2441,13 +2473,17 @@ static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 
 	moo_oop_semaphore_t sem;
 
-	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->processor);*/
+	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->system);*/
 
 	MOO_ASSERT (moo, nargs == 1);
 
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
-	MOO_PF_CHECK_ARGS(moo, nargs, MOO_CLASSOF(moo,sem) == moo->_semaphore);
-	
+	if (!moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "parameter not a kind of semaphore - %O", sem);
+		return MOO_PF_FAILURE;
+	}
+
 /* TODO: remove a semaphore from IO handler if it's registered...
  *       remove a semaphore from elsewhere registered too */
 

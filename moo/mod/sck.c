@@ -76,8 +76,8 @@ static moo_pfrc_t pf_open_socket (moo_t* moo, moo_ooi_t nargs)
 
 oops:
 	if (fd >= 0) close (fd);
-	MOO_STACK_SETRETTOERROR (moo, nargs, errnum);
-	return MOO_PF_SUCCESS;
+	moo_seterrnum (moo, errnum);
+	return MOO_PF_FAILURE;
 }
 
 static moo_pfrc_t pf_close_socket (moo_t* moo, moo_ooi_t nargs)
@@ -104,13 +104,11 @@ static moo_pfrc_t pf_close_socket (moo_t* moo, moo_ooi_t nargs)
 			sck->handle = MOO_SMOOI_TO_OOP(-1);
 			MOO_STACK_SETRETTORCV (moo, nargs);
 		}
-	}
-	else
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_EBADHND);
+		return MOO_PF_SUCCESS;
 	}
 
-	return MOO_PF_SUCCESS;
+	moo_seterrbfmt (moo, MOO_EBADHND, "bad socket handle - %O", sck->handle);
+	return MOO_PF_FAILURE;
 }
 
 static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
@@ -157,8 +155,8 @@ oops_syserr:
 	errnum = moo_syserr_to_errnum(errno);
 
 oops:
-	MOO_STACK_SETRETTOERROR (moo, nargs, errnum);
-	return MOO_PF_SUCCESS;
+	moo_seterrnum (moo, errnum);
+	return MOO_PF_FAILURE;
 }
 /* ------------------------------------------------------------------------ */
  

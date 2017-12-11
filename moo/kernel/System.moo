@@ -101,70 +101,13 @@ class System(Apex)
 
 	## =======================================================================================
 
-	method(#class,#primitive) _signal: semaphore afterSecs: secs.
-	method(#class,#primitive) _signal: semaphore afterSecs: secs nanosecs: nanosecs.
-	method(#class,#primitive) _signal: semaphore onInOutput: file.
-	method(#class,#primitive) _signal: semaphore onInput: file.
-	method(#class,#primitive) _signal: semaphore onOutput: file.
-	method(#class,#primitive) _signalOnGCFin: semaphore.
-	method(#class,#primitive) _unsignal: semaphore.
-
-	method(#class) signal: semaphore afterSecs: secs
-	{
-		| x |
-		x := self _signal: semaphore afterSecs: secs.
-		if (x isError) { Exception raise: 'Cannot register a semaphore for signaling - ' & (x asString) }.
-		^x
-	}
-
-	method(#class) signal: semaphore afterSecs: secs nanoSecs: nanosecs
-	{
-		| x |
-		x := self _signal: semaphore afterSecs: secs nanosecs: nanosecs.
-		if (x isError) { Exception raise: 'Cannot register a semaphore for signaling - ' & (x asString) }.
-		^x
-	}
-
-	method(#class) signal: semaphore onInput: file
-	{
-		| x |
-		x := self _signal: semaphore onInput: file.
-		if (x isError) { Exception raise: 'Cannot register a semaphore for signaling - ' & (x asString) }.
-		^x
-	}
-
-	method(#class) signal: semaphore onOutput: file
-	{
-		| x |
-		x := self _signal: semaphore onOutput: file.
-		if (x isError) { Exception raise: 'Cannot register a semaphore for signaling - ' & (x asString) }.
-		^x
-	}
-
-	method(#class) signal: semaphore onInOutput: file
-	{
-		| x |
-		x := self _signal: semaphore onInOutput: file.
-		if (x isError) { Exception raise: 'Cannot register a semaphore for signaling - ' & (x asString) }.
-		^x
-	}
-
-	method(#class) signalOnGCFin: semaphore
-	{
-		| x |
-		x := self _signalOnGCFin: semaphore.
-		if (x isError) { Exception raise: 'Cannot register a semaphore for GC finalization - ' & (x asString) }.
-		^x
-	}
-
-	method(#class) unsignal: semaphore
-	{
-		| x |
-		x := self _unsignal: semaphore.
-		if (x isError) { Exception raise: 'Cannot deregister a semaphore from signaling ' & (x asString) }.
-		^x
-	}
-
+	method(#class,#primitive) signal: semaphore afterSecs: secs.
+	method(#class,#primitive) signal: semaphore afterSecs: secs nanosecs: nanosecs.
+	method(#class,#primitive) signal: semaphore onInOutput: file.
+	method(#class,#primitive) signal: semaphore onInput: file.
+	method(#class,#primitive) signal: semaphore onOutput: file.
+	method(#class,#primitive) signalOnGCFin: semaphore.
+	method(#class,#primitive) unsignal: semaphore.
 
 	## =======================================================================================
 	method(#class) sleepForSecs: secs

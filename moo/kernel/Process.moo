@@ -218,59 +218,10 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 	{
 		| x |
 		x := self _wait.
-		if (x isError) { Exception signal: ('Cannot wait on a semaphore - ' & x asString) }.
 		if (x signalAction notNil) { x signalAction value: x }.
 		^x
 	}
 
-	method _waitWithTimeout: seconds
-	{
-		| s r |
-
-		## create an internal semaphore for timeout notification.
-		s := Semaphore _new.
-		if (s isError) { ^s }.
-
-		## grant the partial membership to the internal semaphore.
-		## it's partial because it's not added to self.semarr.
-		##s _group: self. 
-		if ((r := (self addSemaphore: s)) isError) { ^r }.
-
-		## arrange the processor to notify upon timeout.
-		if ((r := (System _signal: s after: seconds)) isError) { ^r }.
-
-		if ((r := self _wait) isError) 
-		{
-			System _unsignal: s.
-			^r.
-		}.
-
-		## if the internal semaphore has been signaled, 
-		## arrange to return nil to indicate timeout.
-		if (r == s) { r := nil }
-		elsif (r signalAction notNil) { r signalAction value: r }.
-
-		## nullify the membership
-		self _removeSemaphore: s.
-
-		## cancel the notification arrangement in case it didn't time out.
-		System _unsignal: s.
-
-		^r.
-	}
-
-	method waitWithTimeout: seconds
-	{
-		| r |
-		r := self _waitWithTimeout: seconds.
-		if (r isError)  
-		{
-			Exception signal: 'Error has occurred...' error: r.
-		}.
-		^r
-	}
-
-(*
 	method waitWithTimeout: seconds
 	{
 		| s r |
@@ -290,7 +241,7 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 			## wait on the semaphore group.
 			r := self wait.
 		] on: Exception do: [:ex |
-			System _unsignal: s.
+			System unsignal: s.
 			ex throw
 		].
 
@@ -307,7 +258,6 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 
 		^r.
 	} 
-*)
 }
 
 class SemaphoreHeap(Object)
