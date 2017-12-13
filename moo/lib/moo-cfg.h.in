@@ -345,6 +345,9 @@
 /* use libltdl when loading a dynamic module */
 #undef MOO_ENABLE_LIBLTDL
 
+/* build mod/con */
+#undef MOO_ENABLE_MOD_CON
+
 /* build mod/ffi */
 #undef MOO_ENABLE_MOD_FFI
 

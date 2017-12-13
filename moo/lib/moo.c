@@ -395,7 +395,9 @@ void moo_freemem (moo_t* moo, void* ptr)
 
 #if defined(MOO_ENABLE_STATIC_MODULE)
 
-#include "../mod/console.h"
+#if defined(MOO_ENABLE_MOD_CON)
+#	include "../mod/_con.h"
+#endif
 #if defined(MOO_ENABLE_MOD_FFI)
 #	include "../mod/_ffi.h"
 #endif
@@ -414,7 +416,9 @@ static struct
 }
 static_modtab[] = 
 {
-	{ "console",    moo_mod_console },
+#if defined(MOO_ENABLE_MOD_CON)
+	{ "con",        moo_mod_con },
+#endif
 #if defined(MOO_ENABLE_MOD_FFI)
 	{ "ffi",        moo_mod_ffi },
 #endif

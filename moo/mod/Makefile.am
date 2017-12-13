@@ -25,7 +25,9 @@ LIBADD_COMMON =
 
 noinst_LTLIBRARIES =
 
-noinst_LTLIBRARIES += libmoo-console.la
+if ENABLE_MOD_CON
+noinst_LTLIBRARIES += libmoo-con.la
+endif
 
 if ENABLE_MOD_FFI
 noinst_LTLIBRARIES += libmoo-ffi.la
@@ -52,7 +54,9 @@ LIBADD_COMMON = -lmoo
 pkgmodexecdir = $(libdir)
 pkgmodexec_LTLIBRARIES =
 
-pkgmodexec_LTLIBRARIES += libmoo-console.la 
+if ENABLE_MOD_CON
+pkgmodexec_LTLIBRARIES += libmoo-con.la 
+endif
 
 if ENABLE_MOD_FFI
 pkgmodexec_LTLIBRARIES += libmoo-ffi.la
@@ -70,10 +74,10 @@ endif
 
 endif
 
-libmoo_console_la_SOURCES = console.c console.h
-libmoo_console_la_CPPFLAGS = $(CPPFLAGS_COMMON)
-libmoo_console_la_LDFLAGS = $(LDFLAGS_COMMON)
-libmoo_console_la_LIBADD = $(LIBADD_COMMON) $(TERMINAL_LIBS)
+libmoo_con_la_SOURCES = con.c _con.h
+libmoo_con_la_CPPFLAGS = $(CPPFLAGS_COMMON)
+libmoo_con_la_LDFLAGS = $(LDFLAGS_COMMON)
+libmoo_con_la_LIBADD = $(LIBADD_COMMON) $(TERMINAL_LIBS)
 
 if ENABLE_MOD_FFI
 libmoo_ffi_la_SOURCES = ffi.c _ffi.h

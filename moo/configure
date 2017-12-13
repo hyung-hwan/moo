@@ -662,6 +662,8 @@ ENABLE_MOD_SCK_FALSE
 ENABLE_MOD_SCK_TRUE
 ENABLE_MOD_FFI_FALSE
 ENABLE_MOD_FFI_TRUE
+ENABLE_MOD_CON_FALSE
+ENABLE_MOD_CON_TRUE
 ENABLE_LIBLTDL_FALSE
 ENABLE_LIBLTDL_TRUE
 ENABLE_STATIC_MODULE_FALSE
@@ -842,6 +844,7 @@ enable_cxx
 enable_dynamic_module
 enable_static_module
 enable_libltdl
+enable_mod_con
 enable_mod_ffi
 enable_mod_sck
 enable_mod_x11
@@ -1496,6 +1499,7 @@ Optional Features:
   --enable-static-module  build modules statically into the main
                           library(default. no)
   --enable-libltdl        use libltdl(default. yes)
+  --enable-mod-con        enable mod/con (default. yes)
   --enable-mod-ffi        enable mod/ffi (default. yes)
   --enable-mod-sck        enable mod/sck (default. yes)
   --enable-mod-x11        enable mod/x11 (default. yes)
@@ -20221,6 +20225,29 @@ else
 fi
 
 
+# Check whether --enable-mod-con was given.
+if test "${enable_mod_con+set}" = set; then :
+  enableval=$enable_mod_con; enable_mod_con_is=$enableval
+else
+  enable_mod_con_is=yes
+
+fi
+
+if test "${enable_mod_con_is}" = "yes"
+then
+
+$as_echo "#define MOO_ENABLE_MOD_CON /**/" >>confdefs.h
+
+fi
+ if test "${enable_mod_con_is}" = "yes"; then
+  ENABLE_MOD_CON_TRUE=
+  ENABLE_MOD_CON_FALSE='#'
+else
+  ENABLE_MOD_CON_TRUE='#'
+  ENABLE_MOD_CON_FALSE=
+fi
+
+
 # Check whether --enable-mod-ffi was given.
 if test "${enable_mod_ffi+set}" = set; then :
   enableval=$enable_mod_ffi; enable_mod_ffi_is=$enableval
@@ -20507,6 +20534,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${ENABLE_LIBLTDL_TRUE}" && test -z "${ENABLE_LIBLTDL_FALSE}"; then
   as_fn_error $? "conditional \"ENABLE_LIBLTDL\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${ENABLE_MOD_CON_TRUE}" && test -z "${ENABLE_MOD_CON_FALSE}"; then
+  as_fn_error $? "conditional \"ENABLE_MOD_CON\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${ENABLE_MOD_FFI_TRUE}" && test -z "${ENABLE_MOD_FFI_FALSE}"; then

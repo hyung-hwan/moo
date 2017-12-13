@@ -72,11 +72,13 @@ libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libmoo_la_LIBADD = $(LIBADD_LIB_COMMON)
 
 if ENABLE_STATIC_MODULE
-libmoo_la_LIBADD += -lmoo-console -lmoo-stdio
-libmoo_la_DEPENDENCIES = \
-	$(abs_builddir)/../mod/libmoo-console.la \
-	$(abs_builddir)/../mod/libmoo-stdio.la
+libmoo_la_LIBADD += -lmoo-stdio
+libmoo_la_DEPENDENCIES = $(abs_builddir)/../mod/libmoo-stdio.la
 
+if ENABLE_MOD_CON
+libmoo_la_LIBADD += -lmoo-con
+libmoo_la_DEPENDENCIES += $(abs_builddir)/../mod/libmoo-con.la
+endif
 if ENABLE_MOD_FFI
 libmoo_la_LIBADD += -lmoo-ffi
 libmoo_la_DEPENDENCIES += $(abs_builddir)/../mod/libmoo-ffi.la

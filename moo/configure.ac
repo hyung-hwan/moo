@@ -497,6 +497,18 @@ then
 fi
 AM_CONDITIONAL(ENABLE_LIBLTDL, test "${enable_libltdl_is}" = "yes")
 
+dnl ===== enable-mod-con =====
+AC_ARG_ENABLE([mod-con],
+	[AS_HELP_STRING([--enable-mod-con],[enable mod/con (default. yes)])],
+	enable_mod_con_is=$enableval,
+	enable_mod_con_is=yes
+)
+if test "${enable_mod_con_is}" = "yes"
+then
+	AC_DEFINE([MOO_ENABLE_MOD_CON],[],[build mod/con])
+fi
+AM_CONDITIONAL(ENABLE_MOD_CON, test "${enable_mod_con_is}" = "yes")
+
 dnl ===== enable-mod-ffi =====
 AC_ARG_ENABLE([mod-ffi],
 	[AS_HELP_STRING([--enable-mod-ffi],[enable mod/ffi (default. yes)])],
