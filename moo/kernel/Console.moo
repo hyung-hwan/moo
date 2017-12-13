@@ -47,7 +47,7 @@ extend SmallInteger
 	}
 }
 
-class Console(Object) from 'console'
+class Console(Object) from 'con'
 {
 	method(#primitive) _open.
 	method(#primitive) _close.

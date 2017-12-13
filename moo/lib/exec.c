@@ -1527,11 +1527,11 @@ TODO: overcome this problem - accept parameters....
 	s1 = moo_makesymbol (moo, objname->ptr, objname->len);
 	if (!s1) goto oops;
 
-	moo_pushtmp (moo, (moo_oop_t*)&s1);
+	moo_pushtmp (moo, (moo_oop_t*)&s1); tmp_count++;
 	s2 = moo_makesymbol (moo, mthname->ptr, mthname->len);
 	if (!s2) goto oops;
 
-	moo_pushtmp (moo, (moo_oop_t*)&s2);
+	moo_pushtmp (moo, (moo_oop_t*)&s2); tmp_count++;
 #endif
 
 	/* create a fake initial context. */
