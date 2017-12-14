@@ -7913,7 +7913,7 @@ static int compile_pragma_definition (moo_t* moo)
 		}
 
 #if 0
-/* TODO: pragma push
+/* TODO: pragma push */
 		if (is_token_word(moo, VOCA_PUSH))
 		{
 			/* #pragma push() - saves the pragma flags and keep the existing flags */

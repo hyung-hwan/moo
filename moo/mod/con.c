@@ -25,7 +25,7 @@
  */
 
 
-#include "console.h"
+#include "_con.h"
 #include <moo-utl.h>
 
 #include <string.h>
@@ -276,7 +276,7 @@ static void unload (moo_t* moo, moo_mod_t* mod)
 	/* TODO: close all open handle?? */
 }
 
-int moo_mod_console (moo_t* moo, moo_mod_t* mod)
+int moo_mod_con (moo_t* moo, moo_mod_t* mod)
 {
 	mod->import = import;
 	mod->query = query;
