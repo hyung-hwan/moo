@@ -1119,7 +1119,7 @@ static MOO_INLINE void multiply_unsigned_array (const moo_liw_t* x, moo_oow_t xs
 	((xs) < (ys) && (xs) <= (((ys) + 1) / 2)))
 #else
 #define CANNOT_KARATSUBA(moo,xs,ys) \
-	((xs) < KARATSUBA_CUTOFF || (ys) < KARATSUBA_CUTOFF || \
+	((xs) < MOO_KARATSUBA_CUTOFF || (ys) < MOO_KARATSUBA_CUTOFF || \
 	((xs) > (ys) && (ys) <= (((xs) + 1) / 2)) || \
 	((xs) < (ys) && (xs) <= (((ys) + 1) / 2)))
 #endif
@@ -1560,7 +1560,7 @@ static moo_oop_t multiply_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t 
 	moo_poptmps (moo, 2);
 	if (!z) return MOO_NULL;
 
-#if defined(ENABLE_KARATSUBA)
+#if defined(MOO_ENABLE_KARATSUBA)
 	if (CANNOT_KARATSUBA(moo,xs, ys))
 	{
 #endif
@@ -1568,7 +1568,7 @@ static moo_oop_t multiply_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t 
 			((moo_oop_liword_t)x)->slot, MOO_OBJ_GET_SIZE(x),
 			((moo_oop_liword_t)y)->slot, MOO_OBJ_GET_SIZE(y),
 			((moo_oop_liword_t)z)->slot);
-#if defined(ENABLE_KARATSUBA)
+#if defined(MOO_ENABLE_KARATSUBA)
 	}
 	else
 	{
