@@ -115,7 +115,6 @@ class MyObject(Object)
 			[ self test_mutex = #(2000 6000) ],
 			####[ self test_sem_sig ],
 
-		
 			[ System sleepForSecs: 2. self.a == 300 ] ## sleep before checking self.a to prevent different result depending on process switching frequency and speed
 		).
 

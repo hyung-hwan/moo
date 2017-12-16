@@ -113,12 +113,17 @@ typedef enum moo_option_dflval_t moo_option_dflval_t;
 
 enum moo_trait_t
 {
+#if !defined(NDEBUG)
+	MOO_DEBUG_GC     = (1 << 0),
+	MOO_DEBUG_BIGINT = (1 << 1),
+#endif
+
 	/* perform no garbage collection when the heap is full. 
 	 * you still can use moo_gc() explicitly. */
-	MOO_NOGC = (1 << 0),
+	MOO_NOGC = (1 << 8),
 
 	/* wait for running process when exiting from the main method */
-	MOO_AWAIT_PROCS = (1 << 1)
+	MOO_AWAIT_PROCS = (1 << 9)
 };
 typedef enum moo_trait_t moo_trait_t;
 
@@ -1130,6 +1135,11 @@ struct moo_t
 		moo_oow_t dfl_symtab_size;
 		moo_oow_t dfl_sysdic_size;
 		moo_oow_t dfl_procstk_size; 
+
+#if !defined(NDEBUG)
+		/* set automatically when trait is set */
+		int karatsuba_cutoff;
+#endif
 	} option;
 
 	moo_vmprim_t vmprim;

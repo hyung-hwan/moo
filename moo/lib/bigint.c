@@ -56,14 +56,6 @@
 
 #include "moo-prv.h"
 
-
-#define ENABLE_KARATSUBA
-#if defined(MOO_DEBUG_BIGINT)
-#	define KARATSUBA_CUTOFF 3
-#else
-#	define KARATSUBA_CUTOFF 32
-#endif
-
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
 	/* nothing special */
 #elif (MOO_LIW_BITS == MOO_OOHW_BITS)
@@ -1119,10 +1111,18 @@ static MOO_INLINE void multiply_unsigned_array (const moo_liw_t* x, moo_oow_t xs
  *  X * B^2n => X << (MOO_LIW_BITS * n * 2)
  * --------------------------------------------------------------------
  */
-#define CANNOT_KARATSUBA(xs, ys) \
+ 
+#if !defined(NDEBUG)
+#define CANNOT_KARATSUBA(moo,xs,ys) \
+	((xs) < (moo)->option.karatsuba_cutoff || (ys) < (moo)->option.karatsuba_cutoff || \
+	((xs) > (ys) && (ys) <= (((xs) + 1) / 2)) || \
+	((xs) < (ys) && (xs) <= (((ys) + 1) / 2)))
+#else
+#define CANNOT_KARATSUBA(moo,xs,ys) \
 	((xs) < KARATSUBA_CUTOFF || (ys) < KARATSUBA_CUTOFF || \
 	((xs) > (ys) && (ys) <= (((xs) + 1) / 2)) || \
 	((xs) < (ys) && (xs) <= (((ys) + 1) / 2)))
+#endif
 
 static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const moo_liw_t* x, moo_oow_t xs, const moo_liw_t* y, moo_oow_t ys, moo_liw_t* z)
 {
@@ -1185,7 +1185,7 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 
 	/* place (a0 + a1) * (b0 + b1) at the shifted position */
 	zsp = z + nshifts;
-	if (CANNOT_KARATSUBA(tmplen[0], tmplen[1]))
+	if (CANNOT_KARATSUBA(moo, tmplen[0], tmplen[1]))
 	{
 		multiply_unsigned_array (tmp[0], tmplen[0], tmp[1], tmplen[1], zsp);
 		xlen = count_effective (zsp, tmplen[0] + tmplen[1]);
@@ -1199,7 +1199,7 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	/* tmp[0] = a0 * b0 */
 	tmplen[0] = ndigits_xl + ndigits_yl;
 	MOO_MEMSET (tmp[0], 0, sizeof(moo_liw_t) * tmplen[0]);
-	if (CANNOT_KARATSUBA(ndigits_xl, ndigits_yl))
+	if (CANNOT_KARATSUBA(moo, ndigits_xl, ndigits_yl))
 	{
 		multiply_unsigned_array (x, ndigits_xl, y, ndigits_yl, tmp[0]);
 		tmplen[0] = count_effective(tmp[0], tmplen[0]);
@@ -1213,7 +1213,7 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	/* tmp[1] = a1 * b1 */
 	tmplen[1] = ndigits_xh + ndigits_yh;
 	MOO_MEMSET (tmp[1], 0, sizeof(moo_liw_t) * tmplen[1]);
-	if (CANNOT_KARATSUBA(ndigits_xh, ndigits_yh))
+	if (CANNOT_KARATSUBA(moo, ndigits_xh, ndigits_yh))
 	{
 		multiply_unsigned_array (x + nshifts, ndigits_xh, y + nshifts, ndigits_yh, tmp[1]);
 		tmplen[1] = count_effective (tmp[1], tmplen[1]);
@@ -1304,7 +1304,7 @@ oops:
 	tmplen[2] = tmplen[0] + tmplen[1]; 
 	tmp[2] = moo_callocmem (moo, MOO_SIZEOF(moo_liw_t) * tmplen[2]);
 	if (!tmp[2]) goto oops;
-	if (CANNOT_KARATSUBA(tmplen[0], tmplen[1]))
+	if (CANNOT_KARATSUBA(moo, tmplen[0], tmplen[1]))
 	{
 		multiply_unsigned_array (tmp[0], tmplen[0], tmp[1], tmplen[1], tmp[2]);
 		xlen = count_effective (tmp[2], tmplen[2]);
@@ -1318,7 +1318,7 @@ oops:
 	/* tmp[0] = a0 * b0 */
 	tmplen[0] = ndigits_xl + ndigits_yl;
 	MOO_MEMSET (tmp[0], 0, sizeof(moo_liw_t) * tmplen[0]);
-	if (CANNOT_KARATSUBA(ndigits_xl, ndigits_yl))
+	if (CANNOT_KARATSUBA(moo, ndigits_xl, ndigits_yl))
 	{
 		multiply_unsigned_array (x, ndigits_xl, y, ndigits_yl, tmp[0]);
 		tmplen[0] = count_effective(tmp[0], tmplen[0]);
@@ -1332,7 +1332,7 @@ oops:
 	/* tmp[1] = a1 * b1 */
 	tmplen[1] = ndigits_xh + ndigits_yh;
 	MOO_MEMSET (tmp[1], 0, sizeof(moo_liw_t) * tmplen[1]);
-	if (CANNOT_KARATSUBA(ndigits_xh, ndigits_yh))
+	if (CANNOT_KARATSUBA(moo, ndigits_xh, ndigits_yh))
 	{
 		multiply_unsigned_array (x + nshifts, ndigits_xh, y + nshifts, ndigits_yh, tmp[1]);
 		tmplen[1] = count_effective (tmp[1], tmplen[1]);
@@ -1561,7 +1561,7 @@ static moo_oop_t multiply_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t 
 	if (!z) return MOO_NULL;
 
 #if defined(ENABLE_KARATSUBA)
-	if (CANNOT_KARATSUBA (xs, ys))
+	if (CANNOT_KARATSUBA(moo,xs, ys))
 	{
 #endif
 		multiply_unsigned_array (

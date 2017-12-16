@@ -1,9 +1,3 @@
-
-/* this file is supposed to be included by opt.c multiple times */
-
-
-
-
 /*
  * $Id$
  *
@@ -29,6 +23,10 @@
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+
+/* this file is supposed to be included by opt.c multiple times */
+
 
 #include "moo-opt.h"
 #include "moo-utl.h"

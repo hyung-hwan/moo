@@ -47,7 +47,7 @@ struct moo_uopt_t
 {
 	/* input */
 	const moo_uch_t* str; /* option string  */
-	moo_uopt_lng_t*    lng; /* long options */
+	moo_uopt_lng_t*  lng; /* long options */
 
 	/* output */
 	moo_uci_t        opt; /* character checked for validity */
@@ -57,10 +57,10 @@ struct moo_uopt_t
 	const moo_uch_t* lngopt; 
 
 	/* input + output */
-	int               ind; /* index into parent argv vector */
+	int              ind; /* index into parent argv vector */
 
 	/* input + output - internal*/
-	moo_uch_t*        cur;
+	moo_uch_t*       cur;
 };
 
 
@@ -78,7 +78,7 @@ struct moo_bopt_t
 {
 	/* input */
 	const moo_bch_t* str; /* option string  */
-	moo_bopt_lng_t*    lng; /* long options */
+	moo_bopt_lng_t*  lng; /* long options */
 
 	/* output */
 	moo_bci_t        opt; /* character checked for validity */
@@ -88,10 +88,10 @@ struct moo_bopt_t
 	const moo_bch_t* lngopt; 
 
 	/* input + output */
-	int               ind; /* index into parent argv vector */
+	int              ind; /* index into parent argv vector */
 
 	/* input + output - internal*/
-	moo_bch_t*        cur;
+	moo_bch_t*       cur;
 };
 
 #if defined(__cplusplus)

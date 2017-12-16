@@ -2492,16 +2492,14 @@ static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 		moo->sem_gcfin = (moo_oop_semaphore_t)moo->_nil;
 	}
 
-	if (MOO_OOP_IS_SMOOI(sem->heap_index) && 
-	    sem->heap_index != MOO_SMOOI_TO_OOP(-1))
+	if (MOO_OOP_IS_SMOOI(sem->heap_index) && sem->heap_index != MOO_SMOOI_TO_OOP(-1))
 	{
 		/* the semaphore is in the timed semaphore heap */
 		delete_from_sem_heap (moo, MOO_OOP_TO_SMOOI(sem->heap_index));
 		MOO_ASSERT (moo, sem->heap_index == MOO_SMOOI_TO_OOP(-1));
 	}
 
-	if (MOO_OOP_IS_SMOOI(sem->io_index) &&
-	    sem->io_index != MOO_SMOOI_TO_OOP(-1))
+	if (MOO_OOP_IS_SMOOI(sem->io_index) && sem->io_index != MOO_SMOOI_TO_OOP(-1))
 	{
 		/* the semaphore is associated with IO */
 		if (delete_from_sem_io (moo, MOO_OOP_TO_SMOOI(sem->io_index)) <= -1)

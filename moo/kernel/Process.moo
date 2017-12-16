@@ -228,30 +228,27 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 
 		## create an internal semaphore for timeout notification.
 		s := Semaphore new. 
-
-		## grant the partial membership to the internal semaphore.
-		## it's partial because it's not added to self.semarr.
-		##s _group: self. 
 		self addSemaphore: s.
 
-		## arrange the processor to notify upon timeout.
-		System signal: s after: seconds.
-
 		[ 
+			## arrange the processor to notify upon timeout.
+			System signal: s afterSecs: seconds.
+
 			## wait on the semaphore group.
 			r := self wait. 
 
 			## if the internal semaphore has been signaled, 
 			## arrange to return nil to indicate timeout.
-			if (r == s) { r := nil }
-			elsif (r signalAction notNil) { r signalAction value: r }.
+			if (r == s) { r := nil } ## timed out
+			elsif (r signalAction notNil) { r signalAction value: r }. ## run the signal action block
 		] ensure: [
+			## System<<unsignal: doesn't thrown an exception even if the semaphore s is not
+			## register with System<<signal:afterXXX:. otherwise, i would do like this line
+			## commented out.
+			## [ System unsignal: s ] ensure: [ self removeSemaphore: s ].
 
-			## nullify the membership
-			self removeSemaphore: s.
-
-			## cancel the notification arrangement in case it didn't time out.
 			System unsignal: s.
+			self removeSemaphore: s
 		].
 
 		^r.

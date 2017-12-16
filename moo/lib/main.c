@@ -2117,6 +2117,37 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 	return 0;
 }
 
+#if !defined(NDEBUG)
+static int handle_dbgopt (moo_t* moo, const moo_bch_t* str)
+{
+	xtn_t* xtn = moo_getxtn (moo);
+	const moo_bch_t* cm, * flt;
+	moo_oow_t len;
+	unsigned int trait, dbgopt = 0;
+
+	cm = str - 1;
+	do
+	{
+		flt = cm + 1;
+
+		cm = moo_findbcharinbcstr(flt, ',');
+		len = cm? (cm - flt): moo_countbcstr(flt);
+		if (moo_compbcharsbcstr (flt, len, "gc") == 0)  dbgopt |= MOO_DEBUG_GC;
+		else if (moo_compbcharsbcstr (flt, len, "bigint") == 0)  dbgopt |= MOO_DEBUG_BIGINT;
+		/* TODO: error handling for unknown options */
+	}
+	while (cm);
+
+	moo_getoption (moo, MOO_TRAIT, &trait);
+	trait |= dbgopt;
+	moo_setoption (moo, MOO_TRAIT, &trait);
+	return 0;
+}
+#endif
+
+
+#define MIN_MEMSIZE 2048000ul
+
 int main (int argc, char* argv[])
 {
 	static moo_ooch_t str_my_object[] = { 'M', 'y', 'O', 'b','j','e','c','t' }; /*TODO: make this an argument */
@@ -2132,16 +2163,25 @@ int main (int argc, char* argv[])
 	moo_bci_t c;
 	static moo_bopt_lng_t lopt[] =
 	{
-		{ ":log",    'l' },
-		{ MOO_NULL, '\0' }
+		{ ":log",     'l' },
+		{ ":memsize", 'm' },
+#if !defined(NDEBUG)
+		{ ":debug",   '\0' }, /* NOTE: there is no short option for --debug */
+#endif
+		{ MOO_NULL,   '\0' }
 	};
 	static moo_bopt_t opt =
 	{
-		"l:",
+		"l:m:",
 		lopt
 	};
 
 	const char* logopt = MOO_NULL;
+	moo_oow_t memsize = MIN_MEMSIZE;
+
+#if !defined(NDEBUG)
+	const char* dbgopt = MOO_NULL;
+#endif
 
 	setlocale (LC_ALL, "");
 
@@ -2160,6 +2200,19 @@ int main (int argc, char* argv[])
 			case 'l':
 				logopt = opt.arg;
 				break;
+
+			case 'm':
+				memsize = strtoul(opt.arg, MOO_NULL, 0);
+				if (memsize <= MIN_MEMSIZE) memsize = MIN_MEMSIZE;
+				break;
+
+			case '\0':
+				if (moo_compbcstr(opt.lngopt, "debug") == 0)
+				{
+					dbgopt = opt.arg;
+					break;
+				}
+				goto print_usage;
 
 			case ':':
 				if (opt.lngopt)
@@ -2195,7 +2248,7 @@ int main (int argc, char* argv[])
 	lt_dlinit ();
 #endif
 
-	moo = moo_open (&sys_mmgr, MOO_SIZEOF(xtn_t), 2048000lu, &vmprim, MOO_NULL);
+	moo = moo_open (&sys_mmgr, MOO_SIZEOF(xtn_t), memsize, &vmprim, MOO_NULL);
 	if (!moo)
 	{
 		fprintf (stderr, "ERROR: cannot open moo\n");
@@ -2241,6 +2294,17 @@ int main (int argc, char* argv[])
 		/* default logging mask when no logging option is set */
 		xtn->logmask = MOO_LOG_ALL_TYPES | MOO_LOG_ERROR | MOO_LOG_FATAL;
 	}
+
+#if !defined(NDEBUG)
+	if (dbgopt)
+	{
+		if (handle_dbgopt (moo, dbgopt) <= -1)
+		{
+			close_moo (moo);
+			return -1;
+		}
+	}
+#endif
 
 	if (moo_ignite(moo) <= -1)
 	{
