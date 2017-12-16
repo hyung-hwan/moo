@@ -2207,11 +2207,13 @@ int main (int argc, char* argv[])
 				break;
 
 			case '\0':
+			#if !defined(NDEBUG)
 				if (moo_compbcstr(opt.lngopt, "debug") == 0)
 				{
 					dbgopt = opt.arg;
 					break;
 				}
+			#endif
 				goto print_usage;
 
 			case ':':
