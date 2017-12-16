@@ -237,24 +237,22 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 		## arrange the processor to notify upon timeout.
 		System signal: s after: seconds.
 
-		[
+		[ 
 			## wait on the semaphore group.
-			r := self wait.
-		] on: Exception do: [:ex |
+			r := self wait. 
+
+			## if the internal semaphore has been signaled, 
+			## arrange to return nil to indicate timeout.
+			if (r == s) { r := nil }
+			elsif (r signalAction notNil) { r signalAction value: r }.
+		] ensure: [
+
+			## nullify the membership
+			self removeSemaphore: s.
+
+			## cancel the notification arrangement in case it didn't time out.
 			System unsignal: s.
-			ex throw
 		].
-
-		## if the internal semaphore has been signaled, 
-		## arrange to return nil to indicate timeout.
-		if (r == s) { r := nil }
-		elsif (r signalAction notNil) { r signalAction value: r }.
-
-		## nullify the membership
-		self removeSemaphore: s.
-
-		## cancel the notification arrangement in case it didn't time out.
-		System unsignal: s.
 
 		^r.
 	} 

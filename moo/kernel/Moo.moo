@@ -9,6 +9,6 @@
 #include 'Process.moo'.
 
 (* -------------------------------------------------------------------------- *)
-#include 'FFI.moo'.
+## #include 'FFI.moo'.
 #include 'Stdio.moo'.
-#include 'Console.moo'.
+## #include 'Console.moo'.

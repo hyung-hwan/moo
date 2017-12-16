@@ -2108,7 +2108,7 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 	xtn->logfd = open (xstr, O_CREAT | O_WRONLY | O_APPEND , 0644);
 	if (xtn->logfd == -1)
 	{
-		fprintf (stderr, "ERROR: cannot open %s\n", xstr);
+		fprintf (stderr, "ERROR: cannot open a log file %s\n", xstr);
 		if (str != xstr) moo_freemem (moo, xstr);
 		return -1;
 	}
@@ -2173,6 +2173,8 @@ int main (int argc, char* argv[])
 				goto print_usage;
 		}
 	}
+
+	if (opt.ind >= argc) goto print_usage;
 #endif
 
 	memset (&vmprim, 0, MOO_SIZEOF(vmprim));
@@ -2249,7 +2251,7 @@ int main (int argc, char* argv[])
 
 #if defined(macintosh)
 	i = 20;
-	xtn->source_path = "test.st";
+	xtn->source_path = "test.moo";
 	goto compile;
 #endif
 

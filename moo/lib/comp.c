@@ -1008,7 +1008,6 @@ not_comment:
 
 	return 0;
 
-
 unterminated:
 	set_syntax_error (moo, MOO_SYNERR_CMTNC, LEXER_LOC(moo), MOO_NULL);
 	return -1;
