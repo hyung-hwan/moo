@@ -134,7 +134,7 @@ struct sockaddr_in sin;
 memset (&sin, 0, sizeof(sin));
 sin.sin_family = AF_INET;
 sin.sin_addr.s_addr = inet_addr ("1.234.53.142");
-sin.sin_port = htons(80);
+sin.sin_port = htons(12345);
 	do
 	{
 		n = connect(fd, (struct sockaddr*)&sin, sizeof(sin));

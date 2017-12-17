@@ -45,7 +45,7 @@ extend Socket
 
 	method asyncConnect: connectBlock
 	{
-		| s1 s2 sg sa |
+		| s1 s2 sa |
 
 		s1 := Semaphore new.
 		s2 := Semaphore new.
@@ -61,14 +61,15 @@ extend Socket
 		s1 signalAction: sa.
 		s2 signalAction: sa.
 
-## TODO: unsignal s1 s2, remove them from System when exception occurs.
-		System signal: s1 onOutput: self.handle.
-		System signal: s2 after: 10.
-
-		System addAsyncSemaphore: s1.
-		System addAsyncSemaphore: s2.
-
-		self connect(1, 2, 3).
+		[
+			System signal: s1 onOutput: self.handle.
+			System signal: s2 afterSecs: 10.
+			System addAsyncSemaphore: s1.
+			System addAsyncSemaphore: s2.
+			self connect(1, 2, 3).
+		] ifCurtailed: [
+			sa value: s2.
+		]
 	}
 
 	method asyncRead: readBlock
@@ -81,7 +82,7 @@ extend Socket
 		s2 signalAction: [:sem | readBlock value: false].
 
 		System signal: s1 onInput: self.handle.
-		System signal: s2 after: 10.
+		System signal: s2 afterSecs: 10.
 	}
 
 (*
@@ -95,7 +96,7 @@ extend Socket
 		s2 signalAction: [:sem | writeBlock value: false].
 
 		System signal: s1 onOutput: self.handle.
-		System signal: s2 after: 10.
+		System signal: s2 afterSecs: 10.
 	}
 *)
 
@@ -109,12 +110,21 @@ class MyObject(Object)
 		| s |
 		[
 			s := Socket domain: Socket.Domain.INET type: Socket.Type.STREAM.
-			s dump.
 
 			s asyncConnect: [:result | 
 				##s endConnect: result.
 				##s beginRead: xxx.
-				'CONNECTED NOW.............' dump.
+				if (result)
+				{
+					'CONNECTED NOW.............' dump.
+					s asyncRead: [:data |
+						data dump.
+					]
+				}
+				else
+				{
+					'UNABLE TO CONNECT............' dump.
+				}
 			].
 
 			while (true)

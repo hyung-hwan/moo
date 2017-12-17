@@ -21,6 +21,7 @@ class System(Apex)
 	{
 		^self.asyncsg removeSemaphore: sem
 	}
+
 	method(#class) handleAsyncEvent
 	{
 		^self.asyncsg wait.
