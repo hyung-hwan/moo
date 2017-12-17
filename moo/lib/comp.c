@@ -6435,6 +6435,8 @@ static int __compile_method_definition (moo_t* moo)
 
 	if (moo->c->mth.primitive)
 	{
+		moo_oocs_t mthname;
+		
 		/* the primitive method must be of this form
 		 *  method(#primitive) method_name.
 		 */
@@ -6445,6 +6447,26 @@ static int __compile_method_definition (moo_t* moo)
 			return -1;
 		}
 
+		/*
+		 * remove all leading underscores from the method name when building a primitive
+		 * identifer. multiple methods can map to the same primitive handler.
+		 * for class X, you may have method(#primitive) aa and method(#primitive) _aa
+		 * to map to the X_aa primitive handler.
+		 */
+		mthname = moo->c->mth.name;
+		while (mthname.len > 0)
+		{
+			if (*mthname.ptr != '_') break;
+			mthname.ptr++;
+			mthname.len--;
+		}
+		if (mthname.len == 0)
+		{
+			MOO_DEBUG2 (moo, "Invalid primitive function name - %.*js\n", moo->c->mth.name.len, moo->c->mth.name.ptr);
+			set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+			return -1;
+		}
+		
 		if (moo->c->cls.self_oop->modname == moo->_nil)
 		{
 			/* no module name specified in the class definition using 'from'.
@@ -6453,31 +6475,8 @@ static int __compile_method_definition (moo_t* moo)
 			moo_oow_t savedlen;
 			moo_ooi_t pfnum;
 			moo_pfbase_t* pfbase;
-			moo_oocs_t mthname;
-
-			
 
 			/* primitive identifer = classname_methodname */
-			 
-			/*
-			 * remove all leading underscores from the method name when building a primitive
-			 * identifer. multiple methods can map to the same primitive handler.
-			 * for class X, you may have method(#primitive) aa and method(#primitive) _aa
-			 * to map to the X_aa primitive handler.
-			 */
-			mthname = moo->c->mth.name;
-			while (mthname.len > 0)
-			{
-				if (*mthname.ptr != '_') break;
-				mthname.ptr++;
-				mthname.len--;
-			}
-			if (mthname.len == 0)
-			{
-				MOO_DEBUG2 (moo, "Invalid primitive function name - %.*js\n", moo->c->mth.name.len, moo->c->mth.name.ptr);
-				set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
-				return -1;
-			}
 
 			/* compose the identifer into the back of the cls.modname buffer.
 			 * i'll revert it when done. */
@@ -6532,7 +6531,7 @@ static int __compile_method_definition (moo_t* moo)
 			tmp.len = MOO_OBJ_GET_SIZE(moo->c->cls.self_oop->modname);
 
 			if (copy_string_to (moo, &tmp, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '\0') <= -1 ||
-			    copy_string_to (moo, &moo->c->mth.name, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '.') <= -1 ||
+			    copy_string_to (moo, &mthname, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '.') <= -1 ||
 			    add_symbol_literal(moo, &moo->c->cls.modname, savedlen, &litidx) <= -1)
 			{
 				moo->c->cls.modname.len = savedlen;

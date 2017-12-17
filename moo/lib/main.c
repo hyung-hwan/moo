@@ -2348,7 +2348,7 @@ int main (int argc, char* argv[])
 
 				if (synerr.tgt.len > 0)
 				{
-					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, " in place of %.*js", synerr.tgt.len, synerr.tgt.ptr);
+					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, " - %.*js", synerr.tgt.len, synerr.tgt.ptr);
 				}
 
 				if (moo_geterrmsg(moo) != moo_geterrstr(moo))

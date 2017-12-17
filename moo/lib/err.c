@@ -291,6 +291,28 @@ moo_errnum_t moo_syserr_to_errnum (int e)
 }
 
 /* -------------------------------------------------------------------------- 
+ * ERROR NUMBER/MESSAGE HANDLING
+ * -------------------------------------------------------------------------- */
+
+const moo_ooch_t* moo_geterrstr (moo_t* moo)
+{
+	return moo_errnum_to_errstr (moo->errnum);
+}
+
+const moo_ooch_t* moo_geterrmsg (moo_t* moo)
+{
+	if (moo->errmsg.len <= 0) return moo_errnum_to_errstr (moo->errnum);
+	return moo->errmsg.buf;
+}
+
+void moo_seterrwithsyserr (moo_t* moo, int syserr)
+{
+	moo_bch_t msgbuf[64];
+	strerror_r (errno, msgbuf, MOO_COUNTOF(msgbuf));
+	moo_seterrbfmt (moo, moo_syserr_to_errnum(errno), "%s", msgbuf);
+}
+
+/* -------------------------------------------------------------------------- 
  * ASSERTION FAILURE HANDLER
  * -------------------------------------------------------------------------- */
 

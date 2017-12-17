@@ -4,10 +4,9 @@ class Socket(Object) from 'sck'
 {
 	var handle := -1.
 
-	method(#primitive) _open(domain, type, proto).
+	method(#primitive) open(domain, type, proto).
 	method(#primitive) _close.
-
-	method(#primitive) _connect(a,b,c).
+	method(#primitive) connect(a,b,c).
 }
 
 (* TODO: generate these domain and type from the C header *)
@@ -28,17 +27,9 @@ extend Socket
 	method(#class) new { self messageProhibited: #new }
 	method(#class) new: size { self messageProhibited: #new: }
 
-	method(#class) _domain: domain _type: type
-	{
-		^super new _open(domain, type, 0).
-	}
-
 	method(#class) domain: domain type: type
 	{
-		| s |
-		s := super new _open(domain, type, 0).
-		if (s isError) { Exception signal: 'Cannot open socket' }.
-		^s.
+		^super new open(domain, type, 0).
 	}
 
 	method close
@@ -46,7 +37,7 @@ extend Socket
 		if (self.handle >= 0)
 		{
 			## this primitive method may return failure. 
-			## but ignore it in this normal method.
+			## but ignore it here.
 			self _close.
 			self.handle := -1.
 		}
@@ -77,10 +68,7 @@ extend Socket
 		System addAsyncSemaphore: s1.
 		System addAsyncSemaphore: s2.
 
-		if (self _connect(1, 2, 3) isError)
-		{
-			Exception signal: 'Cannot connect to 1,2,3'.
-		}.
+		self connect(1, 2, 3).
 	}
 
 	method asyncRead: readBlock

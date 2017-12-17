@@ -1594,20 +1594,24 @@ MOO_EXPORT void moo_fini (
 #endif
 
 
-void moo_seterrbfmt (
+MOO_EXPORT void moo_seterrbfmt (
 	moo_t*           moo,
 	moo_errnum_t     errnum,
 	const moo_bch_t* fmt,
 	...
 );
 
-void moo_seterrufmt (
+MOO_EXPORT void moo_seterrufmt (
 	moo_t*           moo,
 	moo_errnum_t     errnum,
 	const moo_uch_t* fmt,
 	...
 );
 
+MOO_EXPORT void moo_seterrwithsyserr (
+	moo_t* moo,
+	int    syserr
+);
 
 MOO_EXPORT const moo_ooch_t* moo_geterrmsg (
 	moo_t* moo

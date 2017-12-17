@@ -1745,8 +1745,6 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_ooi_t nargs)
 }
 
 
-
-
 static moo_pfrc_t pf_perform (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t /*rcv,*/ selector;

@@ -230,17 +230,6 @@ void moo_fini (moo_t* moo)
 	}
 }
 
-const moo_ooch_t* moo_geterrstr (moo_t* moo)
-{
-	return moo_errnum_to_errstr (moo->errnum);
-}
-
-const moo_ooch_t* moo_geterrmsg (moo_t* moo)
-{
-	if (moo->errmsg.len <= 0) return moo_errnum_to_errstr (moo->errnum);
-	return moo->errmsg.buf;
-}
-
 int moo_setoption (moo_t* moo, moo_option_t id, const void* value)
 {
 	switch (id)

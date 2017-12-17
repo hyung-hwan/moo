@@ -58,14 +58,14 @@ static moo_pfrc_t pf_open_socket (moo_t* moo, moo_ooi_t nargs)
 	fd = socket (MOO_OOP_TO_SMOOI(dom), MOO_OOP_TO_SMOOI(type), MOO_OOP_TO_SMOOI(proto));
 	if (fd == -1) 
 	{
-		errnum = moo_syserr_to_errnum(errno);
+		moo_seterrwithsyserr (moo, errno);
 		goto oops;
 	}
 
 	if (!MOO_IN_SMOOI_RANGE(fd))
 	{
 		/* the file descriptor is too big to be represented as a small integer */
-		errnum = MOO_ERANGE;
+		moo_seterrbfmt (moo, MOO_ERANGE, "socket handle %d not in the permitted range", fd);
 		goto oops;
 	}
 
@@ -76,7 +76,6 @@ static moo_pfrc_t pf_open_socket (moo_t* moo, moo_ooi_t nargs)
 
 oops:
 	if (fd >= 0) close (fd);
-	moo_seterrnum (moo, errnum);
 	return MOO_PF_FAILURE;
 }
 
@@ -97,14 +96,15 @@ static moo_pfrc_t pf_close_socket (moo_t* moo, moo_ooi_t nargs)
 	{
 		if (close(MOO_OOP_TO_SMOOI(sck->handle)) == -1)
 		{
-			MOO_STACK_SETRETTOERROR (moo, nargs, moo_syserr_to_errnum(errno));
+			moo_seterrwithsyserr (moo, errno);
+			return MOO_PF_FAILURE;
 		}
 		else
 		{
 			sck->handle = MOO_SMOOI_TO_OOP(-1);
 			MOO_STACK_SETRETTORCV (moo, nargs);
+			return MOO_PF_SUCCESS;
 		}
-		return MOO_PF_SUCCESS;
 	}
 
 	moo_seterrbfmt (moo, MOO_EBADHND, "bad socket handle - %O", sck->handle);
@@ -176,9 +176,9 @@ struct fnctab_t
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, { '_','c','l','o','s','e','\0' },          0, { pf_close_socket,    0, 0  }  },
-	{ I, { '_','c','o','n','n','e','c','t','\0' },  0, { pf_connect,         3, 3  }  },
-	{ I, { '_','o','p','e','n','\0' },              0, { pf_open_socket,     3, 3  }  },
+	{ I, { 'c','l','o','s','e','\0' },          0, { pf_close_socket,    0, 0  }  },
+	{ I, { 'c','o','n','n','e','c','t','\0' },  0, { pf_connect,         3, 3  }  },
+	{ I, { 'o','p','e','n','\0' },              0, { pf_open_socket,     3, 3  }  },
 };
 
 /* ------------------------------------------------------------------------ */
