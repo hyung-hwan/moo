@@ -307,9 +307,9 @@ struct moo_ioarg_t
 		int pos, len, state;
 	} b;
 
-	unsigned long int line;
-	unsigned long int colm;
-	moo_ooci_t       nl;
+	moo_oow_t   line;
+	moo_oow_t   colm;
+	moo_ooci_t  nl;
 
 	moo_iolxc_t lxc;
 	/*-----------------------------------------------------------------*/

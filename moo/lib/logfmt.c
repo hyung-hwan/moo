@@ -160,7 +160,7 @@ struct moo_fmtout_t
  * The buffer pointed to by `nbuf' must have length >= MAXNBUF.
  */
 
-static moo_bch_t* sprintn_lower (moo_bch_t* nbuf, moo_uintmax_t num, int base, moo_ooi_t *lenp)
+static moo_bch_t* sprintn_lower (moo_bch_t* nbuf, moo_uintmax_t num, int base, moo_ooi_t* lenp)
 {
 	moo_bch_t* p;
 
@@ -172,7 +172,7 @@ static moo_bch_t* sprintn_lower (moo_bch_t* nbuf, moo_uintmax_t num, int base, m
 	return p; /* returns the end */
 }
 
-static moo_bch_t* sprintn_upper (moo_bch_t* nbuf, moo_uintmax_t num, int base, moo_ooi_t *lenp)
+static moo_bch_t* sprintn_upper (moo_bch_t* nbuf, moo_uintmax_t num, int base, moo_ooi_t* lenp)
 {
 	moo_bch_t* p;
 

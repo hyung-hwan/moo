@@ -83,7 +83,7 @@ enum moo_errnum_t
 	MOO_EBUFFULL, /**< buffer full */
 
 #if defined(MOO_INCLUDE_COMPILER)
-	MOO_ESYNTAX  /** < syntax error */
+	MOO_ESYNERR  /** < syntax error */
 #endif
 };
 typedef enum moo_errnum_t moo_errnum_t;
@@ -1440,8 +1440,8 @@ typedef enum moo_iocmd_t moo_iocmd_t;
 
 struct moo_ioloc_t
 {
-	unsigned long int  line; /**< line */
-	unsigned long int  colm; /**< column */
+	moo_oow_t line; /**< line */
+	moo_oow_t colm; /**< column */
 	const moo_ooch_t* file; /**< file specified in #include */
 };
 typedef struct moo_ioloc_t moo_ioloc_t;

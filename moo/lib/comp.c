@@ -411,9 +411,10 @@ static int is_restricted_word (const moo_oocs_t* ucs)
 static int begin_include (moo_t* moo);
 static int end_include (moo_t* moo);
 
-static void set_syntax_error (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt)
+static void set_syntax_errbmsg (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt, const moo_bch_t* msg)
 {
-	moo_seterrnum (moo, MOO_ESYNTAX);
+	if (msg) moo_seterrbfmt (moo, MOO_ESYNERR, "%s", msg);
+	else moo_seterrnum (moo, MOO_ESYNERR);
 	moo->c->synerr.num = num;
 
 	/* The SCO compiler complains of this ternary operation saying:
@@ -432,6 +433,11 @@ static void set_syntax_error (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t
 		moo->c->synerr.tgt.ptr = MOO_NULL;
 		moo->c->synerr.tgt.len = 0;
 	}
+}
+
+static void set_syntax_error (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt)
+{
+	set_syntax_errbmsg (moo, num, loc, tgt, MOO_NULL);
 }
 
 static int copy_string_to (moo_t* moo, const moo_oocs_t* src, moo_oocs_t* dst, moo_oow_t* dst_capa, int append, moo_ooch_t delim_char)
@@ -7243,7 +7249,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_LPAREN)
 		{
-			set_syntax_error (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			set_syntax_errbmsg (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo), "superclass must be specified");
 			return -1;
 		}
 

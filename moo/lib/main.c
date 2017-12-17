@@ -2328,60 +2328,34 @@ int main (int argc, char* argv[])
 	compile:
 		if (moo_compile (moo, input_handler) <= -1)
 		{
-			if (moo->errnum == MOO_ESYNTAX)
+			if (moo->errnum == MOO_ESYNERR)
 			{
 				moo_synerr_t synerr;
-				moo_bch_t bcs[1024]; /* TODO: right buffer size */
-				moo_oow_t bcslen, ucslen;
 
 				moo_getsynerr (moo, &synerr);
 
 				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "ERROR: ");
 				if (synerr.loc.file)
 				{
-				#if defined(MOO_OOCH_IS_UCH)
-					bcslen = MOO_COUNTOF(bcs);
-					if (moo_convootobcstr (moo, synerr.loc.file, &ucslen, bcs, &bcslen) >= 0)
-					{
-						moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "%.*s ", (int)bcslen, bcs);
-					}
-				#else
-					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "%s ", synerr.loc.file);
-				#endif
+					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "%js", synerr.loc.file);
 				}
 				else
 				{
-					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "%s ", xtn->source_path);
+					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "%s", xtn->source_path);
 				}
 
-				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "syntax error at line %lu column %lu - ", 
-					(unsigned long int)synerr.loc.line, (unsigned long int)synerr.loc.colm);
-
-				bcslen = MOO_COUNTOF(bcs);
-			#if defined(MOO_OOCH_IS_UCH)
-				if (moo_convootobcstr (moo, moo_synerrnum_to_errstr(synerr.num), &ucslen, bcs, &bcslen) >= 0)
-				{
-					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, " [%.*s]", (int)bcslen, bcs);
-				}
-			#else
-				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, " [%s]", moo_synerrnum_to_errstr(synerr.num));
-			#endif
+				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "[%zu,%zu] syntax error - %js",  synerr.loc.line, synerr.loc.colm, moo_synerrnum_to_errstr(synerr.num));
 
 				if (synerr.tgt.len > 0)
 				{
-					bcslen = MOO_COUNTOF(bcs);
-					ucslen = synerr.tgt.len;
-
-				#if defined(MOO_OOCH_IS_UCH)
-					if (moo_convootobchars (moo, synerr.tgt.ptr, &ucslen, bcs, &bcslen) >= 0)
-					{
-						moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, " [%.*s]", (int)bcslen, bcs);
-					}
-				#else
-					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, " [%.*s]", (int)synerr.tgt.len, synerr.tgt.ptr);
-				#endif
-
+					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, " in place of %.*js", synerr.tgt.len, synerr.tgt.ptr);
 				}
+
+				if (moo_geterrmsg(moo) != moo_geterrstr(moo))
+				{
+					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, " - %js", moo_geterrmsg(moo));
+				}
+				
 				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "\n");
 			}
 			else
