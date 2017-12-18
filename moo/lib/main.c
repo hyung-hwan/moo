@@ -1666,6 +1666,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 				if (revents & XPOLLERR) mask |= MOO_SEMAPHORE_IO_MASK_ERROR;
 				if (revents & XPOLLHUP) mask |= MOO_SEMAPHORE_IO_MASK_HANGUP;
 
+printf ("먹스 마스크  %d\n", (int)mask);
 			#if defined(USE_DEVPOLL)
 				MOO_ASSERT (moo, xtn->epd.capa > xtn->ev.buf[n].fd);
 				muxwcb (moo, mask, (void*)xtn->epd.ptr[xtn->ev.buf[n].fd]);

@@ -7,6 +7,7 @@ class Socket(Object) from 'sck'
 	method(#primitive) open(domain, type, proto).
 	method(#primitive) _close.
 	method(#primitive) connect(a,b,c).
+	method(#primitive) endConnect: xxx.
 }
 
 (* TODO: generate these domain and type from the C header *)
@@ -68,6 +69,7 @@ extend Socket
 			System addAsyncSemaphore: s2.
 			self connect(1, 2, 3).
 		] ifCurtailed: [
+			## rollback 
 			sa value: s2.
 		]
 	}
@@ -116,6 +118,7 @@ class MyObject(Object)
 				##s beginRead: xxx.
 				if (result)
 				{
+					s endConnect: result.
 					'CONNECTED NOW.............' dump.
 					s asyncRead: [:data |
 						data dump.

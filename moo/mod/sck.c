@@ -152,12 +152,55 @@ sin.sin_port = htons(12345);
 	return MOO_PF_SUCCESS;
 
 oops_syserr:
-	errnum = moo_syserr_to_errnum(errno);
+	moo_seterrwithsyserr (moo, errno);
+	return MOO_PF_FAILURE;
 
 oops:
 	moo_seterrnum (moo, errnum);
 	return MOO_PF_FAILURE;
 }
+
+static moo_pfrc_t pf_end_connect (moo_t* moo, moo_ooi_t nargs)
+{
+	oop_sck_t sck;
+	int fd;
+
+	sck = (oop_sck_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, 
+		MOO_OOP_IS_POINTER(sck) && 
+		MOO_OBJ_BYTESOF(sck) >= (MOO_SIZEOF(*sck) - MOO_SIZEOF(moo_obj_t)) &&
+		MOO_OOP_IS_SMOOI(sck->handle)
+	);
+
+	fd = MOO_OOP_TO_SMOOI(sck->handle);
+	if (fd >= 0)
+	{
+		socklen_t len;
+		int ret;
+
+		len = MOO_SIZEOF(ret);
+		if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (char*)&ret, &len) == -1)
+		{
+			moo_seterrwithsyserr (moo, errno);
+			return MOO_PF_FAILURE;
+		}
+
+		if (ret == EINPROGRESS)
+		{
+			return MOO_PF_FAILURE;
+		}
+		else if (ret != 0)
+		{
+			moo_seterrwithsyserr (moo, ret);
+			return MOO_PF_FAILURE;
+		}
+	}
+
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
 /* ------------------------------------------------------------------------ */
  
 typedef struct fnctab_t fnctab_t;
@@ -176,9 +219,10 @@ struct fnctab_t
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, { 'c','l','o','s','e','\0' },          0, { pf_close_socket,    0, 0  }  },
-	{ I, { 'c','o','n','n','e','c','t','\0' },  0, { pf_connect,         3, 3  }  },
-	{ I, { 'o','p','e','n','\0' },              0, { pf_open_socket,     3, 3  }  },
+	{ I, { 'c','l','o','s','e','\0' },                          0, { pf_close_socket,    0, 0  }  },
+	{ I, { 'c','o','n','n','e','c','t','\0' },                  0, { pf_connect,         3, 3  }  },
+	{ I, { 'e','n','d','C','o','n','n','e','c','t',':','\0' },  0, { pf_end_connect,     1, 1  }  },
+	{ I, { 'o','p','e','n','\0' },                              0, { pf_open_socket,     3, 3  }  },
 };
 
 /* ------------------------------------------------------------------------ */
