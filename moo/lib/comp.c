@@ -4550,6 +4550,7 @@ static int read_byte_array_literal (moo_t* moo, moo_oop_t* xlit)
 	moo_ooi_t tmp;
 	moo_oop_t ba;
 	moo_oow_t saved_balit_count;
+	int comma_used = -1; /* unknown */
 
 	saved_balit_count = moo->c->balit.count;
 
@@ -4584,6 +4585,44 @@ static int read_byte_array_literal (moo_t* moo, moo_oop_t* xlit)
 
 		if (add_to_byte_array_literal_buffer(moo, tmp) <= -1) goto oops;
 		GET_TOKEN_GOTO (moo, oops);
+
+		if (comma_used == -1)
+		{
+			/* check if a comma has been used after the first element */
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA)
+			{
+				comma_used = 1;
+				GET_TOKEN_GOTO (moo, oops);
+			}
+			else
+			{
+				comma_used = 0;
+			}
+		}
+		else if (comma_used == 0)
+		{
+			/* a comma is not expected */
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA)
+			{
+				break;
+			}
+		}
+		else if (comma_used == 1)
+		{
+			/* a comma is expected */
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
+			if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA)
+			{
+				set_syntax_error (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				goto oops;
+			}
+			GET_TOKEN_GOTO (moo, oops);
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK)
+			{
+				set_syntax_error (moo, MOO_SYNERR_LITERAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				goto oops;
+			}
+		}
 	}
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACK)

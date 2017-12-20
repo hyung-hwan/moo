@@ -166,7 +166,7 @@ class MyObject(Object)
 		outact := [:sck :state |
 			if (state)
 			{
-				sck writeBytes: #[ $h $e $l $l $o ].
+				sck writeBytes: #[ $h, $e, $l, $l, $o ].
 			}
 			else
 			{
@@ -174,8 +174,6 @@ class MyObject(Object)
 		].
 
 		conact := [:sck :state |
-			
-
 			if (state)
 			{
 				'CONNECTED NOW.............' dump.
