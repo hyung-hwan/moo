@@ -133,7 +133,7 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 struct sockaddr_in sin;
 memset (&sin, 0, sizeof(sin));
 sin.sin_family = AF_INET;
-sin.sin_addr.s_addr = inet_addr ("1.234.53.142");
+sin.sin_addr.s_addr = inet_addr ("192.168.1.143");
 sin.sin_port = htons(12345);
 	do
 	{
@@ -196,8 +196,89 @@ static moo_pfrc_t pf_end_connect (moo_t* moo, moo_ooi_t nargs)
 		}
 	}
 
-
 	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_read_socket (moo_t* moo, moo_ooi_t nargs)
+{
+	oop_sck_t sck;
+	moo_oop_byte_t buf;
+	int fd;
+	ssize_t n;
+
+	sck = (oop_sck_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, 
+		MOO_OOP_IS_POINTER(sck) && 
+		MOO_OBJ_BYTESOF(sck) >= (MOO_SIZEOF(*sck) - MOO_SIZEOF(moo_obj_t)) &&
+		MOO_OOP_IS_SMOOI(sck->handle)
+	);
+
+	fd = MOO_OOP_TO_SMOOI(sck->handle);
+	if (fd <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad socket handle - %d\n", fd);
+		return MOO_PF_FAILURE;
+	}
+
+	buf = (moo_oop_byte_t)MOO_STACK_GETARG (moo, nargs, 0);
+	if (!MOO_OBJ_IS_BYTE_POINTER(buf))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "buffer not a byte array - %O\n", buf);
+		return MOO_PF_FAILURE;
+	}
+
+	n = recv (fd, MOO_OBJ_GET_BYTE_SLOT(buf), MOO_OBJ_GET_SIZE(buf), 0);
+	if (n <= -1 && errno != EWOULDBLOCK)
+	{
+		moo_seterrwithsyserr (moo, errno);
+		return MOO_PF_FAILURE;
+	}
+
+	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(n));
+
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_write_socket (moo_t* moo, moo_ooi_t nargs)
+{
+	oop_sck_t sck;
+	moo_oop_byte_t buf;
+	int fd;
+	ssize_t n;
+
+	sck = (oop_sck_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, 
+		MOO_OOP_IS_POINTER(sck) && 
+		MOO_OBJ_BYTESOF(sck) >= (MOO_SIZEOF(*sck) - MOO_SIZEOF(moo_obj_t)) &&
+		MOO_OOP_IS_SMOOI(sck->handle)
+	);
+
+	fd = MOO_OOP_TO_SMOOI(sck->handle);
+	if (fd <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad socket handle - %d\n", fd);
+		return MOO_PF_FAILURE;
+	}
+
+	buf = (moo_oop_byte_t)MOO_STACK_GETARG (moo, nargs, 0);
+	if (!MOO_OBJ_IS_BYTE_POINTER(buf))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "buffer not a byte array - %O\n", buf);
+		return MOO_PF_FAILURE;
+	}
+
+	n = send (fd, MOO_OBJ_GET_BYTE_SLOT(buf), MOO_OBJ_GET_SIZE(buf), 0);
+	if (n <= -1 && errno != EWOULDBLOCK)
+	{
+		moo_seterrwithsyserr (moo, errno);
+		return MOO_PF_FAILURE;
+	}
+
+	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(n));
+
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
 	return MOO_PF_SUCCESS;
 }
 
@@ -221,8 +302,10 @@ static moo_pfinfo_t pfinfos[] =
 {
 	{ I, { 'c','l','o','s','e','\0' },                          0, { pf_close_socket,    0, 0  }  },
 	{ I, { 'c','o','n','n','e','c','t','\0' },                  0, { pf_connect,         3, 3  }  },
-	{ I, { 'e','n','d','C','o','n','n','e','c','t',':','\0' },  0, { pf_end_connect,     1, 1  }  },
+	{ I, { 'e','n','d','C','o','n','n','e','c','t','\0' },      0, { pf_end_connect,     0, 0  }  },
 	{ I, { 'o','p','e','n','\0' },                              0, { pf_open_socket,     3, 3  }  },
+	{ I, { 'r','e','a','d','B','y','t','e','s',':','\0' },      0, { pf_read_socket,     1, 1  }  },
+	{ I, { 'w','r','i','t','e','B','y','t','e','s',':','\0' },  0, { pf_write_socket,    1, 1  }  },
 };
 
 /* ------------------------------------------------------------------------ */

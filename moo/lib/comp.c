@@ -4555,11 +4555,16 @@ static int read_byte_array_literal (moo_t* moo, moo_oop_t* xlit)
 
 	GET_TOKEN_GOTO (moo, oops); /* skip #[ and read the next token */
 
-	while (TOKEN_TYPE(moo) == MOO_IOTOK_NUMLIT || TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT)
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_NUMLIT || TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT || TOKEN_TYPE(moo) == MOO_IOTOK_CHARLIT)
 	{
 		/* TODO: check if the number is an integer */
 
-		if (string_to_smooi(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT, &tmp) <= -1)
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_CHARLIT)
+		{
+			/* accept a character literal inside a byte array literal */
+			tmp = TOKEN_NAME_PTR(moo)[0];
+		}
+		else if (string_to_smooi(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT, &tmp) <= -1)
 		{
 			/* the token reader reads a valid token. no other errors
 			 * than the range error must not occur */
@@ -4570,7 +4575,8 @@ static int read_byte_array_literal (moo_t* moo, moo_oop_t* xlit)
 			set_syntax_error (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			goto oops;
 		}
-		else if (tmp < 0 || tmp > 255)
+
+		if (tmp < 0 || tmp > 255)
 		{
 			set_syntax_error (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			goto oops;
