@@ -8,7 +8,7 @@ class Socket(Object) from 'sck'
 
 	method(#primitive) open(domain, type, proto).
 	method(#primitive) _close.
-	method(#primitive) connect(a,b,c).
+	method(#primitive) _connect(a,b,c).
 	method(#primitive) endConnect.
 
 	method(#primitive) readBytes: bytes.
@@ -89,7 +89,7 @@ extend Socket
 			System signal: s2 afterSecs: 10.
 			System addAsyncSemaphore: s1.
 			System addAsyncSemaphore: s2.
-			self connect(1, 2, 3).
+			self _connect(1, 2, 3).
 		] ifCurtailed: [
 			## rollback 
 			sa value: s2.
@@ -167,6 +167,7 @@ class MyObject(Object)
 			if (state)
 			{
 				sck writeBytes: #[ $h, $e, $l, $l, $o ].
+				
 			}
 			else
 			{
@@ -179,7 +180,9 @@ class MyObject(Object)
 				'CONNECTED NOW.............' dump.
 				##s onOutputDo: outact.
 				s writeBytes: #[ $h $e $l $l $o ].
+
 				s watchInput.
+				s watchOutput.
 			}
 			else
 			{

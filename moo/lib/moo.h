@@ -123,7 +123,7 @@ enum moo_trait_t
 	MOO_NOGC = (1 << 8),
 
 	/* wait for running process when exiting from the main method */
-	MOO_AWAIT_PROCS = (1 << 9)
+	MOO_AWAIT_PROCS = (1 << 9),
 };
 typedef enum moo_trait_t moo_trait_t;
 
@@ -823,6 +823,7 @@ struct moo_semaphore_t
 	moo_oop_t io_mask; /* SmallInteger */
 
 	moo_oop_t signal_action;
+
 	moo_oop_semaphore_group_t group; /* nil or belonging semaphore group */
 	struct
 	{
@@ -925,9 +926,9 @@ typedef int (*moo_vmprim_startup_t) (moo_t* moo);
 typedef void (*moo_vmprim_cleanup_t) (moo_t* moo);
 typedef void (*moo_vmprim_gettime_t) (moo_t* moo, moo_ntime_t* now);
 
-typedef int (*moo_vmprim_muxadd_t) (moo_t* moo, moo_oop_semaphore_t sem);
-typedef int (*moo_vmprim_muxmod_t) (moo_t* moo, moo_oop_semaphore_t sem);
-typedef int (*moo_vmprim_muxdel_t) (moo_t* moo, moo_oop_semaphore_t sem);
+typedef int (*moo_vmprim_muxadd_t) (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask, void* ctx);
+typedef int (*moo_vmprim_muxmod_t) (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask, void* ctx);
+typedef int (*moo_vmprim_muxdel_t) (moo_t* moo, moo_ooi_t sem);
 
 typedef void (*moo_vmprim_muxwait_cb_t) (moo_t* moo, moo_ooi_t mask, void* ctx);
 typedef void (*moo_vmprim_muxwait_t) (moo_t* moo, const moo_ntime_t* duration, moo_vmprim_muxwait_cb_t muxwcb);
@@ -1097,6 +1098,14 @@ struct moo_sbuf_t
 };
 typedef struct moo_sbuf_t moo_sbuf_t;
 
+struct moo_sem_tuple_t
+{
+	moo_oop_semaphore_t in;
+	moo_oop_semaphore_t out;
+	moo_ooi_t mask;
+};
+typedef struct moo_sem_tuple_t moo_sem_tuple_t;
+
 typedef struct moo_finalizable_t moo_finalizable_t;
 struct moo_finalizable_t
 {
@@ -1123,6 +1132,7 @@ struct moo_t
 
 	struct
 	{
+		moo_ooch_t buf2[2048];
 		moo_ooch_t buf[2048];
 		moo_oow_t len;
 	} errmsg;
@@ -1242,10 +1252,16 @@ struct moo_t
 	moo_oow_t sem_heap_capa;
 
 	/* semaphores for I/O handling. plain array */
-	moo_oop_semaphore_t* sem_io;
+	/*moo_oop_semaphore_t* sem_io;*/
+	moo_sem_tuple_t* sem_io;
+	moo_oow_t sem_io_tuple_count;
+	moo_oow_t sem_io_tuple_capa;
+
 	moo_oow_t sem_io_count;
-	moo_oow_t sem_io_capa;
 	moo_oow_t sem_io_wait_count;
+
+	moo_ooi_t sem_io_map[10240]; /* TODO: make it dynamic */
+
 
 	/* semaphore to notify finalizable objects */
 	moo_oop_semaphore_t sem_gcfin;

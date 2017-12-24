@@ -898,7 +898,10 @@ void moo_gc (moo_t* moo)
 
 	for (i = 0; i < moo->sem_io_count; i++)
 	{
-		moo->sem_io[i] = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_io[i]);
+		if (moo->sem_io[i].in)
+			moo->sem_io[i].in = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_io[i].in);
+		if (moo->sem_io[i].out)
+			moo->sem_io[i].out = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_io[i].out);
 	}
 
 	moo->sem_gcfin = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_gcfin);

@@ -855,7 +855,7 @@ static MOO_INLINE void destroy_poll_data_space (moo_t* moo)
 #endif
 
 
-static int _add_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_data)
+static int _add_poll_fd (moo_t* moo, int fd, int event_mask, void* event_data)
 {
 #if defined(USE_DEVPOLL)
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
@@ -869,7 +869,7 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 	ev.revents = 0;
 	if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
 	{
-		moo_syserr_to_errnum (errno);
+		moo_seterrwithsyserr (moo, errno);
 		MOO_DEBUG2 (moo, "Cannot add file descriptor %d to devpoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
@@ -890,9 +890,10 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 	ev.events |= EPOLLET;
 	#endif
 	ev.data.ptr = (void*)event_data;
-	if (epoll_ctl (xtn->ep, EPOLL_CTL_ADD, fd, &ev) == -1)
+	if (epoll_ctl(xtn->ep, EPOLL_CTL_ADD, fd, &ev) == -1)
 	{
-		moo_syserr_to_errnum (errno);
+
+		moo_seterrwithsyserr (moo, errno);
 		MOO_DEBUG2 (moo, "Cannot add file descriptor %d to epoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
@@ -1050,7 +1051,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 }
 
 
-static int _mod_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_data)
+static int _mod_poll_fd (moo_t* moo, int fd, int event_mask, void* event_data)
 {
 #if defined(USE_DEVPOLL)
 
@@ -1073,7 +1074,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask, moo_oow_t event_dat
 	ev.data.ptr = (void*)event_data;
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_MOD, fd, &ev) == -1)
 	{
-		moo_syserr_to_errnum (errno);
+		moo_seterrwithsyserr (moo, errno);
 		MOO_DEBUG2 (moo, "Cannot modify file descriptor %d in epoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
@@ -1213,7 +1214,7 @@ static int vm_startup (moo_t* moo)
 	if (flag >= 0) fcntl (xtn->p[1], F_SETFL, flag | O_NONBLOCK);
 	#endif
 
-	if (_add_poll_fd(moo, xtn->p[0], XPOLLIN, MOO_TYPE_MAX(moo_oow_t)) <= -1) goto oops;
+	if (_add_poll_fd(moo, xtn->p[0], XPOLLIN, (void*)MOO_TYPE_MAX(moo_oow_t)) <= -1) goto oops;
 
 	pthread_mutex_init (&xtn->ev.mtx, MOO_NULL);
 	pthread_cond_init (&xtn->ev.cnd, MOO_NULL);
@@ -1381,57 +1382,45 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 #endif
 
 
-static int vm_muxadd (moo_t* moo, moo_oop_semaphore_t sem)
+static int vm_muxadd (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask, void* ctx)
 {
-	moo_ooi_t mask;
 	int event_mask;
 
-	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index));
-	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_handle));
-	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_mask));
-
-	mask = MOO_OOP_TO_SMOOI(sem->io_mask);
 	event_mask = 0; /*EPOLLET; */ /* TODO: use edge trigger(EPOLLLET)? */
 	if (mask & MOO_SEMAPHORE_IO_MASK_INPUT) event_mask |= XPOLLIN; 
 	if (mask & MOO_SEMAPHORE_IO_MASK_OUTPUT) event_mask |= XPOLLOUT;
 
 	if (event_mask == 0)
 	{
-		MOO_DEBUG2 (moo, "<vm_muxadd> Invalid semaphore mask %zd on handle %zd\n", mask, MOO_OOP_TO_SMOOI(sem->io_handle));
-		moo_seterrnum (moo, MOO_EINVAL);
+		MOO_DEBUG2 (moo, "<vm_muxadd> Invalid semaphore mask %zd on handle %zd\n", mask, io_handle);
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid semaphore mask %zd on handle %zd", mask, io_handle);
 		return -1;
 	}
 
-	return _add_poll_fd (moo, MOO_OOP_TO_SMOOI(sem->io_handle), event_mask, MOO_OOP_TO_SMOOI(sem->io_index));
+	return _add_poll_fd (moo, io_handle, event_mask, ctx);
 }
 
-static int vm_muxmod (moo_t* moo, moo_oop_semaphore_t sem)
+static int vm_muxmod (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask, void* ctx)
 {
-	moo_ooi_t mask;
 	int event_mask;
 
-	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index));
-	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_handle));
-	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_mask));
-
-	mask = MOO_OOP_TO_SMOOI(sem->io_mask);
 	event_mask = 0; /*EPOLLET; */ /* TODO: use edge trigger(EPOLLLET)? */
 	if (mask & MOO_SEMAPHORE_IO_MASK_INPUT) event_mask |= XPOLLIN; 
 	if (mask & MOO_SEMAPHORE_IO_MASK_OUTPUT) event_mask |= XPOLLOUT;
 
 	if (event_mask == 0)
 	{
-		MOO_DEBUG2 (moo, "<vm_muxadd> Invalid semaphore mask %zd on handle %zd\n", mask, MOO_OOP_TO_SMOOI(sem->io_handle));
-		moo_seterrnum (moo, MOO_EINVAL);
+		MOO_DEBUG2 (moo, "<vm_muxadd> Invalid semaphore mask %zd on handle %zd\n", mask, io_handle);
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid semaphore mask %zd on handle %zd", mask, io_handle);
 		return -1;
 	}
 
-	return _mod_poll_fd (moo, MOO_OOP_TO_SMOOI(sem->io_handle), event_mask, MOO_OOP_TO_SMOOI(sem->io_index));
+	return _mod_poll_fd (moo, io_handle, event_mask, ctx);
 }
 
-static int vm_muxdel (moo_t* moo, moo_oop_semaphore_t sem)
+static int vm_muxdel (moo_t* moo, moo_ooi_t io_handle)
 {
-	return _del_poll_fd (moo, MOO_OOP_TO_SMOOI(sem->io_handle));
+	return _del_poll_fd (moo, io_handle);
 }
 
 #if defined(USE_THREAD)
@@ -2163,12 +2152,12 @@ int main (int argc, char* argv[])
 	moo_bci_t c;
 	static moo_bopt_lng_t lopt[] =
 	{
-		{ ":log",     'l' },
-		{ ":memsize", 'm' },
+		{ ":log",         'l' },
+		{ ":memsize",     'm' },
 #if !defined(NDEBUG)
-		{ ":debug",   '\0' }, /* NOTE: there is no short option for --debug */
+		{ ":debug",       '\0' }, /* NOTE: there is no short option for --debug */
 #endif
-		{ MOO_NULL,   '\0' }
+		{ MOO_NULL,       '\0' }
 	};
 	static moo_bopt_t opt =
 	{
@@ -2207,6 +2196,7 @@ int main (int argc, char* argv[])
 				break;
 
 			case '\0':
+				
 			#if !defined(NDEBUG)
 				if (moo_compbcstr(opt.lngopt, "debug") == 0)
 				{
@@ -2214,6 +2204,7 @@ int main (int argc, char* argv[])
 					break;
 				}
 			#endif
+
 				goto print_usage;
 
 			case ':':

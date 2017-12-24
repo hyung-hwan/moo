@@ -309,7 +309,7 @@ void moo_seterrwithsyserr (moo_t* moo, int syserr)
 {
 	moo_bch_t msgbuf[64];
 	strerror_r (syserr, msgbuf, MOO_COUNTOF(msgbuf));
-	moo_seterrbfmt (moo, moo_syserr_to_errnum(errno), "%s", msgbuf);
+	moo_seterrbfmt (moo, moo_syserr_to_errnum(errno), "%hs", msgbuf);
 }
 
 /* -------------------------------------------------------------------------- 

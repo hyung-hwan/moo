@@ -133,7 +133,7 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 struct sockaddr_in sin;
 memset (&sin, 0, sizeof(sin));
 sin.sin_family = AF_INET;
-sin.sin_addr.s_addr = inet_addr ("192.168.1.143");
+sin.sin_addr.s_addr = inet_addr ("192.168.1.145");
 sin.sin_port = htons(12345);
 	do
 	{

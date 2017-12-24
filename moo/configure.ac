@@ -107,6 +107,8 @@ dnl check the math library (check if -lm is needed)
 LT_LIB_M
 AC_SUBST(LIBM, $LIBM)
 
+AX_PTHREAD()
+
 dnl check some compiler builtins
 AC_MSG_CHECKING([for __builtin_memset])
 AC_LINK_IFELSE(

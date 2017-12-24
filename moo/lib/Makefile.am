@@ -1,5 +1,7 @@
 AUTOMAKE_OPTIONS = nostdinc
 
+AM_CFLAGS = $(PTHREAD_CFLAGS)
+
 CPPFLAGS_ALL_COMMON = \
 	-I$(abs_builddir) \
 	-I$(abs_srcdir) \
@@ -97,7 +99,7 @@ bin_PROGRAMS = moo
 moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 moo_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo -lpthread
+moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo $(PTHREAD_LIBS)
 if ENABLE_STATIC_MODULE
 moo_DEPENDENCIES = libmoo.la
 endif

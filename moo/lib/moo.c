@@ -85,6 +85,7 @@ static void fill_bigint_tables (moo_t* moo)
 int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t* vmprim)
 {
 	int modtab_inited = 0;
+	int i;
 
 	MOO_MEMSET (moo, 0, MOO_SIZEOF(*moo));
 	moo->mmgr = mmgr;
@@ -130,6 +131,9 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 
 	moo->proc_map_free_first = -1;
 	moo->proc_map_free_last = -1;
+
+	for (i = 0; i < MOO_COUNTOF(moo->sem_io_map); i++) moo->sem_io_map[i] = -1;
+
 	return 0;
 
 oops:
@@ -178,7 +182,8 @@ void moo_fini (moo_t* moo)
 	if (moo->sem_io)
 	{
 		moo_freemem (moo, moo->sem_io);
-		moo->sem_io_capa = 0;
+		moo->sem_io_tuple_capa = 0;
+		moo->sem_io_tuple_count = 0;
 		moo->sem_io_count = 0;
 		moo->sem_io_wait_count = 0;
 	}

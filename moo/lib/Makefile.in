@@ -102,7 +102,8 @@ host_triplet = @host@
 @ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_12 = -lmoo-x11
 @ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_13 = $(abs_builddir)/../mod/libmoo-x11.la
 bin_PROGRAMS = moo$(EXEEXT)
-@ENABLE_STATIC_MODULE_FALSE@moo_DEPENDENCIES = $(am__DEPENDENCIES_3)
+@ENABLE_STATIC_MODULE_FALSE@moo_DEPENDENCIES = $(am__DEPENDENCIES_3) \
+@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
 subdir = lib
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(srcdir)/moo-cfg.h.in $(top_srcdir)/ac/depcomp \
@@ -110,10 +111,11 @@ DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/argz.m4 \
 	$(top_srcdir)/m4/ax_cxx_namespace.m4 \
-	$(top_srcdir)/m4/ax_numval.m4 $(top_srcdir)/m4/libtool.m4 \
-	$(top_srcdir)/m4/ltdl.m4 $(top_srcdir)/m4/ltoptions.m4 \
-	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/ax_numval.m4 $(top_srcdir)/m4/ax_pthread.m4 \
+	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltdl.m4 \
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
@@ -334,6 +336,9 @@ PACKAGE_VERSION_MAJOR = @PACKAGE_VERSION_MAJOR@
 PACKAGE_VERSION_MINOR = @PACKAGE_VERSION_MINOR@
 PACKAGE_VERSION_PATCH = @PACKAGE_VERSION_PATCH@
 PATH_SEPARATOR = @PATH_SEPARATOR@
+PTHREAD_CC = @PTHREAD_CC@
+PTHREAD_CFLAGS = @PTHREAD_CFLAGS@
+PTHREAD_LIBS = @PTHREAD_LIBS@
 QUADMATH_LIBS = @QUADMATH_LIBS@
 RANLIB = @RANLIB@
 SED = @SED@
@@ -356,6 +361,7 @@ am__leading_dot = @am__leading_dot@
 am__quote = @am__quote@
 am__tar = @am__tar@
 am__untar = @am__untar@
+ax_pthread_config = @ax_pthread_config@
 bindir = @bindir@
 build = @build@
 build_alias = @build_alias@
@@ -401,6 +407,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = nostdinc
+AM_CFLAGS = $(PTHREAD_CFLAGS)
 CPPFLAGS_ALL_COMMON = \
 	-I$(abs_builddir) \
 	-I$(abs_srcdir) \
@@ -459,7 +466,7 @@ libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_5) \
 moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 moo_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo -lpthread
+moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo $(PTHREAD_LIBS)
 @ENABLE_STATIC_MODULE_TRUE@moo_DEPENDENCIES = libmoo.la
 all: moo-cfg.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
