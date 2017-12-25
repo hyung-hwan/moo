@@ -58,9 +58,9 @@ class Semaphore(Object)
 
 	var fireTimeSec   :=   0,
 	    fireTimeNsec  :=   0,
-	    ioIndex       :=  -1,
+	    ioIndex       := nil,
 	    ioHandle      := nil,
-	    ioMask        := nil.
+	    ioType        := nil.
 
 	var(#get,#set) signalAction := nil.
 

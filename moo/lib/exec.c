@@ -123,23 +123,65 @@ static MOO_INLINE const char* proc_state_to_string (int state)
 #	define __PRIMITIVE_NAME__ (&__FUNCTION__[0])
 #endif
 
-static void signal_io_semaphore (moo_t* moo, /*moo_ooi_t io_handle,*/ moo_ooi_t mask, void* data);
+static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem);
+static void signal_io_semaphore (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask);
 static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_ooi_t nargs);
 static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_t namelen, int to_super, moo_ooi_t nargs);
 
 /* ------------------------------------------------------------------------- */
 static MOO_INLINE int vm_startup (moo_t* moo)
 {
+	moo_oow_t i;
+	
 	MOO_DEBUG0 (moo, "VM started up\n");
+
+	for (i = 0; i < MOO_COUNTOF(moo->sem_io_map); i++)
+	{
+		moo->sem_io_map[i] = -1;
+	}
+
 	if (moo->vmprim.vm_startup (moo) <= -1) return -1;
 	moo->vmprim.vm_gettime (moo, &moo->exec_start_time); /* raw time. no adjustment */
+
 	return 0;
 }
 
 static MOO_INLINE void vm_cleanup (moo_t* moo)
 {
+	moo_oow_t i;
+
+/* TODO: clean up semaphores being waited on 
+	MOO_ASSERT (moo, moo->sem_io_wait_count == 0); */
+
+	for (i = 0; i < MOO_COUNTOF(moo->sem_io_map);)
+	{
+		moo_ooi_t sem_io_index;
+		if ((sem_io_index = moo->sem_io_map[i]) >= 0)
+		{
+			MOO_ASSERT (moo, sem_io_index < moo->sem_io_tuple_count);
+			MOO_ASSERT (moo, moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT] || moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]);
+
+			if (moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT])
+			{
+				delete_from_sem_io (moo, moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]);
+			}
+			if (moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT])
+			{
+				delete_from_sem_io (moo, moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]);
+			}
+		}
+		else 
+		{
+			i++;
+		}
+	}
+
+	MOO_ASSERT (moo, moo->sem_io_tuple_count == 0);
+	MOO_ASSERT (moo, moo->sem_io_count == 0);
+
 	moo->vmprim.vm_gettime (moo, &moo->exec_end_time); /* raw time. no adjustment */
 	moo->vmprim.vm_cleanup (moo);
+
 	MOO_DEBUG0 (moo, "VM cleaned up\n");
 }
 
@@ -751,7 +793,7 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 			MOO_ASSERT (moo, MOO_OOP_TO_SMOOI(proc->sp) < (moo_ooi_t)(MOO_OBJ_GET_SIZE(proc) - MOO_PROCESS_NAMED_INSTVARS));
 			proc->slot[MOO_OOP_TO_SMOOI(proc->sp)] = (moo_oop_t)sem;
 
-			if (MOO_OOP_TO_SMOOI(sem->io_index) >= 0) moo->sem_io_wait_count--;
+			if ((moo_oop_t)sem->io_index != moo->_nil) moo->sem_io_wait_count--;
 			return proc;
 		}
 	}
@@ -797,7 +839,7 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 		unchain_from_semaphore (moo, proc);
 		resume_process (moo, proc);
 
-		if (MOO_OOP_TO_SMOOI(sem->io_index) >= 0) moo->sem_io_wait_count--;
+		if ((moo_oop_t)sem->io_index != moo->_nil) moo->sem_io_wait_count--;
 
 		/* return the resumed(runnable) process */
 		return proc;
@@ -852,7 +894,7 @@ static MOO_INLINE void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 		MOO_ASSERT (moo, sem->waiting.last == proc);
 
-		if (MOO_OOP_TO_SMOOI(sem->io_index) >= 0) moo->sem_io_wait_count++;
+		if ((moo_oop_t)sem->io_index != moo->_nil) moo->sem_io_wait_count++;
 
 		MOO_ASSERT (moo, moo->processor->active != proc);
 	}
@@ -1062,19 +1104,17 @@ static void update_sem_heap (moo_t* moo, moo_ooi_t index, moo_oop_semaphore_t ne
 }
 #endif
 
-static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_handle, moo_ooi_t io_mask)
+static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_handle, moo_semaphore_io_type_t io_type)
 {
 	moo_ooi_t index;
-	int n, tuple_added = 0;
 	moo_ooi_t new_mask;
+	int n, tuple_added = 0;
 
-	MOO_ASSERT (moo, (sem->io_index == (moo_oop_t)moo->_nil) || (MOO_OOP_IS_SMOOI(sem->io_index) && sem->io_index == MOO_SMOOI_TO_OOP(-1)));
+	MOO_ASSERT (moo, sem->io_index == (moo_oop_t)moo->_nil);
 	MOO_ASSERT (moo, sem->io_handle == (moo_oop_t)moo->_nil);
-	MOO_ASSERT (moo, sem->io_mask == (moo_oop_t)moo->_nil);
+	MOO_ASSERT (moo, sem->io_type == (moo_oop_t)moo->_nil);
 
-	MOO_ASSERT (moo, io_mask == MOO_SEMAPHORE_IO_MASK_INPUT || io_mask == MOO_SEMAPHORE_IO_MASK_OUTPUT);  // TOOD: consider changing this to an error
-
-	if (io_handle < 0 || io_handle >= MOO_COUNTOF(moo->sem_io_map)) /* TODO: change the condition when sem_io_map changes to a dynamic structure */
+	if (io_handle < 0 || io_handle >= MOO_COUNTOF(moo->sem_io_map)) /* TODO: change the coindition when sem_io_map changes to a dynamic structure */
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "handle %zd out of supported range", io_handle);
 		return -1;
@@ -1083,6 +1123,7 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_hand
 	index = moo->sem_io_map[io_handle]; /* TODO: make it dynamic */
 	if (index <= -1)
 	{
+		/* this handle is not in any tuples. add it to a new tuple */
 		if (moo->sem_io_tuple_count >= SEM_IO_TUPLE_MAX)
 		{
 			moo_seterrbfmt (moo, MOO_ESHFULL, "too many IO semaphore tuples");  /* TODO: change error code */
@@ -1097,20 +1138,28 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_hand
 			/* no overflow check when calculating the new capacity
 			 * owing to SEM_IO_TUPLE_MAX check above */
 			new_capa = moo->sem_io_tuple_capa + SEM_IO_TUPLE_INC;
-			tmp = moo_reallocmem (moo, moo->sem_io, MOO_SIZEOF(moo_sem_tuple_t) * new_capa);
+			tmp = moo_reallocmem (moo, moo->sem_io_tuple, MOO_SIZEOF(moo_sem_tuple_t) * new_capa);
 			if (!tmp) return -1;
 
-			MOO_MEMSET (&tmp[moo->sem_io_tuple_capa], 0, MOO_SIZEOF(moo_sem_tuple_t) * (new_capa - moo->sem_io_tuple_capa));
-			moo->sem_io = tmp;
+			moo->sem_io_tuple = tmp;
 			moo->sem_io_tuple_capa = new_capa;
 		}
 
-		MOO_ASSERT (moo, moo->sem_io_tuple_count <= MOO_SMOOI_MAX);
+		/* this condition must be true assuming SEM_IO_TUPLE_MAX <= MOO_SMOOI_MAX */
+		MOO_ASSERT (moo, moo->sem_io_tuple_count <= MOO_SMOOI_MAX); 
 		index = moo->sem_io_tuple_count;
 
 		tuple_added = 1;
 
-		new_mask = io_mask;
+		/* safe to initialize before vm_muxadd() because
+		 * moo->sem_io_tuple_count has not been incremented. 
+		 * still no impact even if it fails. */
+		moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT] = MOO_NULL;
+		moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT] = MOO_NULL;
+		moo->sem_io_tuple[index].handle = io_handle;
+		moo->sem_io_tuple[index].mask = 0;
+
+		new_mask = ((moo_ooi_t)1 << io_type);
 
 		moo_pushtmp (moo, (moo_oop_t*)&sem);
 		n = moo->vmprim.vm_muxadd(moo, io_handle, new_mask, (void*)index);
@@ -1118,55 +1167,42 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_hand
 	}
 	else
 	{
-		new_mask = moo->sem_io[index].mask; /* existing mask */
-		new_mask |= io_mask;
-
-		if (new_mask == moo->sem_io[index].mask)
+		if (moo->sem_io_tuple[index].sem[io_type])
 		{
-			moo_oop_semaphore_t oldsem;
-			
-			if (moo->sem_io[index].mask & MOO_SEMAPHORE_IO_MASK_INPUT)
-				oldsem = moo->sem_io[index].in;
-			else 
-				oldsem = moo->sem_io[index].out;
-
-			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(oldsem->io_index) && MOO_OOP_TO_SMOOI(oldsem->io_index) == index);
-			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(oldsem->io_handle));
-			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(oldsem->io_mask));
-			moo_seterrbfmt (moo, MOO_EINVAL, "handle %zd already linked with a semaphore", MOO_OOP_TO_SMOOI(oldsem->io_handle));
+			moo_seterrbfmt (moo, MOO_EINVAL, "handle %zd already linked with a semaphore", io_handle);
 			return -1;
 		}
 
+		new_mask = moo->sem_io_tuple[index].mask; /* existing mask */
+		new_mask |= ((moo_ooi_t)1 << io_type);
+
 		moo_pushtmp (moo, (moo_oop_t*)&sem);
-		n = moo->vmprim.vm_muxmod(moo, io_handle, new_mask, index);
+		n = moo->vmprim.vm_muxmod(moo, io_handle, new_mask, (void*)index);
 		moo_poptmp (moo);
 	}
 
 	if (n <= -1) 
 	{
-		MOO_DEBUG3 (moo, "Failed to add IO semaphore at index %zd on handle %zd mask %zx\n", index, io_handle, io_mask);
+		MOO_DEBUG3 (moo, "Failed to add IO semaphore at index %zd on handle %zd type %d\n", index, io_handle, (int)io_type);
 		return -1;
 	}
 
-	MOO_DEBUG3 (moo, "Added IO semaphore at index %zd on handle %zd mask %zx\n", index, io_handle, io_mask);
-	moo->sem_io_map[io_handle] = index;
+	MOO_DEBUG3 (moo, "Added IO semaphore at index %zd on handle %zd type %d\n", index, io_handle, (int)io_type);
 
 	sem->io_index = MOO_SMOOI_TO_OOP(index);
 	sem->io_handle = MOO_SMOOI_TO_OOP(io_handle);
-	sem->io_mask = MOO_SMOOI_TO_OOP(io_mask);
+	sem->io_type = MOO_SMOOI_TO_OOP((moo_ooi_t)io_type);
 
-	moo->sem_io[index].mask = new_mask;
-	/* successfully added the handle to the system multiplexer */
-	if (io_mask == MOO_SEMAPHORE_IO_MASK_INPUT)
-	{
-		moo->sem_io[index].in = sem;
-	}
-	else /*if (io_mask == MOO_SEMAPHORE_IO_MASK_OUTPUT)*/
-	{
-		moo->sem_io[index].out = sem;
-	}
+	moo->sem_io_tuple[index].handle = io_handle;
+	moo->sem_io_tuple[index].mask = new_mask;
+	moo->sem_io_tuple[index].sem[io_type] = sem;
+
 	moo->sem_io_count++;
-	if (tuple_added) moo->sem_io_tuple_count++;
+	if (tuple_added) 
+	{
+		moo->sem_io_tuple_count++;
+		moo->sem_io_map[io_handle] = index;
+	}
 
 	/* update the number of IO semaphores in a group if necessary */
 	if ((moo_oop_t)sem->group != moo->_nil)
@@ -1183,17 +1219,15 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_hand
 static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	moo_ooi_t index;
-	moo_ooi_t new_mask, io_handle;
+	moo_ooi_t new_mask, io_handle, io_type;
 	int x;
 
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index));
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_handle));
-	index = MOO_OOP_TO_SMOOI(sem->io_index);
-	MOO_ASSERT (moo, index >= 0 && index < moo->sem_io_count);
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_type));
 
-	new_mask = moo->sem_io[index].mask;
-	new_mask &= ~MOO_OOP_TO_SMOOI(sem->io_mask); /* calculate the new mask after deletion */
-	new_mask &= MOO_SEMAPHORE_IO_MASK_INPUT | MOO_SEMAPHORE_IO_MASK_OUTPUT; /* for sanity */
+	index = MOO_OOP_TO_SMOOI(sem->io_index);
+	MOO_ASSERT (moo, index >= 0 && index < moo->sem_io_tuple_count);
 
 	io_handle = MOO_OOP_TO_SMOOI(sem->io_handle);
 	if (io_handle < 0 || io_handle >= MOO_COUNTOF(moo->sem_io_map)) /* TODO: change the condition when sem_io_map changes to a dynamic structure */
@@ -1201,6 +1235,12 @@ static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 		moo_seterrbfmt (moo, MOO_EINVAL, "handle %zd out of supported range", io_handle);
 		return -1;
 	}
+	MOO_ASSERT (moo, moo->sem_io_map[io_handle] == MOO_OOP_TO_SMOOI(sem->io_index));
+
+	io_type = MOO_OOP_TO_SMOOI(sem->io_type);
+
+	new_mask = moo->sem_io_tuple[index].mask;
+	new_mask &= ~((moo_ooi_t)1 << io_type); /* this is the new mask after deletion */
 
 	moo_pushtmp (moo, (moo_oop_t*)&sem);
 	x = new_mask? moo->vmprim.vm_muxmod(moo, io_handle, new_mask, (void*)index):
@@ -1208,13 +1248,13 @@ static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 	moo_poptmp (moo);
 	if (x <= -1) 
 	{
-		MOO_DEBUG2 (moo, "Failed to delete IO semaphore at index %zd on handle %zd - %js\n", index, sem->io_handle);
+		MOO_DEBUG2 (moo, "Failed to delete IO semaphore at index %zd on handle %zd - %js\n", index, io_handle);
 		return -1;
 	}
 
-	MOO_DEBUG3 (moo, "Deleted IO semaphore at index %zd on handle %zd mask %zx\n", index, io_handle, MOO_OOP_TO_SMOOI(sem->io_mask));
-	sem->io_index = MOO_SMOOI_TO_OOP(-1);
-	sem->io_mask = moo->_nil;
+	MOO_DEBUG3 (moo, "Deleted IO semaphore at index %zd on handle %zd type %zd\n", index, io_handle, io_type);
+	sem->io_index = moo->_nil;
+	sem->io_type = moo->_nil;
 	sem->io_handle = moo->_nil;
 	moo->sem_io_count--;
 
@@ -1229,22 +1269,27 @@ static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 
 	if (new_mask)
 	{
-		moo->sem_io[index].mask = new_mask;
+		moo->sem_io_tuple[index].mask = new_mask;
+		moo->sem_io_tuple[index].sem[io_type] = MOO_NULL;
 	}
 	else
 	{
-		moo->sem_io_map[io_handle] = -1;
-
 		moo->sem_io_tuple_count--;
 
-		if (/*moo->sem_io_count > 0 &&*/ index != moo->sem_io_count)
+		if (/*moo->sem_io_tuple_count > 0 &&*/ index != moo->sem_io_tuple_count)
 		{
-			moo->sem_io[index] = moo->sem_io[moo->sem_io_count];
-			if (moo->sem_io[index].mask & MOO_SEMAPHORE_IO_MASK_INPUT) 
-				moo->sem_io[index].in->io_index = MOO_SMOOI_TO_OOP(index);
-			if (moo->sem_io[index].mask & MOO_SEMAPHORE_IO_MASK_OUTPUT) 
-				moo->sem_io[index].out->io_index = MOO_SMOOI_TO_OOP(index);
+			/* migrate the last item to the deleted slot to compact the gap */
+			moo->sem_io_tuple[index] = moo->sem_io_tuple[moo->sem_io_tuple_count];
+
+			if (moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]) 
+				moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]->io_index = MOO_SMOOI_TO_OOP(index);
+			if (moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT])
+				moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]->io_index = MOO_SMOOI_TO_OOP(index);
+
+			moo->sem_io_map[moo->sem_io_tuple[index].handle] = index;
 		}
+
+		moo->sem_io_map[io_handle] = -1;
 	}
 
 	return 0;
@@ -1275,25 +1320,22 @@ static void _signal_io_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	}
 }
 
-static void signal_io_semaphore (moo_t* moo, /*moo_ooi_t io_handle,*/ moo_ooi_t mask, void* ctx)
+static void signal_io_semaphore (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask)
 {
-	moo_oow_t sem_io_index = (moo_oow_t)ctx;
-
-/* TODO: sanity check on the index. conditional handling on mask */
-
-	if (sem_io_index < moo->sem_io_count /*&& 
-	    io_handle >= 0 && io_handle < MOO_COUNTOF(moo->sem_io_map) &&
-	    moo->sem_io_map[io_handle] == sem_io_index*/)
+	if (io_handle >= 0 && io_handle < MOO_COUNTOF(moo->sem_io_map) && moo->sem_io_map[io_handle] >= 0)
 	{
 		moo_oop_semaphore_t sem;
+		moo_ooi_t sem_io_index;
 
-		sem = moo->sem_io[sem_io_index].in;
+		sem_io_index = moo->sem_io_map[io_handle];
+
+		sem = moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT];
 		if (sem && (mask & (MOO_SEMAPHORE_IO_MASK_INPUT | MOO_SEMAPHORE_IO_MASK_HANGUP | MOO_SEMAPHORE_IO_MASK_ERROR)))
 		{
 			_signal_io_semaphore (moo, sem);
 		}
 
-		sem = moo->sem_io[sem_io_index].out;
+		sem = moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];
 		if (sem && (mask & MOO_SEMAPHORE_IO_MASK_OUTPUT))
 		{
 			_signal_io_semaphore (moo, sem);
@@ -1302,7 +1344,7 @@ static void signal_io_semaphore (moo_t* moo, /*moo_ooi_t io_handle,*/ moo_ooi_t 
 	else
 	{
 	invalid_semaphore:
-		MOO_LOG1 (moo, MOO_LOG_WARN, "Warning - Invalid semaphore index %zu\n", sem_io_index);
+		MOO_LOG1 (moo, MOO_LOG_WARN, "Warning - signaling requested on an unmapped handle %zd\n", io_handle);
 	}
 }
 /* ------------------------------------------------------------------------- */
@@ -2208,9 +2250,12 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
 		MOO_APPEND_TO_OOP_LIST (moo, &rcv->sems[sems_idx], moo_oop_semaphore_t, sem, grm);
 		sem->group = rcv;
 
-		if (MOO_OOP_TO_SMOOI(sem->io_index) >= 0) 
+		if ((moo_oop_t)sem->io_index != moo->_nil)
 		{
 			moo_ooi_t count;
+
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index) && MOO_OOP_TO_SMOOI(sem->io_index) >= 0 && MOO_OOP_TO_SMOOI(sem->io_index) < moo->sem_io_tuple_count);
+
 			count = MOO_OOP_TO_SMOOI(rcv->sem_io_count);
 			MOO_ASSERT (moo, count >= 0);
 			count++;
@@ -2286,9 +2331,12 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 		sem->grm.next = (moo_oop_semaphore_t)moo->_nil;
 		sem->group = (moo_oop_semaphore_group_t)moo->_nil;
 
-		if (MOO_OOP_TO_SMOOI(sem->io_index) >=0) 
+		if ((moo_oop_t)sem->io_index != moo->_nil)
 		{
 			moo_ooi_t count;
+
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index) && MOO_OOP_TO_SMOOI(sem->io_index) >= 0 && MOO_OOP_TO_SMOOI(sem->io_index) < moo->sem_io_tuple_count);
+
 			count = MOO_OOP_TO_SMOOI(rcv->sem_io_count);
 			MOO_ASSERT (moo, count > 0);
 			count--;
@@ -2458,7 +2506,7 @@ static moo_pfrc_t pf_system_add_timed_semaphore (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_ooi_t mask)
+static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_semaphore_io_type_t io_type)
 {
 	moo_oop_t fd;
 	moo_oop_semaphore_t sem;
@@ -2482,18 +2530,17 @@ static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_oo
 		return MOO_PF_FAILURE;
 	}
 
-	if (MOO_OOP_IS_SMOOI(sem->io_index) && sem->io_index != MOO_SMOOI_TO_OOP(-1))
+	if ((moo_oop_t)sem->io_index != moo->_nil)
 	{
+		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index) && MOO_OOP_TO_SMOOI(sem->io_index) >= 0);
 		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_handle) && MOO_OOP_TO_SMOOI(sem->io_handle) >= 0);
-		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_mask) && MOO_OOP_TO_SMOOI(sem->io_mask) > 0);
+		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_type));
 
 		moo_seterrbfmt (moo, MOO_EINVAL, "semaphore already linked with a handle %zd", MOO_OOP_TO_SMOOI(sem->io_handle));
 		return MOO_PF_FAILURE;
 	}
 
-	/*sem->io_handle = fd;
-	sem->io_mask = MOO_SMOOI_TO_OOP(mask);*/
-	if (add_to_sem_io(moo, sem, MOO_OOP_TO_SMOOI(fd), mask) <= -1) 
+	if (add_to_sem_io(moo, sem, MOO_OOP_TO_SMOOI(fd), io_type) <= -1) 
 	{
 		moo_copyoocstr (moo->errmsg.buf2, MOO_COUNTOF(moo->errmsg.buf2), moo->errmsg.buf);
 		moo_seterrbfmt (moo, moo->errnum, "cannot add the handle %zd to the multiplexer - %js", MOO_OOP_TO_SMOOI(fd), moo->errmsg.buf2);
@@ -2506,17 +2553,12 @@ static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_oo
 
 static moo_pfrc_t pf_system_add_input_semaphore (moo_t* moo, moo_ooi_t nargs)
 {
-	return __system_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_MASK_INPUT);
+	return __system_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_TYPE_INPUT);
 }
 
 static moo_pfrc_t pf_system_add_output_semaphore (moo_t* moo, moo_ooi_t nargs)
 {
-	return __system_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_MASK_OUTPUT);
-}
-
-static moo_pfrc_t pf_system_add_inoutput_semaphore (moo_t* moo, moo_ooi_t nargs)
-{
-	return __system_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_MASK_INPUT | MOO_SEMAPHORE_IO_MASK_OUTPUT);
+	return __system_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_TYPE_OUTPUT);
 }
 
 static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
@@ -2544,16 +2586,20 @@ static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 		moo->sem_gcfin = (moo_oop_semaphore_t)moo->_nil;
 	}
 
-	if (MOO_OOP_IS_SMOOI(sem->heap_index) && sem->heap_index != MOO_SMOOI_TO_OOP(-1))
+	if (MOO_OOP_IS_SMOOI(sem->heap_index) && sem->heap_index != MOO_SMOOI_TO_OOP(-1)) /* TODO: change to use _nil like io_index instead of -1 */
 	{
 		/* the semaphore is in the timed semaphore heap */
 		delete_from_sem_heap (moo, MOO_OOP_TO_SMOOI(sem->heap_index));
 		MOO_ASSERT (moo, sem->heap_index == MOO_SMOOI_TO_OOP(-1));
 	}
 
-	if (MOO_OOP_IS_SMOOI(sem->io_index) && sem->io_index != MOO_SMOOI_TO_OOP(-1))
+	if ((moo_oop_t)sem->io_index != moo->_nil)
 	{
 		/* the semaphore is associated with IO */
+		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index) && MOO_OOP_TO_SMOOI(sem->io_index) >= 0);
+		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_handle) && MOO_OOP_TO_SMOOI(sem->io_handle) >= 0);
+		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_type));
+
 		if (delete_from_sem_io (moo, sem) <= -1)
 		{
 			moo_copyoocstr (moo->errmsg.buf2, MOO_COUNTOF(moo->errmsg.buf2), moo->errmsg.buf);
@@ -2561,7 +2607,7 @@ static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 			return MOO_PF_FAILURE;
 		}
 
-		MOO_ASSERT (moo, sem->io_index == MOO_SMOOI_TO_OOP(-1));
+		MOO_ASSERT (moo, (moo_oop_t)sem->io_index == moo->_nil);
 	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
@@ -3284,7 +3330,6 @@ static pf_t pftab[] =
 	{ "System_signal:afterSecs:",              { pf_system_add_timed_semaphore,           2, 2 } },
 	{ "System_signal:afterSecs:nanosecs:",     { pf_system_add_timed_semaphore,           3, 3 } },
 	{ "System_signal:onInput:",                { pf_system_add_input_semaphore,           2, 2 } },
-	{ "System_signal:onInOutput:",             { pf_system_add_inoutput_semaphore,        2, 2 } },
 	{ "System_signal:onOutput:",               { pf_system_add_output_semaphore,          2, 2 } },
 	{ "System_signalOnGCFin:",                 { pf_system_add_gcfin_semaphore,           1, 1 } },
 	{ "System_unsignal:",                      { pf_system_remove_semaphore,              1, 1 } }

@@ -46,8 +46,10 @@ class MyObject(Object)
 		[ sg wait. ] fork.
 		[ sg wait. ] fork.
 
+##System sleepForSecs: 1.
 		sg wait.
 sg removeSemaphore: s1.
+		'********** END OF TESTER *************' dump.
 	}
 
 	method(#class) main
@@ -66,6 +68,8 @@ sg removeSemaphore: s1.
 			| tb |
 			tb := tc at: idx.
 			System log(System.Log.INFO, idx asString, (if (tb value) { ' PASS' } else { ' FAIL' }), S'\n').
-		]
+		].
+		
+		'********** END OF MAIN PROGRAM *************' dump.
 	}
 }

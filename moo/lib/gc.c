@@ -896,12 +896,12 @@ void moo_gc (moo_t* moo)
 		moo->sem_heap[i] = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_heap[i]);
 	}
 
-	for (i = 0; i < moo->sem_io_count; i++)
+	for (i = 0; i < moo->sem_io_tuple_count; i++)
 	{
-		if (moo->sem_io[i].in)
-			moo->sem_io[i].in = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_io[i].in);
-		if (moo->sem_io[i].out)
-			moo->sem_io[i].out = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_io[i].out);
+		if (moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT])
+			moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT] = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]);
+		if (moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT])
+			moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT] = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]);
 	}
 
 	moo->sem_gcfin = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_gcfin);

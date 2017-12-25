@@ -794,10 +794,21 @@ struct moo_process_t
 	moo_oop_t slot[1]; /* process stack */
 };
 
-#define MOO_SEMAPHORE_IO_MASK_INPUT   1
-#define MOO_SEMAPHORE_IO_MASK_OUTPUT  2
-#define MOO_SEMAPHORE_IO_MASK_HANGUP  4
-#define MOO_SEMAPHORE_IO_MASK_ERROR   8
+enum moo_semaphore_io_type_t 
+{
+	MOO_SEMAPHORE_IO_TYPE_INPUT   = 0,
+	MOO_SEMAPHORE_IO_TYPE_OUTPUT  = 1
+};
+typedef enum moo_semaphore_io_type_t moo_semaphore_io_type_t;
+
+enum moo_semaphore_io_mask_t
+{
+	MOO_SEMAPHORE_IO_MASK_INPUT   = (1 << 0),
+	MOO_SEMAPHORE_IO_MASK_OUTPUT  = (1 << 1),
+	MOO_SEMAPHORE_IO_MASK_HANGUP  = (1 << 2),
+	MOO_SEMAPHORE_IO_MASK_ERROR   = (1 << 3)
+};
+typedef enum moo_semaphore_io_mask_t moo_semaphore_io_mask_t;
 
 struct moo_semaphore_t
 {
@@ -820,7 +831,7 @@ struct moo_semaphore_t
 
 	moo_oop_t io_index; 
 	moo_oop_t io_handle;
-	moo_oop_t io_mask; /* SmallInteger */
+	moo_oop_t io_type; /* SmallInteger */
 
 	moo_oop_t signal_action;
 
@@ -930,7 +941,7 @@ typedef int (*moo_vmprim_muxadd_t) (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t m
 typedef int (*moo_vmprim_muxmod_t) (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask, void* ctx);
 typedef int (*moo_vmprim_muxdel_t) (moo_t* moo, moo_ooi_t sem);
 
-typedef void (*moo_vmprim_muxwait_cb_t) (moo_t* moo, moo_ooi_t mask, void* ctx);
+typedef void (*moo_vmprim_muxwait_cb_t) (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask);
 typedef void (*moo_vmprim_muxwait_t) (moo_t* moo, const moo_ntime_t* duration, moo_vmprim_muxwait_cb_t muxwcb);
 
 typedef void (*moo_vmprim_sleep_t) (moo_t* moo, const moo_ntime_t* duration);
@@ -1100,8 +1111,8 @@ typedef struct moo_sbuf_t moo_sbuf_t;
 
 struct moo_sem_tuple_t
 {
-	moo_oop_semaphore_t in;
-	moo_oop_semaphore_t out;
+	moo_oop_semaphore_t sem[2]; /* [0] input, [1] output */
+	moo_ooi_t handle; /* io handle */
 	moo_ooi_t mask;
 };
 typedef struct moo_sem_tuple_t moo_sem_tuple_t;
@@ -1253,7 +1264,7 @@ struct moo_t
 
 	/* semaphores for I/O handling. plain array */
 	/*moo_oop_semaphore_t* sem_io;*/
-	moo_sem_tuple_t* sem_io;
+	moo_sem_tuple_t* sem_io_tuple;
 	moo_oow_t sem_io_tuple_count;
 	moo_oow_t sem_io_tuple_capa;
 

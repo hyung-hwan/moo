@@ -104,7 +104,6 @@ class System(Apex)
 
 	method(#class,#primitive) signal: semaphore afterSecs: secs.
 	method(#class,#primitive) signal: semaphore afterSecs: secs nanosecs: nanosecs.
-	method(#class,#primitive) signal: semaphore onInOutput: file.
 	method(#class,#primitive) signal: semaphore onInput: file.
 	method(#class,#primitive) signal: semaphore onOutput: file.
 	method(#class,#primitive) signalOnGCFin: semaphore.

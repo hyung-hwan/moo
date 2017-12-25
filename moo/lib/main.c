@@ -882,6 +882,7 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, void* event_data)
 	struct epoll_event ev;
 
 	MOO_ASSERT (moo, xtn->ep >= 0);
+	memset (&ev, 0, MOO_SIZEOF(ev));
 	ev.events = event_mask;
 	#if defined(USE_THREAD) && defined(EPOLLET)
 	/* epoll_wait may return again if the worker thread consumes events.
@@ -889,7 +890,8 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, void* event_data)
 	/* TODO: verify if EPOLLLET is desired */
 	ev.events |= EPOLLET;
 	#endif
-	ev.data.ptr = (void*)event_data;
+	/*ev.data.ptr = (void*)event_data;*/
+	ev.data.fd = fd;
 	if (epoll_ctl(xtn->ep, EPOLL_CTL_ADD, fd, &ev) == -1)
 	{
 
@@ -1070,8 +1072,10 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask, void* event_data)
 	struct epoll_event ev;
 
 	MOO_ASSERT (moo, xtn->ep >= 0);
+	memset (&ev, 0, MOO_SIZEOF(ev));
 	ev.events = event_mask;
-	ev.data.ptr = (void*)event_data;
+	/*ev.data.ptr = (void*)event_data;*/
+	ev.data.fd = fd;
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_MOD, fd, &ev) == -1)
 	{
 		moo_seterrwithsyserr (moo, errno);
@@ -1618,7 +1622,8 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 		#if defined(USE_DEVPOLL)
 			if (xtn->ev.buf[n].fd == xtn->p[0])
 		#elif defined(USE_EPOLL)
-			if (xtn->ev.buf[n].data.ptr == (void*)MOO_TYPE_MAX(moo_oow_t))
+			/*if (xtn->ev.buf[n].data.ptr == (void*)MOO_TYPE_MAX(moo_oow_t))*/
+			if (xtn->ev.buf[n].data.fd == xtn->p[0])
 		#elif defined(USE_POLL)
 			if (xtn->ev.buf[n].fd == xtn->p[0])
 		#elif defined(USE_SELECT)
@@ -1659,7 +1664,8 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 				MOO_ASSERT (moo, xtn->epd.capa > xtn->ev.buf[n].fd);
 				muxwcb (moo, mask, (void*)xtn->epd.ptr[xtn->ev.buf[n].fd]);
 			#elif defined(USE_EPOLL)
-				muxwcb (moo, mask, xtn->ev.buf[n].data.ptr);
+				/*muxwcb (moo, mask, xtn->ev.buf[n].data.ptr);*/
+				muxwcb (moo, xtn->ev.buf[n].data.fd, mask);
 			#elif defined(USE_POLL)
 				MOO_ASSERT (moo, xtn->epd.capa > xtn->ev.buf[n].fd);
 				muxwcb (moo, mask, (void*)xtn->epd.ptr[xtn->ev.buf[n].fd]);
@@ -1793,7 +1799,8 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 		MOO_ASSERT (moo, xtn->epd.capa > xtn->ev.buf[n].fd);
 		muxwcb (moo, mask, (void*)xtn->epd.ptr[xtn->ev.buf[n].fd]);
 	#elif defined(USE_EPOLL)
-		muxwcb (moo, mask, xtn->ev.buf[n].data.ptr);
+		/*muxwcb (moo, mask, xtn->ev.buf[n].data.ptr);*/
+		muxwcb (moo, xtn->ev.buf[n].data.fd, mask);
 	#elif defined(USE_POLL)
 		MOO_ASSERT (moo, xtn->epd.capa > xtn->ev.buf[n].fd);
 		muxwcb (moo, mask, (void*)xtn->epd.ptr[xtn->ev.buf[n].fd]);
