@@ -183,6 +183,12 @@ void moo_fini (moo_t* moo)
 		moo->sem_io_tuple_count = 0;
 	}
 
+	if (moo->sem_io_map)
+	{
+		moo_freemem (moo, moo->sem_io_map);
+		moo->sem_io_map_capa = 0;
+	}
+
 	if (moo->proc_map)
 	{
 		moo_freemem (moo, moo->proc_map);

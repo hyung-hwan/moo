@@ -135,7 +135,7 @@ static MOO_INLINE int vm_startup (moo_t* moo)
 	
 	MOO_DEBUG0 (moo, "VM started up\n");
 
-	for (i = 0; i < MOO_COUNTOF(moo->sem_io_map); i++)
+	for (i = 0; i < moo->sem_io_map_capa; i++)
 	{
 		moo->sem_io_map[i] = -1;
 	}
@@ -153,7 +153,7 @@ static MOO_INLINE void vm_cleanup (moo_t* moo)
 /* TODO: clean up semaphores being waited on 
 	MOO_ASSERT (moo, moo->sem_io_wait_count == 0); */
 
-	for (i = 0; i < MOO_COUNTOF(moo->sem_io_map);)
+	for (i = 0; i < moo->sem_io_map_capa;)
 	{
 		moo_ooi_t sem_io_index;
 		if ((sem_io_index = moo->sem_io_map[i]) >= 0)
@@ -1114,13 +1114,36 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_hand
 	MOO_ASSERT (moo, sem->io_handle == (moo_oop_t)moo->_nil);
 	MOO_ASSERT (moo, sem->io_type == (moo_oop_t)moo->_nil);
 
-	if (io_handle < 0 || io_handle >= MOO_COUNTOF(moo->sem_io_map)) /* TODO: change the coindition when sem_io_map changes to a dynamic structure */
+	if (io_handle < 0)
 	{
-		moo_seterrbfmt (moo, MOO_EINVAL, "handle %zd out of supported range", io_handle);
+		moo_seterrbfmt (moo, MOO_EINVAL, "handle %zd ouit of supported range", io_handle);
 		return -1;
 	}
+	
+	if (io_handle >= moo->sem_io_map_capa)
+	{
+		moo_oow_t new_capa, i;
+		moo_ooi_t* tmp;
 
-	index = moo->sem_io_map[io_handle]; /* TODO: make it dynamic */
+/* TODO: specify the maximum io_handle supported and check it here? */
+
+		new_capa = MOO_ALIGN_POW2 (io_handle + 1, 1024);
+
+		tmp = moo_reallocmem (moo, moo->sem_io_map, MOO_SIZEOF(*tmp) * new_capa);
+		if (!tmp) 
+		{
+			moo_copyoocstr (moo->errmsg.buf2, MOO_COUNTOF(moo->errmsg.buf2), moo->errmsg.buf);
+			moo_seterrbfmt (moo, MOO_EINVAL, "handle %zd out of supported range - %js", moo->errmsg.buf2);
+			return -1;
+		}
+
+		for (i = moo->sem_io_map_capa; i < new_capa; i++) tmp[i] = -1;
+
+		moo->sem_io_map = tmp;
+		moo->sem_io_map_capa = new_capa;
+	}
+
+	index = moo->sem_io_map[io_handle];
 	if (index <= -1)
 	{
 		/* this handle is not in any tuples. add it to a new tuple */
@@ -1162,7 +1185,7 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_hand
 		new_mask = ((moo_ooi_t)1 << io_type);
 
 		moo_pushtmp (moo, (moo_oop_t*)&sem);
-		n = moo->vmprim.vm_muxadd(moo, io_handle, new_mask, (void*)index);
+		n = moo->vmprim.vm_muxadd(moo, io_handle, new_mask);
 		moo_poptmp (moo);
 	}
 	else
@@ -1177,7 +1200,7 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_hand
 		new_mask |= ((moo_ooi_t)1 << io_type);
 
 		moo_pushtmp (moo, (moo_oop_t*)&sem);
-		n = moo->vmprim.vm_muxmod(moo, io_handle, new_mask, (void*)index);
+		n = moo->vmprim.vm_muxmod(moo, io_handle, new_mask);
 		moo_poptmp (moo);
 	}
 
@@ -1230,7 +1253,7 @@ static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 	MOO_ASSERT (moo, index >= 0 && index < moo->sem_io_tuple_count);
 
 	io_handle = MOO_OOP_TO_SMOOI(sem->io_handle);
-	if (io_handle < 0 || io_handle >= MOO_COUNTOF(moo->sem_io_map)) /* TODO: change the condition when sem_io_map changes to a dynamic structure */
+	if (io_handle < 0 || io_handle >= moo->sem_io_map_capa)
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "handle %zd out of supported range", io_handle);
 		return -1;
@@ -1243,7 +1266,7 @@ static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 	new_mask &= ~((moo_ooi_t)1 << io_type); /* this is the new mask after deletion */
 
 	moo_pushtmp (moo, (moo_oop_t*)&sem);
-	x = new_mask? moo->vmprim.vm_muxmod(moo, io_handle, new_mask, (void*)index):
+	x = new_mask? moo->vmprim.vm_muxmod(moo, io_handle, new_mask):
 	              moo->vmprim.vm_muxdel(moo, io_handle); 
 	moo_poptmp (moo);
 	if (x <= -1) 
@@ -1322,7 +1345,7 @@ static void _signal_io_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 static void signal_io_semaphore (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask)
 {
-	if (io_handle >= 0 && io_handle < MOO_COUNTOF(moo->sem_io_map) && moo->sem_io_map[io_handle] >= 0)
+	if (io_handle >= 0 && io_handle < moo->sem_io_map_capa && moo->sem_io_map[io_handle] >= 0)
 	{
 		moo_oop_semaphore_t sem;
 		moo_ooi_t sem_io_index;

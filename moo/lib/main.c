@@ -204,24 +204,12 @@ struct xtn_t
 
 	#if defined(USE_DEVPOLL)
 	int ep; /* /dev/poll */
-	struct
-	{
-		moo_oow_t capa;
-		moo_ooi_t* ptr;
-	} epd;
 	#elif defined(USE_EPOLL)
 	int ep; /* epoll */
 	#elif defined(USE_POLL)
-	struct
-	{
-		moo_oow_t capa;
-		moo_ooi_t* ptr;
-	} epd;
+	/* nothing */
 	#elif defined(USE_SELECT)
-	struct
-	{
-		void* data[FD_SETSIZE];
-	} epd;
+	/* nothing */
 	#endif
 
 	#if defined(USE_THREAD)
@@ -823,45 +811,11 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 }
 
 /* ========================================================================= */
-#if defined(USE_DEVPOLL) || defined(USE_POLL)
-static MOO_INLINE int secure_poll_data_space (moo_t* moo, int fd)
-{
-	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
-	if (fd >= xtn->epd.capa)
-	{
-		moo_oow_t newcapa;
-		moo_ooi_t* tmp;
-
-		newcapa = MOO_ALIGN_POW2 (fd + 1, 256);
-		tmp = moo_reallocmem (moo, xtn->epd.ptr, newcapa * MOO_SIZEOF(*tmp));
-		if (!tmp) return -1;
-
-		xtn->epd.capa = newcapa;
-		xtn->epd.ptr = tmp;
-	}
-
-	return 0;
-}
-static MOO_INLINE void destroy_poll_data_space (moo_t* moo)
-{
-	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
-	if (xtn->epd.ptr)
-	{
-		moo_freemem (moo, xtn->epd.ptr);
-		xtn->epd.ptr = MOO_NULL;
-		xtn->epd.capa = 0;
-	}
-}
-#endif
-
-
-static int _add_poll_fd (moo_t* moo, int fd, int event_mask, void* event_data)
+static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 {
 #if defined(USE_DEVPOLL)
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 	struct pollfd ev;
-
-	if (secure_poll_data_space (moo, fd) <= -1) return -1;
 
 	MOO_ASSERT (moo, xtn->ep >= 0);
 	ev.fd = fd;
@@ -874,7 +828,6 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, void* event_data)
 		return -1;
 	}
 
-	xtn->epd.ptr[fd] = event_data;
 	return 0;
 
 #elif defined(USE_EPOLL)
@@ -894,7 +847,6 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, void* event_data)
 	ev.data.fd = fd;
 	if (epoll_ctl(xtn->ep, EPOLL_CTL_ADD, fd, &ev) == -1)
 	{
-
 		moo_seterrwithsyserr (moo, errno);
 		MOO_DEBUG2 (moo, "Cannot add file descriptor %d to epoll - %hs\n", fd, strerror(errno));
 		return -1;
@@ -903,8 +855,6 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, void* event_data)
 
 #elif defined(USE_POLL)
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
-
-	if (secure_poll_data_space (moo, fd) <= -1) return -1;
 
 	MUTEX_LOCK (&xtn->ev.reg.pmtx);
 	if (xtn->ev.reg.len >= xtn->ev.reg.capa)
@@ -935,7 +885,6 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, void* event_data)
 	xtn->ev.reg.len++;
 	MUTEX_UNLOCK (&xtn->ev.reg.pmtx);
 
-	xtn->epd.ptr[fd] = event_data;
 	return 0;
 
 #elif defined(USE_SELECT)
@@ -954,7 +903,6 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask, void* event_data)
 	}
 	MUTEX_UNLOCK (&xtn->ev.reg.smtx);
 
-	xtn->epd.data[fd] = (void*)event_data;
 	return 0;
 
 #else
@@ -1041,7 +989,6 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	}
 	MUTEX_UNLOCK (&xtn->ev.reg.smtx);
 
-	/* keep xtn->epd.data[fd] so that the data is still accessible after deletion */
 	return 0;
 
 #else
@@ -1053,7 +1000,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 }
 
 
-static int _mod_poll_fd (moo_t* moo, int fd, int event_mask, void* event_data)
+static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 {
 #if defined(USE_DEVPOLL)
 
@@ -1074,7 +1021,6 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask, void* event_data)
 	MOO_ASSERT (moo, xtn->ep >= 0);
 	memset (&ev, 0, MOO_SIZEOF(ev));
 	ev.events = event_mask;
-	/*ev.data.ptr = (void*)event_data;*/
 	ev.data.fd = fd;
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_MOD, fd, &ev) == -1)
 	{
@@ -1101,8 +1047,6 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask, void* event_data)
 			xtn->ev.reg.ptr[i].revents = 0;
 			MUTEX_UNLOCK (&xtn->ev.reg.pmtx);
 
-			MOO_ASSERT (moo, fd < xtn->epd.capa);
-			xtn->epd.ptr[fd] = event_data;
 			return 0;
 		}
 	}
@@ -1130,7 +1074,6 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask, void* event_data)
 		FD_CLR (fd, &xtn->ev.reg.wfds);
 	MUTEX_UNLOCK (&xtn->ev.reg.smtx);
 
-	xtn->epd.data[fd] = (void*)event_data;
 	return 0;
 
 #else
@@ -1218,7 +1161,7 @@ static int vm_startup (moo_t* moo)
 	if (flag >= 0) fcntl (xtn->p[1], F_SETFL, flag | O_NONBLOCK);
 	#endif
 
-	if (_add_poll_fd(moo, xtn->p[0], XPOLLIN, (void*)MOO_TYPE_MAX(moo_oow_t)) <= -1) goto oops;
+	if (_add_poll_fd(moo, xtn->p[0], XPOLLIN) <= -1) goto oops;
 
 	pthread_mutex_init (&xtn->ev.mtx, MOO_NULL);
 	pthread_cond_init (&xtn->ev.cnd, MOO_NULL);
@@ -1259,7 +1202,7 @@ oops:
 static void vm_cleanup (moo_t* moo)
 {
 #if defined(_WIN32)
-	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = (xatn_t*)moo_getxtn(moo);
 	if (xtn->waitable_timer)
 	{
 		CloseHandle (xtn->waitable_timer);
@@ -1294,7 +1237,7 @@ static void vm_cleanup (moo_t* moo)
 		close (xtn->ep);
 		xtn->ep = -1;
 	}
-	destroy_poll_data_space (moo);
+	/*destroy_poll_data_space (moo);*/
 #elif defined(USE_EPOLL)
 	if (xtn->ep >= 0)
 	{
@@ -1314,7 +1257,7 @@ static void vm_cleanup (moo_t* moo)
 		moo_freemem (moo, xtn->ev.buf);
 		xtn->ev.buf = MOO_NULL;
 	}
-	destroy_poll_data_space (moo);
+	/*destroy_poll_data_space (moo);*/
 	MUTEX_DESTROY (&xtn->ev.reg.pmtx);
 #elif defined(USE_SELECT)
 	FD_ZERO (&xtn->ev.reg.rfds);
@@ -1386,7 +1329,7 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 #endif
 
 
-static int vm_muxadd (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask, void* ctx)
+static int vm_muxadd (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask)
 {
 	int event_mask;
 
@@ -1401,10 +1344,10 @@ static int vm_muxadd (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask, void* ctx
 		return -1;
 	}
 
-	return _add_poll_fd (moo, io_handle, event_mask, ctx);
+	return _add_poll_fd (moo, io_handle, event_mask);
 }
 
-static int vm_muxmod (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask, void* ctx)
+static int vm_muxmod (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask)
 {
 	int event_mask;
 
@@ -1419,7 +1362,7 @@ static int vm_muxmod (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask, void* ctx
 		return -1;
 	}
 
-	return _mod_poll_fd (moo, io_handle, event_mask, ctx);
+	return _mod_poll_fd (moo, io_handle, event_mask);
 }
 
 static int vm_muxdel (moo_t* moo, moo_ooi_t io_handle)
@@ -1661,16 +1604,13 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 				if (revents & XPOLLHUP) mask |= MOO_SEMAPHORE_IO_MASK_HANGUP;
 
 			#if defined(USE_DEVPOLL)
-				MOO_ASSERT (moo, xtn->epd.capa > xtn->ev.buf[n].fd);
-				muxwcb (moo, mask, (void*)xtn->epd.ptr[xtn->ev.buf[n].fd]);
+				muxwcb (moo, xtn->ev.buf[n].fd, mask);
 			#elif defined(USE_EPOLL)
-				/*muxwcb (moo, mask, xtn->ev.buf[n].data.ptr);*/
 				muxwcb (moo, xtn->ev.buf[n].data.fd, mask);
 			#elif defined(USE_POLL)
-				MOO_ASSERT (moo, xtn->epd.capa > xtn->ev.buf[n].fd);
-				muxwcb (moo, mask, (void*)xtn->epd.ptr[xtn->ev.buf[n].fd]);
+				muxwcb (moo, xtn->ev.buf[n].fd, mask);
 			#elif defined(USE_SELECT)
-				muxwcb (moo, mask, (void*)xtn->epd.data[xtn->ev.buf[n].fd]);
+				muxwcb (moo, xtn->ev.buf[n].fd, mask);
 			#else
 			#	error UNSUPPORTED
 			#endif
@@ -1738,7 +1678,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	if (n > 0)
 	{
 		int fd, count = 0;
-		for (fd = 0;  fd <= maxfd; fd++)
+		for (fd = 0; fd <= maxfd; fd++)
 		{
 			int events = 0;
 			if (FD_ISSET(fd, &rfds)) events |= XPOLLIN;
@@ -1796,16 +1736,13 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 		if (revents & XPOLLHUP) mask |= MOO_SEMAPHORE_IO_MASK_HANGUP;
 
 	#if defined(USE_DEVPOLL)
-		MOO_ASSERT (moo, xtn->epd.capa > xtn->ev.buf[n].fd);
-		muxwcb (moo, mask, (void*)xtn->epd.ptr[xtn->ev.buf[n].fd]);
+		muxwcb (moo, xtn->ev.buf[n].fd, mask);
 	#elif defined(USE_EPOLL)
-		/*muxwcb (moo, mask, xtn->ev.buf[n].data.ptr);*/
 		muxwcb (moo, xtn->ev.buf[n].data.fd, mask);
 	#elif defined(USE_POLL)
-		MOO_ASSERT (moo, xtn->epd.capa > xtn->ev.buf[n].fd);
-		muxwcb (moo, mask, (void*)xtn->epd.ptr[xtn->ev.buf[n].fd]);
+		muxwcb (moo, xtn->ev.buf[n].fd, mask);
 	#elif defined(USE_SELECT)
-		muxwcb (moo, mask, (void*)xtn->epd.data[xtn->ev.buf[n].fd]);
+		muxwcb (moo, xtn->ev.buf[n].fd, mask);
 	#endif
 	}
 

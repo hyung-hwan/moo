@@ -46,7 +46,7 @@ class MyObject(Object)
 		[ sg wait. ] fork.
 		[ sg wait. ] fork.
 
-##System sleepForSecs: 1.
+System sleepForSecs: 1.
 		sg wait.
 sg removeSemaphore: s1.
 		'********** END OF TESTER *************' dump.
