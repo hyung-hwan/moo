@@ -227,7 +227,7 @@ static moo_oop_association_t lookup (moo_t* moo, moo_oop_dic_t dic, const moo_oo
 	}
 
 	/* when value is MOO_NULL, perform no insertion */
-	moo_seterrnum (moo, MOO_ENOENT);
+	moo_seterrbfmt (moo, MOO_ENOENT, "unable to find %.*js in a dictionary", name->len, name->ptr);
 	return MOO_NULL;
 }
 

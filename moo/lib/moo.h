@@ -1407,25 +1407,25 @@ struct moo_t
 
 enum moo_log_mask_t
 {
-	MOO_LOG_DEBUG     = (1 << 0),
-	MOO_LOG_INFO      = (1 << 1),
-	MOO_LOG_WARN      = (1 << 2),
-	MOO_LOG_ERROR     = (1 << 3),
-	MOO_LOG_FATAL     = (1 << 4),
+	MOO_LOG_DEBUG      = (1 << 0),
+	MOO_LOG_INFO       = (1 << 1),
+	MOO_LOG_WARN       = (1 << 2),
+	MOO_LOG_ERROR      = (1 << 3),
+	MOO_LOG_FATAL      = (1 << 4),
 
-	MOO_LOG_MNEMONIC  = (1 << 7), /* bytecode mnemonic */
-	MOO_LOG_GC        = (1 << 8),
-	MOO_LOG_IC        = (1 << 9), /* instruction cycle, fetch-decode-execute */
-	MOO_LOG_PRIMITIVE = (1 << 10),
-	MOO_LOG_APP       = (1 << 11), /* moo applications, set by moo logging primitive */
-
+	MOO_LOG_VM         = (1 << 6),
+	MOO_LOG_MNEMONIC   = (1 << 7), /* bytecode mnemonic */
+	MOO_LOG_GC         = (1 << 8),
+	MOO_LOG_IC         = (1 << 9), /* instruction cycle, fetch-decode-execute */
+	MOO_LOG_PRIMITIVE  = (1 << 10),
+	MOO_LOG_APP        = (1 << 11), /* moo applications, set by moo logging primitive */
 
 	MOO_LOG_ALL_LEVELS = (MOO_LOG_DEBUG  | MOO_LOG_INFO | MOO_LOG_WARN | MOO_LOG_ERROR | MOO_LOG_FATAL),
-	MOO_LOG_ALL_TYPES = (MOO_LOG_MNEMONIC | MOO_LOG_GC | MOO_LOG_IC | MOO_LOG_PRIMITIVE | MOO_LOG_APP),
+	MOO_LOG_ALL_TYPES  = (MOO_LOG_VM | MOO_LOG_MNEMONIC | MOO_LOG_GC | MOO_LOG_IC | MOO_LOG_PRIMITIVE | MOO_LOG_APP),
 
 
-	MOO_LOG_STDOUT    = (1 << 14), /* write log messages to stdout without timestamp. MOO_LOG_STDOUT wins over MOO_LOG_STDERR. */
-	MOO_LOG_STDERR    = (1 << 15), /* write log messages to stderr without timestamp. */
+	MOO_LOG_STDOUT     = (1 << 14), /* write log messages to stdout without timestamp. MOO_LOG_STDOUT wins over MOO_LOG_STDERR. */
+	MOO_LOG_STDERR     = (1 << 15), /* write log messages to stderr without timestamp. */
 
 };
 typedef enum moo_log_mask_t moo_log_mask_t;

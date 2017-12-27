@@ -1164,7 +1164,7 @@ moo_oop_t moo_divints (
 	moo_t*     moo,
 	moo_oop_t  x,
 	moo_oop_t  y,
-	int         modulo,
+	int        modulo,
 	moo_oop_t* rem
 );
 
@@ -1248,7 +1248,7 @@ moo_oop_t moo_strtoint (
 	moo_t*            moo,
 	const moo_ooch_t* str,
 	moo_oow_t         len,
-	int                radix
+	int               radix
 );
 
 moo_oop_t moo_inttostr (

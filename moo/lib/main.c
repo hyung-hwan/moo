@@ -2022,11 +2022,12 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 			cm = moo_findbcharinbcstr(flt, ',');
 			if (cm) *cm = '\0';
 
-			if (moo_compbcstr (flt, "app") == 0) xtn->logmask |= MOO_LOG_APP;
-			else if (moo_compbcstr (flt, "mnemonic") == 0) xtn->logmask |= MOO_LOG_MNEMONIC;
-			else if (moo_compbcstr (flt, "gc") == 0) xtn->logmask |= MOO_LOG_GC;
-			else if (moo_compbcstr (flt, "ic") == 0) xtn->logmask |= MOO_LOG_IC;
-			else if (moo_compbcstr (flt, "primitive") == 0) xtn->logmask |= MOO_LOG_PRIMITIVE;
+			if (moo_compbcstr(flt, "app") == 0) xtn->logmask |= MOO_LOG_APP;
+			else if (moo_compbcstr(flt, "vm") == 0) xtn->logmask |= MOO_LOG_VM;
+			else if (moo_compbcstr(flt, "mnemonic") == 0) xtn->logmask |= MOO_LOG_MNEMONIC;
+			else if (moo_compbcstr(flt, "gc") == 0) xtn->logmask |= MOO_LOG_GC;
+			else if (moo_compbcstr(flt, "ic") == 0) xtn->logmask |= MOO_LOG_IC;
+			else if (moo_compbcstr(flt, "primitive") == 0) xtn->logmask |= MOO_LOG_PRIMITIVE;
 
 		}
 		while (cm);
@@ -2318,7 +2319,7 @@ int main (int argc, char* argv[])
 	mthname.len = 4;
 	if (moo_invoke (moo, &objname, &mthname) <= -1)
 	{
-		moo_logbfmt (moo, MOO_LOG_ERROR, "ERROR: cannot execute code - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
+		moo_logbfmt (moo, MOO_LOG_ERROR, "ERROR: cannot execute code - [%d] %js\n", moo_geterrnum(moo), moo_geterrmsg(moo));
 		xret = -1;
 	}
 
