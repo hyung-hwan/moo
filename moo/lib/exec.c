@@ -1354,14 +1354,14 @@ static void signal_io_semaphore (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask
 
 		sem_io_index = moo->sem_io_map[io_handle];
 
-		sem = moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT];
-		if (sem && (mask & (MOO_SEMAPHORE_IO_MASK_INPUT | MOO_SEMAPHORE_IO_MASK_HANGUP | MOO_SEMAPHORE_IO_MASK_ERROR)))
+		sem = moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];
+		if (sem && (mask & MOO_SEMAPHORE_IO_MASK_OUTPUT))
 		{
 			_signal_io_semaphore (moo, sem);
 		}
 
-		sem = moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];
-		if (sem && (mask & MOO_SEMAPHORE_IO_MASK_OUTPUT))
+		sem = moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT];
+		if (sem && (mask & (MOO_SEMAPHORE_IO_MASK_INPUT | MOO_SEMAPHORE_IO_MASK_HANGUP | MOO_SEMAPHORE_IO_MASK_ERROR)))
 		{
 			_signal_io_semaphore (moo, sem);
 		}

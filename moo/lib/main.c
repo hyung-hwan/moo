@@ -1022,6 +1022,12 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 	MOO_ASSERT (moo, xtn->ep >= 0);
 	memset (&ev, 0, MOO_SIZEOF(ev));
 	ev.events = event_mask;
+	#if defined(USE_THREAD) && defined(EPOLLET)
+	/* epoll_wait may return again if the worker thread consumes events.
+	 * switch to level-trigger. */
+	/* TODO: verify if EPOLLLET is desired */
+	ev.events |= EPOLLET;
+	#endif
 	ev.data.fd = fd;
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_MOD, fd, &ev) == -1)
 	{
@@ -1402,7 +1408,7 @@ static void* iothr_main (void* arg)
 			dvp.dp_nfds = MOO_COUNTOF(xtn->ev.buf);
 			n = ioctl (xtn->ep, DP_POLL, &dvp);
 		#elif defined(USE_EPOLL)
-			n = epoll_wait (xtn->ep, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), 10000);
+			n = epoll_wait (xtn->ep, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), 10000); /* TODO: make this timeout value in the io thread */
 		#elif defined(USE_POLL)
 			MUTEX_LOCK (&xtn->ev.reg.pmtx);
 			memcpy (xtn->ev.buf, xtn->ev.reg.ptr, xtn->ev.reg.len * MOO_SIZEOF(*xtn->ev.buf));

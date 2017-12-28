@@ -129,64 +129,6 @@ TODO: how to prohibit wait and signal???
 		^block ensure: [ self signal ]
 	}
 }
-
- 
-(*
- xxx := Semaphore new.
- xxx on: #signal do: [ ].
- 
- 
- ========= CASE 1 ====================
- sg := SemaphoreGroup with (xxx, yyy, zzz).
- System signal: xxx onInput: aaa.
- System signal: yyy onInput: bbb.
- System signal: zzz onOutput: ccc.
- 
- while (true)
- {
-	sem := sg wait.
-	if (sem == xxx)
-	{
-		
-	}
-	elsif (sem == yyy)
-	{
-	}
-	elsif (sem == zzz)
-	{
-	}.
- }
- 
- ============ CASE 2====================
- ### ASSOCIATE CALLBACK WITH SEMAPHORE.
- 
- sg := SemaphoreGroup with (xxx, yyy, zzz).
- 
- oldaction := xxx signalAction: [ ... ].  ### similar interface like unix system call signal()????   method signalAction: block {} , method signalAction { ^self.signalAction }
- yyy signalAction: [ ... ].
- zzz signalAction: [ ... ].
- 
- System signal: xxx onInput: aaa.
- System signal: yyy onInput: bbb.
- System signal: zzz onOutput: ccc.
- 
- 
- while (true)
- {
-	sem := sg wait. ### the action associated with the semaphore must get executed.  => wait may be a primitive. the primitive handler may return failure... if so, the actual primitive body can execute the action easily
- }
- 
- 
- Semaphore>>method wait 
- {
-	<primitive: #Semaphore_wait>
-	if (errorCode == NO ERROR)
-	{
-		self.signalAction value.  ## which is better???
-		self.sginalAction value: self.
-	}
- } 
-*)
  
 
 class SemaphoreGroup(Object)
