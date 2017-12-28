@@ -1883,7 +1883,7 @@ retry:
 			break;
 
 		case '"':
-			/* if QSE_PRAGMA_QC is set, this part should never be reached */
+			/* if MOO_PRAGMA_QC is set, this part should never be reached */
 			MOO_ASSERT (moo, !(moo->c->pragma_flags & MOO_PRAGMA_QC));
 			if (get_string(moo, '"', '\\', 0, 0) <= -1) return -1;
 			break;

@@ -46,14 +46,14 @@ extend Socket
 			## but ignore it here.
 			if (self.insem notNil) 
 			{ 
-				System unsignal: self.insem.
-				System removeAsyncSemaphore: self.insem.
+				System unsignal: self.insem;
+				       removeAsyncSemaphore: self.insem.
 				self.insem := nil.
 			}.
 			if (self.outsem notNil)
 			{
-				System unsignal: self.outsem.
-				System removeAsyncSemaphore: self.outsem.
+				System unsignal: self.outsem;
+				       removeAsyncSemaphore: self.outsem.
 				self.outsem := nil.
 			}.
 
@@ -70,11 +70,11 @@ extend Socket
 		s2 := Semaphore new.
 
 		sa := [:sem | 
-			System unsignal: s1.
-			System unsignal: s2.
 'UNSIGNALLLING      ...........' dump.
-			System removeAsyncSemaphore: s1.
-			System removeAsyncSemaphore: s2.
+			System unsignal: s1;
+			       unsignal: s2;
+			       removeAsyncSemaphore: s1;
+			       removeAsyncSemaphore: s2.
 
 'FINALIZING CONNECT' dump.
 			self endConnect.
@@ -85,10 +85,10 @@ extend Socket
 		s2 signalAction: sa.
 
 		[
-			System signal: s1 onOutput: self.handle.
-			System signal: s2 afterSecs: 10.
-			System addAsyncSemaphore: s1.
-			System addAsyncSemaphore: s2.
+			System signal: s1 onOutput: self.handle;
+			       signal: s2 afterSecs: 10;
+			       addAsyncSemaphore: s1;
+			       addAsyncSemaphore: s2.
 			self _connect(1, 2, 3).
 		] ifCurtailed: [
 			## rollback 
@@ -102,13 +102,10 @@ extend Socket
 		{
 			self.insem := Semaphore new.
 			self.insem signalAction: [:sem | self.inputAction value: self value: true].
-			System signal: self.insem onInput: self.handle.
-			System addAsyncSemaphore: self.insem.
-		}
-		else
-		{
-			self.insem signalAction: [:sem | self.inputAction value: self value: true].
-		}
+			System addAsyncSemaphore: self.insem;       
+		}.
+
+		System signal: self.insem onInput: self.handle.
 
 		###s2 := Semaphore new.
 		###s2 signalAction: [:sem | inputActionBlock value: self value: false].
@@ -117,8 +114,7 @@ extend Socket
 
 	method unwatchInput
 	{
-		System unsignal: self.insem.
-		System removeAsyncSemaphore: self.insem.
+		if (self.insem notNil) { System unsignal: self.insem }.
 	}
 
 	method watchOutput
@@ -127,19 +123,15 @@ extend Socket
 		{
 			self.outsem := Semaphore new.
 			self.outsem signalAction: [:sem | self.outputAction value: self value: true].
-			System signal: self.outsem onOutput: self.handle.
 			System addAsyncSemaphore: self.outsem.
-		}
-		else
-		{
-			self.outsem signalAction: [:sem | self.outputAction value: self value: true].
-		}
+		}.
+
+		System signal: self.outsem onOutput: self.handle.
 	}
 
 	method unwatchOutput
 	{
-		System unsignal: self.outsem.
-		System removeAsyncSemaphore: self.outsem.
+		if (self.outsem notNil) { System unsignal: self.outsem }.
 	}
 }
 
@@ -169,7 +161,7 @@ class MyObject(Object)
 		outact := [:sck :state |
 			if (state)
 			{
-				sck writeBytes: #[ $h, $e, $l, $l, $o, 10 ].
+				sck writeBytes: #[ $h, $e, $l, $l, $o, C'\n' ].
 				
 			}
 			else
@@ -181,7 +173,7 @@ class MyObject(Object)
 			if (state)
 			{
 				'CONNECTED NOW.............' dump.
-				s writeBytes: #[ $h $e $l $l $o ].
+				s writeBytes: #[ $h, $e, $l, $l, $o, C'\n' ].
 
 				s watchInput.
 				s watchOutput.
@@ -202,7 +194,6 @@ class MyObject(Object)
 			while (true)
 			{
 				System handleAsyncEvent.
-				
 			}.
 			s close dump.
 
