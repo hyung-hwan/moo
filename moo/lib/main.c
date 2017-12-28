@@ -1536,6 +1536,8 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 		}
 	}
 
+	if (xtn->iothr_abort) return;
+
 	if (xtn->ev.len <= 0) 
 	{
 		struct timespec ts;
@@ -1908,15 +1910,16 @@ static void setup_tick (void)
 	struct itimerval itv;
 	struct sigaction act;
 
+	memset (&act, 0, sizeof(act));
 	sigemptyset (&act.sa_mask);
 	act.sa_handler = arrange_process_switching;
 	act.sa_flags = SA_RESTART;
 	sigaction (SIGVTALRM, &act, MOO_NULL);
 
 	itv.it_interval.tv_sec = 0;
-	itv.it_interval.tv_usec = 100; /* 100 microseconds */
+	itv.it_interval.tv_usec = 10000; /* microseconds */
 	itv.it_value.tv_sec = 0;
-	itv.it_value.tv_usec = 100;
+	itv.it_value.tv_usec = 10000;
 	setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
 #else
 

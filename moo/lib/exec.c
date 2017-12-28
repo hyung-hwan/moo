@@ -4044,13 +4044,20 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 switch_to_next:
 	/* TODO: implement different process switching scheme - time-slice or clock based??? */
 #if defined(MOO_EXTERNAL_PROCESS_SWITCH)
-	if (!moo->proc_switched && moo->switch_proc) { switch_to_next_runnable_process (moo); }
-	moo->switch_proc = 0;
-#else
-	if (!moo->proc_switched) { switch_to_next_runnable_process (moo); }
+	if (moo->switch_proc)
+	{
+#endif
+		if (!moo->proc_switched) 
+		{
+			switch_to_next_runnable_process (moo);
+			moo->proc_switched = 0;
+		}
+#if defined(MOO_EXTERNAL_PROCESS_SWITCH)
+		moo->switch_proc = 0;
+	}
+	else moo->proc_switched = 0;
 #endif
 
-	moo->proc_switched = 0;
 	return 1;
 }
 

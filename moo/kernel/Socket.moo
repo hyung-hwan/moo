@@ -202,6 +202,7 @@ class MyObject(Object)
 			while (true)
 			{
 				System handleAsyncEvent.
+				
 			}.
 			s close dump.
 
