@@ -57,6 +57,7 @@ static MOO_INLINE const char* proc_state_to_string (int state)
 #define SEM_LIST_MAX (SEM_LIST_INC * 1000)
 #define SEM_HEAP_MAX (SEM_HEAP_INC * 1000)
 #define SEM_IO_TUPLE_MAX (SEM_IO_TUPLE_INC * 1000)
+#define SEM_IO_MAP_ALIGN 1024 /* this must a power of 2 */
 
 #define SEM_HEAP_PARENT(x) (((x) - 1) / 2)
 #define SEM_HEAP_LEFT(x)   ((x) * 2 + 1)
@@ -740,7 +741,7 @@ static int async_signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	if (moo->sem_list_count >= SEM_LIST_MAX)
 	{
-		moo_seterrnum (moo, MOO_ESLFULL);
+		moo_seterrnum (moo, MOO_ESEMFLOOD, "too many semaphores in the semaphore list");
 		return -1;
 	}
 
@@ -1029,7 +1030,7 @@ static int add_to_sem_heap (moo_t* moo, moo_oop_semaphore_t sem)
 
 	if (moo->sem_heap_count >= SEM_HEAP_MAX)
 	{
-		moo_seterrnum (moo, MOO_ESHFULL);
+		moo_seterrbfmt(moo, MOO_ESEMFLOOD, "too many semaphores in the semaphore heap");
 		return -1;
 	}
 
@@ -1126,13 +1127,13 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_hand
 
 /* TODO: specify the maximum io_handle supported and check it here instead of just relying on memory allocation success/failure? */
 
-		new_capa = MOO_ALIGN_POW2 (io_handle + 1, 1024);
+		new_capa = MOO_ALIGN_POW2(io_handle + 1, SEM_IO_MAP_ALIGN);
 
 		tmp = moo_reallocmem (moo, moo->sem_io_map, MOO_SIZEOF(*tmp) * new_capa);
 		if (!tmp) 
 		{
 			moo_copyoocstr (moo->errmsg.buf2, MOO_COUNTOF(moo->errmsg.buf2), moo->errmsg.buf);
-			moo_seterrbfmt (moo, MOO_EINVAL, "handle %zd out of supported range - %js", moo->errmsg.buf2);
+			moo_seterrbfmt (moo, moo->errnum, "handle %zd out of supported range - %js", moo->errmsg.buf2);
 			return -1;
 		}
 
@@ -1148,7 +1149,7 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_hand
 		/* this handle is not in any tuples. add it to a new tuple */
 		if (moo->sem_io_tuple_count >= SEM_IO_TUPLE_MAX)
 		{
-			moo_seterrbfmt (moo, MOO_ESHFULL, "too many IO semaphore tuples");  /* TODO: change error code */
+			moo_seterrbfmt (moo, MOO_ESEMFLOOD, "too many IO semaphore tuples"); 
 			return -1;
 		}
 

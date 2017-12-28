@@ -67,7 +67,7 @@ enum moo_errnum_t
 	MOO_EAGAIN,
 	MOO_EBADHND,
 
-	MOO_ENOAVAIL, /**< data not available*/
+	MOO_EXXXXX1,  /**< **** not used ****/
 	MOO_EMSGRCV,  /**< mesasge receiver error */
 	MOO_EMSGSND,  /**< message sending error. even doesNotUnderstand: is not found */
 	MOO_ENUMARGS, /**< wrong number of arguments */
@@ -75,8 +75,8 @@ enum moo_errnum_t
 	MOO_EBCFULL,  /**< byte-code full */
 	MOO_EDFULL,   /**< dictionary full */
 	MOO_EPFULL,   /**< processor full */
-	MOO_ESHFULL,  /**< semaphore heap full */
-	MOO_ESLFULL,  /**< semaphore list full */
+	MOO_ESEMFLOOD,/**< too many semaphores */
+	MOO_EXXXXX2,  /**< **** not used ***** */
 	MOO_EDIVBY0,  /**< divide by zero */
 	MOO_EIOERR,   /**< I/O error */
 	MOO_EECERR,   /**< encoding conversion error */
@@ -425,7 +425,7 @@ typedef enum moo_gcfin_t moo_gcfin_t;
 /* [NOTE] this macro doesn't include the size of the trailer */
 #define MOO_OBJ_BYTESOF(oop) ((MOO_OBJ_GET_SIZE(oop) + MOO_OBJ_GET_FLAGS_EXTRA(oop)) * MOO_OBJ_GET_FLAGS_UNIT(oop))
 
-#define MOO_OBJ_IS_OOP_POINTER(oop)     (MOO_OOP_IS_POINTER(oop) && (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP))
+#define MOO_OBJ_IS_OOP_POINTER(oop)      (MOO_OOP_IS_POINTER(oop) && (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP))
 #define MOO_OBJ_IS_CHAR_POINTER(oop)     (MOO_OOP_IS_POINTER(oop) && (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_CHAR))
 #define MOO_OBJ_IS_BYTE_POINTER(oop)     (MOO_OOP_IS_POINTER(oop) && (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_BYTE))
 #define MOO_OBJ_IS_HALFWORD_POINTER(oop) (MOO_OOP_IS_POINTER(oop) && (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_HALFWORD))
@@ -990,11 +990,6 @@ struct moo_vmprim_t
 
 typedef struct moo_vmprim_t moo_vmprim_t;
 
-/* =========================================================================
- * IO MANIPULATION
- * ========================================================================= */
-
-/* TODO: MOVE moo_ioimpl_t HERE */
 
 /* =========================================================================
  * CALLBACK MANIPULATION

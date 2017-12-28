@@ -57,7 +57,7 @@ static moo_ooch_t errstr_23[] = {'r','a','n','g','e',' ','e','r','r','o','r','\0
 static moo_ooch_t errstr_24[] = {'b','y','t','e','-','c','o','d','e',' ','f','u','l','l','\0'};
 static moo_ooch_t errstr_25[] = {'d','i','c','t','i','o','n','a','r','y',' ','f','u','l','l','\0'};
 static moo_ooch_t errstr_26[] = {'p','r','o','c','e','s','s','o','r',' ','f','u','l','l','\0'};
-static moo_ooch_t errstr_27[] = {'s','e','m','a','p','h','o','r','e',' ','h','e','a','p',' ','f','u','l','l','\0'};
+static moo_ooch_t errstr_27[] = {'t','o','o',' ','m','a','n','y',' ','s','e','m','a','p','h','o','r','e','s','\0'};
 static moo_ooch_t errstr_28[] = {'s','e','m','a','p','h','o','r','e',' ','l','i','s','t',' ','f','u','l','l','\0'};
 static moo_ooch_t errstr_29[] = {'d','i','v','i','d','e',' ','b','y',' ','z','e','r','o','\0'};
 static moo_ooch_t errstr_30[] = {'I','/','O',' ','e','r','r','o','r','\0'};
@@ -313,7 +313,7 @@ void moo_seterrwithsyserr (moo_t* moo, int syserr)
 }
 
 /* -------------------------------------------------------------------------- 
- * ASSERTION FAILURE HANDLER
+ * ASSERTION FAILURE HANDLERsemaphore heap full
  * -------------------------------------------------------------------------- */
 
 void moo_assertfailed (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file, moo_oow_t line)

@@ -725,7 +725,8 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 	xtn_t* xtn = moo_getxtn(moo);
 	int logfd;
 
-	if (!(xtn->logmask & mask)) return;
+	if (!(xtn->logmask & mask & ~MOO_LOG_ALL_LEVELS)) return; /* check log types */
+	if (!(xtn->logmask & mask & ~MOO_LOG_ALL_TYPES)) return; /* check log levels */
 
 	if (mask & MOO_LOG_STDOUT) logfd = 1;
 	else if (mask & MOO_LOG_STDERR) logfd = 2;
@@ -2029,10 +2030,23 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 			else if (moo_compbcstr(flt, "ic") == 0) xtn->logmask |= MOO_LOG_IC;
 			else if (moo_compbcstr(flt, "primitive") == 0) xtn->logmask |= MOO_LOG_PRIMITIVE;
 
+			else if (moo_compbcstr(flt, "fatal") == 0) xtn->logmask |= MOO_LOG_FATAL;
+			else if (moo_compbcstr(flt, "error") == 0) xtn->logmask |= MOO_LOG_ERROR;
+			else if (moo_compbcstr(flt, "warn") == 0) xtn->logmask |= MOO_LOG_WARN;
+			else if (moo_compbcstr(flt, "info") == 0) xtn->logmask |= MOO_LOG_INFO;
+			else if (moo_compbcstr(flt, "debug") == 0) xtn->logmask |= MOO_LOG_DEBUG;
+
+			else if (moo_compbcstr(flt, "fatal+") == 0) xtn->logmask |= MOO_LOG_FATAL;
+			else if (moo_compbcstr(flt, "error+") == 0) xtn->logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR;
+			else if (moo_compbcstr(flt, "warn+") == 0) xtn->logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN;
+			else if (moo_compbcstr(flt, "info+") == 0) xtn->logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO;
+			else if (moo_compbcstr(flt, "debug+") == 0) xtn->logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO | MOO_LOG_DEBUG;
 		}
 		while (cm);
 
-		xtn->logmask |= MOO_LOG_ALL_LEVELS; /* TODO: parse levels also */
+
+		if (!(xtn->logmask & MOO_LOG_ALL_TYPES)) xtn->logmask |= MOO_LOG_ALL_TYPES;  /* no types specified. force to all types */
+		if (!(xtn->logmask & MOO_LOG_ALL_LEVELS)) xtn->logmask |= MOO_LOG_ALL_LEVELS;  /* no levels specified. force to all levels */
 	}
 	else
 	{

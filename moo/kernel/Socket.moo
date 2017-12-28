@@ -44,13 +44,13 @@ extend Socket
 		{
 			## this primitive method may return failure. 
 			## but ignore it here.
-			if (self.insem) 
+			if (self.insem notNil) 
 			{ 
 				System unsignal: self.insem.
 				System removeAsyncSemaphore: self.insem.
 				self.insem := nil.
 			}.
-			if (self.outsem)
+			if (self.outsem notNil)
 			{
 				System unsignal: self.outsem.
 				System removeAsyncSemaphore: self.outsem.
@@ -158,15 +158,18 @@ class MyObject(Object)
 			if (n == 0)
 			{
 				sck close.
+			}
+			else
+			{
+				(n asString & ' bytes read') dump.
+				data dump.
 			}.
-			(n asString & ' bytes read') dump.
-			data dump.
 		].
 
 		outact := [:sck :state |
 			if (state)
 			{
-				sck writeBytes: #[ $h, $e, $l, $l, $o ].
+				sck writeBytes: #[ $h, $e, $l, $l, $o, 10 ].
 				
 			}
 			else
@@ -178,7 +181,6 @@ class MyObject(Object)
 			if (state)
 			{
 				'CONNECTED NOW.............' dump.
-				##s onOutputDo: outact.
 				s writeBytes: #[ $h $e $l $l $o ].
 
 				s watchInput.
