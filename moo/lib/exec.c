@@ -140,6 +140,9 @@ static MOO_INLINE int vm_startup (moo_t* moo)
 		moo->sem_io_map[i] = -1;
 	}
 
+	moo->sem_gcfin = (moo_oop_semaphore_t)moo->_nil;
+	moo->sem_gcfin_sigreq = 0;
+
 	if (moo->vmprim.vm_startup (moo) <= -1) return -1;
 	moo->vmprim.vm_gettime (moo, &moo->exec_start_time); /* raw time. no adjustment */
 
@@ -181,6 +184,9 @@ static MOO_INLINE void vm_cleanup (moo_t* moo)
 
 	moo->vmprim.vm_gettime (moo, &moo->exec_end_time); /* raw time. no adjustment */
 	moo->vmprim.vm_cleanup (moo);
+	
+	moo->sem_gcfin = (moo_oop_semaphore_t)moo->_nil;
+	moo->sem_gcfin_sigreq = 0;
 
 	MOO_LOG0 (moo, MOO_LOG_VM | MOO_LOG_DEBUG, "VM cleaned up\n");
 }
@@ -1132,8 +1138,8 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_hand
 		tmp = moo_reallocmem (moo, moo->sem_io_map, MOO_SIZEOF(*tmp) * new_capa);
 		if (!tmp) 
 		{
-			moo_copyoocstr (moo->errmsg.buf2, MOO_COUNTOF(moo->errmsg.buf2), moo->errmsg.buf);
-			moo_seterrbfmt (moo, moo->errnum, "handle %zd out of supported range - %js", moo->errmsg.buf2);
+			moo_copyoocstr (moo->errmsg.tmpbuf.ooch, MOO_COUNTOF(moo->errmsg.tmpbuf.ooch), moo->errmsg.buf);
+			moo_seterrbfmt (moo, moo->errnum, "handle %zd out of supported range - %js", moo->errmsg.tmpbuf.ooch);
 			return -1;
 		}
 
@@ -2566,8 +2572,8 @@ static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_se
 
 	if (add_to_sem_io(moo, sem, MOO_OOP_TO_SMOOI(fd), io_type) <= -1) 
 	{
-		moo_copyoocstr (moo->errmsg.buf2, MOO_COUNTOF(moo->errmsg.buf2), moo->errmsg.buf);
-		moo_seterrbfmt (moo, moo->errnum, "cannot add the handle %zd to the multiplexer - %js", MOO_OOP_TO_SMOOI(fd), moo->errmsg.buf2);
+		moo_copyoocstr (moo->errmsg.tmpbuf.ooch, MOO_COUNTOF(moo->errmsg.tmpbuf.ooch), moo->errmsg.buf);
+		moo_seterrbfmt (moo, moo->errnum, "cannot add the handle %zd to the multiplexer - %js", MOO_OOP_TO_SMOOI(fd), moo->errmsg.tmpbuf.ooch);
 		return MOO_PF_FAILURE;
 	}
 
@@ -2626,8 +2632,8 @@ static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 
 		if (delete_from_sem_io (moo, sem) <= -1)
 		{
-			moo_copyoocstr (moo->errmsg.buf2, MOO_COUNTOF(moo->errmsg.buf2), moo->errmsg.buf);
-			moo_seterrbfmt (moo, moo->errnum, "cannot delete the handle %zd from the multiplexer - %js", MOO_OOP_TO_SMOOI(sem->io_handle), moo->errmsg.buf2);
+			moo_copyoocstr (moo->errmsg.tmpbuf.ooch, MOO_COUNTOF(moo->errmsg.tmpbuf.ooch), moo->errmsg.buf);
+			moo_seterrbfmt (moo, moo->errnum, "cannot delete the handle %zd from the multiplexer - %js", MOO_OOP_TO_SMOOI(sem->io_handle), moo->errmsg.tmpbuf.ooch);
 			return MOO_PF_FAILURE;
 		}
 
@@ -3328,6 +3334,7 @@ static pf_t pftab[] =
 	{ "System_collectGarbage",                 { moo_pf_system_collect_garbage,           0, 0 } },
 	{ "System_free",                           { moo_pf_system_free,                      1, 1 } },
 	{ "System_free:",                          { moo_pf_system_free,                      1, 1 } },
+	{ "System_gc",                             { moo_pf_system_collect_garbage,           0, 0 } },
 	{ "System_getBytes",                       { moo_pf_system_get_bytes,                 5, 5 } },
 	{ "System_getInt16",                       { moo_pf_system_get_int16,                 2, 2 } },
 	{ "System_getInt32",                       { moo_pf_system_get_int32,                 2, 2 } },
@@ -3872,7 +3879,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 			}
 			else if (moo->processor->active == moo->nil_process)
 			{
-				/* no running process */
+				/* no running process. before firing time. */
 				MOO_SUBNTIME (&ft, &ft, (moo_ntime_t*)&now);
 
 				if (moo->sem_io_wait_count > 0)
@@ -3907,23 +3914,31 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 
 	if (moo->sem_io_wait_count > 0) 
 	{
-		moo_ntime_t now;
-
 		if (moo->processor->active == moo->nil_process)
 		{
+			moo_ntime_t ft;
+
 			/* no runnable process while there is an io semaphore being waited */
 			if ((moo_oop_t)moo->sem_gcfin != moo->_nil && moo->sem_gcfin_sigreq) goto signal_sem_gcfin;
 
 			do
 			{
-				vm_gettime (moo, &now);
-				now.sec += 3; /* TODO: use a configured value? */
-				vm_muxwait (moo, &now);
+				
+				MOO_INITNTIME (&ft, 3, 0); /* TODO: use a configured time */
+				vm_muxwait (moo, &ft);
 			}
 			while (moo->processor->active == moo->nil_process && !moo->abort_req);
 		}
 		else
 		{
+			/* well, there is a process waiting on one or more semaphores while
+			 * there are other normal processes to run. check IO activities
+			 * before proceeding to handle normal process scheduling */
+
+			/* NOTE: the check with the multiplexer may happen too frequently
+			 *       because this is called everytime process switching is requested
+			 *       the actual callback implementation may avoid using actual
+			 *       system calls for the check too frequently */
 			vm_muxwait (moo, MOO_NULL);
 		}
 	}

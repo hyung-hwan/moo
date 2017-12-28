@@ -98,6 +98,7 @@ class System(Apex)
 
 	method(#class,#primitive) _popCollectable.
 	method(#class,#primitive) collectGarbage.
+	method(#class,#primitive) gc.
 	method(#class,#primitive) return: object to: context.
 
 	## =======================================================================================

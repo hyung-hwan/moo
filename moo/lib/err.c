@@ -307,9 +307,8 @@ const moo_ooch_t* moo_geterrmsg (moo_t* moo)
 
 void moo_seterrwithsyserr (moo_t* moo, int syserr)
 {
-	moo_bch_t msgbuf[64];
-	strerror_r (syserr, msgbuf, MOO_COUNTOF(msgbuf));
-	moo_seterrbfmt (moo, moo_syserr_to_errnum(errno), "%hs", msgbuf);
+	strerror_r (syserr, moo->errmsg.tmpbuf.bch, MOO_COUNTOF(moo->errmsg.tmpbuf.bch));
+	moo_seterrbfmt (moo, moo_syserr_to_errnum(errno), "%hs", moo->errmsg.tmpbuf.bch);
 }
 
 /* -------------------------------------------------------------------------- 

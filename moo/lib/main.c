@@ -725,15 +725,22 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 	xtn_t* xtn = moo_getxtn(moo);
 	int logfd;
 
-	if (!(xtn->logmask & mask & ~MOO_LOG_ALL_LEVELS)) return; /* check log types */
-	if (!(xtn->logmask & mask & ~MOO_LOG_ALL_TYPES)) return; /* check log levels */
-
-	if (mask & MOO_LOG_STDOUT) logfd = 1;
-	else if (mask & MOO_LOG_STDERR) logfd = 2;
+	if (mask & MOO_LOG_STDERR)
+	{
+		/* the messages that go to STDERR don't get masked out */
+		logfd = 2;
+	}
 	else
 	{
-		logfd = xtn->logfd;
-		if (logfd <= -1) return;
+		if (!(xtn->logmask & mask & ~MOO_LOG_ALL_LEVELS)) return; /* check log types */
+		if (!(xtn->logmask & mask & ~MOO_LOG_ALL_TYPES)) return; /* check log levels */
+
+		if (mask & MOO_LOG_STDOUT) logfd = 1;
+		else
+		{
+			logfd = xtn->logfd;
+			if (logfd <= -1) return;
+		}
 	}
 
 /* TODO: beautify the log message.
@@ -1583,7 +1590,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 		#endif
 			{
 				moo_uint8_t u8;
-				while (read (xtn->p[0], &u8, MOO_SIZEOF(u8)) > 0) 
+				while (read(xtn->p[0], &u8, MOO_SIZEOF(u8)) > 0) 
 				{
 					/* consume as much as possible */;
 					if (u8 == 'Q') xtn->iothr_abort = 1;
@@ -1707,7 +1714,8 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 
 	if (n <= -1)
 	{
-		MOO_DEBUG2 (moo, "Warning: multiplexer wait failure - %d, %hs\n", errno, strerror(errno));
+		moo_seterrwithsyserr (moo, errno);
+		MOO_DEBUG2 (moo, "Warning: multiplexer wait failure - %d, %s\n", errno, moo_geterrmsg(moo));
 	}
 	else
 	{
@@ -2316,7 +2324,7 @@ int main (int argc, char* argv[])
 			}
 			else
 			{
-				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "ERROR: cannot compile code - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
+				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "ERROR: cannot compile code - [%d] %js\n", moo_geterrnum(moo), moo_geterrmsg(moo));
 			}
 
 			close_moo (moo);
@@ -2339,7 +2347,7 @@ int main (int argc, char* argv[])
 	mthname.len = 4;
 	if (moo_invoke (moo, &objname, &mthname) <= -1)
 	{
-		moo_logbfmt (moo, MOO_LOG_ERROR, "ERROR: cannot execute code - [%d] %js\n", moo_geterrnum(moo), moo_geterrmsg(moo));
+		moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "ERROR: cannot execute code - [%d] %js\n", moo_geterrnum(moo), moo_geterrmsg(moo));
 		xret = -1;
 	}
 

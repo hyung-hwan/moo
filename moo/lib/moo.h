@@ -1164,7 +1164,12 @@ struct moo_t
 
 	struct
 	{
-		moo_ooch_t buf2[2048];
+		union
+		{
+			moo_ooch_t ooch[2048];
+			moo_bch_t bch[2048];
+			moo_uch_t uch[2048];
+		} tmpbuf;
 		moo_ooch_t buf[2048];
 		moo_oow_t len;
 	} errmsg;
