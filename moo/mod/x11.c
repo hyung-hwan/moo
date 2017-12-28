@@ -775,19 +775,19 @@ static moo_pfrc_t pf_draw_string (moo_t* moo, moo_ooi_t nargs)
 
 static moo_pfinfo_t x11_pfinfo[] =
 {
-	{ MI, { '_','a','p','p','l','y','_','g','c','\0' },                         0, { pf_apply_gc,        1, 1 } },
-	{ MI, { '_','c','l','o','s','e','_','d','i','s','p','l','a','y','\0' },     0, { pf_close_display,   0, 0 } },
-	{ MI, { '_','c','r','e','a','t','e','_','g','c','\0' },                     0, { pf_create_gc,       1, 1 } },
-	{ MI, { '_','c','r','e','a','t','e','_','w','i','n','d','o','w','\0' },     0, { pf_create_window,   7, 7 } },
-	{ MI, { '_','d','e','s','t','r','o','y','_','g','c','\0' },                 0, { pf_destroy_gc,      1, 1 } },
-	{ MI, { '_','d','e','s','t','r','o','y','_','w','i','n','d','o','w','\0' }, 0, { pf_destroy_window,  1, 1 } },
+	{ MI, { 'a','p','p','l','y','_','g','c','\0' },                         0, { pf_apply_gc,        1, 1 } },
+	{ MI, { 'c','l','o','s','e','_','d','i','s','p','l','a','y','\0' },     0, { pf_close_display,   0, 0 } },
+	{ MI, { 'c','r','e','a','t','e','_','g','c','\0' },                     0, { pf_create_gc,       1, 1 } },
+	{ MI, { 'c','r','e','a','t','e','_','w','i','n','d','o','w','\0' },     0, { pf_create_window,   7, 7 } },
+	{ MI, { 'd','e','s','t','r','o','y','_','g','c','\0' },                 0, { pf_destroy_gc,      1, 1 } },
+	{ MI, { 'd','e','s','t','r','o','y','_','w','i','n','d','o','w','\0' }, 0, { pf_destroy_window,  1, 1 } },
 
-	{ MI, { '_','d','r','a','w','_','r','e','c','t','a','n','g','l','e','\0' }, 0, { pf_draw_rectangle,  6, 6 } },
-	{ MI, { '_','d','r','a','w','_','s','t','r','i','n','g','\0' },             0, { pf_draw_string,     4, 4 } },
-	{ MI, { '_','f','i','l','l','_','r','e','c','t','a','n','g','l','e','\0' }, 0, { pf_fill_rectangle,  6, 6 } },
-	{ MI, { '_','g','e','t','_','f','d','\0' },                                 0, { pf_get_fd,          0, 0 } },
-	{ MI, { '_','g','e','t','_','l','l','e','v','e','n','t','\0'},              0, { pf_get_llevent,     1, 1 } },
-	{ MI, { '_','o','p','e','n','_','d','i','s','p','l','a','y','\0' },         0, { pf_open_display,    0, 1 } }
+	{ MI, { 'd','r','a','w','_','r','e','c','t','a','n','g','l','e','\0' }, 0, { pf_draw_rectangle,  6, 6 } },
+	{ MI, { 'd','r','a','w','_','s','t','r','i','n','g','\0' },             0, { pf_draw_string,     4, 4 } },
+	{ MI, { 'f','i','l','l','_','r','e','c','t','a','n','g','l','e','\0' }, 0, { pf_fill_rectangle,  6, 6 } },
+	{ MI, { 'g','e','t','_','f','d','\0' },                                 0, { pf_get_fd,          0, 0 } },
+	{ MI, { 'g','e','t','_','l','l','e','v','e','n','t','\0'},              0, { pf_get_llevent,     1, 1 } },
+	{ MI, { 'o','p','e','n','_','d','i','s','p','l','a','y','\0' },         0, { pf_open_display,    0, 1 } }
 };
 
 static int x11_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
