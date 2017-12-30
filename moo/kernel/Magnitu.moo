@@ -51,6 +51,55 @@ class(#limited) Character(Magnitude)
 	## }
 
 	method(#primitive) asInteger.
+
+	method = aCharacter
+	{
+		<primitive: #Character_eq>
+		self primitiveFailed.
+	}
+
+	method ~= char
+	{
+		<primitive: #Character_ne>
+		self primitiveFailed.
+	}
+
+	method < char
+	{
+		<primitive: #Character_lt>
+		self primitiveFailed.
+	}
+
+	method > char
+	{
+		<primitive: #Character_gt>
+		self primitiveFailed.
+	}
+
+	method <= char
+	{
+		<primitive: #Character_le>
+		self primitiveFailed.
+	}
+
+	method >= char
+	{
+		<primitive: #Character_ge>
+		self primitiveFailed.
+	}
+	
+	method - char
+	{
+		<primitive: #Character_sub>
+		^(self asInteger - char asInteger) asCharacter
+	}
+	
+	method + char
+	{
+		<primitive: #Character_add>
+		^(self asInteger + char asInteger) asCharacter
+	}
+
 }
 
 class(#limited) Number(Magnitude)

@@ -111,6 +111,33 @@ static moo_pfrc_t pf_close_socket (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_FAILURE;
 }
 
+static moo_pfrc_t pf_bind_socket (moo_t* moo, moo_ooi_t nargs)
+{
+	oop_sck_t sck;
+	int fd, n;
+
+
+	sck = (oop_sck_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo,
+		MOO_OOP_IS_POINTER(sck) &&
+		MOO_OBJ_BYTESOF(sck) >= (MOO_SIZEOF(*sck) - MOO_SIZEOF(moo_obj_t)) &&
+		MOO_OOP_IS_SMOOI(sck->handle));
+
+	fd = MOO_OOP_TO_SMOOI(sck->handle);
+
+#if 0
+	n = bind(fd, &sin, MOO_SIZEOF(sin));
+	if (n == -1)
+	{
+		moo_seterrwithsyserr (moo, errno);
+		return MOO_PF_FAILURE;
+	}
+#endif
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
 static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 {
 	oop_sck_t sck;
@@ -300,6 +327,7 @@ struct fnctab_t
 
 static moo_pfinfo_t pfinfos[] =
 {
+	{ I, { 'b','i','n','d','\0' },                              0, { pf_bind_socket,     1, 1  }  },
 	{ I, { 'c','l','o','s','e','\0' },                          0, { pf_close_socket,    0, 0  }  },
 	{ I, { 'c','o','n','n','e','c','t','\0' },                  0, { pf_connect,         3, 3  }  },
 	{ I, { 'e','n','d','C','o','n','n','e','c','t','\0' },      0, { pf_end_connect,     0, 0  }  },
@@ -334,3 +362,5 @@ int moo_mod_sck (moo_t* moo, moo_mod_t* mod)
 	mod->ctx = MOO_NULL;
 	return 0;
 }
+
+

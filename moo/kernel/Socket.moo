@@ -1,5 +1,117 @@
 #include 'Moo.moo'.
 
+##interface IPAddressInterface
+##{
+##}
+## class XXX(Object,IPAddressInterface) {}
+
+class(#byte) IPAddress(Object)
+{
+}
+
+###class(#byte(4)) IP4Address(IPAddress) -> new basicNew always create 4 bytes. size to new: or basicNew: is ignored.
+###class(#byte(16)) IP6Address(IPAddress)
+
+class(#byte) IP4Address(IPAddress)
+{
+	method(#class) new
+	{
+		^self basicNew: 4.
+	}
+	
+	method(#class) fromString: str
+	{
+		^self new fromString: str.
+	}
+	
+	method fromString: str
+	{
+		| dots digits pos size c acc |
+
+		pos := 0.
+		size := str size.
+		
+		acc := 0.
+		digits := 0.
+		dots := 0.
+
+		do
+		{
+			if (pos >= size)
+			{
+				if (dots < 3 or: [digits == 0]) 
+				{
+					Exception signal: ('invalid IPv4 address A ' & str).
+				}.
+				self basicAt: dots put: acc.
+				break.
+			}.
+			
+			c := str at: pos.
+			pos := pos + 1.
+
+			if (c >= $0 and: [c <= $9])
+			{
+				acc := acc * 10 + (c - $0) asInteger.
+				if (acc > 255) { Exception signal: ('invalid IPv4 address B ' & str). }.
+				digits := digits + 1.
+			}
+			elsif (c == $.)
+			{
+				if (dots >= 3 or: [digits == 0]) { Exception signal: ('invalid IPv4 address C ' & str). }.
+				self basicAt: dots put: acc.
+				dots := dots + 1.
+				acc := 0.
+				digits := 0.
+			}
+			else
+			{
+				Exception signal: ('invalid IPv4 address ' & str).
+			}.
+			
+			
+		}
+		while (true).
+	}
+}
+
+class(#byte) IP6Address(IPAddress)
+{
+	method(#class) new
+	{
+		^self basicNew: 16.
+	}
+	
+	method(#class) fromString: str
+	{
+	
+	}
+}
+
+class(#byte) IP4SocketAddress(IP4Address)
+{
+	method(#class) new
+	{
+		^self basicNew: 6.
+	}
+}
+
+class SocketAddress(Object) from 'sck.addr'
+{
+	##method(#primitive) family.
+	method(#primitive) fromString: str.
+	
+	method(#class) fromString: str
+	{
+		^self new fromString: str
+	}
+}
+
+
+##class InetSocketAddress(SocketAddress)
+##{
+##}
+
 class Socket(Object) from 'sck'
 {
 	var handle := -1.
@@ -96,6 +208,8 @@ extend Socket
 		]
 	}
 
+## TODO: how to specify a timeout for an action? using another semaphore??
+
 	method watchInput
 	{
 		if (self.insem isNil)
@@ -106,10 +220,6 @@ extend Socket
 		}.
 
 		System signal: self.insem onInput: self.handle.
-
-		###s2 := Semaphore new.
-		###s2 signalAction: [:sem | inputActionBlock value: self value: false].
-		###System signal: s2 afterSecs: 10.
 	}
 
 	method unwatchInput
@@ -142,27 +252,46 @@ class MyObject(Object)
 	{
 		| s conact inact outact |
 
+
+s := IP4Address fromString: '192.168.1.1'.
+s dump.
+s := IP6Address new.
+s dump.
+s := IP4SocketAddress new.
+s dump.
+thisProcess terminate.
 		inact := [:sck :state |
 			| data n |
+(*
+end of data -> 0.
+no data -> -1.
+has data -> 1 or moreailure indicated by primitive function 0x55a6210 - _integer_add
+
+error -> exception
+*)
 
 			data := ByteArray new: 100.
-			n := sck readBytes: data.
-			if (n == 0)
+			do
 			{
-				sck close.
+				n := sck readBytes: data.
+				if (n <= 0)
+				{
+					if (n == 0) { sck close }.
+					break.
+				}
+				elsif (n > 0)
+				{
+					(n asString & ' bytes read') dump.
+					data dump.
+				}.
 			}
-			else
-			{
-				(n asString & ' bytes read') dump.
-				data dump.
-			}.
+			while (true).
 		].
 
 		outact := [:sck :state |
 			if (state)
 			{
 				sck writeBytes: #[ $h, $e, $l, $l, $o, C'\n' ].
-				
 			}
 			else
 			{

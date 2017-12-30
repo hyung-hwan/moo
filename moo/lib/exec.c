@@ -3022,6 +3022,149 @@ static moo_pfrc_t pf_integer_inttostr (moo_t* moo, moo_ooi_t nargs)
 
 /* ------------------------------------------------------------------ */
 
+static moo_pfrc_t pf_character_eq (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+	
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_CHAR(rcv));
+
+	/*res = (MOO_OOP_IS_CHAR(arg) && MOO_OOP_TO_CHAR(rcv) == MOO_OOP_TO_CHAR(arg))? moo->_true: moo->_false;*/
+	res = (rcv == arg)? moo->_true: moo->_false; /* this comparision should be sufficient for characters */
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_character_ne (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_CHAR(rcv));
+
+	/*res = (MOO_OOP_IS_CHAR(arg) && MOO_OOP_TO_CHAR(rcv) == MOO_OOP_TO_CHAR(arg))? moo->_false: moo->_true;*/
+	res = (rcv == arg)? moo->_false: moo->_true; /* this comparision should be sufficient for characters */
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_character_lt (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+	
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_CHAR(rcv));
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_CHAR(arg));
+
+	res = (MOO_OOP_TO_CHAR(rcv) < MOO_OOP_TO_CHAR(arg))? moo->_true: moo->_false;
+	
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_character_gt (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_CHAR(rcv));
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_CHAR(arg));
+
+	res = (MOO_OOP_TO_CHAR(rcv) > MOO_OOP_TO_CHAR(arg))? moo->_true: moo->_false;
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_character_le (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_CHAR(rcv));
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_CHAR(arg));
+	
+	res = (MOO_OOP_TO_CHAR(rcv) <= MOO_OOP_TO_CHAR(arg))? moo->_true: moo->_false;
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_character_ge (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+	
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_CHAR(rcv));
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_CHAR(arg));
+
+	res = (MOO_OOP_TO_CHAR(rcv) >= MOO_OOP_TO_CHAR(arg))? moo->_true: moo->_false;
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+/* ------------------------------------------------------------------ */
+
+static moo_pfrc_t pf_character_add (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+	
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_CHAR(rcv));
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_CHAR(arg));
+
+	res = MOO_CHAR_TO_OOP(MOO_OOP_TO_CHAR(rcv) + MOO_OOP_TO_CHAR(arg));
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_character_sub (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+	
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_CHAR(rcv));
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_CHAR(arg));
+
+	res = MOO_CHAR_TO_OOP(MOO_OOP_TO_CHAR(rcv) - MOO_OOP_TO_CHAR(arg));
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+/* ------------------------------------------------------------------ */
+
 static moo_pfrc_t pf_character_as_smooi (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
@@ -3283,7 +3426,15 @@ static pf_t pftab[] =
 	{ "BlockContext_value",                    { pf_block_value,                          0, MA } },
 	{ "BlockContext_newProcess",               { pf_block_new_process,                    0, MA } },
 
+	{ "Character_add",                         { pf_character_add,                        1, 1 } },
 	{ "Character_asInteger",                   { pf_character_as_smooi,                   0, 0 } },
+	{ "Character_eq",                          { pf_character_eq,                         1, 1 } },
+	{ "Character_le",                          { pf_character_le,                         1, 1 } },
+	{ "Character_lt",                          { pf_character_lt,                         1, 1 } },
+	{ "Character_ne",                          { pf_character_ne,                         1, 1 } },
+	{ "Character_ge",                          { pf_character_ge,                         1, 1 } },
+	{ "Character_gt",                          { pf_character_gt,                         1, 1 } },
+	{ "Character_sub",                         { pf_character_sub,                        1, 1 } },
 
 	{ "Error_asCharacter",                     { pf_error_as_character,                   0, 0 } },
 	{ "Error_asInteger",                       { pf_error_as_integer,                     0, 0 } },

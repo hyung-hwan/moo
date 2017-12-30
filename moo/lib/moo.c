@@ -425,6 +425,7 @@ static_modtab[] =
 #endif
 #if defined(MOO_ENABLE_MOD_SCK)
 	{ "sck",        moo_mod_sck },
+	{ "sck.addr",   moo_mod_sck_addr },
 #endif
 	{ "stdio",      moo_mod_stdio },
 #if defined(MOO_ENABLE_MOD_X11)

@@ -38,11 +38,13 @@ struct sck_t
 	/* there are more fields in the actual object */
 };
 
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
 MOO_EXPORT int moo_mod_sck (moo_t* moo, moo_mod_t* mod);
+MOO_EXPORT int moo_mod_sck_addr (moo_t* moo, moo_mod_t* mod);
 
 #if defined(__cplusplus)
 }

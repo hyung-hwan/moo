@@ -129,6 +129,7 @@ static struct voca_t
 	{ 10, { '#','i','m','m','u','t','a','b','l','e'                       } },
 	{  6, { 'i','m','p','o','r','t'                                       } },
 	{  8, { '#','i','n','c','l','u','d','e'                               } },
+	{  9, { 'i','n','t','e','r','f','a','c','e'                           } },
 	{  8, { '#','l','e','n','i','e','n','t'                               } },
 	{  8, { '#','l','i','b','e','r','a','l'                               } },
 	{  8, { '#','l','i','m','i','t','e','d'                               } },
@@ -193,6 +194,7 @@ enum voca_id_t
 	VOCA_IMMUTABLE_S,
 	VOCA_IMPORT,
 	VOCA_INCLUDE_S,
+	VOCA_INTERFACE,
 	VOCA_LENIENT_S,
 	VOCA_LIBERAL_S,
 	VOCA_LIMITED_S,
@@ -8060,6 +8062,14 @@ static int compile_stream (moo_t* moo)
 			GET_TOKEN (moo);
 			if (compile_class_definition(moo, 0) <= -1) return -1;
 		}
+#if 0
+		else if (is_token_word(moo, VOCA_INTERFACE))
+		{
+			/* interface InterfaceName { } */
+			GET_TOKEN (moo);
+			if (compile_interface_defintion(moo, 0) <= -1) return -1;
+		}
+#endif
 		else if (is_token_word(moo, VOCA_EXTEND))
 		{
 			/* extend Selfclass {} */
