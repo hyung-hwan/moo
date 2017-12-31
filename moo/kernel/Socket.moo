@@ -25,7 +25,7 @@ class(#byte) IP4Address(IPAddress)
 		^self new fromString: str.
 	}
 	
-	method fromString: str
+	method __fromString: str
 	{
 		| dots digits pos size c acc |
 
@@ -40,10 +40,7 @@ class(#byte) IP4Address(IPAddress)
 		{
 			if (pos >= size)
 			{
-				if (dots < 3 or: [digits == 0]) 
-				{
-					Exception signal: ('invalid IPv4 address A ' & str).
-				}.
+				if (dots < 3 or: [digits == 0]) { ^Error.Code.EINVAL }.
 				self basicAt: dots put: acc.
 				break.
 			}.
@@ -59,7 +56,7 @@ class(#byte) IP4Address(IPAddress)
 			}
 			elsif (c = $.)
 			{
-				if (dots >= 3 or: [digits == 0]) { Exception signal: ('invalid IPv4 address C ' & str). }.
+				if (dots >= 3 or: [digits == 0]) { ^Error.Code.EINVAL }.
 				self basicAt: dots put: acc.
 				dots := dots + 1.
 				acc := 0.
@@ -67,12 +64,25 @@ class(#byte) IP4Address(IPAddress)
 			}
 			else
 			{
-				Exception signal: ('invalid IPv4 address ' & str).
+				^Error.Code.EINVAL
+				### goto @label@.
 			}.
-			
-			
 		}
 		while (true).
+		
+		^self.
+(*
+	(@label@)
+		Exception signal: ('invalid IPv4 address ' & str).
+*)
+	}
+	
+	method fromString: str
+	{
+		if ((self __fromString: str) isError)
+		{
+			Exception signal: ('invalid IPv4 address ' & str).
+		}
 	}
 }
 
