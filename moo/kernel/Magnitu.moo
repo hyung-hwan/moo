@@ -45,10 +45,8 @@ class Association(Magnitude)
 
 class(#limited) Character(Magnitude)
 {
-	## method basicSize
-	## {
-	## 	^0
-	## }
+##	method(#primitive,#class) fromCode: code.
+##	method(#primitive) toCode.
 
 	method(#primitive) asInteger.
 

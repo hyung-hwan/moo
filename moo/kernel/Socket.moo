@@ -9,6 +9,7 @@ class(#byte) IPAddress(Object)
 {
 }
 
+### TODO: extend the compiler
 ###class(#byte(4)) IP4Address(IPAddress) -> new basicNew always create 4 bytes. size to new: or basicNew: is ignored.
 ###class(#byte(16)) IP6Address(IPAddress)
 
@@ -52,7 +53,7 @@ class(#byte) IP4Address(IPAddress)
 
 			if (c >= $0 and: [c <= $9])
 			{
-				acc := acc * 10 + (c - $0) asInteger.
+				acc := acc * 10 + (c asInteger - $0 asInteger).
 				if (acc > 255) { Exception signal: ('invalid IPv4 address B ' & str). }.
 				digits := digits + 1.
 			}
@@ -253,12 +254,13 @@ class MyObject(Object)
 		| s conact inact outact |
 
 
-s := IP4Address fromString: '192.168.1.1'.
+s := IP4Address fromString: '192.168.123.232'.
 s dump.
-s := IP6Address new.
-s dump.
-s := IP4SocketAddress new.
-s dump.
+s basicSize dump.
+##s := IP6Address new.
+##s dump.
+##s := IP4SocketAddress new.
+##s dump.
 thisProcess terminate.
 		inact := [:sck :state |
 			| data n |

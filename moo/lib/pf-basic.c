@@ -260,11 +260,13 @@ moo_pfrc_t moo_pf_basic_size (moo_t* moo, moo_ooi_t nargs)
 
 	if (!MOO_OOP_IS_POINTER(rcv))
 	{
+		/* a non-pointer object has the size of 0. 
+		 * such an object doesn't consume object memory space except an OOP word */
 		sz = MOO_SMOOI_TO_OOP(0);
 	}
 	else
 	{
-		sz = moo_oowtoint (moo, MOO_OBJ_GET_SIZE(rcv));
+		sz = moo_oowtoint(moo, MOO_OBJ_GET_SIZE(rcv));
 		if (!sz) return MOO_PF_FAILURE;
 	}
 
@@ -377,19 +379,17 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 		case MOO_OBJ_TYPE_BYTE:
 			if (!MOO_OOP_IS_SMOOI(val))
 			{
-				/* the value is not a character */
-				moo_seterrnum (moo, MOO_EINVAL);
+				moo_seterrbfmt (moo, MOO_EINVAL, "value not a byte - %O", val);
 				return MOO_PF_FAILURE;
 			}
 /* TOOD: must I check the range of the value? */
-			((moo_oop_char_t)rcv)->slot[idx] = MOO_OOP_TO_SMOOI(val);
+			((moo_oop_byte_t)rcv)->slot[idx] = MOO_OOP_TO_SMOOI(val);
 			break;
 
 		case MOO_OBJ_TYPE_CHAR:
 			if (!MOO_OOP_IS_CHAR(val))
 			{
-				/* the value is not a character */
-				moo_seterrnum (moo, MOO_EINVAL);
+				moo_seterrbfmt (moo, MOO_EINVAL, "value not a character - %O", val);
 				return MOO_PF_FAILURE;
 			}
 			((moo_oop_char_t)rcv)->slot[idx] = MOO_OOP_TO_CHAR(val);
@@ -399,7 +399,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 			if (!MOO_OOP_IS_SMOOI(val))
 			{
 				/* the value is not a number */
-				moo_seterrnum (moo, MOO_EINVAL);
+				moo_seterrbfmt (moo, MOO_EINVAL, "value not a half-word integer - %O", val);
 				return MOO_PF_FAILURE;
 			}
 
@@ -414,7 +414,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 			if (moo_inttooow (moo, val, &w) <= 0)
 			{
 				/* the value is not a number, out of range, or negative */
-				moo_seterrnum (moo, MOO_EINVAL);
+				moo_seterrbfmt (moo, MOO_EINVAL, "value not a word integer - %O", val);
 				return MOO_PF_FAILURE;
 			}
 			((moo_oop_word_t)rcv)->slot[idx] = w;
