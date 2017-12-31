@@ -57,7 +57,7 @@ class(#byte) IP4Address(IPAddress)
 				if (acc > 255) { Exception signal: ('invalid IPv4 address B ' & str). }.
 				digits := digits + 1.
 			}
-			elsif (c == $.)
+			elsif (c = $.)
 			{
 				if (dots >= 3 or: [digits == 0]) { Exception signal: ('invalid IPv4 address C ' & str). }.
 				self basicAt: dots put: acc.

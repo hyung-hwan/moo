@@ -613,6 +613,12 @@ moo_ooi_t moo_logbfmt (moo_t* moo, moo_oow_t mask, const moo_bch_t* fmt, ...)
 	va_list ap;
 	moo_fmtout_t fo;
 
+	if (moo->log.default_type_mask & MOO_LOG_ALL_TYPES) 
+	{
+		mask &= ~MOO_LOG_UNTYPED;
+		mask |= (moo->log.default_type_mask & MOO_LOG_ALL_TYPES);
+	}
+
 	fo.mask = mask;
 	fo.putch = put_ooch;
 	fo.putcs = put_oocs;
@@ -634,6 +640,12 @@ moo_ooi_t moo_logufmt (moo_t* moo, moo_oow_t mask, const moo_uch_t* fmt, ...)
 	int x;
 	va_list ap;
 	moo_fmtout_t fo;
+
+	if (moo->log.default_type_mask & MOO_LOG_ALL_TYPES) 
+	{
+		mask &= ~MOO_LOG_UNTYPED;
+		mask |= (moo->log.default_type_mask & MOO_LOG_ALL_TYPES);
+	}
 
 	fo.mask = mask;
 	fo.putch = put_ooch;

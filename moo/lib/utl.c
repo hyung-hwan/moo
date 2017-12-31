@@ -111,36 +111,61 @@ int moo_compucharsucstr (const moo_uch_t* str1, moo_oow_t len, const moo_uch_t* 
 {
 	const moo_uch_t* end = str1 + len;
 	while (str1 < end && *str2 != '\0' && *str1 == *str2) str1++, str2++;
-	if (str1 == end && *str2 == '\0') return 0;
-	if (*str1 == *str2) return (str1 < end)? 1: -1;
-	return (*str1 > *str2)? 1: -1;
+	
+	if (str1 == end)
+	{
+		return (*str2 == '\0')? 0: -1;
+	}
+	else /* str1 < end */
+	{
+		/* for "abc\0" of length 4 vs "abc", the fourth character
+		 * of the first string is equal to the terminating null of
+		 * the second string. the first string is still considered 
+		 * bigger */
+		return (*str1 >= *str2)? 1: -1;
+	}
 }
 
 int moo_compucharsbcstr (const moo_uch_t* str1, moo_oow_t len, const moo_bch_t* str2)
 {
 	const moo_uch_t* end = str1 + len;
 	while (str1 < end && *str2 != '\0' && *str1 == *str2) str1++, str2++;
-	if (str1 == end && *str2 == '\0') return 0;
-	if (*str1 == *str2) return (str1 < end)? 1: -1;
-	return (*str1 > *str2)? 1: -1;
+	if (str1 == end)
+	{
+		return (*str2 == '\0')? 0: -1;
+	}
+	else /* str1 < end */
+	{
+		return (*str1 >= *str2)? 1: -1;
+	}
 }
 
 int moo_compbcharsbcstr (const moo_bch_t* str1, moo_oow_t len, const moo_bch_t* str2)
 {
 	const moo_bch_t* end = str1 + len;
 	while (str1 < end && *str2 != '\0' && *str1 == *str2) str1++, str2++;
-	if (str1 == end && *str2 == '\0') return 0;
-	if (*str1 == *str2) return (str1 < end)? 1: -1;
-	return (*str1 > *str2)? 1: -1;
+	if (str1 == end)
+	{
+		return (*str2 == '\0')? 0: -1;
+	}
+	else
+	{
+		return (*str1 >= *str2)? 1: -1;
+	}
 }
 
 int moo_compbcharsucstr (const moo_bch_t* str1, moo_oow_t len, const moo_uch_t* str2)
 {
 	const moo_bch_t* end = str1 + len;
 	while (str1 < end && *str2 != '\0' && *str1 == *str2) str1++, str2++;
-	if (str1 == end && *str2 == '\0') return 0;
-	if (*str1 == *str2) return (str1 < end)? 1: -1;
-	return (*str1 > *str2)? 1: -1;
+	if (str1 == end)
+	{
+		return (*str2 == '\0')? 0: -1;
+	}
+	else
+	{
+		return (*str1 >= *str2)? 1: -1;
+	}
 }
 
 

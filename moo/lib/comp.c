@@ -8210,13 +8210,13 @@ static void fini_compiler (moo_t* moo)
 	}
 }
 
-int moo_compile (moo_t* moo, moo_ioimpl_t io)
+static MOO_INLINE int _compile (moo_t* moo, moo_ioimpl_t io)
 {
 	int n;
 
 	if (!io)
 	{
-		moo_seterrnum (moo, MOO_EINVAL);
+		moo_seterrbfmt (moo, MOO_EINVAL, "no IO implementation provided");
 		return -1;
 	}
 
@@ -8295,6 +8295,19 @@ oops:
 
 	moo->c->impl (moo, MOO_IO_CLOSE, moo->c->curinp);
 	return -1;
+}
+
+int moo_compile (moo_t* moo, moo_ioimpl_t io)
+{
+	int n;
+	int log_default_type_mask;
+	
+	log_default_type_mask = moo->log.default_type_mask;
+	moo->log.default_type_mask |= MOO_LOG_COMPILER;
+	n = _compile (moo, io);
+	moo->log.default_type_mask = log_default_type_mask;
+	
+	return n;
 }
 
 void moo_getsynerr (moo_t* moo, moo_synerr_t* synerr)

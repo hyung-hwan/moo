@@ -312,8 +312,10 @@ extend Error
 		^false
 	}
 
-	method(#primitive) asInteger.
 	method(#primitive) asCharacter.
+	method asError { ^self }
+	method(#primitive) asInteger.
+
 	method(#primitive) asString.
 
 	method signal

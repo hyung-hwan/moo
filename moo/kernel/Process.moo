@@ -371,29 +371,6 @@ class(#final,#limited) ProcessScheduler(Object)
 	var(#get) suspended_count := 0.
 	var suspended_head, suspended_tail.
 
-	method activeProcess
-	{
-		^self.active.
-	}
-
-	method resume: process
-	{
-		<primitive: #_processor_schedule>
-		self primitiveFailed.
-
-		(* The primitive does something like the following in principle:
-		(self.tally == 0)
-			ifTrue: [
-				self.head := process.
-				self.tail := process.
-				self.tally := 1.
-			]
-			ifFalse: [
-				process ps_next: self.head.
-				self.head ps_prev: process.
-				self.head := process.
-				self.tally := self.tally + 1.
-			].
-		*)
-	}
+	method activeProcess { ^self.active }
+	method resume: aProcess { ^aProcess resume }
 }

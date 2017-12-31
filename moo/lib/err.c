@@ -323,7 +323,7 @@ void moo_assertfailed (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file,
 	char** btsyms;
 #endif
 
-	moo_logbfmt (moo, MOO_LOG_DEBUG, "ASSERTION FAILURE: %s at %s:%zu\n", expr, file, line);
+	moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_FATAL, "ASSERTION FAILURE: %s at %s:%zu\n", expr, file, line);
 
 
 #if defined(HAVE_BACKTRACE)
@@ -332,11 +332,11 @@ void moo_assertfailed (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file,
 	if (btsyms)
 	{
 		moo_oow_t i;
-		moo_logbfmt (moo, MOO_LOG_DEBUG, "[BACKTRACE]\n");
+		moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_DEBUG, "[BACKTRACE]\n");
 
 		for (i = 0; i < btsize; i++)
 		{
-			moo_logbfmt(moo, MOO_LOG_DEBUG, "  %s\n", btsyms[i]);
+			moo_logbfmt(moo, MOO_LOG_UNTYPED | MOO_LOG_DEBUG, "  %s\n", btsyms[i]);
 		}
 		free (btsyms);
 	}

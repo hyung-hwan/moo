@@ -1200,6 +1200,7 @@ struct moo_t
 		moo_oow_t len;
 		moo_oow_t capa;
 		int last_mask;
+		int default_type_mask;
 	} log;
 
 
@@ -1413,15 +1414,17 @@ enum moo_log_mask_t
 	MOO_LOG_ERROR      = (1 << 3),
 	MOO_LOG_FATAL      = (1 << 4),
 
-	MOO_LOG_VM         = (1 << 6),
-	MOO_LOG_MNEMONIC   = (1 << 7), /* bytecode mnemonic */
-	MOO_LOG_GC         = (1 << 8),
-	MOO_LOG_IC         = (1 << 9), /* instruction cycle, fetch-decode-execute */
-	MOO_LOG_PRIMITIVE  = (1 << 10),
-	MOO_LOG_APP        = (1 << 11), /* moo applications, set by moo logging primitive */
+	MOO_LOG_UNTYPED    = (1 << 6), /* only to be used by MOO_DEBUGx() and MOO_INFOx() */
+	MOO_LOG_COMPILER   = (1 << 7),
+	MOO_LOG_VM         = (1 << 8),
+	MOO_LOG_MNEMONIC   = (1 << 9), /* bytecode mnemonic */
+	MOO_LOG_GC         = (1 << 10),
+	MOO_LOG_IC         = (1 << 11), /* instruction cycle, fetch-decode-execute */
+	MOO_LOG_PRIMITIVE  = (1 << 12),
+	MOO_LOG_APP        = (1 << 13), /* moo applications, set by moo logging primitive */
 
 	MOO_LOG_ALL_LEVELS = (MOO_LOG_DEBUG  | MOO_LOG_INFO | MOO_LOG_WARN | MOO_LOG_ERROR | MOO_LOG_FATAL),
-	MOO_LOG_ALL_TYPES  = (MOO_LOG_VM | MOO_LOG_MNEMONIC | MOO_LOG_GC | MOO_LOG_IC | MOO_LOG_PRIMITIVE | MOO_LOG_APP),
+	MOO_LOG_ALL_TYPES  = (MOO_LOG_UNTYPED | MOO_LOG_COMPILER | MOO_LOG_VM | MOO_LOG_MNEMONIC | MOO_LOG_GC | MOO_LOG_IC | MOO_LOG_PRIMITIVE | MOO_LOG_APP),
 
 
 	MOO_LOG_STDOUT     = (1 << 14), /* write log messages to stdout without timestamp. MOO_LOG_STDOUT wins over MOO_LOG_STDERR. */
@@ -1454,22 +1457,22 @@ typedef enum moo_log_mask_t moo_log_mask_t;
 #	define MOO_DEBUG5(moo,fmt,a1,a2,a3,a4,a5)
 #	define MOO_DEBUG6(moo,fmt,a1,a2,a3,a4,a5,a6)
 #else
-#	define MOO_DEBUG0(moo,fmt) MOO_LOG0(moo, MOO_LOG_DEBUG, fmt)
-#	define MOO_DEBUG1(moo,fmt,a1) MOO_LOG1(moo, MOO_LOG_DEBUG, fmt, a1)
-#	define MOO_DEBUG2(moo,fmt,a1,a2) MOO_LOG2(moo, MOO_LOG_DEBUG, fmt, a1, a2)
-#	define MOO_DEBUG3(moo,fmt,a1,a2,a3) MOO_LOG3(moo, MOO_LOG_DEBUG, fmt, a1, a2, a3)
-#	define MOO_DEBUG4(moo,fmt,a1,a2,a3,a4) MOO_LOG4(moo, MOO_LOG_DEBUG, fmt, a1, a2, a3, a4)
-#	define MOO_DEBUG5(moo,fmt,a1,a2,a3,a4,a5) MOO_LOG5(moo, MOO_LOG_DEBUG, fmt, a1, a2, a3, a4, a5)
-#	define MOO_DEBUG6(moo,fmt,a1,a2,a3,a4,a5,a6) MOO_LOG6(moo, MOO_LOG_DEBUG, fmt, a1, a2, a3, a4, a5, a6)
+#	define MOO_DEBUG0(moo,fmt) MOO_LOG0(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt)
+#	define MOO_DEBUG1(moo,fmt,a1) MOO_LOG1(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1)
+#	define MOO_DEBUG2(moo,fmt,a1,a2) MOO_LOG2(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1, a2)
+#	define MOO_DEBUG3(moo,fmt,a1,a2,a3) MOO_LOG3(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1, a2, a3)
+#	define MOO_DEBUG4(moo,fmt,a1,a2,a3,a4) MOO_LOG4(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4)
+#	define MOO_DEBUG5(moo,fmt,a1,a2,a3,a4,a5) MOO_LOG5(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4, a5)
+#	define MOO_DEBUG6(moo,fmt,a1,a2,a3,a4,a5,a6) MOO_LOG6(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4, a5, a6)
 #endif
 
-#define MOO_INFO0(moo,fmt) MOO_LOG0(moo, MOO_LOG_INFO, fmt)
-#define MOO_INFO1(moo,fmt,a1) MOO_LOG1(moo, MOO_LOG_INFO, fmt, a1)
-#define MOO_INFO2(moo,fmt,a1,a2) MOO_LOG2(moo, MOO_LOG_INFO, fmt, a1, a2)
-#define MOO_INFO3(moo,fmt,a1,a2,a3) MOO_LOG3(moo, MOO_LOG_INFO, fmt, a1, a2, a3)
-#define MOO_INFO4(moo,fmt,a1,a2,a3,a4) MOO_LOG4(moo, MOO_LOG_INFO, fmt, a1, a2, a3, a4)
-#define MOO_INFO5(moo,fmt,a1,a2,a3,a4,a5) MOO_LOG5(moo, MOO_LOG_INFO, fmt, a1, a2, a3, a4, a5)
-#define MOO_INFO6(moo,fmt,a1,a2,a3,a4,a5,a6) MOO_LOG6(moo, MOO_LOG_INFO, fmt, a1, a2, a3, a4, a5, a6)
+#define MOO_INFO0(moo,fmt) MOO_LOG0(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt)
+#define MOO_INFO1(moo,fmt,a1) MOO_LOG1(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1)
+#define MOO_INFO2(moo,fmt,a1,a2) MOO_LOG2(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1, a2)
+#define MOO_INFO3(moo,fmt,a1,a2,a3) MOO_LOG3(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1, a2, a3)
+#define MOO_INFO4(moo,fmt,a1,a2,a3,a4) MOO_LOG4(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4)
+#define MOO_INFO5(moo,fmt,a1,a2,a3,a4,a5) MOO_LOG5(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4, a5)
+#define MOO_INFO6(moo,fmt,a1,a2,a3,a4,a5,a6) MOO_LOG6(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4, a5, a6)
 
 
 /* =========================================================================

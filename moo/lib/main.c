@@ -2041,6 +2041,7 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 			if (cm) *cm = '\0';
 
 			if (moo_compbcstr(flt, "app") == 0) xtn->logmask |= MOO_LOG_APP;
+			else if (moo_compbcstr(flt, "compiler") == 0) xtn->logmask |= MOO_LOG_COMPILER;
 			else if (moo_compbcstr(flt, "vm") == 0) xtn->logmask |= MOO_LOG_VM;
 			else if (moo_compbcstr(flt, "mnemonic") == 0) xtn->logmask |= MOO_LOG_MNEMONIC;
 			else if (moo_compbcstr(flt, "gc") == 0) xtn->logmask |= MOO_LOG_GC;
@@ -2277,7 +2278,7 @@ int main (int argc, char* argv[])
 
 	if (moo_ignite(moo) <= -1)
 	{
-		moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "ERROR: cannot ignite moo - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
+		moo_logbfmt (moo, MOO_LOG_STDERR, "ERROR: cannot ignite moo - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
 		close_moo (moo);
 		return -1;
 	}
@@ -2301,33 +2302,33 @@ int main (int argc, char* argv[])
 
 				moo_getsynerr (moo, &synerr);
 
-				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "ERROR: ");
+				moo_logbfmt (moo, MOO_LOG_STDERR, "ERROR: ");
 				if (synerr.loc.file)
 				{
-					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "%js", synerr.loc.file);
+					moo_logbfmt (moo, MOO_LOG_STDERR, "%js", synerr.loc.file);
 				}
 				else
 				{
-					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "%s", xtn->source_path);
+					moo_logbfmt (moo, MOO_LOG_STDERR, "%s", xtn->source_path);
 				}
 
-				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "[%zu,%zu] syntax error - %js",  synerr.loc.line, synerr.loc.colm, moo_synerrnum_to_errstr(synerr.num));
+				moo_logbfmt (moo, MOO_LOG_STDERR, "[%zu,%zu] syntax error - %js",  synerr.loc.line, synerr.loc.colm, moo_synerrnum_to_errstr(synerr.num));
 
 				if (synerr.tgt.len > 0)
 				{
-					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, " - %.*js", synerr.tgt.len, synerr.tgt.ptr);
+					moo_logbfmt (moo, MOO_LOG_STDERR, " - %.*js", synerr.tgt.len, synerr.tgt.ptr);
 				}
 
 				if (moo_geterrmsg(moo) != moo_geterrstr(moo))
 				{
-					moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, " - %js", moo_geterrmsg(moo));
+					moo_logbfmt (moo, MOO_LOG_STDERR, " - %js", moo_geterrmsg(moo));
 				}
 				
-				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "\n");
+				moo_logbfmt (moo, MOO_LOG_STDERR, "\n");
 			}
 			else
 			{
-				moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "ERROR: cannot compile code - [%d] %js\n", moo_geterrnum(moo), moo_geterrmsg(moo));
+				moo_logbfmt (moo, MOO_LOG_STDERR, "ERROR: cannot compile code - [%d] %js\n", moo_geterrnum(moo), moo_geterrmsg(moo));
 			}
 
 			close_moo (moo);
@@ -2350,7 +2351,7 @@ int main (int argc, char* argv[])
 	mthname.len = 4;
 	if (moo_invoke (moo, &objname, &mthname) <= -1)
 	{
-		moo_logbfmt (moo, MOO_LOG_ERROR | MOO_LOG_STDERR, "ERROR: cannot execute code - [%d] %js\n", moo_geterrnum(moo), moo_geterrmsg(moo));
+		moo_logbfmt (moo, MOO_LOG_STDERR, "ERROR: cannot execute code - [%d] %js\n", moo_geterrnum(moo), moo_geterrmsg(moo));
 		xret = -1;
 	}
 

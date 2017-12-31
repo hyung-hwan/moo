@@ -1,5 +1,24 @@
 class Magnitude(Object)
 {
+	method <  aMagnitude { self subclassResponsibility: #<	}
+	method >  aMagnitude { ^aMagnitude < self }
+	method <= aMagnitude { ^(aMagnitude < self) not }
+	method >= aMagnitude { ^(self < aMagnitude) not }
+    
+	method between: min and: max 
+	{
+		^self >= min and: [self <= max]
+	}
+
+	method min: aMagnitude
+	{
+		^self < aMagnitude ifTrue: [self] ifFalse: [aMagnitude]
+	}
+
+	method max: aMagnitude
+	{
+		^self > aMagnitude ifTrue: [self] ifFalse: [aMagnitude]
+	}
 }
 
 class Association(Magnitude)
@@ -45,59 +64,17 @@ class Association(Magnitude)
 
 class(#limited) Character(Magnitude)
 {
-##	method(#primitive,#class) fromCode: code.
-##	method(#primitive) toCode.
+##	method(#primitive,#class) codePoint: code.
+##	method(#primitive) codePoint.
 
+	method asCharacter { ^self }
+	method(#primitive) asError.
 	method(#primitive) asInteger.
 
-	method = aCharacter
-	{
-		<primitive: #Character_eq>
-		self primitiveFailed.
-	}
-
-	method ~= char
-	{
-		<primitive: #Character_ne>
-		self primitiveFailed.
-	}
-
-	method < char
-	{
-		<primitive: #Character_lt>
-		self primitiveFailed.
-	}
-
-	method > char
-	{
-		<primitive: #Character_gt>
-		self primitiveFailed.
-	}
-
-	method <= char
-	{
-		<primitive: #Character_le>
-		self primitiveFailed.
-	}
-
-	method >= char
-	{
-		<primitive: #Character_ge>
-		self primitiveFailed.
-	}
-	
-	method - char
-	{
-		<primitive: #Character_sub>
-		^(self asInteger - char asInteger) asCharacter
-	}
-	
-	method + char
-	{
-		<primitive: #Character_add>
-		^(self asInteger + char asInteger) asCharacter
-	}
-
+	method(#primitive) < char.
+	method(#primitive) > char.
+	method(#primitive) <= char.
+	method(#primitive) >= char.
 }
 
 class(#limited) Number(Magnitude)
@@ -345,15 +322,12 @@ class(#limited) Integer(Number)
 		count := 0.
 		while (count < self) { aBlock value. count := count + 1 }
 	}
+	
+	method asInteger { ^self }
 }
 
 class(#limited) SmallInteger(Integer)
 {
-	## method basicSize
-	## {
-	## 	^0
-	## }
-
 	method(#primitive) asCharacter.
 	method(#primitive) asError.
 }
