@@ -31,7 +31,7 @@ class(#byte) IP4Address(IPAddress)
 
 		pos := 0.
 		size := str size.
-		
+
 		acc := 0.
 		digits := 0.
 		dots := 0.
@@ -92,10 +92,111 @@ class(#byte) IP6Address(IPAddress)
 	{
 		^self basicNew: 16.
 	}
-	
+
 	method(#class) fromString: str
 	{
+		^self new fromString: str.
+	}
+
+	method __fromString: str
+	{
+		| pos size ch tgpos v1 val curtok saw_xdigit colonpos |
+
+		pos := 0.
+		size := str size.
+
+		## handle leading :: specially 
+		if (size > 0 and: [ (str at: pos) == $: ])
+		{
+			pos := pos + 1.
+			if (pos >= size or: [ (str at: pos) ~~ $:]) { ^Error.Code.EINVAL }.
+		}.
+
+		tgpos := 0.
+		curtok := pos.
+		val := 0.
+		saw_xdigit := false.
+		colonpos := -1.
+
+		while (pos < size)
+		{
+			ch := str at: pos.
+			pos := pos + 1.
+
+			v1 := ch digitValue.
+			if (v1 >= 0 and: [v1 <= 15])
+			{
+				val := (val bitShift: 4) bitOr: v1.
+				if (val > 16rFFFF) { ^Error.Code.EINVAL }.
+				saw_xdigit := true.
+				continue.
+			}.
+
+			if (ch == $:)
+			{
+				curtok := pos.
+				if (saw_xdigit not)
+				{
+					## no multiple double colons are allowed
+					if (colonpos >= 0) { ^Error.Code.EINVAL }. 
+
+					## capture the target position when the double colons 
+					## are encountered.
+					colonpos := tgpos.
+					continue.
+				}
+				elsif (pos >= size)
+				{
+					## a colon can't be the last character
+					^Error.Code.EINVAL
+				}.
+
+				self basicAt: tgpos put: ((val bitShift: -8) bitAnd: 16rFF).
+				tgpos := tgpos + 1.
+				self basicAt: tgpos put: (val bitAnd: 16rFF).
+				tgpos := tgpos + 1.
+
+				saw_xdigit := false.
+				val := 0.
+				continue.
+			}.
+
+			(*if (ch == $. and: [])
+			{
+				saw_xdigit := true.
+				break.
+			}.*)
+
+
+			## invalid character in the address
+			^Error.Code.EINVAL.
+		}.
+
+		if (saw_xdigit)
+		{
+			self basicAt: tgpos put: ((val bitShift: -8) bitAnd: 16rFF).
+			tgpos := tgpos + 1.
+			self basicAt: tgpos put: (val bitAnd: 16rFF).
+			tgpos := tgpos + 1.
+		}.
+
+		if (colonpos >= 0)
+		{
+			/* double colon position */
+			self basicMoveFrom: colonpos length: 5 to: ((self basicSize) - colonpos).
+		}.
+
+tgpos dump.
+self basicSize dump.
+		if (tgpos ~~ (self basicSize)) { 'DDDDDDDDDDDd' dump. ^Error.Code.EINVAL }.
+	}
 	
+	method fromString: str
+	{
+		if ((self __fromString: str) isError)
+		{
+			Exception signal: ('invalid IPv6 address ' & str).
+		}
 	}
 }
 
@@ -265,6 +366,10 @@ class MyObject(Object)
 
 
 s := IP4Address fromString: '192.168.123.232'.
+s dump.
+s basicSize dump.
+
+s := IP6Address fromString: 'fe80::c225:e9ff:fe47:b1b6'.
 s dump.
 s basicSize dump.
 ##s := IP6Address new.

@@ -299,7 +299,7 @@ moo_pfrc_t moo_pf_basic_at (moo_t* moo, moo_ooi_t nargs)
 	if (idx >= MOO_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
-		moo_seterrbfmt (moo, MOO_ERANGE, "position out of bound - %O", pos);
+		moo_seterrbfmt (moo, MOO_ERANGE, "position out of bound - %zu", idx);
 		return MOO_PF_FAILURE;
 	}
 
@@ -353,7 +353,6 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 
 	if (MOO_OBJ_GET_FLAGS_RDONLY(rcv))
 	{
-/* TODO: better error handling */
 		moo_seterrbfmt (moo, MOO_EPERM, "now allowed to change a read-only object - %O", rcv);
 		return MOO_PF_FAILURE;
 	}
@@ -370,7 +369,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 	if (idx >= MOO_OBJ_GET_SIZE(rcv))
 	{
 		/* index out of range */
-		moo_seterrbfmt (moo, MOO_ERANGE, "position out of bound - %O", pos);
+		moo_seterrbfmt (moo, MOO_ERANGE, "position out of bound - %zu", idx);
 		return MOO_PF_FAILURE;
 	}
 
@@ -435,6 +434,106 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+moo_pfrc_t moo_pf_basic_move (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, spos, slen, dpos;
+	moo_oow_t sidx, ssz, didx;
+
+	MOO_ASSERT (moo, nargs == 3);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	if (!MOO_OOP_IS_POINTER(rcv))
+	{
+		/* the receiver is a special numeric object, not a normal pointer */
+		moo_seterrbfmt (moo, MOO_EMSGRCV, "receiver not indexable - %O", rcv);
+		return MOO_PF_FAILURE;
+	}
+
+	if (MOO_OBJ_GET_FLAGS_RDONLY(rcv))
+	{
+		moo_seterrbfmt (moo, MOO_EPERM, "now allowed to change a read-only object - %O", rcv);
+		return MOO_PF_FAILURE;
+	}
+
+	spos = MOO_STACK_GETARG(moo, nargs, 0);
+	slen = MOO_STACK_GETARG(moo, nargs, 1);
+	dpos = MOO_STACK_GETARG(moo, nargs, 2);
+
+	if (moo_inttooow(moo, spos, &sidx) <= 0)
+	{
+		/* negative integer or not integer */
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid source position - %O", spos);
+		return MOO_PF_FAILURE;
+	}
+	if (sidx >= MOO_OBJ_GET_SIZE(rcv))
+	{
+		/* index out of range */
+		moo_seterrbfmt (moo, MOO_ERANGE, "source position out of bound - %zu", sidx);
+		return MOO_PF_FAILURE;
+	}
+
+	if (moo_inttooow(moo, slen, &ssz) <= 0)
+	{
+		/* negative integer or not integer */
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid source length - %O", slen);
+		return MOO_PF_FAILURE;
+	}
+	
+	/* TODO: adjust ssz */
+
+	if (moo_inttooow(moo, dpos, &didx) <= 0)
+	{
+		/* negative integer or not integer */
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid destination position - %O", dpos);
+		return MOO_PF_FAILURE;
+	}
+	if (didx >= MOO_OBJ_GET_SIZE(rcv))
+	{
+		/* index out of range */
+		moo_seterrbfmt (moo, MOO_ERANGE, "destination position out of bound - %zu", didx);
+		return MOO_PF_FAILURE;
+	}
+
+	switch (MOO_OBJ_GET_FLAGS_TYPE(rcv))
+	{
+		case MOO_OBJ_TYPE_BYTE:
+			MOO_MEMMOVE (&((moo_oop_byte_t)rcv)->slot[didx],
+			             &((moo_oop_byte_t)rcv)->slot[sidx],
+			             ssz * MOO_SIZEOF(((moo_oop_byte_t)rcv)->slot[0]));
+			break;
+
+		case MOO_OBJ_TYPE_CHAR:
+			MOO_MEMMOVE (&((moo_oop_char_t)rcv)->slot[didx],
+			             &((moo_oop_char_t)rcv)->slot[sidx],
+			             ssz * MOO_SIZEOF(((moo_oop_char_t)rcv)->slot[0]));
+			break;
+
+		case MOO_OBJ_TYPE_HALFWORD:
+			MOO_MEMMOVE (&((moo_oop_halfword_t)rcv)->slot[didx],
+			             &((moo_oop_halfword_t)rcv)->slot[sidx],
+			             ssz * MOO_SIZEOF(((moo_oop_halfword_t)rcv)->slot[0]));
+			break;
+
+		case MOO_OBJ_TYPE_WORD:
+			MOO_MEMMOVE (&((moo_oop_word_t)rcv)->slot[didx],
+			             &((moo_oop_word_t)rcv)->slot[sidx],
+			             ssz * MOO_SIZEOF(((moo_oop_word_t)rcv)->slot[0]));
+			break;
+
+		case MOO_OBJ_TYPE_OOP:
+			MOO_MEMMOVE (&((moo_oop_oop_t)rcv)->slot[didx],
+			             &((moo_oop_oop_t)rcv)->slot[sidx],
+			             ssz * MOO_SIZEOF(((moo_oop_oop_t)rcv)->slot[0]));
+			break;
+
+		default:
+			moo_seterrnum (moo, MOO_EINTERN);
+			return MOO_PF_HARD_FAILURE;
+	}
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
 
 /* -------------------------------------------------------------------------------- 
  * BASIC QUERY

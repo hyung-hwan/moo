@@ -75,6 +75,32 @@ class(#limited) Character(Magnitude)
 	method(#primitive) > char.
 	method(#primitive) <= char.
 	method(#primitive) >= char.
+
+	method digitValue: anInteger
+	{
+		^'0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ' at: anInteger
+	}
+
+	method digitValue
+	{
+		##<primitive: #Character_digitValue>
+
+		if (self >= $0 and: [self <= $9])
+		{
+			^self asInteger - $0 asInteger
+		}
+		elsif (self >= $A and: [self <= $Z])
+		{
+			^self asInteger - $A asInteger + 10
+		}
+		elsif (self >= $a and: [self <= $z])
+		{
+			^self asInteger - $a asInteger + 10
+		}.
+
+		##Exception signal: 'not a digit character'.
+		^-1
+	}
 }
 
 class(#limited) Number(Magnitude)

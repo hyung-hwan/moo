@@ -100,6 +100,9 @@ extend Apex
 
 	method(#dual,#primitive) basicAt: index.
 	method(#dual,#primitive) basicAt: index put: value.
+	
+	##method(#dual,#primitive) basicMoveFrom: sindex length: length to: dindex.
+	##method(#dual,#primitive) basicCopyFrom: sindex length: length to: dindex.
 
 	(* ------------------------------------------------------------------
 	 * FINALIZATION SUPPORT
