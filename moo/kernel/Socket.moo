@@ -182,7 +182,7 @@ class(#byte) IP6Address(IPAddress)
 
 		if (colonpos >= 0)
 		{
-			/* double colon position */
+			## double colon position 
 			self basicMoveFrom: colonpos length: 5 to: ((self basicSize) - colonpos).
 		}.
 
