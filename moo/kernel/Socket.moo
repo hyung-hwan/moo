@@ -183,14 +183,15 @@ class(#byte) IP6Address(IPAddress)
 		if (colonpos >= 0)
 		{
 			## double colon position 
-			self basicMoveFrom: colonpos length: 5 to: ((self basicSize) - colonpos).
+			self basicShiftFrom: colonpos to: (colonpos + (self basicSize - tgpos)) count: (tgpos - colonpos).
+			##tgpos := tgpos + (self basicSize - tgpos).
+		}
+		elsif (tgpos ~~ (self basicSize)) 
+		{
+			^Error.Code.EINVAL 
 		}.
-
-tgpos dump.
-self basicSize dump.
-		if (tgpos ~~ (self basicSize)) { 'DDDDDDDDDDDd' dump. ^Error.Code.EINVAL }.
 	}
-	
+
 	method fromString: str
 	{
 		if ((self __fromString: str) isError)
@@ -328,7 +329,7 @@ extend Socket
 		{
 			self.insem := Semaphore new.
 			self.insem signalAction: [:sem | self.inputAction value: self value: true].
-			System addAsyncSemaphore: self.insem;       
+			System addAsyncSemaphore: self.insem.
 		}.
 
 		System signal: self.insem onInput: self.handle.
@@ -357,13 +358,19 @@ extend Socket
 	}
 }
 
-
 class MyObject(Object)
 {
 	method(#class) main
 	{
 		| s conact inact outact |
 
+
+s := ByteArray new: 100.
+s basicFillFrom: 0 with: ($a asInteger) count: 100.
+s basicFillFrom: 50 with: ($b asInteger) count: 50.
+(s basicShiftFrom: 50 to: 94 count: 10) dump.
+s dump.
+##thisProcess terminate.
 
 s := IP4Address fromString: '192.168.123.232'.
 s dump.

@@ -434,9 +434,118 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-moo_pfrc_t moo_pf_basic_move (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_basic_fill (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_oop_t rcv, spos, slen, dpos;
+	moo_oop_t rcv, spos, dval, slen;
+	moo_oow_t sidx, ssz, maxlen, end, i;
+
+	MOO_ASSERT (moo, nargs == 3);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	if (!MOO_OOP_IS_POINTER(rcv))
+	{
+		/* the receiver is a special numeric object, not a normal pointer */
+		moo_seterrbfmt (moo, MOO_EMSGRCV, "receiver not indexable - %O", rcv);
+		return MOO_PF_FAILURE;
+	}
+
+	if (MOO_OBJ_GET_FLAGS_RDONLY(rcv))
+	{
+		moo_seterrbfmt (moo, MOO_EPERM, "now allowed to change a read-only object - %O", rcv);
+		return MOO_PF_FAILURE;
+	}
+
+	spos = MOO_STACK_GETARG(moo, nargs, 0);
+	dval = MOO_STACK_GETARG(moo, nargs, 1);
+	slen = MOO_STACK_GETARG(moo, nargs, 2);
+
+	if (moo_inttooow(moo, spos, &sidx) <= 0)
+	{
+		/* negative integer or not integer */
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid source position - %O", spos);
+		return MOO_PF_FAILURE;
+	}
+	if (sidx >= MOO_OBJ_GET_SIZE(rcv))
+	{
+		/* index out of range */
+		moo_seterrbfmt (moo, MOO_ERANGE, "source position out of bound - %zu", sidx);
+		return MOO_PF_FAILURE;
+	}
+
+	if (moo_inttooow(moo, slen, &ssz) <= 0)
+	{
+		/* negative integer or not integer */
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid fill count - %O", slen);
+		return MOO_PF_FAILURE;
+	}
+
+	maxlen = MOO_OBJ_GET_SIZE(rcv) - sidx;
+	if (ssz > maxlen) ssz = maxlen;
+	end = sidx + ssz;
+
+	/* TODO: do i need to perform a range check? */
+	switch (MOO_OBJ_GET_FLAGS_TYPE(rcv))
+	{
+		case MOO_OBJ_TYPE_BYTE:
+			if (!MOO_OOP_IS_SMOOI(dval)) goto invalid_fill_value;
+			for (i = sidx; i < end; i++) ((moo_oop_byte_t)rcv)->slot[i] = MOO_OOP_TO_SMOOI(dval);
+			break;
+
+		case MOO_OBJ_TYPE_CHAR:
+			if (!MOO_OOP_IS_CHAR(dval)) goto invalid_fill_value;
+			for (i = sidx; i < end; i++) ((moo_oop_char_t)rcv)->slot[i] = MOO_OOP_TO_CHAR(dval);
+			break;
+
+		case MOO_OBJ_TYPE_HALFWORD:
+			if (!MOO_OOP_IS_SMOOI(dval)) goto invalid_fill_value;
+			for (i = sidx; i < end; i++) ((moo_oop_halfword_t)rcv)->slot[i] = MOO_OOP_TO_SMOOI(dval);
+			break;
+
+		case MOO_OBJ_TYPE_WORD:
+		{
+			moo_oow_t dw;
+			if (moo_inttooow(moo, dval, &dw) <= 0) goto invalid_fill_value;
+			for (i = sidx; i < end; i++) ((moo_oop_word_t)rcv)->slot[i] = dw;
+			break;
+		}
+
+		case MOO_OBJ_TYPE_OOP:
+			for (i = sidx; i < end; i++) ((moo_oop_oop_t)rcv)->slot[i] = dval;
+			break;
+
+		default:
+			moo_seterrnum (moo, MOO_EINTERN);
+			return MOO_PF_HARD_FAILURE;
+	}
+
+
+#if defined(MOO_LIMIT_OBJ_SIZE)
+	MOO_ASSERT (moo, ssz <= MOO_SMOOI_MAX);
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(ssz));
+#else
+	if (ssz <= MOO_SMOOI_MAX)
+	{
+		MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(ssz));
+	}
+	else
+	{
+		moo_oop_t v;
+		v = moo_oowtoint (moo, ssz);
+		if (!v) MOO_PF_FAILURE;
+		MOO_STACK_SETRET (moo, nargs, v);
+	}
+#endif
+
+	return MOO_PF_SUCCESS;
+
+invalid_fill_value:
+	moo_seterrbfmt (moo, MOO_EINVAL, "invalid fill value - %O", dval);
+	return MOO_PF_FAILURE;
+}
+
+moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, spos, dpos, slen;
 	moo_oow_t sidx, ssz, didx;
 
 	MOO_ASSERT (moo, nargs == 3);
@@ -456,8 +565,8 @@ moo_pfrc_t moo_pf_basic_move (moo_t* moo, moo_ooi_t nargs)
 	}
 
 	spos = MOO_STACK_GETARG(moo, nargs, 0);
-	slen = MOO_STACK_GETARG(moo, nargs, 1);
-	dpos = MOO_STACK_GETARG(moo, nargs, 2);
+	dpos = MOO_STACK_GETARG(moo, nargs, 1);
+	slen = MOO_STACK_GETARG(moo, nargs, 2);
 
 	if (moo_inttooow(moo, spos, &sidx) <= 0)
 	{
@@ -472,15 +581,6 @@ moo_pfrc_t moo_pf_basic_move (moo_t* moo, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	if (moo_inttooow(moo, slen, &ssz) <= 0)
-	{
-		/* negative integer or not integer */
-		moo_seterrbfmt (moo, MOO_EINVAL, "invalid source length - %O", slen);
-		return MOO_PF_FAILURE;
-	}
-	
-	/* TODO: adjust ssz */
-
 	if (moo_inttooow(moo, dpos, &didx) <= 0)
 	{
 		/* negative integer or not integer */
@@ -494,44 +594,127 @@ moo_pfrc_t moo_pf_basic_move (moo_t* moo, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	switch (MOO_OBJ_GET_FLAGS_TYPE(rcv))
+	if (moo_inttooow(moo, slen, &ssz) <= 0)
 	{
-		case MOO_OBJ_TYPE_BYTE:
-			MOO_MEMMOVE (&((moo_oop_byte_t)rcv)->slot[didx],
-			             &((moo_oop_byte_t)rcv)->slot[sidx],
-			             ssz * MOO_SIZEOF(((moo_oop_byte_t)rcv)->slot[0]));
-			break;
-
-		case MOO_OBJ_TYPE_CHAR:
-			MOO_MEMMOVE (&((moo_oop_char_t)rcv)->slot[didx],
-			             &((moo_oop_char_t)rcv)->slot[sidx],
-			             ssz * MOO_SIZEOF(((moo_oop_char_t)rcv)->slot[0]));
-			break;
-
-		case MOO_OBJ_TYPE_HALFWORD:
-			MOO_MEMMOVE (&((moo_oop_halfword_t)rcv)->slot[didx],
-			             &((moo_oop_halfword_t)rcv)->slot[sidx],
-			             ssz * MOO_SIZEOF(((moo_oop_halfword_t)rcv)->slot[0]));
-			break;
-
-		case MOO_OBJ_TYPE_WORD:
-			MOO_MEMMOVE (&((moo_oop_word_t)rcv)->slot[didx],
-			             &((moo_oop_word_t)rcv)->slot[sidx],
-			             ssz * MOO_SIZEOF(((moo_oop_word_t)rcv)->slot[0]));
-			break;
-
-		case MOO_OBJ_TYPE_OOP:
-			MOO_MEMMOVE (&((moo_oop_oop_t)rcv)->slot[didx],
-			             &((moo_oop_oop_t)rcv)->slot[sidx],
-			             ssz * MOO_SIZEOF(((moo_oop_oop_t)rcv)->slot[0]));
-			break;
-
-		default:
-			moo_seterrnum (moo, MOO_EINTERN);
-			return MOO_PF_HARD_FAILURE;
+		/* negative integer or not integer */
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid shift count - %O", slen);
+		return MOO_PF_FAILURE;
 	}
 
-	MOO_STACK_SETRETTORCV (moo, nargs);
+	if (sidx != didx && ssz > 0)
+	{
+		moo_oow_t maxlen;
+
+		maxlen = MOO_OBJ_GET_SIZE(rcv) - didx;
+		if (ssz > maxlen) ssz = maxlen;
+
+		switch (MOO_OBJ_GET_FLAGS_TYPE(rcv))
+		{
+			case MOO_OBJ_TYPE_BYTE:
+				MOO_MEMMOVE (&((moo_oop_byte_t)rcv)->slot[didx],
+				             &((moo_oop_byte_t)rcv)->slot[sidx],
+				             ssz * MOO_SIZEOF(((moo_oop_byte_t)rcv)->slot[0]));
+				
+				if (didx > sidx)
+				{
+					MOO_MEMSET (&((moo_oop_byte_t)rcv)->slot[sidx], 0, 
+					            (didx - sidx) * MOO_SIZEOF(((moo_oop_byte_t)rcv)->slot[0]));
+				}
+				else
+				{
+					MOO_MEMSET (&((moo_oop_byte_t)rcv)->slot[didx + ssz - 1], 0, 
+					            (sidx - didx) * MOO_SIZEOF(((moo_oop_byte_t)rcv)->slot[0]));
+				}
+				break;
+
+			case MOO_OBJ_TYPE_CHAR:
+				MOO_MEMMOVE (&((moo_oop_char_t)rcv)->slot[didx],
+				             &((moo_oop_char_t)rcv)->slot[sidx],
+				             ssz * MOO_SIZEOF(((moo_oop_char_t)rcv)->slot[0]));
+
+				if (didx > sidx)
+				{
+					MOO_MEMSET (&((moo_oop_char_t)rcv)->slot[sidx], 0, 
+					            (didx - sidx) * MOO_SIZEOF(((moo_oop_char_t)rcv)->slot[0]));
+				}
+				else
+				{
+					MOO_MEMSET (&((moo_oop_char_t)rcv)->slot[didx + ssz - 1], 0, 
+					            (sidx - didx) * MOO_SIZEOF(((moo_oop_char_t)rcv)->slot[0]));
+				}
+				break;
+
+			case MOO_OBJ_TYPE_HALFWORD:
+				MOO_MEMMOVE (&((moo_oop_halfword_t)rcv)->slot[didx],
+				             &((moo_oop_halfword_t)rcv)->slot[sidx],
+				             ssz * MOO_SIZEOF(((moo_oop_halfword_t)rcv)->slot[0]));
+
+				if (didx > sidx)
+				{
+					MOO_MEMSET (&((moo_oop_halfword_t)rcv)->slot[sidx], 0, 
+					            (didx - sidx) * MOO_SIZEOF(((moo_oop_halfword_t)rcv)->slot[0]));
+				}
+				else
+				{
+					MOO_MEMSET (&((moo_oop_halfword_t)rcv)->slot[didx + ssz - 1], 0, 
+					            (sidx - didx) * MOO_SIZEOF(((moo_oop_halfword_t)rcv)->slot[0]));
+				}
+				break;
+
+			case MOO_OBJ_TYPE_WORD:
+				MOO_MEMMOVE (&((moo_oop_word_t)rcv)->slot[didx],
+				             &((moo_oop_word_t)rcv)->slot[sidx],
+				             ssz * MOO_SIZEOF(((moo_oop_word_t)rcv)->slot[0]));
+
+				if (didx > sidx)
+				{
+					MOO_MEMSET (&((moo_oop_word_t)rcv)->slot[sidx], 0, 
+					            (didx - sidx) * MOO_SIZEOF(((moo_oop_word_t)rcv)->slot[0]));
+				}
+				else
+				{
+					MOO_MEMSET (&((moo_oop_word_t)rcv)->slot[didx + ssz - 1], 0, 
+					            (sidx - didx) * MOO_SIZEOF(((moo_oop_word_t)rcv)->slot[0]));
+				}
+				break;
+
+			case MOO_OBJ_TYPE_OOP:
+				MOO_MEMMOVE (&((moo_oop_oop_t)rcv)->slot[didx],
+				             &((moo_oop_oop_t)rcv)->slot[sidx],
+				             ssz * MOO_SIZEOF(((moo_oop_oop_t)rcv)->slot[0]));
+
+				if (didx > sidx)
+				{
+					while (sidx < didx) ((moo_oop_oop_t)rcv)->slot[sidx++] = moo->_nil;
+				}
+				else
+				{
+					while (didx > sidx) ((moo_oop_oop_t)rcv)->slot[(didx++) + ssz] = moo->_nil;
+				}
+				break;
+
+			default:
+				moo_seterrnum (moo, MOO_EINTERN);
+				return MOO_PF_HARD_FAILURE;
+		}
+	}
+
+#if defined(MOO_LIMIT_OBJ_SIZE)
+	MOO_ASSERT (moo, ssz <= MOO_SMOOI_MAX);
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(ssz));
+#else
+	if (ssz <= MOO_SMOOI_MAX)
+	{
+		MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(ssz));
+	}
+	else
+	{
+		moo_oop_t v;
+		v = moo_oowtoint (moo, ssz);
+		if (!v) MOO_PF_FAILURE;
+		MOO_STACK_SETRET (moo, nargs, v);
+	}
+#endif
 	return MOO_PF_SUCCESS;
 }
 

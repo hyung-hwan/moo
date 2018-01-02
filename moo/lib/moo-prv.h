@@ -1324,6 +1324,8 @@ moo_pfrc_t moo_pf_class (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_basic_size (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_basic_at (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_basic_fill (moo_t* moo, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_ooi_t nargs);
 
 moo_pfrc_t moo_pf_is_kind_of (moo_t* moo, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_responds_to (moo_t* moo, moo_ooi_t nargs);
