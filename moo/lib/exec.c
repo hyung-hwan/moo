@@ -3324,9 +3324,6 @@ static moo_pfrc_t pf_system_log (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-
-
-
 #define MA MOO_TYPE_MAX(moo_oow_t)
 struct pf_t
 {
@@ -3337,7 +3334,6 @@ typedef struct pf_t pf_t;
 
 static pf_t pftab[] =
 {
-	
 	{ "Apex_=",                                { moo_pf_equal,                            1, 1 } },
 	{ "Apex_==",                               { moo_pf_identical,                        1, 1 } },
 	{ "Apex_addToBeFinalized",                 { pf_add_to_be_finalized,                  0, 0 } },
