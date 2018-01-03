@@ -100,7 +100,7 @@ class(#byte) IP6Address(IPAddress)
 
 	method __fromString: str
 	{
-		| pos size mysize ch tgpos v1 val curtok saw_xdigit colonpos |
+		| pos size mysize ch tgpos v1 val curseg saw_xdigit colonpos |
 
 		pos := 0.
 		size := str size.
@@ -114,7 +114,7 @@ class(#byte) IP6Address(IPAddress)
 		}.
 
 		tgpos := 0.
-		curtok := pos.
+		curseg := pos.
 		val := 0.
 		saw_xdigit := false.
 		colonpos := -1.
@@ -135,7 +135,7 @@ class(#byte) IP6Address(IPAddress)
 
 			if (ch == $:)
 			{
-				curtok := pos.
+				curseg := pos.
 				if (saw_xdigit not)
 				{
 					## no multiple double colons are allowed
@@ -162,13 +162,13 @@ class(#byte) IP6Address(IPAddress)
 				continue.
 			}.
 
-			if (ch == $. and: [tgpos + 4 <= mysize]
+			if (ch == $. and: [tgpos + 4 <= mysize])
 			{
+				IP4Address __fromString: (str copyFrom: curseg).
 				tgpos := tgpos + 4.
 				saw_xdigit := false.
 				break.
 			}.
-
 
 			## invalid character in the address
 			^Error.Code.EINVAL.
