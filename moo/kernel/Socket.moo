@@ -100,13 +100,14 @@ class(#byte) IP6Address(IPAddress)
 
 	method __fromString: str
 	{
-		| pos size ch tgpos v1 val curtok saw_xdigit colonpos |
+		| pos size mysize ch tgpos v1 val curtok saw_xdigit colonpos |
 
 		pos := 0.
 		size := str size.
+		mysize := self basicSize.
 
 		## handle leading :: specially 
-		if (size > 0 and: [ (str at: pos) == $: ])
+		if (size > 0 and: [(str at: pos) == $:])
 		{
 			pos := pos + 1.
 			if (pos >= size or: [ (str at: pos) ~~ $:]) { ^Error.Code.EINVAL }.
@@ -161,11 +162,12 @@ class(#byte) IP6Address(IPAddress)
 				continue.
 			}.
 
-			(*if (ch == $. and: [])
+			if (ch == $. and: [tgpos + 4 <= mysize]
 			{
-				saw_xdigit := true.
+				tgpos := tgpos + 4.
+				saw_xdigit := false.
 				break.
-			}.*)
+			}.
 
 
 			## invalid character in the address
@@ -183,10 +185,10 @@ class(#byte) IP6Address(IPAddress)
 		if (colonpos >= 0)
 		{
 			## double colon position 
-			self basicShiftFrom: colonpos to: (colonpos + (self basicSize - tgpos)) count: (tgpos - colonpos).
-			##tgpos := tgpos + (self basicSize - tgpos).
+			self basicShiftFrom: colonpos to: (colonpos + (mysize - tgpos)) count: (tgpos - colonpos).
+			##tgpos := tgpos + (mysize - tgpos).
 		}
-		elsif (tgpos ~~ (self basicSize)) 
+		elsif (tgpos ~~ mysize) 
 		{
 			^Error.Code.EINVAL 
 		}.
