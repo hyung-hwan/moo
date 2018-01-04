@@ -104,10 +104,12 @@ static int _equal_objects (moo_t* moo, moo_oop_t rcv, moo_oop_t arg)
 				case MOO_OBJ_TYPE_CHAR:
 				case MOO_OBJ_TYPE_HALFWORD:
 				case MOO_OBJ_TYPE_WORD:
-					return (MOO_MEMCMP (MOO_OBJ_GET_BYTE_SLOT(rcv), MOO_OBJ_GET_BYTE_SLOT(arg), MOO_BYTESOF(moo,rcv)) == 0)? 1: 0;
+					return (MOO_MEMCMP(MOO_OBJ_GET_BYTE_SLOT(rcv), MOO_OBJ_GET_BYTE_SLOT(arg), MOO_BYTESOF(moo,rcv)) == 0)? 1: 0;
 
 				default:
 				{
+					moo_oow_t i, size;
+
 					if (rcv == moo->_nil) return arg == moo->_nil? 1: 0;
 					if (rcv == moo->_true) return arg == moo->_true? 1: 0;
 					if (rcv == moo->_false) return arg == moo->_false? 1: 0;
@@ -119,7 +121,21 @@ static int _equal_objects (moo_t* moo, moo_oop_t rcv, moo_oop_t arg)
 					moo_seterrbfmt (moo, MOO_ENOIMPL, "no builtin comparison implemented for %O and %O", rcv, arg); /* TODO: better error code */
 					return -1;
 				#else
-					for (i = 0; i < MOO_OBJ_GET_SIZE(rcv); i++)
+
+					if (moo->_process && MOO_OBJ_GET_CLASS(rcv) == moo->_process)
+					{
+						/* the stack in a process object doesn't need to be 
+						 * scanned in full. the slots above the stack pointer 
+						 * are garbages. */
+						size = MOO_PROCESS_NAMED_INSTVARS +
+							  MOO_OOP_TO_SMOOI(((moo_oop_process_t)rcv)->sp) + 1;
+						MOO_ASSERT (moo, size <= MOO_OBJ_GET_SIZE(rcv));
+					}
+					else
+					{
+						size = MOO_OBJ_GET_SIZE(rcv);
+					}
+					for (i = 0; i < size; i++)
 					{
 						/* TODO: remove recursion */
 
@@ -127,6 +143,8 @@ static int _equal_objects (moo_t* moo, moo_oop_t rcv, moo_oop_t arg)
 						 * this primitive method doesn't honor it. */
 						if (!_equal_objects(moo, ((moo_oop_oop_t)rcv)->slot[i], ((moo_oop_oop_t)arg)->slot[i])) return 0;
 					}
+
+					/* the default implementation doesn't take the trailer space into account */
 					return 1;
 				#endif
 				}
