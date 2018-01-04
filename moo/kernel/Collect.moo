@@ -104,11 +104,17 @@ class(#pointer) Array(Collection)
 		}.
 	}
 
+	method copyFrom: start
+	{
+		| newsz |
+		newsz := (self size) - start.
+		^(self class new: newsz) copy: self from: start to: ((self size) - 1).
+	}
+
 	method copyFrom: start to: end
 	{
 		## returns a copy of the receiver starting from the element 
 		## at index 'start' to the element at index 'end'.
-
 		| newsz |
 		newsz := end - start + 1.
 		^(self class new: newsz) copy: self from: start to: end

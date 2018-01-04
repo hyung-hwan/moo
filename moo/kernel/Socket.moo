@@ -25,7 +25,7 @@ class(#byte) IP4Address(IPAddress)
 		^self new fromString: str.
 	}
 	
-	method __fromString: str
+	method __fromString: str offset: offset
 	{
 		| dots digits pos size c acc |
 
@@ -41,7 +41,7 @@ class(#byte) IP4Address(IPAddress)
 			if (pos >= size)
 			{
 				if (dots < 3 or: [digits == 0]) { ^Error.Code.EINVAL }.
-				self basicAt: dots put: acc.
+				self basicAt: (dots + offset) put: acc.
 				break.
 			}.
 			
@@ -57,7 +57,7 @@ class(#byte) IP4Address(IPAddress)
 			elsif (c = $.)
 			{
 				if (dots >= 3 or: [digits == 0]) { ^Error.Code.EINVAL }.
-				self basicAt: dots put: acc.
+				self basicAt: (dots + offset) put: acc.
 				dots := dots + 1.
 				acc := 0.
 				digits := 0.
@@ -79,24 +79,24 @@ class(#byte) IP4Address(IPAddress)
 	
 	method fromString: str
 	{
-		if ((self __fromString: str) isError)
+		if ((self __fromString: str offset: 0) isError)
 		{
 			Exception signal: ('invalid IPv4 address ' & str).
 		}
 	}
 }
 
-class(#byte) IP6Address(IPAddress)
+class(#byte) IP6Address(IP4Address)
 {
 	method(#class) new
 	{
 		^self basicNew: 16.
 	}
 
-	method(#class) fromString: str
-	{
-		^self new fromString: str.
-	}
+	##method(#class) fromString: str
+	##{
+	##	^self new fromString: str.
+	##}
 
 	method __fromString: str
 	{
@@ -164,7 +164,7 @@ class(#byte) IP6Address(IPAddress)
 
 			if (ch == $. and: [tgpos + 4 <= mysize])
 			{
-				IP4Address __fromString: (str copyFrom: curseg).
+				if ((super __fromString: (str copyFrom: curseg) offset: tgpos) isError) { ^Error.Code.EINVAL }.
 				tgpos := tgpos + 4.
 				saw_xdigit := false.
 				break.
@@ -185,6 +185,9 @@ class(#byte) IP6Address(IPAddress)
 		if (colonpos >= 0)
 		{
 			## double colon position 
+tgpos dump.
+colonpos dump.
+'--------' dump.
 			self basicShiftFrom: colonpos to: (colonpos + (mysize - tgpos)) count: (tgpos - colonpos).
 			##tgpos := tgpos + (mysize - tgpos).
 		}
@@ -375,6 +378,13 @@ s dump.
 ##thisProcess terminate.
 
 s := IP4Address fromString: '192.168.123.232'.
+s dump.
+s basicSize dump.
+
+##s := IP6Address fromString: 'fe80::c225:e9ff:fe47:99.2.3.4'.
+##s := IP6Address fromString: '::99.12.34.54'.
+s := IP6Address fromString: '::FFFF:0:0'.
+s := IP6Address fromString: 'fe80::'.
 s dump.
 s basicSize dump.
 

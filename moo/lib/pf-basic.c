@@ -465,17 +465,24 @@ moo_pfrc_t moo_pf_basic_fill (moo_t* moo, moo_ooi_t nargs)
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid source position - %O", spos);
 		return MOO_PF_FAILURE;
 	}
-	if (sidx >= MOO_OBJ_GET_SIZE(rcv))
-	{
-		/* index out of range */
-		moo_seterrbfmt (moo, MOO_ERANGE, "source position out of bound - %zu", sidx);
-		return MOO_PF_FAILURE;
-	}
-
 	if (moo_inttooow(moo, slen, &ssz) <= 0)
 	{
 		/* negative integer or not integer */
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid fill count - %O", slen);
+		return MOO_PF_FAILURE;
+	}
+
+	if (ssz <= 0) 
+	{
+		/* no filling is performed. also no validation about the range of
+		 * source position is performed */
+		goto done;
+	}
+
+	if (sidx >= MOO_OBJ_GET_SIZE(rcv))
+	{
+		/* index out of range */
+		moo_seterrbfmt (moo, MOO_ERANGE, "source position out of bound - %zu", sidx);
 		return MOO_PF_FAILURE;
 	}
 
@@ -519,6 +526,7 @@ moo_pfrc_t moo_pf_basic_fill (moo_t* moo, moo_ooi_t nargs)
 	}
 
 
+done:
 #if defined(MOO_LIMIT_OBJ_SIZE)
 	MOO_ASSERT (moo, ssz <= MOO_SMOOI_MAX);
 	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(ssz));
@@ -574,17 +582,30 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_ooi_t nargs)
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid source position - %O", spos);
 		return MOO_PF_FAILURE;
 	}
-	if (sidx >= MOO_OBJ_GET_SIZE(rcv))
-	{
-		/* index out of range */
-		moo_seterrbfmt (moo, MOO_ERANGE, "source position out of bound - %zu", sidx);
-		return MOO_PF_FAILURE;
-	}
-
 	if (moo_inttooow(moo, dpos, &didx) <= 0)
 	{
 		/* negative integer or not integer */
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid destination position - %O", dpos);
+		return MOO_PF_FAILURE;
+	}
+	if (moo_inttooow(moo, slen, &ssz) <= 0)
+	{
+		/* negative integer or not integer */
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid shift count - %O", slen);
+		return MOO_PF_FAILURE;
+	}
+
+	if (ssz <= 0) 
+	{
+		/* no shifting is performed. also no validation about the range of
+		 * source position and destionation position is performed */
+		goto done; 
+	}
+
+	if (sidx >= MOO_OBJ_GET_SIZE(rcv))
+	{
+		/* index out of range */
+		moo_seterrbfmt (moo, MOO_ERANGE, "source position out of bound - %zu", sidx);
 		return MOO_PF_FAILURE;
 	}
 	if (didx >= MOO_OBJ_GET_SIZE(rcv))
@@ -594,14 +615,7 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	if (moo_inttooow(moo, slen, &ssz) <= 0)
-	{
-		/* negative integer or not integer */
-		moo_seterrbfmt (moo, MOO_EINVAL, "invalid shift count - %O", slen);
-		return MOO_PF_FAILURE;
-	}
-
-	if (sidx != didx && ssz > 0)
+	if (sidx != didx)
 	{
 		moo_oow_t maxlen;
 
@@ -699,6 +713,7 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_ooi_t nargs)
 		}
 	}
 
+done:
 #if defined(MOO_LIMIT_OBJ_SIZE)
 	MOO_ASSERT (moo, ssz <= MOO_SMOOI_MAX);
 	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(ssz));
