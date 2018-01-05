@@ -79,6 +79,7 @@ class MyObject(Object)
 			'wrong class name'
 			'non-pointer class not allowed to inherit a superclass with trailer size set'
 			'not allowed to inherit a #final class'
+			'invalid class type size'
 			'variable declaration not allowed'
 			'modifier expected'
 			'wrong modifier'

@@ -13,23 +13,23 @@ class(#byte) IPAddress(Object)
 ###class(#byte(4)) IP4Address(IPAddress) -> new basicNew always create 4 bytes. size to new: or basicNew: is ignored.
 ###class(#byte(16)) IP6Address(IPAddress)
 
-class(#byte) IP4Address(IPAddress)
+class(#byte(4)) IP4Address(IPAddress)
 {
-	method(#class) new
+	(*method(#class) new
 	{
 		^self basicNew: 4.
-	}
+	}*)
 	
 	method(#class) fromString: str
 	{
 		^self new fromString: str.
 	}
 	
-	method __fromString: str offset: offset
+	method __fromString: str offset: string_offset offset: address_offset
 	{
 		| dots digits pos size c acc |
 
-		pos := 0.
+		pos := string_offset.
 		size := str size.
 
 		acc := 0.
@@ -41,7 +41,7 @@ class(#byte) IP4Address(IPAddress)
 			if (pos >= size)
 			{
 				if (dots < 3 or: [digits == 0]) { ^Error.Code.EINVAL }.
-				self basicAt: (dots + offset) put: acc.
+				self basicAt: (dots + address_offset) put: acc.
 				break.
 			}.
 			
@@ -57,7 +57,7 @@ class(#byte) IP4Address(IPAddress)
 			elsif (c = $.)
 			{
 				if (dots >= 3 or: [digits == 0]) { ^Error.Code.EINVAL }.
-				self basicAt: (dots + offset) put: acc.
+				self basicAt: (dots + address_offset) put: acc.
 				dots := dots + 1.
 				acc := 0.
 				digits := 0.
@@ -79,19 +79,19 @@ class(#byte) IP4Address(IPAddress)
 	
 	method fromString: str
 	{
-		if ((self __fromString: str offset: 0) isError)
+		if ((self __fromString: str offset: 0 offset: 0) isError)
 		{
 			Exception signal: ('invalid IPv4 address ' & str).
 		}
 	}
 }
 
-class(#byte) IP6Address(IP4Address)
+class(#byte(16)) IP6Address(IP4Address)
 {
-	method(#class) new
+	(*method(#class) new
 	{
 		^self basicNew: 16.
-	}
+	}*)
 
 	##method(#class) fromString: str
 	##{
@@ -164,7 +164,8 @@ class(#byte) IP6Address(IP4Address)
 
 			if (ch == $. and: [tgpos + 4 <= mysize])
 			{
-				if ((super __fromString: (str copyFrom: curseg) offset: tgpos) isError) { ^Error.Code.EINVAL }.
+				##if ((super __fromString: (str copyFrom: curseg) offset:0  offset: tgpos) isError) { ^Error.Code.EINVAL }.
+				if ((super __fromString: str offset: curseg offset: tgpos) isError) { ^Error.Code.EINVAL }.
 				tgpos := tgpos + 4.
 				saw_xdigit := false.
 				break.
@@ -185,9 +186,6 @@ class(#byte) IP6Address(IP4Address)
 		if (colonpos >= 0)
 		{
 			## double colon position 
-tgpos dump.
-colonpos dump.
-'--------' dump.
 			self basicShiftFrom: colonpos to: (colonpos + (mysize - tgpos)) count: (tgpos - colonpos).
 			##tgpos := tgpos + (mysize - tgpos).
 		}
@@ -381,10 +379,10 @@ s := IP4Address fromString: '192.168.123.232'.
 s dump.
 s basicSize dump.
 
-##s := IP6Address fromString: 'fe80::c225:e9ff:fe47:99.2.3.4'.
+s := IP6Address fromString: 'fe80::c225:e9ff:fe47:99.2.3.4'.
 ##s := IP6Address fromString: '::99.12.34.54'.
-s := IP6Address fromString: '::FFFF:0:0'.
-s := IP6Address fromString: 'fe80::'.
+##s := IP6Address fromString: '::FFFF:0:0'.
+##s := IP6Address fromString: 'fe80::'.
 s dump.
 s basicSize dump.
 

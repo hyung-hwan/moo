@@ -195,12 +195,12 @@ static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t
 		{
 			if (named_instvar > MOO_MAX_NAMED_INSTVARS)
 			{
-				MOO_DEBUG3 (moo, "Too many named instance variables for a variable-pointer class %O - %zu/%zu\n", _class, named_instvar, (moo_oow_t)MOO_MAX_NAMED_INSTVARS); 
+				moo_seterrbfmt (moo, MOO_EINVAL, "too many named instance variables for a variable-pointer class %O - %zu/%zu", _class, named_instvar, (moo_oow_t)MOO_MAX_NAMED_INSTVARS); 
 				return -1;
 			}
 			if (vlen > MOO_MAX_INDEXED_INSTVARS(named_instvar))
 			{
-				MOO_DEBUG3 (moo, "Too many unnamed instance variables for a variable-pointer class %O - %zu/%zu\n", _class, vlen, (moo_oow_t)MOO_MAX_INDEXED_INSTVARS(named_instvar)); 
+				moo_seterrbfmt (moo, MOO_EINVAL, "too many unnamed instance variables for a variable-pointer class %O - %zu/%zu", _class, vlen, (moo_oow_t)MOO_MAX_INDEXED_INSTVARS(named_instvar)); 
 				return -1;
 			}
 
@@ -209,14 +209,24 @@ static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t
 		else
 		{
 			/* a non-pointer indexed class can't have named instance variables */
+#if 0
 			if (named_instvar > 0) 
 			{
-				MOO_DEBUG1 (moo, "Named instance variables in a variable-nonpointer class %O\n", _class);
+				moo_seterrbfmt (moo, MOO_EINVAL, "named instance variables in a variable-nonpointer class %O", _class);
 				return -1;
 			}
+#else
+			if (named_instvar > 0 && vlen > 0) 
+			{
+				/* disallow the user-defined length if the fixed type size is specified 
+				 * and it's greater than 0, the user-defined length is not allowed */
+				moo_seterrbfmt (moo, MOO_EINVAL, "size %zu specified for fixed-sized(%zu) class %O", vlen, named_instvar, _class); 
+				return -1;
+			}
+#endif
 			if (vlen > MOO_OBJ_SIZE_MAX) 
 			{
-				MOO_DEBUG3 (moo, "Too many unnamed instance variables for a variable-nonpointer class %O - %zu/%zu\n", _class, vlen, (moo_oow_t)MOO_OBJ_SIZE_MAX); 
+				moo_seterrbfmt (moo, MOO_EINVAL, "too many unnamed instance variables for a variable-nonpointer class %O - %zu/%zu", _class, vlen, (moo_oow_t)MOO_OBJ_SIZE_MAX); 
 				return -1;
 			}
 		}
@@ -229,14 +239,14 @@ static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t
 
 		if (vlen > 0)
 		{
-			MOO_DEBUG2 (moo, "Unnamed instance variables for a fixed class %O - %zu\n", _class, vlen); 
+			moo_seterrbfmt (moo, MOO_EINVAL, "unnamed instance variables for a fixed class %O - %zu", _class, vlen); 
 			return -1;
 		}
 		/*vlen = 0;*/ /* vlen is not used */
 
 		if (named_instvar > MOO_MAX_NAMED_INSTVARS) 
 		{
-			MOO_DEBUG3 (moo, "Too many named instance variables for a fixed class %O - %zu/%zu\n", _class, named_instvar, (moo_oow_t)MOO_MAX_NAMED_INSTVARS); 
+			moo_seterrbfmt (moo, MOO_EINVAL, "too many named instance variables for a fixed class %O - %zu/%zu", _class, named_instvar, (moo_oow_t)MOO_MAX_NAMED_INSTVARS); 
 			return -1;
 		}
 		MOO_ASSERT (moo, named_instvar <= MOO_OBJ_SIZE_MAX);
@@ -256,11 +266,7 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 
 	MOO_ASSERT (moo, moo->_nil != MOO_NULL);
 
-	if (decode_spec (moo, _class, vlen, &type, &alloclen) <= -1) 
-	{
-		moo_seterrnum (moo, MOO_EINVAL);
-		return MOO_NULL;
-	}
+	if (decode_spec(moo, _class, vlen, &type, &alloclen) <= -1) return MOO_NULL;
 
 	moo_pushtmp (moo, (moo_oop_t*)&_class); tmp_count++;
 
@@ -348,11 +354,7 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_class_t _class, moo_oo
 
 	MOO_ASSERT (moo, moo->_nil != MOO_NULL);
 
-	if (decode_spec (moo, _class, vlen, &type, &alloclen) <= -1) 
-	{
-		moo_seterrnum (moo, MOO_EINVAL);
-		return MOO_NULL;
-	}
+	if (decode_spec(moo, _class, vlen, &type, &alloclen) <= -1) return MOO_NULL;
 
 	moo_pushtmp (moo, (moo_oop_t*)&_class); tmp_count++;
 

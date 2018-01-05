@@ -6928,7 +6928,18 @@ static int make_defined_class (moo_t* moo)
 	flags = 0;
 	if (moo->c->cls.flags & CLASS_INDEXED) flags |= MOO_CLASS_SPEC_FLAG_INDEXED;
 	if (moo->c->cls.flags & CLASS_IMMUTABLE) flags |= MOO_CLASS_SPEC_FLAG_IMMUTABLE;
-	spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.var[VAR_INSTANCE].total_count, flags, moo->c->cls.indexed_type);
+
+	if (moo->c->cls.type_size > 0)
+	{
+		MOO_ASSERT (moo, moo->c->cls.var[VAR_INSTANCE].total_count == 0);
+		MOO_ASSERT (moo, moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP);
+		spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.type_size, flags, moo->c->cls.indexed_type);
+	}
+	else
+	{
+		MOO_ASSERT (moo, moo->c->cls.type_size == 0);
+		spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.var[VAR_INSTANCE].total_count, flags, moo->c->cls.indexed_type);
+	}
 
 	flags = 0;
 	if (moo->c->cls.flags & CLASS_FINAL) flags |= MOO_CLASS_SELFSPEC_FLAG_FINAL;
@@ -7130,40 +7141,49 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		{
 			do
 			{
+				int permit_type_size = 0;
+				
 				if (is_token_symbol(moo, VOCA_BYTE_S))
 				{
 					/* class(#byte) */
 					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_BYTE) <= -1) return -1;
 					GET_TOKEN (moo);
+					permit_type_size = 1;
 				}
 				else if (is_token_symbol(moo, VOCA_CHARACTER_S))
 				{
 					/* class(#character) */
 					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_CHAR) <= -1) return -1;
 					GET_TOKEN (moo);
+					permit_type_size = 1;
 				}
 				else if (is_token_symbol(moo, VOCA_HALFWORD_S))
 				{
 					/* class(#halfword) */
 					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_HALFWORD) <= -1) return -1;
 					GET_TOKEN (moo);
+					permit_type_size = 1;
 				}
 				else if (is_token_symbol(moo, VOCA_WORD_S))
 				{
 					/* class(#word) */
 					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_WORD) <= -1) return -1;
 					GET_TOKEN (moo);
+					permit_type_size = 1;
+				}
+				else if (is_token_symbol(moo, VOCA_LIWORD_S))
+				{
+					/* class(#liword) -
+					 *   the liword type maps to one of word or halfword.
+					 *   see the definiton of MOO_OBJ_TYPE_LIWORD in moo.h */
+					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_LIWORD) <= -1) return -1;
+					GET_TOKEN (moo);
+					permit_type_size = 1;
 				}
 				else if (is_token_symbol(moo, VOCA_POINTER_S))
 				{
 					/* class(#pointer) */
 					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_OOP) <= -1) return -1;
-					GET_TOKEN (moo);
-				}
-				else if (is_token_symbol(moo, VOCA_LIWORD_S))
-				{
-					/* class(#liword) */
-					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_LIWORD) <= -1) return -1;
 					GET_TOKEN (moo);
 				}
 				else if (is_token_symbol(moo, VOCA_FINAL_S))
@@ -7207,6 +7227,47 @@ static int __compile_class_definition (moo_t* moo, int extend)
 					/* invalid modifier */
 					set_syntax_error (moo, MOO_SYNERR_MODIFIERINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
+				}size 16 specified for fixed-sized(4) class IP6Addre
+
+				if (permit_type_size)
+				{
+					/* class(#byte(20))
+					 * class(#word(3))
+					 * ... */
+					if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
+					{
+						moo_ooi_t tmp;
+
+						GET_TOKEN (moo);
+
+						if (TOKEN_TYPE(moo) != MOO_IOTOK_NUMLIT && TOKEN_TYPE(moo) != MOO_IOTOK_RADNUMLIT)
+						{
+							set_syntax_error (moo, MOO_SYNERR_LITERAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+							return -1;
+						}
+
+						if (string_to_smooi(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT, &tmp) <= -1 || 
+						    tmp < 0 || tmp > MOO_MAX_NAMED_INSTVARS)
+						{
+							/* the class type size has nothing to do with the name instance variables
+							 * in the semantics. but it is stored into the named-instvar bits in the
+							 * spec field of a class. so i check it against MOO_MAX_NAMED_INSTVARS. */
+							set_syntax_error (moo, MOO_SYNERR_CLASSTSIZEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
+							return -1;
+						}
+
+						GET_TOKEN (moo);
+
+						if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
+						{
+							set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+							return -1;
+						}
+						GET_TOKEN (moo);
+
+						moo->c->cls.type_size = tmp;
+					}
+
 				}
 
 				if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA) break; /* hopefully ) */
@@ -7362,7 +7423,6 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			var_info_t var;
 
 			if (get_variable_info (moo, &moo->c->cls.superfqn, &moo->c->cls.superfqn_loc, superfqn_is_dotted, &var) <= -1) return -1;
-
 
 			if (var.type != VAR_GLOBAL) goto unknown_superclass;
 			if (MOO_CLASSOF(moo, var.u.gbl->value) == moo->_class && MOO_OBJ_GET_FLAGS_KERNEL(var.u.gbl->value) != 1)
@@ -7622,6 +7682,7 @@ static int compile_class_definition (moo_t* moo, int extend)
 	/* reset the structure to hold information about a class to be compiled */
 	moo->c->cls.flags = 0;
 	moo->c->cls.indexed_type = MOO_OBJ_TYPE_OOP;
+	moo->c->cls.type_size = 0;
 
 	moo->c->cls.name.len = 0;
 	moo->c->cls.fqn.len = 0;
