@@ -3246,7 +3246,8 @@ if super is variable-nonpointer, no instance variable is allowed.
 */
 			if (dcl_type == VAR_INSTANCE && (moo->c->cls.flags & CLASS_INDEXED) && (moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP))
 			{
-				set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				/* a non-pointer object cannot have instance variables */
+				set_syntax_error (moo, MOO_SYNERR_VARDCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
@@ -3388,7 +3389,8 @@ if super is variable-nonpointer, no instance variable is allowed.
 */
 			if (dcl_type == VAR_INSTANCE && (moo->c->cls.flags & CLASS_INDEXED) && (moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP))
 			{
-				set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				/* a non-pointer object cannot have instance variables */
+				set_syntax_error (moo, MOO_SYNERR_VARDCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
@@ -6932,8 +6934,8 @@ static int make_defined_class (moo_t* moo)
 	if (moo->c->cls.type_size > 0)
 	{
 		/* class(#byte(N)), class(#word(N)), etc */
-/* TODO: ensure that this size is equal to greater than the type size of the parent */
 		MOO_ASSERT (moo, moo->c->cls.var[VAR_INSTANCE].total_count == 0);
+		MOO_ASSERT (moo, moo->c->cls.flags & CLASS_INDEXED);
 		MOO_ASSERT (moo, moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP);
 		spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.type_size, flags, moo->c->cls.indexed_type);
 	}
@@ -7131,6 +7133,8 @@ static int __compile_class_definition (moo_t* moo, int extend)
 	 * NOTE: when extending a class, class-module-import and variable-definition are not allowed.
 	 */
 	moo_oop_association_t ass;
+	moo_ioloc_t type_size_loc;
+
 
 	if (!extend && TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
@@ -7148,28 +7152,28 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				if (is_token_symbol(moo, VOCA_BYTE_S))
 				{
 					/* class(#byte) */
-					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_BYTE) <= -1) return -1;
+					if (_set_class_indexed_type(moo, MOO_OBJ_TYPE_BYTE) <= -1) return -1;
 					GET_TOKEN (moo);
 					permit_type_size = 1;
 				}
 				else if (is_token_symbol(moo, VOCA_CHARACTER_S))
 				{
 					/* class(#character) */
-					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_CHAR) <= -1) return -1;
+					if (_set_class_indexed_type(moo, MOO_OBJ_TYPE_CHAR) <= -1) return -1;
 					GET_TOKEN (moo);
 					permit_type_size = 1;
 				}
 				else if (is_token_symbol(moo, VOCA_HALFWORD_S))
 				{
 					/* class(#halfword) */
-					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_HALFWORD) <= -1) return -1;
+					if (_set_class_indexed_type(moo, MOO_OBJ_TYPE_HALFWORD) <= -1) return -1;
 					GET_TOKEN (moo);
 					permit_type_size = 1;
 				}
 				else if (is_token_symbol(moo, VOCA_WORD_S))
 				{
 					/* class(#word) */
-					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_WORD) <= -1) return -1;
+					if (_set_class_indexed_type(moo, MOO_OBJ_TYPE_WORD) <= -1) return -1;
 					GET_TOKEN (moo);
 					permit_type_size = 1;
 				}
@@ -7178,14 +7182,14 @@ static int __compile_class_definition (moo_t* moo, int extend)
 					/* class(#liword) -
 					 *   the liword type maps to one of word or halfword.
 					 *   see the definiton of MOO_OBJ_TYPE_LIWORD in moo.h */
-					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_LIWORD) <= -1) return -1;
+					if (_set_class_indexed_type(moo, MOO_OBJ_TYPE_LIWORD) <= -1) return -1;
 					GET_TOKEN (moo);
 					permit_type_size = 1;
 				}
 				else if (is_token_symbol(moo, VOCA_POINTER_S))
 				{
 					/* class(#pointer) */
-					if (_set_class_indexed_type (moo, MOO_OBJ_TYPE_OOP) <= -1) return -1;
+					if (_set_class_indexed_type(moo, MOO_OBJ_TYPE_OOP) <= -1) return -1;
 					GET_TOKEN (moo);
 				}
 				else if (is_token_symbol(moo, VOCA_FINAL_S))
@@ -7258,6 +7262,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 							return -1;
 						}
 
+						type_size_loc = moo->c->tok.loc;
 						GET_TOKEN (moo);
 
 						if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
@@ -7423,7 +7428,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		{
 			var_info_t var;
 
-			if (get_variable_info (moo, &moo->c->cls.superfqn, &moo->c->cls.superfqn_loc, superfqn_is_dotted, &var) <= -1) return -1;
+			if (get_variable_info(moo, &moo->c->cls.superfqn, &moo->c->cls.superfqn_loc, superfqn_is_dotted, &var) <= -1) return -1;
 
 			if (var.type != VAR_GLOBAL) goto unknown_superclass;
 			if (MOO_CLASSOF(moo, var.u.gbl->value) == moo->_class && MOO_OBJ_GET_FLAGS_KERNEL(var.u.gbl->value) != 1)
@@ -7517,18 +7522,31 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		/* [NOTE] class variables are not inherited. 
 		 *        so no data about them are not transferred over */
 
-		
 		if ((moo->c->cls.flags & CLASS_INDEXED) && moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP)
 		{
-			/* TODO: do i need to check if the parent class and the current class have the same indexed type? */
+			/* the class defined is a non-pointer object. */
+			if (MOO_CLASS_SPEC_INDEXED_TYPE(spec) == MOO_OBJ_TYPE_OOP && MOO_CLASS_SPEC_NAMED_INSTVARS(spec) > 0)
+			{
+				/* a non-pointer object cannot inherit from a pointer object with instance variables */
+				set_syntax_error (moo, MOO_SYNERR_CLASSTSIZEINVAL, &moo->c->cls.fqn_loc, &moo->c->cls.fqn); /* TODO: enhance error message */
+				return -1;
+				
+			}
+
+			/* NOTE: I don't mandate that the parent and the child be of the same type.
+			 *       Say, for a parent class(#byte(4)), a child can be defined to be
+			 *       class(#word(4)). */
+
 			if (moo->c->cls.type_size < MOO_CLASS_SPEC_NAMED_INSTVARS(spec))
 			{
-				set_syntax_error (moo, MOO_SYNERR_CLASSTSIZEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo)); /* TODO: change error location... */
+				//set_syntax_error (moo, MOO_SYNERR_CLASSTSIZEINVAL, &type_size_loc, MOO_NULL); /* TODO: enhance error message */
+				set_syntax_error (moo, MOO_SYNERR_CLASSTSIZEINVAL, MOO_NULL, MOO_NULL); /* TODO: enhance error message */
 				return -1;
 			}
 		}
 		else
 		{
+			/* the class defined is a pointer object or a variable-pointer object */
 			MOO_ASSERT (moo, moo->c->cls.type_size == 0); /* no such thing as class(#pointer(N)). so it must be 0 */
 			moo->c->cls.var[VAR_INSTANCE].total_count = MOO_CLASS_SPEC_NAMED_INSTVARS(spec);
 		}
@@ -7697,7 +7715,7 @@ static int compile_class_definition (moo_t* moo, int extend)
 
 	/* reset the structure to hold information about a class to be compiled */
 	moo->c->cls.flags = 0;
-	moo->c->cls.indexed_type = MOO_OBJ_TYPE_OOP;
+	moo->c->cls.indexed_type = MOO_OBJ_TYPE_OOP; /* whether indexed or not, it's the pointer type by default */
 	moo->c->cls.type_size = 0;
 
 	moo->c->cls.name.len = 0;

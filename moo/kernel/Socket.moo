@@ -223,6 +223,17 @@ class SocketAddress(Object) from 'sck.addr'
 	}
 }
 
+class X(Object)
+{
+	var tt,yy.
+	
+	method x {
+	self.yy := 9.
+	}
+}
+class(#byte(3)) Y(X)
+{
+}
 
 ##class InetSocketAddress(SocketAddress)
 ##{
@@ -367,6 +378,10 @@ class MyObject(Object)
 	{
 		| s conact inact outact |
 
+s := Y new.
+s x.
+s basicSize dump.
+'****************************' dump.
 
 s := ByteArray new: 100.
 s basicFillFrom: 0 with: ($a asInteger) count: 100.
