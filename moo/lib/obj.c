@@ -191,6 +191,7 @@ static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t
 	{
 		indexed_type = MOO_CLASS_SPEC_INDEXED_TYPE(spec);
 
+#if 0
 		if (indexed_type == MOO_OBJ_TYPE_OOP)
 		{
 			if (named_instvar > MOO_MAX_NAMED_INSTVARS)
@@ -209,27 +210,38 @@ static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t
 		else
 		{
 			/* a non-pointer indexed class can't have named instance variables */
-#if 0
-			if (named_instvar > 0) 
+			if (named_instvar > MOO_) 
 			{
 				moo_seterrbfmt (moo, MOO_EINVAL, "named instance variables in a variable-nonpointer class %O", _class);
 				return -1;
 			}
-#else
-			if (named_instvar > 0 && vlen > 0) 
-			{
-				/* disallow the user-defined length if the fixed type size is specified 
-				 * and it's greater than 0, the user-defined length is not allowed */
-				moo_seterrbfmt (moo, MOO_EINVAL, "size %zu specified for fixed-sized(%zu) class %O", vlen, named_instvar, _class); 
-				return -1;
-			}
-#endif
 			if (vlen > MOO_OBJ_SIZE_MAX) 
 			{
 				moo_seterrbfmt (moo, MOO_EINVAL, "too many unnamed instance variables for a variable-nonpointer class %O - %zu/%zu", _class, vlen, (moo_oow_t)MOO_OBJ_SIZE_MAX); 
 				return -1;
 			}
 		}
+#else
+		/* the size of the fixed area for non-pointer objects are supported.
+		 * the fixed area of a pointer object holds named instance variables 
+		 * and a non-pointer object is facilitated with the fixed area of the size
+		 * specified in the class description like #byte(5), #word(10).
+		 * 
+		 * when it comes to spec decoding, there is no different between a pointer
+		 * object and a non-pointer object */
+		if (named_instvar > MOO_MAX_NAMED_INSTVARS)
+		{
+			moo_seterrbfmt (moo, MOO_EINVAL, "too many fixed fields for a class %O - %zu/%zu", _class, named_instvar, (moo_oow_t)MOO_MAX_NAMED_INSTVARS); 
+			return -1;
+		}
+		if (vlen > MOO_MAX_INDEXED_INSTVARS(named_instvar))
+		{
+			moo_seterrbfmt (moo, MOO_EINVAL, "too many variable fields for a class %O - %zu/%zu", _class, vlen, (moo_oow_t)MOO_MAX_INDEXED_INSTVARS(named_instvar)); 
+			return -1;
+		}
+
+		MOO_ASSERT (moo, named_instvar + vlen <= MOO_OBJ_SIZE_MAX);
+#endif
 	}
 	else
 	{

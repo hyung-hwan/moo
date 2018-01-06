@@ -204,7 +204,7 @@ class(#byte(16)) IP6Address(IP4Address)
 	}
 }
 
-class(#byte) IP4SocketAddress(IP4Address)
+class(#byte(19)) IP6SocketAddress(IP6Address)
 {
 	method(#class) new
 	{

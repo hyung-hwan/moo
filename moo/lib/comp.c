@@ -6931,6 +6931,8 @@ static int make_defined_class (moo_t* moo)
 
 	if (moo->c->cls.type_size > 0)
 	{
+		/* class(#byte(N)), class(#word(N)), etc */
+/* TODO: ensure that this size is equal to greater than the type size of the parent */
 		MOO_ASSERT (moo, moo->c->cls.var[VAR_INSTANCE].total_count == 0);
 		MOO_ASSERT (moo, moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP);
 		spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.type_size, flags, moo->c->cls.indexed_type);
@@ -7227,7 +7229,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 					/* invalid modifier */
 					set_syntax_error (moo, MOO_SYNERR_MODIFIERINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
-				}size 16 specified for fixed-sized(4) class IP6Addre
+				}
 
 				if (permit_type_size)
 				{
@@ -7370,8 +7372,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		{
 			super_is_nil = 1;
 		}
-		else if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT &&
-			    TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
+		else if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
 		{
 			/* superclass name expected */
 			set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -7501,6 +7502,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		return -1;
 	}
 
+	MOO_ASSERT (moo, moo->c->cls.super_oop != MOO_NULL);
 	if (moo->c->cls.super_oop != moo->_nil)
 	{
 		/* adjust the instance variable count and the class instance variable
@@ -7515,7 +7517,21 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		/* [NOTE] class variables are not inherited. 
 		 *        so no data about them are not transferred over */
 
-		moo->c->cls.var[VAR_INSTANCE].total_count = MOO_CLASS_SPEC_NAMED_INSTVARS(spec);
+		
+		if ((moo->c->cls.flags & CLASS_INDEXED) && moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP)
+		{
+			/* TODO: do i need to check if the parent class and the current class have the same indexed type? */
+			if (moo->c->cls.type_size < MOO_CLASS_SPEC_NAMED_INSTVARS(spec))
+			{
+				set_syntax_error (moo, MOO_SYNERR_CLASSTSIZEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo)); /* TODO: change error location... */
+				return -1;
+			}
+		}
+		else
+		{
+			MOO_ASSERT (moo, moo->c->cls.type_size == 0); /* no such thing as class(#pointer(N)). so it must be 0 */
+			moo->c->cls.var[VAR_INSTANCE].total_count = MOO_CLASS_SPEC_NAMED_INSTVARS(spec);
+		}
 		moo->c->cls.var[VAR_CLASSINST].total_count = MOO_CLASS_SELFSPEC_CLASSINSTVARS(self_spec);
 	}
 
