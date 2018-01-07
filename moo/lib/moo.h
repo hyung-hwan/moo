@@ -222,7 +222,7 @@ typedef enum moo_method_type_t moo_method_type_t;
 #define MOO_OOP_TAG_EXTENDED    3    /* 11 - internal use only */
 #define MOO_OOP_TAG_CHAR        3    /* 0011 */
 #define MOO_OOP_TAG_ERROR       7    /* 0111 */
-#define MOO_OOP_TAG_HANDLE      11   /* 1011 */
+#define MOO_OOP_TAG_RESERVED0   11   /* 1011 */
 #define MOO_OOP_TAG_RESERVED1   15   /* 1111 */
 
 #define MOO_OOP_GET_TAG_LO(oop) (((moo_oow_t)oop) & MOO_LBMASK(moo_oow_t, MOO_OOP_TAG_BITS_LO))
@@ -244,17 +244,13 @@ typedef enum moo_method_type_t moo_method_type_t;
 #define MOO_SMPTR_TO_OOP(ptr) ((moo_oop_t)(((moo_oow_t)ptr) | MOO_OOP_TAG_SMPTR))
 #define MOO_OOP_TO_SMPTR(oop) ((void*)(((moo_oow_t)oop) & ~MOO_LBMASK(moo_oow_t, MOO_OOP_TAG_BITS_LO)))
 
-
 #define MOO_OOP_IS_CHAR(oop) (MOO_OOP_GET_TAG(oop) == MOO_OOP_TAG_CHAR)
 #define MOO_OOP_IS_ERROR(oop) (MOO_OOP_GET_TAG(oop) == MOO_OOP_TAG_ERROR)
-#define MOO_OOP_IS_HANDLE(oop) (MOO_OOP_GET_TAG(oop) == MOO_OOP_TAG_HANDLE)
 
 #define MOO_OOP_TO_CHAR(oop) (((moo_oow_t)oop) >> (MOO_OOP_TAG_BITS_LO + MOO_OOP_TAG_BITS_LO))
 #define MOO_CHAR_TO_OOP(num) ((moo_oop_t)((((moo_oow_t)(num)) << (MOO_OOP_TAG_BITS_LO + MOO_OOP_TAG_BITS_LO)) | MOO_OOP_TAG_CHAR))
 #define MOO_OOP_TO_ERROR(oop) (((moo_oow_t)oop) >> (MOO_OOP_TAG_BITS_LO + MOO_OOP_TAG_BITS_LO))
 #define MOO_ERROR_TO_OOP(num) ((moo_oop_t)((((moo_oow_t)(num)) << (MOO_OOP_TAG_BITS_LO + MOO_OOP_TAG_BITS_LO)) | MOO_OOP_TAG_ERROR))
-#define MOO_OOP_TO_HANDLE(oop) (((moo_oow_t)oop) >> (MOO_OOP_TAG_BITS_LO + MOO_OOP_TAG_BITS_LO))
-#define MOO_HANDLE_TO_OOP(num) ((moo_oop_t)((((moo_oow_t)(num)) << (MOO_OOP_TAG_BITS_LO + MOO_OOP_TAG_BITS_LO)) | MOO_OOP_TAG_ERROR))
 
 /* -------------------------------- */
 
@@ -1562,6 +1558,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_VARUNUSE,        /* unsuable variable in compiled code */
 	MOO_SYNERR_VARINACC,        /* inaccessible variable - e.g. accessing an instance variable from a class method is not allowed. */
 	MOO_SYNERR_VARAMBIG,        /* ambiguious variable - e.g. the variable is found in multiple pool dictionaries imported */
+	MOO_SYNERR_VARFLOOD,        /* too many instance/class variables */
 	MOO_SYNERR_SELFINACC,       /* inaccessible self */
 	MOO_SYNERR_PRIMARYINVAL,    /* wrong expression primary */
 	MOO_SYNERR_TMPRFLOOD,       /* too many temporaries */

@@ -231,12 +231,13 @@ class X(Object)
 	self.yy := 9.
 	}
 }
-class(#byte(3)) Y(X)
+##class(#byte(3)) Y(X)
+class(#pointer) Y(X)
 {
 }
-class (#word(2)) Z(Y)
-{
-}
+##class (#word(2)) Z(Y)
+##{
+##}
 
 ##class InetSocketAddress(SocketAddress)
 ##{
@@ -381,8 +382,14 @@ class MyObject(Object)
 	{
 		| s conact inact outact |
 
-s := Y new.
+s:= X new: 20.
+s basicSize dump.
+'****************************' dump.
+
+s := Y new: 10.
 s x.
+s basicAt: 1 put: 20.
+s dump.
 s basicSize dump.
 '****************************' dump.
 

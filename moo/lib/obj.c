@@ -173,10 +173,10 @@ MOO_INLINE moo_oop_t moo_allocwordobj (moo_t* moo, const moo_oow_t* ptr, moo_oow
 	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_WORD, MOO_SIZEOF(moo_oow_t), 0);
 }
 
-static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t vlen, moo_obj_type_t* type, moo_oow_t* outlen)
+static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t num_flexi_fields, moo_obj_type_t* type, moo_oow_t* outlen)
 {
 	moo_oow_t spec;
-	moo_oow_t named_instvar;
+	moo_oow_t num_fixed_fields;
 	moo_obj_type_t indexed_type;
 
 	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(_class));
@@ -185,63 +185,26 @@ static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t
 	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(_class->spec));
 	spec = MOO_OOP_TO_SMOOI(_class->spec);
 
-	named_instvar = MOO_CLASS_SPEC_NAMED_INSTVARS(spec); /* size of the named_instvar part */
+	num_fixed_fields = MOO_CLASS_SPEC_NAMED_INSTVARS(spec); 
+	MOO_ASSERT (moo, num_fixed_fields <= MOO_MAX_NAMED_INSTVARS);
 
 	if (MOO_CLASS_SPEC_IS_INDEXED(spec)) 
 	{
 		indexed_type = MOO_CLASS_SPEC_INDEXED_TYPE(spec);
 
-#if 0
-		if (indexed_type == MOO_OBJ_TYPE_OOP)
-		{
-			if (named_instvar > MOO_MAX_NAMED_INSTVARS)
-			{
-				moo_seterrbfmt (moo, MOO_EINVAL, "too many named instance variables for a variable-pointer class %O - %zu/%zu", _class, named_instvar, (moo_oow_t)MOO_MAX_NAMED_INSTVARS); 
-				return -1;
-			}
-			if (vlen > MOO_MAX_INDEXED_INSTVARS(named_instvar))
-			{
-				moo_seterrbfmt (moo, MOO_EINVAL, "too many unnamed instance variables for a variable-pointer class %O - %zu/%zu", _class, vlen, (moo_oow_t)MOO_MAX_INDEXED_INSTVARS(named_instvar)); 
-				return -1;
-			}
-
-			MOO_ASSERT (moo, named_instvar + vlen <= MOO_OBJ_SIZE_MAX);
-		}
-		else
-		{
-			/* a non-pointer indexed class can't have named instance variables */
-			if (named_instvar > MOO_) 
-			{
-				moo_seterrbfmt (moo, MOO_EINVAL, "named instance variables in a variable-nonpointer class %O", _class);
-				return -1;
-			}
-			if (vlen > MOO_OBJ_SIZE_MAX) 
-			{
-				moo_seterrbfmt (moo, MOO_EINVAL, "too many unnamed instance variables for a variable-nonpointer class %O - %zu/%zu", _class, vlen, (moo_oow_t)MOO_OBJ_SIZE_MAX); 
-				return -1;
-			}
-		}
-#else
-		/* the size of the fixed area for non-pointer objects are supported.
-		 * the fixed area of a pointer object holds named instance variables 
-		 * and a non-pointer object is facilitated with the fixed area of the size
+		/* the number of the fixed fields for a non-pointer object are supported.
+		 * the fixed fields of a pointer object holds named instance variables 
+		 * and a non-pointer object is facilitated with the fixed fields of the size
 		 * specified in the class description like #byte(5), #word(10).
 		 * 
-		 * when it comes to spec decoding, there is no different between a pointer
+		 * when it comes to spec decoding, there is no difference between a pointer
 		 * object and a non-pointer object */
-		if (named_instvar > MOO_MAX_NAMED_INSTVARS)
-		{
-			moo_seterrbfmt (moo, MOO_EINVAL, "too many fixed fields for a class %O - %zu/%zu", _class, named_instvar, (moo_oow_t)MOO_MAX_NAMED_INSTVARS); 
-			return -1;
-		}
-		if (vlen > MOO_MAX_INDEXED_INSTVARS(named_instvar))
-		{
-			moo_seterrbfmt (moo, MOO_EINVAL, "too many variable fields for a class %O - %zu/%zu", _class, vlen, (moo_oow_t)MOO_MAX_INDEXED_INSTVARS(named_instvar)); 
-			return -1;
-		}
 
-		MOO_ASSERT (moo, named_instvar + vlen <= MOO_OBJ_SIZE_MAX);
-#endif
+		if (num_flexi_fields > MOO_MAX_INDEXED_INSTVARS(num_fixed_fields))
+		{
+			moo_seterrbfmt (moo, MOO_EINVAL, "number of flexi-fields(%zu) too big for a class %O", num_flexi_fields, _class);
+			return -1;
+		}
 	}
 	else
 	{
@@ -249,23 +212,16 @@ static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t
 		 * indexable class with no variable data */
 		indexed_type = MOO_OBJ_TYPE_OOP;
 
-		if (vlen > 0)
+		if (num_flexi_fields > 0)
 		{
-			moo_seterrbfmt (moo, MOO_EINVAL, "unnamed instance variables for a fixed class %O - %zu", _class, vlen); 
+			moo_seterrbfmt (moo, MOO_EPERM, "number of flexi-fields(%zu) disallowed for a class %O", num_flexi_fields, _class); 
 			return -1;
 		}
-		/*vlen = 0;*/ /* vlen is not used */
-
-		if (named_instvar > MOO_MAX_NAMED_INSTVARS) 
-		{
-			moo_seterrbfmt (moo, MOO_EINVAL, "too many named instance variables for a fixed class %O - %zu/%zu", _class, named_instvar, (moo_oow_t)MOO_MAX_NAMED_INSTVARS); 
-			return -1;
-		}
-		MOO_ASSERT (moo, named_instvar <= MOO_OBJ_SIZE_MAX);
 	}
 
+	MOO_ASSERT (moo, num_fixed_fields + num_flexi_fields <= MOO_OBJ_SIZE_MAX);
 	*type = indexed_type;
-	*outlen = named_instvar + vlen;
+	*outlen = num_fixed_fields + num_flexi_fields;
 	return 0; 
 }
 

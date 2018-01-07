@@ -2712,16 +2712,33 @@ static MOO_INLINE int set_pooldic_fqn (moo_t* moo, moo_pooldic_t* pd, const moo_
 	return 0;
 }
 
-static MOO_INLINE int add_class_level_variable (moo_t* moo, var_type_t var_type, const moo_oocs_t* name)
+static MOO_INLINE int add_class_level_variable (moo_t* moo, var_type_t var_type, const moo_oocs_t* name, const moo_ioloc_t* loc)
 {
 	int n;
 
 	n = copy_string_to (moo, name, &moo->c->cls.var[var_type].str, &moo->c->cls.var[var_type].str_capa, 1, ' ');
 	if (n >= 0) 
 	{
+		static moo_oow_t varlim[] =
+		{
+			MOO_MAX_NAMED_INSTVARS, /* VAR_INSTANCE */
+			MOO_MAX_CLASSINSTVARS,  /* VAR_CLASSINST */
+			MOO_MAX_CLASSVARS,      /* VAR_CLASS */
+		};
+
+		MOO_ASSERT (moo, VAR_INSTANCE == 0);
+		MOO_ASSERT (moo, VAR_CLASSINST == 1);
+		MOO_ASSERT (moo, VAR_CLASS == 2);
+		MOO_ASSERT (moo, var_type >= VAR_INSTANCE && var_type <= VAR_CLASS);
+
+		if (moo->c->cls.var[var_type].total_count >= varlim[var_type])
+		{
+			set_syntax_errbfmt (moo, MOO_SYNERR_VARFLOOD, loc, name, "too many ");
+			return -1;
+		}
+
 		moo->c->cls.var[var_type].count++;
 		moo->c->cls.var[var_type].total_count++;
-/* TODO: check if it exceeds MOO_MAX_NAMED_INSTVARS, MOO_MAX_CLASSVARS, MOO_MAX_CLASSINSTVARS */
 	}
 
 	return n;
@@ -3295,7 +3312,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 				return -1;
 			}
 
-			if (add_class_level_variable(moo, dcl_type, TOKEN_NAME(moo)) <= -1) return -1;
+			if (add_class_level_variable(moo, dcl_type, TOKEN_NAME(moo), TOKEN_LOC(moo)) <= -1) return -1;
 		}
 		else
 		{
@@ -3438,7 +3455,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 				return -1;
 			}
 
-			if (add_class_level_variable(moo, dcl_type, TOKEN_NAME(moo)) <= -1) return -1;
+			if (add_class_level_variable(moo, dcl_type, TOKEN_NAME(moo), TOKEN_LOC(moo)) <= -1) return -1;
 
 			GET_TOKEN (moo);
 
