@@ -413,9 +413,45 @@ static int is_restricted_word (const moo_oocs_t* ucs)
 static int begin_include (moo_t* moo);
 static int end_include (moo_t* moo);
 
-static void set_syntax_errbmsg (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt, const moo_bch_t* msg)
+static void set_syntax_errbfmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt, const moo_bch_t* msgfmt, ...)
 {
-	if (msg) moo_seterrbfmt (moo, MOO_ESYNERR, "%s", msg);
+	if (msgfmt) 
+	{
+		va_list ap;
+		va_start (ap, msgfmt);
+		moo_seterrbfmtv (moo, MOO_ESYNERR, msgfmt, ap);
+		va_end (ap);
+	}
+	else moo_seterrnum (moo, MOO_ESYNERR);
+	moo->c->synerr.num = num;
+
+	/* The SCO compiler complains of this ternary operation saying:
+	 *    error: operands have incompatible types: op ":" 
+	 * it seems to complain of type mismatch between *loc and
+	 * moo->c->tok.loc due to 'const' prefixed to loc. */
+	/*moo->c->synerr.loc = loc? *loc: moo->c->tok.loc;*/
+	if (loc)
+		moo->c->synerr.loc = *loc;
+	else
+		moo->c->synerr.loc = moo->c->tok.loc;
+	
+	if (tgt) moo->c->synerr.tgt = *tgt;
+	else 
+	{
+		moo->c->synerr.tgt.ptr = MOO_NULL;
+		moo->c->synerr.tgt.len = 0;
+	}
+}
+
+static void set_syntax_errufmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt, const moo_uch_t* msgfmt, ...)
+{
+	if (msgfmt) 
+	{
+		va_list ap;
+		va_start (ap, msgfmt);
+		moo_seterrufmtv (moo, MOO_ESYNERR, msgfmt, ap);
+		va_end (ap);
+	}
 	else moo_seterrnum (moo, MOO_ESYNERR);
 	moo->c->synerr.num = num;
 
@@ -439,7 +475,7 @@ static void set_syntax_errbmsg (moo_t* moo, moo_synerrnum_t num, const moo_ioloc
 
 static void set_syntax_error (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt)
 {
-	set_syntax_errbmsg (moo, num, loc, tgt, MOO_NULL);
+	set_syntax_errbfmt (moo, num, loc, tgt, MOO_NULL);
 }
 
 static int copy_string_to (moo_t* moo, const moo_oocs_t* src, moo_oocs_t* dst, moo_oow_t* dst_capa, int append, moo_ooch_t delim_char)
@@ -6931,17 +6967,17 @@ static int make_defined_class (moo_t* moo)
 	if (moo->c->cls.flags & CLASS_INDEXED) flags |= MOO_CLASS_SPEC_FLAG_INDEXED;
 	if (moo->c->cls.flags & CLASS_IMMUTABLE) flags |= MOO_CLASS_SPEC_FLAG_IMMUTABLE;
 
-	if (moo->c->cls.type_size > 0)
+	if (moo->c->cls.non_pointer_instsize > 0)
 	{
 		/* class(#byte(N)), class(#word(N)), etc */
 		MOO_ASSERT (moo, moo->c->cls.var[VAR_INSTANCE].total_count == 0);
 		MOO_ASSERT (moo, moo->c->cls.flags & CLASS_INDEXED);
 		MOO_ASSERT (moo, moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP);
-		spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.type_size, flags, moo->c->cls.indexed_type);
+		spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.non_pointer_instsize, flags, moo->c->cls.indexed_type);
 	}
 	else
 	{
-		MOO_ASSERT (moo, moo->c->cls.type_size == 0);
+		MOO_ASSERT (moo, moo->c->cls.non_pointer_instsize == 0);
 		spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.var[VAR_INSTANCE].total_count, flags, moo->c->cls.indexed_type);
 	}
 
@@ -7133,7 +7169,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 	 * NOTE: when extending a class, class-module-import and variable-definition are not allowed.
 	 */
 	moo_oop_association_t ass;
-	moo_ioloc_t type_size_loc;
+	moo_ioloc_t type_loc;
 
 
 	if (!extend && TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
@@ -7147,35 +7183,35 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		{
 			do
 			{
-				int permit_type_size = 0;
+				int permit_non_pointer_instsize = 0;
 				
 				if (is_token_symbol(moo, VOCA_BYTE_S))
 				{
 					/* class(#byte) */
 					if (_set_class_indexed_type(moo, MOO_OBJ_TYPE_BYTE) <= -1) return -1;
 					GET_TOKEN (moo);
-					permit_type_size = 1;
+					permit_non_pointer_instsize = 1;
 				}
 				else if (is_token_symbol(moo, VOCA_CHARACTER_S))
 				{
 					/* class(#character) */
 					if (_set_class_indexed_type(moo, MOO_OBJ_TYPE_CHAR) <= -1) return -1;
 					GET_TOKEN (moo);
-					permit_type_size = 1;
+					permit_non_pointer_instsize = 1;
 				}
 				else if (is_token_symbol(moo, VOCA_HALFWORD_S))
 				{
 					/* class(#halfword) */
 					if (_set_class_indexed_type(moo, MOO_OBJ_TYPE_HALFWORD) <= -1) return -1;
 					GET_TOKEN (moo);
-					permit_type_size = 1;
+					permit_non_pointer_instsize = 1;
 				}
 				else if (is_token_symbol(moo, VOCA_WORD_S))
 				{
 					/* class(#word) */
 					if (_set_class_indexed_type(moo, MOO_OBJ_TYPE_WORD) <= -1) return -1;
 					GET_TOKEN (moo);
-					permit_type_size = 1;
+					permit_non_pointer_instsize = 1;
 				}
 				else if (is_token_symbol(moo, VOCA_LIWORD_S))
 				{
@@ -7184,7 +7220,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 					 *   see the definiton of MOO_OBJ_TYPE_LIWORD in moo.h */
 					if (_set_class_indexed_type(moo, MOO_OBJ_TYPE_LIWORD) <= -1) return -1;
 					GET_TOKEN (moo);
-					permit_type_size = 1;
+					permit_non_pointer_instsize = 1;
 				}
 				else if (is_token_symbol(moo, VOCA_POINTER_S))
 				{
@@ -7235,11 +7271,13 @@ static int __compile_class_definition (moo_t* moo, int extend)
 					return -1;
 				}
 
-				if (permit_type_size)
+				if (permit_non_pointer_instsize)
 				{
 					/* class(#byte(20))
 					 * class(#word(3))
 					 * ... */
+					type_loc = moo->c->tok.loc;
+
 					if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 					{
 						moo_ooi_t tmp;
@@ -7258,11 +7296,10 @@ static int __compile_class_definition (moo_t* moo, int extend)
 							/* the class type size has nothing to do with the name instance variables
 							 * in the semantics. but it is stored into the named-instvar bits in the
 							 * spec field of a class. so i check it against MOO_MAX_NAMED_INSTVARS. */
-							set_syntax_error (moo, MOO_SYNERR_CLASSTSIZEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
+							set_syntax_error (moo, MOO_SYNERR_NPINSTSIZEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
 							return -1;
 						}
 
-						type_size_loc = moo->c->tok.loc;
 						GET_TOKEN (moo);
 
 						if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
@@ -7272,7 +7309,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 						}
 						GET_TOKEN (moo);
 
-						moo->c->cls.type_size = tmp;
+						moo->c->cls.non_pointer_instsize = tmp;
 					}
 
 				}
@@ -7363,7 +7400,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_LPAREN)
 		{
-			set_syntax_errbmsg (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo), "superclass must be specified");
+			set_syntax_errbfmt (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo), "superclass must be specified");
 			return -1;
 		}
 
@@ -7447,14 +7484,17 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				    moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP)
 				{
 					/* non-pointer object cannot inherit from a superclass with trailer size set */
-					set_syntax_error (moo, MOO_SYNERR_CLASSTRSIZE, &moo->c->cls.fqn_loc, &moo->c->cls.fqn);
+					set_syntax_errbfmt (moo, MOO_SYNERR_INHERITBANNED, &moo->c->cls.fqn_loc, &moo->c->cls.fqn,
+						"the non-pointer class %.*js cannot inherit from a class set with trailer size",
+						moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
 					return -1;
 				}
 
 				if (MOO_CLASS_SELFSPEC_FLAGS(MOO_OOP_TO_SMOOI(((moo_oop_class_t)moo->c->cls.super_oop)->selfspec)) & MOO_CLASS_SELFSPEC_FLAG_FINAL)
 				{
 					/* cannot inherit a #final class */
-					set_syntax_error (moo, MOO_SYNERR_CLASSFINAL, &moo->c->cls.fqn_loc, &moo->c->cls.fqn);
+					set_syntax_errbfmt (moo, MOO_SYNERR_INHERITBANNED, &moo->c->cls.fqn_loc, &moo->c->cls.fqn,
+						"the %.*js class cannot inherit from a final class", moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
 					return -1;
 				}
 			}
@@ -7528,26 +7568,28 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			if (MOO_CLASS_SPEC_INDEXED_TYPE(spec) == MOO_OBJ_TYPE_OOP && MOO_CLASS_SPEC_NAMED_INSTVARS(spec) > 0)
 			{
 				/* a non-pointer object cannot inherit from a pointer object with instance variables */
-				set_syntax_error (moo, MOO_SYNERR_CLASSTSIZEINVAL, &moo->c->cls.fqn_loc, &moo->c->cls.fqn); /* TODO: enhance error message */
+				set_syntax_errbfmt (moo, MOO_SYNERR_INHERITBANNED, &moo->c->cls.fqn_loc, &moo->c->cls.fqn, 
+					"the non-pointer class %.*js cannot inherit from a pointer class defined with instance variables", 
+					moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
 				return -1;
-				
 			}
 
 			/* NOTE: I don't mandate that the parent and the child be of the same type.
 			 *       Say, for a parent class(#byte(4)), a child can be defined to be
 			 *       class(#word(4)). */
 
-			if (moo->c->cls.type_size < MOO_CLASS_SPEC_NAMED_INSTVARS(spec))
+			if (moo->c->cls.non_pointer_instsize < MOO_CLASS_SPEC_NAMED_INSTVARS(spec))
 			{
-				//set_syntax_error (moo, MOO_SYNERR_CLASSTSIZEINVAL, &type_size_loc, MOO_NULL); /* TODO: enhance error message */
-				set_syntax_error (moo, MOO_SYNERR_CLASSTSIZEINVAL, MOO_NULL, MOO_NULL); /* TODO: enhance error message */
+				set_syntax_errbfmt (moo, MOO_SYNERR_NPINSTSIZEINVAL, &type_loc, MOO_NULL,
+					"the instance size(%zu) for the non-pointer class %.*js must not be less than the size(%zu) defined in the superclass ", 
+					moo->c->cls.non_pointer_instsize, moo->c->cls.fqn.len, moo->c->cls.fqn.ptr, (moo_oow_t)MOO_CLASS_SPEC_NAMED_INSTVARS(spec));
 				return -1;
 			}
 		}
 		else
 		{
 			/* the class defined is a pointer object or a variable-pointer object */
-			MOO_ASSERT (moo, moo->c->cls.type_size == 0); /* no such thing as class(#pointer(N)). so it must be 0 */
+			MOO_ASSERT (moo, moo->c->cls.non_pointer_instsize == 0); /* no such thing as class(#pointer(N)). so it must be 0 */
 			moo->c->cls.var[VAR_INSTANCE].total_count = MOO_CLASS_SPEC_NAMED_INSTVARS(spec);
 		}
 		moo->c->cls.var[VAR_CLASSINST].total_count = MOO_CLASS_SELFSPEC_CLASSINSTVARS(self_spec);
@@ -7716,7 +7758,7 @@ static int compile_class_definition (moo_t* moo, int extend)
 	/* reset the structure to hold information about a class to be compiled */
 	moo->c->cls.flags = 0;
 	moo->c->cls.indexed_type = MOO_OBJ_TYPE_OOP; /* whether indexed or not, it's the pointer type by default */
-	moo->c->cls.type_size = 0;
+	moo->c->cls.non_pointer_instsize = 0;
 
 	moo->c->cls.name.len = 0;
 	moo->c->cls.fqn.len = 0;

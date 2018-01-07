@@ -903,45 +903,35 @@ int moo_setclasstrsize (moo_t* moo, moo_oop_class_t _class, moo_oow_t size, moo_
 	{
 		/* the bytes code emitted by the compiler go to the trailer part
 		 * regardless of the trailer size. you're not allowed to change it */
-		MOO_DEBUG3 (moo, "Not allowed to set trailer size to %zu on the %.*js class\n", 
-			size,
-			MOO_OBJ_GET_SIZE(_class->name),
-			MOO_OBJ_GET_CHAR_SLOT(_class->name));
-		goto eperm;
+		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to set trailer size to %zu on the %.*js class", 
+			size, MOO_OBJ_GET_SIZE(_class->name), MOO_OBJ_GET_CHAR_SLOT(_class->name));
+		return -1;
 	}
 
 	spec = MOO_OOP_TO_SMOOI(_class->spec);
 	if (MOO_CLASS_SPEC_IS_INDEXED(spec) && MOO_CLASS_SPEC_INDEXED_TYPE(spec) != MOO_OBJ_TYPE_OOP)
 	{
-		MOO_DEBUG3 (moo, "Not allowed to set trailer size to %zu on the %.*js class representing a non-pointer object\n", 
-			size,
-			MOO_OBJ_GET_SIZE(_class->name),
-			MOO_OBJ_GET_CHAR_SLOT(_class->name));
-		goto eperm;
+		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to set trailer size to %zu on the non-pointer class %.*js", 
+			size, MOO_OBJ_GET_SIZE(_class->name), MOO_OBJ_GET_CHAR_SLOT(_class->name));
+		return -1;
 	}
 
 	if (_class->trsize != moo->_nil)
 	{
 		MOO_ASSERT (moo, _class->trgc != moo->_nil);
-		MOO_DEBUG3 (moo, "Not allowed to re-set trailer size to %zu on the %.*js class\n", 
-			size,
-			MOO_OBJ_GET_SIZE(_class->name),
-			MOO_OBJ_GET_CHAR_SLOT(_class->name));
-		goto eperm;
+		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to double-set trailer size to %zu on the %.*js class", 
+			size, MOO_OBJ_GET_SIZE(_class->name), MOO_OBJ_GET_CHAR_SLOT(_class->name));
+		return -1;
 	}
 	MOO_ASSERT (moo, _class->trgc == moo->_nil);
 
 	sc = (moo_oop_class_t)_class->superclass;
 	if (MOO_OOP_IS_SMOOI(sc->trsize) && size < MOO_OOP_TO_SMOOI(sc->trsize))
 	{
-		MOO_DEBUG6 (moo, "Not allowed to set the trailer size of %.*js to be smaller(%zu) than that(%zu) of the superclass %.*js\n",
-			size,
-			MOO_OBJ_GET_SIZE(_class->name),
-			MOO_OBJ_GET_CHAR_SLOT(_class->name),
-			MOO_OOP_TO_SMOOI(sc->trsize),
-			MOO_OBJ_GET_SIZE(sc->name),
-			MOO_OBJ_GET_CHAR_SLOT(sc->name));
-		goto eperm;
+		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to set the trailer size of %.*js to be smaller(%zu) than that(%zu) of the superclass %.*js",
+			size, MOO_OBJ_GET_SIZE(_class->name), MOO_OBJ_GET_CHAR_SLOT(_class->name),
+			MOO_OOP_TO_SMOOI(sc->trsize), MOO_OBJ_GET_SIZE(sc->name), MOO_OBJ_GET_CHAR_SLOT(sc->name));
+		return -1;
 	}
 
 	/* you can only set the trailer size once when it's not set yet */
@@ -954,10 +944,6 @@ int moo_setclasstrsize (moo_t* moo, moo_oop_class_t _class, moo_oow_t size, moo_
 		MOO_OBJ_GET_CHAR_SLOT(_class->name),
 		MOO_SMPTR_TO_OOP(trgc), trgc);
 	return 0;
-
-eperm:
-	moo_seterrnum (moo, MOO_EPERM);
-	return -1;
 }
 
 void* moo_getobjtrailer (moo_t* moo, moo_oop_t obj, moo_oow_t* size)

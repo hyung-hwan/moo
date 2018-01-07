@@ -234,6 +234,9 @@ class X(Object)
 class(#byte(3)) Y(X)
 {
 }
+class (#word(2)) Z(Y)
+{
+}
 
 ##class InetSocketAddress(SocketAddress)
 ##{

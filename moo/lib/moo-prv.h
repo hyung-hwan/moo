@@ -29,6 +29,7 @@
 
 #include "moo.h"
 #include "moo-utl.h"
+#include <stdarg.h>
 
 /* you can define this to either 1 or 2 */
 #define MOO_BCODE_LONG_PARAM_SIZE 2
@@ -513,7 +514,9 @@ struct moo_compiler_t
 	{
 		int flags;
 		int indexed_type;
-		moo_oow_t type_size; /* fixed type size */
+		
+		/* fixed instance size specified for a non-pointer class. class(#byte(N)), etc */
+		moo_oow_t non_pointer_instsize; 
 
 		moo_oop_class_t self_oop;
 		moo_oop_t super_oop; /* this may be nil. so the type is moo_oop_t */
@@ -971,6 +974,23 @@ enum moo_bcode_t
 extern "C" {
 #endif
 
+/* ========================================================================= */
+/* err.c                                                                    */
+/* ========================================================================= */
+
+void moo_seterrbfmtv (
+	moo_t*           moo,
+	moo_errnum_t     errnum,
+	const moo_bch_t* fmt,
+	va_list          ap
+);
+
+void moo_seterrufmtv (
+	moo_t*           moo,
+	moo_errnum_t     errnum,
+	const moo_uch_t* fmt,
+	va_list          ap
+);
 
 /* ========================================================================= */
 /* heap.c                                                                    */

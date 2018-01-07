@@ -27,7 +27,6 @@
 #include "moo-prv.h"
 
 /*#include <stdio.h>*/ /* for snrintf(). used for floating-point number formatting */
-#include <stdarg.h>
 
 #if defined(_MSC_VER) || defined(__BORLANDC__) || (defined(__WATCOMC__) && (__WATCOMC__ < 1200))
 #	define snprintf _snprintf 
@@ -765,4 +764,33 @@ void moo_seterrufmt (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, ...)
 	va_start (ap, fmt);
 	_errufmtv (moo, fmt, &fo, ap);
 	va_end (ap);
+}
+
+
+void moo_seterrbfmtv (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, va_list ap)
+{
+	moo_fmtout_t fo;
+
+	moo->errnum = errnum;
+	moo->errmsg.len = 0;
+
+	fo.mask = 0; /* not used */
+	fo.putch = put_errch;
+	fo.putcs = put_errcs;
+
+	_errbfmtv (moo, fmt, &fo, ap);
+}
+
+void moo_seterrufmtv (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, va_list ap)
+{
+	moo_fmtout_t fo;
+
+	moo->errnum = errnum;
+	moo->errmsg.len = 0;
+
+	fo.mask = 0; /* not used */
+	fo.putch = put_errch;
+	fo.putcs = put_errcs;
+
+	_errufmtv (moo, fmt, &fo, ap);
 }
