@@ -202,13 +202,22 @@ class(#byte(16)) IP6Address(IP4Address)
 			Exception signal: ('invalid IPv6 address ' & str).
 		}
 	}
+
+	##method toString
+	##{
+	##}
 }
 
-class(#byte(19)) IP6SocketAddress(IP6Address)
+class(#byte(19)) SocketAddress(Object)
 {
-	method(#class) new
+	method(#primitive) port.
+	method(#primitive) port: port.
+
+	method(#primitive) ipaddr.
+	method(#primitive) ipaddr: ipaddr.
+
+	method fromString: str
 	{
-		^self basicNew: 6.
 	}
 }
 
@@ -223,6 +232,7 @@ class SocketAddress(Object) from 'sck.addr'
 	}
 }
 
+(**********************************************************
 class X(Object)
 {
 	var tt,yy.
@@ -238,10 +248,10 @@ class(#pointer) Y(X)
 ##class (#word(2)) Z(Y)
 ##{
 ##}
-
 ##class InetSocketAddress(SocketAddress)
 ##{
 ##}
+************************************************************)
 
 class Socket(Object) from 'sck'
 {
@@ -381,7 +391,7 @@ class MyObject(Object)
 	method(#class) main
 	{
 		| s conact inact outact |
-
+(*
 s:= X new: 20.
 s basicSize dump.
 '****************************' dump.
@@ -392,6 +402,7 @@ s basicAt: 1 put: 20.
 s dump.
 s basicSize dump.
 '****************************' dump.
+*)
 
 s := ByteArray new: 100.
 s basicFillFrom: 0 with: ($a asInteger) count: 100.
