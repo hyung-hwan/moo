@@ -276,11 +276,13 @@
 
 typedef char                    moo_bch_t;
 typedef int                     moo_bci_t;
+typedef unsigned char           moo_bchu_t; /* unsigned version of moo_bch_t for inner working */
 #define MOO_SIZEOF_BCH_T MOO_SIZEOF_CHAR
 #define MOO_SIZEOF_BCI_T MOO_SIZEOF_INT
 
 typedef moo_uint16_t            moo_uch_t; /* TODO ... wchar_t??? */
 typedef moo_int32_t             moo_uci_t;
+typedef moo_uint16_t            moo_uchu_t; /* same as moo_uch_t as it is already unsigned */
 #define MOO_SIZEOF_UCH_T 2
 #define MOO_SIZEOF_UCI_T 4
 

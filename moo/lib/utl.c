@@ -54,6 +54,9 @@ int moo_equaluchars (const moo_uch_t* str1, const moo_uch_t* str2, moo_oow_t len
 {
 	moo_oow_t i;
 
+	/* NOTE: you should call this function after having ensured that
+	 *       str1 and str2 are in the same length */
+
 	for (i = 0; i < len; i++)
 	{
 		if (str1[i] != str2[i]) return 0;
@@ -66,12 +69,59 @@ int moo_equalbchars (const moo_bch_t* str1, const moo_bch_t* str2, moo_oow_t len
 {
 	moo_oow_t i;
 
+	/* NOTE: you should call this function after having ensured that
+	 *       str1 and str2 are in the same length */
+
 	for (i = 0; i < len; i++)
 	{
 		if (str1[i] != str2[i]) return 0;
 	}
 
 	return 1;
+}
+
+int moo_compuchars (const moo_uch_t* str1, moo_oow_t len1, const moo_uch_t* str2, moo_oow_t len2)
+{
+	moo_uchu_t c1, c2;
+	const moo_uch_t* end1 = str1 + len1;
+	const moo_uch_t* end2 = str2 + len2;
+
+	while (str1 < end1)
+	{
+		c1 = *str1;
+		if (str2 < end2) 
+		{
+			c2 = *str2;
+			if (c1 > c2) return 1;
+			if (c1 < c2) return -1;
+		}
+		else return 1;
+		str1++; str2++;
+	}
+
+	return (str2 < end2)? -1: 0;
+}
+
+int moo_compbchars (const moo_bch_t* str1, moo_oow_t len1, const moo_bch_t* str2, moo_oow_t len2)
+{
+	moo_bchu_t c1, c2;
+	const moo_bch_t* end1 = str1 + len1;
+	const moo_bch_t* end2 = str2 + len2;
+
+	while (str1 < end1)
+	{
+		c1 = *str1;
+		if (str2 < end2) 
+		{
+			c2 = *str2;
+			if (c1 > c2) return 1;
+			if (c1 < c2) return -1;
+		}
+		else return 1;
+		str1++; str2++;
+	}
+
+	return (str2 < end2)? -1: 0;
 }
 
 int moo_compucstr (const moo_uch_t* str1, const moo_uch_t* str2)
@@ -82,7 +132,7 @@ int moo_compucstr (const moo_uch_t* str1, const moo_uch_t* str2)
 		str1++, str2++;
 	}
 
-	return (*str1 > *str2)? 1: -1;
+	return ((moo_uchu_t)*str1 > (moo_uchu_t)*str2)? 1: -1;
 }
 
 int moo_compbcstr (const moo_bch_t* str1, const moo_bch_t* str2)
@@ -93,7 +143,7 @@ int moo_compbcstr (const moo_bch_t* str1, const moo_bch_t* str2)
 		str1++, str2++;
 	}
 
-	return (*str1 > *str2)? 1: -1;
+	return ((moo_bchu_t)*str1 > (moo_bchu_t)*str2)? 1: -1;
 }
 
 int moo_compucbcstr (const moo_uch_t* str1, const moo_bch_t* str2)
@@ -104,7 +154,7 @@ int moo_compucbcstr (const moo_uch_t* str1, const moo_bch_t* str2)
 		str1++, str2++;
 	}
 
-	return (*str1 > *str2)? 1: -1;
+	return ((moo_uchu_t)*str1 > (moo_bchu_t)*str2)? 1: -1;
 }
 
 int moo_compucharsucstr (const moo_uch_t* str1, moo_oow_t len, const moo_uch_t* str2)
@@ -116,7 +166,7 @@ int moo_compucharsucstr (const moo_uch_t* str1, moo_oow_t len, const moo_uch_t* 
 	const moo_uch_t* end = str1 + len;
 	while (str1 < end && *str2 != '\0') 
 	{
-		if (*str1 != *str2) return (*str1 > *str2)? 1: -1;
+		if (*str1 != *str2) return ((moo_uchu_t)*str1 > (moo_uchu_t)*str2)? 1: -1;
 		str1++; str2++;
 	}
 	return (str1 < end)? 1: (*str2 == '\0'? 0: -1);
@@ -127,7 +177,7 @@ int moo_compucharsbcstr (const moo_uch_t* str1, moo_oow_t len, const moo_bch_t* 
 	const moo_uch_t* end = str1 + len;
 	while (str1 < end && *str2 != '\0') 
 	{
-		if (*str1 != *str2) return (*str1 > *str2)? 1: -1;
+		if (*str1 != *str2) return ((moo_uchu_t)*str1 > (moo_bchu_t)*str2)? 1: -1;
 		str1++; str2++;
 	}
 	return (str1 < end)? 1: (*str2 == '\0'? 0: -1);
@@ -138,7 +188,7 @@ int moo_compbcharsbcstr (const moo_bch_t* str1, moo_oow_t len, const moo_bch_t* 
 	const moo_bch_t* end = str1 + len;
 	while (str1 < end && *str2 != '\0') 
 	{
-		if (*str1 != *str2) return (*str1 > *str2)? 1: -1;
+		if (*str1 != *str2) return ((moo_bchu_t)*str1 > (moo_bchu_t)*str2)? 1: -1;
 		str1++; str2++;
 	}
 	return (str1 < end)? 1: (*str2 == '\0'? 0: -1);
@@ -149,7 +199,7 @@ int moo_compbcharsucstr (const moo_bch_t* str1, moo_oow_t len, const moo_uch_t* 
 	const moo_bch_t* end = str1 + len;
 	while (str1 < end && *str2 != '\0') 
 	{
-		if (*str1 != *str2) return (*str1 > *str2)? 1: -1;
+		if (*str1 != *str2) return ((moo_bchu_t)*str1 > (moo_uchu_t)*str2)? 1: -1;
 		str1++; str2++;
 	}
 	return (str1 < end)? 1: (*str2 == '\0'? 0: -1);

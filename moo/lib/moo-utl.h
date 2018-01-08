@@ -147,6 +147,20 @@ MOO_EXPORT int moo_equalbchars (
 	moo_oow_t        len
 );
 
+MOO_EXPORT int moo_compuchars (
+	const moo_uch_t* str1,
+	moo_oow_t        len1,
+	const moo_uch_t* str2,
+	moo_oow_t        len2
+);
+
+MOO_EXPORT int moo_compbchars (
+	const moo_bch_t* str1,
+	moo_oow_t        len1,
+	const moo_bch_t* str2,
+	moo_oow_t        len2
+);
+
 MOO_EXPORT int moo_compucstr (
 	const moo_uch_t* str1,
 	const moo_uch_t* str2
