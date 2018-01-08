@@ -274,6 +274,7 @@ MOO_EXPORT moo_oow_t moo_countbcstr (
 
 #if defined(MOO_OOCH_IS_UCH)
 #	define moo_equaloochars(str1,str2,len) moo_equaluchars(str1,str2,len)
+#	define moo_compoochars(str1,len1,str2,len2) moo_compuchars(str1,len1,str2,len2)
 #	define moo_compoocbcstr(str1,str2) moo_compucbcstr(str1,str2)
 #	define moo_compoocharsbcstr(str1,len1,str2) moo_compucharsbcstr(str1,len1,str2)
 #	define moo_compoocharsucstr(str1,len1,str2) moo_compucharsucstr(str1,len1,str2)
@@ -288,6 +289,7 @@ MOO_EXPORT moo_oow_t moo_countbcstr (
 #	define moo_countoocstr(str) moo_countucstr(str)
 #else
 #	define moo_equaloochars(str1,str2,len) moo_equalbchars(str1,str2,len)
+#	define moo_compoochars(str1,len1,str2,len2) moo_compbchars(str1,len1,str2,len2)
 #	define moo_compoocbcstr(str1,str2) moo_compbcstr(str1,str2)
 #	define moo_compoocharsbcstr(str1,len1,str2) moo_compbcharsbcstr(str1,len1,str2)
 #	define moo_compoocharsucstr(str1,len1,str2) moo_compbcharsucstr(str1,len1,str2)

@@ -129,7 +129,7 @@ int moo_compucstr (const moo_uch_t* str1, const moo_uch_t* str2)
 	while (*str1 == *str2)
 	{
 		if (*str1 == '\0') return 0;
-		str1++, str2++;
+		str1++; str2++;
 	}
 
 	return ((moo_uchu_t)*str1 > (moo_uchu_t)*str2)? 1: -1;
@@ -140,7 +140,7 @@ int moo_compbcstr (const moo_bch_t* str1, const moo_bch_t* str2)
 	while (*str1 == *str2)
 	{
 		if (*str1 == '\0') return 0;
-		str1++, str2++;
+		str1++; str2++;
 	}
 
 	return ((moo_bchu_t)*str1 > (moo_bchu_t)*str2)? 1: -1;
@@ -151,7 +151,7 @@ int moo_compucbcstr (const moo_uch_t* str1, const moo_bch_t* str2)
 	while (*str1 == *str2)
 	{
 		if (*str1 == '\0') return 0;
-		str1++, str2++;
+		str1++; str2++;
 	}
 
 	return ((moo_uchu_t)*str1 > (moo_bchu_t)*str2)? 1: -1;
