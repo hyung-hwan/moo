@@ -160,6 +160,15 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
+/* Define to 1 if you have the <netinet/in.h> header file. */
+#undef HAVE_NETINET_IN_H
+
+/* Define to 1 if you have the <netpacket/packet.h> header file. */
+#undef HAVE_NETPACKET_PACKET_H
+
+/* Define to 1 if you have the <net/if_dl.h> header file. */
+#undef HAVE_NET_IF_DL_H
+
 /* Define to 1 if you have the `opendir' function. */
 #undef HAVE_OPENDIR
 
@@ -265,6 +274,9 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
 
+/* Define to 1 if you have the <sys/un.h> header file. */
+#undef HAVE_SYS_UN_H
+
 /* Define to 1 if you have the `tanhq' function. */
 #undef HAVE_TANHQ
 
@@ -338,12 +350,14 @@
    module search path. */
 #undef LT_MODULE_PATH_VAR
 
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
 
 /* Define to the shared library suffix, say, ".dylib". */
 #undef LT_SHARED_EXT
+
+/* Define to the shared archive member specification, say "(shr.o)". */
+#undef LT_SHARED_LIB_MEMBER
 
 /* enable dynamic module capability */
 #undef MOO_ENABLE_DYNAMIC_MODULE
@@ -432,6 +446,21 @@
 /* sizeof(short) */
 #undef MOO_SIZEOF_SHORT
 
+/* sizeof(struct sockaddr_dl) */
+#undef MOO_SIZEOF_STRUCT_SOCKADDR_DL
+
+/* sizeof(struct sockaddr_in) */
+#undef MOO_SIZEOF_STRUCT_SOCKADDR_IN
+
+/* sizeof(struct sockaddr_in6) */
+#undef MOO_SIZEOF_STRUCT_SOCKADDR_IN6
+
+/* sizeof(struct sockaddr_ll) */
+#undef MOO_SIZEOF_STRUCT_SOCKADDR_LL
+
+/* sizeof(struct sockaddr_un) */
+#undef MOO_SIZEOF_STRUCT_SOCKADDR_UN
+
 /* sizeof(void*) */
 #undef MOO_SIZEOF_VOID_P
 
@@ -461,6 +490,9 @@
 
 /* sizeof(__uint128_t) */
 #undef MOO_SIZEOF___UINT128_T
+
+/* Define if socklen_t is signed */
+#undef MOO_SOCKLEN_T_IS_SIGNED
 
 /* Define if dlsym() requires a leading underscore in symbol names. */
 #undef NEED_USCORE
@@ -526,6 +558,24 @@
 /* The size of `short', as computed by sizeof. */
 #undef SIZEOF_SHORT
 
+/* The size of `socklen_t', as computed by sizeof. */
+#undef SIZEOF_SOCKLEN_T
+
+/* The size of `struct sockaddr_dl', as computed by sizeof. */
+#undef SIZEOF_STRUCT_SOCKADDR_DL
+
+/* The size of `struct sockaddr_in', as computed by sizeof. */
+#undef SIZEOF_STRUCT_SOCKADDR_IN
+
+/* The size of `struct sockaddr_in6', as computed by sizeof. */
+#undef SIZEOF_STRUCT_SOCKADDR_IN6
+
+/* The size of `struct sockaddr_ll', as computed by sizeof. */
+#undef SIZEOF_STRUCT_SOCKADDR_LL
+
+/* The size of `struct sockaddr_un', as computed by sizeof. */
+#undef SIZEOF_STRUCT_SOCKADDR_UN
+
 /* The size of `void *', as computed by sizeof. */
 #undef SIZEOF_VOID_P
 
@@ -589,5 +639,5 @@
 /* Define so that glibc/gnulib argp.h does not typedef error_t. */
 #undef __error_t_defined
 
-/* Define to a type to use for `error_t' if it is not otherwise available. */
+/* Define to a type to use for 'error_t' if it is not otherwise available. */
 #undef error_t

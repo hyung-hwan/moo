@@ -7729,7 +7729,8 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			if (moo_importmod (moo, moo->c->cls.self_oop, moo->c->cls.modname.ptr, moo->c->cls.modname.len) <= -1)
 			{
 				moo_copyoocstr (moo->errmsg.tmpbuf.ooch, MOO_COUNTOF(moo->errmsg.tmpbuf.ooch), moo->errmsg.buf);
-				set_syntax_errbfmt (moo, MOO_SYNERR_MODIMPFAIL, &moo->c->cls.modname_loc, &moo->c->cls.modname, "%js", moo->errmsg.tmpbuf.ooch);
+				set_syntax_errbfmt (moo, MOO_SYNERR_MODIMPFAIL, &moo->c->cls.modname_loc, &moo->c->cls.modname,
+						"unable to import %.*js - %js", moo->c->cls.modname.len, moo->c->cls.modname.ptr, moo->errmsg.tmpbuf.ooch);
 				return -1;
 			}
 		}

@@ -158,6 +158,7 @@ AC_CHECK_HEADERS([dlfcn.h])
 AC_CHECK_HEADERS([sys/devpoll.h sys/epoll.h poll.h])
 AC_CHECK_HEADERS([dyncall.h])
 AC_CHECK_HEADERS([xcb/xcb.h])
+AC_CHECK_HEADERS([netinet/in.h sys/un.h netpacket/packet.h net/if_dl.h])
 
 dnl check data types
 dnl AC_CHECK_TYPE([wchar_t], 
@@ -281,6 +282,66 @@ AC_CHECK_SIZEOF(off64_t)
 
 AC_CHECK_SIZEOF(mbstate_t,,[#include <wchar.h>])
 AX_CHECK_NUMVALOF(MB_LEN_MAX,[32],[#include <limits.h>])
+
+if test "x${platform_win32}" = "xyes"
+then
+	AC_CHECK_SIZEOF(struct sockaddr_in,,[
+		#include <winsock2.h>
+		#include <ws2tcpip.h>])
+	AC_CHECK_SIZEOF(struct sockaddr_in6,,[
+		#include <winsock2.h>
+		#include <ws2tcpip.h>])
+	AC_CHECK_SIZEOF(struct sockaddr_un,,[
+		#include <winsock2.h>
+		#include <ws2tcpip.h>])
+	AC_CHECK_SIZEOF(struct sockaddr_ll,,[
+		#include <winsock2.h>
+		#include <ws2tcpip.h>])
+	AC_CHECK_SIZEOF(struct sockaddr_dl,,[
+		#include <winsock2.h>
+		#include <ws2tcpip.h>])
+
+	AC_CHECK_SIZEOF(socklen_t,, [
+		#include <winsock2.h>
+		#include <ws2tcpip.h>])
+
+	if test ${ac_cv_sizeof_socklen_t} -gt 0
+	then
+		AX_CHECK_SIGN([socklen_t],
+			[ AC_DEFINE(MOO_SOCKLEN_T_IS_SIGNED, 1, [Define if socklen_t is signed]) ],
+			[ AS_ECHO_N("") ],
+			[#include <winsock2.h>
+			 #include <ws2tcpip.h>])
+	fi
+else
+	AC_CHECK_SIZEOF(struct sockaddr_in,,[
+		#include <sys/socket.h>
+		#include <netinet/in.h>])
+	AC_CHECK_SIZEOF(struct sockaddr_in6,,[
+		#include <sys/socket.h>
+		#include <netinet/in.h>])
+	AC_CHECK_SIZEOF(struct sockaddr_un,,[
+		#include <sys/socket.h>
+		#include <sys/un.h>])
+	AC_CHECK_SIZEOF(struct sockaddr_ll,,[
+		#include <sys/socket.h>
+		#include <netpacket/packet.h>])
+	AC_CHECK_SIZEOF(struct sockaddr_dl,,[
+		#include <sys/socket.h>
+		#include <sys/types.h>
+		#include <net/if_dl.h>])
+	AC_CHECK_SIZEOF(socklen_t,, [
+		#include <sys/socket.h>
+		#include <netinet/in.h>])
+
+	if test ${ac_cv_sizeof_socklen_t} -gt 0
+	then
+		AX_CHECK_SIGN([socklen_t],
+			[ AC_DEFINE(MOO_SOCKLEN_T_IS_SIGNED, 1, [Define if socklen_t is signed]) ],
+			[ AS_ECHO_N("") ],
+			[#include <sys/socket.h>])
+	fi
+fi
 
 dnl gcc 3.4.3 on opensolaris x86 gave this warning without -msse or 
 dnl something similar.
@@ -408,6 +469,33 @@ AC_DEFINE_UNQUOTED(MOO_SIZEOF_OFF64_T, ${ac_cv_sizeof_off64_t}, [sizeof(off64_t)
 
 AC_DEFINE_UNQUOTED(MOO_SIZEOF_MBSTATE_T, ${ac_cv_sizeof_mbstate_t}, [sizeof(mbstate_t)])
 AC_DEFINE_UNQUOTED(MOO_MBLEN_MAX, ${ax_cv_numvalof_MB_LEN_MAX}, [MB_LEN_MAX])
+
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_STRUCT_SOCKADDR_IN, ${ac_cv_sizeof_struct_sockaddr_in}, [sizeof(struct sockaddr_in)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_STRUCT_SOCKADDR_IN6, ${ac_cv_sizeof_struct_sockaddr_in6}, [sizeof(struct sockaddr_in6)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_STRUCT_SOCKADDR_LL, ${ac_cv_sizeof_struct_sockaddr_ll}, [sizeof(struct sockaddr_ll)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_STRUCT_SOCKADDR_UN, ${ac_cv_sizeof_struct_sockaddr_un}, [sizeof(struct sockaddr_un)])
+AC_DEFINE_UNQUOTED(MOO_SIZEOF_STRUCT_SOCKADDR_DL, ${ac_cv_sizeof_struct_sockaddr_dl}, [sizeof(struct sockaddr_dl)])
+
+
+moo_package_version_major="`echo ${PACKAGE_VERSION} | cut -d. -f1`"
+moo_package_version_minor="`echo ${PACKAGE_VERSION} | cut -d. -f2`"
+moo_package_version_patch="`echo ${PACKAGE_VERSION} | cut -d. -f3`"
+AC_SUBST(PACKAGE_VERSION_MAJOR, ${moo_package_version_major})
+AC_SUBST(PACKAGE_VERSION_MINOR, ${moo_package_version_minor})
+AC_SUBST(PACKAGE_VERSION_PATCH, ${moo_package_version_patch})
+
+AC_DEFINE_UNQUOTED(MOO_PACKAGE_VERSION, "${PACKAGE_VERSION}", [Package version])
+dnl AC_DEFINE_UNQUOTED(MOO_PACKAGE_VERSION_MAJOR, $(echo ${VERSION} | cut -d. -f1), [Major version number])
+dnl AC_DEFINE_UNQUOTED(MOO_PACKAGE_VERSION_MINOR, $(echo ${VERSION} | cut -d. -f2), [Minor version number])
+dnl AC_DEFINE_UNQUOTED(MOO_PACKAGE_VERSION_PATCH, $(echo ${VERSION} | cut -d. -f3), [Patch level])
+AC_DEFINE_UNQUOTED(MOO_PACKAGE_VERSION_MAJOR, ${moo_package_version_major}, [Major version number])
+AC_DEFINE_UNQUOTED(MOO_PACKAGE_VERSION_MINOR, ${moo_package_version_minor}, [Minor version number])
+AC_DEFINE_UNQUOTED(MOO_PACKAGE_VERSION_PATCH, ${moo_package_version_patch}, [Patch level])
+
+AC_DEFINE_UNQUOTED(MOO_PACKAGE_AUTHOR,"${PACKAGE_BUGREPORT}", [Author])
+AC_DEFINE_UNQUOTED(MOO_PACKAGE_NAME,"${PACKAGE_NAME}", [package name])
+AC_DEFINE_UNQUOTED(MOO_PACKAGE_URL, "${PACKAGE_URL}", [Project URL])
+
 
 moo_package_version_major="`echo ${PACKAGE_VERSION} | cut -d. -f1`"
 moo_package_version_minor="`echo ${PACKAGE_VERSION} | cut -d. -f2`"

@@ -33,7 +33,19 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include <netinet/in.h>
+#if defined(HAVE_NETINET_IN_H)
+#	include <netinet/in.h>
+#endif
+#if defined(HAVE_SYS_UN_H)
+	#include <sys/un.h>
+#endif
+#if defined(HAVE_NETPACKET_PACKET_H)
+#	include <netpacket/packet.h>
+#endif
+#if defined(HAVE_NET_IF_DL_H)
+#	include <net/if_dl.h>
+#endif
+
 #include <arpa/inet.h>
 #include <string.h>
 
@@ -71,6 +83,22 @@ struct sck_addr_trailer_t
 };
 
 
+union sockaddr_t
+{
+#if defined(MOO_SIZEOF_STRUCT_SOCKADDR_IN)	
+	struct sockaddr_in in4;
+#endif
+#if defined(MOO_SIZEOF_STRUCT_SOCKADDR_IN6)	
+	struct sockaddr_in6 in6;
+#endif
+#if defined(MOO_SIZEOF_STRUCT_SOCKADDR_LL)
+	struct sockaddr_ll ll;
+#endif
+#if defined(MOO_SIZEOF_STRUCT_SOCKADDR_UN)
+	struct sockaddr_un un;
+#endif
+};
+typedef union sockaddr_t sockaddr_t;
 
 static moo_pfrc_t pf_from_string (moo_t* moo, moo_ooi_t nargs)
 {
@@ -93,6 +121,8 @@ static moo_pfinfo_t pfinfos[] =
 
 /* ------------------------------------------------------------------------ */
 
+
+
 static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
 	moo_ooi_t spec;
@@ -101,13 +131,14 @@ static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 	spec = MOO_OOP_TO_SMOOI(_class->spec);
 	if (!MOO_CLASS_SPEC_IS_INDEXED(spec) || MOO_CLASS_SPEC_INDEXED_TYPE(spec) != MOO_OBJ_TYPE_BYTE || MOO_CLASS_SPEC_NAMED_INSTVARS(spec) != 0)
 	{
-		moo_seterrbfmt (moo, MOO_EINVAL, "%O not a plain byte class", _class);
+		moo_seterrbfmt (moo, MOO_EINVAL, "%O not a plain #byte class", _class);
 		return -1;
 	}
 
 	/* change the number of the fixed fields forcibly */
 /* TODO: check if the super class has what kind of size ... */
-	spec = MOO_CLASS_SPEC_MAKE (10, MOO_CLASS_SPEC_FLAGS(spec), MOO_CLASS_SPEC_INDEXED_TYPE(spec));
+
+	spec = MOO_CLASS_SPEC_MAKE (MOO_SIZEOF(sockaddr_t), MOO_CLASS_SPEC_FLAGS(spec), MOO_CLASS_SPEC_INDEXED_TYPE(spec));
 	_class->spec = MOO_SMOOI_TO_OOP(spec);
 	return 0;
 }
