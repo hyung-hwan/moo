@@ -7728,7 +7728,8 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			 *  this extra module name, i'm free from GC headache */
 			if (moo_importmod (moo, moo->c->cls.self_oop, moo->c->cls.modname.ptr, moo->c->cls.modname.len) <= -1)
 			{
-				set_syntax_error (moo, MOO_SYNERR_MODIMPFAIL, &moo->c->cls.modname_loc, &moo->c->cls.modname);
+				moo_copyoocstr (moo->errmsg.tmpbuf.ooch, MOO_COUNTOF(moo->errmsg.tmpbuf.ooch), moo->errmsg.buf);
+				set_syntax_errbfmt (moo, MOO_SYNERR_MODIMPFAIL, &moo->c->cls.modname_loc, &moo->c->cls.modname, "%js", moo->errmsg.tmpbuf.ooch);
 				return -1;
 			}
 		}

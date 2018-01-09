@@ -25,6 +25,7 @@
  */
  
 #include "_sck.h"
+#include "../lib/moo-prv.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -94,7 +95,20 @@ static moo_pfinfo_t pfinfos[] =
 
 static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
-	if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(sck_addr_trailer_t), MOO_NULL) <= -1) return -1;
+	moo_ooi_t spec;
+	/*if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(sck_addr_trailer_t), MOO_NULL) <= -1) return -1;*/
+
+	spec = MOO_OOP_TO_SMOOI(_class->spec);
+	if (!MOO_CLASS_SPEC_IS_INDEXED(spec) || MOO_CLASS_SPEC_INDEXED_TYPE(spec) != MOO_OBJ_TYPE_BYTE || MOO_CLASS_SPEC_NAMED_INSTVARS(spec) != 0)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "%O not a plain byte class", _class);
+		return -1;
+	}
+
+	/* change the number of the fixed fields forcibly */
+/* TODO: check if the super class has what kind of size ... */
+	spec = MOO_CLASS_SPEC_MAKE (10, MOO_CLASS_SPEC_FLAGS(spec), MOO_CLASS_SPEC_INDEXED_TYPE(spec));
+	_class->spec = MOO_SMOOI_TO_OOP(spec);
 	return 0;
 }
 

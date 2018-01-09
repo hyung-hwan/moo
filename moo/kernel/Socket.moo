@@ -208,20 +208,7 @@ class(#byte(16)) IP6Address(IP4Address)
 	##}
 }
 
-class(#byte(19)) SocketAddress(Object)
-{
-	method(#primitive) port.
-	method(#primitive) port: port.
-
-	method(#primitive) ipaddr.
-	method(#primitive) ipaddr: ipaddr.
-
-	method fromString: str
-	{
-	}
-}
-
-class SocketAddress(Object) from 'sck.addr'
+class(#byte) SocketAddress(Object) from 'sck.addr'
 {
 	##method(#primitive) family.
 	method(#primitive) fromString: str.
@@ -391,6 +378,11 @@ class MyObject(Object)
 	method(#class) main
 	{
 		| s conact inact outact |
+		
+		
+SocketAddress new dump.
+'****************************' dump.
+
 (*
 s:= X new: 20.
 s basicSize dump.
