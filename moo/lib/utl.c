@@ -736,7 +736,7 @@ int moo_convbtouchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_
 	if (n <= -1)
 	{
 		/* -1: illegal character, -2: buffer too small, -3: incomplete sequence */
-		moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+		moo_seterrnum (moo, (n == -2)? MOO_EBUFFULL: MOO_EECERR);
 	}
 
 	return n;
@@ -751,7 +751,7 @@ int moo_convutobchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_
 
 	if (n <= -1)
 	{
-		moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+		moo_seterrnum (moo, (n == -2)? MOO_EBUFFULL: MOO_EECERR);
 	}
 
 	return n;
@@ -766,7 +766,7 @@ int moo_convbtoucstr (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_u
 
 	if (n <= -1)
 	{
-		moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+		moo_seterrnum (moo, (n == -2)? MOO_EBUFFULL: MOO_EECERR);
 	}
 
 	return n;
@@ -781,7 +781,7 @@ int moo_convutobcstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_b
 
 	if (n <= -1)
 	{
-		moo->errnum = (n == -2)? MOO_EBUFFULL: MOO_EECERR;
+		moo_seterrnum (moo, (n == -2)? MOO_EBUFFULL: MOO_EECERR);
 	}
 
 	return n;
@@ -931,3 +931,74 @@ moo_bch_t* moo_dupbchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t bcslen)
 	return ptr;
 }
 
+/* ----------------------------------------------------------------------- */
+
+
+#if defined(MOO_HAVE_UINT16_T)
+
+moo_uint16_t moo_ntoh16 (moo_uint16_t x)
+{
+#if defined(MOO_ENDIAN_BIG)
+	return x;
+#elif defined(MOO_ENDIAN_LITTLE)
+	moo_uint8_t* c = (moo_uint8_t*)&x;
+	return (moo_uint16_t)(
+		((moo_uint16_t)c[0] << 8) |
+		((moo_uint16_t)c[1] << 0));
+#else
+#	error Unknown endian
+#endif
+}
+
+moo_uint16_t moo_hton16 (moo_uint16_t x)
+{
+#if defined(MOO_ENDIAN_BIG)
+	return x;
+#elif defined(MOO_ENDIAN_LITTLE)
+	moo_uint8_t* c = (moo_uint8_t*)&x;
+	return (moo_uint16_t)(
+		((moo_uint16_t)c[0] << 8) |
+		((moo_uint16_t)c[1] << 0));
+#else
+#	error Unknown endian
+#endif
+}
+
+#endif
+
+/* --------------------------------------------------------------- */
+
+#if defined(MOO_HAVE_UINT32_T)
+
+moo_uint32_t moo_ntoh32 (moo_uint32_t x)
+{
+#if defined(MOO_ENDIAN_BIG)
+	return x;
+#elif defined(MOO_ENDIAN_LITTLE)
+	moo_uint8_t* c = (moo_uint8_t*)&x;
+	return (moo_uint32_t)(
+		((moo_uint32_t)c[0] << 24) |
+		((moo_uint32_t)c[1] << 16) |
+		((moo_uint32_t)c[2] << 8) | 
+		((moo_uint32_t)c[3] << 0));
+#else
+#	error Unknown endian
+#endif
+}
+
+moo_uint32_t moo_hton32 (moo_uint32_t x)
+{
+#if defined(MOO_ENDIAN_BIG)
+	return x;
+#elif defined(MOO_ENDIAN_LITTLE)
+	moo_uint8_t* c = (moo_uint8_t*)&x;
+	return (moo_uint32_t)(
+		((moo_uint32_t)c[0] << 24) |
+		((moo_uint32_t)c[1] << 16) |
+		((moo_uint32_t)c[2] << 8) | 
+		((moo_uint32_t)c[3] << 0));
+#else
+#	error Unknown endian
+#endif
+}
+#endif

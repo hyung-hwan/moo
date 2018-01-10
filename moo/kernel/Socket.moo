@@ -378,9 +378,7 @@ class MyObject(Object)
 	method(#class) main
 	{
 		| s conact inact outact |
-		
-		
-SocketAddress new dump.
+(SocketAddress fromString: '192.168.123.232:99') dump.
 '****************************' dump.
 
 (*
