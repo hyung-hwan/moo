@@ -89,6 +89,33 @@
 } while(0);
 */
 
+
+
+#define MOO_CONST_SWAP16(x) \
+	((qse_uint16_t)((((qse_uint16_t)(x) & (qse_uint16_t)0x00ffU) << 8) | \
+	                (((qse_uint16_t)(x) & (qse_uint16_t)0xff00U) >> 8) ))
+
+#define MOO_CONST_SWAP32(x) \
+	((qse_uint32_t)((((qse_uint32_t)(x) & (qse_uint32_t)0x000000ffUL) << 24) | \
+	                (((qse_uint32_t)(x) & (qse_uint32_t)0x0000ff00UL) <<  8) | \
+	                (((qse_uint32_t)(x) & (qse_uint32_t)0x00ff0000UL) >>  8) | \
+	                (((qse_uint32_t)(x) & (qse_uint32_t)0xff000000UL) >> 24) ))
+
+#if defined(MOO_ENDIAN_LITTLE)
+#       define MOO_CONST_NTOH16(x) MOO_CONST_SWAP16(x)
+#       define MOO_CONST_HTON16(x) MOO_CONST_SWAP16(x)
+#       define MOO_CONST_NTOH32(x) MOO_CONST_SWAP32(x)
+#       define MOO_CONST_HTON32(x) MOO_CONST_SWAP32(x)
+#elif defined(MOO_ENDIAN_BIG)
+#       define MOO_CONST_NTOH16(x) (x)
+#       define MOO_CONST_HTON16(x) (x)
+#       define MOO_CONST_NTOH32(x) (x)
+#       define MOO_CONST_HTON32(x) (x)
+#else
+#       error UNKNOWN ENDIAN
+#endif
+
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -420,6 +447,50 @@ MOO_EXPORT moo_oow_t moo_utf8touc (
 MOO_EXPORT int moo_ucwidth (
 	moo_uch_t uc
 );
+
+
+/* ------------------------------------------------------------------------- */
+
+#if defined(MOO_HAVE_UINT16_T)
+MOO_EXPORT moo_uint16_t moo_ntoh16 (
+	moo_uint16_t x
+);
+
+MOO_EXPORT moo_uint16_t moo_hton16 (
+	moo_uint16_t x
+);
+#endif
+
+#if defined(MOO_HAVE_UINT32_T)
+MOO_EXPORT moo_uint32_t moo_ntoh32 (
+	moo_uint32_t x
+);
+
+MOO_EXPORT moo_uint32_t moo_hton32 (
+	moo_uint32_t x
+);
+#endif
+
+#if defined(MOO_HAVE_UINT64_T)
+MOO_EXPORT moo_uint64_t moo_ntoh64 (
+	moo_uint64_t x
+);
+
+MOO_EXPORT moo_uint64_t moo_hton64 (
+	moo_uint64_t x
+);
+#endif
+
+#if defined(MOO_HAVE_UINT128_T)
+MOO_EXPORT moo_uint128_t moo_ntoh128 (
+	moo_uint128_t x
+);
+
+MOO_EXPORT moo_uint128_t moo_hton128 (
+	moo_uint128_t x
+);
+#endif
+
 
 #if defined(__cplusplus)
 }
