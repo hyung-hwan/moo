@@ -400,7 +400,7 @@ TODO:
 							moo_seterrbfmt (moo, MOO_EINVAL, "scope id too large");
 							return -1; /* overflow */
 						}
-						nwad->in6.sin6_scope_id= x;
+						nwad->in6.sin6_scope_id = x;
 						p++;
 					}
 					while (p < end && *p >= '0' && *p <= '9');

@@ -38,6 +38,76 @@ struct sck_t
 	/* there are more fields in the actual object */
 };
 
+#if (MOO_SIZEOF_SOCKLEN_T > 0)
+//#error x
+#endif
+
+#if (MOO_SIZEOF_INT8_T > 0)
+#error x
+#endif
+
+#if (MOO_SIZEOF_SOCKLEN_T == 1)
+	#if defined(MOO_SOCKLEN_T_IS_SIGNED)
+		typedef moo_int8_t sck_len_t;
+	#else
+		typedef moo_uint8_t sck_len_t;
+	#endif
+#elif (MOO_SIZEOF_SOCKLEN_T == 2)
+	#if defined(MOO_SOCKLEN_T_IS_SIGNED)
+		typedef moo_int16_t sck_len_t;
+	#else
+		typedef moo_uint16_t sck_len_t;
+	#endif
+#elif (MOO_SIZEOF_SOCKLEN_T == 4)
+	#if defined(MOO_SOCKLEN_T_IS_SIGNED)
+		typedef moo_int32_t sck_len_t;
+	#else
+		typedef moo_uint32_t sck_len_t;
+	#endif
+#elif (MOO_SIZEOF_SOCKLEN_T == 8)
+	#if defined(MOO_SOCKLEN_T_IS_SIGNED)
+		typedef moo_int64_t sck_len_t;
+	#else
+		typedef moo_uint64_t sck_len_t;
+	#endif
+#else
+#	error UNSUPPORT sck_len_t size
+#endif
+
+#if (MOO_SIZEOF_SA_FAMILY_T == 1)
+	#if defined(MOO_SA_FAMILY_T_IS_SIGNED)
+		typedef moo_int8_t sck_addr_family_t;
+	#else
+		typedef moo_uint8_t sck_addr_family_t;
+	#endif
+#elif (MOO_SIZEOF_SA_FAMILY_T == 2)
+	#if defined(MOO_SA_FAMILY_T_IS_SIGNED)
+		typedef moo_int16_t sck_addr_family_t;
+	#else
+		typedef moo_uint16_t sck_addr_family_t;
+	#endif
+#elif (MOO_SIZEOF_SA_FAMILY_T == 4)
+	#if defined(MOO_SA_FAMILY_T_IS_SIGNED)
+		typedef moo_int32_t sck_addr_family_t;
+	#else
+		typedef moo_uint32_t sck_addr_family_t;
+	#endif
+#elif (MOO_SIZEOF_SA_FAMILY_T == 8)
+	#if defined(MOO_SA_FAMILY_T_IS_SIGNED)
+		typedef moo_int64_t sck_addr_family_t;
+	#else
+		typedef moo_uint64_t sck_addr_family_t;
+	#endif
+#else
+#	error UNSUPPORT sck_addr_family_t size
+#endif
+
+struct sck_addr_t
+{
+	sck_addr_family_t family;
+	moo_uint8_t data[1];
+};
+typedef struct sck_addr_t sck_addr_t;
 
 #if defined(__cplusplus)
 extern "C" {

@@ -143,31 +143,28 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 	oop_sck_t sck;
 	int fd, oldfl, n;
 	moo_errnum_t errnum;
+	moo_oop_t arg;
 
 	sck = (oop_sck_t)MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 1);
+
 	MOO_PF_CHECK_RCV (moo,
 		MOO_OOP_IS_POINTER(sck) &&
 		MOO_OBJ_BYTESOF(sck) >= (MOO_SIZEOF(*sck) - MOO_SIZEOF(moo_obj_t)) &&
 		MOO_OOP_IS_SMOOI(sck->handle));
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OBJ_IS_BYTE_POINTER(arg));
 
 	fd = MOO_OOP_TO_SMOOI(sck->handle);
 
 	oldfl = fcntl(fd, F_GETFL, 0);
 	if (oldfl == -1 || fcntl(fd, F_SETFL, oldfl | O_NONBLOCK) == -1) goto oops_syserr;
 
-{
-
-struct sockaddr_in sin;
-memset (&sin, 0, sizeof(sin));
-sin.sin_family = AF_INET;
-sin.sin_addr.s_addr = inet_addr ("192.168.1.145");
-sin.sin_port = htons(12345);
 	do
 	{
-		n = connect(fd, (struct sockaddr*)&sin, sizeof(sin));
+		//n = connect(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), addrlen);
 	}
 	while (n == -1 && errno == EINTR);
-}
+
 
 	if (n == -1 && errno != EINPROGRESS)
 	{

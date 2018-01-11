@@ -413,6 +413,9 @@
 /* Patch level */
 #undef MOO_PACKAGE_VERSION_PATCH
 
+/* Define if sa_family_t is signed */
+#undef MOO_SA_FAMILY_T_IS_SIGNED
+
 /* sizeof(char) */
 #undef MOO_SIZEOF_CHAR
 
@@ -443,8 +446,14 @@
 /* sizeof(off_t) */
 #undef MOO_SIZEOF_OFF_T
 
+/* sizeof(sa_family_t) */
+#undef MOO_SIZEOF_SA_FAMILY_T
+
 /* sizeof(short) */
 #undef MOO_SIZEOF_SHORT
+
+/* sizeof(socklen_t) */
+#undef MOO_SIZEOF_SOCKLEN_T
 
 /* sizeof(struct sockaddr_dl) */
 #undef MOO_SIZEOF_STRUCT_SOCKADDR_DL
@@ -554,6 +563,9 @@
 
 /* The size of `off_t', as computed by sizeof. */
 #undef SIZEOF_OFF_T
+
+/* The size of `sa_family_t', as computed by sizeof. */
+#undef SIZEOF_SA_FAMILY_T
 
 /* The size of `short', as computed by sizeof. */
 #undef SIZEOF_SHORT
