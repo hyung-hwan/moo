@@ -248,7 +248,7 @@ class Socket(Object) from 'sck'
 
 	method(#primitive) open(domain, type, proto).
 	method(#primitive) _close.
-	method(#primitive) _connect(a,b,c).
+	method(#primitive) _connect(addr).
 	method(#primitive) endConnect.
 
 	method(#primitive) readBytes: bytes.
@@ -329,7 +329,7 @@ extend Socket
 			       signal: s2 afterSecs: 10;
 			       addAsyncSemaphore: s1;
 			       addAsyncSemaphore: s2.
-			self _connect(1, 2, 3).
+			self _connect((SocketAddress fromString: '192.168.1.1:80')).
 		] ifCurtailed: [
 			## rollback 
 			sa value: s2.
@@ -394,6 +394,7 @@ s basicSize dump.
 '****************************' dump.
 *)
 
+(***********************************
 s := ByteArray new: 100.
 s basicFillFrom: 0 with: ($a asInteger) count: 100.
 s basicFillFrom: 50 with: ($b asInteger) count: 50.
@@ -420,6 +421,8 @@ s basicSize dump.
 ##s := IP4SocketAddress new.
 ##s dump.
 thisProcess terminate.
+**************************)
+
 		inact := [:sck :state |
 			| data n |
 (*

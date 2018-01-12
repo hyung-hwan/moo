@@ -480,11 +480,12 @@ static moo_pfrc_t pf_from_string (moo_t* moo, moo_ooi_t nargs)
 	MOO_PF_CHECK_RCV (moo, MOO_OBJ_IS_BYTE_POINTER(rcv) && MOO_OBJ_GET_SIZE(rcv) >= MOO_SIZEOF(sockaddr_t));
 	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OBJ_IS_CHAR_POINTER(str));
 
-	if (str_to_sockaddr (moo, MOO_OBJ_GET_CHAR_SLOT(str), MOO_OBJ_GET_SIZE(str), (sockaddr_t*)MOO_OBJ_GET_BYTE_SLOT(rcv)) <= -1)
+	if (str_to_sockaddr(moo, MOO_OBJ_GET_CHAR_SLOT(str), MOO_OBJ_GET_SIZE(str), (sockaddr_t*)MOO_OBJ_GET_BYTE_SLOT(rcv)) <= -1)
 	{
 		return MOO_PF_FAILURE;
 	}
 
+MOO_DEBUG1(moo, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxx %O\n", rcv);
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
@@ -534,5 +535,32 @@ int moo_mod_sck_addr (moo_t* moo, moo_mod_t* mod)
 	mod->unload = unload; 
 	mod->ctx = MOO_NULL;
 	return 0;
+}
+
+
+/* -------------------------------------------------------------------------- */
+sck_len_t moo_sck_addr_len (sck_addr_t* addr)
+{
+	switch (addr->family)
+	{
+	#if defined(AF_INET)
+		case AF_INET:
+			return MOO_SIZEOF(struct sockaddr_in);
+	#endif
+	#if defined(AF_INET)
+		case AF_INET6:
+			return MOO_SIZEOF(struct sockaddr_in6);
+	#endif
+	#if defined(AF_PACKET)
+		case AF_PACKET:
+			return MOO_SIZEOF(struct sockaddr_ll);
+	#endif
+	#if defined(AF_UNIX)
+		case AF_UNIX:
+			return MOO_SIZEOF(struct sockaddr_un);
+	#endif
+		default:
+			return 0;
+	}
 }
 

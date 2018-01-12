@@ -116,6 +116,9 @@ extern "C" {
 MOO_EXPORT int moo_mod_sck (moo_t* moo, moo_mod_t* mod);
 MOO_EXPORT int moo_mod_sck_addr (moo_t* moo, moo_mod_t* mod);
 
+
+sck_len_t moo_sck_addr_len (sck_addr_t* addr);
+
 #if defined(__cplusplus)
 }
 #endif

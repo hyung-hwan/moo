@@ -146,7 +146,7 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 	moo_oop_t arg;
 
 	sck = (oop_sck_t)MOO_STACK_GETRCV(moo, nargs);
-	arg = MOO_STACK_GETARG(moo, nargs, 1);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
 	MOO_PF_CHECK_RCV (moo,
 		MOO_OOP_IS_POINTER(sck) &&
@@ -161,7 +161,7 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 
 	do
 	{
-		//n = connect(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), addrlen);
+		n = connect(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), moo_sck_addr_len((sck_addr_t*)MOO_OBJ_GET_BYTE_SLOT(arg)));
 	}
 	while (n == -1 && errno == EINTR);
 
@@ -326,7 +326,7 @@ static moo_pfinfo_t pfinfos[] =
 {
 	{ I, { 'b','i','n','d','\0' },                              0, { pf_bind_socket,     1, 1  }  },
 	{ I, { 'c','l','o','s','e','\0' },                          0, { pf_close_socket,    0, 0  }  },
-	{ I, { 'c','o','n','n','e','c','t','\0' },                  0, { pf_connect,         3, 3  }  },
+	{ I, { 'c','o','n','n','e','c','t','\0' },                  0, { pf_connect,         1, 1  }  },
 	{ I, { 'e','n','d','C','o','n','n','e','c','t','\0' },      0, { pf_end_connect,     0, 0  }  },
 	{ I, { 'o','p','e','n','\0' },                              0, { pf_open_socket,     3, 3  }  },
 	{ I, { 'r','e','a','d','B','y','t','e','s',':','\0' },      0, { pf_read_socket,     1, 1  }  },
