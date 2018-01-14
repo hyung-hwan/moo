@@ -248,8 +248,11 @@ class Socket(Object) from 'sck'
 
 	method(#primitive) open(domain, type, proto).
 	method(#primitive) _close.
-	method(#primitive) _connect(addr).
-	method(#primitive) endConnect.
+	method(#primitive) bind: addr.
+	method(#primitive) listen: backlog.
+	method(#primitive) accept: addr.
+	method(#primitive) _connect: addr.
+	method(#primitive) _socketError.
 
 	method(#primitive) readBytes: bytes.
 	method(#primitive) writeBytes: bytes.
@@ -302,7 +305,7 @@ extend Socket
 		}
 	}
 
-	method asyncConnect: connectBlock
+	method connectTo: target do: connectBlock
 	{
 		| s1 s2 sa |
 
@@ -310,15 +313,21 @@ extend Socket
 		s2 := Semaphore new.
 
 		sa := [:sem | 
-'UNSIGNALLLING      ...........' dump.
+		
+			| connected |
+
+			connected := false.
 			System unsignal: s1;
 			       unsignal: s2;
 			       removeAsyncSemaphore: s1;
 			       removeAsyncSemaphore: s2.
 
-'FINALIZING CONNECT' dump.
-			self endConnect.
-			connectBlock value: self value: (sem == s1)
+			if (sem == s1)
+			{
+				[ connected := (self _socketError == 0) ] ifCurtailed: [ connected := false ].
+			}.
+
+			connectBlock value: self value: connected.
 		].
 
 		s1 signalAction: sa.
@@ -329,7 +338,7 @@ extend Socket
 			       signal: s2 afterSecs: 10;
 			       addAsyncSemaphore: s1;
 			       addAsyncSemaphore: s2.
-			self _connect((SocketAddress fromString: '192.168.1.1:80')).
+			self _connect: target.
 		] ifCurtailed: [
 			## rollback 
 			sa value: s2.
@@ -377,7 +386,9 @@ class MyObject(Object)
 {
 	method(#class) main
 	{
-		| s conact inact outact |
+		| conact inact outact accact |
+
+
 (SocketAddress fromString: '192.168.123.232:99') dump.
 '****************************' dump.
 
@@ -427,9 +438,8 @@ thisProcess terminate.
 			| data n |
 (*
 end of data -> 0.
-no data -> -1.
-has data -> 1 or moreailure indicated by primitive function 0x55a6210 - _integer_add
-
+no data -> -1. (e.g. EINPROGRESS)
+has data -> 1 or more
 error -> exception
 *)
 
@@ -439,7 +449,7 @@ error -> exception
 				n := sck readBytes: data.
 				if (n <= 0)
 				{
-					if (n == 0) { sck close }.
+					if (n == 0) { sck close }. ## end of data
 					break.
 				}
 				elsif (n > 0)
@@ -465,10 +475,9 @@ error -> exception
 			if (state)
 			{
 				'CONNECTED NOW.............' dump.
-				s writeBytes: #[ $h, $e, $l, $l, $o, C'\n' ].
+				sck writeBytes: #[ $h, $e, $l, $l, $o, $w, $o, C'\n' ].
+				sck watchInput; watchOutput.
 
-				s watchInput.
-				s watchOutput.
 			}
 			else
 			{
@@ -477,17 +486,38 @@ error -> exception
 		].
 
 		## ------------------------------------------------------
+		accact := [:sck :state |
+			| newsck newaddr |
+
+			newaddr := SocketAddress new.
+			newsck := sck accept: newaddr.
+System log: 'new connection - '; logNl: newaddr.
+			newsck inputAction: inact; outputAction: outact.
+			newsck watchInput; watchOuptut.
+		].
 
 		[
-			s := Socket domain: Socket.Domain.INET type: Socket.Type.STREAM.
-			s inputAction: inact; outputAction: outact.
-			s asyncConnect: conact.
+			| s s2 |
+			[
+				s := Socket domain: Socket.Domain.INET type: Socket.Type.STREAM.
+				s inputAction: inact; outputAction: outact.
+				s connectTo: (SocketAddress fromString: '127.0.0.1:9999') do: conact.
 
-			while (true)
-			{
-				System handleAsyncEvent.
-			}.
-			s close dump.
+				s2 := Socket domain: Socket.Domain.INET type: Socket.Type.STREAM.
+				s2 inputAction: accact.
+				s2 bind: (SocketAddress fromString: '0.0.0.0:9998').
+				s2 listen: 10; watchInput.
+
+				while (true)
+				{
+					System handleAsyncEvent.
+				}.
+			]
+			ensure:
+			[
+				if (s notNil) { s close }.
+				if (s2 notNil) { s2 close }.
+			]
 
 		] on: Exception do: [:ex | ('Exception - '  & ex messageText) dump ].
 

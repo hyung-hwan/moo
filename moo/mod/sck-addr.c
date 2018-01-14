@@ -485,7 +485,6 @@ static moo_pfrc_t pf_from_string (moo_t* moo, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-MOO_DEBUG1(moo, "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxx %O\n", rcv);
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }

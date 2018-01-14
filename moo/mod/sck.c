@@ -114,29 +114,121 @@ static moo_pfrc_t pf_close_socket (moo_t* moo, moo_ooi_t nargs)
 static moo_pfrc_t pf_bind_socket (moo_t* moo, moo_ooi_t nargs)
 {
 	oop_sck_t sck;
-	int fd, n;
-
+	moo_oop_t arg;
+	int fd, enable;
 
 	sck = (oop_sck_t)MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
 	MOO_PF_CHECK_RCV (moo,
 		MOO_OOP_IS_POINTER(sck) &&
 		MOO_OBJ_BYTESOF(sck) >= (MOO_SIZEOF(*sck) - MOO_SIZEOF(moo_obj_t)) &&
 		MOO_OOP_IS_SMOOI(sck->handle));
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OBJ_IS_BYTE_POINTER(arg));
 
 	fd = MOO_OOP_TO_SMOOI(sck->handle);
+	if (fd <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad socket handle - %d", fd);
+		return MOO_PF_FAILURE;
+	}
 
-#if 0
-	n = bind(fd, &sin, MOO_SIZEOF(sin));
+	enable = 1;
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, MOO_SIZEOF(int)) == -1 ||
+	    bind(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), moo_sck_addr_len((sck_addr_t*)MOO_OBJ_GET_BYTE_SLOT(arg))) == -1)
+	{
+		moo_seterrwithsyserr (moo, errno);
+		return MOO_PF_FAILURE;
+	}
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_accept_socket (moo_t* moo, moo_ooi_t nargs)
+{
+	oop_sck_t sck, newsck;
+	moo_oop_t arg;
+	sck_len_t addrlen;
+	int fd, newfd;
+
+	sck = (oop_sck_t)MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	MOO_PF_CHECK_RCV (moo,
+		MOO_OOP_IS_POINTER(sck) &&
+		MOO_OBJ_BYTESOF(sck) >= (MOO_SIZEOF(*sck) - MOO_SIZEOF(moo_obj_t)) &&
+		MOO_OOP_IS_SMOOI(sck->handle));
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OBJ_IS_BYTE_POINTER(arg));
+
+	fd = MOO_OOP_TO_SMOOI(sck->handle);
+	if (fd <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad socket handle - %d", fd);
+		return MOO_PF_FAILURE;
+	}
+
+	addrlen = MOO_OBJ_GET_SIZE(arg);
+	newfd = accept(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), &addrlen);
+	if (newfd == -1)
+	{
+		moo_seterrwithsyserr (moo, errno);
+		return MOO_PF_FAILURE;
+	}
+
+	newsck = (oop_sck_t)moo_instantiate (moo, MOO_OBJ_GET_CLASS(sck), MOO_NULL, 0);
+	if (!newsck) 
+	{
+		close (newfd);
+		return MOO_PF_FAILURE;
+	}
+
+	if (!MOO_IN_SMOOI_RANGE(newfd)) 
+	{
+		/* the file descriptor is too big to be represented as a small integer */
+		moo_seterrbfmt (moo, MOO_ERANGE, "socket handle %d not in the permitted range", newfd);
+		close (newfd);
+		return MOO_PF_FAILURE;
+	}
+	newsck->handle = MOO_SMOOI_TO_OOP(newfd);
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_listen_socket (moo_t* moo, moo_ooi_t nargs)
+{
+	oop_sck_t sck;
+	moo_oop_t arg;
+	int fd, n;
+
+	sck = (oop_sck_t)MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	MOO_PF_CHECK_RCV (moo,
+		MOO_OOP_IS_POINTER(sck) &&
+		MOO_OBJ_BYTESOF(sck) >= (MOO_SIZEOF(*sck) - MOO_SIZEOF(moo_obj_t)) &&
+		MOO_OOP_IS_SMOOI(sck->handle));
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_SMOOI(arg));
+
+	fd = MOO_OOP_TO_SMOOI(sck->handle);
+	if (fd <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad socket handle - %d", fd);
+		return MOO_PF_FAILURE;
+	}
+
+	n = listen(fd, MOO_OOP_TO_SMOOI(arg));
 	if (n == -1)
 	{
 		moo_seterrwithsyserr (moo, errno);
 		return MOO_PF_FAILURE;
 	}
-#endif
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
+
 
 static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 {
@@ -155,6 +247,11 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OBJ_IS_BYTE_POINTER(arg));
 
 	fd = MOO_OOP_TO_SMOOI(sck->handle);
+	if (fd <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad socket handle - %d", fd);
+		return MOO_PF_FAILURE;
+	}
 
 	oldfl = fcntl(fd, F_GETFL, 0);
 	if (oldfl == -1 || fcntl(fd, F_SETFL, oldfl | O_NONBLOCK) == -1) goto oops_syserr;
@@ -184,10 +281,11 @@ oops:
 	return MOO_PF_FAILURE;
 }
 
-static moo_pfrc_t pf_end_connect (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_get_socket_error (moo_t* moo, moo_ooi_t nargs)
 {
 	oop_sck_t sck;
-	int fd;
+	int fd, ret;
+	sck_len_t len;
 
 	sck = (oop_sck_t)MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, 
@@ -197,30 +295,21 @@ static moo_pfrc_t pf_end_connect (moo_t* moo, moo_ooi_t nargs)
 	);
 
 	fd = MOO_OOP_TO_SMOOI(sck->handle);
-	if (fd >= 0)
+	if (fd <= -1)
 	{
-		socklen_t len;
-		int ret;
-
-		len = MOO_SIZEOF(ret);
-		if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (char*)&ret, &len) == -1)
-		{
-			moo_seterrwithsyserr (moo, errno);
-			return MOO_PF_FAILURE;
-		}
-
-		if (ret == EINPROGRESS)
-		{
-			return MOO_PF_FAILURE;
-		}
-		else if (ret != 0)
-		{
-			moo_seterrwithsyserr (moo, ret);
-			return MOO_PF_FAILURE;
-		}
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad socket handle - %d", fd);
+		return MOO_PF_FAILURE;
 	}
 
-	MOO_STACK_SETRETTORCV (moo, nargs);
+	len = MOO_SIZEOF(ret);
+	if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (char*)&ret, &len) == -1)
+	{
+		moo_seterrwithsyserr (moo, errno);
+		return MOO_PF_FAILURE;
+	}
+
+	/* if ret == EINPROGRESS .. it's in progress */
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(ret));
 	return MOO_PF_SUCCESS;
 }
 
@@ -241,14 +330,14 @@ static moo_pfrc_t pf_read_socket (moo_t* moo, moo_ooi_t nargs)
 	fd = MOO_OOP_TO_SMOOI(sck->handle);
 	if (fd <= -1)
 	{
-		moo_seterrbfmt (moo, MOO_EINVAL, "bad socket handle - %d\n", fd);
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad socket handle - %d", fd);
 		return MOO_PF_FAILURE;
 	}
 
 	buf = (moo_oop_byte_t)MOO_STACK_GETARG (moo, nargs, 0);
 	if (!MOO_OBJ_IS_BYTE_POINTER(buf))
 	{
-		moo_seterrbfmt (moo, MOO_EINVAL, "buffer not a byte array - %O\n", buf);
+		moo_seterrbfmt (moo, MOO_EINVAL, "buffer not a byte array - %O", buf);
 		return MOO_PF_FAILURE;
 	}
 
@@ -282,14 +371,14 @@ static moo_pfrc_t pf_write_socket (moo_t* moo, moo_ooi_t nargs)
 	fd = MOO_OOP_TO_SMOOI(sck->handle);
 	if (fd <= -1)
 	{
-		moo_seterrbfmt (moo, MOO_EINVAL, "bad socket handle - %d\n", fd);
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad socket handle - %d", fd);
 		return MOO_PF_FAILURE;
 	}
 
 	buf = (moo_oop_byte_t)MOO_STACK_GETARG (moo, nargs, 0);
 	if (!MOO_OBJ_IS_BYTE_POINTER(buf))
 	{
-		moo_seterrbfmt (moo, MOO_EINVAL, "buffer not a byte array - %O\n", buf);
+		moo_seterrbfmt (moo, MOO_EINVAL, "buffer not a byte array - %O", buf);
 		return MOO_PF_FAILURE;
 	}
 
@@ -324,13 +413,15 @@ struct fnctab_t
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, { 'b','i','n','d','\0' },                              0, { pf_bind_socket,     1, 1  }  },
-	{ I, { 'c','l','o','s','e','\0' },                          0, { pf_close_socket,    0, 0  }  },
-	{ I, { 'c','o','n','n','e','c','t','\0' },                  0, { pf_connect,         1, 1  }  },
-	{ I, { 'e','n','d','C','o','n','n','e','c','t','\0' },      0, { pf_end_connect,     0, 0  }  },
-	{ I, { 'o','p','e','n','\0' },                              0, { pf_open_socket,     3, 3  }  },
-	{ I, { 'r','e','a','d','B','y','t','e','s',':','\0' },      0, { pf_read_socket,     1, 1  }  },
-	{ I, { 'w','r','i','t','e','B','y','t','e','s',':','\0' },  0, { pf_write_socket,    1, 1  }  },
+	{ I, { 'a','c','c','e','p','t',':','\0' },                    0, { pf_accept_socket,    1, 1  }  },
+	{ I, { 'b','i','n','d',':','\0' },                            0, { pf_bind_socket,      1, 1  }  },
+	{ I, { 'c','l','o','s','e','\0' },                            0, { pf_close_socket,     0, 0  }  },
+	{ I, { 'c','o','n','n','e','c','t',':','\0' },                0, { pf_connect,          1, 1  }  },
+	{ I, { 'l','i','s','t','e','n',':','\0' },                    0, { pf_listen_socket,    1, 1  }  },
+	{ I, { 'o','p','e','n','\0' },                                0, { pf_open_socket,      3, 3  }  },
+	{ I, { 'r','e','a','d','B','y','t','e','s',':','\0' },        0, { pf_read_socket,      1, 1  }  },
+	{ I, { 's','o','c','k','e','t','E','r','r','o','r','\0' },    0, { pf_get_socket_error, 0, 0  }  },
+	{ I, { 'w','r','i','t','e','B','y','t','e','s',':','\0' },    0, { pf_write_socket,     1, 1  }  }
 };
 
 /* ------------------------------------------------------------------------ */
@@ -359,5 +450,3 @@ int moo_mod_sck (moo_t* moo, moo_mod_t* mod)
 	mod->ctx = MOO_NULL;
 	return 0;
 }
-
-
