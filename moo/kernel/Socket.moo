@@ -457,6 +457,8 @@ error -> exception
 					(n asString & ' bytes read') dump.
 					data dump.
 				}.
+
+				sck writeBytes: #[ $h, $e, $l, $l, $o, $., $., $., C'\n' ].
 			}
 			while (true).
 		].

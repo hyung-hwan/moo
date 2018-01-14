@@ -172,6 +172,7 @@ AC_CHECK_FUNCS([gettimeofday settimeofday clock_gettime clock_settime getitimer 
 AC_CHECK_FUNCS([backtrace backtrace_symbols])
 AC_CHECK_FUNCS([makecontext swapcontext getcontext setcontext])
 AC_CHECK_FUNCS([snprintf _vsnprintf _vsnwprintf])
+AC_CHECK_FUNCS([accept4])
 
 AC_CHECK_LIB([dyncall_s], [dcNewCallVM], 
 	[

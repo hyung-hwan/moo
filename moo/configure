@@ -19654,6 +19654,17 @@ _ACEOF
 fi
 done
 
+for ac_func in accept4
+do :
+  ac_fn_c_check_func "$LINENO" "accept4" "ac_cv_func_accept4"
+if test "x$ac_cv_func_accept4" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_ACCEPT4 1
+_ACEOF
+
+fi
+done
+
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for dcNewCallVM in -ldyncall_s" >&5
 $as_echo_n "checking for dcNewCallVM in -ldyncall_s... " >&6; }

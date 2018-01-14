@@ -150,7 +150,7 @@ static moo_pfrc_t pf_accept_socket (moo_t* moo, moo_ooi_t nargs)
 	oop_sck_t sck, newsck;
 	moo_oop_t arg;
 	sck_len_t addrlen;
-	int fd, newfd;
+	int fd, newfd, oldfl;
 
 	sck = (oop_sck_t)MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
@@ -169,7 +169,17 @@ static moo_pfrc_t pf_accept_socket (moo_t* moo, moo_ooi_t nargs)
 	}
 
 	addrlen = MOO_OBJ_GET_SIZE(arg);
+#if defined(SOCK_NONBLOCK) && defined(SOCK_CLOEXEC) && defined(HAVE_ACCEPT4)
+	newfd = accept4(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), &addrlen, SOCK_NONBLOCK | SOCK_CLOEXEC);
+#else
+	oldfl = fcntl(fd, F_GETFL, 0);
+	if (oldfl == -1 || fcntl(fd, F_SETFL, oldfl | O_NONBLOCK | O_CLOEXEC) == -1)
+	{
+		moo_seterrwithsyserr (moo, errno);
+		return MOO_PF_FAILURE;
+	}
 	newfd = accept(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), &addrlen);
+#endif
 	if (newfd == -1)
 	{
 		moo_seterrwithsyserr (moo, errno);
