@@ -242,7 +242,7 @@ class(#pointer) Y(X)
 
 class Socket(Object) from 'sck'
 {
-	var handle := -1.
+	var(#get) handle := -1.
 	var insem, outsem.
 	var(#get,#set) inputAction, outputAction.
 
@@ -491,9 +491,11 @@ error -> exception
 
 			newaddr := SocketAddress new.
 			newsck := sck accept: newaddr.
-System log: 'new connection - '; logNl: newaddr.
+
+			System log: 'new connection - '; log: newaddr; log: ' '; log: (newsck handle); logNl.
+
 			newsck inputAction: inact; outputAction: outact.
-			newsck watchInput; watchOuptut.
+			newsck watchInput; watchOutput.
 		].
 
 		[

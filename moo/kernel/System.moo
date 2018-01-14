@@ -210,6 +210,11 @@ TODO: how to pass all variadic arguments to another variadic methods???
 		^self atLevel: System.Log.INFO log: message and: message2.
 	}
 
+	method(#class) logNl
+	{
+		^self atLevel: System.Log.INFO log: S'\n'.
+	}
+	
 	method(#class) logNl: message
 	{
 		^self atLevel: System.Log.INFO logNl: message.

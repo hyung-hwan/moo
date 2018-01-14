@@ -192,7 +192,7 @@ static moo_pfrc_t pf_accept_socket (moo_t* moo, moo_ooi_t nargs)
 	}
 	newsck->handle = MOO_SMOOI_TO_OOP(newfd);
 
-	MOO_STACK_SETRETTORCV (moo, nargs);
+	MOO_STACK_SETRET (moo, nargs, (moo_oop_t)newsck);
 	return MOO_PF_SUCCESS;
 }
 
