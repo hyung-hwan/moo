@@ -253,6 +253,23 @@ AC_TRY_RUN(
 	]
 )
 
+
+AC_MSG_CHECKING([for PATH_MAX])
+AC_LANG_CONFTEST([
+	AC_LANG_PROGRAM(
+		[#include <limits.h>],
+		[;;;;;;;;;;
+PATH_MAX])
+])
+_value_of_path_max="`$ac_cv_prog_CPP conftest.c | awk '/;;;;;;;;;;/ { start=1 } /^(0|1|2|3|4|5|6|7|8|9)(0|1|2|3|4|5|6|7|8|9)*/ { if (start == 1) { print $0; start++; } }'`"
+if test "x${_value_of_path_max}" = "x"
+then
+	AC_MSG_RESULT(not defined)
+else
+	AC_MSG_RESULT(${_value_of_path_max})
+	AC_DEFINE_UNQUOTED(MOO_PATH_MAX, ${_value_of_path_max}, [PATH_MAX])
+fi
+
 dnl check the size of primitive data types
 AC_CHECK_SIZEOF(char,,[[]])
 AC_CHECK_SIZEOF(short,,[[]])
