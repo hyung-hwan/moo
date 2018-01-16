@@ -19962,7 +19962,6 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
 fi
 
 
-
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for PATH_MAX" >&5
 $as_echo_n "checking for PATH_MAX... " >&6; }
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -19979,17 +19978,18 @@ PATH_MAX
 }
 
 _ACEOF
-_value_of_path_max="`$ac_cv_prog_CPP conftest.c | awk '/;;;;;;;;;;/ { start=1 } /^(0|1|2|3|4|5|6|7|8|9)(0|1|2|3|4|5|6|7|8|9)*/ { if (start == 1) { print $0; start++; } }'`"
-if test "x${_value_of_path_max}" = "x"
+moo_cv_path_max="`$ac_cv_prog_CPP conftest.c | awk '/;;;;;;;;;;/ { start=1 } /^(0|1|2|3|4|5|6|7|8|9)(0|1|2|3|4|5|6|7|8|9)*/ { if (start == 1) { print $0; start++; } }'`"
+if test "x${moo_cv_path_max}" = "x"
 then
+	dcl either not defined or defined to a non-numeric value
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: not defined" >&5
 $as_echo "not defined" >&6; }
 else
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ${_value_of_path_max}" >&5
-$as_echo "${_value_of_path_max}" >&6; }
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ${moo_cv_path_max}" >&5
+$as_echo "${moo_cv_path_max}" >&6; }
 
 cat >>confdefs.h <<_ACEOF
-#define MOO_PATH_MAX ${_value_of_path_max}
+#define MOO_PATH_MAX ${moo_cv_path_max}
 _ACEOF
 
 fi

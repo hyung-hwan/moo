@@ -253,7 +253,7 @@ AC_TRY_RUN(
 	]
 )
 
-
+dnl check the defined value of PATH_MAX in limits.h
 AC_MSG_CHECKING([for PATH_MAX])
 AC_LANG_CONFTEST([
 	AC_LANG_PROGRAM(
@@ -261,13 +261,14 @@ AC_LANG_CONFTEST([
 		[;;;;;;;;;;
 PATH_MAX])
 ])
-_value_of_path_max="`$ac_cv_prog_CPP conftest.c | awk '/;;;;;;;;;;/ { start=1 } /^(0|1|2|3|4|5|6|7|8|9)(0|1|2|3|4|5|6|7|8|9)*/ { if (start == 1) { print $0; start++; } }'`"
-if test "x${_value_of_path_max}" = "x"
+moo_cv_path_max="`$ac_cv_prog_CPP conftest.c | awk '/;;;;;;;;;;/ { start=1 } /^(0|1|2|3|4|5|6|7|8|9)(0|1|2|3|4|5|6|7|8|9)*/ { if (start == 1) { print $0; start++; } }'`"
+if test "x${moo_cv_path_max}" = "x"
 then
+	dcl either not defined or defined to a non-numeric value
 	AC_MSG_RESULT(not defined)
 else
-	AC_MSG_RESULT(${_value_of_path_max})
-	AC_DEFINE_UNQUOTED(MOO_PATH_MAX, ${_value_of_path_max}, [PATH_MAX])
+	AC_MSG_RESULT(${moo_cv_path_max})
+	AC_DEFINE_UNQUOTED(MOO_PATH_MAX, ${moo_cv_path_max}, [PATH_MAX])
 fi
 
 dnl check the size of primitive data types
