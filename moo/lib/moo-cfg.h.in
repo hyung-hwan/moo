@@ -416,9 +416,6 @@
 /* Patch level */
 #undef MOO_PACKAGE_VERSION_PATCH
 
-/* PATH_MAX */
-#undef MOO_PATH_MAX
-
 /* Define if sa_family_t is signed */
 #undef MOO_SA_FAMILY_T_IS_SIGNED
 
@@ -515,6 +512,9 @@
 /* The size of `MB_LEN_MAX', as computed by valueof. */
 #undef NUMVALOF_MB_LEN_MAX
 
+/* The size of `PATH_MAX', as computed by valueof. */
+#undef NUMVALOF_PATH_MAX
+
 /* Name of package */
 #undef PACKAGE
 
@@ -539,6 +539,9 @@
 /* Define to necessary symbol if this constant uses a non-standard name on
    your system. */
 #undef PTHREAD_CREATE_JOINABLE
+
+/* PATH_MAX */
+#undef QSE_PATH_MAX
 
 /* The size of `char', as computed by sizeof. */
 #undef SIZEOF_CHAR

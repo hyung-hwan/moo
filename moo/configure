@@ -19962,37 +19962,6 @@ rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for PATH_MAX" >&5
-$as_echo_n "checking for PATH_MAX... " >&6; }
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-	#include <limits.h>
-int
-main ()
-{
-;;;;;;;;;;
-PATH_MAX
-  ;
-  return 0;
-}
-
-_ACEOF
-moo_cv_path_max="`$ac_cv_prog_CPP conftest.c | awk '/;;;;;;;;;;/ { start=1 } /^(0|1|2|3|4|5|6|7|8|9)(0|1|2|3|4|5|6|7|8|9)*/ { if (start == 1) { print $0; start++; } }'`"
-if test "x${moo_cv_path_max}" = "x"
-then
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: not defined" >&5
-$as_echo "not defined" >&6; }
-else
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ${moo_cv_path_max}" >&5
-$as_echo "${moo_cv_path_max}" >&6; }
-
-cat >>confdefs.h <<_ACEOF
-#define MOO_PATH_MAX ${moo_cv_path_max}
-_ACEOF
-
-fi
-
 # The cast to long int works around a bug in the HP C Compiler
 # version HP92453-01 B.11.11.23709.GP, which incorrectly rejects
 # declarations like `int a3[[(sizeof (unsigned char)) >= 0]];'.
@@ -20865,6 +20834,33 @@ $as_echo "$ax_cv_numvalof_MB_LEN_MAX" >&6; }
 
 cat >>confdefs.h <<_ACEOF
 #define NUMVALOF_MB_LEN_MAX $ax_cv_numvalof_MB_LEN_MAX
+_ACEOF
+
+
+
+
+
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking numeric value of PATH_MAX" >&5
+$as_echo_n "checking numeric value of PATH_MAX... " >&6; }
+if ${ax_cv_numvalof_PATH_MAX+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if ac_fn_c_compute_int "$LINENO" "(PATH_MAX)" "ax_cv_numvalof_PATH_MAX"        "#include <limits.h>
+"; then :
+
+else
+  ax_cv_numvalof_PATH_MAX=0
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_numvalof_PATH_MAX" >&5
+$as_echo "$ax_cv_numvalof_PATH_MAX" >&6; }
+
+
+
+cat >>confdefs.h <<_ACEOF
+#define NUMVALOF_PATH_MAX $ax_cv_numvalof_PATH_MAX
 _ACEOF
 
 
@@ -21856,6 +21852,14 @@ cat >>confdefs.h <<_ACEOF
 #define MOO_MBLEN_MAX ${ax_cv_numvalof_MB_LEN_MAX}
 _ACEOF
 
+if test ${ax_cv_numvalof_PATH_MAX} -gt 0
+then
+
+cat >>confdefs.h <<_ACEOF
+#define QSE_PATH_MAX ${ax_cv_numvalof_PATH_MAX}
+_ACEOF
+
+fi
 
 
 cat >>confdefs.h <<_ACEOF

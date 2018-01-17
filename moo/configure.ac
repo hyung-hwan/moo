@@ -253,25 +253,6 @@ AC_TRY_RUN(
 	]
 )
 
-dnl check the defined value of PATH_MAX in limits.h
-dnl look for a numeric value of 2 or more digits after preprocessing.
-AC_MSG_CHECKING([for PATH_MAX])
-AC_LANG_CONFTEST([
-	AC_LANG_PROGRAM(
-		[#include <limits.h>],
-		[;;;;;;;;;;
-PATH_MAX])
-])
-moo_cv_path_max="`$ac_cv_prog_CPP conftest.c | awk '/;;;;;;;;;;/ { start=1 } /^(0|1|2|3|4|5|6|7|8|9)(0|1|2|3|4|5|6|7|8|9)*/ { if (start == 1) { print $0; start++; } }'`"
-if test "x${moo_cv_path_max}" = "x"
-then
-	dnl either not defined or defined to a non-numeric value
-	AC_MSG_RESULT(not defined)
-else
-	AC_MSG_RESULT(${moo_cv_path_max})
-	AC_DEFINE_UNQUOTED(MOO_PATH_MAX, ${moo_cv_path_max}, [PATH_MAX])
-fi
-
 dnl check the size of primitive data types
 AC_CHECK_SIZEOF(char,,[[]])
 AC_CHECK_SIZEOF(short,,[[]])
@@ -302,6 +283,7 @@ AC_CHECK_SIZEOF(off64_t)
 
 AC_CHECK_SIZEOF(mbstate_t,,[#include <wchar.h>])
 AX_CHECK_NUMVALOF(MB_LEN_MAX,[32],[#include <limits.h>])
+AX_CHECK_NUMVALOF(PATH_MAX,[0],[#include <limits.h>])
 
 if test "x${platform_win32}" = "xyes"
 then
@@ -510,6 +492,10 @@ AC_DEFINE_UNQUOTED(MOO_SIZEOF_OFF64_T, ${ac_cv_sizeof_off64_t}, [sizeof(off64_t)
 
 AC_DEFINE_UNQUOTED(MOO_SIZEOF_MBSTATE_T, ${ac_cv_sizeof_mbstate_t}, [sizeof(mbstate_t)])
 AC_DEFINE_UNQUOTED(MOO_MBLEN_MAX, ${ax_cv_numvalof_MB_LEN_MAX}, [MB_LEN_MAX])
+if test ${ax_cv_numvalof_PATH_MAX} -gt 0
+then
+	AC_DEFINE_UNQUOTED(QSE_PATH_MAX, ${ax_cv_numvalof_PATH_MAX}, [PATH_MAX])
+fi
 
 AC_DEFINE_UNQUOTED(MOO_SIZEOF_STRUCT_SOCKADDR_IN, ${ac_cv_sizeof_struct_sockaddr_in}, [sizeof(struct sockaddr_in)])
 AC_DEFINE_UNQUOTED(MOO_SIZEOF_STRUCT_SOCKADDR_IN6, ${ac_cv_sizeof_struct_sockaddr_in6}, [sizeof(struct sockaddr_in6)])
