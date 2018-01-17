@@ -19981,7 +19981,6 @@ _ACEOF
 moo_cv_path_max="`$ac_cv_prog_CPP conftest.c | awk '/;;;;;;;;;;/ { start=1 } /^(0|1|2|3|4|5|6|7|8|9)(0|1|2|3|4|5|6|7|8|9)*/ { if (start == 1) { print $0; start++; } }'`"
 if test "x${moo_cv_path_max}" = "x"
 then
-	dcl either not defined or defined to a non-numeric value
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: not defined" >&5
 $as_echo "not defined" >&6; }
 else

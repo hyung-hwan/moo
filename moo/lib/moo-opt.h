@@ -63,8 +63,6 @@ struct moo_uopt_t
 	moo_uch_t*       cur;
 };
 
-
-
 typedef struct moo_bopt_t moo_bopt_t;
 typedef struct moo_bopt_lng_t moo_bopt_lng_t;
 
