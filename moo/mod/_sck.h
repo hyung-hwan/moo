@@ -71,7 +71,9 @@ struct sck_t
 		typedef moo_uint64_t sck_len_t;
 	#endif
 #else
-#	error UNSUPPORT sck_len_t size
+#	define MOO_SIZEOF_SOCKLEN_T MOO_SIZEOF_INT
+#	define MOO_SOCKLEN_T_IS_SIGNED
+	typedef int sck_len_t;
 #endif
 
 #if (MOO_SIZEOF_SA_FAMILY_T == 1)
@@ -99,7 +101,9 @@ struct sck_t
 		typedef moo_uint64_t sck_addr_family_t;
 	#endif
 #else
-#	error UNSUPPORT sck_addr_family_t size
+#	define MOO_SIZEOF_SA_FAMILY_T MOO_SIZEOF_INT
+#	define MOO_SA_FAMILY_T_IS_SIGNED
+	typedef int sck_addr_family_t;
 #endif
 
 struct sck_addr_t

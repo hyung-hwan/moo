@@ -119,6 +119,8 @@ static MOO_INLINE const char* proc_state_to_string (int state)
 #if defined(__DOS__) && (defined(_INTELC32_) || (defined(__WATCOMC__) && (__WATCOMC__ <= 1000)))
 	/* the old intel c code builder doesn't support __FUNCTION__ */
 #	define __PRIMITIVE_NAME__ "<<primitive>>"
+#elif defined(_SCO_DS)
+#	define __PRIMITIVE_NAME__ "<<primitive>>"
 #else
 #	define __PRIMITIVE_NAME__ (&__FUNCTION__[0])
 #endif
