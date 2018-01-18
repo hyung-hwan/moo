@@ -26,6 +26,10 @@
 
 #include "_sck.h"
 
+#if defined(HAVE_ACCEPT4)
+#	define _GNU_SOURCE
+#endif
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -40,8 +44,7 @@ static moo_pfrc_t pf_open_socket (moo_t* moo, moo_ooi_t nargs)
 {
 	oop_sck_t sck;
 	moo_oop_t dom, type, proto;
-	int fd = -1;
-	moo_errnum_t errnum;
+	int fd = -1, typev;
 
 	sck = (oop_sck_t)MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, 
@@ -55,9 +58,21 @@ static moo_pfrc_t pf_open_socket (moo_t* moo, moo_ooi_t nargs)
 
 	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_SMOOI(dom) && MOO_OOP_IS_SMOOI(type) && MOO_OOP_IS_SMOOI(proto));
 
-	fd = socket (MOO_OOP_TO_SMOOI(dom), MOO_OOP_TO_SMOOI(type), MOO_OOP_TO_SMOOI(proto));
+	typev = MOO_OOP_TO_SMOOI(type);
+#if defined(SOCK_NONBLOCK) && defined(SOCK_CLOEXEC)
+	typev |= SOCK_NONBLOCK | SOCK_CLOEXEC;
+create_socket:
+#endif
+	fd = socket (MOO_OOP_TO_SMOOI(dom), typev, MOO_OOP_TO_SMOOI(proto));
 	if (fd == -1) 
 	{
+#if defined(SOCK_NONBLOCK) && defined(SOCK_CLOEXEC)
+		if (errno == EINVAL && (typev & (SOCK_NONBLOCK | SOCK_CLOEXEC))) 
+		{
+			typev &= ~(SOCK_NONBLOCK | SOCK_CLOEXEC);
+			goto create_socket;
+		}
+#endif
 		moo_seterrwithsyserr (moo, errno);
 		goto oops;
 	}
@@ -67,6 +82,20 @@ static moo_pfrc_t pf_open_socket (moo_t* moo, moo_ooi_t nargs)
 		/* the file descriptor is too big to be represented as a small integer */
 		moo_seterrbfmt (moo, MOO_ERANGE, "socket handle %d not in the permitted range", fd);
 		goto oops;
+	}
+	
+#if defined(SOCK_NONBLOCK) && defined(SOCK_CLOEXEC)
+	if (!(typev & (SOCK_NONBLOCK | SOCK_CLOEXEC)))
+#endif
+	{
+		int oldfl;
+
+		oldfl = fcntl(fd, F_GETFL, 0);
+		if (oldfl == -1 || fcntl(fd, F_SETFL, oldfl | O_CLOEXEC | O_NONBLOCK) == -1)
+		{
+			moo_seterrwithsyserr (moo, errno);
+			goto oops;
+		}
 	}
 
 	sck->handle = MOO_SMOOI_TO_OOP(fd);
@@ -171,21 +200,34 @@ static moo_pfrc_t pf_accept_socket (moo_t* moo, moo_ooi_t nargs)
 	addrlen = MOO_OBJ_GET_SIZE(arg);
 #if defined(SOCK_NONBLOCK) && defined(SOCK_CLOEXEC) && defined(HAVE_ACCEPT4)
 	newfd = accept4(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), &addrlen, SOCK_NONBLOCK | SOCK_CLOEXEC);
-#else
-	oldfl = fcntl(fd, F_GETFL, 0);
-	if (oldfl == -1 || fcntl(fd, F_SETFL, oldfl | O_NONBLOCK | O_CLOEXEC) == -1)
+	if (newfd == -1)
 	{
-		moo_seterrwithsyserr (moo, errno);
-		return MOO_PF_FAILURE;
+		if (errno != ENOSYS) 
+		{
+			moo_seterrwithsyserr (moo, errno);
+			return MOO_PF_FAILURE;
+		}
 	}
-	newfd = accept(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), &addrlen);
+	else
+	{
+		goto accept_done;
+	}
 #endif
+	newfd = accept(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), &addrlen);
 	if (newfd == -1)
 	{
 		moo_seterrwithsyserr (moo, errno);
 		return MOO_PF_FAILURE;
 	}
-
+	oldfl = fcntl(newfd, F_GETFL, 0);
+	if (oldfl == -1 || fcntl(newfd, F_SETFL, oldfl | O_NONBLOCK | O_CLOEXEC) == -1)
+	{
+		moo_seterrwithsyserr (moo, errno);
+		close (newfd);
+		return MOO_PF_FAILURE;
+	}
+	
+accept_done:
 	newsck = (oop_sck_t)moo_instantiate (moo, MOO_OBJ_GET_CLASS(sck), MOO_NULL, 0);
 	if (!newsck) 
 	{
@@ -243,8 +285,7 @@ static moo_pfrc_t pf_listen_socket (moo_t* moo, moo_ooi_t nargs)
 static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 {
 	oop_sck_t sck;
-	int fd, oldfl, n;
-	moo_errnum_t errnum;
+	int fd, n;
 	moo_oop_t arg;
 
 	sck = (oop_sck_t)MOO_STACK_GETRCV(moo, nargs);
@@ -263,32 +304,20 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	oldfl = fcntl(fd, F_GETFL, 0);
-	if (oldfl == -1 || fcntl(fd, F_SETFL, oldfl | O_NONBLOCK) == -1) goto oops_syserr;
-
 	do
 	{
 		n = connect(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), moo_sck_addr_len((sck_addr_t*)MOO_OBJ_GET_BYTE_SLOT(arg)));
 	}
 	while (n == -1 && errno == EINTR);
 
-
 	if (n == -1 && errno != EINPROGRESS)
 	{
-		fcntl (fd, F_SETFL, oldfl);
-		goto oops_syserr;
+		moo_seterrwithsyserr (moo, errno);
+		return MOO_PF_FAILURE;
 	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
-
-oops_syserr:
-	moo_seterrwithsyserr (moo, errno);
-	return MOO_PF_FAILURE;
-
-oops:
-	moo_seterrnum (moo, errnum);
-	return MOO_PF_FAILURE;
 }
 
 static moo_pfrc_t pf_get_socket_error (moo_t* moo, moo_ooi_t nargs)

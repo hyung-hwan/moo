@@ -118,8 +118,8 @@
 #elif defined(MOO_SIZEOF_LONG) && (MOO_SIZEOF_LONG == 4)
 #	define MOO_HAVE_UINT32_T
 #	define MOO_HAVE_INT32_T
-	typedef unsigned long       moo_uint32_t;
-	typedef signed long         moo_int32_t;
+	typedef unsigned long int   moo_uint32_t;
+	typedef signed long int     moo_int32_t;
 #elif defined(MOO_SIZEOF___INT32) && (MOO_SIZEOF___INT32 == 4)
 #	define MOO_HAVE_UINT32_T
 #	define MOO_HAVE_INT32_T
@@ -151,13 +151,13 @@
 #elif defined(MOO_SIZEOF_LONG) && (MOO_SIZEOF_LONG == 8)
 #	define MOO_HAVE_UINT64_T
 #	define MOO_HAVE_INT64_T
-	typedef unsigned long       moo_uint64_t;
-	typedef signed long         moo_int64_t;
+	typedef unsigned long int  moo_uint64_t;
+	typedef signed long int    moo_int64_t;
 #elif defined(MOO_SIZEOF_LONG_LONG) && (MOO_SIZEOF_LONG_LONG == 8)
 #	define MOO_HAVE_UINT64_T
 #	define MOO_HAVE_INT64_T
-	typedef unsigned long long  moo_uint64_t;
-	typedef signed long long    moo_int64_t;
+	typedef unsigned long long int  moo_uint64_t;
+	typedef signed long long int    moo_int64_t;
 #elif defined(MOO_SIZEOF___INT64) && (MOO_SIZEOF___INT64 == 8)
 #	define MOO_HAVE_UINT64_T
 #	define MOO_HAVE_INT64_T
@@ -181,13 +181,13 @@
 #elif defined(MOO_SIZEOF_LONG) && (MOO_SIZEOF_LONG == 16)
 #	define MOO_HAVE_UINT128_T
 #	define MOO_HAVE_INT128_T
-	typedef unsigned long       moo_uint128_t;
-	typedef signed long         moo_int128_t;
+	typedef unsigned long int   moo_uint128_t;
+	typedef signed long int     moo_int128_t;
 #elif defined(MOO_SIZEOF_LONG_LONG) && (MOO_SIZEOF_LONG_LONG == 16)
 #	define MOO_HAVE_UINT128_T
 #	define MOO_HAVE_INT128_T
-	typedef unsigned long long  moo_uint128_t;
-	typedef signed long long    moo_int128_t;
+	typedef unsigned long long int moo_uint128_t;
+	typedef signed long long int   moo_int128_t;
 #elif defined(MOO_SIZEOF___INT128) && (MOO_SIZEOF___INT128 == 16)
 #	define MOO_HAVE_UINT128_T
 #	define MOO_HAVE_INT128_T
