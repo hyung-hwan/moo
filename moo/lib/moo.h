@@ -1670,11 +1670,15 @@ MOO_EXPORT void moo_seterrwithsyserr (
 	int    syserr
 );
 
+MOO_EXPORT const moo_ooch_t* moo_geterrstr (
+	moo_t* moo
+);
+
 MOO_EXPORT const moo_ooch_t* moo_geterrmsg (
 	moo_t* moo
 );
 
-MOO_EXPORT const moo_ooch_t* moo_geterrstr (
+MOO_EXPORT const moo_ooch_t* moo_backuperrmsg (
 	moo_t* moo
 );
 

@@ -7728,9 +7728,9 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			 *  this extra module name, i'm free from GC headache */
 			if (moo_importmod (moo, moo->c->cls.self_oop, moo->c->cls.modname.ptr, moo->c->cls.modname.len) <= -1)
 			{
-				moo_copyoocstr (moo->errmsg.tmpbuf.ooch, MOO_COUNTOF(moo->errmsg.tmpbuf.ooch), moo->errmsg.buf);
+				const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
 				set_syntax_errbfmt (moo, MOO_SYNERR_MODIMPFAIL, &moo->c->cls.modname_loc, &moo->c->cls.modname,
-						"unable to import %.*js - %js", moo->c->cls.modname.len, moo->c->cls.modname.ptr, moo->errmsg.tmpbuf.ooch);
+						"unable to import %.*js - %js", moo->c->cls.modname.len, moo->c->cls.modname.ptr, oldmsg);
 				return -1;
 			}
 		}

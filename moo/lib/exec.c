@@ -1140,8 +1140,8 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_hand
 		tmp = moo_reallocmem (moo, moo->sem_io_map, MOO_SIZEOF(*tmp) * new_capa);
 		if (!tmp) 
 		{
-			moo_copyoocstr (moo->errmsg.tmpbuf.ooch, MOO_COUNTOF(moo->errmsg.tmpbuf.ooch), moo->errmsg.buf);
-			moo_seterrbfmt (moo, moo->errnum, "handle %zd out of supported range - %js", moo->errmsg.tmpbuf.ooch);
+			const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
+			moo_seterrbfmt (moo, moo->errnum, "handle %zd out of supported range - %js", oldmsg);
 			return -1;
 		}
 
@@ -2555,8 +2555,8 @@ static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_se
 
 	if (add_to_sem_io(moo, sem, MOO_OOP_TO_SMOOI(fd), io_type) <= -1) 
 	{
-		moo_copyoocstr (moo->errmsg.tmpbuf.ooch, MOO_COUNTOF(moo->errmsg.tmpbuf.ooch), moo->errmsg.buf);
-		moo_seterrbfmt (moo, moo->errnum, "cannot add the handle %zd to the multiplexer - %js", MOO_OOP_TO_SMOOI(fd), moo->errmsg.tmpbuf.ooch);
+		const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
+		moo_seterrbfmt (moo, moo->errnum, "cannot add the handle %zd to the multiplexer - %js", MOO_OOP_TO_SMOOI(fd), oldmsg);
 		return MOO_PF_FAILURE;
 	}
 
@@ -2615,8 +2615,8 @@ static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 
 		if (delete_from_sem_io (moo, sem) <= -1)
 		{
-			moo_copyoocstr (moo->errmsg.tmpbuf.ooch, MOO_COUNTOF(moo->errmsg.tmpbuf.ooch), moo->errmsg.buf);
-			moo_seterrbfmt (moo, moo->errnum, "cannot delete the handle %zd from the multiplexer - %js", MOO_OOP_TO_SMOOI(sem->io_handle), moo->errmsg.tmpbuf.ooch);
+			const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
+			moo_seterrbfmt (moo, moo->errnum, "cannot delete the handle %zd from the multiplexer - %js", MOO_OOP_TO_SMOOI(sem->io_handle), oldmsg);
 			return MOO_PF_FAILURE;
 		}
 

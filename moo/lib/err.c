@@ -306,6 +306,12 @@ const moo_ooch_t* moo_geterrmsg (moo_t* moo)
 	return moo->errmsg.buf;
 }
 
+const moo_ooch_t* moo_backuperrmsg (moo_t* moo)
+{
+	moo_copyoocstr (moo->errmsg.tmpbuf.ooch, MOO_COUNTOF(moo->errmsg.tmpbuf.ooch), moo->errmsg.buf);
+	return moo->errmsg.tmpbuf.ooch;
+}
+
 void moo_seterrwithsyserr (moo_t* moo, int syserr)
 {
 	if (moo->vmprim.syserrstrb)
