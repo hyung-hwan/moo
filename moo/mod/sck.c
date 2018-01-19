@@ -88,14 +88,22 @@ create_socket:
 	if (!(typev & (SOCK_NONBLOCK | SOCK_CLOEXEC)))
 #endif
 	{
-		int oldfl;
+		int fl;
 
-		oldfl = fcntl(fd, F_GETFL, 0);
-		if (oldfl == -1 || fcntl(fd, F_SETFL, oldfl | O_CLOEXEC | O_NONBLOCK) == -1)
+		fl = fcntl(fd, F_GETFL, 0);
+		if (fl == -1)
 		{
+		fcntl_failure:
 			moo_seterrwithsyserr (moo, errno);
 			goto oops;
 		}
+
+		fl |= O_NONBLOCK;
+	#if defined(O_CLOEXEC)
+		fl |= O_CLOEXEC;
+	#endif
+
+		if (fcntl(fd, F_SETFL, fl) == -1) goto fcntl_failure;
 	}
 
 	sck->handle = MOO_SMOOI_TO_OOP(fd);
@@ -179,7 +187,7 @@ static moo_pfrc_t pf_accept_socket (moo_t* moo, moo_ooi_t nargs)
 	oop_sck_t sck, newsck;
 	moo_oop_t arg;
 	sck_len_t addrlen;
-	int fd, newfd, oldfl;
+	int fd, newfd, fl;
 
 	sck = (oop_sck_t)MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
@@ -219,13 +227,20 @@ static moo_pfrc_t pf_accept_socket (moo_t* moo, moo_ooi_t nargs)
 		moo_seterrwithsyserr (moo, errno);
 		return MOO_PF_FAILURE;
 	}
-	oldfl = fcntl(newfd, F_GETFL, 0);
-	if (oldfl == -1 || fcntl(newfd, F_SETFL, oldfl | O_NONBLOCK | O_CLOEXEC) == -1)
+	fl = fcntl(newfd, F_GETFL, 0);
+	if (fl == -1)
 	{
+	fcntl_failure:
 		moo_seterrwithsyserr (moo, errno);
 		close (newfd);
 		return MOO_PF_FAILURE;
 	}
+
+	fl |= O_NONBLOCK;
+#if defined(O_CLOEXEC)
+	fl |= O_CLOEXEC;
+#endif
+	if (fcntl(newfd, F_SETFL, fl) == -1) goto fcntl_failure;
 	
 accept_done:
 	newsck = (oop_sck_t)moo_instantiate (moo, MOO_OBJ_GET_CLASS(sck), MOO_NULL, 0);

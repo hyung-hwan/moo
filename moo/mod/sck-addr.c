@@ -79,22 +79,22 @@ struct sck_addr_trailer_t
 		{
 			moo_ooch_t path[100];
 		} local; */
-	};
+	} u;
 };
 
 
 union sockaddr_t
 {
-#if defined(MOO_SIZEOF_STRUCT_SOCKADDR_IN)	
+#if (MOO_SIZEOF_STRUCT_SOCKADDR_IN > 0)
 	struct sockaddr_in in4;
 #endif
-#if defined(MOO_SIZEOF_STRUCT_SOCKADDR_IN6)	
+#if (MOO_SIZEOF_STRUCT_SOCKADDR_IN6 > 0)
 	struct sockaddr_in6 in6;
 #endif
-#if defined(MOO_SIZEOF_STRUCT_SOCKADDR_LL)
+#if (MOO_SIZEOF_STRUCT_SOCKADDR_LL > 0)
 	struct sockaddr_ll ll;
 #endif
-#if defined(MOO_SIZEOF_STRUCT_SOCKADDR_UN)
+#if (MOO_SIZEOF_STRUCT_SOCKADDR_UN > 0)
 	struct sockaddr_un un;
 #endif
 };
@@ -142,6 +142,7 @@ static int str_to_ipv4 (const moo_ooch_t* str, moo_oow_t len, struct in_addr* in
 
 }
 
+#if (MOO_SIZEOF_STRUCT_SOCKADDR_IN6 > 0)
 static int str_to_ipv6 (const moo_ooch_t* src, moo_oow_t len, struct in6_addr* inaddr)
 {
 	moo_uint8_t* tp, * endp, * colonp;
@@ -251,6 +252,7 @@ static int str_to_ipv6 (const moo_ooch_t* src, moo_oow_t len, struct in6_addr* i
 
 	return 0;
 }
+#endif
 
 
 static int str_to_sockaddr (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, sockaddr_t* nwad)
@@ -291,6 +293,7 @@ static int str_to_sockaddr (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, so
 	}
 #endif
 
+#if (MOO_SIZEOF_STRUCT_SOCKADDR_IN6 > 0)
 	if (*p == '[')
 	{
 		/* IPv6 address */
@@ -353,6 +356,7 @@ TODO:
 	}
 	else
 	{
+#endif
 		/* IPv4 address */
 		tmp.ptr = (moo_ooch_t*)p;
 		while (p < end && *p != ':') p++;
@@ -360,6 +364,7 @@ TODO:
 
 		if (str_to_ipv4(tmp.ptr, tmp.len, &nwad->in4.sin_addr) <= -1)
 		{
+		#if (MOO_SIZEOF_STRUCT_SOCKADDR_IN6 > 0)
 			/* check if it is an IPv6 address not enclosed in []. 
 			 * the port number can't be specified in this format. */
 			if (p >= end || *p != ':') 
@@ -423,10 +428,15 @@ TODO
 
 			nwad->in6.sin6_family = AF_INET6;
 			return 0;
+		#else
+			goto unrecog;
+		#endif	
 		}
 
 		nwad->in4.sin_family = AF_INET;
+#if (MOO_SIZEOF_STRUCT_SOCKADDR_IN6 > 0)
 	}
+#endif
 
 	if (p < end && *p == ':') 
 	{
@@ -450,10 +460,14 @@ TODO
 			return -1;
 		}
 
+	#if (MOO_SIZEOF_STRUCT_SOCKADDR_IN6 > 0)
 		if (nwad->in4.sin_family == AF_INET)
 			nwad->in4.sin_port = moo_hton16(port);
 		else
 			nwad->in6.sin6_port = moo_hton16(port);
+	#else
+		nwad->in4.sin_port = moo_hton16(port);
+	#endif
 	}
 
 	return 0;
@@ -546,7 +560,7 @@ sck_len_t moo_sck_addr_len (sck_addr_t* addr)
 		case AF_INET:
 			return MOO_SIZEOF(struct sockaddr_in);
 	#endif
-	#if defined(AF_INET)
+	#if defined(AF_INET6)
 		case AF_INET6:
 			return MOO_SIZEOF(struct sockaddr_in6);
 	#endif
