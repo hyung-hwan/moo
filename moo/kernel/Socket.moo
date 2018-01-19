@@ -498,7 +498,8 @@ error -> exception
 			System log: 'new connection - '; log: newaddr; log: ' '; log: (newsck handle); logNl.
 
 			newsck inputAction: inact; outputAction: outact.
-			newsck watchInput; watchOutput.
+			##newsck watchInput; watchOutput.
+			newsck watchInput.
 		].
 
 		[
