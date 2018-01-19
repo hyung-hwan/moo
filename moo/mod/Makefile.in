@@ -176,6 +176,7 @@ libmoo_ffi_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 @ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_FALSE@	$(pkgmodexecdir)
 @ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am_libmoo_ffi_la_rpath =
 @ENABLE_MOD_SCK_TRUE@libmoo_sck_la_DEPENDENCIES =  \
+@ENABLE_MOD_SCK_TRUE@	$(am__DEPENDENCIES_1) \
 @ENABLE_MOD_SCK_TRUE@	$(am__DEPENDENCIES_1)
 am__libmoo_sck_la_SOURCES_DIST = sck.c sck-addr.c _sck.h
 @ENABLE_MOD_SCK_TRUE@am_libmoo_sck_la_OBJECTS = libmoo_sck_la-sck.lo \
@@ -381,6 +382,7 @@ RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SOCKET_LIBS = @SOCKET_LIBS@
 STRIP = @STRIP@
 TERMINAL_LIBS = @TERMINAL_LIBS@
 UNICOWS_LIBS = @UNICOWS_LIBS@
@@ -477,7 +479,7 @@ libmoo_con_la_LIBADD = $(LIBADD_COMMON) $(TERMINAL_LIBS)
 @ENABLE_MOD_SCK_TRUE@libmoo_sck_la_SOURCES = sck.c sck-addr.c _sck.h
 @ENABLE_MOD_SCK_TRUE@libmoo_sck_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 @ENABLE_MOD_SCK_TRUE@libmoo_sck_la_LDFLAGS = $(LDFLAGS_COMMON)
-@ENABLE_MOD_SCK_TRUE@libmoo_sck_la_LIBADD = $(LIBADD_COMMON)
+@ENABLE_MOD_SCK_TRUE@libmoo_sck_la_LIBADD = $(LIBADD_COMMON) $(SOCKET_LIBS)
 libmoo_stdio_la_SOURCES = stdio.c _stdio.h
 libmoo_stdio_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_stdio_la_LDFLAGS = $(LDFLAGS_COMMON)

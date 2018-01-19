@@ -92,7 +92,7 @@ if ENABLE_MOD_SCK
 libmoo_sck_la_SOURCES = sck.c sck-addr.c _sck.h
 libmoo_sck_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_sck_la_LDFLAGS = $(LDFLAGS_COMMON)
-libmoo_sck_la_LIBADD = $(LIBADD_COMMON)
+libmoo_sck_la_LIBADD = $(LIBADD_COMMON) $(SOCKET_LIBS)
 endif
 
 libmoo_stdio_la_SOURCES = stdio.c _stdio.h
