@@ -27,7 +27,6 @@
 #include "moo-prv.h"
 
 
-
 /* BEGIN: GENERATED WITH generr.moo */
 
 static moo_ooch_t errstr_0[] = {'n','o',' ','e','r','r','o','r','\0'};
@@ -309,8 +308,17 @@ const moo_ooch_t* moo_geterrmsg (moo_t* moo)
 
 void moo_seterrwithsyserr (moo_t* moo, int syserr)
 {
-	strerror_r (syserr, moo->errmsg.tmpbuf.bch, MOO_COUNTOF(moo->errmsg.tmpbuf.bch));
-	moo_seterrbfmt (moo, moo_syserr_to_errnum(errno), "%hs", moo->errmsg.tmpbuf.bch);
+	if (moo->vmprim.syserrstrb)
+	{
+		moo->vmprim.syserrstrb (moo, syserr, moo->errmsg.tmpbuf.bch, MOO_COUNTOF(moo->errmsg.tmpbuf.bch));
+		moo_seterrbfmt (moo, moo_syserr_to_errnum(errno), "%hs", moo->errmsg.tmpbuf.bch);
+	}
+	else
+	{
+		MOO_ASSERT (moo, moo->vmprim.syserrstru != MOO_NULL);
+		moo->vmprim.syserrstru (moo, syserr, moo->errmsg.tmpbuf.uch, MOO_COUNTOF(moo->errmsg.tmpbuf.uch));
+		moo_seterrbfmt (moo, moo_syserr_to_errnum(errno), "%ls", moo->errmsg.tmpbuf.uch);
+	}
 }
 
 /* -------------------------------------------------------------------------- 

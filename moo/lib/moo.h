@@ -928,6 +928,8 @@ typedef void (*moo_vmprim_dlclose_t) (moo_t* moo, void* handle);
 typedef void* (*moo_vmprim_dlsym_t) (moo_t* moo, void* handle, const moo_ooch_t* name);
 
 typedef void (*moo_log_write_t) (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oow_t len);
+typedef void (*moo_syserrstrb_t) (moo_t* moo, int syserr, moo_bch_t* buf, moo_oow_t len);
+typedef void (*moo_syserrstru_t) (moo_t* moo, int syserr, moo_uch_t* buf, moo_oow_t len);
 
 typedef int (*moo_vmprim_startup_t) (moo_t* moo);
 typedef void (*moo_vmprim_cleanup_t) (moo_t* moo);
@@ -973,6 +975,8 @@ struct moo_vmprim_t
 	moo_vmprim_dlclose_t  dl_close;
 	moo_vmprim_dlsym_t    dl_getsym;
 	moo_log_write_t       log_write;
+	moo_syserrstrb_t      syserrstrb;
+	moo_syserrstru_t      syserrstru;
 
 	moo_vmprim_startup_t  vm_startup;
 	moo_vmprim_cleanup_t  vm_cleanup;

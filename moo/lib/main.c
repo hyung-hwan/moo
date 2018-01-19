@@ -34,7 +34,7 @@
 #include <errno.h>
 #include <locale.h>
 
-#if !defined(__DOS__)
+#if !defined(__DOS__) && defined(HAVE_PTHREAD) && defined(HAVE_STRERROR_R)
 #	define USE_THREAD
 #endif
 
@@ -815,6 +815,16 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 	write_all (logfd, msg, len);
 #endif
 
+#endif
+}
+
+static void syserrstrb (moo_t* moo, int syserr, moo_bch_t* buf, moo_oow_t len)
+{
+#if defined(HAVE_STRERROR_R)
+	strerror_r (syserr, buf, len);
+#else
+	/* this is not thread safe */
+	moo_copybcstr (buf, len, strerror(syserr));
 #endif
 }
 
@@ -1821,19 +1831,21 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 	}
 
 #else
-
 	#if defined(USE_THREAD)
 	/* the sleep callback is called only if there is no IO semaphore 
 	 * waiting. so i can safely call vm_muxwait() without a muxwait callback
 	 * when USE_THREAD is true */
-	vm_muxwait (moo, dur, MOO_NULL);
+		vm_muxwait (moo, dur, MOO_NULL);
+	#elif defined(HAVE_NANOSLEEP)
+		struct timespec ts;
+		ts.tv_sec = dur->sec;
+		ts.tv_nsec = dur->nsec;
+		nanosleep (&ts, MOO_NULL);
+	#elif defined(HAVE_USLEEP)
+		usleep (MOO_SECNSEC_TO_USEC(dur->sec, dur->nsec));
 	#else
-	struct timespec ts;
-	ts.tv_sec = dur->sec;
-	ts.tv_nsec = dur->nsec;
-	nanosleep (&ts, MOO_NULL);
+	#	error UNSUPPORT SLEEP
 	#endif
-
 #endif
 }
 /* ========================================================================= */
@@ -2205,6 +2217,7 @@ int main (int argc, char* argv[])
 	vmprim.dl_close = dl_close;
 	vmprim.dl_getsym = dl_getsym;
 	vmprim.log_write = log_write;
+	vmprim.syserrstrb = syserrstrb;
 	vmprim.vm_startup = vm_startup;
 	vmprim.vm_cleanup = vm_cleanup;
 	vmprim.vm_gettime = vm_gettime;

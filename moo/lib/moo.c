@@ -86,6 +86,12 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 {
 	int modtab_inited = 0;
 
+	if (!vmprim->syserrstrb && !vmprim->syserrstru)
+	{
+		moo_seterrnum (moo, MOO_EINVAL);
+		return -1;
+	}
+
 	MOO_MEMSET (moo, 0, MOO_SIZEOF(*moo));
 	moo->mmgr = mmgr;
 	moo->cmgr = moo_getutf8cmgr ();
