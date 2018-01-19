@@ -63,6 +63,7 @@ static moo_pfrc_t pf_open_socket (moo_t* moo, moo_ooi_t nargs)
 	typev |= SOCK_NONBLOCK | SOCK_CLOEXEC;
 create_socket:
 #endif
+
 	fd = socket (MOO_OOP_TO_SMOOI(dom), typev, MOO_OOP_TO_SMOOI(proto));
 	if (fd == -1) 
 	{
@@ -324,7 +325,7 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 		n = connect(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), moo_sck_addr_len((sck_addr_t*)MOO_OBJ_GET_BYTE_SLOT(arg)));
 	}
 	while (n == -1 && errno == EINTR);
-
+ 
 	if (n == -1 && errno != EINPROGRESS)
 	{
 		moo_seterrwithsyserr (moo, errno);

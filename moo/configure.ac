@@ -189,6 +189,48 @@ LIBS="$save_LIBS"
 AC_SUBST(TERMINAL_LIBS)
 
 
+dnl OLDLIBS="$LIBS"
+dnl AC_SEARCH_LIBS([connect], [socket])
+dnl LIBS="$OLDLIBS"
+dnl if test "$ac_cv_search_connect" != "none required" -a "$ac_cv_search_connect" != "no"
+dnl then
+dnl     SOCKET_LIBS="$SOCKET_LIBS -lsocket"
+dnl fi
+dnl AC_SUBST(SOCKET_LIBS)
+AC_CHECK_FUNCS([connect gethostbyname])
+if test "x$ac_cv_func_gethostbyname" = "xno"
+then
+	AC_CHECK_LIB([nsl], [gethostbyname], [
+		SOCKET_LIBS="$SOCKET_LIBS -lnsl"
+		AC_DEFINE(HAVE_GETHOSTBYNAME, 1)
+	])
+fi
+if test "x$ac_cv_func_connect" = "xno"
+then
+	AC_CHECK_LIB([socket], [connect], [
+		SOCKET_LIBS="$SOCKET_LIBS -lsocket"
+		AC_DEFINE(HAVE_CONNECT, 1)
+	])
+
+	if test "x$ac_cv_lib_socket_connect" = xno
+	then
+		AC_CHECK_FUNCS([t_connect])
+		if test "x$ac_cv_func_t_connect" = "xno"
+		then
+			AC_CHECK_LIB([nsl_s], [t_connect], [
+				SOCKET_LIBS="$SOCKET_LIBS -lnsl_s"
+				AC_DEFINE(HAVE_T_CONNECT, 1)
+			])
+		fi
+	fi
+fi
+if test "x${platform_win32}" = "xyes"
+then
+	SOCKET_LIBS="$SOCKET_LIBS -lws2_32"
+fi
+AC_SUBST(SOCKET_LIBS)
+
+
 dnl check is the import library for unicows.dll exists
 dnl this check doesn't look for a particular symbol
 dnl but for the symbol 'main' since i want to check 

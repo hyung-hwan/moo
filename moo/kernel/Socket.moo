@@ -505,7 +505,7 @@ error -> exception
 			[
 				s := Socket domain: Socket.Domain.INET type: Socket.Type.STREAM.
 				s inputAction: inact; outputAction: outact.
-				s connectTo: (SocketAddress fromString: '127.0.0.1:9999') do: conact.
+				s connectTo: (SocketAddress fromString: '192.168.1.108:9999') do: conact.
 
 				s2 := Socket domain: Socket.Domain.INET type: Socket.Type.STREAM.
 				s2 inputAction: accact.

@@ -103,9 +103,9 @@ struct sck_t
 	#endif
 #else
 #	undef MOO_SIZEOF_SA_FAMILY_T
-#	define MOO_SIZEOF_SA_FAMILY_T MOO_SIZEOF_INT
-#	define MOO_SA_FAMILY_T_IS_SIGNED
-	typedef int sck_addr_family_t;
+#	define MOO_SIZEOF_SA_FAMILY_T MOO_SIZEOF_SHORT
+#	undef MOO_SA_FAMILY_T_IS_SIGNED
+	typedef unsigned short int sck_addr_family_t;
 #endif
 
 struct sck_addr_t
