@@ -7,7 +7,7 @@ CPPFLAGS_COMMON = \
 	-I$(abs_builddir)/../lib \
 	-I$(abs_srcdir) \
 	-I$(abs_srcdir)/../lib \
-	-I$(includedir) -fPIC
+	-I$(includedir)
 
 if WIN32
 # you must adjust the value of DEFAULT_PFMODPOSTFIX according 
