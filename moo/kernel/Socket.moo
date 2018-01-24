@@ -10,8 +10,14 @@ class(#byte) IPAddress(Object)
 }
 
 ### TODO: extend the compiler
-###class(#byte(4)) IP4Address(IPAddress) -> new basicNew always create 4 bytes. size to new: or basicNew: is ignored.
-###class(#byte(16)) IP6Address(IPAddress)
+### #byte(4) basic size if 4 bytes. basicNew: xxx creates an instance of the size 4 + xxx.
+### -> extend to support fixed 4 bytes by throwing an error in basicNew:.
+### -> #byte(4,fixed)? 
+### -> #byte -> byte variable/flexible
+### -> #byte(4) -> byte variable with the mimimum size of 4
+### -> (TODO)-> #byte(4,10) -> byte variable with the mimum size of 4 and maximum size of 10 => basicNew: should be allowed with upto 6.
+### -> #byte(4,4) -> it can emulated fixed byte size. -> do i  have space in spec to store the upper bound?
+
 
 class(#byte(4)) IP4Address(IPAddress)
 {
@@ -219,30 +225,13 @@ class(#byte) SocketAddress(Object) from 'sck.addr'
 	}
 }
 
-(**********************************************************
-class X(Object)
-{
-	var tt,yy.
-	
-	method x {
-	self.yy := 9.
-	}
-}
-##class(#byte(3)) Y(X)
-class(#pointer) Y(X)
-{
-}
-##class (#word(2)) Z(Y)
-##{
-##}
-##class InetSocketAddress(SocketAddress)
-##{
-##}
-************************************************************)
-
 class Socket(Object) from 'sck'
 {
+	## the handle must be the first field in the Socket object to match
+	## the internal socket representation used by the sck module.
 	var(#get) handle := -1.
+
+	var inwc := 0, outwc := 0. ## input watcher count and ouput watcher count
 	var insem, outsem.
 	var(#get,#set) inputAction, outputAction.
 
@@ -255,7 +244,7 @@ class Socket(Object) from 'sck'
 	method(#primitive) _socketError.
 
 	method(#primitive) readBytes: bytes.
-	method(#primitive) writeBytes: bytes.
+	method(#primitive) _writeBytes: bytes.
 }
 
 (* TODO: generate these domain and type from the C header *)
@@ -345,40 +334,79 @@ extend Socket
 		]
 	}
 
+	method writeBytes: bytes
+	{
+		| old_output_action |
+		old_output_action := self.outputAction.
+		self.outputAction := [ :sck :state |
+			self _writeBytes: bytes.
+
+			## restore the output action block before executing the previous
+			## one. i don't want this action block to be chained by the 
+			## previous block if it ever does
+			self.outputAction := old_output_action.
+			if (old_output_action notNil) { old_output_action value: self value: true }.
+			self unwatchOutput.
+		].
+		self watchOutput.
+	}
+
 ## TODO: how to specify a timeout for an action? using another semaphore??
 
 	method watchInput
 	{
-		if (self.insem isNil)
-		{
-			self.insem := Semaphore new.
-			self.insem signalAction: [:sem | self.inputAction value: self value: true].
-			System addAsyncSemaphore: self.insem.
+		if (self.inwc == 0) 
+		{ 
+			if (self.insem isNil)
+			{
+				self.insem := Semaphore new.
+				self.insem signalAction: [:sem | self.inputAction value: self value: true].
+				System addAsyncSemaphore: self.insem.
+			}.
+			System signal: self.insem onInput: self.handle 
 		}.
-
-		System signal: self.insem onInput: self.handle.
+		self.inwc := self.inwc + 1.
 	}
 
 	method unwatchInput
 	{
-		if (self.insem notNil) { System unsignal: self.insem }.
+		if (self.inwc > 0)
+		{
+			self.inwc := self.inwc - 1.
+			if (self.inwc == 0)
+			{
+				##if (self.insem notNil) { System unsignal: self.insem }.
+				System unsignal: self.insem.
+			}.
+		}.
 	}
 
 	method watchOutput
 	{
-		if (self.outsem isNil)
+		if (self.outwc == 0)
 		{
-			self.outsem := Semaphore new.
-			self.outsem signalAction: [:sem | self.outputAction value: self value: true].
-			System addAsyncSemaphore: self.outsem.
+			if (self.outsem isNil)
+			{
+				self.outsem := Semaphore new.
+				self.outsem signalAction: [:sem | self.outputAction value: self value: true].
+				System addAsyncSemaphore: self.outsem.
+			}.
+			System signal: self.outsem onOutput: self.handle.
 		}.
-
-		System signal: self.outsem onOutput: self.handle.
+		self.outwc := self.outwc + 1.
 	}
 
 	method unwatchOutput
 	{
-		if (self.outsem notNil) { System unsignal: self.outsem }.
+		if (self.outwc > 0)
+		{
+			self.outwc := self.outwc - 1.
+			if (self.outwc == 0)
+			{
+				##if (self.outsem notNil) { System unsignal: self.outsem }.
+				System unsignal: self.outsem.
+			}.
+		}.
 	}
 }
 
@@ -458,11 +486,14 @@ error -> exception
 					data dump.
 				}.
 
-				sck writeBytes: #[ $h, $e, $l, $l, $o, $., $., $., C'\n' ].
+				##sck writeBytes: #[ $h, $e, $l, $l, $o, $., $., $., C'\n' ].
+				sck writeBytes: data.
 			}
 			while (true).
 		].
 
+## TODO: what should it accept as block parameter
+## socket, output result? , output object?
 		outact := [:sck :state |
 			if (state)
 			{
@@ -478,9 +509,9 @@ error -> exception
 			if (state)
 			{
 				'CONNECTED NOW.............' dump.
+				sck watchInput.
 				sck writeBytes: #[ $h, $e, $l, $l, $o, $w, $o, C'\n' ].
-				sck watchInput; watchOutput.
-
+				###sck watchInput; watchOutput.
 			}
 			else
 			{
@@ -500,6 +531,8 @@ error -> exception
 			newsck inputAction: inact; outputAction: outact.
 			##newsck watchInput; watchOutput.
 			newsck watchInput.
+
+			newsck writeBytes: #[ $W, $e, $l, $c, $o, $m, $e, $., C'\n' ].
 		].
 
 		[
