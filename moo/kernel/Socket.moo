@@ -245,6 +245,7 @@ class Socket(Object) from 'sck'
 
 	method(#primitive) readBytes: bytes.
 	method(#primitive) _writeBytes: bytes.
+	method(#primitive) _writeBytes: bytes offset: offset length: length.
 }
 
 (* TODO: generate these domain and type from the C header *)
@@ -337,9 +338,11 @@ extend Socket
 	method writeBytes: bytes
 	{
 		| old_output_action |
+
 		old_output_action := self.outputAction.
 		self.outputAction := [ :sck :state |
 			self _writeBytes: bytes.
+## TODO: handle _writeBytes may not write in full.
 
 			## restore the output action block before executing the previous
 			## one. i don't want this action block to be chained by the 
@@ -348,6 +351,7 @@ extend Socket
 			if (old_output_action notNil) { old_output_action value: self value: true }.
 			self unwatchOutput.
 		].
+
 		self watchOutput.
 	}
 
@@ -495,10 +499,12 @@ error -> exception
 ## TODO: what should it accept as block parameter
 ## socket, output result? , output object?
 		outact := [:sck :state |
+
 			if (state)
 			{
-				[ sck writeBytes: #[ $h, $e, $l, $l, $o, C'\n' ] ] 
-					on: Exception do: [:ex | sck close. ].
+				## what if i want write more data???
+				##[ sck writeBytes: #[ $h, $e, $l, $l, $o, C'\n' ] ] 
+				##	on: Exception do: [:ex | sck close. ].
 			}
 			else
 			{

@@ -859,7 +859,7 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 	/* epoll_wait may return again if the worker thread consumes events.
 	 * switch to level-trigger. */
 	/* TODO: verify if EPOLLLET is desired */
-	ev.events |= EPOLLET;
+	//ev.events |= EPOLLET;
 	#endif
 	/*ev.data.ptr = (void*)event_data;*/
 	ev.data.fd = fd;
@@ -1043,7 +1043,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 	/* epoll_wait may return again if the worker thread consumes events.
 	 * switch to level-trigger. */
 	/* TODO: verify if EPOLLLET is desired */
-	ev.events |= EPOLLET;
+	//ev.events |= EPOLLET;
 	#endif
 	ev.data.fd = fd;
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_MOD, fd, &ev) == -1)
