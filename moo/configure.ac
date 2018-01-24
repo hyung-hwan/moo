@@ -371,30 +371,37 @@ then
 	fi
 else
 	AC_CHECK_SIZEOF(struct sockaddr_in,,[
+		#include <sys/types.h>
 		#include <sys/socket.h>
 		#include <netinet/in.h>])
 	AC_CHECK_SIZEOF(struct sockaddr_in6,,[
+		#include <sys/types.h>
 		#include <sys/socket.h>
 		#include <netinet/in.h>])
 	AC_CHECK_SIZEOF(struct sockaddr_un,,[
+		#include <sys/types.h>
 		#include <sys/socket.h>
 		#include <sys/un.h>])
 	AC_CHECK_SIZEOF(struct sockaddr_ll,,[
+		#include <sys/types.h>
 		#include <sys/socket.h>
 		#include <netpacket/packet.h>])
 	AC_CHECK_SIZEOF(struct sockaddr_dl,,[
-		#include <sys/socket.h>
 		#include <sys/types.h>
+		#include <sys/socket.h>
 		#include <net/if_dl.h>])
 
 
-	AC_CHECK_SIZEOF(socklen_t,, [#include <sys/socket.h>])
+	AC_CHECK_SIZEOF(socklen_t,, [
+		#include <sys/types.h>
+		#include <sys/socket.h>])
 	if test ${ac_cv_sizeof_socklen_t} -gt 0
 	then
 		AX_CHECK_SIGN([socklen_t],
 			[ AC_DEFINE(MOO_SOCKLEN_T_IS_SIGNED, 1, [Define if socklen_t is signed]) ],
 			[ AS_ECHO_N("") ],
-			[#include <sys/socket.h>])
+			[#include <sys/types.h>
+			 #include <sys/socket.h>])
 	fi
 
 	AC_CHECK_SIZEOF(sa_family_t,, [
@@ -405,7 +412,8 @@ else
 		AX_CHECK_SIGN([sa_family_t],
 			[ AC_DEFINE(MOO_SA_FAMILY_T_IS_SIGNED, 1, [Define if sa_family_t is signed]) ],
 			[ AS_ECHO_N("") ],
-			[#include <sys/socket.h>])
+			[#include <sys/types.h>
+			 #include <sys/socket.h>])
 	fi
 fi
 

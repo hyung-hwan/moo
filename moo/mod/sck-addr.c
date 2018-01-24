@@ -300,7 +300,7 @@ static int str_to_sockaddr (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, so
 		tmp.ptr = (moo_ooch_t*)++p; /* skip [ and remember the position */
 		while (p < end && *p != '%' && *p != ']') p++;
 
-		if (p >= end) goto norbrack;
+		if (p >= end) goto no_rbrack;
 
 		tmp.len = p - tmp.ptr;
 		if (*p == '%')
@@ -347,7 +347,7 @@ TODO:
 #endif
 			}
 
-			if (p >= end || *p != ']') goto norbrack;
+			if (p >= end || *p != ']') goto no_rbrack;
 		}
 		p++; /* skip ] */
 
@@ -477,7 +477,7 @@ unrecog:
 	moo_seterrbfmt (moo, MOO_EINVAL, "unrecognized address");
 	return -1;
 	
-norbrack:
+no_rbrack:
 	moo_seterrbfmt (moo, MOO_EINVAL, "missing right bracket");
 	return -1;
 }
@@ -524,7 +524,7 @@ static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 	}
 
 	/* change the number of the fixed fields forcibly.
-	/* the check against the superclass is done by the main compiler 
+	 * the check against the superclass is done by the main compiler 
 	 * after this import. so i perform no check about the superclass. */
 	spec = MOO_CLASS_SPEC_MAKE (MOO_SIZEOF(sockaddr_t), MOO_CLASS_SPEC_FLAGS(spec), MOO_CLASS_SPEC_INDEXED_TYPE(spec));
 	_class->spec = MOO_SMOOI_TO_OOP(spec);
