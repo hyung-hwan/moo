@@ -38,14 +38,6 @@ struct sck_t
 	/* there are more fields in the actual object */
 };
 
-#if (MOO_SIZEOF_SOCKLEN_T > 0)
-//#error x
-#endif
-
-#if (MOO_SIZEOF_INT8_T > 0)
-#error x
-#endif
-
 #if (MOO_SIZEOF_SOCKLEN_T == 1)
 	#if defined(MOO_SOCKLEN_T_IS_SIGNED)
 		typedef moo_int8_t sck_len_t;
