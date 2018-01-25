@@ -405,6 +405,7 @@ else
 	fi
 
 	AC_CHECK_SIZEOF(sa_family_t,, [
+		#include <sys/types.h>
 		#include <sys/socket.h>
 		#include <netinet/in.h>])
 	if test ${ac_cv_sizeof_sa_family_t} -gt 0
@@ -413,7 +414,8 @@ else
 			[ AC_DEFINE(MOO_SA_FAMILY_T_IS_SIGNED, 1, [Define if sa_family_t is signed]) ],
 			[ AS_ECHO_N("") ],
 			[#include <sys/types.h>
-			 #include <sys/socket.h>])
+			 #include <sys/socket.h>
+			 #include <netinet/in.h>])
 	fi
 fi
 
