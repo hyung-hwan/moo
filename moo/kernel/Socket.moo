@@ -234,6 +234,7 @@ class Socket(Object) from 'sck'
 	var inwc := 0, outwc := 0. ## input watcher count and ouput watcher count
 	var insem, outsem.
 	var(#get,#set) inputAction, outputAction.
+	var(#get) inputReady := false, outputReady := false.
 
 	method(#primitive) open(domain, type, proto).
 	method(#primitive) _close.
@@ -339,9 +340,20 @@ extend Socket
 	{
 		| old_output_action |
 
+		if (self.outputReady)
+		{
+			if ((self _writeBytes: bytes) >= 0) { ^self }.
+			self.outputReady := false.
+		}.
+
 		old_output_action := self.outputAction.
 		self.outputAction := [ :sck :state |
-			self _writeBytes: bytes.
+			if ((self _writeBytes: bytes) <= -1) 
+			{
+				## EAGAIN
+				self.outputReady := false.
+				^self.
+			}.
 ## TODO: handle _writeBytes may not write in full.
 
 			## restore the output action block before executing the previous
@@ -364,9 +376,13 @@ extend Socket
 			if (self.insem isNil)
 			{
 				self.insem := Semaphore new.
-				self.insem signalAction: [:sem | self.inputAction value: self value: true].
+				self.insem signalAction: [:sem | 
+					self.inputReady := true.
+					self.inputAction value: self value: true
+				].
 				System addAsyncSemaphore: self.insem.
 			}.
+			self.inputReady := false.
 			System signal: self.insem onInput: self.handle 
 		}.
 		self.inwc := self.inwc + 1.
@@ -392,9 +408,13 @@ extend Socket
 			if (self.outsem isNil)
 			{
 				self.outsem := Semaphore new.
-				self.outsem signalAction: [:sem | self.outputAction value: self value: true].
+				self.outsem signalAction: [:sem | 
+					self.outputReady := true.
+					self.outputAction value: self value: true 
+				].
 				System addAsyncSemaphore: self.outsem.
 			}.
+			self.outputReady := false.
 			System signal: self.outsem onOutput: self.handle.
 		}.
 		self.outwc := self.outwc + 1.

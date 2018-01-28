@@ -859,7 +859,7 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 	/* epoll_wait may return again if the worker thread consumes events.
 	 * switch to level-trigger. */
 	/* TODO: verify if EPOLLLET is desired */
-	//ev.events |= EPOLLET;
+	ev.events |= EPOLLET;
 	#endif
 	/*ev.data.ptr = (void*)event_data;*/
 	ev.data.fd = fd;
@@ -1043,7 +1043,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 	/* epoll_wait may return again if the worker thread consumes events.
 	 * switch to level-trigger. */
 	/* TODO: verify if EPOLLLET is desired */
-	//ev.events |= EPOLLET;
+	ev.events |= EPOLLET;
 	#endif
 	ev.data.fd = fd;
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_MOD, fd, &ev) == -1)
@@ -1357,7 +1357,7 @@ static int vm_muxadd (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask)
 {
 	int event_mask;
 
-	event_mask = 0; /*EPOLLET; */ /* TODO: use edge trigger(EPOLLLET)? */
+	event_mask = 0;
 	if (mask & MOO_SEMAPHORE_IO_MASK_INPUT) event_mask |= XPOLLIN; 
 	if (mask & MOO_SEMAPHORE_IO_MASK_OUTPUT) event_mask |= XPOLLOUT;
 
@@ -1368,14 +1368,14 @@ static int vm_muxadd (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask)
 		return -1;
 	}
 
-	return _add_poll_fd (moo, io_handle, event_mask);
+	return _add_poll_fd(moo, io_handle, event_mask);
 }
 
 static int vm_muxmod (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask)
 {
 	int event_mask;
 
-	event_mask = 0; /*EPOLLET; */ /* TODO: use edge trigger(EPOLLLET)? */
+	event_mask = 0;
 	if (mask & MOO_SEMAPHORE_IO_MASK_INPUT) event_mask |= XPOLLIN; 
 	if (mask & MOO_SEMAPHORE_IO_MASK_OUTPUT) event_mask |= XPOLLOUT;
 
@@ -1386,12 +1386,12 @@ static int vm_muxmod (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask)
 		return -1;
 	}
 
-	return _mod_poll_fd (moo, io_handle, event_mask);
+	return _mod_poll_fd(moo, io_handle, event_mask);
 }
 
 static int vm_muxdel (moo_t* moo, moo_ooi_t io_handle)
 {
-	return _del_poll_fd (moo, io_handle);
+	return _del_poll_fd(moo, io_handle);
 }
 
 #if defined(USE_THREAD)
