@@ -225,17 +225,9 @@ class(#character,#final,#limited,#immutable) Symbol(String)
 
 ## -------------------------------------------------------------------------------
 
-class(#byte) ByteArray(Collection)
+class(#byte) ByteArray(Array)
 {
-	method at: anInteger
-	{
-		^self basicAt: anInteger.
-	}
-
-	method at: anInteger put: aValue
-	{
-		^self basicAt: anInteger put: aValue.
-	}
+	## TODO: is it ok for ByteArray to inherit from Array?
 }
 
 ## -------------------------------------------------------------------------------

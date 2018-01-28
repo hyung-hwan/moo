@@ -342,7 +342,7 @@ extend Socket
 
 		if (self.outputReady)
 		{
-			if ((self _writeBytes: bytes) >= 0) { ^self }.
+			if ((self _writeBytes: bytes offset: offset length: length) >= 0) { ^self }.
 			self.outputReady := false.
 		}.
 
@@ -517,7 +517,6 @@ error -> exception
 					##sck writeBytes: #[ $h, $e, $l, $l, $o, $., $., $., C'\n' ].
 					sck writeBytes: data offset: 0 length: n.
 				}.
-
 			}
 			while (true).
 		].
