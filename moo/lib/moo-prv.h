@@ -465,7 +465,7 @@ struct moo_initv_t
 
 enum moo_pragma_flag_t
 {
-	MOO_PRAGMA_QC = (1 << 0),
+	MOO_PRAGMA_QC = (1 << 0)
 };
 
 struct moo_compiler_t

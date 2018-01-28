@@ -208,6 +208,7 @@ const moo_ooch_t* moo_synerrnum_to_errstr (moo_synerrnum_t errnum)
 #	include <ssdef.h> /* (SS$...) */
 #	include <lib$routines.h> /* (lib$...) */
 #elif defined(macintosh)
+#	include <MacErrors.h>
 #	include <Process.h>
 #	include <Dialogs.h>
 #	include <TextUtils.h>
@@ -241,6 +242,24 @@ moo_errnum_t moo_syserr_to_errnum (int e)
 		/*TODO: add more mappings */
 		default: return MOO_ESYSERR;
 	}
+#elif defined(macintosh)
+	switch (e)
+	{
+		case notEnoughMemoryErr: return MOO_ESYSMEM;
+		case paramErr: return MOO_EINVAL;
+
+		case qErr: /* queue element not found during deletion */
+		case fnfErr: /* file not found */
+		case dirNFErr: /* direcotry not found */
+		case resNotFound: /* resource not found */
+		case resFNotFound: /* resource file not found */
+		case nbpNotFound: /* name not found on remove */
+			return MOO_ENOENT;
+
+		/*TODO: add more mappings */
+		default: return MOO_ESYSERR;
+	}
+
 #else
 	switch (e)
 	{
@@ -317,13 +336,13 @@ void moo_seterrwithsyserr (moo_t* moo, int syserr)
 	if (moo->vmprim.syserrstrb)
 	{
 		moo->vmprim.syserrstrb (moo, syserr, moo->errmsg.tmpbuf.bch, MOO_COUNTOF(moo->errmsg.tmpbuf.bch));
-		moo_seterrbfmt (moo, moo_syserr_to_errnum(errno), "%hs", moo->errmsg.tmpbuf.bch);
+		moo_seterrbfmt (moo, moo_syserr_to_errnum(syserr), "%hs", moo->errmsg.tmpbuf.bch);
 	}
 	else
 	{
 		MOO_ASSERT (moo, moo->vmprim.syserrstru != MOO_NULL);
 		moo->vmprim.syserrstru (moo, syserr, moo->errmsg.tmpbuf.uch, MOO_COUNTOF(moo->errmsg.tmpbuf.uch));
-		moo_seterrbfmt (moo, moo_syserr_to_errnum(errno), "%ls", moo->errmsg.tmpbuf.uch);
+		moo_seterrbfmt (moo, moo_syserr_to_errnum(syserr), "%ls", moo->errmsg.tmpbuf.uch);
 	}
 }
 

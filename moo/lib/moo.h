@@ -123,7 +123,7 @@ enum moo_trait_t
 	MOO_NOGC = (1 << 8),
 
 	/* wait for running process when exiting from the main method */
-	MOO_AWAIT_PROCS = (1 << 9),
+	MOO_AWAIT_PROCS = (1 << 9)
 };
 typedef enum moo_trait_t moo_trait_t;
 
@@ -1428,7 +1428,7 @@ enum moo_log_mask_t
 
 
 	MOO_LOG_STDOUT     = (1 << 14), /* write log messages to stdout without timestamp. MOO_LOG_STDOUT wins over MOO_LOG_STDERR. */
-	MOO_LOG_STDERR     = (1 << 15), /* write log messages to stderr without timestamp. */
+	MOO_LOG_STDERR     = (1 << 15)  /* write log messages to stderr without timestamp. */
 
 };
 typedef enum moo_log_mask_t moo_log_mask_t;
