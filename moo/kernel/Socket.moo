@@ -336,7 +336,7 @@ extend Socket
 		]
 	}
 
-	method writeBytes: bytes
+	method writeBytes: bytes offset: offset length: length
 	{
 		| old_output_action |
 
@@ -348,7 +348,7 @@ extend Socket
 
 		old_output_action := self.outputAction.
 		self.outputAction := [ :sck :state |
-			if ((self _writeBytes: bytes) <= -1) 
+			if ((self _writeBytes: bytes offset: offset length: length) <= -1) 
 			{
 				## EAGAIN
 				self.outputReady := false.
@@ -365,6 +365,11 @@ extend Socket
 		].
 
 		self watchOutput.
+	}
+
+	method writeBytes: bytes
+	{
+		^self writeBytes: bytes offset: 0 length: (bytes size)
 	}
 
 ## TODO: how to specify a timeout for an action? using another semaphore??
@@ -508,10 +513,11 @@ error -> exception
 				{
 					(n asString & ' bytes read') dump.
 					data dump.
+
+					##sck writeBytes: #[ $h, $e, $l, $l, $o, $., $., $., C'\n' ].
+					sck writeBytes: data offset: 0 length: n.
 				}.
 
-				##sck writeBytes: #[ $h, $e, $l, $l, $o, $., $., $., C'\n' ].
-				sck writeBytes: data.
 			}
 			while (true).
 		].
