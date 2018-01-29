@@ -280,7 +280,12 @@ typedef unsigned char           moo_bchu_t; /* unsigned version of moo_bch_t for
 #define MOO_SIZEOF_BCH_T MOO_SIZEOF_CHAR
 #define MOO_SIZEOF_BCI_T MOO_SIZEOF_INT
 
-typedef moo_uint16_t            moo_uch_t; /* TODO ... wchar_t??? */
+#if defined(__GNUC__) && defined(__CHAR16_TYPE__)
+/* TODO ... wchar_t???, char16_t? char32_t? */
+typedef __CHAR16_TYPE__         moo_uch_t; 
+#else
+typedef moo_uint16_t            moo_uch_t;
+#endif
 typedef moo_int32_t             moo_uci_t;
 typedef moo_uint16_t            moo_uchu_t; /* same as moo_uch_t as it is already unsigned */
 #define MOO_SIZEOF_UCH_T 2
