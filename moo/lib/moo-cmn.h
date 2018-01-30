@@ -721,7 +721,35 @@ typedef struct moo_t moo_t;
 	#if __has_builtin(__builtin_expect)
 		#define MOO_HAVE_BUILTIN_EXPECT
 	#endif
+
+
+	#if __has_builtin(__sync_lock_test_and_set)
+		#define MOO_HAVE_SYNC_LOCK_TEST_AND_SET
+	#endif
+	#if __has_builtin(__sync_lock_release)
+		#define MOO_HAVE_SYNC_LOCK_RELEASE
+	#endif
+
+	#if __has_builtin(__sync_synchronize)
+		#define MOO_HAVE_SYNC_SYNCHRONIZE
+	#endif
+	#if __has_builtin(__sync_bool_compare_and_swap)
+		#define MOO_HAVE_SYNC_BOOL_COMPARE_AND_SWAP
+	#endif
+	#if __has_builtin(__sync_val_compare_and_swap)
+		#define MOO_HAVE_SYNC_VAL_COMPARE_AND_SWAP
+	#endif
+
 #elif defined(__GNUC__) && defined(__GNUC_MINOR__)
+
+	#if (__GNUC__ >= 4) 
+		#define MOO_HAVE_SYNC_LOCK_TEST_AND_SET
+		#define MOO_HAVE_SYNC_LOCK_RELEASE
+
+		#define MOO_HAVE_SYNC_SYNCHRONIZE
+		#define MOO_HAVE_SYNC_BOOL_COMPARE_AND_SWAP
+		#define MOO_HAVE_SYNC_VAL_COMPARE_AND_SWAP
+	#endif
 
 	#if (__GNUC__ >= 4) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)
 		#define MOO_HAVE_BUILTIN_CTZ
