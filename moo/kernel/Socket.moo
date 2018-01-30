@@ -239,7 +239,7 @@ class Socket(Object) from 'sck'
 	method(#primitive) open(domain, type, proto).
 	method(#primitive) _close.
 	method(#primitive) bind: addr.
-	method(#primitive) listen: backlog.
+	method(#primitive) _listen: backlog.
 	method(#primitive) accept: addr.
 	method(#primitive) _connect: addr.
 	method(#primitive) _socketError.
@@ -279,7 +279,7 @@ extend Socket
 			## this primitive method may return failure. 
 			## but ignore it here.
 			if (self.insem notNil) 
-			{ 
+			{
 				System unsignal: self.insem;
 				       removeAsyncSemaphore: self.insem.
 				self.insem := nil.
@@ -296,6 +296,13 @@ extend Socket
 		}
 	}
 
+	method listen: backlog do: acceptBlock
+	{
+		self.inputAction := acceptBlock.
+		self watchInput.
+		^self _listen: backlog.
+	}
+
 	method connectTo: target do: connectBlock
 	{
 		| s1 s2 sa |
@@ -304,7 +311,7 @@ extend Socket
 		s2 := Semaphore new.
 
 		sa := [:sem | 
-		
+
 			| connected |
 
 			connected := false.
@@ -574,9 +581,13 @@ error -> exception
 				s connectTo: (SocketAddress fromString: '127.0.0.1:9999') do: conact.
 
 				s2 := Socket domain: Socket.Domain.INET type: Socket.Type.STREAM.
-				s2 inputAction: accact.
 				s2 bind: (SocketAddress fromString: '0.0.0.0:9998').
-				s2 listen: 10; watchInput.
+				##s2 inputAction: accact.
+				###s2 listen: 10; watchInput.
+				s2 listen: 10 do: accact.
+
+### when there is an exception something is not right....
+Exception signal: 'XXXXXXXXXX'.
 
 				while (true)
 				{
