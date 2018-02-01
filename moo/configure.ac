@@ -369,6 +369,16 @@ then
 			[#include <winsock2.h>
 			 #include <ws2tcpip.h>])
 	fi
+
+	AC_MSG_CHECKING([offset of sa_family in struct sockaddr])
+	AC_COMPUTE_INT([ac_cv_offsetof_sa_family],
+		[[offsetof(struct sockaddr, sa_family)]],
+		[#include <stddef.h>
+		 #include <winsock2.h>
+		 #include <ws2tcpip.h>], [ac_cv_offsteof_sa_family=0])
+	AC_MSG_RESULT([$ac_cv_offsetof_sa_family])
+	AC_DEFINE_UNQUOTED(MOO_OFFSETOF_SA_FAMILY, ${ac_cv_offsetof_sa_family}, [offsetof(struct sockaddr, sa_family)])
+
 else
 	AC_CHECK_SIZEOF(struct sockaddr_in,,[
 		#include <sys/types.h>
@@ -417,6 +427,15 @@ else
 			 #include <sys/socket.h>
 			 #include <netinet/in.h>])
 	fi
+
+	AC_MSG_CHECKING([offset of sa_family in struct sockaddr])
+	AC_COMPUTE_INT([ac_cv_offsetof_sa_family],
+		[[offsetof(struct sockaddr, sa_family)]],
+		[#include <stddef.h>
+		 #include <sys/types.h>
+		 #include <sys/socket.h>], [ac_cv_offsteof_sa_family=0])
+	AC_MSG_RESULT([$ac_cv_offsetof_sa_family])
+	AC_DEFINE_UNQUOTED(MOO_OFFSETOF_SA_FAMILY, ${ac_cv_offsetof_sa_family}, [offsetof(struct sockaddr, sa_family)])
 fi
 
 dnl gcc 3.4.3 on opensolaris x86 gave this warning without -msse or 

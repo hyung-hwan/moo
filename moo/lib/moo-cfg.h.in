@@ -416,6 +416,9 @@
 /* MB_LEN_MAX */
 #undef MOO_MBLEN_MAX
 
+/* offsetof(struct sockaddr, sa_family) */
+#undef MOO_OFFSETOF_SA_FAMILY
+
 /* Author */
 #undef MOO_PACKAGE_AUTHOR
 

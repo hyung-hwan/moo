@@ -21357,6 +21357,25 @@ $as_echo "#define MOO_SA_FAMILY_T_IS_SIGNED 1" >>confdefs.h
  fi
 
 	fi
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking offset of sa_family in struct sockaddr" >&5
+$as_echo_n "checking offset of sa_family in struct sockaddr... " >&6; }
+	if ac_fn_c_compute_int "$LINENO" "offsetof(struct sockaddr, sa_family)" "ac_cv_offsetof_sa_family"        "#include <stddef.h>
+		 #include <winsock2.h>
+		 #include <ws2tcpip.h>"; then :
+
+else
+  ac_cv_offsteof_sa_family=0
+fi
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_offsetof_sa_family" >&5
+$as_echo "$ac_cv_offsetof_sa_family" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define MOO_OFFSETOF_SA_FAMILY ${ac_cv_offsetof_sa_family}
+_ACEOF
+
+
 else
 	# The cast to long int works around a bug in the HP C Compiler
 # version HP92453-01 B.11.11.23709.GP, which incorrectly rejects
@@ -21704,6 +21723,24 @@ $as_echo "#define MOO_SA_FAMILY_T_IS_SIGNED 1" >>confdefs.h
  fi
 
 	fi
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking offset of sa_family in struct sockaddr" >&5
+$as_echo_n "checking offset of sa_family in struct sockaddr... " >&6; }
+	if ac_fn_c_compute_int "$LINENO" "offsetof(struct sockaddr, sa_family)" "ac_cv_offsetof_sa_family"        "#include <stddef.h>
+		 #include <sys/types.h>
+		 #include <sys/socket.h>"; then :
+
+else
+  ac_cv_offsteof_sa_family=0
+fi
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_offsetof_sa_family" >&5
+$as_echo "$ac_cv_offsetof_sa_family" >&6; }
+
+cat >>confdefs.h <<_ACEOF
+#define MOO_OFFSETOF_SA_FAMILY ${ac_cv_offsetof_sa_family}
+_ACEOF
+
 fi
 
 if test ${ac_cv_sizeof___int128_t} -gt 0

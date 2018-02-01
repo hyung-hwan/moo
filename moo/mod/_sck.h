@@ -102,6 +102,9 @@ struct sck_t
 
 struct sck_addr_t
 {
+#if defined(MOO_OFFSETOF_SA_FAMILY) && (MOO_OFFSETOF_SA_FAMILY > 0)
+	moo_uint8_t filler[MOO_OFFSETOF_SA_FAMILY];
+#endif
 	sck_addr_family_t family;
 	moo_uint8_t data[1];
 };
