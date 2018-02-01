@@ -170,7 +170,6 @@ static moo_pfrc_t __pf_puts (moo_t* moo, moo_ooi_t nargs, moo_oow_t limit)
 			if (fwrite (x->slot, 1, MOO_OBJ_GET_SIZE(x), stdio->fp) < MOO_OBJ_GET_SIZE(x))
 			{
 				moo_seterrnum (moo, moo_syserr_to_errnum(errno));
-				moo_seterrnum (moo, moo_syserr_to_errnum(errno));
 				goto softfail;
 			}
 		#endif
