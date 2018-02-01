@@ -584,7 +584,7 @@ typedef struct moo_t moo_t;
 #	define MOO_IMPORT __declspec(dllimport)
 #	define MOO_EXPORT __declspec(dllexport)
 #	define MOO_PRIVATE 
-#elif defined(__GNUC__) && ((__GNUC__>= 4) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4))
+#elif defined(__GNUC__) && ((__GNUC__>= 4) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 3))
 #	define MOO_IMPORT __attribute__((visibility("default")))
 #	define MOO_EXPORT __attribute__((visibility("default")))
 #	define MOO_PRIVATE __attribute__((visibility("hidden")))
