@@ -614,7 +614,12 @@ moo_ooi_t moo_logbfmt (moo_t* moo, moo_oow_t mask, const moo_bch_t* fmt, ...)
 
 	if (moo->log.default_type_mask & MOO_LOG_ALL_TYPES) 
 	{
-		mask &= ~MOO_LOG_UNTYPED;
+		/* if a type is given, it's not untyped any more.
+		 * mask off the UNTYPED bit */
+		mask &= ~MOO_LOG_UNTYPED; 
+
+		/* if the default_type_mask has the UNTYPED bit on,
+		 * it'll get turned back on */
 		mask |= (moo->log.default_type_mask & MOO_LOG_ALL_TYPES);
 	}
 

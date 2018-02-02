@@ -197,6 +197,7 @@ struct xtn_t
 
 	int logfd;
 	int logmask;
+	int logfd_istty;
 
 #if defined(_WIN32)
 	HANDLE waitable_timer;
@@ -777,6 +778,14 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 		write_all (logfd, ts, tslen);
 	}
 
+
+	if (xtn->logfd_istty)
+	{
+		if (mask & MOO_LOG_FATAL) write_all (logfd, "\x1B[1;31m", 7);
+		else if (mask & MOO_LOG_ERROR) write_all (logfd, "\x1B[1;36m", 7);
+		else if (mask & MOO_LOG_WARN) write_all (logfd, "\x1B[1;33m", 7);
+	}
+
 #if defined(MOO_OOCH_IS_UCH)
 	msgidx = 0;
 	while (len > 0)
@@ -814,6 +823,11 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 #else
 	write_all (logfd, msg, len);
 #endif
+
+	if (xtn->logfd_istty)
+	{
+		if (mask & (MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN)) write_all (logfd, "\x1B[0m", 4);
+	}
 
 #endif
 }
@@ -2022,6 +2036,7 @@ static void close_moo (moo_t* moo)
 	{
 		close (xtn->logfd);
 		xtn->logfd = -1;
+		xtn->logfd_istty = 0;
 	}
 	moo_close (moo);
 }
@@ -2090,6 +2105,10 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 		if (str != xstr) moo_freemem (moo, xstr);
 		return -1;
 	}
+
+#if defined(HAVE_ISATTY)
+	xtn->logfd_istty = isatty(xtn->logfd))
+#endif
 
 	if (str != xstr) moo_freemem (moo, xstr);
 	return 0;
@@ -2263,6 +2282,7 @@ int main (int argc, char* argv[])
 
 	xtn = moo_getxtn (moo);
 	xtn->logfd = -1;
+	xtn->logfd_istty = 0;
 
 	if (logopt)
 	{

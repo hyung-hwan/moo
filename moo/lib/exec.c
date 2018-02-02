@@ -125,7 +125,7 @@ static MOO_INLINE const char* proc_state_to_string (int state)
 #	define __PRIMITIVE_NAME__ (&__FUNCTION__[0])
 #endif
 
-static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem);
+static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem, int force);
 static void signal_io_semaphore (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask);
 static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_ooi_t nargs);
 static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_t namelen, int to_super, moo_ooi_t nargs);
@@ -168,12 +168,14 @@ static MOO_INLINE void vm_cleanup (moo_t* moo)
 
 			if (moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT])
 			{
-				delete_from_sem_io (moo, moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]);
+				delete_from_sem_io (moo, moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT], 1);
 			}
 			if (moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT])
 			{
-				delete_from_sem_io (moo, moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]);
+				delete_from_sem_io (moo, moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT], 1);
 			}
+
+			MOO_ASSERT (moo, moo->sem_io_map[i] <= -1);
 		}
 		else 
 		{
@@ -1247,7 +1249,7 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_hand
 	return 0;
 }
 
-static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
+static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem, int force)
 {
 	moo_ooi_t index;
 	moo_ooi_t new_mask, io_handle, io_type;
@@ -1280,7 +1282,15 @@ static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem)
 	if (x <= -1) 
 	{
 		MOO_LOG3 (moo, MOO_LOG_WARN, "Failed to delete an IO semaphore at index %zd of type %d on handle %zd\n", index, (int)io_type, io_handle);
-		return -1;
+		if (!force) return -1;
+
+		/* NOTE: 
+		 *   this means there could be some issue handling the file handles.
+		 *   the file handle might have been closed before reaching here.
+		 *   assuming the callback works correctly, it's not likely that the
+		 *   underlying operating system returns failure for no reason.
+		 *   i should inspect the overall vm implementation */
+		MOO_LOG3 (moo, MOO_LOG_ERROR, "Forcibly unmapping the handle %zd despite failure\n", index, (int)io_type, io_handle);
 	}
 
 	MOO_LOG3 (moo, MOO_LOG_DEBUG, "Deleted an IO semaphore at index %zd of type %d on handle %zd\n", index, (int)io_type, io_handle);
@@ -2613,7 +2623,7 @@ static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_handle) && MOO_OOP_TO_SMOOI(sem->io_handle) >= 0);
 		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_type));
 
-		if (delete_from_sem_io (moo, sem) <= -1)
+		if (delete_from_sem_io(moo, sem, 0) <= -1)
 		{
 			const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
 			moo_seterrbfmt (moo, moo->errnum, "cannot delete the handle %zd from the multiplexer - %js", MOO_OOP_TO_SMOOI(sem->io_handle), oldmsg);

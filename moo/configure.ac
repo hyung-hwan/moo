@@ -174,6 +174,7 @@ AC_CHECK_FUNCS([makecontext swapcontext getcontext setcontext])
 AC_CHECK_FUNCS([clock_nanosleep nanosleep usleep])
 AC_CHECK_FUNCS([snprintf _vsnprintf _vsnwprintf strerror_r])
 AC_CHECK_FUNCS([accept4])
+AC_CHECK_FUNCS([isatty])
 
 AC_CHECK_LIB([dyncall_s], [dcNewCallVM], 
 	[
