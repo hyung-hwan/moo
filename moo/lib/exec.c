@@ -1281,7 +1281,7 @@ static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem, int force)
 	moo_poptmp (moo);
 	if (x <= -1) 
 	{
-		MOO_LOG3 (moo, MOO_LOG_WARN, "Failed to delete an IO semaphore at index %zd of type %d on handle %zd\n", index, (int)io_type, io_handle);
+		MOO_LOG3 (moo, MOO_LOG_WARN, "Failed to delete an IO semaphored handle %zd at index %zd of type %d\n", io_handle, index, (int)io_type);
 		if (!force) return -1;
 
 		/* NOTE: 
@@ -1290,10 +1290,13 @@ static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem, int force)
 		 *   assuming the callback works correctly, it's not likely that the
 		 *   underlying operating system returns failure for no reason.
 		 *   i should inspect the overall vm implementation */
-		MOO_LOG3 (moo, MOO_LOG_ERROR, "Forcibly unmapping the handle %zd despite failure\n", index, (int)io_type, io_handle);
+		MOO_LOG1 (moo, MOO_LOG_ERROR, "Forcibly unmapping the IO semaphored handle %zd as if it's deleted\n", io_handle);
+	}
+	else
+	{
+		MOO_LOG3 (moo, MOO_LOG_DEBUG, "Deleted an IO semaphored handle %zd at index %zd of type %d\n", io_handle, index, (int)io_type);
 	}
 
-	MOO_LOG3 (moo, MOO_LOG_DEBUG, "Deleted an IO semaphore at index %zd of type %d on handle %zd\n", index, (int)io_type, io_handle);
 	sem->io_index = moo->_nil;
 	sem->io_type = moo->_nil;
 	sem->io_handle = moo->_nil;

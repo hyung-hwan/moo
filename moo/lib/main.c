@@ -798,7 +798,7 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 	if (xtn->logfd_istty)
 	{
 		if (mask & MOO_LOG_FATAL) write_all (logfd, "\x1B[1;31m", 7);
-		else if (mask & MOO_LOG_ERROR) write_all (logfd, "\x1B[1;36m", 7);
+		else if (mask & MOO_LOG_ERROR) write_all (logfd, "\x1B[1;32m", 7);
 		else if (mask & MOO_LOG_WARN) write_all (logfd, "\x1B[1;33m", 7);
 	}
 
