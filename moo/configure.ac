@@ -176,6 +176,11 @@ AC_CHECK_FUNCS([snprintf _vsnprintf _vsnwprintf strerror_r])
 AC_CHECK_FUNCS([accept4])
 AC_CHECK_FUNCS([isatty])
 
+save_LIBS="$LIBS"
+AC_SEARCH_LIBS([dlopen], [dl dld], [DL_LIBS="$ac_cv_search_dlopen"])
+LIBS="$save_LIBS"
+AC_SUBST(DL_LIBS)
+
 AC_CHECK_LIB([dyncall_s], [dcNewCallVM], 
 	[
 		DYNCALL_LIBS="-ldyncall_s"
