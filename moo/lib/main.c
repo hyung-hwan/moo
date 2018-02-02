@@ -75,9 +75,19 @@
 #	if defined(MOO_ENABLE_LIBLTDL)
 #		include <ltdl.h>
 #		define USE_LTDL
+#		define sys_dl_error() lt_dlerror()
+#		define sys_dl_open(x) lt_dlopen(x)
+#		define sys_dl_openext(x) lt_dlopenext(x)
+#		define sys_dl_close(x) lt_dlclose(x)
+#		define sys_dl_sym(x,n) lt_dlsym(x,n)
 #	elif defined(HAVE_DLFCN_H)
 #		include <dlfcn.h>
-#		error NOT IMPLEMENTED
+#		define USE_DLFCN
+#		define sys_dl_error() dlerror()
+#		define sys_dl_open(x) dlopen(x,RTLD_NOW)
+#		define sys_dl_openext(x) dlopen(x,RTLD_NOW)
+#		define sys_dl_close(x) dlclose(x)
+#		define sys_dl_sym(x,n) dlsym(x,n)
 #	else
 #		error UNSUPPORTED DYNAMIC LINKER
 #	endif
@@ -154,7 +164,11 @@
 #	elif defined(__DOS__)
 #		define MOO_DEFAULT_PFMODPOSTFIX ""
 #	else
-#		define MOO_DEFAULT_PFMODPOSTFIX ""
+#		if defined(USE_DLFCN)
+#			define MOO_DEFAULT_PFMODPOSTFIX ".so"
+#		else
+#			define MOO_DEFAULT_PFMODPOSTFIX ""
+#		endif
 #	endif
 #endif
 
@@ -467,7 +481,7 @@ static moo_ooi_t input_handler (moo_t* moo, moo_iocmd_t cmd, moo_ioarg_t* arg)
 
 static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 {
-#if defined(USE_LTDL)
+#if defined(USE_LTDL) || defined(USE_DLFCN)
 	moo_bch_t stabuf[128], * bufptr;
 	moo_oow_t ucslen, bcslen, bufcapa;
 	void* handle;
@@ -478,14 +492,14 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 	 * and MOO_COUNTOF(MOO_DEFAULT_PFMODPOSTIFX) include the terminating nulls. Never mind about
 	 * the extra 2 characters. */
 	#else
-	bufcapa = moo_countbcstr (name);
+	bufcapa = moo_countbcstr(name);
 	#endif
 	bufcapa += MOO_COUNTOF(MOO_DEFAULT_PFMODPREFIX) + MOO_COUNTOF(MOO_DEFAULT_PFMODPOSTFIX) + 1; 
 
 	if (bufcapa <= MOO_COUNTOF(stabuf)) bufptr = stabuf;
 	else
 	{
-		bufptr = moo_allocmem (moo, bufcapa * MOO_SIZEOF(*bufptr));
+		bufptr = moo_allocmem(moo, bufcapa * MOO_SIZEOF(*bufptr));
 		if (!bufptr) return MOO_NULL;
 	}
 
@@ -494,13 +508,13 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		moo_oow_t len, i, xlen;
 
 		/* opening a primitive function module - mostly libmoo-xxxx */
-		len = moo_copybcstr (bufptr, bufcapa, MOO_DEFAULT_PFMODPREFIX);
+		len = moo_copybcstr(bufptr, bufcapa, MOO_DEFAULT_PFMODPREFIX);
 
 		bcslen = bufcapa - len;
 	#if defined(MOO_OOCH_IS_UCH)
-		moo_convootobcstr (moo, name, &ucslen, &bufptr[len], &bcslen);
+		moo_convootobcstr(moo, name, &ucslen, &bufptr[len], &bcslen);
 	#else
-		bcslen = moo_copybcstr (&bufptr[len], bcslen, name);
+		bcslen = moo_copybcstr(&bufptr[len], bcslen, name);
 	#endif
 
 		/* length including the prefix and the name. but excluding the postfix */
@@ -516,19 +530,19 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		moo_copybcstr (&bufptr[xlen], bufcapa - xlen, MOO_DEFAULT_PFMODPOSTFIX);
 
 		/* both prefix and postfix attached. for instance, libmoo-xxx */
-		handle = lt_dlopenext (bufptr);
+		handle = sys_dl_openext(bufptr);
 		if (!handle) 
 		{
-			MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %hs\n", bufptr, name, lt_dlerror());
+			MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %hs\n", bufptr, name, dlerror());
 
 			/* try without prefix and postfix */
 			bufptr[xlen] = '\0';
-			handle = lt_dlopenext (&bufptr[len]);
+			handle = sys_dl_openext(&bufptr[len]);
 			if (!handle) 
 			{
 				moo_bch_t* dash;
-				MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %s\n", &bufptr[len], name, lt_dlerror());
-				dash = moo_rfindbchar (bufptr, moo_countbcstr(bufptr), '-');
+				MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %s\n", &bufptr[len], name, dlerror());
+				dash = moo_rfindbchar(bufptr, moo_countbcstr(bufptr), '-');
 				if (dash) 
 				{
 					/* remove a segment at the back. 
@@ -551,21 +565,21 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		/* opening a raw shared object without a prefix and/or a postfix */
 	#if defined(MOO_OOCH_IS_UCH)
 		bcslen = bufcapa;
-		moo_convootobcstr (moo, name, &ucslen, bufptr, &bcslen);
+		moo_convootobcstr(moo, name, &ucslen, bufptr, &bcslen);
 	#else
-		bcslen = moo_copybcstr (bufptr, bufcapa, name);
+		bcslen = moo_copybcstr(bufptr, bufcapa, name);
 	#endif
 
 		if (moo_findbchar (bufptr, bcslen, '.'))
 		{
-			handle = lt_dlopen (bufptr);
-			if (!handle) MOO_DEBUG2 (moo, "Failed to open DL %hs - %s\n", bufptr, lt_dlerror());
+			handle = sys_dl_open(bufptr);
+			if (!handle) MOO_DEBUG2 (moo, "Failed to open DL %hs - %s\n", bufptr, dlerror());
 			else MOO_DEBUG2 (moo, "Opened DL %hs handle %p\n", bufptr, handle);
 		}
 		else
 		{
-			handle = lt_dlopenext (bufptr);
-			if (!handle) MOO_DEBUG2 (moo, "Failed to open(ext) DL %hs - %s\n", bufptr, lt_dlerror());
+			handle = sys_dl_openext(bufptr);
+			if (!handle) MOO_DEBUG2 (moo, "Failed to open(ext) DL %hs - %s\n", bufptr, dlerror());
 			else MOO_DEBUG2 (moo, "Opened(ext) DL %hs handle %p\n", bufptr, handle);
 		}
 	}
@@ -585,9 +599,9 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 
 static void dl_close (moo_t* moo, void* handle)
 {
-#if defined(USE_LTDL)
+#if defined(USE_LTDL) | defined(USE_DLFCN)
 	MOO_DEBUG1 (moo, "Closed DL handle %p\n", handle);
-	lt_dlclose (handle);
+	sys_dl_close (handle);
 
 #else
 	/* TODO: implemenent this */
@@ -597,14 +611,14 @@ static void dl_close (moo_t* moo, void* handle)
 
 static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 {
-#if defined(USE_LTDL)
+#if defined(USE_LTDL) || defined(USE_DLFCN)
 	moo_bch_t stabuf[64], * bufptr;
 	moo_oow_t bufcapa, ucslen, bcslen, i;
 	const moo_bch_t* symname;
 	void* sym;
 
 	#if defined(MOO_OOCH_IS_UCH)
-	if (moo_convootobcstr (moo, name, &ucslen, MOO_NULL, &bcslen) <= -1) return MOO_NULL;
+	if (moo_convootobcstr(moo, name, &ucslen, MOO_NULL, &bcslen) <= -1) return MOO_NULL;
 	#else
 	bcslen = moo_countbcstr (name);
 	#endif
@@ -612,7 +626,7 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 	if (bcslen >= MOO_COUNTOF(stabuf) - 2)
 	{
 		bufcapa = bcslen + 3;
-		bufptr = moo_allocmem (moo, bufcapa * MOO_SIZEOF(*bufptr));
+		bufptr = moo_allocmem(moo, bufcapa * MOO_SIZEOF(*bufptr));
 		if (!bufptr) return MOO_NULL;
 	}
 	else
@@ -625,30 +639,31 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 	#if defined(MOO_OOCH_IS_UCH)
 	moo_convootobcstr (moo, name, &ucslen, &bufptr[1], &bcslen);
 	#else
-	bcslen = moo_copybcstr (&bufptr[1], bcslen, name);
+	bcslen = moo_copybcstr(&bufptr[1], bcslen, name);
 	#endif
 
 	/* convert a period(.) to an underscore(_) */
 	for (i = 1; i <= bcslen; i++) if (bufptr[i] == '.') bufptr[i] = '_';
 
 	symname = &bufptr[1]; /* try the name as it is */
-	sym = lt_dlsym (handle, symname);
+	sym = sys_dl_sym(handle, symname);
 	if (!sym)
 	{
 		bufptr[0] = '_';
 		symname = &bufptr[0]; /* try _name */
-		sym = lt_dlsym (handle, symname);
+		sym = sys_dl_sym(handle, symname);
 		if (!sym)
 		{
 			bufptr[bcslen + 1] = '_'; 
 			bufptr[bcslen + 2] = '\0';
 
 			symname = &bufptr[1]; /* try name_ */
-			sym = lt_dlsym (handle, symname);
+			sym = sys_dl_sym(handle, symname);
+
 			if (!sym)
 			{
 				symname = &bufptr[0]; /* try _name_ */
-				sym = lt_dlsym (handle, symname);
+				sym = sys_dl_sym(handle, symname);
 			}
 		}
 	}
@@ -656,6 +671,7 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 	if (sym) MOO_DEBUG3 (moo, "Loaded module symbol %js from handle %p - %hs\n", name, handle, symname);
 	if (bufptr != stabuf) moo_freemem (moo, bufptr);
 	return sym;
+
 #else
 	/* TODO: IMPLEMENT THIS */
 	MOO_DEBUG2 (moo, "Dynamic loading not implemented - Cannot load module symbol %js from handle %p\n", name, handle);
