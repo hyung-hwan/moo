@@ -2107,7 +2107,7 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 	}
 
 #if defined(HAVE_ISATTY)
-	xtn->logfd_istty = isatty(xtn->logfd))
+	xtn->logfd_istty = isatty(xtn->logfd);
 #endif
 
 	if (str != xstr) moo_freemem (moo, xstr);
