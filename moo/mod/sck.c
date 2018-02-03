@@ -132,6 +132,7 @@ static moo_pfrc_t pf_close_socket (moo_t* moo, moo_ooi_t nargs)
 	fd = MOO_OOP_TO_SMOOI(sck->handle);
 	if (fd >= 0)
 	{
+		moo_purgesemiobyhandle (moo, MOO_OOP_TO_SMOOI(sck->handle));
 		if (close(MOO_OOP_TO_SMOOI(sck->handle)) == -1)
 		{
 			moo_seterrwithsyserr (moo, errno);

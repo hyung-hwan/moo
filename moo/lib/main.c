@@ -599,7 +599,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 
 static void dl_close (moo_t* moo, void* handle)
 {
-#if defined(USE_LTDL) | defined(USE_DLFCN)
+#if defined(USE_LTDL) || defined(USE_DLFCN)
 	MOO_DEBUG1 (moo, "Closed DL handle %p\n", handle);
 	sys_dl_close (handle);
 
