@@ -553,7 +553,10 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 					goto retry;
 				}
 			}
-			else MOO_DEBUG3 (moo, "Opened(ext) DL %hs[%js] handle %p\n", &bufptr[len], name, handle);
+			else 
+			{
+				MOO_DEBUG3 (moo, "Opened(ext) DL %hs[%js] handle %p\n", &bufptr[len], name, handle);
+			}
 		}
 		else
 		{
@@ -749,12 +752,13 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 	}
 	else
 	{
-		if (!(xtn->logmask & mask & ~MOO_LOG_ALL_LEVELS)) return; /* check log types */
-		if (!(xtn->logmask & mask & ~MOO_LOG_ALL_TYPES)) return; /* check log levels */
+		if (!(xtn->logmask & mask & ~MOO_LOG_ALL_LEVELS)) return;  /* check log types */
+		if (!(xtn->logmask & mask & ~MOO_LOG_ALL_TYPES)) return;  /* check log levels */
 
 		if (mask & MOO_LOG_STDOUT) logfd = 1;
 		else
 		{
+
 			logfd = xtn->logfd;
 			if (logfd <= -1) return;
 		}
@@ -2045,7 +2049,7 @@ static void clear_sigterm (void)
 }
 /* ========================================================================= */
 
-static void close_moo (moo_t* moo)
+static void fini_moo (moo_t* moo)
 {
 	xtn_t* xtn = moo_getxtn(moo);
 	if (xtn->logfd >= 0)
@@ -2054,7 +2058,6 @@ static void close_moo (moo_t* moo)
 		xtn->logfd = -1;
 		xtn->logfd_istty = 0;
 	}
-	moo_close (moo);
 }
 
 static int handle_logopt (moo_t* moo, const moo_bch_t* str)
@@ -2171,6 +2174,7 @@ int main (int argc, char* argv[])
 	moo_oocs_t objname;
 	moo_oocs_t mthname;
 	moo_vmprim_t vmprim;
+	moo_cb_t moocb;
 	int i, xret;
 
 	moo_bci_t c;
@@ -2300,11 +2304,15 @@ int main (int argc, char* argv[])
 	xtn->logfd = -1;
 	xtn->logfd_istty = 0;
 
+	memset (&moocb, 0, MOO_SIZEOF(moocb));
+	moocb.fini = fini_moo;
+	moo_regcb (moo, &moocb);
+
 	if (logopt)
 	{
 		if (handle_logopt (moo, logopt) <= -1) 
 		{
-			close_moo (moo);
+			moo_close (moo);
 			return -1;
 		}
 	}
@@ -2319,7 +2327,7 @@ int main (int argc, char* argv[])
 	{
 		if (handle_dbgopt (moo, dbgopt) <= -1)
 		{
-			close_moo (moo);
+			moo_close (moo);
 			return -1;
 		}
 	}
@@ -2328,7 +2336,7 @@ int main (int argc, char* argv[])
 	if (moo_ignite(moo) <= -1)
 	{
 		moo_logbfmt (moo, MOO_LOG_STDERR, "ERROR: cannot ignite moo - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
-		close_moo (moo);
+		moo_close (moo);
 		return -1;
 	}
 
@@ -2380,7 +2388,7 @@ int main (int argc, char* argv[])
 				moo_logbfmt (moo, MOO_LOG_STDERR, "ERROR: cannot compile code - [%d] %js\n", moo_geterrnum(moo), moo_geterrmsg(moo));
 			}
 
-			close_moo (moo);
+			moo_close (moo);
 #if defined(USE_LTDL)
 			lt_dlexit ();
 #endif
@@ -2411,7 +2419,7 @@ int main (int argc, char* argv[])
 	/*moo_dumpsymtab(moo);
 	 *moo_dumpdic(moo, moo->sysdic, "System dictionary");*/
 
-	close_moo (moo);
+	moo_close (moo);
 
 #if defined(USE_LTDL)
 	lt_dlexit ();

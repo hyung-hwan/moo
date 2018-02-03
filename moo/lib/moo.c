@@ -203,13 +203,13 @@ void moo_fini (moo_t* moo)
 		moo->proc_map_free_last = -1;
 	}
 
+	moo_rbt_walk (&moo->modtab, unload_module, moo); /* unload all modules */
+	moo_rbt_fini (&moo->modtab);
+
 	for (cb = moo->cblist; cb; cb = cb->next)
 	{
 		if (cb->fini) cb->fini (moo);
 	}
-
-	moo_rbt_walk (&moo->modtab, unload_module, moo); /* unload all modules */
-	moo_rbt_fini (&moo->modtab);
 
 /* TOOD: persistency? storing objects to image file? */
 

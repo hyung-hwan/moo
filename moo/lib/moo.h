@@ -2153,11 +2153,11 @@ MOO_EXPORT const moo_ooch_t* moo_errnum_to_errstr (
 );
 
 /**
- * The moo_purgesemiosbyhandle() function deletes IO semaphores associated
- * with the given IO handle. It can be called usefaully when you close 
- * a IO handle with dangling semaphores associated.
+ * The moo_releaseiohandle() function deletes resources associated with
+ * the given IO handle. The resources include IO semaphores. You should call
+ * this function before closing an IO handle.
  */
-MOO_EXPORT void moo_purgesemiosbyhandle (
+MOO_EXPORT void moo_releaseiohandle (
 	moo_t*    moo,
 	moo_ooi_t io_handle
 );

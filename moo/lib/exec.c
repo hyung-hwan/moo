@@ -1341,34 +1341,6 @@ static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem, int force)
 	return 0;
 }
 
-void moo_purgesemiosbyhandle (moo_t* moo, moo_ooi_t io_handle)
-{
-	moo_ooi_t index;
-	moo_oop_semaphore_t sem;
-
-	if (io_handle < moo->sem_io_map_capa)
-	{
-		index = moo->sem_io_map[io_handle];
-		if (index >= 0)
-		{
-			MOO_ASSERT(moo, moo->sem_io_tuple[index].handle == io_handle);
-			sem = moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT];
-			if (sem) delete_from_sem_io (moo, sem, 0);
-		}
-	}
-
-	if (io_handle < moo->sem_io_map_capa)
-	{
-		index = moo->sem_io_map[io_handle];
-		if (index >= 0)
-		{
-			MOO_ASSERT(moo, moo->sem_io_tuple[index].handle == io_handle);
-			sem = moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];
-			if (sem) delete_from_sem_io (moo, sem, 0);
-		}
-	}
-}
-
 static void _signal_io_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	moo_oop_process_t proc;
@@ -1420,6 +1392,41 @@ static void signal_io_semaphore (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask
 		MOO_LOG1 (moo, MOO_LOG_WARN, "Warning - semaphore signaling requested on an unmapped handle %zd\n", io_handle);
 	}
 }
+
+void moo_releaseiohandle (moo_t* moo, moo_ooi_t io_handle)
+{
+	/* TODO: optimize io semapore unmapping. since i'm to close the handle,
+	 *       i don't need to call delete_from_sem_io() seperately for input
+	 *        and output. */
+	if (io_handle < moo->sem_io_map_capa)
+	{
+		moo_ooi_t index;
+		moo_oop_semaphore_t sem;
+
+		index = moo->sem_io_map[io_handle];
+		if (index >= 0)
+		{
+			MOO_ASSERT(moo, moo->sem_io_tuple[index].handle == io_handle);
+			sem = moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT];
+			if (sem) delete_from_sem_io (moo, sem, 0);
+		}
+	}
+
+	if (io_handle < moo->sem_io_map_capa)
+	{
+		moo_ooi_t index;
+		moo_oop_semaphore_t sem;
+
+		index = moo->sem_io_map[io_handle];
+		if (index >= 0)
+		{
+			MOO_ASSERT(moo, moo->sem_io_tuple[index].handle == io_handle);
+			sem = moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];
+			if (sem) delete_from_sem_io (moo, sem, 0);
+		}
+	}
+}
+
 /* ------------------------------------------------------------------------- */
 
 static moo_oop_process_t start_initial_process (moo_t* moo, moo_oop_context_t c)
