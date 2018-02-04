@@ -533,7 +533,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		handle = sys_dl_openext(bufptr);
 		if (!handle) 
 		{
-			MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %hs\n", bufptr, name, dlerror());
+			MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %hs\n", bufptr, name, sys_dl_error());
 
 			/* try without prefix and postfix */
 			bufptr[xlen] = '\0';
@@ -541,7 +541,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 			if (!handle) 
 			{
 				moo_bch_t* dash;
-				MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %s\n", &bufptr[len], name, dlerror());
+				MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %s\n", &bufptr[len], name, sys_dl_error());
 				dash = moo_rfindbchar(bufptr, moo_countbcstr(bufptr), '-');
 				if (dash) 
 				{
@@ -576,13 +576,13 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		if (moo_findbchar (bufptr, bcslen, '.'))
 		{
 			handle = sys_dl_open(bufptr);
-			if (!handle) MOO_DEBUG2 (moo, "Failed to open DL %hs - %s\n", bufptr, dlerror());
+			if (!handle) MOO_DEBUG2 (moo, "Failed to open DL %hs - %s\n", bufptr, sys_dl_error());
 			else MOO_DEBUG2 (moo, "Opened DL %hs handle %p\n", bufptr, handle);
 		}
 		else
 		{
 			handle = sys_dl_openext(bufptr);
-			if (!handle) MOO_DEBUG2 (moo, "Failed to open(ext) DL %hs - %s\n", bufptr, dlerror());
+			if (!handle) MOO_DEBUG2 (moo, "Failed to open(ext) DL %hs - %s\n", bufptr, sys_dl_error());
 			else MOO_DEBUG2 (moo, "Opened(ext) DL %hs handle %p\n", bufptr, handle);
 		}
 	}
