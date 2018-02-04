@@ -2069,6 +2069,8 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 	cm = moo_findbcharinbcstr (xstr, ',');
 	if (cm) 
 	{
+		/* i duplicate this string for open() below as open() doesn't 
+		 * accept a length-bounded string */
 		xstr = moo_dupbchars (moo, str, moo_countbcstr(str));
 		if (!xstr) 
 		{
@@ -2105,6 +2107,13 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 			else if (moo_compbcstr(flt, "warn+") == 0) xtn->logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN;
 			else if (moo_compbcstr(flt, "info+") == 0) xtn->logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO;
 			else if (moo_compbcstr(flt, "debug+") == 0) xtn->logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO | MOO_LOG_DEBUG;
+
+			else
+			{
+				fprintf (stderr, "ERROR: unknown log option value - %s\n", flt);
+				if (str != xstr) moo_freemem (moo, xstr);
+				return -1;
+			}
 		}
 		while (cm);
 
@@ -2150,7 +2159,11 @@ static int handle_dbgopt (moo_t* moo, const moo_bch_t* str)
 		len = cm? (cm - flt): moo_countbcstr(flt);
 		if (moo_compbcharsbcstr (flt, len, "gc") == 0)  dbgopt |= MOO_DEBUG_GC;
 		else if (moo_compbcharsbcstr (flt, len, "bigint") == 0)  dbgopt |= MOO_DEBUG_BIGINT;
-		/* TODO: error handling for unknown options */
+		else
+		{
+			fprintf (stderr, "ERROR: unknown debug option value - %.*s\n", (int)len, flt);
+			return -1;
+		}
 	}
 	while (cm);
 
