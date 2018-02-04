@@ -299,7 +299,7 @@ static moo_pfrc_t pf_listen_socket (moo_t* moo, moo_ooi_t nargs)
 }
 
 
-static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_connect_socket (moo_t* moo, moo_ooi_t nargs)
 {
 	oop_sck_t sck;
 	int fd, n;
@@ -321,19 +321,23 @@ static moo_pfrc_t pf_connect (moo_t* moo, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	do
+	n = connect(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), moo_sck_addr_len((sck_addr_t*)MOO_OBJ_GET_BYTE_SLOT(arg))); 
+	if (n == -1)
 	{
-		n = connect(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), moo_sck_addr_len((sck_addr_t*)MOO_OBJ_GET_BYTE_SLOT(arg)));
-	}
-	while (n == -1 && errno == EINTR);
- 
-	if (n == -1 && errno != EINPROGRESS)
-	{
-		moo_seterrwithsyserr (moo, errno);
-		return MOO_PF_FAILURE;
+		if (errno == EINPROGRESS)
+		{
+			/* have the primitive function to return -1 */
+			MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(-1));
+			return MOO_PF_SUCCESS;
+		}
+		else
+		{
+			moo_seterrwithsyserr (moo, errno);
+			return MOO_PF_FAILURE;
+		}
 	}
 
-	MOO_STACK_SETRETTORCV (moo, nargs);
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(0));
 	return MOO_PF_SUCCESS;
 }
 
@@ -364,7 +368,8 @@ static moo_pfrc_t pf_get_socket_error (moo_t* moo, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	/* if ret == EINPROGRESS .. it's in progress */
+	if (ret == EINPROGRESS) ret = -1; /* map EINPROGRESS to -1. all others are returned without change */
+
 	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(ret));
 	return MOO_PF_SUCCESS;
 }
@@ -505,7 +510,7 @@ static moo_pfinfo_t pfinfos[] =
 	{ I, { 'a','c','c','e','p','t',':','\0' },                    0, { pf_accept_socket,    1, 1  }  },
 	{ I, { 'b','i','n','d',':','\0' },                            0, { pf_bind_socket,      1, 1  }  },
 	{ I, { 'c','l','o','s','e','\0' },                            0, { pf_close_socket,     0, 0  }  },
-	{ I, { 'c','o','n','n','e','c','t',':','\0' },                0, { pf_connect,          1, 1  }  },
+	{ I, { 'c','o','n','n','e','c','t',':','\0' },                0, { pf_connect_socket,   1, 1  }  },
 	{ I, { 'l','i','s','t','e','n',':','\0' },                    0, { pf_listen_socket,    1, 1  }  },
 	{ I, { 'o','p','e','n','\0' },                                0, { pf_open_socket,      3, 3  }  },
 	{ I, { 'r','e','a','d','B','y','t','e','s',':','\0' },        0, { pf_read_socket,      1, 1  }  },
