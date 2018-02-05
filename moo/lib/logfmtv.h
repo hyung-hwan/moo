@@ -553,7 +553,7 @@ reswitch:
 		}
 
 		case 'O': /* object - ignore precision, width, adjustment */
-			print_object (moo, data->mask, va_arg(ap, moo_oop_t), outbfmt);
+			if (print_object(moo, data->mask, va_arg(ap, moo_oop_t), outbfmt) <= -1) goto oops;
 			break;
 
 #if 0
