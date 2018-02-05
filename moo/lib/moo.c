@@ -94,7 +94,7 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 
 	MOO_MEMSET (moo, 0, MOO_SIZEOF(*moo));
 	moo->mmgr = mmgr;
-	moo->cmgr = moo_getutf8cmgr ();
+	moo->cmgr = moo_getutf8cmgr();
 	moo->vmprim = *vmprim;
 
 	moo->option.log_mask = ~0u;

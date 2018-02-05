@@ -2364,7 +2364,7 @@ int main (int argc, char* argv[])
 		xtn->source_path = argv[i];
 
 	compile:
-		if (moo_compile (moo, input_handler) <= -1)
+		if (moo_compile(moo, input_handler) <= -1)
 		{
 			if (moo->errnum == MOO_ESYNERR)
 			{
@@ -2419,7 +2419,7 @@ int main (int argc, char* argv[])
 	objname.len = 8;
 	mthname.ptr = str_main;
 	mthname.len = 4;
-	if (moo_invoke (moo, &objname, &mthname) <= -1)
+	if (moo_invoke(moo, &objname, &mthname) <= -1)
 	{
 		moo_logbfmt (moo, MOO_LOG_STDERR, "ERROR: cannot execute code - [%d] %js\n", moo_geterrnum(moo), moo_geterrmsg(moo));
 		xret = -1;
