@@ -31,7 +31,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-#include <errno.h>
 #include <locale.h>
 
 #if !defined(__DOS__) && defined(HAVE_PTHREAD) && defined(HAVE_STRERROR_R)
@@ -58,6 +57,7 @@
 #	include <time.h>
 #	include <io.h>
 #	include <signal.h>
+#	include <errno.h>
 
 	/* fake XPOLLXXX values */
 #	define XPOLLIN  (1 << 0)
@@ -102,6 +102,7 @@
 #		include <signal.h>
 #	endif
 
+#	include <errno.h>
 #	include <unistd.h>
 #	include <fcntl.h>
 
@@ -758,7 +759,6 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 		if (mask & MOO_LOG_STDOUT) logfd = 1;
 		else
 		{
-
 			logfd = xtn->logfd;
 			if (logfd <= -1) return;
 		}

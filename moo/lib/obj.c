@@ -31,7 +31,7 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 	moo_uint8_t* ptr;
 
 #if !defined(NDEBUG)
-	if ((moo->option.trait &MOO_DEBUG_GC) && !(moo->option.trait & MOO_NOGC)) moo_gc (moo);
+	if ((moo->option.trait & MOO_DEBUG_GC) && !(moo->option.trait & MOO_NOGC)) moo_gc (moo);
 #endif
 
 	ptr = moo_allocheapmem (moo, moo->curheap, size);
