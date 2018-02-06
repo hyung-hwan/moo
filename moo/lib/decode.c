@@ -26,7 +26,7 @@
 
 #include "moo-prv.h"
 
-#define DECODE_LOG_MASK (MOO_LOG_MNEMONIC)
+#define DECODE_LOG_MASK (MOO_LOG_MNEMONIC | MOO_LOG_DEBUG)
 
 #if defined(NDEBUG)
 	/* get rid of instruction logging regardless of the log mask
