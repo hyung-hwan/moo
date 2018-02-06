@@ -2382,7 +2382,7 @@ int main (int argc, char* argv[])
 					moo_logbfmt (moo, MOO_LOG_STDERR, "%s", xtn->source_path);
 				}
 
-				moo_logbfmt (moo, MOO_LOG_STDERR, "[%zu,%zu] syntax error - %js",  synerr.loc.line, synerr.loc.colm, moo_synerrnum_to_errstr(synerr.num));
+				moo_logbfmt (moo, MOO_LOG_STDERR, "[%zu,%zu] syntax error - %js", synerr.loc.line, synerr.loc.colm, moo_synerrnum_to_errstr(synerr.num));
 
 				if (synerr.tgt.len > 0)
 				{
