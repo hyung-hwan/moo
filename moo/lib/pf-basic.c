@@ -137,11 +137,13 @@ static int _equal_objects (moo_t* moo, moo_oop_t rcv, moo_oop_t arg)
 					}
 					for (i = 0; i < size; i++)
 					{
+						int n;
 						/* TODO: remove recursion */
 
 						/* NOTE: even if the object implements the equality method, 
 						 * this primitive method doesn't honor it. */
-						if (!_equal_objects(moo, ((moo_oop_oop_t)rcv)->slot[i], ((moo_oop_oop_t)arg)->slot[i])) return 0;
+						n = _equal_objects(moo, ((moo_oop_oop_t)rcv)->slot[i], ((moo_oop_oop_t)arg)->slot[i]);
+						if (n <= 0) return n;
 					}
 
 					/* the default implementation doesn't take the trailer space into account */

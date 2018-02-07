@@ -112,7 +112,7 @@ moo_oop_t moo_allocoopobjwithtrailer (moo_t* moo, moo_oow_t size, const moo_oob_
 	return (moo_oop_t)hdr;
 }
 
-static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, moo_oow_t len, moo_obj_type_t type, moo_oow_t unit, int extra)
+static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, moo_oow_t len, moo_obj_type_t type, moo_oow_t unit, int extra, int ngc)
 {
 	/* allocate a variable object */
 
@@ -126,14 +126,22 @@ static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, mo
 	nbytes_aligned = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t));
 /* TODO: check overflow in size calculation*/
 
-	/* making the number of bytes to allocate a multiple of
-	 * MOO_SIZEOF(moo_oop_t) will guarantee the starting address
-	 * of the allocated space to be an even number. 
-	 * see MOO_OOP_IS_NUMERIC() and MOO_OOP_IS_POINTER() */
-	hdr = moo_allocbytes (moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
-	if (!hdr) return MOO_NULL;
+	if (MOO_UNLIKELY(ngc))
+	{
+		hdr = moo_callocmem (moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
+		if (!hdr) return MOO_NULL;
+	}
+	else
+	{
+		/* making the number of bytes to allocate a multiple of
+		 * MOO_SIZEOF(moo_oop_t) will guarantee the starting address
+		 * of the allocated space to be an even number. 
+		 * see MOO_OOP_IS_NUMERIC() and MOO_OOP_IS_POINTER() */
+		hdr = moo_allocbytes (moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
+		if (!hdr) return MOO_NULL;
+	}
 
-	hdr->_flags = MOO_OBJ_MAKE_FLAGS(type, unit, extra, 0, 0, 0, 0);
+	hdr->_flags = MOO_OBJ_MAKE_FLAGS(type, unit, extra, 0, 0, ngc, 0);
 	hdr->_size = len;
 	MOO_OBJ_SET_SIZE (hdr, len);
 	MOO_OBJ_SET_CLASS (hdr, moo->_nil);
@@ -155,22 +163,22 @@ static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, mo
 
 MOO_INLINE moo_oop_t moo_alloccharobj (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 {
-	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_CHAR, MOO_SIZEOF(moo_ooch_t), 1);
+	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_CHAR, MOO_SIZEOF(moo_ooch_t), 1, 0);
 }
 
 MOO_INLINE moo_oop_t moo_allocbyteobj (moo_t* moo, const moo_oob_t* ptr, moo_oow_t len)
 {
-	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_BYTE, MOO_SIZEOF(moo_oob_t), 0);
+	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_BYTE, MOO_SIZEOF(moo_oob_t), 0, 0);
 }
 
 MOO_INLINE moo_oop_t moo_allochalfwordobj (moo_t* moo, const moo_oohw_t* ptr, moo_oow_t len)
 {
-	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_HALFWORD, MOO_SIZEOF(moo_oohw_t), 0);
+	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_HALFWORD, MOO_SIZEOF(moo_oohw_t), 0, 0);
 }
 
 MOO_INLINE moo_oop_t moo_allocwordobj (moo_t* moo, const moo_oow_t* ptr, moo_oow_t len)
 {
-	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_WORD, MOO_SIZEOF(moo_oow_t), 0);
+	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_WORD, MOO_SIZEOF(moo_oow_t), 0, 0);
 }
 
 static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t num_flexi_fields, moo_obj_type_t* type, moo_oow_t* outlen)
