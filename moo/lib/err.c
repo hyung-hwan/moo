@@ -171,7 +171,7 @@ const moo_ooch_t* moo_errnum_to_errstr (moo_errnum_t errnum)
 }
 
 #if defined(MOO_INCLUDE_COMPILER)
-const moo_ooch_t* moo_synerrnum_to_errstr (moo_synerrnum_t errnum)
+static const moo_ooch_t* synerr_to_errstr (moo_synerrnum_t errnum)
 {
 	static moo_ooch_t e_unknown[] = {'u','n','k','n','o','w','n',' ','e','r','r','o','r','\0'};
 	return (errnum >= 0 && errnum < MOO_COUNTOF(synerrstr))? synerrstr[errnum]: e_unknown;
@@ -345,6 +345,81 @@ void moo_seterrwithsyserr (moo_t* moo, int syserr)
 		moo_seterrbfmt (moo, moo_syserr_to_errnum(syserr), "%ls", moo->errmsg.tmpbuf.uch);
 	}
 }
+
+
+#if defined(MOO_INCLUDE_COMPILER)
+
+void hcl_setsynerrbfmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt, const moo_bch_t* msgfmt, ...)
+{
+	if (msgfmt) 
+	{
+		va_list ap;
+		va_start (ap, msgfmt);
+		moo_seterrbfmtv (moo, MOO_ESYNERR, msgfmt, ap);
+		va_end (ap);
+	}
+	else 
+	{
+		moo_seterrbfmt (moo, MOO_ESYNERR, "syntax error - %js", synerr_to_errstr(num));
+	}
+	moo->c->synerr.num = num;
+
+	/* The SCO compiler complains of this ternary operation saying:
+	 *    error: operands have incompatible types: op ":" 
+	 * it seems to complain of type mismatch between *loc and
+	 * moo->c->tok.loc due to 'const' prefixed to loc. */
+	/*moo->c->synerr.loc = loc? *loc: moo->c->tok.loc;*/
+	if (loc)
+		moo->c->synerr.loc = *loc;
+	else
+		moo->c->synerr.loc = moo->c->tok.loc;
+	
+	if (tgt) moo->c->synerr.tgt = *tgt;
+	else 
+	{
+		moo->c->synerr.tgt.ptr = MOO_NULL;
+		moo->c->synerr.tgt.len = 0;
+	}
+}
+
+void hcl_setsynerrufmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt, const moo_uch_t* msgfmt, ...)
+{
+	if (msgfmt) 
+	{
+		va_list ap;
+		va_start (ap, msgfmt);
+		moo_seterrufmtv (moo, MOO_ESYNERR, msgfmt, ap);
+		va_end (ap);
+	}
+	else 
+	{
+		moo_seterrbfmt (moo, MOO_ESYNERR, "syntax error - %js", synerr_to_errstr(num));
+	}
+	moo->c->synerr.num = num;
+
+	/* The SCO compiler complains of this ternary operation saying:
+	 *    error: operands have incompatible types: op ":" 
+	 * it seems to complain of type mismatch between *loc and
+	 * moo->c->tok.loc due to 'const' prefixed to loc. */
+	/*moo->c->synerr.loc = loc? *loc: moo->c->tok.loc;*/
+	if (loc)
+		moo->c->synerr.loc = *loc;
+	else
+		moo->c->synerr.loc = moo->c->tok.loc;
+	
+	if (tgt) moo->c->synerr.tgt = *tgt;
+	else 
+	{
+		moo->c->synerr.tgt.ptr = MOO_NULL;
+		moo->c->synerr.tgt.len = 0;
+	}
+}
+
+void hcl_setsynerr (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt)
+{
+	hcl_setsynerrbfmt (moo, num, loc, tgt, MOO_NULL);
+}
+#endif
 
 /* -------------------------------------------------------------------------- 
  * ASSERTION FAILURE HANDLERsemaphore heap full

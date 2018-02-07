@@ -2178,9 +2178,6 @@ MOO_EXPORT void moo_getsynerr (
 	moo_synerr_t* synerr
 );
 
-MOO_EXPORT const moo_ooch_t* moo_synerrnum_to_errstr (
-	moo_synerrnum_t errnum
-);
 #endif
 
 #if defined(__cplusplus)

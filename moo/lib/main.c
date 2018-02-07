@@ -2382,18 +2382,16 @@ int main (int argc, char* argv[])
 					moo_logbfmt (moo, MOO_LOG_STDERR, "%s", xtn->source_path);
 				}
 
-				moo_logbfmt (moo, MOO_LOG_STDERR, "[%zu,%zu] syntax error - %js", synerr.loc.line, synerr.loc.colm, moo_synerrnum_to_errstr(synerr.num));
+				moo_logbfmt (moo, MOO_LOG_STDERR, "[%zu,%zu] %js", 
+					synerr.loc.line, synerr.loc.colm,
+					(moo_geterrmsg(moo) != moo_geterrstr(moo)? moo_geterrmsg(moo): moo_geterrstr(moo))
+				);
 
 				if (synerr.tgt.len > 0)
 				{
 					moo_logbfmt (moo, MOO_LOG_STDERR, " - %.*js", synerr.tgt.len, synerr.tgt.ptr);
 				}
 
-				if (moo_geterrmsg(moo) != moo_geterrstr(moo))
-				{
-					moo_logbfmt (moo, MOO_LOG_STDERR, " - %js", moo_geterrmsg(moo));
-				}
-				
 				moo_logbfmt (moo, MOO_LOG_STDERR, "\n");
 			}
 			else

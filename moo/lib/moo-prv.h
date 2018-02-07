@@ -992,6 +992,34 @@ void moo_seterrufmtv (
 	va_list          ap
 );
 
+
+#if defined(MOO_INCLUDE_COMPILER)
+void hcl_setsynerrbfmt (
+	moo_t*             moo,
+	moo_synerrnum_t    num,
+	const moo_ioloc_t* loc,
+	const moo_oocs_t*  tgt,
+	const moo_bch_t*   msgfmt,
+	...
+);
+
+void hcl_setsynerrufmt (
+	moo_t*             moo,
+	moo_synerrnum_t    num,
+	const moo_ioloc_t* loc,
+	const moo_oocs_t*  tgt,
+	const moo_uch_t*   msgfmt,
+	...
+);
+
+void hcl_setsynerr (
+	moo_t*             moo,
+	moo_synerrnum_t    num,
+	const moo_ioloc_t* loc,
+	const moo_oocs_t*  tgt
+);
+#endif
+
 /* ========================================================================= */
 /* heap.c                                                                    */
 /* ========================================================================= */

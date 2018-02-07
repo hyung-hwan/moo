@@ -413,71 +413,6 @@ static int is_restricted_word (const moo_oocs_t* ucs)
 static int begin_include (moo_t* moo);
 static int end_include (moo_t* moo);
 
-static void set_syntax_errbfmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt, const moo_bch_t* msgfmt, ...)
-{
-	if (msgfmt) 
-	{
-		va_list ap;
-		va_start (ap, msgfmt);
-		moo_seterrbfmtv (moo, MOO_ESYNERR, msgfmt, ap);
-		va_end (ap);
-	}
-	else moo_seterrnum (moo, MOO_ESYNERR);
-	moo->c->synerr.num = num;
-
-	/* The SCO compiler complains of this ternary operation saying:
-	 *    error: operands have incompatible types: op ":" 
-	 * it seems to complain of type mismatch between *loc and
-	 * moo->c->tok.loc due to 'const' prefixed to loc. */
-	/*moo->c->synerr.loc = loc? *loc: moo->c->tok.loc;*/
-	if (loc)
-		moo->c->synerr.loc = *loc;
-	else
-		moo->c->synerr.loc = moo->c->tok.loc;
-	
-	if (tgt) moo->c->synerr.tgt = *tgt;
-	else 
-	{
-		moo->c->synerr.tgt.ptr = MOO_NULL;
-		moo->c->synerr.tgt.len = 0;
-	}
-}
-
-static void set_syntax_errufmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt, const moo_uch_t* msgfmt, ...)
-{
-	if (msgfmt) 
-	{
-		va_list ap;
-		va_start (ap, msgfmt);
-		moo_seterrufmtv (moo, MOO_ESYNERR, msgfmt, ap);
-		va_end (ap);
-	}
-	else moo_seterrnum (moo, MOO_ESYNERR);
-	moo->c->synerr.num = num;
-
-	/* The SCO compiler complains of this ternary operation saying:
-	 *    error: operands have incompatible types: op ":" 
-	 * it seems to complain of type mismatch between *loc and
-	 * moo->c->tok.loc due to 'const' prefixed to loc. */
-	/*moo->c->synerr.loc = loc? *loc: moo->c->tok.loc;*/
-	if (loc)
-		moo->c->synerr.loc = *loc;
-	else
-		moo->c->synerr.loc = moo->c->tok.loc;
-	
-	if (tgt) moo->c->synerr.tgt = *tgt;
-	else 
-	{
-		moo->c->synerr.tgt.ptr = MOO_NULL;
-		moo->c->synerr.tgt.len = 0;
-	}
-}
-
-static void set_syntax_error (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt)
-{
-	set_syntax_errbfmt (moo, num, loc, tgt, MOO_NULL);
-}
-
 static int copy_string_to (moo_t* moo, const moo_oocs_t* src, moo_oocs_t* dst, moo_oow_t* dst_capa, int append, moo_ooch_t delim_char)
 {
 	moo_oow_t len, pos;
@@ -1053,7 +988,7 @@ not_comment:
 	return 0;
 
 unterminated:
-	set_syntax_error (moo, MOO_SYNERR_CMTNC, LEXER_LOC(moo), MOO_NULL);
+	hcl_setsynerr (moo, MOO_SYNERR_CMTNC, LEXER_LOC(moo), MOO_NULL);
 	return -1;
 }
 
@@ -1090,7 +1025,7 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		if (!is_digitchar(c))
 		{
 			ADD_TOKEN_CHAR (moo, c);
-			set_syntax_error (moo, MOO_SYNERR_ERRLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_ERRLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -1103,7 +1038,7 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 
 		if (c != ')')
 		{
-			set_syntax_error (moo, MOO_SYNERR_RPAREN, LEXER_LOC(moo), MOO_NULL);
+			hcl_setsynerr (moo, MOO_SYNERR_RPAREN, LEXER_LOC(moo), MOO_NULL);
 			return -1;
 		}
 
@@ -1138,7 +1073,7 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 			else
 			{
 				/* the last character is not a colon */
-				set_syntax_error (moo, MOO_SYNERR_COLON, LEXER_LOC(moo), MOO_NULL);
+				hcl_setsynerr (moo, MOO_SYNERR_COLON, LEXER_LOC(moo), MOO_NULL);
 				return -1;
 			}
 		}
@@ -1341,7 +1276,7 @@ static int get_numlit (moo_t* moo, int negated)
 		if (radix < 2 || radix > 36)
 		{
 			/* no digit after the radix specifier */
-			set_syntax_error (moo, MOO_SYNERR_RADIXINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_RADIXINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -1351,7 +1286,7 @@ static int get_numlit (moo_t* moo, int negated)
 		if (CHAR_TO_NUM(c, radix) >= radix)
 		{
 			/* no digit after the radix specifier */
-			set_syntax_error (moo, MOO_SYNERR_RADNUMLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_RADNUMLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -1396,7 +1331,7 @@ static int get_charlit (moo_t* moo)
 	moo_ooci_t c = moo->c->lxc.c; /* even a new-line or white space would be taken */
 	if (c == MOO_OOCI_EOF) 
 	{
-		set_syntax_error (moo, MOO_SYNERR_CLTNT, LEXER_LOC(moo), MOO_NULL);
+		hcl_setsynerr (moo, MOO_SYNERR_CLTNT, LEXER_LOC(moo), MOO_NULL);
 		return -1;
 	}
 
@@ -1434,7 +1369,7 @@ static int get_strlit (moo_t* moo)
 				if (c == MOO_OOCI_EOF) 
 				{
 					/* string not closed */
-					set_syntax_error (moo, MOO_SYNERR_STRNC, TOKEN_LOC(moo) /*&moo->c->lxc.l*/, MOO_NULL);
+					hcl_setsynerr (moo, MOO_SYNERR_STRNC, TOKEN_LOC(moo) /*&moo->c->lxc.l*/, MOO_NULL);
 					return -1;
 				}
 			} 
@@ -1470,7 +1405,7 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 
 		if (c == MOO_OOCI_EOF)
 		{
-			set_syntax_error (moo, MOO_SYNERR_STRNC, TOKEN_LOC(moo) /*&moo->c->lxc.l*/, MOO_NULL);
+			hcl_setsynerr (moo, MOO_SYNERR_STRNC, TOKEN_LOC(moo) /*&moo->c->lxc.l*/, MOO_NULL);
 			return -1;
 		}
 
@@ -1794,7 +1729,7 @@ retry:
 			switch (c)
 			{
 				case MOO_OOCI_EOF:
-					set_syntax_error (moo, MOO_SYNERR_HLTNT, LEXER_LOC(moo), MOO_NULL);
+					hcl_setsynerr (moo, MOO_SYNERR_HLTNT, LEXER_LOC(moo), MOO_NULL);
 					return -1;
 
 				case '(':
@@ -1864,7 +1799,7 @@ retry:
 									/* if a colon is found in the middle of a symbol,
 									 * the last charater is expected to be a colon as well.
 									 * but, the last character is not a colon */
-									set_syntax_error (moo, MOO_SYNERR_COLON, LEXER_LOC(moo), MOO_NULL);
+									hcl_setsynerr (moo, MOO_SYNERR_COLON, LEXER_LOC(moo), MOO_NULL);
 									return -1;
 								}
 							}
@@ -1910,7 +1845,7 @@ retry:
 					}
 					else
 					{
-						set_syntax_error (moo, MOO_SYNERR_HLTNT, LEXER_LOC(moo), MOO_NULL);
+						hcl_setsynerr (moo, MOO_SYNERR_HLTNT, LEXER_LOC(moo), MOO_NULL);
 						return -1;
 					}
 
@@ -1942,7 +1877,7 @@ retry:
 				{
 					if (moo->c->tok.name.len != 1)
 					{
-						set_syntax_error (moo, MOO_SYNERR_CHARLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_CHARLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 					SET_TOKEN_TYPE (moo, MOO_IOTOK_CHARLIT);
@@ -1994,7 +1929,7 @@ retry:
 			else 
 			{
 				moo->c->ilchr = (moo_ooch_t)c;
-				set_syntax_error (moo, MOO_SYNERR_ILCHR, LEXER_LOC(moo), &moo->c->ilchr_ucs);
+				hcl_setsynerr (moo, MOO_SYNERR_ILCHR, LEXER_LOC(moo), &moo->c->ilchr_ucs);
 				return -1;
 			}
 			break;
@@ -2063,7 +1998,7 @@ static int begin_include (moo_t* moo)
 
 	if (moo->c->impl (moo, MOO_IO_OPEN, arg) <= -1) 
 	{
-		set_syntax_error (moo, MOO_SYNERR_INCLUDE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_INCLUDE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		goto oops;
 	}
 
@@ -2071,7 +2006,7 @@ static int begin_include (moo_t* moo)
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
 	{
 		/* check if a period is following the includee name */
-		set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		goto oops;
 	}
 
@@ -2429,7 +2364,7 @@ static int patch_long_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_o
 	if (code_size > MAX_CODE_JUMP * 2)
 	{
 /* TODO: change error code or get it as a parameter */
-		set_syntax_error (moo, MOO_SYNERR_BLKFLOOD, errloc, MOO_NULL); 
+		hcl_setsynerr (moo, MOO_SYNERR_BLKFLOOD, errloc, MOO_NULL); 
 		return -1;
 	}
 
@@ -2733,7 +2668,7 @@ static MOO_INLINE int add_class_level_variable (moo_t* moo, var_type_t var_type,
 
 		if (moo->c->cls.var[var_type].total_count >= varlim[var_type])
 		{
-			set_syntax_errbfmt (moo, MOO_SYNERR_VARFLOOD, loc, name, "too many ");
+			hcl_setsynerrbfmt (moo, MOO_SYNERR_VARFLOOD, loc, name, "too many ");
 			return -1;
 		}
 
@@ -3200,7 +3135,7 @@ static int preprocess_dotted_name (moo_t* moo, int flags, moo_oop_nsdic_t topdic
 wrong_name:
 	seg.len += seg.ptr - fqn->ptr;
 	seg.ptr = fqn->ptr;
-	set_syntax_error (moo, MOO_SYNERR_NAMESPACEINVAL, fqn_loc, &seg);
+	hcl_setsynerr (moo, MOO_SYNERR_NAMESPACEINVAL, fqn_loc, &seg);
 	return -1;
 }
 
@@ -3227,7 +3162,7 @@ static int resolve_pooldic (moo_t* moo, int dotted, const moo_oocs_t* name)
 	ass = moo_lookupdic (moo, (moo_oop_dic_t)ns_oop, &last);
 	if (!ass || MOO_CLASSOF(moo, ass->value) != moo->_pool_dictionary)
 	{
-		set_syntax_error (moo, MOO_SYNERR_POOLDICINVAL, TOKEN_LOC(moo), name);
+		hcl_setsynerr (moo, MOO_SYNERR_POOLDICINVAL, TOKEN_LOC(moo), name);
 		return -1;
 	}
 
@@ -3236,7 +3171,7 @@ static int resolve_pooldic (moo_t* moo, int dotted, const moo_oocs_t* name)
 	{
 		if ((moo_oop_dic_t)ass->value == moo->c->cls.pooldic_imp.oops[i])
 		{
-			set_syntax_error (moo, MOO_SYNERR_POOLDICDUPL, TOKEN_LOC(moo), name);
+			hcl_setsynerr (moo, MOO_SYNERR_POOLDICDUPL, TOKEN_LOC(moo), name);
 			return -1;
 		}
 	}
@@ -3254,7 +3189,7 @@ static int import_pool_dictionary (moo_t* moo, moo_oop_nsdic_t ns_oop, const moo
 	ass = moo_lookupdic (moo, (moo_oop_dic_t)ns_oop, tok_lastseg);
 	if (!ass || MOO_CLASSOF(moo, ass->value) != moo->_pool_dictionary)
 	{
-		set_syntax_error (moo, MOO_SYNERR_POOLDICINVAL, tok_loc, tok_name);
+		hcl_setsynerr (moo, MOO_SYNERR_POOLDICINVAL, tok_loc, tok_name);
 		return -1;
 	}
 
@@ -3263,7 +3198,7 @@ static int import_pool_dictionary (moo_t* moo, moo_oop_nsdic_t ns_oop, const moo
 	{
 		if ((moo_oop_dic_t)ass->value == moo->c->cls.pooldic_imp.oops[i])
 		{
-			set_syntax_error (moo, MOO_SYNERR_POOLDICDUPL, tok_loc, tok_name);
+			hcl_setsynerr (moo, MOO_SYNERR_POOLDICDUPL, tok_loc, tok_name);
 			return -1;
 		}
 	}
@@ -3300,7 +3235,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 			if (dcl_type == VAR_INSTANCE && (moo->c->cls.flags & CLASS_INDEXED) && (moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP))
 			{
 				/* a non-pointer object cannot have instance variables */
-				set_syntax_error (moo, MOO_SYNERR_VARDCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_VARDCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
@@ -3308,7 +3243,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 			    moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
 			    moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cls.ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
 			{
-				set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
@@ -3325,7 +3260,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 
 	if (!is_token_binary_selector(moo, VOCA_VBAR))
 	{
-		set_syntax_error (moo, MOO_SYNERR_VBAR, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_VBAR, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -3352,7 +3287,7 @@ static int compile_class_level_variables (moo_t* moo)
 					/* variable(#class) */
 					if (dcl_type != VAR_INSTANCE)
 					{
-						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
@@ -3364,7 +3299,7 @@ static int compile_class_level_variables (moo_t* moo)
 					/* variable(#classinst) */
 					if (dcl_type != VAR_INSTANCE)
 					{
-						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
@@ -3376,7 +3311,7 @@ static int compile_class_level_variables (moo_t* moo)
 					/* variable(#get) */
 					if (varacc_type & VARACC_GETTER)
 					{
-						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
@@ -3388,7 +3323,7 @@ static int compile_class_level_variables (moo_t* moo)
 					/* variable(#set) */
 					if (varacc_type & VARACC_SETTER)
 					{
-						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
@@ -3398,13 +3333,13 @@ static int compile_class_level_variables (moo_t* moo)
 				else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
 				{
 					/* no modifier is present */
-					set_syntax_error (moo, MOO_SYNERR_MODIFIER, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					hcl_setsynerr (moo, MOO_SYNERR_MODIFIER, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 				else
 				{
 					/* invalid modifier */
-					set_syntax_error (moo, MOO_SYNERR_MODIFIERINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					hcl_setsynerr (moo, MOO_SYNERR_MODIFIERINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
@@ -3417,7 +3352,7 @@ static int compile_class_level_variables (moo_t* moo)
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 		{
 			/* ) expected */
-			set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -3443,7 +3378,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 			if (dcl_type == VAR_INSTANCE && (moo->c->cls.flags & CLASS_INDEXED) && (moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP))
 			{
 				/* a non-pointer object cannot have instance variables */
-				set_syntax_error (moo, MOO_SYNERR_VARDCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_VARDCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
@@ -3451,7 +3386,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 			    moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
 			    moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cls.ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
 			{
-				set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
@@ -3489,7 +3424,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 		else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
 		{
 			/* no variable name is present */
-			set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 		else
@@ -3499,7 +3434,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
 		{
-			set_syntax_error (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 		else if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA) break; /* hopefully . */
@@ -3509,7 +3444,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
 	{
-		set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -3544,7 +3479,7 @@ static int compile_class_level_imports (moo_t* moo)
 					/* import(#pooldic) - import a pool dictionary */
 					if (dcl_type != IMPORT_POOLDIC)
 					{
-						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
@@ -3556,13 +3491,13 @@ static int compile_class_level_imports (moo_t* moo)
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
 				{
 					/* no modifier is present */
-					set_syntax_error (moo, MOO_SYNERR_MODIFIER, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					hcl_setsynerr (moo, MOO_SYNERR_MODIFIER, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 				else
 				{
 					/* invalid modifier */
-					set_syntax_error (moo, MOO_SYNERR_MODIFIERINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					hcl_setsynerr (moo, MOO_SYNERR_MODIFIERINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
@@ -3575,7 +3510,7 @@ static int compile_class_level_imports (moo_t* moo)
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 		{
 			/* ) expected */
-			set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -3597,7 +3532,7 @@ static int compile_class_level_imports (moo_t* moo)
 		else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
 		{
 			/* no variable name is present */
-			set_syntax_error (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 		else
@@ -3610,7 +3545,7 @@ static int compile_class_level_imports (moo_t* moo)
 
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED || TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
 		{
-			set_syntax_error (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 		else if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA) break; /* hopefully . */
@@ -3620,7 +3555,7 @@ static int compile_class_level_imports (moo_t* moo)
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
 	{
-		set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -3650,13 +3585,13 @@ static int compile_unary_method_name (moo_t* moo)
 				if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT) 
 				{
 					/* wrong argument name. identifier is expected */
-					set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					hcl_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
 				if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 				{
-					set_syntax_error (moo, MOO_SYNERR_ARGNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					hcl_setsynerr (moo, MOO_SYNERR_ARGNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
@@ -3668,7 +3603,7 @@ static int compile_unary_method_name (moo_t* moo)
 
 				if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA)
 				{
-					set_syntax_error (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					hcl_setsynerr (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
@@ -3696,7 +3631,7 @@ static int compile_binary_method_name (moo_t* moo)
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT) 
 	{
 		/* wrong argument name. identifier expected */
-		set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -3711,7 +3646,7 @@ static int compile_binary_method_name (moo_t* moo)
 	/* this check should not be not necessary
 	if (moo->c->mth.tmpr_nargs > MAX_CODE_NARGS)
 	{
-		set_syntax_error (moo, MOO_SYNERR_ARGFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_ARGFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 	*/
@@ -3733,13 +3668,13 @@ static int compile_keyword_method_name (moo_t* moo)
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT) 
 		{
 			/* wrong argument name. identifier is expected */
-			set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
 		if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 		{
-			set_syntax_error (moo, MOO_SYNERR_ARGNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_ARGNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -3784,7 +3719,7 @@ static int compile_method_name (moo_t* moo)
 
 		default:
 			/* illegal method name  */
-			set_syntax_error (moo, MOO_SYNERR_MTHNAME, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_MTHNAME, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			n = -1;
 	}
 
@@ -3792,14 +3727,14 @@ static int compile_method_name (moo_t* moo)
 	{
 		if (method_exists(moo, &moo->c->mth.name)) 
  		{
-			set_syntax_error (moo, MOO_SYNERR_MTHNAMEDUPL, &moo->c->mth.name_loc, &moo->c->mth.name);
+			hcl_setsynerr (moo, MOO_SYNERR_MTHNAMEDUPL, &moo->c->mth.name_loc, &moo->c->mth.name);
 			return -1;
 		}
 
 		/* compile_unary_method_name() returns 9999 if the name is followed by () */
 		if (moo->c->mth.variadic && n != 9999)
 		{
-			set_syntax_error (moo, MOO_SYNERR_VARIADMTHINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+			hcl_setsynerr (moo, MOO_SYNERR_VARIADMTHINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
 			return -1;
 		}
 	}
@@ -3835,7 +3770,7 @@ static int compile_method_temporaries (moo_t* moo)
 		 * variable */
 		if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 		{
-			set_syntax_error (moo, MOO_SYNERR_TMPRNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_TMPRNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -3844,7 +3779,7 @@ static int compile_method_temporaries (moo_t* moo)
 
 		if (moo->c->mth.tmpr_count > MAX_CODE_NARGS)
 		{
-			set_syntax_error (moo, MOO_SYNERR_TMPRFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_TMPRFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -3853,7 +3788,7 @@ static int compile_method_temporaries (moo_t* moo)
 
 	if (!is_token_binary_selector(moo, VOCA_VBAR)) 
 	{
-		set_syntax_error (moo, MOO_SYNERR_VBAR, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_VBAR, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -3894,7 +3829,7 @@ static int compile_method_pragma (moo_t* moo)
 					pfnum = pfnum * 10 + (*ptr - '0');
 					if (!MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
 					{
-						set_syntax_error (moo, MOO_SYNERR_PFNUMINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_PFNUMINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
@@ -3926,7 +3861,7 @@ static int compile_method_pragma (moo_t* moo)
 					if (!moo_rfindoochar (tptr, tlen, '.'))
 					{
 						/* wrong primitive function identifier */
-						set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_PFIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
@@ -3937,7 +3872,7 @@ static int compile_method_pragma (moo_t* moo)
 					if (!pfbase)
 					{
 						MOO_DEBUG2 (moo, "Cannot find module primitive function - %.*js\n", tlen, tptr);
-						set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_PFIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
@@ -3945,7 +3880,7 @@ static int compile_method_pragma (moo_t* moo)
 					{
 						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
 							tlen, tptr, pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
-						set_syntax_error (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+						hcl_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
 						return -1;
 					}
 
@@ -3960,7 +3895,7 @@ static int compile_method_pragma (moo_t* moo)
 				}
 				else if (!MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
 				{
-					set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					hcl_setsynerr (moo, MOO_SYNERR_PFIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 				else
@@ -3969,7 +3904,7 @@ static int compile_method_pragma (moo_t* moo)
 					{
 						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
 							tlen, tptr, pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
-						set_syntax_error (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+						hcl_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
 						return -1;
 					}
 
@@ -3981,7 +3916,7 @@ static int compile_method_pragma (moo_t* moo)
 			}
 
 			default:
-				set_syntax_error (moo, MOO_SYNERR_INTEGER, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_INTEGER, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 		}
 
@@ -3998,14 +3933,14 @@ static int compile_method_pragma (moo_t* moo)
 	}
 	else
 	{
-		set_syntax_error (moo, MOO_SYNERR_PRIMITIVE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_PRIMITIVE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
 	GET_TOKEN (moo);
 	if (!is_token_binary_selector(moo, VOCA_GT)) 
 	{
-		set_syntax_error (moo, MOO_SYNERR_GT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_GT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -4021,7 +3956,7 @@ static int validate_class_level_variable (moo_t* moo, var_info_t* var, const moo
 			if (moo->c->mth.type == MOO_METHOD_CLASS || moo->c->mth.type == MOO_METHOD_DUAL)
 			{
 				/* a class(or dual) method cannot access an instance variable */
-				set_syntax_error (moo, MOO_SYNERR_VARINACC, name_loc, name);
+				hcl_setsynerr (moo, MOO_SYNERR_VARINACC, name_loc, name);
 				return -1;
 			}
 			break;
@@ -4031,7 +3966,7 @@ static int validate_class_level_variable (moo_t* moo, var_info_t* var, const moo
 			if (moo->c->mth.type == MOO_METHOD_INSTANCE || moo->c->mth.type == MOO_METHOD_DUAL)
 			{
 				/* an instance method cannot access a class-instance variable */
-				set_syntax_error (moo, MOO_SYNERR_VARINACC, name_loc, name);
+				hcl_setsynerr (moo, MOO_SYNERR_VARINACC, name_loc, name);
 				return -1;
 			}
 
@@ -4106,7 +4041,7 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 			{
 				/* self. is followed by a reserved word.
 				 * a proper variable name is expected. */
-				set_syntax_error (moo, MOO_SYNERR_VARNAME, name_loc, name);
+				hcl_setsynerr (moo, MOO_SYNERR_VARNAME, name_loc, name);
 				return -1;
 			}
 
@@ -4147,7 +4082,7 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 				v = find_element_in_compiling_pooldic (moo, &last);
 				if (!v)
 				{
-					set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
+					hcl_setsynerr (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
 					return -1;
 				}
 
@@ -4164,7 +4099,7 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 			 * the pooldic is a terminal point and the items inside
 			 * are final nodes. if self is followed by more than 1 
 			 * subsegments, it's */
-			set_syntax_error (moo, MOO_SYNERR_VARINACC, name_loc, name);
+			hcl_setsynerr (moo, MOO_SYNERR_VARINACC, name_loc, name);
 			return -1;
 		}
 
@@ -4202,7 +4137,7 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 	if (!ass)
 	{
 		/* undeclared identifier */
-		set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
+		hcl_setsynerr (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
 		return -1;
 	}
 
@@ -4257,7 +4192,7 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 		v = find_element_in_compiling_pooldic (moo, name);
 		if (!v)
 		{
-			set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
+			hcl_setsynerr (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
 			return -1;
 		}
 
@@ -4292,7 +4227,7 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 				if (ass2)
 				{
 					/* the variable name has been found at least in 2 dictionaries - ambiguous */
-					set_syntax_error (moo, MOO_SYNERR_VARAMBIG, name_loc, name);
+					hcl_setsynerr (moo, MOO_SYNERR_VARAMBIG, name_loc, name);
 					return -1;
 				}
 				ass2 = ass;
@@ -4302,7 +4237,7 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 		ass = ass2;
 		if (!ass) 
 		{
-			set_syntax_error (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
+			hcl_setsynerr (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
 			return -1;
 		}
 	}
@@ -4328,7 +4263,7 @@ static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 	{
 		/* the assignee is not usable because its index is too large 
 		 * to be expressed in byte-codes. */
-		set_syntax_error (moo, MOO_SYNERR_VARUNUSE, name_loc, name);
+		hcl_setsynerr (moo, MOO_SYNERR_VARUNUSE, name_loc, name);
 		return -1;
 	}
 
@@ -4354,7 +4289,7 @@ static int compile_block_temporaries (moo_t* moo)
 	{
 		if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 		{
-			set_syntax_error (moo, MOO_SYNERR_TMPRNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_TMPRNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -4362,7 +4297,7 @@ static int compile_block_temporaries (moo_t* moo)
 		moo->c->mth.tmpr_count++;
 		if (moo->c->mth.tmpr_count > MAX_CODE_NTMPRS)
 		{
-			set_syntax_error (moo, MOO_SYNERR_TMPRFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
+			hcl_setsynerr (moo, MOO_SYNERR_TMPRFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
 			return -1;
 		}
 
@@ -4371,7 +4306,7 @@ static int compile_block_temporaries (moo_t* moo)
 
 	if (!is_token_binary_selector(moo, VOCA_VBAR)) 
 	{
-		set_syntax_error (moo, MOO_SYNERR_VBAR, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_VBAR, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -4442,14 +4377,14 @@ static int compile_block_expression (moo_t* moo)
 			if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT) 
 			{
 				/* wrong argument name. identifier expected */
-				set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
 /* TODO: check conflicting names as well */
 			if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
 			{
-				set_syntax_error (moo, MOO_SYNERR_BLKARGNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_BLKARGNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
@@ -4457,7 +4392,7 @@ static int compile_block_expression (moo_t* moo)
 			moo->c->mth.tmpr_count++;
 			if (moo->c->mth.tmpr_count > MAX_CODE_NARGS)
 			{
-				set_syntax_error (moo, MOO_SYNERR_BLKARGFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
+				hcl_setsynerr (moo, MOO_SYNERR_BLKARGFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
 				return -1;
 			}
 
@@ -4467,7 +4402,7 @@ static int compile_block_expression (moo_t* moo)
 
 		if (!is_token_binary_selector(moo, VOCA_VBAR))
 		{
-			set_syntax_error (moo, MOO_SYNERR_VBAR, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_VBAR, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -4481,7 +4416,7 @@ static int compile_block_expression (moo_t* moo)
 		 * block arguments, evaluation which is done by message passing
 		 * limits the number of arguments that can be passed. so the
 		 * check is implemented */
-		set_syntax_error (moo, MOO_SYNERR_BLKARGFLOOD, &colon_loc, MOO_NULL); 
+		hcl_setsynerr (moo, MOO_SYNERR_BLKARGFLOOD, &colon_loc, MOO_NULL); 
 		return -1;
 	}
 
@@ -4492,7 +4427,7 @@ static int compile_block_expression (moo_t* moo)
 	block_tmpr_count = moo->c->mth.tmpr_count - saved_tmpr_count;
 	if (block_tmpr_count > MAX_CODE_NBLKTMPRS)
 	{
-		set_syntax_error (moo, MOO_SYNERR_BLKTMPRFLOOD, &tmpr_loc, MOO_NULL); 
+		hcl_setsynerr (moo, MOO_SYNERR_BLKTMPRFLOOD, &tmpr_loc, MOO_NULL); 
 		return -1;
 	}
 
@@ -4537,7 +4472,7 @@ static int compile_block_expression (moo_t* moo)
 			}
 			else
 			{
-				set_syntax_error (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 		}
@@ -4630,13 +4565,13 @@ static int read_byte_array_literal (moo_t* moo, moo_oop_t* xlit)
 
 			/* if the token is out of the SMOOI range, it's too big or 
 			 * to small to be a byte */
-			set_syntax_error (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			goto oops;
 		}
 
 		if (tmp < 0 || tmp > 255)
 		{
-			set_syntax_error (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			goto oops;
 		}
 
@@ -4670,13 +4605,13 @@ static int read_byte_array_literal (moo_t* moo, moo_oop_t* xlit)
 			if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
 			if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA)
 			{
-				set_syntax_error (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				goto oops;
 			}
 			GET_TOKEN_GOTO (moo, oops);
 			if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK)
 			{
-				set_syntax_error (moo, MOO_SYNERR_LITERAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_LITERAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				goto oops;
 			}
 		}
@@ -4684,7 +4619,7 @@ static int read_byte_array_literal (moo_t* moo, moo_oop_t* xlit)
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACK)
 	{
-		set_syntax_error (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		goto oops;
 	}
 
@@ -4715,7 +4650,7 @@ static int read_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 	{
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_EOF) 
 		{
-			set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			goto oops;
 		}
 		else if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN) break;
@@ -4802,7 +4737,7 @@ static int compile_array_expression (moo_t* moo)
 
 			if (index > MAX_CODE_PARAM)
 			{
-				set_syntax_error (moo, MOO_SYNERR_ARREXPFLOOD, &aeloc, MOO_NULL);
+				hcl_setsynerr (moo, MOO_SYNERR_ARREXPFLOOD, &aeloc, MOO_NULL);
 				return -1;
 			}
 
@@ -4810,7 +4745,7 @@ static int compile_array_expression (moo_t* moo)
 
 			if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA)
 			{
-				set_syntax_error (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
@@ -5120,14 +5055,14 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				if (compile_method_expression(moo, 0) <= -1) return -1;
 				if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 				{
-					set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					hcl_setsynerr (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 				GET_TOKEN (moo);
 				break;
 
 			default:
-				set_syntax_error (moo, MOO_SYNERR_PRIMARYINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_PRIMARYINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 		}
 	}
@@ -5169,7 +5104,7 @@ static int compile_unary_message (moo_t* moo, int to_super)
 
 					if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA)
 					{
-						set_syntax_error (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
@@ -5278,7 +5213,7 @@ static int compile_keyword_message (moo_t* moo, int to_super)
 			 * if it parses an expression like 'aBlock value: 10 with: 20',
 			 * 'kw' may point to 'value:' or 'with:'.
 			 */
-			set_syntax_error (moo, MOO_SYNERR_ARGFLOOD, &saved_kwsel_loc, &kw); 
+			hcl_setsynerr (moo, MOO_SYNERR_ARGFLOOD, &saved_kwsel_loc, &kw); 
 			goto oops;
 		}
 
@@ -5448,7 +5383,7 @@ static int compile_braced_block (moo_t* moo)
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
 	{
-		set_syntax_error (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -5470,7 +5405,7 @@ static int compile_braced_block (moo_t* moo)
 			}
 			else
 			{
-				set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 		}
@@ -5484,7 +5419,7 @@ static int compile_braced_block (moo_t* moo)
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
-		set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -5495,7 +5430,7 @@ static int compile_conditional (moo_t* moo)
 {
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_LPAREN)
 	{
-		set_syntax_error (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -5507,7 +5442,7 @@ static int compile_conditional (moo_t* moo)
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 	{
-		set_syntax_error (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -5729,7 +5664,7 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 		{
 			/* the jump offset is out of the representable range by the offset
 			 * portion of the jump instruction */
-			set_syntax_error (moo, MOO_SYNERR_BLKFLOOD, &while_loc, MOO_NULL);
+			hcl_setsynerr (moo, MOO_SYNERR_BLKFLOOD, &while_loc, MOO_NULL);
 		}
 		goto oops;
 	}
@@ -5789,7 +5724,7 @@ static int compile_do_while_expression (moo_t* moo)
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_WHILE) is_until_loop = 0;
 	else
 	{
-		set_syntax_error (moo, MOO_SYNERR_WHILE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_WHILE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		goto oops;
 	}
 	GET_TOKEN (moo); /* get ( */
@@ -5848,7 +5783,7 @@ static int compile_do_while_expression (moo_t* moo)
 		{
 			/* the jump offset is out of the representable range by the offset
 			 * portion of the jump instruction */
-			set_syntax_error (moo, MOO_SYNERR_BLKFLOOD, &do_loc, MOO_NULL);
+			hcl_setsynerr (moo, MOO_SYNERR_BLKFLOOD, &do_loc, MOO_NULL);
 		}
 		goto oops;
 	}
@@ -6040,13 +5975,13 @@ static int compile_special_statement (moo_t* moo)
 		if (!moo->c->mth.loop)
 		{
 			/* break outside a loop */
-			set_syntax_error (moo, MOO_SYNERR_NOTINLOOP, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_NOTINLOOP, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 		if (moo->c->mth.loop->blkcount > 0)
 		{
 			/* break cannot cross boundary of a block */
-			set_syntax_error (moo, MOO_SYNERR_INBLOCK, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_INBLOCK, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -6057,13 +5992,13 @@ static int compile_special_statement (moo_t* moo)
 	{
 		if (!moo->c->mth.loop)
 		{
-			set_syntax_error (moo, MOO_SYNERR_NOTINLOOP, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_NOTINLOOP, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 		if (moo->c->mth.loop->blkcount > 0)
 		{
 			/* continue cannot cross boundary of a block */
-			set_syntax_error (moo, MOO_SYNERR_INBLOCK, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_INBLOCK, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -6180,7 +6115,7 @@ static int compile_method_statements (moo_t* moo)
 				    TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
 
 				/* not a period, EOF, nor } */
-				set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 		}
@@ -6443,7 +6378,7 @@ static int __compile_method_definition (moo_t* moo)
 					/* method(#class) */
 					if (moo->c->mth.type == MOO_METHOD_CLASS || moo->c->mth.type == MOO_METHOD_DUAL)
 					{
-						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
@@ -6455,7 +6390,7 @@ static int __compile_method_definition (moo_t* moo)
 					/* method(#dual) */
 					if (moo->c->mth.type == MOO_METHOD_CLASS || moo->c->mth.type == MOO_METHOD_DUAL)
 					{
-						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
@@ -6468,7 +6403,7 @@ static int __compile_method_definition (moo_t* moo)
 					if (moo->c->mth.primitive)
 					{
 						/* #primitive duplicate modifier */
-						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
@@ -6480,7 +6415,7 @@ static int __compile_method_definition (moo_t* moo)
 					/* method(#lenient) */
 					if (moo->c->mth.lenient)
 					{
-						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 					moo->c->mth.lenient = 1;
@@ -6493,7 +6428,7 @@ static int __compile_method_definition (moo_t* moo)
 					if (moo->c->mth.variadic)
 					{
 						/* #variadic duplicate modifier */
-						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
@@ -6507,13 +6442,13 @@ static int __compile_method_definition (moo_t* moo)
 				else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
 				{
 					/* no modifier is present */
-					set_syntax_error (moo, MOO_SYNERR_MODIFIER, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					hcl_setsynerr (moo, MOO_SYNERR_MODIFIER, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 				else
 				{
 					/* invalid modifier */
-					set_syntax_error (moo, MOO_SYNERR_MODIFIERINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					hcl_setsynerr (moo, MOO_SYNERR_MODIFIERINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
@@ -6526,7 +6461,7 @@ static int __compile_method_definition (moo_t* moo)
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 		{
 			/* ) expected */
-			set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -6545,7 +6480,7 @@ static int __compile_method_definition (moo_t* moo)
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
 		{
 			/* . expected */
-			set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -6565,7 +6500,7 @@ static int __compile_method_definition (moo_t* moo)
 		if (mthname.len == 0)
 		{
 			MOO_DEBUG2 (moo, "Invalid primitive function name - %.*js\n", moo->c->mth.name.len, moo->c->mth.name.ptr);
-			set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+			hcl_setsynerr (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
 			return -1;
 		}
 		
@@ -6596,7 +6531,7 @@ static int __compile_method_definition (moo_t* moo)
 			{
 				MOO_DEBUG2 (moo, "Cannot find intrinsic primitive function - %.*js\n", 
 					moo->c->cls.modname.len - savedlen, &moo->c->cls.modname.ptr[savedlen]);
-				set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+				hcl_setsynerr (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
 				moo->c->cls.modname.len = savedlen;
 				return -1;
 			}
@@ -6606,7 +6541,7 @@ static int __compile_method_definition (moo_t* moo)
 				MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
 					moo->c->cls.modname.len - savedlen, &moo->c->cls.modname.ptr[savedlen],
 					pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
-				set_syntax_error (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+				hcl_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
 				moo->c->cls.modname.len = savedlen;
 				return -1;
 			}
@@ -6647,7 +6582,7 @@ static int __compile_method_definition (moo_t* moo)
 			{
 				MOO_DEBUG2 (moo, "Cannot find module primitive function - %.*js\n", 
 					moo->c->cls.modname.len - savedlen, &moo->c->cls.modname.ptr[savedlen]);
-				set_syntax_error (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+				hcl_setsynerr (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
 				moo->c->cls.modname.len = savedlen;
 				return -1;
 			}
@@ -6657,7 +6592,7 @@ static int __compile_method_definition (moo_t* moo)
 				MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
 					moo->c->cls.modname.len - savedlen, &moo->c->cls.modname.ptr[savedlen],
 					pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
-				set_syntax_error (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+				hcl_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
 				moo->c->cls.modname.len = savedlen;
 				return -1;
 			}
@@ -6677,7 +6612,7 @@ static int __compile_method_definition (moo_t* moo)
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
 		{
 			/* { expected */
-			set_syntax_error (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -6690,7 +6625,7 @@ static int __compile_method_definition (moo_t* moo)
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 		{
 			/* } expected */
-			set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 	}
@@ -7015,7 +6950,7 @@ static int make_defined_class (moo_t* moo)
 		    self_spec != MOO_OOP_TO_SMOOI(moo->c->cls.self_oop->selfspec))
 		{
 			/* it conflicts with internal definition */
-			set_syntax_error (moo, MOO_SYNERR_CLASSCONTRA, &moo->c->cls.fqn_loc, &moo->c->cls.name);
+			hcl_setsynerr (moo, MOO_SYNERR_CLASSCONTRA, &moo->c->cls.fqn_loc, &moo->c->cls.name);
 			return -1;
 		}
 	}
@@ -7156,7 +7091,7 @@ static MOO_INLINE int _set_class_indexed_type (moo_t* moo, moo_obj_type_t type)
 {
 	if (moo->c->cls.flags & CLASS_INDEXED)
 	{
-		set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -7249,7 +7184,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				{
 					if (moo->c->cls.flags & CLASS_FINAL)
 					{
-						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 					moo->c->cls.flags |= CLASS_FINAL;
@@ -7259,7 +7194,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				{
 					if (moo->c->cls.flags & CLASS_LIMITED)
 					{
-						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 					moo->c->cls.flags |= CLASS_LIMITED;
@@ -7269,7 +7204,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				{
 					if (moo->c->cls.flags & CLASS_IMMUTABLE)
 					{
-						set_syntax_error (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						hcl_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 					moo->c->cls.flags |= CLASS_IMMUTABLE;
@@ -7278,13 +7213,13 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
 				{
 					/* no modifier is present */
-					set_syntax_error (moo, MOO_SYNERR_MODIFIER, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					hcl_setsynerr (moo, MOO_SYNERR_MODIFIER, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 				else
 				{
 					/* invalid modifier */
-					set_syntax_error (moo, MOO_SYNERR_MODIFIERINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					hcl_setsynerr (moo, MOO_SYNERR_MODIFIERINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
@@ -7303,7 +7238,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 						if (TOKEN_TYPE(moo) != MOO_IOTOK_NUMLIT && TOKEN_TYPE(moo) != MOO_IOTOK_RADNUMLIT)
 						{
-							set_syntax_error (moo, MOO_SYNERR_LITERAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+							hcl_setsynerr (moo, MOO_SYNERR_LITERAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 							return -1;
 						}
 
@@ -7313,7 +7248,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 							/* the class type size has nothing to do with the name instance variables
 							 * in the semantics. but it is stored into the named-instvar bits in the
 							 * spec field of a class. so i check it against MOO_MAX_NAMED_INSTVARS. */
-							set_syntax_error (moo, MOO_SYNERR_NPINSTSIZEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
+							hcl_setsynerr (moo, MOO_SYNERR_NPINSTSIZEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
 							return -1;
 						}
 
@@ -7321,7 +7256,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 						if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 						{
-							set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+							hcl_setsynerr (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 							return -1;
 						}
 						GET_TOKEN (moo);
@@ -7339,7 +7274,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 		{
-			set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -7350,7 +7285,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 	    TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
 	{
 		/* class name expected. */
-		set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -7358,7 +7293,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && is_restricted_word (TOKEN_NAME(moo)))
 	{
 		/* wrong class name */
-		set_syntax_error (moo, MOO_SYNERR_CLASSNAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_CLASSNAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 #endif
@@ -7399,7 +7334,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		else
 		{
 			/* only an existing class can be extended. */
-			set_syntax_error (moo, MOO_SYNERR_CLASSUNDEF, &moo->c->cls.fqn_loc, &moo->c->cls.name);
+			hcl_setsynerr (moo, MOO_SYNERR_CLASSUNDEF, &moo->c->cls.fqn_loc, &moo->c->cls.name);
 			return -1;
 		}
 
@@ -7417,7 +7352,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_LPAREN)
 		{
-			set_syntax_errbfmt (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo), "superclass must be specified");
+			hcl_setsynerrbfmt (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo), "superclass must be specified");
 			return -1;
 		}
 
@@ -7434,7 +7369,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		else if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
 		{
 			/* superclass name expected */
-			set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -7446,7 +7381,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		GET_TOKEN (moo);
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 		{
-			set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -7461,7 +7396,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				/* the object found with the name is not a class object 
 				 * or the the class object found is a fully defined kernel 
 				 * class object */
-				set_syntax_error (moo, MOO_SYNERR_CLASSDUPL, &moo->c->cls.fqn_loc, &moo->c->cls.name);
+				hcl_setsynerr (moo, MOO_SYNERR_CLASSDUPL, &moo->c->cls.fqn_loc, &moo->c->cls.name);
 				return -1;
 			}
 
@@ -7501,7 +7436,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				    moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP)
 				{
 					/* non-pointer object cannot inherit from a superclass with trailer size set */
-					set_syntax_errbfmt (moo, MOO_SYNERR_INHERITBANNED, &moo->c->cls.fqn_loc, &moo->c->cls.fqn,
+					hcl_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &moo->c->cls.fqn_loc, &moo->c->cls.fqn,
 						"the non-pointer class %.*js cannot inherit from a class set with trailer size",
 						moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
 					return -1;
@@ -7510,7 +7445,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				if (MOO_CLASS_SELFSPEC_FLAGS(MOO_OOP_TO_SMOOI(((moo_oop_class_t)moo->c->cls.super_oop)->selfspec)) & MOO_CLASS_SELFSPEC_FLAG_FINAL)
 				{
 					/* cannot inherit a #final class */
-					set_syntax_errbfmt (moo, MOO_SYNERR_INHERITBANNED, &moo->c->cls.fqn_loc, &moo->c->cls.fqn,
+					hcl_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &moo->c->cls.fqn_loc, &moo->c->cls.fqn,
 						"the %.*js class cannot inherit from a final class", moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
 					return -1;
 				}
@@ -7522,7 +7457,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				 * the object found with the name is not a class object. or,
 				 * the class object found is a internally defined kernel
 				 * class object. */
-				set_syntax_error (moo, MOO_SYNERR_CLASSUNDEF, &moo->c->cls.superfqn_loc, &moo->c->cls.superfqn);
+				hcl_setsynerr (moo, MOO_SYNERR_CLASSUNDEF, &moo->c->cls.superfqn_loc, &moo->c->cls.superfqn);
 				return -1;
 			}
 		}
@@ -7534,7 +7469,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			GET_TOKEN (moo);
 			if (TOKEN_TYPE(moo) != MOO_IOTOK_STRLIT)
 			{
-				set_syntax_error (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
@@ -7547,7 +7482,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 				 * a period to a dash when mapping the module name to an
 				 * actual module file. disallowing a dash lowers confusion
 				 * when loading a module. */
-				set_syntax_error (moo, MOO_SYNERR_MODNAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_MODNAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
@@ -7560,7 +7495,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
 	{
-		set_syntax_error (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -7585,7 +7520,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			if (MOO_CLASS_SPEC_INDEXED_TYPE(spec) == MOO_OBJ_TYPE_OOP && MOO_CLASS_SPEC_NAMED_INSTVARS(spec) > 0)
 			{
 				/* a non-pointer object cannot inherit from a pointer object with instance variables */
-				set_syntax_errbfmt (moo, MOO_SYNERR_INHERITBANNED, &moo->c->cls.fqn_loc, &moo->c->cls.fqn, 
+				hcl_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &moo->c->cls.fqn_loc, &moo->c->cls.fqn, 
 					"the non-pointer class %.*js cannot inherit from a pointer class defined with instance variables", 
 					moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
 				return -1;
@@ -7597,7 +7532,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 			if (moo->c->cls.non_pointer_instsize < MOO_CLASS_SPEC_NAMED_INSTVARS(spec))
 			{
-				set_syntax_errbfmt (moo, MOO_SYNERR_NPINSTSIZEINVAL, &type_loc, MOO_NULL,
+				hcl_setsynerrbfmt (moo, MOO_SYNERR_NPINSTSIZEINVAL, &type_loc, MOO_NULL,
 					"the instance size(%zu) for the non-pointer class %.*js must not be less than the size(%zu) defined in the superclass ", 
 					moo->c->cls.non_pointer_instsize, moo->c->cls.fqn.len, moo->c->cls.fqn.ptr, (moo_oow_t)MOO_CLASS_SPEC_NAMED_INSTVARS(spec));
 				return -1;
@@ -7621,7 +7556,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 		/* when a class is extended, a new variable cannot be added */
 		if (is_token_word(moo, VOCA_VAR) || is_token_word(moo, VOCA_VARIABLE))
 		{
-			set_syntax_error (moo, MOO_SYNERR_VARDCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_VARDCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -7729,7 +7664,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			if (moo_importmod (moo, moo->c->cls.self_oop, moo->c->cls.modname.ptr, moo->c->cls.modname.len) <= -1)
 			{
 				const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
-				set_syntax_errbfmt (moo, MOO_SYNERR_MODIMPFAIL, &moo->c->cls.modname_loc, &moo->c->cls.modname,
+				hcl_setsynerrbfmt (moo, MOO_SYNERR_MODIMPFAIL, &moo->c->cls.modname_loc, &moo->c->cls.modname,
 						"unable to import %.*js - %js", moo->c->cls.modname.len, moo->c->cls.modname.ptr, oldmsg);
 				return -1;
 			}
@@ -7761,7 +7696,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 	
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
-		set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
@@ -7898,7 +7833,7 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 			}
 			else
 			{
-				set_syntax_error (moo, MOO_SYNERR_VARINACC, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_VARINACC, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return MOO_NULL;
 			}
 
@@ -7930,7 +7865,7 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 		}
 
 		default:
-			set_syntax_error (moo, MOO_SYNERR_LITERAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_LITERAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return MOO_NULL;
 	}
 }
@@ -7967,7 +7902,7 @@ static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && 
 	    TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
 	{
-		set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		goto oops;
 	}
 
@@ -7990,14 +7925,14 @@ static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 	if (moo_lookupdic (moo, (moo_oop_dic_t)pd->ns_oop, &pd->name))
 	{
 		/* a conflicting entry has been found */
-		set_syntax_error (moo, MOO_SYNERR_POOLDICDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_POOLDICDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		goto oops;
 	}
 
 	GET_TOKEN (moo);
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
 	{
-		set_syntax_error (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		goto oops;
 	}
 
@@ -8016,7 +7951,7 @@ static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_ASSIGN)
 		{
-			set_syntax_error (moo, MOO_SYNERR_ASSIGN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_ASSIGN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			goto oops;
 		}
 
@@ -8038,7 +7973,7 @@ static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 		/*if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) goto done;
 		else*/ if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
 		{
-			set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			goto oops;
 		}
 
@@ -8048,7 +7983,7 @@ static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
-		set_syntax_error (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		goto oops;
 	}
 
@@ -8115,7 +8050,7 @@ static int compile_pragma_definition (moo_t* moo)
 
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT)
 		{
-			set_syntax_error (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -8140,7 +8075,7 @@ static int compile_pragma_definition (moo_t* moo)
 			GET_TOKEN(moo);
 			if (TOKEN_TYPE(moo) != MOO_IOTOK_LPAREN)
 			{
-				set_syntax_error (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
@@ -8157,20 +8092,20 @@ static int compile_pragma_definition (moo_t* moo)
 			}
 			else
 			{
-				set_syntax_error (moo, MOO_SYNERR_DIRECTIVEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_DIRECTIVEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
 			GET_TOKEN(moo);
 			if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 			{
-				set_syntax_error (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 		}
 		else
 		{
-			set_syntax_error (moo, MOO_SYNERR_PRAGMAINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr (moo, MOO_SYNERR_PRAGMAINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -8181,7 +8116,7 @@ static int compile_pragma_definition (moo_t* moo)
 	
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
 	{
-		set_syntax_error (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		hcl_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 	
@@ -8202,7 +8137,7 @@ static int compile_stream (moo_t* moo)
 			GET_TOKEN (moo);
 			if (TOKEN_TYPE(moo) != MOO_IOTOK_STRLIT)
 			{
-				set_syntax_error (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				hcl_setsynerr (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 			if (begin_include(moo) <= -1) return -1;
@@ -8248,7 +8183,7 @@ static int compile_stream (moo_t* moo)
 #endif
 		else
 		{
-			set_syntax_error(moo, MOO_SYNERR_DIRECTIVEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			hcl_setsynerr(moo, MOO_SYNERR_DIRECTIVEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 	}
