@@ -34,7 +34,7 @@
 
 static MOO_INLINE const char* proc_state_to_string (int state)
 {
-	static const char* str[] = 
+	static const moo_bch_t* str[] = 
 	{
 		"TERMINATED",
 		"SUSPENDED",
