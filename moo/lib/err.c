@@ -349,18 +349,27 @@ void moo_seterrwithsyserr (moo_t* moo, int syserr)
 
 #if defined(MOO_INCLUDE_COMPILER)
 
-void hcl_setsynerrbfmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt, const moo_bch_t* msgfmt, ...)
+void moo_setsynerrbfmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt, const moo_bch_t* msgfmt, ...)
 {
+	static moo_bch_t syntax_error[] = "syntax error - ";
+
 	if (msgfmt) 
 	{
 		va_list ap;
+		int i, selen;
+
 		va_start (ap, msgfmt);
 		moo_seterrbfmtv (moo, MOO_ESYNERR, msgfmt, ap);
 		va_end (ap);
+
+		selen = MOO_COUNTOF(syntax_error) - 1;
+		MOO_MEMMOVE (&moo->errmsg.buf[selen], &moo->errmsg.buf[0], MOO_SIZEOF(moo->errmsg.buf[0]) * (MOO_COUNTOF(moo->errmsg.buf) - selen));
+		for (i = 0; i < selen; i++) moo->errmsg.buf[i] = syntax_error[i];
+		moo->errmsg.buf[MOO_COUNTOF(moo->errmsg.buf) - 1] = '\0';
 	}
 	else 
 	{
-		moo_seterrbfmt (moo, MOO_ESYNERR, "syntax error - %js", synerr_to_errstr(num));
+		moo_seterrbfmt (moo, MOO_ESYNERR, "%hs%js", syntax_error, synerr_to_errstr(num));
 	}
 	moo->c->synerr.num = num;
 
@@ -370,11 +379,18 @@ void hcl_setsynerrbfmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc,
 	 * moo->c->tok.loc due to 'const' prefixed to loc. */
 	/*moo->c->synerr.loc = loc? *loc: moo->c->tok.loc;*/
 	if (loc)
+	{
 		moo->c->synerr.loc = *loc;
+	}
 	else
+	{
 		moo->c->synerr.loc = moo->c->tok.loc;
+	}
 	
-	if (tgt) moo->c->synerr.tgt = *tgt;
+	if (tgt)
+	{
+		moo->c->synerr.tgt = *tgt;
+	}
 	else 
 	{
 		moo->c->synerr.tgt.ptr = MOO_NULL;
@@ -382,18 +398,27 @@ void hcl_setsynerrbfmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc,
 	}
 }
 
-void hcl_setsynerrufmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt, const moo_uch_t* msgfmt, ...)
+void moo_setsynerrufmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt, const moo_uch_t* msgfmt, ...)
 {
+	static moo_bch_t syntax_error[] = "syntax error - ";
+
 	if (msgfmt) 
 	{
 		va_list ap;
+		int i, selen;
+
 		va_start (ap, msgfmt);
 		moo_seterrufmtv (moo, MOO_ESYNERR, msgfmt, ap);
 		va_end (ap);
+
+		selen = MOO_COUNTOF(syntax_error) - 1;
+		MOO_MEMMOVE (&moo->errmsg.buf[selen], &moo->errmsg.buf[0], MOO_SIZEOF(moo->errmsg.buf[0]) * (MOO_COUNTOF(moo->errmsg.buf) - selen));
+		for (i = 0; i < selen; i++) moo->errmsg.buf[i] = syntax_error[i];
+		moo->errmsg.buf[MOO_COUNTOF(moo->errmsg.buf) - 1] = '\0';
 	}
 	else 
 	{
-		moo_seterrbfmt (moo, MOO_ESYNERR, "syntax error - %js", synerr_to_errstr(num));
+		moo_seterrbfmt (moo, MOO_ESYNERR, "%hs%js", syntax_error, synerr_to_errstr(num));
 	}
 	moo->c->synerr.num = num;
 
@@ -403,11 +428,18 @@ void hcl_setsynerrufmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc,
 	 * moo->c->tok.loc due to 'const' prefixed to loc. */
 	/*moo->c->synerr.loc = loc? *loc: moo->c->tok.loc;*/
 	if (loc)
+	{
 		moo->c->synerr.loc = *loc;
+	}
 	else
+	{
 		moo->c->synerr.loc = moo->c->tok.loc;
-	
-	if (tgt) moo->c->synerr.tgt = *tgt;
+	}
+
+	if (tgt)
+	{
+		moo->c->synerr.tgt = *tgt;
+	}
 	else 
 	{
 		moo->c->synerr.tgt.ptr = MOO_NULL;
@@ -415,9 +447,9 @@ void hcl_setsynerrufmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc,
 	}
 }
 
-void hcl_setsynerr (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt)
+void moo_setsynerr (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt)
 {
-	hcl_setsynerrbfmt (moo, num, loc, tgt, MOO_NULL);
+	moo_setsynerrbfmt (moo, num, loc, tgt, MOO_NULL);
 }
 #endif
 

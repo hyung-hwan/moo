@@ -994,7 +994,7 @@ void moo_seterrufmtv (
 
 
 #if defined(MOO_INCLUDE_COMPILER)
-void hcl_setsynerrbfmt (
+void moo_setsynerrbfmt (
 	moo_t*             moo,
 	moo_synerrnum_t    num,
 	const moo_ioloc_t* loc,
@@ -1003,7 +1003,7 @@ void hcl_setsynerrbfmt (
 	...
 );
 
-void hcl_setsynerrufmt (
+void moo_setsynerrufmt (
 	moo_t*             moo,
 	moo_synerrnum_t    num,
 	const moo_ioloc_t* loc,
@@ -1012,7 +1012,7 @@ void hcl_setsynerrufmt (
 	...
 );
 
-void hcl_setsynerr (
+void moo_setsynerr (
 	moo_t*             moo,
 	moo_synerrnum_t    num,
 	const moo_ioloc_t* loc,

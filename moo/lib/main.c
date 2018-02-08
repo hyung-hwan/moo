@@ -417,7 +417,7 @@ static MOO_INLINE moo_ooi_t close_input (moo_t* moo, moo_ioarg_t* arg)
 
 static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 {
-	/*xtn_t* xtn = hcl_getxtn(hcl);*/
+	/*xtn_t* xtn = moo_getxtn(hcl);*/
 	bb_t* bb;
 	moo_oow_t bcslen, ucslen, remlen;
 	int x;
