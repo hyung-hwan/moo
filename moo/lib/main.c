@@ -79,7 +79,7 @@
 #		define sys_dl_open(x) lt_dlopen(x)
 #		define sys_dl_openext(x) lt_dlopenext(x)
 #		define sys_dl_close(x) lt_dlclose(x)
-#		define sys_dl_sym(x,n) lt_dlsym(x,n)
+#		define sys_dl_getsym(x,n) lt_dlsym(x,n)
 #	elif defined(HAVE_DLFCN_H)
 #		include <dlfcn.h>
 #		define USE_DLFCN
@@ -87,7 +87,7 @@
 #		define sys_dl_open(x) dlopen(x,RTLD_NOW)
 #		define sys_dl_openext(x) dlopen(x,RTLD_NOW)
 #		define sys_dl_close(x) dlclose(x)
-#		define sys_dl_sym(x,n) dlsym(x,n)
+#		define sys_dl_getsym(x,n) dlsym(x,n)
 #	else
 #		error UNSUPPORTED DYNAMIC LINKER
 #	endif
@@ -650,24 +650,24 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 	for (i = 1; i <= bcslen; i++) if (bufptr[i] == '.') bufptr[i] = '_';
 
 	symname = &bufptr[1]; /* try the name as it is */
-	sym = sys_dl_sym(handle, symname);
+	sym = sys_dl_getsym(handle, symname);
 	if (!sym)
 	{
 		bufptr[0] = '_';
 		symname = &bufptr[0]; /* try _name */
-		sym = sys_dl_sym(handle, symname);
+		sym = sys_dl_getsym(handle, symname);
 		if (!sym)
 		{
 			bufptr[bcslen + 1] = '_'; 
 			bufptr[bcslen + 2] = '\0';
 
 			symname = &bufptr[1]; /* try name_ */
-			sym = sys_dl_sym(handle, symname);
+			sym = sys_dl_getsym(handle, symname);
 
 			if (!sym)
 			{
 				symname = &bufptr[0]; /* try _name_ */
-				sym = sys_dl_sym(handle, symname);
+				sym = sys_dl_getsym(handle, symname);
 			}
 		}
 	}
