@@ -704,7 +704,7 @@ moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidle
 		 * what if the compiler is broken? imagine a buggy compiler rewritten
 		 * in moo itself? */
 		MOO_DEBUG2 (moo, "Internal error - no period in a primitive function identifier [%.*js] - buggy compiler?\n", pfidlen, pfid);
-		moo_seterrnum (moo, MOO_EINTERN);
+		moo_seterrbfmt (moo, MOO_EINTERN, "no period in a primitive function identifier [%.*js]", pfidlen, pfid);
 		return MOO_NULL;
 	}
 
@@ -731,7 +731,7 @@ moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidle
 	{
 		/* the primitive function is not found. but keep the module open even if it's opened above */
 		MOO_DEBUG3 (moo, "Cannot find a primitive function [%.*js] in a module [%js]\n", pfidlen - mod_name_len - 1, sep + 1, mdp->mod.name);
-		moo_seterrnum (moo, MOO_ENOENT); /* TODO: proper error code and handling */
+		moo_seterrbfmt (moo, MOO_ENOENT, "unable to find a primitive function [%.*js] in a module [%js]", pfidlen - mod_name_len - 1, sep + 1, mdp->mod.name); 
 		return MOO_NULL;
 	}
 
