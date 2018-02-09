@@ -649,7 +649,7 @@ int moo_importmod (moo_t* moo, moo_oop_class_t _class, const moo_ooch_t* name, m
 		MOO_ASSERT (moo, mdp != MOO_NULL);
 
 		MOO_DEBUG1 (moo, "Cannot import module [%js] - already active\n", mdp->mod.name);
-		moo_seterrnum (moo, MOO_EPERM);
+		moo_seterrbfmt (moo, MOO_EPERM, "unable to import module [%js] - already active", mdp->mod.name);
 		goto done2;
 	}
 
@@ -659,7 +659,7 @@ int moo_importmod (moo_t* moo, moo_oop_class_t _class, const moo_ooch_t* name, m
 	if (!mdp->mod.import)
 	{
 		MOO_DEBUG1 (moo, "Cannot import module [%js] - importing not supported by the module\n", mdp->mod.name);
-		moo_seterrnum (moo, MOO_ENOIMPL);
+		moo_seterrbfmt (moo, MOO_ENOIMPL, "unable to import module [%js] - not supported by the module", mdp->mod.name);
 		goto done;
 	}
 
