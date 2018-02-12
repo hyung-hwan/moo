@@ -542,8 +542,10 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 			if (!handle) 
 			{
 				moo_bch_t* dash;
-				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open(ext) DL %js - %hs", name, sys_dl_error());
-				MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %hs\n", &bufptr[len], name, sys_dl_error());
+				const moo_bch_t* dl_errstr;
+				dl_errstr = sys_dl_error();
+				MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %hs\n", &bufptr[len], name, dl_errstr);
+				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open(ext) DL %js - %hs", name, dl_errstr);
 				dash = moo_rfindbchar(bufptr, moo_countbcstr(bufptr), '-');
 				if (dash) 
 				{
@@ -580,8 +582,10 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 			handle = sys_dl_open(bufptr);
 			if (!handle) 
 			{
-				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open DL %js - %hs", name, sys_dl_error());
-				MOO_DEBUG2 (moo, "Failed to open DL %hs - %hs\n", bufptr, sys_dl_error());
+				const moo_bch_t* dl_errstr;
+				dl_errstr = sys_dl_error();
+				MOO_DEBUG2 (moo, "Failed to open DL %hs - %hs\n", bufptr, dl_errstr);
+				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open DL %js - %hs", name, dl_errstr);
 			}
 			else MOO_DEBUG2 (moo, "Opened DL %hs handle %p\n", bufptr, handle);
 		}
@@ -590,8 +594,10 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 			handle = sys_dl_openext(bufptr);
 			if (!handle) 
 			{
-				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open(ext) DL %js - %hs", name, sys_dl_error());
-				MOO_DEBUG2 (moo, "Failed to open(ext) DL %hs - %hs\n", bufptr, sys_dl_error());
+				const moo_bch_t* dl_errstr;
+				dl_errstr = sys_dl_error();
+				MOO_DEBUG2 (moo, "Failed to open(ext) DL %hs - %hs\n", bufptr, dl_errstr);
+				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open(ext) DL %js - %hs", name, dl_errstr);
 			}
 			else MOO_DEBUG2 (moo, "Opened(ext) DL %hs handle %p\n", bufptr, handle);
 		}
@@ -679,7 +685,10 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 				sym = sys_dl_getsym(handle, symname);
 				if (!sym)
 				{
-					moo_seterrbfmt (moo, MOO_ENOENT, "unable to get module symbol %hs", symname);
+					const moo_bch_t* dl_errstr;
+					dl_errstr = sys_dl_error();
+					MOO_DEBUG3 (moo, "Failed to get module symbol %js from handle %p - %hs\n", name, handle, dl_errstr);
+					moo_seterrbfmt (moo, MOO_ENOENT, "unable to get module symbol %hs - %hs", symname, dl_errstr);
 				}
 			}
 		}

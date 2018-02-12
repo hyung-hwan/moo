@@ -496,7 +496,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	/* TODO: binary search ... */
 	for (n = 0; n < MOO_COUNTOF(static_modtab); n++)
 	{
-		if (moo_compoocharsbcstr (name, namelen, static_modtab[n].modname) == 0) 
+		if (moo_compoocharsbcstr(name, namelen, static_modtab[n].modname) == 0) 
 		{
 			load = static_modtab[n].modload;
 			break;
@@ -513,7 +513,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 
 		/* i copy-insert 'md' into the table before calling 'load'.
 		 * to pass the same address to load(), query(), etc */
-		pair = moo_rbt_insert (&moo->modtab, (moo_ooch_t*)name, namelen, &md, MOO_SIZEOF(md));
+		pair = moo_rbt_insert(&moo->modtab, (moo_ooch_t*)name, namelen, &md, MOO_SIZEOF(md));
 		if (pair == MOO_NULL)
 		{
 			moo_seterrnum (moo, MOO_ESYSMEM);
@@ -523,7 +523,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 		mdp = (moo_mod_data_t*)MOO_RBT_VPTR(pair);
 		MOO_ASSERT (moo, MOO_SIZEOF(mdp->mod.hints) == MOO_SIZEOF(int));
 		mdp->mod.hints = hints;
-		if (load (moo, &mdp->mod) <= -1)
+		if (load(moo, &mdp->mod) <= -1)
 		{
 			moo_rbt_delete (&moo->modtab, (moo_ooch_t*)name, namelen);
 			return MOO_NULL;
@@ -555,7 +555,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	moo_copyoochars ((moo_ooch_t*)md.mod.name, name, namelen);
 	if (moo->vmprim.dl_open && moo->vmprim.dl_getsym && moo->vmprim.dl_close)
 	{
-		md.handle = moo->vmprim.dl_open (moo, &buf[MOD_PREFIX_LEN], MOO_VMPRIM_OPENDL_PFMOD);
+		md.handle = moo->vmprim.dl_open(moo, &buf[MOD_PREFIX_LEN], MOO_VMPRIM_OPENDL_PFMOD);
 	}
 
 	if (md.handle == MOO_NULL) 
@@ -566,11 +566,10 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	}
 
 	/* attempt to get moo_mod_xxx where xxx is the module name*/
-	load = moo->vmprim.dl_getsym (moo, md.handle, buf);
+	load = moo->vmprim.dl_getsym(moo, md.handle, buf);
 	if (!load) 
 	{
-		const moo_ooch_t* oldmsg = moo_backuperrmsg (moo);
-		moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to get module symbol [%js] in [%.*js] - %js", buf,namelen, name, oldmsg);
+		moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to get module symbol [%js] in [%.*js] - %js", buf,namelen, name);
 		MOO_DEBUG3 (moo, "Cannot get a module symbol [%js] in [%.*js]\n", buf, namelen, name);
 		moo->vmprim.dl_close (moo, md.handle);
 		return MOO_NULL;
@@ -578,7 +577,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 
 	/* i copy-insert 'md' into the table before calling 'load'.
 	 * to pass the same address to load(), query(), etc */
-	pair = moo_rbt_insert (&moo->modtab, (void*)name, namelen, &md, MOO_SIZEOF(md));
+	pair = moo_rbt_insert(&moo->modtab, (void*)name, namelen, &md, MOO_SIZEOF(md));
 	if (pair == MOO_NULL)
 	{
 		MOO_DEBUG2 (moo, "Cannot register a module [%.*js]\n", namelen, name);
@@ -590,7 +589,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	mdp = (moo_mod_data_t*)MOO_RBT_VPTR(pair);
 	MOO_ASSERT (moo, MOO_SIZEOF(mdp->mod.hints) == MOO_SIZEOF(int));
 	mdp->mod.hints = hints;
-	if (load (moo, &mdp->mod) <= -1)
+	if (load(moo, &mdp->mod) <= -1)
 	{
 		const moo_ooch_t* oldmsg = moo_backuperrmsg (moo);
 		moo_seterrbfmt (moo, moo_geterrnum(moo), "module initializer [%js] returned failure in [%.*js] - %js", buf, namelen, name, oldmsg); 
