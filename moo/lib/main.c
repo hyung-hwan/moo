@@ -542,7 +542,8 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 			if (!handle) 
 			{
 				moo_bch_t* dash;
-				MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %s\n", &bufptr[len], name, sys_dl_error());
+				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open(ext) DL %js - %hs", name, sys_dl_error());
+				MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %hs\n", &bufptr[len], name, sys_dl_error());
 				dash = moo_rfindbchar(bufptr, moo_countbcstr(bufptr), '-');
 				if (dash) 
 				{
@@ -577,13 +578,21 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		if (moo_findbchar (bufptr, bcslen, '.'))
 		{
 			handle = sys_dl_open(bufptr);
-			if (!handle) MOO_DEBUG2 (moo, "Failed to open DL %hs - %s\n", bufptr, sys_dl_error());
+			if (!handle) 
+			{
+				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open DL %js - %hs", name, sys_dl_error());
+				MOO_DEBUG2 (moo, "Failed to open DL %hs - %hs\n", bufptr, sys_dl_error());
+			}
 			else MOO_DEBUG2 (moo, "Opened DL %hs handle %p\n", bufptr, handle);
 		}
 		else
 		{
 			handle = sys_dl_openext(bufptr);
-			if (!handle) MOO_DEBUG2 (moo, "Failed to open(ext) DL %hs - %s\n", bufptr, sys_dl_error());
+			if (!handle) 
+			{
+				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open(ext) DL %js - %hs", name, sys_dl_error());
+				MOO_DEBUG2 (moo, "Failed to open(ext) DL %hs - %hs\n", bufptr, sys_dl_error());
+			}
 			else MOO_DEBUG2 (moo, "Opened(ext) DL %hs handle %p\n", bufptr, handle);
 		}
 	}
@@ -596,7 +605,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 /* TODO: support various platforms */
 	/* TODO: implemenent this */
 	MOO_DEBUG1 (moo, "Dynamic loading not implemented - cannot open %js\n", name);
-	moo_seterrnum (moo, MOO_ENOIMPL);
+	moo_seterrbfmt (moo, MOO_ENOIMPL, "dynamic loading not implemented - cannot open %js", name);
 	return MOO_NULL;
 #endif
 }
@@ -668,6 +677,10 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 			{
 				symname = &bufptr[0]; /* try _name_ */
 				sym = sys_dl_getsym(handle, symname);
+				if (!sym)
+				{
+					moo_seterrbfmt (moo, MOO_ENOENT, "unable to get module symbol %hs", symname);
+				}
 			}
 		}
 	}
@@ -679,7 +692,7 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 #else
 	/* TODO: IMPLEMENT THIS */
 	MOO_DEBUG2 (moo, "Dynamic loading not implemented - Cannot load module symbol %js from handle %p\n", name, handle);
-	moo_seterrnum (moo, MOO_ENOIMPL);
+	moo_seterrbfmt (moo, MOO_ENOIMPL, "dynamic loading not implemented - Cannot load module symbol %js from handle %p", name, handle);
 	return MOO_NULL;
 #endif
 }
