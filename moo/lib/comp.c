@@ -1124,7 +1124,7 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 				while (is_identchar(c));
 
 				if (c == '.') goto read_more_seg;
-				else unget_char (moo, &moo->c->lxc); 
+				unget_char (moo, &moo->c->lxc); 
 			}
 			else
 			{

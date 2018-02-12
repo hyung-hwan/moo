@@ -538,7 +538,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	{
 	#if !defined(MOO_ENABLE_DYNAMIC_MODULE)
 		MOO_DEBUG2 (moo, "Cannot find a static module [%.*js]\n", namelen, name);
-		moo_seterrnum (moo, MOO_ENOENT);
+		moo_seterrbfmt (moo, MOO_ENOENT, "unable to find a static module [%.*js]", namelen, name);
 		return MOO_NULL;
 	#endif
 	}
@@ -546,7 +546,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 
 #if !defined(MOO_ENABLE_DYNAMIC_MODULE)
 	MOO_DEBUG2 (moo, "Cannot open module [%.*js] - module loading disabled\n", namelen, name);
-	moo_seterrnum (moo, MOO_ENOIMPL); /* TODO: is it a good error number for disabled module loading? */
+	moo_seterrbfmt (moo, MOO_ENOIMPL, "unable to open module [%.*js] - module loading disabled", namelen, name);
 	return MOO_NULL;
 #endif
 
@@ -561,16 +561,26 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	if (md.handle == MOO_NULL) 
 	{
 		MOO_DEBUG2 (moo, "Cannot open a module [%.*js]\n", namelen, name);
-		moo_seterrnum (moo, MOO_ENOENT); /* TODO: be more descriptive about the error */
+		moo_seterrbfmt (moo, MOO_ENOENT, "unable to open a module [%.*js]", namelen, name);
 		return MOO_NULL;
 	}
 
+	moo_seterrnum (moo, MOO_ENOERR);
 	/* attempt to get moo_mod_xxx where xxx is the module name*/
 	load = moo->vmprim.dl_getsym (moo, md.handle, buf);
 	if (!load) 
 	{
+		if (moo_geterrnum(moo) == MOO_ENOERR)
+		{
+			moo_seterrbfmt (moo, MOO_ENOENT, "unable to get module symbol [%js] in [%.*js]", buf,namelen, name);
+		}
+		else
+		{
+			const moo_ooch_t* oldmsg = moo_backuperrmsg (moo);
+			moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to get module symbol [%js] in [%.*js] - %js", buf,namelen, name, oldmsg);
+		}
 		MOO_DEBUG3 (moo, "Cannot get a module symbol [%js] in [%.*js]\n", buf, namelen, name);
-		moo_seterrnum (moo, MOO_ENOENT); /* TODO: be more descriptive about the error */
+		
 		moo->vmprim.dl_close (moo, md.handle);
 		return MOO_NULL;
 	}
@@ -581,7 +591,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	if (pair == MOO_NULL)
 	{
 		MOO_DEBUG2 (moo, "Cannot register a module [%.*js]\n", namelen, name);
-		moo_seterrnum (moo, MOO_ESYSMEM);
+		moo_seterrbfmt (moo, MOO_ESYSMEM, "unable to register a module [%.*js] for memory shortage", namelen, name);
 		moo->vmprim.dl_close (moo, md.handle);
 		return MOO_NULL;
 	}
@@ -589,10 +599,20 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	mdp = (moo_mod_data_t*)MOO_RBT_VPTR(pair);
 	MOO_ASSERT (moo, MOO_SIZEOF(mdp->mod.hints) == MOO_SIZEOF(int));
 	mdp->mod.hints = hints;
+	moo_seterrnum (moo, MOO_ENOERR);
 	if (load (moo, &mdp->mod) <= -1)
 	{
+		if (moo_geterrnum(moo) == MOO_ENOERR)
+		{
+			moo_seterrbfmt (moo, MOO_EGENERIC, "module initializer [%js] returned failure in [%.*js]", buf, namelen, name); 
+		}
+		else
+		{
+			const moo_ooch_t* oldmsg = moo_backuperrmsg (moo);
+			moo_seterrbfmt (moo, moo_geterrnum(moo), "module initializer [%js] returned failure in [%.*js] - %js", buf, namelen, name, oldmsg); 
+		}
+
 		MOO_DEBUG3 (moo, "Module function [%js] returned failure in [%.*js]\n", buf, namelen, name);
-		moo_seterrnum (moo, MOO_ENOENT); /* TODO: proper/better error code and handling */
 		moo_rbt_delete (&moo->modtab, name, namelen);
 		moo->vmprim.dl_close (moo, mdp->handle);
 		return MOO_NULL;
