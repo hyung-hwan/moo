@@ -235,7 +235,7 @@ static MOO_INLINE int prepare_to_alloc_pid (moo_t* moo)
 		#if defined(MOO_DEBUG_VM_PROCESSOR)
 			MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_FATAL, "Processor - too many processes\n");
 		#endif
-			moo_seterrnum (moo, MOO_EPFULL);
+			moo_seterrbfmt (moo, MOO_EPFULL, "maximum number(%zd) of processes reached", MOO_SMOOI_MAX);
 			return -1;
 		}
 
@@ -303,7 +303,7 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 	#if defined(MOO_DEBUG_VM_PROCESSOR)
 		MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_FATAL, "Processor - too many processes\n");
 	#endif
-		moo_seterrnum (moo, MOO_EPFULL);
+		moo_seterrbfmt (moo, MOO_EPFULL, "maximum number(%zd) of processes reached", MOO_SMOOI_MAX);
 		return MOO_NULL;
 	}
 
