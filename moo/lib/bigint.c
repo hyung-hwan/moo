@@ -4005,8 +4005,7 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 	moo_liw_t* a, * q, * r;
 	moo_liw_t* t = MOO_NULL;
 	moo_ooch_t* xbuf = MOO_NULL;
-	moo_oow_t xlen = 0, seglen;
-	moo_oop_t s;
+	moo_oow_t xlen = 0, seglen, reqcapa;
 
 	MOO_ASSERT (moo, radix >= 2 && radix <= 36);
 
@@ -4015,19 +4014,29 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 
 	if (v)
 	{
-		/* Use a static buffer for simple conversion as the largest
-		 * size is known. The largest buffer is required for radix 2.
+		/* The largest buffer is required for radix 2.
 		 * For a binary conversion(radix 2), the number of bits is
 		 * the maximum number of digits that can be produced. +1 is
 		 * needed for the sign. */
-		moo_ooch_t buf[MOO_OOW_BITS + 1];
-		moo_oow_t len;
 
-		len = oow_to_text (moo, w, radix, buf);
-		if (v < 0) buf[len++] = '-';
+		reqcapa = MOO_OOW_BITS + 1;
+		if (moo->inttostr.xbuf.capa < reqcapa)
+		{
+			xbuf = (moo_ooch_t*)moo_reallocmem(moo, moo->inttostr.xbuf.ptr, reqcapa);
+			if (!xbuf) return MOO_NULL;
+			moo->inttostr.xbuf.capa = reqcapa;
+			moo->inttostr.xbuf.ptr = xbuf;
+		}
+		else
+		{
+			xbuf = moo->inttostr.xbuf.ptr;
+		}
 
-		reverse_string (buf, len);
-		return moo_makestring (moo, buf, len);
+		xlen = oow_to_text(moo, w, radix, xbuf);
+		if (v < 0) xbuf[xlen++] = '-';
+
+		reverse_string (xbuf, xlen);
+		return moo_makestring(moo, xbuf, xlen);
 	}
 
 	as = MOO_OBJ_GET_SIZE(num);
@@ -4042,8 +4051,18 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 		xlen = as * ((MOO_LIW_BITS + exp) / exp) + 1;
 		xpos = xlen;
 
-		xbuf = (moo_ooch_t*)moo_allocmem (moo, MOO_SIZEOF(*xbuf) * xlen);
-		if (!xbuf) return MOO_NULL;
+		reqcapa = MOO_SIZEOF(*xbuf) * xlen; 
+		if (moo->inttostr.xbuf.capa < reqcapa)
+		{
+			xbuf = (moo_ooch_t*)moo_reallocmem(moo, moo->inttostr.xbuf.ptr, reqcapa);
+			if (!xbuf) return MOO_NULL;
+			moo->inttostr.xbuf.capa = reqcapa;
+			moo->inttostr.xbuf.ptr = xbuf;
+		}
+		else
+		{
+			xbuf = moo->inttostr.xbuf.ptr;
+		}
 
 		acc = 0;
 		accbits = 0;
@@ -4075,23 +4094,39 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 		MOO_ASSERT (moo, xpos >= 1);
 		if (MOO_OBJ_GET_CLASS(num) == moo->_large_negative_integer) xbuf[--xpos] = '-';
 
-		s = moo_makestring (moo, &xbuf[xpos], xlen - xpos);
-		moo_freemem (moo, xbuf);
-		return s;
+		return moo_makestring(moo, &xbuf[xpos], xlen - xpos);
 	}
 
 	/* Do it in a hard way for other cases */
-/* TODO: migrate these buffers into moo_t? */
-/* TODO: find an optimial buffer size */
-	xbuf = (moo_ooch_t*)moo_allocmem (moo, MOO_SIZEOF(*xbuf) * (as * MOO_LIW_BITS + 1));
-	if (!xbuf) return MOO_NULL;
 
-	t = (moo_liw_t*)moo_callocmem (moo, MOO_SIZEOF(*t) * as * 3);
-	if (!t) 
+/* TODO: find an optimial buffer size */
+/* TODO: find an optimial buffer size */
+	reqcapa = MOO_SIZEOF(*xbuf) * (as * MOO_LIW_BITS + 1); 
+	if (moo->inttostr.xbuf.capa < reqcapa)
 	{
-		moo_freemem (moo, xbuf);
-		return MOO_NULL;
+		xbuf = (moo_ooch_t*)moo_reallocmem(moo, moo->inttostr.xbuf.ptr, reqcapa);
+		if (!xbuf) return MOO_NULL;
+		moo->inttostr.xbuf.capa = reqcapa;
+		moo->inttostr.xbuf.ptr = xbuf;
 	}
+	else
+	{
+		xbuf = moo->inttostr.xbuf.ptr;
+	}
+ 
+	reqcapa = MOO_SIZEOF(*t) * as * 3;
+	if (moo->inttostr.t.capa < reqcapa)
+	{
+		t = (moo_liw_t*)moo_reallocmem(moo, moo->inttostr.t.ptr, reqcapa);
+		if (!t) return MOO_NULL;
+		moo->inttostr.t.capa = reqcapa;
+		moo->inttostr.t.ptr = t;
+	}
+	else 
+	{
+		t = moo->inttostr.t.ptr;
+	}
+
 
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
 	b[0] = moo->bigint[radix].multiplier; /* block divisor */
@@ -4164,11 +4199,8 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 
 	if (MOO_OBJ_GET_CLASS(num) == moo->_large_negative_integer) xbuf[xlen++] = '-';
 	reverse_string (xbuf, xlen);
-	s = moo_makestring (moo, xbuf, xlen);
 
-	moo_freemem (moo, t);
-	moo_freemem (moo, xbuf);
-	return s;
+	return moo_makestring(moo, xbuf, xlen);
 
 oops_einval:
 	moo_seterrnum (moo, MOO_EINVAL);

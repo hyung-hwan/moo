@@ -1338,6 +1338,21 @@ struct moo_t
 		int safe_ndigits;
 		moo_oow_t multiplier;
 	} bigint[37];
+
+	struct
+	{
+		struct
+		{
+			moo_uch_t* ptr;
+			moo_oow_t capa;
+			moo_oow_t len;
+		} xbuf;
+		struct
+		{
+			moo_liw_t* ptr;
+			moo_oow_t capa;
+		} t;
+	} inttostr;
 	/* == END BIGINT CONVERSION == */
 
 	moo_sbuf_t sbuf[64];

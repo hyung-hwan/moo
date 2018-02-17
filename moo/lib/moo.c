@@ -257,6 +257,21 @@ void moo_fini (moo_t* moo)
 		moo->log.capa = 0;
 		moo->log.len = 0;
 	}
+
+	if (moo->inttostr.xbuf.ptr)
+	{
+		moo_freemem (moo, moo->inttostr.xbuf.ptr);
+		moo->inttostr.xbuf.ptr = MOO_NULL;
+		moo->inttostr.xbuf.capa = 0;
+		moo->inttostr.xbuf.len = 0;
+	}
+ 
+	if (moo->inttostr.t.ptr)
+	{
+		moo_freemem (moo, moo->inttostr.t.ptr);
+		moo->inttostr.t.ptr = MOO_NULL;
+		moo->inttostr.t.capa = 0;
+	}
 }
 
 int moo_setoption (moo_t* moo, moo_option_t id, const void* value)
