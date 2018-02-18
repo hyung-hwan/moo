@@ -1487,7 +1487,7 @@ static void* iothr_main (void* arg)
 			memcpy (xtn->ev.buf, xtn->ev.reg.ptr, xtn->ev.reg.len * MOO_SIZEOF(*xtn->ev.buf));
 			nfds = xtn->ev.reg.len;
 			MUTEX_UNLOCK (&xtn->ev.reg.pmtx);
-			n = poll (xtn->ev.buf, nfds, 10000);
+			n = poll(xtn->ev.buf, nfds, 10000);
 			if (n > 0) 
 			{
 				/* compact the return buffer as poll() doesn't */
@@ -1727,7 +1727,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	n = epoll_wait (xtn->ep, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), tmout);
 	#elif defined(USE_POLL)
 	memcpy (xtn->ev.buf, xtn->ev.reg.ptr, xtn->ev.reg.len * MOO_SIZEOF(*xtn->ev.buf));
-	n = poll (xtn->ev.buf, xtn->ev.reg.len, tmout);
+	n = poll(xtn->ev.buf, xtn->ev.reg.len, tmout);
 	if (n > 0) 
 	{
 		/* compact the return buffer as poll() doesn't */

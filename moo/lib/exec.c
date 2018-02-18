@@ -164,7 +164,8 @@ static MOO_INLINE void vm_cleanup (moo_t* moo)
 		if ((sem_io_index = moo->sem_io_map[i]) >= 0)
 		{
 			MOO_ASSERT (moo, sem_io_index < moo->sem_io_tuple_count);
-			MOO_ASSERT (moo, moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT] || moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]);
+			MOO_ASSERT (moo, moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT] ||
+			                 moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]);
 
 			if (moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT])
 			{
@@ -1370,21 +1371,29 @@ static void signal_io_semaphore (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask
 {
 	if (io_handle >= 0 && io_handle < moo->sem_io_map_capa && moo->sem_io_map[io_handle] >= 0)
 	{
-		moo_oop_semaphore_t sem;
+		moo_oop_semaphore_t insem, outsem;
 		moo_ooi_t sem_io_index;
 
 		sem_io_index = moo->sem_io_map[io_handle];
 
-		sem = moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];
-		if (sem && (mask & MOO_SEMAPHORE_IO_MASK_OUTPUT))
+		insem = moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];
+		outsem = moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT];
+
+		if (insem)
 		{
-			_signal_io_semaphore (moo, sem);
+			if ((mask & MOO_SEMAPHORE_IO_MASK_OUTPUT) ||
+			    (!outsem && (mask & (MOO_SEMAPHORE_IO_MASK_HANGUP | MOO_SEMAPHORE_IO_MASK_ERROR))))
+			{
+				_signal_io_semaphore (moo, insem);
+			}
 		}
 
-		sem = moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT];
-		if (sem && (mask & (MOO_SEMAPHORE_IO_MASK_INPUT | MOO_SEMAPHORE_IO_MASK_HANGUP | MOO_SEMAPHORE_IO_MASK_ERROR)))
+		if (outsem)
 		{
-			_signal_io_semaphore (moo, sem);
+			if (mask & (MOO_SEMAPHORE_IO_MASK_INPUT | MOO_SEMAPHORE_IO_MASK_HANGUP | MOO_SEMAPHORE_IO_MASK_ERROR))
+			{
+				_signal_io_semaphore (moo, outsem);
+			}
 		}
 	}
 	else
