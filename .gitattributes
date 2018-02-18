@@ -1,1 +1,4 @@
 *.moo linguist-language=Smalltalk
+moo/libltdl/* linguist-generated=true
+moo/ac/* linguist-generated=true
+moo/m4/* linguist-generated=true
