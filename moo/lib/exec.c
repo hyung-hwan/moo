@@ -1381,8 +1381,8 @@ static void signal_io_semaphore (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask
 
 		if (insem)
 		{
-			if ((mask & MOO_SEMAPHORE_IO_MASK_OUTPUT) ||
-			    (!outsem && (mask & (MOO_SEMAPHORE_IO_MASK_HANGUP | MOO_SEMAPHORE_IO_MASK_ERROR))))
+			if ((mask & (MOO_SEMAPHORE_IO_MASK_OUTPUT | MOO_SEMAPHORE_IO_MASK_ERROR)) ||
+			    (!outsem && (mask & MOO_SEMAPHORE_IO_MASK_HANGUP)))
 			{
 				_signal_io_semaphore (moo, insem);
 			}
