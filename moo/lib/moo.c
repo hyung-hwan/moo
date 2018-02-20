@@ -102,9 +102,7 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 	moo->option.dfl_symtab_size = MOO_DFL_SYMTAB_SIZE;
 	moo->option.dfl_sysdic_size = MOO_DFL_SYSDIC_SIZE;
 	moo->option.dfl_procstk_size = MOO_DFL_PROCSTK_SIZE;
-#if !defined(NDEBUG)
 	moo->option.karatsuba_cutoff = MOO_KARATSUBA_CUTOFF;
-#endif
 
 	moo->log.capa = MOO_ALIGN_POW2(1, MOO_LOG_CAPA_ALIGN); /* TODO: is this a good initial size? */
 	/* alloate the log buffer in advance though it may get reallocated

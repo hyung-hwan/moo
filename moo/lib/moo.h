@@ -1183,10 +1183,8 @@ struct moo_t
 		moo_oow_t dfl_sysdic_size;
 		moo_oow_t dfl_procstk_size; 
 
-#if !defined(NDEBUG)
 		/* set automatically when trait is set */
-		int karatsuba_cutoff;
-#endif
+		int karatsuba_cutoff; /* used only if NDEBUG is not set */
 	} option;
 
 	moo_vmprim_t vmprim;
