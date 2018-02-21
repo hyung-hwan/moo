@@ -73,16 +73,20 @@
 
 #define PUT_OOCH(c,n) do { \
 	int xx; \
-	if ((xx = data->putch (moo, data->mask, c, n)) <= -1) goto oops; \
-	if (xx == 0) goto done; \
-	data->count += n; \
+	if (n > 0) { \
+		if ((xx = data->putch (moo, data->mask, c, n)) <= -1) goto oops; \
+		if (xx == 0) goto done; \
+		data->count += n; \
+	} \
 } while (0)
 
 #define PUT_OOCS(ptr,len) do { \
 	int xx; \
-	if ((xx = data->putcs (moo, data->mask, ptr, len)) <= -1) goto oops; \
-	if (xx == 0) goto done; \
-	data->count += len; \
+	if (len > 0) { \
+		if ((xx = data->putcs (moo, data->mask, ptr, len)) <= -1) goto oops; \
+		if (xx == 0) goto done; \
+		data->count += len; \
+	} \
 } while (0)
 
 static int logfmtv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_t* data, va_list ap, outbfmt_t outbfmt)

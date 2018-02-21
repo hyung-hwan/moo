@@ -5305,11 +5305,11 @@ static int __execute (moo_t* moo)
 			/* it emulates thisContext blockCopy: nargs ofTmprCount: ntmprs */
 			MOO_ASSERT (moo, moo->sp >= 2);
 
-			MOO_ASSERT (moo, MOO_CLASSOF(moo, MOO_STACK_GETTOP(moo)) == moo->_small_integer);
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(MOO_STACK_GETTOP(moo)));
 			ntmprs = MOO_OOP_TO_SMOOI(MOO_STACK_GETTOP(moo));
 			MOO_STACK_POP (moo);
 
-			MOO_ASSERT (moo, MOO_CLASSOF(moo, MOO_STACK_GETTOP(moo)) == moo->_small_integer);
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(MOO_STACK_GETTOP(moo)));
 			nargs = MOO_OOP_TO_SMOOI(MOO_STACK_GETTOP(moo));
 			MOO_STACK_POP (moo);
 
