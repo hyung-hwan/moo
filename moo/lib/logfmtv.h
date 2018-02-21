@@ -72,8 +72,8 @@
 #undef PUT_OOCS
 
 #define PUT_OOCH(c,n) do { \
-	int xx; \
 	if (n > 0) { \
+		int xx; \
 		if ((xx = data->putch (moo, data->mask, c, n)) <= -1) goto oops; \
 		if (xx == 0) goto done; \
 		data->count += n; \
@@ -81,8 +81,8 @@
 } while (0)
 
 #define PUT_OOCS(ptr,len) do { \
-	int xx; \
 	if (len > 0) { \
+		int xx; \
 		if ((xx = data->putcs (moo, data->mask, ptr, len)) <= -1) goto oops; \
 		if (xx == 0) goto done; \
 		data->count += len; \
