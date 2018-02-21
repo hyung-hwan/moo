@@ -413,6 +413,9 @@
 /* link modules statically into the main library */
 #undef MOO_ENABLE_STATIC_MODULE
 
+/* Use the unicode character type as the default character type */
+#undef MOO_ENABLE_UNICODE
+
 /* Big Endian */
 #undef MOO_ENDIAN_BIG
 

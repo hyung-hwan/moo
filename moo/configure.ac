@@ -628,8 +628,10 @@ AC_C_BIGENDIAN(
 	[AC_DEFINE([MOO_ENDIAN_LITTLE],[],[Little Endian])],
 	[AC_DEFINE([MOO_ENDIAN_UNKNOWN],[],[Unknown Endian])])
 
-AC_ARG_ENABLE([debug], [AS_HELP_STRING([--enable-debug],[build the library in the debug mode (default. no)])],
-	enable_debug_is=$enableval,enable_debug_is=no)
+AC_ARG_ENABLE([debug], 
+	[AS_HELP_STRING([--enable-debug],[build the library in the debug mode (default. no)])],
+	enable_debug_is=$enableval,
+	enable_debug_is=no)
 if test "$enable_debug_is" = "yes"
 then
 	[CFLAGS="$CFLAGS -g -D_DEBUG -UNDEBUG -U_FORTIFY_SOURCE"]
@@ -643,12 +645,22 @@ else
 	AC_SUBST(BUILD_MODE, "release")
 fi
 
+
+AC_ARG_ENABLE([unicode],
+	[AS_HELP_STRING([--enable-unicode],[Use the unicode character type as the default character type (default. yes)])],
+	enable_unicode=$enableval,
+	enable_unicode=yes
+)
+if test "${enable_unicode}" = "yes"
+then
+	AC_DEFINE([MOO_ENABLE_UNICODE],[1],[Use the unicode character type as the default character type])
+fi
+
 AC_ARG_ENABLE([cxx], 
 	[AS_HELP_STRING([--enable-cxx],[build the library for C++ if a C++ compiler is available (default. yes)])],
 	enable_cxx_is=$enableval,
 	enable_cxx_is=yes
 )
-
 dnl disable c++ if no c++ compiler was found
 test "${HAVE_CXX}" = "yes" || enable_cxx_is="no"
 dnl disable c++ if the compiler is too old.
@@ -666,7 +678,7 @@ test "${enable_shared}" = "no" && enable_dynamic_module_is="no"
 
 if test "${enable_dynamic_module_is}" = "yes"
 then
-	AC_DEFINE([MOO_ENABLE_DYNAMIC_MODULE],[],[enable dynamic module capability])
+	AC_DEFINE([MOO_ENABLE_DYNAMIC_MODULE],[1],[enable dynamic module capability])
 fi
 AM_CONDITIONAL(ENABLE_DYNAMIC_MODULE, test "${enable_dynamic_module_is}" = "yes")
 
@@ -680,7 +692,7 @@ test "${enable_shared}" = "no" -a "${enable_static}" = "yes" && enable_static_mo
 
 if test "${enable_static_module_is}" = "yes"
 then
-	AC_DEFINE([MOO_ENABLE_STATIC_MODULE],[],[link modules statically into the main library])
+	AC_DEFINE([MOO_ENABLE_STATIC_MODULE],[1],[link modules statically into the main library])
 fi
 AM_CONDITIONAL(ENABLE_STATIC_MODULE, test "${enable_static_module_is}" = "yes")
 
@@ -704,7 +716,7 @@ AC_ARG_ENABLE([mod-con],
 )
 if test "${enable_mod_con_is}" = "yes"
 then
-	AC_DEFINE([MOO_ENABLE_MOD_CON],[],[build mod/con])
+	AC_DEFINE([MOO_ENABLE_MOD_CON],[1],[build mod/con])
 fi
 AM_CONDITIONAL(ENABLE_MOD_CON, test "${enable_mod_con_is}" = "yes")
 
@@ -716,7 +728,7 @@ AC_ARG_ENABLE([mod-ffi],
 )
 if test "${enable_mod_ffi_is}" = "yes"
 then
-	AC_DEFINE([MOO_ENABLE_MOD_FFI],[],[build mod/ffi])
+	AC_DEFINE([MOO_ENABLE_MOD_FFI],[1],[build mod/ffi])
 fi
 AM_CONDITIONAL(ENABLE_MOD_FFI, test "${enable_mod_ffi_is}" = "yes")
 
@@ -728,7 +740,7 @@ AC_ARG_ENABLE([mod-sck],
 )
 if test "${enable_mod_sck_is}" = "yes"
 then
-	AC_DEFINE([MOO_ENABLE_MOD_SCK],[],[build mod/sck])
+	AC_DEFINE([MOO_ENABLE_MOD_SCK],[1],[build mod/sck])
 fi
 AM_CONDITIONAL(ENABLE_MOD_SCK, test "${enable_mod_sck_is}" = "yes")
 
@@ -740,7 +752,7 @@ AC_ARG_ENABLE([mod-x11],
 )
 if test "${enable_mod_x11_is}" = "yes"
 then
-	AC_DEFINE([MOO_ENABLE_MOD_X11],[],[build mod/x11])
+	AC_DEFINE([MOO_ENABLE_MOD_X11],[1],[build mod/x11])
 fi
 AM_CONDITIONAL(ENABLE_MOD_X11, test "${enable_mod_x11_is}" = "yes")
 

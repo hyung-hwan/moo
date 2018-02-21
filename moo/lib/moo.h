@@ -1203,7 +1203,6 @@ struct moo_t
 		int default_type_mask;
 	} log;
 
-
 	/* ========================= */
 
 	moo_heap_t* permheap; /* TODO: put kernel objects to here */
