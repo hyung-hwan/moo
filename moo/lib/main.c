@@ -798,7 +798,7 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 		now = time(NULL);
 	#if defined(__DOS__)
 		tmp = localtime (&now);
-		tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S ", tmp); /* no timezone info */
+		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S ", tmp); /* no timezone info */
 		if (tslen == 0) 
 		{
 			strcpy (ts, "0000-00-00 00:00:00");
@@ -807,9 +807,9 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 	#else
 		tmp = localtime_r (&now, &tm);
 		#if defined(HAVE_STRFTIME_SMALL_Z)
-		tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
+		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
 		#else
-		tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %Z ", tmp); 
+		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %Z ", tmp); 
 		#endif
 		if (tslen == 0) 
 		{
@@ -835,7 +835,7 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 		ucslen = len;
 		bcslen = MOO_COUNTOF(buf);
 
-		n = moo_convootobchars (moo, &msg[msgidx], &ucslen, buf, &bcslen);
+		n = moo_convootobchars(moo, &msg[msgidx], &ucslen, buf, &bcslen);
 		if (n == 0 || n == -2)
 		{
 			/* n = 0: 
@@ -847,7 +847,7 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 			MOO_ASSERT (moo, ucslen > 0); /* if this fails, the buffer size must be increased */
 
 			/* attempt to write all converted characters */
-			if (write_all (logfd, buf, bcslen) <= -1) break;
+			if (write_all(logfd, buf, bcslen) <= -1) break;
 
 			if (n == 0) break;
 			else
