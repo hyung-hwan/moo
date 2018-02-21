@@ -1,7 +1,7 @@
 /*
  * $Id$
  *
-    Copyright (c) 2014-2017 Chung, Hyung-Hwan. All rights reserved.
+    Copyright (c) 2014-2018 Chung, Hyung-Hwan. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -55,7 +55,7 @@ static XChar2b* uchars_to_xchar2bstr (moo_t* moo, const moo_uch_t* inptr, moo_oo
 		uch = *inptr++;
 
 	#if (MOO_SIZEOF_UCH_T > 2)
-		if (uch > 0xFFFF) uc = 0xFFFD; /* unicode replacement character */
+		if (uch > 0xFFFF) uch = 0xFFFD; /* unicode replacement character */
 	#endif
 
 		outptr->byte1 = (uch >> 8) & 0xFF;

@@ -645,15 +645,20 @@ else
 	AC_SUBST(BUILD_MODE, "release")
 fi
 
-
 AC_ARG_ENABLE([unicode],
-	[AS_HELP_STRING([--enable-unicode],[Use the unicode character type as the default character type (default. yes)])],
+	[AS_HELP_STRING([--enable-unicode],[Use the unicode character type as the default character type. one of yes, no, ucs2, ucs4 (default. yes)])],
 	enable_unicode=$enableval,
 	enable_unicode=yes
 )
 if test "${enable_unicode}" = "yes"
 then
 	AC_DEFINE([MOO_ENABLE_UNICODE],[1],[Use the unicode character type as the default character type])
+elif test "${enable_unicode}" = "ucs2"
+then
+	AC_DEFINE([MOO_ENABLE_UNICODE],[2],[Use the unicode character type as the default character type])
+elif test "${enable_unicode}" = "ucs4"
+then
+	AC_DEFINE([MOO_ENABLE_UNICODE],[4],[Use the unicode character type as the default character type])
 fi
 
 AC_ARG_ENABLE([cxx], 
