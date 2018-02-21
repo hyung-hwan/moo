@@ -81,7 +81,7 @@ libmoo_con_la_SOURCES = con.c _con.h
 libmoo_con_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_con_la_LDFLAGS = $(LDFLAGS_COMMON)
 libmoo_con_la_LIBADD = $(LIBADD_COMMON) $(TERMINAL_LIBS)
-#endif
+endif
 
 if ENABLE_MOD_FFI
 libmoo_ffi_la_SOURCES = ffi.c _ffi.h

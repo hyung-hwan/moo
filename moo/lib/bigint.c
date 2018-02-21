@@ -1112,7 +1112,7 @@ static MOO_INLINE void multiply_unsigned_array (const moo_liw_t* x, moo_oow_t xs
  * --------------------------------------------------------------------
  */
  
-#if !defined(NDEBUG)
+#if defined(MOO_BUILD_DEBUG)
 #define CANNOT_KARATSUBA(moo,xs,ys) \
 	((xs) < (moo)->option.karatsuba_cutoff || (ys) < (moo)->option.karatsuba_cutoff || \
 	((xs) > (ys) && (ys) <= (((xs) + 1) / 2)) || \

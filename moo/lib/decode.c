@@ -28,7 +28,7 @@
 
 #define DECODE_LOG_MASK (MOO_LOG_MNEMONIC | MOO_LOG_DEBUG)
 
-#if defined(NDEBUG)
+#if defined(MOO_BUILD_RELEASE)
 	/* get rid of instruction logging regardless of the log mask
 	 * in the release build */
 #	define LOG_INST_0(moo,fmt)

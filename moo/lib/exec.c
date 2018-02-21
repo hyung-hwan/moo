@@ -3751,7 +3751,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			MOO_ASSERT (moo, pf_name_index >= 0);
 			pfname = method->slot[pf_name_index];
 
-		#if !defined(NDEBUG)
+		#if defined(MOO_BUILD_DEBUG)
 			LOG_INST1 (moo, "preamble_named_primitive %zd", pf_name_index);
 		#endif
 			MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(pfname));

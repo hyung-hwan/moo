@@ -2164,7 +2164,7 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 	return 0;
 }
 
-#if !defined(NDEBUG)
+#if defined(MOO_BUILD_DEBUG)
 static int handle_dbgopt (moo_t* moo, const moo_bch_t* str)
 {
 	xtn_t* xtn = moo_getxtn (moo);
@@ -2217,7 +2217,7 @@ int main (int argc, char* argv[])
 	{
 		{ ":log",         'l' },
 		{ ":memsize",     'm' },
-#if !defined(NDEBUG)
+#if defined(MOO_BUILD_DEBUG)
 		{ ":debug",       '\0' }, /* NOTE: there is no short option for --debug */
 #endif
 		{ MOO_NULL,       '\0' }
@@ -2231,7 +2231,7 @@ int main (int argc, char* argv[])
 	const char* logopt = MOO_NULL;
 	moo_oow_t memsize = MIN_MEMSIZE;
 
-#if !defined(NDEBUG)
+#if defined(MOO_BUILD_DEBUG)
 	const char* dbgopt = MOO_NULL;
 #endif
 
@@ -2260,7 +2260,7 @@ int main (int argc, char* argv[])
 
 			case '\0':
 				
-			#if !defined(NDEBUG)
+			#if defined(MOO_BUILD_DEBUG)
 				if (moo_compbcstr(opt.lngopt, "debug") == 0)
 				{
 					dbgopt = opt.arg;
@@ -2357,7 +2357,7 @@ int main (int argc, char* argv[])
 		xtn->logmask = MOO_LOG_ALL_TYPES | MOO_LOG_ERROR | MOO_LOG_FATAL;
 	}
 
-#if !defined(NDEBUG)
+#if defined(MOO_BUILD_DEBUG)
 	if (dbgopt)
 	{
 		if (handle_dbgopt (moo, dbgopt) <= -1)

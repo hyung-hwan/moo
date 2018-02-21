@@ -113,7 +113,7 @@ typedef enum moo_option_dflval_t moo_option_dflval_t;
 
 enum moo_trait_t
 {
-#if !defined(NDEBUG)
+#if defined(MOO_BUILD_DEBUG)
 	MOO_DEBUG_GC     = (1 << 0),
 	MOO_DEBUG_BIGINT = (1 << 1),
 #endif
@@ -1183,8 +1183,10 @@ struct moo_t
 		moo_oow_t dfl_sysdic_size;
 		moo_oow_t dfl_procstk_size; 
 
+	#if defined(MOO_BUILD_DEBUG)
 		/* set automatically when trait is set */
-		int karatsuba_cutoff; /* used only if NDEBUG is not set */
+		int karatsuba_cutoff; 
+	#endif
 	} option;
 
 	moo_vmprim_t vmprim;
@@ -1457,7 +1459,7 @@ typedef enum moo_log_mask_t moo_log_mask_t;
 #define MOO_LOG5(moo,mask,fmt,a1,a2,a3,a4,a5) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1, a2, a3, a4, a5); } while(0)
 #define MOO_LOG6(moo,mask,fmt,a1,a2,a3,a4,a5,a6) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1, a2, a3, a4, a5, a6); } while(0)
 
-#if defined(NDEBUG)
+#if defined(MOO_BUILD_RELEASE)
 	/* [NOTE]
 	 *  get rid of debugging message totally regardless of
 	 *  the log mask in the release build.
@@ -1491,7 +1493,7 @@ typedef enum moo_log_mask_t moo_log_mask_t;
 /* =========================================================================
  * MOO ASSERTION
  * ========================================================================= */
-#if defined(NDEBUG)
+#if defined(MOO_BUILD_RELEASE)
 #	define MOO_ASSERT(moo,expr) ((void)0)
 #else
 #	define MOO_ASSERT(moo,expr) ((void)((expr) || (moo_assertfailed (moo, #expr, __FILE__, __LINE__), 0)))
