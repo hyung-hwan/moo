@@ -55,7 +55,6 @@
 #define MOO_DEBUG_COMPILER 1
 #define MOO_DEBUG_VM_PROCESSOR 1
 /*#define MOO_DEBUG_VM_EXEC*/
-#define MOO_DEBUG_BIGINT 1
 #define MOO_PROFILE_VM 1
 #endif
 
@@ -74,10 +73,12 @@
 #define MOO_LIMIT_OBJ_SIZE
 
 
-/* TODO: delete these header inclusion lines after having revised MOO_MEMXXX macros. */
-#include <string.h>
-
 #if defined(__has_builtin)
+
+#	if (!__has_builtin(__builtin_memset) || !__has_builtin(__builtin_memcpy) || !__has_builtin(__builtin_memmove) || !__has_builtin(__builtin_memcmp))
+#	include <string.h>
+#	endif
+
 #	if __has_builtin(__builtin_memset)
 #		define MOO_MEMSET(dst,src,size)  __builtin_memset(dst,src,size)
 #	else
@@ -98,7 +99,13 @@
 #	else
 #		define MOO_MEMCMP(dst,src,size)  memcmp(dst,src,size)
 #	endif
+
 #else
+
+#	if defined(HAVE___BUILTIN_MEMSET) || !defined(HAVE___BUILTIN_MEMCPY) || !defined(HAVE___BUILTIN_MEMMOVE) || !defined(HAVE___BUILTIN_MEMCMP)
+#	include <string.h>
+#	endif
+
 #	if defined(HAVE___BUILTIN_MEMSET)
 #		define MOO_MEMSET(dst,src,size)  __builtin_memset(dst,src,size)
 #	else
@@ -119,6 +126,7 @@
 #	else
 #		define MOO_MEMCMP(dst,src,size)  memcmp(dst,src,size)
 #	endif
+
 #endif
 
 
