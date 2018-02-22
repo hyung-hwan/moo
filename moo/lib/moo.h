@@ -1161,7 +1161,6 @@ struct moo_t
 	moo_mmgr_t*  mmgr;
 	moo_cmgr_t*  cmgr;
 	moo_errnum_t errnum;
-
 	struct
 	{
 		union
@@ -1173,6 +1172,7 @@ struct moo_t
 		moo_ooch_t buf[2048];
 		moo_oow_t len;
 	} errmsg;
+	int shuterr;
 
 	struct
 	{
@@ -1652,7 +1652,6 @@ MOO_EXPORT void moo_fini (
 	static MOO_INLINE void moo_setcmgr (moo_t* moo, moo_cmgr_t* cmgr) { moo->cmgr = cmgr; }
 
 	static MOO_INLINE moo_errnum_t moo_geterrnum (moo_t* moo) { return moo->errnum; }
-	static MOO_INLINE void moo_seterrnum (moo_t* moo, moo_errnum_t errnum) { moo->errnum = errnum; moo->errmsg.len = 0; }
 #else
 #	define moo_getmmgr(moo) ((moo)->mmgr)
 #	define moo_getxtn(moo) ((void*)((moo) + 1))
@@ -1661,9 +1660,17 @@ MOO_EXPORT void moo_fini (
 #	define moo_setcmgr(moo,mgr) ((moo)->cmgr = (mgr))
 
 #	define moo_geterrnum(moo) ((moo)->errnum)
-#	define moo_seterrnum(moo,num) ((moo)->errmsg.len = 0, (moo)->errnum = (num))
 #endif
 
+MOO_EXPORT void moo_seterrnum (
+	moo_t*       moo, 
+	moo_errnum_t errnum
+);
+
+MOO_EXPORT void moo_seterrwithsyserr (
+	moo_t* moo,
+	int    syserr
+);
 
 MOO_EXPORT void moo_seterrbfmt (
 	moo_t*           moo,
@@ -1677,11 +1684,6 @@ MOO_EXPORT void moo_seterrufmt (
 	moo_errnum_t     errnum,
 	const moo_uch_t* fmt,
 	...
-);
-
-MOO_EXPORT void moo_seterrwithsyserr (
-	moo_t* moo,
-	int    syserr
 );
 
 MOO_EXPORT const moo_ooch_t* moo_geterrstr (

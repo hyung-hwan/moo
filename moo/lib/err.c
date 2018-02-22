@@ -331,8 +331,17 @@ const moo_ooch_t* moo_backuperrmsg (moo_t* moo)
 	return moo->errmsg.tmpbuf.ooch;
 }
 
+void moo_seterrnum (moo_t* moo, moo_errnum_t errnum)
+{
+	if (moo->shuterr) return;
+	moo->errnum = errnum; 
+	moo->errmsg.len = 0; 
+}
+
 void moo_seterrwithsyserr (moo_t* moo, int syserr)
 {
+	if (moo->shuterr) return;
+
 	if (moo->vmprim.syserrstrb)
 	{
 		moo->vmprim.syserrstrb (moo, syserr, moo->errmsg.tmpbuf.bch, MOO_COUNTOF(moo->errmsg.tmpbuf.bch));
@@ -346,12 +355,13 @@ void moo_seterrwithsyserr (moo_t* moo, int syserr)
 	}
 }
 
-
 #if defined(MOO_INCLUDE_COMPILER)
 
 void moo_setsynerrbfmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt, const moo_bch_t* msgfmt, ...)
 {
 	static moo_bch_t syntax_error[] = "syntax error - ";
+
+	if (moo->shuterr) return;
 
 	if (msgfmt) 
 	{
@@ -401,6 +411,8 @@ void moo_setsynerrbfmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc,
 void moo_setsynerrufmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt, const moo_uch_t* msgfmt, ...)
 {
 	static moo_bch_t syntax_error[] = "syntax error - ";
+
+	if (moo->shuterr) return;
 
 	if (msgfmt) 
 	{

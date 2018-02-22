@@ -978,6 +978,16 @@ enum moo_bcode_t
 	BCODE_NOOP                       = 0xFF
 };
 
+
+/* i don't want an error raised inside the callback to override 
+ * the existing error number and message. */
+#define vmprim_log_write(moo,mask,ptr,len) do { \
+		int shuterr = (moo)->shuterr; \
+		(moo)->shuterr = 1; \
+		(moo)->vmprim.log_write (moo, mask, ptr, len); \
+		(moo)->shuterr = shuterr; \
+	} while(0)
+
 #if defined(__cplusplus)
 extern "C" {
 #endif

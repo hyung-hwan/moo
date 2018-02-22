@@ -175,7 +175,7 @@ void moo_fini (moo_t* moo)
 	{
 		/* flush pending log messages just in case. */
 		MOO_ASSERT (moo, moo->log.ptr != MOO_NULL);
-		moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
+		vmprim_log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
 	}
 
 	for (cb = moo->cblist; cb; cb = cb->next)
@@ -191,7 +191,7 @@ void moo_fini (moo_t* moo)
 		 * this point because one of the callbacks could arrange to stop
 		 * logging */
 		MOO_ASSERT (moo, moo->log.ptr != MOO_NULL);
-		moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
+		vmprim_log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
 	}
 
 	/* deregister all callbacks */

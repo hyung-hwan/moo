@@ -202,7 +202,7 @@ static int put_ooch (moo_t* moo, moo_oow_t mask, moo_ooch_t ch, moo_oow_t len)
 			/* no line ending - append a line terminator */
 			moo->log.ptr[moo->log.len++] = '\n';
 		}
-		moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
+		vmprim_log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
 		moo->log.len = 0;
 	}
 
@@ -246,7 +246,7 @@ redo:
 					/* no line ending - append a line terminator */
 					moo->log.ptr[moo->log.len++] = '\n';
 				}
-				moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
+				vmprim_log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
 				moo->log.len = 0;
 			}
 
@@ -297,7 +297,7 @@ static int put_oocs (moo_t* moo, moo_oow_t mask, const moo_ooch_t* ptr, moo_oow_
 			moo->log.ptr[moo->log.len++] = '\n';
 		}
 
-		moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
+		vmprim_log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
 		moo->log.len = 0;
 	}
 
@@ -341,7 +341,7 @@ redo:
 					/* no line ending - append a line terminator */
 					moo->log.ptr[moo->log.len++] = '\n';
 				}
-				moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
+				vmprim_log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
 				moo->log.len = 0;
 			}
 
@@ -639,7 +639,7 @@ moo_ooi_t moo_logbfmt (moo_t* moo, moo_oow_t mask, const moo_bch_t* fmt, ...)
 
 	if (moo->log.len > 0 && moo->log.ptr[moo->log.len - 1] == '\n')
 	{
-		moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
+		vmprim_log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
 		moo->log.len = 0;
 	}
 	return (x <= -1)? -1: fo.count;
@@ -667,7 +667,7 @@ moo_ooi_t moo_logufmt (moo_t* moo, moo_oow_t mask, const moo_uch_t* fmt, ...)
 
 	if (moo->log.len > 0 && moo->log.ptr[moo->log.len - 1] == '\n')
 	{
-		moo->vmprim.log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
+		vmprim_log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
 		moo->log.len = 0;
 	}
 
@@ -748,6 +748,8 @@ void moo_seterrbfmt (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, ...)
 	va_list ap;
 	moo_fmtout_t fo;
 
+	if (moo->shuterr) return;
+
 	moo->errnum = errnum;
 	moo->errmsg.len = 0;
 
@@ -764,6 +766,8 @@ void moo_seterrufmt (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, ...)
 {
 	va_list ap;
 	moo_fmtout_t fo;
+
+	if (moo->shuterr) return;
 
 	moo->errnum = errnum;
 	moo->errmsg.len = 0;
@@ -782,6 +786,8 @@ void moo_seterrbfmtv (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, va_
 {
 	moo_fmtout_t fo;
 
+	if (moo->shuterr) return;
+
 	moo->errnum = errnum;
 	moo->errmsg.len = 0;
 
@@ -795,6 +801,8 @@ void moo_seterrbfmtv (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, va_
 void moo_seterrufmtv (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, va_list ap)
 {
 	moo_fmtout_t fo;
+
+	if (moo->shuterr) return;
 
 	moo->errnum = errnum;
 	moo->errmsg.len = 0;
