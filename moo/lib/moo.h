@@ -894,7 +894,7 @@ struct moo_process_scheduler_t
  * object encoded into a pointer.
  */
 #define MOO_CLASSOF(moo,oop) \
-	(MOO_OOP_GET_TAG(oop)? (*moo->tagged_classes[MOO_OOP_GET_TAG(oop)]): MOO_OBJ_GET_CLASS(oop))
+	(MOO_OOP_GET_TAG(oop)? (*(moo)->tagged_classes[MOO_OOP_GET_TAG(oop)]): MOO_OBJ_GET_CLASS(oop))
 
 /**
  * The MOO_BYTESOF() macro returns the size of the payload of
