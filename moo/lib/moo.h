@@ -1185,7 +1185,7 @@ struct moo_t
 
 	#if defined(MOO_BUILD_DEBUG)
 		/* set automatically when trait is set */
-		int karatsuba_cutoff; 
+		moo_oow_t karatsuba_cutoff; 
 	#endif
 	} option;
 
