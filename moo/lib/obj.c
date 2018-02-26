@@ -34,7 +34,7 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 	if ((moo->option.trait & MOO_DEBUG_GC) && !(moo->option.trait & MOO_NOGC)) moo_gc (moo);
 #endif
 
-	ptr = moo_allocheapmem (moo, moo->curheap, size);
+	ptr = (moo_uint8_t*)moo_allocheapmem(moo, moo->curheap, size);
 	if (!ptr && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_NOGC))
 	{
 		moo_gc (moo);
@@ -44,7 +44,7 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 			(moo_oow_t)(moo->curheap->limit - moo->curheap->base),
 			(moo_oow_t)(moo->curheap->limit - moo->curheap->ptr)
 		);
-		ptr = moo_allocheapmem (moo, moo->curheap, size);
+		ptr = (moo_uint8_t*)moo_allocheapmem(moo, moo->curheap, size);
 /* TODO: grow heap if ptr is still null. */
 	}
 
@@ -66,7 +66,7 @@ moo_oop_t moo_allocoopobj (moo_t* moo, moo_oow_t size)
 	 * MOO_SIZEOF(moo_oop_t) will guarantee the starting address
 	 * of the allocated space to be an even number. 
 	 * see MOO_OOP_IS_NUMERIC() and MOO_OOP_IS_POINTER() */
-	hdr = moo_allocbytes (moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
+	hdr = (moo_oop_oop_t)moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
 	if (!hdr) return MOO_NULL;
 
 	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, 0, 0, 0);
@@ -88,7 +88,7 @@ moo_oop_t moo_allocoopobjwithtrailer (moo_t* moo, moo_oow_t size, const moo_oob_
 	nbytes = (size + 1) * MOO_SIZEOF(moo_oop_t) + blen;
 	nbytes_aligned = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t)); 
 
-	hdr = moo_allocbytes (moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
+	hdr = (moo_oop_oop_t)moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
 	if (!hdr) return MOO_NULL;
 
 	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, 0, 0, 1);
@@ -128,7 +128,7 @@ static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, mo
 
 	if (MOO_UNLIKELY(ngc))
 	{
-		hdr = moo_callocmem (moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
+		hdr = (moo_oop_t)moo_callocmem(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
 		if (!hdr) return MOO_NULL;
 	}
 	else
@@ -137,7 +137,7 @@ static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, mo
 		 * MOO_SIZEOF(moo_oop_t) will guarantee the starting address
 		 * of the allocated space to be an even number. 
 		 * see MOO_OOP_IS_NUMERIC() and MOO_OOP_IS_POINTER() */
-		hdr = moo_allocbytes (moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
+		hdr = (moo_oop_t)moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
 		if (!hdr) return MOO_NULL;
 	}
 
@@ -163,22 +163,22 @@ static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, mo
 
 MOO_INLINE moo_oop_t moo_alloccharobj (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 {
-	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_CHAR, MOO_SIZEOF(moo_ooch_t), 1, 0);
+	return alloc_numeric_array(moo, ptr, len, MOO_OBJ_TYPE_CHAR, MOO_SIZEOF(moo_ooch_t), 1, 0);
 }
 
 MOO_INLINE moo_oop_t moo_allocbyteobj (moo_t* moo, const moo_oob_t* ptr, moo_oow_t len)
 {
-	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_BYTE, MOO_SIZEOF(moo_oob_t), 0, 0);
+	return alloc_numeric_array(moo, ptr, len, MOO_OBJ_TYPE_BYTE, MOO_SIZEOF(moo_oob_t), 0, 0);
 }
 
 MOO_INLINE moo_oop_t moo_allochalfwordobj (moo_t* moo, const moo_oohw_t* ptr, moo_oow_t len)
 {
-	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_HALFWORD, MOO_SIZEOF(moo_oohw_t), 0, 0);
+	return alloc_numeric_array(moo, ptr, len, MOO_OBJ_TYPE_HALFWORD, MOO_SIZEOF(moo_oohw_t), 0, 0);
 }
 
 MOO_INLINE moo_oop_t moo_allocwordobj (moo_t* moo, const moo_oow_t* ptr, moo_oow_t len)
 {
-	return alloc_numeric_array (moo, ptr, len, MOO_OBJ_TYPE_WORD, MOO_SIZEOF(moo_oow_t), 0, 0);
+	return alloc_numeric_array(moo, ptr, len, MOO_OBJ_TYPE_WORD, MOO_SIZEOF(moo_oow_t), 0, 0);
 }
 
 static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t num_flexi_fields, moo_obj_type_t* type, moo_oow_t* outlen)
@@ -251,7 +251,7 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 		case MOO_OBJ_TYPE_OOP:
 			/* both the fixed part(named instance variables) and 
 			 * the variable part(indexed instance variables) are allowed. */
-			oop = moo_allocoopobj (moo, alloclen);
+			oop = moo_allocoopobj(moo, alloclen);
 			if (oop)
 			{
 				/* initialize named instance variables with default values */
@@ -291,19 +291,19 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 			break;
 
 		case MOO_OBJ_TYPE_CHAR:
-			oop = moo_alloccharobj (moo, vptr, alloclen);
+			oop = moo_alloccharobj(moo, vptr, alloclen);
 			break;
 
 		case MOO_OBJ_TYPE_BYTE:
-			oop = moo_allocbyteobj (moo, vptr, alloclen);
+			oop = moo_allocbyteobj(moo, vptr, alloclen);
 			break;
 
 		case MOO_OBJ_TYPE_HALFWORD:
-			oop = moo_allochalfwordobj (moo, vptr, alloclen);
+			oop = moo_allochalfwordobj(moo, vptr, alloclen);
 			break;
 
 		case MOO_OBJ_TYPE_WORD:
-			oop = moo_allocwordobj (moo, vptr, alloclen);
+			oop = moo_allocwordobj(moo, vptr, alloclen);
 			break;
 
 		default:

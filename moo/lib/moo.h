@@ -1103,7 +1103,7 @@ typedef void (*moo_mod_gc_t) (
 struct moo_mod_t
 {
 	/* input */
-	const moo_ooch_t name[MOO_MOD_NAME_LEN_MAX + 1];
+	/*const*/ moo_ooch_t name[MOO_MOD_NAME_LEN_MAX + 1];
 	/*const*/ int hints; /* bitwised-ORed of moo_mod_hint_t enumerators */
 
 	/* user-defined data */
@@ -1342,7 +1342,7 @@ struct moo_t
 	{
 		struct
 		{
-			moo_uch_t* ptr;
+			moo_ooch_t* ptr;
 			moo_oow_t capa;
 			moo_oow_t len;
 		} xbuf;

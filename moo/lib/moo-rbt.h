@@ -167,6 +167,13 @@ typedef moo_rbt_pair_t* (*moo_rbt_cbserter_t) (
 	void*           ctx     /**< callback context */
 );
 
+enum moo_rbt_pair_color_t
+{
+	MOO_RBT_RED,
+	MOO_RBT_BLACK
+};
+typedef enum moo_rbt_pair_color_t moo_rbt_pair_color_t;
+
 /**
  * The moo_rbt_pair_t type defines red-black tree pair. A pair is composed 
  * of a key and a value. It maintains pointers to the beginning of a key and 
@@ -188,11 +195,7 @@ struct moo_rbt_pair_t
 	} val;
 
 	/* management information below */
-	enum
-	{
-		MOO_RBT_RED,
-		MOO_RBT_BLACK
-	} color;
+	moo_rbt_pair_color_t color;
 	moo_rbt_pair_t* parent;
 	moo_rbt_pair_t* child[2]; /* left and right */
 };

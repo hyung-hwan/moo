@@ -1036,7 +1036,7 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 		total_bytes = MOO_SIZEOF(moo_obj_t) + get_payload_bytes(moo, oop);
 
 		moo_pushtmp (moo, &oop);
-		z = moo_allocbytes (moo, total_bytes);
+		z = (moo_oop_t)moo_allocbytes (moo, total_bytes);
 		moo_poptmp(moo);
 
 		MOO_MEMCPY (z, oop, total_bytes);
@@ -1059,7 +1059,7 @@ int moo_regfinalizable (moo_t* moo, moo_oop_t oop)
 		return -1;
 	}
 
-	x = moo_allocmem (moo, MOO_SIZEOF(*x));
+	x = (moo_finalizable_t*)moo_allocmem(moo, MOO_SIZEOF(*x));
 	if (!x) return -1;
 
 	MOO_OBJ_SET_FLAGS_GCFIN (oop, MOO_GCFIN_FINALIZABLE);

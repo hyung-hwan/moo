@@ -33,7 +33,7 @@ moo_t* moo_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, moo_oow_t heapsize, const 
 	/* if this assertion fails, correct the type definition in moo.h */
 	MOO_ASSERT (moo, MOO_SIZEOF(moo_oow_t) == MOO_SIZEOF(moo_oop_t));
 
-	moo = MOO_MMGR_ALLOC (mmgr, MOO_SIZEOF(*moo) + xtnsize);
+	moo = (moo_t*)MOO_MMGR_ALLOC(mmgr, MOO_SIZEOF(*moo) + xtnsize);
 	if (moo)
 	{
 		if (moo_init(moo, mmgr, heapsize, vmprim) <= -1)
@@ -369,7 +369,7 @@ moo_cb_t* moo_regcb (moo_t* moo, moo_cb_t* tmpl)
 {
 	moo_cb_t* actual;
 
-	actual = moo_allocmem (moo, MOO_SIZEOF(*actual));
+	actual = (moo_cb_t*)moo_allocmem(moo, MOO_SIZEOF(*actual));
 	if (!actual) return MOO_NULL;
 
 	*actual = *tmpl;

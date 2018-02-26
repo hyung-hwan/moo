@@ -92,14 +92,15 @@
 static int logfmtv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_t* data, va_list ap, outbfmt_t outbfmt)
 {
 	const fmtchar_t* percent;
-#if defined(FMTCHAR_IS_OOCH)
 	const fmtchar_t* checkpoint;
-#endif
 	moo_bch_t nbuf[MAXNBUF], bch;
 	const moo_bch_t* nbufp;
 	int n, base, neg, sign;
 	moo_ooi_t tmp, width, precision;
 	moo_ooch_t ch, padc;
+#if !defined(FMTCHAR_IS_OOCH)
+	fmtchar_t fch;
+#endif
 	int lm_flag, lm_dflag, flagc, numlen;
 	moo_uintmax_t num = 0;
 	int stop = 0;
@@ -137,11 +138,38 @@ static int logfmtv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_t* data, va_lis
 		}
 		PUT_OOCS (checkpoint, fmt - checkpoint - 1);
 	#else
-		while ((ch = *fmt++) != '%' || stop) 
+		#if defined(MOO_OOCH_IS_UCH)
+		/* fmtchar is bch. ooch is uch. convert bch to uch */
+		checkpoint = fmt;
+		while ((fch = *fmt++) != '%' || stop) 
 		{
-			if (ch == '\0') goto done;
+			if (fch == '\0') break;
+		}
+		while (checkpoint < fmt - 1)
+		{
+			moo_oow_t cvlen, bclen;
+			bclen = fmt - checkpoint - 1;
+			cvlen = moo->cmgr->bctouc(checkpoint, bclen, &ch);
+			if (cvlen == 0 || cvlen > bclen) goto oops;
+			checkpoint += cvlen;
 			PUT_OOCH (ch, 1);
 		}
+		if (fch == '\0') goto done;
+		#else
+		while ((fch = *fmt++) != '%' || stop) 
+		{
+			moo_bch_t bcsbuf[MOO_MBLEN_MAX + 1];
+			moo_oow_t ucslen, bcslen;
+
+			if (fch == '\0') goto done;
+
+			/* fmtchar is uch. ooch is bch. convert uch to bch */
+			ucslen = 1;
+			bcslen = MOO_COUNTOF(bcsbuf);
+			if (moo_convutooochars(moo, &fch, &ucslen, bcsbuf, &bcslen) <= -1) goto oops;
+			PUT_OOCS (bcsbuf, bcslen);
+		}
+		#endif
 	#endif
 		percent = fmt - 1;
 

@@ -70,7 +70,7 @@
 #define IS_SIGN_DIFF(x,y) (((x) ^ (y)) < 0)
 
 /* digit character array */
-static char* _digitc = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+static char _digitc[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 /* exponent table */
 static moo_uint8_t _exp_tab[] = 
@@ -1166,12 +1166,12 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	tmplen[0] = ndigits_xh + ndigits_yh;
 	tmplen[1] = ndigits_yl + ndigits_yh + 1; 
 	if (tmplen[1] < tmplen[0]) tmplen[1] = tmplen[0];
-	tmp[1] = moo_callocmem (moo, MOO_SIZEOF(moo_liw_t) * tmplen[1]); /* TODO: should i use the object memory? */
+	tmp[1] = (moo_liw_t*)moo_callocmem(moo, MOO_SIZEOF(moo_liw_t) * tmplen[1]); /* TODO: should i use the object memory? */
 	if (!tmp[1]) goto oops;
 
 	/* make a temporary for (a0 + a1) and (a0 * b0) */
 	tmplen[0] = ndigits_xl + ndigits_yl + 1;
-	tmp[0] = moo_callocmem (moo, MOO_SIZEOF(moo_liw_t) * tmplen[0]);
+	tmp[0] = (moo_liw_t*)moo_callocmem(moo, MOO_SIZEOF(moo_liw_t) * tmplen[0]);
 	if (!tmp[0]) goto oops;
 
 	/* tmp[0] = a0 + a1 */
@@ -1286,12 +1286,12 @@ oops:
 	tmplen[0] = ndigits_yl + ndigits_yh + 1; 
 	tmplen[1] = ndigits_xh + ndigits_yh;
 	if (tmplen[1] < tmplen[0]) tmplen[1] = tmplen[0];
-	tmp[1] = moo_callocmem (moo, MOO_SIZEOF(moo_liw_t) * tmplen[1]);
+	tmp[1] = (hcl_liw_t*)moo_callocmem(moo, MOO_SIZEOF(moo_liw_t) * tmplen[1]);
 	if (!tmp[1]) goto oops;
 
 	/* make a temporary for (a0 + a1) and (a0 * b0) */
 	tmplen[0] = ndigits_xl + ndigits_yl;
-	tmp[0] = moo_callocmem (moo, MOO_SIZEOF(moo_liw_t) * tmplen[0]);
+	tmp[0] = (hcl_liw_t*)moo_callocmem(moo, MOO_SIZEOF(moo_liw_t) * tmplen[0]);
 	if (!tmp[0]) goto oops;
 
 	/* tmp[0] = a0 + a1 */

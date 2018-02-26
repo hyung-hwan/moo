@@ -369,7 +369,7 @@ int moo_concatoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, int id)
 		newcapa = MOO_ALIGN(p->len + len, 512); /* TODO: adjust this capacity */
 
 		/* +1 to handle line ending injection more easily */
-		tmp = moo_reallocmem (moo, p->ptr, (newcapa + 1) * MOO_SIZEOF(*tmp)); 
+		tmp = (moo_ooch_t*)moo_reallocmem(moo, p->ptr, (newcapa + 1) * MOO_SIZEOF(*tmp)); 
 		if (!tmp) return -1;
 
 		p->ptr = tmp;
@@ -731,7 +731,7 @@ int moo_convbtouchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_
 	/* length bound */
 	int n;
 
-	n = bcsn_to_ucsn_with_cmgr (bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
+	n = bcsn_to_ucsn_with_cmgr(bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
 
 	if (n <= -1)
 	{
@@ -747,7 +747,7 @@ int moo_convutobchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_
 	/* length bound */
 	int n;
 
-	n = ucsn_to_bcsn_with_cmgr (ucs, ucslen, bcs, bcslen, moo->cmgr);
+	n = ucsn_to_bcsn_with_cmgr(ucs, ucslen, bcs, bcslen, moo->cmgr);
 
 	if (n <= -1)
 	{
@@ -762,7 +762,7 @@ int moo_convbtoucstr (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_u
 	/* null-terminated. */
 	int n;
 
-	n = bcs_to_ucs_with_cmgr (bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
+	n = bcs_to_ucs_with_cmgr(bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
 
 	if (n <= -1)
 	{
@@ -777,7 +777,7 @@ int moo_convutobcstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_b
 	/* null-terminated */
 	int n;
 
-	n = ucs_to_bcs_with_cmgr (ucs, ucslen, bcs, bcslen, moo->cmgr);
+	n = ucs_to_bcs_with_cmgr(ucs, ucslen, bcs, bcslen, moo->cmgr);
 
 	if (n <= -1)
 	{
@@ -795,13 +795,13 @@ MOO_INLINE moo_uch_t* moo_dupbtoucharswithheadroom (moo_t* moo, moo_oow_t headro
 	moo_uch_t* ptr;
 
 	inlen = bcslen;
-	if (moo_convbtouchars (moo, bcs, &inlen, MOO_NULL, &outlen) <= -1) 
+	if (moo_convbtouchars(moo, bcs, &inlen, MOO_NULL, &outlen) <= -1) 
 	{
 		/* note it's also an error if no full conversion is made in this function */
 		return MOO_NULL;
 	}
 
-	ptr = moo_allocmem (moo, headroom_bytes + ((outlen + 1) * MOO_SIZEOF(moo_uch_t)));
+	ptr = (moo_uch_t*)moo_allocmem(moo, headroom_bytes + ((outlen + 1) * MOO_SIZEOF(moo_uch_t)));
 	if (!ptr) return MOO_NULL;
 
 	inlen = bcslen;
@@ -828,13 +828,13 @@ MOO_INLINE moo_bch_t* moo_duputobcharswithheadroom (moo_t* moo, moo_oow_t headro
 	moo_bch_t* ptr;
 
 	inlen = ucslen;
-	if (moo_convutobchars (moo, ucs, &inlen, MOO_NULL, &outlen) <= -1) 
+	if (moo_convutobchars(moo, ucs, &inlen, MOO_NULL, &outlen) <= -1) 
 	{
 		/* note it's also an error if no full conversion is made in this function */
 		return MOO_NULL;
 	}
 
-	ptr = moo_allocmem (moo, headroom_bytes + ((outlen + 1) * MOO_SIZEOF(moo_bch_t)));
+	ptr = (moo_bch_t*)moo_allocmem(moo, headroom_bytes + ((outlen + 1) * MOO_SIZEOF(moo_bch_t)));
 	if (!ptr) return MOO_NULL;
 
 	inlen = ucslen;
@@ -859,14 +859,14 @@ MOO_INLINE moo_uch_t* moo_dupbtoucstrwithheadroom (moo_t* moo, moo_oow_t headroo
 	moo_oow_t inlen, outlen;
 	moo_uch_t* ptr;
 
-	if (moo_convbtoucstr (moo, bcs, &inlen, MOO_NULL, &outlen) <= -1) 
+	if (moo_convbtoucstr(moo, bcs, &inlen, MOO_NULL, &outlen) <= -1) 
 	{
 		/* note it's also an error if no full conversion is made in this function */
 		return MOO_NULL;
 	}
 
 	outlen++;
-	ptr = moo_allocmem (moo, headroom_bytes + (outlen * MOO_SIZEOF(moo_uch_t)));
+	ptr = (moo_uch_t*)moo_allocmem(moo, headroom_bytes + (outlen * MOO_SIZEOF(moo_uch_t)));
 	if (!ptr) return MOO_NULL;
 
 	moo_convbtoucstr (moo, bcs, &inlen, ptr, &outlen);
@@ -884,14 +884,14 @@ MOO_INLINE moo_bch_t* moo_duputobcstrwithheadroom (moo_t* moo, moo_oow_t headroo
 	moo_oow_t inlen, outlen;
 	moo_bch_t* ptr;
 
-	if (moo_convutobcstr (moo, ucs, &inlen, MOO_NULL, &outlen) <= -1) 
+	if (moo_convutobcstr(moo, ucs, &inlen, MOO_NULL, &outlen) <= -1) 
 	{
 		/* note it's also an error if no full conversion is made in this function */
 		return MOO_NULL;
 	}
 
 	outlen++;
-	ptr = moo_allocmem (moo, headroom_bytes + (outlen * MOO_SIZEOF(moo_bch_t)));
+	ptr = (moo_bch_t*)moo_allocmem(moo, headroom_bytes + (outlen * MOO_SIZEOF(moo_bch_t)));
 	if (!ptr) return MOO_NULL;
 
 	ptr = (moo_bch_t*)((moo_oob_t*)ptr + headroom_bytes);
@@ -911,7 +911,7 @@ moo_uch_t* moo_dupuchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t ucslen)
 {
 	moo_uch_t* ptr;
 
-	ptr = moo_allocmem (moo, (ucslen + 1) * MOO_SIZEOF(moo_uch_t));
+	ptr = (moo_uch_t*)moo_allocmem(moo, (ucslen + 1) * MOO_SIZEOF(moo_uch_t));
 	if (!ptr) return MOO_NULL;
 
 	moo_copyuchars (ptr, ucs, ucslen);
@@ -923,7 +923,7 @@ moo_bch_t* moo_dupbchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t bcslen)
 {
 	moo_bch_t* ptr;
 
-	ptr = moo_allocmem (moo, (bcslen + 1) * MOO_SIZEOF(moo_bch_t));
+	ptr = (moo_bch_t*)moo_allocmem(moo, (bcslen + 1) * MOO_SIZEOF(moo_bch_t));
 	if (!ptr) return MOO_NULL;
 
 	moo_copybchars (ptr, bcs, bcslen);

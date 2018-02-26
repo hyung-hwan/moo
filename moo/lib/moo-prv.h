@@ -322,66 +322,67 @@ struct moo_ioarg_t
 	/*-----------------------------------------------------------------*/
 };
 
+enum moo_iotok_type_t
+{
+	MOO_IOTOK_EOF,
+	
+	MOO_IOTOK_CHARLIT,
+	MOO_IOTOK_STRLIT,
+	MOO_IOTOK_SYMLIT,
+	MOO_IOTOK_NUMLIT,
+	MOO_IOTOK_RADNUMLIT,
+	MOO_IOTOK_ERRLIT, /* error(NN) */
+
+	MOO_IOTOK_ERROR, /* error */
+	MOO_IOTOK_NIL,
+	MOO_IOTOK_SELF,
+	MOO_IOTOK_SUPER,
+	MOO_IOTOK_TRUE,
+	MOO_IOTOK_FALSE,
+	MOO_IOTOK_THIS_CONTEXT,
+	MOO_IOTOK_THIS_PROCESS,
+	MOO_IOTOK_SELFNS,
+
+	MOO_IOTOK_IF,
+	MOO_IOTOK_ELSE,
+	MOO_IOTOK_ELSIF,
+
+	MOO_IOTOK_WHILE,
+	MOO_IOTOK_UNTIL,
+	MOO_IOTOK_DO,
+	MOO_IOTOK_BREAK,
+	MOO_IOTOK_CONTINUE,
+
+	MOO_IOTOK_IDENT,
+	MOO_IOTOK_IDENT_DOTTED,
+	MOO_IOTOK_BINSEL,
+	MOO_IOTOK_KEYWORD,
+	MOO_IOTOK_ASSIGN,  /* := */
+	MOO_IOTOK_COLON,   /* : */
+	MOO_IOTOK_PERCENT, /* % */
+	MOO_IOTOK_RETURN,       /* ^ */
+	MOO_IOTOK_LOCAL_RETURN, /* ^^ */
+	MOO_IOTOK_LBRACE,
+	MOO_IOTOK_RBRACE,
+	MOO_IOTOK_LBRACK,
+	MOO_IOTOK_RBRACK,
+	MOO_IOTOK_LPAREN,
+	MOO_IOTOK_RPAREN,
+	MOO_IOTOK_HASHPAREN,   /* #( - array literal */
+	MOO_IOTOK_HASHBRACK,   /* #[ - byte array literal */
+	MOO_IOTOK_PERCPAREN,   /* %( - array expression */
+	MOO_IOTOK_PERCBRACE,   /* %{ - dictionary expression */
+	MOO_IOTOK_PERIOD,
+	MOO_IOTOK_COMMA,
+	MOO_IOTOK_SEMICOLON
+};
+typedef enum moo_iotok_type_t moo_iotok_type_t;
+
 struct moo_iotok_t
 {
-	enum
-	{
-		MOO_IOTOK_EOF,
-		
-		MOO_IOTOK_CHARLIT,
-		MOO_IOTOK_STRLIT,
-		MOO_IOTOK_SYMLIT,
-		MOO_IOTOK_NUMLIT,
-		MOO_IOTOK_RADNUMLIT,
-		MOO_IOTOK_ERRLIT, /* error(NN) */
-
-		MOO_IOTOK_ERROR, /* error */
-		MOO_IOTOK_NIL,
-		MOO_IOTOK_SELF,
-		MOO_IOTOK_SUPER,
-		MOO_IOTOK_TRUE,
-		MOO_IOTOK_FALSE,
-		MOO_IOTOK_THIS_CONTEXT,
-		MOO_IOTOK_THIS_PROCESS,
-		MOO_IOTOK_SELFNS,
-
-		MOO_IOTOK_IF,
-		MOO_IOTOK_ELSE,
-		MOO_IOTOK_ELSIF,
-
-		MOO_IOTOK_WHILE,
-		MOO_IOTOK_UNTIL,
-		MOO_IOTOK_DO,
-		MOO_IOTOK_BREAK,
-		MOO_IOTOK_CONTINUE,
-
-		MOO_IOTOK_IDENT,
-		MOO_IOTOK_IDENT_DOTTED,
-		MOO_IOTOK_BINSEL,
-		MOO_IOTOK_KEYWORD,
-		MOO_IOTOK_ASSIGN,  /* := */
-		MOO_IOTOK_COLON,   /* : */
-		MOO_IOTOK_PERCENT, /* % */
-		MOO_IOTOK_RETURN,       /* ^ */
-		MOO_IOTOK_LOCAL_RETURN, /* ^^ */
-		MOO_IOTOK_LBRACE,
-		MOO_IOTOK_RBRACE,
-		MOO_IOTOK_LBRACK,
-		MOO_IOTOK_RBRACK,
-		MOO_IOTOK_LPAREN,
-		MOO_IOTOK_RPAREN,
-		MOO_IOTOK_HASHPAREN,   /* #( - array literal */
-		MOO_IOTOK_HASHBRACK,   /* #[ - byte array literal */
-		MOO_IOTOK_PERCPAREN,   /* %( - array expression */
-		MOO_IOTOK_PERCBRACE,   /* %{ - dictionary expression */
-		MOO_IOTOK_PERIOD,
-		MOO_IOTOK_COMMA,
-		MOO_IOTOK_SEMICOLON
-	} type;
-
+	moo_iotok_type_t type;
 	moo_oocs_t name;
 	moo_oow_t name_capa;
-
 	moo_ioloc_t loc;
 };
 typedef struct moo_iotok_t moo_iotok_t;
