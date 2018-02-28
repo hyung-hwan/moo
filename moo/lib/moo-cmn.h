@@ -331,14 +331,18 @@ typedef struct moo_bcs_t moo_bcs_t;
 
 #if defined(MOO_ENABLE_UNICODE)
 	typedef moo_uch_t               moo_ooch_t;
+	typedef moo_uchu_t              moo_oochu_t;
 	typedef moo_uci_t               moo_ooci_t;
 	typedef moo_ucs_t               moo_oocs_t;
 #	define MOO_OOCH_IS_UCH
+#	define MOO_SIZEOF_OOCH_T MOO_SIZEOF_UCH_T
 #else
 	typedef moo_bch_t               moo_ooch_t;
+	typedef moo_bchu_t              moo_oochu_t;
 	typedef moo_bci_t               moo_ooci_t;
 	typedef moo_bcs_t               moo_oocs_t;
 #	define MOO_OOCH_IS_BCH
+#	define MOO_SIZEOF_OOCH_T MOO_SIZEOF_BCH_T
 #endif
 
 /* =========================================================================
