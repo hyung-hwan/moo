@@ -70,7 +70,8 @@
 #define IS_SIGN_DIFF(x,y) (((x) ^ (y)) < 0)
 
 /* digit character array */
-static char _digitc[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+static char _digitc_upper[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+static char _digitc_lower[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 /* exponent table */
 static moo_uint8_t _exp_tab[] = 
@@ -3813,6 +3814,18 @@ oops_einval:
 static moo_oow_t oow_to_text (moo_t* moo, moo_oow_t w, int radix, moo_ooch_t* buf)
 {
 	moo_ooch_t* ptr;
+	const char* _digitc;
+
+	if (radix < 0) 
+	{
+		_digitc = _digitc_lower;
+		radix = -radix;
+	}
+	else
+	{
+		_digitc = _digitc_upper;
+	}
+
 	MOO_ASSERT (moo, radix >= 2 && radix <= 36);
 
 	ptr = buf;
@@ -4007,6 +4020,17 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 	moo_ooch_t* xbuf = MOO_NULL;
 	moo_oow_t xlen = 0, seglen, reqcapa;
 
+	const char* _digitc;
+
+	if (radix < 0) 
+	{
+		_digitc = _digitc_lower;
+		radix = -radix;
+	}
+	else
+	{
+		_digitc = _digitc_upper;
+	}
 	MOO_ASSERT (moo, radix >= 2 && radix <= 36);
 
 	if (!moo_isint(moo,num)) goto oops_einval;
