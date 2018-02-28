@@ -280,7 +280,7 @@ typedef unsigned char           moo_bchu_t; /* unsigned version of moo_bch_t for
 #define MOO_SIZEOF_BCH_T MOO_SIZEOF_CHAR
 #define MOO_SIZEOF_BCI_T MOO_SIZEOF_INT
 
-#if defined(MOO_ENABLE_UNICODE) && (MOO_ENABLE_UNICODE == 4)
+#if defined(MOO_UNICODE_SIZE) && (MOO_UNICODE_SIZE >= 4)
 #	if defined(__GNUC__) && defined(__CHAR32_TYPE__)
 	typedef __CHAR32_TYPE__    moo_uch_t;
 #	else

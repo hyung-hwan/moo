@@ -1504,8 +1504,8 @@ Optional Features:
   --enable-ltdl-install   install libltdl
   --enable-debug          build the library in the debug mode (default. no)
   --enable-unicode        Use the unicode character type as the default
-                          character type. one of yes, no, ucs2, ucs4 (default.
-                          yes)
+                          character type. one of yes, no, yes:2, yes:4, no:2,
+                          no:4 (default. yes)
   --enable-cxx            build the library for C++ if a C++ compiler is
                           available (default. yes)
   --enable-dynamic-module enable dynamic module capability(default. yes)
@@ -22530,20 +22530,43 @@ else
 
 fi
 
-if test "${enable_unicode}" = "yes"
+if test "${enable_unicode}" = "yes:4"
 then
+
+$as_echo "#define MOO_UNICODE_SIZE 4" >>confdefs.h
+
 
 $as_echo "#define MOO_ENABLE_UNICODE 1" >>confdefs.h
 
-elif test "${enable_unicode}" = "ucs2"
+elif test "${enable_unicode}" = "yes:2"
 then
 
-$as_echo "#define MOO_ENABLE_UNICODE 2" >>confdefs.h
+$as_echo "#define MOO_UNICODE_SIZE 2" >>confdefs.h
 
-elif test "${enable_unicode}" = "ucs4"
+
+$as_echo "#define MOO_ENABLE_UNICODE 1" >>confdefs.h
+
+elif test "${enable_unicode}" = "yes"
 then
 
-$as_echo "#define MOO_ENABLE_UNICODE 4" >>confdefs.h
+$as_echo "#define MOO_UNICODE_SIZE 1" >>confdefs.h
+
+
+$as_echo "#define MOO_ENABLE_UNICODE 1" >>confdefs.h
+
+elif test "${enable_unicode}" = "no:4"
+then
+
+$as_echo "#define MOO_UNICODE_SIZE 4" >>confdefs.h
+
+elif test "${enable_unicode}" = "no:2"
+then
+
+$as_echo "#define MOO_UNICODE_SIZE 2" >>confdefs.h
+
+else
+
+$as_echo "#define MOO_UNICODE_SIZE 1" >>confdefs.h
 
 fi
 

@@ -542,6 +542,9 @@
 /* Define if socklen_t is signed */
 #undef MOO_SOCKLEN_T_IS_SIGNED
 
+/* Unicode character type size */
+#undef MOO_UNICODE_SIZE
+
 /* Define if dlsym() requires a leading underscore in symbol names. */
 #undef NEED_USCORE
 
