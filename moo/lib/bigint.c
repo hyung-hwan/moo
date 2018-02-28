@@ -4021,6 +4021,7 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 	moo_oow_t xlen = 0, seglen, reqcapa;
 
 	const char* _digitc;
+	int orgradix = radix;
 
 	if (radix < 0) 
 	{
@@ -4056,7 +4057,7 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 			xbuf = moo->inttostr.xbuf.ptr;
 		}
 
-		xlen = oow_to_text(moo, w, radix, xbuf);
+		xlen = oow_to_text(moo, w, orgradix, xbuf);
 		if (v < 0) xbuf[xlen++] = '-';
 
 		reverse_string (xbuf, xlen);
@@ -4207,7 +4208,7 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 	#else
 	#	error UNSUPPORTED LIW BIT SIZE
 	#endif
-		seglen = oow_to_text (moo, w, radix, &xbuf[xlen]);
+		seglen = oow_to_text (moo, w, orgradix, &xbuf[xlen]);
 		xlen += seglen;
 		if (r == a) break; /* reached the last block */
 
