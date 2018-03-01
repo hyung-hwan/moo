@@ -30,7 +30,7 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 {
 	moo_heap_t* heap;
 
-	heap = (moo_heap_t*)MOO_MMGR_ALLOC(moo->mmgr, MOO_SIZEOF(*heap) + size);
+	heap = (moo_heap_t*)moo->vmprim.alloc_heap(moo, MOO_SIZEOF(*heap) + size);
 	if (!heap)
 	{
 		moo_seterrnum (moo, MOO_ESYSMEM);
@@ -58,7 +58,7 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 
 void moo_killheap (moo_t* moo, moo_heap_t* heap)
 {
-	MOO_MMGR_FREE (moo->mmgr, heap);
+	moo->vmprim.free_heap (moo, heap);
 }
 
 void* moo_allocheapmem (moo_t* moo, moo_heap_t* heap, moo_oow_t size)

@@ -82,6 +82,16 @@ static void fill_bigint_tables (moo_t* moo)
 	}
 }
 
+static void* alloc_heap (moo_t* moo, moo_oow_t size)
+{
+	return MOO_MMGR_ALLOC(moo->mmgr, size);
+}
+
+static void free_heap (moo_t* moo, void* ptr)
+{
+	return MOO_MMGR_FREE(moo->mmgr, ptr);
+}
+
 int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t* vmprim)
 {
 	int modtab_inited = 0;
@@ -96,6 +106,8 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 	moo->mmgr = mmgr;
 	moo->cmgr = moo_getutf8cmgr();
 	moo->vmprim = *vmprim;
+	if (!moo->vmprim.alloc_heap) moo->vmprim.alloc_heap = alloc_heap;
+	if (!moo->vmprim.free_heap) moo->vmprim.free_heap = free_heap;
 
 	moo->option.log_mask = ~0u;
 	moo->option.log_maxcapa = MOO_DFL_LOG_MAXCAPA;
@@ -238,7 +250,7 @@ void moo_fini (moo_t* moo)
 
 	moo_killheap (moo, moo->newheap);
 	moo_killheap (moo, moo->curheap);
-	moo_killheap (moo, moo->permheap);
+	if (moo->permheap) moo_killheap (moo, moo->permheap);
 
 	for (i = 0; i < MOO_COUNTOF(moo->sbuf); i++)
 	{
