@@ -899,8 +899,8 @@ static int logfmtv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_t* data, va_lis
 			nbufp = sprintn (nbuf, num, base, &tmp);
 			if ((flagc & FLAGC_SHARP) && num != 0) 
 			{
-				if (base == 8) tmp++;
-				else if (base == 16) tmp += 2;
+				if (base == 2 || base == 8) tmp += 2;
+				else if (base == 16) tmp += 3;
 			}
 			if (neg) tmp++;
 			else if (flagc & FLAGC_SIGN) tmp++;
@@ -927,17 +927,19 @@ static int logfmtv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_t* data, va_lis
 			{
 				if (base == 2) 
 				{
-					PUT_OOCH ('0', 1);
-					PUT_OOCH ('b', 1);
+					PUT_OOCH ('2', 1);
+					PUT_OOCH ('r', 1);
 				}
 				if (base == 8) 
 				{
-					PUT_OOCH ('0', 1);
+					PUT_OOCH ('8', 1);
+					PUT_OOCH ('r', 1);
 				} 
 				else if (base == 16) 
 				{
-					PUT_OOCH ('0', 1);
-					PUT_OOCH ('x', 1);
+					PUT_OOCH ('1', 1);
+					PUT_OOCH ('6', 1);
+					PUT_OOCH ('r', 1);
 				}
 			}
 
