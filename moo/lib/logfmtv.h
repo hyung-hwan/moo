@@ -180,7 +180,7 @@ static int logfmtv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_t* data, va_lis
 		lm_flag = 0; lm_dflag = 0; flagc = 0; 
 		sprintn = sprintn_lower;
 
-reswitch:
+	reswitch:
 		switch (ch = *fmt++) 
 		{
 		case '%': /* %% */
@@ -800,7 +800,7 @@ reswitch:
 #endif
 
 
-handle_nosign:
+		handle_nosign:
 			sign = 0;
 			if (lm_flag & LF_J)
 			{
@@ -845,7 +845,7 @@ handle_nosign:
 				num = va_arg (ap, unsigned int);
 			goto number;
 
-handle_sign:
+		handle_sign:
 			if (lm_flag & LF_J)
 			{
 			#if defined(__GNUC__) && \
@@ -889,7 +889,7 @@ handle_sign:
 			else
 				num = va_arg (ap, int);
 
-number:
+		number:
 			if (sign && (moo_intmax_t)num < 0) 
 			{
 				neg = 1;
@@ -960,7 +960,7 @@ number:
 			}
 			break;
 
-invalid_format:
+		invalid_format:
 		#if defined(FMTCHAR_IS_OOCH)
 			PUT_OOCS (percent, fmt - percent);
 		#else
