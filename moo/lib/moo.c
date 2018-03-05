@@ -127,14 +127,6 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 	moo->log.ptr = moo_allocmem (moo, (moo->log.capa + 1) * MOO_SIZEOF(*moo->log.ptr)); 
 	if (!moo->log.ptr) goto oops;
 
-/* TODO: introduce a permanent heap */
-	/*moo->permheap = moo_makeheap (moo, what is the best size???);
-	if (!moo->permheap) goto oops; */
-	moo->curheap = moo_makeheap (moo, heapsz);
-	if (!moo->curheap) goto oops;
-	moo->newheap = moo_makeheap (moo, heapsz);
-	if (!moo->newheap) goto oops;
-
 	if (moo_rbt_init (&moo->modtab, moo, MOO_SIZEOF(moo_ooch_t), 1) <= -1) goto oops;
 	modtab_inited = 1;
 	moo_rbt_setstyle (&moo->modtab, moo_getrbtstyle(MOO_RBT_STYLE_INLINE_COPIERS));
@@ -148,6 +140,14 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 
 	moo->proc_map_free_first = -1;
 	moo->proc_map_free_last = -1;
+
+/* TODO: introduce a permanent heap */
+	/*moo->permheap = moo_makeheap (moo, what is the best size???);
+	if (!moo->permheap) goto oops; */
+	moo->curheap = moo_makeheap (moo, heapsz);
+	if (!moo->curheap) goto oops;
+	moo->newheap = moo_makeheap (moo, heapsz);
+	if (!moo->newheap) goto oops;
 
 	return 0;
 

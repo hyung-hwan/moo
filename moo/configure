@@ -19712,7 +19712,13 @@ $as_echo "$ac_cv_search_dlopen" >&6; }
 ac_res=$ac_cv_search_dlopen
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-  DL_LIBS="$ac_cv_search_dlopen"
+
+	DL_LIBS="$ac_cv_search_dlopen"
+	if test "x${DL_LIBS}" = "xnone required"
+	then
+		DL_LIBS=""
+	fi
+
 fi
 
 LIBS="$save_LIBS"
