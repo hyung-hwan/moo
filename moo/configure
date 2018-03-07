@@ -1481,7 +1481,7 @@ Optional Features:
   --enable-dynamic-module enable dynamic module capability(default. yes)
   --enable-static-module  build modules statically into the main
                           library(default. no)
-  --enable-libltdl        use libltdl(default. yes)
+  --enable-libltdl        use libltdl(default. no)
   --enable-mod-con        enable mod/con (default. yes)
   --enable-mod-ffi        enable mod/ffi (default. yes)
   --enable-mod-sck        enable mod/sck (default. yes)
@@ -21431,7 +21431,7 @@ fi
 if test "${enable_libltdl+set}" = set; then :
   enableval=$enable_libltdl; enable_libltdl_is=$enableval
 else
-  enable_libltdl_is=yes
+  enable_libltdl_is=no
 
 fi
 

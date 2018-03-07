@@ -704,9 +704,9 @@ AM_CONDITIONAL(ENABLE_STATIC_MODULE, test "${enable_static_module_is}" = "yes")
 
 dnl ===== enable-libltdl =====
 AC_ARG_ENABLE([libltdl],
-	[AS_HELP_STRING([--enable-libltdl],[use libltdl(default. yes)])],
+	[AS_HELP_STRING([--enable-libltdl],[use libltdl(default. no)])],
 	enable_libltdl_is=$enableval,
-	enable_libltdl_is=yes
+	enable_libltdl_is=no
 )
 if test "${enable_libltdl_is}" = "yes"
 then
