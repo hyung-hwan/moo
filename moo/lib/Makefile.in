@@ -88,15 +88,14 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@ENABLE_LIBLTDL_TRUE@am__append_1 = $(LTDLINCL)
-@ENABLE_LIBLTDL_TRUE@am__append_2 = $(LIBLTDL)
-@ENABLE_LIBLTDL_FALSE@am__append_3 = $(DL_LIBS)
+@ENABLE_LIBLTDL_TRUE@am__append_1 = $(LTDL_LIBS)
+@ENABLE_LIBLTDL_FALSE@am__append_2 = $(DL_LIBS)
 
 # you must adjust the value of DEFAULT_MODPOSTFIX according 
 # to the first number in -version-info above
-@WIN32_TRUE@am__append_4 = -DMOO_DEFAULT_MODPREFIX=\"libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"-1\"
-@WIN32_FALSE@am__append_5 = -DMOO_DEFAULT_MODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"\"
-@ENABLE_STATIC_MODULE_TRUE@am__append_6 = -lmoo-stdio
+@WIN32_TRUE@am__append_3 = -DMOO_DEFAULT_MODPREFIX=\"libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"-1\"
+@WIN32_FALSE@am__append_4 = -DMOO_DEFAULT_MODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"\"
+@ENABLE_STATIC_MODULE_TRUE@am__append_5 = -lmoo-stdio
 @ENABLE_STATIC_MODULE_FALSE@libmoo_la_DEPENDENCIES =  \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_4) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
@@ -104,14 +103,14 @@ host_triplet = @host@
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
-@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_7 = -lmoo-con
-@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_8 = $(abs_builddir)/../mod/libmoo-con.la
-@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_9 = -lmoo-ffi
-@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_10 = $(abs_builddir)/../mod/libmoo-ffi.la
-@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_11 = -lmoo-sck
-@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_12 = $(abs_builddir)/../mod/libmoo-sck.la
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_13 = -lmoo-x11
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_14 = $(abs_builddir)/../mod/libmoo-x11.la
+@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_6 = -lmoo-con
+@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_7 = $(abs_builddir)/../mod/libmoo-con.la
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_8 = -lmoo-ffi
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_9 = $(abs_builddir)/../mod/libmoo-ffi.la
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_10 = -lmoo-sck
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_11 = $(abs_builddir)/../mod/libmoo-sck.la
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_12 = -lmoo-x11
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_13 = $(abs_builddir)/../mod/libmoo-x11.la
 bin_PROGRAMS = moo$(EXEEXT)
 @ENABLE_STATIC_MODULE_FALSE@moo_DEPENDENCIES = $(am__DEPENDENCIES_4) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
@@ -120,8 +119,7 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_sign.m4 \
 	$(top_srcdir)/m4/ax_cxx_namespace.m4 \
 	$(top_srcdir)/m4/ax_numval.m4 $(top_srcdir)/m4/ax_pthread.m4 \
-	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltargz.m4 \
-	$(top_srcdir)/m4/ltdl.m4 $(top_srcdir)/m4/ltoptions.m4 \
+	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
 	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
 	$(top_srcdir)/m4/lt~obsolete.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -289,7 +287,6 @@ EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 GREP = @GREP@
 HAVE_CXX = @HAVE_CXX@
-INCLTDL = @INCLTDL@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -297,11 +294,6 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
-LIBADD_DL = @LIBADD_DL@
-LIBADD_DLD_LINK = @LIBADD_DLD_LINK@
-LIBADD_DLOPEN = @LIBADD_DLOPEN@
-LIBADD_SHL_LOAD = @LIBADD_SHL_LOAD@
-LIBLTDL = @LIBLTDL@
 LIBM = @LIBM@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
@@ -309,14 +301,8 @@ LIBTOOL = @LIBTOOL@
 LIBTOOL_DEPS = @LIBTOOL_DEPS@
 LIPO = @LIPO@
 LN_S = @LN_S@
-LTDLDEPS = @LTDLDEPS@
-LTDLINCL = @LTDLINCL@
-LTDLOPEN = @LTDLOPEN@
+LTDL_LIBS = @LTDL_LIBS@
 LTLIBOBJS = @LTLIBOBJS@
-LT_ARGZ_H = @LT_ARGZ_H@
-LT_CONFIG_H = @LT_CONFIG_H@
-LT_DLLOADERS = @LT_DLLOADERS@
-LT_DLPREOPEN = @LT_DLPREOPEN@
 LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
@@ -404,8 +390,6 @@ libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
 localstatedir = @localstatedir@
-ltdl_LIBOBJS = @ltdl_LIBOBJS@
-ltdl_LTLIBOBJS = @ltdl_LTLIBOBJS@
 mandir = @mandir@
 mkdir_p = @mkdir_p@
 oldincludedir = @oldincludedir@
@@ -416,8 +400,6 @@ psdir = @psdir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
-subdirs = @subdirs@
-sys_symbol_underscore = @sys_symbol_underscore@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
@@ -436,10 +418,10 @@ CPPFLAGS_ALL_COMMON = \
 ##################################################
 # MAIN LIBRARY 
 ##################################################
-CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) $(am__append_1) \
-	$(am__append_4) $(am__append_5)
+CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) $(am__append_3) \
+	$(am__append_4)
 LDFLAGS_LIB_COMMON = $(LDFLAGS_ALL_COMMON) -version-info 1:0:0 -no-undefined
-LIBADD_LIB_COMMON = $(LIBM) $(am__append_2) $(am__append_3)
+LIBADD_LIB_COMMON = $(LIBM) $(am__append_1) $(am__append_2)
 pkginclude_HEADERS = \
 	moo-cmn.h \
 	moo-opt.h \
@@ -474,12 +456,12 @@ libmoo_la_SOURCES = \
 
 libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_6) \
-	$(am__append_7) $(am__append_9) $(am__append_11) \
-	$(am__append_13)
+libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_5) \
+	$(am__append_6) $(am__append_8) $(am__append_10) \
+	$(am__append_12)
 @ENABLE_STATIC_MODULE_TRUE@libmoo_la_DEPENDENCIES = $(abs_builddir)/../mod/libmoo-stdio.la \
-@ENABLE_STATIC_MODULE_TRUE@	$(am__append_8) $(am__append_10) \
-@ENABLE_STATIC_MODULE_TRUE@	$(am__append_12) $(am__append_14)
+@ENABLE_STATIC_MODULE_TRUE@	$(am__append_7) $(am__append_9) \
+@ENABLE_STATIC_MODULE_TRUE@	$(am__append_11) $(am__append_13)
 moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 moo_LDFLAGS = $(LDFLAGS_LIB_COMMON)

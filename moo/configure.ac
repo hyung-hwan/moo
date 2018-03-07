@@ -35,36 +35,9 @@ AC_PROG_EGREP
 AC_PROG_LN_S
 AC_PROG_SED
 
-dnl 'recursive' type seems to have problems in setting LT_CONFIG_H
-dnl so i use the classic 'subproject' type here
-LT_CONFIG_LTDL_DIR([libltdl])
-
 dnl initialize libtool
 LT_INIT
 AC_SUBST(LIBTOOL_DEPS)
-
-save_CFLAGS="$CFLAGS"
-save_LDFLAGS="$LDFLAGS"
-save_LIBS="$LIBS"
-LTDL_INIT
-LDFLAGS="$save_LDFLAGS"
-CFLAGS="$save_CFLAGS"
-LIBS="$save_LIBS"
-
-dnl The lt_dladvise_init symbol was added with libtool-2.2
-if test "x$with_included_ltdl" != "xyes"; then
-	save_CFLAGS="$CFLAGS"
-	save_LDFLAGS="$LDFLAGS"
-	save_LIBS="$LIBS"
-	CFLAGS="$CFLAGS $LTDLINCL"
-	LDFLAGS="$LDFLAGS $LIBLTDL"
-	AC_CHECK_LIB([ltdl], [lt_dladvise_init], [],
-	             [AC_MSG_ERROR([installed libltdl is too old. install a newer libltdl or specify --with-included-ltdl])])
-	LDFLAGS="$save_LDFLAGS"
-	CFLAGS="$save_CFLAGS"
-	LIBS="$save_LIBS"
-fi
-
 
 dnl overrides the default CFLAGS setting
 if test "$ac_test_CFLAGS" != "set"
@@ -154,7 +127,7 @@ dnl check header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([stddef.h wchar.h wctype.h errno.h signal.h fcntl.h dirent.h])
 AC_CHECK_HEADERS([time.h sys/time.h utime.h spawn.h execinfo.h ucontext.h])
-AC_CHECK_HEADERS([dlfcn.h])
+AC_CHECK_HEADERS([dlfcn.h ltdl.h])
 AC_CHECK_HEADERS([sys/devpoll.h sys/epoll.h poll.h])
 AC_CHECK_HEADERS([dyncall.h])
 AC_CHECK_HEADERS([xcb/xcb.h])
@@ -187,10 +160,21 @@ AC_SEARCH_LIBS([dlopen], [dl dld], [
 LIBS="$save_LIBS"
 AC_SUBST(DL_LIBS)
 
+save_LIBS="$LIBS"
+AC_SEARCH_LIBS([lt_dlopen], [ltdl], [
+	LTDL_LIBS="$ac_cv_search_lt_dlopen"
+	if test "x${LTDL_LIBS}" = "xnone required"
+	then
+		LTDL_LIBS=""
+	fi
+])
+LIBS="$save_LIBS"
+AC_SUBST(LTDL_LIBS)
+
 AC_CHECK_LIB([dyncall_s], [dcNewCallVM], 
 	[
 		DYNCALL_LIBS="-ldyncall_s"
-		AC_DEFINE([HAVE_DYNCALL_LIB], [1], [dyncall library is available])	
+		AC_DEFINE([HAVE_DYNCALL_LIB], [1], [dyncall library is available])
 	]
 )
 AC_SUBST(DYNCALL_LIBS)
@@ -726,7 +710,12 @@ AC_ARG_ENABLE([libltdl],
 )
 if test "${enable_libltdl_is}" = "yes"
 then
-	AC_DEFINE([MOO_ENABLE_LIBLTDL],[],[use libltdl when loading a dynamic module])
+	if test "${ac_cv_header_ltdl_h}" = "yes"  -a "${LTDL_LIBS}" != ""
+	then
+		AC_DEFINE([MOO_ENABLE_LIBLTDL],[],[use libltdl when loading a dynamic module])
+	else
+		enable_libltdl_is="no"
+	fi
 fi
 AM_CONDITIONAL(ENABLE_LIBLTDL, test "${enable_libltdl_is}" = "yes")
 

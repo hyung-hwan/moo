@@ -2,12 +2,7 @@ AUTOMAKE_OPTION = foreign
 ACLOCAL_AMFLAGS = -I m4
 
 EXTRA_DIST =
-
-if ENABLE_LIBLTDL
-SUBDIRS = libltdl
-else
-SUBDIRS = 
-endif
+SUBDIRS =
 
 if ENABLE_STATIC_MODULE
 SUBDIRS += mod lib
