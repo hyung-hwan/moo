@@ -127,7 +127,7 @@ dnl check header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([stddef.h wchar.h wctype.h errno.h signal.h fcntl.h dirent.h])
 AC_CHECK_HEADERS([time.h sys/time.h utime.h spawn.h execinfo.h ucontext.h])
-AC_CHECK_HEADERS([dlfcn.h ltdl.h])
+AC_CHECK_HEADERS([dlfcn.h ltdl.h sys/mman.h])
 AC_CHECK_HEADERS([sys/devpoll.h sys/epoll.h poll.h])
 AC_CHECK_HEADERS([dyncall.h])
 AC_CHECK_HEADERS([xcb/xcb.h])
@@ -147,7 +147,7 @@ AC_CHECK_FUNCS([makecontext swapcontext getcontext setcontext])
 AC_CHECK_FUNCS([clock_nanosleep nanosleep usleep])
 AC_CHECK_FUNCS([snprintf _vsnprintf _vsnwprintf strerror_r])
 AC_CHECK_FUNCS([accept4])
-AC_CHECK_FUNCS([isatty])
+AC_CHECK_FUNCS([isatty mmap munmap])
 
 save_LIBS="$LIBS"
 AC_SEARCH_LIBS([dlopen], [dl dld], [

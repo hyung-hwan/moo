@@ -101,6 +101,9 @@
 #	if defined(HAVE_SIGNAL_H)
 #		include <signal.h>
 #	endif
+#	if defined(HAVE_SYS_MMAN_H)
+#		include <sys/mman.h>
+#	endif
 
 #	include <errno.h>
 #	include <unistd.h>
@@ -483,13 +486,64 @@ static moo_ooi_t input_handler (moo_t* moo, moo_iocmd_t cmd, moo_ioarg_t* arg)
 
 static void* alloc_heap (moo_t* moo, moo_oow_t size)
 {
+#if defined(HAVE_MMAP) && defined(HAVE_MUNMAP) && defined(MAP_ANONYMOUS)
+	/* It's called via moo_makeheap() when HCL creates a GC heap.
+	 * The heap is large in size. I can use a different memory allocation
+	 * function instead of an ordinary malloc.
+	 * upon failure, it doesn't require to set error information as moo_makeheap()
+	 * set the error number to MOO_EOOMEM. */
+
+#if !defined(MAP_HUGETLB) && (defined(__amd64__) || defined(__x86_64__))
+#	define MAP_HUGETLB 0x40000
+#endif
+
+	moo_oow_t* ptr;
+	int flags;
+	moo_oow_t actual_size;
+
+	flags = MAP_PRIVATE | MAP_ANONYMOUS;
+
+	#if defined(MAP_HUGETLB)
+	flags |= MAP_HUGETLB;
+	#endif
+
+	#if defined(MAP_UNINITIALIZED)
+	flags |= MAP_UNINITIALIZED;
+	#endif
+
+	actual_size = MOO_SIZEOF(moo_oow_t) + size;
+	actual_size = MOO_ALIGN_POW2(actual_size, 2 * 1024 * 1024);
+	ptr = (moo_oow_t*)mmap(NULL, actual_size, PROT_READ | PROT_WRITE, flags, -1, 0);
+	if (ptr == MAP_FAILED) 
+	{
+	#if defined(MAP_HUGETLB)
+		flags &= ~MAP_HUGETLB;
+		ptr = (moo_oow_t*)mmap(NULL, actual_size, PROT_READ | PROT_WRITE, flags, -1, 0);
+		if (ptr == MAP_FAILED) return MOO_NULL;
+	#else
+		return MOO_NULL;
+	#endif
+	}
+	*ptr = actual_size;
+
+	return (void*)(ptr + 1);
+
+#else
 	return MOO_MMGR_ALLOC(moo->mmgr, size);
+#endif
 }
 
 static void free_heap (moo_t* moo, void* ptr)
 {
+#if defined(HAVE_MMAP) && defined(HAVE_MUNMAP)
+	moo_oow_t* actual_ptr;
+	actual_ptr = (moo_oow_t*)ptr - 1;
+	munmap (actual_ptr, *actual_ptr);
+#else
 	return MOO_MMGR_FREE(moo->mmgr, ptr);
+#endif
 }
+
 
 #if defined(_WIN32)
 	/* nothing to do */
@@ -2228,6 +2282,7 @@ int main (int argc, char* argv[])
 	{
 		{ ":log",         'l' },
 		{ ":memsize",     'm' },
+		{ "large-pages",  '\0' },
 #if defined(MOO_BUILD_DEBUG)
 		{ ":debug",       '\0' }, /* NOTE: there is no short option for --debug */
 #endif
@@ -2241,6 +2296,7 @@ int main (int argc, char* argv[])
 
 	const char* logopt = MOO_NULL;
 	moo_oow_t memsize = MIN_MEMSIZE;
+	int large_pages = 0;
 
 #if defined(MOO_BUILD_DEBUG)
 	const char* dbgopt = MOO_NULL;
@@ -2270,9 +2326,13 @@ int main (int argc, char* argv[])
 				break;
 
 			case '\0':
-				
+				if (moo_compbcstr(opt.lngopt, "large-pages") == 0)
+				{
+					large_pages = 1;
+					break;
+				}
 			#if defined(MOO_BUILD_DEBUG)
-				if (moo_compbcstr(opt.lngopt, "debug") == 0)
+				else if (moo_compbcstr(opt.lngopt, "debug") == 0)
 				{
 					dbgopt = opt.arg;
 					break;
@@ -2298,8 +2358,11 @@ int main (int argc, char* argv[])
 #endif
 
 	memset (&vmprim, 0, MOO_SIZEOF(vmprim));
-	vmprim.alloc_heap = alloc_heap;
-	vmprim.free_heap = free_heap;
+	if (large_pages)
+	{
+		vmprim.alloc_heap = alloc_heap;
+		vmprim.free_heap = free_heap;
+	}
 	vmprim.log_write = log_write;
 	vmprim.syserrstrb = syserrstrb;
 	vmprim.dl_open = dl_open;
