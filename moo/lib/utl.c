@@ -26,8 +26,6 @@
 
 #include "moo-prv.h"
 
-#define MOO_BCLEN_MAX 6
-
 /* some naming conventions
  *  bchars, uchars -> pointer and length
  *  bcstr, ucstr -> null-terminated string pointer
@@ -576,7 +574,7 @@ static MOO_INLINE int ucsn_to_bcsn_with_cmgr (
 	}
 	else
 	{
-		moo_bch_t bcsbuf[MOO_BCLEN_MAX];
+		moo_bch_t bcsbuf[MOO_BCSIZE_MAX];
 		moo_oow_t mlen = 0;
 
 		while (p < end)
@@ -658,7 +656,7 @@ static int ucs_to_bcs_with_cmgr (
 	}
 	else
 	{
-		moo_bch_t bcsbuf[MOO_BCLEN_MAX];
+		moo_bch_t bcsbuf[MOO_BCSIZE_MAX];
 		moo_oow_t mlen = 0;
 
 		while (*p != '\0')

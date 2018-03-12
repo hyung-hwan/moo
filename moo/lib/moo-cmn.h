@@ -345,6 +345,9 @@ typedef struct moo_bcs_t moo_bcs_t;
 #	define MOO_SIZEOF_OOCH_T MOO_SIZEOF_BCH_T
 #endif
 
+/* the maximum number of bch charaters to represent a single uch character */
+#define MOO_BCSIZE_MAX 6
+
 /* =========================================================================
  * TIME-RELATED TYPES
  * =========================================================================*/
