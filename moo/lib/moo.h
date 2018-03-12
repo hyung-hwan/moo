@@ -2018,7 +2018,7 @@ MOO_EXPORT int moo_convbtoucstr (
  * The moo_convutobcstr() function converts a null-terminated wide string
  * to a byte string.
  */
-int moo_convutobcstr (
+MOO_EXPORT int moo_convutobcstr (
 	moo_t*           moo,
 	const moo_uch_t* ucs,
 	moo_oow_t*       ucslen,
