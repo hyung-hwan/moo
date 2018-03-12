@@ -345,7 +345,7 @@ MOO_EXPORT int moo_concatoocstrtosbuf (
 	int                id
 );
 
-MOO_EXPORT moo_cmgr_t* moo_getutf8cmgr (
+MOO_EXPORT moo_cmgr_t* moo_get_utf8_cmgr (
 	void
 );
 

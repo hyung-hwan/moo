@@ -104,7 +104,7 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 
 	MOO_MEMSET (moo, 0, MOO_SIZEOF(*moo));
 	moo->mmgr = mmgr;
-	moo->cmgr = moo_getutf8cmgr();
+	moo->cmgr = moo_get_utf8_cmgr();
 	moo->vmprim = *vmprim;
 	if (!moo->vmprim.alloc_heap) moo->vmprim.alloc_heap = alloc_heap;
 	if (!moo->vmprim.free_heap) moo->vmprim.free_heap = free_heap;

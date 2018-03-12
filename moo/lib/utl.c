@@ -693,7 +693,7 @@ static moo_cmgr_t utf8_cmgr =
 	moo_uctoutf8
 };
 
-moo_cmgr_t* moo_getutf8cmgr (void)
+moo_cmgr_t* moo_get_utf8_cmgr (void)
 {
 	return &utf8_cmgr;
 }
