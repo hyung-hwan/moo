@@ -20930,7 +20930,7 @@ if test ${ax_cv_numvalof_PATH_MAX} -gt 0
 then
 
 cat >>confdefs.h <<_ACEOF
-#define QSE_PATH_MAX ${ax_cv_numvalof_PATH_MAX}
+#define MOO_PATH_MAX ${ax_cv_numvalof_PATH_MAX}
 _ACEOF
 
 fi

@@ -562,7 +562,7 @@ AC_DEFINE_UNQUOTED(MOO_SIZEOF_MBSTATE_T, ${ac_cv_sizeof_mbstate_t}, [sizeof(mbst
 AC_DEFINE_UNQUOTED(MOO_MBLEN_MAX, ${ax_cv_numvalof_MB_LEN_MAX}, [MB_LEN_MAX])
 if test ${ax_cv_numvalof_PATH_MAX} -gt 0
 then
-	AC_DEFINE_UNQUOTED(QSE_PATH_MAX, ${ax_cv_numvalof_PATH_MAX}, [PATH_MAX])
+	AC_DEFINE_UNQUOTED(MOO_PATH_MAX, ${ax_cv_numvalof_PATH_MAX}, [PATH_MAX])
 fi
 
 AC_DEFINE_UNQUOTED(MOO_SIZEOF_STRUCT_SOCKADDR_IN, ${ac_cv_sizeof_struct_sockaddr_in}, [sizeof(struct sockaddr_in)])
