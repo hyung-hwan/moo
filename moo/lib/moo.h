@@ -1164,6 +1164,8 @@ typedef void (*moo_trgc_t) (moo_t* moo, moo_oop_t obj);
 typedef struct moo_compiler_t moo_compiler_t;
 #endif
 
+#define MOO_ERRMSG_CAPA (2048)
+
 struct moo_t
 {
 	moo_mmgr_t*  mmgr;
@@ -1173,11 +1175,11 @@ struct moo_t
 	{
 		union
 		{
-			moo_ooch_t ooch[2048];
-			moo_bch_t bch[2048];
-			moo_uch_t uch[2048];
+			moo_ooch_t ooch[MOO_ERRMSG_CAPA];
+			moo_bch_t bch[MOO_ERRMSG_CAPA];
+			moo_uch_t uch[MOO_ERRMSG_CAPA];
 		} tmpbuf;
-		moo_ooch_t buf[2048];
+		moo_ooch_t buf[MOO_ERRMSG_CAPA];
 		moo_oow_t len;
 	} errmsg;
 	int shuterr;
