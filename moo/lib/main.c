@@ -216,6 +216,12 @@ struct xtn_t
 	int logfd;
 	int logmask;
 	int logfd_istty;
+	
+	struct
+	{
+		moo_bch_t buf[4096];
+		moo_oow_t len;
+	} logbuf;
 
 #if defined(_WIN32)
 	HANDLE waitable_timer;
@@ -420,7 +426,7 @@ static MOO_INLINE moo_ooi_t close_input (moo_t* moo, moo_ioarg_t* arg)
 
 static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 {
-	/*xtn_t* xtn = moo_getxtn(hcl);*/
+	/*xtn_t* xtn = moo_getxtn(moo);*/
 	bb_t* bb;
 	moo_oow_t bcslen, ucslen, remlen;
 	int x;
@@ -552,25 +558,24 @@ static void free_heap (moo_t* moo, void* ptr)
 	/* nothing to do */
 
 #else
-static int write_all (int fd, const char* ptr, moo_oow_t len)
+
+
+static int write_all (int fd, const moo_bch_t* ptr, moo_oow_t len)
 {
 	while (len > 0)
 	{
 		moo_ooi_t wr;
 
-		wr = write (fd, ptr, len);
+		wr = write(fd, ptr, len);
 
 		if (wr <= -1)
 		{
 		#if defined(EAGAIN) && defined(EWOULDBLOCK) && (EAGAIN == EWOULDBLOCK)
-			/* TODO: push it to internal buffers? before writing data just converted, need to write buffered data first. */
 			if (errno == EAGAIN) continue;
 		#else
-
 			#if defined(EAGAIN)
 			if (errno == EAGAIN) continue;
-			#endif
-			#if defined(EWOULDBLOCK)
+			#elif defined(EWOULDBLOCK)
 			if (errno == EWOULDBLOCK) continue;
 			#endif
 		#endif
@@ -590,19 +595,77 @@ static int write_all (int fd, const char* ptr, moo_oow_t len)
 }
 #endif
 
-static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oow_t len)
+static int write_log (moo_t* moo, const moo_bch_t* ptr, moo_oow_t len)
 {
-#if defined(_WIN32)
-#	error NOT IMPLEMENTED 
-	
-#elif defined(macintosh)
-#	error NOT IMPLEMENTED
-#else
+	xtn_t* xtn;
+
+	xtn = moo_getxtn(moo);
+
+	while (len > 0)
+	{
+		if (xtn->logbuf.len > 0)
+		{
+			moo_oow_t rcapa, cplen;
+
+			rcapa = MOO_COUNTOF(xtn->logbuf.buf) - xtn->logbuf.len;
+			cplen = (len >= rcapa)? rcapa: len;
+
+			memcpy (&xtn->logbuf.buf[xtn->logbuf.len], ptr, cplen);
+			xtn->logbuf.len += cplen;
+			ptr += cplen;
+			len -= cplen;
+
+			if (xtn->logbuf.len >= MOO_COUNTOF(xtn->logbuf.buf))
+			{
+				int n;
+				n = write_all(xtn->logfd, xtn->logbuf.buf, xtn->logbuf.len);
+				xtn->logbuf.len = 0;
+				if (n <= -1) return -1;
+			}
+		}
+		else
+		{
+			moo_oow_t rcapa;
+
+			rcapa = MOO_COUNTOF(xtn->logbuf.buf);
+			if (len >= rcapa)
+			{
+				if (write_all(xtn->logfd, ptr, rcapa) <= -1) return -1;
+				ptr += rcapa;
+				len -= rcapa;
+			}
+			else
+			{
+				memcpy (xtn->logbuf.buf, ptr, len);
+				xtn->logbuf.len += len;
+				ptr += len;
+				len -= len;
+				
+			}
+		}
+	}
+
+	return 0;
+}
+
+static void flush_log (moo_t* moo)
+{
+	xtn_t* xtn;
+	xtn = moo_getxtn(moo);
+	if (xtn->logbuf.len > 0)
+	{
+		write_all (xtn->logfd, xtn->logbuf.buf, xtn->logbuf.len);
+		xtn->logbuf.len = 0;
+	}
+}
+
+static void log_write (moo_t* moo, unsigned int mask, const moo_ooch_t* msg, moo_oow_t len)
+{
 	moo_bch_t buf[256];
 	moo_oow_t ucslen, bcslen, msgidx;
 	int n;
 
-	xtn_t* xtn = moo_getxtn(moo);
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 	int logfd;
 
 	if (mask & MOO_LOG_STDERR)
@@ -618,6 +681,7 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 		if (mask & MOO_LOG_STDOUT) logfd = 1;
 		else
 		{
+
 			logfd = xtn->logfd;
 			if (logfd <= -1) return;
 		}
@@ -635,7 +699,7 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 		now = time(NULL);
 	#if defined(__DOS__)
 		tmp = localtime (&now);
-		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S ", tmp); /* no timezone info */
+		tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S ", tmp); /* no timezone info */
 		if (tslen == 0) 
 		{
 			strcpy (ts, "0000-00-00 00:00:00");
@@ -644,9 +708,9 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 	#else
 		tmp = localtime_r (&now, &tm);
 		#if defined(HAVE_STRFTIME_SMALL_Z)
-		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
+		tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
 		#else
-		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %Z ", tmp); 
+		tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %Z ", tmp); 
 		#endif
 		if (tslen == 0) 
 		{
@@ -654,15 +718,14 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 			tslen = 25; 
 		}
 	#endif
-		write_all (logfd, ts, tslen);
+		write_log (moo, ts, tslen);
 	}
-
 
 	if (xtn->logfd_istty)
 	{
-		if (mask & MOO_LOG_FATAL) write_all (logfd, "\x1B[1;31m", 7);
-		else if (mask & MOO_LOG_ERROR) write_all (logfd, "\x1B[1;32m", 7);
-		else if (mask & MOO_LOG_WARN) write_all (logfd, "\x1B[1;33m", 7);
+		if (mask & MOO_LOG_FATAL) write_log (moo, "\x1B[1;31m", 7);
+		else if (mask & MOO_LOG_ERROR) write_log (moo, "\x1B[1;32m", 7);
+		else if (mask & MOO_LOG_WARN) write_log (moo, "\x1B[1;33m", 7);
 	}
 
 #if defined(MOO_OOCH_IS_UCH)
@@ -672,7 +735,7 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 		ucslen = len;
 		bcslen = MOO_COUNTOF(buf);
 
-		n = moo_convootobchars(moo, &msg[msgidx], &ucslen, buf, &bcslen);
+		n = moo_convootobchars (moo, &msg[msgidx], &ucslen, buf, &bcslen);
 		if (n == 0 || n == -2)
 		{
 			/* n = 0: 
@@ -684,7 +747,7 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 			MOO_ASSERT (moo, ucslen > 0); /* if this fails, the buffer size must be increased */
 
 			/* attempt to write all converted characters */
-			if (write_all(logfd, buf, bcslen) <= -1) break;
+			if (write_log (moo, buf, bcslen) <= -1) break;
 
 			if (n == 0) break;
 			else
@@ -700,15 +763,15 @@ static void log_write (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oo
 		}
 	}
 #else
-	write_all (logfd, msg, len);
+	write_log (moo, msg, len);
 #endif
 
 	if (xtn->logfd_istty)
 	{
-		if (mask & (MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN)) write_all (logfd, "\x1B[0m", 4);
+		if (mask & (MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN)) write_log (moo, "\x1B[0m", 4);
 	}
 
-#endif
+	flush_log (moo);
 }
 
 static void syserrstrb (moo_t* moo, int syserr, moo_bch_t* buf, moo_oow_t len)
