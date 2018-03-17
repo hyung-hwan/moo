@@ -2215,6 +2215,7 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 	xtn_t* xtn = moo_getxtn (moo);
 	moo_bch_t* xstr = (moo_bch_t*)str;
 	moo_bch_t* cm, * flt;
+	unsigned int logmask;
 
 	cm = moo_findbcharinbcstr (xstr, ',');
 	if (cm) 
@@ -2231,6 +2232,7 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 		cm = moo_findbcharinbcstr(xstr, ',');
 		*cm = '\0';
 
+		logmask = xtn->logmask;
 		do
 		{
 			flt = cm + 1;
@@ -2238,25 +2240,25 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 			cm = moo_findbcharinbcstr(flt, ',');
 			if (cm) *cm = '\0';
 
-			if (moo_compbcstr(flt, "app") == 0) xtn->logmask |= MOO_LOG_APP;
-			else if (moo_compbcstr(flt, "compiler") == 0) xtn->logmask |= MOO_LOG_COMPILER;
-			else if (moo_compbcstr(flt, "vm") == 0) xtn->logmask |= MOO_LOG_VM;
-			else if (moo_compbcstr(flt, "mnemonic") == 0) xtn->logmask |= MOO_LOG_MNEMONIC;
-			else if (moo_compbcstr(flt, "gc") == 0) xtn->logmask |= MOO_LOG_GC;
-			else if (moo_compbcstr(flt, "ic") == 0) xtn->logmask |= MOO_LOG_IC;
-			else if (moo_compbcstr(flt, "primitive") == 0) xtn->logmask |= MOO_LOG_PRIMITIVE;
+			if (moo_compbcstr(flt, "app") == 0) logmask |= MOO_LOG_APP;
+			else if (moo_compbcstr(flt, "compiler") == 0) logmask |= MOO_LOG_COMPILER;
+			else if (moo_compbcstr(flt, "vm") == 0) logmask |= MOO_LOG_VM;
+			else if (moo_compbcstr(flt, "mnemonic") == 0) logmask |= MOO_LOG_MNEMONIC;
+			else if (moo_compbcstr(flt, "gc") == 0) logmask |= MOO_LOG_GC;
+			else if (moo_compbcstr(flt, "ic") == 0) logmask |= MOO_LOG_IC;
+			else if (moo_compbcstr(flt, "primitive") == 0) logmask |= MOO_LOG_PRIMITIVE;
 
-			else if (moo_compbcstr(flt, "fatal") == 0) xtn->logmask |= MOO_LOG_FATAL;
-			else if (moo_compbcstr(flt, "error") == 0) xtn->logmask |= MOO_LOG_ERROR;
-			else if (moo_compbcstr(flt, "warn") == 0) xtn->logmask |= MOO_LOG_WARN;
-			else if (moo_compbcstr(flt, "info") == 0) xtn->logmask |= MOO_LOG_INFO;
-			else if (moo_compbcstr(flt, "debug") == 0) xtn->logmask |= MOO_LOG_DEBUG;
+			else if (moo_compbcstr(flt, "fatal") == 0) logmask |= MOO_LOG_FATAL;
+			else if (moo_compbcstr(flt, "error") == 0) logmask |= MOO_LOG_ERROR;
+			else if (moo_compbcstr(flt, "warn") == 0) logmask |= MOO_LOG_WARN;
+			else if (moo_compbcstr(flt, "info") == 0) logmask |= MOO_LOG_INFO;
+			else if (moo_compbcstr(flt, "debug") == 0) logmask |= MOO_LOG_DEBUG;
 
-			else if (moo_compbcstr(flt, "fatal+") == 0) xtn->logmask |= MOO_LOG_FATAL;
-			else if (moo_compbcstr(flt, "error+") == 0) xtn->logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR;
-			else if (moo_compbcstr(flt, "warn+") == 0) xtn->logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN;
-			else if (moo_compbcstr(flt, "info+") == 0) xtn->logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO;
-			else if (moo_compbcstr(flt, "debug+") == 0) xtn->logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO | MOO_LOG_DEBUG;
+			else if (moo_compbcstr(flt, "fatal+") == 0) logmask |= MOO_LOG_FATAL;
+			else if (moo_compbcstr(flt, "error+") == 0) logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR;
+			else if (moo_compbcstr(flt, "warn+") == 0) logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN;
+			else if (moo_compbcstr(flt, "info+") == 0) logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO;
+			else if (moo_compbcstr(flt, "debug+") == 0) logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO | MOO_LOG_DEBUG;
 
 			else
 			{
@@ -2268,12 +2270,12 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 		while (cm);
 
 
-		if (!(xtn->logmask & MOO_LOG_ALL_TYPES)) xtn->logmask |= MOO_LOG_ALL_TYPES;  /* no types specified. force to all types */
-		if (!(xtn->logmask & MOO_LOG_ALL_LEVELS)) xtn->logmask |= MOO_LOG_ALL_LEVELS;  /* no levels specified. force to all levels */
+		if (!(logmask & MOO_LOG_ALL_TYPES)) logmask |= MOO_LOG_ALL_TYPES;  /* no types specified. force to all types */
+		if (!(logmask & MOO_LOG_ALL_LEVELS)) logmask |= MOO_LOG_ALL_LEVELS;  /* no levels specified. force to all levels */
 	}
 	else
 	{
-		xtn->logmask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;
+		logmask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;
 	}
 
 	xtn->logfd = open (xstr, O_CREAT | O_WRONLY | O_APPEND , 0644);
@@ -2284,6 +2286,7 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 		return -1;
 	}
 
+	xtn->logmask = logmask;
 #if defined(HAVE_ISATTY)
 	xtn->logfd_istty = isatty(xtn->logfd);
 #endif
