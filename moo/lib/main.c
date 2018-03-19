@@ -558,8 +558,6 @@ static void free_heap (moo_t* moo, void* ptr)
 	/* nothing to do */
 
 #else
-
-
 static int write_all (int fd, const moo_bch_t* ptr, moo_oow_t len)
 {
 	while (len > 0)
@@ -595,7 +593,7 @@ static int write_all (int fd, const moo_bch_t* ptr, moo_oow_t len)
 }
 #endif
 
-static int write_log (moo_t* moo, const moo_bch_t* ptr, moo_oow_t len)
+static int write_log (moo_t* moo, int fd, const moo_bch_t* ptr, moo_oow_t len)
 {
 	xtn_t* xtn;
 
@@ -618,7 +616,7 @@ static int write_log (moo_t* moo, const moo_bch_t* ptr, moo_oow_t len)
 			if (xtn->logbuf.len >= MOO_COUNTOF(xtn->logbuf.buf))
 			{
 				int n;
-				n = write_all(xtn->logfd, xtn->logbuf.buf, xtn->logbuf.len);
+				n = write_all(fd, xtn->logbuf.buf, xtn->logbuf.len);
 				xtn->logbuf.len = 0;
 				if (n <= -1) return -1;
 			}
@@ -630,7 +628,7 @@ static int write_log (moo_t* moo, const moo_bch_t* ptr, moo_oow_t len)
 			rcapa = MOO_COUNTOF(xtn->logbuf.buf);
 			if (len >= rcapa)
 			{
-				if (write_all(xtn->logfd, ptr, rcapa) <= -1) return -1;
+				if (write_all(fd, ptr, rcapa) <= -1) return -1;
 				ptr += rcapa;
 				len -= rcapa;
 			}
@@ -648,13 +646,13 @@ static int write_log (moo_t* moo, const moo_bch_t* ptr, moo_oow_t len)
 	return 0;
 }
 
-static void flush_log (moo_t* moo)
+static void flush_log (moo_t* moo, int fd)
 {
 	xtn_t* xtn;
 	xtn = moo_getxtn(moo);
 	if (xtn->logbuf.len > 0)
 	{
-		write_all (xtn->logfd, xtn->logbuf.buf, xtn->logbuf.len);
+		write_all (fd, xtn->logbuf.buf, xtn->logbuf.len);
 		xtn->logbuf.len = 0;
 	}
 }
@@ -718,14 +716,14 @@ static void log_write (moo_t* moo, unsigned int mask, const moo_ooch_t* msg, moo
 			tslen = 25; 
 		}
 	#endif
-		write_log (moo, ts, tslen);
+		write_log (moo, logfd, ts, tslen);
 	}
 
-	if (xtn->logfd_istty)
+	if (logfd == xtn->logfd && xtn->logfd_istty)
 	{
-		if (mask & MOO_LOG_FATAL) write_log (moo, "\x1B[1;31m", 7);
-		else if (mask & MOO_LOG_ERROR) write_log (moo, "\x1B[1;32m", 7);
-		else if (mask & MOO_LOG_WARN) write_log (moo, "\x1B[1;33m", 7);
+		if (mask & MOO_LOG_FATAL) write_log (moo, logfd, "\x1B[1;31m", 7);
+		else if (mask & MOO_LOG_ERROR) write_log (moo, logfd, "\x1B[1;32m", 7);
+		else if (mask & MOO_LOG_WARN) write_log (moo, logfd, "\x1B[1;33m", 7);
 	}
 
 #if defined(MOO_OOCH_IS_UCH)
@@ -735,7 +733,7 @@ static void log_write (moo_t* moo, unsigned int mask, const moo_ooch_t* msg, moo
 		ucslen = len;
 		bcslen = MOO_COUNTOF(buf);
 
-		n = moo_convootobchars (moo, &msg[msgidx], &ucslen, buf, &bcslen);
+		n = moo_convootobchars(moo, &msg[msgidx], &ucslen, buf, &bcslen);
 		if (n == 0 || n == -2)
 		{
 			/* n = 0: 
@@ -747,7 +745,7 @@ static void log_write (moo_t* moo, unsigned int mask, const moo_ooch_t* msg, moo
 			MOO_ASSERT (moo, ucslen > 0); /* if this fails, the buffer size must be increased */
 
 			/* attempt to write all converted characters */
-			if (write_log (moo, buf, bcslen) <= -1) break;
+			if (write_log(moo, logfd, buf, bcslen) <= -1) break;
 
 			if (n == 0) break;
 			else
@@ -763,15 +761,15 @@ static void log_write (moo_t* moo, unsigned int mask, const moo_ooch_t* msg, moo
 		}
 	}
 #else
-	write_log (moo, msg, len);
+	write_log (moo, logfd, msg, len);
 #endif
 
-	if (xtn->logfd_istty)
+	if (logfd == xtn->logfd && xtn->logfd_istty)
 	{
-		if (mask & (MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN)) write_log (moo, "\x1B[0m", 4);
+		if (mask & (MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN)) write_log (moo, logfd, "\x1B[0m", 4);
 	}
 
-	flush_log (moo);
+	flush_log (moo, logfd);
 }
 
 static void syserrstrb (moo_t* moo, int syserr, moo_bch_t* buf, moo_oow_t len)
