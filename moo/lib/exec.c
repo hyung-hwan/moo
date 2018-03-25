@@ -1914,32 +1914,38 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_ooi_t nargs)
 
 		default:
 		{
-			int type;
-
-			MOO_ASSERT (moo, MOO_OOP_IS_POINTER(rcv));
-			type = MOO_OBJ_GET_FLAGS_TYPE(rcv);
-			switch (type)
+			if (rcv == moo->_nil) hv = 0;
+			else if (rcv == moo->_true) hv = 1;
+			else if (rcv == moo->_false) hv = 2;
+			else
 			{
-				case MOO_OBJ_TYPE_BYTE:
-					hv = moo_hashbytes(((moo_oop_byte_t)rcv)->slot, MOO_OBJ_GET_SIZE(rcv));
-					break;
+				int type;
 
-				case MOO_OBJ_TYPE_CHAR:
-					hv = moo_hashoochars (((moo_oop_char_t)rcv)->slot, MOO_OBJ_GET_SIZE(rcv));
-					break;
+				MOO_ASSERT (moo, MOO_OOP_IS_POINTER(rcv));
+				type = MOO_OBJ_GET_FLAGS_TYPE(rcv);
+				switch (type)
+				{
+					case MOO_OBJ_TYPE_BYTE:
+						hv = moo_hashbytes(((moo_oop_byte_t)rcv)->slot, MOO_OBJ_GET_SIZE(rcv));
+						break;
 
-				case MOO_OBJ_TYPE_HALFWORD:
-					hv = moo_hashhalfwords(((moo_oop_halfword_t)rcv)->slot, MOO_OBJ_GET_SIZE(rcv));
-					break;
+					case MOO_OBJ_TYPE_CHAR:
+						hv = moo_hashoochars (((moo_oop_char_t)rcv)->slot, MOO_OBJ_GET_SIZE(rcv));
+						break;
 
-				case MOO_OBJ_TYPE_WORD:
-					hv = moo_hashwords(((moo_oop_word_t)rcv)->slot, MOO_OBJ_GET_SIZE(rcv));
-					break;
+					case MOO_OBJ_TYPE_HALFWORD:
+						hv = moo_hashhalfwords(((moo_oop_halfword_t)rcv)->slot, MOO_OBJ_GET_SIZE(rcv));
+						break;
 
-				default:
-					/* MOO_OBJ_TYPE_OOP, ... */
-					moo_seterrbfmt(moo, MOO_ENOIMPL, "no builtin hash implemented for %O", rcv); /* TODO: better error code? */
-					return MOO_PF_FAILURE;
+					case MOO_OBJ_TYPE_WORD:
+						hv = moo_hashwords(((moo_oop_word_t)rcv)->slot, MOO_OBJ_GET_SIZE(rcv));
+						break;
+
+					default:
+						/* MOO_OBJ_TYPE_OOP, ... */
+						moo_seterrbfmt(moo, MOO_ENOIMPL, "no builtin hash implemented for %O", rcv); /* TODO: better error code? */
+						return MOO_PF_FAILURE;
+				}
 			}
 			break;
 		}
