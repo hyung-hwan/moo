@@ -1821,7 +1821,7 @@ static moo_pfrc_t pf_dump (moo_t* moo, moo_ooi_t nargs)
 	MOO_ASSERT (moo, nargs >=  0);
 
 	/*moo_logbfmt (moo, 0, "RECEIVER: %O IN PID %d SP %d XSP %d\n", MOO_STACK_GET(moo, moo->sp - nargs), (int)MOO_OOP_TO_SMOOI(moo->processor->active->id), (int)moo->sp, (int)MOO_OOP_TO_SMOOI(moo->processor->active->sp));*/
-	moo_logbfmt (moo, MOO_LOG_APP | MOO_LOG_FATAL, "RECEIVER: %O IN PID %d\n", MOO_STACK_GET(moo, moo->sp - nargs), (int)MOO_OOP_TO_SMOOI(moo->processor->active->id));
+	moo_logbfmt (moo, MOO_LOG_APP | MOO_LOG_FATAL, "PID[%d] %O\n", (int)MOO_OOP_TO_SMOOI(moo->processor->active->id), MOO_STACK_GET(moo, moo->sp - nargs));
 	for (i = nargs; i > 0; )
 	{
 		--i;
