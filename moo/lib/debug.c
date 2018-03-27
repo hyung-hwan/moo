@@ -38,7 +38,7 @@ void moo_dumpsymtab (moo_t* moo)
 	for (i = 0; i < MOO_OBJ_GET_SIZE(moo->symtab->bucket); i++)
 	{
 		symbol = (moo_oop_char_t)moo->symtab->bucket->slot[i];
- 		if ((moo_oop_t)symbol != moo->_nil)
+		if ((moo_oop_t)symbol != moo->_nil)
 		{
 			MOO_DEBUG2 (moo, " %07zu %O\n", i, symbol);
 		}
