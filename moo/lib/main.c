@@ -700,8 +700,8 @@ static void log_write (moo_t* moo, unsigned int mask, const moo_ooch_t* msg, moo
 		tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S ", tmp); /* no timezone info */
 		if (tslen == 0) 
 		{
-			strcpy (ts, "0000-00-00 00:00:00");
-			tslen = 19; 
+			strcpy (ts, "0000-00-00 00:00:00 ");
+			tslen = 20; 
 		}
 	#else
 		tmp = localtime_r (&now, &tm);
@@ -712,8 +712,8 @@ static void log_write (moo_t* moo, unsigned int mask, const moo_ooch_t* msg, moo
 		#endif
 		if (tslen == 0) 
 		{
-			strcpy (ts, "0000-00-00 00:00:00 +0000");
-			tslen = 25; 
+			strcpy (ts, "0000-00-00 00:00:00 +0000 ");
+			tslen = 26; 
 		}
 	#endif
 		write_log (moo, logfd, ts, tslen);
