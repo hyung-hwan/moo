@@ -69,6 +69,10 @@
 
 #define IS_SIGN_DIFF(x,y) (((x) ^ (y)) < 0)
 
+#define IS_PBIGINT(moo,x) (MOO_OBJ_GET_CLASS(x) == (moo)->_large_positive_integer)
+#define IS_NBIGINT(moo,x) (MOO_OBJ_GET_CLASS(x) == (moo)->_large_negative_integer)
+#define IS_BIGINT(moo,x)  (IS_PBIGINT(moo,x) || IS_NBIGINT(moo,x))
+
 /* digit character array */
 static char _digitc_upper[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 static char _digitc_lower[] = "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -202,13 +206,9 @@ static int is_normalized_integer (moo_t* moo, moo_oop_t oop)
 	if (MOO_OOP_IS_SMOOI(oop)) return 1;
 	if (MOO_OOP_IS_POINTER(oop))
 	{
-		moo_oop_class_t c;
 /* TODO: is it better to introduce a special integer mark into the class itself */
 /* TODO: or should it check if it's a subclass, subsubclass, subsubsubclass, etc of a large_integer as well? */
-		c = MOO_OBJ_GET_CLASS(oop);
-
-		if (c == moo->_large_positive_integer ||
-		    c == moo->_large_negative_integer) 
+		if (IS_BIGINT(moo, oop))
 		{
 			moo_oow_t sz;
 
@@ -230,8 +230,7 @@ MOO_INLINE static int is_bigint (moo_t* moo, moo_oop_t x)
 
 /* TODO: is it better to introduce a special integer mark into the class itself */
 /* TODO: or should it check if it's a subclass, subsubclass, subsubsubclass, etc of a large_integer as well? */
-	c = MOO_OBJ_GET_CLASS(x);
-	return (c == moo->_large_positive_integer || c == moo->_large_negative_integer);
+	return IS_BIGINT(moo, x);
 }
 
 MOO_INLINE int moo_isint (moo_t* moo, moo_oop_t x)
@@ -244,15 +243,14 @@ MOO_INLINE int moo_isint (moo_t* moo, moo_oop_t x)
 static MOO_INLINE int bigint_to_oow (moo_t* moo, moo_oop_t num, moo_oow_t* w)
 {
 	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(num));
-	MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(num) == moo->_large_positive_integer ||
-	                 MOO_OBJ_GET_CLASS(num) == moo->_large_negative_integer);
+	MOO_ASSERT (moo, IS_PBIGINT(moo, num) || IS_NBIGINT(moo, num));
 
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
 	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(num) >= 1);
 	if (MOO_OBJ_GET_SIZE(num) == 1)
 	{
 		*w = ((moo_oop_word_t)num)->slot[0];
-		return (MOO_OBJ_GET_CLASS(num) == moo->_large_negative_integer)? -1: 1;
+		return (IS_NBIGINT(moo, num))? -1: 1;
 	}
 
 #elif (MOO_LIW_BITS == MOO_OOHW_BITS)
@@ -265,7 +263,7 @@ static MOO_INLINE int bigint_to_oow (moo_t* moo, moo_oop_t num, moo_oow_t* w)
 	if (MOO_OBJ_GET_SIZE(num) == 2)
 	{
 		*w = MAKE_WORD (((moo_oop_halfword_t)num)->slot[0], ((moo_oop_halfword_t)num)->slot[1]);
-		return (MOO_OBJ_GET_CLASS(num) == moo->_large_negative_integer)? -1: 1;
+		return (IS_NBIGINT(moo, num))? -1: 1;
 	}
 #else
 #	error UNSUPPORTED LIW BIT SIZE
@@ -325,7 +323,7 @@ int moo_inttooow (moo_t* moo, moo_oop_t x, moo_oow_t* w)
 
 	if (is_bigint(moo, x)) return bigint_to_oow (moo, x, w);
 
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "not an integer - %O", x);
 	return 0; /* not convertable - too big, too small, or not an integer */
 }
 
@@ -578,13 +576,13 @@ static MOO_INLINE moo_oop_t clone_bigint_negated (moo_t* moo, moo_oop_t oop, moo
 	moo_oop_class_t _class;
 
 	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(oop));
-	if (MOO_OBJ_GET_CLASS(oop) == moo->_large_positive_integer)
+	if (IS_PBIGINT(moo, oop))
 	{
 		_class = moo->_large_negative_integer;
 	}
 	else
 	{
-		MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(oop) == moo->_large_negative_integer);
+		MOO_ASSERT (moo, IS_NBIGINT(moo, oop));
 		_class = moo->_large_positive_integer;
 	}
 
@@ -633,14 +631,14 @@ static moo_oop_t normalize_bigint (moo_t* moo, moo_oop_t oop)
 		moo_oow_t w;
 
 		w = ((moo_oop_liword_t)oop)->slot[0];
-		if (MOO_OBJ_GET_CLASS(oop) == moo->_large_positive_integer)
+		if (IS_PBIGINT(moo, oop))
 		{
 			if (w <= MOO_SMOOI_MAX) return MOO_SMOOI_TO_OOP(w);
 		}
 		else
 		{
 			MOO_ASSERT (moo, -MOO_SMOOI_MAX  == MOO_SMOOI_MIN);
-			MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(oop) == moo->_large_negative_integer);
+			MOO_ASSERT (moo, IS_NBIGINT(moo, oop));
 			if (w <= MOO_SMOOI_MAX) return MOO_SMOOI_TO_OOP(-(moo_ooi_t)w);
 		}
 	}
@@ -648,13 +646,13 @@ static moo_oop_t normalize_bigint (moo_t* moo, moo_oop_t oop)
 
 	if (count == 1) /* 1 half-word */
 	{
-		if (MOO_OBJ_GET_CLASS(oop) == moo->_large_positive_integer)
+		if (IS_PBIGINT(moo, oop))
 		{
 			return MOO_SMOOI_TO_OOP(((moo_oop_liword_t)oop)->slot[0]);
 		}
 		else
 		{
-			MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(oop) == moo->_large_negative_integer);
+			MOO_ASSERT (moo, IS_NBIGINT(moo, oop));
 			return MOO_SMOOI_TO_OOP(-(moo_ooi_t)((moo_oop_liword_t)oop)->slot[0]);
 		}
 	}
@@ -663,14 +661,14 @@ static moo_oop_t normalize_bigint (moo_t* moo, moo_oop_t oop)
 		moo_oow_t w;
 
 		w = MAKE_WORD (((moo_oop_liword_t)oop)->slot[0], ((moo_oop_liword_t)oop)->slot[1]);
-		if (MOO_OBJ_GET_CLASS(oop) == moo->_large_positive_integer)
+		if (IS_PBIGINT(moo, oop))
 		{
 			if (w <= MOO_SMOOI_MAX) return MOO_SMOOI_TO_OOP(w);
 		}
 		else
 		{
 			MOO_ASSERT (moo, -MOO_SMOOI_MAX  == MOO_SMOOI_MIN);
-			MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(oop) == moo->_large_negative_integer);
+			MOO_ASSERT (moo, IS_NBIGINT(moo, oop));
 			if (w <= MOO_SMOOI_MAX) return MOO_SMOOI_TO_OOP(-(moo_ooi_t)w);
 		}
 	}
@@ -711,10 +709,10 @@ static MOO_INLINE int is_less (moo_t* moo, moo_oop_t x, moo_oop_t y)
 {
 	if (MOO_OBJ_GET_CLASS(x) != MOO_OBJ_GET_CLASS(y))
 	{
-		return MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer;
+		return IS_NBIGINT(moo, x);
 	}
 
-	if (MOO_OBJ_GET_CLASS(x) == moo->_large_positive_integer)
+	if (IS_PBIGINT(moo, x))
 	{
 		return is_less_unsigned (x, y);
 	}
@@ -749,10 +747,10 @@ static MOO_INLINE int is_greater (moo_t* moo, moo_oop_t x, moo_oop_t y)
 {
 	if (MOO_OBJ_GET_CLASS(x) != MOO_OBJ_GET_CLASS(y))
 	{
-		return MOO_OBJ_GET_CLASS(y) == moo->_large_negative_integer;
+		return IS_NBIGINT(moo, y);
 	}
 
-	if (MOO_OBJ_GET_CLASS(x) == moo->_large_positive_integer)
+	if (IS_PBIGINT(moo, x))
 	{
 		return is_greater_unsigned (x, y);
 	}
@@ -1666,7 +1664,7 @@ moo_oop_t moo_addints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 		if (MOO_OBJ_GET_CLASS(x) != MOO_OBJ_GET_CLASS(y))
 		{
-			if (MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer)
+			if (IS_NBIGINT(moo, x))
 			{
 				/* x is negative, y is positive */
 				if (is_less_unsigned (x, y))
@@ -1701,7 +1699,7 @@ moo_oop_t moo_addints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		{
 			int neg;
 			/* both are positive or negative */
-			neg = (MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer); 
+			neg = (IS_NBIGINT(moo, x)); 
 			z = add_unsigned_integers (moo, x, y);
 			if (!z) return MOO_NULL;
 			if (neg) MOO_OBJ_SET_CLASS(z, moo->_large_negative_integer);
@@ -1711,7 +1709,7 @@ moo_oop_t moo_addints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	return normalize_bigint (moo, z);
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "invalid parameters - %O, %O", x, y);
 	return MOO_NULL;
 }
 
@@ -1774,7 +1772,7 @@ moo_oop_t moo_subints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 		if (MOO_OBJ_GET_CLASS(x) != MOO_OBJ_GET_CLASS(y))
 		{
-			neg = (MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer); 
+			neg = (IS_NBIGINT(moo, x)); 
 			z = add_unsigned_integers (moo, x, y);
 			if (!z) return MOO_NULL;
 			if (neg) MOO_OBJ_SET_CLASS(z, moo->_large_negative_integer);
@@ -1784,14 +1782,14 @@ moo_oop_t moo_subints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			/* both are positive or negative */
 			if (is_less_unsigned (x, y))
 			{
-				neg = (MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer);
+				neg = (IS_NBIGINT(moo, x));
 				z = subtract_unsigned_integers (moo, y, x);
 				if (!z) return MOO_NULL;
 				if (!neg) MOO_OBJ_SET_CLASS(z, moo->_large_negative_integer);
 			}
 			else
 			{
-				neg = (MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer); 
+				neg = (IS_NBIGINT(moo, x)); 
 				z = subtract_unsigned_integers (moo, x, y); /* take x's sign */
 				if (!z) return MOO_NULL;
 				if (neg) MOO_OBJ_SET_CLASS(z, moo->_large_negative_integer);
@@ -1802,7 +1800,7 @@ moo_oop_t moo_subints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	return normalize_bigint (moo, z);
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "invalid parameters - %O, %O", x, y);
 	return MOO_NULL;
 }
 
@@ -1906,7 +1904,7 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	return normalize_bigint (moo, z);
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "invalid parameters - %O, %O", x, y);
 	return MOO_NULL;
 }
 
@@ -2087,8 +2085,8 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 		}
 	}
 
-	x_neg = (MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer);
-	y_neg = (MOO_OBJ_GET_CLASS(y) == moo->_large_negative_integer);
+	x_neg = (IS_NBIGINT(moo, x));
+	y_neg = (IS_NBIGINT(moo, y));
 
 	moo_pushtmp (moo, &x);
 	moo_pushtmp (moo, &y);
@@ -2158,7 +2156,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 	return normalize_bigint (moo, z);
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "invalid parameters - %O, %O", x, y);
 	return MOO_NULL;
 }
 
@@ -2178,7 +2176,7 @@ moo_oop_t moo_negateint (moo_t* moo, moo_oop_t x)
 	}
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "invalid parameter - %O", x);
 	return MOO_NULL;
 }
 
@@ -2212,7 +2210,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	{
 		if (!is_bigint(moo, y)) goto oops_einval;
 
-		if (MOO_OBJ_GET_CLASS(y) == moo->_large_negative_integer) return MOO_SMOOI_TO_OOP(0);
+		if (IS_NBIGINT(moo, y)) return MOO_SMOOI_TO_OOP(0);
 
 		/* y is definitely >= MOO_SMOOI_BITS */
 		if (MOO_OOP_TO_SMOOI(x) >= 0) 
@@ -2233,7 +2231,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		bp = v - (wp * MOO_LIW_BITS);
 
 		xs = MOO_OBJ_GET_SIZE(x);
-		if (MOO_OBJ_GET_CLASS(x) == moo->_large_positive_integer)
+		if (IS_PBIGINT(moo, x))
 		{
 			if (wp >= xs) return MOO_SMOOI_TO_OOP(0);
 			v = (((moo_oop_liword_t)x)->slot[wp] >> bp) & 1;
@@ -2269,10 +2267,10 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		if (!is_bigint(moo, x) || !is_bigint(moo, y)) goto oops_einval;
 
 	#if defined(MOO_LIMIT_OBJ_SIZE)
-		if (MOO_OBJ_GET_CLASS(y) == moo->_large_negative_integer) return MOO_SMOOI_TO_OOP(0);
+		if (IS_NBIGINT(moo, y)) return MOO_SMOOI_TO_OOP(0);
 
 		MOO_ASSERT (moo, MOO_OBJ_SIZE_BITS_MAX <= MOO_TYPE_MAX(moo_oow_t));
-		if (MOO_OBJ_GET_CLASS(x) == moo->_large_positive_integer)
+		if (IS_PBIGINT(moo, x))
 		{
 			return MOO_SMOOI_TO_OOP (0);
 		}
@@ -2283,7 +2281,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	#else
 		xs = MOO_OBJ_GET_SIZE(x);
 
-		if (MOO_OBJ_GET_CLASS(y) == moo->_large_negative_integer) return MOO_SMOOI_TO_OOP(0);
+		if (IS_NBIGINT(moo, y)) return MOO_SMOOI_TO_OOP(0);
 
 		sign = bigint_to_oow (moo, y, &w);
 		MOO_ASSERT (moo, sign >= 0);
@@ -2317,7 +2315,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			MOO_ASSERT (moo, bp >= 0 && bp < MOO_LIW_BITS);
 		}
 
-		if (MOO_OBJ_GET_CLASS(x) == moo->_large_positive_integer)
+		if (IS_PBIGINT(moo, x))
 		{
 			if (wp >= xs) return MOO_SMOOI_TO_OOP(0);
 			v = (((moo_oop_liword_t)x)->slot[wp] >> bp) & 1;
@@ -2343,7 +2341,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "invalid parameters - %O, %O", x, y);
 	return MOO_NULL;
 }
 
@@ -2415,8 +2413,8 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			xs = zs;
 		}
 
-		negx = (MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer)? 1: 0;
-		negy = (MOO_OBJ_GET_CLASS(y) == moo->_large_negative_integer)? 1: 0;
+		negx = (IS_NBIGINT(moo, x))? 1: 0;
+		negy = (IS_NBIGINT(moo, y))? 1: 0;
 
 		if (negx && negy)
 		{
@@ -2556,7 +2554,7 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "invalid parameters - %O, %O", x, y);
 	return MOO_NULL;
 }
 
@@ -2628,8 +2626,8 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			xs = zs;
 		}
 
-		negx = (MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer)? 1: 0;
-		negy = (MOO_OBJ_GET_CLASS(y) == moo->_large_negative_integer)? 1: 0;
+		negx = (IS_NBIGINT(moo, x))? 1: 0;
+		negy = (IS_NBIGINT(moo, y))? 1: 0;
 
 		if (negx && negy)
 		{
@@ -2774,7 +2772,7 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "invalid parameters - %O, %O", x, y);
 	return MOO_NULL;
 }
 
@@ -2846,8 +2844,8 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			xs = zs;
 		}
 
-		negx = (MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer)? 1: 0;
-		negy = (MOO_OBJ_GET_CLASS(y) == moo->_large_negative_integer)? 1: 0;
+		negx = (IS_NBIGINT(moo, x))? 1: 0;
+		negy = (IS_NBIGINT(moo, y))? 1: 0;
 
 		if (negx && negy)
 		{
@@ -2991,7 +2989,7 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "invalid parameters - %O, %O", x, y);
 	return MOO_NULL;
 }
 
@@ -3016,7 +3014,7 @@ moo_oop_t moo_bitinvint (moo_t* moo, moo_oop_t x)
 		if (!is_bigint(moo,x)) goto oops_einval;
 
 		xs = MOO_OBJ_GET_SIZE(x);
-		negx = (MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer)? 1: 0;
+		negx = (IS_NBIGINT(moo, x))? 1: 0;
 
 		if (negx)
 		{
@@ -3093,7 +3091,7 @@ moo_oop_t moo_bitinvint (moo_t* moo, moo_oop_t x)
 	}
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "invalid parameter - %O", x);
 	return MOO_NULL;
 }
 
@@ -3104,7 +3102,7 @@ static MOO_INLINE moo_oop_t rshift_negative_bigint (moo_t* moo, moo_oop_t x, moo
 	moo_lidw_t carry;
 	moo_oow_t i, xs;
 
-	MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer);
+	MOO_ASSERT (moo, IS_NBIGINT(moo, x));
 	xs = MOO_OBJ_GET_SIZE(x);
 
 	moo_pushtmp (moo, &x);
@@ -3167,8 +3165,8 @@ static MOO_INLINE moo_oop_t rshift_negative_bigint_and_normalize (moo_t* moo, mo
 	moo_oow_t shift;
 	int sign;
 
-	MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer);
-	MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(y) == moo->_large_negative_integer);
+	MOO_ASSERT (moo, IS_NBIGINT(moo, x));
+	MOO_ASSERT (moo, IS_NBIGINT(moo, y));
 
 	/* for convenience in subtraction below. 
 	 * it could be MOO_TYPE_MAX(moo_oow_t) 
@@ -3245,8 +3243,8 @@ static MOO_INLINE moo_oop_t rshift_positive_bigint_and_normalize (moo_t* moo, mo
 	moo_oow_t zs, shift;
 	int sign;
 
-	MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(x) == moo->_large_positive_integer);
-	MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(y) == moo->_large_negative_integer);
+	MOO_ASSERT (moo, IS_PBIGINT(moo, x));
+	MOO_ASSERT (moo, IS_NBIGINT(moo, y));
 
 	zs = MOO_OBJ_GET_SIZE(x);
 
@@ -3295,7 +3293,7 @@ static MOO_INLINE moo_oop_t lshift_bigint_and_normalize (moo_t* moo, moo_oop_t x
 	moo_oow_t wshift, shift;
 	int sign;
 
-	MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(y) == moo->_large_positive_integer);
+	MOO_ASSERT (moo, IS_PBIGINT(moo, y));
 
 	/* this loop is very inefficient as shifting is repeated
 	 * with lshift_unsigned_array(). however, this part of the
@@ -3439,7 +3437,7 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			v = MOO_OOP_TO_SMOOI(x);
 			if (v == 0) return MOO_SMOOI_TO_OOP(0);
 
-			if (MOO_OBJ_GET_CLASS(y) == moo->_large_negative_integer)
+			if (IS_NBIGINT(moo, y))
 			{
 				/* right shift - special case.
 				 * x is a small integer. it is just a few bytes long.
@@ -3464,7 +3462,7 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			v = MOO_OOP_TO_SMOOI(y);
 			if (v == 0) return clone_bigint (moo, x, MOO_OBJ_GET_SIZE(x));
 
-			negx = (MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer)? 1: 0;
+			negx = (IS_NBIGINT(moo, x))? 1: 0;
 			if (v > 0)
 			{
 				sign = 1;
@@ -3487,8 +3485,8 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			if (!is_bigint(moo,x) || !is_bigint(moo, y)) goto oops_einval;
 
 		bigint_and_bigint:
-			negx = (MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer)? 1: 0;
-			negy = (MOO_OBJ_GET_CLASS(y) == moo->_large_negative_integer)? 1: 0;
+			negx = (IS_NBIGINT(moo, x))? 1: 0;
+			negy = (IS_NBIGINT(moo, y))? 1: 0;
 
 			sign = bigint_to_oow (moo, y, &shift);
 			if (sign == 0)
@@ -3565,7 +3563,7 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "invalid parameters - %O, %O", x, y);
 	return MOO_NULL;
 }
 
@@ -3870,7 +3868,7 @@ moo_oop_t moo_eqints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "parameters not integer - %O, %O", x, y);
 	return MOO_NULL;
 }
 
@@ -3891,7 +3889,7 @@ moo_oop_t moo_neints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "parameters not integer - %O, %O", x, y);
 	return MOO_NULL;
 }
 
@@ -3904,12 +3902,12 @@ moo_oop_t moo_gtints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	else if (MOO_OOP_IS_SMOOI(x))
 	{
 		if (!is_bigint(moo, y)) goto oops_einval;
-		return (MOO_OBJ_GET_CLASS(y) == moo->_large_negative_integer)? moo->_true: moo->_false;
+		return (IS_NBIGINT(moo, y))? moo->_true: moo->_false;
 	}
 	else if (MOO_OOP_IS_SMOOI(y)) 
 	{
 		if (!is_bigint(moo, x)) goto oops_einval;
-		return (MOO_OBJ_GET_CLASS(x) == moo->_large_positive_integer)? moo->_true: moo->_false;
+		return (IS_PBIGINT(moo, x))? moo->_true: moo->_false;
 	}
 	else 
 	{
@@ -3918,7 +3916,7 @@ moo_oop_t moo_gtints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "parameters not integer - %O, %O", x, y);
 	return MOO_NULL;
 }
 
@@ -3931,12 +3929,12 @@ moo_oop_t moo_geints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	else if (MOO_OOP_IS_SMOOI(x))
 	{
 		if (!is_bigint(moo, y)) goto oops_einval;
-		return (MOO_OBJ_GET_CLASS(y) == moo->_large_negative_integer)? moo->_true: moo->_false;
+		return (IS_NBIGINT(moo, y))? moo->_true: moo->_false;
 	}
 	else if (MOO_OOP_IS_SMOOI(y)) 
 	{
 		if (!is_bigint(moo, x)) goto oops_einval;
-		return (MOO_OBJ_GET_CLASS(x) == moo->_large_positive_integer)? moo->_true: moo->_false;
+		return (IS_PBIGINT(moo, x))? moo->_true: moo->_false;
 	}
 	else 
 	{
@@ -3945,7 +3943,7 @@ moo_oop_t moo_geints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "parameters not integer - %O, %O", x, y);
 	return MOO_NULL;
 }
 
@@ -3958,12 +3956,12 @@ moo_oop_t moo_ltints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	else if (MOO_OOP_IS_SMOOI(x))
 	{
 		if (!is_bigint(moo, y)) goto oops_einval;
-		return (MOO_OBJ_GET_CLASS(y) == moo->_large_positive_integer)? moo->_true: moo->_false;
+		return (IS_PBIGINT(moo, y))? moo->_true: moo->_false;
 	}
 	else if (MOO_OOP_IS_SMOOI(y)) 
 	{
 		if (!is_bigint(moo, x)) goto oops_einval;
-		return (MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer)? moo->_true: moo->_false;
+		return (IS_NBIGINT(moo, x))? moo->_true: moo->_false;
 	}
 	else 
 	{
@@ -3972,7 +3970,7 @@ moo_oop_t moo_ltints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "parameters not integer - %O, %O", x, y);
 	return MOO_NULL;
 }
 
@@ -3985,12 +3983,12 @@ moo_oop_t moo_leints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	else if (MOO_OOP_IS_SMOOI(x))
 	{
 		if (!is_bigint(moo, y)) goto oops_einval;
-		return (MOO_OBJ_GET_CLASS(y) == moo->_large_positive_integer)? moo->_true: moo->_false;
+		return (IS_PBIGINT(moo, y))? moo->_true: moo->_false;
 	}
 	else if (MOO_OOP_IS_SMOOI(y)) 
 	{
 		if (!is_bigint(moo, x)) goto oops_einval;
-		return (MOO_OBJ_GET_CLASS(x) == moo->_large_negative_integer)? moo->_true: moo->_false;
+		return (IS_NBIGINT(moo, x))? moo->_true: moo->_false;
 	}
 	else 
 	{
@@ -3999,7 +3997,7 @@ moo_oop_t moo_leints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 
 oops_einval:
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "parameters not integer - %O, %O", x, y);
 	return MOO_NULL;
 }
 
@@ -4117,7 +4115,7 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 		}
 
 		MOO_ASSERT (moo, xpos >= 1);
-		if (MOO_OBJ_GET_CLASS(num) == moo->_large_negative_integer) xbuf[--xpos] = '-';
+		if (IS_NBIGINT(moo, num)) xbuf[--xpos] = '-';
 
 		return moo_makestring(moo, &xbuf[xpos], xlen - xpos);
 	}
@@ -4222,7 +4220,7 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 	}
 	while (1);
 
-	if (MOO_OBJ_GET_CLASS(num) == moo->_large_negative_integer) xbuf[xlen++] = '-';
+	if (IS_NBIGINT(moo, num)) xbuf[xlen++] = '-';
 	reverse_string (xbuf, xlen);
 
 	return moo_makestring(moo, xbuf, xlen);
