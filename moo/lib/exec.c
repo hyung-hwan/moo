@@ -779,16 +779,16 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	moo_oop_process_t proc;
 	moo_ooi_t count;
-	moo_oop_semaphore_group_t semgrp;
+	moo_oop_semaphore_group_t sg;
 
-	semgrp = sem->group;
-	if ((moo_oop_t)semgrp != moo->_nil)
+	sg = sem->group;
+	if ((moo_oop_t)sg != moo->_nil)
 	{
 		/* the semaphore belongs to a semaphore group */
-		if ((moo_oop_t)semgrp->waiting.first != moo->_nil)
+		if ((moo_oop_t)sg->waiting.first != moo->_nil)
 		{
 			/* there is a process waiting on the process group */
-			proc = semgrp->waiting.first;
+			proc = sg->waiting.first;
 
 			unchain_from_semaphore (moo, proc);
 			resume_process (moo, proc);
@@ -828,12 +828,12 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 		sem->count = MOO_SMOOI_TO_OOP(count);
 
 		MOO_ASSERT (moo, count >= 1);
-		if (count == 1 && (moo_oop_t)semgrp != moo->_nil)
+		if (count == 1 && (moo_oop_t)sg != moo->_nil)
 		{
 			/* move the semaphore from the unsignaled list to the signaled list
 			 * if the semaphore count has changed from 0 to 1 in a group */
-			MOO_DELETE_FROM_OOP_LIST (moo, &semgrp->sems[MOO_SEMAPHORE_GROUP_SEMS_UNSIG], sem, grm);
-			MOO_APPEND_TO_OOP_LIST (moo, &semgrp->sems[MOO_SEMAPHORE_GROUP_SEMS_SIG], moo_oop_semaphore_t, sem, grm);
+			MOO_DELETE_FROM_OOP_LIST (moo, &sg->sems[MOO_SEMAPHORE_GROUP_SEMS_UNSIG], sem, grm);
+			MOO_APPEND_TO_OOP_LIST (moo, &sg->sems[MOO_SEMAPHORE_GROUP_SEMS_SIG], moo_oop_semaphore_t, sem, grm);
 		}
 
 		/* no process has been resumed */
@@ -2329,38 +2329,42 @@ static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_oop_semaphore_group_t rcv;
+	moo_oop_semaphore_group_t sg;
 	moo_oop_semaphore_t sem;
 
-	rcv = (moo_oop_semaphore_group_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)rcv, moo->_semaphore_group)); 
+	sg = (moo_oop_semaphore_group_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sg, moo->_semaphore_group)); 
 
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG (moo, nargs, 0);
 	MOO_PF_CHECK_ARGS (moo, nargs, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
 
 	if ((moo_oop_t)sem->group == moo->_nil)
 	{
+		/* the semaphore doesn't belong to a group */
+
 		int sems_idx;
+
 		sems_idx = MOO_OOP_TO_SMOOI(sem->count) > 0? MOO_SEMAPHORE_GROUP_SEMS_SIG: MOO_SEMAPHORE_GROUP_SEMS_UNSIG;
-		MOO_APPEND_TO_OOP_LIST (moo, &rcv->sems[sems_idx], moo_oop_semaphore_t, sem, grm);
-		sem->group = rcv;
+		MOO_APPEND_TO_OOP_LIST (moo, &sg->sems[sems_idx], moo_oop_semaphore_t, sem, grm);
+		sem->group = sg;
 
 		if ((moo_oop_t)sem->io_index != moo->_nil)
 		{
+			/* this semaphore is associated with I/O operation */
 			moo_ooi_t count;
 
 			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index) && MOO_OOP_TO_SMOOI(sem->io_index) >= 0 && MOO_OOP_TO_SMOOI(sem->io_index) < moo->sem_io_tuple_count);
 
-			count = MOO_OOP_TO_SMOOI(rcv->sem_io_count);
+			count = MOO_OOP_TO_SMOOI(sg->sem_io_count);
 			MOO_ASSERT (moo, count >= 0);
 			count++;
-			rcv->sem_io_count = MOO_SMOOI_TO_OOP(count);
+			sg->sem_io_count = MOO_SMOOI_TO_OOP(count);
 
 			if (count == 1)
 			{
 				moo_oop_process_t wp;
 				/* TODO: add sem_wait_count to process. no traversal... */
-				for (wp = rcv->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
+				for (wp = sg->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
 				{
 					moo->sem_io_wait_count++;
 				}
@@ -2369,7 +2373,7 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
 
 		MOO_STACK_SETRETTORCV (moo, nargs);
 	}
-	else if (sem->group == rcv)
+	else if (sem->group == sg)
 	{
 		/* do nothing. don't change the group of the semaphore */
 		MOO_STACK_SETRETTORCV (moo, nargs);
