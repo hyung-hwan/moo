@@ -79,7 +79,7 @@ static MOO_INLINE __utf8_t* get_utf8_slot (moo_uch_t uc)
 	return MOO_NULL; /* invalid character */
 }
 
-moo_oow_t moo_uctoutf8 (moo_uch_t uc, moo_bch_t* utf8, moo_oow_t size)
+moo_oow_t moo_uc_to_utf8 (moo_uch_t uc, moo_bch_t* utf8, moo_oow_t size)
 {
 	__utf8_t* cur = get_utf8_slot (uc);
 
@@ -106,7 +106,7 @@ moo_oow_t moo_uctoutf8 (moo_uch_t uc, moo_bch_t* utf8, moo_oow_t size)
 	return (moo_oow_t)cur->length;
 }
 
-moo_oow_t moo_utf8touc (const moo_bch_t* utf8, moo_oow_t size, moo_uch_t* uc)
+moo_oow_t moo_utf8_to_uc (const moo_bch_t* utf8, moo_oow_t size, moo_uch_t* uc)
 {
 	__utf8_t* cur, * end;
 

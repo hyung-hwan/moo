@@ -393,7 +393,7 @@ MOO_EXPORT moo_cmgr_t* moo_get_utf8_cmgr (
 );
 
 /**
- * The moo_convutoutf8chars() function converts a unicode character string \a ucs 
+ * The moo_conv_uchars_to_utf8() function converts a unicode character string \a ucs 
  * to a UTF8 string and writes it into the buffer pointed to by \a bcs, but
  * not more than \a bcslen bytes including the terminating null.
  *
@@ -414,14 +414,14 @@ MOO_EXPORT moo_cmgr_t* moo_get_utf8_cmgr (
  *   moo_bch_t bcs[10];
  *   moo_oow_t ucslen = 5;
  *   moo_oow_t bcslen = MOO_COUNTOF(bcs);
- *   n = moo_convutoutf8chars (ucs, &ucslen, bcs, &bcslen);
+ *   n = moo_conv_uchars_to_utf8 (ucs, &ucslen, bcs, &bcslen);
  *   if (n <= -1)
  *   {
  *      // conversion error
  *   }
  * \endcode
  */
-MOO_EXPORT int moo_convutoutf8chars (
+MOO_EXPORT int moo_conv_uchars_to_utf8 (
 	const moo_uch_t*    ucs,
 	moo_oow_t*          ucslen,
 	moo_bch_t*          bcs,
@@ -429,7 +429,7 @@ MOO_EXPORT int moo_convutoutf8chars (
 );
 
 /**
- * The moo_convutf8touchars() function converts a UTF8 string to a uncide string.
+ * The moo_conv_utf8_to_uchars() function converts a UTF8 string to a uncide string.
  *
  * It never returns -2 if \a ucs is #MOO_NULL.
  *
@@ -439,7 +439,7 @@ MOO_EXPORT int moo_convutoutf8chars (
  *  moo_oow_t ucslen = MOO_COUNTOF(buf), n;
  *  moo_oow_t bcslen = 11;
  *  int n;
- *  n = moo_convutf8touchars (bcs, &bcslen, ucs, &ucslen);
+ *  n = moo_conv_utf8_to_uchars (bcs, &bcslen, ucs, &ucslen);
  *  if (n <= -1) { invalid/incomplenete sequence or buffer to small }
  * \endcode
  * 
@@ -452,7 +452,7 @@ MOO_EXPORT int moo_convutoutf8chars (
  *         -2 if the wide-character string buffer is too small.
  *         -3 if \a bcs is not a complete sequence.
  */
-MOO_EXPORT int moo_convutf8touchars (
+MOO_EXPORT int moo_conv_utf8_to_uchars (
 	const moo_bch_t*   bcs,
 	moo_oow_t*         bcslen,
 	moo_uch_t*         ucs,
@@ -460,14 +460,14 @@ MOO_EXPORT int moo_convutf8touchars (
 );
 
 
-MOO_EXPORT int moo_convutoutf8cstr (
+MOO_EXPORT int moo_conv_ucstr_to_utf8 (
 	const moo_uch_t*    ucs,
 	moo_oow_t*          ucslen,
 	moo_bch_t*          bcs,
 	moo_oow_t*          bcslen
 );
 
-MOO_EXPORT int moo_convutf8toucstr (
+MOO_EXPORT int moo_conv_utf8_to_ucstr (
 	const moo_bch_t*   bcs,
 	moo_oow_t*         bcslen,
 	moo_uch_t*         ucs,
@@ -475,13 +475,13 @@ MOO_EXPORT int moo_convutf8toucstr (
 );
 
 
-MOO_EXPORT moo_oow_t moo_uctoutf8 (
+MOO_EXPORT moo_oow_t moo_uc_to_utf8 (
 	moo_uch_t    uc,
 	moo_bch_t*   utf8,
 	moo_oow_t    size
 );
 
-MOO_EXPORT moo_oow_t moo_utf8touc (
+MOO_EXPORT moo_oow_t moo_utf8_to_uc (
 	const moo_bch_t* utf8,
 	moo_oow_t        size,
 	moo_uch_t*       uc
