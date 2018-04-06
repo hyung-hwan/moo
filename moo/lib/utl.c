@@ -327,7 +327,6 @@ moo_bch_t* moo_rfindbchar (const moo_bch_t* ptr, moo_oow_t len, moo_bch_t c)
 	return MOO_NULL;
 }
 
-
 moo_uch_t* moo_finducharinucstr (const moo_uch_t* ptr, moo_uch_t c)
 {
 	while (*ptr != '\0')
@@ -349,6 +348,7 @@ moo_bch_t* moo_findbcharinbcstr (const moo_bch_t* ptr, moo_bch_t c)
 
 	return MOO_NULL;
 }
+
 /* ----------------------------------------------------------------------- */
 
 int moo_concatoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, int id)
@@ -387,10 +387,9 @@ int moo_copyoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, int id)
 	return moo_concatoocstrtosbuf (moo, str, id);
 }
 
-
 /* ----------------------------------------------------------------------- */
 
-static MOO_INLINE int bcsn_to_ucsn_with_cmgr (
+MOO_INLINE int moo_conv_bcsn_to_ucsn_with_cmgr (
 	const moo_bch_t* bcs, moo_oow_t* bcslen,
 	moo_uch_t* ucs, moo_oow_t* ucslen, moo_cmgr_t* cmgr, int all)
 {
@@ -511,7 +510,7 @@ static MOO_INLINE int bcsn_to_ucsn_with_cmgr (
 	return ret;
 }
 
-static MOO_INLINE int bcs_to_ucs_with_cmgr (
+MOO_INLINE int moo_conv_bcs_to_ucs_with_cmgr (
 	const moo_bch_t* bcs, moo_oow_t* bcslen,
 	moo_uch_t* ucs, moo_oow_t* ucslen, moo_cmgr_t* cmgr, int all)
 {
@@ -522,7 +521,7 @@ static MOO_INLINE int bcs_to_ucs_with_cmgr (
 	for (bp = bcs; *bp != '\0'; bp++) /* nothing */ ;
 
 	mlen = bp - bcs; wlen = *ucslen;
-	n = bcsn_to_ucsn_with_cmgr (bcs, &mlen, ucs, &wlen, cmgr, all);
+	n = moo_conv_bcsn_to_ucsn_with_cmgr (bcs, &mlen, ucs, &wlen, cmgr, all);
 	if (ucs)
 	{
 		/* null-terminate the target buffer if it has room for it. */
@@ -534,7 +533,7 @@ static MOO_INLINE int bcs_to_ucs_with_cmgr (
 	return n;
 }
 
-static MOO_INLINE int ucsn_to_bcsn_with_cmgr (
+MOO_INLINE int moo_conv_ucsn_to_bcsn_with_cmgr (
 	const moo_uch_t* ucs, moo_oow_t* ucslen,
 	moo_bch_t* bcs, moo_oow_t* bcslen, moo_cmgr_t* cmgr)
 {
@@ -603,8 +602,7 @@ static MOO_INLINE int ucsn_to_bcsn_with_cmgr (
 	return ret;
 }
 
-
-static int ucs_to_bcs_with_cmgr (
+MOO_INLINE int moo_conv_ucs_to_bcs_with_cmgr (
 	const moo_uch_t* ucs, moo_oow_t* ucslen,
 	moo_bch_t* bcs, moo_oow_t* bcslen, moo_cmgr_t* cmgr)
 {
@@ -701,25 +699,25 @@ moo_cmgr_t* moo_get_utf8_cmgr (void)
 int moo_convutf8touchars (const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
 {
 	/* the source is length bound */
-	return bcsn_to_ucsn_with_cmgr (bcs, bcslen, ucs, ucslen, &utf8_cmgr, 0);
+	return moo_conv_bcsn_to_ucsn_with_cmgr(bcs, bcslen, ucs, ucslen, &utf8_cmgr, 0);
 }
 
 int moo_convutoutf8chars (const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t* bcs, moo_oow_t* bcslen)
 {
 	/* length bound */
-	return ucsn_to_bcsn_with_cmgr (ucs, ucslen, bcs, bcslen, &utf8_cmgr);
+	return moo_conv_ucsn_to_bcsn_with_cmgr(ucs, ucslen, bcs, bcslen, &utf8_cmgr);
 }
 
 int moo_convutf8toucstr (const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
 {
 	/* null-terminated. */
-	return bcs_to_ucs_with_cmgr (bcs, bcslen, ucs, ucslen, &utf8_cmgr, 0);
+	return moo_conv_bcs_to_ucs_with_cmgr(bcs, bcslen, ucs, ucslen, &utf8_cmgr, 0);
 }
 
 int moo_convutoutf8cstr (const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t* bcs, moo_oow_t* bcslen)
 {
 	/* null-terminated */
-	return ucs_to_bcs_with_cmgr (ucs, ucslen, bcs, bcslen, &utf8_cmgr);
+	return moo_conv_ucs_to_bcs_with_cmgr(ucs, ucslen, bcs, bcslen, &utf8_cmgr);
 }
 
 /* ----------------------------------------------------------------------- */
@@ -729,7 +727,7 @@ int moo_convbtouchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_
 	/* length bound */
 	int n;
 
-	n = bcsn_to_ucsn_with_cmgr(bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
+	n = moo_conv_bcsn_to_ucsn_with_cmgr(bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
 
 	if (n <= -1)
 	{
@@ -745,7 +743,7 @@ int moo_convutobchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_
 	/* length bound */
 	int n;
 
-	n = ucsn_to_bcsn_with_cmgr(ucs, ucslen, bcs, bcslen, moo->cmgr);
+	n = moo_conv_ucsn_to_bcsn_with_cmgr(ucs, ucslen, bcs, bcslen, moo->cmgr);
 
 	if (n <= -1)
 	{
@@ -760,7 +758,7 @@ int moo_convbtoucstr (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_u
 	/* null-terminated. */
 	int n;
 
-	n = bcs_to_ucs_with_cmgr(bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
+	n = moo_conv_bcs_to_ucs_with_cmgr(bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
 
 	if (n <= -1)
 	{
@@ -775,7 +773,7 @@ int moo_convutobcstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_b
 	/* null-terminated */
 	int n;
 
-	n = ucs_to_bcs_with_cmgr(ucs, ucslen, bcs, bcslen, moo->cmgr);
+	n = moo_conv_ucs_to_bcs_with_cmgr(ucs, ucslen, bcs, bcslen, moo->cmgr);
 
 	if (n <= -1)
 	{

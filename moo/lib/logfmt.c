@@ -749,8 +749,6 @@ void moo_seterrbfmt (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, ...)
 	moo_fmtout_t fo;
 
 	if (moo->shuterr) return;
-
-	moo->errnum = errnum;
 	moo->errmsg.len = 0;
 
 	fo.mask = 0; /* not used */
@@ -760,6 +758,8 @@ void moo_seterrbfmt (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, ...)
 	va_start (ap, fmt);
 	_errbfmtv (moo, fmt, &fo, ap);
 	va_end (ap);
+
+	moo->errnum = errnum;
 }
 
 void moo_seterrufmt (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, ...)
@@ -768,8 +768,6 @@ void moo_seterrufmt (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, ...)
 	moo_fmtout_t fo;
 
 	if (moo->shuterr) return;
-
-	moo->errnum = errnum;
 	moo->errmsg.len = 0;
 
 	fo.mask = 0; /* not used */
@@ -779,6 +777,8 @@ void moo_seterrufmt (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, ...)
 	va_start (ap, fmt);
 	_errufmtv (moo, fmt, &fo, ap);
 	va_end (ap);
+
+	moo->errnum = errnum;
 }
 
 
@@ -788,7 +788,6 @@ void moo_seterrbfmtv (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, va_
 
 	if (moo->shuterr) return;
 
-	moo->errnum = errnum;
 	moo->errmsg.len = 0;
 
 	fo.mask = 0; /* not used */
@@ -796,6 +795,7 @@ void moo_seterrbfmtv (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, va_
 	fo.putcs = put_errcs;
 
 	_errbfmtv (moo, fmt, &fo, ap);
+	moo->errnum = errnum;
 }
 
 void moo_seterrufmtv (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, va_list ap)
@@ -804,7 +804,6 @@ void moo_seterrufmtv (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, va_
 
 	if (moo->shuterr) return;
 
-	moo->errnum = errnum;
 	moo->errmsg.len = 0;
 
 	fo.mask = 0; /* not used */
@@ -812,4 +811,5 @@ void moo_seterrufmtv (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, va_
 	fo.putcs = put_errcs;
 
 	_errufmtv (moo, fmt, &fo, ap);
+	moo->errnum = errnum;
 }

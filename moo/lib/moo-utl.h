@@ -345,6 +345,49 @@ MOO_EXPORT int moo_concatoocstrtosbuf (
 	int                id
 );
 
+#if defined(MOO_OOCH_IS_UCH)
+#	define moo_conv_oocs_to_bcs_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr) moo_conv_ucs_to_bcs_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr)
+#	define moo_conv_oocsn_to_bcsn_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr) moo_conv_ucsn_to_bcsn_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr)
+#else
+#	define moo_conv_oocs_to_ucs_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr) moo_conv_bcs_to_ucs_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr,0)
+#	define moo_conv_oocsn_to_ucsn_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr) moo_conv_bcsn_to_ucsn_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr,0)
+#endif
+
+
+MOO_EXPORT int moo_conv_bcs_to_ucs_with_cmgr (
+	const moo_bch_t* bcs,
+	moo_oow_t*       bcslen,
+	moo_uch_t*       ucs,
+	moo_oow_t*       ucslen,
+	moo_cmgr_t*      cmgr,
+	int              all
+);
+	
+MOO_EXPORT int moo_conv_bcsn_to_ucsn_with_cmgr (
+	const moo_bch_t* bcs,
+	moo_oow_t*       bcslen,
+	moo_uch_t*       ucs,
+	moo_oow_t*       ucslen,
+	moo_cmgr_t*      cmgr,
+	int              all
+);
+
+MOO_EXPORT int moo_conv_ucs_to_bcs_with_cmgr (
+	const moo_uch_t* ucs,
+	moo_oow_t*       ucslen,
+	moo_bch_t*       bcs,
+	moo_oow_t*       bcslen,
+	moo_cmgr_t*      cmgr
+);	
+
+MOO_EXPORT int moo_conv_ucsn_to_bcsn_with_cmgr (
+	const moo_uch_t* ucs,
+	moo_oow_t*       ucslen,
+	moo_bch_t*       bcs,
+	moo_oow_t*       bcslen,
+	moo_cmgr_t*      cmgr
+);
+
 MOO_EXPORT moo_cmgr_t* moo_get_utf8_cmgr (
 	void
 );
