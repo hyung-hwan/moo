@@ -1310,6 +1310,16 @@ moo_oop_t moo_leints (
 	moo_oop_t y
 );
 
+moo_oop_t moo_sqrtint (
+	moo_t*    moo,
+	moo_oop_t x
+);
+
+moo_oop_t moo_absint (
+	moo_t*    moo,
+	moo_oop_t x
+);
+
 moo_oop_t moo_strtoint (
 	moo_t*            moo,
 	const moo_ooch_t* str,

@@ -4001,6 +4001,116 @@ oops_einval:
 	return MOO_NULL;
 }
 
+moo_oop_t moo_sqrtint (moo_t* moo, moo_oop_t x)
+{
+	/* TODO: find a faster and more efficient algorithm??? */
+	moo_oop_t a, b, m, m2, t;
+	int neg;
+
+	if (!moo_isint(moo, x)) 
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "parameter not integer - %O", x);
+		return MOO_NULL;
+	}
+
+	a = moo->_nil;
+	b = moo->_nil;
+	m = moo->_nil;
+	m2 = moo->_nil;
+
+	moo_pushtmp (moo, &x);
+	moo_pushtmp (moo, &a);
+	moo_pushtmp (moo, &b);
+	moo_pushtmp (moo, &m);
+	moo_pushtmp (moo, &m2);
+
+	a = moo_ltints(moo, x, MOO_SMOOI_TO_OOP(0));
+	if (!a) goto oops;
+	if (a == moo->_true)
+	{
+		/* the given number is a negative number.
+		 * i will arrange the return value to be negative. */
+		x = moo_negateint(moo, x);
+		if (!x) goto oops;
+		neg = 1;
+	}
+	else neg = 0;
+
+	a = MOO_SMOOI_TO_OOP(1);
+	b = moo_bitshiftint(moo, x, MOO_SMOOI_TO_OOP(-5));
+	if (!b) goto oops;
+	b = moo_addints(moo, b, MOO_SMOOI_TO_OOP(8));
+	if (!b) goto oops;
+
+	while (1)
+	{
+		t = moo_geints(moo, b, a);
+		if (!t) return MOO_NULL;
+		if (t == moo->_false) break;
+
+		m = moo_addints(moo, a, b);
+		if (!m) goto oops;
+		m = moo_bitshiftint(moo, m, MOO_SMOOI_TO_OOP(-1));
+		if (!m) goto oops;
+		m2 = moo_mulints(moo, m, m);
+		if (!m2) goto oops;
+		t = moo_gtints(moo, m2, x);
+		if (!t) return MOO_NULL;
+		if (t == moo->_true)
+		{
+			b = moo_subints(moo, m, MOO_SMOOI_TO_OOP(1));
+			if (!b) goto oops;
+		}
+		else
+		{
+			a = moo_addints(moo, m, MOO_SMOOI_TO_OOP(1));
+			if (!a) goto oops;
+		}
+	}
+
+	moo_poptmps (moo, 5);
+	x = moo_subints(moo, a, MOO_SMOOI_TO_OOP(1));
+	if (!x) return MOO_NULL;
+
+	if (neg) x = moo_negateint(moo, x);
+	return x;
+
+oops:
+	moo_poptmps (moo, 5);
+	return MOO_NULL;
+}
+
+
+moo_oop_t moo_absint (moo_t* moo, moo_oop_t x)
+{
+	if (MOO_OOP_IS_SMOOI(x))
+	{
+		moo_ooi_t v;
+		v = MOO_OOP_TO_SMOOI(x);
+		if (v < 0) 
+		{
+			v = -v;
+			x = MOO_SMOOI_TO_OOP(v);
+		}
+	}
+	else if (IS_NBIGINT(moo, x))
+	{
+		x = _clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x), moo->_large_positive_integer);
+	}
+	else if (IS_PBIGINT(moo, x))
+	{
+		/* do nothing. return x without change.
+		 * [THINK] but do i need to clone a positive bigint? */
+	}
+	else
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "parameter not integer - %O", x);
+		return MOO_NULL;
+	}
+
+	return x;
+}
+
 moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 {
 	moo_ooi_t v = 0;

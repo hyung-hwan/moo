@@ -1625,12 +1625,6 @@ typedef struct moo_synerr_t moo_synerr_t;
 extern "C" {
 #endif
 
-#if defined(MOO_HAVE_INLINE)
-	static MOO_INLINE void moo_switchprocess(moo_t* moo) { moo->switch_proc = 1; }
-#else
-#	define moo_switchprocess(moo) ((moo)->switch_proc = 1)
-#endif
-
 MOO_EXPORT moo_t* moo_open (
 	moo_mmgr_t*         mmgr,
 	moo_oow_t           xtnsize,
@@ -1819,6 +1813,13 @@ MOO_EXPORT int moo_invoke (
 MOO_EXPORT void moo_abort (
 	moo_t* moo
 );
+
+
+#if defined(MOO_HAVE_INLINE)
+	static MOO_INLINE void moo_switchprocess(moo_t* moo) { moo->switch_proc = 1; }
+#else
+#	define moo_switchprocess(moo) ((moo)->switch_proc = 1)
+#endif
 
 /* =========================================================================
  * COMMON OBJECT MANAGEMENT FUNCTIONS
