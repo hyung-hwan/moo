@@ -327,7 +327,7 @@ const moo_ooch_t* moo_geterrmsg (moo_t* moo)
 
 const moo_ooch_t* moo_backuperrmsg (moo_t* moo)
 {
-	moo_copyoocstr (moo->errmsg.tmpbuf.ooch, MOO_COUNTOF(moo->errmsg.tmpbuf.ooch), moo_geterrmsg(moo));
+	moo_copy_oocstr (moo->errmsg.tmpbuf.ooch, MOO_COUNTOF(moo->errmsg.tmpbuf.ooch), moo_geterrmsg(moo));
 	return moo->errmsg.tmpbuf.ooch;
 }
 

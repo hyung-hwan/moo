@@ -35,7 +35,7 @@
  *  utobcstr -> ucstr to bcstr
  */
 
-moo_oow_t moo_hashbytes (const moo_oob_t* ptr, moo_oow_t len)
+moo_oow_t moo_hash_bytes (const moo_oob_t* ptr, moo_oow_t len)
 {
 	moo_oow_t h = 0;
 	const moo_uint8_t* bp, * be;
@@ -48,7 +48,7 @@ moo_oow_t moo_hashbytes (const moo_oob_t* ptr, moo_oow_t len)
 	return h % ((moo_oow_t)MOO_SMOOI_MAX + 1);
 }
 
-int moo_equaluchars (const moo_uch_t* str1, const moo_uch_t* str2, moo_oow_t len)
+int moo_equal_uchars (const moo_uch_t* str1, const moo_uch_t* str2, moo_oow_t len)
 {
 	moo_oow_t i;
 
@@ -63,7 +63,7 @@ int moo_equaluchars (const moo_uch_t* str1, const moo_uch_t* str2, moo_oow_t len
 	return 1;
 }
 
-int moo_equalbchars (const moo_bch_t* str1, const moo_bch_t* str2, moo_oow_t len)
+int moo_equal_bchars (const moo_bch_t* str1, const moo_bch_t* str2, moo_oow_t len)
 {
 	moo_oow_t i;
 
@@ -78,7 +78,7 @@ int moo_equalbchars (const moo_bch_t* str1, const moo_bch_t* str2, moo_oow_t len
 	return 1;
 }
 
-int moo_compuchars (const moo_uch_t* str1, moo_oow_t len1, const moo_uch_t* str2, moo_oow_t len2)
+int moo_comp_uchars (const moo_uch_t* str1, moo_oow_t len1, const moo_uch_t* str2, moo_oow_t len2)
 {
 	moo_uchu_t c1, c2;
 	const moo_uch_t* end1 = str1 + len1;
@@ -100,7 +100,7 @@ int moo_compuchars (const moo_uch_t* str1, moo_oow_t len1, const moo_uch_t* str2
 	return (str2 < end2)? -1: 0;
 }
 
-int moo_compbchars (const moo_bch_t* str1, moo_oow_t len1, const moo_bch_t* str2, moo_oow_t len2)
+int moo_comp_bchars (const moo_bch_t* str1, moo_oow_t len1, const moo_bch_t* str2, moo_oow_t len2)
 {
 	moo_bchu_t c1, c2;
 	const moo_bch_t* end1 = str1 + len1;
@@ -122,7 +122,7 @@ int moo_compbchars (const moo_bch_t* str1, moo_oow_t len1, const moo_bch_t* str2
 	return (str2 < end2)? -1: 0;
 }
 
-int moo_compucstr (const moo_uch_t* str1, const moo_uch_t* str2)
+int moo_comp_ucstr (const moo_uch_t* str1, const moo_uch_t* str2)
 {
 	while (*str1 == *str2)
 	{
@@ -133,7 +133,7 @@ int moo_compucstr (const moo_uch_t* str1, const moo_uch_t* str2)
 	return ((moo_uchu_t)*str1 > (moo_uchu_t)*str2)? 1: -1;
 }
 
-int moo_compbcstr (const moo_bch_t* str1, const moo_bch_t* str2)
+int moo_comp_bcstr (const moo_bch_t* str1, const moo_bch_t* str2)
 {
 	while (*str1 == *str2)
 	{
@@ -144,7 +144,7 @@ int moo_compbcstr (const moo_bch_t* str1, const moo_bch_t* str2)
 	return ((moo_bchu_t)*str1 > (moo_bchu_t)*str2)? 1: -1;
 }
 
-int moo_compucbcstr (const moo_uch_t* str1, const moo_bch_t* str2)
+int moo_comp_ucstr_bcstr (const moo_uch_t* str1, const moo_bch_t* str2)
 {
 	while (*str1 == *str2)
 	{
@@ -155,7 +155,7 @@ int moo_compucbcstr (const moo_uch_t* str1, const moo_bch_t* str2)
 	return ((moo_uchu_t)*str1 > (moo_bchu_t)*str2)? 1: -1;
 }
 
-int moo_compucharsucstr (const moo_uch_t* str1, moo_oow_t len, const moo_uch_t* str2)
+int moo_comp_uchars_ucstr (const moo_uch_t* str1, moo_oow_t len, const moo_uch_t* str2)
 {
 	/* for "abc\0" of length 4 vs "abc", the fourth character
 	 * of the first string is equal to the terminating null of
@@ -170,7 +170,7 @@ int moo_compucharsucstr (const moo_uch_t* str1, moo_oow_t len, const moo_uch_t* 
 	return (str1 < end)? 1: (*str2 == '\0'? 0: -1);
 }
 
-int moo_compucharsbcstr (const moo_uch_t* str1, moo_oow_t len, const moo_bch_t* str2)
+int moo_comp_uchars_bcstr (const moo_uch_t* str1, moo_oow_t len, const moo_bch_t* str2)
 {
 	const moo_uch_t* end = str1 + len;
 	while (str1 < end && *str2 != '\0') 
@@ -181,7 +181,7 @@ int moo_compucharsbcstr (const moo_uch_t* str1, moo_oow_t len, const moo_bch_t* 
 	return (str1 < end)? 1: (*str2 == '\0'? 0: -1);
 }
 
-int moo_compbcharsbcstr (const moo_bch_t* str1, moo_oow_t len, const moo_bch_t* str2)
+int moo_comp_bchars_bcstr (const moo_bch_t* str1, moo_oow_t len, const moo_bch_t* str2)
 {
 	const moo_bch_t* end = str1 + len;
 	while (str1 < end && *str2 != '\0') 
@@ -192,7 +192,7 @@ int moo_compbcharsbcstr (const moo_bch_t* str1, moo_oow_t len, const moo_bch_t* 
 	return (str1 < end)? 1: (*str2 == '\0'? 0: -1);
 }
 
-int moo_compbcharsucstr (const moo_bch_t* str1, moo_oow_t len, const moo_uch_t* str2)
+int moo_comp_bchars_ucstr (const moo_bch_t* str1, moo_oow_t len, const moo_uch_t* str2)
 {
 	const moo_bch_t* end = str1 + len;
 	while (str1 < end && *str2 != '\0') 
@@ -203,21 +203,21 @@ int moo_compbcharsucstr (const moo_bch_t* str1, moo_oow_t len, const moo_uch_t* 
 	return (str1 < end)? 1: (*str2 == '\0'? 0: -1);
 }
 
-void moo_copyuchars (moo_uch_t* dst, const moo_uch_t* src, moo_oow_t len)
+void moo_copy_uchars (moo_uch_t* dst, const moo_uch_t* src, moo_oow_t len)
 {
 	/* take note of no forced null termination */
 	moo_oow_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
-void moo_copybchars (moo_bch_t* dst, const moo_bch_t* src, moo_oow_t len)
+void moo_copy_bchars (moo_bch_t* dst, const moo_bch_t* src, moo_oow_t len)
 {
 	/* take note of no forced null termination */
 	moo_oow_t i;
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
-void moo_copybtouchars (moo_uch_t* dst, const moo_bch_t* src, moo_oow_t len)
+void moo_copy_bchars_to_uchars (moo_uch_t* dst, const moo_bch_t* src, moo_oow_t len)
 {
 	/* copy without conversions.
 	 * use moo_bctouchars() for conversion encoding */
@@ -225,7 +225,7 @@ void moo_copybtouchars (moo_uch_t* dst, const moo_bch_t* src, moo_oow_t len)
 	for (i = 0; i < len; i++) dst[i] = src[i];
 }
 
-moo_oow_t moo_copyucstr (moo_uch_t* dst, moo_oow_t len, const moo_uch_t* src)
+moo_oow_t moo_copy_ucstr (moo_uch_t* dst, moo_oow_t len, const moo_uch_t* src)
 {
 	moo_uch_t* p, * p2;
 
@@ -241,7 +241,7 @@ moo_oow_t moo_copyucstr (moo_uch_t* dst, moo_oow_t len, const moo_uch_t* src)
 	return p - dst;
 }
 
-moo_oow_t moo_copybcstr (moo_bch_t* dst, moo_oow_t len, const moo_bch_t* src)
+moo_oow_t moo_copy_bcstr (moo_bch_t* dst, moo_oow_t len, const moo_bch_t* src)
 {
 	moo_bch_t* p, * p2;
 
@@ -257,21 +257,21 @@ moo_oow_t moo_copybcstr (moo_bch_t* dst, moo_oow_t len, const moo_bch_t* src)
 	return p - dst;
 }
 
-moo_oow_t moo_countucstr (const moo_uch_t* str)
+moo_oow_t moo_count_ucstr (const moo_uch_t* str)
 {
 	const moo_uch_t* ptr = str;
 	while (*ptr != '\0') ptr++;
 	return ptr - str;
 }
 
-moo_oow_t moo_countbcstr (const moo_bch_t* str)
+moo_oow_t moo_count_bcstr (const moo_bch_t* str)
 {
 	const moo_bch_t* ptr = str;
 	while (*ptr != '\0') ptr++;
 	return ptr - str;
 }
 
-moo_uch_t* moo_finduchar (const moo_uch_t* ptr, moo_oow_t len, moo_uch_t c)
+moo_uch_t* moo_find_uchar (const moo_uch_t* ptr, moo_oow_t len, moo_uch_t c)
 {
 	const moo_uch_t* end;
 
@@ -285,7 +285,7 @@ moo_uch_t* moo_finduchar (const moo_uch_t* ptr, moo_oow_t len, moo_uch_t c)
 	return MOO_NULL;
 }
 
-moo_bch_t* moo_findbchar (const moo_bch_t* ptr, moo_oow_t len, moo_bch_t c)
+moo_bch_t* moo_find_bchar (const moo_bch_t* ptr, moo_oow_t len, moo_bch_t c)
 {
 	const moo_bch_t* end;
 
@@ -299,7 +299,7 @@ moo_bch_t* moo_findbchar (const moo_bch_t* ptr, moo_oow_t len, moo_bch_t c)
 	return MOO_NULL;
 }
 
-moo_uch_t* moo_rfinduchar (const moo_uch_t* ptr, moo_oow_t len, moo_uch_t c)
+moo_uch_t* moo_rfind_uchar (const moo_uch_t* ptr, moo_oow_t len, moo_uch_t c)
 {
 	const moo_uch_t* cur;
 
@@ -313,7 +313,7 @@ moo_uch_t* moo_rfinduchar (const moo_uch_t* ptr, moo_oow_t len, moo_uch_t c)
 	return MOO_NULL;
 }
 
-moo_bch_t* moo_rfindbchar (const moo_bch_t* ptr, moo_oow_t len, moo_bch_t c)
+moo_bch_t* moo_rfind_bchar (const moo_bch_t* ptr, moo_oow_t len, moo_bch_t c)
 {
 	const moo_bch_t* cur;
 
@@ -327,7 +327,7 @@ moo_bch_t* moo_rfindbchar (const moo_bch_t* ptr, moo_oow_t len, moo_bch_t c)
 	return MOO_NULL;
 }
 
-moo_uch_t* moo_finducharinucstr (const moo_uch_t* ptr, moo_uch_t c)
+moo_uch_t* moo_find_uchar_in_ucstr (const moo_uch_t* ptr, moo_uch_t c)
 {
 	while (*ptr != '\0')
 	{
@@ -338,7 +338,7 @@ moo_uch_t* moo_finducharinucstr (const moo_uch_t* ptr, moo_uch_t c)
 	return MOO_NULL;
 }
 
-moo_bch_t* moo_findbcharinbcstr (const moo_bch_t* ptr, moo_bch_t c)
+moo_bch_t* moo_find_bchar_in_bcstr (const moo_bch_t* ptr, moo_bch_t c)
 {
 	while (*ptr != '\0')
 	{
@@ -357,7 +357,7 @@ int moo_concatoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, int id)
 	moo_oow_t len;
 
 	p = &moo->sbuf[id];
-	len = moo_countoocstr (str);
+	len = moo_count_oocstr (str);
 
 	if (len > p->capa - p->len)
 	{
@@ -374,7 +374,7 @@ int moo_concatoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, int id)
 		p->capa = newcapa;
 	}
 
-	moo_copyoochars (&p->ptr[p->len], str, len);
+	moo_copy_oochars (&p->ptr[p->len], str, len);
 	p->len += len;
 	p->ptr[p->len] = '\0';
 
@@ -389,7 +389,7 @@ int moo_copyoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, int id)
 
 /* ----------------------------------------------------------------------- */
 
-MOO_INLINE int moo_conv_bcsn_to_ucsn_with_cmgr (
+MOO_INLINE int moo_conv_bchars_to_uchars_with_cmgr (
 	const moo_bch_t* bcs, moo_oow_t* bcslen,
 	moo_uch_t* ucs, moo_oow_t* ucslen, moo_cmgr_t* cmgr, int all)
 {
@@ -521,7 +521,7 @@ MOO_INLINE int moo_conv_bcs_to_ucs_with_cmgr (
 	for (bp = bcs; *bp != '\0'; bp++) /* nothing */ ;
 
 	mlen = bp - bcs; wlen = *ucslen;
-	n = moo_conv_bcsn_to_ucsn_with_cmgr (bcs, &mlen, ucs, &wlen, cmgr, all);
+	n = moo_conv_bchars_to_uchars_with_cmgr (bcs, &mlen, ucs, &wlen, cmgr, all);
 	if (ucs)
 	{
 		/* null-terminate the target buffer if it has room for it. */
@@ -533,7 +533,7 @@ MOO_INLINE int moo_conv_bcs_to_ucs_with_cmgr (
 	return n;
 }
 
-MOO_INLINE int moo_conv_ucsn_to_bcsn_with_cmgr (
+MOO_INLINE int moo_conv_uchars_to_bchars_with_cmgr (
 	const moo_uch_t* ucs, moo_oow_t* ucslen,
 	moo_bch_t* bcs, moo_oow_t* bcslen, moo_cmgr_t* cmgr)
 {
@@ -699,13 +699,13 @@ moo_cmgr_t* moo_get_utf8_cmgr (void)
 int moo_conv_utf8_to_uchars (const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
 {
 	/* the source is length bound */
-	return moo_conv_bcsn_to_ucsn_with_cmgr(bcs, bcslen, ucs, ucslen, &utf8_cmgr, 0);
+	return moo_conv_bchars_to_uchars_with_cmgr(bcs, bcslen, ucs, ucslen, &utf8_cmgr, 0);
 }
 
 int moo_conv_uchars_to_utf8 (const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t* bcs, moo_oow_t* bcslen)
 {
 	/* length bound */
-	return moo_conv_ucsn_to_bcsn_with_cmgr(ucs, ucslen, bcs, bcslen, &utf8_cmgr);
+	return moo_conv_uchars_to_bchars_with_cmgr(ucs, ucslen, bcs, bcslen, &utf8_cmgr);
 }
 
 int moo_conv_utf8_to_ucstr (const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
@@ -727,7 +727,7 @@ int moo_convbtouchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_
 	/* length bound */
 	int n;
 
-	n = moo_conv_bcsn_to_ucsn_with_cmgr(bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
+	n = moo_conv_bchars_to_uchars_with_cmgr(bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
 
 	if (n <= -1)
 	{
@@ -743,7 +743,7 @@ int moo_convutobchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_
 	/* length bound */
 	int n;
 
-	n = moo_conv_ucsn_to_bcsn_with_cmgr(ucs, ucslen, bcs, bcslen, moo->cmgr);
+	n = moo_conv_uchars_to_bchars_with_cmgr(ucs, ucslen, bcs, bcslen, moo->cmgr);
 
 	if (n <= -1)
 	{
@@ -910,7 +910,7 @@ moo_uch_t* moo_dupuchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t ucslen)
 	ptr = (moo_uch_t*)moo_allocmem(moo, (ucslen + 1) * MOO_SIZEOF(moo_uch_t));
 	if (!ptr) return MOO_NULL;
 
-	moo_copyuchars (ptr, ucs, ucslen);
+	moo_copy_uchars (ptr, ucs, ucslen);
 	ptr[ucslen] = '\0';
 	return ptr;
 }
@@ -922,7 +922,7 @@ moo_bch_t* moo_dupbchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t bcslen)
 	ptr = (moo_bch_t*)moo_allocmem(moo, (bcslen + 1) * MOO_SIZEOF(moo_bch_t));
 	if (!ptr) return MOO_NULL;
 
-	moo_copybchars (ptr, bcs, bcslen);
+	moo_copy_bchars (ptr, bcs, bcslen);
 	ptr[bcslen] = '\0';
 	return ptr;
 }

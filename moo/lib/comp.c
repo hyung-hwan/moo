@@ -348,7 +348,7 @@ static MOO_INLINE int is_closing_char (moo_ooci_t c)
 static MOO_INLINE int is_word (const moo_oocs_t* oocs, voca_id_t id)
 {
 	return oocs->len == vocas[id].len && 
-	       moo_equaloochars(oocs->ptr, vocas[id].str, vocas[id].len);
+	       moo_equal_oochars(oocs->ptr, vocas[id].str, vocas[id].len);
 }
 
 static int is_reserved_word (const moo_oocs_t* ucs)
@@ -444,7 +444,7 @@ static int copy_string_to (moo_t* moo, const moo_oocs_t* src, moo_oocs_t* dst, m
 	}
 
 	if (append && delim_char != '\0') dst->ptr[pos++] = delim_char;
-	moo_copyoochars (&dst->ptr[pos], src->ptr, src->len);
+	moo_copy_oochars (&dst->ptr[pos], src->ptr, src->len);
 	dst->len = len;
 	return 0;
 }
@@ -758,7 +758,7 @@ static int add_to_oow_pool (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t v)
 static MOO_INLINE int does_token_name_match (moo_t* moo, voca_id_t id)
 {
 	return TOKEN_NAME_LEN(moo) == vocas[id].len &&
-	       moo_equaloochars(TOKEN_NAME_PTR(moo), vocas[id].str, vocas[id].len);
+	       moo_equal_oochars(TOKEN_NAME_PTR(moo), vocas[id].str, vocas[id].len);
 }
 
 static MOO_INLINE int is_token_symbol (moo_t* moo, voca_id_t id)
@@ -1970,7 +1970,7 @@ static const moo_ooch_t* add_io_name (moo_t* moo, const moo_oocs_t* name)
 
 	ptr = (moo_ooch_t*)(link + 1);
 
-	moo_copyoochars (ptr, name->ptr, name->len);
+	moo_copy_oochars (ptr, name->ptr, name->len);
 	ptr[name->len] = '\0';
 
 	link->link = moo->c->io_names;
@@ -2597,7 +2597,7 @@ static int add_string_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* ind
 
 		if (MOO_CLASSOF(moo, lit) == moo->_string && 
 		    MOO_OBJ_GET_SIZE(lit) == str->len &&
-		    moo_equaloochars(((moo_oop_char_t)lit)->slot, str->ptr, str->len)) 
+		    moo_equal_oochars(((moo_oop_char_t)lit)->slot, str->ptr, str->len)) 
 		{
 			*index = i;
 			return 0;
@@ -3041,7 +3041,7 @@ static int preprocess_dotted_name (moo_t* moo, int flags, moo_oop_nsdic_t topdic
 	{
 		seg.ptr = (moo_ooch_t*)ptr;
 
-		dot = moo_findoochar (ptr, len, '.');
+		dot = moo_find_oochar (ptr, len, '.');
 		if (dot)
 		{
 			if (pooldic_gotten) goto wrong_name;
@@ -3858,7 +3858,7 @@ static int compile_method_pragma (moo_t* moo)
 					 * check if it is a primitive function identifier */
 					moo_oow_t lit_idx;
 
-					if (!moo_rfindoochar (tptr, tlen, '.'))
+					if (!moo_rfind_oochar (tptr, tlen, '.'))
 					{
 						/* wrong primitive function identifier */
 						moo_setsynerr (moo, MOO_SYNERR_PFIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -3999,7 +3999,7 @@ static int validate_class_level_variable (moo_t* moo, var_info_t* var, const moo
 static moo_oow_t is_dotted_ident_prefixed (const moo_oocs_t* name, int voca_id)
 {
 	if (name->len > vocas[voca_id].len &&
-	    moo_equaloochars(name->ptr, vocas[voca_id].str, vocas[voca_id].len) &&
+	    moo_equal_oochars(name->ptr, vocas[voca_id].str, vocas[voca_id].len) &&
 	    name->ptr[vocas[voca_id].len] == '.') return vocas[voca_id].len;
 
 	return 0;
@@ -4031,7 +4031,7 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 	{
 		/* the first word in the dotted notation is self */
 
-		if (!moo_findoochar (name->ptr + pxlen + 1, name->len - pxlen - 1, '.'))
+		if (!moo_find_oochar (name->ptr + pxlen + 1, name->len - pxlen - 1, '.'))
 		{
 			/* the dotted name is composed of 2 segments only */
 			last.ptr = name->ptr + pxlen + 1;
@@ -7475,7 +7475,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 			if (TOKEN_NAME_LEN(moo) <= 0 || 
 			    TOKEN_NAME_LEN(moo) > MOO_MOD_NAME_LEN_MAX ||
-			    moo_findoochar(TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo), '-') )
+			    moo_find_oochar(TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo), '-') )
 			{
 				/* check for a bad module name. 
 				 * also disallow a dash in the name - i like converting
@@ -7880,7 +7880,7 @@ static moo_oop_t find_element_in_compiling_pooldic (moo_t* moo, const moo_oocs_t
 		s = (moo_oop_char_t)moo->c->arlit.ptr[i];
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,s) == moo->_symbol);
 		if (MOO_OBJ_GET_SIZE(s) == name->len &&
-		    moo_equaloochars (name->ptr, MOO_OBJ_GET_CHAR_SLOT(s), name->len))
+		    moo_equal_oochars (name->ptr, MOO_OBJ_GET_CHAR_SLOT(s), name->len))
 		{
 			return moo->c->arlit.ptr[i + 1];
 		}

@@ -120,7 +120,7 @@
 extern "C" {
 #endif
 
-MOO_EXPORT moo_oow_t moo_hashbytes (
+MOO_EXPORT moo_oow_t moo_hash_bytes (
 	const moo_oob_t* ptr,
 	moo_oow_t        len
 );
@@ -128,28 +128,28 @@ MOO_EXPORT moo_oow_t moo_hashbytes (
 #if defined(MOO_HAVE_INLINE)
 	static MOO_INLINE moo_oow_t moo_hashbchars (const moo_bch_t* ptr, moo_oow_t len)
 	{
-		return moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_bch_t));
+		return moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_bch_t));
 	}
 
 	static MOO_INLINE moo_oow_t moo_hashuchars (const moo_uch_t* ptr, moo_oow_t len)
 	{
-		return moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_uch_t));
+		return moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_uch_t));
 	}
 
 	static MOO_INLINE moo_oow_t moo_hashwords (const moo_oow_t* ptr, moo_oow_t len)
 	{
-		return moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oow_t));
+		return moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oow_t));
 	}
 
 	static MOO_INLINE moo_oow_t moo_hashhalfwords (const moo_oohw_t* ptr, moo_oow_t len)
 	{
-		return moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oohw_t));
+		return moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oohw_t));
 	}
 #else
-#	define moo_hashbchars(ptr,len)    moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_bch_t))
-#	define moo_hashuchars(ptr,len)    moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_uch_t))
-#	define moo_hashwords(ptr,len)     moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oow_t))
-#	define moo_hashhalfwords(ptr,len) moo_hashbytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oohw_t))
+#	define moo_hashbchars(ptr,len)    moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_bch_t))
+#	define moo_hashuchars(ptr,len)    moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_uch_t))
+#	define moo_hashwords(ptr,len)     moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oow_t))
+#	define moo_hashhalfwords(ptr,len) moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oohw_t))
 #endif
 
 #if defined(MOO_OOCH_IS_UCH)
@@ -159,176 +159,176 @@ MOO_EXPORT moo_oow_t moo_hashbytes (
 #endif
 
 /**
- * The moo_equaluchars() function determines equality of two strings
+ * The moo_equal_uchars() function determines equality of two strings
  * of the same length \a len.
  */
-MOO_EXPORT int moo_equaluchars (
+MOO_EXPORT int moo_equal_uchars (
 	const moo_uch_t* str1,
 	const moo_uch_t* str2,
 	moo_oow_t        len
 );
 
-MOO_EXPORT int moo_equalbchars (
+MOO_EXPORT int moo_equal_bchars (
 	const moo_bch_t* str1,
 	const moo_bch_t* str2,
 	moo_oow_t        len
 );
 
-MOO_EXPORT int moo_compuchars (
+MOO_EXPORT int moo_comp_uchars (
 	const moo_uch_t* str1,
 	moo_oow_t        len1,
 	const moo_uch_t* str2,
 	moo_oow_t        len2
 );
 
-MOO_EXPORT int moo_compbchars (
+MOO_EXPORT int moo_comp_bchars (
 	const moo_bch_t* str1,
 	moo_oow_t        len1,
 	const moo_bch_t* str2,
 	moo_oow_t        len2
 );
 
-MOO_EXPORT int moo_compucstr (
+MOO_EXPORT int moo_comp_ucstr (
 	const moo_uch_t* str1,
 	const moo_uch_t* str2
 );
 
-MOO_EXPORT int moo_compbcstr (
+MOO_EXPORT int moo_comp_bcstr (
 	const moo_bch_t* str1,
 	const moo_bch_t* str2
 );
 
-MOO_EXPORT int moo_compucbcstr (
+MOO_EXPORT int moo_comp_ucstr_bcstr (
 	const moo_uch_t* str1,
 	const moo_bch_t* str2
 );
 
-MOO_EXPORT int moo_compucharsucstr (
+MOO_EXPORT int moo_comp_uchars_ucstr (
 	const moo_uch_t* str1,
 	moo_oow_t        len,
 	const moo_uch_t* str2
 );
 
-MOO_EXPORT int moo_compucharsbcstr (
+MOO_EXPORT int moo_comp_uchars_bcstr (
 	const moo_uch_t* str1,
 	moo_oow_t        len,
 	const moo_bch_t* str2
 );
 
-MOO_EXPORT int moo_compbcharsbcstr (
+MOO_EXPORT int moo_comp_bchars_bcstr (
 	const moo_bch_t* str1,
 	moo_oow_t        len,
 	const moo_bch_t* str2
 );
 
-MOO_EXPORT int moo_compbcharsucstr (
+MOO_EXPORT int moo_comp_bchars_ucstr (
 	const moo_bch_t* str1,
 	moo_oow_t        len,
 	const moo_uch_t* str2
 );
 
-MOO_EXPORT void moo_copyuchars (
+MOO_EXPORT void moo_copy_uchars (
 	moo_uch_t*       dst,
 	const moo_uch_t* src,
 	moo_oow_t        len
 );
 
-MOO_EXPORT void moo_copybchars (
+MOO_EXPORT void moo_copy_bchars (
 	moo_bch_t*       dst,
 	const moo_bch_t* src,
 	moo_oow_t        len
 );
 
-MOO_EXPORT void moo_copybtouchars (
+MOO_EXPORT void moo_copy_bchars_to_uchars (
 	moo_uch_t*       dst,
 	const moo_bch_t* src,
 	moo_oow_t        len
 );
 
-MOO_EXPORT moo_oow_t moo_copyucstr (
+MOO_EXPORT moo_oow_t moo_copy_ucstr (
 	moo_uch_t*       dst,
 	moo_oow_t        len,
 	const moo_uch_t* src
 );
 
-MOO_EXPORT moo_oow_t moo_copybcstr (
+MOO_EXPORT moo_oow_t moo_copy_bcstr (
 	moo_bch_t*       dst,
 	moo_oow_t        len,
 	const moo_bch_t* src
 );
 
-MOO_EXPORT moo_uch_t* moo_finduchar (
+MOO_EXPORT moo_uch_t* moo_find_uchar (
 	const moo_uch_t* ptr,
 	moo_oow_t        len,
 	moo_uch_t        c
 );
 
-MOO_EXPORT moo_bch_t* moo_findbchar (
+MOO_EXPORT moo_bch_t* moo_find_bchar (
 	const moo_bch_t* ptr,
 	moo_oow_t        len,
 	moo_bch_t        c
 );
 
-MOO_EXPORT moo_uch_t* moo_rfinduchar (
+MOO_EXPORT moo_uch_t* moo_rfind_uchar (
 	const moo_uch_t* ptr,
 	moo_oow_t        len,
 	moo_uch_t        c
 );
 
-MOO_EXPORT moo_bch_t* moo_rfindbchar (
+MOO_EXPORT moo_bch_t* moo_rfind_bchar (
 	const moo_bch_t* ptr,
 	moo_oow_t        len,
 	moo_bch_t        c
 );
 
-MOO_EXPORT moo_uch_t* moo_finducharinucstr (
+MOO_EXPORT moo_uch_t* moo_find_uchar_in_ucstr (
 	const moo_uch_t* ptr,
 	moo_uch_t        c
 );
 
-MOO_EXPORT moo_bch_t* moo_findbcharinbcstr (
+MOO_EXPORT moo_bch_t* moo_find_bchar_in_bcstr (
 	const moo_bch_t* ptr,
 	moo_bch_t        c
 );
 
-MOO_EXPORT moo_oow_t moo_countucstr (
+MOO_EXPORT moo_oow_t moo_count_ucstr (
 	const moo_uch_t* str
 );
 
-MOO_EXPORT moo_oow_t moo_countbcstr (
+MOO_EXPORT moo_oow_t moo_count_bcstr (
 	const moo_bch_t* str
 );
 
 #if defined(MOO_OOCH_IS_UCH)
-#	define moo_equaloochars(str1,str2,len) moo_equaluchars(str1,str2,len)
-#	define moo_compoochars(str1,len1,str2,len2) moo_compuchars(str1,len1,str2,len2)
-#	define moo_compoocbcstr(str1,str2) moo_compucbcstr(str1,str2)
-#	define moo_compoocharsbcstr(str1,len1,str2) moo_compucharsbcstr(str1,len1,str2)
-#	define moo_compoocharsucstr(str1,len1,str2) moo_compucharsucstr(str1,len1,str2)
-#	define moo_compoocharsoocstr(str1,len1,str2) moo_compucharsucstr(str1,len1,str2)
-#	define moo_compoocstr(str1,str2) moo_compucstr(str1,str2)
-#	define moo_copyoochars(dst,src,len) moo_copyuchars(dst,src,len)
-#	define moo_copybctooochars(dst,src,len) moo_copybtouchars(dst,src,len)
-#	define moo_copyoocstr(dst,len,src) moo_copyucstr(dst,len,src)
-#	define moo_findoochar(ptr,len,c) moo_finduchar(ptr,len,c)
-#	define moo_rfindoochar(ptr,len,c) moo_rfinduchar(ptr,len,c)
-#	define moo_findoocharinoocstr(ptr,c) moo_finducharinucstr(ptr,c)
-#	define moo_countoocstr(str) moo_countucstr(str)
+#	define moo_equal_oochars(str1,str2,len) moo_equal_uchars(str1,str2,len)
+#	define moo_comp_oochars(str1,len1,str2,len2) moo_comp_uchars(str1,len1,str2,len2)
+#	define moo_comp_oocstr_bcstr(str1,str2) moo_comp_ucstr_bcstr(str1,str2)
+#	define moo_comp_oochars_bcstr(str1,len1,str2) moo_comp_uchars_bcstr(str1,len1,str2)
+#	define moo_comp_oochars_ucstr(str1,len1,str2) moo_comp_uchars_ucstr(str1,len1,str2)
+#	define moo_comp_oochars_oocstr(str1,len1,str2) moo_comp_uchars_ucstr(str1,len1,str2)
+#	define moo_comp_oocstr(str1,str2) moo_comp_ucstr(str1,str2)
+#	define moo_copy_oochars(dst,src,len) moo_copy_uchars(dst,src,len)
+#	define moo_copy_bchars_to_oochars(dst,src,len) moo_copy_bchars_to_uchars(dst,src,len)
+#	define moo_copy_oocstr(dst,len,src) moo_copy_ucstr(dst,len,src)
+#	define moo_find_oochar(ptr,len,c) moo_find_uchar(ptr,len,c)
+#	define moo_rfind_oochar(ptr,len,c) moo_rfind_uchar(ptr,len,c)
+#	define moo_find_oochar_in_oocstr(ptr,c) moo_find_uchar_in_ucstr(ptr,c)
+#	define moo_count_oocstr(str) moo_count_ucstr(str)
 #else
-#	define moo_equaloochars(str1,str2,len) moo_equalbchars(str1,str2,len)
-#	define moo_compoochars(str1,len1,str2,len2) moo_compbchars(str1,len1,str2,len2)
-#	define moo_compoocbcstr(str1,str2) moo_compbcstr(str1,str2)
-#	define moo_compoocharsbcstr(str1,len1,str2) moo_compbcharsbcstr(str1,len1,str2)
-#	define moo_compoocharsucstr(str1,len1,str2) moo_compbcharsucstr(str1,len1,str2)
-#	define moo_compoocharsoocstr(str1,len1,str2) moo_compbcharsbcstr(str1,len1,str2)
-#	define moo_compoocstr(str1,str2) moo_compbcstr(str1,str2)
-#	define moo_copyoochars(dst,src,len) moo_copybchars(dst,src,len)
-#	define moo_copybctooochars(dst,src,len) moo_copybchars(dst,src,len)
-#	define moo_copyoocstr(dst,len,src) moo_copybcstr(dst,len,src)
-#	define moo_findoochar(ptr,len,c) moo_findbchar(ptr,len,c)
-#	define moo_rfindoochar(ptr,len,c) moo_rfindbchar(ptr,len,c)
-#	define moo_findoocharinoocstr(ptr,c) moo_findbcharinbcstr(ptr,c)
-#	define moo_countoocstr(str) moo_countbcstr(str)
+#	define moo_equal_oochars(str1,str2,len) moo_equal_bchars(str1,str2,len)
+#	define moo_comp_oochars(str1,len1,str2,len2) moo_comp_bchars(str1,len1,str2,len2)
+#	define moo_comp_oocstr_bcstr(str1,str2) moo_comp_bcstr(str1,str2)
+#	define moo_comp_oochars_bcstr(str1,len1,str2) moo_comp_bchars_bcstr(str1,len1,str2)
+#	define moo_comp_oochars_ucstr(str1,len1,str2) moo_comp_bchars_ucstr(str1,len1,str2)
+#	define moo_comp_oochars_oocstr(str1,len1,str2) moo_comp_bchars_bcstr(str1,len1,str2)
+#	define moo_comp_oocstr(str1,str2) moo_comp_bcstr(str1,str2)
+#	define moo_copy_oochars(dst,src,len) moo_copy_bchars(dst,src,len)
+#	define moo_copy_bchars_to_oochars(dst,src,len) moo_copy_bchars(dst,src,len)
+#	define moo_copy_oocstr(dst,len,src) moo_copy_bcstr(dst,len,src)
+#	define moo_find_oochar(ptr,len,c) moo_find_bchar(ptr,len,c)
+#	define moo_rfind_oochar(ptr,len,c) moo_rfind_bchar(ptr,len,c)
+#	define moo_find_oochar_in_oocstr(ptr,c) moo_find_bchar_in_bcstr(ptr,c)
+#	define moo_count_oocstr(str) moo_count_bcstr(str)
 #endif
 
 
@@ -347,10 +347,10 @@ MOO_EXPORT int moo_concatoocstrtosbuf (
 
 #if defined(MOO_OOCH_IS_UCH)
 #	define moo_conv_oocs_to_bcs_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr) moo_conv_ucs_to_bcs_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr)
-#	define moo_conv_oocsn_to_bcsn_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr) moo_conv_ucsn_to_bcsn_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr)
+#	define moo_conv_oochars_to_bchars_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr) moo_conv_uchars_to_bchars_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr)
 #else
 #	define moo_conv_oocs_to_ucs_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr) moo_conv_bcs_to_ucs_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr,0)
-#	define moo_conv_oocsn_to_ucsn_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr) moo_conv_bcsn_to_ucsn_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr,0)
+#	define moo_conv_oochars_to_uchars_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr) moo_conv_bchars_to_uchars_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr,0)
 #endif
 
 
@@ -363,7 +363,7 @@ MOO_EXPORT int moo_conv_bcs_to_ucs_with_cmgr (
 	int              all
 );
 	
-MOO_EXPORT int moo_conv_bcsn_to_ucsn_with_cmgr (
+MOO_EXPORT int moo_conv_bchars_to_uchars_with_cmgr (
 	const moo_bch_t* bcs,
 	moo_oow_t*       bcslen,
 	moo_uch_t*       ucs,
@@ -380,7 +380,7 @@ MOO_EXPORT int moo_conv_ucs_to_bcs_with_cmgr (
 	moo_cmgr_t*      cmgr
 );	
 
-MOO_EXPORT int moo_conv_ucsn_to_bcsn_with_cmgr (
+MOO_EXPORT int moo_conv_uchars_to_bchars_with_cmgr (
 	const moo_uch_t* ucs,
 	moo_oow_t*       ucslen,
 	moo_bch_t*       bcs,

@@ -98,7 +98,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,symbol) == moo->_symbol);
 
 		if (len == MOO_OBJ_GET_SIZE(symbol) &&
-		    moo_equaloochars (ptr, symbol->slot, len))
+		    moo_equal_oochars (ptr, symbol->slot, len))
 		{
 			return (moo_oop_t)symbol;
 		}

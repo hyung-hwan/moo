@@ -166,7 +166,7 @@ static int logfmtv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_t* data, va_lis
 			/* fmtchar is uch. ooch is bch. convert uch to bch */
 			ucslen = 1;
 			bcslen = MOO_COUNTOF(bcsbuf);
-			if (moo_conv_ucsn_to_bcsn_with_cmgr(&fch, &ucslen, bcsbuf, &bcslen, moo->cmgr) <= -1) goto oops;
+			if (moo_conv_uchars_to_bchars_with_cmgr(&fch, &ucslen, bcsbuf, &bcslen, moo->cmgr) <= -1) goto oops;
 			PUT_OOCS (bcsbuf, bcslen);
 		}
 		#endif
@@ -467,7 +467,7 @@ static int logfmtv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_t* data, va_lis
 			/* get the length */
 			for (bslen = 0; bsp[bslen]; bslen++);
 
-			if (moo_conv_bcsn_to_ucsn_with_cmgr(bsp, &bslen, MOO_NULL, &slen, moo->cmgr, 0) <= -1) goto oops;
+			if (moo_conv_bchars_to_uchars_with_cmgr(bsp, &bslen, MOO_NULL, &slen, moo->cmgr, 0) <= -1) goto oops;
 
 			/* slen holds the length after conversion */
 			n = slen;
@@ -487,7 +487,7 @@ static int logfmtv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_t* data, va_lis
 					conv_len = MOO_COUNTOF(conv_buf);
 
 					/* this must not fail since the dry-run above was successful */
-					moo_conv_bcsn_to_ucsn_with_cmgr(&bsp[tot_len], &src_len, conv_buf, &conv_len, moo->cmgr, 0);
+					moo_conv_bchars_to_uchars_with_cmgr(&bsp[tot_len], &src_len, conv_buf, &conv_len, moo->cmgr, 0);
 					tot_len += src_len;
 
 					if (conv_len > n) conv_len = n;
@@ -536,7 +536,7 @@ static int logfmtv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_t* data, va_lis
 			/* get the length */
 			for (uslen = 0; usp[uslen]; uslen++);
 
-			if (moo_conv_ucsn_to_bcsn_with_cmgr(usp, &uslen, MOO_NULL, &slen, moo->cmgr) <= -1) goto oops;
+			if (moo_conv_uchars_to_bchars_with_cmgr(usp, &uslen, MOO_NULL, &slen, moo->cmgr) <= -1) goto oops;
 
 			/* slen holds the length after conversion */
 			n = slen;
@@ -555,7 +555,7 @@ static int logfmtv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_t* data, va_lis
 					conv_len = MOO_COUNTOF(conv_buf);
 
 					/* this must not fail since the dry-run above was successful */
-					moo_conv_ucsn_to_bcsn_with_cmgr (&usp[tot_len], &src_len, conv_buf, &conv_len, moo->cmgr);
+					moo_conv_uchars_to_bchars_with_cmgr (&usp[tot_len], &src_len, conv_buf, &conv_len, moo->cmgr);
 					tot_len += src_len;
 
 					if (conv_len > n) conv_len = n;

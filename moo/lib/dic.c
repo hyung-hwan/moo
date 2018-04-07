@@ -113,7 +113,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 
 		if (MOO_OBJ_GET_CLASS(key) == MOO_OBJ_GET_CLASS(ass->key) && 
 		    MOO_OBJ_GET_SIZE(key) == MOO_OBJ_GET_SIZE(ass->key) &&
-		    moo_equaloochars (key->slot, ((moo_oop_char_t)ass->key)->slot, MOO_OBJ_GET_SIZE(key))) 
+		    moo_equal_oochars (key->slot, ((moo_oop_char_t)ass->key)->slot, MOO_OBJ_GET_SIZE(key))) 
 		{
 			/* the value of MOO_NULL indicates no insertion or update. */
 			if (value) ass->value = value; /* update */
@@ -218,7 +218,7 @@ static moo_oop_association_t lookup (moo_t* moo, moo_oop_dic_t dic, const moo_oo
 		MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(ass->key));
 
 		if (name->len == MOO_OBJ_GET_SIZE(ass->key) &&
-		    moo_equaloochars(name->ptr, ((moo_oop_char_t)ass->key)->slot, name->len)) 
+		    moo_equal_oochars(name->ptr, ((moo_oop_char_t)ass->key)->slot, name->len)) 
 		{
 			return ass;
 		}
@@ -292,7 +292,7 @@ int moo_deletedic (moo_t* moo, moo_oop_dic_t dic, const moo_oocs_t* name)
 		MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(ass->key));
 
 		if (name->len == MOO_OBJ_GET_SIZE(ass->key) &&
-		    moo_equaloochars(name->ptr, ((moo_oop_char_t)ass->key)->slot, name->len)) 
+		    moo_equal_oochars(name->ptr, ((moo_oop_char_t)ass->key)->slot, name->len)) 
 		{
 			goto found;
 		}

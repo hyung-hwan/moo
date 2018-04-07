@@ -51,8 +51,8 @@ static moo_bch_t EMSG_BCH[] = { '\0' };
 #define xopt_t moo_uopt_t
 #define xopt_lng_t moo_uopt_lng_t
 #define xgetopt moo_getuopt
-#define xcompcharscstr moo_compucharsucstr
-#define xfindcharincstr moo_finducharinucstr
+#define xcompcharscstr moo_comp_uchars_ucstr
+#define xfindcharincstr moo_find_uchar_in_ucstr
 #define XCI_EOF MOO_BCI_EOF
 #include "opt-impl.h"
 
@@ -74,8 +74,8 @@ static moo_bch_t EMSG_BCH[] = { '\0' };
 #define xopt_t moo_bopt_t
 #define xopt_lng_t moo_bopt_lng_t
 #define xgetopt moo_getbopt
-#define xcompcharscstr moo_compbcharsbcstr
-#define xfindcharincstr moo_findbcharinbcstr
+#define xcompcharscstr moo_comp_bchars_bcstr
+#define xfindcharincstr moo_find_bchar_in_bcstr
 #define XCI_EOF MOO_UCI_EOF
 #include "opt-impl.h"
 

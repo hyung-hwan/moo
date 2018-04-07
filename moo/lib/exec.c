@@ -1926,7 +1926,7 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_ooi_t nargs)
 				switch (type)
 				{
 					case MOO_OBJ_TYPE_BYTE:
-						hv = moo_hashbytes(((moo_oop_byte_t)rcv)->slot, MOO_OBJ_GET_SIZE(rcv));
+						hv = moo_hash_bytes(((moo_oop_byte_t)rcv)->slot, MOO_OBJ_GET_SIZE(rcv));
 						break;
 
 					case MOO_OBJ_TYPE_CHAR:
@@ -3290,7 +3290,7 @@ static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_ooi_t nargs)
 
 /* TODO: error string will be mostly the same.. do i really have to call makestring every time? */
 	s = moo_errnum_to_errstr (ec);
-	ss = moo_makestring (moo, s, moo_countoocstr(s));
+	ss = moo_makestring (moo, s, moo_count_oocstr(s));
 	if (!ss) return MOO_PF_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, ss);
@@ -3547,10 +3547,10 @@ moo_pfbase_t* moo_getpfnum (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, mo
 	for (base = 0, lim = MOO_COUNTOF(pftab); lim > 0; lim >>= 1)
 	{
 		mid = base + (lim >> 1);
-		/* moo_compoocharsbcstr() is not aware of multibyte encoding.
+		/* moo_comp_oochars_bcstr() is not aware of multibyte encoding.
 		 * so the names above should be composed of the single byte 
 		 * characters only */
-		n = moo_compoocharsbcstr(ptr, len, pftab[mid].name);
+		n = moo_comp_oochars_bcstr(ptr, len, pftab[mid].name);
 		if (n == 0) 
 		{
 			MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(mid)); /* this must never be so big */

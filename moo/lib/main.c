@@ -352,7 +352,7 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 	#if defined(MOO_OOCH_IS_UCH)
 		if (moo_convootobcstr (moo, arg->name, &ucslen, MOO_NULL, &bcslen) <= -1) goto oops;
 	#else
-		bcslen = moo_countbcstr (arg->name);
+		bcslen = moo_count_bcstr (arg->name);
 	#endif
 
 		fn = ((bb_t*)arg->includer->handle)->fn;
@@ -364,11 +364,11 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 		if (!bb) goto oops;
 
 		bb->fn = (moo_bch_t*)(bb + 1);
-		moo_copybchars (bb->fn, fn, parlen);
+		moo_copy_bchars (bb->fn, fn, parlen);
 	#if defined(MOO_OOCH_IS_UCH)
 		moo_convootobcstr (moo, arg->name, &ucslen, &bb->fn[parlen], &bcslen);
 	#else
-		moo_copybcstr (&bb->fn[parlen], bcslen + 1, arg->name);
+		moo_copy_bcstr (&bb->fn[parlen], bcslen + 1, arg->name);
 	#endif
 	}
 	else
@@ -376,13 +376,13 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 		/* main stream */
 		moo_oow_t pathlen;
 
-		pathlen = moo_countbcstr (xtn->source_path);
+		pathlen = moo_count_bcstr (xtn->source_path);
 
 		bb = moo_callocmem (moo, MOO_SIZEOF(*bb) + (MOO_SIZEOF(moo_bch_t) * (pathlen + 1)));
 		if (!bb) goto oops;
 
 		bb->fn = (moo_bch_t*)(bb + 1);
-		moo_copybcstr (bb->fn, pathlen + 1, xtn->source_path);
+		moo_copy_bcstr (bb->fn, pathlen + 1, xtn->source_path);
 	}
 
 #if defined(__DOS__) || defined(_WIN32) || defined(__OS2__)
@@ -460,7 +460,7 @@ static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 #else
 	bcslen = (bb->len < MOO_COUNTOF(arg->buf))? bb->len: MOO_COUNTOF(arg->buf);
 	ucslen = bcslen;
-	moo_copybchars (arg->buf, bb->buf, bcslen);
+	moo_copy_bchars (arg->buf, bb->buf, bcslen);
 #endif
 
 	remlen = bb->len - bcslen;
@@ -778,7 +778,7 @@ static void syserrstrb (moo_t* moo, int syserr, moo_bch_t* buf, moo_oow_t len)
 	strerror_r (syserr, buf, len);
 #else
 	/* this is not thread safe */
-	moo_copybcstr (buf, len, strerror(syserr));
+	moo_copy_bcstr (buf, len, strerror(syserr));
 #endif
 }
 
@@ -797,7 +797,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 	 * and MOO_COUNTOF(MOO_DEFAULT_PFMODPOSTIFX) include the terminating nulls. Never mind about
 	 * the extra 2 characters. */
 	#else
-	bufcapa = moo_countbcstr(name);
+	bufcapa = moo_count_bcstr(name);
 	#endif
 	bufcapa += MOO_COUNTOF(MOO_DEFAULT_PFMODPREFIX) + MOO_COUNTOF(MOO_DEFAULT_PFMODPOSTFIX) + 1; 
 
@@ -813,13 +813,13 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		moo_oow_t len, i, xlen;
 
 		/* opening a primitive function module - mostly libmoo-xxxx */
-		len = moo_copybcstr(bufptr, bufcapa, MOO_DEFAULT_PFMODPREFIX);
+		len = moo_copy_bcstr(bufptr, bufcapa, MOO_DEFAULT_PFMODPREFIX);
 
 		bcslen = bufcapa - len;
 	#if defined(MOO_OOCH_IS_UCH)
 		moo_convootobcstr(moo, name, &ucslen, &bufptr[len], &bcslen);
 	#else
-		bcslen = moo_copybcstr(&bufptr[len], bcslen, name);
+		bcslen = moo_copy_bcstr(&bufptr[len], bcslen, name);
 	#endif
 
 		/* length including the prefix and the name. but excluding the postfix */
@@ -832,7 +832,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		}
  
 	retry:
-		moo_copybcstr (&bufptr[xlen], bufcapa - xlen, MOO_DEFAULT_PFMODPOSTFIX);
+		moo_copy_bcstr (&bufptr[xlen], bufcapa - xlen, MOO_DEFAULT_PFMODPOSTFIX);
 
 		/* both prefix and postfix attached. for instance, libmoo-xxx */
 		handle = sys_dl_openext(bufptr);
@@ -850,7 +850,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 				dl_errstr = sys_dl_error();
 				MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %hs\n", &bufptr[len], name, dl_errstr);
 				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open(ext) DL %js - %hs", name, dl_errstr);
-				dash = moo_rfindbchar(bufptr, moo_countbcstr(bufptr), '-');
+				dash = moo_rfind_bchar(bufptr, moo_count_bcstr(bufptr), '-');
 				if (dash) 
 				{
 					/* remove a segment at the back. 
@@ -878,10 +878,10 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		bcslen = bufcapa;
 		moo_convootobcstr(moo, name, &ucslen, bufptr, &bcslen);
 	#else
-		bcslen = moo_copybcstr(bufptr, bufcapa, name);
+		bcslen = moo_copy_bcstr(bufptr, bufcapa, name);
 	#endif
 
-		if (moo_findbchar (bufptr, bcslen, '.'))
+		if (moo_find_bchar (bufptr, bcslen, '.'))
 		{
 			handle = sys_dl_open(bufptr);
 			if (!handle) 
@@ -943,7 +943,7 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 	#if defined(MOO_OOCH_IS_UCH)
 	if (moo_convootobcstr(moo, name, &ucslen, MOO_NULL, &bcslen) <= -1) return MOO_NULL;
 	#else
-	bcslen = moo_countbcstr (name);
+	bcslen = moo_count_bcstr (name);
 	#endif
 
 	if (bcslen >= MOO_COUNTOF(stabuf) - 2)
@@ -962,7 +962,7 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 	#if defined(MOO_OOCH_IS_UCH)
 	moo_convootobcstr (moo, name, &ucslen, &bufptr[1], &bcslen);
 	#else
-	bcslen = moo_copybcstr(&bufptr[1], bcslen, name);
+	bcslen = moo_copy_bcstr(&bufptr[1], bcslen, name);
 	#endif
 
 	/* convert a period(.) to an underscore(_) */
@@ -2215,19 +2215,19 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 	moo_bch_t* cm, * flt;
 	unsigned int logmask;
 
-	cm = moo_findbcharinbcstr (xstr, ',');
+	cm = moo_find_bchar_in_bcstr (xstr, ',');
 	if (cm) 
 	{
 		/* i duplicate this string for open() below as open() doesn't 
 		 * accept a length-bounded string */
-		xstr = moo_dupbchars (moo, str, moo_countbcstr(str));
+		xstr = moo_dupbchars (moo, str, moo_count_bcstr(str));
 		if (!xstr) 
 		{
 			fprintf (stderr, "ERROR: out of memory in duplicating %s\n", str);
 			return -1;
 		}
 
-		cm = moo_findbcharinbcstr(xstr, ',');
+		cm = moo_find_bchar_in_bcstr(xstr, ',');
 		*cm = '\0';
 
 		logmask = xtn->logmask;
@@ -2235,28 +2235,28 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 		{
 			flt = cm + 1;
 
-			cm = moo_findbcharinbcstr(flt, ',');
+			cm = moo_find_bchar_in_bcstr(flt, ',');
 			if (cm) *cm = '\0';
 
-			if (moo_compbcstr(flt, "app") == 0) logmask |= MOO_LOG_APP;
-			else if (moo_compbcstr(flt, "compiler") == 0) logmask |= MOO_LOG_COMPILER;
-			else if (moo_compbcstr(flt, "vm") == 0) logmask |= MOO_LOG_VM;
-			else if (moo_compbcstr(flt, "mnemonic") == 0) logmask |= MOO_LOG_MNEMONIC;
-			else if (moo_compbcstr(flt, "gc") == 0) logmask |= MOO_LOG_GC;
-			else if (moo_compbcstr(flt, "ic") == 0) logmask |= MOO_LOG_IC;
-			else if (moo_compbcstr(flt, "primitive") == 0) logmask |= MOO_LOG_PRIMITIVE;
+			if (moo_comp_bcstr(flt, "app") == 0) logmask |= MOO_LOG_APP;
+			else if (moo_comp_bcstr(flt, "compiler") == 0) logmask |= MOO_LOG_COMPILER;
+			else if (moo_comp_bcstr(flt, "vm") == 0) logmask |= MOO_LOG_VM;
+			else if (moo_comp_bcstr(flt, "mnemonic") == 0) logmask |= MOO_LOG_MNEMONIC;
+			else if (moo_comp_bcstr(flt, "gc") == 0) logmask |= MOO_LOG_GC;
+			else if (moo_comp_bcstr(flt, "ic") == 0) logmask |= MOO_LOG_IC;
+			else if (moo_comp_bcstr(flt, "primitive") == 0) logmask |= MOO_LOG_PRIMITIVE;
 
-			else if (moo_compbcstr(flt, "fatal") == 0) logmask |= MOO_LOG_FATAL;
-			else if (moo_compbcstr(flt, "error") == 0) logmask |= MOO_LOG_ERROR;
-			else if (moo_compbcstr(flt, "warn") == 0) logmask |= MOO_LOG_WARN;
-			else if (moo_compbcstr(flt, "info") == 0) logmask |= MOO_LOG_INFO;
-			else if (moo_compbcstr(flt, "debug") == 0) logmask |= MOO_LOG_DEBUG;
+			else if (moo_comp_bcstr(flt, "fatal") == 0) logmask |= MOO_LOG_FATAL;
+			else if (moo_comp_bcstr(flt, "error") == 0) logmask |= MOO_LOG_ERROR;
+			else if (moo_comp_bcstr(flt, "warn") == 0) logmask |= MOO_LOG_WARN;
+			else if (moo_comp_bcstr(flt, "info") == 0) logmask |= MOO_LOG_INFO;
+			else if (moo_comp_bcstr(flt, "debug") == 0) logmask |= MOO_LOG_DEBUG;
 
-			else if (moo_compbcstr(flt, "fatal+") == 0) logmask |= MOO_LOG_FATAL;
-			else if (moo_compbcstr(flt, "error+") == 0) logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR;
-			else if (moo_compbcstr(flt, "warn+") == 0) logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN;
-			else if (moo_compbcstr(flt, "info+") == 0) logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO;
-			else if (moo_compbcstr(flt, "debug+") == 0) logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO | MOO_LOG_DEBUG;
+			else if (moo_comp_bcstr(flt, "fatal+") == 0) logmask |= MOO_LOG_FATAL;
+			else if (moo_comp_bcstr(flt, "error+") == 0) logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR;
+			else if (moo_comp_bcstr(flt, "warn+") == 0) logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN;
+			else if (moo_comp_bcstr(flt, "info+") == 0) logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO;
+			else if (moo_comp_bcstr(flt, "debug+") == 0) logmask |= MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO | MOO_LOG_DEBUG;
 
 			else
 			{
@@ -2306,10 +2306,10 @@ static int handle_dbgopt (moo_t* moo, const moo_bch_t* str)
 	{
 		flt = cm + 1;
 
-		cm = moo_findbcharinbcstr(flt, ',');
-		len = cm? (cm - flt): moo_countbcstr(flt);
-		if (moo_compbcharsbcstr (flt, len, "gc") == 0)  dbgopt |= MOO_DEBUG_GC;
-		else if (moo_compbcharsbcstr (flt, len, "bigint") == 0)  dbgopt |= MOO_DEBUG_BIGINT;
+		cm = moo_find_bchar_in_bcstr(flt, ',');
+		len = cm? (cm - flt): moo_count_bcstr(flt);
+		if (moo_comp_bchars_bcstr (flt, len, "gc") == 0)  dbgopt |= MOO_DEBUG_GC;
+		else if (moo_comp_bchars_bcstr (flt, len, "bigint") == 0)  dbgopt |= MOO_DEBUG_BIGINT;
 		else
 		{
 			fprintf (stderr, "ERROR: unknown debug option value - %.*s\n", (int)len, flt);
@@ -2390,13 +2390,13 @@ int main (int argc, char* argv[])
 				break;
 
 			case '\0':
-				if (moo_compbcstr(opt.lngopt, "large-pages") == 0)
+				if (moo_comp_bcstr(opt.lngopt, "large-pages") == 0)
 				{
 					large_pages = 1;
 					break;
 				}
 			#if defined(MOO_BUILD_DEBUG)
-				else if (moo_compbcstr(opt.lngopt, "debug") == 0)
+				else if (moo_comp_bcstr(opt.lngopt, "debug") == 0)
 				{
 					dbgopt = opt.arg;
 					break;

@@ -505,7 +505,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	/* copy instead of encoding conversion. MOD_PREFIX must not
 	 * include a character that requires encoding conversion.
 	 * note the terminating null isn't needed in buf here. */
-	moo_copybctooochars (buf, MOD_PREFIX, MOD_PREFIX_LEN); 
+	moo_copy_bchars_to_oochars (buf, MOD_PREFIX, MOD_PREFIX_LEN); 
 
 	if (namelen > MOO_COUNTOF(buf) - (MOD_PREFIX_LEN + 1 + 1))
 	{
@@ -514,7 +514,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 		return MOO_NULL;
 	}
 
-	moo_copyoochars (&buf[MOD_PREFIX_LEN], name, namelen);
+	moo_copy_oochars (&buf[MOD_PREFIX_LEN], name, namelen);
 	buf[MOD_PREFIX_LEN + namelen] = '\0';
 
 #if defined(MOO_ENABLE_STATIC_MODULE)
@@ -523,7 +523,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	/* TODO: binary search ... */
 	for (n = 0; n < MOO_COUNTOF(static_modtab); n++)
 	{
-		if (moo_compoocharsbcstr(name, namelen, static_modtab[n].modname) == 0) 
+		if (moo_comp_oochars_bcstr(name, namelen, static_modtab[n].modname) == 0) 
 		{
 			load = static_modtab[n].modload;
 			break;
@@ -535,7 +535,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 		/* found the module in the staic module table */
 
 		MOO_MEMSET (&md, 0, MOO_SIZEOF(md));
-		moo_copyoochars ((moo_ooch_t*)md.mod.name, name, namelen);
+		moo_copy_oochars ((moo_ooch_t*)md.mod.name, name, namelen);
 		/* Note md.handle is MOO_NULL for a static module */
 
 		/* i copy-insert 'md' into the table before calling 'load'.
@@ -579,7 +579,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 
 	/* attempt to find a dynamic external module */
 	MOO_MEMSET (&md, 0, MOO_SIZEOF(md));
-	moo_copyoochars ((moo_ooch_t*)md.mod.name, name, namelen);
+	moo_copy_oochars ((moo_ooch_t*)md.mod.name, name, namelen);
 	if (moo->vmprim.dl_open && moo->vmprim.dl_getsym && moo->vmprim.dl_close)
 	{
 		md.handle = moo->vmprim.dl_open(moo, &buf[MOD_PREFIX_LEN], MOO_VMPRIM_OPENDL_PFMOD);
@@ -654,7 +654,7 @@ void moo_closemod (moo_t* moo, moo_mod_data_t* mdp)
 	if (mdp->pair)
 	{
 		/*mdp->pair = MOO_NULL;*/ /* this reset isn't needed as the area will get freed by moo_rbt_delete()) */
-		moo_rbt_delete (&moo->modtab, mdp->mod.name, moo_countoocstr(mdp->mod.name));
+		moo_rbt_delete (&moo->modtab, mdp->mod.name, moo_count_oocstr(mdp->mod.name));
 	}
 }
 
@@ -724,7 +724,7 @@ moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidle
 	moo_oow_t mod_name_len;
 	moo_pfbase_t* pfbase;
 
-	sep = moo_rfindoochar (pfid, pfidlen, '.');
+	sep = moo_rfind_oochar (pfid, pfidlen, '.');
 	if (!sep)
 	{
 		/* i'm writing a conservative code here. the compiler should 
@@ -918,7 +918,7 @@ moo_pfbase_t* moo_findpfbase (moo_t* moo, moo_pfinfo_t* pfinfo, moo_oow_t pfcoun
 		/*mid = (left + right) / 2;*/
 		mid = left + ((right - left) / 2);
 
-		n = moo_compoocharsoocstr (name, namelen, pfinfo[mid].mthname);
+		n = moo_comp_oochars_oocstr (name, namelen, pfinfo[mid].mthname);
 		if (n < 0) right = mid - 1; /* this substraction can make right negative. so i can't use moo_oow_t for the variable */
 		else if (n > 0) left = mid + 1;
 		else return &pfinfo[mid].base;
@@ -930,7 +930,7 @@ moo_pfbase_t* moo_findpfbase (moo_t* moo, moo_pfinfo_t* pfinfo, moo_oow_t pfcoun
 	for (base = 0, lim = pfcount; lim > 0; lim >>= 1)
 	{
 		mid = base + (lim >> 1);
-		n = moo_compoocharsoocstr (name, namelen, pfinfo[mid].mthname);
+		n = moo_comp_oochars_oocstr (name, namelen, pfinfo[mid].mthname);
 		if (n == 0) return &pfinfo[mid].base;
 		if (n > 0) { base = mid + 1; lim--; }
 	}
@@ -1010,7 +1010,7 @@ moo_oop_t moo_findclass (moo_t* moo, moo_oop_nsdic_t nsdic, const moo_ooch_t* na
 	moo_oocs_t n;
 
 	n.ptr = (moo_ooch_t*)name;
-	n.len = moo_countoocstr(name);
+	n.len = moo_count_oocstr(name);
 
 	ass = moo_lookupdic (moo, (moo_oop_dic_t)nsdic, &n);
 	if (!ass || MOO_CLASSOF(moo,ass->value) != moo->_class) 
