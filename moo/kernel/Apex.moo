@@ -8,17 +8,17 @@ class(#limited) Error(Apex)
 
 pooldic Error.Code
 {
-	ENOERR     := error(0).
-	EGENERIC   := error(1).
-	ENOIMPL    := error(2).
-	ESYSERR    := error(3).
-	EINTERN    := error(4).
-	ESYSMEM    := error(5).
-	EOOMEM     := error(6).
-	EINVAL     := error(7).
-	ENOENT     := error(8).
-	EPERM      := error(12).
-	ERANGE     := error(20).
+	ENOERR   := #\0.
+	EGENERIC := #\1.
+	ENOIMPL  := #\2.
+	ESYSERR  := #\3.
+	EINTERN  := #\4.
+	ESYSMEM  := #\5.
+	EOOMEM   := #\6.
+	EINVAL   := #\7.
+	ENOENT   := #\8.
+	EPERM    := #\12.
+	ERANGE   := #\20.
 (* add more items... *)
 }
 
@@ -170,7 +170,7 @@ extend Apex
 		## ^self ~= nil.
 		^true.
 	}
-
+	
 	method(#dual) isError
 	{
 		^false
@@ -300,8 +300,8 @@ extend Error
 
 	pooldic/const
 	{
-		NONE := error(0).
-		GENERIC := error(1).
+		NONE := #\0.
+		GENERIC := #\1.
 	}
 	-------------------------------- *)
 

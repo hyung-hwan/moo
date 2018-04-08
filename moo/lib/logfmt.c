@@ -404,7 +404,7 @@ static int print_object (moo_t* moo, moo_oow_t mask, moo_oop_t oop, outbfmt_t ou
 	}
 	else if (MOO_OOP_IS_ERROR(oop))
 	{
-		if (outbfmt(moo, mask, "error(%zd)", MOO_OOP_TO_ERROR(oop)) <= -1) return -1;
+		if (outbfmt(moo, mask, "#\\%zd", MOO_OOP_TO_ERROR(oop)) <= -1) return -1;
 	}
 	else
 	{

@@ -1541,7 +1541,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_CMTNC,           /* comment not closed */
 	MOO_SYNERR_STRNC,           /* string not closed */
 	MOO_SYNERR_CLTNT,           /* character literal not terminated */
-	MOO_SYNERR_HLTNT,           /* hased literal not terminated */
+	MOO_SYNERR_HLTNT,           /* hashed literal not terminated */
 	MOO_SYNERR_CHARLITINVAL,    /* wrong character literal */
 	MOO_SYNERR_COLON,           /* : expected */
 	MOO_SYNERR_STRING,          /* string expected */

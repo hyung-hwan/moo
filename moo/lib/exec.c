@@ -2775,7 +2775,7 @@ static moo_pfrc_t pf_integer_mul (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_quo (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_div (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, quo;
 
@@ -2809,7 +2809,7 @@ static moo_pfrc_t pf_integer_rem (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_quo2 (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_mdiv (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, quo;
 
@@ -2826,7 +2826,7 @@ static moo_pfrc_t pf_integer_quo2 (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_rem2 (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_mod (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, quo, rem;
 
@@ -3523,19 +3523,19 @@ static pf_t pftab[] =
 	{ "_integer_bitor",                        { pf_integer_bitor,                        1, 1 } },
 	{ "_integer_bitshift",                     { pf_integer_bitshift,                     1, 1 } },
 	{ "_integer_bitxor",                       { pf_integer_bitxor,                       1, 1 } },
+	{ "_integer_div",                          { pf_integer_div,                          1, 1 } },
 	{ "_integer_eq",                           { pf_integer_eq,                           1, 1 } },
 	{ "_integer_ge",                           { pf_integer_ge,                           1, 1 } },
 	{ "_integer_gt",                           { pf_integer_gt,                           1, 1 } },
 	{ "_integer_inttostr",                     { pf_integer_inttostr,                     1, 1 } },
 	{ "_integer_le",                           { pf_integer_le,                           1, 1 } },
 	{ "_integer_lt",                           { pf_integer_lt,                           1, 1 } },
+	{ "_integer_mdiv",                         { pf_integer_mdiv,                         1, 1 } },
+	{ "_integer_mod",                          { pf_integer_mod,                          1, 1 } },
 	{ "_integer_mul",                          { pf_integer_mul,                          1, 1 } },
 	{ "_integer_ne",                           { pf_integer_ne,                           1, 1 } },
 	{ "_integer_negated",                      { pf_integer_negated,                      0, 0 } },
-	{ "_integer_quo",                          { pf_integer_quo,                          1, 1 } },
-	{ "_integer_quo2",                         { pf_integer_quo2,                         1, 1 } },
 	{ "_integer_rem",                          { pf_integer_rem,                          1, 1 } },
-	{ "_integer_rem2",                         { pf_integer_rem2,                         1, 1 } },
 	{ "_integer_sub",                          { pf_integer_sub,                          1, 1 } }
 };
 

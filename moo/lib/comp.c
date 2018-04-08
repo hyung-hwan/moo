@@ -117,7 +117,6 @@ static struct voca_t
 	{  4, { 'e','l','s','e'                                               } },
 	{  5, { 'e','l','s','i','f'                                           } },
 	{  6, { 'e','n','s','u','r','e',                                      } },
-	{  5, { 'e','r','r','o','r'                                           } },
 	{  9, { 'e','x','c','e','p','t','i','o','n'                           } },
 	{  6, { 'e','x','t','e','n','d'                                       } },
 	{  5, { 'f','a','l','s','e'                                           } },
@@ -182,7 +181,6 @@ enum voca_id_t
 	VOCA_ELSE,
 	VOCA_ELSIF,
 	VOCA_ENSURE,
-	VOCA_ERROR,
 	VOCA_EXCEPTION,
 	VOCA_EXTEND,
 	VOCA_FALSE,
@@ -260,7 +258,6 @@ static MOO_INLINE int is_spacechar (moo_ooci_t c)
 	}
 }
 
-
 static MOO_INLINE int is_alphachar (moo_ooci_t c)
 {
 /* TODO: support full unicode */
@@ -284,13 +281,14 @@ static MOO_INLINE int is_binselchar (moo_ooci_t c)
 	/*
 	 * binary-selector-character :=
 	 *   '&' | '*' | '+' | '-' | '/' |
-	 *   '<' | '>' | '=' | '?' | '@' |
-	 *   '\' | '~' | '|'
+	 *   '<' | '>' | '=' | '@' | '~' | '|'
 	 *
 	 * - a comma is special in moo and doesn't form a binary selector.
 	 * - a percent sign is special in moo and doesn't form a binary selector.
 	 * - an exclamation mark is excluded intentioinally because i can't tell
 	 *   the method symbol #! from the comment introducer #!.
+	 * - a question mark forms a normal identifier.
+	 * - a backslash is used to form an error literal combined with a hash sign. (e.g. #\10)
 	 */
 
 	switch (c)
@@ -303,9 +301,7 @@ static MOO_INLINE int is_binselchar (moo_ooci_t c)
 		case '<':
 		case '>':
 		case '=':
-		case '?':
 		case '@':
-		case '\\':
 		case '|':
 		case '~':
 			return 1;
@@ -322,7 +318,7 @@ static MOO_INLINE int is_leadidentchar (moo_ooci_t c)
 
 static MOO_INLINE int is_identchar (moo_ooci_t c)
 {
-	return is_alnumchar(c) || c == '_';
+	return is_alnumchar(c) || c == '_' || c == '?';
 }
 
 #if 0
@@ -342,7 +338,7 @@ static MOO_INLINE int is_closing_char (moo_ooci_t c)
 		default:
 			return 0;
 	}
-}
+}VOCA_ERROR,
 #endif
 
 static MOO_INLINE int is_word (const moo_oocs_t* oocs, voca_id_t id)
@@ -360,7 +356,6 @@ static int is_reserved_word (const moo_oocs_t* ucs)
 		VOCA_NIL,
 		VOCA_TRUE,
 		VOCA_FALSE,
-		VOCA_ERROR,
 		VOCA_THIS_CONTEXT,
 		VOCA_THIS_PROCESS,
 		VOCA_SELFNS,
@@ -642,7 +637,7 @@ static moo_oop_t string_to_num (moo_t* moo, moo_oocs_t* str, int radixed)
 	return moo_strtoint (moo, ptr, end - ptr, base);
 }
 
-static moo_oop_t string_to_error (moo_t* moo, moo_oocs_t* str)
+static moo_oop_t string_to_error (moo_t* moo, moo_oocs_t* str, moo_ioloc_t* loc)
 {
 	moo_ooi_t num = 0;
 	const moo_ooch_t* ptr, * end;
@@ -655,13 +650,24 @@ static moo_oop_t string_to_error (moo_t* moo, moo_oocs_t* str)
 	 * i just skip all non-digit letters for simplicity sake. */
 	while (ptr < end)
 	{
-		if (is_digitchar(*ptr)) num = num * 10 + (*ptr - '0');
+		if (is_digitchar(*ptr)) 
+		{
+			moo_oow_t xnum;
+
+			xnum = num * 10 + (*ptr - '0');
+			if (xnum < num || xnum > MOO_ERROR_MAX) 
+			{
+				/* overflowed */
+				moo_setsynerr (moo, MOO_SYNERR_ERRLITINVAL, loc, str);
+				return MOO_NULL;
+			}
+			num = xnum;
+		}
 		ptr++;
 	}
 
 	return MOO_ERROR_TO_OOP(num);
 }
-
 
 /* ---------------------------------------------------------------------
  * SOME PRIVIATE UTILITILES
@@ -1017,37 +1023,7 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		GET_CHAR_TO (moo, c);
 	} 
 
-	if (c == '(' && is_token_word(moo, VOCA_ERROR))
-	{
-		/* error(NN) */
-		ADD_TOKEN_CHAR (moo, c);
-		GET_CHAR_TO (moo, c);
-		if (!is_digitchar(c))
-		{
-			ADD_TOKEN_CHAR (moo, c);
-			moo_setsynerr (moo, MOO_SYNERR_ERRLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
-			return -1;
-		}
-
-		do
-		{
-			ADD_TOKEN_CHAR (moo, c);
-			GET_CHAR_TO (moo, c);
-		}
-		while (is_digitchar(c));
-
-		if (c != ')')
-		{
-			moo_setsynerr (moo, MOO_SYNERR_RPAREN, LEXER_LOC(moo), MOO_NULL);
-			return -1;
-		}
-
-/* TODO: error number range check */
-
-		ADD_TOKEN_CHAR (moo, c);
-		SET_TOKEN_TYPE (moo, MOO_IOTOK_ERRLIT);
-	}
-	else if (c == ':') 
+	if (c == ':') 
 	{
 #if 0
 	read_more_kwsym:
@@ -1160,10 +1136,6 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		{
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_FALSE);
 		}
-		else if (is_token_word(moo, VOCA_ERROR))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_ERROR);
-		}
 		else if (is_token_word(moo, VOCA_THIS_CONTEXT))
 		{
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_THIS_CONTEXT);
@@ -1234,8 +1206,8 @@ static int get_numlit (moo_t* moo, int negated)
 	 */
 
 	moo_ooci_t c;
-	int radix = 0, r;
-	
+	moo_oow_t radix = 0;
+	int radix_overflowed = 0;
 
 	c = moo->c->lxc.c;
 	SET_TOKEN_TYPE (moo, MOO_IOTOK_NUMLIT);
@@ -1243,18 +1215,24 @@ static int get_numlit (moo_t* moo, int negated)
 /*TODO: support a complex numeric literal */
 	do 
 	{
-		if (radix <= 36)
+		/* collect the potential radix specifier */
+		if (!radix_overflowed)
 		{
-			/* collect the potential radix specifier */
-			r = CHAR_TO_NUM (c, 10);
+			int r;
+			moo_oow_t rv;
+
+			r = CHAR_TO_NUM(c, 10);
 			MOO_ASSERT (moo, r < 10);
-			radix = radix * 10 + r;
+			rv = radix * 10 + r;
+			if (rv < radix) radix_overflowed = 1;
+			radix = rv;
 		}
 
 		ADD_TOKEN_CHAR(moo, c);
 		GET_CHAR_TO (moo, c);
 		if (c == '_')
 		{
+			/* i allow digit separation with _  as in 123_456. */
 			moo_iolxc_t underscore;
 			underscore = moo->c->lxc;
 			GET_CHAR_TO(moo, c);
@@ -1273,9 +1251,9 @@ static int get_numlit (moo_t* moo, int negated)
 	{
 		/* radix specifier */
 
-		if (radix < 2 || radix > 36)
+		if (radix_overflowed || radix < 2 || radix > 36)
 		{
-			/* no digit after the radix specifier */
+			/* radix too big */
 			moo_setsynerr (moo, MOO_SYNERR_RADIXINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
@@ -1311,9 +1289,12 @@ static int get_numlit (moo_t* moo, int negated)
 		while (CHAR_TO_NUM(c, radix) < radix);
 
 		SET_TOKEN_TYPE (moo, MOO_IOTOK_RADNUMLIT);
+		unget_char (moo, &moo->c->lxc);
 	}
-
-	unget_char (moo, &moo->c->lxc);
+	else
+	{
+		unget_char (moo, &moo->c->lxc);
+	}
 
 /*
  * TODO: handle floating point number
@@ -1743,12 +1724,32 @@ retry:
 					ADD_TOKEN_CHAR(moo, c);
 					SET_TOKEN_TYPE (moo, MOO_IOTOK_HASHBRACK);
 					break;
-					break;
 
 				case '\'':
 					/* quoted symbol literal */
 					if (get_strlit(moo) <= -1) return -1; /* reuse the string literal tokenizer */
 					SET_TOKEN_TYPE (moo, MOO_IOTOK_SYMLIT); /* change the symbol type to symbol */
+					break;
+
+				case '\\':
+					/* #\NNN - error literal - #\0, #\1234, etc */
+					SET_TOKEN_TYPE(moo, MOO_IOTOK_ERRLIT);
+					ADD_TOKEN_CHAR(moo, c);
+					GET_CHAR_TO (moo, c);
+					if (!is_digitchar(c))
+					{
+						ADD_TOKEN_CHAR(moo, c); /* to include it to the error messsage */
+						moo_setsynerr (moo, MOO_SYNERR_ERRLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						return -1;
+					}
+
+					do
+					{
+						ADD_TOKEN_CHAR(moo, c);
+						GET_CHAR_TO (moo, c);
+					}
+					while (is_digitchar(c) || c == '_');
+					unget_char (moo, &moo->c->lxc);
 					break;
 
 				default:
@@ -4936,17 +4937,11 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				GET_TOKEN (moo);
 				break;
 
-			case MOO_IOTOK_ERROR:
-				if (add_literal(moo, MOO_ERROR_TO_OOP(MOO_EGENERIC), &index) <= -1 ||
-				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
-				GET_TOKEN (moo);
-				break;
-
 			case MOO_IOTOK_ERRLIT:
 			{
 				moo_oop_t tmp;
 
-				tmp = string_to_error (moo, TOKEN_NAME(moo));
+				tmp = string_to_error (moo, TOKEN_NAME(moo), TOKEN_LOC(moo));
 				if (!tmp) return -1;
 
 				if (add_literal(moo, tmp, &index) <= -1 ||
@@ -7783,11 +7778,8 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 		case MOO_IOTOK_FALSE:
 			return moo->_false;
 
-		case MOO_IOTOK_ERROR:
-			return MOO_ERROR_TO_OOP(MOO_EGENERIC);
-
 		case MOO_IOTOK_ERRLIT:
-			return string_to_error (moo, TOKEN_NAME(moo));
+			return string_to_error(moo, TOKEN_NAME(moo), TOKEN_LOC(moo));
 
 		case MOO_IOTOK_CHARLIT:
 			MOO_ASSERT (moo, TOKEN_NAME_LEN(moo) == 1);

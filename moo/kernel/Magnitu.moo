@@ -123,29 +123,38 @@ class(#limited) Number(Magnitude)
 		self primitiveFailed.
 	}
 
-	method quo: aNumber
+	method div: aNumber
 	{
-		<primitive: #_integer_quo>
+		## integer division rounded toward zero
+		<primitive: #_integer_div>
 		self primitiveFailed.
 	}
 
 	method rem: aNumber
 	{
+		## integer remainder rounded toward zero
 		<primitive: #_integer_rem>
 		self primitiveFailed.
 	}
 
-	method // aNumber
+	method mdiv: aNumber
 	{
-		<primitive: #_integer_quo2>
+		## integer division quotient
+		<primitive: #_integer_mdiv>
 		self primitiveFailed.
 	}
-
-	method \\ aNumber
+	
+	method mod: aNumber
 	{
-		<primitive: #_integer_rem2>
+		## integer division remainder
+		<primitive: #_integer_mod>
 		self primitiveFailed.
 	}
+	
+	##method / aNumber
+	##{
+	##	## fraction? fixed-point decimal? floating-point?
+	##}
 
 	method = aNumber
 	{
