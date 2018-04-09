@@ -337,6 +337,10 @@ int moo_setoption (moo_t* moo, moo_option_t id, const void* value)
 			moo->option.dfl_procstk_size = *(moo_oow_t*)value;
 			return 0;
 		}
+
+		case MOO_MOD_INCTX:
+			moo->option.mod_inctx = *(void**)value;
+			return 0;
 	}
 
 einval:
@@ -370,6 +374,10 @@ int moo_getoption (moo_t* moo, moo_option_t id, void* value)
 
 		case MOO_PROCSTK_SIZE:
 			*(moo_oow_t*)value = moo->option.dfl_procstk_size;
+			return 0;
+
+		case MOO_MOD_INCTX:
+			*(void**)value = moo->option.mod_inctx;
 			return 0;
 	};
 
@@ -535,6 +543,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 		/* found the module in the staic module table */
 
 		MOO_MEMSET (&md, 0, MOO_SIZEOF(md));
+		md.mod.inctx = moo->option.mod_inctx;
 		moo_copy_oochars ((moo_ooch_t*)md.mod.name, name, namelen);
 		/* Note md.handle is MOO_NULL for a static module */
 
@@ -579,6 +588,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 
 	/* attempt to find a dynamic external module */
 	MOO_MEMSET (&md, 0, MOO_SIZEOF(md));
+	md.mod.inctx = moo->option.mod_inctx;
 	moo_copy_oochars ((moo_ooch_t*)md.mod.name, name, namelen);
 	if (moo->vmprim.dl_open && moo->vmprim.dl_getsym && moo->vmprim.dl_close)
 	{

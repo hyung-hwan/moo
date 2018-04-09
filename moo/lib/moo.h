@@ -95,7 +95,8 @@ enum moo_option_t
 	MOO_LOG_MAXCAPA,
 	MOO_SYMTAB_SIZE,  /* default system table size */
 	MOO_SYSDIC_SIZE,  /* default system dictionary size */
-	MOO_PROCSTK_SIZE  /* default process stack size */
+	MOO_PROCSTK_SIZE, /* default process stack size */
+	MOO_MOD_INCTX
 };
 typedef enum moo_option_t moo_option_t;
 
@@ -1111,8 +1112,9 @@ typedef void (*moo_mod_gc_t) (
 struct moo_mod_t
 {
 	/* input */
-	/*const*/ moo_ooch_t name[MOO_MOD_NAME_LEN_MAX + 1];
-	/*const*/ int hints; /* bitwised-ORed of moo_mod_hint_t enumerators */
+	moo_ooch_t   name[MOO_MOD_NAME_LEN_MAX + 1];
+	void*        inctx;
+	unsigned int hints; /* bitwised-ORed of moo_mod_hint_t enumerators */
 
 	/* user-defined data */
 	moo_mod_import_t import;
@@ -1192,6 +1194,8 @@ struct moo_t
 		moo_oow_t dfl_symtab_size;
 		moo_oow_t dfl_sysdic_size;
 		moo_oow_t dfl_procstk_size; 
+
+		void* mod_inctx;
 
 	#if defined(MOO_BUILD_DEBUG)
 		/* set automatically when trait is set */
