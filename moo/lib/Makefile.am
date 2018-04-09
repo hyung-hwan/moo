@@ -39,16 +39,24 @@ pkgincludedir = $(includedir)
 pkglibdir = $(libdir)
 
 pkginclude_HEADERS = \
+	moo.h \
+	moo-bct.h \
+	moo-cmn.h \
+	moo-opt.h \
+	moo-rbt.h \
+	moo-utl.h
+
+pkglib_LTLIBRARIES = libmoo.la
+libmoo_la_SOURCES = \
+	moo.h \
+	moo-bct.h \
 	moo-cmn.h \
 	moo-opt.h \
 	moo-rbt.h \
 	moo-utl.h \
-	moo.h
-
-noinst_HEADERS = moo-prv.h pack1.h unpack.h
-
-pkglib_LTLIBRARIES = libmoo.la
-libmoo_la_SOURCES = \
+	moo-prv.h \
+	pack1.h \
+	unpack.h \
 	bigint.c \
 	comp.c \
 	debug.c  \

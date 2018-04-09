@@ -21386,15 +21386,18 @@ else
 
 fi
 
-test "${enable_shared}" = "no" && enable_dynamic_module_is="no"
+if test "x${enable_shared}" = "xno"
+then
+	enable_dynamic_module_is="no"
+fi
 
-if test "${enable_dynamic_module_is}" = "yes"
+if test "x${enable_dynamic_module_is}" = "xyes"
 then
 
 $as_echo "#define MOO_ENABLE_DYNAMIC_MODULE 1" >>confdefs.h
 
 fi
- if test "${enable_dynamic_module_is}" = "yes"; then
+ if test "x${enable_dynamic_module_is}" = "xyes"; then
   ENABLE_DYNAMIC_MODULE_TRUE=
   ENABLE_DYNAMIC_MODULE_FALSE='#'
 else
@@ -21411,7 +21414,10 @@ else
 
 fi
 
-test "${enable_shared}" = "no" -a "${enable_static}" = "yes" && enable_static_module_is="yes"
+if test "x${enable_shared}" = "xno" -a "x${enable_static}" = "xyes"
+then
+	enable_static_module_is="yes"
+fi
 
 if test "${enable_static_module_is}" = "yes"
 then
@@ -21419,7 +21425,7 @@ then
 $as_echo "#define MOO_ENABLE_STATIC_MODULE 1" >>confdefs.h
 
 fi
- if test "${enable_static_module_is}" = "yes"; then
+ if test "x${enable_static_module_is}" = "xyes"; then
   ENABLE_STATIC_MODULE_TRUE=
   ENABLE_STATIC_MODULE_FALSE='#'
 else
@@ -21436,9 +21442,9 @@ else
 
 fi
 
-if test "${enable_libltdl_is}" = "yes"
+if test "x${enable_libltdl_is}" = "xyes"
 then
-	if test "${ac_cv_header_ltdl_h}" = "yes"  -a "${LTDL_LIBS}" != ""
+	if test "x${ac_cv_header_ltdl_h}" = "xyes"  -a "${LTDL_LIBS}" != ""
 	then
 
 $as_echo "#define MOO_ENABLE_LIBLTDL /**/" >>confdefs.h
@@ -21447,7 +21453,7 @@ $as_echo "#define MOO_ENABLE_LIBLTDL /**/" >>confdefs.h
 		enable_libltdl_is="no"
 	fi
 fi
- if test "${enable_libltdl_is}" = "yes"; then
+ if test "x${enable_libltdl_is}" = "xyes"; then
   ENABLE_LIBLTDL_TRUE=
   ENABLE_LIBLTDL_FALSE='#'
 else

@@ -680,13 +680,16 @@ AC_ARG_ENABLE([dynamic-module],
 	enable_dynamic_module_is=$enableval,
 	enable_dynamic_module_is=yes
 )
-test "${enable_shared}" = "no" && enable_dynamic_module_is="no"
+if test "x${enable_shared}" = "xno"
+then
+	enable_dynamic_module_is="no"
+fi
 
-if test "${enable_dynamic_module_is}" = "yes"
+if test "x${enable_dynamic_module_is}" = "xyes"
 then
 	AC_DEFINE([MOO_ENABLE_DYNAMIC_MODULE],[1],[enable dynamic module capability])
 fi
-AM_CONDITIONAL(ENABLE_DYNAMIC_MODULE, test "${enable_dynamic_module_is}" = "yes")
+AM_CONDITIONAL(ENABLE_DYNAMIC_MODULE, test "x${enable_dynamic_module_is}" = "xyes")
 
 dnl ===== enable-static-module =====
 AC_ARG_ENABLE([static-module],
@@ -694,13 +697,16 @@ AC_ARG_ENABLE([static-module],
 	enable_static_module_is=$enableval,
 	enable_static_module_is=no
 )
-test "${enable_shared}" = "no" -a "${enable_static}" = "yes" && enable_static_module_is="yes"
+if test "x${enable_shared}" = "xno" -a "x${enable_static}" = "xyes" 
+then
+	enable_static_module_is="yes"
+fi
 
 if test "${enable_static_module_is}" = "yes"
 then
 	AC_DEFINE([MOO_ENABLE_STATIC_MODULE],[1],[link modules statically into the main library])
 fi
-AM_CONDITIONAL(ENABLE_STATIC_MODULE, test "${enable_static_module_is}" = "yes")
+AM_CONDITIONAL(ENABLE_STATIC_MODULE, test "x${enable_static_module_is}" = "xyes")
 
 dnl ===== enable-libltdl =====
 AC_ARG_ENABLE([libltdl],
@@ -708,16 +714,16 @@ AC_ARG_ENABLE([libltdl],
 	enable_libltdl_is=$enableval,
 	enable_libltdl_is=no
 )
-if test "${enable_libltdl_is}" = "yes"
+if test "x${enable_libltdl_is}" = "xyes"
 then
-	if test "${ac_cv_header_ltdl_h}" = "yes"  -a "${LTDL_LIBS}" != ""
+	if test "x${ac_cv_header_ltdl_h}" = "xyes"  -a "${LTDL_LIBS}" != ""
 	then
 		AC_DEFINE([MOO_ENABLE_LIBLTDL],[],[use libltdl when loading a dynamic module])
 	else
 		enable_libltdl_is="no"
 	fi
 fi
-AM_CONDITIONAL(ENABLE_LIBLTDL, test "${enable_libltdl_is}" = "yes")
+AM_CONDITIONAL(ENABLE_LIBLTDL, test "x${enable_libltdl_is}" = "xyes")
 
 dnl ===== enable-mod-con =====
 AC_ARG_ENABLE([mod-con],

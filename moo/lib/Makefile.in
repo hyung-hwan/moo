@@ -124,8 +124,8 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_sign.m4 \
 	$(top_srcdir)/m4/lt~obsolete.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
-DIST_COMMON = $(srcdir)/Makefile.am $(noinst_HEADERS) \
-	$(pkginclude_HEADERS) $(am__DIST_COMMON)
+DIST_COMMON = $(srcdir)/Makefile.am $(pkginclude_HEADERS) \
+	$(am__DIST_COMMON)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = moo-cfg.h
 CONFIG_CLEAN_FILES =
@@ -227,7 +227,7 @@ am__can_run_installinfo = \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
-HEADERS = $(noinst_HEADERS) $(pkginclude_HEADERS)
+HEADERS = $(pkginclude_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) \
 	$(LISP)moo-cfg.h.in
 # Read a list of newline-separated strings from the standard input,
@@ -423,15 +423,24 @@ CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) $(am__append_3) \
 LDFLAGS_LIB_COMMON = $(LDFLAGS_ALL_COMMON) -version-info 1:0:0 -no-undefined
 LIBADD_LIB_COMMON = $(LIBM) $(am__append_1) $(am__append_2)
 pkginclude_HEADERS = \
+	moo.h \
+	moo-bct.h \
+	moo-cmn.h \
+	moo-opt.h \
+	moo-rbt.h \
+	moo-utl.h
+
+pkglib_LTLIBRARIES = libmoo.la
+libmoo_la_SOURCES = \
+	moo.h \
+	moo-bct.h \
 	moo-cmn.h \
 	moo-opt.h \
 	moo-rbt.h \
 	moo-utl.h \
-	moo.h
-
-noinst_HEADERS = moo-prv.h pack1.h unpack.h
-pkglib_LTLIBRARIES = libmoo.la
-libmoo_la_SOURCES = \
+	moo-prv.h \
+	pack1.h \
+	unpack.h \
 	bigint.c \
 	comp.c \
 	debug.c  \
