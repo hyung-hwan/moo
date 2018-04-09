@@ -406,9 +406,9 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 			r = dcCallPointer (ffi->dc, f);
 
 		#if defined(MOO_OOCH_IS_UCH)
-			s = moo_makestringwithbchars (moo, r, moo_countbcstr(r));
+			s = moo_makestringwithbchars (moo, r, moo_count_bcstr(r));
 		#else
-			s = moo_makestring(moo, r, moo_countbcstr(r));
+			s = moo_makestring(moo, r, moo_count_bcstr(r));
 		#endif
 			if (!s) 
 			{
@@ -428,9 +428,9 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
 			r = dcCallPointer (ffi->dc, f);
 
 		#if defined(MOO_OOCH_IS_UCH)
-			s = moo_makestring(moo, r, moo_countucstr(r));
+			s = moo_makestring(moo, r, moo_count_ucstr(r));
 		#else
-			s = moo_makestringwithuchars(moo, r, moo_countucstr(r));
+			s = moo_makestringwithuchars(moo, r, moo_count_ucstr(r));
 		#endif
 			if (!s) 
 			{
