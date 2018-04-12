@@ -290,6 +290,8 @@ class AsyncHandle(Object)
 			{
 				##if (self.insem notNil) { System unsignal: self.insem }.
 				System unsignal: self.insem.
+				System removeAsyncSemaphore: self.insem.
+				self.insem := nil.
 			}.
 		}.
 	}
@@ -323,6 +325,8 @@ class AsyncHandle(Object)
 			{
 				## self.outsem must not be nil here.
 				System unsignal: self.outsem.
+				System removeAsyncSemaphore: self.outsem.
+				self.outsem := nil.
 			}.
 		}.
 	}
@@ -608,7 +612,7 @@ error -> exception
 		].
 
 		[
-			| s s2 |
+			| s s2 st |
 			[
 				s := Socket domain: Socket.Domain.INET type: Socket.Type.STREAM.
 				##s connect: (SocketAddress fromString: '127.0.0.1:9999') do: conact.
@@ -620,10 +624,13 @@ error -> exception
 ##				###s2 listen: 10; watchInput.
 ##				s2 listen: 10 do: accact.
 
+###[ while (1) { '1111' dump. System sleepForSecs: 1 } ] fork.
+
 				while (true)
 				{
-					System handleAsyncEvent.
+					if (System handleAsyncEvent isError) { break }.
 				}.
+				
 			]
 			ensure:
 			[

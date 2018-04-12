@@ -125,7 +125,7 @@ static MOO_INLINE const char* proc_state_to_string (int state)
 #	define __PRIMITIVE_NAME__ (&__FUNCTION__[0])
 #endif
 
-static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem, int force);
+static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, int force);
 static void signal_io_semaphore (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask);
 static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_ooi_t nargs);
 static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_t namelen, int to_super, moo_ooi_t nargs);
@@ -169,11 +169,11 @@ static MOO_INLINE void vm_cleanup (moo_t* moo)
 
 			if (moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT])
 			{
-				delete_from_sem_io (moo, moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT], 1);
+				delete_sem_from_sem_io_tuple (moo, moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT], 1);
 			}
 			if (moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT])
 			{
-				delete_from_sem_io (moo, moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT], 1);
+				delete_sem_from_sem_io_tuple (moo, moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT], 1);
 			}
 
 			MOO_ASSERT (moo, moo->sem_io_map[i] <= -1);
@@ -810,7 +810,6 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	}
 
 	/* if the semaphore belongs to a semaphore group and the control reaches 
-
 	 * here, no process is waiting on the semaphore group. however, a process
 	 * may still be waiting on the semaphore. If a process waits on a semaphore
 	 * group and another process wait on a semaphore that belongs to the 
@@ -938,6 +937,12 @@ static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore
 		return (moo_oop_t)sem;
 	}
 
+/*MOO_DEBUG1 (moo, "QQQQQQQQQQQQQQQQQQQQQQQ %d\n", semgrp->sem_io_count);
+if (MOO_OOP_TO_SMOOI(semgrp->sem_io_count) <= 0)
+{
+	return MOO_ERROR_TO_OOP(MOO_EIOERR);
+}*/
+
 	/* no semaphores have been signaled. suspend the current process
 	 * until at least one of them is signaled */
 	proc = moo->processor->active;
@@ -947,6 +952,7 @@ static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore
 
 	/* link the suspended process to the semaphore group's process list */
 	chain_into_semaphore (moo, proc, (moo_oop_semaphore_t)semgrp); 
+
 	MOO_ASSERT (moo, semgrp->waiting.last == proc);
 
 	if (MOO_OOP_TO_SMOOI(semgrp->sem_io_count) > 0) 
@@ -1115,7 +1121,7 @@ static void update_sem_heap (moo_t* moo, moo_ooi_t index, moo_oop_semaphore_t ne
 }
 #endif
 
-static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_handle, moo_semaphore_io_type_t io_type)
+static int add_sem_to_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_handle, moo_semaphore_io_type_t io_type)
 {
 	moo_ooi_t index;
 	moo_ooi_t new_mask;
@@ -1250,7 +1256,7 @@ static int add_to_sem_io (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi_t io_hand
 	return 0;
 }
 
-static int delete_from_sem_io (moo_t* moo, moo_oop_semaphore_t sem, int force)
+static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, int force)
 {
 	moo_ooi_t index;
 	moo_ooi_t new_mask, io_handle, io_type;
@@ -1405,7 +1411,7 @@ static void signal_io_semaphore (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask
 void moo_releaseiohandle (moo_t* moo, moo_ooi_t io_handle)
 {
 	/* TODO: optimize io semapore unmapping. since i'm to close the handle,
-	 *       i don't need to call delete_from_sem_io() seperately for input
+	 *       i don't need to call delete_sem_from_sem_io_tuple() seperately for input
 	 *        and output. */
 	if (io_handle < moo->sem_io_map_capa)
 	{
@@ -1417,7 +1423,7 @@ void moo_releaseiohandle (moo_t* moo, moo_ooi_t io_handle)
 		{
 			MOO_ASSERT(moo, moo->sem_io_tuple[index].handle == io_handle);
 			sem = moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT];
-			if (sem) delete_from_sem_io (moo, sem, 0);
+			if (sem) delete_sem_from_sem_io_tuple (moo, sem, 0);
 		}
 	}
 
@@ -1431,7 +1437,7 @@ void moo_releaseiohandle (moo_t* moo, moo_ooi_t io_handle)
 		{
 			MOO_ASSERT(moo, moo->sem_io_tuple[index].handle == io_handle);
 			sem = moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];
-			if (sem) delete_from_sem_io (moo, sem, 0);
+			if (sem) delete_sem_from_sem_io_tuple (moo, sem, 0);
 		}
 	}
 }
@@ -2362,6 +2368,9 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
 
 			if (count == 1)
 			{
+				/* the first IO semaphore is being added to the semaphore group.
+				 * but there are processes waiting on the semaphore group */
+
 				moo_oop_process_t wp;
 				/* TODO: add sem_wait_count to process. no traversal... */
 				for (wp = sg->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
@@ -2620,7 +2629,7 @@ static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_se
 		return MOO_PF_FAILURE;
 	}
 
-	if (add_to_sem_io(moo, sem, MOO_OOP_TO_SMOOI(fd), io_type) <= -1) 
+	if (add_sem_to_sem_io_tuple(moo, sem, MOO_OOP_TO_SMOOI(fd), io_type) <= -1) 
 	{
 		const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
 		moo_seterrbfmt (moo, moo->errnum, "cannot add the handle %zd to the multiplexer - %js", MOO_OOP_TO_SMOOI(fd), oldmsg);
@@ -2680,7 +2689,7 @@ static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_handle) && MOO_OOP_TO_SMOOI(sem->io_handle) >= 0);
 		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_type));
 
-		if (delete_from_sem_io(moo, sem, 0) <= -1)
+		if (delete_sem_from_sem_io_tuple(moo, sem, 0) <= -1)
 		{
 			const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
 			moo_seterrbfmt (moo, moo->errnum, "cannot delete the handle %zd from the multiplexer - %js", MOO_OOP_TO_SMOOI(sem->io_handle), oldmsg);
@@ -4190,7 +4199,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 		--moo->sem_list_count;
 		signal_semaphore (moo, moo->sem_list[moo->sem_list_count]);
 		if (moo->processor->active == moo->nil_process)
-		{
+		{suspended process
 		}
 	}
 	/*

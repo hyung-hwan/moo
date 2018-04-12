@@ -862,7 +862,7 @@ struct moo_semaphore_group_t
 		moo_oop_semaphore_t last;
 	} sems[2]; /* sems[0] - unsignaled semaphores, sems[1] - signaled semaphores */
 
-	moo_oop_t sem_io_count;
+	moo_oop_t sem_io_count; /* the number of io semaphores in the group */
 };
 
 #define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 9
