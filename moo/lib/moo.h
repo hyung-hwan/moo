@@ -919,12 +919,36 @@ struct moo_heap_t
  * VIRTUAL MACHINE PRIMITIVES
  * ========================================================================= */
 
-typedef void* (*moo_alloc_heap_t) (moo_t* moo, moo_oow_t size);
-typedef void (*moo_free_heap_t) (moo_t* moo, void* ptr);
+typedef void* (*moo_alloc_heap_t) (
+	moo_t*    moo, 
+	moo_oow_t size
+);
 
-typedef void (*moo_log_write_t) (moo_t* moo, moo_oow_t mask, const moo_ooch_t* msg, moo_oow_t len);
-typedef void (*moo_syserrstrb_t) (moo_t* moo, int syserr, moo_bch_t* buf, moo_oow_t len);
-typedef void (*moo_syserrstru_t) (moo_t* moo, int syserr, moo_uch_t* buf, moo_oow_t len);
+typedef void (*moo_free_heap_t) (
+	moo_t*    moo,
+	void*     ptr
+);
+
+typedef void (*moo_log_write_t) (
+	moo_t*             moo,
+	moo_oow_t          mask,
+	const moo_ooch_t*  msg,
+	moo_oow_t          len
+);
+
+typedef void (*moo_syserrstrb_t) (
+	moo_t*             moo,
+	int                syserr,
+	moo_bch_t*         buf,
+	moo_oow_t          len
+);
+
+typedef void (*moo_syserrstru_t) (
+	moo_t*             moo,
+	int                syserr,
+	moo_uch_t*         buf,
+	moo_oow_t          len
+);
 
 enum moo_vmprim_dlopen_flag_t
 {
@@ -932,13 +956,35 @@ enum moo_vmprim_dlopen_flag_t
 };
 typedef enum moo_vmprim_dlopen_flag_t moo_vmprim_dlopen_flag_t;
 
-typedef void* (*moo_vmprim_dlopen_t) (moo_t* moo, const moo_ooch_t* name, int flags);
-typedef void (*moo_vmprim_dlclose_t) (moo_t* moo, void* handle);
-typedef void* (*moo_vmprimt_dlgetsym_t) (moo_t* moo, void* handle, const moo_ooch_t* name);
+typedef void* (*moo_vmprim_dlopen_t) (
+	moo_t*                  moo,
+	const moo_ooch_t*       name,
+	int                     flags
+);
 
-typedef int (*moo_vmprim_startup_t) (moo_t* moo);
-typedef void (*moo_vmprim_cleanup_t) (moo_t* moo);
-typedef void (*moo_vmprim_gettime_t) (moo_t* moo, moo_ntime_t* now);
+typedef void (*moo_vmprim_dlclose_t) (
+	moo_t*                  moo,
+	void*                   handle
+);
+
+typedef void* (*moo_vmprimt_dlgetsym_t) (
+	moo_t*                  moo,
+	void*                   handle,
+	const moo_ooch_t*       name
+);
+
+typedef int (*moo_vmprim_startup_t) (
+	moo_t*                  moo
+);
+
+typedef void (*moo_vmprim_cleanup_t) (
+	moo_t*                  moo
+);
+
+typedef void (*moo_vmprim_gettime_t) (
+	moo_t*                  moo,
+	moo_ntime_t*            now
+);
 
 typedef int (*moo_vmprim_muxadd_t) (
 	moo_t*                  moo,
