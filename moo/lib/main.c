@@ -808,7 +808,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		if (!bufptr) return MOO_NULL;
 	}
 
-	if (flags & MOO_VMPRIM_OPENDL_PFMOD)
+	if (flags & MOO_VMPRIM_DLOPEN_PFMOD)
 	{
 		moo_oow_t len, i, xlen;
 

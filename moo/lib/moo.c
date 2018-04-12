@@ -592,7 +592,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	moo_copy_oochars ((moo_ooch_t*)md.mod.name, name, namelen);
 	if (moo->vmprim.dl_open && moo->vmprim.dl_getsym && moo->vmprim.dl_close)
 	{
-		md.handle = moo->vmprim.dl_open(moo, &buf[MOD_PREFIX_LEN], MOO_VMPRIM_OPENDL_PFMOD);
+		md.handle = moo->vmprim.dl_open(moo, &buf[MOD_PREFIX_LEN], MOO_VMPRIM_DLOPEN_PFMOD);
 	}
 
 	if (md.handle == MOO_NULL) 

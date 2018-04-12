@@ -926,11 +926,11 @@ typedef void (*moo_log_write_t) (moo_t* moo, moo_oow_t mask, const moo_ooch_t* m
 typedef void (*moo_syserrstrb_t) (moo_t* moo, int syserr, moo_bch_t* buf, moo_oow_t len);
 typedef void (*moo_syserrstru_t) (moo_t* moo, int syserr, moo_uch_t* buf, moo_oow_t len);
 
-enum moo_vmprim_opendl_flag_t
+enum moo_vmprim_dlopen_flag_t
 {
-	MOO_VMPRIM_OPENDL_PFMOD = (1 << 0)
+	MOO_VMPRIM_DLOPEN_PFMOD = (1 << 0)
 };
-typedef enum moo_vmprim_opendl_flag_t moo_vmprim_opendl_flag_t;
+typedef enum moo_vmprim_dlopen_flag_t moo_vmprim_dlopen_flag_t;
 
 typedef void* (*moo_vmprim_dlopen_t) (moo_t* moo, const moo_ooch_t* name, int flags);
 typedef void (*moo_vmprim_dlclose_t) (moo_t* moo, void* handle);
