@@ -160,7 +160,11 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 	{
 		| x |
 		x := self _wait.
-		if (x signalAction notNil) { x signalAction value: x }.
+		if (x notError)
+		{
+			## TODO: is it better to check if x is an instance of Semaphore/SemaphoreGroup?
+			if (x signalAction notNil) { x signalAction value: x }.
+		}.
 		^x
 	}
 

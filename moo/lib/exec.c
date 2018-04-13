@@ -937,11 +937,11 @@ static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore
 		return (moo_oop_t)sem;
 	}
 
-/*MOO_DEBUG1 (moo, "QQQQQQQQQQQQQQQQQQQQQQQ %d\n", semgrp->sem_io_count);
+MOO_DEBUG1 (moo, "QQQQQQQQQQQQQQQQQQQQQQQ %d\n", semgrp->sem_io_count);
 if (MOO_OOP_TO_SMOOI(semgrp->sem_io_count) <= 0)
 {
-	return MOO_ERROR_TO_OOP(MOO_EIOERR);
-}*/
+	//return MOO_ERROR_TO_OOP(MOO_EIOERR);
+}
 
 	/* no semaphores have been signaled. suspend the current process
 	 * until at least one of them is signaled */
@@ -4034,7 +4034,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				/* [NOTE] no moo_pushtmp() on proc. no GC must occur
 				 *        in the following line until it's used for
 				 *        wake_process() below. */
-				delete_from_sem_heap (moo, 0); /* moo->sem_heap_count is decremented */
+				delete_from_sem_heap (moo, 0); /* moo->sem_heap_count is decremented in delete_from_sem_heap() */
 
 				/* if no process is waiting on the semaphore, 
 				 * signal_semaphore() returns moo->_nil. */
