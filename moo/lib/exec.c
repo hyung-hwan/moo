@@ -919,6 +919,15 @@ static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore
 
 	MOO_ASSERT (moo, moo_iskindof(moo, (moo_oop_t)semgrp, moo->_semaphore_group));
 
+	if (MOO_OOP_TO_SMOOI(semgrp->sem_count) <= 0)
+	{
+		/* cannot wait on a semaphore group that has no member semaphores.
+		 * return failure if waiting on such a semapohre group is attempted */
+		MOO_ASSERT (moo, (moo_oop_t)semgrp->sems[MOO_SEMAPHORE_GROUP_SEMS_SIG].first == moo->_nil);
+		MOO_ASSERT (moo, (moo_oop_t)semgrp->sems[MOO_SEMAPHORE_GROUP_SEMS_SIG].last == moo->_nil);
+		return MOO_ERROR_TO_OOP(MOO_EINVAL); /* TODO: better error code? */
+	}
+
 	sem = semgrp->sems[MOO_SEMAPHORE_GROUP_SEMS_SIG].first;
 	if ((moo_oop_t)sem != moo->_nil)
 	{
@@ -936,12 +945,6 @@ static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore
 
 		return (moo_oop_t)sem;
 	}
-
-MOO_DEBUG1 (moo, "QQQQQQQQQQQQQQQQQQQQQQQ %d\n", semgrp->sem_io_count);
-if (MOO_OOP_TO_SMOOI(semgrp->sem_io_count) <= 0)
-{
-	//return MOO_ERROR_TO_OOP(MOO_EIOERR);
-}
 
 	/* no semaphores have been signaled. suspend the current process
 	 * until at least one of them is signaled */
@@ -2341,25 +2344,30 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
 	sg = (moo_oop_semaphore_group_t)MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sg, moo->_semaphore_group)); 
 
-	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG (moo, nargs, 0);
+	sem = (moo_oop_semaphore_t)MOO_STACK_GETARG(moo, nargs, 0);
 	MOO_PF_CHECK_ARGS (moo, nargs, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore));
 
 	if ((moo_oop_t)sem->group == moo->_nil)
 	{
 		/* the semaphore doesn't belong to a group */
-
+		moo_ooi_t count;
 		int sems_idx;
 
 		sems_idx = MOO_OOP_TO_SMOOI(sem->count) > 0? MOO_SEMAPHORE_GROUP_SEMS_SIG: MOO_SEMAPHORE_GROUP_SEMS_UNSIG;
 		MOO_APPEND_TO_OOP_LIST (moo, &sg->sems[sems_idx], moo_oop_semaphore_t, sem, grm);
 		sem->group = sg;
 
+		count = MOO_OOP_TO_SMOOI(sg->sem_count);
+		MOO_ASSERT (moo, count >= 0);
+		count++;
+		sg->sem_count = MOO_SMOOI_TO_OOP(count);
+
 		if ((moo_oop_t)sem->io_index != moo->_nil)
 		{
-			/* this semaphore is associated with I/O operation */
-			moo_ooi_t count;
-
-			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index) && MOO_OOP_TO_SMOOI(sem->io_index) >= 0 && MOO_OOP_TO_SMOOI(sem->io_index) < moo->sem_io_tuple_count);
+			/* the semaphore being added is associated with I/O operation. */
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index) && 
+			                 MOO_OOP_TO_SMOOI(sem->io_index) >= 0 &&
+			                 MOO_OOP_TO_SMOOI(sem->io_index) < moo->sem_io_tuple_count);
 
 			count = MOO_OOP_TO_SMOOI(sg->sem_io_count);
 			MOO_ASSERT (moo, count >= 0);
@@ -2369,7 +2377,15 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
 			if (count == 1)
 			{
 				/* the first IO semaphore is being added to the semaphore group.
-				 * but there are processes waiting on the semaphore group */
+				 * but there are already processes waiting on the semaphore group.
+				 * 
+				 * for instance,
+				 *  [Process 1]
+				 *     sg := SemaphoreGroup new.
+				 *     sg wait.
+				 *  [Process 2]
+				 *     sg addSemaphore: (Semaphore new).
+				 */
 
 				moo_oop_process_t wp;
 				/* TODO: add sem_wait_count to process. no traversal... */
@@ -2402,6 +2418,7 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 {
 	moo_oop_semaphore_group_t rcv;
 	moo_oop_semaphore_t sem;
+	moo_ooi_t count;
 
 	rcv = (moo_oop_semaphore_group_t)MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)rcv, moo->_semaphore_group)); 
@@ -2438,11 +2455,14 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 		sem->grm.prev = (moo_oop_semaphore_t)moo->_nil;
 		sem->grm.next = (moo_oop_semaphore_t)moo->_nil;
 		sem->group = (moo_oop_semaphore_group_t)moo->_nil;
+		
+		count = MOO_OOP_TO_SMOOI(rcv->sem_count);
+		MOO_ASSERT (moo, count > 0);
+		count--;
+		rcv->sem_count = MOO_SMOOI_TO_OOP(count);
 
 		if ((moo_oop_t)sem->io_index != moo->_nil)
 		{
-			moo_ooi_t count;
-
 			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index) && MOO_OOP_TO_SMOOI(sem->io_index) >= 0 && MOO_OOP_TO_SMOOI(sem->io_index) < moo->sem_io_tuple_count);
 
 			count = MOO_OOP_TO_SMOOI(rcv->sem_io_count);
@@ -2793,7 +2813,7 @@ static moo_pfrc_t pf_integer_div (moo_t* moo, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	quo = moo_divints (moo, rcv, arg, 0, MOO_NULL);
+	quo = moo_divints(moo, rcv, arg, 0, MOO_NULL);
 	if (!quo) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 /* TODO: MOO_EDIVBY0 soft or hard failure? */
 
@@ -2810,9 +2830,8 @@ static moo_pfrc_t pf_integer_rem (moo_t* moo, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	quo = moo_divints (moo, rcv, arg, 0, &rem);
-	if (!quo) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
-/* TODO: MOO_EDIVBY0 soft or hard failure? */
+	quo = moo_divints(moo, rcv, arg, 0, &rem);
+	if (!quo) return (moo->errnum == MOO_EINVAL || moo->errnum == MOO_EDIVBY0? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, rem);
 	return MOO_PF_SUCCESS;
@@ -2827,9 +2846,8 @@ static moo_pfrc_t pf_integer_mdiv (moo_t* moo, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	quo = moo_divints (moo, rcv, arg, 1, MOO_NULL);
-	if (!quo) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
-/* TODO: MOO_EDIVBY0 soft or hard failure? */
+	quo = moo_divints(moo, rcv, arg, 1, MOO_NULL);
+	if (!quo) return (moo->errnum == MOO_EINVAL || moo->errnum == MOO_EDIVBY0? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, quo);
 	return MOO_PF_SUCCESS;
@@ -2844,9 +2862,8 @@ static moo_pfrc_t pf_integer_mod (moo_t* moo, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	quo = moo_divints (moo, rcv, arg, 1, &rem);
-	if (!quo) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
-/* TODO: MOO_EDIVBY0 soft or hard failure? */
+	quo = moo_divints(moo, rcv, arg, 1, &rem);
+	if (!quo) return (moo->errnum == MOO_EINVAL || moo->errnum == MOO_EDIVBY0? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, rem);
 	return MOO_PF_SUCCESS;

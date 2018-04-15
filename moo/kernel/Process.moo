@@ -52,7 +52,7 @@ class Semaphore(Object)
 {
 	var waiting_head  := nil,
 	    waiting_tail  := nil,
-	    count         :=   0.
+	    count         := 0.    ## semaphore signal count
 
 	var(#get,#set) heapIndex := -1.
 
@@ -139,7 +139,8 @@ class SemaphoreGroup(Object)
 	    last_sem := nil,
 	    first_sigsem := nil,
 	    last_sigsem := nil,
-	    sem_io_count := 0.
+	    sem_io_count := 0,
+	    sem_count := 0.
 
 (* TODO: good idea to a shortcut way to prohibit a certain method in the heirarchy chain?
 method(#class,#prohibited) new.

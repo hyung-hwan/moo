@@ -612,7 +612,7 @@ error -> exception
 		].
 
 		[
-			| s s2 st sg |
+			| s s2 st sg ss |
 			[
 				s := Socket domain: Socket.Domain.INET type: Socket.Type.STREAM.
 				##s connect: (SocketAddress fromString: '127.0.0.1:9999') do: conact.
@@ -624,6 +624,7 @@ error -> exception
 ##				###s2 listen: 10; watchInput.
 ##				s2 listen: 10 do: accact.
 
+(*
 st := Semaphore new.
 System addAsyncSemaphore: st.
 System signal: st afterSecs: 5.
@@ -632,16 +633,20 @@ sg := SemaphoreGroup new.
 'JJJJJJJJJJJ' dump.
 sg wait.
 'YYYYYYYYYYYYYYY' dump.
+*)
 
 ###[ while (1) { '1111' dump. System sleepForSecs: 1 } ] fork.
 
+(*
 st := Semaphore new.
 System addAsyncSemaphore: st.
 System signal: st afterSecs: 20.
-
+*)
 				while (true)
 				{
-					if (System handleAsyncEvent isError) { break }.
+					ss := System handleAsyncEvent.
+					if (ss isError) { break }.
+					###if (ss == st) { System removeAsyncSemaphore: st }.
 				}.
 			]
 			ensure:

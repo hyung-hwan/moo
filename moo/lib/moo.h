@@ -757,7 +757,7 @@ typedef struct moo_process_t* moo_oop_process_t;
 typedef struct moo_semaphore_t moo_semaphore_t;
 typedef struct moo_semaphore_t* moo_oop_semaphore_t;
 
-#define MOO_SEMAPHORE_GROUP_NAMED_INSTVARS 7
+#define MOO_SEMAPHORE_GROUP_NAMED_INSTVARS 8
 typedef struct moo_semaphore_group_t moo_semaphore_group_t;
 typedef struct moo_semaphore_group_t* moo_oop_semaphore_group_t;
 
@@ -852,8 +852,8 @@ struct moo_semaphore_group_t
 	struct
 	{
 		moo_oop_process_t first;
-		moo_oop_process_t last; /* list of processes waiting on this semaphore group */
-	} waiting;
+		moo_oop_process_t last; 
+	} waiting; /* list of processes waiting on this semaphore group */
 	/* [END IMPORTANT] */
 
 	struct
@@ -863,6 +863,7 @@ struct moo_semaphore_group_t
 	} sems[2]; /* sems[0] - unsignaled semaphores, sems[1] - signaled semaphores */
 
 	moo_oop_t sem_io_count; /* the number of io semaphores in the group */
+	moo_oop_t sem_count; /* the total number of semaphores in the group */
 };
 
 #define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 9
