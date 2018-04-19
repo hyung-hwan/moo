@@ -331,7 +331,7 @@ class AsyncHandle(Object)
 		}.
 	}
 
-	method writeBytes: bytes offset: offset length: length semaphore: sem
+	method writeBytes: bytes offset: offset length: length signal: sem
 	{
 		| oldact n |
 #######################################
@@ -379,19 +379,19 @@ class AsyncHandle(Object)
 		self watchOutput.
 	}
 
-	method writeBytes: bytes semaphore: sem
+	method writeBytes: bytes signal: sem
 	{
-		^self writeBytes: bytes offset: 0 length: (bytes size) semaphore: sem.
+		^self writeBytes: bytes offset: 0 length: (bytes size) signal: sem.
 	}
 
 	method writeBytes: bytes offset: offset length: length
 	{
-		^self writeBytes: bytes offset: offset length: length semaphore: nil.
+		^self writeBytes: bytes offset: offset length: length signal: nil.
 	}
 
 	method writeBytes: bytes
 	{
-		^self writeBytes: bytes offset: 0 length: (bytes size) semaphore: nil.
+		^self writeBytes: bytes offset: 0 length: (bytes size) signal: nil.
 	}
 }
 
@@ -607,20 +607,29 @@ error -> exception
 			if (state)
 			{
 				'CONNECTED NOW.............' dump.
-
 				###sck inputTimeout: 10; outputTimeout: 10; connectTimeout: 10.
+
+#############################################
 				write_more := [:sem |
-					sck writeBytes: %[ $h, $e, $l, $l, $o, $-, $m, $o, count + 65, $o, $o, C'\n' ] semaphore: x.
-					if (count > 26) { count := 0 }
-					else { count := count + 1 }.
+					if (count <= 26)
+					{
+						sck writeBytes: %[ $h, $e, $l, $l, $o, $-, $m, $o, count + 65, $o, $o, C'\n' ] signal: x.
+						count := count + 1.
+					}
+					else
+					{
+						System removeAsyncSemaphore: x.
+					}.
 				].
 
 				x := Semaphore new.
 				x signalAction: write_more.
 				System addAsyncSemaphore: x.
+				x signal.
 
-				sck outputAction: outact.
-				sck writeBytes: #[ $h, $e, $l, $l, $o, $-, $m, $o, $o, C'\n' ] semaphore: x.
+				##sck outputAction: outact.
+				##sck writeBytes: #[ $h, $e, $l, $l, $o, $-, $m, $o, $o, C'\n' ] signal: x.
+###############################################
 
 				sck inputAction: inact.
 				sck watchInput.
@@ -647,6 +656,8 @@ error -> exception
 			
 			newsck writeBytes: #[ $W, $e, $l, $c, $o, $m, $e, $., C'\n' ].
 		].
+
+
 
 		[
 			| s s2 st sg ss |

@@ -8097,7 +8097,7 @@ static int compile_pragma_definition (moo_t* moo)
 #endif
 		if (is_token_word(moo, VOCA_QC))
 		{
-			/* #pragma qc(on). #pragma qc(off) */
+			/* #pragma qc(on). #pragma qc(off) - enable/disable double-quoted comments */
 
 			GET_TOKEN(moo);
 			if (TOKEN_TYPE(moo) != MOO_IOTOK_LPAREN)
