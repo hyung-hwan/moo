@@ -369,7 +369,9 @@ enum moo_iotok_type_t
 	MOO_IOTOK_RPAREN,
 	MOO_IOTOK_HASHPAREN,   /* #( - array literal */
 	MOO_IOTOK_HASHBRACK,   /* #[ - byte array literal */
+	MOO_IOTOK_HASHBRACE,   /* #{ - dictionary literal */
 	MOO_IOTOK_PERCPAREN,   /* %( - array expression */
+	MOO_IOTOK_PERCBRACK,   /* %[ - byte array expression */
 	MOO_IOTOK_PERCBRACE,   /* %{ - dictionary expression */
 	MOO_IOTOK_PERIOD,
 	MOO_IOTOK_COMMA,
@@ -954,8 +956,8 @@ enum moo_bcode_t
 	BCODE_POP_INTO_OBJVAR_X        = 0xEC, /* 236 ## */
 
 	/* UNUSED 237 */
-	/* UNUSED 238 */
-	/* UNUSED 239 */
+	BCODE_MAKE_BYTEARRAY             = 0xEE, /* 238 */
+	BCODE_POP_INTO_BYTEARRAY         = 0xEF, /* 239 */
 
 	BCODE_SEND_MESSAGE_X             = 0xF0, /* 240 ## */
 	/* UNUSED 241 */

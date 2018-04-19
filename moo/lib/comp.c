@@ -1681,12 +1681,17 @@ retry:
 			ADD_TOKEN_CHAR(moo, c);
 			GET_CHAR_TO (moo, c);
 
-			/* TODO: byte array expression token -> %[ */
 			if (c == '(')
 			{
 				/* %( - array expression */
 				ADD_TOKEN_CHAR(moo, c);
 				SET_TOKEN_TYPE (moo, MOO_IOTOK_PERCPAREN);
+			}
+			else if (c == '[')
+			{
+				/* %[ - byte-array expression */
+				ADD_TOKEN_CHAR(moo, c);
+				SET_TOKEN_TYPE (moo, MOO_IOTOK_PERCBRACK);
 			}
 			else if (c == '{')
 			{
@@ -1723,6 +1728,12 @@ retry:
 					/* #[ - byte array literal */
 					ADD_TOKEN_CHAR(moo, c);
 					SET_TOKEN_TYPE (moo, MOO_IOTOK_HASHBRACK);
+					break;
+
+				case '{':
+					/* #[ - dictionary literal */
+					ADD_TOKEN_CHAR(moo, c);
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_HASHBRACE);
 					break;
 
 				case '\'':
@@ -2192,6 +2203,8 @@ static int emit_single_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1
 		case BCODE_MAKE_DICTIONARY:
 		case BCODE_MAKE_ARRAY:
 		case BCODE_POP_INTO_ARRAY:
+		case BCODE_MAKE_BYTEARRAY:
+		case BCODE_POP_INTO_BYTEARRAY:
 			bc = cmd;
 			goto write_long;
 	}
@@ -4713,15 +4726,15 @@ static int compile_array_literal (moo_t* moo)
 	return 0;
 }
 
-static int compile_array_expression (moo_t* moo)
+static int _compile_array_expression (moo_t* moo, int closer_token, int bcode_make, int bcode_pop_into)
 {
 	moo_oow_t maip;
 	moo_ioloc_t aeloc;
 
-	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_PERCPAREN);
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_PERCPAREN || TOKEN_TYPE(moo) == MOO_IOTOK_PERCBRACK);
 
 	maip = moo->c->mth.code.len;
-	if (emit_single_param_instruction(moo, BCODE_MAKE_ARRAY, 0) <= -1) return -1;
+	if (emit_single_param_instruction(moo, bcode_make, 0) <= -1) return -1;
 
 	aeloc = *TOKEN_LOC(moo);
 	GET_TOKEN (moo); /* read a token after #{ */
@@ -4732,8 +4745,8 @@ static int compile_array_expression (moo_t* moo)
 		index = 0;
 		do
 		{
-			if (compile_method_expression (moo, 0) <= -1) return -1;
-			if (emit_single_param_instruction (moo, BCODE_POP_INTO_ARRAY, index) <= -1) return -1;
+			if (compile_method_expression(moo, 0) <= -1) return -1;
+			if (emit_single_param_instruction(moo, bcode_pop_into, index) <= -1) return -1;
 			index++;
 
 			if (index > MAX_CODE_PARAM)
@@ -4742,7 +4755,7 @@ static int compile_array_expression (moo_t* moo)
 				return -1;
 			}
 
-			if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN) break;
+			if (TOKEN_TYPE(moo) == closer_token) break;
 
 			if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA)
 			{
@@ -4766,6 +4779,16 @@ static int compile_array_expression (moo_t* moo)
 
 	GET_TOKEN (moo); /* read a token after } */
 	return 0;
+}
+
+static int compile_array_expression (moo_t* moo)
+{
+	return _compile_array_expression (moo, MOO_IOTOK_RPAREN, BCODE_MAKE_ARRAY, BCODE_POP_INTO_ARRAY);
+}
+
+static int compile_bytearray_expression (moo_t* moo)
+{
+	return _compile_array_expression (moo, MOO_IOTOK_RBRACK, BCODE_MAKE_BYTEARRAY, BCODE_POP_INTO_BYTEARRAY);
 }
 
 static int compile_dictionary_expression (moo_t* moo)
@@ -5008,18 +5031,30 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				GET_TOKEN (moo);
 				break;
 
-			case MOO_IOTOK_HASHBRACK: /* #[ */
-				/*GET_TOKEN (moo);*/
-				if (compile_byte_array_literal(moo) <= -1) return -1;
-				break;
 
 			case MOO_IOTOK_HASHPAREN: /* #( */
 				/*GET_TOKEN (moo);*/
 				if (compile_array_literal(moo) <= -1) return -1;
 				break;
 
+			case MOO_IOTOK_HASHBRACK: /* #[ */
+				/*GET_TOKEN (moo);*/
+				if (compile_byte_array_literal(moo) <= -1) return -1;
+				break;
+
+#if 0
+/* TODO: */
+			case MOO_IOTOK_HASHBRACE: /* #{ */
+				if (compile_dictionary_literal(moo) <= -1) return -1;
+				break;
+#endif
+
 			case MOO_IOTOK_PERCPAREN: /* %( */
 				if (compile_array_expression(moo) <= -1) return -1;
+				break;
+
+			case MOO_IOTOK_PERCBRACK: /* %[ */
+				if (compile_bytearray_expression(moo) <= -1) return -1;
 				break;
 
 			case MOO_IOTOK_PERCBRACE: /* %{ */

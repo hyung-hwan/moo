@@ -331,10 +331,9 @@ class AsyncHandle(Object)
 		}.
 	}
 
-	method writeBytes: bytes offset: offset length: length
+	method writeBytes: bytes offset: offset length: length semaphore: sem
 	{
-		| oldact |
-
+		| oldact n |
 #######################################
 ## TODO: if data still in progress, failure... or success while concatening the message? 
 ##       for a stream, concatening is not bad. but it's not good if the socket requires message boundary preservation.
@@ -342,12 +341,25 @@ class AsyncHandle(Object)
 
 		if (self.outputReady)
 		{
-			if ((self _writeBytes: bytes offset: offset length: length) >= 0) { ^self }.
+			## n >= 0: written
+			## n <= -1: tolerable error (e.g. EAGAIN)
+			## exception: fatal error
+			##while (true) ## TODO: loop to write as much as possible
+			##{
+				n := self _writeBytes: bytes offset: offset length: length.
+				if (n >= 0) 
+				{ 
+					if (sem notNil) { sem signal }.
+					^n 
+				}.
+			##}.
+
 			self.outputReady := false.
 		}.
 
 		oldact := self.outputAction.
 		self.outputAction := [ :sck :state |
+			##### schedule write.
 			if (state)
 			{
 				if ((self _writeBytes: bytes offset: offset length: length) <= -1) 
@@ -367,9 +379,19 @@ class AsyncHandle(Object)
 		self watchOutput.
 	}
 
+	method writeBytes: bytes semaphore: sem
+	{
+		^self writeBytes: bytes offset: 0 length: (bytes size) semaphore: sem.
+	}
+
+	method writeBytes: bytes offset: offset length: length
+	{
+		^self writeBytes: bytes offset: offset length: length semaphore: nil.
+	}
+
 	method writeBytes: bytes
 	{
-		^self writeBytes: bytes offset: 0 length: (bytes size)
+		^self writeBytes: bytes offset: 0 length: (bytes size) semaphore: nil.
 	}
 }
 
@@ -576,15 +598,29 @@ error -> exception
 			}
 		].
 
+	
 		conact := [:sck :state |
+
+			| x write_more count |
+
+			count := 0.
 			if (state)
 			{
 				'CONNECTED NOW.............' dump.
 
 				###sck inputTimeout: 10; outputTimeout: 10; connectTimeout: 10.
+				write_more := [:sem |
+					sck writeBytes: %[ $h, $e, $l, $l, $o, $-, $m, $o, count + 65, $o, $o, C'\n' ] semaphore: x.
+					if (count > 26) { count := 0 }
+					else { count := count + 1 }.
+				].
+
+				x := Semaphore new.
+				x signalAction: write_more.
+				System addAsyncSemaphore: x.
 
 				sck outputAction: outact.
-				sck writeBytes: #[ $h, $e, $l, $l, $o, $-, $m, $o, $o, C'\n' ].
+				sck writeBytes: #[ $h, $e, $l, $l, $o, $-, $m, $o, $o, C'\n' ] semaphore: x.
 
 				sck inputAction: inact.
 				sck watchInput.
@@ -608,6 +644,7 @@ error -> exception
 			##newsck watchInput; watchOutput.
 			newsck watchInput.
 
+			
 			newsck writeBytes: #[ $W, $e, $l, $c, $o, $m, $e, $., C'\n' ].
 		].
 
@@ -615,7 +652,6 @@ error -> exception
 			| s s2 st sg ss |
 			[
 				s := Socket domain: Socket.Domain.INET type: Socket.Type.STREAM.
-				##s connect: (SocketAddress fromString: '127.0.0.1:9999') do: conact.
 				s connect: (SocketAddress fromString: '127.0.0.1:9999') do: conact.
 
 ##				s2 := Socket domain: Socket.Domain.INET type: Socket.Type.STREAM.
@@ -642,6 +678,8 @@ st := Semaphore new.
 System addAsyncSemaphore: st.
 System signal: st afterSecs: 20.
 *)
+
+
 				while (true)
 				{
 					ss := System handleAsyncEvent.

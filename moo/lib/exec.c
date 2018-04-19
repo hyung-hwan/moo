@@ -5283,6 +5283,39 @@ static int __execute (moo_t* moo)
 			NEXT_INST();
 		}
 
+		ON_INST(BCODE_MAKE_BYTEARRAY)
+		{
+			moo_oop_t t;
+
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST1 (moo, "make_bytearray %zu", b1);
+
+			/* create an empty array */
+			t = moo_instantiate (moo, moo->_byte_array, MOO_NULL, b1);
+			if (!t) return -1;
+
+			MOO_STACK_PUSH (moo, t); /* push the array created */
+			NEXT_INST();
+		}
+
+		ON_INST(BCODE_POP_INTO_BYTEARRAY)
+		{
+			moo_oop_t t1, t2;
+			moo_uint8_t bv;
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST1 (moo, "pop_into_bytearray %zu", b1);
+			t1 = MOO_STACK_GETTOP(moo);
+			MOO_STACK_POP (moo);
+			t2 = MOO_STACK_GETTOP(moo);
+			if (MOO_OOP_IS_SMOOI(t1)) bv = MOO_OOP_TO_SMOOI(t1);
+			else if (MOO_OOP_IS_CHAR(t1)) bv = MOO_OOP_TO_CHAR(t1);
+			else if (MOO_OOP_IS_ERROR(t1)) bv = MOO_OOP_TO_ERROR(t1);
+			else if (MOO_OOP_IS_SMPTR(t1)) bv = ((moo_oow_t)MOO_OOP_TO_SMPTR(t1) & 0xFF);
+			else bv = 0;
+			((moo_oop_byte_t)t2)->slot[b1] = bv;
+			NEXT_INST();
+		}
+
 		ON_INST(BCODE_DUP_STACKTOP)
 		{
 			moo_oop_t t;
