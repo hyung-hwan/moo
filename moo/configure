@@ -673,6 +673,7 @@ QUADMATH_LIBS
 UNICOWS_LIBS
 SOCKET_LIBS
 TERMINAL_LIBS
+UNWIND_LIBS
 DYNCALL_LIBS
 LTDL_LIBS
 DL_LIBS
@@ -18263,12 +18264,13 @@ fi
 
 done
 
-for ac_header in dyncall.h
+for ac_header in netinet/in.h sys/un.h netpacket/packet.h net/if_dl.h
 do :
-  ac_fn_c_check_header_mongrel "$LINENO" "dyncall.h" "ac_cv_header_dyncall_h" "$ac_includes_default"
-if test "x$ac_cv_header_dyncall_h" = xyes; then :
+  as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
   cat >>confdefs.h <<_ACEOF
-#define HAVE_DYNCALL_H 1
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
 _ACEOF
 
 fi
@@ -18287,7 +18289,7 @@ fi
 
 done
 
-for ac_header in netinet/in.h sys/un.h netpacket/packet.h net/if_dl.h
+for ac_header in dyncall.h libunwind.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -18564,6 +18566,58 @@ $as_echo "#define HAVE_DYNCALL_LIB 1" >>confdefs.h
 
 fi
 
+
+
+if test "x${ac_cv_header_libunwind_h}" = "xyes"
+then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for unw_backtrace in -lunwind" >&5
+$as_echo_n "checking for unw_backtrace in -lunwind... " >&6; }
+if ${ac_cv_lib_unwind_unw_backtrace+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lunwind  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char unw_backtrace ();
+int
+main ()
+{
+return unw_backtrace ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_unwind_unw_backtrace=yes
+else
+  ac_cv_lib_unwind_unw_backtrace=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_unwind_unw_backtrace" >&5
+$as_echo "$ac_cv_lib_unwind_unw_backtrace" >&6; }
+if test "x$ac_cv_lib_unwind_unw_backtrace" = xyes; then :
+
+			UNWIND_LIBS="-lunwind"
+
+$as_echo "#define HAVE_UNWIND_LIB 1" >>confdefs.h
+
+
+
+fi
+
+
+fi
 
 
 save_LIBS="$LIBS"

@@ -129,9 +129,9 @@ AC_CHECK_HEADERS([stddef.h wchar.h wctype.h errno.h signal.h fcntl.h dirent.h])
 AC_CHECK_HEADERS([time.h sys/time.h utime.h spawn.h execinfo.h ucontext.h])
 AC_CHECK_HEADERS([dlfcn.h ltdl.h sys/mman.h])
 AC_CHECK_HEADERS([sys/devpoll.h sys/epoll.h poll.h])
-AC_CHECK_HEADERS([dyncall.h])
-AC_CHECK_HEADERS([xcb/xcb.h])
 AC_CHECK_HEADERS([netinet/in.h sys/un.h netpacket/packet.h net/if_dl.h])
+AC_CHECK_HEADERS([xcb/xcb.h])
+AC_CHECK_HEADERS([dyncall.h libunwind.h])
 
 dnl check data types
 dnl AC_CHECK_TYPE([wchar_t], 
@@ -178,6 +178,18 @@ AC_CHECK_LIB([dyncall_s], [dcNewCallVM],
 	]
 )
 AC_SUBST(DYNCALL_LIBS)
+
+if test "x${ac_cv_header_libunwind_h}" = "xyes" 
+then
+	AC_CHECK_LIB([unwind], [unw_backtrace], 
+		[
+			UNWIND_LIBS="-lunwind"
+			AC_DEFINE([HAVE_UNWIND_LIB], [1], [libunwind is available])
+		]
+	)
+	AC_SUBST(UNWIND_LIBS)
+fi
+
 
 save_LIBS="$LIBS"
 AC_SEARCH_LIBS([setupterm], [tinfo termcap curses ncurses ncursesw], [TERMINAL_LIBS="$ac_cv_search_setupterm"])

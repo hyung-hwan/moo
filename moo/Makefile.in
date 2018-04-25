@@ -307,6 +307,7 @@ SOCKET_LIBS = @SOCKET_LIBS@
 STRIP = @STRIP@
 TERMINAL_LIBS = @TERMINAL_LIBS@
 UNICOWS_LIBS = @UNICOWS_LIBS@
+UNWIND_LIBS = @UNWIND_LIBS@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@

@@ -99,6 +99,9 @@
 /* labels as values */
 #undef HAVE_LABELS_AS_VALUES
 
+/* Define to 1 if you have the <libunwind.h> header file. */
+#undef HAVE_LIBUNWIND_H
+
 /* Define to 1 if you have the `log10q' function. */
 #undef HAVE_LOG10Q
 
@@ -242,6 +245,9 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
+
+/* libunwind is available */
+#undef HAVE_UNWIND_LIB
 
 /* Define to 1 if you have the `usleep' function. */
 #undef HAVE_USLEEP
