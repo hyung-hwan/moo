@@ -2449,6 +2449,9 @@ int main (int argc, char* argv[])
 	if (!moo)
 	{
 		fprintf (stderr, "ERROR: cannot open moo\n");
+	#if defined(USE_LTDL)
+		lt_dlexit ();
+	#endif
 		return -1;
 	}
 
@@ -2488,6 +2491,9 @@ int main (int argc, char* argv[])
 		if (handle_logopt (moo, logopt) <= -1) 
 		{
 			moo_close (moo);
+		#if defined(USE_LTDL)
+			lt_dlexit ();
+		#endif
 			return -1;
 		}
 	}
@@ -2503,6 +2509,9 @@ int main (int argc, char* argv[])
 		if (handle_dbgopt (moo, dbgopt) <= -1)
 		{
 			moo_close (moo);
+		#if defined(USE_LTDL)
+			lt_dlexit ();
+		#endif
 			return -1;
 		}
 	}
@@ -2512,6 +2521,9 @@ int main (int argc, char* argv[])
 	{
 		moo_logbfmt (moo, MOO_LOG_STDERR, "ERROR: cannot ignite moo - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
 		moo_close (moo);
+	#if defined(USE_LTDL)
+		lt_dlexit ();
+	#endif
 		return -1;
 	}
 
@@ -2562,9 +2574,9 @@ int main (int argc, char* argv[])
 			}
 
 			moo_close (moo);
-#if defined(USE_LTDL)
+		#if defined(USE_LTDL)
 			lt_dlexit ();
-#endif
+		#endif
 			return -1;
 		}
 	}
@@ -2598,8 +2610,5 @@ int main (int argc, char* argv[])
 	lt_dlexit ();
 #endif
 
-#if defined(_WIN32) && defined(_DEBUG)
-getchar();
-#endif
 	return xret;
 }
