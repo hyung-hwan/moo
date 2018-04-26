@@ -1841,7 +1841,7 @@ static moo_pfrc_t pf_dump (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static void log_char_object (moo_t* moo, moo_log_masks_t mask, moo_oop_char_t msg)
+static void log_char_object (moo_t* moo, moo_bitmask_t mask, moo_oop_char_t msg)
 {
 	moo_ooi_t n;
 	moo_oow_t rem;
@@ -3354,7 +3354,7 @@ static moo_pfrc_t pf_strlen (moo_t* moo, moo_ooi_t nargs)
 static moo_pfrc_t pf_system_log (moo_t* moo, moo_ooi_t nargs)
 {
 	moo_oop_t msg, level;
-	moo_log_masks_t mask;
+	moo_bitmask_t mask;
 	moo_ooi_t k;
 
 	MOO_ASSERT (moo, nargs >=  2);

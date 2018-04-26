@@ -130,14 +130,14 @@ static moo_bch_t bch_nullstr[] = { '(','n','u','l','l', ')','\0' };
 
 typedef int (*moo_fmtout_putch_t) (
 	moo_t*          moo,
-	moo_log_masks_t mask,
+	moo_bitmask_t mask,
 	moo_ooch_t      c,
 	moo_oow_t       len
 );
 
 typedef int (*moo_fmtout_putcs_t) (
 	moo_t*            moo,
-	moo_log_masks_t   mask,
+	moo_bitmask_t   mask,
 	const moo_ooch_t* ptr,
 	moo_oow_t         len
 );
@@ -146,7 +146,7 @@ typedef struct moo_fmtout_t moo_fmtout_t;
 struct moo_fmtout_t
 {
 	moo_oow_t            count; /* out */
-	moo_log_masks_t      mask;  /* in */
+	moo_bitmask_t      mask;  /* in */
 	moo_fmtout_putch_t   putch; /* in */
 	moo_fmtout_putcs_t   putcs; /* in */
 };
@@ -184,7 +184,7 @@ static moo_bch_t* sprintn_upper (moo_bch_t* nbuf, moo_uintmax_t num, int base, m
 }
 
 /* ------------------------------------------------------------------------- */
-static int put_ooch (moo_t* moo, moo_log_masks_t mask, moo_ooch_t ch, moo_oow_t len)
+static int put_ooch (moo_t* moo, moo_bitmask_t mask, moo_ooch_t ch, moo_oow_t len)
 {
 	/* this is not equivalent to put_oocs(moo,mask,&ch, 1);
 	 * this function is to emit a single character multiple times */
@@ -281,7 +281,7 @@ redo:
 	return 1; /* success */
 }
 
-static int put_oocs (moo_t* moo, moo_log_masks_t mask, const moo_ooch_t* ptr, moo_oow_t len)
+static int put_oocs (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* ptr, moo_oow_t len)
 {
 	moo_oow_t rem;
 
@@ -374,9 +374,9 @@ redo:
 
 /* ------------------------------------------------------------------------- */
 
-typedef moo_ooi_t (*outbfmt_t) (moo_t* moo, moo_log_masks_t mask, const moo_bch_t* fmt, ...);
+typedef moo_ooi_t (*outbfmt_t) (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...);
 
-static int print_object (moo_t* moo, moo_log_masks_t mask, moo_oop_t oop, outbfmt_t outbfmt)
+static int print_object (moo_t* moo, moo_bitmask_t mask, moo_oop_t oop, outbfmt_t outbfmt)
 {
 	if (oop == moo->_nil)
 	{
@@ -612,7 +612,7 @@ static int _logufmtv (moo_t* moo, const moo_uch_t* fmt, moo_fmtout_t* data, va_l
 	return __logufmtv (moo, fmt, data, ap, moo_logbfmt);
 }
 
-moo_ooi_t moo_logbfmt (moo_t* moo, moo_log_masks_t mask, const moo_bch_t* fmt, ...)
+moo_ooi_t moo_logbfmt (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...)
 {
 	int x;
 	va_list ap;
@@ -645,7 +645,7 @@ moo_ooi_t moo_logbfmt (moo_t* moo, moo_log_masks_t mask, const moo_bch_t* fmt, .
 	return (x <= -1)? -1: fo.count;
 }
 
-moo_ooi_t moo_logufmt (moo_t* moo, moo_log_masks_t mask, const moo_uch_t* fmt, ...)
+moo_ooi_t moo_logufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, ...)
 {
 	int x;
 	va_list ap;
@@ -679,7 +679,7 @@ moo_ooi_t moo_logufmt (moo_t* moo, moo_log_masks_t mask, const moo_uch_t* fmt, .
  * ERROR MESSAGE FORMATTING
  * -------------------------------------------------------------------------- */
 
-static int put_errch (moo_t* moo, moo_log_masks_t mask, moo_ooch_t ch, moo_oow_t len)
+static int put_errch (moo_t* moo, moo_bitmask_t mask, moo_ooch_t ch, moo_oow_t len)
 {
 	moo_oow_t max;
 
@@ -698,7 +698,7 @@ static int put_errch (moo_t* moo, moo_log_masks_t mask, moo_ooch_t ch, moo_oow_t
 	return 1; /* success */
 }
 
-static int put_errcs (moo_t* moo, moo_log_masks_t mask, const moo_ooch_t* ptr, moo_oow_t len)
+static int put_errcs (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* ptr, moo_oow_t len)
 {
 	moo_oow_t max;
 
@@ -715,7 +715,7 @@ static int put_errcs (moo_t* moo, moo_log_masks_t mask, const moo_ooch_t* ptr, m
 }
 
 
-static moo_ooi_t __errbfmtv (moo_t* moo, moo_log_masks_t mask, const moo_bch_t* fmt, ...);
+static moo_ooi_t __errbfmtv (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...);
 
 static int _errbfmtv (moo_t* moo, const moo_bch_t* fmt, moo_fmtout_t* data, va_list ap)
 {
@@ -727,7 +727,7 @@ static int _errufmtv (moo_t* moo, const moo_uch_t* fmt, moo_fmtout_t* data, va_l
 	return __logufmtv (moo, fmt, data, ap, __errbfmtv);
 }
 
-static moo_ooi_t __errbfmtv (moo_t* moo, moo_log_masks_t mask, const moo_bch_t* fmt, ...)
+static moo_ooi_t __errbfmtv (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...)
 {
 	va_list ap;
 	moo_fmtout_t fo;

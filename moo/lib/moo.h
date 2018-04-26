@@ -38,6 +38,9 @@
  * object instead of putting in in a separate byte array. */
 #define MOO_USE_METHOD_TRAILER
 
+
+typedef unsigned int moo_bitmask_t;
+
 /* ========================================================================== */
 
 /**
@@ -127,8 +130,6 @@ enum moo_trait_t
 	MOO_AWAIT_PROCS = (1u << 9)
 };
 typedef enum moo_trait_t moo_trait_t;
-
-typedef unsigned int moo_traits_t;
 
 typedef struct moo_obj_t           moo_obj_t;
 typedef struct moo_obj_t*          moo_oop_t;
@@ -949,8 +950,6 @@ enum moo_log_mask_t
 };
 typedef enum moo_log_mask_t moo_log_mask_t;
 
-typedef unsigned int moo_log_masks_t;
-
 /* all bits must be set to get enabled */
 #define MOO_LOG_ENABLED(moo,mask) (((moo)->option.log_mask & (mask)) == (mask))
 
@@ -1009,7 +1008,7 @@ typedef void (*moo_free_heap_t) (
 
 typedef void (*moo_log_write_t) (
 	moo_t*             moo,
-	moo_log_masks_t    mask,
+	moo_bitmask_t    mask,
 	const moo_ooch_t*  msg,
 	moo_oow_t          len
 );
@@ -1312,8 +1311,8 @@ struct moo_t
 
 	struct
 	{
-		moo_traits_t trait;
-		moo_log_masks_t log_mask;
+		moo_bitmask_t trait;
+		moo_bitmask_t log_mask;
 		moo_oow_t log_maxcapa;
 		moo_oow_t dfl_symtab_size;
 		moo_oow_t dfl_sysdic_size;
@@ -1337,8 +1336,8 @@ struct moo_t
 		moo_ooch_t* ptr;
 		moo_oow_t len;
 		moo_oow_t capa;
-		moo_log_masks_t last_mask;
-		moo_log_masks_t default_type_mask;
+		moo_bitmask_t last_mask;
+		moo_bitmask_t default_type_mask;
 	} log;
 
 	/* ========================= */
