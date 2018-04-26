@@ -27,6 +27,10 @@ else
 LIBADD_LIB_COMMON += $(DL_LIBS)
 endif
 
+if ENABLE_LIBUNWIND
+LIBADD_LIB_COMMON += $(UNWIND_LIBS)
+endif
+
 if WIN32
 # you must adjust the value of DEFAULT_MODPOSTFIX according 
 # to the first number in -version-info above

@@ -26,6 +26,9 @@
 
 #include "moo-prv.h"
 
+#if defined(MOO_ENABLE_LIBUNWIND)
+#	include <libunwind.h>
+#endif
 
 /* BEGIN: GENERATED WITH generr.moo */
 
@@ -466,21 +469,44 @@ void moo_setsynerr (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, con
 #endif
 
 /* -------------------------------------------------------------------------- 
- * ASSERTION FAILURE HANDLERsemaphore heap full
+ * STACK FRAME BACKTRACE
  * -------------------------------------------------------------------------- */
-
-void moo_assertfailed (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file, moo_oow_t line)
+#if defined(MOO_ENABLE_LIBUNWIND)
+void backtrace_stack_frames (moo_t* moo)
 {
-#if defined(HAVE_BACKTRACE)
+	unw_cursor_t cursor;
+	unw_context_t context;
+
+	unw_getcontext(&context);
+	unw_init_local(&cursor, &context);
+
+	int n=0;
+	while (unw_step(&cursor)) 
+	{
+		unw_word_t ip, sp, off;
+
+		unw_get_reg (&cursor, UNW_REG_IP, &ip);
+		unw_get_reg (&cursor, UNW_REG_SP, &sp);
+
+		char symbol[256];
+
+		if (!unw_get_proc_name(&cursor, symbol, MOO_COUNTOF(symbol), &off)) 
+		{
+			moo_copy_bcstr (symbol, "<unknown>");
+		}
+
+		moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_DEBUG, 
+			"#%-2d 0x%016p p=0x%016p %s + 0x%zu\n", 
+			++n, (void*)ip, (void*)sp, symbol, (moo_oow_t)off);
+	}
+}
+#elif defined(HAVE_BACKTRACE)
+void backtrace_stack_frames (moo_t* moo)
+{
 	void* btarray[128];
 	moo_oow_t btsize;
 	char** btsyms;
-#endif
 
-	moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_FATAL, "ASSERTION FAILURE: %s at %s:%zu\n", expr, file, line);
-
-
-#if defined(HAVE_BACKTRACE)
 	btsize = backtrace (btarray, MOO_COUNTOF(btarray));
 	btsyms = backtrace_symbols (btarray, btsize);
 	if (btsyms)
@@ -494,8 +520,23 @@ void moo_assertfailed (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file,
 		}
 		free (btsyms);
 	}
+}
+#else
+void backtrace_stack_frames (moo_t* moo)
+{
+	/* do nothing. not supported */
+}
 #endif
 
+/* -------------------------------------------------------------------------- 
+ * ASSERTION FAILURE HANDLER
+ * -------------------------------------------------------------------------- */
+
+
+void moo_assertfailed (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file, moo_oow_t line)
+{
+	moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_FATAL, "ASSERTION FAILURE: %s at %s:%zu\n", expr, file, line);
+	backtrace_stack_frames (moo);
 
 #if defined(_WIN32)
 	ExitProcess (249);

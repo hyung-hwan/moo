@@ -291,14 +291,14 @@ int moo_setoption (moo_t* moo, moo_option_t id, const void* value)
 	switch (id)
 	{
 		case MOO_TRAIT:
-			moo->option.trait = *(const unsigned int*)value;
+			moo->option.trait = *(moo_traits_t*)value;
 		#if defined(MOO_BUILD_DEBUG)
 			moo->option.karatsuba_cutoff = ((moo->option.trait & MOO_DEBUG_BIGINT)? MOO_KARATSUBA_CUTOFF_DEBUG: MOO_KARATSUBA_CUTOFF);
 		#endif
 			return 0;
 
 		case MOO_LOG_MASK:
-			moo->option.log_mask = *(const unsigned int*)value;
+			moo->option.log_mask = *(moo_log_masks_t*)value;
 			return 0;
 
 		case MOO_LOG_MAXCAPA:
@@ -353,11 +353,11 @@ int moo_getoption (moo_t* moo, moo_option_t id, void* value)
 	switch  (id)
 	{
 		case MOO_TRAIT:
-			*(unsigned int*)value = moo->option.trait;
+			*(moo_traits_t*)value = moo->option.trait;
 			return 0;
 
 		case MOO_LOG_MASK:
-			*(unsigned int*)value = moo->option.log_mask;
+			*(moo_log_masks_t*)value = moo->option.log_mask;
 			return 0;
 
 		case MOO_LOG_MAXCAPA:

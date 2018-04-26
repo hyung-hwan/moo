@@ -115,18 +115,20 @@ typedef enum moo_option_dflval_t moo_option_dflval_t;
 enum moo_trait_t
 {
 #if defined(MOO_BUILD_DEBUG)
-	MOO_DEBUG_GC     = (1 << 0),
-	MOO_DEBUG_BIGINT = (1 << 1),
+	MOO_DEBUG_GC     = (1u << 0),
+	MOO_DEBUG_BIGINT = (1u << 1),
 #endif
 
 	/* perform no garbage collection when the heap is full. 
 	 * you still can use moo_gc() explicitly. */
-	MOO_NOGC = (1 << 8),
+	MOO_NOGC = (1u << 8),
 
 	/* wait for running process when exiting from the main method */
-	MOO_AWAIT_PROCS = (1 << 9)
+	MOO_AWAIT_PROCS = (1u << 9)
 };
 typedef enum moo_trait_t moo_trait_t;
+
+typedef unsigned int moo_traits_t;
 
 typedef struct moo_obj_t           moo_obj_t;
 typedef struct moo_obj_t*          moo_oop_t;
@@ -917,6 +919,81 @@ struct moo_heap_t
 };
 
 /* =========================================================================
+ * MOO VM LOGGING
+ * ========================================================================= */
+
+enum moo_log_mask_t
+{
+	MOO_LOG_DEBUG      = (1u << 0),
+	MOO_LOG_INFO       = (1u << 1),
+	MOO_LOG_WARN       = (1u << 2),
+	MOO_LOG_ERROR      = (1u << 3),
+	MOO_LOG_FATAL      = (1u << 4),
+
+	MOO_LOG_UNTYPED    = (1u << 6), /* only to be used by MOO_DEBUGx() and MOO_INFOx() */
+	MOO_LOG_COMPILER   = (1u << 7),
+	MOO_LOG_VM         = (1u << 8),
+	MOO_LOG_MNEMONIC   = (1u << 9), /* bytecode mnemonic */
+	MOO_LOG_GC         = (1u << 10),
+	MOO_LOG_IC         = (1u << 11), /* instruction cycle, fetch-decode-execute */
+	MOO_LOG_PRIMITIVE  = (1u << 12),
+	MOO_LOG_APP        = (1u << 13), /* moo applications, set by moo logging primitive */
+
+	MOO_LOG_ALL_LEVELS = (MOO_LOG_DEBUG  | MOO_LOG_INFO | MOO_LOG_WARN | MOO_LOG_ERROR | MOO_LOG_FATAL),
+	MOO_LOG_ALL_TYPES  = (MOO_LOG_UNTYPED | MOO_LOG_COMPILER | MOO_LOG_VM | MOO_LOG_MNEMONIC | MOO_LOG_GC | MOO_LOG_IC | MOO_LOG_PRIMITIVE | MOO_LOG_APP),
+
+
+	MOO_LOG_STDOUT     = (1u << 14), /* write log messages to stdout without timestamp. MOO_LOG_STDOUT wins over MOO_LOG_STDERR. */
+	MOO_LOG_STDERR     = (1u << 15)  /* write log messages to stderr without timestamp. */
+
+};
+typedef enum moo_log_mask_t moo_log_mask_t;
+
+typedef unsigned int moo_log_masks_t;
+
+/* all bits must be set to get enabled */
+#define MOO_LOG_ENABLED(moo,mask) (((moo)->option.log_mask & (mask)) == (mask))
+
+#define MOO_LOG0(moo,mask,fmt) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt); } while(0)
+#define MOO_LOG1(moo,mask,fmt,a1) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1); } while(0)
+#define MOO_LOG2(moo,mask,fmt,a1,a2) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1, a2); } while(0)
+#define MOO_LOG3(moo,mask,fmt,a1,a2,a3) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1, a2, a3); } while(0)
+#define MOO_LOG4(moo,mask,fmt,a1,a2,a3,a4) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1, a2, a3, a4); } while(0)
+#define MOO_LOG5(moo,mask,fmt,a1,a2,a3,a4,a5) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1, a2, a3, a4, a5); } while(0)
+#define MOO_LOG6(moo,mask,fmt,a1,a2,a3,a4,a5,a6) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1, a2, a3, a4, a5, a6); } while(0)
+
+#if defined(MOO_BUILD_RELEASE)
+	/* [NOTE]
+	 *  get rid of debugging message totally regardless of
+	 *  the log mask in the release build.
+	 */
+#	define MOO_DEBUG0(moo,fmt)
+#	define MOO_DEBUG1(moo,fmt,a1)
+#	define MOO_DEBUG2(moo,fmt,a1,a2)
+#	define MOO_DEBUG3(moo,fmt,a1,a2,a3)
+#	define MOO_DEBUG4(moo,fmt,a1,a2,a3,a4)
+#	define MOO_DEBUG5(moo,fmt,a1,a2,a3,a4,a5)
+#	define MOO_DEBUG6(moo,fmt,a1,a2,a3,a4,a5,a6)
+#else
+#	define MOO_DEBUG0(moo,fmt) MOO_LOG0(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt)
+#	define MOO_DEBUG1(moo,fmt,a1) MOO_LOG1(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1)
+#	define MOO_DEBUG2(moo,fmt,a1,a2) MOO_LOG2(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1, a2)
+#	define MOO_DEBUG3(moo,fmt,a1,a2,a3) MOO_LOG3(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1, a2, a3)
+#	define MOO_DEBUG4(moo,fmt,a1,a2,a3,a4) MOO_LOG4(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4)
+#	define MOO_DEBUG5(moo,fmt,a1,a2,a3,a4,a5) MOO_LOG5(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4, a5)
+#	define MOO_DEBUG6(moo,fmt,a1,a2,a3,a4,a5,a6) MOO_LOG6(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4, a5, a6)
+#endif
+
+#define MOO_INFO0(moo,fmt) MOO_LOG0(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt)
+#define MOO_INFO1(moo,fmt,a1) MOO_LOG1(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1)
+#define MOO_INFO2(moo,fmt,a1,a2) MOO_LOG2(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1, a2)
+#define MOO_INFO3(moo,fmt,a1,a2,a3) MOO_LOG3(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1, a2, a3)
+#define MOO_INFO4(moo,fmt,a1,a2,a3,a4) MOO_LOG4(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4)
+#define MOO_INFO5(moo,fmt,a1,a2,a3,a4,a5) MOO_LOG5(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4, a5)
+#define MOO_INFO6(moo,fmt,a1,a2,a3,a4,a5,a6) MOO_LOG6(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4, a5, a6)
+
+
+/* =========================================================================
  * VIRTUAL MACHINE PRIMITIVES
  * ========================================================================= */
 
@@ -932,7 +1009,7 @@ typedef void (*moo_free_heap_t) (
 
 typedef void (*moo_log_write_t) (
 	moo_t*             moo,
-	moo_oow_t          mask,
+	moo_log_masks_t    mask,
 	const moo_ooch_t*  msg,
 	moo_oow_t          len
 );
@@ -1235,8 +1312,8 @@ struct moo_t
 
 	struct
 	{
-		unsigned int trait;
-		unsigned int log_mask;
+		moo_traits_t trait;
+		moo_log_masks_t log_mask;
 		moo_oow_t log_maxcapa;
 		moo_oow_t dfl_symtab_size;
 		moo_oow_t dfl_sysdic_size;
@@ -1260,8 +1337,8 @@ struct moo_t
 		moo_ooch_t* ptr;
 		moo_oow_t len;
 		moo_oow_t capa;
-		int last_mask;
-		int default_type_mask;
+		moo_log_masks_t last_mask;
+		moo_log_masks_t default_type_mask;
 	} log;
 
 	/* ========================= */
@@ -1476,79 +1553,6 @@ struct moo_t
 #define MOO_STACK_SETRETTORCV(moo,nargs) (MOO_STACK_POPS(moo, nargs))
 #define MOO_STACK_SETRETTOERRNUM(moo,nargs) MOO_STACK_SETRET(moo, nargs, MOO_ERROR_TO_OOP(moo->errnum))
 #define MOO_STACK_SETRETTOERROR(moo,nargs,ec) MOO_STACK_SETRET(moo, nargs, MOO_ERROR_TO_OOP(ec))
-
-/* =========================================================================
- * MOO VM LOGGING
- * ========================================================================= */
-
-enum moo_log_mask_t
-{
-	MOO_LOG_DEBUG      = (1 << 0),
-	MOO_LOG_INFO       = (1 << 1),
-	MOO_LOG_WARN       = (1 << 2),
-	MOO_LOG_ERROR      = (1 << 3),
-	MOO_LOG_FATAL      = (1 << 4),
-
-	MOO_LOG_UNTYPED    = (1 << 6), /* only to be used by MOO_DEBUGx() and MOO_INFOx() */
-	MOO_LOG_COMPILER   = (1 << 7),
-	MOO_LOG_VM         = (1 << 8),
-	MOO_LOG_MNEMONIC   = (1 << 9), /* bytecode mnemonic */
-	MOO_LOG_GC         = (1 << 10),
-	MOO_LOG_IC         = (1 << 11), /* instruction cycle, fetch-decode-execute */
-	MOO_LOG_PRIMITIVE  = (1 << 12),
-	MOO_LOG_APP        = (1 << 13), /* moo applications, set by moo logging primitive */
-
-	MOO_LOG_ALL_LEVELS = (MOO_LOG_DEBUG  | MOO_LOG_INFO | MOO_LOG_WARN | MOO_LOG_ERROR | MOO_LOG_FATAL),
-	MOO_LOG_ALL_TYPES  = (MOO_LOG_UNTYPED | MOO_LOG_COMPILER | MOO_LOG_VM | MOO_LOG_MNEMONIC | MOO_LOG_GC | MOO_LOG_IC | MOO_LOG_PRIMITIVE | MOO_LOG_APP),
-
-
-	MOO_LOG_STDOUT     = (1 << 14), /* write log messages to stdout without timestamp. MOO_LOG_STDOUT wins over MOO_LOG_STDERR. */
-	MOO_LOG_STDERR     = (1 << 15)  /* write log messages to stderr without timestamp. */
-
-};
-typedef enum moo_log_mask_t moo_log_mask_t;
-
-/* all bits must be set to get enabled */
-#define MOO_LOG_ENABLED(moo,mask) (((moo)->option.log_mask & (mask)) == (mask))
-
-#define MOO_LOG0(moo,mask,fmt) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt); } while(0)
-#define MOO_LOG1(moo,mask,fmt,a1) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1); } while(0)
-#define MOO_LOG2(moo,mask,fmt,a1,a2) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1, a2); } while(0)
-#define MOO_LOG3(moo,mask,fmt,a1,a2,a3) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1, a2, a3); } while(0)
-#define MOO_LOG4(moo,mask,fmt,a1,a2,a3,a4) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1, a2, a3, a4); } while(0)
-#define MOO_LOG5(moo,mask,fmt,a1,a2,a3,a4,a5) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1, a2, a3, a4, a5); } while(0)
-#define MOO_LOG6(moo,mask,fmt,a1,a2,a3,a4,a5,a6) do { if (MOO_LOG_ENABLED(moo,mask)) moo_logbfmt(moo, mask, fmt, a1, a2, a3, a4, a5, a6); } while(0)
-
-#if defined(MOO_BUILD_RELEASE)
-	/* [NOTE]
-	 *  get rid of debugging message totally regardless of
-	 *  the log mask in the release build.
-	 */
-#	define MOO_DEBUG0(moo,fmt)
-#	define MOO_DEBUG1(moo,fmt,a1)
-#	define MOO_DEBUG2(moo,fmt,a1,a2)
-#	define MOO_DEBUG3(moo,fmt,a1,a2,a3)
-#	define MOO_DEBUG4(moo,fmt,a1,a2,a3,a4)
-#	define MOO_DEBUG5(moo,fmt,a1,a2,a3,a4,a5)
-#	define MOO_DEBUG6(moo,fmt,a1,a2,a3,a4,a5,a6)
-#else
-#	define MOO_DEBUG0(moo,fmt) MOO_LOG0(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt)
-#	define MOO_DEBUG1(moo,fmt,a1) MOO_LOG1(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1)
-#	define MOO_DEBUG2(moo,fmt,a1,a2) MOO_LOG2(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1, a2)
-#	define MOO_DEBUG3(moo,fmt,a1,a2,a3) MOO_LOG3(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1, a2, a3)
-#	define MOO_DEBUG4(moo,fmt,a1,a2,a3,a4) MOO_LOG4(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4)
-#	define MOO_DEBUG5(moo,fmt,a1,a2,a3,a4,a5) MOO_LOG5(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4, a5)
-#	define MOO_DEBUG6(moo,fmt,a1,a2,a3,a4,a5,a6) MOO_LOG6(moo, MOO_LOG_DEBUG | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4, a5, a6)
-#endif
-
-#define MOO_INFO0(moo,fmt) MOO_LOG0(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt)
-#define MOO_INFO1(moo,fmt,a1) MOO_LOG1(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1)
-#define MOO_INFO2(moo,fmt,a1,a2) MOO_LOG2(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1, a2)
-#define MOO_INFO3(moo,fmt,a1,a2,a3) MOO_LOG3(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1, a2, a3)
-#define MOO_INFO4(moo,fmt,a1,a2,a3,a4) MOO_LOG4(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4)
-#define MOO_INFO5(moo,fmt,a1,a2,a3,a4,a5) MOO_LOG5(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4, a5)
-#define MOO_INFO6(moo,fmt,a1,a2,a3,a4,a5,a6) MOO_LOG6(moo, MOO_LOG_INFO | MOO_LOG_UNTYPED, fmt, a1, a2, a3, a4, a5, a6)
-
 
 /* =========================================================================
  * MOO ASSERTION
@@ -2187,14 +2191,14 @@ MOO_EXPORT moo_bch_t* moo_dupbchars (
 
 MOO_EXPORT moo_ooi_t moo_logbfmt (
 	moo_t*           moo,
-	moo_oow_t        mask,
+	moo_log_mask_t   mask,
 	const moo_bch_t* fmt,
 	...
 );
 
 MOO_EXPORT moo_ooi_t moo_logufmt (
 	moo_t*            moo,
-	moo_oow_t         mask,
+	moo_log_mask_t    mask,
 	const moo_uch_t*  fmt,
 	...
 );

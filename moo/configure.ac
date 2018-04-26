@@ -737,6 +737,23 @@ then
 fi
 AM_CONDITIONAL(ENABLE_LIBLTDL, test "x${enable_libltdl_is}" = "xyes")
 
+dnl ===== enable-libunwind =====
+AC_ARG_ENABLE([libunwind],
+	[AS_HELP_STRING([--enable-libunwind],[use libunwind(default. no)])],
+	enable_libunwind_is=$enableval,
+	enable_libunwind_is=no
+)
+if test "x${enable_libunwind_is}" = "xyes"
+then
+	if test "x${ac_cv_header_unwind_h}" = "xyes"  -a "${UNWIND_LIBS}" != ""
+	then
+		AC_DEFINE([MOO_ENABLE_LIBUNWIND],[],[use libunwind for backtracing stack frames])
+	else
+		enable_libunwind_is="no"
+	fi
+fi
+AM_CONDITIONAL(ENABLE_LIBUNWIND, test "x${enable_libunwind_is}" = "xyes")
+
 dnl ===== enable-mod-con =====
 AC_ARG_ENABLE([mod-con],
 	[AS_HELP_STRING([--enable-mod-con],[enable mod/con (default. yes)])],

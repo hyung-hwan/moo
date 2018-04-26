@@ -214,7 +214,7 @@ struct xtn_t
 	int vm_running;
 
 	int logfd;
-	int logmask;
+	moo_log_masks_t logmask;
 	int logfd_istty;
 	
 	struct
@@ -657,7 +657,7 @@ static void flush_log (moo_t* moo, int fd)
 	}
 }
 
-static void log_write (moo_t* moo, unsigned int mask, const moo_ooch_t* msg, moo_oow_t len)
+static void log_write (moo_t* moo, moo_log_masks_t mask, const moo_ooch_t* msg, moo_oow_t len)
 {
 	moo_bch_t buf[256];
 	moo_oow_t ucslen, bcslen, msgidx;
@@ -2213,7 +2213,7 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 	xtn_t* xtn = moo_getxtn (moo);
 	moo_bch_t* xstr = (moo_bch_t*)str;
 	moo_bch_t* cm, * flt;
-	unsigned int logmask;
+	moo_log_masks_t logmask;
 
 	cm = moo_find_bchar_in_bcstr (xstr, ',');
 	if (cm) 
@@ -2299,7 +2299,7 @@ static int handle_dbgopt (moo_t* moo, const moo_bch_t* str)
 	xtn_t* xtn = moo_getxtn (moo);
 	const moo_bch_t* cm, * flt;
 	moo_oow_t len;
-	unsigned int trait, dbgopt = 0;
+	moo_traits_t trait, dbgopt = 0;
 
 	cm = str - 1;
 	do
@@ -2467,7 +2467,7 @@ int main (int argc, char* argv[])
 	}
 
 	{
-		unsigned int trait = 0;
+		moo_traits_t trait = 0;
 
 		/*trait |= MOO_NOGC;*/
 		trait |= MOO_AWAIT_PROCS;

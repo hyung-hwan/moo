@@ -303,6 +303,9 @@
 /* use libltdl when loading a dynamic module */
 #undef MOO_ENABLE_LIBLTDL
 
+/* use libunwind for backtracing stack frames */
+#undef MOO_ENABLE_LIBUNWIND
+
 /* build mod/con */
 #undef MOO_ENABLE_MOD_CON
 
