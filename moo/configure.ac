@@ -745,7 +745,7 @@ AC_ARG_ENABLE([libunwind],
 )
 if test "x${enable_libunwind_is}" = "xyes"
 then
-	if test "x${ac_cv_header_unwind_h}" = "xyes"  -a "${UNWIND_LIBS}" != ""
+	if test "x${ac_cv_header_libunwind_h}" = "xyes"  -a "${UNWIND_LIBS}" != ""
 	then
 		AC_DEFINE([MOO_ENABLE_LIBUNWIND],[],[use libunwind for backtracing stack frames])
 	else

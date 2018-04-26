@@ -476,28 +476,28 @@ static void backtrace_stack_frames (moo_t* moo)
 {
 	unw_cursor_t cursor;
 	unw_context_t context;
+	int n;
 
 	unw_getcontext(&context);
 	unw_init_local(&cursor, &context);
 
-	int n=0;
-	while (unw_step(&cursor)) 
+	moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_DEBUG, "[BACKTRACE]\n");
+	for (n = 0; unw_step(&cursor) > 0; n++) 
 	{
 		unw_word_t ip, sp, off;
+		char symbol[256];
 
 		unw_get_reg (&cursor, UNW_REG_IP, &ip);
 		unw_get_reg (&cursor, UNW_REG_SP, &sp);
 
-		char symbol[256];
-
-		if (!unw_get_proc_name(&cursor, symbol, MOO_COUNTOF(symbol), &off)) 
+		if (unw_get_proc_name(&cursor, symbol, MOO_COUNTOF(symbol), &off)) 
 		{
-			moo_copy_bcstr (symbol, "<unknown>");
+			moo_copy_bcstr (symbol, MOO_COUNTOF(symbol), "<unknown>");
 		}
 
 		moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_DEBUG, 
-			"#%-2d 0x%016p p=0x%016p %s + 0x%zu\n", 
-			++n, (void*)ip, (void*)sp, symbol, (moo_oow_t)off);
+			"#%02d ip=0x%*p sp=0x%*p %s+0x%zu\n", 
+			n, MOO_SIZEOF(void*) * 2, (void*)ip, MOO_SIZEOF(void*) * 2, (void*)sp, symbol, (moo_oow_t)off);
 	}
 }
 #elif defined(HAVE_BACKTRACE)
