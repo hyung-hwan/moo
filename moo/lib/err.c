@@ -472,7 +472,7 @@ void moo_setsynerr (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, con
  * STACK FRAME BACKTRACE
  * -------------------------------------------------------------------------- */
 #if defined(MOO_ENABLE_LIBUNWIND)
-void backtrace_stack_frames (moo_t* moo)
+static void backtrace_stack_frames (moo_t* moo)
 {
 	unw_cursor_t cursor;
 	unw_context_t context;
@@ -501,7 +501,7 @@ void backtrace_stack_frames (moo_t* moo)
 	}
 }
 #elif defined(HAVE_BACKTRACE)
-void backtrace_stack_frames (moo_t* moo)
+static void backtrace_stack_frames (moo_t* moo)
 {
 	void* btarray[128];
 	moo_oow_t btsize;
@@ -522,7 +522,7 @@ void backtrace_stack_frames (moo_t* moo)
 	}
 }
 #else
-void backtrace_stack_frames (moo_t* moo)
+static void backtrace_stack_frames (moo_t* moo)
 {
 	/* do nothing. not supported */
 }
