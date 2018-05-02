@@ -2486,7 +2486,7 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 	}
 
 	/* it doesn't belong to a group or belongs to a different group */
-	moo_seterrbfmt (moo, MOO_EPERM, "not alloed to remove a semaphore from a non-owning group");
+	moo_seterrbfmt (moo, MOO_EPERM, "not allowed to remove a semaphore from a non-owning group");
 	return MOO_PF_FAILURE;
 }
 

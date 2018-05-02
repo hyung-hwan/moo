@@ -279,9 +279,9 @@ class Socket(AsyncHandle) from 'sck'
 {
 	var eventActions.
 	var pending_bytes, pending_offset, pending_length.
-	var outreadysem, outdonesem, inreadysem.
+	var outreadysem, outdonesem, inreadysem, connsem.
 
-	method(#primitive) _open(domain, type, proto).
+	method(#primitive) open(domain, type, proto).
 	method(#primitive) _close.
 	method(#primitive) bind: addr.
 	method(#primitive) _listen: backlog.
@@ -332,13 +332,14 @@ extend Socket
 		self.outdonesem := Semaphore new.
 		self.outreadysem := Semaphore new.
 		self.inreadysem := Semaphore new.
+		self.connsem := nil.
 
-		self.outdonesem signalAction: [ :xsem |
+		self.outdonesem signalAction: [ :sem |
 			(self.eventActions at: Socket.EventType.DATA_OUT) value: self.
 			System unsignal: self.outreadysem.
 		].
 
-		self.outreadysem signalAction: [ :xsem |
+		self.outreadysem signalAction: [ :sem |
 			| nwritten |
 			nwritten := self _writeBytes: self.pending_bytes offset: self.pending_offset length: self.pending_length.
 			if (nwritten >= 0)
@@ -350,43 +351,58 @@ extend Socket
 			}
 		].
 
-		self.inreadysem signalAction: [ :ysem |
+		self.inreadysem signalAction: [ :sem |
 			(self.eventActions at: Socket.EventType.DATA_IN) value: self.
 		].
 	}
 
-	method open(domain, type, proto)
+	method finalize
 	{
-		| sck |
-		sck := self _open(domain, type, proto).
-
-		if (self.handle >= 0)
-		{
-			System addAsyncSemaphore: self.outdonesem.
-			System addAsyncSemaphore: self.outreadysem.
-		}.
-
-		^sck
+'SOCKET FINALIZED...............' dump.
+		self close.
 	}
-
+	
 	method close
 	{
 'Socket close' dump.
-		System removeAsyncSemaphore: self.outdonesem.
-		System removeAsyncSemaphore: self.outreadysem.
+
+		if (self.outdonesem notNil)
+		{
+			System unsignal: self.outdonesem.
+			if (self.outdonesem _group notNil) { System removeAsyncSemaphore: self.outdonesem }.
+			self.outdonesem := nil.
+		}.
+		
+		if (self.outreadysem notNil)
+		{
+			System unsignal: self.outreadysem.
+			if (self.outreadysem _group notNil) { System removeAsyncSemaphore: self.outreadysem }.
+			self.outreadysem := nil.
+		}.
+		
+		if (self.connsem notNil)
+		{
+			System unsignal: self.connsem.
+			if (self.connsem _group notNil) { System removeAsyncSemaphore: self.connsem }.
+			self.connsem := nil.
+		}.
+		
+		if (self.inreadysem notNil)
+		{
+			System unsignal: self.inreadysem.
+			if (self.inreadysem _group notNil) { System removeAsyncSemaphore: self.inreadysem }.
+			self.inreadysem := nil.
+		}.
+
 		^super close.
 	}
-###	method listen: backlog do: acceptBlock
-###	{
-###		self.inputAction := acceptBlock.
-###		self watchInput.
-###		^self _listen: backlog.
-###	}
 
 	method onEvent: event_type do: action_block
 	{
 		self.eventActions at: event_type put: action_block.
 	}
+
+
 
 	method connect: target
 	{
@@ -395,55 +411,51 @@ extend Socket
 		{
 			sem := Semaphore new.
 			sem signalAction: [ :xsem |
-				| soerr dra |
+				| soerr |
 				soerr := self _socketError.
 				if (soerr >= 0) 
 				{
 					## finalize connection if not in progress
-'CHECKING FOR CONNECTION.....' dump.
 					System unsignal: xsem.
 					System removeAsyncSemaphore: xsem.
 
+'CHECKING FOR CONNECTION.....' dump.
 					(self.eventActions at: Socket.EventType.CONNECTED) value: self value: (soerr == 0).
 
 					if (soerr == 0)
 					{
-						if ((self.eventActions at: Socket.EventType.DATA_IN) notNil)
-						{
-							xsem signalAction: [ :ysem |
-								(self.eventActions at: Socket.EventType.DATA_IN) value: self.
-							].
-							System addAsyncSemaphore: xsem.
-							System signal: xsem onInput: self.handle.
-						}.
+						System addAsyncSemaphore: self.inreadysem.
+						System signal: self.inreadysem onInput: self.handle.
+						System addAsyncSemaphore: self.outdonesem.
 					}.
 				}.
 				(* HOW TO HANDLE TIMEOUT? *)
 			].
 
-			System addAsyncSemaphore: sem.
-			System signal: sem onOutput: self.handle.
+			self.connsem := sem.
+			System addAsyncSemaphore: self.connsem.
+			System signal: self.connsem onOutput: self.handle.
 		}
 		else
 		{
 			## connected immediately
 'IMMEDIATELY CONNECTED.....' dump.
 			(self.eventActions at: Socket.EventType.CONNECTED) value: self value: true.
-			if ((self.eventActions at: Socket.EventType.DATA_IN) notNil)
-			{
-				sem := Semaphore new.
-				sem signalAction: [ :xsem |
-					(self.eventActions at: Socket.EventType.DATA_IN) value: self.
-				].
-				System addAsyncSemaphore: sem.
-				System signal: sem onInput: self.handle.
-			}.
+
+			System addAsyncSemaphore: self.inreadysem.
+			System signal: self.inreadysem onInput: self.handle.
+			System addAsyncSemaphore: self.outdonesem.
 		}
 	}
 
 	method writeBytes: bytes offset: offset length: length
 	{
 		| n |
+
+		if (self.outreadysem _group notNil)
+		{
+			Exception signal: 'Not allowed to write again'.
+		}.
 
 		## n >= 0: written
 		## n <= -1: tolerable error (e.g. EAGAIN)
@@ -452,7 +464,7 @@ extend Socket
 		##{
 			n := self _writeBytes: bytes offset: offset length: length.
 			if (n >= 0) 
-			{ 
+			{
 				self.outdonesem signal.
 				^n 
 			}.
@@ -463,9 +475,29 @@ extend Socket
 		self.pending_offset := offset.
 		self.pending_length := length.
 
+		System addAsyncSemaphore: self.outreadysem.
 		System signal: self.outreadysem onOutput: self.handle.
 	}
 
+}
+
+class ServerSocket(Socket)
+{
+	method initialize
+	{
+		super initialize.
+		self.inreadysem := [ :sem |
+			| xxx |
+			System accept: xxx.
+		].
+	}
+
+	method listen: backlog
+	{
+		System addAsyncSemaphore: self.inreadysem.
+		System signal: self.inreadysem onInput: self.handle.
+		^self _listen: backlog.
+	}
 }
 
 class MyObject(Object)
@@ -479,12 +511,18 @@ class MyObject(Object)
 			[
 				buf := ByteArray new: 128.
 				s := Socket domain: Socket.Domain.INET type: Socket.Type.STREAM.
+				s2 := ServerSocket domain: Socket.Domain.INET type: Socket.Type.STREAM.
+				
+				s2 onEvent: Socket.EventType.DATA_IN do: [:sck |
+					### accept...
+				].
 				
 				s onEvent: Socket.EventType.CONNECTED do: [ :sck :state |
 					if (state)
 					{
 						'AAAAAAAA' dump.
-						s writeBytes: #[ $a, $b, $c ] 
+						s writeBytes: #[ $a, $b, $c ].
+						s writeBytes: #[ $d, $e, $f ].
 					}
 					else
 					{
@@ -496,7 +534,8 @@ class MyObject(Object)
 					nbytes := s readBytes: buf. 
 					if (nbytes == 0)
 					{
-						sck close
+						sck close.
+						s := nil.
 					}.
 					('Got ' & (nbytes asString)) dump.
 					buf dump.
@@ -517,7 +556,6 @@ class MyObject(Object)
 			ensure:
 			[
 				if (s notNil) { s close }.
-				if (s2 notNil) { s2 close }.
 			]
 
 		] on: Exception do: [:ex | ('Exception - '  & ex messageText) dump ].
