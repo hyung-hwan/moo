@@ -373,7 +373,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 
 	if (MOO_OBJ_GET_FLAGS_RDONLY(rcv))
 	{
-		moo_seterrbfmt (moo, MOO_EPERM, "now allowed to change a read-only object - %O", rcv);
+		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to change a read-only object - %O", rcv);
 		return MOO_PF_FAILURE;
 	}
 
@@ -471,7 +471,7 @@ moo_pfrc_t moo_pf_basic_fill (moo_t* moo, moo_ooi_t nargs)
 
 	if (MOO_OBJ_GET_FLAGS_RDONLY(rcv))
 	{
-		moo_seterrbfmt (moo, MOO_EPERM, "now allowed to change a read-only object - %O", rcv);
+		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to change a read-only object - %O", rcv);
 		return MOO_PF_FAILURE;
 	}
 
@@ -588,7 +588,7 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_ooi_t nargs)
 
 	if (MOO_OBJ_GET_FLAGS_RDONLY(rcv))
 	{
-		moo_seterrbfmt (moo, MOO_EPERM, "now allowed to change a read-only object - %O", rcv);
+		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to change a read-only object - %O", rcv);
 		return MOO_PF_FAILURE;
 	}
 

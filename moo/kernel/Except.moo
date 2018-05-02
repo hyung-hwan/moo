@@ -498,8 +498,21 @@ extend Apex
 	method(#dual) doesNotUnderstand: message_name
 	{
 		## TODO: implement this properly
-		| class_name |
+		| class_name ctx |
 		class_name := if (self class == Class) { self name } else { self class name }.
+
+## TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
+System logNl: '== BACKTRACE =='.
+ctx := thisContext.
+while (ctx notNil)
+{
+	if (ctx class == MethodContext) { System logNl: (' ' & ctx method owner name & '>>' & ctx method name) }.
+	## TODO: include blockcontext???
+	ctx := ctx sender.
+}.
+System logNl: '== END OF BACKTRACE =='.
+
+
 		NoSuchMessageException signal: (message_name & ' not understood by ' & class_name).
 	}
 

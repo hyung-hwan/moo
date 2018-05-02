@@ -71,3 +71,18 @@ binary-argument := expression-primary unary-selector*
 
 #main
 
+
+
+================================================
+#library Dynlib from 'dyn-lib.so'  <--- this is a generic shared library
+{
+## no instance variables allowed
+## class-level(static) functions only.
+	int abc (int, float, void*)  <--- call this as Dynlib.abc (...). anc proper type conversion back and forth must occur.
+	int abc (int, float, void*) as abc: aaa x: x y: y  <--- remap the original name to a moo-style name.
+}
+
+#class abc  from 'x11.so' <--- this is a  moo-only shared library
+{
+}
+
