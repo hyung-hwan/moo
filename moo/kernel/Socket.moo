@@ -230,7 +230,6 @@ class AsyncHandle(Object)
 	## the handle must be the first field in this object to match
 	## the internal representation used by various modules. (e.g. sck)
 	var(#get) handle := -1.
-	var outsem := nil.
 
 	##method initialize
 	##{
@@ -241,27 +240,9 @@ class AsyncHandle(Object)
 	{
 		if (self.handle >= 0)
 		{
-			###if (self.insem notNil) 
-			###{
-			###	System unsignal: self.insem;
-			###	       removeAsyncSemaphore: self.insem.
-			###	self.insem := nil.
-			###}.
-			if (self.outsem notNil)
-			{
-				System unsignal: self.outsem;
-				       removeAsyncSemaphore: self.outsem.
-				self.outsem := nil.
-			}.
-
 			self _close.
 			self.handle := -1.
 		}
-	}
-
-	method writeBytes: bytes signal: sem
-	{
-		^self writeBytes: bytes offset: 0 length: (bytes size)
 	}
 
 	method writeBytes: bytes offset: offset length: length
@@ -401,8 +382,6 @@ extend Socket
 	{
 		self.eventActions at: event_type put: action_block.
 	}
-
-
 
 	method connect: target
 	{
