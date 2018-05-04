@@ -260,7 +260,7 @@ class Socket(AsyncHandle) from 'sck'
 {
 	var eventActions.
 	var pending_bytes, pending_offset, pending_length.
-	var outreadysem, outdonesem, inreadysem, connsem.
+	var outreadysem, outdonesem, inreadysem.
 
 	method(#primitive) open(domain, type, proto).
 	method(#primitive) _close.
@@ -313,7 +313,6 @@ extend Socket
 		self.outdonesem := Semaphore new.
 		self.outreadysem := Semaphore new.
 		self.inreadysem := Semaphore new.
-		self.connsem := nil.
 
 		self.outdonesem signalAction: [ :sem |
 			(self.eventActions at: Socket.EventType.DATA_OUT) value: self.
@@ -360,14 +359,7 @@ extend Socket
 			if (self.outreadysem _group notNil) { System removeAsyncSemaphore: self.outreadysem }.
 			self.outreadysem := nil.
 		}.
-		
-		if (self.connsem notNil)
-		{
-			System unsignal: self.connsem.
-			if (self.connsem _group notNil) { System removeAsyncSemaphore: self.connsem }.
-			self.connsem := nil.
-		}.
-		
+
 		if (self.inreadysem notNil)
 		{
 			System unsignal: self.inreadysem.
@@ -381,50 +373,6 @@ extend Socket
 	method onEvent: event_type do: action_block
 	{
 		self.eventActions at: event_type put: action_block.
-	}
-
-	method connect: target
-	{
-		| sem |
-		if ((self _connect: target) <= -1)
-		{
-			sem := Semaphore new.
-			sem signalAction: [ :xsem |
-				| soerr |
-				soerr := self _socketError.
-				if (soerr >= 0) 
-				{
-					## finalize connection if not in progress
-					System unsignal: xsem.
-					System removeAsyncSemaphore: xsem.
-
-'CHECKING FOR CONNECTION.....' dump.
-					(self.eventActions at: Socket.EventType.CONNECTED) value: self value: (soerr == 0).
-
-					if (soerr == 0)
-					{
-						System addAsyncSemaphore: self.inreadysem.
-						System signal: self.inreadysem onInput: self.handle.
-						System addAsyncSemaphore: self.outdonesem.
-					}.
-				}.
-				(* HOW TO HANDLE TIMEOUT? *)
-			].
-
-			self.connsem := sem.
-			System addAsyncSemaphore: self.connsem.
-			System signal: self.connsem onOutput: self.handle.
-		}
-		else
-		{
-			## connected immediately
-'IMMEDIATELY CONNECTED.....' dump.
-			(self.eventActions at: Socket.EventType.CONNECTED) value: self value: true.
-
-			System addAsyncSemaphore: self.inreadysem.
-			System signal: self.inreadysem onInput: self.handle.
-			System addAsyncSemaphore: self.outdonesem.
-		}
 	}
 
 	method writeBytes: bytes offset: offset length: length
@@ -460,6 +408,71 @@ extend Socket
 
 }
 
+class ClientSocket(Socket)
+{
+	var connsem.
+
+	method initialize
+	{
+		super initialize.
+
+		self.connsem := Semaphore new.
+
+		self.connsem signalAction: [ :sem |
+			| soerr |
+			soerr := self _socketError.
+			if (soerr >= 0) 
+			{
+				## finalize connection if not in progress
+				System unsignal: sem.
+				System removeAsyncSemaphore: sem.
+
+'CHECKING FOR CONNECTION.....' dump.
+				(self.eventActions at: Socket.EventType.CONNECTED) value: self value: (soerr == 0).
+
+				if (soerr == 0)
+				{
+					System addAsyncSemaphore: self.inreadysem.
+					System signal: self.inreadysem onInput: self.handle.
+					System addAsyncSemaphore: self.outdonesem.
+				}.
+			}.
+			(* HOW TO HANDLE TIMEOUT? *)
+		].
+	}
+
+	method close
+	{
+		if (self.connsem notNil)
+		{
+			System unsignal: self.connsem.
+			if (self.connsem _group notNil) { System removeAsyncSemaphore: self.connsem }.
+			self.connsem := nil.
+		}.
+		^super close
+	}
+
+	method connect: target
+	{
+		| sem |
+		if ((self _connect: target) <= -1)
+		{
+			System addAsyncSemaphore: self.connsem.
+			System signal: self.connsem onOutput: self.handle.
+		}
+		else
+		{
+			## connected immediately
+'IMMEDIATELY CONNECTED.....' dump.
+			(self.eventActions at: Socket.EventType.CONNECTED) value: self value: true.
+
+			System addAsyncSemaphore: self.inreadysem.
+			System signal: self.inreadysem onInput: self.handle.
+			System addAsyncSemaphore: self.outdonesem.
+		}
+	}
+}
+
 class ServerSocket(Socket)
 {
 	method initialize
@@ -489,7 +502,7 @@ class MyObject(Object)
 			count := 0.
 			[
 				buf := ByteArray new: 128.
-				s := Socket domain: Socket.Domain.INET type: Socket.Type.STREAM.
+				s := ClientSocket domain: Socket.Domain.INET type: Socket.Type.STREAM.
 				s2 := ServerSocket domain: Socket.Domain.INET type: Socket.Type.STREAM.
 				
 				s2 onEvent: Socket.EventType.DATA_IN do: [:sck |
