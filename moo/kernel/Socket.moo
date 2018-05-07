@@ -493,7 +493,7 @@ class ServerSocket(Socket)
 			| cliaddr clisck cliact |
 			cliaddr := SocketAddress new.
 			clisck := self _accept: cliaddr.
-			if (clisck notError)
+			if (clisck notNil)
 			{
 				## the _accept method doesn't invoke the initialize method.
 				## i should invoke it manually here.
@@ -506,7 +506,6 @@ class ServerSocket(Socket)
 					clisck beWatched.
 				}
 				else { clisck close }.
-	
 			}.
 		].
 	}

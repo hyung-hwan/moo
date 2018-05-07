@@ -218,22 +218,38 @@ static moo_pfrc_t pf_accept_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	newfd = accept4(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), &addrlen, SOCK_NONBLOCK | SOCK_CLOEXEC);
 	if (newfd == -1)
 	{
-		if (errno != ENOSYS) 
+		if (errno == ENOSYS) goto normal_accept;
+		
+		if (errno != EWOULDBLOCK && errno != EAGAIN) 
 		{
 			moo_seterrwithsyserr (moo, errno);
 			return MOO_PF_FAILURE;
 		}
+
+		/* return nil if accept() is not ready to accept a socket */
+		MOO_STACK_SETRET (moo, nargs, moo->_nil);
+		return MOO_PF_SUCCESS;
 	}
 	else
 	{
 		goto accept_done;
 	}
+normal_accept:
 #endif
+
 	newfd = accept(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), &addrlen);
 	if (newfd == -1)
 	{
-		moo_seterrwithsyserr (moo, errno);
-		return MOO_PF_FAILURE;
+		if (errno != EWOULDBLOCK && errno != EAGAIN)
+		{
+			moo_seterrwithsyserr (moo, errno);
+			return MOO_PF_FAILURE;
+		}
+
+
+		/* return nil if accept() is not ready to accept a socket */
+		MOO_STACK_SETRET (moo, nargs, moo->_nil);
+		return MOO_PF_SUCCESS;
 	}
 	fl = fcntl(newfd, F_GETFL, 0);
 	if (fl == -1)
