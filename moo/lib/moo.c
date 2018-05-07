@@ -680,7 +680,7 @@ int moo_importmod (moo_t* moo, moo_oop_class_t _class, const moo_ooch_t* name, m
 
 	moo_pushtmp (moo, (moo_oop_t*)&_class);
 
-	pair = moo_rbt_search (&moo->modtab, name, len);
+	pair = moo_rbt_search(&moo->modtab, name, len);
 	if (pair)
 	{
 		mdp = (moo_mod_data_t*)MOO_RBT_VPTR(pair);
@@ -691,7 +691,7 @@ int moo_importmod (moo_t* moo, moo_oop_class_t _class, const moo_ooch_t* name, m
 		goto done2;
 	}
 
-	mdp = moo_openmod (moo, name, len, MOO_MOD_LOAD_FOR_IMPORT);
+	mdp = moo_openmod(moo, name, len, MOO_MOD_LOAD_FOR_IMPORT);
 	if (!mdp) goto done2;
 
 	if (!mdp->mod.import)
@@ -701,7 +701,7 @@ int moo_importmod (moo_t* moo, moo_oop_class_t _class, const moo_ooch_t* name, m
 		goto done;
 	}
 
-	if (mdp->mod.import (moo, &mdp->mod, _class) <= -1)
+	if (mdp->mod.import(moo, &mdp->mod, _class) <= -1)
 	{
 		MOO_DEBUG1 (moo, "Cannot import module [%js] - module's import() returned failure\n", mdp->mod.name);
 		goto done;
@@ -721,7 +721,7 @@ done2:
 	return r;
 }
 
-moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen)
+moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen, moo_mod_t** mod)
 {
 	/* primitive function identifier
 	 *   _funcname
@@ -734,7 +734,7 @@ moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidle
 	moo_oow_t mod_name_len;
 	moo_pfbase_t* pfbase;
 
-	sep = moo_rfind_oochar (pfid, pfidlen, '.');
+	sep = moo_rfind_oochar(pfid, pfidlen, '.');
 	if (!sep)
 	{
 		/* i'm writing a conservative code here. the compiler should 
@@ -752,7 +752,7 @@ moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidle
 	 * module id. the last segment is the primitive function name.
 	 * for instance, in con.window.open, con.window is a module id and
 	 * open is the primitive function name. */
-	pair = moo_rbt_search (&moo->modtab, pfid, mod_name_len);
+	pair = moo_rbt_search(&moo->modtab, pfid, mod_name_len);
 	if (pair)
 	{
 		mdp = (moo_mod_data_t*)MOO_RBT_VPTR(pair);
@@ -761,17 +761,19 @@ moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidle
 	else
 	{
 		/* open a module using the part before the last period */
-		mdp = moo_openmod (moo, pfid, mod_name_len, 0);
+		mdp = moo_openmod(moo, pfid, mod_name_len, 0);
 		if (!mdp) return MOO_NULL;
 	}
 
-	if ((pfbase = mdp->mod.query (moo, &mdp->mod, sep + 1, pfidlen - mod_name_len - 1)) == MOO_NULL) 
+	if ((pfbase = mdp->mod.query(moo, &mdp->mod, sep + 1, pfidlen - mod_name_len - 1)) == MOO_NULL) 
 	{
 		/* the primitive function is not found. but keep the module open even if it's opened above */
 		MOO_DEBUG3 (moo, "Cannot find a primitive function [%.*js] in a module [%js]\n", pfidlen - mod_name_len - 1, sep + 1, mdp->mod.name);
 		moo_seterrbfmt (moo, MOO_ENOENT, "unable to find a primitive function [%.*js] in a module [%js]", pfidlen - mod_name_len - 1, sep + 1, mdp->mod.name); 
 		return MOO_NULL;
 	}
+
+	if (mod) *mod = &mdp->mod;
 
 	MOO_DEBUG4 (moo, "Found a primitive function [%.*js] in a module [%js] - %p\n",
 		pfidlen - mod_name_len - 1, sep + 1, mdp->mod.name, pfbase);
@@ -870,8 +872,10 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 	mth->name = mnsym;
 	if (variadic) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_VARIADIC;
 	mth->preamble = MOO_SMOOI_TO_OOP(MOO_METHOD_MAKE_PREAMBLE(MOO_METHOD_PREAMBLE_NAMED_PRIMITIVE, 0, preamble_flags));
-	mth->preamble_data[0] = MOO_SMOOI_TO_OOP(0);
-	mth->preamble_data[1] = MOO_SMOOI_TO_OOP(0);
+	/*mth->preamble_data[0] = MOO_SMOOI_TO_OOP(0);
+	mth->preamble_data[1] = MOO_SMOOI_TO_OOP(0);*/
+	mth->preamble_data[0] = MOO_SMPTR_TO_OOP(0);
+	mth->preamble_data[1] = MOO_SMPTR_TO_OOP(0);
 	mth->tmpr_count = MOO_SMOOI_TO_OOP(arg_count);
 	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(arg_count);
 

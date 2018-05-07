@@ -3865,14 +3865,14 @@ static int compile_method_pragma (moo_t* moo)
 				tlen = TOKEN_NAME_LEN(moo) - 1;
 
 				/* attempt get a primitive function number by name */
-				pfbase = moo_getpfnum (moo, tptr, tlen, &pfnum);
+				pfbase = moo_getpfnum(moo, tptr, tlen, &pfnum);
 				if (!pfbase)
 				{
 					/* a built-in primitive function is not found 
 					 * check if it is a primitive function identifier */
 					moo_oow_t lit_idx;
 
-					if (!moo_rfind_oochar (tptr, tlen, '.'))
+					if (!moo_rfind_oochar(tptr, tlen, '.'))
 					{
 						/* wrong primitive function identifier */
 						moo_setsynerr (moo, MOO_SYNERR_PFIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -3882,7 +3882,7 @@ static int compile_method_pragma (moo_t* moo)
 					/* external named primitive containing a period. */
 
 					/* perform some sanity checks. see compile_method_definition() for similar checks */
-					pfbase = moo_querymod (moo, tptr, tlen);
+					pfbase = moo_querymod(moo, tptr, tlen, MOO_NULL);
 					if (!pfbase)
 					{
 						MOO_DEBUG2 (moo, "Cannot find module primitive function - %.*js\n", tlen, tptr);
@@ -6358,8 +6358,10 @@ static int add_compiled_method (moo_t* moo)
 	mth->owner = moo->c->cls.self_oop;
 	mth->name = name;
 	mth->preamble = MOO_SMOOI_TO_OOP(MOO_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index, preamble_flags));
-	mth->preamble_data[0] = MOO_SMOOI_TO_OOP(0);
-	mth->preamble_data[1] = MOO_SMOOI_TO_OOP(0);
+	/*mth->preamble_data[0] = MOO_SMOOI_TO_OOP(0);
+	mth->preamble_data[1] = MOO_SMOOI_TO_OOP(0);*/
+	mth->preamble_data[0] = MOO_SMPTR_TO_OOP(0);
+	mth->preamble_data[1] = MOO_SMPTR_TO_OOP(0);
 	mth->tmpr_count = MOO_SMOOI_TO_OOP(moo->c->mth.tmpr_count);
 	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(moo->c->mth.tmpr_nargs);
 
@@ -6618,7 +6620,7 @@ static int __compile_method_definition (moo_t* moo)
 
 			/* check if the primitive function exists at the compile time and perform some checks.
 			 * see compile_method_primitive() for similar checks */
-			pfbase = moo_querymod (moo, &moo->c->cls.modname.ptr[savedlen], moo->c->cls.modname.len - savedlen);
+			pfbase = moo_querymod(moo, &moo->c->cls.modname.ptr[savedlen], moo->c->cls.modname.len - savedlen, MOO_NULL);
 			if (!pfbase)
 			{
 				MOO_DEBUG2 (moo, "Cannot find module primitive function - %.*js\n", 
@@ -7702,7 +7704,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 			 *  memory(not part of the object memory) to moo_importmod().
 			 *  no big overhead as it's already available. but Accessing 
 			 *  this extra module name, i'm free from GC headache */
-			if (moo_importmod (moo, moo->c->cls.self_oop, moo->c->cls.modname.ptr, moo->c->cls.modname.len) <= -1)
+			if (moo_importmod(moo, moo->c->cls.self_oop, moo->c->cls.modname.ptr, moo->c->cls.modname.len) <= -1)
 			{
 				const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
 				moo_setsynerrbfmt (moo, MOO_SYNERR_MODIMPFAIL, &moo->c->cls.modname_loc, &moo->c->cls.modname,

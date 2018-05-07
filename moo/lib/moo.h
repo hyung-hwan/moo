@@ -39,6 +39,7 @@
 #define MOO_USE_METHOD_TRAILER
 
 
+typedef struct moo_mod_t moo_mod_t;
 typedef unsigned int moo_bitmask_t;
 
 /* ========================================================================== */
@@ -1153,8 +1154,9 @@ typedef enum moo_pfrc_t moo_pfrc_t;
 
 /* primitive function implementation type */
 typedef moo_pfrc_t (*moo_pfimpl_t) (
-	moo_t*    moo,
-	moo_ooi_t nargs
+	moo_t*     moo,
+	moo_mod_t* mod,
+	moo_ooi_t  nargs
 );
 
 typedef struct moo_pfbase_t moo_pfbase_t;
@@ -1195,8 +1197,6 @@ struct moo_pfinfo_t
  * MODULE MANIPULATION
  * ========================================================================= */
 #define MOO_MOD_NAME_LEN_MAX 120
-
-typedef struct moo_mod_t moo_mod_t;
 
 enum moo_mod_hint_t
 {

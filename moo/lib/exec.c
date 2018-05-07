@@ -1823,7 +1823,7 @@ oops:
 }
 
 /* ------------------------------------------------------------------------- */
-static moo_pfrc_t pf_dump (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_dump (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_ooi_t i;
 
@@ -1879,7 +1879,7 @@ start_over:
 	}
 }
 
-static moo_pfrc_t pf_add_to_be_finalized (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_add_to_be_finalized (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	/* TODO: check if it has already been added */
 	moo_regfinalizable (moo, MOO_STACK_GETRCV(moo,nargs));
@@ -1887,7 +1887,7 @@ static moo_pfrc_t pf_add_to_be_finalized (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_remove_to_be_finalized (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_remove_to_be_finalized (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	/* TODO: check if it has already been added */
 	moo_deregfinalizable (moo, MOO_STACK_GETRCV(moo,nargs));
@@ -1895,7 +1895,7 @@ static moo_pfrc_t pf_remove_to_be_finalized (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_hash (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_hash (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 	moo_oow_t hv;
@@ -1969,7 +1969,7 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_ooi_t nargs)
 }
 
 
-static moo_pfrc_t pf_perform (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_perform (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t /*rcv,*/ selector;
 	moo_oow_t ssp, esp, i;
@@ -2003,7 +2003,7 @@ static moo_pfrc_t pf_perform (moo_t* moo, moo_ooi_t nargs)
 
 /* ------------------------------------------------------------------ */
 
-static moo_pfrc_t pf_context_goto (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_context_goto (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 	moo_oop_t pc;
@@ -2141,7 +2141,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_block_value (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_block_value (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_pfrc_t x;
 	moo_oop_context_t rcv_blkctx, blkctx;
@@ -2156,7 +2156,7 @@ static moo_pfrc_t pf_block_value (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	/* create a new process from a block context.
 	 * the receiver must be be a block.
@@ -2218,7 +2218,7 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_ooi_t nargs)
 
 /* ------------------------------------------------------------------ */
 
-static moo_pfrc_t pf_process_sp (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_process_sp (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 
@@ -2232,7 +2232,7 @@ static moo_pfrc_t pf_process_sp (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_process_resume (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_process_resume (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 
@@ -2247,7 +2247,7 @@ static moo_pfrc_t pf_process_resume (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_process_terminate (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_process_terminate (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 
@@ -2264,7 +2264,7 @@ static moo_pfrc_t pf_process_terminate (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_process_yield (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_process_yield (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 
@@ -2279,7 +2279,7 @@ static moo_pfrc_t pf_process_yield (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_process_suspend (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_process_suspend (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 
@@ -2295,7 +2295,7 @@ static moo_pfrc_t pf_process_suspend (moo_t* moo, moo_ooi_t nargs)
 }
 
 /* ------------------------------------------------------------------ */
-static moo_pfrc_t pf_semaphore_signal (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_semaphore_signal (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 
@@ -2313,7 +2313,7 @@ static moo_pfrc_t pf_semaphore_signal (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 
@@ -2336,7 +2336,7 @@ static moo_pfrc_t pf_semaphore_wait (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_semaphore_group_t sg;
 	moo_oop_semaphore_t sem;
@@ -2414,7 +2414,7 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_semaphore_group_t rcv;
 	moo_oop_semaphore_t sem;
@@ -2490,7 +2490,7 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_ooi_t nar
 	return MOO_PF_FAILURE;
 }
 
-static moo_pfrc_t pf_semaphore_group_wait (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_semaphore_group_wait (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, sem;
 
@@ -2522,7 +2522,7 @@ static moo_pfrc_t pf_semaphore_group_wait (moo_t* moo, moo_ooi_t nargs)
 
 /* ------------------------------------------------------------------ */
 
-static moo_pfrc_t pf_system_add_gcfin_semaphore (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_system_add_gcfin_semaphore (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_semaphore_t sem;
 
@@ -2544,7 +2544,7 @@ static moo_pfrc_t pf_system_add_gcfin_semaphore (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_system_add_timed_semaphore (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_system_add_timed_semaphore (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t sec, nsec;
 	moo_oop_semaphore_t sem;
@@ -2660,17 +2660,17 @@ static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_se
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_system_add_input_semaphore (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_system_add_input_semaphore (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return __system_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_TYPE_INPUT);
 }
 
-static moo_pfrc_t pf_system_add_output_semaphore (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_system_add_output_semaphore (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return __system_add_io_semaphore (moo, nargs, MOO_SEMAPHORE_IO_TYPE_OUTPUT);
 }
 
-static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	/* remove a semaphore from processor's signal scheduling */
 
@@ -2725,7 +2725,7 @@ static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_ooi_t nargs)
 
 /* ------------------------------------------------------------------ */
 
-static moo_pfrc_t pf_system_return_value_to_context (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_system_return_value_to_context (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t ret, ctx;
 
@@ -2756,7 +2756,7 @@ static moo_pfrc_t pf_system_return_value_to_context (moo_t* moo, moo_ooi_t nargs
 
 /* ------------------------------------------------------------------ */
 
-static moo_pfrc_t pf_integer_add (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_add (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -2772,7 +2772,7 @@ static moo_pfrc_t pf_integer_add (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_sub (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_sub (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -2788,7 +2788,7 @@ static moo_pfrc_t pf_integer_sub (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_mul (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_mul (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -2804,7 +2804,7 @@ static moo_pfrc_t pf_integer_mul (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_div (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_div (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, quo;
 
@@ -2821,7 +2821,7 @@ static moo_pfrc_t pf_integer_div (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_rem (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_rem (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, quo, rem;
 
@@ -2837,7 +2837,7 @@ static moo_pfrc_t pf_integer_rem (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_mdiv (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_mdiv (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, quo;
 
@@ -2853,7 +2853,7 @@ static moo_pfrc_t pf_integer_mdiv (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_mod (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_mod (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, quo, rem;
 
@@ -2869,7 +2869,7 @@ static moo_pfrc_t pf_integer_mod (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_negated (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_negated (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, res;
 
@@ -2884,7 +2884,7 @@ static moo_pfrc_t pf_integer_negated (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_bitat (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_bitat (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -2900,7 +2900,7 @@ static moo_pfrc_t pf_integer_bitat (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_bitand (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_bitand (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -2916,7 +2916,7 @@ static moo_pfrc_t pf_integer_bitand (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_bitor (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_bitor (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -2932,7 +2932,7 @@ static moo_pfrc_t pf_integer_bitor (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_bitxor (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_bitxor (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -2948,7 +2948,7 @@ static moo_pfrc_t pf_integer_bitxor (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_bitinv (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_bitinv (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, res;
 
@@ -2963,7 +2963,7 @@ static moo_pfrc_t pf_integer_bitinv (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_bitshift (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_bitshift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -2979,7 +2979,7 @@ static moo_pfrc_t pf_integer_bitshift (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_eq (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_eq (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -2995,7 +2995,7 @@ static moo_pfrc_t pf_integer_eq (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_ne (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_ne (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -3011,7 +3011,7 @@ static moo_pfrc_t pf_integer_ne (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_lt (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_lt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -3027,7 +3027,7 @@ static moo_pfrc_t pf_integer_lt (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_gt (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_gt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -3043,7 +3043,7 @@ static moo_pfrc_t pf_integer_gt (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_le (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_le (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -3059,7 +3059,7 @@ static moo_pfrc_t pf_integer_le (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_ge (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_ge (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -3075,7 +3075,7 @@ static moo_pfrc_t pf_integer_ge (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_integer_inttostr (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_integer_inttostr (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, str;
 	moo_ooi_t radix;
@@ -3098,7 +3098,7 @@ static moo_pfrc_t pf_integer_inttostr (moo_t* moo, moo_ooi_t nargs)
 
 /* ------------------------------------------------------------------ */
 
-static moo_pfrc_t pf_character_eq (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_character_eq (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -3114,7 +3114,7 @@ static moo_pfrc_t pf_character_eq (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_character_ne (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_character_ne (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -3130,7 +3130,7 @@ static moo_pfrc_t pf_character_ne (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_character_lt (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_character_lt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -3148,7 +3148,7 @@ static moo_pfrc_t pf_character_lt (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_character_gt (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_character_gt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -3166,7 +3166,7 @@ static moo_pfrc_t pf_character_gt (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_character_le (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_character_le (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -3184,7 +3184,7 @@ static moo_pfrc_t pf_character_le (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_character_ge (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_character_ge (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
 
@@ -3204,7 +3204,7 @@ static moo_pfrc_t pf_character_ge (moo_t* moo, moo_ooi_t nargs)
 
 /* ------------------------------------------------------------------ */
 
-static moo_pfrc_t pf_character_as_error (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_character_as_error (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 	moo_ooi_t c;
@@ -3219,7 +3219,7 @@ static moo_pfrc_t pf_character_as_error (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_character_as_smooi (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_character_as_smooi (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 	moo_ooi_t c;
@@ -3234,7 +3234,7 @@ static moo_pfrc_t pf_character_as_smooi (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_smooi_as_character (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_smooi_as_character (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 	moo_ooi_t ec;
@@ -3250,7 +3250,7 @@ static moo_pfrc_t pf_smooi_as_character (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_smooi_as_error (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_smooi_as_error (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 	moo_ooi_t ec;
@@ -3268,7 +3268,7 @@ static moo_pfrc_t pf_smooi_as_error (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_error_as_character (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_error_as_character (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 	moo_ooi_t ec;
@@ -3284,7 +3284,7 @@ static moo_pfrc_t pf_error_as_character (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_error_as_integer (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_error_as_integer (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 	moo_ooi_t ec;
@@ -3300,7 +3300,7 @@ static moo_pfrc_t pf_error_as_integer (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, ss;
 	moo_ooi_t ec;
@@ -3323,7 +3323,7 @@ static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_strlen (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_strlen (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, ret;
 	moo_oow_t i, limit;
@@ -3351,7 +3351,7 @@ static moo_pfrc_t pf_strlen (moo_t* moo, moo_ooi_t nargs)
 
 /* ------------------------------------------------------------------ */
 
-static moo_pfrc_t pf_system_log (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_system_log (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t msg, level;
 	moo_bitmask_t mask;
@@ -3749,7 +3749,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				}
 
 				moo_pushtmp (moo, (moo_oop_t*)&method);
-				n = pftab[pfnum].pfbase.handler (moo, nargs);
+				n = pftab[pfnum].pfbase.handler(moo, MOO_NULL, nargs); /* builtin numbered primitive. the second parameter is MOO_NULL */
 				moo_poptmp (moo);
 				if (n <= MOO_PF_HARD_FAILURE) 
 				{
@@ -3778,7 +3778,8 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			moo_ooi_t pf_name_index;
 			moo_pfbase_t* pfbase;
 			moo_oop_t pfname;
-			moo_oow_t w;
+			/*moo_oow_t w;*/
+			moo_mod_t* mod;
 
 			stack_base = moo->sp - nargs - 1; /* stack base before receiver and arguments */
 
@@ -3795,19 +3796,28 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,pfname) == moo->_symbol);
 
 			/* merge two SmallIntegers to get a full pointer from the cached data */
-			w = (moo_oow_t)MOO_OOP_TO_SMOOI(method->preamble_data[0]) << (MOO_OOW_BITS / 2) | 
+			/*w = (moo_oow_t)MOO_OOP_TO_SMOOI(method->preamble_data[0]) << (MOO_OOW_BITS / 2) | 
 			    (moo_oow_t)MOO_OOP_TO_SMOOI(method->preamble_data[1]);
-			pfbase = (moo_pfbase_t*)w;
-			if (pfbase) goto exec_handler; /* skip moo_querymod() */
+			pfbase = (moo_pfbase_t*)w;*/
+			pfbase = MOO_OOP_TO_SMPTR(method->preamble_data[1]);
+			if (pfbase) 
+			{
+				mod = MOO_OOP_TO_SMPTR(method->preamble_data[0]);
+				goto exec_handler; /* skip moo_querymod() */
+			}
 
-			pfbase = moo_querymod (moo, MOO_OBJ_GET_CHAR_SLOT(pfname), MOO_OBJ_GET_SIZE(pfname));
+			pfbase = moo_querymod(moo, MOO_OBJ_GET_CHAR_SLOT(pfname), MOO_OBJ_GET_SIZE(pfname), &mod);
 			if (pfbase)
 			{
 				int n;
 
 				/* split a pointer to two OOP fields as SmallIntegers for storing/caching. */
-				method->preamble_data[0] = MOO_SMOOI_TO_OOP((moo_oow_t)pfbase >> (MOO_OOW_BITS / 2));
-				method->preamble_data[1] = MOO_SMOOI_TO_OOP((moo_oow_t)pfbase & MOO_LBMASK(moo_oow_t, MOO_OOW_BITS / 2));
+				/*method->preamble_data[0] = MOO_SMOOI_TO_OOP((moo_oow_t)pfbase >> (MOO_OOW_BITS / 2));
+				method->preamble_data[1] = MOO_SMOOI_TO_OOP((moo_oow_t)pfbase & MOO_LBMASK(moo_oow_t, MOO_OOW_BITS / 2));*/
+				MOO_ASSERT (moo, MOO_IN_SMPTR_RANGE(mod));
+				MOO_ASSERT (moo, MOO_IN_SMPTR_RANGE(pfbase));
+				method->preamble_data[0] = MOO_SMPTR_TO_OOP(mod);
+				method->preamble_data[1] = MOO_SMPTR_TO_OOP(pfbase);
 
 			exec_handler:
 				if (nargs < pfbase->minargs || nargs > pfbase->maxargs)
@@ -3831,7 +3841,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				 * arguments are copied to the back. */
 
 				moo_seterrnum (moo, MOO_ENOERR);
-				n = pfbase->handler (moo, nargs);
+				n = pfbase->handler(moo, mod, nargs);
 
 				moo_poptmp (moo);
 				if (n <= MOO_PF_HARD_FAILURE) 

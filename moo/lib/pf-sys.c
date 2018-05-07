@@ -29,14 +29,14 @@
 
 
 
-moo_pfrc_t moo_pf_system_collect_garbage (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_collect_garbage (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_gc (moo);
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
 
-moo_pfrc_t moo_pf_system_pop_collectable (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_pop_collectable (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	if (moo->collectable.first)
 	{
@@ -94,19 +94,19 @@ static MOO_INLINE moo_pfrc_t _system_alloc (moo_t* moo, moo_ooi_t nargs, int cle
 	return MOO_PF_SUCCESS;
 } 
 
-moo_pfrc_t moo_pf_system_calloc (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_calloc (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->_system);*/
 	return _system_alloc (moo, nargs, 1);
 }
 
-moo_pfrc_t moo_pf_system_malloc (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_malloc (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->_system);*/
 	return _system_alloc (moo, nargs, 0);
 }
 
-moo_pfrc_t moo_pf_system_free (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_free (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t tmp;
 	void* rawptr;
@@ -129,7 +129,7 @@ moo_pfrc_t moo_pf_system_free (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-moo_pfrc_t moo_pf_smptr_free (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_smptr_free (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t tmp;
 
@@ -418,42 +418,42 @@ static moo_pfrc_t _get_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
 }
 
 
-moo_pfrc_t moo_pf_system_get_int8 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_get_int8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_system_int (moo, nargs, 1);
 }
 
-moo_pfrc_t moo_pf_system_get_int16 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_get_int16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_system_int (moo, nargs, 2);
 }
 
-moo_pfrc_t moo_pf_system_get_int32 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_get_int32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_system_int (moo, nargs, 4);
 }
 
-moo_pfrc_t moo_pf_system_get_int64 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_get_int64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_system_int (moo, nargs, 8);
 }
 
-moo_pfrc_t moo_pf_system_get_uint8 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_get_uint8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_system_uint (moo, nargs, 1);
 }
 
-moo_pfrc_t moo_pf_system_get_uint16 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_get_uint16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_system_uint (moo, nargs, 2);
 }
 
-moo_pfrc_t moo_pf_system_get_uint32 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_get_uint32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_system_uint (moo, nargs, 4);
 }
 
-moo_pfrc_t moo_pf_system_get_uint64 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_get_uint64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_system_uint (moo, nargs, 8);
 }
@@ -524,42 +524,42 @@ static moo_pfrc_t _put_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
 	return MOO_PF_SUCCESS;
 }
 
-moo_pfrc_t moo_pf_system_put_int8 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_put_int8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_system_int (moo, nargs, 1);
 }
 
-moo_pfrc_t moo_pf_system_put_int16 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_put_int16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_system_int (moo, nargs, 2);
 }
 
-moo_pfrc_t moo_pf_system_put_int32 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_put_int32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_system_int (moo, nargs, 4);
 }
 
-moo_pfrc_t moo_pf_system_put_int64 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_put_int64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_system_int (moo, nargs, 8);
 }
 
-moo_pfrc_t moo_pf_system_put_uint8 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_put_uint8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_system_uint (moo, nargs, 1);
 }
 
-moo_pfrc_t moo_pf_system_put_uint16 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_put_uint16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_system_uint (moo, nargs, 2);
 }
 
-moo_pfrc_t moo_pf_system_put_uint32 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_put_uint32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_system_uint (moo, nargs, 4);
 }
 
-moo_pfrc_t moo_pf_system_put_uint64 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_put_uint64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_system_uint (moo, nargs, 8);
 }
@@ -567,7 +567,7 @@ moo_pfrc_t moo_pf_system_put_uint64 (moo_t* moo, moo_ooi_t nargs)
 /* ------------------------------------------------------------------------------------- */
 
 
-moo_pfrc_t moo_pf_system_get_bytes (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_get_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_uint8_t* rawptr;
 	moo_oow_t offset, offset_in_buffer, len_in_buffer;
@@ -630,7 +630,7 @@ moo_pfrc_t moo_pf_system_get_bytes (moo_t* moo, moo_ooi_t nargs)
 }
 
 
-moo_pfrc_t moo_pf_system_put_bytes (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_system_put_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_uint8_t* rawptr;
 	moo_oow_t offset, offset_in_buffer, len_in_buffer;
@@ -750,42 +750,42 @@ static moo_pfrc_t _get_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 	return MOO_PF_SUCCESS;
 }
 
- moo_pfrc_t moo_pf_smptr_get_int8 (moo_t* moo, moo_ooi_t nargs)
+ moo_pfrc_t moo_pf_smptr_get_int8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_smptr_int (moo, nargs, 1);
 }
 
- moo_pfrc_t moo_pf_smptr_get_int16 (moo_t* moo, moo_ooi_t nargs)
+ moo_pfrc_t moo_pf_smptr_get_int16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_smptr_int (moo, nargs, 2);
 }
 
- moo_pfrc_t moo_pf_smptr_get_int32 (moo_t* moo, moo_ooi_t nargs)
+ moo_pfrc_t moo_pf_smptr_get_int32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_smptr_int (moo, nargs, 4);
 }
 
- moo_pfrc_t moo_pf_smptr_get_int64 (moo_t* moo, moo_ooi_t nargs)
+ moo_pfrc_t moo_pf_smptr_get_int64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_smptr_int (moo, nargs, 8);
 }
 
- moo_pfrc_t moo_pf_smptr_get_uint8 (moo_t* moo, moo_ooi_t nargs)
+ moo_pfrc_t moo_pf_smptr_get_uint8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_smptr_uint (moo, nargs, 1);
 }
 
- moo_pfrc_t moo_pf_smptr_get_uint16 (moo_t* moo, moo_ooi_t nargs)
+ moo_pfrc_t moo_pf_smptr_get_uint16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_smptr_uint (moo, nargs, 2);
 }
 
- moo_pfrc_t moo_pf_smptr_get_uint32 (moo_t* moo, moo_ooi_t nargs)
+ moo_pfrc_t moo_pf_smptr_get_uint32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_smptr_uint (moo, nargs, 4);
 }
 
- moo_pfrc_t moo_pf_smptr_get_uint64 (moo_t* moo, moo_ooi_t nargs)
+ moo_pfrc_t moo_pf_smptr_get_uint64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _get_smptr_uint (moo, nargs, 8);
 }
@@ -848,42 +848,42 @@ static moo_pfrc_t _put_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 	return MOO_PF_SUCCESS;
 }
 
-moo_pfrc_t moo_pf_smptr_put_int8 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_smptr_put_int8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_smptr_int (moo, nargs, 1);
 }
 
-moo_pfrc_t moo_pf_smptr_put_int16 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_smptr_put_int16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_smptr_int (moo, nargs, 2);
 }
 
-moo_pfrc_t moo_pf_smptr_put_int32 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_smptr_put_int32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_smptr_int (moo, nargs, 4);
 }
 
-moo_pfrc_t moo_pf_smptr_put_int64 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_smptr_put_int64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_smptr_int (moo, nargs, 8);
 }
 
-moo_pfrc_t moo_pf_smptr_put_uint8 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_smptr_put_uint8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_smptr_uint (moo, nargs, 1);
 }
 
-moo_pfrc_t moo_pf_smptr_put_uint16 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_smptr_put_uint16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_smptr_uint (moo, nargs, 2);
 }
 
-moo_pfrc_t moo_pf_smptr_put_uint32 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_smptr_put_uint32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_smptr_uint (moo, nargs, 4);
 }
 
-moo_pfrc_t moo_pf_smptr_put_uint64 (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_smptr_put_uint64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return _put_smptr_uint (moo, nargs, 8);
 }
@@ -891,7 +891,7 @@ moo_pfrc_t moo_pf_smptr_put_uint64 (moo_t* moo, moo_ooi_t nargs)
 
 /* ------------------------------------------------------------------------------------- */
 
-moo_pfrc_t moo_pf_smptr_get_bytes (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_smptr_get_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_uint8_t* rawptr;
 	moo_oow_t offset, offset_in_buffer, len_in_buffer;
@@ -949,7 +949,7 @@ moo_pfrc_t moo_pf_smptr_get_bytes (moo_t* moo, moo_ooi_t nargs)
 }
 
 
-moo_pfrc_t moo_pf_smptr_put_bytes (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_smptr_put_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_uint8_t* rawptr;
 	moo_oow_t offset, offset_in_buffer, len_in_buffer;
@@ -1035,7 +1035,7 @@ static void sprintptr (moo_ooch_t* nbuf, moo_oow_t num, moo_oow_t *lenp)
 	}
 }
 
-moo_pfrc_t moo_pf_smptr_as_string (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_smptr_as_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 	void* ptr;

@@ -31,7 +31,7 @@
  * COMPARISON
  * -------------------------------------------------------------------------------- */
  
-moo_pfrc_t moo_pf_identical (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_identical (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, b;
 
@@ -46,7 +46,7 @@ moo_pfrc_t moo_pf_identical (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-moo_pfrc_t moo_pf_not_identical (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_not_identical (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, b;
 
@@ -155,7 +155,7 @@ static int _equal_objects (moo_t* moo, moo_oop_t rcv, moo_oop_t arg)
 	}
 }
 
-moo_pfrc_t moo_pf_equal (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_equal (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg;
 	int n;
@@ -170,7 +170,7 @@ moo_pfrc_t moo_pf_equal (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-moo_pfrc_t moo_pf_not_equal (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_not_equal (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg;
 	int n;
@@ -190,7 +190,7 @@ moo_pfrc_t moo_pf_not_equal (moo_t* moo, moo_ooi_t nargs)
  * INSTANTIATION
  * -------------------------------------------------------------------------------- */
 
-moo_pfrc_t moo_pf_basic_new (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_basic_new (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_class_t _class;
 	moo_oop_t szoop, obj;
@@ -240,7 +240,7 @@ moo_pfrc_t moo_pf_basic_new (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-moo_pfrc_t moo_pf_shallow_copy (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_shallow_copy (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, obj;
 
@@ -259,7 +259,7 @@ moo_pfrc_t moo_pf_shallow_copy (moo_t* moo, moo_ooi_t nargs)
  * BASIC ACCESS
  * -------------------------------------------------------------------------------- */
 
-moo_pfrc_t moo_pf_class (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_class (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 	rcv = MOO_STACK_GETRCV(moo, nargs);
@@ -268,7 +268,7 @@ moo_pfrc_t moo_pf_class (moo_t* moo, moo_ooi_t nargs)
 }
 
 
-moo_pfrc_t moo_pf_basic_size (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_basic_size (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	/* return the number of indexable fields */
 
@@ -294,7 +294,7 @@ moo_pfrc_t moo_pf_basic_size (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-moo_pfrc_t moo_pf_basic_at (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_basic_at (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, pos, v;
 	moo_oow_t idx;
@@ -356,7 +356,7 @@ moo_pfrc_t moo_pf_basic_at (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, pos, val;
 	moo_oow_t idx;
@@ -454,7 +454,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-moo_pfrc_t moo_pf_basic_fill (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_basic_fill (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, spos, dval, slen;
 	moo_oow_t sidx, ssz, maxlen, end, i;
@@ -571,7 +571,7 @@ invalid_fill_value:
 	return MOO_PF_FAILURE;
 }
 
-moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, spos, dpos, slen;
 	moo_oow_t sidx, ssz, didx;
@@ -757,7 +757,7 @@ done:
  * BASIC QUERY
  * -------------------------------------------------------------------------------- */
 
-moo_pfrc_t moo_pf_is_kind_of (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_is_kind_of (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, _class;
 
@@ -778,7 +778,7 @@ moo_pfrc_t moo_pf_is_kind_of (moo_t* moo, moo_ooi_t nargs)
 }
 
 
-moo_pfrc_t moo_pf_responds_to (moo_t* moo, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_responds_to (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, selector;
 	moo_oocs_t mthname;
