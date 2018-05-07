@@ -3420,11 +3420,11 @@ if super is variable-nonpointer, no instance variable is allowed.
 				 *    I may change this if i get the actual initial
 				 *    value assignment upon instantiation to employ
 				 *    deep-copying in moo_instantiate() and in the compiler. */
-				lit = token_to_literal (moo, dcl_type != VAR_CLASS);
+				lit = token_to_literal(moo, dcl_type != VAR_CLASS);
 				if (!lit) return -1;
 
 				/* set the initial value for the variable added above */
-				if (set_class_level_variable_initv (moo, dcl_type, moo->c->cls.var[dcl_type].count - 1, lit, varacc_type) <= -1) return -1;
+				if (set_class_level_variable_initv(moo, dcl_type, moo->c->cls.var[dcl_type].count - 1, lit, varacc_type) <= -1) return -1;
 
 				GET_TOKEN (moo);
 			}
@@ -4551,7 +4551,7 @@ static int add_to_array_literal_buffer (moo_t* moo, moo_oop_t item)
 	return 0;
 }
 
-static int read_byte_array_literal (moo_t* moo, moo_oop_t* xlit)
+static int read_byte_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 {
 	moo_ooi_t tmp;
 	moo_oop_t ba;
@@ -4640,6 +4640,11 @@ static int read_byte_array_literal (moo_t* moo, moo_oop_t* xlit)
 	ba = moo_instantiate (moo, moo->_byte_array, &moo->c->balit.ptr[saved_balit_count], moo->c->balit.count - saved_balit_count);
 	if (!ba) goto oops;
 
+	if (rdonly)
+	{
+		MOO_ASSERT (moo, MOO_OOP_IS_POINTER(ba));
+		MOO_OBJ_SET_FLAGS_RDONLY (ba, 1);
+	}
 	*xlit = ba;
 
 	moo->c->balit.count = saved_balit_count;
@@ -4684,6 +4689,12 @@ static int read_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 		((moo_oop_oop_t)a)->slot[j] = moo->c->arlit.ptr[i];
 	}
 
+
+	if (rdonly)
+	{
+		MOO_ASSERT (moo, MOO_OOP_IS_POINTER(a));
+		MOO_OBJ_SET_FLAGS_RDONLY (a, 1);
+	}
 	*xlit = a;
 
 	moo->c->arlit.count = saved_arlit_count;
@@ -4702,7 +4713,7 @@ static int compile_byte_array_literal (moo_t* moo)
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_HASHBRACK);
 
-	if (read_byte_array_literal(moo, &lit) <= -1 ||
+	if (read_byte_array_literal(moo, 1, &lit) <= -1 ||
 	    add_literal(moo, lit, &index) <= -1 ||
 	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 
@@ -4718,7 +4729,7 @@ static int compile_array_literal (moo_t* moo)
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_HASHPAREN);
 
-	if (read_array_literal(moo, 0, &lit) <= -1 ||
+	if (read_array_literal(moo, 1, &lit) <= -1 ||
 	    add_literal(moo, lit, &index) <= -1 ||
 	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
 
@@ -7870,12 +7881,7 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 		case MOO_IOTOK_HASHBRACK: /* #[ - byte array literal parenthesis */
 		{
 			moo_oop_t lit;
-			if (read_byte_array_literal(moo, &lit) <= -1) return MOO_NULL;
-			if (rdonly)
-			{
-				MOO_ASSERT (moo, lit && MOO_OOP_IS_POINTER(lit));
-				MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
-			}
+			if (read_byte_array_literal(moo, rdonly, &lit) <= -1) return MOO_NULL;
 			return lit;
 		}
 
@@ -7883,11 +7889,6 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 		{
 			moo_oop_t lit;
 			if (read_array_literal(moo, rdonly, &lit) <= -1) return MOO_NULL;
-			if (rdonly)
-			{
-				MOO_ASSERT (moo, lit && MOO_OOP_IS_POINTER(lit));
-				MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
-			}
 			return lit;
 		}
 
@@ -7987,7 +7988,7 @@ static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 		/* [NOTE]
 		 *   values assigned to a pool dictinary member are not read-only
 		 *   unlike the default initial values defined in a class */
-		lit = token_to_literal (moo, 0);
+		lit = token_to_literal(moo, 0);
 		if (!lit) goto oops;
 
 		/* for this definition, #pooldic MyPoolDic { a := 10. b := 20 },

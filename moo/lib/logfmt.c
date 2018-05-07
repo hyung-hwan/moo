@@ -566,7 +566,7 @@ static int print_object (moo_t* moo, moo_bitmask_t mask, moo_oop_t oop, outbfmt_
 		}
 		else
 		{
-			if (outbfmt(moo, mask, "<<%.*js>>", MOO_OBJ_GET_SIZE(c->name), ((moo_oop_char_t)c->name)->slot) <= -1) return -1;
+			if (outbfmt(moo, mask, "<<%.*js:%p>>", MOO_OBJ_GET_SIZE(c->name), ((moo_oop_char_t)c->name)->slot, oop) <= -1) return -1;
 		}
 	}
 
