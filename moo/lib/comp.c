@@ -3833,7 +3833,7 @@ static int compile_method_pragma (moo_t* moo)
 		GET_TOKEN (moo); 
 		switch (TOKEN_TYPE(moo))
 		{
-			case MOO_IOTOK_NUMLIT: /* TODO: allow only an integer */
+			case MOO_IOTOK_NUMLIT:
 	/*TODO: more checks the validity of the primitive number. support number with radix and so on support more extensive syntax. support primitive name, not number*/
 				ptr = TOKEN_NAME_PTR(moo);
 				end = ptr + TOKEN_NAME_LEN(moo);

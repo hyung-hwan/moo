@@ -3885,7 +3885,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				 *       is not really failure safe without losing integrity???? */
 				moo_oop_t tmp;
 				moo_pushtmp (moo, (moo_oop_t*)&method);
-				tmp = moo_makestring (moo, moo->errmsg.buf, moo->errmsg.len);
+				tmp = moo_makestring(moo, moo->errmsg.buf, moo->errmsg.len);
 				moo_poptmp (moo);
 				/* [NOTE] carry on even if instantiation fails */
 				moo->processor->active->perrmsg = tmp? tmp: moo->_nil; /* TODO: set to nil or set to an empty string if instantiation fails? */
