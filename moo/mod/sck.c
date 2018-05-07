@@ -40,7 +40,13 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-static moo_pfrc_t pf_open_socket (moo_t* moo, moo_ooi_t nargs)
+typedef struct sck_modctx_t sck_modctx_t;
+struct sck_modctx_t
+{
+	moo_oop_class_t sck_class;
+};
+
+static moo_pfrc_t pf_open_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_sck_t sck;
 	moo_oop_t dom, type, proto;
@@ -117,7 +123,7 @@ oops:
 	return MOO_PF_FAILURE;
 }
 
-static moo_pfrc_t pf_close_socket (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_close_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_sck_t sck;
 	int fd;
@@ -150,7 +156,7 @@ static moo_pfrc_t pf_close_socket (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_FAILURE;
 }
 
-static moo_pfrc_t pf_bind_socket (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_bind_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_sck_t sck;
 	moo_oop_t arg;
@@ -184,7 +190,7 @@ static moo_pfrc_t pf_bind_socket (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_accept_socket (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_accept_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_sck_t sck, newsck;
 	moo_oop_t arg;
@@ -245,7 +251,8 @@ static moo_pfrc_t pf_accept_socket (moo_t* moo, moo_ooi_t nargs)
 	if (fcntl(newfd, F_SETFL, fl) == -1) goto fcntl_failure;
 	
 accept_done:
-	newsck = (oop_sck_t)moo_instantiate (moo, MOO_OBJ_GET_CLASS(sck), MOO_NULL, 0);
+	/*newsck = (oop_sck_t)moo_instantiate(moo, MOO_OBJ_GET_CLASS(sck), MOO_NULL, 0);*/
+	newsck = (oop_sck_t)moo_instantiate(moo, ((sck_modctx_t*)mod->ctx)->sck_class, MOO_NULL, 0);
 	if (!newsck) 
 	{
 		close (newfd);
@@ -261,11 +268,14 @@ accept_done:
 	}
 	newsck->handle = MOO_SMOOI_TO_OOP(newfd);
 
+	/* return the partially initialized socket object. the handle field is set to the new file
+	 * descriptor. however all other fields are just set to nil. so the user of this primitive
+	 * method should call application-level initializer. */
 	MOO_STACK_SETRET (moo, nargs, (moo_oop_t)newsck);
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_listen_socket (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_listen_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_sck_t sck;
 	moo_oop_t arg;
@@ -277,7 +287,7 @@ static moo_pfrc_t pf_listen_socket (moo_t* moo, moo_ooi_t nargs)
 	MOO_PF_CHECK_RCV (moo,
 		MOO_OOP_IS_POINTER(sck) &&
 		MOO_OBJ_BYTESOF(sck) >= (MOO_SIZEOF(*sck) - MOO_SIZEOF(moo_obj_t)) &&
-		MOO_OOP_IS_SMOOI(sck->handle));
+		MOO_OOP_IS_SMOOI(sck->handle));/*newsck = (oop_sck_t)moo_instantiate (moo, MOO_OBJ_GET_CLASS(sck), MOO_NULL, 0);*/
 	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_SMOOI(arg));
 
 	fd = MOO_OOP_TO_SMOOI(sck->handle);
@@ -299,7 +309,7 @@ static moo_pfrc_t pf_listen_socket (moo_t* moo, moo_ooi_t nargs)
 }
 
 
-static moo_pfrc_t pf_connect_socket (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_connect_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_sck_t sck;
 	int fd, n;
@@ -341,7 +351,7 @@ static moo_pfrc_t pf_connect_socket (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_get_socket_error (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_get_socket_error (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_sck_t sck;
 	int fd, ret;
@@ -374,7 +384,7 @@ static moo_pfrc_t pf_get_socket_error (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_read_socket (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_read_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_sck_t sck;
 	moo_oop_byte_t buf;
@@ -417,7 +427,7 @@ static moo_pfrc_t pf_read_socket (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_write_socket (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_write_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_sck_t sck;
 	moo_oop_byte_t buf;
@@ -523,25 +533,62 @@ static moo_pfinfo_t pfinfos[] =
 
 static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
-	/*if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(sck_t), MOO_NULL) <= -1) return -1;*/
+	/*if (moo_setclasstrsize(moo, _class, MOO_SIZEOF(sck_t), MOO_NULL) <= -1) return -1;*/
 	return 0;
 }
 
 static moo_pfbase_t* query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name, moo_oow_t namelen)
 {
-	return moo_findpfbase (moo, pfinfos, MOO_COUNTOF(pfinfos), name, namelen);
+	return moo_findpfbase(moo, pfinfos, MOO_COUNTOF(pfinfos), name, namelen);
 }
 
 static void unload (moo_t* moo, moo_mod_t* mod)
 {
 	/* TODO: anything? close open open dll handles? For that, pf_open must store the value it returns to mod->ctx or somewhere..*/
+	if (mod->ctx) moo_freemem (moo, mod->ctx);
+}
+
+static void gc_mod_sck (moo_t* moo, moo_mod_t* mod)
+{
+	sck_modctx_t* ctx = mod->ctx;
+
+	MOO_ASSERT (moo, ctx != MOO_NULL);
+	if (ctx->sck_class)	
+	{
+		ctx->sck_class = (moo_oop_class_t)moo_moveoop(moo, (moo_oop_t)ctx->sck_class);
+	}
 }
 
 int moo_mod_sck (moo_t* moo, moo_mod_t* mod)
 {
+	if (mod->hints & MOO_MOD_LOAD_FOR_IMPORT)
+	{
+		mod->gc = MOO_NULL;
+		mod->ctx = MOO_NULL;
+	}
+	else
+	{
+		sck_modctx_t* ctx;
+
+		static moo_ooch_t name_sck[] = { 'S','o','c','k','e','t','\0' };
+
+		ctx = moo_callocmem(moo, MOO_SIZEOF(*ctx));
+		if (!ctx) return -1;
+
+		ctx->sck_class = (moo_oop_class_t)moo_findclass(moo, moo->sysdic, name_sck);
+		if (!ctx->sck_class)
+		{
+			MOO_DEBUG0 (moo, "Socket class not found\n");
+			moo_freemem (moo, ctx);
+			return -1;
+		}
+
+		mod->gc = gc_mod_sck;
+		mod->ctx = ctx;
+	}
+
 	mod->import = import;
 	mod->query = query;
 	mod->unload = unload; 
-	mod->ctx = MOO_NULL;
 	return 0;
 }

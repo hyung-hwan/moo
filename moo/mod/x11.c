@@ -71,7 +71,7 @@ static XChar2b* uchars_to_xchar2bstr (moo_t* moo, const moo_uch_t* inptr, moo_oo
 }
 
 /* ------------------------------------------------------------------------ */
-static moo_pfrc_t pf_open_display (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_open_display (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_x11_t x11;
 	x11_trailer_t* tr;
@@ -160,7 +160,7 @@ oops:
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_close_display (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_close_display (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_x11_t x11;
 	x11_trailer_t* tr;
@@ -187,7 +187,7 @@ static moo_pfrc_t pf_close_display (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_get_fd (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_get_fd (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	x11_trailer_t* tr;
 // TODO: CHECK if the receiver is an X11 object
@@ -196,7 +196,7 @@ static moo_pfrc_t pf_get_fd (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_get_llevent (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_get_llevent (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_x11_t x11;
 	x11_trailer_t* tr;
@@ -298,7 +298,7 @@ MOO_DEBUG0 (moo, "NO PENDING EVENT....\n");
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_create_window (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_create_window (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	Display* disp;
 	Window wind; /* Window -> XID, unsigned long */
@@ -391,7 +391,7 @@ static moo_pfrc_t pf_create_window (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_destroy_window (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_destroy_window (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_x11_t x11;
 	moo_oop_t a0;
@@ -420,7 +420,7 @@ static moo_pfrc_t pf_destroy_window (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_create_gc (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_create_gc (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	Display* disp;
 	Window wind;
@@ -459,7 +459,7 @@ static moo_pfrc_t pf_create_gc (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_destroy_gc (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_destroy_gc (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_x11_t x11;
 	oop_x11_gc_t gc;
@@ -492,7 +492,7 @@ MOO_DEBUG0 (moo, "Freed Font Set\n");
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_apply_gc (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_apply_gc (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_x11_t x11;
 	oop_x11_gc_t a0;
@@ -613,7 +613,7 @@ MOO_DEBUG0 (moo, "XCreateFontSet ok....\n");
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_draw_rectangle (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_draw_rectangle (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_x11_t x11;
 	Display* disp;
@@ -645,7 +645,7 @@ static moo_pfrc_t pf_draw_rectangle (moo_t* moo, moo_ooi_t nargs)
 }
 
 
-static moo_pfrc_t pf_fill_rectangle (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_fill_rectangle (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_x11_t x11;
 	Display* disp;
@@ -677,7 +677,7 @@ static moo_pfrc_t pf_fill_rectangle (moo_t* moo, moo_ooi_t nargs)
 }
 
 
-static moo_pfrc_t pf_draw_string (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_draw_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_x11_t x11;
 	oop_x11_gc_t gc;

@@ -42,7 +42,7 @@ struct stdio_t
 	FILE* fp;
 };
 
-static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_open (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_char_t name;
 	moo_oop_char_t mode;
@@ -87,7 +87,7 @@ softfail:
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_close (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	stdio_t* stdio;
 
@@ -102,7 +102,7 @@ static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_gets (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_gets (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	/* TODO: ...*/
 	MOO_STACK_SETRETTORCV (moo, nargs);
@@ -189,12 +189,12 @@ softfail:
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_putc (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_putc (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return __pf_puts (moo, nargs, 1);
 }
 
-static moo_pfrc_t pf_puts (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_puts (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	return __pf_puts (moo, nargs, MOO_TYPE_MAX(moo_oow_t));
 }

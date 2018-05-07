@@ -74,7 +74,7 @@ static void free_linked_cas (moo_t* moo, ffi_t* ffi)
 	}
 }
 
-static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_open (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	ffi_t* ffi;
 	moo_oop_t name;
@@ -134,7 +134,7 @@ softfail:
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_close (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	ffi_t* ffi;
 
@@ -168,7 +168,7 @@ softfail:
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_call (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 #if defined(USE_DYNCALL)
 	ffi_t* ffi;
@@ -476,7 +476,7 @@ hardfail:
 #endif
 }
 
-static moo_pfrc_t pf_getsym (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_getsym (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	ffi_t* ffi;
 	moo_oop_t name;
@@ -541,7 +541,7 @@ static moo_pfinfo_t pfinfos[] =
 
 static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
-	if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(ffi_t), MOO_NULL) <= -1) return -1;
+	if (moo_setclasstrsize(moo, _class, MOO_SIZEOF(ffi_t), MOO_NULL) <= -1) return -1;
 	return 0;
 }
 

@@ -52,7 +52,7 @@ struct console_t
 };
 /* ------------------------------------------------------------------------ */
 
-static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_open (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 #if defined(_WIN32)
 	HANDLE h;
@@ -127,7 +127,7 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_close (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 #if defined(_WIN32)
 	HANDLE h;
@@ -149,7 +149,7 @@ static moo_pfrc_t pf_close (moo_t* moo, moo_ooi_t nargs)
 #endif
 }
 
-static moo_pfrc_t pf_write (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_write (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 #if defined(_WIN32)
 #elif defined(__DOS__)
@@ -197,7 +197,7 @@ einval:
 #endif
 }
 
-static moo_pfrc_t pf_clear (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_clear (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 #if defined(_WIN32)
 #elif defined(__DOS__)
@@ -214,7 +214,7 @@ static moo_pfrc_t pf_clear (moo_t* moo, moo_ooi_t nargs)
 #endif
 }
 
-static moo_pfrc_t pf_setcursor (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_setcursor (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 #if defined(_WIN32)
 #elif defined(__DOS__)

@@ -483,7 +483,7 @@ no_rbrack:
 }
 
 
-static moo_pfrc_t pf_from_string (moo_t* moo, moo_ooi_t nargs)
+static moo_pfrc_t pf_from_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
 	moo_oop_t str;
