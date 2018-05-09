@@ -1,9 +1,16 @@
 ###include 'Moo.moo'.
 #include 'Socket.moo'.
 
-
 class HttpServerSocket(ServerSocket)
 {
+	method(#class) initialize
+	{
+		self onEvent: #accepted do: [
+		
+		].
+		
+		###self addEventListener: self.
+	}
 }
 
 class HttpServer(Object)
@@ -22,14 +29,14 @@ class HttpServer(Object)
 		if (laddr class == Array)
 		{
 			laddr do: [:addr |
-				sck := ServerSocket family: (addr family) type: Socket.Type.STREAM.
+				sck := HttpServerSocket family: (addr family) type: Socket.Type.STREAM.
 				self.server_sockets addLast: sck.
 				sck bind: addr.
 			].
 		}
 		else
 		{
-			sck := ServerSocket family: (laddr family) type: Socket.Type.STREAM.
+			sck := HttpServerSocket family: (laddr family) type: Socket.Type.STREAM.
 			self.server_sockets addLast: sck.
 			sck bind: laddr.
 		}.

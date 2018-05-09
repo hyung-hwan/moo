@@ -37,6 +37,29 @@ class Collection(Object)
 		self do: [ :el | if (block value: el) { ^el } ].
 		^exception_block value.
 	}
+
+(* ------------------- TODO -------------------------------
+	method add: object
+	{
+		self subclassResponsibility: #add:.
+	}
+	
+	method select: condition_block
+	{
+		| coll |
+		coll := self class new: self basicSize.
+		self do: [ :el | if (condition_block value: el) { coll add: el } ].
+		^coll
+	}
+
+	method reject: condition_block
+	{
+		| coll |
+		coll := self class new: self basicSize.
+		self do: [ :el | if (condition_block value: el) { } else { coll add: el } ].
+		^coll
+	}
+*)
 }
 
 ## -------------------------------------------------------------------------------
