@@ -404,6 +404,7 @@ static moo_pfrc_t pf_read_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_sck_t sck;
 	moo_oop_byte_t buf;
+	moo_oow_t offset, length, maxlen;
 	int fd;
 	ssize_t n;
 
@@ -428,7 +429,36 @@ static moo_pfrc_t pf_read_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	n = recv(fd, MOO_OBJ_GET_BYTE_SLOT(buf), MOO_OBJ_GET_SIZE(buf), 0);
+	offset = 0;
+	maxlen = MOO_OBJ_GET_SIZE(buf);
+	length = maxlen;
+
+	if (nargs >= 2)
+	{
+		moo_oop_t tmp;
+
+		tmp = MOO_STACK_GETARG(moo, nargs, 1);
+		if (moo_inttooow (moo, tmp, &offset) <= 0)
+		{
+			moo_seterrbfmt (moo, MOO_EINVAL, "invalid offset - %O", tmp);
+			return MOO_PF_FAILURE;
+		}
+
+		if (nargs >= 3)
+		{
+			tmp = MOO_STACK_GETARG(moo, nargs, 2);
+			if (moo_inttooow(moo, tmp, &length) <= 0)
+			{
+				moo_seterrbfmt (moo, MOO_EINVAL, "invalid length - %O", tmp);
+				return MOO_PF_FAILURE;
+			}
+		}
+
+		if (offset >= maxlen) offset = maxlen - 1;
+		if (length > maxlen - offset) length = maxlen - offset;
+	}
+
+	n = recv(fd, &MOO_OBJ_GET_BYTE_SLOT(buf)[offset], length, 0);
 	if (n <= -1 && errno != EWOULDBLOCK && errno != EAGAIN)
 	{
 		moo_seterrwithsyserr (moo, errno);
@@ -540,6 +570,7 @@ static moo_pfinfo_t pfinfos[] =
 	{ I, { 'l','i','s','t','e','n',':','\0' },                    0, { pf_listen_socket,    1, 1  }  },
 	{ I, { 'o','p','e','n','\0' },                                0, { pf_open_socket,      3, 3  }  },
 	{ I, { 'r','e','a','d','B','y','t','e','s',':','\0' },        0, { pf_read_socket,      1, 1  }  },
+	{ I, { 'r','e','a','d','B','y','t','e','s',':','o','f','f','s','e','t',':','l','e','n','g','t','h',':','\0' },    0, { pf_read_socket,     3, 3  }  },
 	{ I, { 's','o','c','k','e','t','E','r','r','o','r','\0' },    0, { pf_get_socket_error, 0, 0  }  },
 	{ I, { 'w','r','i','t','e','B','y','t','e','s',':','\0' },    0, { pf_write_socket,     1, 1  }  },
 	{ I, { 'w','r','i','t','e','B','y','t','e','s',':','o','f','f','s','e','t',':','l','e','n','g','t','h',':','\0' },    0, { pf_write_socket,     3, 3  }  }

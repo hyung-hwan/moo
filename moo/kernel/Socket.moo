@@ -216,9 +216,9 @@ class(#byte(16)) IP6Address(IP4Address)
 
 class(#byte) SocketAddress(Object) from 'sck.addr'
 {
-	##method(#primitive) family.
+	method(#primitive) family.
 	method(#primitive) fromString: str.
-	
+
 	method(#class) fromString: str
 	{
 		^self new fromString: str
@@ -230,6 +230,7 @@ class AsyncHandle(Object)
 	## the handle must be the first field in this object to match
 	## the internal representation used by various modules. (e.g. sck)
 	var(#get) handle := -1.
+	var(#get) closedEventAction := nil.
 
 	##method initialize
 	##{
@@ -242,7 +243,23 @@ class AsyncHandle(Object)
 		{
 			self _close.
 			self.handle := -1.
+
+			if (self.closedEventAction notNil) 
+			{
+				self.closedEventAction value: self.
+			}.
 		}
+	}
+
+	method onEvent: event_type do: action_block
+	{
+		if (event_type == #closed)
+		{
+			self.closedEventAction := action_block.
+			^self.
+		}.
+
+		Exception signal: 'unknown event type ' & event_type asString.
 	}
 
 	method writeBytes: bytes offset: offset length: length
@@ -264,7 +281,7 @@ class Socket(AsyncHandle) from 'sck'
 	var pending_bytes, pending_offset, pending_length.
 	var outreadysem, outdonesem, inreadysem.
 
-	method(#primitive) open(domain, type, proto).
+	method(#primitive) open(family, type, proto).
 	method(#primitive) _close.
 	method(#primitive) bind: addr.
 	method(#primitive) _listen: backlog.
@@ -273,12 +290,13 @@ class Socket(AsyncHandle) from 'sck'
 	method(#primitive) _socketError.
 
 	method(#primitive) readBytes: bytes.
+	method(#primitive) readBytes: bytes offset: offset length: length.
 	method(#primitive) _writeBytes: bytes.
 	method(#primitive) _writeBytes: bytes offset: offset length: length.
 }
 
-(* TODO: generate these domain and type from the C header *)
-pooldic Socket.Domain
+(* TODO: generate these family and type from the C header *)
+pooldic Socket.Family
 {
 	INET := 2.
 	INET6 := 10.
@@ -295,9 +313,9 @@ extend Socket
 	method(#class) new { self messageProhibited: #new }
 	method(#class) new: size { self messageProhibited: #new: }
 
-	method(#class) domain: domain type: type
+	method(#class) family: family type: type
 	{
-		^(super new) open(domain, type, 0)
+		^(super new) open(family, type, 0)
 	}
 
 	method initialize
@@ -351,8 +369,6 @@ extend Socket
 	
 	method close
 	{
-'Socket close' dump.
-
 		if (self.outdonesem notNil)
 		{
 			System unsignal: self.outdonesem.
@@ -390,7 +406,7 @@ extend Socket
 		}
 		else
 		{
-			Exception signal: 'unknown event type ' & event_type asString.
+			^super onEvent: event_type do: action_block.
 		}
 	}
 
@@ -569,109 +585,3 @@ class ServerSocket(Socket)
 		^self _listen: backlog.
 	}
 }
-
-class MyObject(Object)
-{
-	method(#class) start_server_socket
-	{
-		| s2 buf |
-		s2 := ServerSocket domain: Socket.Domain.INET type: Socket.Type.STREAM.
-		buf := ByteArray new: 128.
-
-		s2 onEvent: #accepted do: [ :sck :clisck :cliaddr |
-'SERVER ACCEPTED new client' dump.
-			clisck onEvent: #data_in do: [ :csck |
-				| nbytes |
-				while (true)
-				{
-					nbytes := csck readBytes: buf. 
-					if (nbytes <= 0)
-					{
-						if (nbytes == 0) { csck close }.
-						('Got ' & (nbytes asString)) dump.
-						break.
-					}.
-
-					buf dump.
-					csck writeBytes: buf offset: 0 length: nbytes.
-				}.
-			].
-			clisck onEvent: #data_out do: [ :csck |
-				##csck writeBytes: #[ $a, $b, C'\n' ].
-			].
-		].
-
-		s2 bind: (SocketAddress fromString: '0.0.0.0:7777').
-		s2 listen: 10.
-		^s2.
-	}
-
-	method(#class) start_client_socket
-	{
-		| s buf count |
-		s := ClientSocket domain: Socket.Domain.INET type: Socket.Type.STREAM.
-		buf := ByteArray new: 128.
-
-		count := 0.
-
-		s onEvent: #connected do: [ :sck :state |
-			if (state)
-			{
-				s writeBytes: #[ $a, $b, $c ].
-				s writeBytes: #[ $d, $e, $f ].
-			}
-			else
-			{
-				'FAILED TO CONNECT' dump.
-			}.
-		]. 
-
-		s onEvent: #data_in do: [ :sck |
-			| nbytes |
-			while (true)
-			{
-				nbytes := sck readBytes: buf. 
-				if (nbytes <= 0) 
-				{
-					if (nbytes == 0) { sck close }.
-					break.
-				}.
-				('Got ' & (nbytes asString)) dump.
-				buf dump.
-			}.
-		].
-		s onEvent: #data_out do: [ :sck |
-			if (count < 10) { sck writeBytes: #[ $a, $b, C'\n' ]. count := count + 1. }.
-		].
-
-		s connect: (SocketAddress fromString: '127.0.0.1:9999').
-	}
-
-	method(#class) main
-	{
-		[
-			| s s2 ss |
-
-			[
-				s := self start_client_socket.
-				s2 := self start_server_socket.
-
-				while (true)
-				{
-					ss := System handleAsyncEvent.
-					if (ss isError) { break }.
-					###if (ss == st) { System removeAsyncSemaphore: st }.
-				}.
-			]
-			ensure:
-			[
-				if (s notNil) { s close }.
-				if (s2 notNil) { s2 close }.
-			]
-
-		] on: Exception do: [:ex | ('Exception - '  & ex messageText) dump ].
-
-		'----- END OF MAIN ------' dump.
-	}
-}
-

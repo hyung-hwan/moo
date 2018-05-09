@@ -55,36 +55,9 @@
 
 #define MA MOO_TYPE_MAX(moo_oow_t)
 
-typedef struct sck_addr_trailer_t sck_addr_trailer_t;
-
-struct sck_addr_trailer_t
-{
-	int family;
-	union
-	{
-		struct
-		{
-			moo_uint16_t port;
-			moo_uint32_t addr;
-		} in4;
-		struct
-		{
-			moo_uint16_t port;
-			moo_uint8_t addr[16];
-			moo_uint32_t scope;
-		} in6;
-
-		/*
-		struct
-		{
-			moo_ooch_t path[100];
-		} local; */
-	} u;
-};
-
-
 union sockaddr_t
 {
+	struct sockaddr    sa;
 #if (MOO_SIZEOF_STRUCT_SOCKADDR_IN > 0)
 	struct sockaddr_in in4;
 #endif
@@ -104,7 +77,7 @@ static int str_to_ipv4 (const moo_ooch_t* str, moo_oow_t len, struct in_addr* in
 {
 	const moo_ooch_t* end;
 	int dots = 0, digits = 0;
-	moo_uint32_t acc = 0, addr = 0;	
+	moo_uint32_t acc = 0, addr = 0;
 	moo_ooch_t c;
 
 	end = str + len;
@@ -482,6 +455,21 @@ no_rbrack:
 	return -1;
 }
 
+static moo_pfrc_t pf_get_family (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv;
+	moo_oop_t v;
+	struct sockaddr* sa;
+
+	rcv = (moo_oop_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_OBJ_IS_BYTE_POINTER(rcv) && MOO_OBJ_GET_SIZE(rcv) >= MOO_SIZEOF(sockaddr_t));
+
+	sa = (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(rcv);
+	v = MOO_SMOOI_TO_OOP(sa->sa_family);
+
+	MOO_STACK_SETRET (moo, nargs, v);
+	return MOO_PF_SUCCESS;
+}
 
 static moo_pfrc_t pf_from_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
@@ -506,7 +494,8 @@ static moo_pfrc_t pf_from_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, { 'f','r','o','m','S','t','r','i','n','g',':','\0' },  0, { pf_from_string,    1, 1  }  },
+	{ I, { 'f','a','m','i','l','y' },                           0, { pf_get_family,     0, 0  }  },
+	{ I, { 'f','r','o','m','S','t','r','i','n','g',':','\0' },  0, { pf_from_string,    1, 1  }  }
 };
 
 /* ------------------------------------------------------------------------ */
@@ -514,7 +503,6 @@ static moo_pfinfo_t pfinfos[] =
 static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
 	moo_ooi_t spec;
-	/*if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(sck_addr_trailer_t), MOO_NULL) <= -1) return -1;*/
 
 	spec = MOO_OOP_TO_SMOOI(_class->spec);
 	if (!MOO_CLASS_SPEC_IS_INDEXED(spec) || MOO_CLASS_SPEC_INDEXED_TYPE(spec) != MOO_OBJ_TYPE_BYTE || MOO_CLASS_SPEC_NAMED_INSTVARS(spec) != 0)
