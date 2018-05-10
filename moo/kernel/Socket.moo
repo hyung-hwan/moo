@@ -225,56 +225,14 @@ class(#byte) SocketAddress(Object) from 'sck.addr'
 	}
 }
 
-class AsyncHandle(Object)
+
+class Socket(Object) from 'sck'
 {
 	## the handle must be the first field in this object to match
 	## the internal representation used by various modules. (e.g. sck)
 	var(#get) handle := -1.
-	var(#get) closedEventAction := nil.
 
-	##method initialize
-	##{
-	##	^super initialize
-	##}
-
-	method close
-	{
-		if (self.handle >= 0)
-		{
-			self _close.
-			self.handle := -1.
-
-			if (self.closedEventAction notNil) 
-			{
-				self.closedEventAction value: self.
-			}.
-		}
-	}
-
-	method onEvent: event_type do: action_block
-	{
-		if (event_type == #closed)
-		{
-			self.closedEventAction := action_block.
-			^self.
-		}.
-
-		Exception signal: 'unknown event type ' & event_type asString.
-	}
-
-	method writeBytes: bytes offset: offset length: length
-	{
-		^self writeBytes: bytes offset: offset length: length.
-	}
-
-	method writeBytes: bytes
-	{
-		^self writeBytes: bytes offset: 0 length: (bytes size)
-	}
-}
-
-class Socket(AsyncHandle) from 'sck'
-{
+	var(#get) closedEventAction.
 	var(#get) dataInEventAction.
 	var(#get) dataOutEventAction.
 
@@ -282,6 +240,10 @@ class Socket(AsyncHandle) from 'sck'
 	var outreadysem, outdonesem, inreadysem.
 
 	method(#primitive) open(family, type, proto).
+	## map the open primitive again with a different name for strict internal use only.
+	## this method is supposed to be used to handle an accepted socket in server sockets.
+	method(#primitive) __open(handle). 
+
 	method(#primitive) _close.
 	method(#primitive) bind: addr.
 	method(#primitive) _listen: backlog.
@@ -313,10 +275,26 @@ extend Socket
 	method(#class) new { self messageProhibited: #new }
 	method(#class) new: size { self messageProhibited: #new: }
 
+	method(#class) __with: handle
+	{
+		^(self _basicNew initialize) __open(handle)
+	}
+
 	method(#class) family: family type: type
 	{
-		^(super new) open(family, type, 0)
+		## new is prohibited. so use _basicNew with initialize.
+		##^(self new) open(family, type, 0)
+		^(self _basicNew initialize) open(family, type, 0)
 	}
+
+(* -------------------
+socketClosing
+socketClosed
+socketDataIn
+socketDataOut
+socketAccepted:from:
+socketConnected:
+-------------------- *)
 
 	method initialize
 	{
@@ -327,8 +305,11 @@ extend Socket
 		self.inreadysem := Semaphore new.
 
 		self.outdonesem signalAction: [ :sem |
-			self.dataOutEventAction value: self.
-			##(self.eventActions at: Socket.EventType.DATA_OUT) value: self.
+			##if (self.dataOutEventAction notNil)
+			##{
+			##	self.dataOutEventAction value: self.
+			##}.
+			self onSocketDataOut.
 			System unsignal: self.outreadysem.
 		].
 
@@ -356,8 +337,8 @@ extend Socket
 		].
 
 		self.inreadysem signalAction: [ :sem |
-			##(self.eventActions at: Socket.EventType.DATA_IN) value: self.
-			self.dataInEventAction value: self.
+			###self.dataInEventAction value: self.
+			self onSocketDataIn.
 		].
 	}
 
@@ -366,7 +347,7 @@ extend Socket
 'SOCKET FINALIZED...............' dump.
 		self close.
 	}
-	
+
 	method close
 	{
 		if (self.outdonesem notNil)
@@ -390,13 +371,26 @@ extend Socket
 			self.inreadysem := nil.
 		}.
 
-		^super close.
+		if (self.handle >= 0)
+		{
+			self _close.
+			self.handle := -1.
+
+			##if (self.closedEventAction notNil) 
+			##{
+			##	self.closedEventAction value: self.
+			##}.
+			self onSocketClosed.
+		}.
 	}
 
-	
 	method onEvent: event_type do: action_block
 	{
-		if (event_type == #data_in) 
+		if (event_type == #closed)
+		{
+			self.closedEventAction := action_block.
+		}
+		elsif (event_type == #data_in) 
 		{ 
 			self.dataInEventAction := action_block.
 		}
@@ -406,8 +400,15 @@ extend Socket
 		}
 		else
 		{
-			^super onEvent: event_type do: action_block.
+			Exception signal: 'unknown event type ' & event_type asString.
 		}
+	}
+
+	method beWatched
+	{
+		System addAsyncSemaphore: self.inreadysem.
+		System signal: self.inreadysem onInput: self.handle.
+		System addAsyncSemaphore: self.outdonesem.
 	}
 
 	method writeBytes: bytes offset: offset length: length
@@ -448,11 +449,22 @@ extend Socket
 		System signal: self.outreadysem onOutput: self.handle.
 	}
 
-	method beWatched
+	method writeBytes: bytes
 	{
-		System addAsyncSemaphore: self.inreadysem.
-		System signal: self.inreadysem onInput: self.handle.
-		System addAsyncSemaphore: self.outdonesem.
+		^self writeBytes: bytes offset: 0 length: (bytes size)
+	}
+
+
+	method onSocketClosed
+	{
+	}
+
+	method onSocketDataIn
+	{
+	}
+
+	method onSocketDataOut
+	{
 	}
 }
 
@@ -476,7 +488,8 @@ class ClientSocket(Socket)
 				System unsignal: sem.
 				System removeAsyncSemaphore: sem.
 
-				self.connectedEventAction value: self value: (soerr == 0).
+				##self.connectedEventAction value: self value: (soerr == 0).
+				self onSocketConnected: (soerr == 0).
 				if (soerr == 0) { self beWatched }.
 			}.
 			(* HOW TO HANDLE TIMEOUT? *)
@@ -516,12 +529,17 @@ class ClientSocket(Socket)
 		{
 			## connected immediately
 'IMMEDIATELY CONNECTED.....' dump.
-			self.connectedEventAction value: self value: true.
+			###self.connectedEventAction value: self value: true.
+			self onSocketConnected: true.
 
 			System addAsyncSemaphore: self.inreadysem.
 			System signal: self.inreadysem onInput: self.handle.
 			System addAsyncSemaphore: self.outdonesem.
 		}
+	}
+
+	method onSocketConnected
+	{
 	}
 }
 
@@ -535,22 +553,36 @@ class ServerSocket(Socket)
 		super initialize.
 
 		self.inreadysem signalAction: [ :sem |
-			| cliaddr clisck cliact |
+			| cliaddr clisck cliact fd |
 			cliaddr := SocketAddress new.
+
+			fd := self _accept: cliaddr.
+			if (fd >= 0)
+			{
+				clisck := (self acceptedSocketClass) __with: fd.
+				clisck beWatched.
+				self onSocketAccepted: clisck from: cliaddr.
+			}
+
+			(*--------------------------
 			clisck := self _accept: cliaddr.
-			if (clisck notNil)
+			if (clisck notNil) ## if nil, _accept: failed with EWOULDBLOCK/EAGAIN.
 			{
 				## the _accept method doesn't invoke the initialize method.
 				## i should invoke it manually here.
 				clisck initialize.
+				clisck beWatched.
+				self onSocketAccepted: clisck from: cliaddr.
 
-				if (self.acceptedEventAction notNil) 
-				{ 
-					self.acceptedEventAction value: self value: clisck value: cliaddr.
-					clisck beWatched.
-				}
-				else { clisck close }.
+				###if (self.acceptedEventAction notNil) 
+				####{ 
+				###	clisck beWatched.
+				###	self.acceptedEventAction value: self value: clisck value: cliaddr.
+				###	clisck beWatched.
+				###}
+				###else { clisck close }.
 			}.
+			---------------------------*)
 		].
 	}
 
@@ -583,5 +615,15 @@ class ServerSocket(Socket)
 		System addAsyncSemaphore: self.inreadysem.
 		System signal: self.inreadysem onInput: self.handle.
 		^self _listen: backlog.
+	}
+
+	method onSocketAccepted: clisck from: cliaddr
+	{
+		clisck close.
+	}
+
+	method acceptedSocketClass
+	{
+		^Socket
 	}
 }

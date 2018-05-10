@@ -58,9 +58,18 @@ static moo_pfrc_t pf_open_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		MOO_OBJ_BYTESOF(sck) >= (MOO_SIZEOF(*sck) - MOO_SIZEOF(moo_obj_t))
 	);
 
+	if (nargs == 1)
+	{
+		/* special form of opening. the socket handle is given */
+		sck->handle = MOO_STACK_GETARG(moo, nargs, 0);
+		MOO_STACK_SETRETTORCV (moo, nargs);
+		return MOO_PF_SUCCESS;
+	}
+	
 	dom = MOO_STACK_GETARG(moo, nargs, 0);
 	type = MOO_STACK_GETARG(moo, nargs, 1);
-	proto = MOO_STACK_GETARG(moo, nargs, 2);
+	proto = (nargs < 3)? 0: MOO_STACK_GETARG(moo, nargs, 2);
+	
 
 	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_SMOOI(dom) && MOO_OOP_IS_SMOOI(type) && MOO_OOP_IS_SMOOI(proto));
 
@@ -266,6 +275,7 @@ normal_accept:
 #endif
 	if (fcntl(newfd, F_SETFL, fl) == -1) goto fcntl_failure;
 	
+#if 0
 accept_done:
 	/*newsck = (oop_sck_t)moo_instantiate(moo, MOO_OBJ_GET_CLASS(sck), MOO_NULL, 0);*/
 	newsck = (oop_sck_t)moo_instantiate(moo, ((sck_modctx_t*)mod->ctx)->sck_class, MOO_NULL, 0);
@@ -289,6 +299,19 @@ accept_done:
 	 * method should call application-level initializer. */
 	MOO_STACK_SETRET (moo, nargs, (moo_oop_t)newsck);
 	return MOO_PF_SUCCESS;
+#else
+accept_done:
+	if (!MOO_IN_SMOOI_RANGE(newfd)) 
+	{
+		/* the file descriptor is too big to be represented as a small integer */
+		moo_seterrbfmt (moo, MOO_ERANGE, "socket handle %d not in the permitted range", newfd);
+		close (newfd);
+		return MOO_PF_FAILURE;
+	}
+
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(newfd));
+	return MOO_PF_SUCCESS;
+#endif
 }
 
 static moo_pfrc_t pf_listen_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
@@ -568,7 +591,7 @@ static moo_pfinfo_t pfinfos[] =
 	{ I, { 'c','l','o','s','e','\0' },                            0, { pf_close_socket,     0, 0  }  },
 	{ I, { 'c','o','n','n','e','c','t',':','\0' },                0, { pf_connect_socket,   1, 1  }  },
 	{ I, { 'l','i','s','t','e','n',':','\0' },                    0, { pf_listen_socket,    1, 1  }  },
-	{ I, { 'o','p','e','n','\0' },                                0, { pf_open_socket,      3, 3  }  },
+	{ I, { 'o','p','e','n','\0' },                                0, { pf_open_socket,      1, 3  }  },
 	{ I, { 'r','e','a','d','B','y','t','e','s',':','\0' },        0, { pf_read_socket,      1, 1  }  },
 	{ I, { 'r','e','a','d','B','y','t','e','s',':','o','f','f','s','e','t',':','l','e','n','g','t','h',':','\0' },    0, { pf_read_socket,     3, 3  }  },
 	{ I, { 's','o','c','k','e','t','E','r','r','o','r','\0' },    0, { pf_get_socket_error, 0, 0  }  },

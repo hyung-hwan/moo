@@ -1,15 +1,33 @@
 ###include 'Moo.moo'.
 #include 'Socket.moo'.
 
+class HttpSocket(Socket)
+{
+	method onSocketDataIn
+	{
+		'CLIENT got DATA' dump.
+		self close.
+	}
+}
+
 class HttpServerSocket(ServerSocket)
 {
-	method(#class) initialize
+	method initialize
 	{
-		self onEvent: #accepted do: [
-		
-		].
-		
-		###self addEventListener: self.
+		super initialize.
+	}
+
+	method onSocketAccepted: clisck from: cliaddr
+	{
+		'CLIENT accepted ..............' dump.
+clisck dump.
+		cliaddr dump.
+	##	clisck close.
+	}
+
+	method acceptedSocketClass
+	{
+		^HttpSocket
 	}
 }
 
@@ -19,6 +37,7 @@ class HttpServer(Object)
 
 	method initialize
 	{
+		super initialize.
 		server_sockets := LinkedList new.
 	}
 
