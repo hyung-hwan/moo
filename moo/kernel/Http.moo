@@ -12,9 +12,12 @@ class HttpSocket(Socket)
 
 class HttpServerSocket(ServerSocket)
 {
+	var connections.
+
 	method initialize
 	{
 		super initialize.
+	###	self.connections := LinkedList new.
 	}
 
 	method onSocketAccepted: clisck from: cliaddr
@@ -22,12 +25,13 @@ class HttpServerSocket(ServerSocket)
 		'CLIENT accepted ..............' dump.
 clisck dump.
 		cliaddr dump.
-	##	clisck close.
+	###	self.connections addLast: clisck.
 	}
 
 	method acceptedSocketClass
 	{
-		^HttpSocket
+		##^if (self currentAddress port == 80) { HttpSocket } else { HttpSocket }.
+		^HttpSocket.
 	}
 }
 
