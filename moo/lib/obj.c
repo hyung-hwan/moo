@@ -222,7 +222,7 @@ static MOO_INLINE int decode_spec (moo_t* moo, moo_oop_class_t _class, moo_oow_t
 
 		if (num_flexi_fields > 0)
 		{
-			moo_seterrbfmt (moo, MOO_EPERM, "number of flexi-fields(%zu) disallowed for a class %O", num_flexi_fields, _class); 
+			moo_seterrbfmt (moo, MOO_EPERM, "flexi-fields(%zu) disallowed for a class %O", num_flexi_fields, _class); 
 			return -1;
 		}
 	}

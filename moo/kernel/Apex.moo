@@ -19,6 +19,8 @@ pooldic Error.Code
 	ENOENT   := #\8.
 	EPERM    := #\12.
 	ERANGE   := #\20.
+
+	ELIMIT  := #\9999.
 (* add more items... *)
 }
 

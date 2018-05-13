@@ -1,31 +1,111 @@
 ###include 'Moo.moo'.
 #include 'Socket.moo'.
 
+class HttpConnReg(Object)
+{
+	var connections.
+	var first_free_slot.
+	var last_free_slot.
+
+	method initialize
+	{
+		| i size |
+		self.connections := Array new: 32. ## TODO: make it dynamic
+
+		i := self.connections size.
+		if (i <= 0) 
+		{
+			self.first_free_slot := -1.
+			self.last_free_slot := -1.
+		}
+		else
+		{
+			i := (self.first_free_slot := i - 1).
+			while (i >= 0)
+			{
+				self.connections at: i put: (i - 1).
+				i := i - 1.
+			}.
+			self.last_free_slot := 0.
+		}.
+	}
+
+	method add: elem
+	{
+		| index |
+		if (self.first_free_slot < 0) { ^Error.Code.ELIMIT }.
+		index := self.first_free_slot.
+		self.first_free_slot := (self.connections at: index).
+		self.connections at: index put: elem.
+		if (self.first_free_slot < 0) { self.last_free_slot = -1 }.
+		^index.
+	}
+
+	method remove: index
+	{
+		if (self.last_free_slot >= 0)
+		{
+			self.connections at: self.last_free_slot put: index.
+		}
+		else
+		{
+			self.first_free_slot := self.last_free_slot.
+		}.
+		self.connections at: index put: -1.
+		self.last_free_slot := index.
+	}
+}
+
 class HttpSocket(Socket)
 {
+	var(#get) server := nil.
+	var(#get) cid := -1.
+
 	method onSocketDataIn
 	{
 		'CLIENT got DATA' dump.
 		self close.
 	}
+
+	method close
+	{
+('Http Connection closing.......... handle ' & self.handle asString) dump.
+		if (self.server notNil)
+		{
+('Http Connection ' & self.cid asString &  ' removing from server  ..........') dump.
+			self.server removeConnection: self.
+		}.
+		^super close.
+	}
+	
+	method server: server cid: cid
+	{
+		self.server := server.
+		self.cid := cid.
+	}
 }
 
-class HttpServerSocket(ServerSocket)
+class HttpListener(ServerSocket)
 {
-	var connections.
+	var(#get,#set) server := nil.
 
 	method initialize
 	{
 		super initialize.
-	###	self.connections := LinkedList new.
 	}
 
 	method onSocketAccepted: clisck from: cliaddr
 	{
+		| cid |
+
 		'CLIENT accepted ..............' dump.
 clisck dump.
 		cliaddr dump.
-	###	self.connections addLast: clisck.
+
+		if (self.server notNil)
+		{
+			server addConnection: clisck.
+		}.
 	}
 
 	method acceptedSocketClass
@@ -37,52 +117,76 @@ clisck dump.
 
 class HttpServer(Object)
 {
-	var server_sockets.
+	var listeners.
+	var connreg.
 
 	method initialize
 	{
 		super initialize.
-		server_sockets := LinkedList new.
+		self.listeners := LinkedList new.
+		self.connreg := HttpConnReg new.
 	}
 
 	method start: laddr
 	{
-		| sck |
+		| listener |
 
 		if (laddr class == Array)
 		{
 			laddr do: [:addr |
-				sck := HttpServerSocket family: (addr family) type: Socket.Type.STREAM.
-				self.server_sockets addLast: sck.
-				sck bind: addr.
+				listener := HttpListener family: (addr family) type: Socket.Type.STREAM.
+				self.listeners addLast: listener.
+				listener server: self.
+				listener bind: addr.
 			].
 		}
 		else
 		{
-			sck := HttpServerSocket family: (laddr family) type: Socket.Type.STREAM.
-			self.server_sockets addLast: sck.
-			sck bind: laddr.
+			listener := HttpListener family: (laddr family) type: Socket.Type.STREAM.
+			self.listeners addLast: listener.
+			listener server: self.
+			listener bind: laddr.
 		}.
 
-		self.server_sockets do: [:ssck |
-			ssck listen: 128.
+		self.listeners do: [:l_listener |
+			l_listener listen: 128.
 		].
 	}
 
 	method close
 	{
-		self.server_sockets do: [:sck |
-			sck close.
+		self.listeners do: [:listener |
+			listener server: nil.
+			listener close.
 		].
 
-		while (self.server_sockets size > 0)
+		while (self.listeners size > 0)
 		{
-			self.server_sockets removeLastLink.
+			self.listeners removeLastLink.
 		}.
 	}
+
+	method addConnection: conn
+	{
+		| cid |
+		cid := self.connreg add: conn.
+		if (cid isError)
+		{
+			'ERROR - CANNOT REGISTER NEW CONNECTION >>>>>>>>>> ' dump.
+			conn close.
+			^self.
+		}.
+
+('ADD NEW CONNECTION ' & cid asString) dump.
+		conn server: self cid: cid.
+	}
+	
+	method removeConnection: conn
+	{
+		self.connreg remove: (conn cid).
+		conn server: nil cid: -1.
+	}
 }
-
-
 
 class MyObject(Object)
 {
