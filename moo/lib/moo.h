@@ -1595,7 +1595,8 @@ enum moo_synerrnum_t
 	MOO_SYNERR_CMTNC,           /* comment not closed */
 	MOO_SYNERR_STRNC,           /* string not closed */
 	MOO_SYNERR_CLTNT,           /* character literal not terminated */
-	MOO_SYNERR_HLTNT,           /* hashed literal not terminated */
+	MOO_SYNERR_HLTNT,           /* hashed literal not terminated - no valid character after #*/
+	MOO_SYNERR_HBSLPINVAL,      /* invalid hash-backslahed literal prefix - no valid character after #\ */
 	MOO_SYNERR_CHARLITINVAL,    /* wrong character literal */
 	MOO_SYNERR_COLON,           /* : expected */
 	MOO_SYNERR_STRING,          /* string expected */
@@ -1603,6 +1604,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_RADNUMLITINVAL,  /* invalid numeric literal with radix */
 	MOO_SYNERR_BYTERANGE,       /* byte too small or too large */
 	MOO_SYNERR_ERRLITINVAL,     /* wrong error literal */
+	MOO_SYNERR_SMPTRLITINVAL,   /* wrong smptr literal */
 	MOO_SYNERR_LBRACE,          /* { expected */
 	MOO_SYNERR_RBRACE,          /* } expected */
 	MOO_SYNERR_LPAREN,          /* ( expected */

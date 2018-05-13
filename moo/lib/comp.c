@@ -270,6 +270,12 @@ static MOO_INLINE int is_digitchar (moo_ooci_t c)
 	return (c >= '0' && c <= '9');
 }
 
+static MOO_INLINE int is_xdigitchar (moo_ooci_t c)
+{
+/* TODO: support full unicode */
+	return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
 static MOO_INLINE int is_alnumchar (moo_ooci_t c)
 {
 /* TODO: support full unicode */
@@ -288,7 +294,7 @@ static MOO_INLINE int is_binselchar (moo_ooci_t c)
 	 * - an exclamation mark is excluded intentioinally because i can't tell
 	 *   the method symbol #! from the comment introducer #!.
 	 * - a question mark forms a normal identifier.
-	 * - a backslash is used to form an error literal combined with a hash sign. (e.g. #\10)
+	 * - a backslash is used to form an error literal combined with a hash sign. (e.g. #\E10)
 	 */
 
 	switch (c)
@@ -645,7 +651,7 @@ static moo_oop_t string_to_error (moo_t* moo, moo_oocs_t* str, moo_ioloc_t* loc)
 	ptr = str->ptr,
 	end = str->ptr + str->len;
 
-	/* i assume that the input is in the form of error(NNN)
+	/* i assume that the input is in the form of \#ENNN
 	 * all other letters are non-digits except the NNN part.
 	 * i just skip all non-digit letters for simplicity sake. */
 	while (ptr < end)
@@ -667,6 +673,48 @@ static moo_oop_t string_to_error (moo_t* moo, moo_oocs_t* str, moo_ioloc_t* loc)
 	}
 
 	return MOO_ERROR_TO_OOP(num);
+}
+
+static moo_oop_t string_to_smptr (moo_t* moo, moo_oocs_t* str, moo_ioloc_t* loc)
+{
+	moo_oow_t num = 0;
+	const moo_ooch_t* ptr, * end;
+
+	ptr = str->ptr,
+	end = str->ptr + str->len;
+
+	/* i assume that the input is in the form of \#PNNN
+	 * all other letters are non-xdigits except the NNN part.
+	 * i just skip all non-digit letters for simplicity sake. */
+	while (ptr < end)
+	{
+		if (is_xdigitchar(*ptr)) 
+		{
+			moo_oow_t xnum;
+
+			xnum = num * 16;
+			if (*ptr >= 'a' && *ptr <= 'f') xnum += (*ptr - 'a' + 10);
+			else if (*ptr >= 'A' && *ptr <= 'F') xnum += (*ptr - 'A' + 10);
+			else xnum += (*ptr - '0');
+
+			if (xnum < num)
+			{
+				/* overflowed */
+				moo_setsynerr (moo, MOO_SYNERR_SMPTRLITINVAL, loc, str);
+				return MOO_NULL;
+			}
+			num = xnum;
+		}
+		ptr++;
+	}
+
+	if (!MOO_IN_SMPTR_RANGE(num))
+	{
+		moo_setsynerr (moo, MOO_SYNERR_SMPTRLITINVAL, loc, str);
+		return MOO_NULL;
+	}
+
+	return MOO_SMPTR_TO_OOP(num);
 }
 
 /* ---------------------------------------------------------------------
@@ -1743,23 +1791,54 @@ retry:
 					break;
 
 				case '\\':
-					/* #\NNN - error literal - #\0, #\1234, etc */
-					SET_TOKEN_TYPE(moo, MOO_IOTOK_ERRLIT);
 					ADD_TOKEN_CHAR(moo, c);
 					GET_CHAR_TO (moo, c);
-					if (!is_digitchar(c))
+					if (c == 'E' || c == 'e')
+					{
+						/* #\eNNN - error literal - #\e0, #\e1234, etc */
+						SET_TOKEN_TYPE(moo, MOO_IOTOK_ERRLIT);
+						ADD_TOKEN_CHAR(moo, c);
+						GET_CHAR_TO (moo, c);
+						if (!is_digitchar(c))
+						{
+							ADD_TOKEN_CHAR(moo, c); /* to include it to the error messsage */
+							moo_setsynerr (moo, MOO_SYNERR_ERRLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+							return -1;
+						}
+						do
+						{
+							ADD_TOKEN_CHAR(moo, c);
+							GET_CHAR_TO (moo, c);
+						}
+						while (is_digitchar(c) || c == '_');
+					}
+					else if (c == 'P' || c == 'p')
+					{
+						/* #\pXXX - smptr literal - #\p0, #\p100, etc */
+						SET_TOKEN_TYPE(moo, MOO_IOTOK_SMPTRLIT);
+						ADD_TOKEN_CHAR(moo, c);
+						GET_CHAR_TO (moo, c);
+
+						if (!is_xdigitchar(c))
+						{
+							ADD_TOKEN_CHAR(moo, c); /* to include it to the error messsage */
+							moo_setsynerr (moo, MOO_SYNERR_SMPTRLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+							return -1;
+						}
+						do
+						{
+							ADD_TOKEN_CHAR(moo, c);
+							GET_CHAR_TO (moo, c);
+						}
+						while (is_xdigitchar(c) || c == '_');
+					}
+					else
 					{
 						ADD_TOKEN_CHAR(moo, c); /* to include it to the error messsage */
-						moo_setsynerr (moo, MOO_SYNERR_ERRLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						moo_setsynerr (moo, MOO_SYNERR_HBSLPINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
-					do
-					{
-						ADD_TOKEN_CHAR(moo, c);
-						GET_CHAR_TO (moo, c);
-					}
-					while (is_digitchar(c) || c == '_');
 					unget_char (moo, &moo->c->lxc);
 					break;
 
@@ -4975,7 +5054,21 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 			{
 				moo_oop_t tmp;
 
-				tmp = string_to_error (moo, TOKEN_NAME(moo), TOKEN_LOC(moo));
+				tmp = string_to_error(moo, TOKEN_NAME(moo), TOKEN_LOC(moo));
+				if (!tmp) return -1;
+
+				if (add_literal(moo, tmp, &index) <= -1 ||
+				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+
+				GET_TOKEN (moo);
+				break;
+			}
+
+			case MOO_IOTOK_SMPTRLIT:
+			{
+				moo_oop_t tmp;
+
+				tmp = string_to_smptr(moo, TOKEN_NAME(moo), TOKEN_LOC(moo));
 				if (!tmp) return -1;
 
 				if (add_literal(moo, tmp, &index) <= -1 ||
@@ -7828,6 +7921,9 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 
 		case MOO_IOTOK_ERRLIT:
 			return string_to_error(moo, TOKEN_NAME(moo), TOKEN_LOC(moo));
+
+		case MOO_IOTOK_SMPTRLIT:
+			return string_to_smptr(moo, TOKEN_NAME(moo), TOKEN_LOC(moo));
 
 		case MOO_IOTOK_CHARLIT:
 			MOO_ASSERT (moo, TOKEN_NAME_LEN(moo) == 1);

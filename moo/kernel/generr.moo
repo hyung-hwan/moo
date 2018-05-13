@@ -52,6 +52,7 @@ class MyObject(Object)
 			'string not closed'
 			'no character after $'
 			'no valid character after #'
+			'no valid character after #\'
 			'wrong character literal'
 			'colon expected'
 			'string expected'
@@ -59,6 +60,7 @@ class MyObject(Object)
 			'invalid numeric literal'
 			'byte too small or too large'
 			'wrong error literal'
+			'wrong smptr literal'
 			'{ expected'
 			'} expected'
 			'( expected'
@@ -154,13 +156,22 @@ class MyObject(Object)
 
 	method(#class) printString: s prefix: prefix index: index on: f
 	{
-		| c  |
+		| c |
 		c := s size - 1.
 
 		f puts('static moo_ooch_t ', prefix, index asString, '[] = {').
 
 		0 to: c do: [:i |
-			f putc($', (s at: i), $').
+			| ch |
+			ch := s at: i.
+			if (ch == $\ or: [ch == $"]) 
+			{
+				f putc($', $\, (s at: i), $').
+			}
+			else
+			{
+				f putc($', (s at: i), $').
+			}.
 			(i = c) ifFalse: [f putc($,) ].
 		].
 

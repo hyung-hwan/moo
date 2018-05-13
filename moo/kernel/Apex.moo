@@ -8,19 +8,19 @@ class(#limited) Error(Apex)
 
 pooldic Error.Code
 {
-	ENOERR   := #\0.
-	EGENERIC := #\1.
-	ENOIMPL  := #\2.
-	ESYSERR  := #\3.
-	EINTERN  := #\4.
-	ESYSMEM  := #\5.
-	EOOMEM   := #\6.
-	EINVAL   := #\7.
-	ENOENT   := #\8.
-	EPERM    := #\12.
-	ERANGE   := #\20.
+	ENOERR   := #\E0.
+	EGENERIC := #\E1.
+	ENOIMPL  := #\E2.
+	ESYSERR  := #\E3.
+	EINTERN  := #\E4.
+	ESYSMEM  := #\E5.
+	EOOMEM   := #\E6.
+	EINVAL   := #\E7.
+	ENOENT   := #\E8.
+	EPERM    := #\E12.
+	ERANGE   := #\E20.
 
-	ELIMIT  := #\9999.
+	ELIMIT  := #\E9999.
 (* add more items... *)
 }
 
@@ -302,8 +302,8 @@ extend Error
 
 	pooldic/const
 	{
-		NONE := #\0.
-		GENERIC := #\1.
+		NONE := #\e0.
+		GENERIC := #\e1.
 	}
 	-------------------------------- *)
 

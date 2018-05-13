@@ -396,7 +396,7 @@ static int print_object (moo_t* moo, moo_bitmask_t mask, moo_oop_t oop, outbfmt_
 	}
 	else if (MOO_OOP_IS_SMPTR(oop))
 	{
-		if (outbfmt(moo, mask, "%p", MOO_OOP_TO_SMPTR(oop)) <= -1) return -1;
+		if (outbfmt(moo, mask, "#\\p%X", MOO_OOP_TO_SMPTR(oop)) <= -1) return -1;
 	}
 	else if (MOO_OOP_IS_CHAR(oop))
 	{
@@ -404,7 +404,7 @@ static int print_object (moo_t* moo, moo_bitmask_t mask, moo_oop_t oop, outbfmt_
 	}
 	else if (MOO_OOP_IS_ERROR(oop))
 	{
-		if (outbfmt(moo, mask, "#\\%zd", MOO_OOP_TO_ERROR(oop)) <= -1) return -1;
+		if (outbfmt(moo, mask, "#\\e%zd", MOO_OOP_TO_ERROR(oop)) <= -1) return -1;
 	}
 	else
 	{
