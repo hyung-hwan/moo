@@ -54,12 +54,30 @@ class HttpConnReg(Object)
 		self.connections at: index put: -1.
 		self.last_free_slot := index.
 	}
+	
+	method do: block
+	{
+		| index size conn |
+		## the following loop won't fire for an element added after resizing of self.connections.
+		## at present, there is no self.connections resizing impelemented. so no worry on this.	
+		size := self.connections size. 
+		index := 0.  
+		while (index < size)
+		{
+			conn := self.connections at: index.
+			if ((conn isKindOf: Integer) not)
+			{
+				block value: (self.connections at: index).
+			}.
+			index := index + 1.
+		}.
+	}
 }
 
 class HttpSocket(Socket)
 {
 	var(#get) server := nil.
-	var(#get) cid := -1.
+	var(#get) rid := -1.
 
 	method onSocketDataIn
 	{
@@ -72,22 +90,23 @@ class HttpSocket(Socket)
 ('Http Connection closing.......... handle ' & self.handle asString) dump.
 		if (self.server notNil)
 		{
-('Http Connection ' & self.cid asString &  ' removing from server  ..........') dump.
+('Http Connection ' & self.rid asString &  ' removing from server  ..........') dump.
 			self.server removeConnection: self.
 		}.
 		^super close.
 	}
 	
-	method server: server cid: cid
+	method server: server rid: rid
 	{
 		self.server := server.
-		self.cid := cid.
+		self.rid := rid.
 	}
 }
 
 class HttpListener(ServerSocket)
 {
-	var(#get,#set) server := nil.
+	var(#get) server := nil.
+	var(#get) rid := -1.
 
 	method initialize
 	{
@@ -96,7 +115,7 @@ class HttpListener(ServerSocket)
 
 	method onSocketAccepted: clisck from: cliaddr
 	{
-		| cid |
+		| rid |
 
 		'CLIENT accepted ..............' dump.
 clisck dump.
@@ -106,12 +125,19 @@ clisck dump.
 		{
 			server addConnection: clisck.
 		}.
+
 	}
 
 	method acceptedSocketClass
 	{
 		##^if (self currentAddress port == 80) { HttpSocket } else { HttpSocket }.
 		^HttpSocket.
+	}
+
+	method server: server rid: rid
+	{
+		self.server := server.
+		self.rid := rid.
 	}
 }
 
@@ -123,7 +149,7 @@ class HttpServer(Object)
 	method initialize
 	{
 		super initialize.
-		self.listeners := LinkedList new.
+		self.listeners := HttpConnReg new.
 		self.connreg := HttpConnReg new.
 	}
 
@@ -135,56 +161,75 @@ class HttpServer(Object)
 		{
 			laddr do: [:addr |
 				listener := HttpListener family: (addr family) type: Socket.Type.STREAM.
-				self.listeners addLast: listener.
-				listener server: self.
-				listener bind: addr.
+				if ((self addListener: listener) notError)
+				{
+					listener bind: addr.
+					listener listen: 128.
+				}
 			].
 		}
 		else
 		{
 			listener := HttpListener family: (laddr family) type: Socket.Type.STREAM.
-			self.listeners addLast: listener.
-			listener server: self.
-			listener bind: laddr.
+			if ((self addListener: listener) notError)
+			{
+				listener bind: laddr.
+				listener listen: 128.
+			}
 		}.
-
-		self.listeners do: [:l_listener |
-			l_listener listen: 128.
-		].
 	}
 
 	method close
 	{
 		self.listeners do: [:listener |
-			listener server: nil.
 			listener close.
 		].
 
-		while (self.listeners size > 0)
-		{
-			self.listeners removeLastLink.
-		}.
+		self.connreg do: [:conn |
+			conn close.
+		].
 	}
 
 	method addConnection: conn
 	{
-		| cid |
-		cid := self.connreg add: conn.
-		if (cid isError)
+		| rid |
+		rid := self.connreg add: conn.
+		if (rid isError)
 		{
 			'ERROR - CANNOT REGISTER NEW CONNECTION >>>>>>>>>> ' dump.
 			conn close.
-			^self.
+			^rid.
 		}.
 
-('ADD NEW CONNECTION ' & cid asString) dump.
-		conn server: self cid: cid.
+('ADD NEW CONNECTION ' & rid asString) dump.
+		conn server: self rid: rid.
 	}
 	
 	method removeConnection: conn
 	{
-		self.connreg remove: (conn cid).
-		conn server: nil cid: -1.
+		self.connreg remove: (conn rid).
+		conn server: nil rid: -1.
+	}
+	
+	method addListener: listener
+	{
+		| rid |
+		rid := self.listeners add: listener.
+		if (rid isError)
+		{
+			'ERROR - CANNOT REGISTER NEW LISTENER >>>>>>>>>> ' dump.
+			listener close.
+			^rid.
+		}.
+
+('ADD NEW LISTENER ' & rid asString) dump.
+		listener server: self rid: rid.
+	}
+
+	method removeListener: listener
+	{
+		self.listeners remove: (listener rid).
+		listener server: nil rid: -1.
 	}
 }
 
