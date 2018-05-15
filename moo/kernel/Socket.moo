@@ -353,21 +353,21 @@ socketConnected:
 		if (self.outdonesem notNil)
 		{
 			System unsignal: self.outdonesem.
-			if (self.outdonesem _group notNil) { System removeAsyncSemaphore: self.outdonesem }.
+			if (self.outdonesem _group notNil) { thisProcess removeAsyncSemaphore: self.outdonesem }.
 			self.outdonesem := nil.
 		}.
 		
 		if (self.outreadysem notNil)
 		{
 			System unsignal: self.outreadysem.
-			if (self.outreadysem _group notNil) { System removeAsyncSemaphore: self.outreadysem }.
+			if (self.outreadysem _group notNil) { thisProcess removeAsyncSemaphore: self.outreadysem }.
 			self.outreadysem := nil.
 		}.
 
 		if (self.inreadysem notNil)
 		{
 			System unsignal: self.inreadysem.
-			if (self.inreadysem _group notNil) { System removeAsyncSemaphore: self.inreadysem }.
+			if (self.inreadysem _group notNil) { thisProcess removeAsyncSemaphore: self.inreadysem }.
 			self.inreadysem := nil.
 		}.
 
@@ -406,9 +406,9 @@ socketConnected:
 
 	method beWatched
 	{
-		System addAsyncSemaphore: self.inreadysem.
+		thisProcess addAsyncSemaphore: self.inreadysem.
 		System signal: self.inreadysem onInput: self.handle.
-		System addAsyncSemaphore: self.outdonesem.
+		thisProcess addAsyncSemaphore: self.outdonesem.
 	}
 
 	method writeBytes: bytes offset: offset length: length
@@ -443,9 +443,9 @@ socketConnected:
 
 		self.pending_bytes := bytes.
 		self.pending_offset := pos.
-		self.pending_length := rem
+		self.pending_length := rem.
 
-		System addAsyncSemaphore: self.outreadysem.
+		thisProcess addAsyncSemaphore: self.outreadysem.
 		System signal: self.outreadysem onOutput: self.handle.
 	}
 
@@ -486,7 +486,7 @@ class ClientSocket(Socket)
 			{
 				## finalize connection if not in progress
 				System unsignal: sem.
-				System removeAsyncSemaphore: sem.
+				thisProcess removeAsyncSemaphore: sem.
 
 				##self.connectedEventAction value: self value: (soerr == 0).
 				self onSocketConnected: (soerr == 0).
@@ -501,7 +501,7 @@ class ClientSocket(Socket)
 		if (self.connsem notNil)
 		{
 			System unsignal: self.connsem.
-			if (self.connsem _group notNil) { System removeAsyncSemaphore: self.connsem }.
+			if (self.connsem _group notNil) { thisProcess removeAsyncSemaphore: self.connsem }.
 			self.connsem := nil.
 		}.
 		^super close
@@ -522,7 +522,7 @@ class ClientSocket(Socket)
 		| sem |
 		if ((self _connect: target) <= -1)
 		{
-			System addAsyncSemaphore: self.connsem.
+			thisProcess addAsyncSemaphore: self.connsem.
 			System signal: self.connsem onOutput: self.handle.
 		}
 		else
@@ -532,9 +532,9 @@ class ClientSocket(Socket)
 			###self.connectedEventAction value: self value: true.
 			self onSocketConnected: true.
 
-			System addAsyncSemaphore: self.inreadysem.
+			thisProcess addAsyncSemaphore: self.inreadysem.
 			System signal: self.inreadysem onInput: self.handle.
-			System addAsyncSemaphore: self.outdonesem.
+			thisProcess addAsyncSemaphore: self.outdonesem.
 		}
 	}
 
@@ -556,8 +556,10 @@ class ServerSocket(Socket)
 			| cliaddr clisck cliact fd |
 			cliaddr := SocketAddress new.
 
+'IN READYSEM action performing.........' dump.
 			fd := self _accept: cliaddr.
-			if (fd >= 0)
+			##if (fd >= 0)
+			if (fd notNil)
 			{
 				clisck := (self acceptedSocketClass) __with: fd.
 				clisck beWatched.
@@ -592,7 +594,7 @@ class ServerSocket(Socket)
 		if (self.inreadysem notNil)
 		{
 			System unsignal: self.inreadysem.
-			if (self.inreadysem _group notNil) { System removeAsyncSemaphore: self.inreadysem }.
+			if (self.inreadysem _group notNil) { thisProcess removeAsyncSemaphore: self.inreadysem }.
 			self.inreadysem := nil.
 		}.
 
@@ -612,7 +614,7 @@ class ServerSocket(Socket)
 
 	method listen: backlog
 	{
-		System addAsyncSemaphore: self.inreadysem.
+		thisProcess addAsyncSemaphore: self.inreadysem.
 		System signal: self.inreadysem onInput: self.handle.
 		^self _listen: backlog.
 	}

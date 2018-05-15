@@ -6,6 +6,8 @@ class(#pointer,#final,#limited) Process(Object)
 	var(#get) ps_prev, ps_next, sem_wait_prev, sem_wait_next.
 	var sem, perr, perrmsg.
 
+	var asyncsg.
+	
 	method primError { ^self.perr }
 	method primErrorMessage { ^self.perrmsg }
 
@@ -45,6 +47,26 @@ class(#pointer,#final,#limited) Process(Object)
 		if (thisProcess ~~ self) { self suspend }.
 		self.currentContext unwindTo: self.initialContext return: nil.
 		^self _terminate
+	}
+
+	method initAsync
+	{
+		if (self.asyncsg isNil) { self.asyncsg := SemaphoreGroup new }.
+	}
+	
+	method addAsyncSemaphore: sem
+	{
+		^self.asyncsg addSemaphore: sem
+	}
+
+	method removeAsyncSemaphore: sem
+	{
+		^self.asyncsg removeSemaphore: sem
+	}
+
+	method handleAsyncEvent
+	{
+		^self.asyncsg wait.
 	}
 }
 

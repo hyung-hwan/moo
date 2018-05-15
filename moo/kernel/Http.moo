@@ -90,7 +90,7 @@ class HttpSocket(Socket)
 	method onSocketDataIn
 	{
 		'CLIENT got DATA' dump.
-		self readBytes 
+		###self readBytes: buf.
 		self close.
 	}
 
@@ -333,9 +333,9 @@ class MyObject(Object)
 
 				while (true)
 				{
-					ss := System handleAsyncEvent.
+					ss := thisProcess handleAsyncEvent.
 					if (ss isError) { break }.
-					###if (ss == st) { System removeAsyncSemaphore: st }.
+					###if (ss == st) { thisProcess removeAsyncSemaphore: st }.
 				}.
 			]
 			ensure:
@@ -350,11 +350,43 @@ class MyObject(Object)
 	}
 
 
-	method(#class) main
+	method(#class) another_proc
 	{
 		| httpd |
 
 		[
+			thisProcess initAsync.
+			httpd := HttpServer new.
+			[
+				| ss |
+				httpd start: %(
+					SocketAddress fromString: '[::]:8666',
+					SocketAddress fromString: '0.0.0.0:8665'
+				).
+
+				while (true) 
+				{
+					ss := thisProcess handleAsyncEvent.
+					if (ss isError) { break }.
+				}.
+			] ensure: [ 
+				if (httpd notNil) { httpd close } 
+			]
+
+		] on: Exception do: [:ex | ('Exception - '  & ex messageText) dump].
+
+		'----- END OF ANOTHER PROC ------' dump.
+	}
+	
+	method(#class) main
+	{
+		| httpd |
+
+		[ self another_proc ] fork.
+		###[ self another_proc ] fork.
+
+		[
+			thisProcess initAsync.
 			httpd := HttpServer new.
 			[
 				| ss |
@@ -363,8 +395,9 @@ class MyObject(Object)
 					SocketAddress fromString: '0.0.0.0:7776'
 				).
 
-				while (true) {
-					ss := System handleAsyncEvent.
+				while (true) 
+				{
+					ss := thisProcess handleAsyncEvent.
 					if (ss isError) { break }.
 				}.
 			] ensure: [ 
