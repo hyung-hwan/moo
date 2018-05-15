@@ -1,6 +1,14 @@
 ###include 'Moo.moo'.
 #include 'Socket.moo'.
 
+class HttpReq(Object)
+{
+}
+
+class HttpReqBuilder(Object)
+{
+}
+
 class HttpConnReg(Object)
 {
 	var connections.
@@ -82,6 +90,7 @@ class HttpSocket(Socket)
 	method onSocketDataIn
 	{
 		'CLIENT got DATA' dump.
+		self readBytes 
 		self close.
 	}
 

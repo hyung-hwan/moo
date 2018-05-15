@@ -2207,7 +2207,7 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t na
 	 * context of a process. */
 	blkctx->sender = (moo_oop_context_t)moo->_nil;
 
-	proc = make_process (moo, blkctx);
+	proc = make_process(moo, blkctx);
 	if (!proc) return MOO_PF_FAILURE; /* hard failure */ /* TOOD: can't this be treated as a soft failure? throw an exception instead?? */
 
 	/* __block_value() has popped all arguments and the receiver. 
