@@ -73,9 +73,9 @@ class(#pointer,#final,#limited) Process(Object)
 class Semaphore(Object)
 {
 	var waiting_head  := nil,
-	    waiting_tail  := nil,
-	    count         := 0.    ## semaphore signal count
-
+	    waiting_tail  := nil.
+	
+	var count         := 0.    ## semaphore signal count
 	var(#get,#set) heapIndex := -1.
 
 	var fireTimeSec   :=   0,
@@ -105,9 +105,12 @@ class Semaphore(Object)
 
 	## ==================================================================
 
+	## ------------------------------------------
+	## TODO: either put fireTimeNsec into implementation of fireTime, and related methods.
+	## ------------------------------------------
 	method fireTime
 	{
-		^fireTimeSec
+		^self.fireTimeSec
 	}
 
 	method fireTime: anInteger
@@ -155,9 +158,11 @@ TODO: how to prohibit wait and signal???
 
 class SemaphoreGroup(Object)
 {
+	## the first two variables must match those of Semaphore.
 	var waiting_head  := nil,
 	    waiting_tail  := nil,
-	    first_sem := nil,
+	    
+	var first_sem := nil,
 	    last_sem := nil,
 	    first_sigsem := nil,
 	    last_sigsem := nil,
