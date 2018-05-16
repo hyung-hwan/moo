@@ -564,27 +564,7 @@ class ServerSocket(Socket)
 				clisck := (self acceptedSocketClass) __with: fd.
 				clisck beWatched.
 				self onSocketAccepted: clisck from: cliaddr.
-			}
-
-			(*--------------------------
-			clisck := self _accept: cliaddr.
-			if (clisck notNil) ## if nil, _accept: failed with EWOULDBLOCK/EAGAIN.
-			{
-				## the _accept method doesn't invoke the initialize method.
-				## i should invoke it manually here.
-				clisck initialize.
-				clisck beWatched.
-				self onSocketAccepted: clisck from: cliaddr.
-
-				###if (self.acceptedEventAction notNil) 
-				####{ 
-				###	clisck beWatched.
-				###	self.acceptedEventAction value: self value: clisck value: cliaddr.
-				###	clisck beWatched.
-				###}
-				###else { clisck close }.
 			}.
-			---------------------------*)
 		].
 	}
 
@@ -614,9 +594,19 @@ class ServerSocket(Socket)
 
 	method listen: backlog
 	{
-		thisProcess addAsyncSemaphore: self.inreadysem.
+		| n |
+
+		## If listen is called before the socket handle is
+		## added to the multiplexer, a spurious hangup event might
+		## be generated. At least, such behavior was observed
+		## in linux with epoll in the level trigger mode.
+		###  System signal: self.inreadysem onInput: self.handle.
+		###  thisProcess addAsyncSemaphore: self.inreadysem.
+		###  n := self _listen: backlog.
+		n := self _listen: backlog.
 		System signal: self.inreadysem onInput: self.handle.
-		^self _listen: backlog.
+		thisProcess addAsyncSemaphore: self.inreadysem.
+		^n.
 	}
 
 	method onSocketAccepted: clisck from: cliaddr

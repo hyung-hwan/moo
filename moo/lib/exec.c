@@ -1354,7 +1354,7 @@ static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, in
 static void _signal_io_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	moo_oop_process_t proc;
-	
+
 	proc = signal_semaphore (moo, sem);
 
 	if (moo->processor->active == moo->nil_process && (moo_oop_t)proc != moo->_nil)
@@ -1384,24 +1384,23 @@ static void signal_io_semaphore (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask
 		moo_ooi_t sem_io_index;
 
 		sem_io_index = moo->sem_io_map[io_handle];
-
-		insem = moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];
-		outsem = moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT];
-
-		if (insem)
-		{
-			if ((mask & (MOO_SEMAPHORE_IO_MASK_OUTPUT | MOO_SEMAPHORE_IO_MASK_ERROR)) ||
-			    (!outsem && (mask & MOO_SEMAPHORE_IO_MASK_HANGUP)))
-			{
-				_signal_io_semaphore (moo, insem);
-			}
-		}
+		insem = moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT];
+		outsem = moo->sem_io_tuple[sem_io_index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];
 
 		if (outsem)
 		{
-			if (mask & (MOO_SEMAPHORE_IO_MASK_INPUT | MOO_SEMAPHORE_IO_MASK_HANGUP | MOO_SEMAPHORE_IO_MASK_ERROR))
+			if ((mask & (MOO_SEMAPHORE_IO_MASK_OUTPUT | MOO_SEMAPHORE_IO_MASK_ERROR)) ||
+			    (!insem && (mask & MOO_SEMAPHORE_IO_MASK_HANGUP)))
 			{
 				_signal_io_semaphore (moo, outsem);
+			}
+		}
+
+		if (insem)
+		{
+			if (mask & (MOO_SEMAPHORE_IO_MASK_INPUT | MOO_SEMAPHORE_IO_MASK_HANGUP | MOO_SEMAPHORE_IO_MASK_ERROR))
+			{
+				_signal_io_semaphore (moo, insem);
 			}
 		}
 	}
