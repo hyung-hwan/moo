@@ -225,19 +225,11 @@ class(#byte) SocketAddress(Object) from 'sck.addr'
 	}
 }
 
-
-class Socket(Object) from 'sck'
+class SocketCore(Object) from 'sck'
 {
 	## the handle must be the first field in this object to match
 	## the internal representation used by various modules. (e.g. sck)
 	var(#get) handle := -1.
-
-	var(#get) closedEventAction.
-	var(#get) dataInEventAction.
-	var(#get) dataOutEventAction.
-
-	var pending_bytes, pending_offset, pending_length.
-	var outreadysem, outdonesem, inreadysem.
 
 	method(#primitive) open(family, type, proto).
 	## map the open primitive again with a different name for strict internal use only.
@@ -255,6 +247,12 @@ class Socket(Object) from 'sck'
 	method(#primitive) readBytes: bytes offset: offset length: length.
 	method(#primitive) _writeBytes: bytes.
 	method(#primitive) _writeBytes: bytes offset: offset length: length.
+}
+
+class Socket(SocketCore)
+{
+	var pending_bytes, pending_offset, pending_length.
+	var outreadysem, outdonesem, inreadysem.
 }
 
 (* TODO: generate these family and type from the C header *)
@@ -277,24 +275,27 @@ extend Socket
 
 	method(#class) __with: handle
 	{
+		###self addToBeFinalized.
 		^(self _basicNew initialize) __open(handle)
 	}
 
 	method(#class) family: family type: type
 	{
+		###self addToBeFinalized.
 		## new is prohibited. so use _basicNew with initialize.
 		##^(self new) open(family, type, 0)
 		^(self _basicNew initialize) open(family, type, 0)
 	}
 
-(* -------------------
-socketClosing
-socketClosed
-socketDataIn
-socketDataOut
-socketAccepted:from:
-socketConnected:
--------------------- *)
+	(* -------------------
+	socket call-back methods
+	  socketClosing
+	  socketClosed
+	  socketDataIn
+	  socketDataOut
+	  socketAccepted:from:
+	  socketConnected:
+	-------------------- *)
 
 	method initialize
 	{
@@ -305,10 +306,6 @@ socketConnected:
 		self.inreadysem := Semaphore new.
 
 		self.outdonesem signalAction: [ :sem |
-			##if (self.dataOutEventAction notNil)
-			##{
-			##	self.dataOutEventAction value: self.
-			##}.
 			self onSocketDataOut.
 			System unsignal: self.outreadysem.
 		].
@@ -337,16 +334,18 @@ socketConnected:
 		].
 
 		self.inreadysem signalAction: [ :sem |
-			###self.dataInEventAction value: self.
 			self onSocketDataIn.
 		].
 	}
 
+
+(*
 	method finalize
 	{
 'SOCKET FINALIZED...............' dump.
 		self close.
 	}
+*)
 
 	method close
 	{
@@ -375,33 +374,8 @@ socketConnected:
 		{
 			self _close.
 			self.handle := -1.
-
-			##if (self.closedEventAction notNil) 
-			##{
-			##	self.closedEventAction value: self.
-			##}.
 			self onSocketClosed.
 		}.
-	}
-
-	method onEvent: event_type do: action_block
-	{
-		if (event_type == #closed)
-		{
-			self.closedEventAction := action_block.
-		}
-		elsif (event_type == #data_in) 
-		{ 
-			self.dataInEventAction := action_block.
-		}
-		elsif (event_type == #data_out)
-		{
-			self.dataOutEventAction := action_block.
-		}
-		else
-		{
-			Exception signal: 'unknown event type ' & event_type asString.
-		}
 	}
 
 	method beWatched
@@ -488,7 +462,6 @@ class ClientSocket(Socket)
 				System unsignal: sem.
 				thisProcess removeAsyncSemaphore: sem.
 
-				##self.connectedEventAction value: self value: (soerr == 0).
 				self onSocketConnected: (soerr == 0).
 				if (soerr == 0) { self beWatched }.
 			}.
@@ -507,16 +480,6 @@ class ClientSocket(Socket)
 		^super close
 	}
 
-	method onEvent: event_type do: action_block
-	{
-		if (event_type == #connected)
-		{
-			self.connectedEventAction := action_block.
-			^self.
-		}.
-
-		^super onEvent: event_type do: action_block
-	}
 	method connect: target
 	{
 		| sem |
@@ -529,7 +492,6 @@ class ClientSocket(Socket)
 		{
 			## connected immediately
 'IMMEDIATELY CONNECTED.....' dump.
-			###self.connectedEventAction value: self value: true.
 			self onSocketConnected: true.
 
 			thisProcess addAsyncSemaphore: self.inreadysem.
@@ -540,6 +502,7 @@ class ClientSocket(Socket)
 
 	method onSocketConnected
 	{
+		## do nothing special. the subclass may override this method.
 	}
 }
 
@@ -556,7 +519,6 @@ class ServerSocket(Socket)
 			| cliaddr clisck cliact fd |
 			cliaddr := SocketAddress new.
 
-'IN READYSEM action performing.........' dump.
 			fd := self _accept: cliaddr.
 			##if (fd >= 0)
 			if (fd notNil)
@@ -581,17 +543,6 @@ class ServerSocket(Socket)
 		^super close.
 	}
 
-	method onEvent: event_type do: action_block
-	{
-		if (event_type == #accepted)
-		{
-			self.acceptedEventAction := action_block.
-			^self.
-		}.
-
-		^super onEvent: event_type do: action_block
-	}
-
 	method listen: backlog
 	{
 		| n |
@@ -600,9 +551,10 @@ class ServerSocket(Socket)
 		## added to the multiplexer, a spurious hangup event might
 		## be generated. At least, such behavior was observed
 		## in linux with epoll in the level trigger mode.
-		###  System signal: self.inreadysem onInput: self.handle.
-		###  thisProcess addAsyncSemaphore: self.inreadysem.
-		###  n := self _listen: backlog.
+		##    System signal: self.inreadysem onInput: self.handle.
+		##    thisProcess addAsyncSemaphore: self.inreadysem.
+		##    self _listen: backlog.
+
 		n := self _listen: backlog.
 		System signal: self.inreadysem onInput: self.handle.
 		thisProcess addAsyncSemaphore: self.inreadysem.

@@ -1088,12 +1088,32 @@ int moo_deregfinalizable (moo_t* moo, moo_oop_t oop)
 		{
 			MOO_OBJ_SET_FLAGS_GCFIN(oop, (MOO_OBJ_GET_FLAGS_GCFIN(oop) & ~MOO_GCFIN_FINALIZABLE));
 			MOO_DELETE_FROM_LIST (&moo->finalizable, x);
+			moo_freemem (moo, x);
 			return  0;
 		}
+		x = x->next;
 	}
 
 	moo_seterrnum (moo, MOO_ENOENT);
 	return -1;
+}
+
+void moo_deregallfinalizables (moo_t* moo)
+{
+	moo_finalizable_t* x, * nx;
+
+	x = moo->finalizable.first;
+	while (x)
+	{
+		nx = x->next;
+		MOO_OBJ_SET_FLAGS_GCFIN(x->oop, (MOO_OBJ_GET_FLAGS_GCFIN(x->oop) & ~MOO_GCFIN_FINALIZABLE));
+		MOO_DELETE_FROM_LIST (&moo->finalizable, x);
+		moo_freemem (moo, x);
+		x = nx;
+	}
+
+	MOO_ASSERT (moo, moo->finalizable.first == MOO_NULL);
+	MOO_ASSERT (moo, moo->finalizable.last == MOO_NULL);
 }
 
 static moo_oow_t move_finalizable_objects (moo_t* moo)

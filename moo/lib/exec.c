@@ -193,6 +193,11 @@ static MOO_INLINE void vm_cleanup (moo_t* moo)
 	moo->sem_gcfin = (moo_oop_semaphore_t)moo->_nil;
 	moo->sem_gcfin_sigreq = 0;
 
+	/* deregister all pending finalizable objects pending just in case these
+	 * have not been removed for various reasons. (e.g. sudden VM abortion)
+	 */
+	moo_deregallfinalizables (moo);
+
 	MOO_DEBUG0 (moo, "VM cleaned up\n");
 }
 

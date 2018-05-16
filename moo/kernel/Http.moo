@@ -350,7 +350,7 @@ class MyObject(Object)
 	}
 
 
-	method(#class) another_proc
+	method(#class) another_proc: base_port
 	{
 		| httpd |
 
@@ -360,8 +360,8 @@ class MyObject(Object)
 			[
 				| ss |
 				httpd start: %(
-					SocketAddress fromString: '[::]:8666',
-					SocketAddress fromString: '0.0.0.0:8665'
+					SocketAddress fromString: ('[::]:' & base_port asString),
+					SocketAddress fromString: ('0.0.0.0:' & (base_port + 1) asString)
 				).
 
 				while (true) 
@@ -382,8 +382,9 @@ class MyObject(Object)
 	{
 		| httpd |
 
-		[ self another_proc ] fork.
-		###[ self another_proc ] fork.
+		[ self another_proc: 5000 ] fork.
+		[ self another_proc: 5100 ] fork.
+		[ self another_proc: 5200 ] fork.
 
 		[
 			thisProcess initAsync.
@@ -405,6 +406,7 @@ class MyObject(Object)
 			]
 
 		] on: Exception do: [:ex | ('Exception - '  & ex messageText) dump].
+
 
 		'----- END OF MAIN ------' dump.
 	}

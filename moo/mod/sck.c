@@ -631,6 +631,7 @@ static void gc_mod_sck (moo_t* moo, moo_mod_t* mod)
 
 int moo_mod_sck (moo_t* moo, moo_mod_t* mod)
 {
+/*
 	if (mod->hints & MOO_MOD_LOAD_FOR_IMPORT)
 	{
 		mod->gc = MOO_NULL;
@@ -656,6 +657,7 @@ int moo_mod_sck (moo_t* moo, moo_mod_t* mod)
 		mod->gc = gc_mod_sck;
 		mod->ctx = ctx;
 	}
+*/
 
 	mod->import = import;
 	mod->query = query;
