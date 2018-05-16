@@ -225,7 +225,7 @@ class(#byte) SocketAddress(Object) from 'sck.addr'
 	}
 }
 
-class SocketCore(Object) from 'sck'
+class CoreSocket(Object) from 'sck'
 {
 	## the handle must be the first field in this object to match
 	## the internal representation used by various modules. (e.g. sck)
@@ -247,9 +247,134 @@ class SocketCore(Object) from 'sck'
 	method(#primitive) readBytes: bytes offset: offset length: length.
 	method(#primitive) _writeBytes: bytes.
 	method(#primitive) _writeBytes: bytes offset: offset length: length.
+
+
+	method close
+	{
+('CLOSING Socket HANDLE ' & (self.handle asString)) dump.
+		if (self.handle >= 0)
+		{
+('REALLY CLOSING Socket HANDLE ' & (self.handle asString)) dump.
+			self _close.
+			self.handle := -1.
+			self onSocketClosed.
+		}.
+	}
+
+	method onSocketClosed
+	{
+		## do nothing.
+	}
 }
 
-class Socket(SocketCore)
+class SyncSocket(CoreSocket)
+{
+	var iosem, tmoutsem, sg.
+	var tmoutsecs, tmoutnsecs.
+
+	method(#class) new { self messageProhibited: #new }
+	method(#class) new: size { self messageProhibited: #new: }
+
+	method(#class) __with: handle
+	{
+		###self addToBeFinalized.
+		^(self _basicNew initialize) __open(handle)
+	}
+
+	method(#class) family: family type: type
+	{
+		###self addToBeFinalized.
+
+		## new is prohibited. so use _basicNew with initialize.
+		##^(self new) open(family, type, 0)
+		^(self _basicNew initialize) open(family, type, 0)
+	}
+
+	method initialize
+	{
+		super initialize.
+
+		self.iosem := Semaphore new.
+		self.tmoutsem := Semaphore new.
+
+		self.sg := SemaphoreGroup new.
+		self.sg addSemaphore: self.iosem.
+		self.sg addSemaphore: self.tmoutsem.
+	}
+
+
+
+	method beWatched
+	{
+		## do nothing. i don't want to be watched.
+	}
+
+	method timeout: secs
+	{
+		self.tmoutsecs := secs.
+		self.tmoutnsecs := 0.
+	}
+
+	method readBytes: bytes
+	{
+		| n s |
+		while (true)
+		{
+			n := super readBytes: bytes.
+			if (n >= 0) { ^n }.
+			if (self.tmoutsecs notNil) { System signal: self.tmoutsem afterSecs: self.tmoutsecs nanosecs: self.tmoutnsecs }.
+			System signal: self.iosem onInput: self.handle.
+			s := self.sg wait.
+			System unsignal: self.iosem.
+			if (self.tmoutsecs notNil) { System unsignal: self.tmoutsem }.
+			if (s == self.tmoutsem) { Exception signal: 'timed out' }.
+		}
+	}
+
+	method readBytes: bytes offset: offset length: length
+	{
+		| n |
+		while (true)
+		{
+			n := super readBytes: bytes offset: offset length: length.
+			if (n >= 0) { ^n }.
+
+			System signal: self.iosem onInput: self.handle.
+			self.sg wait.
+			System unsignal: self.iosem.
+		}
+	}
+
+	method writeBytes: bytes
+	{
+		| n |
+		while (true)
+		{
+			n := super _writeBytes: bytes.
+			if (n >= 0) { ^n }.
+
+			System signal: self.iosem onOutput: self.handle.
+			self.sg wait.
+			System unsignal: self.iosem.
+		}
+	}
+
+	method writeBytes: bytes offset: offset length: length
+	{
+		| n |
+		while (true)
+		{
+			n := super _writeBytes: bytes offset: offset length: length.
+			if (n >= 0) { ^n }.
+
+			System signal: self.iosem onOutput: self.handle.
+			self.sg wait.
+			System unsignal: self.iosem.
+		}
+	}
+}
+
+class Socket(CoreSocket)
 {
 	var pending_bytes, pending_offset, pending_length.
 	var outreadysem, outdonesem, inreadysem.
@@ -282,6 +407,7 @@ extend Socket
 	method(#class) family: family type: type
 	{
 		###self addToBeFinalized.
+
 		## new is prohibited. so use _basicNew with initialize.
 		##^(self new) open(family, type, 0)
 		^(self _basicNew initialize) open(family, type, 0)
@@ -370,12 +496,7 @@ extend Socket
 			self.inreadysem := nil.
 		}.
 
-		if (self.handle >= 0)
-		{
-			self _close.
-			self.handle := -1.
-			self onSocketClosed.
-		}.
+		^super close.
 	}
 
 	method beWatched
@@ -429,9 +550,9 @@ extend Socket
 	}
 
 
-	method onSocketClosed
-	{
-	}
+	##method onSocketClosed
+	##{
+	##}
 
 	method onSocketDataIn
 	{
@@ -508,8 +629,6 @@ class ClientSocket(Socket)
 
 class ServerSocket(Socket)
 {
-	var(#get) acceptedEventAction.
-
 	method initialize
 	{
 'Server Socket initialize...........' dump.
@@ -563,6 +682,8 @@ class ServerSocket(Socket)
 
 	method onSocketAccepted: clisck from: cliaddr
 	{
+		## close the accepted client socket immediately.
+		## a subclass must override this to avoid it.
 		clisck close.
 	}
 

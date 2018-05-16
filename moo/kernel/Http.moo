@@ -82,7 +82,7 @@ class HttpConnReg(Object)
 	}
 }
 
-class HttpSocket(Socket)
+class HttpSocket(SyncSocket)
 {
 	var(#get) server := nil.
 	var(#get) rid := -1.
@@ -110,6 +110,28 @@ class HttpSocket(Socket)
 		self.server := server.
 		self.rid := rid.
 	}
+
+	method _run_service
+	{
+		| buf |
+		buf := ByteArray new: 128.
+		'IM RUNNING SERVICE...............' dump.
+
+		self timeout: 10.
+		self readBytes: buf.
+		buf dump.
+		self readBytes: buf.
+		buf dump.
+		self close.
+	}
+
+	method runService
+	{
+		[ self _run_service ] on: Exception do: [:ex | 
+			self close.
+			('EXCEPTION IN HttpSocket ' & ex messageText) dump 
+		].
+	}
 }
 
 class HttpListener(ServerSocket)
@@ -133,6 +155,11 @@ clisck dump.
 		if (self.server notNil)
 		{
 			server addConnection: clisck.
+'QQQQQQQQQQQQqqq' dump.
+			if (clisck isKindOf: SyncSocket)
+			{
+				[clisck runService] fork.
+			}
 		}.
 
 	}
