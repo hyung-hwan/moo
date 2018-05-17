@@ -155,9 +155,9 @@ clisck dump.
 		if (self.server notNil)
 		{
 			server addConnection: clisck.
-'QQQQQQQQQQQQqqq' dump.
 			if (clisck isKindOf: SyncSocket)
 			{
+'SERVICE READLLY STARTING' dump.
 				[clisck runService] fork.
 			}
 		}.

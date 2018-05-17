@@ -757,7 +757,7 @@ struct moo_context_t
 typedef struct moo_process_t moo_process_t;
 typedef struct moo_process_t* moo_oop_process_t;
 
-#define MOO_SEMAPHORE_NAMED_INSTVARS 13
+#define MOO_SEMAPHORE_NAMED_INSTVARS 11
 typedef struct moo_semaphore_t moo_semaphore_t;
 typedef struct moo_semaphore_t* moo_oop_semaphore_t;
 
@@ -797,10 +797,17 @@ struct moo_process_t
 	moo_oop_t slot[1]; /* process stack */
 };
 
-enum moo_semaphore_io_type_t 
+enum moo_semaphore_subtype_t
+{
+	MOO_SEMAPHORE_SUBTYPE_TIMED = 0,
+	MOO_SEMAPHORE_SUBTYPE_IO    = 1
+};
+typedef enum moo_semaphore_subtype_t moo_semaphore_subtype_t;
+
+enum moo_semaphore_io_type_t
 {
 	MOO_SEMAPHORE_IO_TYPE_INPUT   = 0,
-	MOO_SEMAPHORE_IO_TYPE_OUTPUT  = 1
+	MOO_SEMAPHORE_IO_TYPE_OUTPUT  = 1,
 };
 typedef enum moo_semaphore_io_type_t moo_semaphore_io_type_t;
 
@@ -828,13 +835,26 @@ struct moo_semaphore_t
 
 	moo_oop_t count; /* SmallInteger */
 
-	moo_oop_t heap_index; /* index to the heap */
-	moo_oop_t heap_ftime_sec; /* firing time */
-	moo_oop_t heap_ftime_nsec; /* firing time */
+	/* nil for normal. SmallInteger if associated with 
+	 * timer(MOO_SEMAPHORE_SUBTYPE_TIMED) or IO(MOO_SEMAPHORE_SUBTYPE_IO). */
+	moo_oop_t subtype; 
 
-	moo_oop_t io_index; 
-	moo_oop_t io_handle;
-	moo_oop_t io_type; /* SmallInteger */
+	union
+	{
+		struct 
+		{
+			moo_oop_t index; /* index to the heap that stores timed semaphores */
+			moo_oop_t ftime_sec; /* firing time */
+			moo_oop_t ftime_nsec; /* firing time */
+		} timed;
+
+		struct
+		{
+			moo_oop_t index; /* index to sem_io_tuple */
+			moo_oop_t handle;
+			moo_oop_t type; /* SmallInteger */
+		} io;
+	} u;
 
 	moo_oop_t signal_action;
 

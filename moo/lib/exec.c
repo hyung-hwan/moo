@@ -64,8 +64,8 @@ static MOO_INLINE const char* proc_state_to_string (int state)
 #define SEM_HEAP_RIGHT(x)  ((x) * 2 + 2)
 
 #define SEM_HEAP_EARLIER_THAN(stx,x,y) ( \
-	(MOO_OOP_TO_SMOOI((x)->heap_ftime_sec) < MOO_OOP_TO_SMOOI((y)->heap_ftime_sec)) || \
-	(MOO_OOP_TO_SMOOI((x)->heap_ftime_sec) == MOO_OOP_TO_SMOOI((y)->heap_ftime_sec) && MOO_OOP_TO_SMOOI((x)->heap_ftime_nsec) < MOO_OOP_TO_SMOOI((y)->heap_ftime_nsec)) \
+	(MOO_OOP_TO_SMOOI((x)->u.timed.ftime_sec) < MOO_OOP_TO_SMOOI((y)->u.timed.ftime_sec)) || \
+	(MOO_OOP_TO_SMOOI((x)->u.timed.ftime_sec) == MOO_OOP_TO_SMOOI((y)->u.timed.ftime_sec) && MOO_OOP_TO_SMOOI((x)->u.timed.ftime_nsec) < MOO_OOP_TO_SMOOI((y)->u.timed.ftime_nsec)) \
 )
 
 #define LOAD_IP(moo, v_ctx) ((moo)->ip = MOO_OOP_TO_SMOOI((v_ctx)->ip))
@@ -809,7 +809,7 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 			MOO_ASSERT (moo, MOO_OOP_TO_SMOOI(proc->sp) < (moo_ooi_t)(MOO_OBJ_GET_SIZE(proc) - MOO_PROCESS_NAMED_INSTVARS));
 			proc->slot[MOO_OOP_TO_SMOOI(proc->sp)] = (moo_oop_t)sem;
 
-			if ((moo_oop_t)sem->io_index != moo->_nil) moo->sem_io_wait_count--;
+			if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO)) moo->sem_io_wait_count--;
 			return proc;
 		}
 	}
@@ -854,7 +854,7 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 		unchain_from_semaphore (moo, proc);
 		resume_process (moo, proc);
 
-		if ((moo_oop_t)sem->io_index != moo->_nil) moo->sem_io_wait_count--;
+		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO)) moo->sem_io_wait_count--;
 
 		/* return the resumed(runnable) process */
 		return proc;
@@ -909,7 +909,7 @@ static MOO_INLINE void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 		MOO_ASSERT (moo, sem->waiting.last == proc);
 
-		if ((moo_oop_t)sem->io_index != moo->_nil) moo->sem_io_wait_count++;
+		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO)) moo->sem_io_wait_count++;
 
 		MOO_ASSERT (moo, moo->processor->active != proc);
 	}
@@ -992,7 +992,7 @@ static void sift_up_sem_heap (moo_t* moo, moo_ooi_t index)
 			do
 			{
 				/* move down the parent to the current position */
-				parsem->heap_index = MOO_SMOOI_TO_OOP(index);
+				parsem->u.timed.index = MOO_SMOOI_TO_OOP(index);
 				moo->sem_heap[index] = parsem;
 
 				/* traverse up */
@@ -1004,7 +1004,7 @@ static void sift_up_sem_heap (moo_t* moo, moo_ooi_t index)
 			}
 			while (SEM_HEAP_EARLIER_THAN(moo, sem, parsem));
 
-			sem->heap_index = MOO_SMOOI_TO_OOP(index);
+			sem->u.timed.index = MOO_SMOOI_TO_OOP(index);
 			moo->sem_heap[index] = sem;
 		}
 	}
@@ -1037,14 +1037,14 @@ static void sift_down_sem_heap (moo_t* moo, moo_ooi_t index)
 			chisem = moo->sem_heap[child];
 			if (SEM_HEAP_EARLIER_THAN(moo, sem, chisem)) break;
 
-			chisem->heap_index = MOO_SMOOI_TO_OOP(index);
+			chisem->u.timed.index = MOO_SMOOI_TO_OOP(index);
 			moo->sem_heap[index] = chisem;
 
 			index = child;
 		}
 		while (index < base);
 
-		sem->heap_index = MOO_SMOOI_TO_OOP(index);
+		sem->u.timed.index = MOO_SMOOI_TO_OOP(index);
 		moo->sem_heap[index] = sem;
 	}
 }
@@ -1052,6 +1052,8 @@ static void sift_down_sem_heap (moo_t* moo, moo_ooi_t index)
 static int add_to_sem_heap (moo_t* moo, moo_oop_semaphore_t sem)
 {
 	moo_ooi_t index;
+
+	MOO_ASSERT (moo, sem->subtype == moo->_nil);
 
 	if (moo->sem_heap_count >= SEM_HEAP_MAX)
 	{
@@ -1078,7 +1080,8 @@ static int add_to_sem_heap (moo_t* moo, moo_oop_semaphore_t sem)
 
 	index = moo->sem_heap_count;
 	moo->sem_heap[index] = sem;
-	sem->heap_index = MOO_SMOOI_TO_OOP(index);
+	sem->u.timed.index = MOO_SMOOI_TO_OOP(index);
+	sem->subtype = MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_TIMED);
 	moo->sem_heap_count++;
 
 	sift_up_sem_heap (moo, index);
@@ -1093,14 +1096,17 @@ static void delete_from_sem_heap (moo_t* moo, moo_ooi_t index)
 
 	sem = moo->sem_heap[index];
 
-	sem->heap_index = MOO_SMOOI_TO_OOP(-1);
+	sem->subtype = moo->_nil;
+	sem->u.timed.index = moo->_nil;
+	sem->u.timed.ftime_sec = moo->_nil;
+	sem->u.timed.ftime_nsec = moo->_nil;
 
 	moo->sem_heap_count--;
 	if (/*moo->sem_heap_count > 0 &&*/ index != moo->sem_heap_count)
 	{
 		/* move the last item to the deletion position */
 		lastsem = moo->sem_heap[moo->sem_heap_count];
-		lastsem->heap_index = MOO_SMOOI_TO_OOP(index);
+		lastsem->u.timed.index = MOO_SMOOI_TO_OOP(index);
 		moo->sem_heap[index] = lastsem;
 
 		if (SEM_HEAP_EARLIER_THAN(moo, lastsem, sem)) 
@@ -1117,9 +1123,9 @@ static void update_sem_heap (moo_t* moo, moo_ooi_t index, moo_oop_semaphore_t ne
 	moo_oop_semaphore_t sem;
 
 	sem = moo->sem_heap[index];
-	sem->heap_index = MOO_SMOOI_TO_OOP(-1);
+	sem->timed.index = moo->_nil;
 
-	newsem->heap_index = MOO_SMOOI_TO_OOP(index);
+	newsem->timed.index = MOO_SMOOI_TO_OOP(index);
 	moo->sem_heap[index] = newsem;
 
 	if (SEM_HEAP_EARLIER_THAN(moo, newsem, sem))
@@ -1135,9 +1141,10 @@ static int add_sem_to_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi
 	moo_ooi_t new_mask;
 	int n, tuple_added = 0;
 
-	MOO_ASSERT (moo, sem->io_index == (moo_oop_t)moo->_nil);
-	MOO_ASSERT (moo, sem->io_handle == (moo_oop_t)moo->_nil);
-	MOO_ASSERT (moo, sem->io_type == (moo_oop_t)moo->_nil);
+	MOO_ASSERT (moo, sem->subtype == (moo_oop_t)moo->_nil);
+	MOO_ASSERT (moo, sem->u.io.index == (moo_oop_t)moo->_nil);
+	/*MOO_ASSERT (moo, sem->io.handle == (moo_oop_t)moo->_nil);
+	MOO_ASSERT (moo, sem->io.type == (moo_oop_t)moo->_nil);*/
 
 	if (io_handle < 0)
 	{
@@ -1151,7 +1158,6 @@ static int add_sem_to_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi
 		moo_ooi_t* tmp;
 
 /* TODO: specify the maximum io_handle supported and check it here instead of just relying on memory allocation success/failure? */
-
 		new_capa = MOO_ALIGN_POW2(io_handle + 1, SEM_IO_MAP_ALIGN);
 
 		tmp = moo_reallocmem (moo, moo->sem_io_map, MOO_SIZEOF(*tmp) * new_capa);
@@ -1237,9 +1243,10 @@ static int add_sem_to_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi
 
 	MOO_LOG3 (moo, MOO_LOG_DEBUG, "Added an IO semaphore at index %zd of type %d on handle %zd\n", index, (int)io_type, io_handle);
 
-	sem->io_index = MOO_SMOOI_TO_OOP(index);
-	sem->io_handle = MOO_SMOOI_TO_OOP(io_handle);
-	sem->io_type = MOO_SMOOI_TO_OOP((moo_ooi_t)io_type);
+	sem->subtype = MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO);
+	sem->u.io.index = MOO_SMOOI_TO_OOP(index);
+	sem->u.io.handle = MOO_SMOOI_TO_OOP(io_handle);
+	sem->u.io.type = MOO_SMOOI_TO_OOP((moo_ooi_t)io_type);
 
 	moo->sem_io_tuple[index].handle = io_handle;
 	moo->sem_io_tuple[index].mask = new_mask;
@@ -1270,22 +1277,23 @@ static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, in
 	moo_ooi_t new_mask, io_handle, io_type;
 	int x;
 
-	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index));
-	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_handle));
-	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_type));
+	MOO_ASSERT (moo, sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO));
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.type));
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.index));
+	MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.handle));
 
-	index = MOO_OOP_TO_SMOOI(sem->io_index);
+	index = MOO_OOP_TO_SMOOI(sem->u.io.index);
 	MOO_ASSERT (moo, index >= 0 && index < moo->sem_io_tuple_count);
 
-	io_handle = MOO_OOP_TO_SMOOI(sem->io_handle);
+	io_handle = MOO_OOP_TO_SMOOI(sem->u.io.handle);
 	if (io_handle < 0 || io_handle >= moo->sem_io_map_capa)
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "handle %zd out of supported range", io_handle);
 		return -1;
 	}
-	MOO_ASSERT (moo, moo->sem_io_map[io_handle] == MOO_OOP_TO_SMOOI(sem->io_index));
+	MOO_ASSERT (moo, moo->sem_io_map[io_handle] == MOO_OOP_TO_SMOOI(sem->u.io.index));
 
-	io_type = MOO_OOP_TO_SMOOI(sem->io_type);
+	io_type = MOO_OOP_TO_SMOOI(sem->u.io.type);
 
 	new_mask = moo->sem_io_tuple[index].mask;
 	new_mask &= ~((moo_ooi_t)1 << io_type); /* this is the new mask after deletion */
@@ -1312,9 +1320,10 @@ static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, in
 		MOO_LOG3 (moo, MOO_LOG_DEBUG, "Deleted an IO semaphored handle %zd at index %zd of type %d\n", io_handle, index, (int)io_type);
 	}
 
-	sem->io_index = moo->_nil;
-	sem->io_type = moo->_nil;
-	sem->io_handle = moo->_nil;
+	sem->subtype = moo->_nil;
+	sem->u.io.index = moo->_nil;
+	sem->u.io.handle = moo->_nil;
+	sem->u.io.type = moo->_nil;
 	moo->sem_io_count--;
 
 	if ((moo_oop_t)sem->group != moo->_nil)
@@ -1341,9 +1350,9 @@ static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, in
 			moo->sem_io_tuple[index] = moo->sem_io_tuple[moo->sem_io_tuple_count];
 
 			if (moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]) 
-				moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]->io_index = MOO_SMOOI_TO_OOP(index);
+				moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]->u.io.index = MOO_SMOOI_TO_OOP(index);
 			if (moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT])
-				moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]->io_index = MOO_SMOOI_TO_OOP(index);
+				moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]->u.io.index = MOO_SMOOI_TO_OOP(index);
 
 			moo->sem_io_map[moo->sem_io_tuple[index].handle] = index;
 
@@ -1430,7 +1439,11 @@ void moo_releaseiohandle (moo_t* moo, moo_ooi_t io_handle)
 		{
 			MOO_ASSERT(moo, moo->sem_io_tuple[index].handle == io_handle);
 			sem = moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT];
-			if (sem) delete_sem_from_sem_io_tuple (moo, sem, 0);
+			if (sem) 
+			{
+				MOO_ASSERT(moo, sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO));
+				delete_sem_from_sem_io_tuple (moo, sem, 0);
+			}
 		}
 	}
 
@@ -1444,7 +1457,11 @@ void moo_releaseiohandle (moo_t* moo, moo_ooi_t io_handle)
 		{
 			MOO_ASSERT(moo, moo->sem_io_tuple[index].handle == io_handle);
 			sem = moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];
-			if (sem) delete_sem_from_sem_io_tuple (moo, sem, 0);
+			if (sem) 
+			{
+				MOO_ASSERT(moo, sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO));
+				delete_sem_from_sem_io_tuple (moo, sem, 0);
+			}
 		}
 	}
 }
@@ -2366,12 +2383,12 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_mod_t* mod, 
 		count++;
 		sg->sem_count = MOO_SMOOI_TO_OOP(count);
 
-		if ((moo_oop_t)sem->io_index != moo->_nil)
+		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO))
 		{
 			/* the semaphore being added is associated with I/O operation. */
-			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index) && 
-			                 MOO_OOP_TO_SMOOI(sem->io_index) >= 0 &&
-			                 MOO_OOP_TO_SMOOI(sem->io_index) < moo->sem_io_tuple_count);
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.index) && 
+			                 MOO_OOP_TO_SMOOI(sem->u.io.index) >= 0 &&
+			                 MOO_OOP_TO_SMOOI(sem->u.io.index) < moo->sem_io_tuple_count);
 
 			count = MOO_OOP_TO_SMOOI(sg->sem_io_count);
 			MOO_ASSERT (moo, count >= 0);
@@ -2465,9 +2482,11 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_mod_t* mo
 		count--;
 		rcv->sem_count = MOO_SMOOI_TO_OOP(count);
 
-		if ((moo_oop_t)sem->io_index != moo->_nil)
+		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO))
 		{
-			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index) && MOO_OOP_TO_SMOOI(sem->io_index) >= 0 && MOO_OOP_TO_SMOOI(sem->io_index) < moo->sem_io_tuple_count);
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.index) &&
+			                 MOO_OOP_TO_SMOOI(sem->u.io.index) >= 0 &&
+			                 MOO_OOP_TO_SMOOI(sem->u.io.index) < moo->sem_io_tuple_count);
 
 			count = MOO_OOP_TO_SMOOI(rcv->sem_io_count);
 			MOO_ASSERT (moo, count > 0);
@@ -2555,7 +2574,7 @@ static moo_pfrc_t pf_system_add_timed_semaphore (moo_t* moo, moo_mod_t* mod, moo
 	moo_ntime_t now, ft;
 
 	/* don't care about the receiver much as the receiver is not used at all.
-	 * however, it's inteded to be called from the System class. */
+	 * however, it's intended to be called from the System class. */
 
 	MOO_ASSERT (moo, nargs >= 2 || nargs <= 3);
 
@@ -2581,12 +2600,14 @@ static moo_pfrc_t pf_system_add_timed_semaphore (moo_t* moo, moo_mod_t* mod, moo
 		return MOO_PF_FAILURE;
 	}
 
-	if (MOO_OOP_IS_SMOOI(sem->heap_index) && 
-	    sem->heap_index != MOO_SMOOI_TO_OOP(-1))
+#if 0
+	if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_TIMED))
 	{
+		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.timed.index) && MOO_OOP_TO_SMOOI(sem->u.timed.index) >= 0);
+
 		/* if the semaphore is already been added. remove it first */
-		delete_from_sem_heap (moo, MOO_OOP_TO_SMOOI(sem->heap_index));
-		MOO_ASSERT (moo, sem->heap_index == MOO_SMOOI_TO_OOP(-1));
+		delete_from_sem_heap (moo, MOO_OOP_TO_SMOOI(sem->u.timed.index));
+		MOO_ASSERT (moo, sem->subtype == moo->_nil && sem->u.timed.index == moo->_nil);
 
 		/*
 		Is this more desired???
@@ -2594,7 +2615,28 @@ static moo_pfrc_t pf_system_add_timed_semaphore (moo_t* moo, moo_mod_t* mod, moo
 		return MOO_PF_SUCCESS;
 		*/
 	}
+#else
+	if (sem->subtype != moo->_nil)
+	{
+		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO))
+		{
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.index) && MOO_OOP_TO_SMOOI(sem->u.io.index) >= 0);
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.handle) && MOO_OOP_TO_SMOOI(sem->u.io.handle) >= 0);
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.type));
+			moo_seterrbfmt (moo, MOO_EINVAL, "semaphore already linked with a handle %zd", MOO_OOP_TO_SMOOI(sem->u.io.handle));
+		}
+		else
+		{
+			MOO_ASSERT (moo, sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_TIMED));
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.timed.index) && MOO_OOP_TO_SMOOI(sem->u.timed.index) >= 0);
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.timed.ftime_sec));
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.timed.ftime_nsec));
+			moo_seterrbfmt (moo, MOO_EINVAL, "semaphore already activated for timer");
+		}
 
+		return MOO_PF_FAILURE;
+	}
+#endif
 	/* this code assumes that the monotonic clock returns a small value
 	 * that can fit into a SmallInteger, even after some additions. */
 	vm_gettime (moo, &now);
@@ -2610,10 +2652,11 @@ static moo_pfrc_t pf_system_add_timed_semaphore (moo_t* moo, moo_mod_t* mod, moo
 		return MOO_PF_FAILURE;
 	}
 
-	sem->heap_ftime_sec = MOO_SMOOI_TO_OOP(ft.sec);
-	sem->heap_ftime_nsec = MOO_SMOOI_TO_OOP(ft.nsec);
+	sem->u.timed.ftime_sec = MOO_SMOOI_TO_OOP(ft.sec);
+	sem->u.timed.ftime_nsec = MOO_SMOOI_TO_OOP(ft.nsec);
 
-	if (add_to_sem_heap (moo, sem) <= -1) return MOO_PF_HARD_FAILURE;
+	if (add_to_sem_heap(moo, sem) <= -1) return MOO_PF_HARD_FAILURE;
+	MOO_ASSERT (moo, sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_TIMED));
 
 	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
 	return MOO_PF_SUCCESS;
@@ -2643,13 +2686,24 @@ static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_se
 		return MOO_PF_FAILURE;
 	}
 
-	if ((moo_oop_t)sem->io_index != moo->_nil)
+	if (sem->subtype != moo->_nil)
 	{
-		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index) && MOO_OOP_TO_SMOOI(sem->io_index) >= 0);
-		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_handle) && MOO_OOP_TO_SMOOI(sem->io_handle) >= 0);
-		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_type));
+		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO))
+		{
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.index) && MOO_OOP_TO_SMOOI(sem->u.io.index) >= 0);
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.handle) && MOO_OOP_TO_SMOOI(sem->u.io.handle) >= 0);
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.type));
+			moo_seterrbfmt (moo, MOO_EINVAL, "semaphore already linked with a handle %zd", MOO_OOP_TO_SMOOI(sem->u.io.handle));
+		}
+		else
+		{
+			MOO_ASSERT (moo, sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_TIMED));
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.timed.index) && MOO_OOP_TO_SMOOI(sem->u.timed.index) >= 0);
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.timed.ftime_sec));
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.timed.ftime_nsec));
+			moo_seterrbfmt (moo, MOO_EINVAL, "semaphore already activated for timer");
+		}
 
-		moo_seterrbfmt (moo, MOO_EINVAL, "semaphore already linked with a handle %zd", MOO_OOP_TO_SMOOI(sem->io_handle));
 		return MOO_PF_FAILURE;
 	}
 
@@ -2699,29 +2753,30 @@ static moo_pfrc_t pf_system_remove_semaphore (moo_t* moo, moo_mod_t* mod, moo_oo
 		moo->sem_gcfin = (moo_oop_semaphore_t)moo->_nil;
 	}
 
-	if (MOO_OOP_IS_SMOOI(sem->heap_index) && sem->heap_index != MOO_SMOOI_TO_OOP(-1)) /* TODO: change to use _nil like io_index instead of -1 */
+	if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_TIMED))
 	{
 		/* the semaphore is in the timed semaphore heap */
-		delete_from_sem_heap (moo, MOO_OOP_TO_SMOOI(sem->heap_index));
-		MOO_ASSERT (moo, sem->heap_index == MOO_SMOOI_TO_OOP(-1));
+		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.timed.index) && MOO_OOP_TO_SMOOI(sem->u.timed.index) >= 0);
+		delete_from_sem_heap (moo, MOO_OOP_TO_SMOOI(sem->u.timed.index));
+		MOO_ASSERT (moo, sem->u.timed.index == moo->_nil);
 	}
-
-	if ((moo_oop_t)sem->io_index != moo->_nil)
+	else if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO))
 	{
 		/* the semaphore is associated with IO */
-		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_index) && MOO_OOP_TO_SMOOI(sem->io_index) >= 0);
-		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_handle) && MOO_OOP_TO_SMOOI(sem->io_handle) >= 0);
-		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->io_type));
+		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.index) && MOO_OOP_TO_SMOOI(sem->u.io.index) >= 0);
+		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.type));
+		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.handle) && MOO_OOP_TO_SMOOI(sem->u.io.handle) >= 0);
 
 		if (delete_sem_from_sem_io_tuple(moo, sem, 0) <= -1)
 		{
 			const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
-			moo_seterrbfmt (moo, moo->errnum, "cannot delete the handle %zd from the multiplexer - %js", MOO_OOP_TO_SMOOI(sem->io_handle), oldmsg);
+			moo_seterrbfmt (moo, moo->errnum, "cannot delete the handle %zd from the multiplexer - %js", MOO_OOP_TO_SMOOI(sem->u.io.handle), oldmsg);
 			return MOO_PF_FAILURE;
 		}
 
-		MOO_ASSERT (moo, (moo_oop_t)sem->io_index == moo->_nil);
+		MOO_ASSERT (moo, (moo_oop_t)sem->u.io.index == moo->_nil);
 	}
+	MOO_ASSERT (moo, sem->subtype == moo->_nil);
 
 	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
 	return MOO_PF_SUCCESS;
@@ -4047,12 +4102,13 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 
 		do
 		{
-			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->sem_heap[0]->heap_ftime_sec));
-			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->sem_heap[0]->heap_ftime_nsec));
+			MOO_ASSERT (moo, moo->sem_heap[0]->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_TIMED));
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->sem_heap[0]->u.timed.ftime_sec));
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->sem_heap[0]->u.timed.ftime_nsec));
 
 			MOO_INITNTIME (&ft,
-				MOO_OOP_TO_SMOOI(moo->sem_heap[0]->heap_ftime_sec),
-				MOO_OOP_TO_SMOOI(moo->sem_heap[0]->heap_ftime_nsec)
+				MOO_OOP_TO_SMOOI(moo->sem_heap[0]->u.timed.ftime_sec),
+				MOO_OOP_TO_SMOOI(moo->sem_heap[0]->u.timed.ftime_nsec)
 			);
 
 			if (MOO_CMPNTIME(&ft, (moo_ntime_t*)&now) <= 0)
@@ -4211,7 +4267,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 					MOO_OOP_TO_SMOOI(moo->processor->runnable.count),
 					MOO_OOP_TO_SMOOI(moo->processor->suspended.count),
 					moo->sem_io_wait_count);
-				proc = signal_semaphore (moo, moo->sem_gcfin);
+				proc = signal_semaphore(moo, moo->sem_gcfin);
 				if ((moo_oop_t)proc != moo->_nil) 
 				{
 					MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));

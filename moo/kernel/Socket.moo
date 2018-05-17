@@ -322,6 +322,7 @@ class SyncSocket(CoreSocket)
 		{
 			n := super readBytes: bytes.
 			if (n >= 0) { ^n }.
+
 			if (self.tmoutsecs notNil) { System signal: self.tmoutsem afterSecs: self.tmoutsecs nanosecs: self.tmoutnsecs }.
 			System signal: self.iosem onInput: self.handle.
 			s := self.sg wait.

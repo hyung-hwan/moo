@@ -76,13 +76,12 @@ class Semaphore(Object)
 	    waiting_tail  := nil.
 	
 	var count         := 0.    ## semaphore signal count
-	var(#get,#set) heapIndex := -1.
 
-	var fireTimeSec   :=   0,
-	    fireTimeNsec  :=   0,
-	    ioIndex       := nil,
-	    ioHandle      := nil,
-	    ioType        := nil.
+	var subtype       := nil. ## nil, io, timed
+
+	var heapIndex     := nil, ## overlaps as ioIndex
+	    fireTimeSec   := nil, ## overlaps as ioHandle
+	    fireTimeNsec  := nil. ## overlaps as ioType
 
 	var(#get,#set) signalAction := nil.
 
@@ -104,6 +103,15 @@ class Semaphore(Object)
 	}
 
 	## ==================================================================
+
+	method heapIndex: index
+	{
+		self.heapIndex :=  index.
+	}
+	method headpIndex
+	{
+		^self.heapIndex.
+	}
 
 	## ------------------------------------------
 	## TODO: either put fireTimeNsec into implementation of fireTime, and related methods.
@@ -160,7 +168,7 @@ class SemaphoreGroup(Object)
 {
 	## the first two variables must match those of Semaphore.
 	var waiting_head  := nil,
-	    waiting_tail  := nil,
+	    waiting_tail  := nil.
 	    
 	var first_sem := nil,
 	    last_sem := nil,
@@ -283,7 +291,7 @@ class SemaphoreHeap(Object)
 		| item |
 
 		item := self.arr at: anIndex.
-		item heapIndex: -1.
+		item heapIndex: nil.
 
 		self.arr at: anIndex put: aSemaphore.
 		aSemaphore heapIndex: anIndex.
@@ -296,7 +304,7 @@ class SemaphoreHeap(Object)
 		| item xitem |
 
 		item := self.arr at: anIndex.
-		item heapIndex: -1.
+		item heapIndex: nil.
 
 		self.size := self.size - 1.
 		if (anIndex == self.size) 
