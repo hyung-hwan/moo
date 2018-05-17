@@ -2242,6 +2242,10 @@ MOO_EXPORT int moo_decode (
 	const moo_oocs_t* classfqn
 );
 
+MOO_EXPORT void moo_backtrace (
+	moo_t*           moo
+);
+
 MOO_EXPORT void moo_assertfailed (
 	moo_t*           moo,
 	const moo_bch_t* expr,

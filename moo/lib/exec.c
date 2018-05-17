@@ -32,6 +32,12 @@
 #define PROC_STATE_SUSPENDED 0
 #define PROC_STATE_TERMINATED -1
 
+static const char* io_type_str[] =
+{
+	"input",
+	"output"
+};
+
 static MOO_INLINE const char* proc_state_to_string (int state)
 {
 	static const moo_bch_t* str[] = 
@@ -1223,7 +1229,7 @@ static int add_sem_to_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi
 	{
 		if (moo->sem_io_tuple[index].sem[io_type])
 		{
-			moo_seterrbfmt (moo, MOO_EINVAL, "handle %zd linked with an IO semaphore of type %d", io_handle, (int)io_type);
+			moo_seterrbfmt (moo, MOO_EINVAL, "handle %zd already linked with an IO semaphore for %hs", io_handle, io_type_str[io_type]);
 			return -1;
 		}
 
@@ -1237,11 +1243,11 @@ static int add_sem_to_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi
 
 	if (n <= -1) 
 	{
-		MOO_LOG3 (moo, MOO_LOG_WARN, "Failed to add an IO semaphore at index %zd of type %d on handle %zd\n", index, (int)io_type, io_handle);
+		MOO_LOG3 (moo, MOO_LOG_WARN, "Failed to add an IO semaphore at index %zd for %hs on handle %zd\n", index, io_type_str[io_type], io_handle);
 		return -1;
 	}
 
-	MOO_LOG3 (moo, MOO_LOG_DEBUG, "Added an IO semaphore at index %zd of type %d on handle %zd\n", index, (int)io_type, io_handle);
+	MOO_LOG3 (moo, MOO_LOG_DEBUG, "Added an IO semaphore at index %zd for %hs on handle %zd\n", index, io_type_str[io_type], io_handle);
 
 	sem->subtype = MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO);
 	sem->u.io.index = MOO_SMOOI_TO_OOP(index);
@@ -1304,7 +1310,7 @@ static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, in
 	moo_poptmp (moo);
 	if (x <= -1) 
 	{
-		MOO_LOG3 (moo, MOO_LOG_WARN, "Failed to delete an IO semaphored handle %zd at index %zd of type %d\n", io_handle, index, (int)io_type);
+		MOO_LOG3 (moo, MOO_LOG_WARN, "Failed to delete an IO semaphored handle %zd at index %zd for %hs\n", io_handle, index, io_type_str[io_type]);
 		if (!force) return -1;
 
 		/* NOTE: 
@@ -1317,7 +1323,7 @@ static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, in
 	}
 	else
 	{
-		MOO_LOG3 (moo, MOO_LOG_DEBUG, "Deleted an IO semaphored handle %zd at index %zd of type %d\n", io_handle, index, (int)io_type);
+		MOO_LOG3 (moo, MOO_LOG_DEBUG, "Deleted an IO semaphored handle %zd at index %zd for %hs\n", io_handle, index, io_type_str[io_type]);
 	}
 
 	sem->subtype = moo->_nil;
@@ -1420,7 +1426,9 @@ static void signal_io_semaphore (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask
 	}
 	else
 	{
-		MOO_LOG1 (moo, MOO_LOG_WARN, "Warning - semaphore signaling requested on an unmapped handle %zd\n", io_handle);
+		/* you may come across this warning message if the multiplexer returned
+		 * an IO event */
+		MOO_LOG2 (moo, MOO_LOG_WARN, "Warning - semaphore signaling requested on an unmapped handle %zd with mask %#zx\n", io_handle, mask);
 	}
 }
 
@@ -2710,7 +2718,7 @@ static moo_pfrc_t __system_add_io_semaphore (moo_t* moo, moo_ooi_t nargs, moo_se
 	if (add_sem_to_sem_io_tuple(moo, sem, MOO_OOP_TO_SMOOI(fd), io_type) <= -1) 
 	{
 		const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
-		moo_seterrbfmt (moo, moo->errnum, "cannot add the handle %zd to the multiplexer - %js", MOO_OOP_TO_SMOOI(fd), oldmsg);
+		moo_seterrbfmt (moo, moo->errnum, "unable to add the handle %zd to the multiplexer for %hs - %js", MOO_OOP_TO_SMOOI(fd), io_type_str[io_type], oldmsg);
 		return MOO_PF_FAILURE;
 	}
 

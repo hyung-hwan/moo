@@ -474,7 +474,7 @@ void moo_setsynerr (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, con
  * STACK FRAME BACKTRACE
  * -------------------------------------------------------------------------- */
 #if defined(MOO_ENABLE_LIBUNWIND)
-static void backtrace_stack_frames (moo_t* moo)
+void moo_backtrace (moo_t* moo)
 {
 	unw_cursor_t cursor;
 	unw_context_t context;
@@ -503,7 +503,7 @@ static void backtrace_stack_frames (moo_t* moo)
 	}
 }
 #elif defined(HAVE_BACKTRACE)
-static void backtrace_stack_frames (moo_t* moo)
+void moo_backtrace (moo_t* moo)
 {
 	void* btarray[128];
 	moo_oow_t btsize;
@@ -524,7 +524,7 @@ static void backtrace_stack_frames (moo_t* moo)
 	}
 }
 #else
-static void backtrace_stack_frames (moo_t* moo)
+void moo_backtrace (moo_t* moo)
 {
 	/* do nothing. not supported */
 }
@@ -537,8 +537,11 @@ static void backtrace_stack_frames (moo_t* moo)
 
 void moo_assertfailed (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file, moo_oow_t line)
 {
+#if defined(MOO_BUILD_RELEASE)
+	/* do nothing */
+#else
 	moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_FATAL, "ASSERTION FAILURE: %s at %s:%zu\n", expr, file, line);
-	backtrace_stack_frames (moo);
+	moo_backtrace (moo);
 
 #if defined(_WIN32)
 	ExitProcess (249);
@@ -564,5 +567,7 @@ void moo_assertfailed (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file,
 
 	kill (getpid(), SIGABRT);
 	_exit (1);
+#endif
+
 #endif
 }
