@@ -589,7 +589,7 @@ extend X11
 		if (self.event_loop_sem isNil)
 		{
 			self.event_loop_sem := Semaphore new.
-			System signal: self.event_loop_sem onInput: (self _get_fd).
+			self.event_loop_sem signalOnInput: (self _get_fd).
 			self.event_loop_proc := [
 				| llevtbuf llevent ongoing |
 
@@ -618,7 +618,7 @@ extend X11
 
 'CLOSING X11 EVENT LOOP' dump.
 
-				System unsignal: self.event_loop_sem.
+				self.event_loop_sem unsignal.
 		## TODO: LOOK HERE FOR RACE CONDITION
 				self.event_loop_sem := nil.
 				self.event_loop_proc := nil.

@@ -51,12 +51,13 @@ class System(Apex)
 
 	method(#class) __gc_finalizer
 	{
-		| tmp gc fin_sem |
+		| tmp gc gcfin_sem |
 
 		gc := false.
-		fin_sem := Semaphore new.
+		gcfin_sem := Semaphore new.
 
-		self signalOnGCFin: fin_sem.
+		gcfin_sem signalOnGCFin.
+
 		[
 			while (true)
 			{
@@ -87,11 +88,11 @@ class System(Apex)
 
 				##System logNl: '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^gc_waiting....'.
 				##System sleepForSecs: 1. ## TODO: wait on semaphore instead..
-				fin_sem wait.
+				gcfin_sem wait.
 				##System logNl: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX gc_waitED....'.
 			}
 		] ensure: [
-			System unsignal: fin_sem.
+			gcfin_sem unsignal.
 			System logNl: 'End of GC finalization process ' & (thisProcess id) asString.
 		].
 	}
@@ -100,15 +101,6 @@ class System(Apex)
 	method(#class,#primitive) collectGarbage.
 	method(#class,#primitive) gc.
 	method(#class,#primitive) return: object to: context.
-
-	## =======================================================================================
-
-	method(#class,#primitive) signal: semaphore afterSecs: secs.
-	method(#class,#primitive) signal: semaphore afterSecs: secs nanosecs: nanosecs.
-	method(#class,#primitive) signal: semaphore onInput: file.
-	method(#class,#primitive) signal: semaphore onOutput: file.
-	method(#class,#primitive) signalOnGCFin: semaphore.
-	method(#class,#primitive) unsignal: semaphore.
 
 	## =======================================================================================
 	method(#class) sleepForSecs: secs

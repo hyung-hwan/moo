@@ -104,6 +104,15 @@ class Semaphore(Object)
 
 	## ==================================================================
 
+	method(#primitive) signalAfterSecs: secs.
+	method(#primitive) signalAfterSecs: secs nanosecs: nanosecs.
+	method(#primitive) signalOnInput: io_handle.
+	method(#primitive) signalOnOutput: io_handle.
+	method(#primitive) signalOnGCFin.
+	method(#primitive) unsignal.
+
+	## ==================================================================
+
 	method heapIndex: index
 	{
 		self.heapIndex :=  index.
@@ -214,7 +223,7 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 
 		[ 
 			## arrange the processor to notify upon timeout.
-			System signal: s afterSecs: seconds.
+			s signalAfterSecs: seconds.
 
 			## wait on the semaphore group.
 			r := self wait. 
@@ -227,9 +236,9 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 			## System<<unsignal: doesn't thrown an exception even if the semaphore s is not
 			## register with System<<signal:afterXXX:. otherwise, i would do like this line
 			## commented out.
-			## [ System unsignal: s ] ensure: [ self removeSemaphore: s ].
+			## [ s unsignal ] ensure: [ self removeSemaphore: s ].
 
-			System unsignal: s.
+			s unsignal.
 			self removeSemaphore: s
 		].
 

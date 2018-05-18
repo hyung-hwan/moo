@@ -1832,7 +1832,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 		pthread_mutex_unlock (&xtn->ev.mtx);
 	}
 
-#else
+#else /* USE_THREAD */
 	int tmout = 0, n;
 	#if defined(USE_DEVPOLL)
 	struct dvpoll dvp;
@@ -1882,7 +1882,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	maxfd = xtn->ev.reg.maxfd;
 	MOO_MEMCPY (&rfds, &xtn->ev.reg.rfds, MOO_SIZEOF(rfds));
 	MOO_MEMCPY (&wfds, &xtn->ev.reg.wfds, MOO_SIZEOF(wfds));
-	n = select (maxfd + 1, &rfds, &wfds, NULL, &tv);
+	n = select(maxfd + 1, &rfds, &wfds, NULL, &tv);
 	if (n > 0)
 	{
 		int fd, count = 0;
@@ -1956,7 +1956,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	}
 
 	xtn->ev.len = 0;
-#endif
+#endif  /* USE_THREAD */
 }
 
 static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)

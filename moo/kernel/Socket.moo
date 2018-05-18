@@ -302,8 +302,6 @@ class SyncSocket(CoreSocket)
 		self.sg addSemaphore: self.tmoutsem.
 	}
 
-
-
 	method beWatched
 	{
 		## do nothing. i don't want to be watched.
@@ -315,20 +313,36 @@ class SyncSocket(CoreSocket)
 		self.tmoutnsecs := 0.
 	}
 
+	method __wait_for_input
+	{
+		| s |
+		if (self.tmoutsecs notNil) { self.tmoutsem signalAfterSecs: self.tmoutsecs nanosecs: self.tmoutnsecs }.
+		self.iosem signalOnInput: self.handle.
+		s := self.sg wait.
+		self.iosem unsignal.
+		if (self.tmoutsecs notNil) { self.tmoutsem unsignal }.
+		if (s == self.tmoutsem) { Exception signal: 'timed out' }.
+	}
+
+	method __wait_for_output
+	{
+		| s |
+		if (self.tmoutsecs notNil) { self.tmoutsem signalAfterSecs: self.tmoutsecs nanosecs: self.tmoutnsecs }.
+		self.iosem signalOnOutput: self.handle.
+		s := self.sg wait.
+		self.iosem unsignal.
+		if (self.tmoutsecs notNil) { self.tmoutsem unsignal }.
+		if (s == self.tmoutsem) { Exception signal: 'timed out' }.
+	}
+
 	method readBytes: bytes
 	{
-		| n s |
+		| n |
 		while (true)
 		{
 			n := super readBytes: bytes.
 			if (n >= 0) { ^n }.
-
-			if (self.tmoutsecs notNil) { System signal: self.tmoutsem afterSecs: self.tmoutsecs nanosecs: self.tmoutnsecs }.
-			System signal: self.iosem onInput: self.handle.
-			s := self.sg wait.
-			System unsignal: self.iosem.
-			if (self.tmoutsecs notNil) { System unsignal: self.tmoutsem }.
-			if (s == self.tmoutsem) { Exception signal: 'timed out' }.
+			self __wait_for_input.
 		}
 	}
 
@@ -339,10 +353,7 @@ class SyncSocket(CoreSocket)
 		{
 			n := super readBytes: bytes offset: offset length: length.
 			if (n >= 0) { ^n }.
-
-			System signal: self.iosem onInput: self.handle.
-			self.sg wait.
-			System unsignal: self.iosem.
+			self __wait_for_input.
 		}
 	}
 
@@ -353,10 +364,7 @@ class SyncSocket(CoreSocket)
 		{
 			n := super _writeBytes: bytes.
 			if (n >= 0) { ^n }.
-
-			System signal: self.iosem onOutput: self.handle.
-			self.sg wait.
-			System unsignal: self.iosem.
+			self __wait_for_output.
 		}
 	}
 
@@ -367,10 +375,7 @@ class SyncSocket(CoreSocket)
 		{
 			n := super _writeBytes: bytes offset: offset length: length.
 			if (n >= 0) { ^n }.
-
-			System signal: self.iosem onOutput: self.handle.
-			self.sg wait.
-			System unsignal: self.iosem.
+			self __wait_for_output.
 		}
 	}
 }
@@ -434,7 +439,7 @@ extend Socket
 
 		self.outdonesem signalAction: [ :sem |
 			self onSocketDataOut.
-			System unsignal: self.outreadysem.
+			self.outreadysem unsignal.
 		].
 
 		self.outreadysem signalAction: [ :sem |
@@ -478,21 +483,21 @@ extend Socket
 	{
 		if (self.outdonesem notNil)
 		{
-			System unsignal: self.outdonesem.
+			self.outdonesem unsignal.
 			if (self.outdonesem _group notNil) { thisProcess removeAsyncSemaphore: self.outdonesem }.
 			self.outdonesem := nil.
 		}.
 		
 		if (self.outreadysem notNil)
 		{
-			System unsignal: self.outreadysem.
+			self.outreadysem unsignal.
 			if (self.outreadysem _group notNil) { thisProcess removeAsyncSemaphore: self.outreadysem }.
 			self.outreadysem := nil.
 		}.
 
 		if (self.inreadysem notNil)
 		{
-			System unsignal: self.inreadysem.
+			self.inreadysem unsignal.
 			if (self.inreadysem _group notNil) { thisProcess removeAsyncSemaphore: self.inreadysem }.
 			self.inreadysem := nil.
 		}.
@@ -503,7 +508,7 @@ extend Socket
 	method beWatched
 	{
 		thisProcess addAsyncSemaphore: self.inreadysem.
-		System signal: self.inreadysem onInput: self.handle.
+		self.inreadysem signalOnInput: self.handle.
 		thisProcess addAsyncSemaphore: self.outdonesem.
 	}
 
@@ -542,7 +547,7 @@ extend Socket
 		self.pending_length := rem.
 
 		thisProcess addAsyncSemaphore: self.outreadysem.
-		System signal: self.outreadysem onOutput: self.handle.
+		self.outreadysem signalOnOutput: self.handle.
 	}
 
 	method writeBytes: bytes
@@ -581,7 +586,7 @@ class ClientSocket(Socket)
 			if (soerr >= 0) 
 			{
 				## finalize connection if not in progress
-				System unsignal: sem.
+				sem unsignal.
 				thisProcess removeAsyncSemaphore: sem.
 
 				self onSocketConnected: (soerr == 0).
@@ -595,7 +600,7 @@ class ClientSocket(Socket)
 	{
 		if (self.connsem notNil)
 		{
-			System unsignal: self.connsem.
+			self.connsem unsignal.
 			if (self.connsem _group notNil) { thisProcess removeAsyncSemaphore: self.connsem }.
 			self.connsem := nil.
 		}.
@@ -608,7 +613,7 @@ class ClientSocket(Socket)
 		if ((self _connect: target) <= -1)
 		{
 			thisProcess addAsyncSemaphore: self.connsem.
-			System signal: self.connsem onOutput: self.handle.
+			self.connsem signalOnOutput: self.handle.
 		}
 		else
 		{
@@ -617,7 +622,7 @@ class ClientSocket(Socket)
 			self onSocketConnected: true.
 
 			thisProcess addAsyncSemaphore: self.inreadysem.
-			System signal: self.inreadysem onInput: self.handle.
+			self.inreadysem signalOnInput: self.handle.
 			thisProcess addAsyncSemaphore: self.outdonesem.
 		}
 	}
@@ -655,7 +660,7 @@ class ServerSocket(Socket)
 'CLOSING SERVER SOCEKT.... ' dump.
 		if (self.inreadysem notNil)
 		{
-			System unsignal: self.inreadysem.
+			self.inreadysem unsignal.
 			if (self.inreadysem _group notNil) { thisProcess removeAsyncSemaphore: self.inreadysem }.
 			self.inreadysem := nil.
 		}.
@@ -671,12 +676,12 @@ class ServerSocket(Socket)
 		## added to the multiplexer, a spurious hangup event might
 		## be generated. At least, such behavior was observed
 		## in linux with epoll in the level trigger mode.
-		##    System signal: self.inreadysem onInput: self.handle.
+		##    self.inreadysem signalOnInput: self.handle.
 		##    thisProcess addAsyncSemaphore: self.inreadysem.
 		##    self _listen: backlog.
 
 		n := self _listen: backlog.
-		System signal: self.inreadysem onInput: self.handle.
+		self.inreadysem signalOnInput: self.handle.
 		thisProcess addAsyncSemaphore: self.inreadysem.
 		^n.
 	}
