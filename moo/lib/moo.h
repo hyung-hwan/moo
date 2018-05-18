@@ -2214,14 +2214,14 @@ MOO_EXPORT moo_bch_t* moo_dupbchars (
 
 MOO_EXPORT moo_ooi_t moo_logbfmt (
 	moo_t*           moo,
-	moo_log_mask_t   mask,
+	moo_bitmask_t    mask,
 	const moo_bch_t* fmt,
 	...
 );
 
 MOO_EXPORT moo_ooi_t moo_logufmt (
 	moo_t*            moo,
-	moo_log_mask_t    mask,
+	moo_bitmask_t     mask,
 	const moo_uch_t*  fmt,
 	...
 );

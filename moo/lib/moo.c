@@ -89,7 +89,7 @@ static void* alloc_heap (moo_t* moo, moo_oow_t size)
 
 static void free_heap (moo_t* moo, void* ptr)
 {
-	return MOO_MMGR_FREE(moo->mmgr, ptr);
+	MOO_MMGR_FREE(moo->mmgr, ptr);
 }
 
 int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t* vmprim)

@@ -47,11 +47,21 @@
 #elif defined(__OS2__)
 #	define INCL_DOSMODULEMGR
 #	define INCL_DOSPROCESS
+#	define INCL_DOSEXCEPTIONS
 #	define INCL_DOSMISC
 #	define INCL_DOSDATETIME
 #	define INCL_DOSERRORS
 #	include <os2.h>
 #	include <time.h>
+#	include <fcntl.h>
+#	include <io.h>
+
+	/* fake XPOLLXXX values */
+#	define XPOLLIN  (1 << 0)
+#	define XPOLLOUT (1 << 1)
+#	define XPOLLERR (1 << 2)
+#	define XPOLLHUP (1 << 3)
+
 #elif defined(__DOS__)
 #	include <dos.h>
 #	include <time.h>
@@ -213,8 +223,8 @@ struct xtn_t
 	const char* source_path; /* main source file */
 	int vm_running;
 
-	int logfd;
 	moo_bitmask_t logmask;
+	int logfd;
 	int logfd_istty;
 	
 	struct
@@ -546,7 +556,7 @@ static void free_heap (moo_t* moo, void* ptr)
 	actual_ptr = (moo_oow_t*)ptr - 1;
 	munmap (actual_ptr, *actual_ptr);
 #else
-	return MOO_MMGR_FREE(moo->mmgr, ptr);
+	MOO_MMGR_FREE(moo->mmgr, ptr);
 #endif
 }
 
@@ -558,6 +568,7 @@ static void free_heap (moo_t* moo, void* ptr)
 	/* nothing to do */
 
 #else
+
 static int write_all (int fd, const moo_bch_t* ptr, moo_oow_t len)
 {
 	while (len > 0)
@@ -679,7 +690,6 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		if (mask & MOO_LOG_STDOUT) logfd = 1;
 		else
 		{
-
 			logfd = xtn->logfd;
 			if (logfd <= -1) return;
 		}
@@ -704,7 +714,11 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 			tslen = 20; 
 		}
 	#else
-		tmp = localtime_r (&now, &tm);
+		#if defined(__OS2__)
+		tmp = _localtime(&now, &tm);
+		#else
+		tmp = localtime_r(&now, &tm);
+		#endif
 		#if defined(HAVE_STRFTIME_SMALL_Z)
 		tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
 		#else
@@ -2091,6 +2105,9 @@ static void setup_tick (void)
 	prev_timer_intr_handler = _dos_getvect (0x1C);
 	_dos_setvect (0x1C, timer_intr_handler);
 
+#elif defined(__OS2__)
+	/* TODO: */	
+
 #elif defined(macintosh)
 
 	GetCurrentProcess (&g_psn);
@@ -2127,6 +2144,9 @@ static void cancel_tick (void)
 
 	_dos_setvect (0x1C, prev_timer_intr_handler);
 
+#elif defined(__OS2__)
+
+	/* TODO: */	
 #elif defined(macintosh)
 	RmvTime ((QElem*)&g_tmtask);
 	/*DisposeTimerProc (g_tmtask.tmAddr);*/
@@ -2151,7 +2171,7 @@ static void cancel_tick (void)
 #endif
 }
 
-static void handle_term (int sig)
+static MOO_INLINE void abort_moo (void)
 {
 	if (g_moo)
 	{
@@ -2163,12 +2183,61 @@ static void handle_term (int sig)
 	}
 }
 
+
+#if defined(_WIN32)
+static BOOL WINAPI handle_term (DWORD ctrl_type)
+{
+	if (ctrl_type == CTRL_C_EVENT ||
+	    ctrl_type == CTRL_CLOSE_EVENT)
+	{
+		abort_moo ();
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+#elif defined(__OS2__)
+static EXCEPTIONREGISTRATIONRECORD os2_excrr = { 0 };
+
+static ULONG _System handle_term (
+	PEXCEPTIONREPORTRECORD p1,
+	PEXCEPTIONREGISTRATIONRECORD p2,
+	PCONTEXTRECORD p3,
+	PVOID pv)
+{
+	if (p1->ExceptionNum == XCPT_SIGNAL)
+	{
+		if (p1->ExceptionInfo[0] == XCPT_SIGNAL_INTR ||
+		    p1->ExceptionInfo[0] == XCPT_SIGNAL_KILLPROC ||
+		    p1->ExceptionInfo[0] == XCPT_SIGNAL_BREAK)
+		 {
+			APIRET rc;
+
+			abort_moo ();
+
+			rc = DosAcknowledgeSignalException (p1->ExceptionInfo[0]);
+			return (rc != NO_ERROR)? 1: XCPT_CONTINUE_EXECUTION;
+		 }
+	}
+
+	return XCPT_CONTINUE_SEARCH; /* exception not resolved */
+}
+#else
+
+static void handle_term (int sig)
+{
+	abort_moo ();
+}
+#endif
+
+
 static void setup_sigterm (void)
 {
 #if defined(_WIN32)
 	SetConsoleCtrlHandler (handle_term, TRUE);
 #elif defined(__OS2__)
-	os2_excrr.ExceptionHandler = (ERR)__intr_handler;
+	os2_excrr.ExceptionHandler = (ERR)handle_term;
 	DosSetExceptionHandler (&os2_excrr); /* TODO: check if NO_ERROR is returned */
 #elif defined(__DOS__)
 	signal (SIGINT, handle_term);
@@ -2276,7 +2345,7 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 		logmask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;
 	}
 
-	xtn->logfd = open (xstr, O_CREAT | O_WRONLY | O_APPEND , 0644);
+	xtn->logfd = open(xstr, O_CREAT | O_WRONLY | O_APPEND , 0644);
 	if (xtn->logfd == -1)
 	{
 		fprintf (stderr, "ERROR: cannot open a log file %s\n", xstr);

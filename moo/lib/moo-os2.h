@@ -23,6 +23,10 @@
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#define MOO_ENABLE_STATIC_MODULE
+#define MOO_ENABLE_DYNAMIC_MODULE
+
 /* OS/2 for other platforms than x86?
  * If so, the endian should be defined selectively
  */
