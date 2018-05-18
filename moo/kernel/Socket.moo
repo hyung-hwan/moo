@@ -225,7 +225,7 @@ class(#byte) SocketAddress(Object) from 'sck.addr'
 	}
 }
 
-class CoreSocket(Object) from 'sck'
+class Socket(Object) from 'sck'
 {
 	## the handle must be the first field in this object to match
 	## the internal representation used by various modules. (e.g. sck)
@@ -243,11 +243,28 @@ class CoreSocket(Object) from 'sck'
 	method(#primitive) _connect: addr.
 	method(#primitive) _socketError.
 
-	method(#primitive) readBytes: bytes.
-	method(#primitive) readBytes: bytes offset: offset length: length.
+	method(#primitive) _readBytes: bytes.
+	method(#primitive) _readBytes: bytes offset: offset length: length.
 	method(#primitive) _writeBytes: bytes.
 	method(#primitive) _writeBytes: bytes offset: offset length: length.
 
+	method(#class) new { self messageProhibited: #new }
+	method(#class) new: size { self messageProhibited: #new: }
+
+	method(#class) __with: handle
+	{
+		###self addToBeFinalized.
+		^(self _basicNew initialize) __open(handle)
+	}
+
+	method(#class) family: family type: type
+	{
+		###self addToBeFinalized.
+
+		## new is prohibited. so use _basicNew with initialize.
+		##^(self new) open(family, type, 0)
+		^(self _basicNew initialize) open(family, type, 0)
+	}
 
 	method close
 	{
@@ -267,7 +284,20 @@ class CoreSocket(Object) from 'sck'
 	}
 }
 
-class SyncSocket(CoreSocket)
+(* TODO: generate these family and type from the C header *)
+pooldic Socket.Family
+{
+	INET := 2.
+	INET6 := 10.
+}
+
+pooldic Socket.Type
+{
+	STREAM := 1.
+	DGRAM  := 2.
+}
+
+class SyncSocket(Socket)
 {
 	var iosem, tmoutsem, sg.
 	var tmoutsecs, tmoutnsecs.
@@ -335,12 +365,33 @@ class SyncSocket(CoreSocket)
 		if (s == self.tmoutsem) { Exception signal: 'timed out' }.
 	}
 
+	method connect: addr
+	{
+		| soerr |
+
+		## an exception is thrown upon exception failure.
+		if ((super _connect: addr) <= -1)
+		{
+			## connection in progress
+			while (true)
+			{
+				self __wait_for_output.
+				soerr := self _socketError.
+				if (soerr == 0) { break }
+				elsif (soerr > 0)
+				{
+					Exception signal: ('unable to connect - error ' & soerr asString).
+				}.
+			}.
+		}.
+	}
+
 	method readBytes: bytes
 	{
 		| n |
 		while (true)
 		{
-			n := super readBytes: bytes.
+			n := super _readBytes: bytes.
 			if (n >= 0) { ^n }.
 			self __wait_for_input.
 		}
@@ -351,7 +402,7 @@ class SyncSocket(CoreSocket)
 		| n |
 		while (true)
 		{
-			n := super readBytes: bytes offset: offset length: length.
+			n := super _readBytes: bytes offset: offset length: length.
 			if (n >= 0) { ^n }.
 			self __wait_for_input.
 		}
@@ -380,44 +431,10 @@ class SyncSocket(CoreSocket)
 	}
 }
 
-class Socket(CoreSocket)
+class AsyncSocket(Socket)
 {
 	var pending_bytes, pending_offset, pending_length.
 	var outreadysem, outdonesem, inreadysem.
-}
-
-(* TODO: generate these family and type from the C header *)
-pooldic Socket.Family
-{
-	INET := 2.
-	INET6 := 10.
-}
-
-pooldic Socket.Type
-{
-	STREAM := 1.
-	DGRAM  := 2.
-}
-
-extend Socket
-{
-	method(#class) new { self messageProhibited: #new }
-	method(#class) new: size { self messageProhibited: #new: }
-
-	method(#class) __with: handle
-	{
-		###self addToBeFinalized.
-		^(self _basicNew initialize) __open(handle)
-	}
-
-	method(#class) family: family type: type
-	{
-		###self addToBeFinalized.
-
-		## new is prohibited. so use _basicNew with initialize.
-		##^(self new) open(family, type, 0)
-		^(self _basicNew initialize) open(family, type, 0)
-	}
 
 	(* -------------------
 	socket call-back methods
@@ -512,6 +529,16 @@ extend Socket
 		thisProcess addAsyncSemaphore: self.outdonesem.
 	}
 
+	method readBytes: bytes
+	{
+		^super _readBytes: bytes.
+	}
+
+	method readBytes: bytes offset: offset length: length
+	{
+		^super _readBytes: bytes offset: offset length: length.
+	}
+
 	method writeBytes: bytes offset: offset length: length
 	{
 		| n pos rem |
@@ -569,7 +596,7 @@ extend Socket
 	}
 }
 
-class ClientSocket(Socket)
+class AsyncClientSocket(AsyncSocket)
 {
 	var(#get) connectedEventAction.
 	var connsem.
@@ -633,7 +660,7 @@ class ClientSocket(Socket)
 	}
 }
 
-class ServerSocket(Socket)
+class AsyncServerSocket(AsyncSocket)
 {
 	method initialize
 	{

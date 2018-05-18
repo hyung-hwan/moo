@@ -815,7 +815,9 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 			MOO_ASSERT (moo, MOO_OOP_TO_SMOOI(proc->sp) < (moo_ooi_t)(MOO_OBJ_GET_SIZE(proc) - MOO_PROCESS_NAMED_INSTVARS));
 			proc->slot[MOO_OOP_TO_SMOOI(proc->sp)] = (moo_oop_t)sem;
 
-			if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO)) moo->sem_io_wait_count--;
+			/* i should decrement the counter as long as the group being 
+			 * signaled contains an IO semaphore */
+			if (MOO_OOP_TO_SMOOI(sg->sem_io_count) > 0) moo->sem_io_wait_count--;
 			return proc;
 		}
 	}
@@ -881,7 +883,7 @@ static MOO_INLINE void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 	semgrp = sem->group;
 
-	/* the caller of this function ensure that the semaphore doesn't belong to a group */
+	/* the caller of this function must ensure that the semaphore doesn't belong to a group */
 	MOO_ASSERT (moo, (moo_oop_t)semgrp == moo->_nil);
 
 	count = MOO_OOP_TO_SMOOI(sem->count);

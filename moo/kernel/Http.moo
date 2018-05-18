@@ -134,7 +134,7 @@ class HttpSocket(SyncSocket)
 	}
 }
 
-class HttpListener(ServerSocket)
+class HttpListener(AsyncServerSocket)
 {
 	var(#get) server := nil.
 	var(#get) rid := -1.
@@ -274,7 +274,7 @@ class MyObject(Object)
 	method(#class) start_server_socket
 	{
 		| s2 buf |
-		s2 := ServerSocket family: Socket.Family.INET type: Socket.Type.STREAM.
+		s2 := AsyncServerSocket family: Socket.Family.INET type: Socket.Type.STREAM.
 		buf := ByteArray new: 128.
 
 		s2 onEvent: #accepted do: [ :sck :clisck :cliaddr |
@@ -311,7 +311,7 @@ class MyObject(Object)
 	method(#class) start_client_socket
 	{
 		| s buf count |
-		s := ClientSocket family: Socket.Family.INET type: Socket.Type.STREAM.
+		s := AsyncClientSocket family: Socket.Family.INET type: Socket.Type.STREAM.
 		buf := ByteArray new: 128.
 
 		count := 0.
@@ -407,7 +407,17 @@ class MyObject(Object)
 	
 	method(#class) main
 	{
-		| httpd |
+		| httpd addr |
+
+(*
+[
+addr := SocketAddress fromString: '1.2.3.4:5555'.
+##addr := SocketAddress fromString: '127.0.0.1:22'.
+httpd := SyncSocket family: (addr family) type: Socket.Type.STREAM.
+httpd timeout: 5.
+httpd connect: addr.
+] on: Exception do: [:ex | ].
+*)
 
 		[ self another_proc: 5000 ] fork.
 		[ self another_proc: 5100 ] fork.
@@ -433,7 +443,6 @@ class MyObject(Object)
 			]
 
 		] on: Exception do: [:ex | ('Exception - '  & ex messageText) dump].
-
 
 		'----- END OF MAIN ------' dump.
 	}
