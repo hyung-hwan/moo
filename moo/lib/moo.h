@@ -807,7 +807,7 @@ typedef enum moo_semaphore_subtype_t moo_semaphore_subtype_t;
 enum moo_semaphore_io_type_t
 {
 	MOO_SEMAPHORE_IO_TYPE_INPUT   = 0,
-	MOO_SEMAPHORE_IO_TYPE_OUTPUT  = 1,
+	MOO_SEMAPHORE_IO_TYPE_OUTPUT  = 1
 };
 typedef enum moo_semaphore_io_type_t moo_semaphore_io_type_t;
 
