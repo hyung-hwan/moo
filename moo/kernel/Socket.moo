@@ -722,6 +722,100 @@ class AsyncServerSocket(AsyncSocket)
 
 	method acceptedSocketClass
 	{
+		^AsyncSocket
+	}
+}
+
+
+class Mux(SemaphoreGroup)
+{
+	method addSocket: sck
+	{
+		self addSemaphore: (sck inreadysem).
+	}
+
+	method removeSocket: sck 
+	{
+	}
+}
+
+class ListenerSocket(Socket)
+{
+	var inreadysem.
+
+	method initialize
+	{
+'Server Socket initialize...........' dump.
+		super initialize.
+
+		self.inreadysem signalAction: [ :sem |
+			| cliaddr clisck cliact fd |
+			cliaddr := SocketAddress new.
+
+			fd := self _accept: cliaddr.
+			##if (fd >= 0)
+			if (fd notNil)
+			{
+				clisck := (self acceptedSocketClass) __with: fd.
+
+				sg addSemaphore: self.inreadysem.
+				self.inreadysem signalOnInput: self.handle.
+
+
+				self onSocketAccepted: clisck from: cliaddr.
+			}.
+		].
+	}
+
+	method close
+	{
+'CLOSING SERVER SOCEKT.... ' dump.
+		| sg |
+		if (self.inreadysem notNil)
+		{
+			self.inreadysem unsignal.
+			sg := self.inreadysem _group.
+			if (sg notNil) { sg removeSemaphore: self.inreadysem }.
+			self.inreadysem := nil.
+		}.
+
+		^super close.
+	}
+
+	method listen: backlog
+	{
+		| n |
+
+		## If listen is called before the socket handle is
+		## added to the multiplexer, a spurious hangup event might
+		## be generated. At least, such behavior was observed
+		## in linux with epoll in the level trigger mode.
+		##    self.inreadysem signalOnInput: self.handle.
+		##    thisProcess addAsyncSemaphore: self.inreadysem.
+		##    self _listen: backlog.
+
+		n := self _listen: backlog.
+
+		self.inreadysem signalOnInput: self.handle.
+		sg addemaphore: self.inreadysem.
+
+		^n.
+	}
+
+	method accept
+	{
+	}
+
+	method onSocketAccepted: clisck from: cliaddr
+	{
+		## close the accepted client socket immediately.
+		## a subclass must override this to avoid it.
+		clisck close.
+	}
+
+	method acceptedSocketClass
+	{
 		^Socket
 	}
+
 }
