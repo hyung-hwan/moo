@@ -254,6 +254,88 @@ class(#byte) ByteArray(Array)
 }
 
 ## -------------------------------------------------------------------------------
+class SequenceableCollection(Collection)
+{
+}
+
+class OrderedCollection(SequenceableCollection)
+{
+	var contents.
+	var firstIndex.
+	var lastIndex.
+
+	method(#class) new
+	{
+		^self new: 16.
+	}
+
+	method(#class) new: size
+	{
+		^super _basicNew initialize: size.
+	}
+
+	method initialize: size
+	{
+		self.contents := Array new: size.
+		self.firstIndex := size // 2 max: 1.
+		self.lastIndex := self.firstIndex - 1.
+	}
+
+	method size
+	{
+		^self.lastIndex - self.firstIndex + 1.
+	}
+
+	method at: index
+	{
+		| i |
+		i := index + self.firstIndex - 1.
+		if (i >= self.firstIndex and: [i <= self.lastIndex]) { ^self.contents at: index }.
+		Exception signal: ('index ' & index asString & ' out of range').
+	}
+
+	method at: index put: obj
+	{
+		| i |
+		i := index + self.firstIndex - 1.
+		if (i >= self.firstIndex and: [i <= self.lastIndex]) { ^self.contents at: index put: obj }.
+		Exception signal: ('index ' & index asString & ' out of range').
+	}
+
+	method addFirst: obj
+	{
+	}
+
+	method addLast: obj
+	{
+	}
+
+	method add: obj beforeIndex: index
+	{
+	}
+
+	method add: obj afterIndex: index
+	{
+	}
+	
+
+	method removeFirst
+	{
+	}
+
+	method removeLast
+	{
+	}
+
+	method remove: obj ifAbsent: error_block
+	{
+	}
+
+	method growBy: size
+	{
+	}
+}
+## -------------------------------------------------------------------------------
 
 class Set(Collection)
 {

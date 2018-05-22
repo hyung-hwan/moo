@@ -555,7 +555,7 @@ class AsyncSocket(Socket)
 		pos := offset.
 		rem := length.
 
-		while (rem > 0) ## TODO: loop to write as much as possible
+		while (rem > 0)
 		{
 			n := self _writeBytes: bytes offset: pos length: rem.
 			if (n <= -1)  { break }.
@@ -581,7 +581,6 @@ class AsyncSocket(Socket)
 	{
 		^self writeBytes: bytes offset: 0 length: (bytes size)
 	}
-
 
 	##method onSocketClosed
 	##{
@@ -726,19 +725,6 @@ class AsyncServerSocket(AsyncSocket)
 	}
 }
 
-
-class Mux(SemaphoreGroup)
-{
-	method addSocket: sck
-	{
-		self addSemaphore: (sck inreadysem).
-	}
-
-	method removeSocket: sck 
-	{
-	}
-}
-
 (*
 class ListenerSocket(Socket)
 {
@@ -761,7 +747,6 @@ class ListenerSocket(Socket)
 
 				sg addSemaphore: self.inreadysem.
 				self.inreadysem signalOnInput: self.handle.
-
 
 				self onSocketAccepted: clisck from: cliaddr.
 			}.
