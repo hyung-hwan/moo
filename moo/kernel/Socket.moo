@@ -739,6 +739,7 @@ class Mux(SemaphoreGroup)
 	}
 }
 
+(*
 class ListenerSocket(Socket)
 {
 	var inreadysem.
@@ -819,3 +820,4 @@ class ListenerSocket(Socket)
 	}
 
 }
+*)

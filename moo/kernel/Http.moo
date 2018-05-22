@@ -41,7 +41,7 @@ class HttpConnReg(Object)
 	method add: elem
 	{
 		| index |
-		if (self.first_free_slot < 0) { ^Error.Code.ELIMIT }.
+		if (self.first_free_slot < 0) { Exception signal: 'no free slot' }.
 		index := self.first_free_slot.
 		self.first_free_slot := (self.connections at: index).
 		self.connections at: index put: elem.
@@ -115,8 +115,7 @@ class HttpSocket(SyncSocket)
 	{
 		| buf |
 		buf := ByteArray new: 128.
-		'IM RUNNING SERVICE...............' dump.
-
+'IM RUNNING SERVICE...............' dump.
 		self timeout: 10.
 		self readBytes: buf.
 		buf dump.
@@ -137,12 +136,17 @@ class HttpSocket(SyncSocket)
 class HttpListener(AsyncServerSocket)
 {
 	var(#get) server := nil.
-	var(#get) rid := -1.
+	var(#get) rid := nil.
 
 	method initialize
 	{
 		super initialize.
 	}
+
+	##method close
+	##{
+	##	super close.
+	##}
 
 	method onSocketAccepted: clisck from: cliaddr
 	{
@@ -154,12 +158,17 @@ clisck dump.
 
 		if (self.server notNil)
 		{
-			server addConnection: clisck.
-			if (clisck isKindOf: SyncSocket)
-			{
+			[
+				server addConnection: clisck.
+				if (clisck isKindOf: SyncSocket)
+				{
 'SERVICE READLLY STARTING' dump.
-				[clisck runService] fork.
-			}
+					[clisck runService] fork.
+				}
+			]
+			on: Exception do: [:ex |
+				Exception signal: ('unable to handle a new connection - ' & ex messageText).
+			].
 		}.
 
 	}
@@ -189,29 +198,54 @@ class HttpServer(Object)
 		self.connreg := HttpConnReg new.
 	}
 
+	method __add_listener: listener
+	{
+		| rid |
+		rid := self.listeners add: listener.
+('ADD NEW LISTENER ' & rid asString) dump.
+		listener server: self rid: rid.
+	}
+
+	method __remove_listener: listener
+	{
+		| rid |
+		rid = listener rid.
+		if (rid notNil)
+		{
+			self.listeners remove: (listener rid).
+			listener server: nil rid: nil.
+		}.
+	}
+
+	method __start_new_listener: addr
+	{
+		| listener |
+		listener := HttpListener family: (addr family) type: Socket.Type.STREAM.
+		[
+			if ((self __add_listener: listener) notError)
+			{
+				listener bind: addr.
+				listener listen: 128.
+			}
+		] on: Exception do: [:ex |
+			self __remove_listener: listener.
+			listener close.
+			## ex pass.
+			Exception signal: ('unable to add new listener - ' & ex messageText).
+		].
+	}
+
 	method start: laddr
 	{
 		| listener |
-
 		if (laddr class == Array)
+		##if (laddr respondsTo: #do:) ## can i check if the message receives a block and the block accepts 1 argument?
 		{
-			laddr do: [:addr |
-				listener := HttpListener family: (addr family) type: Socket.Type.STREAM.
-				if ((self addListener: listener) notError)
-				{
-					listener bind: addr.
-					listener listen: 128.
-				}
-			].
+			laddr do: [:addr | self __start_new_listener: addr ].
 		}
 		else
 		{
-			listener := HttpListener family: (laddr family) type: Socket.Type.STREAM.
-			if ((self addListener: listener) notError)
-			{
-				listener bind: laddr.
-				listener listen: 128.
-			}
+			self __start_new_listener: laddr.
 		}.
 	}
 
@@ -230,43 +264,22 @@ class HttpServer(Object)
 	{
 		| rid |
 		rid := self.connreg add: conn.
-		if (rid isError)
-		{
-			'ERROR - CANNOT REGISTER NEW CONNECTION >>>>>>>>>> ' dump.
-			conn close.
-			^rid.
-		}.
-
 ('ADD NEW CONNECTION ' & rid asString) dump.
 		conn server: self rid: rid.
 	}
 	
 	method removeConnection: conn
 	{
-		self.connreg remove: (conn rid).
-		conn server: nil rid: -1.
+		| rid |
+		rid := conn rid.
+		if (rid notNil)
+		{
+			self.connreg remove: (conn rid).
+			conn server: nil rid: -1.
+		}.
 	}
 	
-	method addListener: listener
-	{
-		| rid |
-		rid := self.listeners add: listener.
-		if (rid isError)
-		{
-			'ERROR - CANNOT REGISTER NEW LISTENER >>>>>>>>>> ' dump.
-			listener close.
-			^rid.
-		}.
-
-('ADD NEW LISTENER ' & rid asString) dump.
-		listener server: self rid: rid.
-	}
-
-	method removeListener: listener
-	{
-		self.listeners remove: (listener rid).
-		listener server: nil rid: -1.
-	}
+	
 }
 
 
@@ -346,7 +359,7 @@ class HttpServer2(Object)
 		self.connreg := HttpConnReg new.
 	}
 
-	method run: laddr
+	method start: laddr
 	{
 		| listener sem ss |
 
@@ -369,12 +382,6 @@ class HttpServer2(Object)
 				listener bind: laddr.
 				listener _listen: 128.
 			}
-		}.
-
-		while (true) 
-		{
-			ss := self.sg wait.
-			if (ss isError) { break }.
 		}.
 	}
 
@@ -568,7 +575,7 @@ class MyObject(Object)
 		'----- END OF ANOTHER PROC ------' dump.
 	}
 	
-	method(#class) main222
+	method(#class) main
 	{
 		| httpd addr |
 
@@ -610,17 +617,25 @@ httpd connect: addr.
 		'----- END OF MAIN ------' dump.
 	}
 
-	method(#class) main
+	method(#class) mainqq
 	{
-		| httpd addr |
+		| httpd addr sg ss |
+
+		sg := SemaphoreGroup new.
 
 		[
 			httpd := HttpServer2 new.
 			[
-				httpd run: %(
+				httpd start: %(
 					SocketAddress fromString: '[::]:7777',
 					SocketAddress fromString: '0.0.0.0:7776'
 				).
+
+				while (true)
+				{
+					ss := sg wait.
+					if (ss isError) { break }.
+				}
 			] ensure: [ 
 				if (httpd notNil) { httpd close } 
 			]
