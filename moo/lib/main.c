@@ -2127,10 +2127,12 @@ static void setup_tick (void)
 	act.sa_flags = SA_RESTART;
 	sigaction (SIGVTALRM, &act, MOO_NULL);
 
+/*#define MOO_ITIMER_TICK 10000*/ /* microseconds. 0.01 seconds */
+#define MOO_ITIMER_TICK 20000 /* microseconds. 0.02 seconds. */
 	itv.it_interval.tv_sec = 0;
-	itv.it_interval.tv_usec = 10000; /* microseconds */
+	itv.it_interval.tv_usec = MOO_ITIMER_TICK;
 	itv.it_value.tv_sec = 0;
-	itv.it_value.tv_usec = 10000;
+	itv.it_value.tv_usec = MOO_ITIMER_TICK;
 	setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
 #else
 

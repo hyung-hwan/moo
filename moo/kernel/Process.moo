@@ -333,7 +333,7 @@ class SemaphoreHeap(Object)
 
 	method parentIndex: anIndex
 	{
-		^(anIndex - 1) quo: 2
+		^(anIndex - 1) div: 2
 	}
 
 	method leftChildIndex: anIndex
@@ -384,7 +384,7 @@ class SemaphoreHeap(Object)
 		| base capa cindex item 
 		  left right younger xitem |
 
-		base := self.size quo: 2.
+		base := self.size div: 2.
 		if (anIndex >= base) { ^anIndex }.
 
 		cindex := anIndex.

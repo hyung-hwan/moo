@@ -60,10 +60,30 @@ class Collection(Object)
 		^coll
 	}
 *)
+
+
+	method emptyCheck
+	{
+		if (self size <= 0) { Exception signal: 'empty collection' }.
+	}
 }
 
 ## -------------------------------------------------------------------------------
-class(#pointer) Array(Collection)
+class SequenceableCollection(Collection)
+{
+	method do: aBlock
+	{
+		0 to: (self size - 1) do: [:i | aBlock value: (self at: i)].
+	}
+
+	method reverseDo: aBlock
+	{
+		(self size - 1) to: 0 by: -1 do: [:i | aBlock value: (self at: i)].
+	}
+}
+
+## -------------------------------------------------------------------------------
+class(#pointer) Array(SequenceableCollection)
 {
 	method size
 	{
@@ -90,10 +110,7 @@ class(#pointer) Array(Collection)
 		^self at: (self size - 1).
 	}
 
-	method do: aBlock
-	{
-		0 priorTo: (self size) do: [:i | aBlock value: (self at: i)].
-	}
+	
 
 	method copy: anArray
 	{
@@ -141,6 +158,23 @@ class(#pointer) Array(Collection)
 		| newsz |
 		newsz := end - start + 1.
 		^(self class new: newsz) copy: self from: start to: end
+	}
+
+	method replaceFrom: start to: stop with: replacement
+	{
+		self replaceFrom: start to: stop with: replacement startingAt: 0.
+	}
+
+	method replaceFrom: start to: stop with: replacement startingAt: rstart
+	{
+		| offset i |
+		offset := rstart - start.
+		i := start.
+		while (i <= stop) 
+		{ 
+			self at: i put: (replacement at: i + offset).
+			i := i + 1.
+		}.
 	}
 
 	method = anArray
@@ -254,15 +288,12 @@ class(#byte) ByteArray(Array)
 }
 
 ## -------------------------------------------------------------------------------
-class SequenceableCollection(Collection)
-{
-}
 
 class OrderedCollection(SequenceableCollection)
 {
 	var contents.
 	var firstIndex.
-	var lastIndex.
+	var lastIndex. ## this is the last index plus 1.
 
 	method(#class) new
 	{
@@ -271,47 +302,57 @@ class OrderedCollection(SequenceableCollection)
 
 	method(#class) new: size
 	{
-		^super _basicNew initialize: size.
+		^self _basicNew initialize: size.
 	}
 
 	method initialize: size
 	{
 		self.contents := Array new: size.
-		self.firstIndex := size // 2 max: 1.
-		self.lastIndex := self.firstIndex - 1.
+		self.firstIndex := size div: 2.
+		self.lastIndex := self.firstIndex.
 	}
 
 	method size
 	{
-		^self.lastIndex - self.firstIndex + 1.
+		^self.lastIndex - self.firstIndex.
 	}
 
 	method at: index
 	{
 		| i |
-		i := index + self.firstIndex - 1.
-		if (i >= self.firstIndex and: [i <= self.lastIndex]) { ^self.contents at: index }.
+		i := index + self.firstIndex.
+		if (i >= self.firstIndex and: [i < self.lastIndex]) { ^self.contents at: index }.
 		Exception signal: ('index ' & index asString & ' out of range').
 	}
 
 	method at: index put: obj
 	{
 		| i |
-		i := index + self.firstIndex - 1.
-		if (i >= self.firstIndex and: [i <= self.lastIndex]) { ^self.contents at: index put: obj }.
+		i := index + self.firstIndex.
+		if (i >= self.firstIndex and: [i < self.lastIndex]) { ^self.contents at: index put: obj }.
 		Exception signal: ('index ' & index asString & ' out of range').
 	}
 
 	method addFirst: obj
 	{
+		if (self.firstIndex == 0) { self growBy: 8 shiftBy: 8 }.
+		self.firstIndex := self.firstIndex - 1.
+		^self.contents at: self.firstIndex put: obj.
 	}
 
 	method addLast: obj
 	{
+		| k |
+		if (self.lastIndex == self.contents size) { self growBy: 8 shiftBy: 0 }.
+		k := self.contents at: self.lastIndex put: obj.
+		self.lastIndex := self.lastIndex + 1.
+		^k.
 	}
 
 	method add: obj beforeIndex: index
 	{
+		self insert: obj beforeIndex: index.
+		^obj
 	}
 
 	method add: obj afterIndex: index
@@ -321,20 +362,75 @@ class OrderedCollection(SequenceableCollection)
 
 	method removeFirst
 	{
+		| obj |
+		self emptyCheck.
+		obj := self.contents at: self.firstIndex.
+		self.contents at: self.firstIndex put: nil.
+		self.firstIndex := self.firstIndex + 1.
+		^obj.
 	}
 
 	method removeLast
 	{
+		| obj li |
+		self emptyCheck.
+		li := self.lastIndex - 1.
+		obj := self.contents at: li.
+		self.contents at: li put: nil.
+		self.lastIndex := li.
+		^obj
+	}
+
+	method removeIndex: index
+	{
+		| obj |
+		obj := self at: index.
+		self.contents replaceFrom: index + self.firstIndex
+			to: self.lastIndex - 2
+			with: self.contents 
+			startingAt: index + self.firstIndex + 1.
+		self.lastIndex := self.lastIndex - 1.
+		self.contents at: self.lastIndex put: nil.
+System log(System.Log.FATAL, S'REMOVING ... ', obj, '--->', self.lastIndex, S'\n').
+		^obj
 	}
 
 	method remove: obj ifAbsent: error_block
 	{
 	}
 
-	method growBy: size
+	## ------------------------------------------------
+	## ENUMERATING
+	## ------------------------------------------------
+	method do: block
 	{
+		##^self.firstIndex to: (self.lastIndex - 1) do: [:i | block value: (self.contents at: i)].
+
+		| i |
+		i := self.firstIndex.
+		while (i < self.lastIndex)
+		{
+			block value: (self.contents at: i).
+			i := i + 1.
+		}.
+	}
+
+	## ------------------------------------------------
+	## PRIVATE METHODS
+	## ------------------------------------------------
+	method growBy: grow_size shiftBy: shift_count
+	{
+		| newcon |
+		newcon := (self.contents class) new: (self.contents size + grow_size).
+		newcon replaceFrom: (self.firstIndex + shift_count) 
+			to: (self.lastIndex - 1 + shift_count)
+			with: self.contents startingAt: (self.firstIndex).
+		self.contents := newcon.
+		self.firstIndex := self.firstIndex + shift_count.
+		self.lastIndex := self.lastIndex + shift_count.
 	}
 }
+
 ## -------------------------------------------------------------------------------
 
 class Set(Collection)
@@ -572,7 +668,6 @@ class Set(Collection)
 	{
 		^self removeKey: (assoc key) ifAbsent: error_block
 	}
-
 
 	method do: block
 	{
