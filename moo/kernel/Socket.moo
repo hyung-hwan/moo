@@ -254,7 +254,7 @@ class Socket(Object) from 'sck'
 	method(#class) __with: handle
 	{
 		###self addToBeFinalized.
-		^(self _basicNew initialize) __open(handle)
+		^(self basicNew initialize) __open(handle)
 	}
 
 	method(#class) family: family type: type
@@ -263,7 +263,7 @@ class Socket(Object) from 'sck'
 
 		## new is prohibited. so use _basicNew with initialize.
 		##^(self new) open(family, type, 0)
-		^(self _basicNew initialize) open(family, type, 0)
+		^(self basicNew initialize) open(family, type, 0)
 	}
 
 	method close
@@ -308,7 +308,7 @@ class SyncSocket(Socket)
 	method(#class) __with: handle
 	{
 		###self addToBeFinalized.
-		^(self _basicNew initialize) __open(handle)
+		^(self basicNew initialize) __open(handle)
 	}
 
 	method(#class) family: family type: type
@@ -317,7 +317,7 @@ class SyncSocket(Socket)
 
 		## new is prohibited. so use _basicNew with initialize.
 		##^(self new) open(family, type, 0)
-		^(self _basicNew initialize) open(family, type, 0)
+		^(self basicNew initialize) open(family, type, 0)
 	}
 
 	method initialize

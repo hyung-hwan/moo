@@ -302,7 +302,8 @@ class OrderedCollection(SequenceableCollection)
 
 	method(#class) new: size
 	{
-		^self _basicNew initialize: size.
+		| x |
+		^super basicNew initialize: size.
 	}
 
 	method initialize: size
@@ -325,7 +326,7 @@ class OrderedCollection(SequenceableCollection)
 		Exception signal: ('index ' & index asString & ' out of range').
 	}
 
-	method at: index put: obj
+	method at: index put:	 obj
 	{
 		| i |
 		i := index + self.firstIndex.
@@ -428,6 +429,24 @@ System log(System.Log.FATAL, S'REMOVING ... ', obj, '--->', self.lastIndex, S'\n
 		self.contents := newcon.
 		self.firstIndex := self.firstIndex + shift_count.
 		self.lastIndex := self.lastIndex + shift_count.
+	}
+
+	method insert: obj at: index
+	{
+		## internal use only - index must be between 0 and self size inclusive
+
+		| i start |
+		if (self size == self.contents size) { self growBy: 8 shiftBy: 8 }.
+		start := self.firstIndex + index.
+		i := self.lastIndex.
+		while (i > start)
+		{
+			self.contents at: i put: (self.contents at: i - 1).
+			i := i - 1.
+		}.
+		self.lastIndex := self.lastIndex + 1.
+		self.contents at: index + self.firstIndex put: obj.
+		^obj
 	}
 }
 

@@ -5409,7 +5409,13 @@ static int compile_message_expression (moo_t* moo, int to_super)
 
 					noop_pos = moo->c->mth.code.len;
 					if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
-					if (compile_binary_message(moo, to_super) <= -1) return -1;
+
+					/* to_super is reset to 0 because a unary message
+					 * has been sent to super and this binary message
+					 * is following the unary message.
+					 * for instance, in "super abc + 10", + is sent
+					 * to the 'self' which is the result of super abc */
+					if (compile_binary_message(moo, 0/*to_super*/) <= -1) return -1;
 				}
 
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD)
@@ -5422,7 +5428,9 @@ static int compile_message_expression (moo_t* moo, int to_super)
 
 					noop_pos = moo->c->mth.code.len;
 					if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
-					if (compile_keyword_message(moo, to_super) <= -1) return -1;
+					/* don't pass to_super. pass 0 as it can't be the 
+					 * first message after 'super' */
+					if (compile_keyword_message(moo, 0/*to_super*/) <= -1) return -1;
 				}
 				break;
 
@@ -5441,7 +5449,9 @@ static int compile_message_expression (moo_t* moo, int to_super)
 
 					noop_pos = moo->c->mth.code.len;
 					if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
-					if (compile_keyword_message(moo, to_super) <= -1) return -1;
+					/* don't pass to_super. pass 0 as it can't be the 
+					 * first message after 'super' */
+					if (compile_keyword_message(moo, 0/*to_super*/) <= -1) return -1;
 				}
 				break;
 

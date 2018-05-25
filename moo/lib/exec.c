@@ -4001,7 +4001,7 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_
 
 	mthname.ptr = MOO_OBJ_GET_CHAR_SLOT(selector);
 	mthname.len = MOO_OBJ_GET_SIZE(selector);
-	method = moo_findmethod (moo, receiver, &mthname, to_super);
+	method = moo_findmethod(moo, receiver, &mthname, to_super);
 	if (!method) 
 	{
 		static moo_ooch_t fbm[] = { 
