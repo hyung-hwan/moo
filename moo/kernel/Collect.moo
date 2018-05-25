@@ -82,7 +82,7 @@ class SequenceableCollection(Collection)
 	}
 }
 
-## -------------------------------------------------------------------------------
+	## -------------------------------------------------------------------------------
 class(#pointer) Array(SequenceableCollection)
 {
 	method size
@@ -291,7 +291,7 @@ class(#byte) ByteArray(Array)
 
 class OrderedCollection(SequenceableCollection)
 {
-	var contents.
+	var buffer.
 	var firstIndex.
 	var lastIndex. ## this is the last index plus 1.
 
@@ -308,7 +308,7 @@ class OrderedCollection(SequenceableCollection)
 
 	method initialize: size
 	{
-		self.contents := Array new: size.
+		self.buffer := Array new: size.
 		self.firstIndex := size div: 2.
 		self.lastIndex := self.firstIndex.
 	}
@@ -318,34 +318,52 @@ class OrderedCollection(SequenceableCollection)
 		^self.lastIndex - self.firstIndex.
 	}
 
+	method capacity
+	{
+		^self.buffer size 
+	}
+
 	method at: index
 	{
 		| i |
 		i := index + self.firstIndex.
-		if (i >= self.firstIndex and: [i < self.lastIndex]) { ^self.contents at: index }.
+		if (i >= self.firstIndex and: [i < self.lastIndex]) { ^self.buffer at: index }.
 		Exception signal: ('index ' & index asString & ' out of range').
 	}
 
-	method at: index put:	 obj
+	method at: index put: obj
 	{
+		## replace an existing element. it doesn't grow the buffer.
 		| i |
 		i := index + self.firstIndex.
-		if (i >= self.firstIndex and: [i < self.lastIndex]) { ^self.contents at: index put: obj }.
+		if (i >= self.firstIndex and: [i < self.lastIndex]) { ^self.buffer at: index put: obj }.
 		Exception signal: ('index ' & index asString & ' out of range').
+	}
+
+	method first
+	{
+		self emptyCheck.
+		^self.buffer at: self.firstIndex.
+	}
+
+	method last
+	{
+		self emptyCheck.
+		^self.buffer at: self.lastIndex.
 	}
 
 	method addFirst: obj
 	{
 		if (self.firstIndex == 0) { self growBy: 8 shiftBy: 8 }.
 		self.firstIndex := self.firstIndex - 1.
-		^self.contents at: self.firstIndex put: obj.
+		^self.buffer at: self.firstIndex put: obj.
 	}
 
 	method addLast: obj
 	{
 		| k |
-		if (self.lastIndex == self.contents size) { self growBy: 8 shiftBy: 0 }.
-		k := self.contents at: self.lastIndex put: obj.
+		if (self.lastIndex == self.buffer size) { self growBy: 8 shiftBy: 0 }.
+		k := self.buffer at: self.lastIndex put: obj.
 		self.lastIndex := self.lastIndex + 1.
 		^k.
 	}
@@ -365,8 +383,8 @@ class OrderedCollection(SequenceableCollection)
 	{
 		| obj |
 		self emptyCheck.
-		obj := self.contents at: self.firstIndex.
-		self.contents at: self.firstIndex put: nil.
+		obj := self.buffer at: self.firstIndex.
+		self.buffer at: self.firstIndex put: nil.
 		self.firstIndex := self.firstIndex + 1.
 		^obj.
 	}
@@ -376,28 +394,38 @@ class OrderedCollection(SequenceableCollection)
 		| obj li |
 		self emptyCheck.
 		li := self.lastIndex - 1.
-		obj := self.contents at: li.
-		self.contents at: li put: nil.
+		obj := self.buffer at: li.
+		self.buffer at: li put: nil.
 		self.lastIndex := li.
 		^obj
 	}
 
-	method removeIndex: index
+	method removeAtIndex: index
 	{
+		## remove the element at the given position.
 		| obj |
 		obj := self at: index.
-		self.contents replaceFrom: index + self.firstIndex
-			to: self.lastIndex - 2
-			with: self.contents 
-			startingAt: index + self.firstIndex + 1.
-		self.lastIndex := self.lastIndex - 1.
-		self.contents at: self.lastIndex put: nil.
-System log(System.Log.FATAL, S'REMOVING ... ', obj, '--->', self.lastIndex, S'\n').
+		self removeIndex:  index + self.firstIndex.
+		##self.buffer
+		##	replaceFrom: index + self.firstIndex
+		##	to: self.lastIndex - 2
+		##	with: self.buffer 
+		##	startingAt: index + self.firstIndex + 1.
+		##self.lastIndex := self.lastIndex - 1.
+		##self.buffer at: self.lastIndex put: nil.
 		^obj
 	}
 
 	method remove: obj ifAbsent: error_block
 	{
+		| i |
+		i := self.firstIndex.
+		while (i < self.lastIndex)
+		{
+			if (obj = (self.buffer at: i)) { ^self removeIndex: i }.
+			i := i + 1.
+		}.
+		^error_block value.
 	}
 
 	## ------------------------------------------------
@@ -405,13 +433,13 @@ System log(System.Log.FATAL, S'REMOVING ... ', obj, '--->', self.lastIndex, S'\n
 	## ------------------------------------------------
 	method do: block
 	{
-		##^self.firstIndex to: (self.lastIndex - 1) do: [:i | block value: (self.contents at: i)].
+		##^self.firstIndex to: (self.lastIndex - 1) do: [:i | block value: (self.buffer at: i)].
 
 		| i |
 		i := self.firstIndex.
 		while (i < self.lastIndex)
 		{
-			block value: (self.contents at: i).
+			block value: (self.buffer at: i).
 			i := i + 1.
 		}.
 	}
@@ -422,31 +450,42 @@ System log(System.Log.FATAL, S'REMOVING ... ', obj, '--->', self.lastIndex, S'\n
 	method growBy: grow_size shiftBy: shift_count
 	{
 		| newcon |
-		newcon := (self.contents class) new: (self.contents size + grow_size).
+		newcon := (self.buffer class) new: (self.buffer size + grow_size).
 		newcon replaceFrom: (self.firstIndex + shift_count) 
 			to: (self.lastIndex - 1 + shift_count)
-			with: self.contents startingAt: (self.firstIndex).
-		self.contents := newcon.
+			with: self.buffer startingAt: (self.firstIndex).
+		self.buffer := newcon.
 		self.firstIndex := self.firstIndex + shift_count.
 		self.lastIndex := self.lastIndex + shift_count.
 	}
 
-	method insert: obj at: index
+	method insert: obj before: index
 	{
 		## internal use only - index must be between 0 and self size inclusive
 
 		| i start |
-		if (self size == self.contents size) { self growBy: 8 shiftBy: 8 }.
+		if (self size == self.buffer size) { self growBy: 8 shiftBy: 8 }.
 		start := self.firstIndex + index.
 		i := self.lastIndex.
 		while (i > start)
 		{
-			self.contents at: i put: (self.contents at: i - 1).
+			self.buffer at: i put: (self.buffer at: i - 1).
 			i := i - 1.
 		}.
 		self.lastIndex := self.lastIndex + 1.
-		self.contents at: index + self.firstIndex put: obj.
+		self.buffer at: index + self.firstIndex put: obj.
 		^obj
+	}
+
+	method removeIndex: index
+	{
+		self.buffer
+			replaceFrom: index
+			to: self.lastIndex - 2
+			with: self.buffer 
+			startingAt: index + 1.
+		self.lastIndex := self.lastIndex - 1.
+		self.buffer at: self.lastIndex put: nil.
 	}
 }
 
