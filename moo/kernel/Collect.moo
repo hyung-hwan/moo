@@ -400,29 +400,60 @@ class OrderedCollection(SequenceableCollection)
 		^obj
 	}
 
+	method removeFirst: count
+	{
+		| r i |
+		if (count > self size) { Exception signal: 'not sufficient elements to remove' }.
+		r := Array new: count.
+		i := 0.
+		while (i < count)
+		{
+			r at: i put: (self.buffer at: self.firstIndex).
+			self.buffer at: self.firstIndex put: nil.
+			self.firstIndex := self.firstIndex + 1.
+			i := i + 1.
+		}.
+		^r.
+	}
+
+	method removeLast: count
+	{
+		| r i li |
+		if (count > self size) { Exception signal: 'not sufficient elements to remove' }.
+		r := Array new: count.
+		i := 0.
+		while (i < count)
+		{
+			li := self.lastIndex - 1.
+			r at: i put: (self.buffer at: li).
+			self.buffer at: li put: nil.
+			self.lastIndex := li.
+			i := i + 1.
+		}.
+		^r
+	}
+
 	method removeAtIndex: index
 	{
 		## remove the element at the given position.
 		| obj |
-		obj := self at: index.
+		obj := self at: index. ## the range is checed by the at: method.
 		self removeIndex:  index + self.firstIndex.
-		##self.buffer
-		##	replaceFrom: index + self.firstIndex
-		##	to: self.lastIndex - 2
-		##	with: self.buffer 
-		##	startingAt: index + self.firstIndex + 1.
-		##self.lastIndex := self.lastIndex - 1.
-		##self.buffer at: self.lastIndex put: nil.
 		^obj
 	}
 
 	method remove: obj ifAbsent: error_block
 	{
-		| i |
+		## remove the first element equivalent to the given object.
+		## and returns the removed element.
+		## if no matching element is found, it evaluates error_block
+		## and return the evaluation result.
+		| i cand |
 		i := self.firstIndex.
 		while (i < self.lastIndex)
 		{
-			if (obj = (self.buffer at: i)) { ^self removeIndex: i }.
+			cand := self.buffer at: i.
+			if (obj = cand) { self removeIndex: i. ^cand }.
 			i := i + 1.
 		}.
 		^error_block value.
@@ -479,6 +510,10 @@ class OrderedCollection(SequenceableCollection)
 
 	method removeIndex: index
 	{
+		## remove an element at the given index from the internal buffer's
+		## angle. as it is for internal use only, no check is performed
+		## about the range of index. the given index must be equal to or
+		## grater than self.firstIndex and less than self.lastIndex.
 		self.buffer
 			replaceFrom: index
 			to: self.lastIndex - 2
@@ -487,6 +522,21 @@ class OrderedCollection(SequenceableCollection)
 		self.lastIndex := self.lastIndex - 1.
 		self.buffer at: self.lastIndex put: nil.
 	}
+
+	(*
+	method findIndex: obj
+	{
+		| i |
+
+		i := self.firstIndex.
+		while (i < self.lastIndex)
+		{
+			if (obj = (self.buffer at: i)) { ^i }.
+			i := i + 1.
+		}.
+
+		^Error.Code.ENOENT.
+	} *)
 }
 
 ## -------------------------------------------------------------------------------
