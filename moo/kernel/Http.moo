@@ -77,6 +77,7 @@ class HttpConnReg(Object)
 
 class HttpBuffer(Object)
 {
+
 }
 
 class HttpSocket(SyncSocket)

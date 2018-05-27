@@ -300,16 +300,21 @@ class OrderedCollection(SequenceableCollection)
 		^self new: 16.
 	}
 
-	method(#class) new: size
+	method(#class) new: capacity
 	{
-		| x |
-		^super basicNew initialize: size.
+		## super basicNew initWithCapacity: capacity.
+		^super new initWithCapacity: capacity.
 	}
 
-	method initialize: size
+	##method initialize
+	##{
+	##	^super initialize.
+	##}
+
+	method initWithCapacity: capacity
 	{
-		self.buffer := Array new: size.
-		self.firstIndex := size div: 2.
+		self.buffer := Array new: capacity.
+		self.firstIndex := capacity div: 2.
 		self.lastIndex := self.firstIndex.
 	}
 
@@ -320,7 +325,7 @@ class OrderedCollection(SequenceableCollection)
 
 	method capacity
 	{
-		^self.buffer size 
+		^self.buffer size.
 	}
 
 	method at: index
@@ -356,16 +361,40 @@ class OrderedCollection(SequenceableCollection)
 	{
 		if (self.firstIndex == 0) { self growBy: 8 shiftBy: 8 }.
 		self.firstIndex := self.firstIndex - 1.
-		^self.buffer at: self.firstIndex put: obj.
+		self.buffer at: self.firstIndex put: obj.
+		^obj.
 	}
 
 	method addLast: obj
 	{
-		| k |
 		if (self.lastIndex == self.buffer size) { self growBy: 8 shiftBy: 0 }.
-		k := self.buffer at: self.lastIndex put: obj.
+		self.buffer at: self.lastIndex put: obj.
 		self.lastIndex := self.lastIndex + 1.
-		^k.
+		^obj.
+	}
+
+	method addAllFirst: coll
+	{
+		| coll_to_add |
+		coll_to_add := if (self == coll) { coll shallowCopy } else { coll }.
+		self ensureHeadRoom: (coll_to_add size).
+		coll_to_add reverseDo: [:obj | 
+			self.firstIndex := self.firstIndex - 1.
+			self.buffer at: self.firstIndex put: obj.
+		].
+		^coll_to_add.
+	}
+
+	method addAllLast: coll
+	{
+		| coll_to_add |
+		coll_to_add := if (self == coll) { coll shallowCopy } else { coll }.
+		self ensureTailRoom: (coll_to_add size).
+		coll_to_add do: [:obj |
+			self.buffer at: self.lastIndex put: obj.
+			self.lastIndex := self.lastIndex + 1.
+		].
+		^coll_to_add
 	}
 
 	method add: obj beforeIndex: index
@@ -373,11 +402,6 @@ class OrderedCollection(SequenceableCollection)
 		self insert: obj beforeIndex: index.
 		^obj
 	}
-
-	method add: obj afterIndex: index
-	{
-	}
-	
 
 	method removeFirst
 	{
@@ -403,7 +427,7 @@ class OrderedCollection(SequenceableCollection)
 	method removeFirst: count
 	{
 		| r i |
-		if (count > self size) { Exception signal: 'not sufficient elements to remove' }.
+		if (count > self size or: [count < 0]) { Exception signal: 'removal count too big/small' }.
 		r := Array new: count.
 		i := 0.
 		while (i < count)
@@ -419,7 +443,7 @@ class OrderedCollection(SequenceableCollection)
 	method removeLast: count
 	{
 		| r i li |
-		if (count > self size) { Exception signal: 'not sufficient elements to remove' }.
+		if (count > self size or: [count < 0]) { Exception signal: 'removal count too big/small' }.
 		r := Array new: count.
 		i := 0.
 		while (i < count)
@@ -475,6 +499,29 @@ class OrderedCollection(SequenceableCollection)
 		}.
 	}
 
+	method reverseDo: block
+	{
+		| i |
+		i := self.lastIndex.
+		while (i > self.firstIndex)
+		{
+			i := i - 1.
+			block value: (self.buffer at: i).
+		}.
+
+	}
+
+	method keysAndValuesDo: block
+	{
+		| i |
+		i := self.firstIndex.
+		while (i < self.lastIndex)
+		{
+			block value: (i - self.firstIndex) value: (self.buffer at: i).
+			i := i + 1.
+		}.
+	}
+
 	## ------------------------------------------------
 	## PRIVATE METHODS
 	## ------------------------------------------------
@@ -490,7 +537,28 @@ class OrderedCollection(SequenceableCollection)
 		self.lastIndex := self.lastIndex + shift_count.
 	}
 
-	method insert: obj before: index
+	method ensureHeadRoom: size
+	{
+		| grow_size |
+		if (self.firstIndex < size)
+		{
+			grow_size := size - self.firstIndex + 8.
+			self growBy: grow_size shiftBy: grow_size.
+		}
+	}
+
+	method ensureTailRoom: size
+	{
+		| tmp |
+		tmp := (self.buffer size) - self.lastIndex. ## remaining capacity
+		if (tmp < size)
+		{
+			tmp := size - tmp + 8.  ## grow by this
+			self growBy: tmp shiftBy: 0.
+		}
+	}
+
+	method insert: obj beforeIndex: index
 	{
 		## internal use only - index must be between 0 and self size inclusive
 
