@@ -1,5 +1,9 @@
 language: c
 sudo: false
-before_scirpt: cd moo
+
+compiler:
+	- gcc
+	- clang
+
 script:
-	- ./configure && make
+	- cd moo && ./configure && make
