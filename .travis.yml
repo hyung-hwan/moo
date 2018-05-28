@@ -6,4 +6,4 @@ compiler:
   - clang
 
 script:
-  - cd moo && ./configure && make
+  - touch --date="`date`" moo/* moo/*/* && cd moo && ./configure && make
