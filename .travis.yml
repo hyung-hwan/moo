@@ -1,0 +1,3 @@
+before_scirpt: cd moo
+script:
+	./configure && make && make install
