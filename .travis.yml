@@ -3,7 +3,6 @@ sudo: false
 
 os:
   - linux
-  - osx
 
 compiler:
   - gcc
@@ -15,6 +14,7 @@ env:
 matrix:
   include:
     - os: osx
+      compiler: clang
       env: OPTIONS="--enable-static --disable-shared --enable-dynamic-module --enable-static-module --enable-unicode=yes:2 --disable-mod-x11 --disable-mod-ffi"
 
 script:
