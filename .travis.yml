@@ -14,8 +14,8 @@ env:
   
 matrix:
   include:
-    - compiler: clang
-      os: osx
+    - os: osx
       env: OPTIONS="--enable-static --disable-shared --enable-dynamic-module --enable-static-module --enable-unicode=yes:2 --disable-mod-x11 --disable-mod-ffi"
+
 script:
   - touch -r moo/configure moo/* moo/*/* && cd moo && ./configure $OPTIONS && make
