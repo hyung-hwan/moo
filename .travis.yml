@@ -10,7 +10,7 @@ compiler:
 
 env: 
   - OPTIONS="--enable-static --disable-shared --enable-dynamic-module --enable-static-module --enable-unicode=yes:2"
-  
+
 matrix:
   include:
     - os: osx
