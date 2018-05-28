@@ -1,3 +1,5 @@
+language: c
+sudo: false
 before_scirpt: cd moo
 script:
-	./configure && make && make install
+	- ./configure && make
