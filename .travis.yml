@@ -1,9 +1,30 @@
 language: c
 sudo: false
 
-compiler:
-  - gcc
-  - clang
-
+matrix:
+  include:
+    - compiler: gcc
+      os: linux
+      env: OPTIONS="--enable-static --disable-shared --enable-dynamic-module --disable-static-module --enable-unicode=yes:2"
+  include:
+    - compiler: gcc
+      os: linux
+      env: OPTIONS="--enable-static --disable-shared --enable-dynamic-module --enable-static-module --enable-unicode=yes:2"
+  include:
+    - compiler: clang
+      os: linux
+      env: OPTIONS="--enable-static --disable-shared --enable-dynamic-module --disable-static-module --enable-unicode=yes:2"
+  include:
+    - compiler: clang
+      os: linux
+      env: OPTIONS="--enable-static --disable-shared --enable-dynamic-module --enable-static-module --enable-unicode=yes:2"
+  include:
+    - compiler: clang
+      os: osx
+      env: OPTIONS="--enable-static --disable-shared --enable-dynamic-module --disable-static-module --enable-unicode=yes:2"
+  include:
+    - compiler: clang
+      os: osx
+      env: OPTIONS="--enable-static --disable-shared --enable-dynamic-module --enable-static-module --enable-unicode=yes:2"
 script:
-  - touch --date="`date`" moo/* moo/*/* && cd moo && ./configure && make
+  - touch --date="`date`" moo/* moo/*/* && cd moo && ./configure $OPTIONS && make
