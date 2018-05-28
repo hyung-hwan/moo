@@ -311,9 +311,13 @@ int moo_ucwidth (moo_uch_t uc)
 		    (uc >= 0xfe10 && uc <= 0xfe19) || /* Vertical forms */
 		    (uc >= 0xfe30 && uc <= 0xfe6f) || /* CJK Compatibility Forms */
 		    (uc >= 0xff00 && uc <= 0xff60) || /* Fullwidth Forms */
-		    (uc >= 0xffe0 && uc <= 0xffe6) ||
+		    (uc >= 0xffe0 && uc <= 0xffe6)
+		#if (MOO_SIZEOF_UCH_T  > 2)
+		    || 
 		    (uc >= 0x20000 && uc <= 0x2fffd) ||
-		    (uc >= 0x30000 && uc <= 0x3fffd))
+		    (uc >= 0x30000 && uc <= 0x3fffd)
+		#endif
+		   )
 		{
 			return 2;
 		}

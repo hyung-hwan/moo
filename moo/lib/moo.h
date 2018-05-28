@@ -240,10 +240,10 @@ typedef enum moo_method_type_t moo_method_type_t;
 #define MOO_OOP_IS_SMOOI(oop) (MOO_OOP_GET_TAG_LO(oop) == MOO_OOP_TAG_SMOOI)
 #define MOO_OOP_IS_SMPTR(oop) (MOO_OOP_GET_TAG_LO(oop) == MOO_OOP_TAG_SMPTR)
 
-#define MOO_SMOOI_TO_OOP(num) ((moo_oop_t)((((moo_ooi_t)(num)) << MOO_OOP_TAG_BITS_LO) | MOO_OOP_TAG_SMOOI))
+#define MOO_SMOOI_TO_OOP(num) ((moo_oop_t)((((moo_oow_t)(moo_ooi_t)(num)) << MOO_OOP_TAG_BITS_LO) | MOO_OOP_TAG_SMOOI))
 #define MOO_OOP_TO_SMOOI(oop) (((moo_ooi_t)oop) >> MOO_OOP_TAG_BITS_LO)
 /*
-#define MOO_SMPTR_TO_OOP(num) ((moo_oop_t)((((moo_ooi_t)(num)) << MOO_OOP_TAG_BITS_LO) | MOO_OOP_TAG_SMPTR))
+#define MOO_SMPTR_TO_OOP(ptr) ((moo_oop_t)((((moo_oow_t)(ptr)) << MOO_OOP_TAG_BITS_LO) | MOO_OOP_TAG_SMPTR))
 #define MOO_OOP_TO_SMPTR(oop) (((moo_ooi_t)oop) >> MOO_OOP_TAG_BITS_LO)
 */
 #define MOO_SMPTR_TO_OOP(ptr) ((moo_oop_t)(((moo_oow_t)ptr) | MOO_OOP_TAG_SMPTR))
