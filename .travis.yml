@@ -1,27 +1,18 @@
 language: c
 sudo: false
 
+os:
+  - linux
+  - osx
+
+compiler:
+  - gcc
+  - clang
+
+env: 
+  - OPTIONS="--enable-static --disable-shared --enable-dynamic-module --enable-static-module --enable-unicode=yes:2"
+  
 matrix:
-  include:
-    - compiler: gcc
-      os: linux
-      env: OPTIONS="--enable-static --disable-shared --enable-dynamic-module --disable-static-module --enable-unicode=yes:2"
-  include:
-    - compiler: gcc
-      os: linux
-      env: OPTIONS="--enable-static --disable-shared --enable-dynamic-module --enable-static-module --enable-unicode=yes:2"
-  include:
-    - compiler: clang
-      os: linux
-      env: OPTIONS="--enable-static --disable-shared --enable-dynamic-module --disable-static-module --enable-unicode=yes:2"
-  include:
-    - compiler: clang
-      os: linux
-      env: OPTIONS="--enable-static --disable-shared --enable-dynamic-module --enable-static-module --enable-unicode=yes:2"
-  include:
-    - compiler: clang
-      os: osx
-      env: OPTIONS="--enable-static --disable-shared --enable-dynamic-module --disable-static-module --enable-unicode=yes:2 --disable-mod-x11 --disable-mod-ffi"
   include:
     - compiler: clang
       os: osx
