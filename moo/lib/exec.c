@@ -3630,7 +3630,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 
 #if defined(MOO_DEBUG_VM_EXEC)
 	/* set it to a fake value */
-	moo->last_instruction_pointer = 0; 
+	moo->last_inst_pointer = 0; 
 #endif
 
 	preamble = MOO_OOP_TO_SMOOI(method->preamble);
@@ -3765,7 +3765,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			stack_base = moo->sp - nargs - 1; /* stack base before receiver and arguments */
 
 			pfnum = MOO_METHOD_GET_PREAMBLE_INDEX(preamble);
-			LOG_INST1 (moo, "preamble_primitive %zd", pf_no);
+			LOG_INST1 (moo, "preamble_primitive %zd", pfnum);
 
 			if (pfnum >= 0 && pfnum < MOO_COUNTOF(pftab))
 			{

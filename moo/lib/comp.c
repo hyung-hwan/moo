@@ -105,6 +105,7 @@ static struct voca_t
 	moo_oow_t len;
 	moo_ooch_t str[11];
 } vocas[] = {
+	{  3, { 'a','n','d'                                                   } },
 	{  5, { 'b','r','e','a','k'                                           } },
 	{  5, { '#','b','y','t','e'                                           } },
 	{ 10, { '#','c','h','a','r','a','c','t','e','r'                       } },
@@ -137,6 +138,7 @@ static struct voca_t
 	{  3, { 'n','i','l'                                                   } },
 	{  3, { 'o','f','f'                                                   } },
 	{  2, { 'o','n'                                                       } },
+	{  2, { 'o','r'                                                       } },
 	{  8, { '#','p','o','i','n','t','e','r'                               } },
 	{  7, { 'p','o','o','l','d','i','c'                                   } },
 	{  8, { '#','p','o','o','l','d','i','c'                               } },
@@ -169,6 +171,7 @@ static struct voca_t
 
 enum voca_id_t
 {
+	VOCA_AND,
 	VOCA_BREAK,
 	VOCA_BYTE_S,
 	VOCA_CHARACTER_S,
@@ -201,6 +204,7 @@ enum voca_id_t
 	VOCA_NIL,
 	VOCA_OFF,
 	VOCA_ON,
+	VOCA_OR,
 	VOCA_POINTER_S,
 	VOCA_POOLDIC,
 	VOCA_POOLDIC_S,
@@ -1227,6 +1231,14 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		else if (is_token_word(moo, VOCA_CONTINUE))
 		{
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_CONTINUE);
+		}
+		else if (is_token_word(moo, VOCA_AND))
+		{
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_AND);
+		}
+		else if (is_token_word(moo, VOCA_OR))
+		{
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_OR);
 		}
 	}
 
@@ -2621,7 +2633,6 @@ static void eliminate_instructions (moo_t* moo, moo_oow_t start, moo_oow_t end)
 
 	last = moo->c->mth.code.len - 1;
 
-	
 	if (end >= last)
 	{
 		/* eliminate all instructions starting from the start index.
@@ -5494,9 +5505,17 @@ static int compile_basic_expression (moo_t* moo, const moo_oocs_t* ident, const 
 	/*
 	 * basic-expression := expression-primary message-expression?
 	 */
+	moo_oow_pool_t jumptoend;
+	moo_oow_pool_chunk_t* jumptoend_chunk;
+	moo_ioloc_t expr_loc;
+	moo_oow_t i, j;
 	int to_super;
 
-	if (compile_expression_primary(moo, ident, ident_loc, ident_dotted, &to_super) <= -1) return -1;
+	expr_loc = *TOKEN_LOC(moo);
+	init_oow_pool (moo, &jumptoend);
+
+start_over:
+	if (compile_expression_primary(moo, ident, ident_loc, ident_dotted, &to_super) <= -1) goto oops;
 
 #if 0
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_EOF && 
@@ -5504,18 +5523,54 @@ static int compile_basic_expression (moo_t* moo, const moo_oocs_t* ident, const 
 	    TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD &&
 	    TOKEN_TYPE(moo) != MOO_IOTOK_SEMICOLON)
 	{
-		if (compile_message_expression(moo, to_super) <= -1) return -1;
+		if (compile_message_expression(moo, to_super) <= -1) goto oops;
 	}
 #else
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT ||
 	    TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL ||
 	    TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD)
 	{
-		if (compile_message_expression(moo, to_super) <= -1) return -1;
+		if (compile_message_expression(moo, to_super) <= -1) goto oops;
 	}
 #endif
 
+
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_AND)
+ 	{
+		if (add_to_oow_pool(moo, &jumptoend, moo->c->mth.code.len) <= -1 ||
+ 		    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_IF_FALSE, MAX_CODE_JUMP) <= -1 ||
+		    emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) goto oops;
+		GET_TOKEN (moo);
+		goto start_over;
+ 	}
+ 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_OR)
+	{
+		if (add_to_oow_pool(moo, &jumptoend, moo->c->mth.code.len) <= -1 ||
+ 		    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_IF_TRUE, MAX_CODE_JUMP) <= -1 ||
+		    emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) goto oops;
+		GET_TOKEN (moo);
+		goto start_over;
+	}
+
+	/* patch instructions that jumps to the end of if expression */
+	for (jumptoend_chunk = jumptoend.head, i = 0; jumptoend_chunk; jumptoend_chunk = jumptoend_chunk->next)
+	{
+		/* pass expr_loc to every call to patch_long_forward_jump_instruction().
+		 * it's harmless because if the first call doesn't flood, the subseqent 
+		 * call will never flood either. */
+		for (j = 0; j < MOO_COUNTOF(jumptoend.static_chunk.buf) && i < jumptoend.count; j++)
+		{
+			if (patch_long_forward_jump_instruction (moo, jumptoend_chunk->buf[j], moo->c->mth.code.len, &expr_loc) <= -1) goto oops;
+			i++;
+		}
+	}
+
+	fini_oow_pool (moo, &jumptoend);
 	return 0;
+
+oops:
+	fini_oow_pool (moo, &jumptoend);
+	return -1;
 }
 
 static int compile_braced_block (moo_t* moo)

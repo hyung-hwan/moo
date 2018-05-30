@@ -314,7 +314,7 @@ class OrderedCollection(SequenceableCollection)
 	method initWithCapacity: capacity
 	{
 		self.buffer := Array new: capacity.
-		self.firstIndex := capacity div: 2.
+		self.firstIndex := capacity bitShift: -1.
 		self.lastIndex := self.firstIndex.
 	}
 
@@ -359,7 +359,7 @@ class OrderedCollection(SequenceableCollection)
 
 	method addFirst: obj
 	{
-		if (self.firstIndex == 0) { self growBy: 8 shiftBy: 8 }.
+		if (self.firstIndex == 0) { self __grow_and_shift(8, 8) }.
 		self.firstIndex := self.firstIndex - 1.
 		self.buffer at: self.firstIndex put: obj.
 		^obj.
@@ -367,7 +367,7 @@ class OrderedCollection(SequenceableCollection)
 
 	method addLast: obj
 	{
-		if (self.lastIndex == self.buffer size) { self growBy: 8 shiftBy: 0 }.
+		if (self.lastIndex == self.buffer size) { self __grow_and_shift(8, 0) }.
 		self.buffer at: self.lastIndex put: obj.
 		self.lastIndex := self.lastIndex + 1.
 		^obj.
@@ -377,7 +377,7 @@ class OrderedCollection(SequenceableCollection)
 	{
 		| coll_to_add |
 		coll_to_add := if (self == coll) { coll shallowCopy } else { coll }.
-		self ensureHeadRoom: (coll_to_add size).
+		self __ensure_head_room(coll_to_add size).
 		coll_to_add reverseDo: [:obj | 
 			self.firstIndex := self.firstIndex - 1.
 			self.buffer at: self.firstIndex put: obj.
@@ -389,7 +389,7 @@ class OrderedCollection(SequenceableCollection)
 	{
 		| coll_to_add |
 		coll_to_add := if (self == coll) { coll shallowCopy } else { coll }.
-		self ensureTailRoom: (coll_to_add size).
+		self __ensure_tail_room(coll_to_add size).
 		coll_to_add do: [:obj |
 			self.buffer at: self.lastIndex put: obj.
 			self.lastIndex := self.lastIndex + 1.
@@ -399,8 +399,14 @@ class OrderedCollection(SequenceableCollection)
 
 	method add: obj beforeIndex: index
 	{
-		self insert: obj beforeIndex: index.
-		^obj
+		self __insert_before_index(obj, index).
+		^obj.
+	}
+
+	method add: obj afterIndex: index
+	{
+		self __insert_before_index(obj, index + 1).
+		^obj.
 	}
 
 	method removeFirst
@@ -462,7 +468,7 @@ class OrderedCollection(SequenceableCollection)
 		## remove the element at the given position.
 		| obj |
 		obj := self at: index. ## the range is checed by the at: method.
-		self removeIndex:  index + self.firstIndex.
+		self __remove_Index(index + self.firstIndex).
 		^obj
 	}
 
@@ -477,7 +483,7 @@ class OrderedCollection(SequenceableCollection)
 		while (i < self.lastIndex)
 		{
 			cand := self.buffer at: i.
-			if (obj = cand) { self removeIndex: i. ^cand }.
+			if (obj = cand) { self __remove_index(i). ^cand }.
 			i := i + 1.
 		}.
 		^error_block value.
@@ -525,7 +531,7 @@ class OrderedCollection(SequenceableCollection)
 	## ------------------------------------------------
 	## PRIVATE METHODS
 	## ------------------------------------------------
-	method growBy: grow_size shiftBy: shift_count
+	method __grow_and_shift(grow_size, shift_count)
 	{
 		| newcon |
 		newcon := (self.buffer class) new: (self.buffer size + grow_size).
@@ -537,46 +543,71 @@ class OrderedCollection(SequenceableCollection)
 		self.lastIndex := self.lastIndex + shift_count.
 	}
 
-	method ensureHeadRoom: size
+	method __ensure_head_room(size)
 	{
 		| grow_size |
 		if (self.firstIndex < size)
 		{
 			grow_size := size - self.firstIndex + 8.
-			self growBy: grow_size shiftBy: grow_size.
+			self __grow_and_shift(grow_size, grow_size).
 		}
 	}
 
-	method ensureTailRoom: size
+	method __ensure_tail_room(size)
 	{
 		| tmp |
 		tmp := (self.buffer size) - self.lastIndex. ## remaining capacity
 		if (tmp < size)
 		{
-			tmp := size - tmp + 8.  ## grow by this
-			self growBy: tmp shiftBy: 0.
+			tmp := size - tmp + 8.  ## grow by this amount
+			self __grow_and_shift(tmp, 0).
 		}
 	}
 
-	method insert: obj beforeIndex: index
+	method __insert_before_index(obj, index)
 	{
-		## internal use only - index must be between 0 and self size inclusive
+		| i start pos cursize reqsize |
 
-		| i start |
-		if (self size == self.buffer size) { self growBy: 8 shiftBy: 8 }.
-		start := self.firstIndex + index.
-		i := self.lastIndex.
-		while (i > start)
+		if (index <= 0)
 		{
-			self.buffer at: i put: (self.buffer at: i - 1).
-			i := i - 1.
+			## treat a negative index as the indicator to 
+			## grow space in the front side.
+			reqsize := index * -1 + 1.
+			if (reqsize >= self.firstIndex) { self __ensure_head_room(reqsize) }.
+			self.firstIndex := self.firstIndex + index - 1.
+			self.buffer at: self.firstIndex put: obj.
+		}
+		else
+		{
+			cursize := self size.
+			if (self.firstIndex > 0 and: [index <= (cursize bitShift: -1)])
+			{
+				start := self.firstIndex - 1.
+				self.buffer replaceFrom: start to: (start + index - 1) with: self.buffer startingAt: self.firstIndex.
+				self.buffer at: (start + index)  put: obj.
+				self.firstIndex := start.
+			}
+			else
+			{
+				reqsize := if (index > cursize) { index - cursize } else { 1 }.
+				if (reqsize < 8) { reqsize := 8 }.
+				self __grow_and_shift(reqsize + 8, 0).
+
+				start := self.firstIndex + index.
+				i := self.lastIndex.
+				while (i > start)
+				{
+					self.buffer at: i put: (self.buffer at: i - 1).
+					i := i - 1.
+				}.
+				pos := index + self.firstIndex.
+				self.lastIndex := if (pos > self.lastIndex) { pos + 1 } else { self.lastIndex + 1 }.
+				self.buffer at: pos put: obj.
+			}.
 		}.
-		self.lastIndex := self.lastIndex + 1.
-		self.buffer at: index + self.firstIndex put: obj.
-		^obj
 	}
 
-	method removeIndex: index
+	method __remove_index(index)
 	{
 		## remove an element at the given index from the internal buffer's
 		## angle. as it is for internal use only, no check is performed
