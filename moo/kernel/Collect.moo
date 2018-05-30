@@ -332,7 +332,7 @@ class OrderedCollection(SequenceableCollection)
 	{
 		| i |
 		i := index + self.firstIndex.
-		if (i >= self.firstIndex and: [i < self.lastIndex]) { ^self.buffer at: index }.
+		if ((i >= self.firstIndex) and (i < self.lastIndex)) { ^self.buffer at: index }.
 		Exception signal: ('index ' & index asString & ' out of range').
 	}
 
@@ -341,7 +341,7 @@ class OrderedCollection(SequenceableCollection)
 		## replace an existing element. it doesn't grow the buffer.
 		| i |
 		i := index + self.firstIndex.
-		if (i >= self.firstIndex and: [i < self.lastIndex]) { ^self.buffer at: index put: obj }.
+		if ((i >= self.firstIndex) and (i < self.lastIndex)) { ^self.buffer at: index put: obj }.
 		Exception signal: ('index ' & index asString & ' out of range').
 	}
 
@@ -433,7 +433,7 @@ class OrderedCollection(SequenceableCollection)
 	method removeFirst: count
 	{
 		| r i |
-		if (count > self size or: [count < 0]) { Exception signal: 'removal count too big/small' }.
+		if ((count > self size) or (count < 0)) { Exception signal: 'removal count too big/small' }.
 		r := Array new: count.
 		i := 0.
 		while (i < count)
@@ -449,7 +449,7 @@ class OrderedCollection(SequenceableCollection)
 	method removeLast: count
 	{
 		| r i li |
-		if (count > self size or: [count < 0]) { Exception signal: 'removal count too big/small' }.
+		if ((count > self size) or (count < 0)) { Exception signal: 'removal count too big/small' }.
 		r := Array new: count.
 		i := 0.
 		while (i < count)
@@ -468,7 +468,7 @@ class OrderedCollection(SequenceableCollection)
 		## remove the element at the given position.
 		| obj |
 		obj := self at: index. ## the range is checed by the at: method.
-		self __remove_Index(index + self.firstIndex).
+		self __remove_index(index + self.firstIndex).
 		^obj
 	}
 
@@ -580,7 +580,7 @@ class OrderedCollection(SequenceableCollection)
 		else
 		{
 			cursize := self size.
-			if (self.firstIndex > 0 and: [index <= (cursize bitShift: -1)])
+			if ((self.firstIndex > 0) and (index <= (cursize bitShift: -1)))
 			{
 				start := self.firstIndex - 1.
 				self.buffer replaceFrom: start to: (start + index - 1) with: self.buffer startingAt: self.firstIndex.
@@ -778,7 +778,7 @@ class Set(Collection)
 	{
 		| ass |
 		ass := self __find: key or_upsert: false with: nil.
-		^ass key = key and: [ass value = value]
+		^(ass key = key) and (ass value = value)
 	}
 
 	method __find_index: key
@@ -818,7 +818,7 @@ class Set(Collection)
 			z := (ass key hash) rem: bs.
 
 			(* move an element if necessary *)
-			if ((y > x and: [(z <= x) or: [z > y]]) or: [(y < x) and: [(z <= x) and: [z > y]]])
+			if (((y > x) and ((z <= x) or (z > y))) or ((y < x) and ((z <= x) and (z > y))))
 			{
 				self.bucket at: x put: (self.bucket at: y).
 				x := y.

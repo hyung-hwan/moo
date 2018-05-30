@@ -164,7 +164,7 @@ class MyObject(Object)
 		0 to: c do: [:i |
 			| ch |
 			ch := s at: i.
-			if (ch == $\ or: [ch == $"]) 
+			if ((ch == $\) or (ch == $")) 
 			{
 				f putc($', $\, (s at: i), $').
 			}

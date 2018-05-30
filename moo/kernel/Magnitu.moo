@@ -7,17 +7,20 @@ class Magnitude(Object)
     
 	method between: min and: max 
 	{
-		^self >= min and: [self <= max]
+		^self >= min and self <= max
 	}
 
 	method min: aMagnitude
 	{
-		^self < aMagnitude ifTrue: [self] ifFalse: [aMagnitude]
+		##^self < aMagnitude ifTrue: [self] ifFalse: [aMagnitude]
+		^if (self < aMagnitude) { self } else { aMagnitude }.
 	}
 
 	method max: aMagnitude
 	{
-		^self > aMagnitude ifTrue: [self] ifFalse: [aMagnitude]
+		##^self > aMagnitude ifTrue: [self] ifFalse: [aMagnitude]
+		^if (self > aMagnitude) { self } else { aMagnitude }.
+		
 	}
 }
 
@@ -53,7 +56,7 @@ class Association(Magnitude)
 
 	method = ass
 	{
-		^(self.key = ass key) and: [ self.value = ass value ]
+		^(self.key = ass key) and (self.value = ass value)
 	}
 
 	method hash
@@ -85,15 +88,15 @@ class(#limited) Character(Magnitude)
 	{
 		##<primitive: #Character_digitValue>
 
-		if (self >= $0 and: [self <= $9])
+		if ((self >= $0) and (self <= $9))
 		{
 			^self asInteger - $0 asInteger
 		}
-		elsif (self >= $A and: [self <= $Z])
+		elsif ((self >= $A) and (self <= $Z))
 		{
 			^self asInteger - $A asInteger + 10
 		}
-		elsif (self >= $a and: [self <= $z])
+		elsif ((self >= $a) and (self <= $z))
 		{
 			^self asInteger - $a asInteger + 10
 		}.

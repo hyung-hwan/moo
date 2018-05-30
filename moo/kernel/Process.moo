@@ -395,7 +395,7 @@ class SemaphoreHeap(Object)
 			left := self leftChildIndex: cindex.
 			right := self rightChildIndex: cindex.
 
-			younger := if ((right < self.size) and: [(self.arr at: right) youngerThan: (self.arr at: left)]) { right } else { left }.
+			younger := if ((right < self.size) and ((self.arr at: right) youngerThan: (self.arr at: left))) { right } else { left }.
 
 			xitem := self.arr at: younger.
 			if (item youngerThan: xitem)  { break }.

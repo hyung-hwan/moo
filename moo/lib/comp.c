@@ -2250,8 +2250,8 @@ static int emit_single_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1
 
 		case BCODE_JUMP_FORWARD_0:
 		case BCODE_JUMP_BACKWARD_0:
-		case BCODE_JUMP_BACKWARD_IF_FALSE_0:
-		case BCODE_JUMP_BACKWARD_IF_TRUE_0:
+		case BCODE_JUMPOP_BACKWARD_IF_FALSE_0:
+		case BCODE_JUMPOP_BACKWARD_IF_TRUE_0:
 			if (param_1 < 4)
 			{
 				/* low 2 bits to hold the parameter */
@@ -2271,11 +2271,13 @@ static int emit_single_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1
 			}
 
 		case BCODE_JUMP_BACKWARD_X:
-		case BCODE_JUMP_BACKWARD_IF_FALSE_X:
-		case BCODE_JUMP_BACKWARD_IF_TRUE_X:
+		case BCODE_JUMPOP_BACKWARD_IF_FALSE_X:
+		case BCODE_JUMPOP_BACKWARD_IF_TRUE_X:
 		case BCODE_JUMP_FORWARD_X:
-		case BCODE_JUMP_FORWARD_IF_FALSE:
 		case BCODE_JUMP_FORWARD_IF_TRUE:
+		case BCODE_JUMP_FORWARD_IF_FALSE:
+		case BCODE_JUMPOP_FORWARD_IF_FALSE:
+		case BCODE_JUMPOP_FORWARD_IF_TRUE:
 			if (param_1 > MAX_CODE_JUMP)
 			{
 				cmd = cmd + 1; /* convert to a JUMP2 instruction */
@@ -2283,11 +2285,13 @@ static int emit_single_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1
 			}
 			/* fall thru */
 		case BCODE_JUMP2_FORWARD:
-		case BCODE_JUMP2_BACKWARD:
-		case BCODE_JUMP2_BACKWARD_IF_FALSE:
-		case BCODE_JUMP2_BACKWARD_IF_TRUE:
-		case BCODE_JUMP2_FORWARD_IF_FALSE:
 		case BCODE_JUMP2_FORWARD_IF_TRUE:
+		case BCODE_JUMP2_FORWARD_IF_FALSE:
+		case BCODE_JUMP2_BACKWARD:
+		case BCODE_JUMPOP2_BACKWARD_IF_FALSE:
+		case BCODE_JUMPOP2_BACKWARD_IF_TRUE:
+		case BCODE_JUMPOP2_FORWARD_IF_FALSE:
+		case BCODE_JUMPOP2_FORWARD_IF_TRUE:
 		case BCODE_PUSH_INTLIT:
 		case BCODE_PUSH_NEGINTLIT:
 		case BCODE_PUSH_CHARLIT:
@@ -2441,8 +2445,8 @@ static MOO_INLINE int emit_backward_jump_instruction (moo_t* moo, int cmd, moo_o
 	moo_oow_t adj;
 
 	MOO_ASSERT (moo, cmd == BCODE_JUMP_BACKWARD_0 ||
-	                 cmd == BCODE_JUMP_BACKWARD_IF_FALSE_0 ||
-	                 cmd == BCODE_JUMP_BACKWARD_IF_TRUE_0);
+	                 cmd == BCODE_JUMPOP_BACKWARD_IF_FALSE_0 ||
+	                 cmd == BCODE_JUMPOP_BACKWARD_IF_TRUE_0);
 	
 	/* the short BCODE_JUMP_BACKWARD instructions use low 2 bits to encode 
 	 * the jump offset. so it can encode 0, 1, 2, 3. the instruction itself 
@@ -2475,7 +2479,9 @@ static int patch_long_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_o
 
 	MOO_ASSERT (moo, moo->c->mth.code.ptr[jip] == BCODE_JUMP_FORWARD_X ||
 	                 moo->c->mth.code.ptr[jip] == BCODE_JUMP_FORWARD_IF_FALSE ||
-	                 moo->c->mth.code.ptr[jip] == BCODE_JUMP_FORWARD_IF_TRUE);
+	                 moo->c->mth.code.ptr[jip] == BCODE_JUMP_FORWARD_IF_TRUE ||
+	                 moo->c->mth.code.ptr[jip] == BCODE_JUMPOP_FORWARD_IF_FALSE ||
+	                 moo->c->mth.code.ptr[jip] == BCODE_JUMPOP_FORWARD_IF_TRUE);
 
 	if (code_size > MAX_CODE_JUMP)
 	{
@@ -5534,23 +5540,16 @@ start_over:
 	}
 #endif
 
-
-	if (TOKEN_TYPE(moo) == MOO_IOTOK_AND)
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_AND || TOKEN_TYPE(moo) == MOO_IOTOK_OR)
  	{
+		int bcode;
+		bcode = (TOKEN_TYPE(moo) == MOO_IOTOK_AND)? BCODE_JUMP_FORWARD_IF_FALSE: BCODE_JUMP_FORWARD_IF_TRUE;
+		/* TODO: optimization if the expression is a known constant that can be determined to be boolean */
 		if (add_to_oow_pool(moo, &jumptoend, moo->c->mth.code.len) <= -1 ||
- 		    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_IF_FALSE, MAX_CODE_JUMP) <= -1 ||
-		    emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) goto oops;
+ 		    emit_single_param_instruction(moo, bcode, MAX_CODE_JUMP) <= -1) goto oops;
 		GET_TOKEN (moo);
 		goto start_over;
  	}
- 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_OR)
-	{
-		if (add_to_oow_pool(moo, &jumptoend, moo->c->mth.code.len) <= -1 ||
- 		    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_IF_TRUE, MAX_CODE_JUMP) <= -1 ||
-		    emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) goto oops;
-		GET_TOKEN (moo);
-		goto start_over;
-	}
 
 	/* patch instructions that jumps to the end of if expression */
 	for (jumptoend_chunk = jumptoend.head, i = 0; jumptoend_chunk; jumptoend_chunk = jumptoend_chunk->next)
@@ -5694,11 +5693,11 @@ static int compile_if_expression (moo_t* moo)
 		}
 		else
 		{
-			/* remember position of the jump_forward_if_false instruction to be generated */
+			/* remember position of the jumpop_forward_if_false instruction to be generated */
 			jumptonext = moo->c->mth.code.len; 
-			/* BCODE_JUMP_FORWARD_IF_FALSE is always a long jump instruction.
+			/* BCODE_JUMPOP_FORWARD_IF_FALSE is always a long jump instruction.
 			 * just specify MAX_CODE_JUMP for consistency with short jump variants */
-			if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_IF_FALSE, MAX_CODE_JUMP) <= -1) goto oops;
+			if (emit_single_param_instruction (moo, BCODE_JUMPOP_FORWARD_IF_FALSE, MAX_CODE_JUMP) <= -1) goto oops;
 		}
 
 		GET_TOKEN (moo); /* get { */
@@ -5827,9 +5826,9 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 
 	if (cond_style != 1)
 	{
-		/* BCODE_JUMP_FORWARD_IF_FALSE is always a long jump instruction.
+		/* BCODE_JUMPOP_FORWARD_IF_FALSE is always a long jump instruction.
 		 * just specify MAX_CODE_JUMP for consistency with short jump variants */
-		if (emit_single_param_instruction (moo, (is_until_loop? BCODE_JUMP_FORWARD_IF_TRUE: BCODE_JUMP_FORWARD_IF_FALSE), MAX_CODE_JUMP) <= -1) goto oops;
+		if (emit_single_param_instruction (moo, (is_until_loop? BCODE_JUMPOP_FORWARD_IF_TRUE: BCODE_JUMPOP_FORWARD_IF_FALSE), MAX_CODE_JUMP) <= -1) goto oops;
 	}
 
 	/* remember information about this while loop. */
@@ -5954,7 +5953,7 @@ static int compile_do_while_expression (moo_t* moo)
 
 	if (compile_conditional (moo) <= -1) goto oops;
 	postcondpos = moo->c->mth.code.len;
-	jbinst = (is_until_loop? BCODE_JUMP_BACKWARD_IF_FALSE_0: BCODE_JUMP_BACKWARD_IF_TRUE_0);
+	jbinst = (is_until_loop? BCODE_JUMPOP_BACKWARD_IF_FALSE_0: BCODE_JUMPOP_BACKWARD_IF_TRUE_0);
 	if (precondpos + 1 == postcondpos)
 	{
 		/* simple optimization - 

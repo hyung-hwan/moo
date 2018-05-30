@@ -54,13 +54,13 @@ class(#byte(4)) IP4Address(IPAddress)
 			c := str at: pos.
 			pos := pos + 1.
 
-			if (c >= $0 and: [c <= $9])
+			if ((c >= $0) and (c <= $9))
 			{
 				acc := acc * 10 + (c asInteger - $0 asInteger).
 				if (acc > 255) { Exception signal: ('invalid IPv4 address B ' & str). }.
 				digits := digits + 1.
 			}
-			elsif (c = $.)
+			elsif (c == $.)
 			{
 				if (dots >= 3 or: [digits == 0]) { ^Error.Code.EINVAL }.
 				self basicAt: (dots + address_offset) put: acc.
@@ -113,7 +113,7 @@ class(#byte(16)) IP6Address(IP4Address)
 		mysize := self basicSize.
 
 		## handle leading :: specially 
-		if (size > 0 and: [(str at: pos) == $:])
+		if ((size > 0) and ((str at: pos) == $:))
 		{
 			pos := pos + 1.
 			if (pos >= size or: [ (str at: pos) ~~ $:]) { ^Error.Code.EINVAL }.
@@ -131,7 +131,7 @@ class(#byte(16)) IP6Address(IP4Address)
 			pos := pos + 1.
 
 			v1 := ch digitValue.
-			if (v1 >= 0 and: [v1 <= 15])
+			if ((v1 >= 0) and (v1 <= 15))
 			{
 				val := (val bitShift: 4) bitOr: v1.
 				if (val > 16rFFFF) { ^Error.Code.EINVAL }.
@@ -168,7 +168,7 @@ class(#byte(16)) IP6Address(IP4Address)
 				continue.
 			}.
 
-			if (ch == $. and: [tgpos + 4 <= mysize])
+			if ((ch == $.) and (tgpos + 4 <= mysize))
 			{
 				##if ((super __fromString: (str copyFrom: curseg) offset:0  offset: tgpos) isError) { ^Error.Code.EINVAL }.
 				if ((super __fromString: str offset: curseg offset: tgpos) isError) { ^Error.Code.EINVAL }.

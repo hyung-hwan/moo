@@ -51,7 +51,8 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 		while (exctx notNil)
 		{
 			exblk := exctx findExceptionHandlerFor: (self class).
-			if (exblk notNil and: [actpos := exctx basicSize - 1. exctx basicAt: actpos])
+			##if (exblk notNil and: [actpos := exctx basicSize - 1. exctx basicAt: actpos])
+			if ((exblk notNil) and (exctx basicAt: (actpos := exctx basicSize - 1)))
 			{
 				self.handlerContext := exctx.
 				exctx basicAt: actpos put: false.
@@ -119,7 +120,7 @@ System logNl: '== END OF BACKTRACE =='.
 ## TODO: verify if return:to: causes unnecessary stack growth.
 ## is this correct???
 		| ctx |
-		if (self.signalContext notNil and: [self.handlerContext notNil])
+		if ((self.signalContext notNil) and (self.handlerContext notNil))
 		{
 			ctx := self.signalContext sender.
 			self.signalContext := nil.
@@ -272,7 +273,7 @@ extend MethodContext
 			while (i < size)
 			{
 				exc := self basicAt: i.
-				if ((exception_class == exc) or: [exception_class inheritsFrom: exc]) 
+				if ((exception_class == exc) or (exception_class inheritsFrom: exc)) 
 				{ 
 					^self basicAt: (i + 1).
 				}.
@@ -301,7 +302,7 @@ extend MethodContext
 		actpos := (self basicSize) - 1. 
 
 		excblk := self findExceptionHandlerFor: (exception class).
-		if (excblk isNil or: [(self basicAt: actpos) not])
+		if ((excblk isNil) or ((self basicAt: actpos) not))
 		{
 			## self is an exception context but doesn't have a matching
 			## exception handler or the exception context is already
