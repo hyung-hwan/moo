@@ -162,7 +162,7 @@ class(#pointer) Array(SequenceableCollection)
 
 	method replaceFrom: start to: stop with: replacement
 	{
-		self replaceFrom: start to: stop with: replacement startingAt: 0.
+		^self replaceFrom: start to: stop with: replacement startingAt: 0.
 	}
 
 	method replaceFrom: start to: stop with: replacement startingAt: rstart
@@ -175,6 +175,16 @@ class(#pointer) Array(SequenceableCollection)
 			self at: i put: (replacement at: i + offset).
 			i := i + 1.
 		}.
+	}
+
+	method replaceFrom: start count: count with: replacement
+	{
+		^self replaceFrom: start to: (start + count - 1) with: replacement startingAt: 0.
+	}
+
+	method replaceFrom: start count: count with: replacement startingAt: rstart
+	{
+		^self replaceFrom: start to: (start + count - 1) with: replacement startingAt: rstart
 	}
 
 	method = anArray

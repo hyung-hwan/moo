@@ -7,6 +7,7 @@
 #include 'Magnitu.moo'.
 #include 'Collect.moo'.
 #include 'Process.moo'.
+#include 'Stream.moo'.
 
 (* -------------------------------------------------------------------------- *)
 ## #include 'FFI.moo'.

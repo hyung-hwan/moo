@@ -5523,22 +5523,12 @@ static int compile_basic_expression (moo_t* moo, const moo_oocs_t* ident, const 
 start_over:
 	if (compile_expression_primary(moo, ident, ident_loc, ident_dotted, &to_super) <= -1) goto oops;
 
-#if 0
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_EOF && 
-	    TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE && 
-	    TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD &&
-	    TOKEN_TYPE(moo) != MOO_IOTOK_SEMICOLON)
-	{
-		if (compile_message_expression(moo, to_super) <= -1) goto oops;
-	}
-#else
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT ||
 	    TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL ||
 	    TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD)
 	{
 		if (compile_message_expression(moo, to_super) <= -1) goto oops;
 	}
-#endif
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_AND || TOKEN_TYPE(moo) == MOO_IOTOK_OR)
  	{
@@ -5548,6 +5538,9 @@ start_over:
 		if (add_to_oow_pool(moo, &jumptoend, moo->c->mth.code.len) <= -1 ||
  		    emit_single_param_instruction(moo, bcode, MAX_CODE_JUMP) <= -1) goto oops;
 		GET_TOKEN (moo);
+
+		ident = MOO_NULL;
+		ident_loc = MOO_NULL;
 		goto start_over;
  	}
 
@@ -6133,7 +6126,7 @@ static int compile_method_expression (moo_t* moo, int pop)
 		{
 			/* what is held in assignee is not an assignee any more.
 			 * potentially it is a variable or object reference
-			 * to be pused on to the stack */
+			 * to be pushed on to the stack */
 			assignee.ptr = &moo->c->mth.assignees.ptr[assignee_offset];
 			if (compile_basic_expression(moo, &assignee, &assignee_loc, assignee_dotted) <= -1) goto oops;
 		}
