@@ -5539,6 +5539,11 @@ start_over:
  		    emit_single_param_instruction(moo, bcode, MAX_CODE_JUMP) <= -1) goto oops;
 		GET_TOKEN (moo);
 
+		/* compile_method_expression() calls this function with a non-null
+		 * identifer if it encounters an assignment operator after an identifer.
+		 * i only allow a basic expression after a logical operator.
+		 * the basic expression doesn't include an assignment expression
+		 * if it is not in the parenthesis. so i nullify the following 2 variables */
 		ident = MOO_NULL;
 		ident_loc = MOO_NULL;
 		goto start_over;
