@@ -5543,7 +5543,16 @@ start_over:
 		 * identifer if it encounters an assignment operator after an identifer.
 		 * i only allow a basic expression after a logical operator.
 		 * the basic expression doesn't include an assignment expression
-		 * if it is not in the parenthesis. so i nullify the following 2 variables */
+		 * if it is not in the parenthesis. so i nullify the following 2 variables 
+		 *
+		 * a := 30 > 20 and 10 > 20 is equavelent to a := (30 > 20 and 10 > 20).
+		 *
+		 * you will encounter a syntax error for the following expression as the
+		 * expression end after y.
+		 *   a := 30 > 20 and y := 10 > 20
+		 * 
+		 * a := 30 > 20 and (y := 10 > 20) is perfectly valid.
+		 */
 		ident = MOO_NULL;
 		ident_loc = MOO_NULL;
 		goto start_over;

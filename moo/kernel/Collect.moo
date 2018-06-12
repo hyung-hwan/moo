@@ -110,8 +110,6 @@ class(#pointer) Array(SequenceableCollection)
 		^self at: (self size - 1).
 	}
 
-	
-
 	method copy: anArray
 	{
 		0 priorTo: (anArray size) do: [:i | self at: i put: (anArray at: i) ].
@@ -158,6 +156,11 @@ class(#pointer) Array(SequenceableCollection)
 		| newsz |
 		newsz := end - start + 1.
 		^(self class new: newsz) copy: self from: start to: end
+	}
+
+	method copyFrom: start count: count
+	{
+		^(self class new: count) copy: self from: start to: (start + count - 1)
 	}
 
 	method replaceFrom: start to: stop with: replacement
