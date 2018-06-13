@@ -84,6 +84,7 @@ class HttpSocket(SyncSocket)
 {
 	var(#get) server := nil.
 	var(#get) rid := -1.
+	var bs.
 
 	method close
 	{
@@ -104,7 +105,6 @@ class HttpSocket(SyncSocket)
 
 	method getLine
 	{
-		
 	}
 
 	method readRequest
@@ -114,7 +114,7 @@ class HttpSocket(SyncSocket)
 
 	method _run_service
 	{
-		| buf |
+		| buf k i |
 
 		self timeout: 10.
 		(*while (true)
@@ -123,18 +123,32 @@ class HttpSocket(SyncSocket)
 
 		}. *)
 
+
 		buf := ByteArray new: 128.
 'IM RUNNING SERVICE...............' dump.
-		
+	
+		(*
 		self readBytes: buf.
 		buf dump.
 		self readBytes: buf.
 		buf dump.
+		*)
+
+		i := 0.
+		while (i < 3)
+		{
+			k := self.bs next: 3 into: buf startingAt: 4.
+			(buf copyFrom: 4 count: k) dump.
+			i := i + 1.
+		}.
+
 		self close.
 	}
 
 	method runService
 	{
+		self.bs := ByteStream on: self.
+
 		[ self _run_service ] on: Exception do: [:ex | 
 			self close.
 			('EXCEPTION IN HttpSocket ' & ex messageText) dump 

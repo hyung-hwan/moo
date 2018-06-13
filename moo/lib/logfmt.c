@@ -520,9 +520,14 @@ static int print_object (moo_t* moo, moo_bitmask_t mask, moo_oop_t oop, outbfmt_
 		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_BYTE)
 		{
 			if (outbfmt(moo, mask, "#[") <= -1) return -1;
-			for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
+			i = 0;
+			if (i < MOO_OBJ_GET_SIZE(oop))
 			{
-				if (outbfmt(moo, mask, " %d", ((moo_oop_byte_t)oop)->slot[i]) <= -1) return -1;
+				if (outbfmt(moo, mask, "%d", ((moo_oop_byte_t)oop)->slot[i]) <= -1) return -1;
+				for (++i; i < MOO_OBJ_GET_SIZE(oop); i++)
+				{
+					if (outbfmt(moo, mask, " %d", ((moo_oop_byte_t)oop)->slot[i]) <= -1) return -1;
+				}
 			}
 			if (outbfmt(moo, mask, "]") <= -1) return -1;
 		}
@@ -548,10 +553,15 @@ static int print_object (moo_t* moo, moo_bitmask_t mask, moo_oop_t oop, outbfmt_
 		else if (c == moo->_array)
 		{
 			if (outbfmt(moo, mask, "#(") <= -1) return -1;
-			for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
+			i = 0;
+			if (i < MOO_OBJ_GET_SIZE(oop))
 			{
-				if (outbfmt(moo, mask, " ") <= -1) return -1;
 				if (print_object(moo, mask, ((moo_oop_oop_t)oop)->slot[i], outbfmt) <= -1) return -1;
+				for (++i; i < MOO_OBJ_GET_SIZE(oop); i++)
+				{
+					if (outbfmt(moo, mask, " ") <= -1) return -1;
+					if (print_object(moo, mask, ((moo_oop_oop_t)oop)->slot[i], outbfmt) <= -1) return -1;
+				}
 			}
 			if (outbfmt(moo, mask, ")") <= -1) return -1;
 		}

@@ -248,10 +248,6 @@ class ByteStream(Object) ### [ByteStreamable, ByteXXX]
 		^v.
 	}
 
-	method nextUint16
-	{
-	}
-
 	method next: count into: byte_array startingAt: pos
 	{
 		## return the count bytes
