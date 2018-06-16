@@ -5034,8 +5034,8 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 		switch (TOKEN_TYPE(moo))
 		{
 			case MOO_IOTOK_IDENT_DOTTED:
-				ident_dotted = 1;
 			case MOO_IOTOK_IDENT:
+				ident_dotted = (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED);
 				ident = TOKEN_NAME(moo);
 				ident_loc = TOKEN_LOC(moo);
 				read_next_token = 1;

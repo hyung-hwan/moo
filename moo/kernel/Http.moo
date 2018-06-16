@@ -128,9 +128,9 @@ class HttpSocket(SyncSocket)
 'IM RUNNING SERVICE...............' dump.
 	
 		(*
-		self readBytes: buf.
+		self readBytesInto: buf.
 		buf dump.
-		self readBytes: buf.
+		self readBytesInto: buf.
 		buf dump.
 		*)
 
@@ -317,7 +317,7 @@ class MyObject(Object)
 				| nbytes |
 				while (true)
 				{
-					nbytes := csck readBytes: buf. 
+					nbytes := csck readBytesInto: buf. 
 					if (nbytes <= 0)
 					{
 						if (nbytes == 0) { csck close }.
@@ -326,11 +326,11 @@ class MyObject(Object)
 					}.
 
 					buf dump.
-					csck writeBytes: buf offset: 0 length: nbytes.
+					csck writeBytesFrom: buf offset: 0 length: nbytes.
 				}.
 			].
 			clisck onEvent: #data_out do: [ :csck |
-				##csck writeBytes: #[ $a, $b, C'\n' ].
+				##csck writeBytesFrom: #[ $a, $b, C'\n' ].
 			].
 			clisck onEvent: #closed do: [ :csck |
 				'Socket CLOSED....' dump.
@@ -353,8 +353,8 @@ class MyObject(Object)
 		s onEvent: #connected do: [ :sck :state |
 			if (state)
 			{
-				s writeBytes: #[ $a, $b, $c ].
-				s writeBytes: #[ $d, $e, $f ].
+				s writeBytesFrom: #[ $a, $b, $c ].
+				s writeBytesFrom: #[ $d, $e, $f ].
 			}
 			else
 			{
@@ -366,7 +366,7 @@ class MyObject(Object)
 			| nbytes |
 			while (true)
 			{
-				nbytes := sck readBytes: buf. 
+				nbytes := sck readBytesInto: buf. 
 				if (nbytes <= 0) 
 				{
 					if (nbytes == 0) { sck close }.
@@ -377,7 +377,7 @@ class MyObject(Object)
 			}.
 		].
 		s onEvent: #data_out do: [ :sck |
-			if (count < 10) { sck writeBytes: #[ $a, $b, C'\n' ]. count := count + 1. }.
+			if (count < 10) { sck writeBytesFrom: #[ $a, $b, C'\n' ]. count := count + 1. }.
 		].
 
 		s connect: (SocketAddress fromString: '127.0.0.1:9999').

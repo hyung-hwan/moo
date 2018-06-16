@@ -243,18 +243,18 @@ class Socket(Object) from 'sck'
 	method(#primitive) _connect: addr.
 	method(#primitive) _socketError.
 
-	method(#primitive) _readBytes: bytes.
-	method(#primitive) _readBytes: bytes offset: offset length: length.
-	method(#primitive) _writeBytes: bytes.
-	method(#primitive) _writeBytes: bytes offset: offset length: length.
+	method(#primitive) _readBytesInto: bytes.
+	method(#primitive) _readBytesInto: bytes offset: offset length: length.
+	method(#primitive) _writeBytesFrom: bytes.
+	method(#primitive) _writeBytesFrom: bytes offset: offset length: length.
 
 	method(#class) new { self messageProhibited: #new }
 	method(#class) new: size { self messageProhibited: #new: }
 
-	method(#class) __with: handle
+	method(#class) __with_handle: handle
 	{
 		###self addToBeFinalized.
-		^(self basicNew initialize) __open(handle)
+		^(super new) __open(handle)
 	}
 
 	method(#class) family: family type: type
@@ -263,7 +263,7 @@ class Socket(Object) from 'sck'
 
 		## new is prohibited. so use _basicNew with initialize.
 		##^(self new) open(family, type, 0)
-		^(self basicNew initialize) open(family, type, 0)
+		^(super new) open(family, type, 0)
 	}
 
 	method close
@@ -305,10 +305,11 @@ class SyncSocket(Socket)
 	method(#class) new { self messageProhibited: #new }
 	method(#class) new: size { self messageProhibited: #new: }
 
-	method(#class) __with: handle
+(*
+	method(#class) __with_handle: handle
 	{
 		###self addToBeFinalized.
-		^(self basicNew initialize) __open(handle)
+		^(super new) __open(handle)
 	}
 
 	method(#class) family: family type: type
@@ -317,8 +318,9 @@ class SyncSocket(Socket)
 
 		## new is prohibited. so use _basicNew with initialize.
 		##^(self new) open(family, type, 0)
-		^(self basicNew initialize) open(family, type, 0)
+		^(super new) open(family, type, 0)
 	}
+*)
 
 	method initialize
 	{
@@ -386,45 +388,45 @@ class SyncSocket(Socket)
 		}.
 	}
 
-	method readBytes: bytes
+	method readBytesInto: bytes
 	{
 		| n |
 		while (true)
 		{
-			n := super _readBytes: bytes.
+			n := super _readBytesInto: bytes.
 			if (n >= 0) { ^n }.
 			self __wait_for_input.
 		}
 	}
 
-	method readBytes: bytes offset: offset length: length
+	method readBytesInto: bytes offset: offset length: length
 	{
 		| n |
 		while (true)
 		{
-			n := super _readBytes: bytes offset: offset length: length.
+			n := super _readBytesInto: bytes offset: offset length: length.
 			if (n >= 0) { ^n }.
 			self __wait_for_input.
 		}
 	}
 
-	method writeBytes: bytes
+	method writeBytesFrom: bytes
 	{
 		| n |
 		while (true)
 		{
-			n := super _writeBytes: bytes.
+			n := super _writeBytesFrom: bytes.
 			if (n >= 0) { ^n }.
 			self __wait_for_output.
 		}
 	}
 
-	method writeBytes: bytes offset: offset length: length
+	method writeBytesFrom: bytes offset: offset length: length
 	{
 		| n |
 		while (true)
 		{
-			n := super _writeBytes: bytes offset: offset length: length.
+			n := super _writeBytesFrom: bytes offset: offset length: length.
 			if (n >= 0) { ^n }.
 			self __wait_for_output.
 		}
@@ -467,7 +469,7 @@ class AsyncSocket(Socket)
 
 			while (rem > 0)
 			{
-				nbytes := self _writeBytes: self.pending_bytes offset: pos length: rem.
+				nbytes := self _writeBytesFrom: self.pending_bytes offset: pos length: rem.
 				if (nbytes <= -1) { break }.
 				pos := pos + nbytes.
 				rem := rem - nbytes.
@@ -529,17 +531,17 @@ class AsyncSocket(Socket)
 		thisProcess addAsyncSemaphore: self.outdonesem.
 	}
 
-	method readBytes: bytes
+	method readBytesInto: bytes
 	{
-		^super _readBytes: bytes.
+		^super _readBytesInto: bytes.
 	}
 
-	method readBytes: bytes offset: offset length: length
+	method readBytesInto: bytes offset: offset length: length
 	{
-		^super _readBytes: bytes offset: offset length: length.
+		^super _readBytesInto: bytes offset: offset length: length.
 	}
 
-	method writeBytes: bytes offset: offset length: length
+	method writeBytesFrom: bytes offset: offset length: length
 	{
 		| n pos rem |
 
@@ -557,7 +559,7 @@ class AsyncSocket(Socket)
 
 		while (rem > 0)
 		{
-			n := self _writeBytes: bytes offset: pos length: rem.
+			n := self _writeBytesFrom: bytes offset: pos length: rem.
 			if (n <= -1)  { break }.
 			rem := rem - n.
 			pos := pos + n.
@@ -577,9 +579,9 @@ class AsyncSocket(Socket)
 		self.outreadysem signalOnOutput: self.handle.
 	}
 
-	method writeBytes: bytes
+	method writeBytesFrom: bytes
 	{
-		^self writeBytes: bytes offset: 0 length: (bytes size)
+		^self writeBytesFrom: bytes offset: 0 length: (bytes size)
 	}
 
 	##method onSocketClosed
@@ -674,7 +676,7 @@ class AsyncServerSocket(AsyncSocket)
 			##if (fd >= 0)
 			if (fd notNil)
 			{
-				clisck := (self acceptedSocketClass) __with: fd.
+				clisck := (self acceptedSocketClass) __with_handle: fd.
 				clisck beWatched.
 				self onSocketAccepted: clisck from: cliaddr.
 			}.
@@ -743,7 +745,7 @@ class ListenerSocket(Socket)
 			##if (fd >= 0)
 			if (fd notNil)
 			{
-				clisck := (self acceptedSocketClass) __with: fd.
+				clisck := (self acceptedSocketClass) __with_handle: fd.
 
 				sg addSemaphore: self.inreadysem.
 				self.inreadysem signalOnInput: self.handle.
