@@ -3,16 +3,7 @@
 
 (* -------------------------------------------
 
-typedef struct {
-    unsigned char version;
-    unsigned char type;
-    unsigned char requestIdB1;
-    unsigned char requestIdB0;
-    unsigned char contentLengthB1;
-    unsigned char contentLengthB0;
-    unsigned char paddingLength;
-    unsigned char reserved;
-} FCGI_Header;
+
 
  ----------------------------------------------- *)
 
@@ -162,9 +153,42 @@ class FcgiSocket(SyncSocket)
 'IM RUNNING SERVICE...............' dump.
 
 
-		hdr := ByteArray new: 8.
-		k := self.bs next: 8 into: hdr startingAt: 0.
+		## typedef struct {
+		##   unsigned char version;
+		##   unsigned char type;
+		##   unsigned char requestIdB1;
+		##   unsigned char requestIdB0;
+		##   unsigned char contentLengthB1;
+		##   unsigned char contentLengthB0;
+		##   unsigned char paddingLength;
+		##   unsigned char reserved;
+		## } FCGI_Header;
+		ver := self.bs next.
+		type := self.bs next.
+		reqid := (self.bs next bitShift: 8) bitAnd: (self.bs next).  ## can i implement nextUint16??
+		clen := (self.bs next bitShift: 8) bitAnd: (self.bs next).
+		plen := self.bs next.
+		self.bs next. ## eat up the reserved byte.
 
+
+		## typedef struct {
+		##  unsigned char roleB1;
+		##  unsigned char roleB0;
+		##  unsigned char flags;
+		##  unsigned char reserved[5];
+		## } FCGI_BeginRequestBody;
+		## typedef struct {
+		##  unsigned char appStatusB3;
+		##  unsigned char appStatusB2;
+		##  unsigned char appStatusB1;
+		##  unsigned char appStatusB0;
+		##  unsigned char protocolStatus;
+		##  unsigned char reserved[3];
+		## } FCGI_EndRequestBody;
+
+		if (type == Fcgi.Type.BEGIN_REQUEST)
+		{
+		}
 
 (*
 		i := 0.
