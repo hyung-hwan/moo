@@ -42,6 +42,7 @@ class MyObject(Object)
 			'divide by zero'
 			'I/O error'
 			'encoding conversion error'
+			'insufficient data for encoding conversion'
 			'buffer full'
 		).
 		

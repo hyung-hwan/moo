@@ -149,7 +149,7 @@ class FcgiSocket(SyncSocket)
 
 	method _run_service
 	{
-		| buf k i |
+		| buf k i hdr |
 
 		self timeout: 10.
 		(*while (true)
@@ -161,10 +161,12 @@ class FcgiSocket(SyncSocket)
 		buf := ByteArray new: 128.
 'IM RUNNING SERVICE...............' dump.
 
-		(***self.bs next dump.
-		self.bs next dump.
-		self.bs next dump.***)
 
+		hdr := ByteArray new: 8.
+		k := self.bs next: 8 into: hdr startingAt: 0.
+
+
+(*
 		i := 0.
 		while (i < 3)
 		{
@@ -173,9 +175,12 @@ class FcgiSocket(SyncSocket)
 			(buf copyFrom: 10 count: k) dump.
 			i := i + 1.
 
+			(buf copyFrom: 10 count: k) decodeToCharacter dump.
+
 			self.bs nextPut: k from: buf startingAt: 10.
 		}.
 		self.bs flush.
+*)
 
 		self close.
 	}

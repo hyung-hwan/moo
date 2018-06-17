@@ -3496,7 +3496,7 @@ static pf_t pftab[] =
 	{ "Error_asString",                        { pf_error_as_string,                      0, 0 } },
 
 	{ "MethodContext_goto:",                   { pf_context_goto,                         1, 1  } },
-	
+
 	{ "Process_resume",                        { pf_process_resume,                       0, 0 } },
 	{ "Process_sp",                            { pf_process_sp,                           0, 0 } },
 	{ "Process_suspend",                       { pf_process_suspend,                      0, 0 } },
@@ -3506,7 +3506,7 @@ static pf_t pftab[] =
 	{ "SemaphoreGroup_addSemaphore:",          { pf_semaphore_group_add_semaphore,        1, 1 } },
 	{ "SemaphoreGroup_removeSemaphore:",       { pf_semaphore_group_remove_semaphore,     1, 1 } },
 	{ "SemaphoreGroup_wait",                   { pf_semaphore_group_wait,                 0, 0 } },
-	
+
 	{ "Semaphore_signal",                      { pf_semaphore_signal,                     0, 0 } },
 	{ "Semaphore_signalAfterSecs:",            { pf_semaphore_signal_timed,               1, 1 } },
 	{ "Semaphore_signalAfterSecs:nanosecs:",   { pf_semaphore_signal_timed,               2, 2 } },
@@ -3594,7 +3594,10 @@ static pf_t pftab[] =
 	{ "_integer_ne",                           { pf_integer_ne,                           1, 1 } },
 	{ "_integer_negated",                      { pf_integer_negated,                      0, 0 } },
 	{ "_integer_rem",                          { pf_integer_rem,                          1, 1 } },
-	{ "_integer_sub",                          { pf_integer_sub,                          1, 1 } }
+	{ "_integer_sub",                          { pf_integer_sub,                          1, 1 } },
+
+	{ "_utf8_seqlen",                          { moo_pf_utf8_seqlen,                      0, 0 } },
+	{ "_utf8_to_uc",                           { moo_pf_utf8_to_uc,                       0, 0 } },
 };
 
 moo_pfbase_t* moo_getpfnum (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, moo_ooi_t* pfnum)

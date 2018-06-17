@@ -368,8 +368,22 @@ class ByteStream(ByteStreamAdapter)
 	}
 }
 
+(*
 class TextStream(ByteStream)
 {
+	method initialize
+	{
+		super initialize.
+		self.
+	}
 
-}
+	method next
+	{
+	}
+
+	method __utf8_to_uc
+	{
+		if (self.seq at: 0) bitAnd: 
+	}
+}*)
 

@@ -298,6 +298,25 @@ class(#character,#final,#limited,#immutable) Symbol(String)
 class(#byte) ByteArray(Array)
 {
 	## TODO: is it ok for ByteArray to inherit from Array?
+
+	method decodeToCharacter
+	{
+		## TODO: support other encodings. it only supports utf8 as of now.
+		<primitive: #_utf8_to_uc>
+		self primitiveFailed(thisContext method).
+
+		(*
+		### TODO: implement this in moo also..
+		| firstByte |
+		firstByte := self at: 0.
+		if ((firstByte bitAnd:2r10000000) == 0) { 1 }
+		elsif (firstByte bitAnd:2r11000000) == 2r10000000) { 2 }
+		elsif (firstByte bitAnd:2r11100000) == 2r11000000) { 3 }
+		elsif (firstByte bitAnd:2r11110000) == 2r11100000) { 4 }
+		elsif (firstByte bitAnd:2r11111000) == 2r11110000) { 5 }
+		elsif (firstByte bitAnd:2r11111100) == 2r11111000) { 6 }.
+		*)
+	}
 }
 
 ## -------------------------------------------------------------------------------

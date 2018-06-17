@@ -1419,7 +1419,6 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_is_kind_of (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_responds_to (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 
-
 /* ========================================================================= */
 /* pf-sys.c                                                                  */
 /* ========================================================================= */
@@ -1475,6 +1474,14 @@ moo_pfrc_t moo_pf_smptr_get_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_smptr_put_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 
 moo_pfrc_t moo_pf_smptr_as_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
+
+
+/* ========================================================================= */
+/* pf-utf8.c                                                                 */
+/* ========================================================================= */
+moo_pfrc_t moo_pf_utf8_seqlen (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_utf8_to_uc (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_uc_to_utf8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 
 /* TODO: remove the following debugging functions */
 /* ========================================================================= */

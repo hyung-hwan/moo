@@ -84,6 +84,7 @@ enum moo_errnum_t
 	MOO_EDIVBY0,  /**< divide by zero */
 	MOO_EIOERR,   /**< I/O error */
 	MOO_EECERR,   /**< encoding conversion error */
+	MOO_EECMORE,  /**< insufficient data for encoding conversion */
 	MOO_EBUFFULL, /**< buffer full */
 
 #if defined(MOO_INCLUDE_COMPILER)

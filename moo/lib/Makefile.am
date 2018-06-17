@@ -78,6 +78,7 @@ libmoo_la_SOURCES = \
 	opt.c \
 	pf-basic.c \
 	pf-sys.c \
+	pf-utf8.c \
 	rbt.c \
 	sym.c \
 	utf8.c \
