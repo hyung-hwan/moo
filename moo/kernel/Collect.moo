@@ -299,6 +299,10 @@ class(#byte) ByteArray(Array)
 {
 	## TODO: is it ok for ByteArray to inherit from Array?
 
+##	method asByteString
+##	{
+##	}
+
 	method decodeToCharacter
 	{
 		## TODO: support other encodings. it only supports utf8 as of now.
@@ -317,6 +321,10 @@ class(#byte) ByteArray(Array)
 		elsif (firstByte bitAnd:2r11111100) == 2r11111000) { 6 }.
 		*)
 	}
+}
+
+class(#byte) ByteString(Array)
+{
 }
 
 ## -------------------------------------------------------------------------------

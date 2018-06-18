@@ -11,6 +11,257 @@ class Fcgi(Object)
 {
 }
 
+class Fcgi.Header(Object) 
+{
+	var(#get,#set) version := 0.
+	var(#get,#set) type := 0.
+	var(#get,#set) requestId := 0.
+	var(#get,#set) contentLength := 0.
+	var(#get) paddingLength := 0.
+	var reserved := 0.
+
+	method readFrom: aStream 
+	{
+		self.version := aStream uint8.
+		self.type := aStream uint8.
+		self.requestId := aStream uint16.
+		self.contentLength := aStream uint16.
+		self.paddingLength := aStream uint8.
+		self.reserved := aStream uint8
+	}
+
+	method storeOn: aStream 
+	{
+		aStream uint8: version.
+		aStream uint8: type.
+		aStream uint16: requestId.
+		aStream uint16: self contentLength.
+		aStream uint8: self paddingLength.
+		aStream uint8: 0
+	}
+}
+
+class Fcgi.Record(Object)
+{
+	var(#get,#set) header.
+
+	method(#class) type: anInteger
+	{
+		^self new type: anInteger
+	}
+
+	method ensureHeader 
+	{
+		^self.header ifNil: [self.header := Fcgi.Header new]
+	}
+
+	method type 
+	{
+		^self.header type
+	}
+
+	method type: anInteger 
+	{
+		self ensureHeader type: anInteger
+	}
+}
+
+class Fcgi.BeginRequestRecord(Fcgi.Record)
+{
+	var role.
+	var(#get) flags.
+	var reserved.
+
+	method readFrom: aStream 
+	{
+		self.role := aStream uint16.
+		self.flags := aStream uint8.
+		self.reserved := aStream next: 5
+	}
+}
+
+class Fcgi.EndRequestRecord(Fcgi.Record)
+{
+	var(#get,#set) appStatus.
+	var(#get,#set) protocolStatus.
+	var reserved.
+
+	method readFrom: aStream 
+	{
+		self.appStatus := aStream uint32.
+		self.protocolStatus := aStream uint8.
+		self.reserved := aStream next: 3
+	}
+
+	method storeOn: aStream 
+	{
+		aStream uint32: self.appStatus.
+		aStream uint8: self.protocolStatus.
+		1 to: 3 do: [:each | aStream uint8: 0]
+	}
+}
+
+class Fcgi.DefaultRecord(Fcgi.Record)
+{
+	var contentData.
+	var paddingData.
+
+	method content
+	{
+		^self.contentData
+	}
+
+	method content: aString 
+	{
+		self.contentData := aString.
+		self ensureHeader contentLength: aString size
+	}
+
+	method readFrom: aStream 
+	{
+		self.contentData := aStream next: header contentLength.
+		self.paddingData := aStream next: header paddingLength
+	}
+
+	method storeOn: aStream 
+	{
+		aStream nextPutAll: self.contentData.
+		1 to: self header paddingLength do: [:each | aStream uint8: 0]
+	}
+}
+
+
+class Fcgi.ParamRecord(Fcgi.Record)
+{
+	var namesAndValues.
+	var cookies.
+	var(#get,#set) post.
+	var fields.
+	var postFields.
+	var getFields.
+
+
+	method initialize 
+	{
+		super initialize.
+		self.namesAndValues := OrderedCollection new
+	}
+
+	method at: aKey 
+	{
+		^(self.namesAndValues detect: [:assoc | assoc key = aKey]) value
+	}
+
+	method at: aKey ifAbsent: aBlock 
+	{
+		^(self.namesAndValues detect: [:assoc | assoc key = aKey] ifNone: aBlock) value
+	}
+
+	method at: aKey put: aValue 
+	{
+		self.namesAndValues add: aKey -> aValue
+	}
+
+	method cookieString 
+	{
+		^self at: 'HTTP_COOKIE' ifAbsent: ['']
+	}
+
+	method cookies 
+	{
+		^self.cookies ifNil: [self.cookies := self parseToFields: self cookieString separatedBy: $;]
+	}
+
+	method fields
+	{
+		^self.fields ifNil: [self.fields := (Dictionary new) addAll: self postFields; addAll: self getFields; yourself]
+	}
+
+	method getFields 
+	{
+		^getFields ifNil: [getFields := self parseToFields: self query  separatedBy: $&]
+	}
+
+	method header 
+	{
+		^self
+	}
+
+	method method 
+	{
+		^self at: 'REQUEST_METHOD'
+	}
+
+	method postFields 
+	{
+		^self.postFields ifNil: [
+			postFields := self method = 'POST' 
+				ifTrue: [ self parseToFields: self post unescapePercents separatedBy: $&]
+				ifFalse: [Dictionary new]
+		]
+	}
+
+	method query 
+	{
+		^self at: 'QUERY_STRING'
+	}
+
+	method url
+	{
+		^(self at: 'SCRIPT_NAME') & (self at: 'PATH_INFO')
+	}
+
+	method parseToFields: aString separatedBy: char 
+	{
+		| equal tempFields |
+
+		tempFields := Dictionary new.
+
+		if (aString notNil)
+		{
+			(aString subStrings: %(char)) do: [:each | 
+				equal := each indexOf: $=.
+				equal = 0 
+					ifTrue: [tempFields at: each put: nil]
+					ifFalse: [
+					tempFields 
+						at: (each first: equal - 1) 
+						put: (each allButFirst: equal)]
+			]
+		}.
+
+		^tempFields
+	}
+
+	method readFrom: aStream 
+	{
+		| buffer stream |
+		buffer := aStream next: header contentLength.
+(* TODO:
+		stream := ReadStream on: buffer.
+		[stream atEnd] whileFalse: [self readNameValueFrom: stream]
+*)
+	}
+
+	method readNameValueFrom: aStream 
+	{
+		| nameLength valueLength name value |
+		nameLength := aStream uint8.
+		(nameLength bitShift: -7) = 0 ifFalse: [
+			nameLength := (nameLength bitShift: 24) + aStream uint24].
+		valueLength := aStream uint8.
+		(valueLength bitShift: -7) = 0 ifFalse: 
+			[valueLength := (valueLength bitShift: 24) + aStream uint24].
+		name := aStream next: nameLength.
+		value := aStream next: valueLength.
+		self at: name put: value
+	}
+}
+
+
+
+
+
 pooldic Fcgi.Type
 {
 	BEGIN_REQUEST     := 1.
@@ -163,13 +414,14 @@ class FcgiSocket(SyncSocket)
 		##   unsigned char paddingLength;
 		##   unsigned char reserved;
 		## } FCGI_Header;
+(*
 		ver := self.bs next.
 		type := self.bs next.
 		reqid := (self.bs next bitShift: 8) bitAnd: (self.bs next).  ## can i implement nextUint16??
 		clen := (self.bs next bitShift: 8) bitAnd: (self.bs next).
 		plen := self.bs next.
 		self.bs next. ## eat up the reserved byte.
-
+*)
 
 		## typedef struct {
 		##  unsigned char roleB1;
@@ -186,9 +438,10 @@ class FcgiSocket(SyncSocket)
 		##  unsigned char reserved[3];
 		## } FCGI_EndRequestBody;
 
+(*
 		if (type == Fcgi.Type.BEGIN_REQUEST)
 		{
-		}
+		} *)
 
 (*
 		i := 0.
@@ -500,10 +753,14 @@ class MyObject(Object)
 
 		'----- END OF ANOTHER PROC ------' dump.
 	}
-	
+
 	method(#class) main
 	{
-		| fcgi addr |
+		| fcgi addr oc |
+
+oc := Fcgi.ParamRecord new.
+(oc parseToFields: 'a=b&d=f' separatedBy: $&) dump.
+thisProcess terminate.
 
 (*
 [
