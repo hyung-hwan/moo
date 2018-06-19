@@ -35,23 +35,24 @@ class Collection(Object)
 		^self subclassResponsibility: #do
 	}
 
-	method detect: block
-	{
-		self detect: block ifNone: [ ^self error: 'not found' ].
-	}
-
-	method detect: block ifNone: exception_block
-	{
-		self do: [ :el | if (block value: el) { ^el } ].
-		^exception_block value.
-	}
-
 	method collect: block
 	{
 		| coll |
 		coll := self class new: self basicSize.
 		self do: [ :el | coll add: (block value: el) ].
 		^coll
+	}
+
+	method detect: block
+	{
+		^self detect: block ifNone: [ ^self error: 'not found' ].
+	}
+
+	method detect: block ifNone: exception_block
+	{
+		## returns the first element for which the block evaluates to true.
+		self do: [ :el | if (block value: el) { ^el } ].
+		^exception_block value.
 	}
 
 	method select: condition_block
@@ -455,6 +456,17 @@ class OrderedCollection(SequenceableCollection)
 	{
 		self __insert_before_index(obj, index + 1).
 		^obj.
+	}
+
+	method add: obj
+	{
+		^self addLast: obj.
+	}
+
+	method addAll: coll
+	{
+		coll do: [:el | self addLast: el ].
+		^coll.
 	}
 
 	method removeFirst
