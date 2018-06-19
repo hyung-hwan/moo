@@ -288,8 +288,7 @@
 /* __va_copy is available */
 #undef HAVE___VA_COPY
 
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
 
 /* build release/debug */
