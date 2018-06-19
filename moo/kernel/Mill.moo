@@ -95,7 +95,7 @@ class MyObject(Object)
 			(ffi call: #printf signature: 's|iis)i' arguments: #(S'A=>%d B=>%d Hello, world %s\n' 1 2 'fly away')) dump.
 			(ffi call: #printf signature: 's|iis)i' arguments: #(S'A=>%d B=>%d Hello, world %s\n' 1 2 'jump down')) dump.
 			ffi close.
-		}.
+		}. 
 		(('abcd' == 'abcd') ifTrue: [1] ifFalse: [2]) dump.
 
 	}
@@ -325,7 +325,7 @@ i := 0.
 while (i < 26)
 {
 	a putUint8(i, ($A asInteger + i)).
-	System _putUint8(a, i, ($A asInteger + i)).
+	System putUint8(a, i, ($A asInteger + i)).
 	i := i + 1.
 }.
 while (i > 0)

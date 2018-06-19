@@ -21,6 +21,15 @@ class Collection(Object)
 		^count
 	}
 
+	method add: object
+	{
+		self subclassResponsibility: #add:.
+	}
+
+	## ===================================================================
+	## ENUMERATION
+	## ===================================================================
+
 	method do: block
 	{
 		^self subclassResponsibility: #do
@@ -36,13 +45,6 @@ class Collection(Object)
 		self do: [ :el | if (block value: el) { ^el } ].
 		^exception_block value.
 	}
-
-(* ------------------- TODO -------------------------------
-	method add: object
-	{
-		self subclassResponsibility: #add:.
-	}
-*)
 
 	method collect: block
 	{
@@ -924,32 +926,38 @@ class Set(Collection)
 
 	method do: block
 	{
-		| bs |
+		| bs i ass |
 		bs := self.bucket size.
-		0 priorTo: bs by: 1 do: [:i |
-			| ass |
+		i := 0.
+		while (i < bs)
+		{
 			if ((ass := self.bucket at: i) notNil) { block value: ass value }.
-		].
+			i := i + 1.
+		}.
 	}
-	
+
 	method keysDo: block
 	{
-		| bs |
+		| bs i ass |
 		bs := self.bucket size.
-		0 priorTo: bs by: 1 do: [:i |
-			| ass |
+		i := 0.
+		while (i < bs)
+		{
 			if ((ass := self.bucket at: i) notNil) { block value: ass key }.
-		].
+			i := i + 1.
+		}.
 	}
 
 	method keysAndValuesDo: block
 	{
-		| bs |
+		| bs i ass |
 		bs := self.bucket size.
-		0 priorTo: bs by: 1 do: [:i |
-			| ass |
+		i := 0.
+		while (i < bs)
+		{
 			if ((ass := self.bucket at: i) notNil)  { block value: ass key value: ass value }.
-		].	
+			i := i + 1.
+		}.
 	}
 }
 

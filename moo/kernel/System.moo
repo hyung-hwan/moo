@@ -110,7 +110,7 @@ class System(Apex)
 		## -----------------------------------------------------
 		| s |
 		s := Semaphore new.
-		self signal: s afterSecs: secs.
+		s signalAfterSecs: secs.
 		s wait.
 	}
 
@@ -121,7 +121,7 @@ class System(Apex)
 		## -----------------------------------------------------
 		| s |
 		s := Semaphore new.
-		self signal: s afterSecs: secs nanosecs: nanosecs.
+		s signalAfterSecs: secs nanosecs: nanosecs.
 		s wait.
 	}
 }
