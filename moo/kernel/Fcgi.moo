@@ -219,6 +219,8 @@ class Fcgi.ParamRecord(Fcgi.Record)
 
 		if (aString notNil)
 		{
+### TODO: implement this...
+(*
 			(aString subStrings: %(char)) do: [:each | 
 				equal := each indexOf: $=.
 				equal = 0 
@@ -226,8 +228,8 @@ class Fcgi.ParamRecord(Fcgi.Record)
 					ifFalse: [
 					tempFields 
 						at: (each first: equal - 1) 
-						put: (each allButFirst: equal)]
-			]
+						put: (each allButFirst: equal)] 
+			] *)
 		}.
 
 		^tempFields

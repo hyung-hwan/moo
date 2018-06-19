@@ -117,6 +117,7 @@ static struct voca_t
 	{  5, { '#','d','u','a','l'                                           } },
 	{  4, { 'e','l','s','e'                                               } },
 	{  5, { 'e','l','s','i','f'                                           } },
+	{  8, { 'e','l','s','i','f','n','o','t'                               } },
 	{  6, { 'e','n','s','u','r','e',                                      } },
 	{  9, { 'e','x','c','e','p','t','i','o','n'                           } },
 	{  6, { 'e','x','t','e','n','d'                                       } },
@@ -126,6 +127,7 @@ static struct voca_t
 	{  4, { '#','g','e','t'                                               } },
 	{  9, { '#','h','a','l','f','w','o','r','d'                           } },
 	{  2, { 'i','f'                                                       } },
+	{  5, { 'i','f','n','o','t'                                           } },
 	{ 10, { '#','i','m','m','u','t','a','b','l','e'                       } },
 	{  6, { 'i','m','p','o','r','t'                                       } },
 	{  8, { '#','i','n','c','l','u','d','e'                               } },
@@ -183,6 +185,7 @@ enum voca_id_t
 	VOCA_DUAL_S,
 	VOCA_ELSE,
 	VOCA_ELSIF,
+	VOCA_ELSIFNOT,
 	VOCA_ENSURE,
 	VOCA_EXCEPTION,
 	VOCA_EXTEND,
@@ -192,6 +195,7 @@ enum voca_id_t
 	VOCA_GET_S,
 	VOCA_HALFWORD_S,
 	VOCA_IF,
+	VOCA_IFNOT,
 	VOCA_IMMUTABLE_S,
 	VOCA_IMPORT,
 	VOCA_INCLUDE_S,
@@ -372,6 +376,7 @@ static int is_reserved_word (const moo_oocs_t* ucs)
 		VOCA_IF,
 		VOCA_ELSE,
 		VOCA_ELSIF,
+		VOCA_ELSIFNOT,
 		VOCA_WHILE,
 		VOCA_UNTIL,
 		VOCA_DO,
@@ -1204,6 +1209,10 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		{
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_IF);
 		}
+		else if (is_token_word(moo, VOCA_IFNOT))
+		{
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_IFNOT);
+		}
 		else if (is_token_word(moo, VOCA_ELSE))
 		{
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_ELSE);
@@ -1211,6 +1220,10 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 		else if (is_token_word(moo, VOCA_ELSIF))
 		{
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_ELSIF);
+		}
+		else if (is_token_word(moo, VOCA_ELSIFNOT))
+		{
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_ELSIFNOT);
 		}
 		else if (is_token_word(moo, VOCA_WHILE))
 		{
@@ -5661,13 +5674,27 @@ static int compile_if_expression (moo_t* moo)
 	moo_oow_t i, j;
 	moo_oow_t jumptonext, precondpos, postcondpos, endoftrueblock;
 	moo_ioloc_t if_loc, brace_loc;
+	int jumpop_inst, push_true_inst, push_false_inst;
 
-	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_IF);
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_IF || TOKEN_TYPE(moo) == MOO_IOTOK_IFNOT);
 	if_loc = *TOKEN_LOC(moo);
 
 	init_oow_pool (moo, &jumptoend);
 	jumptonext = INVALID_IP;
 	endoftrueblock = INVALID_IP;
+
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_IF)
+	{
+		push_true_inst = BCODE_PUSH_TRUE;
+		push_false_inst = BCODE_PUSH_FALSE;
+		jumpop_inst = BCODE_JUMPOP_FORWARD_IF_FALSE;
+	}
+	else
+	{
+		push_true_inst = BCODE_PUSH_FALSE;
+		push_false_inst = BCODE_PUSH_TRUE;
+		jumpop_inst = BCODE_JUMPOP_FORWARD_IF_TRUE;
+	}
 
 	do
 	{
@@ -5677,12 +5704,12 @@ static int compile_if_expression (moo_t* moo)
 		precondpos = moo->c->mth.code.len;
 
 		if (jumptonext != INVALID_IP &&
-		    patch_long_forward_jump_instruction (moo, jumptonext, precondpos, &brace_loc) <= -1) goto oops;
+		    patch_long_forward_jump_instruction(moo, jumptonext, precondpos, &brace_loc) <= -1) goto oops;
 
 		if (compile_conditional(moo) <= -1) goto oops;
 		postcondpos = moo->c->mth.code.len;
 
-		if (precondpos + 1 == postcondpos && moo->c->mth.code.ptr[precondpos] == BCODE_PUSH_TRUE)
+		if (precondpos + 1 == postcondpos && moo->c->mth.code.ptr[precondpos] == push_true_inst)
 		{
 			/* do not generate jump */
 			jumptonext = INVALID_IP;
@@ -5692,7 +5719,7 @@ static int compile_if_expression (moo_t* moo)
 			eliminate_instructions (moo, precondpos, moo->c->mth.code.len - 1);
 			postcondpos = precondpos;
 		}
-		else if (precondpos + 1 == postcondpos && moo->c->mth.code.ptr[precondpos] == BCODE_PUSH_FALSE)
+		else if (precondpos + 1 == postcondpos && moo->c->mth.code.ptr[precondpos] == push_false_inst)
 		{
 			jumptonext = INVALID_IP;
 			/* mark that the conditional is false. instructions will get eliminated below */
@@ -5704,7 +5731,7 @@ static int compile_if_expression (moo_t* moo)
 			jumptonext = moo->c->mth.code.len; 
 			/* BCODE_JUMPOP_FORWARD_IF_FALSE is always a long jump instruction.
 			 * just specify MAX_CODE_JUMP for consistency with short jump variants */
-			if (emit_single_param_instruction (moo, BCODE_JUMPOP_FORWARD_IF_FALSE, MAX_CODE_JUMP) <= -1) goto oops;
+			if (emit_single_param_instruction(moo, jumpop_inst, MAX_CODE_JUMP) <= -1) goto oops;
 		}
 
 		GET_TOKEN (moo); /* get { */
@@ -5737,10 +5764,26 @@ static int compile_if_expression (moo_t* moo)
 		}
 
 		GET_TOKEN (moo); /* get the next token after } */
-	} while (TOKEN_TYPE(moo) == MOO_IOTOK_ELSIF);
+
+		if (TOKEN_TYPE(moo) !=  MOO_IOTOK_ELSIF && TOKEN_TYPE(moo) != MOO_IOTOK_ELSIFNOT) break;
+
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_ELSIF)
+		{
+			push_true_inst = BCODE_PUSH_TRUE;
+			push_false_inst = BCODE_PUSH_FALSE;
+			jumpop_inst = BCODE_JUMPOP_FORWARD_IF_FALSE;
+		}
+		else
+		{
+			push_true_inst = BCODE_PUSH_FALSE;
+			push_false_inst = BCODE_PUSH_TRUE;
+			jumpop_inst = BCODE_JUMPOP_FORWARD_IF_TRUE;
+		}
+	}
+	while (1);
 
 	if (jumptonext != INVALID_IP &&
-	    patch_long_forward_jump_instruction (moo, jumptonext, moo->c->mth.code.len, &brace_loc) <= -1) goto oops;
+	    patch_long_forward_jump_instruction(moo, jumptonext, moo->c->mth.code.len, &brace_loc) <= -1) goto oops;
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_ELSE)
 	{
@@ -6033,7 +6076,7 @@ static int compile_method_expression (moo_t* moo, int pop)
 	MOO_ASSERT (moo, pop == 0 || pop == 1);
 	MOO_MEMSET (&assignee, 0, MOO_SIZEOF(assignee));
 
-	if (TOKEN_TYPE(moo) == MOO_IOTOK_IF)
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_IF || TOKEN_TYPE(moo) == MOO_IOTOK_IFNOT)
 	{
 		if (compile_if_expression (moo) <= -1) return -1;
 	}

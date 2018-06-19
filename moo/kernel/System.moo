@@ -33,10 +33,10 @@ class System(Apex)
 
 		self.asyncsg := SemaphoreGroup new.
 
-		class := System at: class_name.
+		class := self at: class_name. ## System at: class_name.
 		if (class isError)
 		{
-			System error: ('Cannot find the class - ' & class_name).
+			self error: ('Cannot find the class - ' & class_name).
 		}.
 
 		## start the gc finalizer process

@@ -28,8 +28,7 @@ class Collection(Object)
 
 	method detect: block
 	{
-		self do: [ :el | if (block value: el) { ^el } ].
-		^Error.Code.ENOENT
+		self detect: block ifNone: [ ^self error: 'not found' ].
 	}
 
 	method detect: block ifNone: exception_block
@@ -43,7 +42,16 @@ class Collection(Object)
 	{
 		self subclassResponsibility: #add:.
 	}
-	
+*)
+
+	method collect: block
+	{
+		| coll |
+		coll := self class new: self basicSize.
+		self do: [ :el | coll add: (block value: el) ].
+		^coll
+	}
+
 	method select: condition_block
 	{
 		| coll |
@@ -56,11 +64,9 @@ class Collection(Object)
 	{
 		| coll |
 		coll := self class new: self basicSize.
-		self do: [ :el | if (condition_block value: el) { } else { coll add: el } ].
+		self do: [ :el | ifnot (condition_block value: el) { coll add: el } ].
 		^coll
 	}
-*)
-
 
 	method emptyCheck
 	{
