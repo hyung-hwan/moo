@@ -173,14 +173,14 @@ static kernel_class_info_t kernel_classes[] =
 	  MOO_OBJ_TYPE_BYTE,
 	  MOO_OFFSETOF(moo_t, _byte_array) },
 
-	{ 9,
-	  { 'S','y','m','b','o','l','S','e','t' },
+	{ 11,
+	  { 'S','y','m','b','o','l','T','a','b','l','e' },
 	  0,
 	  0,
 	  MOO_DIC_NAMED_INSTVARS,
 	  0,
 	  MOO_OBJ_TYPE_OOP,
-	  MOO_OFFSETOF(moo_t, _symbol_set) },
+	  MOO_OFFSETOF(moo_t, _symbol_table) },
 
 	{ 10,
 	  { 'D','i','c','t','i','o','n','a','r','y' },
@@ -468,7 +468,7 @@ static int ignite_2 (moo_t* moo)
 	if (!moo->_true || !moo->_false) return -1;
 
 	/* Create the symbol table */
-	tmp = moo_instantiate (moo, moo->_symbol_set, MOO_NULL, 0);
+	tmp = moo_instantiate (moo, moo->_symbol_table, MOO_NULL, 0);
 	if (!tmp) return -1;
 	moo->symtab = (moo_oop_dic_t)tmp;
 
@@ -478,18 +478,18 @@ static int ignite_2 (moo_t* moo)
 	 * The pointer 'moo->symtab; can change in moo_instantiate() and the 
 	 * target address of assignment may get set before moo_instantiate()
 	 * is called. */
-	tmp = moo_instantiate (moo, moo->_array, MOO_NULL, moo->option.dfl_symtab_size);
+	tmp = moo_instantiate(moo, moo->_array, MOO_NULL, moo->option.dfl_symtab_size);
 	if (!tmp) return -1;
 	moo->symtab->bucket = (moo_oop_oop_t)tmp;
 
 	/* Create the system dictionary */
-	tmp = (moo_oop_t)moo_makensdic (moo, moo->_namespace, moo->option.dfl_sysdic_size);
+	tmp = (moo_oop_t)moo_makensdic(moo, moo->_namespace, moo->option.dfl_sysdic_size);
 	if (!tmp) return -1;
 	moo->sysdic = (moo_oop_nsdic_t)tmp;
 
 	/* Create a nil process used to simplify nil check in GC.
 	 * only accessible by VM. not exported via the global dictionary. */
-	tmp = (moo_oop_t)moo_instantiate (moo, moo->_process, MOO_NULL, 0);
+	tmp = (moo_oop_t)moo_instantiate(moo, moo->_process, MOO_NULL, 0);
 	if (!tmp) return -1;
 	moo->nil_process = (moo_oop_process_t)tmp;
 	moo->nil_process->sp = MOO_SMOOI_TO_OOP(-1);
@@ -515,7 +515,7 @@ static int ignite_3 (moo_t* moo)
 	/* Register kernel classes manually created so far to the system dictionary */
 	static moo_ooch_t str_processor[] = { 'P', 'r', 'o', 'c', 'e', 's', 's', 'o', 'r' };
 	static moo_ooch_t str_dicnew[] = { 'n', 'e', 'w', ':' };
-	static moo_ooch_t str_dicputassoc[] = { 'p', 'u', 't', '_', 'a', 's', 's', 'o', 'c', ':' };
+	static moo_ooch_t str_dicputassoc[] = { '_','_','p', 'u', 't', '_', 'a', 's', 's', 'o', 'c', ':' };
 
 	moo_oow_t i;
 	moo_oop_t sym;

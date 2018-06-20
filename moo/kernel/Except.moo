@@ -454,6 +454,22 @@ class ProhibitedMessageException(Exception)
 {
 }
 
+class NotFoundException(Exception)
+{
+}
+
+class KeyNotFoundException(NotFoundException)
+{
+}
+
+class ValueNotFoundException(NotFoundException)
+{
+}
+
+class IndexNotFoundException(NotFoundException)
+{
+}
+
 extend Apex
 {
 	method(#dual,#liberal) primitiveFailed(method)
@@ -525,6 +541,11 @@ System logNl: '== END OF BACKTRACE =='.
 	method(#dual) subclassResponsibility: method_name
 	{
 		SubclassResponsibilityException signal: ('Subclass must implement ' & method_name).
+	}
+
+	method(#dual) shouldNotImplement: method_name
+	{
+		SubclassResponsibilityException signal: ('Message should not be implemented - ' & method_name).
 	}
 
 	method(#dual) notImplemented: method_name

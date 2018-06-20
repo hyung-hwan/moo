@@ -351,16 +351,10 @@ class OrderedCollection(SequenceableCollection)
 
 	method(#class) new: capacity
 	{
-		## super basicNew initWithCapacity: capacity.
-		^super new initWithCapacity: capacity.
+		^super new __init_with_capacity: capacity.
 	}
 
-	##method initialize
-	##{
-	##	^super initialize.
-	##}
-
-	method initWithCapacity: capacity
+	method __init_with_capacity: capacity
 	{
 		self.buffer := Array new: capacity.
 		self.firstIndex := capacity bitShift: -1.
@@ -706,15 +700,128 @@ class Set(Collection)
 
 	method(#class) new: size
 	{
-		^self new initialize: size.
+		^self new __initialize_with_size: size.
 	}
 
 	method initialize
 	{
-		^self initialize: 128. (* TODO: default initial size *)
+		^self __initialize_with_size: 128. (* TODO: default initial size *)
 	}
 
-	method initialize: size
+	method __initialize_with_size: size
+	{
+		if (size <= 0) { size := 2 }.
+		self.tally := 0.
+		self.bucket := Array new: size.
+	}
+
+	method __make_expanded_bucket: bs
+	{
+		| newbuc newsz ass index i |
+
+		(* expand the bucket *)
+		newsz := bs + 128.
+		newbuc := Array new: newsz.
+		i := 0.
+		while (i < bs)
+		{
+			ass := self.bucket at: i.
+			if (ass notNil) 
+			{
+				index := (ass hash) rem: newsz.
+				while ((newbuc at: index) notNil) { index := (index + 1) rem: newsz }.
+				newbuc at: index put: ass
+			}.
+			i := i + 1.
+		}.
+
+		^newbuc.
+	}
+
+	method __find_index: anObject
+	{
+		| bs ass index |
+
+		bs := self.bucket size.
+		index := (anObject hash) rem: bs.
+
+		while ((ass := self.bucket at: index) notNil)
+		{
+			if (anObject = ass) { ^index }.
+			index := (index + 1) rem: bs.
+		}.
+
+		^index. ## the item at this index is nil.
+	}
+
+	method add: anObject
+	{
+		| index absent bs |
+		if (anObject isNil) { ^anObject }.
+
+		index := self __find_index: anObject.
+		absent := (self.bucket at: index) isNil.
+		self.bucket at: index put: anObject.
+
+		if (absent) 
+		{
+			self.tally := self.tally + 1.
+			bs := self.bucket size.
+			if (self.tally > (bs * 3 div: 4)) { self.bucket := self __make_expanded_bucket: bs }.
+		}.
+		^anObject.
+	}
+
+	method remove: oldObject ifAbsent: anExceptionBlock
+	{
+	}
+
+	method includes: anObject
+	{
+	}
+
+	method isEmpty
+	{
+		^self.tally == 0
+	}
+
+	method = aSet
+	{
+		ifnot (self class == aSet class) { ^false }.
+		if (self == aSet){ ^true }.
+		ifnot (self.tally = aSet size) { ^false }.
+		self do: [ :el | ifnot (aSet includes: el) { ^false } ].
+		^true
+	}
+
+	method do: aBlock
+	{
+		| bs i obj |
+		bs := self.bucket size.
+		i := 0.
+		while (i < bs)
+		{
+			if ((obj := self.bucket at: i) notNil) { aBlock value: obj }.
+			i := i + 1.
+		}.
+	}
+}
+
+class AssociativeCollection(Collection)
+{
+	var tally, bucket.
+
+	method(#class) new: size
+	{
+		^self new __initialize_with_size: size.
+	}
+
+	method initialize
+	{
+		^self __initialize_with_size: 128. (* TODO: default initial size *)
+	}
+
+	method __initialize_with_size: size
 	{
 		if (size <= 0) { size := 2 }.
 		self.tally := 0.
@@ -728,25 +835,27 @@ class Set(Collection)
 
 	method __make_expanded_bucket: bs
 	{
-		| newbuc newsz ass index |
+		| newbuc newsz ass index i |
 
 		(* expand the bucket *)
 		newsz := bs + 128. (* TODO: keep this growth policy in sync with VM(dic.c) *)
 		newbuc := Array new: newsz.
-		0 priorTo: bs do: [:i |
+		i := 0.
+		while (i < bs)
+		{
 			ass := self.bucket at: i.
 			if (ass notNil) 
 			{
 				index := (ass key hash) rem: newsz.
-				while ((newbuc at: index) notNil)  { index := (index + 1) rem: newsz }.
+				while ((newbuc at: index) notNil) { index := (index + 1) rem: newsz }.
 				newbuc at: index put: ass
 			}.
-		].
+			i := i + 1.
+		}.
 
 		^newbuc.
 	}
-	
-	
+
 	method __find: key or_upsert: upsert with: value
 	{
 		| hv ass bs index ntally |
@@ -781,7 +890,7 @@ class Set(Collection)
 		ass := Association key: key value: value.
 		self.tally := ntally.
 		self.bucket at: index put: ass.
-		
+
 		^ass
 	}
 
@@ -789,7 +898,7 @@ class Set(Collection)
 	{
 		| ass |
 		ass := self __find: key or_upsert: false with: nil.
-		if (ass isError) { ^ass }.
+		if (ass isError) { ^KeyNotFoundException signal }.
 		^ass value
 	}
 
@@ -844,7 +953,7 @@ class Set(Collection)
 	method __find_index: key
 	{
 		| bs ass index |
-		
+
 		bs := self.bucket size.
 		index := (key hash) rem: bs.
 		
@@ -898,7 +1007,7 @@ class Set(Collection)
 	{
 		| index |
 		index := self __find_index: key.
-		if (index isError) { ^index }.
+		if (index isError) { ^KeyNotFoundException signal. }.
 		^self __remove_at: index.
 	}
 
@@ -973,11 +1082,11 @@ class Set(Collection)
 	}
 }
 
-class SymbolSet(Set)
+class SymbolTable(AssociativeCollection)
 {
 }
 
-class Dictionary(Set)
+class Dictionary(AssociativeCollection)
 {
 	(* [NOTE] 
 	 *  VM require Dictionary to implement new: and __put_assoc
@@ -1000,7 +1109,7 @@ class Dictionary(Set)
 	 *
 	 * it must return self for the way VM works.
 	 *)
-	method put_assoc: assoc
+	method __put_assoc: assoc
 	{
 		| hv ass bs index ntally key |
 
@@ -1046,7 +1155,7 @@ class Dictionary(Set)
 (* Namespace is marked with #limited. If a compiler is writeen in moo itself, it must 
  * call a primitive to instantiate a new namespace rather than sending the new message
  * to Namespace *)
-class(#limited) Namespace(Set)
+class(#limited) Namespace(AssociativeCollection)
 {
 	var name, nsup.
 
@@ -1073,11 +1182,11 @@ class(#limited) Namespace(Set)
 	}
 }
 
-class PoolDictionary(Set)
+class PoolDictionary(AssociativeCollection)
 {
 }
 
-class MethodDictionary(Dictionary)
+class MethodDictionary(AssociativeCollection)
 {
 }
 

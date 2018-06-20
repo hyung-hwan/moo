@@ -1390,7 +1390,7 @@ struct moo_t
 	moo_oop_class_t _symbol; /* Symbol */
 	moo_oop_class_t _array; /* Array */
 	moo_oop_class_t _byte_array; /* ByteArray */
-	moo_oop_class_t _symbol_set; /* SymbolSet */
+	moo_oop_class_t _symbol_table; /* SymbolTable */
 	moo_oop_class_t _dictionary;
 
 	moo_oop_class_t _namespace; /* Namespace */
