@@ -698,21 +698,31 @@ class Set(Collection)
 {
 	var tally, bucket.
 
+	method(#class) new
+	{
+		^self new: 16. ### TODO: default size.
+	}
+
 	method(#class) new: size
 	{
-		^self new __initialize_with_size: size.
+		^super new __init_with_capacity: size.
 	}
 
-	method initialize
-	{
-		^self __initialize_with_size: 1. (* TODO: default initial size *)
-	}
-
-	method __initialize_with_size: size
+	method __init_with_capacity: size
 	{
 		if (size <= 0) { size := 2 }.
 		self.tally := 0.
 		self.bucket := Array new: size.
+	}
+
+	method isEmpty
+	{
+		^self.tally == 0
+	}
+
+	method size
+	{
+		^self.tally
 	}
 
 	method __make_expanded_bucket: bs
@@ -720,7 +730,7 @@ class Set(Collection)
 		| newbuc newsz ass index i |
 
 		(* expand the bucket *)
-		newsz := bs + 32.  ## TODO: make this sizing operation configurable.
+		newsz := bs + 16.  ## TODO: make this sizing operation configurable.
 		newbuc := Array new: newsz.
 		i := 0.
 		while (i < bs)
@@ -846,16 +856,6 @@ class Set(Collection)
 		^(self __find_index: anObject) notError.
 	}
 
-	method isEmpty
-	{
-		^self.tally == 0
-	}
-
-	method size
-	{
-		^self.tally
-	}
-
 	method = aSet
 	{
 		ifnot (self class == aSet class) { ^false }.
@@ -882,18 +882,16 @@ class AssociativeCollection(Collection)
 {
 	var tally, bucket.
 
-
+	method  new
+	{
+		^self new: 16.
+	}
 	method(#class) new: size
 	{
-		^self new __initialize_with_size: size.
+		^super new __init_with_capacity: size.
 	}
 
-	method initialize
-	{
-		^self __initialize_with_size: 128. (* TODO: default initial size *)
-	}
-
-	method __initialize_with_size: size
+	method __init_with_capacity: size
 	{
 		if (size <= 0) { size := 2 }.
 		self.tally := 0.
