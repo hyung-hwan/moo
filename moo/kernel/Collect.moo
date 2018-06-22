@@ -705,7 +705,7 @@ class Set(Collection)
 
 	method initialize
 	{
-		^self __initialize_with_size: 128. (* TODO: default initial size *)
+		^self __initialize_with_size: 1. (* TODO: default initial size *)
 	}
 
 	method __initialize_with_size: size
@@ -720,7 +720,7 @@ class Set(Collection)
 		| newbuc newsz ass index i |
 
 		(* expand the bucket *)
-		newsz := bs + 128.
+		newsz := bs + 32.  ## TODO: make this sizing operation configurable.
 		newbuc := Array new: newsz.
 		i := 0.
 		while (i < bs)
@@ -738,7 +738,7 @@ class Set(Collection)
 		^newbuc.
 	}
 
-	method __find_index: anObject
+	method __find_index_for_add: anObject
 	{
 		| bs ass index |
 
@@ -754,12 +754,65 @@ class Set(Collection)
 		^index. ## the item at this index is nil.
 	}
 
+	method __find_index: anObject
+	{
+		| bs ass index |
+
+		bs := self.bucket size.
+		index := (anObject hash) rem: bs.
+
+		while ((ass := self.bucket at: index) notNil)
+		{
+			if (anObject = ass) { ^index }.
+			index := (index + 1) rem: bs.
+		}.
+
+		^Error.Code.ENOENT.
+	}
+
+	method __remove_at: index
+	{
+		| bs x y i v ass z |
+
+		bs := self.bucket size.
+		v := self.bucket at: index.
+
+		x := index.
+		y := index.
+		i := 0.
+		while (i < self.tally)
+		{
+			y := (y + 1) rem: bs.
+
+			ass := self.bucket at: y.
+			if (ass isNil) { (* done. the slot at the current index is nil *) break }.
+			
+			(* get the natural hash index *)
+			z := (ass key hash) rem: bs.
+
+			(* move an element if necessary *)
+			if (((y > x) and ((z <= x) or (z > y))) or ((y < x) and ((z <= x) and (z > y))))
+			{
+				self.bucket at: x put: (self.bucket at: y).
+				x := y.
+			}.
+			
+			i := i + 1.
+		}.
+		
+		self.bucket at: x put: nil.
+		self.tally := self.tally - 1.
+		
+		(* return the affected association *)
+		^v
+	}
+
 	method add: anObject
 	{
 		| index absent bs |
 		if (anObject isNil) { ^anObject }.
 
-		index := self __find_index: anObject.
+		index := self __find_index_for_add: anObject.
 		absent := (self.bucket at: index) isNil.
 		self.bucket at: index put: anObject.
 
@@ -772,17 +825,35 @@ class Set(Collection)
 		^anObject.
 	}
 
+	method remove: oldObject
+	{
+		| index |
+		index := self __find_index: oldObject.
+		if (index isError) { ^NotFoundException signal. }.
+		^self __remove_at: index.
+	}
+
 	method remove: oldObject ifAbsent: anExceptionBlock
 	{
+		| index |
+		index := self __find_index: oldObject.
+		if (index isError) { ^anExceptionBlock value }.
+		^self __remove_at: index.
 	}
 
 	method includes: anObject
 	{
+		^(self __find_index: anObject) notError.
 	}
 
 	method isEmpty
 	{
 		^self.tally == 0
+	}
+
+	method size
+	{
+		^self.tally
 	}
 
 	method = aSet
@@ -810,6 +881,7 @@ class Set(Collection)
 class AssociativeCollection(Collection)
 {
 	var tally, bucket.
+
 
 	method(#class) new: size
 	{
