@@ -27,7 +27,7 @@ class Collection(Object)
 	}
 
 	## ===================================================================
-	## ENUMERATION
+	## ENUMERATING
 	## ===================================================================
 
 	method do: block
@@ -38,7 +38,8 @@ class Collection(Object)
 	method collect: block
 	{
 		| coll |
-		coll := self class new: self basicSize.
+		##coll := self class new: self basicSize.
+		coll := self class new.
 		self do: [ :el | coll add: (block value: el) ].
 		^coll
 	}
@@ -58,7 +59,8 @@ class Collection(Object)
 	method select: condition_block
 	{
 		| coll |
-		coll := self class new: self basicSize.
+		##coll := self class new: self basicSize.
+		coll := self class new.
 		self do: [ :el | if (condition_block value: el) { coll add: el } ].
 		^coll
 	}
@@ -66,7 +68,8 @@ class Collection(Object)
 	method reject: condition_block
 	{
 		| coll |
-		coll := self class new: self basicSize.
+		##coll := self class new: self basicSize.
+		coll := self class new.
 		self do: [ :el | ifnot (condition_block value: el) { coll add: el } ].
 		^coll
 	}
@@ -546,38 +549,45 @@ class OrderedCollection(SequenceableCollection)
 	## ------------------------------------------------
 	## ENUMERATING
 	## ------------------------------------------------
-	method do: block
+	method collect: aBlock
 	{
-		##^self.firstIndex to: (self.lastIndex - 1) do: [:i | block value: (self.buffer at: i)].
+		| coll |
+		coll := self class new: self capacity.
+		self do: [ :el | coll add: (aBlock value: el) ].
+		^coll
+	}
+
+	method do: aBlock
+	{
+		##^self.firstIndex to: (self.lastIndex - 1) do: [:i | aBlock value: (self.buffer at: i)].
 
 		| i |
 		i := self.firstIndex.
 		while (i < self.lastIndex)
 		{
-			block value: (self.buffer at: i).
+			aBlock value: (self.buffer at: i).
 			i := i + 1.
 		}.
 	}
 
-	method reverseDo: block
+	method reverseDo: aBlock
 	{
 		| i |
 		i := self.lastIndex.
 		while (i > self.firstIndex)
 		{
 			i := i - 1.
-			block value: (self.buffer at: i).
+			aBlock value: (self.buffer at: i).
 		}.
-
 	}
 
-	method keysAndValuesDo: block
+	method keysAndValuesDo: aBlock
 	{
 		| i |
 		i := self.firstIndex.
 		while (i < self.lastIndex)
 		{
-			block value: (i - self.firstIndex) value: (self.buffer at: i).
+			aBlock value: (i - self.firstIndex) value: (self.buffer at: i).
 			i := i + 1.
 		}.
 	}
@@ -703,16 +713,16 @@ class Set(Collection)
 		^self new: 16. ### TODO: default size.
 	}
 
-	method(#class) new: size
+	method(#class) new: capacity
 	{
-		^super new __init_with_capacity: size.
+		^super new __init_with_capacity: capacity.
 	}
 
-	method __init_with_capacity: size
+	method __init_with_capacity: capacity
 	{
-		if (size <= 0) { size := 2 }.
+		if (capacity <= 0) { capacity := 2 }.
 		self.tally := 0.
-		self.bucket := Array new: size.
+		self.bucket := Array new: capacity.
 	}
 
 	method isEmpty
@@ -723,6 +733,11 @@ class Set(Collection)
 	method size
 	{
 		^self.tally
+	}
+
+	method capacity
+	{
+		^self.bucket size.
 	}
 
 	method __make_expanded_bucket: bs
@@ -820,6 +835,10 @@ class Set(Collection)
 	method add: anObject
 	{
 		| index absent bs |
+		
+		## you cannot add nil to a set. however, the add: method doesn't
+		## raise an exception for this. the includes: for nil returns
+		## false naturally for the way it's implemented.
 		if (anObject isNil) { ^anObject }.
 
 		index := self __find_index_for_add: anObject.
@@ -876,31 +895,52 @@ class Set(Collection)
 			i := i + 1.
 		}.
 	}
+	
+	method collect: aBlock
+	{
+		## override the default implementation to avoid frequent growth
+		## of the new collection being constructed. the block tends to 
+		## include expression that will produce a unique value for each
+		## element. so sizing the returning collection to the same size
+		## as the receiver is likely to help. however, this assumption
+		## isn't always true.
+
+		| coll |
+		coll := self class new: self capacity.
+		self do: [ :el | coll add: (aBlock value: el) ].
+		^coll
+	}
 }
 
 class AssociativeCollection(Collection)
 {
 	var tally, bucket.
 
-	method  new
+	method(#class) new
 	{
 		^self new: 16.
 	}
-	method(#class) new: size
+
+	method(#class) new: capacity
 	{
-		^super new __init_with_capacity: size.
+		^super new __init_with_capacity: capacity.
 	}
 
-	method __init_with_capacity: size
+	method __init_with_capacity: capacity
 	{
-		if (size <= 0) { size := 2 }.
+		if (capacity <= 0) { capacity := 2 }.
 		self.tally := 0.
-		self.bucket := Array new: size.
+		self.bucket := Array new: capacity.
 	}
 
 	method size
 	{
 		^self.tally
+	}
+
+	method capacity
+	{
+		^self.bucket size.
 	}
 
 	method __make_expanded_bucket: bs
@@ -945,8 +985,7 @@ class AssociativeCollection(Collection)
 			index := (index + 1) rem: bs.
 		}.
 
-		##upsert ifFalse: [^ErrorCode.NOENT].
-		if (upsert) {} else { ^Error.Code.ENOENT }.
+		ifnot (upsert) { ^Error.Code.ENOENT }.
 
 		ntally := self.tally + 1.
 		if (ntally >= bs)
@@ -995,7 +1034,7 @@ class AssociativeCollection(Collection)
 
 	method at: key put: value
 	{
-		(* returns the affected/inserted association *)
+		## returns the affected/inserted association
 		^self __find: key or_upsert: true with: value.
 	}
 
@@ -1012,7 +1051,7 @@ class AssociativeCollection(Collection)
 		ass := self __find: (assoc key) or_upsert: false with: nil.
 		^ass = assoc.
 	}
-	
+
 	method includesKey: key value: value
 	{
 		| ass |
@@ -1065,11 +1104,11 @@ class AssociativeCollection(Collection)
 			
 			i := i + 1.
 		}.
-		
+
 		self.bucket at: x put: nil.
 		self.tally := self.tally - 1.
-		
-		(* return the affected association *)
+
+		## return the affected association 
 		^v
 	}
 
@@ -1115,38 +1154,74 @@ class AssociativeCollection(Collection)
 		^self removeKey: (assoc key) ifAbsent: error_block
 	}
 
-	method do: block
+
+	## ===================================================================
+	## ENUMERATING
+	## ===================================================================
+
+	method collect: aBlock
+	{
+		| coll |
+		coll := OrderedCollection new: self capacity.  
+		self do: [ :el | coll add: (aBlock value: el) ].
+		^coll
+	}
+
+	method select: aBlock
+	{
+		| coll |
+		coll := self class new.
+		## TODO: using at:put: here isn't really right. implement add: to be able to insert the assocication without
+		##       creating another new association.
+		##self associationsDo: [ :ass | if (aBlock value: ass value) { coll add: ass } ].
+		self associationsDo: [ :ass | if (aBlock value: ass value) { coll at: (ass key) put: (ass value) } ].
+		^coll
+	}
+
+	method do: aBlock
 	{
 		| bs i ass |
 		bs := self.bucket size.
 		i := 0.
 		while (i < bs)
 		{
-			if ((ass := self.bucket at: i) notNil) { block value: ass value }.
+			if ((ass := self.bucket at: i) notNil) { aBlock value: ass value }.
 			i := i + 1.
 		}.
 	}
 
-	method keysDo: block
+	method keysDo: aBlock
 	{
 		| bs i ass |
 		bs := self.bucket size.
 		i := 0.
 		while (i < bs)
 		{
-			if ((ass := self.bucket at: i) notNil) { block value: ass key }.
+			if ((ass := self.bucket at: i) notNil) { aBlock value: ass key }.
 			i := i + 1.
 		}.
 	}
 
-	method keysAndValuesDo: block
+	method keysAndValuesDo: aBlock
 	{
 		| bs i ass |
 		bs := self.bucket size.
 		i := 0.
 		while (i < bs)
 		{
-			if ((ass := self.bucket at: i) notNil)  { block value: ass key value: ass value }.
+			if ((ass := self.bucket at: i) notNil)  { aBlock value: ass key value: ass value }.
+			i := i + 1.
+		}.
+	}
+
+	method associationsDo: aBlock
+	{
+		| bs i ass |
+		bs := self.bucket size.
+		i := 0.
+		while (i < bs)
+		{
+			if ((ass := self.bucket at: i) notNil)  { aBlock value: ass }.
 			i := i + 1.
 		}.
 	}
@@ -1166,9 +1241,9 @@ class Dictionary(AssociativeCollection)
 	## TODO: implement Dictionary as a Hashed List/Table or Red-Black Tree
 	##       Do not inherit Set upon reimplementation
 	##
-	method(#class) new: size
+	method(#class) new: capacity
 	{
-		^super new: (size + 10).
+		^super new: (capacity + 10).
 	}
 
 	(* put_assoc: is called internally by VM to add an association

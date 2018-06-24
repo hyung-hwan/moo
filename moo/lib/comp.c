@@ -5549,7 +5549,8 @@ start_over:
 		bcode = (TOKEN_TYPE(moo) == MOO_IOTOK_AND)? BCODE_JUMP_FORWARD_IF_FALSE: BCODE_JUMP_FORWARD_IF_TRUE;
 		/* TODO: optimization if the expression is a known constant that can be determined to be boolean */
 		if (add_to_oow_pool(moo, &jumptoend, moo->c->mth.code.len) <= -1 ||
- 		    emit_single_param_instruction(moo, bcode, MAX_CODE_JUMP) <= -1) goto oops;
+ 		    emit_single_param_instruction(moo, bcode, MAX_CODE_JUMP) <= -1 ||
+ 		    emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) goto oops;
 		GET_TOKEN (moo);
 
 		/* compile_method_expression() calls this function with a non-null
