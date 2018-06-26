@@ -1007,7 +1007,7 @@ class AssociativeCollection(Collection)
 	{
 		| ass |
 		ass := self __find: key or_upsert: false with: nil.
-		if (ass isError) { ^KeyNotFoundException signal }.
+		if (ass isError) { ^KeyNotFoundException signal: ('Unable to find ' & (key asString)) }.
 		^ass value
 	}
 
@@ -1116,7 +1116,7 @@ class AssociativeCollection(Collection)
 	{
 		| index |
 		index := self __find_index: key.
-		if (index isError) { ^KeyNotFoundException signal. }.
+		if (index isError) { ^KeyNotFoundException signal: ('Unable to find ' & (key asString)). }.
 		^self __remove_at: index.
 	}
 
