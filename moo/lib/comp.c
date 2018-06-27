@@ -48,6 +48,13 @@
 #define PFTYPE_EXCEPTION  3
 #define PFTYPE_ENSURE     4
 
+enum class_type_t
+{
+	CLASS_TYPE_NORMAL = 0,
+	CLASS_TYPE_EXTEND,
+	CLASS_TYPE_INTERFACE
+};
+
 enum class_mod_t
 {
 	CLASS_FINAL      = (1 << 0),
@@ -7351,7 +7358,7 @@ static MOO_INLINE int _set_class_indexed_type (moo_t* moo, moo_obj_type_t type)
 	return 0;
 }
 
-static int __compile_class_definition (moo_t* moo, int extend)
+static int __compile_class_definition (moo_t* moo, int class_type)
 {
 	/* 
 	 * class-definition := #class class-modifier? class-name  (class-body | class-module-import)
@@ -7375,7 +7382,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 	moo_ioloc_t type_loc;
 
 
-	if (!extend && TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
+	if (class_type == CLASS_TYPE_NORMAL && TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
 		/* process class modifiers */
 		MOO_ASSERT (moo, (moo->c->cls.flags & CLASS_INDEXED) == 0);
@@ -7554,7 +7561,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 	moo->c->cls.fqn_loc = moo->c->tok.loc;
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 	{
-		if (preprocess_dotted_name(moo, (extend? PDN_DONT_ADD_NS: 0), MOO_NULL, &moo->c->cls.fqn, &moo->c->cls.fqn_loc, &moo->c->cls.name, &moo->c->cls.ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name(moo, (class_type == CLASS_TYPE_EXTEND? PDN_DONT_ADD_NS: 0), MOO_NULL, &moo->c->cls.fqn, &moo->c->cls.fqn_loc, &moo->c->cls.name, &moo->c->cls.ns_oop) <= -1) return -1;
 	}
 	else
 	{
@@ -7562,7 +7569,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 	}
 	GET_TOKEN (moo); 
 
-	if (extend)
+	if (class_type == CLASS_TYPE_EXTEND)
 	{
 		/* extending class */
 		MOO_ASSERT (moo, moo->c->cls.flags == 0);
@@ -7638,7 +7645,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 		GET_TOKEN (moo);
 
-		ass = moo_lookupdic (moo, (moo_oop_dic_t)moo->c->cls.ns_oop, &moo->c->cls.name);
+		ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cls.ns_oop, &moo->c->cls.name);
 		if (ass)
 		{
 			if (MOO_CLASSOF(moo, ass->value) != moo->_class  ||
@@ -7800,7 +7807,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 
 	GET_TOKEN (moo);
 
-	if (extend)
+	if (class_type == CLASS_TYPE_EXTEND)
 	{
 		moo_oop_char_t pds;
 
@@ -7955,7 +7962,7 @@ static int __compile_class_definition (moo_t* moo, int extend)
 	return 0;
 }
 
-static int compile_class_definition (moo_t* moo, int extend)
+static int compile_class_definition (moo_t* moo, int class_type)
 {
 	int n;
 	moo_oow_t i;
@@ -7995,7 +8002,7 @@ static int compile_class_definition (moo_t* moo, int extend)
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 
 	/* do main compilation work */
-	n = __compile_class_definition (moo, extend);
+	n = __compile_class_definition (moo, class_type);
 
 	/* reset these oops plus literal pointers to lessen load on gc_compiler().
 	 * it doesn't need to rescue items not needed any longer. */
@@ -8392,21 +8399,19 @@ static int compile_stream (moo_t* moo)
 		{
 			/* class Selfclass(Superclass) { } */
 			GET_TOKEN (moo);
-			if (compile_class_definition(moo, 0) <= -1) return -1;
+			if (compile_class_definition(moo, CLASS_TYPE_NORMAL) <= -1) return -1;
 		}
-#if 0
 		else if (is_token_word(moo, VOCA_INTERFACE))
 		{
 			/* interface InterfaceName { } */
 			GET_TOKEN (moo);
-			if (compile_interface_defintion(moo, 0) <= -1) return -1;
+			if (compile_class_definition(moo, CLASS_TYPE_INTERFACE) <= -1) return -1;
 		}
-#endif
 		else if (is_token_word(moo, VOCA_EXTEND))
 		{
 			/* extend Selfclass {} */
 			GET_TOKEN (moo);
-			if (compile_class_definition(moo, 1) <= -1) return -1;
+			if (compile_class_definition(moo, CLASS_TYPE_EXTEND) <= -1) return -1;
 		}
 		else if (is_token_word(moo, VOCA_POOLDIC))
 		{

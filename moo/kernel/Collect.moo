@@ -1155,6 +1155,11 @@ class AssociativeCollection(Collection)
 	}
 
 
+	method add: anAssociation
+	{
+		^self __find: (anAssociation key) or_upsert: true with: (anAssociation value)
+	}
+
 	## ===================================================================
 	## ENUMERATING
 	## ===================================================================
