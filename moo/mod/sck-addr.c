@@ -544,19 +544,19 @@ sck_len_t moo_sck_addr_len (sck_addr_t* addr)
 {
 	switch (addr->family)
 	{
-	#if defined(AF_INET)
+	#if defined(AF_INET) && (MOO__SIZEOF_STRUCT_SOCKADDR_IN > 0)
 		case AF_INET:
 			return MOO_SIZEOF(struct sockaddr_in);
 	#endif
-	#if defined(AF_INET6)
+	#if defined(AF_INET6) && (MOO_SIZEOF_STRUCT_SOCKADDR_IN6 > 0)
 		case AF_INET6:
 			return MOO_SIZEOF(struct sockaddr_in6);
 	#endif
-	#if defined(AF_PACKET)
+	#if defined(AF_PACKET) && (MOO_SIZEOF_STRUCT_SOCKADDR_LL > 0)
 		case AF_PACKET:
 			return MOO_SIZEOF(struct sockaddr_ll);
 	#endif
-	#if defined(AF_UNIX)
+	#if defined(AF_UNIX) && (MOO_SIZEOF_STRUCT_SOCKADDR_UN > 0)
 		case AF_UNIX:
 			return MOO_SIZEOF(struct sockaddr_un);
 	#endif
