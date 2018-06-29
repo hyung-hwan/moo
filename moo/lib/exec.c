@@ -947,6 +947,7 @@ static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore
 		moo_ooi_t count;
 		int sems_idx;
 
+		/* there is a semaphore signaled in the group */
 		count = MOO_OOP_TO_SMOOI(sem->count);
 		MOO_ASSERT (moo, count > 0);
 		count--;
@@ -4165,7 +4166,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 		{
 			moo_ntime_t ft;
 
-			/* no runnable process while there is an io semaphore being waited */
+			/* no runnable process while there is an io semaphore being waited for */
 			if ((moo_oop_t)moo->sem_gcfin != moo->_nil && moo->sem_gcfin_sigreq) goto signal_sem_gcfin;
 
 			do
