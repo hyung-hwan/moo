@@ -458,10 +458,12 @@ dnl Changing ac_cv_sizeof___int128_t here doesn't corret SIZEOF___INT128_T
 dnl since it's already generated. It only affects MOO_SIZEOF___INT128_T below.
 if test ${ac_cv_sizeof___int128_t} -gt 0
 then
-	AC_MSG_CHECKING([__int128_t with %])
+	AC_MSG_CHECKING([__int128_t with % and va_arg])
 	AC_COMPILE_IFELSE(
-		[AC_LANG_PROGRAM([], [
+		[AC_LANG_PROGRAM([#include <stdarg.h>], [
 			volatile __int128_t x, base;
+			va_list ap;
+			va_arg(ap, __int128_t);
 			x = (__int128_t)&base;
 			base = (__int128_t)&x;
 			x = x % base;

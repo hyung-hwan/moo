@@ -94,7 +94,7 @@ class SequenceableCollection(Collection)
 	}
 }
 
-	## -------------------------------------------------------------------------------
+## -------------------------------------------------------------------------------
 class(#pointer) Array(SequenceableCollection)
 {
 	method size
