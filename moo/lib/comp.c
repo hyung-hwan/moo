@@ -7165,6 +7165,39 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 	return 0;
 }
 
+static int make_defined_interface (moo_t* moo)
+{
+	moo_oop_t tmp;
+
+/* TODO: instantiate differently... */
+	tmp = moo_instantiate(moo, moo->_class, MOO_NULL, 0);
+	if (!tmp) return -1;
+	moo->c->cls.self_oop = (moo_oop_class_t)tmp;
+
+	tmp = moo_makesymbol(moo, moo->c->cls.name.ptr, moo->c->cls.name.len);
+	if (!tmp) return -1;
+	moo->c->cls.self_oop->name = (moo_oop_char_t)tmp;
+
+	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
+	if (!tmp) return -1;
+	moo->c->cls.self_oop->mthdic[MOO_METHOD_INSTANCE] = (moo_oop_dic_t)tmp;
+
+/* TOOD: good dictionary size */
+	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
+	if (!tmp) return -1;
+	moo->c->cls.self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_dic_t)tmp;
+
+	if (!moo_putatdic(moo, (moo_oop_dic_t)moo->c->cls.ns_oop, (moo_oop_t)moo->c->cls.self_oop->name, (moo_oop_t)moo->c->cls.self_oop)) return -1;
+	moo->c->cls.self_oop->nsup = moo->c->cls.ns_oop;
+
+	moo->c->cls.self_oop->spec = MOO_SMOOI_TO_OOP(0);
+	moo->c->cls.self_oop->selfspec = MOO_SMOOI_TO_OOP(0);
+
+/*  TODO: .......... */
+
+	return 0;
+}
+
 static int make_defined_class (moo_t* moo)
 {
 	/* this function make a class object with no functions/methods */
@@ -7216,8 +7249,8 @@ static int make_defined_class (moo_t* moo)
 	{
 		/* the class variables and class instance variables are placed
 		 * inside the class object after the fixed part. */
-		tmp = moo_instantiate (moo, moo->_class, MOO_NULL,
-		                       moo->c->cls.var[VAR_CLASSINST].total_count + moo->c->cls.var[VAR_CLASS].total_count);
+		tmp = moo_instantiate(moo, moo->_class, MOO_NULL,
+		                      moo->c->cls.var[VAR_CLASSINST].total_count + moo->c->cls.var[VAR_CLASS].total_count);
 		if (!tmp) return -1;
 
 		just_made = 1;
@@ -7242,7 +7275,7 @@ static int make_defined_class (moo_t* moo)
 		/* set the name of a class if it's not set. at this point,
 		 * only kernel classes must have a name which has been set
 		 * during ignition phase. See ignite_3() */
-		tmp = moo_makesymbol (moo, moo->c->cls.name.ptr, moo->c->cls.name.len);
+		tmp = moo_makesymbol(moo, moo->c->cls.name.ptr, moo->c->cls.name.len);
 		if (!tmp) return -1;
 		moo->c->cls.self_oop->name = (moo_oop_char_t)tmp;
 	}
@@ -7251,42 +7284,42 @@ static int make_defined_class (moo_t* moo)
 
 	if (moo->c->cls.modname.len > 0)
 	{
-		tmp = moo_makesymbol (moo, moo->c->cls.modname.ptr, moo->c->cls.modname.len);
+		tmp = moo_makesymbol(moo, moo->c->cls.modname.ptr, moo->c->cls.modname.len);
 		if (!tmp) return -1;
 		moo->c->cls.self_oop->modname = tmp;
 	}
 
-	tmp = moo_makestring (moo, moo->c->cls.var[VAR_INSTANCE].str.ptr, moo->c->cls.var[VAR_INSTANCE].str.len);
+	tmp = moo_makestring(moo, moo->c->cls.var[VAR_INSTANCE].str.ptr, moo->c->cls.var[VAR_INSTANCE].str.len);
 	if (!tmp) return -1;
 	moo->c->cls.self_oop->instvars = (moo_oop_char_t)tmp;
 
-	tmp = moo_makestring (moo, moo->c->cls.var[VAR_CLASS].str.ptr, moo->c->cls.var[VAR_CLASS].str.len);
+	tmp = moo_makestring(moo, moo->c->cls.var[VAR_CLASS].str.ptr, moo->c->cls.var[VAR_CLASS].str.len);
 	if (!tmp) return -1;
 	moo->c->cls.self_oop->classvars = (moo_oop_char_t)tmp;
 
-	tmp = moo_makestring (moo, moo->c->cls.var[VAR_CLASSINST].str.ptr, moo->c->cls.var[VAR_CLASSINST].str.len);
+	tmp = moo_makestring(moo, moo->c->cls.var[VAR_CLASSINST].str.ptr, moo->c->cls.var[VAR_CLASSINST].str.len);
 	if (!tmp) return -1;
 	moo->c->cls.self_oop->classinstvars = (moo_oop_char_t)tmp;
 
-	tmp = moo_makestring (moo, moo->c->cls.pooldic_imp.dcl.ptr, moo->c->cls.pooldic_imp.dcl.len);
+	tmp = moo_makestring(moo, moo->c->cls.pooldic_imp.dcl.ptr, moo->c->cls.pooldic_imp.dcl.len);
 	if (!tmp) return -1;
 	moo->c->cls.self_oop->pooldics = (moo_oop_char_t)tmp;
 
 /* TOOD: good dictionary size */
-	tmp = (moo_oop_t)moo_makedic (moo, moo->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
+	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
 	moo->c->cls.self_oop->mthdic[MOO_METHOD_INSTANCE] = (moo_oop_dic_t)tmp;
 
 /* TOOD: good dictionary size */
-	tmp = (moo_oop_t)moo_makedic (moo, moo->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
+	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
 	moo->c->cls.self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_dic_t)tmp;
 
 	/* store the default intial values for instance variables */
-	if (make_default_initial_values (moo, VAR_INSTANCE) <= -1) return -1;
+	if (make_default_initial_values(moo, VAR_INSTANCE) <= -1) return -1;
 
 	/* store the default intial values for class instance variables */
-	if (make_default_initial_values (moo, VAR_CLASSINST) <= -1) return -1;
+	if (make_default_initial_values(moo, VAR_CLASSINST) <= -1) return -1;
 	if (moo->c->cls.self_oop->initv[VAR_CLASSINST] != moo->_nil)
 	{
 		moo_oow_t i, initv_count;
@@ -7332,7 +7365,7 @@ static int make_defined_class (moo_t* moo)
 /* TODO: update the subclasses field of the superclass if it's not nil */
 
 
-	if (make_getters_and_setters (moo) <= -1) return -1;
+	if (make_getters_and_setters(moo) <= -1) return -1;
 
 	if (just_made)
 	{
@@ -7569,7 +7602,24 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 	}
 	GET_TOKEN (moo); 
 
-	if (class_type == CLASS_TYPE_EXTEND)
+	if (class_type == CLASS_TYPE_INTERFACE)
+	{
+		MOO_ASSERT (moo, moo->c->cls.flags == 0);
+
+		MOO_INFO2 (moo, "Defining an interface %.*js\n", moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
+
+		ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cls.ns_oop, &moo->c->cls.name);
+		if (ass)
+		{
+			// The interface name already exists. An interface cannot be defined with an existing name
+			moo_setsynerr (moo, MOO_SYNERR_CLASSDUPL, &moo->c->cls.fqn_loc, &moo->c->cls.name); /* TODO: change the error code to MOO_SYNERR_IFCEDUPL? */
+			return -1;
+		}
+
+		/* an interface doesn't inherit anything */
+		moo->c->cls.super_oop = moo->_nil;
+	}
+	else if (class_type == CLASS_TYPE_EXTEND)
 	{
 		/* extending class */
 		MOO_ASSERT (moo, moo->c->cls.flags == 0);
@@ -7807,12 +7857,29 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 
 	GET_TOKEN (moo);
 
-	if (class_type == CLASS_TYPE_EXTEND)
+	if (class_type == CLASS_TYPE_INTERFACE)
+	{
+		/* an interface cannot have variables */
+		if (is_token_word(moo, VOCA_VAR) || is_token_word(moo, VOCA_VARIABLE) || 
+		    is_token_binary_selector(moo, VOCA_VBAR) ||
+		    is_token_binary_selector(moo, VOCA_VBAR_PLUS) ||
+		    is_token_binary_selector(moo, VOCA_VBAR_ASTER))
+		{
+			moo_setsynerr (moo, MOO_SYNERR_VARDCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
+
+		if (make_defined_interface(moo) <= -1) return -1;
+	}
+	else if (class_type == CLASS_TYPE_EXTEND)
 	{
 		moo_oop_char_t pds;
 
 		/* when a class is extended, a new variable cannot be added */
-		if (is_token_word(moo, VOCA_VAR) || is_token_word(moo, VOCA_VARIABLE))
+		if (is_token_word(moo, VOCA_VAR) || is_token_word(moo, VOCA_VARIABLE) || 
+		    is_token_binary_selector(moo, VOCA_VBAR) ||
+		    is_token_binary_selector(moo, VOCA_VBAR_PLUS) ||
+		    is_token_binary_selector(moo, VOCA_VBAR_ASTER))
 		{
 			moo_setsynerr (moo, MOO_SYNERR_VARDCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
@@ -7923,7 +7990,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 			{
 				const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
 				moo_setsynerrbfmt (moo, MOO_SYNERR_MODIMPFAIL, &moo->c->cls.modname_loc, &moo->c->cls.modname,
-						"unable to import %.*js - %js", moo->c->cls.modname.len, moo->c->cls.modname.ptr, oldmsg);
+					"unable to import %.*js - %js", moo->c->cls.modname.len, moo->c->cls.modname.ptr, oldmsg);
 				return -1;
 			}
 		}
@@ -7951,7 +8018,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 		else break;
 	}
 	while (1);
-	
+
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
 		moo_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
