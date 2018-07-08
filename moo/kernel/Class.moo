@@ -37,3 +37,9 @@ class(#pointer,#limited) Class(Apex)
 	method nsup { ^self.nsup }
 	method nsdic { ^self.nsdic }
 }
+
+
+class(#pointer,#limited) Interface(Class)
+{
+### TODO: fill this class with methods
+}

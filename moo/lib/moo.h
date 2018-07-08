@@ -1384,15 +1384,16 @@ struct moo_t
 	moo_oop_class_t _apex; /* Apex */
 	moo_oop_class_t _undefined_object; /* UndefinedObject */
 	moo_oop_class_t _class; /* Class */
+	moo_oop_class_t _interface; /* Interface */
 	moo_oop_class_t _object; /* Object */
-	moo_oop_class_t _string; /* String */
 
+	moo_oop_class_t _string; /* String */
 	moo_oop_class_t _symbol; /* Symbol */
 	moo_oop_class_t _array; /* Array */
 	moo_oop_class_t _byte_array; /* ByteArray */
 	moo_oop_class_t _symbol_table; /* SymbolTable */
-	moo_oop_class_t _dictionary;
 
+	moo_oop_class_t _dictionary;
 	moo_oop_class_t _namespace; /* Namespace */
 	moo_oop_class_t _pool_dictionary; /* PoolDictionary */
 	moo_oop_class_t _method_dictionary; /* MethodDictionary */
