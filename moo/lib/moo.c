@@ -606,7 +606,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	load = moo->vmprim.dl_getsym(moo, md.handle, buf);
 	if (!load) 
 	{
-		moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to get module symbol [%js] in [%.*js] - %js", buf,namelen, name);
+		moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to get module symbol [%js] in [%.*js]", buf, namelen, name);
 		MOO_DEBUG3 (moo, "Cannot get a module symbol [%js] in [%.*js]\n", buf, namelen, name);
 		moo->vmprim.dl_close (moo, md.handle);
 		return MOO_NULL;
