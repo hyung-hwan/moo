@@ -66,7 +66,7 @@ enum class_mod_t
 enum var_type_t
 {
 	/* == NEVER CHANGE THIS ORDER OF 3 ITEMS BELOW ==
-	 * moo->c->cls.var and some iterations rely on them. */
+	 * moo->c->cclass->var and some iterations rely on them. */
 	VAR_INSTANCE   = 0,
 	VAR_CLASSINST  = 1,
 	VAR_CLASS      = 2,
@@ -247,13 +247,17 @@ enum voca_id_t
 };
 typedef enum voca_id_t voca_id_t;
 
-static int compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd);
+static int compile_pooldic_definition (moo_t* moo);
 static int compile_block_statement (moo_t* moo);
 static int compile_method_statement (moo_t* moo);
 static int compile_method_expression (moo_t* moo, int pop);
 static int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index);
 static moo_oop_t token_to_literal (moo_t* moo, int rdonly);
 static moo_oop_t find_element_in_compiling_pooldic (moo_t* moo, const moo_oocs_t* name);
+
+static void gc_cunit_chain (moo_t* moo);
+static moo_cunit_t* push_cunit (moo_t* moo, moo_cunit_type_t type);
+static void pop_cunit (moo_t* moo);
 
 static MOO_INLINE int is_spacechar (moo_ooci_t c)
 {
@@ -2752,27 +2756,27 @@ static int add_symbol_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t offs
 
 static MOO_INLINE int set_class_fqn (moo_t* moo, const moo_oocs_t* name)
 {
-	if (copy_string_to (moo, name, &moo->c->cls.fqn, &moo->c->cls.fqn_capa, 0, '\0') <= -1) return -1;
-	moo->c->cls.name = moo->c->cls.fqn;
+	if (copy_string_to(moo, name, &moo->c->cclass->fqn, &moo->c->cclass->fqn_capa, 0, '\0') <= -1) return -1;
+	moo->c->cclass->name = moo->c->cclass->fqn;
 	return 0;
 }
 
 static MOO_INLINE int set_superclass_fqn (moo_t* moo, const moo_oocs_t* name)
 {
-	if (copy_string_to (moo, name, &moo->c->cls.superfqn, &moo->c->cls.superfqn_capa, 0, '\0') <= -1) return -1;
-	moo->c->cls.supername = moo->c->cls.superfqn;
+	if (copy_string_to(moo, name, &moo->c->cclass->superfqn, &moo->c->cclass->superfqn_capa, 0, '\0') <= -1) return -1;
+	moo->c->cclass->supername = moo->c->cclass->superfqn;
 	return 0;
 }
 
 static MOO_INLINE int set_class_modname (moo_t* moo, const moo_oocs_t* name)
 {
-	if (copy_string_to (moo, name, &moo->c->cls.modname, &moo->c->cls.modname_capa, 0, '\0') <= -1) return -1;
+	if (copy_string_to(moo, name, &moo->c->cclass->modname, &moo->c->cclass->modname_capa, 0, '\0') <= -1) return -1;
 	return 0;
 }
 
-static MOO_INLINE int set_pooldic_fqn (moo_t* moo, moo_pooldic_t* pd, const moo_oocs_t* name)
+static MOO_INLINE int set_pooldic_fqn (moo_t* moo, moo_cunit_pooldic_t* pd, const moo_oocs_t* name)
 {
-	if (copy_string_to (moo, name, &pd->fqn, &pd->fqn_capa, 0, '\0') <= -1) return -1;
+	if (copy_string_to(moo, name, &pd->fqn, &pd->fqn_capa, 0, '\0') <= -1) return -1;
 	pd->name = pd->fqn;
 	return 0;
 }
@@ -2781,7 +2785,7 @@ static MOO_INLINE int add_class_level_variable (moo_t* moo, var_type_t var_type,
 {
 	int n;
 
-	n = copy_string_to (moo, name, &moo->c->cls.var[var_type].str, &moo->c->cls.var[var_type].str_capa, 1, ' ');
+	n = copy_string_to(moo, name, &moo->c->cclass->var[var_type].str, &moo->c->cclass->var[var_type].str_capa, 1, ' ');
 	if (n >= 0) 
 	{
 		static moo_oow_t varlim[] =
@@ -2796,14 +2800,14 @@ static MOO_INLINE int add_class_level_variable (moo_t* moo, var_type_t var_type,
 		MOO_ASSERT (moo, VAR_CLASS == 2);
 		MOO_ASSERT (moo, var_type >= VAR_INSTANCE && var_type <= VAR_CLASS);
 
-		if (moo->c->cls.var[var_type].total_count >= varlim[var_type])
+		if (moo->c->cclass->var[var_type].total_count >= varlim[var_type])
 		{
 			moo_setsynerrbfmt (moo, MOO_SYNERR_VARFLOOD, loc, name, "too many ");
 			return -1;
 		}
 
-		moo->c->cls.var[var_type].count++;
-		moo->c->cls.var[var_type].total_count++;
+		moo->c->cclass->var[var_type].count++;
+		moo->c->cclass->var[var_type].total_count++;
 	}
 
 	return n;
@@ -2811,59 +2815,59 @@ static MOO_INLINE int add_class_level_variable (moo_t* moo, var_type_t var_type,
 
 static int set_class_level_variable_initv (moo_t* moo, var_type_t var_type, moo_oow_t var_index, moo_oop_t initv, int flags)
 {
-	if (var_index >= moo->c->cls.var[var_type].initv_capa)
+	if (var_index >= moo->c->cclass->var[var_type].initv_capa)
 	{
 		moo_oow_t newcapa, oldcapa;
 		/*moo_oow_t i;*/
 		moo_initv_t* tmp;
 
-		oldcapa = moo->c->cls.var[var_type].initv_capa;
+		oldcapa = moo->c->cclass->var[var_type].initv_capa;
 		newcapa = MOO_ALIGN_POW2 ((var_index + 1), 32);
-		tmp = moo_reallocmem (moo, moo->c->cls.var[var_type].initv, newcapa * MOO_SIZEOF(*tmp));
+		tmp = moo_reallocmem (moo, moo->c->cclass->var[var_type].initv, newcapa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
-		/*for (i = moo->c->cls.var[var_type].initv_capa; i < newcapa; i++) tmp[i] = MOO_NULL;*/
+		/*for (i = moo->c->cclass->var[var_type].initv_capa; i < newcapa; i++) tmp[i] = MOO_NULL;*/
 		MOO_MEMSET (&tmp[oldcapa], 0, (newcapa - oldcapa) * MOO_SIZEOF(moo_oop_t));
 
-		moo->c->cls.var[var_type].initv = tmp;
-		moo->c->cls.var[var_type].initv_capa = newcapa;
+		moo->c->cclass->var[var_type].initv = tmp;
+		moo->c->cclass->var[var_type].initv_capa = newcapa;
 	}
 
-	if (var_index >= moo->c->cls.var[var_type].initv_count) 
+	if (var_index >= moo->c->cclass->var[var_type].initv_count) 
 	{
 		moo_oow_t i;
 
-		for (i = moo->c->cls.var[var_type].initv_count; i < var_index; i++) 
+		for (i = moo->c->cclass->var[var_type].initv_count; i < var_index; i++) 
 		{
-			moo->c->cls.var[var_type].initv[i].v = MOO_NULL;
-			moo->c->cls.var[var_type].initv[i].flags = 0;
+			moo->c->cclass->var[var_type].initv[i].v = MOO_NULL;
+			moo->c->cclass->var[var_type].initv[i].flags = 0;
 		}
 
-		moo->c->cls.var[var_type].initv_count = var_index + 1;
+		moo->c->cclass->var[var_type].initv_count = var_index + 1;
 	}
 
-	moo->c->cls.var[var_type].initv[var_index].v = initv;
-	moo->c->cls.var[var_type].initv[var_index].flags = flags;
+	moo->c->cclass->var[var_type].initv[var_index].v = initv;
+	moo->c->cclass->var[var_type].initv[var_index].flags = flags;
 	return 0;
 }
 
 static MOO_INLINE int add_pooldic_import (moo_t* moo, const moo_oocs_t* name, moo_oop_dic_t pooldic_oop)
 {
-	if (moo->c->cls.pooldic_imp.dcl_count >= moo->c->cls.pooldic_imp.oops_capa)
+	if (moo->c->cclass->pooldic_imp.dcl_count >= moo->c->cclass->pooldic_imp.oops_capa)
 	{
 		moo_oow_t new_capa;
 		moo_oop_dic_t* tmp;
 
-		new_capa = MOO_ALIGN(moo->c->cls.pooldic_imp.oops_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
-		tmp = moo_reallocmem (moo, moo->c->cls.pooldic_imp.oops, new_capa * MOO_SIZEOF(moo_oop_dic_t));
+		new_capa = MOO_ALIGN(moo->c->cclass->pooldic_imp.oops_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
+		tmp = moo_reallocmem (moo, moo->c->cclass->pooldic_imp.oops, new_capa * MOO_SIZEOF(moo_oop_dic_t));
 		if (!tmp) return -1;
 
-		moo->c->cls.pooldic_imp.oops_capa = new_capa;
-		moo->c->cls.pooldic_imp.oops = tmp;
+		moo->c->cclass->pooldic_imp.oops_capa = new_capa;
+		moo->c->cclass->pooldic_imp.oops = tmp;
 	}
 
-	moo->c->cls.pooldic_imp.oops[moo->c->cls.pooldic_imp.dcl_count] = pooldic_oop;
-	moo->c->cls.pooldic_imp.dcl_count++;
+	moo->c->cclass->pooldic_imp.oops[moo->c->cclass->pooldic_imp.dcl_count] = pooldic_oop;
+	moo->c->cclass->pooldic_imp.dcl_count++;
 /* TODO: check if pooldic_count overflows */
 
 	return 0;
@@ -2899,7 +2903,7 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 			if (find_word_in_string(&hs, name, &pos) >= 0)
 			{
 				super = self->superclass;
-				MOO_ASSERT (moo, super == moo->c->cls.super_oop);
+				MOO_ASSERT (moo, super == moo->c->cclass->super_oop);
 
 				/* 'self' may be MOO_NULL if MOO_NULL has been given for it.
 				 * the caller must take good care when interpreting the meaning of 
@@ -2910,7 +2914,7 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 		}
 
 		super = self->superclass;
-		MOO_ASSERT (moo, super == moo->c->cls.super_oop);
+		MOO_ASSERT (moo, super == moo->c->cclass->super_oop);
 	}
 	else
 	{
@@ -2918,14 +2922,14 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 		 * find the variable in the compiler's own list */
 		for (index = VAR_INSTANCE; index <= VAR_CLASS; index++)
 		{
-			if (find_word_in_string(&moo->c->cls.var[index].str, name, &pos) >= 0)
+			if (find_word_in_string(&moo->c->cclass->var[index].str, name, &pos) >= 0)
 			{
-				super = moo->c->cls.super_oop;
+				super = moo->c->cclass->super_oop;
 				var->cls = MOO_NULL; /* the current class being compiled */
 				goto done;
 			}
 		}
-		super = moo->c->cls.super_oop;
+		super = moo->c->cclass->super_oop;
 	}
 
 	while (super != moo->_nil)
@@ -3063,13 +3067,13 @@ static int method_exists (moo_t* moo, const moo_oocs_t* name)
 	/* check if the current class contains a method of the given name */
 	if (moo->c->mth.type == MOO_METHOD_DUAL)
 	{
-		return moo_lookupdic (moo, moo->c->cls.self_oop->mthdic[0], name) != MOO_NULL ||
-		       moo_lookupdic (moo, moo->c->cls.self_oop->mthdic[1], name) != MOO_NULL;
+		return moo_lookupdic (moo, moo->c->cclass->self_oop->mthdic[0], name) != MOO_NULL ||
+		       moo_lookupdic (moo, moo->c->cclass->self_oop->mthdic[1], name) != MOO_NULL;
 	}
 	else
 	{
-		MOO_ASSERT (moo, moo->c->mth.type < MOO_COUNTOF(moo->c->cls.self_oop->mthdic));
-		return moo_lookupdic (moo, moo->c->cls.self_oop->mthdic[moo->c->mth.type], name) != MOO_NULL;
+		MOO_ASSERT (moo, moo->c->mth.type < MOO_COUNTOF(moo->c->cclass->self_oop->mthdic));
+		return moo_lookupdic (moo, moo->c->cclass->self_oop->mthdic[moo->c->mth.type], name) != MOO_NULL;
 	}
 }
 
@@ -3180,7 +3184,7 @@ static int preprocess_dotted_name (moo_t* moo, int flags, moo_oop_nsdic_t topdic
 
 			if (is_reserved_word(&seg)) goto wrong_name;
 
-			ass = moo_lookupdic (moo, (moo_oop_dic_t)dic, &seg);
+			ass = moo_lookupdic(moo, (moo_oop_dic_t)dic, &seg);
 			if (ass)
 			{
 				if (MOO_CLASSOF(moo, ass->value) == moo->_namespace)
@@ -3203,7 +3207,7 @@ static int preprocess_dotted_name (moo_t* moo, int flags, moo_oop_nsdic_t topdic
 
 						/* attach a new namespace dictionary to the nsdic field
 						 * of the class */
-						t = attach_nsdic_to_class (moo, (moo_oop_class_t)ass->value, dic);
+						t = attach_nsdic_to_class(moo, (moo_oop_class_t)ass->value, dic);
 						if (!t) return -1;
 
 						dic = t;
@@ -3285,7 +3289,7 @@ static int resolve_pooldic (moo_t* moo, int dotted, const moo_oocs_t* name)
 	{
 		last = *name;
 		/* it falls back to the name space of the class */
-		ns_oop = moo->c->cls.ns_oop; 
+		ns_oop = moo->c->cclass->ns_oop; 
 	}
 
 	/* check if the name refers to a pool dictionary */
@@ -3297,9 +3301,9 @@ static int resolve_pooldic (moo_t* moo, int dotted, const moo_oocs_t* name)
 	}
 
 	/* check if the same dictionary pool has been declared for import */
-	for (i = 0; i < moo->c->cls.pooldic_imp.dcl_count; i++)
+	for (i = 0; i < moo->c->cclass->pooldic_imp.dcl_count; i++)
 	{
-		if ((moo_oop_dic_t)ass->value == moo->c->cls.pooldic_imp.oops[i])
+		if ((moo_oop_dic_t)ass->value == moo->c->cclass->pooldic_imp.oops[i])
 		{
 			moo_setsynerr (moo, MOO_SYNERR_POOLDICDUPL, TOKEN_LOC(moo), name);
 			return -1;
@@ -3324,9 +3328,9 @@ static int import_pool_dictionary (moo_t* moo, moo_oop_nsdic_t ns_oop, const moo
 	}
 
 	/* check if the same dictionary pool has been declared for import */
-	for (i = 0; i < moo->c->cls.pooldic_imp.dcl_count; i++)
+	for (i = 0; i < moo->c->cclass->pooldic_imp.dcl_count; i++)
 	{
-		if ((moo_oop_dic_t)ass->value == moo->c->cls.pooldic_imp.oops[i])
+		if ((moo_oop_dic_t)ass->value == moo->c->cclass->pooldic_imp.oops[i])
 		{
 			moo_setsynerr (moo, MOO_SYNERR_POOLDICDUPL, tok_loc, tok_name);
 			return -1;
@@ -3334,9 +3338,9 @@ static int import_pool_dictionary (moo_t* moo, moo_oop_nsdic_t ns_oop, const moo
 	}
 
 	if (add_pooldic_import(moo, tok_name, (moo_oop_dic_t)ass->value) <= -1) return -1;
-	if (copy_string_to (moo, tok_name, &moo->c->cls.pooldic_imp.dcl, &moo->c->cls.pooldic_imp.dcl_capa, 1, ' ') <= -1)
+	if (copy_string_to (moo, tok_name, &moo->c->cclass->pooldic_imp.dcl, &moo->c->cclass->pooldic_imp.dcl_capa, 1, ' ') <= -1)
 	{
-		moo->c->cls.pooldic_imp.dcl_count--; /* roll back add_pool_dictionary() */
+		moo->c->cclass->pooldic_imp.dcl_count--; /* roll back add_pool_dictionary() */
 		return -1;
 	}
 
@@ -3362,7 +3366,7 @@ if super is variable-pointer, self must be a variable-pointer. can't be fixed ei
 if super is variable-nonpointer, self must be a variable-nonpointer of the same type. can't be fixed either
 if super is variable-nonpointer, no instance variable is allowed.
 */
-			if (dcl_type == VAR_INSTANCE && (moo->c->cls.flags & CLASS_INDEXED) && (moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP))
+			if (dcl_type == VAR_INSTANCE && (moo->c->cclass->flags & CLASS_INDEXED) && (moo->c->cclass->indexed_type != MOO_OBJ_TYPE_OOP))
 			{
 				/* a non-pointer object cannot have instance variables */
 				moo_setsynerr (moo, MOO_SYNERR_VARDCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -3371,7 +3375,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 
 			if (find_class_level_variable(moo, MOO_NULL, TOKEN_NAME(moo), &var) >= 0 ||
 			    moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
-			    moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cls.ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
+			    moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cclass->ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
 			{
 				moo_setsynerr (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
@@ -3505,7 +3509,7 @@ if super is variable-pointer, self must be a variable-pointer. can't be fixed ei
 if super is variable-nonpointer, self must be a variable-nonpointer of the same type. can't be fixed either
 if super is variable-nonpointer, no instance variable is allowed.
 */
-			if (dcl_type == VAR_INSTANCE && (moo->c->cls.flags & CLASS_INDEXED) && (moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP))
+			if (dcl_type == VAR_INSTANCE && (moo->c->cclass->flags & CLASS_INDEXED) && (moo->c->cclass->indexed_type != MOO_OBJ_TYPE_OOP))
 			{
 				/* a non-pointer object cannot have instance variables */
 				moo_setsynerr (moo, MOO_SYNERR_VARDCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -3514,7 +3518,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 
 			if (find_class_level_variable(moo, MOO_NULL, TOKEN_NAME(moo), &var) >= 0 ||
 			    moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
-			    moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cls.ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
+			    moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cclass->ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
 			{
 				moo_setsynerr (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
@@ -3540,7 +3544,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 				if (!lit) return -1;
 
 				/* set the initial value for the variable added above */
-				if (set_class_level_variable_initv(moo, dcl_type, moo->c->cls.var[dcl_type].count - 1, lit, varacc_type) <= -1) return -1;
+				if (set_class_level_variable_initv(moo, dcl_type, moo->c->cclass->var[dcl_type].count - 1, lit, varacc_type) <= -1) return -1;
 
 				GET_TOKEN (moo);
 			}
@@ -3548,7 +3552,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 			{
 				/* this part is to remember the variable access type that indicates
 				 * whether to generate a getter method and a setter method */
-				if (set_class_level_variable_initv (moo, dcl_type, moo->c->cls.var[dcl_type].count - 1, MOO_NULL, varacc_type) <= -1) return -1;
+				if (set_class_level_variable_initv (moo, dcl_type, moo->c->cclass->var[dcl_type].count - 1, MOO_NULL, varacc_type) <= -1) return -1;
 			}
 		}
 		else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
@@ -3657,7 +3661,7 @@ static int compile_class_level_imports (moo_t* moo)
 		{
 			last = moo->c->tok.name;
 			/* it falls back to the name space of the class */
-			ns_oop = moo->c->cls.ns_oop; 
+			ns_oop = moo->c->cclass->ns_oop; 
 		}
 		else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
 		{
@@ -4157,11 +4161,11 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 	xname = *name;
 	xname_loc = *name_loc;
 
-	if ((pxlen = is_dotted_ident_prefixed (name, VOCA_SELF)) > 0)
+	if ((pxlen = is_dotted_ident_prefixed(name, VOCA_SELF)) > 0)
 	{
 		/* the first word in the dotted notation is self */
 
-		if (!moo_find_oochar (name->ptr + pxlen + 1, name->len - pxlen - 1, '.'))
+		if (!moo_find_oochar(name->ptr + pxlen + 1, name->len - pxlen - 1, '.'))
 		{
 			/* the dotted name is composed of 2 segments only */
 			last.ptr = name->ptr + pxlen + 1;
@@ -4175,41 +4179,17 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 				return -1;
 			}
 
-			if (moo->c->cls.super_oop)
-			{
-				/* called inside a class definition */
+			MOO_ASSERT (moo, moo->c->cunit != MOO_NULL);
 
-				/* [NOTE] 
-				 *  cls.ns_oop is set when the class name is enountered.
-				 *  cls.super_oop is set when the parent class name is enountered.
-				 *  cls.super_oop may still be MOO_NULL even if cls.ns_oop is not.
-				 *  on the other hand, cls.ns_oop is not MOO_NULL as long as
-				 *  cls.super_oop is not MOO_NULL.
-				 */
-
-				MOO_ASSERT (moo, moo->c->cls.ns_oop != MOO_NULL);
-				MOO_ASSERT (moo, moo->c->pooldic.ns_oop == MOO_NULL);
-				/* moo->c->cls.self_oop may still be MOO_NULL if the class has not been instantiated */
-
-				if (find_class_level_variable(moo, moo->c->cls.self_oop, &last, var) >= 0)
-				{
-					/* if the current class has not been instantiated, 
-					 * no validation nor adjustment of the var->pos field is performed */
-					if (moo->c->cls.self_oop && validate_class_level_variable (moo, var, name, name_loc) <= -1) return -1;
-					return 0;
-				}
-			}
-			else if (moo->c->pooldic.ns_oop)
+			if (moo->c->cunit->cunit_type == MOO_CUNIT_POOLDIC)
 			{
 				moo_oop_t v;
 
 				/* called inside a pooldic definition */
-				MOO_ASSERT (moo, moo->c->cls.ns_oop == MOO_NULL);
-				MOO_ASSERT (moo, moo->c->cls.super_oop == MOO_NULL);
-				MOO_ASSERT (moo, moo->c->cls.self_oop == MOO_NULL);
-				MOO_ASSERT (moo, moo->c->pooldic.pd_oop == MOO_NULL);
+				MOO_ASSERT (moo, moo->c->cpooldic->ns_oop != MOO_NULL);
+				MOO_ASSERT (moo, moo->c->cpooldic->pd_oop == MOO_NULL);
 
-				v = find_element_in_compiling_pooldic (moo, &last);
+				v = find_element_in_compiling_pooldic(moo, &last);
 				if (!v)
 				{
 					moo_setsynerr (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
@@ -4220,9 +4200,32 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 				var->u.lit = v; /* TODO: change this */
 				return 0;
 			}
+
+			if (moo->c->cunit->cunit_type == MOO_CUNIT_CLASS && moo->c->cclass->super_oop)
+			{
+				/* called inside a class definition */
+
+				/* [NOTE] 
+				 *  cls.ns_oop is set when the class name is enountered.
+				 *  cls.super_oop is set when the parent class name is enountered.
+				 *  cls.super_oop may still be MOO_NULL even if cls.ns_oop is not.
+				 *  on the other hand, cls.ns_oop is not MOO_NULL as long as
+				 *  cls.super_oop is not MOO_NULL.
+				 */
+				MOO_ASSERT (moo, moo->c->cclass->ns_oop != MOO_NULL);
+				/* moo->c->cclass->self_oop may still be MOO_NULL if the class has not been instantiated */
+
+				if (find_class_level_variable(moo, moo->c->cclass->self_oop, &last, var) >= 0)
+				{
+					/* if the current class has not been instantiated, 
+					 * no validation nor adjustment of the var->pos field is performed */
+					if (moo->c->cclass->self_oop && validate_class_level_variable(moo, var, name, name_loc) <= -1) return -1;
+					return 0;
+				}
+			}
 		}
 
-		if (!moo->c->cls.self_oop)
+		if (!moo->c->cclass->self_oop)
 		{
 			/* self is not usable when it's not compiling in a class.
 			 * a pooldic definition cannot contain subdictionaries.
@@ -4234,24 +4237,26 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 		}
 
 		/* namespace that the current class starts */
-		top_dic = moo->c->cls.self_oop->nsdic;
+		top_dic = moo->c->cclass->self_oop->nsdic;
 		pxlen++; /* include . into the length */
 	}
-	else if ((pxlen = is_dotted_ident_prefixed (name, VOCA_SELFNS)) > 0)
+	else if ((pxlen = is_dotted_ident_prefixed(name, VOCA_SELFNS)) > 0)
 	{
 		/* the first segment is selfns which indicates a namespace that
 		 * the current class belongs to */
-		if (moo->c->cls.ns_oop)
-		{
-			/* compiling in a class definition */
-			top_dic = moo->c->cls.ns_oop;
-		}
-		else
+		if (moo->c->cunit->cunit_type == MOO_CUNIT_POOLDIC)
 		{
 			/* compiling in a pooldic definition */
-			MOO_ASSERT (moo, moo->c->pooldic.ns_oop != MOO_NULL);
-			top_dic = moo->c->pooldic.ns_oop;
+			MOO_ASSERT (moo, moo->c->cpooldic->ns_oop != MOO_NULL);
+			top_dic = moo->c->cpooldic->ns_oop;
 		}
+		else if (moo->c->cunit->cunit_type == MOO_CUNIT_CLASS)
+		{
+			/* compiling in a class definition */
+			MOO_ASSERT (moo, moo->c->cclass->ns_oop != MOO_NULL);
+			top_dic = moo->c->cclass->ns_oop;
+		}
+
 		pxlen++; /* include . into the length */
 	}
 
@@ -4261,9 +4266,9 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 	xname_loc.colm += pxlen;
 
 	/*if (preprocess_dotted_name (moo, PDN_DONT_ADD_NS | PDN_ACCEPT_POOLDIC_AS_NS, top_dic, name, name_loc, &last, &ns_oop) <= -1) return -1;*/
-	if (preprocess_dotted_name (moo, PDN_DONT_ADD_NS | PDN_ACCEPT_POOLDIC_AS_NS, top_dic, &xname, &xname_loc, &last, &ns_oop) <= -1) return -1;
+	if (preprocess_dotted_name(moo, PDN_DONT_ADD_NS | PDN_ACCEPT_POOLDIC_AS_NS, top_dic, &xname, &xname_loc, &last, &ns_oop) <= -1) return -1;
 
-	ass = moo_lookupdic (moo, (moo_oop_dic_t)ns_oop, &last);
+	ass = moo_lookupdic(moo, (moo_oop_dic_t)ns_oop, &last);
 	if (!ass)
 	{
 		/* undeclared identifier */
@@ -4281,7 +4286,7 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 	moo_oow_t index;
 	moo_oop_association_t ass;
 
-	if (moo->c->cls.self_oop)
+	if (moo->c->cclass->self_oop)
 	{
 		/* the current class being compiled has been instantiated.
 		 * look up in the temporary variable list if compiling in a method */
@@ -4293,33 +4298,20 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 		}
 	}
 
-	if (moo->c->cls.super_oop)
-	{
-		/* called inside a class definition */
-		/* read a comment in find_dotted_ident() for the reason behind
-		 * the if condition above. */
-
-		MOO_ASSERT (moo, moo->c->cls.ns_oop != MOO_NULL);
-		MOO_ASSERT (moo, moo->c->pooldic.ns_oop == MOO_NULL);
-
-		if (find_class_level_variable(moo, moo->c->cls.self_oop, name, var) >= 0)
-		{
-			/* if the current class being compiled has not been instantiated,
-			 * no validation nor adjustment of the var->pos field is performed */
-			return moo->c->cls.self_oop? validate_class_level_variable (moo, var, name, name_loc): 0;
-		}
-	}
-	else if (moo->c->pooldic.ns_oop)
+	if (moo->c->cunit->cunit_type == MOO_CUNIT_POOLDIC)
 	{
 		moo_oop_t v;
 
 		/* called inside a pooldic definition */
-		MOO_ASSERT (moo, moo->c->cls.ns_oop == MOO_NULL);
-		MOO_ASSERT (moo, moo->c->cls.super_oop == MOO_NULL);
-		MOO_ASSERT (moo, moo->c->cls.self_oop == MOO_NULL);
-		MOO_ASSERT (moo, moo->c->pooldic.pd_oop == MOO_NULL);
+	#if 0 // CUNIT
+		MOO_ASSERT (moo, moo->c->cclass->ns_oop == MOO_NULL);
+		MOO_ASSERT (moo, moo->c->cclass->super_oop == MOO_NULL);
+		MOO_ASSERT (moo, moo->c->cclass->self_oop == MOO_NULL);
+	#endif
+		MOO_ASSERT (moo, moo->c->cpooldic->ns_oop != MOO_NULL);
+		MOO_ASSERT (moo, moo->c->cpooldic->pd_oop == MOO_NULL);
 
-		v = find_element_in_compiling_pooldic (moo, name);
+		v = find_element_in_compiling_pooldic(moo, name);
 		if (!v)
 		{
 			moo_setsynerr (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
@@ -4331,16 +4323,37 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 		return 0;
 	}
 
-	/* find an undotted identifier in dictionaries */
-	if (moo->c->cls.ns_oop)
+	MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_CLASS);
+	if (moo->c->cclass->super_oop)
 	{
-		ass = moo_lookupdic (moo, (moo_oop_dic_t)moo->c->cls.ns_oop, name); /* in the current name space */
-		if (!ass && moo->c->cls.ns_oop != moo->sysdic) 
-			ass = moo_lookupdic (moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
+		/* called inside a class definition */
+		/* read a comment in find_dotted_ident() for the reason behind
+		 * the if condition above. */
+
+		MOO_ASSERT (moo, moo->c->cclass->super_oop != MOO_NULL);
+		MOO_ASSERT (moo, moo->c->cclass->ns_oop != MOO_NULL);
+	#if 0 // CUNIT
+		MOO_ASSERT (moo, moo->c->pooldic.ns_oop == MOO_NULL);
+	#endif
+
+		if (find_class_level_variable(moo, moo->c->cclass->self_oop, name, var) >= 0)
+		{
+			/* if the current class being compiled has not been instantiated,
+			 * no validation nor adjustment of the var->pos field is performed */
+			return moo->c->cclass->self_oop? validate_class_level_variable (moo, var, name, name_loc): 0;
+		}
+	}
+
+	/* find an undotted identifier in dictionaries */
+	if (moo->c->cclass->ns_oop)
+	{
+		ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cclass->ns_oop, name); /* in the current name space */
+		if (!ass && moo->c->cclass->ns_oop != moo->sysdic) 
+			ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
 	}
 	else
 	{
-		ass = moo_lookupdic (moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
+		ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
 	}
 
 	if (!ass)
@@ -4349,9 +4362,9 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 		moo_oop_association_t ass2 = MOO_NULL;
 
 		/* attempt to find the variable in pool dictionaries */
-		for (i = 0; i < moo->c->cls.pooldic_imp.dcl_count; i++)
+		for (i = 0; i < moo->c->cclass->pooldic_imp.dcl_count; i++)
 		{
-			ass = moo_lookupdic (moo, moo->c->cls.pooldic_imp.oops[i], name);
+			ass = moo_lookupdic(moo, moo->c->cclass->pooldic_imp.oops[i], name);
 			if (ass)
 			{
 				if (ass2)
@@ -4384,7 +4397,7 @@ static int get_variable_info (moo_t* moo, const moo_oocs_t* name, const moo_iolo
 
 	MOO_MEMSET (var, 0, MOO_SIZEOF(*var));
 
-	x = name_dotted? find_dotted_ident (moo, name, name_loc, var): find_undotted_ident (moo, name, name_loc, var);
+	x = name_dotted? find_dotted_ident(moo, name, name_loc, var): find_undotted_ident(moo, name, name_loc, var);
 	if (x <= -1) return -1;
 
 	/* final validation on the range of pos field. just check regardless of var->type.
@@ -4655,7 +4668,7 @@ static int add_to_array_literal_buffer (moo_t* moo, moo_oop_t item)
 		moo_oow_t new_capa;
 
 		new_capa = MOO_ALIGN (moo->c->arlit.count + 1, ARLIT_BUFFER_ALIGN);
-		tmp = (moo_oop_t*)moo_reallocmem (moo, moo->c->arlit.ptr, new_capa * MOO_SIZEOF(*tmp));
+		tmp = (moo_oop_t*)moo_reallocmem(moo, moo->c->arlit.ptr, new_capa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
 		moo->c->arlit.capa = new_capa;
@@ -4981,7 +4994,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 	{
 		/* the caller has read the identifier and the next word */
 	handle_ident:
-		MOO_ASSERT (moo, moo->c->cls.super_oop != MOO_NULL && moo->c->cls.self_oop != MOO_NULL);
+		MOO_ASSERT (moo, moo->c->cclass->super_oop != MOO_NULL && moo->c->cclass->self_oop != MOO_NULL);
 		if (get_variable_info(moo, ident, ident_loc, ident_dotted, &var) <= -1) return -1;
 
 		switch (var.type)
@@ -6130,7 +6143,7 @@ static int compile_method_expression (moo_t* moo, int pop)
 			 * assignee to update the actual pointer after the recursive
 			 * compile_method_expression() call */
 			assignee.ptr = &moo->c->mth.assignees.ptr[assignee_offset];
-			MOO_ASSERT (moo, moo->c->cls.super_oop != MOO_NULL && moo->c->cls.self_oop != MOO_NULL);
+			MOO_ASSERT (moo, moo->c->cclass->super_oop != MOO_NULL && moo->c->cclass->self_oop != MOO_NULL);
 			if (get_variable_info(moo, &assignee, &assignee_loc, assignee_dotted, &var) <= -1) goto oops;
 
 			switch (var.type)
@@ -6570,7 +6583,7 @@ static int add_compiled_method (moo_t* moo)
 
 	MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index));
 
-	mth->owner = moo->c->cls.self_oop;
+	mth->owner = moo->c->cclass->self_oop;
 	mth->name = name;
 	mth->preamble = MOO_SMOOI_TO_OOP(MOO_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index, preamble_flags));
 	/*mth->preamble_data[0] = MOO_SMOOI_TO_OOP(0);
@@ -6592,23 +6605,23 @@ need to write code to collect string.
 */
 
 #if defined(MOO_DEBUG_COMPILER)
-	moo_decode (moo, mth, &moo->c->cls.fqn);
+	moo_decode (moo, mth, &moo->c->cclass->fqn);
 #endif
 
 	if (moo->c->mth.type == MOO_METHOD_DUAL)
 	{
-		if (!moo_putatdic(moo, moo->c->cls.self_oop->mthdic[0], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
-		if (!moo_putatdic(moo, moo->c->cls.self_oop->mthdic[1], (moo_oop_t)name, (moo_oop_t)mth)) 
+		if (!moo_putatdic(moo, moo->c->cclass->self_oop->mthdic[0], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
+		if (!moo_putatdic(moo, moo->c->cclass->self_oop->mthdic[1], (moo_oop_t)name, (moo_oop_t)mth)) 
 		{
 			/* 'name' is a symbol created of moo->c->mth.name. so use it as a key for deletion */
-			moo_deletedic (moo, moo->c->cls.self_oop->mthdic[0], &moo->c->mth.name);
+			moo_deletedic (moo, moo->c->cclass->self_oop->mthdic[0], &moo->c->mth.name);
 			goto oops;
 		}
 	}
 	else
 	{
-		MOO_ASSERT (moo, moo->c->mth.type < MOO_COUNTOF(moo->c->cls.self_oop->mthdic));
-		if (!moo_putatdic(moo, moo->c->cls.self_oop->mthdic[moo->c->mth.type], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
+		MOO_ASSERT (moo, moo->c->mth.type < MOO_COUNTOF(moo->c->cclass->self_oop->mthdic));
+		if (!moo_putatdic(moo, moo->c->cclass->self_oop->mthdic[moo->c->mth.type], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
 	}
 
 	moo_poptmps (moo, tmp_count); tmp_count = 0;
@@ -6762,7 +6775,7 @@ static int __compile_method_definition (moo_t* moo)
 			return -1;
 		}
 		
-		if (moo->c->cls.self_oop->modname == moo->_nil)
+		if (moo->c->cclass->self_oop->modname == moo->_nil)
 		{
 			/* no module name specified in the class definition using 'from'.
 			 * it's a builtin primitive function */
@@ -6775,36 +6788,36 @@ static int __compile_method_definition (moo_t* moo)
 
 			/* compose the identifer into the back of the cls.modname buffer.
 			 * i'll revert it when done. */
-			savedlen = moo->c->cls.modname.len;
+			savedlen = moo->c->cclass->modname.len;
 
-			if (copy_string_to(moo, &moo->c->cls.name, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '\0') <= -1 ||
-			    copy_string_to(moo, &mthname, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '_') <= -1)
+			if (copy_string_to(moo, &moo->c->cclass->name, &moo->c->cclass->modname, &moo->c->cclass->modname_capa, 1, '\0') <= -1 ||
+			    copy_string_to(moo, &mthname, &moo->c->cclass->modname, &moo->c->cclass->modname_capa, 1, '_') <= -1)
 			{
-				moo->c->cls.modname.len = savedlen;
+				moo->c->cclass->modname.len = savedlen;
 				return -1;
 			}
 
-			pfbase = moo_getpfnum (moo, &moo->c->cls.modname.ptr[savedlen], moo->c->cls.modname.len - savedlen, &pfnum);
+			pfbase = moo_getpfnum (moo, &moo->c->cclass->modname.ptr[savedlen], moo->c->cclass->modname.len - savedlen, &pfnum);
 			if (!pfbase)
 			{
 				MOO_DEBUG2 (moo, "Cannot find intrinsic primitive function - %.*js\n", 
-					moo->c->cls.modname.len - savedlen, &moo->c->cls.modname.ptr[savedlen]);
+					moo->c->cclass->modname.len - savedlen, &moo->c->cclass->modname.ptr[savedlen]);
 				moo_setsynerr (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
-				moo->c->cls.modname.len = savedlen;
+				moo->c->cclass->modname.len = savedlen;
 				return -1;
 			}
 
 			if (moo->c->mth.tmpr_nargs < pfbase->minargs || moo->c->mth.tmpr_nargs > pfbase->maxargs)
 			{
 				MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
-					moo->c->cls.modname.len - savedlen, &moo->c->cls.modname.ptr[savedlen],
+					moo->c->cclass->modname.len - savedlen, &moo->c->cclass->modname.ptr[savedlen],
 					pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
 				moo_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
-				moo->c->cls.modname.len = savedlen;
+				moo->c->cclass->modname.len = savedlen;
 				return -1;
 			}
 
-			moo->c->cls.modname.len = savedlen;
+			moo->c->cclass->modname.len = savedlen;
 
 			MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum));
 			moo->c->mth.pftype = PFTYPE_NUMBERED; 
@@ -6819,43 +6832,43 @@ static int __compile_method_definition (moo_t* moo)
 			/* combine the module name and the method name delimited by a period
 			 * when doing it, let me reuse the cls.modname buffer and restore it
 			 * back once done */
-			savedlen = moo->c->cls.modname.len;
+			savedlen = moo->c->cclass->modname.len;
 
-			MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->c->cls.self_oop->modname) == moo->_symbol);
-			tmp.ptr = MOO_OBJ_GET_CHAR_SLOT(moo->c->cls.self_oop->modname);
-			tmp.len = MOO_OBJ_GET_SIZE(moo->c->cls.self_oop->modname);
+			MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->c->cclass->self_oop->modname) == moo->_symbol);
+			tmp.ptr = MOO_OBJ_GET_CHAR_SLOT(moo->c->cclass->self_oop->modname);
+			tmp.len = MOO_OBJ_GET_SIZE(moo->c->cclass->self_oop->modname);
 
-			if (copy_string_to (moo, &tmp, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '\0') <= -1 ||
-			    copy_string_to (moo, &mthname, &moo->c->cls.modname, &moo->c->cls.modname_capa, 1, '.') <= -1 ||
-			    add_symbol_literal(moo, &moo->c->cls.modname, savedlen, &litidx) <= -1)
+			if (copy_string_to (moo, &tmp, &moo->c->cclass->modname, &moo->c->cclass->modname_capa, 1, '\0') <= -1 ||
+			    copy_string_to (moo, &mthname, &moo->c->cclass->modname, &moo->c->cclass->modname_capa, 1, '.') <= -1 ||
+			    add_symbol_literal(moo, &moo->c->cclass->modname, savedlen, &litidx) <= -1)
 			{
-				moo->c->cls.modname.len = savedlen;
+				moo->c->cclass->modname.len = savedlen;
 				return -1;
 			}
 
 			/* check if the primitive function exists at the compile time and perform some checks.
 			 * see compile_method_primitive() for similar checks */
-			pfbase = moo_querymod(moo, &moo->c->cls.modname.ptr[savedlen], moo->c->cls.modname.len - savedlen, MOO_NULL);
+			pfbase = moo_querymod(moo, &moo->c->cclass->modname.ptr[savedlen], moo->c->cclass->modname.len - savedlen, MOO_NULL);
 			if (!pfbase)
 			{
 				MOO_DEBUG2 (moo, "Cannot find module primitive function - %.*js\n", 
-					moo->c->cls.modname.len - savedlen, &moo->c->cls.modname.ptr[savedlen]);
+					moo->c->cclass->modname.len - savedlen, &moo->c->cclass->modname.ptr[savedlen]);
 				moo_setsynerr (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
-				moo->c->cls.modname.len = savedlen;
+				moo->c->cclass->modname.len = savedlen;
 				return -1;
 			}
 
 			if (moo->c->mth.tmpr_nargs < pfbase->minargs || moo->c->mth.tmpr_nargs > pfbase->maxargs)
 			{
 				MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
-					moo->c->cls.modname.len - savedlen, &moo->c->cls.modname.ptr[savedlen],
+					moo->c->cclass->modname.len - savedlen, &moo->c->cclass->modname.ptr[savedlen],
 					pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
 				moo_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
-				moo->c->cls.modname.len = savedlen;
+				moo->c->cclass->modname.len = savedlen;
 				return -1;
 			}
 
-			moo->c->cls.modname.len = savedlen;
+			moo->c->cclass->modname.len = savedlen;
 			/* the symbol added must be the first literal to the current method.
 			 * so this condition must be true. */
 			MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(litidx));
@@ -6963,7 +6976,7 @@ static int make_getter_method (moo_t* moo, const moo_oocs_t* name, const var_inf
 		{
 			moo_oow_t index;
 			MOO_ASSERT (moo, var->cls != MOO_NULL);
-			MOO_ASSERT (moo, var->cls == moo->c->cls.self_oop);
+			MOO_ASSERT (moo, var->cls == moo->c->cclass->self_oop);
 			MOO_ASSERT (moo, moo->c->mth.type == MOO_METHOD_CLASS);
 
 			if (add_literal(moo, (moo_oop_t)var->cls, &index) <= -1 ||
@@ -7014,7 +7027,7 @@ static int make_setter_method (moo_t* moo, const moo_oocs_t* name, const var_inf
 		{
 			moo_oow_t index;
 			MOO_ASSERT (moo, var->cls != MOO_NULL);
-			MOO_ASSERT (moo, var->cls == moo->c->cls.self_oop);
+			MOO_ASSERT (moo, var->cls == moo->c->cclass->self_oop);
 			MOO_ASSERT (moo, moo->c->mth.type == MOO_METHOD_CLASS);
 
 			if (add_literal(moo, (moo_oop_t)var->cls, &index) <= -1 ||
@@ -7045,9 +7058,9 @@ static int make_getters_and_setters (moo_t* moo)
 	fake_loc.colm = 0;
 	for (var_type = VAR_INSTANCE; var_type <= VAR_CLASS; var_type++)
 	{
-		for (i = 0; i < moo->c->cls.var[var_type].initv_count; i++)
+		for (i = 0; i < moo->c->cclass->var[var_type].initv_count; i++)
 		{
-			if (!moo->c->cls.var[var_type].initv[i].flags) continue;
+			if (!moo->c->cclass->var[var_type].initv[i].flags) continue;
 
 			/* moo->c->mth.type needs to be set because get_variable_info()
 			 * uses it to validate variable's accessibility */
@@ -7057,20 +7070,20 @@ static int make_getters_and_setters (moo_t* moo)
 			/* the following two function calls must not fail unless the compiler
 			 * is buggy. */
 
-			x = fetch_word_from_string (&moo->c->cls.var[var_type].str, i, &var_name);
+			x = fetch_word_from_string (&moo->c->cclass->var[var_type].str, i, &var_name);
 			MOO_ASSERT (moo, x >= 0);
 			x = get_variable_info (moo, &var_name, &fake_loc, 0, &var_info);
 			MOO_ASSERT (moo, x >= 0);
 
 			MOO_ASSERT (moo, var_info.type == var_type);
 
-			if (moo->c->cls.var[var_type].initv[i].flags & VARACC_GETTER)
+			if (moo->c->cclass->var[var_type].initv[i].flags & VARACC_GETTER)
 			{
 				/* the method data has been reset above. */
 				if (make_getter_method (moo, &var_name, &var_info) <= -1) return -1;
 			}
 
-			if (moo->c->cls.var[var_type].initv[i].flags & VARACC_SETTER)
+			if (moo->c->cclass->var[var_type].initv[i].flags & VARACC_SETTER)
 			{
 				/* i set the method data here because make_getter_method()
 				 * pollutes it if triggered */
@@ -7100,10 +7113,10 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 	MOO_ASSERT (moo, VAR_INSTANCE == 0);
 	MOO_ASSERT (moo, VAR_CLASSINST == 1);
 
-	initv_count = moo->c->cls.var[var_type].initv_count;
-	if (moo->c->cls.super_oop != moo->_nil && ((moo_oop_class_t)moo->c->cls.super_oop)->initv[var_type] != moo->_nil)
+	initv_count = moo->c->cclass->var[var_type].initv_count;
+	if (moo->c->cclass->super_oop != moo->_nil && ((moo_oop_class_t)moo->c->cclass->super_oop)->initv[var_type] != moo->_nil)
 	{
-		super_initv_count = MOO_OBJ_GET_SIZE(((moo_oop_class_t)moo->c->cls.super_oop)->initv[var_type]);
+		super_initv_count = MOO_OBJ_GET_SIZE(((moo_oop_class_t)moo->c->cclass->super_oop)->initv[var_type]);
 	}
 	else
 	{
@@ -7123,9 +7136,9 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 		 *  in the following case(no inheritance for simplicity):
 		 *    class ... { var a, b := 10, c. } 
 		 *  initv_count is 1 whereas total_count is 3. */
-		MOO_ASSERT (moo, initv_count <= moo->c->cls.var[var_type].total_count);
+		MOO_ASSERT (moo, initv_count <= moo->c->cclass->var[var_type].total_count);
 
-		tmp = moo_instantiate (moo, moo->_array, MOO_NULL, moo->c->cls.var[var_type].total_count);
+		tmp = moo_instantiate (moo, moo->_array, MOO_NULL, moo->c->cclass->var[var_type].total_count);
 		if (!tmp) return -1;
 
 		if (super_initv_count > 0)
@@ -7137,8 +7150,8 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 			moo_oop_oop_t initv;
 
 			j = 0;
-			MOO_ASSERT (moo, moo->c->cls.super_oop != moo->_nil);
-			initv = (moo_oop_oop_t)((moo_oop_class_t)moo->c->cls.super_oop)->initv[var_type];
+			MOO_ASSERT (moo, moo->c->cclass->super_oop != moo->_nil);
+			initv = (moo_oop_oop_t)((moo_oop_class_t)moo->c->cclass->super_oop)->initv[var_type];
 			MOO_ASSERT (moo, MOO_CLASSOF(moo, initv) == moo->_array);
 			for (i = 0; i < super_initv_count; i++)
 			{
@@ -7149,17 +7162,17 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 		else
 		{
 			/* superclass chain have variables but no default values are defined */
-			j = moo->c->cls.var[var_type].total_count - moo->c->cls.var[var_type].count;
+			j = moo->c->cclass->var[var_type].total_count - moo->c->cclass->var[var_type].count;
 		}
 
-		for (i = 0; i < moo->c->cls.var[var_type].initv_count; i++)
+		for (i = 0; i < moo->c->cclass->var[var_type].initv_count; i++)
 		{
-			if (moo->c->cls.var[var_type].initv[i].v)
-				((moo_oop_oop_t)tmp)->slot[j] = moo->c->cls.var[var_type].initv[i].v;
+			if (moo->c->cclass->var[var_type].initv[i].v)
+				((moo_oop_oop_t)tmp)->slot[j] = moo->c->cclass->var[var_type].initv[i].v;
 			j++;
 		}
 
-		moo->c->cls.self_oop->initv[var_type] = tmp;
+		moo->c->cclass->self_oop->initv[var_type] = tmp;
 	}
 
 	return 0;
@@ -7172,26 +7185,26 @@ static int make_defined_interface (moo_t* moo)
 /* TODO: instantiate differently... */
 	tmp = moo_instantiate(moo, moo->_class, MOO_NULL, 0);
 	if (!tmp) return -1;
-	moo->c->cls.self_oop = (moo_oop_class_t)tmp;
+	moo->c->cclass->self_oop = (moo_oop_class_t)tmp;
 
-	tmp = moo_makesymbol(moo, moo->c->cls.name.ptr, moo->c->cls.name.len);
+	tmp = moo_makesymbol(moo, moo->c->cclass->name.ptr, moo->c->cclass->name.len);
 	if (!tmp) return -1;
-	moo->c->cls.self_oop->name = (moo_oop_char_t)tmp;
+	moo->c->cclass->self_oop->name = (moo_oop_char_t)tmp;
 
 	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
-	moo->c->cls.self_oop->mthdic[MOO_METHOD_INSTANCE] = (moo_oop_dic_t)tmp;
+	moo->c->cclass->self_oop->mthdic[MOO_METHOD_INSTANCE] = (moo_oop_dic_t)tmp;
 
 /* TOOD: good dictionary size */
 	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
-	moo->c->cls.self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_dic_t)tmp;
+	moo->c->cclass->self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_dic_t)tmp;
 
-	if (!moo_putatdic(moo, (moo_oop_dic_t)moo->c->cls.ns_oop, (moo_oop_t)moo->c->cls.self_oop->name, (moo_oop_t)moo->c->cls.self_oop)) return -1;
-	moo->c->cls.self_oop->nsup = moo->c->cls.ns_oop;
+	if (!moo_putatdic(moo, (moo_oop_dic_t)moo->c->cclass->ns_oop, (moo_oop_t)moo->c->cclass->self_oop->name, (moo_oop_t)moo->c->cclass->self_oop)) return -1;
+	moo->c->cclass->self_oop->nsup = moo->c->cclass->ns_oop;
 
-	moo->c->cls.self_oop->spec = MOO_SMOOI_TO_OOP(0);
-	moo->c->cls.self_oop->selfspec = MOO_SMOOI_TO_OOP(0);
+	moo->c->cclass->self_oop->spec = MOO_SMOOI_TO_OOP(0);
+	moo->c->cclass->self_oop->selfspec = MOO_SMOOI_TO_OOP(0);
 
 /*  TODO: .......... */
 
@@ -7207,41 +7220,41 @@ static int make_defined_class (moo_t* moo)
 	int just_made = 0, flags;
 
 	flags = 0;
-	if (moo->c->cls.flags & CLASS_INDEXED) flags |= MOO_CLASS_SPEC_FLAG_INDEXED;
-	if (moo->c->cls.flags & CLASS_IMMUTABLE) flags |= MOO_CLASS_SPEC_FLAG_IMMUTABLE;
+	if (moo->c->cclass->flags & CLASS_INDEXED) flags |= MOO_CLASS_SPEC_FLAG_INDEXED;
+	if (moo->c->cclass->flags & CLASS_IMMUTABLE) flags |= MOO_CLASS_SPEC_FLAG_IMMUTABLE;
 
-	if (moo->c->cls.non_pointer_instsize > 0)
+	if (moo->c->cclass->non_pointer_instsize > 0)
 	{
 		/* class(#byte(N)), class(#word(N)), etc */
-		MOO_ASSERT (moo, moo->c->cls.var[VAR_INSTANCE].total_count == 0);
-		MOO_ASSERT (moo, moo->c->cls.flags & CLASS_INDEXED);
-		MOO_ASSERT (moo, moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP);
-		spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.non_pointer_instsize, flags, moo->c->cls.indexed_type);
+		MOO_ASSERT (moo, moo->c->cclass->var[VAR_INSTANCE].total_count == 0);
+		MOO_ASSERT (moo, moo->c->cclass->flags & CLASS_INDEXED);
+		MOO_ASSERT (moo, moo->c->cclass->indexed_type != MOO_OBJ_TYPE_OOP);
+		spec = MOO_CLASS_SPEC_MAKE (moo->c->cclass->non_pointer_instsize, flags, moo->c->cclass->indexed_type);
 	}
 	else
 	{
-		MOO_ASSERT (moo, moo->c->cls.non_pointer_instsize == 0);
-		spec = MOO_CLASS_SPEC_MAKE (moo->c->cls.var[VAR_INSTANCE].total_count, flags, moo->c->cls.indexed_type);
+		MOO_ASSERT (moo, moo->c->cclass->non_pointer_instsize == 0);
+		spec = MOO_CLASS_SPEC_MAKE (moo->c->cclass->var[VAR_INSTANCE].total_count, flags, moo->c->cclass->indexed_type);
 	}
 
 	flags = 0;
-	if (moo->c->cls.flags & CLASS_FINAL) flags |= MOO_CLASS_SELFSPEC_FLAG_FINAL;
-	if (moo->c->cls.flags & CLASS_LIMITED) flags |= MOO_CLASS_SELFSPEC_FLAG_LIMITED;
-	self_spec = MOO_CLASS_SELFSPEC_MAKE (moo->c->cls.var[VAR_CLASS].total_count,
-	                                     moo->c->cls.var[VAR_CLASSINST].total_count, flags);
+	if (moo->c->cclass->flags & CLASS_FINAL) flags |= MOO_CLASS_SELFSPEC_FLAG_FINAL;
+	if (moo->c->cclass->flags & CLASS_LIMITED) flags |= MOO_CLASS_SELFSPEC_FLAG_LIMITED;
+	self_spec = MOO_CLASS_SELFSPEC_MAKE (moo->c->cclass->var[VAR_CLASS].total_count,
+	                                     moo->c->cclass->var[VAR_CLASSINST].total_count, flags);
 
-	if (moo->c->cls.self_oop)
+	if (moo->c->cclass->self_oop)
 	{
 		/* this is an internally created class object being defined. */
 
-		MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->c->cls.self_oop) == moo->_class);
-		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_KERNEL (moo->c->cls.self_oop) == 1);
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->c->cclass->self_oop) == moo->_class);
+		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_KERNEL (moo->c->cclass->self_oop) == 1);
 
-		if (spec != MOO_OOP_TO_SMOOI(moo->c->cls.self_oop->spec) ||
-		    self_spec != MOO_OOP_TO_SMOOI(moo->c->cls.self_oop->selfspec))
+		if (spec != MOO_OOP_TO_SMOOI(moo->c->cclass->self_oop->spec) ||
+		    self_spec != MOO_OOP_TO_SMOOI(moo->c->cclass->self_oop->selfspec))
 		{
 			/* it conflicts with internal definition */
-			moo_setsynerr (moo, MOO_SYNERR_CLASSCONTRA, &moo->c->cls.fqn_loc, &moo->c->cls.name);
+			moo_setsynerr (moo, MOO_SYNERR_CLASSCONTRA, &moo->c->cclass->fqn_loc, &moo->c->cclass->name);
 			return -1;
 		}
 	}
@@ -7250,107 +7263,107 @@ static int make_defined_class (moo_t* moo)
 		/* the class variables and class instance variables are placed
 		 * inside the class object after the fixed part. */
 		tmp = moo_instantiate(moo, moo->_class, MOO_NULL,
-		                      moo->c->cls.var[VAR_CLASSINST].total_count + moo->c->cls.var[VAR_CLASS].total_count);
+		                      moo->c->cclass->var[VAR_CLASSINST].total_count + moo->c->cclass->var[VAR_CLASS].total_count);
 		if (!tmp) return -1;
 
 		just_made = 1;
-		moo->c->cls.self_oop = (moo_oop_class_t)tmp;
+		moo->c->cclass->self_oop = (moo_oop_class_t)tmp;
 
-		MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->c->cls.self_oop) == moo->_class);
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->c->cclass->self_oop) == moo->_class);
 
-		moo->c->cls.self_oop->spec = MOO_SMOOI_TO_OOP(spec);
-		moo->c->cls.self_oop->selfspec = MOO_SMOOI_TO_OOP(self_spec);
+		moo->c->cclass->self_oop->spec = MOO_SMOOI_TO_OOP(spec);
+		moo->c->cclass->self_oop->selfspec = MOO_SMOOI_TO_OOP(self_spec);
 	}
 
 /* TODO: check if the current class definition conflicts with the superclass.
  * if superclass is byte variable, the current class cannot be word variable or something else.
 *  TODO: TODO: TODO:
  */
-	MOO_OBJ_SET_FLAGS_KERNEL (moo->c->cls.self_oop, 2);
+	MOO_OBJ_SET_FLAGS_KERNEL (moo->c->cclass->self_oop, 2);
 
-	moo->c->cls.self_oop->superclass = moo->c->cls.super_oop;
+	moo->c->cclass->self_oop->superclass = moo->c->cclass->super_oop;
 
 	if (just_made)
 	{
 		/* set the name of a class if it's not set. at this point,
 		 * only kernel classes must have a name which has been set
 		 * during ignition phase. See ignite_3() */
-		tmp = moo_makesymbol(moo, moo->c->cls.name.ptr, moo->c->cls.name.len);
+		tmp = moo_makesymbol(moo, moo->c->cclass->name.ptr, moo->c->cclass->name.len);
 		if (!tmp) return -1;
-		moo->c->cls.self_oop->name = (moo_oop_char_t)tmp;
+		moo->c->cclass->self_oop->name = (moo_oop_char_t)tmp;
 	}
 
-	MOO_ASSERT (moo, (moo_oop_t)moo->c->cls.self_oop->name != moo->_nil);
+	MOO_ASSERT (moo, (moo_oop_t)moo->c->cclass->self_oop->name != moo->_nil);
 
-	if (moo->c->cls.modname.len > 0)
+	if (moo->c->cclass->modname.len > 0)
 	{
-		tmp = moo_makesymbol(moo, moo->c->cls.modname.ptr, moo->c->cls.modname.len);
+		tmp = moo_makesymbol(moo, moo->c->cclass->modname.ptr, moo->c->cclass->modname.len);
 		if (!tmp) return -1;
-		moo->c->cls.self_oop->modname = tmp;
+		moo->c->cclass->self_oop->modname = tmp;
 	}
 
-	tmp = moo_makestring(moo, moo->c->cls.var[VAR_INSTANCE].str.ptr, moo->c->cls.var[VAR_INSTANCE].str.len);
+	tmp = moo_makestring(moo, moo->c->cclass->var[VAR_INSTANCE].str.ptr, moo->c->cclass->var[VAR_INSTANCE].str.len);
 	if (!tmp) return -1;
-	moo->c->cls.self_oop->instvars = (moo_oop_char_t)tmp;
+	moo->c->cclass->self_oop->instvars = (moo_oop_char_t)tmp;
 
-	tmp = moo_makestring(moo, moo->c->cls.var[VAR_CLASS].str.ptr, moo->c->cls.var[VAR_CLASS].str.len);
+	tmp = moo_makestring(moo, moo->c->cclass->var[VAR_CLASS].str.ptr, moo->c->cclass->var[VAR_CLASS].str.len);
 	if (!tmp) return -1;
-	moo->c->cls.self_oop->classvars = (moo_oop_char_t)tmp;
+	moo->c->cclass->self_oop->classvars = (moo_oop_char_t)tmp;
 
-	tmp = moo_makestring(moo, moo->c->cls.var[VAR_CLASSINST].str.ptr, moo->c->cls.var[VAR_CLASSINST].str.len);
+	tmp = moo_makestring(moo, moo->c->cclass->var[VAR_CLASSINST].str.ptr, moo->c->cclass->var[VAR_CLASSINST].str.len);
 	if (!tmp) return -1;
-	moo->c->cls.self_oop->classinstvars = (moo_oop_char_t)tmp;
+	moo->c->cclass->self_oop->classinstvars = (moo_oop_char_t)tmp;
 
-	tmp = moo_makestring(moo, moo->c->cls.pooldic_imp.dcl.ptr, moo->c->cls.pooldic_imp.dcl.len);
+	tmp = moo_makestring(moo, moo->c->cclass->pooldic_imp.dcl.ptr, moo->c->cclass->pooldic_imp.dcl.len);
 	if (!tmp) return -1;
-	moo->c->cls.self_oop->pooldics = (moo_oop_char_t)tmp;
+	moo->c->cclass->self_oop->pooldics = (moo_oop_char_t)tmp;
 
 /* TOOD: good dictionary size */
 	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
-	moo->c->cls.self_oop->mthdic[MOO_METHOD_INSTANCE] = (moo_oop_dic_t)tmp;
+	moo->c->cclass->self_oop->mthdic[MOO_METHOD_INSTANCE] = (moo_oop_dic_t)tmp;
 
 /* TOOD: good dictionary size */
 	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
-	moo->c->cls.self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_dic_t)tmp;
+	moo->c->cclass->self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_dic_t)tmp;
 
 	/* store the default intial values for instance variables */
 	if (make_default_initial_values(moo, VAR_INSTANCE) <= -1) return -1;
 
 	/* store the default intial values for class instance variables */
 	if (make_default_initial_values(moo, VAR_CLASSINST) <= -1) return -1;
-	if (moo->c->cls.self_oop->initv[VAR_CLASSINST] != moo->_nil)
+	if (moo->c->cclass->self_oop->initv[VAR_CLASSINST] != moo->_nil)
 	{
 		moo_oow_t i, initv_count;
 		moo_oop_oop_t initv;
 
 		/* apply the default initial values for class instance variables to this class now */
-		initv = (moo_oop_oop_t)moo->c->cls.self_oop->initv[VAR_CLASSINST];
+		initv = (moo_oop_oop_t)moo->c->cclass->self_oop->initv[VAR_CLASSINST];
 		MOO_ASSERT (moo, MOO_CLASSOF(moo, initv) == moo->_array);
 		initv_count = MOO_OBJ_GET_SIZE(initv);
 
 		for (i = 0; i < initv_count; i++)
 		{
-			moo->c->cls.self_oop->slot[i] = initv->slot[i];
+			moo->c->cclass->self_oop->slot[i] = initv->slot[i];
 		}
 	}
 
 	/* initialize class variables with default initial values */
-	if (moo->c->cls.var[VAR_CLASS].initv_count > 0)
+	if (moo->c->cclass->var[VAR_CLASS].initv_count > 0)
 	{
 		moo_oow_t i, j, initv_count;
 
-		initv_count = moo->c->cls.var[VAR_CLASS].initv_count;
+		initv_count = moo->c->cclass->var[VAR_CLASS].initv_count;
 
 		/* name instance variables and class instance variables are placed
 		 * in the front part. set j such that they can be skipped. */
-		j = moo->c->cls.var[VAR_CLASSINST].total_count;
+		j = moo->c->cclass->var[VAR_CLASSINST].total_count;
 
-		MOO_ASSERT (moo, MOO_CLASS_NAMED_INSTVARS + j + initv_count <= MOO_OBJ_GET_SIZE(moo->c->cls.self_oop));
+		MOO_ASSERT (moo, MOO_CLASS_NAMED_INSTVARS + j + initv_count <= MOO_OBJ_GET_SIZE(moo->c->cclass->self_oop));
 		for (i = 0; i < initv_count; i++) 
 		{
-			moo->c->cls.self_oop->slot[j] = moo->c->cls.var[VAR_CLASS].initv[i].v;
+			moo->c->cclass->self_oop->slot[j] = moo->c->cclass->var[VAR_CLASS].initv[i].v;
 			j++;
 		}
 	}
@@ -7371,8 +7384,8 @@ static int make_defined_class (moo_t* moo)
 	{
 		/* register the class to the system dictionary. kernel classes have 
 		 * been registered at the ignition phase. */
-		if (!moo_putatdic(moo, (moo_oop_dic_t)moo->c->cls.ns_oop, (moo_oop_t)moo->c->cls.self_oop->name, (moo_oop_t)moo->c->cls.self_oop)) return -1;
-		moo->c->cls.self_oop->nsup = moo->c->cls.ns_oop;
+		if (!moo_putatdic(moo, (moo_oop_dic_t)moo->c->cclass->ns_oop, (moo_oop_t)moo->c->cclass->self_oop->name, (moo_oop_t)moo->c->cclass->self_oop)) return -1;
+		moo->c->cclass->self_oop->nsup = moo->c->cclass->ns_oop;
 	}
 
 	return 0;
@@ -7380,14 +7393,14 @@ static int make_defined_class (moo_t* moo)
 
 static MOO_INLINE int _set_class_indexed_type (moo_t* moo, moo_obj_type_t type)
 {
-	if (moo->c->cls.flags & CLASS_INDEXED)
+	if (moo->c->cclass->flags & CLASS_INDEXED)
 	{
 		moo_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
 
-	moo->c->cls.flags |= CLASS_INDEXED;
-	moo->c->cls.indexed_type = type;
+	moo->c->cclass->flags |= CLASS_INDEXED;
+	moo->c->cclass->indexed_type = type;
 	return 0;
 }
 
@@ -7418,7 +7431,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 	if (class_type == CLASS_TYPE_NORMAL && TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
 		/* process class modifiers */
-		MOO_ASSERT (moo, (moo->c->cls.flags & CLASS_INDEXED) == 0);
+		MOO_ASSERT (moo, (moo->c->cclass->flags & CLASS_INDEXED) == 0);
 
 		GET_TOKEN (moo);
 
@@ -7473,32 +7486,32 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 				}
 				else if (is_token_symbol(moo, VOCA_FINAL_S))
 				{
-					if (moo->c->cls.flags & CLASS_FINAL)
+					if (moo->c->cclass->flags & CLASS_FINAL)
 					{
 						moo_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
-					moo->c->cls.flags |= CLASS_FINAL;
+					moo->c->cclass->flags |= CLASS_FINAL;
 					GET_TOKEN(moo);
 				}
 				else if (is_token_symbol(moo, VOCA_LIMITED_S))
 				{
-					if (moo->c->cls.flags & CLASS_LIMITED)
+					if (moo->c->cclass->flags & CLASS_LIMITED)
 					{
 						moo_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
-					moo->c->cls.flags |= CLASS_LIMITED;
+					moo->c->cclass->flags |= CLASS_LIMITED;
 					GET_TOKEN(moo);
 				}
 				else if (is_token_symbol(moo, VOCA_IMMUTABLE_S))
 				{
-					if (moo->c->cls.flags & CLASS_IMMUTABLE)
+					if (moo->c->cclass->flags & CLASS_IMMUTABLE)
 					{
 						moo_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
-					moo->c->cls.flags |= CLASS_IMMUTABLE;
+					moo->c->cclass->flags |= CLASS_IMMUTABLE;
 					GET_TOKEN(moo);
 				}
 				else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
@@ -7552,7 +7565,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 						}
 						GET_TOKEN (moo);
 
-						moo->c->cls.non_pointer_instsize = tmp;
+						moo->c->cclass->non_pointer_instsize = tmp;
 					}
 
 				}
@@ -7591,43 +7604,43 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 
 	/* copy the class name */
 	if (set_class_fqn(moo, TOKEN_NAME(moo)) <= -1) return -1;
-	moo->c->cls.fqn_loc = moo->c->tok.loc;
+	moo->c->cclass->fqn_loc = moo->c->tok.loc;
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 	{
-		if (preprocess_dotted_name(moo, (class_type == CLASS_TYPE_EXTEND? PDN_DONT_ADD_NS: 0), MOO_NULL, &moo->c->cls.fqn, &moo->c->cls.fqn_loc, &moo->c->cls.name, &moo->c->cls.ns_oop) <= -1) return -1;
+		if (preprocess_dotted_name(moo, (class_type == CLASS_TYPE_EXTEND? PDN_DONT_ADD_NS: 0), MOO_NULL, &moo->c->cclass->fqn, &moo->c->cclass->fqn_loc, &moo->c->cclass->name, &moo->c->cclass->ns_oop) <= -1) return -1;
 	}
 	else
 	{
-		moo->c->cls.ns_oop = moo->sysdic;
+		moo->c->cclass->ns_oop = moo->sysdic;
 	}
 	GET_TOKEN (moo); 
 
 	if (class_type == CLASS_TYPE_INTERFACE)
 	{
-		MOO_ASSERT (moo, moo->c->cls.flags == 0);
+		MOO_ASSERT (moo, moo->c->cclass->flags == 0);
 
-		MOO_INFO2 (moo, "Defining an interface %.*js\n", moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
+		MOO_INFO2 (moo, "Defining an interface %.*js\n", moo->c->cclass->fqn.len, moo->c->cclass->fqn.ptr);
 
-		ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cls.ns_oop, &moo->c->cls.name);
+		ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cclass->ns_oop, &moo->c->cclass->name);
 		if (ass)
 		{
 			// The interface name already exists. An interface cannot be defined with an existing name
-			moo_setsynerr (moo, MOO_SYNERR_CLASSDUPL, &moo->c->cls.fqn_loc, &moo->c->cls.name); /* TODO: change the error code to MOO_SYNERR_IFCEDUPL? */
+			moo_setsynerr (moo, MOO_SYNERR_CLASSDUPL, &moo->c->cclass->fqn_loc, &moo->c->cclass->name); /* TODO: change the error code to MOO_SYNERR_IFCEDUPL? */
 			return -1;
 		}
 
 		/* an interface doesn't inherit anything */
-		moo->c->cls.super_oop = moo->_nil;
+		moo->c->cclass->super_oop = moo->_nil;
 	}
 	else if (class_type == CLASS_TYPE_EXTEND)
 	{
 		/* extending class */
-		MOO_ASSERT (moo, moo->c->cls.flags == 0);
+		MOO_ASSERT (moo, moo->c->cclass->flags == 0);
 
-		MOO_INFO2 (moo, "Extending a class %.*js\n", moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
+		MOO_INFO2 (moo, "Extending a class %.*js\n", moo->c->cclass->fqn.len, moo->c->cclass->fqn.ptr);
 
-		/*ass = moo_lookupsysdic(moo, &moo->c->cls.name);*/
-		ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cls.ns_oop, &moo->c->cls.name);
+		/*ass = moo_lookupsysdic(moo, &moo->c->cclass->name);*/
+		ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cclass->ns_oop, &moo->c->cclass->name);
 		if (ass && 
 		    MOO_CLASSOF(moo, ass->value) == moo->_class &&
 		    MOO_OBJ_GET_FLAGS_KERNEL(ass->value) != 1)
@@ -7637,26 +7650,26 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 			 * completed kernel built-in(2). 
 			 * an incomplete kernel built-in class object(1) can not be
 			 * extended */
-			moo->c->cls.self_oop = (moo_oop_class_t)ass->value;
+			moo->c->cclass->self_oop = (moo_oop_class_t)ass->value;
 		}
 		else
 		{
 			/* only an existing class can be extended. */
-			moo_setsynerr (moo, MOO_SYNERR_CLASSUNDEF, &moo->c->cls.fqn_loc, &moo->c->cls.name);
+			moo_setsynerr (moo, MOO_SYNERR_CLASSUNDEF, &moo->c->cclass->fqn_loc, &moo->c->cclass->name);
 			return -1;
 		}
 
-		moo->c->cls.super_oop = moo->c->cls.self_oop->superclass;
+		moo->c->cclass->super_oop = moo->c->cclass->self_oop->superclass;
 
-		MOO_ASSERT (moo, moo->c->cls.super_oop == moo->_nil || 
-		                 MOO_CLASSOF(moo, moo->c->cls.super_oop) == moo->_class);
+		MOO_ASSERT (moo, moo->c->cclass->super_oop == moo->_nil || 
+		                 MOO_CLASSOF(moo, moo->c->cclass->super_oop) == moo->_class);
 	}
 	else
 	{
 		int super_is_nil = 0;
 		int superfqn_is_dotted;
 
-		MOO_INFO2 (moo, "Defining a class %.*js\n", moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
+		MOO_INFO2 (moo, "Defining a class %.*js\n", moo->c->cclass->fqn.len, moo->c->cclass->fqn.ptr);
 
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_LPAREN)
 		{
@@ -7682,7 +7695,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 		}
 
 		if (set_superclass_fqn(moo, TOKEN_NAME(moo)) <= -1) return -1;
-		moo->c->cls.superfqn_loc = moo->c->tok.loc;
+		moo->c->cclass->superfqn_loc = moo->c->tok.loc;
 
 		superfqn_is_dotted = (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED);
 
@@ -7695,7 +7708,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 
 		GET_TOKEN (moo);
 
-		ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cls.ns_oop, &moo->c->cls.name);
+		ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->c->cclass->ns_oop, &moo->c->cclass->name);
 		if (ass)
 		{
 			if (MOO_CLASSOF(moo, ass->value) != moo->_class  ||
@@ -7704,28 +7717,28 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 				/* the object found with the name is not a class object 
 				 * or the the class object found is a fully defined kernel 
 				 * class object */
-				moo_setsynerr (moo, MOO_SYNERR_CLASSDUPL, &moo->c->cls.fqn_loc, &moo->c->cls.name);
+				moo_setsynerr (moo, MOO_SYNERR_CLASSDUPL, &moo->c->cclass->fqn_loc, &moo->c->cclass->name);
 				return -1;
 			}
 
-			moo->c->cls.self_oop = (moo_oop_class_t)ass->value;
+			moo->c->cclass->self_oop = (moo_oop_class_t)ass->value;
 		}
 		else
 		{
 			/* no class of such a name is found. it's a new definition,
 			 * which is normal for most new classes. */
-			MOO_ASSERT (moo, moo->c->cls.self_oop == MOO_NULL);
+			MOO_ASSERT (moo, moo->c->cclass->self_oop == MOO_NULL);
 		}
 
 		if (super_is_nil)
 		{
-			moo->c->cls.super_oop = moo->_nil;
+			moo->c->cclass->super_oop = moo->_nil;
 		}
 		else
 		{
 			var_info_t var;
 
-			if (get_variable_info(moo, &moo->c->cls.superfqn, &moo->c->cls.superfqn_loc, superfqn_is_dotted, &var) <= -1) return -1;
+			if (get_variable_info(moo, &moo->c->cclass->superfqn, &moo->c->cclass->superfqn_loc, superfqn_is_dotted, &var) <= -1) return -1;
 
 			if (var.type != VAR_GLOBAL) goto unknown_superclass;
 			if (MOO_CLASSOF(moo, var.u.gbl->value) == moo->_class && MOO_OBJ_GET_FLAGS_KERNEL(var.u.gbl->value) != 1)
@@ -7736,25 +7749,25 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 				 *  1(incomplete kernel object),
 				 *  2(complete kernel object) */
 
-				moo->c->cls.super_oop = var.u.gbl->value;
+				moo->c->cclass->super_oop = var.u.gbl->value;
 
 				/* the superclass became known. */
-				if (((moo_oop_class_t)moo->c->cls.super_oop)->trsize != moo->_nil &&
-				    (moo->c->cls.flags & CLASS_INDEXED) &&
-				    moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP)
+				if (((moo_oop_class_t)moo->c->cclass->super_oop)->trsize != moo->_nil &&
+				    (moo->c->cclass->flags & CLASS_INDEXED) &&
+				    moo->c->cclass->indexed_type != MOO_OBJ_TYPE_OOP)
 				{
 					/* non-pointer object cannot inherit from a superclass with trailer size set */
-					moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &moo->c->cls.fqn_loc, &moo->c->cls.fqn,
+					moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &moo->c->cclass->fqn_loc, &moo->c->cclass->fqn,
 						"the non-pointer class %.*js cannot inherit from a class set with trailer size",
-						moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
+						moo->c->cclass->fqn.len, moo->c->cclass->fqn.ptr);
 					return -1;
 				}
 
-				if (MOO_CLASS_SELFSPEC_FLAGS(MOO_OOP_TO_SMOOI(((moo_oop_class_t)moo->c->cls.super_oop)->selfspec)) & MOO_CLASS_SELFSPEC_FLAG_FINAL)
+				if (MOO_CLASS_SELFSPEC_FLAGS(MOO_OOP_TO_SMOOI(((moo_oop_class_t)moo->c->cclass->super_oop)->selfspec)) & MOO_CLASS_SELFSPEC_FLAG_FINAL)
 				{
 					/* cannot inherit a #final class */
-					moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &moo->c->cls.fqn_loc, &moo->c->cls.fqn,
-						"the %.*js class cannot inherit from a final class", moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
+					moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &moo->c->cclass->fqn_loc, &moo->c->cclass->fqn,
+						"the %.*js class cannot inherit from a final class", moo->c->cclass->fqn.len, moo->c->cclass->fqn.ptr);
 					return -1;
 				}
 			}
@@ -7765,7 +7778,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 				 * the object found with the name is not a class object. or,
 				 * the class object found is a internally defined kernel
 				 * class object. */
-				moo_setsynerr (moo, MOO_SYNERR_CLASSUNDEF, &moo->c->cls.superfqn_loc, &moo->c->cls.superfqn);
+				moo_setsynerr (moo, MOO_SYNERR_CLASSUNDEF, &moo->c->cclass->superfqn_loc, &moo->c->cclass->superfqn);
 				return -1;
 			}
 		}
@@ -7795,7 +7808,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 			}
 
 			if (set_class_modname (moo, TOKEN_NAME(moo)) <= -1) return -1;
-			moo->c->cls.modname_loc = *TOKEN_LOC(moo);
+			moo->c->cclass->modname_loc = *TOKEN_LOC(moo);
 
 			GET_TOKEN (moo);
 		}
@@ -7807,30 +7820,30 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 		return -1;
 	}
 
-	MOO_ASSERT (moo, moo->c->cls.super_oop != MOO_NULL);
-	if (moo->c->cls.super_oop != moo->_nil)
+	MOO_ASSERT (moo, moo->c->cclass->super_oop != MOO_NULL);
+	if (moo->c->cclass->super_oop != moo->_nil)
 	{
 		/* adjust the instance variable count and the class instance variable
 		 * count to include that of a superclass */
 		moo_oop_class_t c;
 		moo_oow_t spec, self_spec;
 
-		c = (moo_oop_class_t)moo->c->cls.super_oop;
+		c = (moo_oop_class_t)moo->c->cclass->super_oop;
 		spec = MOO_OOP_TO_SMOOI(c->spec);
 		self_spec = MOO_OOP_TO_SMOOI(c->selfspec);
 
 		/* [NOTE] class variables are not inherited. 
 		 *        so no data about them are not transferred over */
 
-		if ((moo->c->cls.flags & CLASS_INDEXED) && moo->c->cls.indexed_type != MOO_OBJ_TYPE_OOP)
+		if ((moo->c->cclass->flags & CLASS_INDEXED) && moo->c->cclass->indexed_type != MOO_OBJ_TYPE_OOP)
 		{
 			/* the class defined is a non-pointer object. */
 			if (MOO_CLASS_SPEC_INDEXED_TYPE(spec) == MOO_OBJ_TYPE_OOP && MOO_CLASS_SPEC_NAMED_INSTVARS(spec) > 0)
 			{
 				/* a non-pointer object cannot inherit from a pointer object with instance variables */
-				moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &moo->c->cls.fqn_loc, &moo->c->cls.fqn, 
+				moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &moo->c->cclass->fqn_loc, &moo->c->cclass->fqn, 
 					"the non-pointer class %.*js cannot inherit from a pointer class defined with instance variables", 
-					moo->c->cls.fqn.len, moo->c->cls.fqn.ptr);
+					moo->c->cclass->fqn.len, moo->c->cclass->fqn.ptr);
 				return -1;
 			}
 
@@ -7838,21 +7851,21 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 			 *       Say, for a parent class(#byte(4)), a child can be defined to be
 			 *       class(#word(4)). */
 
-			if (moo->c->cls.non_pointer_instsize < MOO_CLASS_SPEC_NAMED_INSTVARS(spec))
+			if (moo->c->cclass->non_pointer_instsize < MOO_CLASS_SPEC_NAMED_INSTVARS(spec))
 			{
 				moo_setsynerrbfmt (moo, MOO_SYNERR_NPINSTSIZEINVAL, &type_loc, MOO_NULL,
 					"the instance size(%zu) for the non-pointer class %.*js must not be less than the size(%zu) defined in the superclass ", 
-					moo->c->cls.non_pointer_instsize, moo->c->cls.fqn.len, moo->c->cls.fqn.ptr, (moo_oow_t)MOO_CLASS_SPEC_NAMED_INSTVARS(spec));
+					moo->c->cclass->non_pointer_instsize, moo->c->cclass->fqn.len, moo->c->cclass->fqn.ptr, (moo_oow_t)MOO_CLASS_SPEC_NAMED_INSTVARS(spec));
 				return -1;
 			}
 		}
 		else
 		{
 			/* the class defined is a pointer object or a variable-pointer object */
-			MOO_ASSERT (moo, moo->c->cls.non_pointer_instsize == 0); /* no such thing as class(#pointer(N)). so it must be 0 */
-			moo->c->cls.var[VAR_INSTANCE].total_count = MOO_CLASS_SPEC_NAMED_INSTVARS(spec);
+			MOO_ASSERT (moo, moo->c->cclass->non_pointer_instsize == 0); /* no such thing as class(#pointer(N)). so it must be 0 */
+			moo->c->cclass->var[VAR_INSTANCE].total_count = MOO_CLASS_SPEC_NAMED_INSTVARS(spec);
 		}
-		moo->c->cls.var[VAR_CLASSINST].total_count = MOO_CLASS_SELFSPEC_CLASSINSTVARS(self_spec);
+		moo->c->cclass->var[VAR_CLASSINST].total_count = MOO_CLASS_SELFSPEC_CLASSINSTVARS(self_spec);
 	}
 
 	GET_TOKEN (moo);
@@ -7886,7 +7899,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 		}
 
 		/* load the pooldic definition from the existing class object */
-		pds = moo->c->cls.self_oop->pooldics;
+		pds = moo->c->cclass->self_oop->pooldics;
 		if ((moo_oop_t)pds != moo->_nil)
 		{
 			moo_ooch_t* ptr, * end;
@@ -7927,7 +7940,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 				{
 					last = tok;
 					/* it falls back to the name space of the class */
-					ns_oop = moo->c->cls.ns_oop; 
+					ns_oop = moo->c->cclass->ns_oop; 
 				}
 
 				if (import_pool_dictionary(moo, ns_oop, &last, &tok, &loc) <= -1) return -1;
@@ -7977,33 +7990,33 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 
 		if (make_defined_class(moo) <= -1) return -1;
 
-		if (moo->c->cls.modname.len > 0)
+		if (moo->c->cclass->modname.len > 0)
 		{
-			MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->c->cls.self_oop->modname) == moo->_symbol);
+			MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->c->cclass->self_oop->modname) == moo->_symbol);
 			/* [NOTE]
 			 *  even if the modname field is set in the class object itself
 			 *  by make_define_class(), i pass the module name in the compiler
 			 *  memory(not part of the object memory) to moo_importmod().
 			 *  no big overhead as it's already available. but Accessing 
 			 *  this extra module name, i'm free from GC headache */
-			if (moo_importmod(moo, moo->c->cls.self_oop, moo->c->cls.modname.ptr, moo->c->cls.modname.len) <= -1)
+			if (moo_importmod(moo, moo->c->cclass->self_oop, moo->c->cclass->modname.ptr, moo->c->cclass->modname.len) <= -1)
 			{
 				const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
-				moo_setsynerrbfmt (moo, MOO_SYNERR_MODIMPFAIL, &moo->c->cls.modname_loc, &moo->c->cls.modname,
-					"unable to import %.*js - %js", moo->c->cls.modname.len, moo->c->cls.modname.ptr, oldmsg);
+				moo_setsynerrbfmt (moo, MOO_SYNERR_MODIMPFAIL, &moo->c->cclass->modname_loc, &moo->c->cclass->modname,
+					"unable to import %.*js - %js", moo->c->cclass->modname.len, moo->c->cclass->modname.ptr, oldmsg);
 				return -1;
 			}
 		}
 
-		if (moo->c->cls.self_oop->trsize == moo->_nil &&
-		    moo->c->cls.self_oop->superclass != moo->_nil)
+		if (moo->c->cclass->self_oop->trsize == moo->_nil &&
+		    moo->c->cclass->self_oop->superclass != moo->_nil)
 		{
 			/* the trailer size has not been set by the module importer.
 			 * if the superclass has the trailer size set, this class must
 			 * inherit so that the inherited methods work well when they
 			 * access the trailer space */
-			moo->c->cls.self_oop->trsize = ((moo_oop_class_t)moo->c->cls.self_oop->superclass)->trsize;
-			moo->c->cls.self_oop->trgc = ((moo_oop_class_t)moo->c->cls.self_oop->superclass)->trgc;
+			moo->c->cclass->self_oop->trsize = ((moo_oop_class_t)moo->c->cclass->self_oop->superclass)->trsize;
+			moo->c->cclass->self_oop->trgc = ((moo_oop_class_t)moo->c->cclass->self_oop->superclass)->trgc;
 		}
 	}
 
@@ -8032,63 +8045,16 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 static int compile_class_definition (moo_t* moo, int class_type)
 {
 	int n;
-	moo_oow_t i;
 
-	/* reset the structure to hold information about a class to be compiled */
-	moo->c->cls.flags = 0;
-	moo->c->cls.indexed_type = MOO_OBJ_TYPE_OOP; /* whether indexed or not, it's the pointer type by default */
-	moo->c->cls.non_pointer_instsize = 0;
-
-	moo->c->cls.name.len = 0;
-	moo->c->cls.fqn.len = 0;
-	moo->c->cls.supername.len = 0;
-	moo->c->cls.superfqn.len = 0;
-	MOO_MEMSET (&moo->c->cls.fqn_loc, 0, MOO_SIZEOF(moo->c->cls.fqn_loc));
-	MOO_MEMSET (&moo->c->cls.superfqn_loc, 0, MOO_SIZEOF(moo->c->cls.superfqn_loc));
-
-	moo->c->cls.modname.len = 0;
-
-	for (i = 0; i < MOO_COUNTOF(moo->c->cls.var); i++) 
-	{
-		moo->c->cls.var[i].str.len = 0;
-		moo->c->cls.var[i].count = 0;
-		moo->c->cls.var[i].total_count = 0;
-		moo->c->cls.var[i].initv_count = 0;
-	}
-
-	moo->c->cls.pooldic_imp.dcl_count = 0;
-	moo->c->cls.pooldic_imp.dcl.len = 0;
-
-	moo->c->cls.self_oop = MOO_NULL;
-	moo->c->cls.super_oop = MOO_NULL;
-	moo->c->cls.ns_oop = MOO_NULL;
-	moo->c->cls.superns_oop = MOO_NULL;
-	moo->c->mth.literals.count = 0;
-
+	if (!push_cunit(moo, MOO_CUNIT_CLASS)) return -1;
+	
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
-
-	/* do main compilation work */
-	n = __compile_class_definition (moo, class_type);
-
-	/* reset these oops plus literal pointers to lessen load on gc_compiler().
-	 * it doesn't need to rescue items not needed any longer. */
-	moo->c->cls.self_oop = MOO_NULL;
-	moo->c->cls.super_oop = MOO_NULL;
-	moo->c->cls.ns_oop = MOO_NULL;
-	moo->c->cls.superns_oop = MOO_NULL;
 	moo->c->mth.literals.count = 0;
 
-	for (i = 0; i < MOO_COUNTOF(moo->c->cls.var); i++) 
-	{
-		moo->c->cls.var[i].str.len = 0;
-		moo->c->cls.var[i].count = 0;
-		moo->c->cls.var[i].total_count = 0;
-		moo->c->cls.var[i].initv_count = 0;
-	}
-	moo->c->cls.pooldic_imp.dcl_count = 0;
-	moo->c->cls.pooldic_imp.dcl.len = 0;
+	n = __compile_class_definition (moo, class_type);
 
+	moo->c->mth.literals.count = 0;
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 
@@ -8147,7 +8113,7 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 		case MOO_IOTOK_IDENT_DOTTED:
 		{
 			var_info_t var;
-			if (get_variable_info (moo, TOKEN_NAME(moo), TOKEN_LOC(moo), TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED, &var) <= -1) return MOO_NULL;
+			if (get_variable_info(moo, TOKEN_NAME(moo), TOKEN_LOC(moo), TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED, &var) <= -1) return MOO_NULL;
 			if (var.type == VAR_GLOBAL)
 			{
 				return var.u.gbl->value;
@@ -8190,12 +8156,12 @@ static moo_oop_t find_element_in_compiling_pooldic (moo_t* moo, const moo_oocs_t
 	moo_oow_t i;
 	moo_oop_char_t s;
 
-	for (i = moo->c->pooldic.start; i < moo->c->pooldic.end; i += 2)
+	for (i = moo->c->cpooldic->start; i < moo->c->cpooldic->end; i += 2)
 	{
 		s = (moo_oop_char_t)moo->c->arlit.ptr[i];
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,s) == moo->_symbol);
 		if (MOO_OBJ_GET_SIZE(s) == name->len &&
-		    moo_equal_oochars (name->ptr, MOO_OBJ_GET_CHAR_SLOT(s), name->len))
+		    moo_equal_oochars(name->ptr, MOO_OBJ_GET_CHAR_SLOT(s), name->len))
 		{
 			return moo->c->arlit.ptr[i + 1];
 		}
@@ -8205,7 +8171,7 @@ static moo_oop_t find_element_in_compiling_pooldic (moo_t* moo, const moo_oocs_t
 	return MOO_NULL;
 }
 
-static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
+static int __compile_pooldic_definition (moo_t* moo, moo_cunit_pooldic_t* pd)
 {
 	moo_oop_t lit;
 	moo_ooi_t tally;
@@ -8214,16 +8180,11 @@ static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 
 	saved_arlit_count = moo->c->arlit.count;
 
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && 
-	    TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
 	{
 		moo_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		goto oops;
 	}
-
-	MOO_ASSERT (moo, moo->c->cls.ns_oop == MOO_NULL);
-	MOO_ASSERT (moo, moo->c->cls.super_oop == MOO_NULL);
-	MOO_ASSERT (moo, moo->c->cls.self_oop == MOO_NULL);
 
 	if (set_pooldic_fqn(moo, pd, TOKEN_NAME(moo)) <= -1) goto oops;
 	pd->fqn_loc = moo->c->tok.loc;
@@ -8237,7 +8198,7 @@ static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 		pd->ns_oop = moo->sysdic;
 	}
 
-	if (moo_lookupdic (moo, (moo_oop_dic_t)pd->ns_oop, &pd->name))
+	if (moo_lookupdic(moo, (moo_oop_dic_t)pd->ns_oop, &pd->name))
 	{
 		/* a conflicting entry has been found */
 		moo_setsynerr (moo, MOO_SYNERR_POOLDICDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -8259,8 +8220,8 @@ static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 	pd->end = moo->c->arlit.count;
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
 	{
-		lit = moo_makesymbol (moo, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
-		if (!lit || add_to_array_literal_buffer (moo, lit) <= -1) goto oops;
+		lit = moo_makesymbol(moo, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
+		if (!lit || add_to_array_literal_buffer(moo, lit) <= -1) goto oops;
 
 		GET_TOKEN (moo);
 
@@ -8295,7 +8256,6 @@ static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 		GET_TOKEN (moo);
 	}
 
-
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
 		moo_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -8309,9 +8269,8 @@ static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 /*TODO: tally and arlit_count range check */
 	/*if (!MOO_IN_SMOOI_RANGE(tally)) ERROR??*/
 
-	pd->pd_oop = moo_makedic (moo, moo->_pool_dictionary, MOO_ALIGN(tally + 10, POOL_DICTIONARY_SIZE_ALIGN));
+	pd->pd_oop = moo_makedic(moo, moo->_pool_dictionary, MOO_ALIGN(tally + 10, POOL_DICTIONARY_SIZE_ALIGN));
 	if (!pd->pd_oop) goto oops;
-
 	for (i = saved_arlit_count; i < moo->c->arlit.count; i += 2)
 	{
 		/* TODO: handle duplicate keys? */
@@ -8320,8 +8279,8 @@ static int __compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
 
 	/* eveything seems ok. register the pool dictionary to the main
 	 * system dictionary or to the name space it belongs to */
-	lit = moo_makesymbol (moo, pd->name.ptr, pd->name.len);
-	if (!lit || !moo_putatdic (moo, (moo_oop_dic_t)pd->ns_oop, lit, (moo_oop_t)pd->pd_oop)) goto oops;
+	lit = moo_makesymbol(moo, pd->name.ptr, pd->name.len);
+	if (!lit || !moo_putatdic(moo, (moo_oop_dic_t)pd->ns_oop, lit, (moo_oop_t)pd->pd_oop)) goto oops;
 
 	moo->c->arlit.count = saved_arlit_count;
 	return 0;
@@ -8331,29 +8290,38 @@ oops:
 	return -1;
 }
 
-static int compile_pooldic_definition (moo_t* moo, moo_pooldic_t* pd)
+static int compile_pooldic_definition (moo_t* moo)
 {
 	int n;
+	moo_cunit_pooldic_t* pd;
 
+	pd = (moo_cunit_pooldic_t*)push_cunit(moo, MOO_CUNIT_POOLDIC);
+	if (!pd) return -1;
+
+#if 0 // CUNIT
 	pd->name.len = 0;
 	pd->fqn.len = 0;
 	MOO_MEMSET (&pd->fqn_loc, 0, MOO_SIZEOF(pd->fqn_loc));
 
 	pd->pd_oop = MOO_NULL;
 	pd->ns_oop = MOO_NULL;
+#endif
 
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 
-	n = __compile_pooldic_definition (moo, pd);
+	n = __compile_pooldic_definition(moo, pd);
 
+#if 0
 	/* reset these oops plus literal pointers not to confuse gc_compiler() */
 	pd->pd_oop = MOO_NULL;
 	pd->ns_oop = MOO_NULL;
+#endif
 
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 
+	pop_cunit (moo);
 	return n;
 }
 
@@ -8484,7 +8452,7 @@ static int compile_stream (moo_t* moo)
 		{
 			/* pooldic SharedPoolDic { ABC := 20. DEFG := 'ayz' } */
 			GET_TOKEN (moo);
-			if (compile_pooldic_definition(moo, &moo->c->pooldic) <= -1) return -1;
+			if (compile_pooldic_definition(moo) <= -1) return -1;
 		}
 #if 0
 		else if (is_token_symbol(moo, VOCA_MAIN))
@@ -8511,38 +8479,42 @@ static void gc_compiler (moo_t* moo)
 	{
 		moo_oow_t i, j;
 
-		if (moo->c->cls.self_oop) 
-			moo->c->cls.self_oop = (moo_oop_class_t)moo_moveoop (moo, (moo_oop_t)moo->c->cls.self_oop);
+		gc_cunit_chain (moo);
 
-		if (moo->c->cls.super_oop)
-			moo->c->cls.super_oop = moo_moveoop (moo, moo->c->cls.super_oop);
+#if 0 // CUNIT
+		if (moo->c->cclass->self_oop) 
+			moo->c->cclass->self_oop = (moo_oop_class_t)moo_moveoop (moo, (moo_oop_t)moo->c->cclass->self_oop);
 
-		for (i = 0; i < MOO_COUNTOF(moo->c->cls.var); i++)
+		if (moo->c->cclass->super_oop)
+			moo->c->cclass->super_oop = moo_moveoop (moo, moo->c->cclass->super_oop);
+
+		for (i = 0; i < MOO_COUNTOF(moo->c->cclass->var); i++)
 		{
-			for (j = 0; j < moo->c->cls.var[i].initv_count; j++)
+			for (j = 0; j < moo->c->cclass->var[i].initv_count; j++)
 			{
-				register moo_oop_t x = moo->c->cls.var[i].initv[j].v;
-				if (x) moo->c->cls.var[i].initv[j].v = moo_moveoop (moo, x);
+				register moo_oop_t x = moo->c->cclass->var[i].initv[j].v;
+				if (x) moo->c->cclass->var[i].initv[j].v = moo_moveoop (moo, x);
 			}
 		}
 
-		if (moo->c->cls.ns_oop)
+		if (moo->c->cclass->ns_oop)
 		{
-			register moo_oop_t x = moo_moveoop (moo, (moo_oop_t)moo->c->cls.ns_oop);
-			moo->c->cls.ns_oop = (moo_oop_nsdic_t)x;
+			register moo_oop_t x = moo_moveoop (moo, (moo_oop_t)moo->c->cclass->ns_oop);
+			moo->c->cclass->ns_oop = (moo_oop_nsdic_t)x;
 		}
 
-		if (moo->c->cls.superns_oop)
+		if (moo->c->cclass->superns_oop)
 		{
-			register moo_oop_t x = moo_moveoop (moo, (moo_oop_t)moo->c->cls.superns_oop);
-			moo->c->cls.superns_oop = (moo_oop_nsdic_t)x;
+			register moo_oop_t x = moo_moveoop (moo, (moo_oop_t)moo->c->cclass->superns_oop);
+			moo->c->cclass->superns_oop = (moo_oop_nsdic_t)x;
 		}
 
-		for (i = 0; i < moo->c->cls.pooldic_imp.dcl_count; i++)
+		for (i = 0; i < moo->c->cclass->pooldic_imp.dcl_count; i++)
 		{
-			register moo_oop_t x = moo_moveoop (moo, (moo_oop_t)moo->c->cls.pooldic_imp.oops[i]);
-			moo->c->cls.pooldic_imp.oops[i] = (moo_oop_dic_t)x;
+			register moo_oop_t x = moo_moveoop (moo, (moo_oop_t)moo->c->cclass->pooldic_imp.oops[i]);
+			moo->c->cclass->pooldic_imp.oops[i] = (moo_oop_dic_t)x;
 		}
+#endif
 
 		for (i = 0; i < moo->c->mth.literals.count; i++)
 		{
@@ -8556,18 +8528,264 @@ static void gc_compiler (moo_t* moo)
 			moo->c->arlit.ptr[i] = x;
 		}
 
+#if 0 // CUNIT
 		if (moo->c->pooldic.pd_oop)
 		{
-			register moo_oop_t x = moo_moveoop (moo, (moo_oop_t)moo->c->pooldic.pd_oop);
+			register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)moo->c->pooldic.pd_oop);
 			moo->c->pooldic.pd_oop = (moo_oop_dic_t)x;
 		}
 
 		if (moo->c->pooldic.ns_oop)
 		{
-			register moo_oop_t x = moo_moveoop (moo, (moo_oop_t)moo->c->pooldic.ns_oop);
+			register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)moo->c->pooldic.ns_oop);
 			moo->c->pooldic.ns_oop = (moo_oop_nsdic_t)x;
 		}
+#endif
 	}
+}
+
+static void gc_cunit_chain (moo_t* moo)
+{
+	moo_cunit_t* cunit;
+
+	for (cunit = moo->c->cunit; cunit; cunit = cunit->cunit_parent)
+	{
+		switch (cunit->cunit_type)
+		{
+			case MOO_CUNIT_CLASS:
+			{
+				moo_oow_t i, j;
+				moo_cunit_class_t* c;
+				c = (moo_cunit_class_t*)cunit;
+
+				if (c->self_oop) 
+					c->self_oop = (moo_oop_class_t)moo_moveoop(moo, (moo_oop_t)c->self_oop);
+
+				if (c->super_oop)
+					c->super_oop = moo_moveoop(moo, c->super_oop);
+
+				for (i = 0; i < MOO_COUNTOF(c->var); i++)
+				{
+					for (j = 0; j < c->var[i].initv_count; j++)
+					{
+						register moo_oop_t x = c->var[i].initv[j].v;
+						if (x) c->var[i].initv[j].v = moo_moveoop(moo, x);
+					}
+				}
+
+				if (c->ns_oop)
+				{
+					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)c->ns_oop);
+					c->ns_oop = (moo_oop_nsdic_t)x;
+				}
+
+				if (c->superns_oop)
+				{
+					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)c->superns_oop);
+					c->superns_oop = (moo_oop_nsdic_t)x;
+				}
+
+				for (i = 0; i < c->pooldic_imp.dcl_count; i++)
+				{
+					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)c->pooldic_imp.oops[i]);
+					c->pooldic_imp.oops[i] = (moo_oop_dic_t)x;
+				}
+				break;
+			}
+
+			case MOO_CUNIT_POOLDIC:
+			{
+				moo_cunit_pooldic_t* pd;
+				pd = (moo_cunit_pooldic_t*)cunit;
+				if (pd->pd_oop)
+				{
+					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)pd->pd_oop);
+					pd->pd_oop = (moo_oop_dic_t)x;
+				}
+				if (pd->ns_oop)
+				{
+					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)pd->ns_oop);
+					pd->ns_oop = (moo_oop_dic_t)x;
+				}
+				break;
+			}
+
+			case MOO_CUNIT_METHOD:
+			{
+				moo_oow_t i;
+				moo_cunit_method_t* mth;
+				mth = (moo_cunit_method_t*)cunit;
+				for (i = 0; i < mth->literals.count; i++)
+				{
+					register moo_oop_t x = moo_moveoop (moo, mth->literals.ptr[i]);
+					mth->literals.ptr[i] = x;
+				}
+				break;
+			}
+		}
+	}
+}
+
+static moo_cunit_t* push_cunit (moo_t* moo, moo_cunit_type_t type)
+{
+	moo_cunit_t* cunit;
+	moo_oow_t size;
+
+	switch (type)
+	{
+		case MOO_CUNIT_CLASS:
+			size = MOO_SIZEOF(moo_cunit_class_t);
+			break;
+		case MOO_CUNIT_POOLDIC:
+			size = MOO_SIZEOF(moo_cunit_pooldic_t);
+			break;
+		case MOO_CUNIT_METHOD:
+			size = MOO_SIZEOF(moo_cunit_method_t);
+			break;
+
+		default:
+			size = MOO_SIZEOF(moo_cunit_t);
+			break;
+	}
+
+	cunit = (moo_cunit_pooldic_t*)moo_callocmem(moo, size);
+	if (!cunit) return MOO_NULL;
+
+	cunit->cunit_type = type;
+	cunit->cunit_parent = moo->c->cunit;
+	moo->c->cunit = cunit;
+
+	switch (type)
+	{
+		case MOO_CUNIT_CLASS:
+		{
+			moo_cunit_class_t* c;
+		#if 0
+			moo_oow_t i;
+		#endif
+
+			c = (moo_cunit_class_t*)cunit;
+			moo->c->cclass = c;
+			
+		#if 0
+			c->flags = 0;
+		#endif
+			c->indexed_type = MOO_OBJ_TYPE_OOP; /* whether indexed or not, it's the pointer type by default */
+		#if 0
+			c->non_pointer_instsize = 0;
+
+			c->name.len = 0;
+			c->fqn.len = 0;
+			c->supername.len = 0;
+			c->superfqn.len = 0;
+			MOO_MEMSET (&c->fqn_loc, 0, MOO_SIZEOF(c->fqn_loc));
+			MOO_MEMSET (&c->superfqn_loc, 0, MOO_SIZEOF(c->superfqn_loc));
+
+			c->modname.len = 0;
+
+			for (i = 0; i < MOO_COUNTOF(c->var); i++) 
+			{
+				c->var[i].str.len = 0;
+				c->var[i].count = 0;
+				c->var[i].total_count = 0;
+				c->var[i].initv_count = 0;
+			}
+
+			c->pooldic_imp.dcl_count = 0;
+			c->pooldic_imp.dcl.len = 0;
+
+			c->self_oop = MOO_NULL;
+			c->super_oop = MOO_NULL;
+			c->ns_oop = MOO_NULL;
+			c->superns_oop = MOO_NULL;
+		#endif
+			break;
+		}
+
+		case MOO_CUNIT_POOLDIC:
+		{
+			moo_cunit_pooldic_t* pd;
+			pd = (moo_cunit_pooldic_t*)cunit;
+			moo->c->cpooldic = pd;
+			/*
+			pd->name.len = 0;
+			pd->fqn.len = 0;
+			MOO_MEMSET (&pd->fqn_loc, 0, MOO_SIZEOF(pd->fqn_loc));
+			pd->pd_oop = MOO_NULL;
+			pd->ns_oop = MOO_NULL;
+			*/
+			break;
+		}
+	}
+	return cunit;
+}
+
+static void pop_cunit (moo_t* moo)
+{
+	moo_cunit_t* cunit;
+
+	MOO_ASSERT (moo, moo->c->cunit != MOO_NULL);
+
+	cunit = moo->c->cunit;
+	moo->c->cunit = cunit->cunit_parent;
+
+	if (moo->c->cunit)
+	{
+		if (moo->c->cunit->cunit_type == MOO_CUNIT_CLASS) 
+			moo->c->cclass = (moo_cunit_class_t*)moo->c->cunit;
+		else if (moo->c->cunit->cunit_type == MOO_CUNIT_POOLDIC)
+			moo->c->cpooldic =  (moo_cunit_pooldic_t*)moo->c->cunit;
+	}
+
+	switch (cunit->cunit_type)
+	{
+		case MOO_CUNIT_CLASS:
+		{
+			moo_oow_t i;
+			moo_cunit_class_t* c;
+			c = (moo_cunit_class_t*)cunit;
+
+			if (c->fqn.ptr) moo_freemem (moo, c->fqn.ptr);
+			if (c->superfqn.ptr) moo_freemem (moo, c->superfqn.ptr);
+			if (c->modname.ptr) moo_freemem (moo, c->modname.ptr);
+
+			for (i = 0; i < MOO_COUNTOF(c->var); i++)
+			{
+				if (c->var[i].str.ptr) moo_freemem (moo, c->var[i].str.ptr);
+				if (c->var[i].initv) moo_freemem (moo, c->var[i].initv);
+			}
+
+			if (c->pooldic_imp.dcl.ptr) moo_freemem (moo, c->pooldic_imp.dcl.ptr);
+			if (c->pooldic_imp.oops) moo_freemem (moo, c->pooldic_imp.oops);
+			break;
+		}
+
+		case MOO_CUNIT_POOLDIC:
+		{
+			moo_cunit_pooldic_t* pd;
+			pd = (moo_cunit_pooldic_t*)cunit;
+			if (pd->fqn.ptr) moo_freemem (moo, pd->fqn.ptr);
+			break;
+		}
+
+		case MOO_CUNIT_METHOD:
+		{
+			moo_cunit_method_t* mth;
+			mth = (moo_cunit_method_t*)cunit;
+			if (mth->text.ptr) moo_freemem (moo, mth->text.ptr);
+			if (mth->assignees.ptr) moo_freemem (moo, mth->assignees.ptr);
+			if (mth->binsels.ptr) moo_freemem (moo, mth->binsels.ptr);
+			if (mth->kwsels.ptr) moo_freemem (moo, mth->kwsels.ptr);
+			if (mth->name.ptr) moo_freemem (moo, mth->name.ptr);
+			if (mth->tmprs.ptr) moo_freemem (moo, mth->tmprs.ptr);
+			if (mth->code.ptr) moo_freemem (moo, mth->code.ptr);
+			if (mth->literals.ptr) moo_freemem (moo, mth->literals.ptr);
+			if (mth->blk_tmprcnt) moo_freemem (moo, mth->blk_tmprcnt);
+			break;
+		}
+	}
+
+	moo_freemem (moo, cunit);
 }
 
 static void fini_compiler (moo_t* moo)
@@ -8581,18 +8799,20 @@ static void fini_compiler (moo_t* moo)
 
 		if (moo->c->tok.name.ptr) moo_freemem (moo, moo->c->tok.name.ptr);
 
-		if (moo->c->cls.fqn.ptr) moo_freemem (moo, moo->c->cls.fqn.ptr);
-		if (moo->c->cls.superfqn.ptr) moo_freemem (moo, moo->c->cls.superfqn.ptr);
-		if (moo->c->cls.modname.ptr) moo_freemem (moo, moo->c->cls.modname.ptr);
+#if 0 // CUNIT
+		if (moo->c->cclass->fqn.ptr) moo_freemem (moo, moo->c->cclass->fqn.ptr);
+		if (moo->c->cclass->superfqn.ptr) moo_freemem (moo, moo->c->cclass->superfqn.ptr);
+		if (moo->c->cclass->modname.ptr) moo_freemem (moo, moo->c->cclass->modname.ptr);
 
-		for (i = 0; i < MOO_COUNTOF(moo->c->cls.var); i++)
+		for (i = 0; i < MOO_COUNTOF(moo->c->cclass->var); i++)
 		{
-			if (moo->c->cls.var[i].str.ptr) moo_freemem (moo, moo->c->cls.var[i].str.ptr);
-			if (moo->c->cls.var[i].initv) moo_freemem (moo, moo->c->cls.var[i].initv);
+			if (moo->c->cclass->var[i].str.ptr) moo_freemem (moo, moo->c->cclass->var[i].str.ptr);
+			if (moo->c->cclass->var[i].initv) moo_freemem (moo, moo->c->cclass->var[i].initv);
 		}
 
-		if (moo->c->cls.pooldic_imp.dcl.ptr) moo_freemem (moo, moo->c->cls.pooldic_imp.dcl.ptr);
-		if (moo->c->cls.pooldic_imp.oops) moo_freemem (moo, moo->c->cls.pooldic_imp.oops);
+		if (moo->c->cclass->pooldic_imp.dcl.ptr) moo_freemem (moo, moo->c->cclass->pooldic_imp.dcl.ptr);
+		if (moo->c->cclass->pooldic_imp.oops) moo_freemem (moo, moo->c->cclass->pooldic_imp.oops);
+#endif
 
 		if (moo->c->mth.text.ptr) moo_freemem (moo, moo->c->mth.text.ptr);
 		if (moo->c->mth.assignees.ptr) moo_freemem (moo, moo->c->mth.assignees.ptr);
@@ -8604,7 +8824,11 @@ static void fini_compiler (moo_t* moo)
 		if (moo->c->mth.literals.ptr) moo_freemem (moo, moo->c->mth.literals.ptr);
 		if (moo->c->mth.blk_tmprcnt) moo_freemem (moo, moo->c->mth.blk_tmprcnt);
 
+#if 0 // CUNIT
 		if (moo->c->pooldic.fqn.ptr) moo_freemem (moo, moo->c->pooldic.fqn.ptr);
+#else
+		while (moo->c->cunit) pop_cunit (moo);
+#endif
 
 		if (moo->c->balit.ptr) moo_freemem (moo, moo->c->balit.ptr);
 		if (moo->c->arlit.ptr) moo_freemem (moo, moo->c->arlit.ptr);

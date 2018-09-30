@@ -459,6 +459,9 @@
 /* The size of `MB_LEN_MAX', as computed by valueof. */
 #undef NUMVALOF_MB_LEN_MAX
 
+/* The size of `NSIG', as computed by valueof. */
+#undef NUMVALOF_NSIG
+
 /* The size of `PATH_MAX', as computed by valueof. */
 #undef NUMVALOF_PATH_MAX
 

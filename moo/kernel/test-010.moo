@@ -143,13 +143,14 @@ class MyObject(TestObject)
 
 		##[ Exception signal: 'simulated error' ] on: Exception do: [:ex | 'CAUGHT...' dump. Exception signal: 'jjjjjjj' ].
 		
-		"[
-				[ Exception signal: 'simulated error' ] ensure: ['ensure 1' dump ].
-		] on: Exception do: [:ex | ('EXCETION - ' & ex messageText) dump. Exception signal: 'qqq'. ]."
+		##[
+		##		[ Exception signal: 'simulated error' ] ensure: ['ensure 1' dump ].
+		##] on: Exception do: [:ex | ('EXCETION - ' & ex messageText) dump. Exception signal: 'qqq'. ].
 
-		"[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump. Exception signal: 'jjjj']."
+		##[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump. Exception signal: 'jjjj'].
 
-"		v1 := [
+		(*
+		v1 := [
 			| k |
 			k := 99.
 			[
@@ -162,7 +163,7 @@ class MyObject(TestObject)
 			('EXCETION - ' & ex messageText) dump.
 			## Exception signal: 'qqq'.
 		].
-"
+		*)
 
 		v1 := self aaa_123.
 		'--------------------------------' dump.

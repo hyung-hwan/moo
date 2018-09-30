@@ -19939,6 +19939,33 @@ _ACEOF
 
 
 
+
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking numeric value of NSIG" >&5
+$as_echo_n "checking numeric value of NSIG... " >&6; }
+if ${ax_cv_numvalof_NSIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if ac_fn_c_compute_int "$LINENO" "(NSIG)" "ax_cv_numvalof_NSIG"        "#include <signal.h>
+"; then :
+
+else
+  ax_cv_numvalof_NSIG=32
+fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_numvalof_NSIG" >&5
+$as_echo "$ax_cv_numvalof_NSIG" >&6; }
+
+
+
+cat >>confdefs.h <<_ACEOF
+#define NUMVALOF_NSIG $ax_cv_numvalof_NSIG
+_ACEOF
+
+
+
+
 if test "x${platform_win32}" = "xyes"
 then
 	# The cast to long int works around a bug in the HP C Compiler

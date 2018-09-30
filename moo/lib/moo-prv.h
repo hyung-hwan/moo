@@ -439,20 +439,7 @@ struct moo_loop_t
 	moo_loop_t* next;
 };
 
-typedef struct moo_pooldic_t moo_pooldic_t;
-struct moo_pooldic_t
-{
-	moo_oocs_t name;
-	moo_oocs_t fqn;
-	moo_oow_t fqn_capa;
-	moo_ioloc_t fqn_loc;
 
-	moo_oop_dic_t pd_oop;
-	moo_oop_nsdic_t ns_oop;
-
-	moo_oow_t start;
-	moo_oow_t end;
-};
 
 typedef struct moo_oopbuf_t moo_oopbuf_t;
 struct moo_oopbuf_t
@@ -480,6 +467,175 @@ struct moo_initv_t
 enum moo_pragma_flag_t
 {
 	MOO_PRAGMA_QC = (1 << 0)
+};
+
+enum moo_cunit_type_t
+{
+	MOO_CUNIT_BLANK = 0,
+	MOO_CUNIT_CLASS,
+	MOO_CUNIT_POOLDIC,
+	MOO_CUNIT_METHOD
+};
+typedef enum moo_cunit_type_t moo_cunit_type_t;
+
+#define MOO_CUNIT_HEADER \
+	moo_cunit_type_t cunit_type; \
+	moo_cunit_t*     cunit_parent
+
+typedef struct moo_cunit_t moo_cunit_t;
+struct moo_cunit_t
+{
+	MOO_CUNIT_HEADER;
+};
+
+typedef struct moo_cunit_pooldic_t moo_cunit_pooldic_t;
+struct moo_cunit_pooldic_t
+{
+	MOO_CUNIT_HEADER;
+
+	moo_oocs_t name;
+	moo_oocs_t fqn;
+	moo_oow_t fqn_capa;
+	moo_ioloc_t fqn_loc;
+
+	moo_oop_dic_t pd_oop;
+	moo_oop_nsdic_t ns_oop;
+
+	moo_oow_t start;
+	moo_oow_t end;
+};
+
+
+typedef struct moo_cunit_class_t moo_cunit_class_t;
+struct moo_cunit_class_t
+{
+	MOO_CUNIT_HEADER;
+
+	int flags;
+	int indexed_type;
+
+	/* fixed instance size specified for a non-pointer class. class(#byte(N)), etc */
+	moo_oow_t non_pointer_instsize; 
+
+	moo_oop_class_t self_oop;
+	moo_oop_t super_oop; /* this may be nil. so the type is moo_oop_t */
+	moo_oop_nsdic_t ns_oop;
+	moo_oocs_t fqn;
+	moo_oocs_t name;
+	moo_oow_t fqn_capa;
+	moo_ioloc_t fqn_loc;
+
+	moo_oop_nsdic_t superns_oop;
+	moo_oocs_t superfqn;
+	moo_oocs_t supername;
+	moo_oow_t superfqn_capa;
+	moo_ioloc_t superfqn_loc;
+
+	moo_oocs_t modname; /* module name after 'from' */
+	moo_oow_t modname_capa;
+	moo_ioloc_t modname_loc;
+
+	/* instance variable, class variable, class instance variable, constant
+	 *   var[0] - named instance variables
+	 *   var[1] - class instance variables
+	 *   var[2] - class variables 
+	 */
+	struct
+	{
+		moo_oocs_t str;  /* long string containing all variables declared delimited by a space */
+		moo_oow_t  str_capa;
+
+		moo_oow_t count; /* the number of variables declared in this class only */
+		moo_oow_t total_count; /* the number of variables declared in this class and superclasses */
+
+		moo_initv_t* initv;
+		moo_oow_t initv_capa;
+		/* initv_count holds the index to the last variable with a 
+		 * default initial value defined in this class only plus one.
+		 * inheritance is handled by the compiler separately using
+		 * the reference to the superclass. so it doesn't include
+		 * the variables defined in the superclass chain.
+		 * for a definition: class ... { var a, b := 0, c },
+		 * initv_count is set to 2 while count is 3. totoal_count
+		 * will be 3 too if there is no variabled defined in the
+		 * superclass chain. */
+		moo_oow_t initv_count;  
+	} var[3];
+
+	/* buffer to hold pooldic import declaration */
+	struct
+	{
+		moo_oocs_t dcl;
+		moo_oow_t dcl_capa;
+		moo_oow_t dcl_count;
+
+		/* used to hold imported pool dictionarie objects */
+		moo_oop_dic_t* oops; 
+		moo_oow_t oops_capa;
+	} pooldic_imp;
+};
+
+
+typedef struct moo_cunit_method_t moo_cunit_method_t;
+struct moo_cunit_method_t
+{
+	MOO_CUNIT_HEADER;
+
+	int active;
+
+	moo_method_type_t type;
+	int primitive; /* true if method(#primitive) */
+	int lenient; /* true if method(#lenient) */
+
+	/* method source text */
+	moo_oocs_t text;
+	moo_oow_t text_capa;
+
+	/* buffer to store identifier names to be assigned */
+	moo_oocs_t assignees;
+	moo_oow_t assignees_capa;
+
+	/* buffer to store binary selectors being worked on */
+	moo_oocs_t binsels;
+	moo_oow_t binsels_capa;
+
+	/* buffer to store keyword selectors being worked on */
+	moo_oocs_t kwsels;
+	moo_oow_t kwsels_capa;
+
+	/* method name */
+	moo_oocs_t name;
+	moo_oow_t name_capa;
+	moo_ioloc_t name_loc;
+
+	/* is the unary method followed by parameter list? */
+	int variadic;
+
+	/* single string containing a space separated list of temporaries */
+	moo_oocs_t tmprs; 
+	moo_oow_t tmprs_capa;
+	moo_oow_t tmpr_count; /* total number of temporaries including arguments */
+	moo_oow_t tmpr_nargs;
+
+	/* literals */
+	moo_oopbuf_t literals;
+
+	/* 0 for no primitive, 1 for a normal primitive, 2 for a named primitive */
+	int pftype;
+	/* primitive function number */
+	moo_ooi_t pfnum; 
+
+	/* block depth */
+	moo_oow_t blk_depth;
+	moo_oow_t* blk_tmprcnt;
+	moo_oow_t blk_tmprcnt_capa;
+
+	/* information about loop constructs */
+	moo_loop_t* loop;
+
+	/* byte code */
+	moo_code_t code;
+	moo_oow_t code_capa;
 };
 
 struct moo_compiler_t
@@ -523,135 +679,20 @@ struct moo_compiler_t
 	/* workspace space to use when reading an array */
 	moo_oopbuf_t arlit;
 
+	/* the current compilation unit being processed */
+	moo_cunit_t* cunit;
+
+	/* inner-most class unit. it may be same as 'cunit' or something up
+	 * the 'cunit->cunit_parent' chain */
+	moo_cunit_class_t* cclass;
+	moo_cunit_pooldic_t* cpooldic;
+
 	/* information about a class being compiled */
-	struct
-	{
-		int flags;
-		int indexed_type;
-		
-		/* fixed instance size specified for a non-pointer class. class(#byte(N)), etc */
-		moo_oow_t non_pointer_instsize; 
-
-		moo_oop_class_t self_oop;
-		moo_oop_t super_oop; /* this may be nil. so the type is moo_oop_t */
-		moo_oop_nsdic_t ns_oop;
-		moo_oocs_t fqn;
-		moo_oocs_t name;
-		moo_oow_t fqn_capa;
-		moo_ioloc_t fqn_loc;
-
-		moo_oop_nsdic_t superns_oop;
-		moo_oocs_t superfqn;
-		moo_oocs_t supername;
-		moo_oow_t superfqn_capa;
-		moo_ioloc_t superfqn_loc;
-
-		moo_oocs_t modname; /* module name after 'from' */
-		moo_oow_t modname_capa;
-		moo_ioloc_t modname_loc;
-
-		/* instance variable, class variable, class instance variable, constant
-		 *   var[0] - named instance variables
-		 *   var[1] - class instance variables
-		 *   var[2] - class variables 
-		 */
-		struct
-		{
-			moo_oocs_t str;  /* long string containing all variables declared delimited by a space */
-			moo_oow_t  str_capa;
-
-			moo_oow_t count; /* the number of variables declared in this class only */
-			moo_oow_t total_count; /* the number of variables declared in this class and superclasses */
-
-			moo_initv_t* initv;
-			moo_oow_t initv_capa;
-			/* initv_count holds the index to the last variable with a 
-			 * default initial value defined in this class only plus one.
-			 * inheritance is handled by the compiler separately using
-			 * the reference to the superclass. so it doesn't include
-			 * the variables defined in the superclass chain.
-			 * for a definition: class ... { var a, b := 0, c },
-			 * initv_count is set to 2 while count is 3. totoal_count
-			 * will be 3 too if there is no variabled defined in the
-			 * superclass chain. */
-			moo_oow_t initv_count;  
-		} var[3];
-
-		/* buffer to hold pooldic import declaration */
-		struct
-		{
-			moo_oocs_t dcl;
-			moo_oow_t dcl_capa;
-			moo_oow_t dcl_count;
-
-			/* used to hold imported pool dictionarie objects */
-			moo_oop_dic_t* oops; 
-			moo_oow_t oops_capa;
-		} pooldic_imp;
-	} cls;
-
+	//moo_cunit_class_t cls;
 	/* pooldic declaration */
-	moo_pooldic_t pooldic;
-
+	/*moo_cunit_pooldic_t pooldic;*/
 	/* information about a method being comipled */
-	struct
-	{
-		int active;
-
-		moo_method_type_t type;
-		int primitive; /* true if method(#primitive) */
-		int lenient; /* true if method(#lenient) */
-
-		/* method source text */
-		moo_oocs_t text;
-		moo_oow_t text_capa;
-
-		/* buffer to store identifier names to be assigned */
-		moo_oocs_t assignees;
-		moo_oow_t assignees_capa;
-
-		/* buffer to store binary selectors being worked on */
-		moo_oocs_t binsels;
-		moo_oow_t binsels_capa;
-
-		/* buffer to store keyword selectors being worked on */
-		moo_oocs_t kwsels;
-		moo_oow_t kwsels_capa;
-
-		/* method name */
-		moo_oocs_t name;
-		moo_oow_t name_capa;
-		moo_ioloc_t name_loc;
-
-		/* is the unary method followed by parameter list? */
-		int variadic;
-
-		/* single string containing a space separated list of temporaries */
-		moo_oocs_t tmprs; 
-		moo_oow_t tmprs_capa;
-		moo_oow_t tmpr_count; /* total number of temporaries including arguments */
-		moo_oow_t tmpr_nargs;
-
-		/* literals */
-		moo_oopbuf_t literals;
-
-		/* 0 for no primitive, 1 for a normal primitive, 2 for a named primitive */
-		int pftype;
-		/* primitive function number */
-		moo_ooi_t pfnum; 
-
-		/* block depth */
-		moo_oow_t blk_depth;
-		moo_oow_t* blk_tmprcnt;
-		moo_oow_t blk_tmprcnt_capa;
-
-		/* information about loop constructs */
-		moo_loop_t* loop;
-
-		/* byte code */
-		moo_code_t code;
-		moo_oow_t code_capa;
-	} mth; 
+	moo_cunit_method_t mth;
 };
 #endif
 

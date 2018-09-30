@@ -335,6 +335,7 @@ AC_CHECK_SIZEOF(off64_t)
 AC_CHECK_SIZEOF(mbstate_t,,[#include <wchar.h>])
 AX_CHECK_NUMVALOF(MB_LEN_MAX,[32],[#include <limits.h>])
 AX_CHECK_NUMVALOF(PATH_MAX,[0],[#include <limits.h>])
+AX_CHECK_NUMVALOF(NSIG,[32],[#include <signal.h>])
 
 if test "x${platform_win32}" = "xyes"
 then
