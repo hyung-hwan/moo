@@ -2205,27 +2205,27 @@ static MOO_INLINE int emit_byte_instruction (moo_t* moo, moo_oob_t code)
 	 * to fit in a small integer. because 'ip' points to the next instruction
 	 * to execute, he upper bound should be (max - 1) so that i stays
 	 * at the max when incremented */
-	if (moo->c->mth.code.len == MOO_SMOOI_MAX - 1)
+	if (moo->c->cclass->mth.code.len == MOO_SMOOI_MAX - 1)
 	{
 		moo_seterrnum (moo, MOO_EBCFULL); /* byte code too big */
 		return -1;
 	}
 
-	if (moo->c->mth.code.len >= moo->c->mth.code_capa)
+	if (moo->c->cclass->mth.code.len >= moo->c->cclass->mth.code_capa)
 	{
 		moo_oob_t* tmp;
 		moo_oow_t newcapa;
 
-		newcapa = MOO_ALIGN (moo->c->mth.code.len + 1, CODE_BUFFER_ALIGN);
+		newcapa = MOO_ALIGN (moo->c->cclass->mth.code.len + 1, CODE_BUFFER_ALIGN);
 
-		tmp = moo_reallocmem (moo, moo->c->mth.code.ptr, newcapa * MOO_SIZEOF(*tmp));
+		tmp = moo_reallocmem (moo, moo->c->cclass->mth.code.ptr, newcapa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
-		moo->c->mth.code.ptr = tmp;
-		moo->c->mth.code_capa = newcapa;
+		moo->c->cclass->mth.code.ptr = tmp;
+		moo->c->cclass->mth.code_capa = newcapa;
 	}
 
-	moo->c->mth.code.ptr[moo->c->mth.code.len++] = code;
+	moo->c->cclass->mth.code.ptr[moo->c->cclass->mth.code.len++] = code;
 	return 0;
 }
 
@@ -2501,17 +2501,17 @@ static int patch_long_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_o
 		return -1;
 	}
 
-	MOO_ASSERT (moo, moo->c->mth.code.ptr[jip] == BCODE_JUMP_FORWARD_X ||
-	                 moo->c->mth.code.ptr[jip] == BCODE_JUMP_FORWARD_IF_FALSE ||
-	                 moo->c->mth.code.ptr[jip] == BCODE_JUMP_FORWARD_IF_TRUE ||
-	                 moo->c->mth.code.ptr[jip] == BCODE_JUMPOP_FORWARD_IF_FALSE ||
-	                 moo->c->mth.code.ptr[jip] == BCODE_JUMPOP_FORWARD_IF_TRUE);
+	MOO_ASSERT (moo, moo->c->cclass->mth.code.ptr[jip] == BCODE_JUMP_FORWARD_X ||
+	                 moo->c->cclass->mth.code.ptr[jip] == BCODE_JUMP_FORWARD_IF_FALSE ||
+	                 moo->c->cclass->mth.code.ptr[jip] == BCODE_JUMP_FORWARD_IF_TRUE ||
+	                 moo->c->cclass->mth.code.ptr[jip] == BCODE_JUMPOP_FORWARD_IF_FALSE ||
+	                 moo->c->cclass->mth.code.ptr[jip] == BCODE_JUMPOP_FORWARD_IF_TRUE);
 
 	if (code_size > MAX_CODE_JUMP)
 	{
 		/* switch to JUMP2 instruction to allow a bigger jump offset.
 		 * up to twice MAX_CODE_JUMP only */
-		moo->c->mth.code.ptr[jip]++; /* switch to the JUMP2 instruction */
+		moo->c->cclass->mth.code.ptr[jip]++; /* switch to the JUMP2 instruction */
 		jump_offset = code_size - MAX_CODE_JUMP;
 	}
 	else
@@ -2520,10 +2520,10 @@ static int patch_long_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_o
 	}
 
 #if (MOO_BCODE_LONG_PARAM_SIZE == 2)
-	moo->c->mth.code.ptr[jip + 1] = jump_offset >> 8;
-	moo->c->mth.code.ptr[jip + 2] = jump_offset & 0xFF;
+	moo->c->cclass->mth.code.ptr[jip + 1] = jump_offset >> 8;
+	moo->c->cclass->mth.code.ptr[jip + 2] = jump_offset & 0xFF;
 #else
-	moo->c->mth.code.ptr[jip + 1] = jump_offset;
+	moo->c->cclass->mth.code.ptr[jip + 1] = jump_offset;
 #endif
 
 	return 0;
@@ -2540,8 +2540,8 @@ static int push_loop (moo_t* moo, moo_loop_type_t type, moo_oow_t startpos)
 	init_oow_pool (moo, &loop->continue_ip_pool);
 	loop->type = type;
 	loop->startpos = startpos;
-	loop->next = moo->c->mth.loop;
-	moo->c->mth.loop = loop;
+	loop->next = moo->c->cclass->mth.loop;
+	moo->c->cclass->mth.loop = loop;
 
 	return 0;
 }
@@ -2582,7 +2582,7 @@ static void adjust_loop_jumps_for_elimination (moo_t* moo, moo_oow_pool_t* pool,
 					/* invalidate the instruction position */
 					chunk->buf[j] = INVALID_IP;
 				}
-				else if (chunk->buf[j] > end && chunk->buf[j] < moo->c->mth.code.len)
+				else if (chunk->buf[j] > end && chunk->buf[j] < moo->c->cclass->mth.code.len)
 				{
 					/* decrement the instruction position */
 					chunk->buf[j] -= end - start + 1;
@@ -2595,19 +2595,19 @@ static void adjust_loop_jumps_for_elimination (moo_t* moo, moo_oow_pool_t* pool,
 
 static MOO_INLINE int update_loop_breaks (moo_t* moo, moo_oow_t jt)
 {
-	return update_loop_jumps (moo, &moo->c->mth.loop->break_ip_pool, jt);
+	return update_loop_jumps (moo, &moo->c->cclass->mth.loop->break_ip_pool, jt);
 }
 
 static MOO_INLINE int update_loop_continues (moo_t* moo, moo_oow_t jt)
 {
-	return update_loop_jumps (moo, &moo->c->mth.loop->continue_ip_pool, jt);
+	return update_loop_jumps (moo, &moo->c->cclass->mth.loop->continue_ip_pool, jt);
 }
 
 static MOO_INLINE void adjust_all_loop_jumps_for_elimination (moo_t* moo, moo_oow_t start, moo_oow_t end)
 {
 	moo_loop_t* loop;
 
-	loop = moo->c->mth.loop;
+	loop = moo->c->cclass->mth.loop;
 	while (loop)
 	{
 		adjust_loop_jumps_for_elimination (moo, &loop->break_ip_pool, start, end);
@@ -2620,9 +2620,9 @@ static MOO_INLINE moo_loop_t* unlink_loop (moo_t* moo)
 {
 	moo_loop_t* loop;
 
-	MOO_ASSERT (moo, moo->c->mth.loop != MOO_NULL);
-	loop = moo->c->mth.loop;
-	moo->c->mth.loop = loop->next;
+	MOO_ASSERT (moo, moo->c->cclass->mth.loop != MOO_NULL);
+	loop = moo->c->cclass->mth.loop;
+	moo->c->cclass->mth.loop = loop->next;
 
 	return loop;
 }
@@ -2641,7 +2641,7 @@ static MOO_INLINE void pop_loop (moo_t* moo)
 
 static MOO_INLINE int inject_break_to_loop (moo_t* moo)
 {
-	if (add_to_oow_pool (moo, &moo->c->mth.loop->break_ip_pool, moo->c->mth.code.len) <= -1 ||
+	if (add_to_oow_pool (moo, &moo->c->cclass->mth.loop->break_ip_pool, moo->c->cclass->mth.code.len) <= -1 ||
 	    emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
 	return 0;
 }
@@ -2650,7 +2650,7 @@ static MOO_INLINE int inject_continue_to_loop (moo_t* moo)
 {
 	/* used for a do-while loop. jump forward because the conditional 
 	 * is at the end of the do-while loop */
-	if (add_to_oow_pool (moo, &moo->c->mth.loop->continue_ip_pool, moo->c->mth.code.len) <= -1 ||
+	if (add_to_oow_pool (moo, &moo->c->cclass->mth.loop->continue_ip_pool, moo->c->cclass->mth.code.len) <= -1 ||
 	    emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
 	return 0;
 }
@@ -2659,24 +2659,24 @@ static void eliminate_instructions (moo_t* moo, moo_oow_t start, moo_oow_t end)
 {
 	moo_oow_t last;
 
-	MOO_ASSERT (moo, moo->c->mth.code.len >= 1);
+	MOO_ASSERT (moo, moo->c->cclass->mth.code.len >= 1);
 
-	last = moo->c->mth.code.len - 1;
+	last = moo->c->cclass->mth.code.len - 1;
 
 	if (end >= last)
 	{
 		/* eliminate all instructions starting from the start index.
 		 * setting the length to the start length will achieve this */
 		adjust_all_loop_jumps_for_elimination (moo, start, last);
-		moo->c->mth.code.len = start;
+		moo->c->cclass->mth.code.len = start;
 	}
 	else
 	{
 		/* eliminate a chunk in the middle of the instruction buffer.
 		 * some copying is required */
 		adjust_all_loop_jumps_for_elimination (moo, start, end);
-		MOO_MEMMOVE (&moo->c->mth.code.ptr[start], &moo->c->mth.code.ptr[end + 1], moo->c->mth.code.len - end - 1);
-		moo->c->mth.code.len -= end - start + 1;
+		MOO_MEMMOVE (&moo->c->cclass->mth.code.ptr[start], &moo->c->cclass->mth.code.ptr[end + 1], moo->c->cclass->mth.code.len - end - 1);
+		moo->c->cclass->mth.code.len -= end - start + 1;
 	}
 }
 
@@ -2688,35 +2688,35 @@ static int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index)
 {
 	moo_oow_t i;
 
-	for (i = 0; i < moo->c->mth.literals.count; i++) 
+	for (i = 0; i < moo->c->cclass->mth.literals.count; i++) 
 	{
 		/* 
 		 * this removes redundancy of symbols, characters, and small integers. 
 		 * more complex redundacy check may be done somewhere else like 
 		 * in add_string_literal().
 		 */
-		if (moo->c->mth.literals.ptr[i] == lit) 
+		if (moo->c->cclass->mth.literals.ptr[i] == lit) 
 		{
 			*index = i;
 			return i;
 		}
 	}
 
-	if (moo->c->mth.literals.count >= moo->c->mth.literals.capa)
+	if (moo->c->cclass->mth.literals.count >= moo->c->cclass->mth.literals.capa)
 	{
 		moo_oop_t* tmp;
 		moo_oow_t new_capa;
 
-		new_capa = MOO_ALIGN (moo->c->mth.literals.count + 1, LITERAL_BUFFER_ALIGN);
-		tmp = (moo_oop_t*)moo_reallocmem (moo, moo->c->mth.literals.ptr, new_capa * MOO_SIZEOF(*tmp));
+		new_capa = MOO_ALIGN (moo->c->cclass->mth.literals.count + 1, LITERAL_BUFFER_ALIGN);
+		tmp = (moo_oop_t*)moo_reallocmem (moo, moo->c->cclass->mth.literals.ptr, new_capa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
-		moo->c->mth.literals.capa = new_capa;
-		moo->c->mth.literals.ptr = tmp;
+		moo->c->cclass->mth.literals.capa = new_capa;
+		moo->c->cclass->mth.literals.ptr = tmp;
 	}
 
-	*index = moo->c->mth.literals.count;
-	moo->c->mth.literals.ptr[moo->c->mth.literals.count++] = lit;
+	*index = moo->c->cclass->mth.literals.count;
+	moo->c->cclass->mth.literals.ptr[moo->c->cclass->mth.literals.count++] = lit;
 	return 0;
 }
 
@@ -2725,9 +2725,9 @@ static int add_string_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* ind
 	moo_oop_t lit;
 	moo_oow_t i;
 
-	for (i = 0; i < moo->c->mth.literals.count; i++) 
+	for (i = 0; i < moo->c->cclass->mth.literals.count; i++) 
 	{
-		lit = moo->c->mth.literals.ptr[i];
+		lit = moo->c->cclass->mth.literals.ptr[i];
 
 		if (MOO_CLASSOF(moo, lit) == moo->_string && 
 		    MOO_OBJ_GET_SIZE(lit) == str->len &&
@@ -2851,23 +2851,23 @@ static int set_class_level_variable_initv (moo_t* moo, var_type_t var_type, moo_
 	return 0;
 }
 
-static MOO_INLINE int add_pooldic_import (moo_t* moo, const moo_oocs_t* name, moo_oop_dic_t pooldic_oop)
+static MOO_INLINE int add_pdimport (moo_t* moo, const moo_oocs_t* name, moo_oop_dic_t pooldic_oop)
 {
-	if (moo->c->cclass->pooldic_imp.dcl_count >= moo->c->cclass->pooldic_imp.oops_capa)
+	if (moo->c->cclass->pdimp.dcl_count >= moo->c->cclass->pdimp.oops_capa)
 	{
 		moo_oow_t new_capa;
 		moo_oop_dic_t* tmp;
 
-		new_capa = MOO_ALIGN(moo->c->cclass->pooldic_imp.oops_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
-		tmp = moo_reallocmem (moo, moo->c->cclass->pooldic_imp.oops, new_capa * MOO_SIZEOF(moo_oop_dic_t));
+		new_capa = MOO_ALIGN(moo->c->cclass->pdimp.oops_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
+		tmp = moo_reallocmem (moo, moo->c->cclass->pdimp.oops, new_capa * MOO_SIZEOF(moo_oop_dic_t));
 		if (!tmp) return -1;
 
-		moo->c->cclass->pooldic_imp.oops_capa = new_capa;
-		moo->c->cclass->pooldic_imp.oops = tmp;
+		moo->c->cclass->pdimp.oops_capa = new_capa;
+		moo->c->cclass->pdimp.oops = tmp;
 	}
 
-	moo->c->cclass->pooldic_imp.oops[moo->c->cclass->pooldic_imp.dcl_count] = pooldic_oop;
-	moo->c->cclass->pooldic_imp.dcl_count++;
+	moo->c->cclass->pdimp.oops[moo->c->cclass->pdimp.dcl_count] = pooldic_oop;
+	moo->c->cclass->pdimp.dcl_count++;
 /* TODO: check if pooldic_count overflows */
 
 	return 0;
@@ -3016,12 +3016,12 @@ static int clone_assignee (moo_t* moo, const moo_oocs_t* name, moo_oow_t* offset
 	int n;
 	moo_oow_t old_len;
 
-	old_len = moo->c->mth.assignees.len;
-	n = copy_string_to (moo, name, &moo->c->mth.assignees, &moo->c->mth.assignees_capa, 1, '\0');
+	old_len = moo->c->cclass->mth.assignees.len;
+	n = copy_string_to (moo, name, &moo->c->cclass->mth.assignees, &moo->c->cclass->mth.assignees_capa, 1, '\0');
 	if (n <= -1) return -1;
 
 	/* update the pointer to of the name. its length is the same. */
-	/*name->ptr = moo->c->mth.assignees.ptr + old_len;*/
+	/*name->ptr = moo->c->cclass->mth.assignees.ptr + old_len;*/
 	*offset = old_len;
 	return 0;
 }
@@ -3031,12 +3031,12 @@ static int clone_binary_selector (moo_t* moo, const moo_oocs_t* name, moo_oow_t*
 	int n;
 	moo_oow_t old_len;
 
-	old_len = moo->c->mth.binsels.len;
-	n = copy_string_to (moo, name, &moo->c->mth.binsels, &moo->c->mth.binsels_capa, 1, '\0');
+	old_len = moo->c->cclass->mth.binsels.len;
+	n = copy_string_to (moo, name, &moo->c->cclass->mth.binsels, &moo->c->cclass->mth.binsels_capa, 1, '\0');
 	if (n <= -1) return -1;
 
 	/* update the pointer to of the name. its length is the same. */
-	/*name->ptr = moo->c->mth.binsels.ptr + old_len;*/
+	/*name->ptr = moo->c->cclass->mth.binsels.ptr + old_len;*/
 	*offset = old_len;
 	return 0;
 }
@@ -3046,12 +3046,12 @@ static int clone_keyword (moo_t* moo, const moo_oocs_t* name, moo_oow_t* offset)
 	int n;
 	moo_oow_t old_len;
 
-	old_len = moo->c->mth.kwsels.len;
-	n = copy_string_to (moo, name, &moo->c->mth.kwsels, &moo->c->mth.kwsels_capa, 1, '\0');
+	old_len = moo->c->cclass->mth.kwsels.len;
+	n = copy_string_to (moo, name, &moo->c->cclass->mth.kwsels, &moo->c->cclass->mth.kwsels_capa, 1, '\0');
 	if (n <= -1) return -1;
 
 	/* update the pointer to of the name. its length is the same. */
-	/*name->ptr = moo->c->mth.kwsels.ptr + old_len;*/
+	/*name->ptr = moo->c->cclass->mth.kwsels.ptr + old_len;*/
 	*offset = old_len;
 	return 0;
 }
@@ -3059,21 +3059,21 @@ static int clone_keyword (moo_t* moo, const moo_oocs_t* name, moo_oow_t* offset)
 static int add_method_name_fragment (moo_t* moo, const moo_oocs_t* name)
 {
 	/* method name fragments are concatenated without any delimiters */
-	return copy_string_to (moo, name, &moo->c->mth.name, &moo->c->mth.name_capa, 1, '\0');
+	return copy_string_to (moo, name, &moo->c->cclass->mth.name, &moo->c->cclass->mth.name_capa, 1, '\0');
 }
 
 static int method_exists (moo_t* moo, const moo_oocs_t* name)
 {
 	/* check if the current class contains a method of the given name */
-	if (moo->c->mth.type == MOO_METHOD_DUAL)
+	if (moo->c->cclass->mth.type == MOO_METHOD_DUAL)
 	{
 		return moo_lookupdic (moo, moo->c->cclass->self_oop->mthdic[0], name) != MOO_NULL ||
 		       moo_lookupdic (moo, moo->c->cclass->self_oop->mthdic[1], name) != MOO_NULL;
 	}
 	else
 	{
-		MOO_ASSERT (moo, moo->c->mth.type < MOO_COUNTOF(moo->c->cclass->self_oop->mthdic));
-		return moo_lookupdic (moo, moo->c->cclass->self_oop->mthdic[moo->c->mth.type], name) != MOO_NULL;
+		MOO_ASSERT (moo, moo->c->cclass->mth.type < MOO_COUNTOF(moo->c->cclass->self_oop->mthdic));
+		return moo_lookupdic (moo, moo->c->cclass->self_oop->mthdic[moo->c->cclass->mth.type], name) != MOO_NULL;
 	}
 }
 
@@ -3081,12 +3081,12 @@ static int add_temporary_variable (moo_t* moo, const moo_oocs_t* name)
 {
 	/* temporary variable names are added to the string with leading
 	 * space if it's not the first variable */
-	return copy_string_to (moo, name, &moo->c->mth.tmprs, &moo->c->mth.tmprs_capa, 1, ' ');
+	return copy_string_to (moo, name, &moo->c->cclass->mth.tmprs, &moo->c->cclass->mth.tmprs_capa, 1, ' ');
 }
 
 static MOO_INLINE int find_temporary_variable (moo_t* moo, const moo_oocs_t* name, moo_oow_t* xindex)
 {
-	return find_word_in_string (&moo->c->mth.tmprs, name, xindex);
+	return find_word_in_string (&moo->c->cclass->mth.tmprs, name, xindex);
 }
 
 static moo_oop_nsdic_t add_namespace (moo_t* moo, moo_oop_nsdic_t dic, const moo_oocs_t* name)
@@ -3301,9 +3301,9 @@ static int resolve_pooldic (moo_t* moo, int dotted, const moo_oocs_t* name)
 	}
 
 	/* check if the same dictionary pool has been declared for import */
-	for (i = 0; i < moo->c->cclass->pooldic_imp.dcl_count; i++)
+	for (i = 0; i < moo->c->cclass->pdimp.dcl_count; i++)
 	{
-		if ((moo_oop_dic_t)ass->value == moo->c->cclass->pooldic_imp.oops[i])
+		if ((moo_oop_dic_t)ass->value == moo->c->cclass->pdimp.oops[i])
 		{
 			moo_setsynerr (moo, MOO_SYNERR_POOLDICDUPL, TOKEN_LOC(moo), name);
 			return -1;
@@ -3328,19 +3328,19 @@ static int import_pool_dictionary (moo_t* moo, moo_oop_nsdic_t ns_oop, const moo
 	}
 
 	/* check if the same dictionary pool has been declared for import */
-	for (i = 0; i < moo->c->cclass->pooldic_imp.dcl_count; i++)
+	for (i = 0; i < moo->c->cclass->pdimp.dcl_count; i++)
 	{
-		if ((moo_oop_dic_t)ass->value == moo->c->cclass->pooldic_imp.oops[i])
+		if ((moo_oop_dic_t)ass->value == moo->c->cclass->pdimp.oops[i])
 		{
 			moo_setsynerr (moo, MOO_SYNERR_POOLDICDUPL, tok_loc, tok_name);
 			return -1;
 		}
 	}
 
-	if (add_pooldic_import(moo, tok_name, (moo_oop_dic_t)ass->value) <= -1) return -1;
-	if (copy_string_to (moo, tok_name, &moo->c->cclass->pooldic_imp.dcl, &moo->c->cclass->pooldic_imp.dcl_capa, 1, ' ') <= -1)
+	if (add_pdimport(moo, tok_name, (moo_oop_dic_t)ass->value) <= -1) return -1;
+	if (copy_string_to (moo, tok_name, &moo->c->cclass->pdimp.dcl, &moo->c->cclass->pdimp.dcl_capa, 1, ' ') <= -1)
 	{
-		moo->c->cclass->pooldic_imp.dcl_count--; /* roll back add_pool_dictionary() */
+		moo->c->cclass->pdimp.dcl_count--; /* roll back add_pool_dictionary() */
 		return -1;
 	}
 
@@ -3700,8 +3700,8 @@ static int compile_class_level_imports (moo_t* moo)
 
 static int compile_unary_method_name (moo_t* moo)
 {
-	MOO_ASSERT (moo, moo->c->mth.name.len == 0);
-	MOO_ASSERT (moo, moo->c->mth.tmpr_nargs == 0);
+	MOO_ASSERT (moo, moo->c->cclass->mth.name.len == 0);
+	MOO_ASSERT (moo, moo->c->cclass->mth.tmpr_nargs == 0);
 
 	if (add_method_name_fragment(moo, TOKEN_NAME(moo)) <= -1) return -1;
 	GET_TOKEN (moo);
@@ -3709,7 +3709,7 @@ static int compile_unary_method_name (moo_t* moo)
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
 		/* this is a procedural style method */
-		MOO_ASSERT (moo, moo->c->mth.tmpr_nargs == 0);
+		MOO_ASSERT (moo, moo->c->cclass->mth.tmpr_nargs == 0);
 
 		GET_TOKEN (moo);
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
@@ -3730,7 +3730,7 @@ static int compile_unary_method_name (moo_t* moo)
 				}
 
 				if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
-				moo->c->mth.tmpr_nargs++;
+				moo->c->cclass->mth.tmpr_nargs++;
 				GET_TOKEN (moo); 
 
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN) break;
@@ -3755,8 +3755,8 @@ static int compile_unary_method_name (moo_t* moo)
 
 static int compile_binary_method_name (moo_t* moo)
 {
-	MOO_ASSERT (moo, moo->c->mth.name.len == 0);
-	MOO_ASSERT (moo, moo->c->mth.tmpr_nargs == 0);
+	MOO_ASSERT (moo, moo->c->cclass->mth.name.len == 0);
+	MOO_ASSERT (moo, moo->c->cclass->mth.tmpr_nargs == 0);
 
 	if (add_method_name_fragment(moo, TOKEN_NAME(moo)) <= -1) return -1;
 	GET_TOKEN (moo);
@@ -3769,16 +3769,16 @@ static int compile_binary_method_name (moo_t* moo)
 		return -1;
 	}
 
-	MOO_ASSERT (moo, moo->c->mth.tmpr_nargs == 0);
+	MOO_ASSERT (moo, moo->c->cclass->mth.tmpr_nargs == 0);
 
 	/* no duplication check is performed against class-level variable names.
 	 * a duplcate name will shade a previsouly defined variable. */
 	if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
-	moo->c->mth.tmpr_nargs++;
+	moo->c->cclass->mth.tmpr_nargs++;
 
-	MOO_ASSERT (moo, moo->c->mth.tmpr_nargs == 1);
+	MOO_ASSERT (moo, moo->c->cclass->mth.tmpr_nargs == 1);
 	/* this check should not be not necessary
-	if (moo->c->mth.tmpr_nargs > MAX_CODE_NARGS)
+	if (moo->c->cclass->mth.tmpr_nargs > MAX_CODE_NARGS)
 	{
 		moo_setsynerr (moo, MOO_SYNERR_ARGFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
@@ -3791,8 +3791,8 @@ static int compile_binary_method_name (moo_t* moo)
 
 static int compile_keyword_method_name (moo_t* moo)
 {
-	MOO_ASSERT (moo, moo->c->mth.name.len == 0);
-	MOO_ASSERT (moo, moo->c->mth.tmpr_nargs == 0);
+	MOO_ASSERT (moo, moo->c->cclass->mth.name.len == 0);
+	MOO_ASSERT (moo, moo->c->cclass->mth.tmpr_nargs == 0);
 
 	do 
 	{
@@ -3813,7 +3813,7 @@ static int compile_keyword_method_name (moo_t* moo)
 		}
 
 		if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
-		moo->c->mth.tmpr_nargs++;
+		moo->c->cclass->mth.tmpr_nargs++;
 
 		GET_TOKEN (moo);
 	} 
@@ -3834,9 +3834,9 @@ static int compile_method_name (moo_t* moo)
 	 */
 	int n;
 
-	MOO_ASSERT (moo, moo->c->mth.tmpr_count == 0);
+	MOO_ASSERT (moo, moo->c->cclass->mth.tmpr_count == 0);
 
-	moo->c->mth.name_loc = moo->c->tok.loc;
+	moo->c->cclass->mth.name_loc = moo->c->tok.loc;
 	switch (TOKEN_TYPE(moo))
 	{
 		case MOO_IOTOK_IDENT:
@@ -3859,25 +3859,25 @@ static int compile_method_name (moo_t* moo)
 
 	if (n >= 0)
 	{
-		if (method_exists(moo, &moo->c->mth.name)) 
+		if (method_exists(moo, &moo->c->cclass->mth.name)) 
  		{
-			moo_setsynerr (moo, MOO_SYNERR_MTHNAMEDUPL, &moo->c->mth.name_loc, &moo->c->mth.name);
+			moo_setsynerr (moo, MOO_SYNERR_MTHNAMEDUPL, &moo->c->cclass->mth.name_loc, &moo->c->cclass->mth.name);
 			return -1;
 		}
 
 		/* compile_unary_method_name() returns 9999 if the name is followed by () */
-		if (moo->c->mth.variadic && n != 9999)
+		if (moo->c->cclass->mth.variadic && n != 9999)
 		{
-			moo_setsynerr (moo, MOO_SYNERR_VARIADMTHINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+			moo_setsynerr (moo, MOO_SYNERR_VARIADMTHINVAL, &moo->c->cclass->mth.name_loc, &moo->c->cclass->mth.name);
 			return -1;
 		}
 	}
 
-	MOO_ASSERT (moo, moo->c->mth.tmpr_nargs < MAX_CODE_NARGS);
+	MOO_ASSERT (moo, moo->c->cclass->mth.tmpr_nargs < MAX_CODE_NARGS);
 	/* the total number of temporaries is equal to the number of 
 	 * arguments after having processed the message pattern. it's because
 	 * moo treats arguments the same as temporaries */
-	moo->c->mth.tmpr_count = moo->c->mth.tmpr_nargs;
+	moo->c->cclass->mth.tmpr_count = moo->c->cclass->mth.tmpr_nargs;
 	return n;
 }
 
@@ -3909,9 +3909,9 @@ static int compile_method_temporaries (moo_t* moo)
 		}
 
 		if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
-		moo->c->mth.tmpr_count++;
+		moo->c->cclass->mth.tmpr_count++;
 
-		if (moo->c->mth.tmpr_count > MAX_CODE_NARGS)
+		if (moo->c->cclass->mth.tmpr_count > MAX_CODE_NARGS)
 		{
 			moo_setsynerr (moo, MOO_SYNERR_TMPRFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
@@ -3972,7 +3972,7 @@ static int compile_method_pragma (moo_t* moo)
 
 /* TODO: check if the number points to one of the internal primitive function */
 
-				moo->c->mth.pfnum = pfnum;
+				moo->c->cclass->mth.pfnum = pfnum;
 				break;
 
 			case MOO_IOTOK_SYMLIT:
@@ -4010,11 +4010,11 @@ static int compile_method_pragma (moo_t* moo)
 						return -1;
 					}
 
-					if (moo->c->mth.tmpr_nargs < pfbase->minargs || moo->c->mth.tmpr_nargs > pfbase->maxargs)
+					if (moo->c->cclass->mth.tmpr_nargs < pfbase->minargs || moo->c->cclass->mth.tmpr_nargs > pfbase->maxargs)
 					{
 						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
-							tlen, tptr, pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
-						moo_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+							tlen, tptr, pfbase->minargs, pfbase->maxargs, moo->c->cclass->mth.tmpr_nargs);
+						moo_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->cclass->mth.name_loc, &moo->c->cclass->mth.name);
 						return -1;
 					}
 
@@ -4024,8 +4024,8 @@ static int compile_method_pragma (moo_t* moo)
 					 * so the index to the symbol registered should be very small like 0 */
 					MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(lit_idx));
 
-					moo->c->mth.pftype = PFTYPE_NAMED; 
-					moo->c->mth.pfnum = lit_idx;
+					moo->c->cclass->mth.pftype = PFTYPE_NAMED; 
+					moo->c->cclass->mth.pfnum = lit_idx;
 				}
 				else if (!MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum))
 				{
@@ -4034,16 +4034,16 @@ static int compile_method_pragma (moo_t* moo)
 				}
 				else
 				{
-					if (moo->c->mth.tmpr_nargs < pfbase->minargs || moo->c->mth.tmpr_nargs > pfbase->maxargs)
+					if (moo->c->cclass->mth.tmpr_nargs < pfbase->minargs || moo->c->cclass->mth.tmpr_nargs > pfbase->maxargs)
 					{
 						MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
-							tlen, tptr, pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
-						moo_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+							tlen, tptr, pfbase->minargs, pfbase->maxargs, moo->c->cclass->mth.tmpr_nargs);
+						moo_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->cclass->mth.name_loc, &moo->c->cclass->mth.name);
 						return -1;
 					}
 
-					moo->c->mth.pftype = PFTYPE_NUMBERED; 
-					moo->c->mth.pfnum = pfnum;
+					moo->c->cclass->mth.pftype = PFTYPE_NUMBERED; 
+					moo->c->cclass->mth.pfnum = pfnum;
 				}
 
 				break;
@@ -4059,11 +4059,11 @@ static int compile_method_pragma (moo_t* moo)
 	{
 /* TODO: exception handler is supposed to be used by BlockContext on:do:. 
  *       it needs to check the number of arguments at least */
-		moo->c->mth.pftype = PFTYPE_EXCEPTION;
+		moo->c->cclass->mth.pftype = PFTYPE_EXCEPTION;
 	}
 	else if (is_token_word(moo, VOCA_ENSURE))
 	{
-		moo->c->mth.pftype = PFTYPE_ENSURE;
+		moo->c->cclass->mth.pftype = PFTYPE_ENSURE;
 	}
 	else
 	{
@@ -4087,7 +4087,7 @@ static int validate_class_level_variable (moo_t* moo, var_info_t* var, const moo
 	switch (var->type)
 	{
 		case VAR_INSTANCE:
-			if (moo->c->mth.type == MOO_METHOD_CLASS || moo->c->mth.type == MOO_METHOD_DUAL)
+			if (moo->c->cclass->mth.type == MOO_METHOD_CLASS || moo->c->cclass->mth.type == MOO_METHOD_DUAL)
 			{
 				/* a class(or dual) method cannot access an instance variable */
 				moo_setsynerr (moo, MOO_SYNERR_VARINACC, name_loc, name);
@@ -4097,7 +4097,7 @@ static int validate_class_level_variable (moo_t* moo, var_info_t* var, const moo
 
 		case VAR_CLASSINST:
 			/* class instance variable can be accessed by only pure class methods */
-			if (moo->c->mth.type == MOO_METHOD_INSTANCE || moo->c->mth.type == MOO_METHOD_DUAL)
+			if (moo->c->cclass->mth.type == MOO_METHOD_INSTANCE || moo->c->cclass->mth.type == MOO_METHOD_DUAL)
 			{
 				/* an instance method cannot access a class-instance variable */
 				moo_setsynerr (moo, MOO_SYNERR_VARINACC, name_loc, name);
@@ -4290,9 +4290,9 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 	{
 		/* the current class being compiled has been instantiated.
 		 * look up in the temporary variable list if compiling in a method */
-		if (moo->c->mth.active && find_temporary_variable (moo, name, &index) >= 0)
+		if (moo->c->cclass->mth.active && find_temporary_variable (moo, name, &index) >= 0)
 		{
-			var->type = (index < moo->c->mth.tmpr_nargs)? VAR_ARGUMENT: VAR_TEMPORARY;
+			var->type = (index < moo->c->cclass->mth.tmpr_nargs)? VAR_ARGUMENT: VAR_TEMPORARY;
 			var->pos = index;
 			return 0;
 		}
@@ -4362,9 +4362,9 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 		moo_oop_association_t ass2 = MOO_NULL;
 
 		/* attempt to find the variable in pool dictionaries */
-		for (i = 0; i < moo->c->cclass->pooldic_imp.dcl_count; i++)
+		for (i = 0; i < moo->c->cclass->pdimp.dcl_count; i++)
 		{
-			ass = moo_lookupdic(moo, moo->c->cclass->pooldic_imp.oops[i], name);
+			ass = moo_lookupdic(moo, moo->c->cclass->pdimp.oops[i], name);
 			if (ass)
 			{
 				if (ass2)
@@ -4437,8 +4437,8 @@ static int compile_block_temporaries (moo_t* moo)
 		}
 
 		if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
-		moo->c->mth.tmpr_count++;
-		if (moo->c->mth.tmpr_count > MAX_CODE_NTMPRS)
+		moo->c->cclass->mth.tmpr_count++;
+		if (moo->c->cclass->mth.tmpr_count > MAX_CODE_NTMPRS)
 		{
 			moo_setsynerr (moo, MOO_SYNERR_TMPRFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
 			return -1;
@@ -4459,23 +4459,23 @@ static int compile_block_temporaries (moo_t* moo)
 
 static int store_tmpr_count_for_block (moo_t* moo, moo_oow_t tmpr_count)
 {
-	if (moo->c->mth.blk_depth >= moo->c->mth.blk_tmprcnt_capa)
+	if (moo->c->cclass->mth.blk_depth >= moo->c->cclass->mth.blk_tmprcnt_capa)
 	{
 		moo_oow_t* tmp;
 		moo_oow_t new_capa;
 
-		new_capa = MOO_ALIGN (moo->c->mth.blk_depth + 1, BLK_TMPRCNT_BUFFER_ALIGN);
-		tmp = (moo_oow_t*)moo_reallocmem (moo, moo->c->mth.blk_tmprcnt, new_capa * MOO_SIZEOF(*tmp));
+		new_capa = MOO_ALIGN (moo->c->cclass->mth.blk_depth + 1, BLK_TMPRCNT_BUFFER_ALIGN);
+		tmp = (moo_oow_t*)moo_reallocmem (moo, moo->c->cclass->mth.blk_tmprcnt, new_capa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
-		moo->c->mth.blk_tmprcnt_capa = new_capa;
-		moo->c->mth.blk_tmprcnt = tmp;
+		moo->c->cclass->mth.blk_tmprcnt_capa = new_capa;
+		moo->c->cclass->mth.blk_tmprcnt = tmp;
 	}
 
 	/* [NOTE] i don't increment blk_depth here. it's updated
 	 *        by the caller after this function has been called for
 	 *        a new block entered. */
-	moo->c->mth.blk_tmprcnt[moo->c->mth.blk_depth] = tmpr_count;
+	moo->c->cclass->mth.blk_tmprcnt[moo->c->cclass->mth.blk_depth] = tmpr_count;
 	return 0;
 }
 
@@ -4495,18 +4495,18 @@ static int compile_block_expression (moo_t* moo)
 	/* this function expects [ not to be consumed away */
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_LBRACK);
 
-	if (moo->c->mth.loop) 
+	if (moo->c->cclass->mth.loop) 
 	{
 		/* this block is placed inside the {} loop */
-		moo->c->mth.loop->blkcount++; 
+		moo->c->cclass->mth.loop->blkcount++; 
 	}
 	block_loc = *TOKEN_LOC(moo);
 	GET_TOKEN (moo);
 
-	saved_tmprs_len = moo->c->mth.tmprs.len;
-	saved_tmpr_count = moo->c->mth.tmpr_count;
-	MOO_ASSERT (moo, moo->c->mth.blk_depth > 0);
-	MOO_ASSERT (moo, moo->c->mth.blk_tmprcnt[moo->c->mth.blk_depth - 1] == saved_tmpr_count);
+	saved_tmprs_len = moo->c->cclass->mth.tmprs.len;
+	saved_tmpr_count = moo->c->cclass->mth.tmpr_count;
+	MOO_ASSERT (moo, moo->c->cclass->mth.blk_depth > 0);
+	MOO_ASSERT (moo, moo->c->cclass->mth.blk_tmprcnt[moo->c->cclass->mth.blk_depth - 1] == saved_tmpr_count);
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_COLON) 
 	{
@@ -4532,8 +4532,8 @@ static int compile_block_expression (moo_t* moo)
 			}
 
 			if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
-			moo->c->mth.tmpr_count++;
-			if (moo->c->mth.tmpr_count > MAX_CODE_NARGS)
+			moo->c->cclass->mth.tmpr_count++;
+			if (moo->c->cclass->mth.tmpr_count > MAX_CODE_NARGS)
 			{
 				moo_setsynerr (moo, MOO_SYNERR_BLKARGFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo)); 
 				return -1;
@@ -4552,7 +4552,7 @@ static int compile_block_expression (moo_t* moo)
 		GET_TOKEN (moo);
 	}
 
-	block_arg_count = moo->c->mth.tmpr_count - saved_tmpr_count;
+	block_arg_count = moo->c->cclass->mth.tmpr_count - saved_tmpr_count;
 	if (block_arg_count > MAX_CODE_NBLKARGS)
 	{
 		/* while an integer object is pused to indicate the number of
@@ -4567,7 +4567,7 @@ static int compile_block_expression (moo_t* moo)
 	if (compile_block_temporaries(moo) <= -1) return -1;
 
 	/* this is a block-local temporary count including arguments */
-	block_tmpr_count = moo->c->mth.tmpr_count - saved_tmpr_count;
+	block_tmpr_count = moo->c->cclass->mth.tmpr_count - saved_tmpr_count;
 	if (block_tmpr_count > MAX_CODE_NBLKTMPRS)
 	{
 		moo_setsynerr (moo, MOO_SYNERR_BLKTMPRFLOOD, &tmpr_loc, MOO_NULL); 
@@ -4577,19 +4577,19 @@ static int compile_block_expression (moo_t* moo)
 	/* store the accumulated number of temporaries for the current block.
 	 * block depth is not raised as it's not entering a new block but
 	 * updating the temporaries count for the current block. */
-	if (store_tmpr_count_for_block (moo, moo->c->mth.tmpr_count) <= -1) return -1;
+	if (store_tmpr_count_for_block (moo, moo->c->cclass->mth.tmpr_count) <= -1) return -1;
 
 #if defined(MOO_USE_MAKE_BLOCK)
-	if (emit_double_param_instruction(moo, BCODE_MAKE_BLOCK, block_arg_count, moo->c->mth.tmpr_count/*block_tmpr_count*/) <= -1) return -1;
+	if (emit_double_param_instruction(moo, BCODE_MAKE_BLOCK, block_arg_count, moo->c->cclass->mth.tmpr_count/*block_tmpr_count*/) <= -1) return -1;
 #else
 	if (emit_byte_instruction(moo, BCODE_PUSH_CONTEXT) <= -1 ||
 	    emit_push_smooi_literal(moo, block_arg_count) <= -1 ||
-	    emit_push_smooi_literal(moo, moo->c->mth.tmpr_count/*block_tmpr_count*/) <= -1 ||
+	    emit_push_smooi_literal(moo, moo->c->cclass->mth.tmpr_count/*block_tmpr_count*/) <= -1 ||
 	    emit_byte_instruction(moo, BCODE_SEND_BLOCK_COPY) <= -1) return -1;
 #endif
 
 	/* insert dummy instructions before replacing them with a jump instruction */
-	jump_inst_pos = moo->c->mth.code.len;
+	jump_inst_pos = moo->c->cclass->mth.code.len;
 	/* specifying MAX_CODE_JUMP causes emit_single_param_instruction() to 
 	 * produce the long jump instruction (BCODE_JUMP_FORWARD_X) */
 	if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
@@ -4623,16 +4623,16 @@ static int compile_block_expression (moo_t* moo)
 
 	if (emit_byte_instruction(moo, BCODE_RETURN_FROM_BLOCK) <= -1) return -1;
 
-	if (patch_long_forward_jump_instruction (moo, jump_inst_pos, moo->c->mth.code.len, &block_loc) <= -1) return -1;
+	if (patch_long_forward_jump_instruction (moo, jump_inst_pos, moo->c->cclass->mth.code.len, &block_loc) <= -1) return -1;
 
 	/* restore the temporary count */
-	moo->c->mth.tmprs.len = saved_tmprs_len;
-	moo->c->mth.tmpr_count = saved_tmpr_count;
+	moo->c->cclass->mth.tmprs.len = saved_tmprs_len;
+	moo->c->cclass->mth.tmpr_count = saved_tmpr_count;
 
-	if (moo->c->mth.loop) 
+	if (moo->c->cclass->mth.loop) 
 	{
-		MOO_ASSERT (moo, moo->c->mth.loop->blkcount > 0);
-		moo->c->mth.loop->blkcount--;
+		MOO_ASSERT (moo, moo->c->cclass->mth.loop->blkcount > 0);
+		moo->c->cclass->mth.loop->blkcount--;
 	}
 
 	GET_TOKEN (moo); /* read the next token after ] */
@@ -4873,7 +4873,7 @@ static int _compile_array_expression (moo_t* moo, int closer_token, int bcode_ma
 
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_PERCPAREN || TOKEN_TYPE(moo) == MOO_IOTOK_PERCBRACK);
 
-	maip = moo->c->mth.code.len;
+	maip = moo->c->cclass->mth.code.len;
 	if (emit_single_param_instruction(moo, bcode_make, 0) <= -1) return -1;
 
 	aeloc = *TOKEN_LOC(moo);
@@ -4910,10 +4910,10 @@ static int _compile_array_expression (moo_t* moo, int closer_token, int bcode_ma
 	/* TODO: devise a double_param MAKE_ARRAY to increase the number of elementes supported... */
 		/* patch the MAKE_ARRAY instruction */
 	#if (MOO_BCODE_LONG_PARAM_SIZE == 2)
-		moo->c->mth.code.ptr[maip + 1] = index >> 8;
-		moo->c->mth.code.ptr[maip + 2] = index & 0xFF;
+		moo->c->cclass->mth.code.ptr[maip + 1] = index >> 8;
+		moo->c->cclass->mth.code.ptr[maip + 2] = index & 0xFF;
 	#else
-		moo->c->mth.code.ptr[maip + 1] = index;
+		moo->c->cclass->mth.code.ptr[maip + 1] = index;
 	#endif
 	}
 
@@ -4939,7 +4939,7 @@ static int compile_dictionary_expression (moo_t* moo)
 
 	GET_TOKEN (moo); /* read a token after :{ */
 
-	mdip = moo->c->mth.code.len;
+	mdip = moo->c->cclass->mth.code.len;
 	if (emit_single_param_instruction (moo, BCODE_MAKE_DICTIONARY, 0) <= -1) return -1;
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
@@ -4967,10 +4967,10 @@ static int compile_dictionary_expression (moo_t* moo)
 
 		/* patch the MAKE_DICTIONARY instruction */
 	#if (MOO_BCODE_LONG_PARAM_SIZE == 2)
-		moo->c->mth.code.ptr[mdip + 1] = count >> 8;
-		moo->c->mth.code.ptr[mdip + 2] = count & 0xFF;
+		moo->c->cclass->mth.code.ptr[mdip + 1] = count >> 8;
+		moo->c->cclass->mth.code.ptr[mdip + 2] = count & 0xFF;
 	#else
-		moo->c->mth.code.ptr[mdip + 1] = count;
+		moo->c->cclass->mth.code.ptr[mdip + 1] = count;
 	#endif
 	}
 
@@ -5003,18 +5003,18 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 			case VAR_TEMPORARY:
 			{
 			#if defined(MOO_USE_CTXTEMPVAR)
-				if (moo->c->mth.blk_depth > 0)
+				if (moo->c->cclass->mth.blk_depth > 0)
 				{
 					moo_oow_t i;
 
 					/* if a temporary variable is accessed inside a block,
 					 * use a special instruction to indicate it */
-					MOO_ASSERT (moo, var.pos < moo->c->mth.blk_tmprcnt[moo->c->mth.blk_depth]);
-					for (i = moo->c->mth.blk_depth; i > 0; i--)
+					MOO_ASSERT (moo, var.pos < moo->c->cclass->mth.blk_tmprcnt[moo->c->cclass->mth.blk_depth]);
+					for (i = moo->c->cclass->mth.blk_depth; i > 0; i--)
 					{
-						if (var.pos >= moo->c->mth.blk_tmprcnt[i - 1])
+						if (var.pos >= moo->c->cclass->mth.blk_tmprcnt[i - 1])
 						{
-							if (emit_double_param_instruction(moo, BCODE_PUSH_CTXTEMPVAR_0, moo->c->mth.blk_depth - i, var.pos - moo->c->mth.blk_tmprcnt[i - 1]) <= -1) return -1;
+							if (emit_double_param_instruction(moo, BCODE_PUSH_CTXTEMPVAR_0, moo->c->cclass->mth.blk_depth - i, var.pos - moo->c->cclass->mth.blk_tmprcnt[i - 1]) <= -1) return -1;
 							goto temporary_done;
 						}
 					}
@@ -5220,16 +5220,16 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				int n;
 
 				/*GET_TOKEN (moo);*/
-				if (store_tmpr_count_for_block (moo, moo->c->mth.tmpr_count) <= -1) return -1;
-				moo->c->mth.blk_depth++;
+				if (store_tmpr_count_for_block (moo, moo->c->cclass->mth.tmpr_count) <= -1) return -1;
+				moo->c->cclass->mth.blk_depth++;
 				/*
-				 * moo->c->mth.tmpr_count[0] contains the number of temporaries for a method.
-				 * moo->c->mth.tmpr_count[1] contains the number of temporaries for the block plus the containing method.
+				 * moo->c->cclass->mth.tmpr_count[0] contains the number of temporaries for a method.
+				 * moo->c->cclass->mth.tmpr_count[1] contains the number of temporaries for the block plus the containing method.
 				 * ...
-				 * moo->c->mth.tmpr_count[n] contains the number of temporaries for the block plus all containing method and blocks.
+				 * moo->c->cclass->mth.tmpr_count[n] contains the number of temporaries for the block plus all containing method and blocks.
 				 */
 				n = compile_block_expression(moo);
-				moo->c->mth.blk_depth--;
+				moo->c->cclass->mth.blk_depth--;
 				if (n <= -1) return -1;
 				break;
 			}
@@ -5331,7 +5331,7 @@ static int compile_binary_message (moo_t* moo, int to_super)
 	do
 	{
 		binsel = moo->c->tok.name;
-		saved_binsels_len = moo->c->mth.binsels.len;
+		saved_binsels_len = moo->c->cclass->mth.binsels.len;
 
 		if (clone_binary_selector(moo, &binsel, &binsel_offset) <= -1) goto oops;
 
@@ -5344,19 +5344,19 @@ static int compile_binary_message (moo_t* moo, int to_super)
 		/* update the pointer to the cloned selector now 
 		 * to be free from reallocation risk for the recursive call
 		 * to compile_expression_primary(). */
-		binsel.ptr = &moo->c->mth.binsels.ptr[binsel_offset];
+		binsel.ptr = &moo->c->cclass->mth.binsels.ptr[binsel_offset];
 		if (add_symbol_literal(moo, &binsel, 0, &index) <= -1 ||
 		    emit_double_param_instruction(moo, send_message_cmd[to_super], 1, index) <= -1) goto oops;
 
 		to_super = 0; /* In super + 2 - 3, '-' is sent to the return value of '+', not to super */
-		moo->c->mth.binsels.len = saved_binsels_len;
+		moo->c->cclass->mth.binsels.len = saved_binsels_len;
 	}
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL);
 
 	return 0;
 
 oops:
-	moo->c->mth.binsels.len = saved_binsels_len;
+	moo->c->cclass->mth.binsels.len = saved_binsels_len;
 	return -1;
 }
 
@@ -5376,7 +5376,7 @@ static int compile_keyword_message (moo_t* moo, int to_super)
 	moo_oow_t nargs = 0;
 
 	saved_kwsel_loc = moo->c->tok.loc;
-	saved_kwsel_len = moo->c->mth.kwsels.len;
+	saved_kwsel_len = moo->c->cclass->mth.kwsels.len;
 
 /* TODO: optimization for ifTrue: ifFalse: whileTrue: whileFalse .. */
 	do 
@@ -5390,7 +5390,7 @@ static int compile_keyword_message (moo_t* moo, int to_super)
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && compile_unary_message(moo, to_super2) <= -1) goto oops;
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL && compile_binary_message(moo, to_super2) <= -1) goto oops;
 
-		kw.ptr = &moo->c->mth.kwsels.ptr[kw_offset];
+		kw.ptr = &moo->c->cclass->mth.kwsels.ptr[kw_offset];
 		if (nargs >= MAX_CODE_NARGS)
 		{
 			/* 'kw' points to only one segment of the full keyword message. 
@@ -5405,17 +5405,17 @@ static int compile_keyword_message (moo_t* moo, int to_super)
 	} 
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD) /* loop */;
 
-	kwsel.ptr = &moo->c->mth.kwsels.ptr[saved_kwsel_len];
-	kwsel.len = moo->c->mth.kwsels.len - saved_kwsel_len;
+	kwsel.ptr = &moo->c->cclass->mth.kwsels.ptr[saved_kwsel_len];
+	kwsel.len = moo->c->cclass->mth.kwsels.len - saved_kwsel_len;
 
 	if (add_symbol_literal(moo, &kwsel, 0, &index) <= -1 ||
 	    emit_double_param_instruction(moo, send_message_cmd[to_super], nargs, index) <= -1) goto oops;
 
-	moo->c->mth.kwsels.len = saved_kwsel_len;
+	moo->c->cclass->mth.kwsels.len = saved_kwsel_len;
 	return 0;
 
 oops:
-	moo->c->mth.kwsels.len = saved_kwsel_len;
+	moo->c->cclass->mth.kwsels.len = saved_kwsel_len;
 	return -1;
 }
 
@@ -5444,20 +5444,20 @@ static int compile_message_expression (moo_t* moo, int to_super)
 			case MOO_IOTOK_IDENT:
 				/* insert NOOP to change to DUP_STACKTOP if there is a 
 				 * cascaded message */
-				noop_pos = moo->c->mth.code.len;
+				noop_pos = moo->c->cclass->mth.code.len;
 				if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
 
 				if (compile_unary_message(moo, to_super) <= -1) return -1;
 
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL)
 				{
-					MOO_ASSERT (moo, moo->c->mth.code.len > noop_pos);
-					/*MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
-					moo->c->mth.code.len--;*/
+					MOO_ASSERT (moo, moo->c->cclass->mth.code.len > noop_pos);
+					/*MOO_MEMMOVE (&moo->c->cclass->mth.code.ptr[noop_pos], &moo->c->cclass->mth.code.ptr[noop_pos + 1], moo->c->cclass->mth.code.len - noop_pos - 1);
+					moo->c->cclass->mth.code.len--;*/
 					/* eliminate the NOOP instruction */
 					eliminate_instructions (moo, noop_pos, noop_pos);
 
-					noop_pos = moo->c->mth.code.len;
+					noop_pos = moo->c->cclass->mth.code.len;
 					if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
 
 					/* to_super is reset to 0 because a unary message
@@ -5470,13 +5470,13 @@ static int compile_message_expression (moo_t* moo, int to_super)
 
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD)
 				{
-					MOO_ASSERT (moo, moo->c->mth.code.len > noop_pos);
-					/*MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
-					moo->c->mth.code.len--;*/
+					MOO_ASSERT (moo, moo->c->cclass->mth.code.len > noop_pos);
+					/*MOO_MEMMOVE (&moo->c->cclass->mth.code.ptr[noop_pos], &moo->c->cclass->mth.code.ptr[noop_pos + 1], moo->c->cclass->mth.code.len - noop_pos - 1);
+					moo->c->cclass->mth.code.len--;*/
 					/* eliminate the NOOP instruction */
 					eliminate_instructions (moo, noop_pos, noop_pos);
 
-					noop_pos = moo->c->mth.code.len;
+					noop_pos = moo->c->cclass->mth.code.len;
 					if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
 					/* don't pass to_super. pass 0 as it can't be the 
 					 * first message after 'super' */
@@ -5485,19 +5485,19 @@ static int compile_message_expression (moo_t* moo, int to_super)
 				break;
 
 			case MOO_IOTOK_BINSEL:
-				noop_pos = moo->c->mth.code.len;
+				noop_pos = moo->c->cclass->mth.code.len;
 				if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
 
 				if (compile_binary_message(moo, to_super) <= -1) return -1;
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD)
 				{
-					MOO_ASSERT (moo, moo->c->mth.code.len > noop_pos);
-					/*MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
-					moo->c->mth.code.len--;*/
+					MOO_ASSERT (moo, moo->c->cclass->mth.code.len > noop_pos);
+					/*MOO_MEMMOVE (&moo->c->cclass->mth.code.ptr[noop_pos], &moo->c->cclass->mth.code.ptr[noop_pos + 1], moo->c->cclass->mth.code.len - noop_pos - 1);
+					moo->c->cclass->mth.code.len--;*/
 					/* eliminate the NOOP instruction */
 					eliminate_instructions (moo, noop_pos, noop_pos);
 
-					noop_pos = moo->c->mth.code.len;
+					noop_pos = moo->c->cclass->mth.code.len;
 					if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
 					/* don't pass to_super. pass 0 as it can't be the 
 					 * first message after 'super' */
@@ -5506,7 +5506,7 @@ static int compile_message_expression (moo_t* moo, int to_super)
 				break;
 
 			case MOO_IOTOK_KEYWORD:
-				noop_pos = moo->c->mth.code.len;
+				noop_pos = moo->c->cclass->mth.code.len;
 				if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
 
 				if (compile_keyword_message(moo, to_super) <= -1) return -1;
@@ -5519,15 +5519,15 @@ static int compile_message_expression (moo_t* moo, int to_super)
 
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_SEMICOLON)
 		{
-			moo->c->mth.code.ptr[noop_pos] = BCODE_DUP_STACKTOP;
+			moo->c->cclass->mth.code.ptr[noop_pos] = BCODE_DUP_STACKTOP;
 			if (emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) return -1;
 			GET_TOKEN(moo);
 		}
 		else 
 		{
-			MOO_ASSERT (moo, moo->c->mth.code.len > noop_pos);
-			/*MOO_MEMMOVE (&moo->c->mth.code.ptr[noop_pos], &moo->c->mth.code.ptr[noop_pos + 1], moo->c->mth.code.len - noop_pos - 1);
-			moo->c->mth.code.len--;*/
+			MOO_ASSERT (moo, moo->c->cclass->mth.code.len > noop_pos);
+			/*MOO_MEMMOVE (&moo->c->cclass->mth.code.ptr[noop_pos], &moo->c->cclass->mth.code.ptr[noop_pos + 1], moo->c->cclass->mth.code.len - noop_pos - 1);
+			moo->c->cclass->mth.code.len--;*/
 			/* eliminate the NOOP instruction */
 			eliminate_instructions (moo, noop_pos, noop_pos);
 			goto done;
@@ -5568,7 +5568,7 @@ start_over:
 		int bcode;
 		bcode = (TOKEN_TYPE(moo) == MOO_IOTOK_AND)? BCODE_JUMP_FORWARD_IF_FALSE: BCODE_JUMP_FORWARD_IF_TRUE;
 		/* TODO: optimization if the expression is a known constant that can be determined to be boolean */
-		if (add_to_oow_pool(moo, &jumptoend, moo->c->mth.code.len) <= -1 ||
+		if (add_to_oow_pool(moo, &jumptoend, moo->c->cclass->mth.code.len) <= -1 ||
  		    emit_single_param_instruction(moo, bcode, MAX_CODE_JUMP) <= -1 ||
  		    emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) goto oops;
 		GET_TOKEN (moo);
@@ -5600,7 +5600,7 @@ start_over:
 		 * call will never flood either. */
 		for (j = 0; j < MOO_COUNTOF(jumptoend.static_chunk.buf) && i < jumptoend.count; j++)
 		{
-			if (patch_long_forward_jump_instruction (moo, jumptoend_chunk->buf[j], moo->c->mth.code.len, &expr_loc) <= -1) goto oops;
+			if (patch_long_forward_jump_instruction (moo, jumptoend_chunk->buf[j], moo->c->cclass->mth.code.len, &expr_loc) <= -1) goto oops;
 			i++;
 		}
 	}
@@ -5628,7 +5628,7 @@ static int compile_braced_block (moo_t* moo)
 
 	GET_TOKEN (moo);
 
-	code_start = moo->c->mth.code.len;
+	code_start = moo->c->cclass->mth.code.len;
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
 		while (TOKEN_TYPE(moo) != MOO_IOTOK_EOF)
@@ -5650,7 +5650,7 @@ static int compile_braced_block (moo_t* moo)
 		}
 	}
 
-	if (moo->c->mth.code.len == code_start)
+	if (moo->c->cclass->mth.code.len == code_start)
 	{
 		/* the block doesn't contain an instruction at all */
 		if (emit_byte_instruction(moo, BCODE_PUSH_NIL) <= -1) return -1;
@@ -5722,25 +5722,25 @@ static int compile_if_expression (moo_t* moo)
 		int falseblock = 0;
 
 		GET_TOKEN (moo); /* get ( */
-		precondpos = moo->c->mth.code.len;
+		precondpos = moo->c->cclass->mth.code.len;
 
 		if (jumptonext != INVALID_IP &&
 		    patch_long_forward_jump_instruction(moo, jumptonext, precondpos, &brace_loc) <= -1) goto oops;
 
 		if (compile_conditional(moo) <= -1) goto oops;
-		postcondpos = moo->c->mth.code.len;
+		postcondpos = moo->c->cclass->mth.code.len;
 
-		if (precondpos + 1 == postcondpos && moo->c->mth.code.ptr[precondpos] == push_true_inst)
+		if (precondpos + 1 == postcondpos && moo->c->cclass->mth.code.ptr[precondpos] == push_true_inst)
 		{
 			/* do not generate jump */
 			jumptonext = INVALID_IP;
 			falseblock = 0;
 
 			/* eliminate PUSH_TRUE as well */
-			eliminate_instructions (moo, precondpos, moo->c->mth.code.len - 1);
+			eliminate_instructions (moo, precondpos, moo->c->cclass->mth.code.len - 1);
 			postcondpos = precondpos;
 		}
-		else if (precondpos + 1 == postcondpos && moo->c->mth.code.ptr[precondpos] == push_false_inst)
+		else if (precondpos + 1 == postcondpos && moo->c->cclass->mth.code.ptr[precondpos] == push_false_inst)
 		{
 			jumptonext = INVALID_IP;
 			/* mark that the conditional is false. instructions will get eliminated below */
@@ -5749,7 +5749,7 @@ static int compile_if_expression (moo_t* moo)
 		else
 		{
 			/* remember position of the jumpop_forward_if_false instruction to be generated */
-			jumptonext = moo->c->mth.code.len; 
+			jumptonext = moo->c->cclass->mth.code.len; 
 			/* BCODE_JUMPOP_FORWARD_IF_FALSE is always a long jump instruction.
 			 * just specify MAX_CODE_JUMP for consistency with short jump variants */
 			if (emit_single_param_instruction(moo, jumpop_inst, MAX_CODE_JUMP) <= -1) goto oops;
@@ -5765,13 +5765,13 @@ static int compile_if_expression (moo_t* moo)
 			{
 				/* the conditional was false. eliminate instructions emitted
 				 * for the block attached to the conditional */
-				eliminate_instructions (moo, precondpos, moo->c->mth.code.len - 1);
+				eliminate_instructions (moo, precondpos, moo->c->cclass->mth.code.len - 1);
 				postcondpos = precondpos;
 			}
 			else if (endoftrueblock == INVALID_IP) 
 			{
 				/* update the end position of the first true block */
-				endoftrueblock = moo->c->mth.code.len;
+				endoftrueblock = moo->c->cclass->mth.code.len;
 			}
 		}
 		else
@@ -5779,7 +5779,7 @@ static int compile_if_expression (moo_t* moo)
 			if (endoftrueblock == INVALID_IP)
 			{
 				/* emit an instruction to jump to the end */
-				if (add_to_oow_pool(moo, &jumptoend, moo->c->mth.code.len) <= -1 ||
+				if (add_to_oow_pool(moo, &jumptoend, moo->c->cclass->mth.code.len) <= -1 ||
 				    emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) goto oops;
 			}
 		}
@@ -5804,7 +5804,7 @@ static int compile_if_expression (moo_t* moo)
 	while (1);
 
 	if (jumptonext != INVALID_IP &&
-	    patch_long_forward_jump_instruction(moo, jumptonext, moo->c->mth.code.len, &brace_loc) <= -1) goto oops;
+	    patch_long_forward_jump_instruction(moo, jumptonext, moo->c->cclass->mth.code.len, &brace_loc) <= -1) goto oops;
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_ELSE)
 	{
@@ -5821,7 +5821,7 @@ static int compile_if_expression (moo_t* moo)
 	if (endoftrueblock != INVALID_IP)
 	{
 		/* eliminate all instructions after the end of the first true block found */
-		eliminate_instructions (moo, endoftrueblock, moo->c->mth.code.len - 1);
+		eliminate_instructions (moo, endoftrueblock, moo->c->cclass->mth.code.len - 1);
 	}
 
 	/* patch instructions that jumps to the end of if expression */
@@ -5832,7 +5832,7 @@ static int compile_if_expression (moo_t* moo)
 		 * call will never flood either. */
 		for (j = 0; j < MOO_COUNTOF(jumptoend.static_chunk.buf) && i < jumptoend.count; j++)
 		{
-			if (patch_long_forward_jump_instruction (moo, jumptoend_chunk->buf[j], moo->c->mth.code.len, &if_loc) <= -1) goto oops;
+			if (patch_long_forward_jump_instruction (moo, jumptoend_chunk->buf[j], moo->c->cclass->mth.code.len, &if_loc) <= -1) goto oops;
 			i++;
 		}
 	}
@@ -5857,10 +5857,10 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 	while_loc = *TOKEN_LOC(moo);
 
 	GET_TOKEN (moo); /* get (, verification is done inside compile_conditional() */
-	precondpos = moo->c->mth.code.len;
+	precondpos = moo->c->cclass->mth.code.len;
 	if (compile_conditional (moo) <= -1) goto oops;
 
-	postcondpos = moo->c->mth.code.len;
+	postcondpos = moo->c->cclass->mth.code.len;
 	if (precondpos + 1 == postcondpos)
 	{
 		moo_uint8_t inst1, inst2;
@@ -5879,14 +5879,14 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 		/* simple optimization - 
 		 *   if the conditional is known to be true, emit the absolute jump instruction.
 		 *   if it is known to be false, kill all generated instructions. */
-		if (moo->c->mth.code.ptr[precondpos] == inst1)
+		if (moo->c->cclass->mth.code.ptr[precondpos] == inst1)
 		{
 			/* the conditional is always true for while, or false for until*/
 			cond_style = 1;
-			eliminate_instructions (moo, precondpos, moo->c->mth.code.len - 1);
+			eliminate_instructions (moo, precondpos, moo->c->cclass->mth.code.len - 1);
 			postcondpos = precondpos;
 		}
-		else if (moo->c->mth.code.ptr[precondpos] == inst2)
+		else if (moo->c->cclass->mth.code.ptr[precondpos] == inst2)
 		{
 			/* the conditional is always false for while, or false for until */
 			cond_style = -1;
@@ -5908,17 +5908,17 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 
 	GET_TOKEN (moo); /* get { */
 	brace_loc = *TOKEN_LOC(moo);
-	prebbpos = moo->c->mth.code.len;
+	prebbpos = moo->c->cclass->mth.code.len;
 	if (compile_braced_block (moo) <= -1) goto oops;
 	GET_TOKEN (moo); /* get the next token after } */
-	postbbpos = moo->c->mth.code.len;
+	postbbpos = moo->c->cclass->mth.code.len;
 
-	if (prebbpos + 1 == postbbpos && moo->c->mth.code.ptr[prebbpos] == BCODE_PUSH_NIL)
+	if (prebbpos + 1 == postbbpos && moo->c->cclass->mth.code.ptr[prebbpos] == BCODE_PUSH_NIL)
 	{
 		/* optimization -
 		 *  the braced block is kind of empty as it only pushes nil.
 		 *  get rid of this push instruction and don't generate the POP_STACKTOP */
-		eliminate_instructions (moo, prebbpos, moo->c->mth.code.len - 1);
+		eliminate_instructions (moo, prebbpos, moo->c->cclass->mth.code.len - 1);
 	}
 	else if (prebbpos < postbbpos)
 	{
@@ -5927,7 +5927,7 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 	}
 
 	/* emit an instruction to jump back to the condition */
-	if (emit_backward_jump_instruction (moo, BCODE_JUMP_BACKWARD_0, moo->c->mth.code.len - precondpos) <= -1) 
+	if (emit_backward_jump_instruction (moo, BCODE_JUMP_BACKWARD_0, moo->c->cclass->mth.code.len - precondpos) <= -1) 
 	{
 		if (moo->errnum == MOO_ERANGE) 
 		{
@@ -5941,18 +5941,18 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 	if (cond_style != 1)
 	{
 		/* patch the jump instruction */
-		if (patch_long_forward_jump_instruction (moo, postcondpos, moo->c->mth.code.len, &brace_loc) <= -1) goto oops;
+		if (patch_long_forward_jump_instruction (moo, postcondpos, moo->c->cclass->mth.code.len, &brace_loc) <= -1) goto oops;
 	}
 
 	if (cond_style == -1) 
 	{
 		/* optimization - get rid of instructions generated for the while
 		 * loop including the conditional as the condition was false */
-		eliminate_instructions (moo, precondpos, moo->c->mth.code.len - 1);
+		eliminate_instructions (moo, precondpos, moo->c->cclass->mth.code.len - 1);
 	}
 
 	/* patch the jump instructions for break */
-	if (update_loop_breaks (moo, moo->c->mth.code.len) <= -1) goto oops;
+	if (update_loop_breaks (moo, moo->c->cclass->mth.code.len) <= -1) goto oops;
 
 	/* destroy the loop information stored earlier in this function  */
 	pop_loop (moo);
@@ -5979,7 +5979,7 @@ static int compile_do_while_expression (moo_t* moo)
 	do_loc = *TOKEN_LOC(moo);
 
 	GET_TOKEN (moo); /* get { */
-	prebbpos = moo->c->mth.code.len;
+	prebbpos = moo->c->cclass->mth.code.len;
 
 	/* remember information about this loop. 
 	 * position of the conditional is not known yet.*/
@@ -5997,14 +5997,14 @@ static int compile_do_while_expression (moo_t* moo)
 		goto oops;
 	}
 	GET_TOKEN (moo); /* get ( */
-	postbbpos = moo->c->mth.code.len;
+	postbbpos = moo->c->cclass->mth.code.len;
 
-	if (prebbpos + 1 == postbbpos && moo->c->mth.code.ptr[prebbpos] == BCODE_PUSH_NIL)
+	if (prebbpos + 1 == postbbpos && moo->c->cclass->mth.code.ptr[prebbpos] == BCODE_PUSH_NIL)
 	{
 		/* optimization -
 		 *  the braced block is kind of empty as it only pushes nil.
 		 *  get rid of this push instruction and don't generate the POP_STACKTOP */
-		eliminate_instructions (moo, prebbpos, moo->c->mth.code.len - 1);
+		eliminate_instructions (moo, prebbpos, moo->c->cclass->mth.code.len - 1);
 		precondpos = prebbpos;
 	}
 	else if (prebbpos < postbbpos)
@@ -6013,7 +6013,7 @@ static int compile_do_while_expression (moo_t* moo)
 		if (emit_byte_instruction (moo, BCODE_POP_STACKTOP) <= -1) goto oops;
 	}
 
-	precondpos = moo->c->mth.code.len;
+	precondpos = moo->c->cclass->mth.code.len;
 
 	/* update jump instructions emitted for continue */
 	if (update_loop_continues (moo, precondpos) <= -1) goto oops;
@@ -6023,30 +6023,30 @@ static int compile_do_while_expression (moo_t* moo)
 	loop = unlink_loop (moo); 
 
 	if (compile_conditional (moo) <= -1) goto oops;
-	postcondpos = moo->c->mth.code.len;
+	postcondpos = moo->c->cclass->mth.code.len;
 	jbinst = (is_until_loop? BCODE_JUMPOP_BACKWARD_IF_FALSE_0: BCODE_JUMPOP_BACKWARD_IF_TRUE_0);
 	if (precondpos + 1 == postcondpos)
 	{
 		/* simple optimization - 
 		 *   if the conditional is known to be true, emit the absolute jump instruction.
 		 *   if it is known to be false, kill all generated instructions. */
-		if (moo->c->mth.code.ptr[precondpos] == (is_until_loop? BCODE_PUSH_FALSE: BCODE_PUSH_TRUE))
+		if (moo->c->cclass->mth.code.ptr[precondpos] == (is_until_loop? BCODE_PUSH_FALSE: BCODE_PUSH_TRUE))
 		{
 			/* the conditional is always true. eliminate PUSH_TRUE and emit an absolute jump */
-			eliminate_instructions (moo, precondpos, moo->c->mth.code.len - 1);
+			eliminate_instructions (moo, precondpos, moo->c->cclass->mth.code.len - 1);
 			postcondpos = precondpos;
 			jbinst = BCODE_JUMP_BACKWARD_0;
 		}
-		else if (moo->c->mth.code.ptr[precondpos] == (is_until_loop? BCODE_PUSH_TRUE: BCODE_PUSH_FALSE))
+		else if (moo->c->cclass->mth.code.ptr[precondpos] == (is_until_loop? BCODE_PUSH_TRUE: BCODE_PUSH_FALSE))
 		{
 			/* the conditional is always false. eliminate PUSH_FALSE and don't emit jump */
-			eliminate_instructions (moo, precondpos, moo->c->mth.code.len - 1);
+			eliminate_instructions (moo, precondpos, moo->c->cclass->mth.code.len - 1);
 			postcondpos = precondpos;
 			goto skip_emitting_jump_backward;
 		}
 	}
 
-	if (emit_backward_jump_instruction (moo, jbinst, moo->c->mth.code.len - prebbpos) <= -1) 
+	if (emit_backward_jump_instruction (moo, jbinst, moo->c->cclass->mth.code.len - prebbpos) <= -1) 
 	{
 		if (moo->errnum == MOO_ERANGE) 
 		{
@@ -6061,7 +6061,7 @@ skip_emitting_jump_backward:
 	GET_TOKEN (moo); /* get the next token after ) */
 
 	/* update jump instructions emitted for break */
-	if (update_loop_jumps (moo, &loop->break_ip_pool, moo->c->mth.code.len) <= -1) return -1;
+	if (update_loop_jumps (moo, &loop->break_ip_pool, moo->c->cclass->mth.code.len) <= -1) return -1;
 	free_loop (moo, loop); /* destroy the unlinked loop information */
 	loop = MOO_NULL;
 	loop_pushed = 0;
@@ -6142,7 +6142,7 @@ static int compile_method_expression (moo_t* moo, int pop)
 			 * fragile as it can change. use the offset of the cloned
 			 * assignee to update the actual pointer after the recursive
 			 * compile_method_expression() call */
-			assignee.ptr = &moo->c->mth.assignees.ptr[assignee_offset];
+			assignee.ptr = &moo->c->cclass->mth.assignees.ptr[assignee_offset];
 			MOO_ASSERT (moo, moo->c->cclass->super_oop != MOO_NULL && moo->c->cclass->self_oop != MOO_NULL);
 			if (get_variable_info(moo, &assignee, &assignee_loc, assignee_dotted, &var) <= -1) goto oops;
 
@@ -6152,18 +6152,18 @@ static int compile_method_expression (moo_t* moo, int pop)
 				case VAR_TEMPORARY:
 				{
 				#if defined(MOO_USE_CTXTEMPVAR)
-					if (moo->c->mth.blk_depth > 0)
+					if (moo->c->cclass->mth.blk_depth > 0)
 					{
 						moo_oow_t i;
 
 						/* if a temporary variable is accessed inside a block,
 						 * use a special instruction to indicate it */
-						MOO_ASSERT (moo, var.pos < moo->c->mth.blk_tmprcnt[moo->c->mth.blk_depth]);
-						for (i = moo->c->mth.blk_depth; i > 0; i--)
+						MOO_ASSERT (moo, var.pos < moo->c->cclass->mth.blk_tmprcnt[moo->c->cclass->mth.blk_depth]);
+						for (i = moo->c->cclass->mth.blk_depth; i > 0; i--)
 						{
-							if (var.pos >= moo->c->mth.blk_tmprcnt[i - 1])
+							if (var.pos >= moo->c->cclass->mth.blk_tmprcnt[i - 1])
 							{
-								if (emit_double_param_instruction(moo, (pop? BCODE_POP_INTO_CTXTEMPVAR_0: BCODE_STORE_INTO_CTXTEMPVAR_0), moo->c->mth.blk_depth - i, var.pos - moo->c->mth.blk_tmprcnt[i - 1]) <= -1) return -1;
+								if (emit_double_param_instruction(moo, (pop? BCODE_POP_INTO_CTXTEMPVAR_0: BCODE_STORE_INTO_CTXTEMPVAR_0), moo->c->cclass->mth.blk_depth - i, var.pos - moo->c->cclass->mth.blk_tmprcnt[i - 1]) <= -1) return -1;
 								goto temporary_done;
 							}
 						}
@@ -6205,7 +6205,7 @@ static int compile_method_expression (moo_t* moo, int pop)
 			/* what is held in assignee is not an assignee any more.
 			 * potentially it is a variable or object reference
 			 * to be pushed on to the stack */
-			assignee.ptr = &moo->c->mth.assignees.ptr[assignee_offset];
+			assignee.ptr = &moo->c->cclass->mth.assignees.ptr[assignee_offset];
 			if (compile_basic_expression(moo, &assignee, &assignee_loc, assignee_dotted) <= -1) goto oops;
 		}
 	}
@@ -6215,11 +6215,11 @@ static int compile_method_expression (moo_t* moo, int pop)
 		if (compile_basic_expression(moo, MOO_NULL, MOO_NULL, 0) <= -1) goto oops;
 	}
 
-	moo->c->mth.assignees.len -= assignee.len;
+	moo->c->cclass->mth.assignees.len -= assignee.len;
 	return ret;
 
 oops:
-	moo->c->mth.assignees.len -= assignee.len;
+	moo->c->cclass->mth.assignees.len -= assignee.len;
 	return -1;
 }
 
@@ -6241,13 +6241,13 @@ static int compile_special_statement (moo_t* moo)
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_BREAK)
 	{
-		if (!moo->c->mth.loop)
+		if (!moo->c->cclass->mth.loop)
 		{
 			/* break outside a loop */
 			moo_setsynerr (moo, MOO_SYNERR_NOTINLOOP, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
-		if (moo->c->mth.loop->blkcount > 0)
+		if (moo->c->cclass->mth.loop->blkcount > 0)
 		{
 			/* break cannot cross boundary of a block */
 			moo_setsynerr (moo, MOO_SYNERR_INBLOCK, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -6259,12 +6259,12 @@ static int compile_special_statement (moo_t* moo)
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_CONTINUE)
 	{
-		if (!moo->c->mth.loop)
+		if (!moo->c->cclass->mth.loop)
 		{
 			moo_setsynerr (moo, MOO_SYNERR_NOTINLOOP, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
-		if (moo->c->mth.loop->blkcount > 0)
+		if (moo->c->cclass->mth.loop->blkcount > 0)
 		{
 			/* continue cannot cross boundary of a block */
 			moo_setsynerr (moo, MOO_SYNERR_INBLOCK, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -6273,9 +6273,9 @@ static int compile_special_statement (moo_t* moo)
 
 		GET_TOKEN (moo); /* read the next token to continue */
 
-		return (moo->c->mth.loop->type == MOO_LOOP_DO_WHILE)?
+		return (moo->c->cclass->mth.loop->type == MOO_LOOP_DO_WHILE)?
 			inject_continue_to_loop (moo): /* in a do-while loop, the position to the conditional is not known yet */
-			emit_backward_jump_instruction (moo, BCODE_JUMP_BACKWARD_0, moo->c->mth.code.len - moo->c->mth.loop->startpos);
+			emit_backward_jump_instruction (moo, BCODE_JUMP_BACKWARD_0, moo->c->cclass->mth.code.len - moo->c->cclass->mth.loop->startpos);
 	}
 
 	return 9999; /* to indicate that no special statement has been seen and processed */
@@ -6316,7 +6316,7 @@ static int compile_method_statement (moo_t* moo)
 		 * STORE_INTO_XXX if it's 0.*/
 		moo_oow_t preexprpos;
 
-		preexprpos = moo->c->mth.code.len;
+		preexprpos = moo->c->cclass->mth.code.len;
 		n = compile_method_expression(moo, 1);
 		if (n <= -1) return -1;
 
@@ -6324,10 +6324,10 @@ static int compile_method_statement (moo_t* moo)
 		 * emitted in place of STORE_INTO_XXX. */
 		if (n == 0)
 		{
-			if (preexprpos + 1 == moo->c->mth.code.len)
+			if (preexprpos + 1 == moo->c->cclass->mth.code.len)
 			{
 /* TODO: MORE optimization. if expresssion is a literal, no push and pop are required. check for multie-byte instructions as well */
-				switch (moo->c->mth.code.ptr[preexprpos])
+				switch (moo->c->cclass->mth.code.ptr[preexprpos])
 				{
 					case BCODE_PUSH_NIL:
 					case BCODE_PUSH_TRUE:
@@ -6340,7 +6340,7 @@ static int compile_method_statement (moo_t* moo)
 					case BCODE_PUSH_TWO:
 						/* eliminate the unneeded push instruction */
 						n = 0;
-						eliminate_instructions (moo, preexprpos, moo->c->mth.code.len - 1);
+						eliminate_instructions (moo, preexprpos, moo->c->cclass->mth.code.len - 1);
 						break;
 					default:
 						goto pop_stacktop;
@@ -6409,30 +6409,30 @@ static int add_compiled_method (moo_t* moo)
 	moo_oow_t i;
 	moo_ooi_t preamble_code, preamble_index, preamble_flags;
 
-	name = (moo_oop_char_t)moo_makesymbol (moo, moo->c->mth.name.ptr, moo->c->mth.name.len);
+	name = (moo_oop_char_t)moo_makesymbol (moo, moo->c->cclass->mth.name.ptr, moo->c->cclass->mth.name.len);
 	if (!name) return -1;
 	moo_pushtmp (moo, (moo_oop_t*)&name); tmp_count++;
 
 	/* The variadic data part passed to moo_instantiate() is not GC-safe. 
 	 * let's delay initialization of variadic data a bit. */
 #if defined(MOO_USE_METHOD_TRAILER)
-	mth = (moo_oop_method_t)moo_instantiatewithtrailer (moo, moo->_method, moo->c->mth.literals.count, moo->c->mth.code.ptr, moo->c->mth.code.len);
+	mth = (moo_oop_method_t)moo_instantiatewithtrailer (moo, moo->_method, moo->c->cclass->mth.literals.count, moo->c->cclass->mth.code.ptr, moo->c->cclass->mth.code.len);
 #else
-	mth = (moo_oop_method_t)moo_instantiate (moo, moo->_method, MOO_NULL, moo->c->mth.literals.count);
+	mth = (moo_oop_method_t)moo_instantiate (moo, moo->_method, MOO_NULL, moo->c->cclass->mth.literals.count);
 #endif
 	if (!mth) goto oops;
 
-	for (i = 0; i < moo->c->mth.literals.count; i++)
+	for (i = 0; i < moo->c->cclass->mth.literals.count; i++)
 	{
 		/* let's do the variadic data initialization here */
-		mth->slot[i] = moo->c->mth.literals.ptr[i];
+		mth->slot[i] = moo->c->cclass->mth.literals.ptr[i];
 	}
 	moo_pushtmp (moo, (moo_oop_t*)&mth); tmp_count++;
 
 #if defined(MOO_USE_METHOD_TRAILER)
 	/* do nothing */
 #else
-	code = (moo_oop_byte_t)moo_instantiate (moo, moo->_byte_array, moo->c->mth.code.ptr, moo->c->mth.code.len);
+	code = (moo_oop_byte_t)moo_instantiate (moo, moo->_byte_array, moo->c->cclass->mth.code.ptr, moo->c->cclass->mth.code.len);
 	if (!code) goto oops;
 	moo_pushtmp (moo, (moo_oop_t*)&code); tmp_count++;
 #endif
@@ -6441,22 +6441,22 @@ static int add_compiled_method (moo_t* moo)
 	preamble_index = 0;
 	preamble_flags = 0;
 
-	if (moo->c->mth.pftype <= 0)
+	if (moo->c->cclass->mth.pftype <= 0)
 	{
 		/* no primitive is set */
-		if (moo->c->mth.code.len <= 0)
+		if (moo->c->cclass->mth.code.len <= 0)
 		{
 			preamble_code = MOO_METHOD_PREAMBLE_RETURN_RECEIVER;
 		}
 		else
 		{
-			if (moo->c->mth.code.ptr[0] == BCODE_RETURN_RECEIVER)
+			if (moo->c->cclass->mth.code.ptr[0] == BCODE_RETURN_RECEIVER)
 			{
 				preamble_code = MOO_METHOD_PREAMBLE_RETURN_RECEIVER;
 			}
-			else if (moo->c->mth.code.len > 1 && moo->c->mth.code.ptr[1] == BCODE_RETURN_STACKTOP)
+			else if (moo->c->cclass->mth.code.len > 1 && moo->c->cclass->mth.code.ptr[1] == BCODE_RETURN_STACKTOP)
 			{
-				switch (moo->c->mth.code.ptr[0])
+				switch (moo->c->cclass->mth.code.ptr[0])
 				{
 					case BCODE_PUSH_RECEIVER:
 						preamble_code = MOO_METHOD_PREAMBLE_RETURN_RECEIVER;
@@ -6515,15 +6515,15 @@ static int add_compiled_method (moo_t* moo)
 					case BCODE_PUSH_INSTVAR_6:
 					case BCODE_PUSH_INSTVAR_7:
 						preamble_code = MOO_METHOD_PREAMBLE_RETURN_INSTVAR;
-						preamble_index = moo->c->mth.code.ptr[0] & 0x7; /* low 3 bits */
+						preamble_index = moo->c->cclass->mth.code.ptr[0] & 0x7; /* low 3 bits */
 						break;
 				}
 			}
-			else if (moo->c->mth.code.len > MOO_BCODE_LONG_PARAM_SIZE + 1 &&
-			         moo->c->mth.code.ptr[MOO_BCODE_LONG_PARAM_SIZE + 1] == BCODE_RETURN_STACKTOP)
+			else if (moo->c->cclass->mth.code.len > MOO_BCODE_LONG_PARAM_SIZE + 1 &&
+			         moo->c->cclass->mth.code.ptr[MOO_BCODE_LONG_PARAM_SIZE + 1] == BCODE_RETURN_STACKTOP)
 			{
 				int i;
-				switch (moo->c->mth.code.ptr[0])
+				switch (moo->c->cclass->mth.code.ptr[0])
 				{
 					case BCODE_PUSH_INSTVAR_X:
 						preamble_code = MOO_METHOD_PREAMBLE_RETURN_INSTVAR;
@@ -6541,7 +6541,7 @@ static int add_compiled_method (moo_t* moo)
 						preamble_index = 0;
 						for (i = 1; i <= MOO_BCODE_LONG_PARAM_SIZE; i++)
 						{
-							preamble_index = (preamble_index << 8) | moo->c->mth.code.ptr[i];
+							preamble_index = (preamble_index << 8) | moo->c->cclass->mth.code.ptr[i];
 						}
 
 						if (!MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index))
@@ -6554,32 +6554,32 @@ static int add_compiled_method (moo_t* moo)
 			}
 		}
 	}
-	else if (moo->c->mth.pftype == PFTYPE_NUMBERED)
+	else if (moo->c->cclass->mth.pftype == PFTYPE_NUMBERED)
 	{
 		preamble_code = MOO_METHOD_PREAMBLE_PRIMITIVE;
-		preamble_index = moo->c->mth.pfnum;
+		preamble_index = moo->c->cclass->mth.pfnum;
 	}
-	else if (moo->c->mth.pftype == PFTYPE_NAMED)
+	else if (moo->c->cclass->mth.pftype == PFTYPE_NAMED)
 	{
 		preamble_code = MOO_METHOD_PREAMBLE_NAMED_PRIMITIVE;
-		preamble_index = moo->c->mth.pfnum; /* index to literal frame */
+		preamble_index = moo->c->cclass->mth.pfnum; /* index to literal frame */
 	}
-	else if (moo->c->mth.pftype == PFTYPE_EXCEPTION)
+	else if (moo->c->cclass->mth.pftype == PFTYPE_EXCEPTION)
 	{
 		preamble_code = MOO_METHOD_PREAMBLE_EXCEPTION;
 		preamble_index = 0;
 	}
 	else 
 	{
-		MOO_ASSERT (moo, moo->c->mth.pftype == PFTYPE_ENSURE);
+		MOO_ASSERT (moo, moo->c->cclass->mth.pftype == PFTYPE_ENSURE);
 		preamble_code = MOO_METHOD_PREAMBLE_ENSURE;
 		preamble_index = 0;
 	}
 
-	/*if (moo->c->mth.variadic) */
-	preamble_flags |= moo->c->mth.variadic;
-	if (moo->c->mth.type == MOO_METHOD_DUAL) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_DUAL;
-	if (moo->c->mth.lenient) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_LENIENT;
+	/*if (moo->c->cclass->mth.variadic) */
+	preamble_flags |= moo->c->cclass->mth.variadic;
+	if (moo->c->cclass->mth.type == MOO_METHOD_DUAL) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_DUAL;
+	if (moo->c->cclass->mth.lenient) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_LENIENT;
 
 	MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index));
 
@@ -6590,8 +6590,8 @@ static int add_compiled_method (moo_t* moo)
 	mth->preamble_data[1] = MOO_SMOOI_TO_OOP(0);*/
 	mth->preamble_data[0] = MOO_SMPTR_TO_OOP(0);
 	mth->preamble_data[1] = MOO_SMPTR_TO_OOP(0);
-	mth->tmpr_count = MOO_SMOOI_TO_OOP(moo->c->mth.tmpr_count);
-	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(moo->c->mth.tmpr_nargs);
+	mth->tmpr_count = MOO_SMOOI_TO_OOP(moo->c->cclass->mth.tmpr_count);
+	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(moo->c->cclass->mth.tmpr_nargs);
 
 #if defined(MOO_USE_METHOD_TRAILER)
 	/* do nothing */
@@ -6599,7 +6599,7 @@ static int add_compiled_method (moo_t* moo)
 	mth->code = code;
 #endif
 
-	/*TODO: preserve source??? mth->text = moo->c->mth.text
+	/*TODO: preserve source??? mth->text = moo->c->cclass->mth.text
 the compiler must collect all source method string collected so far.
 need to write code to collect string.
 */
@@ -6608,20 +6608,20 @@ need to write code to collect string.
 	moo_decode (moo, mth, &moo->c->cclass->fqn);
 #endif
 
-	if (moo->c->mth.type == MOO_METHOD_DUAL)
+	if (moo->c->cclass->mth.type == MOO_METHOD_DUAL)
 	{
 		if (!moo_putatdic(moo, moo->c->cclass->self_oop->mthdic[0], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
 		if (!moo_putatdic(moo, moo->c->cclass->self_oop->mthdic[1], (moo_oop_t)name, (moo_oop_t)mth)) 
 		{
-			/* 'name' is a symbol created of moo->c->mth.name. so use it as a key for deletion */
-			moo_deletedic (moo, moo->c->cclass->self_oop->mthdic[0], &moo->c->mth.name);
+			/* 'name' is a symbol created of moo->c->cclass->mth.name. so use it as a key for deletion */
+			moo_deletedic (moo, moo->c->cclass->self_oop->mthdic[0], &moo->c->cclass->mth.name);
 			goto oops;
 		}
 	}
 	else
 	{
-		MOO_ASSERT (moo, moo->c->mth.type < MOO_COUNTOF(moo->c->cclass->self_oop->mthdic));
-		if (!moo_putatdic(moo, moo->c->cclass->self_oop->mthdic[moo->c->mth.type], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
+		MOO_ASSERT (moo, moo->c->cclass->mth.type < MOO_COUNTOF(moo->c->cclass->self_oop->mthdic));
+		if (!moo_putatdic(moo, moo->c->cclass->self_oop->mthdic[moo->c->cclass->mth.type], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
 	}
 
 	moo_poptmps (moo, tmp_count); tmp_count = 0;
@@ -6631,6 +6631,50 @@ need to write code to collect string.
 oops:
 	moo_poptmps (moo, tmp_count);
 	return -1;
+}
+
+static void clear_pooldic_import_data (moo_t* moo, moo_pooldic_import_data_t* pdimp)
+{
+	if (pdimp->dcl.ptr) moo_freemem (moo, pdimp->dcl.ptr);
+	if (pdimp->oops) moo_freemem (moo, pdimp->oops);
+	MOO_MEMSET (pdimp, 0, MOO_SIZEOF(*pdimp));
+}
+
+static void clear_method_data (moo_t* moo, moo_method_data_t* mth)
+{
+	if (mth->text.ptr) moo_freemem (moo, mth->text.ptr);
+	if (mth->assignees.ptr) moo_freemem (moo, mth->assignees.ptr);
+	if (mth->binsels.ptr) moo_freemem (moo, mth->binsels.ptr);
+	if (mth->kwsels.ptr) moo_freemem (moo, mth->kwsels.ptr);
+	if (mth->name.ptr) moo_freemem (moo, mth->name.ptr);
+	if (mth->tmprs.ptr) moo_freemem (moo, mth->tmprs.ptr);
+	if (mth->code.ptr) moo_freemem (moo, mth->code.ptr);
+	if (mth->literals.ptr) moo_freemem (moo, mth->literals.ptr);
+	if (mth->blk_tmprcnt) moo_freemem (moo, mth->blk_tmprcnt);
+	MOO_MEMSET (mth, 0, MOO_SIZEOF(*mth));
+}
+
+static void reset_method_data (moo_t* moo, moo_method_data_t* mth)
+{
+	/* unlike clear_method_data(), this function doesn't free memory allocated */
+	mth->type = MOO_METHOD_INSTANCE;
+	mth->primitive = 0;
+	mth->lenient = 0;
+	mth->text.len = 0;
+	mth->assignees.len = 0;
+	mth->binsels.len = 0;
+	mth->kwsels.len = 0;
+	mth->name.len = 0;
+	MOO_MEMSET (&mth->name_loc, 0, MOO_SIZEOF(mth->name_loc));
+	mth->variadic = 0;
+	mth->tmprs.len = 0;
+	mth->tmpr_count = 0;
+	mth->tmpr_nargs = 0;
+	mth->literals.count = 0;
+	mth->pftype = PFTYPE_NONE;
+	mth->pfnum = 0;
+	mth->blk_depth = 0;
+	mth->code.len = 0;
 }
 
 static int __compile_method_definition (moo_t* moo)
@@ -6647,56 +6691,56 @@ static int __compile_method_definition (moo_t* moo)
 				if (is_token_symbol(moo, VOCA_CLASS_S))
 				{
 					/* method(#class) */
-					if (moo->c->mth.type == MOO_METHOD_CLASS || moo->c->mth.type == MOO_METHOD_DUAL)
+					if (moo->c->cclass->mth.type == MOO_METHOD_CLASS || moo->c->cclass->mth.type == MOO_METHOD_DUAL)
 					{
 						moo_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
-					moo->c->mth.type = MOO_METHOD_CLASS;
+					moo->c->cclass->mth.type = MOO_METHOD_CLASS;
 					GET_TOKEN (moo);
 				}
 				else if (is_token_symbol(moo, VOCA_DUAL_S))
 				{
 					/* method(#dual) */
-					if (moo->c->mth.type == MOO_METHOD_CLASS || moo->c->mth.type == MOO_METHOD_DUAL)
+					if (moo->c->cclass->mth.type == MOO_METHOD_CLASS || moo->c->cclass->mth.type == MOO_METHOD_DUAL)
 					{
 						moo_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
-					moo->c->mth.type = MOO_METHOD_DUAL;
+					moo->c->cclass->mth.type = MOO_METHOD_DUAL;
 					GET_TOKEN (moo);
 				}
 				else if (is_token_symbol(moo, VOCA_PRIMITIVE_S))
 				{
 					/* method(#primitive) */
-					if (moo->c->mth.primitive)
+					if (moo->c->cclass->mth.primitive)
 					{
 						/* #primitive duplicate modifier */
 						moo_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
-					moo->c->mth.primitive = 1;
+					moo->c->cclass->mth.primitive = 1;
 					GET_TOKEN (moo);
 				}
 				else if (is_token_symbol(moo, VOCA_LENIENT_S))
 				{
 					/* method(#lenient) */
-					if (moo->c->mth.lenient)
+					if (moo->c->cclass->mth.lenient)
 					{
 						moo_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
-					moo->c->mth.lenient = 1;
+					moo->c->cclass->mth.lenient = 1;
 					GET_TOKEN (moo);
 				}
 				else if (is_token_symbol(moo, VOCA_VARIADIC_S) ||
 				         is_token_symbol(moo, VOCA_LIBERAL_S))
 				{
 					/* method(#variadic) or method(#liberal) */
-					if (moo->c->mth.variadic)
+					if (moo->c->cclass->mth.variadic)
 					{
 						/* #variadic duplicate modifier */
 						moo_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -6704,9 +6748,9 @@ static int __compile_method_definition (moo_t* moo)
 					}
 
 					if (is_token_symbol(moo, VOCA_LIBERAL_S))
-						moo->c->mth.variadic = MOO_METHOD_PREAMBLE_FLAG_LIBERAL;
+						moo->c->cclass->mth.variadic = MOO_METHOD_PREAMBLE_FLAG_LIBERAL;
 					else
-						moo->c->mth.variadic = MOO_METHOD_PREAMBLE_FLAG_VARIADIC;
+						moo->c->cclass->mth.variadic = MOO_METHOD_PREAMBLE_FLAG_VARIADIC;
 
 					GET_TOKEN (moo);
 				}
@@ -6741,7 +6785,7 @@ static int __compile_method_definition (moo_t* moo)
 
 	if (compile_method_name(moo) <= -1) return -1;
 
-	if (moo->c->mth.primitive)
+	if (moo->c->cclass->mth.primitive)
 	{
 		moo_oocs_t mthname;
 		
@@ -6761,7 +6805,7 @@ static int __compile_method_definition (moo_t* moo)
 		 * for class X, you may have method(#primitive) aa and method(#primitive) _aa
 		 * to map to the X_aa primitive handler.
 		 */
-		mthname = moo->c->mth.name;
+		mthname = moo->c->cclass->mth.name;
 		while (mthname.len > 0)
 		{
 			if (*mthname.ptr != '_') break;
@@ -6770,8 +6814,8 @@ static int __compile_method_definition (moo_t* moo)
 		}
 		if (mthname.len == 0)
 		{
-			MOO_DEBUG2 (moo, "Invalid primitive function name - %.*js\n", moo->c->mth.name.len, moo->c->mth.name.ptr);
-			moo_setsynerr (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+			MOO_DEBUG2 (moo, "Invalid primitive function name - %.*js\n", moo->c->cclass->mth.name.len, moo->c->cclass->mth.name.ptr);
+			moo_setsynerr (moo, MOO_SYNERR_PFIDINVAL, &moo->c->cclass->mth.name_loc, &moo->c->cclass->mth.name);
 			return -1;
 		}
 		
@@ -6802,17 +6846,17 @@ static int __compile_method_definition (moo_t* moo)
 			{
 				MOO_DEBUG2 (moo, "Cannot find intrinsic primitive function - %.*js\n", 
 					moo->c->cclass->modname.len - savedlen, &moo->c->cclass->modname.ptr[savedlen]);
-				moo_setsynerr (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+				moo_setsynerr (moo, MOO_SYNERR_PFIDINVAL, &moo->c->cclass->mth.name_loc, &moo->c->cclass->mth.name);
 				moo->c->cclass->modname.len = savedlen;
 				return -1;
 			}
 
-			if (moo->c->mth.tmpr_nargs < pfbase->minargs || moo->c->mth.tmpr_nargs > pfbase->maxargs)
+			if (moo->c->cclass->mth.tmpr_nargs < pfbase->minargs || moo->c->cclass->mth.tmpr_nargs > pfbase->maxargs)
 			{
 				MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
 					moo->c->cclass->modname.len - savedlen, &moo->c->cclass->modname.ptr[savedlen],
-					pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
-				moo_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+					pfbase->minargs, pfbase->maxargs, moo->c->cclass->mth.tmpr_nargs);
+				moo_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->cclass->mth.name_loc, &moo->c->cclass->mth.name);
 				moo->c->cclass->modname.len = savedlen;
 				return -1;
 			}
@@ -6820,8 +6864,8 @@ static int __compile_method_definition (moo_t* moo)
 			moo->c->cclass->modname.len = savedlen;
 
 			MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(pfnum));
-			moo->c->mth.pftype = PFTYPE_NUMBERED; 
-			moo->c->mth.pfnum = pfnum;
+			moo->c->cclass->mth.pftype = PFTYPE_NUMBERED; 
+			moo->c->cclass->mth.pfnum = pfnum;
 		}
 		else
 		{
@@ -6853,17 +6897,17 @@ static int __compile_method_definition (moo_t* moo)
 			{
 				MOO_DEBUG2 (moo, "Cannot find module primitive function - %.*js\n", 
 					moo->c->cclass->modname.len - savedlen, &moo->c->cclass->modname.ptr[savedlen]);
-				moo_setsynerr (moo, MOO_SYNERR_PFIDINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+				moo_setsynerr (moo, MOO_SYNERR_PFIDINVAL, &moo->c->cclass->mth.name_loc, &moo->c->cclass->mth.name);
 				moo->c->cclass->modname.len = savedlen;
 				return -1;
 			}
 
-			if (moo->c->mth.tmpr_nargs < pfbase->minargs || moo->c->mth.tmpr_nargs > pfbase->maxargs)
+			if (moo->c->cclass->mth.tmpr_nargs < pfbase->minargs || moo->c->cclass->mth.tmpr_nargs > pfbase->maxargs)
 			{
 				MOO_DEBUG5 (moo, "Unsupported argument count in primitive method definition of %.*js - %zd-%zd expected, %zd specified\n", 
 					moo->c->cclass->modname.len - savedlen, &moo->c->cclass->modname.ptr[savedlen],
-					pfbase->minargs, pfbase->maxargs, moo->c->mth.tmpr_nargs);
-				moo_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->mth.name_loc, &moo->c->mth.name);
+					pfbase->minargs, pfbase->maxargs, moo->c->cclass->mth.tmpr_nargs);
+				moo_setsynerr (moo, MOO_SYNERR_PFARGDEFINVAL, &moo->c->cclass->mth.name_loc, &moo->c->cclass->mth.name);
 				moo->c->cclass->modname.len = savedlen;
 				return -1;
 			}
@@ -6874,8 +6918,8 @@ static int __compile_method_definition (moo_t* moo)
 			MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(litidx));
 
 			/* external named primitive containing a period. */
-			moo->c->mth.pftype = PFTYPE_NAMED; 
-			moo->c->mth.pfnum = litidx;
+			moo->c->cclass->mth.pftype = PFTYPE_NAMED; 
+			moo->c->cclass->mth.pfnum = litidx;
 		}
 	}
 	else
@@ -6909,29 +6953,6 @@ static int __compile_method_definition (moo_t* moo)
 	return 0;
 }
 
-
-static void reset_method_data (moo_t* moo)
-{
-	moo->c->mth.type = MOO_METHOD_INSTANCE;
-	moo->c->mth.primitive = 0;
-	moo->c->mth.lenient = 0;
-	moo->c->mth.text.len = 0;
-	moo->c->mth.assignees.len = 0;
-	moo->c->mth.binsels.len = 0;
-	moo->c->mth.kwsels.len = 0;
-	moo->c->mth.name.len = 0;
-	MOO_MEMSET (&moo->c->mth.name_loc, 0, MOO_SIZEOF(moo->c->mth.name_loc));
-	moo->c->mth.variadic = 0;
-	moo->c->mth.tmprs.len = 0;
-	moo->c->mth.tmpr_count = 0;
-	moo->c->mth.tmpr_nargs = 0;
-	moo->c->mth.literals.count = 0;
-	moo->c->mth.pftype = PFTYPE_NONE;
-	moo->c->mth.pfnum = 0;
-	moo->c->mth.blk_depth = 0;
-	moo->c->mth.code.len = 0;
-}
-
 static int compile_method_definition (moo_t* moo)
 {
 	int n;
@@ -6940,12 +6961,12 @@ static int compile_method_definition (moo_t* moo)
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 
-	moo->c->mth.active = 1;
-	reset_method_data (moo);
+	moo->c->cclass->mth.active = 1;
+	reset_method_data (moo, &moo->c->cclass->mth);
 
 	n = __compile_method_definition (moo);
 
-	moo->c->mth.active = 0;
+	moo->c->cclass->mth.active = 0;
 
 	return n;
 }
@@ -6955,19 +6976,19 @@ static int make_getter_method (moo_t* moo, const moo_oocs_t* name, const var_inf
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 
-	MOO_ASSERT (moo, moo->c->mth.name.len == 0);
+	MOO_ASSERT (moo, moo->c->cclass->mth.name.len == 0);
 	if (add_method_name_fragment(moo, name) <= -1) return -1;
 
 	switch (var->type)
 	{
 		case VAR_INSTANCE:
-			MOO_ASSERT (moo, moo->c->mth.type == MOO_METHOD_INSTANCE);
+			MOO_ASSERT (moo, moo->c->cclass->mth.type == MOO_METHOD_INSTANCE);
 			if (emit_single_param_instruction(moo, BCODE_PUSH_INSTVAR_0, var->pos) <= -1 ||
 			    emit_byte_instruction(moo, BCODE_RETURN_STACKTOP) <= -1) return -1;
 			break;
 
 		case VAR_CLASSINST:
-			MOO_ASSERT (moo, moo->c->mth.type == MOO_METHOD_CLASS);
+			MOO_ASSERT (moo, moo->c->cclass->mth.type == MOO_METHOD_CLASS);
 			if (emit_single_param_instruction(moo, BCODE_PUSH_INSTVAR_0, var->pos) <= -1 ||
 			    emit_byte_instruction(moo, BCODE_RETURN_STACKTOP) <= -1) return -1;
 			break;
@@ -6977,7 +6998,7 @@ static int make_getter_method (moo_t* moo, const moo_oocs_t* name, const var_inf
 			moo_oow_t index;
 			MOO_ASSERT (moo, var->cls != MOO_NULL);
 			MOO_ASSERT (moo, var->cls == moo->c->cclass->self_oop);
-			MOO_ASSERT (moo, moo->c->mth.type == MOO_METHOD_CLASS);
+			MOO_ASSERT (moo, moo->c->cclass->mth.type == MOO_METHOD_CLASS);
 
 			if (add_literal(moo, (moo_oop_t)var->cls, &index) <= -1 ||
 			    emit_double_param_instruction(moo, BCODE_PUSH_OBJVAR_0, var->pos, index) <= -1 ||
@@ -7003,21 +7024,21 @@ static int make_setter_method (moo_t* moo, const moo_oocs_t* name, const var_inf
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 
-	MOO_ASSERT (moo, moo->c->mth.name.len == 0);
+	MOO_ASSERT (moo, moo->c->cclass->mth.name.len == 0);
 	if (add_method_name_fragment(moo, name) <= -1 ||
 	    add_method_name_fragment(moo, &colons) <= -1) return -1;
 
 	switch (var->type)
 	{
 		case VAR_INSTANCE:
-			MOO_ASSERT (moo, moo->c->mth.type == MOO_METHOD_INSTANCE);
+			MOO_ASSERT (moo, moo->c->cclass->mth.type == MOO_METHOD_INSTANCE);
 			if (emit_single_param_instruction(moo, BCODE_PUSH_TEMPVAR_0, 0) <= -1 ||
 			    emit_single_param_instruction(moo, BCODE_POP_INTO_INSTVAR_0, var->pos) <= -1 ||
 			    emit_byte_instruction(moo, BCODE_RETURN_RECEIVER) <= -1) return -1;
 			break;
 
 		case VAR_CLASSINST:
-			MOO_ASSERT (moo, moo->c->mth.type == MOO_METHOD_CLASS);
+			MOO_ASSERT (moo, moo->c->cclass->mth.type == MOO_METHOD_CLASS);
 			if (emit_single_param_instruction(moo, BCODE_PUSH_TEMPVAR_0, 0) <= -1 ||
 			    emit_single_param_instruction(moo, BCODE_POP_INTO_INSTVAR_0, var->pos) <= -1 ||
 			    emit_byte_instruction(moo, BCODE_RETURN_RECEIVER) <= -1) return -1;
@@ -7028,7 +7049,7 @@ static int make_setter_method (moo_t* moo, const moo_oocs_t* name, const var_inf
 			moo_oow_t index;
 			MOO_ASSERT (moo, var->cls != MOO_NULL);
 			MOO_ASSERT (moo, var->cls == moo->c->cclass->self_oop);
-			MOO_ASSERT (moo, moo->c->mth.type == MOO_METHOD_CLASS);
+			MOO_ASSERT (moo, moo->c->cclass->mth.type == MOO_METHOD_CLASS);
 
 			if (add_literal(moo, (moo_oop_t)var->cls, &index) <= -1 ||
 			    emit_single_param_instruction(moo, BCODE_PUSH_TEMPVAR_0, 0) <= -1 ||
@@ -7062,10 +7083,10 @@ static int make_getters_and_setters (moo_t* moo)
 		{
 			if (!moo->c->cclass->var[var_type].initv[i].flags) continue;
 
-			/* moo->c->mth.type needs to be set because get_variable_info()
+			/* moo->c->cclass->mth.type needs to be set because get_variable_info()
 			 * uses it to validate variable's accessibility */
-			reset_method_data (moo);
-			moo->c->mth.type = (var_type == VAR_INSTANCE? MOO_METHOD_INSTANCE: MOO_METHOD_CLASS);
+			reset_method_data (moo, &moo->c->cclass->mth);
+			moo->c->cclass->mth.type = (var_type == VAR_INSTANCE? MOO_METHOD_INSTANCE: MOO_METHOD_CLASS);
 
 			/* the following two function calls must not fail unless the compiler
 			 * is buggy. */
@@ -7087,14 +7108,14 @@ static int make_getters_and_setters (moo_t* moo)
 			{
 				/* i set the method data here because make_getter_method()
 				 * pollutes it if triggered */
-				reset_method_data (moo);
-				moo->c->mth.type = (var_type == VAR_INSTANCE? MOO_METHOD_INSTANCE: MOO_METHOD_CLASS);
+				reset_method_data (moo, &moo->c->cclass->mth);
+				moo->c->cclass->mth.type = (var_type == VAR_INSTANCE? MOO_METHOD_INSTANCE: MOO_METHOD_CLASS);
 
 				/* hack to simulate a parameter. note i don't manipulate tmprs or tmprs_capa
 				 * because there is no method body code to process. i simply generate a setter
 				 * method */
-				moo->c->mth.tmpr_count = 1; 
-				moo->c->mth.tmpr_nargs = 1;
+				moo->c->cclass->mth.tmpr_count = 1; 
+				moo->c->cclass->mth.tmpr_nargs = 1;
 
 				MOO_ASSERT (moo, var_info.type == var_type);
 				if (make_setter_method (moo, &var_name, &var_info) <= -1) return -1;
@@ -7314,7 +7335,7 @@ static int make_defined_class (moo_t* moo)
 	if (!tmp) return -1;
 	moo->c->cclass->self_oop->classinstvars = (moo_oop_char_t)tmp;
 
-	tmp = moo_makestring(moo, moo->c->cclass->pooldic_imp.dcl.ptr, moo->c->cclass->pooldic_imp.dcl.len);
+	tmp = moo_makestring(moo, moo->c->cclass->pdimp.dcl.ptr, moo->c->cclass->pdimp.dcl.len);
 	if (!tmp) return -1;
 	moo->c->cclass->self_oop->pooldics = (moo_oop_char_t)tmp;
 
@@ -8047,14 +8068,14 @@ static int compile_class_definition (moo_t* moo, int class_type)
 	int n;
 
 	if (!push_cunit(moo, MOO_CUNIT_CLASS)) return -1;
-	
+
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
-	moo->c->mth.literals.count = 0;
+	moo->c->cclass->mth.literals.count = 0;
 
 	n = __compile_class_definition (moo, class_type);
 
-	moo->c->mth.literals.count = 0;
+	moo->c->cclass->mth.literals.count = 0;
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 
@@ -8298,25 +8319,10 @@ static int compile_pooldic_definition (moo_t* moo)
 	pd = (moo_cunit_pooldic_t*)push_cunit(moo, MOO_CUNIT_POOLDIC);
 	if (!pd) return -1;
 
-#if 0 // CUNIT
-	pd->name.len = 0;
-	pd->fqn.len = 0;
-	MOO_MEMSET (&pd->fqn_loc, 0, MOO_SIZEOF(pd->fqn_loc));
-
-	pd->pd_oop = MOO_NULL;
-	pd->ns_oop = MOO_NULL;
-#endif
-
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 
 	n = __compile_pooldic_definition(moo, pd);
-
-#if 0
-	/* reset these oops plus literal pointers not to confuse gc_compiler() */
-	pd->pd_oop = MOO_NULL;
-	pd->ns_oop = MOO_NULL;
-#endif
 
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
@@ -8477,70 +8483,15 @@ static void gc_compiler (moo_t* moo)
 	/* called when garbage collection is performed */
 	if (moo->c)
 	{
-		moo_oow_t i, j;
-
-		gc_cunit_chain (moo);
-
-#if 0 // CUNIT
-		if (moo->c->cclass->self_oop) 
-			moo->c->cclass->self_oop = (moo_oop_class_t)moo_moveoop (moo, (moo_oop_t)moo->c->cclass->self_oop);
-
-		if (moo->c->cclass->super_oop)
-			moo->c->cclass->super_oop = moo_moveoop (moo, moo->c->cclass->super_oop);
-
-		for (i = 0; i < MOO_COUNTOF(moo->c->cclass->var); i++)
-		{
-			for (j = 0; j < moo->c->cclass->var[i].initv_count; j++)
-			{
-				register moo_oop_t x = moo->c->cclass->var[i].initv[j].v;
-				if (x) moo->c->cclass->var[i].initv[j].v = moo_moveoop (moo, x);
-			}
-		}
-
-		if (moo->c->cclass->ns_oop)
-		{
-			register moo_oop_t x = moo_moveoop (moo, (moo_oop_t)moo->c->cclass->ns_oop);
-			moo->c->cclass->ns_oop = (moo_oop_nsdic_t)x;
-		}
-
-		if (moo->c->cclass->superns_oop)
-		{
-			register moo_oop_t x = moo_moveoop (moo, (moo_oop_t)moo->c->cclass->superns_oop);
-			moo->c->cclass->superns_oop = (moo_oop_nsdic_t)x;
-		}
-
-		for (i = 0; i < moo->c->cclass->pooldic_imp.dcl_count; i++)
-		{
-			register moo_oop_t x = moo_moveoop (moo, (moo_oop_t)moo->c->cclass->pooldic_imp.oops[i]);
-			moo->c->cclass->pooldic_imp.oops[i] = (moo_oop_dic_t)x;
-		}
-#endif
-
-		for (i = 0; i < moo->c->mth.literals.count; i++)
-		{
-			register moo_oop_t x = moo_moveoop (moo, moo->c->mth.literals.ptr[i]);
-			moo->c->mth.literals.ptr[i] = x;
-		}
+		moo_oow_t i;
 
 		for (i = 0; i < moo->c->arlit.count; i++)
 		{
-			register moo_oop_t x = moo_moveoop (moo, moo->c->arlit.ptr[i]);
+			register moo_oop_t x = moo_moveoop(moo, moo->c->arlit.ptr[i]);
 			moo->c->arlit.ptr[i] = x;
 		}
 
-#if 0 // CUNIT
-		if (moo->c->pooldic.pd_oop)
-		{
-			register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)moo->c->pooldic.pd_oop);
-			moo->c->pooldic.pd_oop = (moo_oop_dic_t)x;
-		}
-
-		if (moo->c->pooldic.ns_oop)
-		{
-			register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)moo->c->pooldic.ns_oop);
-			moo->c->pooldic.ns_oop = (moo_oop_nsdic_t)x;
-		}
-#endif
+		gc_cunit_chain (moo);
 	}
 }
 
@@ -8585,11 +8536,18 @@ static void gc_cunit_chain (moo_t* moo)
 					c->superns_oop = (moo_oop_nsdic_t)x;
 				}
 
-				for (i = 0; i < c->pooldic_imp.dcl_count; i++)
+				for (i = 0; i < c->pdimp.dcl_count; i++)
 				{
-					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)c->pooldic_imp.oops[i]);
-					c->pooldic_imp.oops[i] = (moo_oop_dic_t)x;
+					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)c->pdimp.oops[i]);
+					c->pdimp.oops[i] = (moo_oop_dic_t)x;
 				}
+
+				for (i = 0; i < c->mth.literals.count; i++)
+				{
+					register moo_oop_t x = moo_moveoop (moo, c->mth.literals.ptr[i]);
+					c->mth.literals.ptr[i] = x;
+				}
+
 				break;
 			}
 
@@ -8605,20 +8563,7 @@ static void gc_cunit_chain (moo_t* moo)
 				if (pd->ns_oop)
 				{
 					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)pd->ns_oop);
-					pd->ns_oop = (moo_oop_dic_t)x;
-				}
-				break;
-			}
-
-			case MOO_CUNIT_METHOD:
-			{
-				moo_oow_t i;
-				moo_cunit_method_t* mth;
-				mth = (moo_cunit_method_t*)cunit;
-				for (i = 0; i < mth->literals.count; i++)
-				{
-					register moo_oop_t x = moo_moveoop (moo, mth->literals.ptr[i]);
-					mth->literals.ptr[i] = x;
+					pd->ns_oop = (moo_oop_nsdic_t)x;
 				}
 				break;
 			}
@@ -8639,16 +8584,13 @@ static moo_cunit_t* push_cunit (moo_t* moo, moo_cunit_type_t type)
 		case MOO_CUNIT_POOLDIC:
 			size = MOO_SIZEOF(moo_cunit_pooldic_t);
 			break;
-		case MOO_CUNIT_METHOD:
-			size = MOO_SIZEOF(moo_cunit_method_t);
-			break;
 
 		default:
 			size = MOO_SIZEOF(moo_cunit_t);
 			break;
 	}
 
-	cunit = (moo_cunit_pooldic_t*)moo_callocmem(moo, size);
+	cunit = (moo_cunit_t*)moo_callocmem(moo, size);
 	if (!cunit) return MOO_NULL;
 
 	cunit->cunit_type = type;
@@ -8660,18 +8602,14 @@ static moo_cunit_t* push_cunit (moo_t* moo, moo_cunit_type_t type)
 		case MOO_CUNIT_CLASS:
 		{
 			moo_cunit_class_t* c;
-		#if 0
-			moo_oow_t i;
-		#endif
+			/*moo_oow_t i;*/
 
 			c = (moo_cunit_class_t*)cunit;
 			moo->c->cclass = c;
-			
-		#if 0
-			c->flags = 0;
-		#endif
+
 			c->indexed_type = MOO_OBJ_TYPE_OOP; /* whether indexed or not, it's the pointer type by default */
-		#if 0
+			/*
+			c->flags = 0;
 			c->non_pointer_instsize = 0;
 
 			c->name.len = 0;
@@ -8691,14 +8629,14 @@ static moo_cunit_t* push_cunit (moo_t* moo, moo_cunit_type_t type)
 				c->var[i].initv_count = 0;
 			}
 
-			c->pooldic_imp.dcl_count = 0;
-			c->pooldic_imp.dcl.len = 0;
+			c->pdimp.dcl_count = 0;
+			c->pdimp.dcl.len = 0;
 
 			c->self_oop = MOO_NULL;
 			c->super_oop = MOO_NULL;
 			c->ns_oop = MOO_NULL;
 			c->superns_oop = MOO_NULL;
-		#endif
+			*/
 			break;
 		}
 
@@ -8755,8 +8693,9 @@ static void pop_cunit (moo_t* moo)
 				if (c->var[i].initv) moo_freemem (moo, c->var[i].initv);
 			}
 
-			if (c->pooldic_imp.dcl.ptr) moo_freemem (moo, c->pooldic_imp.dcl.ptr);
-			if (c->pooldic_imp.oops) moo_freemem (moo, c->pooldic_imp.oops);
+			clear_pooldic_import_data (moo, &c->pdimp);
+			clear_method_data (moo, &c->mth);
+
 			break;
 		}
 
@@ -8765,22 +8704,6 @@ static void pop_cunit (moo_t* moo)
 			moo_cunit_pooldic_t* pd;
 			pd = (moo_cunit_pooldic_t*)cunit;
 			if (pd->fqn.ptr) moo_freemem (moo, pd->fqn.ptr);
-			break;
-		}
-
-		case MOO_CUNIT_METHOD:
-		{
-			moo_cunit_method_t* mth;
-			mth = (moo_cunit_method_t*)cunit;
-			if (mth->text.ptr) moo_freemem (moo, mth->text.ptr);
-			if (mth->assignees.ptr) moo_freemem (moo, mth->assignees.ptr);
-			if (mth->binsels.ptr) moo_freemem (moo, mth->binsels.ptr);
-			if (mth->kwsels.ptr) moo_freemem (moo, mth->kwsels.ptr);
-			if (mth->name.ptr) moo_freemem (moo, mth->name.ptr);
-			if (mth->tmprs.ptr) moo_freemem (moo, mth->tmprs.ptr);
-			if (mth->code.ptr) moo_freemem (moo, mth->code.ptr);
-			if (mth->literals.ptr) moo_freemem (moo, mth->literals.ptr);
-			if (mth->blk_tmprcnt) moo_freemem (moo, mth->blk_tmprcnt);
 			break;
 		}
 	}
@@ -8793,45 +8716,13 @@ static void fini_compiler (moo_t* moo)
 	/* called before the moo object is closed */
 	if (moo->c)
 	{
-		moo_oow_t i;
-
 		clear_io_names (moo);
 
 		if (moo->c->tok.name.ptr) moo_freemem (moo, moo->c->tok.name.ptr);
-
-#if 0 // CUNIT
-		if (moo->c->cclass->fqn.ptr) moo_freemem (moo, moo->c->cclass->fqn.ptr);
-		if (moo->c->cclass->superfqn.ptr) moo_freemem (moo, moo->c->cclass->superfqn.ptr);
-		if (moo->c->cclass->modname.ptr) moo_freemem (moo, moo->c->cclass->modname.ptr);
-
-		for (i = 0; i < MOO_COUNTOF(moo->c->cclass->var); i++)
-		{
-			if (moo->c->cclass->var[i].str.ptr) moo_freemem (moo, moo->c->cclass->var[i].str.ptr);
-			if (moo->c->cclass->var[i].initv) moo_freemem (moo, moo->c->cclass->var[i].initv);
-		}
-
-		if (moo->c->cclass->pooldic_imp.dcl.ptr) moo_freemem (moo, moo->c->cclass->pooldic_imp.dcl.ptr);
-		if (moo->c->cclass->pooldic_imp.oops) moo_freemem (moo, moo->c->cclass->pooldic_imp.oops);
-#endif
-
-		if (moo->c->mth.text.ptr) moo_freemem (moo, moo->c->mth.text.ptr);
-		if (moo->c->mth.assignees.ptr) moo_freemem (moo, moo->c->mth.assignees.ptr);
-		if (moo->c->mth.binsels.ptr) moo_freemem (moo, moo->c->mth.binsels.ptr);
-		if (moo->c->mth.kwsels.ptr) moo_freemem (moo, moo->c->mth.kwsels.ptr);
-		if (moo->c->mth.name.ptr) moo_freemem (moo, moo->c->mth.name.ptr);
-		if (moo->c->mth.tmprs.ptr) moo_freemem (moo, moo->c->mth.tmprs.ptr);
-		if (moo->c->mth.code.ptr) moo_freemem (moo, moo->c->mth.code.ptr);
-		if (moo->c->mth.literals.ptr) moo_freemem (moo, moo->c->mth.literals.ptr);
-		if (moo->c->mth.blk_tmprcnt) moo_freemem (moo, moo->c->mth.blk_tmprcnt);
-
-#if 0 // CUNIT
-		if (moo->c->pooldic.fqn.ptr) moo_freemem (moo, moo->c->pooldic.fqn.ptr);
-#else
-		while (moo->c->cunit) pop_cunit (moo);
-#endif
-
 		if (moo->c->balit.ptr) moo_freemem (moo, moo->c->balit.ptr);
 		if (moo->c->arlit.ptr) moo_freemem (moo, moo->c->arlit.ptr);
+
+		while (moo->c->cunit) pop_cunit (moo);
 
 		moo_freemem (moo, moo->c);
 		moo->c = MOO_NULL;

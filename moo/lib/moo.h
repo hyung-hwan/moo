@@ -533,6 +533,19 @@ struct moo_nsdic_t
 	moo_oop_t nsup; /* a class if it belongs to the class. another nsdic if it doesn't */
 };
 
+struct moo_interface_t
+{
+	MOO_OBJ_HEADER;
+	moo_oop_char_t name;
+
+	/* [0] - instance methods, MethodDictionary
+	 * [1] - class methods, MethodDictionary */
+	moo_oop_dic_t  mthdic[2];      
+
+	moo_oop_nsdic_t nsup; /* pointer to the upper namespace */
+	moo_oop_nsdic_t nsdic; /* dictionary used for namespacing - may be nil when there are no subitems underneath */
+};
+
 struct moo_class_t
 {
 	MOO_OBJ_HEADER;

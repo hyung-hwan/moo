@@ -168,6 +168,21 @@ difficulty: how to ensure that the class implements the defined interface?
        method shoutWith: number {}
    }
 
+
+<<swift>>
+
+protocol StringConvertible {
+    func toString() -> String
+}
+
+extension String: StringConvertible {
+    func toString() -> String {
+        return self
+    }
+} 
+<<end swift>>
+
+
 4) other methods???
 
 Let me think about it..

@@ -473,8 +473,7 @@ enum moo_cunit_type_t
 {
 	MOO_CUNIT_BLANK = 0,
 	MOO_CUNIT_CLASS,
-	MOO_CUNIT_POOLDIC,
-	MOO_CUNIT_METHOD
+	MOO_CUNIT_POOLDIC
 };
 typedef enum moo_cunit_type_t moo_cunit_type_t;
 
@@ -505,82 +504,21 @@ struct moo_cunit_pooldic_t
 	moo_oow_t end;
 };
 
-
-typedef struct moo_cunit_class_t moo_cunit_class_t;
-struct moo_cunit_class_t
+typedef struct moo_pooldic_import_data_t moo_pooldic_import_data_t;
+struct moo_pooldic_import_data_t
 {
-	MOO_CUNIT_HEADER;
+	moo_oocs_t dcl;
+	moo_oow_t dcl_capa;
+	moo_oow_t dcl_count;
 
-	int flags;
-	int indexed_type;
-
-	/* fixed instance size specified for a non-pointer class. class(#byte(N)), etc */
-	moo_oow_t non_pointer_instsize; 
-
-	moo_oop_class_t self_oop;
-	moo_oop_t super_oop; /* this may be nil. so the type is moo_oop_t */
-	moo_oop_nsdic_t ns_oop;
-	moo_oocs_t fqn;
-	moo_oocs_t name;
-	moo_oow_t fqn_capa;
-	moo_ioloc_t fqn_loc;
-
-	moo_oop_nsdic_t superns_oop;
-	moo_oocs_t superfqn;
-	moo_oocs_t supername;
-	moo_oow_t superfqn_capa;
-	moo_ioloc_t superfqn_loc;
-
-	moo_oocs_t modname; /* module name after 'from' */
-	moo_oow_t modname_capa;
-	moo_ioloc_t modname_loc;
-
-	/* instance variable, class variable, class instance variable, constant
-	 *   var[0] - named instance variables
-	 *   var[1] - class instance variables
-	 *   var[2] - class variables 
-	 */
-	struct
-	{
-		moo_oocs_t str;  /* long string containing all variables declared delimited by a space */
-		moo_oow_t  str_capa;
-
-		moo_oow_t count; /* the number of variables declared in this class only */
-		moo_oow_t total_count; /* the number of variables declared in this class and superclasses */
-
-		moo_initv_t* initv;
-		moo_oow_t initv_capa;
-		/* initv_count holds the index to the last variable with a 
-		 * default initial value defined in this class only plus one.
-		 * inheritance is handled by the compiler separately using
-		 * the reference to the superclass. so it doesn't include
-		 * the variables defined in the superclass chain.
-		 * for a definition: class ... { var a, b := 0, c },
-		 * initv_count is set to 2 while count is 3. totoal_count
-		 * will be 3 too if there is no variabled defined in the
-		 * superclass chain. */
-		moo_oow_t initv_count;  
-	} var[3];
-
-	/* buffer to hold pooldic import declaration */
-	struct
-	{
-		moo_oocs_t dcl;
-		moo_oow_t dcl_capa;
-		moo_oow_t dcl_count;
-
-		/* used to hold imported pool dictionarie objects */
-		moo_oop_dic_t* oops; 
-		moo_oow_t oops_capa;
-	} pooldic_imp;
+	/* used to hold imported pool dictionarie objects */
+	moo_oop_dic_t* oops; 
+	moo_oow_t oops_capa;
 };
 
-
-typedef struct moo_cunit_method_t moo_cunit_method_t;
-struct moo_cunit_method_t
+typedef struct moo_method_data_t moo_method_data_t;
+struct moo_method_data_t
 {
-	MOO_CUNIT_HEADER;
-
 	int active;
 
 	moo_method_type_t type;
@@ -638,6 +576,66 @@ struct moo_cunit_method_t
 	moo_oow_t code_capa;
 };
 
+typedef struct moo_cunit_class_t moo_cunit_class_t;
+struct moo_cunit_class_t
+{
+	MOO_CUNIT_HEADER;
+
+	int flags;
+	int indexed_type;
+
+	/* fixed instance size specified for a non-pointer class. class(#byte(N)), etc */
+	moo_oow_t non_pointer_instsize; 
+
+	moo_oop_class_t self_oop;
+	moo_oop_t super_oop; /* this may be nil. so the type is moo_oop_t */
+	moo_oop_nsdic_t ns_oop;
+	moo_oocs_t fqn;
+	moo_oocs_t name;
+	moo_oow_t fqn_capa;
+	moo_ioloc_t fqn_loc;
+
+	moo_oop_nsdic_t superns_oop;
+	moo_oocs_t superfqn;
+	moo_oocs_t supername;
+	moo_oow_t superfqn_capa;
+	moo_ioloc_t superfqn_loc;
+
+	moo_oocs_t modname; /* module name after 'from' */
+	moo_oow_t modname_capa;
+	moo_ioloc_t modname_loc;
+
+	/* instance variable, class variable, class instance variable, constant
+	 *   var[0] - named instance variables
+	 *   var[1] - class instance variables
+	 *   var[2] - class variables 
+	 */
+	struct
+	{
+		moo_oocs_t str;  /* long string containing all variables declared delimited by a space */
+		moo_oow_t  str_capa;
+
+		moo_oow_t count; /* the number of variables declared in this class only */
+		moo_oow_t total_count; /* the number of variables declared in this class and superclasses */
+
+		moo_initv_t* initv;
+		moo_oow_t initv_capa;
+		/* initv_count holds the index to the last variable with a 
+		 * default initial value defined in this class only plus one.
+		 * inheritance is handled by the compiler separately using
+		 * the reference to the superclass. so it doesn't include
+		 * the variables defined in the superclass chain.
+		 * for a definition: class ... { var a, b := 0, c },
+		 * initv_count is set to 2 while count is 3. totoal_count
+		 * will be 3 too if there is no variabled defined in the
+		 * superclass chain. */
+		moo_oow_t initv_count;  
+	} var[3];
+
+	moo_pooldic_import_data_t pdimp;
+	moo_method_data_t mth;
+};
+
 struct moo_compiler_t
 {
 	int pragma_flags;
@@ -683,16 +681,10 @@ struct moo_compiler_t
 	moo_cunit_t* cunit;
 
 	/* inner-most class unit. it may be same as 'cunit' or something up
-	 * the 'cunit->cunit_parent' chain */
+	 * the 'cunit->cunit_parent' chain. i keep these to avoid repeated
+	 * typecasting and assignment to another variable */
 	moo_cunit_class_t* cclass;
 	moo_cunit_pooldic_t* cpooldic;
-
-	/* information about a class being compiled */
-	//moo_cunit_class_t cls;
-	/* pooldic declaration */
-	/*moo_cunit_pooldic_t pooldic;*/
-	/* information about a method being comipled */
-	moo_cunit_method_t mth;
 };
 #endif
 
