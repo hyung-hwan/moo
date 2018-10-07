@@ -679,12 +679,6 @@ struct moo_compiler_t
 
 	/* the current compilation unit being processed */
 	moo_cunit_t* cunit;
-
-	/* inner-most class unit. it may be same as 'cunit' or something up
-	 * the 'cunit->cunit_parent' chain. i keep these to avoid repeated
-	 * typecasting and assignment to another variable */
-	moo_cunit_class_t* cclass;
-	moo_cunit_pooldic_t* cpooldic;
 };
 #endif
 
