@@ -15,6 +15,38 @@ class X11(Object) from 'x11'
 	var event_loop_sem, event_loop_proc.
 	var llevent_blocks.
 
+	class Exception(System.Exception)
+	{
+	}
+
+	class Point(Object)
+	{
+		var(#get,#set) x := 0, y := 0.
+	}
+
+	class Dimension(Object)
+	{
+		var(#get,#set) width := 0, height := 0.
+	}
+
+	class Rectangle(Object)
+	{
+		var(#get,#set)
+			x      := 0,
+			y      := 0,
+			width  := 0,
+			height := 0.
+	}
+
+	extend Point
+	{
+		method print
+		{
+			x dump.
+			y dump.
+		}
+	}
+
 	method(#primitive,#liberal) _open_display(name).
 	method(#primitive) _close_display.
 	method(#primitive) _get_fd.
@@ -45,29 +77,6 @@ class X11(Object) from 'x11'
 		w := self _destroy_window(window_handle).
 		if (w notError) { self.window_registrar removeKey: window_handle }
 	}
-}
-
-class X11.Exception(System.Exception)
-{
-}
-
-class X11.Point(Object)
-{
-	var(#get,#set) x := 0, y := 0.
-}
-
-class X11.Dimension(Object)
-{
-	var(#get,#set) width := 0, height := 0.
-}
-
-class X11.Rectangle(Object)
-{
-	var(#get,#set)
-		x      := 0,
-		y      := 0,
-		width  := 0,
-		height := 0.
 }
 
 ## ---------------------------------------------------------------------------

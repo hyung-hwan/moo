@@ -405,7 +405,19 @@ void moo_setsynerrbfmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc,
 	
 	if (tgt)
 	{
-		moo->c->synerr.tgt = *tgt;
+		if (tgt->len >= MOO_COUNTOF(moo->c->synerr_tgtbuf) && 
+		    moo_copyoocharstosbuf(moo, tgt->ptr, tgt->len, MOO_SBUF_ID_SYNERR) >= 0)
+		{
+			moo->c->synerr.tgt.ptr = moo->sbuf[MOO_SBUF_ID_SYNERR].ptr;
+			moo->c->synerr.tgt.len = moo->sbuf[MOO_SBUF_ID_SYNERR].len;
+		}
+		else
+		{
+			moo->c->synerr.tgt.ptr = moo->c->synerr_tgtbuf;
+			moo->c->synerr.tgt.len = (tgt->len < MOO_COUNTOF(moo->c->synerr_tgtbuf))? tgt->len: (MOO_COUNTOF(moo->c->synerr_tgtbuf) - 1);
+			moo->c->synerr.tgt.ptr[moo->c->synerr.tgt.len] = '\0';
+			moo_copy_oochars (moo->c->synerr.tgt.ptr, tgt->ptr, moo->c->synerr.tgt.len);
+		}
 	}
 	else 
 	{
@@ -456,7 +468,19 @@ void moo_setsynerrufmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc,
 
 	if (tgt)
 	{
-		moo->c->synerr.tgt = *tgt;
+		if (tgt->len >= MOO_COUNTOF(moo->c->synerr_tgtbuf) && 
+		    moo_copyoocharstosbuf(moo, tgt->ptr, tgt->len, MOO_SBUF_ID_SYNERR) >= 0)
+		{
+			moo->c->synerr.tgt.ptr = moo->sbuf[MOO_SBUF_ID_SYNERR].ptr;
+			moo->c->synerr.tgt.len = moo->sbuf[MOO_SBUF_ID_SYNERR].len;
+		}
+		else
+		{
+			moo->c->synerr.tgt.ptr = moo->c->synerr_tgtbuf;
+			moo->c->synerr.tgt.len = (tgt->len < MOO_COUNTOF(moo->c->synerr_tgtbuf))? tgt->len: (MOO_COUNTOF(moo->c->synerr_tgtbuf) - 1);
+			moo->c->synerr.tgt.ptr[moo->c->synerr.tgt.len] = '\0';
+			moo_copy_oochars (moo->c->synerr.tgt.ptr, tgt->ptr, moo->c->synerr.tgt.len);
+		}
 	}
 	else 
 	{

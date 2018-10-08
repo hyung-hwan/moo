@@ -247,6 +247,7 @@ enum voca_id_t
 };
 typedef enum voca_id_t voca_id_t;
 
+static int compile_class_definition (moo_t* moo, int class_type);
 static int compile_pooldic_definition (moo_t* moo);
 static int compile_block_statement (moo_t* moo);
 static int compile_method_statement (moo_t* moo);
@@ -7656,8 +7657,15 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 		return -1;
 	}
 
+	if (cc->cunit_parent && cc->cunit_parent->cunit_type == MOO_CUNIT_CLASS && TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
+	{
+		/* the name of a nested class cannot be multi-segmented */
+		moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "undotted identifier expected");
+		return -1;
+	}
+
 #if 0
-	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && is_restricted_word (TOKEN_NAME(moo)))
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && is_restricted_word(TOKEN_NAME(moo)))
 	{
 		/* wrong class name */
 		moo_setsynerr (moo, MOO_SYNERR_CLASSNAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -7665,10 +7673,25 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 	}
 #endif
 
-	/* copy the class name */
+	
+	/* [NOTE] TOKEN_NAME(moo) doesn't contain the full name if it's nested 
+	 *        inside a class. it is merely a name that appeared in the source
+	 *        code.
+	 *  TODO: compose the full name by traversing the namespace chain. */
 	if (set_class_fqn(moo, cc, TOKEN_NAME(moo)) <= -1) return -1;
 	cc->fqn_loc = moo->c->tok.loc;
-	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
+
+	if (cc->cunit_parent && cc->cunit_parent->cunit_type == MOO_CUNIT_CLASS)
+	{
+		moo_cunit_class_t* c = (moo_cunit_class_t*)cc->cunit_parent;
+		if ((moo_oop_t)c->self_oop->nsdic == moo->_nil)
+		{
+			/* attach a new namespace dictionary to the nsdic field of the class */
+			if (!attach_nsdic_to_class(moo, c->self_oop)) return -1;
+		}
+		cc->ns_oop = c->self_oop->nsdic; /* TODO: if c->nsdic is nil, create one? */
+	}
+	else if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 	{
 		if (preprocess_dotted_name(moo, (class_type == CLASS_TYPE_EXTEND? PDN_DONT_ADD_NS: 0), MOO_NULL, &cc->fqn, &cc->fqn_loc, &cc->name, &cc->ns_oop) <= -1) return -1;
 	}
@@ -7724,8 +7747,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 
 		cc->super_oop = cc->self_oop->superclass;
 
-		MOO_ASSERT (moo, cc->super_oop == moo->_nil || 
-		                 MOO_CLASSOF(moo, cc->super_oop) == moo->_class);
+		MOO_ASSERT (moo, cc->super_oop == moo->_nil || MOO_CLASSOF(moo, cc->super_oop) == moo->_class);
 	}
 	else
 	{
@@ -8096,6 +8118,18 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 			GET_TOKEN (moo);
 			if (compile_pooldic_definition(moo) <= -1) return -1;
 		}
+		else if (is_token_word(moo, VOCA_CLASS))
+		{
+			/* class definition nested inside another class definition */
+			GET_TOKEN (moo);
+			if (compile_class_definition(moo, CLASS_TYPE_NORMAL) <= -1) return -1;
+		}
+		else if (is_token_word(moo, VOCA_EXTEND))
+		{
+			/* class extension nested inside another class definition */
+			GET_TOKEN (moo);
+			if (compile_class_definition(moo, CLASS_TYPE_EXTEND) <= -1) return -1;
+		}
 		else break;
 	}
 	while (1);
@@ -8263,10 +8297,14 @@ static int __compile_pooldic_definition (moo_t* moo)
 	if (pd->cunit_parent && pd->cunit_parent->cunit_type == MOO_CUNIT_CLASS && TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 	{
 		/* the pool dictionary nested inside a class cannot be multi-segmented */
-		moo_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "undotted identifier expected");
 		goto oops;
 	}
 
+	/* [NOTE] TOKEN_NAME(moo) doesn't contain the full name if it's nested 
+	 *        inside a class. it is merely a name that appeared in the source
+	 *        code. 
+	 *  TODO: compose the full name by traversing the namespace chain. */
 	if (set_pooldic_fqn(moo, pd, TOKEN_NAME(moo)) <= -1) goto oops;
 	pd->fqn_loc = moo->c->tok.loc;
 

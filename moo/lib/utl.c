@@ -353,11 +353,14 @@ moo_bch_t* moo_find_bchar_in_bcstr (const moo_bch_t* ptr, moo_bch_t c)
 
 int moo_concatoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, int id)
 {
+	return moo_concatoocharstosbuf(moo, str, moo_count_oocstr(str), id);
+}
+
+int moo_concatoocharstosbuf (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, int id)
+{
 	moo_sbuf_t* p;
-	moo_oow_t len;
 
 	p = &moo->sbuf[id];
-	len = moo_count_oocstr (str);
 
 	if (len > p->capa - p->len)
 	{
@@ -374,7 +377,7 @@ int moo_concatoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, int id)
 		p->capa = newcapa;
 	}
 
-	moo_copy_oochars (&p->ptr[p->len], str, len);
+	moo_copy_oochars (&p->ptr[p->len], ptr, len);
 	p->len += len;
 	p->ptr[p->len] = '\0';
 
@@ -384,7 +387,13 @@ int moo_concatoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, int id)
 int moo_copyoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, int id)
 {
 	moo->sbuf[id].len = 0;;
-	return moo_concatoocstrtosbuf (moo, str, id);
+	return moo_concatoocstrtosbuf(moo, str, id);
+}
+
+int moo_copyoocharstosbuf (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, int id)
+{
+	moo->sbuf[id].len = 0;;
+	return moo_concatoocharstosbuf(moo, ptr, len, id);
 }
 
 /* ----------------------------------------------------------------------- */

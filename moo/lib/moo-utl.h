@@ -336,14 +336,30 @@ MOO_EXPORT moo_oow_t moo_count_bcstr (
 MOO_EXPORT int moo_copyoocstrtosbuf (
 	moo_t*            moo,
 	const moo_ooch_t* str,
-	int                id
+	int               id
 );
 
 MOO_EXPORT int moo_concatoocstrtosbuf (
 	moo_t*            moo,
 	const moo_ooch_t* str,
-	int                id
+	int               id
 );
+
+
+MOO_EXPORT int moo_copyoocharstosbuf (
+	moo_t*            moo,
+	const moo_ooch_t* ptr,
+	moo_oow_t         len,
+	int               id
+);
+
+MOO_EXPORT int moo_concatoocharstosbuf (
+	moo_t*            moo,
+	const moo_ooch_t* ptr,
+	moo_oow_t         len,
+	int               id
+);
+
 
 #if defined(MOO_OOCH_IS_UCH)
 #	define moo_conv_oocs_to_bcs_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr) moo_conv_ucs_to_bcs_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr)

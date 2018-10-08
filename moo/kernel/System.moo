@@ -12,6 +12,20 @@ class System(Apex)
 {
 	var(#class) asyncsg.
 
+	pooldic Log
+	{
+		## -----------------------------------------------------------
+		## defines log levels
+		## these items must follow defintions in moo.h
+		## -----------------------------------------------------------
+
+		DEBUG := 1.
+		INFO  := 2.
+		WARN  := 4.
+		ERROR := 8.
+		FATAL := 16.
+	}
+
 	method(#class) addAsyncSemaphore: sem
 	{
 		^self.asyncsg addSemaphore: sem
@@ -124,24 +138,7 @@ class System(Apex)
 		s signalAfterSecs: secs nanosecs: nanosecs.
 		s wait.
 	}
-}
 
-pooldic System.Log
-{
-	## -----------------------------------------------------------
-	## defines log levels
-	## these items must follow defintions in moo.h
-	## -----------------------------------------------------------
-
-	DEBUG := 1.
-	INFO  := 2.
-	WARN  := 4.
-	ERROR := 8.
-	FATAL := 16.
-}
-
-extend System
-{
 	## the following methods may not look suitable to be placed
 	## inside a system dictionary. but they are here for quick and dirty
 	## output production from the moo code.

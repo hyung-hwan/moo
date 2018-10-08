@@ -1327,6 +1327,14 @@ typedef struct moo_compiler_t moo_compiler_t;
 
 #define MOO_ERRMSG_CAPA (2048)
 
+enum moo_sbuf_id_t
+{
+	MOO_SBUF_ID_TMP    = 0,
+	MOO_SBUF_ID_SYNERR = 1
+	/* more? */
+};
+
+
 struct moo_t
 {
 	moo_mmgr_t*  mmgr;

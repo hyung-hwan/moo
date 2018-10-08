@@ -231,6 +231,19 @@ class Socket(Object) from 'sck'
 	## the internal representation used by various modules. (e.g. sck)
 	var(#get) handle := -1.
 
+	## TODO: generate these family and type from the C header 
+	pooldic Family
+	{
+		INET := 2.
+		INET6 := 10.
+	}
+
+	pooldic Type
+	{
+		STREAM := 1.
+		DGRAM  := 2.
+	}
+
 	method(#primitive) open(family, type, proto).
 	## map the open primitive again with a different name for strict internal use only.
 	## this method is supposed to be used to handle an accepted socket in server sockets.
@@ -282,19 +295,6 @@ class Socket(Object) from 'sck'
 	{
 		## do nothing.
 	}
-}
-
-(* TODO: generate these family and type from the C header *)
-pooldic Socket.Family
-{
-	INET := 2.
-	INET6 := 10.
-}
-
-pooldic Socket.Type
-{
-	STREAM := 1.
-	DGRAM  := 2.
 }
 
 class SyncSocket(Socket)

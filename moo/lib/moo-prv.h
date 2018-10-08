@@ -666,6 +666,7 @@ struct moo_compiler_t
 
 	/* syntax error information */
 	moo_synerr_t synerr;
+	moo_ooch_t synerr_tgtbuf[256];
 
 	/* temporary space used when dealing with an illegal character */
 	moo_ooch_t ilchr;

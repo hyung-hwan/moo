@@ -837,15 +837,15 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 
 	/* compose a full primitive function identifier to VM's string buffer.
 	 *   pfid => mod->name + '.' + pfname */
-	if (moo_copyoocstrtosbuf(moo, mod->name, 0) <= -1 ||
-	    moo_concatoocstrtosbuf(moo, dot, 0) <= -1 ||
-	    moo_concatoocstrtosbuf(moo, pfname, 0) <=  -1) 
+	if (moo_copyoocstrtosbuf(moo, mod->name, MOO_SBUF_TMP) <= -1 ||
+	    moo_concatoocstrtosbuf(moo, dot, MOO_SBUF_TMP) <= -1 ||
+	    moo_concatoocstrtosbuf(moo, pfname, MOO_SBUF_TMP) <=  -1) 
 	{
 		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - VM memory shortage\n", mthname, _class->name);
 		return -1;
 	}
 
-	pfidsym = (moo_oop_char_t)moo_makesymbol (moo, moo->sbuf[0].ptr, moo->sbuf[0].len);
+	pfidsym = (moo_oop_char_t)moo_makesymbol(moo, moo->sbuf[MOO_SBUF_TMP].ptr, moo->sbuf[MOO_SBUF_TMP].len);
 	if (!pfidsym) 
 	{
 		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - symbol instantiation failure\n", mthname, _class->name);
