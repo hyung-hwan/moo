@@ -472,8 +472,9 @@ enum moo_pragma_flag_t
 enum moo_cunit_type_t
 {
 	MOO_CUNIT_BLANK = 0,
+	MOO_CUNIT_POOLDIC,
 	MOO_CUNIT_CLASS,
-	MOO_CUNIT_POOLDIC
+	MOO_CUNIT_INTERFACE
 };
 typedef enum moo_cunit_type_t moo_cunit_type_t;
 
@@ -634,6 +635,26 @@ struct moo_cunit_class_t
 
 	moo_pooldic_import_data_t pdimp;
 	moo_method_data_t mth;
+};
+
+typedef struct moo_cunit_interface_t moo_cunit_interface_t;
+struct moo_cunit_interface_t
+{
+	MOO_CUNIT_HEADER;
+
+	moo_oop_class_t self_oop;
+	moo_oop_t super_oop; /* this may be nil. so the type is moo_oop_t */
+	moo_oop_nsdic_t ns_oop;
+	moo_oocs_t fqn;
+	moo_oocs_t name;
+	moo_oow_t fqn_capa;
+	moo_ioloc_t fqn_loc;
+
+	moo_oop_nsdic_t superns_oop;
+	moo_oocs_t superfqn;
+	moo_oocs_t supername;
+	moo_oow_t superfqn_capa;
+	moo_ioloc_t superfqn_loc;
 };
 
 struct moo_compiler_t

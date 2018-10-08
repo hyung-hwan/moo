@@ -247,8 +247,10 @@ enum voca_id_t
 };
 typedef enum voca_id_t voca_id_t;
 
-static int compile_class_definition (moo_t* moo, int class_type);
 static int compile_pooldic_definition (moo_t* moo);
+static int compile_interface_definition (moo_t* moo);
+static int compile_class_definition (moo_t* moo, int class_type);
+
 static int compile_block_statement (moo_t* moo);
 static int compile_method_statement (moo_t* moo);
 static int compile_method_expression (moo_t* moo, int pop);
@@ -4218,8 +4220,7 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 			}
 		}
 
-		if (moo->c->cunit->cunit_type != MOO_CUNIT_CLASS ||
-		    !((moo_cunit_class_t*)moo->c->cunit)->self_oop)
+		if (moo->c->cunit->cunit_type != MOO_CUNIT_CLASS || !((moo_cunit_class_t*)moo->c->cunit)->self_oop)
 		{
 			/* self is not usable when it's not compiling in a class.
 			 * a pooldic definition cannot contain subdictionaries.
@@ -8130,6 +8131,12 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 			GET_TOKEN (moo);
 			if (compile_class_definition(moo, CLASS_TYPE_EXTEND) <= -1) return -1;
 		}
+		else if (is_token_word(moo, VOCA_INTERFACE))
+		{
+			/* interface nested inside another class definition */
+			GET_TOKEN (moo);
+			if (compile_interface_definition(moo) <= -1) return -1;
+		}
 		else break;
 	}
 	while (1);
@@ -8154,6 +8161,29 @@ static int compile_class_definition (moo_t* moo, int class_type)
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 
 	n = __compile_class_definition (moo, class_type);
+
+	MOO_ASSERT (moo, moo->c->balit.count == 0);
+	MOO_ASSERT (moo, moo->c->arlit.count == 0);
+
+	pop_cunit (moo);
+	return n;
+}
+
+static int __compile_interface_definition (moo_t* moo)
+{
+	return 0;
+}
+
+static int compile_interface_definition (moo_t* moo)
+{
+	int n;
+
+	if (!push_cunit(moo, MOO_CUNIT_INTERFACE)) return -1;
+
+	MOO_ASSERT (moo, moo->c->balit.count == 0);
+	MOO_ASSERT (moo, moo->c->arlit.count == 0);
+
+	n = __compile_interface_definition (moo);
 
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
@@ -8189,19 +8219,19 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 		case MOO_IOTOK_RADNUMLIT:
 		{
 			moo_oop_t lit;
-			lit = string_to_num (moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT);
+			lit = string_to_num(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT);
 			if (rdonly && lit && MOO_OOP_IS_POINTER(lit)) MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
 			return lit;
 		}
 
 		case MOO_IOTOK_SYMLIT:
 			/* a symbol is always set with RDONLY. no additional check is needed here */
-			return moo_makesymbol (moo, TOKEN_NAME_PTR(moo) + 1, TOKEN_NAME_LEN(moo) - 1);
+			return moo_makesymbol(moo, TOKEN_NAME_PTR(moo) + 1, TOKEN_NAME_LEN(moo) - 1);
 
 		case MOO_IOTOK_STRLIT:
 		{
 			moo_oop_t lit;
-			lit = moo_instantiate (moo, moo->_string, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
+			lit = moo_instantiate(moo, moo->_string, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
 			if (rdonly && lit)
 			{
 				MOO_ASSERT (moo, MOO_OOP_IS_POINTER(lit));
@@ -8548,17 +8578,17 @@ static int compile_stream (moo_t* moo)
 			GET_TOKEN (moo);
 			if (compile_class_definition(moo, CLASS_TYPE_NORMAL) <= -1) return -1;
 		}
-		else if (is_token_word(moo, VOCA_INTERFACE))
-		{
-			/* interface InterfaceName { } */
-			GET_TOKEN (moo);
-			if (compile_class_definition(moo, CLASS_TYPE_INTERFACE) <= -1) return -1;
-		}
 		else if (is_token_word(moo, VOCA_EXTEND))
 		{
 			/* extend Selfclass {} */
 			GET_TOKEN (moo);
 			if (compile_class_definition(moo, CLASS_TYPE_EXTEND) <= -1) return -1;
+		}
+		else if (is_token_word(moo, VOCA_INTERFACE))
+		{
+			/* interface InterfaceName { } */
+			GET_TOKEN (moo);
+			if (compile_interface_definition(moo) <= -1) return -1;
 		}
 		else if (is_token_word(moo, VOCA_POOLDIC))
 		{
@@ -8684,11 +8714,16 @@ static moo_cunit_t* push_cunit (moo_t* moo, moo_cunit_type_t type)
 
 	switch (type)
 	{
+		case MOO_CUNIT_POOLDIC:
+			size = MOO_SIZEOF(moo_cunit_pooldic_t);
+			break;
+
 		case MOO_CUNIT_CLASS:
 			size = MOO_SIZEOF(moo_cunit_class_t);
 			break;
-		case MOO_CUNIT_POOLDIC:
-			size = MOO_SIZEOF(moo_cunit_pooldic_t);
+
+		case MOO_CUNIT_INTERFACE:
+			size = MOO_SIZEOF(moo_cunit_interface_t);
 			break;
 
 		default:
@@ -8705,6 +8740,15 @@ static moo_cunit_t* push_cunit (moo_t* moo, moo_cunit_type_t type)
 
 	switch (type)
 	{
+		case MOO_CUNIT_POOLDIC:
+		{
+			/*moo_cunit_pooldic_t* pd;
+			pd = (moo_cunit_pooldic_t*)cunit;*/
+			/* all fields are 0s or NULLs */
+			/* nothing to do */
+			break;
+		}
+
 		case MOO_CUNIT_CLASS:
 		{
 			moo_cunit_class_t* c;
@@ -8714,14 +8758,16 @@ static moo_cunit_t* push_cunit (moo_t* moo, moo_cunit_type_t type)
 			break;
 		}
 
-		case MOO_CUNIT_POOLDIC:
+		case MOO_CUNIT_INTERFACE:
 		{
-			moo_cunit_pooldic_t* pd;
-			pd = (moo_cunit_pooldic_t*)cunit;
+			/*moo_cunit_interface_t* ifce;
+			ifce = (moo_cunit_interface_t*)cunit;*/
 			/* all fields are 0s or NULLs */
-			/* nothing to do */
 			break;
 		}
+
+		default:
+			break;
 	}
 	return cunit;
 }
@@ -8737,6 +8783,14 @@ static void pop_cunit (moo_t* moo)
 
 	switch (cunit->cunit_type)
 	{
+		case MOO_CUNIT_POOLDIC:
+		{
+			moo_cunit_pooldic_t* pd;
+			pd = (moo_cunit_pooldic_t*)cunit;
+			if (pd->fqn.ptr) moo_freemem (moo, pd->fqn.ptr);
+			break;
+		}
+
 		case MOO_CUNIT_CLASS:
 		{
 			moo_oow_t i;
@@ -8759,11 +8813,14 @@ static void pop_cunit (moo_t* moo)
 			break;
 		}
 
-		case MOO_CUNIT_POOLDIC:
+		case MOO_CUNIT_INTERFACE:
 		{
-			moo_cunit_pooldic_t* pd;
-			pd = (moo_cunit_pooldic_t*)cunit;
-			if (pd->fqn.ptr) moo_freemem (moo, pd->fqn.ptr);
+			moo_cunit_interface_t* ifce;
+			ifce = (moo_cunit_interface_t*)cunit;
+
+			if (ifce->fqn.ptr) moo_freemem (moo, ifce->fqn.ptr);
+			if (ifce->superfqn.ptr) moo_freemem (moo, ifce->superfqn.ptr);
+
 			break;
 		}
 
