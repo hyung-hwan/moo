@@ -74,6 +74,7 @@ class X11(Object) from 'x11'
 	method __destroy_window(window_handle)
 	{
 		| w |
+###('DESTROY ' & window_handle asString) dump.
 		w := self _destroy_window(window_handle).
 		if (w notError) { self.window_registrar removeKey: window_handle }
 	}
@@ -657,21 +658,17 @@ extend X11
 	{
 		| widget mthname |
 
-		widget := self.window_registrar at: llevent window.
-		if (widget isError)
-		{
+		widget := self.window_registrar at: llevent window ifAbsent: [
 			System logNl: 'Event on unknown widget - ' & (llevent window asString).
 			^nil
-		}.
+		].
 
-		mthname := self.llevent_blocks at: llevent type.
-		if (mthname isError)
-		{
-			System logNl: 'Uknown event type ' & (llevent type asString).
+		mthname := self.llevent_blocks at: llevent type ifAbsent: [
+			System logNl: 'Unknown event type ' & (llevent type asString).
 			^nil
-		}.
+		].
 
-		^self perform (mthname, llevent, widget).
+		^self perform(mthname, llevent, widget).
 	}
 
 	method __handle_notify: llevent on: widget
