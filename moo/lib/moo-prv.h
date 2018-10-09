@@ -642,19 +642,14 @@ struct moo_cunit_interface_t
 {
 	MOO_CUNIT_HEADER;
 
-	moo_oop_class_t self_oop;
-	moo_oop_t super_oop; /* this may be nil. so the type is moo_oop_t */
+	moo_oop_interface_t self_oop;
 	moo_oop_nsdic_t ns_oop;
 	moo_oocs_t fqn;
 	moo_oocs_t name;
 	moo_oow_t fqn_capa;
 	moo_ioloc_t fqn_loc;
 
-	moo_oop_nsdic_t superns_oop;
-	moo_oocs_t superfqn;
-	moo_oocs_t supername;
-	moo_oow_t superfqn_capa;
-	moo_ioloc_t superfqn_loc;
+	moo_method_data_t mth;
 };
 
 struct moo_compiler_t

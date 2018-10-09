@@ -132,7 +132,7 @@ static kernel_class_info_t kernel_classes[] =
 	  { 'I','n','t','e','r','f','a','c','e' },
 	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
 	  0,
-	  MOO_CLASS_NAMED_INSTVARS,
+	  MOO_INTERFACE_NAMED_INSTVARS,
 	  1,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _interface) },

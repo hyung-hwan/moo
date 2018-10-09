@@ -45,7 +45,7 @@ class MyObject(Object)
 			'insufficient data for encoding conversion'
 			'buffer full'
 		).
-		
+
 		synerrmsgs := #(
 			'no error'
 			'illegal character'
@@ -76,10 +76,10 @@ class MyObject(Object)
 			'integer expected'
 			'primitive: expected'
 			'wrong directive'
+			'wrong name'
+			'duplicate name'
 			'undefined class'
-			'duplicate class'
 			'contradictory class definition'
-			'wrong class name'
 			'invalid non-pointer instance size'
 			'prohibited inheritance'
 			'variable declaration not allowed'
@@ -111,13 +111,12 @@ class MyObject(Object)
 			'wrong primitive function number'
 			'wrong primitive function identifier'
 			'wrong primitive function argument definition'
-			'wrong module name'
 			'failed to import module'
 			'#include error'
 			'wrong pragma name'
 			'wrong namespace name'
-			'wrong pool dictionary name'
-			'duplicate pool dictionary name'
+			'wrong pooldicimport name'
+			'duplicate pooldicimport name'
 			'literal expected'
 			'break or continue not within a loop'
 			'break or continue within a block'

@@ -3085,40 +3085,60 @@ static int clone_keyword (moo_t* moo, const moo_oocs_t* name, moo_oow_t* offset)
 	return 0;
 }
 
-static int add_method_name_fragment (moo_t* moo, const moo_oocs_t* name)
+static int add_method_name_fragment (moo_t* moo, moo_method_data_t* mth, const moo_oocs_t* name)
 {
 	/* method name fragments are concatenated without any delimiters */
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-	return copy_string_to (moo, name, &cc->mth.name, &cc->mth.name_capa, 1, '\0');
+	return copy_string_to (moo, name, &mth->name, &mth->name_capa, 1, '\0');
 }
 
 static int method_exists (moo_t* moo, const moo_oocs_t* name)
 {
-	/* check if the current class contains a method of the given name */
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-	if (cc->mth.type == MOO_METHOD_DUAL)
+	if (moo->c->cunit->cunit_type == MOO_CUNIT_INTERFACE)
 	{
-		return moo_lookupdic(moo, cc->self_oop->mthdic[0], name) != MOO_NULL ||
-		       moo_lookupdic(moo, cc->self_oop->mthdic[1], name) != MOO_NULL;
+/* TODO: remove duplicate code */
+		moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
+
+		if (ifce->mth.type == MOO_METHOD_DUAL)
+		{
+			return moo_lookupdic(moo, ifce->self_oop->mthdic[0], name) != MOO_NULL ||
+			       moo_lookupdic(moo, ifce->self_oop->mthdic[1], name) != MOO_NULL;
+		}
+		else
+		{
+			MOO_ASSERT (moo, ifce->mth.type < MOO_COUNTOF(ifce->self_oop->mthdic));
+			return moo_lookupdic(moo, ifce->self_oop->mthdic[ifce->mth.type], name) != MOO_NULL;
+		}
 	}
 	else
 	{
-		MOO_ASSERT (moo, cc->mth.type < MOO_COUNTOF(cc->self_oop->mthdic));
-		return moo_lookupdic(moo, cc->self_oop->mthdic[cc->mth.type], name) != MOO_NULL;
+		/* this function must be called from the inteface or the class context only */
+		MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_CLASS);
+
+		/* check if the current class contains a method of the given name */
+		moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+		if (cc->mth.type == MOO_METHOD_DUAL)
+		{
+			return moo_lookupdic(moo, cc->self_oop->mthdic[0], name) != MOO_NULL ||
+			       moo_lookupdic(moo, cc->self_oop->mthdic[1], name) != MOO_NULL;
+		}
+		else
+		{
+			MOO_ASSERT (moo, cc->mth.type < MOO_COUNTOF(cc->self_oop->mthdic));
+			return moo_lookupdic(moo, cc->self_oop->mthdic[cc->mth.type], name) != MOO_NULL;
+		}
 	}
 }
 
-static int add_temporary_variable (moo_t* moo, const moo_oocs_t* name)
+static int add_temporary_variable (moo_t* moo, moo_method_data_t* mth, const moo_oocs_t* name)
 {
 	/* temporary variable names are added to the string with leading
 	 * space if it's not the first variable */
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-	return copy_string_to(moo, name, &cc->mth.tmprs, &cc->mth.tmprs_capa, 1, ' ');
+	return copy_string_to(moo, name, &mth->tmprs, &mth->tmprs_capa, 1, ' ');
 }
 
-static MOO_INLINE int find_temporary_variable (moo_t* moo, const moo_oocs_t* name, moo_oow_t* xindex)
+static MOO_INLINE int find_temporary_variable (moo_t* moo, moo_method_data_t* mth, const moo_oocs_t* name, moo_oow_t* xindex)
 {
-	return find_word_in_string(&((moo_cunit_class_t*)moo->c->cunit)->mth.tmprs, name, xindex);
+	return find_word_in_string(&mth->tmprs, name, xindex);
 }
 
 static moo_oop_nsdic_t add_namespace (moo_t* moo, moo_oop_nsdic_t dic, const moo_oocs_t* name)
@@ -3306,7 +3326,7 @@ static int import_pool_dictionary (moo_t* moo, moo_oop_nsdic_t ns_oop, const moo
 	ass = moo_lookupdic(moo, (moo_oop_dic_t)ns_oop, tok_lastseg);
 	if (!ass || MOO_CLASSOF(moo, ass->value) != moo->_pool_dictionary)
 	{
-		moo_setsynerr (moo, MOO_SYNERR_POOLDICINVAL, tok_loc, tok_name);
+		moo_setsynerr (moo, MOO_SYNERR_PDIMPINVAL, tok_loc, tok_name);
 		return -1;
 	}
 
@@ -3315,7 +3335,7 @@ static int import_pool_dictionary (moo_t* moo, moo_oop_nsdic_t ns_oop, const moo
 	{
 		if ((moo_oop_dic_t)ass->value == cc->pdimp.oops[i])
 		{
-			moo_setsynerr (moo, MOO_SYNERR_POOLDICDUPL, tok_loc, tok_name);
+			moo_setsynerr (moo, MOO_SYNERR_PDIMPDUPL, tok_loc, tok_name);
 			return -1;
 		}
 	}
@@ -3685,20 +3705,18 @@ static int compile_class_level_imports (moo_t* moo)
 	return 0;
 }
 
-static int compile_unary_method_name (moo_t* moo)
+static int compile_unary_method_name (moo_t* moo, moo_method_data_t* mth)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	MOO_ASSERT (moo, mth->name.len == 0);
+	MOO_ASSERT (moo, mth->tmpr_nargs == 0);
 
-	MOO_ASSERT (moo, cc->mth.name.len == 0);
-	MOO_ASSERT (moo, cc->mth.tmpr_nargs == 0);
-
-	if (add_method_name_fragment(moo, TOKEN_NAME(moo)) <= -1) return -1;
+	if (add_method_name_fragment(moo, mth, TOKEN_NAME(moo)) <= -1) return -1;
 	GET_TOKEN (moo);
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
 		/* this is a procedural style method */
-		MOO_ASSERT (moo, cc->mth.tmpr_nargs == 0);
+		MOO_ASSERT (moo, mth->tmpr_nargs == 0);
 
 		GET_TOKEN (moo);
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
@@ -3712,14 +3730,14 @@ static int compile_unary_method_name (moo_t* moo)
 					return -1;
 				}
 
-				if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
+				if (find_temporary_variable(moo, mth, TOKEN_NAME(moo), MOO_NULL) >= 0)
 				{
 					moo_setsynerr (moo, MOO_SYNERR_ARGNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
-				if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
-				cc->mth.tmpr_nargs++;
+				if (add_temporary_variable(moo, mth, TOKEN_NAME(moo)) <= -1) return -1;
+				mth->tmpr_nargs++;
 				GET_TOKEN (moo); 
 
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN) break;
@@ -3742,14 +3760,12 @@ static int compile_unary_method_name (moo_t* moo)
 	return 0;
 }
 
-static int compile_binary_method_name (moo_t* moo)
+static int compile_binary_method_name (moo_t* moo, moo_method_data_t* mth)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	MOO_ASSERT (moo, mth->name.len == 0);
+	MOO_ASSERT (moo, mth->tmpr_nargs == 0);
 
-	MOO_ASSERT (moo, cc->mth.name.len == 0);
-	MOO_ASSERT (moo, cc->mth.tmpr_nargs == 0);
-
-	if (add_method_name_fragment(moo, TOKEN_NAME(moo)) <= -1) return -1;
+	if (add_method_name_fragment(moo, mth, TOKEN_NAME(moo)) <= -1) return -1;
 	GET_TOKEN (moo);
 
 	/* collect the argument name */
@@ -3760,16 +3776,16 @@ static int compile_binary_method_name (moo_t* moo)
 		return -1;
 	}
 
-	MOO_ASSERT (moo, cc->mth.tmpr_nargs == 0);
+	MOO_ASSERT (moo, mth->tmpr_nargs == 0);
 
 	/* no duplication check is performed against class-level variable names.
 	 * a duplcate name will shade a previsouly defined variable. */
-	if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
-	cc->mth.tmpr_nargs++;
+	if (add_temporary_variable(moo, mth, TOKEN_NAME(moo)) <= -1) return -1;
+	mth->tmpr_nargs++;
 
-	MOO_ASSERT (moo, cc->mth.tmpr_nargs == 1);
+	MOO_ASSERT (moo, mth->tmpr_nargs == 1);
 	/* this check should not be not necessary
-	if (cc->mth.tmpr_nargs > MAX_CODE_NARGS)
+	if (mth->tmpr_nargs > MAX_CODE_NARGS)
 	{
 		moo_setsynerr (moo, MOO_SYNERR_ARGFLOOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
@@ -3780,16 +3796,14 @@ static int compile_binary_method_name (moo_t* moo)
 	return 0;
 }
 
-static int compile_keyword_method_name (moo_t* moo)
+static int compile_keyword_method_name (moo_t* moo, moo_method_data_t* mth)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-
-	MOO_ASSERT (moo, cc->mth.name.len == 0);
-	MOO_ASSERT (moo, cc->mth.tmpr_nargs == 0);
+	MOO_ASSERT (moo, mth->name.len == 0);
+	MOO_ASSERT (moo, mth->tmpr_nargs == 0);
 
 	do 
 	{
-		if (add_method_name_fragment(moo, TOKEN_NAME(moo)) <= -1) return -1;
+		if (add_method_name_fragment(moo, mth, TOKEN_NAME(moo)) <= -1) return -1;
 
 		GET_TOKEN (moo);
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT) 
@@ -3799,14 +3813,14 @@ static int compile_keyword_method_name (moo_t* moo)
 			return -1;
 		}
 
-		if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
+		if (find_temporary_variable(moo, mth, TOKEN_NAME(moo), MOO_NULL) >= 0)
 		{
 			moo_setsynerr (moo, MOO_SYNERR_ARGNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
-		cc->mth.tmpr_nargs++;
+		if (add_temporary_variable(moo, mth, TOKEN_NAME(moo)) <= -1) return -1;
+		mth->tmpr_nargs++;
 
 		GET_TOKEN (moo);
 	} 
@@ -3815,7 +3829,7 @@ static int compile_keyword_method_name (moo_t* moo)
 	return 0;
 }
 
-static int compile_method_name (moo_t* moo)
+static int compile_method_name (moo_t* moo, moo_method_data_t* mth)
 {
 	/* 
 	 * method-name := unary-method-name | binary-method-name | keyword-method-name
@@ -3825,24 +3839,23 @@ static int compile_method_name (moo_t* moo)
 	 * selector-argument := identifier
 	 * unary-selector := identifier
 	 */
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	int n;
 
-	MOO_ASSERT (moo, cc->mth.tmpr_count == 0);
+	MOO_ASSERT (moo, mth->tmpr_count == 0);
 
-	cc->mth.name_loc = moo->c->tok.loc;
+	mth->name_loc = moo->c->tok.loc;
 	switch (TOKEN_TYPE(moo))
 	{
 		case MOO_IOTOK_IDENT:
-			n = compile_unary_method_name(moo);
+			n = compile_unary_method_name(moo, mth);
 			break;
 
 		case MOO_IOTOK_BINSEL:
-			n = compile_binary_method_name(moo);
+			n = compile_binary_method_name(moo, mth);
 			break;
 
 		case MOO_IOTOK_KEYWORD:
-			n = compile_keyword_method_name(moo);
+			n = compile_keyword_method_name(moo, mth);
 			break;
 
 		default:
@@ -3853,25 +3866,25 @@ static int compile_method_name (moo_t* moo)
 
 	if (n >= 0)
 	{
-		if (method_exists(moo, &cc->mth.name)) 
+		if (method_exists(moo, &mth->name)) 
  		{
-			moo_setsynerr (moo, MOO_SYNERR_MTHNAMEDUPL, &cc->mth.name_loc, &cc->mth.name);
+			moo_setsynerr (moo, MOO_SYNERR_MTHNAMEDUPL, &mth->name_loc, &mth->name);
 			return -1;
 		}
 
 		/* compile_unary_method_name() returns 9999 if the name is followed by () */
-		if (cc->mth.variadic && n != 9999)
+		if (mth->variadic && n != 9999)
 		{
-			moo_setsynerr (moo, MOO_SYNERR_VARIADMTHINVAL, &cc->mth.name_loc, &cc->mth.name);
+			moo_setsynerr (moo, MOO_SYNERR_VARIADMTHINVAL, &mth->name_loc, &mth->name);
 			return -1;
 		}
 	}
 
-	MOO_ASSERT (moo, cc->mth.tmpr_nargs < MAX_CODE_NARGS);
+	MOO_ASSERT (moo, mth->tmpr_nargs < MAX_CODE_NARGS);
 	/* the total number of temporaries is equal to the number of 
 	 * arguments after having processed the message pattern. it's because
 	 * moo treats arguments the same as temporaries */
-	cc->mth.tmpr_count = cc->mth.tmpr_nargs;
+	mth->tmpr_count = mth->tmpr_nargs;
 	return n;
 }
 
@@ -3897,13 +3910,13 @@ static int compile_method_temporaries (moo_t* moo)
 		 * or even a class name in such as case, it shadows the class level variable
 		 * name or the class name. however, it can't be the same as another temporary 
 		 * variable */
-		if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
+		if (find_temporary_variable(moo, &cc->mth, TOKEN_NAME(moo), MOO_NULL) >= 0)
 		{
 			moo_setsynerr (moo, MOO_SYNERR_TMPRNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
+		if (add_temporary_variable(moo, &cc->mth, TOKEN_NAME(moo)) <= -1) return -1;
 		cc->mth.tmpr_count++;
 
 		if (cc->mth.tmpr_count > MAX_CODE_NARGS)
@@ -4313,7 +4326,7 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 		{
 			/* the current class being compiled has been instantiated.
 			 * look up in the temporary variable list if compiling in a method */
-			if (cc->mth.active && find_temporary_variable(moo, name, &index) >= 0)
+			if (cc->mth.active && find_temporary_variable(moo, &cc->mth, name, &index) >= 0)
 			{
 				var->type = (index < cc->mth.tmpr_nargs)? VAR_ARGUMENT: VAR_TEMPORARY;
 				var->pos = index;
@@ -4426,13 +4439,13 @@ static int compile_block_temporaries (moo_t* moo)
 	GET_TOKEN (moo);
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT) 
 	{
-		if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
+		if (find_temporary_variable(moo, &cc->mth, TOKEN_NAME(moo), MOO_NULL) >= 0)
 		{
 			moo_setsynerr (moo, MOO_SYNERR_TMPRNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
-		if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
+		if (add_temporary_variable(moo, &cc->mth, TOKEN_NAME(moo)) <= -1) return -1;
 		cc->mth.tmpr_count++;
 		if (cc->mth.tmpr_count > MAX_CODE_NTMPRS)
 		{
@@ -4524,13 +4537,13 @@ static int compile_block_expression (moo_t* moo)
 			}
 
 /* TODO: check conflicting names as well */
-			if (find_temporary_variable(moo, TOKEN_NAME(moo), MOO_NULL) >= 0)
+			if (find_temporary_variable(moo, &cc->mth, TOKEN_NAME(moo), MOO_NULL) >= 0)
 			{
 				moo_setsynerr (moo, MOO_SYNERR_BLKARGNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
 			}
 
-			if (add_temporary_variable(moo, TOKEN_NAME(moo)) <= -1) return -1;
+			if (add_temporary_variable(moo, &cc->mth, TOKEN_NAME(moo)) <= -1) return -1;
 			cc->mth.tmpr_count++;
 			if (cc->mth.tmpr_count > MAX_CODE_NARGS)
 			{
@@ -6692,10 +6705,8 @@ static void reset_method_data (moo_t* moo, moo_method_data_t* mth)
 	mth->code.len = 0;
 }
 
-static int process_method_modifiers (moo_t* moo)
+static int process_method_modifiers (moo_t* moo, moo_method_data_t* mth)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-
 	GET_TOKEN (moo);
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
@@ -6705,56 +6716,56 @@ static int process_method_modifiers (moo_t* moo)
 			if (is_token_symbol(moo, VOCA_CLASS_S))
 			{
 				/* method(#class) */
-				if (cc->mth.type == MOO_METHOD_CLASS || cc->mth.type == MOO_METHOD_DUAL)
+				if (mth->type == MOO_METHOD_CLASS || mth->type == MOO_METHOD_DUAL)
 				{
 					moo_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
-				cc->mth.type = MOO_METHOD_CLASS;
+				mth->type = MOO_METHOD_CLASS;
 				GET_TOKEN (moo);
 			}
 			else if (is_token_symbol(moo, VOCA_DUAL_S))
 			{
 				/* method(#dual) */
-				if (cc->mth.type == MOO_METHOD_CLASS || cc->mth.type == MOO_METHOD_DUAL)
+				if (mth->type == MOO_METHOD_CLASS || mth->type == MOO_METHOD_DUAL)
 				{
 					moo_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
-				cc->mth.type = MOO_METHOD_DUAL;
+				mth->type = MOO_METHOD_DUAL;
 				GET_TOKEN (moo);
 			}
 			else if (is_token_symbol(moo, VOCA_PRIMITIVE_S))
 			{
 				/* method(#primitive) */
-				if (cc->mth.primitive)
+				if (mth->primitive)
 				{
 					/* #primitive duplicate modifier */
 					moo_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
 
-				cc->mth.primitive = 1;
+				mth->primitive = 1;
 				GET_TOKEN (moo);
 			}
 			else if (is_token_symbol(moo, VOCA_LENIENT_S))
 			{
 				/* method(#lenient) */
-				if (cc->mth.lenient)
+				if (mth->lenient)
 				{
 					moo_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 					return -1;
 				}
-				cc->mth.lenient = 1;
+				mth->lenient = 1;
 				GET_TOKEN (moo);
 			}
 			else if (is_token_symbol(moo, VOCA_VARIADIC_S) ||
 					 is_token_symbol(moo, VOCA_LIBERAL_S))
 			{
 				/* method(#variadic) or method(#liberal) */
-				if (cc->mth.variadic)
+				if (mth->variadic)
 				{
 					/* #variadic duplicate modifier */
 					moo_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -6762,9 +6773,9 @@ static int process_method_modifiers (moo_t* moo)
 				}
 
 				if (is_token_symbol(moo, VOCA_LIBERAL_S))
-					cc->mth.variadic = MOO_METHOD_PREAMBLE_FLAG_LIBERAL;
+					mth->variadic = MOO_METHOD_PREAMBLE_FLAG_LIBERAL;
 				else
-					cc->mth.variadic = MOO_METHOD_PREAMBLE_FLAG_VARIADIC;
+					mth->variadic = MOO_METHOD_PREAMBLE_FLAG_VARIADIC;
 
 				GET_TOKEN (moo);
 			}
@@ -6942,15 +6953,17 @@ static int resolve_primitive_method (moo_t* moo)
 
 static int __compile_method_definition (moo_t* moo)
 {
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
 		/* process method modifiers  */
-		if (process_method_modifiers(moo) <= -1) return -1;
+		if (process_method_modifiers(moo, &cc->mth) <= -1) return -1;
 	}
 
-	if (compile_method_name(moo) <= -1) return -1;
+	if (compile_method_name(moo, &cc->mth) <= -1) return -1;
 
-	if (((moo_cunit_class_t*)moo->c->cunit)->mth.primitive)
+	if (cc->mth.primitive)
 	{
 		/* the primitive method doesn't have body */
 		if (resolve_primitive_method(moo) <= -1) return -1;
@@ -6991,10 +7004,10 @@ static int compile_method_definition (moo_t* moo)
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	int n;
 
-	/* clear data required to compile a method */
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 
+	/* clear data required to compile a method */
 	cc->mth.active = 1;
 	reset_method_data (moo, &cc->mth);
 
@@ -7013,7 +7026,7 @@ static int make_getter_method (moo_t* moo, const moo_oocs_t* name, const var_inf
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 
 	MOO_ASSERT (moo, cc->mth.name.len == 0);
-	if (add_method_name_fragment(moo, name) <= -1) return -1;
+	if (add_method_name_fragment(moo, &cc->mth, name) <= -1) return -1;
 
 	switch (var->type)
 	{
@@ -7062,8 +7075,8 @@ static int make_setter_method (moo_t* moo, const moo_oocs_t* name, const var_inf
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 
 	MOO_ASSERT (moo, cc->mth.name.len == 0);
-	if (add_method_name_fragment(moo, name) <= -1 ||
-	    add_method_name_fragment(moo, &colons) <= -1) return -1;
+	if (add_method_name_fragment(moo, &cc->mth, name) <= -1 ||
+	    add_method_name_fragment(moo, &cc->mth, &colons) <= -1) return -1;
 
 	switch (var->type)
 	{
@@ -7234,40 +7247,6 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 
 		cc->self_oop->initv[var_type] = tmp;
 	}
-
-	return 0;
-}
-
-static int make_defined_interface (moo_t* moo)
-{
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-	moo_oop_t tmp;
-
-/* TODO: instantiate differently... */
-	tmp = moo_instantiate(moo, moo->_class, MOO_NULL, 0);
-	if (!tmp) return -1;
-	cc->self_oop = (moo_oop_class_t)tmp;
-
-	tmp = moo_makesymbol(moo, cc->name.ptr, cc->name.len);
-	if (!tmp) return -1;
-	cc->self_oop->name = (moo_oop_char_t)tmp;
-
-	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
-	if (!tmp) return -1;
-	cc->self_oop->mthdic[MOO_METHOD_INSTANCE] = (moo_oop_dic_t)tmp;
-
-/* TOOD: good dictionary size */
-	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
-	if (!tmp) return -1;
-	cc->self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_dic_t)tmp;
-
-	if (!moo_putatdic(moo, (moo_oop_dic_t)cc->ns_oop, (moo_oop_t)cc->self_oop->name, (moo_oop_t)cc->self_oop)) return -1;
-	cc->self_oop->nsup = cc->ns_oop;
-
-	cc->self_oop->spec = MOO_SMOOI_TO_OOP(0);
-	cc->self_oop->selfspec = MOO_SMOOI_TO_OOP(0);
-
-/*  TODO: .......... */
 
 	return 0;
 }
@@ -7656,8 +7635,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 		if (process_class_modifiers(moo, &type_loc) <= -1) return -1;
 	}
 
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT &&
-	    TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
 	{
 		/* class name expected. */
 		moo_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -7675,7 +7653,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && is_restricted_word(TOKEN_NAME(moo)))
 	{
 		/* wrong class name */
-		moo_setsynerr (moo, MOO_SYNERR_CLASSNAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo), "invalid class name");
 		return -1;
 	}
 #endif
@@ -7792,7 +7770,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 				/* the object found with the name is not a class object 
 				 * or the the class object found is a fully defined kernel 
 				 * class object */
-				moo_setsynerr (moo, MOO_SYNERR_CLASSDUPL, &cc->fqn_loc, &cc->name);
+				moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEDUPL, &cc->fqn_loc, &cc->name, "duplicate class name");
 				return -1;
 			}
 
@@ -7818,8 +7796,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 			if (var.type != VAR_GLOBAL) goto unknown_superclass;
 			if (MOO_CLASSOF(moo, var.u.gbl->value) == moo->_class && MOO_OBJ_GET_FLAGS_KERNEL(var.u.gbl->value) != 1)
 			{
-				/* the value found must be a class and it must not be 
-				 * an incomplete internal class object. 
+				/* the value found must be a class and it must not be an incomplete internal class object. 
 				 *  0(non-kernel object)
 				 *  1(incomplete kernel object),
 				 *  2(complete kernel object) */
@@ -7878,7 +7855,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 				 * a period to a dash when mapping the module name to an
 				 * actual module file. disallowing a dash lowers confusion
 				 * when loading a module. */
-				moo_setsynerr (moo, MOO_SYNERR_MODNAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo), "invalid module name");
 				return -1;
 			}
 
@@ -8144,13 +8121,83 @@ static int compile_class_definition (moo_t* moo, int class_type)
 	return n;
 }
 
+static int __compile_method_signature (moo_t* moo)
+{
+	moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
+
+
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
+	{
+		/* process method modifiers  */
+		if (process_method_modifiers(moo, &ifce->mth) <= -1) return -1;
+	}
+
+	if (compile_method_name(moo, &ifce->mth) <= -1) return -1;
+
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
+	{
+		/* . expected */
+		moo_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+	GET_TOKEN (moo);
+	return 0;
+}
+
+static int compile_method_signature (moo_t* moo)
+{
+	moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
+	int n;
+
+	MOO_ASSERT (moo, moo->c->balit.count == 0);
+	MOO_ASSERT (moo, moo->c->arlit.count == 0);
+
+	ifce->mth.active = 1;
+	reset_method_data (moo, &ifce->mth);
+
+	n = __compile_method_signature(moo);
+
+	ifce->mth.active = 0;
+	return n;
+}
+
+
+static int make_defined_interface (moo_t* moo)
+{
+	moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
+	moo_oop_t tmp;
+
+/* TODO: instantiate differently... */
+	tmp = moo_instantiate(moo, moo->_interface, MOO_NULL, 0);
+	if (!tmp) return -1;
+	ifce->self_oop = (moo_oop_interface_t)tmp;
+
+	tmp = moo_makesymbol(moo, ifce->name.ptr, ifce->name.len);
+	if (!tmp) return -1;
+	ifce->self_oop->name = (moo_oop_char_t)tmp;
+
+	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
+	if (!tmp) return -1;
+	ifce->self_oop->mthdic[MOO_METHOD_INSTANCE] = (moo_oop_dic_t)tmp;
+
+/* TOOD: good dictionary size */
+	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
+	if (!tmp) return -1;
+	ifce->self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_dic_t)tmp;
+
+	if (!moo_putatdic(moo, (moo_oop_dic_t)ifce->ns_oop, (moo_oop_t)ifce->self_oop->name, (moo_oop_t)ifce->self_oop)) return -1;
+	ifce->self_oop->nsup = ifce->ns_oop;
+
+	return 0;
+}
+
 static int __compile_interface_definition (moo_t* moo)
 {
 	moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
 	moo_oop_association_t ass;
 
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT &&
-	    TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
 	{
 		/* interface name expected. */
 		moo_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
@@ -8168,7 +8215,7 @@ static int __compile_interface_definition (moo_t* moo)
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && is_restricted_word(TOKEN_NAME(moo)))
 	{
 		/* wrong class name */
-		moo_setsynerr (moo, MOO_SYNERR_CLASSNAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		moo_setsynerr (moo, MOO_SYNERR_NAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo), "invalid interface name");
 		return -1;
 	}
 #endif
@@ -8183,7 +8230,7 @@ static int __compile_interface_definition (moo_t* moo)
 	if (ifce->cunit_parent && ifce->cunit_parent->cunit_type == MOO_CUNIT_CLASS)
 	{
 		/* nested inside a class */
-		moo_cunit_interface_t* c = (moo_cunit_interface_t*)ifce->cunit_parent;
+		moo_cunit_class_t* c = (moo_cunit_class_t*)ifce->cunit_parent;
 		if ((moo_oop_t)c->self_oop->nsdic == moo->_nil)
 		{
 			/* attach a new namespace dictionary to the nsdic field of the class */
@@ -8206,67 +8253,16 @@ static int __compile_interface_definition (moo_t* moo)
 	ass = moo_lookupdic(moo, (moo_oop_dic_t)ifce->ns_oop, &ifce->name);
 	if (ass)
 	{
-		// The interface name already exists. An interface cannot be defined with an existing name
-		moo_setsynerr (moo, MOO_SYNERR_CLASSDUPL, &ifce->fqn_loc, &ifce->name); /* TODO: change the error code to MOO_SYNERR_IFCEDUPL? */
+		/* The interface name already exists. An interface cannot be defined with an existing name */
+		moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEDUPL, &ifce->fqn_loc, &ifce->name, "duplicate interface name");
 		return -1;
 	}
 
-	/* an interface doesn't inherit anything */
-	ifce->super_oop = moo->_nil;
-	
+
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
 	{
 		moo_setsynerr (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
-	}
-
-#if 0
-	MOO_ASSERT (moo, ifce->super_oop != MOO_NULL);
-	if (ifce->super_oop != moo->_nil)
-	{
-		/* adjust the instance variable count and the class instance variable
-		 * count to include that of a superclass */
-		moo_oop_class_t c;
-		moo_oow_t spec, self_spec;
-
-		c = (moo_oop_class_t)ifce->super_oop;
-		spec = MOO_OOP_TO_SMOOI(c->spec);
-		self_spec = MOO_OOP_TO_SMOOI(c->selfspec);
-
-		/* [NOTE] class variables are not inherited. 
-		 *        so no data about them are not transferred over */
-
-		if ((ifce->flags & CLASS_INDEXED) && ifce->indexed_type != MOO_OBJ_TYPE_OOP)
-		{
-			/* the class defined is a non-pointer object. */
-			if (MOO_CLASS_SPEC_INDEXED_TYPE(spec) == MOO_OBJ_TYPE_OOP && MOO_CLASS_SPEC_NAMED_INSTVARS(spec) > 0)
-			{
-				/* a non-pointer object cannot inherit from a pointer object with instance variables */
-				moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &ifce->fqn_loc, &ifce->fqn, 
-					"the non-pointer class %.*js cannot inherit from a pointer class defined with instance variables", 
-					ifce->fqn.len, ifce->fqn.ptr);
-				return -1;
-			}
-
-			/* NOTE: I don't mandate that the parent and the child be of the same type.
-			 *       Say, for a parent class(#byte(4)), a child can be defined to be
-			 *       class(#word(4)). */
-
-			if (ifce->non_pointer_instsize < MOO_CLASS_SPEC_NAMED_INSTVARS(spec))
-			{
-				moo_setsynerrbfmt (moo, MOO_SYNERR_NPINSTSIZEINVAL, &type_loc, MOO_NULL,
-					"the instance size(%zu) for the non-pointer class %.*js must not be less than the size(%zu) defined in the superclass ", 
-					ifce->non_pointer_instsize, ifce->fqn.len, ifce->fqn.ptr, (moo_oow_t)MOO_CLASS_SPEC_NAMED_INSTVARS(spec));
-				return -1;
-			}
-		}
-		else
-		{
-			/* the class defined is a pointer object or a variable-pointer object */
-			MOO_ASSERT (moo, ifce->non_pointer_instsize == 0); /* no such thing as class(#pointer(N)). so it must be 0 */
-			ifce->var[VAR_INSTANCE].total_count = MOO_CLASS_SPEC_NAMED_INSTVARS(spec);
-		}
-		ifce->var[VAR_CLASSINST].total_count = MOO_CLASS_SELFSPEC_CLASSINSTVARS(self_spec);
 	}
 
 	GET_TOKEN (moo);
@@ -8289,7 +8285,7 @@ static int __compile_interface_definition (moo_t* moo)
 		{
 			/* method definition in class definition */
 			GET_TOKEN (moo);
-			if (compile_method_definition(moo) <= -1) return -1;
+			if (compile_method_signature(moo) <= -1) return -1;
 		}
 		else break;
 	}
@@ -8300,7 +8296,7 @@ static int __compile_interface_definition (moo_t* moo)
 		moo_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
-#endif
+
 	GET_TOKEN (moo);
 	return 0;
 
@@ -8463,6 +8459,15 @@ static int __compile_pooldic_definition (moo_t* moo)
 		goto oops;
 	}
 
+#if 0
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && is_restricted_word(TOKEN_NAME(moo)))
+	{
+		/* wrong pooldic name */
+		moo_setsynerr (moo, MOO_SYNERR_NAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo), "invalid pooldic name");
+		return -1;
+	}
+#endif
+
 	/* [NOTE] TOKEN_NAME(moo) doesn't contain the full name if it's nested 
 	 *        inside a class. it is merely a name that appeared in the source
 	 *        code. 
@@ -8492,7 +8497,7 @@ static int __compile_pooldic_definition (moo_t* moo)
 	if (moo_lookupdic(moo, (moo_oop_dic_t)pd->ns_oop, &pd->name))
 	{
 		/* a conflicting entry has been found */
-		moo_setsynerr (moo, MOO_SYNERR_POOLDICDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo), "duplicate pooldic name");
 		goto oops;
 	}
 
@@ -8844,19 +8849,10 @@ static void gc_cunit_chain (moo_t* moo)
 				if (ifce->self_oop) 
 					ifce->self_oop = (moo_oop_class_t)moo_moveoop(moo, (moo_oop_t)ifce->self_oop);
 
-				if (ifce->super_oop)
-					ifce->super_oop = moo_moveoop(moo, ifce->super_oop);
-
 				if (ifce->ns_oop)
 				{
 					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)ifce->ns_oop);
 					ifce->ns_oop = (moo_oop_nsdic_t)x;
-				}
-
-				if (ifce->superns_oop)
-				{
-					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)ifce->superns_oop);
-					ifce->superns_oop = (moo_oop_nsdic_t)x;
 				}
 
 				break;
@@ -8977,8 +8973,6 @@ static void pop_cunit (moo_t* moo)
 			ifce = (moo_cunit_interface_t*)cunit;
 
 			if (ifce->fqn.ptr) moo_freemem (moo, ifce->fqn.ptr);
-			if (ifce->superfqn.ptr) moo_freemem (moo, ifce->superfqn.ptr);
-
 			break;
 		}
 

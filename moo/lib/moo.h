@@ -518,6 +518,10 @@ struct moo_dic_t
 typedef struct moo_nsdic_t moo_nsdic_t;
 typedef struct moo_nsdic_t* moo_oop_nsdic_t;
 
+#define MOO_INTERFACE_NAMED_INSTVARS 4
+typedef struct moo_interface_t moo_interface_t;
+typedef struct moo_interface_t* moo_oop_interface_t;
+
 #define MOO_CLASS_NAMED_INSTVARS 18
 typedef struct moo_class_t moo_class_t;
 typedef struct moo_class_t* moo_oop_class_t;
@@ -541,9 +545,7 @@ struct moo_interface_t
 	/* [0] - instance methods, MethodDictionary
 	 * [1] - class methods, MethodDictionary */
 	moo_oop_dic_t  mthdic[2];      
-
 	moo_oop_nsdic_t nsup; /* pointer to the upper namespace */
-	moo_oop_nsdic_t nsdic; /* dictionary used for namespacing - may be nil when there are no subitems underneath */
 };
 
 struct moo_class_t
@@ -1664,10 +1666,10 @@ enum moo_synerrnum_t
 	MOO_SYNERR_INTEGER,         /* integer expected */
 	MOO_SYNERR_PRIMITIVE,       /* primitive: expected */
 	MOO_SYNERR_DIRECTIVEINVAL,  /* wrong directive */
+	MOO_SYNERR_NAMEINVAL,       /* wrong name */
+	MOO_SYNERR_NAMEDUPL,        /* duplicate name */
 	MOO_SYNERR_CLASSUNDEF,      /* undefined class */
-	MOO_SYNERR_CLASSDUPL,       /* duplicate class */
 	MOO_SYNERR_CLASSCONTRA,     /* contradictory class */
-	MOO_SYNERR_CLASSNAMEINVAL,  /* wrong class name */
 	MOO_SYNERR_NPINSTSIZEINVAL, /* invalid non-pointer instance size */
 	MOO_SYNERR_INHERITBANNED,   /* prohibited inheritance */
 	MOO_SYNERR_VARDCLBANNED,    /* variable declaration not allowed */
@@ -1699,13 +1701,12 @@ enum moo_synerrnum_t
 	MOO_SYNERR_PFNUMINVAL,      /* wrong primitive function number */
 	MOO_SYNERR_PFIDINVAL,       /* wrong primitive function identifier */
 	MOO_SYNERR_PFARGDEFINVAL,   /* wrong primitive function argument definition */
-	MOO_SYNERR_MODNAMEINVAL,    /* wrong module name */
 	MOO_SYNERR_MODIMPFAIL,      /* failed to import module */
 	MOO_SYNERR_INCLUDE,         /* #include error */
 	MOO_SYNERR_PRAGMAINVAL,     /* wrong pragma name */
 	MOO_SYNERR_NAMESPACEINVAL,  /* wrong namespace name */
-	MOO_SYNERR_POOLDICINVAL,    /* wrong pool dictionary */
-	MOO_SYNERR_POOLDICDUPL,     /* duplicate pool dictionary */
+	MOO_SYNERR_PDIMPINVAL,      /* wrong pooldic import name */
+	MOO_SYNERR_PDIMPDUPL,       /* duplicate pooldic import name */
 	MOO_SYNERR_LITERAL,         /* literal expected */
 	MOO_SYNERR_NOTINLOOP,       /* break or continue not within a loop */
 	MOO_SYNERR_INBLOCK,         /* break or continue within a block */

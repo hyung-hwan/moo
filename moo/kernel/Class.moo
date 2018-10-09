@@ -38,8 +38,8 @@ class(#pointer,#limited) Class(Apex)
 	method nsdic { ^self.nsdic }
 }
 
-
-class(#pointer,#limited) Interface(Class)
+class(#pointer,#limited) Interface(Apex)
 {
-### TODO: fill this class with methods
+	var name.
+	var instmthdic, classmthdic, nsup.
 }

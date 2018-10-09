@@ -1,5 +1,11 @@
 #include 'Moo.moo'.
 
+interface X11able
+{
+	method(#dual) abc.
+	method(#dual) def.
+}
+
 class X11(Object) from 'x11'
 {
 	## =====================================================================
@@ -46,6 +52,21 @@ class X11(Object) from 'x11'
 			y dump.
 		}
 	}
+
+(*
+TODO: TODO: compiler enhancement
+	class X11(Object)
+	{
+		class Rectangl(Object)
+		{
+		}
+	}
+	class XRect(X11.X11.Rectangl) -> X11 in X11.Rectangl is not the inner X11. as long as a period is found, the search begins at top.
+	{
+	}
+	----> should i support soemthign like ::X11.Rectangle and X11.Rectangle? ::X11.Rectangle alwasy from the top???
+	-----> or .X11.Rectangle -> to start search from the current name space???
+*)
 
 	method(#primitive,#liberal) _open_display(name).
 	method(#primitive) _close_display.

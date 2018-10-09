@@ -105,10 +105,10 @@ static moo_ooch_t synerrstr_25[] = {'i','d','e','n','t','i','f','i','e','r',' ',
 static moo_ooch_t synerrstr_26[] = {'i','n','t','e','g','e','r',' ','e','x','p','e','c','t','e','d','\0'};
 static moo_ooch_t synerrstr_27[] = {'p','r','i','m','i','t','i','v','e',':',' ','e','x','p','e','c','t','e','d','\0'};
 static moo_ooch_t synerrstr_28[] = {'w','r','o','n','g',' ','d','i','r','e','c','t','i','v','e','\0'};
-static moo_ooch_t synerrstr_29[] = {'u','n','d','e','f','i','n','e','d',' ','c','l','a','s','s','\0'};
-static moo_ooch_t synerrstr_30[] = {'d','u','p','l','i','c','a','t','e',' ','c','l','a','s','s','\0'};
-static moo_ooch_t synerrstr_31[] = {'c','o','n','t','r','a','d','i','c','t','o','r','y',' ','c','l','a','s','s',' ','d','e','f','i','n','i','t','i','o','n','\0'};
-static moo_ooch_t synerrstr_32[] = {'w','r','o','n','g',' ','c','l','a','s','s',' ','n','a','m','e','\0'};
+static moo_ooch_t synerrstr_29[] = {'w','r','o','n','g',' ','n','a','m','e','\0'};
+static moo_ooch_t synerrstr_30[] = {'d','u','p','l','i','c','a','t','e',' ','n','a','m','e','\0'};
+static moo_ooch_t synerrstr_31[] = {'u','n','d','e','f','i','n','e','d',' ','c','l','a','s','s','\0'};
+static moo_ooch_t synerrstr_32[] = {'c','o','n','t','r','a','d','i','c','t','o','r','y',' ','c','l','a','s','s',' ','d','e','f','i','n','i','t','i','o','n','\0'};
 static moo_ooch_t synerrstr_33[] = {'i','n','v','a','l','i','d',' ','n','o','n','-','p','o','i','n','t','e','r',' ','i','n','s','t','a','n','c','e',' ','s','i','z','e','\0'};
 static moo_ooch_t synerrstr_34[] = {'p','r','o','h','i','b','i','t','e','d',' ','i','n','h','e','r','i','t','a','n','c','e','\0'};
 static moo_ooch_t synerrstr_35[] = {'v','a','r','i','a','b','l','e',' ','d','e','c','l','a','r','a','t','i','o','n',' ','n','o','t',' ','a','l','l','o','w','e','d','\0'};
@@ -140,17 +140,16 @@ static moo_ooch_t synerrstr_60[] = {'t','o','o',' ','l','a','r','g','e',' ','a',
 static moo_ooch_t synerrstr_61[] = {'w','r','o','n','g',' ','p','r','i','m','i','t','i','v','e',' ','f','u','n','c','t','i','o','n',' ','n','u','m','b','e','r','\0'};
 static moo_ooch_t synerrstr_62[] = {'w','r','o','n','g',' ','p','r','i','m','i','t','i','v','e',' ','f','u','n','c','t','i','o','n',' ','i','d','e','n','t','i','f','i','e','r','\0'};
 static moo_ooch_t synerrstr_63[] = {'w','r','o','n','g',' ','p','r','i','m','i','t','i','v','e',' ','f','u','n','c','t','i','o','n',' ','a','r','g','u','m','e','n','t',' ','d','e','f','i','n','i','t','i','o','n','\0'};
-static moo_ooch_t synerrstr_64[] = {'w','r','o','n','g',' ','m','o','d','u','l','e',' ','n','a','m','e','\0'};
-static moo_ooch_t synerrstr_65[] = {'f','a','i','l','e','d',' ','t','o',' ','i','m','p','o','r','t',' ','m','o','d','u','l','e','\0'};
-static moo_ooch_t synerrstr_66[] = {'#','i','n','c','l','u','d','e',' ','e','r','r','o','r','\0'};
-static moo_ooch_t synerrstr_67[] = {'w','r','o','n','g',' ','p','r','a','g','m','a',' ','n','a','m','e','\0'};
-static moo_ooch_t synerrstr_68[] = {'w','r','o','n','g',' ','n','a','m','e','s','p','a','c','e',' ','n','a','m','e','\0'};
-static moo_ooch_t synerrstr_69[] = {'w','r','o','n','g',' ','p','o','o','l',' ','d','i','c','t','i','o','n','a','r','y',' ','n','a','m','e','\0'};
-static moo_ooch_t synerrstr_70[] = {'d','u','p','l','i','c','a','t','e',' ','p','o','o','l',' ','d','i','c','t','i','o','n','a','r','y',' ','n','a','m','e','\0'};
-static moo_ooch_t synerrstr_71[] = {'l','i','t','e','r','a','l',' ','e','x','p','e','c','t','e','d','\0'};
-static moo_ooch_t synerrstr_72[] = {'b','r','e','a','k',' ','o','r',' ','c','o','n','t','i','n','u','e',' ','n','o','t',' ','w','i','t','h','i','n',' ','a',' ','l','o','o','p','\0'};
-static moo_ooch_t synerrstr_73[] = {'b','r','e','a','k',' ','o','r',' ','c','o','n','t','i','n','u','e',' ','w','i','t','h','i','n',' ','a',' ','b','l','o','c','k','\0'};
-static moo_ooch_t synerrstr_74[] = {'w','h','i','l','e',' ','e','x','p','e','c','t','e','d','\0'};
+static moo_ooch_t synerrstr_64[] = {'f','a','i','l','e','d',' ','t','o',' ','i','m','p','o','r','t',' ','m','o','d','u','l','e','\0'};
+static moo_ooch_t synerrstr_65[] = {'#','i','n','c','l','u','d','e',' ','e','r','r','o','r','\0'};
+static moo_ooch_t synerrstr_66[] = {'w','r','o','n','g',' ','p','r','a','g','m','a',' ','n','a','m','e','\0'};
+static moo_ooch_t synerrstr_67[] = {'w','r','o','n','g',' ','n','a','m','e','s','p','a','c','e',' ','n','a','m','e','\0'};
+static moo_ooch_t synerrstr_68[] = {'w','r','o','n','g',' ','p','o','o','l','d','i','c','i','m','p','o','r','t',' ','n','a','m','e','\0'};
+static moo_ooch_t synerrstr_69[] = {'d','u','p','l','i','c','a','t','e',' ','p','o','o','l','d','i','c','i','m','p','o','r','t',' ','n','a','m','e','\0'};
+static moo_ooch_t synerrstr_70[] = {'l','i','t','e','r','a','l',' ','e','x','p','e','c','t','e','d','\0'};
+static moo_ooch_t synerrstr_71[] = {'b','r','e','a','k',' ','o','r',' ','c','o','n','t','i','n','u','e',' ','n','o','t',' ','w','i','t','h','i','n',' ','a',' ','l','o','o','p','\0'};
+static moo_ooch_t synerrstr_72[] = {'b','r','e','a','k',' ','o','r',' ','c','o','n','t','i','n','u','e',' ','w','i','t','h','i','n',' ','a',' ','b','l','o','c','k','\0'};
+static moo_ooch_t synerrstr_73[] = {'w','h','i','l','e',' ','e','x','p','e','c','t','e','d','\0'};
 static moo_ooch_t* synerrstr[] =
 {
 	synerrstr_0, synerrstr_1, synerrstr_2, synerrstr_3, synerrstr_4, synerrstr_5, synerrstr_6, synerrstr_7,
@@ -162,7 +161,7 @@ static moo_ooch_t* synerrstr[] =
 	synerrstr_48, synerrstr_49, synerrstr_50, synerrstr_51, synerrstr_52, synerrstr_53, synerrstr_54, synerrstr_55,
 	synerrstr_56, synerrstr_57, synerrstr_58, synerrstr_59, synerrstr_60, synerrstr_61, synerrstr_62, synerrstr_63,
 	synerrstr_64, synerrstr_65, synerrstr_66, synerrstr_67, synerrstr_68, synerrstr_69, synerrstr_70, synerrstr_71,
-	synerrstr_72, synerrstr_73, synerrstr_74 
+	synerrstr_72, synerrstr_73 
 };
 #endif
 /* END: GENERATED WITH generr.moo */
