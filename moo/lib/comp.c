@@ -51,8 +51,7 @@
 enum class_type_t
 {
 	CLASS_TYPE_NORMAL = 0,
-	CLASS_TYPE_EXTEND,
-	CLASS_TYPE_INTERFACE
+	CLASS_TYPE_EXTEND
 };
 
 enum class_mod_t
@@ -2793,6 +2792,13 @@ static MOO_INLINE int set_pooldic_fqn (moo_t* moo, moo_cunit_pooldic_t* pd, cons
 {
 	if (copy_string_to(moo, name, &pd->fqn, &pd->fqn_capa, 0, '\0') <= -1) return -1;
 	pd->name = pd->fqn;
+	return 0;
+}
+
+static MOO_INLINE int set_interface_fqn (moo_t* moo, moo_cunit_interface_t* ifce, const moo_oocs_t* name)
+{
+	if (copy_string_to(moo, name, &ifce->fqn, &ifce->fqn_capa, 0, '\0') <= -1) return -1;
+	ifce->name = ifce->fqn;
 	return 0;
 }
 
@@ -7661,7 +7667,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 	if (cc->cunit_parent && cc->cunit_parent->cunit_type == MOO_CUNIT_CLASS && TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 	{
 		/* the name of a nested class cannot be multi-segmented */
-		moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "undotted identifier expected");
+		moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "undotted class name expected");
 		return -1;
 	}
 
@@ -7702,24 +7708,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 	}
 	GET_TOKEN (moo); 
 
-	if (class_type == CLASS_TYPE_INTERFACE)
-	{
-		MOO_ASSERT (moo, cc->flags == 0);
-
-		MOO_INFO2 (moo, "Defining an interface %.*js\n", cc->fqn.len, cc->fqn.ptr);
-
-		ass = moo_lookupdic(moo, (moo_oop_dic_t)cc->ns_oop, &cc->name);
-		if (ass)
-		{
-			// The interface name already exists. An interface cannot be defined with an existing name
-			moo_setsynerr (moo, MOO_SYNERR_CLASSDUPL, &cc->fqn_loc, &cc->name); /* TODO: change the error code to MOO_SYNERR_IFCEDUPL? */
-			return -1;
-		}
-
-		/* an interface doesn't inherit anything */
-		cc->super_oop = moo->_nil;
-	}
-	else if (class_type == CLASS_TYPE_EXTEND)
+	if (class_type == CLASS_TYPE_EXTEND)
 	{
 		/* extending class */
 		MOO_ASSERT (moo, cc->flags == 0);
@@ -7956,21 +7945,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 
 	GET_TOKEN (moo);
 
-	if (class_type == CLASS_TYPE_INTERFACE)
-	{
-		/* an interface cannot have variables */
-		if (is_token_word(moo, VOCA_VAR) || is_token_word(moo, VOCA_VARIABLE) || 
-		    is_token_binary_selector(moo, VOCA_VBAR) ||
-		    is_token_binary_selector(moo, VOCA_VBAR_PLUS) ||
-		    is_token_binary_selector(moo, VOCA_VBAR_ASTER))
-		{
-			moo_setsynerr (moo, MOO_SYNERR_VARDCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
-			return -1;
-		}
-
-		if (make_defined_interface(moo) <= -1) return -1;
-	}
-	else if (class_type == CLASS_TYPE_EXTEND)
+	if (class_type == CLASS_TYPE_EXTEND)
 	{
 		moo_oop_char_t pds;
 
@@ -8171,7 +8146,164 @@ static int compile_class_definition (moo_t* moo, int class_type)
 
 static int __compile_interface_definition (moo_t* moo)
 {
+	moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
+	moo_oop_association_t ass;
+
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT &&
+	    TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
+	{
+		/* interface name expected. */
+		moo_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+	if (ifce->cunit_parent && ifce->cunit_parent->cunit_type == MOO_CUNIT_CLASS && TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
+	{
+		/* the name of a nested class cannot be multi-segmented */
+		moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "undotted interface name expected");
+		return -1;
+	}
+
+#if 0
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && is_restricted_word(TOKEN_NAME(moo)))
+	{
+		/* wrong class name */
+		moo_setsynerr (moo, MOO_SYNERR_CLASSNAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+#endif
+
+	/* [NOTE] TOKEN_NAME(moo) doesn't contain the full name if it's nested 
+	 *        inside a class. it is merely a name that appeared in the source
+	 *        code.
+	 *  TODO: compose the full name by traversing the namespace chain. */
+	if (set_interface_fqn(moo, ifce, TOKEN_NAME(moo)) <= -1) return -1;
+	ifce->fqn_loc = moo->c->tok.loc;
+
+	if (ifce->cunit_parent && ifce->cunit_parent->cunit_type == MOO_CUNIT_CLASS)
+	{
+		/* nested inside a class */
+		moo_cunit_interface_t* c = (moo_cunit_interface_t*)ifce->cunit_parent;
+		if ((moo_oop_t)c->self_oop->nsdic == moo->_nil)
+		{
+			/* attach a new namespace dictionary to the nsdic field of the class */
+			if (!attach_nsdic_to_class(moo, c->self_oop)) return -1;
+		}
+		ifce->ns_oop = c->self_oop->nsdic; /* TODO: if c->nsdic is nil, create one? */
+	}
+	else if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
+	{
+		if (preprocess_dotted_name(moo, 0, MOO_NULL, &ifce->fqn, &ifce->fqn_loc, &ifce->name, &ifce->ns_oop) <= -1) return -1;
+	}
+	else
+	{
+		ifce->ns_oop = moo->sysdic;
+	}
+	GET_TOKEN (moo); 
+
+	MOO_INFO2 (moo, "Defining an interface %.*js\n", ifce->fqn.len, ifce->fqn.ptr);
+
+	ass = moo_lookupdic(moo, (moo_oop_dic_t)ifce->ns_oop, &ifce->name);
+	if (ass)
+	{
+		// The interface name already exists. An interface cannot be defined with an existing name
+		moo_setsynerr (moo, MOO_SYNERR_CLASSDUPL, &ifce->fqn_loc, &ifce->name); /* TODO: change the error code to MOO_SYNERR_IFCEDUPL? */
+		return -1;
+	}
+
+	/* an interface doesn't inherit anything */
+	ifce->super_oop = moo->_nil;
+	
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
+	{
+		moo_setsynerr (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+#if 0
+	MOO_ASSERT (moo, ifce->super_oop != MOO_NULL);
+	if (ifce->super_oop != moo->_nil)
+	{
+		/* adjust the instance variable count and the class instance variable
+		 * count to include that of a superclass */
+		moo_oop_class_t c;
+		moo_oow_t spec, self_spec;
+
+		c = (moo_oop_class_t)ifce->super_oop;
+		spec = MOO_OOP_TO_SMOOI(c->spec);
+		self_spec = MOO_OOP_TO_SMOOI(c->selfspec);
+
+		/* [NOTE] class variables are not inherited. 
+		 *        so no data about them are not transferred over */
+
+		if ((ifce->flags & CLASS_INDEXED) && ifce->indexed_type != MOO_OBJ_TYPE_OOP)
+		{
+			/* the class defined is a non-pointer object. */
+			if (MOO_CLASS_SPEC_INDEXED_TYPE(spec) == MOO_OBJ_TYPE_OOP && MOO_CLASS_SPEC_NAMED_INSTVARS(spec) > 0)
+			{
+				/* a non-pointer object cannot inherit from a pointer object with instance variables */
+				moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &ifce->fqn_loc, &ifce->fqn, 
+					"the non-pointer class %.*js cannot inherit from a pointer class defined with instance variables", 
+					ifce->fqn.len, ifce->fqn.ptr);
+				return -1;
+			}
+
+			/* NOTE: I don't mandate that the parent and the child be of the same type.
+			 *       Say, for a parent class(#byte(4)), a child can be defined to be
+			 *       class(#word(4)). */
+
+			if (ifce->non_pointer_instsize < MOO_CLASS_SPEC_NAMED_INSTVARS(spec))
+			{
+				moo_setsynerrbfmt (moo, MOO_SYNERR_NPINSTSIZEINVAL, &type_loc, MOO_NULL,
+					"the instance size(%zu) for the non-pointer class %.*js must not be less than the size(%zu) defined in the superclass ", 
+					ifce->non_pointer_instsize, ifce->fqn.len, ifce->fqn.ptr, (moo_oow_t)MOO_CLASS_SPEC_NAMED_INSTVARS(spec));
+				return -1;
+			}
+		}
+		else
+		{
+			/* the class defined is a pointer object or a variable-pointer object */
+			MOO_ASSERT (moo, ifce->non_pointer_instsize == 0); /* no such thing as class(#pointer(N)). so it must be 0 */
+			ifce->var[VAR_INSTANCE].total_count = MOO_CLASS_SPEC_NAMED_INSTVARS(spec);
+		}
+		ifce->var[VAR_CLASSINST].total_count = MOO_CLASS_SELFSPEC_CLASSINSTVARS(self_spec);
+	}
+
+	GET_TOKEN (moo);
+
+	/* an interface cannot have variables */
+	if (is_token_word(moo, VOCA_VAR) || is_token_word(moo, VOCA_VARIABLE) || 
+	    is_token_binary_selector(moo, VOCA_VBAR) ||
+	    is_token_binary_selector(moo, VOCA_VBAR_PLUS) ||
+	    is_token_binary_selector(moo, VOCA_VBAR_ASTER))
+	{
+		moo_setsynerr (moo, MOO_SYNERR_VARDCLBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+	if (make_defined_interface(moo) <= -1) return -1;
+
+	do
+	{
+		if (is_token_word(moo, VOCA_METHOD))
+		{
+			/* method definition in class definition */
+			GET_TOKEN (moo);
+			if (compile_method_definition(moo) <= -1) return -1;
+		}
+		else break;
+	}
+	while (1);
+
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
+	{
+		moo_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+#endif
+	GET_TOKEN (moo);
 	return 0;
+
 }
 
 static int compile_interface_definition (moo_t* moo)
@@ -8327,7 +8459,7 @@ static int __compile_pooldic_definition (moo_t* moo)
 	if (pd->cunit_parent && pd->cunit_parent->cunit_type == MOO_CUNIT_CLASS && TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 	{
 		/* the pool dictionary nested inside a class cannot be multi-segmented */
-		moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "undotted identifier expected");
+		moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "undotted pooldic name expected");
 		goto oops;
 	}
 
@@ -8639,6 +8771,23 @@ static void gc_cunit_chain (moo_t* moo)
 	{
 		switch (cunit->cunit_type)
 		{
+			case MOO_CUNIT_POOLDIC:
+			{
+				moo_cunit_pooldic_t* pd;
+				pd = (moo_cunit_pooldic_t*)cunit;
+				if (pd->pd_oop)
+				{
+					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)pd->pd_oop);
+					pd->pd_oop = (moo_oop_dic_t)x;
+				}
+				if (pd->ns_oop)
+				{
+					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)pd->ns_oop);
+					pd->ns_oop = (moo_oop_nsdic_t)x;
+				}
+				break;
+			}
+
 			case MOO_CUNIT_CLASS:
 			{
 				moo_oow_t i, j;
@@ -8687,20 +8836,29 @@ static void gc_cunit_chain (moo_t* moo)
 				break;
 			}
 
-			case MOO_CUNIT_POOLDIC:
+			case MOO_CUNIT_INTERFACE:
 			{
-				moo_cunit_pooldic_t* pd;
-				pd = (moo_cunit_pooldic_t*)cunit;
-				if (pd->pd_oop)
+				moo_cunit_interface_t* ifce;
+				ifce = (moo_cunit_interface_t*)cunit;
+
+				if (ifce->self_oop) 
+					ifce->self_oop = (moo_oop_class_t)moo_moveoop(moo, (moo_oop_t)ifce->self_oop);
+
+				if (ifce->super_oop)
+					ifce->super_oop = moo_moveoop(moo, ifce->super_oop);
+
+				if (ifce->ns_oop)
 				{
-					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)pd->pd_oop);
-					pd->pd_oop = (moo_oop_dic_t)x;
+					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)ifce->ns_oop);
+					ifce->ns_oop = (moo_oop_nsdic_t)x;
 				}
-				if (pd->ns_oop)
+
+				if (ifce->superns_oop)
 				{
-					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)pd->ns_oop);
-					pd->ns_oop = (moo_oop_nsdic_t)x;
+					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)ifce->superns_oop);
+					ifce->superns_oop = (moo_oop_nsdic_t)x;
 				}
+
 				break;
 			}
 		}
