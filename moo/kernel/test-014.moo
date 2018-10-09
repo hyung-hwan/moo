@@ -190,8 +190,8 @@ class MyObject(TestObject)
 		(v1 := self t001()) isError ifTrue: [('t001 Error 111....' & v1 asInteger asString) dump].
 		(v1 := self t001(10)) isError ifTrue: [('t001 Error 222....' & v1 asInteger asString) dump].
 		(v1 := self t001(20)) isError ifTrue: [('t001 Error 333....' & v1 asInteger asString) dump].
-		error(9999) dump.
-		error(9999) asInteger dump.
+		#\e9999 dump.
+		#\e9999 asInteger dump.
 
 		v2 := (16rFFFFFFFF_FFFFFFFF_FFFFFFFF_FFFFFFFF_FFFFFFFF_FFFFFFFF) basicAt: 1 put: 1; yourself.
 		v2 dump.
@@ -230,8 +230,8 @@ class MyObject(TestObject)
 	
 	method(#class,#liberal) t001(a)
 	{
-		a isNil ifTrue: [^error(10)].
-		(a = 20) ifTrue: [^error].
+		a isNil ifTrue: [^#\e10].
+		(a = 20) ifTrue: [^#\e0 ].
 		(a = 10) ifTrue: [^123 asError].
 		^a.
 
