@@ -200,6 +200,15 @@ static kernel_class_info_t kernel_classes[] =
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _dictionary) },
 
+	{ 11,
+	  { 'A','s','s','o','c','i','a','t','i','o','n' },
+	  0,
+	  0,
+	  MOO_ASSOCIATION_NAMED_INSTVARS,
+	  0,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _association) },
+	  
 	{ 9,
 	  { 'N','a','m','e','s','p','a','c','e' },
 	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
@@ -236,15 +245,16 @@ static kernel_class_info_t kernel_classes[] =
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _method) },
 
-
-	{ 11,
-	  { 'A','s','s','o','c','i','a','t','i','o','n' },
+	{ 15,
+	  { 'M','e','t','h','o','d','S','i','g','n','a','t','u','r','e' },
 	  0,
 	  0,
-	  MOO_ASSOCIATION_NAMED_INSTVARS,
-	  0,
+	  MOO_METHSIG_NAMED_INSTVARS,
+	  MOO_CLASS_SPEC_FLAG_INDEXED,
 	  MOO_OBJ_TYPE_OOP,
-	  MOO_OFFSETOF(moo_t, _association) },
+	  MOO_OFFSETOF(moo_t, _methsig) },
+
+	
 
 	{ 13,
 	  { 'M','e','t','h','o','d','C','o','n','t','e','x','t' },

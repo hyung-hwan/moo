@@ -597,6 +597,19 @@ struct moo_association_t
 	moo_oop_t value;
 };
 
+#define MOO_METHSIG_NAMED_INSTVARS 4
+typedef struct moo_methsig_t moo_methsig_t;
+typedef struct moo_methsig_t* moo_oop_methsig_t;
+struct moo_methsig_t
+{
+	MOO_OBJ_HEADER;
+
+	moo_oop_interface_t owner; /* Interface */
+	moo_oop_char_t  name; /* Symbol, method name */
+	moo_oop_t       modifiers; /* SmallInteger, modifiers specified */
+	moo_oop_t       tmpr_nargs; /* SmallInteger */
+};
+
 #if defined(MOO_USE_METHOD_TRAILER)
 #	define MOO_METHOD_NAMED_INSTVARS 8
 #else
@@ -1415,13 +1428,14 @@ struct moo_t
 	moo_oop_class_t _array; /* Array */
 	moo_oop_class_t _byte_array; /* ByteArray */
 	moo_oop_class_t _symbol_table; /* SymbolTable */
-
 	moo_oop_class_t _dictionary;
+	moo_oop_class_t _association; /* Association */
+
 	moo_oop_class_t _namespace; /* Namespace */
 	moo_oop_class_t _pool_dictionary; /* PoolDictionary */
 	moo_oop_class_t _method_dictionary; /* MethodDictionary */
 	moo_oop_class_t _method; /* CompiledMethod */
-	moo_oop_class_t _association; /* Association */
+	moo_oop_class_t _methsig; /* MethodSignature */
 
 	moo_oop_class_t _method_context; /* MethodContext */
 	moo_oop_class_t _block_context; /* BlockContext */

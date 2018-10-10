@@ -2443,7 +2443,14 @@ int main (int argc, char* argv[])
 	if (argc < 2)
 	{
 	print_usage:
-		fprintf (stderr, "Usage: %s filename ...\n", argv[0]);
+		fprintf (stderr, "Usage: %s [options] filename ...\n", argv[0]);
+		fprintf (stderr, " --log filename[,logopts]\n");
+		
+	#if defined(MOO_BUILD_DEBUG)
+		fprintf (stderr, " --debug dbgopts\n");
+	#endif
+		fprintf (stderr, " --memsize number\n");
+		fprintf (stderr, " --large-pages\n");
 		return -1;
 	}
 

@@ -6438,7 +6438,7 @@ static int add_compiled_method (moo_t* moo)
 	moo_ooi_t preamble_code, preamble_index, preamble_flags;
 
 	name = (moo_oop_char_t)moo_makesymbol(moo, cc->mth.name.ptr, cc->mth.name.len);
-	if (!name) return -1;
+	if (!name) goto oops;
 	moo_pushtmp (moo, (moo_oop_t*)&name); tmp_count++;
 
 	/* The variadic data part passed to moo_instantiate() is not GC-safe. 
@@ -8121,10 +8121,59 @@ static int compile_class_definition (moo_t* moo, int class_type)
 	return n;
 }
 
+static int add_method_signature (moo_t* moo)
+{
+	moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
+	moo_oop_char_t name; /* selector */
+	moo_oop_methsig_t mth; /* method signature */
+	moo_oow_t tmp_count = 0;
+	
+	name = (moo_oop_char_t)moo_makesymbol(moo, ifce->mth.name.ptr, ifce->mth.name.len);
+	if (!name) goto oops;
+	moo_pushtmp (moo, (moo_oop_t*)&name); tmp_count++;
+
+	mth = (moo_oop_methsig_t)moo_instantiate(moo, moo->_methsig, MOO_NULL, 0);
+	if (!mth) goto oops;
+	moo_pushtmp (moo, (moo_oop_t*)&mth); tmp_count++;
+
+	mth->owner = ifce->self_oop;
+	mth->name = name;
+
+/*
+ifce->mth.variadic?
+ifce->mth.lenient?
+ifce->meth.type == DUAL? CLASS? INST?
+*/
+	mth->modifiers = MOO_SMOOI_TO_OOP(0);
+	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(ifce->mth.tmpr_nargs);
+
+	if (ifce->mth.type == MOO_METHOD_DUAL)
+	{
+		if (!moo_putatdic(moo, ifce->self_oop->mthdic[0], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
+		if (!moo_putatdic(moo, ifce->self_oop->mthdic[1], (moo_oop_t)name, (moo_oop_t)mth)) 
+		{
+			/* 'name' is a symbol created of ifce->mth.name. so use it as a key for deletion */
+			moo_deletedic (moo, ifce->self_oop->mthdic[0], &ifce->mth.name);
+			goto oops;
+		}
+	}
+	else
+	{
+		MOO_ASSERT (moo, ifce->mth.type < MOO_COUNTOF(ifce->self_oop->mthdic));
+		if (!moo_putatdic(moo, ifce->self_oop->mthdic[ifce->mth.type], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
+	}
+
+	moo_poptmps (moo, tmp_count); tmp_count = 0;
+	return 0;
+
+oops:
+	moo_poptmps (moo, tmp_count);
+	return -1;
+}
+
 static int __compile_method_signature (moo_t* moo)
 {
 	moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
-
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_LPAREN)
 	{
@@ -8140,6 +8189,8 @@ static int __compile_method_signature (moo_t* moo)
 		moo_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
+
+	if (add_method_signature(moo) <= -1) return -1;
 
 	GET_TOKEN (moo);
 	return 0;
@@ -8162,13 +8213,11 @@ static int compile_method_signature (moo_t* moo)
 	return n;
 }
 
-
 static int make_defined_interface (moo_t* moo)
 {
 	moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
 	moo_oop_t tmp;
 
-/* TODO: instantiate differently... */
 	tmp = moo_instantiate(moo, moo->_interface, MOO_NULL, 0);
 	if (!tmp) return -1;
 	ifce->self_oop = (moo_oop_interface_t)tmp;
@@ -8181,7 +8230,6 @@ static int make_defined_interface (moo_t* moo)
 	if (!tmp) return -1;
 	ifce->self_oop->mthdic[MOO_METHOD_INSTANCE] = (moo_oop_dic_t)tmp;
 
-/* TOOD: good dictionary size */
 	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
 	ifce->self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_dic_t)tmp;
@@ -8847,7 +8895,7 @@ static void gc_cunit_chain (moo_t* moo)
 				ifce = (moo_cunit_interface_t*)cunit;
 
 				if (ifce->self_oop) 
-					ifce->self_oop = (moo_oop_class_t)moo_moveoop(moo, (moo_oop_t)ifce->self_oop);
+					ifce->self_oop = (moo_oop_interface_t)moo_moveoop(moo, (moo_oop_t)ifce->self_oop);
 
 				if (ifce->ns_oop)
 				{
