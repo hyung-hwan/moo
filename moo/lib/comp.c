@@ -6604,8 +6604,7 @@ static int add_compiled_method (moo_t* moo)
 		preamble_index = 0;
 	}
 
-	/*if (cc->mth.variadic) */
-	preamble_flags |= cc->mth.variadic;
+	preamble_flags |= cc->mth.variadic; /* MOO_METHOD_PREAMBLE_FLAG_VARIADIC or MOO_METHOD_PREAMBLE_FLAG_LIBERAL */
 	if (cc->mth.type == MOO_METHOD_DUAL) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_DUAL;
 	if (cc->mth.lenient) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_LENIENT;
 
@@ -8126,8 +8125,9 @@ static int add_method_signature (moo_t* moo)
 	moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
 	moo_oop_char_t name; /* selector */
 	moo_oop_methsig_t mth; /* method signature */
+	moo_ooi_t preamble_flags = 0;
 	moo_oow_t tmp_count = 0;
-	
+
 	name = (moo_oop_char_t)moo_makesymbol(moo, ifce->mth.name.ptr, ifce->mth.name.len);
 	if (!name) goto oops;
 	moo_pushtmp (moo, (moo_oop_t*)&name); tmp_count++;
@@ -8139,12 +8139,11 @@ static int add_method_signature (moo_t* moo)
 	mth->owner = ifce->self_oop;
 	mth->name = name;
 
-/*
-ifce->mth.variadic?
-ifce->mth.lenient?
-ifce->meth.type == DUAL? CLASS? INST?
-*/
-	mth->modifiers = MOO_SMOOI_TO_OOP(0);
+	preamble_flags |= ifce->mth.variadic; /* MOO_METHOD_PREAMBLE_FLAG_VARIADIC or MOO_METHOD_PREAMBLE_FLAG_LIBERAL */
+	if (ifce->mth.lenient) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_LENIENT;
+	if (ifce->mth.type == MOO_METHOD_DUAL) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_DUAL;
+
+	mth->preamble = MOO_SMOOI_TO_OOP(MOO_METHOD_MAKE_PREAMBLE(0,0,preamble_flags));
 	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(ifce->mth.tmpr_nargs);
 
 	if (ifce->mth.type == MOO_METHOD_DUAL)

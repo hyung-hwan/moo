@@ -872,8 +872,6 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 	mth->name = mnsym;
 	if (variadic) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_VARIADIC;
 	mth->preamble = MOO_SMOOI_TO_OOP(MOO_METHOD_MAKE_PREAMBLE(MOO_METHOD_PREAMBLE_NAMED_PRIMITIVE, 0, preamble_flags));
-	/*mth->preamble_data[0] = MOO_SMOOI_TO_OOP(0);
-	mth->preamble_data[1] = MOO_SMOOI_TO_OOP(0);*/
 	mth->preamble_data[0] = MOO_SMPTR_TO_OOP(0);
 	mth->preamble_data[1] = MOO_SMPTR_TO_OOP(0);
 	mth->tmpr_count = MOO_SMOOI_TO_OOP(arg_count);

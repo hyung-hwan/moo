@@ -606,7 +606,7 @@ struct moo_methsig_t
 
 	moo_oop_interface_t owner; /* Interface */
 	moo_oop_char_t  name; /* Symbol, method name */
-	moo_oop_t       modifiers; /* SmallInteger, modifiers specified */
+	moo_oop_t       preamble; /* SmallInteger, includes only preamble flags based on modifiers specified */
 	moo_oop_t       tmpr_nargs; /* SmallInteger */
 };
 
