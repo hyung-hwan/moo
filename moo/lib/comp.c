@@ -7603,12 +7603,193 @@ static int process_class_modifiers (moo_t* moo, moo_ioloc_t* type_loc)
 	return 0;
 }
 
+static int process_class_superclass (moo_t* moo)
+{
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	int super_is_nil = 0;
+	int superfqn_is_dotted;
+	
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_LPAREN)
+	{
+		moo_setsynerrbfmt (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo), "superclass must be specified");
+		return -1;
+	}
+
+	/* superclass is specified. new class defintion.
+	 * for example, #class Dag(Object) */
+	GET_TOKEN (moo); /* skip ( and read superclass name */
+
+	/* TODO: multiple inheritance */
+
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_NIL)
+	{
+		/* #class Dag(nil) */
+		super_is_nil = 1;
+	}
+	else if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
+	{
+		/* superclass name expected */
+		moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "superclass name expected");
+		return -1;
+	}
+
+	if (set_superclass_fqn(moo, cc, TOKEN_NAME(moo)) <= -1) return -1;
+	cc->superfqn_loc = moo->c->tok.loc;
+
+	superfqn_is_dotted = (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED);
+
+	GET_TOKEN (moo);
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
+	{
+		moo_setsynerr (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+	GET_TOKEN (moo); /* skip ) and read the next token */
+
+	if (super_is_nil)
+	{
+		cc->super_oop = moo->_nil;
+	}
+	else
+	{
+		var_info_t var;
+
+		if (get_variable_info(moo, &cc->superfqn, &cc->superfqn_loc, superfqn_is_dotted, &var) <= -1) return -1;
+
+		if (var.type != VAR_GLOBAL) goto unknown_superclass;
+		if (MOO_CLASSOF(moo, var.u.gbl->value) == moo->_class && MOO_OBJ_GET_FLAGS_KERNEL(var.u.gbl->value) != 1)
+		{
+			/* the value found must be a class and it must not be an incomplete internal class object. 
+			 *  0(non-kernel object)
+			 *  1(incomplete kernel object),
+			 *  2(complete kernel object) */
+
+			cc->super_oop = var.u.gbl->value;
+
+			/* the superclass became known. */
+			if (((moo_oop_class_t)cc->super_oop)->trsize != moo->_nil &&
+				(cc->flags & CLASS_INDEXED) &&
+				cc->indexed_type != MOO_OBJ_TYPE_OOP)
+			{
+				/* non-pointer object cannot inherit from a superclass with trailer size set */
+				moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &cc->fqn_loc, &cc->fqn,
+					"the non-pointer class %.*js cannot inherit from a class set with trailer size",
+					cc->fqn.len, cc->fqn.ptr);
+				return -1;
+			}
+
+			if (MOO_CLASS_SELFSPEC_FLAGS(MOO_OOP_TO_SMOOI(((moo_oop_class_t)cc->super_oop)->selfspec)) & MOO_CLASS_SELFSPEC_FLAG_FINAL)
+			{
+				/* cannot inherit a #final class */
+				moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &cc->fqn_loc, &cc->fqn,
+					"the %.*js class cannot inherit from a final class", cc->fqn.len, cc->fqn.ptr);
+				return -1;
+			}
+		}
+		else
+		{
+		unknown_superclass:
+			/* there is no object with such a name. or,
+			 * the object found with the name is not a class object. or,
+			 * the class object found is a internally defined kernel
+			 * class object. */
+			moo_setsynerr (moo, MOO_SYNERR_CLASSUNDEF, &cc->superfqn_loc, &cc->superfqn);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static int process_class_interfaces (moo_t* moo)
+{
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+
+	GET_TOKEN (moo); /* skip [ */
+
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
+	{
+		moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "interface name expected");
+		return -1;
+	}
+
+	do
+	{
+		var_info_t var;
+
+		if (get_variable_info(moo, TOKEN_NAME(moo), TOKEN_LOC(moo), TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED, &var) <= -1) return -1;
+
+		if (var.type != VAR_GLOBAL || MOO_CLASSOF(moo, var.u.gbl->value) != moo->_interface)
+		{
+			moo_setsynerr (moo, MOO_SYNERR_CLASSUNDEF, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
+
+		// TODO: store to interfaces....
+		//cc->interfaces[];
+
+		GET_TOKEN (moo);
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA) break;
+
+		GET_TOKEN (moo);
+	}
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT || TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED);
+
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACK)
+	{
+		moo_setsynerr (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+	
+	GET_TOKEN (moo); /* skip ] and read the next token */
+	return 0;
+}
+
+
+static int process_class_module_import (moo_t* moo)
+{
+	/* handle the module importing(from) part.
+	 *     class XXX from 'mod.name' */
+
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+
+	GET_TOKEN (moo); /* skip 'from' */
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_STRLIT)
+	{
+		moo_setsynerr (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+	if (TOKEN_NAME_LEN(moo) <= 0 || 
+		TOKEN_NAME_LEN(moo) > MOO_MOD_NAME_LEN_MAX ||
+		moo_find_oochar(TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo), '-') )
+	{
+		/* check for a bad module name. 
+		 * also disallow a dash in the name - i like converting
+		 * a period to a dash when mapping the module name to an
+		 * actual module file. disallowing a dash lowers confusion
+		 * when loading a module. */
+		moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo), "invalid module name");
+		return -1;
+	}
+
+	if (set_class_modname (moo, cc, TOKEN_NAME(moo)) <= -1) return -1;
+	cc->modname_loc = *TOKEN_LOC(moo);
+
+	GET_TOKEN (moo); /* skip the module name and read the next token */
+	return 0;
+}
+
 static int __compile_class_definition (moo_t* moo, int class_type)
 {
 	/* 
-	 * class-definition := #class class-modifier? class-name  (class-body | class-module-import)
+	 * class-definition := class class-modifier? class-name super-class-spec interface-spec?  (class-body | class-module-import)
 	 *
 	 * class-modifier := "(" (#byte | #character | #word | #pointer)? ")"
+	 * super-class-spec := "(" super-class-name ")"
+	 * interface-spec := "[" interface-name-list "]"
+	 * interface-name-list := interface-name | interface-name "," inteface-name-list
 	 * class-body := "{" variable-definition* method-definition* "}"
 	 * class-module-import := from "module-name-string"
 	 * 
@@ -7636,8 +7817,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
 	{
-		/* class name expected. */
-		moo_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "class name expected");
 		return -1;
 	}
 
@@ -7692,17 +7872,13 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 
 		MOO_INFO2 (moo, "Extending a class %.*js\n", cc->fqn.len, cc->fqn.ptr);
 
-		/*ass = moo_lookupsysdic(moo, &cc->name);*/
 		ass = moo_lookupdic(moo, (moo_oop_dic_t)cc->ns_oop, &cc->name);
-		if (ass && 
-		    MOO_CLASSOF(moo, ass->value) == moo->_class &&
+		if (ass && MOO_CLASSOF(moo, ass->value) == moo->_class &&
 		    MOO_OBJ_GET_FLAGS_KERNEL(ass->value) != 1)
 		{
 			/* the value must be a class object.
-			 * and it must be either a user-defined(0) or 
-			 * completed kernel built-in(2). 
-			 * an incomplete kernel built-in class object(1) can not be
-			 * extended */
+			 * and it must be either a user-defined(0) or completed kernel built-in(2). 
+			 * an incomplete kernel built-in class object(1) can not be extended */
 			cc->self_oop = (moo_oop_class_t)ass->value;
 		}
 		else
@@ -7713,58 +7889,16 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 		}
 
 		cc->super_oop = cc->self_oop->superclass;
-
 		MOO_ASSERT (moo, cc->super_oop == moo->_nil || MOO_CLASSOF(moo, cc->super_oop) == moo->_class);
 	}
 	else
 	{
-		int super_is_nil = 0;
-		int superfqn_is_dotted;
-
 		MOO_INFO2 (moo, "Defining a class %.*js\n", cc->fqn.len, cc->fqn.ptr);
-
-		if (TOKEN_TYPE(moo) != MOO_IOTOK_LPAREN)
-		{
-			moo_setsynerrbfmt (moo, MOO_SYNERR_LPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo), "superclass must be specified");
-			return -1;
-		}
-
-		/* superclass is specified. new class defintion.
-		 * for example, #class Class(Stix) */
-		GET_TOKEN (moo); /* read superclass name */
-
-		/* TODO: multiple inheritance */
-
-		if (TOKEN_TYPE(moo) == MOO_IOTOK_NIL)
-		{
-			super_is_nil = 1;
-		}
-		else if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
-		{
-			/* superclass name expected */
-			moo_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
-			return -1;
-		}
-
-		if (set_superclass_fqn(moo, cc, TOKEN_NAME(moo)) <= -1) return -1;
-		cc->superfqn_loc = moo->c->tok.loc;
-
-		superfqn_is_dotted = (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED);
-
-		GET_TOKEN (moo);
-		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
-		{
-			moo_setsynerr (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
-			return -1;
-		}
-
-		GET_TOKEN (moo);
 
 		ass = moo_lookupdic(moo, (moo_oop_dic_t)cc->ns_oop, &cc->name);
 		if (ass)
 		{
-			if (MOO_CLASSOF(moo, ass->value) != moo->_class  ||
-			    MOO_OBJ_GET_FLAGS_KERNEL(ass->value) > 1)
+			if (MOO_CLASSOF(moo, ass->value) != moo->_class || MOO_OBJ_GET_FLAGS_KERNEL(ass->value) > 1)
 			{
 				/* the object found with the name is not a class object 
 				 * or the the class object found is a fully defined kernel 
@@ -7782,86 +7916,16 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 			MOO_ASSERT (moo, cc->self_oop == MOO_NULL);
 		}
 
-		if (super_is_nil)
+		if (process_class_superclass(moo) <= -1) return -1;
+
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_LBRACK)
 		{
-			cc->super_oop = moo->_nil;
-		}
-		else
-		{
-			var_info_t var;
-
-			if (get_variable_info(moo, &cc->superfqn, &cc->superfqn_loc, superfqn_is_dotted, &var) <= -1) return -1;
-
-			if (var.type != VAR_GLOBAL) goto unknown_superclass;
-			if (MOO_CLASSOF(moo, var.u.gbl->value) == moo->_class && MOO_OBJ_GET_FLAGS_KERNEL(var.u.gbl->value) != 1)
-			{
-				/* the value found must be a class and it must not be an incomplete internal class object. 
-				 *  0(non-kernel object)
-				 *  1(incomplete kernel object),
-				 *  2(complete kernel object) */
-
-				cc->super_oop = var.u.gbl->value;
-
-				/* the superclass became known. */
-				if (((moo_oop_class_t)cc->super_oop)->trsize != moo->_nil &&
-				    (cc->flags & CLASS_INDEXED) &&
-				    cc->indexed_type != MOO_OBJ_TYPE_OOP)
-				{
-					/* non-pointer object cannot inherit from a superclass with trailer size set */
-					moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &cc->fqn_loc, &cc->fqn,
-						"the non-pointer class %.*js cannot inherit from a class set with trailer size",
-						cc->fqn.len, cc->fqn.ptr);
-					return -1;
-				}
-
-				if (MOO_CLASS_SELFSPEC_FLAGS(MOO_OOP_TO_SMOOI(((moo_oop_class_t)cc->super_oop)->selfspec)) & MOO_CLASS_SELFSPEC_FLAG_FINAL)
-				{
-					/* cannot inherit a #final class */
-					moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &cc->fqn_loc, &cc->fqn,
-						"the %.*js class cannot inherit from a final class", cc->fqn.len, cc->fqn.ptr);
-					return -1;
-				}
-			}
-			else
-			{
-			unknown_superclass:
-				/* there is no object with such a name. or,
-				 * the object found with the name is not a class object. or,
-				 * the class object found is a internally defined kernel
-				 * class object. */
-				moo_setsynerr (moo, MOO_SYNERR_CLASSUNDEF, &cc->superfqn_loc, &cc->superfqn);
-				return -1;
-			}
+			if (process_class_interfaces(moo) <= -1) return -1;
 		}
 
 		if (is_token_word (moo, VOCA_FROM))
 		{
-			/* handle the module importing(from) part.
-			 *     class XXX from 'mod.name' */
-			GET_TOKEN (moo);
-			if (TOKEN_TYPE(moo) != MOO_IOTOK_STRLIT)
-			{
-				moo_setsynerr (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo));
-				return -1;
-			}
-
-			if (TOKEN_NAME_LEN(moo) <= 0 || 
-			    TOKEN_NAME_LEN(moo) > MOO_MOD_NAME_LEN_MAX ||
-			    moo_find_oochar(TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo), '-') )
-			{
-				/* check for a bad module name. 
-				 * also disallow a dash in the name - i like converting
-				 * a period to a dash when mapping the module name to an
-				 * actual module file. disallowing a dash lowers confusion
-				 * when loading a module. */
-				moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo), "invalid module name");
-				return -1;
-			}
-
-			if (set_class_modname (moo, cc, TOKEN_NAME(moo)) <= -1) return -1;
-			cc->modname_loc = *TOKEN_LOC(moo);
-
-			GET_TOKEN (moo);
+			if (process_class_module_import(moo) <= -1) return -1;
 		}
 	}
 
@@ -8246,8 +8310,7 @@ static int __compile_interface_definition (moo_t* moo)
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
 	{
-		/* interface name expected. */
-		moo_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "interface name expected");
 		return -1;
 	}
 
@@ -8495,7 +8558,7 @@ static int __compile_pooldic_definition (moo_t* moo)
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
 	{
-		moo_setsynerr (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "pooldic name expected");
 		goto oops;
 	}
 

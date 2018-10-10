@@ -6,7 +6,7 @@ interface X11able
 	method(#dual) def.
 }
 
-class X11(Object) from 'x11'
+class X11(Object) [X11able] from 'x11'
 {
 	## =====================================================================
 	## this part of the class must match the internal
