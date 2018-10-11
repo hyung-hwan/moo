@@ -32,6 +32,10 @@ class X11(Object) [X11able,selfns.X11able3] from 'x11'
 	var event_loop_sem, event_loop_proc.
 	var llevent_blocks.
 
+method(#dual) abc { ^nil }
+method(#dual) def { ^nil }
+method(#dual) abc3 { ^nil }
+
 	interface X11able3
 	{
 		method(#dual) abc55.

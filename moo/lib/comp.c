@@ -3130,13 +3130,13 @@ static int method_exists (moo_t* moo, const moo_oocs_t* name)
 {
 	if (moo->c->cunit->cunit_type == MOO_CUNIT_INTERFACE)
 	{
-/* TODO: remove duplicate code */
+/* TODO: remove duplicate code between interface and class */
 		moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
 
 		if (ifce->mth.type == MOO_METHOD_DUAL)
 		{
-			return moo_lookupdic(moo, ifce->self_oop->mthdic[0], name) != MOO_NULL ||
-			       moo_lookupdic(moo, ifce->self_oop->mthdic[1], name) != MOO_NULL;
+			return moo_lookupdic(moo, ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], name) != MOO_NULL ||
+			       moo_lookupdic(moo, ifce->self_oop->mthdic[MOO_METHOD_CLASS], name) != MOO_NULL;
 		}
 		else
 		{
@@ -3153,8 +3153,8 @@ static int method_exists (moo_t* moo, const moo_oocs_t* name)
 		moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 		if (cc->mth.type == MOO_METHOD_DUAL)
 		{
-			return moo_lookupdic(moo, cc->self_oop->mthdic[0], name) != MOO_NULL ||
-			       moo_lookupdic(moo, cc->self_oop->mthdic[1], name) != MOO_NULL;
+			return moo_lookupdic(moo, cc->self_oop->mthdic[MOO_METHOD_INSTANCE], name) != MOO_NULL ||
+			       moo_lookupdic(moo, cc->self_oop->mthdic[MOO_METHOD_CLASS], name) != MOO_NULL;
 		}
 		else
 		{
@@ -6657,11 +6657,11 @@ need to write code to collect string.
 
 	if (cc->mth.type == MOO_METHOD_DUAL)
 	{
-		if (!moo_putatdic(moo, cc->self_oop->mthdic[0], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
-		if (!moo_putatdic(moo, cc->self_oop->mthdic[1], (moo_oop_t)name, (moo_oop_t)mth)) 
+		if (!moo_putatdic(moo, cc->self_oop->mthdic[MOO_METHOD_INSTANCE], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
+		if (!moo_putatdic(moo, cc->self_oop->mthdic[MOO_METHOD_CLASS], (moo_oop_t)name, (moo_oop_t)mth)) 
 		{
 			/* 'name' is a symbol created of cc->mth.name. so use it as a key for deletion */
-			moo_deletedic (moo, cc->self_oop->mthdic[0], &cc->mth.name);
+			moo_deletedic (moo, cc->self_oop->mthdic[MOO_METHOD_INSTANCE], &cc->mth.name);
 			goto oops;
 		}
 	}
@@ -7820,10 +7820,52 @@ static int process_class_interfaces (moo_t* moo)
 	return 0;
 }
 
+struct ciim_t
+{
+	moo_oop_interface_t ifce;
+	moo_oop_class_t _class;
+	int mth_type;
+};
+typedef struct ciim_t ciim_t;
+
+static int on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_association_t ass, void* ctx)
+{
+	ciim_t* ciim = (ciim_t*)ctx;
+	moo_oocs_t name;
+
+	name.ptr = MOO_OBJ_GET_CHAR_SLOT(ass->key);
+	name.len = MOO_OBJ_GET_SIZE(ass->key);
+	ass = moo_lookupdic(moo, ciim->_class->mthdic[ciim->mth_type], &name);
+	if (!ass) 
+	{/* TODO: change error code */
+		moo_setsynerrbfmt (moo, MOO_SYNERR_ARGFLOOD, MOO_NULL, MOO_NULL, 
+			"%.*js not implementing %.*js>>%.*js",
+			MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
+			MOO_OBJ_GET_SIZE(ciim->ifce->name), MOO_OBJ_GET_CHAR_SLOT(ciim->ifce->name),
+			name.len, name.ptr
+		);
+		return -1;
+	}
+
+/* TODO: check preamble flags in signature */
+	return 0;
+}
+
 static int class_implements_interface (moo_t* moo, moo_oop_class_t _class, moo_oop_interface_t ifce)
 {
-	
-	return 0;
+	ciim_t ciim;
+
+	ciim.ifce = ifce;
+	ciim._class = _class;
+	ciim.mth_type = MOO_METHOD_INSTANCE;
+	if (moo_walkdic(moo, ifce->mthdic[MOO_METHOD_INSTANCE], on_each_method, &ciim) <= -1) return 0;
+
+	ciim.ifce = ifce;
+	ciim._class = _class;
+	ciim.mth_type = MOO_METHOD_CLASS;
+	if (moo_walkdic(moo, ifce->mthdic[MOO_METHOD_CLASS], on_each_method, &ciim) <= -1) return 0;
+
+	return 1;
 }
 
 static int check_class_interface_conformance (moo_t* moo)
@@ -7833,15 +7875,7 @@ static int check_class_interface_conformance (moo_t* moo)
 
 	for (i = 0; i < cc->ifces.count; i++)
 	{
-		moo_oop_interface_t ifce = (moo_oop_interface_t)cc->ifces.ptr[i];
-		if (!class_implements_interface(moo, cc->self_oop, ifce))
-		{
-			moo_setsynerrbfmt (moo, MOO_SYNERR_ARGNAMEDUPL, &cc->fqn_loc, &cc->fqn, 
-				"%.*js not implementing interface %.*js", 
-				cc->fqn.len, cc->fqn.ptr,
-				MOO_OBJ_GET_SIZE(ifce->name), MOO_OBJ_GET_CHAR_SLOT(ifce->name));
-			return -1;
-		}
+		if (!class_implements_interface(moo, cc->self_oop, (moo_oop_interface_t)cc->ifces.ptr[i])) return -1;
 	}
 
 	return 0;
@@ -8283,11 +8317,11 @@ static int add_method_signature (moo_t* moo)
 
 	if (ifce->mth.type == MOO_METHOD_DUAL)
 	{
-		if (!moo_putatdic(moo, ifce->self_oop->mthdic[0], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
-		if (!moo_putatdic(moo, ifce->self_oop->mthdic[1], (moo_oop_t)name, (moo_oop_t)mth)) 
+		if (!moo_putatdic(moo, ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
+		if (!moo_putatdic(moo, ifce->self_oop->mthdic[MOO_METHOD_CLASS], (moo_oop_t)name, (moo_oop_t)mth)) 
 		{
 			/* 'name' is a symbol created of ifce->mth.name. so use it as a key for deletion */
-			moo_deletedic (moo, ifce->self_oop->mthdic[0], &ifce->mth.name);
+			moo_deletedic (moo, ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], &ifce->mth.name);
 			goto oops;
 		}
 	}

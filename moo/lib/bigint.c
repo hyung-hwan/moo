@@ -224,8 +224,6 @@ static int is_normalized_integer (moo_t* moo, moo_oop_t oop)
 
 MOO_INLINE static int is_bigint (moo_t* moo, moo_oop_t x)
 {
-	moo_oop_class_t c;
-
 	if (!MOO_OOP_IS_POINTER(x)) return 0;
 
 /* TODO: is it better to introduce a special integer mark into the class itself */

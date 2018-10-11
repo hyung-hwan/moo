@@ -1049,6 +1049,13 @@ enum moo_bcode_t
 		(moo)->shuterr = shuterr; \
 	} while(0)
 
+typedef int (*moo_dic_walker_t) (
+	moo_t*                moo,
+	moo_oop_dic_t         dic,
+	moo_oop_association_t ass,
+	void*                 ctx
+);
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -1232,6 +1239,13 @@ int moo_deletedic (
 	moo_t*            moo,
 	moo_oop_dic_t     dic,
 	const moo_oocs_t* name
+);
+
+int moo_walkdic (
+	moo_t*            moo,
+	moo_oop_dic_t     dic,
+	moo_dic_walker_t  walker,
+	void*             ctx
 );
 
 moo_oop_dic_t moo_makedic (

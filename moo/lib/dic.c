@@ -62,7 +62,7 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 	}
 
 	moo_pushtmp (moo, (moo_oop_t*)&oldbuc);
-	newbuc = (moo_oop_oop_t)moo_instantiate (moo, moo->_array, MOO_NULL, newsz); 
+	newbuc = (moo_oop_oop_t)moo_instantiate(moo, moo->_array, MOO_NULL, newsz); 
 	moo_poptmp (moo);
 	if (!newbuc) return MOO_NULL;
 
@@ -234,32 +234,32 @@ static moo_oop_association_t lookup (moo_t* moo, moo_oop_dic_t dic, const moo_oo
 moo_oop_association_t moo_putatsysdic (moo_t* moo, moo_oop_t key, moo_oop_t value)
 {
 	MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);
-	return find_or_upsert (moo, (moo_oop_dic_t)moo->sysdic, (moo_oop_char_t)key, value);
+	return find_or_upsert(moo, (moo_oop_dic_t)moo->sysdic, (moo_oop_char_t)key, value);
 }
 
 moo_oop_association_t moo_getatsysdic (moo_t* moo, moo_oop_t key)
 {
 	MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);
-	return find_or_upsert (moo, (moo_oop_dic_t)moo->sysdic, (moo_oop_char_t)key, MOO_NULL);
+	return find_or_upsert(moo, (moo_oop_dic_t)moo->sysdic, (moo_oop_char_t)key, MOO_NULL);
 }
 
 moo_oop_association_t moo_lookupsysdic (moo_t* moo, const moo_oocs_t* name)
 {
-	return lookup (moo, (moo_oop_dic_t)moo->sysdic, name);
+	return lookup(moo, (moo_oop_dic_t)moo->sysdic, name);
 }
 
 moo_oop_association_t moo_putatdic (moo_t* moo, moo_oop_dic_t dic, moo_oop_t key, moo_oop_t value)
 {
 	/*MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);*/
 	MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(key));
-	return find_or_upsert (moo, dic, (moo_oop_char_t)key, value);
+	return find_or_upsert(moo, dic, (moo_oop_char_t)key, value);
 }
 
 moo_oop_association_t moo_getatdic (moo_t* moo, moo_oop_dic_t dic, moo_oop_t key)
 {
 	/*MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol); */
 	MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(key));
-	return find_or_upsert (moo, dic, (moo_oop_char_t)key, MOO_NULL);
+	return find_or_upsert(moo, dic, (moo_oop_char_t)key, MOO_NULL);
 }
 
 moo_oop_association_t moo_lookupdic (moo_t* moo, moo_oop_dic_t dic, const moo_oocs_t* name)
@@ -334,6 +334,29 @@ found:
 	return 0;
 }
 
+int moo_walkdic (moo_t* moo, moo_oop_dic_t dic, moo_dic_walker_t walker, void* ctx)
+{
+	moo_oow_t index, count;
+	moo_oop_association_t ass;
+
+	count = MOO_OBJ_GET_SIZE(dic->bucket);
+	for (index = 0; index < count; index++)
+	{
+		ass = (moo_oop_association_t)dic->bucket->slot[index];
+		if ((moo_oop_t)ass != moo->_nil)
+		{
+
+			MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
+			/*MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);*/
+			MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(ass->key));
+
+			if (walker(moo, dic, ass, ctx) <= -1) return -1;
+		}
+	}
+
+	return 0;
+}
+
 moo_oop_dic_t moo_makedic (moo_t* moo, moo_oop_class_t _class, moo_oow_t size)
 {
 	moo_oop_dic_t dic;
@@ -342,11 +365,11 @@ moo_oop_dic_t moo_makedic (moo_t* moo, moo_oop_class_t _class, moo_oow_t size)
 	MOO_ASSERT (moo, MOO_CLASSOF(moo,_class) == moo->_class);
 	MOO_ASSERT (moo, MOO_CLASS_SPEC_NAMED_INSTVARS(MOO_OOP_TO_SMOOI(_class->spec)) >= MOO_DIC_NAMED_INSTVARS);
 
-	dic = (moo_oop_dic_t)moo_instantiate (moo, _class, MOO_NULL, 0);
+	dic = (moo_oop_dic_t)moo_instantiate(moo, _class, MOO_NULL, 0);
 	if (!dic) return MOO_NULL;
 
 	moo_pushtmp (moo, (moo_oop_t*)&dic);
-	tmp = moo_instantiate (moo, moo->_array, MOO_NULL, size);
+	tmp = moo_instantiate(moo, moo->_array, MOO_NULL, size);
 	moo_poptmp (moo);
 	if (!tmp) return MOO_NULL;
 
@@ -363,6 +386,5 @@ moo_oop_nsdic_t moo_makensdic (moo_t* moo, moo_oop_class_t _class, moo_oow_t siz
 {
 	MOO_ASSERT (moo, MOO_CLASSOF(moo,_class) == moo->_class);
 	MOO_ASSERT (moo, MOO_CLASS_SPEC_NAMED_INSTVARS(MOO_OOP_TO_SMOOI(_class->spec)) >= MOO_NSDIC_NAMED_INSTVARS);
-
-	return (moo_oop_nsdic_t)moo_makedic (moo, _class, size);
+	return (moo_oop_nsdic_t)moo_makedic(moo, _class, size);
 }
