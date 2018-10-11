@@ -3147,10 +3147,11 @@ static int method_exists (moo_t* moo, const moo_oocs_t* name)
 	else
 	{
 		/* this function must be called from the inteface or the class context only */
+		moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+
 		MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_CLASS);
 
 		/* check if the current class contains a method of the given name */
-		moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 		if (cc->mth.type == MOO_METHOD_DUAL)
 		{
 			return moo_lookupdic(moo, cc->self_oop->mthdic[MOO_METHOD_INSTANCE], name) != MOO_NULL ||
@@ -4247,10 +4248,11 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 			}
 			else
 			{
+				moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+
 				MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_CLASS);
 				/* called inside a class definition */
 
-				moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 				if (cc->super_oop)
 				{
 					/* [NOTE] 
