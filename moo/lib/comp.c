@@ -253,7 +253,7 @@ static int compile_class_definition (moo_t* moo, int class_type);
 static int compile_block_statement (moo_t* moo);
 static int compile_method_statement (moo_t* moo);
 static int compile_method_expression (moo_t* moo, int pop);
-static int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index);
+static MOO_INLINE int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index);
 static moo_oop_t token_to_literal (moo_t* moo, int rdonly);
 static moo_oop_t find_element_in_compiling_pooldic (moo_t* moo, const moo_oocs_t* name);
 
@@ -925,7 +925,7 @@ static MOO_INLINE void unget_char (moo_t* moo, const moo_iolxc_t* c)
 static int get_char (moo_t* moo)
 {
 	moo_ooi_t n;
-	moo_ooci_t lc, ec;
+	moo_ooci_t lc;
 
 	if (moo->c->nungots > 0)
 	{
@@ -947,7 +947,7 @@ static int get_char (moo_t* moo)
 
 	if (moo->c->curinp->b.pos >= moo->c->curinp->b.len)
 	{
-		n = moo->c->impl (moo, MOO_IO_READ, moo->c->curinp);
+		n = moo->c->impl(moo, MOO_IO_READ, moo->c->curinp);
 		if (n <= -1) return -1;
 		
 		if (n == 0)
@@ -7785,9 +7785,13 @@ static int process_class_interfaces (moo_t* moo)
 		if (add_oop_to_oopbuf_nodup(moo, &cc->ifces, var.u.gbl->value, &ifce_index) <= -1) return -1;
 		if (ifce_index < old_ifce_count)
 		{
+			/* add_oop_to_oopbuf_nodup() returns the index to an existing item
+			 * if it's found. the index should be between 0 and the previous count - 1 inclusive.
+			 * the index returned will be the previous count if it's added this time */
 			moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo), "duplicate interface name");
 			return -1;
 		}
+
 #if 0
 		if (find_word_in_string(&cc->ifce_names, TOKEN_NAME(moo), MOO_NULL) >= 0)
 		{
@@ -7811,8 +7815,14 @@ static int process_class_interfaces (moo_t* moo)
 		moo_setsynerr (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
 	}
-	
+
 	GET_TOKEN (moo); /* skip ] and read the next token */
+	return 0;
+}
+
+static int class_implements_interface (moo_t* moo, moo_oop_class_t _class, moo_oop_interface_t ifce)
+{
+	
 	return 0;
 }
 
@@ -7823,12 +7833,19 @@ static int check_class_interface_conformance (moo_t* moo)
 
 	for (i = 0; i < cc->ifces.count; i++)
 	{
-// TODO: check conformance...
+		moo_oop_interface_t ifce = (moo_oop_interface_t)cc->ifces.ptr[i];
+		if (!class_implements_interface(moo, cc->self_oop, ifce))
+		{
+			moo_setsynerrbfmt (moo, MOO_SYNERR_ARGNAMEDUPL, &cc->fqn_loc, &cc->fqn, 
+				"%.*js not implementing interface %.*js", 
+				cc->fqn.len, cc->fqn.ptr,
+				MOO_OBJ_GET_SIZE(ifce->name), MOO_OBJ_GET_CHAR_SLOT(ifce->name));
+			return -1;
+		}
 	}
 
 	return 0;
 }
-
 
 static int __compile_class_definition (moo_t* moo, int class_type)
 {
@@ -7886,7 +7903,6 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 	}
 #endif
 
-	
 	/* [NOTE] TOKEN_NAME(moo) doesn't contain the full name if it's nested 
 	 *        inside a class. it is merely a name that appeared in the source
 	 *        code.
