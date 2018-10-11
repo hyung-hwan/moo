@@ -8916,19 +8916,23 @@ static int compile_stream (moo_t* moo)
 	return 0;
 }
 
+static void gc_oopbuf (moo_t* moo, moo_oopbuf_t* oopbuf)
+{
+	moo_oow_t i;
+
+	for (i = 0; i < oopbuf->count; i++)
+	{
+		register moo_oop_t x = moo_moveoop(moo, oopbuf->ptr[i]);
+		oopbuf->ptr[i] = x;
+	}
+}
+
 static void gc_compiler (moo_t* moo)
 {
 	/* called when garbage collection is performed */
 	if (moo->c)
 	{
-		moo_oow_t i;
-
-		for (i = 0; i < moo->c->arlit.count; i++)
-		{
-			register moo_oop_t x = moo_moveoop(moo, moo->c->arlit.ptr[i]);
-			moo->c->arlit.ptr[i] = x;
-		}
-
+		gc_oopbuf (moo, &moo->c->arlit);
 		gc_cunit_chain (moo);
 	}
 }
@@ -8961,54 +8965,45 @@ static void gc_cunit_chain (moo_t* moo)
 			case MOO_CUNIT_CLASS:
 			{
 				moo_oow_t i, j;
-				moo_cunit_class_t* c;
-				c = (moo_cunit_class_t*)cunit;
+				moo_cunit_class_t* cc;
+				cc = (moo_cunit_class_t*)cunit;
 
-				if (c->self_oop) 
-					c->self_oop = (moo_oop_class_t)moo_moveoop(moo, (moo_oop_t)c->self_oop);
+				if (cc->self_oop) 
+					cc->self_oop = (moo_oop_class_t)moo_moveoop(moo, (moo_oop_t)cc->self_oop);
 
-				if (c->super_oop)
-					c->super_oop = moo_moveoop(moo, c->super_oop);
+				if (cc->super_oop)
+					cc->super_oop = moo_moveoop(moo, cc->super_oop);
 
-				for (i = 0; i < MOO_COUNTOF(c->var); i++)
+				for (i = 0; i < MOO_COUNTOF(cc->var); i++)
 				{
-					for (j = 0; j < c->var[i].initv_count; j++)
+					for (j = 0; j < cc->var[i].initv_count; j++)
 					{
-						register moo_oop_t x = c->var[i].initv[j].v;
-						if (x) c->var[i].initv[j].v = moo_moveoop(moo, x);
+						register moo_oop_t x = cc->var[i].initv[j].v;
+						if (x) cc->var[i].initv[j].v = moo_moveoop(moo, x);
 					}
 				}
 
-				if (c->ns_oop)
+				if (cc->ns_oop)
 				{
-					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)c->ns_oop);
-					c->ns_oop = (moo_oop_nsdic_t)x;
+					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)cc->ns_oop);
+					cc->ns_oop = (moo_oop_nsdic_t)x;
 				}
 
-				if (c->superns_oop)
+				if (cc->superns_oop)
 				{
-					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)c->superns_oop);
-					c->superns_oop = (moo_oop_nsdic_t)x;
+					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)cc->superns_oop);
+					cc->superns_oop = (moo_oop_nsdic_t)x;
 				}
 
-				for (i = 0; i < c->ifces.count; i++)
+				gc_oopbuf (moo, &cc->ifces);
+
+				for (i = 0; i < cc->pdimp.dcl_count; i++)
 				{
-					register moo_oop_t x = moo_moveoop(moo, c->ifces.ptr[i]);
-					c->ifces.ptr[i] = x;
+					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)cc->pdimp.oops[i]);
+					cc->pdimp.oops[i] = (moo_oop_dic_t)x;
 				}
 
-				for (i = 0; i < c->pdimp.dcl_count; i++)
-				{
-					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)c->pdimp.oops[i]);
-					c->pdimp.oops[i] = (moo_oop_dic_t)x;
-				}
-
-				for (i = 0; i < c->mth.literals.count; i++)
-				{
-					register moo_oop_t x = moo_moveoop(moo, c->mth.literals.ptr[i]);
-					c->mth.literals.ptr[i] = x;
-				}
-
+				gc_oopbuf (moo, &cc->mth.literals);
 				break;
 			}
 
