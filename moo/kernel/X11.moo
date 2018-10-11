@@ -5,8 +5,19 @@ interface X11able
 	method(#dual) abc.
 	method(#dual) def.
 }
+interface X11able2
+{
+	method(#dual) abc2.
+	method(#dual) def.
+}
 
-class X11(Object) [X11able] from 'x11'
+interface X11able3
+{
+	method(#dual) abc3.
+}
+
+
+class X11(Object) [X11able,selfns.X11able3] from 'x11'
 {
 	## =====================================================================
 	## this part of the class must match the internal
@@ -20,6 +31,11 @@ class X11(Object) [X11able] from 'x11'
 
 	var event_loop_sem, event_loop_proc.
 	var llevent_blocks.
+
+	interface X11able3
+	{
+		method(#dual) abc55.
+	}
 
 	class Exception(System.Exception)
 	{

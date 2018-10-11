@@ -606,6 +606,8 @@ struct moo_cunit_class_t
 	moo_oow_t modname_capa;
 	moo_ioloc_t modname_loc;
 
+	moo_oopbuf_t ifces;
+
 	/* instance variable, class variable, class instance variable, constant
 	 *   var[0] - named instance variables
 	 *   var[1] - class instance variables

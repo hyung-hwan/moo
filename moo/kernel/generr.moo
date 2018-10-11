@@ -78,7 +78,7 @@ class MyObject(Object)
 			'wrong directive'
 			'wrong name'
 			'duplicate name'
-			'undefined class'
+			'undefined name'
 			'contradictory class definition'
 			'invalid non-pointer instance size'
 			'prohibited inheritance'

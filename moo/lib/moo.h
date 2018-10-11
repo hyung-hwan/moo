@@ -1682,7 +1682,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_DIRECTIVEINVAL,  /* wrong directive */
 	MOO_SYNERR_NAMEINVAL,       /* wrong name */
 	MOO_SYNERR_NAMEDUPL,        /* duplicate name */
-	MOO_SYNERR_CLASSUNDEF,      /* undefined class */
+	MOO_SYNERR_NAMEUNDEF,       /* undefined name */
 	MOO_SYNERR_CLASSCONTRA,     /* contradictory class */
 	MOO_SYNERR_NPINSTSIZEINVAL, /* invalid non-pointer instance size */
 	MOO_SYNERR_INHERITBANNED,   /* prohibited inheritance */

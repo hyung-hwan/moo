@@ -459,7 +459,7 @@ static int copy_string_to (moo_t* moo, const moo_oocs_t* src, moo_oocs_t* dst, m
 
 		capa = MOO_ALIGN(len, CLASS_BUFFER_ALIGN);
 
-		tmp = moo_reallocmem (moo, dst->ptr, MOO_SIZEOF(*tmp) * capa);
+		tmp = moo_reallocmem(moo, dst->ptr, MOO_SIZEOF(*tmp) * capa);
 		if (!tmp)  return -1;
 
 		dst->ptr = tmp;
@@ -546,6 +546,45 @@ static int fetch_word_from_string (const moo_oocs_t* haystack, moo_oow_t xindex,
 	}
 
 	return -1;
+}
+
+
+static int add_oop_to_oopbuf (moo_t* moo, moo_oopbuf_t* oopbuf, moo_oop_t item)
+{
+	if (oopbuf->count >= oopbuf->capa)
+	{
+		moo_oop_t* tmp;
+		moo_oow_t new_capa;
+
+		new_capa = MOO_ALIGN (oopbuf->count + 1, ARLIT_BUFFER_ALIGN);
+		tmp = (moo_oop_t*)moo_reallocmem(moo, oopbuf->ptr, new_capa * MOO_SIZEOF(*tmp));
+		if (!tmp) return -1;
+
+		oopbuf->capa = new_capa;
+		oopbuf->ptr = tmp;
+	}
+
+/* TODO: overflow check of oopbuf->count itself */
+	oopbuf->ptr[oopbuf->count++] = item;
+	return 0;
+}
+
+static int add_oop_to_oopbuf_nodup (moo_t* moo, moo_oopbuf_t* oopbuf, moo_oop_t item, moo_oow_t* index)
+{
+	moo_oow_t i;
+
+	for (i = 0; i < oopbuf->count; i++) 
+	{
+		if (oopbuf->ptr[i] == item) 
+		{
+			*index = i;
+			return 0;
+		}
+	}
+
+	if (add_oop_to_oopbuf(moo, oopbuf, item) <= -1) return -1;
+	*index = oopbuf->count - 1;
+	return 0;
 }
 
 #define CHAR_TO_NUM(c,base) \
@@ -2696,8 +2735,9 @@ static void eliminate_instructions (moo_t* moo, moo_oow_t start, moo_oow_t end)
  * Compiler
  * --------------------------------------------------------------------- */
 
-static int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index)
+static MOO_INLINE int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index)
 {
+#if 0
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_oow_t i;
 
@@ -2711,26 +2751,21 @@ static int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index)
 		if (cc->mth.literals.ptr[i] == lit) 
 		{
 			*index = i;
-			return i;
+			return 0;
 		}
 	}
 
-	if (cc->mth.literals.count >= cc->mth.literals.capa)
-	{
-		moo_oop_t* tmp;
-		moo_oow_t new_capa;
-
-		new_capa = MOO_ALIGN (cc->mth.literals.count + 1, LITERAL_BUFFER_ALIGN);
-		tmp = (moo_oop_t*)moo_reallocmem (moo, cc->mth.literals.ptr, new_capa * MOO_SIZEOF(*tmp));
-		if (!tmp) return -1;
-
-		cc->mth.literals.capa = new_capa;
-		cc->mth.literals.ptr = tmp;
-	}
-
-	*index = cc->mth.literals.count;
-	cc->mth.literals.ptr[cc->mth.literals.count++] = lit;
+	if (add_oop_to_oopbuf(moo, &cc->mth.literals, lit) <= -1) return -1;
+	*index = cc->mth.literals.count - 1;
 	return 0;
+#else
+	/* 
+	 * this removes redundancy of symbols, characters, and small integers. 
+	 * more complex redundacy check may be done somewhere else like 
+	 * in add_string_literal().
+	 */
+	return add_oop_to_oopbuf_nodup(moo, &((moo_cunit_class_t*)moo->c->cunit)->mth.literals, lit, index);
+#endif
 }
 
 static int add_string_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* index)
@@ -4660,7 +4695,7 @@ static int add_to_byte_array_literal_buffer (moo_t* moo, moo_oob_t b)
 		moo_oow_t new_capa;
 
 		new_capa = MOO_ALIGN (moo->c->balit.count + 1, BALIT_BUFFER_ALIGN);
-		tmp = (moo_oob_t*)moo_reallocmem (moo, moo->c->balit.ptr, new_capa * MOO_SIZEOF(*tmp));
+		tmp = (moo_oob_t*)moo_reallocmem(moo, moo->c->balit.ptr, new_capa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
 		moo->c->balit.capa = new_capa;
@@ -4672,24 +4707,9 @@ static int add_to_byte_array_literal_buffer (moo_t* moo, moo_oob_t b)
 	return 0;
 }
 
-static int add_to_array_literal_buffer (moo_t* moo, moo_oop_t item)
+static MOO_INLINE int add_to_array_literal_buffer (moo_t* moo, moo_oop_t item)
 {
-	if (moo->c->arlit.count >= moo->c->arlit.capa)
-	{
-		moo_oop_t* tmp;
-		moo_oow_t new_capa;
-
-		new_capa = MOO_ALIGN (moo->c->arlit.count + 1, ARLIT_BUFFER_ALIGN);
-		tmp = (moo_oop_t*)moo_reallocmem(moo, moo->c->arlit.ptr, new_capa * MOO_SIZEOF(*tmp));
-		if (!tmp) return -1;
-
-		moo->c->arlit.capa = new_capa;
-		moo->c->arlit.ptr = tmp;
-	}
-
-/* TODO: overflow check of moo->c->arlit.count itself */
-	moo->c->arlit.ptr[moo->c->arlit.count++] = item;
-	return 0;
+	return add_oop_to_oopbuf(moo, &moo->c->arlit, item);
 }
 
 static int read_byte_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
@@ -6860,7 +6880,7 @@ static int resolve_primitive_method (moo_t* moo)
 		savedlen = cc->modname.len;
 
 		if (copy_string_to(moo, &cc->name, &cc->modname, &cc->modname_capa, 1, '\0') <= -1 ||
-			copy_string_to(moo, &mthname, &cc->modname, &cc->modname_capa, 1, '_') <= -1)
+		    copy_string_to(moo, &mthname, &cc->modname, &cc->modname_capa, 1, '_') <= -1)
 		{
 			cc->modname.len = savedlen;
 			return -1;
@@ -6908,8 +6928,8 @@ static int resolve_primitive_method (moo_t* moo)
 		tmp.len = MOO_OBJ_GET_SIZE(cc->self_oop->modname);
 
 		if (copy_string_to (moo, &tmp, &cc->modname, &cc->modname_capa, 1, '\0') <= -1 ||
-			copy_string_to (moo, &mthname, &cc->modname, &cc->modname_capa, 1, '.') <= -1 ||
-			add_symbol_literal(moo, &cc->modname, savedlen, &litidx) <= -1)
+		    copy_string_to (moo, &mthname, &cc->modname, &cc->modname_capa, 1, '.') <= -1 ||
+		    add_symbol_literal(moo, &cc->modname, savedlen, &litidx) <= -1)
 		{
 			cc->modname.len = savedlen;
 			return -1;
@@ -7694,58 +7714,13 @@ static int process_class_superclass (moo_t* moo)
 			 * the object found with the name is not a class object. or,
 			 * the class object found is a internally defined kernel
 			 * class object. */
-			moo_setsynerr (moo, MOO_SYNERR_CLASSUNDEF, &cc->superfqn_loc, &cc->superfqn);
+			moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEUNDEF, &cc->superfqn_loc, &cc->superfqn, "superclass name undefined");
 			return -1;
 		}
 	}
 
 	return 0;
 }
-
-static int process_class_interfaces (moo_t* moo)
-{
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-
-	GET_TOKEN (moo); /* skip [ */
-
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
-	{
-		moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "interface name expected");
-		return -1;
-	}
-
-	do
-	{
-		var_info_t var;
-
-		if (get_variable_info(moo, TOKEN_NAME(moo), TOKEN_LOC(moo), TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED, &var) <= -1) return -1;
-
-		if (var.type != VAR_GLOBAL || MOO_CLASSOF(moo, var.u.gbl->value) != moo->_interface)
-		{
-			moo_setsynerr (moo, MOO_SYNERR_CLASSUNDEF, TOKEN_LOC(moo), TOKEN_NAME(moo));
-			return -1;
-		}
-
-		// TODO: store to interfaces....
-		//cc->interfaces[];
-
-		GET_TOKEN (moo);
-		if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA) break;
-
-		GET_TOKEN (moo);
-	}
-	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT || TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED);
-
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACK)
-	{
-		moo_setsynerr (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
-		return -1;
-	}
-	
-	GET_TOKEN (moo); /* skip ] and read the next token */
-	return 0;
-}
-
 
 static int process_class_module_import (moo_t* moo)
 {
@@ -7780,6 +7755,80 @@ static int process_class_module_import (moo_t* moo)
 	GET_TOKEN (moo); /* skip the module name and read the next token */
 	return 0;
 }
+
+static int process_class_interfaces (moo_t* moo)
+{
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+
+	GET_TOKEN (moo); /* skip [ */
+
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT && TOKEN_TYPE(moo) != MOO_IOTOK_IDENT_DOTTED)
+	{
+		moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "interface name expected");
+		return -1;
+	}
+
+	do
+	{
+		var_info_t var;
+		moo_oow_t old_ifce_count;
+		moo_oow_t ifce_index;
+
+		if (get_variable_info(moo, TOKEN_NAME(moo), TOKEN_LOC(moo), TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED, &var) <= -1 ||
+		    var.type != VAR_GLOBAL || MOO_CLASSOF(moo, var.u.gbl->value) != moo->_interface)
+		{
+			moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEUNDEF, TOKEN_LOC(moo), TOKEN_NAME(moo), "interface name undefined");
+			return -1;
+		}
+
+		old_ifce_count = cc->ifces.count;
+		if (add_oop_to_oopbuf_nodup(moo, &cc->ifces, var.u.gbl->value, &ifce_index) <= -1) return -1;
+		if (ifce_index < old_ifce_count)
+		{
+			moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo), "duplicate interface name");
+			return -1;
+		}
+#if 0
+		if (find_word_in_string(&cc->ifce_names, TOKEN_NAME(moo), MOO_NULL) >= 0)
+		{
+			moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo), "duplicate interface name");
+			return -1;
+		}
+
+		/* just store the interface name instead of resolved interface object */
+		if (copy_string_to(moo, TOKEN_NAME(moo), &cc->ifce_names, &cc->ifce_names_capa, 1, ' ') <= -1) return -1;
+#endif
+
+		GET_TOKEN (moo);
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA) break;
+
+		GET_TOKEN (moo);
+	}
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT || TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED);
+
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACK)
+	{
+		moo_setsynerr (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+	
+	GET_TOKEN (moo); /* skip ] and read the next token */
+	return 0;
+}
+
+static int check_class_interface_conformance (moo_t* moo)
+{
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_oow_t i;
+
+	for (i = 0; i < cc->ifces.count; i++)
+	{
+// TODO: check conformance...
+	}
+
+	return 0;
+}
+
 
 static int __compile_class_definition (moo_t* moo, int class_type)
 {
@@ -7884,7 +7933,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 		else
 		{
 			/* only an existing class can be extended. */
-			moo_setsynerr (moo, MOO_SYNERR_CLASSUNDEF, &cc->fqn_loc, &cc->name);
+			moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEUNDEF, &cc->fqn_loc, &cc->name, "class name undefined");
 			return -1;
 		}
 
@@ -8160,6 +8209,12 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 	{
 		moo_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		return -1;
+	}
+
+	if (cc->ifces.count > 0)
+	{
+		/* interface has been specified. */
+		if (check_class_interface_conformance(moo) <= -1) return -1;
 	}
 
 	GET_TOKEN (moo);
@@ -8936,6 +8991,12 @@ static void gc_cunit_chain (moo_t* moo)
 					c->superns_oop = (moo_oop_nsdic_t)x;
 				}
 
+				for (i = 0; i < c->ifces.count; i++)
+				{
+					register moo_oop_t x = moo_moveoop(moo, c->ifces.ptr[i]);
+					c->ifces.ptr[i] = x;
+				}
+
 				for (i = 0; i < c->pdimp.dcl_count; i++)
 				{
 					register moo_oop_t x = moo_moveoop(moo, (moo_oop_t)c->pdimp.oops[i]);
@@ -8944,7 +9005,7 @@ static void gc_cunit_chain (moo_t* moo)
 
 				for (i = 0; i < c->mth.literals.count; i++)
 				{
-					register moo_oop_t x = moo_moveoop (moo, c->mth.literals.ptr[i]);
+					register moo_oop_t x = moo_moveoop(moo, c->mth.literals.ptr[i]);
 					c->mth.literals.ptr[i] = x;
 				}
 
@@ -9061,9 +9122,10 @@ static void pop_cunit (moo_t* moo)
 			moo_cunit_class_t* c;
 			c = (moo_cunit_class_t*)cunit;
 
-			if (c->fqn.ptr) moo_freemem (moo, c->fqn.ptr);
-			if (c->superfqn.ptr) moo_freemem (moo, c->superfqn.ptr);
-			if (c->modname.ptr) moo_freemem (moo, c->modname.ptr);
+			if (c->fqn.ptr) moo_freemem (moo, c->fqn.ptr); /* strbuf */
+			if (c->superfqn.ptr) moo_freemem (moo, c->superfqn.ptr); /* strbuf */
+			if (c->modname.ptr) moo_freemem (moo, c->modname.ptr); /* strbuf */
+			if (c->ifces.ptr) moo_freemem (moo, c->ifces.ptr); /* oopbuf */
 
 			for (i = 0; i < MOO_COUNTOF(c->var); i++)
 			{
