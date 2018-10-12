@@ -3,7 +3,7 @@
 interface X11able
 {
 	method(#dual) abc.
-	method(#dual) def.
+	method(#dual,#liberal) def(x, y).
 }
 interface X11able2
 {
@@ -13,7 +13,7 @@ interface X11able2
 
 interface X11able3
 {
-	method(#dual) abc3.
+	method(#dual) class.
 }
 
 
@@ -33,8 +33,8 @@ class X11(Object) [X11able,selfns.X11able3] from 'x11'
 	var llevent_blocks.
 
 method(#dual) abc { ^nil }
-method(#dual) def { ^nil }
-method(#dual) abc3 { ^nil }
+method(#dual,#liberal) def(x, z) { ^nil }
+###method(#dual) abc3 { ^nil }
 
 	interface X11able3
 	{

@@ -1620,82 +1620,107 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 	return 0;
 }
 
+MOO_INLINE moo_oop_method_t find_method_in_class (moo_t* moo, moo_oop_class_t _class, int mth_type, const moo_oocs_t* name)
+{
+	moo_oop_association_t ass;
+	moo_oop_dic_t mthdic;
+
+	mthdic = _class->mthdic[mth_type];
+
+	/* if a kernel class is not defined in the bootstrapping code,
+	 * the method dictionary is still nil. you must define all the initial 
+	 * kernel classes properly before you can use this function */
+	MOO_ASSERT (moo, (moo_oop_t)mthdic != moo->_nil); 
+	MOO_ASSERT (moo, MOO_CLASSOF(moo, mthdic) == moo->_method_dictionary);
+
+	ass = (moo_oop_association_t)moo_lookupdic(moo, mthdic, name);
+	if (ass) 
+	{
+		/* found the method */
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, ass->value) == moo->_method);
+		return (moo_oop_method_t)ass->value;
+	}
+
+	/* NOTE: moo_seterrXXX() is not called here */
+	return MOO_NULL;
+}
+
+MOO_INLINE moo_oop_method_t find_method_in_class_chain (moo_t* moo, moo_oop_class_t _class, int mth_type, const moo_oocs_t* name)
+{
+	moo_oop_method_t mth;
+
+	do
+	{
+		mth = find_method_in_class(moo, _class, mth_type, name);
+		if (mth) return mth;
+		_class = (moo_oop_class_t)_class->superclass;
+	}
+	while ((moo_oop_t)_class != moo->_nil);
+
+	/* NOTE: moo_seterrXXX() is not called here */
+	return MOO_NULL;
+}
+
+moo_oop_method_t moo_findmethodinclass (moo_t* moo, moo_oop_class_t _class, int mth_type, const moo_oocs_t* name)
+{
+	moo_oop_method_t mth;
+	mth = find_method_in_class(moo, _class, mth_type, name);
+	if (!mth) moo_seterrnum (moo, MOO_ENOENT);
+	return mth;
+}
+
+moo_oop_method_t moo_findmethodinclasschain (moo_t* moo, moo_oop_class_t _class, int mth_type, const moo_oocs_t* name)
+{
+	moo_oop_method_t mth;
+	mth = find_method_in_class_chain(moo, _class, mth_type, name);
+	if (!mth) moo_seterrnum (moo, MOO_ENOENT);
+	return mth;
+}
+
 moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, const moo_oocs_t* message, int super)
 {
-	moo_oop_class_t cls;
-	moo_oop_association_t ass;
-	moo_oop_t c;
-	moo_oop_dic_t mthdic;
-	int dic_no;
-/* TODO: implement method lookup cache */
+	moo_oop_class_t _class;
+	moo_oop_class_t c;
+	int mth_type;
+	moo_oop_method_t mth;
 
-	cls = MOO_CLASSOF(moo, receiver);
-	if (cls == moo->_class)
+	_class = MOO_CLASSOF(moo, receiver);
+	if (_class == moo->_class)
 	{
 		/* receiver is a class object (an instance of Class) */
-		c = receiver; 
-		dic_no = MOO_METHOD_CLASS;
+		c = (moo_oop_class_t)receiver; 
+		mth_type = MOO_METHOD_CLASS;
 	}
 	else
 	{
 		/* receiver is not a class object. so take its class */
-		c = (moo_oop_t)cls;
-		dic_no = MOO_METHOD_INSTANCE;
+		c = _class;
+		mth_type = MOO_METHOD_INSTANCE;
 	}
-
-	MOO_ASSERT (moo, c != moo->_nil);
+	MOO_ASSERT (moo, (moo_oop_t)c != moo->_nil);
 
 	if (super) 
 	{
-		/*
-		moo_oop_method_t m;
-		MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context->origin) == moo->_method_context);
-		m = (moo_oop_method_t)moo->active_context->origin->method_or_nargs;
-		c = ((moo_oop_class_t)m->owner)->superclass;
-		*/
 		MOO_ASSERT (moo, moo->active_method);
 		MOO_ASSERT (moo, moo->active_method->owner);
-		c = ((moo_oop_class_t)moo->active_method->owner)->superclass;
-		if (c == moo->_nil) goto not_found; /* reached the top of the hierarchy */
+		c = (moo_oop_class_t)((moo_oop_class_t)moo->active_method->owner)->superclass;
+		if ((moo_oop_t)c == moo->_nil) goto not_found;
+		// c is nil if it reached the top of the hierarch.
+		// otherwise c points to a class object
 	}
 
-	do
-	{
-		mthdic = ((moo_oop_class_t)c)->mthdic[dic_no];
 
-		/* if a kernel class is not defined in the bootstrapping code,
-		 * the method dictionary is still nil. the initial kernel classes
-		 * must all be defined properly */
-		MOO_ASSERT (moo, (moo_oop_t)mthdic != moo->_nil); 
-
-		MOO_ASSERT (moo, MOO_CLASSOF(moo, mthdic) == moo->_method_dictionary);
-
-		ass = (moo_oop_association_t)moo_lookupdic (moo, mthdic, message);
-		if (ass) 
-		{
-			/* found the method */
-			MOO_ASSERT (moo, MOO_CLASSOF(moo, ass->value) == moo->_method);
-			return (moo_oop_method_t)ass->value;
-		}
-		c = ((moo_oop_class_t)c)->superclass;
-	}
-	while (c != moo->_nil);
+	/* [IMPORT] the method lookup logic should be the same as ciim_on_each_method() in comp.c */
+	mth = find_method_in_class_chain(moo, c, mth_type, message);
+	if (mth) return mth;
 
 not_found:
-	if (cls == moo->_class)
+	if (_class == moo->_class)
 	{
 		/* the object is an instance of Class. find the method
 		 * in an instance method dictionary of Class also */
-		mthdic = ((moo_oop_class_t)cls)->mthdic[MOO_METHOD_INSTANCE];
-		MOO_ASSERT (moo, (moo_oop_t)mthdic != moo->_nil);
-		MOO_ASSERT (moo, MOO_CLASSOF(moo, mthdic) == moo->_method_dictionary);
-
-		ass = (moo_oop_association_t)moo_lookupdic (moo, mthdic, message);
-		if (ass) 
-		{
-			MOO_ASSERT (moo, MOO_CLASSOF(moo, ass->value) == moo->_method);
-			return (moo_oop_method_t)ass->value;
-		}
+		mth = find_method_in_class(moo, _class, MOO_METHOD_INSTANCE, message);
+		if (mth) return mth;
 	}
 
 	MOO_LOG3 (moo, MOO_LOG_DEBUG, "Method '%.*js' not found in %O\n", message->len, message->ptr, receiver);
@@ -1727,14 +1752,14 @@ static int start_initial_process_and_context (moo_t* moo, const moo_oocs_t* objn
 
 #if defined(INVOKE_DIRECTLY)
 
-	ass = moo_lookupsysdic (moo, objname);
+	ass = moo_lookupsysdic(moo, objname);
 	if (!ass || MOO_CLASSOF(moo, ass->value) != moo->_class) 
 	{
 		MOO_LOG2 (moo, MOO_LOG_DEBUG, "Cannot find a class '%.*js'", objname->len, objname->ptr);
 		return -1;
 	}
 
-	mth = moo_findmethod (moo, ass->value, mthname, 0);
+	mth = moo_findmethod(moo, ass->value, mthname, 0);
 	if (!mth) 
 	{
 		MOO_LOG4 (moo, MOO_LOG_DEBUG, "Cannot find a method %.*js>>%.*js", objname->len, objname->ptr, mthname->len, mthname->ptr);
@@ -1758,7 +1783,7 @@ TODO: overcome this problem - accept parameters....
 
 	startup.ptr = str_startup;
 	startup.len = 7;
-	mth = moo_findmethod (moo, (moo_oop_t)moo->_system, &startup, 0);
+	mth = moo_findmethod(moo, (moo_oop_t)moo->_system, &startup, 0);
 	if (!mth) 
 	{
 		MOO_LOG0 (moo, MOO_LOG_DEBUG, "Cannot find the startup method in the system class");
@@ -4016,7 +4041,7 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_
 		mthname.ptr = fbm;
 		mthname.len = 18;
 
-		method = moo_findmethod (moo, receiver, &mthname, 0);
+		method = moo_findmethod(moo, receiver, &mthname, 0);
 		if (!method)
 		{
 			/* this must not happen as long as doesNotUnderstand: is implemented under Apex.
@@ -4053,7 +4078,7 @@ static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow
 
 	mthname.ptr = (moo_ooch_t*)nameptr;
 	mthname.len = namelen;
-	method = moo_findmethod (moo, receiver, &mthname, to_super);
+	method = moo_findmethod(moo, receiver, &mthname, to_super);
 	if (!method)
 	{
 		MOO_LOG4 (moo, MOO_LOG_IC | MOO_LOG_FATAL, 

@@ -1,8 +1,14 @@
+interface ClassInterface
+{
+	method name.
+	method superclass.
+}
+
 ##
 ## the Class object should be a variable-pointer object because
 ## it needs to accomodate class instance variables.
 ##
-class(#pointer,#limited) Class(Apex)
+class(#pointer,#limited) Class(Apex) [ClassInterface]
 {
 	var spec, selfspec, superclass, subclasses, name, modname.
 	var instvars, classinstvars, classvars, pooldics.

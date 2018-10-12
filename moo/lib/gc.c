@@ -409,7 +409,7 @@ static moo_oop_class_t alloc_kernel_class (moo_t* moo, int class_flags, moo_oow_
 	c = (moo_oop_class_t)moo_allocoopobj (moo, MOO_CLASS_NAMED_INSTVARS + num_classvars);
 	if (!c) return MOO_NULL;
 
-	MOO_OBJ_SET_FLAGS_KERNEL (c, 1);
+	MOO_OBJ_SET_FLAGS_KERNEL (c, MOO_OBJ_FLAGS_KERNEL_IMMATURE);
 	MOO_OBJ_SET_CLASS (c, (moo_oop_t)moo->_class);
 	c->spec = MOO_SMOOI_TO_OOP(spec); 
 	c->selfspec = MOO_SMOOI_TO_OOP(MOO_CLASS_SELFSPEC_MAKE(num_classvars, 0, class_flags));

@@ -4253,7 +4253,7 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 				MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_CLASS);
 				/* called inside a class definition */
 
-				if (cc->super_oop)
+				if (cc->in_class_body)
 				{
 					/* [NOTE] 
 					 *  cls.ns_oop is set when the class name is enountered.
@@ -4262,6 +4262,7 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 					 *  on the other hand, cls.ns_oop is not MOO_NULL as long as
 					 *  cls.super_oop is not MOO_NULL.
 					 */
+					MOO_ASSERT (moo, cc->super_oop != MOO_NULL);
 					MOO_ASSERT (moo, cc->ns_oop != MOO_NULL);
 					/* cc->self_oop may still be MOO_NULL if the class has not been instantiated */
 
@@ -4371,11 +4372,11 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 			}
 		}
 
-		if (cc->super_oop)
+		if (cc->in_class_body)
 		{
 			/* called inside a class definition */
 			/* read a comment in find_dotted_ident() for the reason behind
-			 * the if condition above. */
+			 * the 'if' condition above. */
 
 			MOO_ASSERT (moo, cc->super_oop != MOO_NULL);
 			MOO_ASSERT (moo, cc->ns_oop != MOO_NULL);
@@ -4384,7 +4385,7 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 			{
 				/* if the current class being compiled has not been instantiated,
 				 * no validation nor adjustment of the var->pos field is performed */
-				return cc->self_oop? validate_class_level_variable (moo, var, name, name_loc): 0;
+				return cc->self_oop? validate_class_level_variable(moo, var, name, name_loc): 0;
 			}
 		}
 
@@ -7310,7 +7311,7 @@ static int make_defined_class (moo_t* moo)
 		/* this is an internally created class object being defined. */
 
 		MOO_ASSERT (moo, MOO_CLASSOF(moo, cc->self_oop) == moo->_class);
-		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_KERNEL(cc->self_oop) == 1);
+		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_KERNEL(cc->self_oop) == MOO_OBJ_FLAGS_KERNEL_IMMATURE);
 
 		if (spec != MOO_OOP_TO_SMOOI(cc->self_oop->spec) ||
 		    self_spec != MOO_OOP_TO_SMOOI(cc->self_oop->selfspec))
@@ -7341,7 +7342,7 @@ static int make_defined_class (moo_t* moo)
  * if superclass is byte variable, the current class cannot be word variable or something else.
 *  TODO: TODO: TODO:
  */
-	MOO_OBJ_SET_FLAGS_KERNEL (cc->self_oop, 2);
+	MOO_OBJ_SET_FLAGS_KERNEL (cc->self_oop,  MOO_OBJ_FLAGS_KERNEL_MATURE);
 
 	cc->self_oop->superclass = cc->super_oop;
 
@@ -7680,7 +7681,8 @@ static int process_class_superclass (moo_t* moo)
 		if (get_variable_info(moo, &cc->superfqn, &cc->superfqn_loc, superfqn_is_dotted, &var) <= -1) return -1;
 
 		if (var.type != VAR_GLOBAL) goto unknown_superclass;
-		if (MOO_CLASSOF(moo, var.u.gbl->value) == moo->_class && MOO_OBJ_GET_FLAGS_KERNEL(var.u.gbl->value) != 1)
+		if (MOO_CLASSOF(moo, var.u.gbl->value) == moo->_class && 
+		    MOO_OBJ_GET_FLAGS_KERNEL(var.u.gbl->value) != MOO_OBJ_FLAGS_KERNEL_IMMATURE)
 		{
 			/* the value found must be a class and it must not be an incomplete internal class object. 
 			 *  0(non-kernel object)
@@ -7830,17 +7832,21 @@ struct ciim_t
 };
 typedef struct ciim_t ciim_t;
 
-static int on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_association_t ass, void* ctx)
+static int ciim_on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_association_t ass, void* ctx)
 {
 	ciim_t* ciim = (ciim_t*)ctx;
 	moo_oocs_t name;
+	moo_oop_method_t mth;
+	moo_oop_methsig_t sig;
 
 	name.ptr = MOO_OBJ_GET_CHAR_SLOT(ass->key);
 	name.len = MOO_OBJ_GET_SIZE(ass->key);
-	ass = moo_lookupdic(moo, ciim->_class->mthdic[ciim->mth_type], &name);
-	if (!ass) 
-	{/* TODO: change error code */
-		moo_setsynerrbfmt (moo, MOO_SYNERR_ARGFLOOD, MOO_NULL, MOO_NULL, 
+
+	/* [IMPORT] the method lookup logic should be the same as moo_findmethod() in exec.c */
+	mth = moo_findmethodinclasschain(moo, ciim->_class, ciim->mth_type, &name);
+	if (!mth)
+	{
+		moo_setsynerrbfmt (moo, MOO_SYNERR_CLASSNCIFCE, MOO_NULL, MOO_NULL, 
 			"%.*js not implementing %.*js>>%.*js",
 			MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
 			MOO_OBJ_GET_SIZE(ciim->ifce->name), MOO_OBJ_GET_CHAR_SLOT(ciim->ifce->name),
@@ -7849,7 +7855,31 @@ static int on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_association_t 
 		return -1;
 	}
 
-/* TODO: check preamble flags in signature */
+	sig = (moo_oop_methsig_t)ass->value;
+	if (MOO_METHOD_GET_PREAMBLE_FLAGS(MOO_OOP_TO_SMOOI(mth->preamble)) != MOO_METHOD_GET_PREAMBLE_FLAGS(MOO_OOP_TO_SMOOI(sig->preamble)))
+	{
+		moo_setsynerrbfmt (moo, MOO_SYNERR_CLASSNCIFCE, MOO_NULL, MOO_NULL, 
+			"%.*js>>%.*js modifiers conficting with %.*js>>%.*js",
+			MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
+			name.len, name.ptr,
+			MOO_OBJ_GET_SIZE(ciim->ifce->name), MOO_OBJ_GET_CHAR_SLOT(ciim->ifce->name),
+			name.len, name.ptr
+		);
+		return -1;
+	}
+	
+	if (mth->tmpr_nargs != sig->tmpr_nargs) /* don't need MOO_OOP_TO_SMOOI */
+	{
+		moo_setsynerrbfmt (moo, MOO_SYNERR_CLASSNCIFCE, MOO_NULL, MOO_NULL, 
+			"%.*js>>%.*js parameters conflicting with %.*js>>%.*js",
+			MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
+			name.len, name.ptr,
+			MOO_OBJ_GET_SIZE(ciim->ifce->name), MOO_OBJ_GET_CHAR_SLOT(ciim->ifce->name),
+			name.len, name.ptr
+		);
+		return -1;
+	}
+	
 	return 0;
 }
 
@@ -7860,12 +7890,12 @@ static int class_implements_interface (moo_t* moo, moo_oop_class_t _class, moo_o
 	ciim.ifce = ifce;
 	ciim._class = _class;
 	ciim.mth_type = MOO_METHOD_INSTANCE;
-	if (moo_walkdic(moo, ifce->mthdic[MOO_METHOD_INSTANCE], on_each_method, &ciim) <= -1) return 0;
+	if (moo_walkdic(moo, ifce->mthdic[MOO_METHOD_INSTANCE], ciim_on_each_method, &ciim) <= -1) return 0;
 
 	ciim.ifce = ifce;
 	ciim._class = _class;
 	ciim.mth_type = MOO_METHOD_CLASS;
-	if (moo_walkdic(moo, ifce->mthdic[MOO_METHOD_CLASS], on_each_method, &ciim) <= -1) return 0;
+	if (moo_walkdic(moo, ifce->mthdic[MOO_METHOD_CLASS], ciim_on_each_method, &ciim) <= -1) return 0;
 
 	return 1;
 }
@@ -7975,7 +8005,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 
 		ass = moo_lookupdic(moo, (moo_oop_dic_t)cc->ns_oop, &cc->name);
 		if (ass && MOO_CLASSOF(moo, ass->value) == moo->_class &&
-		    MOO_OBJ_GET_FLAGS_KERNEL(ass->value) != 1)
+		    MOO_OBJ_GET_FLAGS_KERNEL(ass->value) != MOO_OBJ_FLAGS_KERNEL_IMMATURE)
 		{
 			/* the value must be a class object.
 			 * and it must be either a user-defined(0) or completed kernel built-in(2). 
@@ -7999,7 +8029,8 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 		ass = moo_lookupdic(moo, (moo_oop_dic_t)cc->ns_oop, &cc->name);
 		if (ass)
 		{
-			if (MOO_CLASSOF(moo, ass->value) != moo->_class || MOO_OBJ_GET_FLAGS_KERNEL(ass->value) > 1)
+			if (MOO_CLASSOF(moo, ass->value) != moo->_class || 
+			    MOO_OBJ_GET_FLAGS_KERNEL(ass->value) == MOO_OBJ_FLAGS_KERNEL_MATURE)
 			{
 				/* the object found with the name is not a class object 
 				 * or the the class object found is a fully defined kernel 
@@ -8030,6 +8061,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 		}
 	}
 
+	cc->in_class_body = 1;
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_LBRACE)
 	{
 		moo_setsynerr (moo, MOO_SYNERR_LBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));

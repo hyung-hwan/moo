@@ -795,7 +795,7 @@ moo_pfrc_t moo_pf_responds_to (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	mthname.ptr = MOO_OBJ_GET_CHAR_SLOT(selector);
 	mthname.len = MOO_OBJ_GET_SIZE(selector);
-	if (moo_findmethod (moo, rcv, &mthname, 0))
+	if (moo_findmethod(moo, rcv, &mthname, 0))
 	{
 		MOO_STACK_SETRET (moo, nargs, moo->_true);
 	}

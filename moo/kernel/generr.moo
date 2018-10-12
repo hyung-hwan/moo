@@ -80,6 +80,7 @@ class MyObject(Object)
 			'duplicate name'
 			'undefined name'
 			'contradictory class definition'
+			'class not conforming to interface'
 			'invalid non-pointer instance size'
 			'prohibited inheritance'
 			'variable declaration not allowed'

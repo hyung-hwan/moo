@@ -446,6 +446,10 @@ typedef enum moo_gcfin_t moo_gcfin_t;
 	(((moo_oow_t)(r)) << MOO_OBJ_FLAGS_TRAILER_SHIFT) \
 )
 
+#define MOO_OBJ_FLAGS_KERNEL_USER     0 
+#define MOO_OBJ_FLAGS_KERNEL_IMMATURE 1
+#define MOO_OBJ_FLAGS_KERNEL_MATURE   2
+
 #define MOO_OBJ_HEADER \
 	moo_oow_t _flags; \
 	moo_oow_t _size; \
@@ -1684,6 +1688,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_NAMEDUPL,        /* duplicate name */
 	MOO_SYNERR_NAMEUNDEF,       /* undefined name */
 	MOO_SYNERR_CLASSCONTRA,     /* contradictory class */
+	MOO_SYNERR_CLASSNCIFCE,     /* class not conforming to interface */
 	MOO_SYNERR_NPINSTSIZEINVAL, /* invalid non-pointer instance size */
 	MOO_SYNERR_INHERITBANNED,   /* prohibited inheritance */
 	MOO_SYNERR_VARDCLBANNED,    /* variable declaration not allowed */

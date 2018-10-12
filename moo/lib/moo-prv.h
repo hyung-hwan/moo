@@ -607,6 +607,7 @@ struct moo_cunit_class_t
 	moo_ioloc_t modname_loc;
 
 	moo_oopbuf_t ifces;
+	int in_class_body; /* set to non-zero after '{' has been encountered */
 
 	/* instance variable, class variable, class instance variable, constant
 	 *   var[0] - named instance variables
@@ -1424,6 +1425,20 @@ moo_oop_method_t moo_findmethod (
 	moo_oop_t         receiver,
 	const moo_oocs_t* message,
 	int               super
+);
+
+moo_oop_method_t moo_findmethodinclass (
+	moo_t*            moo,
+	moo_oop_class_t   _class,
+	int               mth_type,
+	const moo_oocs_t* name
+);
+
+moo_oop_method_t moo_findmethodinclasschain (
+	moo_t*            moo,
+	moo_oop_class_t   _class,
+	int               mth_type,
+	const moo_oocs_t* name
 );
 
 /* ========================================================================= */
