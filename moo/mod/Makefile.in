@@ -149,7 +149,7 @@ am__DEPENDENCIES_1 =
 @ENABLE_MOD_CON_TRUE@libmoo_con_la_DEPENDENCIES =  \
 @ENABLE_MOD_CON_TRUE@	$(am__DEPENDENCIES_1) \
 @ENABLE_MOD_CON_TRUE@	$(am__DEPENDENCIES_1)
-am__libmoo_con_la_SOURCES_DIST = con.c _con.h
+am__libmoo_con_la_SOURCES_DIST = _con.c _con.h
 @ENABLE_MOD_CON_TRUE@am_libmoo_con_la_OBJECTS = libmoo_con_la-con.lo
 libmoo_con_la_OBJECTS = $(am_libmoo_con_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -455,7 +455,7 @@ CPPFLAGS_COMMON = -I$(abs_builddir) -I$(abs_builddir)/../lib \
 @ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES = $(am__append_7) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__append_8) $(am__append_9) \
 @ENABLE_STATIC_MODULE_FALSE@	libmoo-stdio.la $(am__append_10)
-@ENABLE_MOD_CON_TRUE@libmoo_con_la_SOURCES = con.c _con.h
+@ENABLE_MOD_CON_TRUE@libmoo_con_la_SOURCES = _con.c _con.h
 @ENABLE_MOD_CON_TRUE@libmoo_con_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 @ENABLE_MOD_CON_TRUE@libmoo_con_la_LDFLAGS = $(LDFLAGS_COMMON)
 @ENABLE_MOD_CON_TRUE@libmoo_con_la_LIBADD = $(LIBADD_COMMON) $(TERMINAL_LIBS)
@@ -607,12 +607,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LTCOMPILE) -c -o $@ $<
 
-libmoo_con_la-con.lo: con.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_con_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_con_la-con.lo -MD -MP -MF $(DEPDIR)/libmoo_con_la-con.Tpo -c -o libmoo_con_la-con.lo `test -f 'con.c' || echo '$(srcdir)/'`con.c
+libmoo_con_la-con.lo: _con.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_con_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_con_la-con.lo -MD -MP -MF $(DEPDIR)/libmoo_con_la-con.Tpo -c -o libmoo_con_la-con.lo `test -f '_con.c' || echo '$(srcdir)/'`_con.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_con_la-con.Tpo $(DEPDIR)/libmoo_con_la-con.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='con.c' object='libmoo_con_la-con.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='_con.c' object='libmoo_con_la-con.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_con_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_con_la-con.lo `test -f 'con.c' || echo '$(srcdir)/'`con.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_con_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_con_la-con.lo `test -f '_con.c' || echo '$(srcdir)/'`_con.c
 
 libmoo_ffi_la-ffi.lo: ffi.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_ffi_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_ffi_la-ffi.lo -MD -MP -MF $(DEPDIR)/libmoo_ffi_la-ffi.Tpo -c -o libmoo_ffi_la-ffi.lo `test -f 'ffi.c' || echo '$(srcdir)/'`ffi.c
