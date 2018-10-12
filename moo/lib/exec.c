@@ -1620,7 +1620,7 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 	return 0;
 }
 
-MOO_INLINE moo_oop_method_t find_method_in_class (moo_t* moo, moo_oop_class_t _class, int mth_type, const moo_oocs_t* name)
+static MOO_INLINE moo_oop_method_t find_method_in_class (moo_t* moo, moo_oop_class_t _class, int mth_type, const moo_oocs_t* name)
 {
 	moo_oop_association_t ass;
 	moo_oop_dic_t mthdic;
@@ -1645,7 +1645,7 @@ MOO_INLINE moo_oop_method_t find_method_in_class (moo_t* moo, moo_oop_class_t _c
 	return MOO_NULL;
 }
 
-MOO_INLINE moo_oop_method_t find_method_in_class_chain (moo_t* moo, moo_oop_class_t _class, int mth_type, const moo_oocs_t* name)
+static MOO_INLINE moo_oop_method_t find_method_in_class_chain (moo_t* moo, moo_oop_class_t _class, int mth_type, const moo_oocs_t* name)
 {
 	moo_oop_method_t mth;
 
