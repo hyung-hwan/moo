@@ -8021,6 +8021,11 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 
 		cc->super_oop = cc->self_oop->superclass;
 		MOO_ASSERT (moo, cc->super_oop == moo->_nil || MOO_CLASSOF(moo, cc->super_oop) == moo->_class);
+		
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_LBRACK)
+		{
+			if (process_class_interfaces(moo) <= -1) return -1;
+		}
 	}
 	else
 	{

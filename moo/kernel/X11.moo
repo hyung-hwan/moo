@@ -16,6 +16,16 @@ interface X11able3
 	method(#dual) class.
 }
 
+class QQQ(Object)
+{
+}
+
+extend QQQ [X11able]
+{
+
+method(#dual) abc { ^nil }
+method(#dual,#liberal) def(x, z) { ^nil }
+}
 
 class X11(Object) [X11able,selfns.X11able3] from 'x11'
 {
@@ -31,6 +41,7 @@ class X11(Object) [X11able,selfns.X11able3] from 'x11'
 
 	var event_loop_sem, event_loop_proc.
 	var llevent_blocks.
+
 
 method(#dual) abc { ^nil }
 method(#dual,#liberal) def(x, z) { ^nil }
