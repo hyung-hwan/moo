@@ -47,6 +47,14 @@
 #		include <ltdl.h>
 #		define USE_LTDL
 #	endif
+
+#	include "poll-msw.h"
+#	define USE_POLL
+#	define XPOLLIN POLLIN
+#	define XPOLLOUT POLLOUT
+#	define XPOLLERR POLLERR
+#	define XPOLLHUP POLLHUP
+
 #elif defined(__OS2__)
 #	define INCL_DOSMODULEMGR
 #	define INCL_DOSPROCESS
@@ -236,9 +244,9 @@ struct xtn_t
 		moo_oow_t len;
 	} logbuf;
 
-#if defined(_WIN32)
+	#if defined(_WIN32)
 	HANDLE waitable_timer;
-#else
+	#endif
 
 	#if defined(USE_DEVPOLL)
 	int ep; /* /dev/poll */
@@ -301,7 +309,6 @@ struct xtn_t
 		pthread_cond_t cnd2;
 	#endif
 	} ev;
-#endif
 };
 
 /* ========================================================================= */
@@ -563,15 +570,6 @@ static void free_heap (moo_t* moo, void* ptr)
 #endif
 }
 
-
-#if defined(_WIN32)
-	/* nothing to do */
-
-#elif defined(macintosh)
-	/* nothing to do */
-
-#else
-
 static int write_all (int fd, const moo_bch_t* ptr, moo_oow_t len)
 {
 	while (len > 0)
@@ -605,7 +603,6 @@ static int write_all (int fd, const moo_bch_t* ptr, moo_oow_t len)
 
 	return 0;
 }
-#endif
 
 static int write_log (moo_t* moo, int fd, const moo_bch_t* ptr, moo_oow_t len)
 {
@@ -1332,9 +1329,9 @@ static int vm_startup (moo_t* moo)
 
 #elif defined(USE_EPOLL)
 	#if defined(EPOLL_CLOEXEC)
-	xtn->ep = epoll_create1 (EPOLL_CLOEXEC);
+	xtn->ep = epoll_create1(EPOLL_CLOEXEC);
 	#else
-	xtn->ep = epoll_create (1024);
+	xtn->ep = epoll_create(1024);
 	#endif
 	if (xtn->ep == -1) 
 	{
@@ -1346,7 +1343,7 @@ static int vm_startup (moo_t* moo)
 	#if defined(EPOLL_CLOEXEC)
 	/* do nothing */
 	#else
-	flag = fcntl (xtn->ep, F_GETFD);
+	flag = fcntl(xtn->ep, F_GETFD);
 	if (flag >= 0) fcntl (xtn->ep, F_SETFD, flag | FD_CLOEXEC);
 	#endif
 
@@ -2121,7 +2118,7 @@ static void setup_tick (void)
 	g_tick_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
 	if (g_tick_timer)
 	{
-		li.QuadPart = -li.QuadPart = -MOO_SECNSEC_TO_NSEC(0, 20000); /* 20000 microseconds. 0.02 seconds */
+		li.QuadPart = -MOO_SECNSEC_TO_NSEC(0, 20000); /* 20000 microseconds. 0.02 seconds */
 		SetWaitableTimer (g_tick_timer, &li, 0, arrange_process_switching, MOO_NULL, FALSE);
 	}
 
