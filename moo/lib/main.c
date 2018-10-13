@@ -40,6 +40,9 @@
 #if defined(_WIN32)
 #	include <windows.h>
 #	include <tchar.h>
+#	include <time.h>
+#	include <io.h>
+#	include <fcntl.h>
 #	if defined(MOO_HAVE_CFG_H) && defined(MOO_ENABLE_LIBLTDL)
 #		include <ltdl.h>
 #		define USE_LTDL
@@ -705,9 +708,9 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		struct tm tm, *tmp;
 
 		now = time(NULL);
-	#if defined(__DOS__)
-		tmp = localtime (&now);
-		tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S ", tmp); /* no timezone info */
+	#if defined(_WIN32) || defined(__DOS__)
+		tmp = localtime(&now);
+		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S ", tmp); /* no timezone info */
 		if (tslen == 0) 
 		{
 			strcpy (ts, "0000-00-00 00:00:00 ");
@@ -1422,7 +1425,7 @@ oops:
 static void vm_cleanup (moo_t* moo)
 {
 #if defined(_WIN32)
-	xtn_t* xtn = (xatn_t*)moo_getxtn(moo);
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 	if (xtn->waitable_timer)
 	{
 		CloseHandle (xtn->waitable_timer);
@@ -1547,7 +1550,6 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 #	pragma aux _halt_cpu = "hlt"
 #	endif
 #endif
-
 
 static int vm_muxadd (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask)
 {
@@ -1981,8 +1983,8 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 	{
 		LARGE_INTEGER li;
 		li.QuadPart = -MOO_SECNSEC_TO_NSEC(dur->sec, dur->nsec);
-		if(SetWaitableTimer(timer, &li, 0, MOO_NULL, MOO_NULL, FALSE) == FALSE) goto normal_sleep;
-		WaitForSingleObject(timer, INFINITE);
+		if(SetWaitableTimer(xtn->waitable_timer, &li, 0, MOO_NULL, MOO_NULL, FALSE) == FALSE) goto normal_sleep;
+		WaitForSingleObject(xtn->waitable_timer, INFINITE);
 	}
 	else
 	{
@@ -2077,6 +2079,14 @@ static void __interrupt timer_intr_handler (void)
 	_chain_intr (prev_timer_intr_handler);
 }
 
+#elif defined(_WIN32)
+static HANDLE g_tick_timer = MOO_NULL; /*INVALID_HANDLE_VALUE;*/
+
+static VOID CALLBACK arrange_process_switching (LPVOID arg, DWORD timeLow, DWORD timeHigh) 
+{
+	if (g_moo) moo_switchprocess (g_moo);
+}
+
 #elif defined(macintosh)
 
 static TMTask g_tmtask;
@@ -2105,6 +2115,16 @@ static void setup_tick (void)
 	prev_timer_intr_handler = _dos_getvect (0x1C);
 	_dos_setvect (0x1C, timer_intr_handler);
 
+#elif defined(_WIN32)
+
+	LARGE_INTEGER li;
+	g_tick_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
+	if (g_tick_timer)
+	{
+		li.QuadPart = -li.QuadPart = -MOO_SECNSEC_TO_NSEC(0, 20000); /* 20000 microseconds. 0.02 seconds */
+		SetWaitableTimer (g_tick_timer, &li, 0, arrange_process_switching, MOO_NULL, FALSE);
+	}
+
 #elif defined(__OS2__)
 	/* TODO: */	
 
@@ -2114,7 +2134,6 @@ static void setup_tick (void)
 	memset (&g_tmtask, 0, MOO_SIZEOF(g_tmtask));
 	g_tmtask.tmAddr = NewTimerProc (timer_intr_handler);
 	InsXTime ((QElem*)&g_tmtask);
-
 	PrimeTime ((QElem*)&g_tmtask, TMTASK_DELAY);
 
 #elif defined(HAVE_SETITIMER) && defined(SIGVTALRM) && defined(ITIMER_VIRTUAL)
@@ -2145,6 +2164,15 @@ static void cancel_tick (void)
 #if defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
 
 	_dos_setvect (0x1C, prev_timer_intr_handler);
+
+#elif defined(_WIN32)
+
+	if (g_tick_timer)
+	{
+		CancelWaitableTimer (g_tick_timer);
+		CloseHandle (g_tick_timer);
+		g_tick_timer = MOO_NULL;
+	}
 
 #elif defined(__OS2__)
 
