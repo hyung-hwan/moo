@@ -18344,6 +18344,18 @@ _ACEOF
 fi
 done
 
+for ac_func in localtime_r gmtime_r
+do :
+  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
+ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
+if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+done
+
 for ac_func in snprintf _vsnprintf _vsnwprintf strerror_r
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
@@ -19015,7 +19027,7 @@ else
 		char buf[100];
 		time_t t = 0;
 		strftime (buf, sizeof(buf), "%z", gmtime(&t));
-		return strcmp(buf, "%z") == 0? 1: 0;
+		return (strcmp(buf, "%z") == 0 || strcmp(buf, "z") == 0)? 1: 0;
 	}
 _ACEOF
 if ac_fn_c_try_run "$LINENO"; then :

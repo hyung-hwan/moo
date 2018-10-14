@@ -94,8 +94,8 @@ host_triplet = @host@
 
 # you must adjust the value of DEFAULT_MODPOSTFIX according 
 # to the first number in -version-info above
-@WIN32_TRUE@am__append_4 = -DMOO_DEFAULT_MODPREFIX=\"libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"-1\"
-@WIN32_FALSE@am__append_5 = -DMOO_DEFAULT_MODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_MODPOSTFIX=\"\"
+@WIN32_TRUE@am__append_4 = -DMOO_DEFAULT_PFMODPREFIX=\"libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"-1\"
+@WIN32_FALSE@am__append_5 = -DMOO_DEFAULT_PFMODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"\"
 @ENABLE_STATIC_MODULE_TRUE@am__append_6 = -lmoo-stdio
 @ENABLE_STATIC_MODULE_FALSE@libmoo_la_DEPENDENCIES =  \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_5) \
