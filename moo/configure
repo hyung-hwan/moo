@@ -21441,6 +21441,11 @@ $as_echo "#define MOO_UNICODE_SIZE 4" >>confdefs.h
 
 $as_echo "#define MOO_ENABLE_UNICODE 1" >>confdefs.h
 
+	if test "${platform_win32}" = "yes"
+	then
+		CFLAGS="$CFLAGS -DUNICODE -D_UNICODE"
+		CXXFLAGS="$CXXFLAGS -DUNICODE -D_UNICODE"
+	fi
 elif test "${enable_unicode}" = "yes:2"
 then
 
@@ -21449,6 +21454,11 @@ $as_echo "#define MOO_UNICODE_SIZE 2" >>confdefs.h
 
 $as_echo "#define MOO_ENABLE_UNICODE 1" >>confdefs.h
 
+	if test "${platform_win32}" = "yes"
+	then
+		CFLAGS="$CFLAGS -DUNICODE -D_UNICODE"
+		CXXFLAGS="$CXXFLAGS -DUNICODE -D_UNICODE"
+	fi
 elif test "${enable_unicode}" = "yes"
 then
 
@@ -21457,6 +21467,11 @@ $as_echo "#define MOO_UNICODE_SIZE 1" >>confdefs.h
 
 $as_echo "#define MOO_ENABLE_UNICODE 1" >>confdefs.h
 
+	if test "${platform_win32}" = "yes"
+	then
+		CFLAGS="$CFLAGS -DUNICODE -D_UNICODE"
+		CXXFLAGS="$CXXFLAGS -DUNICODE -D_UNICODE"
+	fi
 elif test "${enable_unicode}" = "no:4"
 then
 

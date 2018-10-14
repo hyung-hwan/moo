@@ -84,7 +84,6 @@
 	typedef signed char        moo_int8_t;
 #endif
 
-
 /* moo_int16_t */
 #if defined(MOO_SIZEOF_SHORT) && (MOO_SIZEOF_SHORT == 2)
 #	define MOO_HAVE_UINT16_T

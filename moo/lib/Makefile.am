@@ -116,9 +116,15 @@ endif
 
 bin_PROGRAMS = moo
 moo_SOURCES = main.c
+if WIN32
+moo_SOURCES += poll-msw.c poll-msw.h
+endif
 moo_CPPFLAGS = $(CPPFLAGS_ALL_COMMON) $(CPPFLAGS_PFMOD)
 moo_LDFLAGS = $(LDFLAGS_ALL_COMMON)
 moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo $(PTHREAD_LIBS)
+if WIN32
+moo_LDADD += $(SOCKET_LIBS)
+endif
 if ENABLE_STATIC_MODULE
 moo_DEPENDENCIES = libmoo.la
 endif

@@ -29,8 +29,9 @@
 #include <moo-utl.h>
 
 #include <string.h>
-#if defined(_WIN32)
 
+#if defined(_WIN32)
+#	include <windows.h>
 #elif defined(__DOS__)
 
 #else

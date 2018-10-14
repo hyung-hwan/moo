@@ -46,6 +46,14 @@
 #	if defined(MOO_HAVE_CFG_H) && defined(MOO_ENABLE_LIBLTDL)
 #		include <ltdl.h>
 #		define USE_LTDL
+#	else
+#		define USE_WIN_DLL
+		/* TODO: write sys_dl_error() properly */
+#		define sys_dl_error() win_dlerror()
+#		define sys_dl_open(x) LoadLibraryExA(x, MOO_NULL, 0)
+#		define sys_dl_openext(x) LoadLibraryExA(x, MOO_NULL, 0)
+#		define sys_dl_close(x) FreeLibrary(x)
+#		define sys_dl_getsym(x,n) GetProcAddress(x,n)
 #	endif
 
 #	include "poll-msw.h"
@@ -110,7 +118,7 @@
 #		define sys_dl_close(x) dlclose(x)
 #		define sys_dl_getsym(x,n) dlsym(x,n)
 #	elif defined(__APPLE__) || defined(__MACOSX__)
-#		define USE_MACH_O
+#		define USE_MACH_O_DYLD
 #		include <mach-o/dyld.h>
 #		define sys_dl_error() mach_dlerror()
 #		define sys_dl_open(x) mach_dlopen(x)
@@ -203,7 +211,7 @@
 #	else
 #		if defined(USE_DLFCN)
 #			define MOO_DEFAULT_PFMODPOSTFIX ".so"
-#		elif defined(USE_MACH_O)
+#		elif defined(USE_MACH_O_DYLD)
 #			define MOO_DEFAULT_PFMODPOSTFIX ".dylib"
 #		else
 #			define MOO_DEFAULT_PFMODPOSTFIX ""
@@ -828,7 +836,27 @@ static void syserrstrb (moo_t* moo, int syserr, moo_bch_t* buf, moo_oow_t len)
 
 /* ========================================================================= */
 
-#if defined(USE_MACH_O)
+#if defined(USE_WIN_DLL)
+
+static const char* win_dlerror (void)
+{
+	/* TODO: handle wchar_t, moo_ooch_t etc? */
+	static char buf[256];
+	DWORD rc;
+
+	rc = FormatMessageA (
+		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+		buf, MOO_COUNTOF(buf), MOO_NULL
+	);
+	while (rc > 0 && buf[rc - 1] == '\r' || buf[rc - 1] == '\n') 
+	{
+		buf[--rc] = '\0';
+	}
+	return buf;
+}
+
+#elif defined(USE_MACH_O_DYLD)
 static const char* mach_dlerror_str = "";
 
 static void* mach_dlopen (const char* path)
@@ -897,7 +925,7 @@ static const char* mach_dlerror (void)
 
 static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 {
-#if defined(USE_LTDL) || defined(USE_DLFCN) || defined(USE_MACH_O)
+#if defined(USE_LTDL) || defined(USE_DLFCN) || defined(USE_MACH_O_DYLD) || defined(USE_WIN_DLL)
 	moo_bch_t stabuf[128], * bufptr;
 	moo_oow_t ucslen, bcslen, bufcapa;
 	void* handle;
@@ -1045,7 +1073,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 
 static void dl_close (moo_t* moo, void* handle)
 {
-#if defined(USE_LTDL) || defined(USE_DLFCN) || defined(USE_MACH_O)
+#if defined(USE_LTDL) || defined(USE_DLFCN) || defined(USE_MACH_O_DYLD) || defined(USE_WIN_DLL)
 	MOO_DEBUG1 (moo, "Closed DL handle %p\n", handle);
 	sys_dl_close (handle);
 
@@ -1057,7 +1085,7 @@ static void dl_close (moo_t* moo, void* handle)
 
 static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 {
-#if defined(USE_LTDL) || defined(USE_DLFCN) || defined(USE_MACH_O)
+#if defined(USE_LTDL) || defined(USE_DLFCN) || defined(USE_MACH_O_DYLD) || defined(USE_WIN_DLL)
 	moo_bch_t stabuf[64], * bufptr;
 	moo_oow_t bufcapa, ucslen, bcslen, i;
 	const moo_bch_t* symname;

@@ -667,14 +667,29 @@ if test "${enable_unicode}" = "yes:4"
 then
 	AC_DEFINE([MOO_UNICODE_SIZE],[4],[Unicode character type size])
 	AC_DEFINE([MOO_ENABLE_UNICODE],[1],[Use the unicode character type as the default character type])
+	if test "${platform_win32}" = "yes"
+	then
+		[CFLAGS="$CFLAGS -DUNICODE -D_UNICODE"]
+		[CXXFLAGS="$CXXFLAGS -DUNICODE -D_UNICODE"]
+	fi 
 elif test "${enable_unicode}" = "yes:2"
 then
 	AC_DEFINE([MOO_UNICODE_SIZE],[2],[Unicode character type size])
 	AC_DEFINE([MOO_ENABLE_UNICODE],[1],[Use the unicode character type as the default character type])
+	if test "${platform_win32}" = "yes"
+	then
+		[CFLAGS="$CFLAGS -DUNICODE -D_UNICODE"]
+		[CXXFLAGS="$CXXFLAGS -DUNICODE -D_UNICODE"]
+	fi
 elif test "${enable_unicode}" = "yes"
 then
 	AC_DEFINE([MOO_UNICODE_SIZE],[1],[Unicode character type size])
 	AC_DEFINE([MOO_ENABLE_UNICODE],[1],[Use the unicode character type as the default character type])
+	if test "${platform_win32}" = "yes"
+	then
+		[CFLAGS="$CFLAGS -DUNICODE -D_UNICODE"]
+		[CXXFLAGS="$CXXFLAGS -DUNICODE -D_UNICODE"]
+	fi
 elif test "${enable_unicode}" = "no:4"
 then
 	AC_DEFINE([MOO_UNICODE_SIZE],[4],[Unicode character type size])
