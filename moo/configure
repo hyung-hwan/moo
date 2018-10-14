@@ -684,6 +684,8 @@ PTHREAD_LIBS
 PTHREAD_CC
 ax_pthread_config
 LIBM
+MACOSX_FALSE
+MACOSX_TRUE
 WIN32_FALSE
 WIN32_TRUE
 LIBTOOL_DEPS
@@ -17167,9 +17169,15 @@ case "$host" in
 *-*-mingw*|*-*-cygwin*)
 	#CFLAGS="$CFLAGS -D_WIN32_WINNT=0x0400"
 	platform_win32=yes
+	platform_macosx=no
+	;;
+*-*-darwin*)
+	platform_win32=no
+	platform_macosx=yes
 	;;
 *)
 	platform_win32=no
+	platform_macosx=no
 	;;
 esac
  if test "x${platform_win32}" = "xyes" ; then
@@ -17178,6 +17186,14 @@ esac
 else
   WIN32_TRUE='#'
   WIN32_FALSE=
+fi
+
+ if test "x${platform_macosx}" = "xyes" ; then
+  MACOSX_TRUE=
+  MACOSX_FALSE='#'
+else
+  MACOSX_TRUE='#'
+  MACOSX_FALSE=
 fi
 
 
@@ -21856,6 +21872,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${WIN32_TRUE}" && test -z "${WIN32_FALSE}"; then
   as_fn_error $? "conditional \"WIN32\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${MACOSX_TRUE}" && test -z "${MACOSX_FALSE}"; then
+  as_fn_error $? "conditional \"MACOSX\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

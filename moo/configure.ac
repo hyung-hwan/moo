@@ -69,12 +69,19 @@ case "$host" in
 *-*-mingw*|*-*-cygwin*)
 	#CFLAGS="$CFLAGS -D_WIN32_WINNT=0x0400"
 	platform_win32=yes
+	platform_macosx=no
+	;;
+*-*-darwin*)
+	platform_win32=no
+	platform_macosx=yes
 	;;
 *)
 	platform_win32=no
+	platform_macosx=no
 	;;
 esac
 AM_CONDITIONAL(WIN32, test "x${platform_win32}" = "xyes" )
+AM_CONDITIONAL(MACOSX, test "x${platform_macosx}" = "xyes" )
 
 dnl check the math library (check if -lm is needed)
 LT_LIB_M

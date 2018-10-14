@@ -34,9 +34,14 @@ endif
 if WIN32
 # you must adjust the value of DEFAULT_MODPOSTFIX according 
 # to the first number in -version-info above
-CPPFLAGS_LIB_COMMON += -DMOO_DEFAULT_PFMODPREFIX=\"libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"-1\"
+CPPFLAGS_LIB_COMMON += -DMOO_DEFAULT_PFMODPREFIX=\"libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"-1.dll\"
 else
-CPPFLAGS_LIB_COMMON += -DMOO_DEFAULT_PFMODPREFIX=\"$(libdir)/libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"\"
+CPPFLAGS_LIB_COMMON += -DMOO_DEFAULT_PFMODPREFIX=\"$(libdir)/libmoo-\" 
+if MACOSX
+CPPFLAGS_LIB_COMMON += -DMOO_DEFAULT_PFMODPOSTFIX=\".dynlib\"
+else
+CPPFLAGS_LIB_COMMON += -DMOO_DEFAULT_PFMODPOSTFIX=\".so\"
+endif
 endif
 
 pkgincludedir = $(includedir)
