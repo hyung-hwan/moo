@@ -96,7 +96,7 @@ host_triplet = @host@
 # to the first number in -version-info above
 @WIN32_TRUE@am__append_4 = -DMOO_DEFAULT_PFMODPREFIX=\"libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"-1.dll\"
 @WIN32_FALSE@am__append_5 = -DMOO_DEFAULT_PFMODPREFIX=\"$(libdir)/libmoo-\" 
-@MACOSX_TRUE@@WIN32_FALSE@am__append_6 = -DMOO_DEFAULT_PFMODPOSTFIX=\".dynlib\"
+@MACOSX_TRUE@@WIN32_FALSE@am__append_6 = -DMOO_DEFAULT_PFMODPOSTFIX=\".dylib\"
 @MACOSX_FALSE@@WIN32_FALSE@am__append_7 = -DMOO_DEFAULT_PFMODPOSTFIX=\".so\"
 @ENABLE_STATIC_MODULE_TRUE@am__append_8 = -lmoo-stdio
 @ENABLE_STATIC_MODULE_FALSE@libmoo_la_DEPENDENCIES =  \
