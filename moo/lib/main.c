@@ -109,6 +109,14 @@
 #		define sys_dl_openext(x) dlopen(x,RTLD_NOW)
 #		define sys_dl_close(x) dlclose(x)
 #		define sys_dl_getsym(x,n) dlsym(x,n)
+#	elif defined(__APPLE__) || defined(__MACOSX__)
+#		define USE_MACH_O
+#		include <mach-o/dyld.h>
+#		define sys_dl_error() mach_dlerror()
+#		define sys_dl_open(x) mach_dlopen(x)
+#		define sys_dl_openext(x) mach_dlopen(x)
+#		define sys_dl_close(x) mach_dlclose(x)
+#		define sys_dl_getsym(x,n) mach_dlsym(x,n)
 #	else
 #		error UNSUPPORTED DYNAMIC LINKER
 #	endif
@@ -169,6 +177,10 @@
 
 #endif
 
+#if !defined(MOO_DEFAULT_PFMODDIR)
+#	define MOO_DEFAULT_PFMODDIR ""
+#endif
+
 #if !defined(MOO_DEFAULT_PFMODPREFIX)
 #	if defined(_WIN32)
 #		define MOO_DEFAULT_PFMODPREFIX "moo-"
@@ -191,6 +203,8 @@
 #	else
 #		if defined(USE_DLFCN)
 #			define MOO_DEFAULT_PFMODPOSTFIX ".so"
+#		elif defined(USE_MACH_O)
+#			define MOO_DEFAULT_PFMODPOSTFIX ".dylib"
 #		else
 #			define MOO_DEFAULT_PFMODPOSTFIX ""
 #		endif
@@ -716,13 +730,15 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 	#else
 		#if defined(__OS2__)
 		tmp = _localtime(&now, &tm);
-		#else
+		#elif defined(HAVE_LOCALTIME_R)
 		tmp = localtime_r(&now, &tm);
+		#else
+		tmp = localtime(&now);
 		#endif
 		#if defined(HAVE_STRFTIME_SMALL_Z)
-		tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
+		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
 		#else
-		tslen = strftime (ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %Z ", tmp); 
+		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %Z ", tmp); 
 		#endif
 		if (tslen == 0) 
 		{
@@ -798,22 +814,89 @@ static void syserrstrb (moo_t* moo, int syserr, moo_bch_t* buf, moo_oow_t len)
 
 /* ========================================================================= */
 
+#if defined(USE_MACH_O)
+static const char* mach_dlerror_str = "";
+
+static void* mach_dlopen (const char* path)
+{
+	NSObjectFileImage image;
+	NSObjectFileImageReturnCode rc;
+	void* handle;
+
+	mach_dlerror_str = "";
+	if ((rc = NSCreateObjectFileImageFromFile(path, &image)) != NSObjectFileImageSuccess) 
+	{
+		switch (rc)
+		{
+			case NSObjectFileImageFailure:
+			case NSObjectFileImageFormat:
+				mach_dlerror_str = "unable to crate object file image";
+				break;
+
+			case NSObjectFileImageInappropriateFile:
+				mach_dlerror_str = "inappropriate file";
+				break;
+
+			case NSObjectFileImageArch:
+				mach_dlerror_str = "incompatible architecture";
+				break;
+
+			case NSObjectFileImageAccess:
+				mach_dlerror_str = "inaccessible file";
+				break;
+				
+			default:
+				mach_dlerror_str = "unknown error";
+				break;
+		}
+		return MOO_NULL;
+	}
+	handle = (void*)NSLinkModule(image, path, NSLINKMODULE_OPTION_PRIVATE | NSLINKMODULE_OPTION_RETURN_ON_ERROR);
+	NSDestroyObjectFileImage (image);
+	return handle;
+}
+
+static MOO_INLINE void mach_dlclose (void* handle)
+{
+	mach_dlerror_str = "";
+	NSUnLinkModule (handle, NSUNLINKMODULE_OPTION_NONE);
+}
+
+static MOO_INLINE void* mach_dlsym (void* handle, const char* name)
+{
+	mach_dlerror_str = "";
+	return (void*)NSAddressOfSymbol(NSLookupSymbolInModule(handle, name));
+}
+
+static const char* mach_dlerror (void)
+{
+	int err_no;
+	const char* err_file;
+	NSLinkEditErrors err;
+
+	if (mach_dlerror_str[0] == '\0')
+		NSLinkEditError (&err, &err_no, &err_file, &mach_dlerror_str);
+
+	return mach_dlerror_str;
+}
+#endif
+
 static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 {
-#if defined(USE_LTDL) || defined(USE_DLFCN)
+#if defined(USE_LTDL) || defined(USE_DLFCN) || defined(USE_MACH_O)
 	moo_bch_t stabuf[128], * bufptr;
 	moo_oow_t ucslen, bcslen, bufcapa;
 	void* handle;
 
 	#if defined(MOO_OOCH_IS_UCH)
-	if (moo_convootobcstr (moo, name, &ucslen, MOO_NULL, &bufcapa) <= -1) return MOO_NULL;
+	if (moo_convootobcstr(moo, name, &ucslen, MOO_NULL, &bufcapa) <= -1) return MOO_NULL;
 	/* +1 for terminating null. but it's not needed because MOO_COUNTOF(MOO_DEFAULT_PFMODPREFIX)
 	 * and MOO_COUNTOF(MOO_DEFAULT_PFMODPOSTIFX) include the terminating nulls. Never mind about
 	 * the extra 2 characters. */
 	#else
 	bufcapa = moo_count_bcstr(name);
 	#endif
-	bufcapa += MOO_COUNTOF(MOO_DEFAULT_PFMODPREFIX) + MOO_COUNTOF(MOO_DEFAULT_PFMODPOSTFIX) + 1; 
+	bufcapa += MOO_COUNTOF(MOO_DEFAULT_PFMODDIR) + MOO_COUNTOF(MOO_DEFAULT_PFMODPREFIX) + MOO_COUNTOF(MOO_DEFAULT_PFMODPOSTFIX) + 1; 
 
 	if (bufcapa <= MOO_COUNTOF(stabuf)) bufptr = stabuf;
 	else
@@ -824,10 +907,12 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 
 	if (flags & MOO_VMPRIM_DLOPEN_PFMOD)
 	{
-		moo_oow_t len, i, xlen;
+		moo_oow_t len, i, xlen, dlen;
 
 		/* opening a primitive function module - mostly libmoo-xxxx */
-		len = moo_copy_bcstr(bufptr, bufcapa, MOO_DEFAULT_PFMODPREFIX);
+		dlen = moo_copy_bcstr(bufptr, bufcapa, MOO_DEFAULT_PFMODDIR);
+		len = moo_copy_bcstr(&bufptr[dlen], bufcapa - dlen, MOO_DEFAULT_PFMODPREFIX);
+		len += dlen;
 
 		bcslen = bufcapa - len;
 	#if defined(MOO_OOCH_IS_UCH)
@@ -836,8 +921,8 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		bcslen = moo_copy_bcstr(&bufptr[len], bcslen, name);
 	#endif
 
-		/* length including the prefix and the name. but excluding the postfix */
-		xlen  = len + bcslen; 
+		/* length including the directory, the prefix and the name. but excluding the postfix */
+		xlen = len + bcslen; 
 
 		for (i = len; i < xlen; i++) 
 		{
@@ -849,10 +934,21 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		moo_copy_bcstr (&bufptr[xlen], bufcapa - xlen, MOO_DEFAULT_PFMODPOSTFIX);
 
 		/* both prefix and postfix attached. for instance, libmoo-xxx */
-		handle = sys_dl_openext(bufptr);
+		handle = sys_dl_openext(&bufptr[dlen]);
 		if (!handle) 
 		{
-			MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %hs\n", bufptr, name, sys_dl_error());
+			MOO_DEBUG3 (moo, "Unable to open(ext) PFMOD %hs[%js] - %hs\n", &bufptr[dlen], name, sys_dl_error());
+
+		#if defined(_WIN32) || defined(__DOS__) || defined(__OS2__)
+			if (dlen > 0 && bufptr[len] != '/' && bufptr[len != '\\')
+		#else
+			if (dlen > 0 && bufptr[len] != '/')
+		#endif
+			{
+				handle = sys_dl_openext(&bufptr[0]);
+				if (handle) goto pfmod_open_ok;
+				MOO_DEBUG3 (moo, "Unable to open(ext) PFMOD %hs[%js] - %hs\n", &bufptr[0], name, sys_dl_error());
+			}
 
 			/* try without prefix and postfix */
 			bufptr[xlen] = '\0';
@@ -862,8 +958,8 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 				moo_bch_t* dash;
 				const moo_bch_t* dl_errstr;
 				dl_errstr = sys_dl_error();
-				MOO_DEBUG3 (moo, "Failed to open(ext) DL %hs[%js] - %hs\n", &bufptr[len], name, dl_errstr);
-				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open(ext) DL %js - %hs", name, dl_errstr);
+				MOO_DEBUG3 (moo, "Unable to open(ext) PFMOD %hs[%js] - %hs\n", &bufptr[len], name, dl_errstr);
+				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open(ext) PFMOD %js - %hs", name, dl_errstr);
 				dash = moo_rfind_bchar(bufptr, moo_count_bcstr(bufptr), '-');
 				if (dash) 
 				{
@@ -877,12 +973,13 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 			}
 			else 
 			{
-				MOO_DEBUG3 (moo, "Opened(ext) DL %hs[%js] handle %p\n", &bufptr[len], name, handle);
+				MOO_DEBUG3 (moo, "Opened(ext) PFMOD %hs[%js] handle %p\n", &bufptr[len], name, handle);
 			}
 		}
 		else
 		{
-			MOO_DEBUG3 (moo, "Opened(ext) DL %hs[%js] handle %p\n", bufptr, name, handle);
+		pfmod_open_ok:
+			MOO_DEBUG3 (moo, "Opened(ext) PFMOD %hs[%js] handle %p\n", &bufptr[dlen], name, handle);
 		}
 	}
 	else
@@ -902,7 +999,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 			{
 				const moo_bch_t* dl_errstr;
 				dl_errstr = sys_dl_error();
-				MOO_DEBUG2 (moo, "Failed to open DL %hs - %hs\n", bufptr, dl_errstr);
+				MOO_DEBUG2 (moo, "Unable to open DL %hs - %hs\n", bufptr, dl_errstr);
 				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open DL %js - %hs", name, dl_errstr);
 			}
 			else MOO_DEBUG2 (moo, "Opened DL %hs handle %p\n", bufptr, handle);
@@ -914,7 +1011,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 			{
 				const moo_bch_t* dl_errstr;
 				dl_errstr = sys_dl_error();
-				MOO_DEBUG2 (moo, "Failed to open(ext) DL %hs - %hs\n", bufptr, dl_errstr);
+				MOO_DEBUG2 (moo, "Unable to open(ext) DL %hs - %hs\n", bufptr, dl_errstr);
 				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open(ext) DL %js - %hs", name, dl_errstr);
 			}
 			else MOO_DEBUG2 (moo, "Opened(ext) DL %hs handle %p\n", bufptr, handle);
@@ -936,7 +1033,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 
 static void dl_close (moo_t* moo, void* handle)
 {
-#if defined(USE_LTDL) || defined(USE_DLFCN)
+#if defined(USE_LTDL) || defined(USE_DLFCN) || defined(USE_MACH_O)
 	MOO_DEBUG1 (moo, "Closed DL handle %p\n", handle);
 	sys_dl_close (handle);
 
@@ -948,7 +1045,7 @@ static void dl_close (moo_t* moo, void* handle)
 
 static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 {
-#if defined(USE_LTDL) || defined(USE_DLFCN)
+#if defined(USE_LTDL) || defined(USE_DLFCN) || defined(USE_MACH_O)
 	moo_bch_t stabuf[64], * bufptr;
 	moo_oow_t bufcapa, ucslen, bcslen, i;
 	const moo_bch_t* symname;
@@ -1005,7 +1102,7 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 				{
 					const moo_bch_t* dl_errstr;
 					dl_errstr = sys_dl_error();
-					MOO_DEBUG3 (moo, "Failed to get module symbol %js from handle %p - %hs\n", name, handle, dl_errstr);
+					MOO_DEBUG3 (moo, "Unable to get module symbol %js from handle %p - %hs\n", name, handle, dl_errstr);
 					moo_seterrbfmt (moo, MOO_ENOENT, "unable to get module symbol %hs - %hs", symname, dl_errstr);
 				}
 			}

@@ -145,6 +145,7 @@ AC_CHECK_FUNCS([gettimeofday settimeofday clock_gettime clock_settime getitimer 
 AC_CHECK_FUNCS([backtrace backtrace_symbols])
 AC_CHECK_FUNCS([makecontext swapcontext getcontext setcontext])
 AC_CHECK_FUNCS([clock_nanosleep nanosleep usleep])
+AC_CHECK_FUNCS([localtime_r gmtime_r])
 AC_CHECK_FUNCS([snprintf _vsnprintf _vsnwprintf strerror_r])
 AC_CHECK_FUNCS([accept4])
 AC_CHECK_FUNCS([isatty mmap munmap])
@@ -290,7 +291,7 @@ AC_TRY_RUN(
 		char buf[100];
 		time_t t = 0;
 		strftime (buf, sizeof(buf), "%z", gmtime(&t));
-		return strcmp(buf, "%z") == 0? 1: 0;
+		return (strcmp(buf, "%z") == 0 || strcmp(buf, "z") == 0)? 1: 0;
 	}],
 	[
 	 	AC_MSG_RESULT(yes)
