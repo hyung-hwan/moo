@@ -9,19 +9,6 @@ CPPFLAGS_COMMON = \
 	-I$(abs_srcdir)/../lib \
 	-I$(includedir)
 
-if WIN32
-# you must adjust the value of DEFAULT_MODPOSTFIX according 
-# to the first number in -version-info above
-CPPFLAGS_COMMON += -DMOO_DEFAULT_PFMODPREFIX=\"libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"-1.dll\"
-else
-CPPFLAGS_COMMON += -DMOO_DEFAULT_PFMODPREFIX=\"$(libdir)/libmoo-\" 
-if MACOSX
-CPPFLAGS_COMMON += -DMOO_DEFAULT_PFMODPOSTFIX=\".dylib\"
-else
-CPPFLAGS_COMMON += -DMOO_DEFAULT_PFMODPOSTFIX=\".so\"
-endif
-endif
-
 if ENABLE_STATIC_MODULE
 
 ##################################################

@@ -91,14 +91,9 @@ host_triplet = @host@
 @ENABLE_LIBLTDL_TRUE@am__append_1 = $(LTDL_LIBS)
 @ENABLE_LIBLTDL_FALSE@am__append_2 = $(DL_LIBS)
 @ENABLE_LIBUNWIND_TRUE@am__append_3 = $(UNWIND_LIBS)
-
-# you must adjust the value of DEFAULT_MODPOSTFIX according 
-# to the first number in -version-info above
-@WIN32_TRUE@am__append_4 = -DMOO_DEFAULT_PFMODPREFIX=\"libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"-1.dll\"
-@WIN32_FALSE@am__append_5 = -DMOO_DEFAULT_PFMODPREFIX=\"$(libdir)/libmoo-\" 
-@MACOSX_TRUE@@WIN32_FALSE@am__append_6 = -DMOO_DEFAULT_PFMODPOSTFIX=\".dylib\"
-@MACOSX_FALSE@@WIN32_FALSE@am__append_7 = -DMOO_DEFAULT_PFMODPOSTFIX=\".so\"
-@ENABLE_STATIC_MODULE_TRUE@am__append_8 = -lmoo-stdio
+@MACOSX_TRUE@@WIN32_FALSE@am__append_4 = -DMOO_DEFAULT_PFMODPOSTFIX=\".dylib\"
+@MACOSX_FALSE@@WIN32_FALSE@am__append_5 = -DMOO_DEFAULT_PFMODPOSTFIX=\".so\"
+@ENABLE_STATIC_MODULE_TRUE@am__append_6 = -lmoo-stdio
 @ENABLE_STATIC_MODULE_FALSE@libmoo_la_DEPENDENCIES =  \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_5) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
@@ -106,14 +101,14 @@ host_triplet = @host@
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
-@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_9 = -lmoo-con
-@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_10 = $(abs_builddir)/../mod/libmoo-con.la
-@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_11 = -lmoo-ffi
-@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_12 = $(abs_builddir)/../mod/libmoo-ffi.la
-@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_13 = -lmoo-sck
-@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_14 = $(abs_builddir)/../mod/libmoo-sck.la
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_15 = -lmoo-x11
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_16 = $(abs_builddir)/../mod/libmoo-x11.la
+@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_7 = -lmoo-con
+@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_8 = $(abs_builddir)/../mod/libmoo-con.la
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_9 = -lmoo-ffi
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_10 = $(abs_builddir)/../mod/libmoo-ffi.la
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_11 = -lmoo-sck
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_12 = $(abs_builddir)/../mod/libmoo-sck.la
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_13 = -lmoo-x11
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_14 = $(abs_builddir)/../mod/libmoo-x11.la
 bin_PROGRAMS = moo$(EXEEXT)
 @ENABLE_STATIC_MODULE_FALSE@moo_DEPENDENCIES = $(am__DEPENDENCIES_5) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
@@ -423,11 +418,19 @@ CPPFLAGS_ALL_COMMON = \
 ##################################################
 # MAIN LIBRARY 
 ##################################################
-CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) $(am__append_4) \
-	$(am__append_5) $(am__append_6) $(am__append_7)
+CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) 
 LDFLAGS_LIB_COMMON = $(LDFLAGS_ALL_COMMON) -version-info 1:0:0 -no-undefined
 LIBADD_LIB_COMMON = $(LIBM) $(am__append_1) $(am__append_2) \
 	$(am__append_3)
+@WIN32_FALSE@CPPFLAGS_PFMOD =  \
+@WIN32_FALSE@	-DMOO_DEFAULT_PFMODPREFIX=\"$(libdir)/libmoo-\" \
+@WIN32_FALSE@	$(am__append_4) $(am__append_5)
+
+# you must adjust the value of DEFAULT_MODPOSTFIX according 
+# to the first number in -version-info above
+@WIN32_TRUE@CPPFLAGS_PFMOD = -DMOO_DEFAULT_PFMODPREFIX=\"libmoo-\" \
+@WIN32_TRUE@	-DMOO_DEFAULT_PFMODPOSTFIX=\"-1.dll\" \
+@WIN32_TRUE@	$(am__append_4) $(am__append_5)
 pkginclude_HEADERS = \
 	moo.h \
 	moo-bct.h \
@@ -472,15 +475,15 @@ libmoo_la_SOURCES = \
 
 libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_8) \
-	$(am__append_9) $(am__append_11) $(am__append_13) \
-	$(am__append_15)
+libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_6) \
+	$(am__append_7) $(am__append_9) $(am__append_11) \
+	$(am__append_13)
 @ENABLE_STATIC_MODULE_TRUE@libmoo_la_DEPENDENCIES = $(abs_builddir)/../mod/libmoo-stdio.la \
-@ENABLE_STATIC_MODULE_TRUE@	$(am__append_10) $(am__append_12) \
-@ENABLE_STATIC_MODULE_TRUE@	$(am__append_14) $(am__append_16)
+@ENABLE_STATIC_MODULE_TRUE@	$(am__append_8) $(am__append_10) \
+@ENABLE_STATIC_MODULE_TRUE@	$(am__append_12) $(am__append_14)
 moo_SOURCES = main.c
-moo_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
-moo_LDFLAGS = $(LDFLAGS_LIB_COMMON)
+moo_CPPFLAGS = $(CPPFLAGS_ALL_COMMON) $(CPPFLAGS_PFMOD)
+moo_LDFLAGS = $(LDFLAGS_ALL_COMMON)
 moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo $(PTHREAD_LIBS)
 @ENABLE_STATIC_MODULE_TRUE@moo_DEPENDENCIES = libmoo.la
 all: moo-cfg.h

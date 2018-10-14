@@ -88,21 +88,14 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-
-# you must adjust the value of DEFAULT_MODPOSTFIX according 
-# to the first number in -version-info above
-@WIN32_TRUE@am__append_1 = -DMOO_DEFAULT_PFMODPREFIX=\"libmoo-\" -DMOO_DEFAULT_PFMODPOSTFIX=\"-1.dll\"
-@WIN32_FALSE@am__append_2 = -DMOO_DEFAULT_PFMODPREFIX=\"$(libdir)/libmoo-\" 
-@MACOSX_TRUE@@WIN32_FALSE@am__append_3 = -DMOO_DEFAULT_PFMODPOSTFIX=\".dylib\"
-@MACOSX_FALSE@@WIN32_FALSE@am__append_4 = -DMOO_DEFAULT_PFMODPOSTFIX=\".so\"
-@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_5 = libmoo-con.la
-@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_6 = libmoo-ffi.la
-@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_7 = libmoo-sck.la
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_8 = libmoo-x11.la
-@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_FALSE@am__append_9 = libmoo-con.la 
-@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_FALSE@am__append_10 = libmoo-ffi.la
-@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_FALSE@am__append_11 = libmoo-sck.la
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_FALSE@am__append_12 = libmoo-x11.la
+@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_1 = libmoo-con.la
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_2 = libmoo-ffi.la
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_3 = libmoo-sck.la
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_4 = libmoo-x11.la
+@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_FALSE@am__append_5 = libmoo-con.la 
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_FALSE@am__append_6 = libmoo-ffi.la
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_FALSE@am__append_7 = libmoo-sck.la
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_FALSE@am__append_8 = libmoo-x11.la
 subdir = mod
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_sign.m4 \
@@ -435,10 +428,13 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = nostdinc
-CPPFLAGS_COMMON = -I$(abs_builddir) -I$(abs_builddir)/../lib \
-	-I$(abs_srcdir) -I$(abs_srcdir)/../lib -I$(includedir) \
-	$(am__append_1) $(am__append_2) $(am__append_3) \
-	$(am__append_4)
+CPPFLAGS_COMMON = \
+	-I$(abs_builddir) \
+	-I$(abs_builddir)/../lib \
+	-I$(abs_srcdir) \
+	-I$(abs_srcdir)/../lib \
+	-I$(includedir)
+
 
 ##################################################
 # DYNAMIC MODULES 
@@ -451,13 +447,13 @@ CPPFLAGS_COMMON = -I$(abs_builddir) -I$(abs_builddir)/../lib \
 @ENABLE_STATIC_MODULE_TRUE@LDFLAGS_COMMON = -L$(libdir) -version-info 1:0:0 -no-undefined
 @ENABLE_STATIC_MODULE_FALSE@LIBADD_COMMON = -lmoo
 @ENABLE_STATIC_MODULE_TRUE@LIBADD_COMMON = 
-@ENABLE_STATIC_MODULE_TRUE@noinst_LTLIBRARIES = $(am__append_5) \
-@ENABLE_STATIC_MODULE_TRUE@	$(am__append_6) $(am__append_7) \
-@ENABLE_STATIC_MODULE_TRUE@	libmoo-stdio.la $(am__append_8)
+@ENABLE_STATIC_MODULE_TRUE@noinst_LTLIBRARIES = $(am__append_1) \
+@ENABLE_STATIC_MODULE_TRUE@	$(am__append_2) $(am__append_3) \
+@ENABLE_STATIC_MODULE_TRUE@	libmoo-stdio.la $(am__append_4)
 @ENABLE_STATIC_MODULE_FALSE@pkgmodexecdir = $(libdir)
-@ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES = $(am__append_9) \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__append_10) $(am__append_11) \
-@ENABLE_STATIC_MODULE_FALSE@	libmoo-stdio.la $(am__append_12)
+@ENABLE_STATIC_MODULE_FALSE@pkgmodexec_LTLIBRARIES = $(am__append_5) \
+@ENABLE_STATIC_MODULE_FALSE@	$(am__append_6) $(am__append_7) \
+@ENABLE_STATIC_MODULE_FALSE@	libmoo-stdio.la $(am__append_8)
 @ENABLE_MOD_CON_TRUE@libmoo_con_la_SOURCES = _con.c _con.h
 @ENABLE_MOD_CON_TRUE@libmoo_con_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 @ENABLE_MOD_CON_TRUE@libmoo_con_la_LDFLAGS = $(LDFLAGS_COMMON)

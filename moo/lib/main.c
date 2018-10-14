@@ -358,6 +358,8 @@ static moo_mmgr_t sys_mmgr =
 #	define IS_PATH_SEP(c) ((c) == '/')
 #endif
 
+/* TODO: handle path with a drive letter or in the UNC notation */
+#define IS_PATH_ABSOLUTE(x) IS_PATH_SEP(x[0])
 
 static const moo_bch_t* get_base_name (const moo_bch_t* path)
 {
@@ -909,8 +911,10 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 	{
 		moo_oow_t len, i, xlen, dlen;
 
-		/* opening a primitive function module - mostly libmoo-xxxx */
-		dlen = moo_copy_bcstr(bufptr, bufcapa, MOO_DEFAULT_PFMODDIR);
+		/* opening a primitive function module - mostly libmoo-xxxx.
+		 * if PFMODPREFIX is absolute, never use PFMODDIR */
+		dlen = IS_PATH_ABSOLUTE(MOO_DEFAULT_PFMODPREFIX)? 
+			0: moo_copy_bcstr(bufptr, bufcapa, MOO_DEFAULT_PFMODDIR);
 		len = moo_copy_bcstr(&bufptr[dlen], bufcapa - dlen, MOO_DEFAULT_PFMODPREFIX);
 		len += dlen;
 
@@ -939,11 +943,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		{
 			MOO_DEBUG3 (moo, "Unable to open(ext) PFMOD %hs[%js] - %hs\n", &bufptr[dlen], name, sys_dl_error());
 
-		#if defined(_WIN32) || defined(__DOS__) || defined(__OS2__)
-			if (dlen > 0 && bufptr[len] != '/' && bufptr[len != '\\')
-		#else
-			if (dlen > 0 && bufptr[len] != '/')
-		#endif
+			if (dlen > 0)
 			{
 				handle = sys_dl_openext(&bufptr[0]);
 				if (handle) goto pfmod_open_ok;
