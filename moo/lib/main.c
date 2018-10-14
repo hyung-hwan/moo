@@ -721,7 +721,19 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		struct tm tm, *tmp;
 
 		now = time(NULL);
-	#if defined(_WIN32) || defined(__DOS__)
+	#if defined(_WIN32)
+		tmp = localtime(&now);
+		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
+		if (tslen == 0) 
+		{
+			tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S ", tmp);
+			if (tslen == 0)
+			{
+				strcpy (ts, "0000-00-00 00:00:00 +0000 ");
+				tslen = 26; 
+			}
+		}
+	#elif defined(__DOS__)
 		tmp = localtime(&now);
 		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S ", tmp); /* no timezone info */
 		if (tslen == 0) 
