@@ -89,7 +89,8 @@ typedef struct _IO_STATUS_BLOCK
 		DWORD Status;
 		PVOID Pointer;
 	} u;
-	ULONG_PTR Information;
+	/*ULONG_PTR Information;*/
+	ULONG* Information;
 } IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
 
 typedef enum _FILE_INFORMATION_CLASS

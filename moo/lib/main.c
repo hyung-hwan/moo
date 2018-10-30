@@ -1278,7 +1278,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	ev.revents = 0;
 	if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
 	{
-		moo_syserr_to_errnum (errno);
+		moo_seterrwithsyserr (moo, errno);
 		MOO_DEBUG2 (moo, "Cannot remove file descriptor %d from devpoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
@@ -1293,7 +1293,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	memset (&ev, 0, MOO_SIZEOF(ev));
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_DEL, fd, &ev) == -1)
 	{
-		moo_syserr_to_errnum (errno);
+		moo_seterrwithsyserr (moo, errno);
 		MOO_DEBUG2 (moo, "Cannot remove file descriptor %d from epoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
@@ -1456,7 +1456,7 @@ static int vm_startup (moo_t* moo)
 	xtn->ep = open ("/dev/poll", O_RDWR);
 	if (xtn->ep == -1) 
 	{
-		moo_syserr_to_errnum (errno);
+		moo_seterrwithsyserr (moo, errno);
 		MOO_DEBUG1 (moo, "Cannot create devpoll - %hs\n", strerror(errno));
 		goto oops;
 	}
@@ -1472,7 +1472,7 @@ static int vm_startup (moo_t* moo)
 	#endif
 	if (xtn->ep == -1) 
 	{
-		moo_syserr_to_errnum (errno);
+		moo_seterrwithsyserr (moo, errno);
 		MOO_DEBUG1 (moo, "Cannot create epoll - %hs\n", strerror(errno));
 		goto oops;
 	}
@@ -1498,7 +1498,7 @@ static int vm_startup (moo_t* moo)
 #if defined(USE_THREAD)
 	if (pipe(xtn->p) == -1)
 	{
-		moo_syserr_to_errnum (errno);
+		moo_seterrwithsyserr (moo, errno);
 		MOO_DEBUG1 (moo, "Cannot create pipes - %hs\n", strerror(errno));
 		goto oops;
 	}

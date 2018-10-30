@@ -857,7 +857,7 @@ static int add_to_oow_pool (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t v)
 	do { if (add_token_str(moo, s, l) <= -1) return -1; } while (0)
 
 #define ADD_TOKEN_CHAR(moo,c) \
-	do { if (add_token_char(moo, c) <= -1) return -1; } while (0)
+	do { if (add_token_char(moo, (moo_ooch_t)c) <= -1) return -1; } while (0)
 
 #define CLEAR_TOKEN_NAME(moo) ((moo)->c->tok.name.len = 0)
 #define SET_TOKEN_TYPE(moo,tv) ((moo)->c->tok.type = (tv))
@@ -1121,7 +1121,7 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 
 	if (char_read_ahead != MOO_OOCI_EOF)
 	{
-		ADD_TOKEN_CHAR(moo, char_read_ahead);
+		ADD_TOKEN_CHAR (moo, char_read_ahead);
 	}
 
 	/* while() instead of do..while() because when char_read_ahead is not EOF
@@ -1353,7 +1353,7 @@ static int get_numlit (moo_t* moo, int negated)
 			radix = rv;
 		}
 
-		ADD_TOKEN_CHAR(moo, c);
+		ADD_TOKEN_CHAR (moo, c);
 		GET_CHAR_TO (moo, c);
 		if (c == '_')
 		{
@@ -1383,7 +1383,7 @@ static int get_numlit (moo_t* moo, int negated)
 			return -1;
 		}
 
-		ADD_TOKEN_CHAR(moo, c);
+		ADD_TOKEN_CHAR (moo, c);
 		GET_CHAR_TO (moo, c);
 
 		if (CHAR_TO_NUM(c, radix) >= radix)
@@ -1395,7 +1395,7 @@ static int get_numlit (moo_t* moo, int negated)
 
 		do
 		{
-			ADD_TOKEN_CHAR(moo, c);
+			ADD_TOKEN_CHAR (moo, c);
 			GET_CHAR_TO (moo, c);
 			if (c == '_') 
 			{
@@ -1442,7 +1442,7 @@ static int get_charlit (moo_t* moo)
 	}
 
 	SET_TOKEN_TYPE (moo, MOO_IOTOK_CHARLIT);
-	ADD_TOKEN_CHAR(moo, c);
+	ADD_TOKEN_CHAR (moo, c);
 	return 0;
 }
 
@@ -1758,7 +1758,7 @@ retry:
 
 		case '^':
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_RETURN);
-			ADD_TOKEN_CHAR(moo, c);
+			ADD_TOKEN_CHAR (moo, c);
 			GET_CHAR_TO (moo, c);
 
 			if (c == '^')
@@ -1803,25 +1803,25 @@ retry:
 
 		case '%':
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_PERCENT);
-			ADD_TOKEN_CHAR(moo, c);
+			ADD_TOKEN_CHAR (moo, c);
 			GET_CHAR_TO (moo, c);
 
 			if (c == '(')
 			{
 				/* %( - array expression */
-				ADD_TOKEN_CHAR(moo, c);
+				ADD_TOKEN_CHAR (moo, c);
 				SET_TOKEN_TYPE (moo, MOO_IOTOK_PERCPAREN);
 			}
 			else if (c == '[')
 			{
 				/* %[ - byte-array expression */
-				ADD_TOKEN_CHAR(moo, c);
+				ADD_TOKEN_CHAR (moo, c);
 				SET_TOKEN_TYPE (moo, MOO_IOTOK_PERCBRACK);
 			}
 			else if (c == '{')
 			{
 				/* %{ - dictionary expression */
-				ADD_TOKEN_CHAR(moo, c);
+				ADD_TOKEN_CHAR (moo, c);
 				SET_TOKEN_TYPE (moo, MOO_IOTOK_PERCBRACE);
 			}
 			else
@@ -1835,7 +1835,7 @@ retry:
 			break;
 
 		case '#':  
-			ADD_TOKEN_CHAR(moo, c);
+			ADD_TOKEN_CHAR (moo, c);
 			GET_CHAR_TO (moo, c);
 			switch (c)
 			{
@@ -1845,19 +1845,19 @@ retry:
 
 				case '(':
 					/* #( - array literal */
-					ADD_TOKEN_CHAR(moo, c);
+					ADD_TOKEN_CHAR (moo, c);
 					SET_TOKEN_TYPE (moo, MOO_IOTOK_HASHPAREN);
 					break;
 
 				case '[':
 					/* #[ - byte array literal */
-					ADD_TOKEN_CHAR(moo, c);
+					ADD_TOKEN_CHAR (moo, c);
 					SET_TOKEN_TYPE (moo, MOO_IOTOK_HASHBRACK);
 					break;
 
 				case '{':
 					/* #[ - dictionary literal */
-					ADD_TOKEN_CHAR(moo, c);
+					ADD_TOKEN_CHAR (moo, c);
 					SET_TOKEN_TYPE (moo, MOO_IOTOK_HASHBRACE);
 					break;
 
@@ -1868,23 +1868,23 @@ retry:
 					break;
 
 				case '\\':
-					ADD_TOKEN_CHAR(moo, c);
+					ADD_TOKEN_CHAR (moo, c);
 					GET_CHAR_TO (moo, c);
 					if (c == 'E' || c == 'e')
 					{
 						/* #\eNNN - error literal - #\e0, #\e1234, etc */
 						SET_TOKEN_TYPE(moo, MOO_IOTOK_ERRLIT);
-						ADD_TOKEN_CHAR(moo, c);
+						ADD_TOKEN_CHAR (moo, c);
 						GET_CHAR_TO (moo, c);
 						if (!is_digitchar(c))
 						{
-							ADD_TOKEN_CHAR(moo, c); /* to include it to the error messsage */
+							ADD_TOKEN_CHAR (moo, c); /* to include it to the error messsage */
 							moo_setsynerr (moo, MOO_SYNERR_ERRLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 							return -1;
 						}
 						do
 						{
-							ADD_TOKEN_CHAR(moo, c);
+							ADD_TOKEN_CHAR (moo, c);
 							GET_CHAR_TO (moo, c);
 						}
 						while (is_digitchar(c) || c == '_');
@@ -1893,25 +1893,25 @@ retry:
 					{
 						/* #\pXXX - smptr literal - #\p0, #\p100, etc */
 						SET_TOKEN_TYPE(moo, MOO_IOTOK_SMPTRLIT);
-						ADD_TOKEN_CHAR(moo, c);
+						ADD_TOKEN_CHAR (moo, c);
 						GET_CHAR_TO (moo, c);
 
 						if (!is_xdigitchar(c))
 						{
-							ADD_TOKEN_CHAR(moo, c); /* to include it to the error messsage */
+							ADD_TOKEN_CHAR (moo, c); /* to include it to the error messsage */
 							moo_setsynerr (moo, MOO_SYNERR_SMPTRLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 							return -1;
 						}
 						do
 						{
-							ADD_TOKEN_CHAR(moo, c);
+							ADD_TOKEN_CHAR (moo, c);
 							GET_CHAR_TO (moo, c);
 						}
 						while (is_xdigitchar(c) || c == '_');
 					}
 					else
 					{
-						ADD_TOKEN_CHAR(moo, c); /* to include it to the error messsage */
+						ADD_TOKEN_CHAR (moo, c); /* to include it to the error messsage */
 						moo_setsynerr (moo, MOO_SYNERR_HBSLPINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
@@ -2103,7 +2103,7 @@ retry:
 			break;
 
 		single_char_token:
-			ADD_TOKEN_CHAR(moo, c);
+			ADD_TOKEN_CHAR (moo, c);
 			break;
 	}
 
@@ -7279,7 +7279,7 @@ static int make_defined_class (moo_t* moo)
 
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_oop_t tmp;
-	moo_oow_t spec, self_spec;
+	moo_ooi_t spec, self_spec;
 	int just_made = 0, flags;
 
 	flags = 0;

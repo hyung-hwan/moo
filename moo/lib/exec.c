@@ -127,6 +127,8 @@ static MOO_INLINE const char* proc_state_to_string (int state)
 #	define __PRIMITIVE_NAME__ "<<primitive>>"
 #elif defined(_SCO_DS)
 #	define __PRIMITIVE_NAME__ "<<primitive>>"
+#elif defined(__BORLANDC__) && (__BORLANDC__ <= 0x520)
+#	define __PRIMITIVE_NAME__ "<<primitive>>"
 #else
 #	define __PRIMITIVE_NAME__ (&__FUNCTION__[0])
 #endif

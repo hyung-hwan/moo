@@ -195,6 +195,7 @@ static const moo_ooch_t* synerr_to_errstr (moo_synerrnum_t errnum)
 
 #if defined(_WIN32)
 #	include <windows.h>
+#	include <errno.h>
 #elif defined(__OS2__)
 #	define INCL_DOSPROCESS
 #	define INCL_DOSFILEMGR
