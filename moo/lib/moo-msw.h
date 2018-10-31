@@ -39,6 +39,9 @@ _M_IX86 x86 platform
 _M_X64 x64 platform 
 */
 
+/*#define MOO_ENABLE_STATIC_MODULE*/
+#define MOO_ENABLE_DYNAMIC_MODULE
+
 /* windows for most of non-x86 platforms dropped. 
  * make it selective to support old non-x86 windows platforms. */
 #define MOO_ENDIAN_LITTLE 
