@@ -392,31 +392,31 @@ struct moo_ntime_t
 	moo_int32_t   nsec; /* nanoseconds */
 };
 
-#define MOO_INITNTIME(c,s,ns) (((c)->sec = (s)), ((c)->nsec = (ns)))
-#define MOO_CLEARNTIME(c) MOO_INITNTIME(c, 0, 0)
+#define MOO_INIT_NTIME(c,s,ns) (((c)->sec = (s)), ((c)->nsec = (ns)))
+#define MOO_CLEAR_NTIME(c) MOO_INIT_NTIME(c, 0, 0)
 
-#define MOO_ADDNTIME(c,a,b) \
+#define MOO_ADD_NTIME(c,a,b) \
 	do { \
 		(c)->sec = (a)->sec + (b)->sec; \
 		(c)->nsec = (a)->nsec + (b)->nsec; \
 		while ((c)->nsec >= MOO_NSECS_PER_SEC) { (c)->sec++; (c)->nsec -= MOO_NSECS_PER_SEC; } \
 	} while(0)
 
-#define MOO_ADDNTIMESNS(c,a,s,ns) \
+#define MOO_ADD_NTIME_SNS(c,a,s,ns) \
 	do { \
 		(c)->sec = (a)->sec + (s); \
 		(c)->nsec = (a)->nsec + (ns); \
 		while ((c)->nsec >= MOO_NSECS_PER_SEC) { (c)->sec++; (c)->nsec -= MOO_NSECS_PER_SEC; } \
 	} while(0)
 
-#define MOO_SUBNTIME(c,a,b) \
+#define MOO_SUB_NTIME(c,a,b) \
 	do { \
 		(c)->sec = (a)->sec - (b)->sec; \
 		(c)->nsec = (a)->nsec - (b)->nsec; \
 		while ((c)->nsec < 0) { (c)->sec--; (c)->nsec += MOO_NSECS_PER_SEC; } \
 	} while(0)
 
-#define MOO_SUBNTIMESNS(c,a,s,ns) \
+#define MOO_SUB_NTIME_SNS(c,a,s,ns) \
 	do { \
 		(c)->sec = (a)->sec - s; \
 		(c)->nsec = (a)->nsec - ns; \
@@ -424,7 +424,7 @@ struct moo_ntime_t
 	} while(0)
 
 
-#define MOO_CMPNTIME(a,b) (((a)->sec == (b)->sec)? ((a)->nsec - (b)->nsec): ((a)->sec - (b)->sec))
+#define MOO_CMP_NTIME(a,b) (((a)->sec == (b)->sec)? ((a)->nsec - (b)->nsec): ((a)->sec - (b)->sec))
 
 /* =========================================================================
  * PRIMITIVE MACROS

@@ -217,7 +217,7 @@ static MOO_INLINE void vm_gettime (moo_t* moo, moo_ntime_t* now)
 	 * thus becomes relative to it. this way, it is kept small such that it
 	 * can be represented in a small integer with leaving almost zero chance
 	 * of overflow. */
-	MOO_SUBNTIME (now, now, &moo->exec_start_time);  /* now = now - exec_start_time */
+	MOO_SUB_NTIME (now, now, &moo->exec_start_time);  /* now = now - exec_start_time */
 }
 
 static MOO_INLINE void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
@@ -2473,7 +2473,7 @@ static moo_pfrc_t pf_semaphore_signal_timed (moo_t* moo, moo_mod_t* mod, moo_ooi
 	/* this code assumes that the monotonic clock returns a small value
 	 * that can fit into a SmallInteger, even after some additions. */
 	vm_gettime (moo, &now);
-	MOO_ADDNTIMESNS (&ft, &now, MOO_OOP_TO_SMOOI(sec), MOO_OOP_TO_SMOOI(nsec));
+	MOO_ADD_NTIME_SNS (&ft, &now, MOO_OOP_TO_SMOOI(sec), MOO_OOP_TO_SMOOI(nsec));
 	if (ft.sec < 0 || ft.sec > MOO_SMOOI_MAX) 
 	{
 		/* soft error - cannot represent the expiry time in a small integer. */
@@ -4110,12 +4110,12 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->sem_heap[0]->u.timed.ftime_sec));
 			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->sem_heap[0]->u.timed.ftime_nsec));
 
-			MOO_INITNTIME (&ft,
+			MOO_INIT_NTIME (&ft,
 				MOO_OOP_TO_SMOOI(moo->sem_heap[0]->u.timed.ftime_sec),
 				MOO_OOP_TO_SMOOI(moo->sem_heap[0]->u.timed.ftime_nsec)
 			);
 
-			if (MOO_CMPNTIME(&ft, (moo_ntime_t*)&now) <= 0)
+			if (MOO_CMP_NTIME(&ft, (moo_ntime_t*)&now) <= 0)
 			{
 				moo_oop_process_t proc;
 
@@ -4155,7 +4155,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 			else if (moo->processor->active == moo->nil_process)
 			{
 				/* no running process. before firing time. */
-				MOO_SUBNTIME (&ft, &ft, (moo_ntime_t*)&now);
+				MOO_SUB_NTIME (&ft, &ft, (moo_ntime_t*)&now);
 
 				if (moo->sem_io_wait_count > 0)
 				{
@@ -4198,7 +4198,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 
 			do
 			{
-				MOO_INITNTIME (&ft, 3, 0); /* TODO: use a configured time */
+				MOO_INIT_NTIME (&ft, 3, 0); /* TODO: use a configured time */
 				vm_muxwait (moo, &ft);
 			}
 			while (moo->processor->active == moo->nil_process && !moo->abort_req);

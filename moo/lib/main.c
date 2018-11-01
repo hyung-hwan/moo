@@ -268,6 +268,10 @@ struct xtn_t
 
 	#if defined(_WIN32)
 	HANDLE waitable_timer;
+	DWORD tc_last;
+	DWORD tc_overflow;
+	#elif defined(__OS2__)
+	ULONG tc_last;
 	#endif
 
 	#if defined(USE_DEVPOLL)
@@ -429,7 +433,7 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 		moo_copy_bcstr (bb->fn, pathlen + 1, xtn->source_path);
 	}
 
-#if defined(__DOS__) || defined(_WIN32) || defined(__OS2__)
+#if defined(_WIN32) || defined(__OS2__) || defined(__DOS__)
 	bb->fp = fopen (bb->fn, "rb");
 #else
 	bb->fp = fopen (bb->fn, "r");
@@ -1629,15 +1633,51 @@ static void vm_cleanup (moo_t* moo)
 static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 {
 #if defined(_WIN32)
-	/* TODO: */
-#elif defined(__OS2__)
-	ULONG out;
 
-/* TODO: handle overflow?? */
+	#if defined(_WIN64) || (defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0600))
+	moo_uint64_t bigsec, bigmsec;
+	bigmsec = GetTickCount64();
+	#else
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+	moo_uint64_t bigsec, bigmsec;
+	DWORD msec;
+
+	msec = GetTickCount(); /* this can sustain for 49.7 days */
+	if (msec < xtn->tc_last)
+	{
+		/* i assume the difference is never bigger than 49.7 days */
+		//diff = (MOO_TYPE_MAX(DWORD) - xtn->tc_last) + 1 + msec;
+		xtn->tc_overflow++;
+		bigmsec = ((moo_uint64_t)MOO_TYPE_MAX(DWORD) * xtn->tc_overflow) + msec;
+	}
+	else bigmsec = msec;
+	xtn->tc_last = msec;
+	#endif
+
+	bigsec = MOO_MSEC_TO_SEC(bigmsec);
+	bigmsec -= MOO_SEC_TO_MSEC(bigsec);
+	MOO_INIT_NTIME(now, bigsec, MOO_MSEC_TO_NSEC(bigmsec));
+
+#elif defined(__OS2__)
+	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+	moo_uint64_t bigsec, bigmsec;
+	ULONG msec;
+
 /* TODO: use DosTmrQueryTime() and DosTmrQueryFreq()? */
-	DosQuerySysInfo (QSV_MS_COUNT, QSV_MS_COUNT, &out, MOO_SIZEOF(out)); /* milliseconds */
+	DosQuerySysInfo (QSV_MS_COUNT, QSV_MS_COUNT, &msec, MOO_SIZEOF(msec)); /* milliseconds */
 	/* it must return NO_ERROR */
-	MOO_INITNTIME (now, MOO_MSEC_TO_SEC(out), MOO_MSEC_TO_NSEC(out));
+	if (msec < xtn->tc_last)
+	{
+		xtn->tc_overflow++;
+		bigmsec = ((moo_uint64_t)MOO_TYPE_MAX(ULONG) * xtn->tc_overflow) + msec;
+	}
+	else bigmsec = msec;
+	xtn->tc_last = msec;
+
+	bigsec = MOO_MSEC_TO_SEC(bigmsec);
+	bigmsec -= MOO_SEC_TO_MSEC(bigsec);
+	MOO_INIT_NTIME (now, bigsec, MOO_MSEC_TO_NSEC(bigmsec));
+
 #elif defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
 	clock_t c;
 
@@ -1655,24 +1695,25 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 	#else
 	#	error UNSUPPORTED CLOCKS_PER_SEC
 	#endif
+
 #elif defined(macintosh)
 	UnsignedWide tick;
 	moo_uint64_t tick64;
 	Microseconds (&tick);
 	tick64 = *(moo_uint64_t*)&tick;
-	MOO_INITNTIME (now, MOO_USEC_TO_SEC(tick64), MOO_USEC_TO_NSEC(tick64));
+	MOO_INIT_NTIME (now, MOO_USEC_TO_SEC(tick64), MOO_USEC_TO_NSEC(tick64));
 #elif defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
 	struct timespec ts;
 	clock_gettime (CLOCK_MONOTONIC, &ts);
-	MOO_INITNTIME(now, ts.tv_sec, ts.tv_nsec);
+	MOO_INIT_NTIME(now, ts.tv_sec, ts.tv_nsec);
 #elif defined(HAVE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
 	struct timespec ts;
 	clock_gettime (CLOCK_REALTIME, &ts);
-	MOO_INITNTIME(now, ts.tv_sec, ts.tv_nsec);
+	MOO_INIT_NTIME(now, ts.tv_sec, ts.tv_nsec);
 #else
 	struct timeval tv;
 	gettimeofday (&tv, MOO_NULL);
-	MOO_INITNTIME(now, tv.tv_sec, MOO_USEC_TO_NSEC(tv.tv_usec));
+	MOO_INIT_NTIME(now, tv.tv_sec, MOO_USEC_TO_NSEC(tv.tv_usec));
 #endif
 }
 
@@ -1899,7 +1940,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 			ns.nsec = MOO_USEC_TO_NSEC(tv.tv_usec);
 		}
 	#endif
-		MOO_ADDNTIME (&ns, &ns, dur);
+		MOO_ADD_NTIME (&ns, &ns, dur);
 		ts.tv_sec = ns.sec;
 		ts.tv_nsec = ns.nsec;
 
@@ -2116,6 +2157,7 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 	if (xtn->waitable_timer)
 	{
 		LARGE_INTEGER li;
+goto normal_sleep;
 		li.QuadPart = -MOO_SECNSEC_TO_NSEC(dur->sec, dur->nsec);
 		if(SetWaitableTimer(xtn->waitable_timer, &li, 0, MOO_NULL, MOO_NULL, FALSE) == FALSE) goto normal_sleep;
 		WaitForSingleObject(xtn->waitable_timer, INFINITE);
@@ -2260,7 +2302,8 @@ static void setup_tick (void)
 	}
 
 #elif defined(__OS2__)
-	/* TODO: */	
+	/* TODO: */
+	#error UNSUPPORTED
 
 #elif defined(macintosh)
 
@@ -2309,8 +2352,9 @@ static void cancel_tick (void)
 	}
 
 #elif defined(__OS2__)
+	/* TODO: */
+	#error UNSUPPORTED
 
-	/* TODO: */	
 #elif defined(macintosh)
 	RmvTime ((QElem*)&g_tmtask);
 	/*DisposeTimerProc (g_tmtask.tmAddr);*/
