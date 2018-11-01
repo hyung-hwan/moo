@@ -278,11 +278,8 @@ restart:
 	{
 		int sought = pfd[i].events;
 		pfd[i].revents = 0;
-		if (pfd[i].fd < 0)
-			continue;
-		if (!(sought & (POLLIN | POLLRDNORM | POLLOUT | POLLWRNORM | POLLWRBAND
-		                | POLLPRI | POLLRDBAND)))
-			continue;
+		if (pfd[i].fd < 0) continue;
+		if (!(sought & (POLLIN | POLLRDNORM | POLLOUT | POLLWRNORM | POLLWRBAND | POLLPRI | POLLRDBAND))) continue;
 
 		h = (HANDLE)_get_osfhandle (pfd[i].fd);
 		if (IsSocketHandle (h))
@@ -316,14 +313,12 @@ restart:
 			   a character is available.  windows_compute_revents eliminates
 			   bits for the "wrong" direction. */
 			pfd[i].revents = windows_compute_revents (h, &sought);
-			if (sought)
-				handle_array[nhandles++] = h;
-			if (pfd[i].revents)
-				timeout = 0;
+			if (sought) handle_array[nhandles++] = h;
+			if (pfd[i].revents) timeout = 0;
 		}
 	}
 
-	if (select (0, &rfds, &wfds, &xfds, &tv0) > 0)
+	if (select(0, &rfds, &wfds, &xfds, &tv0) > 0)
 	{
 		/* Do MsgWaitForMultipleObjects anyway to dispatch messages, but
 		   no need to call select again.  */
@@ -341,8 +336,7 @@ restart:
 
 	for (;;)
 	{
-		ret = MsgWaitForMultipleObjects (nhandles, handle_array, FALSE,
-		                                 wait_timeout, QS_ALLINPUT);
+		ret = MsgWaitForMultipleObjects(nhandles, handle_array, FALSE, wait_timeout, QS_ALLINPUT);
 
 		if (ret == WAIT_OBJECT_0 + nhandles)
 		{
@@ -370,8 +364,7 @@ restart:
 
 		if (pfd[i].fd < 0)
 			continue;
-		if (!(pfd[i].events & (POLLIN | POLLRDNORM |
-		                       POLLOUT | POLLWRNORM | POLLWRBAND)))
+		if (!(pfd[i].events & (POLLIN | POLLRDNORM | POLLOUT | POLLWRNORM | POLLWRBAND)))
 			continue;
 
 		h = (HANDLE) _get_osfhandle (pfd[i].fd);

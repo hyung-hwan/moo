@@ -1447,14 +1447,12 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 
 static int vm_startup (moo_t* moo)
 {
-#if defined(_WIN32)
-	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
-	xtn->waitable_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
-
-#else
-
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
 	int pcount = 0, flag;
+
+#if defined(_WIN32)
+	xtn->waitable_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
+#endif
 
 #if defined(USE_DEVPOLL)
 	xtn->ep = open ("/dev/poll", O_RDWR);
@@ -1557,22 +1555,21 @@ oops:
 #endif
 
 	return -1;
-#endif
 }
 
 static void vm_cleanup (moo_t* moo)
 {
-#if defined(_WIN32)
 	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
+
+	xtn->vm_running = 0;
+
+#if defined(_WIN32)
 	if (xtn->waitable_timer)
 	{
 		CloseHandle (xtn->waitable_timer);
 		xtn->waitable_timer = MOO_NULL;
 	}
-#else
-	xtn_t* xtn = (xtn_t*)moo_getxtn(moo);
-
-	xtn->vm_running = 0;
+#endif
 
 #if defined(USE_THREAD)
 	if (xtn->iothr_up)
@@ -1626,8 +1623,6 @@ static void vm_cleanup (moo_t* moo)
 	xtn->ev.reg.maxfd = -1;
 	MUTEX_DESTROY (&xtn->ev.reg.smtx);
 #endif
-
-#endif
 }
 
 static void vm_gettime (moo_t* moo, moo_ntime_t* now)
@@ -1646,7 +1641,7 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 	if (msec < xtn->tc_last)
 	{
 		/* i assume the difference is never bigger than 49.7 days */
-		//diff = (MOO_TYPE_MAX(DWORD) - xtn->tc_last) + 1 + msec;
+		/*diff = (MOO_TYPE_MAX(DWORD) - xtn->tc_last) + 1 + msec;*/
 		xtn->tc_overflow++;
 		bigmsec = ((moo_uint64_t)MOO_TYPE_MAX(DWORD) * xtn->tc_overflow) + msec;
 	}
