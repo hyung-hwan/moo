@@ -228,6 +228,10 @@ static const moo_ooch_t* synerr_to_errstr (moo_synerrnum_t errnum)
 
 moo_errnum_t moo_syserr_to_errnum (int e)
 {
+#if 0
+	/* -------------------------------------- */
+	/* currently 'e' is expected to be 'errno'. it doesn't support GetLastError() on win32 or APIRET on os2 yet */
+	/* -------------------------------------- */
 #if defined(__OS2__)
 	/* APIRET e */
 	switch (e)
@@ -268,6 +272,7 @@ moo_errnum_t moo_syserr_to_errnum (int e)
 	}
 
 #else
+
 	switch (e)
 	{
 		case ENOMEM: return MOO_ESYSMEM;
@@ -314,6 +319,57 @@ moo_errnum_t moo_syserr_to_errnum (int e)
 
 		default: return MOO_ESYSERR;
 	}
+#endif
+
+#else
+	/* ------------------------------------------------------------------- */
+	switch (e)
+	{
+		case ENOMEM: return MOO_ESYSMEM;
+		case EINVAL: return MOO_EINVAL;
+
+	#if defined(EBUSY)
+		case EBUSY: return MOO_EBUSY;
+	#endif
+		case EACCES: return MOO_EACCES;
+	#if defined(EPERM)
+		case EPERM: return MOO_EPERM;
+	#endif
+	#if defined(ENOTDIR)
+		case ENOTDIR: return MOO_ENOTDIR;
+	#endif
+		case ENOENT: return MOO_ENOENT;
+	#if defined(EEXIST)
+		case EEXIST: return MOO_EEXIST;
+	#endif
+	#if defined(EINTR)
+		case EINTR:  return MOO_EINTR;
+	#endif
+
+	#if defined(EPIPE)
+		case EPIPE:  return MOO_EPIPE;
+	#endif
+
+	#if defined(EAGAIN) && defined(EWOULDBLOCK) && (EAGAIN != EWOULDBLOCK)
+		case EAGAIN: 
+		case EWOULDBLOCK: return MOO_EAGAIN;
+	#elif defined(EAGAIN)
+		case EAGAIN: return MOO_EAGAIN;
+	#elif defined(EWOULDBLOCK)
+		case EWOULDBLOCK: return MOO_EAGAIN;
+	#endif
+
+	#if defined(EBADF)
+		case EBADF: return MOO_EBADHND;
+	#endif
+
+	#if defined(EIO)
+		case EIO: return MOO_EIOERR;
+	#endif
+
+		default: return MOO_ESYSERR;
+	}
+	/* ------------------------------------------------------------------- */
 #endif
 }
 

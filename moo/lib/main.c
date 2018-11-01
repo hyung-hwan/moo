@@ -48,7 +48,6 @@
 #		define USE_LTDL
 #	else
 #		define USE_WIN_DLL
-		/* TODO: write sys_dl_error() properly */
 #		define sys_dl_error() win_dlerror()
 #		define sys_dl_open(x) LoadLibraryExA(x, MOO_NULL, 0)
 #		define sys_dl_openext(x) LoadLibraryExA(x, MOO_NULL, 0)
@@ -1176,7 +1175,7 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 	ev.fd = fd;
 	ev.events = event_mask;
 	ev.revents = 0;
-	if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
+	if (write(xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
 	{
 		moo_seterrwithsyserr (moo, errno);
 		MOO_DEBUG2 (moo, "Cannot add file descriptor %d to devpoll - %hs\n", fd, strerror(errno));
@@ -1383,7 +1382,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 	ev.events |= EPOLLET;
 	#endif
 	ev.data.fd = fd;
-	if (epoll_ctl (xtn->ep, EPOLL_CTL_MOD, fd, &ev) == -1)
+	if (epoll_ctl(xtn->ep, EPOLL_CTL_MOD, fd, &ev) == -1)
 	{
 		moo_seterrwithsyserr (moo, errno);
 		MOO_DEBUG2 (moo, "Cannot modify file descriptor %d in epoll - %hs\n", fd, strerror(errno));
@@ -1455,7 +1454,7 @@ static int vm_startup (moo_t* moo)
 #endif
 
 #if defined(USE_DEVPOLL)
-	xtn->ep = open ("/dev/poll", O_RDWR);
+	xtn->ep = open("/dev/poll", O_RDWR);
 	if (xtn->ep == -1) 
 	{
 		moo_seterrwithsyserr (moo, errno);
@@ -1463,7 +1462,7 @@ static int vm_startup (moo_t* moo)
 		goto oops;
 	}
 
-	flag = fcntl (xtn->ep, F_GETFD);
+	flag = fcntl(xtn->ep, F_GETFD);
 	if (flag >= 0) fcntl (xtn->ep, F_SETFD, flag | FD_CLOEXEC);
 
 #elif defined(USE_EPOLL)
