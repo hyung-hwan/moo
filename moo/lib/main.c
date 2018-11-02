@@ -43,16 +43,12 @@
 #	include <time.h>
 #	include <io.h>
 #	include <fcntl.h>
+#	include <errno.h>
 #	if defined(MOO_HAVE_CFG_H) && defined(MOO_ENABLE_LIBLTDL)
 #		include <ltdl.h>
 #		define USE_LTDL
 #	else
 #		define USE_WIN_DLL
-#		define sys_dl_error() win_dlerror()
-#		define sys_dl_open(x) LoadLibraryExA(x, MOO_NULL, 0)
-#		define sys_dl_openext(x) LoadLibraryExA(x, MOO_NULL, 0)
-#		define sys_dl_close(x) FreeLibrary(x)
-#		define sys_dl_getsym(x,n) GetProcAddress(x,n)
 #	endif
 
 #	include "poll-msw.h"
@@ -103,27 +99,12 @@
 #	if defined(MOO_ENABLE_LIBLTDL)
 #		include <ltdl.h>
 #		define USE_LTDL
-#		define sys_dl_error() lt_dlerror()
-#		define sys_dl_open(x) lt_dlopen(x)
-#		define sys_dl_openext(x) lt_dlopenext(x)
-#		define sys_dl_close(x) lt_dlclose(x)
-#		define sys_dl_getsym(x,n) lt_dlsym(x,n)
 #	elif defined(HAVE_DLFCN_H)
 #		include <dlfcn.h>
 #		define USE_DLFCN
-#		define sys_dl_error() dlerror()
-#		define sys_dl_open(x) dlopen(x,RTLD_NOW)
-#		define sys_dl_openext(x) dlopen(x,RTLD_NOW)
-#		define sys_dl_close(x) dlclose(x)
-#		define sys_dl_getsym(x,n) dlsym(x,n)
 #	elif defined(__APPLE__) || defined(__MACOSX__)
 #		define USE_MACH_O_DYLD
 #		include <mach-o/dyld.h>
-#		define sys_dl_error() mach_dlerror()
-#		define sys_dl_open(x) mach_dlopen(x)
-#		define sys_dl_openext(x) mach_dlopen(x)
-#		define sys_dl_close(x) mach_dlclose(x)
-#		define sys_dl_getsym(x,n) mach_dlsym(x,n)
 #	else
 #		error UNSUPPORTED DYNAMIC LINKER
 #	endif
@@ -880,7 +861,37 @@ static moo_errnum_t errno_to_errnum (int errcode)
 #if defined(_WIN32)
 static moo_errnum_t winerr_to_errnum (DWORD errcode)
 {
-	return MOO_ESYSERR;
+	switch (errcode)
+	{
+		case ERROR_NOT_ENOUGH_MEMORY:
+		case ERROR_OUTOFMEMORY:
+			return MOO_ESYSMEM;
+
+		case ERROR_INVALID_PARAMETER:
+		case ERROR_INVALID_NAME:
+			return MOO_EINVAL;
+
+		case ERROR_INVALID_HANDLE:
+			return MOO_EBADHND;
+
+		case ERROR_ACCESS_DENIED:
+		case ERROR_SHARING_VIOLATION:
+			return MOO_EACCES;
+
+		case ERROR_FILE_NOT_FOUND:
+		case ERROR_PATH_NOT_FOUND:
+			return MOO_ENOENT;
+
+		case ERROR_ALREADY_EXISTS:
+		case ERROR_FILE_EXISTS:
+			return MOO_EEXIST;
+
+		case ERROR_BROKEN_PIPE:
+			return MOO_EPIPE;
+
+		default:
+			return MOO_ESYSERR;
+	}
 }
 #endif
 
@@ -894,9 +905,11 @@ static moo_errnum_t os2err_to_errnum (APIRET errcode)
 			return MOO_ESYSMEM;
 
 		case ERROR_INVALID_PARAMETER: 
-		case ERROR_INVALID_HANDLE: 
 		case ERROR_INVALID_NAME:
 			return MOO_EINVAL;
+
+		case ERROR_INVALID_HANDLE: 
+			return MOO_EBADHND;
 
 		case ERROR_ACCESS_DENIED: 
 		case ERROR_SHARING_VIOLATION:
@@ -947,21 +960,24 @@ static moo_errnum_t syserrstrb (moo_t* moo, int syserr_type, int syserr_code, mo
 	{
 		case 1: 
 		#if defined(_WIN32)
-			DWORD rc;
-			rc = FormatMessageA (
-				FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-				NULL, syserr_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
-				buf, len, MOO_NULL
-			);
-			while (rc > 0 && buf[rc - 1] == '\r' || buf[rc - 1] == '\n') buf[--rc] = '\0';
+			if (buf)
+			{
+				DWORD rc;
+				rc = FormatMessageA (
+					FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+					NULL, syserr_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+					buf, len, MOO_NULL
+				);
+				while (rc > 0 && buf[rc - 1] == '\r' || buf[rc - 1] == '\n') buf[--rc] = '\0';
+			}
 			return winerr_to_errnum(syserr_code);
 		#elif defined(__OS2__)
 			/* TODO: convert code to string */
-			moo_copy_bcstr (buf, len, "system error");
+			if (buf) moo_copy_bcstr (buf, len, "system error");
 			return os2err_to_errnum(syserr_code);
 		#elif defined(macintosh)
 			/* TODO: convert code to string */
-			moo_copy_bcstr (buf, len, "system error");
+			if (buf) moo_copy_bcstr (buf, len, "system error");
 			return os2err_to_errnum(syserr_code);
 		#else
 			/* in other systems, errno is still the native system error code.
@@ -970,20 +986,48 @@ static moo_errnum_t syserrstrb (moo_t* moo, int syserr_type, int syserr_code, mo
 
 		case 0:
 		#if defined(HAVE_STRERROR_R)
-			strerror_r (syserr_code, buf, len);
+			if (buf) strerror_r (syserr_code, buf, len);
 		#else
 			/* this is not thread safe */
-			moo_copy_bcstr (buf, len, strerror(syserr_code));
+			if (buf) moo_copy_bcstr (buf, len, strerror(syserr_code));
 		#endif
 			return errno_to_errnum(syserr_code);
 	}
 
-	moo_copy_bcstr (buf, len, "system error");
+	if (buf) moo_copy_bcstr (buf, len, "system error");
 	return MOO_ESYSERR;
 }
 
-
 /* ========================================================================= */
+
+#if defined(USE_LTDL)
+#	define sys_dl_error() lt_dlerror()
+#	define sys_dl_open(x) lt_dlopen(x)
+#	define sys_dl_openext(x) lt_dlopenext(x)
+#	define sys_dl_close(x) lt_dlclose(x)
+#	define sys_dl_getsym(x,n) lt_dlsym(x,n)
+
+#elif defined(USE_DLFCN)
+#	define sys_dl_error() dlerror()
+#	define sys_dl_open(x) dlopen(x,RTLD_NOW)
+#	define sys_dl_openext(x) dlopen(x,RTLD_NOW)
+#	define sys_dl_close(x) dlclose(x)
+#	define sys_dl_getsym(x,n) dlsym(x,n)
+
+#elif defined(USE_WIN_DLL)
+#	define sys_dl_error() win_dlerror()
+#	define sys_dl_open(x) LoadLibraryExA(x, MOO_NULL, 0)
+#	define sys_dl_openext(x) LoadLibraryExA(x, MOO_NULL, 0)
+#	define sys_dl_close(x) FreeLibrary(x)
+#	define sys_dl_getsym(x,n) GetProcAddress(x,n)
+
+#elif defined(USE_MACH_O_DYLD)
+#	define sys_dl_error() mach_dlerror()
+#	define sys_dl_open(x) mach_dlopen(x)
+#	define sys_dl_openext(x) mach_dlopen(x)
+#	define sys_dl_close(x) mach_dlclose(x)
+#	define sys_dl_getsym(x,n) mach_dlsym(x,n)
+#endif
 
 #if defined(USE_WIN_DLL)
 
@@ -1857,15 +1901,6 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 #endif
 }
 
-#if defined(__DOS__) 
-#	if defined(_INTELC32_) 
-	void _halt_cpu (void);
-#	elif defined(__WATCOMC__)
-	void _halt_cpu (void);
-#	pragma aux _halt_cpu = "hlt"
-#	endif
-#endif
-
 static int vm_muxadd (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask)
 {
 	int event_mask;
@@ -2290,6 +2325,15 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 #endif  /* USE_THREAD */
 }
 
+#if defined(__DOS__) 
+#	if defined(_INTELC32_) 
+	void _halt_cpu (void);
+#	elif defined(__WATCOMC__)
+	void _halt_cpu (void);
+#	pragma aux _halt_cpu = "hlt"
+#	endif
+#endif
+
 static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 {
 #if defined(_WIN32)
@@ -2297,8 +2341,7 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 	if (xtn->waitable_timer)
 	{
 		LARGE_INTEGER li;
-goto normal_sleep;
-		li.QuadPart = -MOO_SECNSEC_TO_NSEC(dur->sec, dur->nsec);
+		li.QuadPart = -(MOO_SECNSEC_TO_NSEC(dur->sec, dur->nsec) / 100); /* in 100 nanoseconds */
 		if(SetWaitableTimer(xtn->waitable_timer, &li, 0, MOO_NULL, MOO_NULL, FALSE) == FALSE) goto normal_sleep;
 		WaitForSingleObject(xtn->waitable_timer, INFINITE);
 	}

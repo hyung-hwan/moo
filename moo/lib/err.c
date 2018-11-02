@@ -26,10 +26,6 @@
 
 #include "moo-prv.h"
 
-#if defined(MOO_ENABLE_LIBUNWIND)
-#	include <libunwind.h>
-#endif
-
 /* BEGIN: GENERATED WITH generr.moo */
 
 static moo_ooch_t errstr_0[] = {'n','o',' ','e','r','r','o','r','\0'};
@@ -185,51 +181,8 @@ static const moo_ooch_t* synerr_to_errstr (moo_synerrnum_t errnum)
 #endif
 
 /* -------------------------------------------------------------------------- 
- * SYSTEM DEPENDENT FUNCTIONS 
- * -------------------------------------------------------------------------- */
-
-#if defined(HAVE_EXECINFO_H)
-#	include <execinfo.h>
-#	include <stdlib.h>
-#endif
-
-#if defined(_WIN32)
-#	include <windows.h>
-#	include <errno.h>
-#elif defined(__OS2__)
-#	define INCL_DOSPROCESS
-#	define INCL_DOSFILEMGR
-#	define INCL_DOSERRORS
-#	include <os2.h>
-#elif defined(__DOS__)
-#	include <dos.h>
-#	if defined(_INTELC32_)
-#		define DOS_EXIT 0x4C
-#	else
-#		include <dosfunc.h>
-#	endif
-#	include <errno.h>
-#elif defined(vms) || defined(__vms)
-#	define __NEW_STARLET 1
-#	include <starlet.h> /* (SYS$...) */
-#	include <ssdef.h> /* (SS$...) */
-#	include <lib$routines.h> /* (lib$...) */
-#elif defined(macintosh)
-#	include <MacErrors.h>
-#	include <Process.h>
-#	include <Dialogs.h>
-#	include <TextUtils.h>
-#else
-#	include <sys/types.h>
-#	include <unistd.h>
-#	include <signal.h>
-#	include <errno.h>
-#endif
-
-/* -------------------------------------------------------------------------- 
  * ERROR NUMBER/MESSAGE HANDLING
  * -------------------------------------------------------------------------- */
-
 const moo_ooch_t* moo_geterrstr (moo_t* moo)
 {
 	return moo_errnum_to_errstr (moo->errnum);
@@ -262,13 +215,13 @@ void moo_seterrwithsyserr (moo_t* moo, int syserr_type, int syserr_code)
 
 	if (moo->vmprim.syserrstrb)
 	{
-		errnum = moo->vmprim.syserrstrb (moo, syserr_type, syserr_code, moo->errmsg.tmpbuf.bch, MOO_COUNTOF(moo->errmsg.tmpbuf.bch));
+		errnum = moo->vmprim.syserrstrb(moo, syserr_type, syserr_code, moo->errmsg.tmpbuf.bch, MOO_COUNTOF(moo->errmsg.tmpbuf.bch));
 		moo_seterrbfmt (moo, errnum, "%hs", moo->errmsg.tmpbuf.bch);
 	}
 	else
 	{
 		MOO_ASSERT (moo, moo->vmprim.syserrstru != MOO_NULL);
-		errnum = moo->vmprim.syserrstru (moo, syserr_type, syserr_code, moo->errmsg.tmpbuf.uch, MOO_COUNTOF(moo->errmsg.tmpbuf.uch));
+		errnum = moo->vmprim.syserrstru(moo, syserr_type, syserr_code, moo->errmsg.tmpbuf.uch, MOO_COUNTOF(moo->errmsg.tmpbuf.uch));
 		moo_seterrbfmt (moo, errnum, "%ls", moo->errmsg.tmpbuf.uch);
 	}
 }
@@ -405,13 +358,69 @@ void moo_setsynerr (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, con
 {
 	moo_setsynerrbfmt (moo, num, loc, tgt, MOO_NULL);
 }
+
+void moo_getsynerr (moo_t* moo, moo_synerr_t* synerr)
+{
+	MOO_ASSERT (moo, moo->c != MOO_NULL);
+	if (synerr) *synerr = moo->c->synerr;
+}
 #endif
 
 /* -------------------------------------------------------------------------- 
- * STACK FRAME BACKTRACE
+ * ASSERTION SUPPORT
  * -------------------------------------------------------------------------- */
+
+#if defined(MOO_BUILD_RELEASE)
+
+void moo_assertfailed (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file, moo_oow_t line)
+{
+	/* do nothing */
+}
+
+#else /* defined(MOO_BUILD_RELEASE) */
+
 #if defined(MOO_ENABLE_LIBUNWIND)
-void moo_backtrace (moo_t* moo)
+#	include <libunwind.h>
+#elif defined(HAVE_EXECINFO_H)
+#	include <execinfo.h>
+#	include <stdlib.h>
+#endif
+
+#if defined(_WIN32)
+#	include <windows.h>
+#	include <errno.h>
+#elif defined(__OS2__)
+#	define INCL_DOSPROCESS
+#	define INCL_DOSFILEMGR
+#	define INCL_DOSERRORS
+#	include <os2.h>
+#elif defined(__DOS__)
+#	include <dos.h>
+#	if defined(_INTELC32_)
+#		define DOS_EXIT 0x4C
+#	else
+#		include <dosfunc.h>
+#	endif
+#	include <errno.h>
+#elif defined(vms) || defined(__vms)
+#	define __NEW_STARLET 1
+#	include <starlet.h> /* (SYS$...) */
+#	include <ssdef.h> /* (SS$...) */
+#	include <lib$routines.h> /* (lib$...) */
+#elif defined(macintosh)
+#	include <MacErrors.h>
+#	include <Process.h>
+#	include <Dialogs.h>
+#	include <TextUtils.h>
+#else
+#	include <sys/types.h>
+#	include <unistd.h>
+#	include <signal.h>
+#	include <errno.h>
+#endif
+
+#if defined(MOO_ENABLE_LIBUNWIND)
+static void backtrace_stack_frames (moo_t* moo)
 {
 	unw_cursor_t cursor;
 	unw_context_t context;
@@ -440,7 +449,7 @@ void moo_backtrace (moo_t* moo)
 	}
 }
 #elif defined(HAVE_BACKTRACE)
-void moo_backtrace (moo_t* moo)
+static void backtrace_stack_frames (moo_t* moo)
 {
 	void* btarray[128];
 	moo_oow_t btsize;
@@ -461,24 +470,16 @@ void moo_backtrace (moo_t* moo)
 	}
 }
 #else
-void moo_backtrace (moo_t* moo)
+static void backtrace_stack_frames (moo_t* moo)
 {
 	/* do nothing. not supported */
 }
 #endif
 
-/* -------------------------------------------------------------------------- 
- * ASSERTION FAILURE HANDLER
- * -------------------------------------------------------------------------- */
-
-
 void moo_assertfailed (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file, moo_oow_t line)
 {
-#if defined(MOO_BUILD_RELEASE)
-	/* do nothing */
-#else
 	moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_FATAL, "ASSERTION FAILURE: %s at %s:%zu\n", expr, file, line);
-	moo_backtrace (moo);
+	backtrace_stack_frames (moo);
 
 #if defined(_WIN32)
 	ExitProcess (249);
@@ -505,6 +506,6 @@ void moo_assertfailed (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file,
 	kill (getpid(), SIGABRT);
 	_exit (1);
 #endif
-
-#endif
 }
+
+#endif /* defined(MOO_BUILD_RELEASE) */

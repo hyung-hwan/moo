@@ -9355,9 +9355,3 @@ int moo_compile (moo_t* moo, moo_ioimpl_t io)
 	
 	return n;
 }
-
-void moo_getsynerr (moo_t* moo, moo_synerr_t* synerr)
-{
-	MOO_ASSERT (moo, moo->c != MOO_NULL);
-	if (synerr) *synerr = moo->c->synerr;
-}
