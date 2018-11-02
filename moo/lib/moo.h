@@ -1069,16 +1069,18 @@ typedef void (*moo_log_write_t) (
 	moo_oow_t          len
 );
 
-typedef void (*moo_syserrstrb_t) (
+typedef moo_errnum_t (*moo_syserrstrb_t) (
 	moo_t*             moo,
-	int                syserr,
+	int                syserr_type,
+	int                syserr_code,
 	moo_bch_t*         buf,
 	moo_oow_t          len
 );
 
-typedef void (*moo_syserrstru_t) (
+typedef moo_errnum_t (*moo_syserrstru_t) (
 	moo_t*             moo,
-	int                syserr,
+	int                syserr_type,
+	int                syserr_code,
 	moo_uch_t*         buf,
 	moo_oow_t          len
 );
@@ -1794,7 +1796,8 @@ MOO_EXPORT void moo_seterrnum (
 
 MOO_EXPORT void moo_seterrwithsyserr (
 	moo_t* moo,
-	int    syserr
+	int    syserr_type,
+	int    syserr_code
 );
 
 MOO_EXPORT void moo_seterrbfmt (
@@ -2294,10 +2297,6 @@ MOO_EXPORT void moo_assertfailed (
 	const moo_bch_t* expr,
 	const moo_bch_t* file,
 	moo_oow_t        line
-);
-
-MOO_EXPORT moo_errnum_t moo_syserr_to_errnum (
-	int syserr
 );
 
 MOO_EXPORT const moo_ooch_t* moo_errnum_to_errstr (

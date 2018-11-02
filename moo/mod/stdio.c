@@ -75,7 +75,7 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 #endif
 	if (!stdio->fp) 
 	{
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		goto softfail;
 	}
 
@@ -157,7 +157,7 @@ static moo_pfrc_t __pf_puts (moo_t* moo, moo_ooi_t nargs, moo_oow_t limit)
 
 				if (fwrite (bcs, 1, bcslen, stdio->fp) < bcslen)
 				{
-					moo_seterrwithsyserr (moo, errno);
+					moo_seterrwithsyserr (moo, 0, errno);
 					goto softfail;
 				}
 
@@ -169,7 +169,7 @@ static moo_pfrc_t __pf_puts (moo_t* moo, moo_ooi_t nargs, moo_oow_t limit)
 		puts_string:
 			if (fwrite (x->slot, 1, MOO_OBJ_GET_SIZE(x), stdio->fp) < MOO_OBJ_GET_SIZE(x))
 			{
-				moo_seterrwithsyserr (moo, errno);
+				moo_seterrwithsyserr (moo, 0, errno);
 				goto softfail;
 			}
 		#endif

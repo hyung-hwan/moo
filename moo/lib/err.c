@@ -226,153 +226,6 @@ static const moo_ooch_t* synerr_to_errstr (moo_synerrnum_t errnum)
 #	include <errno.h>
 #endif
 
-moo_errnum_t moo_syserr_to_errnum (int e)
-{
-#if 0
-	/* -------------------------------------- */
-	/* currently 'e' is expected to be 'errno'. it doesn't support GetLastError() on win32 or APIRET on os2 yet */
-	/* -------------------------------------- */
-#if defined(__OS2__)
-	/* APIRET e */
-	switch (e)
-	{
-		case ERROR_NOT_ENOUGH_MEMORY: return MOO_ESYSMEM;
-
-		case ERROR_INVALID_PARAMETER: 
-		case ERROR_INVALID_HANDLE: 
-		case ERROR_INVALID_NAME: return MOO_EINVAL;
-
-		case ERROR_ACCESS_DENIED: 
-		case ERROR_SHARING_VIOLATION: return MOO_EACCES;
-
-		case ERROR_FILE_NOT_FOUND:
-		case ERROR_PATH_NOT_FOUND: return MOO_ENOENT;
-
-		case ERROR_ALREADY_EXISTS: return MOO_EEXIST;
-
-		/*TODO: add more mappings */
-		default: return MOO_ESYSERR;
-	}
-#elif defined(macintosh)
-	switch (e)
-	{
-		case notEnoughMemoryErr: return MOO_ESYSMEM;
-		case paramErr: return MOO_EINVAL;
-
-		case qErr: /* queue element not found during deletion */
-		case fnfErr: /* file not found */
-		case dirNFErr: /* direcotry not found */
-		case resNotFound: /* resource not found */
-		case resFNotFound: /* resource file not found */
-		case nbpNotFound: /* name not found on remove */
-			return MOO_ENOENT;
-
-		/*TODO: add more mappings */
-		default: return MOO_ESYSERR;
-	}
-
-#else
-
-	switch (e)
-	{
-		case ENOMEM: return MOO_ESYSMEM;
-		case EINVAL: return MOO_EINVAL;
-
-	#if defined(EBUSY)
-		case EBUSY: return MOO_EBUSY;
-	#endif
-		case EACCES: return MOO_EACCES;
-	#if defined(EPERM)
-		case EPERM: return MOO_EPERM;
-	#endif
-	#if defined(ENOTDIR)
-		case ENOTDIR: return MOO_ENOTDIR;
-	#endif
-		case ENOENT: return MOO_ENOENT;
-	#if defined(EEXIST)
-		case EEXIST: return MOO_EEXIST;
-	#endif
-	#if defined(EINTR)
-		case EINTR:  return MOO_EINTR;
-	#endif
-
-	#if defined(EPIPE)
-		case EPIPE:  return MOO_EPIPE;
-	#endif
-
-	#if defined(EAGAIN) && defined(EWOULDBLOCK) && (EAGAIN != EWOULDBLOCK)
-		case EAGAIN: 
-		case EWOULDBLOCK: return MOO_EAGAIN;
-	#elif defined(EAGAIN)
-		case EAGAIN: return MOO_EAGAIN;
-	#elif defined(EWOULDBLOCK)
-		case EWOULDBLOCK: return MOO_EAGAIN;
-	#endif
-
-	#if defined(EBADF)
-		case EBADF: return MOO_EBADHND;
-	#endif
-
-	#if defined(EIO)
-		case EIO: return MOO_EIOERR;
-	#endif
-
-		default: return MOO_ESYSERR;
-	}
-#endif
-
-#else
-	/* ------------------------------------------------------------------- */
-	switch (e)
-	{
-		case ENOMEM: return MOO_ESYSMEM;
-		case EINVAL: return MOO_EINVAL;
-
-	#if defined(EBUSY)
-		case EBUSY: return MOO_EBUSY;
-	#endif
-		case EACCES: return MOO_EACCES;
-	#if defined(EPERM)
-		case EPERM: return MOO_EPERM;
-	#endif
-	#if defined(ENOTDIR)
-		case ENOTDIR: return MOO_ENOTDIR;
-	#endif
-		case ENOENT: return MOO_ENOENT;
-	#if defined(EEXIST)
-		case EEXIST: return MOO_EEXIST;
-	#endif
-	#if defined(EINTR)
-		case EINTR:  return MOO_EINTR;
-	#endif
-
-	#if defined(EPIPE)
-		case EPIPE:  return MOO_EPIPE;
-	#endif
-
-	#if defined(EAGAIN) && defined(EWOULDBLOCK) && (EAGAIN != EWOULDBLOCK)
-		case EAGAIN: 
-		case EWOULDBLOCK: return MOO_EAGAIN;
-	#elif defined(EAGAIN)
-		case EAGAIN: return MOO_EAGAIN;
-	#elif defined(EWOULDBLOCK)
-		case EWOULDBLOCK: return MOO_EAGAIN;
-	#endif
-
-	#if defined(EBADF)
-		case EBADF: return MOO_EBADHND;
-	#endif
-
-	#if defined(EIO)
-		case EIO: return MOO_EIOERR;
-	#endif
-
-		default: return MOO_ESYSERR;
-	}
-	/* ------------------------------------------------------------------- */
-#endif
-}
-
 /* -------------------------------------------------------------------------- 
  * ERROR NUMBER/MESSAGE HANDLING
  * -------------------------------------------------------------------------- */
@@ -401,20 +254,22 @@ void moo_seterrnum (moo_t* moo, moo_errnum_t errnum)
 	moo->errmsg.len = 0; 
 }
 
-void moo_seterrwithsyserr (moo_t* moo, int syserr)
+void moo_seterrwithsyserr (moo_t* moo, int syserr_type, int syserr_code)
 {
+	moo_errnum_t errnum;
+
 	if (moo->shuterr) return;
 
 	if (moo->vmprim.syserrstrb)
 	{
-		moo->vmprim.syserrstrb (moo, syserr, moo->errmsg.tmpbuf.bch, MOO_COUNTOF(moo->errmsg.tmpbuf.bch));
-		moo_seterrbfmt (moo, moo_syserr_to_errnum(syserr), "%hs", moo->errmsg.tmpbuf.bch);
+		errnum = moo->vmprim.syserrstrb (moo, syserr_type, syserr_code, moo->errmsg.tmpbuf.bch, MOO_COUNTOF(moo->errmsg.tmpbuf.bch));
+		moo_seterrbfmt (moo, errnum, "%hs", moo->errmsg.tmpbuf.bch);
 	}
 	else
 	{
 		MOO_ASSERT (moo, moo->vmprim.syserrstru != MOO_NULL);
-		moo->vmprim.syserrstru (moo, syserr, moo->errmsg.tmpbuf.uch, MOO_COUNTOF(moo->errmsg.tmpbuf.uch));
-		moo_seterrbfmt (moo, moo_syserr_to_errnum(syserr), "%ls", moo->errmsg.tmpbuf.uch);
+		errnum = moo->vmprim.syserrstru (moo, syserr_type, syserr_code, moo->errmsg.tmpbuf.uch, MOO_COUNTOF(moo->errmsg.tmpbuf.uch));
+		moo_seterrbfmt (moo, errnum, "%ls", moo->errmsg.tmpbuf.uch);
 	}
 }
 

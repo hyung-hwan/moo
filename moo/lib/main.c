@@ -827,15 +827,161 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 	flush_log (moo, logfd);
 }
 
-static void syserrstrb (moo_t* moo, int syserr, moo_bch_t* buf, moo_oow_t len)
+static moo_errnum_t errno_to_errnum (int errcode)
 {
-#if defined(HAVE_STRERROR_R)
-	strerror_r (syserr, buf, len);
-#else
-	/* this is not thread safe */
-	moo_copy_bcstr (buf, len, strerror(syserr));
-#endif
+	switch (errcode)
+	{
+		case ENOMEM: return MOO_ESYSMEM;
+		case EINVAL: return MOO_EINVAL;
+
+	#if defined(EBUSY)
+		case EBUSY: return MOO_EBUSY;
+	#endif
+		case EACCES: return MOO_EACCES;
+	#if defined(EPERM)
+		case EPERM: return MOO_EPERM;
+	#endif
+	#if defined(ENOTDIR)
+		case ENOTDIR: return MOO_ENOTDIR;
+	#endif
+		case ENOENT: return MOO_ENOENT;
+	#if defined(EEXIST)
+		case EEXIST: return MOO_EEXIST;
+	#endif
+	#if defined(EINTR)
+		case EINTR:  return MOO_EINTR;
+	#endif
+
+	#if defined(EPIPE)
+		case EPIPE:  return MOO_EPIPE;
+	#endif
+
+	#if defined(EAGAIN) && defined(EWOULDBLOCK) && (EAGAIN != EWOULDBLOCK)
+		case EAGAIN: 
+		case EWOULDBLOCK: return MOO_EAGAIN;
+	#elif defined(EAGAIN)
+		case EAGAIN: return MOO_EAGAIN;
+	#elif defined(EWOULDBLOCK)
+		case EWOULDBLOCK: return MOO_EAGAIN;
+	#endif
+
+	#if defined(EBADF)
+		case EBADF: return MOO_EBADHND;
+	#endif
+
+	#if defined(EIO)
+		case EIO: return MOO_EIOERR;
+	#endif
+
+		default: return MOO_ESYSERR;
+	}
 }
+
+#if defined(_WIN32)
+static moo_errnum_t winerr_to_errnum (DWORD errcode)
+{
+	return MOO_ESYSERR;
+}
+#endif
+
+#if defined(__OS2__)
+static moo_errnum_t os2err_to_errnum (APIRET errcode)
+{
+	/* APIRET e */
+	switch (errcode)
+	{
+		case ERROR_NOT_ENOUGH_MEMORY:
+			return MOO_ESYSMEM;
+
+		case ERROR_INVALID_PARAMETER: 
+		case ERROR_INVALID_HANDLE: 
+		case ERROR_INVALID_NAME:
+			return MOO_EINVAL;
+
+		case ERROR_ACCESS_DENIED: 
+		case ERROR_SHARING_VIOLATION:
+			return MOO_EACCES;
+
+		case ERROR_FILE_NOT_FOUND:
+		case ERROR_PATH_NOT_FOUND:
+			return MOO_ENOENT;
+
+		case ERROR_ALREADY_EXISTS:
+			return MOO_EEXIST;
+
+		/*TODO: add more mappings */
+		default:
+			return MOO_ESYSERR;
+	}
+}
+#endif
+
+#if defined(macintosh)
+static moo_errnum_t macerr_to_errnum (int errcode)
+{
+	switch (e)
+	{
+		case notEnoughMemoryErr:
+			return MOO_ESYSMEM;
+		case paramErr:
+			return MOO_EINVAL;
+
+		case qErr: /* queue element not found during deletion */
+		case fnfErr: /* file not found */
+		case dirNFErr: /* direcotry not found */
+		case resNotFound: /* resource not found */
+		case resFNotFound: /* resource file not found */
+		case nbpNotFound: /* name not found on remove */
+			return MOO_ENOENT;
+
+		/*TODO: add more mappings */
+		default: 
+			return MOO_ESYSERR;
+	}
+}
+#endif
+
+static moo_errnum_t syserrstrb (moo_t* moo, int syserr_type, int syserr_code, moo_bch_t* buf, moo_oow_t len)
+{
+	switch (syserr_type)
+	{
+		case 1: 
+		#if defined(_WIN32)
+			DWORD rc;
+			rc = FormatMessageA (
+				FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+				NULL, syserr_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
+				buf, len, MOO_NULL
+			);
+			while (rc > 0 && buf[rc - 1] == '\r' || buf[rc - 1] == '\n') buf[--rc] = '\0';
+			return winerr_to_errnum(syserr_code);
+		#elif defined(__OS2__)
+			/* TODO: convert code to string */
+			moo_copy_bcstr (buf, len, "system error");
+			return os2err_to_errnum(syserr_code);
+		#elif defined(macintosh)
+			/* TODO: convert code to string */
+			moo_copy_bcstr (buf, len, "system error");
+			return os2err_to_errnum(syserr_code);
+		#else
+			/* in other systems, errno is still the native system error code.
+			 * fall thru */
+		#endif
+
+		case 0:
+		#if defined(HAVE_STRERROR_R)
+			strerror_r (syserr_code, buf, len);
+		#else
+			/* this is not thread safe */
+			moo_copy_bcstr (buf, len, strerror(syserr_code));
+		#endif
+			return errno_to_errnum(syserr_code);
+	}
+
+	moo_copy_bcstr (buf, len, "system error");
+	return MOO_ESYSERR;
+}
+
 
 /* ========================================================================= */
 
@@ -1177,7 +1323,7 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 	ev.revents = 0;
 	if (write(xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
 	{
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		MOO_DEBUG2 (moo, "Cannot add file descriptor %d to devpoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
@@ -1201,7 +1347,7 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 	ev.data.fd = fd;
 	if (epoll_ctl(xtn->ep, EPOLL_CTL_ADD, fd, &ev) == -1)
 	{
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		MOO_DEBUG2 (moo, "Cannot add file descriptor %d to epoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
@@ -1281,7 +1427,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	ev.revents = 0;
 	if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
 	{
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		MOO_DEBUG2 (moo, "Cannot remove file descriptor %d from devpoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
@@ -1296,7 +1442,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	memset (&ev, 0, MOO_SIZEOF(ev));
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_DEL, fd, &ev) == -1)
 	{
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		MOO_DEBUG2 (moo, "Cannot remove file descriptor %d from epoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
@@ -1384,7 +1530,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 	ev.data.fd = fd;
 	if (epoll_ctl(xtn->ep, EPOLL_CTL_MOD, fd, &ev) == -1)
 	{
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		MOO_DEBUG2 (moo, "Cannot modify file descriptor %d in epoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
@@ -1457,7 +1603,7 @@ static int vm_startup (moo_t* moo)
 	xtn->ep = open("/dev/poll", O_RDWR);
 	if (xtn->ep == -1) 
 	{
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		MOO_DEBUG1 (moo, "Cannot create devpoll - %hs\n", strerror(errno));
 		goto oops;
 	}
@@ -1473,7 +1619,7 @@ static int vm_startup (moo_t* moo)
 	#endif
 	if (xtn->ep == -1) 
 	{
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		MOO_DEBUG1 (moo, "Cannot create epoll - %hs\n", strerror(errno));
 		goto oops;
 	}
@@ -1499,7 +1645,7 @@ static int vm_startup (moo_t* moo)
 #if defined(USE_THREAD)
 	if (pipe(xtn->p) == -1)
 	{
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		MOO_DEBUG1 (moo, "Cannot create pipes - %hs\n", strerror(errno));
 		goto oops;
 	}
@@ -2093,7 +2239,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 
 	if (n <= -1)
 	{
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		MOO_DEBUG2 (moo, "Warning: multiplexer wait failure - %d, %s\n", errno, moo_geterrmsg(moo));
 	}
 	else

@@ -7740,9 +7740,8 @@ static int process_class_module_import (moo_t* moo)
 		return -1;
 	}
 
-	if (TOKEN_NAME_LEN(moo) <= 0 || 
-		TOKEN_NAME_LEN(moo) > MOO_MOD_NAME_LEN_MAX ||
-		moo_find_oochar(TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo), '-') )
+	if (TOKEN_NAME_LEN(moo) <= 0 || TOKEN_NAME_LEN(moo) > MOO_MOD_NAME_LEN_MAX ||
+	    moo_find_oochar(TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo), '-') )
 	{
 		/* check for a bad module name. 
 		 * also disallow a dash in the name - i like converting

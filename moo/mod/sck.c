@@ -89,7 +89,7 @@ create_socket:
 			goto create_socket;
 		}
 #endif
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		goto oops;
 	}
 
@@ -110,7 +110,7 @@ create_socket:
 		if (fl == -1)
 		{
 		fcntl_failure:
-			moo_seterrwithsyserr (moo, errno);
+			moo_seterrwithsyserr (moo, 0, errno);
 			goto oops;
 		}
 
@@ -150,7 +150,7 @@ static moo_pfrc_t pf_close_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		moo_releaseiohandle (moo, MOO_OOP_TO_SMOOI(sck->handle));
 		if (close(MOO_OOP_TO_SMOOI(sck->handle)) == -1)
 		{
-			moo_seterrwithsyserr (moo, errno);
+			moo_seterrwithsyserr (moo, 0, errno);
 			return MOO_PF_FAILURE;
 		}
 		else
@@ -191,7 +191,7 @@ static moo_pfrc_t pf_bind_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &enable, MOO_SIZEOF(int)) == -1 ||
 	    bind(fd, (struct sockaddr*)MOO_OBJ_GET_BYTE_SLOT(arg), moo_sck_addr_len((sck_addr_t*)MOO_OBJ_GET_BYTE_SLOT(arg))) == -1)
 	{
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		return MOO_PF_FAILURE;
 	}
 
@@ -231,7 +231,7 @@ static moo_pfrc_t pf_accept_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		
 		if (errno != EWOULDBLOCK && errno != EAGAIN) 
 		{
-			moo_seterrwithsyserr (moo, errno);
+			moo_seterrwithsyserr (moo, 0, errno);
 			return MOO_PF_FAILURE;
 		}
 
@@ -251,7 +251,7 @@ normal_accept:
 	{
 		if (errno != EWOULDBLOCK && errno != EAGAIN)
 		{
-			moo_seterrwithsyserr (moo, errno);
+			moo_seterrwithsyserr (moo, 0, errno);
 			return MOO_PF_FAILURE;
 		}
 
@@ -264,7 +264,7 @@ normal_accept:
 	if (fl == -1)
 	{
 	fcntl_failure:
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		close (newfd);
 		return MOO_PF_FAILURE;
 	}
@@ -339,7 +339,7 @@ static moo_pfrc_t pf_listen_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	n = listen(fd, MOO_OOP_TO_SMOOI(arg));
 	if (n == -1)
 	{
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		return MOO_PF_FAILURE;
 	}
 
@@ -381,7 +381,7 @@ static moo_pfrc_t pf_connect_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 		}
 		else
 		{
-			moo_seterrwithsyserr (moo, errno);
+			moo_seterrwithsyserr (moo, 0, errno);
 			return MOO_PF_FAILURE;
 		}
 	}
@@ -413,7 +413,7 @@ static moo_pfrc_t pf_get_socket_error (moo_t* moo, moo_mod_t* mod, moo_ooi_t nar
 	len = MOO_SIZEOF(ret);
 	if (getsockopt(fd, SOL_SOCKET, SO_ERROR, (char*)&ret, &len) == -1)
 	{
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		return MOO_PF_FAILURE;
 	}
 
@@ -484,7 +484,7 @@ static moo_pfrc_t pf_read_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	n = recv(fd, &MOO_OBJ_GET_BYTE_SLOT(buf)[offset], length, 0);
 	if (n <= -1 && errno != EWOULDBLOCK && errno != EAGAIN)
 	{
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		return MOO_PF_FAILURE;
 	}
 
@@ -557,7 +557,7 @@ static moo_pfrc_t pf_write_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	n = send(fd, &MOO_OBJ_GET_BYTE_SLOT(buf)[offset], length, 0);
 	if (n <= -1 && errno != EWOULDBLOCK && errno != EAGAIN)
 	{
-		moo_seterrwithsyserr (moo, errno);
+		moo_seterrwithsyserr (moo, 0, errno);
 		return MOO_PF_FAILURE;
 	}
 
