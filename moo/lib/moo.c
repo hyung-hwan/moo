@@ -149,6 +149,7 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 	moo->newheap = moo_makeheap (moo, heapsz);
 	if (!moo->newheap) goto oops;
 
+	if (moo->vmprim.dl_startup) moo->vmprim.dl_startup (moo);
 	return 0;
 
 oops:
@@ -284,6 +285,8 @@ void moo_fini (moo_t* moo)
 		moo->inttostr.t.ptr = MOO_NULL;
 		moo->inttostr.t.capa = 0;
 	}
+
+	if (moo->vmprim.dl_cleanup) moo->vmprim.dl_cleanup (moo);
 }
 
 int moo_setoption (moo_t* moo, moo_option_t id, const void* value)

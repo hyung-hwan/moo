@@ -543,7 +543,7 @@ static moo_ooi_t input_handler (moo_t* moo, moo_iocmd_t cmd, moo_ioarg_t* arg)
 static void* alloc_heap (moo_t* moo, moo_oow_t size)
 {
 #if defined(HAVE_MMAP) && defined(HAVE_MUNMAP) && defined(MAP_ANONYMOUS)
-	/* It's called via moo_makeheap() when HCL creates a GC heap.
+	/* It's called via moo_makeheap() when MOO creates a GC heap.
 	 * The heap is large in size. I can use a different memory allocation
 	 * function instead of an ordinary malloc.
 	 * upon failure, it doesn't require to set error information as moo_makeheap()
@@ -1241,6 +1241,20 @@ static const char* mach_dlerror (void)
 	return mach_dlerror_str;
 }
 #endif
+
+static void dl_startup (moo_t* moo)
+{
+#if defined(USE_LTDL)
+	lt_dlinit ();
+#endif
+}
+
+static void dl_cleanup (moo_t* moo)
+{
+#if defined(USE_LTDL)
+	lt_dlexit ();
+#endif
+}
 
 static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 {
@@ -3023,6 +3037,8 @@ int main (int argc, char* argv[])
 	vmprim.log_write = log_write;
 	vmprim.syserrstrb = syserrstrb;
 	vmprim.assertfail = assert_fail;
+	vmprim.dl_startup = dl_startup;
+	vmprim.dl_cleanup = dl_cleanup;
 	vmprim.dl_open = dl_open;
 	vmprim.dl_close = dl_close;
 	vmprim.dl_getsym = dl_getsym;
@@ -3035,17 +3051,10 @@ int main (int argc, char* argv[])
 	vmprim.vm_muxwait = vm_muxwait;
 	vmprim.vm_sleep = vm_sleep;
 
-#if defined(USE_LTDL)
-	lt_dlinit ();
-#endif
-
 	moo = moo_open (&sys_mmgr, MOO_SIZEOF(xtn_t), memsize, &vmprim, MOO_NULL);
 	if (!moo)
 	{
 		fprintf (stderr, "ERROR: cannot open moo\n");
-	#if defined(USE_LTDL)
-		lt_dlexit ();
-	#endif
 		return -1;
 	}
 
@@ -3085,9 +3094,6 @@ int main (int argc, char* argv[])
 		if (handle_logopt (moo, logopt) <= -1) 
 		{
 			moo_close (moo);
-		#if defined(USE_LTDL)
-			lt_dlexit ();
-		#endif
 			return -1;
 		}
 	}
@@ -3103,9 +3109,6 @@ int main (int argc, char* argv[])
 		if (handle_dbgopt (moo, dbgopt) <= -1)
 		{
 			moo_close (moo);
-		#if defined(USE_LTDL)
-			lt_dlexit ();
-		#endif
 			return -1;
 		}
 	}
@@ -3115,9 +3118,6 @@ int main (int argc, char* argv[])
 	{
 		moo_logbfmt (moo, MOO_LOG_STDERR, "ERROR: cannot ignite moo - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
 		moo_close (moo);
-	#if defined(USE_LTDL)
-		lt_dlexit ();
-	#endif
 		return -1;
 	}
 
@@ -3168,9 +3168,6 @@ int main (int argc, char* argv[])
 			}
 
 			moo_close (moo);
-		#if defined(USE_LTDL)
-			lt_dlexit ();
-		#endif
 			return -1;
 		}
 	}
@@ -3199,10 +3196,5 @@ int main (int argc, char* argv[])
 	 *moo_dumpdic(moo, moo->sysdic, "System dictionary");*/
 
 	moo_close (moo);
-
-#if defined(USE_LTDL)
-	lt_dlexit ();
-#endif
-
 	return xret;
 }

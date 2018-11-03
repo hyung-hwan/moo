@@ -1098,6 +1098,14 @@ enum moo_vmprim_dlopen_flag_t
 };
 typedef enum moo_vmprim_dlopen_flag_t moo_vmprim_dlopen_flag_t;
 
+typedef void (*moo_vmprim_dlstartup_t) (
+	moo_t*             moo
+);
+
+typedef void (*moo_vmprim_dlcleanup_t) (
+	moo_t*             moo
+);
+
 typedef void* (*moo_vmprim_dlopen_t) (
 	moo_t*                  moo,
 	const moo_ooch_t*       name,
@@ -1164,14 +1172,16 @@ typedef void (*moo_vmprim_sleep_t) (
 
 struct moo_vmprim_t
 {
-	moo_alloc_heap_t      alloc_heap;
-	moo_free_heap_t       free_heap;
+	moo_alloc_heap_t       alloc_heap;
+	moo_free_heap_t        free_heap;
 
 	moo_log_write_t        log_write;
 	moo_syserrstrb_t       syserrstrb;
 	moo_syserrstru_t       syserrstru;
 	moo_assertfail_t       assertfail;
 
+	moo_vmprim_dlstartup_t dl_startup;
+	moo_vmprim_dlcleanup_t dl_cleanup;
 	moo_vmprim_dlopen_t    dl_open;
 	moo_vmprim_dlclose_t   dl_close;
 	moo_vmprimt_dlgetsym_t dl_getsym;
