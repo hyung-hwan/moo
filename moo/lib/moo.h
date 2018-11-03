@@ -1085,6 +1085,13 @@ typedef moo_errnum_t (*moo_syserrstru_t) (
 	moo_oow_t          len
 );
 
+typedef void (*moo_assertfail_t) (
+	moo_t*             moo,
+	const moo_bch_t*   expr,
+	const moo_bch_t*   file,
+	moo_oow_t          line
+);
+
 enum moo_vmprim_dlopen_flag_t
 {
 	MOO_VMPRIM_DLOPEN_PFMOD = (1 << 0)
@@ -1163,6 +1170,7 @@ struct moo_vmprim_t
 	moo_log_write_t        log_write;
 	moo_syserrstrb_t       syserrstrb;
 	moo_syserrstru_t       syserrstru;
+	moo_assertfail_t       assertfail;
 
 	moo_vmprim_dlopen_t    dl_open;
 	moo_vmprim_dlclose_t   dl_close;
@@ -1626,7 +1634,7 @@ struct moo_t
 #if defined(MOO_BUILD_RELEASE)
 #	define MOO_ASSERT(moo,expr) ((void)0)
 #else
-#	define MOO_ASSERT(moo,expr) ((void)((expr) || (moo_assertfailed (moo, #expr, __FILE__, __LINE__), 0)))
+#	define MOO_ASSERT(moo,expr) ((void)((expr) || ((moo)->vmprim.assertfail(moo, #expr, __FILE__, __LINE__), 0)))
 #endif
 
 
@@ -2286,13 +2294,6 @@ MOO_EXPORT int moo_decode (
 	moo_t*            moo,
 	moo_oop_method_t  mth,
 	const moo_oocs_t* classfqn
-);
-
-MOO_EXPORT void moo_assertfailed (
-	moo_t*           moo,
-	const moo_bch_t* expr,
-	const moo_bch_t* file,
-	moo_oow_t        line
 );
 
 MOO_EXPORT const moo_ooch_t* moo_errnum_to_errstr (

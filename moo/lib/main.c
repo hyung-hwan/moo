@@ -64,6 +64,7 @@
 #	define INCL_DOSEXCEPTIONS
 #	define INCL_DOSMISC
 #	define INCL_DOSDATETIME
+#	define INCL_DOSFILEMGR
 #	define INCL_DOSERRORS
 #	include <os2.h>
 #	include <time.h>
@@ -83,6 +84,12 @@
 #	include <signal.h>
 #	include <errno.h>
 
+#	if defined(_INTELC32_)
+#		define DOS_EXIT 0x4C
+#	else
+#		include <dosfunc.h>
+#	endif
+
 	/* fake XPOLLXXX values */
 #	define XPOLLIN  (1 << 0)
 #	define XPOLLOUT (1 << 1)
@@ -95,6 +102,10 @@
 #	include <Timer.h>
 
 #else
+#	include <sys/types.h>
+#	include <unistd.h>
+#	include <fcntl.h>
+#	include <errno.h>
 
 #	if defined(MOO_ENABLE_LIBLTDL)
 #		include <ltdl.h>
@@ -121,10 +132,6 @@
 #	if defined(HAVE_SYS_MMAN_H)
 #		include <sys/mman.h>
 #	endif
-
-#	include <errno.h>
-#	include <unistd.h>
-#	include <fcntl.h>
 
 #	if defined(USE_THREAD)
 #		include <pthread.h>
@@ -1000,6 +1007,127 @@ static moo_errnum_t syserrstrb (moo_t* moo, int syserr_type, int syserr_code, mo
 
 /* ========================================================================= */
 
+#if defined(MOO_BUILD_RELEASE)
+
+static void assert_fail (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file, moo_oow_t line)
+{
+	/* do nothing */
+}
+
+#else /* defined(MOO_BUILD_RELEASE) */
+
+#if defined(MOO_ENABLE_LIBUNWIND)
+#	include <libunwind.h>
+#elif defined(HAVE_EXECINFO_H)
+#	include <execinfo.h>
+#	include <stdlib.h>
+#endif
+
+#if defined(vms) || defined(__vms)
+#	define __NEW_STARLET 1
+#	include <starlet.h> /* (SYS$...) */
+#	include <ssdef.h> /* (SS$...) */
+#	include <lib$routines.h> /* (lib$...) */
+#elif defined(macintosh)
+#	include <MacErrors.h>
+#	include <Process.h>
+#	include <Dialogs.h>
+#	include <TextUtils.h>
+#endif
+
+#if defined(MOO_ENABLE_LIBUNWIND)
+static void backtrace_stack_frames (moo_t* moo)
+{
+	unw_cursor_t cursor;
+	unw_context_t context;
+	int n;
+
+	unw_getcontext(&context);
+	unw_init_local(&cursor, &context);
+
+	moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_DEBUG, "[BACKTRACE]\n");
+	for (n = 0; unw_step(&cursor) > 0; n++) 
+	{
+		unw_word_t ip, sp, off;
+		char symbol[256];
+
+		unw_get_reg (&cursor, UNW_REG_IP, &ip);
+		unw_get_reg (&cursor, UNW_REG_SP, &sp);
+
+		if (unw_get_proc_name(&cursor, symbol, MOO_COUNTOF(symbol), &off)) 
+		{
+			moo_copy_bcstr (symbol, MOO_COUNTOF(symbol), "<unknown>");
+		}
+
+		moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_DEBUG, 
+			"#%02d ip=0x%*p sp=0x%*p %s+0x%zu\n", 
+			n, MOO_SIZEOF(void*) * 2, (void*)ip, MOO_SIZEOF(void*) * 2, (void*)sp, symbol, (moo_oow_t)off);
+	}
+}
+#elif defined(HAVE_BACKTRACE)
+static void backtrace_stack_frames (moo_t* moo)
+{
+	void* btarray[128];
+	moo_oow_t btsize;
+	char** btsyms;
+
+	btsize = backtrace (btarray, MOO_COUNTOF(btarray));
+	btsyms = backtrace_symbols (btarray, btsize);
+	if (btsyms)
+	{
+		moo_oow_t i;
+		moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_DEBUG, "[BACKTRACE]\n");
+
+		for (i = 0; i < btsize; i++)
+		{
+			moo_logbfmt(moo, MOO_LOG_UNTYPED | MOO_LOG_DEBUG, "  %s\n", btsyms[i]);
+		}
+		free (btsyms);
+	}
+}
+#else
+static void backtrace_stack_frames (moo_t* moo)
+{
+	/* do nothing. not supported */
+}
+#endif
+
+static void assert_fail (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file, moo_oow_t line)
+{
+	moo_logbfmt (moo, MOO_LOG_UNTYPED | MOO_LOG_FATAL, "ASSERTION FAILURE: %s at %s:%zu\n", expr, file, line);
+	backtrace_stack_frames (moo);
+
+#if defined(_WIN32)
+	ExitProcess (249);
+#elif defined(__OS2__)
+	DosExit (EXIT_PROCESS, 249);
+#elif defined(__DOS__)
+	{
+		union REGS regs;
+		regs.h.ah = DOS_EXIT;
+		regs.h.al = 249;
+		intdos (&regs, &regs);
+	}
+#elif defined(vms) || defined(__vms)
+	lib$stop (SS$_ABORT); /* use SS$_OPCCUS instead? */
+	/* this won't be reached since lib$stop() terminates the process */
+	sys$exit (SS$_ABORT); /* this condition code can be shown with
+	                       * 'show symbol $status' from the command-line. */
+#elif defined(macintosh)
+
+	ExitToShell ();
+
+#else
+
+	kill (getpid(), SIGABRT);
+	_exit (1);
+#endif
+}
+
+#endif /* defined(MOO_BUILD_RELEASE) */
+
+/* ========================================================================= */
+
 #if defined(USE_LTDL)
 #	define sys_dl_error() lt_dlerror()
 #	define sys_dl_open(x) lt_dlopen(x)
@@ -1550,7 +1678,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 
 	if (_del_poll_fd (moo, fd) <= -1) return -1;
 
-	if (_add_poll_fd (moo, fd, event_mask, event_data) <= -1) 
+	if (_add_poll_fd (moo, fd, event_mask) <= -1) 
 	{
 		/* TODO: any good way to rollback successful deletion? */
 		return -1;
@@ -2896,6 +3024,7 @@ int main (int argc, char* argv[])
 	}
 	vmprim.log_write = log_write;
 	vmprim.syserrstrb = syserrstrb;
+	vmprim.assertfail = assert_fail;
 	vmprim.dl_open = dl_open;
 	vmprim.dl_close = dl_close;
 	vmprim.dl_getsym = dl_getsym;
