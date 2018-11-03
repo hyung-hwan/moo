@@ -101,6 +101,21 @@
 #	include <OSUtils.h>
 #	include <Timer.h>
 
+#	include <MacErrors.h>
+#	include <Process.h>
+#	include <Dialogs.h>
+#	include <TextUtils.h>
+
+	/* TODO: a lot to do */
+
+#elif defined(vms) || defined(__vms)
+#	define __NEW_STARLET 1
+#	include <starlet.h> /* (SYS$...) */
+#	include <ssdef.h> /* (SS$...) */
+#	include <lib$routines.h> /* (lib$...) */
+
+	/* TODO: a lot to do */
+
 #else
 #	include <sys/types.h>
 #	include <unistd.h>
@@ -1017,25 +1032,7 @@ static void assert_fail (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* fil
 #else /* defined(MOO_BUILD_RELEASE) */
 
 #if defined(MOO_ENABLE_LIBUNWIND)
-#	include <libunwind.h>
-#elif defined(HAVE_EXECINFO_H)
-#	include <execinfo.h>
-#	include <stdlib.h>
-#endif
-
-#if defined(vms) || defined(__vms)
-#	define __NEW_STARLET 1
-#	include <starlet.h> /* (SYS$...) */
-#	include <ssdef.h> /* (SS$...) */
-#	include <lib$routines.h> /* (lib$...) */
-#elif defined(macintosh)
-#	include <MacErrors.h>
-#	include <Process.h>
-#	include <Dialogs.h>
-#	include <TextUtils.h>
-#endif
-
-#if defined(MOO_ENABLE_LIBUNWIND)
+#include <libunwind.h>
 static void backtrace_stack_frames (moo_t* moo)
 {
 	unw_cursor_t cursor;
@@ -1065,6 +1062,7 @@ static void backtrace_stack_frames (moo_t* moo)
 	}
 }
 #elif defined(HAVE_BACKTRACE)
+#include <execinfo.h>
 static void backtrace_stack_frames (moo_t* moo)
 {
 	void* btarray[128];
@@ -1090,7 +1088,7 @@ static void backtrace_stack_frames (moo_t* moo)
 {
 	/* do nothing. not supported */
 }
-#endif
+#endif /* defined(MOO_ENABLE_LIBUNWIND) */
 
 static void assert_fail (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* file, moo_oow_t line)
 {
