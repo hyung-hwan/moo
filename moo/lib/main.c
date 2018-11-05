@@ -70,6 +70,7 @@
 #	include <time.h>
 #	include <fcntl.h>
 #	include <io.h>
+#	include <errno.h>
 
 	/* fake XPOLLXXX values */
 #	define XPOLLIN  (1 << 0)
@@ -274,6 +275,7 @@ struct xtn_t
 	DWORD tc_overflow;
 	#elif defined(__OS2__)
 	ULONG tc_last;
+	ULONG tc_overflow;
 	#endif
 
 	#if defined(USE_DEVPOLL)

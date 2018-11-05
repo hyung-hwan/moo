@@ -10,7 +10,7 @@
 #include <ToolUtils.h>
 
 
-static void InitToolBox ()
+static void InitToolBox (void)
 {
 	GrafPtr wmgrPort;
 
@@ -35,4 +35,10 @@ static void InitToolBox ()
 #endif
 
 	SetPort (wmgrPort);
+}
+
+
+static void EventLoop (void)
+{
+
 }
