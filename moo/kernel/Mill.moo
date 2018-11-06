@@ -84,6 +84,7 @@ class MyObject(Object)
 			[Exception hash dump] ensure: ['xxxx' dump].
 		] on: Exception do: [:ex | ('Exception caught - ' & ex asString) dump ].*)
 
+(*
 		ffi := FFI new: '/lib64/libc.so.6'.
 		if (ffi isError)
 		{
@@ -96,6 +97,7 @@ class MyObject(Object)
 			(ffi call: #printf signature: 's|iis)i' arguments: #(S'A=>%d B=>%d Hello, world %s\n' 1 2 'jump down')) dump.
 			ffi close.
 		}. 
+*)
 		(('abcd' == 'abcd') ifTrue: [1] ifFalse: [2]) dump.
 
 	}

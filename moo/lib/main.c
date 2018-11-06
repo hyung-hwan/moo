@@ -61,6 +61,7 @@
 #elif defined(__OS2__)
 #	define INCL_DOSMODULEMGR
 #	define INCL_DOSPROCESS
+#	define INCL_DOSSEMAPHORES
 #	define INCL_DOSEXCEPTIONS
 #	define INCL_DOSMISC
 #	define INCL_DOSDATETIME
@@ -2588,6 +2589,44 @@ static VOID CALLBACK arrange_process_switching (LPVOID arg, DWORD timeLow, DWORD
 	if (g_moo) moo_switchprocess (g_moo);
 }
 
+#elif defined(__OS2__)
+static TID g_tick_tid;
+static HEV g_tick_sem; 
+static HTIMER g_tick_timer;
+static int g_tick_done = 0;
+
+static void EXPENTRY os2_wait_for_timer_event (ULONG x)
+{
+	APIRET rc;
+	ULONG count;
+
+	rc = DosCreateEventSem (NULL, &g_tick_sem, DC_SEM_SHARED, FALSE);
+	if (rc != NO_ERROR)
+	{
+		/* xxxx */
+	}
+
+	rc = DosStartTimer (1L, (HSEM)g_tick_sem, &g_tick_timer);
+	if (rc != NO_ERROR)
+	{
+	}
+
+	while (!g_tick_done)
+	{
+		rc = DosWaitEventSem((HSEM)g_tick_sem, 5000L);
+		DosResetEventSem((HSEM)g_tick_sem, &count);
+		if (g_moo) moo_switchprocess (g_moo);
+	}
+
+	DosStopTimer (g_tick_timer);
+	DosCloseEventSem ((HSEM)g_tick_sem);
+
+	g_tick_timer = NULL;
+	g_tick_sem = NULL;
+	DosExit (EXIT_THREAD, 0);
+}
+
+
 #elif defined(macintosh)
 
 static TMTask g_tmtask;
@@ -2627,8 +2666,8 @@ static void setup_tick (void)
 	}
 
 #elif defined(__OS2__)
-	/* TODO: */
-	#error UNSUPPORTED
+	/* TODO: Error check */
+	DosCreateThread (&g_tick_tid, os2_wait_for_timer_event, 0, 0, 4096);
 
 #elif defined(macintosh)
 
@@ -2677,8 +2716,8 @@ static void cancel_tick (void)
 	}
 
 #elif defined(__OS2__)
-	/* TODO: */
-	#error UNSUPPORTED
+	if (g_tick_sem) DosPostEventSem (g_tick_sem);	
+	g_tick_done = 1;
 
 #elif defined(macintosh)
 	RmvTime ((QElem*)&g_tmtask);

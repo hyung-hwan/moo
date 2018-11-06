@@ -261,7 +261,7 @@ TODO: how to pass all variadic arguments to another variadic methods???
 class SmallPointer(Object)
 {
 	method(#primitive) asString.
-	
+
 	method(#primitive) getInt8   (offset).
 	method(#primitive) getInt16  (offset).
 	method(#primitive) getInt32  (offset).

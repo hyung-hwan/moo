@@ -421,7 +421,7 @@ class MyObject(Object)
 			[
 				| ss |
 				httpd start: %(
-					SocketAddress fromString: ('[::]:' & base_port asString),
+				##	SocketAddress fromString: ('[::]:' & base_port asString),
 					SocketAddress fromString: ('0.0.0.0:' & (base_port + 1) asString)
 				).
 
@@ -463,7 +463,7 @@ httpd connect: addr.
 			[
 				| ss |
 				httpd start: %(
-					SocketAddress fromString: '[::]:7777',
+				##	SocketAddress fromString: '[::]:7777',
 					SocketAddress fromString: '0.0.0.0:7776'
 				).
 
