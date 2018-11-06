@@ -403,17 +403,17 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 		const moo_bch_t* fn, * fb;
 
 	#if defined(MOO_OOCH_IS_UCH)
-		if (moo_convootobcstr (moo, arg->name, &ucslen, MOO_NULL, &bcslen) <= -1) goto oops;
+		if (moo_convootobcstr(moo, arg->name, &ucslen, MOO_NULL, &bcslen) <= -1) goto oops;
 	#else
-		bcslen = moo_count_bcstr (arg->name);
+		bcslen = moo_count_bcstr(arg->name);
 	#endif
 
 		fn = ((bb_t*)arg->includer->handle)->fn;
 
-		fb = get_base_name (fn);
+		fb = get_base_name(fn);
 		parlen = fb - fn;
 
-		bb = moo_callocmem (moo, MOO_SIZEOF(*bb) + (MOO_SIZEOF(moo_bch_t) * (parlen + bcslen + 1)));
+		bb = moo_callocmem(moo, MOO_SIZEOF(*bb) + (MOO_SIZEOF(moo_bch_t) * (parlen + bcslen + 1)));
 		if (!bb) goto oops;
 
 		bb->fn = (moo_bch_t*)(bb + 1);
@@ -429,9 +429,9 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 		/* main stream */
 		moo_oow_t pathlen;
 
-		pathlen = moo_count_bcstr (xtn->source_path);
+		pathlen = moo_count_bcstr(xtn->source_path);
 
-		bb = moo_callocmem (moo, MOO_SIZEOF(*bb) + (MOO_SIZEOF(moo_bch_t) * (pathlen + 1)));
+		bb = moo_callocmem(moo, MOO_SIZEOF(*bb) + (MOO_SIZEOF(moo_bch_t) * (pathlen + 1)));
 		if (!bb) goto oops;
 
 		bb->fn = (moo_bch_t*)(bb + 1);
@@ -439,9 +439,9 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 	}
 
 #if defined(_WIN32) || defined(__OS2__) || defined(__DOS__)
-	bb->fp = fopen (bb->fn, "rb");
+	bb->fp = fopen(bb->fn, "rb");
 #else
-	bb->fp = fopen (bb->fn, "r");
+	bb->fp = fopen(bb->fn, "r");
 #endif
 	if (!bb->fp)
 	{
@@ -3092,7 +3092,7 @@ int main (int argc, char* argv[])
 	vmprim.vm_muxwait = vm_muxwait;
 	vmprim.vm_sleep = vm_sleep;
 
-	moo = moo_open (&sys_mmgr, MOO_SIZEOF(xtn_t), memsize, &vmprim, MOO_NULL);
+	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t), memsize, &vmprim, MOO_NULL);
 	if (!moo)
 	{
 		fprintf (stderr, "ERROR: cannot open moo\n");
