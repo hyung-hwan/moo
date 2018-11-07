@@ -53,7 +53,8 @@ pkginclude_HEADERS = \
 	moo-cmn.h \
 	moo-opt.h \
 	moo-rbt.h \
-	moo-utl.h
+	moo-utl.h \
+	moo-std.h
 
 pkglib_LTLIBRARIES = libmoo.la
 libmoo_la_SOURCES = \
@@ -64,6 +65,7 @@ libmoo_la_SOURCES = \
 	moo-rbt.h \
 	moo-utl.h \
 	moo-prv.h \
+	moo-std.h \
 	pack1.h \
 	unpack.h \
 	bigint.c \
@@ -87,7 +89,8 @@ libmoo_la_SOURCES = \
 	rbt.c \
 	sym.c \
 	utf8.c \
-	utl.c
+	utl.c \
+	std.c 
 libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
 libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libmoo_la_LIBADD = $(LIBADD_LIB_COMMON)
