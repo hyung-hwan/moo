@@ -999,10 +999,8 @@ enum moo_log_mask_t
 	MOO_LOG_ALL_LEVELS = (MOO_LOG_DEBUG  | MOO_LOG_INFO | MOO_LOG_WARN | MOO_LOG_ERROR | MOO_LOG_FATAL),
 	MOO_LOG_ALL_TYPES  = (MOO_LOG_UNTYPED | MOO_LOG_COMPILER | MOO_LOG_VM | MOO_LOG_MNEMONIC | MOO_LOG_GC | MOO_LOG_IC | MOO_LOG_PRIMITIVE | MOO_LOG_APP),
 
-
 	MOO_LOG_STDOUT     = (1u << 14), /* write log messages to stdout without timestamp. MOO_LOG_STDOUT wins over MOO_LOG_STDERR. */
 	MOO_LOG_STDERR     = (1u << 15)  /* write log messages to stderr without timestamp. */
-
 };
 typedef enum moo_log_mask_t moo_log_mask_t;
 
@@ -1373,6 +1371,12 @@ enum moo_sbuf_id_t
 	/* more? */
 };
 
+struct moo_errinf_t
+{
+	moo_errnum_t num;
+	moo_ooch_t msg[MOO_ERRMSG_CAPA];
+};
+typedef struct moo_errinf_t moo_errinf_t;
 
 struct moo_t
 {
@@ -1771,7 +1775,7 @@ MOO_EXPORT moo_t* moo_open (
 	moo_oow_t           xtnsize,
 	moo_oow_t           heapsize,
 	const moo_vmprim_t* vmprim,
-	moo_errnum_t*       errnum
+	moo_errinf_t*       errinfo
 );
 
 MOO_EXPORT void moo_close (
@@ -1838,6 +1842,11 @@ MOO_EXPORT const moo_ooch_t* moo_geterrstr (
 
 MOO_EXPORT const moo_ooch_t* moo_geterrmsg (
 	moo_t* moo
+);
+
+MOO_EXPORT void moo_geterrinf (
+	moo_t*        moo,
+	moo_errinf_t* info
 );
 
 MOO_EXPORT const moo_ooch_t* moo_backuperrmsg (

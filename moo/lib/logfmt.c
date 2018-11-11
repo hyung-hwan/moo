@@ -644,7 +644,7 @@ moo_ooi_t moo_logbfmt (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...
 	fo.putcs = put_oocs;
 
 	va_start (ap, fmt);
-	x = _logbfmtv (moo, fmt, &fo, ap);
+	x = _logbfmtv(moo, fmt, &fo, ap);
 	va_end (ap);
 
 	if (moo->log.len > 0 && moo->log.ptr[moo->log.len - 1] == '\n')
@@ -672,7 +672,7 @@ moo_ooi_t moo_logufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, ...
 	fo.putcs = put_oocs;
 
 	va_start (ap, fmt);
-	x = _logufmtv (moo, fmt, &fo, ap);
+	x = _logufmtv(moo, fmt, &fo, ap);
 	va_end (ap);
 
 	if (moo->log.len > 0 && moo->log.ptr[moo->log.len - 1] == '\n')

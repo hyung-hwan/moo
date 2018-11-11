@@ -26,7 +26,7 @@
 
 #include "moo-prv.h"
 
-moo_t* moo_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, moo_oow_t heapsize, const moo_vmprim_t* vmprim, moo_errnum_t* errnum)
+moo_t* moo_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, moo_oow_t heapsize, const moo_vmprim_t* vmprim, moo_errinf_t* errinfo)
 {
 	moo_t* moo;
 
@@ -38,13 +38,17 @@ moo_t* moo_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, moo_oow_t heapsize, const 
 	{
 		if (moo_init(moo, mmgr, heapsize, vmprim) <= -1)
 		{
-			if (errnum) *errnum = moo->errnum;
+			if (errinfo) moo_geterrinf (moo, errinfo);
 			MOO_MMGR_FREE (mmgr, moo);
 			moo = MOO_NULL;
 		}
 		else MOO_MEMSET (moo + 1, 0, xtnsize);
 	}
-	else if (errnum) *errnum = MOO_ESYSMEM;
+	else if (errinfo) 
+	{
+		errinfo->num = MOO_ESYSMEM;
+		moo_copy_oocstr (errinfo->msg, MOO_COUNTOF(errinfo->msg), moo_errnum_to_errstr(MOO_ESYSMEM));
+	}
 
 	return moo;
 }
@@ -109,7 +113,8 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 	if (!moo->vmprim.alloc_heap) moo->vmprim.alloc_heap = alloc_heap;
 	if (!moo->vmprim.free_heap) moo->vmprim.free_heap = free_heap;
 
-	moo->option.log_mask = ~0u;
+	/*moo->option.log_mask = ~0u;*/
+	moo->option.log_mask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;
 	moo->option.log_maxcapa = MOO_DFL_LOG_MAXCAPA;
 	moo->option.dfl_symtab_size = MOO_DFL_SYMTAB_SIZE;
 	moo->option.dfl_sysdic_size = MOO_DFL_SYSDIC_SIZE;

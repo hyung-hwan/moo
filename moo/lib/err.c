@@ -185,13 +185,19 @@ static const moo_ooch_t* synerr_to_errstr (moo_synerrnum_t errnum)
  * -------------------------------------------------------------------------- */
 const moo_ooch_t* moo_geterrstr (moo_t* moo)
 {
-	return moo_errnum_to_errstr (moo->errnum);
+	return moo_errnum_to_errstr(moo->errnum);
 }
 
 const moo_ooch_t* moo_geterrmsg (moo_t* moo)
 {
-	if (moo->errmsg.len <= 0) return moo_errnum_to_errstr (moo->errnum);
+	if (moo->errmsg.len <= 0) return moo_errnum_to_errstr(moo->errnum);
 	return moo->errmsg.buf;
+}
+
+void moo_geterrinf (moo_t* moo, moo_errinf_t* info)
+{
+	info->num = moo_geterrnum(moo);
+	moo_copy_oocstr (info->msg, MOO_COUNTOF(info->msg), moo_geterrmsg(moo));
 }
 
 const moo_ooch_t* moo_backuperrmsg (moo_t* moo)

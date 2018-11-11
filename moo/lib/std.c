@@ -1,4 +1,3 @@
-
 /*
  * $Id$
  *
@@ -25,18 +24,11 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <moo-std.h>
 #include "moo-prv.h"
-#include "moo-opt.h"
 
 #include <stdio.h>
 #include <stdlib.h>
-/*
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <limits.h>
-#include <locale.h>
-*/
 
 #if !defined(__DOS__) && defined(HAVE_PTHREAD) && defined(HAVE_STRERROR_R)
 #	define USE_THREAD
@@ -259,21 +251,31 @@ struct select_fd_t
 };
 #endif
 
+enum logfd_trait_t
+{
+	LOGFD_TTY = (1 << 0),
+	LOGFD_OPENED = (1 << 1)
+};
+
 typedef struct std_xtn_t std_xtn_t;
 struct std_xtn_t
 {
+	moo_t* next;
+	moo_t* prev;
+
 	const char* source_path; /* main source file */
 	int vm_running;
 
 	moo_bitmask_t logmask;
 	int logfd;
-	int logfd_istty;
-	
+	int logfd_trait; /* bitwise OR'ed fo logfd_trait_t bits */
+
 	struct
 	{
 		moo_bch_t buf[4096];
 		moo_oow_t len;
 	} logbuf;
+
 
 	#if defined(_WIN32)
 	HANDLE waitable_timer;
@@ -346,6 +348,10 @@ struct std_xtn_t
 	#endif
 	} ev;
 };
+
+#define GETXTNSTD(moo) ((std_xtn_t*)((moo_uint8_t*)moo_getxtn(moo) + MOO_SIZEOF(std_xtn_t)))
+
+static moo_t* g_moo = MOO_NULL;
 
 /* ========================================================================= */
 
@@ -481,7 +487,6 @@ static MOO_INLINE moo_ooi_t close_input (moo_t* moo, moo_ioarg_t* arg)
 	return 0;
 }
 
-
 static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 {
 	/*std_xtn_t* xtn = moo_getxtn(moo);*/
@@ -522,7 +527,7 @@ static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 #endif
 
 	remlen = bb->len - bcslen;
-	if (remlen > 0) memmove (bb->buf, &bb->buf[bcslen], remlen);
+	if (remlen > 0) MOO_MEMMOVE (bb->buf, &bb->buf[bcslen], remlen);
 	bb->len = remlen;
 	return ucslen;
 }
@@ -532,13 +537,13 @@ static moo_ooi_t input_handler (moo_t* moo, moo_iocmd_t cmd, moo_ioarg_t* arg)
 	switch (cmd)
 	{
 		case MOO_IO_OPEN:
-			return open_input (moo, arg);
+			return open_input(moo, arg);
 			
 		case MOO_IO_CLOSE:
-			return close_input (moo, arg);
+			return close_input(moo, arg);
 
 		case MOO_IO_READ:
-			return read_input (moo, arg);
+			return read_input(moo, arg);
 
 		default:
 			moo_seterrnum (moo, MOO_EINTERN);
@@ -657,7 +662,7 @@ static int write_log (moo_t* moo, int fd, const moo_bch_t* ptr, moo_oow_t len)
 			rcapa = MOO_COUNTOF(xtn->logbuf.buf) - xtn->logbuf.len;
 			cplen = (len >= rcapa)? rcapa: len;
 
-			memcpy (&xtn->logbuf.buf[xtn->logbuf.len], ptr, cplen);
+			MOO_MEMCPY (&xtn->logbuf.buf[xtn->logbuf.len], ptr, cplen);
 			xtn->logbuf.len += cplen;
 			ptr += cplen;
 			len -= cplen;
@@ -683,7 +688,7 @@ static int write_log (moo_t* moo, int fd, const moo_bch_t* ptr, moo_oow_t len)
 			}
 			else
 			{
-				memcpy (xtn->logbuf.buf, ptr, len);
+				MOO_MEMCPY (xtn->logbuf.buf, ptr, len);
 				xtn->logbuf.len += len;
 				ptr += len;
 				len -= len;
@@ -785,7 +790,7 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		write_log (moo, logfd, ts, tslen);
 	}
 
-	if (logfd == xtn->logfd && xtn->logfd_istty)
+	if (logfd == xtn->logfd && (xtn->logfd_trait & LOGFD_TTY))
 	{
 		if (mask & MOO_LOG_FATAL) write_log (moo, logfd, "\x1B[1;31m", 7);
 		else if (mask & MOO_LOG_ERROR) write_log (moo, logfd, "\x1B[1;32m", 7);
@@ -830,7 +835,7 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 	write_log (moo, logfd, msg, len);
 #endif
 
-	if (logfd == xtn->logfd && xtn->logfd_istty)
+	if (logfd == xtn->logfd && (xtn->logfd_trait & LOGFD_TTY))
 	{
 		if (mask & (MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN)) write_log (moo, logfd, "\x1B[0m", 4);
 	}
@@ -1527,7 +1532,7 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 	struct epoll_event ev;
 
 	MOO_ASSERT (moo, xtn->ep >= 0);
-	memset (&ev, 0, MOO_SIZEOF(ev));
+	MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
 	ev.events = event_mask;
 	#if defined(USE_THREAD) && defined(EPOLLET)
 	/* epoll_wait may return again if the worker thread consumes events.
@@ -1631,7 +1636,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	struct epoll_event ev;
 
 	MOO_ASSERT (moo, xtn->ep >= 0);
-	memset (&ev, 0, MOO_SIZEOF(ev));
+	MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
 	if (epoll_ctl (xtn->ep, EPOLL_CTL_DEL, fd, &ev) == -1)
 	{
 		moo_seterrwithsyserr (moo, 0, errno);
@@ -1651,7 +1656,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 		if (xtn->ev.reg.ptr[i].fd == fd)
 		{
 			xtn->ev.reg.len--;
-			memmove (&xtn->ev.reg.ptr[i], &xtn->ev.reg.ptr[i+1], (xtn->ev.reg.len - i) * MOO_SIZEOF(*xtn->ev.reg.ptr));
+			MOO_MEMMOVE (&xtn->ev.reg.ptr[i], &xtn->ev.reg.ptr[i+1], (xtn->ev.reg.len - i) * MOO_SIZEOF(*xtn->ev.reg.ptr));
 			MUTEX_UNLOCK (&xtn->ev.reg.pmtx);
 			return 0;
 		}
@@ -1711,7 +1716,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 	struct epoll_event ev;
 
 	MOO_ASSERT (moo, xtn->ep >= 0);
-	memset (&ev, 0, MOO_SIZEOF(ev));
+	MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
 	ev.events = event_mask;
 	#if defined(USE_THREAD) && defined(EPOLLET)
 	/* epoll_wait may return again if the worker thread consumes events.
@@ -1739,7 +1744,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 	{
 		if (xtn->ev.reg.ptr[i].fd == fd)
 		{
-			memmove (&xtn->ev.reg.ptr[i], &xtn->ev.reg.ptr[i+1], (xtn->ev.reg.len - i - 1) * MOO_SIZEOF(*xtn->ev.reg.ptr));
+			MOO_MEMMOVE (&xtn->ev.reg.ptr[i], &xtn->ev.reg.ptr[i+1], (xtn->ev.reg.len - i - 1) * MOO_SIZEOF(*xtn->ev.reg.ptr));
 			xtn->ev.reg.ptr[i].fd = fd;
 			xtn->ev.reg.ptr[i].events = event_mask;
 			xtn->ev.reg.ptr[i].revents = 0;
@@ -2124,7 +2129,7 @@ static void* iothr_main (void* arg)
 			n = epoll_wait (xtn->ep, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), 10000); /* TODO: make this timeout value in the io thread */
 		#elif defined(USE_POLL)
 			MUTEX_LOCK (&xtn->ev.reg.pmtx);
-			memcpy (xtn->ev.buf, xtn->ev.reg.ptr, xtn->ev.reg.len * MOO_SIZEOF(*xtn->ev.buf));
+			MOO_MEMCPY (xtn->ev.buf, xtn->ev.reg.ptr, xtn->ev.reg.len * MOO_SIZEOF(*xtn->ev.buf));
 			nfds = xtn->ev.reg.len;
 			MUTEX_UNLOCK (&xtn->ev.reg.pmtx);
 			n = poll(xtn->ev.buf, nfds, 10000);
@@ -2366,7 +2371,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	#elif defined(USE_EPOLL)
 	n = epoll_wait (xtn->ep, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), tmout);
 	#elif defined(USE_POLL)
-	memcpy (xtn->ev.buf, xtn->ev.reg.ptr, xtn->ev.reg.len * MOO_SIZEOF(*xtn->ev.buf));
+	MOO_MEMCPY (xtn->ev.buf, xtn->ev.reg.ptr, xtn->ev.reg.len * MOO_SIZEOF(*xtn->ev.buf));
 	n = poll(xtn->ev.buf, xtn->ev.reg.len, tmout);
 	if (n > 0) 
 	{
@@ -2553,27 +2558,386 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 	#endif
 #endif
 }
+
+/* ========================================================================= */
+
+static MOO_INLINE void swproc_all (void)
+{
+	/* TODO: make this atomic */
+	if (g_moo)
+	{
+		moo_t* moo = g_moo;
+		do
+		{
+			moo_switchprocess (moo);
+			moo = GETXTNSTD(moo)->next;
+		}
+		while (moo);
+	}
+	/* TODO: make this atomic */
+}
+
+#if defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
+
+#if defined(_INTELC32_)
+static void (*prev_timer_intr_handler) (void);
+#else
+static void (__interrupt *prev_timer_intr_handler) (void);
+#endif
+
+#if defined(_INTELC32_)
+#pragma interrupt(timer_intr_handler)
+static void timer_intr_handler (void)
+#else
+static void __interrupt timer_intr_handler (void)
+#endif
+{
+	/*
+	_XSTACK *stk;
+	int r;
+	stk = (_XSTACK *)_get_stk_frame();
+	r = (unsigned short)stk_ptr->eax;   
+	*/
+
+	/* The timer interrupt (normally) occurs 18.2 times per second. */
+	if (g_moo) moo_switchprocess (g_moo);
+	_chain_intr (prev_timer_intr_handler);
+}
+
+#elif defined(_WIN32)
+static HANDLE g_tick_timer = MOO_NULL; /*INVALID_HANDLE_VALUE;*/
+
+static VOID CALLBACK arrange_process_switching (LPVOID arg, DWORD timeLow, DWORD timeHigh) 
+{
+	swproc_all ();
+}
+
+#elif defined(__OS2__)
+static TID g_tick_tid;
+static HEV g_tick_sem; 
+static HTIMER g_tick_timer;
+static int g_tick_done = 0;
+
+static void EXPENTRY os2_wait_for_timer_event (ULONG x)
+{
+	APIRET rc;
+	ULONG count;
+
+	rc = DosCreateEventSem (NULL, &g_tick_sem, DC_SEM_SHARED, FALSE);
+	if (rc != NO_ERROR)
+	{
+		/* xxxx */
+	}
+
+	rc = DosStartTimer (1L, (HSEM)g_tick_sem, &g_tick_timer);
+	if (rc != NO_ERROR)
+	{
+	}
+
+	while (!g_tick_done)
+	{
+		rc = DosWaitEventSem((HSEM)g_tick_sem, 5000L);
+		DosResetEventSem((HSEM)g_tick_sem, &count);
+		swproc_all ();
+	}
+
+	DosStopTimer (g_tick_timer);
+	DosCloseEventSem ((HSEM)g_tick_sem);
+
+	g_tick_timer = NULL;
+	g_tick_sem = NULL;
+	DosExit (EXIT_THREAD, 0);
+}
+
+
+#elif defined(macintosh)
+
+static TMTask g_tmtask;
+static ProcessSerialNumber g_psn;
+
+#define TMTASK_DELAY 50 /* milliseconds if positive, microseconds(after negation) if negative */
+
+static pascal void timer_intr_handler (TMTask* task)
+{
+	swproc_all ();
+	WakeUpProcess (&g_psn);
+	PrimeTime ((QElem*)&g_tmtask, TMTASK_DELAY);
+}
+
+#else
+static void arrange_process_switching (int sig)
+{
+	swproc_all ();
+}
+#endif
+
+static void setup_tick (void)
+{
+#if defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
+
+	prev_timer_intr_handler = _dos_getvect (0x1C);
+	_dos_setvect (0x1C, timer_intr_handler);
+
+#elif defined(_WIN32)
+
+	LARGE_INTEGER li;
+	g_tick_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
+	if (g_tick_timer)
+	{
+		li.QuadPart = -MOO_SECNSEC_TO_NSEC(0, 20000); /* 20000 microseconds. 0.02 seconds */
+		SetWaitableTimer (g_tick_timer, &li, 0, arrange_process_switching, MOO_NULL, FALSE);
+	}
+
+#elif defined(__OS2__)
+	/* TODO: Error check */
+	DosCreateThread (&g_tick_tid, os2_wait_for_timer_event, 0, 0, 4096);
+
+#elif defined(macintosh)
+
+	GetCurrentProcess (&g_psn);
+	memset (&g_tmtask, 0, MOO_SIZEOF(g_tmtask));
+	g_tmtask.tmAddr = NewTimerProc (timer_intr_handler);
+	InsXTime ((QElem*)&g_tmtask);
+	PrimeTime ((QElem*)&g_tmtask, TMTASK_DELAY);
+
+#elif defined(HAVE_SETITIMER) && defined(SIGVTALRM) && defined(ITIMER_VIRTUAL)
+	struct itimerval itv;
+	struct sigaction act;
+
+	memset (&act, 0, sizeof(act));
+	sigemptyset (&act.sa_mask);
+	act.sa_handler = arrange_process_switching;
+	act.sa_flags = SA_RESTART;
+	sigaction (SIGVTALRM, &act, MOO_NULL);
+
+/*#define MOO_ITIMER_TICK 10000*/ /* microseconds. 0.01 seconds */
+#define MOO_ITIMER_TICK 20000 /* microseconds. 0.02 seconds. */
+	itv.it_interval.tv_sec = 0;
+	itv.it_interval.tv_usec = MOO_ITIMER_TICK;
+	itv.it_value.tv_sec = 0;
+	itv.it_value.tv_usec = MOO_ITIMER_TICK;
+	setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
+#else
+
+#	error UNSUPPORTED
+#endif
+}
+
+static void cancel_tick (void)
+{
+#if defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
+
+	_dos_setvect (0x1C, prev_timer_intr_handler);
+
+#elif defined(_WIN32)
+
+	if (g_tick_timer)
+	{
+		CancelWaitableTimer (g_tick_timer);
+		CloseHandle (g_tick_timer);
+		g_tick_timer = MOO_NULL;
+	}
+
+#elif defined(__OS2__)
+	if (g_tick_sem) DosPostEventSem (g_tick_sem);
+	g_tick_done = 1;
+
+#elif defined(macintosh)
+	RmvTime ((QElem*)&g_tmtask);
+	/*DisposeTimerProc (g_tmtask.tmAddr);*/
+
+#elif defined(HAVE_SETITIMER) && defined(SIGVTALRM) && defined(ITIMER_VIRTUAL)
+	struct itimerval itv;
+	struct sigaction act;
+
+	itv.it_interval.tv_sec = 0;
+	itv.it_interval.tv_usec = 0;
+	itv.it_value.tv_sec = 0; /* make setitimer() one-shot only */
+	itv.it_value.tv_usec = 0;
+	setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
+
+	sigemptyset (&act.sa_mask); 
+	act.sa_handler = SIG_IGN; /* ignore the signal potentially fired by the one-shot arrange above */
+	act.sa_flags = 0;
+	sigaction (SIGVTALRM, &act, MOO_NULL);
+
+#else
+#	error UNSUPPORTED
+#endif
+}
+
+
+/* ========================================================================= */
+
+static struct 
+{
+	const char* name;
+	moo_bitmask_t mask;
+} log_mask_table[] =
+{
+	{ "app",         MOO_LOG_APP },
+	{ "compiler",    MOO_LOG_COMPILER },
+	{ "vm",          MOO_LOG_VM },
+	{ "mnemonic",    MOO_LOG_MNEMONIC },
+	{ "gc",          MOO_LOG_GC },
+	{ "ic",          MOO_LOG_IC },
+	{ "primitive",   MOO_LOG_PRIMITIVE },
+
+	{ "fatal",       MOO_LOG_FATAL },
+	{ "error",       MOO_LOG_ERROR },
+	{ "warn",        MOO_LOG_WARN },
+	{ "info",        MOO_LOG_INFO },
+	{ "debug",       MOO_LOG_DEBUG },
+
+	{ "fatal+",      MOO_LOG_FATAL },
+	{ "error+",      MOO_LOG_FATAL | MOO_LOG_ERROR },
+	{ "warn+",       MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN },
+	{ "info+",       MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO },
+	{ "debug+",      MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO | MOO_LOG_DEBUG }
+};
+
+static int handle_logopt (moo_t* moo, const moo_bch_t* str)
+{
+	std_xtn_t* xtn = moo_getxtn (moo);
+	moo_bch_t* xstr = (moo_bch_t*)str;
+	moo_bch_t* cm, * flt;
+	moo_bitmask_t logmask;
+	moo_oow_t i;
+
+	cm = moo_find_bchar_in_bcstr(xstr, ',');
+	if (cm) 
+	{
+		/* i duplicate this string for open() below as open() doesn't 
+		 * accept a length-bounded string */
+		xstr = moo_dupbchars(moo, str, moo_count_bcstr(str));
+		if (!xstr) 
+		{
+			moo_seterrbfmt (moo, MOO_ESYSERR, "out of memory in duplicating %hs", str);
+			return -1;
+		}
+
+		cm = moo_find_bchar_in_bcstr(xstr, ',');
+		*cm = '\0';
+
+		logmask = xtn->logmask;
+		do
+		{
+			flt = cm + 1;
+
+			cm = moo_find_bchar_in_bcstr(flt, ',');
+			if (cm) *cm = '\0';
+
+			for (i = 0; i < MOO_COUNTOF(log_mask_table); i++)
+			{
+				if (moo_comp_bcstr(flt, log_mask_table[i].name) == 0) 
+				{
+					logmask |= log_mask_table[i].mask;
+					break;
+				}
+			}
+
+			if (i >= MOO_COUNTOF(log_mask_table))
+			{
+				moo_seterrbfmt (moo, MOO_EINVAL, "unknown log option value %hs", flt);
+				if (str != xstr) moo_freemem (moo, xstr);
+				return -1;
+			}
+		}
+		while (cm);
+
+
+		if (!(logmask & MOO_LOG_ALL_TYPES)) logmask |= MOO_LOG_ALL_TYPES;  /* no types specified. force to all types */
+		if (!(logmask & MOO_LOG_ALL_LEVELS)) logmask |= MOO_LOG_ALL_LEVELS;  /* no levels specified. force to all levels */
+	}
+	else
+	{
+		logmask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;
+	}
+
+	xtn->logfd = open(xstr, O_CREAT | O_WRONLY | O_APPEND , 0644);
+	if (xtn->logfd == -1)
+	{
+		moo_seterrbfmt (moo, MOO_ESYSERR, "cannot open log file %hs", xstr); /* TODO: use syserrb/u??? */
+		if (str != xstr) moo_freemem (moo, xstr);
+		return -1;
+	}
+
+	xtn->logmask = logmask;
+	xtn->logfd_trait |= LOGFD_OPENED;
+#if defined(HAVE_ISATTY)
+	if (isatty(xtn->logfd)) xtn->logfd_trait |= LOGFD_TTY;
+#endif
+
+	if (str != xstr) moo_freemem (moo, xstr);
+	return 0;
+}
+
+static int handle_dbgopt (moo_t* moo, const moo_bch_t* str)
+{
+	const moo_bch_t* cm, * flt;
+	moo_oow_t len;
+	moo_bitmask_t trait, dbgopt = 0;
+
+	cm = str - 1;
+	do
+	{
+		flt = cm + 1;
+
+		cm = moo_find_bchar_in_bcstr(flt, ',');
+		len = cm? (cm - flt): moo_count_bcstr(flt);
+		if (moo_comp_bchars_bcstr(flt, len, "gc") == 0)  dbgopt |= MOO_DEBUG_GC;
+		else if (moo_comp_bchars_bcstr(flt, len, "bigint") == 0)  dbgopt |= MOO_DEBUG_BIGINT;
+		else
+		{
+			moo_seterrbfmt (moo, MOO_EINVAL, "unknown log option value %.*hs", len, flt);
+			return -1;
+		}
+	}
+	while (cm);
+
+	moo_getoption (moo, MOO_TRAIT, &trait);
+	trait |= dbgopt;
+	moo_setoption (moo, MOO_TRAIT, &trait);
+
+	return 0;
+}
+
 /* ========================================================================= */
 
 
 static void fini_moo (moo_t* moo)
 {
-	std_xtn_t* xtn = moo_getxtn(moo);
-	if (xtn->logfd >= 0)
+	std_xtn_t* xtn = GETXTNSTD(moo);
+	if ((xtn->logfd_trait & LOGFD_OPENED) && xtn->logfd >= 0)
 	{
 		close (xtn->logfd);
-		xtn->logfd = -1;
-		xtn->logfd_istty = 0;
+
+		/* back to the default */
+		xtn->logfd = -2;
+		xtn->logfd_trait = 0;
+	#if defined(HAVE_ISATTY)
+		if (isatty(xtn->logfd)) xtn->logfd_trait |= LOGFD_TTY;
+	#endif
 	}
+
+/* TODO: make this atomic */
+	if (xtn->prev) GETXTNSTD(xtn->prev)->next = xtn->next;
+	else g_moo = xtn->next;
+	if (xtn->next) GETXTNSTD(xtn->next)->prev = xtn->prev;
+/* TODO: make this atomic */
+	xtn->prev = MOO_NULL;
+	xtn->prev = MOO_NULL;
 }
 
-moo_t* moo_openstd (moo_oow_t xtnsize, moo_oow_t memsize, moo_errnum_t* errnum)
+moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfg_t* cfg, moo_errinf_t* errinfo)
 {
 	moo_t* moo;
 	moo_vmprim_t vmprim;
+	moo_cb_t cb;
+	std_xtn_t* xtn;
 
 	MOO_MEMSET(&vmprim, 0, MOO_SIZEOF(vmprim));
-	if (1) /* TOOD: */
+	if (cfg->large_pages)
 	{
 		vmprim.alloc_heap = alloc_heap;
 		vmprim.free_heap = free_heap;
@@ -2595,14 +2959,41 @@ moo_t* moo_openstd (moo_oow_t xtnsize, moo_oow_t memsize, moo_errnum_t* errnum)
 	vmprim.vm_muxwait = vm_muxwait;
 	vmprim.vm_sleep = vm_sleep;
 
-	moo = moo_open(&sys_mmgr, MOO_SIZEOF(std_xtn_t) +  xtnsize, memsize, &vmprim, errnum);
+	moo = moo_open(&sys_mmgr, MOO_SIZEOF(std_xtn_t) + xtnsize, cfg->memsize, &vmprim, errinfo);
 	if (!moo) return MOO_NULL;
+
+	xtn = (std_xtn_t*)GETXTNSTD(moo);
+
+	/* initial log goes to stderr */
+	xtn->logfd = -2;
+	xtn->logfd_trait = 0;
+#if defined(HAVE_ISATTY)
+	if (isatty(xtn->logfd)) xtn->logfd_trait |= LOGFD_TTY;
+#endif
+
+	MOO_MEMSET (&cb, 0, MOO_SIZEOF(cb));
+	cb.fini = fini_moo;
+	moo_regcb (moo, &cb);
+
+/* TODO: cfg->logopt, dbgopt => bch uch differentation */
+	if (handle_logopt(moo, cfg->logopt) <= -1 ||
+	    handle_dbgopt(moo, cfg->dbgopt) <= -1) 
+	{
+		if (errinfo) moo_geterrinf (moo, errinfo);
+		moo_close (moo);
+		return MOO_NULL;
+	}
+
+/* TODO: make this atomic */
+	if (g_moo) GETXTNSTD(g_moo)->prev = moo;
+	else g_moo = moo;
+	xtn->next = g_moo;
+/* TODO: make this atomic */
 
 	return moo;
 }
 
 void* moo_getxtnstd (moo_t* moo)
 {
-	return (void*)((moo_uint8_t*)moo_getxtn(moo) + MOO_SIZEOF(std_xtn_t));
+	return GETXTNSTD(moo);
 }
-
