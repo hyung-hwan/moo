@@ -257,13 +257,12 @@ enum logfd_trait_t
 	LOGFD_OPENED = (1 << 1)
 };
 
-typedef struct std_xtn_t std_xtn_t;
-struct std_xtn_t
+typedef struct xtn_t xtn_t;
+struct xtn_t
 {
 	moo_t* next;
 	moo_t* prev;
 
-	const char* source_path; /* main source file */
 	int vm_running;
 
 	moo_bitmask_t logmask;
@@ -276,6 +275,8 @@ struct std_xtn_t
 		moo_oow_t len;
 	} logbuf;
 
+
+	const moo_iostd_t* instd;
 
 	#if defined(_WIN32)
 	HANDLE waitable_timer;
@@ -349,7 +350,7 @@ struct std_xtn_t
 	} ev;
 };
 
-#define GETXTNSTD(moo) ((std_xtn_t*)((moo_uint8_t*)moo_getxtn(moo) + MOO_SIZEOF(std_xtn_t)))
+#define GET_XTN(moo) ((xtn_t*)moo_getxtn(moo))
 
 static moo_t* g_moo = MOO_NULL;
 
@@ -403,7 +404,7 @@ static const moo_bch_t* get_base_name (const moo_bch_t* path)
 
 static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 {
-	std_xtn_t* xtn = moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 	bb_t* bb = MOO_NULL;
 
 /* TOOD: support predefined include directory as well */
@@ -440,13 +441,28 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 		/* main stream */
 		moo_oow_t pathlen;
 
-		pathlen = moo_count_bcstr(xtn->source_path);
+		switch (xtn->instd->type)
+		{
+			//case MOO_IOSTD_FILE: // TODO:
+			case MOO_IOSTD_FILEB:
+				pathlen = moo_count_bcstr(xtn->instd->u.fileb.path);
 
-		bb = moo_callocmem(moo, MOO_SIZEOF(*bb) + (MOO_SIZEOF(moo_bch_t) * (pathlen + 1)));
-		if (!bb) goto oops;
+				bb = moo_callocmem(moo, MOO_SIZEOF(*bb) + (MOO_SIZEOF(moo_bch_t) * (pathlen + 1)));
+				if (!bb) goto oops;
 
-		bb->fn = (moo_bch_t*)(bb + 1);
-		moo_copy_bcstr (bb->fn, pathlen + 1, xtn->source_path);
+				bb->fn = (moo_bch_t*)(bb + 1);
+				moo_copy_bcstr (bb->fn, pathlen + 1, xtn->instd->u.fileb.path);
+				break;
+
+			case MOO_IOSTD_FILE:
+			case MOO_IOSTD_FILEU:
+				moo_seterrbfmt (moo, MOO_ENOIMPL, "unimplemented standard input type fileu\n");
+				goto oops;
+
+			default:
+				moo_seterrbfmt (moo, MOO_EINVAL, "unsupported standard input type - %d", (int)xtn->instd->type);
+				goto oops;
+		}
 	}
 
 #if defined(_WIN32) || defined(__OS2__) || defined(__DOS__)
@@ -456,7 +472,7 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 #endif
 	if (!bb->fp)
 	{
-		moo_seterrnum (moo, MOO_EIOERR);
+		moo_seterrbfmt (moo, MOO_EIOERR, "unable to open file %hs", bb->fn);
 		goto oops;
 	}
 
@@ -474,7 +490,7 @@ oops:
 
 static MOO_INLINE moo_ooi_t close_input (moo_t* moo, moo_ioarg_t* arg)
 {
-	/*std_xtn_t* xtn = moo_getxtn(moo);*/
+	/*xtn_t* xtn = GET_XTN(moo);*/
 	bb_t* bb;
 
 	bb = (bb_t*)arg->handle;
@@ -489,7 +505,7 @@ static MOO_INLINE moo_ooi_t close_input (moo_t* moo, moo_ioarg_t* arg)
 
 static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 {
-	/*std_xtn_t* xtn = moo_getxtn(moo);*/
+	/*xtn_t* xtn = GET_XTN(moo);*/
 	bb_t* bb;
 	moo_oow_t bcslen, ucslen, remlen;
 	int x;
@@ -649,9 +665,7 @@ static int write_all (int fd, const moo_bch_t* ptr, moo_oow_t len)
 
 static int write_log (moo_t* moo, int fd, const moo_bch_t* ptr, moo_oow_t len)
 {
-	std_xtn_t* xtn;
-
-	xtn = moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 
 	while (len > 0)
 	{
@@ -702,8 +716,7 @@ static int write_log (moo_t* moo, int fd, const moo_bch_t* ptr, moo_oow_t len)
 
 static void flush_log (moo_t* moo, int fd)
 {
-	std_xtn_t* xtn;
-	xtn = moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 	if (xtn->logbuf.len > 0)
 	{
 		write_all (fd, xtn->logbuf.buf, xtn->logbuf.len);
@@ -713,12 +726,10 @@ static void flush_log (moo_t* moo, int fd)
 
 static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, moo_oow_t len)
 {
+	xtn_t* xtn = GET_XTN(moo);
 	moo_bch_t buf[256];
 	moo_oow_t ucslen, bcslen, msgidx;
-	int n;
-
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
-	int logfd;
+	int n, logfd;
 
 	if (mask & MOO_LOG_STDERR)
 	{
@@ -1511,7 +1522,7 @@ static void* dl_getsym (moo_t* moo, void* handle, const moo_ooch_t* name)
 static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 {
 #if defined(USE_DEVPOLL)
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 	struct pollfd ev;
 
 	MOO_ASSERT (moo, xtn->ep >= 0);
@@ -1528,7 +1539,7 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 	return 0;
 
 #elif defined(USE_EPOLL)
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 	struct epoll_event ev;
 
 	MOO_ASSERT (moo, xtn->ep >= 0);
@@ -1551,7 +1562,7 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 	return 0;
 
 #elif defined(USE_POLL)
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 
 	MUTEX_LOCK (&xtn->ev.reg.pmtx);
 	if (xtn->ev.reg.len >= xtn->ev.reg.capa)
@@ -1585,7 +1596,7 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 	return 0;
 
 #elif defined(USE_SELECT)
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 
 	MUTEX_LOCK (&xtn->ev.reg.smtx);
 	if (event_mask & XPOLLIN) 
@@ -1615,7 +1626,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 {
 
 #if defined(USE_DEVPOLL)
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 	struct pollfd ev;
 
 	MOO_ASSERT (moo, xtn->ep >= 0);
@@ -1632,7 +1643,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	return 0;
 
 #elif defined(USE_EPOLL)
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 	struct epoll_event ev;
 
 	MOO_ASSERT (moo, xtn->ep >= 0);
@@ -1646,7 +1657,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	return 0;
 
 #elif defined(USE_POLL)
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 	moo_oow_t i;
 
 	/* TODO: performance boost. no linear search */
@@ -1669,7 +1680,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	return -1;
 
 #elif defined(USE_SELECT)
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 
 	MUTEX_LOCK (&xtn->ev.reg.smtx);
 	FD_CLR (fd, &xtn->ev.reg.rfds);
@@ -1712,7 +1723,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 	return 0;
 
 #elif defined(USE_EPOLL)
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 	struct epoll_event ev;
 
 	MOO_ASSERT (moo, xtn->ep >= 0);
@@ -1736,7 +1747,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 
 #elif defined(USE_POLL)
 
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 	moo_oow_t i;
 
 	MUTEX_LOCK (&xtn->ev.reg.pmtx);
@@ -1761,7 +1772,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 
 #elif defined(USE_SELECT)
 
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 
 	MUTEX_LOCK (&xtn->ev.reg.smtx);
 	MOO_ASSERT (moo, fd <= xtn->ev.reg.maxfd);
@@ -1789,7 +1800,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 
 static int vm_startup (moo_t* moo)
 {
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 	int pcount = 0, flag;
 
 #if defined(_WIN32)
@@ -1901,7 +1912,7 @@ oops:
 
 static void vm_cleanup (moo_t* moo)
 {
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 
 	xtn->vm_running = 0;
 
@@ -1975,7 +1986,7 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 	moo_uint64_t bigsec, bigmsec;
 	bigmsec = GetTickCount64();
 	#else
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 	moo_uint64_t bigsec, bigmsec;
 	DWORD msec;
 
@@ -1996,7 +2007,7 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 	MOO_INIT_NTIME(now, bigsec, MOO_MSEC_TO_NSEC(bigmsec));
 
 #elif defined(__OS2__)
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 	moo_uint64_t bigsec, bigmsec;
 	ULONG msec;
 
@@ -2099,7 +2110,7 @@ static int vm_muxdel (moo_t* moo, moo_ooi_t io_handle)
 static void* iothr_main (void* arg)
 {
 	moo_t* moo = (moo_t*)arg;
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 
 	/*while (!moo->abort_req)*/
 	while (!xtn->iothr_abort)
@@ -2230,7 +2241,7 @@ static void* iothr_main (void* arg)
 
 static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_cb_t muxwcb)
 {
-	std_xtn_t* xtn = (std_xtn_t*)moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 
 #if defined(USE_THREAD)
 	int n;
@@ -2490,7 +2501,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 {
 #if defined(_WIN32)
-	std_xtn_t* xtn = moo_getxtn(moo);
+	xtn_t* xtn = GET_XTN(moo);
 	if (xtn->waitable_timer)
 	{
 		LARGE_INTEGER li;
@@ -2570,7 +2581,7 @@ static MOO_INLINE void swproc_all (void)
 		do
 		{
 			moo_switchprocess (moo);
-			moo = GETXTNSTD(moo)->next;
+			moo = GET_XTN(moo)->next;
 		}
 		while (moo);
 	}
@@ -2798,7 +2809,7 @@ static struct
 
 static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 {
-	std_xtn_t* xtn = moo_getxtn (moo);
+	xtn_t* xtn = GET_XTN(moo);
 	moo_bch_t* xstr = (moo_bch_t*)str;
 	moo_bch_t* cm, * flt;
 	moo_bitmask_t logmask;
@@ -2907,7 +2918,7 @@ static int handle_dbgopt (moo_t* moo, const moo_bch_t* str)
 
 static void fini_moo (moo_t* moo)
 {
-	std_xtn_t* xtn = GETXTNSTD(moo);
+	xtn_t* xtn = GET_XTN(moo);
 	if ((xtn->logfd_trait & LOGFD_OPENED) && xtn->logfd >= 0)
 	{
 		close (xtn->logfd);
@@ -2921,9 +2932,9 @@ static void fini_moo (moo_t* moo)
 	}
 
 /* TODO: make this atomic */
-	if (xtn->prev) GETXTNSTD(xtn->prev)->next = xtn->next;
+	if (xtn->prev) GET_XTN(xtn->prev)->next = xtn->next;
 	else g_moo = xtn->next;
-	if (xtn->next) GETXTNSTD(xtn->next)->prev = xtn->prev;
+	if (xtn->next) GET_XTN(xtn->next)->prev = xtn->prev;
 /* TODO: make this atomic */
 	xtn->prev = MOO_NULL;
 	xtn->prev = MOO_NULL;
@@ -2934,7 +2945,7 @@ moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfg_t* cfg, moo_errinf_t* errin
 	moo_t* moo;
 	moo_vmprim_t vmprim;
 	moo_cb_t cb;
-	std_xtn_t* xtn;
+	xtn_t* xtn;
 
 	MOO_MEMSET(&vmprim, 0, MOO_SIZEOF(vmprim));
 	if (cfg->large_pages)
@@ -2959,10 +2970,10 @@ moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfg_t* cfg, moo_errinf_t* errin
 	vmprim.vm_muxwait = vm_muxwait;
 	vmprim.vm_sleep = vm_sleep;
 
-	moo = moo_open(&sys_mmgr, MOO_SIZEOF(std_xtn_t) + xtnsize, cfg->memsize, &vmprim, errinfo);
+	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize, cfg->memsize, &vmprim, errinfo);
 	if (!moo) return MOO_NULL;
 
-	xtn = (std_xtn_t*)GETXTNSTD(moo);
+	xtn = GET_XTN(moo);
 
 	/* initial log goes to stderr */
 	xtn->logfd = -2;
@@ -2976,8 +2987,8 @@ moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfg_t* cfg, moo_errinf_t* errin
 	moo_regcb (moo, &cb);
 
 /* TODO: cfg->logopt, dbgopt => bch uch differentation */
-	if (handle_logopt(moo, cfg->logopt) <= -1 ||
-	    handle_dbgopt(moo, cfg->dbgopt) <= -1) 
+	if ((cfg->logopt && handle_logopt(moo, cfg->logopt) <= -1) ||
+	    (cfg->dbgopt && handle_dbgopt(moo, cfg->dbgopt) <= -1)) 
 	{
 		if (errinfo) moo_geterrinf (moo, errinfo);
 		moo_close (moo);
@@ -2985,7 +2996,7 @@ moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfg_t* cfg, moo_errinf_t* errin
 	}
 
 /* TODO: make this atomic */
-	if (g_moo) GETXTNSTD(g_moo)->prev = moo;
+	if (g_moo) GET_XTN(g_moo)->prev = moo;
 	else g_moo = moo;
 	xtn->next = g_moo;
 /* TODO: make this atomic */
@@ -2995,5 +3006,20 @@ moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfg_t* cfg, moo_errinf_t* errin
 
 void* moo_getxtnstd (moo_t* moo)
 {
-	return GETXTNSTD(moo);
+	return (void*)((moo_uint8_t*)GET_XTN(moo) + MOO_SIZEOF(xtn_t));
 }
+
+int moo_compilestd(moo_t* moo, const moo_iostd_t* instd, moo_oow_t count)
+{
+	xtn_t* xtn;
+	moo_oow_t i;
+
+	xtn = GET_XTN(moo);
+	for (i = 0; i < count; i++)
+	{
+		xtn->instd = &instd[i];
+		if (moo_compile(moo, input_handler) <= -1) return -1;
+	}
+
+	return 0;
+};

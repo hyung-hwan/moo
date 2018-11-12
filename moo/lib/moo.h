@@ -1669,7 +1669,66 @@ struct moo_ioloc_t
 };
 typedef struct moo_ioloc_t moo_ioloc_t;
 
+
+struct moo_iolxc_t
+{
+	moo_ooci_t   c; /**< character */
+	moo_ioloc_t  l; /**< location */
+};
+typedef struct moo_iolxc_t moo_iolxc_t;
+
+/*
+enum moo_ioarg_flag_t
+{
+	MOO_IO_INCLUDED = (1 << 0)
+};
+typedef enum moo_ioarg_flag_t moo_ioarg_flag_t; */
+
 typedef struct moo_ioarg_t moo_ioarg_t;
+struct moo_ioarg_t
+{
+	/** 
+	 * [IN] I/O object name.
+	 * It is #MOO_NULL for the main stream and points to a non-NULL string
+	 * for an included stream.
+	 */
+	const moo_ooch_t* name;
+
+	/** 
+	 * [OUT] I/O handle set by an open handler. 
+	 * [IN] I/O handle referenced in read and close handler.
+	 * The source stream handler can set this field when it opens a stream.
+	 * All subsequent operations on the stream see this field as set
+	 * during opening.
+	 */
+	void* handle;
+
+	/**
+	 * [OUT] place data here 
+	 */
+	moo_ooch_t buf[2048];
+
+	/**
+	 * [IN] points to the data of the includer. It is #MOO_NULL for the
+	 * main stream.
+	 */
+	moo_ioarg_t* includer;
+
+	/*-----------------------------------------------------------------*/
+	/*----------- from here down, internal use only -------------------*/
+	struct
+	{
+		int pos, len, state;
+	} b;
+
+	moo_oow_t   line;
+	moo_oow_t   colm;
+	moo_ooci_t  nl;
+
+	moo_iolxc_t lxc;
+	/*-----------------------------------------------------------------*/
+};
+
 
 typedef moo_ooi_t (*moo_ioimpl_t) (
 	moo_t*       moo,

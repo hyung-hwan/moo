@@ -9314,7 +9314,7 @@ static MOO_INLINE int _compile (moo_t* moo, moo_ioimpl_t io)
 	moo->c->curinp = &moo->c->arg;
 
 	/* compile the contents of the stream */
-	if (compile_stream (moo) <= -1) goto oops;
+	if (compile_stream(moo) <= -1) goto oops;
 
 	/* close the stream */
 	MOO_ASSERT (moo, moo->c->curinp == &moo->c->arg);

@@ -532,18 +532,22 @@ int main (int argc, char* argv[])
 		return -1;
 	}
 
+/*
 #if defined(macintosh)
 	i = 20;
 	xtn->source_path = "test.moo";
 	goto compile;
 #endif
+*/
 
 	for (i = opt.ind; i < argc; i++)
 	{
-		xtn->source_path = argv[i];
+		moo_iostd_t instd;
+		instd.type = MOO_IOSTD_FILEB;
+		instd.u.fileb.path = argv[i];
 
-	compile:
-		if (moo_compile(moo, input_handler) <= -1)
+	/*compile:*/
+		if (moo_compilestd(moo, &instd, 1) <= -1)
 		{
 			if (moo->errnum == MOO_ESYNERR)
 			{
@@ -558,7 +562,7 @@ int main (int argc, char* argv[])
 				}
 				else
 				{
-					moo_logbfmt (moo, MOO_LOG_STDERR, "%s", xtn->source_path);
+					moo_logbfmt (moo, MOO_LOG_STDERR, "%s", argv[i]);
 				}
 
 				moo_logbfmt (moo, MOO_LOG_STDERR, "[%zu,%zu] %js", 
