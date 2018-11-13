@@ -397,7 +397,6 @@ static void clear_sigterm (void)
 }
 /* ========================================================================= */
 
-
 #define MIN_MEMSIZE 2048000ul
 
 int main (int argc, char* argv[])
@@ -406,7 +405,7 @@ int main (int argc, char* argv[])
 	static moo_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
 
 	moo_t* moo;
-	moo_stdcfg_t cfg;
+	moo_cfgstd_t cfg;
 	moo_errinf_t errinf;
 
 	moo_oocs_t objname;
@@ -448,6 +447,7 @@ int main (int argc, char* argv[])
 	}
 
 	memset (&cfg, 0, MOO_SIZEOF(cfg));
+	cfg.type = MOO_CFGSTD_OPTB;
 	cfg.memsize = MIN_MEMSIZE;
 
 	while ((c = moo_getbopt(argc, argv, &opt)) != MOO_BCI_EOF)
@@ -455,7 +455,7 @@ int main (int argc, char* argv[])
 		switch (c)
 		{
 			case 'l':
-				cfg.logopt = opt.arg;
+				cfg.u.optb.log = opt.arg;
 				break;
 
 			case 'm':
@@ -472,7 +472,7 @@ int main (int argc, char* argv[])
 			#if defined(MOO_BUILD_DEBUG)
 				else if (moo_comp_bcstr(opt.lngopt, "debug") == 0)
 				{
-					cfg.dbgopt = opt.arg;
+					cfg.u.optb.dbg = opt.arg;
 					break;
 				}
 			#endif
@@ -498,7 +498,17 @@ int main (int argc, char* argv[])
 	moo = moo_openstd(0, &cfg, &errinf);
 	if (!moo)
 	{
-		fprintf (stderr, "ERROR: cannot open moo - %d\n", (int)errinf.num);
+	#if defined(MOO_OOCH_IS_BCH)
+		fprintf (stderr, "ERROR: cannot open moo - [%d] %s\n", (int)errinf.num, errinf.msg);
+	#elif (MOO_SIZEOF_UCH_T == MOO_SIZEOF_WCHAR_T)
+		fprintf (stderr, "ERROR: cannot open moo - [%d] %ls\n", (int)errinf.num, errinf.msg);
+	#else
+		moo_bch_t bcsmsg[MOO_COUNTOF(errinf.msg) * 2]; /* error messages may get truncated */
+		moo_oow_t wcslen, bcslen;
+		bcslen = MOO_COUNTOF(bcsmsg);
+		moo_conv_ucstr_to_utf8 (errinf.msg, &wcslen, bcsmsg, &bcslen);
+		fprintf (stderr, "ERROR: cannot open moo - [%d] %s\n", (int)errinf.num, bcsmsg);
+	#endif
 		return -1;
 	}
 

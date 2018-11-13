@@ -3,24 +3,43 @@
 
 #include <moo.h>
 
-enum moo_stdcfg_type_t
+enum moo_cfgstd_type_t
 {
-	moo_stdcfg_tYPE_B,
-	moo_stdcfg_tYPE_U
+	MOO_CFGSTD_OPT,
+	MOO_CFGSTD_OPTB,
+	MOO_CFGSTD_OPTU
 };
-typedef enum moo_stdcfg_type_t moo_stdcfg_type_t;
+typedef enum moo_cfgstd_type_t moo_cfgstd_type_t;
 
-struct moo_stdcfg_t
+struct moo_cfgstd_t
 {
-	moo_stdcfg_type_t type;
+	moo_cfgstd_type_t type;
 
 	moo_oow_t memsize;
 	int large_pages;
 
-	const void* logopt;
-	const void* dbgopt;
+	union
+	{
+		struct
+		{
+			const moo_ooch_t* log;
+			const moo_ooch_t* dbg;
+		} opt;
+
+		struct 
+		{
+			const moo_bch_t* log;
+			const moo_bch_t* dbg;
+		} optb;
+
+		struct
+		{
+			const moo_uch_t* log;
+			const moo_uch_t* dbg;
+		} optu;
+	} u;
 };
-typedef struct moo_stdcfg_t moo_stdcfg_t;
+typedef struct moo_cfgstd_t moo_cfgstd_t;
 
 
 enum moo_iostd_type_t
@@ -60,7 +79,7 @@ extern "C" {
 
 MOO_EXPORT moo_t* moo_openstd (
 	moo_oow_t           xtnsize, 
-	const moo_stdcfg_t* cfg,
+	const moo_cfgstd_t* cfg,
 	moo_errinf_t*       errinfo
 );
 

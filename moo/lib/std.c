@@ -2838,28 +2838,30 @@ static struct
 	{ "debug+",      MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN | MOO_LOG_INFO | MOO_LOG_DEBUG }
 };
 
-static int handle_logopt (moo_t* moo, const moo_bch_t* str)
+static struct 
+{
+	const char* name;
+	moo_bitmask_t mask;
+} dbg_mask_table[] =
+{
+	{ "bigint", MOO_DEBUG_BIGINT },
+	{ "gc",     MOO_DEBUG_GC }
+};
+
+static int parse_logoptb (moo_t* moo, const moo_bch_t* str, moo_oow_t* xpathlen, moo_bitmask_t* xlogmask)
 {
 	xtn_t* xtn = GET_XTN(moo);
-	moo_bch_t* xstr = (moo_bch_t*)str;
 	moo_bch_t* cm, * flt;
 	moo_bitmask_t logmask;
-	moo_oow_t i;
+	moo_oow_t i, len, pathlen;
 
-	cm = moo_find_bchar_in_bcstr(xstr, ',');
+	cm = moo_find_bchar_in_bcstr(str, ',');
 	if (cm) 
 	{
 		/* i duplicate this string for open() below as open() doesn't 
 		 * accept a length-bounded string */
-		xstr = moo_dupbchars(moo, str, moo_count_bcstr(str));
-		if (!xstr) 
-		{
-			moo_seterrbfmt (moo, MOO_ESYSERR, "out of memory in duplicating %hs", str);
-			return -1;
-		}
-
-		cm = moo_find_bchar_in_bcstr(xstr, ',');
-		*cm = '\0';
+		cm = moo_find_bchar_in_bcstr(str, ',');
+		pathlen = cm - str;
 
 		logmask = xtn->log.mask;
 		do
@@ -2867,11 +2869,11 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 			flt = cm + 1;
 
 			cm = moo_find_bchar_in_bcstr(flt, ',');
-			if (cm) *cm = '\0';
+			len = cm? (cm - flt): moo_count_bcstr(flt);
 
 			for (i = 0; i < MOO_COUNTOF(log_mask_table); i++)
 			{
-				if (moo_comp_bcstr(flt, log_mask_table[i].name) == 0) 
+				if (moo_comp_bchars_bcstr(flt, len, log_mask_table[i].name) == 0) 
 				{
 					logmask |= log_mask_table[i].mask;
 					break;
@@ -2880,13 +2882,11 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 
 			if (i >= MOO_COUNTOF(log_mask_table))
 			{
-				moo_seterrbfmt (moo, MOO_EINVAL, "unknown log option value %hs", flt);
-				if (str != xstr) moo_freemem (moo, xstr);
+				moo_seterrbfmt (moo, MOO_EINVAL, "unknown log option value %.*hs", len, flt);
 				return -1;
 			}
 		}
 		while (cm);
-
 
 		if (!(logmask & MOO_LOG_ALL_TYPES)) logmask |= MOO_LOG_ALL_TYPES;  /* no types specified. force to all types */
 		if (!(logmask & MOO_LOG_ALL_LEVELS)) logmask |= MOO_LOG_ALL_LEVELS;  /* no levels specified. force to all levels */
@@ -2894,6 +2894,80 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 	else
 	{
 		logmask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;
+		pathlen = moo_count_bcstr(str);
+	}
+
+	*xlogmask = logmask;
+	*xpathlen = pathlen;
+	return 0;
+}
+
+
+static int parse_logoptu (moo_t* moo, const moo_uch_t* str, moo_oow_t* xpathlen, moo_bitmask_t* xlogmask)
+{
+	xtn_t* xtn = GET_XTN(moo);
+	moo_uch_t* cm, * flt;
+	moo_bitmask_t logmask;
+	moo_oow_t i, len, pathlen;
+
+	cm = moo_find_uchar_in_ucstr(str, ',');
+	if (cm) 
+	{
+		cm = moo_find_uchar_in_ucstr(str, ',');
+		pathlen = cm - str;
+
+		logmask = xtn->log.mask;
+		do
+		{
+			flt = cm + 1;
+
+			cm = moo_find_uchar_in_ucstr(flt, ',');
+			len = cm? (cm - flt): moo_count_ucstr(flt);
+
+			for (i = 0; i < MOO_COUNTOF(log_mask_table); i++)
+			{
+				if (moo_comp_uchars_bcstr(flt, len, log_mask_table[i].name) == 0) 
+				{
+					logmask |= log_mask_table[i].mask;
+					break;
+				}
+			}
+
+			if (i >= MOO_COUNTOF(log_mask_table))
+			{
+				moo_seterrbfmt (moo, MOO_EINVAL, "unknown log option value %.*ls", len, flt);
+				return -1;
+			}
+		}
+		while (cm);
+
+		if (!(logmask & MOO_LOG_ALL_TYPES)) logmask |= MOO_LOG_ALL_TYPES;  /* no types specified. force to all types */
+		if (!(logmask & MOO_LOG_ALL_LEVELS)) logmask |= MOO_LOG_ALL_LEVELS;  /* no levels specified. force to all levels */
+	}
+	else
+	{
+		logmask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;
+		pathlen = moo_count_ucstr(str);
+	}
+
+	*xlogmask = logmask;
+	*xpathlen = pathlen;
+	return 0;
+}
+
+static int handle_logoptb (moo_t* moo, const moo_bch_t* str)
+{
+	xtn_t* xtn = GET_XTN(moo);
+	moo_bitmask_t logmask;
+	moo_oow_t pathlen;
+	moo_bch_t* xstr = (moo_bch_t*)str;
+
+	if (parse_logoptb(moo, str, &pathlen, &logmask) <= -1) return -1;
+
+	if (str[pathlen] != '\0')
+	{
+		xstr = moo_dupbchars(moo, str, pathlen);
+		if (!xstr) moo_seterrbfmt (moo, moo_geterrnum(moo), "out of memory in duplicating %hs", str);
 	}
 
 	xtn->log.fd = open(xstr, O_CREAT | O_WRONLY | O_APPEND , 0644);
@@ -2914,10 +2988,40 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 	return 0;
 }
 
-static int handle_dbgopt (moo_t* moo, const moo_bch_t* str)
+static int handle_logoptu (moo_t* moo, const moo_uch_t* str)
+{
+	xtn_t* xtn = GET_XTN(moo);
+	moo_bitmask_t logmask;
+	moo_oow_t pathlen;
+	moo_bch_t* xstr;
+
+	if (parse_logoptu(moo, str, &pathlen, &logmask) <= -1) return -1;
+
+	xstr = moo_duputobchars(moo, str, pathlen, MOO_NULL); /* moo_duputobchars() null-terminates xstr */
+	if (!xstr) moo_seterrbfmt (moo, moo_geterrnum(moo), "out of memory in duplicating %hs", str);
+
+	xtn->log.fd = open(xstr, O_CREAT | O_WRONLY | O_APPEND , 0644);
+	if (xtn->log.fd == -1)
+	{
+		moo_seterrbfmt (moo, MOO_ESYSERR, "cannot open log file %hs", xstr); /* TODO: use syserrb/u??? */
+		moo_freemem (moo, xstr);
+		return -1;
+	}
+
+	xtn->log.mask = logmask;
+	xtn->log.fd_flag |= LOGFD_OPENED_HERE;
+#if defined(HAVE_ISATTY)
+	if (isatty(xtn->log.fd)) xtn->log.fd_flag |= LOGFD_TTY;
+#endif
+
+	moo_freemem (moo, xstr);
+	return 0;
+}
+
+static int handle_dbgoptb (moo_t* moo, const moo_bch_t* str)
 {
 	const moo_bch_t* cm, * flt;
-	moo_oow_t len;
+	moo_oow_t len, i;
 	moo_bitmask_t trait, dbgopt = 0;
 
 	cm = str - 1;
@@ -2927,9 +3031,16 @@ static int handle_dbgopt (moo_t* moo, const moo_bch_t* str)
 
 		cm = moo_find_bchar_in_bcstr(flt, ',');
 		len = cm? (cm - flt): moo_count_bcstr(flt);
-		if (moo_comp_bchars_bcstr(flt, len, "gc") == 0)  dbgopt |= MOO_DEBUG_GC;
-		else if (moo_comp_bchars_bcstr(flt, len, "bigint") == 0)  dbgopt |= MOO_DEBUG_BIGINT;
-		else
+
+		for (i = 0; i < MOO_COUNTOF(dbg_mask_table); i++)
+		{
+			if (moo_comp_bchars_bcstr(flt, len, dbg_mask_table[i].name) == 0) 
+			{
+				dbgopt |= dbg_mask_table[i].mask;
+				break;
+			}
+		}
+		if (i >= MOO_COUNTOF(log_mask_table))
 		{
 			moo_seterrbfmt (moo, MOO_EINVAL, "unknown log option value %.*hs", len, flt);
 			return -1;
@@ -2944,6 +3055,73 @@ static int handle_dbgopt (moo_t* moo, const moo_bch_t* str)
 	return 0;
 }
 
+static int handle_dbgoptu (moo_t* moo, const moo_uch_t* str)
+{
+	const moo_uch_t* cm, * flt;
+	moo_oow_t len, i;
+	moo_bitmask_t trait, dbgopt = 0;
+
+	cm = str - 1;
+	do
+	{
+		flt = cm + 1;
+
+		cm = moo_find_uchar_in_ucstr(flt, ',');
+		len = cm? (cm - flt): moo_count_ucstr(flt);
+
+		for (i = 0; i < MOO_COUNTOF(dbg_mask_table); i++)
+		{
+			if (moo_comp_uchars_bcstr(flt, len, dbg_mask_table[i].name) == 0) 
+			{
+				dbgopt |= dbg_mask_table[i].mask;
+				break;
+			}
+		}
+		if (i >= MOO_COUNTOF(log_mask_table))
+		{
+			moo_seterrbfmt (moo, MOO_EINVAL, "unknown log option value %.*ls", len, flt);
+			return -1;
+		}
+	}
+	while (cm);
+
+	moo_getoption (moo, MOO_TRAIT, &trait);
+	trait |= dbgopt;
+	moo_setoption (moo, MOO_TRAIT, &trait);
+
+	return 0;
+}
+
+
+static int handle_cfg_options (moo_t* moo, const moo_cfgstd_t* cfg)
+{
+	switch (cfg->type)
+	{
+	#if defined(MOO_OOCH_IS_BCH)
+		case MOO_CFGSTD_OPT:
+			MOO_ASSERT (moo, &cfg->u.optb.log == &cfg->u.opt.log);
+			MOO_ASSERT (moo, &cfg->u.optb.dbg == &cfg->u.opt.dbg);
+	#endif
+		case MOO_CFGSTD_OPTB:
+			if ((cfg->u.optb.log && handle_logoptb(moo, cfg->u.optb.log) <= -1) ||
+			    (cfg->u.optb.dbg && handle_dbgoptb(moo, cfg->u.optb.dbg) <= -1)) return -1;
+			return 0;
+
+	#if defined(MOO_OOCH_IS_UCH)
+		case MOO_CFGSTD_OPT:
+			MOO_ASSERT (moo, &cfg->u.optu.log == &cfg->u.opt.log);
+			MOO_ASSERT (moo, &cfg->u.optu.dbg == &cfg->u.opt.dbg);
+	#endif
+		case MOO_CFGSTD_OPTU:
+			if ((cfg->u.optu.log && handle_logoptu(moo, cfg->u.optu.log) <= -1) ||
+			    (cfg->u.optu.dbg && handle_dbgoptu(moo, cfg->u.optu.dbg) <= -1)) return -1;
+			return 0;
+
+		default:
+			moo_seterrbfmt (moo, MOO_EINVAL, "unsupported configuration option type - %d", (int)cfg->type);
+			return -1;
+	}
+}
 /* ========================================================================= */
 
 
@@ -2995,7 +3173,7 @@ static void fini_moo (moo_t* moo)
 	unchain (moo);
 }
 
-moo_t* moo_openstd (moo_oow_t xtnsize, const moo_stdcfg_t* cfg, moo_errinf_t* errinfo)
+moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfgstd_t* cfg, moo_errinf_t* errinfo)
 {
 	moo_t* moo;
 	moo_vmprim_t vmprim;
@@ -3037,9 +3215,7 @@ moo_t* moo_openstd (moo_oow_t xtnsize, const moo_stdcfg_t* cfg, moo_errinf_t* er
 	evtcb.fini = fini_moo;
 	moo_regevtcb (moo, &evtcb);
 
-/* TODO: cfg->logopt, dbgopt => bch uch differentation */
-	if ((cfg->logopt && handle_logopt(moo, cfg->logopt) <= -1) ||
-	    (cfg->dbgopt && handle_dbgopt(moo, cfg->dbgopt) <= -1)) 
+	if (handle_cfg_options(moo, cfg) <= -1)
 	{
 		if (errinfo) moo_geterrinf (moo, errinfo);
 		moo_close (moo);
