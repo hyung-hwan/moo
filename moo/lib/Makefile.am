@@ -91,7 +91,7 @@ libmoo_la_SOURCES = \
 	utf8.c \
 	utl.c \
 	std.c 
-libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON)
+libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) $(CPPFLAGS_PFMOD)
 libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libmoo_la_LIBADD = $(LIBADD_LIB_COMMON)
 
@@ -122,7 +122,7 @@ moo_SOURCES = main.c
 if WIN32
 moo_SOURCES += poll-msw.c poll-msw.h
 endif
-moo_CPPFLAGS = $(CPPFLAGS_ALL_COMMON) $(CPPFLAGS_PFMOD)
+moo_CPPFLAGS = $(CPPFLAGS_ALL_COMMON) 
 moo_LDFLAGS = $(LDFLAGS_ALL_COMMON)
 moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo $(PTHREAD_LIBS)
 if WIN32
