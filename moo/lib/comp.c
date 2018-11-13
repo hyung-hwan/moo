@@ -9228,6 +9228,7 @@ static void pop_cunit (moo_t* moo)
 			ifce = (moo_cunit_interface_t*)cunit;
 
 			if (ifce->fqn.ptr) moo_freemem (moo, ifce->fqn.ptr);
+			clear_method_data (moo, &ifce->mth);
 			break;
 		}
 
