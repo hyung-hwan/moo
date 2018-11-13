@@ -3123,7 +3123,7 @@ static int clone_keyword (moo_t* moo, const moo_oocs_t* name, moo_oow_t* offset)
 static int add_method_name_fragment (moo_t* moo, moo_method_data_t* mth, const moo_oocs_t* name)
 {
 	/* method name fragments are concatenated without any delimiters */
-	return copy_string_to (moo, name, &mth->name, &mth->name_capa, 1, '\0');
+	return copy_string_to(moo, name, &mth->name, &mth->name_capa, 1, '\0');
 }
 
 static int method_exists (moo_t* moo, const moo_oocs_t* name)
