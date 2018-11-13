@@ -29,6 +29,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #if !defined(__DOS__) && defined(HAVE_PTHREAD) && defined(HAVE_STRERROR_R)
 #	define USE_THREAD
@@ -265,15 +266,18 @@ struct xtn_t
 
 	int vm_running;
 
-	moo_bitmask_t logmask;
-	int logfd;
-	int logfd_flag; /* bitwise OR'ed fo logfd_flag_t bits */
-
 	struct
 	{
-		moo_bch_t buf[4096];
-		moo_oow_t len;
-	} logbuf;
+		moo_bitmask_t mask;
+		int fd;
+		int fd_flag; /* bitwise OR'ed fo logfd_flag_t bits */
+
+		struct
+		{
+			moo_bch_t buf[4096];
+			moo_oow_t len;
+		} out;
+	} log;
 
 	const moo_iostd_t* in;
 
@@ -297,10 +301,13 @@ struct xtn_t
 	#endif
 
 	#if defined(USE_THREAD)
-	int p[2]; /* pipe for signaling */
-	pthread_t iothr;
-	int iothr_up;
-	int iothr_abort;
+	struct
+	{
+		int p[2]; /* pipe for signaling */
+		pthread_t thr;
+		int up;
+		int abort;
+	} iothr;
 	#endif
 
 	struct
@@ -684,23 +691,23 @@ static int write_log (moo_t* moo, int fd, const moo_bch_t* ptr, moo_oow_t len)
 
 	while (len > 0)
 	{
-		if (xtn->logbuf.len > 0)
+		if (xtn->log.out.len > 0)
 		{
 			moo_oow_t rcapa, cplen;
 
-			rcapa = MOO_COUNTOF(xtn->logbuf.buf) - xtn->logbuf.len;
+			rcapa = MOO_COUNTOF(xtn->log.out.buf) - xtn->log.out.len;
 			cplen = (len >= rcapa)? rcapa: len;
 
-			MOO_MEMCPY (&xtn->logbuf.buf[xtn->logbuf.len], ptr, cplen);
-			xtn->logbuf.len += cplen;
+			MOO_MEMCPY (&xtn->log.out.buf[xtn->log.out.len], ptr, cplen);
+			xtn->log.out.len += cplen;
 			ptr += cplen;
 			len -= cplen;
 
-			if (xtn->logbuf.len >= MOO_COUNTOF(xtn->logbuf.buf))
+			if (xtn->log.out.len >= MOO_COUNTOF(xtn->log.out.buf))
 			{
 				int n;
-				n = write_all(fd, xtn->logbuf.buf, xtn->logbuf.len);
-				xtn->logbuf.len = 0;
+				n = write_all(fd, xtn->log.out.buf, xtn->log.out.len);
+				xtn->log.out.len = 0;
 				if (n <= -1) return -1;
 			}
 		}
@@ -708,7 +715,7 @@ static int write_log (moo_t* moo, int fd, const moo_bch_t* ptr, moo_oow_t len)
 		{
 			moo_oow_t rcapa;
 
-			rcapa = MOO_COUNTOF(xtn->logbuf.buf);
+			rcapa = MOO_COUNTOF(xtn->log.out.buf);
 			if (len >= rcapa)
 			{
 				if (write_all(fd, ptr, rcapa) <= -1) return -1;
@@ -717,8 +724,8 @@ static int write_log (moo_t* moo, int fd, const moo_bch_t* ptr, moo_oow_t len)
 			}
 			else
 			{
-				MOO_MEMCPY (xtn->logbuf.buf, ptr, len);
-				xtn->logbuf.len += len;
+				MOO_MEMCPY (xtn->log.out.buf, ptr, len);
+				xtn->log.out.len += len;
 				ptr += len;
 				len -= len;
 				
@@ -732,10 +739,10 @@ static int write_log (moo_t* moo, int fd, const moo_bch_t* ptr, moo_oow_t len)
 static void flush_log (moo_t* moo, int fd)
 {
 	xtn_t* xtn = GET_XTN(moo);
-	if (xtn->logbuf.len > 0)
+	if (xtn->log.out.len > 0)
 	{
-		write_all (fd, xtn->logbuf.buf, xtn->logbuf.len);
-		xtn->logbuf.len = 0;
+		write_all (fd, xtn->log.out.buf, xtn->log.out.len);
+		xtn->log.out.len = 0;
 	}
 }
 
@@ -753,13 +760,13 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 	}
 	else
 	{
-		if (!(xtn->logmask & mask & ~MOO_LOG_ALL_LEVELS)) return;  /* check log types */
-		if (!(xtn->logmask & mask & ~MOO_LOG_ALL_TYPES)) return;  /* check log levels */
+		if (!(xtn->log.mask & mask & ~MOO_LOG_ALL_LEVELS)) return;  /* check log types */
+		if (!(xtn->log.mask & mask & ~MOO_LOG_ALL_TYPES)) return;  /* check log levels */
 
 		if (mask & MOO_LOG_STDOUT) logfd = 1;
 		else
 		{
-			logfd = xtn->logfd;
+			logfd = xtn->log.fd;
 			if (logfd <= -1) return;
 		}
 	}
@@ -816,7 +823,7 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		write_log (moo, logfd, ts, tslen);
 	}
 
-	if (logfd == xtn->logfd && (xtn->logfd_flag & LOGFD_TTY))
+	if (logfd == xtn->log.fd && (xtn->log.fd_flag & LOGFD_TTY))
 	{
 		if (mask & MOO_LOG_FATAL) write_log (moo, logfd, "\x1B[1;31m", 7);
 		else if (mask & MOO_LOG_ERROR) write_log (moo, logfd, "\x1B[1;32m", 7);
@@ -861,7 +868,7 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 	write_log (moo, logfd, msg, len);
 #endif
 
-	if (logfd == xtn->logfd && (xtn->logfd_flag & LOGFD_TTY))
+	if (logfd == xtn->log.fd && (xtn->log.fd_flag & LOGFD_TTY))
 	{
 		if (mask & (MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN)) write_log (moo, logfd, "\x1B[0m", 4);
 	}
@@ -1831,11 +1838,13 @@ static int vm_startup (moo_t* moo)
 		goto oops;
 	}
 
+	#if defined(FD_CLOEXEC)
 	flag = fcntl(xtn->ep, F_GETFD);
 	if (flag >= 0) fcntl (xtn->ep, F_SETFD, flag | FD_CLOEXEC);
+	#endif
 
 #elif defined(USE_EPOLL)
-	#if defined(EPOLL_CLOEXEC)
+	#if defined(HAVE_EPOLL_CREATE1) && defined(EPOLL_CLOEXEC)
 	xtn->ep = epoll_create1(EPOLL_CLOEXEC);
 	#else
 	xtn->ep = epoll_create(1024);
@@ -1847,11 +1856,13 @@ static int vm_startup (moo_t* moo)
 		goto oops;
 	}
 
-	#if defined(EPOLL_CLOEXEC)
+	#if defined(HAVE_EPOLL_CREATE1) && defined(EPOLL_CLOEXEC)
 	/* do nothing */
 	#else
+	#if defined(FD_CLOEXEC)
 	flag = fcntl(xtn->ep, F_GETFD);
 	if (flag >= 0) fcntl (xtn->ep, F_SETFD, flag | FD_CLOEXEC);
+	#endif
 	#endif
 
 #elif defined(USE_POLL)
@@ -1866,39 +1877,44 @@ static int vm_startup (moo_t* moo)
 #endif /* USE_DEVPOLL */
 
 #if defined(USE_THREAD)
-	if (pipe(xtn->p) == -1)
+	#if defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
+	if (pipe2(xtn->iothr.p, O_CLOEXEC | O_NONBLOCK) == -1)
+	#else
+	if (pipe(xtn->iothr.p) == -1)
+	#endif
 	{
-		moo_seterrwithsyserr (moo, 0, errno);
-		MOO_DEBUG1 (moo, "Cannot create pipes - %hs\n", strerror(errno));
+		moo_seterrbfmtwithsyserr (moo, 0, errno, "unable to create pipes for iothr management");
 		goto oops;
 	}
 	pcount = 2;
 
-	#if defined(O_CLOEXEC)
-	flag = fcntl (xtn->p[0], F_GETFD);
-	if (flag >= 0) fcntl (xtn->p[0], F_SETFD, flag | FD_CLOEXEC);
-	flag = fcntl (xtn->p[1], F_GETFD);
-	if (flag >= 0) fcntl (xtn->p[1], F_SETFD, flag | FD_CLOEXEC);
+	#if defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
+		/* do nothing */
+	#else
+	#if defined(FD_CLOEXEC)
+	flag = fcntl(xtn->iothr.p[0], F_GETFD);
+	if (flag >= 0) fcntl (xtn->iothr.p[0], F_SETFD, flag | FD_CLOEXEC);
+	flag = fcntl(xtn->iothr.p[1], F_GETFD);
+	if (flag >= 0) fcntl (xtn->iothr.p[1], F_SETFD, flag | FD_CLOEXEC);
 	#endif
-
 	#if defined(O_NONBLOCK)
-	flag = fcntl (xtn->p[0], F_GETFL);
-	if (flag >= 0) fcntl (xtn->p[0], F_SETFL, flag | O_NONBLOCK);
-	flag = fcntl (xtn->p[1], F_GETFL);
-	if (flag >= 0) fcntl (xtn->p[1], F_SETFL, flag | O_NONBLOCK);
+	flag = fcntl(xtn->iothr.p[0], F_GETFL);
+	if (flag >= 0) fcntl (xtn->iothr.p[0], F_SETFL, flag | O_NONBLOCK);
+	flag = fcntl(xtn->iothr.p[1], F_GETFL);
+	if (flag >= 0) fcntl (xtn->iothr.p[1], F_SETFL, flag | O_NONBLOCK);
+	#endif
 	#endif
 
-	if (_add_poll_fd(moo, xtn->p[0], XPOLLIN) <= -1) goto oops;
+	if (_add_poll_fd(moo, xtn->iothr.p[0], XPOLLIN) <= -1) goto oops;
 
 	pthread_mutex_init (&xtn->ev.mtx, MOO_NULL);
 	pthread_cond_init (&xtn->ev.cnd, MOO_NULL);
 	pthread_cond_init (&xtn->ev.cnd2, MOO_NULL);
 
-	xtn->iothr_abort = 0;
-	xtn->iothr_up = 0;
+	xtn->iothr.abort = 0;
+	xtn->iothr.up = 0;
 	/*pthread_create (&xtn->iothr, MOO_NULL, iothr_main, moo);*/
 
-	
 #endif /* USE_THREAD */
 
 	xtn->vm_running = 1;
@@ -1909,8 +1925,8 @@ oops:
 #if defined(USE_THREAD)
 	if (pcount > 0)
 	{
-		close (xtn->p[0]);
-		close (xtn->p[1]);
+		close (xtn->iothr.p[0]);
+		close (xtn->iothr.p[1]);
 	}
 #endif
 
@@ -1940,21 +1956,21 @@ static void vm_cleanup (moo_t* moo)
 #endif
 
 #if defined(USE_THREAD)
-	if (xtn->iothr_up)
+	if (xtn->iothr.up)
 	{
-		xtn->iothr_abort = 1;
-		write (xtn->p[1], "Q", 1);
+		xtn->iothr.abort = 1;
+		write (xtn->iothr.p[1], "Q", 1);
 		pthread_cond_signal (&xtn->ev.cnd);
-		pthread_join (xtn->iothr, MOO_NULL);
-		xtn->iothr_up = 0;
+		pthread_join (xtn->iothr.thr, MOO_NULL);
+		xtn->iothr.up = 0;
 	}
 	pthread_cond_destroy (&xtn->ev.cnd);
 	pthread_cond_destroy (&xtn->ev.cnd2);
 	pthread_mutex_destroy (&xtn->ev.mtx);
 
-	_del_poll_fd (moo, xtn->p[0]);
-	close (xtn->p[1]);
-	close (xtn->p[0]);
+	_del_poll_fd (moo, xtn->iothr.p[0]);
+	close (xtn->iothr.p[1]);
+	close (xtn->iothr.p[0]);
 #endif /* USE_THREAD */
 
 #if defined(USE_DEVPOLL) 
@@ -2128,7 +2144,7 @@ static void* iothr_main (void* arg)
 	xtn_t* xtn = GET_XTN(moo);
 
 	/*while (!moo->abort_req)*/
-	while (!xtn->iothr_abort)
+	while (!xtn->iothr.abort)
 	{
 		if (xtn->ev.len <= 0) /* TODO: no mutex needed for this check? */
 		{
@@ -2262,18 +2278,18 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	int n;
 
 	/* create a thread if mux wait is started at least once. */
-	if (!xtn->iothr_up) 
+	if (!xtn->iothr.up) 
 	{
-		xtn->iothr_up = 1;
-		if (pthread_create (&xtn->iothr, MOO_NULL, iothr_main, moo) != 0)
+		xtn->iothr.up = 1;
+		if (pthread_create (&xtn->iothr.thr, MOO_NULL, iothr_main, moo) != 0)
 		{
 			MOO_LOG2 (moo, MOO_LOG_WARN, "Warning: pthread_create failure - %d, %hs\n", errno, strerror(errno));
-			xtn->iothr_up = 0;
+			xtn->iothr.up = 0;
 /* TODO: switch to the non-threaded mode? */
 		}
 	}
 
-	if (xtn->iothr_abort) return;
+	if (xtn->iothr.abort) return;
 
 	if (xtn->ev.len <= 0) 
 	{
@@ -2316,23 +2332,23 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 			--n;
 
 		#if defined(USE_DEVPOLL)
-			if (xtn->ev.buf[n].fd == xtn->p[0])
+			if (xtn->ev.buf[n].fd == xtn->iothr.p[0])
 		#elif defined(USE_EPOLL)
 			/*if (xtn->ev.buf[n].data.ptr == (void*)MOO_TYPE_MAX(moo_oow_t))*/
-			if (xtn->ev.buf[n].data.fd == xtn->p[0])
+			if (xtn->ev.buf[n].data.fd == xtn->iothr.p[0])
 		#elif defined(USE_POLL)
-			if (xtn->ev.buf[n].fd == xtn->p[0])
+			if (xtn->ev.buf[n].fd == xtn->iothr.p[0])
 		#elif defined(USE_SELECT)
-			if (xtn->ev.buf[n].fd == xtn->p[0])
+			if (xtn->ev.buf[n].fd == xtn->iothr.p[0])
 		#else
 		#	error UNSUPPORTED
 		#endif
 			{
 				moo_uint8_t u8;
-				while (read(xtn->p[0], &u8, MOO_SIZEOF(u8)) > 0) 
+				while (read(xtn->iothr.p[0], &u8, MOO_SIZEOF(u8)) > 0) 
 				{
 					/* consume as much as possible */;
-					if (u8 == 'Q') xtn->iothr_abort = 1;
+					if (u8 == 'Q') xtn->iothr.abort = 1;
 				}
 			}
 			else if (muxwcb)
@@ -2721,7 +2737,7 @@ static void setup_tick (void)
 #elif defined(macintosh)
 
 	GetCurrentProcess (&g_psn);
-	memset (&g_tmtask, 0, MOO_SIZEOF(g_tmtask));
+	MOO_MEMSET (&g_tmtask, 0, MOO_SIZEOF(g_tmtask));
 	g_tmtask.tmAddr = NewTimerProc (timer_intr_handler);
 	InsXTime ((QElem*)&g_tmtask);
 	PrimeTime ((QElem*)&g_tmtask, TMTASK_DELAY);
@@ -2730,7 +2746,7 @@ static void setup_tick (void)
 	struct itimerval itv;
 	struct sigaction act;
 
-	memset (&act, 0, sizeof(act));
+	MOO_MEMSET (&act, 0, sizeof(act));
 	sigemptyset (&act.sa_mask);
 	act.sa_handler = arrange_process_switching;
 	act.sa_flags = SA_RESTART;
@@ -2845,7 +2861,7 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 		cm = moo_find_bchar_in_bcstr(xstr, ',');
 		*cm = '\0';
 
-		logmask = xtn->logmask;
+		logmask = xtn->log.mask;
 		do
 		{
 			flt = cm + 1;
@@ -2880,18 +2896,18 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 		logmask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;
 	}
 
-	xtn->logfd = open(xstr, O_CREAT | O_WRONLY | O_APPEND , 0644);
-	if (xtn->logfd == -1)
+	xtn->log.fd = open(xstr, O_CREAT | O_WRONLY | O_APPEND , 0644);
+	if (xtn->log.fd == -1)
 	{
 		moo_seterrbfmt (moo, MOO_ESYSERR, "cannot open log file %hs", xstr); /* TODO: use syserrb/u??? */
 		if (str != xstr) moo_freemem (moo, xstr);
 		return -1;
 	}
 
-	xtn->logmask = logmask;
-	xtn->logfd_flag |= LOGFD_OPENED_HERE;
+	xtn->log.mask = logmask;
+	xtn->log.fd_flag |= LOGFD_OPENED_HERE;
 #if defined(HAVE_ISATTY)
-	if (isatty(xtn->logfd)) xtn->logfd_flag |= LOGFD_TTY;
+	if (isatty(xtn->log.fd)) xtn->log.fd_flag |= LOGFD_TTY;
 #endif
 
 	if (str != xstr) moo_freemem (moo, xstr);
@@ -2934,16 +2950,16 @@ static int handle_dbgopt (moo_t* moo, const moo_bch_t* str)
 static MOO_INLINE void reset_log_to_default (xtn_t* xtn)
 {
 #if defined(ENABLE_LOG_INITIALLY)
-	xtn->logfd = 2;
-	xtn->logfd_flag = 0;
+	xtn->log.fd = 2;
+	xtn->log.fd_flag = 0;
 	#if defined(HAVE_ISATTY)
-	if (isatty(xtn->logfd)) xtn->logfd_flag |= LOGFD_TTY;
+	if (isatty(xtn->log.fd)) xtn->log.fd_flag |= LOGFD_TTY;
 	#endif
-	xtn->logmask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;
+	xtn->log.mask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;
 #else
-	xtn->logfd = -1;
-	xtn->logfd_flag = 0;
-	xtn->logmask = 0;
+	xtn->log.fd = -1;
+	xtn->log.fd_flag = 0;
+	xtn->log.mask = 0;
 #endif
 }
 
@@ -2974,8 +2990,8 @@ static MOO_INLINE void unchain (moo_t* moo)
 static void fini_moo (moo_t* moo)
 {
 	xtn_t* xtn = GET_XTN(moo);
-	if ((xtn->logfd_flag & LOGFD_OPENED_HERE) && xtn->logfd >= 0) close (xtn->logfd);
-	reset_log_to_default (moo);
+	if ((xtn->log.fd_flag & LOGFD_OPENED_HERE) && xtn->log.fd >= 0) close (xtn->log.fd);
+	reset_log_to_default (xtn);
 	unchain (moo);
 }
 
