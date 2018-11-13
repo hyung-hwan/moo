@@ -154,7 +154,7 @@ AC_CHECK_FUNCS([makecontext swapcontext getcontext setcontext])
 AC_CHECK_FUNCS([clock_nanosleep nanosleep usleep])
 AC_CHECK_FUNCS([localtime_r gmtime_r])
 AC_CHECK_FUNCS([snprintf _vsnprintf _vsnwprintf strerror_r])
-AC_CHECK_FUNCS([accept4])
+AC_CHECK_FUNCS([accept4 pipe2 epoll_create1])
 AC_CHECK_FUNCS([isatty mmap munmap])
 
 save_LIBS="$LIBS"
