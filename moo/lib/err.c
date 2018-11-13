@@ -232,6 +232,120 @@ void moo_seterrwithsyserr (moo_t* moo, int syserr_type, int syserr_code)
 	}
 }
 
+void moo_seterrbfmtwithsyserr (moo_t* moo, int syserr_type, int syserr_code, const moo_bch_t* fmt, ...)
+{
+	moo_errnum_t errnum;
+	moo_oow_t ucslen, bcslen;
+	va_list ap;
+
+	if (moo->shuterr) return;
+	
+	if (moo->vmprim.syserrstrb)
+	{
+		errnum = moo->vmprim.syserrstrb(moo, syserr_type, syserr_code, moo->errmsg.tmpbuf.bch, MOO_COUNTOF(moo->errmsg.tmpbuf.bch));
+		
+		va_start (ap, fmt);
+		moo_seterrbfmtv (moo, errnum, fmt, ap);
+		va_end (ap);
+
+		if (MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len >= 5)
+		{
+			moo->errmsg.buf[moo->errmsg.len++] = ' ';
+			moo->errmsg.buf[moo->errmsg.len++] = '-';
+			moo->errmsg.buf[moo->errmsg.len++] = ' ';
+
+		#if defined(MOO_OOCH_IS_BCH)
+			moo->errmsg.len += moo_copy_bcstr(moo->errmsg.buf[moo->errmsg.len], MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len, moo->errmsg.tmpbuf.bch);
+		#else
+			ucslen = MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len;
+			moo_convbtoucstr (moo, moo->errmsg.tmpbuf.bch, &bcslen, &moo->errmsg.buf[moo->errmsg.len], &ucslen);
+			moo->errmsg.len += ucslen;
+		#endif
+		}
+	}
+	else
+	{
+		MOO_ASSERT (moo, moo->vmprim.syserrstru != MOO_NULL);
+		errnum = moo->vmprim.syserrstru(moo, syserr_type, syserr_code, moo->errmsg.tmpbuf.uch, MOO_COUNTOF(moo->errmsg.tmpbuf.uch));
+
+		va_start (ap, fmt);
+		moo_seterrbfmtv (moo, errnum, fmt, ap);
+		va_end (ap);
+
+		if (MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len >= 5)
+		{
+			moo->errmsg.buf[moo->errmsg.len++] = ' ';
+			moo->errmsg.buf[moo->errmsg.len++] = '-';
+			moo->errmsg.buf[moo->errmsg.len++] = ' ';
+
+		#if defined(MOO_OOCH_IS_BCH)
+			bcslen = MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len;
+			moo_convutobcstr (moo, moo->errmsg.tmpbuf.uch, &ucslen, &moo->errmsg.buf[moo->errmsg.len], &bcslen);
+			moo->errmsg.len += bcslen;
+		#else
+			moo->errmsg.len += moo_copy_ucstr(moo->errmsg.buf[moo->errmsg.len], MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len, moo->errmsg.tmpbuf.uch);
+		#endif
+		}
+	}
+}
+
+void moo_seterrufmtwithsyserr (moo_t* moo, int syserr_type, int syserr_code, const moo_uch_t* fmt, ...)
+{
+	moo_errnum_t errnum;
+	moo_oow_t ucslen, bcslen;
+	va_list ap;
+
+	if (moo->shuterr) return;
+	
+	if (moo->vmprim.syserrstrb)
+	{
+		errnum = moo->vmprim.syserrstrb(moo, syserr_type, syserr_code, moo->errmsg.tmpbuf.bch, MOO_COUNTOF(moo->errmsg.tmpbuf.bch));
+
+		va_start (ap, fmt);
+		moo_seterrufmtv (moo, errnum, fmt, ap);
+		va_end (ap);
+
+		if (MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len >= 5)
+		{
+			moo->errmsg.buf[moo->errmsg.len++] = ' ';
+			moo->errmsg.buf[moo->errmsg.len++] = '-';
+			moo->errmsg.buf[moo->errmsg.len++] = ' ';
+
+		#if defined(MOO_OOCH_IS_BCH)
+			moo->errmsg.len += moo_copy_bcstr(moo->errmsg.buf[moo->errmsg.len], MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len, moo->errmsg.tmpbuf.bch);
+		#else
+			ucslen = MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len;
+			moo_convbtoucstr (moo, moo->errmsg.tmpbuf.bch, &bcslen, &moo->errmsg.buf[moo->errmsg.len], &ucslen);
+			moo->errmsg.len += ucslen;
+		#endif
+		}
+	}
+	else
+	{
+		MOO_ASSERT (moo, moo->vmprim.syserrstru != MOO_NULL);
+		errnum = moo->vmprim.syserrstru(moo, syserr_type, syserr_code, moo->errmsg.tmpbuf.uch, MOO_COUNTOF(moo->errmsg.tmpbuf.uch));
+
+		va_start (ap, fmt);
+		moo_seterrufmtv (moo, errnum, fmt, ap);
+		va_end (ap);
+
+		if (MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len >= 5)
+		{
+			moo->errmsg.buf[moo->errmsg.len++] = ' ';
+			moo->errmsg.buf[moo->errmsg.len++] = '-';
+			moo->errmsg.buf[moo->errmsg.len++] = ' ';
+
+		#if defined(MOO_OOCH_IS_BCH)
+			bcslen = MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len;
+			moo_convutobcstr (moo, moo->errmsg.tmpbuf.uch, &ucslen, &moo->errmsg.buf[moo->errmsg.len], &bcslen);
+			moo->errmsg.len += bcslen;
+		#else
+			moo->errmsg.len += moo_copy_ucstr(moo->errmsg.buf[moo->errmsg.len], MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len, moo->errmsg.tmpbuf.uch);
+		#endif
+		}
+	}
+}
+
 #if defined(MOO_INCLUDE_COMPILER)
 
 void moo_setsynerrbfmt (moo_t* moo, moo_synerrnum_t num, const moo_ioloc_t* loc, const moo_oocs_t* tgt, const moo_bch_t* msgfmt, ...)

@@ -9268,18 +9268,18 @@ static MOO_INLINE int _compile (moo_t* moo, moo_ioimpl_t io)
 
 	if (!moo->c)
 	{
-		moo_cb_t cb, * cbp;
+		moo_evtcb_t cb, * cbp;
 
 		MOO_MEMSET (&cb, 0, MOO_SIZEOF(cb));
 		cb.gc = gc_compiler;
 		cb.fini = fini_compiler;
-		cbp = moo_regcb (moo, &cb);
+		cbp = moo_regevtcb (moo, &cb);
 		if (!cbp) return -1;
 
 		moo->c = moo_callocmem (moo, MOO_SIZEOF(*moo->c));
 		if (!moo->c) 
 		{
-			moo_deregcb (moo, cbp);
+			moo_deregevtcb (moo, cbp);
 			return -1;
 		}
 

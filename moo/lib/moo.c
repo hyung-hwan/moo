@@ -183,7 +183,7 @@ static moo_rbt_walk_t unload_module (moo_rbt_t* rbt, moo_rbt_pair_t* pair, void*
 
 void moo_fini (moo_t* moo)
 {
-	moo_cb_t* cb;
+	moo_evtcb_t* cb;
 	moo_oow_t i;
 
 	moo_rbt_walk (&moo->modtab, unload_module, moo); /* unload all modules */
@@ -196,7 +196,7 @@ void moo_fini (moo_t* moo)
 		vmprim_log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
 	}
 
-	for (cb = moo->cblist; cb; cb = cb->next)
+	for (cb = moo->evtcb_list; cb; cb = cb->next)
 	{
 		/* execute callbacks for finalization */
 		if (cb->fini) cb->fini (moo);
@@ -213,7 +213,7 @@ void moo_fini (moo_t* moo)
 	}
 
 	/* deregister all callbacks */
-	while (moo->cblist) moo_deregcb (moo, moo->cblist);
+	while (moo->evtcb_list) moo_deregevtcb (moo, moo->evtcb_list);
 
 	/* free up internal data structures. this is done after all callbacks
 	 * are completed */
@@ -393,27 +393,27 @@ int moo_getoption (moo_t* moo, moo_option_t id, void* value)
 	return -1;
 }
 
-moo_cb_t* moo_regcb (moo_t* moo, moo_cb_t* tmpl)
+moo_evtcb_t* moo_regevtcb (moo_t* moo, moo_evtcb_t* tmpl)
 {
-	moo_cb_t* actual;
+	moo_evtcb_t* actual;
 
-	actual = (moo_cb_t*)moo_allocmem(moo, MOO_SIZEOF(*actual));
+	actual = (moo_evtcb_t*)moo_allocmem(moo, MOO_SIZEOF(*actual));
 	if (!actual) return MOO_NULL;
 
 	*actual = *tmpl;
-	actual->next = moo->cblist;
+	actual->next = moo->evtcb_list;
 	actual->prev = MOO_NULL;
-	moo->cblist = actual;
+	moo->evtcb_list = actual;
 
 	return actual;
 }
 
-void moo_deregcb (moo_t* moo, moo_cb_t* cb)
+void moo_deregevtcb (moo_t* moo, moo_evtcb_t* cb)
 {
-	if (cb == moo->cblist)
+	if (cb == moo->evtcb_list)
 	{
-		moo->cblist = moo->cblist->next;
-		if (moo->cblist) moo->cblist->prev = MOO_NULL;
+		moo->evtcb_list = moo->evtcb_list->next;
+		if (moo->evtcb_list) moo->evtcb_list->prev = MOO_NULL;
 	}
 	else
 	{

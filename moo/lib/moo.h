@@ -1202,15 +1202,15 @@ typedef struct moo_vmprim_t moo_vmprim_t;
  * ========================================================================= */
 typedef void (*moo_cbimpl_t) (moo_t* moo);
 
-typedef struct moo_cb_t moo_cb_t;
-struct moo_cb_t
+typedef struct moo_evtcb_t moo_evtcb_t;
+struct moo_evtcb_t
 {
 	moo_cbimpl_t gc;
 	moo_cbimpl_t fini;
 
 	/* private below */
-	moo_cb_t*     prev;
-	moo_cb_t*     next;
+	moo_evtcb_t*     prev;
+	moo_evtcb_t*     next;
 };
 
 
@@ -1363,6 +1363,7 @@ typedef struct moo_compiler_t moo_compiler_t;
 #endif
 
 #define MOO_ERRMSG_CAPA (2048)
+#define MOO_IOBUF_CAPA (2048)
 
 enum moo_sbuf_id_t
 {
@@ -1415,7 +1416,7 @@ struct moo_t
 
 	moo_vmprim_t vmprim;
 
-	moo_cb_t* cblist;
+	moo_evtcb_t* evtcb_list;
 	moo_rbt_t modtab; /* primitive module table */
 
 	struct
@@ -1706,7 +1707,7 @@ struct moo_ioarg_t
 	/**
 	 * [OUT] place data here 
 	 */
-	moo_ooch_t buf[2048];
+	moo_ooch_t buf[MOO_IOBUF_CAPA];
 
 	/**
 	 * [IN] points to the data of the includer. It is #MOO_NULL for the
@@ -1895,6 +1896,22 @@ MOO_EXPORT void moo_seterrufmt (
 	...
 );
 
+MOO_EXPORT void moo_seterrbfmtwithsyserr (
+	moo_t*           moo,
+	int              syserr_type,
+	int              syserr_code,
+	const moo_bch_t* fmt,
+	...
+);
+
+MOO_EXPORT void moo_seterrufmtwithsyserr (
+	moo_t*           moo,
+	int              syserr_type,
+	int              syserr_code,
+	const moo_uch_t* fmt,
+	...
+);
+
 MOO_EXPORT const moo_ooch_t* moo_geterrstr (
 	moo_t* moo
 );
@@ -1937,14 +1954,14 @@ MOO_EXPORT int moo_setoption (
 );
 
 
-MOO_EXPORT moo_cb_t* moo_regcb (
+MOO_EXPORT moo_evtcb_t* moo_regevtcb (
 	moo_t*    moo,
-	moo_cb_t* tmpl
+	moo_evtcb_t* tmpl
 );
 
-MOO_EXPORT void moo_deregcb (
+MOO_EXPORT void moo_deregevtcb (
 	moo_t*    moo,
-	moo_cb_t* cb
+	moo_evtcb_t* cb
 );
 
 /**

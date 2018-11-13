@@ -235,7 +235,7 @@
 typedef struct bb_t bb_t;
 struct bb_t
 {
-	char buf[1024];
+	char buf[MOO_IOBUF_CAPA];
 	moo_oow_t pos;
 	moo_oow_t len;
 
@@ -251,10 +251,10 @@ struct select_fd_t
 };
 #endif
 
-enum logfd_trait_t
+enum logfd_flag_t
 {
 	LOGFD_TTY = (1 << 0),
-	LOGFD_OPENED = (1 << 1)
+	LOGFD_OPENED_HERE = (1 << 1)
 };
 
 typedef struct xtn_t xtn_t;
@@ -267,7 +267,7 @@ struct xtn_t
 
 	moo_bitmask_t logmask;
 	int logfd;
-	int logfd_trait; /* bitwise OR'ed fo logfd_trait_t bits */
+	int logfd_flag; /* bitwise OR'ed fo logfd_flag_t bits */
 
 	struct
 	{
@@ -275,8 +275,7 @@ struct xtn_t
 		moo_oow_t len;
 	} logbuf;
 
-
-	const moo_iostd_t* instd;
+	const moo_iostd_t* in;
 
 	#if defined(_WIN32)
 	HANDLE waitable_timer;
@@ -439,32 +438,50 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 	else
 	{
 		/* main stream */
-		moo_oow_t pathlen;
+		moo_oow_t ucslen, bcslen;
 
-		switch (xtn->instd->type)
+		switch (xtn->in->type)
 		{
-			//case MOO_IOSTD_FILE: // TODO:
+		#if defined(MOO_OOCH_IS_BCH)
+			case MOO_IOSTD_FILE:
+				MOO_ASSERT (moo, &xtn->in->u.fileb.path == &xtn->in->u.file.path);
+		#endif
 			case MOO_IOSTD_FILEB:
-				pathlen = moo_count_bcstr(xtn->instd->u.fileb.path);
+				bcslen = moo_count_bcstr(xtn->in->u.fileb.path);
 
-				bb = moo_callocmem(moo, MOO_SIZEOF(*bb) + (MOO_SIZEOF(moo_bch_t) * (pathlen + 1)));
+				bb = moo_callocmem(moo, MOO_SIZEOF(*bb) + (MOO_SIZEOF(moo_bch_t) * (bcslen + 1)));
 				if (!bb) goto oops;
 
 				bb->fn = (moo_bch_t*)(bb + 1);
-				moo_copy_bcstr (bb->fn, pathlen + 1, xtn->instd->u.fileb.path);
+				moo_copy_bcstr (bb->fn, bcslen + 1, xtn->in->u.fileb.path);
 				break;
 
+		#if defined(MOO_OOCH_IS_UCH)
 			case MOO_IOSTD_FILE:
+				MOO_ASSERT (moo, &xtn->in->u.fileu.path == &xtn->in->u.file.path);
+		#endif
 			case MOO_IOSTD_FILEU:
-				moo_seterrbfmt (moo, MOO_ENOIMPL, "unimplemented standard input type fileu\n");
-				goto oops;
+				if (moo_convutobcstr(moo, xtn->in->u.fileu.path, &ucslen, MOO_NULL, &bcslen) <= -1) 
+				{
+					moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to convert encoding of path %ls", xtn->in->u.fileu.path);
+					goto oops;
+				}
+
+				bb = moo_callocmem(moo, MOO_SIZEOF(*bb) + (MOO_SIZEOF(moo_bch_t) * (bcslen + 1)));
+				if (!bb) goto oops;
+
+				bb->fn = (moo_bch_t*)(bb + 1);
+				bcslen += 1;
+				moo_convutobcstr (moo, xtn->in->u.fileu.path, &ucslen, bb->fn, &bcslen);
+				break;
 
 			default:
-				moo_seterrbfmt (moo, MOO_EINVAL, "unsupported standard input type - %d", (int)xtn->instd->type);
+				moo_seterrbfmt (moo, MOO_EINVAL, "unsupported standard input type - %d", (int)xtn->in->type);
 				goto oops;
 		}
 	}
 
+/* TODO: support _wfopen or the like */
 #if defined(_WIN32) || defined(__OS2__) || defined(__DOS__)
 	bb->fp = fopen(bb->fn, "rb");
 #else
@@ -472,7 +489,7 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 #endif
 	if (!bb->fp)
 	{
-		moo_seterrbfmt (moo, MOO_EIOERR, "unable to open file %hs", bb->fn);
+		moo_seterrbfmtwithsyserr (moo, 0, errno, "unable to open file %hs", bb->fn);
 		goto oops;
 	}
 
@@ -490,7 +507,6 @@ oops:
 
 static MOO_INLINE moo_ooi_t close_input (moo_t* moo, moo_ioarg_t* arg)
 {
-	/*xtn_t* xtn = GET_XTN(moo);*/
 	bb_t* bb;
 
 	bb = (bb_t*)arg->handle;
@@ -505,7 +521,6 @@ static MOO_INLINE moo_ooi_t close_input (moo_t* moo, moo_ioarg_t* arg)
 
 static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 {
-	/*xtn_t* xtn = GET_XTN(moo);*/
 	bb_t* bb;
 	moo_oow_t bcslen, ucslen, remlen;
 	int x;
@@ -519,7 +534,7 @@ static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 		{
 			if (ferror((FILE*)bb->fp))
 			{
-				moo_seterrnum (moo, MOO_EIOERR);
+				moo_seterrbfmtwithsyserr (moo, 0, errno, "unable to read file %hs", bb->fn);
 				return -1;
 			}
 			break;
@@ -801,7 +816,7 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		write_log (moo, logfd, ts, tslen);
 	}
 
-	if (logfd == xtn->logfd && (xtn->logfd_trait & LOGFD_TTY))
+	if (logfd == xtn->logfd && (xtn->logfd_flag & LOGFD_TTY))
 	{
 		if (mask & MOO_LOG_FATAL) write_log (moo, logfd, "\x1B[1;31m", 7);
 		else if (mask & MOO_LOG_ERROR) write_log (moo, logfd, "\x1B[1;32m", 7);
@@ -846,7 +861,7 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 	write_log (moo, logfd, msg, len);
 #endif
 
-	if (logfd == xtn->logfd && (xtn->logfd_trait & LOGFD_TTY))
+	if (logfd == xtn->logfd && (xtn->logfd_flag & LOGFD_TTY))
 	{
 		if (mask & (MOO_LOG_FATAL | MOO_LOG_ERROR | MOO_LOG_WARN)) write_log (moo, logfd, "\x1B[0m", 4);
 	}
@@ -1370,13 +1385,13 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 			}
 			else 
 			{
-				MOO_DEBUG3 (moo, "Opened(ext) PFMOD %hs[%js] handle %p\n", &bufptr[len], name, handle);
+				MOO_DEBUG3 (moo, "OPENED_HERE(ext) PFMOD %hs[%js] handle %p\n", &bufptr[len], name, handle);
 			}
 		}
 		else
 		{
 		pfmod_open_ok:
-			MOO_DEBUG3 (moo, "Opened(ext) PFMOD %hs[%js] handle %p\n", &bufptr[dlen], name, handle);
+			MOO_DEBUG3 (moo, "OPENED_HERE(ext) PFMOD %hs[%js] handle %p\n", &bufptr[dlen], name, handle);
 		}
 	}
 	else
@@ -1399,7 +1414,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 				MOO_DEBUG2 (moo, "Unable to open DL %hs - %hs\n", bufptr, dl_errstr);
 				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open DL %js - %hs", name, dl_errstr);
 			}
-			else MOO_DEBUG2 (moo, "Opened DL %hs handle %p\n", bufptr, handle);
+			else MOO_DEBUG2 (moo, "OPENED_HERE DL %hs handle %p\n", bufptr, handle);
 		}
 		else
 		{
@@ -1411,7 +1426,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 				MOO_DEBUG2 (moo, "Unable to open(ext) DL %hs - %hs\n", bufptr, dl_errstr);
 				moo_seterrbfmt (moo, MOO_ESYSERR, "unable to open(ext) DL %js - %hs", name, dl_errstr);
 			}
-			else MOO_DEBUG2 (moo, "Opened(ext) DL %hs handle %p\n", bufptr, handle);
+			else MOO_DEBUG2 (moo, "OPENED_HERE(ext) DL %hs handle %p\n", bufptr, handle);
 		}
 	}
 
@@ -2874,9 +2889,9 @@ static int handle_logopt (moo_t* moo, const moo_bch_t* str)
 	}
 
 	xtn->logmask = logmask;
-	xtn->logfd_trait |= LOGFD_OPENED;
+	xtn->logfd_flag |= LOGFD_OPENED_HERE;
 #if defined(HAVE_ISATTY)
-	if (isatty(xtn->logfd)) xtn->logfd_trait |= LOGFD_TTY;
+	if (isatty(xtn->logfd)) xtn->logfd_flag |= LOGFD_TTY;
 #endif
 
 	if (str != xstr) moo_freemem (moo, xstr);
@@ -2916,35 +2931,59 @@ static int handle_dbgopt (moo_t* moo, const moo_bch_t* str)
 /* ========================================================================= */
 
 
-static void fini_moo (moo_t* moo)
+static MOO_INLINE void reset_log_to_default (xtn_t* xtn)
+{
+#if defined(ENABLE_LOG_INITIALLY)
+	xtn->logfd = 2;
+	xtn->logfd_flag = 0;
+	#if defined(HAVE_ISATTY)
+	if (isatty(xtn->logfd)) xtn->logfd_flag |= LOGFD_TTY;
+	#endif
+	xtn->logmask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;
+#else
+	xtn->logfd = -1;
+	xtn->logfd_flag = 0;
+	xtn->logmask = 0;
+#endif
+}
+
+static MOO_INLINE void chain (moo_t* moo)
 {
 	xtn_t* xtn = GET_XTN(moo);
-	if ((xtn->logfd_trait & LOGFD_OPENED) && xtn->logfd >= 0)
-	{
-		close (xtn->logfd);
 
-		/* back to the default */
-		xtn->logfd = -2;
-		xtn->logfd_trait = 0;
-	#if defined(HAVE_ISATTY)
-		if (isatty(xtn->logfd)) xtn->logfd_trait |= LOGFD_TTY;
-	#endif
-	}
+	/* TODO: make this atomic */
+	if (g_moo) GET_XTN(g_moo)->prev = moo;
+	else g_moo = moo;
+	xtn->next = g_moo;
+	/* TODO: make this atomic */
+}
 
-/* TODO: make this atomic */
+static MOO_INLINE void unchain (moo_t* moo)
+{
+	xtn_t* xtn = GET_XTN(moo);
+
+	/* TODO: make this atomic */
 	if (xtn->prev) GET_XTN(xtn->prev)->next = xtn->next;
 	else g_moo = xtn->next;
 	if (xtn->next) GET_XTN(xtn->next)->prev = xtn->prev;
-/* TODO: make this atomic */
+	/* TODO: make this atomic */
 	xtn->prev = MOO_NULL;
 	xtn->prev = MOO_NULL;
 }
 
-moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfg_t* cfg, moo_errinf_t* errinfo)
+static void fini_moo (moo_t* moo)
+{
+	xtn_t* xtn = GET_XTN(moo);
+	if ((xtn->logfd_flag & LOGFD_OPENED_HERE) && xtn->logfd >= 0) close (xtn->logfd);
+	reset_log_to_default (moo);
+	unchain (moo);
+}
+
+moo_t* moo_openstd (moo_oow_t xtnsize, const moo_stdcfg_t* cfg, moo_errinf_t* errinfo)
 {
 	moo_t* moo;
 	moo_vmprim_t vmprim;
-	moo_cb_t cb;
+	moo_evtcb_t evtcb;
 	xtn_t* xtn;
 
 	MOO_MEMSET(&vmprim, 0, MOO_SIZEOF(vmprim));
@@ -2975,16 +3014,12 @@ moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfg_t* cfg, moo_errinf_t* errin
 
 	xtn = GET_XTN(moo);
 
-	/* initial log goes to stderr */
-	xtn->logfd = -2;
-	xtn->logfd_trait = 0;
-#if defined(HAVE_ISATTY)
-	if (isatty(xtn->logfd)) xtn->logfd_trait |= LOGFD_TTY;
-#endif
+	chain (moo); /* call chain() before moo_regevtcb() as fini_moo() calls unchain() */
+	reset_log_to_default (xtn);
 
-	MOO_MEMSET (&cb, 0, MOO_SIZEOF(cb));
-	cb.fini = fini_moo;
-	moo_regcb (moo, &cb);
+	MOO_MEMSET (&evtcb, 0, MOO_SIZEOF(evtcb));
+	evtcb.fini = fini_moo;
+	moo_regevtcb (moo, &evtcb);
 
 /* TODO: cfg->logopt, dbgopt => bch uch differentation */
 	if ((cfg->logopt && handle_logopt(moo, cfg->logopt) <= -1) ||
@@ -2995,12 +3030,6 @@ moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfg_t* cfg, moo_errinf_t* errin
 		return MOO_NULL;
 	}
 
-/* TODO: make this atomic */
-	if (g_moo) GET_XTN(g_moo)->prev = moo;
-	else g_moo = moo;
-	xtn->next = g_moo;
-/* TODO: make this atomic */
-
 	return moo;
 }
 
@@ -3009,7 +3038,7 @@ void* moo_getxtnstd (moo_t* moo)
 	return (void*)((moo_uint8_t*)GET_XTN(moo) + MOO_SIZEOF(xtn_t));
 }
 
-int moo_compilestd(moo_t* moo, const moo_iostd_t* instd, moo_oow_t count)
+int moo_compilestd(moo_t* moo, const moo_iostd_t* in, moo_oow_t count)
 {
 	xtn_t* xtn;
 	moo_oow_t i;
@@ -3017,7 +3046,7 @@ int moo_compilestd(moo_t* moo, const moo_iostd_t* instd, moo_oow_t count)
 	xtn = GET_XTN(moo);
 	for (i = 0; i < count; i++)
 	{
-		xtn->instd = &instd[i];
+		xtn->in = &in[i];
 		if (moo_compile(moo, input_handler) <= -1) return -1;
 	}
 

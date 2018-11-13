@@ -3,16 +3,16 @@
 
 #include <moo.h>
 
-enum moo_cfg_type_t
+enum moo_stdcfg_type_t
 {
-	MOO_CFG_TYPE_B,
-	MOO_CFG_TYPE_U
+	moo_stdcfg_tYPE_B,
+	moo_stdcfg_tYPE_U
 };
-typedef enum moo_cfg_type_t moo_cfg_type_t;
+typedef enum moo_stdcfg_type_t moo_stdcfg_type_t;
 
-struct moo_cfg_t
+struct moo_stdcfg_t
 {
-	moo_cfg_type_t type;
+	moo_stdcfg_type_t type;
 
 	moo_oow_t memsize;
 	int large_pages;
@@ -20,7 +20,7 @@ struct moo_cfg_t
 	const void* logopt;
 	const void* dbgopt;
 };
-typedef struct moo_cfg_t moo_cfg_t;
+typedef struct moo_stdcfg_t moo_stdcfg_t;
 
 
 enum moo_iostd_type_t
@@ -59,9 +59,9 @@ extern "C" {
 #endif
 
 MOO_EXPORT moo_t* moo_openstd (
-	moo_oow_t        xtnsize, 
-	const moo_cfg_t* cfg,
-	moo_errinf_t*    errinfo
+	moo_oow_t           xtnsize, 
+	const moo_stdcfg_t* cfg,
+	moo_errinf_t*       errinfo
 );
 
 MOO_EXPORT void* moo_getxtnstd (
@@ -70,7 +70,7 @@ MOO_EXPORT void* moo_getxtnstd (
 
 MOO_EXPORT int moo_compilestd(
 	moo_t*             moo,
-	const moo_iostd_t* instd,
+	const moo_iostd_t* in,
 	moo_oow_t          count
 );
 #if defined(__cplusplus)

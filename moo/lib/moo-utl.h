@@ -394,7 +394,7 @@ MOO_EXPORT int moo_conv_ucs_to_bcs_with_cmgr (
 	moo_bch_t*       bcs,
 	moo_oow_t*       bcslen,
 	moo_cmgr_t*      cmgr
-);	
+);
 
 MOO_EXPORT int moo_conv_uchars_to_bchars_with_cmgr (
 	const moo_uch_t* ucs,

@@ -860,7 +860,7 @@ void moo_gc (moo_t* moo)
 	moo_heap_t* tmp;
 	moo_oop_t old_nil;
 	moo_oow_t i;
-	moo_cb_t* cb;
+	moo_evtcb_t* cb;
 	moo_oow_t gcfin_count;
 
 	if (moo->active_context)
@@ -944,7 +944,7 @@ void moo_gc (moo_t* moo)
 
 	moo_rbt_walk (&moo->modtab, call_module_gc, moo); 
 
-	for (cb = moo->cblist; cb; cb = cb->next)
+	for (cb = moo->evtcb_list; cb; cb = cb->next)
 	{
 		if (cb->gc) cb->gc (moo);
 	}

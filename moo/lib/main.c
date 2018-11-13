@@ -406,7 +406,7 @@ int main (int argc, char* argv[])
 	static moo_ooch_t str_main[] = { 'm', 'a', 'i', 'n' };
 
 	moo_t* moo;
-	moo_cfg_t cfg;
+	moo_stdcfg_t cfg;
 	moo_errinf_t errinf;
 
 	moo_oocs_t objname;
@@ -542,12 +542,23 @@ int main (int argc, char* argv[])
 
 	for (i = opt.ind; i < argc; i++)
 	{
-		moo_iostd_t instd;
-		instd.type = MOO_IOSTD_FILEB;
-		instd.u.fileb.path = argv[i];
+		moo_iostd_t in;
+
+#if 0
+		in.type = MOO_IOSTD_FILEB;
+		in.u.fileb.path = argv[i];
+#else
+		moo_uch_t tmp[1000];
+		moo_oow_t bcslen, ucslen;
+		
+		ucslen = MOO_COUNTOF(tmp);
+		moo_conv_utf8_to_ucstr(argv[i], &bcslen, tmp, &ucslen);
+		in.type = MOO_IOSTD_FILEU;
+		in.u.fileu.path = tmp;
+#endif
 
 	/*compile:*/
-		if (moo_compilestd(moo, &instd, 1) <= -1)
+		if (moo_compilestd(moo, &in, 1) <= -1)
 		{
 			if (moo->errnum == MOO_ESYNERR)
 			{
