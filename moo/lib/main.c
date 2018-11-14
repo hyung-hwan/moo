@@ -418,6 +418,10 @@ int main (int argc, char* argv[])
 		{ ":log",         'l' },
 		{ ":memsize",     'm' },
 		{ "large-pages",  '\0' },
+	#if defined(_WIN32)
+		{ "utf8",         '\0' },
+		{ "utf16",        '\0' },
+	#endif
 	#if defined(MOO_BUILD_DEBUG)
 		{ ":debug",       '\0' }, /* NOTE: there is no short option for --debug */
 	#endif
@@ -437,23 +441,22 @@ int main (int argc, char* argv[])
 	print_usage:
 		fprintf (stderr, "Usage: %s [options] filename ...\n", argv[0]);
 		fprintf (stderr, " --log filename[,logopts]\n");
-		
+		fprintf (stderr, " --memsize number\n");
+		fprintf (stderr, " --large-pages\n");
+	#if defined(_WIN32)
+		fprintf (stderr, " --utf16\n");
+		fprintf (stderr, " --utf8\n");
+	#endif
 	#if defined(MOO_BUILD_DEBUG)
 		fprintf (stderr, " --debug dbgopts\n");
 	#endif
-		fprintf (stderr, " --memsize number\n");
-		fprintf (stderr, " --large-pages\n");
 		return -1;
 	}
 
 	memset (&cfg, 0, MOO_SIZEOF(cfg));
 	cfg.type = MOO_CFGSTD_OPTB;
 	cfg.memsize = MIN_MEMSIZE;
-#if defined(_WIN32) && (MOO_UCH_SIZE >= 4)
-	cfg.cmgr = moo_get_utf16_cmgr();
-#else
 	cfg.cmgr = moo_get_utf8_cmgr();
-#endif
 
 	while ((c = moo_getbopt(argc, argv, &opt)) != MOO_BCI_EOF)
 	{
@@ -474,6 +477,18 @@ int main (int argc, char* argv[])
 					cfg.large_pages = 1;
 					break;
 				}
+			#if defined(_WIN32)
+				else if (moo_comp_bcstr(opt.lngopt, "utf8") == 0)
+				{
+					cfg.cmgr = moo_get_utf8_cmgr();
+					break;
+				}
+				else if (moo_comp_bcstr(opt.lngopt, "utf16") == 0)
+				{
+					cfg.cmgr = moo_get_utf16_cmgr();
+					break;
+				}
+			#endif
 			#if defined(MOO_BUILD_DEBUG)
 				else if (moo_comp_bcstr(opt.lngopt, "debug") == 0)
 				{
@@ -481,7 +496,6 @@ int main (int argc, char* argv[])
 					break;
 				}
 			#endif
-
 				goto print_usage;
 
 			case ':':
