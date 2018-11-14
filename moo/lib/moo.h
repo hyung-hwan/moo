@@ -119,10 +119,8 @@ typedef enum moo_option_dflval_t moo_option_dflval_t;
 
 enum moo_trait_t
 {
-#if defined(MOO_BUILD_DEBUG)
 	MOO_DEBUG_GC     = (1u << 0),
 	MOO_DEBUG_BIGINT = (1u << 1),
-#endif
 
 	/* perform no garbage collection when the heap is full. 
 	 * you still can use moo_gc() explicitly. */

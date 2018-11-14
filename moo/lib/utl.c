@@ -632,7 +632,7 @@ MOO_INLINE int moo_conv_ucs_to_bcs_with_cmgr (
 				break;
 			}
 			
-			n = cmgr->uctobc (*p, bcs, rem);
+			n = cmgr->uctobc(*p, bcs, rem);
 			if (n == 0) 
 			{
 				ret = -1;
@@ -670,7 +670,7 @@ MOO_INLINE int moo_conv_ucs_to_bcs_with_cmgr (
 		{
 			moo_oow_t n;
 
-			n = cmgr->uctobc (*p, bcsbuf, MOO_COUNTOF(bcsbuf));
+			n = cmgr->uctobc(*p, bcsbuf, MOO_COUNTOF(bcsbuf));
 			if (n == 0) 
 			{
 				ret = -1;

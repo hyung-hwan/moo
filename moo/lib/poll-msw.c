@@ -95,7 +95,7 @@ typedef struct _IO_STATUS_BLOCK
 
 typedef enum _FILE_INFORMATION_CLASS
 {
-    FilePipeLocalInformation = 24
+	FilePipeLocalInformation = 24
 } FILE_INFORMATION_CLASS, *PFILE_INFORMATION_CLASS;
 
 typedef DWORD (WINAPI *PNtQueryInformationFile) (HANDLE, IO_STATUS_BLOCK *, VOID *, ULONG, FILE_INFORMATION_CLASS);
@@ -124,8 +124,7 @@ static int windows_compute_revents (HANDLE h, int *p_sought)
 			if (!once_only)
 			{
 				NtQueryInformationFile = (PNtQueryInformationFile)
-				                         GetProcAddress (GetModuleHandle ("ntdll.dll"),
-				                                 "NtQueryInformationFile");
+					GetProcAddress (GetModuleHandle(TEXT("ntdll.dll")), "NtQueryInformationFile");
 				once_only = TRUE;
 			}
 
@@ -152,12 +151,12 @@ static int windows_compute_revents (HANDLE h, int *p_sought)
 				memset (&fpli, 0, sizeof (fpli));
 
 				if (!NtQueryInformationFile
-				        || NtQueryInformationFile (h, &iosb, &fpli, sizeof (fpli),
-				                                   FilePipeLocalInformation)
-				        || fpli.WriteQuotaAvailable >= PIPE_BUF
-				        || (fpli.OutboundQuota < PIPE_BUF &&
-				            fpli.WriteQuotaAvailable == fpli.OutboundQuota))
+				 || NtQueryInformationFile (h, &iosb, &fpli, sizeof (fpli), FilePipeLocalInformation)
+				 || fpli.WriteQuotaAvailable >= PIPE_BUF
+				 || (fpli.OutboundQuota < PIPE_BUF && fpli.WriteQuotaAvailable == fpli.OutboundQuota))
+				{
 					happened |= *p_sought & (POLLOUT | POLLWRNORM | POLLWRBAND);
+				}
 			}
 			return happened;
 
@@ -177,8 +176,8 @@ static int windows_compute_revents (HANDLE h, int *p_sought)
 				if (!*p_sought)
 					return 0;
 
-				irbuffer = (INPUT_RECORD *) alloca (nbuffer * sizeof (INPUT_RECORD));
-				bRet = PeekConsoleInput (h, irbuffer, nbuffer, &avail);
+				irbuffer = (INPUT_RECORD *)_alloca(nbuffer * sizeof (INPUT_RECORD));
+				bRet = PeekConsoleInput(h, irbuffer, nbuffer, &avail);
 				if (!bRet || avail == 0)
 					return POLLHUP;
 

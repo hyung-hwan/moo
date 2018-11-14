@@ -42,6 +42,9 @@ _M_X64 x64 platform
 /*#define MOO_ENABLE_STATIC_MODULE*/
 #define MOO_ENABLE_DYNAMIC_MODULE
 
+/* use UCS4 for uch_t */
+/*#define MOO_UNICODE_SIZE 4*/
+
 /* windows for most of non-x86 platforms dropped. 
  * make it selective to support old non-x86 windows platforms. */
 #define MOO_ENDIAN_LITTLE 

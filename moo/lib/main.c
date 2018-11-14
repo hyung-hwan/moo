@@ -449,6 +449,11 @@ int main (int argc, char* argv[])
 	memset (&cfg, 0, MOO_SIZEOF(cfg));
 	cfg.type = MOO_CFGSTD_OPTB;
 	cfg.memsize = MIN_MEMSIZE;
+#if defined(_WIN32) && (MOO_UCH_SIZE >= 4)
+	cfg.cmgr = moo_get_utf16_cmgr();
+#else
+	cfg.cmgr = moo_get_utf8_cmgr();
+#endif
 
 	while ((c = moo_getbopt(argc, argv, &opt)) != MOO_BCI_EOF)
 	{
@@ -560,7 +565,6 @@ int main (int argc, char* argv[])
 #else
 		moo_uch_t tmp[1000];
 		moo_oow_t bcslen, ucslen;
-		
 		ucslen = MOO_COUNTOF(tmp);
 		moo_conv_utf8_to_ucstr(argv[i], &bcslen, tmp, &ucslen);
 		in.type = MOO_IOSTD_FILEU;

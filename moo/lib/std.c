@@ -3204,7 +3204,7 @@ moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfgstd_t* cfg, moo_errinf_t* er
 	vmprim.vm_sleep = vm_sleep;
 
 	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize, cfg->memsize,
-	               (cfg->cmgr? cfg->cmgr: moo_get_utf8_cmgr), &vmprim, errinfo);
+	               (cfg->cmgr? cfg->cmgr: moo_get_utf8_cmgr()), &vmprim, errinfo);
 	if (!moo) return MOO_NULL;
 
 	xtn = GET_XTN(moo);
