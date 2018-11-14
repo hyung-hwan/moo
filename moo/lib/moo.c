@@ -26,7 +26,7 @@
 
 #include "moo-prv.h"
 
-moo_t* moo_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, moo_oow_t heapsize, const moo_vmprim_t* vmprim, moo_errinf_t* errinfo)
+moo_t* moo_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, moo_oow_t heapsize, moo_cmgr_t* cmgr, const moo_vmprim_t* vmprim, moo_errinf_t* errinfo)
 {
 	moo_t* moo;
 
@@ -36,7 +36,7 @@ moo_t* moo_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, moo_oow_t heapsize, const 
 	moo = (moo_t*)MOO_MMGR_ALLOC(mmgr, MOO_SIZEOF(*moo) + xtnsize);
 	if (moo)
 	{
-		if (moo_init(moo, mmgr, heapsize, vmprim) <= -1)
+		if (moo_init(moo, mmgr, heapsize, cmgr, vmprim) <= -1)
 		{
 			if (errinfo) moo_geterrinf (moo, errinfo);
 			MOO_MMGR_FREE (mmgr, moo);
@@ -96,7 +96,7 @@ static void free_heap (moo_t* moo, void* ptr)
 	MOO_MMGR_FREE(moo->mmgr, ptr);
 }
 
-int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t* vmprim)
+int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, moo_cmgr_t* cmgr, const moo_vmprim_t* vmprim)
 {
 	int modtab_inited = 0;
 
@@ -108,7 +108,7 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 
 	MOO_MEMSET (moo, 0, MOO_SIZEOF(*moo));
 	moo->mmgr = mmgr;
-	moo->cmgr = moo_get_utf8_cmgr();
+	moo->cmgr = cmgr;
 	moo->vmprim = *vmprim;
 	if (!moo->vmprim.alloc_heap) moo->vmprim.alloc_heap = alloc_heap;
 	if (!moo->vmprim.free_heap) moo->vmprim.free_heap = free_heap;
@@ -129,7 +129,7 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, const moo_vmprim_t
 	 * routine still function despite some side-effects when
 	 * reallocation fails */
 	/* +1 required for consistency with put_oocs and put_ooch in logfmt.c */
-	moo->log.ptr = moo_allocmem (moo, (moo->log.capa + 1) * MOO_SIZEOF(*moo->log.ptr)); 
+	moo->log.ptr = moo_allocmem(moo, (moo->log.capa + 1) * MOO_SIZEOF(*moo->log.ptr)); 
 	if (!moo->log.ptr) goto oops;
 
 	if (moo_rbt_init (&moo->modtab, moo, MOO_SIZEOF(moo_ooch_t), 1) <= -1) goto oops;

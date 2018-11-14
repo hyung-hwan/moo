@@ -178,6 +178,8 @@ moo_oow_t moo_utf8_to_uc (const moo_bch_t* utf8, moo_oow_t size, moo_uch_t* uc)
 }
 
 
+/* ----------------------------------------------------------------------- */
+
 /*
  * See http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c 
  */

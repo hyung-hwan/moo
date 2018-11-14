@@ -17,6 +17,7 @@ struct moo_cfgstd_t
 
 	moo_oow_t memsize;
 	int large_pages;
+	moo_cmgr_t* cmgr;
 
 	union
 	{

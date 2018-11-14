@@ -731,6 +731,43 @@ int moo_conv_ucstr_to_utf8 (const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t* 
 
 /* ----------------------------------------------------------------------- */
 
+static moo_cmgr_t utf16_cmgr =
+{
+	moo_utf16_to_uc,
+	moo_uc_to_utf16
+};
+
+moo_cmgr_t* moo_get_utf16_cmgr (void)
+{
+	return &utf16_cmgr;
+}
+
+int moo_conv_utf16_to_uchars (const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
+{
+	/* the source is length bound */
+	return moo_conv_bchars_to_uchars_with_cmgr(bcs, bcslen, ucs, ucslen, &utf16_cmgr, 0);
+}
+
+int moo_conv_uchars_to_utf16 (const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t* bcs, moo_oow_t* bcslen)
+{
+	/* length bound */
+	return moo_conv_uchars_to_bchars_with_cmgr(ucs, ucslen, bcs, bcslen, &utf16_cmgr);
+}
+
+int moo_conv_utf16_to_ucstr (const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
+{
+	/* null-terminated. */
+	return moo_conv_bcs_to_ucs_with_cmgr(bcs, bcslen, ucs, ucslen, &utf16_cmgr, 0);
+}
+
+int moo_conv_ucstr_to_utf16 (const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t* bcs, moo_oow_t* bcslen)
+{
+	/* null-terminated */
+	return moo_conv_ucs_to_bcs_with_cmgr(ucs, ucslen, bcs, bcslen, &utf16_cmgr);
+}
+
+/* ----------------------------------------------------------------------- */
+
 int moo_convbtouchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
 {
 	/* length bound */

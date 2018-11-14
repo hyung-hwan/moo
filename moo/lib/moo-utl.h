@@ -361,6 +361,14 @@ MOO_EXPORT int moo_concatoocharstosbuf (
 );
 
 
+/* ------------------------------------------------------------------------- */
+
+MOO_EXPORT int moo_ucwidth (
+	moo_uch_t uc
+);
+
+/* ------------------------------------------------------------------------- */
+
 #if defined(MOO_OOCH_IS_UCH)
 #	define moo_conv_oocs_to_bcs_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr) moo_conv_ucs_to_bcs_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr)
 #	define moo_conv_oochars_to_bchars_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr) moo_conv_uchars_to_bchars_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr)
@@ -378,7 +386,7 @@ MOO_EXPORT int moo_conv_bcs_to_ucs_with_cmgr (
 	moo_cmgr_t*      cmgr,
 	int              all
 );
-	
+
 MOO_EXPORT int moo_conv_bchars_to_uchars_with_cmgr (
 	const moo_bch_t* bcs,
 	moo_oow_t*       bcslen,
@@ -403,6 +411,8 @@ MOO_EXPORT int moo_conv_uchars_to_bchars_with_cmgr (
 	moo_oow_t*       bcslen,
 	moo_cmgr_t*      cmgr
 );
+
+/* ------------------------------------------------------------------------- */
 
 MOO_EXPORT moo_cmgr_t* moo_get_utf8_cmgr (
 	void
@@ -503,10 +513,52 @@ MOO_EXPORT moo_oow_t moo_utf8_to_uc (
 	moo_uch_t*       uc
 );
 
-MOO_EXPORT int moo_ucwidth (
-	moo_uch_t uc
+/* ------------------------------------------------------------------------- */
+
+MOO_EXPORT moo_cmgr_t* moo_get_utf16_cmgr (
+	void
 );
 
+MOO_EXPORT int moo_conv_uchars_to_utf16 (
+	const moo_uch_t*    ucs,
+	moo_oow_t*          ucslen,
+	moo_bch_t*          bcs,
+	moo_oow_t*          bcslen
+);
+
+MOO_EXPORT int moo_conv_utf16_to_uchars (
+	const moo_bch_t*   bcs,
+	moo_oow_t*         bcslen,
+	moo_uch_t*         ucs,
+	moo_oow_t*         ucslen
+);
+
+
+MOO_EXPORT int moo_conv_ucstr_to_utf16 (
+	const moo_uch_t*    ucs,
+	moo_oow_t*          ucslen,
+	moo_bch_t*          bcs,
+	moo_oow_t*          bcslen
+);
+
+MOO_EXPORT int moo_conv_utf16_to_ucstr (
+	const moo_bch_t*   bcs,
+	moo_oow_t*         bcslen,
+	moo_uch_t*         ucs,
+	moo_oow_t*         ucslen
+);
+
+MOO_EXPORT moo_oow_t moo_uc_to_utf16 (
+	moo_uch_t    uc,
+	moo_bch_t*   utf16,
+	moo_oow_t    size
+);
+
+MOO_EXPORT moo_oow_t moo_utf16_to_uc (
+	const moo_bch_t* utf16,
+	moo_oow_t        size,
+	moo_uch_t*       uc
+);
 
 /* ------------------------------------------------------------------------- */
 

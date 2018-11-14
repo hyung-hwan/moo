@@ -173,8 +173,8 @@ am_libmoo_la_OBJECTS = libmoo_la-bigint.lo libmoo_la-comp.lo \
 	libmoo_la-gc.lo libmoo_la-heap.lo libmoo_la-moo.lo \
 	libmoo_la-obj.lo libmoo_la-opt.lo libmoo_la-pf-basic.lo \
 	libmoo_la-pf-sys.lo libmoo_la-pf-utf8.lo libmoo_la-rbt.lo \
-	libmoo_la-sym.lo libmoo_la-utf8.lo libmoo_la-utl.lo \
-	libmoo_la-std.lo
+	libmoo_la-sym.lo libmoo_la-utf8.lo libmoo_la-utf16.lo \
+	libmoo_la-utl.lo libmoo_la-std.lo
 libmoo_la_OBJECTS = $(am_libmoo_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -480,6 +480,7 @@ libmoo_la_SOURCES = \
 	rbt.c \
 	sym.c \
 	utf8.c \
+	utf16.c \
 	utl.c \
 	std.c 
 
@@ -663,6 +664,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-rbt.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-std.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-sym.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-utf16.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-utf8.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-utl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/moo-main.Po@am__quote@
@@ -824,6 +826,13 @@ libmoo_la-utf8.lo: utf8.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='utf8.c' object='libmoo_la-utf8.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-utf8.lo `test -f 'utf8.c' || echo '$(srcdir)/'`utf8.c
+
+libmoo_la-utf16.lo: utf16.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-utf16.lo -MD -MP -MF $(DEPDIR)/libmoo_la-utf16.Tpo -c -o libmoo_la-utf16.lo `test -f 'utf16.c' || echo '$(srcdir)/'`utf16.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-utf16.Tpo $(DEPDIR)/libmoo_la-utf16.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='utf16.c' object='libmoo_la-utf16.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-utf16.lo `test -f 'utf16.c' || echo '$(srcdir)/'`utf16.c
 
 libmoo_la-utl.lo: utl.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-utl.lo -MD -MP -MF $(DEPDIR)/libmoo_la-utl.Tpo -c -o libmoo_la-utl.lo `test -f 'utl.c' || echo '$(srcdir)/'`utl.c

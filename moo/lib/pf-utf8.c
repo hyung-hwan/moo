@@ -94,5 +94,6 @@ moo_pfrc_t moo_pf_utf8_to_uc (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 moo_pfrc_t moo_pf_uc_to_utf8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	MOO_STACK_SETRET (moo, nargs, moo->_nil);
+	/* TODO: */
 	return MOO_PF_SUCCESS;
 }

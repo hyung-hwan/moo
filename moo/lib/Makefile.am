@@ -89,6 +89,7 @@ libmoo_la_SOURCES = \
 	rbt.c \
 	sym.c \
 	utf8.c \
+	utf16.c \
 	utl.c \
 	std.c 
 libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) $(CPPFLAGS_PFMOD)

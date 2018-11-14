@@ -1834,6 +1834,7 @@ MOO_EXPORT moo_t* moo_open (
 	moo_mmgr_t*         mmgr,
 	moo_oow_t           xtnsize,
 	moo_oow_t           heapsize,
+	moo_cmgr_t*         cmgr,
 	const moo_vmprim_t* vmprim,
 	moo_errinf_t*       errinfo
 );
@@ -1846,6 +1847,7 @@ MOO_EXPORT int moo_init (
 	moo_t*              moo,
 	moo_mmgr_t*         mmgr,
 	moo_oow_t           heapsize,
+	moo_cmgr_t*         cmgr,
 	const moo_vmprim_t* vmprim
 );
 
