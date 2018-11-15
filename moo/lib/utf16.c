@@ -28,6 +28,14 @@
 
 /* TODO: handle different endians - UTF16BE or UTF16LE */
 
+enum
+{
+	HIGH_SURROGATE_START = 0xD800,
+	HIGH_SURROGATE_END   = 0xDBFF,
+	LOW_SURROGATE_START  = 0xDC00,
+	LOW_SURROGATE_END    = 0xDFFF
+};
+
 moo_oow_t moo_uc_to_utf16 (moo_uch_t uc, moo_bch_t* utf16, moo_oow_t size)
 {
 	moo_uint16_t* u16 = (moo_uint16_t*)utf16;
@@ -40,8 +48,8 @@ moo_oow_t moo_uc_to_utf16 (moo_uch_t uc, moo_bch_t* utf16, moo_oow_t size)
 #if (MOO_SIZEOF_UCH_T > 2)
 	else if (uc <= 0x10FFFF) 
 	{
-		u16[0] = 0xD800 | (((uc >> 16) & 0x1F) - 1) | (uc >> 10);
-		u16[1] = 0xDC00 | (uc & 0x3FF);
+		u16[0] = HIGH_SURROGATE_START | (((uc >> 16) & 0x1F) - 1) | (uc >> 10);
+		u16[1] = LOW_SURROGATE_START | (uc & 0x3FF);
 		return 4;
 	}
 #endif
@@ -55,17 +63,17 @@ moo_oow_t moo_utf16_to_uc (const moo_bch_t* utf16, moo_oow_t size, moo_uch_t* uc
 
 	if (size < 2) return 0; /* incomplete sequence */
 
-	if (u16[0] <= 0xD7FF || u16[0] >= 0xE000) 
+	if (u16[0] < HIGH_SURROGATE_START || u16[0] > LOW_SURROGATE_END) 
 	{
 		/* BMP - U+0000 - U+D7FF, U+E000 - U+FFFF */
 		*uc = u16[0];
 		return 2;
 	}
 #if (MOO_SIZEOF_UCH_T > 2)
-	else if (u16[0] >= 0xD800 && u16[0] <= 0xDBFF) /* high-surrogate */
+	else if (u16[0] >= HIGH_SURROGATE_START && u16[0] <= HIGH_SURROGATE_END) /* high-surrogate */
 	{
 		if (size < 4) return 0; /* incomplete */
-		if (u16[1] >= 0xDC00 && u16[1] <= 0xDFFF) /* low-surrogate */
+		if (u16[1] >= LOW_SURROGATE_START && u16[1] <= LOW_SURROGATE_END) /* low-surrogate */
 		{
 			*uc = (((u16[0] & 0x3FF) << 10) | (u16[1] & 0x3FF)) + 0x10000;
 			return 4;
