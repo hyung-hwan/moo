@@ -88,6 +88,10 @@ MOO_EXPORT void* moo_getxtnstd (
 	moo_t*        moo
 );
 
+MOO_EXPORT void moo_abortstd (
+	moo_t*        moo
+);
+
 MOO_EXPORT int moo_compilestd(
 	moo_t*             moo,
 	const moo_iostd_t* in,

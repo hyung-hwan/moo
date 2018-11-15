@@ -3231,6 +3231,15 @@ void* moo_getxtnstd (moo_t* moo)
 	return (void*)((moo_uint8_t*)GET_XTN(moo) + MOO_SIZEOF(xtn_t));
 }
 
+void moo_abortstd (moo_t* moo)
+{
+#if defined(USE_THREAD)
+	xtn_t* xtn = GET_XTN(moo);
+	write (xtn->iothr.p[1], "Q", 1);
+#endif
+	moo_abort (moo);
+}
+
 int moo_compilestd(moo_t* moo, const moo_iostd_t* in, moo_oow_t count)
 {
 	xtn_t* xtn;
