@@ -602,7 +602,6 @@ MOO_EXPORT moo_uint128_t moo_hton128 (
 );
 #endif
 
-
 #if defined(__cplusplus)
 }
 #endif
