@@ -255,7 +255,7 @@ void moo_seterrbfmtwithsyserr (moo_t* moo, int syserr_type, int syserr_code, con
 			moo->errmsg.buf[moo->errmsg.len++] = ' ';
 
 		#if defined(MOO_OOCH_IS_BCH)
-			moo->errmsg.len += moo_copy_bcstr(moo->errmsg.buf[moo->errmsg.len], MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len, moo->errmsg.tmpbuf.bch);
+			moo->errmsg.len += moo_copy_bcstr(&moo->errmsg.buf[moo->errmsg.len], MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len, moo->errmsg.tmpbuf.bch);
 		#else
 			ucslen = MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len;
 			moo_convbtoucstr (moo, moo->errmsg.tmpbuf.bch, &bcslen, &moo->errmsg.buf[moo->errmsg.len], &ucslen);
@@ -283,7 +283,7 @@ void moo_seterrbfmtwithsyserr (moo_t* moo, int syserr_type, int syserr_code, con
 			moo_convutobcstr (moo, moo->errmsg.tmpbuf.uch, &ucslen, &moo->errmsg.buf[moo->errmsg.len], &bcslen);
 			moo->errmsg.len += bcslen;
 		#else
-			moo->errmsg.len += moo_copy_ucstr(moo->errmsg.buf[moo->errmsg.len], MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len, moo->errmsg.tmpbuf.uch);
+			moo->errmsg.len += moo_copy_ucstr(&moo->errmsg.buf[moo->errmsg.len], MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len, moo->errmsg.tmpbuf.uch);
 		#endif
 		}
 	}
@@ -312,7 +312,7 @@ void moo_seterrufmtwithsyserr (moo_t* moo, int syserr_type, int syserr_code, con
 			moo->errmsg.buf[moo->errmsg.len++] = ' ';
 
 		#if defined(MOO_OOCH_IS_BCH)
-			moo->errmsg.len += moo_copy_bcstr(moo->errmsg.buf[moo->errmsg.len], MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len, moo->errmsg.tmpbuf.bch);
+			moo->errmsg.len += moo_copy_bcstr(&moo->errmsg.buf[moo->errmsg.len], MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len, moo->errmsg.tmpbuf.bch);
 		#else
 			ucslen = MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len;
 			moo_convbtoucstr (moo, moo->errmsg.tmpbuf.bch, &bcslen, &moo->errmsg.buf[moo->errmsg.len], &ucslen);
@@ -340,7 +340,7 @@ void moo_seterrufmtwithsyserr (moo_t* moo, int syserr_type, int syserr_code, con
 			moo_convutobcstr (moo, moo->errmsg.tmpbuf.uch, &ucslen, &moo->errmsg.buf[moo->errmsg.len], &bcslen);
 			moo->errmsg.len += bcslen;
 		#else
-			moo->errmsg.len += moo_copy_ucstr(moo->errmsg.buf[moo->errmsg.len], MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len, moo->errmsg.tmpbuf.uch);
+			moo->errmsg.len += moo_copy_ucstr(&moo->errmsg.buf[moo->errmsg.len], MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len, moo->errmsg.tmpbuf.uch);
 		#endif
 		}
 	}
