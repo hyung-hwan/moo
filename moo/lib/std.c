@@ -2604,6 +2604,117 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 
 /* ========================================================================= */
 
+typedef struct sig_state_t sig_state_t;
+struct sig_state_t
+{
+	moo_oow_t handler;
+	moo_oow_t old_handler;
+	sigset_t  old_sa_mask;
+	int       old_sa_flags;
+};
+
+typedef void (*sig_handler_t) (int sig);
+
+#if !defined(NSIGS)
+#	define NSIGS 100 /* TODO: change this */
+#endif
+static sig_state_t g_sig_state[NSIGS];
+
+static void dispatch_siginfo (int sig, siginfo_t* si, void* ctx)
+{
+	((sig_handler_t)g_sig_state[sig].handler) (sig);
+	if (g_sig_state[sig].old_handler && 
+	    g_sig_state[sig].old_handler != (moo_oow_t)SIG_IGN &&
+	    g_sig_state[sig].old_handler != (moo_oow_t)SIG_DFL)
+	{
+		((void(*)(int, siginfo_t*, void*))g_sig_state[sig].old_handler) (sig, si, ctx);
+	}
+}
+
+static void dispatch_signal (int sig)
+{
+	((sig_handler_t)g_sig_state[sig].handler) (sig);
+	if (g_sig_state[sig].old_handler && 
+	    g_sig_state[sig].old_handler != (moo_oow_t)SIG_IGN &&
+	    g_sig_state[sig].old_handler != (moo_oow_t)SIG_DFL)
+	{
+		((sig_handler_t)g_sig_state[sig].old_handler) (sig);
+	}
+}
+
+static int set_signal_handler (int sig, sig_handler_t handler, int extra_flags)
+{
+	if (g_sig_state[sig].handler)
+	{
+		/* already set - allow handler change. ignore extra_flags. */
+		g_sig_state[sig].handler = (moo_oow_t)handler;
+	}
+	else
+	{
+		struct sigaction sa, oldsa;
+
+		if (sigaction(sig, MOO_NULL, &oldsa) == -1) return -1;
+
+		MOO_MEMSET (&sa, 0, MOO_SIZEOF(sa));
+		if (oldsa.sa_flags & SA_SIGINFO)
+		{
+			sa.sa_sigaction = dispatch_siginfo;
+			sa.sa_flags = SA_SIGINFO;
+		}
+		else
+		{
+			sa.sa_handler = dispatch_signal;
+			sa.sa_flags = 0;
+		}
+		sa.sa_flags |= extra_flags;
+		/*sa.sa_flags |= SA_INTERUPT;
+		sa.sa_flags |= SA_RESTART;*/
+		sigfillset (&sa.sa_mask); /* block all signals while the handler is being executed */
+
+		if (sigaction(sig, &sa, MOO_NULL) == -1) return -1;
+
+		g_sig_state[sig].handler = (moo_oow_t)handler;
+		if (oldsa.sa_flags & SA_SIGINFO)
+			g_sig_state[sig].old_handler = (moo_oow_t)oldsa.sa_sigaction;
+		else
+			g_sig_state[sig].old_handler = (moo_oow_t)oldsa.sa_handler;
+
+		g_sig_state[sig].old_sa_mask = oldsa.sa_mask;
+		g_sig_state[sig].old_sa_flags = oldsa.sa_flags;
+	}
+
+	return 0;
+}
+
+static int unset_signal_handler (int sig)
+{
+	struct sigaction sa;
+
+	if (!g_sig_state[sig].handler) return -1; /* not set */
+
+	MOO_MEMSET (&sa, 0, MOO_SIZEOF(sa));
+	sa.sa_mask = g_sig_state[sig].old_sa_mask;
+	sa.sa_flags = g_sig_state[sig].old_sa_flags;
+
+	if (sa.sa_flags & SA_SIGINFO)
+	{
+		sa.sa_sigaction = (void(*)(int,siginfo_t*,void*))g_sig_state[sig].old_handler;
+	}
+	else
+	{
+		sa.sa_handler = (sig_handler_t)g_sig_state[sig].old_handler;
+	}
+
+	if (sigaction(sig, &sa, MOO_NULL) == -1) return -1;
+
+	g_sig_state[sig].handler = 0;
+	/* keep other fields untouched */
+
+	return 0;
+}
+
+/* ========================================================================= */
+
 static MOO_INLINE void swproc_all (void)
 {
 	/* TODO: make this atomic */
@@ -2777,6 +2888,8 @@ static void arrange_process_switching (int sig)
 static void setup_tick (void)
 {
 	struct itimerval itv;
+
+#if 0
 	struct sigaction act;
 
 	memset (&act, 0, sizeof(act));
@@ -2784,6 +2897,9 @@ static void setup_tick (void)
 	act.sa_handler = arrange_process_switching;
 	act.sa_flags = SA_RESTART;
 	sigaction (SIGVTALRM, &act, MOO_NULL);
+#else
+	set_signal_handler (SIGVTALRM, arrange_process_switching, SA_RESTART);
+#endif
 
 /*#define MOO_ITIMER_TICK 10000*/ /* microseconds. 0.01 seconds */
 #define MOO_ITIMER_TICK 20000 /* microseconds. 0.02 seconds. */
@@ -2797,7 +2913,9 @@ static void setup_tick (void)
 static void cancel_tick (void)
 {
 	struct itimerval itv;
+#if 0
 	struct sigaction act;
+#endif
 
 	itv.it_interval.tv_sec = 0;
 	itv.it_interval.tv_usec = 0;
@@ -2805,10 +2923,16 @@ static void cancel_tick (void)
 	itv.it_value.tv_usec = 0;
 	setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
 
+#if 0
 	sigemptyset (&act.sa_mask); 
 	act.sa_handler = SIG_IGN; /* ignore the signal potentially fired by the one-shot arrange above */
 	act.sa_flags = 0;
 	sigaction (SIGVTALRM, &act, MOO_NULL);
+#else
+	/* ignore the signal potentially fired by the one-shot arrange above
+	 * instead of unsetting the signal handler */
+	set_signal_handler (SIGVTALRM, SIG_IGN, 0);
+#endif
 }
 #else
 #	error UNSUPPORTED
@@ -3178,7 +3302,7 @@ static void fini_moo (moo_t* moo)
 	unchain (moo);
 }
 
-moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfgstd_t* cfg, moo_errinf_t* errinfo)
+ moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfgstd_t* cfg, moo_errinf_t* errinfo)
 {
 	moo_t* moo;
 	moo_vmprim_t vmprim;
