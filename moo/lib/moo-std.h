@@ -78,6 +78,14 @@ typedef struct moo_iostd_t moo_iostd_t;
 extern "C" {
 #endif
 
+MOO_EXPORT void moo_start_ticker (
+	void
+);
+
+MOO_EXPORT void moo_stop_ticker (
+	void
+);
+
 MOO_EXPORT moo_t* moo_openstd (
 	moo_oow_t           xtnsize, 
 	const moo_cfgstd_t* cfg,
@@ -97,6 +105,12 @@ MOO_EXPORT int moo_compilestd(
 	const moo_iostd_t* in,
 	moo_oow_t          count
 );
+
+MOO_EXPORT void moo_rcvtickstd (
+	moo_t*             moo,
+	int                v
+);
+
 #if defined(__cplusplus)
 }
 #endif

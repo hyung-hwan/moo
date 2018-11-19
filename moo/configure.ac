@@ -153,6 +153,7 @@ AC_CHECK_FUNCS([backtrace backtrace_symbols])
 AC_CHECK_FUNCS([makecontext swapcontext getcontext setcontext])
 AC_CHECK_FUNCS([clock_nanosleep nanosleep usleep])
 AC_CHECK_FUNCS([localtime_r gmtime_r])
+AC_CHECK_FUNCS([sigaction signal])
 AC_CHECK_FUNCS([snprintf _vsnprintf _vsnwprintf strerror_r])
 AC_CHECK_FUNCS([accept4 pipe2 epoll_create1])
 AC_CHECK_FUNCS([isatty mmap munmap])
@@ -587,6 +588,7 @@ if test ${ax_cv_numvalof_PATH_MAX} -gt 0
 then
 	AC_DEFINE_UNQUOTED(MOO_PATH_MAX, ${ax_cv_numvalof_PATH_MAX}, [PATH_MAX])
 fi
+AC_DEFINE_UNQUOTED(MOO_NSIG, ${ax_cv_numvalof_NSIG}, [NSIG])
 
 AC_DEFINE_UNQUOTED(MOO_SIZEOF_STRUCT_SOCKADDR_IN, ${ac_cv_sizeof_struct_sockaddr_in}, [sizeof(struct sockaddr_in)])
 AC_DEFINE_UNQUOTED(MOO_SIZEOF_STRUCT_SOCKADDR_IN6, ${ac_cv_sizeof_struct_sockaddr_in6}, [sizeof(struct sockaddr_in6)])

@@ -174,6 +174,12 @@
 /* Define to 1 if you have the `settimeofday' function. */
 #undef HAVE_SETTIMEOFDAY
 
+/* Define to 1 if you have the `sigaction' function. */
+#undef HAVE_SIGACTION
+
+/* Define to 1 if you have the `signal' function. */
+#undef HAVE_SIGNAL
+
 /* Define to 1 if you have the <signal.h> header file. */
 #undef HAVE_SIGNAL_H
 
@@ -347,6 +353,9 @@
 
 /* MB_LEN_MAX */
 #undef MOO_MBLEN_MAX
+
+/* NSIG */
+#undef MOO_NSIG
 
 /* offsetof(struct sockaddr, sa_family) */
 #undef MOO_OFFSETOF_SA_FAMILY

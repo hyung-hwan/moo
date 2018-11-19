@@ -265,6 +265,7 @@ struct xtn_t
 	moo_t* prev;
 
 	int vm_running;
+	int rcv_tick;
 
 	struct
 	{
@@ -359,7 +360,6 @@ struct xtn_t
 #define GET_XTN(moo) ((xtn_t*)moo_getxtn(moo))
 
 static moo_t* g_moo = MOO_NULL;
-static int g_moo_tick_active = 0;
 
 /* ========================================================================= */
 
@@ -2604,6 +2604,8 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 
 /* ========================================================================= */
 
+#if defined(HAVE_SIGACTION)
+
 typedef struct sig_state_t sig_state_t;
 struct sig_state_t
 {
@@ -2615,14 +2617,16 @@ struct sig_state_t
 
 typedef void (*sig_handler_t) (int sig);
 
-#if !defined(NSIGS)
-#	define NSIGS 100 /* TODO: change this */
-#endif
-static sig_state_t g_sig_state[NSIGS];
+static sig_state_t g_sig_state[MOO_NSIG];
 
 static void dispatch_siginfo (int sig, siginfo_t* si, void* ctx)
 {
-	((sig_handler_t)g_sig_state[sig].handler) (sig);
+	if (g_sig_state[sig].handler != (moo_oow_t)SIG_IGN &&
+	    g_sig_state[sig].handler != (moo_oow_t)SIG_DFL)
+	{
+		((sig_handler_t)g_sig_state[sig].handler) (sig);
+	}
+
 	if (g_sig_state[sig].old_handler && 
 	    g_sig_state[sig].old_handler != (moo_oow_t)SIG_IGN &&
 	    g_sig_state[sig].old_handler != (moo_oow_t)SIG_DFL)
@@ -2633,7 +2637,12 @@ static void dispatch_siginfo (int sig, siginfo_t* si, void* ctx)
 
 static void dispatch_signal (int sig)
 {
-	((sig_handler_t)g_sig_state[sig].handler) (sig);
+	if (g_sig_state[sig].handler != (moo_oow_t)SIG_IGN &&
+	    g_sig_state[sig].handler != (moo_oow_t)SIG_DFL)
+	{
+		((sig_handler_t)g_sig_state[sig].handler) (sig);
+	}
+
 	if (g_sig_state[sig].old_handler && 
 	    g_sig_state[sig].old_handler != (moo_oow_t)SIG_IGN &&
 	    g_sig_state[sig].old_handler != (moo_oow_t)SIG_DFL)
@@ -2647,6 +2656,7 @@ static int set_signal_handler (int sig, sig_handler_t handler, int extra_flags)
 	if (g_sig_state[sig].handler)
 	{
 		/* already set - allow handler change. ignore extra_flags. */
+		if (g_sig_state[sig].handler == (moo_oow_t)handler) return -1;
 		g_sig_state[sig].handler = (moo_oow_t)handler;
 	}
 	else
@@ -2713,9 +2723,10 @@ static int unset_signal_handler (int sig)
 	return 0;
 }
 
+#endif
 /* ========================================================================= */
 
-static MOO_INLINE void swproc_all (void)
+static MOO_INLINE void swproc_all_moos (void)
 {
 	/* TODO: make this atomic */
 	if (g_moo)
@@ -2723,14 +2734,14 @@ static MOO_INLINE void swproc_all (void)
 		moo_t* moo = g_moo;
 		do
 		{
-			moo_switchprocess (moo);
-			moo = GET_XTN(moo)->next;
+			xtn_t* xtn = GET_XTN(moo);
+			if (xtn->rcv_tick) moo_switchprocess (moo);
+			moo = xtn->next;
 		}
 		while (moo);
 	}
 	/* TODO: make this atomic */
 }
-
 
 #if defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
 
@@ -2755,48 +2766,61 @@ static void __interrupt dos_timer_intr_handler (void)
 	*/
 
 	/* The timer interrupt (normally) occurs 18.2 times per second. */
-	swproc_moo ();
+	swproc_all_moos ();
 	_chain_intr (dos_prev_timer_intr_handler);
 }
 
-static void setup_tick (void)
+static void moo_start_ticker (void)
 {
-	dos_prev_timer_intr_handler = _dos_getvect(0x1C);
-	_dos_setvect (0x1C, dos_timer_intr_handler);
+	if (++ticker_started == 1)
+	{
+		dos_prev_timer_intr_handler = _dos_getvect(0x1C);
+		_dos_setvect (0x1C, dos_timer_intr_handler);
+	}
 }
 
-static void cancel_tick (void)
+static void moo_stop_ticker (void)
 {
-	_dos_setvect (0x1C, dos_prev_timer_intr_handler);
+	if (ticker_started > 0 && --ticker_started == 0)
+	{
+		_dos_setvect (0x1C, dos_prev_timer_intr_handler);
+	}
 }
 
 #elif defined(_WIN32)
 
 static HANDLE win_tick_timer = MOO_NULL; /*INVALID_HANDLE_VALUE;*/
+static moo_uint32_t ticker_started = 0;
 
 static VOID CALLBACK arrange_process_switching (LPVOID arg, DWORD timeLow, DWORD timeHigh) 
 {
-	swproc_moo ();
+	swproc_all_moos ();
 }
 
-static void setup_tick (void)
+static void moo_start_ticker (void)
 {
-	LARGE_INTEGER li;
-	win_tick_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
-	if (win_tick_timer)
+	if (++ticker_started == 1)
 	{
-		li.QuadPart = -MOO_SECNSEC_TO_NSEC(0, 20000); /* 20000 microseconds. 0.02 seconds */
-		SetWaitableTimer (win_tick_timer, &li, 0, arrange_process_switching, MOO_NULL, FALSE);
+		LARGE_INTEGER li;
+		win_tick_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
+		if (win_tick_timer)
+		{
+			li.QuadPart = -MOO_SECNSEC_TO_NSEC(0, 20000); /* 20000 microseconds. 0.02 seconds */
+			SetWaitableTimer (win_tick_timer, &li, 0, arrange_process_switching, MOO_NULL, FALSE);
+		}
 	}
 }
 
-static void cancel_tick (void)
+static void moo_stop_ticker (void)
 {
-	if (win_tick_timer)
+	if (ticker_started > 0 && --ticker_started == 0)
 	{
-		CancelWaitableTimer (win_tick_timer);
-		CloseHandle (win_tick_timer);
-		win_tick_timer = MOO_NULL;
+		if (win_tick_timer)
+		{
+			CancelWaitableTimer (win_tick_timer);
+			CloseHandle (win_tick_timer);
+			win_tick_timer = MOO_NULL;
+		}
 	}
 }
 
@@ -2805,6 +2829,7 @@ static TID os2_tick_tid;
 static HEV os2_tick_sem; 
 static HTIMER os2_tick_timer;
 static int os2_tick_done = 0;
+static moo_uint32_t ticker_started = 0;
 
 static void EXPENTRY os2_wait_for_timer_event (ULONG x)
 {
@@ -2826,7 +2851,7 @@ static void EXPENTRY os2_wait_for_timer_event (ULONG x)
 	{
 		rc = DosWaitEventSem((HSEM)os2_tick_sem, 5000L);
 		DosResetEventSem((HSEM)os2_tick_sem, &count);
-		swproc_moo ();
+		swproc_all_moos ();
 	}
 
 	DosStopTimer (os2_tick_timer);
@@ -2837,16 +2862,22 @@ static void EXPENTRY os2_wait_for_timer_event (ULONG x)
 	DosExit (EXIT_THREAD, 0);
 }
 
-static void setup_tick (void)
+static void moo_start_ticker (void)
 {
-	/* TODO: Error check */
-	DosCreateThread (&os2_tick_tid, os2_wait_for_timer_event, 0, 0, 4096);
+	if (++ticker_started == 1)
+	{
+		/* TODO: Error check */
+		DosCreateThread (&os2_tick_tid, os2_wait_for_timer_event, 0, 0, 4096);
+	}
 }
 
-static void cancel_tick (void)
+static void moo_stop_ticker (void)
 {
-	if (os2_tick_sem) DosPostEventSem (os2_tick_sem);
-	os2_tick_done = 1;
+	if (ticker_started > 0 && --ticker_started == 0)
+	{
+		if (os2_tick_sem) DosPostEventSem (os2_tick_sem);
+		os2_tick_done = 1;
+	}
 }
 
 #elif defined(macintosh)
@@ -2858,12 +2889,12 @@ static ProcessSerialNumber mac_psn;
 
 static pascal void timer_intr_handler (TMTask* task)
 {
-	swproc_moo ();
+	swproc_all_moos ();
 	WakeUpProcess (&mac_psn);
 	PrimeTime ((QElem*)&mac_tmtask, TMTASK_DELAY);
 }
 
-static void setup_tick (void)
+static void moo_start_ticker (void)
 {
 	GetCurrentProcess (&mac_psn);
 	memset (&mac_tmtask, 0, MOO_SIZEOF(mac_tmtask));
@@ -2872,7 +2903,7 @@ static void setup_tick (void)
 	PrimeTime ((QElem*)&mac_tmtask, TMTASK_DELAY);
 }
 
-static void cancel_tick (void)
+static void moo_stop_ticker (void)
 {
 	RmvTime ((QElem*)&mac_tmtask);
 	/*DisposeTimerProc (mac_tmtask.tmAddr);*/
@@ -2882,58 +2913,47 @@ static void cancel_tick (void)
 
 static void arrange_process_switching (int sig)
 {
-	swproc_moo ();
+	swproc_all_moos ();
 }
 
-static void setup_tick (void)
+static moo_uint32_t ticker_started = 0;
+
+void moo_start_ticker (void)
 {
-	struct itimerval itv;
-
-#if 0
-	struct sigaction act;
-
-	memset (&act, 0, sizeof(act));
-	sigemptyset (&act.sa_mask);
-	act.sa_handler = arrange_process_switching;
-	act.sa_flags = SA_RESTART;
-	sigaction (SIGVTALRM, &act, MOO_NULL);
-#else
-	set_signal_handler (SIGVTALRM, arrange_process_switching, SA_RESTART);
-#endif
-
-/*#define MOO_ITIMER_TICK 10000*/ /* microseconds. 0.01 seconds */
-#define MOO_ITIMER_TICK 20000 /* microseconds. 0.02 seconds. */
-	itv.it_interval.tv_sec = 0;
-	itv.it_interval.tv_usec = MOO_ITIMER_TICK;
-	itv.it_value.tv_sec = 0;
-	itv.it_value.tv_usec = MOO_ITIMER_TICK;
-	setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
+	if (++ticker_started == 1)
+	{
+		if (set_signal_handler(SIGVTALRM, arrange_process_switching, SA_RESTART) >= 0)
+		{
+			struct itimerval itv;
+		/*#define MOO_ITIMER_TICK 10000*/ /* microseconds. 0.01 seconds */
+		#define MOO_ITIMER_TICK 20000 /* microseconds. 0.02 seconds. */
+			itv.it_interval.tv_sec = 0;
+			itv.it_interval.tv_usec = MOO_ITIMER_TICK;
+			itv.it_value.tv_sec = 0;
+			itv.it_value.tv_usec = MOO_ITIMER_TICK;
+			setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
+		}
+	}
 }
 
-static void cancel_tick (void)
+void moo_stop_ticker (void)
 {
-	struct itimerval itv;
-#if 0
-	struct sigaction act;
-#endif
-
-	itv.it_interval.tv_sec = 0;
-	itv.it_interval.tv_usec = 0;
-	itv.it_value.tv_sec = 0; /* make setitimer() one-shot only */
-	itv.it_value.tv_usec = 0;
-	setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
-
-#if 0
-	sigemptyset (&act.sa_mask); 
-	act.sa_handler = SIG_IGN; /* ignore the signal potentially fired by the one-shot arrange above */
-	act.sa_flags = 0;
-	sigaction (SIGVTALRM, &act, MOO_NULL);
-#else
-	/* ignore the signal potentially fired by the one-shot arrange above
-	 * instead of unsetting the signal handler */
-	set_signal_handler (SIGVTALRM, SIG_IGN, 0);
-#endif
+	if (ticker_started > 0 && --ticker_started == 0)
+	{
+		/* ignore the signal fired by the activated timer.
+		 * unsetting the signal may cause the program to terminate(default action) */
+		if (set_signal_handler(SIGVTALRM, SIG_IGN, 0) >= 0)
+		{
+			struct itimerval itv;
+			itv.it_interval.tv_sec = 0;
+			itv.it_interval.tv_usec = 0;
+			itv.it_value.tv_sec = 0; /* make setitimer() one-shot only */
+			itv.it_value.tv_usec = 0;
+			setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
+		}
+	}
 }
+
 #else
 #	error UNSUPPORTED
 #endif
@@ -3275,9 +3295,11 @@ static MOO_INLINE void chain (moo_t* moo)
 	xtn_t* xtn = GET_XTN(moo);
 
 	/* TODO: make this atomic */
+	xtn->prev = MOO_NULL;
+	xtn->next = g_moo;
+
 	if (g_moo) GET_XTN(g_moo)->prev = moo;
 	else g_moo = moo;
-	xtn->next = g_moo;
 	/* TODO: make this atomic */
 }
 
@@ -3369,12 +3391,11 @@ void moo_abortstd (moo_t* moo)
 	moo_abort (moo);
 }
 
-int moo_compilestd(moo_t* moo, const moo_iostd_t* in, moo_oow_t count)
+int moo_compilestd (moo_t* moo, const moo_iostd_t* in, moo_oow_t count)
 {
-	xtn_t* xtn;
+	xtn_t* xtn = GET_XTN(moo);
 	moo_oow_t i;
 
-	xtn = GET_XTN(moo);
 	for (i = 0; i < count; i++)
 	{
 		xtn->in = &in[i];
@@ -3383,3 +3404,9 @@ int moo_compilestd(moo_t* moo, const moo_iostd_t* in, moo_oow_t count)
 
 	return 0;
 };
+
+void moo_rcvtickstd (moo_t* moo, int v)
+{
+	xtn_t* xtn = GET_XTN(moo);
+	xtn->rcv_tick = v;
+}

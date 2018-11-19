@@ -116,207 +116,7 @@ static MOO_INLINE void abort_moo (void)
 	if (g_moo) moo_abortstd (g_moo);
 }
 
-static MOO_INLINE void swproc_moo (void)
-{
-	if (g_moo) moo_switchprocess (g_moo);
-}
-
 /* ========================================================================= */
-
-#if defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
-
-#if defined(_INTELC32_)
-static void (*prev_timer_intr_handler) (void);
-#else
-static void (__interrupt *prev_timer_intr_handler) (void);
-#endif
-
-#if defined(_INTELC32_)
-#pragma interrupt(timer_intr_handler)
-static void timer_intr_handler (void)
-#else
-static void __interrupt timer_intr_handler (void)
-#endif
-{
-	/*
-	_XSTACK *stk;
-	int r;
-	stk = (_XSTACK *)_get_stk_frame();
-	r = (unsigned short)stk_ptr->eax;   
-	*/
-
-	/* The timer interrupt (normally) occurs 18.2 times per second. */
-	swproc_moo ();
-	_chain_intr (prev_timer_intr_handler);
-}
-
-
-static void setup_tick (void)
-{
-	prev_timer_intr_handler = _dos_getvect (0x1C);
-	_dos_setvect (0x1C, timer_intr_handler);
-}
-
-static void cancel_tick (void)
-{
-	_dos_setvect (0x1C, prev_timer_intr_handler);
-}
-
-#elif defined(_WIN32)
-
-static HANDLE g_tick_timer = MOO_NULL; /*INVALID_HANDLE_VALUE;*/
-
-static VOID CALLBACK arrange_process_switching (LPVOID arg, DWORD timeLow, DWORD timeHigh) 
-{
-	swproc_moo ();
-}
-
-static void setup_tick (void)
-{
-	LARGE_INTEGER li;
-	g_tick_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
-	if (g_tick_timer)
-	{
-		li.QuadPart = -MOO_SECNSEC_TO_NSEC(0, 20000); /* 20000 microseconds. 0.02 seconds */
-		SetWaitableTimer (g_tick_timer, &li, 0, arrange_process_switching, MOO_NULL, FALSE);
-	}
-}
-
-static void cancel_tick (void)
-{
-	if (g_tick_timer)
-	{
-		CancelWaitableTimer (g_tick_timer);
-		CloseHandle (g_tick_timer);
-		g_tick_timer = MOO_NULL;
-	}
-}
-
-#elif defined(__OS2__)
-static TID g_tick_tid;
-static HEV g_tick_sem; 
-static HTIMER g_tick_timer;
-static int g_tick_done = 0;
-
-static void EXPENTRY os2_wait_for_timer_event (ULONG x)
-{
-	APIRET rc;
-	ULONG count;
-
-	rc = DosCreateEventSem (NULL, &g_tick_sem, DC_SEM_SHARED, FALSE);
-	if (rc != NO_ERROR)
-	{
-		/* xxxx */
-	}
-
-	rc = DosStartTimer (1L, (HSEM)g_tick_sem, &g_tick_timer);
-	if (rc != NO_ERROR)
-	{
-	}
-
-	while (!g_tick_done)
-	{
-		rc = DosWaitEventSem((HSEM)g_tick_sem, 5000L);
-		DosResetEventSem((HSEM)g_tick_sem, &count);
-		swproc_moo ();
-	}
-
-	DosStopTimer (g_tick_timer);
-	DosCloseEventSem ((HSEM)g_tick_sem);
-
-	g_tick_timer = NULL;
-	g_tick_sem = NULL;
-	DosExit (EXIT_THREAD, 0);
-}
-
-static void setup_tick (void)
-{
-	/* TODO: Error check */
-	DosCreateThread (&g_tick_tid, os2_wait_for_timer_event, 0, 0, 4096);
-}
-
-static void cancel_tick (void)
-{
-	if (g_tick_sem) DosPostEventSem (g_tick_sem);
-	g_tick_done = 1;
-}
-
-#elif defined(macintosh)
-
-static TMTask g_tmtask;
-static ProcessSerialNumber g_psn;
-
-#define TMTASK_DELAY 50 /* milliseconds if positive, microseconds(after negation) if negative */
-
-static pascal void timer_intr_handler (TMTask* task)
-{
-	swproc_moo ();
-	WakeUpProcess (&g_psn);
-	PrimeTime ((QElem*)&g_tmtask, TMTASK_DELAY);
-}
-
-static void setup_tick (void)
-{
-	GetCurrentProcess (&g_psn);
-	memset (&g_tmtask, 0, MOO_SIZEOF(g_tmtask));
-	g_tmtask.tmAddr = NewTimerProc (timer_intr_handler);
-	InsXTime ((QElem*)&g_tmtask);
-	PrimeTime ((QElem*)&g_tmtask, TMTASK_DELAY);
-}
-
-static void cancel_tick (void)
-{
-	RmvTime ((QElem*)&g_tmtask);
-	/*DisposeTimerProc (g_tmtask.tmAddr);*/
-}
-
-#elif defined(HAVE_SETITIMER) && defined(SIGVTALRM) && defined(ITIMER_VIRTUAL)
-
-static void arrange_process_switching (int sig)
-{
-	swproc_moo ();
-}
-
-static void setup_tick (void)
-{
-	struct itimerval itv;
-	struct sigaction act, oldact;
-
-	memset (&act, 0, sizeof(act));
-	sigemptyset (&act.sa_mask);
-	act.sa_handler = arrange_process_switching;
-	act.sa_flags = SA_RESTART;
-	sigaction (SIGVTALRM, &act, MOO_NULL);
-
-/*#define MOO_ITIMER_TICK 10000*/ /* microseconds. 0.01 seconds */
-#define MOO_ITIMER_TICK 20000 /* microseconds. 0.02 seconds. */
-	itv.it_interval.tv_sec = 0;
-	itv.it_interval.tv_usec = MOO_ITIMER_TICK;
-	itv.it_value.tv_sec = 0;
-	itv.it_value.tv_usec = MOO_ITIMER_TICK;
-	setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
-}
-
-static void cancel_tick (void)
-{
-	struct itimerval itv;
-	struct sigaction act;
-
-	itv.it_interval.tv_sec = 0;
-	itv.it_interval.tv_usec = 0;
-	itv.it_value.tv_sec = 0; /* make setitimer() one-shot only */
-	itv.it_value.tv_usec = 0;
-	setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
-
-	sigemptyset (&act.sa_mask); 
-	act.sa_handler = SIG_IGN; /* ignore the signal potentially fired by the one-shot arrange above */
-	act.sa_flags = 0;
-	sigaction (SIGVTALRM, &act, MOO_NULL);
-}
-#else
-#	error UNSUPPORTED
-#endif
-
 
 #if defined(_WIN32)
 static BOOL WINAPI handle_term (DWORD ctrl_type)
@@ -627,8 +427,10 @@ int main (int argc, char* argv[])
 	MOO_DEBUG0 (moo, "COMPILE OK. STARTING EXECUTION...\n");
 	xret = 0;
 	g_moo = moo;
-	setup_tick ();
+	moo_start_ticker ();
 	setup_sigterm ();
+
+	moo_rcvtickstd (moo, 1);
 
 	objname.ptr = str_my_object;
 	objname.len = 8;
@@ -640,7 +442,7 @@ int main (int argc, char* argv[])
 		xret = -1;
 	}
 
-	cancel_tick ();
+	moo_stop_ticker ();
 	clear_sigterm ();
 	g_moo = MOO_NULL;
 
