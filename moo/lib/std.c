@@ -2770,57 +2770,44 @@ static void __interrupt dos_timer_intr_handler (void)
 	_chain_intr (dos_prev_timer_intr_handler);
 }
 
-static void moo_start_ticker (void)
+static MOO_INLINE void start_ticker (void)
 {
-	if (++ticker_started == 1)
-	{
-		dos_prev_timer_intr_handler = _dos_getvect(0x1C);
-		_dos_setvect (0x1C, dos_timer_intr_handler);
-	}
+	dos_prev_timer_intr_handler = _dos_getvect(0x1C);
+	_dos_setvect (0x1C, dos_timer_intr_handler);
 }
 
-static void moo_stop_ticker (void)
+static MOO_INLINE void moo_stop_ticker (void)
 {
-	if (ticker_started > 0 && --ticker_started == 0)
-	{
-		_dos_setvect (0x1C, dos_prev_timer_intr_handler);
-	}
+	_dos_setvect (0x1C, dos_prev_timer_intr_handler);
 }
 
 #elif defined(_WIN32)
 
 static HANDLE win_tick_timer = MOO_NULL; /*INVALID_HANDLE_VALUE;*/
-static moo_uint32_t ticker_started = 0;
 
 static VOID CALLBACK arrange_process_switching (LPVOID arg, DWORD timeLow, DWORD timeHigh) 
 {
 	swproc_all_moos ();
 }
 
-static void moo_start_ticker (void)
+static MOO_INLINE void start_ticker (void)
 {
-	if (++ticker_started == 1)
+	LARGE_INTEGER li;
+	win_tick_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
+	if (win_tick_timer)
 	{
-		LARGE_INTEGER li;
-		win_tick_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
-		if (win_tick_timer)
-		{
-			li.QuadPart = -MOO_SECNSEC_TO_NSEC(0, 20000); /* 20000 microseconds. 0.02 seconds */
-			SetWaitableTimer (win_tick_timer, &li, 0, arrange_process_switching, MOO_NULL, FALSE);
-		}
+		li.QuadPart = -MOO_SECNSEC_TO_NSEC(0, 20000); /* 20000 microseconds. 0.02 seconds */
+		SetWaitableTimer (win_tick_timer, &li, 0, arrange_process_switching, MOO_NULL, FALSE);
 	}
 }
 
-static void moo_stop_ticker (void)
+static MOO_INLINE void stop_ticker (void)
 {
-	if (ticker_started > 0 && --ticker_started == 0)
+	if (win_tick_timer)
 	{
-		if (win_tick_timer)
-		{
-			CancelWaitableTimer (win_tick_timer);
-			CloseHandle (win_tick_timer);
-			win_tick_timer = MOO_NULL;
-		}
+		CancelWaitableTimer (win_tick_timer);
+		CloseHandle (win_tick_timer);
+		win_tick_timer = MOO_NULL;
 	}
 }
 
@@ -2829,7 +2816,6 @@ static TID os2_tick_tid;
 static HEV os2_tick_sem; 
 static HTIMER os2_tick_timer;
 static int os2_tick_done = 0;
-static moo_uint32_t ticker_started = 0;
 
 static void EXPENTRY os2_wait_for_timer_event (ULONG x)
 {
@@ -2862,22 +2848,16 @@ static void EXPENTRY os2_wait_for_timer_event (ULONG x)
 	DosExit (EXIT_THREAD, 0);
 }
 
-static void moo_start_ticker (void)
+static MOO_INLINE void start_ticker (void)
 {
-	if (++ticker_started == 1)
-	{
-		/* TODO: Error check */
-		DosCreateThread (&os2_tick_tid, os2_wait_for_timer_event, 0, 0, 4096);
-	}
+	/* TODO: Error check */
+	DosCreateThread (&os2_tick_tid, os2_wait_for_timer_event, 0, 0, 4096);
 }
 
-static void moo_stop_ticker (void)
+static MOO_INLINE void stop_ticker (void)
 {
-	if (ticker_started > 0 && --ticker_started == 0)
-	{
-		if (os2_tick_sem) DosPostEventSem (os2_tick_sem);
-		os2_tick_done = 1;
-	}
+	if (os2_tick_sem) DosPostEventSem (os2_tick_sem);
+	os2_tick_done = 1;
 }
 
 #elif defined(macintosh)
@@ -2894,7 +2874,7 @@ static pascal void timer_intr_handler (TMTask* task)
 	PrimeTime ((QElem*)&mac_tmtask, TMTASK_DELAY);
 }
 
-static void moo_start_ticker (void)
+static MOO_INLINE void start_ticker (void)
 {
 	GetCurrentProcess (&mac_psn);
 	memset (&mac_tmtask, 0, MOO_SIZEOF(mac_tmtask));
@@ -2903,7 +2883,7 @@ static void moo_start_ticker (void)
 	PrimeTime ((QElem*)&mac_tmtask, TMTASK_DELAY);
 }
 
-static void moo_stop_ticker (void)
+static MOO_INLINE void stop_ticker (void)
 {
 	RmvTime ((QElem*)&mac_tmtask);
 	/*DisposeTimerProc (mac_tmtask.tmAddr);*/
@@ -2916,41 +2896,34 @@ static void arrange_process_switching (int sig)
 	swproc_all_moos ();
 }
 
-static moo_uint32_t ticker_started = 0;
 
-void moo_start_ticker (void)
+static MOO_INLINE void start_ticker (void)
 {
-	if (++ticker_started == 1)
+	if (set_signal_handler(SIGVTALRM, arrange_process_switching, SA_RESTART) >= 0)
 	{
-		if (set_signal_handler(SIGVTALRM, arrange_process_switching, SA_RESTART) >= 0)
-		{
-			struct itimerval itv;
-		/*#define MOO_ITIMER_TICK 10000*/ /* microseconds. 0.01 seconds */
-		#define MOO_ITIMER_TICK 20000 /* microseconds. 0.02 seconds. */
-			itv.it_interval.tv_sec = 0;
-			itv.it_interval.tv_usec = MOO_ITIMER_TICK;
-			itv.it_value.tv_sec = 0;
-			itv.it_value.tv_usec = MOO_ITIMER_TICK;
-			setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
-		}
+		struct itimerval itv;
+	/*#define MOO_ITIMER_TICK 10000*/ /* microseconds. 0.01 seconds */
+	#define MOO_ITIMER_TICK 20000 /* microseconds. 0.02 seconds. */
+		itv.it_interval.tv_sec = 0;
+		itv.it_interval.tv_usec = MOO_ITIMER_TICK;
+		itv.it_value.tv_sec = 0;
+		itv.it_value.tv_usec = MOO_ITIMER_TICK;
+		setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
 	}
 }
 
-void moo_stop_ticker (void)
+static MOO_INLINE void stop_ticker (void)
 {
-	if (ticker_started > 0 && --ticker_started == 0)
+	/* ignore the signal fired by the activated timer.
+	 * unsetting the signal may cause the program to terminate(default action) */
+	if (set_signal_handler(SIGVTALRM, SIG_IGN, 0) >= 0)
 	{
-		/* ignore the signal fired by the activated timer.
-		 * unsetting the signal may cause the program to terminate(default action) */
-		if (set_signal_handler(SIGVTALRM, SIG_IGN, 0) >= 0)
-		{
-			struct itimerval itv;
-			itv.it_interval.tv_sec = 0;
-			itv.it_interval.tv_usec = 0;
-			itv.it_value.tv_sec = 0; /* make setitimer() one-shot only */
-			itv.it_value.tv_usec = 0;
-			setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
-		}
+		struct itimerval itv;
+		itv.it_interval.tv_sec = 0;
+		itv.it_interval.tv_usec = 0;
+		itv.it_value.tv_sec = 0; /* make setitimer() one-shot only */
+		itv.it_value.tv_usec = 0;
+		setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
 	}
 }
 
@@ -3409,4 +3382,24 @@ void moo_rcvtickstd (moo_t* moo, int v)
 {
 	xtn_t* xtn = GET_XTN(moo);
 	xtn->rcv_tick = v;
+}
+
+/* ========================================================================= */
+
+static moo_uint32_t ticker_started = 0;
+
+void moo_start_ticker (void)
+{
+	if (++ticker_started == 1)
+	{
+		start_ticker ();
+	}
+}
+
+void moo_stop_ticker (void)
+{
+	if (ticker_started > 0 && --ticker_started == 0)
+	{
+		stop_ticker ();
+	}
 }
