@@ -2924,7 +2924,7 @@ static MOO_INLINE void start_ticker (void)
 	/*#define MOO_ITIMER_TICK 10000*/ /* microseconds. 0.01 seconds */
 	#define MOO_ITIMER_TICK 20000 /* microseconds. 0.02 seconds. */
 		itv.it_interval.tv_sec = 0;
-		itv.it_interval.tv_usec = MOO_TICKER_INTERVAL_USECS
+		itv.it_interval.tv_usec = MOO_TICKER_INTERVAL_USECS;
 		itv.it_value.tv_sec = 0;
 		itv.it_value.tv_usec = MOO_TICKER_INTERVAL_USECS;
 		setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
