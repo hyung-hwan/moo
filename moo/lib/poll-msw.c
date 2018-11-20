@@ -32,6 +32,11 @@
 #include <errno.h>
 #include <limits.h>
 
+#if defined(__BORLANDC__)
+#	include <malloc.h>
+#	define _alloca alloca
+#endif
+
 #ifndef INFTIM
 #	define INFTIM (-1)
 #endif
@@ -280,7 +285,7 @@ restart:
 		if (pfd[i].fd < 0) continue;
 		if (!(sought & (POLLIN | POLLRDNORM | POLLOUT | POLLWRNORM | POLLWRBAND | POLLPRI | POLLRDBAND))) continue;
 
-		h = (HANDLE)_get_osfhandle (pfd[i].fd);
+		h = (HANDLE)_get_osfhandle(pfd[i].fd);
 		if (IsSocketHandle (h))
 		{
 			int requested = FD_CLOSE;

@@ -2726,6 +2726,10 @@ static int unset_signal_handler (int sig)
 #endif
 /* ========================================================================= */
 
+
+/*#define MOO_TICKER_INTERVAL_USECS 10000*/ /* microseconds. 0.01 seconds */
+#define MOO_TICKER_INTERVAL_USECS 20000 /* microseconds. 0.02 seconds. */
+
 static MOO_INLINE void swproc_all_moos (void)
 {
 	/* TODO: make this atomic */
@@ -2743,72 +2747,49 @@ static MOO_INLINE void swproc_all_moos (void)
 	/* TODO: make this atomic */
 }
 
-#if defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
-
-#if defined(_INTELC32_)
-static void (*dos_prev_timer_intr_handler) (void);
-#else
-static void (__interrupt *dos_prev_timer_intr_handler) (void);
-#endif
-
-#if defined(_INTELC32_)
-#pragma interrupt(timer_intr_handler)
-static void dos_timer_intr_handler (void)
-#else
-static void __interrupt dos_timer_intr_handler (void)
-#endif
-{
-	/*
-	_XSTACK *stk;
-	int r;
-	stk = (_XSTACK *)_get_stk_frame();
-	r = (unsigned short)stk_ptr->eax;   
-	*/
-
-	/* The timer interrupt (normally) occurs 18.2 times per second. */
-	swproc_all_moos ();
-	_chain_intr (dos_prev_timer_intr_handler);
-}
-
-static MOO_INLINE void start_ticker (void)
-{
-	dos_prev_timer_intr_handler = _dos_getvect(0x1C);
-	_dos_setvect (0x1C, dos_timer_intr_handler);
-}
-
-static MOO_INLINE void moo_stop_ticker (void)
-{
-	_dos_setvect (0x1C, dos_prev_timer_intr_handler);
-}
-
-#elif defined(_WIN32)
+#if defined(_WIN32)
 
 static HANDLE win_tick_timer = MOO_NULL; /*INVALID_HANDLE_VALUE;*/
 
+#if 0
 static VOID CALLBACK arrange_process_switching (LPVOID arg, DWORD timeLow, DWORD timeHigh) 
+#else
+//static void arrange_process_switching (HWND hwnd, UINT arg2, UINT_PTR arg3, DWORD arg4)
+static void arrange_process_switching (HWND arg1, UINT arg2, void* arg3, DWORD arg4)
+#endif
 {
+printf ("process switching tick...\n");
 	swproc_all_moos ();
 }
 
 static MOO_INLINE void start_ticker (void)
 {
+#if 0
 	LARGE_INTEGER li;
 	win_tick_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
 	if (win_tick_timer)
 	{
-		li.QuadPart = -MOO_SECNSEC_TO_NSEC(0, 20000); /* 20000 microseconds. 0.02 seconds */
+		/* lpDueTime in 100 nanoseconds */
+		li.QuadPart = -MOO_USEC_TO_NSEC(MOO_TICKER_INTERVAL_USECS) / 100;
 		SetWaitableTimer (win_tick_timer, &li, 0, arrange_process_switching, MOO_NULL, FALSE);
 	}
+#else
+	SetTimer (NULL, 0x9991, MOO_USEC_TO_MSEC(MOO_TICKER_INTERVAL_USECS),  arrange_process_switching);
+#endif
 }
 
 static MOO_INLINE void stop_ticker (void)
 {
+#if 0
 	if (win_tick_timer)
 	{
 		CancelWaitableTimer (win_tick_timer);
 		CloseHandle (win_tick_timer);
 		win_tick_timer = MOO_NULL;
 	}
+#else
+	KillTimer (NULL, 0x9991);
+#endif
 }
 
 #elif defined(__OS2__)
@@ -2860,6 +2841,44 @@ static MOO_INLINE void stop_ticker (void)
 	os2_tick_done = 1;
 }
 
+#elif defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
+
+#if defined(_INTELC32_)
+static void (*dos_prev_timer_intr_handler) (void);
+#else
+static void (__interrupt *dos_prev_timer_intr_handler) (void);
+#endif
+
+#if defined(_INTELC32_)
+#pragma interrupt(timer_intr_handler)
+static void dos_timer_intr_handler (void)
+#else
+static void __interrupt dos_timer_intr_handler (void)
+#endif
+{
+	/*
+	_XSTACK *stk;
+	int r;
+	stk = (_XSTACK *)_get_stk_frame();
+	r = (unsigned short)stk_ptr->eax;   
+	*/
+
+	/* The timer interrupt (normally) occurs 18.2 times per second. */
+	swproc_all_moos ();
+	_chain_intr (dos_prev_timer_intr_handler);
+}
+
+static MOO_INLINE void start_ticker (void)
+{
+	dos_prev_timer_intr_handler = _dos_getvect(0x1C);
+	_dos_setvect (0x1C, dos_timer_intr_handler);
+}
+
+static MOO_INLINE void moo_stop_ticker (void)
+{
+	_dos_setvect (0x1C, dos_prev_timer_intr_handler);
+}
+
 #elif defined(macintosh)
 
 static TMTask mac_tmtask;
@@ -2905,9 +2924,9 @@ static MOO_INLINE void start_ticker (void)
 	/*#define MOO_ITIMER_TICK 10000*/ /* microseconds. 0.01 seconds */
 	#define MOO_ITIMER_TICK 20000 /* microseconds. 0.02 seconds. */
 		itv.it_interval.tv_sec = 0;
-		itv.it_interval.tv_usec = MOO_ITIMER_TICK;
+		itv.it_interval.tv_usec = MOO_TICKER_INTERVAL_USECS
 		itv.it_value.tv_sec = 0;
-		itv.it_value.tv_usec = MOO_ITIMER_TICK;
+		itv.it_value.tv_usec = MOO_TICKER_INTERVAL_USECS;
 		setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
 	}
 }
