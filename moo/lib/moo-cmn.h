@@ -379,6 +379,9 @@ typedef struct moo_bcs_t moo_bcs_t;
 #define MOO_MSEC_TO_NSEC(msec) ((msec) * MOO_NSECS_PER_MSEC)
 #define MOO_NSEC_TO_MSEC(nsec) ((nsec) / MOO_NSECS_PER_MSEC)
 
+#define MOO_MSEC_TO_USEC(msec) ((msec) * MOO_USECS_PER_MSEC)
+#define MOO_USEC_TO_MSEC(usec) ((usec) / MOO_USECS_PER_MSEC)
+
 #define MOO_SEC_TO_NSEC(sec) ((sec) * MOO_NSECS_PER_SEC)
 #define MOO_NSEC_TO_SEC(nsec) ((nsec) / MOO_NSECS_PER_SEC)
 

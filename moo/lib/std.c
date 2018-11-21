@@ -1188,7 +1188,7 @@ static void assert_fail (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* fil
 #	define sys_dl_getsym(x,n) dlsym(x,n)
 
 #elif defined(USE_WIN_DLL)
-#	define sys_dl_error() win_dlerror()
+#	define sys_dl_error() msw_dlerror()
 #	define sys_dl_open(x) LoadLibraryExA(x, MOO_NULL, 0)
 #	define sys_dl_openext(x) LoadLibraryExA(x, MOO_NULL, 0)
 #	define sys_dl_close(x) FreeLibrary(x)
@@ -1204,7 +1204,7 @@ static void assert_fail (moo_t* moo, const moo_bch_t* expr, const moo_bch_t* fil
 
 #if defined(USE_WIN_DLL)
 
-static const char* win_dlerror (void)
+static const char* msw_dlerror (void)
 {
 	/* TODO: handle wchar_t, moo_ooch_t etc? */
 	static char buf[256];
@@ -2749,51 +2749,76 @@ static MOO_INLINE void swproc_all_moos (void)
 
 #if defined(_WIN32)
 
-static HANDLE win_tick_timer = MOO_NULL; /*INVALID_HANDLE_VALUE;*/
+static HANDLE msw_tick_timer = MOO_NULL; /*INVALID_HANDLE_VALUE;*/
+static int msw_tick_done = 0;
 
-#if 0
-static VOID CALLBACK arrange_process_switching (LPVOID arg, DWORD timeLow, DWORD timeHigh) 
-#else
-//static void arrange_process_switching (HWND hwnd, UINT arg2, UINT_PTR arg3, DWORD arg4)
-static void arrange_process_switching (HWND arg1, UINT arg2, void* arg3, DWORD arg4)
-#endif
+static DWORD WINAPI msw_wait_for_timer_event (LPVOID ctx)
 {
-printf ("process switching tick...\n");
-	swproc_all_moos ();
+	msw_tick_timer = CreateWaitableTimer(MOO_NULL, FALSE, MOO_NULL);
+	if (msw_tick_timer)
+	{
+		LARGE_INTEGER li;
+
+		/* lpDueTime in 100 nanoseconds */
+		li.QuadPart = -MOO_USEC_TO_NSEC(MOO_TICKER_INTERVAL_USECS) / 100;
+
+	/*#define MSW_TICKER_MANUAL_RESET */
+	#if defined(MSW_TICKER_MANUAL_RESET)
+		/* if manual resetting is enabled, the reset is done after 
+		 * swproc_all_moos has been called. so the interval is the
+		 * interval specified plus the time taken in swproc_all_moos. */
+		SetWaitableTimer (msw_tick_timer, &li, 0, MOO_NULL, MOO_NULL, FALSE);
+	#else
+		/* with auto reset, the interval is not affected by time taken
+		 * in swproc_all_moos() */
+		SetWaitableTimer (msw_tick_timer, &li, MOO_USEC_TO_MSEC(MOO_TICKER_INTERVAL_USECS), MOO_NULL, MOO_NULL, FALSE);
+	#endif
+
+		while (!msw_tick_done)
+		{
+			if (WaitForSingleObject(msw_tick_timer, 100000) == WAIT_OBJECT_0)
+			{
+				swproc_all_moos ();
+			#if defined(MSW_TICKER_MANUAL_RESET)
+				SetWaitableTimer (msw_tick_timer, &li, 0, MOO_NULL, MOO_NULL, FALSE);
+			#endif
+			}
+		}
+
+		CancelWaitableTimer (msw_tick_timer);
+
+		CloseHandle (msw_tick_timer);
+		msw_tick_timer = MOO_NULL;
+	}
+
+	msw_tick_done = 0;
+	/*ExitThread (0);*/
 }
 
 static MOO_INLINE void start_ticker (void)
 {
-#if 0
-	LARGE_INTEGER li;
-	win_tick_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
-	if (win_tick_timer)
+	HANDLE thr;
+
+	msw_tick_done = 0;
+
+	thr = CreateThread(MOO_NULL, 0, msw_wait_for_timer_event, MOO_NULL, 0, MOO_NULL);
+	if (thr)
 	{
-		/* lpDueTime in 100 nanoseconds */
-		li.QuadPart = -MOO_USEC_TO_NSEC(MOO_TICKER_INTERVAL_USECS) / 100;
-		SetWaitableTimer (win_tick_timer, &li, 0, arrange_process_switching, MOO_NULL, FALSE);
+		/* MSDN - The thread object remains in the system until the thread has terminated 
+		 *        and all handles to it have been closed through a call to CloseHandle.
+		 * it is safe to close the handle here */
+		CloseHandle (thr);
 	}
-#else
-	SetTimer (NULL, 0x9991, MOO_USEC_TO_MSEC(MOO_TICKER_INTERVAL_USECS),  arrange_process_switching);
-#endif
 }
 
 static MOO_INLINE void stop_ticker (void)
 {
-#if 0
-	if (win_tick_timer)
-	{
-		CancelWaitableTimer (win_tick_timer);
-		CloseHandle (win_tick_timer);
-		win_tick_timer = MOO_NULL;
-	}
-#else
-	KillTimer (NULL, 0x9991);
-#endif
+	if (msw_tick_timer) CancelWaitableTimer (msw_tick_timer);
+	msw_tick_done = 1;
 }
 
 #elif defined(__OS2__)
-static TID os2_tick_tid;
+
 static HEV os2_tick_sem; 
 static HTIMER os2_tick_timer;
 static int os2_tick_done = 0;
@@ -2806,12 +2831,14 @@ static void EXPENTRY os2_wait_for_timer_event (ULONG x)
 	rc = DosCreateEventSem (NULL, &os2_tick_sem, DC_SEM_SHARED, FALSE);
 	if (rc != NO_ERROR)
 	{
-		/* xxxx */
+		goto done;
 	}
 
 	rc = DosStartTimer (1L, (HSEM)os2_tick_sem, &os2_tick_timer);
 	if (rc != NO_ERROR)
 	{
+		DosCloseEventSem ((HSEM)os2_tick_sem);
+		goto done;
 	}
 
 	while (!os2_tick_done)
@@ -2824,15 +2851,19 @@ static void EXPENTRY os2_wait_for_timer_event (ULONG x)
 	DosStopTimer (os2_tick_timer);
 	DosCloseEventSem ((HSEM)os2_tick_sem);
 
+done:
 	os2_tick_timer = NULL;
 	os2_tick_sem = NULL;
+	os2_tick_done = 0;
 	DosExit (EXIT_THREAD, 0);
 }
 
 static MOO_INLINE void start_ticker (void)
 {
+	static TID tid;
+	os2_tick_done = 0;
+	DosCreateThread (&tid, os2_wait_for_timer_event, 0, 0, 4096);
 	/* TODO: Error check */
-	DosCreateThread (&os2_tick_tid, os2_wait_for_timer_event, 0, 0, 4096);
 }
 
 static MOO_INLINE void stop_ticker (void)
@@ -2896,7 +2927,7 @@ static pascal void timer_intr_handler (TMTask* task)
 static MOO_INLINE void start_ticker (void)
 {
 	GetCurrentProcess (&mac_psn);
-	memset (&mac_tmtask, 0, MOO_SIZEOF(mac_tmtask));
+	MOO_MEMSET (&mac_tmtask, 0, MOO_SIZEOF(mac_tmtask));
 	mac_tmtask.tmAddr = NewTimerProc (timer_intr_handler);
 	InsXTime ((QElem*)&mac_tmtask);
 	PrimeTime ((QElem*)&mac_tmtask, TMTASK_DELAY);
@@ -2914,7 +2945,6 @@ static void arrange_process_switching (int sig)
 {
 	swproc_all_moos ();
 }
-
 
 static MOO_INLINE void start_ticker (void)
 {
