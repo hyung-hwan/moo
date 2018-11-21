@@ -621,12 +621,12 @@ static void* alloc_heap (moo_t* moo, moo_oow_t size)
 
 	actual_size = MOO_SIZEOF(moo_oow_t) + size;
 	actual_size = MOO_ALIGN_POW2(actual_size, 2 * 1024 * 1024);
-	ptr = (moo_oow_t*)mmap(NULL, actual_size, PROT_READ | PROT_WRITE, flags, -1, 0);
+	ptr = (moo_oow_t*)mmap(MOO_NULL, actual_size, PROT_READ | PROT_WRITE, flags, -1, 0);
 	if (ptr == MAP_FAILED) 
 	{
 	#if defined(MAP_HUGETLB)
 		flags &= ~MAP_HUGETLB;
-		ptr = (moo_oow_t*)mmap(NULL, actual_size, PROT_READ | PROT_WRITE, flags, -1, 0);
+		ptr = (moo_oow_t*)mmap(MOO_NULL, actual_size, PROT_READ | PROT_WRITE, flags, -1, 0);
 		if (ptr == MAP_FAILED) return MOO_NULL;
 	#else
 		return MOO_NULL;
@@ -781,7 +781,7 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		size_t tslen;
 		struct tm tm, *tmp;
 
-		now = time(NULL);
+		now = time(MOO_NULL);
 	#if defined(_WIN32)
 		tmp = localtime(&now);
 		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
@@ -2198,7 +2198,7 @@ static void* iothr_main (void* arg)
 			MOO_MEMCPY (&rfds, &xtn->ev.reg.rfds, MOO_SIZEOF(rfds));
 			MOO_MEMCPY (&wfds, &xtn->ev.reg.wfds, MOO_SIZEOF(wfds));
 			MUTEX_UNLOCK (&xtn->ev.reg.smtx);
-			n = select (maxfd + 1, &rfds, &wfds, NULL, &tv);
+			n = select (maxfd + 1, &rfds, &wfds, MOO_NULL, &tv);
 			if (n > 0)
 			{
 				int fd, count = 0;
@@ -2444,7 +2444,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	maxfd = xtn->ev.reg.maxfd;
 	MOO_MEMCPY (&rfds, &xtn->ev.reg.rfds, MOO_SIZEOF(rfds));
 	MOO_MEMCPY (&wfds, &xtn->ev.reg.wfds, MOO_SIZEOF(wfds));
-	n = select(maxfd + 1, &rfds, &wfds, NULL, &tv);
+	n = select(maxfd + 1, &rfds, &wfds, MOO_NULL, &tv);
 	if (n > 0)
 	{
 		int fd, count = 0;
@@ -2828,13 +2828,13 @@ static void EXPENTRY os2_wait_for_timer_event (ULONG x)
 	APIRET rc;
 	ULONG count;
 
-	rc = DosCreateEventSem (NULL, &os2_tick_sem, DC_SEM_SHARED, FALSE);
+	rc = DosCreateEventSem(MOO_NULL, &os2_tick_sem, DC_SEM_SHARED, FALSE);
 	if (rc != NO_ERROR)
 	{
 		goto done;
 	}
 
-	rc = DosStartTimer (1L, (HSEM)os2_tick_sem, &os2_tick_timer);
+	rc = DosStartTimer(MOO_USEC_TO_MSEC(MOO_TICKER_INTERVAL_USECS), (HSEM)os2_tick_sem, &os2_tick_timer);
 	if (rc != NO_ERROR)
 	{
 		DosCloseEventSem ((HSEM)os2_tick_sem);
@@ -2844,8 +2844,13 @@ static void EXPENTRY os2_wait_for_timer_event (ULONG x)
 	while (!os2_tick_done)
 	{
 		rc = DosWaitEventSem((HSEM)os2_tick_sem, 5000L);
-		DosResetEventSem((HSEM)os2_tick_sem, &count);
+	#if 0
 		swproc_all_moos ();
+		DosResetEventSem ((HSEM)os2_tick_sem, &count);
+	#else
+		DosResetEventSem ((HSEM)os2_tick_sem, &count);
+		swproc_all_moos ();
+	#endif
 	}
 
 	DosStopTimer (os2_tick_timer);
@@ -2915,7 +2920,8 @@ static MOO_INLINE void moo_stop_ticker (void)
 static TMTask mac_tmtask;
 static ProcessSerialNumber mac_psn;
 
-#define TMTASK_DELAY 50 /* milliseconds if positive, microseconds(after negation) if negative */
+/* milliseconds if positive, microseconds(after negation) if negative */
+#define TMTASK_DELAY MOO_USEC_TO_MSEC(MOO_TICKER_INTERVAL_USECS)
 
 static pascal void timer_intr_handler (TMTask* task)
 {
@@ -2951,8 +2957,6 @@ static MOO_INLINE void start_ticker (void)
 	if (set_signal_handler(SIGVTALRM, arrange_process_switching, SA_RESTART) >= 0)
 	{
 		struct itimerval itv;
-	/*#define MOO_ITIMER_TICK 10000*/ /* microseconds. 0.01 seconds */
-	#define MOO_ITIMER_TICK 20000 /* microseconds. 0.02 seconds. */
 		itv.it_interval.tv_sec = 0;
 		itv.it_interval.tv_usec = MOO_TICKER_INTERVAL_USECS;
 		itv.it_value.tv_sec = 0;
