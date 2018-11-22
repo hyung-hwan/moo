@@ -2793,6 +2793,7 @@ static DWORD WINAPI msw_wait_for_timer_event (LPVOID ctx)
 
 	msw_tick_done = 0;
 	/*ExitThread (0);*/
+	return 0;
 }
 
 static MOO_INLINE void start_ticker (void)

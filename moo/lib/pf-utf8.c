@@ -43,16 +43,13 @@ moo_pfrc_t moo_pf_utf8_seqlen (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	utf8 = (const moo_bch_t*)MOO_OBJ_GET_BYTE_SLOT(rcv);
 	size = MOO_OBJ_GET_SIZE(rcv);
 
-
-#if 0
-	/* TODO: check the first byte and return bytes required */
+/* TODO: do i need to check the first byte and return bytes required regardless of the available length? */
 	if ((n = moo_utf8_to_uc(utf8, size, &uch)) == 0)
 	{
 		/* invalid sequence */
 		moo_seterrnum (moo, MOO_EECERR);
 		return MOO_PF_FAILURE;
 	}
-#endif
 
 	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
 	return MOO_PF_SUCCESS;

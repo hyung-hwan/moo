@@ -539,7 +539,6 @@ static int ignite_3 (moo_t* moo)
 	moo_oow_t i;
 	moo_oop_t sym;
 	moo_oop_class_t cls;
-	moo_oop_t* moo_ptr;
 
 	for (i = 0; i < MOO_COUNTOF(kernel_classes); i++)
 	{
@@ -551,7 +550,6 @@ static int ignite_3 (moo_t* moo)
 		cls->nsup = moo->sysdic;
 
 		if (!moo_putatsysdic(moo, sym, (moo_oop_t)cls)) return -1;
-		moo_ptr++;
 	}
 
 	/* Attach the system dictionary to the nsdic field of the System class */
