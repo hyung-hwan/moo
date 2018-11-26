@@ -37,6 +37,7 @@
 
 #if defined(_WIN32)
 #	include <windows.h>
+#	include <psapi.h>
 #	include <tchar.h>
 #	include <time.h>
 #	include <io.h>
@@ -2754,6 +2755,17 @@ static int msw_tick_done = 0;
 
 static DWORD WINAPI msw_wait_for_timer_event (LPVOID ctx)
 {
+	/* I don't think i need to use the waiting timer for this.
+	 * a simple loop with sleep inside should also work as i don't do anything
+	 * special except waiting for timer expiry.
+	 *   while (!msw_tick_done)
+	 *   {
+	 *       Sleep (...);
+	 *       swproc_all_moos();
+	 *   }
+	 * but never mind for now. let's do it the hard way.
+	 */
+
 	msw_tick_timer = CreateWaitableTimer(MOO_NULL, FALSE, MOO_NULL);
 	if (msw_tick_timer)
 	{
@@ -2987,6 +2999,92 @@ static MOO_INLINE void stop_ticker (void)
 #	error UNSUPPORTED
 #endif
 
+/* ========================================================================= */
+#if defined(_WIN32)
+
+static const wchar_t* msw_exception_name (DWORD excode)
+{
+	switch (excode)
+	{
+		case EXCEPTION_ACCESS_VIOLATION:          return L"Access violation exception";
+		case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:     return L"Array bounds exceeded";
+		case EXCEPTION_BREAKPOINT:                return L"Breakpoint";
+		case EXCEPTION_DATATYPE_MISALIGNMENT:     return L"Float datatype misalignment";
+		case EXCEPTION_FLT_DENORMAL_OPERAND:      return L"Float denormal operand";
+		case EXCEPTION_FLT_DIVIDE_BY_ZERO:        return L"Float divide by zero";
+		case EXCEPTION_FLT_INEXACT_RESULT:        return L"Float inexact result";
+		case EXCEPTION_FLT_OVERFLOW:              return L"Float overflow";
+		case EXCEPTION_FLT_STACK_CHECK:           return L"Float stack check";
+		case EXCEPTION_FLT_UNDERFLOW:             return L"Float underflow";
+		case EXCEPTION_ILLEGAL_INSTRUCTION:       return L"Illegal instruction";
+		case EXCEPTION_IN_PAGE_ERROR:             return L"In page error";
+		case EXCEPTION_INT_DIVIDE_BY_ZERO:        return L"Integer divide by zero";
+		case EXCEPTION_INT_OVERFLOW:              return L"Integer overflow";
+		case EXCEPTION_INVALID_DISPOSITION:       return L"Invalid disposition";
+		case EXCEPTION_NONCONTINUABLE_EXCEPTION:  return L"Noncontinuable exception";
+		case EXCEPTION_PRIV_INSTRUCTION:          return L"Priv instruction";
+		case EXCEPTION_SINGLE_STEP:               return L"Single step";
+		case EXCEPTION_STACK_OVERFLOW:            return L"Stack overflow";
+		default:                                  return L"Unknown exception";
+	}
+}
+
+static const wchar_t* msw_exception_opname (const ULONG opcode)
+{
+	switch (opcode)
+	{
+		case 0: return L"Read attempt from inaccessible data";
+		case 1: return L"Write attempt to inaccessible data";
+		case 8: return L"User-mode data execution prevention violation";
+		default: return L"Unknown exception operation";
+	}
+}
+
+static LONG WINAPI msw_exception_filter (struct _EXCEPTION_POINTERS* exinfo)
+{
+	HMODULE mod;
+	MODULEINFO modinfo;
+	DWORD excode;
+	static wchar_t exmsg[256];
+	static wchar_t expath[128];
+
+#if defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0501)
+	GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, exinfo->ExceptionRecord->ExceptionAddress, &mod);
+	//GetModuleInformation (GetCurrentProcess(), mod, &modinfo, MOO_SIZEOF(modinfo));
+	GetModuleFileNameExW (GetCurrentProcess(), mod, expath, MOO_SIZEOF(expath));
+#else
+	GetModuleFileNameW (MOO_NULL, expath, MOO_SIZEOF(expath));
+#endif
+
+	excode = exinfo->ExceptionRecord->ExceptionCode;
+	if (excode == EXCEPTION_BREAKPOINT) return EXCEPTION_CONTINUE_SEARCH;
+
+	if (excode == EXCEPTION_ACCESS_VIOLATION || excode == EXCEPTION_IN_PAGE_ERROR)
+	{
+		_snwprintf (exmsg, MOO_COUNTOF(exmsg), L"Exception %s(%u) at 0x%p - Invalid operation at 0x%p - %s", 
+			msw_exception_name(excode), (unsigned int)excode,
+			exinfo->ExceptionRecord->ExceptionAddress,
+			(PVOID)exinfo->ExceptionRecord->ExceptionInformation[1],
+			msw_exception_opname(exinfo->ExceptionRecord->ExceptionInformation[0])
+		);
+	}
+	else
+	{
+		_snwprintf (exmsg, MOO_COUNTOF(exmsg), L"Exception %s(%u) at 0x%p", 
+			msw_exception_name(excode), (unsigned int)excode, 
+			exinfo->ExceptionRecord->ExceptionAddress
+		);
+	}
+
+	/* TODO: use a global output callback like vmprim.assertfail().
+	 *       vmprim.assertfail() requires 'moo'. so i need another global level callback for this */
+	MessageBoxW (NULL, exmsg, expath, MB_OK | MB_ICONERROR);
+
+	/*return EXCEPTION_CONTINUE_SEARCH;*/
+	/*return EXCEPTION_CONTINUE_EXECUTION;*/
+	return EXCEPTION_EXECUTE_HANDLER;
+}
+#endif
 /* ========================================================================= */
 
 static struct 
@@ -3402,6 +3500,10 @@ static void fini_moo (moo_t* moo)
 		moo_close (moo);
 		return MOO_NULL;
 	}
+
+#if defined(_WIN32)
+	SetUnhandledExceptionFilter (msw_exception_filter);
+#endif
 
 	return moo;
 }
