@@ -2805,6 +2805,8 @@ static MOO_INLINE void start_ticker (void)
 	thr = CreateThread(MOO_NULL, 0, msw_wait_for_timer_event, MOO_NULL, 0, MOO_NULL);
 	if (thr)
 	{
+		SetThreadPriority (thr, THREAD_PRIORITY_HIGHEST);
+
 		/* MSDN - The thread object remains in the system until the thread has terminated 
 		 *        and all handles to it have been closed through a call to CloseHandle.
 		 * it is safe to close the handle here */
