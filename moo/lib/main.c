@@ -33,166 +33,35 @@
 #include <stdlib.h>
 #include <locale.h>
 
-#if defined(_WIN32)
-#	include <windows.h>
-
-#elif defined(__OS2__)
-#	define INCL_DOSMODULEMGR
-#	define INCL_DOSPROCESS
-#	define INCL_DOSSEMAPHORES
-#	define INCL_DOSEXCEPTIONS
-#	define INCL_DOSMISC
-#	define INCL_DOSDATETIME
-#	define INCL_DOSFILEMGR
-#	define INCL_DOSERRORS
-#	include <os2.h>
-#	include <time.h>
-#	include <fcntl.h>
-#	include <io.h>
-#	include <errno.h>
-
-
-#elif defined(__DOS__)
-#	include <dos.h>
-#	include <time.h>
-#	include <io.h>
-#	include <signal.h>
-#	include <errno.h>
-
-
-#elif defined(macintosh)
-#	include <Types.h>
-#	include <OSUtils.h>
-#	include <Timer.h>
-
-#	include <MacErrors.h>
-#	include <Process.h>
-#	include <Dialogs.h>
-#	include <TextUtils.h>
-
-	/* TODO: a lot to do */
-
-#elif defined(vms) || defined(__vms)
-#	define __NEW_STARLET 1
-#	include <starlet.h> /* (SYS$...) */
-#	include <ssdef.h> /* (SS$...) */
-#	include <lib$routines.h> /* (lib$...) */
-
-	/* TODO: a lot to do */
-
-#else
-#	include <sys/types.h>
-#	include <unistd.h>
-#	include <fcntl.h>
-#	include <errno.h>
-
-
-#	if defined(HAVE_TIME_H)
-#		include <time.h>
-#	endif
-#	if defined(HAVE_SYS_TIME_H)
-#		include <sys/time.h>
-#	endif
-#	if defined(HAVE_SIGNAL_H)
-#		include <signal.h>
-#	endif
-#	if defined(HAVE_SYS_MMAN_H)
-#		include <sys/mman.h>
-#	endif
-
-#	if defined(USE_THREAD)
-#		include <pthread.h>
-#		include <sched.h>
-#	endif
-
-#endif
-
-/* ========================================================================= */
-
-static moo_t* g_moo = MOO_NULL;
-
-static MOO_INLINE void abort_moo (void)
+static void print_syntax_error (moo_t* moo, const char* main_src_file)
 {
-	if (g_moo) moo_abortstd (g_moo);
-}
+	moo_synerr_t synerr;
 
-/* ========================================================================= */
+	moo_getsynerr (moo, &synerr);
 
-#if defined(_WIN32)
-static BOOL WINAPI handle_term (DWORD ctrl_type)
-{
-	if (ctrl_type == CTRL_C_EVENT || ctrl_type == CTRL_CLOSE_EVENT)
+	moo_logbfmt (moo, MOO_LOG_STDERR, "ERROR: ");
+	if (synerr.loc.file)
 	{
-		abort_moo ();
-		return TRUE;
+		moo_logbfmt (moo, MOO_LOG_STDERR, "%js", synerr.loc.file);
+	}
+	else
+	{
+		moo_logbfmt (moo, MOO_LOG_STDERR, "%s", main_src_file);
 	}
 
-	return FALSE;
-}
+	moo_logbfmt (moo, MOO_LOG_STDERR, "[%zu,%zu] %js", 
+		synerr.loc.line, synerr.loc.colm,
+		(moo_geterrmsg(moo) != moo_geterrstr(moo)? moo_geterrmsg(moo): moo_geterrstr(moo))
+	);
 
-#elif defined(__OS2__)
-static EXCEPTIONREGISTRATIONRECORD os2_excrr = { 0 };
-
-static ULONG _System handle_term (
-	PEXCEPTIONREPORTRECORD p1,
-	PEXCEPTIONREGISTRATIONRECORD p2,
-	PCONTEXTRECORD p3,
-	PVOID pv)
-{
-	if (p1->ExceptionNum == XCPT_SIGNAL)
+	if (synerr.tgt.len > 0)
 	{
-		if (p1->ExceptionInfo[0] == XCPT_SIGNAL_INTR ||
-		    p1->ExceptionInfo[0] == XCPT_SIGNAL_KILLPROC ||
-		    p1->ExceptionInfo[0] == XCPT_SIGNAL_BREAK)
-		{
-			abort_moo ();
-			return (DosAcknowledgeSignalException(p1->ExceptionInfo[0]) != NO_ERROR)? 1: XCPT_CONTINUE_EXECUTION;
-		}
+		moo_logbfmt (moo, MOO_LOG_STDERR, " - %.*js", synerr.tgt.len, synerr.tgt.ptr);
 	}
 
-	return XCPT_CONTINUE_SEARCH; /* exception not resolved */
-}
-#else
-
-static void handle_term (int sig)
-{
-	abort_moo ();
-}
-#endif
-
-
-static void setup_sigterm (void)
-{
-#if defined(_WIN32)
-	SetConsoleCtrlHandler (handle_term, TRUE);
-#elif defined(__OS2__)
-	os2_excrr.ExceptionHandler = (ERR)handle_term;
-	DosSetExceptionHandler (&os2_excrr); /* TODO: check if NO_ERROR is returned */
-#elif defined(__DOS__)
-	signal (SIGINT, handle_term);
-#else
-	struct sigaction sa;
-	memset (&sa, 0, MOO_SIZEOF(sa));
-	sa.sa_handler = handle_term;
-	sigaction (SIGINT, &sa, MOO_NULL);
-#endif
+	moo_logbfmt (moo, MOO_LOG_STDERR, "\n");
 }
 
-static void clear_sigterm (void)
-{
-#if defined(_WIN32)
-	SetConsoleCtrlHandler (handle_term, FALSE);
-#elif defined(__OS2__)
-	DosUnsetExceptionHandler (&os2_excrr);
-#elif defined(__DOS__)
-	signal (SIGINT, SIG_DFL);
-#else
-	struct sigaction sa;
-	memset (&sa, 0, MOO_SIZEOF(sa));
-	sa.sa_handler = SIG_DFL;
-	sigaction (SIGINT, &sa, MOO_NULL);
-#endif
-}
 /* ========================================================================= */
 
 #define MIN_MEMSIZE 2048000ul
@@ -371,7 +240,7 @@ int main (int argc, char* argv[])
 	{
 		moo_iostd_t in;
 
-#if 0
+#if 1
 		in.type = MOO_IOSTD_FILEB;
 		in.u.fileb.path = argv[i];
 #else
@@ -388,31 +257,7 @@ int main (int argc, char* argv[])
 		{
 			if (moo->errnum == MOO_ESYNERR)
 			{
-				moo_synerr_t synerr;
-
-				moo_getsynerr (moo, &synerr);
-
-				moo_logbfmt (moo, MOO_LOG_STDERR, "ERROR: ");
-				if (synerr.loc.file)
-				{
-					moo_logbfmt (moo, MOO_LOG_STDERR, "%js", synerr.loc.file);
-				}
-				else
-				{
-					moo_logbfmt (moo, MOO_LOG_STDERR, "%s", argv[i]);
-				}
-
-				moo_logbfmt (moo, MOO_LOG_STDERR, "[%zu,%zu] %js", 
-					synerr.loc.line, synerr.loc.colm,
-					(moo_geterrmsg(moo) != moo_geterrstr(moo)? moo_geterrmsg(moo): moo_geterrstr(moo))
-				);
-
-				if (synerr.tgt.len > 0)
-				{
-					moo_logbfmt (moo, MOO_LOG_STDERR, " - %.*js", synerr.tgt.len, synerr.tgt.ptr);
-				}
-
-				moo_logbfmt (moo, MOO_LOG_STDERR, "\n");
+				print_syntax_error (moo, argv[i]);
 			}
 			else
 			{
@@ -426,9 +271,9 @@ int main (int argc, char* argv[])
 
 	MOO_DEBUG0 (moo, "COMPILE OK. STARTING EXECUTION...\n");
 	xret = 0;
-	g_moo = moo;
+
+	moo_catch_termreq ();
 	moo_start_ticker ();
-	setup_sigterm ();
 
 	moo_rcvtickstd (moo, 1);
 
@@ -443,8 +288,7 @@ int main (int argc, char* argv[])
 	}
 
 	moo_stop_ticker ();
-	clear_sigterm ();
-	g_moo = MOO_NULL;
+	moo_uncatch_termreq ();
 
 	/*moo_dumpsymtab(moo);
 	 *moo_dumpdic(moo, moo->sysdic, "System dictionary");*/

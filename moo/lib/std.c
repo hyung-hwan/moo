@@ -2728,10 +2728,28 @@ static int unset_signal_handler (int sig)
 /* ========================================================================= */
 
 
+static MOO_INLINE void abort_all_moos (int unused)
+{
+	/* TODO: make this atomic */
+	if (g_moo)
+	{
+		moo_t* moo = g_moo;
+		do
+		{
+			xtn_t* xtn = GET_XTN(moo);
+			moo_abortstd (moo);
+			moo = xtn->next;
+		}
+		while (moo);
+	}
+	/* TODO: make this atomic */
+}
+
+
 /*#define MOO_TICKER_INTERVAL_USECS 10000*/ /* microseconds. 0.01 seconds */
 #define MOO_TICKER_INTERVAL_USECS 20000 /* microseconds. 0.02 seconds. */
 
-static MOO_INLINE void swproc_all_moos (void)
+static MOO_INLINE void swproc_all_moos (int unused)
 {
 	/* TODO: make this atomic */
 	if (g_moo)
@@ -2790,7 +2808,7 @@ static DWORD WINAPI msw_wait_for_timer_event (LPVOID ctx)
 		{
 			if (WaitForSingleObject(msw_tick_timer, 100000) == WAIT_OBJECT_0)
 			{
-				swproc_all_moos ();
+				swproc_all_moos (0);
 			#if defined(MSW_TICKER_MANUAL_RESET)
 				SetWaitableTimer (msw_tick_timer, &li, 0, MOO_NULL, MOO_NULL, FALSE);
 			#endif
@@ -2860,11 +2878,11 @@ static void EXPENTRY os2_wait_for_timer_event (ULONG x)
 	{
 		rc = DosWaitEventSem((HSEM)os2_tick_sem, 5000L);
 	#if 0
-		swproc_all_moos ();
+		swproc_all_moos (0);
 		DosResetEventSem ((HSEM)os2_tick_sem, &count);
 	#else
 		DosResetEventSem ((HSEM)os2_tick_sem, &count);
-		swproc_all_moos ();
+		swproc_all_moos (0);
 	#endif
 	}
 
@@ -2915,7 +2933,7 @@ static void __interrupt dos_timer_intr_handler (void)
 	*/
 
 	/* The timer interrupt (normally) occurs 18.2 times per second. */
-	swproc_all_moos ();
+	swproc_all_moos (0);
 	_chain_intr (dos_prev_timer_intr_handler);
 }
 
@@ -2940,7 +2958,7 @@ static ProcessSerialNumber mac_psn;
 
 static pascal void timer_intr_handler (TMTask* task)
 {
-	swproc_all_moos ();
+	swproc_all_moos (0);
 	WakeUpProcess (&mac_psn);
 	PrimeTime ((QElem*)&mac_tmtask, TMTASK_DELAY);
 }
@@ -2962,14 +2980,9 @@ static MOO_INLINE void stop_ticker (void)
 
 #elif defined(HAVE_SETITIMER) && defined(SIGVTALRM) && defined(ITIMER_VIRTUAL)
 
-static void arrange_process_switching (int sig)
-{
-	swproc_all_moos ();
-}
-
 static MOO_INLINE void start_ticker (void)
 {
-	if (set_signal_handler(SIGVTALRM, arrange_process_switching, SA_RESTART) >= 0)
+	if (set_signal_handler(SIGVTALRM, swproc_all_moos, SA_RESTART) >= 0)
 	{
 		struct itimerval itv;
 		itv.it_interval.tv_sec = 0;
@@ -3561,3 +3574,111 @@ void moo_stop_ticker (void)
 		stop_ticker ();
 	}
 }
+
+
+/* ========================================================================== */
+
+#if defined(_WIN32)
+static BOOL WINAPI handle_term (DWORD ctrl_type)
+{
+	if (ctrl_type == CTRL_C_EVENT || ctrl_type == CTRL_CLOSE_EVENT)
+	{
+		abort_all_moos (0);
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
+void moo_catch_termreq (void)
+{
+	SetConsoleCtrlHandler (handle_term, TRUE);
+}
+
+void moo_uncatch_termreq (void)
+{
+	SetConsoleCtrlHandler (handle_term, FALSE);
+}
+
+void moo_ignore_termreq (void)
+{
+}
+
+#elif defined(__OS2__)
+
+static EXCEPTIONREGISTRATIONRECORD os2_excrr = { 0 };
+
+static ULONG _System handle_term (
+	PEXCEPTIONREPORTRECORD p1,
+	PEXCEPTIONREGISTRATIONRECORD p2,
+	PCONTEXTRECORD p3,
+	PVOID pv)
+{
+	if (p1->ExceptionNum == XCPT_SIGNAL)
+	{
+		if (p1->ExceptionInfo[0] == XCPT_SIGNAL_INTR ||
+		    p1->ExceptionInfo[0] == XCPT_SIGNAL_KILLPROC ||
+		    p1->ExceptionInfo[0] == XCPT_SIGNAL_BREAK)
+		{
+			abort_all_moos (0);
+			return (DosAcknowledgeSignalException(p1->ExceptionInfo[0]) != NO_ERROR)? 1: XCPT_CONTINUE_EXECUTION;
+		}
+	}
+
+	return XCPT_CONTINUE_SEARCH; /* exception not resolved */
+}
+
+void moo_catch_termreq (void)
+{
+	os2_excrr.ExceptionHandler = (ERR)handle_term;
+	DosSetExceptionHandler (&os2_excrr); /* TODO: check if NO_ERROR is returned */
+}
+
+void moo_uncatch_termreq (void)
+{
+	DosUnsetExceptionHandler (&os2_excrr);
+}
+
+void moo_ignore_termreq (void)
+{
+}
+
+#elif defined(__DOS__)
+
+void moo_catch_termreq (void)
+{
+	signal (SIGINT, abort_all_moos);
+	signal (SIGTERM, abort_all_moos);
+}
+
+void moo_uncatch_termreq (void)
+{
+	signal (SIGINT, SIG_DFL);
+	signal (SIGTERM, SGI_DFL);
+}
+
+void moo_ignore_termreq (void)
+{
+	signal (SIGINT, SIG_IGN);
+	signal (SIGTERM, SIG_IGN);
+}
+
+#else
+
+void moo_catch_termreq (void)
+{
+	set_signal_handler(SIGINT, abort_all_moos, 0);
+}
+
+void moo_uncatch_termreq (void)
+{
+	unset_signal_handler(SIGTERM);
+}
+
+void moo_ignore_termreq (void)
+{
+	set_signal_handler(SIGINT, SIG_IGN, 0);
+}
+
+#endif
+

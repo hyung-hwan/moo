@@ -86,6 +86,19 @@ MOO_EXPORT void moo_stop_ticker (
 	void
 );
 
+MOO_EXPORT void moo_catch_termreq (
+	void
+);
+
+MOO_EXPORT void moo_uncatch_termreq (
+	void
+);
+
+MOO_EXPORT void moo_ignore_termreq (
+	void
+);
+
+/* ----------------------------------------------------------------------- */
 MOO_EXPORT moo_t* moo_openstd (
 	moo_oow_t           xtnsize, 
 	const moo_cfgstd_t* cfg,
@@ -110,6 +123,9 @@ MOO_EXPORT void moo_rcvtickstd (
 	moo_t*             moo,
 	int                v
 );
+
+
+
 
 #if defined(__cplusplus)
 }
