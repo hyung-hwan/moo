@@ -33,7 +33,7 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 	heap = (moo_heap_t*)moo->vmprim.alloc_heap(moo, MOO_SIZEOF(*heap) + size);
 	if (!heap) 
 	{
-		moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
+		const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
 		moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to allocate heap - %js", oldmsg);
 		return MOO_NULL;
 	}

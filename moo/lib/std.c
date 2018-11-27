@@ -625,7 +625,6 @@ static void* alloc_heap (moo_t* moo, moo_oow_t size)
 	moo_oow_t actual_size, align_size;
 	HINSTANCE k32;
 	SIZE_T (*k32_GetLargePageMinimum) (void);
-	DWORD va_flags;
 
 	align_size = 2 * 1024 * 1024;
 
@@ -640,24 +639,18 @@ static void* alloc_heap (moo_t* moo, moo_oow_t size)
 	actual_size = MOO_SIZEOF(moo_oow_t) + size;
 	actual_size = MOO_ALIGN_POW2(actual_size, align_size);
 
-	va_flags =  MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES;
-	if (msw_set_privilege(moo, TEXT("SeLockMemoryPrivilege"), TRUE) <= -1) goto large_page_fail;
+	if (msw_set_privilege(moo, TEXT("SeLockMemoryPrivilege"), TRUE) <= -1) return MOO_NULL;
 
-va_do:
-	ptr = VirtualAlloc(MOO_NULL, actual_size, va_flags, PAGE_READWRITE);
+	ptr = VirtualAlloc(MOO_NULL, actual_size, MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES, PAGE_READWRITE);
 	if (!ptr)
 	{
-		if ((va_flags & MEM_LARGE_PAGES) && GetLastError() == ERROR_INVALID_PARAMETER)
-		{
-		large_page_fail:
-			va_flags &= ~MEM_LARGE_PAGES;
-			goto va_do;
-		}
-
-		moo_seterrwithsyserr (moo, 1, GetLastError());
+		DWORD errcode = GetLastError();
+		msw_set_privilege(moo, TEXT("SeLockMemoryPrivilege"), FALSE);
+		moo_seterrwithsyserr (moo, 1, errcode);
 		return MOO_NULL;
 	}
 
+	msw_set_privilege(moo, TEXT("SeLockMemoryPrivilege"), FALSE);
 	return ptr;
 
 #elif defined(HAVE_MMAP) && defined(HAVE_MUNMAP) && defined(MAP_ANONYMOUS)
