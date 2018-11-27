@@ -88,7 +88,9 @@ static void fill_bigint_tables (moo_t* moo)
 
 static void* alloc_heap (moo_t* moo, moo_oow_t size)
 {
-	return MOO_MMGR_ALLOC(moo->mmgr, size);
+	void* ptr = MOO_MMGR_ALLOC(moo->mmgr, size);
+	if (!ptr) moo_seterrnum (moo, MOO_ESYSMEM);
+	return ptr;
 }
 
 static void free_heap (moo_t* moo, void* ptr)

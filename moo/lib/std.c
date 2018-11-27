@@ -593,9 +593,74 @@ static moo_ooi_t input_handler (moo_t* moo, moo_iocmd_t cmd, moo_ioarg_t* arg)
 
 /* ========================================================================= */
 
+#if defined(_WIN32)
+static int msw_set_privilege (moo_t* moo, TCHAR* pszPrivilege, BOOL bEnable)
+{
+	HANDLE token = MOO_NULL;
+	TOKEN_PRIVILEGES tp;
+	BOOL status;
+	DWORD error;
+
+	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) goto oops;
+	if (!LookupPrivilegeValue(MOO_NULL, pszPrivilege, &tp.Privileges[0].Luid)) goto oops;
+
+	tp.PrivilegeCount = 1;
+	tp.Privileges[0].Attributes = (bEnable? SE_PRIVILEGE_ENABLED: 0);
+	if (!AdjustTokenPrivileges(token, FALSE, &tp, 0, (PTOKEN_PRIVILEGES)MOO_NULL, 0) || GetLastError() != ERROR_SUCCESS) goto oops;
+
+	CloseHandle (token);
+	return 0;
+
+oops:
+	moo_seterrwithsyserr (moo, 1, GetLastError());
+	if (token) CloseHandle (token);
+	return -1;
+}
+#endif
+
 static void* alloc_heap (moo_t* moo, moo_oow_t size)
 {
-#if defined(HAVE_MMAP) && defined(HAVE_MUNMAP) && defined(MAP_ANONYMOUS)
+#if defined(_WIN32)
+	moo_oow_t* ptr;
+	moo_oow_t actual_size, align_size;
+	HINSTANCE k32;
+	SIZE_T (*k32_GetLargePageMinimum) (void);
+	DWORD va_flags;
+
+	align_size = 2 * 1024 * 1024;
+
+	k32 = LoadLibrary (TEXT("kernel32.dll"));
+	if (k32)
+	{
+		k32_GetLargePageMinimum = (SIZE_T(*)(void))GetProcAddress (k32, "GetLargePageMinimum");
+		if (k32_GetLargePageMinimum) align_size = k32_GetLargePageMinimum();
+		FreeLibrary (k32);
+	}
+
+	actual_size = MOO_SIZEOF(moo_oow_t) + size;
+	actual_size = MOO_ALIGN_POW2(actual_size, align_size);
+
+	va_flags =  MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES;
+	if (msw_set_privilege(moo, TEXT("SeLockMemoryPrivilege"), TRUE) <= -1) goto large_page_fail;
+
+va_do:
+	ptr = VirtualAlloc(MOO_NULL, actual_size, va_flags, PAGE_READWRITE);
+	if (!ptr)
+	{
+		if ((va_flags & MEM_LARGE_PAGES) && GetLastError() == ERROR_INVALID_PARAMETER)
+		{
+		large_page_fail:
+			va_flags &= ~MEM_LARGE_PAGES;
+			goto va_do;
+		}
+
+		moo_seterrwithsyserr (moo, 1, GetLastError());
+		return MOO_NULL;
+	}
+
+	return ptr;
+
+#elif defined(HAVE_MMAP) && defined(HAVE_MUNMAP) && defined(MAP_ANONYMOUS)
 	/* It's called via moo_makeheap() when MOO creates a GC heap.
 	 * The heap is large in size. I can use a different memory allocation
 	 * function instead of an ordinary malloc.
@@ -628,8 +693,13 @@ static void* alloc_heap (moo_t* moo, moo_oow_t size)
 	#if defined(MAP_HUGETLB)
 		flags &= ~MAP_HUGETLB;
 		ptr = (moo_oow_t*)mmap(MOO_NULL, actual_size, PROT_READ | PROT_WRITE, flags, -1, 0);
-		if (ptr == MAP_FAILED) return MOO_NULL;
+		if (ptr == MAP_FAILED) 
+		{
+			moo_seterrwithsyserr (moo, 0, errno);
+			return MOO_NULL;
+		}
 	#else
+		moo_seterrwithsyserr (moo, 0, errno);
 		return MOO_NULL;
 	#endif
 	}
@@ -644,7 +714,10 @@ static void* alloc_heap (moo_t* moo, moo_oow_t size)
 
 static void free_heap (moo_t* moo, void* ptr)
 {
-#if defined(HAVE_MMAP) && defined(HAVE_MUNMAP)
+#if defined(_WIN32)
+	VirtualFree (ptr, 0, MEM_RELEASE); /* release the entire region */
+
+#elif defined(HAVE_MMAP) && defined(HAVE_MUNMAP)
 	moo_oow_t* actual_ptr;
 	actual_ptr = (moo_oow_t*)ptr - 1;
 	munmap (actual_ptr, *actual_ptr);
@@ -947,6 +1020,12 @@ static moo_errnum_t winerr_to_errnum (DWORD errcode)
 		case ERROR_ACCESS_DENIED:
 		case ERROR_SHARING_VIOLATION:
 			return MOO_EACCES;
+
+	#if defined(ERROR_IO_PRIVILEGE_FAILED)
+		case ERROR_IO_PRIVILEGE_FAILED:
+	#endif
+		case ERROR_PRIVILEGE_NOT_HELD:
+			return MOO_EPERM;
 
 		case ERROR_FILE_NOT_FOUND:
 		case ERROR_PATH_NOT_FOUND:
