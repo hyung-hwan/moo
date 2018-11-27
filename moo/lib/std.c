@@ -36,6 +36,11 @@
 #endif
 
 #if defined(_WIN32)
+#	if !defined(_WIN32_WINNT)
+#		define _WIN32_WINNT 0x0400
+#	endif
+#	define WIN32_LEAN_AND_MEAN
+
 #	include <windows.h>
 #	include <psapi.h>
 #	include <tchar.h>
@@ -592,32 +597,6 @@ static moo_ooi_t input_handler (moo_t* moo, moo_iocmd_t cmd, moo_ioarg_t* arg)
 }
 
 /* ========================================================================= */
-
-#if defined(_WIN32)
-static int msw_set_privilege (moo_t* moo, TCHAR* pszPrivilege, BOOL bEnable)
-{
-	HANDLE token = MOO_NULL;
-	TOKEN_PRIVILEGES tp;
-	BOOL status;
-	DWORD error;
-
-	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) goto oops;
-	if (!LookupPrivilegeValue(MOO_NULL, pszPrivilege, &tp.Privileges[0].Luid)) goto oops;
-
-	tp.PrivilegeCount = 1;
-	tp.Privileges[0].Attributes = (bEnable? SE_PRIVILEGE_ENABLED: 0);
-	if (!AdjustTokenPrivileges(token, FALSE, &tp, 0, (PTOKEN_PRIVILEGES)MOO_NULL, 0) || GetLastError() != ERROR_SUCCESS) goto oops;
-
-	CloseHandle (token);
-	return 0;
-
-oops:
-	moo_seterrwithsyserr (moo, 1, GetLastError());
-	if (token) CloseHandle (token);
-	return -1;
-}
-#endif
-
 static void* alloc_heap (moo_t* moo, moo_oow_t size)
 {
 #if defined(_WIN32)
@@ -625,10 +604,15 @@ static void* alloc_heap (moo_t* moo, moo_oow_t size)
 	moo_oow_t actual_size, align_size;
 	HINSTANCE k32;
 	SIZE_T (*k32_GetLargePageMinimum) (void);
+	HANDLE token = MOO_NULL;
+	TOKEN_PRIVILEGES new_state, prev_state;
+	TOKEN_PRIVILEGES* prev_state_ptr;
+	DWORD prev_state_reqsize = 0;
+	int token_adjusted = 0;
 
 	align_size = 2 * 1024 * 1024;
 
-	k32 = LoadLibrary (TEXT("kernel32.dll"));
+	k32 = LoadLibrary(TEXT("kernel32.dll"));
 	if (k32)
 	{
 		k32_GetLargePageMinimum = (SIZE_T(*)(void))GetProcAddress (k32, "GetLargePageMinimum");
@@ -637,21 +621,44 @@ static void* alloc_heap (moo_t* moo, moo_oow_t size)
 	}
 
 	actual_size = MOO_SIZEOF(moo_oow_t) + size;
-	actual_size = MOO_ALIGN_POW2(actual_size, align_size);
+	actual_size = MOO_ALIGN(actual_size, align_size);
 
-	if (msw_set_privilege(moo, TEXT("SeLockMemoryPrivilege"), TRUE) <= -1) return MOO_NULL;
+	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &token)) goto oops;
+	if (!LookupPrivilegeValue(MOO_NULL, TEXT("SeLockMemoryPrivilege"), &new_state.Privileges[0].Luid)) goto oops;
+	new_state.PrivilegeCount = 1;
+	new_state.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+	prev_state_ptr = &prev_state;
+	if (!AdjustTokenPrivileges(token, FALSE, &new_state, MOO_SIZEOF(prev_state), prev_state_ptr, &prev_state_reqsize) || GetLastError() != ERROR_SUCCESS) 
+	{
+		if (prev_state_reqsize >= MOO_SIZEOF(prev_state))
+		{
+			/* GetLastError() == ERROR_INSUFFICIENT_BUFFER */
+			prev_state_ptr = (TOKEN_PRIVILEGES*)HeapAlloc(GetProcessHeap(), 0, prev_state_reqsize);
+			if (!prev_state_ptr) goto oops;
+			if (!AdjustTokenPrivileges(token, FALSE, &new_state, prev_state_reqsize, prev_state_ptr, &prev_state_reqsize) || GetLastError() != ERROR_SUCCESS) goto oops;
+		}
+		else goto oops;
+	}
+	token_adjusted = 1;
 
 	ptr = VirtualAlloc(MOO_NULL, actual_size, MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES, PAGE_READWRITE);
-	if (!ptr)
-	{
-		DWORD errcode = GetLastError();
-		msw_set_privilege(moo, TEXT("SeLockMemoryPrivilege"), FALSE);
-		moo_seterrwithsyserr (moo, 1, errcode);
-		return MOO_NULL;
-	}
+	if (!ptr) goto oops;
 
-	msw_set_privilege(moo, TEXT("SeLockMemoryPrivilege"), FALSE);
+	AdjustTokenPrivileges (token, FALSE, prev_state_ptr, 0, MOO_NULL, 0);
+	CloseHandle (token);
+	if (prev_state_ptr && prev_state_ptr != &prev_state) HeapFree (GetProcessHeap(), 0, prev_state_ptr);
 	return ptr;
+
+oops:
+	moo_seterrwithsyserr (moo, 1, GetLastError());
+	if (token)
+	{
+		if (token_adjusted) AdjustTokenPrivileges (token, FALSE, prev_state_ptr, 0, MOO_NULL, 0);
+		CloseHandle (token);
+	}
+	if (prev_state_ptr && prev_state_ptr != &prev_state) HeapFree (GetProcessHeap(), 0, prev_state_ptr);
+	return MOO_NULL;
 
 #elif defined(HAVE_MMAP) && defined(HAVE_MUNMAP) && defined(MAP_ANONYMOUS)
 	/* It's called via moo_makeheap() when MOO creates a GC heap.
