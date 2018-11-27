@@ -23,9 +23,10 @@
 # pragma GCC diagnostic ignored "-Wtype-limits"
 #endif
 
-#include "poll-msw.h"
 #include <winsock2.h>
 #include <windows.h>
+
+#include "poll-msw.h"
 
 #include <sys/types.h>
 #include <time.h>

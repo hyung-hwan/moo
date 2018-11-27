@@ -3,6 +3,7 @@
 
 #include "moo.h"
 
+#if !defined(_WIN32_WINNT) || (_WIN32_WINNT < 0x0600)
 /* Event types that can be polled for.  These bits may be set in `events'
    to indicate the interesting event types; they will appear in `revents'
    to indicate the status of the file descriptor.  */
@@ -30,8 +31,10 @@ struct pollfd
    an event to occur; if TIMEOUT is -1, block until an event occurs.
    Returns the number of file descriptors with events, zero if timed out,
    or -1 for errors.  */
+#endif
 
 typedef unsigned long nfds_t;
+
 
 #if defined(__cplusplus)
 extern "C" {
