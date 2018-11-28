@@ -619,6 +619,13 @@ static void* alloc_heap (moo_t* moo, moo_oow_t size)
 		if (k32_GetLargePageMinimum) align_size = k32_GetLargePageMinimum();
 		FreeLibrary (k32);
 	}
+	/* the standard page size shouldn't help. so let me comment out this part.
+	else
+	{
+		SYSTEM_INFO si;
+		GetSystemInfo (&si);
+		align_size = si.dwPageSize;
+	}*/
 
 	actual_size = MOO_SIZEOF(moo_oow_t) + size;
 	actual_size = MOO_ALIGN(actual_size, align_size);
