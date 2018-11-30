@@ -295,6 +295,9 @@ struct xtn_t
 	#elif defined(__OS2__)
 	ULONG tc_last;
 	ULONG tc_overflow;
+	#elif defined(__DOS__)
+	clock_t tc_last;
+	clock_t tc_overflow;
 	#endif
 
 	#if defined(USE_DEVPOLL)
@@ -2147,18 +2150,27 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 
 #elif defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
 	clock_t c;
+	moo_uint64_t bigc;
 
 /* TODO: handle overflow?? */
 	c = clock ();
-	now->sec = c / CLOCKS_PER_SEC;
+	if (c < xtn->tc_last)
+	{
+		xtn->tc_overflow++;
+		bigc= ((moo_uint64_t)MOO_TYPE_MAX(clock_t) * xtn->tc_overflow) + c;
+	}
+	else bigc = c;
+	xtn->tc_last = c;
+
+	now->sec = bigc / CLOCKS_PER_SEC;
 	#if (CLOCKS_PER_SEC == 100)
-		now->nsec = MOO_MSEC_TO_NSEC((c % CLOCKS_PER_SEC) * 10);
+		now->nsec = MOO_MSEC_TO_NSEC((bigc % CLOCKS_PER_SEC) * 10);
 	#elif (CLOCKS_PER_SEC == 1000)
-		now->nsec = MOO_MSEC_TO_NSEC(c % CLOCKS_PER_SEC);
+		now->nsec = MOO_MSEC_TO_NSEC(bigc % CLOCKS_PER_SEC);
 	#elif (CLOCKS_PER_SEC == 1000000L)
-		now->nsec = MOO_USEC_TO_NSEC(c % CLOCKS_PER_SEC);
+		now->nsec = MOO_USEC_TO_NSEC(bigc % CLOCKS_PER_SEC);
 	#elif (CLOCKS_PER_SEC == 1000000000L)
-		now->nsec = (c % CLOCKS_PER_SEC);
+		now->nsec = (bigc % CLOCKS_PER_SEC);
 	#else
 	#	error UNSUPPORTED CLOCKS_PER_SEC
 	#endif
