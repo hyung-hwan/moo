@@ -1707,8 +1707,8 @@ moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, const moo_oocs_
 		MOO_ASSERT (moo, moo->active_method->owner);
 		c = (moo_oop_class_t)((moo_oop_class_t)moo->active_method->owner)->superclass;
 		if ((moo_oop_t)c == moo->_nil) goto not_found;
-		// c is nil if it reached the top of the hierarch.
-		// otherwise c points to a class object
+		/* c is nil if it reached the top of the hierarchy.
+		 * otherwise c points to a class object */
 	}
 
 

@@ -89,6 +89,7 @@
 #	include <io.h>
 #	include <signal.h>
 #	include <errno.h>
+#	include <fcntl.h>
 
 #	if defined(_INTELC32_)
 #		define DOS_EXIT 0x4C
@@ -2149,28 +2150,23 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 	MOO_INIT_NTIME (now, bigsec, MOO_MSEC_TO_NSEC(bigmsec));
 
 #elif defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
+	xtn_t* xtn = GET_XTN(moo);
 	clock_t c;
-	moo_uint64_t bigc;
 
 /* TODO: handle overflow?? */
-	c = clock ();
-	if (c < xtn->tc_last)
-	{
-		xtn->tc_overflow++;
-		bigc= ((moo_uint64_t)MOO_TYPE_MAX(clock_t) * xtn->tc_overflow) + c;
-	}
-	else bigc = c;
+	c = clock();
+	if (c < xtn->tc_last) xtn->tc_overflow++;
 	xtn->tc_last = c;
 
-	now->sec = bigc / CLOCKS_PER_SEC;
+	now->sec = c / CLOCKS_PER_SEC;
 	#if (CLOCKS_PER_SEC == 100)
-		now->nsec = MOO_MSEC_TO_NSEC((bigc % CLOCKS_PER_SEC) * 10);
+		now->nsec = MOO_MSEC_TO_NSEC((c % CLOCKS_PER_SEC) * 10);
 	#elif (CLOCKS_PER_SEC == 1000)
-		now->nsec = MOO_MSEC_TO_NSEC(bigc % CLOCKS_PER_SEC);
+		now->nsec = MOO_MSEC_TO_NSEC(c % CLOCKS_PER_SEC);
 	#elif (CLOCKS_PER_SEC == 1000000L)
-		now->nsec = MOO_USEC_TO_NSEC(bigc % CLOCKS_PER_SEC);
+		now->nsec = MOO_USEC_TO_NSEC(c % CLOCKS_PER_SEC);
 	#elif (CLOCKS_PER_SEC == 1000000000L)
-		now->nsec = (bigc % CLOCKS_PER_SEC);
+		now->nsec = (c % CLOCKS_PER_SEC);
 	#else
 	#	error UNSUPPORTED CLOCKS_PER_SEC
 	#endif
@@ -3041,7 +3037,7 @@ static MOO_INLINE void start_ticker (void)
 	_dos_setvect (0x1C, dos_timer_intr_handler);
 }
 
-static MOO_INLINE void moo_stop_ticker (void)
+static MOO_INLINE void stop_ticker (void)
 {
 	_dos_setvect (0x1C, dos_prev_timer_intr_handler);
 }
@@ -3238,7 +3234,7 @@ static struct
 static int parse_logoptb (moo_t* moo, const moo_bch_t* str, moo_oow_t* xpathlen, moo_bitmask_t* xlogmask)
 {
 	xtn_t* xtn = GET_XTN(moo);
-	moo_bch_t* cm, * flt;
+	const moo_bch_t* cm, * flt;
 	moo_bitmask_t logmask;
 	moo_oow_t i, len, pathlen;
 
@@ -3293,7 +3289,7 @@ static int parse_logoptb (moo_t* moo, const moo_bch_t* str, moo_oow_t* xpathlen,
 static int parse_logoptu (moo_t* moo, const moo_uch_t* str, moo_oow_t* xpathlen, moo_bitmask_t* xlogmask)
 {
 	xtn_t* xtn = GET_XTN(moo);
-	moo_uch_t* cm, * flt;
+	const moo_uch_t* cm, * flt;
 	moo_bitmask_t logmask;
 	moo_oow_t i, len, pathlen;
 
@@ -3645,7 +3641,7 @@ int moo_compilestd (moo_t* moo, const moo_iostd_t* in, moo_oow_t count)
 	}
 
 	return 0;
-};
+}
 
 void moo_rcvtickstd (moo_t* moo, int v)
 {
@@ -3752,7 +3748,7 @@ void moo_catch_termreq (void)
 void moo_uncatch_termreq (void)
 {
 	signal (SIGINT, SIG_DFL);
-	signal (SIGTERM, SGI_DFL);
+	signal (SIGTERM, SIG_DFL);
 }
 
 void moo_ignore_termreq (void)

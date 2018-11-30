@@ -22,8 +22,12 @@ SRCS := \
 	logfmt.c \
 	moo.c \
 	obj.c \
+	opt.c \
+	pf.c \
 	rbt.c \
+	std.c \
 	sym.c \
+	utf16.c \
 	utf8.c \
 	utl.c \
 	main.c \

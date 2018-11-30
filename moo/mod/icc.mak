@@ -5,7 +5,7 @@
 CFLAGS := /D__DOS__ /DMOO_ENABLE_STATIC_MODULE /DNDEBUG /I..\lib
 
 SRCS := \
-	console.c \
+	_con.c \
 	ffi.c \
 	stdio.c
 
