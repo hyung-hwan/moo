@@ -3580,7 +3580,7 @@ static void fini_moo (moo_t* moo)
 	vmprim.vm_muxwait = vm_muxwait;
 	vmprim.vm_sleep = vm_sleep;
 
-	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize, cfg->memsize,
+	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize,
 	               (cfg->cmgr? cfg->cmgr: moo_get_utf8_cmgr()), &vmprim, errinfo);
 	if (!moo) return MOO_NULL;
 

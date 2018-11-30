@@ -77,6 +77,7 @@ int main (int argc, char* argv[])
 
 	moo_oocs_t objname;
 	moo_oocs_t mthname;
+	moo_oow_t memsize;
 	int i, xret;
 
 	moo_bci_t c;
@@ -122,8 +123,9 @@ int main (int argc, char* argv[])
 
 	memset (&cfg, 0, MOO_SIZEOF(cfg));
 	cfg.type = MOO_CFGSTD_OPTB;
-	cfg.memsize = MIN_MEMSIZE;
 	cfg.cmgr = moo_get_utf8_cmgr();
+
+	memsize = MIN_MEMSIZE;
 
 	while ((c = moo_getbopt(argc, argv, &opt)) != MOO_BCI_EOF)
 	{
@@ -134,8 +136,8 @@ int main (int argc, char* argv[])
 				break;
 
 			case 'm':
-				cfg.memsize = strtoul(opt.arg, MOO_NULL, 0);
-				if (cfg.memsize <= MIN_MEMSIZE) cfg.memsize = MIN_MEMSIZE;
+				memsize = strtoul(opt.arg, MOO_NULL, 0);
+				if (memsize <= MIN_MEMSIZE) memsize = MIN_MEMSIZE;
 				break;
 
 			case '\0':
@@ -221,7 +223,7 @@ int main (int argc, char* argv[])
 		moo_setoption (moo, MOO_LOG_MASK, &bm);
 	}
 
-	if (moo_ignite(moo) <= -1)
+	if (moo_ignite(moo, memsize) <= -1)
 	{
 		moo_logbfmt (moo, MOO_LOG_STDERR, "ERROR: cannot ignite moo - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
 		moo_close (moo);

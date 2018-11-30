@@ -26,7 +26,7 @@
 
 #include "moo-prv.h"
 
-moo_t* moo_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, moo_oow_t heapsize, moo_cmgr_t* cmgr, const moo_vmprim_t* vmprim, moo_errinf_t* errinfo)
+moo_t* moo_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, moo_cmgr_t* cmgr, const moo_vmprim_t* vmprim, moo_errinf_t* errinfo)
 {
 	moo_t* moo;
 
@@ -36,7 +36,7 @@ moo_t* moo_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, moo_oow_t heapsize, moo_cm
 	moo = (moo_t*)MOO_MMGR_ALLOC(mmgr, MOO_SIZEOF(*moo) + xtnsize);
 	if (moo)
 	{
-		if (moo_init(moo, mmgr, heapsize, cmgr, vmprim) <= -1)
+		if (moo_init(moo, mmgr, cmgr, vmprim) <= -1)
 		{
 			if (errinfo) moo_geterrinf (moo, errinfo);
 			MOO_MMGR_FREE (mmgr, moo);
@@ -98,7 +98,7 @@ static void free_heap (moo_t* moo, void* ptr)
 	MOO_MMGR_FREE(moo->mmgr, ptr);
 }
 
-int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, moo_cmgr_t* cmgr, const moo_vmprim_t* vmprim)
+int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_cmgr_t* cmgr, const moo_vmprim_t* vmprim)
 {
 	int modtab_inited = 0;
 
@@ -148,22 +148,11 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_oow_t heapsz, moo_cmgr_t* cmgr, 
 	moo->proc_map_free_first = -1;
 	moo->proc_map_free_last = -1;
 
-/* TODO: introduce a permanent heap */
-	/*moo->permheap = moo_makeheap (moo, what is the best size???);
-	if (!moo->permheap) goto oops; */
-	moo->curheap = moo_makeheap (moo, heapsz);
-	if (!moo->curheap) goto oops;
-	moo->newheap = moo_makeheap (moo, heapsz);
-	if (!moo->newheap) goto oops;
-
 	if (moo->vmprim.dl_startup) moo->vmprim.dl_startup (moo);
 	return 0;
 
 oops:
 	if (modtab_inited) moo_rbt_fini (&moo->modtab);
-	if (moo->newheap) moo_killheap (moo, moo->newheap);
-	if (moo->curheap) moo_killheap (moo, moo->curheap);
-	if (moo->permheap) moo_killheap (moo, moo->permheap);
 	if (moo->log.ptr) moo_freemem (moo, moo->log.ptr);
 	moo->log.capa = 0;
 	return -1;
@@ -256,8 +245,10 @@ void moo_fini (moo_t* moo)
 
 /* TOOD: persistency? storing objects to image file? */
 
-	moo_killheap (moo, moo->newheap);
-	moo_killheap (moo, moo->curheap);
+	/* if the moo object is closed without moo_ignite(),
+	 * the heap may not exist */
+	if (moo->newheap) moo_killheap (moo, moo->newheap);
+	if (moo->curheap) moo_killheap (moo, moo->curheap);
 	if (moo->permheap) moo_killheap (moo, moo->permheap);
 
 	for (i = 0; i < MOO_COUNTOF(moo->sbuf); i++)

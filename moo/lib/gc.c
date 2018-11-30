@@ -575,9 +575,17 @@ static int ignite_3 (moo_t* moo)
 	return 0;
 }
 
-int moo_ignite (moo_t* moo)
+int moo_ignite (moo_t* moo, moo_oow_t heapsz)
 {
 	MOO_ASSERT (moo, moo->_nil == MOO_NULL);
+
+	/*moo->permheap = moo_makeheap (moo, what is the best size???);
+	if (!moo->permheap) goto oops; */
+	if (moo->curheap) moo_killheap (moo, moo->curheap);
+	if (moo->newheap) moo_killheap (moo, moo->newheap);
+	moo->curheap = moo_makeheap(moo, heapsz);
+	moo->newheap = moo_makeheap(moo, heapsz);
+	if (!moo->curheap || !moo->newheap) return -1;
 
 	moo->_nil = moo_allocbytes (moo, MOO_SIZEOF(moo_obj_t));
 	if (!moo->_nil) return -1;
