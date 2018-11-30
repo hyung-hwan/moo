@@ -29,6 +29,10 @@
 moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 {
 	moo_heap_t* heap;
+	moo_oow_t half_size;
+
+	if (size < 65536) size = 65536; /* not really useful check as 65536 is too small */
+	half_size = size / 2;
 
 	heap = (moo_heap_t*)moo->vmprim.alloc_heap(moo, MOO_SIZEOF(*heap) + size);
 	if (!heap) 
@@ -39,19 +43,20 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 	}
 
 	MOO_MEMSET (heap, 0, MOO_SIZEOF(*heap) + size);
-
 	heap->base = (moo_uint8_t*)(heap + 1);
-	/* adjust the initial allocation pointer to a multiple of the oop size */
-	heap->ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)heap->base), MOO_SIZEOF(moo_oop_t));
-	heap->limit = heap->base + size;
+	heap->size = size;
 
-	MOO_ASSERT (moo, heap->ptr >= heap->base);
-	MOO_ASSERT (moo, heap->limit >= heap->base ); 
-	MOO_ASSERT (moo, heap->limit - heap->base == size);
+	heap->curspace.base= (moo_uint8_t*)(heap + 1);
+	heap->curspace.ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)heap->curspace.base), MOO_SIZEOF(moo_oop_t));
+	heap->curspace.limit = heap->curspace.ptr + half_size;
 
-	/* if size is too small, heap->ptr may go past heap->limit even at 
-	 * this moment depending on the alignment of heap->base. subsequent
-	 * calls to submoo_allocheapmem() are bound to fail. Make sure to
+	heap->newspace.base = (moo_uint8_t*)(heap + 1) + half_size;
+	heap->newspace.ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)heap->newspace.base), MOO_SIZEOF(moo_oop_t));
+	heap->newspace.limit = heap->newspace.ptr + half_size;
+
+	/* if size is too small, space->ptr may go past space->limit even at 
+	 * this moment depending on the alignment of space->base. subsequent
+	 * calls to moo_allocheapspace() are bound to fail. Make sure to
 	 * pass a heap size large enough */
 
 	return heap;
@@ -62,22 +67,22 @@ void moo_killheap (moo_t* moo, moo_heap_t* heap)
 	moo->vmprim.free_heap (moo, heap);
 }
 
-void* moo_allocheapmem (moo_t* moo, moo_heap_t* heap, moo_oow_t size)
+void* moo_allocheapspace (moo_t* moo, moo_space_t* space, moo_oow_t size)
 {
 	moo_uint8_t* ptr;
 
-	/* check the heap size limit */
-	if (heap->ptr >= heap->limit || heap->limit - heap->ptr < size)
+	/* check the space size limit */
+	if (space->ptr >= space->limit || space->limit - space->ptr < size)
 	{
-		MOO_DEBUG5 (moo, "Cannot allocate %zd bytes from heap - ptr %p limit %p size %zd free %zd\n",
-			size, heap->ptr, heap->limit, (moo_oow_t)(heap->limit - heap->base), (moo_oow_t)(heap->limit - heap->ptr));
+		MOO_DEBUG5 (moo, "Cannot allocate %zd bytes from space - ptr %p limit %p size %zd free %zd\n",
+			size, space->ptr, space->limit, (moo_oow_t)(space->limit - space->base), (moo_oow_t)(space->limit - space->ptr));
 		moo_seterrnum (moo, MOO_EOOMEM);
 		return MOO_NULL;
 	}
 
-	/* allocation is as simple as moving the heap pointer */
-	ptr = heap->ptr;
-	heap->ptr += size;
+	/* allocation is as simple as moving the space pointer */
+	ptr = space->ptr;
+	space->ptr += size;
 
 	return ptr;
 }

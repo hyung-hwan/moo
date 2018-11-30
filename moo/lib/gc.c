@@ -579,13 +579,9 @@ int moo_ignite (moo_t* moo, moo_oow_t heapsz)
 {
 	MOO_ASSERT (moo, moo->_nil == MOO_NULL);
 
-	/*moo->permheap = moo_makeheap (moo, what is the best size???);
-	if (!moo->permheap) goto oops; */
-	if (moo->curheap) moo_killheap (moo, moo->curheap);
-	if (moo->newheap) moo_killheap (moo, moo->newheap);
-	moo->curheap = moo_makeheap(moo, heapsz);
-	moo->newheap = moo_makeheap(moo, heapsz);
-	if (!moo->curheap || !moo->newheap) return -1;
+	if (moo->heap) moo_killheap (moo, moo->heap);
+	moo->heap = moo_makeheap(moo, heapsz);
+	if (!moo->heap) return -1;
 
 	moo->_nil = moo_allocbytes (moo, MOO_SIZEOF(moo_obj_t));
 	if (!moo->_nil) return -1;
@@ -730,7 +726,7 @@ moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
 		nbytes_aligned = get_payload_bytes (moo, oop);
 
 		/* allocate space in the new heap */
-		tmp = moo_allocheapmem (moo, moo->newheap, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
+		tmp = moo_allocheapspace(moo, &moo->heap->newspace, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
 
 		/* allocation here must not fail because
 		 * i'm allocating the new space in a new heap for 
@@ -759,7 +755,7 @@ moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
 
 static moo_uint8_t* scan_new_heap (moo_t* moo, moo_uint8_t* ptr)
 {
-	while (ptr < moo->newheap->ptr)
+	while (ptr < moo->heap->newspace.ptr)
 	{
 		moo_oow_t i;
 		moo_oow_t nbytes_aligned;
@@ -863,7 +859,7 @@ void moo_gc (moo_t* moo)
 	 * finally perform some tricky symbol table clean-up.
 	 */
 	moo_uint8_t* scan_ptr;
-	moo_heap_t* tmp;
+	moo_space_t tmp;
 	moo_oop_t old_nil;
 	moo_oow_t i;
 	moo_evtcb_t* cb;
@@ -884,9 +880,9 @@ void moo_gc (moo_t* moo)
 
 	MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO, 
 		"Starting GC curheap base %p ptr %p newheap base %p ptr %p\n",
-		moo->curheap->base, moo->curheap->ptr, moo->newheap->base, moo->newheap->ptr); 
+		moo->heap->curspace.base, moo->heap->curspace.ptr, moo->heap->newspace.base, moo->heap->newspace.ptr); 
 
-	scan_ptr = (moo_uint8_t*) MOO_ALIGN ((moo_uintptr_t)moo->newheap->base, MOO_SIZEOF(moo_oop_t));
+	scan_ptr = (moo_uint8_t*) MOO_ALIGN ((moo_uintptr_t)moo->heap->newspace.base, MOO_SIZEOF(moo_oop_t));
 
 	/* TODO: allocate common objects like _nil and the root dictionary 
 	 *       in the permanant heap.  minimize moving around */
@@ -981,12 +977,12 @@ void moo_gc (moo_t* moo)
 	/* the contents of the current heap is not needed any more.
 	 * reset the upper bound to the base. don't forget to align the heap
 	 * pointer to the OOP size. See moo_makeheap() also */
-	moo->curheap->ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)moo->curheap->base), MOO_SIZEOF(moo_oop_t));
+	moo->heap->curspace.ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)moo->heap->curspace.base), MOO_SIZEOF(moo_oop_t));
 
 	/* swap the current heap and old heap */
-	tmp = moo->curheap;
-	moo->curheap = moo->newheap;
-	moo->newheap = tmp;
+	tmp = moo->heap->curspace;
+	moo->heap->curspace = moo->heap->newspace;
+	moo->heap->newspace = tmp;
 
 /*
 	if (moo->symtab && MOO_LOG_ENABLED(moo, MOO_LOG_GC | MOO_LOG_DEBUG))
@@ -1012,7 +1008,7 @@ void moo_gc (moo_t* moo)
 	/* TODO: include some gc statstics like number of live objects, gc performance, etc */
 	MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO, 
 		"Finished GC curheap base %p ptr %p newheap base %p ptr %p\n",
-		moo->curheap->base, moo->curheap->ptr, moo->newheap->base, moo->newheap->ptr); 
+		moo->heap->curspace.base, moo->heap->curspace.ptr, moo->heap->newspace.base, moo->heap->newspace.ptr); 
 }
 
 void moo_pushtmp (moo_t* moo, moo_oop_t* oop_ptr)

@@ -963,15 +963,27 @@ struct moo_process_scheduler_t
 #define MOO_BYTESOF(moo,oop) \
 	(MOO_OOP_IS_NUMERIC(oop)? MOO_SIZEOF(moo_oow_t): MOO_OBJ_BYTESOF(oop))
 
+typedef struct moo_space_t moo_space_t;
 
-typedef struct moo_heap_t moo_heap_t;
-
-struct moo_heap_t
+struct moo_space_t
 {
 	moo_uint8_t* base;  /* start of a heap */
 	moo_uint8_t* limit; /* end of a heap */
 	moo_uint8_t* ptr;   /* next allocation pointer */
 };
+
+typedef struct moo_heap_t moo_heap_t;
+
+struct moo_heap_t
+{
+	moo_uint8_t* base;
+	moo_oow_t    size;
+
+	moo_space_t  permspace;
+	moo_space_t  curspace;
+	moo_space_t  newspace;
+};
+
 
 /* =========================================================================
  * MOO VM LOGGING
@@ -1428,9 +1440,7 @@ struct moo_t
 
 	/* ========================= */
 
-	moo_heap_t* permheap; /* TODO: put kernel objects to here */
-	moo_heap_t* curheap;
-	moo_heap_t* newheap;
+	moo_heap_t* heap;
 
 	/* =============================================================
 	 * nil, true, false

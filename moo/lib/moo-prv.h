@@ -1073,15 +1073,15 @@ void moo_killheap (
 );
 
 /**
- * The moo_allocheapmem() function allocates \a size bytes in the heap pointed
+ * The moo_allocheapspace() function allocates \a size bytes in the heap pointed
  * to by \a heap.
  *
  * \return memory pointer on success and #MOO_NULL on failure.
  */
-void* moo_allocheapmem (
-	moo_t*      moo,
-	moo_heap_t* heap,
-	moo_oow_t   size
+void* moo_allocheapspace (
+	moo_t*       moo,
+	moo_space_t* space,
+	moo_oow_t    size
 );
 
 /* ========================================================================= */

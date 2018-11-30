@@ -247,9 +247,7 @@ void moo_fini (moo_t* moo)
 
 	/* if the moo object is closed without moo_ignite(),
 	 * the heap may not exist */
-	if (moo->newheap) moo_killheap (moo, moo->newheap);
-	if (moo->curheap) moo_killheap (moo, moo->curheap);
-	if (moo->permheap) moo_killheap (moo, moo->permheap);
+	if (moo->heap) moo_killheap (moo, moo->heap);
 
 	for (i = 0; i < MOO_COUNTOF(moo->sbuf); i++)
 	{

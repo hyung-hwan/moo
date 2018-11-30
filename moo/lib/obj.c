@@ -34,17 +34,17 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 	if ((moo->option.trait & MOO_DEBUG_GC) && !(moo->option.trait & MOO_NOGC)) moo_gc (moo);
 #endif
 
-	ptr = (moo_uint8_t*)moo_allocheapmem(moo, moo->curheap, size);
+	ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->curspace, size);
 	if (!ptr && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_NOGC))
 	{
 		moo_gc (moo);
 		MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO,
 			"GC completed - current heap ptr %p limit %p size %zd free %zd\n", 
-			moo->curheap->ptr, moo->curheap->limit,
-			(moo_oow_t)(moo->curheap->limit - moo->curheap->base),
-			(moo_oow_t)(moo->curheap->limit - moo->curheap->ptr)
+			moo->heap->curspace.ptr, moo->heap->curspace.limit,
+			(moo_oow_t)(moo->heap->curspace.limit - moo->heap->curspace.base),
+			(moo_oow_t)(moo->heap->curspace.limit - moo->heap->curspace.ptr)
 		);
-		ptr = (moo_uint8_t*)moo_allocheapmem(moo, moo->curheap, size);
+		ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->curspace, size);
 /* TODO: grow heap if ptr is still null. */
 	}
 
