@@ -3013,7 +3013,7 @@ static void (__interrupt *dos_prev_timer_intr_handler) (void);
 #endif
 
 #if defined(_INTELC32_)
-#pragma interrupt(timer_intr_handler)
+#pragma interrupt(dos_timer_intr_handler)
 static void dos_timer_intr_handler (void)
 #else
 static void __interrupt dos_timer_intr_handler (void)
