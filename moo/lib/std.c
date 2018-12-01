@@ -3704,6 +3704,7 @@ void moo_uncatch_termreq (void)
 
 void moo_ignore_termreq (void)
 {
+	/* TODO: ... */
 }
 
 #elif defined(__OS2__)
@@ -3743,10 +3744,12 @@ void moo_uncatch_termreq (void)
 
 void moo_ignore_termreq (void)
 {
+	/* TODO: ... */
 }
 
 #elif defined(__DOS__)
 
+/* TODO: signal chaining and unchaining linux in unix/linux */
 void moo_catch_termreq (void)
 {
 	signal (SIGINT, abort_all_moos);
