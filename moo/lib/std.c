@@ -872,21 +872,12 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
 		if (tslen == 0) 
 		{
-			tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S ", tmp);
-			if (tslen == 0)
-			{
-				strcpy (ts, "0000-00-00 00:00:00 +0000 ");
-				tslen = 26; 
-			}
+			tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d ", tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
 		}
 	#elif defined(__DOS__)
 		tmp = localtime(&now);
-		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S ", tmp); /* no timezone info */
-		if (tslen == 0) 
-		{
-			strcpy (ts, "0000-00-00 00:00:00 ");
-			tslen = 20; 
-		}
+		/* since i know that %z/%Z is not available in strftime, i switch to sprintf immediately */
+		tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d ", tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
 	#else
 		#if defined(__OS2__)
 		tmp = _localtime(&now, &tm);
@@ -902,8 +893,7 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		#endif
 		if (tslen == 0) 
 		{
-			strcpy (ts, "0000-00-00 00:00:00 +0000 ");
-			tslen = 26; 
+			tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d ", tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
 		}
 	#endif
 		write_log (moo, logfd, ts, tslen);
