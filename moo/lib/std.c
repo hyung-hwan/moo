@@ -295,7 +295,7 @@ struct xtn_t
 	DWORD tc_overflow;
 	#elif defined(__OS2__)
 	ULONG tc_last;
-	ULONG tc_overflow;
+	moo_ntime_t tc_last_ret;
 	#elif defined(__DOS__)
 	clock_t tc_last;
 	moo_ntime_t tc_last_ret;
@@ -874,18 +874,35 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		{
 			tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d ", tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
 		}
+	#elif defined(__OS2__)
+		#if defined(__WATCOMC__)
+		tmp = _localtime(&now, &tm);
+		#else
+		tmp = localtime(&now);
+		#endif
+
+		#if defined(__BORLANDC__)
+		/* the borland compiler doesn't handle %z properly - it showed 00 all the time */
+		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %Z ", tmp);
+		#else
+		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
+		#endif
+		if (tslen == 0) 
+		{
+			tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d ", tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
+		}
+
 	#elif defined(__DOS__)
 		tmp = localtime(&now);
 		/* since i know that %z/%Z is not available in strftime, i switch to sprintf immediately */
 		tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d ", tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
 	#else
-		#if defined(__OS2__)
-		tmp = _localtime(&now, &tm);
-		#elif defined(HAVE_LOCALTIME_R)
+		#if defined(HAVE_LOCALTIME_R)
 		tmp = localtime_r(&now, &tm);
 		#else
 		tmp = localtime(&now);
 		#endif
+
 		#if defined(HAVE_STRFTIME_SMALL_Z)
 		tslen = strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S %z ", tmp);
 		#else
@@ -2121,23 +2138,21 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 
 #elif defined(__OS2__)
 	xtn_t* xtn = GET_XTN(moo);
-	moo_uint64_t bigsec, bigmsec;
-	ULONG msec;
+	ULONG msec, elapsed;
+	moo_ntime_t et;
 
 /* TODO: use DosTmrQueryTime() and DosTmrQueryFreq()? */
 	DosQuerySysInfo (QSV_MS_COUNT, QSV_MS_COUNT, &msec, MOO_SIZEOF(msec)); /* milliseconds */
-	/* it must return NO_ERROR */
-	if (msec < xtn->tc_last)
-	{
-		xtn->tc_overflow++;
-		bigmsec = ((moo_uint64_t)MOO_TYPE_MAX(ULONG) * xtn->tc_overflow) + msec;
-	}
-	else bigmsec = msec;
+
+	elapsed = (msec < xtn->tc_last)? (MOO_TYPE_MAX(ULONG) - xtn->tc_last + msec + 1): (msec - xtn->tc_last);
 	xtn->tc_last = msec;
 
-	bigsec = MOO_MSEC_TO_SEC(bigmsec);
-	bigmsec -= MOO_SEC_TO_MSEC(bigsec);
-	MOO_INIT_NTIME (now, bigsec, MOO_MSEC_TO_NSEC(bigmsec));
+	et.sec = MOO_MSEC_TO_SEC(elapsed);
+	msec = elapsed - MOO_SEC_TO_MSEC(et.sec);
+	et.nsec = MOO_MSEC_TO_NSEC(msec);
+
+	MOO_ADD_NTIME (&xtn->tc_last_ret , &xtn->tc_last_ret, &et);
+	*now = xtn->tc_last_ret;
 
 #elif defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
 	xtn_t* xtn = GET_XTN(moo);
@@ -2145,14 +2160,8 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 	moo_ntime_t et;
 
 	c = clock();
-	if (c < xtn->tc_last) 
-	{
-		elapsed = MOO_TYPE_MAX(clock_t) - xtn->tc_last + c + 1;
-	}
-	else
-	{
-		elapsed = c - xtn->tc_last;
-	}
+	elapsed = (c < xtn->tc_last)? (MOO_TYPE_MAX(clock_t) - xtn->tc_last + c + 1): (c - xtn->tc_last);
+	xtn->tc_last = c;
 
 	et.sec = elapsed / CLOCKS_PER_SEC;
 	#if (CLOCKS_PER_SEC == 100)
@@ -2167,7 +2176,6 @@ static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 	#	error UNSUPPORTED CLOCKS_PER_SEC
 	#endif
 
-	xtn->tc_last = c;
 	MOO_ADD_NTIME (&xtn->tc_last_ret , &xtn->tc_last_ret, &et);
 	*now = xtn->tc_last_ret;
 
@@ -2964,24 +2972,24 @@ static void EXPENTRY os2_wait_for_timer_event (ULONG x)
 	rc = DosStartTimer(MOO_USEC_TO_MSEC(MOO_TICKER_INTERVAL_USECS), (HSEM)os2_tick_sem, &os2_tick_timer);
 	if (rc != NO_ERROR)
 	{
-		DosCloseEventSem ((HSEM)os2_tick_sem);
+		DosCloseEventSem (os2_tick_sem);
 		goto done;
 	}
 
 	while (!os2_tick_done)
 	{
-		rc = DosWaitEventSem((HSEM)os2_tick_sem, 5000L);
+		rc = DosWaitEventSem(os2_tick_sem, 5000L);
 	#if 0
 		swproc_all_moos (0);
-		DosResetEventSem ((HSEM)os2_tick_sem, &count);
+		DosResetEventSem (os2_tick_sem, &count);
 	#else
-		DosResetEventSem ((HSEM)os2_tick_sem, &count);
+		DosResetEventSem (os2_tick_sem, &count);
 		swproc_all_moos (0);
 	#endif
 	}
 
 	DosStopTimer (os2_tick_timer);
-	DosCloseEventSem ((HSEM)os2_tick_sem);
+	DosCloseEventSem (os2_tick_sem);
 
 done:
 	os2_tick_timer = NULL;
@@ -3702,7 +3710,7 @@ void moo_ignore_termreq (void)
 
 static EXCEPTIONREGISTRATIONRECORD os2_excrr = { 0 };
 
-static ULONG _System handle_term (
+static ULONG APIENTRY handle_term (
 	PEXCEPTIONREPORTRECORD p1,
 	PEXCEPTIONREGISTRATIONRECORD p2,
 	PCONTEXTRECORD p3,
