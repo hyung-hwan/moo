@@ -93,6 +93,8 @@
 
 #	if defined(_INTELC32_)
 #		define DOS_EXIT 0x4C
+#		include <i32.h>
+#		include <stk.h>
 #	else
 #		include <dosfunc.h>
 #	endif
@@ -3016,22 +3018,16 @@ static MOO_INLINE void stop_ticker (void)
 
 #if defined(_INTELC32_)
 static void (*dos_prev_timer_intr_handler) (void);
-#else
-static void (__interrupt *dos_prev_timer_intr_handler) (void);
-#endif
-
-#if defined(_INTELC32_)
 #pragma interrupt(dos_timer_intr_handler)
 static void dos_timer_intr_handler (void)
 #else
+static void (__interrupt *dos_prev_timer_intr_handler) (void);
 static void __interrupt dos_timer_intr_handler (void)
 #endif
 {
 	/*
-	_XSTACK *stk;
-	int r;
-	stk = (_XSTACK *)_get_stk_frame();
-	r = (unsigned short)stk_ptr->eax;   
+	_XSTACK* stk = (_XSTACK *)_get_stk_frame();
+	r = (unsigned short)stk->eax;   
 	*/
 
 	/* The timer interrupt (normally) occurs 18.2 times per second. */
@@ -3749,23 +3745,43 @@ void moo_ignore_termreq (void)
 
 #elif defined(__DOS__)
 
-/* TODO: signal chaining and unchaining linux in unix/linux */
+#if defined(_INTELC32_)
+static void (*dos_prev_int23_handler) (void);
+#pragma interrupt(dos_int23_handler)
+static void dos_int23_handler (void)
+#else
+static void (__interrupt *dos_prev_int23_handler) (void);
+static void __interrupt dos_int23_handler (void)
+#endif
+{
+#if defined(_INTELC32_)
+	/* prevent the DOS interrupt handler from being called */
+	_XSTACK* stk = (_XSTACK*)_get_stk_frame();
+	stk->opts |= _STK_NOINT;
+#endif
+	abort_all_moos (0);
+
+	/* if i call the previous handler, it's likely to kill the application.
+	 * so i don't chain-call the previous handler. but another call could
+	 * have changed the handler already to something else. then it would be
+	 * better to chain-call it. TODO: find a way to chain-call it safely */
+	/*_chain_intr (dos_prev_int23_handler);*/
+}
+
 void moo_catch_termreq (void)
 {
-	signal (SIGINT, abort_all_moos);
-	signal (SIGTERM, abort_all_moos);
+	dos_prev_int23_handler = _dos_getvect(0x23);
+	_dos_setvect (0x23, dos_int23_handler);
 }
 
 void moo_uncatch_termreq (void)
 {
-	signal (SIGINT, SIG_DFL);
-	signal (SIGTERM, SIG_DFL);
+	_dos_setvect (0x23, dos_int23_handler);
 }
 
 void moo_ignore_termreq (void)
 {
-	signal (SIGINT, SIG_IGN);
-	signal (SIGTERM, SIG_IGN);
+	/* TODO: */
 }
 
 #else
