@@ -90,6 +90,7 @@
 #	include <signal.h>
 #	include <errno.h>
 #	include <fcntl.h>
+#	include <conio.h> /* inp, outp */
 
 #	if defined(_INTELC32_)
 #		define DOS_EXIT 0x4C
@@ -3735,6 +3736,10 @@ void moo_uncatch_termreq (void)
 
 #elif defined(__DOS__)
 
+/*#define IRQ_TERM 0x23*/
+/*#define IRQ_TERM 0x1B*/
+#define IRQ_TERM 0x9
+
 #if defined(_INTELC32_)
 static void (*dos_prev_int23_handler) (void);
 #pragma interrupt(dos_int23_handler)
@@ -3744,29 +3749,76 @@ static void (__interrupt *dos_prev_int23_handler) (void);
 static void __interrupt dos_int23_handler (void)
 #endif
 {
-#if defined(_INTELC32_)
+#if (IRQ_TERM == 0x23) && defined(_INTELC32_)
+	/* note this code for _INTELC32_ doesn't seem to work properly
+	 * unless the program is waiting on getch() or something similar */
 	/* prevent the DOS interrupt handler from being called */
 	_XSTACK* stk = (_XSTACK*)_get_stk_frame();
 	stk->opts |= _STK_NOINT;
-#endif
 	abort_all_moos (0);
-
 	/* if i call the previous handler, it's likely to kill the application.
 	 * so i don't chain-call the previous handler. but another call could
 	 * have changed the handler already to something else. then it would be
 	 * better to chain-call it. TODO: find a way to chain-call it safely */
 	/*_chain_intr (dos_prev_int23_handler);*/
+#else
+
+
+	#if 0
+	static int extended = 0;
+	static int keyboard[255] = { 0, };
+	moo_uint8_t sc, status;
+	/* TODO: determine if the key pressed is ctrl-C or ctrl-break ... */
+
+	sc = inp(0x60);
+	/*status = inp(0x61);*/
+	if (sc == 0xE0)
+	{
+		/* extended key prefix */
+		extended = 1;
+	}
+	else if (sc == 0xE1)
+	{
+		/* pause key */
+	}
+	else
+	{
+		if (sc & 0x80) 
+		{
+			/* key release */ 
+			sc = sc & 0x7F;
+			keyboard[sc] = 0;
+			printf ("%key released ... %x\n", sc);
+		}
+		else
+		{
+			keyboard[sc] = 1;
+			printf ("%key pressed ... %x %c\n", sc, sc);
+			abort_all_moos (0);
+		}
+
+		extended = 0;
+	}
+
+	/*_chain_intr (dos_prev_int23_handler);*/
+	outp (0x20, 0x20);
+	#else
+	abort_all_moos (0);
+	_chain_intr (dos_prev_int23_handler);
+	#endif
+#endif
 }
 
 void moo_catch_termreq (void)
 {
-	dos_prev_int23_handler = _dos_getvect(0x23);
-	_dos_setvect (0x23, dos_int23_handler);
+	dos_prev_int23_handler = _dos_getvect(IRQ_TERM);
+	_dos_setvect (IRQ_TERM, dos_int23_handler);
 }
 
 void moo_uncatch_termreq (void)
 {
-	_dos_setvect (0x23, dos_int23_handler);
+	_dos_setvect (IRQ_TERM, dos_prev_int23_handler);
+	dos_prev_int23_handler = MOO_NULL;
 }
 
 #else
