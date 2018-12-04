@@ -78,7 +78,8 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 
 			index = moo_hashoochars(key->slot, MOO_OBJ_GET_SIZE(key)) % newsz;
 			while (newbuc->slot[index] != moo->_nil) index = (index + 1) % newsz;
-			newbuc->slot[index] = (moo_oop_t)ass;
+
+			MOO_STORE_OOP_TO_ARRAY (moo, newbuc, index, (moo_oop_t)ass); /* newbuc->slot[index] = (moo_oop_t)ass; */
 		}
 	}
 
@@ -176,7 +177,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 
 	/* create a new assocation of a key and a value since 
 	 * the key isn't found in the root dictionary */
-	ass = (moo_oop_association_t)moo_instantiate (moo, moo->_association, MOO_NULL, 0);
+	ass = (moo_oop_association_t)moo_instantiate(moo, moo->_association, MOO_NULL, 0);
 	if (!ass) goto oops;
 
 	ass->key = (moo_oop_t)key;
@@ -186,7 +187,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 	 * it overflows after increment below */
 	MOO_ASSERT (moo, tally < MOO_SMOOI_MAX);
 	dic->tally = MOO_SMOOI_TO_OOP(tally + 1);
-	dic->bucket->slot[index] = (moo_oop_t)ass;
+	MOO_STORE_OOP_TO_ARRAY (moo, dic->bucket, index, (moo_oop_t)ass); /*dic->bucket->slot[index] = (moo_oop_t)ass;*/
 
 	moo_poptmps (moo, tmp_count);
 	return ass;
@@ -321,12 +322,12 @@ found:
 		if ((y > x && (z <= x || z > y)) ||
 		    (y < x && (z <= x && z > y)))
 		{
-			dic->bucket->slot[x] = dic->bucket->slot[y];
+			MOO_STORE_OOP_TO_ARRAY (moo, dic->bucket, x, dic->bucket->slot[y]); /*dic->bucket->slot[x] = dic->bucket->slot[y];*/
 			x = y;
 		}
 	}
 
-	dic->bucket->slot[x] = moo->_nil;
+	MOO_STORE_OOP_TO_ARRAY (moo, dic->bucket, x, moo->_nil); /*dic->bucket->slot[x] = moo->_nil;*/
 
 	tally--;
 	dic->tally = MOO_SMOOI_TO_OOP(tally);

@@ -441,7 +441,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		}
 
 		case MOO_OBJ_TYPE_OOP:
-			((moo_oop_oop_t)rcv)->slot[idx] = val;
+			MOO_STORE_OOP_TO_ARRAY (moo, (moo_oop_oop_t)rcv, idx, val); /*((moo_oop_oop_t)rcv)->slot[idx] = val;*/
 			break;
 
 		default:

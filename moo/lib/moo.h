@@ -1838,6 +1838,14 @@ typedef struct moo_synerr_t moo_synerr_t;
 extern "C" {
 #endif
 
+#if defined(MOO_HAVE_INLINE)
+	static MOO_INLINE void MOO_STORE_OOP (moo_t* moo, moo_oop_t* rcvaddr, moo_oop_t val) { *rcvaddr = val; }
+	static MOO_INLINE void MOO_STORE_OOP_TO_ARRAY (moo_t* moo, moo_oop_oop_t rcv, moo_oow_t idx, moo_oop_t val) { MOO_STORE_OOP (moo, &rcv->slot[idx], val); }
+#else
+#	define MOO_STORE_OOP(moo,rcvaddr,val) (*(rcvaddr) = val)
+#	define MOO_STORE_OOP_TO_ARRAY(moo,rcv,idx,val) MOO_STORE_OOP(moo, &((moo_oop_oop_t)rcv)->slot[idx], val)
+#endif
+
 MOO_EXPORT moo_t* moo_open (
 	moo_mmgr_t*         mmgr,
 	moo_oow_t           xtnsize,
