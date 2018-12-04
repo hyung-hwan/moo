@@ -33,6 +33,10 @@
 #include <stdlib.h>
 #include <locale.h>
 
+#if (defined(__unix) || defined(__linux) || defined(__ultrix) || defined(_AIX) || defined(__hpux) || defined(__sgi)) && defined(HAVE_SIGNAL_H)
+#	include <signal.h>
+#endif
+
 static void print_syntax_error (moo_t* moo, const char* main_src_file)
 {
 	moo_synerr_t synerr;
@@ -273,6 +277,13 @@ int main (int argc, char* argv[])
 
 	MOO_DEBUG0 (moo, "COMPILE OK. STARTING EXECUTION...\n");
 	xret = 0;
+
+#if defined(SIGINT) && defined(HAVE_SIGNAL)
+	/* i'd like the program to ignore the interrupt signal 
+	 * before moo_catch_termreq() and after moo_uncatch_termreq() */
+	signal (SIGINT, SIG_IGN);
+	signal (SIGTERM, SIG_IGN);
+#endif
 
 	moo_catch_termreq ();
 	moo_start_ticker ();

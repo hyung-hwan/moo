@@ -93,10 +93,6 @@ MOO_EXPORT void moo_uncatch_termreq (
 	void
 );
 
-MOO_EXPORT void moo_ignore_termreq (
-	void
-);
-
 /* ----------------------------------------------------------------------- */
 MOO_EXPORT moo_t* moo_openstd (
 	moo_oow_t           xtnsize, 

@@ -3698,11 +3698,6 @@ void moo_uncatch_termreq (void)
 	SetConsoleCtrlHandler (handle_term, FALSE);
 }
 
-void moo_ignore_termreq (void)
-{
-	/* TODO: ... */
-}
-
 #elif defined(__OS2__)
 
 static EXCEPTIONREGISTRATIONRECORD os2_excrr = { 0 };
@@ -3736,11 +3731,6 @@ void moo_catch_termreq (void)
 void moo_uncatch_termreq (void)
 {
 	DosUnsetExceptionHandler (&os2_excrr);
-}
-
-void moo_ignore_termreq (void)
-{
-	/* TODO: ... */
 }
 
 #elif defined(__DOS__)
@@ -3779,26 +3769,18 @@ void moo_uncatch_termreq (void)
 	_dos_setvect (0x23, dos_int23_handler);
 }
 
-void moo_ignore_termreq (void)
-{
-	/* TODO: */
-}
-
 #else
 
 void moo_catch_termreq (void)
 {
+	set_signal_handler(SIGTERM, abort_all_moos, 0);
 	set_signal_handler(SIGINT, abort_all_moos, 0);
 }
 
 void moo_uncatch_termreq (void)
 {
 	unset_signal_handler(SIGTERM);
-}
-
-void moo_ignore_termreq (void)
-{
-	set_signal_handler(SIGINT, SIG_IGN, 0);
+	unset_signal_handler(SIGINT);
 }
 
 #endif
