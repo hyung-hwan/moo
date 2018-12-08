@@ -406,7 +406,7 @@ static moo_oop_class_t alloc_kernel_class (moo_t* moo, int class_flags, moo_oow_
 {
 	moo_oop_class_t c;
 
-	c = (moo_oop_class_t)moo_allocoopobj (moo, MOO_CLASS_NAMED_INSTVARS + num_classvars);
+	c = (moo_oop_class_t)moo_allocoopobj(moo, MOO_CLASS_NAMED_INSTVARS + num_classvars);
 	if (!c) return MOO_NULL;
 
 	MOO_OBJ_SET_FLAGS_KERNEL (c, MOO_OBJ_FLAGS_KERNEL_IMMATURE);
@@ -434,12 +434,12 @@ static int ignite_1 (moo_t* moo)
 	 * The instance of Class can have indexed instance variables 
 	 * which are actually class variables.
 	 * -------------------------------------------------------------- */
-	moo->_class = alloc_kernel_class (
+	moo->_class = alloc_kernel_class(
 		moo, kernel_classes[KCI_CLASS].class_flags, 
 		kernel_classes[KCI_CLASS].class_num_classvars, 
-		MOO_CLASS_SPEC_MAKE (kernel_classes[KCI_CLASS].class_spec_named_instvars,
-		                     kernel_classes[KCI_CLASS].class_spec_flags,
-		                     kernel_classes[KCI_CLASS].class_spec_indexed_type));
+		MOO_CLASS_SPEC_MAKE(kernel_classes[KCI_CLASS].class_spec_named_instvars,
+		                    kernel_classes[KCI_CLASS].class_spec_flags,
+		                    kernel_classes[KCI_CLASS].class_spec_indexed_type));
 	if (!moo->_class) return -1;
 
 	MOO_ASSERT (moo, MOO_OBJ_GET_CLASS(moo->_class) == MOO_NULL);
@@ -451,12 +451,12 @@ static int ignite_1 (moo_t* moo)
 
 		if (i == KCI_CLASS) continue; /* skip Class as it's created above */
 
-		tmp = alloc_kernel_class (
+		tmp = alloc_kernel_class(
 			moo, kernel_classes[i].class_flags,
 			kernel_classes[i].class_num_classvars, 
-			MOO_CLASS_SPEC_MAKE (kernel_classes[i].class_spec_named_instvars,
-			                     kernel_classes[i].class_spec_flags,
-			                     kernel_classes[i].class_spec_indexed_type));
+			MOO_CLASS_SPEC_MAKE(kernel_classes[i].class_spec_named_instvars,
+			                    kernel_classes[i].class_spec_flags,
+			                    kernel_classes[i].class_spec_indexed_type));
 		if (!tmp) return -1;
 		*(moo_oop_class_t*)((moo_uint8_t*)moo + kernel_classes[i].offset) = tmp;
 	}
@@ -542,7 +542,7 @@ static int ignite_3 (moo_t* moo)
 
 	for (i = 0; i < MOO_COUNTOF(kernel_classes); i++)
 	{
-		sym = moo_makesymbol (moo, kernel_classes[i].name, kernel_classes[i].len);
+		sym = moo_makesymbol(moo, kernel_classes[i].name, kernel_classes[i].len);
 		if (!sym) return -1;
 
 		cls = *(moo_oop_class_t*)((moo_uint8_t*)moo + kernel_classes[i].offset);
@@ -560,15 +560,15 @@ static int ignite_3 (moo_t* moo)
 	moo->sysdic->nsup = (moo_oop_t)moo->_system;
 
 	/* Make the process scheduler avaialble as the global name 'Processor' */
-	sym = moo_makesymbol (moo, str_processor, MOO_COUNTOF(str_processor));
+	sym = moo_makesymbol(moo, str_processor, MOO_COUNTOF(str_processor));
 	if (!sym) return -1;
 	if (!moo_putatsysdic(moo, sym, (moo_oop_t)moo->processor)) return -1;
 
-	sym = moo_makesymbol (moo, str_dicnew, MOO_COUNTOF(str_dicnew));
+	sym = moo_makesymbol(moo, str_dicnew, MOO_COUNTOF(str_dicnew));
 	if (!sym) return -1;
 	moo->dicnewsym = (moo_oop_char_t)sym;
 
-	sym = moo_makesymbol (moo, str_dicputassoc, MOO_COUNTOF(str_dicputassoc));
+	sym = moo_makesymbol(moo, str_dicputassoc, MOO_COUNTOF(str_dicputassoc));
 	if (!sym) return -1;
 	moo->dicputassocsym = (moo_oop_char_t)sym;
 
@@ -586,7 +586,7 @@ int moo_ignite (moo_t* moo, moo_oow_t heapsz)
 	moo->_nil = moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t));
 	if (!moo->_nil) return -1;
 
-	moo->_nil->_flags = MOO_OBJ_MAKE_FLAGS (MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 1, 0, 0, 0);
+	moo->_nil->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 1, 0, 0, 0);
 	moo->_nil->_size = 0;
 
 	if (ignite_1(moo) <= -1 || ignite_2(moo) <= -1 || ignite_3(moo)) return -1;
@@ -712,6 +712,8 @@ moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
 
 	if (!MOO_OOP_IS_POINTER(oop)) return oop;
 
+	if (MOO_OBJ_GET_FLAGS_PERM(oop)) return oop;
+
 	if (MOO_OBJ_GET_FLAGS_MOVED(oop))
 	{
 		/* this object has migrated to the new heap. 
@@ -725,7 +727,7 @@ moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
 		moo_oow_t nbytes_aligned;
 		moo_oop_t tmp;
 
-		nbytes_aligned = get_payload_bytes (moo, oop);
+		nbytes_aligned = get_payload_bytes(moo, oop);
 
 		/* allocate space in the new heap */
 		tmp = moo_allocheapspace(moo, &moo->heap->newspace, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
@@ -743,7 +745,7 @@ moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
 		MOO_MEMCPY (tmp, oop, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
 
 		/* mark the old object that it has migrated to the new heap */
-		MOO_OBJ_SET_FLAGS_MOVED(oop, 1);
+		MOO_OBJ_SET_FLAGS_MOVED (oop, 1);
 
 		/* let the class field of the old object point to the new 
 		 * object allocated in the new heap. it is returned in 
