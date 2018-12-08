@@ -79,7 +79,7 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 			index = moo_hashoochars(key->slot, MOO_OBJ_GET_SIZE(key)) % newsz;
 			while (newbuc->slot[index] != moo->_nil) index = (index + 1) % newsz;
 
-			MOO_STORE_OOP_TO_ARRAY (moo, newbuc, index, (moo_oop_t)ass); /* newbuc->slot[index] = (moo_oop_t)ass; */
+			MOO_STORE_OOP (moo, &newbuc->slot[index], (moo_oop_t)ass); /* newbuc->slot[index] = (moo_oop_t)ass; */
 		}
 	}
 
@@ -114,10 +114,10 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 
 		if (MOO_OBJ_GET_CLASS(key) == MOO_OBJ_GET_CLASS(ass->key) && 
 		    MOO_OBJ_GET_SIZE(key) == MOO_OBJ_GET_SIZE(ass->key) &&
-		    moo_equal_oochars (key->slot, ((moo_oop_char_t)ass->key)->slot, MOO_OBJ_GET_SIZE(key))) 
+		    moo_equal_oochars(key->slot, ((moo_oop_char_t)ass->key)->slot, MOO_OBJ_GET_SIZE(key))) 
 		{
 			/* the value of MOO_NULL indicates no insertion or update. */
-			if (value) ass->value = value; /* update */
+			if (value) MOO_STORE_OOP (moo, &ass->value, value); /*ass->value = value;*/ /* update */
 			return ass;
 		}
 
@@ -163,7 +163,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 		 * make sure that it has at least one free slot left
 		 * after having added a new symbol. this is to help
 		 * traversal end at a _nil slot if no entry is found. */
-		bucket = expand_bucket (moo, dic->bucket);
+		bucket = expand_bucket(moo, dic->bucket);
 		if (!bucket) goto oops;
 
 		dic->bucket = bucket;
@@ -180,14 +180,14 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 	ass = (moo_oop_association_t)moo_instantiate(moo, moo->_association, MOO_NULL, 0);
 	if (!ass) goto oops;
 
-	ass->key = (moo_oop_t)key;
-	ass->value = value;
+	MOO_STORE_OOP (moo, &ass->key, (moo_oop_t)key); /*ass->key = (moo_oop_t)key; */
+	MOO_STORE_OOP (moo, &ass->value, value); /*ass->value = value;*/
 
 	/* the current tally must be less than the maximum value. otherwise,
 	 * it overflows after increment below */
 	MOO_ASSERT (moo, tally < MOO_SMOOI_MAX);
-	dic->tally = MOO_SMOOI_TO_OOP(tally + 1);
-	MOO_STORE_OOP_TO_ARRAY (moo, dic->bucket, index, (moo_oop_t)ass); /*dic->bucket->slot[index] = (moo_oop_t)ass;*/
+	dic->tally = MOO_SMOOI_TO_OOP(tally + 1); /* no need to use MOO_STORE_OOP as the value is not a pointer object */
+	MOO_STORE_OOP (moo, &dic->bucket->slot[index], (moo_oop_t)ass); /*dic->bucket->slot[index] = (moo_oop_t)ass;*/
 
 	moo_poptmps (moo, tmp_count);
 	return ass;
@@ -322,12 +322,12 @@ found:
 		if ((y > x && (z <= x || z > y)) ||
 		    (y < x && (z <= x && z > y)))
 		{
-			MOO_STORE_OOP_TO_ARRAY (moo, dic->bucket, x, dic->bucket->slot[y]); /*dic->bucket->slot[x] = dic->bucket->slot[y];*/
+			MOO_STORE_OOP (moo, &dic->bucket->slot[x], dic->bucket->slot[y]); /*dic->bucket->slot[x] = dic->bucket->slot[y];*/
 			x = y;
 		}
 	}
 
-	MOO_STORE_OOP_TO_ARRAY (moo, dic->bucket, x, moo->_nil); /*dic->bucket->slot[x] = moo->_nil;*/
+	MOO_STORE_OOP (moo, &dic->bucket->slot[x], moo->_nil); /*dic->bucket->slot[x] = moo->_nil;*/
 
 	tally--;
 	dic->tally = MOO_SMOOI_TO_OOP(tally);

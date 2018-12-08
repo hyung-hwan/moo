@@ -482,12 +482,12 @@ static int ignite_2 (moo_t* moo)
 	moo_oop_t tmp;
 
 	/* Create 'true' and 'false objects */
-	moo->_true = moo_instantiate (moo, moo->_true_class, MOO_NULL, 0);
-	moo->_false = moo_instantiate (moo, moo->_false_class, MOO_NULL, 0);
+	moo->_true = moo_instantiate(moo, moo->_true_class, MOO_NULL, 0);
+	moo->_false = moo_instantiate(moo, moo->_false_class, MOO_NULL, 0);
 	if (!moo->_true || !moo->_false) return -1;
 
 	/* Create the symbol table */
-	tmp = moo_instantiate (moo, moo->_symbol_table, MOO_NULL, 0);
+	tmp = moo_instantiate(moo, moo->_symbol_table, MOO_NULL, 0);
 	if (!tmp) return -1;
 	moo->symtab = (moo_oop_dic_t)tmp;
 
@@ -517,7 +517,7 @@ static int ignite_2 (moo_t* moo)
 	moo->nil_process->perrmsg = moo->_nil;
 
 	/* Create a process scheduler */
-	tmp = (moo_oop_t)moo_instantiate (moo, moo->_process_scheduler, MOO_NULL, 0);
+	tmp = (moo_oop_t)moo_instantiate(moo, moo->_process_scheduler, MOO_NULL, 0);
 	if (!tmp) return -1;
 	moo->processor = (moo_oop_process_scheduler_t)tmp;
 	moo->processor->active = moo->nil_process;
@@ -583,7 +583,7 @@ int moo_ignite (moo_t* moo, moo_oow_t heapsz)
 	moo->heap = moo_makeheap(moo, heapsz);
 	if (!moo->heap) return -1;
 
-	moo->_nil = moo_allocbytes (moo, MOO_SIZEOF(moo_obj_t));
+	moo->_nil = moo_allocpermbytes(moo, MOO_SIZEOF(moo_obj_t));
 	if (!moo->_nil) return -1;
 
 	moo->_nil->_flags = MOO_OBJ_MAKE_FLAGS (MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 1, 0, 0, 0);
@@ -601,6 +601,7 @@ int moo_ignite (moo_t* moo, moo_oow_t heapsz)
 
 static void compact_symbol_table (moo_t* moo, moo_oop_t _nil)
 {
+	moo_oop_oop_t bucket;
 	moo_oop_char_t symbol;
 	moo_oow_t i, x, y, z;
 	moo_oow_t bucket_size, index;
@@ -617,45 +618,46 @@ static void compact_symbol_table (moo_t* moo, moo_oop_t _nil)
 	MOO_ASSERT (moo, tally >= 0); /* it must not be less than 0 */
 	if (tally <= 0) return;
 
+	bucket = moo->symtab->bucket;
 	/* NOTE: in theory, the bucket size can be greater than MOO_SMOOI_MAX
 	 * as it is an internal header field and is of an unsigned type */
-	bucket_size = MOO_OBJ_GET_SIZE(moo->symtab->bucket);
+	bucket_size = MOO_OBJ_GET_SIZE(bucket);
 
 	for (index = 0; index < bucket_size; )
 	{
-		if (MOO_OBJ_GET_FLAGS_MOVED(moo->symtab->bucket->slot[index]))
+		if (MOO_OBJ_GET_FLAGS_MOVED(bucket->slot[index]))
 		{
 			index++;
 			continue;
 		}
 
-		MOO_ASSERT (moo, moo->symtab->bucket->slot[index] != _nil);
+		MOO_ASSERT (moo, bucket->slot[index] != _nil);
 
 		for (i = 0, x = index, y = index; i < bucket_size; i++)
 		{
 			y = (y + 1) % bucket_size;
 
 			/* done if the slot at the current hash index is _nil */
-			if (moo->symtab->bucket->slot[y] == _nil) break;
+			if (bucket->slot[y] == _nil) break;
 
 			/* get the natural hash index for the data in the slot 
 			 * at the current hash index */
-			symbol = (moo_oop_char_t)moo->symtab->bucket->slot[y];
+			symbol = (moo_oop_char_t)bucket->slot[y];
 
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,symbol) == moo->_symbol);
 
-			z = moo_hashoochars(symbol->slot, MOO_OBJ_GET_SIZE(symbol)) % bucket_size;
+			z = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(symbol), MOO_OBJ_GET_SIZE(symbol)) % bucket_size;
 
 			/* move an element if necessary */
 			if ((y > x && (z <= x || z > y)) ||
 			    (y < x && (z <= x && z > y)))
 			{
-				moo->symtab->bucket->slot[x] = moo->symtab->bucket->slot[y];
+				bucket->slot[x] = bucket->slot[y];
 				x = y;
 			}
 		}
 
-		moo->symtab->bucket->slot[x] = _nil;
+		bucket->slot[x] = _nil;
 		tally--;
 	}
 
@@ -889,9 +891,9 @@ void moo_gc (moo_t* moo)
 	old_nil = moo->_nil;
 
 	/* move _nil and the root object table */
-	moo->_nil = moo_moveoop (moo, moo->_nil);
-	moo->_true = moo_moveoop (moo, moo->_true);
-	moo->_false = moo_moveoop (moo, moo->_false);
+	moo->_nil = moo_moveoop(moo, moo->_nil);
+	moo->_true = moo_moveoop(moo, moo->_true);
+	moo->_false = moo_moveoop(moo, moo->_false);
 
 	for (i = 0; i < MOO_COUNTOF(kernel_classes); i++)
 	{
@@ -901,48 +903,48 @@ void moo_gc (moo_t* moo)
 		*(moo_oop_t*)((moo_uint8_t*)moo + kernel_classes[i].offset) = tmp;
 	}
 
-	moo->sysdic = (moo_oop_nsdic_t)moo_moveoop (moo, (moo_oop_t)moo->sysdic);
-	moo->processor = (moo_oop_process_scheduler_t)moo_moveoop (moo, (moo_oop_t)moo->processor);
-	moo->nil_process = (moo_oop_process_t)moo_moveoop (moo, (moo_oop_t)moo->nil_process);
-	moo->dicnewsym = (moo_oop_char_t)moo_moveoop (moo, (moo_oop_t)moo->dicnewsym);
-	moo->dicputassocsym = (moo_oop_char_t)moo_moveoop (moo, (moo_oop_t)moo->dicputassocsym);
+	moo->sysdic = (moo_oop_nsdic_t)moo_moveoop(moo, (moo_oop_t)moo->sysdic);
+	moo->processor = (moo_oop_process_scheduler_t)moo_moveoop(moo, (moo_oop_t)moo->processor);
+	moo->nil_process = (moo_oop_process_t)moo_moveoop(moo, (moo_oop_t)moo->nil_process);
+	moo->dicnewsym = (moo_oop_char_t)moo_moveoop(moo, (moo_oop_t)moo->dicnewsym);
+	moo->dicputassocsym = (moo_oop_char_t)moo_moveoop(moo, (moo_oop_t)moo->dicputassocsym);
 
 	for (i = 0; i < moo->sem_list_count; i++)
 	{
-		moo->sem_list[i] = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_list[i]);
+		moo->sem_list[i] = (moo_oop_semaphore_t)moo_moveoop(moo, (moo_oop_t)moo->sem_list[i]);
 	}
 
 	for (i = 0; i < moo->sem_heap_count; i++)
 	{
-		moo->sem_heap[i] = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_heap[i]);
+		moo->sem_heap[i] = (moo_oop_semaphore_t)moo_moveoop(moo, (moo_oop_t)moo->sem_heap[i]);
 	}
 
 	for (i = 0; i < moo->sem_io_tuple_count; i++)
 	{
 		if (moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT])
-			moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT] = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]);
+			moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT] = (moo_oop_semaphore_t)moo_moveoop(moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_INPUT]);
 		if (moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT])
-			moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT] = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]);
+			moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT] = (moo_oop_semaphore_t)moo_moveoop(moo, (moo_oop_t)moo->sem_io_tuple[i].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT]);
 	}
 
-	moo->sem_gcfin = (moo_oop_semaphore_t)moo_moveoop (moo, (moo_oop_t)moo->sem_gcfin);
+	moo->sem_gcfin = (moo_oop_semaphore_t)moo_moveoop(moo, (moo_oop_t)moo->sem_gcfin);
 
 	for (i = 0; i < moo->proc_map_capa; i++)
 	{
-		moo->proc_map[i] = moo_moveoop (moo, moo->proc_map[i]);
+		moo->proc_map[i] = moo_moveoop(moo, moo->proc_map[i]);
 	}
 
 	for (i = 0; i < moo->tmp_count; i++)
 	{
-		*moo->tmp_stack[i] = moo_moveoop (moo, *moo->tmp_stack[i]);
+		*moo->tmp_stack[i] = moo_moveoop(moo, *moo->tmp_stack[i]);
 	}
 
 	if (moo->initial_context)
-		moo->initial_context = (moo_oop_context_t)moo_moveoop (moo, (moo_oop_t)moo->initial_context);
+		moo->initial_context = (moo_oop_context_t)moo_moveoop(moo, (moo_oop_t)moo->initial_context);
 	if (moo->active_context)
-		moo->active_context = (moo_oop_context_t)moo_moveoop (moo, (moo_oop_t)moo->active_context);
+		moo->active_context = (moo_oop_context_t)moo_moveoop(moo, (moo_oop_t)moo->active_context);
 	if (moo->active_method)
-		moo->active_method = (moo_oop_method_t)moo_moveoop (moo, (moo_oop_t)moo->active_method);
+		moo->active_method = (moo_oop_method_t)moo_moveoop(moo, (moo_oop_t)moo->active_method);
 
 	moo_rbt_walk (&moo->modtab, call_module_gc, moo); 
 
@@ -952,13 +954,13 @@ void moo_gc (moo_t* moo)
 	}
 
 	/* scan the new heap to move referenced objects */
-	scan_ptr = scan_new_heap (moo, scan_ptr);
+	scan_ptr = scan_new_heap(moo, scan_ptr);
 
 	/* check finalizable objects registered and scan the heap again. 
 	 * symbol table compation is placed after this phase assuming that
 	 * no symbol is added to be finalized. */
-	gcfin_count = move_finalizable_objects (moo);
-	scan_ptr = scan_new_heap (moo, scan_ptr);
+	gcfin_count = move_finalizable_objects(moo);
+	scan_ptr = scan_new_heap(moo, scan_ptr);
 
 	/* traverse the symbol table for unreferenced symbols.
 	 * if the symbol has not moved to the new heap, the symbol
@@ -967,12 +969,12 @@ void moo_gc (moo_t* moo)
 	compact_symbol_table (moo, old_nil);
 
 	/* move the symbol table itself */
-	moo->symtab = (moo_oop_dic_t)moo_moveoop (moo, (moo_oop_t)moo->symtab);
+	moo->symtab = (moo_oop_dic_t)moo_moveoop(moo, (moo_oop_t)moo->symtab);
 
 	/* scan the new heap again from the end position of
 	 * the previous scan to move referenced objects by 
 	 * the symbol table. */
-	scan_ptr = scan_new_heap (moo, scan_ptr);
+	scan_ptr = scan_new_heap(moo, scan_ptr);
 
 	/* the contents of the current heap is not needed any more.
 	 * reset the upper bound to the base. don't forget to align the heap
@@ -1041,7 +1043,7 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 
 		c = MOO_OBJ_GET_CLASS(oop);
 		moo_pushtmp (moo, &oop);
-		z = moo_instantiate (moo, (moo_oop_t)c, MOO_NULL, MOO_OBJ_GET_SIZE(oop) - MOO_CLASS_SPEC_NAMED_INSTVARS(MOO_OOP_TO_SMOOI(c->spec)));
+		z = moo_instantiate(moo, (moo_oop_t)c, MOO_NULL, MOO_OBJ_GET_SIZE(oop) - MOO_CLASS_SPEC_NAMED_INSTVARS(MOO_OOP_TO_SMOOI(c->spec)));
 		moo_poptmp(moo);
 
 		if (!z) return z;

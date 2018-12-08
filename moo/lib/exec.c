@@ -324,7 +324,7 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 	if (moo->proc_map_free_first <= -1 && prepare_to_alloc_pid(moo) <= -1) return MOO_NULL;
 
 	moo_pushtmp (moo, (moo_oop_t*)&c);
-	proc = (moo_oop_process_t)moo_instantiate (moo, moo->_process, MOO_NULL, moo->option.dfl_procstk_size);
+	proc = (moo_oop_process_t)moo_instantiate(moo, moo->_process, MOO_NULL, moo->option.dfl_procstk_size);
 	moo_poptmp (moo);
 	if (!proc) return MOO_NULL;
 
@@ -1525,7 +1525,7 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 	else actual_ntmprs = ntmprs;
 
 	moo_pushtmp (moo, (moo_oop_t*)&mth);
-	ctx = (moo_oop_context_t)moo_instantiate (moo, moo->_method_context, MOO_NULL, actual_ntmprs);
+	ctx = (moo_oop_context_t)moo_instantiate(moo, moo->_method_context, MOO_NULL, actual_ntmprs);
 	moo_poptmp (moo);
 	if (!ctx) return -1;
 
@@ -1584,14 +1584,14 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 		for (i = actual_nargs, j = ntmprs + (actual_nargs - nargs); i > nargs; i--)
 		{
 			/* place variadic arguments after local temporaries */
-			ctx->slot[--j] = MOO_STACK_GETTOP (moo);
+			ctx->slot[--j] = MOO_STACK_GETTOP(moo);
 			MOO_STACK_POP (moo);
 		}
 		MOO_ASSERT (moo, i == nargs);
 		while (i > 0)
 		{
 			/* place normal argument before local temporaries */
-			ctx->slot[--i] = MOO_STACK_GETTOP (moo);
+			ctx->slot[--i] = MOO_STACK_GETTOP(moo);
 			MOO_STACK_POP (moo);
 		}
 	}
@@ -1812,7 +1812,7 @@ TODO: overcome this problem - accept parameters....
 #endif
 
 	/* create a fake initial context. */
-	ctx = (moo_oop_context_t)moo_instantiate (moo, moo->_method_context, MOO_NULL, MOO_OOP_TO_SMOOI(mth->tmpr_nargs));
+	ctx = (moo_oop_context_t)moo_instantiate(moo, moo->_method_context, MOO_NULL, MOO_OOP_TO_SMOOI(mth->tmpr_nargs));
 	if (!ctx) goto oops;
 
 	moo_pushtmp (moo, (moo_oop_t*)&ctx); tmp_count++;
@@ -1994,19 +1994,19 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 				switch (type)
 				{
 					case MOO_OBJ_TYPE_BYTE:
-						hv = moo_hash_bytes(((moo_oop_byte_t)rcv)->slot, MOO_OBJ_GET_SIZE(rcv));
+						hv = moo_hash_bytes(MOO_OBJ_GET_BYTE_SLOT(rcv), MOO_OBJ_GET_SIZE(rcv));
 						break;
 
 					case MOO_OBJ_TYPE_CHAR:
-						hv = moo_hashoochars (((moo_oop_char_t)rcv)->slot, MOO_OBJ_GET_SIZE(rcv));
+						hv = moo_hashoochars (MOO_OBJ_GET_CHAR_SLOT(rcv), MOO_OBJ_GET_SIZE(rcv));
 						break;
 
 					case MOO_OBJ_TYPE_HALFWORD:
-						hv = moo_hashhalfwords(((moo_oop_halfword_t)rcv)->slot, MOO_OBJ_GET_SIZE(rcv));
+						hv = moo_hashhalfwords(MOO_OBJ_GET_HALFWORD_SLOT(rcv), MOO_OBJ_GET_SIZE(rcv));
 						break;
 
 					case MOO_OBJ_TYPE_WORD:
-						hv = moo_hashwords(((moo_oop_word_t)rcv)->slot, MOO_OBJ_GET_SIZE(rcv));
+						hv = moo_hashwords(MOO_OBJ_GET_WORD_SLOT(rcv), MOO_OBJ_GET_SIZE(rcv));
 						break;
 
 					default:
@@ -2148,7 +2148,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 
 	/* create a new block context to clone rcv_blkctx */
 	moo_pushtmp (moo, (moo_oop_t*)&rcv_blkctx);
-	blkctx = (moo_oop_context_t) moo_instantiate (moo, moo->_block_context, MOO_NULL, local_ntmprs); 
+	blkctx = (moo_oop_context_t) moo_instantiate(moo, moo->_block_context, MOO_NULL, local_ntmprs); 
 	moo_poptmp (moo);
 	if (!blkctx) return MOO_PF_FAILURE;
 
@@ -4602,7 +4602,7 @@ static MOO_INLINE int make_block (moo_t* moo)
 	 * clones a block context and activates the cloned context.
 	 * this base block context is created with no stack for 
 	 * this reason */
-	blkctx = (moo_oop_context_t)moo_instantiate (moo, moo->_block_context, MOO_NULL, 0); 
+	blkctx = (moo_oop_context_t)moo_instantiate(moo, moo->_block_context, MOO_NULL, 0); 
 	if (!blkctx) return -1;
 
 	/* the long forward jump instruction has the format of 
@@ -5360,7 +5360,7 @@ static int __execute (moo_t* moo)
 			LOG_INST1 (moo, "make_array %zu", b1);
 
 			/* create an empty array */
-			t = moo_instantiate (moo, moo->_array, MOO_NULL, b1);
+			t = moo_instantiate(moo, moo->_array, MOO_NULL, b1);
 			if (!t) return -1;
 
 			MOO_STACK_PUSH (moo, t); /* push the array created */
@@ -5387,7 +5387,7 @@ static int __execute (moo_t* moo)
 			LOG_INST1 (moo, "make_bytearray %zu", b1);
 
 			/* create an empty array */
-			t = moo_instantiate (moo, moo->_byte_array, MOO_NULL, b1);
+			t = moo_instantiate(moo, moo->_byte_array, MOO_NULL, b1);
 			if (!t) return -1;
 
 			MOO_STACK_PUSH (moo, t); /* push the array created */
@@ -5408,7 +5408,7 @@ static int __execute (moo_t* moo)
 			else if (MOO_OOP_IS_ERROR(t1)) bv = MOO_OOP_TO_ERROR(t1);
 			else if (MOO_OOP_IS_SMPTR(t1)) bv = ((moo_oow_t)MOO_OOP_TO_SMPTR(t1) & 0xFF);
 			else bv = 0;
-			((moo_oop_byte_t)t2)->slot[b1] = bv;
+			MOO_OBJ_GET_BYTE_SLOT(t2)[b1] = bv;
 			NEXT_INST();
 		}
 
@@ -5487,7 +5487,7 @@ static int __execute (moo_t* moo)
 			 * context and activates the cloned context.
 			 * this base block context is created with no 
 			 * stack for this reason. */
-			blkctx = (moo_oop_context_t)moo_instantiate (moo, moo->_block_context, MOO_NULL, 0); 
+			blkctx = (moo_oop_context_t)moo_instantiate(moo, moo->_block_context, MOO_NULL, 0); 
 			if (!blkctx) return -1;
 
 			/* get the receiver to the block copy message after block context instantiation

@@ -493,6 +493,7 @@ struct moo_obj_word_t
 #define MOO_OBJ_GET_BYTE_SLOT(oop)     (((moo_oop_byte_t)(oop))->slot)
 #define MOO_OBJ_GET_HALFWORD_SLOT(oop) (((moo_oop_halfword_t)(oop))->slot)
 #define MOO_OBJ_GET_WORD_SLOT(oop)     (((moo_oop_word_t)(oop))->slot)
+#define MOO_OBJ_GET_LIWORD_SLOT(oop)   (((moo_oop_liword_t)(oop))->slot)
 
 typedef struct moo_trailer_t moo_trailer_t;
 struct moo_trailer_t
@@ -1840,10 +1841,8 @@ extern "C" {
 
 #if defined(MOO_HAVE_INLINE)
 	static MOO_INLINE void MOO_STORE_OOP (moo_t* moo, moo_oop_t* rcvaddr, moo_oop_t val) { *rcvaddr = val; }
-	static MOO_INLINE void MOO_STORE_OOP_TO_ARRAY (moo_t* moo, moo_oop_oop_t rcv, moo_oow_t idx, moo_oop_t val) { MOO_STORE_OOP (moo, &rcv->slot[idx], val); }
 #else
 #	define MOO_STORE_OOP(moo,rcvaddr,val) (*(rcvaddr) = val)
-#	define MOO_STORE_OOP_TO_ARRAY(moo,rcv,idx,val) MOO_STORE_OOP(moo, &((moo_oop_oop_t)rcv)->slot[idx], val)
 #endif
 
 MOO_EXPORT moo_t* moo_open (

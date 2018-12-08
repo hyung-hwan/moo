@@ -26,15 +26,18 @@
 
 #include "moo-prv.h"
 
+#define MIN_HEAP_SIZE 65536 /* TODO: adjust this value? */
+#define PERM_SPACE_SIZE 2048  /* TODO: adjust perm space size depending on what's allocated in the permspace */
+
 moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 {
 	moo_heap_t* heap;
 	moo_oow_t half_size;
 
-	if (size < 65536) size = 65536; /* not really useful check as 65536 is too small */
+	if (size < MIN_HEAP_SIZE) size = MIN_HEAP_SIZE;
 	half_size = size / 2;
 
-	heap = (moo_heap_t*)moo->vmprim.alloc_heap(moo, MOO_SIZEOF(*heap) + size);
+	heap = (moo_heap_t*)moo->vmprim.alloc_heap(moo, MOO_SIZEOF(*heap) + PERM_SPACE_SIZE + size);
 	if (!heap) 
 	{
 		const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
@@ -46,16 +49,23 @@ moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 	heap->base = (moo_uint8_t*)(heap + 1);
 	heap->size = size;
 
-	heap->curspace.base= (moo_uint8_t*)(heap + 1);
+	/* TODO: consider placing permspace in a separate memory allocated block in case we have to grow
+	 *       other spaces. we may be able to realloc() the entire heap region without affecting the separately
+	 *       allocated block. */
+	heap->permspace.base = (moo_uint8_t*)(heap + 1);
+	heap->permspace.ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)heap->permspace.base), MOO_SIZEOF(moo_oop_t));
+	heap->permspace.limit = heap->permspace.base + PERM_SPACE_SIZE;
+
+	heap->curspace.base = heap->permspace.limit;
 	heap->curspace.ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)heap->curspace.base), MOO_SIZEOF(moo_oop_t));
-	heap->curspace.limit = heap->curspace.ptr + half_size;
+	heap->curspace.limit = heap->curspace.base + half_size;
 
-	heap->newspace.base = (moo_uint8_t*)(heap + 1) + half_size;
+	heap->newspace.base = heap->curspace.limit; /*(moo_uint8_t*)(heap + 1) + half_size;*/
 	heap->newspace.ptr = (moo_uint8_t*)MOO_ALIGN(((moo_uintptr_t)heap->newspace.base), MOO_SIZEOF(moo_oop_t));
-	heap->newspace.limit = heap->newspace.ptr + half_size;
+	heap->newspace.limit = heap->newspace.base + half_size;
 
-	/* if size is too small, space->ptr may go past space->limit even at 
-	 * this moment depending on the alignment of space->base. subsequent
+	/* if size is too small, space.ptr may go past space.limit even at 
+	 * this moment depending on the alignment of space.base. subsequent
 	 * calls to moo_allocheapspace() are bound to fail. Make sure to
 	 * pass a heap size large enough */
 
