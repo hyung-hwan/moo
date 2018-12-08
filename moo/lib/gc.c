@@ -583,7 +583,7 @@ int moo_ignite (moo_t* moo, moo_oow_t heapsz)
 	moo->heap = moo_makeheap(moo, heapsz);
 	if (!moo->heap) return -1;
 
-	moo->_nil = moo_allocpermbytes(moo, MOO_SIZEOF(moo_obj_t));
+	moo->_nil = moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t));
 	if (!moo->_nil) return -1;
 
 	moo->_nil->_flags = MOO_OBJ_MAKE_FLAGS (MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 1, 0, 0, 0);
