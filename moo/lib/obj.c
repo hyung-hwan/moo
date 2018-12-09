@@ -28,27 +28,34 @@
 
 void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 {
-	moo_uint8_t* ptr;
-
 #if defined(MOO_BUILD_DEBUG)
 	if ((moo->option.trait & MOO_DEBUG_GC) && !(moo->option.trait & MOO_NOGC)) moo_gc (moo);
 #endif
 
-	ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->curspace, size);
-	if (!ptr && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_NOGC))
+	if (MOO_UNLIKELY(moo->igniting))
 	{
-		moo_gc (moo);
-		MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO,
-			"GC completed - current heap ptr %p limit %p size %zd free %zd\n", 
-			moo->heap->curspace.ptr, moo->heap->curspace.limit,
-			(moo_oow_t)(moo->heap->curspace.limit - moo->heap->curspace.base),
-			(moo_oow_t)(moo->heap->curspace.limit - moo->heap->curspace.ptr)
-		);
-		ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->curspace, size);
-/* TODO: grow heap if ptr is still null. */
+		/* you must increase the size of the permheap if this allocation fails */
+		return (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->permspace, size); 
 	}
+	else
+	{
+		moo_uint8_t* ptr;
+		ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->curspace, size);
+		if (!ptr && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_NOGC))
+		{
+			moo_gc (moo);
+			MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO,
+				"GC completed - current heap ptr %p limit %p size %zd free %zd\n", 
+				moo->heap->curspace.ptr, moo->heap->curspace.limit,
+				(moo_oow_t)(moo->heap->curspace.limit - moo->heap->curspace.base),
+				(moo_oow_t)(moo->heap->curspace.limit - moo->heap->curspace.ptr)
+			);
+			ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->curspace, size);
+	/* TODO: grow heap if ptr is still null. */
+		}
 
-	return ptr;
+		return ptr;
+	}
 }
 
 moo_oop_t moo_allocoopobj (moo_t* moo, moo_oow_t size)
@@ -69,7 +76,7 @@ moo_oop_t moo_allocoopobj (moo_t* moo, moo_oow_t size)
 	hdr = (moo_oop_oop_t)moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
 	if (!hdr) return MOO_NULL;
 
-	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, 0, 0, 0);
+	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, moo->igniting, 0, 0, 0);
 	MOO_OBJ_SET_SIZE (hdr, size);
 	MOO_OBJ_SET_CLASS (hdr, moo->_nil);
 
@@ -91,7 +98,7 @@ moo_oop_t moo_allocoopobjwithtrailer (moo_t* moo, moo_oow_t size, const moo_oob_
 	hdr = (moo_oop_oop_t)moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
 	if (!hdr) return MOO_NULL;
 
-	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, 0, 0, 1);
+	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, moo->igniting, 0, 0, 1);
 	MOO_OBJ_SET_SIZE (hdr, size);
 	MOO_OBJ_SET_CLASS (hdr, moo->_nil);
 
@@ -141,7 +148,7 @@ static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, mo
 		if (!hdr) return MOO_NULL;
 	}
 
-	hdr->_flags = MOO_OBJ_MAKE_FLAGS(type, unit, extra, 0, 0, ngc, 0);
+	hdr->_flags = MOO_OBJ_MAKE_FLAGS(type, unit, extra, 0, moo->igniting, 0, ngc, 0); /* TODO: review. ngc and perm flags seems to conflict with each other ... the diff is that ngc is malloc() and perm is allocated in the perm heap */
 	hdr->_size = len;
 	MOO_OBJ_SET_SIZE (hdr, len);
 	MOO_OBJ_SET_CLASS (hdr, moo->_nil);

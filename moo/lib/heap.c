@@ -26,8 +26,8 @@
 
 #include "moo-prv.h"
 
-#define MIN_HEAP_SIZE 65536 /* TODO: adjust this value? */
-#define PERM_SPACE_SIZE 2048  /* TODO: adjust perm space size depending on what's allocated in the permspace */
+#define MIN_HEAP_SIZE 65536 * 5 /* TODO: adjust this value? */
+#define PERM_SPACE_SIZE 65536 * 2 /* TODO: adjust perm space size depending on what's allocated in the permspace */
 
 moo_heap_t* moo_makeheap (moo_t* moo, moo_oow_t size)
 {

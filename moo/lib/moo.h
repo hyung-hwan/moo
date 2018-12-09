@@ -438,11 +438,12 @@ typedef enum moo_gcfin_t moo_gcfin_t;
 /* [NOTE] this macro doesn't check the range of the actual value.
  *        make sure that the value of each bit fields given falls within the 
  *        possible range of the defined bits */
-#define MOO_OBJ_MAKE_FLAGS(t,u,e,k,m,g,r) ( \
+#define MOO_OBJ_MAKE_FLAGS(t,u,e,k,p,m,g,r) ( \
 	(((moo_oow_t)(t)) << MOO_OBJ_FLAGS_TYPE_SHIFT) | \
 	(((moo_oow_t)(u)) << MOO_OBJ_FLAGS_UNIT_SHIFT) | \
 	(((moo_oow_t)(e)) << MOO_OBJ_FLAGS_EXTRA_SHIFT) | \
 	(((moo_oow_t)(k)) << MOO_OBJ_FLAGS_KERNEL_SHIFT) | \
+	(((moo_oow_t)(p)) << MOO_OBJ_FLAGS_PERM_SHIFT) | \
 	(((moo_oow_t)(m)) << MOO_OBJ_FLAGS_MOVED_SHIFT) | \
 	(((moo_oow_t)(g)) << MOO_OBJ_FLAGS_NGC_SHIFT) | \
 	(((moo_oow_t)(r)) << MOO_OBJ_FLAGS_TRAILER_SHIFT) \
@@ -1410,7 +1411,9 @@ struct moo_t
 		moo_ooch_t buf[MOO_ERRMSG_CAPA];
 		moo_oow_t len;
 	} errmsg;
+
 	int shuterr;
+	int igniting;
 
 	struct
 	{
@@ -1969,17 +1972,17 @@ MOO_EXPORT int moo_getoption (
 MOO_EXPORT int moo_setoption (
 	moo_t*       moo,
 	moo_option_t id,
-	const void*   value
+	const void*  value
 );
 
 
 MOO_EXPORT moo_evtcb_t* moo_regevtcb (
-	moo_t*    moo,
+	moo_t*       moo,
 	moo_evtcb_t* tmpl
 );
 
 MOO_EXPORT void moo_deregevtcb (
-	moo_t*    moo,
+	moo_t*       moo,
 	moo_evtcb_t* cb
 );
 

@@ -583,15 +583,21 @@ int moo_ignite (moo_t* moo, moo_oow_t heapsz)
 	moo->heap = moo_makeheap(moo, heapsz);
 	if (!moo->heap) return -1;
 
+	moo->igniting = 1;
 	moo->_nil = moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t));
-	if (!moo->_nil) return -1;
+	if (!moo->_nil) goto oops;
 
-	moo->_nil->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 1, 0, 0, 0);
+	moo->_nil->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 1, 1, 0, 0, 0);
 	moo->_nil->_size = 0;
 
-	if (ignite_1(moo) <= -1 || ignite_2(moo) <= -1 || ignite_3(moo)) return -1;
+	if (ignite_1(moo) <= -1 || ignite_2(moo) <= -1 || ignite_3(moo)) goto oops;;
 
+	moo->igniting = 0;
 	return 0;
+
+oops:
+	moo->igniting = 0;
+	return -1;
 }
 
 /* ----------------------------------------------------------------------- 
