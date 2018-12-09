@@ -61,7 +61,7 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 	}
 
 	moo_pushtmp (moo, (moo_oop_t*)&oldbuc);
-	newbuc = (moo_oop_oop_t)moo_instantiate (moo, moo->_array, MOO_NULL, newsz); 
+	newbuc = (moo_oop_oop_t)moo_instantiate(moo, moo->_array, MOO_NULL, newsz); 
 	moo_poptmp (moo);
 	if (!newbuc) return MOO_NULL;
 
@@ -181,28 +181,28 @@ moo_oop_t moo_makestringwithbchars (moo_t* moo, const moo_bch_t* ptr, moo_oow_t 
 
 	inlen = len;
 	if (moo_convbtouchars (moo, ptr, &inlen, MOO_NULL, &outlen) <= -1) return MOO_NULL;
-	obj = moo_instantiate (moo, moo->_string, MOO_NULL, outlen);
+	obj = moo_instantiate(moo, moo->_string, MOO_NULL, outlen);
 	if (!obj) return MOO_NULL;
 
 	inlen = len;
 	moo_convbtouchars (moo, ptr, &inlen, MOO_OBJ_GET_CHAR_SLOT(obj), &outlen);
 	return obj;
 #else
-	return moo_instantiate (moo, moo->_string, ptr, len);
+	return moo_instantiate(moo, moo->_string, ptr, len);
 #endif
 }
 
 moo_oop_t moo_makestringwithuchars (moo_t* moo, const moo_uch_t* ptr, moo_oow_t len)
 {
 #if defined(MOO_OOCH_IS_UCH)
-	return moo_instantiate (moo, moo->_string, ptr, len);
+	return moo_instantiate(moo, moo->_string, ptr, len);
 #else
 	moo_oow_t inlen, outlen;
 	moo_oop_t obj;
 
 	inlen = len;
 	if (moo_convutobchars (moo, ptr, &inlen, MOO_NULL, &outlen) <= -1) return MOO_NULL;
-	obj = moo_instantiate (moo, moo->_string, MOO_NULL, outlen);
+	obj = moo_instantiate(moo, moo->_string, MOO_NULL, outlen);
 	if (!obj) return MOO_NULL;
 
 	inlen = len;

@@ -326,7 +326,7 @@ static moo_pfrc_t pf_listen_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	MOO_PF_CHECK_RCV (moo,
 		MOO_OOP_IS_POINTER(sck) &&
 		MOO_OBJ_BYTESOF(sck) >= (MOO_SIZEOF(*sck) - MOO_SIZEOF(moo_obj_t)) &&
-		MOO_OOP_IS_SMOOI(sck->handle));/*newsck = (oop_sck_t)moo_instantiate (moo, MOO_OBJ_GET_CLASS(sck), MOO_NULL, 0);*/
+		MOO_OOP_IS_SMOOI(sck->handle));/*newsck = (oop_sck_t)moo_instantiate(moo, MOO_OBJ_GET_CLASS(sck), MOO_NULL, 0);*/
 	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_SMOOI(arg));
 
 	fd = MOO_OOP_TO_SMOOI(sck->handle);
