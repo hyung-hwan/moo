@@ -604,7 +604,6 @@ oops:
  * GARBAGE COLLECTOR
  * ----------------------------------------------------------------------- */
 
-
 static void compact_symbol_table (moo_t* moo, moo_oop_t _nil)
 {
 	moo_oop_oop_t bucket;
@@ -671,7 +670,6 @@ static void compact_symbol_table (moo_t* moo, moo_oop_t _nil)
 	MOO_ASSERT (moo, tally <= MOO_SMOOI_MAX);
 	moo->symtab->tally = MOO_SMOOI_TO_OOP(tally);
 }
-
 
 static MOO_INLINE moo_oow_t get_payload_bytes (moo_t* moo, moo_oop_t oop)
 {
@@ -763,9 +761,9 @@ moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
 	}
 }
 
-static moo_uint8_t* scan_new_heap (moo_t* moo, moo_uint8_t* ptr)
+static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t* end)
 {
-	while (ptr < moo->heap->newspace.ptr)
+	while (ptr < end)
 	{
 		moo_oow_t i;
 		moo_oow_t nbytes_aligned;
@@ -773,6 +771,7 @@ static moo_uint8_t* scan_new_heap (moo_t* moo, moo_uint8_t* ptr)
 
 		oop = (moo_oop_t)ptr;
 
+if (end == moo->heap->permspace.ptr) printf ("attempt to move in permspace...%p\n", oop);
 		if (MOO_OBJ_GET_FLAGS_TRAILER(oop))
 		{
 			moo_oow_t nbytes;
@@ -790,6 +789,8 @@ static moo_uint8_t* scan_new_heap (moo_t* moo, moo_uint8_t* ptr)
 			nbytes_aligned = MOO_ALIGN (MOO_OBJ_BYTESOF(oop), MOO_SIZEOF(moo_oop_t));
 		}
 
+if (end == moo->heap->permspace.ptr) MOO_DEBUG2 (moo, "XXXX attempt to move in permspace...%p %O\n", MOO_OBJ_GET_CLASS(oop), MOO_OBJ_GET_CLASS(oop));
+
 		MOO_OBJ_SET_CLASS (oop, moo_moveoop(moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop)));
 		if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP)
 		{
@@ -804,8 +805,7 @@ static moo_uint8_t* scan_new_heap (moo_t* moo, moo_uint8_t* ptr)
 				/* the stack in a process object doesn't need to be 
 				 * scanned in full. the slots above the stack pointer 
 				 * are garbages. */
-				size = MOO_PROCESS_NAMED_INSTVARS +
-				       MOO_OOP_TO_SMOOI(((moo_oop_process_t)oop)->sp) + 1;
+				size = MOO_PROCESS_NAMED_INSTVARS + MOO_OOP_TO_SMOOI(((moo_oop_process_t)oop)->sp) + 1;
 				MOO_ASSERT (moo, size <= MOO_OBJ_GET_SIZE(oop));
 			}
 			else
@@ -817,7 +817,10 @@ static moo_uint8_t* scan_new_heap (moo_t* moo, moo_uint8_t* ptr)
 			for (i = 0; i < size; i++)
 			{
 				if (MOO_OOP_IS_POINTER(xtmp->slot[i]))
-					xtmp->slot[i] = moo_moveoop (moo, xtmp->slot[i]);
+				{
+if (end == moo->heap->permspace.ptr) printf ("XXXX attempt to move in permspace...%d/%d %p\n", (int)i, (int)size, xtmp->slot[i]);
+					xtmp->slot[i] = moo_moveoop(moo, xtmp->slot[i]);
+				}
 			}
 		}
 
@@ -843,6 +846,7 @@ static moo_uint8_t* scan_new_heap (moo_t* moo, moo_uint8_t* ptr)
 		ptr = ptr + MOO_SIZEOF(moo_obj_t) + nbytes_aligned;
 	}
 
+if (end == moo->heap->permspace.ptr) printf ("scan done... attempt to move in permspace...\n");
 	/* return the pointer to the beginning of the free space in the heap */
 	return ptr; 
 }
@@ -868,7 +872,7 @@ void moo_gc (moo_t* moo)
 	 * move objects pointed to by the fields to the new heap.
 	 * finally perform some tricky symbol table clean-up.
 	 */
-	moo_uint8_t* scan_ptr;
+	moo_uint8_t* newspace_scan_ptr;
 	moo_space_t tmp;
 	moo_oop_t old_nil;
 	moo_oow_t i;
@@ -892,7 +896,7 @@ void moo_gc (moo_t* moo)
 		"Starting GC curheap base %p ptr %p newheap base %p ptr %p\n",
 		moo->heap->curspace.base, moo->heap->curspace.ptr, moo->heap->newspace.base, moo->heap->newspace.ptr); 
 
-	scan_ptr = (moo_uint8_t*) MOO_ALIGN ((moo_uintptr_t)moo->heap->newspace.base, MOO_SIZEOF(moo_oop_t));
+	newspace_scan_ptr = (moo_uint8_t*)MOO_ALIGN((moo_uintptr_t)moo->heap->newspace.base, MOO_SIZEOF(moo_oop_t));
 
 	/* TODO: allocate common objects like _nil and the root dictionary 
 	 *       in the permanant heap.  minimize moving around */
@@ -947,6 +951,7 @@ void moo_gc (moo_t* moo)
 		*moo->tmp_stack[i] = moo_moveoop(moo, *moo->tmp_stack[i]);
 	}
 
+
 	if (moo->initial_context)
 		moo->initial_context = (moo_oop_context_t)moo_moveoop(moo, (moo_oop_t)moo->initial_context);
 	if (moo->active_context)
@@ -961,14 +966,17 @@ void moo_gc (moo_t* moo)
 		if (cb->gc) cb->gc (moo);
 	}
 
+	/* scan the objects in the permspace in case an object there points to an object outside the permspace */
+	scan_heap_space (moo, (moo_uint8_t*)MOO_ALIGN((moo_uintptr_t)moo->heap->permspace.base, MOO_SIZEOF(moo_oop_t)), moo->heap->permspace.ptr);
+
 	/* scan the new heap to move referenced objects */
-	scan_ptr = scan_new_heap(moo, scan_ptr);
+	newspace_scan_ptr = scan_heap_space(moo, newspace_scan_ptr, moo->heap->newspace.ptr);
 
 	/* check finalizable objects registered and scan the heap again. 
 	 * symbol table compation is placed after this phase assuming that
 	 * no symbol is added to be finalized. */
 	gcfin_count = move_finalizable_objects(moo);
-	scan_ptr = scan_new_heap(moo, scan_ptr);
+	newspace_scan_ptr = scan_heap_space(moo, newspace_scan_ptr, moo->heap->newspace.ptr);
 
 	/* traverse the symbol table for unreferenced symbols.
 	 * if the symbol has not moved to the new heap, the symbol
@@ -982,7 +990,7 @@ void moo_gc (moo_t* moo)
 	/* scan the new heap again from the end position of
 	 * the previous scan to move referenced objects by 
 	 * the symbol table. */
-	scan_ptr = scan_new_heap(moo, scan_ptr);
+	newspace_scan_ptr = scan_heap_space(moo, newspace_scan_ptr, moo->heap->newspace.ptr);
 
 	/* the contents of the current heap is not needed any more.
 	 * reset the upper bound to the base. don't forget to align the heap

@@ -34,7 +34,7 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 
 	if (MOO_UNLIKELY(moo->igniting))
 	{
-		/* you must increase the size of the permheap if this allocation fails */
+		/* you must increase the size of the permspace if this allocation fails */
 		return (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->permspace, size); 
 	}
 	else

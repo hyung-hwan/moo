@@ -232,7 +232,7 @@ moo_pfrc_t moo_pf_basic_new (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		 * disallows indexed(variable) parts. */
 		/* TODO: should i check the specification before calling 
 		*       moo_instantiate()? */
-		obj = moo_instantiate (moo, _class, MOO_NULL, size);
+		obj = moo_instantiate(moo, _class, MOO_NULL, size);
 	}
 	if (!obj) return MOO_PF_FAILURE;
 
