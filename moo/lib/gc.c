@@ -587,7 +587,7 @@ int moo_ignite (moo_t* moo, moo_oow_t heapsz)
 	moo->_nil = moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t));
 	if (!moo->_nil) goto oops;
 
-	moo->_nil->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 1, 1, 0, 0, 0);
+	moo->_nil->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 1, moo->igniting, 0, 0, 0);
 	moo->_nil->_size = 0;
 
 	if (ignite_1(moo) <= -1 || ignite_2(moo) <= -1 || ignite_3(moo)) goto oops;;
@@ -630,7 +630,8 @@ static void compact_symbol_table (moo_t* moo, moo_oop_t _nil)
 
 	for (index = 0; index < bucket_size; )
 	{
-		if (MOO_OBJ_GET_FLAGS_MOVED(bucket->slot[index]))
+		if (MOO_OBJ_GET_FLAGS_PERM(bucket->slot[index]) ||
+		    MOO_OBJ_GET_FLAGS_MOVED(bucket->slot[index]))
 		{
 			index++;
 			continue;
@@ -761,9 +762,9 @@ moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
 	}
 }
 
-static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t* end)
+static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t** end)
 {
-	while (ptr < end)
+	while (ptr < *end) /* the end pointer may get changed, especially the new space. so it's moo_int8_t** */
 	{
 		moo_oow_t i;
 		moo_oow_t nbytes_aligned;
@@ -771,7 +772,6 @@ static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t* 
 
 		oop = (moo_oop_t)ptr;
 
-if (end == moo->heap->permspace.ptr) printf ("attempt to move in permspace...%p\n", oop);
 		if (MOO_OBJ_GET_FLAGS_TRAILER(oop))
 		{
 			moo_oow_t nbytes;
@@ -782,14 +782,12 @@ if (end == moo->heap->permspace.ptr) printf ("attempt to move in permspace...%p\
 
 			nbytes = MOO_OBJ_BYTESOF(oop) + MOO_SIZEOF(moo_oow_t) + \
 			         (moo_oow_t)((moo_oop_oop_t)oop)->slot[MOO_OBJ_GET_SIZE(oop)];
-			nbytes_aligned = MOO_ALIGN (nbytes, MOO_SIZEOF(moo_oop_t));
+			nbytes_aligned = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t));
 		}
 		else
 		{
-			nbytes_aligned = MOO_ALIGN (MOO_OBJ_BYTESOF(oop), MOO_SIZEOF(moo_oop_t));
+			nbytes_aligned = MOO_ALIGN(MOO_OBJ_BYTESOF(oop), MOO_SIZEOF(moo_oop_t));
 		}
-
-if (end == moo->heap->permspace.ptr) MOO_DEBUG2 (moo, "XXXX attempt to move in permspace...%p %O\n", MOO_OBJ_GET_CLASS(oop), MOO_OBJ_GET_CLASS(oop));
 
 		MOO_OBJ_SET_CLASS (oop, moo_moveoop(moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop)));
 		if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP)
@@ -818,7 +816,6 @@ if (end == moo->heap->permspace.ptr) MOO_DEBUG2 (moo, "XXXX attempt to move in p
 			{
 				if (MOO_OOP_IS_POINTER(xtmp->slot[i]))
 				{
-if (end == moo->heap->permspace.ptr) printf ("XXXX attempt to move in permspace...%d/%d %p\n", (int)i, (int)size, xtmp->slot[i]);
 					xtmp->slot[i] = moo_moveoop(moo, xtmp->slot[i]);
 				}
 			}
@@ -843,10 +840,9 @@ if (end == moo->heap->permspace.ptr) printf ("XXXX attempt to move in permspace.
 			if (trgc) trgc (moo, oop);
 		}
 
-		ptr = ptr + MOO_SIZEOF(moo_obj_t) + nbytes_aligned;
+		ptr += MOO_SIZEOF(moo_obj_t) + nbytes_aligned;
 	}
 
-if (end == moo->heap->permspace.ptr) printf ("scan done... attempt to move in permspace...\n");
 	/* return the pointer to the beginning of the free space in the heap */
 	return ptr; 
 }
@@ -951,7 +947,6 @@ void moo_gc (moo_t* moo)
 		*moo->tmp_stack[i] = moo_moveoop(moo, *moo->tmp_stack[i]);
 	}
 
-
 	if (moo->initial_context)
 		moo->initial_context = (moo_oop_context_t)moo_moveoop(moo, (moo_oop_t)moo->initial_context);
 	if (moo->active_context)
@@ -967,16 +962,16 @@ void moo_gc (moo_t* moo)
 	}
 
 	/* scan the objects in the permspace in case an object there points to an object outside the permspace */
-	scan_heap_space (moo, (moo_uint8_t*)MOO_ALIGN((moo_uintptr_t)moo->heap->permspace.base, MOO_SIZEOF(moo_oop_t)), moo->heap->permspace.ptr);
+	scan_heap_space (moo, (moo_uint8_t*)MOO_ALIGN((moo_uintptr_t)moo->heap->permspace.base, MOO_SIZEOF(moo_oop_t)), &moo->heap->permspace.ptr);
 
 	/* scan the new heap to move referenced objects */
-	newspace_scan_ptr = scan_heap_space(moo, newspace_scan_ptr, moo->heap->newspace.ptr);
+	newspace_scan_ptr = scan_heap_space(moo, newspace_scan_ptr, &moo->heap->newspace.ptr);
 
 	/* check finalizable objects registered and scan the heap again. 
 	 * symbol table compation is placed after this phase assuming that
 	 * no symbol is added to be finalized. */
 	gcfin_count = move_finalizable_objects(moo);
-	newspace_scan_ptr = scan_heap_space(moo, newspace_scan_ptr, moo->heap->newspace.ptr);
+	newspace_scan_ptr = scan_heap_space(moo, newspace_scan_ptr, &moo->heap->newspace.ptr);
 
 	/* traverse the symbol table for unreferenced symbols.
 	 * if the symbol has not moved to the new heap, the symbol
@@ -990,7 +985,7 @@ void moo_gc (moo_t* moo)
 	/* scan the new heap again from the end position of
 	 * the previous scan to move referenced objects by 
 	 * the symbol table. */
-	newspace_scan_ptr = scan_heap_space(moo, newspace_scan_ptr, moo->heap->newspace.ptr);
+	newspace_scan_ptr = scan_heap_space(moo, newspace_scan_ptr, &moo->heap->newspace.ptr);
 
 	/* the contents of the current heap is not needed any more.
 	 * reset the upper bound to the base. don't forget to align the heap

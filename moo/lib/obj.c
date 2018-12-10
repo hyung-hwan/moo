@@ -28,6 +28,8 @@
 
 void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 {
+	moo_uint8_t* ptr;
+
 #if defined(MOO_BUILD_DEBUG)
 	if ((moo->option.trait & MOO_DEBUG_GC) && !(moo->option.trait & MOO_NOGC)) moo_gc (moo);
 #endif
@@ -35,11 +37,10 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 	if (MOO_UNLIKELY(moo->igniting))
 	{
 		/* you must increase the size of the permspace if this allocation fails */
-		return (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->permspace, size); 
+		ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->permspace, size); 
 	}
 	else
 	{
-		moo_uint8_t* ptr;
 		ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->curspace, size);
 		if (!ptr && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_NOGC))
 		{
@@ -53,9 +54,8 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 			ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->curspace, size);
 	/* TODO: grow heap if ptr is still null. */
 		}
-
-		return ptr;
 	}
+	return ptr;
 }
 
 moo_oop_t moo_allocoopobj (moo_t* moo, moo_oow_t size)
@@ -126,10 +126,11 @@ static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, mo
 	moo_oop_t hdr;
 	moo_oow_t xbytes, nbytes, nbytes_aligned;
 
-	xbytes = len * unit; 
+	xbytes = len * unit;
 	/* 'extra' indicates an extra unit to append at the end.
 	 * it's useful to store a string with a terminating null */
-	nbytes = extra? xbytes + len: xbytes; 
+	/*nbytes = extra? xbytes + len: xbytes; */
+	nbytes = extra? xbytes + unit: xbytes; 
 	nbytes_aligned = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t));
 /* TODO: check overflow in size calculation*/
 
