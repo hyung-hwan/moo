@@ -197,7 +197,7 @@ oops:
 	return MOO_NULL;
 }
 
-static moo_oop_association_t lookup (moo_t* moo, moo_oop_dic_t dic, const moo_oocs_t* name)
+moo_oop_association_t moo_lookupdic_noseterr (moo_t* moo, moo_oop_dic_t dic, const moo_oocs_t* name)
 {
 	/* this is special version of moo_getatsysdic() that performs
 	 * lookup using a plain string specified */
@@ -228,8 +228,20 @@ static moo_oop_association_t lookup (moo_t* moo, moo_oop_dic_t dic, const moo_oo
 	}
 
 	/* when value is MOO_NULL, perform no insertion */
-	moo_seterrbfmt (moo, MOO_ENOENT, "unable to find %.*js in a dictionary", name->len, name->ptr);
+
+	/* moo_seterrXXX() is not called here. the dictionary lookup is very frequent 
+	 * and so is lookup failure. for instance, moo_findmethod() calls this over 
+	 * a class chain. there might be a failure at each class level. it's waste to
+	 * set the error information whenever the failure occurs.
+	 * the caller of this function must set the error information upon failure */
 	return MOO_NULL;
+}
+
+static MOO_INLINE moo_oop_association_t lookup (moo_t* moo, moo_oop_dic_t dic, const moo_oocs_t* name)
+{
+	moo_oop_association_t ass = moo_lookupdic_noseterr(moo, dic, name);
+	if (!ass) moo_seterrbfmt(moo, MOO_ENOENT, "unable to find %.*js in a dictionary", name->len, name->ptr);
+	return ass;
 }
 
 moo_oop_association_t moo_putatsysdic (moo_t* moo, moo_oop_t key, moo_oop_t value)

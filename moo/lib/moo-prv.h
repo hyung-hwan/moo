@@ -1173,6 +1173,12 @@ moo_oop_association_t moo_getatdic (
 	moo_oop_t     key
 );
 
+moo_oop_association_t moo_lookupdic_noseterr (
+	moo_t*            moo,
+	moo_oop_dic_t     dic,
+	const moo_oocs_t* name
+);
+
 moo_oop_association_t moo_lookupdic (
 	moo_t*            moo,
 	moo_oop_dic_t     dic,

@@ -1635,7 +1635,7 @@ static MOO_INLINE moo_oop_method_t find_method_in_class (moo_t* moo, moo_oop_cla
 	MOO_ASSERT (moo, (moo_oop_t)mthdic != moo->_nil); 
 	MOO_ASSERT (moo, MOO_CLASSOF(moo, mthdic) == moo->_method_dictionary);
 
-	ass = (moo_oop_association_t)moo_lookupdic(moo, mthdic, name);
+	ass = (moo_oop_association_t)moo_lookupdic_noseterr(moo, mthdic, name);
 	if (ass) 
 	{
 		/* found the method */
@@ -1710,7 +1710,6 @@ moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, const moo_oocs_
 		/* c is nil if it reached the top of the hierarchy.
 		 * otherwise c points to a class object */
 	}
-
 
 	/* [IMPORT] the method lookup logic should be the same as ciim_on_each_method() in comp.c */
 	mth = find_method_in_class_chain(moo, c, mth_type, message);
