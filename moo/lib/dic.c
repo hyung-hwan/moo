@@ -114,7 +114,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 
 		if (MOO_OBJ_GET_CLASS(key) == MOO_OBJ_GET_CLASS(ass->key) && 
 		    MOO_OBJ_GET_SIZE(key) == MOO_OBJ_GET_SIZE(ass->key) &&
-		    moo_equal_oochars(key->slot, ((moo_oop_char_t)ass->key)->slot, MOO_OBJ_GET_SIZE(key))) 
+		    moo_equal_oochars(MOO_OBJ_GET_CHAR_SLOT(key), MOO_OBJ_GET_CHAR_SLOT(ass->key), MOO_OBJ_GET_SIZE(key))) 
 		{
 			/* the value of MOO_NULL indicates no insertion or update. */
 			if (value) MOO_STORE_OOP (moo, &ass->value, value); /*ass->value = value;*/ /* update */
@@ -219,7 +219,7 @@ moo_oop_association_t moo_lookupdic_noseterr (moo_t* moo, moo_oop_dic_t dic, con
 		MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(ass->key));
 
 		if (name->len == MOO_OBJ_GET_SIZE(ass->key) &&
-		    moo_equal_oochars(name->ptr, ((moo_oop_char_t)ass->key)->slot, name->len)) 
+		    moo_equal_oochars(name->ptr, MOO_OBJ_GET_CHAR_SLOT(ass->key), name->len)) 
 		{
 			return ass;
 		}
@@ -305,7 +305,7 @@ int moo_deletedic (moo_t* moo, moo_oop_dic_t dic, const moo_oocs_t* name)
 		MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(ass->key));
 
 		if (name->len == MOO_OBJ_GET_SIZE(ass->key) &&
-		    moo_equal_oochars(name->ptr, ((moo_oop_char_t)ass->key)->slot, name->len)) 
+		    moo_equal_oochars(name->ptr, MOO_OBJ_GET_CHAR_SLOT(ass->key), name->len)) 
 		{
 			goto found;
 		}
@@ -328,7 +328,7 @@ found:
 		/* get the natural hash index for the data in the slot at
 		 * the current hash index */
 		ass = (moo_oop_association_t)dic->bucket->slot[y];
-		z = moo_hashoochars(((moo_oop_char_t)ass->key)->slot, MOO_OBJ_GET_SIZE(ass->key)) % bs;
+		z = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(ass->key), MOO_OBJ_GET_SIZE(ass->key)) % bs;
 
 		/* move an element if necesary */
 		if ((y > x && (z <= x || z > y)) ||

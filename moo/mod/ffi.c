@@ -106,7 +106,7 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		goto softfail;
 	}
 
-	handle = moo->vmprim.dl_open (moo, ((moo_oop_char_t)name)->slot, 0);
+	handle = moo->vmprim.dl_open (moo, MOO_OBJ_GET_CHAR_SLOT(name), 0);
 	if (!handle) goto softfail;
 
 #if defined(USE_DYNCALL)
@@ -125,7 +125,7 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	ffi->dc = dc;
 #endif
 
-	MOO_DEBUG3 (moo, "<ffi.open> %.*js => %p\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, ffi->handle);
+	MOO_DEBUG3 (moo, "<ffi.open> %.*js => %p\n", MOO_OBJ_GET_SIZE(name), MOO_OBJ_GET_CHAR_SLOT(name), ffi->handle);
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 
@@ -203,7 +203,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	dcReset (ffi->dc);
 
 	i = 0;
-	if (i < MOO_OBJ_GET_SIZE(sig) && ((moo_oop_char_t)sig)->slot[i] == '|') 
+	if (i < MOO_OBJ_GET_SIZE(sig) && MOO_OBJ_GET_CHAR_SLOT(sig)[i] == '|') 
 	{
 		dcMode (ffi->dc, DC_CALL_C_ELLIPSIS);
 
@@ -219,7 +219,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		moo_ooch_t fmtc;
 		moo_oop_t arg;
 
-		fmtc = ((moo_oop_char_t)sig)->slot[i];
+		fmtc = MOO_OBJ_GET_CHAR_SLOT(sig)[i];
 
 		if (fmtc == ')') 
 		{
@@ -499,10 +499,10 @@ static moo_pfrc_t pf_getsym (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		goto softfail;
 	}
 
-	sym = moo->vmprim.dl_getsym (moo, ffi->handle, ((moo_oop_char_t)name)->slot);
+	sym = moo->vmprim.dl_getsym (moo, ffi->handle, MOO_OBJ_GET_CHAR_SLOT(name));
 	if (!sym) goto softfail;
 
-	MOO_DEBUG4 (moo, "<ffi.getsym> %.*js => %p in %p\n", MOO_OBJ_GET_SIZE(name), ((moo_oop_char_t)name)->slot, sym, ffi->handle);
+	MOO_DEBUG4 (moo, "<ffi.getsym> %.*js => %p in %p\n", MOO_OBJ_GET_SIZE(name), MOO_OBJ_GET_CHAR_SLOT(name), sym, ffi->handle);
 
 	MOO_ASSERT (moo, MOO_IN_SMPTR_RANGE(sym));
 	MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP(sym));

@@ -800,6 +800,8 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 		/* the semaphore belongs to a semaphore group */
 		if ((moo_oop_t)sg->waiting.first != moo->_nil)
 		{
+			moo_ooi_t sp;
+
 			/* there is a process waiting on the process group */
 			proc = sg->waiting.first;
 
@@ -815,7 +817,8 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 			 * change the return value forcibly to the actual signaled 
 			 * semaphore */
 			MOO_ASSERT (moo, MOO_OOP_TO_SMOOI(proc->sp) < (moo_ooi_t)(MOO_OBJ_GET_SIZE(proc) - MOO_PROCESS_NAMED_INSTVARS));
-			proc->slot[MOO_OOP_TO_SMOOI(proc->sp)] = (moo_oop_t)sem;
+			sp = MOO_OOP_TO_SMOOI(proc->sp);
+			MOO_STORE_OOP (moo, &proc->slot[sp], (moo_oop_t)sem);
 
 			/* i should decrement the counter as long as the group being 
 			 * signaled contains an IO semaphore */
@@ -1529,7 +1532,7 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 	moo_poptmp (moo);
 	if (!ctx) return -1;
 
-	ctx->sender = moo->active_context; 
+	MOO_STORE_OOP (moo, &ctx->sender, moo->active_context); 
 	ctx->ip = MOO_SMOOI_TO_OOP(0);
 	/* ctx->sp will be set further down */
 
@@ -1553,10 +1556,10 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 	 */
 
 	ctx->ntmprs = MOO_SMOOI_TO_OOP(ntmprs);
-	ctx->method_or_nargs = (moo_oop_t)mth;
+	MOO_STORE_OOP (moo, &ctx->method_or_nargs, (moo_oop_t)mth);
 	/* the 'home' field of a method context is always moo->_nil.
 	ctx->home = moo->_nil;*/
-	ctx->origin = ctx; /* point to self */
+	MOO_STORE_OOP (moo, &ctx->origin, ctx); /* point to self */
 
 	/* 
 	 * Assume this message sending expression:
@@ -1584,14 +1587,16 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 		for (i = actual_nargs, j = ntmprs + (actual_nargs - nargs); i > nargs; i--)
 		{
 			/* place variadic arguments after local temporaries */
-			ctx->slot[--j] = MOO_STACK_GETTOP(moo);
+			--j;
+			MOO_STORE_OOP (moo, &ctx->slot[j], MOO_STACK_GETTOP(moo));
 			MOO_STACK_POP (moo);
 		}
 		MOO_ASSERT (moo, i == nargs);
 		while (i > 0)
 		{
 			/* place normal argument before local temporaries */
-			ctx->slot[--i] = MOO_STACK_GETTOP(moo);
+			--i;
+			MOO_STORE_OOP (moo, &ctx->slot[i], MOO_STACK_GETTOP(moo));
 			MOO_STACK_POP (moo);
 		}
 	}
@@ -1600,12 +1605,13 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 		for (i = actual_nargs; i > 0; )
 		{
 			/* place normal argument before local temporaries */
-			ctx->slot[--i] = MOO_STACK_GETTOP (moo);
+			--i;
+			MOO_STORE_OOP (moo, &ctx->slot[i], MOO_STACK_GETTOP(moo));
 			MOO_STACK_POP (moo);
 		}
 	}
 	/* copy receiver */
-	ctx->receiver_or_source = MOO_STACK_GETTOP (moo);
+	MOO_STORE_OOP (moo, &ctx->receiver_or_source, MOO_STACK_GETTOP(moo));
 	MOO_STACK_POP (moo);
 
 	MOO_ASSERT (moo, moo->sp >= -1);
@@ -2160,10 +2166,10 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 #else
 	blkctx->ip = rcv_blkctx->ip;
 	blkctx->ntmprs = rcv_blkctx->ntmprs;
-	blkctx->method_or_nargs = rcv_blkctx->method_or_nargs;
-	blkctx->receiver_or_source = (moo_oop_t)rcv_blkctx;
-	blkctx->home = rcv_blkctx->home;
-	blkctx->origin = rcv_blkctx->origin;
+	MOO_STORE_OOP (moo, &blkctx->method_or_nargs, rcv_blkctx->method_or_nargs);
+	MOO_STORE_OOP (moo, &blkctx->receiver_or_source, (moo_oop_t)rcv_blkctx);
+	MOO_STORE_OOP (moo, &blkctx->home, rcv_blkctx->home);
+	MOO_STORE_OOP (moo, &blkctx->origin, rcv_blkctx->origin);
 #endif
 
 /* TODO: check the stack size of a block context to see if it's large enough to hold arguments */
@@ -2173,12 +2179,12 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 		 * to pass array elements to the new block */
 		moo_oop_oop_t xarg;
 		MOO_ASSERT (moo, nargs == 1);
-		xarg = (moo_oop_oop_t)MOO_STACK_GETTOP (moo);
+		xarg = (moo_oop_oop_t)MOO_STACK_GETTOP(moo);
 		MOO_ASSERT (moo, MOO_OBJ_IS_OOP_POINTER(xarg));
 		MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(xarg) == num_first_arg_elems); 
 		for (i = 0; i < num_first_arg_elems; i++)
 		{
-			blkctx->slot[i] = xarg->slot[i];
+			MOO_STORE_OOP (moo, &blkctx->slot[i], xarg->slot[i]);
 		}
 	}
 	else
@@ -2186,14 +2192,15 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 		/* copy the arguments to the stack */
 		for (i = 0; i < nargs; i++)
 		{
-			blkctx->slot[i] = MOO_STACK_GETARG(moo, nargs, i);
+			register moo_oop_t tmp = MOO_STACK_GETARG(moo, nargs, i);
+			MOO_STORE_OOP (moo, &blkctx->slot[i], tmp);
 		}
 	}
 	MOO_STACK_POPS (moo, nargs + 1); /* pop arguments and receiver */
 
 	MOO_ASSERT (moo, blkctx->home != moo->_nil);
 	blkctx->sp = MOO_SMOOI_TO_OOP(-1); /* not important at all */
-	blkctx->sender = moo->active_context;
+	MOO_STORE_OOP (moo, &blkctx->sender, moo->active_context);
 
 	*pblkctx = blkctx;
 	return MOO_PF_SUCCESS;
