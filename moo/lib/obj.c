@@ -98,13 +98,13 @@ moo_oop_t moo_allocoopobjwithtrailer (moo_t* moo, moo_oow_t size, const moo_oob_
 	hdr = (moo_oop_oop_t)moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
 	if (!hdr) return MOO_NULL;
 
-	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, moo->igniting, 0, 0, 1);
+	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, moo->igniting, 0, 0, 1); /* TRAILER bit -> 1 */
 	MOO_OBJ_SET_SIZE (hdr, size);
 	MOO_OBJ_SET_CLASS (hdr, moo->_nil);
 
 	for (i = 0; i < size; i++) hdr->slot[i] = moo->_nil;
 
-	/* [NOTE] this is not converted to a SmallInteger object */
+	/* [NOTE] this is not converted to a SmallInteger object. it is a special slot handled by GC for an object with the TRAILER bit set */
 	hdr->slot[size] = (moo_oop_t)blen; 
 
 	if (bptr)
@@ -275,7 +275,7 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 					while (i > 0)
 					{
 						--i;
-						((moo_oop_oop_t)oop)->slot[i] = ((moo_oop_oop_t)_class->initv[0])->slot[i];
+						MOO_STORE_OOP (moo, &((moo_oop_oop_t)oop)->slot[i], ((moo_oop_oop_t)_class->initv[0])->slot[i]);
 					}
 				}
 			}
@@ -361,7 +361,7 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_class_t _class, moo_oo
 					while (i > 0)
 					{
 						--i;
-						((moo_oop_oop_t)oop)->slot[i] = ((moo_oop_oop_t)_class->initv[0])->slot[i];
+						MOO_STORE_OOP (moo, &((moo_oop_oop_t)oop)->slot[i], ((moo_oop_oop_t)_class->initv[0])->slot[i]);
 					}
 				}
 			}

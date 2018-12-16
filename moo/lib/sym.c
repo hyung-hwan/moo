@@ -53,7 +53,7 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 			if (inc_max > 0) inc = inc_max;
 			else
 			{
-				moo_seterrnum (moo, MOO_EOOMEM);
+				moo_seterrbfmt (moo, MOO_EOOMEM, "unable to grow symbol table");
 				return MOO_NULL;
 			}
 		}
@@ -73,9 +73,9 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,symbol) == moo->_symbol);
 			/*MOO_ASSERT (moo, sym->size > 0);*/
 
-			index = moo_hashoochars(symbol->slot, MOO_OBJ_GET_SIZE(symbol)) % newsz;
+			index = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(symbol), MOO_OBJ_GET_SIZE(symbol)) % newsz;
 			while (newbuc->slot[index] != moo->_nil) index = (index + 1) % newsz;
-			newbuc->slot[index] = (moo_oop_t)symbol;
+			MOO_STORE_OOP (moo, &newbuc->slot[index], (moo_oop_t)symbol);
 		}
 	}
 
@@ -98,7 +98,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,symbol) == moo->_symbol);
 
 		if (len == MOO_OBJ_GET_SIZE(symbol) &&
-		    moo_equal_oochars (ptr, symbol->slot, len))
+		    moo_equal_oochars(ptr, MOO_OBJ_GET_CHAR_SLOT(symbol), len))
 		{
 			return (moo_oop_t)symbol;
 		}
@@ -119,7 +119,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 	{
 		/* this built-in table is not allowed to hold more than 
 		 * MOO_SMOOI_MAX items for efficiency sake */
-		moo_seterrnum (moo, MOO_EDFULL);
+		moo_seterrbfmt (moo, MOO_EDFULL, "unable to add a symbol %.*js - symbol table full", len, ptr);
 		return MOO_NULL;
 	}
 
@@ -157,7 +157,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 	{
 		MOO_ASSERT (moo, tally < MOO_SMOOI_MAX);
 		moo->symtab->tally = MOO_SMOOI_TO_OOP(tally + 1);
-		moo->symtab->bucket->slot[index] = (moo_oop_t)symbol;
+		MOO_STORE_OOP (moo, &moo->symtab->bucket->slot[index], (moo_oop_t)symbol);
 	}
 
 	return (moo_oop_t)symbol;
@@ -165,12 +165,12 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 
 moo_oop_t moo_makesymbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 {
-	return find_or_make_symbol (moo, ptr, len, 1);
+	return find_or_make_symbol(moo, ptr, len, 1);
 }
 
 moo_oop_t moo_findsymbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 {
-	return find_or_make_symbol (moo, ptr, len, 0);
+	return find_or_make_symbol(moo, ptr, len, 0);
 }
 
 moo_oop_t moo_makestringwithbchars (moo_t* moo, const moo_bch_t* ptr, moo_oow_t len)
@@ -180,7 +180,7 @@ moo_oop_t moo_makestringwithbchars (moo_t* moo, const moo_bch_t* ptr, moo_oow_t 
 	moo_oop_t obj;
 
 	inlen = len;
-	if (moo_convbtouchars (moo, ptr, &inlen, MOO_NULL, &outlen) <= -1) return MOO_NULL;
+	if (moo_convbtouchars(moo, ptr, &inlen, MOO_NULL, &outlen) <= -1) return MOO_NULL;
 	obj = moo_instantiate(moo, moo->_string, MOO_NULL, outlen);
 	if (!obj) return MOO_NULL;
 
@@ -201,7 +201,7 @@ moo_oop_t moo_makestringwithuchars (moo_t* moo, const moo_uch_t* ptr, moo_oow_t 
 	moo_oop_t obj;
 
 	inlen = len;
-	if (moo_convutobchars (moo, ptr, &inlen, MOO_NULL, &outlen) <= -1) return MOO_NULL;
+	if (moo_convutobchars(moo, ptr, &inlen, MOO_NULL, &outlen) <= -1) return MOO_NULL;
 	obj = moo_instantiate(moo, moo->_string, MOO_NULL, outlen);
 	if (!obj) return MOO_NULL;
 

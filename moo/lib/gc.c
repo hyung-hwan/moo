@@ -546,7 +546,7 @@ static int ignite_3 (moo_t* moo)
 		if (!sym) return -1;
 
 		cls = *(moo_oop_class_t*)((moo_uint8_t*)moo + kernel_classes[i].offset);
-		cls->name = (moo_oop_char_t)sym;
+		MOO_STORE_OOP (moo, (moo_oop_t*)&cls->name, sym);
 		cls->nsup = moo->sysdic;
 
 		if (!moo_putatsysdic(moo, sym, (moo_oop_t)cls)) return -1;

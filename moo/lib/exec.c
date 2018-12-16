@@ -552,7 +552,7 @@ static MOO_INLINE void chain_into_semaphore (moo_t* moo, moo_oop_process_t proc,
 
 	MOO_APPEND_TO_OOP_LIST (moo, &sem->waiting, moo_oop_process_t, proc, sem_wait);
 
-	proc->sem = (moo_oop_t)sem;
+	MOO_STORE_OOP (moo, &proc->sem, (moo_oop_t)sem);
 }
 
 static MOO_INLINE void unchain_from_semaphore (moo_t* moo, moo_oop_process_t proc)
@@ -597,7 +597,7 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 
 			unchain_from_processor (moo, proc, PROC_STATE_TERMINATED);
 			proc->sp = MOO_SMOOI_TO_OOP(-1); /* invalidate the process stack */
-			proc->current_context = proc->initial_context; /* not needed but just in case */
+			MOO_STORE_OOP (moo, (moo_oop_t*)&proc->current_context, (moo_oop_t)proc->initial_context); /* not needed but just in case */
 
 			/* a runnable or running process must not be chanined to the
 			 * process list of a semaphore */
@@ -673,7 +673,7 @@ static void resume_process (moo_t* moo, moo_oop_process_t proc)
 		/* don't switch to this process. just change the state to RUNNABLE.
 		 * process switching should be triggerd by the process scheduler. */
 		chain_into_processor (moo, proc, PROC_STATE_RUNNABLE); 
-		/*proc->current_context = proc->initial_context;*/
+		/*MOO_STORE_OOP (moo, &proc->current_context = proc->initial_context);*/
 	}
 #if 0
 	else if (proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE))
@@ -775,7 +775,7 @@ static int async_signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 		moo_oop_semaphore_t* tmp;
 
 		new_capa = moo->sem_list_capa + SEM_LIST_INC; /* TODO: overflow check.. */
-		tmp = moo_reallocmem (moo, moo->sem_list, MOO_SIZEOF(moo_oop_semaphore_t) * new_capa);
+		tmp = moo_reallocmem(moo, moo->sem_list, MOO_SIZEOF(moo_oop_semaphore_t) * new_capa);
 		if (!tmp) return -1;
 
 		moo->sem_list = tmp;
@@ -1532,7 +1532,7 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 	moo_poptmp (moo);
 	if (!ctx) return -1;
 
-	MOO_STORE_OOP (moo, &ctx->sender, moo->active_context); 
+	MOO_STORE_OOP (moo, (moo_oop_t*)&ctx->sender, (moo_oop_t)moo->active_context); 
 	ctx->ip = MOO_SMOOI_TO_OOP(0);
 	/* ctx->sp will be set further down */
 
@@ -1559,7 +1559,7 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 	MOO_STORE_OOP (moo, &ctx->method_or_nargs, (moo_oop_t)mth);
 	/* the 'home' field of a method context is always moo->_nil.
 	ctx->home = moo->_nil;*/
-	MOO_STORE_OOP (moo, &ctx->origin, ctx); /* point to self */
+	MOO_STORE_OOP (moo, (moo_oop_t*)&ctx->origin, (moo_oop_t)ctx); /* point to self */
 
 	/* 
 	 * Assume this message sending expression:
@@ -1834,8 +1834,8 @@ TODO: overcome this problem - accept parameters....
 
 	ctx->ip = MOO_SMOOI_TO_OOP(0); /* point to the beginning */
 	ctx->sp = MOO_SMOOI_TO_OOP(-1); /* pointer to -1 below the bottom */
-	ctx->origin = ctx; /* point to self */
-	ctx->method_or_nargs = (moo_oop_t)mth; /* fake. help SWITCH_ACTIVE_CONTEXT() not fail. TODO: create a static fake method and use it... instead of 'mth' */
+	MOO_STORE_OOP (moo, (moo_oop_t*)&ctx->origin, (moo_oop_t)ctx); /* point to self */
+	MOO_STORE_OOP (moo, (moo_oop_t*)&ctx->method_or_nargs, (moo_oop_t)mth); /* fake. help SWITCH_ACTIVE_CONTEXT() not fail. TODO: create a static fake method and use it... instead of 'mth' */
 
 	/* [NOTE]
 	 *  the receiver field and the sender field of ctx are nils.
@@ -2161,7 +2161,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 	/* shallow-copy the named part including home, origin, etc. */
 	for (i = 0; i < MOO_CONTEXT_NAMED_INSTVARS; i++)
 	{
-		((moo_oop_oop_t)blkctx)->slot[i] = ((moo_oop_oop_t)rcv_blkctx)->slot[i];
+		MOO_STORE_OOP (moo, &((moo_oop_oop_t)blkctx)->slot[i], ((moo_oop_oop_t)rcv_blkctx)->slot[i]);
 	}
 #else
 	blkctx->ip = rcv_blkctx->ip;
@@ -2169,7 +2169,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 	MOO_STORE_OOP (moo, &blkctx->method_or_nargs, rcv_blkctx->method_or_nargs);
 	MOO_STORE_OOP (moo, &blkctx->receiver_or_source, (moo_oop_t)rcv_blkctx);
 	MOO_STORE_OOP (moo, &blkctx->home, rcv_blkctx->home);
-	MOO_STORE_OOP (moo, &blkctx->origin, rcv_blkctx->origin);
+	MOO_STORE_OOP (moo, (moo_oop_t*)&blkctx->origin, (moo_oop_t)rcv_blkctx->origin);
 #endif
 
 /* TODO: check the stack size of a block context to see if it's large enough to hold arguments */
@@ -2200,7 +2200,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 
 	MOO_ASSERT (moo, blkctx->home != moo->_nil);
 	blkctx->sp = MOO_SMOOI_TO_OOP(-1); /* not important at all */
-	MOO_STORE_OOP (moo, &blkctx->sender, moo->active_context);
+	MOO_STORE_OOP (moo, (moo_oop_t*)&blkctx->sender, (moo_oop_t)moo->active_context);
 
 	*pblkctx = blkctx;
 	return MOO_PF_SUCCESS;
@@ -2622,7 +2622,7 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_mod_t* mod, 
 
 		sems_idx = MOO_OOP_TO_SMOOI(sem->count) > 0? MOO_SEMAPHORE_GROUP_SEMS_SIG: MOO_SEMAPHORE_GROUP_SEMS_UNSIG;
 		MOO_APPEND_TO_OOP_LIST (moo, &sg->sems[sems_idx], moo_oop_semaphore_t, sem, grm);
-		sem->group = sg;
+		MOO_STORE_OOP (moo, (moo_oop_t*)&sem->group, (moo_oop_t)sg);
 
 		count = MOO_OOP_TO_SMOOI(sg->sem_count);
 		MOO_ASSERT (moo, count >= 0);
@@ -4626,11 +4626,11 @@ static MOO_INLINE int make_block (moo_t* moo)
 	blkctx->ntmprs = MOO_SMOOI_TO_OOP(b2);
 
 	/* set the home context where it's defined */
-	blkctx->home = (moo_oop_t)moo->active_context; 
+	MOO_STORE_OOP (moo, &blkctx->home, (moo_oop_t)moo->active_context); 
 	/* no source for a base block context. */
 	blkctx->receiver_or_source = moo->_nil; 
 
-	blkctx->origin = moo->active_context->origin;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&blkctx->origin, (moo_oop_t)moo->active_context->origin);
 
 	/* push the new block context to the stack of the active context */
 	MOO_STACK_PUSH (moo, (moo_oop_t)blkctx);
@@ -4736,7 +4736,7 @@ static int __execute (moo_t* moo)
 		store_instvar:
 			LOG_INST1 (moo, "store_into_instvar %zu", b1);
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->receiver_or_source) == MOO_OBJ_TYPE_OOP);
-			((moo_oop_oop_t)moo->active_context->origin->receiver_or_source)->slot[b1] = MOO_STACK_GETTOP(moo);
+			MOO_STORE_OOP (moo, &((moo_oop_oop_t)moo->active_context->origin->receiver_or_source)->slot[b1], MOO_STACK_GETTOP(moo));
 			NEXT_INST();
 
 		/* ------------------------------------------------- */
@@ -4755,7 +4755,7 @@ static int __execute (moo_t* moo)
 		pop_into_instvar:
 			LOG_INST1 (moo, "pop_into_instvar %zu", b1);
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->receiver_or_source) == MOO_OBJ_TYPE_OOP);
-			((moo_oop_oop_t)moo->active_context->origin->receiver_or_source)->slot[b1] = MOO_STACK_GETTOP(moo);
+			MOO_STORE_OOP (moo, &((moo_oop_oop_t)moo->active_context->origin->receiver_or_source)->slot[b1], MOO_STACK_GETTOP(moo));
 			MOO_STACK_POP (moo);
 			NEXT_INST();
 
@@ -4858,7 +4858,7 @@ static int __execute (moo_t* moo)
 			else
 			{
 				/* store or pop - bit 5 off */
-				ctx->slot[bx] = MOO_STACK_GETTOP(moo);
+				MOO_STORE_OOP (moo, &ctx->slot[bx], MOO_STACK_GETTOP(moo));
 
 				if ((bcode >> 3) & 1)
 				{
@@ -4924,7 +4924,7 @@ static int __execute (moo_t* moo)
 			if ((bcode >> 3) & 1)
 			{
 				/* store or pop */
-				ass->value = MOO_STACK_GETTOP(moo);
+				MOO_STORE_OOP (moo, &ass->value, MOO_STACK_GETTOP(moo));
 
 				if ((bcode >> 2) & 1)
 				{
@@ -5128,7 +5128,7 @@ static int __execute (moo_t* moo)
 			if ((bcode >> 3) & 1)
 			{
 				/* store or pop */
-				ctx->slot[b2] = MOO_STACK_GETTOP(moo);
+				MOO_STORE_OOP (moo, &ctx->slot[b2], MOO_STACK_GETTOP(moo));
 
 				if ((bcode >> 2) & 1)
 				{
@@ -5187,7 +5187,7 @@ static int __execute (moo_t* moo)
 			if ((bcode >> 3) & 1)
 			{
 				/* store or pop */
-				t->slot[b1] = MOO_STACK_GETTOP(moo);
+				MOO_STORE_OOP (moo, &t->slot[b1], MOO_STACK_GETTOP(moo));
 
 				if ((bcode >> 2) & 1)
 				{
@@ -5381,7 +5381,7 @@ static int __execute (moo_t* moo)
 			t1 = MOO_STACK_GETTOP(moo);
 			MOO_STACK_POP (moo);
 			t2 = MOO_STACK_GETTOP(moo);
-			((moo_oop_oop_t)t2)->slot[b1] = t1;
+			MOO_STORE_OOP (moo, &((moo_oop_oop_t)t2)->slot[b1], t1);
 			NEXT_INST();
 		}
 
@@ -5529,7 +5529,7 @@ static int __execute (moo_t* moo)
 			 * the number of temporaries of a home context */
 			blkctx->ntmprs = MOO_SMOOI_TO_OOP(ntmprs);
 
-			blkctx->home = (moo_oop_t)rctx;
+			MOO_STORE_OOP (moo, &blkctx->home, (moo_oop_t)rctx);
 			blkctx->receiver_or_source = moo->_nil;
 
 			/* [NOTE]
@@ -5547,7 +5547,7 @@ static int __execute (moo_t* moo)
 			 * if it is a block context, the following condition is true.
 			 *   MOO_CLASSOF(moo, rctx) == moo->_block_context
 			 */
-			blkctx->origin = rctx->origin;
+			MOO_STORE_OOP (moo, (moo_oop_t*)&blkctx->origin, (moo_oop_t)rctx->origin);
 
 			MOO_STACK_SETTOP (moo, (moo_oop_t)blkctx);
 			NEXT_INST();

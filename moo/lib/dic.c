@@ -76,7 +76,7 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 			key = (moo_oop_char_t)ass->key;
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);
 
-			index = moo_hashoochars(key->slot, MOO_OBJ_GET_SIZE(key)) % newsz;
+			index = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(key), MOO_OBJ_GET_SIZE(key)) % newsz;
 			while (newbuc->slot[index] != moo->_nil) index = (index + 1) % newsz;
 
 			MOO_STORE_OOP (moo, &newbuc->slot[index], (moo_oop_t)ass); /* newbuc->slot[index] = (moo_oop_t)ass; */
@@ -100,7 +100,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 	MOO_ASSERT (moo, MOO_CLASSOF(moo,dic->tally) == moo->_small_integer);
 	MOO_ASSERT (moo, MOO_CLASSOF(moo,dic->bucket) == moo->_array);
 
-	hv = moo_hashoochars(key->slot, MOO_OBJ_GET_SIZE(key));
+	hv = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(key), MOO_OBJ_GET_SIZE(key));
 	index = hv % MOO_OBJ_GET_SIZE(dic->bucket);
 
 	/* find */

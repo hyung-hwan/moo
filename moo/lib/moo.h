@@ -500,6 +500,7 @@ struct moo_obj_word_t
 #define MOO_OBJ_GET_WORD_SLOT(oop)     (((moo_oop_word_t)(oop))->slot)
 #define MOO_OBJ_GET_LIWORD_SLOT(oop)   (((moo_oop_liword_t)(oop))->slot)
 
+#if 0
 #define MOO_OBJ_GET_OOP_SLOT_PTR(oop,idx)      (&(((moo_oop_oop_t)(oop))->slot)[idx])
 #define MOO_OBJ_GET_CHAR_SLOT_PTR(oop,idx)     (&(((moo_oop_char_t)(oop))->slot)[idx])
 #define MOO_OBJ_GET_BYTE_SLOT_PTR(oop,idx)     (&(((moo_oop_byte_t)(oop))->slot)[idx])
@@ -520,6 +521,7 @@ struct moo_obj_word_t
 #define MOO_OBJ_SET_HALFWORD_SLOT_VAL(oop,idx,val) ((((moo_oop_halfword_t)(oop))->slot)[idx] = (val))
 #define MOO_OBJ_SET_WORD_SLOT_VAL(oop,idx,val)     ((((moo_oop_word_t)(oop))->slot)[idx] = (val))
 #define MOO_OBJ_SET_LIWORD_SLOT_VAL(oop,idx,val)   ((((moo_oop_liword_t)(oop))->slot)[idx] = (val))
+#endif
 
 typedef struct moo_trailer_t moo_trailer_t;
 struct moo_trailer_t
