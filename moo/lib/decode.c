@@ -604,9 +604,8 @@ int moo_decode (moo_t* moo, moo_oop_method_t mth, const moo_oocs_t* classfqn)
 	/* print literal frame contents */
 	for (ip = 0; ip < MOO_OBJ_GET_SIZE(mth) - MOO_METHOD_NAMED_INSTVARS; ip++)
 	{
-		 MOO_LOG2(moo, DECODE_LOG_MASK, " @%-5zd %O\n", ip, mth->slot[ip]);
+		MOO_LOG2(moo, DECODE_LOG_MASK, " @%-5zd %O\n", ip, MOO_OBJ_GET_OOP_VAL(mth, ip));
 	}
 
 	return 0;
 }
-

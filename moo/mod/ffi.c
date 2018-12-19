@@ -203,7 +203,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	dcReset (ffi->dc);
 
 	i = 0;
-	if (i < MOO_OBJ_GET_SIZE(sig) && MOO_OBJ_GET_CHAR_SLOT(sig)[i] == '|') 
+	if (i < MOO_OBJ_GET_SIZE(sig) && MOO_OBJ_GET_CHAR_VAL(sig, i) == '|') 
 	{
 		dcMode (ffi->dc, DC_CALL_C_ELLIPSIS);
 
@@ -219,7 +219,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		moo_ooch_t fmtc;
 		moo_oop_t arg;
 
-		fmtc = MOO_OBJ_GET_CHAR_SLOT(sig)[i];
+		fmtc = MOO_OBJ_GET_CHAR_VAL(sig, i);
 
 		if (fmtc == ')') 
 		{
@@ -325,7 +325,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 				/*ptr = moo_dupoochars (moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg));
 				if (!ptr) goto softfail; */ /* out of system memory or conversion error - soft failure */
 			#else
-				ptr = moo_dupootoucharswithheadroom (moo, MOO_SIZEOF_VOID_P, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg), MOO_NULL);
+				ptr = moo_dupootoucharswithheadroom(moo, MOO_SIZEOF_VOID_P, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg), MOO_NULL);
 				if (!ptr) goto softfail; /* out of system memory or conversion error - soft failure */
 				link_ca (ffi, ptr);
 			#endif
@@ -343,7 +343,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	if (i >= MOO_OBJ_GET_SIZE(sig)) goto call_void;
 
-	switch (((moo_oop_char_t)sig)->slot[i])
+	switch (MOO_OBJ_GET_CHAR_VAL(sig, i))
 	{
 /* TODO: support more types... */
 /* TODO: proper return value conversion */
@@ -358,7 +358,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		{
 			moo_oop_t r;
 
-			r = moo_ooitoint (moo, dcCallInt (ffi->dc, f));
+			r = moo_ooitoint (moo, dcCallInt(ffi->dc, f));
 			if (!r) goto hardfail;
 			MOO_STACK_SETRET (moo, nargs, r);
 			break;
@@ -379,7 +379,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		#if (MOO_SIZEOF_LONG_LONG > 0)
 			moo_oop_t r;
 		#	if (MOO_SIZEOF_LONG_LONG <= MOO_SIZEOF_OOI_T)
-			r = moo_ooitoint (moo, dcCallLongLong (ffi->dc, f));
+			r = moo_ooitoint (moo, dcCallLongLong(ffi->dc, f));
 		#	else
 		#	error UNSUPPORTED MOO_SIZEOF_LONG_LONG
 		#	endif

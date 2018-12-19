@@ -142,7 +142,7 @@ static int _equal_objects (moo_t* moo, moo_oop_t rcv, moo_oop_t arg)
 
 						/* NOTE: even if the object implements the equality method, 
 						 * this primitive method doesn't honor it. */
-						n = _equal_objects(moo, ((moo_oop_oop_t)rcv)->slot[i], ((moo_oop_oop_t)arg)->slot[i]);
+						n = _equal_objects(moo, MOO_OBJ_GET_OOP_VAL(rcv, i), MOO_OBJ_GET_OOP_VAL(arg, i));
 						if (n <= 0) return n;
 					}
 
@@ -326,25 +326,25 @@ moo_pfrc_t moo_pf_basic_at (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	switch (MOO_OBJ_GET_FLAGS_TYPE(rcv))
 	{
 		case MOO_OBJ_TYPE_BYTE:
-			v = MOO_SMOOI_TO_OOP(((moo_oop_byte_t)rcv)->slot[idx]);
+			v = MOO_SMOOI_TO_OOP(MOO_OBJ_GET_BYTE_VAL(rcv, idx));
 			break;
 
 		case MOO_OBJ_TYPE_CHAR:
-			v = MOO_CHAR_TO_OOP(((moo_oop_char_t)rcv)->slot[idx]);
+			v = MOO_CHAR_TO_OOP(MOO_OBJ_GET_CHAR_VAL(rcv, idx));
 			break;
 
 		case MOO_OBJ_TYPE_HALFWORD:
 			/* TODO: LargeInteger if the halfword is too large */
-			v = MOO_SMOOI_TO_OOP(((moo_oop_halfword_t)rcv)->slot[idx]);
+			v = MOO_SMOOI_TO_OOP(MOO_OBJ_GET_HALFWORD_VAL(rcv, idx));
 			break;
 
 		case MOO_OBJ_TYPE_WORD:
-			v = moo_oowtoint (moo, ((moo_oop_word_t)rcv)->slot[idx]);
+			v = moo_oowtoint(moo, MOO_OBJ_GET_WORD_VAL(rcv, idx));
 			if (!v) return MOO_PF_FAILURE;
 			break;
 
 		case MOO_OBJ_TYPE_OOP:
-			v = ((moo_oop_oop_t)rcv)->slot[idx];
+			v = MOO_OBJ_GET_OOP_VAL(rcv, idx);
 			break;
 
 		default:
@@ -402,7 +402,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 				return MOO_PF_FAILURE;
 			}
 /* TOOD: must I check the range of the value? */
-			((moo_oop_byte_t)rcv)->slot[idx] = MOO_OOP_TO_SMOOI(val);
+			MOO_OBJ_SET_BYTE_VAL (rcv, idx, MOO_OOP_TO_SMOOI(val));
 			break;
 
 		case MOO_OBJ_TYPE_CHAR:
@@ -411,7 +411,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 				moo_seterrbfmt (moo, MOO_EINVAL, "value not a character - %O", val);
 				return MOO_PF_FAILURE;
 			}
-			((moo_oop_char_t)rcv)->slot[idx] = MOO_OOP_TO_CHAR(val);
+			MOO_OBJ_SET_CHAR_VAL (rcv, idx, MOO_OOP_TO_CHAR(val));
 			break;
 
 		case MOO_OBJ_TYPE_HALFWORD:
@@ -423,7 +423,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 			}
 
 			/* if the small integer is too large, it will get truncated */
-			((moo_oop_halfword_t)rcv)->slot[idx] = MOO_OOP_TO_SMOOI(val);
+			MOO_OBJ_SET_HALFWORD_VAL (rcv, idx, MOO_OOP_TO_SMOOI(val));
 			break;
 
 		case MOO_OBJ_TYPE_WORD:
@@ -436,7 +436,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 				moo_seterrbfmt (moo, MOO_EINVAL, "value not a word integer - %O", val);
 				return MOO_PF_FAILURE;
 			}
-			((moo_oop_word_t)rcv)->slot[idx] = w;
+			MOO_OBJ_SET_WORD_VAL (rcv, idx, MOO_OOP_TO_SMOOI(val));
 			break;
 		}
 
@@ -515,29 +515,29 @@ moo_pfrc_t moo_pf_basic_fill (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	{
 		case MOO_OBJ_TYPE_BYTE:
 			if (!MOO_OOP_IS_SMOOI(dval)) goto invalid_fill_value;
-			for (i = sidx; i < end; i++) ((moo_oop_byte_t)rcv)->slot[i] = MOO_OOP_TO_SMOOI(dval);
+			for (i = sidx; i < end; i++) MOO_OBJ_SET_BYTE_VAL (rcv, i, MOO_OOP_TO_SMOOI(dval));
 			break;
 
 		case MOO_OBJ_TYPE_CHAR:
 			if (!MOO_OOP_IS_CHAR(dval)) goto invalid_fill_value;
-			for (i = sidx; i < end; i++) ((moo_oop_char_t)rcv)->slot[i] = MOO_OOP_TO_CHAR(dval);
+			for (i = sidx; i < end; i++) MOO_OBJ_SET_CHAR_VAL (rcv, i, MOO_OOP_TO_CHAR(dval));
 			break;
 
 		case MOO_OBJ_TYPE_HALFWORD:
 			if (!MOO_OOP_IS_SMOOI(dval)) goto invalid_fill_value;
-			for (i = sidx; i < end; i++) ((moo_oop_halfword_t)rcv)->slot[i] = MOO_OOP_TO_SMOOI(dval);
+			for (i = sidx; i < end; i++) MOO_OBJ_SET_HALFWORD_VAL (rcv, i, MOO_OOP_TO_SMOOI(dval));
 			break;
 
 		case MOO_OBJ_TYPE_WORD:
 		{
 			moo_oow_t dw;
 			if (moo_inttooow(moo, dval, &dw) <= 0) goto invalid_fill_value;
-			for (i = sidx; i < end; i++) ((moo_oop_word_t)rcv)->slot[i] = dw;
+			for (i = sidx; i < end; i++) MOO_OBJ_SET_WORD_VAL (rcv, i, dw);
 			break;
 		}
 
 		case MOO_OBJ_TYPE_OOP:
-			for (i = sidx; i < end; i++) ((moo_oop_oop_t)rcv)->slot[i] = dval;
+			for (i = sidx; i < end; i++) MOO_STORE_OOP (moo, &((moo_oop_oop_t)rcv)->slot[i], dval);
 			break;
 
 		default:
@@ -645,19 +645,19 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		switch (MOO_OBJ_GET_FLAGS_TYPE(rcv))
 		{
 			case MOO_OBJ_TYPE_BYTE:
-				MOO_MEMMOVE (&((moo_oop_byte_t)rcv)->slot[didx],
-				             &((moo_oop_byte_t)rcv)->slot[sidx],
-				             ssz * MOO_SIZEOF(((moo_oop_byte_t)rcv)->slot[0]));
+				MOO_MEMMOVE (MOO_OBJ_GET_BYTE_PTR(rcv, didx),
+				             MOO_OBJ_GET_BYTE_PTR(rcv, sidx),
+				             ssz * MOO_SIZEOF(MOO_OBJ_GET_BYTE_VAL(rcv, 0)));
 				
 				if (didx > sidx)
 				{
-					MOO_MEMSET (&((moo_oop_byte_t)rcv)->slot[sidx], 0, 
-					            (didx - sidx) * MOO_SIZEOF(((moo_oop_byte_t)rcv)->slot[0]));
+					MOO_MEMSET (MOO_OBJ_GET_BYTE_PTR(rcv, sidx), 0, 
+					            (didx - sidx) * MOO_SIZEOF(MOO_OBJ_GET_BYTE_VAL(rcv, 0)));
 				}
 				else
 				{
-					MOO_MEMSET (&((moo_oop_byte_t)rcv)->slot[didx + ssz - 1], 0, 
-					            (sidx - didx) * MOO_SIZEOF(((moo_oop_byte_t)rcv)->slot[0]));
+					MOO_MEMSET (MOO_OBJ_GET_BYTE_PTR(rcv, didx + ssz - 1), 0, 
+					            (sidx - didx) * MOO_SIZEOF(MOO_OBJ_GET_BYTE_VAL(rcv, 0)));
 				}
 				break;
 

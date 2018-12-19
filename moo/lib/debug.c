@@ -37,7 +37,7 @@ void moo_dumpsymtab (moo_t* moo)
 
 	for (i = 0; i < MOO_OBJ_GET_SIZE(moo->symtab->bucket); i++)
 	{
-		symbol = (moo_oop_char_t)moo->symtab->bucket->slot[i];
+		symbol = (moo_oop_char_t)MOO_OBJ_GET_OOP_VAL(moo->symtab->bucket, i);
 		if ((moo_oop_t)symbol != moo->_nil)
 		{
 			MOO_DEBUG2 (moo, " %07zu %O\n", i, symbol);
@@ -58,7 +58,7 @@ void moo_dumpdic (moo_t* moo, moo_oop_dic_t dic, const moo_bch_t* title)
 
 	for (i = 0; i < MOO_OBJ_GET_SIZE(dic->bucket); i++)
 	{
-		ass = (moo_oop_association_t)dic->bucket->slot[i];
+		ass = (moo_oop_association_t)MOO_OBJ_GET_OOP_VAL(dic->bucket, i);
 		if ((moo_oop_t)ass != moo->_nil)
 		{
 			MOO_DEBUG2 (moo, " %07zu %O\n", i, ass->key);

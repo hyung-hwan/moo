@@ -481,7 +481,7 @@ static moo_pfrc_t pf_read_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		if (length > maxlen - offset) length = maxlen - offset;
 	}
 
-	n = recv(fd, &MOO_OBJ_GET_BYTE_SLOT(buf)[offset], length, 0);
+	n = recv(fd, MOO_OBJ_GET_BYTE_PTR(buf, offset), length, 0);
 	if (n <= -1 && errno != EWOULDBLOCK && errno != EAGAIN)
 	{
 		moo_seterrwithsyserr (moo, 0, errno);
@@ -554,7 +554,7 @@ static moo_pfrc_t pf_write_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		if (length > maxlen - offset) length = maxlen - offset;
 	}
 
-	n = send(fd, &MOO_OBJ_GET_BYTE_SLOT(buf)[offset], length, 0);
+	n = send(fd, MOO_OBJ_GET_BYTE_PTR(buf, offset), length, 0);
 	if (n <= -1 && errno != EWOULDBLOCK && errno != EAGAIN)
 	{
 		moo_seterrwithsyserr (moo, 0, errno);

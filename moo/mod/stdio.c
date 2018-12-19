@@ -61,17 +61,17 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 #if defined(MOO_OOCH_IS_UCH)
 	ucslen = MOO_OBJ_GET_SIZE(name);
 	bcslen = MOO_COUNTOF(namebuf) - 1;
-	if (moo_convootobchars (moo, name->slot, &ucslen, namebuf, &bcslen) <= -1) goto softfail;
+	if (moo_convootobchars(moo, MOO_OBJ_GET_CHAR_SLOT(name), &ucslen, namebuf, &bcslen) <= -1) goto softfail;
 	namebuf[bcslen] = '\0';
 
 	ucslen = MOO_OBJ_GET_SIZE(mode);
 	bcslen = MOO_COUNTOF(modebuf) - 1;
-	if (moo_convootobchars (moo, mode->slot, &ucslen, modebuf, &bcslen) <= -1) goto softfail;
+	if (moo_convootobchars(moo, MOO_OBJ_GET_CHAR_SLOT(mode), &ucslen, modebuf, &bcslen) <= -1) goto softfail;
 	modebuf[bcslen] = '\0';
 
 	stdio->fp = fopen (namebuf, modebuf);
 #else
-	stdio->fp = fopen (name->slot, mode->slot);
+	stdio->fp = fopen (MOO_OBJ_GET_CHAR_SLOT(name), MOO_OBJ_GET_CHAR_SLOT(mode));
 #endif
 	if (!stdio->fp) 
 	{
@@ -150,7 +150,7 @@ static moo_pfrc_t __pf_puts (moo_t* moo, moo_ooi_t nargs, moo_oow_t limit)
 				bcslen = MOO_COUNTOF(bcs);
 
 /* TODO: implement character conversion into stdio and use it instead of vm's conversion facility. */
-				if ((n = moo_convootobchars (moo, &x->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
+				if ((n = moo_convootobchars (moo, MOO_OBJ_GET_CHAR_PTR(x, ucspos), &ucslen, bcs, &bcslen)) <= -1)
 				{
 					if (n != -2 || ucslen <= 0) goto softfail;
 				}
@@ -167,7 +167,7 @@ static moo_pfrc_t __pf_puts (moo_t* moo, moo_ooi_t nargs, moo_oow_t limit)
 			}
 		#else
 		puts_string:
-			if (fwrite (x->slot, 1, MOO_OBJ_GET_SIZE(x), stdio->fp) < MOO_OBJ_GET_SIZE(x))
+			if (fwrite (MOO_OBJ_GET_CHAR_SLOT(x), 1, MOO_OBJ_GET_SIZE(x), stdio->fp) < MOO_OBJ_GET_SIZE(x))
 			{
 				moo_seterrwithsyserr (moo, 0, errno);
 				goto softfail;

@@ -1914,7 +1914,7 @@ static void log_char_object (moo_t* moo, moo_bitmask_t mask, moo_oop_char_t msg)
 	MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(msg) == MOO_OBJ_TYPE_CHAR);
 
 	rem = MOO_OBJ_GET_SIZE(msg);
-	ptr = msg->slot;
+	ptr = MOO_OBJ_GET_CHAR_SLOT(msg);
 
 start_over:
 	while (rem > 0)
@@ -3458,7 +3458,7 @@ static moo_pfrc_t pf_system_log (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 				for (i = 0; i < MOO_OBJ_GET_SIZE(msg); i++)
 				{
-					inner = ((moo_oop_oop_t)msg)->slot[i];
+					inner = MOO_OBJ_GET_OOP_VAL(msg, i);
 
 					if (i > 0) moo_logbfmt (moo, mask, " ");
 					if (MOO_OOP_IS_POINTER(inner) &&

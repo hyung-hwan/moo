@@ -622,7 +622,7 @@ moo_pfrc_t moo_pf_system_get_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	
 	if (len_in_buffer > 0)
 	{
-		MOO_MEMCPY (&MOO_OBJ_GET_BYTE_SLOT(tmp)[offset_in_buffer], &rawptr[offset], len_in_buffer);
+		MOO_MEMCPY (MOO_OBJ_GET_BYTE_PTR(tmp, offset_in_buffer), &rawptr[offset], len_in_buffer);
 	}
 
 	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(len_in_buffer));
@@ -685,7 +685,7 @@ moo_pfrc_t moo_pf_system_put_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	
 	if (len_in_buffer > 0)
 	{
-		MOO_MEMCPY (&rawptr[offset], &MOO_OBJ_GET_BYTE_SLOT(tmp)[offset_in_buffer], len_in_buffer);
+		MOO_MEMCPY (&rawptr[offset], MOO_OBJ_GET_BYTE_PTR(tmp, offset_in_buffer), len_in_buffer);
 	}
 
 	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(len_in_buffer));
@@ -941,7 +941,7 @@ moo_pfrc_t moo_pf_smptr_get_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	
 	if (len_in_buffer > 0)
 	{
-		MOO_MEMCPY (&MOO_OBJ_GET_BYTE_SLOT(tmp)[offset_in_buffer], &rawptr[offset], len_in_buffer);
+		MOO_MEMCPY (MOO_OBJ_GET_BYTE_PTR(tmp, offset_in_buffer), &rawptr[offset], len_in_buffer);
 	}
 
 	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(len_in_buffer));
@@ -999,7 +999,7 @@ moo_pfrc_t moo_pf_smptr_put_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	
 	if (len_in_buffer > 0)
 	{
-		MOO_MEMCPY (&rawptr[offset], &MOO_OBJ_GET_BYTE_SLOT(tmp)[offset_in_buffer], len_in_buffer);
+		MOO_MEMCPY (&rawptr[offset], MOO_OBJ_GET_BYTE_PTR(tmp, offset_in_buffer), len_in_buffer);
 	}
 
 	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(len_in_buffer));

@@ -2780,7 +2780,7 @@ static int add_string_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* ind
 
 		if (MOO_CLASSOF(moo, lit) == moo->_string && 
 		    MOO_OBJ_GET_SIZE(lit) == str->len &&
-		    moo_equal_oochars(((moo_oop_char_t)lit)->slot, str->ptr, str->len)) 
+		    moo_equal_oochars(MOO_OBJ_GET_CHAR_SLOT(lit), str->ptr, str->len)) 
 		{
 			*index = i;
 			return 0;
@@ -2958,7 +2958,7 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 		for (index = VAR_INSTANCE; index <= VAR_CLASS; index++)
 		{
 			v = vv[index];
-			hs.ptr = v->slot;
+			hs.ptr = MOO_OBJ_GET_CHAR_SLOT(v);
 			hs.len = MOO_OBJ_GET_SIZE(v);
 
 			if (find_word_in_string(&hs, name, &pos) >= 0)
@@ -3008,7 +3008,7 @@ static moo_ooi_t find_class_level_variable (moo_t* moo, moo_oop_class_t self, co
 		for (index = VAR_INSTANCE; index <= VAR_CLASS; index++)
 		{
 			v = vv[index];
-			hs.ptr = v->slot;
+			hs.ptr = MOO_OBJ_GET_CHAR_SLOT(v);
 			hs.len = MOO_OBJ_GET_SIZE(v);
 
 			if (find_word_in_string(&hs, name, &pos) >= 0)
@@ -4850,9 +4850,8 @@ static int read_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 
 	for (i = saved_arlit_count, j = 0; i < moo->c->arlit.count; i++, j++)
 	{
-		((moo_oop_oop_t)a)->slot[j] = moo->c->arlit.ptr[i];
+		MOO_STORE_OOP (moo, &((moo_oop_oop_t)a)->slot[j], moo->c->arlit.ptr[i]);
 	}
-
 
 	if (rdonly)
 	{
@@ -6476,7 +6475,7 @@ static int add_compiled_method (moo_t* moo)
 	for (i = 0; i < cc->mth.literals.count; i++)
 	{
 		/* let's do the variadic data initialization here */
-		mth->slot[i] = cc->mth.literals.ptr[i];
+		MOO_STORE_OOP (moo, &mth->slot[i], cc->mth.literals.ptr[i]);
 	}
 	moo_pushtmp (moo, (moo_oop_t*)&mth); tmp_count++;
 
@@ -7233,7 +7232,7 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 		 *  initv_count is 1 whereas total_count is 3. */
 		MOO_ASSERT (moo, initv_count <= cc->var[var_type].total_count);
 
-		tmp = moo_instantiate (moo, moo->_array, MOO_NULL, cc->var[var_type].total_count);
+		tmp = moo_instantiate(moo, moo->_array, MOO_NULL, cc->var[var_type].total_count);
 		if (!tmp) return -1;
 
 		if (super_initv_count > 0)
@@ -7250,7 +7249,7 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 			MOO_ASSERT (moo, MOO_CLASSOF(moo, initv) == moo->_array);
 			for (i = 0; i < super_initv_count; i++)
 			{
-				if (initv->slot[i]) ((moo_oop_oop_t)tmp)->slot[j] = initv->slot[i];
+				if (initv->slot[i]) MOO_STORE_OOP (moo, &((moo_oop_oop_t)tmp)->slot[j], initv->slot[i]);
 				j++;
 			}
 		}
@@ -7263,7 +7262,7 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 		for (i = 0; i < cc->var[var_type].initv_count; i++)
 		{
 			if (cc->var[var_type].initv[i].v)
-				((moo_oop_oop_t)tmp)->slot[j] = cc->var[var_type].initv[i].v;
+				MOO_STORE_OOP (moo, &((moo_oop_oop_t)tmp)->slot[j], cc->var[var_type].initv[i].v);
 			j++;
 		}
 
@@ -7408,7 +7407,7 @@ static int make_defined_class (moo_t* moo)
 
 		for (i = 0; i < initv_count; i++)
 		{
-			cc->self_oop->slot[i] = initv->slot[i];
+			MOO_STORE_OOP (moo, &cc->self_oop->slot[i], initv->slot[i]);
 		}
 	}
 
@@ -7426,7 +7425,7 @@ static int make_defined_class (moo_t* moo)
 		MOO_ASSERT (moo, MOO_CLASS_NAMED_INSTVARS + j + initv_count <= MOO_OBJ_GET_SIZE(cc->self_oop));
 		for (i = 0; i < initv_count; i++) 
 		{
-			cc->self_oop->slot[j] = cc->var[VAR_CLASS].initv[i].v;
+			MOO_STORE_OOP (moo, &cc->self_oop->slot[j], cc->var[VAR_CLASS].initv[i].v);
 			j++;
 		}
 	}
@@ -8144,8 +8143,8 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 
 			MOO_ASSERT (moo, MOO_CLASSOF(moo, pds) == moo->_string);
 
-			ptr = pds->slot;
-			end = pds->slot + MOO_OBJ_GET_SIZE(pds);
+			ptr = MOO_OBJ_GET_CHAR_SLOT(pds);
+			end = ptr + MOO_OBJ_GET_SIZE(pds);
 
 			/* this loop handles the pooldic string as if it's a pooldic import.
 			 * see compile_class_level_variables() for mostly identical code except token handling */
