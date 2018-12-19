@@ -304,7 +304,7 @@ int main (int argc, char* argv[])
 	moo_uncatch_termreq ();
 
 	/*moo_dumpsymtab(moo);
-	 *moo_dumpdic(moo, moo->sysdic, "System dictionary");*/
+	moo_dumpdic(moo, moo->sysdic, "System dictionary");*/
 
 	moo_close (moo);
 	return xret;

@@ -32,7 +32,7 @@ void moo_dumpsymtab (moo_t* moo)
 	moo_oop_char_t symbol;
 
 	MOO_DEBUG0 (moo, "--------------------------------------------\n");
-	MOO_DEBUG1 (moo, "Stix Symbol Table %zu\n", MOO_OBJ_GET_SIZE(moo->symtab->bucket));
+	MOO_DEBUG1 (moo, "MOO Symbol Table %zu\n", MOO_OBJ_GET_SIZE(moo->symtab->bucket));
 	MOO_DEBUG0 (moo, "--------------------------------------------\n");
 
 	for (i = 0; i < MOO_OBJ_GET_SIZE(moo->symtab->bucket); i++)

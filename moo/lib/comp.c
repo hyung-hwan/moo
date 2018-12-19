@@ -2881,7 +2881,7 @@ static int set_class_level_variable_initv (moo_t* moo, var_type_t var_type, moo_
 
 		oldcapa = cc->var[var_type].initv_capa;
 		newcapa = MOO_ALIGN_POW2 ((var_index + 1), 32);
-		tmp = moo_reallocmem (moo, cc->var[var_type].initv, newcapa * MOO_SIZEOF(*tmp));
+		tmp = moo_reallocmem(moo, cc->var[var_type].initv, newcapa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
 		/*for (i = cc->var[var_type].initv_capa; i < newcapa; i++) tmp[i] = MOO_NULL;*/
@@ -4850,7 +4850,7 @@ static int read_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 
 	for (i = saved_arlit_count, j = 0; i < moo->c->arlit.count; i++, j++)
 	{
-		MOO_STORE_OOP (moo, &((moo_oop_oop_t)a)->slot[j], moo->c->arlit.ptr[i]);
+		MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(a, j), moo->c->arlit.ptr[i]);
 	}
 
 	if (rdonly)
@@ -6466,16 +6466,16 @@ static int add_compiled_method (moo_t* moo)
 	/* The variadic data part passed to moo_instantiate() is not GC-safe. 
 	 * let's delay initialization of variadic data a bit. */
 #if defined(MOO_USE_METHOD_TRAILER)
-	mth = (moo_oop_method_t)moo_instantiatewithtrailer (moo, moo->_method, cc->mth.literals.count, cc->mth.code.ptr, cc->mth.code.len);
+	mth = (moo_oop_method_t)moo_instantiatewithtrailer(moo, moo->_method, cc->mth.literals.count, cc->mth.code.ptr, cc->mth.code.len);
 #else
-	mth = (moo_oop_method_t)moo_instantiate (moo, moo->_method, MOO_NULL, cc->mth.literals.count);
+	mth = (moo_oop_method_t)moo_instantiate(moo, moo->_method, MOO_NULL, cc->mth.literals.count);
 #endif
 	if (!mth) goto oops;
 
 	for (i = 0; i < cc->mth.literals.count; i++)
 	{
 		/* let's do the variadic data initialization here */
-		MOO_STORE_OOP (moo, &mth->slot[i], cc->mth.literals.ptr[i]);
+		MOO_STORE_OOP (moo, &mth->literal_frame[i], cc->mth.literals.ptr[i]);
 	}
 	moo_pushtmp (moo, (moo_oop_t*)&mth); tmp_count++;
 
@@ -7249,7 +7249,8 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 			MOO_ASSERT (moo, MOO_CLASSOF(moo, initv) == moo->_array);
 			for (i = 0; i < super_initv_count; i++)
 			{
-				if (initv->slot[i]) MOO_STORE_OOP (moo, &((moo_oop_oop_t)tmp)->slot[j], initv->slot[i]);
+				if (MOO_OBJ_GET_OOP_VAL(initv, i)) 
+					MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(tmp, j), MOO_OBJ_GET_OOP_VAL(initv, i));
 				j++;
 			}
 		}
@@ -7262,7 +7263,7 @@ static int make_default_initial_values (moo_t* moo, var_type_t var_type)
 		for (i = 0; i < cc->var[var_type].initv_count; i++)
 		{
 			if (cc->var[var_type].initv[i].v)
-				MOO_STORE_OOP (moo, &((moo_oop_oop_t)tmp)->slot[j], cc->var[var_type].initv[i].v);
+				MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(tmp, j), cc->var[var_type].initv[i].v);
 			j++;
 		}
 
@@ -7324,8 +7325,7 @@ static int make_defined_class (moo_t* moo)
 	{
 		/* the class variables and class instance variables are placed
 		 * inside the class object after the fixed part. */
-		tmp = moo_instantiate(moo, moo->_class, MOO_NULL,
-		                      cc->var[VAR_CLASSINST].total_count + cc->var[VAR_CLASS].total_count);
+		tmp = moo_instantiate(moo, moo->_class, MOO_NULL, cc->var[VAR_CLASSINST].total_count + cc->var[VAR_CLASS].total_count);
 		if (!tmp) return -1;
 
 		just_made = 1;
@@ -7407,7 +7407,7 @@ static int make_defined_class (moo_t* moo)
 
 		for (i = 0; i < initv_count; i++)
 		{
-			MOO_STORE_OOP (moo, &cc->self_oop->slot[i], initv->slot[i]);
+			MOO_STORE_OOP (moo, &cc->self_oop->cvar[i], initv->slot[i]);
 		}
 	}
 
@@ -7425,7 +7425,7 @@ static int make_defined_class (moo_t* moo)
 		MOO_ASSERT (moo, MOO_CLASS_NAMED_INSTVARS + j + initv_count <= MOO_OBJ_GET_SIZE(cc->self_oop));
 		for (i = 0; i < initv_count; i++) 
 		{
-			MOO_STORE_OOP (moo, &cc->self_oop->slot[j], cc->var[VAR_CLASS].initv[i].v);
+			MOO_STORE_OOP (moo, &cc->self_oop->cvar[j], cc->var[VAR_CLASS].initv[i].v);
 			j++;
 		}
 	}

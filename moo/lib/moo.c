@@ -864,7 +864,7 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 	}
 
 	/* store the primitive function name symbol to the literal frame */
-	mth->slot[0] = (moo_oop_t)pfidsym;
+	mth->literal_frame[0] = (moo_oop_t)pfidsym;
 
 	/* premable should contain the index to the literal frame which is always 0 */
 	mth->owner = _class;

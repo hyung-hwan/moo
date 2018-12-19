@@ -613,7 +613,7 @@ struct moo_class_t
 	moo_oop_t      initv[2]; 
 
 	/* indexed part afterwards */
-	moo_oop_t      slot[1];   /* class instance variables and class variables. */
+	moo_oop_t      cvar[1];   /* class instance variables and class variables. */
 };
 
 #define MOO_ASSOCIATION_NAMED_INSTVARS 2
@@ -665,7 +665,7 @@ struct moo_method_t
 	moo_oop_t       tmpr_nargs; /* SmallInteger */
 
 #if defined(MOO_USE_METHOD_TRAILER)
-	/* no code field is used */
+	/* no code field is used. it's placed after literal_frame. */
 #else
 	moo_oop_byte_t  code; /* ByteArray */
 #endif
@@ -673,7 +673,9 @@ struct moo_method_t
 	moo_oop_t       source; /* TODO: what should I put? */
 
 	/* == variable indexed part == */
-	moo_oop_t       slot[1]; /* it stores literals */
+	moo_oop_t       literal_frame[1]; /* it stores literals */
+
+	/* after the literal frame comes the actual byte code, if MOO_USE_METHOD_TRAILER is defined */
 };
 
 #if defined(MOO_USE_METHOD_TRAILER)
@@ -807,7 +809,7 @@ struct moo_context_t
 	moo_oop_context_t  origin; 
 
 	/* variable indexed part - actual arguments and temporaries are placed here */
-	moo_oop_t          slot[1]; /* stack */
+	moo_oop_t          stack[1]; /* context stack that stores arguments and temporaries */
 };
 
 
@@ -852,7 +854,7 @@ struct moo_process_t
 	moo_oop_t asyncsg;
 
 	/* == variable indexed part == */
-	moo_oop_t slot[1]; /* process stack */
+	moo_oop_t stack[1]; /* process stack */
 };
 
 enum moo_semaphore_subtype_t
@@ -1645,14 +1647,15 @@ struct moo_t
 	do { \
 		(moo)->sp = (moo)->sp + 1; \
 		MOO_ASSERT (moo, (moo)->sp < (moo_ooi_t)(MOO_OBJ_GET_SIZE((moo)->processor->active) - MOO_PROCESS_NAMED_INSTVARS)); \
-		(moo)->processor->active->slot[(moo)->sp] = v; \
+		MOO_STORE_OOP (moo, &(moo)->processor->active->stack[(moo)->sp], v); \
 	} while(0)
 
-#define MOO_STACK_GET(moo,v_sp) ((moo)->processor->active->slot[v_sp])
+#define MOO_STACK_GET(moo,v_sp) ((moo)->processor->active->stack[v_sp])
+
 #define MOO_STACK_SET(moo,v_sp,v_obj) \
 	do { \
 		MOO_ASSERT (moo, (v_sp) < (moo_ooi_t)(MOO_OBJ_GET_SIZE((moo)->processor->active) - MOO_PROCESS_NAMED_INSTVARS)); \
-		(moo)->processor->active->slot[v_sp] = v_obj; \
+		MOO_STORE_OOP (moo, &(moo)->processor->active->stack[v_sp], v_obj); \
 	} while(0)
 
 #define MOO_STACK_GETTOP(moo) MOO_STACK_GET(moo, (moo)->sp)

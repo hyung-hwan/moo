@@ -441,7 +441,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		}
 
 		case MOO_OBJ_TYPE_OOP:
-			MOO_STORE_OOP (moo, &((moo_oop_oop_t)rcv)->slot[idx], val); /*((moo_oop_oop_t)rcv)->slot[idx] = val;*/
+			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(rcv, idx), val); /*((moo_oop_oop_t)rcv)->slot[idx] = val;*/
 			break;
 
 		default:
@@ -537,7 +537,7 @@ moo_pfrc_t moo_pf_basic_fill (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		}
 
 		case MOO_OBJ_TYPE_OOP:
-			for (i = sidx; i < end; i++) MOO_STORE_OOP (moo, &((moo_oop_oop_t)rcv)->slot[i], dval);
+			for (i = sidx; i < end; i++) MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(rcv, i), dval);
 			break;
 
 		default:
@@ -662,53 +662,53 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 				break;
 
 			case MOO_OBJ_TYPE_CHAR:
-				MOO_MEMMOVE (&((moo_oop_char_t)rcv)->slot[didx],
-				             &((moo_oop_char_t)rcv)->slot[sidx],
-				             ssz * MOO_SIZEOF(((moo_oop_char_t)rcv)->slot[0]));
+				MOO_MEMMOVE (MOO_OBJ_GET_CHAR_PTR(rcv, didx),
+				             MOO_OBJ_GET_CHAR_PTR(rcv, sidx),
+				             ssz * MOO_SIZEOF(MOO_OBJ_GET_CHAR_VAL(rcv, 0)));
 
 				if (didx > sidx)
 				{
-					MOO_MEMSET (&((moo_oop_char_t)rcv)->slot[sidx], 0, 
-					            (didx - sidx) * MOO_SIZEOF(((moo_oop_char_t)rcv)->slot[0]));
+					MOO_MEMSET (MOO_OBJ_GET_CHAR_PTR(rcv, sidx), 0, 
+					            (didx - sidx) * MOO_SIZEOF(MOO_OBJ_GET_CHAR_VAL(rcv, 0)));
 				}
 				else
 				{
-					MOO_MEMSET (&((moo_oop_char_t)rcv)->slot[didx + ssz - 1], 0, 
-					            (sidx - didx) * MOO_SIZEOF(((moo_oop_char_t)rcv)->slot[0]));
+					MOO_MEMSET (MOO_OBJ_GET_CHAR_PTR(rcv, didx + ssz - 1), 0, 
+					            (sidx - didx) * MOO_SIZEOF(MOO_OBJ_GET_CHAR_VAL(rcv, 0)));
 				}
 				break;
 
 			case MOO_OBJ_TYPE_HALFWORD:
-				MOO_MEMMOVE (&((moo_oop_halfword_t)rcv)->slot[didx],
-				             &((moo_oop_halfword_t)rcv)->slot[sidx],
-				             ssz * MOO_SIZEOF(((moo_oop_halfword_t)rcv)->slot[0]));
+				MOO_MEMMOVE (MOO_OBJ_GET_HALFWORD_PTR(rcv, didx),
+				             MOO_OBJ_GET_HALFWORD_PTR(rcv, sidx),
+				             ssz * MOO_SIZEOF(MOO_OBJ_GET_HALFWORD_VAL(rcv, 0)));
 
 				if (didx > sidx)
 				{
-					MOO_MEMSET (&((moo_oop_halfword_t)rcv)->slot[sidx], 0, 
-					            (didx - sidx) * MOO_SIZEOF(((moo_oop_halfword_t)rcv)->slot[0]));
+					MOO_MEMSET (MOO_OBJ_GET_HALFWORD_PTR(rcv, sidx), 0, 
+					            (didx - sidx) * MOO_SIZEOF(MOO_OBJ_GET_HALFWORD_VAL(rcv, 0)));
 				}
 				else
 				{
-					MOO_MEMSET (&((moo_oop_halfword_t)rcv)->slot[didx + ssz - 1], 0, 
-					            (sidx - didx) * MOO_SIZEOF(((moo_oop_halfword_t)rcv)->slot[0]));
+					MOO_MEMSET (MOO_OBJ_GET_HALFWORD_PTR(rcv, didx + ssz - 1), 0, 
+					            (sidx - didx) * MOO_SIZEOF(MOO_OBJ_GET_HALFWORD_VAL(rcv, 0)));
 				}
 				break;
 
 			case MOO_OBJ_TYPE_WORD:
-				MOO_MEMMOVE (&((moo_oop_word_t)rcv)->slot[didx],
-				             &((moo_oop_word_t)rcv)->slot[sidx],
-				             ssz * MOO_SIZEOF(((moo_oop_word_t)rcv)->slot[0]));
+				MOO_MEMMOVE (MOO_OBJ_GET_WORD_PTR(rcv, didx),
+				             MOO_OBJ_GET_WORD_PTR(rcv, sidx),
+				             ssz * MOO_SIZEOF(MOO_OBJ_GET_WORD_VAL(rcv, 0)));
 
 				if (didx > sidx)
 				{
-					MOO_MEMSET (&((moo_oop_word_t)rcv)->slot[sidx], 0, 
-					            (didx - sidx) * MOO_SIZEOF(((moo_oop_word_t)rcv)->slot[0]));
+					MOO_MEMSET (MOO_OBJ_GET_WORD_PTR(rcv, sidx), 0, 
+					            (didx - sidx) * MOO_SIZEOF(MOO_OBJ_GET_WORD_VAL(rcv, 0)));
 				}
 				else
 				{
-					MOO_MEMSET (&((moo_oop_word_t)rcv)->slot[didx + ssz - 1], 0, 
-					            (sidx - didx) * MOO_SIZEOF(((moo_oop_word_t)rcv)->slot[0]));
+					MOO_MEMSET (MOO_OBJ_GET_WORD_PTR(rcv, didx + ssz - 1), 0, 
+					            (sidx - didx) * MOO_SIZEOF(MOO_OBJ_GET_WORD_VAL(rcv, 0)));
 				}
 				break;
 
@@ -719,10 +719,12 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 				if (didx > sidx)
 				{
+					/* no need to use MOO_STORE_OOP because moo->_nil is the assigning value */
 					while (sidx < didx) ((moo_oop_oop_t)rcv)->slot[sidx++] = moo->_nil;
 				}
 				else
 				{
+					/* no need to use MOO_STORE_OOP because moo->_nil is the assigning value */
 					while (didx > sidx) ((moo_oop_oop_t)rcv)->slot[(didx++) + ssz] = moo->_nil;
 				}
 				break;

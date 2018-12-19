@@ -818,7 +818,7 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 			 * semaphore */
 			MOO_ASSERT (moo, MOO_OOP_TO_SMOOI(proc->sp) < (moo_ooi_t)(MOO_OBJ_GET_SIZE(proc) - MOO_PROCESS_NAMED_INSTVARS));
 			sp = MOO_OOP_TO_SMOOI(proc->sp);
-			MOO_STORE_OOP (moo, &proc->slot[sp], (moo_oop_t)sem);
+			MOO_STORE_OOP (moo, &proc->stack[sp], (moo_oop_t)sem);
 
 			/* i should decrement the counter as long as the group being 
 			 * signaled contains an IO semaphore */
@@ -1588,7 +1588,7 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 		{
 			/* place variadic arguments after local temporaries */
 			--j;
-			MOO_STORE_OOP (moo, &ctx->slot[j], MOO_STACK_GETTOP(moo));
+			MOO_STORE_OOP (moo, &ctx->stack[j], MOO_STACK_GETTOP(moo));
 			MOO_STACK_POP (moo);
 		}
 		MOO_ASSERT (moo, i == nargs);
@@ -1596,7 +1596,7 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 		{
 			/* place normal argument before local temporaries */
 			--i;
-			MOO_STORE_OOP (moo, &ctx->slot[i], MOO_STACK_GETTOP(moo));
+			MOO_STORE_OOP (moo, &ctx->stack[i], MOO_STACK_GETTOP(moo));
 			MOO_STACK_POP (moo);
 		}
 	}
@@ -1606,7 +1606,7 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 		{
 			/* place normal argument before local temporaries */
 			--i;
-			MOO_STORE_OOP (moo, &ctx->slot[i], MOO_STACK_GETTOP(moo));
+			MOO_STORE_OOP (moo, &ctx->stack[i], MOO_STACK_GETTOP(moo));
 			MOO_STACK_POP (moo);
 		}
 	}
@@ -2184,7 +2184,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 		MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(xarg) == num_first_arg_elems); 
 		for (i = 0; i < num_first_arg_elems; i++)
 		{
-			MOO_STORE_OOP (moo, &blkctx->slot[i], xarg->slot[i]);
+			MOO_STORE_OOP (moo, &blkctx->stack[i], xarg->slot[i]);
 		}
 	}
 	else
@@ -2193,7 +2193,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 		for (i = 0; i < nargs; i++)
 		{
 			register moo_oop_t tmp = MOO_STACK_GETARG(moo, nargs, i);
-			MOO_STORE_OOP (moo, &blkctx->slot[i], tmp);
+			MOO_STORE_OOP (moo, &blkctx->stack[i], tmp);
 		}
 	}
 	MOO_STACK_POPS (moo, nargs + 1); /* pop arguments and receiver */
@@ -3855,7 +3855,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			/* index to the primitive function identifier in the literal frame */
 			pf_name_index = MOO_METHOD_GET_PREAMBLE_INDEX(preamble);
 			MOO_ASSERT (moo, pf_name_index >= 0);
-			pfname = method->slot[pf_name_index];
+			pfname = method->literal_frame[pf_name_index];
 
 		#if defined(MOO_BUILD_DEBUG)
 			LOG_INST1 (moo, "preamble_named_primitive %zd", pf_name_index);
@@ -4853,12 +4853,12 @@ static int __execute (moo_t* moo)
 			{
 				/* push - bit 4 on */
 				LOG_INST1 (moo, "push_tempvar %zu", b1);
-				MOO_STACK_PUSH (moo, ctx->slot[bx]);
+				MOO_STACK_PUSH (moo, ctx->stack[bx]);
 			}
 			else
 			{
 				/* store or pop - bit 5 off */
-				MOO_STORE_OOP (moo, &ctx->slot[bx], MOO_STACK_GETTOP(moo));
+				MOO_STORE_OOP (moo, &ctx->stack[bx], MOO_STACK_GETTOP(moo));
 
 				if ((bcode >> 3) & 1)
 				{
@@ -4891,7 +4891,7 @@ static int __execute (moo_t* moo)
 			b1 = bcode & 0x7; /* low 3 bits */
 		push_literal:
 			LOG_INST1 (moo, "push_literal @%zu", b1);
-			MOO_STACK_PUSH (moo, moo->active_method->slot[b1]);
+			MOO_STACK_PUSH (moo, moo->active_method->literal_frame[b1]);
 			NEXT_INST();
 
 		/* ------------------------------------------------- */
@@ -4918,7 +4918,7 @@ static int __execute (moo_t* moo)
 
 			b1 = bcode & 0x3; /* low 2 bits */
 		handle_object:
-			ass = (moo_oop_association_t)moo->active_method->slot[b1];
+			ass = (moo_oop_association_t)moo->active_method->literal_frame[b1];
 			MOO_ASSERT (moo, MOO_CLASSOF(moo, ass) == moo->_association);
 
 			if ((bcode >> 3) & 1)
@@ -5128,7 +5128,7 @@ static int __execute (moo_t* moo)
 			if ((bcode >> 3) & 1)
 			{
 				/* store or pop */
-				MOO_STORE_OOP (moo, &ctx->slot[b2], MOO_STACK_GETTOP(moo));
+				MOO_STORE_OOP (moo, &ctx->stack[b2], MOO_STACK_GETTOP(moo));
 
 				if ((bcode >> 2) & 1)
 				{
@@ -5144,7 +5144,7 @@ static int __execute (moo_t* moo)
 			else
 			{
 				/* push */
-				MOO_STACK_PUSH (moo, ctx->slot[b2]);
+				MOO_STACK_PUSH (moo, ctx->stack[b2]);
 				LOG_INST2 (moo, "push_ctxtempvar %zu %zu", b1, b2);
 			}
 
@@ -5180,7 +5180,7 @@ static int __execute (moo_t* moo)
 			b2 = FETCH_BYTE_CODE(moo);
 
 		handle_objvar:
-			t = (moo_oop_oop_t)moo->active_method->slot[b2];
+			t = (moo_oop_oop_t)moo->active_method->literal_frame[b2];
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(t) == MOO_OBJ_TYPE_OOP);
 			MOO_ASSERT (moo, b1 < MOO_OBJ_GET_SIZE(t));
 
@@ -5234,7 +5234,7 @@ static int __execute (moo_t* moo)
 
 		handle_send_message:
 			/* get the selector from the literal frame */
-			selector = (moo_oop_char_t)moo->active_method->slot[b2];
+			selector = (moo_oop_char_t)moo->active_method->literal_frame[b2];
 
 			LOG_INST3 (moo, "send_message%hs %zu @%zu", (((bcode >> 2) & 1)? "_to_super": ""), b1, b2);
 			if (send_message (moo, selector, ((bcode >> 2) & 1), b1) <= -1) return -1;

@@ -556,11 +556,11 @@ static int print_object (moo_t* moo, moo_bitmask_t mask, moo_oop_t oop, outbfmt_
 			i = 0;
 			if (i < MOO_OBJ_GET_SIZE(oop))
 			{
-				if (print_object(moo, mask, MOO_OBJ_GET_OOP_SLOT(oop)[i], outbfmt) <= -1) return -1;
+				if (print_object(moo, mask, MOO_OBJ_GET_OOP_VAL(oop, i), outbfmt) <= -1) return -1;
 				for (++i; i < MOO_OBJ_GET_SIZE(oop); i++)
 				{
 					if (outbfmt(moo, mask, " ") <= -1) return -1;
-					if (print_object(moo, mask, MOO_OBJ_GET_OOP_SLOT(oop)[i], outbfmt) <= -1) return -1;
+					if (print_object(moo, mask, MOO_OBJ_GET_OOP_VAL(oop, i), outbfmt) <= -1) return -1;
 				}
 			}
 			if (outbfmt(moo, mask, ")") <= -1) return -1;
