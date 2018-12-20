@@ -2161,7 +2161,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 	/* shallow-copy the named part including home, origin, etc. */
 	for (i = 0; i < MOO_CONTEXT_NAMED_INSTVARS; i++)
 	{
-		MOO_STORE_OOP (moo, &((moo_oop_oop_t)blkctx)->slot[i], ((moo_oop_oop_t)rcv_blkctx)->slot[i]);
+		MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(blkctx, i), MOO_OBJ_GET_OOP_VAL(rcv_blkctx, i));
 	}
 #else
 	blkctx->ip = rcv_blkctx->ip;
@@ -2184,7 +2184,7 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 		MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(xarg) == num_first_arg_elems); 
 		for (i = 0; i < num_first_arg_elems; i++)
 		{
-			MOO_STORE_OOP (moo, &blkctx->stack[i], xarg->slot[i]);
+			MOO_STORE_OOP (moo, &blkctx->stack[i], MOO_OBJ_GET_OOP_VAL(xarg, i));
 		}
 	}
 	else
@@ -3765,6 +3765,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 		case MOO_METHOD_PREAMBLE_RETURN_INSTVAR:
 		{
 			moo_oop_oop_t rcv;
+			moo_ooi_t index;
 
 			MOO_STACK_POPS (moo, nargs); /* pop arguments only */
 
@@ -3791,7 +3792,8 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			}
 
 			/* this accesses the instance variable of the receiver */
-			MOO_STACK_SET (moo, moo->sp, rcv->slot[MOO_METHOD_GET_PREAMBLE_INDEX(preamble)]);
+			index = MOO_METHOD_GET_PREAMBLE_INDEX(preamble);
+			MOO_STACK_SET (moo, moo->sp, MOO_OBJ_GET_OOP_VAL(rcv, index));
 			break;
 		}
 
@@ -4716,7 +4718,7 @@ static int __execute (moo_t* moo)
 		push_instvar:
 			LOG_INST1 (moo, "push_instvar %zu", b1);
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->origin->receiver_or_source) == MOO_OBJ_TYPE_OOP);
-			MOO_STACK_PUSH (moo, ((moo_oop_oop_t)moo->active_context->origin->receiver_or_source)->slot[b1]);
+			MOO_STACK_PUSH (moo, MOO_OBJ_GET_OOP_VAL(moo->active_context->origin->receiver_or_source, b1));
 			NEXT_INST();
 
 		/* ------------------------------------------------- */
@@ -4736,7 +4738,7 @@ static int __execute (moo_t* moo)
 		store_instvar:
 			LOG_INST1 (moo, "store_into_instvar %zu", b1);
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->receiver_or_source) == MOO_OBJ_TYPE_OOP);
-			MOO_STORE_OOP (moo, &((moo_oop_oop_t)moo->active_context->origin->receiver_or_source)->slot[b1], MOO_STACK_GETTOP(moo));
+			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(moo->active_context->origin->receiver_or_source, b1), MOO_STACK_GETTOP(moo));
 			NEXT_INST();
 
 		/* ------------------------------------------------- */
@@ -4755,7 +4757,7 @@ static int __execute (moo_t* moo)
 		pop_into_instvar:
 			LOG_INST1 (moo, "pop_into_instvar %zu", b1);
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(moo->active_context->receiver_or_source) == MOO_OBJ_TYPE_OOP);
-			MOO_STORE_OOP (moo, &((moo_oop_oop_t)moo->active_context->origin->receiver_or_source)->slot[b1], MOO_STACK_GETTOP(moo));
+			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(moo->active_context->origin->receiver_or_source, b1), MOO_STACK_GETTOP(moo));
 			MOO_STACK_POP (moo);
 			NEXT_INST();
 
@@ -5187,7 +5189,7 @@ static int __execute (moo_t* moo)
 			if ((bcode >> 3) & 1)
 			{
 				/* store or pop */
-				MOO_STORE_OOP (moo, &t->slot[b1], MOO_STACK_GETTOP(moo));
+				MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(t, b1), MOO_STACK_GETTOP(moo));
 
 				if ((bcode >> 2) & 1)
 				{
@@ -5204,7 +5206,7 @@ static int __execute (moo_t* moo)
 			{
 				/* push */
 				LOG_INST2 (moo, "push_objvar %zu %zu", b1, b2);
-				MOO_STACK_PUSH (moo, t->slot[b1]);
+				MOO_STACK_PUSH (moo, MOO_OBJ_GET_OOP_VAL(t, b1));
 			}
 			NEXT_INST();
 		}
@@ -5381,7 +5383,7 @@ static int __execute (moo_t* moo)
 			t1 = MOO_STACK_GETTOP(moo);
 			MOO_STACK_POP (moo);
 			t2 = MOO_STACK_GETTOP(moo);
-			MOO_STORE_OOP (moo, &((moo_oop_oop_t)t2)->slot[b1], t1);
+			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(t2, b1), t1);
 			NEXT_INST();
 		}
 
