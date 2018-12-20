@@ -67,15 +67,17 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 
 	while (oldsz > 0)
 	{
-		symbol = (moo_oop_char_t)oldbuc->slot[--oldsz];
+		oldsz = oldsz - 1;
+		symbol = (moo_oop_char_t)MOO_OBJ_GET_OOP_VAL(oldbuc, oldsz);
+
 		if ((moo_oop_t)symbol != moo->_nil)
 		{
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,symbol) == moo->_symbol);
 			/*MOO_ASSERT (moo, sym->size > 0);*/
 
 			index = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(symbol), MOO_OBJ_GET_SIZE(symbol)) % newsz;
-			while (newbuc->slot[index] != moo->_nil) index = (index + 1) % newsz;
-			MOO_STORE_OOP (moo, &newbuc->slot[index], (moo_oop_t)symbol);
+			while (MOO_OBJ_GET_OOP_VAL(newbuc, index) != moo->_nil) index = (index + 1) % newsz;
+			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(newbuc, index), (moo_oop_t)symbol);
 		}
 	}
 
@@ -92,9 +94,8 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 	index = moo_hashoochars(ptr, len) % MOO_OBJ_GET_SIZE(moo->symtab->bucket);
 
 	/* find a matching symbol in the open-addressed symbol table */
-	while (moo->symtab->bucket->slot[index] != moo->_nil) 
+	while ((moo_oop_t)(symbol = MOO_OBJ_GET_OOP_VAL(moo->symtab->bucket, index)) != moo->_nil) 
 	{
-		symbol = (moo_oop_char_t)moo->symtab->bucket->slot[index];
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,symbol) == moo->_symbol);
 
 		if (len == MOO_OBJ_GET_SIZE(symbol) &&
@@ -147,7 +148,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 		/* recalculate the index for the expanded bucket */
 		index = moo_hashoochars(ptr, len) % MOO_OBJ_GET_SIZE(moo->symtab->bucket);
 
-		while (moo->symtab->bucket->slot[index] != moo->_nil) 
+		while (MOO_OBJ_GET_OOP_VAL(moo->symtab->bucket, index) != moo->_nil) 
 			index = (index + 1) % MOO_OBJ_GET_SIZE(moo->symtab->bucket);
 	}
 
@@ -157,7 +158,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 	{
 		MOO_ASSERT (moo, tally < MOO_SMOOI_MAX);
 		moo->symtab->tally = MOO_SMOOI_TO_OOP(tally + 1);
-		MOO_STORE_OOP (moo, &moo->symtab->bucket->slot[index], (moo_oop_t)symbol);
+		MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(moo->symtab->bucket, index), (moo_oop_t)symbol);
 	}
 
 	return (moo_oop_t)symbol;

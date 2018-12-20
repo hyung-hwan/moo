@@ -7407,7 +7407,7 @@ static int make_defined_class (moo_t* moo)
 
 		for (i = 0; i < initv_count; i++)
 		{
-			MOO_STORE_OOP (moo, &cc->self_oop->cvar[i], initv->slot[i]);
+			MOO_STORE_OOP (moo, &cc->self_oop->cvar[i], MOO_OBJ_GET_OOP_VAL(initv, i));
 		}
 	}
 

@@ -4852,7 +4852,7 @@ static int __execute (moo_t* moo)
 			if ((bcode >> 4) & 1)
 			{
 				/* push - bit 4 on */
-				LOG_INST1 (moo, "push_tempvar %zu", b1);
+				LOG_INST2 (moo, "push_tempvar %zu  => %O", b1, ctx->stack[bx]);
 				MOO_STACK_PUSH (moo, ctx->stack[bx]);
 			}
 			else

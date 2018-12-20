@@ -43,12 +43,21 @@ class FFI(Object)
 	method call: name signature: sig arguments: args
 	{
 		| f |
-		f := self.funcs at: name.
-		(f isError) ifTrue: [
+
+		(* f := self.funcs at: name ifAbsent: [ 
 			f := self.ffi getsym(name).
-			(f isError) ifTrue: [^f].
+			if (f isError) { ^f }.
 			self.funcs at: name put: f.
-		].
+			f. ## need this as at:put: returns an association
+		]. *)
+
+		f := self.funcs at: name ifAbsent: [ nil ].
+		if (f isNil)
+		{
+			f := self.ffi getsym(name).
+			if (f isError) { ^f }.
+			self.funcs at: name put: f.
+		}.
 
 		^self.ffi call(f, sig, args)
 	}

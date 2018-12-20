@@ -220,7 +220,6 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		moo_oop_t arg;
 
 		fmtc = MOO_OBJ_GET_CHAR_VAL(sig, i);
-
 		if (fmtc == ')') 
 		{
 			i++;
@@ -241,22 +240,22 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		/* more items in signature than the actual argument */
 		if (j >= MOO_OBJ_GET_SIZE(arr)) goto inval;
 
-		arg = arr->slot[j];
+		arg = MOO_OBJ_GET_OOP_VAL(arr, j);
 		switch (fmtc)
 		{
 		/* TODO: support more types... */
 			case 'c':
 				if (!MOO_OOP_IS_CHAR(arg)) goto inval;
-				dcArgChar (ffi->dc, MOO_OOP_TO_CHAR(arr->slot[j]));
+				dcArgChar (ffi->dc, MOO_OOP_TO_CHAR(arg));
 				j++;
 				break;
 
-/* TODO: added unsigned types */
+/* TODO: add unsigned types */
 			case 'i':
 			{
 				moo_ooi_t v;
 				if (moo_inttoooi(moo, arg, &v) == 0) goto inval;
-				dcArgInt (ffi->dc, i);
+				dcArgInt (ffi->dc, v);
 				j++;
 				break;
 			}
@@ -300,7 +299,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 				if (!MOO_OBJ_IS_CHAR_POINTER(arg)) goto inval;
 
 			#if defined(MOO_OOCH_IS_UCH)
-				ptr = moo_dupootobcharswithheadroom (moo, MOO_SIZEOF_VOID_P, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg), MOO_NULL);
+				ptr = moo_dupootobcharswithheadroom(moo, MOO_SIZEOF_VOID_P, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg), MOO_NULL);
 				if (!ptr) goto softfail; /* out of system memory or conversion error - soft failure */
 				link_ca (ffi, ptr);
 			#else
@@ -349,7 +348,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 /* TODO: proper return value conversion */
 		case 'c':
 		{
-			char r = dcCallChar (ffi->dc, f);
+			char r = dcCallChar(ffi->dc, f);
 			MOO_STACK_SETRET (moo, nargs, MOO_CHAR_TO_OOP(r));
 			break;
 		}
@@ -358,7 +357,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		{
 			moo_oop_t r;
 
-			r = moo_ooitoint (moo, dcCallInt(ffi->dc, f));
+			r = moo_ooitoint(moo, dcCallInt(ffi->dc, f));
 			if (!r) goto hardfail;
 			MOO_STACK_SETRET (moo, nargs, r);
 			break;
@@ -368,7 +367,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		{
 			moo_oop_t r;
 		ret_as_long:
-			r = moo_ooitoint (moo, dcCallLong (ffi->dc, f));
+			r = moo_ooitoint(moo, dcCallLong(ffi->dc, f));
 			if (!r) goto hardfail;
 			MOO_STACK_SETRET (moo, nargs, r);
 			break;
@@ -499,7 +498,7 @@ static moo_pfrc_t pf_getsym (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		goto softfail;
 	}
 
-	sym = moo->vmprim.dl_getsym (moo, ffi->handle, MOO_OBJ_GET_CHAR_SLOT(name));
+	sym = moo->vmprim.dl_getsym(moo, ffi->handle, MOO_OBJ_GET_CHAR_SLOT(name));
 	if (!sym) goto softfail;
 
 	MOO_DEBUG4 (moo, "<ffi.getsym> %.*js => %p in %p\n", MOO_OBJ_GET_SIZE(name), MOO_OBJ_GET_CHAR_SLOT(name), sym, ffi->handle);

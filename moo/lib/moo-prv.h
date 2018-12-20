@@ -54,7 +54,7 @@
 /*#define MOO_DEBUG_LEXER 1*/
 #define MOO_DEBUG_COMPILER 1
 #define MOO_DEBUG_VM_PROCESSOR 1
-/*#define MOO_DEBUG_VM_EXEC*/
+/*#define MOO_DEBUG_VM_EXEC 1*/
 #define MOO_PROFILE_VM 1
 #endif
 
@@ -381,8 +381,6 @@ struct moo_loop_t
 	moo_oow_t blkcount; /* number of inner blocks enclosed in square brackets */
 	moo_loop_t* next;
 };
-
-
 
 typedef struct moo_oopbuf_t moo_oopbuf_t;
 struct moo_oopbuf_t

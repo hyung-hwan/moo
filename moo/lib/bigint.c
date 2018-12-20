@@ -4153,7 +4153,7 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 		reqcapa = MOO_OOW_BITS + 1;
 		if (moo->inttostr.xbuf.capa < reqcapa)
 		{
-			xbuf = (moo_ooch_t*)moo_reallocmem(moo, moo->inttostr.xbuf.ptr, reqcapa);
+			xbuf = (moo_ooch_t*)moo_reallocmem(moo, moo->inttostr.xbuf.ptr, reqcapa * MOO_SIZEOF(*xbuf));
 			if (!xbuf) return MOO_NULL;
 			moo->inttostr.xbuf.capa = reqcapa;
 			moo->inttostr.xbuf.ptr = xbuf;
@@ -4182,10 +4182,10 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 		xlen = as * ((MOO_LIW_BITS + exp) / exp) + 1;
 		xpos = xlen;
 
-		reqcapa = MOO_SIZEOF(*xbuf) * xlen; 
+		reqcapa = xlen; 
 		if (moo->inttostr.xbuf.capa < reqcapa)
 		{
-			xbuf = (moo_ooch_t*)moo_reallocmem(moo, moo->inttostr.xbuf.ptr, reqcapa);
+			xbuf = (moo_ooch_t*)moo_reallocmem(moo, moo->inttostr.xbuf.ptr, reqcapa * MOO_SIZEOF(*xbuf));
 			if (!xbuf) return MOO_NULL;
 			moo->inttostr.xbuf.capa = reqcapa;
 			moo->inttostr.xbuf.ptr = xbuf;
@@ -4232,10 +4232,10 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 
 /* TODO: find an optimial buffer size */
 /* TODO: find an optimial buffer size */
-	reqcapa = MOO_SIZEOF(*xbuf) * (as * MOO_LIW_BITS + 1); 
+	reqcapa = as * MOO_LIW_BITS + 1; 
 	if (moo->inttostr.xbuf.capa < reqcapa)
 	{
-		xbuf = (moo_ooch_t*)moo_reallocmem(moo, moo->inttostr.xbuf.ptr, reqcapa);
+		xbuf = (moo_ooch_t*)moo_reallocmem(moo, moo->inttostr.xbuf.ptr, reqcapa * MOO_SIZEOF(*xbuf));
 		if (!xbuf) return MOO_NULL;
 		moo->inttostr.xbuf.capa = reqcapa;
 		moo->inttostr.xbuf.ptr = xbuf;
@@ -4245,10 +4245,10 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 		xbuf = moo->inttostr.xbuf.ptr;
 	}
  
-	reqcapa = MOO_SIZEOF(*t) * as * 3;
+	reqcapa = as * 3;
 	if (moo->inttostr.t.capa < reqcapa)
 	{
-		t = (moo_liw_t*)moo_reallocmem(moo, moo->inttostr.t.ptr, reqcapa);
+		t = (moo_liw_t*)moo_reallocmem(moo, moo->inttostr.t.ptr, reqcapa * MOO_SIZEOF(*t));
 		if (!t) return MOO_NULL;
 		moo->inttostr.t.capa = reqcapa;
 		moo->inttostr.t.ptr = t;
@@ -4257,7 +4257,6 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int radix)
 	{
 		t = moo->inttostr.t.ptr;
 	}
-
 
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
 	b[0] = moo->bigint[radix].multiplier; /* block divisor */

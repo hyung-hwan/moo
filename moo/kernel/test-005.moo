@@ -248,19 +248,20 @@ class MyObject(TestObject)
 		^ [ 'a block returned by getABlock' dump. "^ self"]
 	}
 
-	method(#class) main
+
+	method(#class) test_ffi
 	{
-"
 		| ffi |
 		ffi := FFI new: 'libc.so.6'.
 
 		## ffi call: #printf with: #((str '%d') (int 10) (long 20)).
-		 ffi call: #printf withSig: 'i|sii' withArgs: #(S'hello world %d %d\n' 11123 9876543).
-		## ffi call: #puts withSig: 'i|s' withArgs: #('hello world').
+		ffi call: #printf signature: '|s|ici)i' arguments: #("hello world %d %c %d\n" 11123 $X 9876543).
+		##ffi call: #puts signature: 's)i' arguments: #('hello world').
 		ffi close.
-"
+	}
 
-
+	method(#class) main
+	{
 		## ---------------------------------------------------------------
 		## getABlock has returned.
 		## aBlock's home context is getABlock. getABlock has returned
@@ -272,7 +273,9 @@ class MyObject(TestObject)
 		aBlock value.
 		## ---------------------------------------------------------------
 
-"
+		self test_ffi.
+
+(* -----------------------------
 PROCESS TESTING
 		| p |
 		'000000000000000000' dump.
@@ -285,7 +288,8 @@ PROCESS TESTING
 		'222222222222222222' dump.
 		'333333333333333333' dump.
 		'444444444444444444' dump.
-" 
+---------------------------- *)
+
 
 
 		(-2305843009213693952 - 1) dump.
@@ -302,14 +306,15 @@ PROCESS TESTING
 
 (2r111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111 * 128971234897128931) dump.
 
-"(-10000 rem: 3) dump.
-(-10000 quo: 3) dump.
-(-10000 \\ 3) dump.
-(-10000 // 3) dump."
+(* (-10000 rem: 3) dump.
+(-10000 mod: 3) dump.
+(-10000 div: 3) dump.
+(-10000 mdiv: 3) dump. *)
+
 (7 rem: -3) dump.
-(7 quo: -3) dump.
-(7 \\ -3) dump.
-(7 // -3) dump.
+(7 mod: -3) dump.
+(7 div: -3) dump.
+(7 mdiv: -3) dump.
 
 ##(777777777777777777777777777777777777777777777777777777777777777777777 rem: -8127348917239812731289371289731298) dump.
 ##(777777777777777777777777777777777777777777777777777777777777777777777 quo: -8127348917239812731289371289731298) dump.
@@ -440,7 +445,7 @@ PROCESS TESTING
 	b dump.
 ] value.
 '====================' dump.
-([ :a :b | "a := 20."  b := [ a + 20 ]. b value.] value: 99 value: 100) dump.
+([ :a :b | (*a := 20.*)  b := [ a + 20 ]. b value.] value: 99 value: 100) dump.
 '====================' dump.
 
 [ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] value dump.  ## not sufficient arguments. it must fail
@@ -458,7 +463,7 @@ PROCESS TESTING
 }
 
 
-"
+(* ====================
  [ a := 20.  b := [ a + 20 ].   b value. ] value
 ^                 ^               ^        ^              
 p1                p3             p4        p2
@@ -517,4 +522,4 @@ method whileTrue: aBlock
 
 [ b < 10 ] whileTrue: [ b dump. b := b + 1 ].
 
-"
+========== *)
