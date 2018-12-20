@@ -376,6 +376,15 @@ static kernel_class_info_t kernel_classes[] =
 	  MOO_OBJ_TYPE_LIWORD,
 	  MOO_OFFSETOF(moo_t, _large_negative_integer) },
 
+	{ 17,
+	  { 'F','i','x','e','d','P','o','i','n','t','D','e','c','i','m','a','l' },
+	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  0,
+	  MOO_FPDEC_NAMED_INSTVARS,
+	  MOO_CLASS_SPEC_FLAG_INDEXED,
+	  MOO_OBJ_TYPE_OOP,
+	  MOO_OFFSETOF(moo_t, _fixed_point_decimal) },
+
 	{ 12,
 	  { 'S','m','a','l','l','P','o','i','n','t','e','r' },
 	  0,

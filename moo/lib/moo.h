@@ -977,6 +977,17 @@ struct moo_process_scheduler_t
 	} suspended;
 };
 
+
+#define MOO_FPDEC_NAMED_INSTVARS 2
+typedef struct moo_fpdec_t moo_fpdec_t;
+typedef struct moo_fpdec_t* moo_oop_fpdec_t;
+struct moo_fpdec_t
+{
+	MOO_OBJ_HEADER;
+	moo_oop_t value; /* smooi or bigint */
+	moo_oop_t scale; /* smooi, positive */
+};
+
 /**
  * The MOO_CLASSOF() macro return the class of an object including a numeric
  * object encoded into a pointer.
@@ -1520,6 +1531,7 @@ struct moo_t
 
 	moo_oop_class_t _large_positive_integer; /* LargePositiveInteger */
 	moo_oop_class_t _large_negative_integer; /* LargeNegativeInteger */
+	moo_oop_class_t _fixed_point_decimal; /* FixedPointDecimal */
 
 	moo_oop_class_t _small_pointer;
 	moo_oop_class_t _system;

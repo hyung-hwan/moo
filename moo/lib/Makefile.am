@@ -80,6 +80,7 @@ libmoo_la_SOURCES = \
 	gc.c \
 	heap.c \
 	moo.c \
+	number.c \
 	obj.c \
 	opt-impl.h \
 	opt.c \
