@@ -233,7 +233,7 @@ redo:
 		}
 
 		/* +1 to handle line ending injection more easily */
-		tmp = moo_reallocmem (moo, moo->log.ptr, (newcapa + 1) * MOO_SIZEOF(*tmp)); 
+		tmp = moo_reallocmem(moo, moo->log.ptr, (newcapa + 1) * MOO_SIZEOF(*tmp)); 
 		if (!tmp) 
 		{
 		make_do:
@@ -328,7 +328,7 @@ redo:
 		}
 
 		/* +1 to handle line ending injection more easily */
-		tmp = moo_reallocmem (moo, moo->log.ptr, (newcapa + 1) * MOO_SIZEOF(*tmp));
+		tmp = moo_reallocmem(moo, moo->log.ptr, (newcapa + 1) * MOO_SIZEOF(*tmp));
 		if (!tmp) 
 		{
 		make_do:
@@ -1240,16 +1240,8 @@ static MOO_INLINE int print_formatted (moo_t* moo, moo_ooi_t nargs, moo_fmtout_t
 
 		case 'O': /* object - ignore precision, width, adjustment */
 			GET_NEXT_ARG_TO (moo, nargs, &arg_state, arg);
-			/*if (print_object(moo, (data->mask & ~MOO_LOG_PREFER_JSON), arg, outbfmt) <= -1) goto oops;*/
 			if (print_object(moo, data->mask, arg, outbfmt) <= -1) goto oops;
 			break;
-
-#if 0
-		case 'J':
-			GET_NEXT_ARG_TO (moo, nargs, &arg_state, arg);
-			if (print_object(moo, (data->mask | MOO_LOG_PREFER_JSON), arg, outbfmt) <= -1) goto oops;
-			break;
-#endif
 
 		print_integer:
 		{
