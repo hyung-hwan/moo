@@ -22,6 +22,7 @@ LIBSRCS := \
 	heap.c \
 	logfmt.c \
 	moo.c \
+	number.c \
 	obj.c \
 	pf.c \
 	rbt.c \
