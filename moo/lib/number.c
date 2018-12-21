@@ -32,6 +32,15 @@ moo_oop_t moo_makefpdec (moo_t* moo, moo_oop_t value, moo_ooi_t scale)
 {
 	moo_oop_fpdec_t fpdec;
 
+	MOO_ASSERT (moo, moo_isint(moo, value));
+	if (scale <= 0) return value; /* if scale is 0 or less, return the value as it it */
+
+	if (scale > MOO_SMOOI_MAX)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "fpdec scale too large - %zd", scale);
+		return MOO_NULL;
+	}
+
 	moo_pushtmp (moo, &value);
 	fpdec = (moo_oop_fpdec_t)moo_instantiate(moo, moo->_fixed_point_decimal, MOO_NULL, 0);
 	moo_poptmp (moo);

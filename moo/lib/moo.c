@@ -282,6 +282,14 @@ void moo_fini (moo_t* moo)
 		moo->inttostr.t.capa = 0;
 	}
 
+	if (moo->sprintf.xbuf.ptr)
+	{
+			moo_freemem (moo, moo->sprintf.xbuf.ptr);
+			moo->sprintf.xbuf.ptr = MOO_NULL;
+			moo->sprintf.xbuf.capa = 0;
+			moo->sprintf.xbuf.len = 0;
+	}
+
 	if (moo->vmprim.dl_cleanup) moo->vmprim.dl_cleanup (moo);
 }
 

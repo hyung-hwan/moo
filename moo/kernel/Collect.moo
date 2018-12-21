@@ -265,6 +265,8 @@ class(#character) String(Array)
 	 * if no terminating null character exists, it returns the same value as the size method *)
 	method(#primitive,#lenient) _strlen.
 	method(#primitive) strlen.
+
+	method(#primitive,#variadic) strfmt().
 }
 
 ## -------------------------------------------------------------------------------

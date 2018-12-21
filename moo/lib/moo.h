@@ -435,6 +435,7 @@ typedef enum moo_gcfin_t moo_gcfin_t;
 #define MOO_OBJ_IS_HALFWORD_POINTER(oop) (MOO_OOP_IS_POINTER(oop) && (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_HALFWORD))
 #define MOO_OBJ_IS_WORD_POINTER(oop)     (MOO_OOP_IS_POINTER(oop) && (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_WORD))
 
+
 /* [NOTE] this macro doesn't check the range of the actual value.
  *        make sure that the value of each bit fields given falls within the 
  *        possible range of the defined bits */
@@ -1631,6 +1632,16 @@ struct moo_t
 		} t;
 	} inttostr;
 	/* == END BIGINT CONVERSION == */
+
+	struct
+	{
+		struct
+		{
+			moo_ooch_t* ptr;
+			moo_oow_t capa;
+			moo_oow_t len;
+		} xbuf; /* buffer to support sprintf */
+	} sprintf;
 
 	moo_sbuf_t sbuf[64];
 

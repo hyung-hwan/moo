@@ -2831,7 +2831,7 @@ static moo_pfrc_t pf_integer_add (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	res = moo_addints (moo, rcv, arg);
+	res = moo_addints(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -2847,7 +2847,7 @@ static moo_pfrc_t pf_integer_sub (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	res = moo_subints (moo, rcv, arg);
+	res = moo_subints(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -2863,7 +2863,7 @@ static moo_pfrc_t pf_integer_mul (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	res = moo_mulints (moo, rcv, arg);
+	res = moo_mulints(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -2975,7 +2975,7 @@ static moo_pfrc_t pf_integer_bitand (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	res = moo_bitandints (moo, rcv, arg);
+	res = moo_bitandints(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -2991,7 +2991,7 @@ static moo_pfrc_t pf_integer_bitor (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	res = moo_bitorints (moo, rcv, arg);
+	res = moo_bitorints(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -3007,7 +3007,7 @@ static moo_pfrc_t pf_integer_bitxor (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	res = moo_bitxorints (moo, rcv, arg);
+	res = moo_bitxorints(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -3022,7 +3022,7 @@ static moo_pfrc_t pf_integer_bitinv (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 
-	res = moo_bitinvint (moo, rcv);
+	res = moo_bitinvint(moo, rcv);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -3038,7 +3038,7 @@ static moo_pfrc_t pf_integer_bitshift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nar
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	res = moo_bitshiftint (moo, rcv, arg);
+	res = moo_bitshiftint(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -3054,7 +3054,7 @@ static moo_pfrc_t pf_integer_eq (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	res = moo_eqints (moo, rcv, arg);
+	res = moo_eqints(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -3070,7 +3070,7 @@ static moo_pfrc_t pf_integer_ne (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	res = moo_neints (moo, rcv, arg);
+	res = moo_neints(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -3086,7 +3086,7 @@ static moo_pfrc_t pf_integer_lt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	res = moo_ltints (moo, rcv, arg);
+	res = moo_ltints(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -3102,7 +3102,7 @@ static moo_pfrc_t pf_integer_gt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	res = moo_gtints (moo, rcv, arg);
+	res = moo_gtints(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -3118,7 +3118,7 @@ static moo_pfrc_t pf_integer_le (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	res = moo_leints (moo, rcv, arg);
+	res = moo_leints(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -3134,7 +3134,7 @@ static moo_pfrc_t pf_integer_ge (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	res = moo_geints (moo, rcv, arg);
+	res = moo_geints(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -3155,7 +3155,7 @@ static moo_pfrc_t pf_integer_inttostr (moo_t* moo, moo_mod_t* mod, moo_ooi_t nar
 	radix = MOO_OOP_TO_SMOOI(arg);
 
 	if (radix < 2 || radix > 36) return MOO_PF_FAILURE;
-	str = moo_inttostr (moo, rcv, radix);
+	str = moo_inttostr(moo, rcv, radix);
 	if (!str) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, str);
@@ -3389,6 +3389,29 @@ static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t narg
 	return MOO_PF_SUCCESS;
 }
 
+static moo_pfrc_t pf_strfmt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_OBJ_IS_CHAR_POINTER(rcv));
+
+	if (moo_sprintfmtst(moo, nargs) <= -1)
+	{
+		MOO_STACK_SETRETTOERRNUM (moo, nargs);
+	}
+	else
+	{
+		moo_oop_t str;
+		str = moo_makestring(moo, moo->sprintf.xbuf.ptr, moo->sprintf.xbuf.len);
+		if (!str) return MOO_PF_FAILURE;
+
+		MOO_STACK_SETRET (moo, nargs, str);
+	}
+
+	return MOO_PF_SUCCESS;
+}
+
 static moo_pfrc_t pf_strlen (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, ret;
@@ -3574,6 +3597,7 @@ static pf_t pftab[] =
 	{ "SmallPointer_putUint64",                { moo_pf_smptr_put_uint64,                 2, 2 } },
 	{ "SmallPointer_putUint8",                 { moo_pf_smptr_put_uint8,                  2, 2 } },
 
+	{ "String_strfmt",                         { pf_strfmt,                               0, MA } },
 	{ "String_strlen",                         { pf_strlen,                               0, 0 } },
 
 	{ "System_calloc",                         { moo_pf_system_calloc,                    1, 1 } },

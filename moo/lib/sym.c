@@ -94,7 +94,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 	index = moo_hashoochars(ptr, len) % MOO_OBJ_GET_SIZE(moo->symtab->bucket);
 
 	/* find a matching symbol in the open-addressed symbol table */
-	while ((moo_oop_t)(symbol = MOO_OBJ_GET_OOP_VAL(moo->symtab->bucket, index)) != moo->_nil) 
+	while ((moo_oop_t)(symbol = (moo_oop_char_t)MOO_OBJ_GET_OOP_VAL(moo->symtab->bucket, index)) != moo->_nil) 
 	{
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,symbol) == moo->_symbol);
 

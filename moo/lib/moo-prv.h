@@ -257,6 +257,24 @@
 #endif
 
 
+#define MOO_OOP_IS_PBIGINT(moo,x) (MOO_CLASSOF(moo,x) == (moo)->_large_positive_integer)
+#define MOO_OOP_IS_NBIGINT(moo,x) (MOO_CLASSOF(moo,x) == (moo)->_large_negative_integer)
+#define MOO_OOP_IS_BIGINT(moo,x)  (MOO_OOP_IS_PBIGINT(moo,x) || MOO_OOP_IS_NBIGINT(moo,x))
+
+#define MOO_POINTER_IS_PBIGINT(moo,x) (MOO_OBJ_GET_CLASS(x) == (moo)->_large_positive_integer)
+#define MOO_POINTER_IS_NBIGINT(moo,x) (MOO_OBJ_GET_CLASS(x) == (moo)->_large_negative_integer)
+#define MOO_POINTER_IS_BIGINT(moo,x)  (MOO_OOP_IS_PBIGINT(moo,x) || MOO_OOP_IS_NBIGINT(moo,x))
+
+#define MOO_OOP_IS_FPDEC(moo,x) (MOO_CLASSOF(moo,x) == (moo)->_fixed_point_decimal)
+#define MOO_POINTER_IS_FPDEC(moo,x) (MOO_OBJ_GET_CLASS(x) == (moo)->_fixed_point_Decimal)
+
+typedef moo_ooi_t (*moo_outbfmt_t) (
+        moo_t*           moo,
+        moo_bitmask_t    mask,
+        const moo_bch_t* fmt,
+        ...
+);
+
 #if defined(MOO_INCLUDE_COMPILER)
 
 /* ========================================================================= */
@@ -981,7 +999,6 @@ enum moo_bcode_t
 	BCODE_NOOP                       = 0xFF
 };
 
-
 /* i don't want an error raised inside the callback to override 
  * the existing error number and message. */
 #define vmprim_log_write(moo,mask,ptr,len) do { \
@@ -1217,13 +1234,6 @@ int moo_deregfinalizable (moo_t* moo, moo_oop_t oop);
 void moo_deregallfinalizables (moo_t* moo);
 
 /* ========================================================================= */
-/* proc.c                                                                    */
-/* ========================================================================= */
-moo_oop_process_t moo_makeproc (
-	moo_t* moo
-);
-
-/* ========================================================================= */
 /* bigint.c                                                                  */
 /* ========================================================================= */
 int moo_isint (
@@ -1350,10 +1360,29 @@ moo_oop_t moo_strtoint (
 	int               radix
 );
 
+#define MOO_INTTOSTR_LOWERCASE (1 << 14)
+#define MOO_INTTOSTR_NONEWOBJ  (1 << 15)
+
 moo_oop_t moo_inttostr (
 	moo_t*      moo,
 	moo_oop_t   num,
-	int         radix
+	int         flagged_radix /* radix between 2 and 36 inclusive, optionally bitwise ORed of MOO_INTTOSTR_XXX bits */
+);
+
+/* ========================================================================= */
+/* number.c                                                                  */
+/* ========================================================================= */
+moo_oop_t moo_makefpdec (
+	moo_t*      moo,
+	moo_oop_t   value,
+	moo_ooi_t   scale
+);
+
+moo_oop_t moo_truncfpdecval (
+	moo_t*      moo,
+	moo_oop_t   iv,
+	moo_ooi_t   cs,
+	moo_ooi_t   ns
 );
 
 /* ========================================================================= */
