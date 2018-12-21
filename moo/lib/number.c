@@ -27,9 +27,20 @@
 #include "moo-prv.h"
 
 #define MOO_IS_FPDEC(moo, x) (MOO_OBJ_GET_CLASS(x) == (moo)->_fixed_point_decimal)
-moo_oop_t moo_makefpdec (moo_t* moo, moo_oop_t value, moo_oop_t scale)
+
+moo_oop_t moo_makefpdec (moo_t* moo, moo_oop_t value, moo_ooi_t scale)
 {
-	/* TODO: */
+	moo_oop_fpdec_t fpdec;
+
+	moo_pushtmp (moo, &value);
+	fpdec = (moo_oop_fpdec_t)moo_instantiate(moo, moo->_fixed_point_decimal, MOO_NULL, 0);
+	moo_poptmp (moo);
+	if (!fpdec) return MOO_NULL;
+
+	MOO_STORE_OOP (moo, &fpdec->value, value);
+	fpdec->scale = MOO_SMOOI_TO_OOP(scale);
+
+	return (moo_oop_t)fpdec;
 }
 
 static moo_ooi_t equalize_scale (moo_t* moo, moo_oop_t* x, moo_oop_t* y)
