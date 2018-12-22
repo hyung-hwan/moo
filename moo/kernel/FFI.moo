@@ -8,6 +8,10 @@ class _FFI(Object) from 'ffi'
 	method(#primitive) call(func, sig, args).
 }
 
+class FFIException(Exception)
+{
+}
+
 class FFI(Object)
 {
 	var name, ffi, funcs.
@@ -42,11 +46,11 @@ class FFI(Object)
 
 	method call: name signature: sig arguments: args
 	{
-		| f |
+		| f rc |
 
 		(* f := self.funcs at: name ifAbsent: [ 
 			f := self.ffi getsym(name).
-			if (f isError) { ^f }.
+			if (f isError) { FFIException signal: ('Unable to find %s' strfmt(name)) }.
 			self.funcs at: name put: f.
 			f. ## need this as at:put: returns an association
 		]. *)
@@ -55,10 +59,11 @@ class FFI(Object)
 		if (f isNil)
 		{
 			f := self.ffi getsym(name).
-			if (f isError) { ^f }.
+			if (f isError) { FFIException signal: ('Unable to find %s' strfmt(name)) }.
 			self.funcs at: name put: f.
 		}.
 
-		^self.ffi call(f, sig, args)
+		rc := self.ffi call(f, sig, args).
+		if (rc isError)	{ FFIException signal: ('Unable to call %s' strfmt(name)) }.
 	}
 }

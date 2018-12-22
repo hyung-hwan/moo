@@ -1023,7 +1023,10 @@ class AssociativeCollection(Collection)
 
 	method associationAt: assoc
 	{
-		^self __find: (assoc key) or_upsert: false with: nil.
+		| ass |
+		ass := self __find: (assoc key) or_upsert: false with: nil.
+		if (ass isError) { ^KeyNotFoundException signal: ('Unable to find ' & (assoc key asString)) }.
+		^ass.
 	}
 
 	method associationAt: assoc ifAbsent: error_block

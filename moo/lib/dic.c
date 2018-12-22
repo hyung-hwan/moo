@@ -68,7 +68,8 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 
 	while (oldsz > 0)
 	{
-		ass = (moo_oop_association_t)oldbuc->slot[--oldsz];
+		oldsz = oldsz - 1;
+		ass = (moo_oop_association_t)MOO_OBJ_GET_OOP_VAL(oldbuc, oldsz);
 		if ((moo_oop_t)ass != moo->_nil)
 		{
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
@@ -77,9 +78,9 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);
 
 			index = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(key), MOO_OBJ_GET_SIZE(key)) % newsz;
-			while (newbuc->slot[index] != moo->_nil) index = (index + 1) % newsz;
+			while (MOO_OBJ_GET_OOP_VAL(newbuc, index) != moo->_nil) index = (index + 1) % newsz;
 
-			MOO_STORE_OOP (moo, &newbuc->slot[index], (moo_oop_t)ass); /* newbuc->slot[index] = (moo_oop_t)ass; */
+			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(newbuc, index), (moo_oop_t)ass);
 		}
 	}
 
@@ -104,10 +105,8 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 	index = hv % MOO_OBJ_GET_SIZE(dic->bucket);
 
 	/* find */
-	while (dic->bucket->slot[index] != moo->_nil) 
+	while ((moo_oop_t)(ass = (moo_oop_association_t)MOO_OBJ_GET_OOP_VAL(dic->bucket, index)) != moo->_nil) 
 	{
-		ass = (moo_oop_association_t)dic->bucket->slot[index];
-
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
 		/*MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);*/
 		MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(ass->key));
@@ -171,7 +170,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 		/* recalculate the index for the expanded bucket */
 		index = hv % MOO_OBJ_GET_SIZE(dic->bucket);
 
-		while (dic->bucket->slot[index] != moo->_nil) 
+		while (MOO_OBJ_GET_OOP_VAL(dic->bucket, index) != moo->_nil) 
 			index = (index + 1) % MOO_OBJ_GET_SIZE(dic->bucket);
 	}
 
@@ -187,7 +186,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 	 * it overflows after increment below */
 	MOO_ASSERT (moo, tally < MOO_SMOOI_MAX);
 	dic->tally = MOO_SMOOI_TO_OOP(tally + 1); /* no need to use MOO_STORE_OOP as the value is not a pointer object */
-	MOO_STORE_OOP (moo, &dic->bucket->slot[index], (moo_oop_t)ass); /*dic->bucket->slot[index] = (moo_oop_t)ass;*/
+	MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(dic->bucket, index), (moo_oop_t)ass);
 
 	moo_poptmps (moo, tmp_count);
 	return ass;
@@ -210,10 +209,8 @@ moo_oop_association_t moo_lookupdic_noseterr (moo_t* moo, moo_oop_dic_t dic, con
 
 	index = moo_hashoochars(name->ptr, name->len) % MOO_OBJ_GET_SIZE(dic->bucket);
 
-	while (dic->bucket->slot[index] != moo->_nil) 
+	while ((moo_oop_t)(ass = (moo_oop_association_t)MOO_OBJ_GET_OOP_VAL(dic->bucket, index)) != moo->_nil) 
 	{
-		ass = (moo_oop_association_t)dic->bucket->slot[index];
-
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
 		/*MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);*/
 		MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(ass->key));
@@ -296,10 +293,8 @@ int moo_deletedic (moo_t* moo, moo_oop_dic_t dic, const moo_oocs_t* name)
 	index = hv % bs;
 
 	/* find */
-	while (dic->bucket->slot[index] != moo->_nil) 
+	while ((moo_oop_t)(ass = (moo_oop_association_t)MOO_OBJ_GET_OOP_VAL(dic->bucket, index)) != moo->_nil) 
 	{
-		ass = (moo_oop_association_t)dic->bucket->slot[index];
-
 		MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
 		/*MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);*/
 		MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(ass->key));
@@ -323,23 +318,22 @@ found:
 		y = (y + 1) % bs;
 
 		/* done if the slot at the current index is empty */
-		if (dic->bucket->slot[y] == moo->_nil) break;
+		if ((moo_oop_t)(ass = (moo_oop_association_t)MOO_OBJ_GET_OOP_VAL(dic->bucket, y)) == moo->_nil)  break;
 
-		/* get the natural hash index for the data in the slot at
+		/* otherwise get the natural hash index for the data in the slot at
 		 * the current hash index */
-		ass = (moo_oop_association_t)dic->bucket->slot[y];
 		z = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(ass->key), MOO_OBJ_GET_SIZE(ass->key)) % bs;
 
 		/* move an element if necesary */
 		if ((y > x && (z <= x || z > y)) ||
 		    (y < x && (z <= x && z > y)))
 		{
-			MOO_STORE_OOP (moo, &dic->bucket->slot[x], dic->bucket->slot[y]); /*dic->bucket->slot[x] = dic->bucket->slot[y];*/
+			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(dic->bucket, x), MOO_OBJ_GET_OOP_VAL(dic->bucket, y));
 			x = y;
 		}
 	}
 
-	MOO_STORE_OOP (moo, &dic->bucket->slot[x], moo->_nil); /*dic->bucket->slot[x] = moo->_nil;*/
+	dic->bucket->slot[x] = moo->_nil; /* the value is nil. no MOO_STORE_OOP */
 
 	tally--;
 	dic->tally = MOO_SMOOI_TO_OOP(tally);
@@ -355,7 +349,7 @@ int moo_walkdic (moo_t* moo, moo_oop_dic_t dic, moo_dic_walker_t walker, void* c
 	count = MOO_OBJ_GET_SIZE(dic->bucket);
 	for (index = 0; index < count; index++)
 	{
-		ass = (moo_oop_association_t)dic->bucket->slot[index];
+		ass = (moo_oop_association_t)MOO_OBJ_GET_OOP_VAL(dic->bucket, index);
 		if ((moo_oop_t)ass != moo->_nil)
 		{
 

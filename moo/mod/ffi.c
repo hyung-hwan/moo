@@ -185,6 +185,8 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	sig = MOO_STACK_GETARG(moo, nargs, 1);
 	args = MOO_STACK_GETARG(moo, nargs, 2);
 
+	if (!MOO_OOP_IS_SMPTR(fun)) goto inval;
+
 	/* the signature must not be empty. at least the return type must be
 	 * specified */
 	if (!MOO_OBJ_IS_CHAR_POINTER(sig) || MOO_OBJ_GET_SIZE(sig) <= 0) goto inval;
