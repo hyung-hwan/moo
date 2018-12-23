@@ -2880,8 +2880,7 @@ static moo_pfrc_t pf_integer_div (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
 	quo = moo_divints(moo, rcv, arg, 0, MOO_NULL);
-	if (!quo) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
-/* TODO: MOO_EDIVBY0 soft or hard failure? */
+	if (!quo) return (moo->errnum == MOO_EINVAL || moo->errnum == MOO_EDIVBY0? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, quo);
 	return MOO_PF_SUCCESS;
