@@ -333,8 +333,8 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 	/* assign a process id to the process */
 	alloc_pid (moo, proc);
 
-	proc->initial_context = c;
-	proc->current_context = c;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&proc->initial_context, (moo_oop_t)c);
+	MOO_STORE_OOP (moo, (moo_oop_t*)&proc->current_context, (moo_oop_t)c);
 	proc->sp = MOO_SMOOI_TO_OOP(-1);
 	proc->perr = MOO_ERROR_TO_OOP(MOO_ENOERR);
 	proc->perrmsg = moo->_nil;
@@ -369,7 +369,7 @@ static MOO_INLINE void sleep_active_process (moo_t* moo, int state)
 	MOO_LOG3 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Processor - process[%zd] %hs->%hs in sleep_active_process\n", MOO_OOP_TO_SMOOI(moo->processor->active->id), proc_state_to_string(MOO_OOP_TO_SMOOI(moo->processor->active->state)), proc_state_to_string(state));
 #endif
 
-	moo->processor->active->current_context = moo->active_context;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&moo->processor->active->current_context, (moo_oop_t)moo->active_context);
 	moo->processor->active->state = MOO_SMOOI_TO_OOP(state);
 }
 
@@ -382,7 +382,7 @@ static MOO_INLINE void wake_process (moo_t* moo, moo_oop_process_t proc)
 
 	MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
 	proc->state = MOO_SMOOI_TO_OOP(PROC_STATE_RUNNING);
-	moo->processor->active = proc;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&moo->processor->active, (moo_oop_t)proc);
 
 	/* load the stack pointer from 'proc'. 
 	 * moo->processor->active points to 'proc' now. */

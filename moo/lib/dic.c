@@ -116,7 +116,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 		    moo_equal_oochars(MOO_OBJ_GET_CHAR_SLOT(key), MOO_OBJ_GET_CHAR_SLOT(ass->key), MOO_OBJ_GET_SIZE(key))) 
 		{
 			/* the value of MOO_NULL indicates no insertion or update. */
-			if (value) MOO_STORE_OOP (moo, &ass->value, value); /*ass->value = value;*/ /* update */
+			if (value) MOO_STORE_OOP (moo, &ass->value, value); /* update */
 			return ass;
 		}
 
@@ -165,7 +165,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 		bucket = expand_bucket(moo, dic->bucket);
 		if (!bucket) goto oops;
 
-		dic->bucket = bucket;
+		MOO_STORE_OOP (moo, &dic->bucket, bucket);
 
 		/* recalculate the index for the expanded bucket */
 		index = hv % MOO_OBJ_GET_SIZE(dic->bucket);
@@ -179,8 +179,8 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 	ass = (moo_oop_association_t)moo_instantiate(moo, moo->_association, MOO_NULL, 0);
 	if (!ass) goto oops;
 
-	MOO_STORE_OOP (moo, &ass->key, (moo_oop_t)key); /*ass->key = (moo_oop_t)key; */
-	MOO_STORE_OOP (moo, &ass->value, value); /*ass->value = value;*/
+	MOO_STORE_OOP (moo, &ass->key, (moo_oop_t)key);
+	MOO_STORE_OOP (moo, &ass->value, value);
 
 	/* the current tally must be less than the maximum value. otherwise,
 	 * it overflows after increment below */
