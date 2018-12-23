@@ -91,7 +91,7 @@ static MOO_INLINE const char* proc_state_to_string (int state)
 		STORE_ACTIVE_IP (moo); \
 		(moo)->active_context = (v_ctx); \
 		(moo)->active_method = (moo_oop_method_t)(moo)->active_context->origin->method_or_nargs; \
-		SET_ACTIVE_METHOD_CODE(moo); \
+		(moo)->active_code = MOO_METHOD_GET_CODE_BYTE((moo)->active_method); \
 		LOAD_ACTIVE_IP (moo); \
 		(moo)->processor->active->current_context = (moo)->active_context; \
 	} while (0)

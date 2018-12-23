@@ -661,14 +661,6 @@ struct moo_compiler_t
 };
 #endif
 
-#if defined(MOO_USE_METHOD_TRAILER)
-	/* let it point to the trailer of the method */
-#	define SET_ACTIVE_METHOD_CODE(moo) ((moo)->active_code = (moo_oob_t*)&(moo)->active_method->literal_frame[MOO_OBJ_GET_SIZE((moo)->active_method) + 1 - MOO_METHOD_NAMED_INSTVARS])
-#else
-	/* let it point to the payload of the code byte array */
-#	define SET_ACTIVE_METHOD_CODE(moo) ((moo)->active_code = (moo)->active_method->code->slot)
-#endif
-
 #if defined(MOO_BCODE_LONG_PARAM_SIZE) && (MOO_BCODE_LONG_PARAM_SIZE == 1)
 #	define MAX_CODE_INDEX               (0xFFu)
 #	define MAX_CODE_NTMPRS              (0xFFu)

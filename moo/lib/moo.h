@@ -515,7 +515,7 @@ struct moo_obj_word_t
 #define MOO_OBJ_GET_WORD_VAL(oop,idx)     ((((moo_oop_word_t)(oop))->slot)[idx])
 #define MOO_OBJ_GET_LIWORD_VAL(oop,idx)   ((((moo_oop_liword_t)(oop))->slot)[idx])
 
-/*#define MOO_OBJ_SET_OOP_VAL(oop,idx,val)      ((((moo_oop_oop_t)(oop))->slot)[idx] = (val)) - I must use MOO_STORE_OOP() instead.*/
+#define MOO_OBJ_SET_OOP_VAL(oop,idx,val)      ((((moo_oop_oop_t)(oop))->slot)[idx] = (val)) /* NOTE: MOO_STORE_OOP() */
 #define MOO_OBJ_SET_CHAR_VAL(oop,idx,val)     ((((moo_oop_char_t)(oop))->slot)[idx] = (val))
 #define MOO_OBJ_SET_BYTE_VAL(oop,idx,val)     ((((moo_oop_byte_t)(oop))->slot)[idx] = (val))
 #define MOO_OBJ_SET_HALFWORD_VAL(oop,idx,val) ((((moo_oop_halfword_t)(oop))->slot)[idx] = (val))
@@ -680,18 +680,16 @@ struct moo_method_t
 };
 
 #if defined(MOO_USE_METHOD_TRAILER)
-
-	/* if m is to be type-cast to moo_oop_method_t, the macro must be
-	 * redefined to this:
-	 *   (&((moo_oop_method_t)m)>slot[MOO_OBJ_GET_SIZE(m) + 1 - MOO_METHOD_NAMED_INSTVARS])
-	 */
-
-	/*((moo_oob_t*)&((moo_oop_oop_t)m)->slot[MOO_OBJ_GET_SIZE(m) + 1])*/
+	/* the first byte after the main payload is the trailer size
+	 * the code bytes are placed after the trailer size.
+	 *
+	 * code bytes -> ((moo_oob_t*)&((moo_oop_oop_t)m)->slot[MOO_OBJ_GET_SIZE(m) + 1]) or
+     *               ((moo_oob_t*)&((moo_oop_method_t)m)->literal_frame[MOO_OBJ_GET_SIZE(m) + 1 - MOO_METHOD_NAMED_INSTVARS]) 
+	 * size -> ((moo_oow_t)((moo_oop_oop_t)m)->slot[MOO_OBJ_GET_SIZE(m)])*/
 #	define MOO_METHOD_GET_CODE_BYTE(m) MOO_OBJ_GET_TRAILER_BYTE(m)
-	/*((moo_oow_t)((moo_oop_oop_t)m)->slot[MOO_OBJ_GET_SIZE(m)])*/
 #	define MOO_METHOD_GET_CODE_SIZE(m) MOO_OBJ_GET_TRAILER_SIZE(m) 
 #else
-#	define MOO_METHOD_GET_CODE_BYTE(m) ((m)->code->slot)
+#	define MOO_METHOD_GET_CODE_BYTE(m) MOO_OBJ_GET_BYTE_SLOT(((m)->code)
 #	define MOO_METHOD_GET_CODE_SIZE(m) MOO_OBJ_GET_SIZE((m)->code)
 #endif
 

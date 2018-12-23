@@ -333,7 +333,7 @@ found:
 		}
 	}
 
-	dic->bucket->slot[x] = moo->_nil; /* the value is nil. no MOO_STORE_OOP */
+	MOO_OBJ_SET_OOP_VAL (dic->bucket, x, moo->_nil); /* the value is nil. no MOO_STORE_OOP */
 
 	tally--;
 	dic->tally = MOO_SMOOI_TO_OOP(tally);

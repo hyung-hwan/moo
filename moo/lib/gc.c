@@ -1024,7 +1024,7 @@ void moo_gc (moo_t* moo)
 	}
 */
 
-	if (moo->active_method) SET_ACTIVE_METHOD_CODE (moo); /* update moo->active_code */
+	if (moo->active_method) moo->active_code = MOO_METHOD_GET_CODE_BYTE(moo->active_method); /* update moo->active_code */
 	if (gcfin_count > 0) moo->sem_gcfin_sigreq = 1;
 
 	/* TODO: include some gc statstics like number of live objects, gc performance, etc */

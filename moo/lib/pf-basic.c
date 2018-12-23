@@ -441,7 +441,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		}
 
 		case MOO_OBJ_TYPE_OOP:
-			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(rcv, idx), val); /*((moo_oop_oop_t)rcv)->slot[idx] = val;*/
+			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(rcv, idx), val);
 			break;
 
 		default:
@@ -713,19 +713,36 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 				break;
 
 			case MOO_OBJ_TYPE_OOP:
-				MOO_MEMMOVE (&((moo_oop_oop_t)rcv)->slot[didx],
-				             &((moo_oop_oop_t)rcv)->slot[sidx],
-				             ssz * MOO_SIZEOF(((moo_oop_oop_t)rcv)->slot[0]));
-
 				if (didx > sidx)
 				{
-					/* no need to use MOO_STORE_OOP because moo->_nil is the assigning value */
-					while (sidx < didx) ((moo_oop_oop_t)rcv)->slot[sidx++] = moo->_nil;
+					moo_oow_t i;
+					for (i = ssz; i > 0; )
+					{
+						MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(rcv, didx + i), MOO_OBJ_GET_OOP_VAL(rcv, sidx + i));
+					}
+
+					while (sidx < didx) 
+					{
+						/* no need to use MOO_STORE_OOP because moo->_nil is the assigned value */
+						MOO_OBJ_SET_OOP_VAL (rcv, sidx, moo->_nil);
+						sidx = sidx + 1;
+					}
 				}
 				else
 				{
-					/* no need to use MOO_STORE_OOP because moo->_nil is the assigning value */
-					while (didx > sidx) ((moo_oop_oop_t)rcv)->slot[(didx++) + ssz] = moo->_nil;
+					moo_oow_t i;
+					for (i = 0; i < ssz; i++)
+					{
+						--i;
+						MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(rcv, didx + i), MOO_OBJ_GET_OOP_VAL(rcv, sidx + i));
+					}
+
+					while (didx > sidx) 
+					{
+						/* no need to use MOO_STORE_OOP because moo->_nil is the assigned value */
+						MOO_OBJ_SET_OOP_VAL (rcv, didx + ssz, moo->_nil);
+						didx = didx + 1;
+					}
 				}
 				break;
 

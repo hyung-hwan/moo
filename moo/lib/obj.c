@@ -80,7 +80,11 @@ moo_oop_t moo_allocoopobj (moo_t* moo, moo_oow_t size)
 	MOO_OBJ_SET_SIZE (hdr, size);
 	MOO_OBJ_SET_CLASS (hdr, moo->_nil);
 
-	while (size > 0) hdr->slot[--size] = moo->_nil;
+	while (size > 0) 
+	{
+		size = size - 1;
+		MOO_OBJ_SET_OOP_VAL (hdr, size, moo->_nil);
+	}
 
 	return (moo_oop_t)hdr;
 }
@@ -102,18 +106,22 @@ moo_oop_t moo_allocoopobjwithtrailer (moo_t* moo, moo_oow_t size, const moo_oob_
 	MOO_OBJ_SET_SIZE (hdr, size);
 	MOO_OBJ_SET_CLASS (hdr, moo->_nil);
 
-	for (i = 0; i < size; i++) hdr->slot[i] = moo->_nil;
+	for (i = 0; i < size; i++) 
+	{
+		MOO_OBJ_SET_OOP_VAL (hdr, i, moo->_nil);
+	}
 
 	/* [NOTE] this is not converted to a SmallInteger object. it is a special slot handled by GC for an object with the TRAILER bit set */
-	hdr->slot[size] = (moo_oop_t)blen; 
+	MOO_OBJ_SET_OOP_VAL (hdr, size, (moo_oop_t)blen);
 
+	/* the trailer part is just composed of raw bytes from the moo core's perspective. */
 	if (bptr)
 	{
-		MOO_MEMCPY (&hdr->slot[size + 1], bptr, blen);
+		MOO_MEMCPY ((moo_oob_t*)MOO_OBJ_GET_OOP_PTR(hdr, size + 1), bptr, blen);
 	}
 	else
 	{
-		MOO_MEMSET (&hdr->slot[size + 1], 0, blen);
+		MOO_MEMSET ((moo_oob_t*)MOO_OBJ_GET_OOP_PTR(hdr, size + 1), 0, blen);
 	}
 
 	return (moo_oop_t)hdr;
@@ -275,7 +283,7 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 					while (i > 0)
 					{
 						--i;
-						MOO_STORE_OOP (moo, &((moo_oop_oop_t)oop)->slot[i], ((moo_oop_oop_t)_class->initv[0])->slot[i]);
+						MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(oop, i), MOO_OBJ_GET_OOP_VAL(_class->initv[0], i));
 					}
 				}
 			}
@@ -361,7 +369,7 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_class_t _class, moo_oo
 					while (i > 0)
 					{
 						--i;
-						MOO_STORE_OOP (moo, &((moo_oop_oop_t)oop)->slot[i], ((moo_oop_oop_t)_class->initv[0])->slot[i]);
+						MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(oop, i), MOO_OBJ_GET_OOP_VAL(_class->initv[0], i));
 					}
 				}
 			}
