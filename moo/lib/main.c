@@ -218,13 +218,17 @@ int main (int argc, char* argv[])
 	{
 		moo_bitmask_t bm = 0;
 
+		moo_getoption (moo, MOO_TRAIT, &bm);
 		/*bm |= MOO_NOGC;*/
 		bm |= MOO_AWAIT_PROCS;
 		moo_setoption (moo, MOO_TRAIT, &bm);
 
+#if 0
 		/* disable GC logs */
+		moo_getoption (moo, MOO_LOG_MASK, &bm);
 		bm = ~MOO_LOG_GC;
 		moo_setoption (moo, MOO_LOG_MASK, &bm);
+#endif
 	}
 
 	if (moo_ignite(moo, memsize) <= -1)

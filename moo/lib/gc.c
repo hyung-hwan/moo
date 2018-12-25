@@ -616,7 +616,7 @@ oops:
 static void compact_symbol_table (moo_t* moo, moo_oop_t _nil)
 {
 	moo_oop_oop_t bucket;
-	moo_oop_char_t symbol;
+	moo_oop_t tmp;
 	moo_oow_t i, x, y, z;
 	moo_oow_t bucket_size, index;
 	moo_ooi_t tally;
@@ -639,40 +639,43 @@ static void compact_symbol_table (moo_t* moo, moo_oop_t _nil)
 
 	for (index = 0; index < bucket_size; )
 	{
-		if (MOO_OBJ_GET_FLAGS_PERM(bucket->slot[index]) ||
-		    MOO_OBJ_GET_FLAGS_MOVED(bucket->slot[index]))
+		tmp = MOO_OBJ_GET_OOP_VAL(bucket, index);
+		if (MOO_OBJ_GET_FLAGS_PERM(tmp) || MOO_OBJ_GET_FLAGS_MOVED(tmp))
 		{
 			index++;
 			continue;
 		}
 
-		MOO_ASSERT (moo, bucket->slot[index] != _nil);
+		MOO_ASSERT (moo, tmp != _nil);
 
 		for (i = 0, x = index, y = index; i < bucket_size; i++)
 		{
 			y = (y + 1) % bucket_size;
 
 			/* done if the slot at the current hash index is _nil */
-			if (bucket->slot[y] == _nil) break;
+			tmp = MOO_OBJ_GET_OOP_VAL(bucket, y);
+			if (tmp == _nil) break;
 
 			/* get the natural hash index for the data in the slot 
 			 * at the current hash index */
-			symbol = (moo_oop_char_t)bucket->slot[y];
+			MOO_ASSERT (moo, MOO_CLASSOF(moo,tmp) == moo->_symbol);
+			z = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(tmp), MOO_OBJ_GET_SIZE(tmp)) % bucket_size;
 
-			MOO_ASSERT (moo, MOO_CLASSOF(moo,symbol) == moo->_symbol);
-
-			z = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(symbol), MOO_OBJ_GET_SIZE(symbol)) % bucket_size;
+			MOO_LOG2 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Compacting away a symbol - %.*js\n", MOO_OBJ_GET_SIZE(tmp), MOO_OBJ_GET_CHAR_SLOT(tmp));
 
 			/* move an element if necessary */
 			if ((y > x && (z <= x || z > y)) ||
 			    (y < x && (z <= x && z > y)))
 			{
-				bucket->slot[x] = bucket->slot[y];
+				tmp = MOO_OBJ_GET_OOP_VAL(bucket, y);
+				/* this function is called as part of garbage collection.
+				 * i must not use MOO_STORE_OOP for object relocation */
+				MOO_OBJ_SET_OOP_VAL (bucket, x, tmp);
 				x = y;
 			}
 		}
 
-		bucket->slot[x] = _nil;
+		MOO_OBJ_SET_OOP_VAL (bucket, x, _nil);
 		tally--;
 	}
 
@@ -705,14 +708,13 @@ static MOO_INLINE moo_oow_t get_payload_bytes (moo_t* moo, moo_oop_t oop)
 		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_UNIT(oop) == MOO_SIZEOF(moo_oow_t));
 		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_EXTRA(oop) == 0); /* no 'extra' for an OOP object */
 
-		nbytes = MOO_OBJ_BYTESOF(oop) + MOO_SIZEOF(moo_oow_t) + \
-		         (moo_oow_t)((moo_oop_oop_t)oop)->slot[MOO_OBJ_GET_SIZE(oop)];
+		nbytes = MOO_OBJ_BYTESOF(oop) + MOO_SIZEOF(moo_oow_t) + MOO_OBJ_GET_TRAILER_SIZE(oop);
 		nbytes_aligned = MOO_ALIGN (nbytes, MOO_SIZEOF(moo_oop_t));
 	}
 	else
 	{
 		/* calculate the payload size in bytes */
-		nbytes_aligned = MOO_ALIGN (MOO_OBJ_BYTESOF(oop), MOO_SIZEOF(moo_oop_t));
+		nbytes_aligned = MOO_ALIGN(MOO_OBJ_BYTESOF(oop), MOO_SIZEOF(moo_oop_t));
 	}
 
 	return nbytes_aligned;
@@ -780,28 +782,12 @@ static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t**
 		moo_oop_t oop;
 
 		oop = (moo_oop_t)ptr;
-
-		if (MOO_OBJ_GET_FLAGS_TRAILER(oop))
-		{
-			moo_oow_t nbytes;
-
-			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP);
-			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_UNIT(oop) == MOO_SIZEOF(moo_oow_t));
-			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_EXTRA(oop) == 0); /* no 'extra' for an OOP object */
-
-			nbytes = MOO_OBJ_BYTESOF(oop) + MOO_SIZEOF(moo_oow_t) + \
-			         (moo_oow_t)((moo_oop_oop_t)oop)->slot[MOO_OBJ_GET_SIZE(oop)];
-			nbytes_aligned = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t));
-		}
-		else
-		{
-			nbytes_aligned = MOO_ALIGN(MOO_OBJ_BYTESOF(oop), MOO_SIZEOF(moo_oop_t));
-		}
+		nbytes_aligned = get_payload_bytes(moo, oop);
 
 		MOO_OBJ_SET_CLASS (oop, moo_moveoop(moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop)));
 		if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP)
 		{
-			moo_oop_oop_t xtmp;
+			register moo_oop_t tmp;
 			moo_oow_t size;
 
 			/* TODO: is it better to use a flag bit in the header to
@@ -820,12 +806,15 @@ static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t**
 				size = MOO_OBJ_GET_SIZE(oop);
 			}
 
-			xtmp = (moo_oop_oop_t)oop;
 			for (i = 0; i < size; i++)
 			{
-				if (MOO_OOP_IS_POINTER(xtmp->slot[i]))
+				tmp = MOO_OBJ_GET_OOP_VAL(oop, i);
+				if (MOO_OOP_IS_POINTER(tmp))
 				{
-					xtmp->slot[i] = moo_moveoop(moo, xtmp->slot[i]);
+					/* i must not use MOO_STORE_OOP() as this operation is 
+					 * part of garbage collection. */
+					tmp = moo_moveoop(moo, tmp);
+					MOO_OBJ_SET_OOP_VAL (oop, i, tmp);
 				}
 			}
 		}

@@ -635,9 +635,9 @@ struct moo_methsig_t
 	MOO_OBJ_HEADER;
 
 	moo_oop_interface_t owner; /* Interface */
-	moo_oop_char_t  name; /* Symbol, method name */
-	moo_oop_t       preamble; /* SmallInteger, includes only preamble flags based on modifiers specified */
-	moo_oop_t       tmpr_nargs; /* SmallInteger */
+	moo_oop_char_t      name; /* Symbol, method name */
+	moo_oop_t           preamble; /* SmallInteger, includes only preamble flags based on modifiers specified */
+	moo_oop_t           tmpr_nargs; /* SmallInteger */
 };
 
 #if defined(MOO_USE_METHOD_TRAILER)

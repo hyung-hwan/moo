@@ -1787,7 +1787,6 @@ TODO: overcome this problem - accept parameters....
 	moo_pushtmp (moo, (moo_oop_t*)&mth); tmp_count++;
 	moo_pushtmp (moo, (moo_oop_t*)&ass); tmp_count++;
 #else
-
 	startup.ptr = str_startup;
 	startup.len = 7;
 	mth = moo_findmethod(moo, (moo_oop_t)moo->_system, &startup, 0);
@@ -1806,11 +1805,11 @@ TODO: overcome this problem - accept parameters....
 /* TODO: check if it's variadic.... it should be. and accept more than 2... */
 
 	moo_pushtmp (moo, (moo_oop_t*)&mth); tmp_count++;
-	s1 = moo_makesymbol (moo, objname->ptr, objname->len);
+	s1 = moo_makesymbol(moo, objname->ptr, objname->len);
 	if (!s1) goto oops;
 
 	moo_pushtmp (moo, (moo_oop_t*)&s1); tmp_count++;
-	s2 = moo_makesymbol (moo, mthname->ptr, mthname->len);
+	s2 = moo_makesymbol(moo, mthname->ptr, mthname->len);
 	if (!s2) goto oops;
 
 	moo_pushtmp (moo, (moo_oop_t*)&s2); tmp_count++;
