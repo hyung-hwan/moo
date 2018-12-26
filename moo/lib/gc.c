@@ -558,9 +558,7 @@ static int ignite_3 (moo_t* moo)
 		MOO_STORE_OOP (moo, (moo_oop_t*)&cls->name, sym);
 		cls->nsup = moo->sysdic;
 
-MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_DEBUG, "putting to sysdic... %.*js offset = %d %d\n", kernel_classes[i].len, kernel_classes[i].name, (int)kernel_classes[i].offset, (int)MOO_OBJ_GET_FLAGS_PERM(sym));
 		if (!moo_putatsysdic(moo, sym, (moo_oop_t)cls)) return -1;
-MOO_LOG0 (moo,  MOO_LOG_GC | MOO_LOG_DEBUG, "done putting to sysdic...\n");
 	}
 
 	/* Attach the system dictionary to the nsdic field of the System class */
@@ -782,10 +780,13 @@ static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t**
 		moo_oop_t oop, tmp;
 
 		oop = (moo_oop_t)ptr;
+		MOO_ASSERT (moo, MOO_OOP_IS_POINTER(oop));
+
 		nbytes_aligned = get_payload_bytes(moo, oop);
 
 		tmp = moo_moveoop(moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop));
 		MOO_OBJ_SET_CLASS (oop, tmp);
+
 		if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP)
 		{
 			moo_oow_t size;
