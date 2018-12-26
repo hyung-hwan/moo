@@ -558,7 +558,9 @@ static int ignite_3 (moo_t* moo)
 		MOO_STORE_OOP (moo, (moo_oop_t*)&cls->name, sym);
 		cls->nsup = moo->sysdic;
 
+MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_DEBUG, "putting to sysdic... %.*js offset = %d %d\n", kernel_classes[i].len, kernel_classes[i].name, (int)kernel_classes[i].offset, (int)MOO_OBJ_GET_FLAGS_PERM(sym));
 		if (!moo_putatsysdic(moo, sym, (moo_oop_t)cls)) return -1;
+MOO_LOG0 (moo,  MOO_LOG_GC | MOO_LOG_DEBUG, "done putting to sysdic...\n");
 	}
 
 	/* Attach the system dictionary to the nsdic field of the System class */
@@ -647,6 +649,7 @@ static void compact_symbol_table (moo_t* moo, moo_oop_t _nil)
 		}
 
 		MOO_ASSERT (moo, tmp != _nil);
+		MOO_LOG2 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Compacting away a symbol - %.*js\n", MOO_OBJ_GET_SIZE(tmp), MOO_OBJ_GET_CHAR_SLOT(tmp));
 
 		for (i = 0, x = index, y = index; i < bucket_size; i++)
 		{
@@ -661,11 +664,8 @@ static void compact_symbol_table (moo_t* moo, moo_oop_t _nil)
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,tmp) == moo->_symbol);
 			z = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(tmp), MOO_OBJ_GET_SIZE(tmp)) % bucket_size;
 
-			MOO_LOG2 (moo, MOO_LOG_GC | MOO_LOG_INFO, "Compacting away a symbol - %.*js\n", MOO_OBJ_GET_SIZE(tmp), MOO_OBJ_GET_CHAR_SLOT(tmp));
-
 			/* move an element if necessary */
-			if ((y > x && (z <= x || z > y)) ||
-			    (y < x && (z <= x && z > y)))
+			if ((y > x && (z <= x || z > y)) || (y < x && (z <= x && z > y)))
 			{
 				tmp = MOO_OBJ_GET_OOP_VAL(bucket, y);
 				/* this function is called as part of garbage collection.
@@ -779,15 +779,15 @@ static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t**
 	{
 		moo_oow_t i;
 		moo_oow_t nbytes_aligned;
-		moo_oop_t oop;
+		moo_oop_t oop, tmp;
 
 		oop = (moo_oop_t)ptr;
 		nbytes_aligned = get_payload_bytes(moo, oop);
 
-		MOO_OBJ_SET_CLASS (oop, moo_moveoop(moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop)));
+		tmp = moo_moveoop(moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop));
+		MOO_OBJ_SET_CLASS (oop, tmp);
 		if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP)
 		{
-			register moo_oop_t tmp;
 			moo_oow_t size;
 
 			/* TODO: is it better to use a flag bit in the header to
@@ -905,7 +905,7 @@ void moo_gc (moo_t* moo)
 	{
 		moo_oop_t tmp;
 		tmp = *(moo_oop_t*)((moo_uint8_t*)moo + kernel_classes[i].offset);
-		tmp = moo_moveoop (moo, tmp);
+		tmp = moo_moveoop(moo, tmp);
 		*(moo_oop_t*)((moo_uint8_t*)moo + kernel_classes[i].offset) = tmp;
 	}
 

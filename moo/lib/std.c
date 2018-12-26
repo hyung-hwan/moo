@@ -279,7 +279,7 @@ struct xtn_t
 
 	struct
 	{
-		moo_bitmask_t mask;
+		/*moo_bitmask_t mask;*/
 		int fd;
 		int fd_flag; /* bitwise OR'ed fo logfd_flag_t bits */
 
@@ -849,8 +849,10 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 	}
 	else
 	{
+#if 0
 		if (!(xtn->log.mask & mask & ~MOO_LOG_ALL_LEVELS)) return;  /* check log types */
 		if (!(xtn->log.mask & mask & ~MOO_LOG_ALL_TYPES)) return;  /* check log levels */
+#endif
 
 		if (mask & MOO_LOG_STDOUT) logfd = 1;
 		else
@@ -3212,6 +3214,7 @@ static struct
 	{ "gc",          MOO_LOG_GC },
 	{ "ic",          MOO_LOG_IC },
 	{ "primitive",   MOO_LOG_PRIMITIVE },
+	{ "all",         MOO_LOG_ALL_TYPES },
 
 	{ "fatal",       MOO_LOG_FATAL },
 	{ "error",       MOO_LOG_ERROR },
@@ -3251,7 +3254,11 @@ static int parse_logoptb (moo_t* moo, const moo_bch_t* str, moo_oow_t* xpathlen,
 		cm = moo_find_bchar_in_bcstr(str, ',');
 		pathlen = cm - str;
 
+#if 0
 		logmask = xtn->log.mask;
+#else
+		logmask = 0;
+#endif
 		do
 		{
 			flt = cm + 1;
@@ -3276,14 +3283,16 @@ static int parse_logoptb (moo_t* moo, const moo_bch_t* str, moo_oow_t* xpathlen,
 		}
 		while (cm);
 
-		if (!(logmask & MOO_LOG_ALL_TYPES)) logmask |= MOO_LOG_ALL_TYPES;  /* no types specified. force to all types */
+		if (!(logmask & MOO_LOG_ALL_TYPES)) logmask |= MOO_LOG_ALL_TYPES & ~(moo_bitmask_t)MOO_LOG_GC;  /* no types specified. force to all types except gc */
 		if (!(logmask & MOO_LOG_ALL_LEVELS)) logmask |= MOO_LOG_ALL_LEVELS;  /* no levels specified. force to all levels */
 	}
 	else
 	{
-		logmask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;
+		logmask = (MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES) & ~(moo_bitmask_t)MOO_LOG_GC; /* all types except gc + all levels */
 		pathlen = moo_count_bcstr(str);
 	}
+
+	/* to have gc logs produced, you should specify 'all' or 'gc' */
 
 	*xlogmask = logmask;
 	*xpathlen = pathlen;
@@ -3304,7 +3313,8 @@ static int parse_logoptu (moo_t* moo, const moo_uch_t* str, moo_oow_t* xpathlen,
 		cm = moo_find_uchar_in_ucstr(str, ',');
 		pathlen = cm - str;
 
-		logmask = xtn->log.mask;
+		/*logmask = xtn->log.mask;*/
+		logmask = 0;
 		do
 		{
 			flt = cm + 1;
@@ -3351,7 +3361,6 @@ static int handle_logoptb (moo_t* moo, const moo_bch_t* str)
 	moo_bch_t* xstr = (moo_bch_t*)str;
 
 	if (parse_logoptb(moo, str, &pathlen, &logmask) <= -1) return -1;
-
 	if (str[pathlen] != '\0')
 	{
 		xstr = moo_dupbchars(moo, str, pathlen);
@@ -3366,13 +3375,14 @@ static int handle_logoptb (moo_t* moo, const moo_bch_t* str)
 		return -1;
 	}
 
-	xtn->log.mask = logmask;
+	/*xtn->log.mask = logmask;*/
 	xtn->log.fd_flag |= LOGFD_OPENED_HERE;
 #if defined(HAVE_ISATTY)
 	if (isatty(xtn->log.fd)) xtn->log.fd_flag |= LOGFD_TTY;
 #endif
 
 	if (str != xstr) moo_freemem (moo, xstr);
+	moo_setoption (moo, MOO_LOG_MASK, &logmask);
 	return 0;
 }
 
@@ -3396,13 +3406,14 @@ static int handle_logoptu (moo_t* moo, const moo_uch_t* str)
 		return -1;
 	}
 
-	xtn->log.mask = logmask;
+	/*xtn->log.mask = logmask;*/
 	xtn->log.fd_flag |= LOGFD_OPENED_HERE;
 #if defined(HAVE_ISATTY)
 	if (isatty(xtn->log.fd)) xtn->log.fd_flag |= LOGFD_TTY;
 #endif
 
 	moo_freemem (moo, xstr);
+	moo_setoption (moo, MOO_LOG_MASK, &logmask);
 	return 0;
 }
 
@@ -3521,11 +3532,11 @@ static MOO_INLINE void reset_log_to_default (xtn_t* xtn)
 	#if defined(HAVE_ISATTY)
 	if (isatty(xtn->log.fd)) xtn->log.fd_flag |= LOGFD_TTY;
 	#endif
-	xtn->log.mask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;
+	/*xtn->log.mask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;*/
 #else
 	xtn->log.fd = -1;
 	xtn->log.fd_flag = 0;
-	xtn->log.mask = 0;
+	/*xtn->log.mask = 0;*/
 #endif
 }
 
@@ -3605,6 +3616,21 @@ static void fini_moo (moo_t* moo)
 	MOO_MEMSET (&evtcb, 0, MOO_SIZEOF(evtcb));
 	evtcb.fini = fini_moo;
 	moo_regevtcb (moo, &evtcb);
+
+
+	{
+		moo_bitmask_t bm = 0;
+
+		moo_getoption (moo, MOO_TRAIT, &bm);
+		/*bm |= MOO_NOGC;*/
+		bm |= MOO_AWAIT_PROCS;
+		moo_setoption (moo, MOO_TRAIT, &bm);
+
+		/* disable GC logs */
+		moo_getoption (moo, MOO_LOG_MASK, &bm);
+		bm = ~MOO_LOG_GC;
+		moo_setoption (moo, MOO_LOG_MASK, &bm);
+	}
 
 	if (handle_cfg_options(moo, cfg) <= -1)
 	{

@@ -66,6 +66,3 @@ void moo_dumpdic (moo_t* moo, moo_oop_dic_t dic, const moo_bch_t* title)
 	}
 	MOO_DEBUG0 (moo, "--------------------------------------------\n");
 }
-
-
-

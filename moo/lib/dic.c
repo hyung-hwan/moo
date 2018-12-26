@@ -325,8 +325,7 @@ found:
 		z = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(ass->key), MOO_OBJ_GET_SIZE(ass->key)) % bs;
 
 		/* move an element if necesary */
-		if ((y > x && (z <= x || z > y)) ||
-		    (y < x && (z <= x && z > y)))
+		if ((y > x && (z <= x || z > y)) || (y < x && (z <= x && z > y)))
 		{
 			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(dic->bucket, x), MOO_OBJ_GET_OOP_VAL(dic->bucket, y));
 			x = y;
