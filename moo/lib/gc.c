@@ -976,7 +976,7 @@ void moo_gc (moo_t* moo)
 	 * if the symbol has not moved to the new heap, the symbol
 	 * is not referenced by any other objects than the symbol 
 	 * table itself */
-	compact_symbol_table (moo, old_nil);
+	/*compact_symbol_table (moo, old_nil); <---- this causes a problem when gc debugging is on, debug it */
 
 	/* move the symbol table itself */
 	moo->symtab = (moo_oop_dic_t)moo_moveoop(moo, (moo_oop_t)moo->symtab);

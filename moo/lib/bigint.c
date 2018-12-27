@@ -296,7 +296,7 @@ static MOO_INLINE int integer_to_oow (moo_t* moo, moo_oop_t x, moo_oow_t* w)
 	}
 
 	MOO_ASSERT (moo, is_bigint(moo, x));
-	return bigint_to_oow (moo, x, w);
+	return bigint_to_oow(moo, x, w);
 }
 
 int moo_inttooow (moo_t* moo, moo_oop_t x, moo_oow_t* w)
@@ -318,7 +318,7 @@ int moo_inttooow (moo_t* moo, moo_oop_t x, moo_oow_t* w)
 		}
 	}
 
-	if (is_bigint(moo, x)) return bigint_to_oow (moo, x, w);
+	if (is_bigint(moo, x)) return bigint_to_oow(moo, x, w);
 
 	moo_seterrbfmt (moo, MOO_EINVAL, "not an integer - %O", x);
 	return 0; /* not convertable - too big, too small, or not an integer */
@@ -1726,7 +1726,7 @@ moo_oop_t moo_subints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		i = MOO_OOP_TO_SMOOI(x) - MOO_OOP_TO_SMOOI(y);
 		if (MOO_IN_SMOOI_RANGE(i)) return MOO_SMOOI_TO_OOP(i);
 
-		return make_bigint_with_ooi (moo, i);
+		return make_bigint_with_ooi(moo, i);
 	}
 	else
 	{
@@ -1741,11 +1741,11 @@ moo_oop_t moo_subints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			if (v == 0) 
 			{
 				/* switch the sign to the opposite and return it */
-				return clone_bigint_negated (moo, y, MOO_OBJ_GET_SIZE(y));
+				return clone_bigint_negated(moo, y, MOO_OBJ_GET_SIZE(y));
 			}
 
 			moo_pushtmp (moo, &y);
-			x = make_bigint_with_ooi (moo, v);
+			x = make_bigint_with_ooi(moo, v);
 			moo_poptmp (moo);
 			if (!x) return MOO_NULL;
 		}
@@ -1754,10 +1754,10 @@ moo_oop_t moo_subints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			if (!is_bigint(moo,x)) goto oops_einval;
 
 			v = MOO_OOP_TO_SMOOI(y);
-			if (v == 0) return clone_bigint (moo, x, MOO_OBJ_GET_SIZE(x));
+			if (v == 0) return clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
 
 			moo_pushtmp (moo, &x);
-			y = make_bigint_with_ooi (moo, v);
+			y = make_bigint_with_ooi(moo, v);
 			moo_poptmp (moo);
 			if (!y) return MOO_NULL;
 		}
@@ -1770,7 +1770,7 @@ moo_oop_t moo_subints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		if (MOO_OBJ_GET_CLASS(x) != MOO_OBJ_GET_CLASS(y))
 		{
 			neg = (MOO_POINTER_IS_NBIGINT(moo, x)); 
-			z = add_unsigned_integers (moo, x, y);
+			z = add_unsigned_integers(moo, x, y);
 			if (!z) return MOO_NULL;
 			if (neg) MOO_OBJ_SET_CLASS(z, moo->_large_negative_integer);
 		}
@@ -1811,14 +1811,14 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		moo_intmax_t i;
 		i = (moo_intmax_t)MOO_OOP_TO_SMOOI(x) * (moo_intmax_t)MOO_OOP_TO_SMOOI(y);
 		if (MOO_IN_SMOOI_RANGE(i)) return MOO_SMOOI_TO_OOP((moo_ooi_t)i);
-		return make_bigint_with_intmax (moo, i);
+		return make_bigint_with_intmax(moo, i);
 	#else
 		moo_ooi_t i;
 		moo_ooi_t xv, yv;
 
 		xv = MOO_OOP_TO_SMOOI(x);
 		yv = MOO_OOP_TO_SMOOI(y);
-		if (smooi_mul_overflow (moo, xv, yv, &i))
+		if (smooi_mul_overflow(moo, xv, yv, &i))
 		{
 			/* overflowed - convert x and y normal objects and carry on */
 
@@ -1828,7 +1828,7 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			if (!x) return MOO_NULL;
 
 			moo_pushtmp (moo, &x); /* protect x made above */
-			y = make_bigint_with_ooi (moo, yv);
+			y = make_bigint_with_ooi(moo, yv);
 			moo_poptmp (moo);
 			if (!y) return MOO_NULL;
 
@@ -1837,7 +1837,7 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		else
 		{
 			if (MOO_IN_SMOOI_RANGE(i)) return MOO_SMOOI_TO_OOP(i);
-			return make_bigint_with_ooi (moo, i);
+			return make_bigint_with_ooi(moo, i);
 		}
 	#endif
 	}
@@ -1855,13 +1855,13 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				case 0:
 					return MOO_SMOOI_TO_OOP(0);
 				case 1:
-					return clone_bigint (moo, y, MOO_OBJ_GET_SIZE(y));
+					return clone_bigint(moo, y, MOO_OBJ_GET_SIZE(y));
 				case -1:
-					return clone_bigint_negated (moo, y, MOO_OBJ_GET_SIZE(y));
+					return clone_bigint_negated(moo, y, MOO_OBJ_GET_SIZE(y));
 			}
 
 			moo_pushtmp (moo, &y);
-			x = make_bigint_with_ooi (moo, v);
+			x = make_bigint_with_ooi(moo, v);
 			moo_poptmp (moo);
 			if (!x) return MOO_NULL;
 		}
@@ -1875,9 +1875,9 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				case 0:
 					return MOO_SMOOI_TO_OOP(0);
 				case 1:
-					return clone_bigint (moo, x, MOO_OBJ_GET_SIZE(x));
+					return clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
 				case -1:
-					return clone_bigint_negated (moo, x, MOO_OBJ_GET_SIZE(x));
+					return clone_bigint_negated(moo, x, MOO_OBJ_GET_SIZE(x));
 			}
 
 			moo_pushtmp (moo, &x);
@@ -1892,7 +1892,10 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		}
 
 	normal:
+		moo_pushtmp (moo, &x);
+		moo_pushtmp (moo, &y);
 		z = multiply_unsigned_integers (moo, x, y);
+		moo_poptmps (moo, 2);
 		if (!z) return MOO_NULL;
 		if (MOO_OBJ_GET_CLASS(x) != MOO_OBJ_GET_CLASS(y))
 			MOO_OBJ_SET_CLASS(z, moo->_large_negative_integer);
@@ -2280,7 +2283,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 		if (MOO_POINTER_IS_NBIGINT(moo, y)) return MOO_SMOOI_TO_OOP(0);
 
-		sign = bigint_to_oow (moo, y, &w);
+		sign = bigint_to_oow(moo, y, &w);
 		MOO_ASSERT (moo, sign >= 0);
 		if (sign >= 1)
 		{
@@ -3485,7 +3488,7 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			negx = (MOO_POINTER_IS_NBIGINT(moo, x))? 1: 0;
 			negy = (MOO_POINTER_IS_NBIGINT(moo, y))? 1: 0;
 
-			sign = bigint_to_oow (moo, y, &shift);
+			sign = bigint_to_oow(moo, y, &shift);
 			if (sign == 0)
 			{
 				/* y is too big or too small */
