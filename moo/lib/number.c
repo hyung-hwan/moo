@@ -41,9 +41,9 @@ moo_oop_t moo_makefpdec (moo_t* moo, moo_oop_t value, moo_ooi_t scale)
 		return MOO_NULL;
 	}
 
-	moo_pushtmp (moo, &value);
+	moo_pushvolat (moo, &value);
 	fpdec = (moo_oop_fpdec_t)moo_instantiate(moo, moo->_fixed_point_decimal, MOO_NULL, 0);
-	moo_poptmp (moo);
+	moo_popvolat (moo);
 	if (!fpdec) return MOO_NULL;
 
 	MOO_STORE_OOP (moo, &fpdec->value, value);
@@ -153,17 +153,17 @@ moo_oop_t moo_addnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		moo_oop_t v;
 		moo_ooi_t scale;
 
-		moo_pushtmp (moo, &x);
-		moo_pushtmp (moo, &y);
+		moo_pushvolat (moo, &x);
+		moo_pushvolat (moo, &y);
 
 		scale = equalize_scale(moo, &x, &y);
 		if (scale <= -1) 
 		{
-			moo_poptmps (moo, 2);
+			moo_popvolats (moo, 2);
 			return MOO_NULL;
 		}
 		v = moo_addints(moo, ((moo_oop_fpdec_t)x)->value, ((moo_oop_fpdec_t)y)->value);
-		moo_poptmps (moo, 2);
+		moo_popvolats (moo, 2);
 		if (!v) return MOO_NULL;
 
 		return moo_makefpdec(moo, v, scale);
@@ -182,17 +182,17 @@ moo_oop_t moo_subnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		moo_oop_t v;
 		moo_ooi_t scale;
 
-		moo_pushtmp (moo, &x);
-		moo_pushtmp (moo, &y);
+		moo_pushvolat (moo, &x);
+		moo_pushvolat (moo, &y);
 
 		scale = equalize_scale(moo, &x, &y);
 		if (scale <= -1) 
 		{
-			moo_poptmps (moo, 2);
+			moo_popvolats (moo, 2);
 			return MOO_NULL;
 		}
 		v = moo_subints(moo, ((moo_oop_fpdec_t)x)->value, ((moo_oop_fpdec_t)y)->value);
-		moo_poptmps (moo, 2);
+		moo_popvolats (moo, 2);
 		if (!v) return MOO_NULL;
 
 		return moo_makefpdec(moo, v, scale);
@@ -295,19 +295,19 @@ moo_oop_t moo_divnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 	nv = xv;
 
-	moo_pushtmp (moo, &yv);
+	moo_pushvolat (moo, &yv);
 	for (i = 0; i < ys; i++)
 	{
 		nv = moo_mulints(moo, nv, MOO_SMOOI_TO_OOP(10));
 		if (!nv) 
 		{
-			moo_poptmp (moo);
+			moo_popvolat (moo);
 			return MOO_NULL;
 		}
 	}
 
 	nv = moo_divints(moo, nv, yv, 0, MOO_NULL);
-	moo_poptmp (moo);
+	moo_popvolat (moo);
 	if (!nv) return MOO_NULL;
 
 	return moo_makefpdec(moo, nv, xs);
@@ -325,17 +325,17 @@ static moo_oop_t comp_nums (moo_t* moo, moo_oop_t x, moo_oop_t y, moo_oop_t (*co
 		moo_oop_t v;
 		moo_ooi_t scale;
 
-		moo_pushtmp (moo, &x);
-		moo_pushtmp (moo, &y);
+		moo_pushvolat (moo, &x);
+		moo_pushvolat (moo, &y);
 
 		scale = equalize_scale(moo, &x, &y);
 		if (scale <= -1) 
 		{
-			moo_poptmps (moo, 2);
+			moo_popvolats (moo, 2);
 			return MOO_NULL;
 		}
 		v = comper(moo, ((moo_oop_fpdec_t)x)->value, ((moo_oop_fpdec_t)y)->value);
-		moo_poptmps (moo, 2);
+		moo_popvolats (moo, 2);
 		return v;
 	}
 }
@@ -388,7 +388,7 @@ moo_oop_t moo_sqrtnum (moo_t* moo, moo_oop_t x)
 			v = moo_mulints(moo, v, MOO_SMOOI_TO_OOP(10));
 			if (!v)
 			{
-				moo_poptmp (moo);
+				moo_popvolat (moo);
 				return MOO_NULL;
 			}
 		}

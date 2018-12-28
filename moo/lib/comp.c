@@ -3186,17 +3186,17 @@ static moo_oop_nsdic_t add_namespace (moo_t* moo, moo_oop_nsdic_t dic, const moo
 	moo_oop_nsdic_t nsdic;
 	moo_oop_association_t ass;
 
-	moo_pushtmp (moo, (moo_oop_t*)&dic); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&dic); tmp_count++;
 
 	sym = (moo_oop_char_t)moo_makesymbol(moo, name->ptr, name->len);
 	if (!sym) goto oops;
 
-	moo_pushtmp (moo, (moo_oop_t*)&sym); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&sym); tmp_count++;
 
 	nsdic = moo_makensdic(moo, moo->_namespace, NAMESPACE_SIZE);
 	if (!nsdic) goto oops;
 
-	/*moo_pushtmp (moo, &ns); tmp_count++;*/
+	/*moo_pushvolat (moo, &ns); tmp_count++;*/
 	ass = moo_putatdic(moo, (moo_oop_dic_t)dic, (moo_oop_t)sym, (moo_oop_t)nsdic);
 	if (!ass) goto oops;
 
@@ -3204,11 +3204,11 @@ static moo_oop_nsdic_t add_namespace (moo_t* moo, moo_oop_nsdic_t dic, const moo
 	nsdic->nsup = (moo_oop_t)dic;
 	nsdic->name = sym;
 
-	moo_poptmps (moo, tmp_count);
+	moo_popvolats (moo, tmp_count);
 	return nsdic;
 
 oops:
-	moo_poptmps (moo, tmp_count);
+	moo_popvolats (moo, tmp_count);
 	return MOO_NULL;
 }
 
@@ -3217,7 +3217,7 @@ static moo_oop_nsdic_t attach_nsdic_to_class (moo_t* moo, moo_oop_class_t c)
 	moo_oow_t tmp_count = 0;
 	moo_oop_nsdic_t nsdic;
 
-	moo_pushtmp (moo, (moo_oop_t*)&c); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&c); tmp_count++;
 
 	nsdic = moo_makensdic(moo, moo->_namespace, NAMESPACE_SIZE);
 	if (!nsdic) goto oops;
@@ -3226,11 +3226,11 @@ static moo_oop_nsdic_t attach_nsdic_to_class (moo_t* moo, moo_oop_class_t c)
 	nsdic->name = c->name; /* for convenience only */
 	c->nsdic = nsdic;
 
-	moo_poptmps (moo, tmp_count);
+	moo_popvolats (moo, tmp_count);
 	return nsdic;
 
 oops:
-	moo_poptmps (moo, tmp_count);
+	moo_popvolats (moo, tmp_count);
 	return MOO_NULL;
 }
 
@@ -6461,7 +6461,7 @@ static int add_compiled_method (moo_t* moo)
 
 	name = (moo_oop_char_t)moo_makesymbol(moo, cc->mth.name.ptr, cc->mth.name.len);
 	if (!name) goto oops;
-	moo_pushtmp (moo, (moo_oop_t*)&name); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&name); tmp_count++;
 
 	/* The variadic data part passed to moo_instantiate() is not GC-safe. 
 	 * let's delay initialization of variadic data a bit. */
@@ -6477,14 +6477,14 @@ static int add_compiled_method (moo_t* moo)
 		/* let's do the variadic data initialization here */
 		MOO_STORE_OOP (moo, &mth->literal_frame[i], cc->mth.literals.ptr[i]);
 	}
-	moo_pushtmp (moo, (moo_oop_t*)&mth); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&mth); tmp_count++;
 
 #if defined(MOO_USE_METHOD_TRAILER)
 	/* do nothing */
 #else
 	code = (moo_oop_byte_t)moo_instantiate(moo, moo->_byte_array, cc->mth.code.ptr, cc->mth.code.len);
 	if (!code) goto oops;
-	moo_pushtmp (moo, (moo_oop_t*)&code); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&code); tmp_count++;
 #endif
 
 	preamble_code = MOO_METHOD_PREAMBLE_NONE;
@@ -6673,12 +6673,12 @@ need to write code to collect string.
 		if (!moo_putatdic(moo, cc->self_oop->mthdic[cc->mth.type], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
 	}
 
-	moo_poptmps (moo, tmp_count); tmp_count = 0;
+	moo_popvolats (moo, tmp_count); tmp_count = 0;
 
 	return 0;
 
 oops:
-	moo_poptmps (moo, tmp_count);
+	moo_popvolats (moo, tmp_count);
 	return -1;
 }
 
@@ -8336,11 +8336,11 @@ static int add_method_signature (moo_t* moo)
 
 	name = (moo_oop_char_t)moo_makesymbol(moo, ifce->mth.name.ptr, ifce->mth.name.len);
 	if (!name) goto oops;
-	moo_pushtmp (moo, (moo_oop_t*)&name); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&name); tmp_count++;
 
 	mth = (moo_oop_methsig_t)moo_instantiate(moo, moo->_methsig, MOO_NULL, 0);
 	if (!mth) goto oops;
-	moo_pushtmp (moo, (moo_oop_t*)&mth); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&mth); tmp_count++;
 
 	mth->owner = ifce->self_oop;
 	mth->name = name;
@@ -8368,11 +8368,11 @@ static int add_method_signature (moo_t* moo)
 		if (!moo_putatdic(moo, ifce->self_oop->mthdic[ifce->mth.type], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
 	}
 
-	moo_poptmps (moo, tmp_count); tmp_count = 0;
+	moo_popvolats (moo, tmp_count); tmp_count = 0;
 	return 0;
 
 oops:
-	moo_poptmps (moo, tmp_count);
+	moo_popvolats (moo, tmp_count);
 	return -1;
 }
 

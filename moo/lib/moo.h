@@ -2195,18 +2195,18 @@ MOO_EXPORT void* moo_getobjtrailer (
 );
 
 /* =========================================================================
- * TEMPORARY OOP MANAGEMENT FUNCTIONS
+ * VOLATILE OOP MANAGEMENT FUNCTIONS
  * ========================================================================= */
-MOO_EXPORT void moo_pushtmp (
+MOO_EXPORT void moo_pushvolat (
 	moo_t*     moo,
 	moo_oop_t* oop_ptr
 );
 
-MOO_EXPORT void moo_poptmp (
+MOO_EXPORT void moo_popvolat (
 	moo_t*     moo
 );
 
-MOO_EXPORT void moo_poptmps (
+MOO_EXPORT void moo_popvolats (
 	moo_t*     moo,
 	moo_oow_t  count
 );

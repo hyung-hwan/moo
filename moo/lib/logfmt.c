@@ -1260,9 +1260,9 @@ static MOO_INLINE int print_formatted (moo_t* moo, moo_ooi_t nargs, moo_fmtout_t
 
 				/* the given number for integer output is a fixed-point decimal.
 				 * i will drop all digits after the fixed point */
-				moo_pushtmp (moo, &arg);
+				moo_pushvolat (moo, &arg);
 				nv = moo_truncfpdecval(moo, fa->value, MOO_OOP_TO_SMOOI(fa->scale), 0);
-				moo_poptmp (moo);
+				moo_popvolat (moo);
 				if (!nv)
 				{
 					MOO_LOG1 (moo, MOO_LOG_WARN | MOO_LOG_UNTYPED, "unable to truncate a fixed-point number %O to an integer for output\n", arg);

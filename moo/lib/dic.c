@@ -61,9 +61,9 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 		newsz = oldsz + inc;
 	}
 
-	moo_pushtmp (moo, (moo_oop_t*)&oldbuc);
+	moo_pushvolat (moo, (moo_oop_t*)&oldbuc);
 	newbuc = (moo_oop_oop_t)moo_instantiate(moo, moo->_array, MOO_NULL, newsz); 
-	moo_poptmp (moo);
+	moo_popvolat (moo);
 	if (!newbuc) return MOO_NULL;
 
 	while (oldsz > 0)
@@ -142,9 +142,9 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 		return MOO_NULL;
 	}
 
-	moo_pushtmp (moo, (moo_oop_t*)&dic); tmp_count++;
-	moo_pushtmp (moo, (moo_oop_t*)&key); tmp_count++;
-	moo_pushtmp (moo, &value); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&dic); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&key); tmp_count++;
+	moo_pushvolat (moo, &value); tmp_count++;
 
 	/* no conversion to moo_oow_t is necessary for tally + 1.
 	 * the maximum value of tally is checked to be MOO_SMOOI_MAX - 1.
@@ -188,11 +188,11 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 	dic->tally = MOO_SMOOI_TO_OOP(tally + 1); /* no need to use MOO_STORE_OOP as the value is not a pointer object */
 	MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(dic->bucket, index), (moo_oop_t)ass);
 
-	moo_poptmps (moo, tmp_count);
+	moo_popvolats (moo, tmp_count);
 	return ass;
 
 oops:
-	moo_poptmps (moo, tmp_count);
+	moo_popvolats (moo, tmp_count);
 	return MOO_NULL;
 }
 
@@ -374,9 +374,9 @@ moo_oop_dic_t moo_makedic (moo_t* moo, moo_oop_class_t _class, moo_oow_t size)
 	dic = (moo_oop_dic_t)moo_instantiate(moo, _class, MOO_NULL, 0);
 	if (!dic) return MOO_NULL;
 
-	moo_pushtmp (moo, (moo_oop_t*)&dic);
+	moo_pushvolat (moo, (moo_oop_t*)&dic);
 	tmp = moo_instantiate(moo, moo->_array, MOO_NULL, size);
-	moo_poptmp (moo);
+	moo_popvolat (moo);
 	if (!tmp) return MOO_NULL;
 
 	dic->tally = MOO_SMOOI_TO_OOP(0);

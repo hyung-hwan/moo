@@ -685,7 +685,7 @@ int moo_importmod (moo_t* moo, moo_oop_class_t _class, const moo_ooch_t* name, m
 	 * i need to protect _class in case the user-defined callback allocates 
 	 * a OOP memory chunk and GC occurs. */
 
-	moo_pushtmp (moo, (moo_oop_t*)&_class);
+	moo_pushvolat (moo, (moo_oop_t*)&_class);
 
 	pair = moo_rbt_search(&moo->modtab, name, len);
 	if (pair)
@@ -724,7 +724,7 @@ done:
 	moo_closemod (moo, mdp);
 
 done2:
-	moo_poptmp (moo);
+	moo_popvolat (moo);
 	return r;
 }
 
@@ -807,7 +807,7 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 
 	if (!pfname) pfname = mthname;
 
-	moo_pushtmp (moo, (moo_oop_t*)&_class); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&_class); tmp_count++;
 	MOO_ASSERT (moo, MOO_CLASSOF(moo, (moo_oop_t)_class->mthdic[type]) == moo->_method_dictionary);
 
 	for (i = 0; mthname[i]; i++)
@@ -840,7 +840,7 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 
 	mnsym = (moo_oop_char_t)moo_makesymbol (moo, mthname, i);
 	if (!mnsym) goto oops;
-	moo_pushtmp (moo, (moo_oop_t*)&mnsym); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&mnsym); tmp_count++;
 
 	/* compose a full primitive function identifier to VM's string buffer.
 	 *   pfid => mod->name + '.' + pfname */
@@ -858,7 +858,7 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - symbol instantiation failure\n", mthname, _class->name);
 		goto oops;
 	}
-	moo_pushtmp (moo, (moo_oop_t*)&pfidsym); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&pfidsym); tmp_count++;
 
 #if defined(MOO_USE_METHOD_TRAILER)
 	mth = (moo_oop_method_t)moo_instantiatewithtrailer (moo, moo->_method, 1, MOO_NULL, 0); 
@@ -894,11 +894,11 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 
 	MOO_DEBUG2 (moo, "Generated primitive function method [%js] in [%O]\n", mthname, _class->name);
 
-	moo_poptmps (moo, tmp_count); tmp_count = 0;
+	moo_popvolats (moo, tmp_count); tmp_count = 0;
 	return 0;
 
 oops:
-	moo_poptmps (moo, tmp_count);
+	moo_popvolats (moo, tmp_count);
 	return -1;
 }
 
@@ -907,7 +907,7 @@ int moo_genpfmethods (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, const 
 	int ret = 0;
 	moo_oow_t i;
 
-	moo_pushtmp (moo, (moo_oop_t*)&_class);
+	moo_pushvolat (moo, (moo_oop_t*)&_class);
 	for (i = 0; i < pfcount; i++)
 	{
 		if (moo_genpfmethod (moo, mod, _class, pfinfo[i].type, pfinfo[i].mthname, pfinfo[i].variadic, MOO_NULL) <= -1) 
@@ -918,7 +918,7 @@ int moo_genpfmethods (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, const 
 		}
 	}
 
-	moo_poptmp (moo);
+	moo_popvolat (moo);
 	return ret;
 }
 #endif

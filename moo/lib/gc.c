@@ -1023,7 +1023,7 @@ void moo_gc (moo_t* moo)
 		moo->heap->curspace.base, moo->heap->curspace.ptr, moo->heap->newspace.base, moo->heap->newspace.ptr); 
 }
 
-void moo_pushtmp (moo_t* moo, moo_oop_t* oop_ptr)
+void moo_pushvolat (moo_t* moo, moo_oop_t* oop_ptr)
 {
 	/* if you have too many temporaries pushed, something must be wrong.
 	 * change your code not to exceede the stack limit */
@@ -1031,13 +1031,13 @@ void moo_pushtmp (moo_t* moo, moo_oop_t* oop_ptr)
 	moo->tmp_stack[moo->tmp_count++] = oop_ptr;
 }
 
-void moo_poptmp (moo_t* moo)
+void moo_popvolat (moo_t* moo)
 {
 	MOO_ASSERT (moo, moo->tmp_count > 0);
 	moo->tmp_count--;
 }
 
-void moo_poptmps (moo_t* moo, moo_oow_t count)
+void moo_popvolats (moo_t* moo, moo_oow_t count)
 {
 	MOO_ASSERT (moo, moo->tmp_count >= count);
 	moo->tmp_count -= count;
@@ -1052,9 +1052,9 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 		moo_oop_class_t c;
 
 		c = MOO_OBJ_GET_CLASS(oop);
-		moo_pushtmp (moo, &oop);
+		moo_pushvolat (moo, &oop);
 		z = moo_instantiate(moo, (moo_oop_t)c, MOO_NULL, MOO_OBJ_GET_SIZE(oop) - MOO_CLASS_SPEC_NAMED_INSTVARS(MOO_OOP_TO_SMOOI(c->spec)));
-		moo_poptmp(moo);
+		moo_popvolat(moo);
 
 		if (!z) return z;
 
@@ -1068,9 +1068,9 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 
 		total_bytes = MOO_SIZEOF(moo_obj_t) + get_payload_bytes(moo, oop);
 
-		moo_pushtmp (moo, &oop);
+		moo_pushvolat (moo, &oop);
 		z = (moo_oop_t)moo_allocbytes(moo, total_bytes);
-		moo_poptmp(moo);
+		moo_popvolat(moo);
 
 		MOO_MEMCPY (z, oop, total_bytes);
 		return z;

@@ -260,7 +260,7 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 
 	if (decode_spec(moo, _class, vlen, &type, &alloclen) <= -1) return MOO_NULL;
 
-	moo_pushtmp (moo, (moo_oop_t*)&_class); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&_class); tmp_count++;
 
 	switch (type)
 	{
@@ -300,7 +300,7 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 			}
 
 			For the above code to work, it should protect the elements of 
-			the vptr array with moo_pushtmp(). So it might be better 
+			the vptr array with moo_pushvolat(). So it might be better 
 			to disallow a non-NULL vptr when indexed_type is OOP. See
 			the assertion above this comment block.
 			*/
@@ -333,7 +333,7 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 		MOO_OBJ_SET_CLASS (oop, (moo_oop_t)_class);
 		if (MOO_CLASS_SPEC_IS_IMMUTABLE(MOO_OOP_TO_SMOOI(_class->spec))) MOO_OBJ_SET_FLAGS_RDONLY (oop, 1);
 	}
-	moo_poptmps (moo, tmp_count);
+	moo_popvolats (moo, tmp_count);
 	return oop;
 }
 
@@ -348,7 +348,7 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_class_t _class, moo_oo
 
 	if (decode_spec(moo, _class, vlen, &type, &alloclen) <= -1) return MOO_NULL;
 
-	moo_pushtmp (moo, (moo_oop_t*)&_class); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&_class); tmp_count++;
 
 	switch (type)
 	{
@@ -392,6 +392,6 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_class_t _class, moo_oo
 		MOO_OBJ_SET_CLASS (oop, _class);
 		if (MOO_CLASS_SPEC_IS_IMMUTABLE(MOO_OOP_TO_SMOOI(_class->spec))) MOO_OBJ_SET_FLAGS_RDONLY (oop, 1);
 	}
-	moo_poptmps (moo, tmp_count);
+	moo_popvolats (moo, tmp_count);
 	return oop;
 }

@@ -60,9 +60,9 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 		newsz = oldsz + inc;
 	}
 
-	moo_pushtmp (moo, (moo_oop_t*)&oldbuc);
+	moo_pushvolat (moo, (moo_oop_t*)&oldbuc);
 	newbuc = (moo_oop_oop_t)moo_instantiate(moo, moo->_array, MOO_NULL, newsz); 
-	moo_poptmp (moo);
+	moo_popvolat (moo);
 	if (!newbuc) return MOO_NULL;
 
 	while (oldsz > 0)

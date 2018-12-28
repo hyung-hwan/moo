@@ -323,9 +323,9 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 
 	if (moo->proc_map_free_first <= -1 && prepare_to_alloc_pid(moo) <= -1) return MOO_NULL;
 
-	moo_pushtmp (moo, (moo_oop_t*)&c);
+	moo_pushvolat (moo, (moo_oop_t*)&c);
 	proc = (moo_oop_process_t)moo_instantiate(moo, moo->_process, MOO_NULL, moo->option.dfl_procstk_size);
-	moo_poptmp (moo);
+	moo_popvolat (moo);
 	if (!proc) return MOO_NULL;
 
 	proc->state = MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED);
@@ -860,7 +860,7 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 	{
 		proc = sem->waiting.first;
 
-		/* [NOTE] no GC must occur as 'proc' isn't protected with moo_pushtmp(). */
+		/* [NOTE] no GC must occur as 'proc' isn't protected with moo_pushvolat(). */
 
 		/* detach a process from a semaphore's waiting list and 
 		 * make it runnable */
@@ -1229,9 +1229,9 @@ static int add_sem_to_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi
 
 		new_mask = ((moo_ooi_t)1 << io_type);
 
-		moo_pushtmp (moo, (moo_oop_t*)&sem);
+		moo_pushvolat (moo, (moo_oop_t*)&sem);
 		n = moo->vmprim.vm_muxadd(moo, io_handle, new_mask);
-		moo_poptmp (moo);
+		moo_popvolat (moo);
 	}
 	else
 	{
@@ -1244,9 +1244,9 @@ static int add_sem_to_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, moo_ooi
 		new_mask = moo->sem_io_tuple[index].mask; /* existing mask */
 		new_mask |= ((moo_ooi_t)1 << io_type);
 
-		moo_pushtmp (moo, (moo_oop_t*)&sem);
+		moo_pushvolat (moo, (moo_oop_t*)&sem);
 		n = moo->vmprim.vm_muxmod(moo, io_handle, new_mask);
-		moo_poptmp (moo);
+		moo_popvolat (moo);
 	}
 
 	if (n <= -1) 
@@ -1312,10 +1312,10 @@ static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, in
 	new_mask = moo->sem_io_tuple[index].mask;
 	new_mask &= ~((moo_ooi_t)1 << io_type); /* this is the new mask after deletion */
 
-	moo_pushtmp (moo, (moo_oop_t*)&sem);
+	moo_pushvolat (moo, (moo_oop_t*)&sem);
 	x = new_mask? moo->vmprim.vm_muxmod(moo, io_handle, new_mask):
 	              moo->vmprim.vm_muxdel(moo, io_handle); 
-	moo_poptmp (moo);
+	moo_popvolat (moo);
 	if (x <= -1) 
 	{
 		MOO_LOG3 (moo, MOO_LOG_WARN, "Failed to delete an IO semaphored handle %zd at index %zd for %hs\n", io_handle, index, io_type_str[io_type]);
@@ -1527,9 +1527,9 @@ static MOO_INLINE int activate_new_method (moo_t* moo, moo_oop_method_t mth, moo
 	}
 	else actual_ntmprs = ntmprs;
 
-	moo_pushtmp (moo, (moo_oop_t*)&mth);
+	moo_pushvolat (moo, (moo_oop_t*)&mth);
 	ctx = (moo_oop_context_t)moo_instantiate(moo, moo->_method_context, MOO_NULL, actual_ntmprs);
-	moo_poptmp (moo);
+	moo_popvolat (moo);
 	if (!ctx) return -1;
 
 	MOO_STORE_OOP (moo, (moo_oop_t*)&ctx->sender, (moo_oop_t)moo->active_context); 
@@ -1784,8 +1784,8 @@ TODO: overcome this problem - accept parameters....
 		return -1;
 	}
 
-	moo_pushtmp (moo, (moo_oop_t*)&mth); tmp_count++;
-	moo_pushtmp (moo, (moo_oop_t*)&ass); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&mth); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&ass); tmp_count++;
 #else
 	startup.ptr = str_startup;
 	startup.len = 7;
@@ -1804,22 +1804,22 @@ TODO: overcome this problem - accept parameters....
 	}
 /* TODO: check if it's variadic.... it should be. and accept more than 2... */
 
-	moo_pushtmp (moo, (moo_oop_t*)&mth); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&mth); tmp_count++;
 	s1 = moo_makesymbol(moo, objname->ptr, objname->len);
 	if (!s1) goto oops;
 
-	moo_pushtmp (moo, (moo_oop_t*)&s1); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&s1); tmp_count++;
 	s2 = moo_makesymbol(moo, mthname->ptr, mthname->len);
 	if (!s2) goto oops;
 
-	moo_pushtmp (moo, (moo_oop_t*)&s2); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&s2); tmp_count++;
 #endif
 
 	/* create a fake initial context. */
 	ctx = (moo_oop_context_t)moo_instantiate(moo, moo->_method_context, MOO_NULL, MOO_OOP_TO_SMOOI(mth->tmpr_nargs));
 	if (!ctx) goto oops;
 
-	moo_pushtmp (moo, (moo_oop_t*)&ctx); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&ctx); tmp_count++;
 
 
 /* TODO: handle preamble */
@@ -1856,7 +1856,7 @@ TODO: overcome this problem - accept parameters....
 	moo->active_context = ctx;
 
 	proc = start_initial_process (moo, ctx); 
-	moo_poptmps (moo, tmp_count); tmp_count = 0;
+	moo_popvolats (moo, tmp_count); tmp_count = 0;
 	if (!proc) goto oops;
 
 #if defined(INVOKE_DIRECTLY)
@@ -1881,7 +1881,7 @@ TODO: overcome this problem - accept parameters....
 #endif
 
 oops:
-	if (tmp_count > 0) moo_poptmps (moo, tmp_count);
+	if (tmp_count > 0) moo_popvolats (moo, tmp_count);
 	return -1;
 }
 
@@ -2151,9 +2151,9 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 	MOO_ASSERT (moo, local_ntmprs >= actual_arg_count);
 
 	/* create a new block context to clone rcv_blkctx */
-	moo_pushtmp (moo, (moo_oop_t*)&rcv_blkctx);
+	moo_pushvolat (moo, (moo_oop_t*)&rcv_blkctx);
 	blkctx = (moo_oop_context_t) moo_instantiate(moo, moo->_block_context, MOO_NULL, local_ntmprs); 
-	moo_poptmp (moo);
+	moo_popvolat (moo);
 	if (!blkctx) return MOO_PF_FAILURE;
 
 #if 0
@@ -3841,9 +3841,9 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 					goto activate_primitive_method_body;
 				}
 
-				moo_pushtmp (moo, (moo_oop_t*)&method);
+				moo_pushvolat (moo, (moo_oop_t*)&method);
 				n = pftab[pfnum].pfbase.handler(moo, MOO_NULL, nargs); /* builtin numbered primitive. the second parameter is MOO_NULL */
-				moo_poptmp (moo);
+				moo_popvolat (moo);
 				if (n <= MOO_PF_HARD_FAILURE) 
 				{
 					MOO_LOG3 (moo, MOO_LOG_DEBUG,
@@ -3925,7 +3925,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 					goto activate_primitive_method_body;
 				}
 
-				moo_pushtmp (moo, (moo_oop_t*)&method);
+				moo_pushvolat (moo, (moo_oop_t*)&method);
 
 				/* the primitive handler is executed without activating the method itself.
 				 * one major difference between the primitive function and the normal method
@@ -3936,7 +3936,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				moo_seterrnum (moo, MOO_ENOERR);
 				n = pfbase->handler(moo, mod, nargs);
 
-				moo_poptmp (moo);
+				moo_popvolat (moo);
 				if (n <= MOO_PF_HARD_FAILURE) 
 				{
 					MOO_LOG4 (moo, MOO_LOG_DEBUG, 
@@ -3977,9 +3977,9 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				 *       is it really a good idea to compose a string here which
 				 *       is not really failure safe without losing integrity???? */
 				moo_oop_t tmp;
-				moo_pushtmp (moo, (moo_oop_t*)&method);
+				moo_pushvolat (moo, (moo_oop_t*)&method);
 				tmp = moo_makestring(moo, moo->errmsg.buf, moo->errmsg.len);
-				moo_poptmp (moo);
+				moo_popvolat (moo);
 				/* [NOTE] carry on even if instantiation fails */
 				moo->processor->active->perrmsg = tmp? tmp: moo->_nil; /* TODO: set to nil or set to an empty string if instantiation fails? */
 			}
@@ -4152,7 +4152,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				/* waited long enough. signal the semaphore */
 
 				proc = signal_semaphore (moo, moo->sem_heap[0]);
-				/* [NOTE] no moo_pushtmp() on proc. no GC must occur
+				/* [NOTE] no moo_pushvolat() on proc. no GC must occur
 				 *        in the following line until it's used for
 				 *        wake_process() below. */
 				delete_from_sem_heap (moo, 0); /* moo->sem_heap_count is decremented in delete_from_sem_heap() */
