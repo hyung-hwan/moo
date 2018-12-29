@@ -495,6 +495,7 @@ static int ignite_2 (moo_t* moo)
 	moo->_false = moo_instantiate(moo, moo->_false_class, MOO_NULL, 0);
 	if (!moo->_true || !moo->_false) return -1;
 
+moo->igniting = 0;
 	/* Create the symbol table */
 	tmp = moo_instantiate(moo, moo->_symbol_table, MOO_NULL, 0);
 	if (!tmp) return -1;
@@ -509,6 +510,7 @@ static int ignite_2 (moo_t* moo)
 	tmp = moo_instantiate(moo, moo->_array, MOO_NULL, moo->option.dfl_symtab_size);
 	if (!tmp) return -1;
 	moo->symtab->bucket = (moo_oop_oop_t)tmp;
+moo->igniting = 1;
 
 	/* Create the system dictionary */
 	tmp = (moo_oop_t)moo_makensdic(moo, moo->_namespace, moo->option.dfl_sysdic_size);
@@ -794,7 +796,7 @@ static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t**
 			/* TODO: is it better to use a flag bit in the header to
 			 *       determine that it is an instance of process?
 			 *       for example, if (MOO_OBJ_GET_FLAGS_PROC(oop))... */
-			if (moo->_process && MOO_OBJ_GET_CLASS(oop) == moo->_process)
+			if (MOO_UNLIKELY(MOO_OBJ_GET_FLAGS_PROC(oop)))
 			{
 				/* the stack in a process object doesn't need to be 
 				 * scanned in full. the slots above the stack pointer 
@@ -976,7 +978,7 @@ void moo_gc (moo_t* moo)
 	 * if the symbol has not moved to the new heap, the symbol
 	 * is not referenced by any other objects than the symbol 
 	 * table itself */
-	/*compact_symbol_table (moo, old_nil); <---- this causes a problem when gc debugging is on, debug it */
+	compact_symbol_table (moo, old_nil);
 
 	/* move the symbol table itself */
 	moo->symtab = (moo_oop_dic_t)moo_moveoop(moo, (moo_oop_t)moo->symtab);

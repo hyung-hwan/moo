@@ -328,6 +328,7 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 	moo_popvolat (moo);
 	if (!proc) return MOO_NULL;
 
+	MOO_OBJ_SET_FLAGS_PROC (proc, 1); /* a special flag to indicate an object is a process instance */
 	proc->state = MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED);
 
 	/* assign a process id to the process */

@@ -122,13 +122,12 @@ static int _equal_objects (moo_t* moo, moo_oop_t rcv, moo_oop_t arg)
 					return -1;
 				#else
 
-					if (moo->_process && MOO_OBJ_GET_CLASS(rcv) == moo->_process)
+					if (MOO_UNLIKELY(MOO_OBJ_GET_FLAGS_PROC(rcv)))
 					{
 						/* the stack in a process object doesn't need to be 
 						 * scanned in full. the slots above the stack pointer 
 						 * are garbages. */
-						size = MOO_PROCESS_NAMED_INSTVARS +
-							  MOO_OOP_TO_SMOOI(((moo_oop_process_t)rcv)->sp) + 1;
+						size = MOO_PROCESS_NAMED_INSTVARS + MOO_OOP_TO_SMOOI(((moo_oop_process_t)rcv)->sp) + 1;
 						MOO_ASSERT (moo, size <= MOO_OBJ_GET_SIZE(rcv));
 					}
 					else
