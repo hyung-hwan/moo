@@ -223,7 +223,7 @@ static moo_pfrc_t pf_get_llevent (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		e->window = MOO_SMOOI_TO_OOP(0);
 
 		/* if the following is going to trigger GC directly or indirectly,
-		 * e must be proteced with moo_pushtmp(). 
+		 * e must be proteced with moo_pushvolat(). 
 		 * also x11, tr must be refetched from the stack. */
 
 		switch (event->type)
@@ -812,7 +812,7 @@ static void gc_mod_x11 (moo_t* moo, moo_mod_t* mod)
 	x11_modctx_t* ctx = mod->ctx;
 
 	MOO_ASSERT (moo, ctx != MOO_NULL);
-	ctx->x11_class = (moo_oop_class_t)moo_moveoop (moo, (moo_oop_t)ctx->x11_class);
+	ctx->x11_class = (moo_oop_class_t)moo_moveoop(moo, (moo_oop_t)ctx->x11_class);
 }
 
 int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)
@@ -825,20 +825,22 @@ int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)
 	else
 	{
 		x11_modctx_t* ctx;
+		moo_oop_t tmp;
 
 		static moo_ooch_t name_x11[] = { 'X','1','1','\0' };
 
 		ctx = moo_callocmem (moo, MOO_SIZEOF(*ctx));
 		if (!ctx) return -1;
 
-		ctx->x11_class = (moo_oop_class_t)moo_findclass (moo, moo->sysdic, name_x11);
-		if (!ctx->x11_class)
+		tmp = moo_findclass(moo, moo->sysdic, name_x11);
+		if (!tmp)
 		{
 			/* Not a single X11.XXX has been defined. */
 			MOO_DEBUG0 (moo, "X11 class not found\n");
 			moo_freemem (moo, ctx);
 			return -1;
 		}
+		MOO_STORE_OOP (moo, (moo_oop_t*)&ctx->x11_class, tmp);
 
 		mod->gc = gc_mod_x11;
 		mod->ctx = ctx;

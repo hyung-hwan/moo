@@ -92,7 +92,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 	moo_ooi_t tally;
 	moo_oow_t hv, index;
 	moo_oop_association_t ass;
-	moo_oow_t tmp_count = 0;
+	moo_oow_t volat_count = 0;
 
 	/* the builtin dictionary is not a generic dictionary.
 	 * it accepts only a symbol or something similar as a key. */
@@ -142,9 +142,9 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 		return MOO_NULL;
 	}
 
-	moo_pushvolat (moo, (moo_oop_t*)&dic); tmp_count++;
-	moo_pushvolat (moo, (moo_oop_t*)&key); tmp_count++;
-	moo_pushvolat (moo, &value); tmp_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&dic); volat_count++;
+	moo_pushvolat (moo, (moo_oop_t*)&key); volat_count++;
+	moo_pushvolat (moo, &value); volat_count++;
 
 	/* no conversion to moo_oow_t is necessary for tally + 1.
 	 * the maximum value of tally is checked to be MOO_SMOOI_MAX - 1.
@@ -152,7 +152,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 	 * MOO_SMOOI_MAX is way smaller than MOO_TYPE_MAX(moo_ooi_t). */
 	if (tally + 1 >= MOO_OBJ_GET_SIZE(dic->bucket))
 	{
-		moo_oop_oop_t bucket;
+		moo_oop_oop_t tmp;
 
 		/* TODO: make the growth policy configurable instead of growing
 			     it just before it gets full. The polcy can be grow it
@@ -162,10 +162,10 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 		 * make sure that it has at least one free slot left
 		 * after having added a new symbol. this is to help
 		 * traversal end at a _nil slot if no entry is found. */
-		bucket = expand_bucket(moo, dic->bucket);
-		if (!bucket) goto oops;
+		tmp = expand_bucket(moo, dic->bucket);
+		if (!tmp) goto oops;
 
-		MOO_STORE_OOP (moo, &dic->bucket, bucket);
+		MOO_STORE_OOP (moo, (moo_oop_t*)&dic->bucket, (moo_oop_t)tmp);
 
 		/* recalculate the index for the expanded bucket */
 		index = hv % MOO_OBJ_GET_SIZE(dic->bucket);
@@ -188,11 +188,11 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 	dic->tally = MOO_SMOOI_TO_OOP(tally + 1); /* no need to use MOO_STORE_OOP as the value is not a pointer object */
 	MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(dic->bucket, index), (moo_oop_t)ass);
 
-	moo_popvolats (moo, tmp_count);
+	moo_popvolats (moo, volat_count);
 	return ass;
 
 oops:
-	moo_popvolats (moo, tmp_count);
+	moo_popvolats (moo, volat_count);
 	return MOO_NULL;
 }
 
@@ -380,7 +380,7 @@ moo_oop_dic_t moo_makedic (moo_t* moo, moo_oop_class_t _class, moo_oow_t size)
 	if (!tmp) return MOO_NULL;
 
 	dic->tally = MOO_SMOOI_TO_OOP(0);
-	dic->bucket = (moo_oop_oop_t)tmp;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&dic->bucket, tmp);
 
 	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(dic) == MOO_CLASS_SPEC_NAMED_INSTVARS(MOO_OOP_TO_SMOOI(_class->spec)));
 	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(dic->bucket) == size);

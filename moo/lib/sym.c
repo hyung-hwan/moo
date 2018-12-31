@@ -130,7 +130,7 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 	 * MOO_SMOOI_MAX is way smaller than MOO_TYPE_MAX(moo_ooi_t). */
 	if (tally + 1 >= MOO_OBJ_GET_SIZE(moo->symtab->bucket))
 	{
-		moo_oop_oop_t bucket;
+		moo_oop_oop_t tmp;
 
 		/* TODO: make the growth policy configurable instead of growing
 		         it just before it gets full. The polcy can be grow it
@@ -140,10 +140,10 @@ static moo_oop_t find_or_make_symbol (moo_t* moo, const moo_ooch_t* ptr, moo_oow
 		 * make sure that it has at least one free slot left
 		 * after having added a new symbol. this is to help
 		 * traversal end at a _nil slot if no entry is found. */
-		bucket = expand_bucket(moo, moo->symtab->bucket);
-		if (!bucket) return MOO_NULL;
+		tmp = expand_bucket(moo, moo->symtab->bucket);
+		if (!tmp) return MOO_NULL;
 
-		moo->symtab->bucket = bucket;
+		MOO_STORE_OOP (moo, (moo_oop_t*)&moo->symtab->bucket, (moo_oop_t)tmp);
 
 		/* recalculate the index for the expanded bucket */
 		index = moo_hashoochars(ptr, len) % MOO_OBJ_GET_SIZE(moo->symtab->bucket);

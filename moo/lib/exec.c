@@ -93,7 +93,7 @@ static MOO_INLINE const char* proc_state_to_string (int state)
 		(moo)->active_method = (moo_oop_method_t)(moo)->active_context->origin->method_or_nargs; \
 		(moo)->active_code = MOO_METHOD_GET_CODE_BYTE((moo)->active_method); \
 		LOAD_ACTIVE_IP (moo); \
-		(moo)->processor->active->current_context = (moo)->active_context; \
+		MOO_STORE_OOP (moo, (moo_oop_t*)&(moo)->processor->active->current_context, (moo_oop_t)(moo)->active_context); \
 	} while (0)
 
 #define FETCH_BYTE_CODE(moo) ((moo)->active_code[(moo)->ip++])
@@ -2089,7 +2089,7 @@ static moo_pfrc_t pf_context_goto (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	((moo_oop_context_t)rcv)->ip = pc;
+	((moo_oop_context_t)rcv)->ip = pc; /* no need to MOO_STORE_OOP as pc is a small integer */
 	LOAD_ACTIVE_IP (moo);
 
 	MOO_ASSERT (moo, nargs + 1 == 2);
@@ -2164,8 +2164,8 @@ static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_o
 		MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(blkctx, i), MOO_OBJ_GET_OOP_VAL(rcv_blkctx, i));
 	}
 #else
-	blkctx->ip = rcv_blkctx->ip;
-	blkctx->ntmprs = rcv_blkctx->ntmprs;
+	blkctx->ip = rcv_blkctx->ip; /* no MOO_STORE_OOP() as it's a small integer */
+	blkctx->ntmprs = rcv_blkctx->ntmprs; /* no MOO_STORE_OOP() as it's a small integer */
 	MOO_STORE_OOP (moo, &blkctx->method_or_nargs, rcv_blkctx->method_or_nargs);
 	MOO_STORE_OOP (moo, &blkctx->receiver_or_source, (moo_oop_t)rcv_blkctx);
 	MOO_STORE_OOP (moo, &blkctx->home, rcv_blkctx->home);
@@ -3982,10 +3982,12 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				tmp = moo_makestring(moo, moo->errmsg.buf, moo->errmsg.len);
 				moo_popvolat (moo);
 				/* [NOTE] carry on even if instantiation fails */
-				moo->processor->active->perrmsg = tmp? tmp: moo->_nil; /* TODO: set to nil or set to an empty string if instantiation fails? */
+				if (!tmp) goto no_perrmsg;
+				MOO_STORE_OOP (moo, &moo->processor->active->perrmsg, tmp);
 			}
 			else
 			{
+			no_perrmsg:
 				moo->processor->active->perrmsg = moo->_nil;
 			}
 

@@ -489,13 +489,32 @@ static int ignite_1 (moo_t* moo)
 static int ignite_2 (moo_t* moo)
 {
 	moo_oop_t tmp;
+	int old_igniting = moo->igniting;
 
 	/* Create 'true' and 'false objects */
 	moo->_true = moo_instantiate(moo, moo->_true_class, MOO_NULL, 0);
 	moo->_false = moo_instantiate(moo, moo->_false_class, MOO_NULL, 0);
 	if (!moo->_true || !moo->_false) return -1;
 
-moo->igniting = 0;
+	/* Prevent the object instations in the permspace. 
+	 *
+	 * 1. The symbol table is big and it may resize after ignition.
+	 *    the resizing operation will migrate the obejct out of the
+	 *    permspace. The space taken by the symbol table and the
+	 *    system dictionary is wasted. I'd rather allocate these
+	 *    in the normal space. 
+	 *  
+	 * 2. For compact_symbol_table() to work properly, moo_gc() must not
+	 *    scan the symbol table before it executes compact_symbol_table().
+	 *    since moo_gc() scans the entire perspace, it naturally gets to 
+	 *    moo->symtab, which causes problems in compact_symbol_table(). 
+	 *    I may reserve a special space for only the symbol table
+	 *    to overcome this issue.
+	 *
+	 * For now, let's just allocate the symbol table and the system dictionary
+	 * in the normal space */
+	moo->igniting = 0;
+
 	/* Create the symbol table */
 	tmp = moo_instantiate(moo, moo->_symbol_table, MOO_NULL, 0);
 	if (!tmp) return -1;
@@ -510,12 +529,13 @@ moo->igniting = 0;
 	tmp = moo_instantiate(moo, moo->_array, MOO_NULL, moo->option.dfl_symtab_size);
 	if (!tmp) return -1;
 	moo->symtab->bucket = (moo_oop_oop_t)tmp;
-moo->igniting = 1;
 
 	/* Create the system dictionary */
 	tmp = (moo_oop_t)moo_makensdic(moo, moo->_namespace, moo->option.dfl_sysdic_size);
 	if (!tmp) return -1;
 	moo->sysdic = (moo_oop_nsdic_t)tmp;
+
+	moo->igniting = old_igniting; /* back to the permspace */
 
 	/* Create a nil process used to simplify nil check in GC.
 	 * only accessible by VM. not exported via the global dictionary. */
@@ -558,17 +578,17 @@ static int ignite_3 (moo_t* moo)
 
 		cls = *(moo_oop_class_t*)((moo_uint8_t*)moo + kernel_classes[i].offset);
 		MOO_STORE_OOP (moo, (moo_oop_t*)&cls->name, sym);
-		cls->nsup = moo->sysdic;
+		MOO_STORE_OOP (moo, (moo_oop_t*)&cls->nsup, (moo_oop_t)moo->sysdic);
 
 		if (!moo_putatsysdic(moo, sym, (moo_oop_t)cls)) return -1;
 	}
 
 	/* Attach the system dictionary to the nsdic field of the System class */
-	moo->_system->nsdic = moo->sysdic;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&moo->_system->nsdic, (moo_oop_t)moo->sysdic);
 	/* Set the name field of the system dictionary */
-	moo->sysdic->name = moo->_system->name;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&moo->sysdic->name, (moo_oop_t)moo->_system->name);
 	/* Set the owning class field of the system dictionary, it's circular here */
-	moo->sysdic->nsup = (moo_oop_t)moo->_system;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&moo->sysdic->nsup, (moo_oop_t)moo->_system);
 
 	/* Make the process scheduler avaialble as the global name 'Processor' */
 	sym = moo_makesymbol(moo, str_processor, MOO_COUNTOF(str_processor));

@@ -3201,8 +3201,8 @@ static moo_oop_nsdic_t add_namespace (moo_t* moo, moo_oop_nsdic_t dic, const moo
 	if (!ass) goto oops;
 
 	nsdic = (moo_oop_nsdic_t)ass->value; 
-	nsdic->nsup = (moo_oop_t)dic;
-	nsdic->name = sym;
+	MOO_STORE_OOP (moo, &nsdic->nsup, (moo_oop_t)dic);
+	MOO_STORE_OOP (moo, (moo_oop_t*)&nsdic->name, (moo_oop_t)sym);
 
 	moo_popvolats (moo, tmp_count);
 	return nsdic;
@@ -3222,8 +3222,8 @@ static moo_oop_nsdic_t attach_nsdic_to_class (moo_t* moo, moo_oop_class_t c)
 	nsdic = moo_makensdic(moo, moo->_namespace, NAMESPACE_SIZE);
 	if (!nsdic) goto oops;
 
-	nsdic->nsup = (moo_oop_t)c; /* it points to the owning class as it belongs to a class */
-	nsdic->name = c->name; /* for convenience only */
+	MOO_STORE_OOP (moo, &nsdic->nsup, (moo_oop_t)c); /* it points to the owning class as it belongs to a class */
+	MOO_STORE_OOP (moo, (moo_oop_t*)&nsdic->name, (moo_oop_t)c->name); /* for convenience only */
 	c->nsdic = nsdic;
 
 	moo_popvolats (moo, tmp_count);
@@ -6632,8 +6632,8 @@ static int add_compiled_method (moo_t* moo)
 
 	MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index));
 
-	mth->owner = cc->self_oop;
-	mth->name = name;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->owner, (moo_oop_t)cc->self_oop);
+	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->name, (moo_oop_t)name);
 	mth->preamble = MOO_SMOOI_TO_OOP(MOO_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index, preamble_flags));
 	/*mth->preamble_data[0] = MOO_SMOOI_TO_OOP(0);
 	mth->preamble_data[1] = MOO_SMOOI_TO_OOP(0);*/
@@ -6645,7 +6645,7 @@ static int add_compiled_method (moo_t* moo)
 #if defined(MOO_USE_METHOD_TRAILER)
 	/* do nothing */
 #else
-	mth->code = code;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->code, (moo_oop_t)code);
 #endif
 
 	/*TODO: preserve source??? mth->text = cc->mth.text
@@ -8342,8 +8342,8 @@ static int add_method_signature (moo_t* moo)
 	if (!mth) goto oops;
 	moo_pushvolat (moo, (moo_oop_t*)&mth); tmp_count++;
 
-	mth->owner = ifce->self_oop;
-	mth->name = name;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->owner, (moo_oop_t)ifce->self_oop);
+	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->name, (moo_oop_t)name);
 
 	preamble_flags |= ifce->mth.variadic; /* MOO_METHOD_PREAMBLE_FLAG_VARIADIC or MOO_METHOD_PREAMBLE_FLAG_LIBERAL */
 	if (ifce->mth.lenient) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_LENIENT;
@@ -8429,18 +8429,18 @@ static int make_defined_interface (moo_t* moo)
 
 	tmp = moo_makesymbol(moo, ifce->name.ptr, ifce->name.len);
 	if (!tmp) return -1;
-	ifce->self_oop->name = (moo_oop_char_t)tmp;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&ifce->self_oop->name, tmp);
 
 	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
-	ifce->self_oop->mthdic[MOO_METHOD_INSTANCE] = (moo_oop_dic_t)tmp;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], tmp);
 
 	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
-	ifce->self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_dic_t)tmp;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&ifce->self_oop->mthdic[MOO_METHOD_CLASS], tmp);
 
 	if (!moo_putatdic(moo, (moo_oop_dic_t)ifce->ns_oop, (moo_oop_t)ifce->self_oop->name, (moo_oop_t)ifce->self_oop)) return -1;
-	ifce->self_oop->nsup = ifce->ns_oop;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&ifce->self_oop->nsup, (moo_oop_t)ifce->ns_oop);
 
 	return 0;
 }
