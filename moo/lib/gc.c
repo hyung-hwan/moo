@@ -360,7 +360,7 @@ static kernel_class_info_t kernel_classes[] =
 
 	{ 20,
 	  { 'L','a','r','g','e','P','o','s','i','t','i','v','e','I','n','t','e','g','e','r' },
-	  0,
+	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
 	  0,
 	  0,
 	  MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE,
@@ -369,7 +369,7 @@ static kernel_class_info_t kernel_classes[] =
 
 	{ 20,
 	  { 'L','a','r','g','e','N','e','g','a','t','i','v','e','I','n','t','e','g','e','r' },
-	  0,
+	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
 	  0,
 	  0,
 	  MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_IMMUTABLE,
@@ -381,7 +381,7 @@ static kernel_class_info_t kernel_classes[] =
 	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
 	  0,
 	  MOO_FPDEC_NAMED_INSTVARS,
-	  MOO_CLASS_SPEC_FLAG_INDEXED,
+	  MOO_CLASS_SPEC_FLAG_IMMUTABLE,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _fixed_point_decimal) },
 

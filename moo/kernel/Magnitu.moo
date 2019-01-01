@@ -370,18 +370,23 @@ class(#limited) SmallInteger(Integer)
 	method(#primitive) asError.
 }
 
-class(#liword,#limited) LargeInteger(Integer)
+class(#limited,#immutable,#liword) LargeInteger(Integer)
 {
 }
 
-class(#liword,#immutable) LargePositiveInteger(LargeInteger)
+class(#limited,#immutable,#liword) LargePositiveInteger(LargeInteger)
 {
 	method abs { ^self }
 	method sign { ^1 }
 }
 
-class(#liword,#immutable) LargeNegativeInteger(LargeInteger)
+class(#limited,#immutable,#liword) LargeNegativeInteger(LargeInteger)
 {
 	method abs { ^self negated }
 	method sign { ^-1 }
+}
+
+class(#limited,#immutable) FixedPointDecimal(Number)
+{
+	var value, scale.
 }

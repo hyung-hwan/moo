@@ -1371,10 +1371,86 @@ moo_oop_t moo_makefpdec (
 );
 
 moo_oop_t moo_truncfpdecval (
-	moo_t*      moo,
-	moo_oop_t   iv,
-	moo_ooi_t   cs,
-	moo_ooi_t   ns
+	moo_t*       moo,
+	moo_oop_t    iv, /* integer */
+	moo_ooi_t    cs, /* current scale */
+	moo_ooi_t    ns  /* new scale */
+);
+
+moo_oop_t moo_addnums (
+	moo_t*       moo,
+	moo_oop_t    x,
+	moo_oop_t    y
+);
+
+moo_oop_t moo_subnums (
+	moo_t*       moo,
+	moo_oop_t    x,
+	moo_oop_t    y
+);
+
+moo_oop_t moo_mulnums (
+	moo_t*       moo,
+	moo_oop_t    x,
+	moo_oop_t    y
+);
+
+moo_oop_t moo_mltnums (
+	moo_t*       moo,
+	moo_oop_t    x,
+	moo_oop_t    y
+);
+
+moo_oop_t moo_divnums (
+	moo_t*       moo,
+	moo_oop_t    x,
+	moo_oop_t    y
+);
+
+moo_oop_t moo_gtnums (
+	moo_t*       moo,
+	moo_oop_t    x,
+	moo_oop_t    y
+);
+
+moo_oop_t moo_genums (
+	moo_t*       moo,
+	moo_oop_t    x,
+	moo_oop_t    y
+);
+
+moo_oop_t moo_ltnums (
+	moo_t*       moo,
+	moo_oop_t    x,
+	moo_oop_t    y
+);
+
+moo_oop_t moo_lenums (
+	moo_t*       moo,
+	moo_oop_t    x,
+	moo_oop_t    y
+);
+
+moo_oop_t moo_eqnums (
+	moo_t*       moo,
+	moo_oop_t    x,
+	moo_oop_t    y
+);
+
+moo_oop_t moo_nenums (
+	moo_t*       moo,
+	moo_oop_t    x,
+	moo_oop_t    y
+);
+
+moo_oop_t moo_sqrtnum (
+	moo_t*       moo,
+	moo_oop_t    x
+);
+
+moo_oop_t moo_absnum (
+	moo_t*       moo,
+	moo_oop_t    x
 );
 
 /* ========================================================================= */
