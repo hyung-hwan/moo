@@ -701,8 +701,51 @@ static moo_oop_t string_to_num (moo_t* moo, moo_oocs_t* str, int radixed)
 
 /* TODO: handle floating point numbers ... etc */
 	if (negsign) base = -base;
-	return moo_strtoint (moo, ptr, end - ptr, base);
+	return moo_strtoint(moo, ptr, end - ptr, base);
 }
+
+#if 0
+static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str, const moo_ioloc_t* loc)
+{
+	moo_oow_t pos, len;
+	moo_oow_t scale = 0;
+	moo_oop_t v;
+	int base = 10;
+
+	pos = str->len;
+	while (pos > 0)
+	{
+		pos--;
+		if (str->ptr[pos] == '.')
+		{
+			scale = str->len - pos - 1;
+			if (scale > MOO_SMOOI_MAX)
+			{
+				moo_setsynerrbfmt (moo, MOO_SYNERR_NUMRANGE, loc, str, "too many digits after decimal point");
+				return MOO_NULL;
+			}
+
+			MOO_ASSERT (moo, scale > 0);
+			/*if (scale > 0)*/ MOO_MEMMOVE (&str->ptr[pos], &str->ptr[pos + 1], scale * MOO_SIZEOF(str->ptr[0])); /* remove the decimal point from the string */
+			break;
+		}
+	}
+
+	pos = 0;
+	len = str->len - 1;
+	if (str->ptr[pos] == '+' || str->ptr[pos] == '-')
+	{
+		if (str->ptr[pos] - '+') base = -10;
+		pos++;
+		len--;
+	}
+
+	v = moo_strtoint(moo, &str->ptr[pos], len, base);
+	if (!v) return MOO_NULL;
+
+	return moo_makefpdec(moo, v, scale);
+}
+#endif
 
 static moo_oop_t string_to_error (moo_t* moo, moo_oocs_t* str, moo_ioloc_t* loc)
 {
@@ -1418,7 +1461,39 @@ static int get_numlit (moo_t* moo, int negated)
 	}
 	else
 	{
-		unget_char (moo, &moo->c->lxc);
+#if 0
+		if (c == '.')
+		{
+			do
+			{
+				ADD_TOKEN_CHAR (moo, c);
+				GET_CHAR_TO (moo, c);
+				if (c == '_')
+				{
+					moo_iolxc_t underscore;
+					underscore = moo->c->lxc;
+					GET_CHAR_TO(moo, c);
+					if (!is_digitchar(c))
+					{
+						unget_char (moo, &moo->c->lxc);
+						unget_char (moo, &underscore);
+						break;
+					}
+					else continue;
+				}
+			}
+			while (is_digitchar(c));
+
+			/* TODO: handle floating-point? fpdec if only suffixed with 's' like 1.23s4? */
+			SET_TOKEN_TYPE (moo, MOO_IOTOK_FPDECLIT);
+		}
+		else
+		{
+#endif
+			unget_char (moo, &moo->c->lxc);
+#if 0
+		}
+#endif
 	}
 
 /*
@@ -2800,6 +2875,18 @@ static int add_symbol_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t offs
 	tmp = moo_makesymbol(moo, str->ptr + offset, str->len - offset);
 	if (!tmp) return -1;
 
+	return add_literal(moo, tmp, index);
+}
+
+
+static int add_fpdec_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* index)
+{
+	moo_oop_t tmp;
+
+#if 0
+	tmp = moo_makefpdec(moo, value, scale);
+	if (!tmp) return -1;
+#endif
 	return add_literal(moo, tmp, index);
 }
 
@@ -5193,7 +5280,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				/* TODO: other types of numbers, etc */
 				moo_oop_t tmp;
 
-				tmp = string_to_num (moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT);
+				tmp = string_to_num(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT);
 				if (!tmp) return -1;
 
 				if (MOO_OOP_IS_SMOOI(tmp))
@@ -5209,6 +5296,14 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				GET_TOKEN (moo);
 				break;
 			}
+
+#if 0
+			case MOO_IOTOK_FPDECLIT:
+				if (add_fpdec_literal(moo, TOKEN_NAME(moo, &index) <= -1 ||
+				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				GET_TOKEN (moo);
+				break;
+#endif
 
 			case MOO_IOTOK_SYMLIT:
 				if (add_symbol_literal(moo, TOKEN_NAME(moo), 1, &index) <= -1 ||
