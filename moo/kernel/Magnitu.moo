@@ -110,26 +110,26 @@ class(#limited) Number(Magnitude)
 {
 	method + aNumber
 	{
-		<primitive: #_integer_add>
+		<primitive: #_number_add>
 		self primitiveFailed.
 	}
 
 	method - aNumber
 	{
-		<primitive: #_integer_sub>
+		<primitive: #_number_sub>
 		self primitiveFailed.
 	}
 
 	method * aNumber
 	{
-		<primitive: #_integer_mul>
+		<primitive: #_number_mul>
 		self primitiveFailed.
 	}
 
 	method div: aNumber
 	{
 		## integer division rounded toward zero
-		<primitive: #_integer_div>
+		<primitive: #_number_div>
 		self primitiveFailed.
 	}
 
@@ -161,13 +161,13 @@ class(#limited) Number(Magnitude)
 
 	method = aNumber
 	{
-		<primitive: #_integer_eq>
+		<primitive: #_number_eq>
 		self primitiveFailed.
 	}
 
 	method ~= aNumber
 	{
-		<primitive: #_integer_ne>
+		<primitive: #_number_ne>
 		self primitiveFailed.
 	}
 

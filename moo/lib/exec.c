@@ -2822,6 +2822,104 @@ static moo_pfrc_t pf_system_return_value_to_context (moo_t* moo, moo_mod_t* mod,
 
 /* ------------------------------------------------------------------ */
 
+static moo_pfrc_t pf_number_add (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	res = moo_addnums(moo, rcv, arg);
+	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_number_sub (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	res = moo_subnums(moo, rcv, arg);
+	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_number_mul (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	res = moo_mulnums(moo, rcv, arg);
+	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_number_div (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	res = moo_divnums(moo, rcv, arg);
+	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+
+static moo_pfrc_t pf_number_eq (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	res = moo_eqnums(moo, rcv, arg);
+	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_number_ne (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	res = moo_nenums(moo, rcv, arg);
+	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+/* ------------------------------------------------------------------ */
 static moo_pfrc_t pf_integer_add (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
@@ -3652,6 +3750,13 @@ static pf_t pftab[] =
 	{ "_integer_negated",                      { pf_integer_negated,                      0, 0 } },
 	{ "_integer_rem",                          { pf_integer_rem,                          1, 1 } },
 	{ "_integer_sub",                          { pf_integer_sub,                          1, 1 } },
+
+	{ "_number_add",                           { pf_number_add,                           1, 1 } },
+	{ "_number_div",                           { pf_number_div,                           1, 1 } },
+	{ "_number_eq",                            { pf_number_eq,                            1, 1 } },
+	{ "_number_mul",                           { pf_number_mul,                           1, 1 } },
+	{ "_number_ne",                            { pf_number_ne,                            1, 1 } },
+	{ "_number_sub",                           { pf_number_sub,                           1, 1 } },
 
 	{ "_utf8_seqlen",                          { moo_pf_utf8_seqlen,                      0, 0 } },
 	{ "_utf8_to_uc",                           { moo_pf_utf8_to_uc,                       0, 0 } },

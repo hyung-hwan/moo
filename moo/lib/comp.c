@@ -711,7 +711,6 @@ static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str)
 	moo_oop_t v;
 	int base = 10;
 
-MOO_DEBUG2 (moo, "string to fpdec... %.*js\n", str->len, str->ptr);
 	pos = str->len;
 	while (pos > 0)
 	{
@@ -1493,13 +1492,12 @@ static int get_numlit (moo_t* moo, int negated)
 			}
 			while (is_digitchar(c));
 
-			MOO_ASSERT (moo, scale > 0);
+			MOO_ASSERT (moo, scale > 0 && scale <= MOO_SMOOI_MAX);
 
 			/* TODO: handle floating-point? fpdec if only suffixed with 's' like 1.23s4?, 'e','g' for floating point? 
 			 *      for now, there is no floating point support. as long as a point appears, it's a fpdec number. */
-
-MOO_DEBUG2 (moo, "FPDEC LITERAL [%.*js]\n", TOKEN_NAME_LEN(moo), TOKEN_NAME_PTR(moo));
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_FPDECLIT);
+			unget_char (moo, &moo->c->lxc);
 		}
 	}
 	else

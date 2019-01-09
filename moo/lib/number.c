@@ -26,8 +26,6 @@
 
 #include "moo-prv.h"
 
-#define MOO_IS_FPDEC(moo, x) (MOO_OBJ_GET_CLASS(x) == (moo)->_fixed_point_decimal)
-
 moo_oop_t moo_makefpdec (moo_t* moo, moo_oop_t value, moo_ooi_t scale)
 {
 	moo_oop_fpdec_t fpdec;
@@ -62,7 +60,7 @@ static moo_ooi_t equalize_scale (moo_t* moo, moo_oop_t* x, moo_oop_t* y)
 
 	xs = 0;
 	xv = *x;
-	if (MOO_IS_FPDEC(moo, xv))
+	if (MOO_OOP_IS_FPDEC(moo, xv))
 	{
 		xs = MOO_OOP_TO_SMOOI(((moo_oop_fpdec_t)xv)->scale);
 		xv = ((moo_oop_fpdec_t)xv)->value;
@@ -72,10 +70,10 @@ static moo_ooi_t equalize_scale (moo_t* moo, moo_oop_t* x, moo_oop_t* y)
 		moo_seterrbfmt (moo, MOO_EINVAL, "parameter not numeric - %O", xv);
 		return -1;
 	}
-	
+
 	ys = 0;
 	yv = *y;
-	if (MOO_IS_FPDEC(moo, *y))
+	if (MOO_OOP_IS_FPDEC(moo, yv))
 	{
 		ys = MOO_OOP_TO_SMOOI(((moo_oop_fpdec_t)yv)->scale);
 		yv = ((moo_oop_fpdec_t)yv)->value;
@@ -143,7 +141,7 @@ moo_oop_t moo_truncfpdecval (moo_t* moo, moo_oop_t iv, moo_ooi_t cs, moo_ooi_t n
 
 moo_oop_t moo_addnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 {
-	if (!MOO_IS_FPDEC(moo, x) && !MOO_IS_FPDEC(moo, y))
+	if (!MOO_OOP_IS_FPDEC(moo, x) && !MOO_OOP_IS_FPDEC(moo, y))
 	{
 		/* both are probably integers */
 		return moo_addints(moo, x, y);
@@ -172,7 +170,7 @@ moo_oop_t moo_addnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 moo_oop_t moo_subnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 {
-	if (!MOO_IS_FPDEC(moo, x) && !MOO_IS_FPDEC(moo, y))
+	if (!MOO_OOP_IS_FPDEC(moo, x) && !MOO_OOP_IS_FPDEC(moo, y))
 	{
 		/* both are probably integers */
 		return moo_subints(moo, x, y);
@@ -207,7 +205,7 @@ static moo_oop_t mul_nums (moo_t* moo, moo_oop_t x, moo_oop_t y, int mult)
 
 	xs = 0;
 	xv = x;
-	if (MOO_IS_FPDEC(moo, xv))
+	if (MOO_OOP_IS_FPDEC(moo, xv))
 	{
 		xs = MOO_OOP_TO_SMOOI(((moo_oop_fpdec_t)xv)->scale);
 		xv = ((moo_oop_fpdec_t)xv)->value;
@@ -220,7 +218,7 @@ static moo_oop_t mul_nums (moo_t* moo, moo_oop_t x, moo_oop_t y, int mult)
 	
 	ys = 0;
 	yv = y;
-	if (MOO_IS_FPDEC(moo, y))
+	if (MOO_OOP_IS_FPDEC(moo, y))
 	{
 		ys = MOO_OOP_TO_SMOOI(((moo_oop_fpdec_t)yv)->scale);
 		yv = ((moo_oop_fpdec_t)yv)->value;
@@ -269,7 +267,7 @@ moo_oop_t moo_divnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 	xs = 0;
 	xv = x;
-	if (MOO_IS_FPDEC(moo, xv))
+	if (MOO_OOP_IS_FPDEC(moo, xv))
 	{
 		xs = MOO_OOP_TO_SMOOI(((moo_oop_fpdec_t)xv)->scale);
 		xv = ((moo_oop_fpdec_t)xv)->value;
@@ -282,7 +280,7 @@ moo_oop_t moo_divnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 	ys = 0;
 	yv = y;
-	if (MOO_IS_FPDEC(moo, y))
+	if (MOO_OOP_IS_FPDEC(moo, y))
 	{
 		ys = MOO_OOP_TO_SMOOI(((moo_oop_fpdec_t)yv)->scale);
 		yv = ((moo_oop_fpdec_t)yv)->value;
@@ -315,7 +313,7 @@ moo_oop_t moo_divnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 static moo_oop_t comp_nums (moo_t* moo, moo_oop_t x, moo_oop_t y, moo_oop_t (*comper) (moo_t*, moo_oop_t, moo_oop_t))
 {
-	if (!MOO_IS_FPDEC(moo, x) && !MOO_IS_FPDEC(moo, y))
+	if (!MOO_OOP_IS_FPDEC(moo, x) && !MOO_OOP_IS_FPDEC(moo, y))
 	{
 		/* both are probably integers */
 		return comper(moo, x, y);
@@ -371,7 +369,7 @@ moo_oop_t moo_nenums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 moo_oop_t moo_sqrtnum (moo_t* moo, moo_oop_t x)
 {
-	if (!MOO_IS_FPDEC(moo, x))
+	if (!MOO_OOP_IS_FPDEC(moo, x))
 	{
 		return moo_sqrtint(moo, x);
 	}
@@ -402,7 +400,7 @@ moo_oop_t moo_sqrtnum (moo_t* moo, moo_oop_t x)
 
 moo_oop_t moo_absnum (moo_t* moo, moo_oop_t x)
 {
-	if (!MOO_IS_FPDEC(moo, x))
+	if (!MOO_OOP_IS_FPDEC(moo, x))
 	{
 		return moo_absint(moo, x);
 	}
