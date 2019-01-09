@@ -426,11 +426,18 @@ static int print_object (moo_t* moo, moo_bitmask_t mask, moo_oop_t oop, outbfmt_
 		else if (c == moo->_large_positive_integer)
 		{
 			moo_oow_t i;
-			if (outbfmt (moo, mask, "16r") <= -1) return -1;
+			if (outbfmt(moo, mask, "16r") <= -1) return -1;
 			for (i = MOO_OBJ_GET_SIZE(oop); i > 0;)
 			{
 				if (outbfmt(moo, mask, "%0*lX", (int)(MOO_SIZEOF(moo_liw_t) * 2), (unsigned long int)(MOO_OBJ_GET_LIWORD_SLOT(oop)[--i])) <= -1) return -1;
 			}
+		}
+		else if (c == moo->_fixed_point_decimal)
+		{
+/* TODO: change this to a proper output.... */
+			if (print_object(moo, mask, ((moo_oop_fpdec_t)oop)->value, outbfmt) <= -1) return -1;
+			if (outbfmt(moo, mask, "s") <= -1) return -1;
+			if (print_object(moo, mask, ((moo_oop_fpdec_t)oop)->scale, outbfmt) <= -1) return -1;
 		}
 		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_CHAR)
 		{

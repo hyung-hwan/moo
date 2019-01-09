@@ -1811,7 +1811,8 @@ enum moo_synerrnum_t
 	MOO_SYNERR_COLON,           /* : expected */
 	MOO_SYNERR_STRING,          /* string expected */
 	MOO_SYNERR_RADIXINVAL,      /* invalid radix */
-	MOO_SYNERR_RADNUMLITINVAL,  /* invalid numeric literal with radix */
+	MOO_SYNERR_RADINTLITINVAL,  /* invalid integer literal with radix */
+	MOO_SYNERR_FPDECLITINVAL,   /* invalid fixed-point decimal literal */
 	MOO_SYNERR_BYTERANGE,       /* byte too small or too large */
 	MOO_SYNERR_ERRLITINVAL,     /* wrong error literal */
 	MOO_SYNERR_SMPTRLITINVAL,   /* wrong smptr literal */

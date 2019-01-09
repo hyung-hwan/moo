@@ -666,7 +666,7 @@ static int string_to_smooi (moo_t* moo, moo_oocs_t* str, int radixed, moo_ooi_t*
 	return 0;
 }
 
-static moo_oop_t string_to_num (moo_t* moo, moo_oocs_t* str, int radixed)
+static moo_oop_t string_to_int (moo_t* moo, moo_oocs_t* str, int radixed)
 {
 	int negsign, base;
 	const moo_ooch_t* ptr, * end;
@@ -704,29 +704,23 @@ static moo_oop_t string_to_num (moo_t* moo, moo_oocs_t* str, int radixed)
 	return moo_strtoint(moo, ptr, end - ptr, base);
 }
 
-#if 0
-static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str, const moo_ioloc_t* loc)
+static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str)
 {
 	moo_oow_t pos, len;
 	moo_oow_t scale = 0;
 	moo_oop_t v;
 	int base = 10;
 
+MOO_DEBUG2 (moo, "string to fpdec... %.*js\n", str->len, str->ptr);
 	pos = str->len;
 	while (pos > 0)
 	{
-		pos--;
-		if (str->ptr[pos] == '.')
+		if (str->ptr[--pos] == '.')
 		{
 			scale = str->len - pos - 1;
-			if (scale > MOO_SMOOI_MAX)
-			{
-				moo_setsynerrbfmt (moo, MOO_SYNERR_NUMRANGE, loc, str, "too many digits after decimal point");
-				return MOO_NULL;
-			}
-
 			MOO_ASSERT (moo, scale > 0);
-			/*if (scale > 0)*/ MOO_MEMMOVE (&str->ptr[pos], &str->ptr[pos + 1], scale * MOO_SIZEOF(str->ptr[0])); /* remove the decimal point from the string */
+			MOO_ASSERT (moo, scale <= MOO_SMOOI_MAX);
+			MOO_MEMMOVE (&str->ptr[pos], &str->ptr[pos + 1], scale * MOO_SIZEOF(str->ptr[0])); /* remove the decimal point from the string */
 			break;
 		}
 	}
@@ -745,7 +739,6 @@ static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str, const moo_ioloc_t
 
 	return moo_makefpdec(moo, v, scale);
 }
-#endif
 
 static moo_oop_t string_to_error (moo_t* moo, moo_oocs_t* str, moo_ioloc_t* loc)
 {
@@ -1378,7 +1371,7 @@ static int get_numlit (moo_t* moo, int negated)
 	int radix_overflowed = 0;
 
 	c = moo->c->lxc.c;
-	SET_TOKEN_TYPE (moo, MOO_IOTOK_NUMLIT);
+	SET_TOKEN_TYPE (moo, MOO_IOTOK_INTLIT);
 
 /*TODO: support a complex numeric literal */
 	do 
@@ -1432,7 +1425,7 @@ static int get_numlit (moo_t* moo, int negated)
 		if (CHAR_TO_NUM(c, radix) >= radix)
 		{
 			/* no digit after the radix specifier */
-			moo_setsynerr (moo, MOO_SYNERR_RADNUMLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			moo_setsynerr (moo, MOO_SYNERR_RADINTLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -1456,16 +1449,32 @@ static int get_numlit (moo_t* moo, int negated)
 		}
 		while (CHAR_TO_NUM(c, radix) < radix);
 
-		SET_TOKEN_TYPE (moo, MOO_IOTOK_RADNUMLIT);
+		SET_TOKEN_TYPE (moo, MOO_IOTOK_RADINTLIT);
 		unget_char (moo, &moo->c->lxc);
 	}
-	else
+	else if (c == '.')
 	{
-#if 0
-		if (c == '.')
+		moo_iolxc_t period;
+		moo_oow_t scale = 0;
+
+		period = moo->c->lxc;
+		GET_CHAR_TO (moo, c);
+		if (!is_digitchar(c))
 		{
+			unget_char (moo, &moo->c->lxc);
+			unget_char (moo, &period);
+		}
+		else
+		{
+			ADD_TOKEN_CHAR (moo, '.');
 			do
 			{
+				if (scale >= MOO_SMOOI_MAX)
+				{
+					moo_setsynerrbfmt (moo, MOO_SYNERR_FPDECLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo), "invalid fixed-point decimal - too many digits after point");
+					return -1;
+				}
+				scale++;
 				ADD_TOKEN_CHAR (moo, c);
 				GET_CHAR_TO (moo, c);
 				if (c == '_')
@@ -1484,16 +1493,18 @@ static int get_numlit (moo_t* moo, int negated)
 			}
 			while (is_digitchar(c));
 
-			/* TODO: handle floating-point? fpdec if only suffixed with 's' like 1.23s4? */
+			MOO_ASSERT (moo, scale > 0);
+
+			/* TODO: handle floating-point? fpdec if only suffixed with 's' like 1.23s4?, 'e','g' for floating point? 
+			 *      for now, there is no floating point support. as long as a point appears, it's a fpdec number. */
+
+MOO_DEBUG2 (moo, "FPDEC LITERAL [%.*js]\n", TOKEN_NAME_LEN(moo), TOKEN_NAME_PTR(moo));
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_FPDECLIT);
 		}
-		else
-		{
-#endif
+	}
+	else
+	{
 			unget_char (moo, &moo->c->lxc);
-#if 0
-		}
-#endif
 	}
 
 /*
@@ -2878,18 +2889,6 @@ static int add_symbol_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t offs
 	return add_literal(moo, tmp, index);
 }
 
-
-static int add_fpdec_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* index)
-{
-	moo_oop_t tmp;
-
-#if 0
-	tmp = moo_makefpdec(moo, value, scale);
-	if (!tmp) return -1;
-#endif
-	return add_literal(moo, tmp, index);
-}
-
 static MOO_INLINE int set_class_fqn (moo_t* moo, moo_cunit_class_t* cc, const moo_oocs_t* name)
 {
 	if (copy_string_to(moo, name, &cc->fqn, &cc->fqn_capa, 0, '\0') <= -1) return -1;
@@ -4085,7 +4084,7 @@ static int compile_method_pragma (moo_t* moo)
 		GET_TOKEN (moo); 
 		switch (TOKEN_TYPE(moo))
 		{
-			case MOO_IOTOK_NUMLIT:
+			case MOO_IOTOK_INTLIT:
 	/*TODO: more checks the validity of the primitive number. support number with radix and so on support more extensive syntax. support primitive name, not number*/
 				ptr = TOKEN_NAME_PTR(moo);
 				end = ptr + TOKEN_NAME_LEN(moo);
@@ -4813,7 +4812,7 @@ static int read_byte_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 
 	GET_TOKEN_GOTO (moo, oops); /* skip #[ and read the next token */
 
-	while (TOKEN_TYPE(moo) == MOO_IOTOK_NUMLIT || TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT || TOKEN_TYPE(moo) == MOO_IOTOK_CHARLIT)
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_INTLIT || TOKEN_TYPE(moo) == MOO_IOTOK_RADINTLIT || TOKEN_TYPE(moo) == MOO_IOTOK_CHARLIT)
 	{
 		/* TODO: check if the number is an integer */
 
@@ -4822,7 +4821,7 @@ static int read_byte_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 			/* accept a character literal inside a byte array literal */
 			tmp = TOKEN_NAME_PTR(moo)[0];
 		}
-		else if (string_to_smooi(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT, &tmp) <= -1)
+		else if (string_to_smooi(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADINTLIT, &tmp) <= -1)
 		{
 			/* the token reader reads a valid token. no other errors
 			 * than the range error must not occur */
@@ -5273,14 +5272,14 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				GET_TOKEN (moo);
 				break;
 
-			case MOO_IOTOK_NUMLIT:
-			case MOO_IOTOK_RADNUMLIT:
+			case MOO_IOTOK_INTLIT:
+			case MOO_IOTOK_RADINTLIT:
 			{
 /* TODO: floating pointer number */
 				/* TODO: other types of numbers, etc */
 				moo_oop_t tmp;
 
-				tmp = string_to_num(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT);
+				tmp = string_to_int(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADINTLIT);
 				if (!tmp) return -1;
 
 				if (MOO_OOP_IS_SMOOI(tmp))
@@ -5297,13 +5296,19 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				break;
 			}
 
-#if 0
 			case MOO_IOTOK_FPDECLIT:
-				if (add_fpdec_literal(moo, TOKEN_NAME(moo, &index) <= -1 ||
+			{
+				moo_oop_t tmp;
+
+				tmp = string_to_fpdec(moo, TOKEN_NAME(moo));
+				if (!tmp) return -1;
+
+				if (add_literal(moo, tmp, &index) <= -1 ||
 				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+
 				GET_TOKEN (moo);
 				break;
-#endif
+			}
 
 			case MOO_IOTOK_SYMLIT:
 				if (add_symbol_literal(moo, TOKEN_NAME(moo), 1, &index) <= -1 ||
@@ -7674,13 +7679,13 @@ static int process_class_modifiers (moo_t* moo, moo_ioloc_t* type_loc)
 
 					GET_TOKEN (moo);
 
-					if (TOKEN_TYPE(moo) != MOO_IOTOK_NUMLIT && TOKEN_TYPE(moo) != MOO_IOTOK_RADNUMLIT)
+					if (TOKEN_TYPE(moo) != MOO_IOTOK_INTLIT && TOKEN_TYPE(moo) != MOO_IOTOK_RADINTLIT)
 					{
 						moo_setsynerr (moo, MOO_SYNERR_LITERAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
 					}
 
-					if (string_to_smooi(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT, &tmp) <= -1 || 
+					if (string_to_smooi(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADINTLIT, &tmp) <= -1 || 
 						tmp < 0 || tmp > MOO_MAX_NAMED_INSTVARS)
 					{
 						/* the class type size has nothing to do with the name instance variables
@@ -8690,11 +8695,19 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 			MOO_ASSERT (moo, TOKEN_NAME_LEN(moo) == 1);
 			return MOO_CHAR_TO_OOP(TOKEN_NAME_PTR(moo)[0]);
 
-		case MOO_IOTOK_NUMLIT:
-		case MOO_IOTOK_RADNUMLIT:
+		case MOO_IOTOK_INTLIT:
+		case MOO_IOTOK_RADINTLIT:
 		{
 			moo_oop_t lit;
-			lit = string_to_num(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADNUMLIT);
+			lit = string_to_int(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADINTLIT);
+			if (rdonly && lit && MOO_OOP_IS_POINTER(lit)) MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
+			return lit;
+		}
+
+		case MOO_IOTOK_FPDECLIT:
+		{
+			moo_oop_t lit;
+			lit = string_to_fpdec(moo, TOKEN_NAME(moo));
 			if (rdonly && lit && MOO_OOP_IS_POINTER(lit)) MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
 			return lit;
 		}
