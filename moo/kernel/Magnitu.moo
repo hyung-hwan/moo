@@ -126,6 +126,18 @@ class(#limited) Number(Magnitude)
 		self primitiveFailed.
 	}
 
+	method mul: aNumber
+	{
+		<primitive: #_number_mul>
+		self primitiveFailed.
+	}
+
+	method mlt: aNumber
+	{
+		<primitive: #_number_mlt>
+		self primitiveFailed.
+	}
+
 	method div: aNumber
 	{
 		## integer division rounded toward zero

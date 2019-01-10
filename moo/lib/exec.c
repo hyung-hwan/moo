@@ -2870,6 +2870,22 @@ static moo_pfrc_t pf_number_mul (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+static moo_pfrc_t pf_number_mlt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	res = moo_mltnums(moo, rcv, arg);
+	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
 static moo_pfrc_t pf_number_div (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
@@ -3873,6 +3889,7 @@ static pf_t pftab[] =
 	{ "_number_le",                            { pf_number_le,                            1, 1 } },
 	{ "_number_lt",                            { pf_number_lt,                            1, 1 } },
 	{ "_number_mdiv",                          { pf_number_mdiv,                          1, 1 } },
+	{ "_number_mlt",                           { pf_number_mlt,                           1, 1 } },
 	{ "_number_mul",                           { pf_number_mul,                           1, 1 } },
 	{ "_number_ne",                            { pf_number_ne,                            1, 1 } },
 	{ "_number_negated",                       { pf_number_negated,                       0, 0 } },
