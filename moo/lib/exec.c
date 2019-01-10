@@ -2880,7 +2880,7 @@ static moo_pfrc_t pf_number_div (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
 	res = moo_divnums(moo, rcv, arg, 0);
-	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+	if (!res) return (moo->errnum == MOO_EINVAL || moo->errnum == MOO_EDIVBY0? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
 	return MOO_PF_SUCCESS;
@@ -2896,7 +2896,7 @@ static moo_pfrc_t pf_number_mdiv (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
 	res = moo_divnums(moo, rcv, arg, 1);
-	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+	if (!res) return (moo->errnum == MOO_EINVAL || moo->errnum == MOO_EDIVBY0? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
 	return MOO_PF_SUCCESS;
