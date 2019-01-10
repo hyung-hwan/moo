@@ -1405,7 +1405,8 @@ moo_oop_t moo_mltnums (
 moo_oop_t moo_divnums (
 	moo_t*       moo,
 	moo_oop_t    x,
-	moo_oop_t    y
+	moo_oop_t    y,
+	int          modulo
 );
 
 moo_oop_t moo_gtnums (
@@ -1442,6 +1443,11 @@ moo_oop_t moo_nenums (
 	moo_t*       moo,
 	moo_oop_t    x,
 	moo_oop_t    y
+);
+
+moo_oop_t moo_negatenum (
+	moo_t*       moo,
+	moo_oop_t    x
 );
 
 moo_oop_t moo_sqrtnum (

@@ -143,7 +143,7 @@ class(#limited) Number(Magnitude)
 	method mdiv: aNumber
 	{
 		## integer division quotient
-		<primitive: #_integer_mdiv>
+		<primitive: #_number_mdiv>
 		self primitiveFailed.
 	}
 	
@@ -173,31 +173,31 @@ class(#limited) Number(Magnitude)
 
 	method < aNumber
 	{
-		<primitive: #_integer_lt>
+		<primitive: #_number_lt>
 		self primitiveFailed.
 	}
 
 	method > aNumber
 	{
-		<primitive: #_integer_gt>
+		<primitive: #_number_gt>
 		self primitiveFailed.
 	}
 
 	method <= aNumber
 	{
-		<primitive: #_integer_le>
+		<primitive: #_number_le>
 		self primitiveFailed.
 	}
 
 	method >= aNumber
 	{
-		<primitive: #_integer_ge>
+		<primitive: #_number_ge>
 		self primitiveFailed.
 	}
 
 	method negated
 	{
-		<primitive: #_integer_negated>
+		<primitive: #_number_negated>
 		^0 - self.
 	}
 

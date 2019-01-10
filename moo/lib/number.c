@@ -259,7 +259,7 @@ moo_oop_t moo_mltnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	return mul_nums(moo, x, y, 1);
 }
 
-moo_oop_t moo_divnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
+moo_oop_t moo_divnums (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo)
 {
 	moo_ooi_t xs, ys, i;
 	moo_oop_t nv;
@@ -304,7 +304,7 @@ moo_oop_t moo_divnums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		}
 	}
 
-	nv = moo_divints(moo, nv, yv, 0, MOO_NULL);
+	nv = moo_divints(moo, nv, yv, modulo, MOO_NULL);
 	moo_popvolat (moo);
 	if (!nv) return MOO_NULL;
 
@@ -367,6 +367,28 @@ moo_oop_t moo_nenums (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	return comp_nums(moo, x, y, moo_neints);
 }
 
+
+moo_oop_t moo_negatenum (moo_t* moo, moo_oop_t x)
+{
+	if (!MOO_OOP_IS_FPDEC(moo, x))
+	{
+		return moo_negateint(moo, x);
+	}
+	else
+	{
+		moo_oop_t v;
+		moo_ooi_t scale;
+
+		scale = MOO_OOP_TO_SMOOI(((moo_oop_fpdec_t)x)->scale);
+		v = ((moo_oop_fpdec_t)x)->value;
+
+		v = moo_negateint(moo, v);
+		if (!v) return MOO_NULL;
+
+		return moo_makefpdec(moo, v, scale);
+	}
+}
+
 moo_oop_t moo_sqrtnum (moo_t* moo, moo_oop_t x)
 {
 	if (!MOO_OOP_IS_FPDEC(moo, x))
@@ -411,10 +433,10 @@ moo_oop_t moo_absnum (moo_t* moo, moo_oop_t x)
 
 		scale = MOO_OOP_TO_SMOOI(((moo_oop_fpdec_t)x)->scale);
 		v = ((moo_oop_fpdec_t)x)->value;
-		
+
 		v = moo_absint(moo, v);
 		if (!v) return MOO_NULL;
-		
+
 		return moo_makefpdec(moo, v, scale);
 	}
 }

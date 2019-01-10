@@ -2879,13 +2879,43 @@ static moo_pfrc_t pf_number_div (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	res = moo_divnums(moo, rcv, arg);
+	res = moo_divnums(moo, rcv, arg, 0);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
 	return MOO_PF_SUCCESS;
 }
 
+static moo_pfrc_t pf_number_mdiv (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	res = moo_divnums(moo, rcv, arg, 1);
+	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_number_negated (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, res;
+
+	MOO_ASSERT (moo, nargs == 0);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+
+	res = moo_negatenum(moo, rcv);
+	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
 
 static moo_pfrc_t pf_number_eq (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
@@ -2913,6 +2943,70 @@ static moo_pfrc_t pf_number_ne (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
 	res = moo_nenums(moo, rcv, arg);
+	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_number_lt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	res = moo_ltnums(moo, rcv, arg);
+	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_number_gt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	res = moo_gtnums(moo, rcv, arg);
+	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_number_le (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	res = moo_lenums(moo, rcv, arg);
+	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_number_ge (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	res = moo_genums(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -3040,7 +3134,7 @@ static moo_pfrc_t pf_integer_negated (moo_t* moo, moo_mod_t* mod, moo_ooi_t narg
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 
-	res = moo_negateint (moo, rcv);
+	res = moo_negateint(moo, rcv);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
 
 	MOO_STACK_SETRET (moo, nargs, res);
@@ -3754,8 +3848,14 @@ static pf_t pftab[] =
 	{ "_number_add",                           { pf_number_add,                           1, 1 } },
 	{ "_number_div",                           { pf_number_div,                           1, 1 } },
 	{ "_number_eq",                            { pf_number_eq,                            1, 1 } },
+	{ "_number_ge",                            { pf_number_ge,                            1, 1 } },
+	{ "_number_gt",                            { pf_number_gt,                            1, 1 } },
+	{ "_number_le",                            { pf_number_le,                            1, 1 } },
+	{ "_number_lt",                            { pf_number_lt,                            1, 1 } },
+	{ "_number_mdiv",                          { pf_number_mdiv,                          1, 1 } },
 	{ "_number_mul",                           { pf_number_mul,                           1, 1 } },
 	{ "_number_ne",                            { pf_number_ne,                            1, 1 } },
+	{ "_number_negated",                       { pf_number_negated,                       0, 0 } },
 	{ "_number_sub",                           { pf_number_sub,                           1, 1 } },
 
 	{ "_utf8_seqlen",                          { moo_pf_utf8_seqlen,                      0, 0 } },
