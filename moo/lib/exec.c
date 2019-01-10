@@ -3013,6 +3013,26 @@ static moo_pfrc_t pf_number_ge (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+static moo_pfrc_t pf_number_numtostr (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, str;
+	moo_ooi_t radix;
+
+	MOO_ASSERT (moo, nargs == 1);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	if (!MOO_OOP_IS_SMOOI(arg)) return MOO_PF_FAILURE;
+	radix = MOO_OOP_TO_SMOOI(arg);
+
+	if (radix < 2 || radix > 36) return MOO_PF_FAILURE;
+	str = moo_numtostr(moo, rcv, radix);
+	if (!str) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	MOO_STACK_SETRET (moo, nargs, str);
+	return MOO_PF_SUCCESS;
+}
 /* ------------------------------------------------------------------ */
 static moo_pfrc_t pf_integer_add (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
@@ -3856,6 +3876,7 @@ static pf_t pftab[] =
 	{ "_number_mul",                           { pf_number_mul,                           1, 1 } },
 	{ "_number_ne",                            { pf_number_ne,                            1, 1 } },
 	{ "_number_negated",                       { pf_number_negated,                       0, 0 } },
+	{ "_number_numtostr",                      { pf_number_numtostr,                      1, 1 } },
 	{ "_number_sub",                           { pf_number_sub,                           1, 1 } },
 
 	{ "_utf8_seqlen",                          { moo_pf_utf8_seqlen,                      0, 0 } },

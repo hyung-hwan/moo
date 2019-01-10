@@ -421,6 +421,10 @@ static int print_object (moo_t* moo, moo_bitmask_t mask, moo_oop_t oop, outbfmt_
 		}
 		else if (c == moo->_fixed_point_decimal)
 		{
+#if 1
+			if (!moo_numtostr(moo, oop, 10 | MOO_NUMTOSTR_NONEWOBJ)) return -1;
+			if (outbfmt(moo, mask, "%.*js", moo->inttostr.xbuf.len, moo->inttostr.xbuf.ptr) <= -1) return -1;
+#else
 			moo_ooch_t* ptr;
 			moo_oow_t len;
 			moo_ooi_t scale;
@@ -453,6 +457,7 @@ static int print_object (moo_t* moo, moo_bitmask_t mask, moo_oop_t oop, outbfmt_
 			{
 				if (outbfmt(moo, mask, "%.*js.%.*js", len - scale, &ptr[0], scale, &ptr[len - scale]) <= -1) return -1;
 			}
+#endif
 		}
 		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_CHAR)
 		{

@@ -1353,8 +1353,9 @@ moo_oop_t moo_strtoint (
 	int               radix
 );
 
-#define MOO_INTTOSTR_LOWERCASE (1 << 14)
-#define MOO_INTTOSTR_NONEWOBJ  (1 << 15)
+#define MOO_INTTOSTR_RADIXMASK (0xFF)
+#define MOO_INTTOSTR_LOWERCASE (1 << 8)
+#define MOO_INTTOSTR_NONEWOBJ  (1 << 9)
 
 moo_oop_t moo_inttostr (
 	moo_t*      moo,
@@ -1459,6 +1460,18 @@ moo_oop_t moo_absnum (
 	moo_t*       moo,
 	moo_oop_t    x
 );
+
+
+#define MOO_NUMTOSTR_RADIXMASK MOO_INTTOSTR_RADIXMASK
+#define MOO_NUMTOSTR_LOWERCASE MOO_INTTOSTR_LOWERCASE
+#define MOO_NUMTOSTR_NONEWOBJ MOO_INTTOSTR_NONEWOBJ
+
+moo_oop_t moo_numtostr (
+	moo_t*      moo,
+	moo_oop_t   num,
+	int         flagged_radix /* radix between 2 and 36 inclusive, optionally bitwise ORed of MOO_INTTOSTR_XXX bits */
+);
+
 
 /* ========================================================================= */
 /* logfmt.c                                                                  */

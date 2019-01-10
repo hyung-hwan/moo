@@ -440,3 +440,70 @@ moo_oop_t moo_absnum (moo_t* moo, moo_oop_t x)
 		return moo_makefpdec(moo, v, scale);
 	}
 }
+
+moo_oop_t moo_numtostr (moo_t* moo, moo_oop_t num, int flagged_radix)
+{
+	if (!MOO_OOP_IS_FPDEC(moo, num))
+	{
+		return moo_inttostr(moo, num, flagged_radix);
+	}
+	else
+	{
+		/* ignore radix for fixed-point decimal */
+		moo_ooch_t* ptr;
+		moo_oow_t len, inc, reqcapa;
+		moo_ooi_t scale;
+		int flags;
+
+		flags = 10 | (flagged_radix & ~MOO_INTTOSTR_RADIXMASK) | MOO_INTTOSTR_NONEWOBJ;
+		if (!moo_inttostr(moo, ((moo_oop_fpdec_t)num)->value, flags)) return MOO_NULL;
+
+		scale = MOO_OOP_TO_SMOOI(((moo_oop_fpdec_t)num)->scale);
+
+	start_over:
+		ptr = moo->inttostr.xbuf.ptr;
+		len = moo->inttostr.xbuf.len;
+		if (ptr[0] == '-')
+		{
+			ptr++;
+			len--;
+		}
+
+		inc = (scale >= len)? (scale - len + 2): 1;
+		reqcapa = moo->inttostr.xbuf.len + inc + 20000;
+		if (moo->inttostr.xbuf.capa < reqcapa)
+		{
+			moo_ooch_t* xbuf = (moo_ooch_t*)moo_reallocmem(moo, moo->inttostr.xbuf.ptr, reqcapa * MOO_SIZEOF(*xbuf));
+			if (!xbuf) return MOO_NULL;
+			moo->inttostr.xbuf.capa = reqcapa;
+			moo->inttostr.xbuf.ptr = xbuf;
+			goto start_over;
+		}
+
+		if (scale >= len)
+		{
+			moo_oow_t i, j;
+			MOO_MEMMOVE (&ptr[inc], ptr, len * MOO_SIZEOF(*ptr));
+			ptr[0] = '0';
+			ptr[1] = '.';
+			for (i = len, j = 2; i < scale; i++) ptr[j++] = '0';
+		}
+		else
+		{
+			moo_oow_t pos;
+			pos = len - scale;
+			MOO_MEMMOVE (&ptr[pos + 1], &ptr[pos], scale * MOO_SIZEOF(*ptr));
+			ptr[pos] = '.'; /* squeeze in the fixed point */
+		}
+		moo->inttostr.xbuf.len += inc;
+
+		if (flagged_radix & MOO_INTTOSTR_NONEWOBJ)
+		{
+			/* special case. don't create a new object.
+			* the caller can use the data left in moo->inttostr.xbuf */
+			return moo->_nil;
+		}
+
+		return moo_makestring(moo, moo->inttostr.xbuf.ptr, moo->inttostr.xbuf.len);
+	}
+}

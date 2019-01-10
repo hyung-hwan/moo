@@ -247,7 +247,7 @@ class(#limited) Number(Magnitude)
 
 	method printStringRadix: aNumber
 	{
-		<primitive: #_integer_inttostr>
+		<primitive: #_number_numtostr>
 		self primitiveFailed.
 	}
 
