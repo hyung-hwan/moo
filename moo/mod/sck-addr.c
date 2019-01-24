@@ -37,7 +37,7 @@
 #	include <netinet/in.h>
 #endif
 #if defined(HAVE_SYS_UN_H)
-	#include <sys/un.h>
+#	include <sys/un.h>
 #endif
 #if defined(HAVE_NETPACKET_PACKET_H)
 #	include <netpacket/packet.h>
@@ -249,7 +249,7 @@ static int str_to_sockaddr (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, so
 	if (*p == '/' && len >= 2)
 	{
 	#if defined(MOO_OOCH_IS_BCH)
-		moo_copybcstr (nwad->un.sun_path, MOO_COUNTOF(nwad->un.sun_path), str);
+		moo_copy_bcstr (nwad->un.sun_path, MOO_COUNTOF(nwad->un.sun_path), str);
 	#else
 		moo_oow_t dstlen;
 
