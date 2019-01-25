@@ -169,7 +169,7 @@ am__DEPENDENCIES_5 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2) \
 	$(am__DEPENDENCIES_3) $(am__DEPENDENCIES_4)
 am_libmoo_la_OBJECTS = libmoo_la-bigint.lo libmoo_la-comp.lo \
 	libmoo_la-debug.lo libmoo_la-decode.lo libmoo_la-dic.lo \
-	libmoo_la-err.lo libmoo_la-exec.lo libmoo_la-logfmt.lo \
+	libmoo_la-err.lo libmoo_la-exec.lo libmoo_la-fmtout.lo \
 	libmoo_la-gc.lo libmoo_la-heap.lo libmoo_la-moo.lo \
 	libmoo_la-number.lo libmoo_la-obj.lo libmoo_la-opt.lo \
 	libmoo_la-pf-basic.lo libmoo_la-pf-sys.lo libmoo_la-pf-utf8.lo \
@@ -404,6 +404,7 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -466,8 +467,8 @@ libmoo_la_SOURCES = \
 	dic.c \
 	err.c \
 	exec.c \
-	logfmtv.h \
-	logfmt.c \
+	fmtout.c \
+	fmtoutv.h \
 	gc.c \
 	heap.c \
 	moo.c \
@@ -653,9 +654,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-dic.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-err.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-exec.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-fmtout.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-gc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-heap.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-logfmt.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-moo.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-number.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-obj.Plo@am__quote@
@@ -745,12 +746,12 @@ libmoo_la-exec.lo: exec.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-exec.lo `test -f 'exec.c' || echo '$(srcdir)/'`exec.c
 
-libmoo_la-logfmt.lo: logfmt.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-logfmt.lo -MD -MP -MF $(DEPDIR)/libmoo_la-logfmt.Tpo -c -o libmoo_la-logfmt.lo `test -f 'logfmt.c' || echo '$(srcdir)/'`logfmt.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-logfmt.Tpo $(DEPDIR)/libmoo_la-logfmt.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='logfmt.c' object='libmoo_la-logfmt.lo' libtool=yes @AMDEPBACKSLASH@
+libmoo_la-fmtout.lo: fmtout.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-fmtout.lo -MD -MP -MF $(DEPDIR)/libmoo_la-fmtout.Tpo -c -o libmoo_la-fmtout.lo `test -f 'fmtout.c' || echo '$(srcdir)/'`fmtout.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-fmtout.Tpo $(DEPDIR)/libmoo_la-fmtout.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='fmtout.c' object='libmoo_la-fmtout.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-logfmt.lo `test -f 'logfmt.c' || echo '$(srcdir)/'`logfmt.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-fmtout.lo `test -f 'fmtout.c' || echo '$(srcdir)/'`fmtout.c
 
 libmoo_la-gc.lo: gc.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-gc.lo -MD -MP -MF $(DEPDIR)/libmoo_la-gc.Tpo -c -o libmoo_la-gc.lo `test -f 'gc.c' || echo '$(srcdir)/'`gc.c

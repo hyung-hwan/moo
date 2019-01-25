@@ -75,8 +75,8 @@ libmoo_la_SOURCES = \
 	dic.c \
 	err.c \
 	exec.c \
-	logfmtv.h \
-	logfmt.c \
+	fmtout.c \
+	fmtoutv.h \
 	gc.c \
 	heap.c \
 	moo.c \

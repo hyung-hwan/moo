@@ -268,13 +268,6 @@
 #define MOO_OOP_IS_FPDEC(moo,x) (MOO_CLASSOF(moo,x) == (moo)->_fixed_point_decimal)
 #define MOO_POINTER_IS_FPDEC(moo,x) (MOO_OBJ_GET_CLASS(x) == (moo)->_fixed_point_Decimal)
 
-typedef moo_ooi_t (*moo_outbfmt_t) (
-        moo_t*           moo,
-        moo_bitmask_t    mask,
-        const moo_bch_t* fmt,
-        ...
-);
-
 #if defined(MOO_INCLUDE_COMPILER)
 
 /* ========================================================================= */
@@ -1474,7 +1467,7 @@ moo_oop_t moo_numtostr (
 
 
 /* ========================================================================= */
-/* logfmt.c                                                                  */
+/* fmtout.c                                                                  */
 /* ========================================================================= */
 moo_ooi_t moo_sproutbfmt (
 	moo_t*           moo,

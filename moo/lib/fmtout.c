@@ -142,8 +142,8 @@ typedef int (*moo_fmtout_putcs_t) (
 	moo_oow_t         len
 );
 
-typedef struct moo_fmtout_t moo_fmtout_t;
-struct moo_fmtout_t
+typedef struct moo_fmtout_data_t moo_fmtout_data_t;
+struct moo_fmtout_data_t
 {
 	moo_oow_t            count; /* out */
 	moo_bitmask_t        mask;  /* in */
@@ -151,6 +151,13 @@ struct moo_fmtout_t
 	moo_fmtout_putcs_t   putcs; /* in */
 };
 
+
+typedef moo_ooi_t (*moo_outbfmt_t) (
+	moo_t*             moo,
+	moo_bitmask_t      mask,
+	const moo_bch_t*   fmt,
+	...
+);
 /* ------------------------------------------------------------------------- */
 /*
  * Put a NUL-terminated ASCII number (base <= 36) in a buffer in reverse
@@ -374,9 +381,7 @@ redo:
 
 /* ------------------------------------------------------------------------- */
 
-typedef moo_ooi_t (*outbfmt_t) (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...);
-
-static int print_object (moo_t* moo, moo_bitmask_t mask, moo_oop_t oop, outbfmt_t outbfmt)
+static int print_object (moo_t* moo, moo_bitmask_t mask, moo_oop_t oop, moo_outbfmt_t outbfmt)
 {
 	if (oop == moo->_nil)
 	{
@@ -616,44 +621,44 @@ static int print_object (moo_t* moo, moo_bitmask_t mask, moo_oop_t oop, outbfmt_
 #undef FMTCHAR_IS_UCH
 #undef FMTCHAR_IS_OOCH
 #undef fmtchar_t
-#undef logfmtv
+#undef fmtoutv
 #define fmtchar_t moo_bch_t
-#define logfmtv __logbfmtv
+#define fmtoutv __logbfmtv
 #define FMTCHAR_IS_BCH
 #if defined(MOO_OOCH_IS_BCH)
 #	define FMTCHAR_IS_OOCH
 #endif
-#include "logfmtv.h"
+#include "fmtoutv.h"
 
 #undef FMTCHAR_IS_BCH
 #undef FMTCHAR_IS_UCH
 #undef FMTCHAR_IS_OOCH
 #undef fmtchar_t
-#undef logfmtv
+#undef fmtoutv
 #define fmtchar_t moo_uch_t
-#define logfmtv __logufmtv
+#define fmtoutv __logufmtv
 #define FMTCHAR_IS_UCH
 #if defined(MOO_OOCH_IS_UCH)
 #	define FMTCHAR_IS_OOCH
 #endif
-#include "logfmtv.h" 
+#include "fmtoutv.h" 
 
 
-static int _logbfmtv (moo_t* moo, const moo_bch_t* fmt, moo_fmtout_t* data, va_list ap)
+static int _logbfmtv (moo_t* moo, const moo_bch_t* fmt, moo_fmtout_data_t* data, va_list ap)
 {
-	return __logbfmtv (moo, fmt, data, ap, moo_logbfmt);
+	return __logbfmtv(moo, fmt, data, ap, moo_logbfmt);
 }
 
-static int _logufmtv (moo_t* moo, const moo_uch_t* fmt, moo_fmtout_t* data, va_list ap)
+static int _logufmtv (moo_t* moo, const moo_uch_t* fmt, moo_fmtout_data_t* data, va_list ap)
 {
-	return __logufmtv (moo, fmt, data, ap, moo_logbfmt);
+	return __logufmtv(moo, fmt, data, ap, moo_logbfmt);
 }
 
 moo_ooi_t moo_logbfmt (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...)
 {
 	int x;
 	va_list ap;
-	moo_fmtout_t fo;
+	moo_fmtout_data_t fo;
 
 	if (moo->log.default_type_mask & MOO_LOG_ALL_TYPES) 
 	{
@@ -686,7 +691,7 @@ moo_ooi_t moo_logufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, ...
 {
 	int x;
 	va_list ap;
-	moo_fmtout_t fo;
+	moo_fmtout_data_t fo;
 
 	if (moo->log.default_type_mask & MOO_LOG_ALL_TYPES) 
 	{
@@ -754,12 +759,12 @@ static int put_errcs (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* ptr, moo
 
 static moo_ooi_t __errbfmtv (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...);
 
-static int _errbfmtv (moo_t* moo, const moo_bch_t* fmt, moo_fmtout_t* data, va_list ap)
+static int _errbfmtv (moo_t* moo, const moo_bch_t* fmt, moo_fmtout_data_t* data, va_list ap)
 {
 	return __logbfmtv (moo, fmt, data, ap, __errbfmtv);
 }
 
-static int _errufmtv (moo_t* moo, const moo_uch_t* fmt, moo_fmtout_t* data, va_list ap)
+static int _errufmtv (moo_t* moo, const moo_uch_t* fmt, moo_fmtout_data_t* data, va_list ap)
 {
 	return __logufmtv (moo, fmt, data, ap, __errbfmtv);
 }
@@ -767,7 +772,7 @@ static int _errufmtv (moo_t* moo, const moo_uch_t* fmt, moo_fmtout_t* data, va_l
 static moo_ooi_t __errbfmtv (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...)
 {
 	va_list ap;
-	moo_fmtout_t fo;
+	moo_fmtout_data_t fo;
 
 	fo.mask = 0; /* not used */
 	fo.putch = put_errch;
@@ -783,7 +788,7 @@ static moo_ooi_t __errbfmtv (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fm
 void moo_seterrbfmt (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, ...)
 {
 	va_list ap;
-	moo_fmtout_t fo;
+	moo_fmtout_data_t fo;
 
 	if (moo->shuterr) return;
 	moo->errmsg.len = 0;
@@ -802,7 +807,7 @@ void moo_seterrbfmt (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, ...)
 void moo_seterrufmt (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, ...)
 {
 	va_list ap;
-	moo_fmtout_t fo;
+	moo_fmtout_data_t fo;
 
 	if (moo->shuterr) return;
 	moo->errmsg.len = 0;
@@ -821,7 +826,7 @@ void moo_seterrufmt (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, ...)
 
 void moo_seterrbfmtv (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, va_list ap)
 {
-	moo_fmtout_t fo;
+	moo_fmtout_data_t fo;
 
 	if (moo->shuterr) return;
 
@@ -837,7 +842,7 @@ void moo_seterrbfmtv (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, va_
 
 void moo_seterrufmtv (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, va_list ap)
 {
-	moo_fmtout_t fo;
+	moo_fmtout_data_t fo;
 
 	if (moo->shuterr) return;
 
@@ -885,7 +890,7 @@ void moo_seterrufmtv (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, va_
 	else { ch = *(fmt); (fmt)++; }\
 } while(0)
 
-static MOO_INLINE int print_formatted (moo_t* moo, moo_ooi_t nargs, moo_fmtout_t* data, moo_outbfmt_t outbfmt, int ignore_rcv)
+static MOO_INLINE int print_formatted (moo_t* moo, moo_ooi_t nargs, moo_fmtout_data_t* data, moo_outbfmt_t outbfmt, int ignore_rcv)
 {
 	const moo_ooch_t* fmt, * fmtend;
 	const moo_ooch_t* checkpoint, * percent;
@@ -1418,7 +1423,7 @@ oops:
 
 int moo_printfmtst (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_fmtout_t fo;
+	moo_fmtout_data_t fo;
 	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
 	fo.putch = put_prch;
 	fo.putcs = put_prcs;
@@ -1431,7 +1436,7 @@ int moo_printfmtst (moo_t* moo, moo_ooi_t nargs)
 
 int moo_logfmtst (moo_t* moo, moo_ooi_t nargs)
 {
-	moo_fmtout_t fo;
+	moo_fmtout_data_t fo;
 
 	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
 	fo.mask = MOO_LOG_FATAL | MOO_LOG_APP;
@@ -1506,21 +1511,21 @@ static int put_sprch (moo_t* moo, moo_bitmask_t mask, moo_ooch_t ch, moo_oow_t l
 
 static moo_ooi_t __sprbfmtv (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...);
 
-static int _sprbfmtv (moo_t* moo, const moo_bch_t* fmt, moo_fmtout_t* data, va_list ap)
+static int _sprbfmtv (moo_t* moo, const moo_bch_t* fmt, moo_fmtout_data_t* data, va_list ap)
 {
-	return __logbfmtv (moo, fmt, data, ap, __sprbfmtv);
+	return __logbfmtv(moo, fmt, data, ap, __sprbfmtv);
 }
 
 /*
-static int _sprufmtv (moo_t* moo, const moo_uch_t* fmt, moo_fmtout_t* data, va_list ap)
+static int _sprufmtv (moo_t* moo, const moo_uch_t* fmt, moo_fmtout_data_t* data, va_list ap)
 {
 	return __logufmtv (moo, fmt, data, ap, __sprbfmtv);
 }*/
 
-static moo_ooi_t __sprbfmtv (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...)
+static moo_ooi_t __sprbfmtv(moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...)
 {
 	va_list ap;
-	moo_fmtout_t fo;
+	moo_fmtout_data_t fo;
 
 	fo.mask = mask; /* not used */
 	fo.putch = put_sprch;
@@ -1537,7 +1542,7 @@ moo_ooi_t moo_sproutbfmt (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, 
 {
 	int x;
 	va_list ap;
-	moo_fmtout_t fo;
+	moo_fmtout_data_t fo;
 
 	fo.mask = mask;
 	fo.putch = put_sprch;
@@ -1555,14 +1560,14 @@ moo_ooi_t moo_sproutufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, 
 {
 	int x;
 	va_list ap;
-	moo_fmtout_t fo;
+	moo_fmtout_data_t fo;
 
 	fo.mask = mask;
 	fo.putch = put_sprch;
 	fo.putcs = put_sprcs;
 
 	va_start (ap, fmt);
-	x = _sprufmtv (moo, fmt, &fo, ap);
+	x = _sprufmtv(moo, fmt, &fo, ap);
 	va_end (ap);
 
 	return (x <= -1)? -1: fo.count;
@@ -1572,7 +1577,7 @@ moo_ooi_t moo_sproutufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, 
 int moo_sprintfmtst (moo_t* moo, moo_ooi_t nargs)
 {
 	/* format a string using the receiver and arguments on the stack */
-	moo_fmtout_t fo;
+	moo_fmtout_data_t fo;
 	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
 	fo.putch = put_sprch;
 	fo.putcs = put_sprcs;

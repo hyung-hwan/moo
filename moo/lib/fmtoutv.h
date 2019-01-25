@@ -74,7 +74,7 @@
 #define PUT_OOCH(c,n) do { \
 	if (n > 0) { \
 		int xx; \
-		if ((xx = data->putch (moo, data->mask, c, n)) <= -1) goto oops; \
+		if ((xx = data->putch(moo, data->mask, c, n)) <= -1) goto oops; \
 		if (xx == 0) goto done; \
 		data->count += n; \
 	} \
@@ -83,13 +83,13 @@
 #define PUT_OOCS(ptr,len) do { \
 	if (len > 0) { \
 		int xx; \
-		if ((xx = data->putcs (moo, data->mask, ptr, len)) <= -1) goto oops; \
+		if ((xx = data->putcs(moo, data->mask, ptr, len)) <= -1) goto oops; \
 		if (xx == 0) goto done; \
 		data->count += len; \
 	} \
 } while (0)
 
-static int logfmtv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_t* data, va_list ap, outbfmt_t outbfmt)
+static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, va_list ap, moo_outbfmt_t outbfmt)
 {
 	const fmtchar_t* percent;
 	const fmtchar_t* checkpoint;

@@ -127,10 +127,10 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_cmgr_t* cmgr, const moo_vmprim_t
 
 	moo->log.capa = MOO_ALIGN_POW2(1, MOO_LOG_CAPA_ALIGN); /* TODO: is this a good initial size? */
 	/* alloate the log buffer in advance though it may get reallocated
-	 * in put_oocs and put_ooch in logfmt.c. this is to let the logging
+	 * in put_oocs and put_ooch in fmtout.c. this is to let the logging
 	 * routine still function despite some side-effects when
 	 * reallocation fails */
-	/* +1 required for consistency with put_oocs and put_ooch in logfmt.c */
+	/* +1 required for consistency with put_oocs and put_ooch in fmtout.c */
 	moo->log.ptr = moo_allocmem(moo, (moo->log.capa + 1) * MOO_SIZEOF(*moo->log.ptr)); 
 	if (!moo->log.ptr) goto oops;
 
