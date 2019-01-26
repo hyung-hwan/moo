@@ -279,7 +279,6 @@ struct xtn_t
 
 	struct
 	{
-		/*moo_bitmask_t mask;*/
 		int fd;
 		int fd_flag; /* bitwise OR'ed fo logfd_flag_t bits */
 
@@ -849,11 +848,6 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 	}
 	else
 	{
-#if 0
-		if (!(xtn->log.mask & mask & ~MOO_LOG_ALL_LEVELS)) return;  /* check log types */
-		if (!(xtn->log.mask & mask & ~MOO_LOG_ALL_TYPES)) return;  /* check log levels */
-#endif
-
 		if (mask & MOO_LOG_STDOUT) logfd = 1;
 		else
 		{
@@ -3254,11 +3248,8 @@ static int parse_logoptb (moo_t* moo, const moo_bch_t* str, moo_oow_t* xpathlen,
 		cm = moo_find_bchar_in_bcstr(str, ',');
 		pathlen = cm - str;
 
-#if 0
-		logmask = xtn->log.mask;
-#else
 		logmask = 0;
-#endif
+
 		do
 		{
 			flt = cm + 1;
@@ -3313,7 +3304,6 @@ static int parse_logoptu (moo_t* moo, const moo_uch_t* str, moo_oow_t* xpathlen,
 		cm = moo_find_uchar_in_ucstr(str, ',');
 		pathlen = cm - str;
 
-		/*logmask = xtn->log.mask;*/
 		logmask = 0;
 		do
 		{
@@ -3375,7 +3365,6 @@ static int handle_logoptb (moo_t* moo, const moo_bch_t* str)
 		return -1;
 	}
 
-	/*xtn->log.mask = logmask;*/
 	xtn->log.fd_flag |= LOGFD_OPENED_HERE;
 #if defined(HAVE_ISATTY)
 	if (isatty(xtn->log.fd)) xtn->log.fd_flag |= LOGFD_TTY;
@@ -3406,7 +3395,6 @@ static int handle_logoptu (moo_t* moo, const moo_uch_t* str)
 		return -1;
 	}
 
-	/*xtn->log.mask = logmask;*/
 	xtn->log.fd_flag |= LOGFD_OPENED_HERE;
 #if defined(HAVE_ISATTY)
 	if (isatty(xtn->log.fd)) xtn->log.fd_flag |= LOGFD_TTY;
@@ -3532,11 +3520,9 @@ static MOO_INLINE void reset_log_to_default (xtn_t* xtn)
 	#if defined(HAVE_ISATTY)
 	if (isatty(xtn->log.fd)) xtn->log.fd_flag |= LOGFD_TTY;
 	#endif
-	/*xtn->log.mask = MOO_LOG_ALL_LEVELS | MOO_LOG_ALL_TYPES;*/
 #else
 	xtn->log.fd = -1;
 	xtn->log.fd_flag = 0;
-	/*xtn->log.mask = 0;*/
 #endif
 }
 

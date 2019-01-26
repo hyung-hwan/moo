@@ -429,6 +429,12 @@ struct moo_ntime_t
 
 #define MOO_CMP_NTIME(a,b) (((a)->sec == (b)->sec)? ((a)->nsec - (b)->nsec): ((a)->sec - (b)->sec))
 
+/* if time has been normalized properly, nsec must be equal to or
+ * greater than 0. */
+#define MOO_IS_NEG_NTIME(x) ((x)->sec < 0)
+#define MOO_IS_POS_NTIME(x) ((x)->sec > 0 || ((x)->sec == 0 && (x)->nsec > 0))
+#define MOO_IS_ZERO_NTIME(x) ((x)->sec == 0 && (x)->nsec == 0)
+
 /* =========================================================================
  * PRIMITIVE MACROS
  * ========================================================================= */
