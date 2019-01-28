@@ -843,7 +843,6 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 
 	if (mask & MOO_LOG_STDERR)
 	{
-		/* the messages that go to STDERR don't get masked out */
 		logfd = 2;
 	}
 	else
