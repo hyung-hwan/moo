@@ -23,7 +23,7 @@ class MyObject(Object)
 			'busy'
 			'access denied'
 			'operation not permitted'
-			'not a directory'
+			'not directory'
 			'interrupted'
 			'pipe error'
 			'resource temporarily unavailable'

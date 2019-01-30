@@ -62,14 +62,14 @@ enum moo_errnum_t
 	MOO_EINVAL,   /**< invalid parameter or data */
 	MOO_ENOENT,   /**< data not found */
 	MOO_EEXIST,   /**< existing/duplicate data */
-	MOO_EBUSY, 
-	MOO_EACCES,
-	MOO_EPERM,
-	MOO_ENOTDIR,
-	MOO_EINTR,
-	MOO_EPIPE,
-	MOO_EAGAIN,
-	MOO_EBADHND,
+	MOO_EBUSY,    /**< system busy */ 
+	MOO_EACCES,   /**< access denied */
+	MOO_EPERM,    /**< operation not permitted */
+	MOO_ENOTDIR,  /**< not directory */
+	MOO_EINTR,    /**< interrupted */
+	MOO_EPIPE,    /**< pipe error */
+	MOO_EAGAIN,   /**< resource temporarily unavailable */
+	MOO_EBADHND,  /**< bad system handle */
 
 	MOO_EXXXXX1,  /**< **** not used ****/
 	MOO_EMSGRCV,  /**< mesasge receiver error */
