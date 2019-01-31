@@ -465,7 +465,14 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 
 		#if defined(MOO_OOCH_IS_UCH)
 			/* get the length */
-			for (bslen = 0; bsp[bslen]; bslen++);
+			if (flagc & FLAGC_DOT)
+			{
+				for (bslen = 0; bslen < precision && bsp[bslen]; bslen++);
+			}
+			else
+			{
+				for (bslen = 0; bsp[bslen]; bslen++);
+			}
 
 			if (moo_conv_bchars_to_uchars_with_cmgr(bsp, &bslen, MOO_NULL, &slen, moo->cmgr, 0) <= -1) goto oops;
 
@@ -534,7 +541,14 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 
 		#if defined(MOO_OOCH_IS_BCH)
 			/* get the length */
-			for (uslen = 0; usp[uslen]; uslen++);
+			if (flagc & FLAGC_DOT)
+			{
+				for (uslen = 0; uslen < precision && usp[uslen]; uslen++);
+			}
+			else
+			{
+				for (uslen = 0; usp[uslen]; uslen++);
+			}
 
 			if (moo_conv_uchars_to_bchars_with_cmgr(usp, &uslen, MOO_NULL, &slen, moo->cmgr) <= -1) goto oops;
 

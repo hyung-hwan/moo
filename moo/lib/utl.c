@@ -429,7 +429,7 @@ MOO_INLINE int moo_conv_bchars_to_uchars_with_cmgr (
 				break;
 			}
 
-			n = cmgr->bctouc (p, mlen, q);
+			n = cmgr->bctouc(p, mlen, q);
 			if (n == 0)
 			{
 				/* invalid sequence */
@@ -485,7 +485,7 @@ MOO_INLINE int moo_conv_bchars_to_uchars_with_cmgr (
 		{
 			moo_oow_t n;
 
-			n = cmgr->bctouc (p, mlen, &w);
+			n = cmgr->bctouc(p, mlen, &w);
 			if (n == 0)
 			{
 				/* invalid sequence */
