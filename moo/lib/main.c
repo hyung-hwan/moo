@@ -229,7 +229,6 @@ int main (int argc, char* argv[])
 	goto compile;
 #endif
 */
-
 	for (i = opt.ind; i < argc; i++)
 	{
 		moo_iostd_t in;
