@@ -18,7 +18,6 @@ class(#byte) IPAddress(Object)
 ### -> (TODO)-> #byte(4,10) -> byte variable with the mimum size of 4 and maximum size of 10 => basicNew: should be allowed with upto 6.
 ### -> #byte(4,4) -> it can emulated fixed byte size. -> do i  have space in spec to store the upper bound?
 
-
 class(#byte(4)) IP4Address(IPAddress)
 {
 	(*method(#class) new
