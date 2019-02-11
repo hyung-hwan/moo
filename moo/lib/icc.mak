@@ -10,6 +10,8 @@
 CFLAGS :=  /D__DOS__ /DMOO_ENABLE_STATIC_MODULE  /DMOO_BUILD_DEBUG
 LDFLAGS := /xnovm /xregion=12m
 
+# pf.c is a place holder file to work around the ICC bug of treating a
+# dash inside a file name as an option.
 LIBSRCS := \
 	bigint.c \
 	comp.c \
