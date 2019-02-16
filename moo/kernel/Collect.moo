@@ -346,8 +346,8 @@ class(#byte) ByteString(Array)
 class OrderedCollection(SequenceableCollection)
 {
 	var buffer.
-	var firstIndex.
-	var lastIndex. ## this is the last index plus 1.
+	var(#get) firstIndex.
+	var(#get) lastIndex. ## this is the last index plus 1.
 
 	method(#class) new
 	{
@@ -380,7 +380,7 @@ class OrderedCollection(SequenceableCollection)
 	{
 		| i |
 		i := index + self.firstIndex.
-		if ((i >= self.firstIndex) and (i < self.lastIndex)) { ^self.buffer at: index }.
+		if ((i >= self.firstIndex) and (i < self.lastIndex)) { ^self.buffer at: i}.
 		Exception signal: ('index ' & index asString & ' out of range').
 	}
 
@@ -389,7 +389,7 @@ class OrderedCollection(SequenceableCollection)
 		## replace an existing element. it doesn't grow the buffer.
 		| i |
 		i := index + self.firstIndex.
-		if ((i >= self.firstIndex) and (i < self.lastIndex)) { ^self.buffer at: index put: obj }.
+		if ((i >= self.firstIndex) and (i < self.lastIndex)) { ^self.buffer at: i put: obj }.
 		Exception signal: ('index ' & index asString & ' out of range').
 	}
 
