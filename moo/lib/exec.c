@@ -2821,6 +2821,27 @@ static moo_pfrc_t pf_system_return_value_to_context (moo_t* moo, moo_mod_t* mod,
 }
 
 /* ------------------------------------------------------------------ */
+static moo_pfrc_t pf_number_scale (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, arg, res;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	arg = MOO_STACK_GETARG(moo, nargs, 0);
+
+	if (!MOO_OOP_IS_SMOOI(arg))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid scale - %O", arg);
+		return MOO_PF_FAILURE;
+	}
+
+	res = moo_truncfpdec(moo, rcv, MOO_OOP_TO_SMOOI(arg));
+	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	MOO_STACK_SETRET (moo, nargs, res);
+	return MOO_PF_SUCCESS;
+}
+
+/* ------------------------------------------------------------------ */
 
 static moo_pfrc_t pf_number_add (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
@@ -3779,7 +3800,32 @@ static pf_t pftab[] =
 	{ "Error_asInteger",                       { pf_error_as_integer,                     0, 0 } },
 	{ "Error_asString",                        { pf_error_as_string,                      0, 0 } },
 
-	{ "MethodContext_goto:",                   { pf_context_goto,                         1, 1  } },
+	{ "FixedPointDecimal_scale:",              { pf_number_scale,                         1, 1 } },
+
+	{ "Integer_add",                           { pf_integer_add,                          1, 1 } },
+	{ "Integer_bitand",                        { pf_integer_bitand,                       1, 1 } },
+	{ "Integer_bitat",                         { pf_integer_bitat,                        1, 1 } },
+	{ "Integer_bitinv",                        { pf_integer_bitinv,                       0, 0 } },
+	{ "Integer_bitor",                         { pf_integer_bitor,                        1, 1 } },
+	{ "Integer_bitshift",                      { pf_integer_bitshift,                     1, 1 } },
+	{ "Integer_bitxor",                        { pf_integer_bitxor,                       1, 1 } },
+	{ "Integer_div",                           { pf_integer_div,                          1, 1 } },
+	{ "Integer_eq",                            { pf_integer_eq,                           1, 1 } },
+	{ "Integer_ge",                            { pf_integer_ge,                           1, 1 } },
+	{ "Integer_gt",                            { pf_integer_gt,                           1, 1 } },
+	{ "Integer_inttostr",                      { pf_integer_inttostr,                     1, 1 } },
+	{ "Integer_le",                            { pf_integer_le,                           1, 1 } },
+	{ "Integer_lt",                            { pf_integer_lt,                           1, 1 } },
+	{ "Integer_mdiv",                          { pf_integer_mdiv,                         1, 1 } },
+	{ "Integer_mod",                           { pf_integer_mod,                          1, 1 } },
+	{ "Integer_mul",                           { pf_integer_mul,                          1, 1 } },
+	{ "Integer_ne",                            { pf_integer_ne,                           1, 1 } },
+	{ "Integer_negated",                       { pf_integer_negated,                      0, 0 } },
+	{ "Integer_rem",                           { pf_integer_rem,                          1, 1 } },
+	{ "Integer_scale:",                        { pf_number_scale,                         1, 1 } },
+	{ "Integer_sub",                           { pf_integer_sub,                          1, 1 } },
+
+	{ "MethodContext_goto:",                   { pf_context_goto,                         1, 1 } },
 
 	{ "Process_resume",                        { pf_process_resume,                       0, 0 } },
 	{ "Process_sp",                            { pf_process_sp,                           0, 0 } },
@@ -3859,28 +3905,6 @@ static pf_t pftab[] =
 
 	{ "_dump",                                 { pf_dump,                                 0, MA } },
 
-	{ "_integer_add",                          { pf_integer_add,                          1, 1 } },
-	{ "_integer_bitand",                       { pf_integer_bitand,                       1, 1 } },
-	{ "_integer_bitat",                        { pf_integer_bitat,                        1, 1 } },
-	{ "_integer_bitinv",                       { pf_integer_bitinv,                       0, 0 } },
-	{ "_integer_bitor",                        { pf_integer_bitor,                        1, 1 } },
-	{ "_integer_bitshift",                     { pf_integer_bitshift,                     1, 1 } },
-	{ "_integer_bitxor",                       { pf_integer_bitxor,                       1, 1 } },
-	{ "_integer_div",                          { pf_integer_div,                          1, 1 } },
-	{ "_integer_eq",                           { pf_integer_eq,                           1, 1 } },
-	{ "_integer_ge",                           { pf_integer_ge,                           1, 1 } },
-	{ "_integer_gt",                           { pf_integer_gt,                           1, 1 } },
-	{ "_integer_inttostr",                     { pf_integer_inttostr,                     1, 1 } },
-	{ "_integer_le",                           { pf_integer_le,                           1, 1 } },
-	{ "_integer_lt",                           { pf_integer_lt,                           1, 1 } },
-	{ "_integer_mdiv",                         { pf_integer_mdiv,                         1, 1 } },
-	{ "_integer_mod",                          { pf_integer_mod,                          1, 1 } },
-	{ "_integer_mul",                          { pf_integer_mul,                          1, 1 } },
-	{ "_integer_ne",                           { pf_integer_ne,                           1, 1 } },
-	{ "_integer_negated",                      { pf_integer_negated,                      0, 0 } },
-	{ "_integer_rem",                          { pf_integer_rem,                          1, 1 } },
-	{ "_integer_sub",                          { pf_integer_sub,                          1, 1 } },
-
 	{ "_number_add",                           { pf_number_add,                           1, 1 } },
 	{ "_number_div",                           { pf_number_div,                           1, 1 } },
 	{ "_number_eq",                            { pf_number_eq,                            1, 1 } },
@@ -3894,6 +3918,7 @@ static pf_t pftab[] =
 	{ "_number_ne",                            { pf_number_ne,                            1, 1 } },
 	{ "_number_negated",                       { pf_number_negated,                       0, 0 } },
 	{ "_number_numtostr",                      { pf_number_numtostr,                      1, 1 } },
+	{ "_number_scale:",                        { pf_number_scale,                         1, 1 } },
 	{ "_number_sub",                           { pf_number_sub,                           1, 1 } },
 
 	{ "_utf8_seqlen",                          { moo_pf_utf8_seqlen,                      0, 0 } },

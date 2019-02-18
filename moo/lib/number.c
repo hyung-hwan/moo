@@ -121,8 +121,9 @@ static moo_ooi_t equalize_scale (moo_t* moo, moo_oop_t* x, moo_oop_t* y)
 
 moo_oop_t moo_truncfpdecval (moo_t* moo, moo_oop_t iv, moo_ooi_t cs, moo_ooi_t ns)
 {
-	/* this function truncates an existing fixed-point decimal.
-	 * it doesn't create a new object */
+	/* this function truncates an existing fixed-point decimal value only if 
+	 * the existing scale is greater than the new scale given.
+	 * [NOTE] this doesn't work on the fpdec object. */
 
 	if (cs > ns)
 	{
@@ -137,6 +138,60 @@ moo_oop_t moo_truncfpdecval (moo_t* moo, moo_oop_t iv, moo_ooi_t cs, moo_ooi_t n
 	}
 
 	return iv;
+}
+
+moo_oop_t moo_truncfpdec (moo_t* moo, moo_oop_t x, moo_ooi_t ns)
+{
+	moo_oop_t xv;
+	moo_ooi_t cs;
+
+	if (MOO_OOP_IS_FPDEC(moo, x))
+	{
+		xv = ((moo_oop_fpdec_t)x)->value;
+		cs = MOO_OOP_TO_SMOOI(((moo_oop_fpdec_t)x)->scale);
+	}
+	else if (moo_isint(moo, x))
+	{
+		/* this accepts an integer unlike the function name implies */
+		xv = x;
+		cs = 0;
+	}
+	else
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "parameter not fpdec - %O", x);
+		return MOO_NULL;
+	}
+
+	if (ns < 0) ns = 0;
+	if (cs == ns) return x; /* no change needed */
+
+	if (cs > ns)
+	{
+		/* same as moo_truncfpdecval() */
+		do
+		{
+			/* TODO: optimization... less divisions */
+			xv = moo_divints(moo, xv, MOO_SMOOI_TO_OOP(10), 0, MOO_NULL);
+			if (!xv) return MOO_NULL;
+			cs--;
+		}
+		while (cs > ns);
+	}
+	else /*if (cs < ns)*/
+	{
+		do
+		{
+			xv = moo_mulints(moo, xv, MOO_SMOOI_TO_OOP(10));
+			if (!xv) return MOO_NULL;
+			cs++;
+		}
+		while (cs < ns);
+	}
+
+	/* moo_makefpdec returns xv if ns <= 0. so it's safe to call it
+	 * without checks against the 'ns <= 0' condition. 
+	 * setting ns to 0 or less will converts a decimal to an integer */
+	return moo_makefpdec(moo, xv, ns);
 }
 
 moo_oop_t moo_addnums (moo_t* moo, moo_oop_t x, moo_oop_t y)

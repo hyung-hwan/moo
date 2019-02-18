@@ -1372,6 +1372,12 @@ moo_oop_t moo_truncfpdecval (
 	moo_ooi_t    ns  /* new scale */
 );
 
+moo_oop_t moo_truncfpdec (
+	moo_t*       moo,
+	moo_oop_t    iv, /* integer */
+	moo_ooi_t    ns  /* new scale */
+);
+
 moo_oop_t moo_addnums (
 	moo_t*       moo,
 	moo_oop_t    x,

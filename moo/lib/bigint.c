@@ -2027,7 +2027,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 			}
 
 			moo_pushvolat (moo, &y);
-			x = make_bigint_with_ooi (moo, v);
+			x = make_bigint_with_ooi(moo, v);
 			moo_popvolat (moo);
 			if (!x) return MOO_NULL;
 		}
@@ -2045,14 +2045,14 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 					return MOO_NULL;
 
 				case 1:
-					z = clone_bigint (moo, x, MOO_OBJ_GET_SIZE(x));
+					z = clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
 					if (!z) return MOO_NULL;
 					if (rem) *rem = MOO_SMOOI_TO_OOP(0);
 					return z;
 
 
 				case -1:
-					z = clone_bigint_negated (moo, x, MOO_OBJ_GET_SIZE(x));
+					z = clone_bigint_negated(moo, x, MOO_OBJ_GET_SIZE(x));
 					if (!z) return MOO_NULL;
 					if (rem) *rem = MOO_SMOOI_TO_OOP(0);
 					return z;
@@ -2072,7 +2072,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 			}
 
 			moo_pushvolat (moo, &x);
-			y = make_bigint_with_ooi (moo, v);
+			y = make_bigint_with_ooi(moo, v);
 			moo_popvolat (moo);
 			if (!y) return MOO_NULL;
 		}
@@ -2088,7 +2088,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 
 	moo_pushvolat (moo, &x);
 	moo_pushvolat (moo, &y);
-	z = divide_unsigned_integers (moo, x, y, &r);
+	z = divide_unsigned_integers(moo, x, y, &r);
 	moo_popvolats (moo, 2);
 	if (!z) return MOO_NULL;
 
@@ -2115,17 +2115,17 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 			{
 				moo_pushvolat (moo, &z);
 				moo_pushvolat (moo, &y);
-				r = moo_addints (moo, r, y);
+				r = moo_addints(moo, r, y);
 				moo_popvolats (moo, 2);
 				if (!r) return MOO_NULL;
 
 				moo_pushvolat (moo, &r);
-				z = normalize_bigint (moo, z);
+				z = normalize_bigint(moo, z);
 				moo_popvolat (moo);
 				if (!z) return MOO_NULL;
 
 				moo_pushvolat (moo, &r);
-				z = moo_subints (moo, z, MOO_SMOOI_TO_OOP(1));
+				z = moo_subints(moo, z, MOO_SMOOI_TO_OOP(1));
 				moo_popvolat (moo);
 				if (!z) return MOO_NULL;
 
@@ -2138,20 +2138,20 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 /* TODO: subtract 1 without normalization??? */
 				z = normalize_bigint (moo, z);
 				if (!z) return MOO_NULL;
-				return moo_subints (moo, z, MOO_SMOOI_TO_OOP(1));
+				return moo_subints(moo, z, MOO_SMOOI_TO_OOP(1));
 			}
 		}
 	}
 	else
 	{
 		moo_pushvolat (moo, &z);
-		r = normalize_bigint (moo, r);
+		r = normalize_bigint(moo, r);
 		moo_popvolat (moo);
 		if (!r) return MOO_NULL;
 	}
 
 	if (rem) *rem = r;
-	return normalize_bigint (moo, z);
+	return normalize_bigint(moo, z);
 
 oops_einval:
 	moo_seterrbfmt (moo, MOO_EINVAL, "invalid parameters - %O, %O", x, y);

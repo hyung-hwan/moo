@@ -148,7 +148,7 @@ class(#limited) Number(Magnitude)
 	method rem: aNumber
 	{
 		## integer remainder rounded toward zero
-		<primitive: #_integer_rem>
+		<primitive: #Integer_rem>
 		self primitiveFailed.
 	}
 
@@ -162,7 +162,7 @@ class(#limited) Number(Magnitude)
 	method mod: aNumber
 	{
 		## integer division remainder
-		<primitive: #_integer_mod>
+		<primitive: #Integer_mod>
 		self primitiveFailed.
 	}
 	
@@ -215,31 +215,31 @@ class(#limited) Number(Magnitude)
 
 	method bitAt: index
 	{
-		<primitive: #_integer_bitat>
+		<primitive: #Integer_bitat>
 		^(self bitShift: index negated) bitAnd: 1.
 	}
 
 	method bitAnd: aNumber
 	{
-		<primitive: #_integer_bitand>
+		<primitive: #Integer_bitand>
 		self primitiveFailed.
 	}
 
 	method bitOr: aNumber
 	{
-		<primitive: #_integer_bitor>
+		<primitive: #Integer_bitor>
 		self primitiveFailed.
 	}
 
 	method bitXor: aNumber
 	{
-		<primitive: #_integer_bitxor>
+		<primitive: #Integer_bitxor>
 		self primitiveFailed.
 	}
 
 	method bitInvert
 	{
-		<primitive: #_integer_bitinv>
+		<primitive: #Integer_bitinv>
 		^-1 - self.
 	}
 
@@ -248,7 +248,7 @@ class(#limited) Number(Magnitude)
 		(* positive number for left shift. 
 		 * negative number for right shift *)
 
-		<primitive: #_integer_bitshift>
+		<primitive: #Integer_bitshift>
 		self primitiveFailed.
 	}
 
@@ -374,6 +374,12 @@ class(#limited) Integer(Number)
 	}
 	
 	method asInteger { ^self }
+
+	## integer has the scale of 0.
+	method scale { ^0 }
+
+	## non-zero positive scale converts integer to fixed-point decimal
+	method(#primitive) scale: ndigits.
 }
 
 class(#limited) SmallInteger(Integer)
@@ -400,5 +406,8 @@ class(#limited,#immutable,#liword) LargeNegativeInteger(LargeInteger)
 
 class(#limited,#immutable) FixedPointDecimal(Number)
 {
-	var value, scale.
+	var value.
+	var(#get) scale.
+
+	method(#primitive) scale: ndigits.
 }

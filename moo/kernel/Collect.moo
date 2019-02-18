@@ -92,6 +92,24 @@ class SequenceableCollection(Collection)
 	{
 		(self size - 1) to: 0 by: -1 do: [:i | aBlock value: (self at: i)].
 	}
+
+	method doWithIndex: aBlock
+	{
+
+		0 to: (self size - 1) do: [:i | aBlock value: (self at: i) value: i].
+	}
+
+	method from: startIndex to: stopIndex do: aBlock
+	{
+
+		startIndex to: stopIndex do: [:i | aBlock value: (self at: i)].
+	}
+
+	method from: startIndex to: stopIndex doWithIndex: aBlock
+	{
+
+		startIndex to: stopIndex do: [:i | aBlock value: (self at: i) value: i].
+	}
 }
 
 ## -------------------------------------------------------------------------------
