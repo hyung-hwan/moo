@@ -3668,7 +3668,8 @@ moo_oop_t moo_strtoint (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, int ra
 
 		if (outlen > MOO_COUNTOF(hw)) 
 		{
-			hwp = moo_allocmem (moo, outlen * MOO_SIZEOF(hw[0]));
+/* TODO: reuse this buffer? */
+			hwp = moo_allocmem(moo, outlen * MOO_SIZEOF(hw[0]));
 			if (!hwp) return MOO_NULL;
 		}
 		else
@@ -3716,7 +3717,7 @@ moo_oop_t moo_strtoint (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, int ra
 		outlen = (end - str) / safe_ndigits + 1;
 		if (outlen > MOO_COUNTOF(hw)) 
 		{
-			hwp = moo_allocmem (moo, outlen * MOO_SIZEOF(moo_liw_t));
+			hwp = moo_allocmem(moo, outlen * MOO_SIZEOF(moo_liw_t));
 			if (!hwp) return MOO_NULL;
 		}
 		else
@@ -3744,7 +3745,6 @@ moo_oop_t moo_strtoint (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, int ra
 				r1 = r1 * radix + (moo_liw_t)v;
 				ptr++;
 			}
-
 
 			r2 = r1;
 			for (i = 0; i < hwlen; i++)
@@ -3803,7 +3803,7 @@ moo_oop_t moo_strtoint (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, int ra
 
 oops_einval:
 	if (hwp && hw != hwp) moo_freemem (moo, hwp);
-	moo_seterrnum (moo, MOO_EINVAL);
+	moo_seterrbfmt (moo, MOO_EINVAL, "unable to convert to integer %.*js", len, str);
 	return MOO_NULL;
 }
 

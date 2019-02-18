@@ -257,6 +257,19 @@ MOO_EXPORT moo_oow_t moo_copy_bcstr (
 	const moo_bch_t* src
 );
 
+MOO_EXPORT void moo_fill_uchars (
+	moo_uch_t*       dst,
+	const moo_uch_t  ch,
+	moo_oow_t        len
+);
+
+MOO_EXPORT void moo_fill_bchars (
+	moo_bch_t*       dst,
+	const moo_bch_t  ch,
+	moo_oow_t        len
+);
+
+
 MOO_EXPORT moo_uch_t* moo_find_uchar (
 	const moo_uch_t* ptr,
 	moo_oow_t        len,
@@ -310,6 +323,7 @@ MOO_EXPORT moo_oow_t moo_count_bcstr (
 #	define moo_copy_oochars(dst,src,len) moo_copy_uchars(dst,src,len)
 #	define moo_copy_bchars_to_oochars(dst,src,len) moo_copy_bchars_to_uchars(dst,src,len)
 #	define moo_copy_oocstr(dst,len,src) moo_copy_ucstr(dst,len,src)
+#	define moo_fill_oochars(dst,ch,len) moo_fill_uchars(dst,ch,len)
 #	define moo_find_oochar(ptr,len,c) moo_find_uchar(ptr,len,c)
 #	define moo_rfind_oochar(ptr,len,c) moo_rfind_uchar(ptr,len,c)
 #	define moo_find_oochar_in_oocstr(ptr,c) moo_find_uchar_in_ucstr(ptr,c)
@@ -325,6 +339,7 @@ MOO_EXPORT moo_oow_t moo_count_bcstr (
 #	define moo_copy_oochars(dst,src,len) moo_copy_bchars(dst,src,len)
 #	define moo_copy_bchars_to_oochars(dst,src,len) moo_copy_bchars(dst,src,len)
 #	define moo_copy_oocstr(dst,len,src) moo_copy_bcstr(dst,len,src)
+#	define moo_fill_oochars(dst,ch,len) moo_fill_bchars(dst,ch,len)
 #	define moo_find_oochar(ptr,len,c) moo_find_bchar(ptr,len,c)
 #	define moo_rfind_oochar(ptr,len,c) moo_rfind_bchar(ptr,len,c)
 #	define moo_find_oochar_in_oocstr(ptr,c) moo_find_bchar_in_bcstr(ptr,c)

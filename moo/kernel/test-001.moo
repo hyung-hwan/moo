@@ -230,9 +230,10 @@ extend MyObject
 			[ (10 scale: 2) scale = (10.11 scale) ],
 
 			## 75-79
-			[ ((10.19 scale: 3) scale) = (10.199 scale) ],
-			[ ((10.19 scale: 0) scale) = (10 scale) ],
-
+			[ ((-10.19 scale: 3) scale) = (10.199 scale) ],
+			[ ((-10.19 scale: 0) scale) = (10 scale) ],
+			[ (-9p10 scale) = (-10.000000000 scale) ],
+			[ (-9p10.123 scale) = (-10.123000000 scale) ],
 
 			[
 				| b |

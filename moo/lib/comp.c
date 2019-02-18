@@ -704,10 +704,10 @@ static moo_oop_t string_to_int (moo_t* moo, moo_oocs_t* str, int radixed)
 	return moo_strtoint(moo, ptr, end - ptr, base);
 }
 
-static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str)
+static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str, int prescaled)
 {
 	moo_oow_t pos, len;
-	moo_oow_t scale = 0;
+	moo_oow_t scale = 0, xscale = 0;
 	moo_oop_t v;
 	int base = 10;
 
@@ -733,8 +733,62 @@ static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str)
 		len--;
 	}
 
-	v = moo_strtoint(moo, &str->ptr[pos], len, base);
-	if (!v) return MOO_NULL;
+	if (prescaled)
+	{
+		do
+		{
+			xscale = xscale * 10 + CHAR_TO_NUM(str->ptr[pos], 10);
+			pos++;
+			len--;
+		}
+		while (str->ptr[pos] != 'p');
+
+		pos++;
+		len--;
+	}
+	else xscale = scale;
+
+	/* the caller guarantees that the scale is greater than 0 if not pre-scaled.
+	 * it might be zero if pre-scaled. but it guarantees that the prescale is
+	 * greater than 0 */
+
+	if (scale < xscale)
+	{
+		/* need to add more zeros */
+		moo_ooch_t* tmp;
+		moo_oow_t explen;
+
+		explen = len + xscale - scale;
+/* TODO: reuse this buffer? */
+		tmp = moo_allocmem(moo, explen * MOO_SIZEOF(*tmp));
+		if (!tmp)
+		{
+			const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
+			moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to convert to fpdec %.*js - %js", str->len, str->ptr, oldmsg);
+			return MOO_NULL;
+		}
+
+		moo_copy_oochars (tmp, &str->ptr[pos], len);
+		moo_fill_oochars (&tmp[len], '0', explen - len); 
+		v = moo_strtoint(moo, tmp, explen, base);
+		moo_freemem (moo, tmp);
+		scale = xscale;
+	}
+	else if (scale > xscale)
+	{
+		v = moo_strtoint(moo, &str->ptr[pos], len - (scale - xscale), base);
+		scale = xscale;
+	}
+	else
+	{
+		v = moo_strtoint(moo, &str->ptr[pos], len, base);
+	}
+	if (!v) 
+	{
+		const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
+		moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to convert to fpdec %.*js - %js", str->len, str->ptr, oldmsg);
+		return MOO_NULL;
+	}
 
 	return moo_makefpdec(moo, v, scale);
 }
@@ -1366,7 +1420,7 @@ static int get_numlit (moo_t* moo, int negated)
 	 */
 
 	moo_ooci_t c;
-	moo_oow_t radix = 0;
+	moo_oow_t radix = 0, xscale = 0;
 	int radix_overflowed = 0;
 
 	c = moo->c->lxc.c;
@@ -1407,7 +1461,23 @@ static int get_numlit (moo_t* moo, int negated)
 	} 
 	while (is_digitchar(c));
 
-	if (c == 'r')
+	if (c == 'p')
+	{
+		/* fixed-point decimal with the scale specified.
+		 *   5p99 -> 99.0000,  5p99.12 -> 99.12000 
+		 * treat the raxid value as the scale */
+
+		if (radix_overflowed || radix < 1 || radix > MOO_SMOOI_MAX)
+		{
+			moo_setsynerr (moo, MOO_SYNERR_FPDECSCALEINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
+
+		xscale = radix;
+		radix = 10;
+		goto radixed; /* not really radixed. but use the same code. will eventually jump to fixed-point */
+	}
+	else if (c == 'r')
 	{
 		/* radix specifier */
 
@@ -1418,13 +1488,14 @@ static int get_numlit (moo_t* moo, int negated)
 			return -1;
 		}
 
+	radixed:
 		ADD_TOKEN_CHAR (moo, c);
 		GET_CHAR_TO (moo, c);
 
 		if (CHAR_TO_NUM(c, radix) >= radix)
 		{
 			/* no digit after the radix specifier */
-			moo_setsynerr (moo, MOO_SYNERR_RADINTLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			moo_setsynerr (moo, (xscale > 0? MOO_SYNERR_FPDECLITINVAL: MOO_SYNERR_RADINTLITINVAL), TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
 
@@ -1432,6 +1503,8 @@ static int get_numlit (moo_t* moo, int negated)
 		{
 			ADD_TOKEN_CHAR (moo, c);
 			GET_CHAR_TO (moo, c);
+			if (xscale > 0 && c == '.') goto fixed_point;
+
 			if (c == '_') 
 			{
 				moo_iolxc_t underscore;
@@ -1448,7 +1521,7 @@ static int get_numlit (moo_t* moo, int negated)
 		}
 		while (CHAR_TO_NUM(c, radix) < radix);
 
-		SET_TOKEN_TYPE (moo, MOO_IOTOK_RADINTLIT);
+		SET_TOKEN_TYPE (moo, (xscale > 0? MOO_IOTOK_SCALEDFPDECLIT: MOO_IOTOK_RADINTLIT));
 		unget_char (moo, &moo->c->lxc);
 	}
 	else if (c == '.')
@@ -1456,6 +1529,7 @@ static int get_numlit (moo_t* moo, int negated)
 		moo_iolxc_t period;
 		moo_oow_t scale = 0;
 
+	fixed_point:
 		period = moo->c->lxc;
 		GET_CHAR_TO (moo, c);
 		if (!is_digitchar(c))
@@ -1468,7 +1542,7 @@ static int get_numlit (moo_t* moo, int negated)
 			ADD_TOKEN_CHAR (moo, '.');
 			do
 			{
-				if (scale >= MOO_SMOOI_MAX)
+				if (scale > MOO_SMOOI_MAX)
 				{
 					moo_setsynerrbfmt (moo, MOO_SYNERR_FPDECLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo), "invalid fixed-point decimal - too many digits after point");
 					return -1;
@@ -1494,15 +1568,13 @@ static int get_numlit (moo_t* moo, int negated)
 
 			MOO_ASSERT (moo, scale > 0 && scale <= MOO_SMOOI_MAX);
 
-			/* TODO: handle floating-point? fpdec if only suffixed with 's' like 1.23s4?, 'e','g' for floating point? 
-			 *      for now, there is no floating point support. as long as a point appears, it's a fpdec number. */
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_FPDECLIT);
+			SET_TOKEN_TYPE (moo, (xscale > 0? MOO_IOTOK_SCALEDFPDECLIT: MOO_IOTOK_FPDECLIT));
 			unget_char (moo, &moo->c->lxc);
 		}
 	}
 	else
 	{
-			unget_char (moo, &moo->c->lxc);
+		unget_char (moo, &moo->c->lxc);
 	}
 
 /*
@@ -5295,10 +5367,11 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 			}
 
 			case MOO_IOTOK_FPDECLIT:
+			case MOO_IOTOK_SCALEDFPDECLIT:
 			{
 				moo_oop_t tmp;
 
-				tmp = string_to_fpdec(moo, TOKEN_NAME(moo));
+				tmp = string_to_fpdec(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_SCALEDFPDECLIT);
 				if (!tmp) return -1;
 
 				if (add_literal(moo, tmp, &index) <= -1 ||
@@ -8703,9 +8776,10 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 		}
 
 		case MOO_IOTOK_FPDECLIT:
+		case MOO_IOTOK_SCALEDFPDECLIT:
 		{
 			moo_oop_t lit;
-			lit = string_to_fpdec(moo, TOKEN_NAME(moo));
+			lit = string_to_fpdec(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_SCALEDFPDECLIT);
 			if (rdonly && lit && MOO_OOP_IS_POINTER(lit)) MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
 			return lit;
 		}

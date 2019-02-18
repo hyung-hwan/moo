@@ -257,6 +257,18 @@ moo_oow_t moo_copy_bcstr (moo_bch_t* dst, moo_oow_t len, const moo_bch_t* src)
 	return p - dst;
 }
 
+void moo_fill_uchars (moo_uch_t* dst, moo_uch_t ch, moo_oow_t len)
+{
+	moo_oow_t i;
+	for (i = 0; i < len; i++) dst[i] = ch;
+}
+
+void moo_fill_bchars (moo_bch_t* dst, moo_bch_t ch, moo_oow_t len)
+{
+	moo_oow_t i;
+	for (i = 0; i < len; i++) dst[i] = ch;
+}
+
 moo_oow_t moo_count_ucstr (const moo_uch_t* str)
 {
 	const moo_uch_t* ptr = str;

@@ -59,6 +59,7 @@ class MyObject(Object)
 			'string expected'
 			'invalid radix' 
 			'invalid integer literal'
+			'invalid fixed-point decimal scale'
 			'invalid fixed-point decimal literal'
 			'byte too small or too large'
 			'wrong error literal'
