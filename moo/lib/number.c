@@ -87,6 +87,42 @@ moo_oop_t moo_makefpdec (moo_t* moo, moo_oop_t value, moo_ooi_t scale)
 	return (moo_oop_t)fpdec;
 }
 
+static MOO_INLINE moo_oop_t multiply_by_tens (moo_t* moo, moo_oop_t v, moo_oow_t count)
+{
+	moo_oow_t dec;
+
+	MOO_ASSERT (moo, count > 0);
+
+	do
+	{
+		dec = (count >= MOO_COUNTOF(pow_of_ten) - 1)? (MOO_COUNTOF(pow_of_ten) - 1): count;
+		v = moo_mulints(moo, v, MOO_SMOOI_TO_OOP(pow_of_ten[dec]));
+		if (!v) return MOO_NULL;
+		count -= dec;
+	}
+	while (count > 0);
+
+	return v;
+}
+
+static MOO_INLINE moo_oop_t divide_by_tens (moo_t* moo, moo_oop_t v, moo_oow_t count)
+{
+	moo_oow_t dec;
+
+	MOO_ASSERT (moo, count > 0);
+
+	do
+	{
+		dec = (count >= MOO_COUNTOF(pow_of_ten) - 1)? (MOO_COUNTOF(pow_of_ten) - 1): count;
+		v = moo_divints(moo, v, MOO_SMOOI_TO_OOP(pow_of_ten[dec]), 0, MOO_NULL);
+		if (!v) return MOO_NULL;
+		count -= dec;
+	}
+	while (count > 0);
+
+	return v;
+}
+
 static moo_ooi_t equalize_scale (moo_t* moo, moo_oop_t* x, moo_oop_t* y)
 {
 	moo_ooi_t xs, ys;
@@ -123,14 +159,19 @@ static moo_ooi_t equalize_scale (moo_t* moo, moo_oop_t* x, moo_oop_t* y)
 
 	if (xs < ys)
 	{
+	#if 0
 		nv = xv;
 		while (xs < ys)
 		{
-			/* TODO: optmize this. less multiplications */
 			nv = moo_mulints(moo, nv, MOO_SMOOI_TO_OOP(10));
 			if (!nv) return -1;
 			xs++;
 		}
+	#else
+		nv = multiply_by_tens(moo, xv, ys - xs);
+		if (!nv) return -1;
+		xs = ys;
+	#endif
 
 		nv = moo_makefpdec(moo, nv, xs);
 		if (!nv) return -1;
@@ -139,6 +180,7 @@ static moo_ooi_t equalize_scale (moo_t* moo, moo_oop_t* x, moo_oop_t* y)
 	}
 	else if (xs > ys)
 	{
+	#if 0
 		nv = yv;
 		while (ys < xs)
 		{
@@ -146,6 +188,11 @@ static moo_ooi_t equalize_scale (moo_t* moo, moo_oop_t* x, moo_oop_t* y)
 			if (!nv) return -1;
 			ys++;
 		}
+	#else
+		nv = multiply_by_tens(moo, yv, xs - ys);
+		if (!nv) return -1;
+		ys = xs;
+	#endif
 
 		nv = moo_makefpdec(moo, nv, ys);
 		if (!nv) return -1;
@@ -168,22 +215,14 @@ moo_oop_t moo_truncfpdecval (moo_t* moo, moo_oop_t iv, moo_ooi_t cs, moo_ooi_t n
 	#if 0
 		do
 		{
-			/* TODO: optimization... less divisions */
 			iv = moo_divints(moo, iv, MOO_SMOOI_TO_OOP(10), 0, MOO_NULL);
 			if (!iv) return MOO_NULL;
 			cs--;
 		}
 		while (cs > ns);
 	#else
-		moo_oow_t dec, rem = cs - ns;
-		do
-		{
-			dec = (rem >= MOO_COUNTOF(pow_of_ten) - 1)? (MOO_COUNTOF(pow_of_ten) - 1): rem;
-			iv = moo_divints(moo, iv, MOO_SMOOI_TO_OOP(pow_of_ten[dec]), 0, MOO_NULL);
-			if (!iv) return MOO_NULL;
-			rem -= dec;
-		}
-		while (rem > 0);
+		iv = divide_by_tens(moo, iv, cs - ns);
+		/* if (!iv) return MOO_NULL; */
 	#endif
 	}
 
@@ -228,15 +267,8 @@ moo_oop_t moo_truncfpdec (moo_t* moo, moo_oop_t x, moo_ooi_t ns)
 		}
 		while (cs > ns);
 	#else
-		moo_oow_t dec, rem = cs - ns;
-		do
-		{
-			dec = (rem >= MOO_COUNTOF(pow_of_ten) - 1)? (MOO_COUNTOF(pow_of_ten) - 1): rem;
-			xv = moo_divints(moo, xv, MOO_SMOOI_TO_OOP(pow_of_ten[dec]), 0, MOO_NULL);
-			if (!xv) return MOO_NULL;
-			rem -= dec;
-		}
-		while (rem > 0);
+		xv = divide_by_tens (moo, xv, cs - ns);
+		if (!xv) return MOO_NULL;
 	#endif
 	}
 	else /*if (cs < ns)*/
@@ -250,15 +282,8 @@ moo_oop_t moo_truncfpdec (moo_t* moo, moo_oop_t x, moo_ooi_t ns)
 		}
 		while (cs < ns);
 	#else
-		moo_oow_t dec, rem = ns - cs;
-		do
-		{
-			dec = (rem >= MOO_COUNTOF(pow_of_ten) - 1)? (MOO_COUNTOF(pow_of_ten) - 1): rem;
-			xv = moo_mulints(moo, xv, MOO_SMOOI_TO_OOP(pow_of_ten[dec]));
-			if (!xv) return MOO_NULL;
-			rem -= dec;
-		}
-		while (rem > 0);
+		xv = multiply_by_tens (moo, xv, ns - cs);
+		if (!xv) return MOO_NULL;
 	#endif
 	}
 
