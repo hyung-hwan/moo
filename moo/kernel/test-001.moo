@@ -234,7 +234,9 @@ extend MyObject
 			[ ((-10.19 scale: 0) scale) = (10 scale) ],
 			[ (-9p10 scale) = (-10.000000000 scale) ],
 			[ (-9p10.123 scale) = (-10.123000000 scale) ],
+			[ (+3p100.1 + 16rffff + +5p1.22 + -5p1.223) = 65635.09700 ],
 
+			## =========================
 			[
 				| b |
 				b := [:n | (n > 0) ifTrue: [ n * (b value: n - 1)] ifFalse: [1]].

@@ -29,8 +29,9 @@ class MyObject(Object)
 		##rec := [ :y :z | (108.0000000000000000000000 - (815.000000000000000000 - (1500.0000000000000000 div: z) div: y)) truncate: 18. ].
 		##rec := [ :y :z | (108.0000000000000000000000 - (815.000000000000000000 - (1500.0000000000000000 div: z) div: y)) truncate: 16. ].
 		##rec := [ :y :z | 108.0000000000000000000000 - (815.000000000000000000 - (1500.0000000000000000 div: z) div: y) ].
-		rec := [ :y :z | (108.0 scale: 22) - ((815 scale: 18) - ((1500 scale: 16) div: z) div: y) ].
+		##rec := [ :y :z | (108.0 scale: 22) - ((815 scale: 18) - ((1500 scale: 16) div: z) div: y) ].
 		##rec := [ :y :z | 108.000000000000000000000000000000 - (815.00000000000000000000000000 - (1500.0000000000000000 div: z) div: y) ].
+		rec := [ :y :z | 22p108 - (18p815 - (16p1500 div: z) div: y) ].
 
 
 		## results := %( 4.0, 425 div: 100.0 ) asOrderedCollection.
@@ -90,6 +91,6 @@ class MyObject(Object)
 			| tb |
 			tb := tc at: idx.
 			System log(System.Log.INFO, idx asString, (if (tb value) { ' PASS' } else { ' FAIL' }), S'\n').
-		]
+		].
 	}
 }

@@ -709,13 +709,14 @@ static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str, int prescaled)
 	moo_oow_t pos, len;
 	moo_oow_t scale = 0, xscale = 0;
 	moo_oop_t v;
-	int base = 10;
+	int base = 10, dotted = 0;
 
 	pos = str->len;
 	while (pos > 0)
 	{
 		if (str->ptr[--pos] == '.')
 		{
+			dotted = 1;
 			scale = str->len - pos - 1;
 			MOO_ASSERT (moo, scale > 0);
 			MOO_ASSERT (moo, scale <= MOO_SMOOI_MAX);
@@ -725,7 +726,7 @@ static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str, int prescaled)
 	}
 
 	pos = 0;
-	len = str->len - 1;
+	len = str->len - dotted;
 	if (str->ptr[pos] == '+' || str->ptr[pos] == '-')
 	{
 		if (str->ptr[pos] - '+') base = -10;
@@ -1530,6 +1531,8 @@ static int get_numlit (moo_t* moo, int negated)
 		moo_oow_t scale = 0;
 
 	fixed_point:
+		SET_TOKEN_TYPE (moo, (xscale > 0? MOO_IOTOK_SCALEDFPDECLIT: MOO_IOTOK_FPDECLIT));
+
 		period = moo->c->lxc;
 		GET_CHAR_TO (moo, c);
 		if (!is_digitchar(c))
@@ -1567,8 +1570,6 @@ static int get_numlit (moo_t* moo, int negated)
 			while (is_digitchar(c));
 
 			MOO_ASSERT (moo, scale > 0 && scale <= MOO_SMOOI_MAX);
-
-			SET_TOKEN_TYPE (moo, (xscale > 0? MOO_IOTOK_SCALEDFPDECLIT: MOO_IOTOK_FPDECLIT));
 			unget_char (moo, &moo->c->lxc);
 		}
 	}
@@ -1823,7 +1824,7 @@ static int get_binsel (moo_t* moo)
 
 	GET_CHAR (moo);
 	/* special case if a minus is followed by a digit immediately */
-	if (oc == '-' && is_digitchar(moo->c->lxc.c)) return get_numlit (moo, 1);
+	if ((oc == '-' || oc == '+') && is_digitchar(moo->c->lxc.c)) return get_numlit (moo, 1);
 
 #if 1
 	/* up to 2 characters only */
