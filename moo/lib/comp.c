@@ -1531,6 +1531,7 @@ static int get_numlit (moo_t* moo, int negated)
 		moo_oow_t scale = 0;
 
 	fixed_point:
+		/* once a jump is made to here. it's known to be a fixed point number */
 		SET_TOKEN_TYPE (moo, (xscale > 0? MOO_IOTOK_SCALEDFPDECLIT: MOO_IOTOK_FPDECLIT));
 
 		period = moo->c->lxc;
