@@ -26,6 +26,43 @@
 
 #include "moo-prv.h"
 
+static moo_ooi_t pow_of_ten[] = { 
+	1L, 
+	10L,
+	100L,
+	1000L,
+	10000L,
+	100000L, 
+#if (MOO_SIZEOF_OOI_T >= 4)
+	1000000L,
+	10000000L,
+	100000000L,
+	1000000000L,
+#endif
+#if (MOO_SIZEOF_OOI_T >= 8)
+	10000000000L,
+	100000000000L,
+	1000000000000L,
+	10000000000000L,
+	100000000000000L,
+	1000000000000000L,
+	10000000000000000L,
+	100000000000000000L,
+	1000000000000000000L,
+#endif
+#if (MOO_SIZEOF_OOI_T >= 16)
+	10000000000000000000L,
+	100000000000000000000L,
+	1000000000000000000000L,
+	10000000000000000000000L,
+	100000000000000000000000L,
+	1000000000000000000000000L,
+	10000000000000000000000000L,
+	100000000000000000000000000L,
+	1000000000000000000000000000L,
+#endif
+};
+
 moo_oop_t moo_makefpdec (moo_t* moo, moo_oop_t value, moo_ooi_t scale)
 {
 	moo_oop_fpdec_t fpdec;
@@ -123,10 +160,12 @@ moo_oop_t moo_truncfpdecval (moo_t* moo, moo_oop_t iv, moo_ooi_t cs, moo_ooi_t n
 {
 	/* this function truncates an existing fixed-point decimal value only if 
 	 * the existing scale is greater than the new scale given.
-	 * [NOTE] this doesn't work on the fpdec object. */
+	 * [NOTE] this doesn't work on the fpdec object but on the inner integra
+	 *        fpdec value. */
 
 	if (cs > ns)
 	{
+	#if 0
 		do
 		{
 			/* TODO: optimization... less divisions */
@@ -135,6 +174,17 @@ moo_oop_t moo_truncfpdecval (moo_t* moo, moo_oop_t iv, moo_ooi_t cs, moo_ooi_t n
 			cs--;
 		}
 		while (cs > ns);
+	#else
+		moo_oow_t dec, rem = cs - ns;
+		do
+		{
+			dec = (rem >= MOO_COUNTOF(pow_of_ten) - 1)? (MOO_COUNTOF(pow_of_ten) - 1): rem;
+			iv = moo_divints(moo, iv, MOO_SMOOI_TO_OOP(pow_of_ten[dec]), 0, MOO_NULL);
+			if (!iv) return MOO_NULL;
+			rem -= dec;
+		}
+		while (rem > 0);
+	#endif
 	}
 
 	return iv;
@@ -168,6 +218,7 @@ moo_oop_t moo_truncfpdec (moo_t* moo, moo_oop_t x, moo_ooi_t ns)
 	if (cs > ns)
 	{
 		/* same as moo_truncfpdecval() */
+	#if 0
 		do
 		{
 			/* TODO: optimization... less divisions */
@@ -176,9 +227,21 @@ moo_oop_t moo_truncfpdec (moo_t* moo, moo_oop_t x, moo_ooi_t ns)
 			cs--;
 		}
 		while (cs > ns);
+	#else
+		moo_oow_t dec, rem = cs - ns;
+		do
+		{
+			dec = (rem >= MOO_COUNTOF(pow_of_ten) - 1)? (MOO_COUNTOF(pow_of_ten) - 1): rem;
+			xv = moo_divints(moo, xv, MOO_SMOOI_TO_OOP(pow_of_ten[dec]), 0, MOO_NULL);
+			if (!xv) return MOO_NULL;
+			rem -= dec;
+		}
+		while (rem > 0);
+	#endif
 	}
 	else /*if (cs < ns)*/
 	{
+	#if 0
 		do
 		{
 			xv = moo_mulints(moo, xv, MOO_SMOOI_TO_OOP(10));
@@ -186,6 +249,17 @@ moo_oop_t moo_truncfpdec (moo_t* moo, moo_oop_t x, moo_ooi_t ns)
 			cs++;
 		}
 		while (cs < ns);
+	#else
+		moo_oow_t dec, rem = ns - cs;
+		do
+		{
+			dec = (rem >= MOO_COUNTOF(pow_of_ten) - 1)? (MOO_COUNTOF(pow_of_ten) - 1): rem;
+			xv = moo_mulints(moo, xv, MOO_SMOOI_TO_OOP(pow_of_ten[dec]));
+			if (!xv) return MOO_NULL;
+			rem -= dec;
+		}
+		while (rem > 0);
+	#endif
 	}
 
 	/* moo_makefpdec returns xv if ns <= 0. so it's safe to call it
