@@ -760,7 +760,7 @@ static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str, int prescaled)
 		moo_oow_t explen;
 
 		explen = len + xscale - scale;
-/* TODO: reuse this buffer? */
+#if 0
 		tmp = moo_allocmem(moo, explen * MOO_SIZEOF(*tmp));
 		if (!tmp)
 		{
@@ -770,9 +770,19 @@ static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str, int prescaled)
 		}
 
 		moo_copy_oochars (tmp, &str->ptr[pos], len);
-		moo_fill_oochars (&tmp[len], '0', explen - len); 
+		moo_fill_oochars (&tmp[len], '0', explen - len);
 		v = moo_strtoint(moo, tmp, explen, base);
 		moo_freemem (moo, tmp);
+#else
+		if (moo_copyoocharstosbuf(moo, &str->ptr[pos], len, MOO_SBUF_ID_FPDEC) <= -1 ||
+		    moo_concatoochartosbuf(moo, '0', explen - len, MOO_SBUF_ID_FPDEC) <= -1)
+		{
+			const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
+			moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to convert to fpdec %.*js - %js", str->len, str->ptr, oldmsg);
+			return MOO_NULL;
+		}
+		v = moo_strtoint(moo, moo->sbuf[MOO_SBUF_ID_FPDEC].ptr, moo->sbuf[MOO_SBUF_ID_FPDEC].len, base);
+#endif
 		scale = xscale;
 	}
 	else if (scale > xscale)
@@ -4785,7 +4795,7 @@ static int compile_block_expression (moo_t* moo)
 	/* store the accumulated number of temporaries for the current block.
 	 * block depth is not raised as it's not entering a new block but
 	 * updating the temporaries count for the current block. */
-	if (store_tmpr_count_for_block (moo, cc->mth.tmpr_count) <= -1) return -1;
+	if (store_tmpr_count_for_block(moo, cc->mth.tmpr_count) <= -1) return -1;
 
 #if defined(MOO_USE_MAKE_BLOCK)
 	if (emit_double_param_instruction(moo, BCODE_MAKE_BLOCK, block_arg_count, cc->mth.tmpr_count/*block_tmpr_count*/) <= -1) return -1;
@@ -4800,13 +4810,13 @@ static int compile_block_expression (moo_t* moo)
 	jump_inst_pos = cc->mth.code.len;
 	/* specifying MAX_CODE_JUMP causes emit_single_param_instruction() to 
 	 * produce the long jump instruction (BCODE_JUMP_FORWARD_X) */
-	if (emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
+	if (emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
 
 	/* compile statements inside a block */
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK)
 	{
 		/* the block is empty */
-		if (emit_byte_instruction (moo, BCODE_PUSH_NIL) <= -1) return -1;
+		if (emit_byte_instruction(moo, BCODE_PUSH_NIL) <= -1) return -1;
 	}
 	else 
 	{

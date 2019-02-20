@@ -1416,10 +1416,13 @@ typedef struct moo_compiler_t moo_compiler_t;
 
 enum moo_sbuf_id_t
 {
-	MOO_SBUF_ID_TMP    = 0,
-	MOO_SBUF_ID_SYNERR = 1
+	MOO_SBUF_ID_TMP = 0,
+	MOO_SBUF_ID_SYNERR,
+	MOO_SBUF_ID_FPDEC,
 	/* more? */
+	MOO_SBUF_COUNT
 };
+typedef enum moo_sbuf_id_t moo_sbuf_id_t;
 
 struct moo_errinf_t
 {
@@ -1641,7 +1644,7 @@ struct moo_t
 		} xbuf; /* buffer to support sprintf */
 	} sprintf;
 
-	moo_sbuf_t sbuf[64];
+	moo_sbuf_t sbuf[MOO_SBUF_COUNT];
 
 	struct
 	{
@@ -2326,6 +2329,9 @@ MOO_EXPORT int moo_convutobcstr (
 	moo_oow_t*       bcslen
 );
 
+/* =========================================================================
+ * STRING DUPLICATION
+ * ========================================================================= */
 
 #if defined(MOO_OOCH_IS_UCH)
 #	define moo_dupootobcharswithheadroom(moo,hrb,oocs,oocslen,bcslen) moo_duputobcharswithheadroom(moo,hrb,oocs,oocslen,bcslen)
@@ -2426,6 +2432,43 @@ MOO_EXPORT moo_bch_t* moo_dupbchars (
 	moo_oow_t        bcslen
 );
 
+/* =========================================================================
+ * SBUF MANIPULATION
+ * ========================================================================= */
+
+MOO_EXPORT int moo_copyoocstrtosbuf (
+	moo_t*            moo,
+	const moo_ooch_t* str,
+	moo_sbuf_id_t     id
+);
+
+MOO_EXPORT int moo_concatoocstrtosbuf (
+	moo_t*            moo,
+	const moo_ooch_t* str,
+	moo_sbuf_id_t     id
+);
+
+
+MOO_EXPORT int moo_copyoocharstosbuf (
+	moo_t*            moo,
+	const moo_ooch_t* ptr,
+	moo_oow_t         len,
+	moo_sbuf_id_t     id
+);
+
+MOO_EXPORT int moo_concatoocharstosbuf (
+	moo_t*            moo,
+	const moo_ooch_t* ptr,
+	moo_oow_t         len,
+	moo_sbuf_id_t     id
+);
+
+MOO_EXPORT int moo_concatoochartosbuf (
+	moo_t*            moo,
+	moo_ooch_t        ch,
+	moo_oow_t         count,
+	moo_sbuf_id_t     id
+);
 
 /* =========================================================================
  * MOO VM LOGGING

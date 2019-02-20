@@ -346,36 +346,6 @@ MOO_EXPORT moo_oow_t moo_count_bcstr (
 #	define moo_count_oocstr(str) moo_count_bcstr(str)
 #endif
 
-
-
-MOO_EXPORT int moo_copyoocstrtosbuf (
-	moo_t*            moo,
-	const moo_ooch_t* str,
-	int               id
-);
-
-MOO_EXPORT int moo_concatoocstrtosbuf (
-	moo_t*            moo,
-	const moo_ooch_t* str,
-	int               id
-);
-
-
-MOO_EXPORT int moo_copyoocharstosbuf (
-	moo_t*            moo,
-	const moo_ooch_t* ptr,
-	moo_oow_t         len,
-	int               id
-);
-
-MOO_EXPORT int moo_concatoocharstosbuf (
-	moo_t*            moo,
-	const moo_ooch_t* ptr,
-	moo_oow_t         len,
-	int               id
-);
-
-
 /* ------------------------------------------------------------------------- */
 
 MOO_EXPORT int moo_ucwidth (

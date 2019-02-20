@@ -26,6 +26,187 @@
 
 #include "moo-prv.h"
 
+/* ----------------------------------------------------------------------- */
+
+#if defined(MOO_HAVE_UINT16_T)
+
+moo_uint16_t moo_ntoh16 (moo_uint16_t x)
+{
+#if defined(MOO_ENDIAN_BIG)
+	return x;
+#elif defined(MOO_ENDIAN_LITTLE)
+	moo_uint8_t* c = (moo_uint8_t*)&x;
+	return (moo_uint16_t)(
+		((moo_uint16_t)c[0] << 8) |
+		((moo_uint16_t)c[1] << 0));
+#else
+#	error Unknown endian
+#endif
+}
+
+moo_uint16_t moo_hton16 (moo_uint16_t x)
+{
+#if defined(MOO_ENDIAN_BIG)
+	return x;
+#elif defined(MOO_ENDIAN_LITTLE)
+	moo_uint8_t* c = (moo_uint8_t*)&x;
+	return (moo_uint16_t)(
+		((moo_uint16_t)c[0] << 8) |
+		((moo_uint16_t)c[1] << 0));
+#else
+#	error Unknown endian
+#endif
+}
+
+#endif
+
+/* --------------------------------------------------------------- */
+
+#if defined(MOO_HAVE_UINT32_T)
+
+moo_uint32_t moo_ntoh32 (moo_uint32_t x)
+{
+#if defined(MOO_ENDIAN_BIG)
+	return x;
+#elif defined(MOO_ENDIAN_LITTLE)
+	moo_uint8_t* c = (moo_uint8_t*)&x;
+	return (moo_uint32_t)(
+		((moo_uint32_t)c[0] << 24) |
+		((moo_uint32_t)c[1] << 16) |
+		((moo_uint32_t)c[2] << 8) | 
+		((moo_uint32_t)c[3] << 0));
+#else
+#	error Unknown endian
+#endif
+}
+
+moo_uint32_t moo_hton32 (moo_uint32_t x)
+{
+#if defined(MOO_ENDIAN_BIG)
+	return x;
+#elif defined(MOO_ENDIAN_LITTLE)
+	moo_uint8_t* c = (moo_uint8_t*)&x;
+	return (moo_uint32_t)(
+		((moo_uint32_t)c[0] << 24) |
+		((moo_uint32_t)c[1] << 16) |
+		((moo_uint32_t)c[2] << 8) | 
+		((moo_uint32_t)c[3] << 0));
+#else
+#	error Unknown endian
+#endif
+}
+#endif
+
+
+#if defined(MOO_HAVE_UINT64_T)
+
+moo_uint64_t moo_ntoh64 (moo_uint64_t x)
+{
+#if defined(MOO_ENDIAN_BIG)
+	return x;
+#elif defined(MOO_ENDIAN_LITTLE)
+	moo_uint8_t* c = (moo_uint8_t*)&x;
+	return (moo_uint64_t)(
+		((moo_uint64_t)c[0] << 56) | 
+		((moo_uint64_t)c[1] << 48) | 
+		((moo_uint64_t)c[2] << 40) |
+		((moo_uint64_t)c[3] << 32) |
+		((moo_uint64_t)c[4] << 24) |
+		((moo_uint64_t)c[5] << 16) |
+		((moo_uint64_t)c[6] << 8)  |
+		((moo_uint64_t)c[7] << 0));
+#else
+#	error Unknown endian
+#endif
+}
+
+moo_uint64_t moo_hton64 (moo_uint64_t x)
+{
+#if defined(MOO_ENDIAN_BIG)
+	return x;
+#elif defined(MOO_ENDIAN_LITTLE)
+	moo_uint8_t* c = (moo_uint8_t*)&x;
+	return (moo_uint64_t)(
+		((moo_uint64_t)c[0] << 56) | 
+		((moo_uint64_t)c[1] << 48) | 
+		((moo_uint64_t)c[2] << 40) |
+		((moo_uint64_t)c[3] << 32) |
+		((moo_uint64_t)c[4] << 24) |
+		((moo_uint64_t)c[5] << 16) |
+		((moo_uint64_t)c[6] << 8)  |
+		((moo_uint64_t)c[7] << 0));
+#else
+#	error Unknown endian
+#endif
+}
+
+#endif
+
+/* --------------------------------------------------------------- */
+
+#if defined(MOO_HAVE_UINT128_T)
+
+moo_uint128_t moo_ntoh128 (moo_uint128_t x)
+{
+#if defined(MOO_ENDIAN_BIG)
+	return x;
+#elif defined(MOO_ENDIAN_LITTLE)
+	moo_uint8_t* c = (moo_uint8_t*)&x;
+	return (moo_uint128_t)(
+		((moo_uint128_t)c[0]  << 120) | 
+		((moo_uint128_t)c[1]  << 112) | 
+		((moo_uint128_t)c[2]  << 104) |
+		((moo_uint128_t)c[3]  << 96) |
+		((moo_uint128_t)c[4]  << 88) |
+		((moo_uint128_t)c[5]  << 80) |
+		((moo_uint128_t)c[6]  << 72) |
+		((moo_uint128_t)c[7]  << 64) |
+		((moo_uint128_t)c[8]  << 56) | 
+		((moo_uint128_t)c[9]  << 48) | 
+		((moo_uint128_t)c[10] << 40) |
+		((moo_uint128_t)c[11] << 32) |
+		((moo_uint128_t)c[12] << 24) |
+		((moo_uint128_t)c[13] << 16) |
+		((moo_uint128_t)c[14] << 8)  |
+		((moo_uint128_t)c[15] << 0));
+#else
+#	error Unknown endian
+#endif
+}
+
+moo_uint128_t moo_hton128 (moo_uint128_t x)
+{
+#if defined(MOO_ENDIAN_BIG)
+	return x;
+#elif defined(MOO_ENDIAN_LITTLE)
+	moo_uint8_t* c = (moo_uint8_t*)&x;
+	return (moo_uint128_t)(
+		((moo_uint128_t)c[0]  << 120) | 
+		((moo_uint128_t)c[1]  << 112) | 
+		((moo_uint128_t)c[2]  << 104) |
+		((moo_uint128_t)c[3]  << 96) |
+		((moo_uint128_t)c[4]  << 88) |
+		((moo_uint128_t)c[5]  << 80) |
+		((moo_uint128_t)c[6]  << 72) |
+		((moo_uint128_t)c[7]  << 64) |
+		((moo_uint128_t)c[8]  << 56) | 
+		((moo_uint128_t)c[9]  << 48) | 
+		((moo_uint128_t)c[10] << 40) |
+		((moo_uint128_t)c[11] << 32) |
+		((moo_uint128_t)c[12] << 24) |
+		((moo_uint128_t)c[13] << 16) |
+		((moo_uint128_t)c[14] << 8)  |
+		((moo_uint128_t)c[15] << 0));
+#else
+#	error Unknown endian
+#endif
+}
+
+#endif
+
+/* ----------------------------------------------------------------------- */
+
+
 /* some naming conventions
  *  bchars, uchars -> pointer and length
  *  bcstr, ucstr -> null-terminated string pointer
@@ -359,53 +540,6 @@ moo_bch_t* moo_find_bchar_in_bcstr (const moo_bch_t* ptr, moo_bch_t c)
 	}
 
 	return MOO_NULL;
-}
-
-/* ----------------------------------------------------------------------- */
-
-int moo_concatoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, int id)
-{
-	return moo_concatoocharstosbuf(moo, str, moo_count_oocstr(str), id);
-}
-
-int moo_concatoocharstosbuf (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, int id)
-{
-	moo_sbuf_t* p;
-
-	p = &moo->sbuf[id];
-
-	if (len > p->capa - p->len)
-	{
-		moo_oow_t newcapa;
-		moo_ooch_t* tmp;
-
-		newcapa = MOO_ALIGN(p->len + len, 512); /* TODO: adjust this capacity */
-
-		/* +1 to handle line ending injection more easily */
-		tmp = (moo_ooch_t*)moo_reallocmem(moo, p->ptr, (newcapa + 1) * MOO_SIZEOF(*tmp)); 
-		if (!tmp) return -1;
-
-		p->ptr = tmp;
-		p->capa = newcapa;
-	}
-
-	moo_copy_oochars (&p->ptr[p->len], ptr, len);
-	p->len += len;
-	p->ptr[p->len] = '\0';
-
-	return 0;
-}
-
-int moo_copyoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, int id)
-{
-	moo->sbuf[id].len = 0;;
-	return moo_concatoocstrtosbuf(moo, str, id);
-}
-
-int moo_copyoocharstosbuf (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, int id)
-{
-	moo->sbuf[id].len = 0;;
-	return moo_concatoocharstosbuf(moo, ptr, len, id);
 }
 
 /* ----------------------------------------------------------------------- */
@@ -987,179 +1121,68 @@ moo_bch_t* moo_dupbchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t bcslen)
 
 /* ----------------------------------------------------------------------- */
 
-
-#if defined(MOO_HAVE_UINT16_T)
-
-moo_uint16_t moo_ntoh16 (moo_uint16_t x)
+static MOO_INLINE int secure_space_in_sbuf (moo_t* moo, moo_oow_t req, moo_sbuf_t* p)
 {
-#if defined(MOO_ENDIAN_BIG)
-	return x;
-#elif defined(MOO_ENDIAN_LITTLE)
-	moo_uint8_t* c = (moo_uint8_t*)&x;
-	return (moo_uint16_t)(
-		((moo_uint16_t)c[0] << 8) |
-		((moo_uint16_t)c[1] << 0));
-#else
-#	error Unknown endian
-#endif
+	if (req > p->capa - p->len)
+	{
+		moo_oow_t newcapa;
+		moo_ooch_t* tmp;
+
+		newcapa = MOO_ALIGN_POW2(p->len + req, 512); /* TODO: adjust this capacity */
+
+		/* +1 to handle line ending injection more easily */
+		tmp = (moo_ooch_t*)moo_reallocmem(moo, p->ptr, (newcapa + 1) * MOO_SIZEOF(*tmp)); 
+		if (!tmp) return -1;
+
+		p->ptr = tmp;
+		p->capa = newcapa;
+	}
+
+	return 0;
 }
 
-moo_uint16_t moo_hton16 (moo_uint16_t x)
+int moo_concatoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, moo_sbuf_id_t id)
 {
-#if defined(MOO_ENDIAN_BIG)
-	return x;
-#elif defined(MOO_ENDIAN_LITTLE)
-	moo_uint8_t* c = (moo_uint8_t*)&x;
-	return (moo_uint16_t)(
-		((moo_uint16_t)c[0] << 8) |
-		((moo_uint16_t)c[1] << 0));
-#else
-#	error Unknown endian
-#endif
+	return moo_concatoocharstosbuf(moo, str, moo_count_oocstr(str), id);
 }
 
-#endif
-
-/* --------------------------------------------------------------- */
-
-#if defined(MOO_HAVE_UINT32_T)
-
-moo_uint32_t moo_ntoh32 (moo_uint32_t x)
+int moo_concatoocharstosbuf (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, moo_sbuf_id_t id)
 {
-#if defined(MOO_ENDIAN_BIG)
-	return x;
-#elif defined(MOO_ENDIAN_LITTLE)
-	moo_uint8_t* c = (moo_uint8_t*)&x;
-	return (moo_uint32_t)(
-		((moo_uint32_t)c[0] << 24) |
-		((moo_uint32_t)c[1] << 16) |
-		((moo_uint32_t)c[2] << 8) | 
-		((moo_uint32_t)c[3] << 0));
-#else
-#	error Unknown endian
-#endif
+	moo_sbuf_t* p;
+
+	p = &moo->sbuf[id];
+
+	if (secure_space_in_sbuf(moo, len, p) <= -1) return -1;
+
+	moo_copy_oochars (&p->ptr[p->len], ptr, len);
+	p->len += len;
+	p->ptr[p->len] = '\0';
+
+	return 0;
+}
+int moo_concatoochartosbuf (moo_t* moo, moo_ooch_t ch, moo_oow_t count, moo_sbuf_id_t id)
+{
+	moo_sbuf_t* p;
+
+	p = &moo->sbuf[id];
+
+	if (secure_space_in_sbuf(moo, count, p) <= -1) return -1;
+
+	moo_fill_oochars (&p->ptr[p->len], ch, count);
+	p->len += count;
+	p->ptr[p->len] = '\0';
+
+	return 0;
 }
 
-moo_uint32_t moo_hton32 (moo_uint32_t x)
+int moo_copyoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, moo_sbuf_id_t id)
 {
-#if defined(MOO_ENDIAN_BIG)
-	return x;
-#elif defined(MOO_ENDIAN_LITTLE)
-	moo_uint8_t* c = (moo_uint8_t*)&x;
-	return (moo_uint32_t)(
-		((moo_uint32_t)c[0] << 24) |
-		((moo_uint32_t)c[1] << 16) |
-		((moo_uint32_t)c[2] << 8) | 
-		((moo_uint32_t)c[3] << 0));
-#else
-#	error Unknown endian
-#endif
-}
-#endif
-
-
-#if defined(MOO_HAVE_UINT64_T)
-
-moo_uint64_t moo_ntoh64 (moo_uint64_t x)
-{
-#if defined(MOO_ENDIAN_BIG)
-	return x;
-#elif defined(MOO_ENDIAN_LITTLE)
-	moo_uint8_t* c = (moo_uint8_t*)&x;
-	return (moo_uint64_t)(
-		((moo_uint64_t)c[0] << 56) | 
-		((moo_uint64_t)c[1] << 48) | 
-		((moo_uint64_t)c[2] << 40) |
-		((moo_uint64_t)c[3] << 32) |
-		((moo_uint64_t)c[4] << 24) |
-		((moo_uint64_t)c[5] << 16) |
-		((moo_uint64_t)c[6] << 8)  |
-		((moo_uint64_t)c[7] << 0));
-#else
-#	error Unknown endian
-#endif
+	moo->sbuf[id].len = 0;;
+	return moo_concatoocstrtosbuf(moo, str, id);
 }
 
-moo_uint64_t moo_hton64 (moo_uint64_t x)
+int moo_copyoocharstosbuf (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, moo_sbuf_id_t id)
 {
-#if defined(MOO_ENDIAN_BIG)
-	return x;
-#elif defined(MOO_ENDIAN_LITTLE)
-	moo_uint8_t* c = (moo_uint8_t*)&x;
-	return (moo_uint64_t)(
-		((moo_uint64_t)c[0] << 56) | 
-		((moo_uint64_t)c[1] << 48) | 
-		((moo_uint64_t)c[2] << 40) |
-		((moo_uint64_t)c[3] << 32) |
-		((moo_uint64_t)c[4] << 24) |
-		((moo_uint64_t)c[5] << 16) |
-		((moo_uint64_t)c[6] << 8)  |
-		((moo_uint64_t)c[7] << 0));
-#else
-#	error Unknown endian
-#endif
+	moo->sbuf[id].len = 0;;
+	return moo_concatoocharstosbuf(moo, ptr, len, id);
 }
-
-#endif
-
-/* --------------------------------------------------------------- */
-
-#if defined(MOO_HAVE_UINT128_T)
-
-moo_uint128_t moo_ntoh128 (moo_uint128_t x)
-{
-#if defined(MOO_ENDIAN_BIG)
-	return x;
-#elif defined(MOO_ENDIAN_LITTLE)
-	moo_uint8_t* c = (moo_uint8_t*)&x;
-	return (moo_uint128_t)(
-		((moo_uint128_t)c[0]  << 120) | 
-		((moo_uint128_t)c[1]  << 112) | 
-		((moo_uint128_t)c[2]  << 104) |
-		((moo_uint128_t)c[3]  << 96) |
-		((moo_uint128_t)c[4]  << 88) |
-		((moo_uint128_t)c[5]  << 80) |
-		((moo_uint128_t)c[6]  << 72) |
-		((moo_uint128_t)c[7]  << 64) |
-		((moo_uint128_t)c[8]  << 56) | 
-		((moo_uint128_t)c[9]  << 48) | 
-		((moo_uint128_t)c[10] << 40) |
-		((moo_uint128_t)c[11] << 32) |
-		((moo_uint128_t)c[12] << 24) |
-		((moo_uint128_t)c[13] << 16) |
-		((moo_uint128_t)c[14] << 8)  |
-		((moo_uint128_t)c[15] << 0));
-#else
-#	error Unknown endian
-#endif
-}
-
-moo_uint128_t moo_hton128 (moo_uint128_t x)
-{
-#if defined(MOO_ENDIAN_BIG)
-	return x;
-#elif defined(MOO_ENDIAN_LITTLE)
-	moo_uint8_t* c = (moo_uint8_t*)&x;
-	return (moo_uint128_t)(
-		((moo_uint128_t)c[0]  << 120) | 
-		((moo_uint128_t)c[1]  << 112) | 
-		((moo_uint128_t)c[2]  << 104) |
-		((moo_uint128_t)c[3]  << 96) |
-		((moo_uint128_t)c[4]  << 88) |
-		((moo_uint128_t)c[5]  << 80) |
-		((moo_uint128_t)c[6]  << 72) |
-		((moo_uint128_t)c[7]  << 64) |
-		((moo_uint128_t)c[8]  << 56) | 
-		((moo_uint128_t)c[9]  << 48) | 
-		((moo_uint128_t)c[10] << 40) |
-		((moo_uint128_t)c[11] << 32) |
-		((moo_uint128_t)c[12] << 24) |
-		((moo_uint128_t)c[13] << 16) |
-		((moo_uint128_t)c[14] << 8)  |
-		((moo_uint128_t)c[15] << 0));
-#else
-#	error Unknown endian
-#endif
-}
-
-#endif

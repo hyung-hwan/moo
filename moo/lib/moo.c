@@ -284,10 +284,10 @@ void moo_fini (moo_t* moo)
 
 	if (moo->sprintf.xbuf.ptr)
 	{
-			moo_freemem (moo, moo->sprintf.xbuf.ptr);
-			moo->sprintf.xbuf.ptr = MOO_NULL;
-			moo->sprintf.xbuf.capa = 0;
-			moo->sprintf.xbuf.len = 0;
+		moo_freemem (moo, moo->sprintf.xbuf.ptr);
+		moo->sprintf.xbuf.ptr = MOO_NULL;
+		moo->sprintf.xbuf.capa = 0;
+		moo->sprintf.xbuf.len = 0;
 	}
 
 	if (moo->vmprim.dl_cleanup) moo->vmprim.dl_cleanup (moo);
@@ -844,15 +844,15 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 
 	/* compose a full primitive function identifier to VM's string buffer.
 	 *   pfid => mod->name + '.' + pfname */
-	if (moo_copyoocstrtosbuf(moo, mod->name, MOO_SBUF_TMP) <= -1 ||
-	    moo_concatoocstrtosbuf(moo, dot, MOO_SBUF_TMP) <= -1 ||
-	    moo_concatoocstrtosbuf(moo, pfname, MOO_SBUF_TMP) <=  -1) 
+	if (moo_copyoocstrtosbuf(moo, mod->name, MOO_SBUF_ID_TMP) <= -1 ||
+	    moo_concatoocstrtosbuf(moo, dot, MOO_SBUF_ID_TMP) <= -1 ||
+	    moo_concatoocstrtosbuf(moo, pfname, MOO_SBUF_ID_TMP) <=  -1) 
 	{
 		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - VM memory shortage\n", mthname, _class->name);
 		return -1;
 	}
 
-	pfidsym = (moo_oop_char_t)moo_makesymbol(moo, moo->sbuf[MOO_SBUF_TMP].ptr, moo->sbuf[MOO_SBUF_TMP].len);
+	pfidsym = (moo_oop_char_t)moo_makesymbol(moo, moo->sbuf[MOO_SBUF_ID_TMP].ptr, moo->sbuf[MOO_SBUF_ID_TMP].len);
 	if (!pfidsym) 
 	{
 		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - symbol instantiation failure\n", mthname, _class->name);
