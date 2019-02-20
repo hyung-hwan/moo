@@ -1128,14 +1128,14 @@ static MOO_INLINE int secure_space_in_sbuf (moo_t* moo, moo_oow_t req, moo_sbuf_
 		moo_oow_t newcapa;
 		moo_ooch_t* tmp;
 
-		newcapa = MOO_ALIGN_POW2(p->len + req, 512); /* TODO: adjust this capacity */
+		newcapa = p->len + req + 1;
+		newcapa = MOO_ALIGN_POW2(newcapa, 512); /* TODO: adjust this capacity */
 
-		/* +1 to handle line ending injection more easily */
-		tmp = (moo_ooch_t*)moo_reallocmem(moo, p->ptr, (newcapa + 1) * MOO_SIZEOF(*tmp)); 
+		tmp = (moo_ooch_t*)moo_reallocmem(moo, p->ptr, newcapa * MOO_SIZEOF(*tmp)); 
 		if (!tmp) return -1;
 
 		p->ptr = tmp;
-		p->capa = newcapa;
+		p->capa = newcapa - 1;
 	}
 
 	return 0;
@@ -1151,23 +1151,20 @@ int moo_concatoocharstosbuf (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, m
 	moo_sbuf_t* p;
 
 	p = &moo->sbuf[id];
-
 	if (secure_space_in_sbuf(moo, len, p) <= -1) return -1;
-
 	moo_copy_oochars (&p->ptr[p->len], ptr, len);
 	p->len += len;
 	p->ptr[p->len] = '\0';
 
 	return 0;
 }
+
 int moo_concatoochartosbuf (moo_t* moo, moo_ooch_t ch, moo_oow_t count, moo_sbuf_id_t id)
 {
 	moo_sbuf_t* p;
 
 	p = &moo->sbuf[id];
-
 	if (secure_space_in_sbuf(moo, count, p) <= -1) return -1;
-
 	moo_fill_oochars (&p->ptr[p->len], ch, count);
 	p->len += count;
 	p->ptr[p->len] = '\0';
@@ -1177,12 +1174,12 @@ int moo_concatoochartosbuf (moo_t* moo, moo_ooch_t ch, moo_oow_t count, moo_sbuf
 
 int moo_copyoocstrtosbuf (moo_t* moo, const moo_ooch_t* str, moo_sbuf_id_t id)
 {
-	moo->sbuf[id].len = 0;;
+	moo->sbuf[id].len = 0;
 	return moo_concatoocstrtosbuf(moo, str, id);
 }
 
 int moo_copyoocharstosbuf (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len, moo_sbuf_id_t id)
 {
-	moo->sbuf[id].len = 0;;
+	moo->sbuf[id].len = 0;
 	return moo_concatoocharstosbuf(moo, ptr, len, id);
 }

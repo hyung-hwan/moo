@@ -1454,7 +1454,7 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 	 *   R := R << 1          left-shift R by 1 bit    
 	 *   R(0) := X(i)         set the least-significant bit of R equal to bit i of the numerator
 	 *   if R >= Y then
-	 *     R = R - Y               
+	 *     R = R - Y 
 	 *     Q(i) := 1
 	 *   end
 	 * end 
@@ -4279,21 +4279,21 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 
 	do
 	{
-		if (is_less_unsigned_array (b, bs, a, as))
+		if (is_less_unsigned_array(b, bs, a, as))
 		{
 			moo_liw_t* tmp;
 
-			divide_unsigned_array (moo, a, as, b, bs, q, r);
+			divide_unsigned_array(moo, a, as, b, bs, q, r);
 
 			/* get 'rs' before 'as' gets changed */
-			rs = count_effective (r, as); 
+			rs = count_effective(r, as); 
  
 			/* swap a and q for later division */
 			tmp = a;
 			a = q;
 			q = tmp;
 
-			as = count_effective (a, as);
+			as = count_effective(a, as);
 		}
 		else
 		{
@@ -4315,7 +4315,7 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 	#else
 	#	error UNSUPPORTED LIW BIT SIZE
 	#endif
-		seglen = oow_to_text (moo, w, flagged_radix, &xbuf[xlen]);
+		seglen = oow_to_text(moo, w, flagged_radix, &xbuf[xlen]);
 		xlen += seglen;
 		if (r == a) break; /* reached the last block */
 

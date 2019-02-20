@@ -760,20 +760,6 @@ static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str, int prescaled)
 		moo_oow_t explen;
 
 		explen = len + xscale - scale;
-#if 0
-		tmp = moo_allocmem(moo, explen * MOO_SIZEOF(*tmp));
-		if (!tmp)
-		{
-			const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
-			moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to convert to fpdec %.*js - %js", str->len, str->ptr, oldmsg);
-			return MOO_NULL;
-		}
-
-		moo_copy_oochars (tmp, &str->ptr[pos], len);
-		moo_fill_oochars (&tmp[len], '0', explen - len);
-		v = moo_strtoint(moo, tmp, explen, base);
-		moo_freemem (moo, tmp);
-#else
 		if (moo_copyoocharstosbuf(moo, &str->ptr[pos], len, MOO_SBUF_ID_FPDEC) <= -1 ||
 		    moo_concatoochartosbuf(moo, '0', explen - len, MOO_SBUF_ID_FPDEC) <= -1)
 		{
@@ -782,7 +768,6 @@ static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str, int prescaled)
 			return MOO_NULL;
 		}
 		v = moo_strtoint(moo, moo->sbuf[MOO_SBUF_ID_FPDEC].ptr, moo->sbuf[MOO_SBUF_ID_FPDEC].len, base);
-#endif
 		scale = xscale;
 	}
 	else if (scale > xscale)
