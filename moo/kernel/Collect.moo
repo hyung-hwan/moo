@@ -727,6 +727,9 @@ class OrderedCollection(SequenceableCollection)
 
 class Set(Collection)
 {
+	## The set class stores unordered elemenents and disallows duplicates.
+	## It is implemented as an open-addressed hash table currently.
+
 	var tally, bucket.
 
 	method(#class) new
@@ -932,6 +935,11 @@ class Set(Collection)
 		^coll
 	}
 }
+
+## TODO: implement IdentitySet
+##class IdentitySet(Set)
+##{
+##}
 
 class AssociativeCollection(Collection)
 {
@@ -1555,6 +1563,14 @@ extend Collection
 		| coll |
 		coll := OrderedCollection new: self size.
 		self do: [:each | coll addLast: each ].
-		^coll
+		^coll.
+	}
+
+	method asSet
+	{
+		| coll |
+		coll := Set new: self size.
+		self do: [:each | coll add: each ].
+		^coll.
 	}
 }

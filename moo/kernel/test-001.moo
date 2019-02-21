@@ -263,6 +263,13 @@ extend MyObject
 				k = '0=>3 1=>-6233041613697111534195832 2=>3.3333333333333333333 '.
 			],
 
+
+			[
+				| k |
+				k := #('str1' 'str2' 'str3' 'str4' 'str5' 'str1' 'str2') asSet.
+				##k do: [:each | each dump].
+				if ((k includes: 'str1') and (k includes: 'str3') and ((k includes: 'str9') not)) { true } else { false }
+			],
 			[
 				| b |
 				b := [:n | (n > 0) ifTrue: [ n * (b value: n - 1)] ifFalse: [1]].
