@@ -722,6 +722,7 @@ class OrderedCollection(SequenceableCollection)
 	} *)
 }
 
+
 ## -------------------------------------------------------------------------------
 
 class Set(Collection)
@@ -1541,5 +1542,19 @@ class LinkedList(Collection)
 	{
 		self doOverLink: [:el | if (el value == value) { ^el }].
 		^Error.Code.ENOENT
+	}
+}
+
+extend Collection
+{
+	## ===================================================================
+	## CONVERSION
+	## ===================================================================
+	method asOrderedCollection
+	{
+		| coll |
+		coll := OrderedCollection new: self size.
+		self do: [:each | coll addLast: each ].
+		^coll
 	}
 }
