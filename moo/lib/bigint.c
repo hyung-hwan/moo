@@ -3677,7 +3677,7 @@ moo_oop_t moo_strtoint (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, int ra
 
 	#elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
 		/* use the Bit Scan Forward instruction */
-		__asm__ volat (
+		__asm__ volatile (
 			"bsf %1,%0\n\t"
 			: "=r"(exp) /* output */
 			: "r"(radix) /* input */
@@ -3689,7 +3689,7 @@ moo_oop_t moo_strtoint (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, int ra
 		 * count trailing zeros or something similar. using RBIT with CLZ
 		 * would be good in ARMv6T2 and above to avoid further calculation
 		 * afte CLZ */
-		__asm__ volat (
+		__asm__ volatile (
 			"clz %0,%1\n\t"
 			: "=r"(exp) /* output */
 			: "r"(radix) /* input */
