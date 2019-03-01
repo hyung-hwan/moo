@@ -222,7 +222,12 @@ moo_oow_t moo_hash_bytes (const moo_oob_t* ptr, moo_oow_t len)
 	const moo_uint8_t* bp, * be;
 
 	bp = ptr; be = bp + len;
-	while (bp < be) h = h * 31 + *bp++;
+
+	/* this hash doesn't produce good distribution */
+	/*while (bp < be) h = h * 31 + *bp++; */
+
+	/* SDBM hash is know to produce good overall distribution for many different data sets */
+	while (bp < be) h = (h << 6) + (h << 16) - h + *bp++;
 
 	/* constrain the hash value to be representable in a small integer
 	 * for convenience sake */
