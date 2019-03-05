@@ -246,8 +246,8 @@ moo_oow_t moo_hash_bytes (const moo_oob_t* ptr, moo_oow_t len)
 	h = FNV_MAGIC_INIT;
 	while (bp < be)
 	{
-		 h ^= (moo_oow_t)(*bp++);
-		 h *= FNV_MAGIC_PRIME;
+		h ^= (moo_oow_t)(*bp++);
+		h *= FNV_MAGIC_PRIME;
 	}
 #else
 	/* SDBM hash is known to produce good overall distribution
