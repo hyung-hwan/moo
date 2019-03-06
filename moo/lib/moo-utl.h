@@ -29,10 +29,9 @@
 
 #include "moo-cmn.h"
 
-
-/* ----------------------------------------------------------------------- 
- * DOUBLY LINKED LIST MACROS
- * ----------------------------------------------------------------------- */
+/* =========================================================================
+ * DOUBLY LINKED LIST
+ * ========================================================================= */
 #define MOO_APPEND_TO_LIST(list, node) do { \
 	(node)->next = MOO_NULL; \
 	(node)->prev = (list)->last; \
@@ -55,7 +54,6 @@
 	if ((node)->next) (node)->next->prev = (node)->prev; \
 	else (list)->last = (node)->prev; \
 } while(0)
-
 
 
 #define MOO_APPEND_TO_OOP_LIST(moo, list, node_type, node, _link) do { \
@@ -89,8 +87,9 @@
 } while(0);
 */
 
-
-
+/* =========================================================================
+ * ENDIAN CHANGE
+ * ========================================================================= */
 #define MOO_CONST_SWAP16(x) \
 	((qse_uint16_t)((((qse_uint16_t)(x) & (qse_uint16_t)0x00ffU) << 8) | \
 	                (((qse_uint16_t)(x) & (qse_uint16_t)0xff00U) >> 8) ))
@@ -116,46 +115,129 @@
 #endif
 
 
+/* =========================================================================
+ * HASH
+ * ========================================================================= */
+
+#if (MOO_SIZEOF_SIZE_T == 4)
+#	define MOO_HASH_FNV_MAGIC_INIT (0x811c9dc5)
+#	define MOO_HASH_FNV_MAGIC_PRIME (0x01000193)
+#elif (MOO_SIZEOF_SIZE_T == 8)
+
+#	define MOO_HASH_FNV_MAGIC_INIT (0xCBF29CE484222325)
+#	define MOO_HASH_FNV_MAGIC_PRIME (0x100000001B3l)
+
+#elif (MOO_SIZEOF_SIZE_T == 16)
+#	define MOO_HASH_FNV_MAGIC_INIT (0x6C62272E07BB014262B821756295C58D)
+#	define MOO_HASH_FNV_MAGIC_PRIME (0x1000000000000000000013B)
+#endif
+
+#if defined(MOO_HASH_FNV_MAGIC_INIT)
+	/* FNV-1 hash */
+#	define MOO_HASH_INIT MOO_HASH_FNV_MAGIC_INIT
+#	define MOO_HASH_VALUE(hv,v) (((hv) ^ (v)) * MOO_HASH_FNV_MAGIC_PRIME)
+
+#else
+	/* SDBM hash */
+#	define MOO_HASH_INIT 0
+#	define MOO_HASH_VALUE(hv,v) (((hv) << 6) + ((hv) << 16) - (hv) + (v))
+#endif
+
+#define MOO_HASH_VPTL(hv, ptr, len, type) do { \
+	hv = MOO_HASH_INIT; \
+	MOO_HASH_MORE_VPTL (hv, ptr, len, type); \
+} while(0)
+
+#define MOO_HASH_MORE_VPTL(hv, ptr, len, type) do { \
+	type* __moo_hash_more_vptl_p = (type*)(ptr); \
+	type* __moo_hash_more_vptl_q = (type*)__moo_hash_more_vptl_p + (len); \
+	while (__moo_hash_more_vptl_p < __moo_hash_more_vptl_q) \
+	{ \
+		hv = MOO_HASH_VALUE(hv, *__moo_hash_more_vptl_p); \
+		__moo_hash_more_vptl_p++; \
+	} \
+} while(0)
+
+#define MOO_HASH_VPTR(hv, ptr, type) do { \
+	hv = MOO_HASH_INIT; \
+	MOO_HASH_MORE_VPTR (hv, ptr, type); \
+} while(0)
+
+#define MOO_HASH_MORE_VPTR(hv, ptr, type) do { \
+	type* __moo_hash_more_vptr_p = (type*)(ptr); \
+	while (*__moo_hash_more_vptr_p) \
+	{ \
+		hv = MOO_HASH_VALUE(hv, *__moo_hash_more_vptr_p); \
+		__moo_hash_more_vptr_p++; \
+	} \
+} while(0)
+
+#define MOO_HASH_BYTES(hv, ptr, len) MOO_HASH_VPTL(hv, ptr, len, const moo_uint8_t)
+#define MOO_HASH_MORE_BYTES(hv, ptr, len) MOO_HASH_MORE_VPTL(hv, ptr, len, const moo_uint8_t)
+
+#define MOO_HASH_BCHARS(hv, ptr, len) MOO_HASH_VPTL(hv, ptr, len, const moo_bch_t)
+#define MOO_HASH_MORE_BCHARS(hv, ptr, len) MOO_HASH_MORE_VPTL(hv, ptr, len, const moo_bch_t)
+
+#define MOO_HASH_UCHARS(hv, ptr, len) MOO_HASH_VPTL(hv, ptr, len, const moo_uch_t)
+#define MOO_HASH_MORE_UCHARS(hv, ptr, len) MOO_HASH_MORE_VPTL(hv, ptr, len, const moo_uch_t)
+
+#define MOO_HASH_BCSTR(hv, ptr) MOO_HASH_VPTR(hv, ptr, const moo_bch_t)
+#define MOO_HASH_MORE_BCSTR(hv, ptr) MOO_HASH_MORE_VPTR(hv, ptr, const moo_bch_t)
+
+#define MOO_HASH_UCSTR(hv, ptr) MOO_HASH_VPTR(hv, ptr, const moo_uch_t)
+#define MOO_HASH_MORE_UCSTR(hv, ptr) MOO_HASH_MORE_VPTR(hv, ptr, const moo_uch_t)
+
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
 
-MOO_EXPORT moo_oow_t moo_hash_bytes (
+MOO_EXPORT moo_oow_t moo_hash_bytes_ (
 	const moo_oob_t* ptr,
 	moo_oow_t        len
 );
 
 #if defined(MOO_HAVE_INLINE)
-	static MOO_INLINE moo_oow_t moo_hashbchars (const moo_bch_t* ptr, moo_oow_t len)
+	static MOO_INLINE moo_oow_t moo_hash_bytes (const moo_oob_t* ptr, moo_oow_t len)
+	{
+		moo_oow_t hv;
+		MOO_HASH_BYTES (hv, ptr, len);
+		/* constrain the hash value to be representable in a small integer
+		 * for convenience sake */
+		return hv % ((moo_oow_t)MOO_SMOOI_MAX + 1);
+	}
+
+	static MOO_INLINE moo_oow_t moo_hash_bchars (const moo_bch_t* ptr, moo_oow_t len)
 	{
 		return moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_bch_t));
 	}
 
-	static MOO_INLINE moo_oow_t moo_hashuchars (const moo_uch_t* ptr, moo_oow_t len)
+	static MOO_INLINE moo_oow_t moo_hash_uchars (const moo_uch_t* ptr, moo_oow_t len)
 	{
 		return moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_uch_t));
 	}
 
-	static MOO_INLINE moo_oow_t moo_hashwords (const moo_oow_t* ptr, moo_oow_t len)
+	static MOO_INLINE moo_oow_t moo_hash_words (const moo_oow_t* ptr, moo_oow_t len)
 	{
 		return moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oow_t));
 	}
 
-	static MOO_INLINE moo_oow_t moo_hashhalfwords (const moo_oohw_t* ptr, moo_oow_t len)
+	static MOO_INLINE moo_oow_t moo_hash_halfwords (const moo_oohw_t* ptr, moo_oow_t len)
 	{
 		return moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oohw_t));
 	}
 #else
-#	define moo_hashbchars(ptr,len)    moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_bch_t))
-#	define moo_hashuchars(ptr,len)    moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_uch_t))
-#	define moo_hashwords(ptr,len)     moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oow_t))
-#	define moo_hashhalfwords(ptr,len) moo_hash_bytes((const moo_oob_t*)ptr, len * MOO_SIZEOF(moo_oohw_t))
+#	define moo_hash_bytes(ptr,len)     moo_hash_bytes_(ptr, len)
+#	define moo_hash_bchars(ptr,len)    moo_hash_bytes((const moo_oob_t*)(ptr), (len) * MOO_SIZEOF(moo_bch_t))
+#	define moo_hash_uchars(ptr,len)    moo_hash_bytes((const moo_oob_t*)(ptr), (len) * MOO_SIZEOF(moo_uch_t))
+#	define moo_hash_words(ptr,len)     moo_hash_bytes((const moo_oob_t*)(ptr), (len) * MOO_SIZEOF(moo_oow_t))
+#	define moo_hash_halfwords(ptr,len) moo_hash_bytes((const moo_oob_t*)(ptr), (len) * MOO_SIZEOF(moo_oohw_t))
 #endif
 
 #if defined(MOO_OOCH_IS_UCH)
-#	define moo_hashoochars(ptr,len) moo_hashuchars(ptr,len)
+#	define moo_hash_oochars(ptr,len) moo_hash_uchars(ptr,len)
 #else
-#	define moo_hashoochars(ptr,len) moo_hashbchars(ptr,len)
+#	define moo_hash_oochars(ptr,len) moo_hash_bchars(ptr,len)
 #endif
 
 /**

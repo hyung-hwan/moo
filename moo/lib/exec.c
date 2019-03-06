@@ -2003,15 +2003,15 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 						break;
 
 					case MOO_OBJ_TYPE_CHAR:
-						hv = moo_hashoochars (MOO_OBJ_GET_CHAR_SLOT(rcv), MOO_OBJ_GET_SIZE(rcv));
+						hv = moo_hash_oochars (MOO_OBJ_GET_CHAR_SLOT(rcv), MOO_OBJ_GET_SIZE(rcv));
 						break;
 
 					case MOO_OBJ_TYPE_HALFWORD:
-						hv = moo_hashhalfwords(MOO_OBJ_GET_HALFWORD_SLOT(rcv), MOO_OBJ_GET_SIZE(rcv));
+						hv = moo_hash_halfwords(MOO_OBJ_GET_HALFWORD_SLOT(rcv), MOO_OBJ_GET_SIZE(rcv));
 						break;
 
 					case MOO_OBJ_TYPE_WORD:
-						hv = moo_hashwords(MOO_OBJ_GET_WORD_SLOT(rcv), MOO_OBJ_GET_SIZE(rcv));
+						hv = moo_hash_words(MOO_OBJ_GET_WORD_SLOT(rcv), MOO_OBJ_GET_SIZE(rcv));
 						break;
 
 					default:

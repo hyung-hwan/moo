@@ -77,7 +77,7 @@ static moo_oop_oop_t expand_bucket (moo_t* moo, moo_oop_oop_t oldbuc)
 			key = (moo_oop_char_t)ass->key;
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,key) == moo->_symbol);
 
-			index = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(key), MOO_OBJ_GET_SIZE(key)) % newsz;
+			index = moo_hash_oochars(MOO_OBJ_GET_CHAR_SLOT(key), MOO_OBJ_GET_SIZE(key)) % newsz;
 			while (MOO_OBJ_GET_OOP_VAL(newbuc, index) != moo->_nil) index = (index + 1) % newsz;
 
 			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(newbuc, index), (moo_oop_t)ass);
@@ -101,7 +101,7 @@ static moo_oop_association_t find_or_upsert (moo_t* moo, moo_oop_dic_t dic, moo_
 	MOO_ASSERT (moo, MOO_CLASSOF(moo,dic->tally) == moo->_small_integer);
 	MOO_ASSERT (moo, MOO_CLASSOF(moo,dic->bucket) == moo->_array);
 
-	hv = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(key), MOO_OBJ_GET_SIZE(key));
+	hv = moo_hash_oochars(MOO_OBJ_GET_CHAR_SLOT(key), MOO_OBJ_GET_SIZE(key));
 	index = hv % MOO_OBJ_GET_SIZE(dic->bucket);
 
 	/* find */
@@ -207,7 +207,7 @@ moo_oop_association_t moo_lookupdic_noseterr (moo_t* moo, moo_oop_dic_t dic, con
 	MOO_ASSERT (moo, MOO_CLASSOF(moo,dic->tally) == moo->_small_integer);
 	MOO_ASSERT (moo, MOO_CLASSOF(moo,dic->bucket) == moo->_array);
 
-	index = moo_hashoochars(name->ptr, name->len) % MOO_OBJ_GET_SIZE(dic->bucket);
+	index = moo_hash_oochars(name->ptr, name->len) % MOO_OBJ_GET_SIZE(dic->bucket);
 
 	while ((moo_oop_t)(ass = (moo_oop_association_t)MOO_OBJ_GET_OOP_VAL(dic->bucket, index)) != moo->_nil) 
 	{
@@ -289,7 +289,7 @@ int moo_deletedic (moo_t* moo, moo_oop_dic_t dic, const moo_oocs_t* name)
 	tally = MOO_OOP_TO_SMOOI(dic->tally);
 
 	bs = MOO_OBJ_GET_SIZE(dic->bucket);
-	hv = moo_hashoochars(name->ptr, name->len) % bs;
+	hv = moo_hash_oochars(name->ptr, name->len) % bs;
 	index = hv % bs;
 
 	/* find */
@@ -322,7 +322,7 @@ found:
 
 		/* otherwise get the natural hash index for the data in the slot at
 		 * the current hash index */
-		z = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(ass->key), MOO_OBJ_GET_SIZE(ass->key)) % bs;
+		z = moo_hash_oochars(MOO_OBJ_GET_CHAR_SLOT(ass->key), MOO_OBJ_GET_SIZE(ass->key)) % bs;
 
 		/* move an element if necesary */
 		if ((y > x && (z <= x || z > y)) || (y < x && (z <= x && z > y)))

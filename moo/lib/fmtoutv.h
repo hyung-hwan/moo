@@ -460,8 +460,8 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 		#endif
 		lowercase_s:
 
-			bsp = va_arg (ap, moo_bch_t*);
-			if (bsp == MOO_NULL) bsp = bch_nullstr;
+			bsp = va_arg(ap, moo_bch_t*);
+			if (!bsp) bsp = bch_nullstr;
 
 		#if defined(MOO_OOCH_IS_UCH)
 			/* get the length */
@@ -536,8 +536,8 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 			if (lm_flag & LF_J) goto lowercase_s;
 		#endif
 		uppercase_s:
-			usp = va_arg (ap, moo_uch_t*);
-			if (usp == MOO_NULL) usp = uch_nullstr;
+			usp = va_arg(ap, moo_uch_t*);
+			if (!usp) usp = uch_nullstr;
 
 		#if defined(MOO_OOCH_IS_BCH)
 			/* get the length */
@@ -682,15 +682,15 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 			{
 				if (fltfmt->ptr == fltfmt->buf)
 				{
-					fltfmt->ptr = MOO_MMGR_ALLOC (MOO_MMGR_GETDFL(), MOO_SIZEOF(*fltfmt->ptr) * (fmtlen + 1));
-					if (fltfmt->ptr == MOO_NULL) goto oops;
+					fltfmt->ptr = MOO_MMGR_ALLOC(MOO_MMGR_GETDFL(), MOO_SIZEOF(*fltfmt->ptr) * (fmtlen + 1));
+					if (!fltfmt->ptr) goto oops;
 				}
 				else
 				{
-					moo_mchar_t* tmpptr;
+					moo_bch_t* tmpptr;
 
-					tmpptr = MOO_MMGR_REALLOC (MOO_MMGR_GETDFL(), fltfmt->ptr, MOO_SIZEOF(*fltfmt->ptr) * (fmtlen + 1));
-					if (tmpptr == MOO_NULL) goto oops;
+					tmpptr = MOO_MMGR_REALLOC(MOO_MMGR_GETDFL(), fltfmt->ptr, MOO_SIZEOF(*fltfmt->ptr) * (fmtlen + 1));
+					if (!tmpptr) goto oops;
 					fltfmt->ptr = tmpptr;
 				}
 
@@ -742,8 +742,8 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 			{
 				MOO_ASSERT (moo, fltout->ptr == fltout->buf);
 
-				fltout->ptr = MOO_MMGR_ALLOC (MOO_MMGR_GETDFL(), MOO_SIZEOF(char_t) * (newcapa + 1));
-				if (fltout->ptr == MOO_NULL) goto oops;
+				fltout->ptr = MOO_MMGR_ALLOC(MOO_MMGR_GETDFL(), MOO_SIZEOF(char_t) * (newcapa + 1));
+				if (!fltout->ptr) goto oops;
 				fltout->capa = newcapa;
 			}
 		#endif
@@ -754,23 +754,23 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 				if (dtype == LF_LD)
 				{
 				#if defined(HAVE_SNPRINTF)
-					q = snprintf ((moo_mchar_t*)fltout->ptr, fltout->capa + 1, fltfmt->ptr, v_ld);
+					q = snprintf ((moo_bch_t*)fltout->ptr, fltout->capa + 1, fltfmt->ptr, v_ld);
 				#else
-					q = sprintf ((moo_mchar_t*)fltout->ptr, fltfmt->ptr, v_ld);
+					q = sprintf ((moo_bch_t*)fltout->ptr, fltfmt->ptr, v_ld);
 				#endif
 				}
 			#if (MOO_SIZEOF___FLOAT128 > 0) && defined(HAVE_QUADMATH_SNPRINTF)
 				else if (dtype == LF_QD)
 				{
-					q = quadmath_snprintf ((moo_mchar_t*)fltout->ptr, fltout->capa + 1, fltfmt->ptr, v_qd);
+					q = quadmath_snprintf((moo_bch_t*)fltout->ptr, fltout->capa + 1, fltfmt->ptr, v_qd);
 				}
 			#endif
 				else
 				{
 				#if defined(HAVE_SNPRINTF)
-					q = snprintf ((moo_mchar_t*)fltout->ptr, fltout->capa + 1, fltfmt->ptr, v_d);
+					q = snprintf ((moo_bch_t*)fltout->ptr, fltout->capa + 1, fltfmt->ptr, v_d);
 				#else
-					q = sprintf ((moo_mchar_t*)fltout->ptr, fltfmt->ptr, v_d);
+					q = sprintf ((moo_bch_t*)fltout->ptr, fltfmt->ptr, v_d);
 				#endif
 				}
 				if (q <= -1) goto oops;
@@ -781,27 +781,27 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 
 				if (fltout->ptr == fltout->sbuf)
 				{
-					fltout->ptr = MOO_MMGR_ALLOC (MOO_MMGR_GETDFL(), MOO_SIZEOF(char_t) * (newcapa + 1));
-					if (fltout->ptr == MOO_NULL) goto oops;
+					fltout->ptr = MOO_MMGR_ALLOC(MOO_MMGR_GETDFL(), MOO_SIZEOF(char_t) * (newcapa + 1));
+					if (!fltout->ptr) goto oops;
 				}
 				else
 				{
 					char_t* tmpptr;
 
-					tmpptr = MOO_MMGR_REALLOC (MOO_MMGR_GETDFL(), fltout->ptr, MOO_SIZEOF(char_t) * (newcapa + 1));
-					if (tmpptr == MOO_NULL) goto oops;
+					tmpptr = MOO_MMGR_REALLOC(MOO_MMGR_GETDFL(), fltout->ptr, MOO_SIZEOF(char_t) * (newcapa + 1));
+					if (!tmpptr) goto oops;
 					fltout->ptr = tmpptr;
 				}
 				fltout->capa = newcapa;
 			}
 
-			if (MOO_SIZEOF(char_t) != MOO_SIZEOF(moo_mchar_t))
+			if (MOO_SIZEOF(char_t) != MOO_SIZEOF(moo_bch_t))
 			{
 				fltout->ptr[q] = '\0';
 				while (q > 0)
 				{
 					q--;
-					fltout->ptr[q] = ((moo_mchar_t*)fltout->ptr)[q];
+					fltout->ptr[q] = ((moo_bch_t*)fltout->ptr)[q];
 				}
 			}
 

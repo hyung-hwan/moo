@@ -682,7 +682,7 @@ static void compact_symbol_table (moo_t* moo, moo_oop_t _nil)
 			/* get the natural hash index for the data in the slot 
 			 * at the current hash index */
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,tmp) == moo->_symbol);
-			z = moo_hashoochars(MOO_OBJ_GET_CHAR_SLOT(tmp), MOO_OBJ_GET_SIZE(tmp)) % bucket_size;
+			z = moo_hash_oochars(MOO_OBJ_GET_CHAR_SLOT(tmp), MOO_OBJ_GET_SIZE(tmp)) % bucket_size;
 
 			/* move an element if necessary */
 			if ((y > x && (z <= x || z > y)) || (y < x && (z <= x && z > y)))
