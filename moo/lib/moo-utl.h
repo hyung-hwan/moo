@@ -119,15 +119,13 @@
  * HASH
  * ========================================================================= */
 
-#if (MOO_SIZEOF_SIZE_T == 4)
+#if (MOO_SIZEOF_OOW_T == 4)
 #	define MOO_HASH_FNV_MAGIC_INIT (0x811c9dc5)
 #	define MOO_HASH_FNV_MAGIC_PRIME (0x01000193)
-#elif (MOO_SIZEOF_SIZE_T == 8)
-
+#elif (MOO_SIZEOF_OOW_T == 8)
 #	define MOO_HASH_FNV_MAGIC_INIT (0xCBF29CE484222325)
 #	define MOO_HASH_FNV_MAGIC_PRIME (0x100000001B3l)
-
-#elif (MOO_SIZEOF_SIZE_T == 16)
+#elif (MOO_SIZEOF_OOW_T == 16)
 #	define MOO_HASH_FNV_MAGIC_INIT (0x6C62272E07BB014262B821756295C58D)
 #	define MOO_HASH_FNV_MAGIC_PRIME (0x1000000000000000000013B)
 #endif
