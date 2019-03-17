@@ -428,6 +428,19 @@ MOO_EXPORT moo_oow_t moo_count_bcstr (
 
 /* ------------------------------------------------------------------------- */
 
+#define MOO_BYTE_TO_BCSTR_RADIXMASK (0xFF)
+#define MOO_BYTE_TO_BCSTR_LOWERCASE (1 << 8)
+
+moo_oow_t moo_byte_to_bcstr (
+	moo_uint8_t   byte,  
+	moo_bch_t*    buf,
+	moo_oow_t     size,
+	int           flagged_radix,
+	moo_bch_t     fill
+);
+
+/* ------------------------------------------------------------------------- */
+
 MOO_EXPORT int moo_ucwidth (
 	moo_uch_t uc
 );

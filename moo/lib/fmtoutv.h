@@ -89,6 +89,9 @@
 	} \
 } while (0)
 
+/* TODO: redefine this */
+#define BYTE_PRINTABLE(x) ((x >= 'a' && x <= 'z') || (x >= 'A' &&  x <= 'Z'))
+
 static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, va_list ap, moo_outbfmt_t outbfmt)
 {
 	const fmtchar_t* percent;
@@ -595,6 +598,87 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 			PUT_OOCS (usp, n);
 			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
 		#endif
+			break;
+		}
+
+		case 'k':
+		case 'K':
+		{
+			const moo_uint8_t* bsp;
+			moo_oow_t bslen, slen, k_hex_width;
+
+			/* zeropad must not take effect for 'k' and 'K' 
+			 * 
+ 			 * 'h' & 'l' is not used to differentiate qse_mchar_t and qse_wchar_t
+			 * because 'k' means qse_byte_t. 
+			 * 'l', results in uppercase hexadecimal letters. 
+			 * 'h' drops the leading \x in the output 
+			 * --------------------------------------------------------
+			 * hk -> \x + non-printable in lowercase hex
+			 * k -> all in lowercase hex
+			 * lk -> \x +  all in lowercase hex
+			 * --------------------------------------------------------
+			 * hK -> \x + non-printable in uppercase hex
+			 * K -> all in uppercase hex
+			 * lK -> \x +  all in uppercase hex
+			 * --------------------------------------------------------
+			 * with 'k' or 'K', i don't substitute "(null)" for the NULL pointer
+			 */
+			if (flagc & FLAGC_ZEROPAD) padc = ' ';
+
+			bsp = va_arg(ap, moo_uint8_t*);
+			k_hex_width = (lm_flag & (LF_H | LF_L))? 4: 2;
+
+			if (lm_flag& LF_H)
+			{
+				if (flagc & FLAGC_DOT)
+				{
+					/* if precision is specifed, it doesn't stop at the value of zero unlike 's' or 'S' */
+					for (n = 0; n < precision; n++) width -= BYTE_PRINTABLE(bsp[n])? 1: k_hex_width;
+				}
+				else
+				{
+					for (n = 0; bsp[n]; n++) width -= BYTE_PRINTABLE(bsp[n])? 1: k_hex_width;
+				}
+			}
+			else
+			{
+				if (flagc & FLAGC_DOT)
+				{
+					/* if precision is specifed, it doesn't stop at the value of zero unlike 's' or 'S' */
+					for (n = 0; n < precision; n++) /* nothing */;
+				}
+				else
+				{
+					for (n = 0; bsp[n]; n++) /* nothing */;
+				}
+				width -= (n * k_hex_width);
+			}
+
+			if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
+
+			while (n--) 
+			{
+				if ((lm_flag & LF_H) && BYTE_PRINTABLE(*bsp)) 
+				{
+					PUT_OOCH(*bsp, 1);
+				}
+				else
+				{
+					moo_bch_t xbuf[3];
+					moo_byte_to_bcstr (*bsp, xbuf, MOO_COUNTOF(xbuf), (16 | (ch == 'k'? MOO_BYTE_TO_BCSTR_LOWERCASE: 0)), '0');
+					if (lm_flag & (LF_H | LF_L))
+					{
+						PUT_OOCH('\\', 1);
+						PUT_OOCH('x', 1);
+					}
+					PUT_OOCH(xbuf[0], 1);
+					PUT_OOCH(xbuf[1], 1);
+				}
+				bsp++;
+			}
+
+			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
 			break;
 		}
 

@@ -541,6 +541,42 @@ moo_bch_t* moo_find_bchar_in_bcstr (const moo_bch_t* ptr, moo_bch_t c)
 
 /* ----------------------------------------------------------------------- */
 
+moo_oow_t moo_byte_to_bcstr (moo_uint8_t byte, moo_bch_t* buf, moo_oow_t size, int flagged_radix, moo_bch_t fill)
+{
+	moo_bch_t tmp[(MOO_SIZEOF(moo_uint8_t) * 8)];
+	moo_bch_t* p = tmp, * bp = buf, * be = buf + size - 1;
+	int radix;
+	moo_bch_t radix_char;
+
+	radix = (flagged_radix & MOO_BYTE_TO_BCSTR_RADIXMASK);
+	radix_char = (flagged_radix & MOO_BYTE_TO_BCSTR_LOWERCASE)? 'a': 'A';
+	if (radix < 2 || radix > 36 || size <= 0) return 0;
+
+	do 
+	{
+		moo_uint8_t digit = byte % radix;	
+		if (digit < 10) *p++ = digit + '0';
+		else *p++ = digit + radix_char - 10;
+		byte /= radix;
+	}
+	while (byte > 0);
+
+	if (fill != '\0') 
+	{
+		while (size - 1 > p - tmp) 
+		{
+			*bp++ = fill;
+			size--;
+		}
+	}
+
+	while (p > tmp && bp < be) *bp++ = *--p;
+	*bp = '\0';
+	return bp - buf;
+}
+
+/* ----------------------------------------------------------------------- */
+
 MOO_INLINE int moo_conv_bchars_to_uchars_with_cmgr (
 	const moo_bch_t* bcs, moo_oow_t* bcslen,
 	moo_uch_t* ucs, moo_oow_t* ucslen, moo_cmgr_t* cmgr, int all)
