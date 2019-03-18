@@ -738,7 +738,6 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 				}
 				else if (!(lm_flag & LF_L) && *usp <= 0xFFFF) 
 				{
-					moo_bch_t xbuf[3];
 					moo_uint16_t u16 = *usp;
 					moo_uint8_t* bsp = (moo_uint8_t*)&u16;
 					PUT_OOCH('\\', 1);
@@ -753,7 +752,6 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 				}
 				else
 				{
-					moo_bch_t xbuf[3];
 					moo_uint32_t u32 = *usp;
 					moo_uint8_t* bsp = (moo_uint8_t*)&u32;
 					PUT_OOCH('\\', 1);
