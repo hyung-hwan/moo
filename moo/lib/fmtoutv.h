@@ -89,8 +89,15 @@
 	} \
 } while (0)
 
+#define PUT_BYTE_IN_HEX(byte) do { \
+	moo_bch_t __xbuf[3]; \
+	moo_byte_to_bcstr (byte, __xbuf, MOO_COUNTOF(__xbuf), (16 | (ch == 'w'? MOO_BYTE_TO_BCSTR_LOWERCASE: 0)), '0'); \
+	PUT_OOCH(__xbuf[0], 1); \
+	PUT_OOCH(__xbuf[1], 1); \
+} while (0)
+
 /* TODO: redefine this */
-#define BYTE_PRINTABLE(x) ((x >= 'a' && x <= 'z') || (x >= 'A' &&  x <= 'Z'))
+#define BYTE_PRINTABLE(x) ((x >= 'a' && x <= 'z') || (x >= 'A' &&  x <= 'Z') || (x == ' '))
 
 static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, va_list ap, moo_outbfmt_t outbfmt)
 {
@@ -604,8 +611,10 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 		case 'k':
 		case 'K':
 		{
+			/* byte or multibyte character string in escape sequence */
+
 			const moo_uint8_t* bsp;
-			moo_oow_t bslen, slen, k_hex_width;
+			moo_oow_t k_hex_width;
 
 			/* zeropad must not take effect for 'k' and 'K' 
 			 * 
@@ -676,6 +685,92 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 					PUT_OOCH(xbuf[1], 1);
 				}
 				bsp++;
+			}
+
+			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
+			break;
+		}
+
+		case 'w':
+		case 'W':
+		{
+			/* unicode string in unicode escape sequence.
+			 * 
+			 * hw -> \uXXXX, \UXXXXXXXX, printable-byte(only in ascii range)
+			 * w -> \uXXXX, \UXXXXXXXX
+			 * lw -> all in \UXXXXXXXX
+			 */
+			const moo_uch_t* usp;
+			moo_oow_t uwid;
+
+			if (flagc & FLAGC_ZEROPAD) padc = ' ';
+			usp = va_arg(ap, moo_uch_t*);
+
+			if (flagc & FLAGC_DOT)
+			{
+				/* if precision is specifed, it doesn't stop at the value of zero unlike 's' or 'S' */
+				for (n = 0; n < precision; n++) 
+				{
+					if ((lm_flag & LF_H) && BYTE_PRINTABLE(usp[n])) uwid = 1;
+					else if (!(lm_flag & LF_L) && usp[n] <= 0xFFFF) uwid = 6;
+					else uwid = 10;
+					width -= uwid;
+				}
+			}
+			else
+			{
+				for (n = 0; usp[n]; n++)
+				{
+					if ((lm_flag & LF_H) && BYTE_PRINTABLE(usp[n])) uwid = 1;
+					else if (!(lm_flag & LF_L) && usp[n] <= 0xFFFF) uwid = 6;
+					else uwid = 10;
+					width -= uwid;
+				}
+			}
+
+			if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
+
+			while (n--) 
+			{
+				if ((lm_flag & LF_H) && BYTE_PRINTABLE(*usp)) 
+				{
+					PUT_OOCH(*usp, 1);
+				}
+				else if (!(lm_flag & LF_L) && *usp <= 0xFFFF) 
+				{
+					moo_bch_t xbuf[3];
+					moo_uint16_t u16 = *usp;
+					moo_uint8_t* bsp = (moo_uint8_t*)&u16;
+					PUT_OOCH('\\', 1);
+					PUT_OOCH('u', 1);
+				#if defined(MOO_ENDIAN_BIG)
+					PUT_BYTE_IN_HEX(bsp[0]);
+					PUT_BYTE_IN_HEX(bsp[1]);
+				#else
+					PUT_BYTE_IN_HEX(bsp[1]);
+					PUT_BYTE_IN_HEX(bsp[0]);
+				#endif
+				}
+				else
+				{
+					moo_bch_t xbuf[3];
+					moo_uint32_t u32 = *usp;
+					moo_uint8_t* bsp = (moo_uint8_t*)&u32;
+					PUT_OOCH('\\', 1);
+					PUT_OOCH('U', 1);
+				#if defined(MOO_ENDIAN_BIG)
+					PUT_BYTE_IN_HEX(bsp[0]);
+					PUT_BYTE_IN_HEX(bsp[1]);
+					PUT_BYTE_IN_HEX(bsp[2]);
+					PUT_BYTE_IN_HEX(bsp[3]);
+				#else
+					PUT_BYTE_IN_HEX(bsp[3]);
+					PUT_BYTE_IN_HEX(bsp[2]);
+					PUT_BYTE_IN_HEX(bsp[1]);
+					PUT_BYTE_IN_HEX(bsp[0]);
+				#endif
+				}
+				usp++;
 			}
 
 			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
