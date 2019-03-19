@@ -448,15 +448,15 @@ MOO_EXPORT int moo_ucwidth (
 /* ------------------------------------------------------------------------- */
 
 #if defined(MOO_OOCH_IS_UCH)
-#	define moo_conv_oocs_to_bcs_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr) moo_conv_ucs_to_bcs_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr)
+#	define moo_conv_oocstr_to_bcstr_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr) moo_conv_ucstr_to_bcstr_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr)
 #	define moo_conv_oochars_to_bchars_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr) moo_conv_uchars_to_bchars_with_cmgr(oocs,oocslen,bcs,bcslen,cmgr)
 #else
-#	define moo_conv_oocs_to_ucs_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr) moo_conv_bcs_to_ucs_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr,0)
+#	define moo_conv_oocstr_to_ucstr_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr) moo_conv_bcstr_to_ucstr_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr,0)
 #	define moo_conv_oochars_to_uchars_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr) moo_conv_bchars_to_uchars_with_cmgr(oocs,oocslen,ucs,ucslen,cmgr,0)
 #endif
 
 
-MOO_EXPORT int moo_conv_bcs_to_ucs_with_cmgr (
+MOO_EXPORT int moo_conv_bcstr_to_ucstr_with_cmgr (
 	const moo_bch_t* bcs,
 	moo_oow_t*       bcslen,
 	moo_uch_t*       ucs,
@@ -474,7 +474,7 @@ MOO_EXPORT int moo_conv_bchars_to_uchars_with_cmgr (
 	int              all
 );
 
-MOO_EXPORT int moo_conv_ucs_to_bcs_with_cmgr (
+MOO_EXPORT int moo_conv_ucstr_to_bcstr_with_cmgr (
 	const moo_uch_t* ucs,
 	moo_oow_t*       ucslen,
 	moo_bch_t*       bcs,

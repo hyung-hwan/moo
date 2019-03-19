@@ -70,6 +70,8 @@
 
 #undef PUT_OOCH
 #undef PUT_OOCS
+#undef PUT_BYTE_IN_HEX
+#undef BYTE_PRINTABLE
 
 #define PUT_OOCH(c,n) do { \
 	if (n > 0) { \
@@ -97,7 +99,7 @@
 } while (0)
 
 /* TODO: redefine this */
-#define BYTE_PRINTABLE(x) ((x >= 'a' && x <= 'z') || (x >= 'A' &&  x <= 'Z') || (x == ' '))
+#define BYTE_PRINTABLE(x) ((x >= 'a' && x <= 'z') || (x >= 'A' &&  x <= 'Z') || (x >= '0' && x <= '9') || (x == ' '))
 
 static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, va_list ap, moo_outbfmt_t outbfmt)
 {
