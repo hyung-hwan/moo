@@ -739,34 +739,20 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 				else if (!(lm_flag & LF_L) && *usp <= 0xFFFF) 
 				{
 					moo_uint16_t u16 = *usp;
-					moo_uint8_t* bsp = (moo_uint8_t*)&u16;
 					PUT_OOCH('\\', 1);
 					PUT_OOCH('u', 1);
-				#if defined(MOO_ENDIAN_BIG)
-					PUT_BYTE_IN_HEX(bsp[0]);
-					PUT_BYTE_IN_HEX(bsp[1]);
-				#else
-					PUT_BYTE_IN_HEX(bsp[1]);
-					PUT_BYTE_IN_HEX(bsp[0]);
-				#endif
+					PUT_BYTE_IN_HEX((u16 >> 8) & 0xFF);
+					PUT_BYTE_IN_HEX(u16 & 0xFF);
 				}
 				else
 				{
 					moo_uint32_t u32 = *usp;
-					moo_uint8_t* bsp = (moo_uint8_t*)&u32;
 					PUT_OOCH('\\', 1);
 					PUT_OOCH('U', 1);
-				#if defined(MOO_ENDIAN_BIG)
-					PUT_BYTE_IN_HEX(bsp[0]);
-					PUT_BYTE_IN_HEX(bsp[1]);
-					PUT_BYTE_IN_HEX(bsp[2]);
-					PUT_BYTE_IN_HEX(bsp[3]);
-				#else
-					PUT_BYTE_IN_HEX(bsp[3]);
-					PUT_BYTE_IN_HEX(bsp[2]);
-					PUT_BYTE_IN_HEX(bsp[1]);
-					PUT_BYTE_IN_HEX(bsp[0]);
-				#endif
+					PUT_BYTE_IN_HEX((u32 >> 24) & 0xFF);
+					PUT_BYTE_IN_HEX((u32 >> 16) & 0xFF);
+					PUT_BYTE_IN_HEX((u32 >> 8) & 0xFF);
+					PUT_BYTE_IN_HEX(u32 & 0xFF);
 				}
 				usp++;
 			}
