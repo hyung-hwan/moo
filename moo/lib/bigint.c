@@ -1460,6 +1460,7 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 /* TODO: this function needs to be rewritten for performance improvement. 
  *       the binary long division is extremely slow for a big number */
 
+#if 0
 	/* Perform binary long division.
 	 * http://en.wikipedia.org/wiki/Division_algorithm
 	 * ---------------------------------------------------------------------
@@ -1491,14 +1492,17 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 			lshift_unsigned_array (r, xs, 1);
 			MOO_SETBITS (moo_liw_t, r[0], 0, 1, MOO_GETBITS(moo_liw_t, x[i], j, 1));
 
-			rs = count_effective (r, xs);
-			if (!is_less_unsigned_array (r, rs, y, ys))
+			rs = count_effective(r, xs);
+			if (!is_less_unsigned_array(r, rs, y, ys))
 			{
 				subtract_unsigned_array (moo, r, rs, y, ys, r);
 				MOO_SETBITS (moo_liw_t, q[i], j, 1, 1);
 			}
 		}
 	}
+#else
+
+#endif
 }
 
 static moo_oop_t add_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y)
@@ -2080,35 +2084,40 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 			v = MOO_OOP_TO_SMOOI(y);
 			switch (v)
 			{
-				case 0:
+				case 0: /* divide by 0 */
 					moo_seterrnum (moo, MOO_EDIVBY0);
 					return MOO_NULL;
 
-				case 1:
+				case 1: /* divide by 1 */
 					z = clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
 					if (!z) return MOO_NULL;
 					if (rem) *rem = MOO_SMOOI_TO_OOP(0);
 					return z;
 
 
-				case -1:
+				case -1: /* divide by -1 */
 					z = clone_bigint_negated(moo, x, MOO_OBJ_GET_SIZE(x));
 					if (!z) return MOO_NULL;
 					if (rem) *rem = MOO_SMOOI_TO_OOP(0);
 					return z;
 
-	/*
+#if 0
 				default:
 					if (IS_POWER_OF_2(v))
 					{
+ 						/* 
+						2**x = v
+						x = logv(2) = log(v) / log(2)
+						x is the number of shift to make */
 	TODO:
 	DO SHIFTING. how to get remainder..
 	if v is powerof2, do shifting???
 
-						z = clone_bigint_negated (moo, x, MOO_OBJ_GET_SIZE(x));
-						rshift_unsigned_array (z, MOO_OBJ_GET_SIZE(z), 10);
+						z = clone_bigint_negated(moo, x, MOO_OBJ_GET_SIZE(x));
+						if (!z) return MOO_NULL;
+						rshift_unsigned_array (z, MOO_OBJ_GET_SIZE(z), log(v)/log(2));
 					}
-	*/
+#ebduf
 			}
 
 			moo_pushvolat (moo, &x);
