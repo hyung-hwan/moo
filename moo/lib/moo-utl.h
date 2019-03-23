@@ -640,6 +640,12 @@ MOO_EXPORT moo_oow_t moo_utf16_to_uc (
 
 /* ------------------------------------------------------------------------- */
 
+MOO_EXPORT int moo_log2_for_pow2 (
+	moo_oow_t pow2v
+);
+
+/* ------------------------------------------------------------------------- */
+
 #if defined(MOO_HAVE_UINT16_T)
 MOO_EXPORT moo_uint16_t moo_ntoh16 (
 	moo_uint16_t x

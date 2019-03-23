@@ -27,6 +27,45 @@
 #include "moo-prv.h"
 
 /* ----------------------------------------------------------------------- */
+int moo_log2_for_pow2 (moo_oow_t pow2v)
+{
+#if defined(MOO_HAVE_UINT32_T) && (MOO_SIZEOF_OOW_T == 4)
+
+	static const int debruijn[32] = 
+	{
+		0, 1, 28, 2, 29, 14, 24, 3,
+		30, 22, 20, 15, 25, 17, 4, 8, 
+		31, 27, 13, 23, 21, 19, 16, 7,
+		26, 12, 18, 6, 11, 5, 10, 9
+	};
+
+	return debruijn[(moo_uint32_t)(pow2v * 0x077CB531u) >> 27];
+
+#elif defined(MOO_HAVE_UINT64_T) && (MOO_SIZEOF_OOW_T == 8)
+
+	static const int debruijn[64] = 
+	{
+		0, 1,  2, 53,  3,  7, 54, 27,
+		4, 38, 41,  8, 34, 55, 48, 28,
+		62,  5, 39, 46, 44, 42, 22,  9,
+		24, 35, 59, 56, 49, 18, 29, 11,
+		63, 52,  6, 26, 37, 40, 33, 47,
+		61, 45, 43, 21, 23, 58, 17, 10,
+		51, 25, 36, 32, 60, 20, 57, 16,
+		50, 31, 19, 15, 30, 14, 13, 12
+	};
+
+	return debruijn[(moo_uint64_t)(pow2v * 0x022fdd63cc95386dllu) >> 58];
+
+#else
+	int i;
+	for (i = -1; pow2v; i++) pow2v >>= 1;
+	return (i == -1) ? 0 : i;
+
+#endif
+}
+
+/* ----------------------------------------------------------------------- */
 
 #if defined(MOO_HAVE_UINT16_T)
 

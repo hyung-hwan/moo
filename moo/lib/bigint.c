@@ -2107,7 +2107,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 					{
  						/* 
 						2**x = v
-						x = logv(2) = log(v) / log(2)
+						x = log2(v)
 						x is the number of shift to make */
 	TODO:
 	DO SHIFTING. how to get remainder..
@@ -2117,7 +2117,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 						if (!z) return MOO_NULL;
 						rshift_unsigned_array (z, MOO_OBJ_GET_SIZE(z), log(v)/log(2));
 					}
-#ebduf
+#endif
 			}
 
 			moo_pushvolat (moo, &x);
