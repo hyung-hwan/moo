@@ -64,10 +64,10 @@
 #	error UNSUPPORTED LIW BIT SIZE
 #endif
 
-/*#define IS_POWER_OF_2(ui) (((ui) > 0) && (((ui) & (~(ui)+ 1)) == (ui)))*/
-#define IS_POWER_OF_2(ui) (((ui) > 0) && ((ui) & ((ui) - 1)) == 0)
-
 #define IS_SIGN_DIFF(x,y) (((x) ^ (y)) < 0)
+
+/*#define IS_POW2(ui) (((ui) > 0) && (((ui) & (~(ui)+ 1)) == (ui)))*/
+#define IS_POW2(ui) (((ui) > 0) && ((ui) & ((ui) - 1)) == 0)
 
 /* digit character array */
 static char* _digitc_array[] =
@@ -76,12 +76,100 @@ static char* _digitc_array[] =
 	"0123456789abcdefghijklmnopqrstuvwxyz"
 };
 
-/* exponent table */
-static moo_uint8_t _exp_tab[] = 
+/* exponent table for pow2 between 1 and 32 inclusive. */
+static moo_uint8_t _exp_tab[32] = 
 {
-	0, 0, 1, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0
+	0, 1, 0, 2, 0, 0, 0, 3,
+	0, 0, 0, 0, 0, 0, 0, 4,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 5
 };
+
+static const moo_uint8_t debruijn_32[32] = 
+{
+	0, 1, 28, 2, 29, 14, 24, 3,
+	30, 22, 20, 15, 25, 17, 4, 8, 
+	31, 27, 13, 23, 21, 19, 16, 7,
+	26, 12, 18, 6, 11, 5, 10, 9
+};
+
+static const moo_uint8_t debruijn_64[64] = 
+{
+	0, 1,  2, 53,  3,  7, 54, 27,
+	4, 38, 41,  8, 34, 55, 48, 28,
+	62,  5, 39, 46, 44, 42, 22,  9,
+	24, 35, 59, 56, 49, 18, 29, 11,
+	63, 52,  6, 26, 37, 40, 33, 47,
+	61, 45, 43, 21, 23, 58, 17, 10,
+	51, 25, 36, 32, 60, 20, 57, 16,
+	50, 31, 19, 15, 30, 14, 13, 12
+};
+
+#if defined(MOO_HAVE_UINT32_T)
+#	define LOG2_FOR_POW2_32(x) (debruijn_32[(moo_uint32_t)((moo_uint32_t)(x) * 0x077CB531) >> 27])
+#endif
+
+#if defined(MOO_HAVE_UINT64_T)
+#	define LOG2_FOR_POW2_64(x) (debruijn_64[(moo_uint64_t)((moo_uint64_t)(x) * 0x022fdd63cc95386d) >> 58])
+#endif
+
+static MOO_INLINE int get_pos_of_msb_set (moo_oow_t x)
+{
+	/* the caller must ensure that x is power of 2. if x happens to be zero,
+	 * the return value is undefined as each method used may give different result. */
+#if defined(MOO_HAVE_BUILTIN_CTZLL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG_LONG)
+	return __builtin_ctzll(x); /* count the number of trailing zeros */
+#elif defined(MOO_HAVE_BUILTIN_CTZL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG)
+	return __builtin_ctzl(x); /* count the number of trailing zeros */
+#elif defined(MOO_HAVE_BUILTIN_CTZ) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_INT)
+	return __builtin_ctz(x); /* count the number of trailing zeros */
+#elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
+	moo_oow_t pos;
+	/* use the Bit Scan Forward instruction */
+#if 1
+	__asm__ volatile (
+		"bsf %1,%0\n\t"
+		: "=r"(pos) /* output */
+		: "r"(x) /* input */
+	);
+#else
+	__asm__ volatile (
+		"bsf %[X],%[EXP]\n\t"
+		: [EXP]"=r"(pos) /* output */
+		: [X]"r"(x) /* input */
+	);
+#endif
+	return (int)pos;
+#elif defined(USE_UGLY_CODE) && defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH_5__) || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__))
+	moo_oow_t pos;
+
+	/* CLZ is available in ARMv5T and above. there is no instruction to
+	 * count trailing zeros or something similar. using RBIT with CLZ
+	 * would be good in ARMv6T2 and above to avoid further calculation
+	 * afte CLZ */
+	__asm__ volatile (
+		"clz %0,%1\n\t"
+		: "=r"(pos) /* output */
+		: "r"(x) /* input */
+	);
+	return (int)((MOO_SIZEOF(pos) * 8) - pos - 1); 
+
+	/* TODO: PPC - use cntlz, cntlzw, cntlzd, SPARC - use lzcnt, MIPS clz */
+
+#else
+	int pos = 0;
+	while (x >>= 1) pos++;
+	return pos;
+#endif
+}
+
+#if defined(MOO_HAVE_UINT32_T) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_UINT32_T)
+#	define LOG2_FOR_POW2(x) LOG2_FOR_POW2_32(x)
+#elif defined(MOO_HAVE_UINT64_T) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_UINT64_T)
+#	define LOG2_FOR_POW2(x) LOG2_FOR_POW2_64(x)
+#else
+#	define LOG2_FOR_POW2(x) get_pos_of_msb_set(x)
+#endif
 
 
 #if (MOO_SIZEOF_OOW_T == MOO_SIZEOF_INT) && defined(MOO_HAVE_BUILTIN_UADD_OVERFLOW)
@@ -1460,7 +1548,7 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 /* TODO: this function needs to be rewritten for performance improvement. 
  *       the binary long division is extremely slow for a big number */
 
-#if 0
+#if 1
 	/* Perform binary long division.
 	 * http://en.wikipedia.org/wiki/Division_algorithm
 	 * ---------------------------------------------------------------------
@@ -1501,7 +1589,7 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 		}
 	}
 #else
-
+	/* TODO: more efficient method */
 #endif
 }
 
@@ -1957,7 +2045,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 
 	if (MOO_OOP_IS_SMOOI(x) && MOO_OOP_IS_SMOOI(y))
 	{
-		moo_ooi_t xv, yv, q, r;
+		moo_ooi_t xv, yv, q, ri;
 
 		xv = MOO_OOP_TO_SMOOI(x);
 		yv = MOO_OOP_TO_SMOOI(y);
@@ -1995,8 +2083,8 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 		q = xv / yv;
 		MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(q));
 
-		r = xv - yv * q; /* xv % yv; */
-		if (r)
+		ri = xv - yv * q; /* xv % yv; */
+		if (ri)
 		{
 			if (modulo)
 			{
@@ -2012,13 +2100,13 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 
 				/* r must be floored. that is, it rounds away from zero 
 				 * and towards negative infinity */
-				if (IS_SIGN_DIFF(yv, r))
+				if (IS_SIGN_DIFF(yv, ri))
 				{
 					/* if the divisor has a different sign from r,
 					 * change the sign of r to the divisor's sign */
-					r += yv;
+					ri += yv;
 					--q;
-					MOO_ASSERT (moo, r && !IS_SIGN_DIFF(yv, r));
+					MOO_ASSERT (moo, ri && !IS_SIGN_DIFF(yv, ri));
 				}
 			}
 			else
@@ -2032,7 +2120,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 					 7      -3     -2       1
 					-7      -3      2      -1
 				 */
-				if (xv && IS_SIGN_DIFF(xv, r)) 
+				if (xv && IS_SIGN_DIFF(xv, ri)) 
 				{
 					/* if the dividend has a different sign from r,
 					 * change the sign of r to the dividend's sign.
@@ -2040,49 +2128,51 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 					 * the quotient and the remainder that don't need
 					 * any adjustment. however, there may be an esoteric
 					 * architecture. */
-					r -= yv;
+					ri -= yv;
 					++q;
-					MOO_ASSERT (moo, xv && !IS_SIGN_DIFF(xv, r));
+					MOO_ASSERT (moo, xv && !IS_SIGN_DIFF(xv, ri));
 				}
 			}
 		}
 
 		if (rem)
 		{
-			MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(r));
-			*rem = MOO_SMOOI_TO_OOP(r);
+			MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(ri));
+			*rem = MOO_SMOOI_TO_OOP(ri);
 		}
 
 		return MOO_SMOOI_TO_OOP((moo_ooi_t)q);
 	}
 	else 
 	{
+		moo_oop_t r;
+
 		if (MOO_OOP_IS_SMOOI(x))
 		{
-			moo_ooi_t v;
+			moo_ooi_t yv;
 
 			if (!is_bigint(moo,y)) goto oops_einval;
 
-			v = MOO_OOP_TO_SMOOI(x);
-			if (v == 0)
+			yv = MOO_OOP_TO_SMOOI(x);
+			if (yv == 0)
 			{
 				if (rem) *rem = MOO_SMOOI_TO_OOP(0);
 				return MOO_SMOOI_TO_OOP(0);
 			}
 
 			moo_pushvolat (moo, &y);
-			x = make_bigint_with_ooi(moo, v);
+			x = make_bigint_with_ooi(moo, yv);
 			moo_popvolat (moo);
 			if (!x) return MOO_NULL;
 		}
 		else if (MOO_OOP_IS_SMOOI(y))
 		{
-			moo_ooi_t v;
+			moo_ooi_t yv;
 
 			if (!is_bigint(moo,x)) goto oops_einval;
 
-			v = MOO_OOP_TO_SMOOI(y);
-			switch (v)
+			yv = MOO_OOP_TO_SMOOI(y);
+			switch (yv)
 			{
 				case 0: /* divide by 0 */
 					moo_seterrnum (moo, MOO_EDIVBY0);
@@ -2101,27 +2191,54 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 					if (rem) *rem = MOO_SMOOI_TO_OOP(0);
 					return z;
 
-#if 0
 				default:
-					if (IS_POWER_OF_2(v))
+					/* TODO: do division by shifting if both x & y are negative here */
+					if (yv > 0 && IS_POW2(yv) && !MOO_POINTER_IS_NBIGINT(moo, x))
 					{
+						moo_oow_t nshifts;
+
  						/* 
 						2**x = v
 						x = log2(v)
 						x is the number of shift to make */
-	TODO:
-	DO SHIFTING. how to get remainder..
-	if v is powerof2, do shifting???
+						nshifts = LOG2_FOR_POW2(yv);
 
-						z = clone_bigint_negated(moo, x, MOO_OBJ_GET_SIZE(x));
+						moo_pushvolat (moo, &x);
+						moo_pushvolat (moo, &y);
+						z = clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
+						moo_popvolats (moo, 2);
 						if (!z) return MOO_NULL;
-						rshift_unsigned_array (z, MOO_OBJ_GET_SIZE(z), log(v)/log(2));
+
+						rshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), nshifts);
+
+						moo_pushvolat (moo, &x);
+						moo_pushvolat (moo, &y);
+						z = normalize_bigint(moo, z);
+						moo_popvolats (moo, 2);
+						if (!z) return MOO_NULL;
+
+						if (rem) 
+						{
+							moo_pushvolat (moo, &x);
+							moo_pushvolat (moo, &z);
+							r = moo_mulints(moo, y, z);
+							moo_popvolats (moo, 2);
+							if (!r) return MOO_NULL;
+
+							moo_pushvolat (moo, &z);
+							r = moo_subints(moo, x, r);
+							moo_popvolat (moo);
+							if (!r) return MOO_NULL;
+
+							*rem = r;
+						}
+						return z;
 					}
-#endif
+					break;
 			}
 
 			moo_pushvolat (moo, &x);
-			y = make_bigint_with_ooi(moo, v);
+			y = make_bigint_with_ooi(moo, yv);
 			moo_popvolat (moo);
 			if (!y) return MOO_NULL;
 		}
@@ -3673,7 +3790,7 @@ moo_oop_t moo_strtoint (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, int ra
 	hwlen = 0;
 	start = ptr; /* this is the real start */
 
-	if (IS_POWER_OF_2(radix))
+	if (IS_POW2(radix))
 	{
 		unsigned int exp;
 		unsigned int bitcnt;
@@ -3681,34 +3798,8 @@ moo_oop_t moo_strtoint (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, int ra
 		/* get log2(radix) in a fast way under the fact that
 		 * radix is a power of 2. the exponent acquired is
 		 * the number of bits that a digit of the given radix takes up */
-	#if defined(MOO_HAVE_BUILTIN_CTZ)
-		exp = __builtin_ctz(radix);
-
-	#elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
-		/* use the Bit Scan Forward instruction */
-		__asm__ volatile (
-			"bsf %1,%0\n\t"
-			: "=r"(exp) /* output */
-			: "r"(radix) /* input */
-		);
-
-	#elif defined(USE_UGLY_CODE) && defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH_5__) || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__))
-
-		/* CLZ is available in ARMv5T and above. there is no instruction to
-		 * count trailing zeros or something similar. using RBIT with CLZ
-		 * would be good in ARMv6T2 and above to avoid further calculation
-		 * afte CLZ */
-		__asm__ volatile (
-			"clz %0,%1\n\t"
-			: "=r"(exp) /* output */
-			: "r"(radix) /* input */
-		);
-		exp = (MOO_SIZEOF(exp) * 8) - exp - 1; 
-
-		/* TODO: PPC - use cntlz, cntlzw, cntlzd, SPARC - use lzcnt, MIPS clz */
-	#else
-		exp = _exp_tab[radix];
-	#endif
+		/*exp = LOG2_FOR_POW2(radix);*/
+		exp = _exp_tab[radix - 1];
 
 		/* bytes */
 		outlen = ((moo_oow_t)(end - str) * exp + 7) / 8; 
@@ -4214,13 +4305,14 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 
 	as = MOO_OBJ_GET_SIZE(num);
 
-	if (IS_POWER_OF_2(radix))
+	if (IS_POW2(radix))
 	{
 		unsigned int exp, accbits;
 		moo_lidw_t acc;
 		moo_oow_t xpos;
 
-		exp = _exp_tab[radix];
+		/*exp = LOG2_FOR_POW2(radix);*/
+		exp = _exp_tab[radix - 1];
 		xlen = as * ((MOO_LIW_BITS + exp) / exp) + 1;
 		xpos = xlen;
 
