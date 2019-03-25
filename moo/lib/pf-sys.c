@@ -184,13 +184,13 @@ static MOO_INLINE moo_oop_t _fetch_raw_int (moo_t* moo, moo_int8_t* rawptr, moo_
 			v = ((struct st_int32_t*)&rawptr[offset])->v;
 			break;
 
-	#if defined(MOO_HAVE_INT64_T) &&  (MOO_SIZEOF_OOW_T >= 8)
+	#if defined(MOO_HAVE_INT64_T) &&  (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_INT64_T)
 		case 8: 
 			v = ((struct st_int64_t*)&rawptr[offset])->v;
 			break;
 	#endif
 
-	#if defined(MOO_HAVE_INT128_T) && (MOO_SIZEOF_OOW_T >= 16)
+	#if defined(MOO_HAVE_INT128_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_INT128_T)
 		case 16: 
 			v = ((struct st_int128_t*)&rawptr[offset])->v;
 			break;
@@ -279,13 +279,13 @@ static MOO_INLINE int _store_raw_int (moo_t* moo, moo_uint8_t* rawptr, moo_oow_t
 			((struct st_int32_t*)&rawptr[offset])->v = w;
 			return 0;
 
-	#if defined(MOO_HAVE_INT64_T) && (MOO_SIZEOF_OOW_T >= 8)
+	#if defined(MOO_HAVE_INT64_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_INT64_T)
 		case 8:
 			((struct st_int64_t*)&rawptr[offset])->v = w; 
 			return 0;
 	#endif
 
-	#if defined(MOO_HAVE_INT128_T) && (MOO_SIZEOF_OOW_T >= 16)
+	#if defined(MOO_HAVE_INT128_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_INT128_T)
 		case 16:
 			((struct st_int128_t*)&rawptr[offset])->v = w; 
 			return 0;
@@ -1057,4 +1057,3 @@ moo_pfrc_t moo_pf_smptr_as_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	MOO_STACK_SETRET (moo, nargs, ss);
 	return MOO_PF_SUCCESS;
 }
-
