@@ -2192,47 +2192,91 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 					return z;
 
 				default:
-					/* TODO: do division by shifting if both x & y are negative here */
-					if (yv > 0 && IS_POW2(yv) && !MOO_POINTER_IS_NBIGINT(moo, x))
+					/* TODO: do division by shifting if both x & y are in different sign */
+					if (yv < 0)
 					{
-						moo_oow_t nshifts;
-
- 						/* 
-						2**x = v
-						x = log2(v)
-						x is the number of shift to make */
-						nshifts = LOG2_FOR_POW2(yv);
-
-						moo_pushvolat (moo, &x);
-						moo_pushvolat (moo, &y);
-						z = clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
-						moo_popvolats (moo, 2);
-						if (!z) return MOO_NULL;
-
-						rshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), nshifts);
-
-						moo_pushvolat (moo, &x);
-						moo_pushvolat (moo, &y);
-						z = normalize_bigint(moo, z);
-						moo_popvolats (moo, 2);
-						if (!z) return MOO_NULL;
-
-						if (rem) 
+						moo_oow_t yv_neg = -yv;
+						if (IS_POW2(yv_neg) && MOO_POINTER_IS_NBIGINT(moo, x))
 						{
+							moo_oow_t nshifts;
+
+							nshifts = LOG2_FOR_POW2(yv_neg);
+
 							moo_pushvolat (moo, &x);
-							moo_pushvolat (moo, &z);
-							r = moo_mulints(moo, y, z);
-							moo_popvolats (moo, 2);
-							if (!r) return MOO_NULL;
-
-							moo_pushvolat (moo, &z);
-							r = moo_subints(moo, x, r);
+							z = clone_bigint_negated(moo, x, MOO_OBJ_GET_SIZE(x));
 							moo_popvolat (moo);
-							if (!r) return MOO_NULL;
+							if (!z) return MOO_NULL;
 
-							*rem = r;
+							rshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), nshifts);
+
+							moo_pushvolat (moo, &x);
+							z = normalize_bigint(moo, z);
+							moo_popvolat (moo);
+							if (!z) return MOO_NULL;
+
+							if (rem) 
+							{
+								moo_pushvolat (moo, &x);
+								moo_pushvolat (moo, &z);
+								r = moo_mulints(moo, MOO_SMOOI_TO_OOP(yv_neg), z);
+								moo_popvolats (moo, 2);
+								if (!r) return MOO_NULL;
+
+								moo_pushvolat (moo, &z);
+								r = moo_addints(moo, x, r);
+								moo_popvolat (moo);
+								if (!r) return MOO_NULL;
+
+								*rem = r;
+							}
+
+							return z;
 						}
-						return z;
+					}
+					else
+					{
+						/* yv > 0 */
+						if (IS_POW2(yv) && MOO_POINTER_IS_PBIGINT(moo, x))
+						{
+							moo_oow_t nshifts;
+
+							/* 
+							2**x = v
+							x = log2(v)
+							x is the number of shift to make */
+							nshifts = LOG2_FOR_POW2(yv);
+
+							/* no pushvolat() on y as y is SMOOI here */
+							moo_pushvolat (moo, &x);
+							z = clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
+							moo_popvolat (moo);
+							if (!z) return MOO_NULL;
+
+							rshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), nshifts);
+
+							moo_pushvolat (moo, &x);
+							z = normalize_bigint(moo, z);
+							moo_popvolat (moo);
+							if (!z) return MOO_NULL;
+
+							if (rem) 
+							{
+								moo_pushvolat (moo, &x);
+								moo_pushvolat (moo, &z);
+								r = moo_mulints(moo, y, z);
+								moo_popvolats (moo, 2);
+								if (!r) return MOO_NULL;
+
+								moo_pushvolat (moo, &z);
+								r = moo_subints(moo, x, r);
+								moo_popvolat (moo);
+								if (!r) return MOO_NULL;
+
+								*rem = r;
+							}
+
+							return z;
+						}
 					}
 					break;
 			}
