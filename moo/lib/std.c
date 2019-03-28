@@ -42,7 +42,7 @@
 #	define WIN32_LEAN_AND_MEAN
 
 #	include <windows.h>
-#	include <psapi.h>
+//#	include <psapi.h>
 #	include <tchar.h>
 #	include <time.h>
 #	include <io.h>
@@ -61,6 +61,10 @@
 #	define XPOLLOUT POLLOUT
 #	define XPOLLERR POLLERR
 #	define XPOLLHUP POLLHUP
+
+#if !defined(SIZE_T)
+#	define SIZE_T unsigned long int
+#endif
 
 #elif defined(__OS2__)
 #	define INCL_DOSMODULEMGR
@@ -655,6 +659,9 @@ static void* alloc_heap (moo_t* moo, moo_oow_t size)
 	}
 	token_adjusted = 1;
 
+#if !defined(MEM_LARGE_PAGES)
+#	define MEM_LARGE_PAGES (0x20000000)
+#endif
 	ptr = VirtualAlloc(MOO_NULL, actual_size, MEM_COMMIT | MEM_RESERVE | MEM_LARGE_PAGES, PAGE_READWRITE);
 	if (!ptr) goto oops;
 
@@ -3150,7 +3157,9 @@ static const wchar_t* msw_exception_opname (const ULONG opcode)
 static LONG WINAPI msw_exception_filter (struct _EXCEPTION_POINTERS* exinfo)
 {
 	HMODULE mod;
+#if defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0501)
 	MODULEINFO modinfo;
+#endif
 	DWORD excode;
 	static wchar_t exmsg[256];
 	static wchar_t expath[128];
