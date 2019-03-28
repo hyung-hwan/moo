@@ -1461,7 +1461,7 @@ static int get_numlit (moo_t* moo, int negated)
 	{
 		/* fixed-point decimal with the scale specified.
 		 *   5p99 -> 99.0000,  5p99.12 -> 99.12000 
-		 * treat the raxid value as the scale */
+		 * treat the radix value as the scale */
 
 		if (radix_overflowed || radix < 1 || radix > MOO_SMOOI_MAX)
 		{
@@ -1523,10 +1523,13 @@ static int get_numlit (moo_t* moo, int negated)
 	else if (c == '.')
 	{
 		moo_iolxc_t period;
-		moo_oow_t scale = 0;
+		moo_oow_t scale;
 
 	fixed_point:
-		/* once a jump is made to here. it's known to be a fixed point number */
+		scale = 0;
+		/* once a jump is made to here. it's known to be a fixed point number.
+		 * xscale is the scale prefix specified before 'p' as in 10p99.02.
+		 * scale is the number of digits after the decimal point. */
 		SET_TOKEN_TYPE (moo, (xscale > 0? MOO_IOTOK_SCALEDFPDECLIT: MOO_IOTOK_FPDECLIT));
 
 		period = moo->c->lxc;
@@ -1539,11 +1542,12 @@ static int get_numlit (moo_t* moo, int negated)
 		else
 		{
 			ADD_TOKEN_CHAR (moo, '.');
+
 			do
 			{
 				if (scale > MOO_SMOOI_MAX)
 				{
-					moo_setsynerrbfmt (moo, MOO_SYNERR_FPDECLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo), "invalid fixed-point decimal - too many digits after point");
+					moo_setsynerrbfmt (moo, MOO_SYNERR_FPDECLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo), "invalid fixed-point decimal - too many digits(%zu) after point", scale);
 					return -1;
 				}
 				scale++;
