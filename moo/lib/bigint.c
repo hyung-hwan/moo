@@ -1548,7 +1548,6 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 /* TODO: this function needs to be rewritten for performance improvement. 
  *       the binary long division is extremely slow for a big number */
 
-#if 1
 	/* Perform binary long division.
 	 * http://en.wikipedia.org/wiki/Division_algorithm
 	 * ---------------------------------------------------------------------
@@ -1588,10 +1587,32 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 			}
 		}
 	}
-#else
-	/* TODO: more efficient method */
-#endif
 }
+
+#if 0
+static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs, const moo_liw_t* y, moo_oow_t ys, moo_liw_t* q, moo_liw_t* r)
+{
+	moo_oow_t rsize, qsize;
+
+	/* estimate result sizes */
+	rsize = ys;
+	qsize = xs - ys + 1;
+
+	npos = xs - 1;
+	dpos = ys - 1;
+
+	for (j = qsize - 1; j >= 0; j--, npos--)
+	{
+		if (ndigs[npos] == ddigs[dpos]
+		else
+		
+
+		carry = scarry = 0;
+
+		qdigs[j] = qest;
+	}
+}
+#endif
 
 static moo_oop_t add_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y)
 {
@@ -4286,6 +4307,48 @@ moo_oop_t moo_absint (moo_t* moo, moo_oop_t x)
 	return x;
 }
 
+static moo_liw_t div_with_carry (moo_liw_t x, moo_liw_t y, moo_liw_t* r)
+{
+/* TODO: optimize it with ASM */
+	moo_liw_t q;
+	moo_lidw_t dd;
+
+	dd = ((moo_lidw_t)*r << MOO_LIW_BITS) + x;
+
+	q = dd / y;
+	*r = dd % y;
+
+	return q;
+}
+
+static get_last_digit (moo_t* moo, moo_liw_t* x, moo_oow_t xs, int base)
+{
+	moo_oow_t i = xs;
+	moo_liw_t r = 0;
+	while (i > 0)
+	{
+		--i;
+		x[i] = div_with_carry(x[i], base, &r);
+	}
+	return r;
+}
+
+void test_last_digit (moo_t* moo)
+{
+	moo_ooch_t x[] = { 'F','F','9','9','1', '2','3','4',
+'F','F','9','9','1', '2','3','4',
+'F','F','9','9','1', '2','3','4',
+'F','F','9','9','1', '2','3','4',
+'F','F','9','9','1', '2','3','4',
+'F','F','9','9','1', '2','3','4',
+'F','F','9','9','1', '2','3','4',
+'F','F','9','9','1', '2','3','4',
+'F','F','9','9','1', '2','3','4' };
+	moo_oop_t q = moo_strtoint (moo, x, MOO_COUNTOF(x), 16);
+	moo_oop_t s = moo_inttostr (moo, q, 10);
+	MOO_DEBUG1 (moo, "[%O]\n", s);
+}
+
 moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 {
 	moo_ooi_t v = 0;
@@ -4311,7 +4374,7 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 	MOO_ASSERT (moo, radix >= 2 && radix <= 36);
 
 	if (!moo_isint(moo,num)) goto oops_einval;
-	v = integer_to_oow (moo, num, &w);
+	v = integer_to_oow(moo, num, &w);
 
 	if (v)
 	{
@@ -4495,7 +4558,7 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 		else 
 		{
 			MOO_ASSERT (moo, rs == 2);
-			w = MAKE_WORD (r[0], r[1]);
+			w = MAKE_WORD(r[0], r[1]);
 		}
 	#else
 	#	error UNSUPPORTED LIW BIT SIZE
