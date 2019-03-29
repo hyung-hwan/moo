@@ -42,7 +42,9 @@
 #	define WIN32_LEAN_AND_MEAN
 
 #	include <windows.h>
-//#	include <psapi.h>
+#	if !(defined(__BORLANDC__) && (__BORLANDC__ <= 0x0520))
+#		include <psapi.h>
+#	endif
 #	include <tchar.h>
 #	include <time.h>
 #	include <io.h>
