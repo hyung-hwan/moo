@@ -272,10 +272,6 @@ int main (int argc, char* argv[])
 	signal (SIGTERM, SIG_IGN);
 #endif
 
-/*
-test_last_digit (moo);
-exit (0);
-*/
 	moo_catch_termreq ();
 	moo_start_ticker ();
 

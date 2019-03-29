@@ -1461,7 +1461,7 @@ oops:
 	moo_freemem (moo, tmp[1]);
 	moo_freemem (moo, tmp[0]);
 
-	return count_effective (z, xlen);
+	return count_effective(z, xlen);
 
 oops:
 	if (tmp[2]) moo_freemem (moo, tmp[2]);
@@ -4276,7 +4276,6 @@ oops:
 	return MOO_NULL;
 }
 
-
 moo_oop_t moo_absint (moo_t* moo, moo_oop_t x)
 {
 	if (MOO_OOP_IS_SMOOI(x))
@@ -4307,7 +4306,7 @@ moo_oop_t moo_absint (moo_t* moo, moo_oop_t x)
 	return x;
 }
 
-static moo_liw_t div_with_carry (moo_liw_t x, moo_liw_t y, moo_liw_t* r)
+static MOO_INLINE moo_liw_t div_with_carry (moo_liw_t x, moo_liw_t y, moo_liw_t* r)
 {
 /* TODO: optimize it with ASM */
 	moo_liw_t q;
@@ -4321,39 +4320,43 @@ static moo_liw_t div_with_carry (moo_liw_t x, moo_liw_t y, moo_liw_t* r)
 	return q;
 }
 
-static get_last_digit (moo_t* moo, moo_liw_t* x, moo_oow_t xs, int base)
+static MOO_INLINE moo_liw_t get_last_digit (moo_t* moo, moo_liw_t* x, moo_oow_t* xs, int radix)
 {
-	moo_oow_t i = xs;
-	moo_liw_t r = 0;
-	while (i > 0)
+	/* this function changes the contents of the large integer word array */
+	moo_oow_t oxs = *xs;
+	moo_liw_t carry = 0;
+	moo_oow_t i;
+	moo_lidw_t dw;
+
+	MOO_ASSERT (moo, oxs > 0);
+
+	for (i = oxs; i > 0; )
 	{
 		--i;
-		x[i] = div_with_carry(x[i], base, &r);
+	#if 0
+		x[i] = div_with_carry(x[i], radix, &carry);
+	#else
+		dw = ((moo_lidw_t)carry << MOO_LIW_BITS) + x[i];
+		/* TODO: optimize it with ASM - no seperate / and % */
+		x[i] = dw / radix;
+		carry = dw % radix;
+	#endif
 	}
-	return r;
+	if (/*oxs > 0 &&*/ x[oxs - 1] == 0) *xs = oxs - 1;
+	return carry;
 }
 
-void test_last_digit (moo_t* moo)
-{
-	moo_ooch_t x[] = { 'F','F','9','9','1', '2','3','4',
-'F','F','9','9','1', '2','3','4',
-'F','F','9','9','1', '2','3','4',
-'F','F','9','9','1', '2','3','4',
-'F','F','9','9','1', '2','3','4',
-'F','F','9','9','1', '2','3','4',
-'F','F','9','9','1', '2','3','4',
-'F','F','9','9','1', '2','3','4',
-'F','F','9','9','1', '2','3','4' };
-	moo_oop_t q = moo_strtoint (moo, x, MOO_COUNTOF(x), 16);
-	moo_oop_t s = moo_inttostr (moo, q, 10);
-	MOO_DEBUG1 (moo, "[%O]\n", s);
-}
+
 
 moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 {
 	moo_ooi_t v = 0;
 	moo_oow_t w;
-	moo_oow_t as, bs, rs;
+	moo_oow_t as;
+
+/*#define INTTOSTR_SLOW_WORD_BY_WORD_CONVERSION*/
+#if defined(INTTOSTR_SLOW_WORD_BY_WORD_CONVERSION)
+	moo_oow_t bs, rs;
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
 	moo_liw_t b[1];
 #elif (MOO_LIW_BITS == MOO_OOHW_BITS)
@@ -4362,9 +4365,11 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 #	error UNSUPPORTED LIW BIT SIZE
 #endif
 	moo_liw_t* a, * q, * r;
+#endif
+
 	moo_liw_t* t = MOO_NULL;
 	moo_ooch_t* xbuf = MOO_NULL;
-	moo_oow_t xlen = 0, seglen, reqcapa;
+	moo_oow_t xlen = 0, reqcapa;
 
 	int radix;
 	const char* _digitc;
@@ -4412,6 +4417,7 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 
 	as = MOO_OBJ_GET_SIZE(num);
 
+#if defined(INTTOSTR_SLOW_WORD_BY_WORD_CONVERSION)
 	if (IS_POW2(radix))
 	{
 		unsigned int exp, accbits;
@@ -4481,7 +4487,6 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 	/* Do it in a hard way for other cases */
 
 /* TODO: find an optimial buffer size */
-/* TODO: find an optimial buffer size */
 	reqcapa = as * MOO_LIW_BITS + 1; 
 	if (moo->inttostr.xbuf.capa < reqcapa)
 	{
@@ -4519,14 +4524,17 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 #	error UNSUPPORTED LIW BIT SIZE
 #endif
 
-	a = &t[0];
-	q = &t[as];
-	r = &t[as * 2];
+	a = &t[0]; /* temporary space for the number to convert */
+	q = &t[as]; /* temporary space for intermediate quotient */
+	r = &t[as * 2]; /* temporary space for intermediate remainder */
 
 	MOO_MEMCPY (a, MOO_OBJ_GET_LIWORD_SLOT(num), MOO_SIZEOF(*a) * as);
 
 	do
 	{
+		moo_oow_t seglen;
+		/* NOTE: this loop is super-slow */
+
 		if (is_less_unsigned_array(b, bs, a, as))
 		{
 			moo_liw_t* tmp;
@@ -4576,6 +4584,41 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 		}
 	}
 	while (1);
+#else
+	reqcapa = as * MOO_LIW_BITS + 1; 
+	if (moo->inttostr.xbuf.capa < reqcapa)
+	{
+		xbuf = (moo_ooch_t*)moo_reallocmem(moo, moo->inttostr.xbuf.ptr, reqcapa * MOO_SIZEOF(*xbuf));
+		if (!xbuf) return MOO_NULL;
+		moo->inttostr.xbuf.capa = reqcapa;
+		moo->inttostr.xbuf.ptr = xbuf;
+	}
+	else
+	{
+		xbuf = moo->inttostr.xbuf.ptr;
+	}
+
+	if (moo->inttostr.t.capa < as)
+	{
+		t = (moo_liw_t*)moo_reallocmem(moo, moo->inttostr.t.ptr, reqcapa * MOO_SIZEOF(*t));
+		if (!t) return MOO_NULL;
+		moo->inttostr.t.capa = as;
+		moo->inttostr.t.ptr = t;
+	}
+	else 
+	{
+		t = moo->inttostr.t.ptr;
+	}
+
+	MOO_MEMCPY (t, MOO_OBJ_GET_LIWORD_SLOT(num), MOO_SIZEOF(*t) * as);
+
+	do
+	{
+		moo_liw_t dv = get_last_digit(moo, t, &as, radix);
+		xbuf[xlen++] = _digitc[dv];
+	}
+	while (as > 0);
+#endif
 
 	if (MOO_POINTER_IS_NBIGINT(moo, num)) xbuf[xlen++] = '-';
 	reverse_string (xbuf, xlen);
