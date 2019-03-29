@@ -1287,7 +1287,7 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	if (CANNOT_KARATSUBA(moo, tmplen[0], tmplen[1]))
 	{
 		multiply_unsigned_array (tmp[0], tmplen[0], tmp[1], tmplen[1], zsp);
-		xlen = count_effective (zsp, tmplen[0] + tmplen[1]);
+		xlen = count_effective(zsp, tmplen[0] + tmplen[1]);
 	}
 	else 
 	{
@@ -1315,7 +1315,7 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	if (CANNOT_KARATSUBA(moo, ndigits_xh, ndigits_yh))
 	{
 		multiply_unsigned_array (x + nshifts, ndigits_xh, y + nshifts, ndigits_yh, tmp[1]);
-		tmplen[1] = count_effective (tmp[1], tmplen[1]);
+		tmplen[1] = count_effective(tmp[1], tmplen[1]);
 	}
 	else
 	{
@@ -1338,7 +1338,7 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 
 	moo_freemem (moo, tmp[1]);
 	moo_freemem (moo, tmp[0]);
-	return count_effective (z, xlen);
+	return count_effective(z, xlen);
 
 oops:
 	if (tmp[1]) moo_freemem (moo, tmp[1]);
@@ -1406,7 +1406,7 @@ oops:
 	if (CANNOT_KARATSUBA(moo, tmplen[0], tmplen[1]))
 	{
 		multiply_unsigned_array (tmp[0], tmplen[0], tmp[1], tmplen[1], tmp[2]);
-		xlen = count_effective (tmp[2], tmplen[2]);
+		xlen = count_effective(tmp[2], tmplen[2]);
 	}
 	else 
 	{
@@ -1434,7 +1434,7 @@ oops:
 	if (CANNOT_KARATSUBA(moo, ndigits_xh, ndigits_yh))
 	{
 		multiply_unsigned_array (x + nshifts, ndigits_xh, y + nshifts, ndigits_yh, tmp[1]);
-		tmplen[1] = count_effective (tmp[1], tmplen[1]);
+		tmplen[1] = count_effective(tmp[1], tmplen[1]);
 	}
 	else
 	{
@@ -3478,7 +3478,7 @@ static MOO_INLINE moo_oop_t rshift_positive_bigint_and_normalize (moo_t* moo, mo
 	zs = MOO_OBJ_GET_SIZE(x);
 
 	moo_pushvolat (moo, &y);
-	z = clone_bigint (moo, x, zs);
+	z = clone_bigint(moo, x, zs);
 	moo_popvolat (moo);
 	if (!z) return MOO_NULL;
 
@@ -3490,7 +3490,7 @@ static MOO_INLINE moo_oop_t rshift_positive_bigint_and_normalize (moo_t* moo, mo
 	do
 	{
 		rshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), zs, shift);
-		if (count_effective (MOO_OBJ_GET_LIWORD_SLOT(z), zs) == 1 &&
+		if (count_effective(MOO_OBJ_GET_LIWORD_SLOT(z), zs) == 1 &&
 		    MOO_OBJ_GET_LIWORD_SLOT(z)[0] == 0) 
 		{
 			/* if z is 0, i don't have to go on */
@@ -3499,11 +3499,11 @@ static MOO_INLINE moo_oop_t rshift_positive_bigint_and_normalize (moo_t* moo, mo
 
 		/* y is a negative number. use moo_addints() until it becomes 0 */
 		moo_pushvolat (moo, &z);
-		y = moo_addints (moo, y, MOO_SMOOI_TO_OOP(shift));
+		y = moo_addints(moo, y, MOO_SMOOI_TO_OOP(shift));
 		moo_popvolat (moo);
 		if (!y) return MOO_NULL;
 
-		sign = integer_to_oow (moo, y, &shift);
+		sign = integer_to_oow(moo, y, &shift);
 		if (sign == 0) shift = MOO_SMOOI_MAX;
 		else 
 		{
@@ -3762,7 +3762,7 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 				wshift = shift / MOO_LIW_BITS;
 				if (shift > wshift * MOO_LIW_BITS) wshift++;
 
-				z = expand_bigint (moo, x, wshift);
+				z = expand_bigint(moo, x, wshift);
 				if (!z) return MOO_NULL;
 
 				lshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), shift);
@@ -3776,12 +3776,12 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 				if (negx)
 				{
-					z = rshift_negative_bigint (moo, x, shift);
+					z = rshift_negative_bigint(moo, x, shift);
 					if (!z) return MOO_NULL;
 				}
 				else
 				{
-					z = clone_bigint (moo, x, MOO_OBJ_GET_SIZE(x));
+					z = clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
 					if (!z) return MOO_NULL;
 					rshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), shift);
 				}
