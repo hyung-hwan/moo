@@ -2213,6 +2213,33 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 					return z;
 
 				default:
+#if 0
+TODO:
+				{
+					moo_lidw_t dw;
+					moo_liw_t carry = 0;
+					moo_liw_t* zw;
+					moo_oow_t zs, i;
+
+					z = clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
+					if (!z) return MOO_NULL;
+
+					zw = MOO_OBJ_GET_LIWORD_SLOT(z);
+					zs = MOO_OBJ_GET_SIZE(z);
+					for (i = zs; i > 0; )
+					{
+						--i;
+						dw = ((moo_lidw_t)carry << MOO_LIW_BITS) + zw[i];
+						/* TODO: optimize it with ASM - no seperate / and % */
+						zw[i] = dw / yv;
+						carry = dw % yv;
+					}
+					if (zw[zs - 1] == 0) 
+
+					if (rem) *rem = MOO_SMOOI_TO_OOP(carry);
+					return normalize_bigint(moo, z);
+				}
+#endif
 					/* TODO: do division by shifting if both x & y are in different sign */
 					if (yv < 0)
 					{
