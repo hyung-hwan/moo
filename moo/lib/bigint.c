@@ -2062,7 +2062,7 @@ oops_einval:
 moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop_t* rem)
 {
 	moo_oop_t z, r;
-	int x_neg, y_neg;
+	int x_neg_sign, y_neg_sign;
 
 	if (MOO_OOP_IS_SMOOI(x) && MOO_OOP_IS_SMOOI(y))
 	{
@@ -2170,21 +2170,24 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 
 		if (MOO_OOP_IS_SMOOI(x))
 		{
-			moo_ooi_t yv;
+			moo_ooi_t xv;
 
 			if (!is_bigint(moo,y)) goto oops_einval;
 
-			yv = MOO_OOP_TO_SMOOI(x);
-			if (yv == 0)
+			xv = MOO_OOP_TO_SMOOI(x);
+			x_neg_sign = (xv < 0);
+			y_neg_sign = MOO_POINTER_IS_NBIGINT(moo, y);
+			if (x_neg_sign == y_neg_sign || !modulo)
 			{
-				if (rem) *rem = MOO_SMOOI_TO_OOP(0);
+				if (rem) *rem = x;
 				return MOO_SMOOI_TO_OOP(0);
 			}
 
 			moo_pushvolat (moo, &y);
-			x = make_bigint_with_ooi(moo, yv);
+			x = make_bigint_with_ooi(moo, xv);
 			moo_popvolat (moo);
 			if (!x) return MOO_NULL;
+			/* carry on the the full division */
 		}
 		else if (MOO_OOP_IS_SMOOI(y))
 		{
@@ -2213,15 +2216,18 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 					return z;
 
 				default:
-#if 0
-TODO:
 				{
 					moo_lidw_t dw;
 					moo_liw_t carry = 0;
 					moo_liw_t* zw;
 					moo_oow_t zs, i;
+					moo_ooi_t yv_abs, ri;
 
-					z = clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
+					yv_abs = (yv < 0)? -yv: yv;
+					x_neg_sign = (MOO_POINTER_IS_NBIGINT(moo, x));
+					y_neg_sign = (yv < 0);
+
+					z = clone_bigint_to_positive(moo, x, MOO_OBJ_GET_SIZE(x));
 					if (!z) return MOO_NULL;
 
 					zw = MOO_OBJ_GET_LIWORD_SLOT(z);
@@ -2231,102 +2237,40 @@ TODO:
 						--i;
 						dw = ((moo_lidw_t)carry << MOO_LIW_BITS) + zw[i];
 						/* TODO: optimize it with ASM - no seperate / and % */
-						zw[i] = dw / yv;
-						carry = dw % yv;
+						zw[i] = dw / yv_abs;
+						carry = dw % yv_abs;
 					}
-					if (zw[zs - 1] == 0) 
+					/*if (zw[zs - 1] == 0) zs--;*/
 
-					if (rem) *rem = MOO_SMOOI_TO_OOP(carry);
-					return normalize_bigint(moo, z);
+					MOO_ASSERT (moo, carry <= MOO_SMOOI_MAX);
+					ri = carry;
+					if (x_neg_sign) ri = -ri;
+
+					z = normalize_bigint(moo, z);
+					if (!z) return MOO_NULL;
+
+					if (x_neg_sign != y_neg_sign)
+					{
+						MOO_OBJ_SET_CLASS(z, moo->_large_negative_integer);
+						if (ri && modulo)
+						{
+							z = moo_subints(moo, z, MOO_SMOOI_TO_OOP(1));
+							if (!z) return MOO_NULL;
+							if (rem)
+							{
+								moo_pushvolat (moo, &z);
+								r = moo_addints(moo, MOO_SMOOI_TO_OOP(ri), MOO_SMOOI_TO_OOP(yv));
+								moo_popvolat (moo);
+								if (!r) return MOO_NULL;
+								*rem = r;
+							}
+							return z;
+						}
+					}
+
+					if (rem) *rem = MOO_SMOOI_TO_OOP(ri);
+					return z;
 				}
-#endif
-					/* TODO: do division by shifting if both x & y are in different sign */
-					if (yv < 0)
-					{
-						moo_oow_t yv_neg = -yv;
-						if (IS_POW2(yv_neg) && MOO_POINTER_IS_NBIGINT(moo, x))
-						{
-							moo_oow_t nshifts;
-
-							nshifts = LOG2_FOR_POW2(yv_neg);
-
-							moo_pushvolat (moo, &x);
-							z = clone_bigint_negated(moo, x, MOO_OBJ_GET_SIZE(x));
-							moo_popvolat (moo);
-							if (!z) return MOO_NULL;
-
-							rshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), nshifts);
-
-							moo_pushvolat (moo, &x);
-							z = normalize_bigint(moo, z);
-							moo_popvolat (moo);
-							if (!z) return MOO_NULL;
-
-							if (rem) 
-							{
-								moo_pushvolat (moo, &x);
-								moo_pushvolat (moo, &z);
-								r = moo_mulints(moo, MOO_SMOOI_TO_OOP(yv_neg), z);
-								moo_popvolats (moo, 2);
-								if (!r) return MOO_NULL;
-
-								moo_pushvolat (moo, &z);
-								r = moo_addints(moo, x, r);
-								moo_popvolat (moo);
-								if (!r) return MOO_NULL;
-
-								*rem = r;
-							}
-
-							return z;
-						}
-					}
-					else
-					{
-						/* yv > 0 */
-						if (IS_POW2(yv) && MOO_POINTER_IS_PBIGINT(moo, x))
-						{
-							moo_oow_t nshifts;
-
-							/* 
-							2**x = v
-							x = log2(v)
-							x is the number of shift to make */
-							nshifts = LOG2_FOR_POW2(yv);
-
-							/* no pushvolat() on y as y is SMOOI here */
-							moo_pushvolat (moo, &x);
-							z = clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
-							moo_popvolat (moo);
-							if (!z) return MOO_NULL;
-
-							rshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), MOO_OBJ_GET_SIZE(z), nshifts);
-
-							moo_pushvolat (moo, &x);
-							z = normalize_bigint(moo, z);
-							moo_popvolat (moo);
-							if (!z) return MOO_NULL;
-
-							if (rem) 
-							{
-								moo_pushvolat (moo, &x);
-								moo_pushvolat (moo, &z);
-								r = moo_mulints(moo, y, z);
-								moo_popvolats (moo, 2);
-								if (!r) return MOO_NULL;
-
-								moo_pushvolat (moo, &z);
-								r = moo_subints(moo, x, r);
-								moo_popvolat (moo);
-								if (!r) return MOO_NULL;
-
-								*rem = r;
-							}
-
-							return z;
-						}
-					}
-					break;
 			}
 
 			moo_pushvolat (moo, &x);
@@ -2341,8 +2285,8 @@ TODO:
 		}
 	}
 
-	x_neg = (MOO_POINTER_IS_NBIGINT(moo, x));
-	y_neg = (MOO_POINTER_IS_NBIGINT(moo, y));
+	x_neg_sign = (MOO_POINTER_IS_NBIGINT(moo, x));
+	y_neg_sign = (MOO_POINTER_IS_NBIGINT(moo, y));
 
 	moo_pushvolat (moo, &x);
 	moo_pushvolat (moo, &y);
@@ -2350,14 +2294,15 @@ TODO:
 	moo_popvolats (moo, 2);
 	if (!z) return MOO_NULL;
 
-	if (x_neg) 
+	if (x_neg_sign) 
 	{
+
 		/* the class on r must be set before normalize_bigint() 
 		 * because it can get changed to a small integer */
 		MOO_OBJ_SET_CLASS(r, moo->_large_negative_integer);
 	}
 
-	if (x_neg != y_neg)
+	if (x_neg_sign != y_neg_sign)
 	{
 		MOO_OBJ_SET_CLASS(z, moo->_large_negative_integer);
 
