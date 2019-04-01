@@ -1592,24 +1592,54 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 #if 0
 static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs, const moo_liw_t* y, moo_oow_t ys, moo_liw_t* q, moo_liw_t* r)
 {
-	moo_oow_t rsize, qsize;
+	moo_oow_t i;
 
-	/* estimate result sizes */
-	rsize = ys;
-	qsize = xs - ys + 1;
-
-	npos = xs - 1;
-	dpos = ys - 1;
-
-	for (j = qsize - 1; j >= 0; j--, npos--)
+	d = (y[ys - 1] == MOO_TYPE_MAX(moo_liw_t)? 1: (((moo_lidw_t)1 << MOO_LIW_BITS) / (y[ys - 1] + 1));
+	if (d > 1)
 	{
-		if (ndigs[npos] == ddigs[dpos]
+		x[xs] = multiply_unsigned_array_in_place_and_get_last_carry(x, xs, d);
+		carry = multiply_unsigned_array_in_place_and_get_last_carry(y, ys, d); /* carry must be zero */
+		MOO_ASSERT (moo, carry == 0);
+	}
+
+	for (i = xs; i >= ys; )
+	{
+		moo_liw_t q;
+		moo_liw_t y1, y2;
+
+		y1 = y[ys - 1];
+		y2 = y[ys - 2];
+
+		if (x[i] == y1) 
+		{
+			q = MOO_TYPE_MAX(moo_liw_t);
+		}
 		else
-		
+		{
+			moo_lidw_t dw;
 
-		carry = scarry = 0;
+			dw = ((moo_lidw_t)x[i] << MOO_LIW_BITS) + x[i - 1];
+			/* TODO: optimize it with ASM - no seperate / and % */
+			q = dw / y1;
+			x[i] = dw % y1;
+		}
 
-		qdigs[j] = qest;
+		while (i < ys) { j++; k++; }
+		x[i] = q;
+		i--;
+	}
+	if (d != 1)
+	{
+		moo_lidw_t dw;
+		moo_liw_t carry = 0;
+		for (i = ys; i > 0; )
+		{
+			--i;
+			dw = ((moo_lidw_t)x[i] << MOO_LIW_BITS) + carry;
+			/* TODO: optimize it with ASM - no seperate / and % */
+			x[i] = dw / y1;
+			carry = dw % y1;
+		}
 	}
 }
 #endif
@@ -1704,6 +1734,25 @@ static moo_oop_t multiply_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t 
 	}
 #endif
 	return z;
+}
+
+static moo_liw_t multiply_unsigned_array_in_place_and_get_last_carry (moo_liw_t* x, moo_oow_t xs, moo_liw_t y) 
+{
+	/* multiply unsigned array with a single word and put the result 
+	 * back to the array. return the last remaining carry */
+
+	moo_lidw_t dw;
+	moo_liw_t carry = 0;
+	moo_oow_t i;
+
+	for (i = 0; i < xs; i++)
+	{
+		dw = ((moo_lidw_t)x[i] * y) + carry;
+		carry = (moo_liw_t)(dw >> MOO_LIW_BITS);
+		x[i] = (moo_liw_t)dw/*& MOO_TYPE_MAX(moo_liw_t)*/;
+	}
+
+	return carry;
 }
 
 static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y, moo_oop_t* r)
@@ -1960,7 +2009,7 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 	if (MOO_OOP_IS_SMOOI(x) && MOO_OOP_IS_SMOOI(y))
 	{
-	#if MOO_SIZEOF_INTMAX_T > MOO_SIZEOF_OOI_T
+	#if (MOO_SIZEOF_INTMAX_T > MOO_SIZEOF_OOI_T)
 		moo_intmax_t i;
 		i = (moo_intmax_t)MOO_OOP_TO_SMOOI(x) * (moo_intmax_t)MOO_OOP_TO_SMOOI(y);
 		if (MOO_IN_SMOOI_RANGE(i)) return MOO_SMOOI_TO_OOP((moo_ooi_t)i);
@@ -1985,7 +2034,7 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			moo_popvolat (moo);
 			if (!y) return MOO_NULL;
 
-			goto normal;
+			goto full_multiply;
 		}
 		else
 		{
@@ -2045,7 +2094,7 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			if (!is_bigint(moo,y)) goto oops_einval;
 		}
 
-	normal:
+	full_multiply:
 		neg = (MOO_OBJ_GET_CLASS(x) != MOO_OBJ_GET_CLASS(y)); /* checking sign before multication. no need to preserve x and y */
 		z = multiply_unsigned_integers(moo, x, y);
 		if (!z) return MOO_NULL;
@@ -2174,26 +2223,34 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 
 			if (!is_bigint(moo,y)) goto oops_einval;
 
+			/* divide a small integer by a big integer. 
+			 * the dividend is guaranteed to be greater than the divisor
+			 * if both are positive. */
+
 			xv = MOO_OOP_TO_SMOOI(x);
 			x_neg_sign = (xv < 0);
 			y_neg_sign = MOO_POINTER_IS_NBIGINT(moo, y);
 			if (x_neg_sign == y_neg_sign || !modulo)
 			{
+				/* simple. the quotient is zero and the
+				 * dividend becomes the remainder as a whole. */
 				if (rem) *rem = x;
 				return MOO_SMOOI_TO_OOP(0);
 			}
 
+			/* carry on to the full bigint division */
 			moo_pushvolat (moo, &y);
 			x = make_bigint_with_ooi(moo, xv);
 			moo_popvolat (moo);
 			if (!x) return MOO_NULL;
-			/* carry on the the full division */
 		}
 		else if (MOO_OOP_IS_SMOOI(y))
 		{
 			moo_ooi_t yv;
 
 			if (!is_bigint(moo,x)) goto oops_einval;
+
+			/* divide a big integer by a small integer. */
 
 			yv = MOO_OOP_TO_SMOOI(y);
 			switch (yv)
@@ -2207,7 +2264,6 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 					if (!z) return MOO_NULL;
 					if (rem) *rem = MOO_SMOOI_TO_OOP(0);
 					return z;
-
 
 				case -1: /* divide by -1 */
 					z = clone_bigint_negated(moo, x, MOO_OBJ_GET_SIZE(x));
@@ -2224,6 +2280,10 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 					moo_ooi_t yv_abs, ri;
 
 					yv_abs = (yv < 0)? -yv: yv;
+				#if (MOO_LIW_BITS < MOO_OOI_BITS)
+					if (yv_abs > MOO_TYPE_MAX(moo_liw_t)) break;
+				#endif
+
 					x_neg_sign = (MOO_POINTER_IS_NBIGINT(moo, x));
 					y_neg_sign = (yv < 0);
 
@@ -2273,6 +2333,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 				}
 			}
 
+			/* carry on to the full bigint division */
 			moo_pushvolat (moo, &x);
 			y = make_bigint_with_ooi(moo, yv);
 			moo_popvolat (moo);
@@ -4278,20 +4339,6 @@ moo_oop_t moo_absint (moo_t* moo, moo_oop_t x)
 	return x;
 }
 
-static MOO_INLINE moo_liw_t div_with_carry (moo_liw_t x, moo_liw_t y, moo_liw_t* r)
-{
-/* TODO: optimize it with ASM */
-	moo_liw_t q;
-	moo_lidw_t dd;
-
-	dd = ((moo_lidw_t)*r << MOO_LIW_BITS) + x;
-
-	q = dd / y;
-	*r = dd % y;
-
-	return q;
-}
-
 static MOO_INLINE moo_liw_t get_last_digit (moo_t* moo, moo_liw_t* x, moo_oow_t* xs, int radix)
 {
 	/* this function changes the contents of the large integer word array */
@@ -4305,40 +4352,20 @@ static MOO_INLINE moo_liw_t get_last_digit (moo_t* moo, moo_liw_t* x, moo_oow_t*
 	for (i = oxs; i > 0; )
 	{
 		--i;
-	#if 0
-		x[i] = div_with_carry(x[i], radix, &carry);
-	#else
 		dw = ((moo_lidw_t)carry << MOO_LIW_BITS) + x[i];
 		/* TODO: optimize it with ASM - no seperate / and % */
 		x[i] = dw / radix;
 		carry = dw % radix;
-	#endif
 	}
 	if (/*oxs > 0 &&*/ x[oxs - 1] == 0) *xs = oxs - 1;
 	return carry;
 }
-
-
 
 moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 {
 	moo_ooi_t v = 0;
 	moo_oow_t w;
 	moo_oow_t as;
-
-/*#define INTTOSTR_SLOW_WORD_BY_WORD_CONVERSION*/
-#if defined(INTTOSTR_SLOW_WORD_BY_WORD_CONVERSION)
-	moo_oow_t bs, rs;
-#if (MOO_LIW_BITS == MOO_OOW_BITS)
-	moo_liw_t b[1];
-#elif (MOO_LIW_BITS == MOO_OOHW_BITS)
-	moo_liw_t b[2];
-#else
-#	error UNSUPPORTED LIW BIT SIZE
-#endif
-	moo_liw_t* a, * q, * r;
-#endif
-
 	moo_liw_t* t = MOO_NULL;
 	moo_ooch_t* xbuf = MOO_NULL;
 	moo_oow_t xlen = 0, reqcapa;
@@ -4389,174 +4416,6 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 
 	as = MOO_OBJ_GET_SIZE(num);
 
-#if defined(INTTOSTR_SLOW_WORD_BY_WORD_CONVERSION)
-	if (IS_POW2(radix))
-	{
-		unsigned int exp, accbits;
-		moo_lidw_t acc;
-		moo_oow_t xpos;
-
-		/*exp = LOG2_FOR_POW2(radix);*/
-		exp = _exp_tab[radix - 1];
-		xlen = as * ((MOO_LIW_BITS + exp) / exp) + 1;
-		xpos = xlen;
-
-		reqcapa = xlen; 
-		if (moo->inttostr.xbuf.capa < reqcapa)
-		{
-			xbuf = (moo_ooch_t*)moo_reallocmem(moo, moo->inttostr.xbuf.ptr, reqcapa * MOO_SIZEOF(*xbuf));
-			if (!xbuf) return MOO_NULL;
-			moo->inttostr.xbuf.capa = reqcapa;
-			moo->inttostr.xbuf.ptr = xbuf;
-		}
-		else
-		{
-			xbuf = moo->inttostr.xbuf.ptr;
-		}
-
-		acc = 0;
-		accbits = 0;
-
-		w = 0;
-		while (w < as)
-		{
-			acc |= (moo_lidw_t)MOO_OBJ_GET_LIWORD_SLOT(num)[w] << accbits;
-			accbits += MOO_LIW_BITS;
-
-			w++;
-			do
-			{
-				xbuf[--xpos] = _digitc[acc & (radix - 1)]; /* acc % radix */
-				accbits -= exp;
-				acc >>= exp;
-				if (w < as)
-				{
-					if (accbits < exp) break;
-				}
-				else
-				{
-					if (acc <= 0) break;
-				}
-			}
-			while (1);
-		}
-
-		MOO_ASSERT (moo, xpos >= 1);
-		if (MOO_POINTER_IS_NBIGINT(moo, num)) xbuf[--xpos] = '-';
-
-		if (flagged_radix & MOO_INTTOSTR_NONEWOBJ)
-		{
-			/* special case. don't create a new object.
-			 * the caller can use the data left in moo->inttostr.xbuf */
-			MOO_MEMMOVE (&xbuf[0], &xbuf[xpos], MOO_SIZEOF(*xbuf) * (xlen - xpos));
-			moo->inttostr.xbuf.len = xlen - xpos;
-			return moo->_nil;
-		}
-
-		return moo_makestring(moo, &xbuf[xpos], xlen - xpos);
-	}
-
-	/* Do it in a hard way for other cases */
-
-/* TODO: find an optimial buffer size */
-	reqcapa = as * MOO_LIW_BITS + 1; 
-	if (moo->inttostr.xbuf.capa < reqcapa)
-	{
-		xbuf = (moo_ooch_t*)moo_reallocmem(moo, moo->inttostr.xbuf.ptr, reqcapa * MOO_SIZEOF(*xbuf));
-		if (!xbuf) return MOO_NULL;
-		moo->inttostr.xbuf.capa = reqcapa;
-		moo->inttostr.xbuf.ptr = xbuf;
-	}
-	else
-	{
-		xbuf = moo->inttostr.xbuf.ptr;
-	}
- 
-	reqcapa = as * 3;
-	if (moo->inttostr.t.capa < reqcapa)
-	{
-		t = (moo_liw_t*)moo_reallocmem(moo, moo->inttostr.t.ptr, reqcapa * MOO_SIZEOF(*t));
-		if (!t) return MOO_NULL;
-		moo->inttostr.t.capa = reqcapa;
-		moo->inttostr.t.ptr = t;
-	}
-	else 
-	{
-		t = moo->inttostr.t.ptr;
-	}
-
-#if (MOO_LIW_BITS == MOO_OOW_BITS)
-	b[0] = moo->bigint[radix].multiplier; /* block divisor */
-	bs = 1;
-#elif (MOO_LIW_BITS == MOO_OOHW_BITS)
-	b[0] = moo->bigint[radix].multiplier /*& MOO_LBMASK(moo_oow_t, MOO_LIW_BITS)*/;
-	b[1] = moo->bigint[radix].multiplier >> MOO_LIW_BITS;
-	bs = (b[1] > 0)? 2: 1;
-#else
-#	error UNSUPPORTED LIW BIT SIZE
-#endif
-
-	a = &t[0]; /* temporary space for the number to convert */
-	q = &t[as]; /* temporary space for intermediate quotient */
-	r = &t[as * 2]; /* temporary space for intermediate remainder */
-
-	MOO_MEMCPY (a, MOO_OBJ_GET_LIWORD_SLOT(num), MOO_SIZEOF(*a) * as);
-
-	do
-	{
-		moo_oow_t seglen;
-		/* NOTE: this loop is super-slow */
-
-		if (is_less_unsigned_array(b, bs, a, as))
-		{
-			moo_liw_t* tmp;
-
-			divide_unsigned_array(moo, a, as, b, bs, q, r);
-
-			/* get 'rs' before 'as' gets changed */
-			rs = count_effective(r, as); 
- 
-			/* swap a and q for later division */
-			tmp = a;
-			a = q;
-			q = tmp;
-
-			as = count_effective(a, as);
-		}
-		else
-		{
-			/* it is the last block */
-			r = a;
-			rs = as;
-		}
-
-	#if (MOO_LIW_BITS == MOO_OOW_BITS)
-		MOO_ASSERT (moo, rs == 1);
-		w = r[0];
-	#elif (MOO_LIW_BITS == MOO_OOHW_BITS)
-		if (rs == 1) w = r[0];
-		else 
-		{
-			MOO_ASSERT (moo, rs == 2);
-			w = MAKE_WORD(r[0], r[1]);
-		}
-	#else
-	#	error UNSUPPORTED LIW BIT SIZE
-	#endif
-		seglen = oow_to_text(moo, w, flagged_radix, &xbuf[xlen]);
-		xlen += seglen;
-		if (r == a) break; /* reached the last block */
-
-		/* fill unfilled leading digits with zeros as it's not 
-		 * the last block */
-		while (seglen < moo->bigint[radix].safe_ndigits)
-		{
-			xbuf[xlen++] = '0';
-			seglen++;
-		}
-	}
-	while (1);
-#else
 	reqcapa = as * MOO_LIW_BITS + 1; 
 	if (moo->inttostr.xbuf.capa < reqcapa)
 	{
@@ -4590,7 +4449,6 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 		xbuf[xlen++] = _digitc[dv];
 	}
 	while (as > 0);
-#endif
 
 	if (MOO_POINTER_IS_NBIGINT(moo, num)) xbuf[xlen++] = '-';
 	reverse_string (xbuf, xlen);
