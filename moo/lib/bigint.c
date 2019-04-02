@@ -53,6 +53,27 @@
  * Author: Paulo César Pereira de Andrade
  */
 
+/* 
+ * Copyright 1994 - 1996 LongView Technologies L.L.C. $Revision: 1.5 $ 
+ * Copyright (c) 2006, Sun Microsystems, Inc.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the 
+following conditions are met:
+
+    * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following 
+      disclaimer in the documentation and/or other materials provided with the distribution.
+    * Neither the name of Sun Microsystems nor the names of its contributors may be used to endorse or promote products derived 
+      from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT 
+NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
+THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
+*/
 
 #include "moo-prv.h"
 
@@ -1589,45 +1610,172 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 	}
 }
 
-#if 0
-static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs, const moo_liw_t* y, moo_oow_t ys, moo_liw_t* q, moo_liw_t* r)
+#if 1
+static moo_liw_t adjust_for_over_estimate (moo_liw_t y1, moo_liw_t y2, moo_liw_t q, moo_liw_t xi, moo_liw_t xi2) 
 {
+	moo_lidw_t dw;
+	moo_liw_t c, c2, y2q;
+
+	/*moo_liw_t y2q = axpy(y2, q, 0, c);*/
+	dw = ((moo_lidw_t)q * y2);
+	c = (moo_liw_t)(dw >> MOO_LIW_BITS);
+	y2q = (moo_liw_t)dw;
+
+	if (c > xi || (c = xi && y2q > xi2)) 
+	{
+		q--; // too large by 1
+
+		/*xpy(xi, y1, c2); // add back divisor */
+		c2 = (moo_liw_t)(((moo_lidw_t)xi + y1) >> MOO_LIW_BITS);
+		
+		if (!c2) 
+		{
+			/*y2q = axpy(y2, q, 0, c);*/
+			dw = ((moo_lidw_t)q * y2);
+			y2q = (moo_liw_t)dw;
+			c = (moo_liw_t)(dw >> MOO_LIW_BITS);
+			if (c > xi || (c = xi && y2q > xi2)) q--; // too large by 2
+		}
+	}
+
+	return q;
+}
+
+static void adjust_for_underflow (moo_t* moo, moo_liw_t* qr, moo_liw_t* divisor, int qrStart, int stop) 
+{
+	moo_lidw_t dw;
+	moo_liw_t carry = 0;
+	moo_oow_t j, k;
+
+	for (j = qrStart, k = 0; k < stop; k++)
+	{
+		/*qr[j] = xpy(qr[j], divisor[k], c);*/
+		dw = (moo_lidw_t)qr[j] + divisor[k] + carry;
+		carry = (moo_liw_t)(dw >> MOO_LIW_BITS);
+		qr[j] = (moo_liw_t)dw;
+		j++;
+		k++;
+	}
+
+	MOO_ASSERT (moo, carry == 1); // Should have carry to balance borrow; // see Knuth p258 D6
+}
+
+static moo_liw_t calculate_remainder (moo_t* moo, moo_liw_t* qr, moo_liw_t* divisor, moo_liw_t q,  int qrStart, int stop)
+{
+	moo_lidw_t dw;
+	moo_liw_t c = 0, c2 = 0, qyk;
+	moo_oow_t   j = qrStart;
+	moo_oow_t  k = 0;
+	moo_liw_t b = 0;
+
+	while (k < stop) 
+	{
+		/* qr[j] = xmy(qr[j], 0, b); */
+		dw = (moo_lidw_t)qr[j] - b;
+		b = (dw >> MOO_LIW_BITS) & 1;
+		qr[j] = (moo_liw_t)dw;
+
+		/* moo_liw_t qyk = axpy(q, divisor[k], 0, c); */
+		dw = ((moo_lidw_t)divisor[k] * q) + c;
+		c = (moo_liw_t)(dw >> MOO_LIW_BITS);
+		qyk = (moo_liw_t)dw;
+
+		/*qr[j] = xmy(qr[j], qyk, c2); */
+		dw = (moo_lidw_t)qr[j] - qyk - c2;
+		c2 = (dw >> MOO_LIW_BITS) & 1;
+		qr[j] = (moo_liw_t)dw;
+
+		//b = xpy(b, c2, c);
+		dw = (moo_lidw_t)b + c2 + c;
+		c = (moo_liw_t)(dw >> MOO_LIW_BITS);
+		b = (moo_liw_t)dw;
+
+		MOO_ASSERT (moo, c == 0);
+
+		j++;
+		k++;
+	}
+	return b;
+}
+
+static moo_liw_t multiply_unsigned_array_in_place_and_get_carry (moo_liw_t* x, moo_oow_t xs, moo_liw_t y) 
+{
+	/* multiply unsigned array with a single word and put the result 
+	 * back to the array. return the last remaining carry */
+
+	moo_lidw_t dw;
+	moo_liw_t carry = 0;
 	moo_oow_t i;
 
-	d = (y[ys - 1] == MOO_TYPE_MAX(moo_liw_t)? 1: (((moo_lidw_t)1 << MOO_LIW_BITS) / (y[ys - 1] + 1));
+	for (i = 0; i < xs; i++)
+	{
+		dw = ((moo_lidw_t)x[i] * y) + carry;
+		carry = (moo_liw_t)(dw >> MOO_LIW_BITS);
+		x[i] = (moo_liw_t)dw/*& MOO_TYPE_MAX(moo_liw_t)*/;
+	}
+
+	return carry;
+}
+
+static void divide_unsigned_array2 (moo_t* moo, moo_liw_t* x, moo_oow_t xs, moo_liw_t* y, moo_oow_t ys, moo_liw_t* q, moo_liw_t* r)
+{
+	moo_oow_t i;
+	moo_liw_t d, y1, y2;
+
+	/* the caller must allocate q to be greater than x by 1 in size. */
+	for (i = 0; i < xs; i++) q[i] = x[i]; /* copy x to q */
+	q[xs] = 0;
+
+	d = (y[ys - 1] == MOO_TYPE_MAX(moo_liw_t)? 1: (((moo_lidw_t)1 << MOO_LIW_BITS) / (y[ys - 1] + 1)));
 	if (d > 1)
 	{
-		x[xs] = multiply_unsigned_array_in_place_and_get_last_carry(x, xs, d);
-		carry = multiply_unsigned_array_in_place_and_get_last_carry(y, ys, d); /* carry must be zero */
-		MOO_ASSERT (moo, carry == 0);
+		q[xs] = multiply_unsigned_array_in_place_and_get_carry(q, xs, d);
+		/*carry = */multiply_unsigned_array_in_place_and_get_carry(y, ys, d); /* carry must be zero */
+		/*MOO_ASSERT (moo, carry == 0);*/
 	}
+
+	y1 = y[ys - 1];
+	y2 = y[ys - 2];
 
 	for (i = xs; i >= ys; )
 	{
-		moo_liw_t q;
-		moo_liw_t y1, y2;
+		moo_lidw_t dw;
+		moo_liw_t quo, b, xhi, xlo;
 
-		y1 = y[ys - 1];
-		y2 = y[ys - 2];
+		xhi = q[i];
+		xlo = q[i - 1];
 
-		if (x[i] == y1) 
+		if (xhi == y1) 
 		{
-			q = MOO_TYPE_MAX(moo_liw_t);
+			quo = MOO_TYPE_MAX(moo_liw_t);
 		}
 		else
 		{
-			moo_lidw_t dw;
-
-			dw = ((moo_lidw_t)x[i] << MOO_LIW_BITS) + x[i - 1];
+			dw = ((moo_lidw_t)xhi << MOO_LIW_BITS) + xlo;
 			/* TODO: optimize it with ASM - no seperate / and % */
-			q = dw / y1;
-			x[i] = dw % y1;
+			quo = dw / y1;
+			q[i] = dw % y1; 
 		}
 
-		while (i < ys) { j++; k++; }
-		x[i] = q;
+		quo = adjust_for_over_estimate(y1, y2, quo, q[i], q[i - 2]);
+
+		b = calculate_remainder(moo, q, y, quo, i - ys, ys);
+
+		//xmy (xi, 0, b);
+		b = (moo_liw_t)(((moo_lidw_t)xhi - b) >> MOO_LIW_BITS) & 1;
+		if (b)
+		{
+			/* underflow */
+			adjust_for_underflow(moo, q, y, i - ys, ys);
+			q[i] = quo - 1;
+		}
+		else
+		{
+			q[i] = quo;
+		}
 		i--;
 	}
+
 	if (d != 1)
 	{
 		moo_lidw_t dw;
@@ -1635,14 +1783,29 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		for (i = ys; i > 0; )
 		{
 			--i;
-			dw = ((moo_lidw_t)x[i] << MOO_LIW_BITS) + carry;
+			dw = ((moo_lidw_t)q[i] << MOO_LIW_BITS) + carry;
 			/* TODO: optimize it with ASM - no seperate / and % */
-			x[i] = dw / y1;
+			q[i] = dw / y1;
 			carry = dw % y1;
 		}
 	}
+
+	for (i = 0; i < ys; i++) r[i] = q[i];
+	for (; i <= xs; i++) 
+	{
+		q[i - ys] = q[i];
+		q[i] = 0;
+	}
+/*
+	i = xs;
+	while (i >= ys && q[i] == 0) i--;
+	for (; i >= ys; i--) q[i - ys] = q[i];
+	MOO_MEMMOVE (&q[xxx], &
+	q[xs] = 0;*/
 }
 #endif
+
+/* ======================================================================== */
 
 static moo_oop_t add_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y)
 {
@@ -1736,25 +1899,6 @@ static moo_oop_t multiply_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t 
 	return z;
 }
 
-static moo_liw_t multiply_unsigned_array_in_place_and_get_last_carry (moo_liw_t* x, moo_oow_t xs, moo_liw_t y) 
-{
-	/* multiply unsigned array with a single word and put the result 
-	 * back to the array. return the last remaining carry */
-
-	moo_lidw_t dw;
-	moo_liw_t carry = 0;
-	moo_oow_t i;
-
-	for (i = 0; i < xs; i++)
-	{
-		dw = ((moo_lidw_t)x[i] * y) + carry;
-		carry = (moo_liw_t)(dw >> MOO_LIW_BITS);
-		x[i] = (moo_liw_t)dw/*& MOO_TYPE_MAX(moo_liw_t)*/;
-	}
-
-	return carry;
-}
-
 static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y, moo_oop_t* r)
 {
 	moo_oop_t qq, rr;
@@ -1788,7 +1932,12 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 	MOO_ASSERT (moo, !is_less_unsigned(x, y)); 
 	moo_pushvolat (moo, &x);
 	moo_pushvolat (moo, &y);
+/*#define USE_DIVIDE_UNSIGNED_ARRAY2*/
+#if defined(USE_DIVIDE_UNSIGNED_ARRAY2)
+	qq = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(x) + 1);
+#else
 	qq = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(x));
+#endif
 	if (!qq) 
 	{
 		moo_popvolats (moo, 2);
@@ -1800,7 +1949,11 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 	moo_popvolats (moo, 3);
 	if (!rr) return MOO_NULL;
 
+#if defined(USE_DIVIDE_UNSIGNED_ARRAY2)
+	divide_unsigned_array2 (moo,
+#else
 	divide_unsigned_array (moo,
+#endif
 		MOO_OBJ_GET_LIWORD_SLOT(x), MOO_OBJ_GET_SIZE(x),
 		MOO_OBJ_GET_LIWORD_SLOT(y), MOO_OBJ_GET_SIZE(y),
 		MOO_OBJ_GET_LIWORD_SLOT(qq), MOO_OBJ_GET_LIWORD_SLOT(rr));
@@ -1808,6 +1961,8 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 	*r = rr;
 	return qq;
 }
+
+/* ======================================================================== */
 
 moo_oop_t moo_addints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 {
