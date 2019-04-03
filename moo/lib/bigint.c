@@ -1584,12 +1584,18 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 	 * end 
 	 */
 
-	moo_oow_t rs, i , j;
+	moo_oow_t rs, rrs, i , j;
 
 	MOO_ASSERT (moo, xs >= ys);
-	MOO_MEMSET (q, 0, MOO_SIZEOF(*q) * xs);
-	MOO_MEMSET (r, 0, MOO_SIZEOF(*q) * xs);
 
+	/* the caller must ensure:
+	 *   - q and r are all zeros. can skip memset() with zero.
+	 *   - q is as large as xs in size.
+	 *   - r is as large as ys + 1 in size  */
+	/*MOO_MEMSET (q, 0, MOO_SIZEOF(*q) * xs);
+	MOO_MEMSET (r, 0, MOO_SIZEOF(*q) * ys);*/
+
+	rrs = ys + 1;
 	for (i = xs; i > 0; )
 	{
 		--i;
@@ -1597,10 +1603,13 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 		{
 			--j;
 
-			lshift_unsigned_array (r, xs, 1);
+			/* the value of the remainder 'r' may get bigger than the 
+			 * divisor 'y' temporarily until subtraction is performed
+			 * below. so ys + 1(kept in rrs) is needed for shifting here. */
+			lshift_unsigned_array (r, rrs, 1); 
 			MOO_SETBITS (moo_liw_t, r[0], 0, 1, MOO_GETBITS(moo_liw_t, x[i], j, 1));
 
-			rs = count_effective(r, xs);
+			rs = count_effective(r, rrs);
 			if (!is_less_unsigned_array(r, rs, y, ys))
 			{
 				subtract_unsigned_array (moo, r, rs, y, ys, r);
@@ -1641,13 +1650,13 @@ static moo_liw_t adjust_for_over_estimate (moo_liw_t y1, moo_liw_t y2, moo_liw_t
 	return q;
 }
 
-static moo_liw_t adjust_for_underflow (moo_liw_t* qr, moo_liw_t* divisor, moo_oow_t qrStart, moo_oow_t stop) 
+static moo_liw_t adjust_for_underflow (moo_liw_t* qr, moo_liw_t* divisor, moo_oow_t qr_start, moo_oow_t stop) 
 {
 	moo_lidw_t dw;
 	moo_liw_t carry = 0;
 	moo_oow_t j, k;
 
-	for (j = qrStart, k = 0; k < stop; k++, j++)
+	for (j = qr_start, k = 0; k < stop; k++, j++)
 	{
 		/*qr[j] = xpy(qr[j], divisor[k], c);*/
 		dw = (moo_lidw_t)qr[j] + divisor[k] + carry;
@@ -1658,12 +1667,12 @@ static moo_liw_t adjust_for_underflow (moo_liw_t* qr, moo_liw_t* divisor, moo_oo
 	return carry;
 }
 
-static moo_liw_t calculate_remainder (moo_t* moo, moo_liw_t* qr, moo_liw_t* divisor, moo_liw_t q,  int qrStart, int stop)
+static moo_liw_t calculate_remainder (moo_t* moo, moo_liw_t* qr, moo_liw_t* divisor, moo_liw_t q,  int qr_start, int stop)
 {
 	moo_lidw_t dw;
 	moo_liw_t c = 0, c2 = 0, qyk;
-	moo_oow_t   j = qrStart;
-	moo_oow_t  k = 0;
+	moo_oow_t j = qr_start;
+	moo_oow_t k = 0;
 	moo_liw_t b = 0;
 
 	while (k < stop) 
@@ -1715,16 +1724,34 @@ static moo_liw_t multiply_unsigned_array_in_place_and_get_carry (moo_liw_t* x, m
 	return carry;
 }
 
-static void divide_unsigned_array2 (moo_t* moo,const moo_liw_t* x, moo_oow_t xs, const moo_liw_t* y, moo_oow_t ys, moo_liw_t* q, moo_liw_t* r)
+static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs, const moo_liw_t* y, moo_oow_t ys, moo_liw_t* q, moo_liw_t* r)
 {
 	moo_oow_t i;
 	moo_liw_t d, y1, y2;
 
-	/* the caller must ensure that q can hold 'xs + 1' words and r can hold 'xs' words. */
+	/* the caller must ensure:
+	 *  - q can hold 'xs + 1' words and r can hold 'ys' words. 
+	 *  - q and r are set to all zeros. */
 	MOO_ASSERT (moo, xs >= ys);
 
 	for (i = 0; i < xs; i++) q[i] = x[i]; /* copy x to q */
 	q[xs] = 0;
+
+	if (ys == 1)
+	{
+		/* the divisor has a single word only. perform simple division */
+		moo_lidw_t dw;
+		moo_liw_t carry = 0;
+		for (i = xs; i > 0; )
+		{
+			--i;
+			dw = ((moo_lidw_t)carry << MOO_LIW_BITS) + q[i];
+			q[i] = (moo_liw_t)(dw / y[0]);
+			carry = (moo_liw_t)(dw % y[0]);
+		}
+		r[0] = carry;
+		return;
+	}
 
 	for (i = 0; i < ys; i++) r[i] = y[i]; /* copy y to r */
 
@@ -1732,11 +1759,6 @@ static void divide_unsigned_array2 (moo_t* moo,const moo_liw_t* x, moo_oow_t xs,
 	d = (y1 == MOO_TYPE_MAX(moo_liw_t)? ((moo_liw_t)1): ((moo_liw_t)(((moo_lidw_t)1 << MOO_LIW_BITS) / (y1 + 1))));
 	if (d > 1)
 	{
-#if 0
-		q[xs] = multiply_unsigned_array_in_place_and_get_carry(q, xs, d);
-		y2 = multiply_unsigned_array_in_place_and_get_carry(r, ys, d); 
-		MOO_ASSERT (moo, y2 == 0); /* carry must be zero */
-#else
 		moo_lidw_t dw;
 		moo_liw_t carry;
 
@@ -1757,7 +1779,6 @@ static void divide_unsigned_array2 (moo_t* moo,const moo_liw_t* x, moo_oow_t xs,
 			r[i] = (moo_liw_t)dw;
 		}
 		MOO_ASSERT (moo, carry == 0);
-#endif
 	}
 
 	y1 = r[ys - 1];
@@ -1810,20 +1831,17 @@ static void divide_unsigned_array2 (moo_t* moo,const moo_liw_t* x, moo_oow_t xs,
 			--i;
 			dw = ((moo_lidw_t)carry << MOO_LIW_BITS) + q[i];
 			/* TODO: optimize it with ASM - no seperate / and % */
-			carry = (moo_liw_t)(dw % d);
 			q[i] = (moo_liw_t)(dw / d);
+			carry = (moo_liw_t)(dw % d);
 		}
 	}
 
-	for (i = 0; i < ys; i++) r[i] = q[i];
-	for (; i < xs; i++) 
-	{
-		r[i] = 0;
-		q[i - ys] = q[i];
-		q[i] = 0;
-	}
-	q[i - ys] = q[i];
-	for (i = i - ys + 1; i <= xs; i++) q[i] = 0;
+	/* split quotient and remainder held in q to q and r respectively 
+	 *   q      [<--- quotient     ---->|<-- remainder     -->]
+	 *  index   |xs  xs-1  ...  ys+1  ys|ys-1  ys-2  ...  1  0|
+	 */
+	for (i = 0; i < ys; i++) { r[i] = q[i]; q[i] = 0;  }
+	for (; i <= xs; i++) { q[i - ys] = q[i]; q[i] = 0; }
 }
 #endif
 
@@ -1954,7 +1972,7 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 	MOO_ASSERT (moo, !is_less_unsigned(x, y)); 
 	moo_pushvolat (moo, &x);
 	moo_pushvolat (moo, &y);
-/*#define USE_DIVIDE_UNSIGNED_ARRAY2*/
+//#define USE_DIVIDE_UNSIGNED_ARRAY2
 #if defined(USE_DIVIDE_UNSIGNED_ARRAY2)
 	qq = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(x) + 1);
 #else
@@ -1967,7 +1985,11 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 	}
 
 	moo_pushvolat (moo, &qq);
-	rr = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(x));
+#if defined(USE_DIVIDE_UNSIGNED_ARRAY2)
+	rr = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(y));
+#else
+	rr = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(y) + 1);
+#endif
 	moo_popvolats (moo, 3);
 	if (!rr) return MOO_NULL;
 
@@ -2474,8 +2496,8 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 						--i;
 						dw = ((moo_lidw_t)carry << MOO_LIW_BITS) + zw[i];
 						/* TODO: optimize it with ASM - no seperate / and % */
-						zw[i] = dw / yv_abs;
-						carry = dw % yv_abs;
+						zw[i] = (moo_liw_t)(dw / yv_abs);
+						carry = (moo_liw_t)(dw % yv_abs);
 					}
 					/*if (zw[zs - 1] == 0) zs--;*/
 
@@ -4531,8 +4553,8 @@ static MOO_INLINE moo_liw_t get_last_digit (moo_t* moo, moo_liw_t* x, moo_oow_t*
 		--i;
 		dw = ((moo_lidw_t)carry << MOO_LIW_BITS) + x[i];
 		/* TODO: optimize it with ASM - no seperate / and % */
-		x[i] = dw / radix;
-		carry = dw % radix;
+		x[i] = (moo_liw_t)(dw / radix);
+		carry = (moo_liw_t)(dw % radix);
 	}
 	if (/*oxs > 0 &&*/ x[oxs - 1] == 0) *xs = oxs - 1;
 	return carry;
