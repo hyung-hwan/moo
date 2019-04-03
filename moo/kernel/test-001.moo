@@ -132,7 +132,7 @@ extend MyObject
 			q := divd div: divr.
 			r := divd rem: divr.
 
-			ifnot (divd = (q * divr + r)) { divd dump. divr dump. q dump. r dump. ^false. }.
+			ifnot (divd = (q * divr + r)) { i dump. divd dump. divr dump. q dump. r dump. ^false. }.
 
 			i := i + 1.
 		}.

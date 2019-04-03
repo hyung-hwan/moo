@@ -1630,7 +1630,7 @@ static moo_liw_t adjust_for_over_estimate (moo_liw_t y1, moo_liw_t y2, moo_liw_t
 	c = (moo_liw_t)(dw >> MOO_LIW_BITS);
 	y2q = (moo_liw_t)dw;
 
-	if (c > xi || (c = xi && y2q > xi2)) 
+	if (c > xi || (c == xi && y2q > xi2)) 
 	{
 		q--; // too large by 1
 
@@ -1643,7 +1643,7 @@ static moo_liw_t adjust_for_over_estimate (moo_liw_t y1, moo_liw_t y2, moo_liw_t
 			dw = ((moo_lidw_t)q * y2);
 			y2q = (moo_liw_t)dw;
 			c = (moo_liw_t)(dw >> MOO_LIW_BITS);
-			if (c > xi || (c = xi && y2q > xi2)) q--; // too large by 2
+			if (c > xi || (c == xi && y2q > xi2)) q--; // too large by 2
 		}
 	}
 
@@ -1972,7 +1972,7 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 	MOO_ASSERT (moo, !is_less_unsigned(x, y)); 
 	moo_pushvolat (moo, &x);
 	moo_pushvolat (moo, &y);
-//#define USE_DIVIDE_UNSIGNED_ARRAY2
+/*#define USE_DIVIDE_UNSIGNED_ARRAY2*/
 #if defined(USE_DIVIDE_UNSIGNED_ARRAY2)
 	qq = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(x) + 1);
 #else
