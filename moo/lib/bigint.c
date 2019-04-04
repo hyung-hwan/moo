@@ -1620,43 +1620,58 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 }
 
 #if 1
-static moo_liw_t adjust_for_over_estimate (moo_liw_t y1, moo_liw_t y2, moo_liw_t q, moo_liw_t xi, moo_liw_t xi2) 
+static moo_liw_t adjust_for_over_estimate (moo_liw_t y1, moo_liw_t y2, moo_liw_t quo, moo_liw_t xi, moo_liw_t xi2) 
 {
 	moo_lidw_t dw;
 	moo_liw_t c, c2, y2q;
 
 	/*moo_liw_t y2q = axpy(y2, q, 0, c);*/
-	dw = ((moo_lidw_t)q * y2);
+	dw = ((moo_lidw_t)quo * y2);
 	c = (moo_liw_t)(dw >> MOO_LIW_BITS);
 	y2q = (moo_liw_t)dw;
 
 	if (c > xi || (c == xi && y2q > xi2)) 
 	{
-		q--; // too large by 1
+		--quo; /* too large by 1 */
 
-		/*xpy(xi, y1, c2); // add back divisor */
+		/*xpy(xi, y1, c2); add back divisor */
 		c2 = (moo_liw_t)(((moo_lidw_t)xi + y1) >> MOO_LIW_BITS);
-		
-		if (!c2) 
+		if (c2 == 0) 
 		{
 			/*y2q = axpy(y2, q, 0, c);*/
-			dw = ((moo_lidw_t)q * y2);
-			y2q = (moo_liw_t)dw;
+			dw = ((moo_lidw_t)quo * y2);
 			c = (moo_liw_t)(dw >> MOO_LIW_BITS);
-			if (c > xi || (c == xi && y2q > xi2)) q--; // too large by 2
+			y2q = (moo_liw_t)dw;
+			if (c > xi || (c == xi && y2q > xi2)) --quo; /* too large by 2 */
 		}
 	}
 
-	return q;
+	return quo;
+}
+
+static moo_liw_t adjust_for_over_estimate2 (moo_liw_t y1, moo_liw_t y2, moo_liw_t quo, moo_liw_t xhi, moo_liw_t xlo, moo_liw_t x2) 
+{
+	moo_lidw_t dw1, dw2;
+
+	dw1 = ((moo_lidw_t)quo * y2);
+	dw2 = (((moo_lidw_t)quo * xhi + xlo - ((moo_lidw_t)quo * y1)) << MOO_LIW_BITS) + x2;
+	if (dw1 > dw2)
+	{
+		quo--;
+		dw1 = ((moo_lidw_t)quo * y2);
+		dw2 = (((moo_lidw_t)quo * xhi + xlo - ((moo_lidw_t)quo * y1)) << MOO_LIW_BITS) + x2;
+		if (dw1 > dw2) quo--;
+	}
+	return quo;
 }
 
 static moo_liw_t adjust_for_underflow (moo_liw_t* qr, moo_liw_t* divisor, moo_oow_t qr_start, moo_oow_t stop) 
 {
 	moo_lidw_t dw;
-	moo_liw_t carry = 0;
+	moo_liw_t carry;
 	moo_oow_t j, k;
 
-	for (j = qr_start, k = 0; k < stop; k++, j++)
+	for (carry = 0, j = qr_start, k = 0; k < stop; j++, k++)
 	{
 		/*qr[j] = xpy(qr[j], divisor[k], c);*/
 		dw = (moo_lidw_t)qr[j] + divisor[k] + carry;
@@ -1667,40 +1682,35 @@ static moo_liw_t adjust_for_underflow (moo_liw_t* qr, moo_liw_t* divisor, moo_oo
 	return carry;
 }
 
-static moo_liw_t calculate_remainder (moo_t* moo, moo_liw_t* qr, moo_liw_t* divisor, moo_liw_t q,  int qr_start, int stop)
+static moo_liw_t calculate_remainder (moo_t* moo, moo_liw_t* qr, moo_liw_t* y, moo_liw_t quo, int qr_start, int stop)
 {
 	moo_lidw_t dw;
-	moo_liw_t c = 0, c2 = 0, qyk;
-	moo_oow_t j = qr_start;
-	moo_oow_t k = 0;
-	moo_liw_t b = 0;
+	moo_liw_t b, c, c2, qyk;
+	moo_oow_t j, k;
 
-	while (k < stop) 
+	for (b = 0, c = 0, c2 = 0, j = qr_start, k = 0; k < stop; j++, k++)
 	{
 		/* qr[j] = xmy(qr[j], 0, b); */
 		dw = (moo_lidw_t)qr[j] - b;
-		b = (dw >> MOO_LIW_BITS) & 1;
+		b = (moo_liw_t)((dw >> MOO_LIW_BITS) & 1); /* b = -(dw mod BASE) */
 		qr[j] = (moo_liw_t)dw;
 
 		/* moo_liw_t qyk = axpy(q, divisor[k], 0, c); */
-		dw = ((moo_lidw_t)divisor[k] * q) + c;
+		dw = ((moo_lidw_t)y[k] * quo) + c;
 		c = (moo_liw_t)(dw >> MOO_LIW_BITS);
 		qyk = (moo_liw_t)dw;
 
-		/*qr[j] = xmy(qr[j], qyk, c2); */
-		dw = (moo_lidw_t)qr[j] - qyk - c2;
-		c2 = (dw >> MOO_LIW_BITS) & 1;
+		/*c2 = 0; qr[j] = xmy(qr[j], qyk, c2); */
+		dw = (moo_lidw_t)qr[j] - qyk;
+		c2 = (moo_liw_t)((dw >> MOO_LIW_BITS) & 1);
 		qr[j] = (moo_liw_t)dw;
 
-		//b = xpy(b, c2, c);
+		/*b = xpy(b, c2, c);*/
 		dw = (moo_lidw_t)b + c2 + c;
 		c = (moo_liw_t)(dw >> MOO_LIW_BITS);
 		b = (moo_liw_t)dw;
 
 		MOO_ASSERT (moo, c == 0);
-
-		j++;
-		k++;
 	}
 	return b;
 }
@@ -1718,7 +1728,7 @@ static moo_liw_t multiply_unsigned_array_in_place_and_get_carry (moo_liw_t* x, m
 	{
 		dw = ((moo_lidw_t)x[i] * y) + carry;
 		carry = (moo_liw_t)(dw >> MOO_LIW_BITS);
-		x[i] = (moo_liw_t)dw/*& MOO_TYPE_MAX(moo_liw_t)*/;
+		x[i] = (moo_liw_t)dw;
 	}
 
 	return carry;
@@ -1734,9 +1744,6 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 	 *  - q and r are set to all zeros. */
 	MOO_ASSERT (moo, xs >= ys);
 
-	for (i = 0; i < xs; i++) q[i] = x[i]; /* copy x to q */
-	q[xs] = 0;
-
 	if (ys == 1)
 	{
 		/* the divisor has a single word only. perform simple division */
@@ -1745,7 +1752,7 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		for (i = xs; i > 0; )
 		{
 			--i;
-			dw = ((moo_lidw_t)carry << MOO_LIW_BITS) + q[i];
+			dw = ((moo_lidw_t)carry << MOO_LIW_BITS) + x[i];
 			q[i] = (moo_liw_t)(dw / y[0]);
 			carry = (moo_liw_t)(dw % y[0]);
 		}
@@ -1753,6 +1760,8 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		return;
 	}
 
+	for (i = 0; i < xs; i++) q[i] = x[i]; /* copy x to q */
+	q[xs] = 0; /* store zero in the last extra word */
 	for (i = 0; i < ys; i++) r[i] = y[i]; /* copy y to r */
 
 	y1 = r[ys - 1]; /* highest divisor word */
@@ -1805,15 +1814,15 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		}
 
 		quo = adjust_for_over_estimate(y1, y2, quo, q[i], q[i - 2]);
+		/*quo = adjust_for_over_estimate2(y1, y2, quo, xhi, xlo, q[i - 2]);*/
 
 		b = calculate_remainder(moo, q, r, quo, i - ys, ys);
-		b = (moo_liw_t)(((moo_lidw_t)xhi - b) >> MOO_LIW_BITS) & 1;
-
+		b = (moo_liw_t)((((moo_lidw_t)xhi - b) >> MOO_LIW_BITS) & 1);
 		if (b)
 		{
 			/* underflow */
 			b = adjust_for_underflow(q, r, i - ys, ys);
-			MOO_ASSERT (moo, b == 1); /* Should have carry to balance borrow; // see Knuth p258 D6 */
+			MOO_ASSERT (moo, b == 1);
 			q[i] = quo - 1;
 		}
 		else
@@ -1842,6 +1851,122 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 	 */
 	for (i = 0; i < ys; i++) { r[i] = q[i]; q[i] = 0;  }
 	for (; i <= xs; i++) { q[i - ys] = q[i]; q[i] = 0; }
+
+}
+
+
+static moo_oow_t nlz (moo_liw_t x) 
+{
+   moo_oow_t n;
+
+   if (x == 0) return(32);
+
+   n = 0;
+   if (x <= 0x0000FFFF) {n = n +16; x = x <<16;}
+   if (x <= 0x00FFFFFF) {n = n + 8; x = x << 8;}
+   if (x <= 0x0FFFFFFF) {n = n + 4; x = x << 4;}
+   if (x <= 0x3FFFFFFF) {n = n + 2; x = x << 2;}
+   if (x <= 0x7FFFFFFF) {n = n + 1;}
+
+   return n;
+}
+
+
+static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs, const moo_liw_t* y, moo_oow_t ys, moo_liw_t* q, moo_liw_t* r)
+{
+	moo_oow_t i, j, s;
+	moo_lidw_t dw, qhat, rhat;
+	moo_lidi_t t, k;
+
+	/* the caller must ensure:
+	 *  - q can hold 'xs + 1' words and r can hold 'ys' words. 
+	 *  - q and r are set to all zeros. */
+	MOO_ASSERT (moo, xs >= ys);
+
+	if (ys == 1)
+	{
+		/* the divisor has a single word only. perform simple division */
+		moo_lidw_t dw;
+		moo_liw_t carry = 0;
+		for (i = xs; i > 0; )
+		{
+			--i;
+			dw = ((moo_lidw_t)carry << MOO_LIW_BITS) + x[i];
+			q[i] = (moo_liw_t)(dw / y[0]);
+			carry = (moo_liw_t)(dw % y[0]);
+		}
+		r[0] = carry;
+		return;
+	}
+
+	s = nlz(y[ys - 1]);
+	for (i = ys; i > 1; )
+	{
+		--i;
+		r[i] = (y[i] << s) | ((moo_lidw_t)y[i - 1] >> (MOO_LIW_BITS - s));
+	}
+	r[0] = y[0] << s;
+
+
+	q[xs] = (moo_lidw_t)x[xs - 1] >> (MOO_LIW_BITS - s);
+	for (i = xs; i > 1; )
+	{
+		--i;
+		q[i] = (x[i] << s) | ((moo_lidw_t)x[i - 1] >> (MOO_LIW_BITS - s));
+	}
+	q[0] = x[0] << s;
+
+	for (j = xs - ys + 1; j > 0; )
+	{
+		--j;
+
+		//dw = ((moo_lidw_t)q[j + ys] << MOO_LIW_BITS) + q[j + ys - 1];
+		dw = ((moo_lidw_t)q[j + ys] * MOO_TYPE_MAX(moo_liw_t)) + q[j + ys - 1];
+		qhat = dw / r[ys - 1];
+		rhat = dw - (qhat * r[ys - 1]);
+
+	again:
+		//if (qhat >= MOO_TYPE_MAX(moo_liw_t) || (qhat * r[ys - 2]) > ((rhat << MOO_LIW_BITS) + q[j + ys - 2]))
+		if (qhat >= MOO_TYPE_MAX(moo_liw_t) || (qhat * r[ys - 2]) > (rhat * MOO_TYPE_MAX(moo_liw_t) + q[j + ys - 2]))
+		{
+			qhat = qhat - 1;
+			rhat = rhat + r[ys - 1];
+			if (rhat < MOO_TYPE_MAX(moo_liw_t)) goto again;
+		}
+
+		for (k = 0, i = 0; i < ys; i++)
+		{
+			dw = qhat * r[i];
+			t = q[j + i] - k - (dw & MOO_TYPE_MAX(moo_liw_t));
+			q[j + i] = t;
+			k = (dw >> MOO_LIW_BITS) - (t >> MOO_LIW_BITS);
+		}
+		t = q[j + ys] - k;
+		q[j + ys] = t;
+
+		q[j] = qhat;
+		if (t < 0)
+		{
+			q[j] = q[j] - 1;
+			for (k = 0, i = 0; i < ys; i++)
+			{
+				t = (moo_lidw_t)q[j + i] + r[i] + k;
+				q[j + i] = t;
+				k = t >> MOO_LIW_BITS;
+			}
+			q[j + ys] += k;
+		}
+	}
+
+	for (i = 0; i < ys - 1; i++)
+	{
+		r[i] = (r[i] >> s) | ((moo_lidw_t)q[i + 1] << (MOO_LIW_BITS - s));
+	}
+	r[i] = r[i] >> s;
+
+	//for (j = (xs == ys)? 1: (xs - ys + 1); j < xs; j++) q[i] = 0;
+	for (i = xs ; i > 0; ) printf ("%08x ", q[--i]);
+	printf ("\n");
 }
 #endif
 
@@ -1994,7 +2119,7 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 	if (!rr) return MOO_NULL;
 
 #if defined(USE_DIVIDE_UNSIGNED_ARRAY2)
-	divide_unsigned_array2 (moo,
+	divide_unsigned_array3 (moo,
 #else
 	divide_unsigned_array (moo,
 #endif

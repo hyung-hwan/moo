@@ -163,7 +163,7 @@ typedef struct moo_obj_word_t*     moo_oop_word_t;
  * BIGINT TYPES AND MACROS
  * ========================================================================= */
 #if (MOO_SIZEOF_UINTMAX_T > MOO_SIZEOF_OOW_T)
-#	define MOO_USE_FULL_WORD
+/*#	define MOO_USE_FULL_WORD*/
 #endif
 
 #if defined(MOO_USE_FULL_WORD)

@@ -119,20 +119,37 @@ extend MyObject
                 ^(a value: 5) * (b value: 6). ## (12 * 5 + 22) * (99 * 6 + 4) => 49036
 	}
 
-	method(#class) testBigintDiv
+	method(#class) testBigintDiv: divd_base divisor: divr_base
 	{
-		| q r divd divr i |
+		| i q r divd divr |
 
 		i := 1.
-		while (i < 1000)
+		while (i < 2000)
 		{
-			divd := 100919283908998345873248972389472389791283789123712899089034258903482398198123912831 * i.
-			divr := 129323482374892374238974238974238947328972389128387312892713891728391278 * i.
+			divd := divd_base * i.
+			divr := divr_base * i.
+			q := divd div: divr.
+			r := divd rem: divr.
+			if (divd ~= (q * divr + r)) { i dump. divd dump. divr dump. q dump. r dump. (q * divr + r) dump. ^false. }.
 
+			divd := divd_base * i.
+			divr := divr_base.
 			q := divd div: divr.
 			r := divd rem: divr.
 
-			ifnot (divd = (q * divr + r)) { i dump. divd dump. divr dump. q dump. r dump. ^false. }.
+			if (divd ~= (q * divr + r)) { i dump. divd dump. divr dump. q dump. r dump. (q * divr + r) dump. ^false. }.
+			
+			divd := divd_base.
+			divr := divr_base * i.
+			q := divd div: divr.
+			r := divd rem: divr.
+			if (divd ~= (q * divr + r)) { i dump. divd dump. divr dump. q dump. r dump. (q * divr + r) dump. ^false. }.
+
+			divd := divd_base * i * i.
+			divr := divr_base * i.
+			q := divd div: divr.
+			r := divd rem: divr.
+			if (divd ~= (q * divr + r)) { i dump. divd dump. divr dump. q dump. r dump. (q * divr + r) dump. ^false. }.
 
 			i := i + 1.
 		}.
@@ -358,7 +375,8 @@ extend MyObject
 			## 150-154
 			[ (8113063330913503995887611892379812731289731289312898971231 div: 8113063330913503995887611892379812731289731289312898971230) = 1 ],
 			[ (8113063330913503995887611892379812731289731289312898971231 rem: 8113063330913503995887611892379812731289731289312898971230) = 1 ],
-			[ self testBigintDiv ],
+			[ self testBigintDiv: 100919283908998345873248972389472389791283789123712899089034258903482398198123912831 divisor: 129323482374892374238974238974238947328972389128387312892713891728391278 ],
+			[ self testBigintDiv: 234897230919283908998345873248972389472389791283789123712899089034258903482398198123912831 divisor: 129323482374892374238974238974238947328972389128387312892713891728391278 ],
 
 
 			## =========================
