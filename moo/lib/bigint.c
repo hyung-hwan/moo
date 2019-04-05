@@ -1871,12 +1871,12 @@ static moo_oow_t nlz (moo_liw_t x)
    return n;
 }
 
-
 static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs, const moo_liw_t* y, moo_oow_t ys, moo_liw_t* q, moo_liw_t* r)
 {
 	moo_oow_t i, j, s;
-	moo_lidw_t dw, qhat, rhat;
+	moo_lidw_t dw, qhat, rhat, b;
 	moo_lidi_t t, k;
+	moo_liw_t* qq;
 
 	/* the caller must ensure:
 	 *  - q can hold 'xs + 1' words and r can hold 'ys' words. 
@@ -1899,6 +1899,32 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		return;
 	}
 
+	if (moo->inttostr.t.capa <= xs)
+	{
+		moo_liw_t* t;
+		moo_oow_t reqcapa;
+
+		reqcapa = MOO_ALIGN_POW2(xs + 1, 32);
+		t = (moo_liw_t*)moo_reallocmem(moo, moo->inttostr.t.ptr, reqcapa * MOO_SIZEOF(*t));
+		//if (!t) return -1; // TOOD:
+
+		moo->inttostr.t.capa = xs + 1;
+		moo->inttostr.t.ptr = t;
+	}
+
+	b = (moo_lidw_t)MOO_TYPE_MAX(moo_liw_t) + 1;
+	qq = moo->inttostr.t.ptr;
+
+/*
+printf ("------------------\n");
+printf ("unsigned u[] = {");
+for (i = 0; i < xs; i++ ) printf ("0x%llx, ", (unsigned long long)x[i]);
+printf ("};\n");
+printf ("unsigned v[] = {");
+for (i = 0; i < ys; i++) printf ("0x%llx, ", (unsigned long long)y[i]);
+printf ("};\n"); */
+//for (i = 0; i <= xs; i++) printf ("un %llx\n", (unsigned long long)q[i]);
+
 	s = nlz(y[ys - 1]);
 	for (i = ys; i > 1; )
 	{
@@ -1908,41 +1934,44 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 	r[0] = y[0] << s;
 
 
-	q[xs] = (moo_lidw_t)x[xs - 1] >> (MOO_LIW_BITS - s);
+	qq[xs] = (moo_lidw_t)x[xs - 1] >> (MOO_LIW_BITS - s);
 	for (i = xs; i > 1; )
 	{
 		--i;
-		q[i] = (x[i] << s) | ((moo_lidw_t)x[i - 1] >> (MOO_LIW_BITS - s));
+		qq[i] = (x[i] << s) | ((moo_lidw_t)x[i - 1] >> (MOO_LIW_BITS - s));
 	}
-	q[0] = x[0] << s;
+	qq[0] = x[0] << s;
+
+
+//for (i = 0; i < ys; i++) printf ("vn %llx\n", (unsigned long long)r[i]);
+//for (i = 0; i <= xs; i++) printf ("un %llx\n", (unsigned long long)qq[i]);
 
 	for (j = xs - ys + 1; j > 0; )
 	{
 		--j;
 
-		//dw = ((moo_lidw_t)q[j + ys] << MOO_LIW_BITS) + q[j + ys - 1];
-		dw = ((moo_lidw_t)q[j + ys] * MOO_TYPE_MAX(moo_liw_t)) + q[j + ys - 1];
+		dw = (moo_lidw_t)qq[j + ys] * b + qq[j + ys - 1];
 		qhat = dw / r[ys - 1];
 		rhat = dw - (qhat * r[ys - 1]);
 
+ //printf ("qhat == %llx rhat == %llx dw = %llx r[ys-1]  = %llx   /// %llx %llx\n", (unsigned long long)qhat, (unsigned long long)rhat, (unsigned long long)dw, (unsigned long long)r[ys-1], (unsigned long long)qq[j + ys], (unsigned long long)qq[j + ys - 1]);
 	again:
-		//if (qhat >= MOO_TYPE_MAX(moo_liw_t) || (qhat * r[ys - 2]) > ((rhat << MOO_LIW_BITS) + q[j + ys - 2]))
-		if (qhat >= MOO_TYPE_MAX(moo_liw_t) || (qhat * r[ys - 2]) > (rhat * MOO_TYPE_MAX(moo_liw_t) + q[j + ys - 2]))
+		if (qhat >= b || (qhat * r[ys - 2]) > (rhat * b + qq[j + ys - 2]))
 		{
 			qhat = qhat - 1;
 			rhat = rhat + r[ys - 1];
-			if (rhat < MOO_TYPE_MAX(moo_liw_t)) goto again;
+			if (rhat < b) goto again;
 		}
-
+//printf ("qhat == %llx rhat == %llx\n", (unsigned long long)qhat, (unsigned long long)rhat);
 		for (k = 0, i = 0; i < ys; i++)
 		{
 			dw = qhat * r[i];
-			t = q[j + i] - k - (dw & MOO_TYPE_MAX(moo_liw_t));
-			q[j + i] = t;
+			t = qq[j + i] - k - (dw & MOO_TYPE_MAX(moo_liw_t));
+			qq[j + i] = t;
 			k = (dw >> MOO_LIW_BITS) - (t >> MOO_LIW_BITS);
 		}
-		t = q[j + ys] - k;
-		q[j + ys] = t;
+		t = qq[j + ys] - k;
+		qq[j + ys] = t;
 
 		q[j] = qhat;
 		if (t < 0)
@@ -1950,23 +1979,29 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 			q[j] = q[j] - 1;
 			for (k = 0, i = 0; i < ys; i++)
 			{
-				t = (moo_lidw_t)q[j + i] + r[i] + k;
-				q[j + i] = t;
+				t = (moo_lidw_t)qq[j + i] + r[i] + k;
+				qq[j + i] = t;
 				k = t >> MOO_LIW_BITS;
 			}
-			q[j + ys] += k;
+			qq[j + ys] += k;
 		}
 	}
 
 	for (i = 0; i < ys - 1; i++)
 	{
-		r[i] = (r[i] >> s) | ((moo_lidw_t)q[i + 1] << (MOO_LIW_BITS - s));
+		r[i] = (qq[i] >> s) | ((moo_lidw_t)qq[i + 1] << (MOO_LIW_BITS - s));
 	}
-	r[i] = r[i] >> s;
+	r[i] = qq[i] >> s;
 
-	//for (j = (xs == ys)? 1: (xs - ys + 1); j < xs; j++) q[i] = 0;
+	//for (i = (xs == ys)? 1: (xs - ys + 1); i < xs; i++) q[i] = 0;
+
+/*
+	printf ("q => ");
 	for (i = xs ; i > 0; ) printf ("%08x ", q[--i]);
 	printf ("\n");
+	printf ("r => ");
+	for (i = ys ; i > 0; ) printf ("%08x ", r[--i]);
+	printf ("\n"); */
 }
 #endif
 
