@@ -1117,6 +1117,23 @@ static MOO_INLINE void multiply_unsigned_array (const moo_liw_t* x, moo_oow_t xs
 		y = (moo_liw_t*)i;
 	}
 
+	if (ys == 1)
+	{
+		moo_lidw_t dw;
+		moo_liw_t carry = 0;
+		moo_oow_t i;
+
+		for (i = 0; i < xs; i++)
+		{
+			dw = ((moo_lidw_t)x[i] * y[0]) + carry;
+			carry = (moo_liw_t)(dw >> MOO_LIW_BITS);
+			z[i] = (moo_liw_t)dw;
+		}
+
+		z[i] = carry;
+		return;
+	}
+
 	pa = xs;
 	if (pa <= ((moo_oow_t)1 << (MOO_LIDW_BITS - (MOO_LIW_BITS * 2))))
 	{
@@ -1271,6 +1288,23 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 		y = (moo_liw_t*)i;
 	}
 
+	if (ys == 1)
+	{
+		moo_lidw_t dw;
+		moo_liw_t carry = 0;
+		moo_oow_t i;
+
+		for (i = 0; i < xs; i++)
+		{
+			dw = ((moo_lidw_t)x[i] * y[0]) + carry;
+			carry = (moo_liw_t)(dw >> MOO_LIW_BITS);
+			z[i] = (moo_liw_t)dw;
+		}
+
+		z[i] = carry;
+		return;
+	}
+
 	/* calculate value of nshifts, that is 2^(MOO_LIW_BITS*nshifts) */
 	nshifts = (xs + 1) / 2;
 
@@ -1295,10 +1329,10 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	if (!tmp[0]) goto oops;
 
 	/* tmp[0] = a0 + a1 */
-	tmplen[0] = add_unsigned_array (x, ndigits_xl, x + nshifts, ndigits_xh, tmp[0]);
+	tmplen[0] = add_unsigned_array(x, ndigits_xl, x + nshifts, ndigits_xh, tmp[0]);
 
 	/* tmp[1] = b0 + b1 */
-	tmplen[1] = add_unsigned_array (y, ndigits_yl, y + nshifts, ndigits_yh, tmp[1]);
+	tmplen[1] = add_unsigned_array(y, ndigits_yl, y + nshifts, ndigits_yh, tmp[1]);
 
 	/*MOO_DEBUG6 (moo, "karatsuba t %p u %p ndigits_xl %d ndigits_xh %d ndigits_yl %d ndigits_yh %d\n", tmp[0], tmp[1], (int)ndigits_xl, (int)ndigits_xh, (int)ndigits_yl, (int)ndigits_yh);*/
 	/*MOO_DEBUG5 (moo, "zcapa %d, tmplen[0] %d tmplen[1] %d nshifts %d total %d\n", (int)zcapa, (int)tmplen[0], (int)tmplen[1], (int)nshifts, (int)(tmplen[0] + tmplen[1] + nshifts));*/
@@ -1389,6 +1423,23 @@ oops:
 		i = (moo_oow_t)x;
 		x = y;
 		y = (moo_liw_t*)i;
+	}
+
+	if (ys == 1)
+	{
+		moo_lidw_t dw;
+		moo_liw_t carry = 0;
+		moo_oow_t i;
+
+		for (i = 0; i < xs; i++)
+		{
+			dw = ((moo_lidw_t)x[i] * y[0]) + carry;
+			carry = (moo_liw_t)(dw >> MOO_LIW_BITS);
+			z[i] = (moo_liw_t)dw;
+		}
+
+		z[i] = carry;
+		return;
 	}
 
 	/* calculate value of nshifts, that is 2^(MOO_LIW_BITS*nshifts) */
@@ -1631,6 +1682,7 @@ static moo_liw_t adjust_for_over_estimate (moo_liw_t y1, moo_liw_t y2, moo_liw_t
 	y2q = (moo_liw_t)dw;
 
 	if (c > xi || (c == xi && y2q > xi2)) 
+	//if (c > xi || (c == xi && xi2 > y2q)) 
 	{
 		--quo; /* too large by 1 */
 
@@ -1649,21 +1701,6 @@ static moo_liw_t adjust_for_over_estimate (moo_liw_t y1, moo_liw_t y2, moo_liw_t
 	return quo;
 }
 
-static moo_liw_t adjust_for_over_estimate2 (moo_liw_t y1, moo_liw_t y2, moo_liw_t quo, moo_liw_t xhi, moo_liw_t xlo, moo_liw_t x2) 
-{
-	moo_lidw_t dw1, dw2;
-
-	dw1 = ((moo_lidw_t)quo * y2);
-	dw2 = (((moo_lidw_t)quo * xhi + xlo - ((moo_lidw_t)quo * y1)) << MOO_LIW_BITS) + x2;
-	if (dw1 > dw2)
-	{
-		quo--;
-		dw1 = ((moo_lidw_t)quo * y2);
-		dw2 = (((moo_lidw_t)quo * xhi + xlo - ((moo_lidw_t)quo * y1)) << MOO_LIW_BITS) + x2;
-		if (dw1 > dw2) quo--;
-	}
-	return quo;
-}
 
 static moo_liw_t adjust_for_underflow (moo_liw_t* qr, moo_liw_t* divisor, moo_oow_t qr_start, moo_oow_t stop) 
 {
@@ -1795,7 +1832,12 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 
 	for (i = xs; i >= ys; --i)
 	{
+		moo_lidw_t dw;
 		moo_liw_t quo, b, xhi, xlo;
+
+		/* ---------------------------------------------------------- */
+		/* estimate the quotient.
+		 *  2-current-dividend-words / 2-most-significant-divisor-words */
 
 		xhi = q[i];
 		xlo = q[i - 1];
@@ -1806,16 +1848,57 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		}
 		else
 		{
-			moo_lidw_t dw;
 			dw = ((moo_lidw_t)xhi << MOO_LIW_BITS) + xlo;
 			/* TODO: optimize it with ASM - no seperate / and % */
 			quo = (moo_liw_t)(dw / y1);
 			q[i] = (moo_liw_t)(dw % y1); 
 		}
 
-		quo = adjust_for_over_estimate(y1, y2, quo, q[i], q[i - 2]);
-		/*quo = adjust_for_over_estimate2(y1, y2, quo, xhi, xlo, q[i - 2]);*/
+		/* ---------------------------------------------------------- */
+		/*quo = adjust_for_over_estimate(y1, y2, quo, q[i], q[i - 2]);*/
+	{
+		moo_liw_t c, c2, y2q;
 
+		dw = ((moo_lidw_t)quo * y2);
+		c = (moo_liw_t)(dw >> MOO_LIW_BITS);
+		y2q = (moo_liw_t)dw;
+
+/*
+x1 => c
+x2 => y2q
+ujn2 => q[i - 2]
+rhat => q[i]
+
+for greaterThan(x1, x2, rhat, ujn2) 
+
+func greaterThan(x1, x2, y1, y2 Word) bool {
+	return x1 > y1 || x1 == y1 && x2 > y2
+}*/
+
+//printf ("XXXXXXXXXXXXXXXXXXXXXx %d %d\n", (int)xs, (int)i);
+		if (c > q[i] || (c == q[i] && y2q > q[i - 2])) 
+		{
+//printf ("ADJUST...............%llu %llu %llu %llu\n", (unsigned long long)c,  (unsigned long long)q[i],  (unsigned long long)y2q,  (unsigned long long)q[i - 2]);
+			--quo; /* too large by 1 */
+
+			/*xpy(xi, y1, c2); add back divisor */
+			c2 = (moo_liw_t)(((moo_lidw_t)q[i] + y1) >> MOO_LIW_BITS);
+			if (c2 == 0) 
+			{
+				/*y2q = axpy(y2, q, 0, c);*/
+				dw = ((moo_lidw_t)quo * y2);
+				c = (moo_liw_t)(dw >> MOO_LIW_BITS);
+				y2q = (moo_liw_t)dw;
+				if (c > q[i] || (c == q[i] && y2q > q[i - 2])) 
+				{
+//printf ("ADJUST2...............%llu %llu %llu %llu\n", (unsigned long long)c,  (unsigned long long)q[i],  (unsigned long long)y2q,  (unsigned long long)q[i - 2]);
+					--quo; /* too large by 2 */
+				}
+			}
+		}
+	}
+
+		/* ---------------------------------------------------------- */
 		b = calculate_remainder(moo, q, r, quo, i - ys, ys);
 		b = (moo_liw_t)((((moo_lidw_t)xhi - b) >> MOO_LIW_BITS) & 1);
 		if (b)
@@ -1874,7 +1957,7 @@ static moo_oow_t nlz (moo_liw_t x)
 static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs, const moo_liw_t* y, moo_oow_t ys, moo_liw_t* q, moo_liw_t* r)
 {
 	moo_oow_t i, j, s;
-	moo_lidw_t dw, qhat, rhat, b;
+	moo_lidw_t dw, qhat, rhat;
 	moo_lidi_t t, k;
 	moo_liw_t* qq;
 
@@ -1912,7 +1995,6 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		moo->inttostr.t.ptr = t;
 	}
 
-	b = (moo_lidw_t)MOO_TYPE_MAX(moo_liw_t) + 1;
 	qq = moo->inttostr.t.ptr;
 
 /*
@@ -1950,19 +2032,23 @@ printf ("};\n"); */
 	{
 		--j;
 
-		dw = (moo_lidw_t)qq[j + ys] * b + qq[j + ys - 1];
+		/* estimate */
+		dw = ((moo_lidw_t)qq[j + ys] << MOO_LIW_BITS) + qq[j + ys - 1];
 		qhat = dw / r[ys - 1];
 		rhat = dw - (qhat * r[ys - 1]);
 
  //printf ("qhat == %llx rhat == %llx dw = %llx r[ys-1]  = %llx   /// %llx %llx\n", (unsigned long long)qhat, (unsigned long long)rhat, (unsigned long long)dw, (unsigned long long)r[ys-1], (unsigned long long)qq[j + ys], (unsigned long long)qq[j + ys - 1]);
-	again:
-		if (qhat >= b || (qhat * r[ys - 2]) > (rhat * b + qq[j + ys - 2]))
+	adjust_quotient:
+		if (qhat > MOO_TYPE_MAX(moo_liw_t) || (qhat * r[ys - 2]) > ((rhat << MOO_LIW_BITS) + qq[j + ys - 2]))
 		{
 			qhat = qhat - 1;
 			rhat = rhat + r[ys - 1];
-			if (rhat < b) goto again;
+			if (rhat <= MOO_TYPE_MAX(moo_liw_t)) goto adjust_quotient;
 		}
+
 //printf ("qhat == %llx rhat == %llx\n", (unsigned long long)qhat, (unsigned long long)rhat);
+#if 1
+		/* multiply and subtract */
 		for (k = 0, i = 0; i < ys; i++)
 		{
 			dw = qhat * r[i];
@@ -1973,6 +2059,7 @@ printf ("};\n"); */
 		t = qq[j + ys] - k;
 		qq[j + ys] = t;
 
+		/* test remainder */
 		q[j] = qhat;
 		if (t < 0)
 		{
@@ -1980,11 +2067,40 @@ printf ("};\n"); */
 			for (k = 0, i = 0; i < ys; i++)
 			{
 				t = (moo_lidw_t)qq[j + i] + r[i] + k;
-				qq[j + i] = t;
+				qq[j + i] = (moo_liw_t)t;
 				k = t >> MOO_LIW_BITS;
 			}
 			qq[j + ys] += k;
 		}
+#else
+
+		for (k = 0, i = 0; i <= n; i++) 
+		{
+			p = qhat * (i == n ? 0 : v[i]);
+			k2 = (p >> 16);
+
+			d = u[j + i] - (uint16_t)p;
+			k2 += (d > u[j + i]);
+
+			u[j + i] = d - k;
+			k2 += (u[j + i] > d);
+
+			k = k2;
+		}
+
+		/* Test remainder. */
+		q[j] = qhat;
+		if (k != 0) {
+		    /* Add back. */
+		    q[j]--;
+		    k = 0;
+		    for (i = 0; i < n; i++) {
+				  t = u[j + i] + v[i] + k;
+				  u[j + i] = (uint16_t)t;
+				  k = t >> 16;
+		    }
+		 
+#endif
 	}
 
 	for (i = 0; i < ys - 1; i++)
@@ -2078,7 +2194,7 @@ static moo_oop_t multiply_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t 
 	if (!z) return MOO_NULL;
 
 #if defined(MOO_ENABLE_KARATSUBA)
-	if (CANNOT_KARATSUBA(moo,xs, ys))
+	if (CANNOT_KARATSUBA(moo, xs, ys))
 	{
 #endif
 		multiply_unsigned_array (
@@ -2132,7 +2248,7 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 	MOO_ASSERT (moo, !is_less_unsigned(x, y)); 
 	moo_pushvolat (moo, &x);
 	moo_pushvolat (moo, &y);
-/*#define USE_DIVIDE_UNSIGNED_ARRAY2*/
+#define USE_DIVIDE_UNSIGNED_ARRAY2
 #if defined(USE_DIVIDE_UNSIGNED_ARRAY2)
 	qq = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(x) + 1);
 #else
