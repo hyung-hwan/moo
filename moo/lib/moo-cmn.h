@@ -853,6 +853,16 @@ typedef struct moo_t moo_t;
 		#define MOO_HAVE_BUILTIN_CTZLL
 	#endif
 
+	#if __has_builtin(__builtin_clz)
+		#define MOO_HAVE_BUILTIN_CLZ
+	#endif
+	#if __has_builtin(__builtin_clzl)
+		#define MOO_HAVE_BUILTIN_CLZL
+	#endif
+	#if __has_builtin(__builtin_clzll)
+		#define MOO_HAVE_BUILTIN_CLZLL
+	#endif
+
 	#if __has_builtin(__builtin_uadd_overflow)
 		#define MOO_HAVE_BUILTIN_UADD_OVERFLOW 
 	#endif

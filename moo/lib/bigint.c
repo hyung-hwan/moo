@@ -134,6 +134,41 @@ static const moo_uint8_t debruijn_64[64] =
 #	define LOG2_FOR_POW2_64(x) (debruijn_64[(moo_uint64_t)((moo_uint64_t)(x) * 0x022fdd63cc95386d) >> 58])
 #endif
 
+static MOO_INLINE int get_num_leading_zero_bits (moo_oow_t x)
+{
+#if defined(MOO_HAVE_BUILTIN_CLZLL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG_LONG)
+	return __builtin_clzll(x); /* count the number of leading zeros */
+#elif defined(MOO_HAVE_BUILTIN_CLZL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG)
+	return __builtin_clzl(x); /* count the number leading zeros */
+#elif defined(MOO_HAVE_BUILTIN_CLZ) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_INT)
+	return __builtin_clz(x); /* count the number of leading zeros */
+#elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
+	/* bit scan reverse. not all x86 CPUs have LZCNT. */
+	moo_oow_t pos;
+	__asm__ volatile (
+		"bsr %1,%0\n\t"
+		: "=r"(pos) /* output */
+		: "r"(x) /* input */
+	);
+	return (int)((MOO_SIZEOF(pos) * 8) - pos);
+#elif defined(__GNUC__) && (defined(__arm__)
+	moo_oow_t count;
+	__asm__ volatile (
+		"clz %0,%1\n\t"
+		: "=r"(count) /* output */
+		: "r"(x) /* input */
+	);
+	return (int)count;
+#else
+	int count = 0;
+	while (x >= 0) 
+	{
+		x <<= 1;
+		count++;
+	}
+#endif
+}
+
 static MOO_INLINE int get_pos_of_msb_set (moo_oow_t x)
 {
 	/* the caller must ensure that x is power of 2. if x happens to be zero,
@@ -1802,20 +1837,17 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 	for (i = 0; i < ys; i++) r[i] = y[i]; /* copy y to r */
 
 	y1 = r[ys - 1]; /* highest divisor word */
-	d = (y1 == MOO_TYPE_MAX(moo_liw_t)? ((moo_liw_t)1): ((moo_liw_t)(((moo_lidw_t)1 << MOO_LIW_BITS) / (y1 + 1))));
+
+
+	//d = (y1 == MOO_TYPE_MAX(moo_liw_t)? ((moo_liw_t)1): ((moo_liw_t)(((moo_lidw_t)1 << MOO_LIW_BITS) / (y1 + 1))));
+	d = (moo_liw_t)(((moo_lidw_t)1 << MOO_LIW_BITS) / ((moo_lidw_t)y1 + 1));
 	if (d > 1)
 	{
 		moo_lidw_t dw;
 		moo_liw_t carry;
 
-		/* q = q * d */
-		for (carry = 0, i = 0; i < xs; i++)
-		{
-			dw = ((moo_lidw_t)q[i] * d) + carry;
-			carry = (moo_liw_t)(dw >> MOO_LIW_BITS);
-			q[i] = (moo_liw_t)dw;
-		}
-		q[xs] = carry;
+		/* shift the divisor such that its high-order bit is on.
+		 * shift the dividend the same amount as the previous step */
 
 		/* r = r * d */
 		for (carry = 0, i = 0; i < ys; i++)
@@ -1825,6 +1857,15 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 			r[i] = (moo_liw_t)dw;
 		}
 		MOO_ASSERT (moo, carry == 0);
+
+		/* q = q * d */
+		for (carry = 0, i = 0; i < xs; i++)
+		{
+			dw = ((moo_lidw_t)q[i] * d) + carry;
+			carry = (moo_liw_t)(dw >> MOO_LIW_BITS);
+			q[i] = (moo_liw_t)dw;
+		}
+		q[xs] = carry;
 	}
 
 	y1 = r[ys - 1];
@@ -1842,6 +1883,7 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		xhi = q[i];
 		xlo = q[i - 1];
 
+//printf ("AAAAAAAAAAAaa %llx %llx\n", (unsigned long long)xhi, (unsigned long long)y1);
 		if (xhi == y1) 
 		{
 			quo = MOO_TYPE_MAX(moo_liw_t);
@@ -1850,60 +1892,57 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		{
 			dw = ((moo_lidw_t)xhi << MOO_LIW_BITS) + xlo;
 			/* TODO: optimize it with ASM - no seperate / and % */
-			quo = (moo_liw_t)(dw / y1);
-			q[i] = (moo_liw_t)(dw % y1); 
+			quo = (moo_liw_t)(dw / y1); /* qhat */
+			q[i] = (moo_liw_t)(dw % y1);  /* rhat */
+
+MOO_ASSERT (moo, (dw / y1) == quo);
 		}
 
 		/* ---------------------------------------------------------- */
 		/*quo = adjust_for_over_estimate(y1, y2, quo, q[i], q[i - 2]);*/
-	{
-		moo_liw_t c, c2, y2q;
 
+//printf ("qhat == %llx rhat == %llx dw = %llx r[ys-1]  = %llx   /// %llx %llx\n", (unsigned long long)qhat, (unsigned long long)rhat, (unsigned long long)dw, (unsigned long long)r[ys-1], (unsigned long long)qq[j + ys], (unsigned long long)qq[j + ys - 1]);
+#if 0
+{
+moo_lidw_t rhat = q[i];
+	adjust_quotient:
+		if (quo > MOO_TYPE_MAX(moo_liw_t) || ((moo_lidw_t)quo * y2) > (((moo_lidw_t)rhat << MOO_LIW_BITS) + q[i - 2]))
+		{
+			quo = quo - 1;
+			rhat = rhat + y1;
+			if (rhat <= MOO_TYPE_MAX(moo_liw_t)) goto adjust_quotient;
+		}
+}
+#else
+	{
+		moo_liw_t c, c2, y2q, rhat;
+
+//printf ("XXXXXXXXXXXXXXXXXXXXXx %d %d\n", (int)xs, (int)i);
+rhat = q[i];
+adjust_quotient:
 		dw = ((moo_lidw_t)quo * y2);
 		c = (moo_liw_t)(dw >> MOO_LIW_BITS);
 		y2q = (moo_liw_t)dw;
-
-/*
-x1 => c
-x2 => y2q
-ujn2 => q[i - 2]
-rhat => q[i]
-
-for greaterThan(x1, x2, rhat, ujn2) 
-
-func greaterThan(x1, x2, y1, y2 Word) bool {
-	return x1 > y1 || x1 == y1 && x2 > y2
-}*/
-
-//printf ("XXXXXXXXXXXXXXXXXXXXXx %d %d\n", (int)xs, (int)i);
-		if (c > q[i] || (c == q[i] && y2q > q[i - 2])) 
+		if (c > rhat || (c == rhat && y2q > q[i - 2])) 
 		{
 //printf ("ADJUST...............%llu %llu %llu %llu\n", (unsigned long long)c,  (unsigned long long)q[i],  (unsigned long long)y2q,  (unsigned long long)q[i - 2]);
-			--quo; /* too large by 1 */
+			--quo; /* too large */
 
-			/*xpy(xi, y1, c2); add back divisor */
-			c2 = (moo_liw_t)(((moo_lidw_t)q[i] + y1) >> MOO_LIW_BITS);
-			if (c2 == 0) 
+			dw = (moo_lidw_t)q[i] + y1; /* add back the divisor */
+			if (dw <= MOO_TYPE_MAX(moo_liw_t)) /* if ((dw >> MOO_LIW_BITS) == 0) */
 			{
-				/*y2q = axpy(y2, q, 0, c);*/
-				dw = ((moo_lidw_t)quo * y2);
-				c = (moo_liw_t)(dw >> MOO_LIW_BITS);
-				y2q = (moo_liw_t)dw;
-				if (c > q[i] || (c == q[i] && y2q > q[i - 2])) 
-				{
-//printf ("ADJUST2...............%llu %llu %llu %llu\n", (unsigned long long)c,  (unsigned long long)q[i],  (unsigned long long)y2q,  (unsigned long long)q[i - 2]);
-					--quo; /* too large by 2 */
-				}
+				rhat = (moo_liw_t)dw;
+				goto adjust_quotient;
 			}
 		}
 	}
-
+#endif
 		/* ---------------------------------------------------------- */
 		b = calculate_remainder(moo, q, r, quo, i - ys, ys);
-		b = (moo_liw_t)((((moo_lidw_t)xhi - b) >> MOO_LIW_BITS) & 1);
+		b = (moo_liw_t)((((moo_lidw_t)xhi - b) >> MOO_LIW_BITS) & 1); /* is the sign bit set? */
 		if (b)
 		{
-			/* underflow */
+			/* yes. underflow */
 			b = adjust_for_underflow(q, r, i - ys, ys);
 			MOO_ASSERT (moo, b == 1);
 			q[i] = quo - 1;
@@ -1938,28 +1977,12 @@ func greaterThan(x1, x2, y1, y2 Word) bool {
 }
 
 
-static moo_oow_t nlz (moo_liw_t x) 
-{
-   moo_oow_t n;
-
-   if (x == 0) return(32);
-
-   n = 0;
-   if (x <= 0x0000FFFF) {n = n +16; x = x <<16;}
-   if (x <= 0x00FFFFFF) {n = n + 8; x = x << 8;}
-   if (x <= 0x0FFFFFFF) {n = n + 4; x = x << 4;}
-   if (x <= 0x3FFFFFFF) {n = n + 2; x = x << 2;}
-   if (x <= 0x7FFFFFFF) {n = n + 1;}
-
-   return n;
-}
-
 static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs, const moo_liw_t* y, moo_oow_t ys, moo_liw_t* q, moo_liw_t* r)
 {
-	moo_oow_t i, j, s;
+	moo_oow_t s, i, j, g;
 	moo_lidw_t dw, qhat, rhat;
 	moo_lidi_t t, k;
-	moo_liw_t* qq;
+	moo_liw_t* qq, y1, y2;
 
 	/* the caller must ensure:
 	 *  - q can hold 'xs + 1' words and r can hold 'ys' words. 
@@ -2007,7 +2030,7 @@ for (i = 0; i < ys; i++) printf ("0x%llx, ", (unsigned long long)y[i]);
 printf ("};\n"); */
 //for (i = 0; i <= xs; i++) printf ("un %llx\n", (unsigned long long)q[i]);
 
-	s = nlz(y[ys - 1]);
+	s = get_num_leading_zero_bits(y[ys - 1]);
 	for (i = ys; i > 1; )
 	{
 		--i;
@@ -2028,79 +2051,62 @@ printf ("};\n"); */
 //for (i = 0; i < ys; i++) printf ("vn %llx\n", (unsigned long long)r[i]);
 //for (i = 0; i <= xs; i++) printf ("un %llx\n", (unsigned long long)qq[i]);
 
+	y1 = r[ys - 1];
+	y2 = r[ys - 2];
+
+/*
 	for (j = xs - ys + 1; j > 0; )
 	{
 		--j;
+*/
+
+
+	for (j = xs; j >= ys; --j)
+	{
+		g = j - ys; /* position where remainder begins in qq */
 
 		/* estimate */
-		dw = ((moo_lidw_t)qq[j + ys] << MOO_LIW_BITS) + qq[j + ys - 1];
-		qhat = dw / r[ys - 1];
-		rhat = dw - (qhat * r[ys - 1]);
+		dw = ((moo_lidw_t)qq[j] << MOO_LIW_BITS) + qq[j - 1];
+		qhat = dw / y1;
+		rhat = dw - (qhat * y1);
 
  //printf ("qhat == %llx rhat == %llx dw = %llx r[ys-1]  = %llx   /// %llx %llx\n", (unsigned long long)qhat, (unsigned long long)rhat, (unsigned long long)dw, (unsigned long long)r[ys-1], (unsigned long long)qq[j + ys], (unsigned long long)qq[j + ys - 1]);
 	adjust_quotient:
-		if (qhat > MOO_TYPE_MAX(moo_liw_t) || (qhat * r[ys - 2]) > ((rhat << MOO_LIW_BITS) + qq[j + ys - 2]))
+		if (qhat > MOO_TYPE_MAX(moo_liw_t) || (qhat * y2) > ((rhat << MOO_LIW_BITS) + qq[j - 2]))
 		{
 			qhat = qhat - 1;
-			rhat = rhat + r[ys - 1];
+			rhat = rhat + y1;
 			if (rhat <= MOO_TYPE_MAX(moo_liw_t)) goto adjust_quotient;
 		}
 
 //printf ("qhat == %llx rhat == %llx\n", (unsigned long long)qhat, (unsigned long long)rhat);
-#if 1
 		/* multiply and subtract */
 		for (k = 0, i = 0; i < ys; i++)
 		{
 			dw = qhat * r[i];
-			t = qq[j + i] - k - (dw & MOO_TYPE_MAX(moo_liw_t));
-			qq[j + i] = t;
+			t = qq[g + i] - k - (dw & MOO_TYPE_MAX(moo_liw_t));
+			qq[g + i] = t;
 			k = (dw >> MOO_LIW_BITS) - (t >> MOO_LIW_BITS);
 		}
-		t = qq[j + ys] - k;
-		qq[j + ys] = t;
+		MOO_ASSERT (moo, j == g + ys);
+		t = qq[j] - k;
+		qq[j] = t;
 
 		/* test remainder */
-		q[j] = qhat;
+		q[g] = qhat; /* store quotient */
 		if (t < 0)
 		{
-			q[j] = q[j] - 1;
+			q[g] = q[g] - 1; /* add back */
+
 			for (k = 0, i = 0; i < ys; i++)
 			{
-				t = (moo_lidw_t)qq[j + i] + r[i] + k;
-				qq[j + i] = (moo_liw_t)t;
+				t = (moo_lidw_t)qq[g + i] + r[i] + k;
+				qq[g + i] = (moo_liw_t)t;
 				k = t >> MOO_LIW_BITS;
 			}
-			qq[j + ys] += k;
+			MOO_ASSERT (moo, j == g + ys);
+			qq[j] += k;
 		}
-#else
-
-		for (k = 0, i = 0; i <= n; i++) 
-		{
-			p = qhat * (i == n ? 0 : v[i]);
-			k2 = (p >> 16);
-
-			d = u[j + i] - (uint16_t)p;
-			k2 += (d > u[j + i]);
-
-			u[j + i] = d - k;
-			k2 += (u[j + i] > d);
-
-			k = k2;
-		}
-
-		/* Test remainder. */
-		q[j] = qhat;
-		if (k != 0) {
-		    /* Add back. */
-		    q[j]--;
-		    k = 0;
-		    for (i = 0; i < n; i++) {
-				  t = u[j + i] + v[i] + k;
-				  u[j + i] = (uint16_t)t;
-				  k = t >> 16;
-		    }
-		 
-#endif
 	}
 
 	for (i = 0; i < ys - 1; i++)
@@ -2270,7 +2276,7 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 	if (!rr) return MOO_NULL;
 
 #if defined(USE_DIVIDE_UNSIGNED_ARRAY2)
-	divide_unsigned_array3 (moo,
+	divide_unsigned_array2 (moo,
 #else
 	divide_unsigned_array (moo,
 #endif
@@ -2896,7 +2902,6 @@ oops_einval:
 	moo_seterrbfmt (moo, MOO_EINVAL, "invalid parameters - %O, %O", x, y);
 	return MOO_NULL;
 }
-
 
 moo_oop_t moo_negateint (moo_t* moo, moo_oop_t x)
 {
