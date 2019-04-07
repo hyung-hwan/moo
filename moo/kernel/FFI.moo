@@ -65,5 +65,7 @@ class FFI(Object)
 
 		rc := self.ffi call(f, sig, args).
 		if (rc isError)	{ FFIException signal: ('Unable to call %s' strfmt(name)) }.
+
+		^rc.
 	}
 }

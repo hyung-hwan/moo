@@ -216,6 +216,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		i++;
 	}
 
+	/* check argument signature */
 	for (j = 0; i < MOO_OBJ_GET_SIZE(sig); i++)
 	{
 		moo_ooch_t fmtc;
@@ -344,6 +345,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	if (i >= MOO_OBJ_GET_SIZE(sig)) goto call_void;
 
+	/* check the return value type in signature */
 	switch (MOO_OBJ_GET_CHAR_VAL(sig, i))
 	{
 /* TODO: support more types... */
