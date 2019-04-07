@@ -134,42 +134,7 @@ static const moo_uint8_t debruijn_64[64] =
 #	define LOG2_FOR_POW2_64(x) (debruijn_64[(moo_uint64_t)((moo_uint64_t)(x) * 0x022fdd63cc95386d) >> 58])
 #endif
 
-static MOO_INLINE int get_num_leading_zero_bits (moo_oow_t x)
-{
-#if defined(MOO_HAVE_BUILTIN_CLZLL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG_LONG)
-	return __builtin_clzll(x); /* count the number of leading zeros */
-#elif defined(MOO_HAVE_BUILTIN_CLZL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG)
-	return __builtin_clzl(x); /* count the number leading zeros */
-#elif defined(MOO_HAVE_BUILTIN_CLZ) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_INT)
-	return __builtin_clz(x); /* count the number of leading zeros */
-#elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
-	/* bit scan reverse. not all x86 CPUs have LZCNT. */
-	moo_oow_t pos;
-	__asm__ volatile (
-		"bsr %1,%0\n\t"
-		: "=r"(pos) /* output */
-		: "r"(x) /* input */
-	);
-	return (int)((MOO_SIZEOF(pos) * 8) - pos);
-#elif defined(__GNUC__) && (defined(__arm__)
-	moo_oow_t count;
-	__asm__ volatile (
-		"clz %0,%1\n\t"
-		: "=r"(count) /* output */
-		: "r"(x) /* input */
-	);
-	return (int)count;
-#else
-	int count = 0;
-	while (x >= 0) 
-	{
-		x <<= 1;
-		count++;
-	}
-#endif
-}
-
-static MOO_INLINE int get_pos_of_msb_set (moo_oow_t x)
+static MOO_INLINE int get_pos_of_msb_set_pow2 (moo_oow_t x)
 {
 	/* the caller must ensure that x is power of 2. if x happens to be zero,
 	 * the return value is undefined as each method used may give different result. */
@@ -196,22 +161,53 @@ static MOO_INLINE int get_pos_of_msb_set (moo_oow_t x)
 	);
 #endif
 	return (int)pos;
-#elif defined(USE_UGLY_CODE) && defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH_5__) || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__))
-	moo_oow_t pos;
-
+#elif defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH_5__) || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__))
+	moo_oow_t n;
 	/* CLZ is available in ARMv5T and above. there is no instruction to
 	 * count trailing zeros or something similar. using RBIT with CLZ
 	 * would be good in ARMv6T2 and above to avoid further calculation
 	 * afte CLZ */
 	__asm__ volatile (
 		"clz %0,%1\n\t"
+		: "=r"(n) /* output */
+		: "r"(x) /* input */
+	);
+	return (int)(MOO_OOW_BITS - n - 1); 
+	/* TODO: PPC - use cntlz, cntlzw, cntlzd, SPARC - use lzcnt, MIPS clz */
+#else
+	int pos = 0;
+	while (x >>= 1) pos++;
+	return pos;
+#endif
+}
+
+static MOO_INLINE int get_pos_of_msb_set (moo_oow_t x)
+{
+	/* x doesn't have to be power of 2. if x is zero, the result is undefined */
+#if defined(MOO_HAVE_BUILTIN_CLZLL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG_LONG)
+	return MOO_OOW_BITS - __builtin_clzll(x) - 1; /* count the number of leading zeros */
+#elif defined(MOO_HAVE_BUILTIN_CLZL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG)
+	return MOO_OOW_BITS - __builtin_clzl(x) - 1; /* count the number of leading zeros */
+#elif defined(MOO_HAVE_BUILTIN_CLZ) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_INT)
+	return MOO_OOW_BITS - __builtin_clz(x) - 1; /* count the number of leading zeros */
+#elif !defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
+	/* bit scan reverse. not all x86 CPUs have LZCNT. */
+	moo_oow_t pos;
+	__asm__ volatile (
+		"bsr %1,%0\n\t"
 		: "=r"(pos) /* output */
 		: "r"(x) /* input */
 	);
-	return (int)((MOO_SIZEOF(pos) * 8) - pos - 1); 
-
+	return (int)pos;
+#elif defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH_5__) || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__))
+	moo_oow_t n;
+	__asm__ volatile (
+		"clz %0,%1\n\t"
+		: "=r"(n) /* output */
+		: "r"(x) /* input */
+	);
+	return (int)(MOO_OOW_BITS - n - 1); 
 	/* TODO: PPC - use cntlz, cntlzw, cntlzd, SPARC - use lzcnt, MIPS clz */
-
 #else
 	int pos = 0;
 	while (x >>= 1) pos++;
@@ -224,7 +220,7 @@ static MOO_INLINE int get_pos_of_msb_set (moo_oow_t x)
 #elif defined(MOO_HAVE_UINT64_T) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_UINT64_T)
 #	define LOG2_FOR_POW2(x) LOG2_FOR_POW2_64(x)
 #else
-#	define LOG2_FOR_POW2(x) get_pos_of_msb_set(x)
+#	define LOG2_FOR_POW2(x) get_pos_of_msb_set_pow2(x)
 #endif
 
 
@@ -1337,7 +1333,7 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 		}
 
 		z[i] = carry;
-		return;
+		return count_effective(z, xs + 1);
 	}
 
 	/* calculate value of nshifts, that is 2^(MOO_LIW_BITS*nshifts) */
@@ -1787,25 +1783,6 @@ static moo_liw_t calculate_remainder (moo_t* moo, moo_liw_t* qr, moo_liw_t* y, m
 	return b;
 }
 
-static moo_liw_t multiply_unsigned_array_in_place_and_get_carry (moo_liw_t* x, moo_oow_t xs, moo_liw_t y) 
-{
-	/* multiply unsigned array with a single word and put the result 
-	 * back to the array. return the last remaining carry */
-
-	moo_lidw_t dw;
-	moo_liw_t carry = 0;
-	moo_oow_t i;
-
-	for (i = 0; i < xs; i++)
-	{
-		dw = ((moo_lidw_t)x[i] * y) + carry;
-		carry = (moo_liw_t)(dw >> MOO_LIW_BITS);
-		x[i] = (moo_liw_t)dw;
-	}
-
-	return carry;
-}
-
 static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs, const moo_liw_t* y, moo_oow_t ys, moo_liw_t* q, moo_liw_t* r)
 {
 	moo_oow_t i;
@@ -1838,8 +1815,7 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 
 	y1 = r[ys - 1]; /* highest divisor word */
 
-
-	//d = (y1 == MOO_TYPE_MAX(moo_liw_t)? ((moo_liw_t)1): ((moo_liw_t)(((moo_lidw_t)1 << MOO_LIW_BITS) / (y1 + 1))));
+	/*d = (y1 == MOO_TYPE_MAX(moo_liw_t)? ((moo_liw_t)1): ((moo_liw_t)(((moo_lidw_t)1 << MOO_LIW_BITS) / (y1 + 1))));*/
 	d = (moo_liw_t)(((moo_lidw_t)1 << MOO_LIW_BITS) / ((moo_lidw_t)y1 + 1));
 	if (d > 1)
 	{
@@ -1874,7 +1850,7 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 	for (i = xs; i >= ys; --i)
 	{
 		moo_lidw_t dw;
-		moo_liw_t quo, b, xhi, xlo;
+		moo_liw_t quo, b, xhi, xlo, rem;
 
 		/* ---------------------------------------------------------- */
 		/* estimate the quotient.
@@ -1883,59 +1859,49 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		xhi = q[i];
 		xlo = q[i - 1];
 
-//printf ("AAAAAAAAAAAaa %llx %llx\n", (unsigned long long)xhi, (unsigned long long)y1);
+/*
 		if (xhi == y1) 
 		{
 			quo = MOO_TYPE_MAX(moo_liw_t);
+			rem = 0;
 		}
 		else
 		{
+*/
 			dw = ((moo_lidw_t)xhi << MOO_LIW_BITS) + xlo;
 			/* TODO: optimize it with ASM - no seperate / and % */
-			quo = (moo_liw_t)(dw / y1); /* qhat */
-			q[i] = (moo_liw_t)(dw % y1);  /* rhat */
+			quo = (moo_liw_t)(dw / y1);
+			//q[i] = (moo_liw_t)(dw % y1);
+			rem = (moo_liw_t)(dw % y1);
 
-MOO_ASSERT (moo, (dw / y1) == quo);
-		}
+			MOO_ASSERT (moo, (dw / y1) == quo);
+/*
+		}*/
 
-		/* ---------------------------------------------------------- */
-		/*quo = adjust_for_over_estimate(y1, y2, quo, q[i], q[i - 2]);*/
-
-//printf ("qhat == %llx rhat == %llx dw = %llx r[ys-1]  = %llx   /// %llx %llx\n", (unsigned long long)qhat, (unsigned long long)rhat, (unsigned long long)dw, (unsigned long long)r[ys-1], (unsigned long long)qq[j + ys], (unsigned long long)qq[j + ys - 1]);
+		/* adjust the quotient if over-estimated */
 #if 0
-{
-moo_lidw_t rhat = q[i];
+		dw = (moo_lidw_t)rem;
 	adjust_quotient:
-		if (quo > MOO_TYPE_MAX(moo_liw_t) || ((moo_lidw_t)quo * y2) > (((moo_lidw_t)rhat << MOO_LIW_BITS) + q[i - 2]))
+		if (quo > MOO_TYPE_MAX(moo_liw_t) || ((moo_lidw_t)quo * y2) > ((dw << MOO_LIW_BITS) + q[i - 2]))
 		{
-			quo = quo - 1;
-			rhat = rhat + y1;
-			if (rhat <= MOO_TYPE_MAX(moo_liw_t)) goto adjust_quotient;
+			--quo;
+			dw += y1;
+			if (dw <= MOO_TYPE_MAX(moo_liw_t)) goto adjust_quotient;
 		}
-}
 #else
-	{
-		moo_liw_t c, c2, y2q, rhat;
-
-//printf ("XXXXXXXXXXXXXXXXXXXXXx %d %d\n", (int)xs, (int)i);
-rhat = q[i];
-adjust_quotient:
+	adjust_quotient:
 		dw = ((moo_lidw_t)quo * y2);
-		c = (moo_liw_t)(dw >> MOO_LIW_BITS);
-		y2q = (moo_liw_t)dw;
-		if (c > rhat || (c == rhat && y2q > q[i - 2])) 
+		b = (moo_liw_t)(dw >> MOO_LIW_BITS);
+		if (b > rem || (b == rem && (moo_liw_t)dw > q[i - 2])) 
 		{
-//printf ("ADJUST...............%llu %llu %llu %llu\n", (unsigned long long)c,  (unsigned long long)q[i],  (unsigned long long)y2q,  (unsigned long long)q[i - 2]);
 			--quo; /* too large */
-
-			dw = (moo_lidw_t)q[i] + y1; /* add back the divisor */
+			dw = (moo_lidw_t)rem + y1; /* add back the divisor */
 			if (dw <= MOO_TYPE_MAX(moo_liw_t)) /* if ((dw >> MOO_LIW_BITS) == 0) */
 			{
-				rhat = (moo_liw_t)dw;
+				rem = (moo_liw_t)dw;
 				goto adjust_quotient;
 			}
 		}
-	}
 #endif
 		/* ---------------------------------------------------------- */
 		b = calculate_remainder(moo, q, r, quo, i - ys, ys);
@@ -1975,7 +1941,6 @@ adjust_quotient:
 	for (; i <= xs; i++) { q[i - ys] = q[i]; q[i] = 0; }
 
 }
-
 
 static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs, const moo_liw_t* y, moo_oow_t ys, moo_liw_t* q, moo_liw_t* r)
 {
@@ -2017,27 +1982,18 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		moo->inttostr.t.capa = xs + 1;
 		moo->inttostr.t.ptr = t;
 	}
-
 	qq = moo->inttostr.t.ptr;
 
-/*
-printf ("------------------\n");
-printf ("unsigned u[] = {");
-for (i = 0; i < xs; i++ ) printf ("0x%llx, ", (unsigned long long)x[i]);
-printf ("};\n");
-printf ("unsigned v[] = {");
-for (i = 0; i < ys; i++) printf ("0x%llx, ", (unsigned long long)y[i]);
-printf ("};\n"); */
-//for (i = 0; i <= xs; i++) printf ("un %llx\n", (unsigned long long)q[i]);
-
-	s = get_num_leading_zero_bits(y[ys - 1]);
+	y1 = y[ys - 1];
+	/*s = MOO_LIW_BITS - ((y1 == 0)? -1: get_pos_of_msb_set(y1)) - 1;*/
+	MOO_ASSERT (moo, y1 > 0); /* the highest word can't be non-zero in the context where this function is called */
+	s = MOO_LIW_BITS - get_pos_of_msb_set(y1) - 1;
 	for (i = ys; i > 1; )
 	{
 		--i;
 		r[i] = (y[i] << s) | ((moo_lidw_t)y[i - 1] >> (MOO_LIW_BITS - s));
 	}
 	r[0] = y[0] << s;
-
 
 	qq[xs] = (moo_lidw_t)x[xs - 1] >> (MOO_LIW_BITS - s);
 	for (i = xs; i > 1; )
@@ -2047,19 +2003,8 @@ printf ("};\n"); */
 	}
 	qq[0] = x[0] << s;
 
-
-//for (i = 0; i < ys; i++) printf ("vn %llx\n", (unsigned long long)r[i]);
-//for (i = 0; i <= xs; i++) printf ("un %llx\n", (unsigned long long)qq[i]);
-
 	y1 = r[ys - 1];
 	y2 = r[ys - 2];
-
-/*
-	for (j = xs - ys + 1; j > 0; )
-	{
-		--j;
-*/
-
 
 	for (j = xs; j >= ys; --j)
 	{
@@ -2070,7 +2015,6 @@ printf ("};\n"); */
 		qhat = dw / y1;
 		rhat = dw - (qhat * y1);
 
- //printf ("qhat == %llx rhat == %llx dw = %llx r[ys-1]  = %llx   /// %llx %llx\n", (unsigned long long)qhat, (unsigned long long)rhat, (unsigned long long)dw, (unsigned long long)r[ys-1], (unsigned long long)qq[j + ys], (unsigned long long)qq[j + ys - 1]);
 	adjust_quotient:
 		if (qhat > MOO_TYPE_MAX(moo_liw_t) || (qhat * y2) > ((rhat << MOO_LIW_BITS) + qq[j - 2]))
 		{
@@ -2079,7 +2023,6 @@ printf ("};\n"); */
 			if (rhat <= MOO_TYPE_MAX(moo_liw_t)) goto adjust_quotient;
 		}
 
-//printf ("qhat == %llx rhat == %llx\n", (unsigned long long)qhat, (unsigned long long)rhat);
 		/* multiply and subtract */
 		for (k = 0, i = 0; i < ys; i++)
 		{
@@ -2114,16 +2057,6 @@ printf ("};\n"); */
 		r[i] = (qq[i] >> s) | ((moo_lidw_t)qq[i + 1] << (MOO_LIW_BITS - s));
 	}
 	r[i] = qq[i] >> s;
-
-	//for (i = (xs == ys)? 1: (xs - ys + 1); i < xs; i++) q[i] = 0;
-
-/*
-	printf ("q => ");
-	for (i = xs ; i > 0; ) printf ("%08x ", q[--i]);
-	printf ("\n");
-	printf ("r => ");
-	for (i = ys ; i > 0; ) printf ("%08x ", r[--i]);
-	printf ("\n"); */
 }
 #endif
 
@@ -2255,7 +2188,9 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 	moo_pushvolat (moo, &x);
 	moo_pushvolat (moo, &y);
 #define USE_DIVIDE_UNSIGNED_ARRAY2
-#if defined(USE_DIVIDE_UNSIGNED_ARRAY2)
+//#define USE_DIVIDE_UNSIGNED_ARRAY3
+
+#if defined(USE_DIVIDE_UNSIGNED_ARRAY2) || defined(USE_DIVIDE_UNSIGNED_ARRAY3)
 	qq = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(x) + 1);
 #else
 	qq = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(x));
@@ -2267,7 +2202,7 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 	}
 
 	moo_pushvolat (moo, &qq);
-#if defined(USE_DIVIDE_UNSIGNED_ARRAY2)
+#if defined(USE_DIVIDE_UNSIGNED_ARRAY2) || defined(USE_DIVIDE_UNSIGNED_ARRAY3)
 	rr = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(y));
 #else
 	rr = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(y) + 1);
@@ -2277,12 +2212,15 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 
 #if defined(USE_DIVIDE_UNSIGNED_ARRAY2)
 	divide_unsigned_array2 (moo,
+#elif defined(USE_DIVIDE_UNSIGNED_ARRAY3)
+	divide_unsigned_array3 (moo,
 #else
 	divide_unsigned_array (moo,
 #endif
 		MOO_OBJ_GET_LIWORD_SLOT(x), MOO_OBJ_GET_SIZE(x),
 		MOO_OBJ_GET_LIWORD_SLOT(y), MOO_OBJ_GET_SIZE(y),
-		MOO_OBJ_GET_LIWORD_SLOT(qq), MOO_OBJ_GET_LIWORD_SLOT(rr));
+		MOO_OBJ_GET_LIWORD_SLOT(qq), MOO_OBJ_GET_LIWORD_SLOT(rr)
+	);
 
 	*r = rr;
 	return qq;
