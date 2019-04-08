@@ -280,10 +280,12 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 				moo_ooi_t v;
 				if (moo_inttoooi(moo, arg, &v) == 0) goto inval;
 			#	else
-				/* TODO: moo_intmax_t v;
-				if (moo_inttointmax (moo, arg, &v) == 0) goto inval; */
-			#	error UNSUPPORTED MOO_SIZEOF_LONG_LONG.
+				/* TODO: IMPLEMENT THIS moo_intmax_t v;
+				if (moo_inttointmax(moo, arg, &v) == 0) goto inval; */
+				long long v; 
+				goto arg_as_long;
 			#	endif
+
 				dcArgLongLong (ffi->dc, v);
 				j++;
 				break;
@@ -307,7 +309,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 				link_ca (ffi, ptr);
 			#else
 				ptr = MOO_OBJ_GET_CHAR_SLOT(arg);
-				/*ptr = moo_dupoochars (moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg));
+				/*ptr = moo_dupoochars(moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg));
 				if (!ptr) goto softfail;*/ /* out of system memory or conversion error - soft failure */
 			#endif
 
@@ -324,7 +326,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 			#if defined(MOO_OOCH_IS_UCH)
 				ptr = MOO_OBJ_GET_CHAR_SLOT(arg);
-				/*ptr = moo_dupoochars (moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg));
+				/*ptr = moo_dupoochars(moo, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg));
 				if (!ptr) goto softfail; */ /* out of system memory or conversion error - soft failure */
 			#else
 				ptr = moo_dupootoucharswithheadroom(moo, MOO_SIZEOF_VOID_P, MOO_OBJ_GET_CHAR_SLOT(arg), MOO_OBJ_GET_SIZE(arg), MOO_NULL);
@@ -382,9 +384,9 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		#if (MOO_SIZEOF_LONG_LONG > 0)
 			moo_oop_t r;
 		#	if (MOO_SIZEOF_LONG_LONG <= MOO_SIZEOF_OOI_T)
-			r = moo_ooitoint (moo, dcCallLongLong(ffi->dc, f));
+			r = moo_ooitoint(moo, dcCallLongLong(ffi->dc, f));
 		#	else
-		#	error UNSUPPORTED MOO_SIZEOF_LONG_LONG
+			goto ret_as_long;
 		#	endif
 			if (!r) goto hardfail;
 			MOO_STACK_SETRET (moo, nargs, r);
@@ -406,10 +408,10 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 			moo_oop_t s;
 			moo_bch_t* r;
 
-			r = dcCallPointer (ffi->dc, f);
+			r = dcCallPointer(ffi->dc, f);
 
 		#if defined(MOO_OOCH_IS_UCH)
-			s = moo_makestringwithbchars (moo, r, moo_count_bcstr(r));
+			s = moo_makestringwithbchars(moo, r, moo_count_bcstr(r));
 		#else
 			s = moo_makestring(moo, r, moo_count_bcstr(r));
 		#endif
@@ -428,7 +430,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 			moo_oop_t s;
 			moo_uch_t* r;
 
-			r = dcCallPointer (ffi->dc, f);
+			r = dcCallPointer(ffi->dc, f);
 
 		#if defined(MOO_OOCH_IS_UCH)
 			s = moo_makestring(moo, r, moo_count_ucstr(r));
