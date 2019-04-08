@@ -1702,23 +1702,6 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 }
 
 #if 1
-static moo_liw_t adjust_for_underflow (moo_liw_t* qr, moo_liw_t* divisor, moo_oow_t qr_start, moo_oow_t stop) 
-{
-	moo_lidw_t dw;
-	moo_liw_t carry;
-	moo_oow_t j, k;
-
-	for (carry = 0, j = qr_start, k = 0; k < stop; j++, k++)
-	{
-		/*qr[j] = xpy(qr[j], divisor[k], c);*/
-		dw = (moo_lidw_t)qr[j] + divisor[k] + carry;
-		carry = (moo_liw_t)(dw >> MOO_LIW_BITS);
-		qr[j] = (moo_liw_t)dw;
-	}
-
-	return carry;
-}
-
 static MOO_INLINE moo_liw_t calculate_remainder (moo_t* moo, moo_liw_t* qr, moo_liw_t* y, moo_liw_t quo, int qr_start, int stop)
 {
 	moo_lidw_t dw;
@@ -1840,6 +1823,7 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 
 		/* ---------------------------------------------------------- */
 		b = calculate_remainder(moo, q, r, quo, i - ys, ys);
+
 		b = (moo_liw_t)((((moo_lidw_t)xhi - b) >> MOO_LIW_BITS) & 1); /* is the sign bit set? */
 		if (b)
 		{
