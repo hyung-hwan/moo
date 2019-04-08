@@ -1833,8 +1833,7 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		/* TODO: optimize it with ASM - no seperate / and % */
 		quo = dw / y1;
 		rem = dw % y1;
-		/*rem = dw - (quo * y1);*/
-#if 0
+#if 1
 	adjust_quotient:
 		if (quo > MOO_TYPE_MAX(moo_liw_t) || (quo * y2) > ((rem << MOO_LIW_BITS) + q[i - 2]))
 		{
