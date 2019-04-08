@@ -702,6 +702,16 @@ else
 	AC_DEFINE([MOO_UNICODE_SIZE],[1],[Unicode character type size])
 fi
 
+AC_ARG_ENABLE([full-liw], 
+	[AS_HELP_STRING([--enable-full-liw],[Use a full word as a large integer word])],
+	enable_full_liw=$enableval,
+	enable_full_liw=no
+)
+if test "${enable_full_liw}" = "yes"
+then
+	AC_DEFINE([MOO_ENABLE_FULL_LIW],[1],[Use a full word as a large integer word])
+fi
+
 AC_ARG_ENABLE([cxx], 
 	[AS_HELP_STRING([--enable-cxx],[build the library for C++ if a C++ compiler is available (default. yes)])],
 	enable_cxx_is=$enableval,

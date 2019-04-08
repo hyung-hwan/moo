@@ -318,6 +318,9 @@
 /* enable dynamic module capability */
 #undef MOO_ENABLE_DYNAMIC_MODULE
 
+/* Use a full word as a large integer word */
+#undef MOO_ENABLE_FULL_LIW
+
 /* use libltdl when loading a dynamic module */
 #undef MOO_ENABLE_LIBLTDL
 
