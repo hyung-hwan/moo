@@ -383,6 +383,7 @@ extend MyObject
 			[ self testBigintDiv: 16r000000030000000000008000 divisor: 16r000000010000000000002000 count: 2000 ],
 			[ self testBigintDiv: 16rfffffffe0000000080000000 divisor: 16r0000ffff0000000080000000 count: 12345 ],
 			[ self testBigintDiv: 16rfffffffffffffffe divisor: 16rffffffff count: 2000 ],
+			[ self testBigintDiv: 68651967526299315528548877601614136727014 divisor: 1729382256910270380 count: 1 ],
 
 
 			## =========================

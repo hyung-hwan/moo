@@ -199,7 +199,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	f = MOO_OOP_TO_SMPTR(fun); 
 	arr = (moo_oop_oop_t)args;
 
-	MOO_DEBUG2 (moo, "<ffi.call> %p in %p\n", f, ffi->handle);
+	/*MOO_DEBUG2 (moo, "<ffi.call> %p in %p\n", f, ffi->handle);*/
 
 	dcMode (ffi->dc, DC_CALL_C_DEFAULT);
 	dcReset (ffi->dc);

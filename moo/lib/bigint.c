@@ -1849,8 +1849,8 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 
 	for (i = xs; i >= ys; --i)
 	{
-		moo_lidw_t dw;
-		moo_liw_t quo, b, xhi, xlo, rem;
+		moo_lidw_t dw, quo, rem;
+		moo_liw_t b, xhi, xlo;
 
 		/* ---------------------------------------------------------- */
 		/* estimate the quotient.
@@ -1859,38 +1859,36 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		xhi = q[i];
 		xlo = q[i - 1];
 
-/*
-		if (xhi == y1) 
-		{
-			quo = MOO_TYPE_MAX(moo_liw_t);
-			rem = 0;
-		}
-		else
-		{
-*/
-			dw = ((moo_lidw_t)xhi << MOO_LIW_BITS) + xlo;
-			/* TODO: optimize it with ASM - no seperate / and % */
-			quo = (moo_liw_t)(dw / y1);
-			//q[i] = (moo_liw_t)(dw % y1);
-			rem = (moo_liw_t)(dw % y1);
-
-			MOO_ASSERT (moo, (dw / y1) == quo);
-/*
-		}*/
-
 		/* adjust the quotient if over-estimated */
-#if 0
-		dw = (moo_lidw_t)rem;
+#if 1
+		dw = ((moo_lidw_t)xhi << MOO_LIW_BITS) + xlo;
+		/* TODO: optimize it with ASM - no seperate / and % */
+		quo = dw / y1;
+		rem = dw % y1;
+		/*rem = dw - (quo * y1);*/
 	adjust_quotient:
-		if (quo > MOO_TYPE_MAX(moo_liw_t) || ((moo_lidw_t)quo * y2) > ((dw << MOO_LIW_BITS) + q[i - 2]))
+		if (quo > MOO_TYPE_MAX(moo_liw_t) || (quo * y2) > ((rem << MOO_LIW_BITS) + q[i - 2]))
 		{
 			--quo;
-			dw += y1;
-			if (dw <= MOO_TYPE_MAX(moo_liw_t)) goto adjust_quotient;
+			rem += y1;
+			if (rem <= MOO_TYPE_MAX(moo_liw_t)) goto adjust_quotient;
 		}
 #else
+		/*if (xhi == y1) 
+		{
+			quo = MOO_TYPE_MAX(moo_liw_t);
+			rem = q[i];
+		}
+		else
+		{ */
+			dw = ((moo_lidw_t)xhi << MOO_LIW_BITS) + xlo;
+			/* TODO: optimize it with ASM - no seperate / and % */
+			quo = dw / y1;
+			//q[i] = (moo_liw_t)(dw % y1);
+			rem = dw % y1;
+		/*}*/
 	adjust_quotient:
-		dw = ((moo_lidw_t)quo * y2);
+		dw = quo * y2;
 		b = (moo_liw_t)(dw >> MOO_LIW_BITS);
 		if (b > rem || (b == rem && (moo_liw_t)dw > q[i - 2])) 
 		{
