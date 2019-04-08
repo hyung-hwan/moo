@@ -1727,22 +1727,18 @@ static MOO_INLINE moo_liw_t calculate_remainder (moo_t* moo, moo_liw_t* qr, moo_
 
 	for (b = 0, c = 0, c2 = 0, j = qr_start, k = 0; k < stop; j++, k++)
 	{
-		/* qr[j] = xmy(qr[j], 0, b); */
 		dw = (moo_lidw_t)qr[j] - b;
 		b = (moo_liw_t)((dw >> MOO_LIW_BITS) & 1); /* b = -(dw mod BASE) */
 		qr[j] = (moo_liw_t)dw;
 
-		/* moo_liw_t qyk = axpy(q, divisor[k], 0, c); */
 		dw = ((moo_lidw_t)y[k] * quo) + c;
 		c = (moo_liw_t)(dw >> MOO_LIW_BITS);
 		qyk = (moo_liw_t)dw;
 
-		/*c2 = 0; qr[j] = xmy(qr[j], qyk, c2); */
 		dw = (moo_lidw_t)qr[j] - qyk;
 		c2 = (moo_liw_t)((dw >> MOO_LIW_BITS) & 1);
 		qr[j] = (moo_liw_t)dw;
 
-		/*b = xpy(b, c2, c);*/
 		dw = (moo_lidw_t)b + c2 + c;
 		c = (moo_liw_t)(dw >> MOO_LIW_BITS);
 		b = (moo_liw_t)dw;
@@ -1903,6 +1899,7 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 	 */
 	for (i = 0; i < ys; i++) { r[i] = q[i]; q[i] = 0;  }
 	for (; i <= xs; i++) { q[i - ys] = q[i]; q[i] = 0; }
+
 }
 
 static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs, const moo_liw_t* y, moo_oow_t ys, moo_liw_t* q, moo_liw_t* r)
@@ -1992,8 +1989,8 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		{
 			dw = qhat * r[k];
 			di = qq[i] - ci - (dw & MOO_TYPE_MAX(moo_liw_t));
-			qq[i] = di;
 			ci = (dw >> MOO_LIW_BITS) - (di >> MOO_LIW_BITS);
+			qq[i] = (moo_liw_t)di;
 		}
 		MOO_ASSERT (moo, i == j);
 		di = qq[j] - ci;
@@ -2012,7 +2009,6 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 			MOO_ASSERT (moo, i == j);
 			/*MOO_ASSERT (moo, ci == 1);*/
 			qq[j] += ci;
-
 			q[g] = qhat - 1;
 		}
 		else
