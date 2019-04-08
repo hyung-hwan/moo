@@ -1829,7 +1829,7 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		/* TODO: optimize it with ASM - no seperate / and % */
 		quo = dw / y1;
 		rem = dw % y1;
-#if 1
+
 	adjust_quotient:
 		if (quo > MOO_TYPE_MAX(moo_liw_t) || (quo * y2) > ((rem << MOO_LIW_BITS) + q[i - 2]))
 		{
@@ -1837,21 +1837,6 @@ static void divide_unsigned_array2 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 			rem += y1;
 			if (rem <= MOO_TYPE_MAX(moo_liw_t)) goto adjust_quotient;
 		}
-#else
-	adjust_quotient:
-		dw = quo * y2;
-		b = (moo_liw_t)(dw >> MOO_LIW_BITS);
-		if (b > rem || (b == rem && (moo_liw_t)dw > q[i - 2])) 
-		{
-			--quo; /* too large */
-			dw = (moo_lidw_t)rem + y1; /* add back the divisor */
-			if (dw <= MOO_TYPE_MAX(moo_liw_t)) /* if ((dw >> MOO_LIW_BITS) == 0) */
-			{
-				rem = (moo_liw_t)dw;
-				goto adjust_quotient;
-			}
-		}
-#endif
 
 		/* ---------------------------------------------------------- */
 		b = calculate_remainder(moo, q, r, quo, i - ys, ys);
