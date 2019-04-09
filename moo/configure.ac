@@ -703,7 +703,7 @@ else
 fi
 
 AC_ARG_ENABLE([full-liw], 
-	[AS_HELP_STRING([--enable-full-liw],[Use a full word as a large integer word])],
+	[AS_HELP_STRING([--enable-full-liw],[Use a full word as a large integer word (default. no)])],
 	enable_full_liw=$enableval,
 	enable_full_liw=no
 )
