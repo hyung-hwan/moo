@@ -1701,7 +1701,6 @@ static void divide_unsigned_array (moo_t* moo, const moo_liw_t* x, moo_oow_t xs,
 	}
 }
 
-#if 1
 static MOO_INLINE moo_liw_t calculate_remainder (moo_t* moo, moo_liw_t* qr, moo_liw_t* y, moo_liw_t quo, int qr_start, int stop)
 {
 	moo_lidw_t dw;
@@ -1899,6 +1898,15 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		return;
 	}
 
+#define SHARED_QQ
+
+#if defined(SHARED_QQ)
+	/* as long as q is 2 words longer than x, this algorithm can store
+	 * both quotient and remainder in q at the same time. */
+	qq = q;
+#else
+	/* this part requires an extra buffer. proper error handling isn't easy
+	 * since the return type of this function is void */
 	if (moo->inttostr.t.capa <= xs)
 	{
 		moo_liw_t* t;
@@ -1906,13 +1914,14 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 
 		reqcapa = MOO_ALIGN_POW2(xs + 1, 32);
 		t = (moo_liw_t*)moo_reallocmem(moo, moo->inttostr.t.ptr, reqcapa * MOO_SIZEOF(*t));
-/* TODO: TODO: TODO: ERROR HANDLING
+		/* TODO: TODO: TODO: ERROR HANDLING
 		if (!t) return -1; */
 
 		moo->inttostr.t.capa = xs + 1;
 		moo->inttostr.t.ptr = t;
 	}
 	qq = moo->inttostr.t.ptr;
+#endif
 
 	y1 = y[ys - 1];
 	/*s = MOO_LIW_BITS - ((y1 == 0)? -1: get_pos_of_msb_set(y1)) - 1;*/
@@ -1954,7 +1963,7 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		}
 
 		/* multiply and subtract */
-		for (ci = 0, i = j - ys, k = 0; k < ys; i++, k++)
+		for (ci = 0, i = g, k = 0; k < ys; i++, k++)
 		{
 			dw = qhat * r[k];
 			di = qq[i] - ci - (dw & MOO_TYPE_MAX(moo_liw_t));
@@ -1962,13 +1971,13 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 			qq[i] = (moo_liw_t)di;
 		}
 		MOO_ASSERT (moo, i == j);
-		di = qq[j] - ci;
-		qq[j] = di;
+		di = qq[i] - ci;
+		qq[i] = di;
 
 		/* test remainder */
 		if (di < 0)
 		{
-			for (ci = 0, i = j - ys, k = 0; k < ys; i++, k++)
+			for (ci = 0, i = g, k = 0; k < ys; i++, k++)
 			{
 				di = (moo_lidw_t)qq[i] + r[k] + ci;
 				ci = (moo_liw_t)(di >> MOO_LIW_BITS);
@@ -1977,12 +1986,23 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 
 			MOO_ASSERT (moo, i == j);
 			/*MOO_ASSERT (moo, ci == 1);*/
-			qq[j] += ci;
+			qq[i] += ci;
+
+		#if defined(SHARED_QQ)
+			/* store the quotient word right after the remainder in q */
+			q[i + 1] = qhat - 1;
+		#else
 			q[g] = qhat - 1;
+		#endif
 		}
 		else
 		{
+		#if defined(SHARED_QQ)
+			/* store the quotient word right after the remainder in q */
+			q[i + 1] = qhat;
+		#else
 			q[g] = qhat;
+		#endif
 		}
 	}
 
@@ -1991,8 +2011,13 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 		r[i] = (qq[i] >> s) | ((moo_lidw_t)qq[i + 1] << (MOO_LIW_BITS - s));
 	}
 	r[i] = qq[i] >> s;
-}
+
+#if defined(SHARED_QQ)
+	for (i = 0; i <= ys; i++) { q[i] = 0;  }
+	for (; i <= xs + 1; i++) { q[i - ys - 1] = q[i]; q[i] = 0; }
 #endif
+
+}
 
 /* ======================================================================== */
 
@@ -2121,10 +2146,13 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 	MOO_ASSERT (moo, !is_less_unsigned(x, y)); 
 	moo_pushvolat (moo, &x);
 	moo_pushvolat (moo, &y);
+
 #define USE_DIVIDE_UNSIGNED_ARRAY2
 /*#define USE_DIVIDE_UNSIGNED_ARRAY3*/
 
-#if defined(USE_DIVIDE_UNSIGNED_ARRAY2) || defined(USE_DIVIDE_UNSIGNED_ARRAY3)
+#if defined(USE_DIVIDE_UNSIGNED_ARRAY3)
+	qq = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(x) + 2);
+#elif defined(USE_DIVIDE_UNSIGNED_ARRAY2)
 	qq = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(x) + 1);
 #else
 	qq = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(x));
@@ -2136,7 +2164,9 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 	}
 
 	moo_pushvolat (moo, &qq);
-#if defined(USE_DIVIDE_UNSIGNED_ARRAY2) || defined(USE_DIVIDE_UNSIGNED_ARRAY3)
+#if defined(USE_DIVIDE_UNSIGNED_ARRAY3)
+	rr = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(y));
+#elif defined(USE_DIVIDE_UNSIGNED_ARRAY2) 
 	rr = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(y));
 #else
 	rr = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, MOO_OBJ_GET_SIZE(y) + 1);
@@ -2144,10 +2174,10 @@ static moo_oop_t divide_unsigned_integers (moo_t* moo, moo_oop_t x, moo_oop_t y,
 	moo_popvolats (moo, 3);
 	if (!rr) return MOO_NULL;
 
-#if defined(USE_DIVIDE_UNSIGNED_ARRAY2)
-	divide_unsigned_array2 (moo,
-#elif defined(USE_DIVIDE_UNSIGNED_ARRAY3)
+#if defined(USE_DIVIDE_UNSIGNED_ARRAY3)
 	divide_unsigned_array3 (moo,
+#elif defined(USE_DIVIDE_UNSIGNED_ARRAY2)
+	divide_unsigned_array2 (moo,
 #else
 	divide_unsigned_array (moo,
 #endif

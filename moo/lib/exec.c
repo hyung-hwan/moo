@@ -1731,7 +1731,7 @@ not_found:
 		if (mth) return mth;
 	}
 
-	MOO_LOG3 (moo, MOO_LOG_DEBUG, "Method '%.*js' not found in %O\n", message->len, message->ptr, receiver);
+	MOO_LOG3 (moo, MOO_LOG_DEBUG, "Method '%.*js' not found in receiver %O\n", message->len, message->ptr, receiver);
 	moo_seterrbfmt (moo, MOO_ENOENT, "unable to find the method '%.*js' in %O", message->len, message->ptr, receiver);
 	return MOO_NULL;
 }
