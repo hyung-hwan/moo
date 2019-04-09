@@ -190,7 +190,7 @@ static MOO_INLINE int get_pos_of_msb_set (moo_oow_t x)
 	return MOO_OOW_BITS - __builtin_clzl(x) - 1; /* count the number of leading zeros */
 #elif defined(MOO_HAVE_BUILTIN_CLZ) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_INT)
 	return MOO_OOW_BITS - __builtin_clz(x) - 1; /* count the number of leading zeros */
-#elif !defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
+#elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
 	/* bit scan reverse. not all x86 CPUs have LZCNT. */
 	moo_oow_t pos;
 	__asm__ volatile (
