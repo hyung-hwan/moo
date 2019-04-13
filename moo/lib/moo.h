@@ -1850,13 +1850,13 @@ MOO_EXPORT void moo_fini (
 
 	static MOO_INLINE moo_errnum_t moo_geterrnum (moo_t* moo) { return moo->errnum; }
 #else
-#	define moo_getmmgr(moo) ((moo)->mmgr)
-#	define moo_getxtn(moo) ((void*)((moo) + 1))
+#	define moo_getmmgr(moo) (((moo_t*)(moo))->mmgr)
+#	define moo_getxtn(moo) ((void*)((moo_t*)(moo) + 1))
 
-#	define moo_getcmgr(moo) ((moo)->cmgr)
-#	define moo_setcmgr(moo,mgr) ((moo)->cmgr = (mgr))
+#	define moo_getcmgr(moo) (((moo_t*)(moo))->cmgr)
+#	define moo_setcmgr(moo,mgr) (((moo_t*)(moo))->cmgr = (mgr))
 
-#	define moo_geterrnum(moo) ((moo)->errnum)
+#	define moo_geterrnum(moo) (((moo_t*)(moo))->errnum)
 #endif
 
 MOO_EXPORT void moo_seterrnum (
