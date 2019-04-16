@@ -1351,7 +1351,7 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	tmplen[0] = ndigits_xh + ndigits_yh;
 	tmplen[1] = ndigits_yl + ndigits_yh + 1; 
 	if (tmplen[1] < tmplen[0]) tmplen[1] = tmplen[0];
-	tmp[1] = (moo_liw_t*)moo_callocmem(moo, MOO_SIZEOF(moo_liw_t) * tmplen[1]); /* TODO: should i use the object memory? */
+	tmp[1] = (moo_liw_t*)moo_callocmem(moo, MOO_SIZEOF(moo_liw_t) * tmplen[1]); /* TODO: should i use the object memory? if not, reuse the buffer and minimize memory allocation */
 	if (!tmp[1]) goto oops;
 
 	/* make a temporary for (a0 + a1) and (a0 * b0) */
@@ -4433,7 +4433,7 @@ static moo_oow_t oow_to_text (moo_t* moo, moo_oow_t w, int flagged_radix, moo_oo
 	const char* _digitc;
 	int radix;
 
-	radix = flagged_radix & 0xFF;
+	radix = flagged_radix & MOO_INTTOSTR_RADIXMASK;
 	_digitc =  _digitc_array[!!(flagged_radix & MOO_INTTOSTR_LOWERCASE)];
 	MOO_ASSERT (moo, radix >= 2 && radix <= 36);
 
@@ -4755,7 +4755,7 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 	int radix;
 	const char* _digitc;
 
-	radix = flagged_radix & 0xFF;
+	radix = flagged_radix & MOO_INTTOSTR_RADIXMASK;
 	_digitc =  _digitc_array[!!(flagged_radix & MOO_INTTOSTR_LOWERCASE)];
 	MOO_ASSERT (moo, radix >= 2 && radix <= 36);
 

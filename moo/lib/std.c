@@ -825,7 +825,6 @@ static int write_log (moo_t* moo, int fd, const moo_bch_t* ptr, moo_oow_t len)
 				xtn->log.out.len += len;
 				ptr += len;
 				len -= len;
-				
 			}
 		}
 	}
@@ -850,18 +849,12 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 	moo_oow_t ucslen, bcslen, msgidx;
 	int n, logfd;
 
-	if (mask & MOO_LOG_STDERR)
-	{
-		logfd = 2;
-	}
+	if (mask & MOO_LOG_STDERR) logfd = 2;
+	else if (mask & MOO_LOG_STDOUT) logfd = 1;
 	else
 	{
-		if (mask & MOO_LOG_STDOUT) logfd = 1;
-		else
-		{
-			logfd = xtn->log.fd;
-			if (logfd <= -1) return;
-		}
+		logfd = xtn->log.fd;
+		if (logfd <= -1) return;
 	}
 
 /* TODO: beautify the log message.

@@ -920,7 +920,7 @@ static MOO_INLINE int print_formatted (moo_t* moo, moo_ooi_t nargs, moo_fmtout_d
 
 	if (ignore_rcv)
 	{
-		arg = MOO_STACK_GETARG(moo, nargs, 0);	
+		arg = MOO_STACK_GETARG(moo, nargs, 0);
 		arg_state.idx = 1;
 	}
 	else
