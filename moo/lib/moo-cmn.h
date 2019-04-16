@@ -938,6 +938,9 @@ typedef struct moo_t moo_t;
 		#define MOO_HAVE_BUILTIN_CTZ
 		#define MOO_HAVE_BUILTIN_CTZL
 		#define MOO_HAVE_BUILTIN_CTZLL
+		#define MOO_HAVE_BUILTIN_CLZ
+		#define MOO_HAVE_BUILTIN_CLZL
+		#define MOO_HAVE_BUILTIN_CLZLL
 		#define MOO_HAVE_BUILTIN_EXPECT
 	#endif
 
