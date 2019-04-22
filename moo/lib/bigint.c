@@ -1391,7 +1391,7 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	}
 	else
 	{
-		tmplen[0] = multiply_unsigned_array_karatsuba (moo, x, ndigits_xl, y, ndigits_yl, tmp[0]);
+		tmplen[0] = multiply_unsigned_array_karatsuba(moo, x, ndigits_xl, y, ndigits_yl, tmp[0]);
 		if (tmplen[0] <= 0) goto oops;
 	}
 
@@ -1405,7 +1405,7 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	}
 	else
 	{
-		tmplen[1] = multiply_unsigned_array_karatsuba (moo, x + nshifts, ndigits_xh, y + nshifts, ndigits_yh, tmp[1]);
+		tmplen[1] = multiply_unsigned_array_karatsuba(moo, x + nshifts, ndigits_xh, y + nshifts, ndigits_yh, tmp[1]);
 		if (tmplen[1] <= 0) goto oops;
 	}
 
@@ -1417,7 +1417,7 @@ static MOO_INLINE moo_oow_t multiply_unsigned_array_karatsuba (moo_t* moo, const
 	/* a1b1 is in tmp[1]. add (a1b1 * B^2n) to the high part of 'z' */
 	zsp = z + (nshifts * 2); /* emulate shifting for "* B^2n". */
 	xlen = zcapa - (nshifts * 2);
-	xlen = add_unsigned_array (zsp, xlen, tmp[1], tmplen[1], zsp);
+	xlen = add_unsigned_array(zsp, xlen, tmp[1], tmplen[1], zsp);
 
 	/* z = z + a0b0. a0b0 is in tmp[0] */
 	xlen = add_unsigned_array(z, zcapa, tmp[0], tmplen[0], z);
@@ -1504,7 +1504,7 @@ oops:
 
 	/* tmp[2] = (a0 + a1) * (b0 + b1) */
 	tmplen[2] = tmplen[0] + tmplen[1]; 
-	tmp[2] = moo_callocmem (moo, MOO_SIZEOF(moo_liw_t) * tmplen[2]);
+	tmp[2] = moo_callocmem(moo, MOO_SIZEOF(moo_liw_t) * tmplen[2]);
 	if (!tmp[2]) goto oops;
 	if (CANNOT_KARATSUBA(moo, tmplen[0], tmplen[1]))
 	{
