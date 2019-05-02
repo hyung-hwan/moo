@@ -90,28 +90,126 @@
 /* =========================================================================
  * ENDIAN CHANGE
  * ========================================================================= */
-#define MOO_CONST_SWAP16(x) \
-	((qse_uint16_t)((((qse_uint16_t)(x) & (qse_uint16_t)0x00ffU) << 8) | \
-	                (((qse_uint16_t)(x) & (qse_uint16_t)0xff00U) >> 8) ))
+#define MOO_CONST_BSWAP16(x) \
+	((qse_uint16_t)((((qse_uint16_t)(x) & (qse_uint16_t)0x00ff) << 8) | \
+	                (((qse_uint16_t)(x) & (qse_uint16_t)0xff00) >> 8) ))
 
-#define MOO_CONST_SWAP32(x) \
-	((qse_uint32_t)((((qse_uint32_t)(x) & (qse_uint32_t)0x000000ffUL) << 24) | \
-	                (((qse_uint32_t)(x) & (qse_uint32_t)0x0000ff00UL) <<  8) | \
-	                (((qse_uint32_t)(x) & (qse_uint32_t)0x00ff0000UL) >>  8) | \
-	                (((qse_uint32_t)(x) & (qse_uint32_t)0xff000000UL) >> 24) ))
+#define MOO_CONST_BSWAP32(x) \
+	((qse_uint32_t)((((qse_uint32_t)(x) & (qse_uint32_t)0x000000ff) << 24) | \
+	                (((qse_uint32_t)(x) & (qse_uint32_t)0x0000ff00) <<  8) | \
+	                (((qse_uint32_t)(x) & (qse_uint32_t)0x00ff0000) >>  8) | \
+	                (((qse_uint32_t)(x) & (qse_uint32_t)0xff000000) >> 24) ))
+
+#if defined(MOO_HAVE_UINT64_T)
+#define MOO_CONST_BSWAP64(x) \
+	((qse_uint64_t)((((qse_uint64_t)(x) & (qse_uint64_t)0x00000000000000ff) << 56) | \
+	                (((qse_uint64_t)(x) & (qse_uint64_t)0x000000000000ff00) << 40) | \
+	                (((qse_uint64_t)(x) & (qse_uint64_t)0x0000000000ff0000) << 24) | \
+	                (((qse_uint64_t)(x) & (qse_uint64_t)0x00000000ff000000) << 8) | \
+	                (((qse_uint64_t)(x) & (qse_uint64_t)0x000000ff00000000) >> 8) | \
+	                (((qse_uint64_t)(x) & (qse_uint64_t)0x0000ff0000000000) >> 24) | \
+	                (((qse_uint64_t)(x) & (qse_uint64_t)0x00ff000000000000) >> 40) | \
+	                (((qse_uint64_t)(x) & (qse_uint64_t)0xff00000000000000) >> 56))
+#endif
+
+#if defined(MOO_HAVE_UINT128_T)
+#define MOO_CONST_BSWAP128(x) \
+	((qse_uint128_t)((((qse_uint128_t)(x) & (qse_uint128_t)0x000000000000000000000000000000ff) << 120) | \
+	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x0000000000000000000000000000ff00) << 104) | \
+	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x00000000000000000000000000ff0000) << 88) | \
+	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x000000000000000000000000ff000000) << 72) | \
+	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x0000000000000000000000ff00000000) << 56) | \
+	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x00000000000000000000ff0000000000) << 40) | \
+	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x000000000000000000ff000000000000) << 24) | \
+	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x0000000000000000ff00000000000000) << 8) | \
+	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x00000000000000ff0000000000000000) >> 8) | \
+	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x000000000000ff000000000000000000) >> 24) | \
+	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x0000000000ff00000000000000000000) >> 40) | \
+	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x00000000ff0000000000000000000000) >> 56) | \
+	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x000000ff000000000000000000000000) >> 72) | \
+	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x0000ff00000000000000000000000000) >> 88) | \
+	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x00ff0000000000000000000000000000) >> 104) | \
+	                 (((qse_uint128_t)(x) & (qse_uint128_t)0xff000000000000000000000000000000) >> 120))
+#endif
 
 #if defined(MOO_ENDIAN_LITTLE)
-#       define MOO_CONST_NTOH16(x) MOO_CONST_SWAP16(x)
-#       define MOO_CONST_HTON16(x) MOO_CONST_SWAP16(x)
-#       define MOO_CONST_NTOH32(x) MOO_CONST_SWAP32(x)
-#       define MOO_CONST_HTON32(x) MOO_CONST_SWAP32(x)
+
+#	if defined(MOO_HAVE_UINT16_T)
+#	define MOO_CONST_NTOH16(x) MOO_CONST_BSWAP16(x)
+#	define MOO_CONST_HTON16(x) MOO_CONST_BSWAP16(x)
+#	define MOO_CONST_HTOBE16(x) MOO_CONST_BSWAP16(x)
+#	define MOO_CONST_HTOLE16(x) (x)
+#	define MOO_CONST_BE16TOH(x) MOO_CONST_BSWAP16(x)
+#	define MOO_CONST_LE16TOH(x) (x)
+#	endif
+
+#	if defined(MOO_HAVE_UINT32_T)
+#	define MOO_CONST_NTOH32(x) MOO_CONST_BSWAP32(x)
+#	define MOO_CONST_HTON32(x) MOO_CONST_BSWAP32(x)
+#	define MOO_CONST_HTOBE32(x) MOO_CONST_BSWAP32(x)
+#	define MOO_CONST_HTOLE32(x) (x)
+#	define MOO_CONST_BE32TOH(x) MOO_CONST_BSWAP32(x)
+#	define MOO_CONST_LE32TOH(x) (x)
+#	endif
+
+#	if defined(MOO_HAVE_UINT64_T)
+#	define MOO_CONST_NTOH64(x) MOO_CONST_BSWAP64(x)
+#	define MOO_CONST_HTON64(x) MOO_CONST_BSWAP64(x)
+#	define MOO_CONST_HTOBE64(x) MOO_CONST_BSWAP64(x)
+#	define MOO_CONST_HTOLE64(x) (x)
+#	define MOO_CONST_BE64TOH(x) MOO_CONST_BSWAP64(x)
+#	define MOO_CONST_LE64TOH(x) (x)
+#	endif
+
+#	if defined(MOO_HAVE_UINT128_T)
+#	define MOO_CONST_NTOH128(x) MOO_CONST_BSWAP128(x)
+#	define MOO_CONST_HTON128(x) MOO_CONST_BSWAP128(x)
+#	define MOO_CONST_HTOBE128(x) MOO_CONST_BSWAP128(x)
+#	define MOO_CONST_HTOLE128(x) (x)
+#	define MOO_CONST_BE128TOH(x) MOO_CONST_BSWAP128(x)
+#	define MOO_CONST_LE128TOH(x) (x)
+#endif
+
 #elif defined(MOO_ENDIAN_BIG)
-#       define MOO_CONST_NTOH16(x) (x)
-#       define MOO_CONST_HTON16(x) (x)
-#       define MOO_CONST_NTOH32(x) (x)
-#       define MOO_CONST_HTON32(x) (x)
+
+#	if defined(MOO_HAVE_UINT16_T)
+#	define MOO_CONST_NTOH16(x) (x)
+#	define MOO_CONST_HTON16(x) (x)
+#	define MOO_CONST_HTOBE16(x) (x)
+#	define MOO_CONST_HTOLE16(x) MOO_CONST_BSWAP16(x)
+#	define MOO_CONST_BE16TOH(x) (x)
+#	define MOO_CONST_LE16TOH(x) MOO_CONST_BSWAP16(x)
+#	endif
+
+#	if defined(MOO_HAVE_UINT32_T)
+#	define MOO_CONST_NTOH32(x) (x)
+#	define MOO_CONST_HTON32(x) (x)
+#	define MOO_CONST_HTOBE32(x) (x)
+#	define MOO_CONST_HTOLE32(x) MOO_CONST_BSWAP32(x)
+#	define MOO_CONST_BE32TOH(x) (x)
+#	define MOO_CONST_LE32TOH(x) MOO_CONST_BSWAP32(x)
+#	endif
+
+#	if defined(MOO_HAVE_UINT64_T)
+#	define MOO_CONST_NTOH64(x) (x)
+#	define MOO_CONST_HTON64(x) (x)
+#	define MOO_CONST_HTOBE64(x) (x)
+#	define MOO_CONST_HTOLE64(x) MOO_CONST_BSWAP64(x)
+#	define MOO_CONST_BE64TOH(x) (x)
+#	define MOO_CONST_LE64TOH(x) MOO_CONST_BSWAP64(x)
+#	endif
+
+#	if defined(MOO_HAVE_UINT128_T)
+#	define MOO_CONST_NTOH128(x) (x)
+#	define MOO_CONST_HTON128(x) (x)
+#	define MOO_CONST_HTOBE128(x) (x)
+#	define MOO_CONST_HTOLE128(x) MOO_CONST_BSWAP128(x)
+#	define MOO_CONST_BE128TOH(x) (x)
+#	define MOO_CONST_LE128TOH(x) MOO_CONST_BSWAP128(x)
+#	endif
+
 #else
-#       error UNKNOWN ENDIAN
+#	error UNKNOWN ENDIAN
 #endif
 
 
@@ -640,44 +738,187 @@ MOO_EXPORT moo_oow_t moo_utf16_to_uc (
 
 /* ------------------------------------------------------------------------- */
 
-#if defined(MOO_HAVE_UINT16_T)
-MOO_EXPORT moo_uint16_t moo_ntoh16 (
-	moo_uint16_t x
-);
 
-MOO_EXPORT moo_uint16_t moo_hton16 (
-	moo_uint16_t x
-);
+
+#if defined(MOO_HAVE_INLINE)
+
+#if defined(MOO_HAVE_UINT16_T)
+static MOO_INLINE moo_uint16_t moo_bswap16 (moo_uint16_t x)
+{
+	return (x << 8) | (x >> 8);
+}
 #endif
 
 #if defined(MOO_HAVE_UINT32_T)
-MOO_EXPORT moo_uint32_t moo_ntoh32 (
-	moo_uint32_t x
-);
-
-MOO_EXPORT moo_uint32_t moo_hton32 (
-	moo_uint32_t x
-);
+static MOO_INLINE moo_uint32_t moo_bswap32 (moo_uint32_t x)
+{
+	return ((x >> 24)) | 
+	       ((x >>  8) & ((moo_uint32_t)0xff << 8)) | 
+	       ((x <<  8) & ((moo_uint32_t)0xff << 16)) | 
+	       ((x << 24));
+}
 #endif
 
 #if defined(MOO_HAVE_UINT64_T)
-MOO_EXPORT moo_uint64_t moo_ntoh64 (
-	moo_uint64_t x
-);
-
-MOO_EXPORT moo_uint64_t moo_hton64 (
-	moo_uint64_t x
-);
+static MOO_INLINE moo_uint64_t moo_bswap64 (moo_uint64_t x)
+{
+	return ((x >> 56)) | 
+	       ((x >> 40) & ((moo_uint64_t)0xff << 8)) | 
+	       ((x >> 24) & ((moo_uint64_t)0xff << 16)) | 
+	       ((x >>  8) & ((moo_uint64_t)0xff << 24)) | 
+	       ((x <<  8) & ((moo_uint64_t)0xff << 32)) | 
+	       ((x << 24) & ((moo_uint64_t)0xff << 40)) | 
+	       ((x << 40) & ((moo_uint64_t)0xff << 48)) | 
+	       ((x << 56));
+}
 #endif
 
 #if defined(MOO_HAVE_UINT128_T)
-MOO_EXPORT moo_uint128_t moo_ntoh128 (
-	moo_uint128_t x
-);
+static MOO_INLINE moo_uint128_t moo_bswap128 (moo_uint128_t x)
+{
+	return ((x >> 120)) | 
+	       ((x >> 104) & ((moo_uint128_t)0xff << 8)) |
+	       ((x >>  88) & ((moo_uint128_t)0xff << 16)) |
+	       ((x >>  72) & ((moo_uint128_t)0xff << 24)) |
+	       ((x >>  56) & ((moo_uint128_t)0xff << 32)) |
+	       ((x >>  40) & ((moo_uint128_t)0xff << 40)) |
+	       ((x >>  24) & ((moo_uint128_t)0xff << 48)) |
+	       ((x >>   8) & ((moo_uint128_t)0xff << 56)) |
+	       ((x <<   8) & ((moo_uint128_t)0xff << 64)) |
+	       ((x <<  24) & ((moo_uint128_t)0xff << 72)) |
+	       ((x <<  40) & ((moo_uint128_t)0xff << 80)) |
+	       ((x <<  56) & ((moo_uint128_t)0xff << 88)) |
+	       ((x <<  72) & ((moo_uint128_t)0xff << 96)) |
+	       ((x <<  88) & ((moo_uint128_t)0xff << 104)) |
+	       ((x << 104) & ((moo_uint128_t)0xff << 112)) |
+	       ((x << 120));
+}
+#endif
 
-MOO_EXPORT moo_uint128_t moo_hton128 (
-	moo_uint128_t x
-);
+#else
+
+#if defined(MOO_HAVE_UINT16_T)
+#	define moo_bswap16(x) ((moo_uint16_t)(((moo_uint16_t)(x)) << 8) | (((moo_uint16_t)(x)) >> 8))
+#endif
+
+#if defined(MOO_HAVE_UINT32_T)
+#	define moo_bswap32(x) ((moo_uint32_t)(((((moo_uint32_t)(x)) >> 24)) | \
+	                                      ((((moo_uint32_t)(x)) >>  8) & ((moo_uint32_t)0xff << 8)) | \
+	                                      ((((moo_uint32_t)(x)) <<  8) & ((moo_uint32_t)0xff << 16)) | \
+	                                      ((((moo_uint32_t)(x)) << 24))))
+#endif
+
+#if defined(MOO_HAVE_UINT64_T)
+#	define moo_bswap64(x) ((moo_uint64_t)(((((moo_uint64_t)(x)) >> 56)) | \
+	                                      ((((moo_uint64_t)(x)) >> 40) & ((moo_uint64_t)0xff << 8)) | \
+	                                      ((((moo_uint64_t)(x)) >> 24) & ((moo_uint64_t)0xff << 16)) | \
+	                                      ((((moo_uint64_t)(x)) >>  8) & ((moo_uint64_t)0xff << 24)) | \
+	                                      ((((moo_uint64_t)(x)) <<  8) & ((moo_uint64_t)0xff << 32)) | \
+	                                      ((((moo_uint64_t)(x)) << 24) & ((moo_uint64_t)0xff << 40)) | \
+	                                      ((((moo_uint64_t)(x)) << 40) & ((moo_uint64_t)0xff << 48)) | \
+	                                      ((((moo_uint64_t)(x)) << 56))))
+#endif
+
+#if defined(MOO_HAVE_UINT128_T)
+#	define moo_bswap128(x) ((moo_uint128_t)(((((moo_uint128_t)(x)) >> 120)) |  \
+	                                        ((((moo_uint128_t)(x)) >> 104) & ((moo_uint128_t)0xff << 8)) | \
+	                                        ((((moo_uint128_t)(x)) >>  88) & ((moo_uint128_t)0xff << 16)) | \
+	                                        ((((moo_uint128_t)(x)) >>  72) & ((moo_uint128_t)0xff << 24)) | \
+	                                        ((((moo_uint128_t)(x)) >>  56) & ((moo_uint128_t)0xff << 32)) | \
+	                                        ((((moo_uint128_t)(x)) >>  40) & ((moo_uint128_t)0xff << 40)) | \
+	                                        ((((moo_uint128_t)(x)) >>  24) & ((moo_uint128_t)0xff << 48)) | \
+	                                        ((((moo_uint128_t)(x)) >>   8) & ((moo_uint128_t)0xff << 56)) | \
+	                                        ((((moo_uint128_t)(x)) <<   8) & ((moo_uint128_t)0xff << 64)) | \
+	                                        ((((moo_uint128_t)(x)) <<  24) & ((moo_uint128_t)0xff << 72)) | \
+	                                        ((((moo_uint128_t)(x)) <<  40) & ((moo_uint128_t)0xff << 80)) | \
+	                                        ((((moo_uint128_t)(x)) <<  56) & ((moo_uint128_t)0xff << 88)) | \
+	                                        ((((moo_uint128_t)(x)) <<  72) & ((moo_uint128_t)0xff << 96)) | \
+	                                        ((((moo_uint128_t)(x)) <<  88) & ((moo_uint128_t)0xff << 104)) | \
+	                                        ((((moo_uint128_t)(x)) << 104) & ((moo_uint128_t)0xff << 112)) | \
+	                                        ((((moo_uint128_t)(x)) << 120))))
+#endif
+
+#endif /* MOO_HAVE_INLINE */
+
+
+#if defined(MOO_ENDIAN_LITTLE)
+
+#	if defined(MOO_HAVE_UINT16_T)
+#	define moo_ntoh16(x) moo_bswap16(x)
+#	define moo_hton16(x) moo_bswap16(x)
+#	define moo_htobe16(x) moo_bswap16(x)
+#	define moo_htole16(x) (x)
+#	define moo_be16toh(x) moo_bswap16(x)
+#	define moo_le16toh(x) (x)
+#	endif
+
+#	if defined(MOO_HAVE_UINT32_T)
+#	define moo_ntoh32(x) moo_bswap32(x)
+#	define moo_hton32(x) moo_bswap32(x)
+#	define moo_htobe32(x) moo_bswap32(x)
+#	define moo_htole32(x) (x)
+#	define moo_be32toh(x) moo_bswap32(x)
+#	define moo_le32toh(x) (x)
+#	endif
+
+#	if defined(MOO_HAVE_UINT64_T)
+#	define moo_ntoh64(x) moo_bswap64(x)
+#	define moo_hton64(x) moo_bswap64(x)
+#	define moo_htobe64(x) moo_bswap64(x)
+#	define moo_htole64(x) (x)
+#	define moo_be64toh(x) moo_bswap64(x)
+#	define moo_le64toh(x) (x)
+#	endif
+
+#	if defined(MOO_HAVE_UINT128_T)
+#	define moo_ntoh128(x) moo_bswap128(x)
+#	define moo_hton128(x) moo_bswap128(x)
+#	define moo_htobe128(x) moo_bswap128(x)
+#	define moo_htole128(x) (x)
+#	define moo_be128toh(x) moo_bswap128(x)
+#	define moo_le128toh(x) (x)
+#	endif
+
+#elif defined(MOO_ENDIAN_BIG)
+
+#	if defined(MOO_HAVE_UINT16_T)
+#	define moo_ntoh16(x) (x)
+#	define moo_hton16(x) (x)
+#	define moo_htobe16(x) (x)
+#	define moo_htole16(x) moo_bswap16(x)
+#	define moo_be16toh(x) (x)
+#	define moo_le16toh(x) moo_bswap16(x)
+#	endif
+
+#	if defined(MOO_HAVE_UINT32_T)
+#	define moo_ntoh32(x) (x)
+#	define moo_hton32(x) (x)
+#	define moo_htobe32(x) (x)
+#	define moo_htole32(x) moo_bswap32(x)
+#	define moo_be32toh(x) (x)
+#	define moo_le32toh(x) moo_bswap32(x)
+#	endif
+
+#	if defined(MOO_HAVE_UINT64_T)
+#	define moo_ntoh64(x) (x)
+#	define moo_hton64(x) (x)
+#	define moo_htobe64(x) (x)
+#	define moo_htole64(x) moo_bswap64(x)
+#	define moo_be64toh(x) (x)
+#	define moo_le64toh(x) moo_bswap64(x)
+#	endif
+
+#	if defined(MOO_HAVE_UINT128_T)
+#	define moo_ntoh128(x) (x)
+#	define moo_hton128(x) (x)
+#	define moo_htobe128(x) (x)
+#	define moo_htole128(x) moo_bswap128(x)
+#	define moo_be128toh(x) (x)
+#	define moo_le128toh(x) moo_bswap128(x)
+#	endif
+
+#else
+#	error unknown endian
 #endif
 
 #if defined(__cplusplus)
