@@ -620,8 +620,8 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 
 			/* zeropad must not take effect for 'k' and 'K' 
 			 * 
- 			 * 'h' & 'l' is not used to differentiate qse_mchar_t and qse_wchar_t
-			 * because 'k' means qse_byte_t. 
+ 			 * 'h' & 'l' is not used to differentiate moo_bch_t and moo_uch_t
+			 * because 'k' means moo_byte_t. 
 			 * 'l', results in uppercase hexadecimal letters. 
 			 * 'h' drops the leading \x in the output 
 			 * --------------------------------------------------------

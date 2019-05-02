@@ -22,6 +22,14 @@ int main ()
 		T_ASSERT1 (x.u16 != moo_htole16(x.u16) || x.u16 != moo_htobe16(x.u16), "u16 endian conversion #0");
 		T_ASSERT1 (x.u16 == moo_le16toh(moo_htole16(x.u16)), "u16 endian conversion #1");
 		T_ASSERT1 (x.u16 == moo_be16toh(moo_htobe16(x.u16)), "u16 endian conversion #2");
+		T_ASSERT1 (x.u16 == moo_ntoh16(moo_hton16(x.u16)), "u16 endian conversion #3");
+
+		#define X_CONST (0x1122)
+		T_ASSERT1 (X_CONST != MOO_CONST_HTOLE16(X_CONST) || X_CONST != MOO_CONST_HTOBE16(X_CONST), "u16 constant endian conversion #0");
+		T_ASSERT1 (X_CONST == MOO_CONST_LE16TOH(MOO_CONST_HTOLE16(X_CONST)), "u16 constant endian conversion #1");
+		T_ASSERT1 (X_CONST == MOO_CONST_BE16TOH(MOO_CONST_HTOBE16(X_CONST)), "u16 constant endian conversion #2");
+		T_ASSERT1 (X_CONST == MOO_CONST_NTOH16(MOO_CONST_HTON16(X_CONST)), "u16 constant endian conversion #3");
+		#undef X_CONST
 	}
 
 
@@ -43,6 +51,14 @@ int main ()
 		T_ASSERT1 (x.u32 != moo_htole32(x.u32) || x.u32 != moo_htobe32(x.u32), "u32 endian conversion #0");
 		T_ASSERT1 (x.u32 == moo_le32toh(moo_htole32(x.u32)), "u32 endian conversion #1");
 		T_ASSERT1 (x.u32 == moo_be32toh(moo_htobe32(x.u32)), "u32 endian conversion #2");
+		T_ASSERT1 (x.u32 == moo_ntoh32(moo_hton32(x.u32)), "u32 endian conversion #3");
+
+		#define X_CONST (0x11223344)
+		T_ASSERT1 (X_CONST != MOO_CONST_HTOLE32(X_CONST) || X_CONST != MOO_CONST_HTOBE32(X_CONST), "u32 constant endian conversion #0");
+		T_ASSERT1 (X_CONST == MOO_CONST_LE32TOH(MOO_CONST_HTOLE32(X_CONST)), "u32 constant endian conversion #1");
+		T_ASSERT1 (X_CONST == MOO_CONST_BE32TOH(MOO_CONST_HTOBE32(X_CONST)), "u32 constant endian conversion #2");
+		T_ASSERT1 (X_CONST == MOO_CONST_NTOH32(MOO_CONST_HTON32(X_CONST)), "u32 constant endian conversion #3");
+		#undef X_CONST
 	}
 
 #if defined(MOO_HAVE_UINT64_T)
@@ -68,6 +84,14 @@ int main ()
 		T_ASSERT1 (x.u64 != moo_htole64(x.u64) || x.u64 != moo_htobe64(x.u64), "u64 endian conversion #0");
 		T_ASSERT1 (x.u64 == moo_le64toh(moo_htole64(x.u64)), "u64 endian conversion #1");
 		T_ASSERT1 (x.u64 == moo_be64toh(moo_htobe64(x.u64)), "u64 endian conversion #2");
+		T_ASSERT1 (x.u64 == moo_ntoh64(moo_hton64(x.u64)), "u64 endian conversion #3");
+
+		#define X_CONST (((moo_uint64_t)0x11223344 << 32) | (moo_uint64_t)0x55667788)
+		T_ASSERT1 (X_CONST != MOO_CONST_HTOLE64(X_CONST) || X_CONST != MOO_CONST_HTOBE64(X_CONST), "u64 constant endian conversion #0");
+		T_ASSERT1 (X_CONST == MOO_CONST_LE64TOH(MOO_CONST_HTOLE64(X_CONST)), "u64 constant endian conversion #1");
+		T_ASSERT1 (X_CONST == MOO_CONST_BE64TOH(MOO_CONST_HTOBE64(X_CONST)), "u64 constant endian conversion #2");
+		T_ASSERT1 (X_CONST == MOO_CONST_NTOH64(MOO_CONST_HTON64(X_CONST)), "u64 constant endian conversion #3");
+		#undef X_CONST
 	}
 #endif
 
@@ -107,6 +131,14 @@ int main ()
 		T_ASSERT1 (x.u128 != moo_htole128(x.u128) || x.u128 != moo_htobe128(x.u128), "u128 endian conversion #0");
 		T_ASSERT1 (x.u128 == moo_le128toh(moo_htole128(x.u128)), "u128 endian conversion #1");
 		T_ASSERT1 (x.u128 == moo_be128toh(moo_htobe128(x.u128)), "u128 endian conversion #2");
+		T_ASSERT1 (x.u128 == moo_ntoh128(moo_hton128(x.u128)), "u128 endian conversion #3");
+
+		#define X_CONST (((moo_uint128_t)0x11223344 << 96) | ((moo_uint128_t)0x55667788 << 64) | ((moo_uint128_t)0x99aabbcc << 32)  | ((moo_uint128_t)0xddeefffa))
+		T_ASSERT1 (X_CONST != MOO_CONST_HTOLE128(X_CONST) || X_CONST != MOO_CONST_HTOBE128(X_CONST), "u128 constant endian conversion #0");
+		T_ASSERT1 (X_CONST == MOO_CONST_LE128TOH(MOO_CONST_HTOLE128(X_CONST)), "u128 constant endian conversion #1");
+		T_ASSERT1 (X_CONST == MOO_CONST_BE128TOH(MOO_CONST_HTOBE128(X_CONST)), "u128 constant endian conversion #2");
+		T_ASSERT1 (X_CONST == MOO_CONST_NTOH128(MOO_CONST_HTON128(X_CONST)), "u128 constant endian conversion #3");
+		#undef X_CONST
 	}
 #endif
 

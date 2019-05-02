@@ -88,48 +88,48 @@
 */
 
 /* =========================================================================
- * ENDIAN CHANGE
+ * ENDIAN CHANGE OF A CONSTANT
  * ========================================================================= */
 #define MOO_CONST_BSWAP16(x) \
-	((qse_uint16_t)((((qse_uint16_t)(x) & (qse_uint16_t)0x00ff) << 8) | \
-	                (((qse_uint16_t)(x) & (qse_uint16_t)0xff00) >> 8) ))
+	((moo_uint16_t)((((moo_uint16_t)(x) & ((moo_uint16_t)0xff << 0)) << 8) | \
+	                (((moo_uint16_t)(x) & ((moo_uint16_t)0xff << 8)) >> 8)))
 
 #define MOO_CONST_BSWAP32(x) \
-	((qse_uint32_t)((((qse_uint32_t)(x) & (qse_uint32_t)0x000000ff) << 24) | \
-	                (((qse_uint32_t)(x) & (qse_uint32_t)0x0000ff00) <<  8) | \
-	                (((qse_uint32_t)(x) & (qse_uint32_t)0x00ff0000) >>  8) | \
-	                (((qse_uint32_t)(x) & (qse_uint32_t)0xff000000) >> 24) ))
+	((moo_uint32_t)((((moo_uint32_t)(x) & ((moo_uint32_t)0xff <<  0)) << 24) | \
+	                (((moo_uint32_t)(x) & ((moo_uint32_t)0xff <<  8)) <<  8) | \
+	                (((moo_uint32_t)(x) & ((moo_uint32_t)0xff << 16)) >>  8) | \
+	                (((moo_uint32_t)(x) & ((moo_uint32_t)0xff << 24)) >> 24)))
 
 #if defined(MOO_HAVE_UINT64_T)
 #define MOO_CONST_BSWAP64(x) \
-	((qse_uint64_t)((((qse_uint64_t)(x) & (qse_uint64_t)0x00000000000000ff) << 56) | \
-	                (((qse_uint64_t)(x) & (qse_uint64_t)0x000000000000ff00) << 40) | \
-	                (((qse_uint64_t)(x) & (qse_uint64_t)0x0000000000ff0000) << 24) | \
-	                (((qse_uint64_t)(x) & (qse_uint64_t)0x00000000ff000000) << 8) | \
-	                (((qse_uint64_t)(x) & (qse_uint64_t)0x000000ff00000000) >> 8) | \
-	                (((qse_uint64_t)(x) & (qse_uint64_t)0x0000ff0000000000) >> 24) | \
-	                (((qse_uint64_t)(x) & (qse_uint64_t)0x00ff000000000000) >> 40) | \
-	                (((qse_uint64_t)(x) & (qse_uint64_t)0xff00000000000000) >> 56))
+	((moo_uint64_t)((((moo_uint64_t)(x) & ((moo_uint64_t)0xff <<  0)) << 56) | \
+	                (((moo_uint64_t)(x) & ((moo_uint64_t)0xff <<  8)) << 40) | \
+	                (((moo_uint64_t)(x) & ((moo_uint64_t)0xff << 16)) << 24) | \
+	                (((moo_uint64_t)(x) & ((moo_uint64_t)0xff << 24)) <<  8) | \
+	                (((moo_uint64_t)(x) & ((moo_uint64_t)0xff << 32)) >>  8) | \
+	                (((moo_uint64_t)(x) & ((moo_uint64_t)0xff << 40)) >> 24) | \
+	                (((moo_uint64_t)(x) & ((moo_uint64_t)0xff << 48)) >> 40) | \
+	                (((moo_uint64_t)(x) & ((moo_uint64_t)0xff << 56)) >> 56)))
 #endif
 
 #if defined(MOO_HAVE_UINT128_T)
 #define MOO_CONST_BSWAP128(x) \
-	((qse_uint128_t)((((qse_uint128_t)(x) & (qse_uint128_t)0x000000000000000000000000000000ff) << 120) | \
-	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x0000000000000000000000000000ff00) << 104) | \
-	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x00000000000000000000000000ff0000) << 88) | \
-	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x000000000000000000000000ff000000) << 72) | \
-	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x0000000000000000000000ff00000000) << 56) | \
-	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x00000000000000000000ff0000000000) << 40) | \
-	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x000000000000000000ff000000000000) << 24) | \
-	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x0000000000000000ff00000000000000) << 8) | \
-	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x00000000000000ff0000000000000000) >> 8) | \
-	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x000000000000ff000000000000000000) >> 24) | \
-	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x0000000000ff00000000000000000000) >> 40) | \
-	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x00000000ff0000000000000000000000) >> 56) | \
-	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x000000ff000000000000000000000000) >> 72) | \
-	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x0000ff00000000000000000000000000) >> 88) | \
-	                 (((qse_uint128_t)(x) & (qse_uint128_t)0x00ff0000000000000000000000000000) >> 104) | \
-	                 (((qse_uint128_t)(x) & (qse_uint128_t)0xff000000000000000000000000000000) >> 120))
+	((moo_uint128_t)((((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 0)) << 120) | \
+	                 (((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 8)) << 104) | \
+	                 (((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 16)) << 88) | \
+	                 (((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 24)) << 72) | \
+	                 (((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 32)) << 56) | \
+	                 (((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 40)) << 40) | \
+	                 (((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 48)) << 24) | \
+	                 (((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 56)) << 8) | \
+	                 (((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 64)) >> 8) | \
+	                 (((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 72)) >> 24) | \
+	                 (((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 80)) >> 40) | \
+	                 (((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 88)) >> 56) | \
+	                 (((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 96)) >> 72) | \
+	                 (((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 104)) >> 88) | \
+	                 (((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 112)) >> 104) | \
+	                 (((moo_uint128_t)(x) & ((moo_uint128_t)0xff << 120)) >> 120)))
 #endif
 
 #if defined(MOO_ENDIAN_LITTLE)
@@ -738,8 +738,6 @@ MOO_EXPORT moo_oow_t moo_utf16_to_uc (
 
 /* ------------------------------------------------------------------------- */
 
-
-
 #if defined(MOO_HAVE_INLINE)
 
 #if defined(MOO_HAVE_UINT16_T)
@@ -918,7 +916,7 @@ static MOO_INLINE moo_uint128_t moo_bswap128 (moo_uint128_t x)
 #	endif
 
 #else
-#	error unknown endian
+#	error UNKNOWN ENDIAN
 #endif
 
 #if defined(__cplusplus)
