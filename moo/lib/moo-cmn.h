@@ -769,8 +769,8 @@ typedef struct moo_t moo_t;
 #	define MOO_PRIVATE
 #endif
 
-#if defined(__STDC_VERSION__) && (__STDC_VERSION__>=199901L)
-	/* C99 has inline */
+#if defined(__cplusplus) || (defined(__STDC_VERSION__) && (__STDC_VERSION__>=199901L))
+	/* C++/C99 has inline */
 #	define MOO_INLINE inline
 #	define MOO_HAVE_INLINE
 #elif defined(__GNUC__) && defined(__GNUC_GNU_INLINE__)
