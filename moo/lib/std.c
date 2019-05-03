@@ -555,7 +555,7 @@ static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 	MOO_ASSERT (moo, bb != MOO_NULL && bb->fp != MOO_NULL);
 	do
 	{
-		x = fgetc (bb->fp);
+		x = fgetc(bb->fp);
 		if (x == EOF)
 		{
 			if (ferror((FILE*)bb->fp))
@@ -573,7 +573,7 @@ static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 #if defined(MOO_OOCH_IS_UCH)
 	bcslen = bb->len;
 	ucslen = MOO_COUNTOF(arg->buf);
-	x = moo_convbtooochars (moo, bb->buf, &bcslen, arg->buf, &ucslen);
+	x = moo_convbtooochars(moo, bb->buf, &bcslen, arg->buf, &ucslen);
 	if (x <= -1 && ucslen <= 0) return -1;
 	/* if ucslen is greater than 0, i see that some characters have been
 	 * converted properly */
@@ -3593,8 +3593,7 @@ static void fini_moo (moo_t* moo)
 	vmprim.vm_muxwait = vm_muxwait;
 	vmprim.vm_sleep = vm_sleep;
 
-	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize,
-	               (cfg->cmgr? cfg->cmgr: moo_get_utf8_cmgr()), &vmprim, errinfo);
+	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize, (cfg->cmgr? cfg->cmgr: moo_get_utf8_cmgr()), &vmprim, errinfo);
 	if (!moo) return MOO_NULL;
 
 	xtn = GET_XTN(moo);

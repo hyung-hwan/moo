@@ -209,6 +209,7 @@ static int put_ooch (moo_t* moo, moo_bitmask_t mask, moo_ooch_t ch, moo_oow_t le
 			/* no line ending - append a line terminator */
 			moo->log.ptr[moo->log.len++] = '\n';
 		}
+
 		vmprim_log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
 		moo->log.len = 0;
 	}
@@ -253,6 +254,7 @@ redo:
 					/* no line ending - append a line terminator */
 					moo->log.ptr[moo->log.len++] = '\n';
 				}
+
 				vmprim_log_write (moo, moo->log.last_mask, moo->log.ptr, moo->log.len);
 				moo->log.len = 0;
 			}
@@ -284,7 +286,6 @@ redo:
 		goto redo;
 	}
 
-	
 	return 1; /* success */
 }
 

@@ -69,9 +69,9 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	if (moo_convootobchars(moo, MOO_OBJ_GET_CHAR_SLOT(mode), &ucslen, modebuf, &bcslen) <= -1) goto softfail;
 	modebuf[bcslen] = '\0';
 
-	stdio->fp = fopen (namebuf, modebuf);
+	stdio->fp = fopen(namebuf, modebuf);
 #else
-	stdio->fp = fopen (MOO_OBJ_GET_CHAR_SLOT(name), MOO_OBJ_GET_CHAR_SLOT(mode));
+	stdio->fp = fopen(MOO_OBJ_GET_CHAR_SLOT(name), MOO_OBJ_GET_CHAR_SLOT(mode));
 #endif
 	if (!stdio->fp) 
 	{
