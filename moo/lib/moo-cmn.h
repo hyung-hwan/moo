@@ -923,6 +923,19 @@ typedef struct moo_t moo_t;
 		#define MOO_HAVE_SYNC_VAL_COMPARE_AND_SWAP
 	#endif
 
+
+	#if __has_builtin(__builtin_bswap16)
+		#define MOO_HAVE_BUILTIN_BSWAP16
+	#endif
+	#if __has_builtin(__builtin_bswap32)
+		#define MOO_HAVE_BUILTIN_BSWAP32
+	#endif
+	#if __has_builtin(__builtin_bswap64)
+		#define MOO_HAVE_BUILTIN_BSWAP64
+	#endif
+	#if __has_builtin(__builtin_bswap128)
+		#define MOO_HAVE_BUILTIN_BSWAP128
+	#endif
 #elif defined(__GNUC__) && defined(__GNUC_MINOR__)
 
 	#if (__GNUC__ >= 4) 
@@ -960,6 +973,16 @@ typedef struct moo_t moo_t;
 		#define MOO_HAVE_BUILTIN_SMULLL_OVERFLOW
 	#endif
 
+	#if (__GNUC__ >= 5) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)
+		/* 4.8.0 or later */
+		#define MOO_HAVE_BUILTIN_BSWAP16
+	#endif
+	#if (__GNUC__ >= 5) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3)
+		/* 4.3.0 or later */
+		#define MOO_HAVE_BUILTIN_BSWAP32
+		#define MOO_HAVE_BUILTIN_BSWAP64
+		/*#define MOO_HAVE_BUILTIN_BSWAP128*/
+	#endif
 #endif
 
 #if defined(MOO_HAVE_BUILTIN_EXPECT)

@@ -743,23 +743,49 @@ MOO_EXPORT moo_oow_t moo_utf16_to_uc (
 #if defined(MOO_HAVE_UINT16_T)
 static MOO_INLINE moo_uint16_t moo_bswap16 (moo_uint16_t x)
 {
+#if defined(MOO_HAVE_BUILTIN_BSWAP16)
+	return __builtin_bswap16(x);
+#elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
+	__asm__ volatile ("xchgb %b0, %h0" : "=Q"(x): "0"(x));
+	return x;
+#elif defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH_5__) || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__))
+	__asm__ volatile ("rev16 %0, %1" : "=&r"(x): "+r"(x));
+	return x;
+#else
 	return (x << 8) | (x >> 8);
+#endif
 }
 #endif
 
 #if defined(MOO_HAVE_UINT32_T)
 static MOO_INLINE moo_uint32_t moo_bswap32 (moo_uint32_t x)
 {
+#if defined(MOO_HAVE_BUILTIN_BSWAP32)
+	return __builtin_bswap32(x);
+#elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
+	__asm__ volatile ("bswapl %0" : "=r"(x) : "0"(x));
+	return x;
+#elif defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH_5__) || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__))
+	__asm__ volatile ("rev32 %0, %1" : "=&r"(x): "+r"(x));
+	return x;
+#else
 	return ((x >> 24)) | 
 	       ((x >>  8) & ((moo_uint32_t)0xff << 8)) | 
 	       ((x <<  8) & ((moo_uint32_t)0xff << 16)) | 
 	       ((x << 24));
+#endif
 }
 #endif
 
 #if defined(MOO_HAVE_UINT64_T)
 static MOO_INLINE moo_uint64_t moo_bswap64 (moo_uint64_t x)
 {
+#if defined(MOO_HAVE_BUILTIN_BSWAP64)
+	return __builtin_bswap64(x);
+#elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64))
+	__asm__ volatile ("bswapq %0" : "=r"(x) : "0"(x));
+	return x;
+#else
 	return ((x >> 56)) | 
 	       ((x >> 40) & ((moo_uint64_t)0xff << 8)) | 
 	       ((x >> 24) & ((moo_uint64_t)0xff << 16)) | 
@@ -768,12 +794,16 @@ static MOO_INLINE moo_uint64_t moo_bswap64 (moo_uint64_t x)
 	       ((x << 24) & ((moo_uint64_t)0xff << 40)) | 
 	       ((x << 40) & ((moo_uint64_t)0xff << 48)) | 
 	       ((x << 56));
+#endif
 }
 #endif
 
 #if defined(MOO_HAVE_UINT128_T)
 static MOO_INLINE moo_uint128_t moo_bswap128 (moo_uint128_t x)
 {
+#if defined(MOO_HAVE_BUILTIN_BSWAP128)
+	return __builtin_bswap128(x);
+#else
 	return ((x >> 120)) | 
 	       ((x >> 104) & ((moo_uint128_t)0xff << 8)) |
 	       ((x >>  88) & ((moo_uint128_t)0xff << 16)) |
@@ -790,6 +820,7 @@ static MOO_INLINE moo_uint128_t moo_bswap128 (moo_uint128_t x)
 	       ((x <<  88) & ((moo_uint128_t)0xff << 104)) |
 	       ((x << 104) & ((moo_uint128_t)0xff << 112)) |
 	       ((x << 120));
+#endif
 }
 #endif
 
