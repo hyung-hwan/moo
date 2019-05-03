@@ -9,7 +9,7 @@ AM_CPPFLAGS = \
 	-I$(abs_srcdir)/../lib \
 	-I$(includedir)
 
-AM_LDFLAGS = -L$(libdir)
+AM_LDFLAGS = -L$(abs_builddir)/../lib  -L$(libdir)
 LDADD = -lmoo $(PTHREAD_LIBS)
 
 if WIN32
