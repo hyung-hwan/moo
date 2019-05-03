@@ -748,9 +748,6 @@ static MOO_INLINE moo_uint16_t moo_bswap16 (moo_uint16_t x)
 #elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
 	__asm__ volatile ("xchgb %b0, %h0" : "=Q"(x): "0"(x));
 	return x;
-#elif defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH_5__) || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__))
-	__asm__ volatile ("rev16 %0, %1" : "=&r"(x): "+r"(x));
-	return x;
 #else
 	return (x << 8) | (x >> 8);
 #endif
@@ -764,9 +761,6 @@ static MOO_INLINE moo_uint32_t moo_bswap32 (moo_uint32_t x)
 	return __builtin_bswap32(x);
 #elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
 	__asm__ volatile ("bswapl %0" : "=r"(x) : "0"(x));
-	return x;
-#elif defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH_5__) || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__))
-	__asm__ volatile ("rev32 %0, %1" : "=&r"(x): "+r"(x));
 	return x;
 #else
 	return ((x >> 24)) | 
