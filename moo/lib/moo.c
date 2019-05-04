@@ -477,7 +477,7 @@ void moo_freemem (moo_t* moo, void* ptr)
 
 static struct
 {
-	moo_bch_t* modname;
+	const moo_bch_t* modname;
 	int (*modload) (moo_t* moo, moo_mod_t* mod);
 }
 static_modtab[] = 

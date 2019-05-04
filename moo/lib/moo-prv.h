@@ -1223,10 +1223,21 @@ void moo_deregallfinalizables (moo_t* moo);
 /* ========================================================================= */
 /* bigint.c                                                                  */
 /* ========================================================================= */
-int moo_isint (
-	moo_t*    moo,
-	moo_oop_t x
-);
+static MOO_INLINE int moo_isbigint (moo_t* moo, moo_oop_t x)
+{
+	if (!MOO_OOP_IS_POINTER(x)) return 0;
+
+/* TODO: is it better to introduce a special integer mark into the class itself */
+/* TODO: or should it check if it's a subclass, subsubclass, subsubsubclass, etc of a large_integer as well? */
+	return MOO_POINTER_IS_BIGINT(moo, x);
+}
+
+static MOO_INLINE int moo_isint (moo_t* moo, moo_oop_t x)
+{
+	if (MOO_OOP_IS_SMOOI(x)) return 1;
+	if (MOO_OOP_IS_POINTER(x)) return MOO_POINTER_IS_BIGINT(moo, x); /* is_bigint? */
+	return 0;
+}
 
 moo_oop_t moo_addints (
 	moo_t*    moo,

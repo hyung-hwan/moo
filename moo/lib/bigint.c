@@ -279,22 +279,6 @@ static int is_normalized_integer (moo_t* moo, moo_oop_t oop)
 	return 0;
 }
 
-MOO_INLINE static int is_bigint (moo_t* moo, moo_oop_t x)
-{
-	if (!MOO_OOP_IS_POINTER(x)) return 0;
-
-/* TODO: is it better to introduce a special integer mark into the class itself */
-/* TODO: or should it check if it's a subclass, subsubclass, subsubsubclass, etc of a large_integer as well? */
-	return MOO_POINTER_IS_BIGINT(moo, x);
-}
-
-MOO_INLINE int moo_isint (moo_t* moo, moo_oop_t x)
-{
-	if (MOO_OOP_IS_SMOOI(x)) return 1;
-	if (MOO_OOP_IS_POINTER(x)) return is_bigint(moo, x);
-	return 0;
-}
-
 static MOO_INLINE int bigint_to_oow (moo_t* moo, moo_oop_t num, moo_oow_t* w)
 {
 	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(num));
@@ -353,7 +337,7 @@ static MOO_INLINE int integer_to_oow (moo_t* moo, moo_oop_t x, moo_oow_t* w)
 		}
 	}
 
-	MOO_ASSERT (moo, is_bigint(moo, x));
+	MOO_ASSERT (moo, moo_isbigint(moo, x));
 	return bigint_to_oow(moo, x, w);
 }
 
@@ -376,7 +360,7 @@ int moo_inttooow (moo_t* moo, moo_oop_t x, moo_oow_t* w)
 		}
 	}
 
-	if (is_bigint(moo, x)) return bigint_to_oow(moo, x, w);
+	if (moo_isbigint(moo, x)) return bigint_to_oow(moo, x, w);
 
 	moo_seterrbfmt (moo, MOO_EINVAL, "not an integer - %O", x);
 	return 0; /* not convertable - too big, too small, or not an integer */
@@ -420,7 +404,7 @@ static MOO_INLINE moo_oop_t make_bigint_with_oow (moo_t* moo, moo_oow_t w)
 	moo_liw_t hw[2];
 	hw[0] = w /*& MOO_LBMASK(moo_oow_t,MOO_LIW_BITS)*/;
 	hw[1] = w >> MOO_LIW_BITS;
-	return moo_instantiate(moo, moo->_large_positive_integer, &hw, (hw[1] > 0? 2: 1));
+	return moo_instantiate(moo, moo->_large_positive_integer, hw, (hw[1] > 0? 2: 1));
 #else
 #	error UNSUPPORTED LIW BIT SIZE
 #endif
@@ -455,7 +439,7 @@ static MOO_INLINE moo_oop_t make_bigint_with_ooi (moo_t* moo, moo_ooi_t i)
 		w = i;
 		hw[0] = w /*& MOO_LBMASK(moo_oow_t,MOO_LIW_BITS)*/;
 		hw[1] = w >> MOO_LIW_BITS;
-		return moo_instantiate(moo, moo->_large_positive_integer, &hw, (hw[1] > 0? 2: 1));
+		return moo_instantiate(moo, moo->_large_positive_integer, hw, (hw[1] > 0? 2: 1));
 	}
 	else
 	{
@@ -463,7 +447,7 @@ static MOO_INLINE moo_oop_t make_bigint_with_ooi (moo_t* moo, moo_ooi_t i)
 		w = -i;
 		hw[0] = w /*& MOO_LBMASK(moo_oow_t,MOO_LIW_BITS)*/;
 		hw[1] = w >> MOO_LIW_BITS;
-		return moo_instantiate(moo, moo->_large_negative_integer, &hw, (hw[1] > 0? 2: 1));
+		return moo_instantiate(moo, moo->_large_negative_integer, hw, (hw[1] > 0? 2: 1));
 	}
 #else
 #	error UNSUPPORTED LIW BIT SIZE
@@ -2134,7 +2118,7 @@ moo_oop_t moo_addints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 		if (MOO_OOP_IS_SMOOI(x))
 		{
-			if (!is_bigint(moo,y)) goto oops_einval;
+			if (!moo_isbigint(moo,y)) goto oops_einval;
 
 			v = MOO_OOP_TO_SMOOI(x);
 			if (v == 0) return clone_bigint(moo, y, MOO_OBJ_GET_SIZE(y));
@@ -2146,7 +2130,7 @@ moo_oop_t moo_addints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		}
 		else if (MOO_OOP_IS_SMOOI(y))
 		{
-			if (!is_bigint(moo,x)) goto oops_einval;
+			if (!moo_isbigint(moo,x)) goto oops_einval;
 
 			v = MOO_OOP_TO_SMOOI(y);
 			if (v == 0) return clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
@@ -2158,8 +2142,8 @@ moo_oop_t moo_addints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		}
 		else
 		{
-			if (!is_bigint(moo,x)) goto oops_einval;
-			if (!is_bigint(moo,y)) goto oops_einval;
+			if (!moo_isbigint(moo,x)) goto oops_einval;
+			if (!moo_isbigint(moo,y)) goto oops_einval;
 		}
 
 		if (MOO_OBJ_GET_CLASS(x) != MOO_OBJ_GET_CLASS(y))
@@ -2238,7 +2222,7 @@ moo_oop_t moo_subints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 		if (MOO_OOP_IS_SMOOI(x))
 		{
-			if (!is_bigint(moo,y)) goto oops_einval;
+			if (!moo_isbigint(moo,y)) goto oops_einval;
 
 			v = MOO_OOP_TO_SMOOI(x);
 			if (v == 0) 
@@ -2254,7 +2238,7 @@ moo_oop_t moo_subints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		}
 		else if (MOO_OOP_IS_SMOOI(y))
 		{
-			if (!is_bigint(moo,x)) goto oops_einval;
+			if (!moo_isbigint(moo,x)) goto oops_einval;
 
 			v = MOO_OOP_TO_SMOOI(y);
 			if (v == 0) return clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
@@ -2266,8 +2250,8 @@ moo_oop_t moo_subints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		}
 		else
 		{
-			if (!is_bigint(moo,x)) goto oops_einval;
-			if (!is_bigint(moo,y)) goto oops_einval;
+			if (!moo_isbigint(moo,x)) goto oops_einval;
+			if (!moo_isbigint(moo,y)) goto oops_einval;
 		}
 
 		if (MOO_OBJ_GET_CLASS(x) != MOO_OBJ_GET_CLASS(y))
@@ -2351,7 +2335,7 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 		if (MOO_OOP_IS_SMOOI(x))
 		{
-			if (!is_bigint(moo,y)) goto oops_einval;
+			if (!moo_isbigint(moo,y)) goto oops_einval;
 
 			v = MOO_OOP_TO_SMOOI(x);
 			switch (v)
@@ -2371,7 +2355,7 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		}
 		else if (MOO_OOP_IS_SMOOI(y))
 		{
-			if (!is_bigint(moo,x)) goto oops_einval;
+			if (!moo_isbigint(moo,x)) goto oops_einval;
 
 			v = MOO_OOP_TO_SMOOI(y);
 			switch (v)
@@ -2391,8 +2375,8 @@ moo_oop_t moo_mulints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		}
 		else
 		{
-			if (!is_bigint(moo,x)) goto oops_einval;
-			if (!is_bigint(moo,y)) goto oops_einval;
+			if (!moo_isbigint(moo,x)) goto oops_einval;
+			if (!moo_isbigint(moo,y)) goto oops_einval;
 		}
 
 	full_multiply:
@@ -2522,7 +2506,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 		{
 			moo_ooi_t xv;
 
-			if (!is_bigint(moo,y)) goto oops_einval;
+			if (!moo_isbigint(moo,y)) goto oops_einval;
 
 			/* divide a small integer by a big integer. 
 			 * the dividend is guaranteed to be greater than the divisor
@@ -2549,7 +2533,7 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 		{
 			moo_ooi_t yv;
 
-			if (!is_bigint(moo,x)) goto oops_einval;
+			if (!moo_isbigint(moo,x)) goto oops_einval;
 
 			/* divide a big integer by a small integer. */
 
@@ -2642,8 +2626,8 @@ moo_oop_t moo_divints (moo_t* moo, moo_oop_t x, moo_oop_t y, int modulo, moo_oop
 		}
 		else
 		{
-			if (!is_bigint(moo,x)) goto oops_einval;
-			if (!is_bigint(moo,y)) goto oops_einval;
+			if (!moo_isbigint(moo,x)) goto oops_einval;
+			if (!moo_isbigint(moo,y)) goto oops_einval;
 		}
 	}
 
@@ -2733,7 +2717,7 @@ moo_oop_t moo_negateint (moo_t* moo, moo_oop_t x)
 	}
 	else
 	{
-		if (!is_bigint(moo, x)) goto oops_einval;
+		if (!moo_isbigint(moo, x)) goto oops_einval;
 		return clone_bigint_negated (moo, x, MOO_OBJ_GET_SIZE(x));
 	}
 
@@ -2770,7 +2754,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 	else if (MOO_OOP_IS_SMOOI(x))
 	{
-		if (!is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo, y)) goto oops_einval;
 
 		if (MOO_POINTER_IS_NBIGINT(moo, y)) return MOO_SMOOI_TO_OOP(0);
 
@@ -2785,7 +2769,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		moo_ooi_t v;
 		moo_oow_t wp, bp, xs;
 
-		if (!is_bigint(moo, x)) goto oops_einval;
+		if (!moo_isbigint(moo, x)) goto oops_einval;
 		v = MOO_OOP_TO_SMOOI(y);
 
 		if (v < 0) return MOO_SMOOI_TO_OOP(0);
@@ -2826,7 +2810,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		int sign;
 	#endif
 
-		if (!is_bigint(moo, x) || !is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo, x) || !moo_isbigint(moo, y)) goto oops_einval;
 
 	#if defined(MOO_LIMIT_OBJ_SIZE)
 		if (MOO_POINTER_IS_NBIGINT(moo, y)) return MOO_SMOOI_TO_OOP(0);
@@ -2924,7 +2908,7 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	{
 		moo_ooi_t v;
 
-		if (!is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo, y)) goto oops_einval;
 
 		v = MOO_OOP_TO_SMOOI(x);
 		if (v == 0) return MOO_SMOOI_TO_OOP(0);
@@ -2940,7 +2924,7 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	{
 		moo_ooi_t v;
 
-		if (!is_bigint(moo, x)) goto oops_einval;
+		if (!moo_isbigint(moo, x)) goto oops_einval;
 
 		v = MOO_OOP_TO_SMOOI(y);
 		if (v == 0) return MOO_SMOOI_TO_OOP(0);
@@ -2958,7 +2942,7 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		moo_oow_t i, xs, ys, zs, zalloc;
 		int negx, negy;
 
-		if (!is_bigint(moo,x) || !is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo,x) || !moo_isbigint(moo, y)) goto oops_einval;
 
 	bigint_and_bigint:
 		xs = MOO_OBJ_GET_SIZE(x);
@@ -3137,7 +3121,7 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	{
 		moo_ooi_t v;
 
-		if (!is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo, y)) goto oops_einval;
 
 		v = MOO_OOP_TO_SMOOI(x);
 		if (v == 0) return clone_bigint(moo, y, MOO_OBJ_GET_SIZE(y));
@@ -3153,7 +3137,7 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	{
 		moo_ooi_t v;
 
-		if (!is_bigint(moo, x)) goto oops_einval;
+		if (!moo_isbigint(moo, x)) goto oops_einval;
 
 		v = MOO_OOP_TO_SMOOI(y);
 		if (v == 0) return clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
@@ -3171,7 +3155,7 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		moo_oow_t i, xs, ys, zs, zalloc;
 		int negx, negy;
 
-		if (!is_bigint(moo,x) || !is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo,x) || !moo_isbigint(moo, y)) goto oops_einval;
 
 	bigint_and_bigint:
 		xs = MOO_OBJ_GET_SIZE(x);
@@ -3355,7 +3339,7 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	{
 		moo_ooi_t v;
 
-		if (!is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo, y)) goto oops_einval;
 
 		v = MOO_OOP_TO_SMOOI(x);
 		if (v == 0) return clone_bigint(moo, y, MOO_OBJ_GET_SIZE(y));
@@ -3371,7 +3355,7 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	{
 		moo_ooi_t v;
 
-		if (!is_bigint(moo, x)) goto oops_einval;
+		if (!moo_isbigint(moo, x)) goto oops_einval;
 
 		v = MOO_OOP_TO_SMOOI(y);
 		if (v == 0) return clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
@@ -3389,7 +3373,7 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		moo_oow_t i, xs, ys, zs, zalloc;
 		int negx, negy;
 
-		if (!is_bigint(moo,x) || !is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo,x) || !moo_isbigint(moo, y)) goto oops_einval;
 
 	bigint_and_bigint:
 		xs = MOO_OBJ_GET_SIZE(x);
@@ -3573,7 +3557,7 @@ moo_oop_t moo_bitinvint (moo_t* moo, moo_oop_t x)
 		moo_oow_t i, xs, zs, zalloc;
 		int negx;
 
-		if (!is_bigint(moo,x)) goto oops_einval;
+		if (!moo_isbigint(moo,x)) goto oops_einval;
 
 		xs = MOO_OBJ_GET_SIZE(x);
 		negx = (MOO_POINTER_IS_NBIGINT(moo, x))? 1: 0;
@@ -3994,7 +3978,7 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		{
 			moo_ooi_t v;
 
-			if (!is_bigint(moo,y)) goto oops_einval;
+			if (!moo_isbigint(moo,y)) goto oops_einval;
 
 			v = MOO_OOP_TO_SMOOI(x);
 			if (v == 0) return MOO_SMOOI_TO_OOP(0);
@@ -4019,7 +4003,7 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		{
 			moo_ooi_t v;
 
-			if (!is_bigint(moo,x)) goto oops_einval;
+			if (!moo_isbigint(moo,x)) goto oops_einval;
 
 			v = MOO_OOP_TO_SMOOI(y);
 			if (v == 0) return clone_bigint(moo, x, MOO_OBJ_GET_SIZE(x));
@@ -4044,7 +4028,7 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		{
 			moo_oop_t z;
 
-			if (!is_bigint(moo,x) || !is_bigint(moo, y)) goto oops_einval;
+			if (!moo_isbigint(moo,x) || !moo_isbigint(moo, y)) goto oops_einval;
 
 		bigint_and_bigint:
 			negx = (MOO_POINTER_IS_NBIGINT(moo, x))? 1: 0;
@@ -4207,7 +4191,7 @@ moo_oop_t moo_strtoint (moo_t* moo, const moo_ooch_t* str, moo_oow_t len, int ra
 		if (outlen > MOO_COUNTOF(hw)) 
 		{
 /* TODO: reuse this buffer? */
-			hwp = moo_allocmem(moo, outlen * MOO_SIZEOF(hw[0]));
+			hwp = (moo_liw_t*)moo_allocmem(moo, outlen * MOO_SIZEOF(hw[0]));
 			if (!hwp) return MOO_NULL;
 		}
 		else
@@ -4392,7 +4376,7 @@ moo_oop_t moo_eqints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 	else 
 	{
-		if (!is_bigint(moo, x) || !is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo, x) || !moo_isbigint(moo, y)) goto oops_einval;
 		return is_equal(moo, x, y)? moo->_true: moo->_false;
 	}
 
@@ -4413,7 +4397,7 @@ moo_oop_t moo_neints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 	else 
 	{
-		if (!is_bigint(moo, x) || !is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo, x) || !moo_isbigint(moo, y)) goto oops_einval;
 		return !is_equal(moo, x, y)? moo->_true: moo->_false;
 	}
 
@@ -4430,17 +4414,17 @@ moo_oop_t moo_gtints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 	else if (MOO_OOP_IS_SMOOI(x))
 	{
-		if (!is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo, y)) goto oops_einval;
 		return (MOO_POINTER_IS_NBIGINT(moo, y))? moo->_true: moo->_false;
 	}
 	else if (MOO_OOP_IS_SMOOI(y)) 
 	{
-		if (!is_bigint(moo, x)) goto oops_einval;
+		if (!moo_isbigint(moo, x)) goto oops_einval;
 		return (MOO_POINTER_IS_PBIGINT(moo, x))? moo->_true: moo->_false;
 	}
 	else 
 	{
-		if (!is_bigint(moo, x) || !is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo, x) || !moo_isbigint(moo, y)) goto oops_einval;
 		return is_greater(moo, x, y)? moo->_true: moo->_false;
 	}
 
@@ -4457,17 +4441,17 @@ moo_oop_t moo_geints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 	else if (MOO_OOP_IS_SMOOI(x))
 	{
-		if (!is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo, y)) goto oops_einval;
 		return (MOO_POINTER_IS_NBIGINT(moo, y))? moo->_true: moo->_false;
 	}
 	else if (MOO_OOP_IS_SMOOI(y)) 
 	{
-		if (!is_bigint(moo, x)) goto oops_einval;
+		if (!moo_isbigint(moo, x)) goto oops_einval;
 		return (MOO_POINTER_IS_PBIGINT(moo, x))? moo->_true: moo->_false;
 	}
 	else 
 	{
-		if (!is_bigint(moo, x) || !is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo, x) || !moo_isbigint(moo, y)) goto oops_einval;
 		return (is_greater(moo, x, y) || is_equal(moo, x, y))? moo->_true: moo->_false;
 	}
 
@@ -4484,17 +4468,17 @@ moo_oop_t moo_ltints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 	else if (MOO_OOP_IS_SMOOI(x))
 	{
-		if (!is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo, y)) goto oops_einval;
 		return (MOO_POINTER_IS_PBIGINT(moo, y))? moo->_true: moo->_false;
 	}
 	else if (MOO_OOP_IS_SMOOI(y)) 
 	{
-		if (!is_bigint(moo, x)) goto oops_einval;
+		if (!moo_isbigint(moo, x)) goto oops_einval;
 		return (MOO_POINTER_IS_NBIGINT(moo, x))? moo->_true: moo->_false;
 	}
 	else 
 	{
-		if (!is_bigint(moo, x) || !is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo, x) || !moo_isbigint(moo, y)) goto oops_einval;
 		return is_less(moo, x, y)? moo->_true: moo->_false;
 	}
 
@@ -4511,17 +4495,17 @@ moo_oop_t moo_leints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 	}
 	else if (MOO_OOP_IS_SMOOI(x))
 	{
-		if (!is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo, y)) goto oops_einval;
 		return (MOO_POINTER_IS_PBIGINT(moo, y))? moo->_true: moo->_false;
 	}
 	else if (MOO_OOP_IS_SMOOI(y)) 
 	{
-		if (!is_bigint(moo, x)) goto oops_einval;
+		if (!moo_isbigint(moo, x)) goto oops_einval;
 		return (MOO_POINTER_IS_NBIGINT(moo, x))? moo->_true: moo->_false;
 	}
 	else 
 	{
-		if (!is_bigint(moo, x) || !is_bigint(moo, y)) goto oops_einval;
+		if (!moo_isbigint(moo, x) || !moo_isbigint(moo, y)) goto oops_einval;
 		return (is_less(moo, x, y) || is_equal(moo, x, y))? moo->_true: moo->_false;
 	}
 

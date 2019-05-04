@@ -159,10 +159,10 @@ typedef struct moo_obj_word_t*     moo_oop_word_t;
  * BIGINT TYPES AND MACROS
  * ========================================================================= */
 #if defined(MOO_ENABLE_FULL_LIW) && (MOO_SIZEOF_UINTMAX_T > MOO_SIZEOF_OOW_T)
-#	define MOO_LIW_IS_OOW
+#	define MOO_USE_OOW_FOR_LIW
 #endif
 
-#if defined(MOO_LIW_IS_OOW)
+#if defined(MOO_USE_OOW_FOR_LIW)
 	typedef moo_oow_t          moo_liw_t; /* large integer word */
 	typedef moo_ooi_t          moo_lii_t;
 	typedef moo_uintmax_t      moo_lidw_t; /* large integer double word */
