@@ -134,95 +134,13 @@ static const moo_uint8_t debruijn_64[64] =
 #	define LOG2_FOR_POW2_64(x) (debruijn_64[(moo_uint64_t)((moo_uint64_t)(x) * 0x022fdd63cc95386d) >> 58])
 #endif
 
-static MOO_INLINE int get_pos_of_msb_set_pow2 (moo_oow_t x)
-{
-	/* the caller must ensure that x is power of 2. if x happens to be zero,
-	 * the return value is undefined as each method used may give different result. */
-#if defined(MOO_HAVE_BUILTIN_CTZLL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG_LONG)
-	return __builtin_ctzll(x); /* count the number of trailing zeros */
-#elif defined(MOO_HAVE_BUILTIN_CTZL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG)
-	return __builtin_ctzl(x); /* count the number of trailing zeros */
-#elif defined(MOO_HAVE_BUILTIN_CTZ) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_INT)
-	return __builtin_ctz(x); /* count the number of trailing zeros */
-#elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
-	moo_oow_t pos;
-	/* use the Bit Scan Forward instruction */
-#if 1
-	__asm__ volatile (
-		"bsf %1,%0\n\t"
-		: "=r"(pos) /* output */
-		: "r"(x) /* input */
-	);
-#else
-	__asm__ volatile (
-		"bsf %[X],%[EXP]\n\t"
-		: [EXP]"=r"(pos) /* output */
-		: [X]"r"(x) /* input */
-	);
-#endif
-	return (int)pos;
-#elif defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH) && (__ARM_ARCH >= 5))
-	moo_oow_t n;
-	/* CLZ is available in ARMv5T and above. there is no instruction to
-	 * count trailing zeros or something similar. using RBIT with CLZ
-	 * would be good in ARMv6T2 and above to avoid further calculation
-	 * afte CLZ */
-	__asm__ volatile (
-		"clz %0,%1\n\t"
-		: "=r"(n) /* output */
-		: "r"(x) /* input */
-	);
-	return (int)(MOO_OOW_BITS - n - 1); 
-	/* TODO: PPC - use cntlz, cntlzw, cntlzd, SPARC - use lzcnt, MIPS clz */
-#else
-	int pos = 0;
-	while (x >>= 1) pos++;
-	return pos;
-#endif
-}
-
-static MOO_INLINE int get_pos_of_msb_set (moo_oow_t x)
-{
-	/* x doesn't have to be power of 2. if x is zero, the result is undefined */
-#if defined(MOO_HAVE_BUILTIN_CLZLL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG_LONG)
-	return MOO_OOW_BITS - __builtin_clzll(x) - 1; /* count the number of leading zeros */
-#elif defined(MOO_HAVE_BUILTIN_CLZL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG)
-	return MOO_OOW_BITS - __builtin_clzl(x) - 1; /* count the number of leading zeros */
-#elif defined(MOO_HAVE_BUILTIN_CLZ) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_INT)
-	return MOO_OOW_BITS - __builtin_clz(x) - 1; /* count the number of leading zeros */
-#elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
-	/* bit scan reverse. not all x86 CPUs have LZCNT. */
-	moo_oow_t pos;
-	__asm__ volatile (
-		"bsr %1,%0\n\t"
-		: "=r"(pos) /* output */
-		: "r"(x) /* input */
-	);
-	return (int)pos;
-#elif defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH) && (__ARM_ARCH >= 5))
-	moo_oow_t n;
-	__asm__ volatile (
-		"clz %0,%1\n\t"
-		: "=r"(n) /* output */
-		: "r"(x) /* input */
-	);
-	return (int)(MOO_OOW_BITS - n - 1); 
-	/* TODO: PPC - use cntlz, cntlzw, cntlzd, SPARC - use lzcnt, MIPS clz */
-#else
-	int pos = 0;
-	while (x >>= 1) pos++;
-	return pos;
-#endif
-}
-
 #if defined(MOO_HAVE_UINT32_T) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_UINT32_T)
 #	define LOG2_FOR_POW2(x) LOG2_FOR_POW2_32(x)
 #elif defined(MOO_HAVE_UINT64_T) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_UINT64_T)
 #	define LOG2_FOR_POW2(x) LOG2_FOR_POW2_64(x)
 #else
-#	define LOG2_FOR_POW2(x) get_pos_of_msb_set_pow2(x)
+#	define LOG2_FOR_POW2(x) moo_get_pos_of_msb_set_pow2(x)
 #endif
-
 
 #if (MOO_SIZEOF_OOW_T == MOO_SIZEOF_INT) && defined(MOO_HAVE_BUILTIN_UADD_OVERFLOW)
 #	define oow_add_overflow(a,b,c)  __builtin_uadd_overflow(a,b,c)
@@ -1924,9 +1842,9 @@ static void divide_unsigned_array3 (moo_t* moo, const moo_liw_t* x, moo_oow_t xs
 #endif
 
 	y1 = y[ys - 1];
-	/*s = MOO_LIW_BITS - ((y1 == 0)? -1: get_pos_of_msb_set(y1)) - 1;*/
+	/*s = MOO_LIW_BITS - ((y1 == 0)? -1: moo_get_pos_of_msb_set(y1)) - 1;*/
 	MOO_ASSERT (moo, y1 > 0); /* the highest word can't be non-zero in the context where this function is called */
-	s = MOO_LIW_BITS - get_pos_of_msb_set(y1) - 1;
+	s = MOO_LIW_BITS - moo_get_pos_of_msb_set(y1) - 1;
 	for (i = ys; i > 1; )
 	{
 		--i;

@@ -256,7 +256,7 @@ static MOO_INLINE int _store_raw_int (moo_t* moo, moo_uint8_t* rawptr, moo_oow_t
 	}
 
 	/* assume 2's complement */
-	max = (moo_ooi_t)(~(moo_oow_t)0 >> ((MOO_SIZEOF_OOW_T - size) * 8  + 1));
+	max = (moo_ooi_t)(~(moo_oow_t)0 >> ((MOO_SIZEOF_OOW_T - size) * MOO_BITS_PER_BYTE  + 1));
 	min = -max - 1;
 
 	if (w > max || w < min) 
@@ -314,7 +314,7 @@ static MOO_INLINE int _store_raw_uint (moo_t* moo, moo_uint8_t* rawptr, moo_oow_
 		return -1;
 	}
 
-	max = (~(moo_oow_t)0 >> ((MOO_SIZEOF_OOW_T - size) * 8));
+	max = (~(moo_oow_t)0 >> ((MOO_SIZEOF_OOW_T - size) * MOO_BITS_PER_BYTE));
 	if (w > max) 
 	{
 		moo_seterrbfmt (moo, MOO_ERANGE, "value %ju out of supported range for raw unsigned memory store",  w);

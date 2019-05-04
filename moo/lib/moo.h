@@ -153,11 +153,7 @@ typedef struct moo_obj_byte_t*     moo_oop_byte_t;
 typedef struct moo_obj_halfword_t* moo_oop_halfword_t;
 typedef struct moo_obj_word_t*     moo_oop_word_t;
 
-#define MOO_OOW_BITS  (MOO_SIZEOF_OOW_T * 8)
-#define MOO_OOI_BITS  (MOO_SIZEOF_OOI_T * 8)
-#define MOO_OOP_BITS  (MOO_SIZEOF_OOP_T * 8)
-#define MOO_OOHW_BITS (MOO_SIZEOF_OOHW_T * 8)
-
+#define MOO_OOP_BITS  (MOO_SIZEOF_OOP_T * MOO_BITS_PER_BYTE)
 
 /* =========================================================================
  * BIGINT TYPES AND MACROS
@@ -174,7 +170,7 @@ typedef struct moo_obj_word_t*     moo_oop_word_t;
 #	define MOO_SIZEOF_LIW_T    MOO_SIZEOF_OOW_T
 #	define MOO_SIZEOF_LIDW_T   MOO_SIZEOF_UINTMAX_T
 #	define MOO_LIW_BITS        MOO_OOW_BITS
-#	define MOO_LIDW_BITS       (MOO_SIZEOF_UINTMAX_T * 8) 
+#	define MOO_LIDW_BITS       (MOO_SIZEOF_UINTMAX_T * MOO_BITS_PER_BYTE) 
 
 	typedef moo_oop_word_t     moo_oop_liword_t;
 #	define MOO_OBJ_TYPE_LIWORD MOO_OBJ_TYPE_WORD

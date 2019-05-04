@@ -71,6 +71,8 @@
 #		define __ARM_ARCH 6
 #	elif defined(__ARM_ARCH_5__)
 #		define __ARM_ARCH 5
+#	elif defined(__ARM_ARCH_4__)
+#		define __ARM_ARCH 4
 #	endif
 #endif
 
@@ -335,6 +337,13 @@
 #endif
 
 /* =========================================================================
+ * BASIC HARD-CODED DEFINES
+ * ========================================================================= */
+#define MOO_BITS_PER_BYTE (8)
+/* the maximum number of bch charaters to represent a single uch character */
+#define MOO_BCSIZE_MAX 6
+
+/* =========================================================================
  * BASIC MOO TYPES
  * ========================================================================= */
 
@@ -373,11 +382,15 @@ typedef moo_uintptr_t           moo_oow_t;
 typedef moo_intptr_t            moo_ooi_t;
 #define MOO_SIZEOF_OOW_T MOO_SIZEOF_UINTPTR_T
 #define MOO_SIZEOF_OOI_T MOO_SIZEOF_INTPTR_T
+#define MOO_OOW_BITS  (MOO_SIZEOF_OOW_T * MOO_BITS_PER_BYTE)
+#define MOO_OOI_BITS  (MOO_SIZEOF_OOI_T * MOO_BITS_PER_BYTE)
 
 typedef moo_ushortptr_t         moo_oohw_t; /* half word - half word */
 typedef moo_shortptr_t          moo_oohi_t; /* signed half word */
 #define MOO_SIZEOF_OOHW_T MOO_SIZEOF_USHORTPTR_T
 #define MOO_SIZEOF_OOHI_T MOO_SIZEOF_SHORTPTR_T
+#define MOO_OOHW_BITS  (MOO_SIZEOF_OOHW_T * MOO_BITS_PER_BYTE)
+#define MOO_OOHI_BITS  (MOO_SIZEOF_OOHI_T * MOO_BITS_PER_BYTE)
 
 struct moo_ucs_t
 {
@@ -409,14 +422,9 @@ typedef struct moo_bcs_t moo_bcs_t;
 #	define MOO_SIZEOF_OOCH_T MOO_SIZEOF_BCH_T
 #endif
 
-/* the maximum number of bch charaters to represent a single uch character */
-#define MOO_BCSIZE_MAX 6
-
-
 /* =========================================================================
  * BASIC OOP ENCODING
  * ========================================================================= */
-
 /* actual structure defined in moo.h */
 typedef struct moo_obj_t           moo_obj_t;
 typedef struct moo_obj_t*          moo_oop_t;
@@ -637,11 +645,11 @@ struct moo_ntime_t
 
 /* make a bit mask that can mask off low n bits */
 #define MOO_LBMASK(type,n) (~(~((type)0) << (n))) 
-#define MOO_LBMASK_SAFE(type,n) (((n) < MOO_SIZEOF(type) * 8)? MOO_LBMASK(type,n): ~(type)0)
+#define MOO_LBMASK_SAFE(type,n) (((n) < MOO_SIZEOF(type) * MOO_BITS_PER_BYTE)? MOO_LBMASK(type,n): ~(type)0)
 
 /* make a bit mask that can mask off hig n bits */
 #define MOO_HBMASK(type,n) (~(~((type)0) >> (n)))
-#define MOO_HBMASK_SAFE(type,n) (((n) < MOO_SIZEOF(type) * 8)? MOO_HBMASK(type,n): ~(type)0)
+#define MOO_HBMASK_SAFE(type,n) (((n) < MOO_SIZEOF(type) * MOO_BITS_PER_BYTE)? MOO_HBMASK(type,n): ~(type)0)
 
 /* get 'length' bits starting from the bit at the 'offset' */
 #define MOO_GETBITS(type,value,offset,length) \
@@ -668,7 +676,7 @@ struct moo_ntime_t
  * \endcode
  */
 /*#define MOO_BITS_MAX(type,nbits) ((((type)1) << (nbits)) - 1)*/
-#define MOO_BITS_MAX(type,nbits) ((~(type)0) >> (MOO_SIZEOF(type) * 8 - (nbits)))
+#define MOO_BITS_MAX(type,nbits) ((~(type)0) >> (MOO_SIZEOF(type) * MOO_BITS_PER_BYTE - (nbits)))
 
 /* =========================================================================
  * MMGR
@@ -819,11 +827,11 @@ typedef struct moo_t moo_t;
 #define MOO_TYPE_IS_UNSIGNED(type) (((type)0) < ((type)-1))
 
 #define MOO_TYPE_SIGNED_MAX(type) \
-	((type)~((type)1 << ((type)MOO_SIZEOF(type) * 8 - 1)))
+	((type)~((type)1 << ((type)MOO_SIZEOF(type) * MOO_BITS_PER_BYTE - 1)))
 #define MOO_TYPE_UNSIGNED_MAX(type) ((type)(~(type)0))
 
 #define MOO_TYPE_SIGNED_MIN(type) \
-	((type)((type)1 << ((type)MOO_SIZEOF(type) * 8 - 1)))
+	((type)((type)1 << ((type)MOO_SIZEOF(type) * MOO_BITS_PER_BYTE - 1)))
 #define MOO_TYPE_UNSIGNED_MIN(type) ((type)0)
 
 #define MOO_TYPE_MAX(type) \

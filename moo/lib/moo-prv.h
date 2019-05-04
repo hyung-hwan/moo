@@ -250,10 +250,10 @@
  *   2. the maximum number of bit shifts can be represented in the moo_oow_t type.
  */
 #	define MOO_OBJ_SIZE_MAX ((moo_oow_t)MOO_SMOOI_MAX)
-#	define MOO_OBJ_SIZE_BITS_MAX (MOO_OBJ_SIZE_MAX * 8)
+#	define MOO_OBJ_SIZE_BITS_MAX (MOO_OBJ_SIZE_MAX * MOO_BITS_PER_BYTE)
 #else
 #	define MOO_OBJ_SIZE_MAX ((moo_oow_t)MOO_TYPE_MAX(moo_oow_t))
-#	define MOO_OBJ_SIZE_BITS_MAX (MOO_OBJ_SIZE_MAX * 8)
+#	define MOO_OBJ_SIZE_BITS_MAX (MOO_OBJ_SIZE_MAX * MOO_BITS_PER_BYTE)
 #endif
 
 

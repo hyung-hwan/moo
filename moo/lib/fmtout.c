@@ -42,7 +42,7 @@ floting-point conversion implementation*/
 
 /* Max number conversion buffer length: 
  * moo_intmax_t in base 2, plus NUL byte. */
-#define MAXNBUF (MOO_SIZEOF(moo_intmax_t) * 8 + 1)
+#define MAXNBUF (MOO_SIZEOF(moo_intmax_t) * MOO_BITS_PER_BYTE + 1)
 
 enum
 {

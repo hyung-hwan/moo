@@ -736,8 +736,9 @@ MOO_EXPORT moo_oow_t moo_utf16_to_uc (
 	moo_uch_t*       uc
 );
 
-/* ------------------------------------------------------------------------- */
-
+/* =========================================================================
+ * BIT SWAP
+ * ========================================================================= */
 #if defined(MOO_HAVE_INLINE)
 
 #if defined(MOO_HAVE_UINT16_T)
@@ -748,8 +749,9 @@ static MOO_INLINE moo_uint16_t moo_bswap16 (moo_uint16_t x)
 #elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
 	__asm__ /*volatile*/ ("xchgb %b0, %h0" : "=Q"(x): "0"(x));
 	return x;
-#elif defined(__GNUC__) && (defined(__ARM_ARCH) && (__ARM_ARCH >= 6))
+#elif defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH) && (__ARM_ARCH >= 6))
 	__asm__ /*volatile*/ ("rev16 %0, %0" : "+r"(x));
+	return x;
 #else
 	return (x << 8) | (x >> 8);
 #endif
@@ -764,8 +766,12 @@ static MOO_INLINE moo_uint32_t moo_bswap32 (moo_uint32_t x)
 #elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
 	__asm__ /*volatile*/ ("bswapl %0" : "=r"(x) : "0"(x));
 	return x;
-#elif defined(__GNUC__) && (defined(__ARM_ARCH) && (__ARM_ARCH >= 6))
+#elif defined(__GNUC__) && defined(__aarch64__)
 	__asm__ /*volatile*/ ("rev32 %0, %0" : "+r"(x));
+	return x;
+#elif defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH) && (__ARM_ARCH >= 6))
+	__asm__ /*volatile*/ ("rev %0, %0" : "+r"(x));
+	return x;
 #elif defined(__GNUC__) && defined(__ARM_ARCH)
 	moo_uint32_t tmp;
 	__asm__ /*volatile*/ (
@@ -794,7 +800,8 @@ static MOO_INLINE moo_uint64_t moo_bswap64 (moo_uint64_t x)
 	__asm__ /*volatile*/ ("bswapq %0" : "=r"(x) : "0"(x));
 	return x;
 #elif defined(__GNUC__) && defined(__aarch64__)
-	__asm__ /*volatile*/ ("rev64 %0, %0" : "+r"(x));
+	__asm__ /*volatile*/ ("rev %0, %0" : "+r"(x));
+	return x;
 #else
 	return ((x >> 56)) | 
 	       ((x >> 40) & ((moo_uint64_t)0xff << 8)) | 
@@ -837,17 +844,28 @@ static MOO_INLINE moo_uint128_t moo_bswap128 (moo_uint128_t x)
 #else
 
 #if defined(MOO_HAVE_UINT16_T)
+#	if defined(MOO_HAVE_BUILTIN_BSWAP16)
+#	define moo_bswap16(x) ((moo_uint16_t)__builtin_bswap16((moo_uint16_t)(x)))
+#	else 
 #	define moo_bswap16(x) ((moo_uint16_t)(((moo_uint16_t)(x)) << 8) | (((moo_uint16_t)(x)) >> 8))
+#	endif
 #endif
 
 #if defined(MOO_HAVE_UINT32_T)
+#	if defined(MOO_HAVE_BUILTIN_BSWAP32)
+#	define moo_bswap32(x) ((moo_uint32_t)__builtin_bswap32((moo_uint32_t)(x)))
+#	else 
 #	define moo_bswap32(x) ((moo_uint32_t)(((((moo_uint32_t)(x)) >> 24)) | \
 	                                      ((((moo_uint32_t)(x)) >>  8) & ((moo_uint32_t)0xff << 8)) | \
 	                                      ((((moo_uint32_t)(x)) <<  8) & ((moo_uint32_t)0xff << 16)) | \
 	                                      ((((moo_uint32_t)(x)) << 24))))
+#	endif
 #endif
 
 #if defined(MOO_HAVE_UINT64_T)
+#	if defined(MOO_HAVE_BUILTIN_BSWAP64)
+#	define moo_bswap64(x) ((moo_uint64_t)__builtin_bswap64((moo_uint64_t)(x)))
+#	else 
 #	define moo_bswap64(x) ((moo_uint64_t)(((((moo_uint64_t)(x)) >> 56)) | \
 	                                      ((((moo_uint64_t)(x)) >> 40) & ((moo_uint64_t)0xff << 8)) | \
 	                                      ((((moo_uint64_t)(x)) >> 24) & ((moo_uint64_t)0xff << 16)) | \
@@ -856,9 +874,13 @@ static MOO_INLINE moo_uint128_t moo_bswap128 (moo_uint128_t x)
 	                                      ((((moo_uint64_t)(x)) << 24) & ((moo_uint64_t)0xff << 40)) | \
 	                                      ((((moo_uint64_t)(x)) << 40) & ((moo_uint64_t)0xff << 48)) | \
 	                                      ((((moo_uint64_t)(x)) << 56))))
+#	endif
 #endif
 
 #if defined(MOO_HAVE_UINT128_T)
+#	if defined(MOO_HAVE_BUILTIN_BSWAP128)
+#	define moo_bswap128(x) ((moo_uint128_t)__builtin_bswap128((moo_uint128_t)(x)))
+#	else 
 #	define moo_bswap128(x) ((moo_uint128_t)(((((moo_uint128_t)(x)) >> 120)) |  \
 	                                        ((((moo_uint128_t)(x)) >> 104) & ((moo_uint128_t)0xff << 8)) | \
 	                                        ((((moo_uint128_t)(x)) >>  88) & ((moo_uint128_t)0xff << 16)) | \
@@ -875,6 +897,7 @@ static MOO_INLINE moo_uint128_t moo_bswap128 (moo_uint128_t x)
 	                                        ((((moo_uint128_t)(x)) <<  88) & ((moo_uint128_t)0xff << 104)) | \
 	                                        ((((moo_uint128_t)(x)) << 104) & ((moo_uint128_t)0xff << 112)) | \
 	                                        ((((moo_uint128_t)(x)) << 120))))
+#	endif
 #endif
 
 #endif /* MOO_HAVE_INLINE */
@@ -961,9 +984,92 @@ static MOO_INLINE moo_uint128_t moo_bswap128 (moo_uint128_t x)
 #	error UNKNOWN ENDIAN
 #endif
 
+/* =========================================================================
+ * BIT POSITION
+ * ========================================================================= */
+static MOO_INLINE int moo_get_pos_of_msb_set_pow2 (moo_oow_t x)
+{
+	/* the caller must ensure that x is power of 2. if x happens to be zero,
+	 * the return value is undefined as each method used may give different result. */
+#if defined(MOO_HAVE_BUILTIN_CTZLL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG_LONG)
+	return __builtin_ctzll(x); /* count the number of trailing zeros */
+#elif defined(MOO_HAVE_BUILTIN_CTZL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG)
+	return __builtin_ctzl(x); /* count the number of trailing zeros */
+#elif defined(MOO_HAVE_BUILTIN_CTZ) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_INT)
+	return __builtin_ctz(x); /* count the number of trailing zeros */
+#elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
+	moo_oow_t pos;
+	/* use the Bit Scan Forward instruction */
+#if 1
+	__asm__ volatile (
+		"bsf %1,%0\n\t"
+		: "=r"(pos) /* output */
+		: "r"(x) /* input */
+	);
+#else
+	__asm__ volatile (
+		"bsf %[X],%[EXP]\n\t"
+		: [EXP]"=r"(pos) /* output */
+		: [X]"r"(x) /* input */
+	);
+#endif
+	return (int)pos;
+#elif defined(__GNUC__) && defined(__aarch64__) || (defined(__arm__) && (defined(__ARM_ARCH) && (__ARM_ARCH >= 5)))
+	moo_oow_t n;
+	/* CLZ is available in ARMv5T and above. there is no instruction to
+	 * count trailing zeros or something similar. using RBIT with CLZ
+	 * would be good in ARMv6T2 and above to avoid further calculation
+	 * afte CLZ */
+	__asm__ volatile (
+		"clz %0,%1\n\t"
+		: "=r"(n) /* output */
+		: "r"(x) /* input */
+	);
+	return (int)(MOO_OOW_BITS - n - 1); 
+	/* TODO: PPC - use cntlz, cntlzw, cntlzd, SPARC - use lzcnt, MIPS clz */
+#else
+	int pos = 0;
+	while (x >>= 1) pos++;
+	return pos;
+#endif
+}
+
+static MOO_INLINE int moo_get_pos_of_msb_set (moo_oow_t x)
+{
+	/* x doesn't have to be power of 2. if x is zero, the result is undefined */
+#if defined(MOO_HAVE_BUILTIN_CLZLL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG_LONG)
+	return MOO_OOW_BITS - __builtin_clzll(x) - 1; /* count the number of leading zeros */
+#elif defined(MOO_HAVE_BUILTIN_CLZL) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_LONG)
+	return MOO_OOW_BITS - __builtin_clzl(x) - 1; /* count the number of leading zeros */
+#elif defined(MOO_HAVE_BUILTIN_CLZ) && (MOO_SIZEOF_OOW_T == MOO_SIZEOF_INT)
+	return MOO_OOW_BITS - __builtin_clz(x) - 1; /* count the number of leading zeros */
+#elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
+	/* bit scan reverse. not all x86 CPUs have LZCNT. */
+	moo_oow_t pos;
+	__asm__ volatile (
+		"bsr %1,%0\n\t"
+		: "=r"(pos) /* output */
+		: "r"(x) /* input */
+	);
+	return (int)pos;
+#elif defined(__GNUC__) && defined(__aarch64__) || (defined(__arm__) && (defined(__ARM_ARCH) && (__ARM_ARCH >= 5)))
+	moo_oow_t n;
+	__asm__ volatile (
+		"clz %0,%1\n\t"
+		: "=r"(n) /* output */
+		: "r"(x) /* input */
+	);
+	return (int)(MOO_OOW_BITS - n - 1); 
+	/* TODO: PPC - use cntlz, cntlzw, cntlzd, SPARC - use lzcnt, MIPS clz */
+#else
+	int pos = 0;
+	while (x >>= 1) pos++;
+	return pos;
+#endif
+}
+
 #if defined(__cplusplus)
 }
 #endif
-
 
 #endif

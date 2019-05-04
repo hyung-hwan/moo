@@ -999,7 +999,7 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 				#else
 					register int shift = i * MOO_SIZEOF(moo_oow_t);
 					moo_oow_t x = va_arg (ap, moo_oow_t);
-					num |= (moo_uintmax_t)x << (shift * 8);
+					num |= (moo_uintmax_t)x << (shift * MOO_BITS_PER_BYTE);
 				#endif
 				}
 			#else
@@ -1043,7 +1043,7 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 				#else
 					register int shift = i * MOO_SIZEOF(moo_oow_t);
 					moo_oow_t x = va_arg (ap, moo_oow_t);
-					num |= (moo_uintmax_t)x << (shift * 8);
+					num |= (moo_uintmax_t)x << (shift * MOO_BITS_PER_BYTE);
 				#endif
 				}
 			#else

@@ -404,7 +404,7 @@ moo_bch_t* moo_find_bchar_in_bcstr (const moo_bch_t* ptr, moo_bch_t c)
 
 moo_oow_t moo_byte_to_bcstr (moo_uint8_t byte, moo_bch_t* buf, moo_oow_t size, int flagged_radix, moo_bch_t fill)
 {
-	moo_bch_t tmp[(MOO_SIZEOF(moo_uint8_t) * 8)];
+	moo_bch_t tmp[(MOO_SIZEOF(moo_uint8_t) * MOO_BITS_PER_BYTE)];
 	moo_bch_t* p = tmp, * bp = buf, * be = buf + size - 1;
 	int radix;
 	moo_bch_t radix_char;
