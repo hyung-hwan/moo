@@ -45,6 +45,11 @@
 #	error UNSUPPORTED SYSTEM
 #endif
 
+
+/* =========================================================================
+ * ARCHITECTURE/COMPILER TWEAKS
+ * ========================================================================= */
+
 #if defined(EMSCRIPTEN)
 #	if defined(MOO_SIZEOF___INT128)
 #		undef MOO_SIZEOF___INT128 
@@ -54,6 +59,18 @@
 		/* autoconf doesn't seem to match actual emscripten */
 #		undef MOO_SIZEOF_LONG
 #		define MOO_SIZEOF_LONG MOO_SIZEOF_INT
+#	endif
+#endif
+
+#if defined(__GNUC__) && defined(__arm__)  && !defined(__ARM_ARCH)
+#	if defined(__ARM_ARCH_8__)
+#		define __ARM_ARCH 8
+#	elif defined(__ARM_ARCH_7__)
+#		define __ARM_ARCH 7
+#	elif defined(__ARM_ARCH_6__)
+#		define __ARM_ARCH 6
+#	elif defined(__ARM_ARCH_5__)
+#		define __ARM_ARCH 5
 #	endif
 #endif
 

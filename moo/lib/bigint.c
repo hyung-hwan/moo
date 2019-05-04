@@ -161,7 +161,7 @@ static MOO_INLINE int get_pos_of_msb_set_pow2 (moo_oow_t x)
 	);
 #endif
 	return (int)pos;
-#elif defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH_5__) || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__))
+#elif defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH) && (__ARM_ARCH >= 5))
 	moo_oow_t n;
 	/* CLZ is available in ARMv5T and above. there is no instruction to
 	 * count trailing zeros or something similar. using RBIT with CLZ
@@ -199,7 +199,7 @@ static MOO_INLINE int get_pos_of_msb_set (moo_oow_t x)
 		: "r"(x) /* input */
 	);
 	return (int)pos;
-#elif defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH_5__) || defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7__) || defined(__ARM_ARCH_8__))
+#elif defined(__GNUC__) && defined(__arm__) && (defined(__ARM_ARCH) && (__ARM_ARCH >= 5))
 	moo_oow_t n;
 	__asm__ volatile (
 		"clz %0,%1\n\t"

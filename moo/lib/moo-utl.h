@@ -746,8 +746,10 @@ static MOO_INLINE moo_uint16_t moo_bswap16 (moo_uint16_t x)
 #if defined(MOO_HAVE_BUILTIN_BSWAP16)
 	return __builtin_bswap16(x);
 #elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
-	__asm__ volatile ("xchgb %b0, %h0" : "=Q"(x): "0"(x));
+	__asm__ /*volatile*/ ("xchgb %b0, %h0" : "=Q"(x): "0"(x));
 	return x;
+#elif defined(__GNUC__) && (defined(__ARM_ARCH) && (__ARM_ARCH >= 6))
+	__asm__ /*volatile*/ ("rev16 %0, %0" : "+r"(x));
 #else
 	return (x << 8) | (x >> 8);
 #endif
@@ -760,7 +762,19 @@ static MOO_INLINE moo_uint32_t moo_bswap32 (moo_uint32_t x)
 #if defined(MOO_HAVE_BUILTIN_BSWAP32)
 	return __builtin_bswap32(x);
 #elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64) || defined(__i386) || defined(i386))
-	__asm__ volatile ("bswapl %0" : "=r"(x) : "0"(x));
+	__asm__ /*volatile*/ ("bswapl %0" : "=r"(x) : "0"(x));
+	return x;
+#elif defined(__GNUC__) && (defined(__ARM_ARCH) && (__ARM_ARCH >= 6))
+	__asm__ /*volatile*/ ("rev32 %0, %0" : "+r"(x));
+#elif defined(__GNUC__) && defined(__ARM_ARCH)
+	moo_uint32_t tmp;
+	__asm__ /*volatile*/ (
+		"eor %1, %0, %0, ror #16\n\t"
+		"bic %1, %1, #0x00ff0000\n\t"
+		"mov %0, %0, ror #8\n\t"
+		"eor %0, %0, %1, lsr #8\n\t"
+		:"+r"(x), "=&r"(tmp)
+	);
 	return x;
 #else
 	return ((x >> 24)) | 
@@ -777,8 +791,10 @@ static MOO_INLINE moo_uint64_t moo_bswap64 (moo_uint64_t x)
 #if defined(MOO_HAVE_BUILTIN_BSWAP64)
 	return __builtin_bswap64(x);
 #elif defined(__GNUC__) && (defined(__x86_64) || defined(__amd64))
-	__asm__ volatile ("bswapq %0" : "=r"(x) : "0"(x));
+	__asm__ /*volatile*/ ("bswapq %0" : "=r"(x) : "0"(x));
 	return x;
+#elif defined(__GNUC__) && defined(__aarch64__)
+	__asm__ /*volatile*/ ("rev64 %0, %0" : "+r"(x));
 #else
 	return ((x >> 56)) | 
 	       ((x >> 40) & ((moo_uint64_t)0xff << 8)) | 
