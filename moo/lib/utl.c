@@ -808,6 +808,43 @@ int moo_conv_ucstr_to_utf16 (const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t*
 
 /* ----------------------------------------------------------------------- */
 
+static moo_cmgr_t mb8_cmgr =
+{
+	moo_mb8_to_uc,
+	moo_uc_to_mb8
+};
+
+moo_cmgr_t* moo_get_mb8_cmgr (void)
+{
+	return &mb8_cmgr;
+}
+
+int moo_conv_mb8_to_uchars (const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
+{
+	/* the source is length bound */
+	return moo_conv_bchars_to_uchars_with_cmgr(bcs, bcslen, ucs, ucslen, &mb8_cmgr, 0);
+}
+
+int moo_conv_uchars_to_mb8 (const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t* bcs, moo_oow_t* bcslen)
+{
+	/* length bound */
+	return moo_conv_uchars_to_bchars_with_cmgr(ucs, ucslen, bcs, bcslen, &mb8_cmgr);
+}
+
+int moo_conv_mb8_to_ucstr (const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
+{
+	/* null-terminated. */
+	return moo_conv_bcstr_to_ucstr_with_cmgr(bcs, bcslen, ucs, ucslen, &mb8_cmgr, 0);
+}
+
+int moo_conv_ucstr_to_mb8 (const moo_uch_t* ucs, moo_oow_t* ucslen, moo_bch_t* bcs, moo_oow_t* bcslen)
+{
+	/* null-terminated */
+	return moo_conv_ucstr_to_bcstr_with_cmgr(ucs, ucslen, bcs, bcslen, &mb8_cmgr);
+}
+
+/* ----------------------------------------------------------------------- */
+
 int moo_convbtouchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_uch_t* ucs, moo_oow_t* ucslen)
 {
 	/* length bound */

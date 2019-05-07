@@ -736,6 +736,53 @@ MOO_EXPORT moo_oow_t moo_utf16_to_uc (
 	moo_uch_t*       uc
 );
 
+/* ------------------------------------------------------------------------- */
+
+MOO_EXPORT moo_cmgr_t* moo_get_mb8_cmgr (
+	void
+);
+
+MOO_EXPORT int moo_conv_uchars_to_mb8 (
+	const moo_uch_t*    ucs,
+	moo_oow_t*          ucslen,
+	moo_bch_t*          bcs,
+	moo_oow_t*          bcslen
+);
+
+MOO_EXPORT int moo_conv_mb8_to_uchars (
+	const moo_bch_t*   bcs,
+	moo_oow_t*         bcslen,
+	moo_uch_t*         ucs,
+	moo_oow_t*         ucslen
+);
+
+
+MOO_EXPORT int moo_conv_ucstr_to_mb8 (
+	const moo_uch_t*    ucs,
+	moo_oow_t*          ucslen,
+	moo_bch_t*          bcs,
+	moo_oow_t*          bcslen
+);
+
+MOO_EXPORT int moo_conv_mb8_to_ucstr (
+	const moo_bch_t*   bcs,
+	moo_oow_t*         bcslen,
+	moo_uch_t*         ucs,
+	moo_oow_t*         ucslen
+);
+
+MOO_EXPORT moo_oow_t moo_uc_to_mb8 (
+	moo_uch_t    uc,
+	moo_bch_t*   mb8,
+	moo_oow_t    size
+);
+
+MOO_EXPORT moo_oow_t moo_mb8_to_uc (
+	const moo_bch_t* mb8,
+	moo_oow_t        size,
+	moo_uch_t*       uc
+);
+
 /* =========================================================================
  * BIT SWAP
  * ========================================================================= */

@@ -79,6 +79,7 @@ libmoo_la_SOURCES = \
 	fmtoutv.h \
 	gc.c \
 	heap.c \
+	mb8.c \
 	moo.c \
 	number.c \
 	obj.c \

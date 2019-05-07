@@ -160,9 +160,25 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 		while (checkpoint < fmt - 1)
 		{
 			moo_oow_t cvlen, bclen;
+			moo_cmgr_t* cmgr;
+
 			bclen = fmt - checkpoint - 1;
-			cvlen = moo->cmgr->bctouc(checkpoint, bclen, &ch);
-			if (cvlen == 0 || cvlen > bclen) goto oops;
+			cmgr = moo->cmgr;
+			cvlen = cmgr->bctouc(checkpoint, bclen, &ch);
+			if (cvlen == 0 || cvlen > bclen) 
+			{
+				/* conversion error. just emit the byte as it is. */
+			#if defined(FMTOUT_STRICT)
+				goto oops;
+			#else
+				cmgr = moo_get_utf8_cmgr();
+				if (cmgr == moo->cmgr || (cvlen = cmgr->bctouc(checkpoint, bclen, &ch)) == 0 || cvlen > bclen) 
+				{
+					cmgr = moo_get_mb8_cmgr();
+					if (cmgr == moo->cmgr || (cvlen = cmgr->bctouc(checkpoint, bclen, &ch)) == 0 || cvlen > bclen) goto oops;
+				}
+			#endif
+			}
 			checkpoint += cvlen;
 			PUT_OOCH (ch, 1);
 		}
@@ -462,7 +478,8 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 		case 's':
 		{
 			const moo_bch_t* bsp;
-			moo_oow_t bslen, slen;
+			moo_oow_t bslen, obslen, slen;
+			moo_cmgr_t* cmgr;
 
 			/* zeropad must not take effect for 'S' */
 			if (flagc & FLAGC_ZEROPAD) padc = ' ';
@@ -479,14 +496,31 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 			/* get the length */
 			if (flagc & FLAGC_DOT)
 			{
-				for (bslen = 0; bslen < precision && bsp[bslen]; bslen++);
+				for (obslen = 0; obslen < precision && bsp[obslen]; obslen++);
 			}
 			else
 			{
-				for (bslen = 0; bsp[bslen]; bslen++);
+				for (obslen = 0; bsp[obslen]; obslen++);
 			}
 
-			if (moo_conv_bchars_to_uchars_with_cmgr(bsp, &bslen, MOO_NULL, &slen, moo->cmgr, 0) <= -1) goto oops;
+			/* get the required length for successful conversion in a fail-safe manner */
+			cmgr = moo->cmgr;
+			bslen = obslen;
+			if (moo_conv_bchars_to_uchars_with_cmgr(bsp, &bslen, MOO_NULL, &slen, cmgr, 0) <= -1) 
+			{
+			#if defined(FMTOUT_STRICT)
+				goto oops;
+			#else
+				cmgr = moo_get_utf8_cmgr();
+				bslen = obslen;
+				if (cmgr == moo->cmgr || moo_conv_bchars_to_uchars_with_cmgr(bsp, &bslen, MOO_NULL, &slen, cmgr, 0) <= -1)
+				{
+					cmgr = moo_get_mb8_cmgr();
+					bslen = obslen;
+					if (cmgr == moo->cmgr || moo_conv_bchars_to_uchars_with_cmgr(bsp, &bslen, MOO_NULL, &slen, cmgr, 0) <= -1) goto oops;
+				}
+			#endif
+			}
 
 			/* slen holds the length after conversion */
 			n = slen;
@@ -506,7 +540,7 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 					conv_len = MOO_COUNTOF(conv_buf);
 
 					/* this must not fail since the dry-run above was successful */
-					moo_conv_bchars_to_uchars_with_cmgr(&bsp[tot_len], &src_len, conv_buf, &conv_len, moo->cmgr, 0);
+					moo_conv_bchars_to_uchars_with_cmgr(&bsp[tot_len], &src_len, conv_buf, &conv_len, cmgr, 0);
 					tot_len += src_len;
 
 					if (conv_len > n) conv_len = n;
@@ -515,7 +549,7 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 					n -= conv_len;
 				}
 			}
-			
+
 			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
 		#else
 			if (flagc & FLAGC_DOT)

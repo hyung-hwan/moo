@@ -573,8 +573,11 @@ static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 #if defined(MOO_OOCH_IS_UCH)
 	bcslen = bb->len;
 	ucslen = MOO_COUNTOF(arg->buf);
+/* TODO: use the default cmgr first.
+ * then fallback to utf8, mb8, etc */
 	x = moo_convbtooochars(moo, bb->buf, &bcslen, arg->buf, &ucslen);
-	if (x <= -1 && ucslen <= 0) return -1;
+	if (x <= -1 /*&& ucslen <= 0 */) return -1;
+
 	/* if ucslen is greater than 0, i see that some characters have been
 	 * converted properly */
 #else
