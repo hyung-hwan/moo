@@ -170,11 +170,12 @@ am__DEPENDENCIES_5 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2) \
 am_libmoo_la_OBJECTS = libmoo_la-bigint.lo libmoo_la-comp.lo \
 	libmoo_la-debug.lo libmoo_la-decode.lo libmoo_la-dic.lo \
 	libmoo_la-err.lo libmoo_la-exec.lo libmoo_la-fmtout.lo \
-	libmoo_la-gc.lo libmoo_la-heap.lo libmoo_la-mb8.lo libmoo_la-moo.lo \
-	libmoo_la-number.lo libmoo_la-obj.lo libmoo_la-opt.lo \
-	libmoo_la-pf-basic.lo libmoo_la-pf-sys.lo libmoo_la-pf-utf8.lo \
-	libmoo_la-rbt.lo libmoo_la-sym.lo libmoo_la-utf8.lo \
-	libmoo_la-utf16.lo libmoo_la-utl.lo libmoo_la-std.lo
+	libmoo_la-gc.lo libmoo_la-heap.lo libmoo_la-mb8.lo \
+	libmoo_la-moo.lo libmoo_la-number.lo libmoo_la-obj.lo \
+	libmoo_la-opt.lo libmoo_la-pf-basic.lo libmoo_la-pf-sys.lo \
+	libmoo_la-pf-utf8.lo libmoo_la-rbt.lo libmoo_la-sym.lo \
+	libmoo_la-utf8.lo libmoo_la-utf16.lo libmoo_la-utl.lo \
+	libmoo_la-std.lo
 libmoo_la_OBJECTS = $(am_libmoo_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
