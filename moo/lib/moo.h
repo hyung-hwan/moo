@@ -101,7 +101,13 @@ enum moo_option_t
 	MOO_OPTION_SYMTAB_SIZE,  /* default system table size */
 	MOO_OPTION_SYSDIC_SIZE,  /* default system dictionary size */
 	MOO_OPTION_PROCSTK_SIZE, /* default process stack size */
-	MOO_OPTION_MOD_INCTX
+	MOO_OPTION_MOD_INCTX,
+
+	/*
+	MOO_OPTION_CMGR_FS,
+	MOO_OPTION_CMGR_FILE_SYS
+	MOO_OPTION_CMGR_
+	*/
 };
 typedef enum moo_option_t moo_option_t;
 

@@ -442,7 +442,8 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 		const moo_bch_t* fn, * fb;
 
 	#if defined(MOO_OOCH_IS_UCH)
-		if (moo_convootobcstr(moo, arg->name, &ucslen, MOO_NULL, &bcslen) <= -1) goto oops;
+		/*if (moo_convootobcstr(moo, arg->name, &ucslen, MOO_NULL, &bcslen) <= -1) goto oops;*/
+		if (moo_conv_uchars_to_bchars_with_cmgr(arg->name, &ucslen, MOO_NULL, &bcslen, moo_get_cmgr_by_id(MOO_CMGR_UTF8)) <= -1) goto oops;
 	#else
 		bcslen = moo_count_bcstr(arg->name);
 	#endif
@@ -458,7 +459,11 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 		bb->fn = (moo_bch_t*)(bb + 1);
 		moo_copy_bchars (bb->fn, fn, parlen);
 	#if defined(MOO_OOCH_IS_UCH)
-		moo_convootobcstr (moo, arg->name, &ucslen, &bb->fn[parlen], &bcslen);
+		/* [NOTE] as i convert a unicode string for fopen() below, the conversion
+		 *        should use the system locale instead of moo's cmgr configuration.
+		 *        but let's not use the system locale for now. */
+		/*moo_convootobcstr (moo, arg->name, &ucslen, &bb->fn[parlen], &bcslen);*/
+		moo_conv_uchars_to_bchars_with_cmgr (arg->name, &ucslen, &bb->fn[parlen], &bcslen, moo_get_cmgr_by_id(MOO_CMGR_UTF8));
 	#else
 		moo_copy_bcstr (&bb->fn[parlen], bcslen + 1, arg->name);
 	#endif
@@ -482,7 +487,7 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 
 				bb->fn = (moo_bch_t*)(bb + 1);
 				moo_copy_bcstr (bb->fn, bcslen + 1, xtn->in->u.fileb.path);
-		
+
 				break;
 
 		#if defined(MOO_OOCH_IS_UCH)
@@ -1467,7 +1472,7 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 
 		bcslen = bufcapa - len;
 	#if defined(MOO_OOCH_IS_UCH)
-		moo_convootobcstr(moo, name, &ucslen, &bufptr[len], &bcslen);
+		moo_convootobcstr (moo, name, &ucslen, &bufptr[len], &bcslen);
 	#else
 		bcslen = moo_copy_bcstr(&bufptr[len], bcslen, name);
 	#endif
@@ -1534,12 +1539,12 @@ static void* dl_open (moo_t* moo, const moo_ooch_t* name, int flags)
 		/* opening a raw shared object without a prefix and/or a postfix */
 	#if defined(MOO_OOCH_IS_UCH)
 		bcslen = bufcapa;
-		moo_convootobcstr(moo, name, &ucslen, bufptr, &bcslen);
+		moo_convootobcstr (moo, name, &ucslen, bufptr, &bcslen);
 	#else
 		bcslen = moo_copy_bcstr(bufptr, bufcapa, name);
 	#endif
 
-		if (moo_find_bchar (bufptr, bcslen, '.'))
+		if (moo_find_bchar(bufptr, bcslen, '.'))
 		{
 			handle = sys_dl_open(bufptr);
 			if (!handle) 
