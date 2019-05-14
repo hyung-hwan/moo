@@ -283,6 +283,16 @@
 #define MOO_HASH_UCSTR(hv, ptr) MOO_HASH_VPTR(hv, ptr, const moo_uch_t)
 #define MOO_HASH_MORE_UCSTR(hv, ptr) MOO_HASH_MORE_VPTR(hv, ptr, const moo_uch_t)
 
+/* =========================================================================
+ * CMGR
+ * ========================================================================= */
+enum moo_cmgr_id_t
+{
+	MOO_CMGR_UTF8,
+	MOO_CMGR_UTF16,
+	MOO_CMGR_MB8,
+};
+typedef enum moo_cmgr_id_t moo_cmgr_id_t;
 
 #if defined(__cplusplus)
 extern "C" {
@@ -590,9 +600,29 @@ MOO_EXPORT int moo_conv_uchars_to_bchars_with_cmgr (
 
 /* ------------------------------------------------------------------------- */
 
-MOO_EXPORT moo_cmgr_t* moo_get_utf8_cmgr (
-	void
+MOO_EXPORT moo_cmgr_t* moo_get_cmgr_by_id (
+	moo_cmgr_id_t id
 );
+
+MOO_EXPORT moo_cmgr_t* moo_get_cmgr_by_bcstr (
+	const moo_bch_t* name
+);
+
+MOO_EXPORT moo_cmgr_t* moo_get_cmgr_by_ucstr (
+	const moo_uch_t* name
+);
+
+#if defined(MOO_OOCH_IS_UCH)
+#	define moo_get_cmgr_by_name(name) moo_get_cmgr_by_ucstr(name)
+#else
+#	define moo_get_cmgr_by_name(name) moo_get_cmgr_by_bcstr(name)
+#endif
+
+#define moo_get_utf8_cmgr() moo_get_cmgr_by_id(MOO_CMGR_UTF8)
+#define moo_get_utf16_cmgr() moo_get_cmgr_by_id(MOO_CMGR_UTF16)
+#define moo_get_mb8_cmgr() moo_get_cmgr_by_id(MOO_CMGR_MB8)
+
+/* ------------------------------------------------------------------------- */
 
 /**
  * The moo_conv_uchars_to_utf8() function converts a unicode character string \a ucs 
@@ -691,10 +721,6 @@ MOO_EXPORT moo_oow_t moo_utf8_to_uc (
 
 /* ------------------------------------------------------------------------- */
 
-MOO_EXPORT moo_cmgr_t* moo_get_utf16_cmgr (
-	void
-);
-
 MOO_EXPORT int moo_conv_uchars_to_utf16 (
 	const moo_uch_t*    ucs,
 	moo_oow_t*          ucslen,
@@ -737,10 +763,6 @@ MOO_EXPORT moo_oow_t moo_utf16_to_uc (
 );
 
 /* ------------------------------------------------------------------------- */
-
-MOO_EXPORT moo_cmgr_t* moo_get_mb8_cmgr (
-	void
-);
 
 MOO_EXPORT int moo_conv_uchars_to_mb8 (
 	const moo_uch_t*    ucs,

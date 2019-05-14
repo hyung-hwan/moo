@@ -31,7 +31,7 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 	moo_uint8_t* ptr;
 
 #if defined(MOO_BUILD_DEBUG)
-	if ((moo->option.trait & MOO_DEBUG_GC) && !(moo->option.trait & MOO_NOGC)) moo_gc (moo);
+	if ((moo->option.trait & MOO_TRAIT_DEBUG_GC) && !(moo->option.trait & MOO_TRAIT_NOGC)) moo_gc (moo);
 #endif
 
 	if (MOO_UNLIKELY(moo->igniting))
@@ -42,7 +42,7 @@ void* moo_allocbytes (moo_t* moo, moo_oow_t size)
 	else
 	{
 		ptr = (moo_uint8_t*)moo_allocheapspace(moo, &moo->heap->curspace, size);
-		if (!ptr && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_NOGC))
+		if (!ptr && moo->errnum == MOO_EOOMEM && !(moo->option.trait & MOO_TRAIT_NOGC))
 		{
 			moo_gc (moo);
 			MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO,

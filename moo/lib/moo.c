@@ -297,22 +297,22 @@ int moo_setoption (moo_t* moo, moo_option_t id, const void* value)
 {
 	switch (id)
 	{
-		case MOO_TRAIT:
+		case MOO_OPTION_TRAIT:
 			moo->option.trait = *(moo_bitmask_t*)value;
 		#if defined(MOO_BUILD_DEBUG)
-			moo->option.karatsuba_cutoff = ((moo->option.trait & MOO_DEBUG_BIGINT)? MOO_KARATSUBA_CUTOFF_DEBUG: MOO_KARATSUBA_CUTOFF);
+			moo->option.karatsuba_cutoff = ((moo->option.trait & MOO_TRAIT_DEBUG_BIGINT)? MOO_KARATSUBA_CUTOFF_DEBUG: MOO_KARATSUBA_CUTOFF);
 		#endif
 			return 0;
 
-		case MOO_LOG_MASK:
+		case MOO_OPTION_LOG_MASK:
 			moo->option.log_mask = *(moo_bitmask_t*)value;
 			return 0;
 
-		case MOO_LOG_MAXCAPA:
+		case MOO_OPTION_LOG_MAXCAPA:
 			moo->option.log_maxcapa = *(moo_oow_t*)value;
 			return 0;
 
-		case MOO_SYMTAB_SIZE:
+		case MOO_OPTION_SYMTAB_SIZE:
 		{
 			moo_oow_t w;
 
@@ -323,7 +323,7 @@ int moo_setoption (moo_t* moo, moo_option_t id, const void* value)
 			return 0;
 		}
 
-		case MOO_SYSDIC_SIZE:
+		case MOO_OPTION_SYSDIC_SIZE:
 		{
 			moo_oow_t w;
 
@@ -334,7 +334,7 @@ int moo_setoption (moo_t* moo, moo_option_t id, const void* value)
 			return 0;
 		}
 
-		case MOO_PROCSTK_SIZE:
+		case MOO_OPTION_PROCSTK_SIZE:
 		{
 			moo_oow_t w;
 
@@ -345,7 +345,7 @@ int moo_setoption (moo_t* moo, moo_option_t id, const void* value)
 			return 0;
 		}
 
-		case MOO_MOD_INCTX:
+		case MOO_OPTION_MOD_INCTX:
 			moo->option.mod_inctx = *(void**)value;
 			return 0;
 	}
@@ -357,33 +357,33 @@ einval:
 
 int moo_getoption (moo_t* moo, moo_option_t id, void* value)
 {
-	switch  (id)
+	switch (id)
 	{
-		case MOO_TRAIT:
+		case MOO_OPTION_TRAIT:
 			*(moo_bitmask_t*)value = moo->option.trait;
 			return 0;
 
-		case MOO_LOG_MASK:
+		case MOO_OPTION_LOG_MASK:
 			*(moo_bitmask_t*)value = moo->option.log_mask;
 			return 0;
 
-		case MOO_LOG_MAXCAPA:
+		case MOO_OPTION_LOG_MAXCAPA:
 			*(moo_oow_t*)value = moo->option.log_maxcapa;
 			return 0;
 
-		case MOO_SYMTAB_SIZE:
+		case MOO_OPTION_SYMTAB_SIZE:
 			*(moo_oow_t*)value = moo->option.dfl_symtab_size;
 			return 0;
 
-		case MOO_SYSDIC_SIZE:
+		case MOO_OPTION_SYSDIC_SIZE:
 			*(moo_oow_t*)value = moo->option.dfl_sysdic_size;
 			return 0;
 
-		case MOO_PROCSTK_SIZE:
+		case MOO_OPTION_PROCSTK_SIZE:
 			*(moo_oow_t*)value = moo->option.dfl_procstk_size;
 			return 0;
 
-		case MOO_MOD_INCTX:
+		case MOO_OPTION_MOD_INCTX:
 			*(void**)value = moo->option.mod_inctx;
 			return 0;
 	};
@@ -392,14 +392,14 @@ int moo_getoption (moo_t* moo, moo_option_t id, void* value)
 	return -1;
 }
 
-moo_evtcb_t* moo_regevtcb (moo_t* moo, moo_evtcb_t* tmpl)
+moo_evtcb_t* moo_regevtcb (moo_t* moo, moo_evtcb_t* cb)
 {
 	moo_evtcb_t* actual;
 
 	actual = (moo_evtcb_t*)moo_allocmem(moo, MOO_SIZEOF(*actual));
 	if (!actual) return MOO_NULL;
 
-	*actual = *tmpl;
+	*actual = *cb;
 	actual->next = moo->evtcb_list;
 	actual->prev = MOO_NULL;
 	moo->evtcb_list = actual;

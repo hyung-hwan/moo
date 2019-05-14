@@ -4835,7 +4835,7 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 				/* the stack contains the final return value so the stack pointer must be 0. */
 				MOO_ASSERT (moo, moo->sp == 0); 
 
-				if (moo->option.trait & MOO_AWAIT_PROCS)
+				if (moo->option.trait & MOO_TRAIT_AWAIT_PROCS)
 				{
 					terminate_process (moo, moo->processor->active);
 				}

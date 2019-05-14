@@ -202,11 +202,11 @@ int main (int argc, char* argv[])
 		moo_oow_t tab_size;
 
 		tab_size = 5000;
-		moo_setoption (moo, MOO_SYMTAB_SIZE, &tab_size);
+		moo_setoption (moo, MOO_OPTION_SYMTAB_SIZE, &tab_size);
 		tab_size = 5000;
-		moo_setoption (moo, MOO_SYSDIC_SIZE, &tab_size);
+		moo_setoption (moo, MOO_OPTION_SYSDIC_SIZE, &tab_size);
 		tab_size = 600;
-		moo_setoption (moo, MOO_PROCSTK_SIZE, &tab_size);
+		moo_setoption (moo, MOO_OPTION_PROCSTK_SIZE, &tab_size);
 	}
 
 	if (moo_ignite(moo, memsize) <= -1)
@@ -226,7 +226,6 @@ int main (int argc, char* argv[])
 	for (i = opt.ind; i < argc; i++)
 	{
 		moo_iostd_t in;
-
 #if 1
 		in.type = MOO_IOSTD_FILEB;
 		in.u.fileb.path = argv[i];

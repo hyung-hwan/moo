@@ -95,13 +95,13 @@ typedef enum moo_errnum_t moo_errnum_t;
 
 enum moo_option_t
 {
-	MOO_TRAIT,
-	MOO_LOG_MASK,
-	MOO_LOG_MAXCAPA,
-	MOO_SYMTAB_SIZE,  /* default system table size */
-	MOO_SYSDIC_SIZE,  /* default system dictionary size */
-	MOO_PROCSTK_SIZE, /* default process stack size */
-	MOO_MOD_INCTX
+	MOO_OPTION_TRAIT,
+	MOO_OPTION_LOG_MASK,
+	MOO_OPTION_LOG_MAXCAPA,
+	MOO_OPTION_SYMTAB_SIZE,  /* default system table size */
+	MOO_OPTION_SYSDIC_SIZE,  /* default system dictionary size */
+	MOO_OPTION_PROCSTK_SIZE, /* default process stack size */
+	MOO_OPTION_MOD_INCTX
 };
 typedef enum moo_option_t moo_option_t;
 
@@ -119,15 +119,15 @@ typedef enum moo_option_dflval_t moo_option_dflval_t;
 
 enum moo_trait_t
 {
-	MOO_DEBUG_GC     = (1u << 0),
-	MOO_DEBUG_BIGINT = (1u << 1),
+	MOO_TRAIT_DEBUG_GC     = (1u << 0),
+	MOO_TRAIT_DEBUG_BIGINT = (1u << 1),
 
 	/* perform no garbage collection when the heap is full. 
 	 * you still can use moo_gc() explicitly. */
-	MOO_NOGC = (1u << 8),
+	MOO_TRAIT_NOGC = (1u << 8),
 
 	/* wait for running process when exiting from the main method */
-	MOO_AWAIT_PROCS = (1u << 9)
+	MOO_TRAIT_AWAIT_PROCS = (1u << 9)
 };
 typedef enum moo_trait_t moo_trait_t;
 
@@ -1940,7 +1940,7 @@ MOO_EXPORT int moo_setoption (
 
 MOO_EXPORT moo_evtcb_t* moo_regevtcb (
 	moo_t*       moo,
-	moo_evtcb_t* tmpl
+	moo_evtcb_t* cb
 );
 
 MOO_EXPORT void moo_deregevtcb (
@@ -1950,7 +1950,7 @@ MOO_EXPORT void moo_deregevtcb (
 
 /**
  * The moo_gc() function performs garbage collection.
- * It is not affected by #MOO_NOGC.
+ * It is not affected by #MOO_TRAIT_NOGC.
  */
 MOO_EXPORT void moo_gc (
 	moo_t* moo

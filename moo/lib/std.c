@@ -258,6 +258,7 @@ struct bb_t
 
 	FILE* fp;
 	moo_bch_t* fn;
+	moo_cmgr_t* cmgr;
 };
 
 #if defined(USE_SELECT)
@@ -431,6 +432,7 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 {
 	xtn_t* xtn = GET_XTN(moo);
 	bb_t* bb = MOO_NULL;
+	moo_bch_t* at;
 
 /* TOOD: support predefined include directory as well */
 	if (arg->includer)
@@ -480,6 +482,7 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 
 				bb->fn = (moo_bch_t*)(bb + 1);
 				moo_copy_bcstr (bb->fn, bcslen + 1, xtn->in->u.fileb.path);
+		
 				break;
 
 		#if defined(MOO_OOCH_IS_UCH)
@@ -499,12 +502,30 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 				bb->fn = (moo_bch_t*)(bb + 1);
 				bcslen += 1;
 				moo_convutobcstr (moo, xtn->in->u.fileu.path, &ucslen, bb->fn, &bcslen);
+
 				break;
 
 			default:
 				moo_seterrbfmt (moo, MOO_EINVAL, "unsupported standard input type - %d", (int)xtn->in->type);
 				goto oops;
 		}
+	}
+
+	/* the path name can be appened with @encoding */
+	at = moo_find_bchar_in_bcstr(bb->fn, '@');
+	if (at && at[1] != '\0')
+	{
+		*at = '\0';
+		bb->cmgr = moo_get_cmgr_by_bcstr(at + 1);
+		if (!bb->cmgr) bb->cmgr = moo_getcmgr(moo);
+	}
+	else if (arg->includer)
+	{
+		bb->cmgr = ((bb_t*)arg->includer->handle)->cmgr;
+	}
+	else
+	{
+		bb->cmgr = moo_getcmgr(moo);
 	}
 
 /* TODO: support _wfopen or the like */
@@ -575,8 +596,13 @@ static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 	ucslen = MOO_COUNTOF(arg->buf);
 /* TODO: use the default cmgr first.
  * then fallback to utf8, mb8, etc */
-	x = moo_convbtooochars(moo, bb->buf, &bcslen, arg->buf, &ucslen);
-	if (x <= -1 /*&& ucslen <= 0 */) return -1;
+	/*x = moo_convbtooochars(moo, bb->buf, &bcslen, arg->buf, &ucslen);*/
+	x = moo_conv_bchars_to_uchars_with_cmgr(bb->buf, &bcslen, arg->buf, &ucslen, bb->cmgr, 0);
+	if (x <= -1 /*&& ucslen <= 0 */) 
+	{
+		moo_seterrbfmt (moo, (x == -2)? MOO_EBUFFULL: MOO_EECERR, "unable to convert source input - %.*hs", bcslen, bb->buf);
+		return -1;
+	}
 
 	/* if ucslen is greater than 0, i see that some characters have been
 	 * converted properly */
@@ -3235,8 +3261,8 @@ static struct
 	moo_bitmask_t mask;
 } dbg_mask_table[] =
 {
-	{ "bigint", MOO_DEBUG_BIGINT },
-	{ "gc",     MOO_DEBUG_GC }
+	{ "bigint", MOO_TRAIT_DEBUG_BIGINT },
+	{ "gc",     MOO_TRAIT_DEBUG_GC }
 };
 
 static int parse_logoptb (moo_t* moo, const moo_bch_t* str, moo_oow_t* xpathlen, moo_bitmask_t* xlogmask)
@@ -3377,7 +3403,7 @@ static int handle_logoptb (moo_t* moo, const moo_bch_t* str)
 #endif
 
 	if (str != xstr) moo_freemem (moo, xstr);
-	moo_setoption (moo, MOO_LOG_MASK, &logmask);
+	moo_setoption (moo, MOO_OPTION_LOG_MASK, &logmask);
 	return 0;
 }
 
@@ -3407,7 +3433,7 @@ static int handle_logoptu (moo_t* moo, const moo_uch_t* str)
 #endif
 
 	moo_freemem (moo, xstr);
-	moo_setoption (moo, MOO_LOG_MASK, &logmask);
+	moo_setoption (moo, MOO_OPTION_LOG_MASK, &logmask);
 	return 0;
 }
 
@@ -3441,9 +3467,9 @@ static int handle_dbgoptb (moo_t* moo, const moo_bch_t* str)
 	}
 	while (cm);
 
-	moo_getoption (moo, MOO_TRAIT, &trait);
+	moo_getoption (moo, MOO_OPTION_TRAIT, &trait);
 	trait |= dbgopt;
-	moo_setoption (moo, MOO_TRAIT, &trait);
+	moo_setoption (moo, MOO_OPTION_TRAIT, &trait);
 
 	return 0;
 }
@@ -3478,9 +3504,9 @@ static int handle_dbgoptu (moo_t* moo, const moo_uch_t* str)
 	}
 	while (cm);
 
-	moo_getoption (moo, MOO_TRAIT, &trait);
+	moo_getoption (moo, MOO_OPTION_TRAIT, &trait);
 	trait |= dbgopt;
-	moo_setoption (moo, MOO_TRAIT, &trait);
+	moo_setoption (moo, MOO_OPTION_TRAIT, &trait);
 
 	return 0;
 }
@@ -3612,15 +3638,15 @@ static void fini_moo (moo_t* moo)
 	{
 		moo_bitmask_t bm = 0;
 
-		moo_getoption (moo, MOO_TRAIT, &bm);
-		/*bm |= MOO_NOGC;*/
-		bm |= MOO_AWAIT_PROCS;
-		moo_setoption (moo, MOO_TRAIT, &bm);
+		moo_getoption (moo, MOO_OPTION_TRAIT, &bm);
+		/*bm |= MOO_TRAIT_NOGC;*/
+		bm |= MOO_TRAIT_AWAIT_PROCS;
+		moo_setoption (moo, MOO_OPTION_TRAIT, &bm);
 
 		/* disable GC logs */
-		moo_getoption (moo, MOO_LOG_MASK, &bm);
+		moo_getoption (moo, MOO_OPTION_LOG_MASK, &bm);
 		bm = ~MOO_LOG_GC;
-		moo_setoption (moo, MOO_LOG_MASK, &bm);
+		moo_setoption (moo, MOO_OPTION_LOG_MASK, &bm);
 	}
 
 	if (handle_cfg_options(moo, cfg) <= -1)
