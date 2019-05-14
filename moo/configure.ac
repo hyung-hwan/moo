@@ -860,6 +860,7 @@ AC_CONFIG_FILES([
 	Makefile 
 	lib/Makefile 
 	mod/Makefile 
+	bin/Makefile
 	t/Makefile
 ])
 AC_OUTPUT

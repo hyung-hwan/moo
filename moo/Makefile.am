@@ -5,12 +5,12 @@ EXTRA_DIST =
 SUBDIRS =
 
 if ENABLE_STATIC_MODULE
-SUBDIRS += mod lib
+SUBDIRS += mod lib bin
 else
-SUBDIRS += lib mod
+SUBDIRS += lib mod bin
 endif
 
-DIST_SUBDIRS = $(SUBDIRS) 
+DIST_SUBDIRS = $(SUBDIRS) t
 
 distclean-local:
 	@rm -rf $(top_srcdir)/autom4te.cache

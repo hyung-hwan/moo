@@ -15,7 +15,6 @@
 @SET_MAKE@
 
 
-
 VPATH = @srcdir@
 am__is_gnu_make = { \
   if test -z '$(MAKELEVEL)'; then \
@@ -109,12 +108,6 @@ host_triplet = @host@
 @ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_12 = $(abs_builddir)/../mod/libmoo-sck.la
 @ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_13 = -lmoo-x11
 @ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_14 = $(abs_builddir)/../mod/libmoo-x11.la
-bin_PROGRAMS = moo$(EXEEXT)
-@WIN32_TRUE@am__append_15 = poll-msw.c poll-msw.h
-@WIN32_TRUE@am__append_16 = $(SOCKET_LIBS)
-@ENABLE_STATIC_MODULE_FALSE@moo_DEPENDENCIES = $(am__DEPENDENCIES_5) \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_6)
 subdir = lib
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_sign.m4 \
@@ -158,7 +151,7 @@ am__uninstall_files_from_dir = { \
     || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
-am__installdirs = "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(bindir)" \
+am__installdirs = "$(DESTDIR)$(pkglibdir)" \
 	"$(DESTDIR)$(pkgincludedir)"
 LTLIBRARIES = $(pkglib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
@@ -184,15 +177,6 @@ am__v_lt_1 =
 libmoo_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(libmoo_la_LDFLAGS) $(LDFLAGS) -o $@
-PROGRAMS = $(bin_PROGRAMS)
-am__moo_SOURCES_DIST = main.c poll-msw.c poll-msw.h
-@WIN32_TRUE@am__objects_1 = moo-poll-msw.$(OBJEXT)
-am_moo_OBJECTS = moo-main.$(OBJEXT) $(am__objects_1)
-moo_OBJECTS = $(am_moo_OBJECTS)
-@WIN32_TRUE@am__DEPENDENCIES_6 = $(am__DEPENDENCIES_1)
-moo_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(moo_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -227,8 +211,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libmoo_la_SOURCES) $(moo_SOURCES)
-DIST_SOURCES = $(libmoo_la_SOURCES) $(am__moo_SOURCES_DIST)
+SOURCES = $(libmoo_la_SOURCES)
+DIST_SOURCES = $(libmoo_la_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -495,12 +479,6 @@ libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_6) \
 @ENABLE_STATIC_MODULE_TRUE@libmoo_la_DEPENDENCIES = $(abs_builddir)/../mod/libmoo-stdio.la \
 @ENABLE_STATIC_MODULE_TRUE@	$(am__append_8) $(am__append_10) \
 @ENABLE_STATIC_MODULE_TRUE@	$(am__append_12) $(am__append_14)
-moo_SOURCES = main.c $(am__append_15)
-moo_CPPFLAGS = $(CPPFLAGS_ALL_COMMON) 
-moo_LDFLAGS = $(LDFLAGS_ALL_COMMON)
-moo_LDADD = $(LIBADD_LIB_COMMON) -lmoo $(PTHREAD_LIBS) \
-	$(am__append_16)
-@ENABLE_STATIC_MODULE_TRUE@moo_DEPENDENCIES = libmoo.la
 all: moo-cfg.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -588,59 +566,6 @@ clean-pkglibLTLIBRARIES:
 
 libmoo.la: $(libmoo_la_OBJECTS) $(libmoo_la_DEPENDENCIES) $(EXTRA_libmoo_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libmoo_la_LINK) -rpath $(pkglibdir) $(libmoo_la_OBJECTS) $(libmoo_la_LIBADD) $(LIBS)
-install-binPROGRAMS: $(bin_PROGRAMS)
-	@$(NORMAL_INSTALL)
-	@list='$(bin_PROGRAMS)'; test -n "$(bindir)" || list=; \
-	if test -n "$$list"; then \
-	  echo " $(MKDIR_P) '$(DESTDIR)$(bindir)'"; \
-	  $(MKDIR_P) "$(DESTDIR)$(bindir)" || exit 1; \
-	fi; \
-	for p in $$list; do echo "$$p $$p"; done | \
-	sed 's/$(EXEEXT)$$//' | \
-	while read p p1; do if test -f $$p \
-	 || test -f $$p1 \
-	  ; then echo "$$p"; echo "$$p"; else :; fi; \
-	done | \
-	sed -e 'p;s,.*/,,;n;h' \
-	    -e 's|.*|.|' \
-	    -e 'p;x;s,.*/,,;s/$(EXEEXT)$$//;$(transform);s/$$/$(EXEEXT)/' | \
-	sed 'N;N;N;s,\n, ,g' | \
-	$(AWK) 'BEGIN { files["."] = ""; dirs["."] = 1 } \
-	  { d=$$3; if (dirs[d] != 1) { print "d", d; dirs[d] = 1 } \
-	    if ($$2 == $$4) files[d] = files[d] " " $$1; \
-	    else { print "f", $$3 "/" $$4, $$1; } } \
-	  END { for (d in files) print "f", d, files[d] }' | \
-	while read type dir files; do \
-	    if test "$$dir" = .; then dir=; else dir=/$$dir; fi; \
-	    test -z "$$files" || { \
-	    echo " $(INSTALL_PROGRAM_ENV) $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL_PROGRAM) $$files '$(DESTDIR)$(bindir)$$dir'"; \
-	    $(INSTALL_PROGRAM_ENV) $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL_PROGRAM) $$files "$(DESTDIR)$(bindir)$$dir" || exit $$?; \
-	    } \
-	; done
-
-uninstall-binPROGRAMS:
-	@$(NORMAL_UNINSTALL)
-	@list='$(bin_PROGRAMS)'; test -n "$(bindir)" || list=; \
-	files=`for p in $$list; do echo "$$p"; done | \
-	  sed -e 'h;s,^.*/,,;s/$(EXEEXT)$$//;$(transform)' \
-	      -e 's/$$/$(EXEEXT)/' \
-	`; \
-	test -n "$$list" || exit 0; \
-	echo " ( cd '$(DESTDIR)$(bindir)' && rm -f" $$files ")"; \
-	cd "$(DESTDIR)$(bindir)" && rm -f $$files
-
-clean-binPROGRAMS:
-	@list='$(bin_PROGRAMS)'; test -n "$$list" || exit 0; \
-	echo " rm -f" $$list; \
-	rm -f $$list || exit $$?; \
-	test -n "$(EXEEXT)" || exit 0; \
-	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
-	echo " rm -f" $$list; \
-	rm -f $$list
-
-moo$(EXEEXT): $(moo_OBJECTS) $(moo_DEPENDENCIES) $(EXTRA_moo_DEPENDENCIES) 
-	@rm -f moo$(EXEEXT)
-	$(AM_V_CCLD)$(moo_LINK) $(moo_OBJECTS) $(moo_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -672,8 +597,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-utf16.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-utf8.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-utl.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/moo-main.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/moo-poll-msw.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -867,34 +790,6 @@ libmoo_la-std.lo: std.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-std.lo `test -f 'std.c' || echo '$(srcdir)/'`std.c
 
-moo-main.o: main.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT moo-main.o -MD -MP -MF $(DEPDIR)/moo-main.Tpo -c -o moo-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/moo-main.Tpo $(DEPDIR)/moo-main.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='moo-main.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o moo-main.o `test -f 'main.c' || echo '$(srcdir)/'`main.c
-
-moo-main.obj: main.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT moo-main.obj -MD -MP -MF $(DEPDIR)/moo-main.Tpo -c -o moo-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/moo-main.Tpo $(DEPDIR)/moo-main.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='main.c' object='moo-main.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o moo-main.obj `if test -f 'main.c'; then $(CYGPATH_W) 'main.c'; else $(CYGPATH_W) '$(srcdir)/main.c'; fi`
-
-moo-poll-msw.o: poll-msw.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT moo-poll-msw.o -MD -MP -MF $(DEPDIR)/moo-poll-msw.Tpo -c -o moo-poll-msw.o `test -f 'poll-msw.c' || echo '$(srcdir)/'`poll-msw.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/moo-poll-msw.Tpo $(DEPDIR)/moo-poll-msw.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='poll-msw.c' object='moo-poll-msw.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o moo-poll-msw.o `test -f 'poll-msw.c' || echo '$(srcdir)/'`poll-msw.c
-
-moo-poll-msw.obj: poll-msw.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT moo-poll-msw.obj -MD -MP -MF $(DEPDIR)/moo-poll-msw.Tpo -c -o moo-poll-msw.obj `if test -f 'poll-msw.c'; then $(CYGPATH_W) 'poll-msw.c'; else $(CYGPATH_W) '$(srcdir)/poll-msw.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/moo-poll-msw.Tpo $(DEPDIR)/moo-poll-msw.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='poll-msw.c' object='moo-poll-msw.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(moo_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o moo-poll-msw.obj `if test -f 'poll-msw.c'; then $(CYGPATH_W) 'poll-msw.c'; else $(CYGPATH_W) '$(srcdir)/poll-msw.c'; fi`
-
 mostlyclean-libtool:
 	-rm -f *.lo
 
@@ -1006,9 +901,9 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) $(HEADERS) moo-cfg.h
+all-am: Makefile $(LTLIBRARIES) $(HEADERS) moo-cfg.h
 installdirs:
-	for dir in "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkgincludedir)"; do \
+	for dir in "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(pkgincludedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -1043,8 +938,8 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-binPROGRAMS clean-generic clean-libtool \
-	clean-pkglibLTLIBRARIES mostlyclean-am
+clean-am: clean-generic clean-libtool clean-pkglibLTLIBRARIES \
+	mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -1071,7 +966,7 @@ install-dvi: install-dvi-am
 
 install-dvi-am:
 
-install-exec-am: install-binPROGRAMS install-pkglibLTLIBRARIES
+install-exec-am: install-pkglibLTLIBRARIES
 
 install-html: install-html-am
 
@@ -1111,18 +1006,16 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-binPROGRAMS uninstall-pkgincludeHEADERS \
-	uninstall-pkglibLTLIBRARIES
+uninstall-am: uninstall-pkgincludeHEADERS uninstall-pkglibLTLIBRARIES
 	@$(NORMAL_INSTALL)
 	$(MAKE) $(AM_MAKEFLAGS) uninstall-hook
 .MAKE: all install-am install-data-am install-strip uninstall-am
 
-.PHONY: CTAGS GTAGS TAGS all all-am check check-am clean \
-	clean-binPROGRAMS clean-generic clean-libtool \
-	clean-pkglibLTLIBRARIES cscopelist-am ctags ctags-am distclean \
-	distclean-compile distclean-generic distclean-hdr \
-	distclean-libtool distclean-tags distdir dvi dvi-am html \
-	html-am info info-am install install-am install-binPROGRAMS \
+.PHONY: CTAGS GTAGS TAGS all all-am check check-am clean clean-generic \
+	clean-libtool clean-pkglibLTLIBRARIES cscopelist-am ctags \
+	ctags-am distclean distclean-compile distclean-generic \
+	distclean-hdr distclean-libtool distclean-tags distdir dvi \
+	dvi-am html html-am info info-am install install-am \
 	install-data install-data-am install-data-hook install-dvi \
 	install-dvi-am install-exec install-exec-am install-html \
 	install-html-am install-info install-info-am install-man \
@@ -1132,8 +1025,8 @@ uninstall-am: uninstall-binPROGRAMS uninstall-pkgincludeHEADERS \
 	maintainer-clean maintainer-clean-generic mostlyclean \
 	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
 	pdf pdf-am ps ps-am tags tags-am uninstall uninstall-am \
-	uninstall-binPROGRAMS uninstall-hook \
-	uninstall-pkgincludeHEADERS uninstall-pkglibLTLIBRARIES
+	uninstall-hook uninstall-pkgincludeHEADERS \
+	uninstall-pkglibLTLIBRARIES
 
 .PRECIOUS: Makefile
 
