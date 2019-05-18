@@ -284,6 +284,9 @@ struct xtn_t
 	int vm_running;
 	int rcv_tick;
 
+	moo_cmgr_t* input_cmgr;
+	moo_cmgr_t* log_cmgr;
+
 	struct
 	{
 		int fd;
@@ -442,8 +445,7 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 		const moo_bch_t* fn, * fb;
 
 	#if defined(MOO_OOCH_IS_UCH)
-		/*if (moo_convootobcstr(moo, arg->name, &ucslen, MOO_NULL, &bcslen) <= -1) goto oops;*/
-		if (moo_conv_uchars_to_bchars_with_cmgr(arg->name, &ucslen, MOO_NULL, &bcslen, moo_get_cmgr_by_id(MOO_CMGR_UTF8)) <= -1) goto oops;
+		if (moo_convootobcstr(moo, arg->name, &ucslen, MOO_NULL, &bcslen) <= -1) goto oops;
 	#else
 		bcslen = moo_count_bcstr(arg->name);
 	#endif
@@ -459,11 +461,7 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 		bb->fn = (moo_bch_t*)(bb + 1);
 		moo_copy_bchars (bb->fn, fn, parlen);
 	#if defined(MOO_OOCH_IS_UCH)
-		/* [NOTE] as i convert a unicode string for fopen() below, the conversion
-		 *        should use the system locale instead of moo's cmgr configuration.
-		 *        but let's not use the system locale for now. */
-		/*moo_convootobcstr (moo, arg->name, &ucslen, &bb->fn[parlen], &bcslen);*/
-		moo_conv_uchars_to_bchars_with_cmgr (arg->name, &ucslen, &bb->fn[parlen], &bcslen, moo_get_cmgr_by_id(MOO_CMGR_UTF8));
+		moo_convootobcstr (moo, arg->name, &ucslen, &bb->fn[parlen], &bcslen);
 	#else
 		moo_copy_bcstr (&bb->fn[parlen], bcslen + 1, arg->name);
 	#endif
@@ -522,15 +520,16 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 	{
 		*at = '\0';
 		bb->cmgr = moo_get_cmgr_by_bcstr(at + 1);
-		if (!bb->cmgr) bb->cmgr = moo_getcmgr(moo);
-	}
-	else if (arg->includer)
-	{
-		bb->cmgr = ((bb_t*)arg->includer->handle)->cmgr;
+		if (!bb->cmgr)
+		{
+			moo_seterrbfmt (moo, MOO_EINVAL, "unsupported charset - %hs", at + 1);
+			goto oops;
+		}
 	}
 	else
 	{
-		bb->cmgr = moo_getcmgr(moo);
+		bb->cmgr = arg->includer? ((bb_t*)arg->includer->handle)->cmgr: xtn->in->cmgr;
+		if (!bb->cmgr) bb->cmgr = xtn->input_cmgr;
 	}
 
 /* TODO: support _wfopen or the like */
@@ -599,8 +598,6 @@ static MOO_INLINE moo_ooi_t read_input (moo_t* moo, moo_ioarg_t* arg)
 #if defined(MOO_OOCH_IS_UCH)
 	bcslen = bb->len;
 	ucslen = MOO_COUNTOF(arg->buf);
-/* TODO: use the default cmgr first.
- * then fallback to utf8, mb8, etc */
 	/*x = moo_convbtooochars(moo, bb->buf, &bcslen, arg->buf, &ucslen);*/
 	x = moo_conv_bchars_to_uchars_with_cmgr(bb->buf, &bcslen, arg->buf, &ucslen, bb->cmgr, 0);
 	if (x <= -1 /*&& ucslen <= 0 */) 
@@ -896,7 +893,11 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 	if (!(mask & (MOO_LOG_STDOUT | MOO_LOG_STDERR)))
 	{
 		time_t now;
+	#if defined(MOO_OOCH_IS_UCH)
+		char ts[32 * MOO_BCSIZE_MAX];
+	#else
 		char ts[32];
+	#endif
 		size_t tslen;
 		struct tm tm, *tmp;
 
@@ -947,6 +948,23 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 			tslen = sprintf(ts, "%04d-%02d-%02d %02d:%02d:%02d ", tmp->tm_year + 1900, tmp->tm_mon + 1, tmp->tm_mday, tmp->tm_hour, tmp->tm_min, tmp->tm_sec);
 		}
 	#endif
+
+	#if defined(MOO_OOCH_IS_UCH)
+		if (moo_getcmgr(moo) != xtn->log_cmgr)
+		{
+			moo_uch_t tsu[32];
+			moo_oow_t tsulen;
+
+			/* the timestamp is likely to contain simple ascii characters only.
+			 * conversion is not likely to fail regardless of encodings. 
+			 * so i don't check errors here */
+			tsulen = MOO_COUNTOF(tsu);
+			moo_convbtooochars (moo, ts, &tslen, tsu, &tsulen);
+			tslen = MOO_COUNTOF(ts);
+			moo_conv_uchars_to_bchars_with_cmgr (tsu, &tsulen, ts, &tslen, xtn->log_cmgr);
+		}
+	#endif
+
 		write_log (moo, logfd, ts, tslen);
 	}
 
@@ -964,7 +982,8 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		ucslen = len;
 		bcslen = MOO_COUNTOF(buf);
 
-		n = moo_convootobchars(moo, &msg[msgidx], &ucslen, buf, &bcslen);
+		/*n = moo_convootobchars(moo, &msg[msgidx], &ucslen, buf, &bcslen);*/
+		n = moo_conv_uchars_to_bchars_with_cmgr(&msg[msgidx], &ucslen, buf, &bcslen, xtn->log_cmgr);
 		if (n == 0 || n == -2)
 		{
 			/* n = 0: 
@@ -987,7 +1006,7 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 		}
 		else if (n <= -1)
 		{
-			/* conversion error */
+			/* conversion error but i just stop here but don't treat it as a hard error. */
 			break;
 		}
 	}
@@ -3631,6 +3650,10 @@ static void fini_moo (moo_t* moo)
 	if (!moo) return MOO_NULL;
 
 	xtn = GET_XTN(moo);
+	xtn->input_cmgr = cfg->input_cmgr;
+	if (!xtn->input_cmgr) xtn->input_cmgr = moo_getcmgr(moo);
+	xtn->log_cmgr = cfg->log_cmgr;
+	if (!xtn->log_cmgr) xtn->log_cmgr = moo_getcmgr(moo);
 
 	chain (moo); /* call chain() before moo_regevtcb() as fini_moo() calls unchain() */
 	reset_log_to_default (xtn);

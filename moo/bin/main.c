@@ -87,15 +87,16 @@ int main (int argc, char* argv[])
 	moo_bci_t c;
 	static moo_bopt_lng_t lopt[] =
 	{
-		{ ":log",         'l' },
-		{ ":memsize",     'm' },
-		{ "large-pages",  '\0' },
-		{ "utf8",         '\0' },
-		{ "utf16",        '\0' },
+		{ ":log",              'l' },
+		{ ":memsize",          'm' },
+		{ "large-pages",       '\0' },
+		{ ":base-charset",     '\0' },
+		{ ":input-charset",    '\0' },
+		{ ":log-charset",      '\0' },
 	#if defined(MOO_BUILD_DEBUG)
-		{ ":debug",       '\0' }, /* NOTE: there is no short option for --debug */
+		{ ":debug",            '\0' }, /* NOTE: there is no short option for --debug */
 	#endif
-		{ MOO_NULL,       '\0' }
+		{ MOO_NULL,            '\0' }
 	};
 	static moo_bopt_t opt =
 	{
@@ -113,8 +114,9 @@ int main (int argc, char* argv[])
 		fprintf (stderr, " --log filename[,logopts]\n");
 		fprintf (stderr, " --memsize number\n");
 		fprintf (stderr, " --large-pages\n");
-		fprintf (stderr, " --utf16\n");
-		fprintf (stderr, " --utf8\n");
+		fprintf (stderr, " --base-charset=name\n");
+		fprintf (stderr, " --input-charset=name\n");
+		fprintf (stderr, " --log-charset=name\n");
 	#if defined(MOO_BUILD_DEBUG)
 		fprintf (stderr, " --debug dbgopts\n");
 	#endif
@@ -124,6 +126,8 @@ int main (int argc, char* argv[])
 	memset (&cfg, 0, MOO_SIZEOF(cfg));
 	cfg.type = MOO_CFGSTD_OPTB;
 	cfg.cmgr = moo_get_utf8_cmgr();
+	cfg.input_cmgr = cfg.cmgr;
+	cfg.log_cmgr = cfg.cmgr;
 
 	memsize = MIN_MEMSIZE;
 
@@ -146,14 +150,34 @@ int main (int argc, char* argv[])
 					cfg.large_pages = 1;
 					break;
 				}
-				else if (moo_comp_bcstr(opt.lngopt, "utf8") == 0)
+				else if (moo_comp_bcstr(opt.lngopt, "base-charset") == 0)
 				{
-					cfg.cmgr = moo_get_utf8_cmgr();
+					cfg.cmgr = moo_get_cmgr_by_bcstr(opt.arg);
+					if (!cfg.cmgr) 
+					{
+						fprintf (stderr, "unknown base-charset name - %s\n", opt.arg);
+						return -1;
+					}
 					break;
 				}
-				else if (moo_comp_bcstr(opt.lngopt, "utf16") == 0)
+				else if (moo_comp_bcstr(opt.lngopt, "input-charset") == 0)
 				{
-					cfg.cmgr = moo_get_utf16_cmgr();
+					cfg.input_cmgr = moo_get_cmgr_by_bcstr(opt.arg);
+					if (!cfg.input_cmgr)
+					{
+						fprintf (stderr, "unknown input-charset name - %s\n", opt.arg);
+						return -1;
+					}
+					break;
+				}
+				else if (moo_comp_bcstr(opt.lngopt, "log-charset") == 0)
+				{
+					cfg.log_cmgr = moo_get_cmgr_by_bcstr(opt.arg);
+					if (!cfg.log_cmgr) 
+					{
+						fprintf (stderr, "unknown log-charset name - %s\n", opt.arg);
+						return -1;
+					}
 					break;
 				}
 			#if defined(MOO_BUILD_DEBUG)

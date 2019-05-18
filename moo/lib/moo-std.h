@@ -17,6 +17,8 @@ struct moo_cfgstd_t
 
 	int large_pages;
 	moo_cmgr_t* cmgr;
+	moo_cmgr_t* input_cmgr;
+	moo_cmgr_t* log_cmgr;
 
 	union
 	{
@@ -70,6 +72,7 @@ struct moo_iostd_t
 			const moo_uch_t* path;
 		} fileu;
 	} u;
+	moo_cmgr_t* cmgr;
 };
 typedef struct moo_iostd_t moo_iostd_t;
 
