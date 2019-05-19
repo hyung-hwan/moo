@@ -56,7 +56,8 @@ pkginclude_HEADERS = \
 	moo-utl.h \
 	moo-std.h
 
-pkglib_LTLIBRARIES = libmoo.la
+pkglib_LTLIBRARIES = libmoo.la libmoox.la
+
 libmoo_la_SOURCES = \
 	moo.h \
 	moo-bct.h \
@@ -92,11 +93,18 @@ libmoo_la_SOURCES = \
 	sym.c \
 	utf8.c \
 	utf16.c \
-	utl.c \
-	std.c 
+	utl.c
 libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) $(CPPFLAGS_PFMOD)
 libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libmoo_la_LIBADD = $(LIBADD_LIB_COMMON)
+
+libmoox_la_SOURCES = std.c
+if WIN32
+libmoox_la_SOURCES += poll-msw.c poll-msw.h
+endif
+libmoox_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) $(CPPFLAGS_PFMOD)
+libmoox_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
+libmoox_la_LIBADD = $(LIBADD_LIB_COMMON) -lmoo
 
 if ENABLE_STATIC_MODULE
 libmoo_la_LIBADD += -lmoo-stdio
