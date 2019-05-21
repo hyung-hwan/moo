@@ -87,28 +87,29 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@ENABLE_LIBLTDL_TRUE@am__append_1 = $(LTDL_LIBS)
-@ENABLE_LIBLTDL_FALSE@am__append_2 = $(DL_LIBS)
-@ENABLE_LIBUNWIND_TRUE@am__append_3 = $(UNWIND_LIBS)
-@MACOSX_TRUE@@WIN32_FALSE@am__append_4 = -DMOO_DEFAULT_PFMODPOSTFIX=\".dylib\"
-@MACOSX_FALSE@@WIN32_FALSE@am__append_5 = -DMOO_DEFAULT_PFMODPOSTFIX=\".so\"
-@WIN32_TRUE@am__append_6 = poll-msw.c poll-msw.h
-@ENABLE_STATIC_MODULE_TRUE@am__append_7 = -lmoo-stdio
+@MACOSX_TRUE@@WIN32_FALSE@am__append_1 = -DMOO_DEFAULT_PFMODPOSTFIX=\".dylib\"
+@MACOSX_FALSE@@WIN32_FALSE@am__append_2 = -DMOO_DEFAULT_PFMODPOSTFIX=\".so\"
+@ENABLE_STATIC_MODULE_TRUE@am__append_3 = -lmoo-stdio
 @ENABLE_STATIC_MODULE_FALSE@libmoo_la_DEPENDENCIES =  \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_5) \
+@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
-@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_8 = -lmoo-con
-@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_9 = $(abs_builddir)/../mod/libmoo-con.la
-@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_10 = -lmoo-ffi
-@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_11 = $(abs_builddir)/../mod/libmoo-ffi.la
-@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_12 = -lmoo-sck
-@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_13 = $(abs_builddir)/../mod/libmoo-sck.la
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_14 = -lmoo-x11
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_15 = $(abs_builddir)/../mod/libmoo-x11.la
+@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_4 = -lmoo-con
+@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_5 = $(abs_builddir)/../mod/libmoo-con.la
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_6 = -lmoo-ffi
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_7 = $(abs_builddir)/../mod/libmoo-ffi.la
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_8 = -lmoo-sck
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_9 = $(abs_builddir)/../mod/libmoo-sck.la
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_10 = -lmoo-x11
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_11 = $(abs_builddir)/../mod/libmoo-x11.la
+@WIN32_TRUE@am__append_12 = poll-msw.c poll-msw.h
+@ENABLE_LIBLTDL_TRUE@am__append_13 = $(LTDL_LIBS)
+@ENABLE_LIBLTDL_FALSE@am__append_14 = $(DL_LIBS)
+@ENABLE_LIBUNWIND_TRUE@am__append_15 = $(UNWIND_LIBS)
+@WIN32_TRUE@am__append_16 = -lpsapi
 subdir = lib
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_sign.m4 \
@@ -156,19 +157,14 @@ am__installdirs = "$(DESTDIR)$(pkglibdir)" \
 	"$(DESTDIR)$(pkgincludedir)"
 LTLIBRARIES = $(pkglib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
-@ENABLE_LIBLTDL_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
-@ENABLE_LIBLTDL_FALSE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1)
-@ENABLE_LIBUNWIND_TRUE@am__DEPENDENCIES_4 = $(am__DEPENDENCIES_1)
-am__DEPENDENCIES_5 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2) \
-	$(am__DEPENDENCIES_3) $(am__DEPENDENCIES_4)
 am_libmoo_la_OBJECTS = libmoo_la-bigint.lo libmoo_la-comp.lo \
 	libmoo_la-debug.lo libmoo_la-decode.lo libmoo_la-dic.lo \
 	libmoo_la-err.lo libmoo_la-exec.lo libmoo_la-fmtout.lo \
 	libmoo_la-gc.lo libmoo_la-heap.lo libmoo_la-mb8.lo \
 	libmoo_la-moo.lo libmoo_la-number.lo libmoo_la-obj.lo \
-	libmoo_la-opt.lo libmoo_la-pf-basic.lo libmoo_la-pf-sys.lo \
-	libmoo_la-pf-utf8.lo libmoo_la-rbt.lo libmoo_la-sym.lo \
-	libmoo_la-utf8.lo libmoo_la-utf16.lo libmoo_la-utl.lo
+	libmoo_la-pf-basic.lo libmoo_la-pf-sys.lo libmoo_la-pf-utf8.lo \
+	libmoo_la-rbt.lo libmoo_la-sym.lo libmoo_la-utf8.lo \
+	libmoo_la-utf16.lo libmoo_la-utl.lo
 libmoo_la_OBJECTS = $(am_libmoo_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -177,10 +173,14 @@ am__v_lt_1 =
 libmoo_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(libmoo_la_LDFLAGS) $(LDFLAGS) -o $@
-libmoox_la_DEPENDENCIES = $(am__DEPENDENCIES_5)
-am__libmoox_la_SOURCES_DIST = std.c moo-std.h poll-msw.c poll-msw.h
+@ENABLE_LIBLTDL_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
+@ENABLE_LIBLTDL_FALSE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1)
+@ENABLE_LIBUNWIND_TRUE@am__DEPENDENCIES_4 = $(am__DEPENDENCIES_1)
+am__libmoox_la_SOURCES_DIST = moo-opt.h moo-std.h opt-impl.h opt.c \
+	std.c poll-msw.c poll-msw.h
 @WIN32_TRUE@am__objects_1 = libmoox_la-poll-msw.lo
-am_libmoox_la_OBJECTS = libmoox_la-std.lo $(am__objects_1)
+am_libmoox_la_OBJECTS = libmoox_la-opt.lo libmoox_la-std.lo \
+	$(am__objects_1)
 libmoox_la_OBJECTS = $(am_libmoox_la_OBJECTS)
 libmoox_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
@@ -250,7 +250,15 @@ CTAGS = ctags
 am__DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/moo-cfg.h.in \
 	$(top_srcdir)/ac/depcomp
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+
+##################################################
+# include files to deploy
+##################################################
 pkgincludedir = $(includedir)
+
+##################################################
+# libraries to deploy
+##################################################
 pkglibdir = $(libdir)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
@@ -415,23 +423,18 @@ CPPFLAGS_ALL_COMMON = \
 
 @ENABLE_STATIC_MODULE_FALSE@LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(libdir)
 @ENABLE_STATIC_MODULE_TRUE@LDFLAGS_ALL_COMMON = -L$(abs_builddir)/../mod -L$(abs_builddir) -L$(libdir)
-
-##################################################
-# MAIN LIBRARY 
-##################################################
 CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) 
 LDFLAGS_LIB_COMMON = $(LDFLAGS_ALL_COMMON) -version-info 1:0:0 -no-undefined
-LIBADD_LIB_COMMON = $(LIBM) $(am__append_1) $(am__append_2) \
-	$(am__append_3)
+LIBADD_LIB_COMMON = 
 @WIN32_FALSE@CPPFLAGS_PFMOD =  \
 @WIN32_FALSE@	-DMOO_DEFAULT_PFMODPREFIX=\"$(libdir)/libmoo-\" \
-@WIN32_FALSE@	$(am__append_4) $(am__append_5)
+@WIN32_FALSE@	$(am__append_1) $(am__append_2)
 
 # you must adjust the value of DEFAULT_MODPOSTFIX according 
 # to the first number in -version-info above
 @WIN32_TRUE@CPPFLAGS_PFMOD = -DMOO_DEFAULT_PFMODPREFIX=\"libmoo-\" \
 @WIN32_TRUE@	-DMOO_DEFAULT_PFMODPOSTFIX=\"-1.dll\" \
-@WIN32_TRUE@	$(am__append_4) $(am__append_5)
+@WIN32_TRUE@	$(am__append_1) $(am__append_2)
 pkginclude_HEADERS = \
 	moo.h \
 	moo-bct.h \
@@ -442,11 +445,14 @@ pkginclude_HEADERS = \
 	moo-std.h
 
 pkglib_LTLIBRARIES = libmoo.la libmoox.la
+
+##################################################
+# libmoo
+##################################################
 libmoo_la_SOURCES = \
 	moo.h \
 	moo-bct.h \
 	moo-cmn.h \
-	moo-opt.h \
 	moo-rbt.h \
 	moo-utl.h \
 	moo-prv.h \
@@ -467,8 +473,6 @@ libmoo_la_SOURCES = \
 	moo.c \
 	number.c \
 	obj.c \
-	opt-impl.h \
-	opt.c \
 	pf-basic.c \
 	pf-sys.c \
 	pf-utf8.c \
@@ -478,18 +482,26 @@ libmoo_la_SOURCES = \
 	utf16.c \
 	utl.c
 
-libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) $(CPPFLAGS_PFMOD)
+libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) 
 libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_7) \
-	$(am__append_8) $(am__append_10) $(am__append_12) \
-	$(am__append_14)
-libmoox_la_SOURCES = std.c moo-std.h $(am__append_6)
+libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_3) \
+	$(am__append_4) $(am__append_6) $(am__append_8) \
+	$(am__append_10)
+@ENABLE_STATIC_MODULE_TRUE@libmoo_la_DEPENDENCIES = $(abs_builddir)/../mod/libmoo-stdio.la \
+@ENABLE_STATIC_MODULE_TRUE@	$(am__append_5) $(am__append_7) \
+@ENABLE_STATIC_MODULE_TRUE@	$(am__append_9) $(am__append_11)
+
+##############################################################
+# libmoox
+##############################################################
+libmoox_la_SOURCES = moo-opt.h moo-std.h opt-impl.h opt.c std.c \
+	$(am__append_12)
 libmoox_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) $(CPPFLAGS_PFMOD)
 libmoox_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-libmoox_la_LIBADD = $(LIBADD_LIB_COMMON) -lmoo 
-@ENABLE_STATIC_MODULE_TRUE@libmoo_la_DEPENDENCIES = $(abs_builddir)/../mod/libmoo-stdio.la \
-@ENABLE_STATIC_MODULE_TRUE@	$(am__append_9) $(am__append_11) \
-@ENABLE_STATIC_MODULE_TRUE@	$(am__append_13) $(am__append_15)
+libmoox_la_LIBADD = $(LIBADD_LIB_COMMON) -lmoo $(LIBM) $(PTHREAD_LIBS) \
+	$(am__append_13) $(am__append_14) $(am__append_15) \
+	$(am__append_16)
+libmoox_la_DEPENDENCIES = libmoo.la
 all: moo-cfg.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -601,7 +613,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-moo.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-number.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-obj.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-opt.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-pf-basic.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-pf-sys.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-pf-utf8.Plo@am__quote@
@@ -610,6 +621,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-utf16.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-utf8.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-utl.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoox_la-opt.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoox_la-poll-msw.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoox_la-std.Plo@am__quote@
 
@@ -735,13 +747,6 @@ libmoo_la-obj.lo: obj.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-obj.lo `test -f 'obj.c' || echo '$(srcdir)/'`obj.c
 
-libmoo_la-opt.lo: opt.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-opt.lo -MD -MP -MF $(DEPDIR)/libmoo_la-opt.Tpo -c -o libmoo_la-opt.lo `test -f 'opt.c' || echo '$(srcdir)/'`opt.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-opt.Tpo $(DEPDIR)/libmoo_la-opt.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='opt.c' object='libmoo_la-opt.lo' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-opt.lo `test -f 'opt.c' || echo '$(srcdir)/'`opt.c
-
 libmoo_la-pf-basic.lo: pf-basic.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-pf-basic.lo -MD -MP -MF $(DEPDIR)/libmoo_la-pf-basic.Tpo -c -o libmoo_la-pf-basic.lo `test -f 'pf-basic.c' || echo '$(srcdir)/'`pf-basic.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-pf-basic.Tpo $(DEPDIR)/libmoo_la-pf-basic.Plo
@@ -797,6 +802,13 @@ libmoo_la-utl.lo: utl.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='utl.c' object='libmoo_la-utl.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-utl.lo `test -f 'utl.c' || echo '$(srcdir)/'`utl.c
+
+libmoox_la-opt.lo: opt.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoox_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoox_la-opt.lo -MD -MP -MF $(DEPDIR)/libmoox_la-opt.Tpo -c -o libmoox_la-opt.lo `test -f 'opt.c' || echo '$(srcdir)/'`opt.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoox_la-opt.Tpo $(DEPDIR)/libmoox_la-opt.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='opt.c' object='libmoox_la-opt.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoox_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoox_la-opt.lo `test -f 'opt.c' || echo '$(srcdir)/'`opt.c
 
 libmoox_la-std.lo: std.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoox_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoox_la-std.lo -MD -MP -MF $(DEPDIR)/libmoox_la-std.Tpo -c -o libmoox_la-std.lo `test -f 'std.c' || echo '$(srcdir)/'`std.c
@@ -1053,6 +1065,9 @@ uninstall-am: uninstall-pkgincludeHEADERS uninstall-pkglibLTLIBRARIES
 .PRECIOUS: Makefile
 
 
+##############################################################
+# installation
+##############################################################
 install-data-hook:
 	@echo "#ifndef _MOO_CFG_H_" > "$(DESTDIR)$(pkgincludedir)/moo-cfg.h"
 	@echo "#define _MOO_CFG_H_" >> "$(DESTDIR)$(pkgincludedir)/moo-cfg.h"

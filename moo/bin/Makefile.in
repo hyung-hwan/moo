@@ -88,13 +88,10 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@ENABLE_LIBLTDL_TRUE@am__append_1 = $(LTDL_LIBS)
-@ENABLE_LIBLTDL_FALSE@am__append_2 = $(DL_LIBS)
 bin_PROGRAMS = moo$(EXEEXT)
-@WIN32_TRUE@am__append_3 = $(SOCKET_LIBS) -lpsapi
-@ENABLE_STATIC_MODULE_FALSE@moo_DEPENDENCIES = $(am__DEPENDENCIES_4) \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_5)
+@WIN32_TRUE@am__append_1 = $(SOCKET_LIBS)
+@ENABLE_STATIC_MODULE_FALSE@moo_DEPENDENCIES = $(am__DEPENDENCIES_2) \
+@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_3)
 subdir = bin
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_sign.m4 \
@@ -115,11 +112,8 @@ PROGRAMS = $(bin_PROGRAMS)
 am_moo_OBJECTS = moo-main.$(OBJEXT)
 moo_OBJECTS = $(am_moo_OBJECTS)
 am__DEPENDENCIES_1 =
-@ENABLE_LIBLTDL_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
-@ENABLE_LIBLTDL_FALSE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1)
-am__DEPENDENCIES_4 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2) \
-	$(am__DEPENDENCIES_3)
-@WIN32_TRUE@am__DEPENDENCIES_5 = $(am__DEPENDENCIES_1)
+am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
+@WIN32_TRUE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -352,19 +346,18 @@ CPPFLAGS_ALL_COMMON = \
 	-I$(includedir)	
 
 LDFLAGS_ALL_COMMON = -L$(abs_builddir) -L$(abs_builddir)/../lib -L$(libdir)
+CPPFLAGS_BIN_COMMON = $(CPPFLAGS_ALL_COMMON)
+LDFLAGS_BIN_COMMON = $(LDFLAGS_ALL_COMMON) -version-info 1:0:0 -no-undefined
+LIBADD_BIN_COMMON = $(LIBM) 
 
 ##################################################
-# MAIN LIBRARY 
+# moo
 ##################################################
-CPPFLAGS_LIB_COMMON = $(CPPFLAGS_ALL_COMMON) $(LTDLINCL)
-LDFLAGS_LIB_COMMON = $(LDFLAGS_ALL_COMMON) -version-info 1:0:0 -no-undefined
-LIBADD_LIB_COMMON = $(LIBM) $(am__append_1) $(am__append_2)
 moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_ALL_COMMON)
 moo_LDFLAGS = $(LDFLAGS_ALL_COMMON)
-moo_LDADD = $(LIBADD_LIB_COMMON) -lmoox $(PTHREAD_LIBS) \
-	$(am__append_3)
-@ENABLE_STATIC_MODULE_TRUE@moo_DEPENDENCIES = ../lib/libmoo.la
+moo_LDADD = $(LIBADD_BIN_COMMON) -lmoox $(am__append_1)
+@ENABLE_STATIC_MODULE_TRUE@moo_DEPENDENCIES = ../lib/libmoox.la
 all: all-am
 
 .SUFFIXES:

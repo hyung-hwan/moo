@@ -261,6 +261,7 @@ int main (int argc, char* argv[])
 		in.type = MOO_IOSTD_FILEU;
 		in.u.fileu.path = tmp;
 #endif
+		in.cmgr = MOO_NULL;
 
 	/*compile:*/
 		if (moo_compilestd(moo, &in, 1) <= -1)
