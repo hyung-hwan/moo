@@ -66,7 +66,6 @@ libmoo_la_SOURCES = \
 	moo-rbt.h \
 	moo-utl.h \
 	moo-prv.h \
-	moo-std.h \
 	pack1.h \
 	unpack.h \
 	bigint.c \
@@ -98,13 +97,13 @@ libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) $(CPPFLAGS_PFMOD)
 libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libmoo_la_LIBADD = $(LIBADD_LIB_COMMON)
 
-libmoox_la_SOURCES = std.c
+libmoox_la_SOURCES = std.c moo-std.h
 if WIN32
 libmoox_la_SOURCES += poll-msw.c poll-msw.h
 endif
 libmoox_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) $(CPPFLAGS_PFMOD)
 libmoox_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-libmoox_la_LIBADD = $(LIBADD_LIB_COMMON) -lmoo
+libmoox_la_LIBADD = $(LIBADD_LIB_COMMON) -lmoo 
 
 if ENABLE_STATIC_MODULE
 libmoo_la_LIBADD += -lmoo-stdio

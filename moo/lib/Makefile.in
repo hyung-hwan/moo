@@ -178,7 +178,7 @@ libmoo_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(libmoo_la_LDFLAGS) $(LDFLAGS) -o $@
 libmoox_la_DEPENDENCIES = $(am__DEPENDENCIES_5)
-am__libmoox_la_SOURCES_DIST = std.c poll-msw.c poll-msw.h
+am__libmoox_la_SOURCES_DIST = std.c moo-std.h poll-msw.c poll-msw.h
 @WIN32_TRUE@am__objects_1 = libmoox_la-poll-msw.lo
 am_libmoox_la_OBJECTS = libmoox_la-std.lo $(am__objects_1)
 libmoox_la_OBJECTS = $(am_libmoox_la_OBJECTS)
@@ -450,7 +450,6 @@ libmoo_la_SOURCES = \
 	moo-rbt.h \
 	moo-utl.h \
 	moo-prv.h \
-	moo-std.h \
 	pack1.h \
 	unpack.h \
 	bigint.c \
@@ -484,10 +483,10 @@ libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_7) \
 	$(am__append_8) $(am__append_10) $(am__append_12) \
 	$(am__append_14)
-libmoox_la_SOURCES = std.c $(am__append_6)
+libmoox_la_SOURCES = std.c moo-std.h $(am__append_6)
 libmoox_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) $(CPPFLAGS_PFMOD)
 libmoox_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
-libmoox_la_LIBADD = $(LIBADD_LIB_COMMON) -lmoo
+libmoox_la_LIBADD = $(LIBADD_LIB_COMMON) -lmoo 
 @ENABLE_STATIC_MODULE_TRUE@libmoo_la_DEPENDENCIES = $(abs_builddir)/../mod/libmoo-stdio.la \
 @ENABLE_STATIC_MODULE_TRUE@	$(am__append_9) $(am__append_11) \
 @ENABLE_STATIC_MODULE_TRUE@	$(am__append_13) $(am__append_15)

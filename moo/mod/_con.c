@@ -59,17 +59,14 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	HANDLE h;
 	moo_ooi_t immv;
 
-	h = GetStdHandle(STD_INPUT_HANDLE);
+	h = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (h == INVALID_HANDLE_VALUE) return 0;
 	if (h == NULL)
 	{
+		/* the program doens't have an associated handle for stdin. is it a service? */
 	}
 
-	imm = moo_makeimm (moo, h);
-	if (imm <= -1) 
-	{
-		/* error */
-	}
+	MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP(h));
 
 #elif defined(__DOS__)
 	moo->errnum = MOO_ENOIMPL;
@@ -88,7 +85,7 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	}
 	else
 	{
-		con->fd = open ("/dev/tty", O_RDWR, 0);
+		con->fd = open("/dev/tty", O_RDWR, 0);
 		if (con->fd == -1)
 		{
 			/* TODO: failed to open /dev/stdout */
@@ -99,13 +96,13 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		con->fd_opened = 1;
 	}
 
-	term = getenv ("TERM");
-	if (term && setupterm (term, con->fd, &err) == OK) 
+	term = getenv("TERM");
+	if (term && setupterm(term, con->fd, &err) == OK) 
 	{
 	}
 
-	con->cup = tigetstr ("cup"); /* TODO: error check */
-	con->clear = tigetstr ("clear");
+	con->cup = tigetstr("cup"); /* TODO: error check */
+	con->clear = tigetstr("clear");
 
 #if 0
 	{
@@ -131,9 +128,16 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 static moo_pfrc_t pf_close (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 #if defined(_WIN32)
+	moo_oop_t arg;
 	HANDLE h;
 
-	h = MOO_STACK_GETARG (moo, nargs, 0);
+	con = MOO_STACK_GETARG(moo, nargs, 0);
+	h = MOO_OOP_TO_SMPTR(con);
+	
+	/*if (h != XXX)
+	{
+		CloseHandle (h);
+	}*/
 #elif defined(__DOS__)
 
 	/* TODO */
@@ -153,8 +157,9 @@ static moo_pfrc_t pf_close (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 static moo_pfrc_t pf_write (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 #if defined(_WIN32)
+	/* TODO: */
 #elif defined(__DOS__)
-
+	/* TODO: */
 #else
 	console_t* con;
 	moo_oop_char_t msg;
