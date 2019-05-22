@@ -643,8 +643,14 @@ AC_C_BIGENDIAN(
 	[AC_DEFINE([MOO_ENDIAN_LITTLE],[],[Little Endian])],
 	[AC_DEFINE([MOO_ENDIAN_UNKNOWN],[],[Unknown Endian])])
 
+AC_ARG_ENABLE([experimental], 
+	[AS_HELP_STRING([--enable-experimental],[enable experimental feature(default. no)])],
+	enable_experimental_is=$enableval,
+	enable_experimental_is=no)
+AM_CONDITIONAL(ENABLE_EXPERIMENTAL, test "${enable_experimental_is}" = "yes" )
+
 AC_ARG_ENABLE([debug], 
-	[AS_HELP_STRING([--enable-debug],[build the library in the debug mode (default. no)])],
+	[AS_HELP_STRING([--enable-debug],[compile the code in the debug mode (default. no)])],
 	enable_debug_is=$enableval,
 	enable_debug_is=no)
 if test "$enable_debug_is" = "yes"

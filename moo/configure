@@ -668,6 +668,8 @@ ENABLE_DYNAMIC_MODULE_TRUE
 ENABLE_CXX_FALSE
 ENABLE_CXX_TRUE
 BUILD_MODE
+ENABLE_EXPERIMENTAL_FALSE
+ENABLE_EXPERIMENTAL_TRUE
 PACKAGE_VERSION_PATCH
 PACKAGE_VERSION_MINOR
 PACKAGE_VERSION_MAJOR
@@ -823,6 +825,7 @@ with_aix_soname
 with_gnu_ld
 with_sysroot
 enable_libtool_lock
+enable_experimental
 enable_debug
 enable_unicode
 enable_full_liw
@@ -1479,7 +1482,8 @@ Optional Features:
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
-  --enable-debug          build the library in the debug mode (default. no)
+  --enable-experimental   enable experimental feature(default. no)
+  --enable-debug          compile the code in the debug mode (default. no)
   --enable-unicode        Use the unicode character type as the default
                           character type. one of yes, no, yes:2, yes:4, no:2,
                           no:4 (default. yes)
@@ -21420,6 +21424,22 @@ $as_echo "#define MOO_ENDIAN_UNKNOWN /**/" >>confdefs.h
  esac
 
 
+# Check whether --enable-experimental was given.
+if test "${enable_experimental+set}" = set; then :
+  enableval=$enable_experimental; enable_experimental_is=$enableval
+else
+  enable_experimental_is=no
+fi
+
+ if test "${enable_experimental_is}" = "yes" ; then
+  ENABLE_EXPERIMENTAL_TRUE=
+  ENABLE_EXPERIMENTAL_FALSE='#'
+else
+  ENABLE_EXPERIMENTAL_TRUE='#'
+  ENABLE_EXPERIMENTAL_FALSE=
+fi
+
+
 # Check whether --enable-debug was given.
 if test "${enable_debug+set}" = set; then :
   enableval=$enable_debug; enable_debug_is=$enableval
@@ -21930,6 +21950,10 @@ if test -z "${MACOSX_TRUE}" && test -z "${MACOSX_FALSE}"; then
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 
+if test -z "${ENABLE_EXPERIMENTAL_TRUE}" && test -z "${ENABLE_EXPERIMENTAL_FALSE}"; then
+  as_fn_error $? "conditional \"ENABLE_EXPERIMENTAL\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${ENABLE_CXX_TRUE}" && test -z "${ENABLE_CXX_FALSE}"; then
   as_fn_error $? "conditional \"ENABLE_CXX\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5

@@ -19,6 +19,7 @@ struct moo_cfgstd_t
 	moo_cmgr_t* cmgr;
 	moo_cmgr_t* input_cmgr;
 	moo_cmgr_t* log_cmgr;
+	moo_log_write_t log_write;
 
 	union
 	{

@@ -3629,7 +3629,7 @@ static void fini_moo (moo_t* moo)
 		vmprim.alloc_heap = alloc_heap;
 		vmprim.free_heap = free_heap;
 	}
-	vmprim.log_write = log_write;
+	vmprim.log_write = (cfg->log_write? cfg->log_write: log_write);
 	vmprim.syserrstrb = syserrstrb;
 	vmprim.assertfail = assert_fail;
 	vmprim.dl_startup = dl_startup;
@@ -3907,4 +3907,3 @@ void moo_uncatch_termreq (void)
 }
 
 #endif
-

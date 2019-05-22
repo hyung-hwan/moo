@@ -250,6 +250,8 @@ int main (int argc, char* argv[])
 	for (i = opt.ind; i < argc; i++)
 	{
 		moo_iostd_t in;
+
+		memset (&in, 0, MOO_SIZEOF(in));
 #if 1
 		in.type = MOO_IOSTD_FILEB;
 		in.u.fileb.path = argv[i];

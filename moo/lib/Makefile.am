@@ -91,23 +91,23 @@ libmoo_la_LIBADD = $(LIBADD_LIB_COMMON)
 
 if ENABLE_STATIC_MODULE
 libmoo_la_LIBADD += -lmoo-stdio
-libmoo_la_DEPENDENCIES = $(abs_builddir)/../mod/libmoo-stdio.la
+libmoo_la_DEPENDENCIES = ../mod/libmoo-stdio.la
 
 if ENABLE_MOD_CON
 libmoo_la_LIBADD += -lmoo-con
-libmoo_la_DEPENDENCIES += $(abs_builddir)/../mod/libmoo-con.la
+libmoo_la_DEPENDENCIES += ../mod/libmoo-con.la
 endif
 if ENABLE_MOD_FFI
 libmoo_la_LIBADD += -lmoo-ffi
-libmoo_la_DEPENDENCIES += $(abs_builddir)/../mod/libmoo-ffi.la
+libmoo_la_DEPENDENCIES += ../mod/libmoo-ffi.la
 endif
 if ENABLE_MOD_SCK
 libmoo_la_LIBADD += -lmoo-sck
-libmoo_la_DEPENDENCIES += $(abs_builddir)/../mod/libmoo-sck.la
+libmoo_la_DEPENDENCIES += ../mod/libmoo-sck.la
 endif
 if ENABLE_MOD_X11
 libmoo_la_LIBADD += -lmoo-x11
-libmoo_la_DEPENDENCIES += $(abs_builddir)/../mod/libmoo-x11.la
+libmoo_la_DEPENDENCIES += ../mod/libmoo-x11.la
 endif
 endif
 

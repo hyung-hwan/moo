@@ -98,13 +98,13 @@ host_triplet = @host@
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
 @ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
 @ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_4 = -lmoo-con
-@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_5 = $(abs_builddir)/../mod/libmoo-con.la
+@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_5 = ../mod/libmoo-con.la
 @ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_6 = -lmoo-ffi
-@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_7 = $(abs_builddir)/../mod/libmoo-ffi.la
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_7 = ../mod/libmoo-ffi.la
 @ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_8 = -lmoo-sck
-@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_9 = $(abs_builddir)/../mod/libmoo-sck.la
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_9 = ../mod/libmoo-sck.la
 @ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_10 = -lmoo-x11
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_11 = $(abs_builddir)/../mod/libmoo-x11.la
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_11 = ../mod/libmoo-x11.la
 @WIN32_TRUE@am__append_12 = poll-msw.c poll-msw.h
 @ENABLE_LIBLTDL_TRUE@am__append_13 = $(LTDL_LIBS)
 @ENABLE_LIBLTDL_FALSE@am__append_14 = $(DL_LIBS)
@@ -487,7 +487,8 @@ libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_3) \
 	$(am__append_4) $(am__append_6) $(am__append_8) \
 	$(am__append_10)
-@ENABLE_STATIC_MODULE_TRUE@libmoo_la_DEPENDENCIES = $(abs_builddir)/../mod/libmoo-stdio.la \
+@ENABLE_STATIC_MODULE_TRUE@libmoo_la_DEPENDENCIES =  \
+@ENABLE_STATIC_MODULE_TRUE@	../mod/libmoo-stdio.la \
 @ENABLE_STATIC_MODULE_TRUE@	$(am__append_5) $(am__append_7) \
 @ENABLE_STATIC_MODULE_TRUE@	$(am__append_9) $(am__append_11)
 
