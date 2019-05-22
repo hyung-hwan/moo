@@ -88,7 +88,6 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@WIN32_TRUE@am__append_1 = $(SOCKET_LIBS)
 bin_PROGRAMS = t-001$(EXEEXT) t-002$(EXEEXT)
 subdir = t
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -111,8 +110,7 @@ am_t_001_OBJECTS = t-001.$(OBJEXT)
 t_001_OBJECTS = $(am_t_001_OBJECTS)
 t_001_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
-@WIN32_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
-t_001_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2)
+t_001_DEPENDENCIES = $(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -120,7 +118,7 @@ am__v_lt_1 =
 am_t_002_OBJECTS = t-002.$(OBJEXT)
 t_002_OBJECTS = $(am_t_002_OBJECTS)
 t_002_LDADD = $(LDADD)
-t_002_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2)
+t_002_DEPENDENCIES = $(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -346,7 +344,7 @@ AM_CPPFLAGS = \
 	-I$(includedir)
 
 AM_LDFLAGS = -L$(abs_builddir)/../lib  -L$(libdir)
-LDADD = -lmoo $(PTHREAD_LIBS) $(am__append_1)
+LDADD = -lmoo $(PTHREAD_LIBS)
 t_001_SOURCES = t-001.c
 t_002_SOURCES = t-002.c
 all: all-am

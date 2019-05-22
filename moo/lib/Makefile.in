@@ -109,7 +109,7 @@ host_triplet = @host@
 @ENABLE_LIBLTDL_TRUE@am__append_13 = $(LTDL_LIBS)
 @ENABLE_LIBLTDL_FALSE@am__append_14 = $(DL_LIBS)
 @ENABLE_LIBUNWIND_TRUE@am__append_15 = $(UNWIND_LIBS)
-@WIN32_TRUE@am__append_16 = -lpsapi
+@WIN32_TRUE@am__append_16 = -lpsapi $(SOCKET_LIBS)
 subdir = lib
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_sign.m4 \
@@ -176,6 +176,7 @@ libmoo_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 @ENABLE_LIBLTDL_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
 @ENABLE_LIBLTDL_FALSE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1)
 @ENABLE_LIBUNWIND_TRUE@am__DEPENDENCIES_4 = $(am__DEPENDENCIES_1)
+@WIN32_TRUE@am__DEPENDENCIES_5 = $(am__DEPENDENCIES_1)
 am__libmoox_la_SOURCES_DIST = moo-opt.h moo-std.h opt-impl.h opt.c \
 	std.c poll-msw.c poll-msw.h
 @WIN32_TRUE@am__objects_1 = libmoox_la-poll-msw.lo
@@ -405,7 +406,6 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
-runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@

@@ -89,9 +89,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 bin_PROGRAMS = moo$(EXEEXT)
-@WIN32_TRUE@am__append_1 = $(SOCKET_LIBS)
-@ENABLE_STATIC_MODULE_FALSE@moo_DEPENDENCIES = $(am__DEPENDENCIES_2) \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_3)
+@ENABLE_STATIC_MODULE_FALSE@moo_DEPENDENCIES = $(am__DEPENDENCIES_2)
 subdir = bin
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_sign.m4 \
@@ -113,7 +111,6 @@ am_moo_OBJECTS = moo-main.$(OBJEXT)
 moo_OBJECTS = $(am_moo_OBJECTS)
 am__DEPENDENCIES_1 =
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
-@WIN32_TRUE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
@@ -328,7 +325,6 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
-runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -356,7 +352,7 @@ LIBADD_BIN_COMMON = $(LIBM)
 moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_ALL_COMMON)
 moo_LDFLAGS = $(LDFLAGS_ALL_COMMON)
-moo_LDADD = $(LIBADD_BIN_COMMON) -lmoox $(am__append_1)
+moo_LDADD = $(LIBADD_BIN_COMMON) -lmoox 
 @ENABLE_STATIC_MODULE_TRUE@moo_DEPENDENCIES = ../lib/libmoox.la
 all: all-am
 

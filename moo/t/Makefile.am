@@ -12,10 +12,6 @@ AM_CPPFLAGS = \
 AM_LDFLAGS = -L$(abs_builddir)/../lib  -L$(libdir)
 LDADD = -lmoo $(PTHREAD_LIBS)
 
-if WIN32
-LDADD += $(SOCKET_LIBS)
-endif
-
 bin_PROGRAMS = t-001 t-002
 t_001_SOURCES = t-001.c
 t_002_SOURCES = t-002.c

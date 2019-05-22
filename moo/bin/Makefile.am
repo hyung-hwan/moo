@@ -22,9 +22,6 @@ moo_SOURCES = main.c
 moo_CPPFLAGS = $(CPPFLAGS_ALL_COMMON)
 moo_LDFLAGS = $(LDFLAGS_ALL_COMMON)
 moo_LDADD = $(LIBADD_BIN_COMMON) -lmoox 
-if WIN32
-moo_LDADD += $(SOCKET_LIBS)
-endif
 if ENABLE_STATIC_MODULE
 moo_DEPENDENCIES = ../lib/libmoox.la
 endif

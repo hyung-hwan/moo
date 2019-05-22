@@ -136,7 +136,7 @@ if ENABLE_LIBUNWIND
 libmoox_la_LIBADD += $(UNWIND_LIBS)
 endif
 if WIN32
-libmoox_la_LIBADD += -lpsapi
+libmoox_la_LIBADD += -lpsapi $(SOCKET_LIBS)
 endif
 
 libmoox_la_DEPENDENCIES = libmoo.la
