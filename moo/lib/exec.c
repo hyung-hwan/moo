@@ -5909,10 +5909,10 @@ int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname
 	MOO_ASSERT (moo, moo->active_context == MOO_NULL);
 	MOO_ASSERT (moo, moo->active_method == MOO_NULL);
 
-	if (start_initial_process_and_context (moo, objname, mthname) <= -1) return -1;
+	if (start_initial_process_and_context(moo, objname, mthname) <= -1) return -1;
 	moo->initial_context = moo->processor->active->initial_context;
 
-	n = moo_execute (moo);
+	n = moo_execute(moo);
 
 /* TODO: reset processor fields. set processor->tally to zero. processor->active to nil_process... */
 	moo->initial_context = MOO_NULL;

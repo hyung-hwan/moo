@@ -3236,7 +3236,7 @@ static int clone_assignee (moo_t* moo, const moo_oocs_t* name, moo_oow_t* offset
 	moo_oow_t old_len;
 
 	old_len = cc->mth.assignees.len;
-	n = copy_string_to (moo, name, &cc->mth.assignees, &cc->mth.assignees_capa, 1, '\0');
+	n = copy_string_to(moo, name, &cc->mth.assignees, &cc->mth.assignees_capa, 1, '\0');
 	if (n <= -1) return -1;
 
 	/* update the pointer to of the name. its length is the same. */
