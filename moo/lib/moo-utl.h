@@ -28,6 +28,7 @@
 #define _MOO_UTL_H_
 
 #include "moo-cmn.h"
+#include <stdarg.h>
 
 /* =========================================================================
  * DOUBLY LINKED LIST
@@ -293,6 +294,52 @@ enum moo_cmgr_id_t
 	MOO_CMGR_MB8,
 };
 typedef enum moo_cmgr_id_t moo_cmgr_id_t;
+
+
+/* =========================================================================
+ * FORMATTED OUTPUT
+ * ========================================================================= */
+typedef struct moo_fmtout_t moo_fmtout_t;
+
+typedef int (*moo_fmtout_putbcs_t) (
+	moo_fmtout_t*     fmtout,
+	const moo_bch_t*  ptr,
+	moo_oow_t         len
+);
+
+typedef int (*moo_fmtout_putucs_t) (
+	moo_fmtout_t*     fmtout,
+	const moo_uch_t*  ptr,
+	moo_oow_t         len
+);
+
+typedef int (*moo_fmtout_putobj_t) (
+	moo_fmtout_t*     fmtout,
+	moo_oop_t         obj;
+);
+
+enum moo_fmtout_fmt_type_t 
+{
+	MOO_FMTOUT_FMT_TYPE_BCH = 0,
+	MOO_FMTOUT_FMT_TYPE_UCH
+};
+typedef enum moo_fmtout_fmt_type_t moo_fmtout_fmt_type_t;
+
+
+struct moo_fmtout_t
+{
+	moo_oow_t             count; /* out */
+
+	moo_fmtout_putbcs_t   putbcs; /* in */
+	moo_fmtout_putucs_t   putucs; /* in */
+	moo_fmtout_putobj_t   putobj; /* in - %O is not handled if it's not set. */
+	moo_bitmask_t         mask;   /* in */
+	void*                 ctx;    /* in */
+
+	moo_fmtout_fmt_type_t fmt_type;
+	const void*           fmt_str;
+};
+
 
 #if defined(__cplusplus)
 extern "C" {
@@ -803,6 +850,34 @@ MOO_EXPORT moo_oow_t moo_mb8_to_uc (
 	const moo_bch_t* mb8,
 	moo_oow_t        size,
 	moo_uch_t*       uc
+);
+
+/* =========================================================================
+ * FORMATTED OUTPUT
+ * ========================================================================= */
+MOO_EXPORT int moo_bfmt_outv (
+	moo_fmtout_t*    fmtout,
+	const moo_bch_t* fmt,
+	va_list          ap
+);
+
+MOO_EXPORT int moo_ufmt_outv (
+	moo_fmtout_t*    fmtout,
+	const moo_uch_t* fmt,
+	va_list          ap
+);
+
+
+MOO_EXPORT int moo_bfmt_out (
+	moo_fmtout_t*    fmtout,
+	const moo_bch_t* fmt,
+	...
+);
+
+MOO_EXPORT int moo_ufmt_out (
+	moo_fmtout_t*    fmtout,
+	const moo_uch_t* fmt,
+	...
 );
 
 /* =========================================================================

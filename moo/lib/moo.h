@@ -40,7 +40,6 @@
 
 
 typedef struct moo_mod_t moo_mod_t;
-typedef unsigned int moo_bitmask_t;
 
 /* ========================================================================== */
 

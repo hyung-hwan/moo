@@ -422,6 +422,8 @@ typedef struct moo_bcs_t moo_bcs_t;
 #	define MOO_SIZEOF_OOCH_T MOO_SIZEOF_BCH_T
 #endif
 
+typedef unsigned int moo_bitmask_t;
+
 /* =========================================================================
  * BASIC OOP ENCODING
  * ========================================================================= */

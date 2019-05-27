@@ -29,7 +29,6 @@
 
 #include "moo.h"
 #include "moo-utl.h"
-#include <stdarg.h>
 
 /* you can define this to either 1 or 2 */
 #define MOO_BCODE_LONG_PARAM_SIZE 2

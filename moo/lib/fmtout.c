@@ -427,43 +427,8 @@ static int print_object (moo_t* moo, moo_bitmask_t mask, moo_oop_t oop, moo_outb
 		}
 		else if (c == moo->_fixed_point_decimal)
 		{
-#if 1
 			if (!moo_numtostr(moo, oop, 10 | MOO_NUMTOSTR_NONEWOBJ)) return -1;
 			if (outbfmt(moo, mask, "%.*js", moo->inttostr.xbuf.len, moo->inttostr.xbuf.ptr) <= -1) return -1;
-#else
-			moo_ooch_t* ptr;
-			moo_oow_t len;
-			moo_ooi_t scale;
-
-			if (!moo_inttostr(moo, ((moo_oop_fpdec_t)oop)->value, 10 | MOO_INTTOSTR_NONEWOBJ)) return -1;
-
-			ptr = moo->inttostr.xbuf.ptr;
-			len = moo->inttostr.xbuf.len;
-			if (ptr[0] == '-')
-			{
-				if (outbfmt(moo, mask, "-") <= -1) return -1; 
-				ptr++;
-				len--;
-			}
-
-			scale = MOO_OOP_TO_SMOOI(((moo_oop_fpdec_t)oop)->scale);
-			if (scale >= len)
-			{
-				moo_oow_t i;
-
-				if (outbfmt(moo, mask, "0.") <= -1) return -1; 
-				for (i = len; i < scale; i++)
-				{
-					if (outbfmt(moo, mask, "0") <= -1) return -1; 
-				}
-
-				if (outbfmt(moo, mask, "%.*js", len, ptr) <= -1) return -1; 
-			}
-			else
-			{
-				if (outbfmt(moo, mask, "%.*js.%.*js", len - scale, &ptr[0], scale, &ptr[len - scale]) <= -1) return -1;
-			}
-#endif
 		}
 		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_CHAR)
 		{
@@ -618,6 +583,7 @@ static int print_object (moo_t* moo, moo_bitmask_t mask, moo_oop_t oop, moo_outb
 
 /* ------------------------------------------------------------------------- */
 
+
 #undef FMTCHAR_IS_BCH
 #undef FMTCHAR_IS_UCH
 #undef FMTCHAR_IS_OOCH
@@ -654,6 +620,8 @@ static int _logufmtv (moo_t* moo, const moo_uch_t* fmt, moo_fmtout_data_t* data,
 {
 	return __logufmtv(moo, fmt, data, ap, moo_logbfmt);
 }
+
+#if 0
 
 moo_ooi_t moo_logbfmt (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...)
 {
@@ -726,7 +694,7 @@ moo_ooi_t moo_logufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, ...
 
 	return (x <= -1)? -1: fo.count;
 }
-
+#endif
 
 /* -------------------------------------------------------------------------- 
  * ERROR MESSAGE FORMATTING

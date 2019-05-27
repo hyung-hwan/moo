@@ -159,12 +159,12 @@ LTLIBRARIES = $(pkglib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 am_libmoo_la_OBJECTS = libmoo_la-bigint.lo libmoo_la-comp.lo \
 	libmoo_la-debug.lo libmoo_la-decode.lo libmoo_la-dic.lo \
-	libmoo_la-err.lo libmoo_la-exec.lo libmoo_la-fmtout.lo \
-	libmoo_la-gc.lo libmoo_la-heap.lo libmoo_la-mb8.lo \
-	libmoo_la-moo.lo libmoo_la-number.lo libmoo_la-obj.lo \
-	libmoo_la-pf-basic.lo libmoo_la-pf-sys.lo libmoo_la-pf-utf8.lo \
-	libmoo_la-rbt.lo libmoo_la-sym.lo libmoo_la-utf8.lo \
-	libmoo_la-utf16.lo libmoo_la-utl.lo
+	libmoo_la-err.lo libmoo_la-exec.lo libmoo_la-fmt.lo \
+	libmoo_la-fmtout.lo libmoo_la-gc.lo libmoo_la-heap.lo \
+	libmoo_la-mb8.lo libmoo_la-moo.lo libmoo_la-number.lo \
+	libmoo_la-obj.lo libmoo_la-pf-basic.lo libmoo_la-pf-sys.lo \
+	libmoo_la-pf-utf8.lo libmoo_la-rbt.lo libmoo_la-sym.lo \
+	libmoo_la-utf8.lo libmoo_la-utf16.lo libmoo_la-utl.lo
 libmoo_la_OBJECTS = $(am_libmoo_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -406,6 +406,7 @@ pdfdir = @pdfdir@
 prefix = @prefix@
 program_transform_name = @program_transform_name@
 psdir = @psdir@
+runstatedir = @runstatedir@
 sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 srcdir = @srcdir@
@@ -465,6 +466,7 @@ libmoo_la_SOURCES = \
 	dic.c \
 	err.c \
 	exec.c \
+	fmt.c \
 	fmtout.c \
 	fmtoutv.h \
 	gc.c \
@@ -607,6 +609,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-dic.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-err.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-exec.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-fmt.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-fmtout.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-gc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/libmoo_la-heap.Plo@am__quote@
@@ -698,6 +701,13 @@ libmoo_la-exec.lo: exec.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='exec.c' object='libmoo_la-exec.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-exec.lo `test -f 'exec.c' || echo '$(srcdir)/'`exec.c
+
+libmoo_la-fmt.lo: fmt.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-fmt.lo -MD -MP -MF $(DEPDIR)/libmoo_la-fmt.Tpo -c -o libmoo_la-fmt.lo `test -f 'fmt.c' || echo '$(srcdir)/'`fmt.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/libmoo_la-fmt.Tpo $(DEPDIR)/libmoo_la-fmt.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='fmt.c' object='libmoo_la-fmt.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o libmoo_la-fmt.lo `test -f 'fmt.c' || echo '$(srcdir)/'`fmt.c
 
 libmoo_la-fmtout.lo: fmtout.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmoo_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT libmoo_la-fmtout.lo -MD -MP -MF $(DEPDIR)/libmoo_la-fmtout.Tpo -c -o libmoo_la-fmtout.lo `test -f 'fmtout.c' || echo '$(srcdir)/'`fmtout.c
