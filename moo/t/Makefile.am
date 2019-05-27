@@ -12,6 +12,7 @@ AM_CPPFLAGS = \
 AM_LDFLAGS = -L$(abs_builddir)/../lib  -L$(libdir)
 LDADD = -lmoo $(PTHREAD_LIBS)
 
-bin_PROGRAMS = t-001 t-002
+bin_PROGRAMS = t-001 t-002 t-003
 t_001_SOURCES = t-001.c
 t_002_SOURCES = t-002.c
+t_003_SOURCES = t-003.c
