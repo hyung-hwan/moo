@@ -130,8 +130,8 @@ typedef moo_ooi_t (*moo_outbfmt_t) (
 
 enum moo_fmtout_fmt_type_t 
 {
-	MOO_FMTOUT_FMT_BCH = 0,
-	MOO_FMTOUT_FMT_UCH
+	MOO_FMTOUT_FMT_TYPE_BCH = 0,
+	MOO_FMTOUT_FMT_TYPE_UCH
 };
 typedef enum moo_fmtout_fmt_type_t moo_fmtout_fmt_type_t;
 
@@ -140,16 +140,16 @@ struct moo_fmtout_t
 {
 	moo_oow_t             count; /* out */
 
+	moo_fmtout_fmt_type_t fmttype;
+	const void*           fmtstr;
 	moo_bitmask_t         mask;  /* in */
+	void*                 ctx;
+
 	moo_fmtout_putbch_t   putbch; /* in */
 	moo_fmtout_putbcs_t   putbcs; /* in */
 	moo_fmtout_putuch_t   putuch; /* in */
 	moo_fmtout_putucs_t   putucs; /* in */
 	/*moo_outbfmt_t outbfmt;*/
-
-	moo_fmtout_fmt_type_t fmttype;
-	const void* fmtstr;
-	void* ctx;
 };
 
 
@@ -234,14 +234,13 @@ static moo_bch_t* sprintn_upper (moo_bch_t* nbuf, moo_uintmax_t num, int base, m
 
 #define BYTE_PRINTABLE(x) ((x >= 'a' && x <= 'z') || (x >= 'A' &&  x <= 'Z') || (x >= '0' && x <= '9') || (x == ' '))
 
-/*
-#define PUT_BYTE_IN_HEX(byte,extra_flags) do { \
+
+#define PUT_BYTE_IN_HEX(fmtout,byte,extra_flags) do { \
 	moo_bch_t __xbuf[3]; \
 	moo_byte_to_bcstr ((byte), __xbuf, MOO_COUNTOF(__xbuf), (16 | (extra_flags)), '0'); \
-	PUT_OOCH(__xbuf[0], 1); \
-	PUT_OOCH(__xbuf[1], 1); \
+	PUT_BCH(fmtout, __xbuf[0], 1); \
+	PUT_BCH(fmtout, __xbuf[1], 1); \
 } while (0)
-*/
 
 /* ------------------------------------------------------------------------- */
 
@@ -262,7 +261,6 @@ static int moo_do_fmtoutv (moo_fmtout_t* fmtout, va_list ap)
 	moo_bch_t nbuf[MAXNBUF];
 	const moo_bch_t* nbufp;
 	int stop = 0;
-
 #if 0
 	moo_bchbuf_t* fltfmt;
 	moo_oochbuf_t* fltout;
@@ -273,10 +271,10 @@ static int moo_do_fmtoutv (moo_fmtout_t* fmtout, va_list ap)
 	fmtptr = (const moo_uint8_t*)fmtout->fmtstr;
 	switch (fmtout->fmttype)
 	{
-		case MOO_FMTOUT_FMT_BCH: 
+		case MOO_FMTOUT_FMT_TYPE_BCH: 
 			fmtchsz = MOO_SIZEOF_BCH_T;
 			break;
-		case MOO_FMTOUT_FMT_UCH: 
+		case MOO_FMTOUT_FMT_TYPE_UCH: 
 			fmtchsz = MOO_SIZEOF_UCH_T;
 			break;
 	}
@@ -303,7 +301,7 @@ static int moo_do_fmtoutv (moo_fmtout_t* fmtout, va_list ap)
 		{
 			case MOO_FMOUT_FMT_BCH:
 				goto before_percent_bch;
-			case MOO_FMTOUT_FMT_UCH:
+			case MOO_FMTOUT_FMT_TYPE_UCH:
 				goto before_percent_uch;
 		}
 	#endif
@@ -353,10 +351,10 @@ static int moo_do_fmtoutv (moo_fmtout_t* fmtout, va_list ap)
 	reswitch:
 		switch (fmtout->fmttype)
 		{
-			case MOO_FMTOUT_FMT_BCH: 
+			case MOO_FMTOUT_FMT_TYPE_BCH: 
 				uch = *(const moo_bch_t*)fmtptr;
 				break;
-			case MOO_FMTOUT_FMT_UCH:
+			case MOO_FMTOUT_FMT_TYPE_UCH:
 				uch = *(const moo_uch_t*)fmtptr;
 				break;
 		}
@@ -460,10 +458,10 @@ static int moo_do_fmtoutv (moo_fmtout_t* fmtout, va_list ap)
 				n = n * 10 + uch - '0';
 				switch (fmtout->fmttype)
 				{
-					case MOO_FMTOUT_FMT_BCH: 
+					case MOO_FMTOUT_FMT_TYPE_BCH: 
 						uch = *(const moo_bch_t*)fmtptr;
 						break;
-					case MOO_FMTOUT_FMT_UCH:
+					case MOO_FMTOUT_FMT_TYPE_UCH:
 						uch = *(const moo_uch_t*)fmtptr;
 						break;
 				}
@@ -639,8 +637,6 @@ static int moo_do_fmtoutv (moo_fmtout_t* fmtout, va_list ap)
 		case 's':
 		{
 			const moo_bch_t* bsp;
-			moo_oow_t bslen, obslen, slen;
-			moo_cmgr_t* cmgr;
 
 			/* zeropad must not take effect for 'S' */
 			if (flagc & FLAGC_ZEROPAD) padc = ' ';
@@ -672,7 +668,6 @@ static int moo_do_fmtoutv (moo_fmtout_t* fmtout, va_list ap)
 		case 'S':
 		{
 			const moo_uch_t* usp;
-			moo_oow_t uslen, slen;
 
 			/* zeropad must not take effect for 's' */
 			if (flagc & FLAGC_ZEROPAD) padc = ' ';
@@ -702,7 +697,6 @@ static int moo_do_fmtoutv (moo_fmtout_t* fmtout, va_list ap)
 			break;
 		}
 
-#if 0
 		case 'k':
 		case 'K':
 		{
@@ -765,19 +759,19 @@ static int moo_do_fmtoutv (moo_fmtout_t* fmtout, va_list ap)
 			{
 				if ((lm_flag & LF_H) && BYTE_PRINTABLE(*bsp)) 
 				{
-					PUT_OOCH (fmtout, *bsp, 1);
+					PUT_BCH (fmtout, *bsp, 1);
 				}
 				else
 				{
 					moo_bch_t xbuf[3];
-					moo_byte_to_bcstr (*bsp, xbuf, MOO_COUNTOF(xbuf), (16 | (ch == 'k'? MOO_BYTE_TO_BCSTR_LOWERCASE: 0)), '0');
+					moo_byte_to_bcstr (*bsp, xbuf, MOO_COUNTOF(xbuf), (16 | (uch == 'k'? MOO_BYTE_TO_BCSTR_LOWERCASE: 0)), '0');
 					if (lm_flag & (LF_H | LF_L))
 					{
-						PUT_OOCH(fmtout, '\\', 1);
-						PUT_OOCH(fmtout, 'x', 1);
+						PUT_BCH(fmtout, '\\', 1);
+						PUT_BCH(fmtout, 'x', 1);
 					}
-					PUT_OOCH(fmtout, xbuf[0], 1);
-					PUT_OOCH(fmtout, xbuf[1], 1);
+					PUT_BCH(fmtout, xbuf[0], 1);
+					PUT_BCH(fmtout, xbuf[1], 1);
 				}
 				bsp++;
 			}
@@ -785,9 +779,7 @@ static int moo_do_fmtoutv (moo_fmtout_t* fmtout, va_list ap)
 			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (fmtout, padc, width);
 			break;
 		}
-#endif
 
-#if 0
 		case 'w':
 		case 'W':
 		{
@@ -825,41 +817,40 @@ static int moo_do_fmtoutv (moo_fmtout_t* fmtout, va_list ap)
 				}
 			}
 
-			if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
+			if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (fmtout, padc, width);
 
 			while (n--) 
 			{
 				if ((lm_flag & LF_H) && BYTE_PRINTABLE(*usp)) 
 				{
-					PUT_OOCH(*usp, 1);
+					PUT_OOCH(fmtout, *usp, 1);
 				}
 				else if (!(lm_flag & LF_L) && *usp <= 0xFFFF) 
 				{
 					moo_uint16_t u16 = *usp;
-					int extra_flags = ((ch) == 'w'? MOO_BYTE_TO_BCSTR_LOWERCASE: 0);
-					PUT_OOCH('\\', 1);
-					PUT_OOCH('u', 1);
-					PUT_BYTE_IN_HEX((u16 >> 8) & 0xFF, extra_flags);
-					PUT_BYTE_IN_HEX(u16 & 0xFF, extra_flags);
+					int extra_flags = ((uch) == 'w'? MOO_BYTE_TO_BCSTR_LOWERCASE: 0);
+					PUT_BCH(fmtout, '\\', 1);
+					PUT_BCH(fmtout, 'u', 1);
+					PUT_BYTE_IN_HEX(fmtout, (u16 >> 8) & 0xFF, extra_flags);
+					PUT_BYTE_IN_HEX(fmtout, u16 & 0xFF, extra_flags);
 				}
 				else
 				{
 					moo_uint32_t u32 = *usp;
-					int extra_flags = ((ch) == 'w'? MOO_BYTE_TO_BCSTR_LOWERCASE: 0);
-					PUT_OOCH('\\', 1);
-					PUT_OOCH('U', 1);
-					PUT_BYTE_IN_HEX((u32 >> 24) & 0xFF, extra_flags);
-					PUT_BYTE_IN_HEX((u32 >> 16) & 0xFF, extra_flags);
-					PUT_BYTE_IN_HEX((u32 >> 8) & 0xFF, extra_flags);
-					PUT_BYTE_IN_HEX(u32 & 0xFF, extra_flags);
+					int extra_flags = ((uch) == 'w'? MOO_BYTE_TO_BCSTR_LOWERCASE: 0);
+					PUT_BCH(fmtout, '\\', 1);
+					PUT_BCH(fmtout, 'U', 1);
+					PUT_BYTE_IN_HEX(fmtout, (u32 >> 24) & 0xFF, extra_flags);
+					PUT_BYTE_IN_HEX(fmtout, (u32 >> 16) & 0xFF, extra_flags);
+					PUT_BYTE_IN_HEX(fmtout, (u32 >> 8) & 0xFF, extra_flags);
+					PUT_BYTE_IN_HEX(fmtout, u32 & 0xFF, extra_flags);
 				}
 				usp++;
 			}
 
-			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (padc, width);
+			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (fmtout, padc, width);
 			break;
 		}
-#endif
 
 #if 0
 //////////////////////////
@@ -1176,7 +1167,7 @@ static int moo_do_fmtoutv (moo_fmtout_t* fmtout, va_list ap)
 				num = -(moo_intmax_t)num;
 			}
 
-			nbufp = sprintn (nbuf, num, base, &tmp);
+			nbufp = sprintn(nbuf, num, base, &tmp);
 			if ((flagc & FLAGC_SHARP) && num != 0) 
 			{
 				if (base == 2 || base == 8) tmp += 2;
@@ -1245,11 +1236,11 @@ static int moo_do_fmtoutv (moo_fmtout_t* fmtout, va_list ap)
 		invalid_format:
 			switch (fmtout->fmttype)
 			{
-				case MOO_FMTOUT_FMT_BCH:
-					PUT_BCS (fmtout, percent, (fmtptr - percent) / fmtchsz);
+				case MOO_FMTOUT_FMT_TYPE_BCH:
+					PUT_BCS (fmtout, (const moo_bch_t*)percent, (fmtptr - percent) / fmtchsz);
 					break;
-				case MOO_FMTOUT_FMT_UCH:
-					PUT_UCS (fmtout, percent, (fmtptr - percent) / fmtchsz);
+				case MOO_FMTOUT_FMT_TYPE_UCH:
+					PUT_UCS (fmtout, (const moo_uch_t*)percent, (fmtptr - percent) / fmtchsz);
 					break;
 			}
 			break;
@@ -1257,11 +1248,11 @@ static int moo_do_fmtoutv (moo_fmtout_t* fmtout, va_list ap)
 		default:
 			switch (fmtout->fmttype)
 			{
-				case MOO_FMTOUT_FMT_BCH:
-					PUT_BCS (fmtout, percent, (fmtptr - percent) / fmtchsz);
+				case MOO_FMTOUT_FMT_TYPE_BCH:
+					PUT_BCS (fmtout, (const moo_bch_t*)percent, (fmtptr - percent) / fmtchsz);
 					break;
-				case MOO_FMTOUT_FMT_UCH:
-					PUT_UCS (fmtout, percent, (fmtptr - percent) / fmtchsz);
+				case MOO_FMTOUT_FMT_TYPE_UCH:
+					PUT_UCS (fmtout, (const moo_uch_t*)percent, (fmtptr - percent) / fmtchsz);
 					break;
 			}
 			/*
@@ -1336,7 +1327,7 @@ static void moo_bfmtout (const moo_bch_t* fmt, ...)
 	va_list ap;
 
 	memset (&fmtout, 0, MOO_SIZEOF(fmtout));
-	fmtout.fmttype = MOO_FMTOUT_FMT_BCH;
+	fmtout.fmttype = MOO_FMTOUT_FMT_TYPE_BCH;
 	fmtout.fmtstr = fmt;
 	fmtout.putbch = put_bch;
 	fmtout.putbcs = put_bcs;
@@ -1356,7 +1347,7 @@ static int moo_ufmtout (const moo_bch_t* fmt, ...)
 
 int main ()
 {
-moo_uch_t x[] = { 'A', 'B', 'C' };
-	moo_bfmtout ("[%s %d %ls %s]\n", "test", 10, x, "code");
+	moo_uch_t x[] = { 'A', 'B', 'C' };
+	moo_bfmtout ("[%s %d %020X %ls %s %w %.*lk]\n", "test", 10, 0x1232, x, "code", x, MOO_SIZEOF_UCH_T * 3, x);
 	return 0;
 }
