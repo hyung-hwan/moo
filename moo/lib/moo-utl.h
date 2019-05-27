@@ -315,7 +315,7 @@ typedef int (*moo_fmtout_putucs_t) (
 
 typedef int (*moo_fmtout_putobj_t) (
 	moo_fmtout_t*     fmtout,
-	moo_oop_t         obj;
+	moo_oop_t         obj
 );
 
 enum moo_fmtout_fmt_type_t 
