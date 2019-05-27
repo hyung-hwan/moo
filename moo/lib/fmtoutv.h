@@ -165,19 +165,11 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 			bclen = fmt - checkpoint - 1;
 			cmgr = moo->cmgr;
 			cvlen = cmgr->bctouc(checkpoint, bclen, &ch);
-			if (cvlen == 0 || cvlen > bclen) 
+			if (cvlen == 0 || cvlen > bclen)
 			{
 				/* conversion error. just emit the byte as it is. */
-			#if defined(FMTOUT_STRICT)
-				goto oops;
-			#else
-				cmgr = moo_get_utf8_cmgr();
-				if (cmgr == moo->cmgr || (cvlen = cmgr->bctouc(checkpoint, bclen, &ch)) == 0 || cvlen > bclen) 
-				{
-					cmgr = moo_get_mb8_cmgr();
-					if (cmgr == moo->cmgr || (cvlen = cmgr->bctouc(checkpoint, bclen, &ch)) == 0 || cvlen > bclen) goto oops;
-				}
-			#endif
+				ch = *checkpoint;
+				cvlen = 1;
 			}
 			checkpoint += cvlen;
 			PUT_OOCH (ch, 1);
@@ -506,21 +498,7 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 			/* get the required length for successful conversion in a fail-safe manner */
 			cmgr = moo->cmgr;
 			bslen = obslen;
-			if (moo_conv_bchars_to_uchars_with_cmgr(bsp, &bslen, MOO_NULL, &slen, cmgr, 0) <= -1) 
-			{
-			#if defined(FMTOUT_STRICT)
-				goto oops;
-			#else
-				cmgr = moo_get_utf8_cmgr();
-				bslen = obslen;
-				if (cmgr == moo->cmgr || moo_conv_bchars_to_uchars_with_cmgr(bsp, &bslen, MOO_NULL, &slen, cmgr, 0) <= -1)
-				{
-					cmgr = moo_get_mb8_cmgr();
-					bslen = obslen;
-					if (cmgr == moo->cmgr || moo_conv_bchars_to_uchars_with_cmgr(bsp, &bslen, MOO_NULL, &slen, cmgr, 0) <= -1) goto oops;
-				}
-			#endif
-			}
+			if (moo_conv_bchars_to_uchars_with_cmgr(bsp, &bslen, MOO_NULL, &slen, cmgr, 0) <= -1) goto oops;
 
 			/* slen holds the length after conversion */
 			n = slen;
@@ -1042,22 +1020,22 @@ static int fmtoutv (moo_t* moo, const fmtchar_t* fmt, moo_fmtout_data_t* data, v
 			}
 #if 0
 			else if (lm_flag & LF_T)
-				num = va_arg (ap, moo_ptrdiff_t);
+				num = va_arg(ap, moo_ptrdiff_t);
 #endif
 			else if (lm_flag & LF_Z)
-				num = va_arg (ap, moo_oow_t);
+				num = va_arg(ap, moo_oow_t);
 			#if (MOO_SIZEOF_LONG_LONG > 0)
 			else if (lm_flag & LF_Q)
-				num = va_arg (ap, unsigned long long int);
+				num = va_arg(ap, unsigned long long int);
 			#endif
 			else if (lm_flag & (LF_L | LF_LD))
-				num = va_arg (ap, unsigned long int);
+				num = va_arg(ap, unsigned long int);
 			else if (lm_flag & LF_H)
-				num = (unsigned short int)va_arg (ap, int);
+				num = (unsigned short int)va_arg(ap, int);
 			else if (lm_flag & LF_C)
-				num = (unsigned char)va_arg (ap, int);
+				num = (unsigned char)va_arg(ap, int);
 			else
-				num = va_arg (ap, unsigned int);
+				num = va_arg(ap, unsigned int);
 			goto number;
 
 		handle_sign:
