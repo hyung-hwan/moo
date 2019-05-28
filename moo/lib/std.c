@@ -3624,12 +3624,12 @@ static void fini_moo (moo_t* moo)
 	xtn_t* xtn;
 
 	MOO_MEMSET(&vmprim, 0, MOO_SIZEOF(vmprim));
-	if (cfg->large_pages)
+	if (cfg && cfg->large_pages)
 	{
 		vmprim.alloc_heap = alloc_heap;
 		vmprim.free_heap = free_heap;
 	}
-	vmprim.log_write = (cfg->log_write? cfg->log_write: log_write);
+	vmprim.log_write = ((cfg && cfg->log_write)? cfg->log_write: log_write);
 	vmprim.syserrstrb = syserrstrb;
 	vmprim.assertfail = assert_fail;
 	vmprim.dl_startup = dl_startup;
@@ -3646,13 +3646,13 @@ static void fini_moo (moo_t* moo)
 	vmprim.vm_muxwait = vm_muxwait;
 	vmprim.vm_sleep = vm_sleep;
 
-	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize, (cfg->cmgr? cfg->cmgr: moo_get_utf8_cmgr()), &vmprim, errinfo);
+	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize, ((cfg && cfg->cmgr)? cfg->cmgr: moo_get_utf8_cmgr()), &vmprim, errinfo);
 	if (!moo) return MOO_NULL;
 
 	xtn = GET_XTN(moo);
-	xtn->input_cmgr = cfg->input_cmgr;
+	if (cfg) xtn->input_cmgr = cfg->input_cmgr;
 	if (!xtn->input_cmgr) xtn->input_cmgr = moo_getcmgr(moo);
-	xtn->log_cmgr = cfg->log_cmgr;
+	if (cfg) xtn->log_cmgr = cfg->log_cmgr;
 	if (!xtn->log_cmgr) xtn->log_cmgr = moo_getcmgr(moo);
 
 	chain (moo); /* call chain() before moo_regevtcb() as fini_moo() calls unchain() */
@@ -3677,7 +3677,7 @@ static void fini_moo (moo_t* moo)
 		moo_setoption (moo, MOO_OPTION_LOG_MASK, &bm);
 	}
 
-	if (handle_cfg_options(moo, cfg) <= -1)
+	if (cfg && handle_cfg_options(moo, cfg) <= -1)
 	{
 		if (errinfo) moo_geterrinf (moo, errinfo);
 		moo_close (moo);

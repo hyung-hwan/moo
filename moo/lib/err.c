@@ -215,6 +215,131 @@ void moo_seterrnum (moo_t* moo, moo_errnum_t errnum)
 	moo->errmsg.len = 0; 
 }
 
+
+static int err_bcs (moo_fmtout_t* fmtout, const moo_bch_t* ptr, moo_oow_t len)
+{
+	moo_t* moo = (moo_t*)fmtout->ctx;
+	moo_oow_t max;
+
+	max = MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len - 1;
+
+#if defined(MOO_OOCH_IS_UCH)
+	if (max <= 0) return 1;
+	moo_conv_bchars_to_uchars_with_cmgr (ptr, &len, &moo->errmsg.buf[moo->errmsg.len], &max, moo->cmgr, 1);
+	moo->errmsg.len += max;
+#else
+	if (len > max) len = max;
+	if (len <= 0) return 1;
+	MOO_MEMCPY (&moo->errmsg.buf[moo->errmsg.len], ptr, len * MOO_SIZEOF(*ptr));
+	moo->errmsg.len += len;
+#endif
+
+	moo->errmsg.buf[moo->errmsg.len] = '\0';
+
+	return 1; /* success */
+}
+
+static int err_ucs (moo_fmtout_t* fmtout, const moo_uch_t* ptr, moo_oow_t len)
+{
+	moo_t* moo = (moo_t*)fmtout->ctx;
+	moo_oow_t max;
+
+	max = MOO_COUNTOF(moo->errmsg.buf) - moo->errmsg.len - 1;
+
+#if defined(MOO_OOCH_IS_UCH)
+	if (len > max) len = max;
+	if (len <= 0) return 1;
+	MOO_MEMCPY (&moo->errmsg.buf[moo->errmsg.len], ptr, len * MOO_SIZEOF(*ptr));
+	moo->errmsg.len += len;
+#else
+	if (max <= 0) return 1;
+	moo_conv_uchars_to_bchars_with_cmgr (ptr, &len, &moo->errmsg.buf[moo->errmsg.len], &max, moo->cmgr);
+	moo->errmsg.len += max;
+#endif
+	moo->errmsg.buf[moo->errmsg.len] = '\0';
+	return 1; /* success */
+}
+
+void moo_seterrbfmt (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, ...)
+{
+	va_list ap;
+	moo_fmtout_t fo;
+
+	if (moo->shuterr) return;
+	moo->errmsg.len = 0;
+
+	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
+	fo.putbcs = err_bcs;
+	fo.putucs = err_ucs;
+	fo.putobj = moo_fmt_object_;
+	fo.ctx = moo;
+
+	va_start (ap, fmt);
+	moo_bfmt_outv (&fo, fmt, ap);
+	va_end (ap);
+
+	moo->errnum = errnum;
+}
+
+void moo_seterrufmt (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, ...)
+{
+	va_list ap;
+	moo_fmtout_t fo;
+
+	if (moo->shuterr) return;
+	moo->errmsg.len = 0;
+
+	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
+	fo.putbcs = err_bcs;
+	fo.putucs = err_ucs;
+	fo.putobj = moo_fmt_object_;
+	fo.ctx = moo;
+
+	va_start (ap, fmt);
+	moo_ufmt_outv (&fo, fmt, ap);
+	va_end (ap);
+
+	moo->errnum = errnum;
+}
+
+
+void moo_seterrbfmtv (moo_t* moo, moo_errnum_t errnum, const moo_bch_t* fmt, va_list ap)
+{
+	moo_fmtout_t fo;
+
+	if (moo->shuterr) return;
+
+	moo->errmsg.len = 0;
+
+	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
+	fo.putbcs = err_bcs;
+	fo.putucs = err_ucs;
+	fo.putobj = moo_fmt_object_;
+	fo.ctx = moo;
+
+	moo_bfmt_outv (&fo, fmt, ap);
+	moo->errnum = errnum;
+}
+
+void moo_seterrufmtv (moo_t* moo, moo_errnum_t errnum, const moo_uch_t* fmt, va_list ap)
+{
+	moo_fmtout_t fo;
+
+	if (moo->shuterr) return;
+
+	moo->errmsg.len = 0;
+
+	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
+	fo.putbcs = err_bcs;
+	fo.putucs = err_ucs;
+	fo.putobj = moo_fmt_object_;
+	fo.ctx = moo;
+
+	moo_ufmt_outv (&fo, fmt, ap);
+	moo->errnum = errnum;
+}
+
+
 void moo_seterrwithsyserr (moo_t* moo, int syserr_type, int syserr_code)
 {
 	moo_errnum_t errnum;

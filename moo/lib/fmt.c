@@ -1267,7 +1267,7 @@ int moo_ufmt_outv (moo_fmtout_t* fmtout, const moo_uch_t* fmt, va_list ap)
 	fmt_str = fmtout->fmt_str;
 	fmt_type = fmtout->fmt_type;
 
-	fmtout->fmt_type = MOO_FMTOUT_FMT_TYPE_BCH;
+	fmtout->fmt_type = MOO_FMTOUT_FMT_TYPE_UCH;
 	fmtout->fmt_str = fmt;
 
 	n = fmt_outv(fmtout, ap);
@@ -1325,7 +1325,7 @@ int moo_ufmt_out (moo_fmtout_t* fmtout, const moo_uch_t* fmt, ...)
  * OBJECT OUTPUT
  * -------------------------------------------------------------------------- */
 
-static int print_object (moo_fmtout_t* fmtout, moo_oop_t oop)
+int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 {
 	moo_t* moo = (moo_t*)fmtout->ctx;
 
@@ -1499,11 +1499,11 @@ static int print_object (moo_fmtout_t* fmtout, moo_oop_t oop)
 			i = 0;
 			if (i < MOO_OBJ_GET_SIZE(oop))
 			{
-				if (print_object(fmtout, MOO_OBJ_GET_OOP_VAL(oop, i)) <= -1) return -1;
+				if (moo_fmt_object_(fmtout, MOO_OBJ_GET_OOP_VAL(oop, i)) <= -1) return -1;
 				for (++i; i < MOO_OBJ_GET_SIZE(oop); i++)
 				{
 					if (moo_bfmt_out(fmtout, " ") <= -1) return -1;
-					if (print_object(fmtout, MOO_OBJ_GET_OOP_VAL(oop, i)) <= -1) return -1;
+					if (moo_fmt_object_(fmtout, MOO_OBJ_GET_OOP_VAL(oop, i)) <= -1) return -1;
 				}
 			}
 			if (moo_bfmt_out(fmtout, ")") <= -1) return -1;
@@ -1701,7 +1701,7 @@ moo_ooi_t moo_logbfmt (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...
 	fo.mask = mask;
 	fo.putbcs = log_bcs;
 	fo.putucs = log_ucs;
-	fo.putobj = print_object;
+	fo.putobj = moo_fmt_object_;
 
 	va_start (ap, fmt);
 	x = fmt_outv(&fo, ap);
@@ -1746,7 +1746,7 @@ moo_ooi_t moo_logufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, ...
 	fo.mask = mask;
 	fo.putbcs = log_bcs;
 	fo.putucs = log_ucs;
-	fo.putobj = print_object;
+	fo.putobj = moo_fmt_object_;
 
 	va_start (ap, fmt);
 	x = fmt_outv(&fo, ap);

@@ -596,7 +596,7 @@ moo_oow_t moo_byte_to_bcstr (
 
 /* ------------------------------------------------------------------------- */
 
-MOO_EXPORT int moo_ucwidth (
+MOO_EXPORT int moo_get_ucwidth (
 	moo_uch_t uc
 );
 

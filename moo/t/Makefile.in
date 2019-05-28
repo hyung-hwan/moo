@@ -88,7 +88,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = t-001$(EXEEXT) t-002$(EXEEXT) t-003$(EXEEXT)
+bin_PROGRAMS = t-001$(EXEEXT) t-002$(EXEEXT) t-003$(EXEEXT) \
+	t-004$(EXEEXT)
 subdir = t
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_sign.m4 \
@@ -117,12 +118,11 @@ am__v_lt_0 = --silent
 am__v_lt_1 = 
 am_t_002_OBJECTS = t-002.$(OBJEXT)
 t_002_OBJECTS = $(am_t_002_OBJECTS)
-t_002_LDADD = $(LDADD)
-t_002_DEPENDENCIES = $(am__DEPENDENCIES_1)
+am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
 am_t_003_OBJECTS = t-003.$(OBJEXT)
 t_003_OBJECTS = $(am_t_003_OBJECTS)
-t_003_LDADD = $(LDADD)
-t_003_DEPENDENCIES = $(am__DEPENDENCIES_1)
+am_t_004_OBJECTS = t-004.$(OBJEXT)
+t_004_OBJECTS = $(am_t_004_OBJECTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -157,8 +157,10 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(t_001_SOURCES) $(t_002_SOURCES) $(t_003_SOURCES)
-DIST_SOURCES = $(t_001_SOURCES) $(t_002_SOURCES) $(t_003_SOURCES)
+SOURCES = $(t_001_SOURCES) $(t_002_SOURCES) $(t_003_SOURCES) \
+	$(t_004_SOURCES)
+DIST_SOURCES = $(t_001_SOURCES) $(t_002_SOURCES) $(t_003_SOURCES) \
+	$(t_004_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -348,10 +350,17 @@ AM_CPPFLAGS = \
 	-I$(includedir)
 
 AM_LDFLAGS = -L$(abs_builddir)/../lib  -L$(libdir)
-LDADD = -lmoo $(PTHREAD_LIBS)
+LDADD = $(PTHREAD_LIBS)
 t_001_SOURCES = t-001.c
 t_002_SOURCES = t-002.c
+t_002_LDADD = -lmoo $(LDADD)
+t_002_DEPENDENCIES = ../lib/libmoo.la
 t_003_SOURCES = t-003.c
+t_003_LDADD = -lmoo $(LDADD)
+t_003_DEPENDENCIES = ../lib/libmoo.la
+t_004_SOURCES = t-004.c
+t_004_LDADD = -lmoox $(LDADD)
+t_004_DEPENDENCIES = ../lib/libmoox.la
 all: all-am
 
 .SUFFIXES:
@@ -447,6 +456,10 @@ t-003$(EXEEXT): $(t_003_OBJECTS) $(t_003_DEPENDENCIES) $(EXTRA_t_003_DEPENDENCIE
 	@rm -f t-003$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(t_003_OBJECTS) $(t_003_LDADD) $(LIBS)
 
+t-004$(EXEEXT): $(t_004_OBJECTS) $(t_004_DEPENDENCIES) $(EXTRA_t_004_DEPENDENCIES) 
+	@rm -f t-004$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(t_004_OBJECTS) $(t_004_LDADD) $(LIBS)
+
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 
@@ -456,6 +469,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-001.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-002.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-003.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t-004.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
