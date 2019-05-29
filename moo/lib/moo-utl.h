@@ -381,10 +381,10 @@ MOO_EXPORT moo_oow_t moo_hash_bytes_ (
 	}
 #else
 #	define moo_hash_bytes(ptr,len)     moo_hash_bytes_(ptr, len)
-#	define moo_hash_bchars(ptr,len)    moo_hash_bytes((const moo_oob_t*)(ptr), (len) * MOO_SIZEOF(moo_bch_t))
-#	define moo_hash_uchars(ptr,len)    moo_hash_bytes((const moo_oob_t*)(ptr), (len) * MOO_SIZEOF(moo_uch_t))
-#	define moo_hash_words(ptr,len)     moo_hash_bytes((const moo_oob_t*)(ptr), (len) * MOO_SIZEOF(moo_oow_t))
-#	define moo_hash_halfwords(ptr,len) moo_hash_bytes((const moo_oob_t*)(ptr), (len) * MOO_SIZEOF(moo_oohw_t))
+#	define moo_hash_bchars(ptr,len)    moo_hash_bytes_((const moo_oob_t*)(ptr), (len) * MOO_SIZEOF(moo_bch_t))
+#	define moo_hash_uchars(ptr,len)    moo_hash_bytes_((const moo_oob_t*)(ptr), (len) * MOO_SIZEOF(moo_uch_t))
+#	define moo_hash_words(ptr,len)     moo_hash_bytes_((const moo_oob_t*)(ptr), (len) * MOO_SIZEOF(moo_oow_t))
+#	define moo_hash_halfwords(ptr,len) moo_hash_bytes_((const moo_oob_t*)(ptr), (len) * MOO_SIZEOF(moo_oohw_t))
 #endif
 
 #if defined(MOO_OOCH_IS_UCH)

@@ -3637,6 +3637,29 @@ static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t narg
 	return MOO_PF_SUCCESS;
 }
 
+static moo_pfrc_t pf_string_format (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	/* ignore the receiver. the first argument is the format string. */
+	/*moo_oop_t rcv;
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_OBJ_IS_CHAR_POINTER(rcv));*/
+
+	if (moo_strfmtcallstack(moo, nargs, 0) <= -1)
+	{
+		MOO_STACK_SETRETTOERRNUM (moo, nargs);
+	}
+	else
+	{
+		moo_oop_t str;
+		str = moo_makestring(moo, moo->sprintf.xbuf.ptr, moo->sprintf.xbuf.len);
+		if (!str) return MOO_PF_FAILURE;
+
+		MOO_STACK_SETRET (moo, nargs, str);
+	}
+
+	return MOO_PF_SUCCESS;
+}
+
 static moo_pfrc_t pf_strfmt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv;
@@ -3644,7 +3667,7 @@ static moo_pfrc_t pf_strfmt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, MOO_OBJ_IS_CHAR_POINTER(rcv));
 
-	if (moo_sprintfmtst(moo, nargs) <= -1)
+	if (moo_strfmtcallstack(moo, nargs, 1) <= -1)
 	{
 		MOO_STACK_SETRETTOERRNUM (moo, nargs);
 	}
@@ -3870,6 +3893,7 @@ static pf_t pftab[] =
 	{ "SmallPointer_putUint64",                { moo_pf_smptr_put_uint64,                 2, 2 } },
 	{ "SmallPointer_putUint8",                 { moo_pf_smptr_put_uint8,                  2, 2 } },
 
+	{ "String_format",                         { pf_string_format,                        1, MA } },
 	{ "String_strfmt",                         { pf_strfmt,                               0, MA } },
 	{ "String_strlen",                         { pf_strlen,                               0, 0 } },
 

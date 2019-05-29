@@ -26,6 +26,8 @@
 
 #include "moo-prv.h"
 
+#if 0
+
 /*#include <stdio.h>*/ /* for snrintf(). used for floating-point number formatting */
 
 #if defined(_MSC_VER) || defined(__BORLANDC__) || (defined(__WATCOMC__) && (__WATCOMC__ < 1200))
@@ -729,7 +731,7 @@ moo_ooi_t moo_logufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, ...
 	else { ch = *(fmt); (fmt)++; }\
 } while(0)
 
-static MOO_INLINE int print_formatted (moo_t* moo, moo_ooi_t nargs, moo_fmtout_data_t* data, moo_outbfmt_t outbfmt, int ignore_rcv)
+static MOO_INLINE int print_formatted (moo_t* moo, moo_ooi_t nargs, moo_fmtout_data_t* data, moo_outbfmt_t outbfmt, int rcv_is_fmtstr)
 {
 	const moo_ooch_t* fmt, * fmtend;
 	const moo_ooch_t* checkpoint, * percent;
@@ -747,15 +749,15 @@ static MOO_INLINE int print_formatted (moo_t* moo, moo_ooi_t nargs, moo_fmtout_d
 	} arg_state;
 	moo_oop_t arg;
 
-	if (ignore_rcv)
-	{
-		arg = MOO_STACK_GETARG(moo, nargs, 0);
-		arg_state.idx = 1;
-	}
-	else
+	if (rcv_is_fmtstr)
 	{
 		arg = MOO_STACK_GETRCV(moo, nargs);
 		arg_state.idx = 0;
+	}
+	else
+	{
+		arg = MOO_STACK_GETARG(moo, nargs, 0);
+		arg_state.idx = 1;
 	}
 
 	if (!MOO_OOP_IS_POINTER(arg) || MOO_OBJ_GET_FLAGS_TYPE(arg) != MOO_OBJ_TYPE_CHAR)
@@ -1377,6 +1379,7 @@ static moo_ooi_t __sprbfmtv(moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt
 	return fo.count;
 }
 
+#if 0
 moo_ooi_t moo_sproutbfmt (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...)
 {
 	int x;
@@ -1393,7 +1396,7 @@ moo_ooi_t moo_sproutbfmt (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, 
 
 	return (x <= -1)? -1: fo.count;
 }
-
+#endif
 /*
 moo_ooi_t moo_sproutufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, ...)
 {
@@ -1413,7 +1416,7 @@ moo_ooi_t moo_sproutufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, 
 }*/
 
 
-int moo_sprintfmtst (moo_t* moo, moo_ooi_t nargs)
+int moo_strfmtcallstack (moo_t* moo, moo_ooi_t nargs)
 {
 	/* format a string using the receiver and arguments on the stack */
 	moo_fmtout_data_t fo;
@@ -1421,5 +1424,7 @@ int moo_sprintfmtst (moo_t* moo, moo_ooi_t nargs)
 	fo.putch = put_sprch;
 	fo.putcs = put_sprcs;
 	moo->sprintf.xbuf.len = 0;
-	return print_formatted(moo, nargs, &fo, moo_sproutbfmt, 0);
+	return print_formatted(moo, nargs, &fo, moo_sproutbfmt, 1);
 }
+
+#endif

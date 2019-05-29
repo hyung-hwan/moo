@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <wchar.h>
 #include <locale.h>
+#include "t.h"
 
 static int put_bcs (moo_fmtout_t* fmtout, const moo_bch_t* c, moo_oow_t len)
 {
@@ -59,6 +60,11 @@ int main ()
 
 	/* this unit is the number of characters written. but some are written as bch and some other as uch. 
 	 * if uch and bch data are mixed, the count returned doesn't really tell how many bytes or characters written */
-	cnt = bfmt_out ("wrote [%ld] units\n", cnt); 
+	bfmt_out ("wrote [%ld] units\n", cnt); 
+	T_ASSERT1 (cnt == 98, "bfmt_out test #1");
+
 	return 0;
+
+oops:
+	return -1;
 }

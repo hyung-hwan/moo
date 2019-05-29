@@ -285,6 +285,7 @@ class(#character) String(Array)
 	method(#primitive) strlen.
 
 	method(#primitive,#variadic) strfmt().
+	method(#primitive,#variadic,#class) format(fmt).
 }
 
 ## -------------------------------------------------------------------------------

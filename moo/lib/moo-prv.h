@@ -1501,9 +1501,10 @@ moo_ooi_t moo_sproutbfmt (
 	...
 );
 
-int moo_sprintfmtst (
+int moo_strfmtcallstack (
 	moo_t*            moo,
-	moo_ooi_t         nargs
+	moo_ooi_t         nargs,
+	int               rcv_is_fmtstr
 );
 
 /* ========================================================================= */
