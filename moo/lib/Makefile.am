@@ -70,8 +70,6 @@ libmoo_la_SOURCES = \
 	err.c \
 	exec.c \
 	fmt.c \
-	fmtout.c \
-	fmtoutv.h \
 	gc.c \
 	heap.c \
 	mb8.c \

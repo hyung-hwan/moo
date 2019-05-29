@@ -61,7 +61,14 @@ int main ()
 	/* this unit is the number of characters written. but some are written as bch and some other as uch. 
 	 * if uch and bch data are mixed, the count returned doesn't really tell how many bytes or characters written */
 	bfmt_out ("wrote [%ld] units\n", cnt); 
-	T_ASSERT1 (cnt == 98, "bfmt_out test #1");
+#if (MOO_SIZEOF_UCH_T == 2)
+#	define EXPECTED_LEN 98
+#elif (MOO_SIZEOF_UCH_T == 4)
+#	define EXPECTED_LEN 122
+#else
+#	error UNSUPPORTED UCH SIZE
+#endif
+	T_ASSERT1 (cnt == EXPECTED_LEN, "bfmt_out test #1");
 
 	return 0;
 

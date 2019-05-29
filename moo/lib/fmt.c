@@ -24,8 +24,62 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * This file contains a formatted output routine derived from kvprintf() 
+ * of FreeBSD. It has been heavily modified and bug-fixed.
+ */
+
+/*
+ * Copyright (c) 1986, 1988, 1991, 1993
+ *	The Regents of the University of California.  All rights reserved.
+ * (c) UNIX System Laboratories, Inc.
+ * All or some portions of this file are derived from material licensed
+ * to the University of California by American Telephone and Telegraph
+ * Co. or Unix System Laboratories, Inc. and are reproduced herein with
+ * the permission of UNIX System Laboratories, Inc.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 4. Neither the name of the University nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ */
+
 
 #include "moo-prv.h"
+
+
+#if 0
+#include <stdio.h> /* for snrintf(). used for floating-point number formatting */
+#if defined(_MSC_VER) || defined(__BORLANDC__) || (defined(__WATCOMC__) && (__WATCOMC__ < 1200))
+#	define snprintf _snprintf 
+#	if !defined(HAVE_SNPRINTF)
+#		define HAVE_SNPRINTF
+#	endif
+#endif
+#if defined(HAVE_QUADMATH_H)
+#	include <quadmath.h> /* for quadmath_snprintf() */
+#endif
+#endif
 
 /* Max number conversion buffer length: 
  * moo_intmax_t in base 2, plus NUL byte. */
@@ -718,7 +772,7 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 				if (flagc & FLAGC_DOT)
 				{
 					/* if precision is specifed, it doesn't stop at the value of zero unlike 's' or 'S' */
-					for (n = 0; n < precision; n++) /* nothing */;
+					n = precision;
 				}
 				else
 				{
@@ -1842,51 +1896,6 @@ static int sprint_ucs (moo_fmtout_t* fmtout, const moo_uch_t* ptr, moo_oow_t len
 	return 1; /* success */
 }
 
-
-moo_ooi_t moo_sproutbfmt (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...)
-{
-	int x;
-	va_list ap;
-	moo_fmtout_t fo;
-
-	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
-	fo.fmt_type = MOO_FMTOUT_FMT_TYPE_BCH;
-	fo.fmt_str = fmt;
-	fo.mask = mask;
-	fo.putbcs = sprint_bcs;
-	fo.putucs = sprint_ucs;
-	fo.putobj = moo_fmt_object_;
-
-	va_start (ap, fmt);
-	x = fmt_outv(&fo, ap);
-	va_end (ap);
-
-	return (x <= -1)? -1: fo.count;
-}
-
-moo_ooi_t moo_sproutufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, ...)
-{
-	int x;
-	va_list ap;
-	moo_fmtout_t fo;
-
-	MOO_MEMSET (&fo, 0, MOO_SIZEOF(fo));
-	fo.fmt_type = MOO_FMTOUT_FMT_TYPE_UCH;
-	fo.fmt_str = fmt;
-	fo.mask = mask;
-	fo.putbcs = sprint_bcs;
-	fo.putucs = sprint_ucs;
-	fo.putobj = moo_fmt_object_;
-
-	va_start (ap, fmt);
-	x = fmt_outv(&fo, ap);
-	va_end (ap);
-
-	return (x <= -1)? -1: fo.count;
-}
-
-
-
 #define GET_NEXT_ARG_TO(moo,nargs,arg_state,arg) do { \
 	if ((arg_state)->idx >= nargs) { (arg_state)->stop = 1;  goto invalid_format; } \
 	arg = MOO_STACK_GETARG(moo, nargs, (arg_state)->idx); \
@@ -1909,7 +1918,7 @@ static MOO_INLINE int format_stack_args (moo_fmtout_t* fmtout, moo_ooi_t nargs, 
 	moo_ooi_t extra, width, precision;
 	moo_ooch_t padc, ooch;
 	moo_ooci_t ch;
-	int flagc;
+	int flagc, lm_flag;
 
 	struct 
 	{
@@ -1977,7 +1986,7 @@ static MOO_INLINE int format_stack_args (moo_fmtout_t* fmtout, moo_ooi_t nargs, 
 		width = 0; precision = 0;
 		neg = 0; sign = 0;
 
-		flagc = 0; 
+		lm_flag = 0; flagc = 0; 
 		radix_flags = MOO_INTTOSTR_NONEWOBJ;
 
 	reswitch:
@@ -2089,6 +2098,14 @@ static MOO_INLINE int format_stack_args (moo_fmtout_t* fmtout, moo_ooi_t nargs, 
 				width = n;
 				flagc |= FLAGC_WIDTH;
 			}
+			goto reswitch;
+
+		/* length modifiers - used for k/K. not useful for s/S/d/i/o/u/x/X/b/f */
+		case 'h': /* short int */
+		case 'l': /* long int */
+			if (lm_flag & (LF_L | LF_H)) goto invalid_format;
+			flagc |= FLAGC_LENMOD;
+			lm_flag |= lm_tab[ch - 'a'].flag;
 			goto reswitch;
  
 		/* integer conversions */
@@ -2258,26 +2275,193 @@ static MOO_INLINE int format_stack_args (moo_fmtout_t* fmtout, moo_ooi_t nargs, 
 		case 's':
 		case 'S':
 		{
-			const moo_ooch_t* oosp;
-			moo_oow_t oosl;
-
 			/* zeropad must not take effect for 'S' */
 			if (flagc & FLAGC_ZEROPAD) padc = ' ';
 
 			GET_NEXT_ARG_TO (moo, nargs, &arg_state, arg);
+			if (!MOO_OOP_IS_POINTER(arg)) goto invalid_format;
+			switch (MOO_OBJ_GET_FLAGS_TYPE(arg))
+			{
+				case MOO_OBJ_TYPE_CHAR:
+				{
+					/* string, symbol */
+					const moo_ooch_t* oosp;
+					moo_oow_t oosl;
+
+					oosp = MOO_OBJ_GET_CHAR_SLOT(arg);
+					oosl = MOO_OBJ_GET_SIZE(arg);
+
+					if (flagc & FLAGC_DOT)
+					{
+						if (oosl > precision) oosl = precision;
+					}
+					width -= oosl;
+
+					if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (fmtout, padc, width);
+					PUT_OOCS (fmtout, oosp, oosl);
+					if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (fmtout, padc, width);
+					break;
+				}
+
+				case MOO_OBJ_TYPE_BYTE:
+				{
+					/* byte array */
+					const moo_uint8_t* bsp;
+					moo_oow_t bsl;
+
+					bsp = MOO_OBJ_GET_BYTE_SLOT(arg);
+					bsl = MOO_OBJ_GET_SIZE(arg);
+
+					if (flagc & FLAGC_DOT)
+					{
+						if (bsl > precision) bsl = precision;
+					}
+					width -= bsl;
+
+					if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (fmtout, padc, width);
+					PUT_BCS (fmtout, (const moo_bch_t*)bsp, bsl);
+					if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (fmtout, padc, width);
+					break;
+				}
+
+				default:
+					goto invalid_format;
+			}
+
+			break;
+		}
+
+		case 'k':
+		case 'K':
+		{
+			const moo_uint8_t* bsp;
+			moo_oow_t bsl, k_hex_width;
+
+			GET_NEXT_ARG_TO (moo, nargs, &arg_state, arg);
+			if (!MOO_OOP_IS_POINTER(arg)) goto invalid_format;
+
+			if (flagc & FLAGC_ZEROPAD) padc = ' ';
+
+			switch (MOO_OBJ_GET_FLAGS_TYPE(arg))
+			{
+				case MOO_OBJ_TYPE_CHAR:
+					bsp = (const moo_uint8_t*)MOO_OBJ_GET_CHAR_SLOT(arg);
+					bsl = MOO_OBJ_GET_SIZE(arg) * MOO_SIZEOF_OOCH_T;
+					goto format_byte_in_k;
+
+				case MOO_OBJ_TYPE_BYTE:
+					bsp = MOO_OBJ_GET_BYTE_SLOT(arg);
+					bsl = MOO_OBJ_GET_SIZE(arg);
+				
+				format_byte_in_k:
+					k_hex_width = (lm_flag & (LF_H | LF_L))? 4: 2;
+
+					if (flagc & FLAGC_DOT)
+					{
+						n = (precision > bsl)? bsl: precision;
+					}
+					else n = bsl;
+
+					if (lm_flag & LF_H)
+					{
+						moo_oow_t i;
+						for (i = 0; i < n; i++) width -= BYTE_PRINTABLE(bsp[i])? 1: k_hex_width;
+					}
+					else
+					{
+						width -= (n * k_hex_width);
+					}
+
+					if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (fmtout, padc, width);
+
+					while (n--) 
+					{
+						if ((lm_flag & LF_H) && BYTE_PRINTABLE(*bsp)) 
+						{
+							PUT_BCH (fmtout, *bsp, 1);
+						}
+						else
+						{
+							moo_bch_t xbuf[3];
+							moo_byte_to_bcstr (*bsp, xbuf, MOO_COUNTOF(xbuf), (16 | (ch == 'k'? MOO_BYTE_TO_BCSTR_LOWERCASE: 0)), '0');
+							if (lm_flag & (LF_H | LF_L)) PUT_BCS (fmtout, "\\x", 2);
+							PUT_BCS (fmtout, xbuf, 2);
+						}
+						bsp++;
+					}
+
+					if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (fmtout, padc, width);
+					break;
+
+				default:
+					goto invalid_format;
+			}
+			break;
+		}
+
+		case 'w':
+		case 'W':
+		{
+			/* unicode string in unicode escape sequence.
+			 * 
+			 * hw -> \uXXXX, \UXXXXXXXX, printable-byte(only in ascii range)
+			 * w -> \uXXXX, \UXXXXXXXX
+			 * lw -> all in \UXXXXXXXX
+			 */
+			const moo_uch_t* usp;
+			moo_oow_t usl, i, uwid;
+
+			GET_NEXT_ARG_TO (moo, nargs, &arg_state, arg);
 			if (!MOO_OOP_IS_POINTER(arg) || MOO_OBJ_GET_FLAGS_TYPE(arg) != MOO_OBJ_TYPE_CHAR) goto invalid_format;
 
-			oosp = MOO_OBJ_GET_CHAR_SLOT(arg);
-			oosl = MOO_OBJ_GET_SIZE(arg);
+			if (flagc & FLAGC_ZEROPAD) padc = ' ';
+
+			usp = MOO_OBJ_GET_CHAR_SLOT(arg);
+			usl = MOO_OBJ_GET_SIZE(arg);
 
 			if (flagc & FLAGC_DOT)
 			{
-				if (oosl > precision) oosl = precision;
+				n = (precision > usl)? usl: precision;
 			}
-			width -= oosl;
+			else n = usl;
+
+			for (i = 0; i < n; i++) 
+			{
+				if ((lm_flag & LF_H) && BYTE_PRINTABLE(usp[n])) uwid = 1;
+				else if (!(lm_flag & LF_L) && usp[n] <= 0xFFFF) uwid = 6;
+				else uwid = 10;
+				width -= uwid;
+			}
 
 			if (!(flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (fmtout, padc, width);
-			PUT_OOCS (fmtout, oosp, oosl);
+
+			while (n--) 
+			{
+				if ((lm_flag & LF_H) && BYTE_PRINTABLE(*usp)) 
+				{
+					PUT_OOCH(fmtout, *usp, 1);
+				}
+				else if (!(lm_flag & LF_L) && *usp <= 0xFFFF) 
+				{
+					moo_uint16_t u16 = *usp;
+					int extra_flags = ((ch) == 'w'? MOO_BYTE_TO_BCSTR_LOWERCASE: 0);
+					PUT_BCS(fmtout, "\\u", 2);
+					PUT_BYTE_IN_HEX(fmtout, (u16 >> 8) & 0xFF, extra_flags);
+					PUT_BYTE_IN_HEX(fmtout, u16 & 0xFF, extra_flags);
+				}
+				else
+				{
+					moo_uint32_t u32 = *usp;
+					int extra_flags = ((ch) == 'w'? MOO_BYTE_TO_BCSTR_LOWERCASE: 0);
+					PUT_BCS(fmtout, "\\u", 2);
+					PUT_BYTE_IN_HEX(fmtout, (u32 >> 24) & 0xFF, extra_flags);
+					PUT_BYTE_IN_HEX(fmtout, (u32 >> 16) & 0xFF, extra_flags);
+					PUT_BYTE_IN_HEX(fmtout, (u32 >> 8) & 0xFF, extra_flags);
+					PUT_BYTE_IN_HEX(fmtout, u32 & 0xFF, extra_flags);
+				}
+				usp++;
+			}
+
 			if ((flagc & FLAGC_LEFTADJ) && width > 0) PUT_OOCH (fmtout, padc, width);
 			break;
 		}

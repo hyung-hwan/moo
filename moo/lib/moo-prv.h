@@ -1491,16 +1491,6 @@ int moo_fmt_object_ (
 	moo_oop_t     oop
 );
 
-/* ========================================================================= */
-/* fmtout.c                                                                  */
-/* ========================================================================= */
-moo_ooi_t moo_sproutbfmt (
-	moo_t*           moo,
-	moo_bitmask_t    mask,
-	const moo_bch_t* fmt,
-	...
-);
-
 int moo_strfmtcallstack (
 	moo_t*            moo,
 	moo_ooi_t         nargs,
