@@ -419,7 +419,7 @@ struct moo_initv_t
 
 enum moo_pragma_flag_t
 {
-	MOO_PRAGMA_QC = (1 << 0)
+	MOO_PRAGMA_QC = (1 << 0) /* quoted commented. treat a double quoted text as a comment */
 };
 
 enum moo_cunit_type_t

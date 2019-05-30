@@ -2019,8 +2019,16 @@ retry:
 					break;
 
 				case '\'':
-					/* quoted symbol literal */
+					/* #'XXXX' - quoted symbol literal */
 					if (get_strlit(moo) <= -1) return -1; /* reuse the string literal tokenizer */
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_SYMLIT); /* change the symbol type to symbol */
+					break;
+
+				case '"':
+					/* #"XXXX" - quoted symbol literal with C-style escape sequences.
+					 * if MOO_PRAGMA_QC is set, this part should never be reached */
+					MOO_ASSERT (moo, !(moo->c->pragma_flags & MOO_PRAGMA_QC));
+					if (get_string(moo, '"', '\\', 0, 0) <= -1) return -1;
 					SET_TOKEN_TYPE (moo, MOO_IOTOK_SYMLIT); /* change the symbol type to symbol */
 					break;
 

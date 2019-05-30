@@ -180,7 +180,7 @@ static moo_pfrc_t pf_write (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	{
 		ucslen = ucsrem;
 		bcslen = MOO_COUNTOF(bcs);
-		if ((n = moo_convootobchars (moo, &msg->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
+		if ((n = moo_convootobchars(moo, &msg->slot[ucspos], &ucslen, bcs, &bcslen)) <= -1)
 		{
 			if (n != -2 || ucslen <= 0) return MOO_PF_HARD_FAILURE;
 		}
@@ -191,7 +191,7 @@ static moo_pfrc_t pf_write (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		ucsrem -= ucslen;
 	}
 #else
-	write (con->fd, MOO_GET_OBJ_CHAR_SLOT(msg), MOO_OBJ_GET_SIZE(msg)); /* TODO: error handling. incomplete write handling */
+	write (con->fd, MOO_OBJ_GET_CHAR_SLOT(msg), MOO_OBJ_GET_SIZE(msg)); /* TODO: error handling. incomplete write handling */
 #endif
 
 	MOO_STACK_SETRETTORCV (moo, nargs); /* TODO: change return code */

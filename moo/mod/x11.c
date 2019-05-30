@@ -45,7 +45,7 @@ static XChar2b* uchars_to_xchar2bstr (moo_t* moo, const moo_uch_t* inptr, moo_oo
 	const moo_uch_t* endptr;
 	XChar2b* outbuf, * outptr;
 
-	outbuf = moo_allocmem (moo, (inlen + 1) * MOO_SIZEOF(*outptr));
+	outbuf = moo_allocmem(moo, (inlen + 1) * MOO_SIZEOF(*outptr));
 	if (!outbuf) return MOO_NULL;
 
 	outptr = outbuf;
@@ -99,17 +99,21 @@ static moo_pfrc_t pf_open_display (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 			}
 
 			bl = MOO_OBJ_GET_SIZE(np);
-			dispname = moo_dupootobcstr (moo, MOO_OBJ_GET_CHAR_SLOT(np), &bl);
+		#if defined(MOO_OOCH_IS_UCH)
+			dispname = moo_dupootobcstr(moo, MOO_OBJ_GET_CHAR_SLOT(np), &bl);
 			if (!dispname)
 			{
 				MOO_DEBUG2 (moo, "<x11.connect> Cannot convert display name %.*js\n", MOO_OBJ_GET_SIZE(np), MOO_OBJ_GET_CHAR_SLOT(np));
 				MOO_STACK_SETRETTOERRNUM (moo, nargs);
 				goto oops;
 			}
+		#else
+			dispname = MOO_OBJ_GET_CHAR_SLOT(np);
+		#endif
 		}
 	}
 
-	event = moo_allocmem (moo, MOO_SIZEOF(*event));
+	event = moo_allocmem(moo, MOO_SIZEOF(*event));
 	if (!event)
 	{
 		MOO_STACK_SETRETTOERRNUM (moo, nargs);
@@ -150,13 +154,17 @@ static moo_pfrc_t pf_open_display (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	x11->display = MOO_SMPTR_TO_OOP(disp);
 	MOO_STACK_SETRETTORCV (moo, nargs);
 
+#if defined(MOO_OOCH_IS_UCH)
 	if (dispname) moo_freemem (moo, dispname);
+#endif
 	return MOO_PF_SUCCESS;
 
 oops:
 	if (disp) XCloseDisplay (disp);
 	if (event) moo_freemem (moo, event);
+#if defined(MOO_OOCH_IS_UCH)
 	if (dispname) moo_freemem (moo, dispname);
+#endif
 	return MOO_PF_SUCCESS;
 }
 
@@ -714,8 +722,8 @@ static moo_pfrc_t pf_draw_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		moo_oow_t oocslen;
 
 		oocslen = MOO_OBJ_GET_SIZE(a3);
-		if (moo_convootobchars (moo, MOO_OBJ_GET_CHAR_SLOT(a3), &oocslen, MOO_NULL, &bcslen) <= -1 ||
-		    !(bb = moo_allocmem (moo, MOO_SIZEOF(moo_bch_t) * bcslen)))
+		if (moo_convootobchars(moo, MOO_OBJ_GET_CHAR_SLOT(a3), &oocslen, MOO_NULL, &bcslen) <= -1 ||
+		    !(bb = moo_allocmem(moo, MOO_SIZEOF(moo_bch_t) * bcslen)))
 		{
 			MOO_DEBUG0 (moo, "<x11.draw_string> Error in converting a string\n");
 			MOO_STACK_SETRETTOERRNUM (moo, nargs);
@@ -724,7 +732,7 @@ static moo_pfrc_t pf_draw_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		moo_convootobchars (moo, MOO_OBJ_GET_CHAR_SLOT(a3), &oocslen, bb, &bcslen);
 	#else
 		bb = MOO_OBJ_GET_CHAR_SLOT(a3);
-		bcslen = oocslen;
+		bcslen = MOO_OBJ_GET_SIZE(a3);
 	#endif
 
 		XmbTextExtents(MOO_OOP_TO_SMPTR(gc->font_set), bb, bcslen, MOO_NULL, &r);
@@ -741,12 +749,13 @@ static moo_pfrc_t pf_draw_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	}
 	else
 	{
+	#if defined(MOO_OOCH_IS_UCH)
 		XChar2b* stptr;
 		moo_oow_t stlen;
 		int ascent = 0;
 
 	/* TODO: draw string chunk by chunk to avoid memory allocation in uchars_to_xchars2bstr */
-		stptr = uchars_to_xchar2bstr (moo, MOO_OBJ_GET_CHAR_SLOT(a3), MOO_OBJ_GET_SIZE(a3), &stlen);
+		stptr = uchars_to_xchar2bstr(moo, MOO_OBJ_GET_CHAR_SLOT(a3), MOO_OBJ_GET_SIZE(a3), &stlen);
 		if (!stptr)
 		{
 			MOO_DEBUG0 (moo, "<x11.draw_string> Error in converting a string\n");
@@ -765,6 +774,19 @@ static moo_pfrc_t pf_draw_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 			MOO_OOP_TO_SMOOI(a1), MOO_OOP_TO_SMOOI(a2) + ascent, stptr, stlen);
 
 		moo_freemem (moo, stptr);
+	#else
+		int ascent = 0;
+
+		if (MOO_OOP_IS_SMPTR(gc->font_ptr))
+		{
+			int direction, descent;
+			XCharStruct overall;
+			XTextExtents16 (MOO_OOP_TO_SMPTR(gc->font_ptr), MOO_OBJ_GET_CHAR_SLOT(a3), MOO_OBJ_GET_SIZE(a3), &direction, &ascent, &descent, &overall);
+		}
+
+		XDrawString (disp, (Window)MOO_OOP_TO_SMOOI(((oop_x11_widget_t)gc->widget)->window_handle), MOO_OOP_TO_SMPTR(gc->gc_handle),
+			MOO_OOP_TO_SMOOI(a1), MOO_OOP_TO_SMOOI(a2) + ascent, MOO_OBJ_GET_CHAR_SLOT(a3), MOO_OBJ_GET_SIZE(a3));
+	#endif
 	}
 
 	MOO_STACK_SETRETTORCV (moo, nargs);

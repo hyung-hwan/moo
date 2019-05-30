@@ -1431,87 +1431,79 @@ int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 		}
 		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_CHAR)
 		{
-			if (c == moo->_symbol) 
-			{
-				if (moo_bfmt_out(fmtout, "#%.*js", MOO_OBJ_GET_SIZE(oop), MOO_OBJ_GET_CHAR_SLOT(oop)) <= -1) return -1;
-			}
-			else /*if ((moo_oop_t)c == moo->_string)*/
-			{
-				moo_ooch_t ch;
-				int escape = 0;
+			moo_ooch_t ch;
+			int escape = 0;
 
+			for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
+			{
+				ch = MOO_OBJ_GET_CHAR_SLOT(oop)[i];
+				if ((ch >= '\0' && ch < ' ') || ch == '\\' || ch == '\"') 
+				{
+					escape = 1;
+					break;
+				}
+			}
+
+			if (escape)
+			{
+				moo_ooch_t escaped;
+
+				if (moo_bfmt_out(fmtout, ((c == moo->_symbol)? "#\"": "\"")) <= -1) return -1;
 				for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
 				{
 					ch = MOO_OBJ_GET_CHAR_SLOT(oop)[i];
-					if (ch < ' ') 
+					if (ch >= '\0' && ch < ' ') 
 					{
-						escape = 1;
-						break;
+						switch (ch)
+						{
+							case '\0':
+								escaped = '0';
+								break;
+							case '\n':
+								escaped = 'n';
+								break;
+							case '\r':
+								escaped = 'r';
+								break;
+							case '\t':
+								escaped = 't';
+								break;
+							case '\f':
+								escaped = 'f';
+								break;
+							case '\b':
+								escaped = 'b';
+								break;
+							case '\v':
+								escaped = 'v';
+								break;
+							case '\a':
+								escaped = 'a';
+								break;
+							default:
+								/* since it's less than ' ' and greater than or equal to '\0' , 
+								 * it should not exceed 0xFF regardless of character mode. %02X should be good enough */
+								if (moo_bfmt_out(fmtout, "\\x%02X", (moo_oochu_t)ch) <= -1) return -1;
+								continue;
+						}
+
+						if (moo_bfmt_out(fmtout, "\\%jc", escaped) <= -1) return -1;
+					}
+					else if (ch == '\\' || ch == '\"')
+					{
+						if (moo_bfmt_out(fmtout, "\\%jc", ch) <= -1) return -1;
+					}
+					else
+					{
+						if (moo_bfmt_out(fmtout, "%jc", ch) <= -1) return -1;
 					}
 				}
 
-				if (escape)
-				{
-					moo_ooch_t escaped;
-
-					if (moo_bfmt_out(fmtout, "S'") <= -1) return -1;
-					for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
-					{
-						ch = MOO_OBJ_GET_CHAR_SLOT(oop)[i];
-						if (ch < ' ') 
-						{
-							switch (ch)
-							{
-								case '\0':
-									escaped = '0';
-									break;
-								case '\n':
-									escaped = 'n';
-									break;
-								case '\r':
-									escaped = 'r';
-									break;
-								case '\t':
-									escaped = 't';
-									break;
-								case '\f':
-									escaped = 'f';
-									break;
-								case '\b':
-									escaped = 'b';
-									break;
-								case '\v':
-									escaped = 'v';
-									break;
-								case '\a':
-									escaped = 'a';
-									break;
-								default:
-									escaped = ch;
-									break;
-							}
-
-							if (escaped == ch)
-							{
-								if (moo_bfmt_out(fmtout, "\\x%X", ch) <= -1) return -1;
-							}
-							else
-							{
-								if (moo_bfmt_out(fmtout, "\\%jc", escaped) <= -1) return -1;
-							}
-						}
-						else
-						{
-							if (moo_bfmt_out(fmtout, "%jc", ch) <= -1) return -1;
-						}
-					}
-
-					if (moo_bfmt_out(fmtout, "'") <= -1) return -1;
-				}
-				else
-				{
-					if (moo_bfmt_out(fmtout, "'%.*js'", MOO_OBJ_GET_SIZE(oop), MOO_OBJ_GET_CHAR_SLOT(oop)) <= -1) return -1;
-				}
+				if (moo_bfmt_out(fmtout, "\"") <= -1) return -1;
+			}
+			else
+			{
+				if (moo_bfmt_out(fmtout, ((c == moo->_symbol)? "#%.*js": "'%.%js'"), MOO_OBJ_GET_SIZE(oop), MOO_OBJ_GET_CHAR_SLOT(oop)) <= -1) return -1;
 			}
 		}
 		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_BYTE)

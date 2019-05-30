@@ -39,7 +39,7 @@ class MyObject(Object)
 		sg addSemaphore: s3.
 
 		s1 signalOnInput: 0.
-		s2 signalOnInput: 0. ## this should raise an exception.
+		s2 signalOnInput: 0. ## this should raise an exception as the same file descriptor is added to a different semaphore
 		s3 signalOnInput: 0.
 
 		[ sg wait. ] fork.
@@ -69,7 +69,7 @@ sg removeSemaphore: s1.
 			tb := tc at: idx.
 			System log(System.Log.INFO, idx asString, (if (tb value) { ' PASS' } else { ' FAIL' }), S'\n').
 		].
-		
+
 		'********** END OF MAIN PROGRAM *************' dump.
 	}
 }
