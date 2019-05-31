@@ -326,7 +326,7 @@ static int fmt_outv (moo_fmtout_t* fmtout, va_list ap)
 	#else
 		switch (fmtout->fmt_type)
 		{
-			case MOO_FMOUT_FMT_BCH:
+			case MOO_FMTOUT_FMT_TYPE_BCH:
 				goto before_percent_bch;
 			case MOO_FMTOUT_FMT_TYPE_UCH:
 				goto before_percent_uch;
@@ -1717,10 +1717,9 @@ static int log_bcs (moo_fmtout_t* fmtout, const moo_bch_t* ptr, moo_oow_t len)
 
 #endif
 
-moo_ooi_t moo_logbfmt (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...)
+moo_ooi_t moo_logbfmtv (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, va_list ap)
 {
 	int x;
-	va_list ap;
 	moo_fmtout_t fo;
 
 	if (moo->log.default_type_mask & MOO_LOG_ALL_TYPES) 
@@ -1749,9 +1748,7 @@ moo_ooi_t moo_logbfmt (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...
 	fo.putucs = log_ucs;
 	fo.putobj = moo_fmt_object_;
 
-	va_start (ap, fmt);
 	x = fmt_outv(&fo, ap);
-	va_end (ap);
 
 	if (moo->log.len > 0 && moo->log.ptr[moo->log.len - 1] == '\n')
 	{
@@ -1762,10 +1759,21 @@ moo_ooi_t moo_logbfmt (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...
 	return (x <= -1)? -1: fo.count;
 }
 
-moo_ooi_t moo_logufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, ...)
+moo_ooi_t moo_logbfmt (moo_t* moo, moo_bitmask_t mask, const moo_bch_t* fmt, ...)
+{
+	moo_ooi_t x;
+	va_list ap;
+
+	va_start (ap, fmt);
+	x = moo_logbfmtv(moo, mask, fmt, ap);
+	va_end (ap);
+
+	return x;
+}
+
+moo_ooi_t moo_logufmtv (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, va_list ap)
 {
 	int x;
-	va_list ap;
 	moo_fmtout_t fo;
 
 	if (moo->log.default_type_mask & MOO_LOG_ALL_TYPES) 
@@ -1794,9 +1802,7 @@ moo_ooi_t moo_logufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, ...
 	fo.putucs = log_ucs;
 	fo.putobj = moo_fmt_object_;
 
-	va_start (ap, fmt);
 	x = fmt_outv(&fo, ap);
-	va_end (ap);
 
 	if (moo->log.len > 0 && moo->log.ptr[moo->log.len - 1] == '\n')
 	{
@@ -1806,10 +1812,22 @@ moo_ooi_t moo_logufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, ...
 	return (x <= -1)? -1: fo.count;
 }
 
+moo_ooi_t moo_logufmt (moo_t* moo, moo_bitmask_t mask, const moo_uch_t* fmt, ...)
+{
+	moo_ooi_t x;
+	va_list ap;
+
+	va_start (ap, fmt);
+	x = moo_logufmtv(moo, mask, fmt, ap);
+	va_end (ap);
+
+	return x;
+}
 
 /* --------------------------------------------------------------------------
- * SUPPORT FOR FORMATTED OUTPUT TO BE USED BY BUILTIN PRIMITIVE FUNCTIONS
+ * STRING FORMATTING
  * -------------------------------------------------------------------------- */
+
 static int sprint_bcs (moo_fmtout_t* fmtout, const moo_bch_t* ptr, moo_oow_t len)
 {
 	moo_t* moo = (moo_t*)fmtout->ctx;
@@ -1887,6 +1905,10 @@ static int sprint_ucs (moo_fmtout_t* fmtout, const moo_uch_t* ptr, moo_oow_t len
 
 	return 1; /* success */
 }
+
+/* --------------------------------------------------------------------------
+ * SUPPORT FOR FORMATTED OUTPUT TO BE USED BY BUILTIN PRIMITIVE FUNCTIONS
+ * -------------------------------------------------------------------------- */
 
 #define GET_NEXT_ARG_TO(moo,nargs,arg_state,arg) do { \
 	if ((arg_state)->idx >= nargs) { (arg_state)->stop = 1;  goto invalid_format; } \

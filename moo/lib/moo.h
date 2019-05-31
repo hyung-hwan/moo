@@ -29,6 +29,7 @@
 
 #include "moo-cmn.h"
 #include "moo-rbt.h"
+#include <stdarg.h>
 
 /* TODO: move this macro out to the build files.... */
 #define MOO_INCLUDE_COMPILER
@@ -2398,17 +2399,33 @@ MOO_EXPORT moo_ooi_t moo_logbfmt (
 	...
 );
 
+MOO_EXPORT moo_ooi_t moo_logbfmtv (
+	moo_t*           moo,
+	moo_bitmask_t    mask,
+	const moo_bch_t* fmt,
+	va_list          ap
+);
+
 MOO_EXPORT moo_ooi_t moo_logufmt (
 	moo_t*            moo,
 	moo_bitmask_t     mask,
 	const moo_uch_t*  fmt,
 	...
 );
+
+MOO_EXPORT moo_ooi_t moo_logufmtv (
+	moo_t*            moo,
+	moo_bitmask_t     mask,
+	const moo_uch_t*  fmt,
+	va_list           ap
+);
  
 #if defined(MOO_OOCH_IS_UCH)
 #	define moo_logoofmt moo_logufmt
+#	define moo_logoofmtv moo_logufmtv
 #else
 #	define moo_logoofmt moo_logbfmt
+#	define moo_logoofmtv moo_logbfmtv
 #endif
 
 /* =========================================================================
