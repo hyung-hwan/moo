@@ -2402,7 +2402,7 @@ static MOO_INLINE int format_stack_args (moo_fmtout_t* fmtout, moo_ooi_t nargs, 
 						{
 							moo_bch_t xbuf[3];
 							int flagged_radix = 16;
-						#if defined(HCL_OOCH_IS_UCH)
+						#if defined(MOO_OOCH_IS_UCH)
 							if (ch == 'k') flagged_radix |= MOO_BYTE_TO_BCSTR_LOWERCASE;
 						#else
 							if (ch == 'k' || ch == 'w') flagged_radix |= MOO_BYTE_TO_BCSTR_LOWERCASE;
