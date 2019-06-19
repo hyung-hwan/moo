@@ -43,10 +43,10 @@ class MyObject(Object)
 	{
 		| d a ffi |
 
-		(*k := Mill new.
+		/*k := Mill new.
 		k register: #abc call: [ Dictionary new ].
 		a := k make: #abc.
-		##a dump.*)
+		##a dump.*/
 		
 		d := Dictionary new.
 		d at: #abc put: 20.
@@ -55,9 +55,9 @@ class MyObject(Object)
 		d at: #moo put: 'good?'.
 		d at: #moo put: 'not good?'.
 
-		(* (d at: #abc) dump.
-		(* (d at: #dddd) dump. *)
-		(*d do: [:v | v dump].*)
+		/* (d at: #abc) dump.
+		/* (d at: #dddd) dump. */
+		/*d do: [:v | v dump].*/
 
 		d keysAndValuesDo: [:k :v| System logNl: (k asString) & ' => ' & (v asString) ].
 
@@ -72,17 +72,17 @@ class MyObject(Object)
 		(d at: #jjjj) dump.
 		(d at: #jjjja) dump.
 		
-		(* 
+		/* 
 		System keysAndValuesDo: [:k :v| 
 				System logNl: (k asString) & ' => ' & (v asString) 
 		].
-		*)
+		*/
 		
 		##System keysDo: [:k| System logNl: (k asString)]
 		
-		(*[
+		/*[
 			[Exception hash dump] ensure: ['xxxx' dump].
-		] on: Exception do: [:ex | ('Exception caught - ' & ex asString) dump ].*)
+		] on: Exception do: [:ex | ('Exception caught - ' & ex asString) dump ].*/
 
 		ffi := FFI new: '/lib64/libc.so.6'.
 		if (ffi isError)
@@ -160,12 +160,12 @@ class MyObject(Object)
 			]
 		]) dump.
 
-		(*
+		/*
 		a := 5.
 		while (true) {
 			System logNl: a asString.
 			a := a + 100000000000000.
-		}.*)
+		}.*/
 		
 		
 		a := if(false) { 10 } elsif (false) { 20 } elsif (false) { 30} else { 40}.
@@ -228,24 +228,24 @@ class MyObject(Object)
 			#'a b c'
 		).
 		
-		(* Dictionary ???
+		/* Dictionary ???
 		a := %{ 
 			key -> value ,
 			key -> value ,
 			key -> value ,
 			key -> value
 		),.
-		*)
+		*/
 
 		a do: [ :v | v dump].
 
-(*
+/*
 		## how to handle return inside 'if' like the following???
 		## what happens to the stack?
 		a := if ((k := 20) == 10) {99} else { 100}.
 		k dump.
 		a dump.
-*)
+*/
 		'---------- END ------------' dump.
 		##System sleepForSecs: 20.
 	}
@@ -260,7 +260,7 @@ class MyObject(Object)
 
 		a := 100.
 			## PROBLEM: the following double loop will exhaust the stack 
-			(*
+			/*
 		while (true)
 		{
 		##111 dump.
@@ -272,7 +272,7 @@ class MyObject(Object)
 				##[:j :q | (j + q) dump] value: 10 value: 20.
 				##if (false) {} else { break }.
 			}.
-		}.*)
+		}.*/
 
 
 		a := %{
@@ -285,8 +285,8 @@ class MyObject(Object)
 			'ccc' -> 890
 		}.
 
-		(*a removeKey: 'bbb'.
-		a remove: :(#bbb).*)
+		/*a removeKey: 'bbb'.
+		a remove: :(#bbb).*/
 
 		##1 to: 100 do: [ :i | a at: i put: (i * 2) ].
 		a keysAndValuesDo: [:k :v |
@@ -296,7 +296,7 @@ class MyObject(Object)
 		].
 
 		(a associationAt: (#aaa -> nil)) dump.
-		(*
+		/*
 		while (true) 
 		{
 			while (true)
@@ -304,12 +304,12 @@ class MyObject(Object)
 				[:j :q | (j + q) dump] value: (if (true) { 20 }) value: (if (true) { break }).
 				(1 + (if (false) {} else { break })) dump.
 			}
-		}*)
+		}*/
 
 		
 		
 
-		(* basicAt: 12 to access the nsdic field. use a proper method once it's defined in Class *)
+		/* basicAt: 12 to access the nsdic field. use a proper method once it's defined in Class */
 	##	(System nsdic) keysAndValuesDo: [:k :v |
 	##		k dump.
 	##		v dump.
@@ -344,7 +344,7 @@ a free.
 		System sleepForSecs: 2.
 	}
 	
-	(*
+	/*
 	#method(#class) main
 	{
 		| event |
@@ -359,12 +359,12 @@ a free.
 			event := GUI waitForEvent.
 			GUI dispatchEvent: event.
 		}
-	}*)
+	}*/
 }
 
-(*
+/*
 pooldic XXD {
 	#abc := #(1 2 3).
 	#def := %( 1, 3, 4 ). ## syntax error - literal expected where %( is
 }
-*)
+*/

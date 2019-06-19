@@ -17,8 +17,8 @@ class(#pointer,#limited) Class(Apex) [ClassInterface]
 
 	method(#class) initialize { ^self }
 
-	(* most of the following methods can actually become class methods of Apex.
-	 * if the instance varibles can be made accessible from the Apex class. *)
+	/* most of the following methods can actually become class methods of Apex.
+	 * if the instance varibles can be made accessible from the Apex class. */
 	method name { ^self.name }
 	method superclass { ^self.superclass }
 
@@ -29,7 +29,7 @@ class(#pointer,#limited) Class(Apex) [ClassInterface]
 		^self.spec bitShift: -8
 	}
 
-	(*method inheritsFrom: aSuperclass
+	/*method inheritsFrom: aSuperclass
 	{
 		| c |
 		c := self superclass.
@@ -38,7 +38,7 @@ class(#pointer,#limited) Class(Apex) [ClassInterface]
 			c := c superclass.
 		].
 		^false
-	}*)
+	}*/
 
 	method nsup { ^self.nsup }
 	method nsdic { ^self.nsdic }

@@ -14,7 +14,7 @@ class Stdio(Object) from 'stdio'
 		^(self new) open(name, mode)
 	}
 	
-(* ---------------------
+/* ---------------------
 	method(#class) stdin
 	{
 		self.in isNil ifTrue: [ self.in := ^(super new) open: 0 for: 'r' ].
@@ -32,14 +32,14 @@ class Stdio(Object) from 'stdio'
 		self.err isNil ifTrue: [ self.err := ^(super new) open: 2 for: 'w' ].
 		^self.err.
 	}
------------------------- *)
+------------------------ */
 
-	(*
+	/*
 	method format: fmt with: ...
 	{
  
 	}
-	*)
+	*/
 
 	method(#variadic) format (fmt)
 	{

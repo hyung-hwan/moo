@@ -17,7 +17,7 @@ class(#pointer) Context(Apex)
 		^self.ntmprs
 	}
 
-(* ---------------------------------
+/* ---------------------------------
 method varargCount
 {
 method context,
@@ -39,7 +39,7 @@ block context...
 	^self.home varargAt: index
 }
 
----------------------------------- *)
+---------------------------------- */
 }
 
 class(#pointer,#final,#limited) MethodContext(Context)
@@ -161,7 +161,7 @@ class(#pointer,#final,#limited) BlockContext(Context)
 	method ifFalse: aBlock
 	{
 		##^(self value) ifFalse: aBlock.
-		^if (self value) { (* nothing *) } else { aBlock value }.
+		^if (self value) { /* nothing */ } else { aBlock value }.
 	}
 
 	method ifTrue: trueBlock ifFalse: falseBlock
@@ -172,15 +172,15 @@ class(#pointer,#final,#limited) BlockContext(Context)
 
 	method whileTrue: aBlock
 	{
-		(* --------------------------------------------------
+		/* --------------------------------------------------
 		 * Naive recursive implementation
 		 * --------------------------------------------------
 		(self value) ifFalse: [^nil].
 		aBlock value. 
 		self whileTrue: aBlock.
-		 * -------------------------------------------------- *)
+		 * -------------------------------------------------- */
 
-		(* --------------------------------------------------
+		/* --------------------------------------------------
 		 * Non-recursive implementation
 		 * --------------------------------------------------
 		| pc sp |
@@ -197,22 +197,22 @@ class(#pointer,#final,#limited) BlockContext(Context)
 		thisContext goto: pc.
 		 * -------------------------------------------------- *(
 
-		(* --------------------------------------------------
+		/* --------------------------------------------------
 		 * Imperative implementation - == true or ~~ false? match the VM implementation
-		 * -------------------------------------------------- *)
+		 * -------------------------------------------------- */
 		while ((self value) ~~ false) { aBlock value }.
 	}
 
 	method whileTrue
 	{
-		(* --------------------------------------------------
+		/* --------------------------------------------------
 		 * Naive recursive implementation
 		 * --------------------------------------------------
 		(self value) ifFalse: [^nil].
 		self whileTrue.
 		 * -------------------------------------------------- */
 
-		(* --------------------------------------------------
+		/* --------------------------------------------------
 		 * Non-recursive implementation
 		 * --------------------------------------------------
 		| pc |
@@ -221,23 +221,23 @@ class(#pointer,#final,#limited) BlockContext(Context)
 		thisContext goto: pc.
 		 * -------------------------------------------------- */
 		 
-		(* --------------------------------------------------
+		/* --------------------------------------------------
 		 * Imperative implementation
-		 * -------------------------------------------------- *)
+		 * -------------------------------------------------- */
 		while ((self value) ~~ false) { }.
 	}
 
 	method whileFalse: aBlock
 	{
-		(* --------------------------------------------------
+		/* --------------------------------------------------
 		 * Naive recursive implementation
 		 * --------------------------------------------------
 		 (self value) ifTrue: [^nil].
 		 aBlock value. 
 		 self whileFalse: aBlock.
-		 * -------------------------------------------------- *)
+		 * -------------------------------------------------- */
 
-		(* --------------------------------------------------
+		/* --------------------------------------------------
 		 * Non-recursive implementation
 		 * --------------------------------------------------
 		 *  The assignment to 'pc' uses the POP_INTO_TEMPVAR_1.
@@ -257,31 +257,31 @@ class(#pointer,#final,#limited) BlockContext(Context)
 		(self value) ifTrue: [ ^nil ]. ## ^self
 		aBlock value.
 		thisContext goto: pc.
-		 * -------------------------------------------------- *)
+		 * -------------------------------------------------- */
 
-		(* --------------------------------------------------
+		/* --------------------------------------------------
 		 * Imperative implementation
-		 * -------------------------------------------------- *)
+		 * -------------------------------------------------- */
 		while ((self value) == false) { aBlock value }.
 	}
 
 	method whileFalse
 	{
-		(* --------------------------------------------------
+		/* --------------------------------------------------
 		 * Naive recursive implementation
 		 * --------------------------------------------------
 		(self value) ifTrue: [^nil].
 		self whileFalse.
-		 * -------------------------------------------------- *)
+		 * -------------------------------------------------- */
 
-		(* --------------------------------------------------
+		/* --------------------------------------------------
 		 * Non-recursive implementation
 		 * -------------------------------------------------- 
 		| pc |
 		pc := thisContext pcplus1.
 		(self value) ifTrue: [ ^nil ]. ## ^self
 		thisContext goto: pc.
-		* -------------------------------------------------- *)
+		* -------------------------------------------------- */
 		while ((self value) == false) { }.
 	}
 
@@ -324,7 +324,7 @@ class(#pointer) CompiledMethod(Object)
 
 	method preambleCode
 	{
-		(* TODO: make this a primtive for performance *)
+		/* TODO: make this a primtive for performance */
 		^(self.preamble bitShift: -4) bitAnd: 16r1F.
 	}
 

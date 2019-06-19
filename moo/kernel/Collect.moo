@@ -13,8 +13,8 @@ class Collection(Object)
 
 	method size
 	{
-		(* Each subclass must override this method because
-		 * it interates over the all elements for counting *)
+		/* Each subclass must override this method because
+		 * it interates over the all elements for counting */
 		| count |
 		count := 0.
 		self do: [ :el | count := count + 1 ].
@@ -163,7 +163,7 @@ class(#pointer) Array(SequenceableCollection)
 
 		| s i ss |
 
-(*
+/*
 		s := anArray size.
 
 		if (start < 0) { start := 0 }
@@ -171,7 +171,7 @@ class(#pointer) Array(SequenceableCollection)
 
 		if (end < 0) { end := 0 }
 		elsif (end >= s) { end := s - 1 }.
-*)
+*/
 		i := 0.
 		ss := self size.
 		while (start <= end)
@@ -261,15 +261,15 @@ class(#character) String(Array)
 {
 	method & string
 	{
-		(* TOOD: make this a primitive for performance. *)
+		/* TOOD: make this a primitive for performance. */
 		
-		(* concatenate two strings. *)
+		/* concatenate two strings. */
 		| newsize newstr cursize appsize |
 
 		cursize := self basicSize.
 		appsize := string basicSize.
 		newsize := cursize + appsize.
-		(*newstr := self class basicNew: newsize.*)
+		/*newstr := self class basicNew: newsize.*/
 		newstr := String basicNew: newsize.
 
 		0 priorTo: cursize do: [:i | newstr at: i put: (self at: i) ].
@@ -283,15 +283,15 @@ class(#character) String(Array)
 		^self
 	}
 
-	(* TODO: Symbol is a #final class. Symbol new is not allowed. To create a symbol programatically, you should
+	/* TODO: Symbol is a #final class. Symbol new is not allowed. To create a symbol programatically, you should
 	 *       build a string and send asSymbol to the string............
 	method asSymbol
 	{
 	}
-	*)
+	*/
 
-	(* The strlen method returns the number of characters before a terminating null.
-	 * if no terminating null character exists, it returns the same value as the size method *)
+	/* The strlen method returns the number of characters before a terminating null.
+	 * if no terminating null character exists, it returns the same value as the size method */
 	method(#primitive,#lenient) _strlen.
 	method(#primitive) strlen.
 
@@ -305,9 +305,9 @@ class(#character,#final,#limited,#immutable) Symbol(String)
 {
 	method asString
 	{
-		(* TODO: make this a primitive for performance *)
+		/* TODO: make this a primitive for performance */
 
-		(* convert a symbol to a string *)
+		/* convert a symbol to a string */
 		| size str i |
 		size := self basicSize.
 		str := String basicNew: size.
@@ -324,14 +324,14 @@ class(#character,#final,#limited,#immutable) Symbol(String)
 
 	method = anObject
 	{
-		(* for a symbol, equality check is the same as the identity check *)
+		/* for a symbol, equality check is the same as the identity check */
 		<primitive: #'Apex_=='>
 		self primitiveFailed.
 	}
 
 	method ~= anObject
 	{
-		(* for a symbol, equality check is the same as the identity check *)
+		/* for a symbol, equality check is the same as the identity check */
 		<primitive: #'Apex_~~'>
 		^(self == anObject) not.
 	}
@@ -353,7 +353,7 @@ class(#byte) ByteArray(Array)
 		<primitive: #_utf8_to_uc>
 		self primitiveFailed(thisContext method).
 
-		(*
+		/*
 		### TODO: implement this in moo also..
 		| firstByte |
 		firstByte := self at: 0.
@@ -363,7 +363,7 @@ class(#byte) ByteArray(Array)
 		elsif (firstByte bitAnd:2r11110000) == 2r11100000) { 4 }
 		elsif (firstByte bitAnd:2r11111000) == 2r11110000) { 5 }
 		elsif (firstByte bitAnd:2r11111100) == 2r11111000) { 6 }.
-		*)
+		*/
 	}
 }
 
@@ -718,7 +718,7 @@ class OrderedCollection(SequenceableCollection)
 		self.buffer at: self.lastIndex put: nil.
 	}
 
-	(*
+	/*
 	method findIndex: obj
 	{
 		| i |
@@ -731,7 +731,7 @@ class OrderedCollection(SequenceableCollection)
 		}.
 
 		^Error.Code.ENOENT.
-	} *)
+	} */
 }
 
 
@@ -780,7 +780,7 @@ class Set(Collection)
 	{
 		| newbuc newsz ass index i |
 
-		(* expand the bucket *)
+		/* expand the bucket */
 		newsz := bs + 16.  ## TODO: make this sizing operation configurable.
 		newbuc := Array new: newsz.
 		i := 0.
@@ -846,12 +846,12 @@ class Set(Collection)
 			y := (y + 1) rem: bs.
 
 			ass := self.bucket at: y.
-			if (ass isNil) { (* done. the slot at the current index is nil *) break }.
+			if (ass isNil) { /* done. the slot at the current index is nil */ break }.
 			
-			(* get the natural hash index *)
+			/* get the natural hash index */
 			z := (ass key hash) rem: bs.
 
-			(* move an element if necessary *)
+			/* move an element if necessary */
 			if (((y > x) and ((z <= x) or (z > y))) or ((y < x) and ((z <= x) and (z > y))))
 			{
 				self.bucket at: x put: (self.bucket at: y).
@@ -864,7 +864,7 @@ class Set(Collection)
 		self.bucket at: x put: nil.
 		self.tally := self.tally - 1.
 		
-		(* return the affected association *)
+		/* return the affected association */
 		^v
 	}
 
@@ -988,8 +988,8 @@ class AssociativeCollection(Collection)
 	{
 		| newbuc newsz ass index i |
 
-		(* expand the bucket *)
-		newsz := bs + 128. (* TODO: keep this growth policy in sync with VM(dic.c) *)
+		/* expand the bucket */
+		newsz := bs + 128. /* TODO: keep this growth policy in sync with VM(dic.c) */
 		newbuc := Array new: newsz.
 		i := 0.
 		while (i < bs)
@@ -1019,7 +1019,7 @@ class AssociativeCollection(Collection)
 		{
 			if (key = ass key)
 			{
-				(* found *)
+				/* found */
 				if (upsert) { ass value: value }.
 				^ass
 			}.
@@ -1134,12 +1134,12 @@ class AssociativeCollection(Collection)
 			y := (y + 1) rem: bs.
 
 			ass := self.bucket at: y.
-			if (ass isNil) { (* done. the slot at the current index is nil *) break }.
+			if (ass isNil) { /* done. the slot at the current index is nil */ break }.
 			
-			(* get the natural hash index *)
+			/* get the natural hash index */
 			z := (ass key hash) rem: bs.
 
-			(* move an element if necessary *)
+			/* move an element if necessary */
 			if (((y > x) and ((z <= x) or (z > y))) or ((y < x) and ((z <= x) and (z > y))))
 			{
 				self.bucket at: x put: (self.bucket at: y).
@@ -1174,19 +1174,19 @@ class AssociativeCollection(Collection)
 
 	method removeAllKeys
 	{
-		(* remove all items from a dictionary *)
+		/* remove all items from a dictionary */
 		| bs |
 		bs := self.bucket size.
 		0 priorTo: bs do: [:i | self.bucket at: i put: nil ].
 		self.tally := 0
 	}
 
-(* TODO: ... keys is an array of keys.
+/* TODO: ... keys is an array of keys.
 	method removeAllKeys: keys
 	{
 		self notImplemented: #removeAllKeys:
 	}
-*)
+*/
 
 	method remove: assoc
 	{
@@ -1282,10 +1282,10 @@ class SymbolTable(AssociativeCollection)
 
 class Dictionary(AssociativeCollection)
 {
-	(* [NOTE] 
+	/* [NOTE] 
 	 *  VM require Dictionary to implement new: and __put_assoc
 	 *  for the dictionary expression notation - %{ }
-	 *)
+	 */
 	
 	## TODO: implement Dictionary as a Hashed List/Table or Red-Black Tree
 	##       Do not inherit Set upon reimplementation
@@ -1295,14 +1295,14 @@ class Dictionary(AssociativeCollection)
 		^super new: (capacity + 10).
 	}
 
-	(* put_assoc: is called internally by VM to add an association
+	/* put_assoc: is called internally by VM to add an association
 	 * to a dictionary with the dictionary/association expression notation
 	 * like this:
 	 *
 	 *   %{ 1 -> 20, #moo -> 999 } 
 	 *
 	 * it must return self for the way VM works.
-	 *)
+	 */
 	method __put_assoc: assoc
 	{
 		| hv ass bs index ntally key |
@@ -1312,22 +1312,22 @@ class Dictionary(AssociativeCollection)
 		hv := key hash.
 		index := hv rem: bs.
 
-		(* as long as 'assoc' supports the message 'key' and 'value'
+		/* as long as 'assoc' supports the message 'key' and 'value'
 		 * this dictionary should work. there is no explicit check 
-		 * on this protocol of key and value. *)
+		 * on this protocol of key and value. */
 
 		while ((ass := self.bucket at: index) notNil)
 		{
 			if (key = ass key) 
 			{
-				(* found *)
+				/* found */
 				self.bucket at: index put: assoc.
 				^self. ## it must return self for the instructions generated by the compiler.
 			}.
 			index := (index + 1) rem: bs.
 		}.
 
-		(* not found *)
+		/* not found */
 		ntally := self.tally + 1.
 		if (ntally >= bs) 
 		{
@@ -1340,15 +1340,15 @@ class Dictionary(AssociativeCollection)
 		self.tally := ntally.
 		self.bucket at: index put: assoc.
 
-		(* it must return self for the instructions generated by the compiler.
-		 * otherwise, VM will break. *)
+		/* it must return self for the instructions generated by the compiler.
+		 * otherwise, VM will break. */
 		^self.
 	}
 }
 
-(* Namespace is marked with #limited. If a compiler is writeen in moo itself, it must 
+/* Namespace is marked with #limited. If a compiler is writeen in moo itself, it must 
  * call a primitive to instantiate a new namespace rather than sending the new message
- * to Namespace *)
+ * to Namespace */
 class(#limited) Namespace(AssociativeCollection)
 {
 	var name, nsup.
@@ -1356,10 +1356,10 @@ class(#limited) Namespace(AssociativeCollection)
 	method name { ^self.name }
 	## method name: name { self.name := name }
 
-	(* nsup points to either the class associated with this namespace or directly
+	/* nsup points to either the class associated with this namespace or directly
 	 * the upper namespace placed above this namespace. when it points to a class,
 	 * you should inspect the nsup field of the class to reach the actual upper
-	 * namespace *)
+	 * namespace */
 	method nsup { ^self.nsup }
 	## method nsup: nsup { self.nsup := nsup }
 
@@ -1452,7 +1452,7 @@ class LinkedList(Collection)
 	{
 		if (pos isNil)
 		{
-			(* add link at the back *)
+			/* add link at the back */
 			if (self.tally == 0)
 			{
 				self.first := link.
@@ -1469,7 +1469,7 @@ class LinkedList(Collection)
 		}
 		else
 		{
-			(* insert the link before pos *)
+			/* insert the link before pos */
 			link next: pos.
 			link prev: pos prev.
 			if (pos prev notNil) { pos prev next: link }

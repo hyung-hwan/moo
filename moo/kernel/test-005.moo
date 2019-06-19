@@ -224,10 +224,10 @@ class MyObject(TestObject)
 		[self getTen] value dump.
 	}
 
-	(*method(#class) abc
+	/*method(#class) abc
 	{
 		<primitive: #snd_open>
-	}*)
+	}*/
 
 	method(#class) a: a b: b c: c
 	{
@@ -275,7 +275,7 @@ class MyObject(TestObject)
 
 		self test_ffi.
 
-(* -----------------------------
+/* -----------------------------
 PROCESS TESTING
 		| p |
 		'000000000000000000' dump.
@@ -288,7 +288,7 @@ PROCESS TESTING
 		'222222222222222222' dump.
 		'333333333333333333' dump.
 		'444444444444444444' dump.
----------------------------- *)
+---------------------------- */
 
 
 
@@ -306,10 +306,10 @@ PROCESS TESTING
 
 (2r111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111 * 128971234897128931) dump.
 
-(* (-10000 rem: 3) dump.
+/* (-10000 rem: 3) dump.
 (-10000 mod: 3) dump.
 (-10000 div: 3) dump.
-(-10000 mdiv: 3) dump. *)
+(-10000 mdiv: 3) dump. */
 
 (7 rem: -3) dump.
 (7 mod: -3) dump.
@@ -359,7 +359,7 @@ PROCESS TESTING
 
 (2r1111111111111111111111111111111111111111111111111111111111111111 printStringRadix:2) dump.
 
-(*  -----------------------
+/*  -----------------------
 
 (16rF0FFFF bitOr: 16r111111) dump.
 
@@ -373,7 +373,7 @@ PROCESS TESTING
 
 ((2r10101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101 bitAnd: 2r01010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010) printStringRadix: 2) dump.
 
---------------------- *)
+--------------------- */
 
 (16rFFFFFFFFFFFFFFFF bitOr: 16rFFFFFFFFFFFFFFFFFFFFFFFF) dump.
 (-16rFFFFFFFFFFFFFFFF bitOr: 16rFFFFFFFFFFFFFFFFFFFFFFFF) dump.
@@ -445,25 +445,25 @@ PROCESS TESTING
 	b dump.
 ] value.
 '====================' dump.
-([ :a :b | (*a := 20.*)  b := [ a + 20 ]. b value.] value: 99 value: 100) dump.
+([ :a :b | /*a := 20.*/  b := [ a + 20 ]. b value.] value: 99 value: 100) dump.
 '====================' dump.
 
 [ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] value dump.  ## not sufficient arguments. it must fail
 ##[ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] on: Exception do: [:ex | 'Exception' dump].
 
-(*
+/*
 		FFI isNil dump.
 		FFI notNil dump.
 		nil isNil dump.
 		nil notNil dump.
 		nil class dump.
 		nil class class class dump.
-*)
+*/
 	}
 }
 
 
-(* ====================
+/* ====================
  [ a := 20.  b := [ a + 20 ].   b value. ] value
 ^                 ^               ^        ^              
 p1                p3             p4        p2
@@ -522,4 +522,4 @@ method whileTrue: aBlock
 
 [ b < 10 ] whileTrue: [ b dump. b := b + 1 ].
 
-========== *)
+========== */

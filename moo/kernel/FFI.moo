@@ -4,7 +4,7 @@ class _FFI(Object) from 'ffi'
 	method(#primitive) close.
 	method(#primitive) getsym(name).
 	 
-	(* TODO: make call variadic? method(#primitive,#variadic) call (func, sig). *)
+	/* TODO: make call variadic? method(#primitive,#variadic) call (func, sig). */
 	method(#primitive) call(func, sig, args).
 }
 
@@ -48,12 +48,12 @@ class FFI(Object)
 	{
 		| f rc |
 
-		(* f := self.funcs at: name ifAbsent: [ 
+		/* f := self.funcs at: name ifAbsent: [ 
 			f := self.ffi getsym(name).
 			if (f isError) { FFIException signal: ('Unable to find %s' strfmt(name)) }.
 			self.funcs at: name put: f.
 			f. ## need this as at:put: returns an association
-		]. *)
+		]. */
 
 		f := self.funcs at: name ifAbsent: [ nil ].
 		if (f isNil)

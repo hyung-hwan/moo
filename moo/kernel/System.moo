@@ -146,13 +146,13 @@ class System(Apex)
 	##
 	method(#class,#variadic,#primitive) log(level,msg1).
 
-(*
+/*
 TODO: how to pass all variadic arguments to another variadic methods???
 	method(#class,#variadic) logInfo (msg1)
 	{
 		^self log (System.Log.INFO,msg1)
 	}
-*)	
+*/	
 	method(#class) atLevel: level log: message
 	{
 		<primitive: #System_log>
@@ -214,7 +214,7 @@ TODO: how to pass all variadic arguments to another variadic methods???
 		^self atLevel: System.Log.INFO logNl: message and: message2.
 	}
 
-	(* nsdic access *)
+	/* nsdic access */
 	method(#class) at: key
 	{
 		^self nsdic at: key
@@ -225,7 +225,7 @@ TODO: how to pass all variadic arguments to another variadic methods???
 		^self nsdic at: key put: value
 	}
 
-	(* raw memory allocation *)
+	/* raw memory allocation */
 	method(#class,#primitive) malloc (size).
 	method(#class,#primitive) calloc (size).
 	method(#class,#primitive) free (rawptr).
@@ -234,7 +234,7 @@ TODO: how to pass all variadic arguments to another variadic methods???
 	method(#class,#primitive) calloc: size.
 	method(#class,#primitive) free: rawptr.
 
-	(* raw memory access *)
+	/* raw memory access */
 	method(#class,#primitive) getInt8   (rawptr, offset). ## <primitive: #System__getInt8>
 	method(#class,#primitive) getInt16  (rawptr, offset).
 	method(#class,#primitive) getInt32  (rawptr, offset).

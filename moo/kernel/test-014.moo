@@ -132,9 +132,9 @@ class MyObject(TestObject)
 				v1 puts ('hello', 'world', 'good', C'\n', C'\t', 'under my umbrella 123.', C'\n').
 				v1 close.
 
-				(*v1 format(10, 20) isNil ifFalse: [
+				/*v1 format(10, 20) isNil ifFalse: [
 				 	'Beautiful life' dump.
-				].*)
+				].*/
 			].
 		nil isNil ifTrue: [ 'NIL NIL NIL' dump. ].
 		(Apex new) notNil ifTrue: [ 'APEX NIL NIL NIL' dump. ].

@@ -23,7 +23,7 @@ class(#limited) Error(Apex)
 	}
 }
 
-(*
+/*
 pooldic Error.Code
 {
 	ENOERR   := #\E0.
@@ -40,9 +40,9 @@ pooldic Error.Code
 
 	ELIMIT  := #\E9999.
 ## add more items... 
-} *)
+} */
 
-(*pooldic Error.Code2 
+/*pooldic Error.Code2 
 {
 	>> CAN I SUPPORT this kind of redefnition? as of now, it's not accepted because 
 	>> Error.Code2.EGENERIC is not a literal. Should i treate pooldic members as a constant
@@ -50,7 +50,7 @@ pooldic Error.Code
 	>> the definition here won't see the change... what is the best way to tackle this issue?
 
 	EGENERIC := Error.Code2.EGENERIC.
-}*)
+}*/
 
 extend Apex
 {
@@ -73,7 +73,7 @@ extend Apex
 
 	method(#class,#primitive) basicNew.
 	method(#class,#primitive) basicNew: size.
-	(* the following definition is almost equivalent to the simpler definition
+	/* the following definition is almost equivalent to the simpler definition
 	 *    method(#class,#primitive) basicNew: size.
 	 * found above.
 	 * in the following defintion, the primitiveFailed method is executed 
@@ -84,7 +84,7 @@ extend Apex
 	{
 		<primitive: #Apex__basicNew:>
 		self primitiveFailed(thisContext method)
-	}*)
+	}*/
 
 	method(#class) new
 	{
@@ -104,7 +104,7 @@ extend Apex
 
 	method initialize
 	{
-		(* a subclass may override this method *)
+		/* a subclass may override this method */
 		^self.
 	}
 
@@ -126,27 +126,27 @@ extend Apex
 	method(#dual,#primitive) basicFillFrom: sindex with: value count: count.
 	method(#dual,#primitive) basicShiftFrom: sindex to: dindex count: count.
 
-	(* ------------------------------------------------------------------
+	/* ------------------------------------------------------------------
 	 * FINALIZATION SUPPORT
-	 * ------------------------------------------------------------------ *)
+	 * ------------------------------------------------------------------ */
 	method(#dual,#primitive) addToBeFinalized.
 	method(#dual,#primitive) removeToBeFinalized.
 
-	(* ------------------------------------------------------------------
+	/* ------------------------------------------------------------------
 	 * HASHING
-	 * ------------------------------------------------------------------ *)
+	 * ------------------------------------------------------------------ */
 	method(#dual,#primitive) hash.
 
-	(*
+	/*
 	method(#dual) hash
 	{
 		<primitive: #Apex_hash>
 		self subclassResponsibility: #hash
-	}*)
+	}*/
 
-	(* ------------------------------------------------------------------
+	/* ------------------------------------------------------------------
 	 * IDENTITY TEST
-	 * ------------------------------------------------------------------ *)
+	 * ------------------------------------------------------------------ */
 
 	## check if the receiver is identical to anObject.
 	## this doesn't compare the contents 
@@ -158,9 +158,9 @@ extend Apex
 		^(self == anObject) not.
 	}
 
-	(* ------------------------------------------------------------------
+	/* ------------------------------------------------------------------
 	 * EQUALITY TEST
-	 * ------------------------------------------------------------------ *)
+	 * ------------------------------------------------------------------ */
 	method(#dual) = anObject
 	{
 		<primitive: #'Apex_='>
@@ -174,9 +174,9 @@ extend Apex
 	}
 
 
-	(* ------------------------------------------------------------------
+	/* ------------------------------------------------------------------
 	 * COMMON QUERIES
-	 * ------------------------------------------------------------------ *)
+	 * ------------------------------------------------------------------ */
 
 	method(#dual,#primitive) class.
 
@@ -210,10 +210,10 @@ extend Apex
 	{
 		| c |
 		c := self superclass.
-		(* [c notNil] whileTrue: [
+		/* [c notNil] whileTrue: [
 			[ c == aClass ] ifTrue: [^true].
 			c := c superclass.
-		]. *)
+		]. */
 		while (c notNil)
 		{
 			if (c == aClass) { ^true }.
@@ -224,10 +224,10 @@ extend Apex
 
 	method(#class) isMemberOf: aClass
 	{
-		(* a class object is an instance of Class
+		/* a class object is an instance of Class
 		 * but Class inherits from Apex. On the other hand,
 		 * most of ordinary classes are under Object again under Apex.
-		 * special consideration is required here. *)
+		 * special consideration is required here. */
 		^aClass == Class
 	}
 
@@ -276,13 +276,13 @@ extend Apex
 		self primitiveFailed
 	}
 
-	(* ------------------------------------------------------------------
+	/* ------------------------------------------------------------------
 	 * COMMON ERROR/EXCEPTION HANDLERS
-	 * ------------------------------------------------------------------ *)
+	 * ------------------------------------------------------------------ */
 	method(#dual) error: msgText
 	{
-		(* TODO: implement this
-		  Error signal: msgText. *)
+		/* TODO: implement this
+		  Error signal: msgText. */
 		msgText dump.
 	}
 }
@@ -317,7 +317,7 @@ class UndefinedObject(Apex)
 
 extend Error
 {
-	(* ----------------------------
+	/* ----------------------------
 	TODO: support nested pooldic/constant declaration...
 
 	pooldic/const
@@ -325,7 +325,7 @@ extend Error
 		NONE := #\e0.
 		GENERIC := #\e1.
 	}
-	-------------------------------- *)
+	-------------------------------- */
 
 	method isError
 	{

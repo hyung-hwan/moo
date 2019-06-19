@@ -149,7 +149,7 @@ class MyObject(TestObject)
 
 		##[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump. Exception signal: 'jjjj'].
 
-		(*
+		/*
 		v1 := [
 			| k |
 			k := 99.
@@ -163,7 +163,7 @@ class MyObject(TestObject)
 			('EXCETION - ' & ex messageText) dump.
 			## Exception signal: 'qqq'.
 		].
-		*)
+		*/
 
 		v1 := self aaa_123.
 		'--------------------------------' dump.

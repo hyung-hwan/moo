@@ -125,17 +125,17 @@ class ExternalStream(ReadWriteStream)
 {
 }
 
-(*
+/*
 ## mimic java's interface...
 interface ByteStreamable
 {
 	readBytesInto:
 	writeBytesFrom:
 }
-*)
+*/
 
 ### TODO: specify interface inside [] 
-(* 
+/* 
 difficulty: how to ensure that the class implements the defined interface?
 
 1) check when a new instance is created.
@@ -186,7 +186,7 @@ extension String: StringConvertible {
 4) other methods???
 
 Let me think about it..
-*) 
+*/ 
 
 class ByteStreamAdapter(Object) ### [ByteStreamable, ByteXXX]
 {
@@ -383,7 +383,7 @@ class ByteStream(ByteStreamAdapter)
 	}
 }
 
-(*
+/*
 class TextStream(ByteStream)
 {
 	method initialize
@@ -400,5 +400,5 @@ class TextStream(ByteStream)
 	{
 		if (self.seq at: 0) bitAnd: 
 	}
-}*)
+}*/
 

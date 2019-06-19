@@ -84,7 +84,7 @@ method(#dual,#liberal) def(x, z) { ^nil }
 		}
 	}
 
-(*
+/*
 TODO: TODO: compiler enhancement
 	class X11(Object)
 	{
@@ -97,7 +97,7 @@ TODO: TODO: compiler enhancement
 	}
 	----> should i support soemthign like ::X11.Rectangle and X11.Rectangle? ::X11.Rectangle alwasy from the top???
 	-----> or .X11.Rectangle -> to start search from the current name space???
-*)
+*/
 
 	method(#primitive,#liberal) _open_display(name).
 	method(#primitive) _close_display.
@@ -595,7 +595,7 @@ extend X11
 		self.shell_container := self.Composite new.
 		self.window_registrar := System.Dictionary new: 100.
 
-		(*
+		/*
 
 		self.llevent_blocks := System.Dictionary new.
 		self.llevent_blocks
@@ -610,7 +610,7 @@ extend X11
 			at: self.LLEventType.DESTROY_NOTIFY    put: #__handle_destroy_notify:on:;
 			at: self.LLEventType.CONFIGURE_NOTIFY  put: #__handle_configure_notify:on:;
 			at: self.LLEventType.CLIENT_MESSAGE    put: #__handle_client_message:on:.
-		*)
+		*/
 		self.llevent_blocks := %{
 			self.LLEventType.KEY_PRESS         -> #__handle_key_event:on:,
 			self.LLEventType.KEY_RELEASE       -> #__handle_key_event:on:,

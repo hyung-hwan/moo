@@ -117,22 +117,22 @@ class HttpSocket(SyncSocket)
 		| buf k i |
 
 		self timeout: 10.
-		(*while (true)
+		/*while (true)
 		{
 			req := self readRequest.
 
-		}. *)
+		}. */
 
 
 		buf := ByteArray new: 128.
 'IM RUNNING SERVICE...............' dump.
 	
-		(*
+		/*
 		self readBytesInto: buf.
 		buf dump.
 		self readBytesInto: buf.
 		buf dump.
-		*)
+		*/
 
 		i := 0.
 		while (i < 3)
@@ -443,7 +443,7 @@ class MyObject(Object)
 	{
 		| httpd addr |
 
-(*
+/*
 [
 addr := SocketAddress fromString: '1.2.3.4:5555'.
 ##addr := SocketAddress fromString: '127.0.0.1:22'.
@@ -451,7 +451,7 @@ httpd := SyncSocket family: (addr family) type: Socket.Type.STREAM.
 httpd timeout: 5.
 httpd connect: addr.
 ] on: Exception do: [:ex | ].
-*)
+*/
 
 		[ self another_proc: 5000 ] fork.
 		[ self another_proc: 5100 ] fork.

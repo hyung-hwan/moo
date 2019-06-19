@@ -1,7 +1,7 @@
 class Boolean(Object)
 {
-	(* TODO: do i need to really define methods defined in True and False here?
-	       and call subclassResponsibiltiy?" *)
+	/* TODO: do i need to really define methods defined in True and False here?
+	       and call subclassResponsibiltiy?" */
 }
 
 class True(Boolean)

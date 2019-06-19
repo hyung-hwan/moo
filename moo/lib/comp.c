@@ -1114,9 +1114,9 @@ static int skip_comment (moo_t* moo)
 		if (c == '"') GET_CHAR (moo); /* keep the next character in lxc */
 		return 1; /* double-quoted comment */
 	}
-	else if (c == '(')
+	else if (c == '/')
 	{
-		/* handle (* ... *) */
+		/* handle block comment encoded in /x x/ where x is * */
 		lc = moo->c->lxc;
 		GET_CHAR_TO (moo, c);
 		if (c != '*') goto not_comment;
@@ -1133,7 +1133,7 @@ static int skip_comment (moo_t* moo)
 				if (c == MOO_OOCI_EOF) goto unterminated;
 
 				if (c == '*') goto check_rparen; /* got another * after * */
-				if (c == ')')
+				if (c == '/')
 				{
 					GET_CHAR (moo); /* keep the first meaningful character in lxc */
 					break;
@@ -1142,7 +1142,7 @@ static int skip_comment (moo_t* moo)
 		} 
 		while (1);
 
-		return 1; /* multi-line comment enclosed in (* and *) */
+		return 1; /* multi-line comment enclosed in /x and x/ where x is * */
 	}
 	else if (c == '#')
 	{

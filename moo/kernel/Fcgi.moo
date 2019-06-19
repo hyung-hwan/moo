@@ -1,11 +1,11 @@
 ###include 'Moo.moo'.
 #include 'Socket.moo'.
 
-(* -------------------------------------------
+/* -------------------------------------------
 
 
 
- ----------------------------------------------- *)
+ ----------------------------------------------- */
 
 class Fcgi(Object)
 {
@@ -220,7 +220,7 @@ class Fcgi.ParamRecord(Fcgi.Record)
 		if (aString notNil)
 		{
 ### TODO: implement this...
-(*
+/*
 			(aString subStrings: %(char)) do: [:each | 
 				equal := each indexOf: $=.
 				equal = 0 
@@ -229,7 +229,7 @@ class Fcgi.ParamRecord(Fcgi.Record)
 					tempFields 
 						at: (each first: equal - 1) 
 						put: (each allButFirst: equal)] 
-			] *)
+			] */
 		}.
 
 		^tempFields
@@ -239,10 +239,10 @@ class Fcgi.ParamRecord(Fcgi.Record)
 	{
 		| buffer stream |
 		buffer := aStream next: header contentLength.
-(* TODO:
+/* TODO:
 		stream := ReadStream on: buffer.
 		[stream atEnd] whileFalse: [self readNameValueFrom: stream]
-*)
+*/
 	}
 
 	method readNameValueFrom: aStream 
@@ -396,11 +396,11 @@ class FcgiSocket(SyncSocket)
 		| buf k i hdr |
 
 		self timeout: 10.
-		(*while (true)
+		/*while (true)
 		{
 			req := self readRequest.
 
-		}. *)
+		}. */
 
 		buf := ByteArray new: 128.
 'IM RUNNING SERVICE...............' dump.
@@ -416,14 +416,14 @@ class FcgiSocket(SyncSocket)
 		##   unsigned char paddingLength;
 		##   unsigned char reserved;
 		## } FCGI_Header;
-(*
+/*
 		ver := self.bs next.
 		type := self.bs next.
 		reqid := (self.bs next bitShift: 8) bitAnd: (self.bs next).  ## can i implement nextUint16??
 		clen := (self.bs next bitShift: 8) bitAnd: (self.bs next).
 		plen := self.bs next.
 		self.bs next. ## eat up the reserved byte.
-*)
+*/
 
 		## typedef struct {
 		##  unsigned char roleB1;
@@ -440,12 +440,12 @@ class FcgiSocket(SyncSocket)
 		##  unsigned char reserved[3];
 		## } FCGI_EndRequestBody;
 
-(*
+/*
 		if (type == Fcgi.Type.BEGIN_REQUEST)
 		{
-		} *)
+		} */
 
-(*
+/*
 		i := 0.
 		while (i < 3)
 		{
@@ -459,7 +459,7 @@ class FcgiSocket(SyncSocket)
 			self.bs nextPut: k from: buf startingAt: 10.
 		}.
 		self.bs flush.
-*)
+*/
 
 		self close.
 	}
@@ -764,7 +764,7 @@ oc := Fcgi.ParamRecord new.
 (oc parseToFields: 'a=b&d=f' separatedBy: $&) dump.
 thisProcess terminate.
 
-(*
+/*
 [
 addr := SocketAddress fromString: '1.2.3.4:5555'.
 ##addr := SocketAddress fromString: '127.0.0.1:22'.
@@ -772,7 +772,7 @@ fcgi := SyncSocket family: (addr family) type: Socket.Type.STREAM.
 fcgi timeout: 5.
 fcgi connect: addr.
 ] on: Exception do: [:ex | ].
-*)
+*/
 
 		[ self another_proc: 5000 ] fork.
 		[ self another_proc: 5100 ] fork.

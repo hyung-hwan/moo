@@ -9,7 +9,7 @@ class Exception(Apex)
 	var signalContext, handlerContext.
 	var(#get) messageText.
 
-(*
+/*
 TODO: can i convert 'thisProcess primError' to a relevant exception?
 	var(#class) primExceptTable.
 
@@ -17,7 +17,7 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 	{
 		^self.primExceptTable at: no
 	}
-*)
+*/
 
 	method(#class) signal
 	{
@@ -182,8 +182,8 @@ extend Context
 			eb := ctx ensureBlock.
 			if (eb notNil)
 			{
-				(* position of the temporary variable in the ensureBlock that indicates
-				 * if the block has been evaluated *)
+				/* position of the temporary variable in the ensureBlock that indicates
+				 * if the block has been evaluated */
 				pending_pos := ctx basicSize - 1. 
 				if (ctx basicAt: pending_pos)
 				{
@@ -246,21 +246,21 @@ extend MethodContext
 
 	method findExceptionHandlerFor: exception_class
 	{
-		(* find an exception handler block for a given exception class.
+		/* find an exception handler block for a given exception class.
 		 *
 		 * for this to work, self must be an exception handler context.
 		 * For a single on:do: call,
 		 *   self class specNumInstVars must return 8.(i.e.MethodContext has 8 instance variables.)
 		 *   basicAt: 8 must be the on: argument.
-		 *   basicAt: 9 must be the do: argument  *)
+		 *   basicAt: 9 must be the do: argument  */
 
 		| size exc i |
 		
 		if (self isExceptionContext) 
 		{
-			(* NOTE: the following loop scans all parameters to the on:do: method.
+			/* NOTE: the following loop scans all parameters to the on:do: method.
 			 *       if the on:do: method contains local temporary variables,
-			 *       those must be skipped from scanning. *)
+			 *       those must be skipped from scanning. */
 
 			size := self basicSize.
 			##8 priorTo: size by: 2 do: [ :i | 
@@ -285,7 +285,7 @@ extend MethodContext
 
 	method handleException: exception
 	{
-		(* -----------------------------------------------------------------
+		/* -----------------------------------------------------------------
 		 * <<private>>
 		 *   called by Exception>>signal.
 		 *   this method only exists in the MethodContext and UndefinedObject.
@@ -293,12 +293,12 @@ extend MethodContext
 		 *   a method context or nil. Exception>>signal invokes this method
 		 *   only for an exception context which is a method context. it 
 		 *   invokes it for nil when no exception context is found.
-		 * ---------------------------------------------------------------- *)
+		 * ---------------------------------------------------------------- */
 
 		| excblk retval actpos |
 
-		(* position of the temporary variable 'exception_active' in MethodContext>>on:do.
-		 * for this code to work, it must be the last temporary variable in the method. *)
+		/* position of the temporary variable 'exception_active' in MethodContext>>on:do.
+		 * for this code to work, it must be the last temporary variable in the method. */
 		actpos := (self basicSize) - 1. 
 
 		excblk := self findExceptionHandlerFor: (exception class).
@@ -312,13 +312,13 @@ extend MethodContext
 
 		exception handlerContext: self.
 
-		(* -----------------------------------------------------------------
+		/* -----------------------------------------------------------------
 		 * if an exception occurs within an exception handler block,
 		 * the search will reach this context again as the exception block
 		 * is evaluated before actual unwinding. set the temporary variable
 		 * in the exception context to mask out this context from the search
 		 * list.
-		 * ---------------------------------------------------------------- *)
+		 * ---------------------------------------------------------------- */
 		self basicAt: actpos put: false.
 		[ retval := excblk value: exception ] ensure: [
 			self basicAt: actpos put: true
@@ -326,11 +326,11 @@ extend MethodContext
 
 		##(self.sender isNil) ifTrue: [ "TODO: CANNOT RETURN" ].
 
-		(* -----------------------------------------------------------------
+		/* -----------------------------------------------------------------
 		 * return to self.sender which is a caller of the exception context (on:do:)
 		 * pass the first ensure context between thisContext and self.sender.
 		 * [ [Exception signal: 'xxx'] ensure: [20] ] on: Exception do: [:ex | ...]
-		 * ---------------------------------------------------------------- *)
+		 * ---------------------------------------------------------------- */
 		thisContext unwindTo: self.sender return: nil.
 		System return: retval to: self.sender.
 	}
@@ -344,14 +344,14 @@ extend BlockContext
 		| exception_active |
 		<exception>
 
-(* ------------------------------- 
+/* ------------------------------- 
 thisContext isExceptionContext dump.
 (thisContext basicSize) dump.
 (thisContext basicAt: 8) dump.  ## this should be anException
 (thisContext basicAt: 9) dump.  ## this should be anExceptionBlock
 (thisContext basicAt: 10) dump.  ## this should be handlerActive
 'on:do: ABOUT TO EVALUE THE RECEIVER BLOCK' dump.
----------------------------------- *)
+---------------------------------- */
 		exception_active := true.
 		^self value.
 	}
@@ -380,9 +380,9 @@ thisContext isExceptionContext dump.
 		pending := true.
 		retval := self value. 
 
-		(* the temporary variable 'pending' may get changed
+		/* the temporary variable 'pending' may get changed
 		 * during evaluation for exception handling. 
-		 * it gets chagned in Context>>unwindTo:return: *)
+		 * it gets chagned in Context>>unwindTo:return: */
 		if (pending) { pending := false. aBlock value }.
 		^retval
 	}
@@ -476,7 +476,7 @@ extend Apex
 	{
 		| a b msg ec ex |
 
-		(* since method is an argument, the caller can call this method
+		/* since method is an argument, the caller can call this method
 		 * from a context chain where the method context actually doesn't exist.
 		 * when a primitive method is defined using the #primitive method,
 		 * the VM invokes this primtiveFailed method without creating 
@@ -488,16 +488,16 @@ extend Apex
 		 * on the other handle, in the latter definition, the context
 		 * for the method is activated first before primitiveFailed is 
 		 * invoked. in the context chain, the method for xxx is found.
-		 *)
+		 */
 		 
-		(*System logNl: 'Arguments: '.
+		/*System logNl: 'Arguments: '.
 		a := 0.
 		b := thisContext vargCount.
 		while (a < b)
 		{
 			System logNl: (thisContext vargAt: a) asString.
 			a := a + 1.
-		}.*)
+		}.*/
 
 		ec := thisProcess primError.
 		msg := thisProcess primErrorMessage.
@@ -509,7 +509,7 @@ extend Apex
 		### elsif (ec == Error.Code.EPERM) { self messageProhibited: method name }
 		### elsif (ec == Error.Code.ENOIMPL) { self subclassResponsibility: method name }.
 
-		(PrimitiveFailureException (* in: method *) withErrorCode: ec) signal: msg.
+		(PrimitiveFailureException /* in: method */ withErrorCode: ec) signal: msg.
 	}
 
 	method(#dual) doesNotUnderstand: message_name

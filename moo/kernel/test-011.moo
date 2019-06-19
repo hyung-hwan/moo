@@ -198,7 +198,7 @@ class MyObject(TestObject)
 	##	100 timesRepeat: ['>>>>> END OF MAIN' dump].
 
 
-(*
+/*
 (Exception isKindOf: Apex) dump.
 (Exception isMemberOf: Apex) dump.
 (Exception isMemberOf: Class) dump.
@@ -211,7 +211,7 @@ class MyObject(TestObject)
 (Exception isKindOf: Object) dump.
 (Exception isKindOf: (Apex new)) dump.
 (Exception isKindOf: (Object new)) dump.
-*)
+*/
 
 
 		'@@@@@@@@@@@@@@@@@@@@@@@@@@@@' dump.

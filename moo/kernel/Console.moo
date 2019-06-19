@@ -55,14 +55,14 @@ class Console(Object) from 'con'
 	method(#primitive) _setcursor(x, y).
 	method(#primitive) _write(msg).
 
-(*
+/*
 	method finalize
 	{
 		if (still open) {
 			self _close.
 		}
 	}
-*)
+*/
 
 
 ##	method(#class) input

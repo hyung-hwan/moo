@@ -82,7 +82,7 @@ class MyObject(Object)
 		^%( v, p ) ## v must be 2000, p must be 6000
 	}
 
-(*
+/*
 	method(#class) test_sem_sig
 	{
 		| s |
@@ -101,7 +101,7 @@ class MyObject(Object)
 		sg add: s3 withAction: [].
 		sg wait.
 	}
-*)
+*/
 
 	method(#class) main
 	{
@@ -129,7 +129,7 @@ class MyObject(Object)
 }
 
 
-(*
+/*
 s1 := TcpSocket new.
 
 s1 onEvent: #connected do: [
@@ -156,4 +156,4 @@ s1 endSend
 
 s1 beginAccept: [callback]
 s1 endAccept -> returns the actual socket
-*)
+*/

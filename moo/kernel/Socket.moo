@@ -20,10 +20,10 @@ class(#byte) IPAddress(Object)
 
 class(#byte(4)) IP4Address(IPAddress)
 {
-	(*method(#class) new
+	/*method(#class) new
 	{
 		^self basicNew: 4.
-	}*)
+	}*/
 	
 	method(#class) fromString: str
 	{
@@ -76,10 +76,10 @@ class(#byte(4)) IP4Address(IPAddress)
 		while (true).
 		
 		^self.
-(*
+/*
 	(@label@)
 		Exception signal: ('invalid IPv4 address ' & str).
-*)
+*/
 	}
 	
 	method fromString: str
@@ -93,10 +93,10 @@ class(#byte(4)) IP4Address(IPAddress)
 
 class(#byte(16)) IP6Address(IP4Address)
 {
-	(*method(#class) new
+	/*method(#class) new
 	{
 		^self basicNew: 16.
-	}*)
+	}*/
 
 	##method(#class) fromString: str
 	##{
@@ -304,7 +304,7 @@ class SyncSocket(Socket)
 	method(#class) new { self messageProhibited: #new }
 	method(#class) new: size { self messageProhibited: #new: }
 
-(*
+/*
 	method(#class) __with_handle: handle
 	{
 		###self addToBeFinalized.
@@ -319,7 +319,7 @@ class SyncSocket(Socket)
 		##^(self new) open(family, type, 0)
 		^(super new) open(family, type, 0)
 	}
-*)
+*/
 
 	method initialize
 	{
@@ -437,7 +437,7 @@ class AsyncSocket(Socket)
 	var pending_bytes, pending_offset, pending_length.
 	var outreadysem, outdonesem, inreadysem.
 
-	(* -------------------
+	/* -------------------
 	socket call-back methods
 	  socketClosing
 	  socketClosed
@@ -445,7 +445,7 @@ class AsyncSocket(Socket)
 	  socketDataOut
 	  socketAccepted:from:
 	  socketConnected:
-	-------------------- *)
+	-------------------- */
 
 	method initialize
 	{
@@ -489,13 +489,13 @@ class AsyncSocket(Socket)
 	}
 
 
-(*
+/*
 	method finalize
 	{
 'SOCKET FINALIZED...............' dump.
 		self close.
 	}
-*)
+*/
 
 	method close
 	{
@@ -619,7 +619,7 @@ class AsyncClientSocket(AsyncSocket)
 				self onSocketConnected: (soerr == 0).
 				if (soerr == 0) { self beWatched }.
 			}.
-			(* HOW TO HANDLE TIMEOUT? *)
+			/* HOW TO HANDLE TIMEOUT? */
 		].
 	}
 
@@ -726,7 +726,7 @@ class AsyncServerSocket(AsyncSocket)
 	}
 }
 
-(*
+/*
 class ListenerSocket(Socket)
 {
 	var inreadysem.
@@ -806,4 +806,4 @@ class ListenerSocket(Socket)
 	}
 
 }
-*)
+*/

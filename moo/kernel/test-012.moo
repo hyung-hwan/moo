@@ -88,11 +88,11 @@ class MyObject(TestObject)
 
 		##[ Exception signal: 'simulated error' ] on: Exception do: [:ex | 'CAUGHT...' dump. Exception signal: 'jjjjjjj' ].
 		
-		(*[
+		/*[
 				[ Exception signal: 'simulated error' ] ensure: ['ensure 1' dump ].
 		] on: Exception do: [:ex | ('EXCETION - ' & ex messageText) dump. Exception signal: 'qqq'. ].
 
-		[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump. Exception signal: 'jjjj']. *)
+		[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump. Exception signal: 'jjjj']. */
 
 		v1 := [ 
 			[

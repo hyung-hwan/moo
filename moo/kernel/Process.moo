@@ -156,11 +156,11 @@ class Mutex(Semaphore)
 		^s.
 	}
 
-(*
+/*
 TODO: how to prohibit wait and signal???
 	method(#prohibited) wait.
 	method(#prohibited) signal.
-*)
+*/
 
 	method lock  { ^super wait }
 	method unlock { ^super signal }
@@ -186,16 +186,16 @@ class SemaphoreGroup(Object)
 	    sem_io_count := 0,
 	    sem_count := 0.
 
-(* TODO: good idea to a shortcut way to prohibit a certain method in the heirarchy chain?
+/* TODO: good idea to a shortcut way to prohibit a certain method in the heirarchy chain?
 method(#class,#prohibited) new.
 method(#class,#prohibited) new: size.
 method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibility: #xxxx }
-*)
+*/
 
-(*
+/*
 	method(#class) new { self messageProhibited: #new }
 	method(#class) new: size { self messageProhibited: #new: }
-*)
+*/
 
 	method(#primitive) addSemaphore: sem.
 	method(#primitive) removeSemaphore: sem.

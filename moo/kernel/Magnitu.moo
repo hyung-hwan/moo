@@ -245,8 +245,8 @@ class(#limited) Number(Magnitude)
 
 	method bitShift: aNumber
 	{
-		(* positive number for left shift. 
-		 * negative number for right shift *)
+		/* positive number for left shift. 
+		 * negative number for right shift */
 
 		<primitive: #Integer_bitshift>
 		self primitiveFailed.
@@ -267,7 +267,7 @@ class(#limited) Number(Magnitude)
 	{
 		| i |
 		i := self.
-		(*
+		/*
 		(step > 0) 
 			ifTrue: [
 				[ i <= end ] whileTrue: [ 
@@ -281,7 +281,7 @@ class(#limited) Number(Magnitude)
 					i := i - step.
 				].
 			].
-		*)
+		*/
 		if (step > 0)
 		{
 			while (i <= end)
@@ -309,7 +309,7 @@ class(#limited) Number(Magnitude)
 	{
 		| i |
 		i := self.
-		(*
+		/*
 		(step > 0) 
 			ifTrue: [
 				[ i < end ] whileTrue: [ 
@@ -323,7 +323,7 @@ class(#limited) Number(Magnitude)
 					i := i - step.
 				].
 			].
-		*)
+		*/
 		if (step > 0)
 		{
 			while (i < end)
@@ -349,16 +349,16 @@ class(#limited) Number(Magnitude)
 
 	method abs
 	{
-		(*self < 0 ifTrue: [^self negated].
-		^self.*)
+		/*self < 0 ifTrue: [^self negated].
+		^self.*/
 		^if (self < 0) { self negated } else { self }
 	}
 
 	method sign
 	{
-		(* self < 0 ifTrue: [^-1].
+		/* self < 0 ifTrue: [^-1].
 		self > 0 ifTrue: [^1].
-		^0.*)
+		^0.*/
 		^if (self < 0) { -1 } elsif (self > 0) { 1 } else { 0 }
 	}
 }
