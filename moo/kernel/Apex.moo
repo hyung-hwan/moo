@@ -112,6 +112,8 @@ extend Apex
 	## -------------------------------------------------------
 	method(#dual,#primitive,#lenient) _shallowCopy.
 	method(#dual,#primitive) shallowCopy.
+	method(#dual,#primitive,#lenient) _copy. ## alias to _shallowCopy
+	method(#dual,#primitive) copy. ## alias to shallowCopy
 
 	## -------------------------------------------------------
 	## -------------------------------------------------------

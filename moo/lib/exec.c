@@ -3800,6 +3800,7 @@ static pf_t pftab[] =
 	{ "Apex_basicShiftFrom:to:count:",         { moo_pf_basic_shift,                      3, 3 } },
 	{ "Apex_basicSize",                        { moo_pf_basic_size,                       0, 0 } },
 	{ "Apex_class",                            { moo_pf_class,                            0, 0 } },
+	{ "Apex_copy",                             { moo_pf_shallow_copy,                     0, 0 } },
 	{ "Apex_hash",                             { pf_hash,                                 0, 0 } },
 	{ "Apex_isKindOf:",                        { moo_pf_is_kind_of,                       1, 1, } },
 	{ "Apex_perform",                          { pf_perform,                              1, MA } },

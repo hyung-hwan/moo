@@ -110,6 +110,17 @@ class SequenceableCollection(Collection)
 
 		startIndex to: stopIndex do: [:i | aBlock value: (self at: i) value: i].
 	}
+
+	method swap: anIndex with: anotherIndex
+	{
+		## the subclass must implement at: and at:put for this to work.
+
+		| tmp |
+		tmp := self at: anIndex.
+		self at: anIndex put: (self at: anotherIndex).
+		self at: anotherIndex put: tmp.
+	}
+
 }
 
 ## -------------------------------------------------------------------------------

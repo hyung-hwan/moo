@@ -1082,6 +1082,7 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 
 		/* copy the payload */
 		MOO_MEMCPY (z + 1, oop + 1, get_payload_bytes(moo, oop));
+		MOO_OBJ_SET_FLAGS_RDONLY (z, 0); /* a copied object is not read-only */
 
 		return z;
 #else
@@ -1095,6 +1096,7 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 		moo_popvolat(moo);
 
 		MOO_MEMCPY (z, oop, total_bytes);
+		MOO_OBJ_SET_FLAGS_RDONLY (z, 0); /* a copied object is not read-only */
 		return z;
 #endif 
 	}
