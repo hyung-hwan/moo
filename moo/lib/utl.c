@@ -879,7 +879,7 @@ int moo_convbtouchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_
 {
 	/* length bound */
 	int n;
-	n = moo_conv_bchars_to_uchars_with_cmgr(bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
+	n = moo_conv_bchars_to_uchars_with_cmgr(bcs, bcslen, ucs, ucslen, moo_getcmgr(moo), 0);
 	/* -1: illegal character, -2: buffer too small, -3: incomplete sequence */
 	if (n <= -1) moo_seterrnum (moo, (n == -2)? MOO_EBUFFULL: MOO_EECERR);
 	return n;
@@ -889,7 +889,7 @@ int moo_convutobchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_
 {
 	/* length bound */
 	int n;
-	n = moo_conv_uchars_to_bchars_with_cmgr(ucs, ucslen, bcs, bcslen, moo->cmgr);
+	n = moo_conv_uchars_to_bchars_with_cmgr(ucs, ucslen, bcs, bcslen, moo_getcmgr(moo));
 	if (n <= -1) moo_seterrnum (moo, (n == -2)? MOO_EBUFFULL: MOO_EECERR);
 	return n;
 }
@@ -898,7 +898,7 @@ int moo_convbtoucstr (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* bcslen, moo_u
 {
 	/* null-terminated. */
 	int n;
-	n = moo_conv_bcstr_to_ucstr_with_cmgr(bcs, bcslen, ucs, ucslen, moo->cmgr, 0);
+	n = moo_conv_bcstr_to_ucstr_with_cmgr(bcs, bcslen, ucs, ucslen, moo_getcmgr(moo), 0);
 	if (n <= -1) moo_seterrnum (moo, (n == -2)? MOO_EBUFFULL: MOO_EECERR);
 	return n;
 }
@@ -907,7 +907,7 @@ int moo_convutobcstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_b
 {
 	/* null-terminated */
 	int n;
-	n = moo_conv_ucstr_to_bcstr_with_cmgr(ucs, ucslen, bcs, bcslen, moo->cmgr);
+	n = moo_conv_ucstr_to_bcstr_with_cmgr(ucs, ucslen, bcs, bcslen, moo_getcmgr(moo));
 	if (n <= -1) moo_seterrnum (moo, (n == -2)? MOO_EBUFFULL: MOO_EECERR);
 	return n;
 }

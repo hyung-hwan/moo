@@ -67,8 +67,8 @@ MOO_INLINE moo_rbt_pair_t* moo_rbt_allocpair (
 	if (kcop == MOO_RBT_COPIER_INLINE) as += MOO_ALIGN_POW2(KTOB(rbt,klen), MOO_SIZEOF_VOID_P);
 	if (vcop == MOO_RBT_COPIER_INLINE) as += VTOB(rbt,vlen);
 
-	pair = (moo_rbt_pair_t*) MOO_MMGR_ALLOC (rbt->moo->mmgr, as);
-	if (pair == MOO_NULL) return MOO_NULL;
+	pair = (moo_rbt_pair_t*)moo_allocmem(rbt->moo, as);
+	if (!pair) return MOO_NULL;
 
 	pair->color = MOO_RBT_RED;
 	pair->parent = MOO_NULL;
@@ -87,10 +87,10 @@ MOO_INLINE moo_rbt_pair_t* moo_rbt_allocpair (
 	}
 	else
 	{
-		KPTR(pair) = kcop (rbt, kptr, klen);
+		KPTR(pair) = kcop(rbt, kptr, klen);
 		if (KPTR(pair) == MOO_NULL)
 		{
-			MOO_MMGR_FREE (rbt->moo->mmgr, pair);
+			moo_freemem (rbt->moo, pair);
 			return MOO_NULL;
 		}
 	}
@@ -114,7 +114,7 @@ MOO_INLINE moo_rbt_pair_t* moo_rbt_allocpair (
 		{
 			if (rbt->style->freeer[MOO_RBT_KEY] != MOO_NULL)
 				rbt->style->freeer[MOO_RBT_KEY] (rbt, KPTR(pair), KLEN(pair));
-			MOO_MMGR_FREE (rbt->moo->mmgr, pair);
+			moo_freemem (rbt->moo, pair);
 			return MOO_NULL;
 		}
 	}
@@ -128,7 +128,7 @@ MOO_INLINE void moo_rbt_freepair (moo_rbt_t* rbt, moo_rbt_pair_t* pair)
 		rbt->style->freeer[MOO_RBT_KEY] (rbt, KPTR(pair), KLEN(pair));
 	if (rbt->style->freeer[MOO_RBT_VAL] != MOO_NULL)
 		rbt->style->freeer[MOO_RBT_VAL] (rbt, VPTR(pair), VLEN(pair));
-	MOO_MMGR_FREE (rbt->moo->mmgr, pair);
+	moo_freemem (rbt->moo, pair);
 }
 
 static moo_rbt_style_t style[] =
@@ -195,12 +195,12 @@ moo_rbt_t* moo_rbt_open (moo_t* moo, moo_oow_t xtnsize, int kscale, int vscale)
 {
 	moo_rbt_t* rbt;
 
-	rbt = (moo_rbt_t*) MOO_MMGR_ALLOC (moo->mmgr, MOO_SIZEOF(moo_rbt_t) + xtnsize);
-	if (rbt == MOO_NULL) return MOO_NULL;
+	rbt = (moo_rbt_t*)moo_allocmem(moo, MOO_SIZEOF(moo_rbt_t) + xtnsize);
+	if (!rbt) return MOO_NULL;
 
-	if (moo_rbt_init (rbt, moo, kscale, vscale) <= -1)
+	if (moo_rbt_init(rbt, moo, kscale, vscale) <= -1)
 	{
-		MOO_MMGR_FREE (moo->mmgr, rbt);
+		moo_freemem (moo, rbt);
 		return MOO_NULL;
 	}
 
@@ -211,7 +211,7 @@ moo_rbt_t* moo_rbt_open (moo_t* moo, moo_oow_t xtnsize, int kscale, int vscale)
 void moo_rbt_close (moo_rbt_t* rbt)
 {
 	moo_rbt_fini (rbt);
-	MOO_MMGR_FREE (rbt->moo->mmgr, rbt);
+	moo_freemem (rbt->moo, rbt);
 }
 
 int moo_rbt_init (moo_rbt_t* rbt, moo_t* moo, int kscale, int vscale)

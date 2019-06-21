@@ -104,10 +104,6 @@ MOO_EXPORT moo_t* moo_openstd (
 	moo_errinf_t*       errinfo
 );
 
-MOO_EXPORT void* moo_getxtnstd (
-	moo_t*        moo
-);
-
 MOO_EXPORT void moo_abortstd (
 	moo_t*        moo
 );

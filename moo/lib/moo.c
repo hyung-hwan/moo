@@ -56,7 +56,7 @@ moo_t* moo_open (moo_mmgr_t* mmgr, moo_oow_t xtnsize, moo_cmgr_t* cmgr, const mo
 void moo_close (moo_t* moo)
 {
 	moo_fini (moo);
-	MOO_MMGR_FREE (moo->mmgr, moo);
+	MOO_MMGR_FREE (moo_getmmgr(moo), moo);
 }
 
 static void fill_bigint_tables (moo_t* moo)
@@ -86,16 +86,14 @@ static void fill_bigint_tables (moo_t* moo)
 	}
 }
 
-static void* alloc_heap (moo_t* moo, moo_oow_t size)
+static MOO_INLINE void* alloc_heap (moo_t* moo, moo_oow_t size)
 {
-	void* ptr = MOO_MMGR_ALLOC(moo->mmgr, size);
-	if (!ptr) moo_seterrnum (moo, MOO_ESYSMEM);
-	return ptr;
+	return moo_allocmem(moo, size);
 }
 
-static void free_heap (moo_t* moo, void* ptr)
+static MOO_INLINE void free_heap (moo_t* moo, void* ptr)
 {
-	MOO_MMGR_FREE(moo->mmgr, ptr);
+	moo_freemem (moo, ptr);
 }
 
 int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_cmgr_t* cmgr, const moo_vmprim_t* vmprim)
@@ -109,8 +107,10 @@ int moo_init (moo_t* moo, moo_mmgr_t* mmgr, moo_cmgr_t* cmgr, const moo_vmprim_t
 	}
 
 	MOO_MEMSET (moo, 0, MOO_SIZEOF(*moo));
-	moo->mmgr = mmgr;
-	moo->cmgr = cmgr;
+	moo->_instsize = MOO_SIZEOF(*moo);
+	moo->_mmgr = mmgr;
+	moo->_cmgr = cmgr;
+
 	moo->vmprim = *vmprim;
 	if (!moo->vmprim.alloc_heap) moo->vmprim.alloc_heap = alloc_heap;
 	if (!moo->vmprim.free_heap) moo->vmprim.free_heap = free_heap;
@@ -427,7 +427,7 @@ void* moo_allocmem (moo_t* moo, moo_oow_t size)
 {
 	void* ptr;
 
-	ptr = MOO_MMGR_ALLOC (moo->mmgr, size);
+	ptr = MOO_MMGR_ALLOC(moo_getmmgr(moo), size);
 	if (!ptr) moo_seterrnum (moo, MOO_ESYSMEM);
 	return ptr;
 }
@@ -436,7 +436,7 @@ void* moo_callocmem (moo_t* moo, moo_oow_t size)
 {
 	void* ptr;
 
-	ptr = MOO_MMGR_ALLOC (moo->mmgr, size);
+	ptr = MOO_MMGR_ALLOC(moo_getmmgr(moo), size);
 	if (!ptr) moo_seterrnum (moo, MOO_ESYSMEM);
 	else MOO_MEMSET (ptr, 0, size);
 	return ptr;
@@ -444,14 +444,14 @@ void* moo_callocmem (moo_t* moo, moo_oow_t size)
 
 void* moo_reallocmem (moo_t* moo, void* ptr, moo_oow_t size)
 {
-	ptr = MOO_MMGR_REALLOC (moo->mmgr, ptr, size);
+	ptr = MOO_MMGR_REALLOC (moo_getmmgr(moo), ptr, size);
 	if (!ptr) moo_seterrnum (moo, MOO_ESYSMEM);
 	return ptr;
 }
 
 void moo_freemem (moo_t* moo, void* ptr)
 {
-	MOO_MMGR_FREE (moo->mmgr, ptr);
+	MOO_MMGR_FREE (moo_getmmgr(moo), ptr);
 }
 
 /* -------------------------------------------------------------------------- */

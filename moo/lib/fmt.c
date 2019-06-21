@@ -1683,7 +1683,7 @@ static int log_ucs (moo_fmtout_t* fmtout, const moo_uch_t* ptr, moo_oow_t len)
 	{
 		len = rem;
 		bcslen = MOO_COUNTOF(bcs);
-		moo_conv_uchars_to_bchars_with_cmgr(ptr, &len, bcs, &bcslen, moo->cmgr);
+		moo_conv_uchars_to_bchars_with_cmgr(ptr, &len, bcs, &bcslen, moo_getcmgr(moo));
 		log_bcs(fmtout, bcs, bcslen);
 		rem -= len;
 		ptr += len;
@@ -1707,7 +1707,7 @@ static int log_bcs (moo_fmtout_t* fmtout, const moo_bch_t* ptr, moo_oow_t len)
 	{
 		len = rem;
 		ucslen = MOO_COUNTOF(ucs);
-		moo_conv_bchars_to_uchars_with_cmgr(ptr, &len, ucs, &ucslen, moo->cmgr, 1);
+		moo_conv_bchars_to_uchars_with_cmgr(ptr, &len, ucs, &ucslen, moo_getcmgr(moo), 1);
 		log_ucs(fmtout, ucs, ucslen);
 		rem -= len;
 		ptr += len;
@@ -1837,7 +1837,7 @@ static int sprint_bcs (moo_fmtout_t* fmtout, const moo_bch_t* ptr, moo_oow_t len
 
 #if defined(MOO_OOCH_IS_UCH)
 	blen = len;
-	moo_conv_bchars_to_uchars_with_cmgr (ptr, &blen, MOO_NULL, &oolen, moo->cmgr, 1);
+	moo_conv_bchars_to_uchars_with_cmgr (ptr, &blen, MOO_NULL, &oolen, moo_getcmgr(moo), 1);
 #else
 	oolen = len;
 #endif
@@ -1858,7 +1858,7 @@ static int sprint_bcs (moo_fmtout_t* fmtout, const moo_bch_t* ptr, moo_oow_t len
 	}
 
 #if defined(MOO_OOCH_IS_UCH)
-	moo_conv_bchars_to_uchars_with_cmgr (ptr, &len, &moo->sprintf.xbuf.ptr[moo->sprintf.xbuf.len], &oolen, moo->cmgr, 1);
+	moo_conv_bchars_to_uchars_with_cmgr (ptr, &len, &moo->sprintf.xbuf.ptr[moo->sprintf.xbuf.len], &oolen, moo_getcmgr(moo), 1);
 #else
 	MOO_MEMCPY (&moo->sprintf.xbuf.ptr[moo->sprintf.xbuf.len], ptr, len * MOO_SIZEOF(*ptr));
 #endif
@@ -1878,7 +1878,7 @@ static int sprint_ucs (moo_fmtout_t* fmtout, const moo_uch_t* ptr, moo_oow_t len
 	oolen = len;
 #else
 	ulen = len;
-	moo_conv_uchars_to_bchars_with_cmgr (ptr, &ulen, MOO_NULL, &oolen, moo->cmgr);
+	moo_conv_uchars_to_bchars_with_cmgr (ptr, &ulen, MOO_NULL, &oolen, moo_getcmgr(moo));
 #endif
 
 	if (oolen > unused)
@@ -1899,7 +1899,7 @@ static int sprint_ucs (moo_fmtout_t* fmtout, const moo_uch_t* ptr, moo_oow_t len
 #if defined(MOO_OOCH_IS_UCH)
 	MOO_MEMCPY (&moo->sprintf.xbuf.ptr[moo->sprintf.xbuf.len], ptr, len * MOO_SIZEOF(*ptr));
 #else
-	moo_conv_uchars_to_bchars_with_cmgr (ptr, &len, &moo->sprintf.xbuf.ptr[moo->sprintf.xbuf.len], &oolen, moo->cmgr);
+	moo_conv_uchars_to_bchars_with_cmgr (ptr, &len, &moo->sprintf.xbuf.ptr[moo->sprintf.xbuf.len], &oolen, moo_getcmgr(moo));
 #endif
 	moo->sprintf.xbuf.len += oolen;
 

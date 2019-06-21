@@ -379,7 +379,7 @@ struct xtn_t
 	} ev;
 };
 
-#define GET_XTN(moo) ((xtn_t*)moo_getxtn(moo))
+#define GET_XTN(moo) ((xtn_t*)((moo_uint8_t*)moo_getxtn(moo) - MOO_SIZEOF(xtn_t)))
 
 static moo_t* g_moo = MOO_NULL;
 
@@ -3649,6 +3649,9 @@ static void fini_moo (moo_t* moo)
 	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize, ((cfg && cfg->cmgr)? cfg->cmgr: moo_get_utf8_cmgr()), &vmprim, errinfo);
 	if (!moo) return MOO_NULL;
 
+	/* adjust the object size by the sizeof xtn_t so that qse_getxtn() returns the right pointer. */
+	moo->_instsize += MOO_SIZEOF(xtn_t);
+
 	xtn = GET_XTN(moo);
 	if (cfg) xtn->input_cmgr = cfg->input_cmgr;
 	if (!xtn->input_cmgr) xtn->input_cmgr = moo_getcmgr(moo);
@@ -3689,11 +3692,6 @@ static void fini_moo (moo_t* moo)
 #endif
 
 	return moo;
-}
-
-void* moo_getxtnstd (moo_t* moo)
-{
-	return (void*)((moo_uint8_t*)GET_XTN(moo) + MOO_SIZEOF(xtn_t));
 }
 
 void moo_abortstd (moo_t* moo)

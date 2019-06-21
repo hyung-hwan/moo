@@ -1351,8 +1351,9 @@ typedef struct moo_errinf_t moo_errinf_t;
 
 struct moo_t
 {
-	moo_mmgr_t*  mmgr;
-	moo_cmgr_t*  cmgr;
+	moo_oow_t    _instsize;
+	moo_mmgr_t*  _mmgr;
+	moo_cmgr_t*  _cmgr;
 	moo_errnum_t errnum;
 	struct
 	{
@@ -1844,19 +1845,19 @@ MOO_EXPORT void moo_fini (
 );
 
 #if defined(MOO_HAVE_INLINE)
-	static MOO_INLINE moo_mmgr_t* moo_getmmgr (moo_t* moo) { return moo->mmgr; }
-	static MOO_INLINE void* moo_getxtn (moo_t* moo) { return (void*)(moo + 1); }
+	static MOO_INLINE moo_mmgr_t* moo_getmmgr (moo_t* moo) { return moo->_mmgr; }
+	static MOO_INLINE void* moo_getxtn (moo_t* moo) { return (void*)((moo_uint8_t*)moo + moo->_instsize); }
 
-	static MOO_INLINE moo_cmgr_t* moo_getcmgr (moo_t* moo) { return moo->cmgr; }
-	static MOO_INLINE void moo_setcmgr (moo_t* moo, moo_cmgr_t* cmgr) { moo->cmgr = cmgr; }
+	static MOO_INLINE moo_cmgr_t* moo_getcmgr (moo_t* moo) { return moo->_cmgr; }
+	static MOO_INLINE void moo_setcmgr (moo_t* moo, moo_cmgr_t* cmgr) { moo->_cmgr = cmgr; }
 
 	static MOO_INLINE moo_errnum_t moo_geterrnum (moo_t* moo) { return moo->errnum; }
 #else
-#	define moo_getmmgr(moo) (((moo_t*)(moo))->mmgr)
-#	define moo_getxtn(moo) ((void*)((moo_t*)(moo) + 1))
+#	define moo_getmmgr(moo) (((moo_t*)(moo))->_mmgr)
+#	define moo_getxtn(moo) ((void*)((moo_uint8_t*)moo + ((moo_t*)moo)->_instsize))
 
-#	define moo_getcmgr(moo) (((moo_t*)(moo))->cmgr)
-#	define moo_setcmgr(moo,mgr) (((moo_t*)(moo))->cmgr = (mgr))
+#	define moo_getcmgr(moo) (((moo_t*)(moo))->_cmgr)
+#	define moo_setcmgr(moo,cmgr) (((moo_t*)(moo))->_cmgr = (cmgr))
 
 #	define moo_geterrnum(moo) (((moo_t*)(moo))->errnum)
 #endif

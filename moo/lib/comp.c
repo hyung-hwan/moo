@@ -9524,7 +9524,7 @@ oops:
 
 		prev = moo->c->curinp->includer;
 		MOO_ASSERT (moo, moo->c->curinp->name != MOO_NULL);
-		MOO_MMGR_FREE (moo->mmgr, moo->c->curinp);
+		moo_freemem (moo, moo->c->curinp);
 		moo->c->curinp = prev;
 	}
 

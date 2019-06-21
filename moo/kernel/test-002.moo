@@ -103,6 +103,34 @@ class MyObject(Object)
 	}
 */
 
+	method(#class) test_quicksort: anArray
+	{
+		| quicksort |
+		quicksort := nil.
+		quicksort := [ :data :from :to |
+			(from < to)
+				ifTrue: [ | pivot index |
+					pivot := data at: from.
+					data swap: from with: to.
+					index := from.
+					from to: (to - 1) do: [ :each | 
+						(data at: each) < pivot
+						ifTrue: [ 
+							data swap: each with: index. 
+							index := index + 1
+						] 
+					].
+
+					data swap: to with: index.
+					quicksort value: data value: from value: index - 1.
+					quicksort value: data value: index + 1 value: to 
+				].
+			data 
+		].
+
+		^(quicksort value: anArray value: 0 value: (anArray size - 1))
+	}
+
 	method(#class) main
 	{
 		| tc limit |
@@ -114,6 +142,8 @@ class MyObject(Object)
 			[ self test_semaphore_heap == true ],
 			[ self test_mutex = #(2000 6000) ],
 			####[ self test_sem_sig ],
+			[ (self test_quicksort: #(7 12 3 20 5 8 2) copy) = #(2 3 5 7 8 12 20)],
+			[ (self test_quicksort: %(99, 12, 18, 7, 12, 3, 20, 5, 8, 2)) = #(2 3 5 7 8 12 12 18 20 99)],
 
 			[ System sleepForSecs: 2. self.a == 300 ] ## sleep before checking self.a to prevent different result depending on process switching frequency and speed
 		).
@@ -125,6 +155,8 @@ class MyObject(Object)
 			tb := tc at: idx.
 			System log(System.Log.INFO, idx asString, (if (tb value) { ' PASS' } else { ' FAIL' }), S'\n').
 		].
+
+'AAAAAAAAAAAAAAAAAAAAAaa' dump.
 	}
 }
 

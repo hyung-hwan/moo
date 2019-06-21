@@ -225,7 +225,7 @@ static int err_bcs (moo_fmtout_t* fmtout, const moo_bch_t* ptr, moo_oow_t len)
 
 #if defined(MOO_OOCH_IS_UCH)
 	if (max <= 0) return 1;
-	moo_conv_bchars_to_uchars_with_cmgr (ptr, &len, &moo->errmsg.buf[moo->errmsg.len], &max, moo->cmgr, 1);
+	moo_conv_bchars_to_uchars_with_cmgr (ptr, &len, &moo->errmsg.buf[moo->errmsg.len], &max, moo_getcmgr(moo), 1);
 	moo->errmsg.len += max;
 #else
 	if (len > max) len = max;
@@ -253,7 +253,7 @@ static int err_ucs (moo_fmtout_t* fmtout, const moo_uch_t* ptr, moo_oow_t len)
 	moo->errmsg.len += len;
 #else
 	if (max <= 0) return 1;
-	moo_conv_uchars_to_bchars_with_cmgr (ptr, &len, &moo->errmsg.buf[moo->errmsg.len], &max, moo->cmgr);
+	moo_conv_uchars_to_bchars_with_cmgr (ptr, &len, &moo->errmsg.buf[moo->errmsg.len], &max, moo_getcmgr(moo));
 	moo->errmsg.len += max;
 #endif
 	moo->errmsg.buf[moo->errmsg.len] = '\0';
