@@ -155,8 +155,6 @@ class MyObject(Object)
 			tb := tc at: idx.
 			System log(System.Log.INFO, idx asString, (if (tb value) { ' PASS' } else { ' FAIL' }), S'\n').
 		].
-
-'AAAAAAAAAAAAAAAAAAAAAaa' dump.
 	}
 }
 

@@ -1503,7 +1503,7 @@ int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 			}
 			else
 			{
-				if (moo_bfmt_out(fmtout, ((c == moo->_symbol)? "#%.*js": "'%.%js'"), MOO_OBJ_GET_SIZE(oop), MOO_OBJ_GET_CHAR_SLOT(oop)) <= -1) return -1;
+				if (moo_bfmt_out(fmtout, ((c == moo->_symbol)? "#%.*js": "'%.*js'"), MOO_OBJ_GET_SIZE(oop), MOO_OBJ_GET_CHAR_SLOT(oop)) <= -1) return -1;
 			}
 		}
 		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_BYTE)
