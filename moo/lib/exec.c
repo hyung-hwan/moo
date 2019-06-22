@@ -135,8 +135,8 @@ static MOO_INLINE const char* proc_state_to_string (int state)
 
 static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, int force);
 static void signal_io_semaphore (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask);
-static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_ooi_t nargs);
-static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_t namelen, int to_super, moo_ooi_t nargs);
+static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, int to_super);
+static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_t namelen, moo_ooi_t nargs);
 
 /* ------------------------------------------------------------------------- */
 static MOO_INLINE int vm_startup (moo_t* moo)
@@ -1686,8 +1686,10 @@ moo_oop_method_t moo_findmethodinclasschain (moo_t* moo, moo_oop_class_t _class,
 	return mth;
 }
 
-static MOO_INLINE moo_oop_method_t find_method_with_str (moo_t* moo, moo_oop_t receiver, const moo_oocs_t* message, int super)
+static MOO_INLINE moo_oop_method_t find_method_with_str (moo_t* moo, moo_oop_t receiver, const moo_oocs_t* message, int in_super)
 {
+	/* this function should be the same as moo_findmethod() mostly except cache management.
+	 * this function can get removed if the callers create a symbol before look-up.  TODO: << */
 	moo_oop_class_t _class;
 	moo_oop_class_t c;
 	int mth_type;
@@ -1708,7 +1710,7 @@ static MOO_INLINE moo_oop_method_t find_method_with_str (moo_t* moo, moo_oop_t r
 	}
 	MOO_ASSERT (moo, (moo_oop_t)c != moo->_nil);
 
-	if (super) 
+	if (in_super) 
 	{
 		MOO_ASSERT (moo, moo->active_method);
 		MOO_ASSERT (moo, moo->active_method->owner);
@@ -1736,22 +1738,95 @@ not_found:
 	return MOO_NULL;
 }
 
-moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t selector, int super)
+moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t selector, int in_super)
 {
-	moo_oocs_t msg;
+	moo_oop_class_t _class;
+	moo_oop_class_t c;
+	int mth_type;
 	moo_oop_method_t mth;
+	moo_oocs_t message;
+	moo_oow_t mcidx;
+	moo_method_cache_item_t* mcitm;
+
+	message.ptr = MOO_OBJ_GET_CHAR_SLOT(selector);
+	message.len = MOO_OBJ_GET_SIZE(selector);
 	
-	/* find in cache  */
-	msg.ptr = MOO_OBJ_GET_CHAR_SLOT(selector);
-	msg.len = MOO_OBJ_GET_SIZE(selector);
-	
-	mth = find_method_with_str(moo, receiver, &msg, super);
-	if (!mth)
+	_class = MOO_CLASSOF(moo, receiver);
+	if (_class == moo->_class)
 	{
-		/* cache? */
+		/* receiver is a class object (an instance of Class) */
+		c = (moo_oop_class_t)receiver; 
+		mth_type = MOO_METHOD_CLASS;
 	}
+	else
+	{
+		/* receiver is not a class object. so take its class */
+		c = _class;
+		mth_type = MOO_METHOD_INSTANCE;
+	}
+	MOO_ASSERT (moo, (moo_oop_t)c != moo->_nil);
+
+	if (in_super) 
+	{
+		MOO_ASSERT (moo, moo->active_method);
+		MOO_ASSERT (moo, moo->active_method->owner);
+		c = (moo_oop_class_t)((moo_oop_class_t)moo->active_method->owner)->superclass;
+		if ((moo_oop_t)c == moo->_nil) goto not_found;
+		/* c is nil if it reached the top of the hierarchy.
+		 * otherwise c points to a class object */
+	}
+
+#if 0
+	mcidx = ((moo_oow_t)c + (moo_oow_t)selector) % MOO_METHOD_CACHE_SIZE; /* TODO: change hash function */
+	mcitm = &moo->method_cache[mcidx];
 	
-	return mth;
+	if (mcitm->receiver_class == c  && mcitm->selector == selector && mcitm->method_type == mth_type)
+	{
+		/* cache  hit */
+		return mcitm->method;
+	}
+#endif
+	
+	/* [IMPORT] the method lookup logic should be the same as ciim_on_each_method() in comp.c */
+	mth = find_method_in_class_chain(moo, c, mth_type, &message);
+	if (mth) 
+	{
+		mcitm->receiver_class = c;
+		mcitm->selector = selector;
+		mcitm->method_type = mth_type;
+		mcitm->method = mth;
+		return mth;
+	}
+
+not_found:
+	if (_class == moo->_class)
+	{
+		/* the object is an instance of Class. find the method
+		 * in an instance method dictionary of Class also */
+#if 0
+		mcidx = ((moo_oow_t)_class + (moo_oow_t)selector) % MOO_METHOD_CACHE_SIZE; /* TODO: change hash function */
+		mcitm = &moo->method_cache[mcidx];
+
+		if (mcitm->receiver_class == _class  && mcitm->selector == selector && mcitm->method_type == MOO_METHOD_INSTANCE)
+		{
+			/* cache  hit */
+			return mcitm->method;
+		}
+#endif	
+		mth = find_method_in_class(moo, _class, MOO_METHOD_INSTANCE, &message);
+		if (mth) 
+		{
+			mcitm->receiver_class = c;
+			mcitm->selector = selector;
+			mcitm->method_type = MOO_METHOD_INSTANCE;
+			mcitm->method = mth;
+			return mth;
+		}
+	}
+
+	MOO_LOG3 (moo, MOO_LOG_DEBUG, "Method '%.*js' not found in receiver %O\n", message.len, message.ptr, receiver);
+	moo_seterrbfmt (moo, MOO_ENOENT, "unable to find the method '%.*js' in %O", message.len, message.ptr, receiver);
+	return MOO_NULL;
 }
 
 static int start_initial_process_and_context (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname)
@@ -2079,7 +2154,7 @@ static moo_pfrc_t pf_perform (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	MOO_STACK_POP (moo);
 
 	/* emulate message sending */
-	if (send_message (moo, (moo_oop_char_t)selector, 0, nargs - 1) <= -1) return MOO_PF_HARD_FAILURE;
+	if (send_message (moo, (moo_oop_char_t)selector, nargs - 1, 0) <= -1) return MOO_PF_HARD_FAILURE;
 	return MOO_PF_SUCCESS;
 }
 
@@ -4340,7 +4415,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				MOO_STACK_SET (moo, stack_base + 2, (moo_oop_t)method);
 
 				/* send primitiveFailed to self */
-				if (send_message_with_str (moo, prim_fail_msg, 15, 0, nargs + 1) <= -1) return -1;
+				if (send_message_with_str (moo, prim_fail_msg, 15, nargs + 1) <= -1) return -1;
 			}
 			else
 			{
@@ -4362,7 +4437,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 	return 0;
 }
 
-static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_ooi_t nargs)
+static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, int to_super)
 {
 
 	moo_oop_t receiver;
@@ -4414,7 +4489,7 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_
 	return start_method (moo, method, nargs);
 }
 
-static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_t namelen, int to_super, moo_ooi_t nargs)
+static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_t namelen, moo_ooi_t nargs)
 {
 	moo_oocs_t mthname;
 	moo_oop_t receiver;
@@ -4424,7 +4499,7 @@ static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow
 
 	mthname.ptr = (moo_ooch_t*)nameptr;
 	mthname.len = namelen;
-	method = find_method_with_str(moo, receiver, &mthname, to_super);
+	method = find_method_with_str(moo, receiver, &mthname, 0);
 	if (!method)
 	{
 		MOO_LOG4 (moo, MOO_LOG_IC | MOO_LOG_FATAL, 
@@ -4852,7 +4927,7 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 			MOO_STACK_PUSH (moo, (moo_oop_t)unwind_stop);
 			MOO_STACK_PUSH (moo, (moo_oop_t)return_value);
 
-			if (send_message_with_str(moo, fbm, 16, 0, 2) <= -1) return -1;
+			if (send_message_with_str(moo, fbm, 16, 2) <= -1) return -1;
 		}
 		else
 		{
@@ -5576,7 +5651,7 @@ static int __execute (moo_t* moo)
 			/* if the compiler is not buggy or the byte code gets corrupted, the selector is guaranteed to be a symbol */
 
 			LOG_INST3 (moo, "send_message%hs %zu @%zu", (((bcode >> 2) & 1)? "_to_super": ""), b1, b2);
-			if (send_message(moo, selector, ((bcode >> 2) & 1), b1) <= -1) return -1;
+			if (send_message(moo, selector, b1, ((bcode >> 2) & 1)) <= -1) return -1;
 			NEXT_INST();
 		}
 
@@ -5680,7 +5755,7 @@ static int __execute (moo_t* moo)
 			 */
 			MOO_STACK_PUSH (moo, (moo_oop_t)moo->_dictionary);
 			MOO_STACK_PUSH (moo, MOO_SMOOI_TO_OOP(b1));
-			if (send_message (moo, moo->dicnewsym, 0, 1) <= -1) return -1;
+			if (send_message(moo, moo->dicnewsym, 1, 0) <= -1) return -1;
 			NEXT_INST();
 
 		ON_INST(BCODE_POP_INTO_DICTIONARY)
@@ -5694,7 +5769,7 @@ static int __execute (moo_t* moo)
 			t2 = MOO_STACK_GETTOP(moo);
 			moo_putatdic (moo, (moo_oop_dic_t)t2, ((moo_oop_association_t)t1)->key, ((moo_oop_association_t)t1)->value);
 			 */
-			if (send_message (moo, moo->dicputassocsym, 0, 1) <= -1) return -1;
+			if (send_message(moo, moo->dicputassocsym, 1, 0) <= -1) return -1;
 			NEXT_INST();
 
 		ON_INST(BCODE_MAKE_ARRAY)
