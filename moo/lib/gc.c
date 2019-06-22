@@ -1039,6 +1039,9 @@ void moo_gc (moo_t* moo)
 	if (moo->active_method) moo->active_code = MOO_METHOD_GET_CODE_BYTE(moo->active_method); /* update moo->active_code */
 	if (gcfin_count > 0) moo->sem_gcfin_sigreq = 1;
 
+	/* invalidate method cache. TODO: GCing entries on the method cache is also one way instead of full invalidation */
+	moo_clearmethodcache (moo);
+	
 	/* TODO: include some gc statstics like number of live objects, gc performance, etc */
 	MOO_LOG4 (moo, MOO_LOG_GC | MOO_LOG_INFO, 
 		"Finished GC curheap base %p ptr %p newheap base %p ptr %p\n",

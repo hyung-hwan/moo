@@ -1776,21 +1776,26 @@ moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t 
 		 * otherwise c points to a class object */
 	}
 
-#if 0
-	mcidx = ((moo_oow_t)c + (moo_oow_t)selector) % MOO_METHOD_CACHE_SIZE; /* TODO: change hash function */
+	/*mcidx = MOO_HASH_INIT;
+	mcidx = MOO_HASH_VALUE(mcidx, (moo_oow_t)c);
+	mcidx = MOO_HASH_VALUE(mcidx, (moo_oow_t)selector);
+	mcidx &= (MOO_METHOD_CACHE_SIZE - 1);*/
+	/*mcidx = ((moo_oow_t)c + (moo_oow_t)selector) % MOO_METHOD_CACHE_SIZE; */
+	mcidx = ((moo_oow_t)_class ^ (moo_oow_t)selector) & (MOO_METHOD_CACHE_SIZE - 1);
 	mcitm = &moo->method_cache[mcidx];
 	
 	if (mcitm->receiver_class == c  && mcitm->selector == selector && mcitm->method_type == mth_type)
 	{
-		/* cache  hit */
+		/* cache hit */
+		/* TODO: moo->method_cache_hits++; */
 		return mcitm->method;
 	}
-#endif
 	
 	/* [IMPORT] the method lookup logic should be the same as ciim_on_each_method() in comp.c */
 	mth = find_method_in_class_chain(moo, c, mth_type, &message);
 	if (mth) 
 	{
+		/* TODO: moo->method_cache_misses++; */
 		mcitm->receiver_class = c;
 		mcitm->selector = selector;
 		mcitm->method_type = mth_type;
@@ -1803,19 +1808,26 @@ not_found:
 	{
 		/* the object is an instance of Class. find the method
 		 * in an instance method dictionary of Class also */
-#if 0
-		mcidx = ((moo_oow_t)_class + (moo_oow_t)selector) % MOO_METHOD_CACHE_SIZE; /* TODO: change hash function */
+		
+		/*mcidx = MOO_HASH_INIT;
+		mcidx = MOO_HASH_VALUE(mcidx, (moo_oow_t)_class);
+		mcidx = MOO_HASH_VALUE(mcidx, (moo_oow_t)selector);
+		mcidx &= (MOO_METHOD_CACHE_SIZE - 1); */
+		/* mcidx = ((moo_oow_t)_class + (moo_oow_t)selector) % MOO_METHOD_CACHE_SIZE; */
+		mcidx = ((moo_oow_t)_class ^ (moo_oow_t)selector) & (MOO_METHOD_CACHE_SIZE - 1);
 		mcitm = &moo->method_cache[mcidx];
 
 		if (mcitm->receiver_class == _class  && mcitm->selector == selector && mcitm->method_type == MOO_METHOD_INSTANCE)
 		{
 			/* cache  hit */
+			/* TODO: moo->method_cache_hits++; */
 			return mcitm->method;
 		}
-#endif	
+		
 		mth = find_method_in_class(moo, _class, MOO_METHOD_INSTANCE, &message);
 		if (mth) 
 		{
+			/* TODO: moo->method_cache_misses++; */
 			mcitm->receiver_class = c;
 			mcitm->selector = selector;
 			mcitm->method_type = MOO_METHOD_INSTANCE;
@@ -1827,6 +1839,11 @@ not_found:
 	MOO_LOG3 (moo, MOO_LOG_DEBUG, "Method '%.*js' not found in receiver %O\n", message.len, message.ptr, receiver);
 	moo_seterrbfmt (moo, MOO_ENOENT, "unable to find the method '%.*js' in %O", message.len, message.ptr, receiver);
 	return MOO_NULL;
+}
+
+void moo_clearmethodcache (moo_t* moo)
+{
+	MOO_MEMSET (moo->method_cache, 0, MOO_SIZEOF(moo->method_cache));
 }
 
 static int start_initial_process_and_context (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname)
@@ -6027,6 +6044,8 @@ int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname
 	MOO_ASSERT (moo, moo->initial_context == MOO_NULL);
 	MOO_ASSERT (moo, moo->active_context == MOO_NULL);
 	MOO_ASSERT (moo, moo->active_method == MOO_NULL);
+
+	moo_clearmethodcache (moo);
 
 	if (start_initial_process_and_context(moo, objname, mthname) <= -1) return -1;
 	moo->initial_context = moo->processor->active->initial_context;

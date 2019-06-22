@@ -1336,6 +1336,7 @@ struct moo_method_cache_item_t
 };
 typedef struct moo_method_cache_item_t moo_method_cache_item_t;
 
+/* it must be a power of 2. otherwise cache hash will fail miserably */
 #define MOO_METHOD_CACHE_SIZE 4096
 
 /* =========================================================================
