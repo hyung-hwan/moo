@@ -1686,7 +1686,7 @@ moo_oop_method_t moo_findmethodinclasschain (moo_t* moo, moo_oop_class_t _class,
 	return mth;
 }
 
-moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, const moo_oocs_t* message, int super)
+static MOO_INLINE moo_oop_method_t find_method_with_str (moo_t* moo, moo_oop_t receiver, const moo_oocs_t* message, int super)
 {
 	moo_oop_class_t _class;
 	moo_oop_class_t c;
@@ -1736,6 +1736,24 @@ not_found:
 	return MOO_NULL;
 }
 
+moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t selector, int super)
+{
+	moo_oocs_t msg;
+	moo_oop_method_t mth;
+	
+	/* find in cache  */
+	msg.ptr = MOO_OBJ_GET_CHAR_SLOT(selector);
+	msg.len = MOO_OBJ_GET_SIZE(selector);
+	
+	mth = find_method_with_str(moo, receiver, &msg, super);
+	if (!mth)
+	{
+		/* cache? */
+	}
+	
+	return mth;
+}
+
 static int start_initial_process_and_context (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname)
 {
 	/* the initial context is a fake context. if objname is 'Stix' and
@@ -1767,7 +1785,7 @@ static int start_initial_process_and_context (moo_t* moo, const moo_oocs_t* objn
 		return -1;
 	}
 
-	mth = moo_findmethod(moo, ass->value, mthname, 0);
+	mth = moo_findmethowithstr(moo, ass->value, mthname, 0);
 	if (!mth) 
 	{
 		MOO_LOG4 (moo, MOO_LOG_DEBUG, "Cannot find a method %.*js>>%.*js", objname->len, objname->ptr, mthname->len, mthname->ptr);
@@ -1790,7 +1808,7 @@ TODO: overcome this problem - accept parameters....
 #else
 	startup.ptr = str_startup;
 	startup.len = 7;
-	mth = moo_findmethod(moo, (moo_oop_t)moo->_system, &startup, 0);
+	mth = find_method_with_str(moo, (moo_oop_t)moo->_system, &startup, 0);
 	if (!mth) 
 	{
 		MOO_LOG0 (moo, MOO_LOG_DEBUG, "Cannot find the startup method in the system class");
@@ -4346,7 +4364,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 
 static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_ooi_t nargs)
 {
-	moo_oocs_t mthname;
+
 	moo_oop_t receiver;
 	moo_oop_method_t method;
 
@@ -4356,9 +4374,7 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_
 
 	receiver = MOO_STACK_GET(moo, moo->sp - nargs);
 
-	mthname.ptr = MOO_OBJ_GET_CHAR_SLOT(selector);
-	mthname.len = MOO_OBJ_GET_SIZE(selector);
-	method = moo_findmethod(moo, receiver, &mthname, to_super);
+	method = moo_findmethod(moo, receiver, selector, to_super);
 	if (!method) 
 	{
 		static moo_ooch_t fbm[] = { 
@@ -4366,10 +4382,12 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, int to_super, moo_
 			'N', 'o', 't',
 			'U', 'n', 'd', 'e', 'r', 's', 't', 'a', 'n', 'd', ':'
 		};
+		moo_oocs_t mthname;
+		
 		mthname.ptr = fbm;
 		mthname.len = 18;
 
-		method = moo_findmethod(moo, receiver, &mthname, 0);
+		method = find_method_with_str(moo, receiver, &mthname, 0);
 		if (!method)
 		{
 			/* this must not happen as long as doesNotUnderstand: is implemented under Apex.
@@ -4406,7 +4424,7 @@ static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow
 
 	mthname.ptr = (moo_ooch_t*)nameptr;
 	mthname.len = namelen;
-	method = moo_findmethod(moo, receiver, &mthname, to_super);
+	method = find_method_with_str(moo, receiver, &mthname, to_super);
 	if (!method)
 	{
 		MOO_LOG4 (moo, MOO_LOG_IC | MOO_LOG_FATAL, 
@@ -4834,7 +4852,7 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 			MOO_STACK_PUSH (moo, (moo_oop_t)unwind_stop);
 			MOO_STACK_PUSH (moo, (moo_oop_t)return_value);
 
-			if (send_message_with_str (moo, fbm, 16, 0, 2) <= -1) return -1;
+			if (send_message_with_str(moo, fbm, 16, 0, 2) <= -1) return -1;
 		}
 		else
 		{
@@ -5555,9 +5573,10 @@ static int __execute (moo_t* moo)
 		handle_send_message:
 			/* get the selector from the literal frame */
 			selector = (moo_oop_char_t)moo->active_method->literal_frame[b2];
+			/* if the compiler is not buggy or the byte code gets corrupted, the selector is guaranteed to be a symbol */
 
 			LOG_INST3 (moo, "send_message%hs %zu @%zu", (((bcode >> 2) & 1)? "_to_super": ""), b1, b2);
-			if (send_message (moo, selector, ((bcode >> 2) & 1), b1) <= -1) return -1;
+			if (send_message(moo, selector, ((bcode >> 2) & 1), b1) <= -1) return -1;
 			NEXT_INST();
 		}
 

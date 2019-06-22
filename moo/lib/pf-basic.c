@@ -798,7 +798,6 @@ moo_pfrc_t moo_pf_is_kind_of (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 moo_pfrc_t moo_pf_responds_to (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, selector;
-	moo_oocs_t mthname;
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	selector = MOO_STACK_GETARG(moo, nargs, 0);
@@ -810,9 +809,7 @@ moo_pfrc_t moo_pf_responds_to (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	mthname.ptr = MOO_OBJ_GET_CHAR_SLOT(selector);
-	mthname.len = MOO_OBJ_GET_SIZE(selector);
-	if (moo_findmethod(moo, rcv, &mthname, 0))
+	if (moo_findmethod(moo, rcv, selector, 0))
 	{
 		MOO_STACK_SETRET (moo, nargs, moo->_true);
 	}

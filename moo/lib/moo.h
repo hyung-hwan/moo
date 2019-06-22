@@ -1322,6 +1322,21 @@ struct moo_finalizable_t
 /* special callback to be called for trailer */
 typedef void (*moo_trgc_t) (moo_t* moo, moo_oop_t obj);
 
+
+/* =========================================================================
+ * MOO METHOD LOOKUP CACHE
+ * ========================================================================= */
+struct moo_method_cache_item_t
+{
+	moo_oop_char_t selector;
+	moo_oop_class_t receiver_class;
+	moo_oop_method_t method;
+	moo_oop_class_t method_class;
+};
+typedef struct moo_method_cache_item_t moo_method_cache_item_t;
+
+#define MOO_METHOD_CACHE_SIZE 4096
+
 /* =========================================================================
  * MOO VM
  * ========================================================================= */
@@ -1576,6 +1591,8 @@ struct moo_t
 		moo_finalizable_t* first;
 		moo_finalizable_t* last;
 	} finalizable;
+
+	moo_method_cache_item_t method_cache[MOO_METHOD_CACHE_SIZE];
 
 	moo_uintmax_t inst_counter;
 	moo_ooi_t last_inst_pointer;
