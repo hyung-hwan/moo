@@ -809,7 +809,7 @@ moo_pfrc_t moo_pf_responds_to (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	if (moo_findmethod(moo, rcv, selector, 0))
+	if (moo_findmethod(moo, rcv, (moo_oop_char_t)selector, 0))
 	{
 		MOO_STACK_SETRET (moo, nargs, moo->_true);
 	}

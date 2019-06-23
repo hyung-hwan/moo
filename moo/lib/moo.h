@@ -1491,7 +1491,11 @@ struct moo_t
 	moo_oop_process_t nil_process; /* instance of Process */
 	moo_oop_char_t dicnewsym; /* symbol new: for dictionary */
 	moo_oop_char_t dicputassocsym; /* symbol put_assoc: for dictionary */
-
+	moo_oop_char_t does_not_understand_sym; /* symbol doesNotUnderstand: */
+	moo_oop_char_t primitive_failed_sym; /* symbol primitiveFailed */
+	moo_oop_char_t unwindto_return_sym; /* symbol unwindTo:return: */
+	
+					
 	/* pending asynchronous semaphores */
 	moo_oop_semaphore_t* sem_list;
 	moo_oow_t sem_list_count;

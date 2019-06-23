@@ -566,7 +566,10 @@ static int ignite_3 (moo_t* moo)
 	static moo_ooch_t str_processor[] = { 'P', 'r', 'o', 'c', 'e', 's', 's', 'o', 'r' };
 	static moo_ooch_t str_dicnew[] = { 'n', 'e', 'w', ':' };
 	static moo_ooch_t str_dicputassoc[] = { '_','_','p', 'u', 't', '_', 'a', 's', 's', 'o', 'c', ':' };
-
+	static moo_ooch_t str_does_not_understand[] = { 'd', 'o', 'e', 's', 'N', 'o', 't', 'U', 'n', 'd', 'e', 'r', 's', 't', 'a', 'n', 'd', ':' };
+	static moo_ooch_t str_primitive_failed[] = {  'p', 'r', 'i', 'm', 'i', 't', 'i', 'v', 'e', 'F', 'a', 'i', 'l', 'e', 'd' };
+	static moo_ooch_t str_unwindto_return[] = { 'u', 'n', 'w', 'i', 'n', 'd', 'T', 'o', ':', 'r', 'e', 't', 'u', 'r', 'n', ':' };
+	
 	moo_oow_t i;
 	moo_oop_t sym;
 	moo_oop_class_t cls;
@@ -602,6 +605,18 @@ static int ignite_3 (moo_t* moo)
 	sym = moo_makesymbol(moo, str_dicputassoc, MOO_COUNTOF(str_dicputassoc));
 	if (!sym) return -1;
 	moo->dicputassocsym = (moo_oop_char_t)sym;
+
+	sym = moo_makesymbol(moo, str_does_not_understand, MOO_COUNTOF(str_does_not_understand));
+	if (!sym) return -1;
+	moo->does_not_understand_sym = (moo_oop_char_t)sym;
+	
+	sym = moo_makesymbol(moo, str_primitive_failed, MOO_COUNTOF(str_primitive_failed));
+	if (!sym) return -1;
+	moo->primitive_failed_sym = (moo_oop_char_t)sym;
+	
+	sym = moo_makesymbol(moo, str_unwindto_return, MOO_COUNTOF(str_unwindto_return));
+	if (!sym) return -1;
+	moo->unwindto_return_sym = (moo_oop_char_t)sym;
 
 	return 0;
 }
@@ -937,6 +952,9 @@ void moo_gc (moo_t* moo)
 	moo->nil_process = (moo_oop_process_t)moo_moveoop(moo, (moo_oop_t)moo->nil_process);
 	moo->dicnewsym = (moo_oop_char_t)moo_moveoop(moo, (moo_oop_t)moo->dicnewsym);
 	moo->dicputassocsym = (moo_oop_char_t)moo_moveoop(moo, (moo_oop_t)moo->dicputassocsym);
+	moo->does_not_understand_sym = (moo_oop_char_t)moo_moveoop(moo, (moo_oop_t)moo->does_not_understand_sym);
+	moo->primitive_failed_sym = (moo_oop_char_t)moo_moveoop(moo, (moo_oop_t)moo->primitive_failed_sym);
+	moo->unwindto_return_sym = (moo_oop_char_t)moo_moveoop(moo, (moo_oop_t)moo->unwindto_return_sym);
 
 	for (i = 0; i < moo->sem_list_count; i++)
 	{

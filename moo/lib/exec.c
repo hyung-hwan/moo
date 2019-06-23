@@ -136,7 +136,6 @@ static MOO_INLINE const char* proc_state_to_string (int state)
 static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, int force);
 static void signal_io_semaphore (moo_t* moo, moo_ooi_t io_handle, moo_ooi_t mask);
 static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, int to_super);
-static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_t namelen, moo_ooi_t nargs);
 
 /* ------------------------------------------------------------------------- */
 static MOO_INLINE int vm_startup (moo_t* moo)
@@ -1686,58 +1685,6 @@ moo_oop_method_t moo_findmethodinclasschain (moo_t* moo, moo_oop_class_t _class,
 	return mth;
 }
 
-static MOO_INLINE moo_oop_method_t find_method_with_str (moo_t* moo, moo_oop_t receiver, const moo_oocs_t* message, int in_super)
-{
-	/* this function should be the same as moo_findmethod() mostly except cache management.
-	 * this function can get removed if the callers create a symbol before look-up.  TODO: << */
-	moo_oop_class_t _class;
-	moo_oop_class_t c;
-	int mth_type;
-	moo_oop_method_t mth;
-
-	_class = MOO_CLASSOF(moo, receiver);
-	if (_class == moo->_class)
-	{
-		/* receiver is a class object (an instance of Class) */
-		c = (moo_oop_class_t)receiver; 
-		mth_type = MOO_METHOD_CLASS;
-	}
-	else
-	{
-		/* receiver is not a class object. so take its class */
-		c = _class;
-		mth_type = MOO_METHOD_INSTANCE;
-	}
-	MOO_ASSERT (moo, (moo_oop_t)c != moo->_nil);
-
-	if (in_super) 
-	{
-		MOO_ASSERT (moo, moo->active_method);
-		MOO_ASSERT (moo, moo->active_method->owner);
-		c = (moo_oop_class_t)((moo_oop_class_t)moo->active_method->owner)->superclass;
-		if ((moo_oop_t)c == moo->_nil) goto not_found;
-		/* c is nil if it reached the top of the hierarchy.
-		 * otherwise c points to a class object */
-	}
-
-	/* [IMPORT] the method lookup logic should be the same as ciim_on_each_method() in comp.c */
-	mth = find_method_in_class_chain(moo, c, mth_type, message);
-	if (mth) return mth;
-
-not_found:
-	if (_class == moo->_class)
-	{
-		/* the object is an instance of Class. find the method
-		 * in an instance method dictionary of Class also */
-		mth = find_method_in_class(moo, _class, MOO_METHOD_INSTANCE, message);
-		if (mth) return mth;
-	}
-
-	MOO_LOG3 (moo, MOO_LOG_DEBUG, "Method '%.*js' not found in receiver %O\n", message->len, message->ptr, receiver);
-	moo_seterrbfmt (moo, MOO_ENOENT, "unable to find the method '%.*js' in %O", message->len, message->ptr, receiver);
-	return MOO_NULL;
-}
-
 moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t selector, int in_super)
 {
 	moo_oop_class_t _class;
@@ -1836,8 +1783,8 @@ not_found:
 		}
 	}
 
-	MOO_LOG3 (moo, MOO_LOG_DEBUG, "Method '%.*js' not found in receiver %O\n", message.len, message.ptr, receiver);
-	moo_seterrbfmt (moo, MOO_ENOENT, "unable to find the method '%.*js' in %O", message.len, message.ptr, receiver);
+	MOO_LOG4 (moo, MOO_LOG_DEBUG, "Method '%O>>%.*js' not found in receiver %O\n", _class, message.len, message.ptr, receiver);
+	moo_seterrbfmt (moo, MOO_ENOENT, "unable to find the method '%O>>%.*js' in %O", _class, message.len, message.ptr, receiver);
 	return MOO_NULL;
 }
 
@@ -1858,29 +1805,38 @@ static int start_initial_process_and_context (moo_t* moo, const moo_oocs_t* objn
 	moo_oop_context_t ctx;
 	moo_oop_method_t mth;
 	moo_oop_process_t proc;
+	moo_oow_t tmp_count = 0;
+	moo_oop_t sym_startup;
+	
 #if defined(INVOKE_DIRECTLY)
 	moo_oop_association_t ass;
 #else
 	moo_oop_t s1, s2;
-#endif
-	moo_oow_t tmp_count = 0;
-
-	moo_oocs_t startup;
 	static moo_ooch_t str_startup[] = { 's', 't', 'a', 'r', 't', 'u', 'p' };
+#endif
+
 
 #if defined(INVOKE_DIRECTLY)
-
 	ass = moo_lookupsysdic(moo, objname);
 	if (!ass || MOO_CLASSOF(moo, ass->value) != moo->_class) 
 	{
 		MOO_LOG2 (moo, MOO_LOG_DEBUG, "Cannot find a class '%.*js'", objname->len, objname->ptr);
 		return -1;
 	}
+	
+	sym_statup = moo_findsymbol(moo, mthname->ptr, mthname->len;
+	if (!sym_startup)
+	{
+		/* the method name should exist as a symbol in the system.
+		 * otherwise, a method of such a name also doesn't exist */
+		MOO_LOG4 (moo, MOO_LOG_DEBUG, "Cannot find a startup method symbol %.*js>>%.*js", objname->len, objname->ptr, mthname->len, mthname->ptr);
+		goto oops;
+	}
 
-	mth = moo_findmethowithstr(moo, ass->value, mthname, 0);
+	mth = moo_findmethod(moo, moo, ass->value, sym_startup, 0);
 	if (!mth) 
 	{
-		MOO_LOG4 (moo, MOO_LOG_DEBUG, "Cannot find a method %.*js>>%.*js", objname->len, objname->ptr, mthname->len, mthname->ptr);
+		MOO_LOG4 (moo, MOO_LOG_DEBUG, "Cannot find a startup method %.*js>>%.*js", objname->len, objname->ptr, mthname->len, mthname->ptr);
 		return -1;
 	}
 
@@ -1898,9 +1854,16 @@ TODO: overcome this problem - accept parameters....
 	moo_pushvolat (moo, (moo_oop_t*)&mth); tmp_count++;
 	moo_pushvolat (moo, (moo_oop_t*)&ass); tmp_count++;
 #else
-	startup.ptr = str_startup;
-	startup.len = 7;
-	mth = find_method_with_str(moo, (moo_oop_t)moo->_system, &startup, 0);
+	sym_startup = moo_findsymbol(moo, str_startup, MOO_COUNTOF(str_startup));
+	if (!sym_startup)
+	{
+		/* the method name should exist as a symbol in the system.
+		 * otherwise, a method of such a name also doesn't exist */
+		MOO_LOG0 (moo, MOO_LOG_DEBUG, "Cannot find the startup method name symbol in the system class");
+		goto oops;
+	}
+
+	mth = moo_findmethod(moo, (moo_oop_t)moo->_system, (moo_oop_char_t)sym_startup, 0);
 	if (!mth) 
 	{
 		MOO_LOG0 (moo, MOO_LOG_DEBUG, "Cannot find the startup method in the system class");
@@ -1931,7 +1894,6 @@ TODO: overcome this problem - accept parameters....
 	if (!ctx) goto oops;
 
 	moo_pushvolat (moo, (moo_oop_t*)&ctx); tmp_count++;
-
 
 /* TODO: handle preamble */
 
@@ -4402,11 +4364,6 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 		#endif
 			{
 				/* no byte code to execute - invoke 'self primitiveFailed' */
-
-				static moo_ooch_t prim_fail_msg[] = { 
-					'p', 'r', 'i', 'm', 'i', 't', 'i', 'v', 'e', 
-					'F', 'a', 'i', 'l', 'e', 'd'
-				};
 				moo_oow_t i;
 
 				if (stack_base != moo->sp - nargs - 1)
@@ -4432,12 +4389,12 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				MOO_STACK_SET (moo, stack_base + 2, (moo_oop_t)method);
 
 				/* send primitiveFailed to self */
-				if (send_message_with_str (moo, prim_fail_msg, 15, nargs + 1) <= -1) return -1;
+				if (send_message(moo, moo->primitive_failed_sym, nargs + 1, 0) <= -1) return -1;
 			}
 			else
 			{
 				/* arrange to execute the method body */
-				if (activate_new_method (moo, method, nargs) <= -1) return -1;
+				if (activate_new_method(moo, method, nargs) <= -1) return -1;
 			}
 			break;
 		}
@@ -4447,7 +4404,7 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			                 preamble_code == MOO_METHOD_PREAMBLE_RETURN_CONTEXT ||
 			                 preamble_code == MOO_METHOD_PREAMBLE_EXCEPTION ||
 			                 preamble_code == MOO_METHOD_PREAMBLE_ENSURE);
-			if (activate_new_method (moo, method, nargs) <= -1) return -1;
+			if (activate_new_method(moo, method, nargs) <= -1) return -1;
 			break;
 	}
 
@@ -4468,27 +4425,18 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, i
 
 	method = moo_findmethod(moo, receiver, selector, to_super);
 	if (!method) 
-	{
-		static moo_ooch_t fbm[] = { 
-			'd', 'o', 'e', 's', 
-			'N', 'o', 't',
-			'U', 'n', 'd', 'e', 'r', 's', 't', 'a', 'n', 'd', ':'
-		};
-		moo_oocs_t mthname;
-		
-		mthname.ptr = fbm;
-		mthname.len = 18;
-
-		method = find_method_with_str(moo, receiver, &mthname, 0);
+	{	
+		method = moo_findmethod(moo, receiver, moo->does_not_understand_sym, 0);
 		if (!method)
 		{
 			/* this must not happen as long as doesNotUnderstand: is implemented under Apex.
 			 * this check should indicate a very serious internal problem */
 			MOO_LOG4 (moo, MOO_LOG_IC | MOO_LOG_FATAL, 
-				"Fatal error - receiver [%O] of class [%O] does not understand a message [%.*js]\n", 
-				receiver, MOO_CLASSOF(moo, receiver), mthname.len, mthname.ptr);
-
-			moo_seterrnum (moo, MOO_EMSGSND);
+				"Fatal error - unable to find a fallback method [%O<<%.*js] for receiver [%O]\n", 
+				MOO_CLASSOF(moo, receiver), MOO_OBJ_GET_SIZE(moo->does_not_understand_sym), MOO_OBJ_GET_CHAR_SLOT(moo->does_not_understand_sym), receiver);
+			
+			moo_seterrbfmt (moo, MOO_EMSGSND, "unable to find a fallback method - %O<<%.*js",
+				MOO_CLASSOF(moo, receiver), MOO_OBJ_GET_SIZE(moo->does_not_understand_sym), MOO_OBJ_GET_CHAR_SLOT(moo->does_not_understand_sym));
 			return -1;
 		}
 		else
@@ -4503,30 +4451,7 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, i
 		}
 	}
 
-	return start_method (moo, method, nargs);
-}
-
-static int send_message_with_str (moo_t* moo, const moo_ooch_t* nameptr, moo_oow_t namelen, moo_ooi_t nargs)
-{
-	moo_oocs_t mthname;
-	moo_oop_t receiver;
-	moo_oop_method_t method;
-
-	receiver = MOO_STACK_GET(moo, moo->sp - nargs);
-
-	mthname.ptr = (moo_ooch_t*)nameptr;
-	mthname.len = namelen;
-	method = find_method_with_str(moo, receiver, &mthname, 0);
-	if (!method)
-	{
-		MOO_LOG4 (moo, MOO_LOG_IC | MOO_LOG_FATAL, 
-			"Fatal error - receiver [%O] of class [%O] does not understand a private message [%.*js]\n", 
-			receiver, MOO_CLASSOF(moo, receiver), mthname.len, mthname.ptr);
-		moo_seterrnum (moo, MOO_EMSGSND);
-		return -1;
-	}
-
-	return start_method (moo, method, nargs);
+	return start_method(moo, method, nargs);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -4935,16 +4860,12 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 
 		if (unwind_protect)
 		{
-			static moo_ooch_t fbm[] = { 
-				'u', 'n', 'w', 'i', 'n', 'd', 'T', 'o', ':', 
-				'r', 'e', 't', 'u', 'r', 'n', ':'
-			};
-
+			/* if ensure: is used over a non-local return, it should reach here.
+			 *   [^10] ensure: [...] */
 			MOO_STACK_PUSH (moo, (moo_oop_t)unwind_start);
 			MOO_STACK_PUSH (moo, (moo_oop_t)unwind_stop);
 			MOO_STACK_PUSH (moo, (moo_oop_t)return_value);
-
-			if (send_message_with_str(moo, fbm, 16, 2) <= -1) return -1;
+			if (send_message(moo, moo->unwindto_return_sym, 2, 0) <= -1) return -1;
 		}
 		else
 		{
