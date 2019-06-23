@@ -1330,9 +1330,9 @@ struct moo_method_cache_item_t
 {
 	moo_oop_char_t selector;
 	moo_oop_class_t receiver_class;
-	int method_type;
 	moo_oop_method_t method;
-	moo_oop_class_t method_class;
+	/*int method_type;
+	moo_oop_class_t method_class;*/
 };
 typedef struct moo_method_cache_item_t moo_method_cache_item_t;
 
@@ -1598,7 +1598,7 @@ struct moo_t
 		moo_finalizable_t* last;
 	} finalizable;
 
-	moo_method_cache_item_t method_cache[MOO_METHOD_CACHE_SIZE];
+	moo_method_cache_item_t method_cache[2][MOO_METHOD_CACHE_SIZE];
 
 	moo_uintmax_t inst_counter;
 	moo_ooi_t last_inst_pointer;
