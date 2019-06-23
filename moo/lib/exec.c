@@ -152,7 +152,7 @@ static MOO_INLINE int vm_startup (moo_t* moo)
 	moo->sem_gcfin = (moo_oop_semaphore_t)moo->_nil;
 	moo->sem_gcfin_sigreq = 0;
 
-	if (moo->vmprim.vm_startup (moo) <= -1) return -1;
+	if (moo->vmprim.vm_startup(moo) <= -1) return -1;
 	moo->vmprim.vm_gettime (moo, &moo->exec_start_time); /* raw time. no adjustment */
 
 	return 0;
@@ -775,7 +775,7 @@ static int async_signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 		moo_oop_semaphore_t* tmp;
 
 		new_capa = moo->sem_list_capa + SEM_LIST_INC; /* TODO: overflow check.. */
-		tmp = moo_reallocmem(moo, moo->sem_list, MOO_SIZEOF(moo_oop_semaphore_t) * new_capa);
+		tmp = (moo_oop_semaphore_t*)moo_reallocmem(moo, moo->sem_list, MOO_SIZEOF(moo_oop_semaphore_t) * new_capa);
 		if (!tmp) return -1;
 
 		moo->sem_list = tmp;
@@ -1729,9 +1729,9 @@ moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t 
 	mcidx &= (MOO_METHOD_CACHE_SIZE - 1);*/
 	/*mcidx = ((moo_oow_t)c + (moo_oow_t)selector) % MOO_METHOD_CACHE_SIZE; */
 	mcidx = ((moo_oow_t)_class ^ (moo_oow_t)selector) & (MOO_METHOD_CACHE_SIZE - 1);
-	mcitm = &moo->method_cache[mcidx];
+	mcitm = &moo->method_cache[mth_type][mcidx];
 	
-	if (mcitm->receiver_class == c  && mcitm->selector == selector && mcitm->method_type == mth_type)
+	if (mcitm->receiver_class == c  && mcitm->selector == selector /*&& mcitm->method_type == mth_type*/)
 	{
 		/* cache hit */
 		/* TODO: moo->method_cache_hits++; */
@@ -1745,7 +1745,7 @@ moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t 
 		/* TODO: moo->method_cache_misses++; */
 		mcitm->receiver_class = c;
 		mcitm->selector = selector;
-		mcitm->method_type = mth_type;
+		/*mcitm->method_type = mth_type;*/
 		mcitm->method = mth;
 		return mth;
 	}
@@ -1762,9 +1762,9 @@ not_found:
 		mcidx &= (MOO_METHOD_CACHE_SIZE - 1); */
 		/* mcidx = ((moo_oow_t)_class + (moo_oow_t)selector) % MOO_METHOD_CACHE_SIZE; */
 		mcidx = ((moo_oow_t)_class ^ (moo_oow_t)selector) & (MOO_METHOD_CACHE_SIZE - 1);
-		mcitm = &moo->method_cache[mcidx];
+		mcitm = &moo->method_cache[MOO_METHOD_INSTANCE][mcidx];
 
-		if (mcitm->receiver_class == _class  && mcitm->selector == selector && mcitm->method_type == MOO_METHOD_INSTANCE)
+		if (mcitm->receiver_class == _class  && mcitm->selector == selector /*&& mcitm->method_type == MOO_METHOD_INSTANCE*/)
 		{
 			/* cache  hit */
 			/* TODO: moo->method_cache_hits++; */
@@ -1777,7 +1777,7 @@ not_found:
 			/* TODO: moo->method_cache_misses++; */
 			mcitm->receiver_class = c;
 			mcitm->selector = selector;
-			mcitm->method_type = MOO_METHOD_INSTANCE;
+			/*mcitm->method_type = MOO_METHOD_INSTANCE;*/
 			mcitm->method = mth;
 			return mth;
 		}
@@ -2286,7 +2286,7 @@ static moo_pfrc_t pf_block_value (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv_blkctx = (moo_oop_context_t)MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv_blkctx) == moo->_block_context);
 
-	x = __block_value (moo, rcv_blkctx, nargs, 0, &blkctx);
+	x = __block_value(moo, rcv_blkctx, nargs, 0, &blkctx);
 	if (x <= MOO_PF_FAILURE) return x; /* hard failure and soft failure */
 
 	SWITCH_ACTIVE_CONTEXT (moo, (moo_oop_context_t)blkctx);
@@ -2332,9 +2332,9 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t na
 	/* this primitive creates a new process with a block as if the block
 	 * is sent the value message */
 #if 0
-	x = __block_value (moo, rcv_blkctx, nargs, num_first_arg_elems, &blkctx);
+	x = __block_value(moo, rcv_blkctx, nargs, num_first_arg_elems, &blkctx);
 #else
-	x = __block_value (moo, rcv_blkctx, nargs, 0, &blkctx);
+	x = __block_value(moo, rcv_blkctx, nargs, 0, &blkctx);
 #endif
 	if (x <= 0) return x; /* both hard failure and soft failure */
 
@@ -2847,7 +2847,7 @@ static moo_pfrc_t pf_semaphore_group_wait (moo_t* moo, moo_mod_t* mod, moo_ooi_t
 	 * the stack from this moment on. */
 	MOO_STACK_SETRETTORCV (moo, nargs);
 
-	sem = await_semaphore_group (moo, (moo_oop_semaphore_group_t)rcv);
+	sem = await_semaphore_group(moo, (moo_oop_semaphore_group_t)rcv);
 	if (sem != moo->_nil)
 	{
 		/* there was a signaled semaphore. the active process won't get
