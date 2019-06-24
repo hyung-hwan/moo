@@ -1868,20 +1868,16 @@ MOO_EXPORT void moo_fini (
 );
 
 #if defined(MOO_HAVE_INLINE)
-	static MOO_INLINE moo_mmgr_t* moo_getmmgr (moo_t* moo) { return moo->_mmgr; }
-	static MOO_INLINE void* moo_getxtn (moo_t* moo) { return (void*)((moo_uint8_t*)moo + moo->_instsize); }
-
-	static MOO_INLINE moo_cmgr_t* moo_getcmgr (moo_t* moo) { return moo->_cmgr; }
-	static MOO_INLINE void moo_setcmgr (moo_t* moo, moo_cmgr_t* cmgr) { moo->_cmgr = cmgr; }
-
-	static MOO_INLINE moo_errnum_t moo_geterrnum (moo_t* moo) { return moo->errnum; }
+static MOO_INLINE void* moo_getxtn (moo_t* moo) { return (void*)((moo_uint8_t*)moo + moo->_instsize); }
+static MOO_INLINE moo_mmgr_t* moo_getmmgr (moo_t* moo) { return moo->_mmgr; }
+static MOO_INLINE moo_cmgr_t* moo_getcmgr (moo_t* moo) { return moo->_cmgr; }
+static MOO_INLINE void moo_setcmgr (moo_t* moo, moo_cmgr_t* cmgr) { moo->_cmgr = cmgr; }
+static MOO_INLINE moo_errnum_t moo_geterrnum (moo_t* moo) { return moo->errnum; }
 #else
-#	define moo_getmmgr(moo) (((moo_t*)(moo))->_mmgr)
 #	define moo_getxtn(moo) ((void*)((moo_uint8_t*)moo + ((moo_t*)moo)->_instsize))
-
+#	define moo_getmmgr(moo) (((moo_t*)(moo))->_mmgr)
 #	define moo_getcmgr(moo) (((moo_t*)(moo))->_cmgr)
 #	define moo_setcmgr(moo,cmgr) (((moo_t*)(moo))->_cmgr = (cmgr))
-
 #	define moo_geterrnum(moo) (((moo_t*)(moo))->errnum)
 #endif
 
