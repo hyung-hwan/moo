@@ -61,8 +61,8 @@ class(#pointer,#final,#limited) MethodContext(Context)
 		self.ip := anInteger.
 	}
 
-	## it is similar to the pc: method but it doesn't 
-	## push the return value to the stack.
+	// it is similar to the pc: method but it doesn't 
+	// push the return value to the stack.
 	method(#primitive) goto: pc.
 
 	method sp
@@ -111,18 +111,18 @@ class(#pointer,#final,#limited) BlockContext(Context)
 		^self.home vargAt: index
 	}
 
-## TODO: how can i pass variadic arguments to newProcess
-## method(#variadic) fork() -> how to pass them to newProcess???
+// TODO: how can i pass variadic arguments to newProcess
+// method(#variadic) fork() -> how to pass them to newProcess???
 	method fork 
 	{
-		## crate a new process in the runnable state
+		// crate a new process in the runnable state
 		^self newProcess resume.
 	}
 
-	## create a new process in the suspended state
+	// create a new process in the suspended state
 	method(#variadic,#primitive) newProcess().
 
-	## evaluate the block
+	// evaluate the block
 	method(#variadic,#primitive) value().
 
 	method value: a 
@@ -154,19 +154,19 @@ class(#pointer,#final,#limited) BlockContext(Context)
 
 	method ifTrue: aBlock
 	{
-		##^(self value) ifTrue: aBlock.
+		//^(self value) ifTrue: aBlock.
 		^if (self value) { aBlock value }.
 	}
 
 	method ifFalse: aBlock
 	{
-		##^(self value) ifFalse: aBlock.
+		//^(self value) ifFalse: aBlock.
 		^if (self value) { /* nothing */ } else { aBlock value }.
 	}
 
 	method ifTrue: trueBlock ifFalse: falseBlock
 	{
-		##^(self value) ifTrue: trueBlock ifFalse: falseBlock
+		//^(self value) ifTrue: trueBlock ifFalse: falseBlock
 		^if (self value) { trueBlock value } else { falseBlock value }.
 	}
 
@@ -254,7 +254,7 @@ class(#pointer,#final,#limited) BlockContext(Context)
 		 * --------------------------------------------------
 		| pc |
 		pc := thisContext pcplus1.
-		(self value) ifTrue: [ ^nil ]. ## ^self
+		(self value) ifTrue: [ ^nil ]. // ^self
 		aBlock value.
 		thisContext goto: pc.
 		 * -------------------------------------------------- */
@@ -279,7 +279,7 @@ class(#pointer,#final,#limited) BlockContext(Context)
 		 * -------------------------------------------------- 
 		| pc |
 		pc := thisContext pcplus1.
-		(self value) ifTrue: [ ^nil ]. ## ^self
+		(self value) ifTrue: [ ^nil ]. // ^self
 		thisContext goto: pc.
 		* -------------------------------------------------- */
 		while ((self value) == false) { }.
@@ -314,7 +314,7 @@ class(#pointer,#final,#limited) BlockContext(Context)
 
 class(#pointer) CompiledMethod(Object)
 {
-	## var owner, name, preamble, preamble_data_1, preamble_data_2, ntmprs, nargs, code, source.
+	// var owner, name, preamble, preamble_data_1, preamble_data_2, ntmprs, nargs, code, source.
 	var owner, name, preamble, preamble_data_1, preamble_data_2, ntmprs, nargs, source.
 
 	method preamble

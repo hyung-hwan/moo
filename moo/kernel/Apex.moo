@@ -19,7 +19,7 @@ class(#limited) Error(Apex)
 		ERANGE   := #\E20.
 
 		ELIMIT  := #\E9999.
-		## add more items...
+		// add more items...
 	}
 }
 
@@ -39,7 +39,7 @@ pooldic Error.Code
 	ERANGE   := #\E20.
 
 	ELIMIT  := #\E9999.
-## add more items... 
+// add more items... 
 } */
 
 /*pooldic Error.Code2 
@@ -54,20 +54,20 @@ pooldic Error.Code
 
 extend Apex
 {
-	## -------------------------------------------------------
-	## -------------------------------------------------------
+	// -------------------------------------------------------
+	// -------------------------------------------------------
 	method(#dual) dump
 	{
 		<primitive: #_dump>
 	}
 
-	## -------------------------------------------------------
-	## -------------------------------------------------------
+	// -------------------------------------------------------
+	// -------------------------------------------------------
 	method(#dual) yourself { ^self }
 
-	## -------------------------------------------------------
-	## INSTANTIATION & INITIALIZATION
-	## -------------------------------------------------------
+	// -------------------------------------------------------
+	// INSTANTIATION & INITIALIZATION
+	// -------------------------------------------------------
 	method(#class,#primitive,#lenient) _basicNew.
 	method(#class,#primitive,#lenient) _basicNew: size.
 
@@ -90,7 +90,7 @@ extend Apex
 	{
 		| x |
 		x := self basicNew.
-		x initialize. ## TODO: assess if it's good to call 'initialize' from new
+		x initialize. // TODO: assess if it's good to call 'initialize' from new
 		^x.
 	}
 
@@ -98,7 +98,7 @@ extend Apex
 	{
 		| x |
 		x := self basicNew: anInteger.
-		x initialize. ## TODO: assess if it's good to call 'initialize' from new.
+		x initialize. // TODO: assess if it's good to call 'initialize' from new.
 		^x.
 	}
 
@@ -108,15 +108,15 @@ extend Apex
 		^self.
 	}
 
-	## -------------------------------------------------------
-	## -------------------------------------------------------
+	// -------------------------------------------------------
+	// -------------------------------------------------------
 	method(#dual,#primitive,#lenient) _shallowCopy.
 	method(#dual,#primitive) shallowCopy.
-	method(#dual,#primitive,#lenient) _copy. ## alias to _shallowCopy
-	method(#dual,#primitive) copy. ## alias to shallowCopy
+	method(#dual,#primitive,#lenient) _copy. // alias to _shallowCopy
+	method(#dual,#primitive) copy. // alias to shallowCopy
 
-	## -------------------------------------------------------
-	## -------------------------------------------------------
+	// -------------------------------------------------------
+	// -------------------------------------------------------
 	method(#dual,#primitive,#lenient) _basicSize.
 	method(#dual,#primitive) basicSize.
 
@@ -148,8 +148,8 @@ extend Apex
 	 * IDENTITY TEST
 	 * ------------------------------------------------------------------ */
 
-	## check if the receiver is identical to anObject.
-	## this doesn't compare the contents 
+	// check if the receiver is identical to anObject.
+	// this doesn't compare the contents 
 	method(#dual, #primitive) == anObject.
 
 	method(#dual) ~~ anObject
@@ -182,14 +182,14 @@ extend Apex
 
 	method(#dual) isNil
 	{
-		## ^self == nil.
+		// ^self == nil.
 		^false
 	}
 
 	method(#dual) notNil
 	{
-		## ^(self == nil) not
-		## ^self ~= nil.
+		// ^(self == nil) not
+		// ^self ~= nil.
 		^true.
 	}
 	
@@ -203,8 +203,8 @@ extend Apex
 		^true
 	}
 
-	## -------------------------------------------------------
-	## -------------------------------------------------------
+	// -------------------------------------------------------
+	// -------------------------------------------------------
 
 	method(#class) inheritsFrom: aClass
 	{
@@ -242,13 +242,13 @@ extend Apex
 		^(self isMemberOf: aClass) or: [self class inheritsFrom: aClass].
 	}
 
-	## -------------------------------------------------------
-	## -------------------------------------------------------
+	// -------------------------------------------------------
+	// -------------------------------------------------------
 
 	method(#dual,#primitive) respondsTo: selector.
 
-	## -------------------------------------------------------
-	## -------------------------------------------------------
+	// -------------------------------------------------------
+	// -------------------------------------------------------
 
 	method(#dual,#variadic,#primitive) perform(selector).
 
@@ -306,10 +306,10 @@ class UndefinedObject(Apex)
 
 	method handleException: exception
 	{
-		('### EXCEPTION NOT HANDLED #### ' &  exception class name & ' - ' & exception messageText) dump.
-		## TODO: debug the current process???? "
-## TODO: ensure to execute ensure blocks as well....
-		####Processor activeProcess terminate.
+		('//# EXCEPTION NOT HANDLED //// ' &  exception class name & ' - ' & exception messageText) dump.
+		// TODO: debug the current process???? "
+// TODO: ensure to execute ensure blocks as well....
+		////Processor activeProcess terminate.
 	}
 }
 
@@ -362,28 +362,28 @@ extend Error
 			exctx := (exctx sender) findExceptionContext.
 		}.
 
-		## -----------------------------------------------------------------
-		## FATAL ERROR - no exception handler.
-		## -----------------------------------------------------------------
-		##thisContext unwindTo: nil return: nil.
-		##thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
+		// -----------------------------------------------------------------
+		// FATAL ERROR - no exception handler.
+		// -----------------------------------------------------------------
+		//thisContext unwindTo: nil return: nil.
+		//thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
 		
-## TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
+// TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
 System logNl: '== BACKTRACE =='.
 ctx := thisContext.
 while (ctx notNil)
 {
 	if (ctx class == MethodContext) { System logNl: (' ' & ctx method owner name & '>>' & ctx method name) }.
-	## TODO: include blockcontext???
+	// TODO: include blockcontext???
 	ctx := ctx sender.
 }.
 System logNl: '== END OF BACKTRACE =='.
 
 		thisContext unwindTo: (thisProcess initialContext) return: nil.
-		('### ERROR NOT HANDLED #### ' & self class name & ' - ' & self asString) dump.
-		## TODO: debug the current process???? "
+		('//# ERROR NOT HANDLED //// ' & self class name & ' - ' & self asString) dump.
+		// TODO: debug the current process???? "
 
-		##Processor activeProcess terminate.
+		//Processor activeProcess terminate.
 		thisProcess terminate.
 	}
 }

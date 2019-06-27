@@ -1,12 +1,12 @@
-## TODO: consider if System can replace Apex itself.
-##       System, being the top class, seems to give very natural way of 
-##       offering global system-level functions and interfaces.
-##
-##           class System(nil) { ... }
-##           class Object(System) { .... }
-##           System at:  #
-##           System logNl: 'xxxxx'.
-##           System getUint8(ptr,offset)
+// TODO: consider if System can replace Apex itself.
+//       System, being the top class, seems to give very natural way of 
+//       offering global system-level functions and interfaces.
+//
+//           class System(nil) { ... }
+//           class Object(System) { .... }
+//           System at:  #
+//           System logNl: 'xxxxx'.
+//           System getUint8(ptr,offset)
 
 class System(Apex)
 {
@@ -14,10 +14,10 @@ class System(Apex)
 
 	pooldic Log
 	{
-		## -----------------------------------------------------------
-		## defines log levels
-		## these items must follow defintions in moo.h
-		## -----------------------------------------------------------
+		// -----------------------------------------------------------
+		// defines log levels
+		// these items must follow defintions in moo.h
+		// -----------------------------------------------------------
 
 		DEBUG := 1.
 		INFO  := 2.
@@ -47,19 +47,19 @@ class System(Apex)
 
 		self.asyncsg := SemaphoreGroup new.
 
-		class := self at: class_name. ## System at: class_name.
+		class := self at: class_name. // System at: class_name.
 		if (class isError)
 		{
 			self error: ('Cannot find the class - ' & class_name).
 		}.
 
-		## start the gc finalizer process
+		// start the gc finalizer process
 		[ self __gc_finalizer ] fork.
 
-		## TODO: change the method signature to variadic and pass extra arguments to perform???
+		// TODO: change the method signature to variadic and pass extra arguments to perform???
 		ret := class perform: method_name.
 
-		#### System logNl: '======= END of startup ==============='.
+		//// System logNl: '======= END of startup ==============='.
 		^ret.
 	}
 
@@ -77,14 +77,14 @@ class System(Apex)
 			{
 				while ((tmp := self _popCollectable) notError)
 				{
-					## TODO: Do i have to protected this in an exception handler???
+					// TODO: Do i have to protected this in an exception handler???
 					if (tmp respondsTo: #finalize) { tmp finalize }.
 				}.
 
-				##if (Processor total_count == 1)
+				//if (Processor total_count == 1)
 				if (Processor should_exit)
 				{
-					## exit from this loop when there are no other processes running except this finalizer process
+					// exit from this loop when there are no other processes running except this finalizer process
 					if (gc) 
 					{ 
 						System logNl: 'Exiting the GC finalization process ' & (thisProcess id) asString.
@@ -100,10 +100,10 @@ class System(Apex)
 					gc := false.
 				}.
 
-				##System logNl: '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^gc_waiting....'.
-				##System sleepForSecs: 1. ## TODO: wait on semaphore instead..
+				//System logNl: '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^gc_waiting....'.
+				//System sleepForSecs: 1. // TODO: wait on semaphore instead..
 				gcfin_sem wait.
-				##System logNl: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX gc_waitED....'.
+				//System logNl: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX gc_waitED....'.
 			}
 		] ensure: [
 			gcfin_sem unsignal.
@@ -116,12 +116,12 @@ class System(Apex)
 	method(#class,#primitive) gc.
 	method(#class,#primitive) return: object to: context.
 
-	## =======================================================================================
+	// =======================================================================================
 	method(#class) sleepForSecs: secs
 	{
-		## -----------------------------------------------------
-		## put the calling process to sleep for given seconds.
-		## -----------------------------------------------------
+		// -----------------------------------------------------
+		// put the calling process to sleep for given seconds.
+		// -----------------------------------------------------
 		| s |
 		s := Semaphore new.
 		s signalAfterSecs: secs.
@@ -130,20 +130,20 @@ class System(Apex)
 
 	method(#class) sleepForSecs: secs nanosecs: nanosecs
 	{
-		## -----------------------------------------------------
-		## put the calling process to sleep for given seconds.
-		## -----------------------------------------------------
+		// -----------------------------------------------------
+		// put the calling process to sleep for given seconds.
+		// -----------------------------------------------------
 		| s |
 		s := Semaphore new.
 		s signalAfterSecs: secs nanosecs: nanosecs.
 		s wait.
 	}
 
-	## the following methods may not look suitable to be placed
-	## inside a system dictionary. but they are here for quick and dirty
-	## output production from the moo code.
-	##   System logNl: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'.
-	##
+	// the following methods may not look suitable to be placed
+	// inside a system dictionary. but they are here for quick and dirty
+	// output production from the moo code.
+	//   System logNl: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'.
+	//
 	method(#class,#variadic,#primitive) log(level,msg1).
 
 /*
@@ -156,30 +156,30 @@ TODO: how to pass all variadic arguments to another variadic methods???
 	method(#class) atLevel: level log: message
 	{
 		<primitive: #System_log>
-		## do nothing upon logging failure
+		// do nothing upon logging failure
 	}
 
 	method(#class) atLevel: level log: message and: message2
 	{
 		<primitive: #System_log>
-		## do nothing upon logging failure
+		// do nothing upon logging failure
 	}
 
 	method(#class) atLevel: level log: message and: message2 and: message3
 	{
 		<primitive: #System_log>
-		## do nothing upon logging failure
+		// do nothing upon logging failure
 	}
 
 	method(#class) atLevel: level logNl: message 
 	{
-		## the #_log primitive accepts an array.
-		## so the following lines should work also.
-		## | x |
-		## x := Array new: 2.
-		## x at: 0 put: message.
-		## x at: 1 put: S'\n'.
-		## ^self atLevel: level log: x.
+		// the #_log primitive accepts an array.
+		// so the following lines should work also.
+		// | x |
+		// x := Array new: 2.
+		// x at: 0 put: message.
+		// x at: 1 put: S'\n'.
+		// ^self atLevel: level log: x.
 
 		^self atLevel: level log: message and: S'\n'.
 	}
@@ -235,11 +235,11 @@ TODO: how to pass all variadic arguments to another variadic methods???
 	method(#class,#primitive) free: rawptr.
 
 	/* raw memory access */
-	method(#class,#primitive) getInt8   (rawptr, offset). ## <primitive: #System__getInt8>
+	method(#class,#primitive) getInt8   (rawptr, offset). // <primitive: #System__getInt8>
 	method(#class,#primitive) getInt16  (rawptr, offset).
 	method(#class,#primitive) getInt32  (rawptr, offset).
 	method(#class,#primitive) getInt64  (rawptr, offset).
-	method(#class,#primitive) getUint8  (rawptr, offset). ## <primitive: #System__getUint8>
+	method(#class,#primitive) getUint8  (rawptr, offset). // <primitive: #System__getUint8>
 	method(#class,#primitive) getUint16 (rawptr, offset).
 	method(#class,#primitive) getUint32 (rawptr, offset).
 	method(#class,#primitive) getUint64 (rawptr, offset).

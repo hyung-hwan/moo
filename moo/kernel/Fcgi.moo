@@ -1,4 +1,4 @@
-###include 'Moo.moo'.
+//#include 'Moo.moo'.
 #include 'Socket.moo'.
 
 /* -------------------------------------------
@@ -219,7 +219,7 @@ class Fcgi.ParamRecord(Fcgi.Record)
 
 		if (aString notNil)
 		{
-### TODO: implement this...
+//# TODO: implement this...
 /*
 			(aString subStrings: %(char)) do: [:each | 
 				equal := each indexOf: $=.
@@ -288,7 +288,7 @@ class FcgiConnReg(Object)
 	method initialize
 	{
 		| i size |
-		self.connections := Array new: 32. ## TODO: make it dynamic
+		self.connections := Array new: 32. // TODO: make it dynamic
 
 		i := self.connections size.
 		if (i <= 0) 
@@ -336,9 +336,9 @@ class FcgiConnReg(Object)
 	method do: block
 	{
 		| index size conn |
-		## the following loop won't evaluate the given block for an element added after 
-		## resizing of self.connections at present, there is no self.connections resizing
-		## impelemented. so no worry on this.
+		// the following loop won't evaluate the given block for an element added after 
+		// resizing of self.connections at present, there is no self.connections resizing
+		// impelemented. so no worry on this.
 		size := self.connections size. 
 		index := 0.  
 		while (index < size)
@@ -406,39 +406,39 @@ class FcgiSocket(SyncSocket)
 'IM RUNNING SERVICE...............' dump.
 
 
-		## typedef struct {
-		##   unsigned char version;
-		##   unsigned char type;
-		##   unsigned char requestIdB1;
-		##   unsigned char requestIdB0;
-		##   unsigned char contentLengthB1;
-		##   unsigned char contentLengthB0;
-		##   unsigned char paddingLength;
-		##   unsigned char reserved;
-		## } FCGI_Header;
+		// typedef struct {
+		//   unsigned char version;
+		//   unsigned char type;
+		//   unsigned char requestIdB1;
+		//   unsigned char requestIdB0;
+		//   unsigned char contentLengthB1;
+		//   unsigned char contentLengthB0;
+		//   unsigned char paddingLength;
+		//   unsigned char reserved;
+		// } FCGI_Header;
 /*
 		ver := self.bs next.
 		type := self.bs next.
-		reqid := (self.bs next bitShift: 8) bitAnd: (self.bs next).  ## can i implement nextUint16??
+		reqid := (self.bs next bitShift: 8) bitAnd: (self.bs next).  // can i implement nextUint16??
 		clen := (self.bs next bitShift: 8) bitAnd: (self.bs next).
 		plen := self.bs next.
-		self.bs next. ## eat up the reserved byte.
+		self.bs next. // eat up the reserved byte.
 */
 
-		## typedef struct {
-		##  unsigned char roleB1;
-		##  unsigned char roleB0;
-		##  unsigned char flags;
-		##  unsigned char reserved[5];
-		## } FCGI_BeginRequestBody;
-		## typedef struct {
-		##  unsigned char appStatusB3;
-		##  unsigned char appStatusB2;
-		##  unsigned char appStatusB1;
-		##  unsigned char appStatusB0;
-		##  unsigned char protocolStatus;
-		##  unsigned char reserved[3];
-		## } FCGI_EndRequestBody;
+		// typedef struct {
+		//  unsigned char roleB1;
+		//  unsigned char roleB0;
+		//  unsigned char flags;
+		//  unsigned char reserved[5];
+		// } FCGI_BeginRequestBody;
+		// typedef struct {
+		//  unsigned char appStatusB3;
+		//  unsigned char appStatusB2;
+		//  unsigned char appStatusB1;
+		//  unsigned char appStatusB0;
+		//  unsigned char protocolStatus;
+		//  unsigned char reserved[3];
+		// } FCGI_EndRequestBody;
 
 /*
 		if (type == Fcgi.Type.BEGIN_REQUEST)
@@ -516,7 +516,7 @@ cliaddr dump.
 
 	method acceptedSocketClass
 	{
-		##^if (self currentAddress port == 80) { FcgiSocket } else { FcgiSocket }.
+		//^if (self currentAddress port == 80) { FcgiSocket } else { FcgiSocket }.
 		^FcgiSocket.
 	}
 
@@ -569,7 +569,7 @@ class FcgiServer(Object)
 			listener listen: 128.
 		] on: Exception do: [:ex |
 			listener close.
-			## ex pass.
+			// ex pass.
 			Exception signal: ('unable to add new listener - ' & ex messageText).
 		].
 	}
@@ -598,7 +598,7 @@ class FcgiServer(Object)
 	{
 		| listener |
 		if (laddr class == Array)
-		##if (laddr respondsTo: #do:) ## can i check if the message receives a block and the block accepts 1 argument?
+		//if (laddr respondsTo: #do:) // can i check if the message receives a block and the block accepts 1 argument?
 		{
 			laddr do: [:addr | self __add_new_listener: addr ].
 		}
@@ -647,7 +647,7 @@ class MyObject(Object)
 				}.
 			].
 			clisck onEvent: #data_out do: [ :csck |
-				##csck writeBytesFrom: #[ $a, $b, C'\n' ].
+				//csck writeBytesFrom: #[ $a, $b, C'\n' ].
 			].
 			clisck onEvent: #closed do: [ :csck |
 				'Socket CLOSED....' dump.
@@ -713,7 +713,7 @@ class MyObject(Object)
 				{
 					ss := thisProcess handleAsyncEvent.
 					if (ss isError) { break }.
-					###if (ss == st) { thisProcess removeAsyncSemaphore: st }.
+					//#if (ss == st) { thisProcess removeAsyncSemaphore: st }.
 				}.
 			]
 			ensure:
@@ -767,7 +767,7 @@ thisProcess terminate.
 /*
 [
 addr := SocketAddress fromString: '1.2.3.4:5555'.
-##addr := SocketAddress fromString: '127.0.0.1:22'.
+//addr := SocketAddress fromString: '127.0.0.1:22'.
 fcgi := SyncSocket family: (addr family) type: Socket.Type.STREAM.
 fcgi timeout: 5.
 fcgi connect: addr.

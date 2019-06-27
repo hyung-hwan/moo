@@ -4,10 +4,10 @@ interface ClassInterface
 	method superclass.
 }
 
-##
-## the Class object should be a variable-pointer object because
-## it needs to accomodate class instance variables.
-##
+//
+// the Class object should be a variable-pointer object because
+// it needs to accomodate class instance variables.
+//
 class(#pointer,#limited) Class(Apex) [ClassInterface]
 {
 	var spec, selfspec, superclass, subclasses, name, modname.
@@ -24,8 +24,8 @@ class(#pointer,#limited) Class(Apex) [ClassInterface]
 
 	method specNumInstVars
 	{
-		## shift right by 8 bits.
-		## see MOO_CLASS_SPEC_NAMED_INSTVARS in moo-prv.h for details.
+		// shift right by 8 bits.
+		// see MOO_CLASS_SPEC_NAMED_INSTVARS in moo-prv.h for details.
 		^self.spec bitShift: -8
 	}
 

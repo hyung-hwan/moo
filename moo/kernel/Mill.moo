@@ -46,7 +46,7 @@ class MyObject(Object)
 		/*k := Mill new.
 		k register: #abc call: [ Dictionary new ].
 		a := k make: #abc.
-		##a dump.*/
+		//a dump.*/
 		
 		d := Dictionary new.
 		d at: #abc put: 20.
@@ -61,9 +61,9 @@ class MyObject(Object)
 
 		d keysAndValuesDo: [:k :v| System logNl: (k asString) & ' => ' & (v asString) ].
 
-		##(d includesAssociation: (Association key: #moo value: 'not good?')) dump.
+		//(d includesAssociation: (Association key: #moo value: 'not good?')) dump.
 		'-------------------------' dump.
-		##(System at: #MyObject) dump.
+		//(System at: #MyObject) dump.
 		(d removeKey: #moo) dump.
 		d removeKey: #abc ifAbsent: [System logNl: '#moo not found'].
 		d keysAndValuesDo: [:k :v| System logNl: (k asString) & ' => ' & (v asString) ].
@@ -78,7 +78,7 @@ class MyObject(Object)
 		].
 		*/
 		
-		##System keysDo: [:k| System logNl: (k asString)]
+		//System keysDo: [:k| System logNl: (k asString)]
 		
 		/*[
 			[Exception hash dump] ensure: ['xxxx' dump].
@@ -148,7 +148,7 @@ class MyObject(Object)
 		] value) dump.
 
 		a := 5.
-		##((a < 20) ifTrue: [ 1. if (a < 20) { ^^50 }. 90. ]) dump.
+		//((a < 20) ifTrue: [ 1. if (a < 20) { ^^50 }. 90. ]) dump.
 		([true] whileTrue: [
 			[true] whileTrue: [
 				[
@@ -169,16 +169,16 @@ class MyObject(Object)
 		
 		
 		a := if(false) { 10 } elsif (false) { 20 } elsif (false) { 30} else { 40}.
-		##a := if(false) { 999 } else { 888 }.
+		//a := if(false) { 999 } else { 888 }.
 		a dump.
 
 		a := 5.
 		a := while (true)
 		{
 			a := a + 1.
-			##if (a > 20) { break if (true) { break. }. }.
+			//if (a > 20) { break if (true) { break. }. }.
 			if (a > 20) { 
-				^if (true) { break } else {10}.   ## return gets ignored for break.
+				^if (true) { break } else {10}.   // return gets ignored for break.
 			}.
 			a dump.
 		}.
@@ -188,13 +188,13 @@ class MyObject(Object)
 		do {
 			a := do {
 				('in loop.....' & a asString) dump.
-				##if (a > 5) { break }.
+				//if (a > 5) { break }.
 				a := a + 1.
 			} while(a < 10).
 		} while (false).
 		a dump.
 
-		## these should be elimited by the compiler.
+		// these should be elimited by the compiler.
 		nil.
 		1.
 		0.
@@ -203,14 +203,14 @@ class MyObject(Object)
 		thisContext.
 		nil.
 		nil.
-		## end of elimination.
+		// end of elimination.
 
-		## PROBLEM: the following double loop will exhaust the stack 
+		// PROBLEM: the following double loop will exhaust the stack 
 		while (true)
 		{
 			while (true) 
 			{ 
-				##[:j :q | (j + q) dump] value: (if (true) { 20 }) value: (if (true) { break }).
+				//[:j :q | (j + q) dump] value: (if (true) { 20 }) value: (if (true) { break }).
 				(1 + (if (false) {} else { break })) dump.
 			}.
 		}.
@@ -240,14 +240,14 @@ class MyObject(Object)
 		a do: [ :v | v dump].
 
 /*
-		## how to handle return inside 'if' like the following???
-		## what happens to the stack?
+		// how to handle return inside 'if' like the following???
+		// what happens to the stack?
 		a := if ((k := 20) == 10) {99} else { 100}.
 		k dump.
 		a dump.
 */
 		'---------- END ------------' dump.
-		##System sleepForSecs: 20.
+		//System sleepForSecs: 20.
 	}
 	
 	
@@ -256,21 +256,21 @@ class MyObject(Object)
 	{
 		|a i|
 
-###self main_xx.
+//#self main_xx.
 
 		a := 100.
-			## PROBLEM: the following double loop will exhaust the stack 
+			// PROBLEM: the following double loop will exhaust the stack 
 			/*
 		while (true)
 		{
-		##111 dump.
+		//111 dump.
 			while (true) 
 			{ 
-				##[:j :q | (j + q) dump] value: (if (true) { 20 }) value: (if (true) { break }).
+				//[:j :q | (j + q) dump] value: (if (true) { 20 }) value: (if (true) { break }).
 				(1 + (if (false) {} else { break })) dump.
-				##break.
-				##[:j :q | (j + q) dump] value: 10 value: 20.
-				##if (false) {} else { break }.
+				//break.
+				//[:j :q | (j + q) dump] value: 10 value: 20.
+				//if (false) {} else { break }.
 			}.
 		}.*/
 
@@ -281,14 +281,14 @@ class MyObject(Object)
 			'bbb' -> 30,
 			#bbb -> 40,
 			Association key: 12343 value: 129908123,
-			##5 -> 99,
+			//5 -> 99,
 			'ccc' -> 890
 		}.
 
 		/*a removeKey: 'bbb'.
 		a remove: :(#bbb).*/
 
-		##1 to: 100 do: [ :i | a at: i put: (i * 2) ].
+		//1 to: 100 do: [ :i | a at: i put: (i * 2) ].
 		a keysAndValuesDo: [:k :v |
 			k dump.
 			v dump.
@@ -310,11 +310,11 @@ class MyObject(Object)
 		
 
 		/* basicAt: 12 to access the nsdic field. use a proper method once it's defined in Class */
-	##	(System nsdic) keysAndValuesDo: [:k :v |
-	##		k dump.
-	##		v dump.
-	##		'------------' dump.
-	##	].
+	//	(System nsdic) keysAndValuesDo: [:k :v |
+	//		k dump.
+	//		v dump.
+	//		'------------' dump.
+	//	].
 
 		
 		(System at: #Processor) dump.
@@ -337,8 +337,8 @@ while (i > 0)
 a getUint32(0) dump.
 a getUint32(1) dump.
 
-##a dump.
-##System free(a).
+//a dump.
+//System free(a).
 a free.
 
 		System sleepForSecs: 2.
@@ -365,6 +365,6 @@ a free.
 /*
 pooldic XXD {
 	#abc := #(1 2 3).
-	#def := %( 1, 3, 4 ). ## syntax error - literal expected where %( is
+	#def := %( 1, 3, 4 ). // syntax error - literal expected where %( is
 }
 */

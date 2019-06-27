@@ -1,9 +1,9 @@
 
 
-##
-## TODO: is it better to inherit from Object???
-##       or treat Exception specially like UndefinedObject or Class???
-##
+//
+// TODO: is it better to inherit from Object???
+//       or treat Exception specially like UndefinedObject or Class???
+//
 class Exception(Apex)
 {
 	var signalContext, handlerContext.
@@ -47,11 +47,11 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 		self.signalContext := thisContext.
 		exctx := (thisContext sender) findExceptionContext.
 
-		##[exctx notNil] whileTrue: [
+		//[exctx notNil] whileTrue: [
 		while (exctx notNil)
 		{
 			exblk := exctx findExceptionHandlerFor: (self class).
-			##if (exblk notNil and: [actpos := exctx basicSize - 1. exctx basicAt: actpos])
+			//if (exblk notNil and: [actpos := exctx basicSize - 1. exctx basicAt: actpos])
 			if ((exblk notNil) and (exctx basicAt: (actpos := exctx basicSize - 1)))
 			{
 				self.handlerContext := exctx.
@@ -63,28 +63,28 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 			exctx := (exctx sender) findExceptionContext.
 		}.
 
-		## -----------------------------------------------------------------
-		## FATAL ERROR - no exception handler.
-		## -----------------------------------------------------------------
-		##thisContext unwindTo: nil return: nil.
-		##thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
+		// -----------------------------------------------------------------
+		// FATAL ERROR - no exception handler.
+		// -----------------------------------------------------------------
+		//thisContext unwindTo: nil return: nil.
+		//thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
 		
-## TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
+// TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
 System logNl: '== BACKTRACE =='.
 ctx := thisContext.
 while (ctx notNil)
 {
 	if (ctx class == MethodContext) { System logNl: (' ' & ctx method owner name & '>>' & ctx method name) }.
-	## TODO: include blockcontext???
+	// TODO: include blockcontext???
 	ctx := ctx sender.
 }.
 System logNl: '== END OF BACKTRACE =='.
 
 		thisContext unwindTo: (thisProcess initialContext) return: nil.
-		('### EXCEPTION NOT HANDLED(Exception) #### ' & self class name & ' - ' & self messageText) dump.
-		## TODO: debug the current process???? "
+		('//# EXCEPTION NOT HANDLED(Exception) //// ' & self class name & ' - ' & self messageText) dump.
+		// TODO: debug the current process???? "
 
-		##Processor activeProcess terminate.
+		//Processor activeProcess terminate.
 		thisProcess terminate.
 	}
 
@@ -96,7 +96,7 @@ System logNl: '== END OF BACKTRACE =='.
 
 	method pass
 	{
-		## pass the exception to the outer context
+		// pass the exception to the outer context
 		((self.handlerContext sender) findExceptionContext) handleException: self.
 	}
 
@@ -107,7 +107,7 @@ System logNl: '== END OF BACKTRACE =='.
 
 	method retry
 	{
-## TODO: verify if return:to: causes unnecessary stack growth.
+// TODO: verify if return:to: causes unnecessary stack growth.
 		if (self.handlerContext notNil) 
 		{
 			self.handlerContext pc: 0.
@@ -117,8 +117,8 @@ System logNl: '== END OF BACKTRACE =='.
 
 	method resume: value
 	{
-## TODO: verify if return:to: causes unnecessary stack growth.
-## is this correct???
+// TODO: verify if return:to: causes unnecessary stack growth.
+// is this correct???
 		| ctx |
 		if ((self.signalContext notNil) and (self.handlerContext notNil))
 		{
@@ -135,7 +135,7 @@ System logNl: '== END OF BACKTRACE =='.
 	}
 }
 
-##============================================================================
+//============================================================================
 extend Context
 {
 	method isExceptionContext
@@ -167,11 +167,11 @@ extend Context
 
 	method unwindTo: context return: retval
 	{
-		## -------------------------------------------------------------------
-		## <<private>>
-		## private: called by VM upon unwinding as well as by 
-		##          Exception<<signal and Error<<signal
-		## -------------------------------------------------------------------
+		// -------------------------------------------------------------------
+		// <<private>>
+		// private: called by VM upon unwinding as well as by 
+		//          Exception<<signal and Error<<signal
+		// -------------------------------------------------------------------
 
 		| ctx stop eb pending_pos |
 
@@ -194,35 +194,35 @@ extend Context
 			stop := (ctx == context).
 			ctx := ctx sender.
 
-			## stop ifFalse: [ stop := ctx isNil ].
+			// stop ifFalse: [ stop := ctx isNil ].
 		}.
 
 		^retval
 	}
 }
 
-##============================================================================
+//============================================================================
 pooldic MethodContext.Preamble
 {
-	## this must follow MOO_METHOD_PREAMBLE_EXCEPTION in moo.h
+	// this must follow MOO_METHOD_PREAMBLE_EXCEPTION in moo.h
 	EXCEPTION := 13.
 
-	## this must follow MOO_METHOD_PREAMBLE_ENSURE in moo.h
+	// this must follow MOO_METHOD_PREAMBLE_ENSURE in moo.h
 	ENSURE := 14.
 }
 
 pooldic MethodContext.Index
 {
-	## [ value-block ] ensure: [ ensure-block ]
-	## assuming ensure block is a parameter the ensure: method to a 
-	## block context, the first parameter is placed after the fixed
-	## instance variables of the method context. As MethodContex has
-	## instance variables, the ensure block must be at the 9th position
-	## which translates to index 8 
+	// [ value-block ] ensure: [ ensure-block ]
+	// assuming ensure block is a parameter the ensure: method to a 
+	// block context, the first parameter is placed after the fixed
+	// instance variables of the method context. As MethodContex has
+	// instance variables, the ensure block must be at the 9th position
+	// which translates to index 8 
 	ENSURE := 8.
 
 
-	## [ ... ] on: Exception: do: [:ex | ... ]
+	// [ ... ] on: Exception: do: [:ex | ... ]
 	FIRST_ON := 8.
 }
 
@@ -263,12 +263,12 @@ extend MethodContext
 			 *       those must be skipped from scanning. */
 
 			size := self basicSize.
-			##8 priorTo: size by: 2 do: [ :i | 
-			##	exc := self basicAt: i.
-			##	if ((exception_class == exc) or: [exception_class inheritsFrom: exc]) { ^self basicAt: (i + 1) }.
-			##]
+			//8 priorTo: size by: 2 do: [ :i | 
+			//	exc := self basicAt: i.
+			//	if ((exception_class == exc) or: [exception_class inheritsFrom: exc]) { ^self basicAt: (i + 1) }.
+			//]
 			
-			## start scanning from the position of the first parameter
+			// start scanning from the position of the first parameter
 			i := MethodContext.Index.FIRST_ON. 
 			while (i < size)
 			{
@@ -304,9 +304,9 @@ extend MethodContext
 		excblk := self findExceptionHandlerFor: (exception class).
 		if ((excblk isNil) or ((self basicAt: actpos) not))
 		{
-			## self is an exception context but doesn't have a matching
-			## exception handler or the exception context is already
-			## in the middle of evaluation. 
+			// self is an exception context but doesn't have a matching
+			// exception handler or the exception context is already
+			// in the middle of evaluation. 
 			^(self.sender findExceptionContext) handleException: exception.
 		}.
 
@@ -324,7 +324,7 @@ extend MethodContext
 			self basicAt: actpos put: true
 		].
 
-		##(self.sender isNil) ifTrue: [ "TODO: CANNOT RETURN" ].
+		//(self.sender isNil) ifTrue: [ "TODO: CANNOT RETURN" ].
 
 		/* -----------------------------------------------------------------
 		 * return to self.sender which is a caller of the exception context (on:do:)
@@ -336,7 +336,7 @@ extend MethodContext
 	}
 }
 
-##============================================================================
+//============================================================================
 extend BlockContext
 {
 	method on: anException do: anExceptionBlock
@@ -347,9 +347,9 @@ extend BlockContext
 /* ------------------------------- 
 thisContext isExceptionContext dump.
 (thisContext basicSize) dump.
-(thisContext basicAt: 8) dump.  ## this should be anException
-(thisContext basicAt: 9) dump.  ## this should be anExceptionBlock
-(thisContext basicAt: 10) dump.  ## this should be handlerActive
+(thisContext basicAt: 8) dump.  // this should be anException
+(thisContext basicAt: 9) dump.  // this should be anExceptionBlock
+(thisContext basicAt: 10) dump.  // this should be handlerActive
 'on:do: ABOUT TO EVALUE THE RECEIVER BLOCK' dump.
 ---------------------------------- */
 		exception_active := true.
@@ -403,7 +403,7 @@ thisContext isExceptionContext dump.
 }
 
 
-##============================================================================
+//============================================================================
 class PrimitiveFailureException(Exception)
 {
 	var errcode.
@@ -504,27 +504,27 @@ extend Apex
 		if (msg isNil) { msg := ec asString }.
 		if (method notNil) { msg := msg & ' - ' & (method owner name) & '>>' & (method name) }.
 
-		### TODO: convert an exception to a more specific one depending on the error code.
-		###if (ec == Error.Code.ERANGE) { self index: index outOfRange: (self basicSize) }
-		### elsif (ec == Error.Code.EPERM) { self messageProhibited: method name }
-		### elsif (ec == Error.Code.ENOIMPL) { self subclassResponsibility: method name }.
+		//# TODO: convert an exception to a more specific one depending on the error code.
+		//#if (ec == Error.Code.ERANGE) { self index: index outOfRange: (self basicSize) }
+		//# elsif (ec == Error.Code.EPERM) { self messageProhibited: method name }
+		//# elsif (ec == Error.Code.ENOIMPL) { self subclassResponsibility: method name }.
 
 		(PrimitiveFailureException /* in: method */ withErrorCode: ec) signal: msg.
 	}
 
 	method(#dual) doesNotUnderstand: message_name
 	{
-		## TODO: implement this properly
+		// TODO: implement this properly
 		| class_name ctx |
 		class_name := if (self class == Class) { self name } else { self class name }.
 
-## TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
+// TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
 System logNl: '== BACKTRACE =='.
 ctx := thisContext.
 while (ctx notNil)
 {
 	if (ctx class == MethodContext) { System logNl: (' ' & ctx method owner name & '>>' & ctx method name) }.
-	## TODO: include blockcontext???
+	// TODO: include blockcontext???
 	ctx := ctx sender.
 }.
 System logNl: '== END OF BACKTRACE =='.

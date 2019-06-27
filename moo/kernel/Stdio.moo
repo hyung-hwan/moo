@@ -66,8 +66,8 @@ class Stdio2(Stdio)
 {
 	method(#class) new
 	{
-		##self prohibited
-		##raise exception. prohibited...
+		//self prohibited
+		//raise exception. prohibited...
 		^(super new).
 	}
 }

@@ -1,13 +1,13 @@
 
 #include 'Moo.moo'.
 
-#################################################################
-## MAIN
-#################################################################
+////////////////////////////////////////////////////////////////#
+// MAIN
+////////////////////////////////////////////////////////////////#
 
-## TODO: use #define to define a class or use #class to define a class.
-##       use #extend to extend a class
-##       using #class for both feels confusing.
+// TODO: use #define to define a class or use #class to define a class.
+//       use #extend to extend a class
+//       using #class for both feels confusing.
 
 extend Apex
 {
@@ -65,7 +65,7 @@ class MyObject(TestObject)
 	{
 		| p p2 |
                 'START OF MAIN' dump.
- 		##p := [ :a :b :c :d | a dump. b dump. (c + d) dump. ^10. ] newProcessWith: #(#abc #def 10 20).
+ 		//p := [ :a :b :c :d | a dump. b dump. (c + d) dump. ^10. ] newProcessWith: #(#abc #def 10 20).
  		p := [ :a :b :c :d | a dump. b dump. (c + d) dump. ] newProcessWith: #(#abc #def 10 20).
  		p2 := [ :a :b :c :d | a dump. b dump. a dump. b dump. (c + d) dump. ^10000 ] newProcessWith: #(
 			#AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
@@ -80,7 +80,7 @@ class MyObject(TestObject)
                 'MIDDLE OF MAIN' dump.
 		Processor activeProcess terminate.
 
-		##p terminate.
+		//p terminate.
                 '999999999999999999' dump.
                 '999999999999999999' dump.
                 '999999999999999999' dump.
@@ -88,7 +88,7 @@ class MyObject(TestObject)
                 '999999999999999999' dump.
                 '999999999999999999' dump.
                 '999999999999999999' dump.
-##		p resume.
+//		p resume.
                 '999999999999999999' dump.
                 '999999999999999999' dump.
                 '999999999999999999' dump.

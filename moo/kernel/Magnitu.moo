@@ -12,13 +12,13 @@ class Magnitude(Object)
 
 	method min: aMagnitude
 	{
-		##^self < aMagnitude ifTrue: [self] ifFalse: [aMagnitude]
+		//^self < aMagnitude ifTrue: [self] ifFalse: [aMagnitude]
 		^if (self < aMagnitude) { self } else { aMagnitude }.
 	}
 
 	method max: aMagnitude
 	{
-		##^self > aMagnitude ifTrue: [self] ifFalse: [aMagnitude]
+		//^self > aMagnitude ifTrue: [self] ifFalse: [aMagnitude]
 		^if (self > aMagnitude) { self } else { aMagnitude }.
 		
 	}
@@ -67,8 +67,8 @@ class Association(Magnitude)
 
 class(#limited) Character(Magnitude)
 {
-##	method(#primitive,#class) codePoint: code.
-##	method(#primitive) codePoint.
+//	method(#primitive,#class) codePoint: code.
+//	method(#primitive) codePoint.
 
 	method asCharacter { ^self }
 	method(#primitive) asError.
@@ -86,7 +86,7 @@ class(#limited) Character(Magnitude)
 
 	method digitValue
 	{
-		##<primitive: #Character_digitValue>
+		//<primitive: #Character_digitValue>
 
 		if ((self >= $0) and (self <= $9))
 		{
@@ -101,7 +101,7 @@ class(#limited) Character(Magnitude)
 			^self asInteger - $a asInteger + 10
 		}.
 
-		##Exception signal: 'not a digit character'.
+		//Exception signal: 'not a digit character'.
 		^-1
 	}
 }
@@ -140,36 +140,36 @@ class(#limited) Number(Magnitude)
 
 	method div: aNumber
 	{
-		## integer division rounded toward zero
+		// integer division rounded toward zero
 		<primitive: #_number_div>
 		self primitiveFailed.
 	}
 
 	method rem: aNumber
 	{
-		## integer remainder rounded toward zero
+		// integer remainder rounded toward zero
 		<primitive: #Integer_rem>
 		self primitiveFailed.
 	}
 
 	method mdiv: aNumber
 	{
-		## integer division quotient
+		// integer division quotient
 		<primitive: #_number_mdiv>
 		self primitiveFailed.
 	}
 	
 	method mod: aNumber
 	{
-		## integer division remainder
+		// integer division remainder
 		<primitive: #Integer_mod>
 		self primitiveFailed.
 	}
 	
-	##method / aNumber
-	##{
-	##	## fraction? fixed-point decimal? floating-point?
-	##}
+	//method / aNumber
+	//{
+	//	// fraction? fixed-point decimal? floating-point?
+	//}
 
 	method = aNumber
 	{
@@ -367,7 +367,7 @@ class(#limited) Integer(Number)
 {
 	method timesRepeat: aBlock
 	{
-		## 1 to: self by: 1 do: [ :count | aBlock value ].
+		// 1 to: self by: 1 do: [ :count | aBlock value ].
 		| count |
 		count := 0.
 		while (count < self) { aBlock value. count := count + 1 }
@@ -375,10 +375,10 @@ class(#limited) Integer(Number)
 	
 	method asInteger { ^self }
 
-	## integer has the scale of 0.
+	// integer has the scale of 0.
 	method scale { ^0 }
 
-	## non-zero positive scale converts integer to fixed-point decimal
+	// non-zero positive scale converts integer to fixed-point decimal
 	method(#primitive) scale: ndigits.
 }
 

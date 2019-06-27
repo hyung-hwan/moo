@@ -29,15 +29,15 @@ method(#dual,#liberal) def(x, z) { ^nil }
 
 class X11(Object) [X11able,selfns.X11able3] from 'x11'
 {
-	## =====================================================================
-	## this part of the class must match the internal
-	## definition struct x11_t  defined in _x11.h
-	## ---------------------------------------------------------------------
+	// =====================================================================
+	// this part of the class must match the internal
+	// definition struct x11_t  defined in _x11.h
+	// ---------------------------------------------------------------------
 	var display_base := nil.
-	## =====================================================================
+	// =====================================================================
 
 	var shell_container := nil.
-	var window_registrar. ## all windows registered
+	var window_registrar. // all windows registered
 
 	var event_loop_sem, event_loop_proc.
 	var llevent_blocks.
@@ -45,7 +45,7 @@ class X11(Object) [X11able,selfns.X11able3] from 'x11'
 
 method(#dual) abc { ^nil }
 method(#dual,#liberal) def(x, z) { ^nil }
-###method(#dual) abc3 { ^nil }
+//#method(#dual) abc3 { ^nil }
 
 	interface X11able3
 	{
@@ -108,8 +108,8 @@ TODO: TODO: compiler enhancement
 	method(#primitive) _destroy_window(window_handle).
 
 	method(#primitive) _create_gc (window_handle).
-	method(#primitive) _destroy_gc (gc). ## note this one accepts a GC object.
-	method(#primitive) _apply_gc (gc). ## note this one accepts a GC object, not a GC handle.
+	method(#primitive) _destroy_gc (gc). // note this one accepts a GC object.
+	method(#primitive) _apply_gc (gc). // note this one accepts a GC object, not a GC handle.
 
 	method(#primitive) _draw_rectangle(window_handle, gc_handle, x, y, width, height).
 	method(#primitive) _fill_rectangle(window_handle, gc_handle, x, y, width, height).
@@ -126,15 +126,15 @@ TODO: TODO: compiler enhancement
 	method __destroy_window(window_handle)
 	{
 		| w |
-###('DESTROY ' & window_handle asString) dump.
+//#('DESTROY ' & window_handle asString) dump.
 		w := self _destroy_window(window_handle).
 		if (w notError) { self.window_registrar removeKey: window_handle }
 	}
 }
 
-## ---------------------------------------------------------------------------
-## Event
-## ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Event
+// ---------------------------------------------------------------------------
 pooldic X11.LLEventType
 {
 	KEY_PRESS         := 2.
@@ -179,7 +179,7 @@ class X11.MouseEvent(X11.Event)
 	var(#get,#set)
 		x      := 0,
 		y      := 0,
-		button := 0. ## X11.MouseButton
+		button := 0. // X11.MouseButton
 }
 
 class X11.MouseWheelEvent(X11.Event)
@@ -201,9 +201,9 @@ class X11.ExposeEvent(X11.Event)
 
 
 
-## ---------------------------------------------------------------------------
-## X11 Context
-## ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// X11 Context
+// ---------------------------------------------------------------------------
 pooldic X11.GCLineStyle
 {
 	SOLID       := 0.
@@ -221,7 +221,7 @@ pooldic X11.GCFillStyle
 
 class X11.GC(Object)
 {
-	## note these fields must match the x11_gc_t structure defined in _x11.h
+	// note these fields must match the x11_gc_t structure defined in _x11.h
 
 	var(#get) widget := nil, gcHandle := nil.
 
@@ -293,9 +293,9 @@ widget windowHandle dump.
 	}
 }
 
-## ---------------------------------------------------------------------------
-## X11 Widgets
-## ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// X11 Widgets
+// ---------------------------------------------------------------------------
 
 class X11.Widget(Object)
 {
@@ -505,7 +505,7 @@ class X11.Composite(X11.Widget)
 	{
 		super onPaintEvent: event.
 		self.children do: [:child |
-			## TODO: adjust event relative to each child...
+			// TODO: adjust event relative to each child...
 			child onPaintEvent: event.
 		]
 	}
@@ -521,16 +521,16 @@ class X11.Shell(X11.Composite)
 		self.title := title.
 	}
 
-#### TODO:
-#### redefine x:, y:, width:, height: to return actual geometry values...
-####
+//// TODO:
+//// redefine x:, y:, width:, height: to return actual geometry values...
+////
 
 	method title: title
 	{
 		self.title := title.
 		if (self.windowHandle notNil)
 		{
-			## set window title of this window.
+			// set window title of this window.
 		}
 	}
 
@@ -554,9 +554,9 @@ class X11.Shell(X11.Composite)
 	}
 }
 
-## ---------------------------------------------------------------------------
-## X11 server
-## ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// X11 server
+// ---------------------------------------------------------------------------
 extend X11
 {
 	method(#class) new
@@ -667,7 +667,7 @@ extend X11
 					{
 						if (llevent isError)
 						{
-							##System logNl: ('Error while getting a event from server ' & self.cid asString).
+							//System logNl: ('Error while getting a event from server ' & self.cid asString).
 							ongoing := false.
 							break.
 						}
@@ -681,7 +681,7 @@ extend X11
 'CLOSING X11 EVENT LOOP' dump.
 
 				self.event_loop_sem unsignal.
-		## TODO: LOOK HERE FOR RACE CONDITION
+		// TODO: LOOK HERE FOR RACE CONDITION
 				self.event_loop_sem := nil.
 				self.event_loop_proc := nil.
 				
@@ -694,7 +694,7 @@ extend X11
 	{
 		if (self.event_loop_sem notNil)
 		{
-		## TODO: handle race-condition with the part maked 'LOOK HERE FOR RACE CONDITION'
+		// TODO: handle race-condition with the part maked 'LOOK HERE FOR RACE CONDITION'
 			self.event_loop_proc terminate.
 			self.event_loop_proc := nil.
 			self.event_loop_sem := nil.
@@ -810,7 +810,7 @@ class MyObject(Object)
 
 		comp1 add: (X11.Label new text: '간다'; width: 100; height: 100).
 		comp1 add: (X11.Label new text: 'crayon'; x: 90; y: 90; width: 100; height: 100).
-	##	self.shell1 add: (X11.Label new text: 'xxxxxxxx'; width: 100; height: 100).
+	//	self.shell1 add: (X11.Label new text: 'xxxxxxxx'; width: 100; height: 100).
 		self.shell1 add: (X11.Button new text: '크레용crayon'; x: 90; y: 90; width: 100; height: 100).
 
 		self.shell2 add: (X11.Button new text: 'crayon'; x: 90; y: 90; width: 100; height: 100).
@@ -819,7 +819,7 @@ class MyObject(Object)
 		self.shell2 realize.
 		self.shell3 realize.
 
-		self.disp1 enterEventLoop. ## this is not a blocking call. it spawns another process.
+		self.disp1 enterEventLoop. // this is not a blocking call. it spawns another process.
 		self.disp2 enterEventLoop.
 
 		comp1 := Fx new.

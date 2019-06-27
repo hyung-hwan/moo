@@ -1,13 +1,13 @@
 
 #include 'Moo.moo'.
 
-#################################################################
-## MAIN
-#################################################################
+////////////////////////////////////////////////////////////////#
+// MAIN
+////////////////////////////////////////////////////////////////#
 
-## TODO: use #define to define a class or use #class to define a class.
-##       use #extend to extend a class
-##       using #class for both feels confusing.
+// TODO: use #define to define a class or use #class to define a class.
+//       use #extend to extend a class
+//       using #class for both feels confusing.
 
 extend Apex
 {
@@ -59,7 +59,7 @@ class MyObject(TestObject)
 		^a + 99.
 
 
-		##a := Moo.MyCOM.HashTable new.
+		//a := Moo.MyCOM.HashTable new.
 	}
 
 	method xxx: aBlock
@@ -73,46 +73,46 @@ class MyObject(TestObject)
 	{
 		| a b c sum |
 
-##		##(10 add: 20) dump.
-##		(10 + 20) dump.
-##
-##		a := 10 + 20 + 30.
-##		b := [:x :y | | t z | x := 20. b := 9. x := 10 + 20 ].
-##
-##		(b value: 10 value: 20) dump.
-##		
-##		thisContext basicSize dump.
-##
-##		(thisContext basicAt: (8 + 5)) dump.
-##
-##		^self.
+//		//(10 add: 20) dump.
+//		(10 + 20) dump.
+//
+//		a := 10 + 20 + 30.
+//		b := [:x :y | | t z | x := 20. b := 9. x := 10 + 20 ].
+//
+//		(b value: 10 value: 20) dump.
+//		
+//		thisContext basicSize dump.
+//
+//		(thisContext basicAt: (8 + 5)) dump.
+//
+//		^self.
 
 		a := self new.
-		##a yourself.
-		##b := a getTrue; getFalse.
-		##b := a getTrue; getFalse; getTrue: 20 + 10.
-		##b := a getTrue; getFalse; getTrue: 20 + 10; getTrue: 90 + 20.
-		##b := 3 + 5 getTrue: 20; getTrue: 8 + 1; getTrue: 20; yourself.
+		//a yourself.
+		//b := a getTrue; getFalse.
+		//b := a getTrue; getFalse; getTrue: 20 + 10.
+		//b := a getTrue; getFalse; getTrue: 20 + 10; getTrue: 90 + 20.
+		//b := 3 + 5 getTrue: 20; getTrue: 8 + 1; getTrue: 20; yourself.
 
 		b := 3 + 5 inc getTrue: 20 + (30 getTrue: 20; yourself); yourself.
 
-		##b := [:q | q ] value: a getTrue.
+		//b := [:q | q ] value: a getTrue.
 		b dump.
 
-		##^self.
+		//^self.
 
-## ############################################################
-##		A := 99.
+// ////////////////////////////////////////////////////////////
+//		A := 99.
 		[:x :y | R := y. ] value: 10 value: 6.
 		R := R + 1.
 		R dump.
 
 		sum := [ :n | (n < 2) ifTrue: [1] ifFalse: [ n + (sum value: (n - 1))] ].
-		##sum := [ :n | (n < 2) ifTrue: [1] ifFalse: [ n + (sum value: (n - 1)) + (sum value: (n - 2))] ].
+		//sum := [ :n | (n < 2) ifTrue: [1] ifFalse: [ n + (sum value: (n - 1)) + (sum value: (n - 2))] ].
 		(sum value: R; value: 5) dump.
 
-##sum := [ :n | sum value: 5 ].
-##sum value: 5.
+//sum := [ :n | sum value: 5 ].
+//sum value: 5.
 
 		#[ 1 2 3] dump.
 		#[ 4 5 6] dump.
@@ -135,8 +135,8 @@ class MyObject(TestObject)
 	C'\n' dump.
 #abc:def: dump.
 
-		##a := (11 < 10) ifTrue: [5] ifFalse: [20].
-		##a dump.
+		//a := (11 < 10) ifTrue: [5] ifFalse: [20].
+		//a dump.
 	}
 
 	method(#class) main55
@@ -144,8 +144,8 @@ class MyObject(TestObject)
 		|a b c|
 
 		self main2.
-##		b := 0.
-##		[ b < 5 ] whileTrue: [ b dump. b := b + 1 ].
+//		b := 0.
+//		[ b < 5 ] whileTrue: [ b dump. b := b + 1 ].
 	}
 
 	method(#class) getTen
@@ -153,10 +153,10 @@ class MyObject(TestObject)
 		^10
 	}
 
-## ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 
-## this sample demonstrates what happens when a block context returns to the origin's caller
-##  after the caller has already returned. 
+// this sample demonstrates what happens when a block context returns to the origin's caller
+//  after the caller has already returned. 
 
 	method(#class) xxxx
 	{
@@ -180,7 +180,7 @@ class MyObject(TestObject)
 	method(#class) main66
 	{
 		self yyyy.
-		t2 := t2 value.  ## can t2 return? it should return somewhere into the method context of yyy. but it has already terminated
+		t2 := t2 value.  // can t2 return? it should return somewhere into the method context of yyy. but it has already terminated
 		t2 dump.
 	}
 
@@ -190,10 +190,10 @@ class MyObject(TestObject)
 		t1 := 1.
 		self xxxx.
 
-		t2 := t2 value.  ## can t2 return? it should return somewhere into the method context of yyy. but it has already terminated
+		t2 := t2 value.  // can t2 return? it should return somewhere into the method context of yyy. but it has already terminated
 		t2 dump.
 	}
-## ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
 
 	method(#class) main22
 	{
@@ -215,8 +215,8 @@ class MyObject(TestObject)
 		(#[3 2 1] at: 3) dump.
 
 
-		## thisContext value. ## the message value must be unresolvable as thisContext is a method context
-		## [thisContext value] value.
+		// thisContext value. // the message value must be unresolvable as thisContext is a method context
+		// [thisContext value] value.
 		'-------------------------' dump.
 		b := 0.
 		[ b := b + 1. b dump. thisContext value] value.
@@ -254,24 +254,24 @@ class MyObject(TestObject)
 		| ffi |
 		ffi := FFI new: 'libc.so.6'.
 
-		## ffi call: #printf with: #((str '%d') (int 10) (long 20)).
+		// ffi call: #printf with: #((str '%d') (int 10) (long 20)).
 		ffi call: #printf signature: '|s|ici)i' arguments: #("hello world %d %c %d\n" 11123 $X 9876543).
-		##ffi call: #puts signature: 's)i' arguments: #('hello world').
+		//ffi call: #puts signature: 's)i' arguments: #('hello world').
 		ffi close.
 	}
 
 	method(#class) main
 	{
-		## ---------------------------------------------------------------
-		## getABlock has returned.
-		## aBlock's home context is getABlock. getABlock has returned
-		## when 'aBlock value' is executed. so when aBlock is really 
-		## executed, ^self is a double return attempt. should this be made
-		## illegal??
+		// ---------------------------------------------------------------
+		// getABlock has returned.
+		// aBlock's home context is getABlock. getABlock has returned
+		// when 'aBlock value' is executed. so when aBlock is really 
+		// executed, ^self is a double return attempt. should this be made
+		// illegal??
 		|aBlock|
 		aBlock := self getABlock.
 		aBlock value.
-		## ---------------------------------------------------------------
+		// ---------------------------------------------------------------
 
 		self test_ffi.
 
@@ -279,7 +279,7 @@ class MyObject(TestObject)
 PROCESS TESTING
 		| p |
 		'000000000000000000' dump.
-		## p := [ | 'xxxxxxxxxxx' dump. 'yyyyyyyyyy' dump. ^10. ] newProcess.
+		// p := [ | 'xxxxxxxxxxx' dump. 'yyyyyyyyyy' dump. ^10. ] newProcess.
 		p := [ :a :b :c :d | a dump. b dump. (c + d) dump. ^10. ] newProcessWith: #(abc def 10 20).
 		'999999999999999999' dump.
 		p resume.
@@ -295,12 +295,12 @@ PROCESS TESTING
 		(-2305843009213693952 - 1) dump.
 
 (1 + 2) dump.
-		##(-2305843009213693952 * 2305843009213693952) dump.
-##		(((-2305843009213693952 - 10) * (-2305843009213693952 - 10) *(-2305843009213693952 - 10) * (-2305843009213693952 - 10) * 255) * ((-2305843009213693952 - 10) * (-2305843009213693952 - 10) *(-2305843009213693952 - 10) * (-2305843009213693952 - 10) * 255)) dump.
-		##((-2305843009213693952 - 10) * (-2305843009213693952 - 10) *(-2305843009213693952 - 10) * (-2305843009213693952 - 10) * 255) dump.
+		//(-2305843009213693952 * 2305843009213693952) dump.
+//		(((-2305843009213693952 - 10) * (-2305843009213693952 - 10) *(-2305843009213693952 - 10) * (-2305843009213693952 - 10) * 255) * ((-2305843009213693952 - 10) * (-2305843009213693952 - 10) *(-2305843009213693952 - 10) * (-2305843009213693952 - 10) * 255)) dump.
+		//((-2305843009213693952 - 10) * (-2305843009213693952 - 10) *(-2305843009213693952 - 10) * (-2305843009213693952 - 10) * 255) dump.
 
-		##(-16rFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF * 1) dump.
-		##((-2305843009213693952 * -1) - 1 + 2) dump.
+		//(-16rFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF * 1) dump.
+		//((-2305843009213693952 * -1) - 1 + 2) dump.
 		((-2305843009213693952 * -2305843009213693952 * 2305843009213693952 * 2305843009213693952 * 2305843009213693952) - 1 + 2) dump.
 		
 
@@ -316,46 +316,46 @@ PROCESS TESTING
 (7 div: -3) dump.
 (7 mdiv: -3) dump.
 
-##(777777777777777777777777777777777777777777777777777777777777777777777 rem: -8127348917239812731289371289731298) dump.
-##(777777777777777777777777777777777777777777777777777777777777777777777 quo: -8127348917239812731289371289731298) dump.
+//(777777777777777777777777777777777777777777777777777777777777777777777 rem: -8127348917239812731289371289731298) dump.
+//(777777777777777777777777777777777777777777777777777777777777777777777 div: -8127348917239812731289371289731298) dump.
 
-##(270000000000000000000000000000000000000000000000000000000000000000000 rem: 50000000000000000000000000000000000000000000000000000000000000000000) dump.
-##(270000000000000000000000000000000000000000000000000000000000000000000 quo: 50000000000000000000000000000000000000000000000000000000000000000000) dump.
-##(270000000000000000000000000000000000000000000000000000000000000000000 \\ 50000000000000000000000000000000000000000000000000000000000000000000) dump.
-##(270000000000000000000000000000000000000000000000000000000000000000000 // 50000000000000000000000000000000000000000000000000000000000000000000) dump.
+//(270000000000000000000000000000000000000000000000000000000000000000000 rem: 50000000000000000000000000000000000000000000000000000000000000000000) dump.
+//(270000000000000000000000000000000000000000000000000000000000000000000 div: 50000000000000000000000000000000000000000000000000000000000000000000) dump.
+//(270000000000000000000000000000000000000000000000000000000000000000000 mdiv: 50000000000000000000000000000000000000000000000000000000000000000000) dump.
+//(270000000000000000000000000000000000000000000000000000000000000000000 mod: 50000000000000000000000000000000000000000000000000000000000000000000) dump.
 
-##(0 rem: -50000000000000000000000000000000000000000000000000000000000000000000) dump.
-##(0 quo: -50000000000000000000000000000000000000000000000000000000000000000000) dump.
-##(0 \\ -50000000000000000000000000000000000000000000000000000000000000000000) dump.
-##(0 // -50000000000000000000000000000000000000000000000000000000000000000000) dump.
+//(0 rem: -50000000000000000000000000000000000000000000000000000000000000000000) dump.
+//(0 div: -50000000000000000000000000000000000000000000000000000000000000000000) dump.
+//(0 mdiv: -50000000000000000000000000000000000000000000000000000000000000000000) dump.
+//(0 mod: -50000000000000000000000000000000000000000000000000000000000000000000) dump.
 
-##(-270000000000000000000000000000000000000000000000000000000000000000000 rem: -1) dump.
-##(-270000000000000000000000000000000000000000000000000000000000000000000 quo: -1) dump.
-##(-270000000000000000000000000000000000000000000000000000000000000000000 \\ -1) dump.
-##(-270000000000000000000000000000000000000000000000000000000000000000000 // -1) dump.
+//(-270000000000000000000000000000000000000000000000000000000000000000000 rem: -1) dump.
+//(-270000000000000000000000000000000000000000000000000000000000000000000 div: -1) dump.
+//(-270000000000000000000000000000000000000000000000000000000000000000000 mdiv: -1) dump.
+//(-270000000000000000000000000000000000000000000000000000000000000000000 mod: -1) dump.
 
-## (-27029038 // 2) asString dump.
-## (-270290380000000000000000000000000000000000000000000000000000000000000000000000000000000000000 // 2) asString dump.
-##(-16rAAAAAAAABBBBBBBBCCCCCCCCDDDDDDDDEEEEEEEEFFFFFFFF) asString dump.
-## (16r2dd01fc06c265c8163ac729b49d890939826ce3dd quo: 16r3b9aca00) dump.
+// (-27029038 mod: 2) asString dump.
+// (-270290380000000000000000000000000000000000000000000000000000000000000000000000000000000000000 mod: 2) asString dump.
+//(-16rAAAAAAAABBBBBBBBCCCCCCCCDDDDDDDDEEEEEEEEFFFFFFFF) asString dump.
+// (16r2dd01fc06c265c8163ac729b49d890939826ce3dd div: 16r3b9aca00) dump.
 
-##(0 rem: -50) dump.
-##(0 quo: -50) dump.
-##(0 \\ -50) dump.
-##(0 // -50) dump.
+//(0 rem: -50) dump.
+//(0 div: -50) dump.
+//(0 mdiv: -50) dump.
+//(0 mod: -50) dump.
 
 
-##(-270000000000000000000000000000000000000000000000000000000000000000000 rem: 5) dump.
-##(-270000000000000000000000000000000000000000000000000000000000000000000 quo: 5) dump.
-##(-270000000000000000000000000000000000000000000000000000000000000000000 \\ 5) dump.
-##(-270000000000000000000000000000000000000000000000000000000000000000000 // 5) dump.
+//(-270000000000000000000000000000000000000000000000000000000000000000000 rem: 5) dump.
+//(-270000000000000000000000000000000000000000000000000000000000000000000 div: 5) dump.
+//(-270000000000000000000000000000000000000000000000000000000000000000000 mdiv: 5) dump.
+//(-270000000000000000000000000000000000000000000000000000000000000000000 mod: 5) dump.
 
-##(-270 rem: 5) dump.
-##(-270 quo: 5) dump.
-##(-270 \\ 5) dump.
-##(-270 // 5) dump.
+//(-270 rem: 5) dump.
+//(-270 div: 5) dump.
+//(-270 mdiv: 5) dump.
+//(-270 mod: 5) dump.
 
-##(16rFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF bitAnd: 16r1111111111111111111111111111111111111111) dump.
+//(16rFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF bitAnd: 16r1111111111111111111111111111111111111111) dump.
 
 (2r1111111111111111111111111111111111111111111111111111111111111111 printStringRadix:2) dump.
 
@@ -402,10 +402,10 @@ PROCESS TESTING
 (16rFFFFFFFFFF1234567890AAAAAAAAAAAAAAAAAAAAAAAAA22222222222222222F printStringRadix: 32) dump.
 (32r3VVVVVVVS938LJOI2LALALALALALALALALAL8H248H248H248HF printStringRadix: 16) dump.
 
-## ((-2r110101010101010101010101010101111111111111111111111111111111111111111111111111111111100000000001111111 bitShift: 16r1FFFFFFFFFFFFFFFF) printStringRadix: 2) dump.
+// ((-2r110101010101010101010101010101111111111111111111111111111111111111111111111111111111100000000001111111 bitShift: 16r1FFFFFFFFFFFFFFFF) printStringRadix: 2) dump.
 
-##((-2r11111111110000000000111110000 bitShift: -31) printStringRadix: 2) dump.
-##((-536870911 bitShift: -536870912) printStringRadix: 2) dump.
+//((-2r11111111110000000000111110000 bitShift: -31) printStringRadix: 2) dump.
+//((-536870911 bitShift: -536870912) printStringRadix: 2) dump.
 ((-2r1111 bitShift: -3) printStringRadix: 2) dump.
 ((-2r11111111111111111111111111111111111111111111111111111111111111111111110001 bitShift: -1) printStringRadix: 2) dump.
 ((-2r11111111111111111111111111111111111111111111111111111111111111111111110001 bitShift: -2) printStringRadix: 2) dump.
@@ -430,8 +430,8 @@ PROCESS TESTING
 (2r1000000000000000000000000000100000000000000000000000000000000000000000000000 bitAt: 129) dump.
 (2r1000000000000000000000000000100000000000000000000000000000000000000000000000 bitAt: 16rFFFFFFFFFFFFFFFF1) dump.
 
-		##self a: 1 b: 2 c: 3 d: 4 e: 5 f: 6 g: 7.
-		##self a: 1 b: 2 c: 3.
+		//self a: 1 b: 2 c: 3 d: 4 e: 5 f: 6 g: 7.
+		//self a: 1 b: 2 c: 3.
 
 [1 + [100 + 200] value] value dump.
 
@@ -448,8 +448,8 @@ PROCESS TESTING
 ([ :a :b | /*a := 20.*/  b := [ a + 20 ]. b value.] value: 99 value: 100) dump.
 '====================' dump.
 
-[ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] value dump.  ## not sufficient arguments. it must fail
-##[ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] on: Exception do: [:ex | 'Exception' dump].
+[ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] value dump.  // not sufficient arguments. it must fail
+//[ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] on: Exception do: [:ex | 'Exception' dump].
 
 /*
 		FFI isNil dump.

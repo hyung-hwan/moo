@@ -1,12 +1,19 @@
-## Top-level elemtns
+### Top-level elements
 * #include
 * #pragma
 * class
 * interface
 * pooldic
 
+### Comments
 
-## Literal notations
+~~~
+#! comment text
+// comment text
+/* comment text */
+~~~
+
+### Literal notations
 * 200 decimal integer
 * 2r1100 binary integer
 * 16rFF00 hexadecimal integer
@@ -48,4 +55,33 @@ The following are not literals.
 ** S%{A B C '\n'}
 
 * S%{} String with dynamic expression
-*  S%{ 65 asCharacter, 64 asCharacter }
+* S%{ 65 asCharacter, 64 asCharacter }
+
+
+### Class
+
+~~~
+class MyClass(Object)
+{
+	method show: this
+	{
+	}
+}
+~~~
+
+### Flow Control
+~~~
+k := if (i < 20) { 30 } else { 40 }.
+~~~
+
+~~~
+while (true)
+{
+
+}.
+~~~
+
+~~~
+1 to: 20 do: [:count | ... ].
+~~~
+

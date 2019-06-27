@@ -1,13 +1,13 @@
 
 #include 'Moo.moo'.
 
-#################################################################
-## MAIN
-#################################################################
+////////////////////////////////////////////////////////////////#
+// MAIN
+////////////////////////////////////////////////////////////////#
 
-## TODO: use #define to define a class or use #class to define a class.
-##       use #extend to extend a class
-##       using #class for both feels confusing.
+// TODO: use #define to define a class or use #class to define a class.
+//       use #extend to extend a class
+//       using #class for both feels confusing.
 
 extend Apex
 {
@@ -77,14 +77,14 @@ class MyObject(TestObject)
 		s2 := Semaphore forMutualExclusion.
 
 		t1 := [ 
-			##1000 timesRepeat: ['BLOCK #1' dump].
+			//1000 timesRepeat: ['BLOCK #1' dump].
 			s2 critical: [
 				10000 timesRepeat: ['BLOCK #1' dump ].
 				Exception signal: 'Raised Exception at process t1'.
 			]
 		] newProcess.
 		t2 := [ 
-			##1000 timesRepeat: ['BLOCK #2' dump].
+			//1000 timesRepeat: ['BLOCK #2' dump].
 			s2 critical: [
 				10000 timesRepeat: ['BLOCK #2' dump. ]
 			].
@@ -120,13 +120,13 @@ class MyObject(TestObject)
 			k := 99.
 			[
 				[
-					##[ Exception signal: 'simulated error' ] ensure: [('ensure 1 ' & (k asString)) dump ].
+					//[ Exception signal: 'simulated error' ] ensure: [('ensure 1 ' & (k asString)) dump ].
 					[ ^ 20 ] ensure: [ ('ensure 1 ' & (k asString)) dump. ].
 				] ensure: ['ensure 2' dump ].
 			] ensure: ['ensure 3' dump ].
 		] on: Exception do: [:ex | 
 			('EXCETION - ' & ex messageText) dump.
-			## Exception signal: 'qqq'.
+			// Exception signal: 'qqq'.
 		].
 		^v1
 	}
@@ -134,20 +134,20 @@ class MyObject(TestObject)
 	{
 		| v1 |
 		'START OF MAIN' dump.
-		##[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump].
-		##['ENSURE TEST' dump] ensure: ['XXXXXXXXX ENSURE XXXXXXXXXXXXXx' dump].
+		//[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump].
+		//['ENSURE TEST' dump] ensure: ['XXXXXXXXX ENSURE XXXXXXXXXXXXXx' dump].
 
-		##v1 := [ ['kkk' dump.] ensure: ['XXXXXXXXX ENSURE XXXXXXXXXXXXXx' dump. 30] ] on: Exception do: [:ex | 'EXCEPTION OUTSIDE ENSURE...' dump.  ].
-		##v1 dump.
+		//v1 := [ ['kkk' dump.] ensure: ['XXXXXXXXX ENSURE XXXXXXXXXXXXXx' dump. 30] ] on: Exception do: [:ex | 'EXCEPTION OUTSIDE ENSURE...' dump.  ].
+		//v1 dump.
 
 
-		##[ Exception signal: 'simulated error' ] on: Exception do: [:ex | 'CAUGHT...' dump. Exception signal: 'jjjjjjj' ].
+		//[ Exception signal: 'simulated error' ] on: Exception do: [:ex | 'CAUGHT...' dump. Exception signal: 'jjjjjjj' ].
 		
-		##[
-		##		[ Exception signal: 'simulated error' ] ensure: ['ensure 1' dump ].
-		##] on: Exception do: [:ex | ('EXCETION - ' & ex messageText) dump. Exception signal: 'qqq'. ].
+		//[
+		//		[ Exception signal: 'simulated error' ] ensure: ['ensure 1' dump ].
+		//] on: Exception do: [:ex | ('EXCETION - ' & ex messageText) dump. Exception signal: 'qqq'. ].
 
-		##[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump. Exception signal: 'jjjj'].
+		//[1 xxx] ifCurtailed: ['XXXXXXXX CURTAILED XXXXXXXXX' dump. Exception signal: 'jjjj'].
 
 		/*
 		v1 := [
@@ -155,13 +155,13 @@ class MyObject(TestObject)
 			k := 99.
 			[
 				[
-					##[ Exception signal: 'simulated error' ] ensure: [('ensure 1 ' & (k asString)) dump ].
+					//[ Exception signal: 'simulated error' ] ensure: [('ensure 1 ' & (k asString)) dump ].
 					[ ^20 ] ensure: [('ensure 1 ' & (k asString)) dump ].
 				] ensure: ['ensure 2' dump ].
 			] ensure: ['ensure 3' dump ].
 		] on: Exception do: [:ex | 
 			('EXCETION - ' & ex messageText) dump.
-			## Exception signal: 'qqq'.
+			// Exception signal: 'qqq'.
 		].
 		*/
 
@@ -205,7 +205,7 @@ class MyObject(TestObject)
 		
 
 		'WAITING ON S3...' dump.
-		##System unsignal: s3.
+		//System unsignal: s3.
 		s3 wait.
 
 		10 timesRepeat: ['WAITED t1 and t2' dump].

@@ -1,9 +1,9 @@
 
 #include 'Moo.moo'.
 
-#################################################################
-## MAIN
-#################################################################
+////////////////////////////////////////////////////////////////#
+// MAIN
+////////////////////////////////////////////////////////////////#
 
 extend Apex
 {
@@ -86,7 +86,7 @@ class MyConsole(Console)
 
 class MyObject(TestObject)
 {
-	##import(#pooldic) ABC, SRX.ABC.
+	//import(#pooldic) ABC, SRX.ABC.
 	import ABC, SRX.ABC.
 	
 	method(#class) main
@@ -121,14 +121,14 @@ class MyObject(TestObject)
 		System logNl: S'\0\0\0END OF MAIN\0AB\0\0\0C\0\0\0'.
 
 
-		##v1 := Stdio2 open: '/tmp/1.txt' for: 'w+'.
+		//v1 := Stdio2 open: '/tmp/1.txt' for: 'w+'.
 		v1 := Stdio2 new open('/tmp/1.txt', 'w+').
 		(v1 isError) 
 			ifTrue: [
 				System logNl: ('Error in opening a file....' & v1 asString). 
 			]
 			ifFalse: [
-				## v1 puts: 'hello'.
+				// v1 puts: 'hello'.
 				v1 puts ('hello', 'world', 'good', C'\n', C'\t', 'under my umbrella 123.', C'\n').
 				v1 close.
 
@@ -169,7 +169,7 @@ class MyObject(TestObject)
 		0 priorTo: 200 do: [:i |
 			| k |
 			k := 1 bitShift: i.
-			## (k printStringRadix: 2) dump.
+			// (k printStringRadix: 2) dump.
 			((k bitAt: i) = 1) ifFalse: [
 				System logNl: 'Test 5 failed'.
 				thisProcess terminate.
@@ -220,7 +220,7 @@ class MyObject(TestObject)
 			(thisContext vargAt: k) dump.
 		].
 		'varg_test3 end .....' dump.
-		## ^b * 100
+		// ^b * 100
 		^f
 	}
 	

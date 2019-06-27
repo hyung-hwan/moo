@@ -1,4 +1,4 @@
-###include 'Moo.moo'.
+//#include 'Moo.moo'.
 #include 'Socket.moo'.
 
 class HttpConnReg(Object)
@@ -10,7 +10,7 @@ class HttpConnReg(Object)
 	method initialize
 	{
 		| i size |
-		self.connections := Array new: 32. ## TODO: make it dynamic
+		self.connections := Array new: 32. // TODO: make it dynamic
 
 		i := self.connections size.
 		if (i <= 0) 
@@ -58,9 +58,9 @@ class HttpConnReg(Object)
 	method do: block
 	{
 		| index size conn |
-		## the following loop won't evaluate the given block for an element added after 
-		## resizing of self.connections at present, there is no self.connections resizing
-		## impelemented. so no worry on this.
+		// the following loop won't evaluate the given block for an element added after 
+		// resizing of self.connections at present, there is no self.connections resizing
+		// impelemented. so no worry on this.
 		size := self.connections size. 
 		index := 0.  
 		while (index < size)
@@ -199,7 +199,7 @@ cliaddr dump.
 
 	method acceptedSocketClass
 	{
-		##^if (self currentAddress port == 80) { HttpSocket } else { HttpSocket }.
+		//^if (self currentAddress port == 80) { HttpSocket } else { HttpSocket }.
 		^HttpSocket.
 	}
 
@@ -252,7 +252,7 @@ class HttpServer(Object)
 			listener listen: 128.
 		] on: Exception do: [:ex |
 			listener close.
-			## ex pass.
+			// ex pass.
 			Exception signal: ('unable to add new listener - ' & ex messageText).
 		].
 	}
@@ -281,7 +281,7 @@ class HttpServer(Object)
 	{
 		| listener |
 		if (laddr class == Array)
-		##if (laddr respondsTo: #do:) ## can i check if the message receives a block and the block accepts 1 argument?
+		//if (laddr respondsTo: #do:) // can i check if the message receives a block and the block accepts 1 argument?
 		{
 			laddr do: [:addr | self __add_new_listener: addr ].
 		}
@@ -330,7 +330,7 @@ class MyObject(Object)
 				}.
 			].
 			clisck onEvent: #data_out do: [ :csck |
-				##csck writeBytesFrom: #[ $a, $b, C'\n' ].
+				//csck writeBytesFrom: #[ $a, $b, C'\n' ].
 			].
 			clisck onEvent: #closed do: [ :csck |
 				'Socket CLOSED....' dump.
@@ -396,7 +396,7 @@ class MyObject(Object)
 				{
 					ss := thisProcess handleAsyncEvent.
 					if (ss isError) { break }.
-					###if (ss == st) { thisProcess removeAsyncSemaphore: st }.
+					//#if (ss == st) { thisProcess removeAsyncSemaphore: st }.
 				}.
 			]
 			ensure:
@@ -446,7 +446,7 @@ class MyObject(Object)
 /*
 [
 addr := SocketAddress fromString: '1.2.3.4:5555'.
-##addr := SocketAddress fromString: '127.0.0.1:22'.
+//addr := SocketAddress fromString: '127.0.0.1:22'.
 httpd := SyncSocket family: (addr family) type: Socket.Type.STREAM.
 httpd timeout: 5.
 httpd connect: addr.

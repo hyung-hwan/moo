@@ -1,13 +1,13 @@
 
 #include 'Moo.moo'.
 
-#################################################################
-## MAIN
-#################################################################
+////////////////////////////////////////////////////////////////#
+// MAIN
+////////////////////////////////////////////////////////////////#
 
-## TODO: use #define to define a class or use #class to define a class.
-##       use #extend to extend a class
-##       using #class for both feels confusing.
+// TODO: use #define to define a class or use #class to define a class.
+//       use #extend to extend a class
+//       using #class for both feels confusing.
 
 extend Apex
 {

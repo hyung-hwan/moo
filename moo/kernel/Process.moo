@@ -20,30 +20,30 @@ class(#pointer,#final,#limited) Process(Object)
 
 	method terminate
 	{
-		## search from the top context of the process down to intial_context and find ensure blocks and execute them.
-		## if a different process calls 'terminate' on a process,
-		## the ensureblock is not executed in the context of the
-		## process being terminated, but in the context of terminatig process.
-		##
-		## 1) process termianted by another process
-		##   p := [ 
-		##       [  1 to: 10000 by: 1 do: [:ex | System logNl: i asString] ] ensure: [System logNl: 'ensured....'] 
-		##   ] newProcess.
-		##   p resume.
-		##   p terminate.
-		##
-		## 2) process terminated by itself
-		##   p := [ 
-		##       [ thisProcess terminate. ] ensure: [System logNl: 'ensured....'] 
-		##   ] newProcess.
-		##   p resume.
-		##   p terminate.
-		## ----------------------------------------------------------------------------------------------------------
-		## the process must be frozen first. while unwinding is performed, 
-		## the process must not be scheduled.
-		## ----------------------------------------------------------------------------------------------------------
+		// search from the top context of the process down to intial_context and find ensure blocks and execute them.
+		// if a different process calls 'terminate' on a process,
+		// the ensureblock is not executed in the context of the
+		// process being terminated, but in the context of terminatig process.
+		//
+		// 1) process termianted by another process
+		//   p := [ 
+		//       [  1 to: 10000 by: 1 do: [:ex | System logNl: i asString] ] ensure: [System logNl: 'ensured....'] 
+		//   ] newProcess.
+		//   p resume.
+		//   p terminate.
+		//
+		// 2) process terminated by itself
+		//   p := [ 
+		//       [ thisProcess terminate. ] ensure: [System logNl: 'ensured....'] 
+		//   ] newProcess.
+		//   p resume.
+		//   p terminate.
+		// ----------------------------------------------------------------------------------------------------------
+		// the process must be frozen first. while unwinding is performed, 
+		// the process must not be scheduled.
+		// ----------------------------------------------------------------------------------------------------------
 
-		##if (Processor activeProcess ~~ self) { self suspend }.
+		//if (Processor activeProcess ~~ self) { self suspend }.
 		if (thisProcess ~~ self) { self suspend }.
 		self.currentContext unwindTo: self.initialContext return: nil.
 		^self _terminate
@@ -75,13 +75,13 @@ class Semaphore(Object)
 	var waiting_head  := nil,
 	    waiting_tail  := nil.
 	
-	var count         := 0.    ## semaphore signal count
+	var count         := 0.    // semaphore signal count
 
-	var subtype       := nil. ## nil, io, timed
+	var subtype       := nil. // nil, io, timed
 
-	var heapIndex     := nil, ## overlaps as ioIndex
-	    fireTimeSec   := nil, ## overlaps as ioHandle
-	    fireTimeNsec  := nil. ## overlaps as ioType
+	var heapIndex     := nil, // overlaps as ioIndex
+	    fireTimeSec   := nil, // overlaps as ioHandle
+	    fireTimeNsec  := nil. // overlaps as ioType
 
 	var(#get,#set) signalAction := nil.
 
@@ -89,7 +89,7 @@ class Semaphore(Object)
 	               _grm_next := nil,
 	               _grm_prev := nil.
 
-	## ==================================================================
+	// ==================================================================
 
 	method(#primitive) signal.
 	method(#primitive) _wait.
@@ -102,7 +102,7 @@ class Semaphore(Object)
 		^k
 	}
 
-	## ==================================================================
+	// ==================================================================
 
 	method(#primitive) signalAfterSecs: secs.
 	method(#primitive) signalAfterSecs: secs nanosecs: nanosecs.
@@ -111,7 +111,7 @@ class Semaphore(Object)
 	method(#primitive) signalOnGCFin.
 	method(#primitive) unsignal.
 
-	## ==================================================================
+	// ==================================================================
 
 	method heapIndex: index
 	{
@@ -122,9 +122,9 @@ class Semaphore(Object)
 		^self.heapIndex.
 	}
 
-	## ------------------------------------------
-	## TODO: either put fireTimeNsec into implementation of fireTime, and related methods.
-	## ------------------------------------------
+	// ------------------------------------------
+	// TODO: either put fireTimeNsec into implementation of fireTime, and related methods.
+	// ------------------------------------------
 	method fireTime
 	{
 		^self.fireTimeSec
@@ -175,7 +175,7 @@ TODO: how to prohibit wait and signal???
 
 class SemaphoreGroup(Object)
 {
-	## the first two variables must match those of Semaphore.
+	// the first two variables must match those of Semaphore.
 	var waiting_head  := nil,
 	    waiting_tail  := nil.
 	    
@@ -207,7 +207,7 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 		x := self _wait.
 		if (x notError)
 		{
-			## TODO: is it better to check if x is an instance of Semaphore/SemaphoreGroup?
+			// TODO: is it better to check if x is an instance of Semaphore/SemaphoreGroup?
 			if (x signalAction notNil) { x signalAction value: x }.
 		}.
 		^x
@@ -217,26 +217,26 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 	{
 		| s r |
 
-		## create an internal semaphore for timeout notification.
+		// create an internal semaphore for timeout notification.
 		s := Semaphore new. 
 		self addSemaphore: s.
 
 		[ 
-			## arrange the processor to notify upon timeout.
+			// arrange the processor to notify upon timeout.
 			s signalAfterSecs: seconds.
 
-			## wait on the semaphore group.
+			// wait on the semaphore group.
 			r := self wait. 
 
-			## if the internal semaphore has been signaled, 
-			## arrange to return nil to indicate timeout.
-			if (r == s) { r := nil } ## timed out
-			elsif (r signalAction notNil) { r signalAction value: r }. ## run the signal action block
+			// if the internal semaphore has been signaled, 
+			// arrange to return nil to indicate timeout.
+			if (r == s) { r := nil } // timed out
+			elsif (r signalAction notNil) { r signalAction value: r }. // run the signal action block
 		] ensure: [
-			## System<<unsignal: doesn't thrown an exception even if the semaphore s is not
-			## register with System<<signal:afterXXX:. otherwise, i would do like this line
-			## commented out.
-			## [ s unsignal ] ensure: [ self removeSemaphore: s ].
+			// System<<unsignal: doesn't thrown an exception even if the semaphore s is not
+			// register with System<<signal:afterXXX:. otherwise, i would do like this line
+			// commented out.
+			// [ s unsignal ] ensure: [ self removeSemaphore: s ].
 
 			s unsignal.
 			self removeSemaphore: s
@@ -318,7 +318,7 @@ class SemaphoreHeap(Object)
 		self.size := self.size - 1.
 		if (anIndex == self.size) 
 		{
-			## the last item
+			// the last item
 			self.arr at: self.size put: nil.
 		}
 		else
@@ -366,13 +366,13 @@ class SemaphoreHeap(Object)
 
 			if (item notYoungerThan: par)  { break }.
 
-			## item is younger than the parent. 
-			## move the parent down
+			// item is younger than the parent. 
+			// move the parent down
 			self.arr at: cindex put: par.
 			par heapIndex: cindex.
 		}.
 
-		## place the item as high as it can
+		// place the item as high as it can
 		self.arr at: cindex put: item.
 		item heapIndex: cindex.
 

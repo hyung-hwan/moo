@@ -1,12 +1,12 @@
-##
-## TEST CASES for basic methods
-##
+//
+// TEST CASES for basic methods
+//
 
 #include 'Moo.moo'.
 
-#################################################################
-## MAIN
-#################################################################
+////////////////////////////////////////////////////////////////#
+// MAIN
+////////////////////////////////////////////////////////////////#
 
 class MyObject(Object)
 {
@@ -39,7 +39,7 @@ class MyObject(Object)
 		sg addSemaphore: s3.
 
 		s1 signalOnInput: 0.
-		s2 signalOnInput: 0. ## this should raise an exception as the same file descriptor is added to a different semaphore
+		s2 signalOnInput: 0. // this should raise an exception as the same file descriptor is added to a different semaphore
 		s3 signalOnInput: 0.
 
 		[ sg wait. ] fork.
@@ -57,7 +57,7 @@ sg removeSemaphore: s1.
 		| tc limit |
 
 		tc := %(
-			## 0 - 4
+			// 0 - 4
 			[self test_terminate == 180],
 			[self test_sg == nil]
 		).

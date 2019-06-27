@@ -1,13 +1,13 @@
 
 #include 'Moo.moo'.
 
-#################################################################
-## MAIN
-#################################################################
+////////////////////////////////////////////////////////////////#
+// MAIN
+////////////////////////////////////////////////////////////////#
 
-## TODO: use #define to define a class or use #class to define a class.
-##       use #extend to extend a class
-##       using #class for both feels confusing.
+// TODO: use #define to define a class or use #class to define a class.
+//       use #extend to extend a class
+//       using #class for both feels confusing.
 
 extend Apex
 {
@@ -97,8 +97,8 @@ class MyObject(TestObject)
 
 		'START OF MAIN' dump.
 		[2 + 3 + 1 + [[[^6] value] value ] value] value dump.
-	##	^(self a: (self new a) b: ([:a :b | a + b] value: 10 value: 20) c: (self new c)) dump.
-		##self getBlock value dump.
+	//	^(self a: (self new a) b: ([:a :b | a + b] value: 10 value: 20) c: (self new c)) dump.
+		//self getBlock value dump.
 		'END OF MAIN' dump.
 	}
 

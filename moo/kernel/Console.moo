@@ -1,4 +1,4 @@
-## TODO: move Pointe to a separate file 
+// TODO: move Pointe to a separate file 
 class Point(Object)
 {
 	var x, y.
@@ -65,23 +65,23 @@ class Console(Object) from 'con'
 */
 
 
-##	method(#class) input
-##	{
-##		^self new _open: filename mode: mode
-##	}
+//	method(#class) input
+//	{
+//		^self new _open: filename mode: mode
+//	}
 
 	method(#class) output
 	{
 		| c |
 
 		c := self new.
-		c _open. ## TODO error check - if ((e := c _open) isError) { ^e }.
+		c _open. // TODO error check - if ((e := c _open) isError) { ^e }.
 		^c
 	}
 
-##	method(#class) error
-##	{
-##	}
+//	method(#class) error
+//	{
+//	}
 
 	method close
 	{

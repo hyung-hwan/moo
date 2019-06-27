@@ -1,9 +1,9 @@
 
 #include 'Moo.moo'.
 
-#################################################################
-## MAIN
-#################################################################
+////////////////////////////////////////////////////////////////#
+// MAIN
+////////////////////////////////////////////////////////////////#
 
 class MyObject(Object)
 {
@@ -42,7 +42,7 @@ class MyObject(Object)
 
 		ffi := FFI new: 'libc.so.6'.
 		now := ffi call: #time signature: 'l)i' arguments: #(0).
-		####ffi call: #srand signature: 'i)' arguments: %(now).
+		////ffi call: #srand signature: 'i)' arguments: %(now).
 		ffi call: #srandom signature: 'i)' arguments: %(now).
 
 		[
@@ -51,24 +51,24 @@ class MyObject(Object)
 
 			while (true)
 			{
-				##x := (ffi call: #rand signature: ')i' arguments: nil) rem: 20.
-				##divd := (ffi call: #rand signature: ')i' arguments: nil).
+				//x := (ffi call: #rand signature: ')i' arguments: nil) rem: 20.
+				//divd := (ffi call: #rand signature: ')i' arguments: nil).
 				x := (ffi call: #random signature: ')l' arguments: nil) rem: 20.
 				divd := (ffi call: #random signature: ')l' arguments: nil).
 				while (x > 0)
 				{
-					##divd := (divd bitShift: 7) bitOr: (ffi call: #rand signature: ')i' arguments: nil).
+					//divd := (divd bitShift: 7) bitOr: (ffi call: #rand signature: ')i' arguments: nil).
 					divd := (divd bitShift: 7) bitOr: (ffi call: #random signature: ')l' arguments: nil).
 					x := x - 1.
 				}.
 
-				##x := (ffi call: #rand signature: ')i' arguments: nil) rem: 20.
-				##divr := (ffi call: #rand signature: ')i' arguments: nil).
+				//x := (ffi call: #rand signature: ')i' arguments: nil) rem: 20.
+				//divr := (ffi call: #rand signature: ')i' arguments: nil).
 				x := (ffi call: #random signature: ')l' arguments: nil) rem: 20.
 				divr := (ffi call: #random signature: ')l' arguments: nil).
 				while (x > 0)
 				{
-					##divr := (divr bitShift: 7) bitOr: (ffi call: #rand signature: ')i' arguments: nil).
+					//divr := (divr bitShift: 7) bitOr: (ffi call: #rand signature: ')i' arguments: nil).
 					divr := (divr bitShift: 7) bitOr: (ffi call: #random signature: ')l' arguments: nil).
 					x := x - 1.
 				}.
@@ -77,7 +77,7 @@ class MyObject(Object)
 				q := divd div: divr.
 				r := divd rem: divr.
 				if (divd ~= (q * divr + r)) { i dump. divd dump. divr dump. q dump. r dump. (q * divr + r) dump. ^false. }.
-				####((q asString) & ' ' & (r asString)) dump 
+				////((q asString) & ' ' & (r asString)) dump 
 			}.
 		] ensure: [ ffi close. ].
 		^true

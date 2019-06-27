@@ -1,13 +1,13 @@
 
 #include 'Moo.moo'.
 
-#################################################################
-## MAIN
-#################################################################
+////////////////////////////////////////////////////////////////#
+// MAIN
+////////////////////////////////////////////////////////////////#
 
-## TODO: use #define to define a class or use #class to define a class.
-##       use #extend to extend a class
-##       using #class for both feels confusing.
+// TODO: use #define to define a class or use #class to define a class.
+//       use #extend to extend a class
+//       using #class for both feels confusing.
 
 extend Apex
 {
@@ -69,13 +69,13 @@ class MyObject(TestObject)
 			'>>> TEST3 METHOD >>> ' dump.
 			j dump.
 			(j < 25) ifTrue: [ | t | 
-				t := Exception signal: 'bad exceptinon'.  ## when resumed, t should get Exception, the leftover in the stack...
-				t signal: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'. ## so it should be ok to signal again..
-				##t := self raise_exception.  ## when resumed, t should get 'self'
+				t := Exception signal: 'bad exceptinon'.  // when resumed, t should get Exception, the leftover in the stack...
+				t signal: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'. // so it should be ok to signal again..
+				//t := self raise_exception.  // when resumed, t should get 'self'
 
-				##g_ex retry. # You should not do these as the following 3 lines make things very complicated.
-				##g_ex signal.
-				##g_ex pass.
+				//g_ex retry. # You should not do these as the following 3 lines make things very complicated.
+				//g_ex signal.
+				//g_ex pass.
 
 				'RESUMED???' dump. 
 				t dump.
@@ -98,8 +98,8 @@ class MyObject(TestObject)
 			'>>> TEST4_1 METHOD >>> ' dump.
 			j dump.
 			(j < 25) ifTrue: [ | t | 
-				##t := Exception signal: 'bad exceptinon'.  ## when resume, t should get Exception.
-				t := self raise_exception.  ## when resumed, t should get 'self'
+				//t := Exception signal: 'bad exceptinon'.  // when resume, t should get Exception.
+				t := self raise_exception.  // when resumed, t should get 'self'
 				'RESUMED???' dump. 
 				t dump.
 				j dump.
@@ -130,8 +130,8 @@ class MyObject(TestObject)
 			'>>> TEST5 BLOCK >>> ' dump.
 			j dump.
 			(j < 25) ifTrue: [ | t | 
-				##t := Exception signal: 'bad exceptinon'.  ## when resume, t should get Exception.
-				t := self raise_exception.  ## when resumed, t should get 'self'
+				//t := Exception signal: 'bad exceptinon'.  // when resume, t should get Exception.
+				t := self raise_exception.  // when resumed, t should get 'self'
 			]. 
 
 			'OOOOOOOOOOOOOOOOOOOOOOO' dump.
@@ -144,15 +144,15 @@ class MyObject(TestObject)
 
 	method(#class) test11
 	{
-		## exception is raised in a new process. it can't be captured
-		## by an exception handler of a calling process.
-		## exception handling must not cross the process boundary.
+		// exception is raised in a new process. it can't be captured
+		// by an exception handler of a calling process.
+		// exception handling must not cross the process boundary.
 		'BEGINNING OF test11' dump.
 		[ 
 			|p | 
 			p := [ 'TEST11 IN NEW PROCESS' dump. Exception signal: 'Exception raised in a new process of test11'.  ] newProcess.
 			'JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ' dump.
-			p resume. ## resume the new process
+			p resume. // resume the new process
 		] on: Exception do: [:ex | '---- EXCEPTION IN TEST11. THIS MUST NOT BE PRINTED----------' dump. ex messageText dump ].
 		'END OF test11' dump.
 	}
@@ -182,20 +182,20 @@ class MyObject(TestObject)
 		[ self main2 ] on: Exception do: [ :ex | 
 			'EXCEPTION CAUGHT IN MAIN....' dump. 
 			ex messageText dump. 
-			##ex pass.
+			//ex pass.
 			'Returning back to where the exception has signalled in main2...' dump.
-			##ex resume. 
+			//ex resume. 
 			ex resume: 'RESUMED WITH THIS STRING'.
 		].
 
-		'##############################' dump.
-	##	self test3.
-	##	self test4.
+		'//////////////////////////////' dump.
+	//	self test3.
+	//	self test4.
 
-	##	self test5.
+	//	self test5.
 		self test11.
-	##	self test12.
-	##	100 timesRepeat: ['>>>>> END OF MAIN' dump].
+	//	self test12.
+	//	100 timesRepeat: ['>>>>> END OF MAIN' dump].
 
 
 /*
@@ -215,12 +215,12 @@ class MyObject(TestObject)
 
 
 		'@@@@@@@@@@@@@@@@@@@@@@@@@@@@' dump.
-		## the following line(return:to:) must cause primitive failure...
-		##[ Processor return: 10 to: 20. ] on: Exception do: [:ex | ex messageText dump].
+		// the following line(return:to:) must cause primitive failure...
+		//[ Processor return: 10 to: 20. ] on: Exception do: [:ex | ex messageText dump].
 
-		##[ Processor return: 10 to: 20. ] 
-		##	on: PrimitiveFailureException do: [:ex | 'PRIMITIVE FAILURE CAUGHT HERE HERE HERE' dump]
-		##	on: Exception do: [:ex | ex messageText dump].
+		//[ Processor return: 10 to: 20. ] 
+		//	on: PrimitiveFailureException do: [:ex | 'PRIMITIVE FAILURE CAUGHT HERE HERE HERE' dump]
+		//	on: Exception do: [:ex | ex messageText dump].
 
 		'SLEEPING FOR 10 seconds ....' dump.
 		System sleepForSecs: 10.

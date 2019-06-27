@@ -1,13 +1,13 @@
 
 #include 'Moo.moo'.
 
-#################################################################
-## MAIN
-#################################################################
+////////////////////////////////////////////////////////////////#
+// MAIN
+////////////////////////////////////////////////////////////////#
 
-## TODO: use #define to define a class or use #class to define a class.
-##       use #extend to extend a class
-##       using #class for both feels confusing.
+// TODO: use #define to define a class or use #class to define a class.
+//       use #extend to extend a class
+//       using #class for both feels confusing.
 
 extend Apex
 {
@@ -69,7 +69,7 @@ class MyObject(TestObject)
 		do: [:ex |
 			System logNl: ('Exception: ' & ex messageText).
 			ex return: 10.
-			##ex retry.
+			//ex retry.
 			System logNl: '--- THIS MUST NOT BE PRINTED ---'.
 		].
 
@@ -80,7 +80,7 @@ class MyObject(TestObject)
 		v1 := [
 			[    
 				[ 
-					##1 to: 20000 by: 1 do: [:i | System logNl: i asString. "System sleepForSecs: 1." ]  
+					//1 to: 20000 by: 1 do: [:i | System logNl: i asString. "System sleepForSecs: 1." ]  
 					Processor activeProcess terminate.
 				] ensure: [ System logNl: '<<<PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP>>>' ].
 
@@ -92,9 +92,9 @@ class MyObject(TestObject)
 		System sleepForSecs: 1.
 		v1 terminate.
 
- 		##[    
-		##	[ Processor activeProcess terminate. ] ensure: [System logNl: '<<<PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP>>>' ].
-		##] ensure: [ System logNl: '<<--------------------->>' ].
+ 		//[    
+		//	[ Processor activeProcess terminate. ] ensure: [System logNl: '<<<PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP>>>' ].
+		//] ensure: [ System logNl: '<<--------------------->>' ].
 
 		System logNl: S'\0\0\0END OF MAIN\0AB\0\0\0C\0\0\0'.
 	}

@@ -26,9 +26,9 @@ class Collection(Object)
 		self subclassResponsibility: #add:.
 	}
 
-	## ===================================================================
-	## ENUMERATING
-	## ===================================================================
+	// ===================================================================
+	// ENUMERATING
+	// ===================================================================
 
 	method do: block
 	{
@@ -38,7 +38,7 @@ class Collection(Object)
 	method collect: block
 	{
 		| coll |
-		##coll := self class new: self basicSize.
+		//coll := self class new: self basicSize.
 		coll := self class new.
 		self do: [ :el | coll add: (block value: el) ].
 		^coll
@@ -51,7 +51,7 @@ class Collection(Object)
 
 	method detect: block ifNone: exception_block
 	{
-		## returns the first element for which the block evaluates to true.
+		// returns the first element for which the block evaluates to true.
 		self do: [ :el | if (block value: el) { ^el } ].
 		^exception_block value.
 	}
@@ -59,7 +59,7 @@ class Collection(Object)
 	method select: condition_block
 	{
 		| coll |
-		##coll := self class new: self basicSize.
+		//coll := self class new: self basicSize.
 		coll := self class new.
 		self do: [ :el | if (condition_block value: el) { coll add: el } ].
 		^coll
@@ -68,7 +68,7 @@ class Collection(Object)
 	method reject: condition_block
 	{
 		| coll |
-		##coll := self class new: self basicSize.
+		//coll := self class new: self basicSize.
 		coll := self class new.
 		self do: [ :el | ifnot (condition_block value: el) { coll add: el } ].
 		^coll
@@ -80,7 +80,7 @@ class Collection(Object)
 	}
 }
 
-## -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------
 class SequenceableCollection(Collection)
 {
 	method do: aBlock
@@ -113,7 +113,7 @@ class SequenceableCollection(Collection)
 
 	method swap: anIndex with: anotherIndex
 	{
-		## the subclass must implement at: and at:put for this to work.
+		// the subclass must implement at: and at:put for this to work.
 
 		| tmp |
 		tmp := self at: anIndex.
@@ -123,7 +123,7 @@ class SequenceableCollection(Collection)
 
 }
 
-## -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------
 class(#pointer) Array(SequenceableCollection)
 {
 	method size
@@ -158,8 +158,8 @@ class(#pointer) Array(SequenceableCollection)
 
 	method copy: anArray from: start to: end
 	{
-		## copy elements from an array 'anArray' starting from 
-		## the index 'start' to the index 'end'.
+		// copy elements from an array 'anArray' starting from 
+		// the index 'start' to the index 'end'.
 
 		| s i ss |
 
@@ -192,8 +192,8 @@ class(#pointer) Array(SequenceableCollection)
 
 	method copyFrom: start to: end
 	{
-		## returns a copy of the receiver starting from the element 
-		## at index 'start' to the element at index 'end'.
+		// returns a copy of the receiver starting from the element 
+		// at index 'start' to the element at index 'end'.
 		| newsz |
 		newsz := end - start + 1.
 		^(self class new: newsz) copy: self from: start to: end
@@ -255,7 +255,7 @@ class(#pointer) Array(SequenceableCollection)
 	}
 }
 
-## -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------
 
 class(#character) String(Array)
 {
@@ -299,7 +299,7 @@ class(#character) String(Array)
 	method(#primitive,#variadic,#class) format(fmt).
 }
 
-## -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------
 
 class(#character,#final,#limited,#immutable) Symbol(String)
 {
@@ -312,7 +312,7 @@ class(#character,#final,#limited,#immutable) Symbol(String)
 		size := self basicSize.
 		str := String basicNew: size.
 
-		##0 priorTo: size do: [:i | str at: i put: (self at: i) ].
+		//0 priorTo: size do: [:i | str at: i put: (self at: i) ].
 		i := 0.
 		while (i < size) 
 		{ 
@@ -337,24 +337,24 @@ class(#character,#final,#limited,#immutable) Symbol(String)
 	}
 }
 
-## -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------
 
 class(#byte) ByteArray(Array)
 {
-	## TODO: is it ok for ByteArray to inherit from Array?
+	// TODO: is it ok for ByteArray to inherit from Array?
 
-##	method asByteString
-##	{
-##	}
+//	method asByteString
+//	{
+//	}
 
 	method decodeToCharacter
 	{
-		## TODO: support other encodings. it only supports utf8 as of now.
+		// TODO: support other encodings. it only supports utf8 as of now.
 		<primitive: #_utf8_to_uc>
 		self primitiveFailed(thisContext method).
 
 		/*
-		### TODO: implement this in moo also..
+		//# TODO: implement this in moo also..
 		| firstByte |
 		firstByte := self at: 0.
 		if ((firstByte bitAnd:2r10000000) == 0) { 1 }
@@ -371,13 +371,13 @@ class(#byte) ByteString(Array)
 {
 }
 
-## -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------
 
 class OrderedCollection(SequenceableCollection)
 {
 	var buffer.
 	var(#get) firstIndex.
-	var(#get) lastIndex. ## this is the last index plus 1.
+	var(#get) lastIndex. // this is the last index plus 1.
 
 	method(#class) new
 	{
@@ -416,7 +416,7 @@ class OrderedCollection(SequenceableCollection)
 
 	method at: index put: obj
 	{
-		## replace an existing element. it doesn't grow the buffer.
+		// replace an existing element. it doesn't grow the buffer.
 		| i |
 		i := index + self.firstIndex.
 		if ((i >= self.firstIndex) and (i < self.lastIndex)) { ^self.buffer at: i put: obj }.
@@ -554,19 +554,19 @@ class OrderedCollection(SequenceableCollection)
 
 	method removeAtIndex: index
 	{
-		## remove the element at the given position.
+		// remove the element at the given position.
 		| obj |
-		obj := self at: index. ## the range is checed by the at: method.
+		obj := self at: index. // the range is checed by the at: method.
 		self __remove_index(index + self.firstIndex).
 		^obj
 	}
 
 	method remove: obj ifAbsent: error_block
 	{
-		## remove the first element equivalent to the given object.
-		## and returns the removed element.
-		## if no matching element is found, it evaluates error_block
-		## and return the evaluation result.
+		// remove the first element equivalent to the given object.
+		// and returns the removed element.
+		// if no matching element is found, it evaluates error_block
+		// and return the evaluation result.
 		| i cand |
 		i := self.firstIndex.
 		while (i < self.lastIndex)
@@ -578,9 +578,9 @@ class OrderedCollection(SequenceableCollection)
 		^error_block value.
 	}
 
-	## ------------------------------------------------
-	## ENUMERATING
-	## ------------------------------------------------
+	// ------------------------------------------------
+	// ENUMERATING
+	// ------------------------------------------------
 	method collect: aBlock
 	{
 		| coll |
@@ -591,7 +591,7 @@ class OrderedCollection(SequenceableCollection)
 
 	method do: aBlock
 	{
-		##^self.firstIndex to: (self.lastIndex - 1) do: [:i | aBlock value: (self.buffer at: i)].
+		//^self.firstIndex to: (self.lastIndex - 1) do: [:i | aBlock value: (self.buffer at: i)].
 
 		| i |
 		i := self.firstIndex.
@@ -624,9 +624,9 @@ class OrderedCollection(SequenceableCollection)
 		}.
 	}
 
-	## ------------------------------------------------
-	## PRIVATE METHODS
-	## ------------------------------------------------
+	// ------------------------------------------------
+	// PRIVATE METHODS
+	// ------------------------------------------------
 	method __grow_and_shift(grow_size, shift_count)
 	{
 		| newcon |
@@ -652,10 +652,10 @@ class OrderedCollection(SequenceableCollection)
 	method __ensure_tail_room(size)
 	{
 		| tmp |
-		tmp := (self.buffer size) - self.lastIndex. ## remaining capacity
+		tmp := (self.buffer size) - self.lastIndex. // remaining capacity
 		if (tmp < size)
 		{
-			tmp := size - tmp + 8.  ## grow by this amount
+			tmp := size - tmp + 8.  // grow by this amount
 			self __grow_and_shift(tmp, 0).
 		}
 	}
@@ -666,8 +666,8 @@ class OrderedCollection(SequenceableCollection)
 
 		if (index <= 0)
 		{
-			## treat a negative index as the indicator to 
-			## grow space in the front side.
+			// treat a negative index as the indicator to 
+			// grow space in the front side.
 			reqsize := index * -1 + 1.
 			if (reqsize >= self.firstIndex) { self __ensure_head_room(reqsize) }.
 			self.firstIndex := self.firstIndex + index - 1.
@@ -705,10 +705,10 @@ class OrderedCollection(SequenceableCollection)
 
 	method __remove_index(index)
 	{
-		## remove an element at the given index from the internal buffer's
-		## angle. as it is for internal use only, no check is performed
-		## about the range of index. the given index must be equal to or
-		## grater than self.firstIndex and less than self.lastIndex.
+		// remove an element at the given index from the internal buffer's
+		// angle. as it is for internal use only, no check is performed
+		// about the range of index. the given index must be equal to or
+		// grater than self.firstIndex and less than self.lastIndex.
 		self.buffer
 			replaceFrom: index
 			to: self.lastIndex - 2
@@ -735,18 +735,18 @@ class OrderedCollection(SequenceableCollection)
 }
 
 
-## -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------
 
 class Set(Collection)
 {
-	## The set class stores unordered elemenents and disallows duplicates.
-	## It is implemented as an open-addressed hash table currently.
+	// The set class stores unordered elemenents and disallows duplicates.
+	// It is implemented as an open-addressed hash table currently.
 
 	var tally, bucket.
 
 	method(#class) new
 	{
-		^self new: 16. ### TODO: default size.
+		^self new: 16. //# TODO: default size.
 	}
 
 	method(#class) new: capacity
@@ -781,7 +781,7 @@ class Set(Collection)
 		| newbuc newsz ass index i |
 
 		/* expand the bucket */
-		newsz := bs + 16.  ## TODO: make this sizing operation configurable.
+		newsz := bs + 16.  // TODO: make this sizing operation configurable.
 		newbuc := Array new: newsz.
 		i := 0.
 		while (i < bs)
@@ -812,7 +812,7 @@ class Set(Collection)
 			index := (index + 1) rem: bs.
 		}.
 
-		^index. ## the item at this index is nil.
+		^index. // the item at this index is nil.
 	}
 
 	method __find_index: anObject
@@ -872,9 +872,9 @@ class Set(Collection)
 	{
 		| index absent bs |
 		
-		## you cannot add nil to a set. however, the add: method doesn't
-		## raise an exception for this. the includes: for nil returns
-		## false naturally for the way it's implemented.
+		// you cannot add nil to a set. however, the add: method doesn't
+		// raise an exception for this. the includes: for nil returns
+		// false naturally for the way it's implemented.
 		if (anObject isNil) { ^anObject }.
 
 		index := self __find_index_for_add: anObject.
@@ -934,12 +934,12 @@ class Set(Collection)
 	
 	method collect: aBlock
 	{
-		## override the default implementation to avoid frequent growth
-		## of the new collection being constructed. the block tends to 
-		## include expression that will produce a unique value for each
-		## element. so sizing the returning collection to the same size
-		## as the receiver is likely to help. however, this assumption
-		## isn't always true.
+		// override the default implementation to avoid frequent growth
+		// of the new collection being constructed. the block tends to 
+		// include expression that will produce a unique value for each
+		// element. so sizing the returning collection to the same size
+		// as the receiver is likely to help. however, this assumption
+		// isn't always true.
 
 		| coll |
 		coll := self class new: self capacity.
@@ -948,10 +948,10 @@ class Set(Collection)
 	}
 }
 
-## TODO: implement IdentitySet
-##class IdentitySet(Set)
-##{
-##}
+// TODO: implement IdentitySet
+//class IdentitySet(Set)
+//{
+//}
 
 class AssociativeCollection(Collection)
 {
@@ -1078,7 +1078,7 @@ class AssociativeCollection(Collection)
 
 	method at: key put: value
 	{
-		## returns the affected/inserted association
+		// returns the affected/inserted association
 		^self __find: key or_upsert: true with: value.
 	}
 
@@ -1152,7 +1152,7 @@ class AssociativeCollection(Collection)
 		self.bucket at: x put: nil.
 		self.tally := self.tally - 1.
 
-		## return the affected association 
+		// return the affected association 
 		^v
 	}
 
@@ -1204,9 +1204,9 @@ class AssociativeCollection(Collection)
 		^self __find: (anAssociation key) or_upsert: true with: (anAssociation value)
 	}
 
-	## ===================================================================
-	## ENUMERATING
-	## ===================================================================
+	// ===================================================================
+	// ENUMERATING
+	// ===================================================================
 
 	method collect: aBlock
 	{
@@ -1220,9 +1220,9 @@ class AssociativeCollection(Collection)
 	{
 		| coll |
 		coll := self class new.
-		## TODO: using at:put: here isn't really right. implement add: to be able to insert the assocication without
-		##       creating another new association.
-		##self associationsDo: [ :ass | if (aBlock value: ass value) { coll add: ass } ].
+		// TODO: using at:put: here isn't really right. implement add: to be able to insert the assocication without
+		//       creating another new association.
+		//self associationsDo: [ :ass | if (aBlock value: ass value) { coll add: ass } ].
 		self associationsDo: [ :ass | if (aBlock value: ass value) { coll at: (ass key) put: (ass value) } ].
 		^coll
 	}
@@ -1287,9 +1287,9 @@ class Dictionary(AssociativeCollection)
 	 *  for the dictionary expression notation - %{ }
 	 */
 	
-	## TODO: implement Dictionary as a Hashed List/Table or Red-Black Tree
-	##       Do not inherit Set upon reimplementation
-	##
+	// TODO: implement Dictionary as a Hashed List/Table or Red-Black Tree
+	//       Do not inherit Set upon reimplementation
+	//
 	method(#class) new: capacity
 	{
 		^super new: (capacity + 10).
@@ -1322,7 +1322,7 @@ class Dictionary(AssociativeCollection)
 			{
 				/* found */
 				self.bucket at: index put: assoc.
-				^self. ## it must return self for the instructions generated by the compiler.
+				^self. // it must return self for the instructions generated by the compiler.
 			}.
 			index := (index + 1) rem: bs.
 		}.
@@ -1354,14 +1354,14 @@ class(#limited) Namespace(AssociativeCollection)
 	var name, nsup.
 
 	method name { ^self.name }
-	## method name: name { self.name := name }
+	// method name: name { self.name := name }
 
 	/* nsup points to either the class associated with this namespace or directly
 	 * the upper namespace placed above this namespace. when it points to a class,
 	 * you should inspect the nsup field of the class to reach the actual upper
 	 * namespace */
 	method nsup { ^self.nsup }
-	## method nsup: nsup { self.nsup := nsup }
+	// method nsup: nsup { self.nsup := nsup }
 
 	method at: key
 	{
@@ -1386,10 +1386,10 @@ class MethodDictionary(AssociativeCollection)
 
 extend Apex
 {
-	## -------------------------------------------------------
-	## Association has been defined now. let's add association
-	## creating methods
-	## -------------------------------------------------------
+	// -------------------------------------------------------
+	// Association has been defined now. let's add association
+	// creating methods
+	// -------------------------------------------------------
 
 	method(#class) -> object
 	{
@@ -1402,7 +1402,7 @@ extend Apex
 	}
 }
 
-## -------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------
 
 class Link(Object)
 {
@@ -1567,9 +1567,9 @@ class LinkedList(Collection)
 
 extend Collection
 {
-	## ===================================================================
-	## CONVERSION
-	## ===================================================================
+	// ===================================================================
+	// CONVERSION
+	// ===================================================================
 	method asOrderedCollection
 	{
 		| coll |

@@ -52,7 +52,7 @@ class FFI(Object)
 			f := self.ffi getsym(name).
 			if (f isError) { FFIException signal: ('Unable to find %s' strfmt(name)) }.
 			self.funcs at: name put: f.
-			f. ## need this as at:put: returns an association
+			f. // need this as at:put: returns an association
 		]. */
 
 		f := self.funcs at: name ifAbsent: [ nil ].

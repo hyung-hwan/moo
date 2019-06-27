@@ -1119,30 +1119,53 @@ static int skip_comment (moo_t* moo)
 		/* handle block comment encoded in /x x/ where x is * */
 		lc = moo->c->lxc;
 		GET_CHAR_TO (moo, c);
-		if (c != '*') goto not_comment;
-
-		do 
+		if (c == '/')
 		{
-			GET_CHAR_TO (moo, c);
-			if (c == MOO_OOCI_EOF) goto unterminated;
-
-			if (c == '*')
+			do 
 			{
-			check_rparen:
 				GET_CHAR_TO (moo, c);
-				if (c == MOO_OOCI_EOF) goto unterminated;
-
-				if (c == '*') goto check_rparen; /* got another * after * */
-				if (c == '/')
+				if (c == MOO_OOCI_EOF)
+				{
+					/* EOF on the comment line is ok for a single-line comment */
+					break;
+				}
+				else if (c == '\r' || c == '\n')
 				{
 					GET_CHAR (moo); /* keep the first meaningful character in lxc */
 					break;
 				}
-			}
-		} 
-		while (1);
+			} 
+			while (1);
 
-		return 1; /* multi-line comment enclosed in /x and x/ where x is * */
+			return 1; /* single line comment led by // */	
+		}
+		else if (c == '*')
+		{
+			do 
+			{
+				GET_CHAR_TO (moo, c);
+				if (c == MOO_OOCI_EOF) goto unterminated;
+
+				if (c == '*')
+				{
+				check_rparen:
+					GET_CHAR_TO (moo, c);
+					if (c == MOO_OOCI_EOF) goto unterminated;
+
+					if (c == '*') goto check_rparen; /* got another * after * */
+					if (c == '/')
+					{
+						GET_CHAR (moo); /* keep the first meaningful character in lxc */
+						break;
+					}
+				}
+			} 
+			while (1);
+
+			return 1; /* multi-line comment enclosed in /x and x/ where x is * */
+		}
+		
+		goto not_comment;
 	}
 	else if (c == '#')
 	{
@@ -1153,7 +1176,7 @@ static int skip_comment (moo_t* moo)
 		/* read a new character */
 		GET_CHAR_TO (moo, c);
 
-		if (c != '!' && c != '#') goto not_comment;
+		if (c != '!') goto not_comment;
 		do 
 		{
 			GET_CHAR_TO (moo, c);
@@ -1170,7 +1193,7 @@ static int skip_comment (moo_t* moo)
 		} 
 		while (1);
 
-		return 1; /* single line comment led by ## or #! */
+		return 1; /* single line comment led by #! */
 	}
 	else 
 	{

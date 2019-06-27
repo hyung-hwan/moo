@@ -2,7 +2,7 @@ class Stream(Object)
 {
 	method(#class) new
 	{
-		## you must use dedicated class methods for instantiation
+		// you must use dedicated class methods for instantiation
 		self messageProhibited: #new.
 	}
 
@@ -18,13 +18,13 @@ class Stream(Object)
 
 	method next
 	{
-		## return the next object in the receiver
+		// return the next object in the receiver
 		^self subclassResponsibility: #next.
 	}
 
 	method nextPut: object
 	{
-		## insert an object at the next position in the receiver
+		// insert an object at the next position in the receiver
 		^self subclassResponsibility: #next.
 	}
 
@@ -100,7 +100,7 @@ class PositionableStream(Stream)
 
 	method position: pos
 	{
-		##if (pos >= 0 and 
+		//if (pos >= 0 and 
 	}
 
 	method reset
@@ -126,7 +126,7 @@ class ExternalStream(ReadWriteStream)
 }
 
 /*
-## mimic java's interface...
+// mimic java's interface...
 interface ByteStreamable
 {
 	readBytesInto:
@@ -134,7 +134,7 @@ interface ByteStreamable
 }
 */
 
-### TODO: specify interface inside [] 
+//# TODO: specify interface inside [] 
 /* 
 difficulty: how to ensure that the class implements the defined interface?
 
@@ -188,7 +188,7 @@ extension String: StringConvertible {
 Let me think about it..
 */ 
 
-class ByteStreamAdapter(Object) ### [ByteStreamable, ByteXXX]
+class ByteStreamAdapter(Object) //# [ByteStreamable, ByteXXX]
 {
 	var bsobj.
 	var inbuf.
@@ -239,12 +239,12 @@ class ByteStreamAdapter(Object) ### [ByteStreamable, ByteXXX]
 	{
 		| v |
 		v := self.bsobj readBytesInto: self.inbuf.
-		## if the streamable object is not blocking, it may return an 
-		## error object when data is not ready. 
+		// if the streamable object is not blocking, it may return an 
+		// error object when data is not ready. 
 		if (v isError) { ^v }. 
 		if (v == 0) 
 		{
-			## end of input
+			// end of input
 			self.indown := true.
 			^v
 		}.
@@ -262,9 +262,9 @@ class ByteStreamAdapter(Object) ### [ByteStreamable, ByteXXX]
 		if (self.inpos >= self.inlen)
 		{ 
 			v := self __fill_inbuf.
-			if (v isError) { ^v }. ## TODO: change error handling
+			if (v isError) { ^v }. // TODO: change error handling
 			if (v <= 0) { ^nil }.
-			####if (self.inpos >= self.inlen) { ^nil }.
+			////if (self.inpos >= self.inlen) { ^nil }.
 		}.
 		
 		v := self.inbuf at: self.inpos.
@@ -274,15 +274,15 @@ class ByteStreamAdapter(Object) ### [ByteStreamable, ByteXXX]
 
 	method next: count into: byte_array startingAt: pos
 	{
-		## return the count bytes
+		// return the count bytes
 		| taken avail needed v incapa |
 
 		if (self.indown) { ^0 }.
 
-		## i assume the given byte array is large enough
-		## to store as many as count bytes starting at the pos position.
-		## if the parameters cannot meet this assumption, you will get
-		## into various system exceptions.
+		// i assume the given byte array is large enough
+		// to store as many as count bytes starting at the pos position.
+		// if the parameters cannot meet this assumption, you will get
+		// into various system exceptions.
 		needed := count.
 		incapa := self.inbuf size.
 
@@ -293,11 +293,11 @@ class ByteStreamAdapter(Object) ### [ByteStreamable, ByteXXX]
 			{
 				if (needed >= incapa)
 				{
-					## don't rely on the internal buffer if the number of bytes 
-					## needed are equal to or greater than the capacity of the
-					## buffer.
+					// don't rely on the internal buffer if the number of bytes 
+					// needed are equal to or greater than the capacity of the
+					// buffer.
 					v := self.bsobj readBytesInto: byte_array offset: pos length: needed.
-					if (v isError or v <= 0) { break }.  ## <<< TODO: change the error handling
+					if (v isError or v <= 0) { break }.  // <<< TODO: change the error handling
 					pos := pos + v.
 					needed := needed - v.
 					continue.
@@ -305,7 +305,7 @@ class ByteStreamAdapter(Object) ### [ByteStreamable, ByteXXX]
 				else
 				{
 					v := self __fill_inbuf.
-					if (v isError or v <= 0) { break }. ## <<< TODO: change the error handling
+					if (v isError or v <= 0) { break }. // <<< TODO: change the error handling
 				}.
 			}.
 
@@ -333,13 +333,13 @@ class ByteStreamAdapter(Object) ### [ByteStreamable, ByteXXX]
 			free := outcapa - self.outlen.
 			if (free <= 0)
 			{
-				self flush. ## TODO: error handling...
+				self flush. // TODO: error handling...
 			}.
 
 			if (self.outlen <= 0 and rem >= outcapa)
 			{
 				consumed := self.bsobj writeBytesFrom: byte_array offset: pos length: rem.
-				if (consumed <= 0) { break }. ## TODO: error handling. also handle exceptions
+				if (consumed <= 0) { break }. // TODO: error handling. also handle exceptions
 			}
 			else
 			{
@@ -363,7 +363,7 @@ class ByteStreamAdapter(Object) ### [ByteStreamable, ByteXXX]
 		while (pos < self.outlen)
 		{
 			v := self.bsobj writeBytesFrom: self.outbuf offset: pos length: (self.outlen - pos).
-			if (v <= 0) { break }. ## TODO: error handling. also handle exceptions
+			if (v <= 0) { break }. // TODO: error handling. also handle exceptions
 			pos := pos + v.
 		}.
 

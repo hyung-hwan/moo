@@ -1,9 +1,9 @@
 
 #include 'Moo.moo'.
 
-#################################################################
-## MAIN
-#################################################################
+////////////////////////////////////////////////////////////////#
+// MAIN
+////////////////////////////////////////////////////////////////#
 
 class MyObject(Object)
 {
@@ -40,7 +40,7 @@ class MyObject(Object)
 
 	method(#class) test_on_do_with: dividend with: divisor
 	{
-		## it returns 0 upon an exception otherwise, division result.
+		// it returns 0 upon an exception otherwise, division result.
 		^[ dividend div: divisor ]  on: Exception do: [:ex | 0 ]
 	}
 
@@ -126,7 +126,7 @@ class MyObject(Object)
 		sem wait.
 		sem wait.
 
-		^%( v, p ) ## v must be 2000, p must be 6000
+		^%( v, p ) // v must be 2000, p must be 6000
 	}
 
 /*
@@ -155,23 +155,23 @@ class MyObject(Object)
 		| tc limit |
 
 		tc := %(
-			## 0 - 4
+			// 0 - 4
 			[ (self test_quicksort: #(7 12 3 20 5 8 2) copy) = #(2 3 5 7 8 12 20)],
 			[ (self test_quicksort: %(99, 12, 18, 7, 12, 3, 20, 5, 8, 2)) = #(2 3 5 7 8 12 12 18 20 99)],
 			[ (self test_on_do_with: 10 with: 2) == 5 ],
 			[ (self test_on_do_with: -10 with: 0) == 0 ],
 			[ self test_ensure_with: -20945. self.ensure_tester_v == -20945 ],
 
-			## 5-9
+			// 5-9
 			[ ((self test_ensure2_with: 8) == 64) and: [self.ensure_tester_v == 8] ],
 			[ self proc1 == 100 ], 
 			[ System sleepForSecs: 2.  self proc1 == 200 ],
 			[ self test_semaphore_heap == true ],
 			[ self test_mutex = #(2000 6000) ],
 
-			## 10-14
-			####[ self test_sem_sig ],
-			[ System sleepForSecs: 2. self.a == 300 ] ## sleep before checking self.a to prevent different result depending on process switching frequency and speed
+			// 10-14
+			////[ self test_sem_sig ],
+			[ System sleepForSecs: 2. self.a == 300 ] // sleep before checking self.a to prevent different result depending on process switching frequency and speed
 		).
 
 		limit := tc size.
@@ -190,7 +190,7 @@ s1 := TcpSocket new.
 
 s1 onEvent: #connected do: [
 	s1 waitToRead.
-	##s1 beginWrite: C'GET / HTTP/1.0\n\r'.
+	//s1 beginWrite: C'GET / HTTP/1.0\n\r'.
 ] 
 s1 onEvent: #written do: [
 ].
@@ -202,7 +202,7 @@ s1 onEvent: #readyToRead do: [
 s1 beginConnect: '1.2.3.4:45' onConnected: [ :result | xxxx].
 
 
-####
+////
 s1 beginConnect: destination onConnected: 
 s1 endConnect --> return what?
 s1 endReceive
