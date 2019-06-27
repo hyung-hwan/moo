@@ -49,7 +49,7 @@ class MyObject(Object)
 System sleepForSecs: 1.
 		sg wait.
 sg removeSemaphore: s1.
-		'********** END OF TESTER *************' dump.
+		"********** END OF TESTER *************" dump.
 	}
 
 	method(#class) main
@@ -67,9 +67,9 @@ sg removeSemaphore: s1.
 		0 priorTo: limit by: 1 do: [ :idx |
 			| tb |
 			tb := tc at: idx.
-			System log(System.Log.INFO, idx asString, (if (tb value) { ' PASS' } else { ' FAIL' }), S'\n').
+			System log(System.Log.INFO, idx asString, (if (tb value) { " PASS" } else { " FAIL" }), "\n").
 		].
 
-		'********** END OF MAIN PROGRAM *************' dump.
+		"********** END OF MAIN PROGRAM *************" dump.
 	}
 }

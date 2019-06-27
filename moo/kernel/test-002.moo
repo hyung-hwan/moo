@@ -1,5 +1,5 @@
 
-#include 'Moo.moo'.
+#include "Moo.moo".
 
 ////////////////////////////////////////////////////////////////#
 // MAIN
@@ -179,7 +179,7 @@ class MyObject(Object)
 		0 priorTo: limit by: 1 do: [ :idx |
 			| tb |
 			tb := tc at: idx.
-			System log(System.Log.INFO, idx asString, (if (tb value) { ' PASS' } else { ' FAIL' }), S'\n').
+			System log(System.Log.INFO, idx asString, (if (tb value) { " PASS" } else { " FAIL" }), "\n").
 		].
 	}
 }

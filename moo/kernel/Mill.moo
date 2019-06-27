@@ -51,53 +51,53 @@ class MyObject(Object)
 		d := Dictionary new.
 		d at: #abc put: 20.
 		d at: #dddd put: 40.
-		d at: #jjjj put: 'hello world'.
-		d at: #moo put: 'good?'.
-		d at: #moo put: 'not good?'.
+		d at: #jjjj put: "hello world".
+		d at: #moo put: "good?".
+		d at: #moo put: "not good?".
 
 		/* (d at: #abc) dump.
 		/* (d at: #dddd) dump. */
 		/*d do: [:v | v dump].*/
 
-		d keysAndValuesDo: [:k :v| System logNl: (k asString) & ' => ' & (v asString) ].
+		d keysAndValuesDo: [:k :v| System logNl: (k asString) & " => " & (v asString) ].
 
-		//(d includesAssociation: (Association key: #moo value: 'not good?')) dump.
-		'-------------------------' dump.
+		//(d includesAssociation: (Association key: #moo value: "not good?")) dump.
+		"-------------------------" dump.
 		//(System at: #MyObject) dump.
 		(d removeKey: #moo) dump.
-		d removeKey: #abc ifAbsent: [System logNl: '#moo not found'].
-		d keysAndValuesDo: [:k :v| System logNl: (k asString) & ' => ' & (v asString) ].
+		d removeKey: #abc ifAbsent: [System logNl: "#moo not found"].
+		d keysAndValuesDo: [:k :v| System logNl: (k asString) & " => " & (v asString) ].
 
-		'-------------------------' dump.
+		"-------------------------" dump.
 		(d at: #jjjj) dump.
 		(d at: #jjjja) dump.
 		
 		/* 
 		System keysAndValuesDo: [:k :v| 
-				System logNl: (k asString) & ' => ' & (v asString) 
+				System logNl: (k asString) & " => " & (v asString) 
 		].
 		*/
 		
 		//System keysDo: [:k| System logNl: (k asString)]
 		
 		/*[
-			[Exception hash dump] ensure: ['xxxx' dump].
-		] on: Exception do: [:ex | ('Exception caught - ' & ex asString) dump ].*/
+			[Exception hash dump] ensure: ["xxxx" dump].
+		] on: Exception do: [:ex | ("Exception caught - " & ex asString) dump ].*/
 
-		ffi := FFI new: '/lib64/libc.so.6'.
+		ffi := FFI new: "/lib64/libc.so.6".
 		if (ffi isError)
 		{
-			System logNl: 'cannot open libc.so'
+			System logNl: "cannot open libc.so"
 		}
 		else
 		{
-			(ffi call: #getpid  signature: ')i' arguments: nil) dump.
-			(ffi call: #printf signature: 's|iis)i' arguments: #(S'A=>%d B=>%d Hello, world %s\n' 1 2 'fly away')) dump.
-			(ffi call: #printf signature: 's|iis)i' arguments: #(S'A=>%d B=>%d Hello, world %s\n' 1 2 'jump down')) dump.
+			(ffi call: #getpid  signature: ")i" arguments: nil) dump.
+			(ffi call: #printf signature: "s|iis)i" arguments: #("A=>%d B=>%d Hello, world %s\n" 1 2 "fly away")) dump.
+			(ffi call: #printf signature: "s|iis)i" arguments: #("A=>%d B=>%d Hello, world %s\n" 1 2 "jump down")) dump.
 			ffi close.
 		}. 
 
-		(('abcd' == 'abcd') ifTrue: [1] ifFalse: [2]) dump.
+		(("abcd" == "abcd") ifTrue: [1] ifFalse: [2]) dump.
 
 	}
 	
@@ -106,28 +106,28 @@ class MyObject(Object)
 	{
 		|a k|
 
-		'BEGINNING OF main...........' dump.
+		"BEGINNING OF main..........." dump.
 		a := 
-			if ([System logNl: 'xxxx'. 'abcd' == 'bcde'. false] value) 
+			if ([System logNl: "xxxx". "abcd" == "bcde". false] value) 
 			{ 
-				System logNl: 'XXXXXXXXX'.
+				System logNl: "XXXXXXXXX".
 				1111 
 			}
-			elsif ('abcd' ~= 'abcd')
+			elsif ("abcd" ~= "abcd")
 			{
-				System logNl: 'second if'.
+				System logNl: "second if".
 			}
-			elsif ([k := 20. System logNl: 'k => ' & (k asString). k + 20. true] value)
+			elsif ([k := 20. System logNl: "k => " & (k asString). k + 20. true] value)
 			{
-				System logNl: 'THIRID forever.............' & (k asString)
+				System logNl: "THIRID forever............." & (k asString)
 			}
 			elsif (true = true)
 			{
-				System logNl: 'forever.............'
+				System logNl: "forever............."
 			}
 			else
 			{
-				System logNl: 'NO MATCH'.
+				System logNl: "NO MATCH".
 				[true] value.
 			}.
 		
@@ -135,12 +135,12 @@ class MyObject(Object)
 		
 		(if (false) { 10 } else { 16rFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF}) dump.
 		
-		System logNl: 'DONE DONE DONE...'.
+		System logNl: "DONE DONE DONE...".
 		
 		
 		(if (false) {} else {1.} ) dump.
 		
-		'TESTING ^^....' dump.
+		"TESTING ^^...." dump.
 		a := 10.
 		([
 			a := a + 3.
@@ -152,11 +152,11 @@ class MyObject(Object)
 		([true] whileTrue: [
 			[true] whileTrue: [
 				[
-				'aaa' dump.
+				"aaa" dump.
 				if (a > 20) { ^^506070 }.
 				a := a + 1.
-				'bbb' dump.
-				] ensure: [('xxxxx' & a asString) dump].
+				"bbb" dump.
+				] ensure: [("xxxxx" & a asString) dump].
 			]
 		]) dump.
 
@@ -187,7 +187,7 @@ class MyObject(Object)
 		a := 5.
 		do {
 			a := do {
-				('in loop.....' & a asString) dump.
+				("in loop....." & a asString) dump.
 				//if (a > 5) { break }.
 				a := a + 1.
 			} while(a < 10).
@@ -225,7 +225,7 @@ class MyObject(Object)
 			1 + 1,
 			##( 1, 2, ##(a, a := a + 1, a, if (a > 10) { a + 20 } ), 3),
 			2 + 2,
-			#'a b c'
+			#"a b c"
 		).
 		
 		/* Dictionary ???
@@ -246,7 +246,7 @@ class MyObject(Object)
 		k dump.
 		a dump.
 */
-		'---------- END ------------' dump.
+		"---------- END ------------" dump.
 		//System sleepForSecs: 20.
 	}
 	
@@ -276,23 +276,23 @@ class MyObject(Object)
 
 
 		a := ##{
-			'aaa' -> 10,
-			'bbb' -> 20,
-			'bbb' -> 30,
+			"aaa" -> 10,
+			"bbb" -> 20,
+			"bbb" -> 30,
 			#bbb -> 40,
 			Association key: 12343 value: 129908123,
 			//5 -> 99,
-			'ccc' -> 890
+			"ccc" -> 890
 		}.
 
-		/*a removeKey: 'bbb'.
+		/*a removeKey: "bbb".
 		a remove: :(#bbb).*/
 
 		//1 to: 100 do: [ :i | a at: i put: (i * 2) ].
 		a keysAndValuesDo: [:k :v |
 			k dump.
 			v dump.
-			'------------' dump.
+			"------------" dump.
 		].
 
 		(a associationAt: (#aaa -> nil)) dump.
@@ -309,16 +309,16 @@ class MyObject(Object)
 		
 		
 
-		/* basicAt: 12 to access the nsdic field. use a proper method once it's defined in Class */
+		/* basicAt: 12 to access the nsdic field. use a proper method once it"s defined in Class */
 	//	(System nsdic) keysAndValuesDo: [:k :v |
 	//		k dump.
 	//		v dump.
-	//		'------------' dump.
+	//		"------------" dump.
 	//	].
 
 		
 		(System at: #Processor) dump.
-		System logNl: 'Sleeping start now....'.
+		System logNl: "Sleeping start now....".
 
 		
 a := System malloc(200).
@@ -349,7 +349,7 @@ a free.
 	{
 		| event |
 		
-		Timer fire: [ 'Timer job' dump. ] in: 3000.
+		Timer fire: [ "Timer job" dump. ] in: 3000.
 		
 		GUI on: #XXX do: [:evt | ... ].
 		GUI on: #YYYY do: [:evt | ... ].

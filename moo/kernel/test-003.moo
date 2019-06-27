@@ -2,7 +2,7 @@
 // TEST CASES for basic methods
 //
 
-#include 'Moo.moo'.
+#include "Moo.moo".
 
 ////////////////////////////////////////////////////////////////#
 // MAIN
@@ -42,7 +42,7 @@ class MyObject(Object)
 		3 to: 100 do: [ :i |
 //(results at: i - 2) dump.
 //(results at: i - 3) dump.
-//'----------' dump.
+//"----------" dump.
 			results add: (rec value: (results at: i - 2) value: (results at: i - 3)).
 		].
 
@@ -79,9 +79,9 @@ class MyObject(Object)
 			[([] isKindOf: Context) == true],
 
 			// 15-20
-			[('string' isKindOf: String) == true],
+			[("string" isKindOf: String) == true],
 			[(#symbol isKindOf: String) == true],
-			[('string' isKindOf: Symbol) == false],
+			[("string" isKindOf: Symbol) == false],
 			[(#symbol isKindOf: Symbol) == true]
 		).
 
@@ -90,11 +90,11 @@ class MyObject(Object)
 		0 priorTo: limit by: 1 do: [ :idx |
 			| tb |
 			tb := tc at: idx.
-			System log(System.Log.INFO, idx asString, (if (tb value) { ' PASS' } else { ' FAIL' }), "\n").
+			System log(System.Log.INFO, idx asString, (if (tb value) { " PASS" } else { " FAIL" }), "\n").
 		].
 
 		// TODO: 
-		String format('%s', " 나	는\\\"") dump.
+		String format("%s", " 나	는\\\"") dump.
 		#"a b\nc" dump.
 	}
 }

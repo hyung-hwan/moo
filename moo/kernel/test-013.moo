@@ -1,5 +1,5 @@
 
-#include 'Moo.moo'.
+#include "Moo.moo".
 
 ////////////////////////////////////////////////////////////////#
 // MAIN
@@ -60,43 +60,43 @@ class MyObject(TestObject)
 	method(#class) main
 	{
 		| v1 v2 |
-		System logNl: 'START OF MAIN'.
+		System logNl: "START OF MAIN".
 		v2 := [ 
-			[ v1 := [ System logNl: 'xxxxxxxxxxxxxxxxc'. Exception signal: 'qqqqq' ] value.
-			'OK OK OK' dump. ] ensure: [ System logNl: 'ENSURE ENSURE ENSURE'].
+			[ v1 := [ System logNl: "xxxxxxxxxxxxxxxxc". Exception signal: "qqqqq" ] value.
+			"OK OK OK" dump. ] ensure: [ System logNl: "ENSURE ENSURE ENSURE"].
 		]
 		on: Exception
 		do: [:ex |
-			System logNl: ('Exception: ' & ex messageText).
+			System logNl: ("Exception: " & ex messageText).
 			ex return: 10.
 			//ex retry.
-			System logNl: '--- THIS MUST NOT BE PRINTED ---'.
+			System logNl: "--- THIS MUST NOT BE PRINTED ---".
 		].
 
 
-		System logNl: '---------------------'.
-		System log: 'v1=>'; log: v1; log: ' v2=>'; logNl: v2.
+		System logNl: "---------------------".
+		System log: "v1=>"; log: v1; log: " v2=>"; logNl: v2.
 
 		v1 := [
 			[    
 				[ 
 					//1 to: 20000 by: 1 do: [:i | System logNl: i asString. "System sleepForSecs: 1." ]  
 					Processor activeProcess terminate.
-				] ensure: [ System logNl: '<<<PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP>>>' ].
+				] ensure: [ System logNl: "<<<PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP>>>" ].
 
-			] ensure: [ System logNl: '<<--------------------->>' ].
+			] ensure: [ System logNl: "<<--------------------->>" ].
 		] newProcess.
 
-		System logNl: 'RESUMING v1'.
+		System logNl: "RESUMING v1".
 		v1 resume.
 		System sleepForSecs: 1.
 		v1 terminate.
 
  		//[    
-		//	[ Processor activeProcess terminate. ] ensure: [System logNl: '<<<PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP>>>' ].
-		//] ensure: [ System logNl: '<<--------------------->>' ].
+		//	[ Processor activeProcess terminate. ] ensure: [System logNl: "<<<PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP>>>" ].
+		//] ensure: [ System logNl: "<<--------------------->>" ].
 
-		System logNl: S'\0\0\0END OF MAIN\0AB\0\0\0C\0\0\0'.
+		System logNl: "\0\0\0END OF MAIN\0AB\0\0\0C\0\0\0".
 	}
 
 }

@@ -37,7 +37,7 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 
 	method asString
 	{
-		^(self class name) & ' - ' & self.messageText.
+		^(self class name) & " - " & self.messageText.
 	}
      
 	method signal
@@ -70,18 +70,18 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 		//thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
 		
 // TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
-System logNl: '== BACKTRACE =='.
+System logNl: "== BACKTRACE ==".
 ctx := thisContext.
 while (ctx notNil)
 {
-	if (ctx class == MethodContext) { System logNl: (' ' & ctx method owner name & '>>' & ctx method name) }.
+	if (ctx class == MethodContext) { System logNl: (" " & ctx method owner name & ">>" & ctx method name) }.
 	// TODO: include blockcontext???
 	ctx := ctx sender.
 }.
-System logNl: '== END OF BACKTRACE =='.
+System logNl: "== END OF BACKTRACE ==".
 
 		thisContext unwindTo: (thisProcess initialContext) return: nil.
-		('//# EXCEPTION NOT HANDLED(Exception) //// ' & self class name & ' - ' & self messageText) dump.
+		("### EXCEPTION NOT HANDLED(Exception) #### " & self class name & " - " & self messageText) dump.
 		// TODO: debug the current process???? "
 
 		//Processor activeProcess terminate.
@@ -502,7 +502,7 @@ extend Apex
 		ec := thisProcess primError.
 		msg := thisProcess primErrorMessage.
 		if (msg isNil) { msg := ec asString }.
-		if (method notNil) { msg := msg & ' - ' & (method owner name) & '>>' & (method name) }.
+		if (method notNil) { msg := msg & " - " & (method owner name) & ">>" & (method name) }.
 
 		//# TODO: convert an exception to a more specific one depending on the error code.
 		//#if (ec == Error.Code.ERANGE) { self index: index outOfRange: (self basicSize) }
@@ -519,46 +519,46 @@ extend Apex
 		class_name := if (self class == Class) { self name } else { self class name }.
 
 // TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
-System logNl: '== BACKTRACE =='.
+System logNl: "== BACKTRACE ==".
 ctx := thisContext.
 while (ctx notNil)
 {
-	if (ctx class == MethodContext) { System logNl: (' ' & ctx method owner name & '>>' & ctx method name) }.
+	if (ctx class == MethodContext) { System logNl: (" " & ctx method owner name & ">>" & ctx method name) }.
 	// TODO: include blockcontext???
 	ctx := ctx sender.
 }.
-System logNl: '== END OF BACKTRACE =='.
+System logNl: "== END OF BACKTRACE ==".
 
 
-		NoSuchMessageException signal: (message_name & ' not understood by ' & class_name).
+		NoSuchMessageException signal: (message_name & " not understood by " & class_name).
 	}
 
 	method(#dual) index: index outOfRange: ubound
 	{
-		IndexOutOfRangeException signal: 'Out of range'.
+		IndexOutOfRangeException signal: "Out of range".
 	}
 
 	method(#dual) subclassResponsibility: method_name
 	{
-		SubclassResponsibilityException signal: ('Subclass must implement ' & method_name).
+		SubclassResponsibilityException signal: ("Subclass must implement " & method_name).
 	}
 
 	method(#dual) shouldNotImplement: method_name
 	{
-		SubclassResponsibilityException signal: ('Message should not be implemented - ' & method_name).
+		SubclassResponsibilityException signal: ("Message should not be implemented - " & method_name).
 	}
 
 	method(#dual) notImplemented: method_name
 	{
 		| class_name |
 		class_name := if (self class == Class) { self name } else { self class name }.
-		NotImplementedException signal: (method_name & ' not implemented by ' & class_name).
+		NotImplementedException signal: (method_name & " not implemented by " & class_name).
 	}
 	
 	method(#dual) messageProhibited: method_name
 	{
 		| class_name |
 		class_name := if (self class == Class) { self name } else { self class name }.
-		ProhibitedMessageException signal: (method_name & ' not allowed for ' & class_name).
+		ProhibitedMessageException signal: (method_name & " not allowed for " & class_name).
 	}
 }

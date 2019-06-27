@@ -178,15 +178,15 @@ TODO: how to pass all variadic arguments to another variadic methods???
 		// | x |
 		// x := Array new: 2.
 		// x at: 0 put: message.
-		// x at: 1 put: S'\n'.
+		// x at: 1 put: "\n".
 		// ^self atLevel: level log: x.
 
-		^self atLevel: level log: message and: S'\n'.
+		^self atLevel: level log: message and: "\n".
 	}
 
 	method(#class) atLevel: level logNl: message and: message2
 	{
-		^self atLevel: level log: message and: message2 and: S'\n'.
+		^self atLevel: level log: message and: message2 and: "\n".
 	}
 
 	method(#class) log: message
@@ -201,7 +201,7 @@ TODO: how to pass all variadic arguments to another variadic methods???
 
 	method(#class) logNl
 	{
-		^self atLevel: System.Log.INFO log: S'\n'.
+		^self atLevel: System.Log.INFO log: "\n".
 	}
 	
 	method(#class) logNl: message

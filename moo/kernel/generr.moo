@@ -146,15 +146,15 @@ class MyObject(Object)
 		].
 
 		
-		f puts(S'static moo_ooch_t* ', name, S'[] =\n{\n').
+		f puts("static moo_ooch_t* ", name, "[] =\n{\n").
 		0 to: c do: [:i |
-			((i rem: 8) = 0) ifTrue: [ f putc(C'\t') ].
+			((i rem: 8) = 0) ifTrue: [ f putc(C"\t") ].
 			f puts(prefix, (i asString)).
-			(i = c) ifFalse: [f puts(S',') ].
-			(((i + 1) rem: 8) = 0) ifTrue: [ f putc(C'\n') ] ifFalse: [ f putc(C' ') ].
+			(i = c) ifFalse: [f puts(",") ].
+			(((i + 1) rem: 8) = 0) ifTrue: [ f putc(C"\n") ] ifFalse: [ f putc(C' ') ].
 		].
-		(((c + 1) rem: 8) = 0) ifFalse: [ f putc(C'\n') ].
-		f puts(S'};\n').
+		(((c + 1) rem: 8) = 0) ifFalse: [ f putc(C"\n") ].
+		f puts("};\n").
 	}
 
 	method(#class) printString: s prefix: prefix index: index on: f
@@ -162,7 +162,7 @@ class MyObject(Object)
 		| c |
 		c := s size - 1.
 
-		f puts('static moo_ooch_t ', prefix, index asString, '[] = {').
+		f puts("static moo_ooch_t ", prefix, index asString, '[] = {').
 
 		0 to: c do: [:i |
 			| ch |
@@ -178,6 +178,6 @@ class MyObject(Object)
 			(i = c) ifFalse: [f putc($,) ].
 		].
 
-		f puts(S',\'\\0\'};\n').
+		f puts(",\'\\0\'};\n").
 	}
 }

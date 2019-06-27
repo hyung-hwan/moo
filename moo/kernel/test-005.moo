@@ -1,5 +1,5 @@
 
-#include 'Moo.moo'.
+#include "Moo.moo".
 
 ////////////////////////////////////////////////////////////////#
 // MAIN
@@ -66,7 +66,7 @@ class MyObject(TestObject)
 	{
 		| a |
 		a := self yyy: aBlock.
-		'KKKKKKKKKKKKKKKKKKKKKKKKKKKKK' dump.
+		"KKKKKKKKKKKKKKKKKKKKKKKKKKKKK" dump.
 		^a.
 	}
 	method(#class) main2 
@@ -116,12 +116,12 @@ class MyObject(TestObject)
 
 		#[ 1 2 3] dump.
 		#[ 4 5 6] dump.
-	#(#abc:def: 2 'string is good' 3 4 #(5 6) #(7 #(8 9)) 10) dump.
+	#(#abc:def: 2 "string is good" 3 4 #(5 6) #(7 #(8 9)) 10) dump.
 		#(#[] #[]) dump.
 
 
-	a := #(#abc:def: -2 'string is good' 3 #[2 3 4] 4 #(5 6) #(7 #(8 #[4 56] 'hello' 9)) 10 -93952 #self true false nil #thisContext #super).
-	a at: 3 put: 'hello world'; dump.
+	a := #(#abc:def: -2 "string is good" 3 #[2 3 4] 4 #(5 6) #(7 #(8 #[4 56] "hello" 9)) 10 -93952 #self true false nil #thisContext #super).
+	a at: 3 put: "hello world"; dump.
 
 
 	a := self new.
@@ -131,8 +131,8 @@ class MyObject(TestObject)
 	b := 0.
 	[ b < 9 ] whileTrue: [ b dump. b := b + 1 ].
 
-	S'hello \t\u78966\u8765\u3456\u2723\x20\123world\uD57C\uB85C\uC6B0' dump.
-	C'\n' dump.
+	"hello \t\u78966\u8765\u3456\u2723\x20\123world\uD57C\uB85C\uC6B0" dump.
+	C"\n" dump.
 #abc:def: dump.
 
 		//a := (11 < 10) ifTrue: [5] ifFalse: [20].
@@ -155,7 +155,7 @@ class MyObject(TestObject)
 
 // ---------------------------------------------------------------------------
 
-// this sample demonstrates what happens when a block context returns to the origin's caller
+// this sample demonstrates what happens when a block context returns to the origin"s caller
 //  after the caller has already returned. 
 
 	method(#class) xxxx
@@ -202,22 +202,22 @@ class MyObject(TestObject)
 		sum := [ :n | (n < 2) ifTrue: [1] ifFalse: [ n + (sum value: (n - 1))] ].
 		(sum value: 5) dump.
 
-		'-------------------------' dump.
+		"-------------------------" dump.
 		b := 0.
 		[ b < 2000 ] whileTrue: [ b dump. b := b + 1 ].
 
-		'-------------------------' dump.
+		"-------------------------" dump.
 		b := 0.
 		[ b < 10 ] whileTrue: [ b dump. b := b + 1 ].
 
-		'-------------------------' dump.
+		"-------------------------" dump.
 		 a := #[4 5 6 7] at: 3. 
 		(#[3 2 1] at: 3) dump.
 
 
 		// thisContext value. // the message value must be unresolvable as thisContext is a method context
 		// [thisContext value] value.
-		'-------------------------' dump.
+		"-------------------------" dump.
 		b := 0.
 		[ b := b + 1. b dump. thisContext value] value.
 
@@ -245,18 +245,18 @@ class MyObject(TestObject)
 
 	method(#class) getABlock
 	{
-		^ [ 'a block returned by getABlock' dump. "^ self"]
+		^ [ "a block returned by getABlock" dump. "^ self"]
 	}
 
 
 	method(#class) test_ffi
 	{
 		| ffi |
-		ffi := FFI new: 'libc.so.6'.
+		ffi := FFI new: "libc.so.6".
 
-		// ffi call: #printf with: #((str '%d') (int 10) (long 20)).
-		ffi call: #printf signature: '|s|ici)i' arguments: #("hello world %d %c %d\n" 11123 $X 9876543).
-		//ffi call: #puts signature: 's)i' arguments: #('hello world').
+		// ffi call: #printf with: #((str "%d") (int 10) (long 20)).
+		ffi call: #printf signature: "|s|ici)i" arguments: #("hello world %d %c %d\n" 11123 $X 9876543).
+		//ffi call: #puts signature: "s)i" arguments: #("hello world").
 		ffi close.
 	}
 
@@ -264,8 +264,8 @@ class MyObject(TestObject)
 	{
 		// ---------------------------------------------------------------
 		// getABlock has returned.
-		// aBlock's home context is getABlock. getABlock has returned
-		// when 'aBlock value' is executed. so when aBlock is really 
+		// aBlock"s home context is getABlock. getABlock has returned
+		// when "aBlock value" is executed. so when aBlock is really 
 		// executed, ^self is a double return attempt. should this be made
 		// illegal??
 		|aBlock|
@@ -278,16 +278,16 @@ class MyObject(TestObject)
 /* -----------------------------
 PROCESS TESTING
 		| p |
-		'000000000000000000' dump.
-		// p := [ | 'xxxxxxxxxxx' dump. 'yyyyyyyyyy' dump. ^10. ] newProcess.
+		"000000000000000000" dump.
+		// p := [ | "xxxxxxxxxxx" dump. "yyyyyyyyyy" dump. ^10. ] newProcess.
 		p := [ :a :b :c :d | a dump. b dump. (c + d) dump. ^10. ] newProcessWith: #(abc def 10 20).
-		'999999999999999999' dump.
+		"999999999999999999" dump.
 		p resume.
 
-		'111111111111111111' dump.
-		'222222222222222222' dump.
-		'333333333333333333' dump.
-		'444444444444444444' dump.
+		"111111111111111111" dump.
+		"222222222222222222" dump.
+		"333333333333333333" dump.
+		"444444444444444444" dump.
 ---------------------------- */
 
 
@@ -436,20 +436,20 @@ PROCESS TESTING
 [1 + [100 + 200] value] value dump.
 
 
-'====================' dump.
+"====================" dump.
 [
 	| a b |
-	'--------------' dump.
+	"--------------" dump.
 	[a := 20.  b := [ a + 20 ]. b value.] value dump.
 	a dump.
 	b dump.
 ] value.
-'====================' dump.
+"====================" dump.
 ([ :a :b | /*a := 20.*/  b := [ a + 20 ]. b value.] value: 99 value: 100) dump.
-'====================' dump.
+"====================" dump.
 
 [ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] value dump.  // not sufficient arguments. it must fail
-//[ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] on: Exception do: [:ex | 'Exception' dump].
+//[ :a :b | a dump. b dump. a := 20.  b := [ a + 20 ]. b value.] on: Exception do: [:ex | "Exception" dump].
 
 /*
 		FFI isNil dump.
@@ -503,9 +503,9 @@ bc2		bc4 is shallow-copied of bc3.   (bc3 value)
 bc4.
 --------------------------------------------------------------------------------
 
-'home' is set when the context is created by blockCopy.
-'caller' is set when the context is activated.
-all 'origin' fields point to mc1 as a result.
+"home" is set when the context is created by blockCopy.
+"caller" is set when the context is activated.
+all "origin" fields point to mc1 as a result.
 self represents the receiver. that is bc->origin->receiver which is mc1->receiver.
 
 --------------------------------------------------------------------------------

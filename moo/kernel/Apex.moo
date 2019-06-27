@@ -306,7 +306,7 @@ class UndefinedObject(Apex)
 
 	method handleException: exception
 	{
-		('//# EXCEPTION NOT HANDLED //// ' &  exception class name & ' - ' & exception messageText) dump.
+		("### EXCEPTION NOT HANDLED #### " &  exception class name & " - " & exception messageText) dump.
 		// TODO: debug the current process???? "
 // TODO: ensure to execute ensure blocks as well....
 		////Processor activeProcess terminate.
@@ -369,18 +369,18 @@ extend Error
 		//thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
 		
 // TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
-System logNl: '== BACKTRACE =='.
+System logNl: "== BACKTRACE ==".
 ctx := thisContext.
 while (ctx notNil)
 {
-	if (ctx class == MethodContext) { System logNl: (' ' & ctx method owner name & '>>' & ctx method name) }.
+	if (ctx class == MethodContext) { System logNl: (" " & ctx method owner name & ">>" & ctx method name) }.
 	// TODO: include blockcontext???
 	ctx := ctx sender.
 }.
-System logNl: '== END OF BACKTRACE =='.
+System logNl: "== END OF BACKTRACE ==".
 
 		thisContext unwindTo: (thisProcess initialContext) return: nil.
-		('//# ERROR NOT HANDLED //// ' & self class name & ' - ' & self asString) dump.
+		("### ERROR NOT HANDLED #### " & self class name & " - " & self asString) dump.
 		// TODO: debug the current process???? "
 
 		//Processor activeProcess terminate.

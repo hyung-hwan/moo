@@ -1,4 +1,4 @@
-#include 'Moo.moo'.
+#include "Moo.moo".
 
 interface X11able
 {
@@ -27,7 +27,7 @@ method(#dual) abc { ^nil }
 method(#dual,#liberal) def(x, z) { ^nil }
 }
 
-class X11(Object) [X11able,selfns.X11able3] from 'x11'
+class X11(Object) [X11able,selfns.X11able3] from "x11"
 {
 	// =====================================================================
 	// this part of the class must match the internal
@@ -252,7 +252,7 @@ class X11.GC(Object)
 widget displayServer dump.
 widget windowHandle dump.
 		gc := widget displayServer _create_gc (widget windowHandle).
-		if (gc isError) { selfns.Exception signal: 'Cannot create a graphics context' }.
+		if (gc isError) { selfns.Exception signal: "Cannot create a graphics context" }.
 		self.gcHandle := gc.
 		self.widget := widget.
 	}
@@ -287,7 +287,7 @@ widget windowHandle dump.
 		{
 			if (self.widget displayServer _apply_gc (self) isError)
 			{
-				X11.Exception signal: 'Cannot apply GC settings'
+				X11.Exception signal: "Cannot apply GC settings"
 			}
 		}
 	}
@@ -332,13 +332,13 @@ class X11.Widget(Object)
 		disp := self displayServer.
 		if (disp isNil)
 		{
-			X11.Exception signal: 'Cannot realize a widget not added to a display server'
+			X11.Exception signal: "Cannot realize a widget not added to a display server"
 		}.
 
 		wind := disp __create_window(self parentWindowHandle, self.x, self.y, self.width, self.height, self.fgcolor, self.bgcolor, self).
 		if (wind isError)
 		{
-			self.Exception signal: 'Cannot create widget window'.
+			self.Exception signal: "Cannot create widget window".
 		}.
 
 		self.windowHandle := wind.
@@ -455,7 +455,7 @@ class X11.Composite(X11.Widget)
 	{
 		if (widget parent notNil)
 		{
-			selfns.Exception signal: 'Cannot add an already added widget'.
+			selfns.Exception signal: "Cannot add an already added widget".
 		}.
 
 		self.children addLast: widget.
@@ -467,7 +467,7 @@ class X11.Composite(X11.Widget)
 		| link |
 		if (widget parent ~~ self)
 		{
-			selfns.Exception sinal: 'Cannot remove an unknown widget'
+			selfns.Exception sinal: "Cannot remove an unknown widget"
 		}.
 
 		link := self.children findIdenticalLink: widget.
