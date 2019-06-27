@@ -217,19 +217,19 @@ class MyObject(Object)
 
 		
 		a :=999.
-		a := %(
+		a := ##(
 			1, 
 			2,
 			a,
 			4,
 			1 + 1,
-			%( 1, 2, %(a, a := a + 1, a, if (a > 10) { a + 20 } ), 3),
+			##( 1, 2, ##(a, a := a + 1, a, if (a > 10) { a + 20 } ), 3),
 			2 + 2,
 			#'a b c'
 		).
 		
 		/* Dictionary ???
-		a := %{ 
+		a := ##{ 
 			key -> value ,
 			key -> value ,
 			key -> value ,
@@ -275,7 +275,7 @@ class MyObject(Object)
 		}.*/
 
 
-		a := %{
+		a := ##{
 			'aaa' -> 10,
 			'bbb' -> 20,
 			'bbb' -> 30,
@@ -365,6 +365,6 @@ a free.
 /*
 pooldic XXD {
 	#abc := #(1 2 3).
-	#def := %( 1, 3, 4 ). // syntax error - literal expected where %( is
+	#def := ##( 1, 3, 4 ). // syntax error - literal expected where ##( is
 }
 */

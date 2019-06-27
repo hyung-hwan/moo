@@ -221,7 +221,7 @@ class Fcgi.ParamRecord(Fcgi.Record)
 		{
 //# TODO: implement this...
 /*
-			(aString subStrings: %(char)) do: [:each | 
+			(aString subStrings: ##(char)) do: [:each | 
 				equal := each indexOf: $=.
 				equal = 0 
 					ifTrue: [tempFields at: each put: nil]
@@ -737,7 +737,7 @@ class MyObject(Object)
 			fcgi := FcgiServer new.
 			[
 				| ss |
-				fcgi start: %(
+				fcgi start: ##(
 					SocketAddress fromString: ('[::]:' & base_port asString),
 					SocketAddress fromString: ('0.0.0.0:' & (base_port + 1) asString)
 				).
@@ -783,7 +783,7 @@ fcgi connect: addr.
 			fcgi := FcgiServer new.
 			[
 				| ss |
-				fcgi start: %(
+				fcgi start: ##(
 					SocketAddress fromString: '[::]:7777',
 					SocketAddress fromString: '0.0.0.0:7776'
 				).
@@ -811,7 +811,7 @@ fcgi connect: addr.
 		[
 			fcgi := FcgiServer new.
 			[
-				fcgi start: %(
+				fcgi start: ##(
 					SocketAddress fromString: '[::]:7777',
 					SocketAddress fromString: '0.0.0.0:7776'
 				).

@@ -42,8 +42,8 @@ class MyObject(Object)
 
 		ffi := FFI new: 'libc.so.6'.
 		now := ffi call: #time signature: 'l)i' arguments: #(0).
-		////ffi call: #srand signature: 'i)' arguments: %(now).
-		ffi call: #srandom signature: 'i)' arguments: %(now).
+		////ffi call: #srand signature: 'i)' arguments: ##(now).
+		ffi call: #srandom signature: 'i)' arguments: ##(now).
 
 		[
 			divr_ubound := 16rFFFFFFFFFFFFFFFFFFFFFFFF.

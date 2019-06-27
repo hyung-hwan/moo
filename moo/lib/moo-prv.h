@@ -286,6 +286,7 @@ enum moo_iotok_type_t
 	MOO_IOTOK_SCALEDFPDECLIT, /* NNpNNNN.NN e.g. 5p10.3 ===> 10.30000 */
 	MOO_IOTOK_ERRLIT, /* #\eNN */
 	MOO_IOTOK_SMPTRLIT, /* #\pXX */
+	MOO_IOTOK_BYTEARRAYLIT, /* B"ab\x99\x77" */
 
 	MOO_IOTOK_NIL,
 	MOO_IOTOK_SELF,
@@ -317,7 +318,7 @@ enum moo_iotok_type_t
 	MOO_IOTOK_KEYWORD,
 	MOO_IOTOK_ASSIGN,  /* := */
 	MOO_IOTOK_COLON,   /* : */
-	MOO_IOTOK_PERCENT, /* % */
+	MOO_IOTOK_DHASH,   /* ## */
 	MOO_IOTOK_RETURN,       /* ^ */
 	MOO_IOTOK_LOCAL_RETURN, /* ^^ */
 	MOO_IOTOK_LBRACE,
@@ -329,9 +330,9 @@ enum moo_iotok_type_t
 	MOO_IOTOK_HASHPAREN,   /* #( - array literal */
 	MOO_IOTOK_HASHBRACK,   /* #[ - byte array literal */
 	MOO_IOTOK_HASHBRACE,   /* #{ - dictionary literal */
-	MOO_IOTOK_PERCPAREN,   /* %( - array expression */
-	MOO_IOTOK_PERCBRACK,   /* %[ - byte array expression */
-	MOO_IOTOK_PERCBRACE,   /* %{ - dictionary expression */
+	MOO_IOTOK_DHASHPAREN,  /* #( - array expression */
+	MOO_IOTOK_DHASHBRACK,  /* #[ - byte array expression */
+	MOO_IOTOK_DHASHBRACE,  /* #{ - dictionary expression */
 	MOO_IOTOK_PERIOD,
 	MOO_IOTOK_COMMA,
 	MOO_IOTOK_SEMICOLON

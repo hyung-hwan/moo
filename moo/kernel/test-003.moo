@@ -34,7 +34,7 @@ class MyObject(Object)
 		rec := [ :y :z | 22p108 - (18p815 - (16p1500 div: z) div: y) ].
 
 
-		// results := %( 4.0, 425 div: 100.0 ) asOrderedCollection.
+		// results := ##( 4.0, 425 div: 100.0 ) asOrderedCollection.
 		results := OrderedCollection new.
 		results add: 4.0; add: (425.00 div: 100.00).
 
@@ -56,7 +56,7 @@ class MyObject(Object)
 	{
 		| tc limit |
 
-		tc := %(
+		tc := ##(
 			// 0 - 4
 			[(Object isKindOf: Class) == true],
 			[(Object isKindOf: Apex) == true],

@@ -420,7 +420,7 @@ class MyObject(Object)
 			httpd := HttpServer new.
 			[
 				| ss |
-				httpd start: %(
+				httpd start: ##(
 					SocketAddress fromString: ('[::]:' & base_port asString),
 					SocketAddress fromString: ('0.0.0.0:' & (base_port + 1) asString)
 				).
@@ -462,7 +462,7 @@ httpd connect: addr.
 			httpd := HttpServer new.
 			[
 				| ss |
-				httpd start: %(
+				httpd start: ##(
 					SocketAddress fromString: '[::]:7777',
 					SocketAddress fromString: '0.0.0.0:7776'
 				).
@@ -490,7 +490,7 @@ httpd connect: addr.
 		[
 			httpd := HttpServer new.
 			[
-				httpd start: %(
+				httpd start: ##(
 					SocketAddress fromString: '[::]:7777',
 					SocketAddress fromString: '0.0.0.0:7776'
 				).

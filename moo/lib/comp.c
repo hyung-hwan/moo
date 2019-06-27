@@ -307,11 +307,10 @@ static MOO_INLINE int is_binselchar (moo_ooci_t c)
 {
 	/*
 	 * binary-selector-character :=
-	 *   '&' | '*' | '+' | '-' | '/' |
+	 *   '&' | '*' | '+' | '-' | '/' | '%' |
 	 *   '<' | '>' | '=' | '@' | '~' | '|'
 	 *
 	 * - a comma is special in moo and doesn't form a binary selector.
-	 * - a percent sign is special in moo and doesn't form a binary selector.
 	 * - an exclamation mark is excluded intentioinally because i can't tell
 	 *   the method symbol #! from the comment introducer #!.
 	 * - a question mark forms a normal identifier.
@@ -325,6 +324,7 @@ static MOO_INLINE int is_binselchar (moo_ooci_t c)
 		case '+':
 		case '-':
 		case '/': 
+		case '%': 
 		case '<':
 		case '>':
 		case '=':
@@ -1169,7 +1169,7 @@ static int skip_comment (moo_t* moo)
 	}
 	else if (c == '#')
 	{
-		/* handle #! or ## */
+		/* handle #! */
 
 		/* save the last character */
 		lc = moo->c->lxc;
@@ -1626,7 +1626,7 @@ static int get_charlit (moo_t* moo)
 	return 0;
 }
 
-static int get_strlit (moo_t* moo)
+static int get_strlit (moo_t* moo, int byte_only)
 {
 	/* 
 	 * string-literal := single-quote string-character* single-quote
@@ -1676,7 +1676,7 @@ static int get_strlit (moo_t* moo)
 	return 0;
 }
 
-static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int regex, moo_oow_t preescaped)
+static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int byte_only, int regex, moo_oow_t preescaped)
 {
 	moo_ooci_t c;
 	moo_oow_t escaped = preescaped;
@@ -1918,7 +1918,7 @@ retry:
 			break;
 
 		case '\'': /* string literal */
-			if (get_strlit(moo) <= -1) return -1;
+			if (get_strlit(moo, 0) <= -1) return -1;
 			break;
 
 		case ':':
@@ -1981,39 +1981,6 @@ retry:
 			SET_TOKEN_TYPE (moo, MOO_IOTOK_SEMICOLON);
 			goto single_char_token;
 
-		case '%':
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_PERCENT);
-			ADD_TOKEN_CHAR (moo, c);
-			GET_CHAR_TO (moo, c);
-
-			if (c == '(')
-			{
-				/* %( - array expression */
-				ADD_TOKEN_CHAR (moo, c);
-				SET_TOKEN_TYPE (moo, MOO_IOTOK_PERCPAREN);
-			}
-			else if (c == '[')
-			{
-				/* %[ - byte-array expression */
-				ADD_TOKEN_CHAR (moo, c);
-				SET_TOKEN_TYPE (moo, MOO_IOTOK_PERCBRACK);
-			}
-			else if (c == '{')
-			{
-				/* %{ - dictionary expression */
-				ADD_TOKEN_CHAR (moo, c);
-				SET_TOKEN_TYPE (moo, MOO_IOTOK_PERCBRACE);
-			}
-			else
-			{
-				/* NOTE the percent sign not followed by  ( or } is 
-				 *      meaningless at this moment. however, i return
-				 *      it as a token so that the compiler anyway 
-				 *      will fail eventually */
-				unget_char (moo, &moo->c->lxc);
-			}
-			break;
-
 		case '#':  
 			ADD_TOKEN_CHAR (moo, c);
 			GET_CHAR_TO (moo, c);
@@ -2023,6 +1990,38 @@ retry:
 					moo_setsynerr (moo, MOO_SYNERR_HLTNT, LEXER_LOC(moo), MOO_NULL);
 					return -1;
 
+				case '#':
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_DHASH);
+					ADD_TOKEN_CHAR (moo, c);
+					GET_CHAR_TO (moo, c);
+					if (c == '(')
+					{
+						/* ##( - array expression */
+						ADD_TOKEN_CHAR (moo, c);
+						SET_TOKEN_TYPE (moo, MOO_IOTOK_DHASHPAREN);
+					}
+					else if (c == '[')
+					{
+						/* ##[ - byte array expression */
+						ADD_TOKEN_CHAR (moo, c);
+						SET_TOKEN_TYPE (moo, MOO_IOTOK_DHASHBRACK);
+					}
+					else if (c == '{')
+					{
+						/* ##{ - dictionary expression */
+						ADD_TOKEN_CHAR (moo, c);
+						SET_TOKEN_TYPE (moo, MOO_IOTOK_DHASHBRACE);
+					}
+					else
+					{
+						/* NOTE the double hashes not followed by (, [, or { is 
+						 *      meaningless at this moment. however, i return
+						 *      it as a token so that the compiler anyway 
+						 *      will fail eventually */
+						unget_char (moo, &moo->c->lxc);
+					}
+					break;
+					
 				case '(':
 					/* #( - array literal */
 					ADD_TOKEN_CHAR (moo, c);
@@ -2040,10 +2039,10 @@ retry:
 					ADD_TOKEN_CHAR (moo, c);
 					SET_TOKEN_TYPE (moo, MOO_IOTOK_HASHBRACE);
 					break;
-
+					
 				case '\'':
 					/* #'XXXX' - quoted symbol literal */
-					if (get_strlit(moo) <= -1) return -1; /* reuse the string literal tokenizer */
+					if (get_strlit(moo, 0) <= -1) return -1; /* reuse the string literal tokenizer */
 					SET_TOKEN_TYPE (moo, MOO_IOTOK_SYMLIT); /* change the symbol type to symbol */
 					break;
 
@@ -2051,7 +2050,7 @@ retry:
 					/* #"XXXX" - quoted symbol literal with C-style escape sequences.
 					 * if MOO_PRAGMA_QC is set, this part should never be reached */
 					MOO_ASSERT (moo, !(moo->c->pragma_flags & MOO_PRAGMA_QC));
-					if (get_string(moo, '"', '\\', 0, 0) <= -1) return -1;
+					if (get_string(moo, '"', '\\', 0, 0, 0) <= -1) return -1;
 					SET_TOKEN_TYPE (moo, MOO_IOTOK_SYMLIT); /* change the symbol type to symbol */
 					break;
 
@@ -2214,12 +2213,12 @@ retry:
 		case '"':
 			/* if MOO_PRAGMA_QC is set, this part should never be reached */
 			MOO_ASSERT (moo, !(moo->c->pragma_flags & MOO_PRAGMA_QC));
-			if (get_string(moo, '"', '\\', 0, 0) <= -1) return -1;
+			if (get_string(moo, '"', '\\', 0, 0, 0) <= -1) return -1;
 			break;
 
+		
 		case 'C': /* a character with a C-style escape sequence */
-		case 'S': /* a string with a C-style escape sequences */
-		case 'M': /* a symbol with a C-style escape sequences */
+		case 'B': /* byte array in a string like notation */
 		{
 			moo_ooci_t saved_c = c;
 
@@ -2227,7 +2226,7 @@ retry:
 			if (c == '\'')
 			{
 				/*GET_CHAR (moo);*/
-				if (get_string(moo, '\'', '\\', 0, 0) <= -1) return -1;
+				if (get_strlit(moo, (saved_c == 'B')) <= -1) return -1;
 
 				if (saved_c == 'C')
 				{
@@ -2238,9 +2237,28 @@ retry:
 					}
 					SET_TOKEN_TYPE (moo, MOO_IOTOK_CHARLIT);
 				}
-				else if (saved_c == 'M')
+				else if (saved_c == 'B')
 				{
-					SET_TOKEN_TYPE (moo, MOO_IOTOK_SYMLIT);
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_BYTEARRAYLIT);
+				}
+			}
+			else if (c == '\"')
+			{
+				/*GET_CHAR (moo);*/
+				if (get_string(moo, '\"', '\\', (saved_c == 'B'), 0, 0) <= -1) return -1;
+
+				if (saved_c == 'C')
+				{
+					if (moo->c->tok.name.len != 1)
+					{
+						moo_setsynerr (moo, MOO_SYNERR_CHARLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+						return -1;
+					}
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_CHARLIT);
+				}
+				else if (saved_c == 'B')
+				{
+					SET_TOKEN_TYPE (moo, MOO_IOTOK_BYTEARRAYLIT);
 				}
 			}
 			else
@@ -2988,6 +3006,18 @@ static int add_symbol_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t offs
 	tmp = moo_makesymbol(moo, str->ptr + offset, str->len - offset);
 	if (!tmp) return -1;
 
+	return add_literal(moo, tmp, index);
+}
+
+static int add_byte_array_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* index)
+{
+	/* see read_byte_array_literal for comparision */
+	moo_oop_t tmp;
+	moo_oow_t i;
+
+	tmp = moo_instantiate(moo, moo->_byte_array, MOO_NULL, str->len);
+	if (!tmp) return -1;
+	for (i = 0; i < str->len; i++) MOO_OBJ_SET_BYTE_VAL(tmp, i, str->ptr[i]);
 	return add_literal(moo, tmp, index);
 }
 
@@ -5026,7 +5056,7 @@ static int read_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 		}
 		else if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN) break;
 
-		lit = token_to_literal (moo, rdonly);
+		lit = token_to_literal(moo, rdonly);
 		if (!lit || add_to_array_literal_buffer(moo, lit) <= -1) goto oops;
 
 		GET_TOKEN_GOTO (moo, oops);
@@ -5094,7 +5124,7 @@ static int _compile_array_expression (moo_t* moo, int closer_token, int bcode_ma
 	moo_oow_t maip;
 	moo_ioloc_t aeloc;
 
-	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_PERCPAREN || TOKEN_TYPE(moo) == MOO_IOTOK_PERCBRACK);
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_DHASHPAREN || TOKEN_TYPE(moo) == MOO_IOTOK_DHASHBRACK);
 
 	maip = cc->mth.code.len;
 	if (emit_single_param_instruction(moo, bcode_make, 0) <= -1) return -1;
@@ -5159,7 +5189,7 @@ static int compile_dictionary_expression (moo_t* moo)
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_oow_t mdip;
 
-	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_PERCBRACE);
+	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_DHASHBRACE);
 
 	GET_TOKEN (moo); /* read a token after :{ */
 
@@ -5425,6 +5455,11 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				GET_TOKEN (moo);
 				break;
 
+			case MOO_IOTOK_BYTEARRAYLIT:
+				/* B"xxxxx". see MOO_IOTOK_HASHBRACK below for comparision */
+				if (add_byte_array_literal(moo, TOKEN_NAME(moo), &index) <= -1 ||
+				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				break;
 
 			case MOO_IOTOK_HASHPAREN: /* #( */
 				/*GET_TOKEN (moo);*/
@@ -5443,15 +5478,15 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				break;
 #endif
 
-			case MOO_IOTOK_PERCPAREN: /* %( */
+			case MOO_IOTOK_DHASHPAREN: /* ##( */
 				if (compile_array_expression(moo) <= -1) return -1;
 				break;
 
-			case MOO_IOTOK_PERCBRACK: /* %[ */
+			case MOO_IOTOK_DHASHBRACK: /* ##[ */
 				if (compile_bytearray_expression(moo) <= -1) return -1;
 				break;
 
-			case MOO_IOTOK_PERCBRACE: /* %{ */
+			case MOO_IOTOK_DHASHBRACE: /* ##{ */
 				if (compile_dictionary_expression(moo) <= -1) return -1;
 				break;
 
@@ -8832,6 +8867,24 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 			return lit;
 		}
 
+		case MOO_IOTOK_BYTEARRAYLIT:
+		{
+			moo_oop_t lit;
+			moo_oow_t i;
+
+			lit = moo_instantiate(moo, moo->_byte_array, MOO_NULL, TOKEN_NAME_LEN(moo));
+			if (lit)
+			{
+				for (i = 0; i < MOO_OBJ_GET_SIZE(lit); i++) MOO_OBJ_SET_BYTE_VAL(lit, i, TOKEN_NAME_PTR(moo)[i]);
+				if (rdonly)
+				{
+					MOO_ASSERT (moo, MOO_OOP_IS_POINTER(lit));
+					MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
+				}
+			}
+			return lit;
+		}
+			
 		case MOO_IOTOK_IDENT:
 		case MOO_IOTOK_IDENT_DOTTED:
 		{

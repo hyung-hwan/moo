@@ -126,7 +126,7 @@ class MyObject(Object)
 		sem wait.
 		sem wait.
 
-		^%( v, p ) // v must be 2000, p must be 6000
+		^##( v, p ) // v must be 2000, p must be 6000
 	}
 
 /*
@@ -154,10 +154,10 @@ class MyObject(Object)
 	{
 		| tc limit |
 
-		tc := %(
+		tc := ##(
 			// 0 - 4
 			[ (self test_quicksort: #(7 12 3 20 5 8 2) copy) = #(2 3 5 7 8 12 20)],
-			[ (self test_quicksort: %(99, 12, 18, 7, 12, 3, 20, 5, 8, 2)) = #(2 3 5 7 8 12 12 18 20 99)],
+			[ (self test_quicksort: ##(99, 12, 18, 7, 12, 3, 20, 5, 8, 2)) = #(2 3 5 7 8 12 12 18 20 99)],
 			[ (self test_on_do_with: 10 with: 2) == 5 ],
 			[ (self test_on_do_with: -10 with: 0) == 0 ],
 			[ self test_ensure_with: -20945. self.ensure_tester_v == -20945 ],

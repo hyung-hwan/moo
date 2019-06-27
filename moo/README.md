@@ -24,32 +24,28 @@
 * C'X' -> charcter??
 * C"X" -> character??
 
-* 'XXXX' string 
-* "XXXX" string with escaping 
+* 'XXXX' string literal
+* "XXXX" string litearl with escaping 
 
-* B"XXXXX" -> byte array with escaping?
-* B'XXXXXX' -> byte array
-
+* B'XXXXXX' -> byte array literal
+* B"XXXXX" -> byte array literal with escaping
 
 * #XXXX symbol
 * #'XXXX' quoted symbol
 * #"XXXX" quoted symbol with escaping
 
-* #\eNNNN error literal
-* #\pNNNN smptr literal
-
-* %eNNNN <---------
-* %pNNNN <---------
+* #\e123   Error literal
+* #\pB8000000 SmallPointer(smptr) literal
 
 * #() Array
 * #[] ByteArray
-* #{} Dictionary
+* #{} Dictionary - not supported yet
 
 The following are not literals.
 
-* %() Array
-* %[] ByteArray
-* %{} Dictionary
+* ##() Array expression
+* ##[] ByteArray expression
+* ##{} Dictionary expression
 
 * S%[] String literal with each character specified 
 ** S%{A B C '\n'}

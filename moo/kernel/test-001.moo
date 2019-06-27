@@ -161,7 +161,7 @@ extend MyObject
 	{
 		| tc limit |
 		
-		tc := %(
+		tc := ##(
 			// 0 - 4
 			[MyObject.Donkey v == 901982],
 			[selfns.MyObject.Donkey v == 901982],
@@ -396,7 +396,7 @@ extend MyObject
 			[ 
 				| k | 
 				k := String new.
-				(%( 1 + 2, -21391239218392 * +291382913821, 19p10 div: 3 ) asOrderedCollection) doWithIndex: [:each :index | k := k & (index asString) & '=>' & (each asString) & ' '. ].
+				(##( 1 + 2, -21391239218392 * +291382913821, 19p10 div: 3 ) asOrderedCollection) doWithIndex: [:each :index | k := k & (index asString) & '=>' & (each asString) & ' '. ].
 				k = '0=>3 1=>-6233041613697111534195832 2=>3.3333333333333333333 '.
 			],
 

@@ -611,7 +611,7 @@ extend X11
 			at: self.LLEventType.CONFIGURE_NOTIFY  put: #__handle_configure_notify:on:;
 			at: self.LLEventType.CLIENT_MESSAGE    put: #__handle_client_message:on:.
 		*/
-		self.llevent_blocks := %{
+		self.llevent_blocks := ##{
 			self.LLEventType.KEY_PRESS         -> #__handle_key_event:on:,
 			self.LLEventType.KEY_RELEASE       -> #__handle_key_event:on:,
 			self.LLEventType.BUTTON_PRESS      -> #__handle_button_event:on:,

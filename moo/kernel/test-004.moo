@@ -56,7 +56,7 @@ sg removeSemaphore: s1.
 	{
 		| tc limit |
 
-		tc := %(
+		tc := ##(
 			// 0 - 4
 			[self test_terminate == 180],
 			[self test_sg == nil]
