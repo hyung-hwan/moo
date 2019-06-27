@@ -181,6 +181,13 @@ class MyObject(Object)
 			tb := tc at: idx.
 			System log(System.Log.INFO, idx asString, (if (tb value) { " PASS" } else { " FAIL" }), "\n").
 		].
+
+// [ |k| k := B"ABC\xFF". k at: 3 put: 16r65. k dump ] value.
+// [ |k| k := "ABC\xFF". k at: 3 put: $X. k dump ] value.
+//2 timesRepeat: [ |k| k := "ABC\xFF" copy. k dump. k at: 3 put: $X. k dump ].
+//2 timesRepeat: [ |k| k := B"ABC\xFF" copy. k dump. k at: 3 put: 16r39. k dump ].
+//B"" dump.
+
 	}
 }
 

@@ -1626,6 +1626,8 @@ static int get_charlit (moo_t* moo)
 	return 0;
 }
 
+#define CHECK_BYTE_RANGE_FOR_BYTE_ARRAY(x) do { if ((x) > 0xFF) byte_range_error = 1; } while(0)
+
 static int get_strlit (moo_t* moo, int byte_only)
 {
 	/* 
@@ -1636,6 +1638,7 @@ static int get_strlit (moo_t* moo, int byte_only)
 	 */
 
 	moo_ooci_t oc, c;
+	int byte_range_error = 0;
 
 	oc = moo->c->lxc.c; /* opening quote */
 
@@ -1649,6 +1652,7 @@ static int get_strlit (moo_t* moo, int byte_only)
 			do 
 			{
 			in_strlit:
+				if (byte_only) CHECK_BYTE_RANGE_FOR_BYTE_ARRAY (c);
 				ADD_TOKEN_CHAR (moo, c);
 				GET_CHAR_TO (moo, c);
 
@@ -1673,15 +1677,22 @@ static int get_strlit (moo_t* moo, int byte_only)
 	}
 
 	unget_char (moo, &moo->c->lxc);
+
+	if (byte_range_error)
+	{
+		moo_setsynerrbfmt (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo), "non-byte in byte array literal");
+		return -1;
+	}
+
 	return 0;
 }
 
 static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int byte_only, int regex, moo_oow_t preescaped)
 {
-	moo_ooci_t c;
+	moo_ooci_t c, c_acc = 0;
 	moo_oow_t escaped = preescaped;
 	moo_oow_t digit_count = 0;
-	moo_ooci_t c_acc = 0;
+	int byte_range_error = 0;
 
 	SET_TOKEN_TYPE (moo, MOO_IOTOK_STRLIT);
 
@@ -1703,18 +1714,23 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 				digit_count++;
 				if (digit_count >= escaped) 
 				{
-					/* should i limit the max to 0xFF/0377? 
+					/* should i limit the max to 0xFF/0377 regardless of byte_only? 
 					 * if (c_acc > 0377) c_acc = 0377;*/
+
+					 if (byte_only) CHECK_BYTE_RANGE_FOR_BYTE_ARRAY (c_acc);
 					ADD_TOKEN_CHAR (moo, c_acc);
 					escaped = 0;
 				}
 				continue;
 			}
-			else
-			{
-				ADD_TOKEN_CHAR (moo, c_acc);
-				escaped = 0;
-			}
+
+			/* octal notation with only 1 digit following 0. */
+
+			MOO_ASSERT (moo, c_acc < 8); /* it can't be bigger than 7. no need to byte check either */
+			/*if (byte_only) CHECK_BYTE_RANGE_FOR_BYTE_ARRAY (c_acc);*/
+
+			ADD_TOKEN_CHAR (moo, c_acc);
+			escaped = 0;
 		}
 		else if (escaped == 2 || escaped == 4 || escaped == 8)
 		{
@@ -1724,6 +1740,7 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 				digit_count++;
 				if (digit_count >= escaped) 
 				{
+					if (byte_only) CHECK_BYTE_RANGE_FOR_BYTE_ARRAY (c_acc);
 					ADD_TOKEN_CHAR (moo, c_acc);
 					escaped = 0;
 				}
@@ -1735,6 +1752,7 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 				digit_count++;
 				if (digit_count >= escaped) 
 				{
+					if (byte_only) CHECK_BYTE_RANGE_FOR_BYTE_ARRAY (c_acc);
 					ADD_TOKEN_CHAR (moo, c_acc);
 					escaped = 0;
 				}
@@ -1746,6 +1764,7 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 				digit_count++;
 				if (digit_count >= escaped) 
 				{
+					if (byte_only) CHECK_BYTE_RANGE_FOR_BYTE_ARRAY (c_acc);
 					ADD_TOKEN_CHAR (moo, c_acc);
 					escaped = 0;
 				}
@@ -1753,14 +1772,17 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 			}
 			else
 			{
-				moo_ooch_t rc;
-
-				rc = (escaped == 2)? 'x':
-				     (escaped == 4)? 'u': 'U';
+				/* \x, \u, \U not followed by a hexadecimal digit */
 				if (digit_count == 0) 
-					ADD_TOKEN_CHAR (moo, rc);
-				else ADD_TOKEN_CHAR (moo, c_acc);
-
+				{
+					static moo_ooch_t rc_tab[] = { '\0', '\0', 'x', '\0', 'u', '\0', '\0', '\0', 'U' };
+					ADD_TOKEN_CHAR (moo, rc_tab[escaped]);
+				}
+				else 
+				{
+					if (byte_only) CHECK_BYTE_RANGE_FOR_BYTE_ARRAY (c_acc);
+					ADD_TOKEN_CHAR (moo, c_acc);
+				}
 				escaped = 0;
 			}
 		}
@@ -1802,14 +1824,14 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 				c_acc = 0;
 				continue;
 			}
-			else if (c == 'u' && MOO_SIZEOF(moo_ooch_t) >= 2) 
+			else if (!byte_only && c == 'u' && MOO_SIZEOF(moo_ooch_t) >= 2) 
 			{
 				escaped = 4;
 				digit_count = 0;
 				c_acc = 0;
 				continue;
 			}
-			else if (c == 'U' && MOO_SIZEOF(moo_ooch_t) >= 4) 
+			else if (!byte_only && c == 'U' && MOO_SIZEOF(moo_ooch_t) >= 4) 
 			{
 				escaped = 8;
 				digit_count = 0;
@@ -1829,7 +1851,14 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 			escaped = 0;
 		}
 
+		if (byte_only) CHECK_BYTE_RANGE_FOR_BYTE_ARRAY (c);
 		ADD_TOKEN_CHAR (moo, c);
+	}
+
+	if (byte_range_error)
+	{
+		moo_setsynerrbfmt (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo), "non-byte in byte array literal");
+		return -1;
 	}
 
 	return 0;
@@ -2216,7 +2245,7 @@ retry:
 			if (get_string(moo, '"', '\\', 0, 0, 0) <= -1) return -1;
 			break;
 
-		
+
 		case 'C': /* a character with a C-style escape sequence */
 		case 'B': /* byte array in a string like notation */
 		{
@@ -2995,6 +3024,7 @@ static int add_string_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* ind
 
 	lit = moo_instantiate(moo, moo->_string, str->ptr, str->len);
 	if (!lit) return -1;
+	MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
 
 	return add_literal(moo, lit, index);
 }
@@ -3005,7 +3035,8 @@ static int add_symbol_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t offs
 
 	tmp = moo_makesymbol(moo, str->ptr + offset, str->len - offset);
 	if (!tmp) return -1;
-
+	MOO_OBJ_SET_FLAGS_RDONLY (tmp, 1);
+	
 	return add_literal(moo, tmp, index);
 }
 
@@ -3018,6 +3049,8 @@ static int add_byte_array_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t*
 	tmp = moo_instantiate(moo, moo->_byte_array, MOO_NULL, str->len);
 	if (!tmp) return -1;
 	for (i = 0; i < str->len; i++) MOO_OBJ_SET_BYTE_VAL(tmp, i, str->ptr[i]);
+	MOO_OBJ_SET_FLAGS_RDONLY (tmp, 1);
+
 	return add_literal(moo, tmp, index);
 }
 
@@ -4965,7 +4998,7 @@ static int read_byte_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 			goto oops;
 		}
 
-		if (tmp < 0 || tmp > 255)
+		if (tmp < 0 || tmp > 0xFF)
 		{
 			moo_setsynerr (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			goto oops;
@@ -5019,7 +5052,7 @@ static int read_byte_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 		goto oops;
 	}
 
-	ba = moo_instantiate (moo, moo->_byte_array, &moo->c->balit.ptr[saved_balit_count], moo->c->balit.count - saved_balit_count);
+	ba = moo_instantiate(moo, moo->_byte_array, &moo->c->balit.ptr[saved_balit_count], moo->c->balit.count - saved_balit_count);
 	if (!ba) goto oops;
 
 	if (rdonly)
@@ -5459,6 +5492,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				/* B"xxxxx". see MOO_IOTOK_HASHBRACK below for comparision */
 				if (add_byte_array_literal(moo, TOKEN_NAME(moo), &index) <= -1 ||
 				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				GET_TOKEN (moo);
 				break;
 
 			case MOO_IOTOK_HASHPAREN: /* #( */
@@ -8884,7 +8918,7 @@ static moo_oop_t token_to_literal (moo_t* moo, int rdonly)
 			}
 			return lit;
 		}
-			
+
 		case MOO_IOTOK_IDENT:
 		case MOO_IOTOK_IDENT_DOTTED:
 		{
