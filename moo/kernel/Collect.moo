@@ -253,6 +253,105 @@ class(#pointer) Array(SequenceableCollection)
 	{
 		^(self = anArray) not
 	}
+
+	method collect: condition_block
+	{
+		// The stock implementation needs to be overwritten
+		// as the Array class has no add: method which it requires.
+
+		| cursize newarr i |
+
+		cursize := self size.
+		newarr := self class new: cursize.
+
+		i := 0.
+		while (i < cursize)
+		{
+			newarr at: i put: (condition_block value: (self at: i)).
+			i := i + 1.
+		}.
+
+		^newarr.
+	}
+
+	method select: condition_block
+	{
+		// The stock implementation needs to be overwritten
+		// as the Array class has no add: method which it requires.
+
+		| seltab cursize newarr newsize i |
+
+		cursize := self size.
+		seltab := ByteArray new: cursize.
+
+		newsize := 0.
+		i := 0.
+		while (i < cursize)
+		{
+			if (condition_block value: (self at: i)) 
+			{
+				seltab at: i put: 1.
+				newsize := newsize + 1.
+			}.
+			i := i + 1.
+		}.
+
+		newarr := self class new: newsize.
+
+		newsize := 0.
+		i := 0.
+		while (i < cursize)
+		{
+			if ((seltab at: i) == 1)
+			{
+				newarr at: newsize put: (self at: i).
+				newsize := newsize + 1.
+			}.
+			i := i + 1.
+		}.
+
+		^newarr.
+	}
+
+	method reject: condition_block
+	{
+		// The stock implementation needs to be overwritten
+		// as the Array class has no add: method which it requires.
+
+		| seltab cursize newarr newsize i |
+
+		cursize := self size.
+		seltab := ByteArray new: cursize.
+
+		newsize := 0.
+		i := 0.
+		while (i < cursize)
+		{
+			ifnot (condition_block value: (self at: i)) 
+			{
+				seltab at: i put: 1.
+				newsize := newsize + 1.
+			}.
+			i := i + 1.
+		}.
+
+		newarr := self class new: newsize.
+
+		newsize := 0.
+		i := 0.
+		while (i < cursize)
+		{
+			if ((seltab at: i) == 1)
+			{
+				newarr at: newsize put: (self at: i).
+				newsize := newsize + 1.
+			}.
+			i := i + 1.
+		}.
+
+		^newarr.
+	}
+
 }
 
 // -------------------------------------------------------------------------------
@@ -1216,61 +1315,61 @@ class AssociativeCollection(Collection)
 		^coll
 	}
 
-	method select: aBlock
+	method select: condition_block
 	{
 		| coll |
 		coll := self class new.
 		// TODO: using at:put: here isn't really right. implement add: to be able to insert the assocication without
 		//       creating another new association.
-		//self associationsDo: [ :ass | if (aBlock value: ass value) { coll add: ass } ].
-		self associationsDo: [ :ass | if (aBlock value: ass value) { coll at: (ass key) put: (ass value) } ].
+		//self associationsDo: [ :ass | if (condition_block value: ass value) { coll add: ass } ].
+		self associationsDo: [ :ass | if (condition_block value: ass value) { coll at: (ass key) put: (ass value) } ].
 		^coll
 	}
 
-	method do: aBlock
+	method do: action_block
 	{
 		| bs i ass |
 		bs := self.bucket size.
 		i := 0.
 		while (i < bs)
 		{
-			if ((ass := self.bucket at: i) notNil) { aBlock value: ass value }.
+			if ((ass := self.bucket at: i) notNil) { action_block value: ass value }.
 			i := i + 1.
 		}.
 	}
 
-	method keysDo: aBlock
+	method keysDo: action_block
 	{
 		| bs i ass |
 		bs := self.bucket size.
 		i := 0.
 		while (i < bs)
 		{
-			if ((ass := self.bucket at: i) notNil) { aBlock value: ass key }.
+			if ((ass := self.bucket at: i) notNil) { action_block value: ass key }.
 			i := i + 1.
 		}.
 	}
 
-	method keysAndValuesDo: aBlock
+	method keysAndValuesDo: action_block
 	{
 		| bs i ass |
 		bs := self.bucket size.
 		i := 0.
 		while (i < bs)
 		{
-			if ((ass := self.bucket at: i) notNil)  { aBlock value: ass key value: ass value }.
+			if ((ass := self.bucket at: i) notNil)  { action_block value: ass key value: ass value }.
 			i := i + 1.
 		}.
 	}
 
-	method associationsDo: aBlock
+	method associationsDo: action_block
 	{
 		| bs i ass |
 		bs := self.bucket size.
 		i := 0.
 		while (i < bs)
 		{
-			if ((ass := self.bucket at: i) notNil)  { aBlock value: ass }.
+			if ((ass := self.bucket at: i) notNil)  { action_block value: ass }.
 			i := i + 1.
 		}.
 	}

@@ -37,15 +37,15 @@
 * #\e123   Error literal
 * #\pB8000000 SmallPointer(smptr) literal
 
-* #() Array
-* #[] ByteArray
+* #() Array. Comma as element delimiter is optional
+* #[] ByteArray. Comma as element delimiter is optional
 * #{} Dictionary - not supported yet
 
-The following are not literals.
+The following are not literals. The followings forms expressions.
 
-* ##() Array expression
-* ##[] ByteArray expression
-* ##{} Dictionary expression
+* ##() Array expression. Comma required to delimit elements
+* ##[] ByteArray expression. Comma required to delimit elements
+* ##{} Dictionary expression. Comma required to delimit elements
 
 * S%[] String literal with each character specified 
 ** S%{A B C '\n'}

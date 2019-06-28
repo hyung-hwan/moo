@@ -188,6 +188,10 @@ class MyObject(Object)
 //2 timesRepeat: [ |k| k := B"ABC\xFF" copy. k dump. k at: 3 put: 16r39. k dump ].
 //B"" dump.
 
+//##(#( 1 2 3 4 5 6 7 8 9 ) asOrderedCollection select: [:x | x > 5]) do: [:x | x dump ].
+//(#( 1 2 3 4 5 6 7 8 9 ) select: [:x | x > 5]) dump.
+//(#( 1 2 3 4 5 6 7 8 9 ) collect: [:x | x * 2]) dump.
+//(#( 1 2 3 4 5 6 7 8 9 ) reject: [:x | x > 5]) dump.
 	}
 }
 
