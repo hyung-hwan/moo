@@ -1775,8 +1775,8 @@ static int get_string (moo_t* moo, moo_ooch_t end_char, moo_ooch_t esc_char, int
 				/* \x, \u, \U not followed by a hexadecimal digit */
 				if (digit_count == 0) 
 				{
-					static moo_ooch_t rc_tab[] = { '\0', '\0', 'x', '\0', 'u', '\0', '\0', '\0', 'U' };
-					ADD_TOKEN_CHAR (moo, rc_tab[escaped]);
+					static moo_ooch_t esc_char_tab[] = { '\0', '\0', 'x', '\0', 'u', '\0', '\0', '\0', 'U' };
+					ADD_TOKEN_CHAR (moo, esc_char_tab[escaped]);
 				}
 				else 
 				{

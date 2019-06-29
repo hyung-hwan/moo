@@ -314,8 +314,17 @@ class(#pointer,#final,#limited) BlockContext(Context)
 
 class(#pointer) CompiledMethod(Object)
 {
-	// var owner, name, preamble, preamble_data_1, preamble_data_2, ntmprs, nargs, code, source.
-	var owner, name, preamble, preamble_data_1, preamble_data_2, ntmprs, nargs, source.
+	var owner, 
+	    name,
+	    preamble,
+	    preamble_data_1,
+	    preamble_data_2,
+	    ntmprs,
+	    nargs,
+	    //code, <-- only if moo is built with MOO_USE_METHOD_TRAILER disable.
+	    source,
+	    source_file,
+	    source_line.
 
 	method preamble
 	{
