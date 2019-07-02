@@ -359,6 +359,10 @@ struct moo_code_t
 {
 	moo_uint8_t* ptr;
 	moo_oow_t    len;
+	moo_oow_t    capa;
+
+	/* array that hold the location of the byte code emitted */
+	moo_oow_t*   locptr;
 };
 
 typedef struct moo_oow_pool_chunk_t moo_oow_pool_chunk_t;
@@ -471,6 +475,7 @@ struct moo_pooldic_import_data_t
 	moo_oow_t oops_capa;
 };
 
+/* data kept by compiler to complie a method */
 typedef struct moo_method_data_t moo_method_data_t;
 struct moo_method_data_t
 {
@@ -528,7 +533,6 @@ struct moo_method_data_t
 
 	/* byte code */
 	moo_code_t code;
-	moo_oow_t code_capa;
 };
 
 typedef struct moo_cunit_class_t moo_cunit_class_t;

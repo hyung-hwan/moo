@@ -2489,18 +2489,27 @@ static MOO_INLINE int emit_byte_instruction (moo_t* moo, moo_oob_t code)
 		return -1;
 	}
 
-	if (cc->mth.code.len >= cc->mth.code_capa)
+	if (cc->mth.code.len >= cc->mth.code.capa)
 	{
 		moo_oob_t* tmp;
+		moo_oow_t* tmp2;
 		moo_oow_t newcapa;
 
 		newcapa = MOO_ALIGN (cc->mth.code.len + 1, CODE_BUFFER_ALIGN);
 
-		tmp = moo_reallocmem (moo, cc->mth.code.ptr, newcapa * MOO_SIZEOF(*tmp));
+		tmp = (moo_oob_t*)moo_reallocmem(moo, cc->mth.code.ptr, newcapa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
+		tmp2 = (moo_oow_t*)moo_reallocmem(moo, cc->mth.code.locptr, newcapa * MOO_SIZEOF(*tmp2));
+		if (!tmp)
+		{
+			moo_freemem (moo, tmp);
+			return -1;
+		}
+
+		cc->mth.code.capa = newcapa;
 		cc->mth.code.ptr = tmp;
-		cc->mth.code_capa = newcapa;
+		cc->mth.code.locptr = tmp2;
 	}
 
 	cc->mth.code.ptr[cc->mth.code.len++] = code;
@@ -2548,7 +2557,6 @@ static int emit_single_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1
 				bc = cmd | 0x80;
 				goto write_long;
 			}
-
 
 		case BCODE_JUMP_FORWARD_0:
 		case BCODE_JUMP_BACKWARD_0:
