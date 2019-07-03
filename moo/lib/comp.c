@@ -2259,7 +2259,7 @@ retry:
 
 				if (saved_c == 'C')
 				{
-					if (moo->c->tok.name.len != 1)
+					if (TOKEN_NAME_LEN(moo) != 1)
 					{
 						moo_setsynerr (moo, MOO_SYNERR_CHARLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
@@ -2278,7 +2278,7 @@ retry:
 
 				if (saved_c == 'C')
 				{
-					if (moo->c->tok.name.len != 1)
+					if (TOKEN_NAME_LEN(moo) != 1)
 					{
 						moo_setsynerr (moo, MOO_SYNERR_CHARLITINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 						return -1;
@@ -3966,7 +3966,7 @@ static int compile_class_level_imports (moo_t* moo)
 		}
 		else if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
 		{
-			last = moo->c->tok.name;
+			last = *TOKEN_NAME(moo);
 			/* it falls back to the name space of the class */
 			ns_oop = cc->ns_oop; 
 		}
@@ -5323,21 +5323,21 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 					{
 						if (var.pos >= cc->mth.blk_tmprcnt[i - 1])
 						{
-							if (emit_double_param_instruction(moo, BCODE_PUSH_CTXTEMPVAR_0, cc->mth.blk_depth - i, var.pos - cc->mth.blk_tmprcnt[i - 1]) <= -1) return -1;
+							if (emit_double_param_instruction(moo, BCODE_PUSH_CTXTEMPVAR_0, cc->mth.blk_depth - i, var.pos - cc->mth.blk_tmprcnt[i - 1], ident_loc) <= -1) return -1;
 							goto temporary_done;
 						}
 					}
 				}
 			#endif
 
-				if (emit_single_param_instruction(moo, BCODE_PUSH_TEMPVAR_0, var.pos) <= -1) return -1;
+				if (emit_single_param_instruction(moo, BCODE_PUSH_TEMPVAR_0, var.pos, ident_loc) <= -1) return -1;
 			temporary_done:
 				break;
 			}
 
 			case VAR_INSTANCE:
 			case VAR_CLASSINST:
-				if (emit_single_param_instruction(moo, BCODE_PUSH_INSTVAR_0, var.pos) <= -1) return -1;
+				if (emit_single_param_instruction(moo, BCODE_PUSH_INSTVAR_0, var.pos, ident_loc) <= -1) return -1;
 				break;
 
 			case VAR_CLASS:
@@ -5347,7 +5347,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				MOO_ASSERT (moo, var.cls != MOO_NULL); 
 
 				if (add_literal(moo, (moo_oop_t)var.cls, &index) <= -1 ||
-				    emit_double_param_instruction(moo, BCODE_PUSH_OBJVAR_0, var.pos, index) <= -1) return -1;
+				    emit_double_param_instruction(moo, BCODE_PUSH_OBJVAR_0, var.pos, index, ident_loc) <= -1) return -1;
 				break;
 
 			case VAR_GLOBAL:
@@ -5357,11 +5357,11 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				 * must not migrate the value of the association to a new
 				 * association when it rehashes the entire dictionary. 
 				 * If the association entry is deleted from the dictionary,
-				 * the code compiled before the deletion will still access
+				 * the code compiled before deletion will still access
 				 * the deleted association
 				 */
 				if (add_literal(moo, (moo_oop_t)var.u.gbl, &index) <= -1 ||
-				    emit_single_param_instruction(moo, BCODE_PUSH_OBJECT_0, index) <= -1) return -1;
+				    emit_single_param_instruction(moo, BCODE_PUSH_OBJECT_0, index, ident_loc) <= -1) return -1;
 				break;
 
 			default:
@@ -5384,28 +5384,28 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				goto handle_ident;
 
 			case MOO_IOTOK_SELF:
-				if (emit_byte_instruction(moo, BCODE_PUSH_RECEIVER) <= -1) return -1;
+				if (emit_byte_instruction(moo, BCODE_PUSH_RECEIVER, TOKEN_LOC(moo)) <= -1) return -1;
 				GET_TOKEN (moo);
 				break;
 
 			case MOO_IOTOK_SUPER:
-				if (emit_byte_instruction(moo, BCODE_PUSH_RECEIVER) <= -1) return -1;
+				if (emit_byte_instruction(moo, BCODE_PUSH_RECEIVER, TOKEN_LOC(moo)) <= -1) return -1;
 				GET_TOKEN (moo);
 				*to_super = 1;
 				break;
 
 			case MOO_IOTOK_NIL:
-				if (emit_byte_instruction(moo, BCODE_PUSH_NIL) <= -1) return -1;
+				if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) return -1;
 				GET_TOKEN (moo);
 				break;
 
 			case MOO_IOTOK_TRUE:
-				if (emit_byte_instruction(moo, BCODE_PUSH_TRUE) <= -1) return -1;
+				if (emit_byte_instruction(moo, BCODE_PUSH_TRUE, TOKEN_LOC(moo)) <= -1) return -1;
 				GET_TOKEN (moo);
 				break;
 
 			case MOO_IOTOK_FALSE:
-				if (emit_byte_instruction(moo, BCODE_PUSH_FALSE) <= -1) return -1;
+				if (emit_byte_instruction(moo, BCODE_PUSH_FALSE, TOKEN_LOC(moo)) <= -1) return -1;
 				GET_TOKEN (moo);
 				break;
 
@@ -5417,7 +5417,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				if (!tmp) return -1;
 
 				if (add_literal(moo, tmp, &index) <= -1 ||
-				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index, TOKEN_LOC(moo)) <= -1) return -1;
 
 				GET_TOKEN (moo);
 				break;
@@ -5431,30 +5431,30 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				if (!tmp) return -1;
 
 				if (add_literal(moo, tmp, &index) <= -1 ||
-				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index, TOKEN_LOC(moo)) <= -1) return -1;
 
 				GET_TOKEN (moo);
 				break;
 			}
 
 			case MOO_IOTOK_THIS_CONTEXT:
-				if (emit_byte_instruction(moo, BCODE_PUSH_CONTEXT) <= -1) return -1;
+				if (emit_byte_instruction(moo, BCODE_PUSH_CONTEXT, TOKEN_LOC(moo)) <= -1) return -1;
 				GET_TOKEN (moo);
 				break;
 
 			case MOO_IOTOK_THIS_PROCESS:
-				if (emit_byte_instruction(moo, BCODE_PUSH_PROCESS) <= -1) return -1;
+				if (emit_byte_instruction(moo, BCODE_PUSH_PROCESS, TOKEN_LOC(moo)) <= -1) return -1;
 				GET_TOKEN (moo);
 				break;
 
 			case MOO_IOTOK_SELFNS:
-				if (emit_byte_instruction(moo, BCODE_PUSH_RECEIVER_NS) <= -1) return -1;
+				if (emit_byte_instruction(moo, BCODE_PUSH_RECEIVER_NS, TOKEN_LOC(moo)) <= -1) return -1;
 				GET_TOKEN (moo);
 				break;
 
 			case MOO_IOTOK_CHARLIT:
 				MOO_ASSERT (moo, TOKEN_NAME_LEN(moo) == 1);
-				if (emit_push_character_literal(moo, TOKEN_NAME_PTR(moo)[0]) <= -1) return -1;
+				if (emit_push_character_literal(moo, TOKEN_NAME_PTR(moo)[0], TOKEN_LOC(moo)) <= -1) return -1;
 				GET_TOKEN (moo);
 				break;
 
@@ -5470,12 +5470,12 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 
 				if (MOO_OOP_IS_SMOOI(tmp))
 				{
-					if (emit_push_smooi_literal(moo, MOO_OOP_TO_SMOOI(tmp)) <= -1) return -1;
+					if (emit_push_smooi_literal(moo, MOO_OOP_TO_SMOOI(tmp), TOKEN_LOC(moo)) <= -1) return -1;
 				}
 				else
 				{
 					if (add_literal(moo, tmp, &index) <= -1 ||
-					    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+					    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index, TOKEN_LOC(moo)) <= -1) return -1;
 				}
 
 				GET_TOKEN (moo);
@@ -5491,7 +5491,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				if (!tmp) return -1;
 
 				if (add_literal(moo, tmp, &index) <= -1 ||
-				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index, TOKEN_LOC(moo)) <= -1) return -1;
 
 				GET_TOKEN (moo);
 				break;
@@ -5499,20 +5499,20 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 
 			case MOO_IOTOK_SYMLIT:
 				if (add_symbol_literal(moo, TOKEN_NAME(moo), 1, &index) <= -1 ||
-				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index, TOKEN_LOC(moo)) <= -1) return -1;
 				GET_TOKEN (moo);
 				break;
 
 			case MOO_IOTOK_STRLIT:
 				if (add_string_literal(moo, TOKEN_NAME(moo), &index) <= -1 ||
-				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index, TOKEN_LOC(moo)) <= -1) return -1;
 				GET_TOKEN (moo);
 				break;
 
 			case MOO_IOTOK_BYTEARRAYLIT:
 				/* B"xxxxx". see MOO_IOTOK_HASHBRACK below for comparision */
 				if (add_byte_array_literal(moo, TOKEN_NAME(moo), &index) <= -1 ||
-				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+				    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index, TOKEN_LOC(moo)) <= -1) return -1;
 				GET_TOKEN (moo);
 				break;
 
@@ -5594,11 +5594,14 @@ static int compile_unary_message (moo_t* moo, int to_super)
 {
 	moo_oow_t index;
 	moo_oow_t nargs;
+	moo_ioloc_t sel_loc;
 
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_IDENT);
 
 	do
 	{
+		sel_loc = *TOKEN_LOC(moo);
+
 		nargs = 0;
 		if (add_symbol_literal(moo, TOKEN_NAME(moo), 0, &index) <= -1) return -1;
 
@@ -5634,7 +5637,7 @@ static int compile_unary_message (moo_t* moo, int to_super)
 			 *       expected by the method */
 		}
 
-		if (emit_double_param_instruction(moo, send_message_cmd[to_super], nargs, index) <= -1) return -1;
+		if (emit_double_param_instruction(moo, send_message_cmd[to_super], nargs, index, &sel_loc) <= -1) return -1;
 
 		/* In 'super new xxx', xxx is sent to the object returned by new.
 		 * that means it is not sent to 'super' */
@@ -5656,12 +5659,14 @@ static int compile_binary_message (moo_t* moo, int to_super)
 	int to_super2;
 	moo_oocs_t binsel;
 	moo_oow_t saved_binsels_len, binsel_offset;
+	moo_ioloc_t sel_loc;
 
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL);
 
 	do
 	{
-		binsel = moo->c->tok.name;
+		sel_loc = *TOKEN_LOC(moo);
+		binsel = *TOKEN_NAME(moo);
 		saved_binsels_len = cc->mth.binsels.len;
 
 		if (clone_binary_selector(moo, &binsel, &binsel_offset) <= -1) goto oops;
@@ -5677,7 +5682,7 @@ static int compile_binary_message (moo_t* moo, int to_super)
 		 * to compile_expression_primary(). */
 		binsel.ptr = &cc->mth.binsels.ptr[binsel_offset];
 		if (add_symbol_literal(moo, &binsel, 0, &index) <= -1 ||
-		    emit_double_param_instruction(moo, send_message_cmd[to_super], 1, index) <= -1) goto oops;
+		    emit_double_param_instruction(moo, send_message_cmd[to_super], 1, index, &sel_loc) <= -1) goto oops;
 
 		to_super = 0; /* In super + 2 - 3, '-' is sent to the return value of '+', not to super */
 		cc->mth.binsels.len = saved_binsels_len;
@@ -5713,7 +5718,7 @@ static int compile_keyword_message (moo_t* moo, int to_super)
 /* TODO: optimization for ifTrue: ifFalse: whileTrue: whileFalse .. */
 	do 
 	{
-		kw = moo->c->tok.name;
+		kw = *TOKEN_NAME(moo);
 		if (clone_keyword(moo, &kw, &kw_offset) <= -1) goto oops;
 
 		GET_TOKEN (moo);
@@ -5741,7 +5746,7 @@ static int compile_keyword_message (moo_t* moo, int to_super)
 	kwsel.len = cc->mth.kwsels.len - saved_kwsel_len;
 
 	if (add_symbol_literal(moo, &kwsel, 0, &index) <= -1 ||
-	    emit_double_param_instruction(moo, send_message_cmd[to_super], nargs, index) <= -1) goto oops;
+	    emit_double_param_instruction(moo, send_message_cmd[to_super], nargs, index, &saved_kwsel_loc) <= -1) goto oops;
 
 	cc->mth.kwsels.len = saved_kwsel_len;
 	return 0;
@@ -5778,7 +5783,7 @@ static int compile_message_expression (moo_t* moo, int to_super)
 				/* insert NOOP to change to DUP_STACKTOP if there is a 
 				 * cascaded message */
 				noop_pos = cc->mth.code.len;
-				if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
+				if (emit_byte_instruction(moo, BCODE_NOOP, TOKEN_LOC(moo)) <= -1) return -1;
 
 				if (compile_unary_message(moo, to_super) <= -1) return -1;
 
@@ -5791,7 +5796,7 @@ static int compile_message_expression (moo_t* moo, int to_super)
 					eliminate_instructions (moo, noop_pos, noop_pos);
 
 					noop_pos = cc->mth.code.len;
-					if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
+					if (emit_byte_instruction(moo, BCODE_NOOP, TOKEN_LOC(moo)) <= -1) return -1;
 
 					/* to_super is reset to 0 because a unary message
 					 * has been sent to super and this binary message
@@ -5810,7 +5815,7 @@ static int compile_message_expression (moo_t* moo, int to_super)
 					eliminate_instructions (moo, noop_pos, noop_pos);
 
 					noop_pos = cc->mth.code.len;
-					if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
+					if (emit_byte_instruction(moo, BCODE_NOOP, TOKEN_LOC(moo)) <= -1) return -1;
 					/* don't pass to_super. pass 0 as it can't be the 
 					 * first message after 'super' */
 					if (compile_keyword_message(moo, 0/*to_super*/) <= -1) return -1;
@@ -5819,7 +5824,7 @@ static int compile_message_expression (moo_t* moo, int to_super)
 
 			case MOO_IOTOK_BINSEL:
 				noop_pos = cc->mth.code.len;
-				if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
+				if (emit_byte_instruction(moo, BCODE_NOOP, TOKEN_LOC(moo)) <= -1) return -1;
 
 				if (compile_binary_message(moo, to_super) <= -1) return -1;
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD)
@@ -5831,7 +5836,7 @@ static int compile_message_expression (moo_t* moo, int to_super)
 					eliminate_instructions (moo, noop_pos, noop_pos);
 
 					noop_pos = cc->mth.code.len;
-					if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
+					if (emit_byte_instruction(moo, BCODE_NOOP, TOKEN_LOC(moo)) <= -1) return -1;
 					/* don't pass to_super. pass 0 as it can't be the 
 					 * first message after 'super' */
 					if (compile_keyword_message(moo, 0/*to_super*/) <= -1) return -1;
@@ -5840,7 +5845,7 @@ static int compile_message_expression (moo_t* moo, int to_super)
 
 			case MOO_IOTOK_KEYWORD:
 				noop_pos = cc->mth.code.len;
-				if (emit_byte_instruction(moo, BCODE_NOOP) <= -1) return -1;
+				if (emit_byte_instruction(moo, BCODE_NOOP, TOKEN_LOC(moo)) <= -1) return -1;
 
 				if (compile_keyword_message(moo, to_super) <= -1) return -1;
 				break;
@@ -5853,7 +5858,7 @@ static int compile_message_expression (moo_t* moo, int to_super)
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_SEMICOLON)
 		{
 			cc->mth.code.ptr[noop_pos] = BCODE_DUP_STACKTOP;
-			if (emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) return -1;
+			if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, TOKEN_LOC(moo)) <= -1) return -1;
 			GET_TOKEN(moo);
 		}
 		else 
@@ -5903,8 +5908,8 @@ start_over:
 		bcode = (TOKEN_TYPE(moo) == MOO_IOTOK_AND)? BCODE_JUMP_FORWARD_IF_FALSE: BCODE_JUMP_FORWARD_IF_TRUE;
 		/* TODO: optimization if the expression is a known constant that can be determined to be boolean */
 		if (add_to_oow_pool(moo, &jumptoend, cc->mth.code.len) <= -1 ||
- 		    emit_single_param_instruction(moo, bcode, MAX_CODE_JUMP) <= -1 ||
- 		    emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) goto oops;
+ 		    emit_single_param_instruction(moo, bcode, MAX_CODE_JUMP, TOKEN_LOC(moo)) <= -1 ||
+ 		    emit_byte_instruction(moo, BCODE_POP_STACKTOP, TOKEN_LOC(moo)) <= -1) goto oops;
 		GET_TOKEN (moo);
 
 		/* compile_method_expression() calls this function with a non-null
@@ -5973,9 +5978,10 @@ static int compile_braced_block (moo_t* moo)
 			if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
 			else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
 			{
+				moo_ioloc_t period_loc = *TOKEN_LOC(moo);
 				GET_TOKEN (moo);
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
-				if (emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) return -1;
+				if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, &period_loc) <= -1) return -1;
 			}
 			else
 			{
@@ -5988,7 +5994,7 @@ static int compile_braced_block (moo_t* moo)
 	if (cc->mth.code.len == code_start)
 	{
 		/* the block doesn't contain an instruction at all */
-		if (emit_byte_instruction(moo, BCODE_PUSH_NIL) <= -1) return -1;
+		if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) return -1;
 	}
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
@@ -6088,7 +6094,7 @@ static int compile_if_expression (moo_t* moo)
 			jumptonext = cc->mth.code.len; 
 			/* BCODE_JUMPOP_FORWARD_IF_FALSE is always a long jump instruction.
 			 * just specify MAX_CODE_JUMP for consistency with short jump variants */
-			if (emit_single_param_instruction(moo, jumpop_inst, MAX_CODE_JUMP) <= -1) goto oops;
+			if (emit_single_param_instruction(moo, jumpop_inst, MAX_CODE_JUMP, &if_loc) <= -1) goto oops;
 		}
 
 		GET_TOKEN (moo); /* get { */
@@ -6458,7 +6464,7 @@ static int compile_method_expression (moo_t* moo, int pop)
 
 		/* store the assignee name to the internal buffer
 		 * to make it valid after the token buffer has been overwritten */
-		assignee = moo->c->tok.name;
+		assignee = *TOKEN_NAME(moo);
 
 		if (clone_assignee(moo, &assignee, &assignee_offset) <= -1) return -1;
 
