@@ -2474,7 +2474,7 @@ static int end_include (moo_t* moo)
  * Byte-Code Manipulation Functions
  * --------------------------------------------------------------------- */
 
-static MOO_INLINE int emit_byte_instruction (moo_t* moo, moo_oob_t code)
+static MOO_INLINE int emit_byte_instruction (moo_t* moo, moo_oob_t code, const moo_ioloc_t* srcloc)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 
@@ -2512,11 +2512,14 @@ static MOO_INLINE int emit_byte_instruction (moo_t* moo, moo_oob_t code)
 		cc->mth.code.locptr = tmp2;
 	}
 
-	cc->mth.code.ptr[cc->mth.code.len++] = code;
+	cc->mth.code.ptr[cc->mth.code.len] = code;
+	if (srcloc) cc->mth.code.locptr[cc->mth.code.len] = srcloc->line;
+	cc->mth.code.len++;
+
 	return 0;
 }
 
-static int emit_single_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1)
+static int emit_single_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1, const moo_ioloc_t* srcloc)
 {
 	moo_oob_t bc;
 
@@ -2619,7 +2622,7 @@ static int emit_single_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1
 	return -1;
 
 write_short:
-	if (emit_byte_instruction(moo, bc) <= -1) return -1;
+	if (emit_byte_instruction(moo, bc, srcloc) <= -1) return -1;
 	return 0;
 
 write_long:
@@ -2629,17 +2632,17 @@ write_long:
 		return -1;
 	}
 #if (MOO_BCODE_LONG_PARAM_SIZE == 2)
-	if (emit_byte_instruction(moo, bc) <= -1 ||
-	    emit_byte_instruction(moo, (param_1 >> 8) & 0xFF) <= -1 ||
-	    emit_byte_instruction(moo, param_1 & 0xFF) <= -1) return -1;
+	if (emit_byte_instruction(moo, bc, srcloc) <= -1 ||
+	    emit_byte_instruction(moo, (param_1 >> 8) & 0xFF, srcloc) <= -1 ||
+	    emit_byte_instruction(moo, param_1 & 0xFF, srcloc) <= -1) return -1;
 #else
-	if (emit_byte_instruction(moo, bc) <= -1 ||
-	    emit_byte_instruction(moo, param_1) <= -1) return -1;
+	if (emit_byte_instruction(moo, bc, srcloc) <= -1 ||
+	    emit_byte_instruction(moo, param_1, srcloc) <= -1) return -1;
 #endif
 	return 0;
 }
 
-static int emit_double_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1, moo_oow_t param_2)
+static int emit_double_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1, moo_oow_t param_2, const moo_ioloc_t* srcloc)
 {
 	moo_oob_t bc;
 
@@ -2676,8 +2679,8 @@ static int emit_double_param_instruction (moo_t* moo, int cmd, moo_oow_t param_1
 	return -1;
 
 write_short:
-	if (emit_byte_instruction(moo, bc) <= -1 ||
-	    emit_byte_instruction(moo, param_2) <= -1) return -1;
+	if (emit_byte_instruction(moo, bc, srcloc) <= -1 ||
+	    emit_byte_instruction(moo, param_2, srcloc) <= -1) return -1;
 	return 0;
 
 write_long:
@@ -2687,70 +2690,70 @@ write_long:
 		return -1;
 	}
 #if (MOO_BCODE_LONG_PARAM_SIZE == 2)
-	if (emit_byte_instruction(moo, bc) <= -1 ||
-	    emit_byte_instruction(moo, (param_1 >> 8) & 0xFF) <= -1 ||
-	    emit_byte_instruction(moo, param_1 & 0xFF) <= -1 ||
-	    emit_byte_instruction(moo, (param_2 >> 8) & 0xFF) <= -1 ||
-	    emit_byte_instruction(moo, param_2 & 0xFF) <= -1) return -1;
+	if (emit_byte_instruction(moo, bc, srcloc) <= -1 ||
+	    emit_byte_instruction(moo, (param_1 >> 8) & 0xFF, srcloc) <= -1 ||
+	    emit_byte_instruction(moo, param_1 & 0xFF, srcloc) <= -1 ||
+	    emit_byte_instruction(moo, (param_2 >> 8) & 0xFF, srcloc) <= -1 ||
+	    emit_byte_instruction(moo, param_2 & 0xFF, srcloc) <= -1) return -1;
 #else
 	
-	if (emit_byte_instruction(moo, bc) <= -1 ||
-	    emit_byte_instruction(moo, param_1) <= -1 ||
-	    emit_byte_instruction(moo, param_2) <= -1) return -1;
+	if (emit_byte_instruction(moo, bc, srcloc) <= -1 ||
+	    emit_byte_instruction(moo, param_1, srcloc) <= -1 ||
+	    emit_byte_instruction(moo, param_2, srcloc) <= -1) return -1;
 #endif
 	return 0;
 }
 
-static int emit_push_smooi_literal (moo_t* moo, moo_ooi_t i)
+static int emit_push_smooi_literal (moo_t* moo, moo_ooi_t i, const moo_ioloc_t* srcloc)
 {
 	moo_oow_t index;
 
 	switch (i)
 	{
 		case -1:
-			return emit_byte_instruction (moo, BCODE_PUSH_NEGONE);
+			return emit_byte_instruction(moo, BCODE_PUSH_NEGONE, srcloc);
 
 		case 0:
-			return emit_byte_instruction (moo, BCODE_PUSH_ZERO);
+			return emit_byte_instruction(moo, BCODE_PUSH_ZERO, srcloc);
 
 		case 1:
-			return emit_byte_instruction (moo, BCODE_PUSH_ONE);
+			return emit_byte_instruction(moo, BCODE_PUSH_ONE, srcloc);
 
 		case 2:
-			return emit_byte_instruction (moo, BCODE_PUSH_TWO);
+			return emit_byte_instruction(moo, BCODE_PUSH_TWO, srcloc);
 	}
 
 	if (i >= 0 && i <= MAX_CODE_PARAM)
 	{
-		return emit_single_param_instruction(moo, BCODE_PUSH_INTLIT, i);
+		return emit_single_param_instruction(moo, BCODE_PUSH_INTLIT, i, srcloc);
 	}
 	else if (i < 0 && i >= -(moo_ooi_t)MAX_CODE_PARAM)
 	{
-		return emit_single_param_instruction(moo, BCODE_PUSH_NEGINTLIT, -i);
+		return emit_single_param_instruction(moo, BCODE_PUSH_NEGINTLIT, -i, srcloc);
 	}
 
 	if (add_literal(moo, MOO_SMOOI_TO_OOP(i), &index) <= -1 ||
-	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index, srcloc) <= -1) return -1;
 
 	return 0;
 }
 
-static int emit_push_character_literal (moo_t* moo, moo_ooch_t ch)
+static int emit_push_character_literal (moo_t* moo, moo_ooch_t ch, const moo_ioloc_t* srcloc)
 {
 	moo_oow_t index;
 
 	if (ch >= 0 && ch <= MAX_CODE_PARAM)
 	{
-		return emit_single_param_instruction (moo, BCODE_PUSH_CHARLIT, ch);
+		return emit_single_param_instruction(moo, BCODE_PUSH_CHARLIT, ch, srcloc);
 	}
 
 	if (add_literal(moo, MOO_CHAR_TO_OOP(ch), &index) <= -1 ||
-	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index, srcloc) <= -1) return -1;
 
 	return 0;
 }
 
-static MOO_INLINE int emit_backward_jump_instruction (moo_t* moo, int cmd, moo_oow_t offset)
+static MOO_INLINE int emit_backward_jump_instruction (moo_t* moo, int cmd, moo_oow_t offset, const  moo_ioloc_t* srcloc)
 {
 	moo_oow_t adj;
 
@@ -2765,7 +2768,7 @@ static MOO_INLINE int emit_backward_jump_instruction (moo_t* moo, int cmd, moo_o
 	 * of the instruction itself */
 
 	adj = (offset < 3)? 1: (MOO_BCODE_LONG_PARAM_SIZE + 1);
-	return emit_single_param_instruction (moo, cmd, offset + adj);
+	return emit_single_param_instruction(moo, cmd, offset + adj, srcloc);
 }
 
 static int patch_long_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oow_t jt, moo_ioloc_t* errloc)
@@ -2812,6 +2815,7 @@ static int patch_long_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_o
 #else
 	cc->mth.code.ptr[jip + 1] = jump_offset;
 #endif
+
 
 	return 0;
 }
@@ -2930,21 +2934,21 @@ static MOO_INLINE void pop_loop (moo_t* moo)
 	free_loop (moo, unlink_loop(moo));
 }
 
-static MOO_INLINE int inject_break_to_loop (moo_t* moo)
+static MOO_INLINE int inject_break_to_loop (moo_t* moo, const moo_ioloc_t* srcloc)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	if (add_to_oow_pool(moo, &cc->mth.loop->break_ip_pool, cc->mth.code.len) <= -1 ||
-	    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
+	    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP, srcloc) <= -1) return -1;
 	return 0;
 }
 
-static MOO_INLINE int inject_continue_to_loop (moo_t* moo)
+static MOO_INLINE int inject_continue_to_loop (moo_t* moo, const moo_ioloc_t* srcloc)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	/* used for a do-while loop. jump forward because the conditional 
 	 * is at the end of the do-while loop */
 	if (add_to_oow_pool(moo, &cc->mth.loop->continue_ip_pool, cc->mth.code.len) <= -1 ||
-	    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
+	    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP, srcloc) <= -1) return -1;
 	return 0;
 }
 
@@ -4889,25 +4893,25 @@ static int compile_block_expression (moo_t* moo)
 	if (store_tmpr_count_for_block(moo, cc->mth.tmpr_count) <= -1) return -1;
 
 #if defined(MOO_USE_MAKE_BLOCK)
-	if (emit_double_param_instruction(moo, BCODE_MAKE_BLOCK, block_arg_count, cc->mth.tmpr_count/*block_tmpr_count*/) <= -1) return -1;
+	if (emit_double_param_instruction(moo, BCODE_MAKE_BLOCK, block_arg_count, cc->mth.tmpr_count/*block_tmpr_count*/, &block_loc) <= -1) return -1;
 #else
-	if (emit_byte_instruction(moo, BCODE_PUSH_CONTEXT) <= -1 ||
-	    emit_push_smooi_literal(moo, block_arg_count) <= -1 ||
-	    emit_push_smooi_literal(moo, cc->mth.tmpr_count/*block_tmpr_count*/) <= -1 ||
-	    emit_byte_instruction(moo, BCODE_SEND_BLOCK_COPY) <= -1) return -1;
+	if (emit_byte_instruction(moo, BCODE_PUSH_CONTEXT, &block_loc) <= -1 ||
+	    emit_push_smooi_literal(moo, block_arg_count, &block_loc) <= -1 ||
+	    emit_push_smooi_literal(moo, cc->mth.tmpr_count/*block_tmpr_count*/, &block_loc) <= -1 ||
+	    emit_byte_instruction(moo, BCODE_SEND_BLOCK_COPY, &block_loc) <= -1) return -1;
 #endif
 
 	/* insert dummy instructions before replacing them with a jump instruction */
 	jump_inst_pos = cc->mth.code.len;
 	/* specifying MAX_CODE_JUMP causes emit_single_param_instruction() to 
 	 * produce the long jump instruction (BCODE_JUMP_FORWARD_X) */
-	if (emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) return -1;
+	if (emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP, &block_loc) <= -1) return -1;
 
 	/* compile statements inside a block */
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK)
 	{
 		/* the block is empty */
-		if (emit_byte_instruction(moo, BCODE_PUSH_NIL) <= -1) return -1;
+		if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) return -1;
 	}
 	else 
 	{
@@ -4918,9 +4922,10 @@ static int compile_block_expression (moo_t* moo)
 			if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
 			else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
 			{
+				moo_ioloc_t period_loc = *TOKEN_LOC(moo);
 				GET_TOKEN (moo);
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
-				if (emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) return -1;
+				if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, &period_loc) <= -1) return -1;
 			}
 			else
 			{
@@ -4930,7 +4935,7 @@ static int compile_block_expression (moo_t* moo)
 		}
 	}
 
-	if (emit_byte_instruction(moo, BCODE_RETURN_FROM_BLOCK) <= -1) return -1;
+	if (emit_byte_instruction(moo, BCODE_RETURN_FROM_BLOCK, TOKEN_LOC(moo)) <= -1) return -1;
 
 	if (patch_long_forward_jump_instruction(moo, jump_inst_pos, cc->mth.code.len, &block_loc) <= -1) return -1;
 
@@ -5131,13 +5136,15 @@ static int compile_byte_array_literal (moo_t* moo)
 {
 	moo_oop_t lit;
 	moo_oow_t index;
+	moo_ioloc_t start_loc;
 
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_HASHBRACK);
 
+	start_loc = *TOKEN_LOC(moo);
 	if (read_byte_array_literal(moo, 1, &lit) <= -1 ||
 	    add_literal(moo, lit, &index) <= -1 ||
-	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index, &start_loc) <= -1) return -1;
 
 	GET_TOKEN (moo);
 	return 0;
@@ -5147,13 +5154,15 @@ static int compile_array_literal (moo_t* moo)
 {
 	moo_oop_t lit;
 	moo_oow_t index;
+	moo_ioloc_t start_loc;
 
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_HASHPAREN);
 
+	start_loc = *TOKEN_LOC(moo);
 	if (read_array_literal(moo, 1, &lit) <= -1 ||
 	    add_literal(moo, lit, &index) <= -1 ||
-	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index) <= -1) return -1;
+	    emit_single_param_instruction(moo, BCODE_PUSH_LITERAL_0, index, &start_loc) <= -1) return -1;
 
 	GET_TOKEN (moo);
 	return 0;
@@ -5163,16 +5172,17 @@ static int _compile_array_expression (moo_t* moo, int closer_token, int bcode_ma
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_oow_t maip;
-	moo_ioloc_t aeloc;
+	moo_ioloc_t start_loc;
 
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_DHASHPAREN || TOKEN_TYPE(moo) == MOO_IOTOK_DHASHBRACK);
 
-	maip = cc->mth.code.len;
-	if (emit_single_param_instruction(moo, bcode_make, 0) <= -1) return -1;
+	start_loc = *TOKEN_LOC(moo);
 
-	aeloc = *TOKEN_LOC(moo);
-	GET_TOKEN (moo); /* read a token after #{ */
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
+	maip = cc->mth.code.len;
+	if (emit_single_param_instruction(moo, bcode_make, 0, &start_loc) <= -1) return -1;
+
+	GET_TOKEN (moo); /* read a token after ##( or ##[ */
+	if (TOKEN_TYPE(moo) != closer_token)
 	{
 		moo_oow_t index;
 
@@ -5180,12 +5190,12 @@ static int _compile_array_expression (moo_t* moo, int closer_token, int bcode_ma
 		do
 		{
 			if (compile_method_expression(moo, 0) <= -1) return -1;
-			if (emit_single_param_instruction(moo, bcode_pop_into, index) <= -1) return -1;
+			if (emit_single_param_instruction(moo, bcode_pop_into, index, TOKEN_LOC(moo)) <= -1) return -1;
 			index++;
 
 			if (index > MAX_CODE_PARAM)
 			{
-				moo_setsynerr (moo, MOO_SYNERR_ARREXPFLOOD, &aeloc, MOO_NULL);
+				moo_setsynerr (moo, MOO_SYNERR_ARREXPFLOOD, &start_loc, MOO_NULL);
 				return -1;
 			}
 
@@ -5211,7 +5221,7 @@ static int _compile_array_expression (moo_t* moo, int closer_token, int bcode_ma
 	#endif
 	}
 
-	GET_TOKEN (moo); /* read a token after } */
+	GET_TOKEN (moo); /* read a token after ( or ] */
 	return 0;
 }
 
@@ -5229,13 +5239,16 @@ static int compile_dictionary_expression (moo_t* moo)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_oow_t mdip;
+	moo_ioloc_t start_loc;
 
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_DHASHBRACE);
 
-	GET_TOKEN (moo); /* read a token after :{ */
+	start_loc = *TOKEN_LOC(moo);
+
+	GET_TOKEN (moo); /* read a token after ##{ */
 
 	mdip = cc->mth.code.len;
-	if (emit_single_param_instruction (moo, BCODE_MAKE_DICTIONARY, 0) <= -1) return -1;
+	if (emit_single_param_instruction(moo, BCODE_MAKE_DICTIONARY, 0, &start_loc) <= -1) return -1;
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
@@ -5244,8 +5257,8 @@ static int compile_dictionary_expression (moo_t* moo)
 		count = 0;
 		do
 		{
-			if (compile_method_expression (moo, 0) <= -1 ||
-			    emit_byte_instruction (moo, BCODE_POP_INTO_DICTIONARY) <= -1) return -1;
+			if (compile_method_expression(moo, 0) <= -1 ||
+			    emit_byte_instruction(moo, BCODE_POP_INTO_DICTIONARY, TOKEN_LOC(moo)) <= -1) return -1;
 
 			count++;
 
@@ -6558,14 +6571,14 @@ static int compile_special_statement (moo_t* moo)
 		/* ^ - return - return to the sender of the origin */
 		GET_TOKEN (moo);
 		if (compile_method_expression(moo, 0) <= -1) return -1;
-		return emit_byte_instruction (moo, BCODE_RETURN_STACKTOP);
+		return emit_byte_instruction(moo, BCODE_RETURN_STACKTOP);
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_LOCAL_RETURN)
 	{
 		/* ^^ - local return - return to the origin */
 		GET_TOKEN (moo);
 		if (compile_method_expression(moo, 0) <= -1) return -1;
-		return emit_byte_instruction (moo, BCODE_LOCAL_RETURN);
+		return emit_byte_instruction(moo, BCODE_LOCAL_RETURN);
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_BREAK)
 	{
@@ -6602,8 +6615,8 @@ static int compile_special_statement (moo_t* moo)
 		GET_TOKEN (moo); /* read the next token to continue */
 
 		return (cc->mth.loop->type == MOO_LOOP_DO_WHILE)?
-			inject_continue_to_loop (moo): /* in a do-while loop, the position to the conditional is not known yet */
-			emit_backward_jump_instruction (moo, BCODE_JUMP_BACKWARD_0, cc->mth.code.len - cc->mth.loop->startpos);
+			inject_continue_to_loop(moo): /* in a do-while loop, the position to the conditional is not known yet */
+			emit_backward_jump_instruction(moo, BCODE_JUMP_BACKWARD_0, cc->mth.code.len - cc->mth.loop->startpos);
 	}
 
 	return 9999; /* to indicate that no special statement has been seen and processed */
