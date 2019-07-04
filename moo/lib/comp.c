@@ -2970,10 +2970,16 @@ static void eliminate_instructions (moo_t* moo, moo_oow_t start, moo_oow_t end)
 	}
 	else
 	{
+		moo_oow_t tail_len;
+
 		/* eliminate a chunk in the middle of the instruction buffer.
 		 * some copying is required */
 		adjust_all_loop_jumps_for_elimination (moo, start, end);
-		MOO_MEMMOVE (&cc->mth.code.ptr[start], &cc->mth.code.ptr[end + 1], cc->mth.code.len - end - 1);
+
+		tail_len = cc->mth.code.len - end - 1;
+		MOO_MEMMOVE (&cc->mth.code.ptr[start], &cc->mth.code.ptr[end + 1], tail_len * MOO_SIZEOF(cc->mth.code.ptr[0]));
+		MOO_MEMMOVE (&cc->mth.code.locptr[start], &cc->mth.code.locptr[end + 1], tail_len * MOO_SIZEOF(cc->mth.code.locptr[0]));
+
 		cc->mth.code.len -= end - start + 1;
 	}
 }
@@ -6122,7 +6128,7 @@ static int compile_if_expression (moo_t* moo)
 			{
 				/* emit an instruction to jump to the end */
 				if (add_to_oow_pool(moo, &jumptoend, cc->mth.code.len) <= -1 ||
-				    emit_single_param_instruction (moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP) <= -1) goto oops;
+				    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP, TOKEN_LOC(moo)) <= -1) goto oops;
 			}
 		}
 
@@ -6151,13 +6157,13 @@ static int compile_if_expression (moo_t* moo)
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_ELSE)
 	{
 		GET_TOKEN (moo); /* get { */
-		if (compile_braced_block (moo) <= -1) goto oops;
+		if (compile_braced_block(moo) <= -1) goto oops;
 		GET_TOKEN (moo); /* get the next token after } */
 	}
 	else
 	{
 		/* emit an instruction to push nil if no 'else' part exists */
-		if (emit_byte_instruction (moo, BCODE_PUSH_NIL) <= -1) goto oops;
+		if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) goto oops;
 	}
 
 	if (endoftrueblock != INVALID_IP)
@@ -6190,7 +6196,7 @@ oops:
 static int compile_while_expression (moo_t* moo) /* or compile_until_expression */
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-	moo_ioloc_t while_loc, brace_loc;
+	moo_ioloc_t while_loc, brace_loc, closing_brace_loc;
 	moo_oow_t precondpos, postcondpos, prebbpos, postbbpos;
 	int cond_style = 0, loop_pushed = 0, is_until_loop;
 
@@ -6242,7 +6248,7 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 	{
 		/* BCODE_JUMPOP_FORWARD_IF_FALSE is always a long jump instruction.
 		 * just specify MAX_CODE_JUMP for consistency with short jump variants */
-		if (emit_single_param_instruction(moo, (is_until_loop? BCODE_JUMPOP_FORWARD_IF_TRUE: BCODE_JUMPOP_FORWARD_IF_FALSE), MAX_CODE_JUMP) <= -1) goto oops;
+		if (emit_single_param_instruction(moo, (is_until_loop? BCODE_JUMPOP_FORWARD_IF_TRUE: BCODE_JUMPOP_FORWARD_IF_FALSE), MAX_CODE_JUMP, TOKEN_LOC(moo)) <= -1) goto oops;
 	}
 
 	/* remember information about this while loop. */
@@ -6253,6 +6259,7 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 	brace_loc = *TOKEN_LOC(moo);
 	prebbpos = cc->mth.code.len;
 	if (compile_braced_block(moo) <= -1) goto oops;
+	closing_brace_loc = *TOKEN_LOC(moo);
 	GET_TOKEN (moo); /* get the next token after } */
 	postbbpos = cc->mth.code.len;
 
@@ -6266,11 +6273,11 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 	else if (prebbpos < postbbpos)
 	{
 		/* emit an instruction to pop the value pushed by the braced block */
-		if (emit_byte_instruction(moo, BCODE_POP_STACKTOP) <= -1) goto oops;
+		if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, &closing_brace_loc) <= -1) goto oops;
 	}
 
 	/* emit an instruction to jump back to the condition */
-	if (emit_backward_jump_instruction(moo, BCODE_JUMP_BACKWARD_0, cc->mth.code.len - precondpos) <= -1) 
+	if (emit_backward_jump_instruction(moo, BCODE_JUMP_BACKWARD_0, cc->mth.code.len - precondpos, &closing_brace_loc) <= -1) 
 	{
 		if (moo->errnum == MOO_ERANGE) 
 		{
@@ -6302,7 +6309,7 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 	loop_pushed = 0;
 
 	/* push nil as a result of the while expression. TODO: is it the best value? anything else? */
-	if (emit_byte_instruction(moo, BCODE_PUSH_NIL) <= -1) goto oops;
+	if (emit_byte_instruction(moo, BCODE_PUSH_NIL, &closing_brace_loc) <= -1) goto oops;
 
 	return 0;
 
@@ -6314,7 +6321,7 @@ oops:
 static int compile_do_while_expression (moo_t* moo)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-	moo_ioloc_t do_loc;
+	moo_ioloc_t do_loc, closing_brace_loc;
 	moo_oow_t precondpos, postcondpos, prebbpos, postbbpos;
 	int jbinst = 0, loop_pushed = 0, is_until_loop;
 	moo_loop_t* loop = MOO_NULL;
@@ -6327,11 +6334,12 @@ static int compile_do_while_expression (moo_t* moo)
 
 	/* remember information about this loop. 
 	 * position of the conditional is not known yet.*/
-	if (push_loop (moo, MOO_LOOP_DO_WHILE, prebbpos) <= -1) goto oops;
+	if (push_loop(moo, MOO_LOOP_DO_WHILE, prebbpos) <= -1) goto oops;
 	loop_pushed = 1;
 
 	if (compile_braced_block(moo) <= -1) goto oops;
 
+	closing_brace_loc = *TOKEN_LOC(moo);
 	GET_TOKEN (moo); /* get the next token after } */
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_UNTIL) is_until_loop = 1;
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_WHILE) is_until_loop = 0;
@@ -6354,7 +6362,7 @@ static int compile_do_while_expression (moo_t* moo)
 	else if (prebbpos < postbbpos)
 	{
 		/* emit code to pop the value pushed by the braced block */
-		if (emit_byte_instruction (moo, BCODE_POP_STACKTOP) <= -1) goto oops;
+		if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, &closing_brace_loc) <= -1) goto oops;
 	}
 
 	precondpos = cc->mth.code.len;
@@ -6390,7 +6398,7 @@ static int compile_do_while_expression (moo_t* moo)
 		}
 	}
 
-	if (emit_backward_jump_instruction (moo, jbinst, cc->mth.code.len - prebbpos) <= -1) 
+	if (emit_backward_jump_instruction(moo, jbinst, cc->mth.code.len - prebbpos, TOKEN_LOC(moo)) <= -1) 
 	{
 		if (moo->errnum == MOO_ERANGE) 
 		{
@@ -6405,13 +6413,13 @@ skip_emitting_jump_backward:
 	GET_TOKEN (moo); /* get the next token after ) */
 
 	/* update jump instructions emitted for break */
-	if (update_loop_jumps (moo, &loop->break_ip_pool, cc->mth.code.len) <= -1) return -1;
+	if (update_loop_jumps(moo, &loop->break_ip_pool, cc->mth.code.len) <= -1) return -1;
 	free_loop (moo, loop); /* destroy the unlinked loop information */
 	loop = MOO_NULL;
 	loop_pushed = 0;
 
 	/* push nil as a result of the while expression. TODO: is it the best value? anything else? */
-	if (emit_byte_instruction (moo, BCODE_PUSH_NIL) <= -1) goto oops;
+	if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) goto oops;
 
 	return 0;
 
@@ -6476,7 +6484,9 @@ static int compile_method_expression (moo_t* moo, int pop)
 		{
 			/* assignment expression */
 			var_info_t var;
+			moo_ioloc_t assop_loc;
 
+			assop_loc = *TOKEN_LOC(moo);
 			GET_TOKEN (moo);
 
 			if (compile_method_expression(moo, 0) <= -1) goto oops;
@@ -6508,14 +6518,14 @@ static int compile_method_expression (moo_t* moo, int pop)
 						{
 							if (var.pos >= cc->mth.blk_tmprcnt[i - 1])
 							{
-								if (emit_double_param_instruction(moo, (pop? BCODE_POP_INTO_CTXTEMPVAR_0: BCODE_STORE_INTO_CTXTEMPVAR_0), cc->mth.blk_depth - i, var.pos - cc->mth.blk_tmprcnt[i - 1]) <= -1) return -1;
+								if (emit_double_param_instruction(moo, (pop? BCODE_POP_INTO_CTXTEMPVAR_0: BCODE_STORE_INTO_CTXTEMPVAR_0), cc->mth.blk_depth - i, var.pos - cc->mth.blk_tmprcnt[i - 1], &assop_loc) <= -1) return -1;
 								goto temporary_done;
 							}
 						}
 					}
 				#endif
 
-					if (emit_single_param_instruction (moo, (pop? BCODE_POP_INTO_TEMPVAR_0: BCODE_STORE_INTO_TEMPVAR_0), var.pos) <= -1) goto oops;
+					if (emit_single_param_instruction(moo, (pop? BCODE_POP_INTO_TEMPVAR_0: BCODE_STORE_INTO_TEMPVAR_0), var.pos, &assop_loc) <= -1) goto oops;
 
 				temporary_done:
 					ret = pop;
@@ -6524,19 +6534,19 @@ static int compile_method_expression (moo_t* moo, int pop)
 
 				case VAR_INSTANCE:
 				case VAR_CLASSINST:
-					if (emit_single_param_instruction (moo, (pop? BCODE_POP_INTO_INSTVAR_0: BCODE_STORE_INTO_INSTVAR_0), var.pos) <= -1) goto oops;
+					if (emit_single_param_instruction(moo, (pop? BCODE_POP_INTO_INSTVAR_0: BCODE_STORE_INTO_INSTVAR_0), var.pos, &assop_loc) <= -1) goto oops;
 					ret = pop;
 					break;
 
 				case VAR_CLASS:
-					if (add_literal (moo, (moo_oop_t)var.cls, &index) <= -1 ||
-					    emit_double_param_instruction (moo, (pop? BCODE_POP_INTO_OBJVAR_0: BCODE_STORE_INTO_OBJVAR_0), var.pos, index) <= -1) goto oops;
+					if (add_literal(moo, (moo_oop_t)var.cls, &index) <= -1 ||
+					    emit_double_param_instruction(moo, (pop? BCODE_POP_INTO_OBJVAR_0: BCODE_STORE_INTO_OBJVAR_0), var.pos, index, &assop_loc) <= -1) goto oops;
 					ret = pop;
 					break;
 
 				case VAR_GLOBAL:
 					if (add_literal(moo, (moo_oop_t)var.u.gbl, &index) <= -1 ||
-					    emit_single_param_instruction(moo, (pop? BCODE_POP_INTO_OBJECT_0: BCODE_STORE_INTO_OBJECT_0), index) <= -1) return -1;
+					    emit_single_param_instruction(moo, (pop? BCODE_POP_INTO_OBJECT_0: BCODE_STORE_INTO_OBJECT_0), index, &assop_loc) <= -1) return -1;
 					ret = pop;
 					break;
 
@@ -6571,20 +6581,21 @@ oops:
 static int compile_special_statement (moo_t* moo)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_ioloc_t start_loc = *TOKEN_LOC(moo);
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_RETURN) 
 	{
 		/* ^ - return - return to the sender of the origin */
 		GET_TOKEN (moo);
 		if (compile_method_expression(moo, 0) <= -1) return -1;
-		return emit_byte_instruction(moo, BCODE_RETURN_STACKTOP);
+		return emit_byte_instruction(moo, BCODE_RETURN_STACKTOP, &start_loc);
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_LOCAL_RETURN)
 	{
 		/* ^^ - local return - return to the origin */
 		GET_TOKEN (moo);
 		if (compile_method_expression(moo, 0) <= -1) return -1;
-		return emit_byte_instruction(moo, BCODE_LOCAL_RETURN);
+		return emit_byte_instruction(moo, BCODE_LOCAL_RETURN, &start_loc);
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_BREAK)
 	{
@@ -6602,7 +6613,7 @@ static int compile_special_statement (moo_t* moo)
 		}
 
 		GET_TOKEN (moo); /* read the next token to break */
-		return inject_break_to_loop (moo);
+		return inject_break_to_loop(moo, &start_loc);
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_CONTINUE)
 	{
@@ -6621,8 +6632,8 @@ static int compile_special_statement (moo_t* moo)
 		GET_TOKEN (moo); /* read the next token to continue */
 
 		return (cc->mth.loop->type == MOO_LOOP_DO_WHILE)?
-			inject_continue_to_loop(moo): /* in a do-while loop, the position to the conditional is not known yet */
-			emit_backward_jump_instruction(moo, BCODE_JUMP_BACKWARD_0, cc->mth.code.len - cc->mth.loop->startpos);
+			inject_continue_to_loop(moo, &start_loc): /* in a do-while loop, the position to the conditional is not known yet */
+			emit_backward_jump_instruction(moo, BCODE_JUMP_BACKWARD_0, cc->mth.code.len - cc->mth.loop->startpos, &start_loc);
 	}
 
 	return 9999; /* to indicate that no special statement has been seen and processed */
@@ -6697,7 +6708,7 @@ static int compile_method_statement (moo_t* moo)
 			else
 			{
 			pop_stacktop:
-				return emit_byte_instruction (moo, BCODE_POP_STACKTOP);
+				return emit_byte_instruction (moo, BCODE_POP_STACKTOP, TOKEN_LOC(moo));
 			}
 		}
 	}
@@ -6741,7 +6752,7 @@ static int compile_method_statements (moo_t* moo)
 
 	/* arrange to return the receiver if execution reached 
 	 * the end of the method without explicit return */
-	return emit_byte_instruction (moo, BCODE_RETURN_RECEIVER);
+	return emit_byte_instruction(moo, BCODE_RETURN_RECEIVER, TOKEN_LOC(moo));
 }
 
 static int add_compiled_method (moo_t* moo)
@@ -6997,6 +7008,7 @@ static void clear_method_data (moo_t* moo, moo_method_data_t* mth)
 	if (mth->name.ptr) moo_freemem (moo, mth->name.ptr);
 	if (mth->tmprs.ptr) moo_freemem (moo, mth->tmprs.ptr);
 	if (mth->code.ptr) moo_freemem (moo, mth->code.ptr);
+	if (mth->code.locptr) moo_freemem (moo, mth->code.locptr);
 	if (mth->literals.ptr) moo_freemem (moo, mth->literals.ptr);
 	if (mth->blk_tmprcnt) moo_freemem (moo, mth->blk_tmprcnt);
 	MOO_MEMSET (mth, 0, MOO_SIZEOF(*mth));
@@ -7352,14 +7364,14 @@ static int make_getter_method (moo_t* moo, const moo_oocs_t* name, const var_inf
 	{
 		case VAR_INSTANCE:
 			MOO_ASSERT (moo, cc->mth.type == MOO_METHOD_INSTANCE);
-			if (emit_single_param_instruction(moo, BCODE_PUSH_INSTVAR_0, var->pos) <= -1 ||
-			    emit_byte_instruction(moo, BCODE_RETURN_STACKTOP) <= -1) return -1;
+			if (emit_single_param_instruction(moo, BCODE_PUSH_INSTVAR_0, var->pos, MOO_NULL) <= -1 ||
+			    emit_byte_instruction(moo, BCODE_RETURN_STACKTOP, MOO_NULL) <= -1) return -1;
 			break;
 
 		case VAR_CLASSINST:
 			MOO_ASSERT (moo, cc->mth.type == MOO_METHOD_CLASS);
-			if (emit_single_param_instruction(moo, BCODE_PUSH_INSTVAR_0, var->pos) <= -1 ||
-			    emit_byte_instruction(moo, BCODE_RETURN_STACKTOP) <= -1) return -1;
+			if (emit_single_param_instruction(moo, BCODE_PUSH_INSTVAR_0, var->pos, MOO_NULL) <= -1 ||
+			    emit_byte_instruction(moo, BCODE_RETURN_STACKTOP, MOO_NULL) <= -1) return -1;
 			break;
 
 		case VAR_CLASS:
@@ -7370,8 +7382,8 @@ static int make_getter_method (moo_t* moo, const moo_oocs_t* name, const var_inf
 			MOO_ASSERT (moo, cc->mth.type == MOO_METHOD_CLASS);
 
 			if (add_literal(moo, (moo_oop_t)var->cls, &index) <= -1 ||
-			    emit_double_param_instruction(moo, BCODE_PUSH_OBJVAR_0, var->pos, index) <= -1 ||
-			    emit_byte_instruction(moo, BCODE_RETURN_STACKTOP) <= -1) return -1;
+			    emit_double_param_instruction(moo, BCODE_PUSH_OBJVAR_0, var->pos, index, MOO_NULL) <= -1 ||
+			    emit_byte_instruction(moo, BCODE_RETURN_STACKTOP, MOO_NULL) <= -1) return -1;
 			break;
 		}
 
@@ -7402,16 +7414,16 @@ static int make_setter_method (moo_t* moo, const moo_oocs_t* name, const var_inf
 	{
 		case VAR_INSTANCE:
 			MOO_ASSERT (moo, cc->mth.type == MOO_METHOD_INSTANCE);
-			if (emit_single_param_instruction(moo, BCODE_PUSH_TEMPVAR_0, 0) <= -1 ||
-			    emit_single_param_instruction(moo, BCODE_POP_INTO_INSTVAR_0, var->pos) <= -1 ||
-			    emit_byte_instruction(moo, BCODE_RETURN_RECEIVER) <= -1) return -1;
+			if (emit_single_param_instruction(moo, BCODE_PUSH_TEMPVAR_0, 0, MOO_NULL) <= -1 ||
+			    emit_single_param_instruction(moo, BCODE_POP_INTO_INSTVAR_0, var->pos, MOO_NULL) <= -1 ||
+			    emit_byte_instruction(moo, BCODE_RETURN_RECEIVER, MOO_NULL) <= -1) return -1;
 			break;
 
 		case VAR_CLASSINST:
 			MOO_ASSERT (moo, cc->mth.type == MOO_METHOD_CLASS);
-			if (emit_single_param_instruction(moo, BCODE_PUSH_TEMPVAR_0, 0) <= -1 ||
-			    emit_single_param_instruction(moo, BCODE_POP_INTO_INSTVAR_0, var->pos) <= -1 ||
-			    emit_byte_instruction(moo, BCODE_RETURN_RECEIVER) <= -1) return -1;
+			if (emit_single_param_instruction(moo, BCODE_PUSH_TEMPVAR_0, 0, MOO_NULL) <= -1 ||
+			    emit_single_param_instruction(moo, BCODE_POP_INTO_INSTVAR_0, var->pos, MOO_NULL) <= -1 ||
+			    emit_byte_instruction(moo, BCODE_RETURN_RECEIVER, MOO_NULL) <= -1) return -1;
 			break;
 
 		case VAR_CLASS:
@@ -7422,9 +7434,9 @@ static int make_setter_method (moo_t* moo, const moo_oocs_t* name, const var_inf
 			MOO_ASSERT (moo, cc->mth.type == MOO_METHOD_CLASS);
 
 			if (add_literal(moo, (moo_oop_t)var->cls, &index) <= -1 ||
-			    emit_single_param_instruction(moo, BCODE_PUSH_TEMPVAR_0, 0) <= -1 ||
-			    emit_double_param_instruction(moo, BCODE_POP_INTO_OBJVAR_0, var->pos, index) <= -1 ||
-			    emit_byte_instruction(moo, BCODE_RETURN_RECEIVER) <= -1) return -1;
+			    emit_single_param_instruction(moo, BCODE_PUSH_TEMPVAR_0, 0, MOO_NULL) <= -1 ||
+			    emit_double_param_instruction(moo, BCODE_POP_INTO_OBJVAR_0, var->pos, index, MOO_NULL) <= -1 ||
+			    emit_byte_instruction(moo, BCODE_RETURN_RECEIVER, MOO_NULL) <= -1) return -1;
 			break;
 		}
 

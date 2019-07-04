@@ -2169,6 +2169,12 @@ static moo_pfrc_t pf_context_goto (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+
+static moo_pfrc_t pf_context_find_exception_handler (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	return MOO_PF_FAILURE;
+}
+
 /* ------------------------------------------------------------------ */
 
 static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_ooi_t nargs, moo_ooi_t num_first_arg_elems, moo_oop_context_t* pblkctx)
@@ -3921,6 +3927,7 @@ static pf_t pftab[] =
 	{ "Integer_scale:",                        { pf_number_scale,                         1, 1 } },
 	{ "Integer_sub",                           { pf_integer_sub,                          1, 1 } },
 
+	{ "MethodContext_findExceptionHandler:",   { pf_context_find_exception_handler,       1, 1 } },
 	{ "MethodContext_goto:",                   { pf_context_goto,                         1, 1 } },
 
 	{ "Process_resume",                        { pf_process_resume,                       0, 0 } },

@@ -50,7 +50,7 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 		//[exctx notNil] whileTrue: [
 		while (exctx notNil)
 		{
-			exblk := exctx findExceptionHandlerFor: (self class).
+			exblk := exctx findExceptionHandler: (self class).
 			//if (exblk notNil and: [actpos := exctx basicSize - 1. exctx basicAt: actpos])
 			if ((exblk notNil) and (exctx basicAt: (actpos := exctx basicSize - 1)))
 			{
@@ -244,7 +244,7 @@ extend MethodContext
 	}
 
 
-	method findExceptionHandlerFor: exception_class
+	method findExceptionHandler: exception_class
 	{
 		/* find an exception handler block for a given exception class.
 		 *
@@ -253,21 +253,17 @@ extend MethodContext
 		 *   self class specNumInstVars must return 8.(i.e.MethodContext has 8 instance variables.)
 		 *   basicAt: 8 must be the on: argument.
 		 *   basicAt: 9 must be the do: argument  */
-
 		| size exc i |
-		
+
+		<primitive: #MethodContext_findExceptionHandler:>
+
 		if (self isExceptionContext) 
 		{
 			/* NOTE: the following loop scans all parameters to the on:do: method.
 			 *       if the on:do: method contains local temporary variables,
 			 *       those must be skipped from scanning. */
-
 			size := self basicSize.
-			//8 priorTo: size by: 2 do: [ :i | 
-			//	exc := self basicAt: i.
-			//	if ((exception_class == exc) or: [exception_class inheritsFrom: exc]) { ^self basicAt: (i + 1) }.
-			//]
-			
+
 			// start scanning from the position of the first parameter
 			i := MethodContext.Index.FIRST_ON. 
 			while (i < size)
@@ -301,7 +297,7 @@ extend MethodContext
 		 * for this code to work, it must be the last temporary variable in the method. */
 		actpos := (self basicSize) - 1. 
 
-		excblk := self findExceptionHandlerFor: (exception class).
+		excblk := self findExceptionHandler: (exception class).
 		if ((excblk isNil) or ((self basicAt: actpos) not))
 		{
 			// self is an exception context but doesn't have a matching

@@ -351,7 +351,7 @@ extend Error
 
 		while (exctx notNil)
 		{
-			exblk := exctx findExceptionHandlerFor: (self class).
+			exblk := exctx findExceptionHandler: (self class).
 			if (exblk notNil and: [actpos := exctx basicSize - 1. exctx basicAt: actpos])
 			{
 				exctx basicAt: actpos put: false.
