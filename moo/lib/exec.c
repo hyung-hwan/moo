@@ -2172,7 +2172,46 @@ static moo_pfrc_t pf_context_goto (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_context_find_exception_handler (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return MOO_PF_FAILURE;
+	moo_oop_context_t rcv;
+	moo_ooi_t preamble;
+	moo_oop_t except_class;
+
+	rcv = (moo_oop_context_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_method_context);
+
+	preamble = MOO_OOP_TO_SMOOI(((moo_oop_method_t)rcv->method_or_nargs)->preamble);
+	if (MOO_METHOD_GET_PREAMBLE_CODE(preamble) == MOO_METHOD_PREAMBLE_EXCEPTION)
+	{
+		/* <exception> context 
+		 * on: ... do: ...*/
+		moo_oow_t size, i;
+
+		except_class = MOO_STACK_GETARG(moo, nargs, 0);
+
+		size = MOO_OBJ_GET_SIZE(rcv);
+		for (i = MOO_CONTEXT_NAMED_INSTVARS; i < size; i += 2)
+		{
+			/* NOTE: the following loop scans all parameters to the on:do: method.
+			 *       if the on:do: method contains local temporary variables,
+			 *       you must change this function to skip scanning local variables. 
+			 *       the current on:do: method has 1 local variable declared.
+			 *       as local variables are placed after method arguments and 
+			 *       the loop increments 'i' by 2, the last element is naturally
+			 *       get excluded from inspection.
+			 */
+			moo_oop_class_t on_class;
+
+			on_class = (moo_oop_class_t)MOO_OBJ_GET_OOP_VAL(rcv, i);
+			if (on_class == except_class || (MOO_CLASSOF(moo, on_class) == moo->_class && moo_ischildclassof(moo, except_class, on_class)))
+			{
+				MOO_STACK_SETRET (moo, nargs, MOO_OBJ_GET_OOP_VAL(rcv, i + 1));
+				return MOO_PF_SUCCESS;
+			}
+		}
+	}
+
+	MOO_STACK_SETRET (moo, nargs, moo->_nil);
+	return MOO_PF_SUCCESS;
 }
 
 /* ------------------------------------------------------------------ */

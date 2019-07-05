@@ -1066,3 +1066,15 @@ int moo_iskindof (moo_t* moo, moo_oop_t obj, moo_oop_class_t _class)
 	}
 	return 0;
 }
+
+int moo_ischildclassof (moo_t* moo, moo_oop_class_t c, moo_oop_class_t k)
+{
+	c = (moo_oop_class_t)c->superclass;
+	while ((moo_oop_t)c != moo->_nil)
+	{
+		if (c == k) return 1;
+		c = (moo_oop_class_t)c->superclass;
+	}
+
+	return 0;
+}

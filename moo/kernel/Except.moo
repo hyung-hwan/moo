@@ -221,7 +221,6 @@ pooldic MethodContext.Index
 	// which translates to index 8 
 	ENSURE := 8.
 
-
 	// [ ... ] on: Exception: do: [:ex | ... ]
 	FIRST_ON := 8.
 }
@@ -252,7 +251,8 @@ extend MethodContext
 		 * For a single on:do: call,
 		 *   self class specNumInstVars must return 8.(i.e.MethodContext has 8 instance variables.)
 		 *   basicAt: 8 must be the on: argument.
-		 *   basicAt: 9 must be the do: argument  */
+		 *   basicAt: 9 must be the do: argument
+		 */
 		| size exc i |
 
 		<primitive: #MethodContext_findExceptionHandler:>
@@ -261,7 +261,12 @@ extend MethodContext
 		{
 			/* NOTE: the following loop scans all parameters to the on:do: method.
 			 *       if the on:do: method contains local temporary variables,
-			 *       those must be skipped from scanning. */
+			 *       you must change this function to skip scanning local variables. 
+			 *       the current on:do: method has 1 local variable declared.
+			 *       as local variables are placed after method arguments and 
+			 *       the loop increments 'i' by 2, the last element is naturally
+			 *       get excluded from inspection.
+			 */
 			size := self basicSize.
 
 			// start scanning from the position of the first parameter
@@ -367,7 +372,23 @@ thisContext isExceptionContext dump.
 		exception_active := true.
 		^self value.
 	}
-	
+
+	method on: exc1 do: blk1 on: exc2 do: blk2 on: exc3 do: blk3 on: exc4 do: blk4
+	{
+		| exception_active |
+		<exception>
+		exception_active := true.
+		^self value.
+	}
+
+	method on: exc1 do: blk1 on: exc2 do: blk2 on: exc3 do: blk3 on: exc4 do: blk4 on: exc5 do: blk5
+	{
+		| exception_active |
+		<exception>
+		exception_active := true.
+		^self value.
+	}
+
 	method ensure: aBlock
 	{
 		| retval pending |

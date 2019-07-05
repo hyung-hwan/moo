@@ -2123,6 +2123,13 @@ MOO_EXPORT int moo_iskindof (
 	moo_oop_class_t _class
 );
 
+/* check if c is a child class of k */
+MOO_EXPORT int moo_ischildclassof (
+	moo_t*          moo,
+	moo_oop_class_t c,
+	moo_oop_class_t k
+);
+
 /* =========================================================================
  * TRAILER MANAGEMENT
  * ========================================================================= */
