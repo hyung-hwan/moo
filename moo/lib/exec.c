@@ -2174,10 +2174,13 @@ static moo_pfrc_t pf_context_find_exception_handler (moo_t* moo, moo_mod_t* mod,
 {
 	moo_oop_context_t rcv;
 	moo_ooi_t preamble;
-	moo_oop_t except_class;
+	moo_oop_class_t except_class;
 
 	rcv = (moo_oop_context_t)MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_method_context);
+
+	except_class = MOO_STACK_GETARG(moo, nargs, 0);
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_CLASSOF(moo,rcv) == moo->_class);
 
 	preamble = MOO_OOP_TO_SMOOI(((moo_oop_method_t)rcv->method_or_nargs)->preamble);
 	if (MOO_METHOD_GET_PREAMBLE_CODE(preamble) == MOO_METHOD_PREAMBLE_EXCEPTION)
@@ -2185,8 +2188,6 @@ static moo_pfrc_t pf_context_find_exception_handler (moo_t* moo, moo_mod_t* mod,
 		/* <exception> context 
 		 * on: ... do: ...*/
 		moo_oow_t size, i;
-
-		except_class = MOO_STACK_GETARG(moo, nargs, 0);
 
 		size = MOO_OBJ_GET_SIZE(rcv);
 		for (i = MOO_CONTEXT_NAMED_INSTVARS; i < size; i += 2)
