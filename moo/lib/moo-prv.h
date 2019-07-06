@@ -533,6 +533,7 @@ struct moo_method_data_t
 
 	/* byte code */
 	moo_code_t code;
+	moo_ioloc_t code_start_loc; /* source location of the method body opening brace */
 };
 
 typedef struct moo_cunit_class_t moo_cunit_class_t;
