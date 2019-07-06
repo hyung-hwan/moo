@@ -6778,6 +6778,7 @@ static int add_compiled_method (moo_t* moo)
 #else
 	moo_oop_byte_t code;
 #endif
+	moo_oop_t source_file;
 	moo_oow_t tmp_count = 0;
 	moo_oow_t i;
 	moo_ooi_t preamble_code, preamble_index, preamble_flags;
@@ -6810,6 +6811,20 @@ static int add_compiled_method (moo_t* moo)
 	moo_pushvolat (moo, (moo_oop_t*)&code); tmp_count++;
 #endif
 
+	if (cc->mth.code_start_loc.file)
+	{
+/* TODO: make file names like symbols at least in this compiler. can also make it readonly.
+         don't want to make it a symbol  */
+		source_file = moo_makestring(moo, cc->mth.code_start_loc.file, moo_count_oocstr(cc->mth.code_start_loc.file));
+		if (!source_file) goto oops;
+		moo_pushvolat (moo, (moo_oop_t*)&source_file); tmp_count++;
+	}
+	else
+	{
+		/* the method has been read in from the main souce stream */
+		source_file = moo->_nil;
+	}
+	
 	preamble_code = MOO_METHOD_PREAMBLE_NONE;
 	preamble_index = 0;
 	preamble_flags = 0;
@@ -6971,6 +6986,17 @@ static int add_compiled_method (moo_t* moo)
 	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->code, (moo_oop_t)code);
 #endif
 
+	MOO_STORE_OOP (moo, &mth->source_file, source_file);
+	if (cc->mth.code_start_loc.line <= MOO_SMOOI_MAX)
+	{
+		mth->source_line = MOO_SMOOI_TO_OOP(cc->mth.code_start_loc.line);
+	}
+	else
+	{
+		/* the source line is too large to be held as a SmallInteger.
+		 * Just set it to 0 to indicate that the information is not available */
+		mth->source_line = MOO_SMOOI_TO_OOP(0);
+	}
 	/*TODO: preserve source??? mth->text = cc->mth.text
 the compiler must collect all source method string collected so far.
 need to write code to collect string.

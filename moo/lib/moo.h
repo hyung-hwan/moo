@@ -585,9 +585,9 @@ struct moo_method_t
 	moo_oop_byte_t  code; /* ByteArray */
 #endif
 
-	moo_oop_t       source; /* TODO: what should I put? */
-	moo_oop_t       source_file; /* source file that contains the definition of this method. nil if unavailable */
-	moo_oow_t       source_line; /* line of the source file where the method definition begins. valid only if source_file is not nil */
+	moo_oop_t       source_text; /* source text. String if available. nil if not */
+	moo_oop_t       source_file; /* source file path that contains the definition of this method. String if available. nil for the main source stream */
+	moo_oop_t       source_line; /* SmallInteger. line of the source file where the method definition begins. valid only if source_file is not nil */
 
 	/* == variable indexed part == */
 	moo_oop_t       literal_frame[1]; /* it stores literals */
