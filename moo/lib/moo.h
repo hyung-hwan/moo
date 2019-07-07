@@ -944,6 +944,14 @@ struct moo_heap_t
 	moo_space_t  newspace;
 };
 
+typedef struct moo_dbginfo_t moo_dbginfo_t;
+struct moo_dbginfo_t
+{
+	moo_oow_t _capa;
+	moo_oow_t _len;
+	/* actual information is recorded here */
+};
+
 /* =========================================================================
  * VM LOGGING
  * ========================================================================= */
@@ -1423,6 +1431,7 @@ struct moo_t
 	/* ========================= */
 
 	moo_heap_t* heap;
+	moo_dbginfo_t* dbginfo;
 
 	/* =============================================================
 	 * nil, true, false
@@ -2050,6 +2059,14 @@ MOO_EXPORT int moo_invoke (
 	const moo_oocs_t* mthname
 );
 
+
+/**
+ * The moo_abort() function requests to stop on-going execution. 
+ * On-going execution doesn't get terminated immediately when this function
+ * returns. Termination of execution is honored by the virtual machine.
+ * If the virtual machine is in a blocking context, termination will only
+ * occur after it gets out of the blocking context.
+ */
 MOO_EXPORT void moo_abort (
 	moo_t* moo
 );
@@ -2061,6 +2078,23 @@ MOO_EXPORT void moo_abort (
 #	define moo_switchprocess(moo) ((moo)->switch_proc = 1)
 #endif
 
+/* =========================================================================
+ * DEBUG SUPPORT
+ * ========================================================================= */
+
+MOO_EXPORT int moo_initdbginfo (
+	moo_t*    moo,
+	moo_oow_t init_capa
+);
+
+/**
+ * The moo_finidbginfo() function deletes the debug information.
+ * It is called by moo_close(). Unless you want the debug information to
+ * be deleted earlier, you need not call this function explicitly.
+ */
+MOO_EXPORT void moo_finidbginfo (
+	moo_t* moo
+);
 /* =========================================================================
  * COMMON OBJECT MANAGEMENT FUNCTIONS
  * ========================================================================= */

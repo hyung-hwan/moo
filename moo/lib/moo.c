@@ -249,6 +249,8 @@ void moo_fini (moo_t* moo)
 	 * the heap may not exist */
 	if (moo->heap) moo_killheap (moo, moo->heap);
 
+	moo_finidbginfo (moo);
+
 	for (i = 0; i < MOO_COUNTOF(moo->sbuf); i++)
 	{
 		if (moo->sbuf[i].ptr)

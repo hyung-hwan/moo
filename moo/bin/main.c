@@ -240,6 +240,15 @@ int main (int argc, char* argv[])
 		return -1;
 	}
 
+	/* TODO: don't initialize debug information if debug info is not requested.
+	 *       call moo_loaddbginfo() if loading a compiled image... */
+	if (moo_initdbginfo(moo, 102400) <= -1) /* TODO: set initial debug information size from a configurable value */
+	{
+		moo_logbfmt (moo, MOO_LOG_STDERR, "ERROR: cannot initialize debug information - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
+		moo_close (moo);
+		return -1;
+	}
+
 /*
 #if defined(macintosh)
 	i = 20;

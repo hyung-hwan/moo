@@ -6824,7 +6824,7 @@ static int add_compiled_method (moo_t* moo)
 		/* the method has been read in from the main souce stream */
 		source_file = moo->_nil;
 	}
-	
+
 	preamble_code = MOO_METHOD_PREAMBLE_NONE;
 	preamble_index = 0;
 	preamble_flags = 0;

@@ -66,3 +66,37 @@ void moo_dumpdic (moo_t* moo, moo_oop_dic_t dic, const moo_bch_t* title)
 	}
 	MOO_DEBUG0 (moo, "--------------------------------------------\n");
 }
+
+
+/* TODO: moo_loaddbginfofromimage() -> load debug information from compiled image?
+moo_storedbginfotoimage()? -> store debug information to compiled image?
+moo_compactdbginfo()? -> compact debug information by scaning dbginfo data. find class and method. if not found, drop the portion.
+*/
+
+int moo_initdbginfo (moo_t* moo, moo_oow_t capa)
+{
+	moo_dbginfo_t* info;
+
+	info = (moo_dbginfo_t*)moo_allocmem(moo, MOO_SIZEOF(*info) + capa);
+	if (!info) return -1;
+
+	info->_capa = capa;
+	info->_len = 0;
+
+	moo->dbginfo = info;
+	return 0;
+}
+
+void moo_finidbginfo (moo_t* moo)
+{
+	if (moo->dbginfo)
+	{
+		moo_freemem (moo, moo->dbginfo);
+		moo->dbginfo = MOO_NULL;
+	}
+}
+
+int moo_addmethodtodbginfo (moo_t* moo, const moo_uch_t* class_name, const moo_uch_t* method_name)
+{
+	return 0;
+}
