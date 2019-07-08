@@ -75,15 +75,19 @@ moo_compactdbginfo()? -> compact debug information by scaning dbginfo data. find
 
 int moo_initdbginfo (moo_t* moo, moo_oow_t capa)
 {
-	moo_dbginfo_t* info;
+	moo_dbginfo_t* tmp;
 
-	info = (moo_dbginfo_t*)moo_allocmem(moo, MOO_SIZEOF(*info) + capa);
-	if (!info) return -1;
+	if (capa < MOO_SIZEOF(*tmp)) capa = MOO_SIZEOF(*tmp);
 
-	info->_capa = capa;
-	info->_len = 0;
+	tmp = (moo_dbginfo_t*)moo_callocmem(moo, capa);
+	if (!tmp) return -1;
 
-	moo->dbginfo = info;
+	tmp->_capa = capa;
+	tmp->_len = MOO_SIZEOF(*tmp);
+	tmp->_last_class = 0;
+	tmp->_last_file = 0;
+
+	moo->dbginfo = tmp;
 	return 0;
 }
 
@@ -96,7 +100,110 @@ void moo_finidbginfo (moo_t* moo)
 	}
 }
 
-int moo_addmethodtodbginfo (moo_t* moo, const moo_uch_t* class_name, const moo_uch_t* method_name)
+static MOO_INLINE secure_dbginfo_space (moo_t* moo, moo_oow_t req_bytes)
 {
+	if (moo->dbginfo->_capa - moo->dbginfo->_len < req_bytes)
+	{
+		moo_dbginfo_t* tmp;
+		moo_oow_t newcapa;
+
+		newcapa = moo->dbginfo->_len + req_bytes;
+		newcapa = MOO_ALIGN_POW2(newcapa, 65536); /* TODO: make the align value configurable */
+		tmp = moo_reallocmem(moo, moo->dbginfo, newcapa);
+		if (!tmp) return -1;
+
+		moo->dbginfo = tmp;
+		moo->dbginfo->_capa = newcapa;
+	}
+
 	return 0;
 }
+
+int moo_addclasstodbginfo (moo_t* moo, const moo_ooch_t* class_name, moo_oow_t* start_offset)
+{
+	moo_oow_t name_len, name_bytes, name_bytes_aligned, req_bytes;
+	moo_dbginfo_class_t* di;
+
+	if (!moo->dbginfo) return 0; /* debug information is disabled*/
+
+	name_len = moo_count_oocstr(class_name);
+	name_bytes = name_len * MOO_SIZEOF(*class_name);
+	name_bytes_aligned = MOO_ALIGN_POW2(name_bytes, MOO_SIZEOF_OOW_T);
+	req_bytes = MOO_SIZEOF(moo_dbginfo_class_t) + name_bytes_aligned;
+
+	if (secure_dbginfo_space(moo, req_bytes) <= -1) return -1;
+
+	di = (moo_dbginfo_class_t*)&((moo_uint8_t*)moo->dbginfo)[moo->dbginfo->_len];
+	di->_type = MOO_DBGINFO_MAKE_TYPE(MOO_DBGINFO_TYPE_CODE_CLASS, 0);
+	di->_len = name_len;
+	di->_next = moo->dbginfo->_last_class;
+
+	MOO_MEMCPY (di + 1, class_name, name_len * MOO_SIZEOF(*class_name));
+/* TODO: set '\0' after file names? */
+
+	moo->dbginfo->_last_class = moo->dbginfo->_len;
+	moo->dbginfo->_len += req_bytes;
+
+	if (start_offset) *start_offset = moo->dbginfo->_last_class;
+	return 0;
+}
+
+int moo_addfiletodbginfo (moo_t* moo, const moo_ooch_t* file_name, moo_oow_t* start_offset)
+{
+	moo_oow_t name_len, name_bytes, name_bytes_aligned, req_bytes;
+	moo_dbginfo_file_t* di;
+
+	if (!moo->dbginfo) return 0; /* debug information is disabled*/
+
+	name_len = moo_count_oocstr(file_name);
+	name_bytes = name_len * MOO_SIZEOF(*file_name);
+	name_bytes_aligned = MOO_ALIGN_POW2(name_bytes, MOO_SIZEOF_OOW_T);
+	req_bytes = MOO_SIZEOF(moo_dbginfo_file_t) + name_bytes_aligned;
+
+	if (secure_dbginfo_space(moo, req_bytes) <= -1) return -1;
+
+	di = (moo_dbginfo_file_t*)&((moo_uint8_t*)moo->dbginfo)[moo->dbginfo->_len];
+	di->_type = MOO_DBGINFO_MAKE_TYPE(MOO_DBGINFO_TYPE_CODE_FILE, 0);
+	di->_len = name_len;
+	di->_next = moo->dbginfo->_last_file;
+
+	MOO_MEMCPY (di + 1, file_name, name_len * MOO_SIZEOF(*file_name));
+/* TODO: set '\0' after file names? */
+
+	moo->dbginfo->_last_file = moo->dbginfo->_len;
+	moo->dbginfo->_len += req_bytes;
+
+	if (start_offset) *start_offset = moo->dbginfo->_last_file;
+	return 0;
+}
+
+#if 0
+int moo_addmethodtodbginfo (moo_t* moo, const moo_ooch_t* class_name, const moo_ooch_t* method_name, const moo_ooch_t* file_name)
+{
+	moo_oow_t name_len, name_bytes, name_bytes_aligned, req_bytes;
+	moo_dbginfo_file_t* di;
+
+	if (!moo->dbginfo) return 0; /* debug information is disabled*/
+
+	name_len = moo_count_oocstr(file_name);
+	name_bytes = name_len * MOO_SIZEOF(*file_name);
+	name_bytes_aligned = MOO_ALIGN_POW2(name_bytes, MOO_SIZEOF_OOW_T);
+	req_bytes = MOO_SIZEOF(moo_dbginfo_file_t) + name_bytes_aligned;
+
+	if (secure_dbginfo_space(moo, req_bytes) <= -1) return -1;
+
+	di = (moo_dbginfo_file_t*)&((moo_uint8_t*)moo->dbginfo)[moo->dbginfo->_len];
+	di->_type = MOO_DBGINFO_MAKE_TYPE(MOO_DBGINFO_TYPE_CODE_FILE, 0);
+	di->_len = name_len;
+	di->_next = moo->dbginfo->_last_file;
+
+	MOO_MEMCPY (di + 1, file_name, name_len * MOO_SIZEOF(*file_name));
+/* TODO: set '\0' after file names? */
+
+	moo->dbginfo->_last_file = moo->dbginfo->_len;
+	moo->dbginfo->_len += req_bytes;
+
+	if (start_offset) *start_offset = moo->dbginfo->_last_file;
+	return 0;
+}
+#endif

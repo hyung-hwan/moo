@@ -1745,8 +1745,8 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 		moo_oow_t newcapa;
 
 		newcapa = MOO_ALIGN_POW2 (xtn->ev.reg.len + 1, 256);
-		tmp = (struct pollfd*)moo_reallocmem (moo, xtn->ev.reg.ptr, newcapa * MOO_SIZEOF(*tmp));
-		tmp2 = (struct pollfd*)moo_reallocmem (moo, xtn->ev.buf, newcapa * MOO_SIZEOF(*tmp2));
+		tmp = (struct pollfd*)moo_reallocmem(moo, xtn->ev.reg.ptr, newcapa * MOO_SIZEOF(*tmp));
+		tmp2 = (struct pollfd*)moo_reallocmem(moo, xtn->ev.buf, newcapa * MOO_SIZEOF(*tmp2));
 		if (!tmp || !tmp2)
 		{
 			MOO_DEBUG2 (moo, "Cannot add file descriptor %d to poll - %hs\n", fd, strerror(errno));

@@ -949,7 +949,54 @@ struct moo_dbginfo_t
 {
 	moo_oow_t _capa;
 	moo_oow_t _len;
+	moo_oow_t _last_class; /* offset to the last class element added */
+	moo_oow_t _last_file; /* offset to the last file element added */
 	/* actual information is recorded here */
+};
+
+enum moo_dbginfo_type_t
+{
+	/* bit 8 to bit 15 */
+	MOO_DBGINFO_TYPE_CODE_CLASS   = 0,
+	MOO_DBGINFO_TYPE_CODE_FILE    = 1,
+	MOO_DBGINFO_TYPE_CODE_METHOD  = 2,
+
+	/* low 8 bits */
+	MOO_DBGINFO_TYPE_FLAG_INVALID = (1 << 0)
+};
+typedef enum moo_dbginfo_type_t moo_dbginfo_type_t;
+
+#define MOO_DBGINFO_MAKE_TYPE(code,flags) (((code) << 8) | (flags))
+
+typedef struct moo_dbginfo_class_t moo_dbginfo_class_t;
+struct moo_dbginfo_class_t
+{
+	moo_oow_t _type;
+	moo_oow_t _len;
+	moo_oow_t _next; /* offset to a previous class */
+	/* ... class name here ... */
+};
+
+typedef struct moo_dbginfo_file_t moo_dbginfo_file_t;
+struct moo_dbginfo_file_t
+{
+	moo_oow_t _type;
+	moo_oow_t _len;
+	moo_oow_t _next;
+	/* ... file path here ... */
+};
+
+typedef struct moo_dbginfo_method_t moo_dbginfo_method_t;
+struct moo_dbginfo_method_t
+{
+	moo_oow_t _type;
+	moo_oow_t _name_len;
+	moo_oow_t _code_len;
+	moo_oow_t _next;
+	moo_oow_t _class;
+	moo_oow_t _file;
+	/* ... method name here ... */
+	/* ... code info here ... */
 };
 
 /* =========================================================================
