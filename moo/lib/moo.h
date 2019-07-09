@@ -974,8 +974,8 @@ typedef struct moo_dbginfo_file_t moo_dbginfo_file_t;
 struct moo_dbginfo_file_t
 {
 	moo_oow_t _type;
+	moo_oow_t _len;
 	moo_oow_t _next;
-	moo_oow_t name_len;
 	/* ... file path here ... */
 };
 
@@ -983,10 +983,10 @@ typedef struct moo_dbginfo_class_t moo_dbginfo_class_t;
 struct moo_dbginfo_class_t
 {
 	moo_oow_t _type;
+	moo_oow_t _len;
 	moo_oow_t _next; /* offset to a previous class */
 	moo_oow_t _file;
 	moo_oow_t _line;
-	moo_oow_t name_len;
 	/* ... class name here ... */
 };
 
@@ -994,10 +994,10 @@ typedef struct moo_dbginfo_method_t moo_dbginfo_method_t;
 struct moo_dbginfo_method_t
 {
 	moo_oow_t _type;
+	moo_oow_t _len;
 	moo_oow_t _next;
 	moo_oow_t _file;
 	moo_oow_t _class;
-	moo_oow_t name_len;
 	moo_oow_t code_loc_len;
 	/* ... method name here ... */
 	/* ... code info here ... */
