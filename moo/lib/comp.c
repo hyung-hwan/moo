@@ -459,7 +459,7 @@ static int copy_string_to (moo_t* moo, const moo_oocs_t* src, moo_oocs_t* dst, m
 
 		capa = MOO_ALIGN(len, CLASS_BUFFER_ALIGN);
 
-		tmp = moo_reallocmem(moo, dst->ptr, MOO_SIZEOF(*tmp) * capa);
+		tmp = (moo_ooch_t*)moo_reallocmem(moo, dst->ptr, MOO_SIZEOF(*tmp) * capa);
 		if (!tmp)  return -1;
 
 		dst->ptr = tmp;
@@ -4158,6 +4158,8 @@ static int compile_method_name (moo_t* moo, moo_method_data_t* mth)
 	 * unary-selector := identifier
 	 */
 	int n;
+	static moo_ooch_t _nul = '\0';
+	moo_oocs_t dummy;
 
 	MOO_ASSERT (moo, mth->tmpr_count == 0);
 
@@ -4180,22 +4182,28 @@ static int compile_method_name (moo_t* moo, moo_method_data_t* mth)
 			/* illegal method name  */
 			moo_setsynerr (moo, MOO_SYNERR_MTHNAME, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			n = -1;
+			break;
 	}
 
-	if (n >= 0)
-	{
-		if (method_exists(moo, &mth->name)) 
- 		{
-			moo_setsynerr (moo, MOO_SYNERR_MTHNAMEDUPL, &mth->name_loc, &mth->name);
-			return -1;
-		}
+	if (n <= -1) return -1;
 
-		/* compile_unary_method_name() returns 9999 if the name is followed by () */
-		if (mth->variadic && n != 9999)
-		{
-			moo_setsynerr (moo, MOO_SYNERR_VARIADMTHINVAL, &mth->name_loc, &mth->name);
-			return -1;
-		}
+	/* null terminate it for convenience */
+	dummy.ptr = &_nul;
+	dummy.len = 1;
+	if (add_method_name_fragment(moo, mth, &dummy) <= -1) return -1;
+	mth->name.len--; /* restore the method name length back */
+
+	if (method_exists(moo, &mth->name)) 
+	{
+		moo_setsynerr (moo, MOO_SYNERR_MTHNAMEDUPL, &mth->name_loc, &mth->name);
+		return -1;
+	}
+
+	/* compile_unary_method_name() returns 9999 if the name is followed by () */
+	if (mth->variadic && n != 9999)
+	{
+		moo_setsynerr (moo, MOO_SYNERR_VARIADMTHINVAL, &mth->name_loc, &mth->name);
+		return -1;
 	}
 
 	MOO_ASSERT (moo, mth->tmpr_nargs < MAX_CODE_NARGS);
@@ -4203,7 +4211,7 @@ static int compile_method_name (moo_t* moo, moo_method_data_t* mth)
 	 * arguments after having processed the message pattern. it's because
 	 * moo treats arguments the same as temporaries */
 	mth->tmpr_count = mth->tmpr_nargs;
-	return n;
+	return 0;
 }
 
 static int compile_method_temporaries (moo_t* moo)
@@ -6997,6 +7005,42 @@ static int add_compiled_method (moo_t* moo)
 		 * Just set it to 0 to indicate that the information is not available */
 		mth->source_line = MOO_SMOOI_TO_OOP(0);
 	}
+
+	if (moo->dbginfo)
+	{
+		moo_oow_t file_offset;
+		moo_oow_t class_offset;
+		moo_oow_t method_offset;
+
+		if (cc->mth.code_start_loc.file)
+		{
+			if (moo_addfiletodbginfo(moo, cc->mth.code_start_loc.file, &file_offset) <= -1) 
+			{
+				/* TODO: warning */
+				file_offset = 0;
+			}
+			else if (file_offset > MOO_SMOOI_MAX) 
+			{
+				/* TODO: warnign */
+				file_offset = 0;
+			}
+		}
+		else
+		{
+			/* main stream */
+			file_offset = 0;
+		}
+		mth->source_file = MOO_SMOOI_TO_OOP(file_offset);
+
+/* TODO: call moo_addclasstodbginfo() */
+		class_offset = 0;
+
+		if (moo_addmethodtodbginfo(moo, file_offset, class_offset, cc->mth.name.ptr, cc->mth.code.locptr, cc->mth.code.len, &method_offset) <= -1)
+		{
+			/* TODO: warning. no debug information about this method will be available */
+		}
+	}
+
 	/*TODO: preserve source??? mth->text = cc->mth.text
 the compiler must collect all source method string collected so far.
 need to write code to collect string.

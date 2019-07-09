@@ -346,4 +346,11 @@ class(#pointer) CompiledMethod(Object)
 	{
 		^self.name
 	}
+
+	method(#primitive) sourceFile.
+
+	method sourceLine
+	{
+		^self.source_line
+	}
 }

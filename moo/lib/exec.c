@@ -2216,6 +2216,39 @@ static moo_pfrc_t pf_context_find_exception_handler (moo_t* moo, moo_mod_t* mod,
 }
 
 /* ------------------------------------------------------------------ */
+static moo_pfrc_t pf_method_get_source_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_method_t rcv;
+	moo_oop_t tmp;
+
+	if (moo->dbginfo)
+	{
+/* TODO: return sothing else lighter-weight than a string? */
+		rcv = (moo_oop_method_t*)MOO_STACK_GETRCV(moo, nargs);
+		if (rcv->source_file == MOO_SMOOI_TO_OOP(0))
+		{
+/* TOOD: use the actual name as given by the caller ? */
+			tmp = moo_makestringwithbchars(moo, "<MAIN>", 6);
+		}
+		else
+		{
+			moo_dbginfo_file_t* di;
+			di = (moo_dbginfo_file_t*)&((moo_uint8_t*)moo->dbginfo)[MOO_OOP_TO_SMOOI(rcv->source_file)];
+			tmp = moo_makestring(moo, di + 1, moo_count_oocstr(di + 1));
+		}
+		if (!tmp) return MOO_PF_FAILURE;
+
+		MOO_STACK_SETRET (moo, nargs, tmp);
+	}
+	else
+	{
+		MOO_STACK_SETRET (moo, nargs, moo->_nil);
+	}
+
+	return MOO_PF_SUCCESS;
+}
+
+/* ------------------------------------------------------------------ */
 
 static moo_pfrc_t __block_value (moo_t* moo, moo_oop_context_t rcv_blkctx, moo_ooi_t nargs, moo_ooi_t num_first_arg_elems, moo_oop_context_t* pblkctx)
 {
@@ -3937,6 +3970,8 @@ static pf_t pftab[] =
 	{ "Character_>=",                          { pf_character_ge,                         1, 1 } },
 	{ "Character_asError",                     { pf_character_as_error,                   0, 0 } },
 	{ "Character_asInteger",                   { pf_character_as_smooi,                   0, 0 } },
+
+	{ "CompiledMethod_sourceFile",             { pf_method_get_source_file,               0, 0 } },
 
 	{ "Error_asCharacter",                     { pf_error_as_character,                   0, 0 } },
 	{ "Error_asInteger",                       { pf_error_as_integer,                     0, 0 } },

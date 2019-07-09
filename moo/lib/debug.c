@@ -132,7 +132,8 @@ int moo_addfiletodbginfo (moo_t* moo, const moo_ooch_t* file_name, moo_oow_t* st
 
 	if (moo->dbginfo->_last_file > 0)
 	{
-		moo_oow_t offset = moo->dbginfo->_last_fiel;
+		/* TODO: avoid linear search. need indexing for speed up */
+		moo_oow_t offset = moo->dbginfo->_last_file;
 		do
 		{
 			di = &((moo_uint8_t*)moo->dbginfo)[offset];
@@ -173,6 +174,23 @@ int moo_addclasstodbginfo (moo_t* moo, const moo_ooch_t* class_name, moo_oow_t f
 
 	if (!moo->dbginfo) return 0; /* debug information is disabled*/
 
+	if (moo->dbginfo->_last_class > 0)
+	{
+		/* TODO: avoid linear search. need indexing for speed up */
+		moo_oow_t offset = moo->dbginfo->_last_class;
+		do
+		{
+			di = &((moo_uint8_t*)moo->dbginfo)[offset];
+			if (moo_comp_oocstr(di + 1, class_name) == 0 && di->_file == file_offset && di->_line == file_line) 
+			{
+				if (start_offset) *start_offset = offset;
+				return 0;
+			}
+			offset = di->_next;
+		}
+		while (offset > 0);
+	}
+
 	name_len = moo_count_oocstr(class_name);
 	name_bytes = (name_len + 1) * MOO_SIZEOF(*class_name);
 	name_bytes_aligned = MOO_ALIGN_POW2(name_bytes, MOO_SIZEOF_OOW_T);
@@ -195,7 +213,7 @@ int moo_addclasstodbginfo (moo_t* moo, const moo_ooch_t* class_name, moo_oow_t f
 	return 0;
 }
 
-int moo_addmethodtodbginfo (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_offset, const moo_ooch_t* method_name, const moo_oow_t* code_loc_ptr, moo_oow_t code_loc_len)
+int moo_addmethodtodbginfo (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_offset, const moo_ooch_t* method_name, const moo_oow_t* code_loc_ptr, moo_oow_t code_loc_len, moo_oow_t* start_offset)
 {
 	moo_oow_t name_len, name_bytes, name_bytes_aligned, code_loc_bytes, code_loc_bytes_aligned, req_bytes;
 	moo_dbginfo_method_t* di;
@@ -225,6 +243,6 @@ int moo_addmethodtodbginfo (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_o
 	moo->dbginfo->_last_method = moo->dbginfo->_len;
 	moo->dbginfo->_len += req_bytes;
 
-	/*if (start_offset) *start_offset = moo->dbginfo->_last_method;*/
+	if (start_offset) *start_offset = moo->dbginfo->_last_method;
 	return 0;
 }

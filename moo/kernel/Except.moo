@@ -74,7 +74,7 @@ System logNl: "== BACKTRACE ==".
 ctx := thisContext.
 while (ctx notNil)
 {
-	if (ctx class == MethodContext) { System logNl: (" " & ctx method owner name & ">>" & ctx method name) }.
+	if (ctx class == MethodContext) { System logNl: (" " & ctx method owner name & ">>" & ctx method name & " (" & ctx method sourceFile & " " & ctx method sourceLine asString & ")"). }.
 	// TODO: include blockcontext???
 	ctx := ctx sender.
 }.
