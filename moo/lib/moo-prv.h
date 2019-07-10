@@ -1679,6 +1679,7 @@ int moo_addmethodtodbgi (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_offs
 /* ========================================================================= */
 #if defined(MOO_INCLUDE_COMPILER)
 const moo_ooch_t* moo_addcioname (moo_t* moo, const moo_oocs_t* name);
+void moo_clearcionames (moo_t* moo);
 #endif
 
 #if defined(__cplusplus)

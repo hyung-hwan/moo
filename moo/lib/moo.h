@@ -586,8 +586,9 @@ struct moo_method_t
 #endif
 
 	moo_oop_t       source_text; /* source text. String if available. nil if not */
-	moo_oop_t       source_file; /* SmallInteger. source file path that contains the definition of this method. offset from moo->dbgi. 0 for the main stream. */
-	moo_oop_t       source_line; /* SmallInteger. line of the source file where the method definition begins. valid only if source_file is not nil */
+	moo_oop_t       source_file; /* SmallInteger. source file path that contains the definition of this method. offset from moo->dbgi. 0 if unavailable */
+	moo_oop_t       source_line; /* SmallInteger. line of the source file where the method definition begins. valid only if source_file is greater than 0 */
+	//moo_oop_t       code_line; /* SmallInteger */
 
 	/* == variable indexed part == */
 	moo_oop_t       literal_frame[1]; /* it stores literals */

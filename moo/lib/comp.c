@@ -2352,7 +2352,7 @@ retry:
 	return 0;
 }
 
-static void clear_io_names (moo_t* moo)
+void moo_clearcionames (moo_t* moo)
 {
 	moo_iolink_t* cur;
 
@@ -7026,7 +7026,13 @@ static int add_compiled_method (moo_t* moo)
 		if (moo_addmethodtodbgi(moo, file_offset, cc->dbgi_class_offset, cc->mth.name.ptr, cc->mth.code.locptr, cc->mth.code.len, &method_offset) <= -1)
 		{
 			/* TODO: warning. no debug information about this method will be available */
+			method_offset = 0;
 		}
+		else if (method_offset > MOO_SMOOI_MAX)
+		{
+			method_offset = 90;
+		}
+		/* TODO mth->code_sline = MOO_SMOOI_TO_OOP(method_offset); */
 	}
 
 	/*TODO: preserve source??? mth->text = cc->mth.text
@@ -9681,7 +9687,7 @@ static void fini_compiler (moo_t* moo)
 	/* called before the moo object is closed */
 	if (moo->c)
 	{
-		clear_io_names (moo);
+		moo_clearcionames (moo);
 
 		if (moo->c->tok.name.ptr) moo_freemem (moo, moo->c->tok.name.ptr);
 		if (moo->c->balit.ptr) moo_freemem (moo, moo->c->balit.ptr);
@@ -9731,7 +9737,7 @@ static MOO_INLINE int _compile (moo_t* moo, moo_ioimpl_t io)
 	 * I clear such names before i begin this function. i don't clear it
 	 * at the end of this function because i may be referenced as an error
 	 * location */
-	clear_io_names (moo);
+	moo_clearcionames (moo);
 
 	/* reset pragma flags */
 	moo->c->pragma_flags = 0;

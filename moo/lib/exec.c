@@ -2218,14 +2218,15 @@ static moo_pfrc_t pf_context_find_exception_handler (moo_t* moo, moo_mod_t* mod,
 /* ------------------------------------------------------------------ */
 static moo_pfrc_t pf_method_get_source_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
+	moo_oop_method_t rcv;
 	moo_oop_t retv = moo->_nil;
+
+/* TODO: return something else lighter-weight than a string? */
+	rcv = (moo_oop_method_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo, rcv) == moo->_method);
 
 	if (moo->dbgi)
 	{
-		moo_oop_method_t rcv;
-
-/* TODO: return something else lighter-weight than a string? */
-		rcv = (moo_oop_method_t)MOO_STACK_GETRCV(moo, nargs);
 		if (MOO_OOP_IS_SMOOI(rcv->source_file) && MOO_OOP_TO_SMOOI(rcv->source_file) > 0)
 		{
 			moo_dbgi_file_t* di;
@@ -2243,6 +2244,38 @@ static moo_pfrc_t pf_method_get_source_file (moo_t* moo, moo_mod_t* mod, moo_ooi
 	}
 
 	MOO_STACK_SETRET (moo, nargs, retv);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_method_get_code_source_line (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	/* get source line of the given instruction pointer */
+	moo_oop_method_t rcv;
+
+	rcv = (moo_oop_method_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo, rcv) == moo->_method);
+
+	if (moo->dbgi && MOO_OOP_IS_SMOOI(rcv->source_line))
+	{
+		moo_oop_t ip;
+		moo_ooi_t source_line, ipv;
+
+		ip = MOO_STACK_GETARG(moo, nargs, 0);
+		MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_SMOOI(ip));
+
+		source_line = MOO_OOP_TO_SMOOI(rcv->source_line);
+		ipv = MOO_OOP_TO_SMOOI(ip);
+#if 0
+		if (MOO_OOP_IS_SMOOI(rcv->code_sline))
+		{
+			moo_dbgi_method_t* di;
+
+			di = (moo_dbgi_method_t*)&((moo_uint8_t*)moo->dbgi)[MOO_OOP_TO_SMOOI(rcv->code_sline)];
+			/* ... TODO .. */
+		}
+#endif
+	}
+
 	return MOO_PF_SUCCESS;
 }
 
