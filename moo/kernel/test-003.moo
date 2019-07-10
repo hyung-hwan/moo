@@ -92,6 +92,7 @@ class MyObject(Object)
 			tb := tc at: idx.
 			System log(System.Log.INFO, idx asString, (if (tb value) { " PASS" } else { " FAIL" }), "\n").
 		].
+Exception signal: 'xxx'.
 
 		// TODO: 
 		String format("%s", " 나	는\\\"") dump.

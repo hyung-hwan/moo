@@ -586,7 +586,7 @@ struct moo_method_t
 #endif
 
 	moo_oop_t       source_text; /* source text. String if available. nil if not */
-	moo_oop_t       source_file; /* SmallInteger. source file path that contains the definition of this method. offset from moo->dbginfo. 0 for the main stream. */
+	moo_oop_t       source_file; /* SmallInteger. source file path that contains the definition of this method. offset from moo->dbgi. 0 for the main stream. */
 	moo_oop_t       source_line; /* SmallInteger. line of the source file where the method definition begins. valid only if source_file is not nil */
 
 	/* == variable indexed part == */
@@ -944,8 +944,8 @@ struct moo_heap_t
 	moo_space_t  newspace;
 };
 
-typedef struct moo_dbginfo_t moo_dbginfo_t;
-struct moo_dbginfo_t
+typedef struct moo_dbgi_t moo_dbgi_t;
+struct moo_dbgi_t
 {
 	moo_oow_t _capa;
 	moo_oow_t _len;
@@ -955,7 +955,7 @@ struct moo_dbginfo_t
 	/* actual information is recorded here */
 };
 
-enum moo_dbginfo_type_t
+enum moo_dbgi_type_t
 {
 	/* bit 8 to bit 15 */
 	MOO_DBGINFO_TYPE_CODE_FILE    = 0,
@@ -966,12 +966,12 @@ enum moo_dbginfo_type_t
 	/* low 8 bits */
 	MOO_DBGINFO_TYPE_FLAG_INVALID = (1 << 0)
 };
-typedef enum moo_dbginfo_type_t moo_dbginfo_type_t;
+typedef enum moo_dbgi_type_t moo_dbgi_type_t;
 
 #define MOO_DBGINFO_MAKE_TYPE(code,flags) (((code) << 8) | (flags))
 
-typedef struct moo_dbginfo_file_t moo_dbginfo_file_t;
-struct moo_dbginfo_file_t
+typedef struct moo_dbgi_file_t moo_dbgi_file_t;
+struct moo_dbgi_file_t
 {
 	moo_oow_t _type;
 	moo_oow_t _len;
@@ -979,8 +979,8 @@ struct moo_dbginfo_file_t
 	/* ... file path here ... */
 };
 
-typedef struct moo_dbginfo_class_t moo_dbginfo_class_t;
-struct moo_dbginfo_class_t
+typedef struct moo_dbgi_class_t moo_dbgi_class_t;
+struct moo_dbgi_class_t
 {
 	moo_oow_t _type;
 	moo_oow_t _len;
@@ -990,8 +990,8 @@ struct moo_dbginfo_class_t
 	/* ... class name here ... */
 };
 
-typedef struct moo_dbginfo_method_t moo_dbginfo_method_t;
-struct moo_dbginfo_method_t
+typedef struct moo_dbgi_method_t moo_dbgi_method_t;
+struct moo_dbgi_method_t
 {
 	moo_oow_t _type;
 	moo_oow_t _len;
@@ -1482,7 +1482,7 @@ struct moo_t
 	/* ========================= */
 
 	moo_heap_t* heap;
-	moo_dbginfo_t* dbginfo;
+	moo_dbgi_t* dbgi;
 
 	/* =============================================================
 	 * nil, true, false
@@ -1901,7 +1901,7 @@ extern "C" {
 #endif
 
 #if defined(MOO_HAVE_INLINE)
-	static MOO_INLINE void MOO_STORE_OOP (moo_t* moo, moo_oop_t* rcvaddr, moo_oop_t val) { *rcvaddr = val; }
+static MOO_INLINE void MOO_STORE_OOP (moo_t* moo, moo_oop_t* rcvaddr, moo_oop_t val) { *rcvaddr = val; }
 #else
 #	define MOO_STORE_OOP(moo,rcvaddr,val) (*(rcvaddr) = val)
 #endif
@@ -2124,7 +2124,7 @@ MOO_EXPORT void moo_abort (
 
 
 #if defined(MOO_HAVE_INLINE)
-	static MOO_INLINE void moo_switchprocess(moo_t* moo) { moo->switch_proc = 1; }
+static MOO_INLINE void moo_switchprocess(moo_t* moo) { moo->switch_proc = 1; }
 #else
 #	define moo_switchprocess(moo) ((moo)->switch_proc = 1)
 #endif
@@ -2133,17 +2133,17 @@ MOO_EXPORT void moo_abort (
  * DEBUG SUPPORT
  * ========================================================================= */
 
-MOO_EXPORT int moo_initdbginfo (
+MOO_EXPORT int moo_initdbgi (
 	moo_t*    moo,
 	moo_oow_t init_capa
 );
 
 /**
- * The moo_finidbginfo() function deletes the debug information.
+ * The moo_finidbgi() function deletes the debug information.
  * It is called by moo_close(). Unless you want the debug information to
  * be deleted earlier, you need not call this function explicitly.
  */
-MOO_EXPORT void moo_finidbginfo (
+MOO_EXPORT void moo_finidbgi (
 	moo_t* moo
 );
 /* =========================================================================
@@ -2365,29 +2365,6 @@ MOO_EXPORT int moo_convutobcstr (
  * STRING DUPLICATION
  * ========================================================================= */
 
-#if defined(MOO_OOCH_IS_UCH)
-#	define moo_dupootobcharswithheadroom(moo,hrb,oocs,oocslen,bcslen) moo_duputobcharswithheadroom(moo,hrb,oocs,oocslen,bcslen)
-#	define moo_dupbtooocharswithheadroom(moo,hrb,bcs,bcslen,oocslen) moo_dupbtoucharswithheadroom(moo,hrb,bcs,bcslen,oocslen)
-#	define moo_dupootobchars(moo,oocs,oocslen,bcslen) moo_duputobchars(moo,oocs,oocslen,bcslen)
-#	define moo_dupbtooochars(moo,bcs,bcslen,oocslen) moo_dupbtouchars(moo,bcs,bcslen,oocslen)
-
-#	define moo_dupootobcstrwithheadroom(moo,hrb,oocs,bcslen) moo_duputobcstrwithheadroom(moo,hrb,oocs,bcslen)
-#	define moo_dupbtooocstrwithheadroom(moo,hrb,bcs,oocslen) moo_dupbtoucstrwithheadroom(moo,hrb,bcs,oocslen)
-#	define moo_dupootobcstr(moo,oocs,bcslen) moo_duputobcstr(moo,oocs,bcslen)
-#	define moo_dupbtooocstr(moo,bcs,oocslen) moo_dupbtoucstr(moo,bcs,oocslen)
-#else
-#	define moo_dupootoucharswithheadroom(moo,hrb,oocs,oocslen,ucslen) moo_dupbtoucharswithheadroom(moo,hrb,oocs,oocslen,ucslen)
-#	define moo_duputooocharswithheadroom(moo,hrb,ucs,ucslen,oocslen) moo_duputobcharswithheadroom(moo,hrb,ucs,ucslen,oocslen)
-#	define moo_dupootouchars(moo,oocs,oocslen,ucslen) moo_dupbtouchars(moo,oocs,oocslen,ucslen)
-#	define moo_duputooochars(moo,ucs,ucslen,oocslen) moo_duputobchars(moo,ucs,ucslen,oocslen)
-
-#	define moo_dupootoucstrwithheadroom(moo,hrb,oocs,ucslen) moo_dupbtoucstrwithheadroom(moo,hrb,oocs,ucslen)
-#	define moo_duputooocstrwithheadroom(moo,hrb,ucs,oocslen) moo_duputobcstrwithheadroom(moo,hrb,ucs,oocslen)
-#	define moo_dupootoucstr(moo,oocs,ucslen) moo_dupbtoucstr(moo,oocs,ucslen)
-#	define moo_duputooocstr(moo,ucs,oocslen) moo_duputobcstr(moo,ucs,oocslen)
-#endif
-
-
 MOO_EXPORT moo_uch_t* moo_dupbtoucharswithheadroom (
 	moo_t*           moo,
 	moo_oow_t        headroom_bytes,
@@ -2404,21 +2381,6 @@ MOO_EXPORT moo_bch_t* moo_duputobcharswithheadroom (
 	moo_oow_t*       bcslen
 );
 
-MOO_EXPORT moo_uch_t* moo_dupbtouchars (
-	moo_t*           moo,
-	const moo_bch_t* bcs,
-	moo_oow_t        bcslen,
-	moo_oow_t*       ucslen
-);
-
-MOO_EXPORT moo_bch_t* moo_duputobchars (
-	moo_t*           moo,
-	const moo_uch_t* ucs,
-	moo_oow_t        ucslen,
-	moo_oow_t*       bcslen
-);
-
-
 MOO_EXPORT moo_uch_t* moo_dupbtoucstrwithheadroom (
 	moo_t*           moo,
 	moo_oow_t        headroom_bytes,
@@ -2433,24 +2395,33 @@ MOO_EXPORT moo_bch_t* moo_duputobcstrwithheadroom (
 	moo_oow_t* bcslen
 );
 
-MOO_EXPORT moo_uch_t* moo_dupbtoucstr (
-	moo_t*           moo,
-	const moo_bch_t* bcs,
-	moo_oow_t*       ucslen /* optional: length of returned string */
-);
+#if defined(MOO_HAVE_INLINE)
+static MOO_INLINE moo_bch_t* moo_duputobchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t ucslen, moo_oow_t* bcslen)
+{
+	return moo_duputobcharswithheadroom (moo, 0, ucs, ucslen, bcslen);
+}
 
-MOO_EXPORT moo_bch_t* moo_duputobcstr (
-	moo_t*           moo,
-	const moo_uch_t* ucs,
-	moo_oow_t*       bcslen /* optional: length of returned string */
-);
+static MOO_INLINE moo_uch_t* moo_dupbtouchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t bcslen, moo_oow_t* ucslen)
+{
+	return moo_dupbtoucharswithheadroom (moo, 0, bcs, bcslen, ucslen);
+}
 
+static MOO_INLINE moo_bch_t* moo_duputobcstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* bcslen)
+{
+	return moo_duputobcstrwithheadroom (moo, 0, ucs, bcslen);
+}
 
-#if defined(MOO_OOCH_IS_UCH)
-#	define moo_dupoochars(moo,oocs,oocslen) moo_dupuchars(moo,oocs,oocslen)
+static MOO_INLINE moo_uch_t* moo_dupbtoucstr (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* ucslen)
+{
+	return moo_dupbtoucstrwithheadroom(moo, 0, bcs, ucslen);
+}
 #else
-#	define moo_dupoochars(moo,oocs,oocslen) moo_dupbchars(moo,oocs,oocslen)
+#	define moo_duputobchars(moo, ucs, ucslen, bcslen) moo_duputobcharswithheadroom(moo, 0, ucs, ucslen, bcslen)
+#	define moo_dupbtouchars(moo, bcs, bcslen, ucslen) moo_dupbtoucharswithheadroom(moo, 0, bcs, bcslen, ucslen)
+#	define moo_duputobcstr(moo, ucs, bcslen) moo_duputobcstrwithheadroom(moo, 0, ucs, bcslen)
+#	define moo_dupbtoucstr(moo, bcs, ucslen) moo_dupbtoucstrwithheadroom(moo, 0, bcs, ucslen)
 #endif
+
 
 MOO_EXPORT moo_uch_t* moo_dupuchars (
 	moo_t*           moo,
@@ -2463,6 +2434,31 @@ MOO_EXPORT moo_bch_t* moo_dupbchars (
 	const moo_bch_t* bcs,
 	moo_oow_t        bcslen
 );
+
+#if defined(MOO_OOCH_IS_UCH)
+#	define moo_dupootobcharswithheadroom(moo,hrb,oocs,oocslen,bcslen) moo_duputobcharswithheadroom(moo,hrb,oocs,oocslen,bcslen)
+#	define moo_dupbtooocharswithheadroom(moo,hrb,bcs,bcslen,oocslen) moo_dupbtoucharswithheadroom(moo,hrb,bcs,bcslen,oocslen)
+#	define moo_dupootobchars(moo,oocs,oocslen,bcslen) moo_duputobchars(moo,oocs,oocslen,bcslen)
+#	define moo_dupbtooochars(moo,bcs,bcslen,oocslen) moo_dupbtouchars(moo,bcs,bcslen,oocslen)
+
+#	define moo_dupootobcstrwithheadroom(moo,hrb,oocs,bcslen) moo_duputobcstrwithheadroom(moo,hrb,oocs,bcslen)
+#	define moo_dupbtooocstrwithheadroom(moo,hrb,bcs,oocslen) moo_dupbtoucstrwithheadroom(moo,hrb,bcs,oocslen)
+#	define moo_dupootobcstr(moo,oocs,bcslen) moo_duputobcstr(moo,oocs,bcslen)
+#	define moo_dupbtooocstr(moo,bcs,oocslen) moo_dupbtoucstr(moo,bcs,oocslen)
+#	define moo_dupoochars(moo,oocs,oocslen) moo_dupuchars(moo,oocs,oocslen)
+#else
+#	define moo_dupootoucharswithheadroom(moo,hrb,oocs,oocslen,ucslen) moo_dupbtoucharswithheadroom(moo,hrb,oocs,oocslen,ucslen)
+#	define moo_duputooocharswithheadroom(moo,hrb,ucs,ucslen,oocslen) moo_duputobcharswithheadroom(moo,hrb,ucs,ucslen,oocslen)
+#	define moo_dupootouchars(moo,oocs,oocslen,ucslen) moo_dupbtouchars(moo,oocs,oocslen,ucslen)
+#	define moo_duputooochars(moo,ucs,ucslen,oocslen) moo_duputobchars(moo,ucs,ucslen,oocslen)
+
+#	define moo_dupootoucstrwithheadroom(moo,hrb,oocs,ucslen) moo_dupbtoucstrwithheadroom(moo,hrb,oocs,ucslen)
+#	define moo_duputooocstrwithheadroom(moo,hrb,ucs,oocslen) moo_duputobcstrwithheadroom(moo,hrb,ucs,oocslen)
+#	define moo_dupootoucstr(moo,oocs,ucslen) moo_dupbtoucstr(moo,oocs,ucslen)
+#	define moo_duputooocstr(moo,ucs,oocslen) moo_duputobcstr(moo,ucs,oocslen)
+#	define moo_dupoochars(moo,oocs,oocslen) moo_dupbchars(moo,oocs,oocslen)
+#endif
+
 
 /* =========================================================================
  * SBUF MANIPULATION

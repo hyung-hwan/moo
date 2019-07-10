@@ -108,11 +108,13 @@ MOO_EXPORT void moo_abortstd (
 	moo_t*        moo
 );
 
+#if defined(MOO_INCLUDE_COMPILER)
 MOO_EXPORT int moo_compilestd(
 	moo_t*             moo,
 	const moo_iostd_t* in,
 	moo_oow_t          count
 );
+#endif
 
 MOO_EXPORT void moo_rcvtickstd (
 	moo_t*             moo,

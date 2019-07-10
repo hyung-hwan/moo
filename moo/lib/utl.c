@@ -914,7 +914,7 @@ int moo_convutobcstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* ucslen, moo_b
 
 /* ----------------------------------------------------------------------- */
 
-MOO_INLINE moo_uch_t* moo_dupbtoucharswithheadroom (moo_t* moo, moo_oow_t headroom_bytes, const moo_bch_t* bcs, moo_oow_t bcslen, moo_oow_t* ucslen)
+moo_uch_t* moo_dupbtoucharswithheadroom (moo_t* moo, moo_oow_t headroom_bytes, const moo_bch_t* bcs, moo_oow_t bcslen, moo_oow_t* ucslen)
 {
 	moo_oow_t inlen, outlen;
 	moo_uch_t* ptr;
@@ -942,12 +942,7 @@ MOO_INLINE moo_uch_t* moo_dupbtoucharswithheadroom (moo_t* moo, moo_oow_t headro
 	return ptr;
 }
 
-moo_uch_t* moo_dupbtouchars (moo_t* moo, const moo_bch_t* bcs, moo_oow_t bcslen, moo_oow_t* ucslen)
-{
-	return moo_dupbtoucharswithheadroom (moo, 0, bcs, bcslen, ucslen);
-}
-
-MOO_INLINE moo_bch_t* moo_duputobcharswithheadroom (moo_t* moo, moo_oow_t headroom_bytes, const moo_uch_t* ucs, moo_oow_t ucslen, moo_oow_t* bcslen)
+moo_bch_t* moo_duputobcharswithheadroom (moo_t* moo, moo_oow_t headroom_bytes, const moo_uch_t* ucs, moo_oow_t ucslen, moo_oow_t* bcslen)
 {
 	moo_oow_t inlen, outlen;
 	moo_bch_t* ptr;
@@ -971,15 +966,9 @@ MOO_INLINE moo_bch_t* moo_duputobcharswithheadroom (moo_t* moo, moo_oow_t headro
 	return ptr;
 }
 
-moo_bch_t* moo_duputobchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t ucslen, moo_oow_t* bcslen)
-{
-	return moo_duputobcharswithheadroom (moo, 0, ucs, ucslen, bcslen);
-}
-
-
 /* ----------------------------------------------------------------------- */
 
-MOO_INLINE moo_uch_t* moo_dupbtoucstrwithheadroom (moo_t* moo, moo_oow_t headroom_bytes, const moo_bch_t* bcs, moo_oow_t* ucslen)
+moo_uch_t* moo_dupbtoucstrwithheadroom (moo_t* moo, moo_oow_t headroom_bytes, const moo_bch_t* bcs, moo_oow_t* ucslen)
 {
 	moo_oow_t inlen, outlen;
 	moo_uch_t* ptr;
@@ -999,12 +988,7 @@ MOO_INLINE moo_uch_t* moo_dupbtoucstrwithheadroom (moo_t* moo, moo_oow_t headroo
 	return ptr;
 }
 
-moo_uch_t* moo_dupbtoucstr (moo_t* moo, const moo_bch_t* bcs, moo_oow_t* ucslen)
-{
-	return moo_dupbtoucstrwithheadroom (moo, 0, bcs, ucslen);
-}
-
-MOO_INLINE moo_bch_t* moo_duputobcstrwithheadroom (moo_t* moo, moo_oow_t headroom_bytes, const moo_uch_t* ucs, moo_oow_t* bcslen)
+moo_bch_t* moo_duputobcstrwithheadroom (moo_t* moo, moo_oow_t headroom_bytes, const moo_uch_t* ucs, moo_oow_t* bcslen)
 {
 	moo_oow_t inlen, outlen;
 	moo_bch_t* ptr;
@@ -1026,10 +1010,6 @@ MOO_INLINE moo_bch_t* moo_duputobcstrwithheadroom (moo_t* moo, moo_oow_t headroo
 	return ptr;
 }
 
-moo_bch_t* moo_duputobcstr (moo_t* moo, const moo_uch_t* ucs, moo_oow_t* bcslen)
-{
-	return moo_duputobcstrwithheadroom (moo, 0, ucs, bcslen);
-}
 /* ----------------------------------------------------------------------- */
 
 moo_uch_t* moo_dupuchars (moo_t* moo, const moo_uch_t* ucs, moo_oow_t ucslen)

@@ -545,6 +545,21 @@ static MOO_INLINE moo_ooi_t open_input (moo_t* moo, moo_ioarg_t* arg)
 	}
 
 	arg->handle = bb;
+	if (!arg->name)
+	{
+		/* for the top-level stream, i simply change the arg->name field
+		 * so that the compiler knows the file to be read */
+		moo_oocs_t io_name;
+
+		io_name.ptr = moo_dupbtooocstr(moo, get_base_name(bb->fn), &io_name.len);
+		if (!io_name.ptr) goto oops;
+
+		arg->name = moo_addcioname(moo, &io_name);
+		moo_freemem (moo, io_name.ptr);
+
+		if (!arg->name) goto oops;
+	}
+
 	return 0;
 
 oops:
@@ -3703,6 +3718,7 @@ void moo_abortstd (moo_t* moo)
 	moo_abort (moo);
 }
 
+#if defined(MOO_INCLUDE_COMPILER)
 int moo_compilestd (moo_t* moo, const moo_iostd_t* in, moo_oow_t count)
 {
 	xtn_t* xtn = GET_XTN(moo);
@@ -3716,6 +3732,7 @@ int moo_compilestd (moo_t* moo, const moo_iostd_t* in, moo_oow_t count)
 
 	return 0;
 }
+#endif
 
 void moo_rcvtickstd (moo_t* moo, int v)
 {

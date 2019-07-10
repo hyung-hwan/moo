@@ -246,6 +246,8 @@ enum voca_id_t
 };
 typedef enum voca_id_t voca_id_t;
 
+static moo_ooch_t _nul = '\0';
+
 static int compile_pooldic_definition (moo_t* moo);
 static int compile_interface_definition (moo_t* moo);
 static int compile_class_definition (moo_t* moo, int class_type);
@@ -452,22 +454,23 @@ static int copy_string_to (moo_t* moo, const moo_oocs_t* src, moo_oocs_t* dst, m
 		len = src->len;
 	}
 
-	if (len > *dst_capa)
+	if (len >= *dst_capa)
 	{
 		moo_ooch_t* tmp;
 		moo_oow_t capa;
 
-		capa = MOO_ALIGN(len, CLASS_BUFFER_ALIGN);
+		capa = MOO_ALIGN(len + 1, CLASS_BUFFER_ALIGN);
 
 		tmp = (moo_ooch_t*)moo_reallocmem(moo, dst->ptr, MOO_SIZEOF(*tmp) * capa);
 		if (!tmp)  return -1;
 
 		dst->ptr = tmp;
-		*dst_capa = capa;
+		*dst_capa = capa - 1;
 	}
 
 	if (append && delim_char != '\0') dst->ptr[pos++] = delim_char;
 	moo_copy_oochars (&dst->ptr[pos], src->ptr, src->len);
+	dst->ptr[len] = '\0';
 	dst->len = len;
 	return 0;
 }
@@ -556,7 +559,7 @@ static int add_oop_to_oopbuf (moo_t* moo, moo_oopbuf_t* oopbuf, moo_oop_t item)
 		moo_oop_t* tmp;
 		moo_oow_t new_capa;
 
-		new_capa = MOO_ALIGN (oopbuf->count + 1, ARLIT_BUFFER_ALIGN);
+		new_capa = MOO_ALIGN(oopbuf->count + 1, ARLIT_BUFFER_ALIGN);
 		tmp = (moo_oop_t*)moo_reallocmem(moo, oopbuf->ptr, new_capa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
@@ -2363,12 +2366,12 @@ static void clear_io_names (moo_t* moo)
 	}
 }
 
-static const moo_ooch_t* add_io_name (moo_t* moo, const moo_oocs_t* name)
+const moo_ooch_t* moo_addcioname (moo_t* moo, const moo_oocs_t* name)
 {
 	moo_iolink_t* link;
 	moo_ooch_t* ptr;
 
-	link = (moo_iolink_t*) moo_callocmem (moo, MOO_SIZEOF(*link) + MOO_SIZEOF(moo_ooch_t) * (name->len + 1));
+	link = (moo_iolink_t*)moo_callocmem(moo, MOO_SIZEOF(*link) + MOO_SIZEOF(moo_ooch_t) * (name->len + 1));
 	if (!link) return MOO_NULL;
 
 	ptr = (moo_ooch_t*)(link + 1);
@@ -2387,10 +2390,10 @@ static int begin_include (moo_t* moo)
 	moo_ioarg_t* arg;
 	const moo_ooch_t* io_name;
 
-	io_name = add_io_name (moo, TOKEN_NAME(moo));
+	io_name = moo_addcioname(moo, TOKEN_NAME(moo));
 	if (!io_name) return -1;
 
-	arg = (moo_ioarg_t*) moo_callocmem (moo, MOO_SIZEOF(*arg));
+	arg = (moo_ioarg_t*)moo_callocmem(moo, MOO_SIZEOF(*arg));
 	if (!arg) goto oops;
 
 	arg->name = io_name;
@@ -2399,7 +2402,7 @@ static int begin_include (moo_t* moo)
 	/*arg->nl = '\0';*/
 	arg->includer = moo->c->curinp;
 
-	if (moo->c->impl (moo, MOO_IO_OPEN, arg) <= -1) 
+	if (moo->c->impl(moo, MOO_IO_OPEN, arg) <= -1) 
 	{
 		moo_setsynerr (moo, MOO_SYNERR_INCLUDE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 		goto oops;
@@ -4158,7 +4161,6 @@ static int compile_method_name (moo_t* moo, moo_method_data_t* mth)
 	 * unary-selector := identifier
 	 */
 	int n;
-	static moo_ooch_t _nul = '\0';
 	moo_oocs_t dummy;
 
 	MOO_ASSERT (moo, mth->tmpr_count == 0);
@@ -4186,12 +4188,6 @@ static int compile_method_name (moo_t* moo, moo_method_data_t* mth)
 	}
 
 	if (n <= -1) return -1;
-
-	/* null terminate it for convenience */
-	dummy.ptr = &_nul;
-	dummy.len = 1;
-	if (add_method_name_fragment(moo, mth, &dummy) <= -1) return -1;
-	mth->name.len--; /* restore the method name length back */
 
 	if (method_exists(moo, &mth->name)) 
 	{
@@ -7006,36 +7002,28 @@ static int add_compiled_method (moo_t* moo)
 		mth->source_line = MOO_SMOOI_TO_OOP(0);
 	}
 
-	if (moo->dbginfo)
+	if (moo->dbgi)
 	{
 		moo_oow_t file_offset;
-		moo_oow_t class_offset;
 		moo_oow_t method_offset;
+		const moo_ooch_t* file_name;
 
-		if (cc->mth.code_start_loc.file)
+		file_name = cc->mth.code_start_loc.file;
+		if (!file_name) file_name = &_nul;
+
+		if (moo_addfiletodbgi(moo, file_name, &file_offset) <= -1) 
 		{
-			if (moo_addfiletodbginfo(moo, cc->mth.code_start_loc.file, &file_offset) <= -1) 
-			{
-				/* TODO: warning */
-				file_offset = 0;
-			}
-			else if (file_offset > MOO_SMOOI_MAX) 
-			{
-				/* TODO: warnign */
-				file_offset = 0;
-			}
+			/* TODO: warning */
+			file_offset = 0;
 		}
-		else
+		else if (file_offset > MOO_SMOOI_MAX) 
 		{
-			/* main stream */
+			/* TODO: warning */
 			file_offset = 0;
 		}
 		mth->source_file = MOO_SMOOI_TO_OOP(file_offset);
 
-/* TODO: call moo_addclasstodbginfo() */
-		class_offset = 0;
-
-		if (moo_addmethodtodbginfo(moo, file_offset, class_offset, cc->mth.name.ptr, cc->mth.code.locptr, cc->mth.code.len, &method_offset) <= -1)
+		if (moo_addmethodtodbgi(moo, file_offset, cc->dbgi_class_offset, cc->mth.name.ptr, cc->mth.code.locptr, cc->mth.code.len, &method_offset) <= -1)
 		{
 			/* TODO: warning. no debug information about this method will be available */
 		}
@@ -8517,6 +8505,33 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 
 	GET_TOKEN (moo);
 
+	if (moo->dbgi)
+	{
+		moo_oow_t file_offset;
+		moo_oow_t class_offset;
+		const moo_ooch_t* file_name;
+
+		file_name = cc->fqn_loc.file;
+		if (!file_name) file_name = &_nul;
+
+		if (moo_addfiletodbgi(moo, file_name, &file_offset) <= -1) 
+		{
+			/* TODO: warning */
+			file_offset = 0;
+		}
+		else if (file_offset > MOO_SMOOI_MAX) 
+		{
+			/* TODO: warning */
+			file_offset = 0;
+		}
+
+		if (moo_addclasstodbgi(moo, cc->fqn.ptr, file_offset, cc->fqn_loc.line, &cc->dbgi_class_offset) <= -1)
+		{
+			/* TODO: warning. no debug information about this method will be available */
+		}
+/* TODO: store source file offset and class offset in the class object only for NORMAL. make_defined_class is a good candidate to do this in. */
+	}
+
 	if (class_type == CLASS_TYPE_EXTEND)
 	{
 		moo_oop_char_t pds;
@@ -9674,6 +9689,8 @@ static void fini_compiler (moo_t* moo)
 
 		while (moo->c->cunit) pop_cunit (moo);
 
+		if (moo->c->iid) moo_freemem (moo, moo->c->iid);
+
 		moo_freemem (moo, moo->c);
 		moo->c = MOO_NULL;
 	}
@@ -9730,7 +9747,7 @@ static MOO_INLINE int _compile (moo_t* moo, moo_ioimpl_t io)
 	moo->c->arg.colm = 1;
 
 	/* open the top-level stream */
-	n = moo->c->impl (moo, MOO_IO_OPEN, &moo->c->arg);
+	n = moo->c->impl(moo, MOO_IO_OPEN, &moo->c->arg);
 	if (n <= -1) return -1;
 
 	/* the stream is open. set it as the current input stream */
@@ -9770,11 +9787,11 @@ int moo_compile (moo_t* moo, moo_ioimpl_t io)
 {
 	int n;
 	int log_default_type_mask;
-	
+
 	log_default_type_mask = moo->log.default_type_mask;
 	moo->log.default_type_mask |= MOO_LOG_COMPILER;
-	n = _compile (moo, io);
+	n = _compile(moo, io);
 	moo->log.default_type_mask = log_default_type_mask;
-	
+
 	return n;
 }

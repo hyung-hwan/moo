@@ -595,6 +595,8 @@ struct moo_cunit_class_t
 		moo_oow_t initv_count;  
 	} var[3];
 
+	moo_oow_t dbgi_class_offset;
+
 	moo_pooldic_import_data_t pdimp;
 	moo_method_data_t mth;
 };
@@ -620,6 +622,7 @@ struct moo_compiler_t
 
 	/* input handler */
 	moo_ioimpl_t impl;
+	moo_ooch_t*  iid; /* input id that represents the current main input file */
 
 	/* information about the last meaningful character read.
 	 * this is a copy of curinp->lxc if no ungetting is performed.
@@ -1658,17 +1661,25 @@ moo_pfrc_t moo_pf_utf8_seqlen (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_utf8_to_uc (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_uc_to_utf8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 
-/* TODO: remove the following debugging functions */
+
 /* ========================================================================= */
 /* debug.c                                                                   */
 /* ========================================================================= */
+/* TODO: remove the following dump functions */
 void moo_dumpsymtab (moo_t* moo);
 void moo_dumpdic (moo_t* moo, moo_oop_dic_t dic, const moo_bch_t* title);
 
-int moo_addfiletodbginfo (moo_t* moo, const moo_ooch_t* file_name, moo_oow_t* start_offset);
-int moo_addclasstodbginfo (moo_t* moo, const moo_ooch_t* class_name, moo_oow_t file_offset, moo_oow_t file_line, moo_oow_t* start_offset);
-int moo_addmethodtodbginfo (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_offset, const moo_ooch_t* method_name, const moo_oow_t* code_loc_ptr, moo_oow_t code_loc_len, moo_oow_t* start_offset);
+int moo_addfiletodbgi (moo_t* moo, const moo_ooch_t* file_name, moo_oow_t* start_offset);
+int moo_addclasstodbgi (moo_t* moo, const moo_ooch_t* class_name, moo_oow_t file_offset, moo_oow_t file_line, moo_oow_t* start_offset);
+int moo_addmethodtodbgi (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_offset, const moo_ooch_t* method_name, const moo_oow_t* code_loc_ptr, moo_oow_t code_loc_len, moo_oow_t* start_offset);
 
+
+/* ========================================================================= */
+/* comp.c                                                                   */
+/* ========================================================================= */
+#if defined(MOO_INCLUDE_COMPILER)
+const moo_ooch_t* moo_addcioname (moo_t* moo, const moo_oocs_t* name);
+#endif
 
 #if defined(__cplusplus)
 }

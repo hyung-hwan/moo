@@ -39,7 +39,7 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 	{
 		^(self class name) & " - " & self.messageText.
 	}
-     
+
 	method signal
 	{
 		| exctx exblk retval actpos ctx |
@@ -68,13 +68,19 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 		// -----------------------------------------------------------------
 		//thisContext unwindTo: nil return: nil.
 		//thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
-		
-// TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
+
+// TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE... MOVE THIS TO  System>>backtrace and skip the first method context for backtrace itself.
 System logNl: "== BACKTRACE ==".
 ctx := thisContext.
 while (ctx notNil)
 {
-	if (ctx class == MethodContext) { System logNl: (" " & ctx method owner name & ">>" & ctx method name & " (" & ctx method sourceFile & " " & ctx method sourceLine asString & ")"). }.
+	if (ctx class == MethodContext) 
+	{
+		System logNl: (" " & ctx method owner name & ">>" & ctx method name &
+		               " (" & ctx method sourceFile & " " & ctx method sourceLine asString & ")"). 
+// TODO: get location of the current pc and include it... (ctx method sourceLine: ctx pc) asString dump.
+
+	}.
 	// TODO: include blockcontext???
 	ctx := ctx sender.
 }.

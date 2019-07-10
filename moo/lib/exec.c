@@ -2179,7 +2179,7 @@ static moo_pfrc_t pf_context_find_exception_handler (moo_t* moo, moo_mod_t* mod,
 	rcv = (moo_oop_context_t)MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_method_context);
 
-	except_class = MOO_STACK_GETARG(moo, nargs, 0);
+	except_class = (moo_oop_class_t)MOO_STACK_GETARG(moo, nargs, 0);
 	MOO_PF_CHECK_ARGS (moo, nargs, MOO_CLASSOF(moo,rcv) == moo->_class);
 
 	preamble = MOO_OOP_TO_SMOOI(((moo_oop_method_t)rcv->method_or_nargs)->preamble);
@@ -2218,33 +2218,31 @@ static moo_pfrc_t pf_context_find_exception_handler (moo_t* moo, moo_mod_t* mod,
 /* ------------------------------------------------------------------ */
 static moo_pfrc_t pf_method_get_source_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	moo_oop_method_t rcv;
-	moo_oop_t tmp;
+	moo_oop_t retv = moo->_nil;
 
-	if (moo->dbginfo)
+	if (moo->dbgi)
 	{
-/* TODO: return sothing else lighter-weight than a string? */
-		rcv = (moo_oop_method_t*)MOO_STACK_GETRCV(moo, nargs);
-		if (rcv->source_file == MOO_SMOOI_TO_OOP(0))
-		{
-/* TOOD: use the actual name as given by the caller ? */
-			tmp = moo_makestringwithbchars(moo, "<MAIN>", 6);
-		}
-		else
-		{
-			moo_dbginfo_file_t* di;
-			di = (moo_dbginfo_file_t*)&((moo_uint8_t*)moo->dbginfo)[MOO_OOP_TO_SMOOI(rcv->source_file)];
-			tmp = moo_makestring(moo, di + 1, moo_count_oocstr(di + 1));
-		}
-		if (!tmp) return MOO_PF_FAILURE;
+		moo_oop_method_t rcv;
 
-		MOO_STACK_SETRET (moo, nargs, tmp);
-	}
-	else
-	{
-		MOO_STACK_SETRET (moo, nargs, moo->_nil);
+/* TODO: return something else lighter-weight than a string? */
+		rcv = (moo_oop_method_t)MOO_STACK_GETRCV(moo, nargs);
+		if (MOO_OOP_IS_SMOOI(rcv->source_file) && MOO_OOP_TO_SMOOI(rcv->source_file) > 0)
+		{
+			moo_dbgi_file_t* di;
+			const moo_ooch_t* file_name;
+
+			di = (moo_dbgi_file_t*)&((moo_uint8_t*)moo->dbgi)[MOO_OOP_TO_SMOOI(rcv->source_file)];
+/* TODO: check if di is the file type... otherwise, it's internal corruption */
+
+			file_name = (const moo_ooch_t*)(di + 1);
+			moo_pushvolat (moo, &retv);
+			retv = moo_makestring(moo, file_name, moo_count_oocstr(file_name));
+			moo_popvolat (moo);
+			if (!retv) return MOO_PF_FAILURE;
+		}
 	}
 
+	MOO_STACK_SETRET (moo, nargs, retv);
 	return MOO_PF_SUCCESS;
 }
 

@@ -68,18 +68,18 @@ void moo_dumpdic (moo_t* moo, moo_oop_dic_t dic, const moo_bch_t* title)
 }
 
 
-/* TODO: moo_loaddbginfofromimage() -> load debug information from compiled image?
-moo_storedbginfotoimage()? -> store debug information to compiled image?
-moo_compactdbginfo()? -> compact debug information by scaning dbginfo data. find class and method. if not found, drop the portion.
+/* TODO: moo_loaddbgifromimage() -> load debug information from compiled image?
+moo_storedbgitoimage()? -> store debug information to compiled image?
+moo_compactdbgi()? -> compact debug information by scaning dbgi data. find class and method. if not found, drop the portion.
 */
 
-int moo_initdbginfo (moo_t* moo, moo_oow_t capa)
+int moo_initdbgi (moo_t* moo, moo_oow_t capa)
 {
-	moo_dbginfo_t* tmp;
+	moo_dbgi_t* tmp;
 
 	if (capa < MOO_SIZEOF(*tmp)) capa = MOO_SIZEOF(*tmp);
 
-	tmp = (moo_dbginfo_t*)moo_callocmem(moo, capa);
+	tmp = (moo_dbgi_t*)moo_callocmem(moo, capa);
 	if (!tmp) return -1;
 
 	tmp->_capa = capa;
@@ -87,57 +87,57 @@ int moo_initdbginfo (moo_t* moo, moo_oow_t capa)
 	tmp->_last_class = 0;
 	tmp->_last_file = 0;
 
-	moo->dbginfo = tmp;
+	moo->dbgi = tmp;
 	return 0;
 }
 
-void moo_finidbginfo (moo_t* moo)
+void moo_finidbgi (moo_t* moo)
 {
-	if (moo->dbginfo)
+	if (moo->dbgi)
 	{
-		moo_freemem (moo, moo->dbginfo);
-		moo->dbginfo = MOO_NULL;
+		moo_freemem (moo, moo->dbgi);
+		moo->dbgi = MOO_NULL;
 	}
 }
 
-static MOO_INLINE moo_uint8_t* secure_dbginfo_space (moo_t* moo, moo_oow_t req_bytes)
+static MOO_INLINE moo_uint8_t* secure_dbgi_space (moo_t* moo, moo_oow_t req_bytes)
 {
-	if (moo->dbginfo->_capa - moo->dbginfo->_len < req_bytes)
+	if (moo->dbgi->_capa - moo->dbgi->_len < req_bytes)
 	{
-		moo_dbginfo_t* tmp;
+		moo_dbgi_t* tmp;
 		moo_oow_t newcapa;
 
-		newcapa = moo->dbginfo->_len + req_bytes;
+		newcapa = moo->dbgi->_len + req_bytes;
 		newcapa = MOO_ALIGN_POW2(newcapa, 65536); /* TODO: make the align value configurable */
-		tmp = moo_reallocmem(moo, moo->dbginfo, newcapa);
+		tmp = moo_reallocmem(moo, moo->dbgi, newcapa);
 		if (!tmp) return MOO_NULL;
 
-		moo->dbginfo = tmp;
-		moo->dbginfo->_capa = newcapa;
+		moo->dbgi = tmp;
+		moo->dbgi->_capa = newcapa;
 	}
 
-	return &((moo_uint8_t*)moo->dbginfo)[moo->dbginfo->_len];
+	return &((moo_uint8_t*)moo->dbgi)[moo->dbgi->_len];
 }
 
-int moo_addfiletodbginfo (moo_t* moo, const moo_ooch_t* file_name, moo_oow_t* start_offset)
+int moo_addfiletodbgi (moo_t* moo, const moo_ooch_t* file_name, moo_oow_t* start_offset)
 {
 	moo_oow_t name_len, name_bytes, name_bytes_aligned, req_bytes;
-	moo_dbginfo_file_t* di;
+	moo_dbgi_file_t* di;
 
-	if (!moo->dbginfo) 
+	if (!moo->dbgi) 
 	{
 		if (start_offset) *start_offset = MOO_NULL;
 		return 0; /* debug information is disabled*/
 	}
 
-	if (moo->dbginfo->_last_file > 0)
+	if (moo->dbgi->_last_file > 0)
 	{
 		/* TODO: avoid linear search. need indexing for speed up */
-		moo_oow_t offset = moo->dbginfo->_last_file;
+		moo_oow_t offset = moo->dbgi->_last_file;
 		do
 		{
-			di = &((moo_uint8_t*)moo->dbginfo)[offset];
-			if (moo_comp_oocstr(di + 1, file_name) == 0) 
+			di = (moo_dbgi_file_t*)&((moo_uint8_t*)moo->dbgi)[offset];
+			if (moo_comp_oocstr((moo_ooch_t*)(di + 1), file_name) == 0) 
 			{
 				if (start_offset) *start_offset = offset;
 				return 0;
@@ -150,38 +150,38 @@ int moo_addfiletodbginfo (moo_t* moo, const moo_ooch_t* file_name, moo_oow_t* st
 	name_len = moo_count_oocstr(file_name);
 	name_bytes = (name_len + 1) * MOO_SIZEOF(*file_name);
 	name_bytes_aligned = MOO_ALIGN_POW2(name_bytes, MOO_SIZEOF_OOW_T);
-	req_bytes = MOO_SIZEOF(moo_dbginfo_file_t) + name_bytes_aligned;
+	req_bytes = MOO_SIZEOF(moo_dbgi_file_t) + name_bytes_aligned;
 
-	di = (moo_dbginfo_file_t*)secure_dbginfo_space(moo, req_bytes);
+	di = (moo_dbgi_file_t*)secure_dbgi_space(moo, req_bytes);
 	if (!di) return -1;
 
 	di->_type = MOO_DBGINFO_MAKE_TYPE(MOO_DBGINFO_TYPE_CODE_FILE, 0);
 	di->_len = req_bytes;
-	di->_next = moo->dbginfo->_last_file;
-	moo_copy_oocstr (di + 1, name_len + 1, file_name);
+	di->_next = moo->dbgi->_last_file;
+	moo_copy_oocstr ((moo_ooch_t*)(di + 1), name_len + 1, file_name);
 
-	moo->dbginfo->_last_file = moo->dbginfo->_len;
-	moo->dbginfo->_len += req_bytes;
+	moo->dbgi->_last_file = moo->dbgi->_len;
+	moo->dbgi->_len += req_bytes;
 
-	if (start_offset) *start_offset = moo->dbginfo->_last_file;
+	if (start_offset) *start_offset = moo->dbgi->_last_file;
 	return 0;
 }
 
-int moo_addclasstodbginfo (moo_t* moo, const moo_ooch_t* class_name, moo_oow_t file_offset, moo_oow_t file_line, moo_oow_t* start_offset)
+int moo_addclasstodbgi (moo_t* moo, const moo_ooch_t* class_name, moo_oow_t file_offset, moo_oow_t file_line, moo_oow_t* start_offset)
 {
 	moo_oow_t name_len, name_bytes, name_bytes_aligned, req_bytes;
-	moo_dbginfo_class_t* di;
+	moo_dbgi_class_t* di;
 
-	if (!moo->dbginfo) return 0; /* debug information is disabled*/
+	if (!moo->dbgi) return 0; /* debug information is disabled*/
 
-	if (moo->dbginfo->_last_class > 0)
+	if (moo->dbgi->_last_class > 0)
 	{
 		/* TODO: avoid linear search. need indexing for speed up */
-		moo_oow_t offset = moo->dbginfo->_last_class;
+		moo_oow_t offset = moo->dbgi->_last_class;
 		do
 		{
-			di = &((moo_uint8_t*)moo->dbginfo)[offset];
-			if (moo_comp_oocstr(di + 1, class_name) == 0 && di->_file == file_offset && di->_line == file_line) 
+			di = (moo_dbgi_class_t*)&((moo_uint8_t*)moo->dbgi)[offset];
+			if (moo_comp_oocstr((moo_ooch_t*)(di + 1), class_name) == 0 && di->_file == file_offset && di->_line == file_line) 
 			{
 				if (start_offset) *start_offset = offset;
 				return 0;
@@ -194,55 +194,55 @@ int moo_addclasstodbginfo (moo_t* moo, const moo_ooch_t* class_name, moo_oow_t f
 	name_len = moo_count_oocstr(class_name);
 	name_bytes = (name_len + 1) * MOO_SIZEOF(*class_name);
 	name_bytes_aligned = MOO_ALIGN_POW2(name_bytes, MOO_SIZEOF_OOW_T);
-	req_bytes = MOO_SIZEOF(moo_dbginfo_class_t) + name_bytes_aligned;
+	req_bytes = MOO_SIZEOF(moo_dbgi_class_t) + name_bytes_aligned;
 
-	di = (moo_dbginfo_class_t*)secure_dbginfo_space(moo, req_bytes);
+	di = (moo_dbgi_class_t*)secure_dbgi_space(moo, req_bytes);
 	if (!di) return -1;
 
 	di->_type = MOO_DBGINFO_MAKE_TYPE(MOO_DBGINFO_TYPE_CODE_CLASS, 0);
 	di->_len = req_bytes;
-	di->_next = moo->dbginfo->_last_class;
+	di->_next = moo->dbgi->_last_class;
 	di->_file = file_offset;
 	di->_line = file_line;
-	moo_copy_oocstr (di + 1, name_len + 1, class_name);
+	moo_copy_oocstr ((moo_ooch_t*)(di + 1), name_len + 1, class_name);
 
-	moo->dbginfo->_last_class = moo->dbginfo->_len;
-	moo->dbginfo->_len += req_bytes;
+	moo->dbgi->_last_class = moo->dbgi->_len;
+	moo->dbgi->_len += req_bytes;
 
-	if (start_offset) *start_offset = moo->dbginfo->_last_class;
+	if (start_offset) *start_offset = moo->dbgi->_last_class;
 	return 0;
 }
 
-int moo_addmethodtodbginfo (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_offset, const moo_ooch_t* method_name, const moo_oow_t* code_loc_ptr, moo_oow_t code_loc_len, moo_oow_t* start_offset)
+int moo_addmethodtodbgi (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_offset, const moo_ooch_t* method_name, const moo_oow_t* code_loc_ptr, moo_oow_t code_loc_len, moo_oow_t* start_offset)
 {
 	moo_oow_t name_len, name_bytes, name_bytes_aligned, code_loc_bytes, code_loc_bytes_aligned, req_bytes;
-	moo_dbginfo_method_t* di;
+	moo_dbgi_method_t* di;
 
-	if (!moo->dbginfo) return 0; /* debug information is disabled*/
+	if (!moo->dbgi) return 0; /* debug information is disabled*/
 
 	name_len = moo_count_oocstr(method_name);
 	name_bytes = (name_len + 1) * MOO_SIZEOF(*method_name);
 	name_bytes_aligned = MOO_ALIGN_POW2(name_bytes, MOO_SIZEOF_OOW_T);
 	code_loc_bytes = code_loc_len * MOO_SIZEOF(*code_loc_ptr);
 	code_loc_bytes_aligned = MOO_ALIGN_POW2(code_loc_bytes, MOO_SIZEOF_OOW_T);
-	req_bytes = MOO_SIZEOF(moo_dbginfo_method_t) + name_bytes_aligned + code_loc_bytes_aligned;
+	req_bytes = MOO_SIZEOF(moo_dbgi_method_t) + name_bytes_aligned + code_loc_bytes_aligned;
 
-	di = (moo_dbginfo_method_t*)secure_dbginfo_space(moo, req_bytes);
+	di = (moo_dbgi_method_t*)secure_dbgi_space(moo, req_bytes);
 	if (!di) return -1;
 
 	di->_type = MOO_DBGINFO_MAKE_TYPE(MOO_DBGINFO_TYPE_CODE_METHOD, 0);
 	di->_len = req_bytes;
-	di->_next = moo->dbginfo->_last_method;
+	di->_next = moo->dbgi->_last_method;
 	di->_file = file_offset;
 	di->_class = class_offset;
 	di->code_loc_len = code_loc_len;
 
-	moo_copy_oocstr (di + 1, name_len + 1, method_name);
+	moo_copy_oocstr ((moo_ooch_t*)(di + 1), name_len + 1, method_name);
 	MOO_MEMCPY ((moo_uint8_t*)(di + 1) + name_bytes_aligned, code_loc_ptr, code_loc_bytes);
 
-	moo->dbginfo->_last_method = moo->dbginfo->_len;
-	moo->dbginfo->_len += req_bytes;
+	moo->dbgi->_last_method = moo->dbgi->_len;
+	moo->dbgi->_len += req_bytes;
 
-	if (start_offset) *start_offset = moo->dbginfo->_last_method;
+	if (start_offset) *start_offset = moo->dbgi->_last_method;
 	return 0;
 }

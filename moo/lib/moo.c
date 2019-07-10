@@ -249,7 +249,7 @@ void moo_fini (moo_t* moo)
 	 * the heap may not exist */
 	if (moo->heap) moo_killheap (moo, moo->heap);
 
-	moo_finidbginfo (moo);
+	moo_finidbgi (moo);
 
 	for (i = 0; i < MOO_COUNTOF(moo->sbuf); i++)
 	{
