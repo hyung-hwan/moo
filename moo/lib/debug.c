@@ -235,6 +235,7 @@ int moo_addmethodtodbgi (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_offs
 	di->_next = moo->dbgi->_last_method;
 	di->_file = file_offset;
 	di->_class = class_offset;
+	di->code_loc_start = name_bytes_aligned;
 	di->code_loc_len = code_loc_len;
 
 	moo_copy_oocstr ((moo_ooch_t*)(di + 1), name_len + 1, method_name);

@@ -555,9 +555,9 @@ struct moo_methsig_t
 };
 
 #if defined(MOO_USE_METHOD_TRAILER)
-#	define MOO_METHOD_NAMED_INSTVARS 10
-#else
 #	define MOO_METHOD_NAMED_INSTVARS 11
+#else
+#	define MOO_METHOD_NAMED_INSTVARS 12
 #endif
 typedef struct moo_method_t moo_method_t;
 typedef struct moo_method_t* moo_oop_method_t;
@@ -586,9 +586,9 @@ struct moo_method_t
 #endif
 
 	moo_oop_t       source_text; /* source text. String if available. nil if not */
-	moo_oop_t       source_file; /* SmallInteger. source file path that contains the definition of this method. offset from moo->dbgi. 0 if unavailable */
-	moo_oop_t       source_line; /* SmallInteger. line of the source file where the method definition begins. valid only if source_file is greater than 0 */
-	//moo_oop_t       code_line; /* SmallInteger */
+	moo_oop_t       dbi_file_offset; /* SmallInteger. source file path that contains the definition of this method. offset from moo->dbgi. 0 if unavailable */
+	moo_oop_t       source_line; /* SmallInteger. line of the source file where the method definition begins. valid only if dbi_file_offset is greater than 0 */
+	moo_oop_t       dbi_method_offset; /* SmallInteger */
 
 	/* == variable indexed part == */
 	moo_oop_t       literal_frame[1]; /* it stores literals */
@@ -975,7 +975,7 @@ typedef struct moo_dbgi_file_t moo_dbgi_file_t;
 struct moo_dbgi_file_t
 {
 	moo_oow_t _type;
-	moo_oow_t _len;
+	moo_oow_t _len; /* length of this record including the header and the file path payload */
 	moo_oow_t _next;
 	/* ... file path here ... */
 };
@@ -984,7 +984,7 @@ typedef struct moo_dbgi_class_t moo_dbgi_class_t;
 struct moo_dbgi_class_t
 {
 	moo_oow_t _type;
-	moo_oow_t _len;
+	moo_oow_t _len; /* length of this record including the header and the class name payload */
 	moo_oow_t _next; /* offset to a previous class */
 	moo_oow_t _file;
 	moo_oow_t _line;
@@ -995,13 +995,14 @@ typedef struct moo_dbgi_method_t moo_dbgi_method_t;
 struct moo_dbgi_method_t
 {
 	moo_oow_t _type;
-	moo_oow_t _len;
+	moo_oow_t _len; /* length of this record including the header and the payload including method name and code line numbers */
 	moo_oow_t _next;
 	moo_oow_t _file;
 	moo_oow_t _class;
+	moo_oow_t code_loc_start; /* start offset from the payload beginning within this record */
 	moo_oow_t code_loc_len;
 	/* ... method name here ... */
-	/* ... code info here ... */
+	/* ... code line numbers here ... */
 };
 
 /* =========================================================================

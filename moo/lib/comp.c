@@ -6782,7 +6782,6 @@ static int add_compiled_method (moo_t* moo)
 #else
 	moo_oop_byte_t code;
 #endif
-	moo_oop_t source_file;
 	moo_oow_t tmp_count = 0;
 	moo_oow_t i;
 	moo_ooi_t preamble_code, preamble_index, preamble_flags;
@@ -6814,20 +6813,6 @@ static int add_compiled_method (moo_t* moo)
 	if (!code) goto oops;
 	moo_pushvolat (moo, (moo_oop_t*)&code); tmp_count++;
 #endif
-
-	if (cc->mth.code_start_loc.file)
-	{
-/* TODO: make file names like symbols at least in this compiler. can also make it readonly.
-         don't want to make it a symbol  */
-		source_file = moo_makestring(moo, cc->mth.code_start_loc.file, moo_count_oocstr(cc->mth.code_start_loc.file));
-		if (!source_file) goto oops;
-		moo_pushvolat (moo, (moo_oop_t*)&source_file); tmp_count++;
-	}
-	else
-	{
-		/* the method has been read in from the main souce stream */
-		source_file = moo->_nil;
-	}
 
 	preamble_code = MOO_METHOD_PREAMBLE_NONE;
 	preamble_index = 0;
@@ -6990,7 +6975,6 @@ static int add_compiled_method (moo_t* moo)
 	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->code, (moo_oop_t)code);
 #endif
 
-	MOO_STORE_OOP (moo, &mth->source_file, source_file);
 	if (cc->mth.code_start_loc.line <= MOO_SMOOI_MAX)
 	{
 		mth->source_line = MOO_SMOOI_TO_OOP(cc->mth.code_start_loc.line);
@@ -7021,7 +7005,7 @@ static int add_compiled_method (moo_t* moo)
 			/* TODO: warning */
 			file_offset = 0;
 		}
-		mth->source_file = MOO_SMOOI_TO_OOP(file_offset);
+		mth->dbi_file_offset = MOO_SMOOI_TO_OOP(file_offset);
 
 		if (moo_addmethodtodbgi(moo, file_offset, cc->dbgi_class_offset, cc->mth.name.ptr, cc->mth.code.locptr, cc->mth.code.len, &method_offset) <= -1)
 		{
@@ -7030,9 +7014,9 @@ static int add_compiled_method (moo_t* moo)
 		}
 		else if (method_offset > MOO_SMOOI_MAX)
 		{
-			method_offset = 90;
+			method_offset = 0;
 		}
-		/* TODO mth->code_sline = MOO_SMOOI_TO_OOP(method_offset); */
+		mth->dbi_method_offset = MOO_SMOOI_TO_OOP(method_offset);
 	}
 
 	/*TODO: preserve source??? mth->text = cc->mth.text

@@ -2227,12 +2227,12 @@ static moo_pfrc_t pf_method_get_source_file (moo_t* moo, moo_mod_t* mod, moo_ooi
 
 	if (moo->dbgi)
 	{
-		if (MOO_OOP_IS_SMOOI(rcv->source_file) && MOO_OOP_TO_SMOOI(rcv->source_file) > 0)
+		if (MOO_OOP_IS_SMOOI(rcv->dbi_file_offset) && MOO_OOP_TO_SMOOI(rcv->dbi_file_offset) > 0)
 		{
 			moo_dbgi_file_t* di;
 			const moo_ooch_t* file_name;
 
-			di = (moo_dbgi_file_t*)&((moo_uint8_t*)moo->dbgi)[MOO_OOP_TO_SMOOI(rcv->source_file)];
+			di = (moo_dbgi_file_t*)&((moo_uint8_t*)moo->dbgi)[MOO_OOP_TO_SMOOI(rcv->dbi_file_offset)];
 /* TODO: check if di is the file type... otherwise, it's internal corruption */
 
 			file_name = (const moo_ooch_t*)(di + 1);
@@ -2247,10 +2247,11 @@ static moo_pfrc_t pf_method_get_source_file (moo_t* moo, moo_mod_t* mod, moo_ooi
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_method_get_code_source_line (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+static moo_pfrc_t pf_method_get_ip_source_line (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	/* get source line of the given instruction pointer */
 	moo_oop_method_t rcv;
+	moo_oow_t line = 0;
 
 	rcv = (moo_oop_method_t)MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo, rcv) == moo->_method);
@@ -2265,17 +2266,27 @@ static moo_pfrc_t pf_method_get_code_source_line (moo_t* moo, moo_mod_t* mod, mo
 
 		source_line = MOO_OOP_TO_SMOOI(rcv->source_line);
 		ipv = MOO_OOP_TO_SMOOI(ip);
-#if 0
-		if (MOO_OOP_IS_SMOOI(rcv->code_sline))
+
+		if (source_line >= 0 && ipv >= 0 && MOO_OOP_IS_SMOOI(rcv->dbi_method_offset)) 
 		{
 			moo_dbgi_method_t* di;
+			moo_ooi_t dbi_method_offset;
+			moo_oow_t* code_loc_ptr;
 
-			di = (moo_dbgi_method_t*)&((moo_uint8_t*)moo->dbgi)[MOO_OOP_TO_SMOOI(rcv->code_sline)];
-			/* ... TODO .. */
+			dbi_method_offset = MOO_OOP_TO_SMOOI(rcv->dbi_method_offset);
+			di = (moo_dbgi_method_t*)&((moo_uint8_t*)moo->dbgi)[dbi_method_offset];
+
+			code_loc_ptr = (moo_oow_t*)((moo_uint8_t*)(di + 1) + di->code_loc_start);
+			if (ipv < di->code_loc_len && code_loc_ptr[ipv] <= MOO_SMOOI_MAX) 
+			{
+				line = code_loc_ptr[ipv] + source_line; /* this won't overflow but can exceed MOO_SMOOI_MAX */
+				if (line > MOO_SMOOI_MAX) line = 0;
+			}
 		}
-#endif
+/* TODO: security check for data corruption? check if the ipv offset and the size calcualted doesn't exceed di->_len... */
 	}
 
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(line));
 	return MOO_PF_SUCCESS;
 }
 
@@ -4002,6 +4013,7 @@ static pf_t pftab[] =
 	{ "Character_asError",                     { pf_character_as_error,                   0, 0 } },
 	{ "Character_asInteger",                   { pf_character_as_smooi,                   0, 0 } },
 
+	{ "CompiledMethod_ipSourceLine:",          { pf_method_get_ip_source_line,            1, 1 } },
 	{ "CompiledMethod_sourceFile",             { pf_method_get_source_file,               0, 0 } },
 
 	{ "Error_asCharacter",                     { pf_error_as_character,                   0, 0 } },

@@ -2915,6 +2915,9 @@ static MOO_INLINE void abort_all_moos (int unused)
 	/* TODO: make this atomic */
 }
 
+static MOO_INLINE void do_nothing (int unused)
+{
+}
 
 /*#define MOO_TICKER_INTERVAL_USECS 10000*/ /* microseconds. 0.01 seconds */
 #define MOO_TICKER_INTERVAL_USECS 20000 /* microseconds. 0.02 seconds. */
@@ -3912,13 +3915,17 @@ void moo_uncatch_termreq (void)
 void moo_catch_termreq (void)
 {
 	set_signal_handler(SIGTERM, abort_all_moos, 0);
+	set_signal_handler(SIGHUP, abort_all_moos, 0);
 	set_signal_handler(SIGINT, abort_all_moos, 0);
+	set_signal_handler(SIGPIPE, do_nothing, 0);
 }
 
 void moo_uncatch_termreq (void)
 {
 	unset_signal_handler(SIGTERM);
+	unset_signal_handler(SIGHUP);
 	unset_signal_handler(SIGINT);
+	unset_signal_handler(SIGPIPE);
 }
 
 #endif
