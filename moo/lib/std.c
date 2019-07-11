@@ -2013,6 +2013,7 @@ static int vm_startup (moo_t* moo)
 #elif defined(USE_EPOLL)
 	#if defined(HAVE_EPOLL_CREATE1) && defined(EPOLL_CLOEXEC)
 	xtn->ep = epoll_create1(EPOLL_CLOEXEC);
+	if (xtn->ep == -1) xtn->ep = epoll_create(1024); 
 	#else
 	xtn->ep = epoll_create(1024);
 	#endif
@@ -2023,13 +2024,9 @@ static int vm_startup (moo_t* moo)
 		goto oops;
 	}
 
-	#if defined(HAVE_EPOLL_CREATE1) && defined(EPOLL_CLOEXEC)
-	/* do nothing */
-	#else
 	#if defined(FD_CLOEXEC)
 	flag = fcntl(xtn->ep, F_GETFD);
-	if (flag >= 0) fcntl (xtn->ep, F_SETFD, flag | FD_CLOEXEC);
-	#endif
+	if (flag >= 0 && !(flag & FD_CLOEXEC)) fcntl (xtn->ep, F_SETFD, flag | FD_CLOEXEC);
 	#endif
 
 #elif defined(USE_POLL)
@@ -3232,7 +3229,7 @@ static LONG WINAPI msw_exception_filter (struct _EXCEPTION_POINTERS* exinfo)
 
 #if defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0501)
 	GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, exinfo->ExceptionRecord->ExceptionAddress, &mod);
-	//GetModuleInformation (GetCurrentProcess(), mod, &modinfo, MOO_SIZEOF(modinfo));
+	/*GetModuleInformation (GetCurrentProcess(), mod, &modinfo, MOO_SIZEOF(modinfo));*/
 	GetModuleFileNameExW (GetCurrentProcess(), mod, expath, MOO_SIZEOF(expath));
 #else
 	GetModuleFileNameW (MOO_NULL, expath, MOO_SIZEOF(expath));

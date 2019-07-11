@@ -585,7 +585,7 @@ struct moo_method_t
 	moo_oop_byte_t  code; /* ByteArray */
 #endif
 
-	moo_oop_t       source_text; /* source text. String if available. nil if not */
+	moo_oop_t       dbi_text_offset; /* SmallInteger. Offset to source text in moo->dbgi. 0 if unavailable */
 	moo_oop_t       dbi_file_offset; /* SmallInteger. source file path that contains the definition of this method. offset from moo->dbgi. 0 if unavailable */
 	moo_oop_t       source_line; /* SmallInteger. line of the source file where the method definition begins. valid only if dbi_file_offset is greater than 0 */
 	moo_oop_t       dbi_method_offset; /* SmallInteger */
@@ -952,6 +952,7 @@ struct moo_dbgi_t
 	moo_oow_t _len;
 	moo_oow_t _last_file; /* offset to the last file element added */
 	moo_oow_t _last_class; /* offset to the last class element added */
+	moo_oow_t _last_text; /* offset to the last text element added */
 	moo_oow_t _last_method;
 	/* actual information is recorded here */
 };
@@ -959,17 +960,20 @@ struct moo_dbgi_t
 enum moo_dbgi_type_t
 {
 	/* bit 8 to bit 15 */
-	MOO_DBGINFO_TYPE_CODE_FILE    = 0,
-	MOO_DBGINFO_TYPE_CODE_CLASS   = 1,
+	MOO_DBGI_TYPE_CODE_FILE    = 0,
+	MOO_DBGI_TYPE_CODE_CLASS   = 1,
+	MOO_DBGI_TYPE_CODE_TEXT    = 2,
 	/* TODO: interface? etc? */
-	MOO_DBGINFO_TYPE_CODE_METHOD  = 2,
+	MOO_DBGI_TYPE_CODE_METHOD  = 3, /* method instruction location information */
 
 	/* low 8 bits */
-	MOO_DBGINFO_TYPE_FLAG_INVALID = (1 << 0)
+	MOO_DBGI_TYPE_FLAG_INVALID = (1 << 0)
 };
 typedef enum moo_dbgi_type_t moo_dbgi_type_t;
 
-#define MOO_DBGINFO_MAKE_TYPE(code,flags) (((code) << 8) | (flags))
+#define MOO_DBGI_MAKE_TYPE(code,flags) (((code) << 8) | (flags))
+#define MOO_DBGI_GET_TYPE_CODE(type) ((type) >> 8)
+#define MOO_DBGI_GET_TYPE_FLAGS(type) ((type) & 0xFF)
 
 typedef struct moo_dbgi_file_t moo_dbgi_file_t;
 struct moo_dbgi_file_t
@@ -978,6 +982,22 @@ struct moo_dbgi_file_t
 	moo_oow_t _len; /* length of this record including the header and the file path payload */
 	moo_oow_t _next;
 	/* ... file path here ... */
+};
+
+typedef struct moo_dbgi_text_t moo_dbgi_text_t;
+struct moo_dbgi_text_t
+{
+	moo_oow_t _type;
+	moo_oow_t _len; /* length of this record including the header and the text payload */
+	moo_oow_t _next; /* offset to a previous text */
+	/*moo_oow_t _file;
+	moo_oow_t _line; */
+	moo_oow_t text_len;
+	/*moo_oow_t class_name_start; <--- needed for compaction.
+	moo_oow_t method_name_start; <--- needed for compaction */
+	/* ... text ... */
+/* class name... */
+/* method name ... */
 };
 
 typedef struct moo_dbgi_class_t moo_dbgi_class_t;
@@ -1004,6 +1024,8 @@ struct moo_dbgi_method_t
 	/* ... method name here ... */
 	/* ... code line numbers here ... */
 };
+
+
 
 /* =========================================================================
  * VM LOGGING

@@ -1670,9 +1670,9 @@ void moo_dumpsymtab (moo_t* moo);
 void moo_dumpdic (moo_t* moo, moo_oop_dic_t dic, const moo_bch_t* title);
 
 int moo_addfiletodbgi (moo_t* moo, const moo_ooch_t* file_name, moo_oow_t* start_offset);
+int moo_addtexttodbgi (moo_t* moo, const moo_ooch_t* text_ptr, moo_oow_t text_len, moo_oow_t* start_offset);
 int moo_addclasstodbgi (moo_t* moo, const moo_ooch_t* class_name, moo_oow_t file_offset, moo_oow_t file_line, moo_oow_t* start_offset);
 int moo_addmethodtodbgi (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_offset, const moo_ooch_t* method_name, const moo_oow_t* code_loc_ptr, moo_oow_t code_loc_len, moo_oow_t* start_offset);
-
 
 /* ========================================================================= */
 /* comp.c                                                                   */

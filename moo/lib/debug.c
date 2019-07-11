@@ -84,8 +84,10 @@ int moo_initdbgi (moo_t* moo, moo_oow_t capa)
 
 	tmp->_capa = capa;
 	tmp->_len = MOO_SIZEOF(*tmp);
+	/* tmp->_last_file = 0;
 	tmp->_last_class = 0;
-	tmp->_last_file = 0;
+	tmp->_last_text = 0;
+	tmp->_last_method = 0; */
 
 	moo->dbgi = tmp;
 	return 0;
@@ -155,7 +157,7 @@ int moo_addfiletodbgi (moo_t* moo, const moo_ooch_t* file_name, moo_oow_t* start
 	di = (moo_dbgi_file_t*)secure_dbgi_space(moo, req_bytes);
 	if (!di) return -1;
 
-	di->_type = MOO_DBGINFO_MAKE_TYPE(MOO_DBGINFO_TYPE_CODE_FILE, 0);
+	di->_type = MOO_DBGI_MAKE_TYPE(MOO_DBGI_TYPE_CODE_FILE, 0);
 	di->_len = req_bytes;
 	di->_next = moo->dbgi->_last_file;
 	moo_copy_oocstr ((moo_ooch_t*)(di + 1), name_len + 1, file_name);
@@ -164,6 +166,39 @@ int moo_addfiletodbgi (moo_t* moo, const moo_ooch_t* file_name, moo_oow_t* start
 	moo->dbgi->_len += req_bytes;
 
 	if (start_offset) *start_offset = moo->dbgi->_last_file;
+	return 0;
+}
+
+int moo_addtexttodbgi (moo_t* moo, const moo_ooch_t* text_ptr, moo_oow_t text_len, moo_oow_t* start_offset)
+{
+	moo_oow_t text_bytes, text_bytes_aligned, req_bytes;
+	moo_dbgi_text_t* di;
+
+	if (!moo->dbgi) 
+	{
+		if (start_offset) *start_offset = MOO_NULL;
+		return 0; /* debug information is disabled*/
+	}
+
+	/* NOTE: there is no duplication check for text */
+
+	text_bytes = (text_len + 1) * MOO_SIZEOF(*text_ptr);
+	text_bytes_aligned = MOO_ALIGN_POW2(text_bytes, MOO_SIZEOF_OOW_T);
+	req_bytes = MOO_SIZEOF(moo_dbgi_text_t) + text_bytes_aligned;
+
+	di = (moo_dbgi_text_t*)secure_dbgi_space(moo, req_bytes);
+	if (!di) return -1;
+
+	di->_type = MOO_DBGI_MAKE_TYPE(MOO_DBGI_TYPE_CODE_TEXT, 0);
+	di->_len = req_bytes;
+	di->_next = moo->dbgi->_last_text;
+	di->text_len = text_len;
+	moo_copy_oochars ((moo_ooch_t*)(di + 1), text_ptr, text_len);
+
+	moo->dbgi->_last_text = moo->dbgi->_len;
+	moo->dbgi->_len += req_bytes;
+
+	if (start_offset) *start_offset = moo->dbgi->_last_text;
 	return 0;
 }
 
@@ -199,7 +234,7 @@ int moo_addclasstodbgi (moo_t* moo, const moo_ooch_t* class_name, moo_oow_t file
 	di = (moo_dbgi_class_t*)secure_dbgi_space(moo, req_bytes);
 	if (!di) return -1;
 
-	di->_type = MOO_DBGINFO_MAKE_TYPE(MOO_DBGINFO_TYPE_CODE_CLASS, 0);
+	di->_type = MOO_DBGI_MAKE_TYPE(MOO_DBGI_TYPE_CODE_CLASS, 0);
 	di->_len = req_bytes;
 	di->_next = moo->dbgi->_last_class;
 	di->_file = file_offset;
@@ -230,7 +265,7 @@ int moo_addmethodtodbgi (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_offs
 	di = (moo_dbgi_method_t*)secure_dbgi_space(moo, req_bytes);
 	if (!di) return -1;
 
-	di->_type = MOO_DBGINFO_MAKE_TYPE(MOO_DBGINFO_TYPE_CODE_METHOD, 0);
+	di->_type = MOO_DBGI_MAKE_TYPE(MOO_DBGI_TYPE_CODE_METHOD, 0);
 	di->_len = req_bytes;
 	di->_next = moo->dbgi->_last_method;
 	di->_file = file_offset;

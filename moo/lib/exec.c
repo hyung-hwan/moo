@@ -2216,10 +2216,10 @@ static moo_pfrc_t pf_context_find_exception_handler (moo_t* moo, moo_mod_t* mod,
 }
 
 /* ------------------------------------------------------------------ */
-static moo_pfrc_t pf_method_get_source_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+static moo_pfrc_t pf_method_get_source_text (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_method_t rcv;
-	moo_oop_t retv = moo->_nil;
+	moo_oop_t retv = moo->_nil; /* TODO: empty string instead of nil? */
 
 /* TODO: return something else lighter-weight than a string? */
 	rcv = (moo_oop_method_t)MOO_STACK_GETRCV(moo, nargs);
@@ -2227,19 +2227,65 @@ static moo_pfrc_t pf_method_get_source_file (moo_t* moo, moo_mod_t* mod, moo_ooi
 
 	if (moo->dbgi)
 	{
-		if (MOO_OOP_IS_SMOOI(rcv->dbi_file_offset) && MOO_OOP_TO_SMOOI(rcv->dbi_file_offset) > 0)
+		if (MOO_OOP_IS_SMOOI(rcv->dbi_text_offset))
 		{
-			moo_dbgi_file_t* di;
-			const moo_ooch_t* file_name;
+			moo_ooi_t dbi_text_offset;
 
-			di = (moo_dbgi_file_t*)&((moo_uint8_t*)moo->dbgi)[MOO_OOP_TO_SMOOI(rcv->dbi_file_offset)];
-/* TODO: check if di is the file type... otherwise, it's internal corruption */
+			dbi_text_offset = MOO_OOP_TO_SMOOI(rcv->dbi_text_offset);
+			if (dbi_text_offset > 0)
+			{
+				moo_dbgi_text_t* di;
+				const moo_ooch_t* text_ptr;
 
-			file_name = (const moo_ooch_t*)(di + 1);
-			moo_pushvolat (moo, &retv);
-			retv = moo_makestring(moo, file_name, moo_count_oocstr(file_name));
-			moo_popvolat (moo);
-			if (!retv) return MOO_PF_FAILURE;
+				MOO_ASSERT (moo, dbi_text_offset < moo->dbgi->_len);
+				di = (moo_dbgi_text_t*)&((moo_uint8_t*)moo->dbgi)[dbi_text_offset];
+				MOO_ASSERT (moo, MOO_DBGI_GET_TYPE_CODE(di->_type) == MOO_DBGI_TYPE_CODE_TEXT);
+
+				text_ptr = (const moo_ooch_t*)(di + 1);
+				moo_pushvolat (moo, &retv);
+				retv = moo_makestring(moo, text_ptr, di->text_len);
+				moo_popvolat (moo);
+				if (!retv) return MOO_PF_FAILURE;
+			}
+		}
+	}
+
+	MOO_STACK_SETRET (moo, nargs, retv);
+	return MOO_PF_SUCCESS;
+}
+
+
+static moo_pfrc_t pf_method_get_source_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_method_t rcv;
+	moo_oop_t retv = moo->_nil; /* TODO: empty string instead of nil? */
+
+/* TODO: return something else lighter-weight than a string? */
+	rcv = (moo_oop_method_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo, rcv) == moo->_method);
+
+	if (moo->dbgi)
+	{
+		if (MOO_OOP_IS_SMOOI(rcv->dbi_file_offset))
+		{
+			moo_ooi_t dbi_file_offset;
+
+			dbi_file_offset = MOO_OOP_TO_SMOOI(rcv->dbi_file_offset);
+			if (dbi_file_offset > 0)
+			{
+				moo_dbgi_file_t* di;
+				const moo_ooch_t* file_name;
+
+				MOO_ASSERT (moo, dbi_file_offset < moo->dbgi->_len);
+				di = (moo_dbgi_file_t*)&((moo_uint8_t*)moo->dbgi)[dbi_file_offset];
+				MOO_ASSERT (moo, MOO_DBGI_GET_TYPE_CODE(di->_type) == MOO_DBGI_TYPE_CODE_FILE);
+
+				file_name = (const moo_ooch_t*)(di + 1);
+				moo_pushvolat (moo, &retv);
+				retv = moo_makestring(moo, file_name, moo_count_oocstr(file_name));
+				moo_popvolat (moo);
+				if (!retv) return MOO_PF_FAILURE;
+			}
 		}
 	}
 
@@ -2269,18 +2315,24 @@ static moo_pfrc_t pf_method_get_ip_source_line (moo_t* moo, moo_mod_t* mod, moo_
 
 		if (source_line >= 0 && ipv >= 0 && MOO_OOP_IS_SMOOI(rcv->dbi_method_offset)) 
 		{
-			moo_dbgi_method_t* di;
 			moo_ooi_t dbi_method_offset;
-			moo_oow_t* code_loc_ptr;
 
 			dbi_method_offset = MOO_OOP_TO_SMOOI(rcv->dbi_method_offset);
-			di = (moo_dbgi_method_t*)&((moo_uint8_t*)moo->dbgi)[dbi_method_offset];
-
-			code_loc_ptr = (moo_oow_t*)((moo_uint8_t*)(di + 1) + di->code_loc_start);
-			if (ipv < di->code_loc_len && code_loc_ptr[ipv] <= MOO_SMOOI_MAX) 
+			if (dbi_method_offset > 0)
 			{
-				line = code_loc_ptr[ipv] + source_line; /* this won't overflow but can exceed MOO_SMOOI_MAX */
-				if (line > MOO_SMOOI_MAX) line = 0;
+				moo_dbgi_method_t* di;
+				moo_oow_t* code_loc_ptr;
+
+				MOO_ASSERT (moo, dbi_method_offset < moo->dbgi->_len);
+				di = (moo_dbgi_method_t*)&((moo_uint8_t*)moo->dbgi)[dbi_method_offset];
+				MOO_ASSERT (moo, MOO_DBGI_GET_TYPE_CODE(di->_type) == MOO_DBGI_TYPE_CODE_METHOD);
+
+				code_loc_ptr = (moo_oow_t*)((moo_uint8_t*)(di + 1) + di->code_loc_start);
+				if (ipv < di->code_loc_len && code_loc_ptr[ipv] <= MOO_SMOOI_MAX) 
+				{
+					line = code_loc_ptr[ipv] + source_line; /* this won't overflow but can exceed MOO_SMOOI_MAX */
+					if (line > MOO_SMOOI_MAX) line = 0;
+				}
 			}
 		}
 /* TODO: security check for data corruption? check if the ipv offset and the size calcualted doesn't exceed di->_len... */
@@ -4015,6 +4067,7 @@ static pf_t pftab[] =
 
 	{ "CompiledMethod_ipSourceLine:",          { pf_method_get_ip_source_line,            1, 1 } },
 	{ "CompiledMethod_sourceFile",             { pf_method_get_source_file,               0, 0 } },
+	{ "CompiledMethod_sourceText",             { pf_method_get_source_text,               0, 0 } },	
 
 	{ "Error_asCharacter",                     { pf_error_as_character,                   0, 0 } },
 	{ "Error_asInteger",                       { pf_error_as_integer,                     0, 0 } },
