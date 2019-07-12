@@ -505,6 +505,7 @@ struct moo_method_data_t
 	moo_oocs_t name;
 	moo_oow_t name_capa;
 	moo_ioloc_t name_loc;
+	moo_ioloc_t start_loc; /* location where the method definition begins */
 
 	/* is the unary method followed by parameter list? */
 	int variadic;
@@ -533,7 +534,6 @@ struct moo_method_data_t
 
 	/* byte code */
 	moo_code_t code;
-	moo_ioloc_t code_start_loc; /* source location of the method body opening brace */
 };
 
 typedef struct moo_cunit_class_t moo_cunit_class_t;

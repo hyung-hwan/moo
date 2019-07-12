@@ -2518,9 +2518,9 @@ static MOO_INLINE int emit_byte_instruction (moo_t* moo, moo_oob_t code, const m
 	cc->mth.code.ptr[cc->mth.code.len] = code;
 	if (srcloc) 
 	{
-		if (srcloc->file == cc->mth.code_start_loc.file && srcloc->line >= cc->mth.code_start_loc.line)
+		if (srcloc->file == cc->mth.start_loc.file && srcloc->line >= cc->mth.start_loc.line)
 		{
-			/*cc->mth.code.locptr[cc->mth.code.len] = srcloc->line - cc->mth.code_start_loc.line;*/
+			/*cc->mth.code.locptr[cc->mth.code.len] = srcloc->line - cc->mth.start_loc.line; // relative within the method? */
 			cc->mth.code.locptr[cc->mth.code.len] = srcloc->line;
 		}
 		else
@@ -6981,7 +6981,7 @@ static int add_compiled_method (moo_t* moo)
 		moo_oow_t method_offset;
 		const moo_ooch_t* file_name;
 
-		file_name = cc->mth.code_start_loc.file;
+		file_name = cc->mth.start_loc.file;
 		if (!file_name) file_name = &_nul;
 
 		if (moo_addfiletodbgi(moo, file_name, &file_offset) <= -1) 
@@ -6997,7 +6997,7 @@ static int add_compiled_method (moo_t* moo)
 		mth->dbgi_file_offset = MOO_SMOOI_TO_OOP(file_offset);
 
 /* TODO: preserve source text... */
-		if (moo_addmethodtodbgi(moo, file_offset, cc->dbgi_class_offset, cc->mth.name.ptr, cc->mth.code_start_loc.line, cc->mth.code.locptr, cc->mth.code.len, MOO_NULL, 0, &method_offset) <= -1)
+		if (moo_addmethodtodbgi(moo, file_offset, cc->dbgi_class_offset, cc->mth.name.ptr, cc->mth.start_loc.line, cc->mth.code.locptr, cc->mth.code.len, MOO_NULL, 0, &method_offset) <= -1)
 		{
 			/* TODO: warning. no debug information about this method will be available */
 			method_offset = 0;
@@ -7072,6 +7072,7 @@ static void reset_method_data (moo_t* moo, moo_method_data_t* mth)
 	mth->kwsels.len = 0;
 	mth->name.len = 0;
 	MOO_MEMSET (&mth->name_loc, 0, MOO_SIZEOF(mth->name_loc));
+	MOO_MEMSET (&mth->start_loc, 0, MOO_SIZEOF(mth->start_loc));
 	mth->variadic = 0;
 	mth->tmprs.len = 0;
 	mth->tmpr_count = 0;
@@ -7081,7 +7082,6 @@ static void reset_method_data (moo_t* moo, moo_method_data_t* mth)
 	mth->pfnum = 0;
 	mth->blk_depth = 0;
 	mth->code.len = 0;
-	MOO_MEMSET (&mth->code_start_loc, 0, MOO_SIZEOF(mth->code_start_loc));
 }
 
 static int process_method_modifiers (moo_t* moo, moo_method_data_t* mth)
@@ -7356,7 +7356,6 @@ static int __compile_method_definition (moo_t* moo)
 			return -1;
 		}
 
-		cc->mth.code_start_loc = *TOKEN_LOC(moo); /* set it to the location of the opening brace */
 		GET_TOKEN (moo);
 
 		if (compile_method_temporaries(moo) <= -1 ||
@@ -7390,6 +7389,7 @@ static int compile_method_definition (moo_t* moo)
 	/* clear data required to compile a method */
 	cc->mth.active = 1;
 	reset_method_data (moo, &cc->mth);
+	cc->mth.start_loc = *TOKEN_LOC(moo);
 
 	n = __compile_method_definition(moo);
 
@@ -7522,9 +7522,9 @@ static int make_getters_and_setters (moo_t* moo)
 			/* the following two function calls must not fail unless the compiler
 			 * is buggy. */
 
-			x = fetch_word_from_string (&cc->var[var_type].str, i, &var_name);
+			x = fetch_word_from_string(&cc->var[var_type].str, i, &var_name);
 			MOO_ASSERT (moo, x >= 0);
-			x = get_variable_info (moo, &var_name, &fake_loc, 0, &var_info);
+			x = get_variable_info(moo, &var_name, &fake_loc, 0, &var_info);
 			MOO_ASSERT (moo, x >= 0);
 
 			MOO_ASSERT (moo, var_info.type == var_type);
@@ -7532,7 +7532,7 @@ static int make_getters_and_setters (moo_t* moo)
 			if (cc->var[var_type].initv[i].flags & VARACC_GETTER)
 			{
 				/* the method data has been reset above. */
-				if (make_getter_method (moo, &var_name, &var_info) <= -1) return -1;
+				if (make_getter_method(moo, &var_name, &var_info) <= -1) return -1;
 			}
 
 			if (cc->var[var_type].initv[i].flags & VARACC_SETTER)
@@ -7549,7 +7549,7 @@ static int make_getters_and_setters (moo_t* moo)
 				cc->mth.tmpr_nargs = 1;
 
 				MOO_ASSERT (moo, var_info.type == var_type);
-				if (make_setter_method (moo, &var_name, &var_info) <= -1) return -1;
+				if (make_setter_method(moo, &var_name, &var_info) <= -1) return -1;
 			}
 		}
 	}

@@ -218,17 +218,35 @@ TODO: how to pass all variadic arguments to another variadic methods???
 	{
 		| ctx |
 		// TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE... MOVE THIS TO  System>>backtrace and skip the first method context for backtrace itself.
+// TODO: make this method atomic? no other process should get scheduled while this function is running?
+//  possible imementation methods:
+//    1. disable task switching? -> 
+//    2. use a global lock.
+//    3. make this a primitive function. -> natually no callback.
+//    4. introduce a new method attribute. e.g. #atomic -> vm disables task switching or uses a lock to achieve atomicity.
+// >>>> i think it should not be atomic as a while. only logging output should be produeced at one go.
+
 		System logNl: "== BACKTRACE ==".
 
 		//ctx := thisContext.
 		ctx := thisContext sender. // skip the current context. skip to the caller context.
 		while (ctx notNil)
 		{
+			// if (ctx sender isNil) { break }. // to skip the fake top level call context...
+
 			if (ctx class == MethodContext) 
 			{
-				System logNl: (" " & ctx method owner name & ">>" & ctx method name &
-							   " (" & ctx method sourceFile & " " & (ctx method ipSourceLine: (ctx pc)) asString & ")"). 
-		// TODO: get location of the current pc and include it... (ctx method sourceLine: ctx pc) asString dump.
+				System log: " ";
+				       log: ctx method owner name;
+				       log: ">>";
+				       log: ctx method name;
+				       log: " (";
+				       log: ctx method sourceFile;
+				       log: " ";
+				       log: (ctx method ipSourceLine: (ctx pc)) asString;
+				       logNl: ")".
+				//System logNl: (" " & ctx method owner name & ">>" & ctx method name &
+				//			   " (" & ctx method sourceFile & " " & (ctx method ipSourceLine: (ctx pc)) asString & ")"). 
 			}.
 			// TODO: include blockcontext???
 			ctx := ctx sender.
