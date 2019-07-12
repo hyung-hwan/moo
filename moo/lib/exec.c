@@ -2262,9 +2262,7 @@ static moo_pfrc_t pf_method_get_source_file (moo_t* moo, moo_mod_t* mod, moo_ooi
 				MOO_ASSERT (moo, MOO_DBGI_GET_TYPE_CODE(di->_type) == MOO_DBGI_TYPE_CODE_FILE);
 
 				file_name = (const moo_ooch_t*)(di + 1);
-				moo_pushvolat (moo, &retv);
 				retv = moo_makestring(moo, file_name, moo_count_oocstr(file_name));
-				moo_popvolat (moo);
 				if (!retv) return MOO_PF_FAILURE;
 			}
 		}
