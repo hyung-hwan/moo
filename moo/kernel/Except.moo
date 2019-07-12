@@ -79,7 +79,6 @@ while (ctx notNil)
 		System logNl: (" " & ctx method owner name & ">>" & ctx method name &
 		               " (" & ctx method sourceFile & " " & (ctx method ipSourceLine: (ctx pc)) asString & ")"). 
 // TODO: get location of the current pc and include it... (ctx method sourceLine: ctx pc) asString dump.
-
 	}.
 	// TODO: include blockcontext???
 	ctx := ctx sender.

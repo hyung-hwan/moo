@@ -322,9 +322,7 @@ class(#pointer) CompiledMethod(Object)
 	    ntmprs,
 	    nargs,
 	    //code, <-- only if moo is built with MOO_USE_METHOD_TRAILER disable.
-	    dbi_text_offset,
 	    dbi_file_offset,
-	    source_line,
 	    dbi_method_offset.
 
 	method preamble
@@ -350,10 +348,6 @@ class(#pointer) CompiledMethod(Object)
 
 	method(#primitive) sourceText.
 	method(#primitive) sourceFile.
+	method(#primitive) sourceLine.
 	method(#primitive) ipSourceLine: ip.
-
-	method sourceLine
-	{
-		^self.source_line
-	}
 }

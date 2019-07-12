@@ -2518,10 +2518,10 @@ static MOO_INLINE int emit_byte_instruction (moo_t* moo, moo_oob_t code, const m
 	cc->mth.code.ptr[cc->mth.code.len] = code;
 	if (srcloc) 
 	{
-		/* store the distance from the method body start */
 		if (srcloc->file == cc->mth.code_start_loc.file && srcloc->line >= cc->mth.code_start_loc.line)
 		{
-			cc->mth.code.locptr[cc->mth.code.len] = srcloc->line - cc->mth.code_start_loc.line;
+			/*cc->mth.code.locptr[cc->mth.code.len] = srcloc->line - cc->mth.code_start_loc.line;*/
+			cc->mth.code.locptr[cc->mth.code.len] = srcloc->line;
 		}
 		else
 		{
@@ -6975,17 +6975,6 @@ static int add_compiled_method (moo_t* moo)
 	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->code, (moo_oop_t)code);
 #endif
 
-	if (cc->mth.code_start_loc.line <= MOO_SMOOI_MAX)
-	{
-		mth->source_line = MOO_SMOOI_TO_OOP(cc->mth.code_start_loc.line);
-	}
-	else
-	{
-		/* the source line is too large to be held as a SmallInteger.
-		 * Just set it to 0 to indicate that the information is not available */
-		mth->source_line = MOO_SMOOI_TO_OOP(0);
-	}
-
 	if (moo->dbgi)
 	{
 		moo_oow_t file_offset;
@@ -7005,9 +6994,10 @@ static int add_compiled_method (moo_t* moo)
 			/* TODO: warning */
 			file_offset = 0;
 		}
-		mth->dbi_file_offset = MOO_SMOOI_TO_OOP(file_offset);
+		mth->dbgi_file_offset = MOO_SMOOI_TO_OOP(file_offset);
 
-		if (moo_addmethodtodbgi(moo, file_offset, cc->dbgi_class_offset, cc->mth.name.ptr, cc->mth.code.locptr, cc->mth.code.len, &method_offset) <= -1)
+/* TODO: preserve source text... */
+		if (moo_addmethodtodbgi(moo, file_offset, cc->dbgi_class_offset, cc->mth.name.ptr, cc->mth.code_start_loc.line, cc->mth.code.locptr, cc->mth.code.len, MOO_NULL, 0, &method_offset) <= -1)
 		{
 			/* TODO: warning. no debug information about this method will be available */
 			method_offset = 0;
@@ -7016,13 +7006,8 @@ static int add_compiled_method (moo_t* moo)
 		{
 			method_offset = 0;
 		}
-		mth->dbi_method_offset = MOO_SMOOI_TO_OOP(method_offset);
+		mth->dbgi_method_offset = MOO_SMOOI_TO_OOP(method_offset);
 	}
-
-	/*TODO: preserve source??? mth->text = cc->mth.text
-the compiler must collect all source method string collected so far.
-need to write code to collect string.
-*/
 
 #if defined(MOO_DEBUG_COMPILER)
 	moo_decode (moo, mth, &cc->fqn);

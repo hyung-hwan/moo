@@ -555,9 +555,9 @@ struct moo_methsig_t
 };
 
 #if defined(MOO_USE_METHOD_TRAILER)
-#	define MOO_METHOD_NAMED_INSTVARS 11
+#	define MOO_METHOD_NAMED_INSTVARS 9
 #else
-#	define MOO_METHOD_NAMED_INSTVARS 12
+#	define MOO_METHOD_NAMED_INSTVARS 10
 #endif
 typedef struct moo_method_t moo_method_t;
 typedef struct moo_method_t* moo_oop_method_t;
@@ -585,10 +585,8 @@ struct moo_method_t
 	moo_oop_byte_t  code; /* ByteArray */
 #endif
 
-	moo_oop_t       dbi_text_offset; /* SmallInteger. Offset to source text in moo->dbgi. 0 if unavailable */
-	moo_oop_t       dbi_file_offset; /* SmallInteger. source file path that contains the definition of this method. offset from moo->dbgi. 0 if unavailable */
-	moo_oop_t       source_line; /* SmallInteger. line of the source file where the method definition begins. valid only if dbi_file_offset is greater than 0 */
-	moo_oop_t       dbi_method_offset; /* SmallInteger */
+	moo_oop_t       dbgi_file_offset; /* SmallInteger. source file path that contains the definition of this method. offset from moo->dbgi. 0 if unavailable */
+	moo_oop_t       dbgi_method_offset; /* SmallInteger */
 
 	/* == variable indexed part == */
 	moo_oop_t       literal_frame[1]; /* it stores literals */
@@ -984,22 +982,6 @@ struct moo_dbgi_file_t
 	/* ... file path here ... */
 };
 
-typedef struct moo_dbgi_text_t moo_dbgi_text_t;
-struct moo_dbgi_text_t
-{
-	moo_oow_t _type;
-	moo_oow_t _len; /* length of this record including the header and the text payload */
-	moo_oow_t _next; /* offset to a previous text */
-	/*moo_oow_t _file;
-	moo_oow_t _line; */
-	moo_oow_t text_len;
-	/*moo_oow_t class_name_start; <--- needed for compaction.
-	moo_oow_t method_name_start; <--- needed for compaction */
-	/* ... text ... */
-/* class name... */
-/* method name ... */
-};
-
 typedef struct moo_dbgi_class_t moo_dbgi_class_t;
 struct moo_dbgi_class_t
 {
@@ -1019,8 +1001,11 @@ struct moo_dbgi_method_t
 	moo_oow_t _next;
 	moo_oow_t _file;
 	moo_oow_t _class;
+	moo_oow_t start_line;
 	moo_oow_t code_loc_start; /* start offset from the payload beginning within this record */
 	moo_oow_t code_loc_len;
+	moo_oow_t text_start;
+	moo_oow_t text_len;
 	/* ... method name here ... */
 	/* ... code line numbers here ... */
 };

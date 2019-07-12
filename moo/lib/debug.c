@@ -169,39 +169,6 @@ int moo_addfiletodbgi (moo_t* moo, const moo_ooch_t* file_name, moo_oow_t* start
 	return 0;
 }
 
-int moo_addtexttodbgi (moo_t* moo, const moo_ooch_t* text_ptr, moo_oow_t text_len, moo_oow_t* start_offset)
-{
-	moo_oow_t text_bytes, text_bytes_aligned, req_bytes;
-	moo_dbgi_text_t* di;
-
-	if (!moo->dbgi) 
-	{
-		if (start_offset) *start_offset = MOO_NULL;
-		return 0; /* debug information is disabled*/
-	}
-
-	/* NOTE: there is no duplication check for text */
-
-	text_bytes = (text_len + 1) * MOO_SIZEOF(*text_ptr);
-	text_bytes_aligned = MOO_ALIGN_POW2(text_bytes, MOO_SIZEOF_OOW_T);
-	req_bytes = MOO_SIZEOF(moo_dbgi_text_t) + text_bytes_aligned;
-
-	di = (moo_dbgi_text_t*)secure_dbgi_space(moo, req_bytes);
-	if (!di) return -1;
-
-	di->_type = MOO_DBGI_MAKE_TYPE(MOO_DBGI_TYPE_CODE_TEXT, 0);
-	di->_len = req_bytes;
-	di->_next = moo->dbgi->_last_text;
-	di->text_len = text_len;
-	moo_copy_oochars ((moo_ooch_t*)(di + 1), text_ptr, text_len);
-
-	moo->dbgi->_last_text = moo->dbgi->_len;
-	moo->dbgi->_len += req_bytes;
-
-	if (start_offset) *start_offset = moo->dbgi->_last_text;
-	return 0;
-}
-
 int moo_addclasstodbgi (moo_t* moo, const moo_ooch_t* class_name, moo_oow_t file_offset, moo_oow_t file_line, moo_oow_t* start_offset)
 {
 	moo_oow_t name_len, name_bytes, name_bytes_aligned, req_bytes;
@@ -248,10 +215,11 @@ int moo_addclasstodbgi (moo_t* moo, const moo_ooch_t* class_name, moo_oow_t file
 	return 0;
 }
 
-int moo_addmethodtodbgi (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_offset, const moo_ooch_t* method_name, const moo_oow_t* code_loc_ptr, moo_oow_t code_loc_len, moo_oow_t* start_offset)
+int moo_addmethodtodbgi (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_offset, const moo_ooch_t* method_name, moo_oow_t start_line, const moo_oow_t* code_loc_ptr, moo_oow_t code_loc_len, const moo_ooch_t* text_ptr, moo_oow_t text_len, moo_oow_t* start_offset)
 {
-	moo_oow_t name_len, name_bytes, name_bytes_aligned, code_loc_bytes, code_loc_bytes_aligned, req_bytes;
+	moo_oow_t name_len, name_bytes, name_bytes_aligned, code_loc_bytes, code_loc_bytes_aligned, text_bytes, text_bytes_aligned, req_bytes;
 	moo_dbgi_method_t* di;
+	moo_uint8_t* curptr;
 
 	if (!moo->dbgi) return 0; /* debug information is disabled*/
 
@@ -260,7 +228,9 @@ int moo_addmethodtodbgi (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_offs
 	name_bytes_aligned = MOO_ALIGN_POW2(name_bytes, MOO_SIZEOF_OOW_T);
 	code_loc_bytes = code_loc_len * MOO_SIZEOF(*code_loc_ptr);
 	code_loc_bytes_aligned = MOO_ALIGN_POW2(code_loc_bytes, MOO_SIZEOF_OOW_T);
-	req_bytes = MOO_SIZEOF(moo_dbgi_method_t) + name_bytes_aligned + code_loc_bytes_aligned;
+	text_bytes = text_len * MOO_SIZEOF(*text_ptr);
+	text_bytes_aligned = MOO_ALIGN_POW2(text_bytes, MOO_SIZEOF_OOW_T);
+	req_bytes = MOO_SIZEOF(moo_dbgi_method_t) + name_bytes_aligned + code_loc_bytes_aligned + text_bytes_aligned;
 
 	di = (moo_dbgi_method_t*)secure_dbgi_space(moo, req_bytes);
 	if (!di) return -1;
@@ -270,11 +240,23 @@ int moo_addmethodtodbgi (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_offs
 	di->_next = moo->dbgi->_last_method;
 	di->_file = file_offset;
 	di->_class = class_offset;
+	di->start_line = start_line;
 	di->code_loc_start = name_bytes_aligned;
 	di->code_loc_len = code_loc_len;
+	di->text_start = name_bytes_aligned + code_loc_bytes_aligned;
+	di->text_len = text_len;
 
-	moo_copy_oocstr ((moo_ooch_t*)(di + 1), name_len + 1, method_name);
-	MOO_MEMCPY ((moo_uint8_t*)(di + 1) + name_bytes_aligned, code_loc_ptr, code_loc_bytes);
+	curptr = (moo_uint8_t*)(di + 1);
+	moo_copy_oocstr ((moo_ooch_t*)curptr, name_len + 1, method_name);
+
+	curptr += name_bytes_aligned;
+	MOO_MEMCPY (curptr, code_loc_ptr, code_loc_bytes);
+
+	if (text_len > 0)
+	{
+		curptr += code_loc_bytes_aligned;
+		moo_copy_oochars ((moo_ooch_t*)curptr, text_ptr, text_len);
+	}
 
 	moo->dbgi->_last_method = moo->dbgi->_len;
 	moo->dbgi->_len += req_bytes;
