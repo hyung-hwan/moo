@@ -313,8 +313,6 @@ class UndefinedObject(Apex)
 	}
 }
 
-
-
 extend Error
 {
 	/* ----------------------------
@@ -343,6 +341,7 @@ extend Error
 
 	method(#primitive) asString.
 
+/* -----------------------
 	method signal
 	{
 		| exctx exblk retval actpos ctx |
@@ -367,17 +366,8 @@ extend Error
 		// -----------------------------------------------------------------
 		//thisContext unwindTo: nil return: nil.
 		//thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
-		
-// TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
-System logNl: "== BACKTRACE ==".
-ctx := thisContext.
-while (ctx notNil)
-{
-	if (ctx class == MethodContext) { System logNl: (" " & ctx method owner name & ">>" & ctx method name) }.
-	// TODO: include blockcontext???
-	ctx := ctx sender.
-}.
-System logNl: "== END OF BACKTRACE ==".
+
+		System backtrace.
 
 		thisContext unwindTo: (thisProcess initialContext) return: nil.
 		("### ERROR NOT HANDLED #### " & self class name & " - " & self asString) dump.
@@ -386,4 +376,5 @@ System logNl: "== END OF BACKTRACE ==".
 		//Processor activeProcess terminate.
 		thisProcess terminate.
 	}
+---------------------- */
 }

@@ -2228,7 +2228,7 @@ static MOO_INLINE moo_dbgi_method_t* get_dbgi_method (moo_t* moo, moo_oop_method
 		if (dbgi_method_offset > 0)
 		{
 			MOO_ASSERT (moo, dbgi_method_offset < moo->dbgi->_len);
-			di = (moo_dbgi_method_t*)&((moo_uint8_t*)moo->dbgi)[dbgi_method_offset];
+			di = (moo_dbgi_method_t*)MOO_DBGI_GET_DATA(moo, dbgi_method_offset);
 			MOO_ASSERT (moo, MOO_DBGI_GET_TYPE_CODE(di->_type) == MOO_DBGI_TYPE_CODE_METHOD);
 		}
 	}
@@ -2258,7 +2258,7 @@ static moo_pfrc_t pf_method_get_source_file (moo_t* moo, moo_mod_t* mod, moo_ooi
 				const moo_ooch_t* file_name;
 
 				MOO_ASSERT (moo, dbgi_file_offset < moo->dbgi->_len);
-				di = (moo_dbgi_file_t*)&((moo_uint8_t*)moo->dbgi)[dbgi_file_offset];
+				di = (moo_dbgi_file_t*)MOO_DBGI_GET_DATA(moo, dbgi_file_offset);
 				MOO_ASSERT (moo, MOO_DBGI_GET_TYPE_CODE(di->_type) == MOO_DBGI_TYPE_CODE_FILE);
 
 				file_name = (const moo_ooch_t*)(di + 1);
@@ -2300,7 +2300,6 @@ static moo_pfrc_t pf_method_get_ip_source_line (moo_t* moo, moo_mod_t* mod, moo_
 			retv = moo_oowtoint(moo, code_loc_ptr[ipv]);
 			if (!retv) return MOO_PF_FAILURE;
 		}
-/* TODO: security check for data corruption? check if the ipv offset and the size calcualted doesn't exceed di->_len... */
 	}
 
 	MOO_STACK_SETRET (moo, nargs, retv);

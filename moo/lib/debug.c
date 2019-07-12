@@ -241,9 +241,9 @@ int moo_addmethodtodbgi (moo_t* moo, moo_oow_t file_offset, moo_oow_t class_offs
 	di->_file = file_offset;
 	di->_class = class_offset;
 	di->start_line = start_line;
-	di->code_loc_start = name_bytes_aligned;
+	di->code_loc_start = name_bytes_aligned; /* distance from the beginning of the variable payload */
 	di->code_loc_len = code_loc_len;
-	di->text_start = name_bytes_aligned + code_loc_bytes_aligned;
+	di->text_start = name_bytes_aligned + code_loc_bytes_aligned; /* distance from the beginning of the variable payload */
 	di->text_len = text_len;
 
 	curptr = (moo_uint8_t*)(di + 1);

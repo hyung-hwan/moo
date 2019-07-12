@@ -973,6 +973,8 @@ typedef enum moo_dbgi_type_t moo_dbgi_type_t;
 #define MOO_DBGI_GET_TYPE_CODE(type) ((type) >> 8)
 #define MOO_DBGI_GET_TYPE_FLAGS(type) ((type) & 0xFF)
 
+#define MOO_DBGI_GET_DATA(moo, offset) ((moo_uint8_t*)(moo)->dbgi + (offset))
+
 typedef struct moo_dbgi_file_t moo_dbgi_file_t;
 struct moo_dbgi_file_t
 {

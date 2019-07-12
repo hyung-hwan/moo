@@ -69,21 +69,7 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 		//thisContext unwindTo: nil return: nil.
 		//thisContext unwindTo: (Processor activeProcess initialContext) return: nil.
 
-// TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE... MOVE THIS TO  System>>backtrace and skip the first method context for backtrace itself.
-System logNl: "== BACKTRACE ==".
-ctx := thisContext.
-while (ctx notNil)
-{
-	if (ctx class == MethodContext) 
-	{
-		System logNl: (" " & ctx method owner name & ">>" & ctx method name &
-		               " (" & ctx method sourceFile & " " & (ctx method ipSourceLine: (ctx pc)) asString & ")"). 
-// TODO: get location of the current pc and include it... (ctx method sourceLine: ctx pc) asString dump.
-	}.
-	// TODO: include blockcontext???
-	ctx := ctx sender.
-}.
-System logNl: "== END OF BACKTRACE ==".
+		System backtrace.
 
 		thisContext unwindTo: (thisProcess initialContext) return: nil.
 		("### EXCEPTION NOT HANDLED(Exception) #### " & self class name & " - " & self messageText) dump.
@@ -540,17 +526,7 @@ extend Apex
 		| class_name ctx |
 		class_name := if (self class == Class) { self name } else { self class name }.
 
-// TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE...
-System logNl: "== BACKTRACE ==".
-ctx := thisContext.
-while (ctx notNil)
-{
-	if (ctx class == MethodContext) { System logNl: (" " & ctx method owner name & ">>" & ctx method name) }.
-	// TODO: include blockcontext???
-	ctx := ctx sender.
-}.
-System logNl: "== END OF BACKTRACE ==".
-
+		System backtrace.
 
 		NoSuchMessageException signal: (message_name & " not understood by " & class_name).
 	}

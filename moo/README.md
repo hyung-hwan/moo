@@ -81,3 +81,14 @@ while (true)
 1 to: 20 do: [:count | ... ].
 ~~~
 
+
+### Exception handling
+Exception signal.
+Exception signal: "message".
+
+[ ... ] on: Exception do: [:ex | ... ].
+
+ex retry.
+ex resume.
+ex resume: value.
+ex return: value.

@@ -214,6 +214,28 @@ TODO: how to pass all variadic arguments to another variadic methods???
 		^self atLevel: System.Log.INFO logNl: message and: message2.
 	}
 
+	method(#class) backtrace
+	{
+		| ctx |
+		// TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE... MOVE THIS TO  System>>backtrace and skip the first method context for backtrace itself.
+		System logNl: "== BACKTRACE ==".
+
+		//ctx := thisContext.
+		ctx := thisContext sender. // skip the current context. skip to the caller context.
+		while (ctx notNil)
+		{
+			if (ctx class == MethodContext) 
+			{
+				System logNl: (" " & ctx method owner name & ">>" & ctx method name &
+							   " (" & ctx method sourceFile & " " & (ctx method ipSourceLine: (ctx pc)) asString & ")"). 
+		// TODO: get location of the current pc and include it... (ctx method sourceLine: ctx pc) asString dump.
+			}.
+			// TODO: include blockcontext???
+			ctx := ctx sender.
+		}.
+		System logNl: "== END OF BACKTRACE ==".
+	}
+
 	/* nsdic access */
 	method(#class) at: key
 	{
