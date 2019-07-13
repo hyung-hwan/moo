@@ -68,6 +68,10 @@ class MyClass(Object)
 ### Flow Control
 ~~~
 k := if (i < 20) { 30 } else { 40 }.
+
+if (a < 10) { ... }
+elsif (a < 20) { ... }
+else { ... }.
 ~~~
 
 ~~~
@@ -75,10 +79,27 @@ while (true)
 {
 
 }.
+
+until (a > b)
+{
+}.
+
+do
+{
+} while (a > b).
+
+do
+{
+} until (a > b).
+
+[a > b] whileTrue: [ ... ].
+[a > b] whileFalse: [ ... ].
 ~~~
 
 ~~~
 1 to: 20 do: [:count | ... ].
+1 to: 10 by: 3 do: [:count | ... ].
+30 timesRepeat: [ ... ].
 ~~~
 
 
@@ -92,3 +113,34 @@ ex retry.
 ex resume.
 ex resume: value.
 ex return: value.
+
+### Type checking
+
+Type checking not implemented yet.
+
+~~~
+class SampleClass(Object)
+{
+	method run => Integer
+	{
+	}
+
+	method execute((Integer)a,(Integer)b) => Integer
+	{
+	}
+
+	method handle: (Object)this with: (a Integer)care => Integer
+	{
+	}
+}
+~~~
+
+TODO: How to specify return type of a block? or How to specify parameter type to a block?
+      How to evaluate a block type-safely?
+~~~
+[ => Integer :(Integer)a :(Integer)b | 
+
+	| (Integer)c (Integer)d }
+	a + b 
+] with: 20 with: 10
+~~~
