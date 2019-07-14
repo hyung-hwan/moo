@@ -114,6 +114,33 @@ ex resume.
 ex resume: value.
 ex return: value.
 
+### goto
+
+~~~
+goto jump_label.
+
+jump_label::
+	a + b;
+~~~
+
+useful to make a block return
+can i deprecate the ^^ operator?
+
+~~~
+[ 1 + 2. goto r. 3 + 4. r::]
+~~~
+
+goto must not cross the boundary of the block context.
+
+~~~
+this is invalid. cannot jump into a block from outside 
+and vice versa.
+ goto x.
+ [ x:: 
+   1 + 2 ].
+~~~
+
+
 ### Type checking
 
 Type checking not implemented yet.
@@ -138,9 +165,34 @@ class SampleClass(Object)
 TODO: How to specify return type of a block? or How to specify parameter type to a block?
       How to evaluate a block type-safely?
 ~~~
-[ => Integer :(Integer)a :(Integer)b | 
-
+[ :(Integer)a :(Integer)b => Integer | 
 	| (Integer)c (Integer)d }
 	a + b 
 ] with: 20 with: 10
+
+the method value is a variadic method. and it is a primitive.
+[ :a :b | a + b ](1, 20) <---- syntax sugar for [:a :b | a + b] value(1, 20).
+
+[:(Integer)a :(Integer)b => Integer | a + b ] value("kkkk", 20) 
+ -> the first argument violates the expected type.
+ -> argument types to a method is defined in the method signature.
+ -> but the block argument types are specified in the block itself.
+ -> so it doesn't seem natural to achieve type safety without treating 'value' specially.
+ -> create a shorthand expression for 'value' [:(Integer)a :(Integer)b => (Integer) | a + b ](1, 2)
+ -> ] followed by ( ===> shorthand expression for value.
+ -> it looks more sensible to treat this () specially
+ 
+what looks better as a shorthand expression for block value?
+ [ :a :b | a + b ](10, 20)
+ [ 10 + 20 ]() // no arguments
+ [ :a :b | a + b ]->(10, 20). // -> cannot form a valid binary selector. must exclude it from binary selector patterns
+ [ 10 + 20 ]->() // if no arugments are required.
+ 
+ continuation?
+ | a |
+ a->()? block value?
+ 
+ | (Block)a |
+ a->()? block value?
+ 
 ~~~
