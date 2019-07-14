@@ -60,6 +60,7 @@
 #		undef MOO_SIZEOF_LONG
 #		define MOO_SIZEOF_LONG MOO_SIZEOF_INT
 #	endif
+#	include <emscripten/emscripten.h> /* EMSCRIPTEN_KEEPALIVE */
 #endif
 
 #if defined(__GNUC__) && defined(__arm__)  && !defined(__ARM_ARCH)
@@ -777,7 +778,11 @@ typedef struct moo_t moo_t;
  * MACROS THAT CHANGES THE BEHAVIORS OF THE C COMPILER/LINKER
  * =========================================================================*/
 
-#if defined(__BORLANDC__) && (__BORLANDC__ < 0x500)
+#if defined(EMSCRIPTEN)
+#	define MOO_IMPORT
+#	define MOO_EXPORT EMSCRIPTEN_KEEPALIVE
+#	define MOO_PRIVATE
+#elif defined(__BORLANDC__) && (__BORLANDC__ < 0x500)
 #	define MOO_IMPORT
 #	define MOO_EXPORT
 #	define MOO_PRIVATE

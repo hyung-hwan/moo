@@ -1,0 +1,77 @@
+Temporary notes on how to build libmoo to web assembly with emscripten.
+
+#### How to Build
+ mkdir -p bld/emcc
+ cd blc/emcc
+ emconfigure ../../configure --prefix=${HOME}/xxx-emcc --disable-shared --enable-dynamic-module --disable-mod-x11 --disable-mod-con --disable-mod-sck CFLAGS="-Wall -O2 -g"
+ emmake make
+ ##emcc lib/.libs/libmoo.a -s WASM=1 -s EXPORT_ALL=1 -s LINKABLE=1 -o libmoo.js
+ #if you have defined MOO_EXPORT as EMSCRIPTEN_KEEPALIVE, the following will do
+ ##emcc lib/.libs/libmoo.a -s WASM=1 -s -s LINKABLE=1 -o libmoo.js
+ ###emcc lib/.libs/libmoo.a lib/.libs/libmoox.a -s WASM=1 -s -s LINKABLE=1 -o libmoo.js
+ emcc lib/.libs/libmoo.a lib/.libs/libmoox.a -s WASM=1 -s -s LINKABLE=1 -s EXTRA_EXPORTED_RUNTIME_METHODS="['ccall']" -o libmoo.js
+
+#### moo.worker.js
+
+self.importScripts('libmoo.js');
+self.__ready = false;
+
+Module.onRuntimeInitialized = function()
+{
+        self.__ready = true;
+        console.log ('runtime is ready now...');
+}
+
+const libmoo = {
+        open: Module.cwrap('moo_openstd', 'number', ['number', 'number', 'number']),
+        close: Module.cwrap('moo_close', '', ['number'])
+};
+
+self.onmessage = function (evt) {
+        var objData = evt.data;
+
+        var cmd = objData.cmd;
+        if (cmd === "test-moo")
+        {
+                //var x = Module.ccall('moo_openstd', [0, null, null]);
+                //Module.ccall('moo_close', x);
+
+                if (self.__ready)
+                {
+                        var moo = libmoo.open(0, null, null);
+                        self.postMessage ('XXXXXXXXXXXXXXXx - ' + moo);
+                        libmoo.close (moo);
+                }
+        } 
+}
+
+#### moo.html
+
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /></head>
+
+<body>
+    <input type="button" value="Test" onclick="do_test();" />
+
+
+    <script type="text/javascript">
+        var g_WebWorker = new Worker("moo.worker.js");
+
+        //if (typeof(WebAssembly) === 'undefined')
+        //{
+        //      alert ('No web assebly support in this browser');
+        //}
+
+        g_WebWorker.onerror = function (evt) { console.log(`Error from Web Worker: ${evt.message}`); }
+        g_WebWorker.onmessage = function (evt) { console.log(`Message from the Web Worker:\n\n ${evt.data}`); }
+
+        function do_test() {
+                g_WebWorker.postMessage({ "cmd": "test-moo", "data": "nothing as of now.." });
+        }
+    </script>
+
+
+</body>
+</html>
+
