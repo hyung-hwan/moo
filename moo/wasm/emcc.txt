@@ -1,5 +1,8 @@
 Temporary notes on how to build libmoo to web assembly with emscripten.
 
+#### emscriptten APIS to look into
+  emscripten_set_main_loop();
+
 #### How to Build
  mkdir -p bld/emcc
  cd blc/emcc
@@ -9,7 +12,10 @@ Temporary notes on how to build libmoo to web assembly with emscripten.
  #if you have defined MOO_EXPORT as EMSCRIPTEN_KEEPALIVE, the following will do
  ##emcc lib/.libs/libmoo.a -s WASM=1 -s -s LINKABLE=1 -o libmoo.js
  ###emcc lib/.libs/libmoo.a lib/.libs/libmoox.a -s WASM=1 -s -s LINKABLE=1 -o libmoo.js
- emcc lib/.libs/libmoo.a lib/.libs/libmoox.a -s WASM=1 -s -s LINKABLE=1 -s EXTRA_EXPORTED_RUNTIME_METHODS="['ccall']" -o libmoo.js
+ emcc lib/.libs/libmoo.a lib/.libs/libmoox.a -s WASM=1 -s -s LINKABLE=1 -s EXTRA_EXPORTED_RUNTIME_METHODS="['ccall','cwrap']" -o libmoo.js
+
+ ## if defined some javascript functions in moo.cb.js...
+ emcc -Wall -O2 -g lib/.libs/libmoo.a ws.c -DMOO_HAVE_CFG_H -Ilib -I../../lib -s WASM=1 -s -s LINKABLE=1 -s EXTRA_EXPORTED_RUNTIME_METHODS="['ccall','cwrap']" -o libmoo.js --pre-js moo.cb.js
 
 #### moo.worker.js
 
@@ -56,7 +62,8 @@ self.onmessage = function (evt) {
 
 
     <script type="text/javascript">
-        var g_WebWorker = new Worker("moo.worker.js");
+        //var g_WebWorker = new Worker("moo.worker.js");
+        var g_WebWorker = new SharedWorker("moo.worker.js");
 
         //if (typeof(WebAssembly) === 'undefined')
         //{
@@ -74,4 +81,6 @@ self.onmessage = function (evt) {
 
 </body>
 </html>
+
+
 

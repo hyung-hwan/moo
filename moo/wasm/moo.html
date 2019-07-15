@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /></head>
+
+<body>
+    <input type="button" value="Test" onclick="do_test();" />
+
+
+    <script type="text/javascript">
+        var g_WebWorker = new Worker("moo.worker.js");
+
+        //if (typeof(WebAssembly) === 'undefined')
+        //{
+        //      alert ('No web assebly support in this browser');
+        //}
+
+        g_WebWorker.onerror = function (evt) { console.log(`Error from Web Worker: ${evt.message}`); }
+        g_WebWorker.onmessage = function (evt) { console.log(`Message from the Web Worker:\n\n ${evt.data}`); }
+
+        function do_test() {
+                g_WebWorker.postMessage({ "cmd": "test-moo", "data": "nothing as of now.." });
+        }
+    </script>
+
+
+</body>
+</html>
+

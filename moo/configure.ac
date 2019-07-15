@@ -868,6 +868,7 @@ AC_CONFIG_FILES([
 	mod/Makefile 
 	bin/Makefile
 	t/Makefile
+	wasm/Makefile
 ])
 AC_OUTPUT
 

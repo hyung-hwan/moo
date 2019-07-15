@@ -10,7 +10,7 @@ else
 SUBDIRS += lib mod bin
 endif
 
-DIST_SUBDIRS = $(SUBDIRS) t
+DIST_SUBDIRS = $(SUBDIRS) t wasm
 
 distclean-local:
 	@rm -rf $(top_srcdir)/autom4te.cache
