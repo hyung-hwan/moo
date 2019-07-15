@@ -30,16 +30,25 @@ static moo_mmgr_t sys_mmgr =
 /* ========================================================================= */
 
 extern void jsGetTime (moo_ntime_t* now);
+extern void jsSleep (const moo_ntime_t* now);
 
 static void vm_gettime (moo_t* moo, moo_ntime_t* now)
 {
 	jsGetTime(now);
 }
+static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
+{
+	jsSleep (dur);
+}
+
 
 EMSCRIPTEN_KEEPALIVE int open_moo (void)
 {
 	moo_ntime_t now;
 	vm_gettime (NULL, &now);
+	now.sec = 1;
+	now.nsec = 500;
+	vm_sleep (NULL, &now);
 	return now.sec;
 #if 0
 	moo_t* moo;
