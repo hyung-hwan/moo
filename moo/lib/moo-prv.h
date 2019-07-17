@@ -315,7 +315,7 @@ enum moo_iotok_type_t
 	MOO_IOTOK_IDENT,
 	MOO_IOTOK_IDENT_DOTTED,
 	MOO_IOTOK_BINSEL,
-	MOO_IOTOK_KEYWORD,
+	MOO_IOTOK_KEYWORD, /* word ending with : such as basicAt:*/
 	MOO_IOTOK_ASSIGN,  /* := */
 	MOO_IOTOK_COLON,   /* : */
 	MOO_IOTOK_DHASH,   /* ## */

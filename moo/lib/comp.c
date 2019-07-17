@@ -984,7 +984,6 @@ static MOO_INLINE int is_token_keyword (moo_t* moo, voca_id_t id)
 	return TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD && does_token_name_match(moo, id);
 }
 
-
 static MOO_INLINE int add_token_str (moo_t* moo, const moo_ooch_t* ptr, moo_oow_t len)
 {
 	moo_oocs_t tmp;
@@ -4819,7 +4818,7 @@ static int compile_block_expression (moo_t* moo)
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_oow_t jump_inst_pos;
 	moo_oow_t saved_tmpr_count, saved_tmprs_len;
-	moo_oow_t block_arg_count, block_tmpr_count;
+	moo_oow_t block_arg_count, block_tmpr_count, code_start;
 	moo_ioloc_t block_loc, colon_loc, tmpr_loc;
 
 	/*
@@ -4931,6 +4930,7 @@ static int compile_block_expression (moo_t* moo)
 	if (emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP, &block_loc) <= -1) return -1;
 
 	/* compile statements inside a block */
+#if 0
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK)
 	{
 		/* the block is empty */
@@ -4938,25 +4938,83 @@ static int compile_block_expression (moo_t* moo)
 	}
 	else 
 	{
+		int empty = 1, n;
+
 		while (TOKEN_TYPE(moo) != MOO_IOTOK_EOF)
 		{
-			if (compile_block_statement(moo) <= -1) return -1;
-
-			if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
-			else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
+			n = compile_block_statement(moo);
+			if (n <= -1) return -1;
+			if (n == 8888)
 			{
-				moo_ioloc_t period_loc = *TOKEN_LOC(moo);
-				GET_TOKEN (moo);
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
-				if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, &period_loc) <= -1) return -1;
+				/* compile_block_statement() processed non-statement item like a jump label. */
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) 
+				{
+					if (empty && emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) return -1;
+					break;
+				}
 			}
 			else
 			{
-				moo_setsynerr (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
-				return -1;
+				/* a proper statement has been processed in compile_block_statemnt */
+				empty = 0;
+
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
+				else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
+				{
+					moo_ioloc_t period_loc = *TOKEN_LOC(moo);
+					GET_TOKEN (moo);
+					if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
+					if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, &period_loc) <= -1) return -1;
+				}
+				else
+				{
+					moo_setsynerr (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					return -1;
+				}
 			}
 		}
 	}
+#else
+	code_start = cc->mth.code.len;
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACK)
+	{
+		while (TOKEN_TYPE(moo) != MOO_IOTOK_EOF)
+		{
+			int n;
+
+			n = compile_block_statement(moo);
+			if (n <= -1) return -1;
+			if (n == 8888)
+			{
+				/* compile_block_statement() processed non-statement item like a jump label. */
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
+			}
+			else
+			{
+				/* a proper statement has been processed in compile_block_statemnt */
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
+				else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
+				{
+					moo_ioloc_t period_loc = *TOKEN_LOC(moo);
+					GET_TOKEN (moo);
+					if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
+					if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, &period_loc) <= -1) return -1;
+				}
+				else
+				{
+					moo_setsynerr (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					return -1;
+				}
+			}
+		}
+	}
+
+	if (cc->mth.code.len == code_start)
+	{
+		/* the block is empty */
+		if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) return -1;
+	}
+#endif
 
 	if (emit_byte_instruction(moo, BCODE_RETURN_FROM_BLOCK, TOKEN_LOC(moo)) <= -1) return -1;
 
@@ -5996,20 +6054,30 @@ static int compile_braced_block (moo_t* moo)
 	{
 		while (TOKEN_TYPE(moo) != MOO_IOTOK_EOF)
 		{
-			if (compile_block_statement(moo) <= -1) return -1;
+			int n;
 
-			if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
-			else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
+			n = compile_block_statement(moo);
+			if (n <= -1) return -1;
+			if (n == 8888)
 			{
-				moo_ioloc_t period_loc = *TOKEN_LOC(moo);
-				GET_TOKEN (moo);
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
-				if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, &period_loc) <= -1) return -1;
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE)  break;
 			}
 			else
 			{
-				moo_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
-				return -1;
+
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
+				else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
+				{
+					moo_ioloc_t period_loc = *TOKEN_LOC(moo);
+					GET_TOKEN (moo);
+					if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
+					if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, &period_loc) <= -1) return -1;
+				}
+				else
+				{
+					moo_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					return -1;
+				}
 			}
 		}
 	}
@@ -6652,6 +6720,14 @@ static int compile_special_statement (moo_t* moo)
 			inject_continue_to_loop(moo, &start_loc): /* in a do-while loop, the position to the conditional is not known yet */
 			emit_backward_jump_instruction(moo, BCODE_JUMP_BACKWARD_0, cc->mth.code.len - cc->mth.loop->startpos, &start_loc);
 	}
+	else if (TOKEN_TYPE(moo) == MOO_IOTOK_KEYWORD)
+	{
+		/* this is a label */
+		/* remember the label location with the block depth */
+MOO_DEBUG2 (moo, "LABEL => %.*js\n", TOKEN_NAME_LEN(moo), TOKEN_NAME_PTR(moo));
+		GET_TOKEN (moo);
+		return 8888; /* indicates that non-statement has been seen and processed.*/
+	}
 
 	return 9999; /* to indicate that no special statement has been seen and processed */
 }
@@ -6744,24 +6820,36 @@ static int compile_method_statements (moo_t* moo)
 	{
 		do
 		{
-			if (compile_method_statement(moo) <= -1) return -1;
+			int n;
 
-			if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD) 
+			n = compile_method_statement(moo);
+			if (n <= -1) return -1;
+			if (n == 8888)
 			{
-				/* period after a statement */
-				GET_TOKEN (moo);
-
+				/* a non-statement such as label has been processed */
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_EOF ||
 				    TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
 			}
 			else
 			{
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_EOF ||
-				    TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
+				/* a proper statement has been processed */
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD) 
+				{
+					/* period after a statement */
+					GET_TOKEN (moo);
 
-				/* not a period, EOF, nor } */
-				moo_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
-				return -1;
+					if (TOKEN_TYPE(moo) == MOO_IOTOK_EOF ||
+					    TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
+				}
+				else
+				{
+					if (TOKEN_TYPE(moo) == MOO_IOTOK_EOF ||
+					    TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
+
+					/* not a period, EOF, nor } */
+					moo_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					return -1;
+				}
 			}
 		}
 		while (1);
