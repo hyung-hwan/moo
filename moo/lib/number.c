@@ -68,7 +68,7 @@ moo_oop_t moo_makefpdec (moo_t* moo, moo_oop_t value, moo_ooi_t scale)
 	moo_oop_fpdec_t fpdec;
 
 	MOO_ASSERT (moo, moo_isint(moo, value));
-	if (scale <= 0) return value; /* if scale is 0 or less, return the value as it it */
+	if (scale <= 0) return value; /* if scale is 0 or less, return the value as it is */
 
 	if (scale > MOO_SMOOI_MAX)
 	{

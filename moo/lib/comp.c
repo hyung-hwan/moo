@@ -1549,6 +1549,7 @@ static int get_numlit (moo_t* moo, int negated)
 	{
 		moo_iolxc_t period;
 		moo_oow_t scale;
+		moo_iotok_type_t tok_type;
 
 	fixed_point:
 		scale = 0;
@@ -1563,6 +1564,12 @@ static int get_numlit (moo_t* moo, int negated)
 		{
 			unget_char (moo, &moo->c->lxc);
 			unget_char (moo, &period);
+			if (xscale <= 0) 
+			{
+				/* * restore the token type. it's not prefixed with 'p' like 20p.
+				 * the number is followed by a terminating period rather than a decimal point. */
+				SET_TOKEN_TYPE(moo, MOO_IOTOK_INTLIT);
+			}
 		}
 		else
 		{
@@ -4978,6 +4985,8 @@ static int compile_block_expression (moo_t* moo)
 	code_start = cc->mth.code.len;
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACK)
 	{
+		moo_oow_t pop_stacktop_pos = 0;
+
 		while (TOKEN_TYPE(moo) != MOO_IOTOK_EOF)
 		{
 			int n;
@@ -4987,7 +4996,13 @@ static int compile_block_expression (moo_t* moo)
 			if (n == 8888)
 			{
 				/* compile_block_statement() processed non-statement item like a jump label. */
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) 
+				{
+					/* eliminate BCODE_POP_STACKTOP produced in the else block below
+					 * becuase the non-steatemnt item is the last item before the closing bracket */
+					if (pop_stacktop_pos > 0) eliminate_instructions (moo, pop_stacktop_pos, cc->mth.code.len - 1);
+					break;
+				}
 			}
 			else
 			{
@@ -4998,6 +5013,8 @@ static int compile_block_expression (moo_t* moo)
 					moo_ioloc_t period_loc = *TOKEN_LOC(moo);
 					GET_TOKEN (moo);
 					if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
+
+					pop_stacktop_pos = cc->mth.code.len;
 					if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, &period_loc) <= -1) return -1;
 				}
 				else
@@ -6052,6 +6069,8 @@ static int compile_braced_block (moo_t* moo)
 	code_start = cc->mth.code.len;
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
+		moo_oow_t pop_stacktop_pos = 0;
+
 		while (TOKEN_TYPE(moo) != MOO_IOTOK_EOF)
 		{
 			int n;
@@ -6060,7 +6079,14 @@ static int compile_braced_block (moo_t* moo)
 			if (n <= -1) return -1;
 			if (n == 8888)
 			{
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE)  break;
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) 
+				{
+					/* non-statement followed by the closing brace.
+					 * if there is a statement above the non-statement item, the POP_STACKSTOP is procuced.
+					 * it should be eliminated since the block should return the last evalulated value */
+					if (pop_stacktop_pos > 0) eliminate_instructions (moo, pop_stacktop_pos, cc->mth.code.len - 1);
+					break;
+				}
 			}
 			else
 			{
@@ -6071,6 +6097,8 @@ static int compile_braced_block (moo_t* moo)
 					moo_ioloc_t period_loc = *TOKEN_LOC(moo);
 					GET_TOKEN (moo);
 					if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
+
+					pop_stacktop_pos = cc->mth.code.len; /* remember the position of the last POP_STACKTOP for elimination */
 					if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, &period_loc) <= -1) return -1;
 				}
 				else
@@ -6537,16 +6565,16 @@ static int compile_method_expression (moo_t* moo, int pop)
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_IF || TOKEN_TYPE(moo) == MOO_IOTOK_IFNOT)
 	{
-		if (compile_if_expression (moo) <= -1) return -1;
+		if (compile_if_expression(moo) <= -1) return -1;
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_WHILE ||
 	         TOKEN_TYPE(moo) == MOO_IOTOK_UNTIL)
 	{
-		if (compile_while_expression (moo) <= -1) return -1;
+		if (compile_while_expression(moo) <= -1) return -1;
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_DO)
 	{
-		if (compile_do_while_expression (moo) <= -1) return -1;
+		if (compile_do_while_expression(moo) <= -1) return -1;
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT ||
 	         TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
@@ -6735,8 +6763,9 @@ MOO_DEBUG2 (moo, "LABEL => %.*js\n", TOKEN_NAME_LEN(moo), TOKEN_NAME_PTR(moo));
 static int compile_block_statement (moo_t* moo)
 {
 	/* compile_block_statement() is a simpler version of
-	 * of compile_method_statement(). it doesn't cater for
-	 * popping the stack top */
+	 * of compile_method_statement(). it doesn't care to
+	 * produce the instruction to pop the stack top by passing
+	 * 0 as the second argument to compile_method_expression(). */
 	int n;
 	n = compile_special_statement(moo);
 	if (n <= -1) return -1;

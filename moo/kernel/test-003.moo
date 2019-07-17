@@ -91,9 +91,10 @@ class MyObject(Object)
 			| tb |
 			tb := tc at: idx.
 			System log(System.Log.INFO, idx asString, (if (tb value) { " PASS" } else { " FAIL" }), "\n").
-/*a:
-b: c:*/
 		].
+	(if (true) { a: 10. b: 1p1000. 20000 }) dump.
+	[a: 10. b: 1000. ] value class dump.
+
 
 Exception signal: 'experiment with exception signalling'.
 

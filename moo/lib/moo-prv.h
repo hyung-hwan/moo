@@ -276,7 +276,7 @@
 enum moo_iotok_type_t
 {
 	MOO_IOTOK_EOF,
-	
+
 	MOO_IOTOK_CHARLIT,
 	MOO_IOTOK_STRLIT,
 	MOO_IOTOK_SYMLIT,
