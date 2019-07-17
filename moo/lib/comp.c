@@ -1549,7 +1549,6 @@ static int get_numlit (moo_t* moo, int negated)
 	{
 		moo_iolxc_t period;
 		moo_oow_t scale;
-		moo_iotok_type_t tok_type;
 
 	fixed_point:
 		scale = 0;
