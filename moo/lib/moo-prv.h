@@ -399,6 +399,22 @@ struct moo_loop_t
 	moo_loop_t* next;
 };
 
+typedef struct moo_label_t moo_label_t;
+struct moo_label_t
+{
+	moo_ooch_t* name;
+	moo_oow_t level;
+	moo_label_t* next;
+};
+
+typedef struct moo_goto_t moo_goto_t;
+struct moo_goto_t
+{
+	moo_ooch_t* label_name;
+	moo_oow_t level;
+	moo_goto_t* next;
+};
+
 typedef struct moo_oopbuf_t moo_oopbuf_t;
 struct moo_oopbuf_t
 {
@@ -531,6 +547,9 @@ struct moo_method_data_t
 
 	/* information about loop constructs */
 	moo_loop_t* loop;
+
+	moo_goto_t* _goto;
+	moo_label_t* _label;
 
 	/* byte code */
 	moo_code_t code;

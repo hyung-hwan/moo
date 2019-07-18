@@ -6690,6 +6690,38 @@ oops:
 	return -1;
 }
 
+static int add_label (moo_t* moo, const moo_oocs_t* name)
+{
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_label_t* lab;
+	moo_ooch_t* nptr;
+
+/* TODO: name must not have trailing colon? */
+	lab = cc->mth._label;
+	while (lab)
+	{
+		nptr = (moo_ooch_t*)(lab + 1);
+		if (moo_comp_oochars_oocstr(name->ptr, name->len, nptr) == 0)
+		{
+			/* duplicate label name */
+/* TODO: there is a duplicate label... */
+			return -1;
+		}
+	}
+
+	lab = (moo_label_t*)moo_allocmem(moo, MOO_SIZEOF(*lab) + (name->len + 1) * MOO_SIZEOF(moo_ooch_t));
+	if (!lab) return -1;
+
+	nptr = (moo_ooch_t*)(lab + 1);
+	moo_copy_oochars (nptr, name->ptr, name->len);
+	nptr[name->len] = '\0';
+
+	lab->next = cc->mth._label;
+	cc->mth._label = lab;
+
+	return 0;
+}
+
 static int compile_special_statement (moo_t* moo)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
@@ -6752,6 +6784,7 @@ static int compile_special_statement (moo_t* moo)
 		/* this is a label */
 		/* remember the label location with the block depth */
 MOO_DEBUG2 (moo, "LABEL => %.*js\n", TOKEN_NAME_LEN(moo), TOKEN_NAME_PTR(moo));
+		/* TODO: if (add_label(moo, TOKEN_NAME(moo), level???) <= -1) return -1; */
 		GET_TOKEN (moo);
 		return 8888; /* indicates that non-statement has been seen and processed.*/
 	}
