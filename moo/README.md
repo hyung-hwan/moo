@@ -70,7 +70,14 @@ class MyClass(Object)
 k := if (i < 20) { 30 } else { 40 }.
 
 if (a < 10) { ... }
-elsif (a < 20) { ... }
+elif (a < 20) { ... }
+else { ... }.
+
+ifnot (i < 20) { 30 } else { 40 }.
+nif (i < 20) { 30 } else { 40 }.
+
+if (a < 10) { .. } 
+elifnot (a > 20) { ... }
 else { ... }.
 ~~~
 

@@ -2279,7 +2279,7 @@ static moo_pfrc_t pf_method_get_ip_source_line (moo_t* moo, moo_mod_t* mod, moo_
 	moo_oop_method_t rcv;
 	moo_oop_t ip;
 	moo_dbgi_method_t* di;
-	moo_oow_t retv = MOO_SMOOI_TO_OOP(0);
+	moo_oop_t retv = MOO_SMOOI_TO_OOP(0);
 
 	rcv = (moo_oop_method_t)MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo, rcv) == moo->_method);
@@ -2310,7 +2310,7 @@ static moo_pfrc_t pf_method_get_source_line (moo_t* moo, moo_mod_t* mod, moo_ooi
 {
 	moo_oop_method_t rcv;
 	moo_dbgi_method_t* di;
-	moo_oow_t retv = MOO_SMOOI_TO_OOP(0);
+	moo_oop_t retv = MOO_SMOOI_TO_OOP(0);
 
 	rcv = (moo_oop_method_t)MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo, rcv) == moo->_method);
@@ -2322,7 +2322,7 @@ static moo_pfrc_t pf_method_get_source_line (moo_t* moo, moo_mod_t* mod, moo_ooi
 		if (!retv) return MOO_PF_FAILURE;
 	}
 
-	MOO_STACK_SETRET (moo, nargs,retv);
+	MOO_STACK_SETRET (moo, nargs, retv);
 	return MOO_PF_SUCCESS;
 }
 

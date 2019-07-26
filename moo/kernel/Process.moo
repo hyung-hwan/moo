@@ -231,7 +231,7 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 			// if the internal semaphore has been signaled, 
 			// arrange to return nil to indicate timeout.
 			if (r == s) { r := nil } // timed out
-			elsif (r signalAction notNil) { r signalAction value: r }. // run the signal action block
+			elif (r signalAction notNil) { r signalAction value: r }. // run the signal action block
 		] ensure: [
 			// System<<unsignal: doesn't thrown an exception even if the semaphore s is not
 			// register with System<<signal:afterXXX:. otherwise, i would do like this line

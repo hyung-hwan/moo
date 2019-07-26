@@ -113,15 +113,15 @@ class MyObject(Object)
 				System logNl: "XXXXXXXXX".
 				1111 
 			}
-			elsif ("abcd" ~= "abcd")
+			elif ("abcd" ~= "abcd")
 			{
 				System logNl: "second if".
 			}
-			elsif ([k := 20. System logNl: "k => " & (k asString). k + 20. true] value)
+			elif ([k := 20. System logNl: "k => " & (k asString). k + 20. true] value)
 			{
 				System logNl: "THIRID forever............." & (k asString)
 			}
-			elsif (true = true)
+			elif (true = true)
 			{
 				System logNl: "forever............."
 			}
@@ -168,7 +168,7 @@ class MyObject(Object)
 		}.*/
 		
 		
-		a := if(false) { 10 } elsif (false) { 20 } elsif (false) { 30} else { 40}.
+		a := if(false) { 10 } elif (false) { 20 } elif (false) { 30} else { 40}.
 		//a := if(false) { 999 } else { 888 }.
 		a dump.
 

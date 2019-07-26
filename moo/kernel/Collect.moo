@@ -167,10 +167,10 @@ class(#pointer) Array(SequenceableCollection)
 		s := anArray size.
 
 		if (start < 0) { start := 0 }
-		elsif (start >= s) { start := s - 1 }.
+		elif (start >= s) { start := s - 1 }.
 
 		if (end < 0) { end := 0 }
-		elsif (end >= s) { end := s - 1 }.
+		elif (end >= s) { end := s - 1 }.
 */
 		i := 0.
 		ss := self size.
@@ -457,11 +457,11 @@ class(#byte) ByteArray(Array)
 		| firstByte |
 		firstByte := self at: 0.
 		if ((firstByte bitAnd:2r10000000) == 0) { 1 }
-		elsif (firstByte bitAnd:2r11000000) == 2r10000000) { 2 }
-		elsif (firstByte bitAnd:2r11100000) == 2r11000000) { 3 }
-		elsif (firstByte bitAnd:2r11110000) == 2r11100000) { 4 }
-		elsif (firstByte bitAnd:2r11111000) == 2r11110000) { 5 }
-		elsif (firstByte bitAnd:2r11111100) == 2r11111000) { 6 }.
+		elif (firstByte bitAnd:2r11000000) == 2r10000000) { 2 }
+		elif (firstByte bitAnd:2r11100000) == 2r11000000) { 3 }
+		elif (firstByte bitAnd:2r11110000) == 2r11100000) { 4 }
+		elif (firstByte bitAnd:2r11111000) == 2r11110000) { 5 }
+		elif (firstByte bitAnd:2r11111100) == 2r11111000) { 6 }.
 		*/
 	}
 }

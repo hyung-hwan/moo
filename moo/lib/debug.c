@@ -128,7 +128,7 @@ int moo_addfiletodbgi (moo_t* moo, const moo_ooch_t* file_name, moo_oow_t* start
 
 	if (!moo->dbgi) 
 	{
-		if (start_offset) *start_offset = MOO_NULL;
+		if (start_offset) *start_offset = 0;
 		return 0; /* debug information is disabled*/
 	}
 

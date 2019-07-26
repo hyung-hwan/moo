@@ -514,8 +514,8 @@ extend Apex
 
 		//# TODO: convert an exception to a more specific one depending on the error code.
 		//#if (ec == Error.Code.ERANGE) { self index: index outOfRange: (self basicSize) }
-		//# elsif (ec == Error.Code.EPERM) { self messageProhibited: method name }
-		//# elsif (ec == Error.Code.ENOIMPL) { self subclassResponsibility: method name }.
+		//# elif (ec == Error.Code.EPERM) { self messageProhibited: method name }
+		//# elif (ec == Error.Code.ENOIMPL) { self subclassResponsibility: method name }.
 
 		(PrimitiveFailureException /* in: method */ withErrorCode: ec) signal: msg.
 	}

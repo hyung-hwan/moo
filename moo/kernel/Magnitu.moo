@@ -92,11 +92,11 @@ class(#limited) Character(Magnitude)
 		{
 			^self asInteger - $0 asInteger
 		}
-		elsif ((self >= $A) and (self <= $Z))
+		elif ((self >= $A) and (self <= $Z))
 		{
 			^self asInteger - $A asInteger + 10
 		}
-		elsif ((self >= $a) and (self <= $z))
+		elif ((self >= $a) and (self <= $z))
 		{
 			^self asInteger - $a asInteger + 10
 		}.
@@ -359,7 +359,7 @@ class(#limited) Number(Magnitude)
 		/* self < 0 ifTrue: [^-1].
 		self > 0 ifTrue: [^1].
 		^0.*/
-		^if (self < 0) { -1 } elsif (self > 0) { 1 } else { 0 }
+		^if (self < 0) { -1 } elif (self > 0) { 1 } else { 0 }
 	}
 }
 

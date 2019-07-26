@@ -432,7 +432,7 @@ class X11.Button(X11.Label)
 			self.bgcolor := x.
 			self onPaintEvent: llevent.
 		}
-		elsif (type == X11.LLEventType.BUTTON_RELEASE)
+		elif (type == X11.LLEventType.BUTTON_RELEASE)
 		{
 			x := self.fgcolor.
 			self.fgcolor := self.bgcolor.

@@ -121,9 +121,9 @@ static struct voca_t
 	{  8, { 'c','o','n','t','i','n','u','e'                               } },
 	{  2, { 'd','o'                                                       } },
 	{  5, { '#','d','u','a','l'                                           } },
+	{  4, { 'e','l','i','f'                                               } },
+	{  7, { 'e','l','i','f','n','o','t'                                   } },
 	{  4, { 'e','l','s','e'                                               } },
-	{  5, { 'e','l','s','i','f'                                           } },
-	{  8, { 'e','l','s','i','f','n','o','t'                               } },
 	{  6, { 'e','n','s','u','r','e',                                      } },
 	{  9, { 'e','x','c','e','p','t','i','o','n'                           } },
 	{  6, { 'e','x','t','e','n','d'                                       } },
@@ -131,6 +131,7 @@ static struct voca_t
 	{  6, { '#','f','i','n','a','l'                                       } },
 	{  4, { 'f','r','o','m'                                               } },
 	{  4, { '#','g','e','t'                                               } },
+	{  4, { 'g','o','t','o'                                               } },
 	{  9, { '#','h','a','l','f','w','o','r','d'                           } },
 	{  2, { 'i','f'                                                       } },
 	{  5, { 'i','f','n','o','t'                                           } },
@@ -189,9 +190,9 @@ enum voca_id_t
 	VOCA_CONTINUE,
 	VOCA_DO,
 	VOCA_DUAL_S,
+	VOCA_ELIF,
+	VOCA_ELIFNOT,
 	VOCA_ELSE,
-	VOCA_ELSIF,
-	VOCA_ELSIFNOT,
 	VOCA_ENSURE,
 	VOCA_EXCEPTION,
 	VOCA_EXTEND,
@@ -199,6 +200,7 @@ enum voca_id_t
 	VOCA_FINAL_S,
 	VOCA_FROM,
 	VOCA_GET_S,
+	VOCA_GOTO,
 	VOCA_HALFWORD_S,
 	VOCA_IF,
 	VOCA_IFNOT,
@@ -376,33 +378,45 @@ static MOO_INLINE int is_word (const moo_oocs_t* oocs, voca_id_t id)
 	       moo_equal_oochars(oocs->ptr, vocas[id].str, vocas[id].len);
 }
 
-static int is_reserved_word (const moo_oocs_t* ucs)
+static int is_reserved_word (const moo_oocs_t* ucs, moo_iotok_type_t* token_type)
 {
-	static int rw[] = 
+	static struct
 	{
-		VOCA_SELF,
-		VOCA_SUPER,
-		VOCA_NIL,
-		VOCA_TRUE,
-		VOCA_FALSE,
-		VOCA_THIS_CONTEXT,
-		VOCA_THIS_PROCESS,
-		VOCA_SELFNS,
-		VOCA_IF,
-		VOCA_ELSE,
-		VOCA_ELSIF,
-		VOCA_ELSIFNOT,
-		VOCA_WHILE,
-		VOCA_UNTIL,
-		VOCA_DO,
-		VOCA_BREAK,
-		VOCA_CONTINUE
+		voca_id_t voca_id;
+		moo_iotok_type_t token_type;
+	} rw[] = 
+	{
+		{ VOCA_SELF,          MOO_IOTOK_SELF },
+		{ VOCA_SUPER,         MOO_IOTOK_SUPER },
+		{ VOCA_NIL,           MOO_IOTOK_NIL },
+		{ VOCA_TRUE,          MOO_IOTOK_TRUE },
+		{ VOCA_FALSE,         MOO_IOTOK_FALSE },
+		{ VOCA_THIS_CONTEXT,  MOO_IOTOK_THIS_CONTEXT },
+		{ VOCA_THIS_PROCESS,  MOO_IOTOK_THIS_PROCESS },
+		{ VOCA_SELFNS,        MOO_IOTOK_SELFNS },
+		{ VOCA_IF,            MOO_IOTOK_IF },
+		{ VOCA_IFNOT,         MOO_IOTOK_IFNOT },
+		{ VOCA_ELIF,          MOO_IOTOK_ELIF },
+		{ VOCA_ELIFNOT,       MOO_IOTOK_ELIFNOT },
+		{ VOCA_ELSE,          MOO_IOTOK_ELSE },
+		{ VOCA_WHILE,         MOO_IOTOK_WHILE },
+		{ VOCA_UNTIL,         MOO_IOTOK_UNTIL },
+		{ VOCA_DO,            MOO_IOTOK_DO },
+		{ VOCA_BREAK,         MOO_IOTOK_BREAK },
+		{ VOCA_CONTINUE,      MOO_IOTOK_CONTINUE },
+		{ VOCA_GOTO,          MOO_IOTOK_GOTO },
+		{ VOCA_AND,           MOO_IOTOK_AND },
+		{ VOCA_OR,            MOO_IOTOK_OR }
 	};
 	int i;
 
 	for (i = 0; i < MOO_COUNTOF(rw); i++)
 	{
-		if (is_word(ucs, rw[i])) return 1;
+		if (is_word(ucs, rw[i].voca_id)) 
+		{
+			if (token_type) *token_type = rw[i].token_type;
+			return 1;
+		}
 	}
 
 	return 0;
@@ -1297,6 +1311,8 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 	}
 	else
 	{
+		moo_iotok_type_t token_type;
+
 		if (c == '.')
 		{
 			moo_iolxc_t period;
@@ -1334,86 +1350,10 @@ static int get_ident (moo_t* moo, moo_ooci_t char_read_ahead)
 			unget_char (moo, &moo->c->lxc); 
 		}
 
-		/* handle reserved words */
-		if (is_token_word(moo, VOCA_SELF))
+		if (is_reserved_word(TOKEN_NAME(moo), &token_type))
 		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_SELF);
-		}
-		else if (is_token_word(moo, VOCA_SUPER))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_SUPER);
-		}
-		else if (is_token_word(moo, VOCA_NIL))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_NIL);
-		}
-		else if (is_token_word(moo, VOCA_TRUE))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_TRUE);
-		}
-		else if (is_token_word(moo, VOCA_FALSE))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_FALSE);
-		}
-		else if (is_token_word(moo, VOCA_THIS_CONTEXT))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_THIS_CONTEXT);
-		}
-		else if (is_token_word(moo, VOCA_THIS_PROCESS))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_THIS_PROCESS);
-		}
-		else if (is_token_word(moo, VOCA_SELFNS))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_SELFNS);
-		}
-		else if (is_token_word(moo, VOCA_IF))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_IF);
-		}
-		else if (is_token_word(moo, VOCA_IFNOT))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_IFNOT);
-		}
-		else if (is_token_word(moo, VOCA_ELSE))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_ELSE);
-		}
-		else if (is_token_word(moo, VOCA_ELSIF))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_ELSIF);
-		}
-		else if (is_token_word(moo, VOCA_ELSIFNOT))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_ELSIFNOT);
-		}
-		else if (is_token_word(moo, VOCA_WHILE))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_WHILE);
-		}
-		else if (is_token_word(moo, VOCA_UNTIL))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_UNTIL);
-		}
-		else if (is_token_word(moo, VOCA_DO))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_DO);
-		}
-		else if (is_token_word(moo, VOCA_BREAK))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_BREAK);
-		}
-		else if (is_token_word(moo, VOCA_CONTINUE))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_CONTINUE);
-		}
-		else if (is_token_word(moo, VOCA_AND))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_AND);
-		}
-		else if (is_token_word(moo, VOCA_OR))
-		{
-			SET_TOKEN_TYPE (moo, MOO_IOTOK_OR);
+			/* handle reserved words */
+			SET_TOKEN_TYPE (moo, token_type);
 		}
 	}
 
@@ -3551,7 +3491,7 @@ static int preprocess_dotted_name (moo_t* moo, int flags, moo_oop_nsdic_t topdic
 
 			seg.len = dot - ptr;
 
-			if (is_reserved_word(&seg)) goto wrong_name;
+			if (is_reserved_word(&seg, MOO_NULL)) goto wrong_name;
 
 			ass = moo_lookupdic(moo, (moo_oop_dic_t)dic, &seg);
 			if (ass)
@@ -3621,7 +3561,7 @@ static int preprocess_dotted_name (moo_t* moo, int flags, moo_oop_nsdic_t topdic
 			/* this is the last segment. it should be a class name or an item name */
 			seg.len = len;
 
-			if (is_reserved_word(&seg)) goto wrong_name;
+			if (is_reserved_word(&seg, MOO_NULL)) goto wrong_name;
 
 			*name = seg;
 			*ns_oop = dic;
@@ -4508,7 +4448,7 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 			last.ptr = name->ptr + pxlen + 1;
 			last.len = name->len - pxlen - 1;
 
-			if (is_reserved_word(&last))
+			if (is_reserved_word(&last, MOO_NULL))
 			{
 				/* self. is followed by a reserved word.
 				 * a proper variable name is expected. */
@@ -6246,9 +6186,9 @@ static int compile_if_expression (moo_t* moo)
 
 		GET_TOKEN (moo); /* get the next token after } */
 
-		if (TOKEN_TYPE(moo) !=  MOO_IOTOK_ELSIF && TOKEN_TYPE(moo) != MOO_IOTOK_ELSIFNOT) break;
+		if (TOKEN_TYPE(moo) !=  MOO_IOTOK_ELIF && TOKEN_TYPE(moo) != MOO_IOTOK_ELIFNOT) break;
 
-		if (TOKEN_TYPE(moo) == MOO_IOTOK_ELSIF)
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_ELIF)
 		{
 			push_true_inst = BCODE_PUSH_TRUE;
 			push_false_inst = BCODE_PUSH_FALSE;
@@ -6549,7 +6489,7 @@ static int compile_method_expression (moo_t* moo, int pop)
 	/*
 	 * method-expression := method-assignment-expression | basic-expression | if-expression | while-expression | do-while-expression
 	 * method-assignment-expression := identifier ":=" method-expression
-	 * if-expression := if ( ) {  } elsif { } else { }
+	 * if-expression := if ( ) {  } elif { } else { }
 	 * while-expression := while () {}
 	 * do-while-expression := do { } while ()
 	 */

@@ -59,7 +59,7 @@ class(#byte(4)) IP4Address(IPAddress)
 				if (acc > 255) { Exception signal: ('invalid IPv4 address B ' & str). }.
 				digits := digits + 1.
 			}
-			elsif (c == $.)
+			elif (c == $.)
 			{
 				if (dots >= 3 or: [digits == 0]) { ^Error.Code.EINVAL }.
 				self basicAt: (dots + address_offset) put: acc.
@@ -151,7 +151,7 @@ class(#byte(16)) IP6Address(IP4Address)
 					colonpos := tgpos.
 					continue.
 				}
-				elsif (pos >= size)
+				elif (pos >= size)
 				{
 					// a colon can't be the last character
 					^Error.Code.EINVAL
@@ -194,7 +194,7 @@ class(#byte(16)) IP6Address(IP4Address)
 			self basicShiftFrom: colonpos to: (colonpos + (mysize - tgpos)) count: (tgpos - colonpos).
 			//tgpos := tgpos + (mysize - tgpos).
 		}
-		elsif (tgpos ~~ mysize) 
+		elif (tgpos ~~ mysize) 
 		{
 			^Error.Code.EINVAL 
 		}.
@@ -379,7 +379,7 @@ class SyncSocket(Socket)
 				self __wait_for_output.
 				soerr := self _socketError.
 				if (soerr == 0) { break }
-				elsif (soerr > 0)
+				elif (soerr > 0)
 				{
 					Exception signal: ('unable to connect - error ' & soerr asString).
 				}.
