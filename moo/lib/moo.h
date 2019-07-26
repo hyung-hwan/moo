@@ -1894,7 +1894,8 @@ enum moo_synerrnum_t
 	MOO_SYNERR_LITERAL,         /* literal expected */
 	MOO_SYNERR_NOTINLOOP,       /* break or continue not within a loop */
 	MOO_SYNERR_INBLOCK,         /* break or continue within a block */
-	MOO_SYNERR_WHILE            /* while expected */
+	MOO_SYNERR_WHILE,           /* while expected */
+	MOO_SYNERR_GOTOTARGETINVAL  /* invalid goto target */
 };
 typedef enum moo_synerrnum_t moo_synerrnum_t;
 

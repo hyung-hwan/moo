@@ -918,7 +918,7 @@ static int add_to_oow_pool (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t v)
 	{
 		moo_oow_pool_chunk_t* chunk;
 
-		chunk = moo_allocmem (moo, MOO_SIZEOF(pool->static_chunk));
+		chunk = (moo_oow_pool_chunk_t*)moo_allocmem(moo, MOO_SIZEOF(pool->static_chunk));
 		if (!chunk) return -1;
 
 		chunk->next = MOO_NULL;
@@ -2785,7 +2785,7 @@ static int push_loop (moo_t* moo, moo_loop_type_t type, moo_oow_t startpos)
 {
 	moo_loop_t* loop;
 
-	loop = moo_callocmem(moo, MOO_SIZEOF(*loop));
+	loop = (moo_loop_t*)moo_callocmem(moo, MOO_SIZEOF(*loop));
 	if (!loop) return -1;
 
 	init_oow_pool (moo, &loop->break_ip_pool);
@@ -6662,6 +6662,43 @@ static int add_label (moo_t* moo, const moo_oocs_t* name)
 	return 0;
 }
 
+static int compile_goto_statement (moo_t* moo)
+{
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_goto_t* _goto;
+	moo_oocs_t* target;
+	moo_ooch_t* nptr;
+
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT)
+	{
+		moo_setsynerr (moo, MOO_SYNERR_GOTOTARGETINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+	target = TOKEN_NAME(moo);
+	_goto = (moo_goto_t*)moo_allocmem(moo, MOO_SIZEOF(*_goto) + (target->len + 1) * MOO_SIZEOF(moo_ooch_t));
+	if (!_goto) return -1;
+
+	nptr = (moo_ooch_t*)(_goto + 1);
+	moo_copy_oochars (nptr, target->ptr, target->len);
+	nptr[target->len] = '\0';
+
+#if 0
+	if (add_to_oow_pool(moo, &cc->mth._goto->target_ip_pool, cc->mth.code.len) <= -1 ||
+	    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP, srcloc) <= -1) 
+	{
+		moo_freemem (moo, _goto);
+		return -1;
+	}
+#endif
+
+	_goto->next = cc->mth._goto;
+	cc->mth._goto = _goto;
+
+	GET_TOKEN (moo); /* read the next token to the target label */
+	return 0;
+}
+
 static int compile_special_statement (moo_t* moo)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
@@ -6727,6 +6764,11 @@ MOO_DEBUG2 (moo, "LABEL => %.*js\n", TOKEN_NAME_LEN(moo), TOKEN_NAME_PTR(moo));
 		/* TODO: if (add_label(moo, TOKEN_NAME(moo), level???) <= -1) return -1; */
 		GET_TOKEN (moo);
 		return 8888; /* indicates that non-statement has been seen and processed.*/
+	}
+	else if (TOKEN_TYPE(moo) == MOO_IOTOK_GOTO)
+	{
+		GET_TOKEN (moo);
+		return compile_goto_statement(moo);
 	}
 
 	return 9999; /* to indicate that no special statement has been seen and processed */

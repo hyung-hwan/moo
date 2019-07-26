@@ -124,6 +124,7 @@ class MyObject(Object)
 			'break or continue not within a loop'
 			'break or continue within a block'
 			'while expected'
+			'invalid goto target'	
 		).
 
 		f := Stdio open: 'generr.out' for: 'w'.

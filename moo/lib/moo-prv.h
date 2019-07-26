@@ -411,8 +411,9 @@ struct moo_label_t
 typedef struct moo_goto_t moo_goto_t;
 struct moo_goto_t
 {
-	moo_ooch_t* label_name;
+	moo_ooch_t* target_name;
 	moo_oow_t level;
+	moo_oow_t ip;
 	moo_goto_t* next;
 };
 
