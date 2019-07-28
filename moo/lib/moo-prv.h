@@ -403,18 +403,18 @@ struct moo_loop_t
 typedef struct moo_label_t moo_label_t;
 struct moo_label_t
 {
-	moo_ooch_t* name;
 	moo_oow_t level;
 	moo_label_t* next;
+	/* ... label name at the back ... */
 };
 
 typedef struct moo_goto_t moo_goto_t;
 struct moo_goto_t
 {
-	moo_ooch_t* target_name;
 	moo_oow_t level;
 	moo_oow_t ip;
 	moo_goto_t* next;
+	/* ... target label name at the back ... */
 };
 
 typedef struct moo_oopbuf_t moo_oopbuf_t;

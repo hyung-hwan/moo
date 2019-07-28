@@ -6683,14 +6683,12 @@ static int compile_goto_statement (moo_t* moo)
 	moo_copy_oochars (nptr, target->ptr, target->len);
 	nptr[target->len] = '\0';
 
-#if 0
-	if (add_to_oow_pool(moo, &cc->mth._goto->target_ip_pool, cc->mth.code.len) <= -1 ||
-	    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP, srcloc) <= -1) 
+	_goto->ip = cc->mth.code.len;
+	if (emit_single_param_instruction(moo, BCODE_JUMP_FORWARD_0, MAX_CODE_JUMP, TOKEN_LOC(moo)) <= -1) 
 	{
 		moo_freemem (moo, _goto);
 		return -1;
 	}
-#endif
 
 	_goto->next = cc->mth._goto;
 	cc->mth._goto = _goto;
