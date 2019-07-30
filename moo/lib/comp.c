@@ -6647,6 +6647,7 @@ static int add_label (moo_t* moo, const moo_oocs_t* name)
 /* TODO: there is a duplicate label... */
 			return -1;
 		}
+		lab = lab->next;
 	}
 
 	lab = (moo_label_t*)moo_allocmem(moo, MOO_SIZEOF(*lab) + (name->len + 1) * MOO_SIZEOF(moo_ooch_t));
@@ -6758,8 +6759,7 @@ static int compile_special_statement (moo_t* moo)
 	{
 		/* this is a label */
 		/* remember the label location with the block depth */
-MOO_DEBUG2 (moo, "LABEL => %.*js\n", TOKEN_NAME_LEN(moo), TOKEN_NAME_PTR(moo));
-		/* TODO: if (add_label(moo, TOKEN_NAME(moo), level???) <= -1) return -1; */
+		if (add_label(moo, TOKEN_NAME(moo)) <= -1) return -1; /* TODO: pass level info */
 		GET_TOKEN (moo);
 		return 8888; /* indicates that non-statement has been seen and processed.*/
 	}
@@ -7186,6 +7186,24 @@ static void clear_method_data (moo_t* moo, moo_method_data_t* mth)
 	if (mth->code.locptr) moo_freemem (moo, mth->code.locptr);
 	if (mth->literals.ptr) moo_freemem (moo, mth->literals.ptr);
 	if (mth->blk_tmprcnt) moo_freemem (moo, mth->blk_tmprcnt);
+
+	/* this must not happen as loop data are cleared in functions that handle loop expressions().
+	 * but let me have this here just in case */
+	while (mth->loop) pop_loop (moo); 
+
+	while (mth->_label)
+	{
+		moo_label_t* tmp = mth->_label;
+		mth->_label = mth->_label->next;
+		moo_freemem (moo, tmp);
+	}
+	while (mth->_goto)
+	{
+		moo_goto_t* tmp = mth->_goto;
+		mth->_goto = mth->_goto->next;
+		moo_freemem (moo, tmp);
+	}
+
 	MOO_MEMSET (mth, 0, MOO_SIZEOF(*mth));
 }
 
@@ -7210,7 +7228,12 @@ static void reset_method_data (moo_t* moo, moo_method_data_t* mth)
 	mth->pftype = PFTYPE_NONE;
 	mth->pfnum = 0;
 	mth->blk_depth = 0;
+	/* don't reset mth->blk_tmprcnt_capa as it indicates capacity for blk_tmprcnt */
 	mth->code.len = 0;
+
+	MOO_ASSERT (moo, mth->loop == MOO_NULL);
+	MOO_ASSERT (moo, mth->_label == MOO_NULL);
+	MOO_ASSERT (moo, mth->_goto == MOO_NULL);
 }
 
 static int process_method_modifiers (moo_t* moo, moo_method_data_t* mth)
