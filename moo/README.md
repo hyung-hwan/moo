@@ -7,11 +7,11 @@
 
 ### Comments
 
-~~~
+```
 #! comment text
 // comment text
 /* comment text */
-~~~
+```
 
 ### Literal notations
 * 200 decimal integer
@@ -55,18 +55,17 @@ The following are not literals. The followings forms expressions.
 
 
 ### Class
-
-~~~
+```
 class MyClass(Object)
 {
 	method show: this
 	{
 	}
 }
-~~~
+```
 
 ### Flow Control
-~~~
+```
 k := if (i < 20) { 30 } else { 40 }.
 
 if (a < 10) { ... }
@@ -79,9 +78,9 @@ nif (i < 20) { 30 } else { 40 }.
 if (a < 10) { .. } 
 elifnot (a > 20) { ... }
 else { ... }.
-~~~
+```
 
-~~~
+```
 while (true)
 {
 
@@ -101,13 +100,13 @@ do
 
 [a > b] whileTrue: [ ... ].
 [a > b] whileFalse: [ ... ].
-~~~
+```
 
-~~~
+```
 1 to: 20 do: [:count | ... ].
 1 to: 10 by: 3 do: [:count | ... ].
 30 timesRepeat: [ ... ].
-~~~
+```
 
 
 ### Exception handling
@@ -123,36 +122,36 @@ ex return: value.
 
 ### goto
 
-~~~
+```
 goto jump_label.
 
-jump_label::
+jump_label:
 	a + b;
-~~~
+```
 
 useful to make a block return
 can i deprecate the ^^ operator?
 
-~~~
+```
 [ 1 + 2. goto r. 3 + 4. r::]
-~~~
+```
 
 goto must not cross the boundary of the block context.
 
-~~~
+```
 this is invalid. cannot jump into a block from outside 
 and vice versa.
  goto x.
  [ x:: 
    1 + 2 ].
-~~~
+```
 
 
 ### Type checking
 
 Type checking not implemented yet.
 
-~~~
+```
 class SampleClass(Object)
 {
 	method run => Integer
@@ -167,11 +166,12 @@ class SampleClass(Object)
 	{
 	}
 }
-~~~
+```
 
 TODO: How to specify return type of a block? or How to specify parameter type to a block?
       How to evaluate a block type-safely?
-~~~
+
+```
 [ :(Integer)a :(Integer)b => Integer | 
 	| (Integer)c (Integer)d }
 	a + b 
@@ -202,4 +202,4 @@ what looks better as a shorthand expression for block value?
  | (Block)a |
  a->()? block value?
  
-~~~
+```
