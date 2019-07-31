@@ -6630,33 +6630,38 @@ oops:
 	return -1;
 }
 
-static int add_label (moo_t* moo, const moo_oocs_t* name)
+static int add_label (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* lab_loc, moo_oow_t level)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_label_t* lab;
 	moo_ooch_t* nptr;
+	moo_oocs_t lab_name;
 
-/* TODO: name must not have trailing colon? */
+	MOO_ASSERT (moo, name->len > 0);
+	lab_name = *name;
+	if (lab_name.ptr[lab_name.len - 1] == ':') lab_name.len--; /* if the name ends with a trailing colon */
+
 	lab = cc->mth._label;
 	while (lab)
 	{
 		nptr = (moo_ooch_t*)(lab + 1);
-		if (moo_comp_oochars_oocstr(name->ptr, name->len, nptr) == 0)
+		if (moo_comp_oochars_oocstr(lab_name.ptr, lab_name.len, nptr) == 0)
 		{
 			/* duplicate label name */
-/* TODO: there is a duplicate label... */
+			moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEDUPL, lab_loc, &lab_name, "duplicate label name");
 			return -1;
 		}
 		lab = lab->next;
 	}
 
-	lab = (moo_label_t*)moo_allocmem(moo, MOO_SIZEOF(*lab) + (name->len + 1) * MOO_SIZEOF(moo_ooch_t));
+	lab = (moo_label_t*)moo_allocmem(moo, MOO_SIZEOF(*lab) + (lab_name.len + 1) * MOO_SIZEOF(moo_ooch_t));
 	if (!lab) return -1;
 
 	nptr = (moo_ooch_t*)(lab + 1);
-	moo_copy_oochars (nptr, name->ptr, name->len);
-	nptr[name->len] = '\0';
+	moo_copy_oochars (nptr, lab_name.ptr, lab_name.len);
+	nptr[lab_name.len] = '\0';
 
+	lab->level = level;
 	lab->next = cc->mth._label;
 	cc->mth._label = lab;
 
@@ -6691,6 +6696,7 @@ static int compile_goto_statement (moo_t* moo)
 		return -1;
 	}
 
+	_goto->level = cc->mth.blk_depth;
 	_goto->next = cc->mth._goto;
 	cc->mth._goto = _goto;
 
@@ -6759,7 +6765,7 @@ static int compile_special_statement (moo_t* moo)
 	{
 		/* this is a label */
 		/* remember the label location with the block depth */
-		if (add_label(moo, TOKEN_NAME(moo)) <= -1) return -1; /* TODO: pass level info */
+		if (add_label(moo, TOKEN_NAME(moo), TOKEN_LOC(moo), cc->mth.blk_depth) <= -1) return -1;
 		GET_TOKEN (moo);
 		return 8888; /* indicates that non-statement has been seen and processed.*/
 	}
@@ -7227,8 +7233,13 @@ static void reset_method_data (moo_t* moo, moo_method_data_t* mth)
 	mth->literals.count = 0;
 	mth->pftype = PFTYPE_NONE;
 	mth->pfnum = 0;
+
 	mth->blk_depth = 0;
-	/* don't reset mth->blk_tmprcnt_capa as it indicates capacity for blk_tmprcnt */
+	/* don't reset mth->blk_tmprcnt_capa as it indicates capacity for blk_tmprcnt.
+	 * mth->blk_depth indicates the number of elements in mth->blk_tmprcnt_capa.
+	 * this function doesn't free the allocated memory pointed to by mth->blk->tmprcnt.
+	 * see store_tmpr_count_for_block(). */
+
 	mth->code.len = 0;
 
 	MOO_ASSERT (moo, mth->loop == MOO_NULL);

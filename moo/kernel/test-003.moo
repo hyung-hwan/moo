@@ -92,7 +92,7 @@ class MyObject(Object)
 			tb := tc at: idx.
 			System log(System.Log.INFO, idx asString, (if (tb value) { " PASS" } else { " FAIL" }), "\n").
 		].
-	(if (true) { a: 10. b: 1p1000. 20000 }) dump.
+	(if (true) { a: 10. b: 1p1000. c: 20000 }) dump.
 	[A01: 10. B02: 1000. ] value class dump.
 
 TODO:

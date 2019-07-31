@@ -542,7 +542,7 @@ struct moo_method_data_t
 	/* primitive function number */
 	moo_ooi_t pfnum; 
 
-	/* block depth */
+	/* block depth - [ ... ]*/
 	moo_oow_t blk_depth;
 	moo_oow_t* blk_tmprcnt;
 	moo_oow_t blk_tmprcnt_capa;
