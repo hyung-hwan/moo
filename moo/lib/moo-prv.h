@@ -404,6 +404,8 @@ typedef struct moo_label_t moo_label_t;
 struct moo_label_t
 {
 	moo_oow_t level;
+	moo_ioloc_t loc;
+	moo_oow_t ip;
 	moo_label_t* next;
 	/* ... label name at the back ... */
 };
@@ -412,6 +414,7 @@ typedef struct moo_goto_t moo_goto_t;
 struct moo_goto_t
 {
 	moo_oow_t level;
+	moo_ioloc_t loc;
 	moo_oow_t ip;
 	moo_goto_t* next;
 	/* ... target label name at the back ... */

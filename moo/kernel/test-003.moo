@@ -93,10 +93,9 @@ class MyObject(Object)
 			System log(System.Log.INFO, idx asString, (if (tb value) { " PASS" } else { " FAIL" }), "\n").
 		].
 	(if (true) { a: 10. b: 1p1000. c: 20000 }) dump.
-	[A01: 10. B02: 1000. ] value class dump.
+	[goto B02. A01: 10. B02: 1000. ] value class dump.
 
-TODO:
-
+EXCEPTION_TEST:
 Exception signal: 'experiment with exception signalling'.
 
 		// TODO: 

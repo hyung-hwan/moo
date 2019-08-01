@@ -2777,7 +2777,6 @@ static int patch_long_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_o
 	cc->mth.code.ptr[jip + 1] = jump_offset;
 #endif
 
-
 	return 0;
 }
 
@@ -6633,28 +6632,44 @@ oops:
 static MOO_INLINE int resolve_goto_label (moo_t* moo, moo_goto_t* _goto)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-	const moo_ooch_t* gtname, * lbname;
+	moo_oocs_t gtname;
 	moo_label_t* _label;
 
-	gtname = (const moo_ooch_t*)(_goto + 1);
+	gtname.ptr = (const moo_ooch_t*)(_goto + 1);
 	_label = cc->mth._label;
 	while (_label)
 	{
+		const moo_ooch_t* lbname;
+
 		lbname = (const moo_ooch_t*)(_label + 1);
-		if (moo_comp_oocstr(gtname, lbname) == 0)
+		if (moo_comp_oocstr(gtname.ptr, lbname) == 0)
 		{
 			if (_goto->level != _label->level)
 			{
-				/*TODO: error... */
+				gtname.len = moo_count_oocstr(gtname.ptr);
+				moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEUNDEF, &_goto->loc, &gtname, "goto disallowed to different level");
+				return -1;
 			}
+
 			/* TODO: patch instruction */
+			MOO_ASSERT (moo, _goto->ip != _label->ip);
+			if (_goto->ip > _label->ip)
+			{
+				/* jump backward */
+				/* TODO: */
+			}
+			else
+			{
+				/* jump forward */
+				if (patch_long_forward_jump_instruction (moo, _goto->ip, _label->ip, &_goto->loc) <= -1) return -1;
+			}
 			return 0;
 		}
 		_label = _label->next;
 	}
 
-	/* TODO: */
-	/*moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEUNDEF, "xxxx");*/
+	gtname.len = moo_count_oocstr(gtname.ptr);
+	moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEUNDEF, &_goto->loc, &gtname, "undefined goto label - %js", gtname);
 	return -1;
 }
 
@@ -6672,7 +6687,7 @@ static MOO_INLINE int resolve_goto_labels (moo_t* moo)
 	return 0;
 }
 
-static MOO_INLINE int add_label (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* lab_loc, moo_oow_t level)
+static MOO_INLINE int add_label (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* lab_loc, moo_oow_t level, moo_oow_t ip)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_label_t* lab;
@@ -6704,6 +6719,8 @@ static MOO_INLINE int add_label (moo_t* moo, const moo_oocs_t* name, const moo_i
 	nptr[lab_name.len] = '\0';
 
 	lab->level = level;
+	lab->ip = ip;
+	lab->loc = *lab_loc;
 	lab->next = cc->mth._label;
 	cc->mth._label = lab;
 
@@ -6739,6 +6756,7 @@ static int compile_goto_statement (moo_t* moo)
 	}
 
 	_goto->level = cc->mth.blk_depth;
+	_goto->loc = *TOKEN_LOC(moo);
 	_goto->next = cc->mth._goto;
 	cc->mth._goto = _goto;
 
@@ -6807,7 +6825,7 @@ static int compile_special_statement (moo_t* moo)
 	{
 		/* this is a label */
 		/* remember the label location with the block depth */
-		if (add_label(moo, TOKEN_NAME(moo), TOKEN_LOC(moo), cc->mth.blk_depth) <= -1) return -1;
+		if (add_label(moo, TOKEN_NAME(moo), TOKEN_LOC(moo), cc->mth.blk_depth, cc->mth.code.len) <= -1) return -1;
 		GET_TOKEN (moo);
 		return 8888; /* indicates that non-statement has been seen and processed.*/
 	}
@@ -7285,8 +7303,23 @@ static void reset_method_data (moo_t* moo, moo_method_data_t* mth)
 	mth->code.len = 0;
 
 	MOO_ASSERT (moo, mth->loop == MOO_NULL);
-	MOO_ASSERT (moo, mth->_label == MOO_NULL);
-	MOO_ASSERT (moo, mth->_goto == MOO_NULL);
+
+	/* the current implementation allocates a label and a goto chunk for each
+	 * label and goto statement. it prevents the reuse of the allocated chunks
+	 * without major code change.. so let's free these here which is confliting
+	 * with the purpose of this function */
+	while (mth->_label)
+	{
+		moo_label_t* tmp = mth->_label;
+		mth->_label = mth->_label->next;
+		moo_freemem (moo, tmp);
+	}
+	while (mth->_goto)
+	{
+		moo_goto_t* tmp = mth->_goto;
+		mth->_goto = mth->_goto->next;
+		moo_freemem (moo, tmp);
+	}
 }
 
 static int process_method_modifiers (moo_t* moo, moo_method_data_t* mth)
