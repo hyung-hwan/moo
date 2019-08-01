@@ -6630,7 +6630,49 @@ oops:
 	return -1;
 }
 
-static int add_label (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* lab_loc, moo_oow_t level)
+static MOO_INLINE int resolve_goto_label (moo_t* moo, moo_goto_t* _goto)
+{
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	const moo_ooch_t* gtname, * lbname;
+	moo_label_t* _label;
+
+	gtname = (const moo_ooch_t*)(_goto + 1);
+	_label = cc->mth._label;
+	while (_label)
+	{
+		lbname = (const moo_ooch_t*)(_label + 1);
+		if (moo_comp_oocstr(gtname, lbname) == 0)
+		{
+			if (_goto->level != _label->level)
+			{
+				/*TODO: error... */
+			}
+			/* TODO: patch instruction */
+			return 0;
+		}
+		_label = _label->next;
+	}
+
+	/* TODO: */
+	/*moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEUNDEF, "xxxx");*/
+	return -1;
+}
+
+static MOO_INLINE int resolve_goto_labels (moo_t* moo)
+{
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_goto_t* _goto;
+
+	_goto = cc->mth._goto;
+	while (_goto)
+	{
+		if (resolve_goto_label(moo, _goto) <= -1) return -1;
+		_goto = _goto->next;
+	}
+	return 0;
+}
+
+static MOO_INLINE int add_label (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* lab_loc, moo_oow_t level)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_label_t* lab;
@@ -7531,6 +7573,9 @@ static int __compile_method_definition (moo_t* moo)
 			moo_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			return -1;
 		}
+
+		/* end of method has been reached */
+		if (resolve_goto_labels(moo) <= -1) return -1;
 	}
 
 	GET_TOKEN (moo);
@@ -8646,7 +8691,6 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 	if (moo->dbgi)
 	{
 		moo_oow_t file_offset;
-		moo_oow_t class_offset;
 		const moo_ooch_t* file_name;
 
 		file_name = cc->fqn_loc.file;
