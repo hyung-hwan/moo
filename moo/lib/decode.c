@@ -271,7 +271,27 @@ int moo_decode (moo_t* moo, moo_oop_method_t mth, const moo_oocs_t* classfqn)
 				break;
 
 			/* -- */
+			case BCODE_JMPOP_FORWARD_IF_TRUE:
+				FETCH_PARAM_CODE_TO (moo, b1);
+				LOG_INST_1 (moo, "jmpop_forward_if_true %zu", b1);
+				break;
 
+			case BCODE_JMPOP2_FORWARD_IF_TRUE:
+				FETCH_PARAM_CODE_TO (moo, b1);
+				LOG_INST_1 (moo, "jmpop2_forward_if_true %zu", b1);
+				break;
+
+			case BCODE_JMPOP_FORWARD_IF_FALSE:
+				FETCH_PARAM_CODE_TO (moo, b1);
+				LOG_INST_1 (moo, "jmpop_forward_if_false %zu", b1);
+				break;
+
+			case BCODE_JMPOP2_FORWARD_IF_FALSE:
+				FETCH_PARAM_CODE_TO (moo, b1);
+				LOG_INST_1 (moo, "jmpop2_forward_if_false %zu", b1);
+				break;
+
+			/* -- */
 			case BCODE_JUMP_BACKWARD:
 				FETCH_PARAM_CODE_TO (moo, b1);
 				LOG_INST_1 (moo, "jump_backward %zu", b1);
@@ -303,28 +323,6 @@ int moo_decode (moo_t* moo, moo_oop_method_t mth, const moo_oocs_t* classfqn)
 				break;
 
 			/* -- */
-			case BCODE_JMPOP_FORWARD_IF_TRUE:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jmpop_forward_if_true %zu", b1);
-				break;
-
-			case BCODE_JMPOP2_FORWARD_IF_TRUE:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jmpop2_forward_if_true %zu", b1);
-				break;
-
-			case BCODE_JMPOP_FORWARD_IF_FALSE:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jmpop_forward_if_false %zu", b1);
-				break;
-
-			case BCODE_JMPOP2_FORWARD_IF_FALSE:
-				FETCH_PARAM_CODE_TO (moo, b1);
-				LOG_INST_1 (moo, "jmpop2_forward_if_false %zu", b1);
-				break;
-
-			/* -- */
-
 			case BCODE_JMPOP_BACKWARD_IF_TRUE:
 				FETCH_PARAM_CODE_TO (moo, b1);
 				LOG_INST_1 (moo, "jmpop_backward_if_true %zu", b1);

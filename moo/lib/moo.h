@@ -1731,7 +1731,6 @@ struct moo_t
 #	define MOO_ASSERT(moo,expr) ((void)((expr) || ((moo)->vmprim.assertfail(moo, #expr, __FILE__, __LINE__), 0)))
 #endif
 
-
 #if defined(MOO_INCLUDE_COMPILER)
 enum moo_iocmd_t
 {

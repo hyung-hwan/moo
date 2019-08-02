@@ -5523,45 +5523,6 @@ static int __execute (moo_t* moo)
 			NEXT_INST();
 
 		/* -- */
-		ON_INST(BCODE_JUMP_BACKWARD) /* 0xCA */
-			FETCH_PARAM_CODE_TO (moo, b1);
-			LOG_INST1 (moo, "jump_backward %zu", b1);
-			moo->ip -= b1;
-			NEXT_INST();
-
-		ON_INST(BCODE_JUMP2_BACKWARD) /* 0xCB */
-			FETCH_PARAM_CODE_TO (moo, b1);
-			LOG_INST1 (moo, "jump2_backward %zu", b1);
-			moo->ip -= MAX_CODE_JUMP + b1;
-			NEXT_INST();
-
-		ON_INST(BCODE_JUMP_BACKWARD_IF_TRUE) /* 0xCC */
-			FETCH_PARAM_CODE_TO (moo, b1);
-			LOG_INST1 (moo, "jump_backward_if_true %zu", b1);
-			if (MOO_STACK_GETTOP(moo) != moo->_false) moo->ip -= b1;
-			NEXT_INST();
-
-		ON_INST(BCODE_JUMP2_BACKWARD_IF_TRUE) /* 0xCD */
-			FETCH_PARAM_CODE_TO (moo, b1);
-			LOG_INST1 (moo, "jump2_backward_if_true %zu", b1);
-			if (MOO_STACK_GETTOP(moo) != moo->_false) moo->ip -= MAX_CODE_JUMP + b1;
-			NEXT_INST();
-
-		ON_INST(BCODE_JUMP_BACKWARD_IF_FALSE) /* 0xCE */
-			FETCH_PARAM_CODE_TO (moo, b1);
-			LOG_INST1 (moo, "jump_backward_if_false %zu", b1);
-			if (MOO_STACK_GETTOP(moo) == moo->_false) moo->ip -= b1;
-			NEXT_INST();
-
-		ON_INST(BCODE_JUMP2_BACKWARD_IF_FALSE) /* 0xCF */
-			FETCH_PARAM_CODE_TO (moo, b1);
-			LOG_INST1 (moo, "jump2_backward_if_false %zu", b1);
-			if (MOO_STACK_GETTOP(moo) == moo->_false) moo->ip -= MAX_CODE_JUMP + b1;
-			NEXT_INST();
-
-		/* -- */
-
-		
 		ON_INST(BCODE_JMPOP_FORWARD_IF_TRUE)
 			FETCH_PARAM_CODE_TO (moo, b1);
 			LOG_INST1 (moo, "jmpop_forward_if_true %zu", b1);
@@ -5588,6 +5549,43 @@ static int __execute (moo_t* moo)
 			LOG_INST1 (moo, "jmpop2_forward_if_false %zu", b1);
 			if (MOO_STACK_GETTOP(moo) == moo->_false) moo->ip += MAX_CODE_JUMP + b1;
 			MOO_STACK_POP (moo);
+			NEXT_INST();
+
+		/* -- */
+		ON_INST(BCODE_JUMP_BACKWARD) /* 0xCE */
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST1 (moo, "jump_backward %zu", b1);
+			moo->ip -= b1;
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP2_BACKWARD) /* 0xCF */
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST1 (moo, "jump2_backward %zu", b1);
+			moo->ip -= MAX_CODE_JUMP + b1;
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP_BACKWARD_IF_TRUE) /* 0xD0 */
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST1 (moo, "jump_backward_if_true %zu", b1);
+			if (MOO_STACK_GETTOP(moo) != moo->_false) moo->ip -= b1;
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP2_BACKWARD_IF_TRUE) /* 0xD1 */
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST1 (moo, "jump2_backward_if_true %zu", b1);
+			if (MOO_STACK_GETTOP(moo) != moo->_false) moo->ip -= MAX_CODE_JUMP + b1;
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP_BACKWARD_IF_FALSE) /* 0xD2 */
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST1 (moo, "jump_backward_if_false %zu", b1);
+			if (MOO_STACK_GETTOP(moo) == moo->_false) moo->ip -= b1;
+			NEXT_INST();
+
+		ON_INST(BCODE_JUMP2_BACKWARD_IF_FALSE) /* 0xD3 */
+			FETCH_PARAM_CODE_TO (moo, b1);
+			LOG_INST1 (moo, "jump2_backward_if_false %zu", b1);
+			if (MOO_STACK_GETTOP(moo) == moo->_false) moo->ip -= MAX_CODE_JUMP + b1;
 			NEXT_INST();
 
 		/* -- */

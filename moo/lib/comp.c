@@ -773,7 +773,6 @@ static moo_oop_t string_to_fpdec (moo_t* moo, moo_oocs_t* str, int prescaled)
 	if (scale < xscale)
 	{
 		/* need to add more zeros */
-		moo_ooch_t* tmp;
 		moo_oow_t explen;
 
 		explen = len + xscale - scale;
@@ -2719,30 +2718,12 @@ static int patch_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oow_t 
 	if (jt < jip)
 	{
 		/* backward jump */
-
-		switch (cc->mth.code.ptr[jip])
-		{
-			case BCODE_JUMP_FORWARD:
-				cc->mth.code.ptr[jip] = BCODE_JUMP_BACKWARD;
-				break;
-
-			case BCODE_JUMP_FORWARD_IF_FALSE:
-				cc->mth.code.ptr[jip] = BCODE_JUMP_BACKWARD_IF_FALSE;
-				break;
-
-			case BCODE_JUMP_FORWARD_IF_TRUE:
-				cc->mth.code.ptr[jip] == BCODE_JUMP_BACKWARD_IF_TRUE;
-				break;
-
-			case BCODE_JMPOP_FORWARD_IF_FALSE:
-				cc->mth.code.ptr[jip] = BCODE_JMPOP_BACKWARD_IF_FALSE;
-				break;
-
-			case BCODE_JMPOP_FORWARD_IF_TRUE:
-				cc->mth.code.ptr[jip] = BCODE_JMPOP_BACKWARD_IF_TRUE;
-				break;
-		}
-
+		MOO_STATIC_ASSERT (BCODE_JUMP_FORWARD + 10 == BCODE_JUMP_BACKWARD);
+		MOO_STATIC_ASSERT (BCODE_JUMP_FORWARD_IF_TRUE + 10  == BCODE_JUMP_BACKWARD_IF_TRUE);
+		MOO_STATIC_ASSERT (BCODE_JUMP_FORWARD_IF_FALSE + 10 == BCODE_JUMP_BACKWARD_IF_FALSE);
+		MOO_STATIC_ASSERT (BCODE_JMPOP_FORWARD_IF_TRUE + 10 == BCODE_JMPOP_BACKWARD_IF_TRUE);
+		MOO_STATIC_ASSERT (BCODE_JMPOP_FORWARD_IF_FALSE + 10 == BCODE_JMPOP_BACKWARD_IF_FALSE);
+		cc->mth.code.ptr[jip] += 10; /* switch to the backward jump instruction */
 		code_size = jip - jt + (MOO_BCODE_LONG_PARAM_SIZE + 1);
 	}
 	else
@@ -2876,47 +2857,30 @@ static MOO_INLINE void adjust_all_loop_jumps_for_elimination (moo_t* moo, moo_oo
 	}
 }
 
-static MOO_INLINE void adjust_gotos_for_elimination (moo_t* moo, moo_oow_t start, moo_oow_t end)
+static MOO_INLINE void adjust_all_gotos_for_elimination (moo_t* moo, moo_oow_t start, moo_oow_t end)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-	moo_goto_t* _goto, *prev_goto, * next_goto;
+	moo_goto_t* _goto;
 
 	_goto = cc->mth._goto;
-	prev_goto = MOO_NULL;
-
 	while (_goto)
 	{
 		if (_goto->ip >= start && _goto->ip <= end)
 		{
-			next_goto = _goto->next;
-
-			moo_freemem (moo, _goto);
-
-			if (prev_goto) 
-			{
-				prev_goto->next = next_goto;
-			}
-			else
-			{
-				cc->mth._goto = next_goto;
-			}
-
-			_goto = next_goto;
+			/* invalidate this entry since the goto instruction itself is getting eliminated. 
+			 * i don't kill this node. the resolver must skip this node. */
+			_goto->ip = INVALID_IP;
 		}
-		else
+		else if (_goto->ip > end)
 		{
-			if (_goto->ip > end)
-			{
-				_goto->ip -= end - start + 1;
-			}
-
-			prev_goto = _goto;
-			_goto = _goto->next;
+			_goto->ip -= end - start + 1;
 		}
+
+		_goto = _goto->next;
 	}
 }
 
-static MOO_INLINE void adjust_labels_for_elimination (moo_t* moo, moo_oow_t start, moo_oow_t end)
+static MOO_INLINE void adjust_all_labels_for_elimination (moo_t* moo, moo_oow_t start, moo_oow_t end)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_label_t* _label;
@@ -2992,8 +2956,8 @@ static void eliminate_instructions (moo_t* moo, moo_oow_t start, moo_oow_t end)
 		/* eliminate all instructions starting from the start index.
 		 * setting the length to the start length will achieve this */
 		adjust_all_loop_jumps_for_elimination (moo, start, last);
-		adjust_gotos_for_elimination (moo, start, last);
-		adjust_labels_for_elimination (moo, start, last);
+		adjust_all_gotos_for_elimination (moo, start, last);
+		adjust_all_labels_for_elimination (moo, start, last);
 		cc->mth.code.len = start;
 	}
 	else
@@ -3003,8 +2967,8 @@ static void eliminate_instructions (moo_t* moo, moo_oow_t start, moo_oow_t end)
 		/* eliminate a chunk in the middle of the instruction buffer.
 		 * some copying is required */
 		adjust_all_loop_jumps_for_elimination (moo, start, end);
-		adjust_gotos_for_elimination (moo, start, end);
-		adjust_labels_for_elimination (moo, start, end);
+		adjust_all_gotos_for_elimination (moo, start, end);
+		adjust_all_labels_for_elimination (moo, start, end);
 
 		tail_len = cc->mth.code.len - end - 1;
 		MOO_MEMMOVE (&cc->mth.code.ptr[start], &cc->mth.code.ptr[end + 1], tail_len * MOO_SIZEOF(cc->mth.code.ptr[0]));
@@ -4175,7 +4139,6 @@ static int compile_method_name (moo_t* moo, moo_method_data_t* mth)
 	 * unary-selector := identifier
 	 */
 	int n;
-	moo_oocs_t dummy;
 
 	MOO_ASSERT (moo, mth->tmpr_count == 0);
 
@@ -6721,6 +6684,7 @@ static MOO_INLINE int resolve_goto_label (moo_t* moo, moo_goto_t* _goto)
 				return -1;
 			}
 
+			MOO_ASSERT (moo, _goto->ip != INVALID_IP);
 			MOO_ASSERT (moo, _goto->ip != _label->ip);
 			if (patch_forward_jump_instruction(moo, _goto->ip, _label->ip, &_goto->loc) <= -1) return -1;
 			return 0;
@@ -6741,7 +6705,7 @@ static MOO_INLINE int resolve_goto_labels (moo_t* moo)
 	_goto = cc->mth._goto;
 	while (_goto)
 	{
-		if (resolve_goto_label(moo, _goto) <= -1) return -1;
+		if (_goto->ip != INVALID_IP && resolve_goto_label(moo, _goto) <= -1) return -1;
 		_goto = _goto->next;
 	}
 	return 0;

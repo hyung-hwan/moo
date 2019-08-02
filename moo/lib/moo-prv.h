@@ -744,16 +744,17 @@ SHORT INSTRUCTION CODE                                        LONG INSTRUCTION C
                                                               199  1100 0111 XXXXXXXX JUMP2_FORWARD_IF_TRUE
                                                               200  1100 1000 XXXXXXXX JUMP_FORWARD_IF_FALSE
                                                               201  1100 1001 XXXXXXXX JUMP2_FORWARD_IF_FALSE
-                                                              202  1100 1010 XXXXXXXX JUMP_BACKWARD
-                                                              203  1100 1011 XXXXXXXX JUMP2_BACKWARD
-                                                              204  1100 1100 XXXXXXXX JUMP_BACKWARD_IF_TRUE
-                                                              205  1100 1101 XXXXXXXX JUMP2_BACKWARD_IF_TRUE
-                                                              206  1100 1110 XXXXXXXX JUMP_BACKWARD_IF_FALSE
-                                                              207  1100 1111 XXXXXXXX JUMP2_BACKWARD_IF_FALSE
-                                                              208  1101 0000 XXXXXXXX JMPOP_FORWARD_IF_TRUE
-                                                              209  1101 0001 XXXXXXXX JMPOP2_FORWARD_IF_TRUE
-                                                              210  1101 0010 XXXXXXXX JMPOP_FORWARD_IF_FALSE
-                                                              211  1101 0011 XXXXXXXX JMPOP2_FORWARD_IF_FALSE
+                                                              202  1100 1010 XXXXXXXX JMPOP_FORWARD_IF_TRUE
+                                                              203  1100 1011 XXXXXXXX JMPOP2_FORWARD_IF_TRUE
+                                                              204  1100 1100 XXXXXXXX JMPOP_FORWARD_IF_FALSE
+                                                              205  1100 1101 XXXXXXXX JMPOP2_FORWARD_IF_FALSE
+
+                                                              206  1100 1110 XXXXXXXX JUMP_BACKWARD
+                                                              207  1100 1111 XXXXXXXX JUMP2_BACKWARD
+                                                              208  1101 0000 XXXXXXXX JUMP_BACKWARD_IF_TRUE
+                                                              209  1101 0001 XXXXXXXX JUMP2_BACKWARD_IF_TRUE
+                                                              210  1101 0010 XXXXXXXX JUMP_BACKWARD_IF_FALSE
+                                                              211  1101 0011 XXXXXXXX JUMP2_BACKWARD_IF_FALSE
                                                               212  1101 0100 XXXXXXXX JMPOP_BACKWARD_IF_TRUE
                                                               213  1101 0101 XXXXXXXX JMPOP2_BACKWARD_IF_TRUE
                                                               214  1101 0110 XXXXXXXX JMPOP_BACKWARD_IF_FALSE
@@ -950,26 +951,26 @@ enum moo_bcode_t
 	BCODE_POP_INTO_OBJECT_X        = 0xBC, /* 188 ## */
 	BCODE_PUSH_OBJECT_X            = 0xC0, /* 192 ## */
 
+	/* UNUSED - 0xC0 - 0xC3 */
+
 	BCODE_JUMP_FORWARD             = 0xC4, /* 196 ## */
 	BCODE_JUMP2_FORWARD            = 0xC5, /* 197 ## */
 	BCODE_JUMP_FORWARD_IF_TRUE     = 0xC6, /* 198 ## */
 	BCODE_JUMP2_FORWARD_IF_TRUE    = 0xC7, /* 199 ## */
 	BCODE_JUMP_FORWARD_IF_FALSE    = 0xC8, /* 200 ## */
 	BCODE_JUMP2_FORWARD_IF_FALSE   = 0xC9, /* 201 ## */
-
-	BCODE_JUMP_BACKWARD            = 0xCA, /* 202 ## */
-	BCODE_JUMP2_BACKWARD           = 0xCB, /* 203 ## */
-	BCODE_JUMP_BACKWARD_IF_TRUE    = 0xCC, /* 204 ## */
-	BCODE_JUMP2_BACKWARD_IF_TRUE   = 0xCD, /* 205 ## */
-	BCODE_JUMP_BACKWARD_IF_FALSE   = 0xCE, /* 206 ## */
-	BCODE_JUMP2_BACKWARD_IF_FALSE  = 0xCF, /* 207 ## */
-
 	/* JMPOP = JUMP + POP */
-	BCODE_JMPOP_FORWARD_IF_TRUE    = 0xD0, /* 208 ## */
-	BCODE_JMPOP2_FORWARD_IF_TRUE   = 0xD1, /* 209 ## */
-	BCODE_JMPOP_FORWARD_IF_FALSE   = 0xD2, /* 210 ## */
-	BCODE_JMPOP2_FORWARD_IF_FALSE  = 0xD3, /* 211 ## */
-
+	BCODE_JMPOP_FORWARD_IF_TRUE    = 0xCA, /* 202 ## */
+	BCODE_JMPOP2_FORWARD_IF_TRUE   = 0xCB, /* 203 ## */
+	BCODE_JMPOP_FORWARD_IF_FALSE   = 0xCC, /* 204 ## */
+	BCODE_JMPOP2_FORWARD_IF_FALSE  = 0xCD, /* 205 ## */
+	
+	BCODE_JUMP_BACKWARD            = 0xCE, /* 206 ## */
+	BCODE_JUMP2_BACKWARD           = 0xCF, /* 207 ## */
+	BCODE_JUMP_BACKWARD_IF_TRUE    = 0xD0, /* 208 ## */
+	BCODE_JUMP2_BACKWARD_IF_TRUE   = 0xD1, /* 209 ## */
+	BCODE_JUMP_BACKWARD_IF_FALSE   = 0xD2, /* 210 ## */
+	BCODE_JUMP2_BACKWARD_IF_FALSE  = 0xD3, /* 211 ## */
 	BCODE_JMPOP_BACKWARD_IF_TRUE   = 0xD4, /* 212 ## */
 	BCODE_JMPOP2_BACKWARD_IF_TRUE  = 0xD5, /* 213 ## */
 	BCODE_JMPOP_BACKWARD_IF_FALSE  = 0xD6, /* 214 ## */
@@ -983,12 +984,12 @@ enum moo_bcode_t
 	BCODE_STORE_INTO_OBJVAR_X      = 0xE8, /* 232 ## */
 	BCODE_POP_INTO_OBJVAR_X        = 0xEC, /* 236 ## */
 
-	/* UNUSED 237 */
+	/* UNUSED 0xED */
 	BCODE_MAKE_BYTEARRAY           = 0xEE, /* 238 */
 	BCODE_POP_INTO_BYTEARRAY       = 0xEF, /* 239 */
 
 	BCODE_SEND_MESSAGE_X           = 0xF0, /* 240 ## */
-	/* UNUSED 241 */
+	/* UNUSED 0xF1 */
 	BCODE_MAKE_DICTIONARY          = 0xF2, /* 242 */
 	BCODE_POP_INTO_DICTIONARY      = 0xF3, /* 243 */
 	BCODE_SEND_MESSAGE_TO_SUPER_X  = 0xF4, /* 244 ## */
