@@ -108,6 +108,8 @@ start:
 	[goto B02. A01: 10. B02: 1000. ] value class dump.
 self q.
 
+[ | a | a := 21. if (a = 21) { goto X02 }. X02: ] value dump. ## this causes a stack depletion problem... TODO:
+
 EXCEPTION_TEST:
 Exception signal: 'experiment with exception signalling'.
 
