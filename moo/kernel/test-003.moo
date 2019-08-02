@@ -52,6 +52,18 @@ class MyObject(Object)
 		].
 	}
 
+method(#class) q
+{
+	| v |
+	
+	v := 0.
+start:
+	if (v > 100) { ^nil }.
+	v dump.
+	v := v + 1.
+	goto start.
+}
+
 	method(#class) main
 	{
 		| tc limit |
@@ -94,6 +106,7 @@ class MyObject(Object)
 		].
 	(if (true) { a: 10. b: 1p1000. c: 20000 }) dump.
 	[goto B02. A01: 10. B02: 1000. ] value class dump.
+self q.
 
 EXCEPTION_TEST:
 Exception signal: 'experiment with exception signalling'.

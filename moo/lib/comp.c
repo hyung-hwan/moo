@@ -2704,7 +2704,7 @@ static MOO_INLINE int emit_backward_jump_instruction (moo_t* moo, int cmd, moo_o
 	return emit_single_param_instruction(moo, cmd, offset + adj, srcloc);
 }
 
-static int patch_long_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oow_t jt, moo_ioloc_t* errloc)
+static int patch_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oow_t jt, moo_ioloc_t* errloc)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_oow_t code_size;
@@ -2816,7 +2816,7 @@ static int update_loop_jumps (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t jt)
 		for (j = 0; j < MOO_COUNTOF(pool->static_chunk.buf) && i < pool->count; j++)
 		{
 			if (chunk->buf[j] != INVALID_IP &&
-			    patch_long_forward_jump_instruction(moo, chunk->buf[j], jt, MOO_NULL) <= -1) return -1;
+			    patch_forward_jump_instruction(moo, chunk->buf[j], jt, MOO_NULL) <= -1) return -1;
 			i++;
 		}
 	}
@@ -4978,7 +4978,7 @@ static int compile_block_expression (moo_t* moo)
 
 	if (emit_byte_instruction(moo, BCODE_RETURN_FROM_BLOCK, TOKEN_LOC(moo)) <= -1) return -1;
 
-	if (patch_long_forward_jump_instruction(moo, jump_inst_pos, cc->mth.code.len, &block_loc) <= -1) return -1;
+	if (patch_forward_jump_instruction(moo, jump_inst_pos, cc->mth.code.len, &block_loc) <= -1) return -1;
 
 	/* restore the temporary count */
 	cc->mth.tmprs.len = saved_tmprs_len;
@@ -5975,12 +5975,12 @@ start_over:
 	/* patch instructions that jumps to the end of if expression */
 	for (jumptoend_chunk = jumptoend.head, i = 0; jumptoend_chunk; jumptoend_chunk = jumptoend_chunk->next)
 	{
-		/* pass expr_loc to every call to patch_long_forward_jump_instruction().
+		/* pass expr_loc to every call to patch_forward_jump_instruction().
 		 * it's harmless because if the first call doesn't flood, the subseqent 
 		 * call will never flood either. */
 		for (j = 0; j < MOO_COUNTOF(jumptoend.static_chunk.buf) && i < jumptoend.count; j++)
 		{
-			if (patch_long_forward_jump_instruction (moo, jumptoend_chunk->buf[j], cc->mth.code.len, &expr_loc) <= -1) goto oops;
+			if (patch_forward_jump_instruction (moo, jumptoend_chunk->buf[j], cc->mth.code.len, &expr_loc) <= -1) goto oops;
 			i++;
 		}
 	}
@@ -6129,7 +6129,7 @@ static int compile_if_expression (moo_t* moo)
 		precondpos = cc->mth.code.len;
 
 		if (jumptonext != INVALID_IP &&
-		    patch_long_forward_jump_instruction(moo, jumptonext, precondpos, &brace_loc) <= -1) goto oops;
+		    patch_forward_jump_instruction(moo, jumptonext, precondpos, &brace_loc) <= -1) goto oops;
 
 		if (compile_conditional(moo) <= -1) goto oops;
 		postcondpos = cc->mth.code.len;
@@ -6208,7 +6208,7 @@ static int compile_if_expression (moo_t* moo)
 	while (1);
 
 	if (jumptonext != INVALID_IP &&
-	    patch_long_forward_jump_instruction(moo, jumptonext, cc->mth.code.len, &brace_loc) <= -1) goto oops;
+	    patch_forward_jump_instruction(moo, jumptonext, cc->mth.code.len, &brace_loc) <= -1) goto oops;
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_ELSE)
 	{
@@ -6231,12 +6231,12 @@ static int compile_if_expression (moo_t* moo)
 	/* patch instructions that jumps to the end of if expression */
 	for (jumptoend_chunk = jumptoend.head, i = 0; jumptoend_chunk; jumptoend_chunk = jumptoend_chunk->next)
 	{
-		/* pass if_loc to every call to patch_long_forward_jump_instruction().
+		/* pass if_loc to every call to patch_forward_jump_instruction().
 		 * it's harmless because if the first call doesn't flood, the subseqent 
 		 * call will never flood either. */
 		for (j = 0; j < MOO_COUNTOF(jumptoend.static_chunk.buf) && i < jumptoend.count; j++)
 		{
-			if (patch_long_forward_jump_instruction (moo, jumptoend_chunk->buf[j], cc->mth.code.len, &if_loc) <= -1) goto oops;
+			if (patch_forward_jump_instruction (moo, jumptoend_chunk->buf[j], cc->mth.code.len, &if_loc) <= -1) goto oops;
 			i++;
 		}
 	}
@@ -6347,7 +6347,7 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 	if (cond_style != 1)
 	{
 		/* patch the jump instruction */
-		if (patch_long_forward_jump_instruction(moo, postcondpos, cc->mth.code.len, &brace_loc) <= -1) goto oops;
+		if (patch_forward_jump_instruction(moo, postcondpos, cc->mth.code.len, &brace_loc) <= -1) goto oops;
 	}
 
 	if (cond_style == -1) 
@@ -6657,7 +6657,7 @@ static MOO_INLINE int resolve_goto_label (moo_t* moo, moo_goto_t* _goto)
 			}
 
 			MOO_ASSERT (moo, _goto->ip != _label->ip);
-			if (patch_long_forward_jump_instruction (moo, _goto->ip, _label->ip, &_goto->loc) <= -1) return -1;
+			if (patch_forward_jump_instruction(moo, _goto->ip, _label->ip, &_goto->loc) <= -1) return -1;
 			return 0;
 		}
 		_label = _label->next;
