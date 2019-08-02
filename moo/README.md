@@ -41,18 +41,16 @@
 * #[] ByteArray. Comma as element delimiter is optional
 * #{} Dictionary - not supported yet
 
-The following are not literals. The followings forms expressions.
+The followings are not literals. The followings forms expressions.
 
 * ##() Array expression. Comma required to delimit elements
 * ##[] ByteArray expression. Comma required to delimit elements
 * ##{} Dictionary expression. Comma required to delimit elements
 
-* S%[] String literal with each character specified 
-** S%{A B C '\n'}
-
-* S%{} String with dynamic expression
-* S%{ 65 asCharacter, 64 asCharacter }
-
+The followings are not implemented. but can i do something like these?
+* S#[] String literal with each character specified. S%{A B C '\n'}
+* S#{} String with dynamic expression
+* S#{ 65 asCharacter, 64 asCharacter }
 
 ### Class
 ```
@@ -72,8 +70,7 @@ if (a < 10) { ... }
 elif (a < 20) { ... }
 else { ... }.
 
-ifnot (i < 20) { 30 } else { 40 }.
-nif (i < 20) { 30 } else { 40 }.
+ifnot (i < 20) { 30 } else { 40 }. /* TODO: ifnot or nif? elifnot or elnif? */
 
 if (a < 10) { .. } 
 elifnot (a > 20) { ... }
@@ -133,7 +130,7 @@ useful to make a block return
 can i deprecate the ^^ operator?
 
 ```
-[ 1 + 2. goto r. 3 + 4. r::]
+[ 1 + 2. goto r. 3 + 4. r:]
 ```
 
 goto must not cross the boundary of the block context.
@@ -142,7 +139,7 @@ goto must not cross the boundary of the block context.
 this is invalid. cannot jump into a block from outside 
 and vice versa.
  goto x.
- [ x:: 
+ [ x:
    1 + 2 ].
 ```
 
