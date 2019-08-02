@@ -2864,14 +2864,75 @@ static MOO_INLINE int update_loop_continues (moo_t* moo, moo_oow_t jt)
 
 static MOO_INLINE void adjust_all_loop_jumps_for_elimination (moo_t* moo, moo_oow_t start, moo_oow_t end)
 {
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_loop_t* loop;
 
-	loop = ((moo_cunit_class_t*)moo->c->cunit)->mth.loop;
+	loop = cc->mth.loop;
 	while (loop)
 	{
 		adjust_loop_jumps_for_elimination (moo, &loop->break_ip_pool, start, end);
 		adjust_loop_jumps_for_elimination (moo, &loop->continue_ip_pool, start, end);
 		loop = loop->next;
+	}
+}
+
+static MOO_INLINE void adjust_gotos_for_elimination (moo_t* moo, moo_oow_t start, moo_oow_t end)
+{
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_goto_t* _goto, *prev_goto, * next_goto;
+
+	_goto = cc->mth._goto;
+	prev_goto = MOO_NULL;
+
+	while (_goto)
+	{
+		if (_goto->ip >= start && _goto->ip <= end)
+		{
+			next_goto = _goto->next;
+
+			moo_freemem (moo, _goto);
+
+			if (prev_goto) 
+			{
+				prev_goto->next = next_goto;
+			}
+			else
+			{
+				cc->mth._goto = next_goto;
+			}
+
+			_goto = next_goto;
+		}
+		else
+		{
+			if (_goto->ip > end)
+			{
+				_goto->ip -= end - start + 1;
+			}
+
+			prev_goto = _goto;
+			_goto = _goto->next;
+		}
+	}
+}
+
+static MOO_INLINE void adjust_labels_for_elimination (moo_t* moo, moo_oow_t start, moo_oow_t end)
+{
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_label_t* _label;
+
+	_label = cc->mth._label;
+	while (_label)
+	{
+		if (_label->ip >= start && _label->ip <= end)
+		{
+			/* TODO: ERROR - cannot eliminate this part. caller must ensure this doesn't happen */
+		}
+		else if (_label->ip > end)
+		{
+			_label->ip -= end - start + 1;
+		}
+		_label = _label->next;
 	}
 }
 
@@ -2931,6 +2992,8 @@ static void eliminate_instructions (moo_t* moo, moo_oow_t start, moo_oow_t end)
 		/* eliminate all instructions starting from the start index.
 		 * setting the length to the start length will achieve this */
 		adjust_all_loop_jumps_for_elimination (moo, start, last);
+		adjust_gotos_for_elimination (moo, start, last);
+		adjust_labels_for_elimination (moo, start, last);
 		cc->mth.code.len = start;
 	}
 	else
@@ -2940,6 +3003,8 @@ static void eliminate_instructions (moo_t* moo, moo_oow_t start, moo_oow_t end)
 		/* eliminate a chunk in the middle of the instruction buffer.
 		 * some copying is required */
 		adjust_all_loop_jumps_for_elimination (moo, start, end);
+		adjust_gotos_for_elimination (moo, start, end);
+		adjust_labels_for_elimination (moo, start, end);
 
 		tail_len = cc->mth.code.len - end - 1;
 		MOO_MEMMOVE (&cc->mth.code.ptr[start], &cc->mth.code.ptr[end + 1], tail_len * MOO_SIZEOF(cc->mth.code.ptr[0]));
