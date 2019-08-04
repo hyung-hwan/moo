@@ -959,7 +959,7 @@ enum moo_bcode_t
 	BCODE_JUMP2_FORWARD_IF_TRUE    = 0xC7, /* 199 ## */
 	BCODE_JUMP_FORWARD_IF_FALSE    = 0xC8, /* 200 ## */
 	BCODE_JUMP2_FORWARD_IF_FALSE   = 0xC9, /* 201 ## */
-	/* JMPOP = JUMP + POP */
+	/* JMPOP = JUMP + POP -> it pops the stack top always but it jumps only if the condition is met */
 	BCODE_JMPOP_FORWARD_IF_TRUE    = 0xCA, /* 202 ## */
 	BCODE_JMPOP2_FORWARD_IF_TRUE   = 0xCB, /* 203 ## */
 	BCODE_JMPOP_FORWARD_IF_FALSE   = 0xCC, /* 204 ## */

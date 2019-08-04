@@ -108,7 +108,15 @@ start:
 	[goto B02. A01: 10. B02: 1000. ] value class dump.
 self q.
 
-[ | a | a := 21. if (a = 21) { goto X02 }. X02: ] value dump. ## this causes a stack depletion problem... TODO:
+[ | a | a := 21. if (a = 21) { goto X02 }. X02: ] value dump. // this causes a stack depletion problem... TODO:
+
+/*
+this is horrible... the stack won't be cleared when goto is made... 
+System should never be popped out
+	(if (2 > 1) { 20. System log: (if (2 > 1) {goto X2}) }) dump.
+X2:
+	a dump.
+*/
 
 EXCEPTION_TEST:
 Exception signal: 'experiment with exception signalling'.
