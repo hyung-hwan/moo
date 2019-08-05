@@ -4993,7 +4993,7 @@ static int compile_block_expression (moo_t* moo)
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) 
 				{
 					/* eliminate BCODE_POP_STACKTOP produced in the else block below
-					 * becuase the non-steatemnt item is the last item before the closing bracket */
+					 * because the non-steatemnt item is the last item before the closing bracket */
 					if (pop_stacktop_pos > 0) eliminate_instructions (moo, pop_stacktop_pos, cc->mth.code.len - 1);
 					break;
 				}
@@ -5037,15 +5037,16 @@ static int compile_block_expression (moo_t* moo)
 		if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) return -1;
 	}
 #else
-moo_oow_t pop_stacktop_pos = INVALID_IP; /* TODO: move this up */
-
 	code_start = cc->mth.code.len;
 	if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) return -1; 
-	pop_stacktop_pos = cc->mth.code.len;
-	if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, TOKEN_LOC(moo)) <= -1) return -1;
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACK)
 	{
+		moo_oow_t pop_stacktop_pos;
+
+		pop_stacktop_pos = cc->mth.code.len;
+		if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, TOKEN_LOC(moo)) <= -1) return -1;
+
 		do
 		{
 			int n;
@@ -5080,7 +5081,7 @@ moo_oow_t pop_stacktop_pos = INVALID_IP; /* TODO: move this up */
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) 
 				{
 					/* eliminate BCODE_POP_STACKTOP produced in the else block below
-					 * becuase the non-stetment item is the last item before the closing bracket */
+					 * becuase the non-statement item is the last item before the closing bracket */
 					if (pop_stacktop_pos != INVALID_IP) 
 					{
 						eliminate_instructions (moo, pop_stacktop_pos, pop_stacktop_pos);
@@ -5134,7 +5135,12 @@ moo_oow_t pop_stacktop_pos = INVALID_IP; /* TODO: move this up */
 	/*
 	if (cc->mth.code.len > 2 && cc->mth.code.len - 2 == code_start)
 	{
-		if (cc->mth.code.ptr[code_start] == BCODE_PUSH_NIL
+		if (cc->mth.code.ptr[code_start] == BCODE_PUSH_NIL &&
+		    cc->mth.code.ptr[code_start + 1] == BCODE_POP_STACKTOP &&
+		    no goto found... <--- it's a bit tricy since goto can be inside other expressions like 'if' expression.
+		{
+			eliminate_instructions(moo, code_start, code_start + 2);
+		}
 	}*/
 #endif
 
@@ -6189,7 +6195,7 @@ static int compile_braced_block (moo_t* moo)
 					/* non-statement followed by the closing brace.
 					 * if there is a statement above the non-statement item, the POP_STACKSTOP is produced.
 					 * it should be eliminated since the block should return the last evalulated value */
-					if (pop_stacktop_pos > 0) eliminate_instructions (moo, pop_stacktop_pos, cc->mth.code.len - 1);
+					if (pop_stacktop_pos > 0) eliminate_instructions (moo, pop_stacktop_pos, pop_stacktop_pos);
 					break;
 				}
 			}
@@ -6198,7 +6204,7 @@ static int compile_braced_block (moo_t* moo)
 				/* goto statement */
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) 
 				{
-					if (pop_stacktop_pos > 0) eliminate_instructions (moo, pop_stacktop_pos, cc->mth.code.len - 1);
+					if (pop_stacktop_pos > 0) eliminate_instructions (moo, pop_stacktop_pos, pop_stacktop_pos);
 					break;
 				}
 				else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
@@ -6820,7 +6826,7 @@ static MOO_INLINE int resolve_goto_label (moo_t* moo, moo_goto_t* _goto)
 	moo_oocs_t gtname;
 	moo_label_t* _label;
 
-	gtname.ptr = (const moo_ooch_t*)(_goto + 1);
+	gtname.ptr = (moo_ooch_t*)(_goto + 1);
 	_label = cc->mth._label;
 	while (_label)
 	{
@@ -6838,6 +6844,7 @@ static MOO_INLINE int resolve_goto_label (moo_t* moo, moo_goto_t* _goto)
 
 			MOO_ASSERT (moo, _goto->ip != INVALID_IP);
 			MOO_ASSERT (moo, _goto->ip != _label->ip);
+
 			if (patch_forward_jump_instruction(moo, _goto->ip, _label->ip, &_goto->loc) <= -1) return -1;
 			return 0;
 		}
