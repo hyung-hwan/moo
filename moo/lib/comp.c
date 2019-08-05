@@ -2865,15 +2865,18 @@ static MOO_INLINE void adjust_all_gotos_for_elimination (moo_t* moo, moo_oow_t s
 	_goto = cc->mth._goto;
 	while (_goto)
 	{
-		if (_goto->ip >= start && _goto->ip <= end)
+		if (_goto->ip != INVALID_IP)
 		{
-			/* invalidate this entry since the goto instruction itself is getting eliminated. 
-			 * i don't kill this node. the resolver must skip this node. */
-			_goto->ip = INVALID_IP;
-		}
-		else if (_goto->ip > end)
-		{
-			_goto->ip -= end - start + 1;
+			if (_goto->ip >= start && _goto->ip <= end)
+			{
+				/* invalidate this entry since the goto instruction itself is getting eliminated. 
+				 * i don't kill this node. the resolver must skip this node. */
+				_goto->ip = INVALID_IP;
+			}
+			else if (_goto->ip > end)
+			{
+				_goto->ip -= end - start + 1;
+			}
 		}
 
 		_goto = _goto->next;
@@ -5110,7 +5113,6 @@ moo_oow_t pop_stacktop_pos = INVALID_IP; /* TODO: move this up */
 				}
 				else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
 				{
-					moo_ioloc_t period_loc = *TOKEN_LOC(moo);
 					GET_TOKEN (moo);
 					if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) 
 					{
