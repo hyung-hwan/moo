@@ -1,0 +1,2 @@
+[ X02: 20 ] value dump.
+[ X02: 20 ] value dump. // syntax error X02 is a duplicate label. a label must be uniquie method-wide.

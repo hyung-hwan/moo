@@ -1,0 +1,2 @@
+[ goto X03. ] value dump. /* Unable to jump out of a block */
+[ goto X02. X01: 9. goto X03. X02: goto X01. X03: 20. ] value dump.
