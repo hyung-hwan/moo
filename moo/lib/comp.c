@@ -6284,12 +6284,14 @@ static int compile_if_expression (moo_t* moo)
 
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_IF)
 	{
+		/* if */
 		push_true_inst = BCODE_PUSH_TRUE;
 		push_false_inst = BCODE_PUSH_FALSE;
 		jmpop_inst = BCODE_JMPOP_FORWARD_IF_FALSE;
 	}
 	else
 	{
+		/* ifnot */
 		push_true_inst = BCODE_PUSH_FALSE;
 		push_false_inst = BCODE_PUSH_TRUE;
 		jmpop_inst = BCODE_JMPOP_FORWARD_IF_TRUE;
@@ -6310,8 +6312,10 @@ static int compile_if_expression (moo_t* moo)
 
 		if (precondpos + 1 == postcondpos && cc->mth.code.ptr[precondpos] == push_true_inst)
 		{
+			/* got 'if (true)' or 'ifnot (false)' */
+
 			/* do not generate jump */
-			jumptonext = INVALID_IP;
+			jumptonext = INVALID_IP; /* indicate that the jump has not been emitted */
 			falseblock = 0;
 
 			/* eliminate PUSH_TRUE as well */
@@ -6320,7 +6324,10 @@ static int compile_if_expression (moo_t* moo)
 		}
 		else if (precondpos + 1 == postcondpos && cc->mth.code.ptr[precondpos] == push_false_inst)
 		{
-			jumptonext = INVALID_IP;
+			/* got 'if (false)' or 'ifnot (true)' */
+
+			jumptonext = INVALID_IP; /* indicate that the jump has not been emitted */
+
 			/* mark that the conditional is false. instructions will get eliminated below */
 			falseblock = 1; 
 		}
