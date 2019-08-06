@@ -6299,7 +6299,7 @@ static int compile_if_expression (moo_t* moo)
 
 	do
 	{
-		int falseblock = 0;
+		enum { COND_NORMAL, COND_TRUE, COND_FALSE } cond_type = COND_NORMAL; /* normal condition */
 
 		GET_TOKEN (moo); /* get ( */
 		precondpos = cc->mth.code.len;
@@ -6313,23 +6313,14 @@ static int compile_if_expression (moo_t* moo)
 		if (precondpos + 1 == postcondpos && cc->mth.code.ptr[precondpos] == push_true_inst)
 		{
 			/* got 'if (true)' or 'ifnot (false)' */
-
-			/* do not generate jump */
 			jumptonext = INVALID_IP; /* indicate that the jump has not been emitted */
-			falseblock = 0;
-
-			/* eliminate PUSH_TRUE as well */
-			eliminate_instructions (moo, precondpos, cc->mth.code.len - 1);
-			postcondpos = precondpos;
+			cond_type = COND_TRUE; 
 		}
 		else if (precondpos + 1 == postcondpos && cc->mth.code.ptr[precondpos] == push_false_inst)
 		{
 			/* got 'if (false)' or 'ifnot (true)' */
-
 			jumptonext = INVALID_IP; /* indicate that the jump has not been emitted */
-
-			/* mark that the conditional is false. instructions will get eliminated below */
-			falseblock = 1; 
+			cond_type = COND_FALSE;  /* mark that the conditional is false. instructions will get eliminated below */
 		}
 		else
 		{
@@ -6344,29 +6335,39 @@ static int compile_if_expression (moo_t* moo)
 		brace_loc = *TOKEN_LOC(moo);
 		if (compile_braced_block(moo) <= -1) goto oops;
 
-		if (jumptonext == INVALID_IP)
+		switch (cond_type)
 		{
-			if (falseblock) 
-			{
+			case COND_TRUE:
+				MOO_ASSERT (moo, jumptonext == INVALID_IP);
+
+				/* eliminate PUSH_TRUE  */
+				eliminate_instructions (moo, precondpos, precondpos);
+				postcondpos = precondpos;
+
+				if (endoftrueblock == INVALID_IP) 
+				{
+					/* update the end position of the first true block */
+					endoftrueblock = cc->mth.code.len;
+				}
+				break;
+
+			case COND_FALSE:
+				MOO_ASSERT (moo, jumptonext == INVALID_IP);
+
 				/* the conditional was false. eliminate instructions emitted
 				 * for the block attached to the conditional */
 				eliminate_instructions (moo, precondpos, cc->mth.code.len - 1);
 				postcondpos = precondpos;
-			}
-			else if (endoftrueblock == INVALID_IP) 
-			{
-				/* update the end position of the first true block */
-				endoftrueblock = cc->mth.code.len;
-			}
-		}
-		else
-		{
-			if (endoftrueblock == INVALID_IP)
-			{
-				/* emit an instruction to jump to the end */
-				if (add_to_oow_pool(moo, &jumptoend, cc->mth.code.len) <= -1 ||
-				    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD, MAX_CODE_JUMP, TOKEN_LOC(moo)) <= -1) goto oops;
-			}
+				break;
+
+			case COND_NORMAL:
+				MOO_ASSERT (moo, jumptonext != INVALID_IP);
+				if (endoftrueblock == INVALID_IP)
+				{
+					/* emit an instruction to jump to the end */
+					if (add_to_oow_pool(moo, &jumptoend, cc->mth.code.len) <= -1 ||
+					    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD, MAX_CODE_JUMP, TOKEN_LOC(moo)) <= -1) goto oops;
+				}
 		}
 
 		GET_TOKEN (moo); /* get the next token after } */
