@@ -4911,132 +4911,6 @@ static int compile_block_expression (moo_t* moo)
 	if (emit_single_param_instruction(moo, BCODE_JUMP_FORWARD, MAX_CODE_JUMP, &block_loc) <= -1) return -1;
 
 	/* compile statements inside a block */
-#if 0
-	if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK)
-	{
-		/* the block is empty */
-		if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) return -1;
-	}
-	else 
-	{
-		int empty = 1, n;
-
-		while (TOKEN_TYPE(moo) != MOO_IOTOK_EOF)
-		{
-			n = compile_block_statement(moo);
-			if (n <= -1) return -1;
-			if (n == 8888)
-			{
-				/* compile_block_statement() processed non-statement item like a jump label. */
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) 
-				{
-					if (empty && emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) return -1;
-					break;
-				}
-			}
-			else
-			{
-				/* a proper statement has been processed in compile_block_statemnt */
-				empty = 0;
-
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
-				else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
-				{
-					moo_ioloc_t period_loc = *TOKEN_LOC(moo);
-					GET_TOKEN (moo);
-					if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
-					if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, &period_loc) <= -1) return -1;
-				}
-				else
-				{
-					moo_setsynerr (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
-					return -1;
-				}
-			}
-		}
-	}
-#elif 0
-	code_start = cc->mth.code.len;
-
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACK)
-	{
-		moo_oow_t pop_stacktop_pos = 0;
-
-		do
-		{
-			int n;
-
-			if (TOKEN_TYPE(moo) == MOO_IOTOK_EOF)
-			{
-				moo_setsynerr (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
-				return -1;
-			}
-
-			n = compile_block_statement(moo);
-			if (n <= -1) return -1;
-			if (n == 8888)
-			{
-				/* compile_block_statement() processed non-statement item like a jump label. */
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) 
-				{
-					/* eliminate BCODE_POP_STACKTOP produced in the else block below
-					 * becuase the non-steatemnt item is the last item before the closing bracket */
-					if (pop_stacktop_pos > 0) eliminate_instructions (moo, pop_stacktop_pos, cc->mth.code.len - 1);
-					break;
-				}
-			}
-			else if (n == 7777)
-			{
-				/* goto statement - 
-				 *   the goto statement looks like a normal statement, but it never pushes a value.
-				 *   so no pop_stacktop instruction needs to get injected */
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) 
-				{
-					/* eliminate BCODE_POP_STACKTOP produced in the else block below
-					 * because the non-steatemnt item is the last item before the closing bracket */
-					if (pop_stacktop_pos > 0) eliminate_instructions (moo, pop_stacktop_pos, cc->mth.code.len - 1);
-					break;
-				}
-				else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
-				{
-					GET_TOKEN (moo);
-					if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
-				}
-				else
-				{
-					moo_setsynerr (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
-					return -1;
-				}
-			}
-			else
-			{
-				/* a proper statement has been processed in compile_block_statemnt */
-				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
-				else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
-				{
-					moo_ioloc_t period_loc = *TOKEN_LOC(moo);
-					GET_TOKEN (moo);
-					if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACK) break;
-
-					pop_stacktop_pos = cc->mth.code.len;
-					if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, &period_loc) <= -1) return -1;
-				}
-				else
-				{
-					moo_setsynerr (moo, MOO_SYNERR_RBRACK, TOKEN_LOC(moo), TOKEN_NAME(moo));
-					return -1;
-				}
-			}
-		}
-		while (1);
-	}
-
-	if (cc->mth.code.len == code_start)
-	{
-		/* the block is empty */
-		if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) return -1;
-	}
-#else
 	code_start = cc->mth.code.len;
 	if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) return -1; 
 
@@ -5130,19 +5004,16 @@ static int compile_block_expression (moo_t* moo)
 			}
 		}
 		while (1);
-	}
 
-	/*
-	if (cc->mth.code.len > 2 && cc->mth.code.len - 2 == code_start)
-	{
-		if (cc->mth.code.ptr[code_start] == BCODE_PUSH_NIL &&
-		    cc->mth.code.ptr[code_start + 1] == BCODE_POP_STACKTOP &&
-		    no goto found... <--- it's a bit tricy since goto can be inside other expressions like 'if' expression.
+		MOO_ASSERT (moo, cc->mth.code.len > code_start);
+		if (cc->mth.code.len - code_start >= 2 &&
+		    cc->mth.code.ptr[code_start] == BCODE_PUSH_NIL &&
+		    cc->mth.code.ptr[code_start + 1] == BCODE_POP_STACKTOP)
 		{
-			eliminate_instructions(moo, code_start, code_start + 2);
+			/* elminnate the block prologue */
+			eliminate_instructions(moo, code_start, code_start + 1);
 		}
-	}*/
-#endif
+	}
 
 	if (emit_byte_instruction(moo, BCODE_RETURN_FROM_BLOCK, TOKEN_LOC(moo)) <= -1) return -1;
 
@@ -6177,6 +6048,7 @@ static int compile_braced_block (moo_t* moo)
 
 	GET_TOKEN (moo);
 
+#if 0
 	code_start = cc->mth.code.len;
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
@@ -6244,6 +6116,122 @@ static int compile_braced_block (moo_t* moo)
 		/* the block doesn't contain an instruction at all */
 		if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) return -1;
 	}
+#else
+	code_start = cc->mth.code.len;
+	if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) return -1;
+
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
+	{
+		moo_oow_t pop_stacktop_pos;
+
+		pop_stacktop_pos = cc->mth.code.len;
+		if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, TOKEN_LOC(moo)) <= -1) return -1;
+
+		do
+		{
+			int n;
+
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_EOF)
+			{
+				moo_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				return -1;
+			}
+
+			n = compile_block_statement(moo);
+			if (n <= -1) return -1;
+			if (n == 8888)
+			{
+				/* compile_block_statement() processed non-statement item like a jump label. */
+				MOO_ASSERT (moo, cc->mth._label != MOO_NULL);
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE)
+				{
+				#if 0
+					/* the last label inside {} must be followed by a valid statement */
+					moo_oocs_t labname;
+					labname.ptr = (moo_ooch_t*)(cc->mth._label + 1);
+					labname.len = moo_count_oocstr(labname.ptr);
+					moo_setsynerrbfmt (moo, MOO_SYNERR_LABELATEND, &cc->mth._label->loc, &labname, "label at end of braced block");
+					return -1;
+				#else
+					/* unlike in [], a label can be placed at the back of the block.
+					 * to keep the last evaluated value, eliminate the pop_stacktop instruction */
+					if (pop_stacktop_pos > 0) eliminate_instructions (moo, pop_stacktop_pos, pop_stacktop_pos);
+					break;
+				#endif
+				}
+			}
+			else if (n == 7777)
+			{
+				/* goto statement */
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) 
+				{
+					/* jumping somewhere inside {} is different from inside [].
+					 * [] needs to leave a return value when leaving the block.
+					 * {} doesn't need to because {} can only be used as part of 'if', 'while', 'until', 'do'.
+					 * that means, the last evaluated value inside {} before exit is used
+					 * as a lvalue but the jump target can't be break into an assignment statement.
+					 * 
+					 *       a : 3.
+					 *       a := if (1) { goto L30 }.   // if jump to L30 is made inside {}, assignment to 'a' is skipped. 
+					 *                                   // so the evaluation result of the 'if' statement goes unused.
+ 					 *  L30: b := a + 1.                 // therefore, 'a' holds 3.
+					 * 
+					 * it is not allowed to place label inside "b := a + 1".
+					 * so the pop_stacktop produced must not be eliminated.
+					 */
+					break;
+				}
+				else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
+				{
+					GET_TOKEN (moo);
+					if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) break;
+				}
+				else
+				{
+					moo_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					return -1;
+				}
+			}
+			else
+			{
+				pop_stacktop_pos = cc->mth.code.len; /* remember the position of the last POP_STACKTOP for elimination */
+				if (emit_byte_instruction(moo, BCODE_POP_STACKTOP, TOKEN_LOC(moo)) <= -1) return -1;
+
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE)
+				{
+					eliminate_instructions (moo, pop_stacktop_pos, pop_stacktop_pos);
+					pop_stacktop_pos = INVALID_IP;
+					break;
+				}
+				else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
+				{
+					GET_TOKEN (moo);
+					if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) 
+					{
+						eliminate_instructions(moo, pop_stacktop_pos, pop_stacktop_pos);
+						pop_stacktop_pos = INVALID_IP;
+						break;
+					}
+				}
+				else
+				{
+					moo_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					return -1;
+				}
+			}
+		}
+		while (1);
+
+		MOO_ASSERT (moo, cc->mth.code.len > code_start);
+		if (cc->mth.code.len - code_start >= 2 &&
+		    cc->mth.code.ptr[code_start] == BCODE_PUSH_NIL &&
+		    cc->mth.code.ptr[code_start + 1] == BCODE_POP_STACKTOP)
+		{
+			/* elminnate the block prologue */
+			eliminate_instructions(moo, code_start, code_start + 1);
+		}
+	}
+#endif
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
 	{
@@ -7123,7 +7111,7 @@ static int compile_method_statements (moo_t* moo)
 			}
 			else
 			{
-				/* a proper statement has been processed */
+				/* a proper statement or a goto statement(if n == 7777) has been processed */
 				if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD) 
 				{
 					/* period after a statement */

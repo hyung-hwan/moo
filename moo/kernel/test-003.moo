@@ -52,6 +52,24 @@ class MyObject(Object)
 		].
 	}
 
+
+	method(#class) local_return_001
+	{
+		| a b c d|
+		a := 10.
+		c := 2.
+		d := 3.
+		b := ([
+			[
+				a := a + 3.
+				if (a > 10) { ^^77 } // ^^ must return to the calling method despite 2 blocks nested.
+			] value.
+			d := 99. // this is skipped because of ^^77 above.
+		] ensure: [ c := 88 ]). // however, the ensured block must be executed.
+
+		^a == 13 and b == 77 and c == 88 and d == 3.
+	}
+
 method(#class) q
 {
 	| v |
@@ -90,11 +108,23 @@ start:
 			[([] isKindOf: MethodContext) == false],
 			[([] isKindOf: Context) == true],
 
-			// 15-20
+			// 15-19
 			[("string" isKindOf: String) == true],
 			[(#symbol isKindOf: String) == true],
 			[("string" isKindOf: Symbol) == false],
-			[(#symbol isKindOf: Symbol) == true]
+			[(#symbol isKindOf: Symbol) == true],
+			[ [] value == nil ],
+			
+			// 20-24
+			[ self local_return_001 ],
+			[ (if (1 > 2) { } else { }) == nil. ],
+			[ (if (1 < 2) { } else { }) == nil. ],
+			[ (if (1 > 2) { } else { goto A01. A01: }) == nil ],
+			[ (if (1 > 2) { } else { 9876. goto A02. A02: }) == 9876 ],
+
+			// 25-29
+			[ [ | a3 | a3:= 20. if (a3 == 21) { a3 := 4321. goto L03 } else { a3 := 1234. goto L03 }. a3 := 8888. L03: a3 ] value == 1234 ],
+			[ [ | a4 | a4:= 21. if (a4 == 21) { a4 := 4321. goto L04 } else { a4 := 1234. goto L04 }. a4 := 8888. L04: a4 ] value == 4321 ]
 		).
 
 		limit := tc size.
@@ -104,11 +134,16 @@ start:
 			tb := tc at: idx.
 			System log(System.Log.INFO, idx asString, (if (tb value) { " PASS" } else { " FAIL" }), "\n").
 		].
-	(if (true) { a: 10. b: 1p1000. c: 20000 }) dump.
-	[goto B02. A01: 10. B02: 1000. ] value class dump.
+
+
+//	(if (true) { a: 10. b: 1p1000. c: 20000 }) dump.
+//	[goto B02. A01: 10. B02: 1000. ] value class dump.
 self q.
 
-[ | a | a := 21. if (a = 21) { goto X02 }. X02: ] value dump. // this causes a stack depletion problem... TODO:
+//[ | a | a := 21. if (a = 21) { goto X02 }. X02: ] value dump. // this causes a stack depletion problem... TODO:
+
+                //[ a := 4. while (1) { X44: goto X33 }. X33: 1233 dump. if (a < 10) { a := a + 1. 'X44' dump. goto X44 } else { 'ELSE' dump. a := a * 10}. ] value dump.
+
 
 /*
 this is horrible... the stack won't be cleared when goto is made... 

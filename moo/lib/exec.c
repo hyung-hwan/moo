@@ -5102,8 +5102,6 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 
 static MOO_INLINE void do_return_from_block (moo_t* moo)
 {
-	LOG_INST0 (moo, "return_from_block");
-
 	MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_context) == moo->_block_context);
 
 	if (moo->active_context == moo->processor->active->initial_context)
@@ -5974,7 +5972,7 @@ static int __execute (moo_t* moo)
 		handle_return:
 			{
 				int n;
-				if ((n = do_return (moo, bcode, return_value)) <= -1) return -1;
+				if ((n = do_return(moo, bcode, return_value)) <= -1) return -1;
 				if (n == 0) EXIT_DISPATCH_LOOP();
 			}
 			NEXT_INST();
@@ -5986,6 +5984,7 @@ static int __execute (moo_t* moo)
 			goto handle_return;
 
 		ON_INST(BCODE_RETURN_FROM_BLOCK)
+			LOG_INST0 (moo, "return_from_block");
 			do_return_from_block (moo);
 			NEXT_INST();
 

@@ -117,20 +117,30 @@ ex resume.
 ex resume: value.
 ex return: value.
 
+### return from context(method/block)
+
+explicit return operators
+```
+^ return_stacktop
+^^ local_return
+```
+
+implicit return when the end of the context is reached
+* a method context returns the receiver.
+* a block context returns the last evaluated value. if nothing has been evaluated, nil is returned.
+
 ### goto
 
 ```
 goto jump_label.
 
 jump_label:
-	a + b;
+	a + b.
 ```
 
-useful to make a block return
-can i deprecate the ^^ operator?
-
+goto inside a block context.
 ```
-[ 1 + 2. goto r. 3 + 4. r:]
+[ 1 + 2. goto r. 3 + 4. r: 99 ]
 ```
 
 goto must not cross the boundary of the block context.

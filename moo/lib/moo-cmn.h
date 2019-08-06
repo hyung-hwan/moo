@@ -1046,5 +1046,6 @@ typedef struct moo_t moo_t;
 #	define MOO_STATIC_ASSERT(expr) typedef char MOO_STATIC_JOIN(MOO_STATIC_ASSERT_T_, __LINE__)[(expr)? 1: -1] MOO_UNUSED
 #endif
 
-#define MOO_STATIC_ASSERT_EXPR(expr) ((void)MOO_SIZEOF(char[(expr)? 1: -1])) 
+#define MOO_STATIC_ASSERT_EXPR(expr) ((void)MOO_SIZEOF(char[(expr)? 1: -1]))
+
 #endif
