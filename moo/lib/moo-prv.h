@@ -407,9 +407,10 @@ struct moo_loop_t
 typedef struct moo_label_t moo_label_t;
 struct moo_label_t
 {
-	moo_oow_t level;
-	moo_ioloc_t loc;
-	moo_oow_t ip;
+	moo_oow_t blk_id; /* block id where this label belongs to */
+	moo_oow_t blk_depth; /* level of the block where thsi label belongs to */ 
+	moo_ioloc_t loc; /* location inside source */
+	moo_oow_t ip; /* instruction pointer where this label points to */
 	moo_label_t* next;
 	/* ... label name at the back ... */
 };
@@ -417,7 +418,8 @@ struct moo_label_t
 typedef struct moo_goto_t moo_goto_t;
 struct moo_goto_t
 {
-	moo_oow_t level;
+	moo_oow_t blk_id;
+	moo_oow_t blk_depth;
 	moo_ioloc_t loc;
 	moo_oow_t ip;
 	moo_goto_t* next;
@@ -550,6 +552,8 @@ struct moo_method_data_t
 	moo_ooi_t pfnum; 
 
 	/* block depth - [ ... ]*/
+	moo_oow_t blk_idseq;
+	moo_oow_t blk_id;
 	moo_oow_t blk_depth;
 	moo_oow_t* blk_tmprcnt;
 	moo_oow_t blk_tmprcnt_capa;

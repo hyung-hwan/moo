@@ -5636,9 +5636,12 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 			case MOO_IOTOK_LBRACK: /* [ */
 			{
 				int n;
+				moo_oow_t cur_blk_id;
 
 				/*GET_TOKEN (moo);*/
-				if (store_tmpr_count_for_block (moo, cc->mth.tmpr_count) <= -1) return -1;
+				if (store_tmpr_count_for_block(moo, cc->mth.tmpr_count) <= -1) return -1;
+				cur_blk_id = cc->mth.blk_id; /* save the current block id */
+				cc->mth.blk_id = cc->mth.blk_idseq++; /* allocate a new block id  for compile_block_expression() */
 				cc->mth.blk_depth++;
 				/*
 				 * cc->mth.tmpr_count[0] contains the number of temporaries for a method.
@@ -5648,6 +5651,7 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				 */
 				n = compile_block_expression(moo);
 				cc->mth.blk_depth--;
+				cc->mth.blk_id = cur_blk_id; /* put back the saved block id */
 				if (n <= -1) return -1;
 				break;
 			}
@@ -6865,10 +6869,10 @@ static MOO_INLINE int resolve_goto_label (moo_t* moo, moo_goto_t* _goto)
 		lbname = (const moo_ooch_t*)(_label + 1);
 		if (moo_comp_oocstr(gtname.ptr, lbname) == 0)
 		{
-			if (_goto->level != _label->level)
+			if (_goto->blk_id != _label->blk_id || _goto->blk_depth != _label->blk_depth)
 			{
 				gtname.len = moo_count_oocstr(gtname.ptr);
-				moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEUNDEF, &_goto->loc, &gtname, "goto disallowed to different level");
+				moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEUNDEF, &_goto->loc, &gtname, "goto disallowed to different square bracketed block/level");
 				return -1;
 			}
 
@@ -6904,7 +6908,7 @@ static MOO_INLINE int resolve_goto_labels (moo_t* moo)
 	return 0;
 }
 
-static MOO_INLINE int add_label (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* lab_loc, moo_oow_t level, moo_oow_t ip)
+static MOO_INLINE int add_label (moo_t* moo, const moo_oocs_t* name, const moo_ioloc_t* lab_loc, moo_oow_t blkid, moo_oow_t blkdepth, moo_oow_t ip)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_label_t* lab;
@@ -6935,7 +6939,8 @@ static MOO_INLINE int add_label (moo_t* moo, const moo_oocs_t* name, const moo_i
 	moo_copy_oochars (nptr, lab_name.ptr, lab_name.len);
 	nptr[lab_name.len] = '\0';
 
-	lab->level = level;
+	lab->blk_id = blkid;
+	lab->blk_depth = blkdepth;
 	lab->ip = ip;
 	lab->loc = *lab_loc;
 	lab->next = cc->mth._label;
@@ -6972,7 +6977,8 @@ static int compile_goto_statement (moo_t* moo)
 		return -1;
 	}
 
-	_goto->level = cc->mth.blk_depth;
+	_goto->blk_id = cc->mth.blk_id;
+	_goto->blk_depth = cc->mth.blk_depth;
 	_goto->loc = *TOKEN_LOC(moo);
 	_goto->next = cc->mth._goto;
 	cc->mth._goto = _goto;
@@ -7042,7 +7048,7 @@ static int compile_special_statement (moo_t* moo)
 	{
 		/* this is a label */
 		/* remember the label location with the block depth */
-		if (add_label(moo, TOKEN_NAME(moo), TOKEN_LOC(moo), cc->mth.blk_depth, cc->mth.code.len) <= -1) return -1;
+		if (add_label(moo, TOKEN_NAME(moo), TOKEN_LOC(moo), cc->mth.blk_id, cc->mth.blk_depth, cc->mth.code.len) <= -1) return -1;
 		GET_TOKEN (moo);
 		return 8888; /* indicates that non-statement has been seen and processed.*/
 	}
@@ -7512,6 +7518,8 @@ static void reset_method_data (moo_t* moo, moo_method_data_t* mth)
 	mth->pftype = PFTYPE_NONE;
 	mth->pfnum = 0;
 
+	mth->blk_idseq = 0;
+	mth->blk_id = 0;
 	mth->blk_depth = 0;
 	/* don't reset mth->blk_tmprcnt_capa as it indicates capacity for blk_tmprcnt.
 	 * mth->blk_depth indicates the number of elements in mth->blk_tmprcnt_capa.
