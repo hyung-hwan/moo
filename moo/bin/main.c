@@ -94,7 +94,7 @@ int main (int argc, char* argv[])
 		{ ":input-charset",    '\0' },
 		{ ":log-charset",      '\0' },
 	#if defined(MOO_BUILD_DEBUG)
-		{ ":debug",            '\0' }, /* NOTE: there is no short option for --debug */
+		{ ":debug",            '\0' }, /* [NOTE] there is no short option for --debug */
 	#endif
 		{ MOO_NULL,            '\0' }
 	};

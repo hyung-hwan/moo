@@ -378,7 +378,7 @@ typedef moo_int32_t             moo_uci_t;
 
 typedef moo_uint8_t             moo_oob_t;
 
-/* NOTE: sizeof(moo_oop_t) must be equal to sizeof(moo_oow_t) */
+/* [NOTE] sizeof(moo_oop_t) must be equal to sizeof(moo_oow_t) */
 typedef moo_uintptr_t           moo_oow_t;
 typedef moo_intptr_t            moo_ooi_t;
 #define MOO_SIZEOF_OOW_T MOO_SIZEOF_UINTPTR_T

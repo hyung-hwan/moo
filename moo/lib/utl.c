@@ -91,7 +91,7 @@ int moo_equal_uchars (const moo_uch_t* str1, const moo_uch_t* str2, moo_oow_t le
 {
 	moo_oow_t i;
 
-	/* NOTE: you should call this function after having ensured that
+	/* [NOTE] you should call this function after having ensured that
 	 *       str1 and str2 are in the same length */
 
 	for (i = 0; i < len; i++)
@@ -106,8 +106,8 @@ int moo_equal_bchars (const moo_bch_t* str1, const moo_bch_t* str2, moo_oow_t le
 {
 	moo_oow_t i;
 
-	/* NOTE: you should call this function after having ensured that
-	 *       str1 and str2 are in the same length */
+	/* [NOTE] you should call this function after having ensured that
+	 *        str1 and str2 are in the same length */
 
 	for (i = 0; i < len; i++)
 	{

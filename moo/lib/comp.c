@@ -908,7 +908,7 @@ static void fini_oow_pool (moo_t* moo, moo_oow_pool_t* pool)
 	 * to reuse it */
 }
 
-static int add_to_oow_pool (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t v)
+static int add_to_oow_pool (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t v, const moo_ioloc_t* loc)
 {
 	moo_oow_t idx;
 
@@ -925,7 +925,8 @@ static int add_to_oow_pool (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t v)
 		pool->tail = chunk;
 	}
 
-	pool->tail->buf[idx] = v;
+	pool->tail->buf[idx].v = v;
+	pool->tail->buf[idx].loc = *loc;
 	pool->count++;
 
 	return 0;
@@ -2703,7 +2704,7 @@ static MOO_INLINE int emit_backward_jump_instruction (moo_t* moo, int cmd, moo_o
 	return emit_single_param_instruction(moo, cmd, offset + adj, srcloc);
 }
 
-static int patch_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oow_t jt, moo_ioloc_t* errloc)
+static int patch_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oow_t jt)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_oow_t code_size;
@@ -2739,8 +2740,7 @@ static int patch_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oow_t 
 
 	if (code_size > MAX_CODE_JUMP * 2)
 	{
-/* TODO: change error code or get it as a parameter */
-		moo_setsynerr (moo, MOO_SYNERR_BLKFLOOD, errloc, MOO_NULL); 
+		moo_seterrnum (moo, MOO_ERANGE);
 		return -1;
 	}
 
@@ -2796,8 +2796,12 @@ static int update_loop_jumps (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t jt)
 	{
 		for (j = 0; j < MOO_COUNTOF(pool->static_chunk.buf) && i < pool->count; j++)
 		{
-			if (chunk->buf[j] != INVALID_IP &&
-			    patch_forward_jump_instruction(moo, chunk->buf[j], jt, MOO_NULL) <= -1) return -1;
+			if (chunk->buf[j].v != INVALID_IP &&
+			    patch_forward_jump_instruction(moo, chunk->buf[j].v, jt) <= -1) 
+			{
+				moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &chunk->buf[j].loc, MOO_NULL, "unable to patch conditional loop jump");
+				return -1;
+			}
 			i++;
 		}
 	}
@@ -2815,17 +2819,17 @@ static void adjust_loop_jumps_for_elimination (moo_t* moo, moo_oow_pool_t* pool,
 	{
 		for (j = 0; j < MOO_COUNTOF(pool->static_chunk.buf) && i < pool->count; j++)
 		{
-			if (chunk->buf[j] != INVALID_IP)
+			if (chunk->buf[j].v != INVALID_IP)
 			{
-				if (chunk->buf[j] >= start && chunk->buf[j] <= end) 
+				if (chunk->buf[j].v >= start && chunk->buf[j].v <= end) 
 				{
 					/* invalidate the instruction position */
-					chunk->buf[j] = INVALID_IP;
+					chunk->buf[j].v = INVALID_IP;
 				}
-				else if (chunk->buf[j] > end && chunk->buf[j] < ((moo_cunit_class_t*)moo->c->cunit)->mth.code.len)
+				else if (chunk->buf[j].v > end && chunk->buf[j].v < ((moo_cunit_class_t*)moo->c->cunit)->mth.code.len)
 				{
 					/* decrement the instruction position */
-					chunk->buf[j] -= end - start + 1;
+					chunk->buf[j].v -= end - start + 1;
 				}
 			}
 			i++;
@@ -2930,7 +2934,7 @@ static MOO_INLINE void pop_loop (moo_t* moo)
 static MOO_INLINE int inject_break_to_loop (moo_t* moo, const moo_ioloc_t* srcloc)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-	if (add_to_oow_pool(moo, &cc->mth.loop->break_ip_pool, cc->mth.code.len) <= -1 ||
+	if (add_to_oow_pool(moo, &cc->mth.loop->break_ip_pool, cc->mth.code.len, srcloc) <= -1 ||
 	    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD, MAX_CODE_JUMP, srcloc) <= -1) return -1;
 	return 0;
 }
@@ -2940,7 +2944,7 @@ static MOO_INLINE int inject_continue_to_loop (moo_t* moo, const moo_ioloc_t* sr
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	/* used for a do-while loop. jump forward because the conditional 
 	 * is at the end of the do-while loop */
-	if (add_to_oow_pool(moo, &cc->mth.loop->continue_ip_pool, cc->mth.code.len) <= -1 ||
+	if (add_to_oow_pool(moo, &cc->mth.loop->continue_ip_pool, cc->mth.code.len, srcloc) <= -1 ||
 	    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD, MAX_CODE_JUMP, srcloc) <= -1) return -1;
 	return 0;
 }
@@ -5017,7 +5021,11 @@ static int compile_block_expression (moo_t* moo)
 
 	if (emit_byte_instruction(moo, BCODE_RETURN_FROM_BLOCK, TOKEN_LOC(moo)) <= -1) return -1;
 
-	if (patch_forward_jump_instruction(moo, jump_inst_pos, cc->mth.code.len, &block_loc) <= -1) return -1;
+	if (patch_forward_jump_instruction(moo, jump_inst_pos, cc->mth.code.len) <= -1) 
+	{
+		moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &block_loc, MOO_NULL, "unable to patch block jump");
+		return -1;
+	}
 
 	/* restore the temporary count */
 	cc->mth.tmprs.len = saved_tmprs_len;
@@ -5712,9 +5720,9 @@ static int compile_unary_message (moo_t* moo, int to_super)
 
 			GET_TOKEN(moo);
 
-			/* NOTE: since the actual method may not be known at the compile time,
-			 *       i can't check if nargs will match the number of arguments
-			 *       expected by the method */
+			/* [NOTE] since the actual method may not be known at the compile time,
+			 *        i can't check if nargs will match the number of arguments
+			 *        expected by the method */
 		}
 
 		if (emit_double_param_instruction(moo, send_message_cmd[to_super], nargs, index, &sel_loc) <= -1) return -1;
@@ -5987,7 +5995,7 @@ start_over:
 		int bcode;
 		bcode = (TOKEN_TYPE(moo) == MOO_IOTOK_AND)? BCODE_JUMP_FORWARD_IF_FALSE: BCODE_JUMP_FORWARD_IF_TRUE;
 		/* TODO: optimization if the expression is a known constant that can be determined to be boolean */
-		if (add_to_oow_pool(moo, &jumptoend, cc->mth.code.len) <= -1 ||
+		if (add_to_oow_pool(moo, &jumptoend, cc->mth.code.len, TOKEN_LOC(moo)) <= -1 ||
  		    emit_single_param_instruction(moo, bcode, MAX_CODE_JUMP, TOKEN_LOC(moo)) <= -1 ||
  		    emit_byte_instruction(moo, BCODE_POP_STACKTOP, TOKEN_LOC(moo)) <= -1) goto oops;
 		GET_TOKEN (moo);
@@ -6011,15 +6019,17 @@ start_over:
 		goto start_over;
  	}
 
-	/* patch instructions that jumps to the end of if expression */
+	/* patch instructions that jumps to the end of logical expression for short-circuited evaluation */
 	for (jumptoend_chunk = jumptoend.head, i = 0; jumptoend_chunk; jumptoend_chunk = jumptoend_chunk->next)
 	{
-		/* pass expr_loc to every call to patch_forward_jump_instruction().
-		 * it's harmless because if the first call doesn't flood, the subseqent 
-		 * call will never flood either. */
 		for (j = 0; j < MOO_COUNTOF(jumptoend.static_chunk.buf) && i < jumptoend.count; j++)
 		{
-			if (patch_forward_jump_instruction (moo, jumptoend_chunk->buf[j], cc->mth.code.len, &expr_loc) <= -1) goto oops;
+			if (patch_forward_jump_instruction (moo, jumptoend_chunk->buf[j].v, cc->mth.code.len) <= -1) 
+			{
+				/* the logical expression is too large to patch the jump instruction */
+				moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &expr_loc, MOO_NULL, "unable to patch logical operator jump");
+				goto oops;
+			}
 			i++;
 		}
 	}
@@ -6274,6 +6284,7 @@ static int compile_if_expression (moo_t* moo)
 	moo_oow_t jumptonext, precondpos, postcondpos, endoftrueblock;
 	moo_ioloc_t if_loc, brace_loc;
 	int jmpop_inst, push_true_inst, push_false_inst;
+	moo_label_t* la, * lb;
 
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_IF || TOKEN_TYPE(moo) == MOO_IOTOK_IFNOT);
 	if_loc = *TOKEN_LOC(moo);
@@ -6299,46 +6310,48 @@ static int compile_if_expression (moo_t* moo)
 
 	do
 	{
-		enum { COND_NORMAL, COND_TRUE, COND_FALSE } cond_type = COND_NORMAL; /* normal condition */
-
 		GET_TOKEN (moo); /* get ( */
 		precondpos = cc->mth.code.len;
 
 		if (jumptonext != INVALID_IP &&
-		    patch_forward_jump_instruction(moo, jumptonext, precondpos, &brace_loc) <= -1) goto oops;
+		    patch_forward_jump_instruction(moo, jumptonext, precondpos) <= -1) 
+		{
+			moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &brace_loc, MOO_NULL, "unable to patch conditional branching jump");
+			goto oops;
+		}
 
 		if (compile_conditional(moo) <= -1) goto oops;
 		postcondpos = cc->mth.code.len;
 
-		if (precondpos + 1 == postcondpos && cc->mth.code.ptr[precondpos] == push_true_inst)
-		{
-			/* got 'if (true)' or 'ifnot (false)' */
-			jumptonext = INVALID_IP; /* indicate that the jump has not been emitted */
-			cond_type = COND_TRUE; 
-		}
-		else if (precondpos + 1 == postcondpos && cc->mth.code.ptr[precondpos] == push_false_inst)
-		{
-			/* got 'if (false)' or 'ifnot (true)' */
-			jumptonext = INVALID_IP; /* indicate that the jump has not been emitted */
-			cond_type = COND_FALSE;  /* mark that the conditional is false. instructions will get eliminated below */
-		}
-		else
-		{
-			/* remember position of the jmpop_forward_if_false instruction to be generated */
-			jumptonext = cc->mth.code.len; 
-			/* BCODE_JMPOP_FORWARD_IF_FALSE is always a long jump instruction.
-			 * just specify MAX_CODE_JUMP for consistency with short jump variants */
-			if (emit_single_param_instruction(moo, jmpop_inst, MAX_CODE_JUMP, &if_loc) <= -1) goto oops;
-		}
+		/* remember position of the jmpop_forward_if_false instruction to be generated */
+		jumptonext = cc->mth.code.len; 
+		/* BCODE_JMPOP_FORWARD_IF_FALSE is always a long jump instruction.
+		 * just specify MAX_CODE_JUMP for consistency with short jump variants */
+		if (emit_single_param_instruction(moo, jmpop_inst, MAX_CODE_JUMP, &if_loc) <= -1) goto oops;
 
 		GET_TOKEN (moo); /* get { */
 		brace_loc = *TOKEN_LOC(moo);
-		if (compile_braced_block(moo) <= -1) goto oops;
 
-		switch (cond_type)
+		la = cc->mth._label;
+		if (compile_braced_block(moo) <= -1) goto oops;
+		lb = cc->mth._label;
+
+		/* [NOTE]
+		 *  it checks by comparing 'la' and 'b' if there has been a label found inside a braced block.
+		 *  the code below doesn't eliminate instructions emitted of a braced block containing one or 
+		 *  more labels.
+		 *
+		 *  the check is suboptimal and primitive. an optimizing compiler needs to check if the actual
+		 *  jump is to be made made into the blcok.  TODO: optimize it further
+		 */
+		if (la == lb && precondpos + 1 == postcondpos)
 		{
-			case COND_TRUE:
-				MOO_ASSERT (moo, jumptonext == INVALID_IP);
+			if (cc->mth.code.ptr[precondpos] == push_true_inst)
+			{
+				/* got 'if (true)' or 'ifnot (false)' */
+
+				eliminate_instructions (moo, jumptonext, jumptonext + MOO_BCODE_LONG_PARAM_SIZE);
+				jumptonext = INVALID_IP;
 
 				/* eliminate PUSH_TRUE  */
 				eliminate_instructions (moo, precondpos, precondpos);
@@ -6349,25 +6362,30 @@ static int compile_if_expression (moo_t* moo)
 					/* update the end position of the first true block */
 					endoftrueblock = cc->mth.code.len;
 				}
-				break;
+			}
+			else if (cc->mth.code.ptr[precondpos] == push_false_inst)
+			{
+				/* got 'if (false)' or 'ifnot (true)' */
 
-			case COND_FALSE:
-				MOO_ASSERT (moo, jumptonext == INVALID_IP);
+				eliminate_instructions (moo, jumptonext, jumptonext + MOO_BCODE_LONG_PARAM_SIZE);
+				jumptonext = INVALID_IP;
 
 				/* the conditional was false. eliminate instructions emitted
 				 * for the block attached to the conditional */
 				eliminate_instructions (moo, precondpos, cc->mth.code.len - 1);
 				postcondpos = precondpos;
-				break;
-
-			case COND_NORMAL:
-				MOO_ASSERT (moo, jumptonext != INVALID_IP);
-				if (endoftrueblock == INVALID_IP)
-				{
-					/* emit an instruction to jump to the end */
-					if (add_to_oow_pool(moo, &jumptoend, cc->mth.code.len) <= -1 ||
-					    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD, MAX_CODE_JUMP, TOKEN_LOC(moo)) <= -1) goto oops;
-				}
+			}
+			else goto normal_cond;
+		}
+		else
+		{
+		normal_cond:
+			if (endoftrueblock == INVALID_IP)
+			{
+				/* emit an instruction to jump to the end */
+				if (add_to_oow_pool(moo, &jumptoend, cc->mth.code.len, TOKEN_LOC(moo)) <= -1 ||
+				    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD, MAX_CODE_JUMP, TOKEN_LOC(moo)) <= -1) goto oops;
+			}
 		}
 
 		GET_TOKEN (moo); /* get the next token after } */
@@ -6390,8 +6408,13 @@ static int compile_if_expression (moo_t* moo)
 	while (1);
 
 	if (jumptonext != INVALID_IP &&
-	    patch_forward_jump_instruction(moo, jumptonext, cc->mth.code.len, &brace_loc) <= -1) goto oops;
+	    patch_forward_jump_instruction(moo, jumptonext, cc->mth.code.len) <= -1) 
+	{
+		moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &brace_loc, MOO_NULL, "unable to patch conditional branching jump");
+		goto oops;
+	}
 
+	la = cc->mth._label;
 	if (TOKEN_TYPE(moo) == MOO_IOTOK_ELSE)
 	{
 		GET_TOKEN (moo); /* get { */
@@ -6403,8 +6426,9 @@ static int compile_if_expression (moo_t* moo)
 		/* emit an instruction to push nil if no 'else' part exists */
 		if (emit_byte_instruction(moo, BCODE_PUSH_NIL, TOKEN_LOC(moo)) <= -1) goto oops;
 	}
+	lb = cc->mth._label;
 
-	if (endoftrueblock != INVALID_IP)
+	if (la == lb && endoftrueblock != INVALID_IP)
 	{
 		/* eliminate all instructions after the end of the first true block found */
 		eliminate_instructions (moo, endoftrueblock, cc->mth.code.len - 1);
@@ -6413,12 +6437,13 @@ static int compile_if_expression (moo_t* moo)
 	/* patch instructions that jumps to the end of if expression */
 	for (jumptoend_chunk = jumptoend.head, i = 0; jumptoend_chunk; jumptoend_chunk = jumptoend_chunk->next)
 	{
-		/* pass if_loc to every call to patch_forward_jump_instruction().
-		 * it's harmless because if the first call doesn't flood, the subseqent 
-		 * call will never flood either. */
 		for (j = 0; j < MOO_COUNTOF(jumptoend.static_chunk.buf) && i < jumptoend.count; j++)
 		{
-			if (patch_forward_jump_instruction (moo, jumptoend_chunk->buf[j], cc->mth.code.len, &if_loc) <= -1) goto oops;
+			if (patch_forward_jump_instruction(moo, jumptoend_chunk->buf[j].v, cc->mth.code.len) <= -1) 
+			{
+				moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &jumptoend_chunk->buf[j].loc, MOO_NULL, "unable to patch conditional branching jump");
+				goto oops;
+			}
 			i++;
 		}
 	}
@@ -6521,15 +6546,18 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 		{
 			/* the jump offset is out of the representable range by the offset
 			 * portion of the jump instruction */
-			moo_setsynerr (moo, MOO_SYNERR_BLKFLOOD, &while_loc, MOO_NULL);
+			moo_setsynerr (moo, MOO_SYNERR_INSTFLOOD, &while_loc, MOO_NULL);
 		}
 		goto oops;
 	}
 
 	if (cond_style != 1)
 	{
-		/* patch the jump instruction */
-		if (patch_forward_jump_instruction(moo, postcondpos, cc->mth.code.len, &brace_loc) <= -1) goto oops;
+		if (patch_forward_jump_instruction(moo, postcondpos, cc->mth.code.len) <= -1) 
+		{
+			moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &brace_loc, MOO_NULL, "unable to patch conditional loop jump");
+			goto oops;
+		}
 	}
 
 	if (cond_style == -1) 
@@ -6642,7 +6670,7 @@ static int compile_do_while_expression (moo_t* moo)
 		{
 			/* the jump offset is out of the representable range by the offset
 			 * portion of the jump instruction */
-			moo_setsynerr (moo, MOO_SYNERR_BLKFLOOD, &do_loc, MOO_NULL);
+			moo_setsynerr (moo, MOO_SYNERR_INSTFLOOD, &do_loc, MOO_NULL);
 		}
 		goto oops;
 	}
@@ -6841,7 +6869,11 @@ static MOO_INLINE int resolve_goto_label (moo_t* moo, moo_goto_t* _goto)
 			MOO_ASSERT (moo, _goto->ip != INVALID_IP);
 			MOO_ASSERT (moo, _goto->ip != _label->ip);
 
-			if (patch_forward_jump_instruction(moo, _goto->ip, _label->ip, &_goto->loc) <= -1) return -1;
+			if (patch_forward_jump_instruction(moo, _goto->ip, _label->ip) <= -1) 
+			{
+				moo_setsynerrbfmt (moo, MOO_SYNERR_INSTFLOOD, &_goto->loc, MOO_NULL, "unable to patch unconditional jump");
+				return -1;
+			}
 			return 0;
 		}
 		_label = _label->next;
@@ -8712,7 +8744,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 	 * method-modifier := "(" (#class | #instance)? ")"
 	 * method-actual-definition := method-name "{" method-tempraries? method-pragma? method-statements* "}"
 	 *
-	 * NOTE: when extending a class, class-module-import and variable-definition are not allowed.
+	 * [NOTE] when extending a class, class-module-import and variable-definition are not allowed.
 	 */
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_oop_association_t ass;
@@ -8878,9 +8910,9 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 				return -1;
 			}
 
-			/* NOTE: I don't mandate that the parent and the child be of the same type.
-			 *       Say, for a parent class(#byte(4)), a child can be defined to be
-			 *       class(#word(4)). */
+			/* [NOTE] I don't mandate that the parent and the child be of the same type.
+			 *        Say, for a parent class(#byte(4)), a child can be defined to be
+			 *        class(#word(4)). */
 
 			if (cc->non_pointer_instsize < MOO_CLASS_SPEC_NAMED_INSTVARS(spec))
 			{

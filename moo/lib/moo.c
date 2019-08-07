@@ -795,7 +795,7 @@ moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidle
 /* add a new primitive method */
 int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_method_type_t type, const moo_ooch_t* mthname, int variadic, const moo_ooch_t* pfname)
 {
-	/* NOTE: this function is a subset of add_compiled_method() in comp.c */
+	/* [NOTE] this function is a subset of add_compiled_method() in comp.c */
 
 	moo_oop_char_t mnsym, pfidsym;
 	moo_oop_method_t mth;

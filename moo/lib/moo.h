@@ -221,7 +221,7 @@ enum moo_obj_type_t
 	MOO_OBJ_TYPE_UINT32,
 */
 
-/* NOTE: you can have MOO_OBJ_SHORT, MOO_OBJ_INT
+/* [NOTE] you can have MOO_OBJ_SHORT, MOO_OBJ_INT
  * MOO_OBJ_LONG, MOO_OBJ_FLOAT, MOO_OBJ_DOUBLE, etc 
  * type type field being 6 bits long, you can have up to 64 different types.
 
@@ -429,7 +429,7 @@ struct moo_obj_word_t
 #define MOO_OBJ_GET_WORD_VAL(oop,idx)     ((((moo_oop_word_t)(oop))->slot)[idx])
 #define MOO_OBJ_GET_LIWORD_VAL(oop,idx)   ((((moo_oop_liword_t)(oop))->slot)[idx])
 
-#define MOO_OBJ_SET_OOP_VAL(oop,idx,val)      ((((moo_oop_oop_t)(oop))->slot)[idx] = (val)) /* NOTE: MOO_STORE_OOP() */
+#define MOO_OBJ_SET_OOP_VAL(oop,idx,val)      ((((moo_oop_oop_t)(oop))->slot)[idx] = (val)) /* [NOTE] MOO_STORE_OOP() */
 #define MOO_OBJ_SET_CHAR_VAL(oop,idx,val)     ((((moo_oop_char_t)(oop))->slot)[idx] = (val))
 #define MOO_OBJ_SET_BYTE_VAL(oop,idx,val)     ((((moo_oop_byte_t)(oop))->slot)[idx] = (val))
 #define MOO_OBJ_SET_HALFWORD_VAL(oop,idx,val) ((((moo_oop_halfword_t)(oop))->slot)[idx] = (val))
@@ -665,9 +665,9 @@ struct moo_method_t
 #define MOO_METHOD_PREAMBLE_FLAG_DUAL     (1 << 2)
 #define MOO_METHOD_PREAMBLE_FLAG_LENIENT  (1 << 3)  /* lenient primitive method - no exception upon failure. return an error instead */
 
-/* NOTE: if you change the number of instance variables for moo_context_t,
- *       you need to change the defintion of BlockContext and MethodContext.
- *       plus, you need to update various exception handling code in MethodContext */
+/* [NOTE] if you change the number of instance variables for moo_context_t,
+ *        you need to change the defintion of BlockContext and MethodContext.
+ *        plus, you need to update various exception handling code in MethodContext */
 #define MOO_CONTEXT_NAMED_INSTVARS 8
 typedef struct moo_context_t moo_context_t;
 typedef struct moo_context_t* moo_oop_context_t;
@@ -1879,8 +1879,8 @@ enum moo_synerrnum_t
 	MOO_SYNERR_ARGFLOOD,        /* too many arguments */
 	MOO_SYNERR_BLKTMPRFLOOD,    /* too many block temporaries */
 	MOO_SYNERR_BLKARGFLOOD,     /* too many block arguments */
-	MOO_SYNERR_BLKFLOOD,        /* too large block */
 	MOO_SYNERR_ARREXPFLOOD,     /* too large array expression */
+	MOO_SYNERR_INSTFLOOD,       /* instruction too large */
 	MOO_SYNERR_PFNUMINVAL,      /* wrong primitive function number */
 	MOO_SYNERR_PFIDINVAL,       /* wrong primitive function identifier */
 	MOO_SYNERR_PFARGDEFINVAL,   /* wrong primitive function argument definition */

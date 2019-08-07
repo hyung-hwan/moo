@@ -139,7 +139,7 @@ static int _equal_objects (moo_t* moo, moo_oop_t rcv, moo_oop_t arg)
 						int n;
 						/* TODO: remove recursion */
 
-						/* NOTE: even if the object implements the equality method, 
+						/* [NOTE] even if the object implements the equality method, 
 						 * this primitive method doesn't honor it. */
 						n = _equal_objects(moo, MOO_OBJ_GET_OOP_VAL(rcv, i), MOO_OBJ_GET_OOP_VAL(arg, i));
 						if (n <= 0) return n;

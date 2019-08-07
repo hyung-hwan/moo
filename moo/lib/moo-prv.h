@@ -369,7 +369,11 @@ struct moo_code_t
 typedef struct moo_oow_pool_chunk_t moo_oow_pool_chunk_t;
 struct moo_oow_pool_chunk_t
 {
-	moo_oow_t buf[16];
+	struct
+	{
+		moo_oow_t v;
+		moo_ioloc_t loc;
+	} buf[16];
 	moo_oow_pool_chunk_t* next;
 };
 

@@ -670,7 +670,7 @@ static void compact_symbol_table (moo_t* moo, moo_oop_t _nil)
 	if (tally <= 0) return;
 
 	bucket = moo->symtab->bucket;
-	/* NOTE: in theory, the bucket size can be greater than MOO_SMOOI_MAX
+	/* [NOTE] in theory, the bucket size can be greater than MOO_SMOOI_MAX
 	 * as it is an internal header field and is of an unsigned type */
 	bucket_size = MOO_OBJ_GET_SIZE(bucket);
 

@@ -250,7 +250,7 @@ extend MethodContext
 
 		if (self isExceptionContext) 
 		{
-			/* NOTE: the following loop scans all parameters to the on:do: method.
+			/* [NOTE] the following loop scans all parameters to the on:do: method.
 			 *       if the on:do: method contains local temporary variables,
 			 *       you must change this function to skip scanning local variables. 
 			 *       the current on:do: method has 1 local variable declared.

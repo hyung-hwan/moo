@@ -1321,7 +1321,7 @@ static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, in
 		MOO_LOG3 (moo, MOO_LOG_WARN, "Failed to delete an IO semaphored handle %zd at index %zd for %hs\n", io_handle, index, io_type_str[io_type]);
 		if (!force) return -1;
 
-		/* NOTE: 
+		/* [NOTE] 
 		 *   this means there could be some issue handling the file handles.
 		 *   the file handle might have been closed before reaching here.
 		 *   assuming the callback works correctly, it's not likely that the
@@ -1649,7 +1649,7 @@ static MOO_INLINE moo_oop_method_t find_method_in_class (moo_t* moo, moo_oop_cla
 		return (moo_oop_method_t)ass->value;
 	}
 
-	/* NOTE: moo_seterrXXX() is not called here */
+	/* [NOTE] moo_seterrXXX() is not called here */
 	return MOO_NULL;
 }
 
@@ -1665,7 +1665,7 @@ static MOO_INLINE moo_oop_method_t find_method_in_class_chain (moo_t* moo, moo_o
 	}
 	while ((moo_oop_t)_class != moo->_nil);
 
-	/* NOTE: moo_seterrXXX() is not called here */
+	/* [NOTE] moo_seterrXXX() is not called here */
 	return MOO_NULL;
 }
 
@@ -2192,7 +2192,7 @@ static moo_pfrc_t pf_context_find_exception_handler (moo_t* moo, moo_mod_t* mod,
 		size = MOO_OBJ_GET_SIZE(rcv);
 		for (i = MOO_CONTEXT_NAMED_INSTVARS; i < size; i += 2)
 		{
-			/* NOTE: the following loop scans all parameters to the on:do: method.
+			/* [NOTE] the following loop scans all parameters to the on:do: method.
 			 *       if the on:do: method contains local temporary variables,
 			 *       you must change this function to skip scanning local variables. 
 			 *       the current on:do: method has 1 local variable declared.
@@ -4758,7 +4758,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 			 * there are other normal processes to run. check IO activities
 			 * before proceeding to handle normal process scheduling */
 
-			/* NOTE: the check with the multiplexer may happen too frequently
+			/* [NOTE] the check with the multiplexer may happen too frequently
 			 *       because this is called everytime process switching is requested.
 			 *       the actual callback implementation should try to avoid invoking 
 			 *       actual system calls too frequently for less overhead. */
@@ -5071,7 +5071,7 @@ static MOO_INLINE int do_return (moo_t* moo, moo_oob_t bcode, moo_oop_t return_v
 				MOO_ASSERT (moo, moo->active_context->origin == moo->processor->active->initial_context->origin);
 				MOO_ASSERT (moo, moo->active_context->origin == moo->active_context);
 
-				/* NOTE: this condition is true for the processified block context also.
+				/* [NOTE] this condition is true for the processified block context also.
 				 *   moo->active_context->origin == moo->processor->active->initial_context->origin
 				 *   however, the check here is done after context switching and the
 				 *   processified block check has been done against the context before switching */

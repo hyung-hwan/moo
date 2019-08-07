@@ -488,7 +488,7 @@ static moo_pfrc_t pf_read_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	/* NOTE: on EWOULDBLOCK or EGAIN, -1 is returned  */
+	/* [NOTE] on EWOULDBLOCK or EGAIN, -1 is returned  */
 
 	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(n));
 
@@ -561,7 +561,7 @@ static moo_pfrc_t pf_write_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	/* NOTE: on EWOULDBLOCK or EGAIN, -1 is returned  */
+	/* [NOTE] on EWOULDBLOCK or EGAIN, -1 is returned  */
 	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(n));
 
 	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
