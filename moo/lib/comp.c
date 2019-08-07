@@ -6462,6 +6462,7 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 	moo_ioloc_t while_loc, brace_loc, closing_brace_loc;
 	moo_oow_t precondpos, postcondpos, prebbpos, postbbpos;
 	int cond_style = 0, loop_pushed = 0, is_until_loop;
+	moo_label_t* la, * lb;
 
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_WHILE || TOKEN_TYPE(moo) == MOO_IOTOK_UNTIL);
 
@@ -6521,12 +6522,14 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 	GET_TOKEN (moo); /* get { */
 	brace_loc = *TOKEN_LOC(moo);
 	prebbpos = cc->mth.code.len;
+	la = cc->mth._label;
 	if (compile_braced_block(moo) <= -1) goto oops;
+	lb = cc->mth._label;
 	closing_brace_loc = *TOKEN_LOC(moo);
 	GET_TOKEN (moo); /* get the next token after } */
 	postbbpos = cc->mth.code.len;
 
-	if (prebbpos + 1 == postbbpos && cc->mth.code.ptr[prebbpos] == BCODE_PUSH_NIL)
+	if (la == lb && prebbpos + 1 == postbbpos && cc->mth.code.ptr[prebbpos] == BCODE_PUSH_NIL)
 	{
 		/* optimization -
 		 *  the braced block is kind of empty as it only pushes nil.
@@ -6560,7 +6563,7 @@ static int compile_while_expression (moo_t* moo) /* or compile_until_expression 
 		}
 	}
 
-	if (cond_style == -1) 
+	if (la == lb && cond_style == -1) 
 	{
 		/* optimization - get rid of instructions generated for the while
 		 * loop including the conditional as the condition was false */
@@ -6591,6 +6594,7 @@ static int compile_do_while_expression (moo_t* moo)
 	moo_oow_t precondpos, postcondpos, prebbpos, postbbpos;
 	int jbinst = 0, loop_pushed = 0, is_until_loop;
 	moo_loop_t* loop = MOO_NULL;
+	moo_label_t* la, * lb;
 
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_DO);
 	do_loc = *TOKEN_LOC(moo);
@@ -6603,7 +6607,9 @@ static int compile_do_while_expression (moo_t* moo)
 	if (push_loop(moo, MOO_LOOP_DO_WHILE, prebbpos) <= -1) goto oops;
 	loop_pushed = 1;
 
+	la = cc->mth._label;
 	if (compile_braced_block(moo) <= -1) goto oops;
+	lb = cc->mth._label;
 
 	closing_brace_loc = *TOKEN_LOC(moo);
 	GET_TOKEN (moo); /* get the next token after } */
@@ -6617,7 +6623,7 @@ static int compile_do_while_expression (moo_t* moo)
 	GET_TOKEN (moo); /* get ( */
 	postbbpos = cc->mth.code.len;
 
-	if (prebbpos + 1 == postbbpos && cc->mth.code.ptr[prebbpos] == BCODE_PUSH_NIL)
+	if (la == lb && prebbpos + 1 == postbbpos && cc->mth.code.ptr[prebbpos] == BCODE_PUSH_NIL)
 	{
 		/* optimization -
 		 *  the braced block is kind of empty as it only pushes nil.
@@ -6651,14 +6657,14 @@ static int compile_do_while_expression (moo_t* moo)
 		if (cc->mth.code.ptr[precondpos] == (is_until_loop? BCODE_PUSH_FALSE: BCODE_PUSH_TRUE))
 		{
 			/* the conditional is always true. eliminate PUSH_TRUE and emit an absolute jump */
-			eliminate_instructions (moo, precondpos, cc->mth.code.len - 1);
+			eliminate_instructions (moo, precondpos, precondpos);
 			postcondpos = precondpos;
 			jbinst = BCODE_JUMP_BACKWARD;
 		}
 		else if (cc->mth.code.ptr[precondpos] == (is_until_loop? BCODE_PUSH_TRUE: BCODE_PUSH_FALSE))
 		{
 			/* the conditional is always false. eliminate PUSH_FALSE and don't emit jump */
-			eliminate_instructions (moo, precondpos, cc->mth.code.len - 1);
+			eliminate_instructions (moo, precondpos, precondpos);
 			postcondpos = precondpos;
 			goto skip_emitting_jump_backward;
 		}

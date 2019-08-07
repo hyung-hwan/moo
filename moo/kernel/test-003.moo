@@ -53,7 +53,7 @@ class MyObject(Object)
 	}
 
 
-	method(#class) local_return_001
+	method(#class) test_local_return_001
 	{
 		| a b c d|
 		a := 10.
@@ -68,6 +68,74 @@ class MyObject(Object)
 		] ensure: [ c := 88 ]). // however, the ensured block must be executed.
 
 		^a == 13 and b == 77 and c == 88 and d == 3.
+	}
+
+	method(#class) test_if_001
+	{
+		| a b c d e x |
+
+		x := if (false) { X02: a := 55. goto Z02 }
+		     elif (false) { b := 66.}
+		     elif (2 > 1) { c := 77. goto X02 }
+		     elif (true) { d := 88 }
+		     else { Z02:  e := 99 }.
+
+		^c == 77 and a == 55 and e == 99 and b == nil and d == nil and x == 99.
+	}
+
+	method(#class) test_while_001
+	{
+		| a b i |
+
+		a := 0.
+		b := #(0 0 0 0 0) copy.
+		i := 0.
+
+		while (false)
+		{
+		X02:
+			a := a + 1.
+			b at: i put: 1.
+			i := i + 1.
+			goto X03.
+		}.
+		goto X02.
+
+		until (false)
+		{
+		X03:
+			a := a + 2.
+			b at: i put: 2.
+			i := i + 1.
+			goto Y01.
+		}.
+
+		do
+		{
+		X04:
+			a := a + 3.
+			b at: i put: 3.
+			i := i + 1.
+			goto X05.
+		}
+		while (true).
+	Y01:
+		goto X04.
+
+		do
+		{
+			a := a + 4.
+			b at: i put: 4.
+			i := i + 1.
+			break.
+		X05:
+			a := a + 5.
+			b at: i put: 5.
+			i := i + 1.
+		}
+		until (false).
+
+		^a == 15 and b = #(1 2 3 5 4).
 	}
 
 method(#class) q
@@ -116,13 +184,15 @@ start:
 			[ [] value == nil ],
 			
 			// 20-24
-			[ self local_return_001 ],
+			[ self test_local_return_001 ],
+			[ self test_if_001 ],
+			[ self test_while_001 ],
 			[ (if (1 > 2) { } else { }) == nil. ],
 			[ (if (1 < 2) { } else { }) == nil. ],
 			[ (if (1 > 2) { } else { goto A01. A01: }) == nil ],
-			[ (if (1 > 2) { } else { 9876. goto A02. A02: }) == 9876 ],
 
 			// 25-29
+			[ (if (1 > 2) { } else { 9876. goto A02. A02: }) == 9876 ],
 			[ [ | a3 | a3:= 20. if (a3 == 21) { a3 := 4321. goto L03 } else { a3 := 1234. goto L03 }. a3 := 8888. L03: a3 ] value == 1234 ],
 			[ [ | a4 | a4:= 21. if (a4 == 21) { a4 := 4321. goto L04 } else { a4 := 1234. goto L04 }. a4 := 8888. L04: a4 ] value == 4321 ]
 		).
