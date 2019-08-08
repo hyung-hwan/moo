@@ -776,7 +776,7 @@ oops:
 	return (void*)(ptr + 1);
 
 #else
-	return MOO_MMGR_ALLOC(moo->mmgr, size);
+	return MOO_MMGR_ALLOC(moo->_mmgr, size);
 #endif
 }
 
@@ -790,7 +790,7 @@ static void free_heap (moo_t* moo, void* ptr)
 	actual_ptr = (moo_oow_t*)ptr - 1;
 	munmap (actual_ptr, *actual_ptr);
 #else
-	MOO_MMGR_FREE(moo->mmgr, ptr);
+	MOO_MMGR_FREE(moo->_mmgr, ptr);
 #endif
 }
 
