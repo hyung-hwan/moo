@@ -91,9 +91,9 @@ class MyObject(Object)
 		}
 		else
 		{
-			(ffi call: #getpid  signature: ")i" arguments: nil) dump.
-			(ffi call: #printf signature: "s|iis)i" arguments: #("A=>%d B=>%d Hello, world %s\n" 1 2 "fly away")) dump.
-			(ffi call: #printf signature: "s|iis)i" arguments: #("A=>%d B=>%d Hello, world %s\n" 1 2 "jump down")) dump.
+			(ffi call: #getpid  signature: ">i" arguments: nil) dump.
+			(ffi call: #printf signature: "s|iis>i" arguments: #("A=>%d B=>%d Hello, world %s\n" 1 2 "fly away")) dump.
+			(ffi call: #printf signature: "s|iis>i" arguments: #("A=>%d B=>%d Hello, world %s\n" 1 2 "jump down")) dump.
 			ffi close.
 		}. 
 

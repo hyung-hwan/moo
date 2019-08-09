@@ -75,6 +75,12 @@
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
 
+/* Define to 1 if you have the <ffi.h> header file. */
+#undef HAVE_FFI_H
+
+/* libffi library is available */
+#undef HAVE_FFI_LIB
+
 /* Define to 1 if you have the `floorq' function. */
 #undef HAVE_FLOORQ
 

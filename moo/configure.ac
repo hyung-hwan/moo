@@ -138,7 +138,7 @@ AC_CHECK_HEADERS([dlfcn.h ltdl.h sys/mman.h])
 AC_CHECK_HEADERS([sys/devpoll.h sys/epoll.h poll.h])
 AC_CHECK_HEADERS([netinet/in.h sys/un.h netpacket/packet.h net/if_dl.h])
 AC_CHECK_HEADERS([xcb/xcb.h])
-AC_CHECK_HEADERS([dyncall.h libunwind.h])
+AC_CHECK_HEADERS([ffi.h dyncall.h libunwind.h])
 
 dnl check data types
 dnl AC_CHECK_TYPE([wchar_t], 
@@ -187,6 +187,14 @@ AC_CHECK_LIB([dyncall_s], [dcNewCallVM],
 	]
 )
 AC_SUBST(DYNCALL_LIBS)
+
+AC_CHECK_LIB([ffi], [ffi_call], 
+	[
+		FFI_LIBS="-lffi"
+		AC_DEFINE([HAVE_FFI_LIB], [1], [libffi library is available])
+	]
+)
+AC_SUBST(FFI_LIBS)
 
 if test "x${ac_cv_header_libunwind_h}" = "xyes" 
 then

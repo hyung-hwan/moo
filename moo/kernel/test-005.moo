@@ -255,8 +255,8 @@ class MyObject(TestObject)
 		ffi := FFI new: "libc.so.6".
 
 		// ffi call: #printf with: #((str "%d") (int 10) (long 20)).
-		ffi call: #printf signature: "|s|ici)i" arguments: #("hello world %d %c %d\n" 11123 $X 9876543).
-		//ffi call: #puts signature: "s)i" arguments: #("hello world").
+		ffi call: #printf signature: "s|ici>i" arguments: #("hello world %d %c %d\n" 11123 $X 9876543).
+		//ffi call: #puts signature: "s>i" arguments: #("hello world").
 		ffi close.
 	}
 

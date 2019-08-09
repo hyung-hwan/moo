@@ -79,7 +79,7 @@ if ENABLE_MOD_FFI
 libmoo_ffi_la_SOURCES = ffi.c _ffi.h
 libmoo_ffi_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_ffi_la_LDFLAGS = $(LDFLAGS_COMMON)
-libmoo_ffi_la_LIBADD = $(LIBADD_COMMON) $(DYNCALL_LIBS)
+libmoo_ffi_la_LIBADD = $(LIBADD_COMMON) $(DYNCALL_LIBS) $(FFI_LIBS)
 endif
 
 if ENABLE_MOD_SCK
