@@ -390,14 +390,14 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			break;
 
 		case FMTC_LONGLONG:
-		#if (MOO_SIZEOF_LONG_LONG <= 0)
+		#if (MOO_SIZEOF_LONG_LONG <= MOO_SIZEOF_LONG)
 			goto arg_as_long;
 		#else
 			if (_unsigned)
 			{
-				moo_oow_t v;
+				moo_uintmax_t v;
 				/* TODO: if (MOO_SIZEOF_LONG_LONG > MOO_SIZEOF_OOI_T) use moo_inttointmax() or something */
-				if (moo_inttooow(moo, arg, &v) == 0) goto oops;
+				if (moo_inttouintmax(moo, arg, &v) == 0) goto oops;
 			#if defined(USE_DYNCALL)
 				dcArgLongLong (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -407,8 +407,8 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			}
 			else
 			{
-				moo_ooi_t v;
-				if (moo_inttoooi(moo, arg, &v) == 0) goto oops;
+				moo_intmax_t v;
+				if (moo_inttointmax(moo, arg, &v) == 0) goto oops;
 			#if defined(USE_DYNCALL)
 				dcArgLongLong (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -671,7 +671,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 		case FMTC_LONGLONG:
 		{
-		#if (MOO_SIZEOF_LONG_LONG <= 0)
+		#if (MOO_SIZEOF_LONG_LONG <= MOO_SIZEOF_LONG)
 			goto ret_as_long;
 		#else
 			moo_oop_t r;

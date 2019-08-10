@@ -35,7 +35,7 @@ class FFI(Object)
 
 		x := self.ffi open(name).
 		//(x isError) ifTrue: [^x].
-		if (x isError) { FFIException signal: ('Unable to open %s' strfmt(name)) }.
+		if (x isError) { FFIException signal: ('Unable to open %O' strfmt(name)) }.
 
 		^self.
 	}
@@ -51,7 +51,7 @@ class FFI(Object)
 
 		/* f := self.funcs at: name ifAbsent: [ 
 			f := self.ffi getsym(name).
-			if (f isError) { FFIException signal: ('Unable to find %s' strfmt(name)) }.
+			if (f isError) { FFIException signal: ('Unable to find %O' strfmt(name)) }.
 			self.funcs at: name put: f.
 			f. // need this as at:put: returns an association
 		]. */
@@ -60,12 +60,12 @@ class FFI(Object)
 		if (f isNil)
 		{
 			f := self.ffi getsym(name).
-			if (f isError) { FFIException signal: ('Unable to find %s' strfmt(name)) }.
+			if (f isError) { FFIException signal: ('Unable to find %O' strfmt(name)) }.
 			self.funcs at: name put: f.
 		}.
 
 		rc := self.ffi call(f, sig, args).
-		if (rc isError)	{ FFIException signal: ('Unable to call %s' strfmt(name)) }.
+		if (rc isError)	{ FFIException signal: ('Unable to call %O' strfmt(name)) }.
 
 		^rc.
 	}
