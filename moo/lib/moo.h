@@ -2208,6 +2208,23 @@ MOO_EXPORT int moo_inttoooi (
 	moo_ooi_t* i
 );
 
+#if (MOO_SIZEOF_UINTMAX_T == MOO_SIZEOF_OOW_T)
+#	define moo_inttouintmax moo_inttooow
+#	define moo_inttointmax moo_inttoooi
+#else
+MOO_EXPORT int moo_inttouintmax (
+	moo_t*         moo,
+	moo_oop_t      x,
+	moo_uintmax_t* w
+);
+
+MOO_EXPORT int moo_inttointmax (
+	moo_t*        moo,
+	moo_oop_t     x,
+	moo_intmax_t* i
+);
+#endif
+
 MOO_EXPORT moo_oop_t moo_findclass (
 	moo_t*            moo,
 	moo_oop_nsdic_t   nsdic,
