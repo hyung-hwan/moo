@@ -34,7 +34,8 @@ class FFI(Object)
 		self.name := name.
 
 		x := self.ffi open(name).
-		(x isError) ifTrue: [^x].
+		//(x isError) ifTrue: [^x].
+		if (x isError) { FFIException signal: ('Unable to open %s' strfmt(name)) }.
 
 		^self.
 	}

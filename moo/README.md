@@ -210,3 +210,14 @@ what looks better as a shorthand expression for block value?
  a->()? block value?
  
 ```
+
+### FFI 
+
+```
+	ffi := FFI new: 'libc.so.6'.
+	(ffi call: #printf signature: 's|sl>i' arguments: #("[%s ffi test %ld]\n" "sloppy" 12345678)) dump.
+	(ffi call: #printf signature: 's>i' arguments: #("[%% ffi test %%]\n")) dump.
+	(ffi call: #puts signature: 's>i' arguments: #("this is ffi test")) dump.
+	(ffi call: #time signature: 'p>l' arguments: #(#\p0)) dump.
+	ffi close.
+```
