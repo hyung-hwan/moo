@@ -272,7 +272,7 @@ static int is_normalized_integer (moo_t* moo, moo_oop_t oop)
 			sz = MOO_OBJ_GET_SIZE(oop);
 			MOO_ASSERT (moo, sz >= 1);
 
-			return MOO_OBJ_GET_LIWORD_SLOT(oop)[sz - 1] == 0? 0: 1;
+			return MOO_OBJ_GET_LIWORD_VAL(oop, sz - 1) == 0? 0: 1;
 		}
 	}
 
@@ -590,7 +590,7 @@ static MOO_INLINE moo_oop_t make_bloated_bigint_with_ooi (moo_t* moo, moo_ooi_t 
 	}
 
 	if (!z) return MOO_NULL;
-	MOO_OBJ_GET_LIWORD_SLOT(z)[0] = w;
+	MOO_OBJ_SET_LIWORD_VAL (z, 0, w);
 	return z;
 
 #elif (MOO_LIW_BITS == MOO_OOHW_BITS)
@@ -616,8 +616,8 @@ static MOO_INLINE moo_oop_t make_bloated_bigint_with_ooi (moo_t* moo, moo_ooi_t 
 	}
 
 	if (!z) return MOO_NULL;
-	MOO_OBJ_GET_LIWORD_SLOT(z)[0] = hw[0];
-	if (hw[1] > 0) MOO_OBJ_GET_LIWORD_SLOT(z)[1] = hw[1];
+	MOO_OBJ_SET_LIWORD_VAL (z, 0, hw[0]);
+	if (hw[1] > 0) MOO_OBJ_SET_LIWORD_VAL (z, 1, hw[1]);
 	return z;
 #else
 #	error UNSUPPORTED LIW BIT SIZE
@@ -694,7 +694,7 @@ static MOO_INLINE moo_oop_t expand_bigint (moo_t* moo, moo_oop_t oop, moo_oow_t 
 
 	for (i = 0; i < count; i++)
 	{
-		MOO_OBJ_GET_LIWORD_SLOT(z)[i] = MOO_OBJ_GET_LIWORD_SLOT(oop)[i];
+		MOO_OBJ_SET_LIWORD_VAL (z, i, MOO_OBJ_GET_LIWORD_VAL(oop, i));
 	}
 	return z;
 }
@@ -715,7 +715,7 @@ static MOO_INLINE moo_oop_t _clone_bigint (moo_t* moo, moo_oop_t oop, moo_oow_t 
 
 	for (i = 0; i < count; i++)
 	{
-		MOO_OBJ_GET_LIWORD_SLOT(z)[i] = MOO_OBJ_GET_LIWORD_SLOT(oop)[i];
+		MOO_OBJ_SET_LIWORD_VAL (z, i, MOO_OBJ_GET_LIWORD_VAL(oop, i));
 	}
 	return z;
 }

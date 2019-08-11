@@ -59,6 +59,7 @@
 #define FMTC_LONGLONG 'L'
 #define FMTC_BCS 's'
 #define FMTC_UCS 'S'
+#define FMTC_BLOB 'b'
 #define FMTC_POINTER 'p'
 
 typedef struct link_t link_t;
@@ -419,9 +420,6 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			break;
 		#endif
 
-#if 0
-		case 'B': /* byte array */
-#endif
 		case FMTC_BCS:
 		{
 			moo_bch_t* ptr;
@@ -462,6 +460,22 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			if (!ptr) goto oops; /* out of system memory or conversion error - soft failure */
 			link_ca (ffi, ptr);
 		#endif
+
+		#if defined(USE_DYNCALL)
+			dcArgPointer (ffi->dc, ptr);
+		#elif defined(USE_LIBFFI)
+			ffi->arg_values[ffi->arg_count] = &ffi->arg_svs[ffi->arg_count].p;
+			ffi->arg_svs[ffi->arg_count].p = ptr;
+		#endif
+			break;
+		}
+
+		case FMTC_BLOB:
+		{
+			void* ptr;
+
+			if (MOO_OBJ_IS_BYTE_POINTER(arg)) goto inval_arg_value;
+			ptr = MOO_OBJ_GET_BYTE_SLOT(arg);
 
 		#if defined(USE_DYNCALL)
 			dcArgPointer (ffi->dc, ptr);
@@ -570,6 +584,10 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	for (i = 0, j = 0, nfixedargs = 0; i < MOO_OBJ_GET_SIZE(sig); i++)
 	{
 		fmtc = MOO_OBJ_GET_CHAR_VAL(sig, i);
+		if (fmtc == ' ')
+		{
+			continue;
+		}
 		if (fmtc == '>') 
 		{
 			i++;
@@ -598,9 +616,9 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		j++;
 	}
 
+	while (i < MOO_OBJ_GET_SIZE(sig) && MOO_OBJ_GET_CHAR_VAL(sig, i) == ' '); /* skip all spaces after > */
 	fmtc = (i >= MOO_OBJ_GET_SIZE(sig)? FMTC_NULL: MOO_OBJ_GET_CHAR_VAL(sig, i));
 #if defined(USE_LIBFFI)
-/* TODO: handle unsigned */
 	fs = (nfixedargs == j)? ffi_prep_cif(&ffi->cif, FFI_DEFAULT_ABI, j, ffi->fmtc_to_type[0][fmtc], ffi->arg_types):
 	                        ffi_prep_cif_var(&ffi->cif, FFI_DEFAULT_ABI, nfixedargs, j, ffi->fmtc_to_type[0][fmtc], ffi->arg_types);
 	if (fs != FFI_OK)
@@ -617,6 +635,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	{
 /* TODO: support more types... */
 /* TODO: proper return value conversion */
+/* TODO: handle unsigned */
 		case FMTC_CHAR:
 		{
 		#if defined(USE_DYNCALL)
@@ -746,6 +765,17 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 			MOO_STACK_SETRET (moo, nargs, s); 
 			break;
 		}
+
+
+#if 0
+		case FMTC_BLOB:
+		{
+			/* blob as a return type isn't sufficient as it lacks the size information. 
+			 * blob as an argument is just a pointer and the size can be yet another argument.
+			 * it there a good way to represent this here?... TODO: */
+			break;
+		}
+#endif
 
 		case FMTC_POINTER:
 		{
