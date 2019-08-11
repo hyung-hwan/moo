@@ -2185,6 +2185,15 @@ MOO_EXPORT moo_oop_t moo_makestringwithbchars (
 #	define moo_makestring(moo,ptr,len) moo_makestringwithbchars(moo,ptr,len)
 #endif
 
+
+#if (MOO_SIZEOF_UINTMAX_T == MOO_SIZEOF_OOW_T)
+#	define moo_inttouintmax moo_inttooow
+#	define moo_inttointmax moo_inttoooi
+#	define moo_uintmaxtoint moo_oowtoint
+#	define moo_intmaxtoint moo_ooitoint
+#else
+
+
 MOO_EXPORT moo_oop_t moo_oowtoint (
 	moo_t*    moo,
 	moo_oow_t w
@@ -2194,7 +2203,6 @@ MOO_EXPORT moo_oop_t moo_ooitoint (
 	moo_t*    moo,
 	moo_ooi_t i
 );
-
 
 MOO_EXPORT int moo_inttooow (
 	moo_t*     moo,
@@ -2208,10 +2216,16 @@ MOO_EXPORT int moo_inttoooi (
 	moo_ooi_t* i
 );
 
-#if (MOO_SIZEOF_UINTMAX_T == MOO_SIZEOF_OOW_T)
-#	define moo_inttouintmax moo_inttooow
-#	define moo_inttointmax moo_inttoooi
-#else
+MOO_EXPORT moo_oop_t moo_intmaxtoint (
+	moo_t*       moo,
+	moo_intmax_t i
+);
+
+/*MOO_EXPORT moo_oop_t moo_uintmaxtoint (
+	moo_t*        moo,
+	moo_uintmax_t i
+);*/
+
 MOO_EXPORT int moo_inttouintmax (
 	moo_t*         moo,
 	moo_oop_t      x,

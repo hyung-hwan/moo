@@ -411,7 +411,7 @@ static MOO_INLINE int bigint_to_uintmax (moo_t* moo, moo_oop_t num, moo_uintmax_
 	switch (MOO_OBJ_GET_SIZE(num))
 	{
 		case 1:
-			*w = ((moo_uintmax_t)MOO_OBJ_GET_WORD_VAL(num, 0);
+			*w = (moo_uintmax_t)MOO_OBJ_GET_WORD_VAL(num, 0);
 			goto done;
 
 		case 2:
@@ -528,41 +528,49 @@ static MOO_INLINE moo_oop_t make_bigint_with_oow (moo_t* moo, moo_oow_t w)
 static MOO_INLINE moo_oop_t make_bigint_with_ooi (moo_t* moo, moo_ooi_t i)
 {
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
-	moo_oow_t w;
 
-	MOO_ASSERT (moo, MOO_SIZEOF(moo_oow_t) == MOO_SIZEOF(moo_liw_t));
+	MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oow_t) == MOO_SIZEOF(moo_liw_t));
 	if (i >= 0)
 	{
-		w = i;
+		moo_oow_t w = i;
 		return moo_instantiate(moo, moo->_large_positive_integer, &w, 1);
+	}
+	else if (i > MOO_TYPE_MIN(moo_ooi_t))
+	{
+		moo_oow_t w = -i;
+		return moo_instantiate(moo, moo->_large_negative_integer, &w, 1);
 	}
 	else
 	{
-		/* The caller must ensure that i is greater than the smallest value
-		 * that moo_ooi_t can represent. otherwise, the absolute value 
-		 * cannot be held in moo_ooi_t. */
-		MOO_ASSERT (moo, i > MOO_TYPE_MIN(moo_ooi_t));
-		w = -i;
+		/* MOO_TYPE_MIN(moo_ooi_t) */
+		moo_oow_t w = (moo_oow_t)MOO_TYPE_MAX(moo_ooi_t) + 1;
 		return moo_instantiate(moo, moo->_large_negative_integer, &w, 1);
 	}
-#elif (MOO_LIW_BITS == MOO_OOHW_BITS)
-	moo_liw_t hw[2];
-	moo_oow_t w;
 
+#elif (MOO_LIW_BITS == MOO_OOHW_BITS)
+
+	MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oohw_t) == MOO_SIZEOF(moo_liw_t));
 	if (i >= 0)
 	{
-		w = i;
+		moo_liw_t hw[2];
+		moo_oow_t w = i;
 		hw[0] = w /*& MOO_LBMASK(moo_oow_t,MOO_LIW_BITS)*/;
 		hw[1] = w >> MOO_LIW_BITS;
 		return moo_instantiate(moo, moo->_large_positive_integer, hw, (hw[1] > 0? 2: 1));
 	}
-	else
+	else if (i > MOO_TYPE_MIN(moo_ooi_t))
 	{
-		MOO_ASSERT (moo, i > MOO_TYPE_MIN(moo_ooi_t));
-		w = -i;
+		moo_liw_t hw[2];
+		moo_oow_t w = -i;
 		hw[0] = w /*& MOO_LBMASK(moo_oow_t,MOO_LIW_BITS)*/;
 		hw[1] = w >> MOO_LIW_BITS;
 		return moo_instantiate(moo, moo->_large_negative_integer, hw, (hw[1] > 0? 2: 1));
+	}
+	else
+	{
+		/* MOO_TYPE_MIN(moo_ooi_t) */
+		moo_liw_t hw[2] = { 0, (MOO_TYPE_MAX(moo_liw_t) >> 1) + 1 };
+		return moo_instantiate(moo, moo->_large_negative_integer, hw, 2);
 	}
 #else
 #	error UNSUPPORTED LIW BIT SIZE
@@ -571,6 +579,7 @@ static MOO_INLINE moo_oop_t make_bigint_with_ooi (moo_t* moo, moo_ooi_t i)
 
 static MOO_INLINE moo_oop_t make_bloated_bigint_with_ooi (moo_t* moo, moo_ooi_t i, moo_oow_t extra)
 {
+/*TODO: enhance this like make_bitint_with_ooi */
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
 	moo_oow_t w;
 	moo_oop_t z;
@@ -630,6 +639,7 @@ static MOO_INLINE moo_oop_t make_bigint_with_intmax (moo_t* moo, moo_intmax_t v)
 	moo_liw_t buf[MOO_SIZEOF_INTMAX_T / MOO_SIZEOF_LIW_T];
 	moo_uintmax_t ui;
 
+/*TODO: enhance to support MOO_TYPE_MIN(moo_intmax_t) */
 	/* this is not a generic function. it can't handle v 
 	 * if it's MOO_TYPE_MIN(moo_intmax_t) */
 	MOO_ASSERT (moo, v > MOO_TYPE_MIN(moo_intmax_t));
@@ -669,6 +679,18 @@ moo_oop_t moo_ooitoint (moo_t* moo, moo_ooi_t i)
 	else
 	{
 		return make_bigint_with_ooi(moo, i);
+	}
+}
+
+moo_oop_t moo_intmaxtoint (moo_t* moo, moo_intmax_t i)
+{
+	if (MOO_IN_SMOOI_RANGE(i))
+	{
+		return MOO_SMOOI_TO_OOP(i);
+	}
+	else
+	{
+		return make_bigint_with_intmax(moo, i);
 	}
 }
 

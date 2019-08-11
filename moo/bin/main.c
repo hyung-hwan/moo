@@ -291,6 +291,7 @@ int main (int argc, char* argv[])
 		}
 	}
 
+/*MOO_DEBUG2 (moo, "XXXXXXXXXXXXXXXXXXXXX %O %ld\n", moo_ooitoint(moo, MOO_TYPE_MIN(moo_ooi_t)), MOO_TYPE_MIN(moo_ooi_t));*/
 	MOO_DEBUG0 (moo, "COMPILE OK. STARTING EXECUTION...\n");
 	xret = 0;
 
