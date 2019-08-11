@@ -616,7 +616,8 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		j++;
 	}
 
-	while (i < MOO_OBJ_GET_SIZE(sig) && MOO_OBJ_GET_CHAR_VAL(sig, i) == ' '); /* skip all spaces after > */
+	while (i < MOO_OBJ_GET_SIZE(sig) && MOO_OBJ_GET_CHAR_VAL(sig, i) == ' ') i++; /* skip all spaces after > */
+
 	fmtc = (i >= MOO_OBJ_GET_SIZE(sig)? FMTC_NULL: MOO_OBJ_GET_CHAR_VAL(sig, i));
 #if defined(USE_LIBFFI)
 	fs = (nfixedargs == j)? ffi_prep_cif(&ffi->cif, FFI_DEFAULT_ABI, j, ffi->fmtc_to_type[0][fmtc], ffi->arg_types):

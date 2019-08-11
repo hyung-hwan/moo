@@ -288,7 +288,7 @@ static MOO_INLINE int bigint_to_oow (moo_t* moo, moo_oop_t num, moo_oow_t* w)
 	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(num) >= 1);
 	if (MOO_OBJ_GET_SIZE(num) == 1)
 	{
-		*w = MOO_OBJ_GET_WORD_SLOT(num)[0];
+		*w = MOO_OBJ_GET_WORD_VAL(num, 0);
 		return (MOO_POINTER_IS_NBIGINT(moo, num))? -1: 1;
 	}
 
@@ -301,7 +301,7 @@ static MOO_INLINE int bigint_to_oow (moo_t* moo, moo_oop_t num, moo_oow_t* w)
 	MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(num) >= 2);
 	if (MOO_OBJ_GET_SIZE(num) == 2)
 	{
-		*w = MAKE_WORD (MOO_OBJ_GET_HALFWORD_SLOT(num)[0], MOO_OBJ_GET_HALFWORD_SLOT(num)[1]);
+		*w = MAKE_WORD(MOO_OBJ_GET_HALFWORD_VAL(num, 0), MOO_OBJ_GET_HALFWORD_VAL(num, 1));
 		return (MOO_POINTER_IS_NBIGINT(moo, num))? -1: 1;
 	}
 #else
@@ -411,11 +411,11 @@ static MOO_INLINE int bigint_to_uintmax (moo_t* moo, moo_oop_t num, moo_uintmax_
 	switch (MOO_OBJ_GET_SIZE(num))
 	{
 		case 1:
-			*w = ((moo_uintmax_t)MOO_OBJ_GET_WORD_SLOT(num)[0];
+			*w = ((moo_uintmax_t)MOO_OBJ_GET_WORD_VAL(num, 0);
 			goto done;
 
 		case 2:
-			*w = ((moo_uintmax_t)MOO_OBJ_GET_WORD_SLOT(num)[0] << MOO_LIW_BITS) | MOO_OBJ_GET_WORD_SLOT(num)[1];
+			*w = ((moo_uintmax_t)MOO_OBJ_GET_WORD_VAL(num, 0) << MOO_LIW_BITS) | MOO_OBJ_GET_WORD_VAL(num, 1);
 			goto done;
 
 		default:
@@ -427,14 +427,14 @@ static MOO_INLINE int bigint_to_uintmax (moo_t* moo, moo_oop_t num, moo_uintmax_
 	switch (MOO_OBJ_GET_SIZE(num))
 	{
 		case 2:
-			*w = ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_SLOT(num)[0] << MOO_LIW_BITS) | MOO_OBJ_GET_HALFWORD_SLOT(num)[1];
+			*w = ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 0) << MOO_LIW_BITS) | MOO_OBJ_GET_HALFWORD_VAL(num, 1);
 			goto done;
 
 		case 4:
-			*w = ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_SLOT(num)[0] << MOO_LIW_BITS * 3) | 
-			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_SLOT(num)[1] << MOO_LIW_BITS * 2) |
-			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_SLOT(num)[2] << MOO_LIW_BITS * 1) |
-			     MOO_OBJ_GET_HALFWORD_SLOT(num)[3];
+			*w = ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 0) << MOO_LIW_BITS * 3) | 
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 1) << MOO_LIW_BITS * 2) |
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 2) << MOO_LIW_BITS * 1) |
+			     MOO_OBJ_GET_HALFWORD_VAL(num, 3);
 			goto done;
 
 		default:
@@ -766,7 +766,7 @@ static MOO_INLINE moo_oow_t count_effective_digits (moo_oop_t oop)
 	for (i = MOO_OBJ_GET_SIZE(oop); i > 1; )
 	{
 		--i;
-		if (MOO_OBJ_GET_LIWORD_SLOT(oop)[i]) return i + 1;
+		if (MOO_OBJ_GET_LIWORD_VAL(oop, i)) return i + 1;
 	}
 
 	return 1;
@@ -786,7 +786,7 @@ static moo_oop_t normalize_bigint (moo_t* moo, moo_oop_t oop)
 	{
 		moo_oow_t w;
 
-		w = MOO_OBJ_GET_LIWORD_SLOT(oop)[0];
+		w = MOO_OBJ_GET_LIWORD_VAL(oop, 0);
 		if (MOO_POINTER_IS_PBIGINT(moo, oop))
 		{
 			if (w <= MOO_SMOOI_MAX) return MOO_SMOOI_TO_OOP(w);
@@ -804,19 +804,19 @@ static moo_oop_t normalize_bigint (moo_t* moo, moo_oop_t oop)
 	{
 		if (MOO_POINTER_IS_PBIGINT(moo, oop))
 		{
-			return MOO_SMOOI_TO_OOP(MOO_OBJ_GET_LIWORD_SLOT(oop)[0]);
+			return MOO_SMOOI_TO_OOP(MOO_OBJ_GET_LIWORD_VAL(oop, 0));
 		}
 		else
 		{
 			MOO_ASSERT (moo, MOO_POINTER_IS_NBIGINT(moo, oop));
-			return MOO_SMOOI_TO_OOP(-(moo_ooi_t)MOO_OBJ_GET_LIWORD_SLOT(oop)[0]);
+			return MOO_SMOOI_TO_OOP(-(moo_ooi_t)MOO_OBJ_GET_LIWORD_VAL(oop, 0));
 		}
 	}
 	else if (count == 2) /* 2 half-words */
 	{
 		moo_oow_t w;
 
-		w = MAKE_WORD (MOO_OBJ_GET_LIWORD_SLOT(oop)[0], MOO_OBJ_GET_LIWORD_SLOT(oop)[1]);
+		w = MAKE_WORD(MOO_OBJ_GET_LIWORD_VAL(oop, 0), MOO_OBJ_GET_LIWORD_VAL(oop, 1));
 		if (MOO_POINTER_IS_PBIGINT(moo, oop))
 		{
 			if (w <= MOO_SMOOI_MAX) return MOO_SMOOI_TO_OOP(w);
@@ -2895,7 +2895,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		if (MOO_POINTER_IS_PBIGINT(moo, x))
 		{
 			if (wp >= xs) return MOO_SMOOI_TO_OOP(0);
-			v = (MOO_OBJ_GET_LIWORD_SLOT(x)[wp] >> bp) & 1;
+			v = (MOO_OBJ_GET_LIWORD_VAL(x, wp) >> bp) & 1;
 		}
 		else
 		{
@@ -2907,7 +2907,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			carry = 1;
 			for (i = 0; i <= wp; i++)
 			{
-				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(x)[i]) + carry;
+				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(x, i)) + carry;
 				carry = w >> MOO_LIW_BITS;
 			}
 			v = ((moo_oow_t)w >> bp) & 1;
@@ -2979,7 +2979,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		if (MOO_POINTER_IS_PBIGINT(moo, x))
 		{
 			if (wp >= xs) return MOO_SMOOI_TO_OOP(0);
-			v = (MOO_OBJ_GET_LIWORD_SLOT(x)[wp] >> bp) & 1;
+			v = (MOO_OBJ_GET_LIWORD_SLOT(x, wp) >> bp) & 1;
 		}
 		else
 		{
@@ -2991,7 +2991,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			carry = 1;
 			for (i = 0; i <= wp; i++)
 			{
-				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(x)[i]) + carry;
+				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(x, i)) + carry;
 				carry = w >> MOO_LIW_BITS;
 			}
 			v = ((moo_oow_t)w >> bp) & 1;
@@ -3115,13 +3115,13 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			/* 2's complement on both x and y and perform bitwise-and */
 			for (i = 0; i < ys; i++)
 			{
-				w[0] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(x)[i]) + carry[0];
+				w[0] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(x, i)) + carry[0];
 				carry[0] = w[0] >> MOO_LIW_BITS;
 
-				w[1] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(y)[i]) + carry[1];
+				w[1] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(y, i)) + carry[1];
 				carry[1] = w[1] >> MOO_LIW_BITS;
 
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w[0] & (moo_liw_t)w[1];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w[0] & (moo_liw_t)w[1]);
 			}
 			MOO_ASSERT (moo, carry[1] == 0);
 
@@ -3129,20 +3129,20 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			 * in y is treated as if they are all 1s. */
 			for (; i < xs; i++)
 			{
-				w[0] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(x)[i]) + carry[0];
+				w[0] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(x, i)) + carry[0];
 				carry[0] = w[0] >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w[0];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w[0]);
 			}
 			MOO_ASSERT (moo, carry[0] == 0);
 
 			/* 2's complement on the final result */
-			MOO_OBJ_GET_LIWORD_SLOT(z)[zs] = ~(moo_liw_t)0;
+			MOO_OBJ_SET_LIWORD_VAL (z, zs, ~(moo_liw_t)0);
 			carry[0] = 1;
 			for (i = 0; i <= zs; i++)
 			{
-				w[0] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(z)[i]) + carry[0];
+				w[0] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(z, i)) + carry[0];
 				carry[0] = w[0] >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w[0];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w[0]);
 			}
 			MOO_ASSERT (moo, carry[0] == 0);
 
@@ -3156,9 +3156,9 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			carry = 1;
 			for (i = 0; i < ys; i++)
 			{
-				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(x)[i]) + carry;
+				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(x, i)) + carry;
 				carry = w >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w & MOO_OBJ_GET_LIWORD_SLOT(y)[i];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w & MOO_OBJ_GET_LIWORD_VAL(y, i));
 			}
 
 			/* the lacking part in y is all 0's. the remaining part in x is
@@ -3174,9 +3174,9 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			carry = 1;
 			for (i = 0; i < ys; i++)
 			{
-				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(y)[i]) + carry;
+				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(y, i)) + carry;
 				carry = w >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = MOO_OBJ_GET_LIWORD_SLOT(x)[i] & (moo_liw_t)w;
+				MOO_OBJ_SET_LIWORD_VAL (z, i, MOO_OBJ_GET_LIWORD_VAL(x, i) & (moo_liw_t)w);
 			}
 			MOO_ASSERT (moo, carry == 0);
 
@@ -3199,7 +3199,7 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			 */
 			for (; i < xs; i++)
 			{
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = MOO_OBJ_GET_LIWORD_SLOT(x)[i];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, MOO_OBJ_GET_LIWORD_VAL(x, i));
 			}
 		}
 		else
@@ -3207,7 +3207,7 @@ moo_oop_t moo_bitandints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			/* both are positive */
 			for (i = 0; i < ys; i++)
 			{
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = MOO_OBJ_GET_LIWORD_SLOT(x)[i] & MOO_OBJ_GET_LIWORD_SLOT(y)[i];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, MOO_OBJ_GET_LIWORD_VAL(x, i) & MOO_OBJ_GET_LIWORD_VAL(y, i));
 			}
 		}
 
@@ -3335,13 +3335,13 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			/* 2's complement on both x and y and perform bitwise-and */
 			for (i = 0; i < ys; i++)
 			{
-				w[0] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(x)[i]) + carry[0];
+				w[0] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(x, i)) + carry[0];
 				carry[0] = w[0] >> MOO_LIW_BITS;
 
-				w[1] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(y)[i]) + carry[1];
+				w[1] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(y, i)) + carry[1];
 				carry[1] = w[1] >> MOO_LIW_BITS;
 
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w[0] | (moo_liw_t)w[1];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w[0] | (moo_liw_t)w[1]);
 			}
 			MOO_ASSERT (moo, carry[1] == 0);
 
@@ -3351,13 +3351,13 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 		adjust_to_negative:
 			/* 2's complement on the final result */
-			MOO_OBJ_GET_LIWORD_SLOT(z)[zs] = ~(moo_liw_t)0;
+			MOO_OBJ_SET_LIWORD_VAL (z, zs, ~(moo_liw_t)0);
 			carry[0] = 1;
 			for (i = 0; i <= zs; i++)
 			{
-				w[0] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(z)[i]) + carry[0];
+				w[0] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(z, i)) + carry[0];
 				carry[0] = w[0] >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w[0];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w[0]);
 			}
 			MOO_ASSERT (moo, carry[0] == 0);
 
@@ -3371,16 +3371,16 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			carry = 1;
 			for (i = 0; i < ys; i++)
 			{
-				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(x)[i]) + carry;
+				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(x, i)) + carry;
 				carry = w >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w | MOO_OBJ_GET_LIWORD_SLOT(y)[i];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w | MOO_OBJ_GET_LIWORD_VAL(y, i));
 			}
 
 			for (; i < xs; i++)
 			{
-				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(x)[i]) + carry;
+				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(x, i)) + carry;
 				carry = w >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w;
+				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w);
 			}
 
 			MOO_ASSERT (moo, carry == 0);
@@ -3395,9 +3395,9 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			carry = 1;
 			for (i = 0; i < ys; i++)
 			{
-				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(y)[i]) + carry;
+				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(y, i)) + carry;
 				carry = w >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = MOO_OBJ_GET_LIWORD_SLOT(x)[i] | (moo_liw_t)w;
+				MOO_OBJ_SET_LIWORD_VAL (z, i, MOO_OBJ_GET_LIWORD_VAL(x, i) | (moo_liw_t)w);
 			}
 			MOO_ASSERT (moo, carry == 0);
 
@@ -3410,7 +3410,7 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			 *  redundant.
 			for (; i < xs; i++)
 			{
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = ~(moo_liw_t)0;
+				MOO_OBJ_SET_LIWORD_VAL (z, i, ~(moo_liw_t)0);
 			}
 			*/
 			goto adjust_to_negative;
@@ -3420,12 +3420,12 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			/* both are positive */
 			for (i = 0; i < ys; i++)
 			{
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = MOO_OBJ_GET_LIWORD_SLOT(x)[i] | MOO_OBJ_GET_LIWORD_SLOT(y)[i];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, MOO_OBJ_GET_LIWORD_VAL(x, i) | MOO_OBJ_GET_LIWORD_VAL(y, i));
 			}
 
 			for (; i < xs; i++)
 			{
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = MOO_OBJ_GET_LIWORD_SLOT(x)[i];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, MOO_OBJ_GET_LIWORD_VAL(x, i));
 			}
 		}
 
@@ -3553,22 +3553,22 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			/* 2's complement on both x and y and perform bitwise-and */
 			for (i = 0; i < ys; i++)
 			{
-				w[0] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(x)[i]) + carry[0];
+				w[0] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(x, i)) + carry[0];
 				carry[0] = w[0] >> MOO_LIW_BITS;
 
-				w[1] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(y)[i]) + carry[1];
+				w[1] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(y, i)) + carry[1];
 				carry[1] = w[1] >> MOO_LIW_BITS;
 
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w[0] ^ (moo_liw_t)w[1];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w[0] ^ (moo_liw_t)w[1]);
 			}
 			MOO_ASSERT (moo, carry[1] == 0);
 
 			/* treat the lacking part in y as all 1s */
 			for (; i < xs; i++)
 			{
-				w[0] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(x)[i]) + carry[0];
+				w[0] = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(x, i)) + carry[0];
 				carry[0] = w[0] >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w[0] ^ (~(moo_liw_t)0);
+				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w[0] ^ (~(moo_liw_t)0));
 			}
 			MOO_ASSERT (moo, carry[0] == 0);
 		}
@@ -3580,29 +3580,29 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			carry = 1;
 			for (i = 0; i < ys; i++)
 			{
-				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(x)[i]) + carry;
+				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(x, i)) + carry;
 				carry = w >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w ^ MOO_OBJ_GET_LIWORD_SLOT(y)[i];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w ^ MOO_OBJ_GET_LIWORD_VAL(y, i));
 			}
 
 			/* treat the lacking part in y as all 0s */
 			for (; i < xs; i++)
 			{
-				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(x)[i]) + carry;
+				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(x, i)) + carry;
 				carry = w >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w;
+				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w);
 			}
 			MOO_ASSERT (moo, carry == 0);
 
 		adjust_to_negative:
 			/* 2's complement on the final result */
-			MOO_OBJ_GET_LIWORD_SLOT(z)[zs] = ~(moo_liw_t)0;
+			MOO_OBJ_SET_LIWORD_VAL (z, zs, ~(moo_liw_t)0);
 			carry = 1;
 			for (i = 0; i <= zs; i++)
 			{
-				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(z)[i]) + carry;
+				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(z, i)) + carry;
 				carry = w >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w;
+				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w);
 			}
 			MOO_ASSERT (moo, carry == 0);
 
@@ -3617,16 +3617,16 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			carry = 1;
 			for (i = 0; i < ys; i++)
 			{
-				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(y)[i]) + carry;
+				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(y, i)) + carry;
 				carry = w >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = MOO_OBJ_GET_LIWORD_SLOT(x)[i] ^ (moo_liw_t)w;
+				MOO_OBJ_SET_LIWORD_VAL (z, i, MOO_OBJ_GET_LIWORD_VAL(x, i) ^ (moo_liw_t)w);
 			}
 			MOO_ASSERT (moo, carry == 0);
 
 			/* treat the lacking part in y as all 1s */
 			for (; i < xs; i++)
 			{
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = MOO_OBJ_GET_LIWORD_SLOT(x)[i] ^ (~(moo_liw_t)0);
+				MOO_OBJ_SET_LIWORD_VAL (z, i, MOO_OBJ_GET_LIWORD_VAL(x, i) ^ (~(moo_liw_t)0));
 			}
 
 			goto adjust_to_negative;
@@ -3636,13 +3636,13 @@ moo_oop_t moo_bitxorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			/* both are positive */
 			for (i = 0; i < ys; i++)
 			{
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = MOO_OBJ_GET_LIWORD_SLOT(x)[i] ^ MOO_OBJ_GET_LIWORD_SLOT(y)[i];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, MOO_OBJ_GET_LIWORD_VAL(x, i) ^ MOO_OBJ_GET_LIWORD_VAL(y, i));
 			}
 
 			/* treat the lacking part in y as all 0s */
 			for (; i < xs; i++)
 			{
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = MOO_OBJ_GET_LIWORD_SLOT(x)[i];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, MOO_OBJ_GET_LIWORD_VAL(x, i));
 			}
 		}
 
@@ -3707,9 +3707,9 @@ moo_oop_t moo_bitinvint (moo_t* moo, moo_oop_t x)
 			carry = 1;
 			for (i = 0; i < xs; i++)
 			{
-				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(x)[i]) + carry;
+				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(x, i)) + carry;
 				carry = w >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = ~(moo_liw_t)w;
+				MOO_OBJ_SET_LIWORD_VAL (z, i, ~(moo_liw_t)w);
 			}
 			MOO_ASSERT (moo, carry == 0);
 		}
@@ -3720,28 +3720,28 @@ moo_oop_t moo_bitinvint (moo_t* moo, moo_oop_t x)
 		#if 0
 			for (i = 0; i < xs; i++)
 			{
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = ~MOO_OBJ_GET_LIWORD_SLOT(x)[i];
+				MOO_OBJ_SET_LIWORD_VAL (z, i, ~MOO_OBJ_GET_LIWORD_VAL(x, i));
 			}
 
-			MOO_OBJ_GET_LIWORD_SLOT(z)[zs] = ~(moo_liw_t)0;
+			MOO_OBJ_SET_LIWORD_VAL (z, zs, ~(moo_liw_t)0);
 			carry = 1;
 			for (i = 0; i <= zs; i++)
 			{
-				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(z)[i]) + carry;
+				w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(z, i)) + carry;
 				carry = w >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w;
+				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w);
 			}
 			MOO_ASSERT (moo, carry == 0);
 		#else
 			carry = 1;
 			for (i = 0; i < xs; i++)
 			{
-				w = (moo_lidw_t)(MOO_OBJ_GET_LIWORD_SLOT(x)[i]) + carry;
+				w = (moo_lidw_t)(MOO_OBJ_GET_LIWORD_VAL(x, i)) + carry;
 				carry = w >> MOO_LIW_BITS;
-				MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w;
+				MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w);
 			}
 			MOO_ASSERT (moo, i == zs);
-			MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)carry;
+			MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)carry);
 			MOO_ASSERT (moo, (carry >> MOO_LIW_BITS) == 0);
 		#endif
 
@@ -3776,9 +3776,9 @@ static MOO_INLINE moo_oop_t rshift_negative_bigint (moo_t* moo, moo_oop_t x, moo
 	carry = 1;
 	for (i = 0; i < xs; i++)
 	{
-		w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(x)[i]) + carry;
+		w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(x, i)) + carry;
 		carry = w >> MOO_LIW_BITS;
-		MOO_OBJ_GET_LIWORD_SLOT(z)[i] = ~(moo_liw_t)w;
+		MOO_OBJ_SET_LIWORD_VAL (z, i, ~(moo_liw_t)w);
 	}
 	MOO_ASSERT (moo, carry == 0);
 
@@ -3789,27 +3789,27 @@ static MOO_INLINE moo_oop_t rshift_negative_bigint (moo_t* moo, moo_oop_t x, moo
 #if 0
 	for (i = 0; i < xs; i++)
 	{
-		MOO_OBJ_GET_LIWORD_SLOT(z)[i] = ~MOO_OBJ_GET_LIWORD_SLOT(z)[i];
+		MOO_OBJ_SET_LIWORD_VAL (z, i, ~MOO_OBJ_GET_LIWORD_VAL(z, i));
 	}
-	MOO_OBJ_GET_LIWORD_SLOT(z)[xs] = ~(moo_liw_t)0;
+	MOO_OBJ_SET_LIWORD_VAL (z, xs, ~(moo_liw_t)0);
 
 	carry = 1;
 	for (i = 0; i <= xs; i++)
 	{
-		w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_SLOT(z)[i]) + carry;
+		w = (moo_lidw_t)((moo_liw_t)~MOO_OBJ_GET_LIWORD_VAL(z, i)) + carry;
 		carry = w >> MOO_LIW_BITS;
-		MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w;
+		MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w);
 	}
 	MOO_ASSERT (moo, carry == 0);
-#else
+#elses
 	carry = 1;
 	for (i = 0; i < xs; i++)
 	{
-		w = (moo_lidw_t)(MOO_OBJ_GET_LIWORD_SLOT(z)[i]) + carry;
+		w = (moo_lidw_t)(MOO_OBJ_GET_LIWORD_VAL(z, i)) + carry;
 		carry = w >> MOO_LIW_BITS;
-		MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)w;
+		MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)w);
 	}
-	MOO_OBJ_GET_LIWORD_SLOT(z)[i] = (moo_liw_t)carry;
+	MOO_OBJ_SET_LIWORD_VAL (z, i, (moo_liw_t)carry);
 	MOO_ASSERT (moo, (carry >> MOO_LIW_BITS) == 0);
 #endif
 
@@ -3923,7 +3923,7 @@ static MOO_INLINE moo_oop_t rshift_positive_bigint_and_normalize (moo_t* moo, mo
 	{
 		rshift_unsigned_array (MOO_OBJ_GET_LIWORD_SLOT(z), zs, shift);
 		if (count_effective(MOO_OBJ_GET_LIWORD_SLOT(z), zs) == 1 &&
-		    MOO_OBJ_GET_LIWORD_SLOT(z)[0] == 0) 
+		    MOO_OBJ_GET_LIWORD_VAL(z, 0) == 0) 
 		{
 			/* if z is 0, i don't have to go on */
 			break;
