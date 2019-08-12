@@ -625,13 +625,19 @@ static MOO_INLINE moo_oop_t make_bigint_with_intmax (moo_t* moo, moo_intmax_t v)
 	moo_oow_t len;
 	moo_liw_t buf[MOO_SIZEOF_INTMAX_T / MOO_SIZEOF_LIW_T];
 	moo_uintmax_t ui;
+	moo_oop_class_t _class;
 
-/*TODO: enhance to support MOO_TYPE_MIN(moo_intmax_t) */
-	/* this is not a generic function. it can't handle v 
-	 * if it's MOO_TYPE_MIN(moo_intmax_t) */
-	MOO_ASSERT (moo, v > MOO_TYPE_MIN(moo_intmax_t));
+	if (v >= 0)
+	{
+		ui = v;
+		_class = moo->_large_positive_integer;
+	}
+	else
+	{
+		ui = (v == MOO_TYPE_MIN(moo_intmax_t))? ((moo_uintmax_t)MOO_TYPE_MAX(moo_intmax_t) + 1): -v;
+		_class = moo->_large_negative_integer;
+	}
 
-	ui = (v >= 0)? v: -v;
 	len = 0;
 	do
 	{
@@ -640,7 +646,23 @@ static MOO_INLINE moo_oop_t make_bigint_with_intmax (moo_t* moo, moo_intmax_t v)
 	}
 	while (ui > 0);
 
-	return moo_instantiate(moo, ((v >= 0)? moo->_large_positive_integer: moo->_large_negative_integer), buf, len);
+	return moo_instantiate(moo, _class, buf, len);
+}
+
+static MOO_INLINE moo_oop_t make_bigint_with_uintmax (moo_t* moo, moo_uintmax_t ui)
+{
+	moo_oow_t len;
+	moo_liw_t buf[MOO_SIZEOF_INTMAX_T / MOO_SIZEOF_LIW_T];
+
+	len = 0;
+	do
+	{
+		buf[len++] = (moo_liw_t)ui;
+		ui = ui >> MOO_LIW_BITS;
+	}
+	while (ui > 0);
+
+	return moo_instantiate(moo, moo->_large_positive_integer, buf, len);
 }
 
 moo_oop_t moo_oowtoint (moo_t* moo, moo_oow_t w)
@@ -678,6 +700,18 @@ moo_oop_t moo_intmaxtoint (moo_t* moo, moo_intmax_t i)
 	else
 	{
 		return make_bigint_with_intmax(moo, i);
+	}
+}
+
+moo_oop_t moo_uintmaxtoint (moo_t* moo, moo_uintmax_t i)
+{
+	if (MOO_IN_SMOOI_RANGE(i))
+	{
+		return MOO_SMOOI_TO_OOP(i);
+	}
+	else
+	{
+		return make_bigint_with_uintmax(moo, i);
 	}
 }
 

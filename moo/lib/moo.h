@@ -2221,10 +2221,10 @@ MOO_EXPORT moo_oop_t moo_intmaxtoint (
 	moo_intmax_t i
 );
 
-/*MOO_EXPORT moo_oop_t moo_uintmaxtoint (
+MOO_EXPORT moo_oop_t moo_uintmaxtoint (
 	moo_t*        moo,
 	moo_uintmax_t i
-);*/
+);
 
 MOO_EXPORT int moo_inttouintmax (
 	moo_t*         moo,

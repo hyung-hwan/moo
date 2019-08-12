@@ -291,7 +291,11 @@ int main (int argc, char* argv[])
 		}
 	}
 
-/*MOO_DEBUG2 (moo, "XXXXXXXXXXXXXXXXXXXXX %O %ld\n", moo_ooitoint(moo, MOO_TYPE_MIN(moo_ooi_t)), MOO_TYPE_MIN(moo_ooi_t));*/
+/*MOO_DEBUG2 (moo, "XXXXXXXXXXXXXXXXXXXXX %O %zd\n", moo_ooitoint(moo, MOO_TYPE_MIN(moo_ooi_t)), MOO_TYPE_MIN(moo_ooi_t));
+MOO_DEBUG2 (moo, "XXXXXXXXXXXXXXXXXXXXX %O %jd\n", moo_intmaxtoint(moo, MOO_TYPE_MIN(moo_intmax_t)), MOO_TYPE_MIN(moo_intmax_t));
+MOO_DEBUG2 (moo, "XXXXXXXXXXXXXXXXXXXXX %O %ju\n", moo_uintmaxtoint(moo, MOO_TYPE_MAX(moo_uintmax_t)), MOO_TYPE_MAX(moo_uintmax_t));
+MOO_DEBUG2 (moo, "XXXXXXXXXXXXXXXXXXXXX %O %zu\n", moo_oowtoint(moo, MOO_TYPE_MAX(moo_oow_t)), MOO_TYPE_MAX(moo_oow_t));*/
+
 	MOO_DEBUG0 (moo, "COMPILE OK. STARTING EXECUTION...\n");
 	xret = 0;
 
