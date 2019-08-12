@@ -528,49 +528,38 @@ static MOO_INLINE moo_oop_t make_bigint_with_oow (moo_t* moo, moo_oow_t w)
 static MOO_INLINE moo_oop_t make_bigint_with_ooi (moo_t* moo, moo_ooi_t i)
 {
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
+	moo_oow_t w;
 
 	MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oow_t) == MOO_SIZEOF(moo_liw_t));
 	if (i >= 0)
 	{
-		moo_oow_t w = i;
+		w = i;
 		return moo_instantiate(moo, moo->_large_positive_integer, &w, 1);
-	}
-	else if (i > MOO_TYPE_MIN(moo_ooi_t))
-	{
-		moo_oow_t w = -i;
-		return moo_instantiate(moo, moo->_large_negative_integer, &w, 1);
 	}
 	else
 	{
-		/* MOO_TYPE_MIN(moo_ooi_t) */
-		moo_oow_t w = (moo_oow_t)MOO_TYPE_MAX(moo_ooi_t) + 1;
+		w = (i == MOO_TYPE_MIN(moo_ooi_t))? ((moo_oow_t)MOO_TYPE_MAX(moo_ooi_t) + 1): -i;
 		return moo_instantiate(moo, moo->_large_negative_integer, &w, 1);
 	}
 
 #elif (MOO_LIW_BITS == MOO_OOHW_BITS)
+	moo_liw_t hw[2];
+	moo_oow_t w;
 
 	MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oohw_t) == MOO_SIZEOF(moo_liw_t));
 	if (i >= 0)
 	{
-		moo_liw_t hw[2];
-		moo_oow_t w = i;
+		w = i;
 		hw[0] = w /*& MOO_LBMASK(moo_oow_t,MOO_LIW_BITS)*/;
 		hw[1] = w >> MOO_LIW_BITS;
 		return moo_instantiate(moo, moo->_large_positive_integer, hw, (hw[1] > 0? 2: 1));
 	}
-	else if (i > MOO_TYPE_MIN(moo_ooi_t))
+	else
 	{
-		moo_liw_t hw[2];
-		moo_oow_t w = -i;
+		w = (i == MOO_TYPE_MIN(moo_ooi_t))? ((moo_oow_t)MOO_TYPE_MAX(moo_ooi_t) + 1): -i;
 		hw[0] = w /*& MOO_LBMASK(moo_oow_t,MOO_LIW_BITS)*/;
 		hw[1] = w >> MOO_LIW_BITS;
 		return moo_instantiate(moo, moo->_large_negative_integer, hw, (hw[1] > 0? 2: 1));
-	}
-	else
-	{
-		/* MOO_TYPE_MIN(moo_ooi_t) */
-		moo_liw_t hw[2] = { 0, (MOO_TYPE_MAX(moo_liw_t) >> 1) + 1 };
-		return moo_instantiate(moo, moo->_large_negative_integer, hw, 2);
 	}
 #else
 #	error UNSUPPORTED LIW BIT SIZE
@@ -579,7 +568,6 @@ static MOO_INLINE moo_oop_t make_bigint_with_ooi (moo_t* moo, moo_ooi_t i)
 
 static MOO_INLINE moo_oop_t make_bloated_bigint_with_ooi (moo_t* moo, moo_ooi_t i, moo_oow_t extra)
 {
-/*TODO: enhance this like make_bitint_with_ooi */
 #if (MOO_LIW_BITS == MOO_OOW_BITS)
 	moo_oow_t w;
 	moo_oop_t z;
@@ -591,10 +579,10 @@ static MOO_INLINE moo_oop_t make_bloated_bigint_with_ooi (moo_t* moo, moo_ooi_t 
 		w = i;
 		z = moo_instantiate(moo, moo->_large_positive_integer, MOO_NULL, 1 + extra);
 	}
+	
 	else
 	{
-		MOO_ASSERT (moo, i > MOO_TYPE_MIN(moo_ooi_t));
-		w = -i;
+		w = (i == MOO_TYPE_MIN(moo_ooi_t))? ((moo_oow_t)MOO_TYPE_MAX(moo_ooi_t) + 1): -i;
 		z = moo_instantiate(moo, moo->_large_negative_integer, MOO_NULL, 1 + extra);
 	}
 
@@ -617,8 +605,7 @@ static MOO_INLINE moo_oop_t make_bloated_bigint_with_ooi (moo_t* moo, moo_ooi_t 
 	}
 	else
 	{
-		MOO_ASSERT (moo, i > MOO_TYPE_MIN(moo_ooi_t));
-		w = -i;
+		w = (i == MOO_TYPE_MIN(moo_ooi_t))? ((moo_oow_t)MOO_TYPE_MAX(moo_ooi_t) + 1): -i;
 		hw[0] = w /*& MOO_LBMASK(moo_oow_t,MOO_LIW_BITS)*/;
 		hw[1] = w >> MOO_LIW_BITS;
 		z = moo_instantiate(moo, moo->_large_negative_integer, MOO_NULL, (hw[1] > 0? 2: 1) + extra);
