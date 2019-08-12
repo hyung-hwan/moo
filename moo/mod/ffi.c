@@ -397,7 +397,6 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			if (_unsigned)
 			{
 				moo_uintmax_t v;
-				/* TODO: if (MOO_SIZEOF_LONG_LONG > MOO_SIZEOF_OOI_T) use moo_inttointmax() or something */
 				if (moo_inttouintmax(moo, arg, &v) == 0) goto oops;
 			#if defined(USE_DYNCALL)
 				dcArgLongLong (ffi->dc, v);
@@ -696,12 +695,10 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		#else
 			moo_oop_t r;
 		#if defined(USE_DYNCALL)
-			
-			r = moo_ooitoint(moo, dcCallLongLong(ffi->dc, f));
+			r = moo_intmaxtoint(moo, dcCallLongLong(ffi->dc, f));
 		#elif defined(USE_LIBFFI)
-			/* TODO: use moo_intmaxtoint()... */
 			/* TODO: unsigned  */
-			r = moo_ooitoint(moo, ffi->ret_sv.ll);
+			r = moo_intmaxtoint(moo, ffi->ret_sv.ll);
 		#endif
 			if (!r) goto hardfail;
 			MOO_STACK_SETRET (moo, nargs, r);
