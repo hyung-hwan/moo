@@ -4774,7 +4774,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 		{
 		signal_sem_gcfin:
 			MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Signaled GCFIN semaphore\n");
-			proc = signal_semaphore (moo, moo->sem_gcfin);
+			proc = signal_semaphore(moo, moo->sem_gcfin);
 
 			if (moo->processor->active == moo->nil_process && (moo_oop_t)proc != moo->_nil)
 			{

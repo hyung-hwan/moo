@@ -25,7 +25,13 @@ class FFI(Object)
 	{
 		self.funcs := Dictionary new.
 		self.ffi := _FFI new.
+		//self addToBeFinalized.
 	}
+
+	/*method finalize
+	{
+		self close
+	}*/
 
 	method open: name
 	{

@@ -55,6 +55,7 @@ class System(Apex)
 
 		// start the gc finalizer process
 		[ self __gc_finalizer ] fork.
+		[ self __os_signal_handler ] fork.
 
 		// TODO: change the method signature to variadic and pass extra arguments to perform???
 		ret := class perform: method_name.
@@ -70,7 +71,7 @@ class System(Apex)
 		gc := false.
 		gcfin_sem := Semaphore new.
 
-		gcfin_sem signalOnGCFin.
+		gcfin_sem signalOnGCFin. // tell VM to signal this semaphore when it schedules gc finalization.
 
 		[
 			while (true)
@@ -100,14 +101,36 @@ class System(Apex)
 					gc := false.
 				}.
 
-				//System logNl: '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^gc_waiting....'.
-				//System sleepForSecs: 1. // TODO: wait on semaphore instead..
 				gcfin_sem wait.
-				//System logNl: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX gc_waitED....'.
 			}
 		] ensure: [
 			gcfin_sem unsignal.
 			System logNl: 'End of GC finalization process ' & (thisProcess id) asString.
+		].
+	}
+
+	method(#class) __os_signal_handler
+	{
+		| os_sig_sem |
+
+		os_sig_sem := Semaphore new.
+		//os_sig_sem signalOnSystemSignal.
+
+		[
+			while (true)
+			{
+				if (Processor should_exit)
+				{
+					System logNl: 'Exiting the GC finalization process ' & (thisProcess id) asString.
+					break.
+				}.
+
+				os_sig_sem wait.
+			}
+		]
+		ensure: [
+			os_sig_sem unsignal.
+			System logNl: 'End of OS signal handler process ' & (thisProcess id) asString.
 		].
 	}
 
