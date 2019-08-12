@@ -694,7 +694,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 			goto ret_as_long;
 		#else
 			moo_oop_t r;
-		#if defined(USE_DYNCALL)
+		#if defined(USE_DYNCALL)	
 			r = moo_intmaxtoint(moo, dcCallLongLong(ffi->dc, f));
 		#elif defined(USE_LIBFFI)
 			/* TODO: unsigned  */
@@ -705,13 +705,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 			break;
 		#endif
 		}
-	
 
-#if 0
-		case 'B': /* byte array */
-		{
-		}
-#endif
 		case FMTC_BCS:
 		{
 			moo_oop_t s;
