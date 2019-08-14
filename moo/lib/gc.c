@@ -975,15 +975,16 @@ void moo_gc (moo_t* moo)
 	}
 
 	moo->sem_gcfin = (moo_oop_semaphore_t)moo_moveoop(moo, (moo_oop_t)moo->sem_gcfin);
+	moo->sem_intr = (moo_oop_semaphore_t)moo_moveoop(moo, (moo_oop_t)moo->sem_intr);
 
 	for (i = 0; i < moo->proc_map_capa; i++)
 	{
 		moo->proc_map[i] = moo_moveoop(moo, moo->proc_map[i]);
 	}
 
-	for (i = 0; i < moo->tmp_count; i++)
+	for (i = 0; i < moo->volat_count; i++)
 	{
-		*moo->tmp_stack[i] = moo_moveoop(moo, *moo->tmp_stack[i]);
+		*moo->volat_stack[i] = moo_moveoop(moo, *moo->volat_stack[i]);
 	}
 
 	if (moo->initial_context)
@@ -1070,20 +1071,20 @@ void moo_pushvolat (moo_t* moo, moo_oop_t* oop_ptr)
 {
 	/* if you have too many temporaries pushed, something must be wrong.
 	 * change your code not to exceede the stack limit */
-	MOO_ASSERT (moo, moo->tmp_count < MOO_COUNTOF(moo->tmp_stack));
-	moo->tmp_stack[moo->tmp_count++] = oop_ptr;
+	MOO_ASSERT (moo, moo->volat_count < MOO_COUNTOF(moo->volat_stack));
+	moo->volat_stack[moo->volat_count++] = oop_ptr;
 }
 
 void moo_popvolat (moo_t* moo)
 {
-	MOO_ASSERT (moo, moo->tmp_count > 0);
-	moo->tmp_count--;
+	MOO_ASSERT (moo, moo->volat_count > 0);
+	moo->volat_count--;
 }
 
 void moo_popvolats (moo_t* moo, moo_oow_t count)
 {
-	MOO_ASSERT (moo, moo->tmp_count >= count);
-	moo->tmp_count -= count;
+	MOO_ASSERT (moo, moo->volat_count >= count);
+	moo->volat_count -= count;
 }
 
 moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
@@ -1202,7 +1203,7 @@ static moo_oow_t move_finalizable_objects (moo_t* moo)
 	for (x = moo->collectable.first; x; x = x->next)
 	{
 		MOO_ASSERT (moo, (MOO_OBJ_GET_FLAGS_GCFIN(x->oop) & (MOO_GCFIN_FINALIZABLE | MOO_GCFIN_FINALIZED)) == MOO_GCFIN_FINALIZABLE);
-		x->oop = moo_moveoop (moo, x->oop);
+		x->oop = moo_moveoop(moo, x->oop);
 	}
 
 	for (x = moo->finalizable.first; x; )
@@ -1222,7 +1223,7 @@ static moo_oow_t move_finalizable_objects (moo_t* moo)
 			 * however this is quite unlikely because some key objects for VM execution 
 			 * like context objects doesn't require finalization. */
 
-			x->oop = moo_moveoop (moo, x->oop);
+			x->oop = moo_moveoop(moo, x->oop);
 
 			/* remove it from the finalizable list */
 			MOO_DELETE_FROM_LIST (&moo->finalizable, x);

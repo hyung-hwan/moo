@@ -109,6 +109,7 @@ class Semaphore(Object)
 	method(#primitive) signalOnInput: io_handle.
 	method(#primitive) signalOnOutput: io_handle.
 	method(#primitive) signalOnGCFin.
+	method(#primitive) signalOnIntr.
 	method(#primitive) unsignal.
 
 	// ==================================================================

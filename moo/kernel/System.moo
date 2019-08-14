@@ -55,7 +55,7 @@ class System(Apex)
 
 		// start the gc finalizer process
 		[ self __gc_finalizer ] fork.
-		[ self __os_signal_handler ] fork.
+		[ self __os_intr_handler ] fork.
 
 		// TODO: change the method signature to variadic and pass extra arguments to perform???
 		ret := class perform: method_name.
@@ -78,8 +78,12 @@ class System(Apex)
 			{
 				while ((tmp := self _popCollectable) notError)
 				{
-					// TODO: Do i have to protected this in an exception handler???
-					if (tmp respondsTo: #finalize) { tmp finalize }.
+					if (tmp respondsTo: #finalize)
+					{ 
+						// finalize is protected with an exception handler.
+						// the exception is ignored except it's logged.
+						[ tmp finalize ] on: Exception do: [:ex | System longNl: "Exception in finalize - " & ex messageText ]
+					}.
 				}.
 
 				//if (Processor total_count == 1)
@@ -88,11 +92,11 @@ class System(Apex)
 					// exit from this loop when there are no other processes running except this finalizer process
 					if (gc) 
 					{ 
-						System logNl: 'Exiting the GC finalization process ' & (thisProcess id) asString.
+						System logNl: "Exiting the GC finalization process " & (thisProcess id) asString.
 						break.
 					}.
 
-					System logNl: 'Forcing garbage collection before termination in ' & (thisProcess id) asString.
+					System logNl: "Forcing garbage collection before termination in " & (thisProcess id) asString.
 					self collectGarbage.
 					gc := true.
 				}
@@ -109,31 +113,39 @@ class System(Apex)
 		].
 	}
 
-	method(#class) __os_signal_handler
+	method(#class) __os_intr_handler
 	{
-		| os_sig_sem |
+		| os_intr_sem tmp |
 
-		os_sig_sem := Semaphore new.
-		//os_sig_sem signalOnSystemSignal.
+		os_intr_sem := Semaphore new.
+		os_intr_sem signalOnIntr.
 
 		[
 			while (true)
 			{
+				while ((tmp := self _dequeueIntr) notError)
+				{
+					// TODO: Do i have to protected this in an exception handler???
+					//TODO: Execute Handler for tmp.
+					System logNl: 'Interrupt dectected - signal no - ' & tmp asString.
+				}.
+
 				if (Processor should_exit)
 				{
-					System logNl: 'Exiting the GC finalization process ' & (thisProcess id) asString.
+					System logNl: 'Exiting os interrupt handling process ' & (thisProcess id) asString.
 					break.
 				}.
 
-				os_sig_sem wait.
+				os_intr_sem wait.
 			}
 		]
 		ensure: [
-			os_sig_sem unsignal.
+			os_intr_sem unsignal.
 			System logNl: 'End of OS signal handler process ' & (thisProcess id) asString.
 		].
 	}
 
+	method(#class,#primitive) _dequeueIntr.
 	method(#class,#primitive) _popCollectable.
 	method(#class,#primitive) collectGarbage.
 	method(#class,#primitive) gc.

@@ -2895,7 +2895,7 @@ static int unset_signal_handler (int sig)
 /* ========================================================================= */
 
 
-static MOO_INLINE void abort_all_moos (int unused)
+static MOO_INLINE void abort_all_moos (int signo)
 {
 	/* TODO: make this atomic */
 	if (g_moo)
@@ -2904,7 +2904,8 @@ static MOO_INLINE void abort_all_moos (int unused)
 		do
 		{
 			xtn_t* xtn = GET_XTN(moo);
-			moo_abortstd (moo);
+			/*moo_abortstd (moo);*/
+			moo_reportintr (moo, signo);
 			moo = xtn->next;
 		}
 		while (moo);

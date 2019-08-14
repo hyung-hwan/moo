@@ -64,6 +64,24 @@ moo_pfrc_t moo_pf_system_pop_collectable (moo_t* moo, moo_mod_t* mod, moo_ooi_t 
 }
 
 /* ------------------------------------------------------------------------------------- */
+moo_pfrc_t moo_pf_system_dequeue_intr (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	if (moo->intr_qstart != moo->intr_qend)
+	{
+		moo_ooi_t intr_no;
+		intr_no = moo->intr_queue[moo->intr_qstart];
+		moo->intr_qstart = (moo->intr_qstart + 1) % MOO_COUNTOF(moo->intr_queue);
+		MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(intr_no));
+	}
+	else
+	{
+		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
+	}
+
+	return MOO_PF_SUCCESS;
+}
+
+/* ------------------------------------------------------------------------------------- */
 
 static MOO_INLINE moo_pfrc_t _system_alloc (moo_t* moo, moo_ooi_t nargs, int clear)
 {

@@ -2662,8 +2662,22 @@ static moo_pfrc_t pf_semaphore_signal_on_gcfin (moo_t* moo, moo_mod_t* mod, moo_
 	sem = (moo_oop_semaphore_t)MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore)); 
 
-/* TODO: no overwriting.. */
+/* TODO: should i prevent overwriting? */
 	moo->sem_gcfin = sem;
+
+	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_semaphore_signal_on_intr (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_semaphore_t sem;
+
+	sem = (moo_oop_semaphore_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, moo_iskindof(moo, (moo_oop_t)sem, moo->_semaphore)); 
+
+/* TODO: should i prevent overwriting? */
+	moo->sem_intr = sem;
 
 	MOO_STACK_SETRETTORCV (moo, nargs); /* ^self */
 	return MOO_PF_SUCCESS;
@@ -2824,6 +2838,10 @@ static moo_pfrc_t pf_semaphore_unsignal (moo_t* moo, moo_mod_t* mod, moo_ooi_t n
 	if (sem == moo->sem_gcfin)
 	{
 		moo->sem_gcfin = (moo_oop_semaphore_t)moo->_nil;
+	}
+	else if (sem == moo->sem_intr)
+	{
+		moo->sem_intr = (moo_oop_semaphore_t)moo->_nil;
 	}
 
 	if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_TIMED))
@@ -4126,6 +4144,7 @@ static pf_t pftab[] =
 	{ "Semaphore_signalAfterSecs:nanosecs:",   { pf_semaphore_signal_timed,               2, 2 } },
 	{ "Semaphore_signalOnGCFin",               { pf_semaphore_signal_on_gcfin,            0, 0 } },
 	{ "Semaphore_signalOnInput:",              { pf_semaphore_signal_on_input,            1, 1 } },
+	{ "Semaphore_signalOnIntr",                { pf_semaphore_signal_on_intr,             0, 0 } },
 	{ "Semaphore_signalOnOutput:",             { pf_semaphore_signal_on_output,           1, 1 } },
 	{ "Semaphore_unsignal",                    { pf_semaphore_unsignal,                   0, 0 } },
 	{ "Semaphore_wait",                        { pf_semaphore_wait,                       0, 0 } },
@@ -4161,6 +4180,7 @@ static pf_t pftab[] =
 	{ "System_calloc",                         { moo_pf_system_calloc,                    1, 1 } },
 	{ "System_calloc:",                        { moo_pf_system_calloc,                    1, 1 } },
 	{ "System_collectGarbage",                 { moo_pf_system_collect_garbage,           0, 0 } },
+	{ "System_dequeueIntr",                    { moo_pf_system_dequeue_intr,               0, 0 } },
 	{ "System_free",                           { moo_pf_system_free,                      1, 1 } },
 	{ "System_free:",                          { moo_pf_system_free,                      1, 1 } },
 	{ "System_gc",                             { moo_pf_system_collect_garbage,           0, 0 } },
@@ -4601,7 +4621,6 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 
 static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, int to_super)
 {
-
 	moo_oop_t receiver;
 	moo_oop_method_t method;
 
@@ -4646,6 +4665,20 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, i
 
 static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 {
+	if (moo->intr_qstart != moo->intr_qend && (moo_oop_t)moo->sem_intr != moo->_nil) 
+	{
+		moo_oop_process_t proc;
+
+		proc = signal_semaphore(moo, moo->sem_intr);
+		if (moo->processor->active == moo->nil_process && (moo_oop_t)proc != moo->_nil)
+		{
+			MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
+			MOO_ASSERT (moo, proc == moo->processor->runnable.first);
+			switch_to_process_from_nil (moo, proc);
+		}
+		goto switch_to_next;
+	}
+
 	if (moo->sem_heap_count > 0)
 	{
 		/* handle timed semaphores */
@@ -6131,6 +6164,13 @@ int moo_execute (moo_t* moo)
 void moo_abort (moo_t* moo)
 {
 	moo->abort_req = 1;
+}
+
+void moo_reportintr (moo_t* moo, int intrno)
+{
+	moo->intr_queue[moo->intr_qend] = intrno;
+	moo->intr_qend = (moo->intr_qend + 1) % MOO_COUNTOF(moo->intr_queue);
+	if (moo->intr_qend == moo->intr_qstart) moo->intr_qstart = (moo->intr_qstart + 1) % MOO_COUNTOF(moo->intr_queue);
 }
 
 int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname)
