@@ -975,7 +975,6 @@ void moo_gc (moo_t* moo)
 	}
 
 	moo->sem_gcfin = (moo_oop_semaphore_t)moo_moveoop(moo, (moo_oop_t)moo->sem_gcfin);
-	moo->sem_intr = (moo_oop_semaphore_t)moo_moveoop(moo, (moo_oop_t)moo->sem_intr);
 
 	for (i = 0; i < moo->proc_map_capa; i++)
 	{

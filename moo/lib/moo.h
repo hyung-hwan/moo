@@ -1207,6 +1207,15 @@ typedef void (*moo_vmprim_sleep_t) (
 	const moo_ntime_t*      duration
 );
 
+typedef moo_ooi_t (*moo_vmprim_getsigfd_t) (
+	moo_t*                  moo
+);
+
+typedef int (*moo_vmprim_getsig_t) (
+	moo_t*                  moo,
+	moo_uint8_t*            sig
+);
+
 struct moo_vmprim_t
 {
 	moo_alloc_heap_t       alloc_heap;
@@ -1231,10 +1240,12 @@ struct moo_vmprim_t
 	moo_vmprim_muxmod_t    vm_muxmod;
 	moo_vmprim_muxwait_t   vm_muxwait;
 	moo_vmprim_sleep_t     vm_sleep;
+
+	moo_vmprim_getsigfd_t  vm_getsigfd;
+	moo_vmprim_getsig_t    vm_getsig;
 };
 
 typedef struct moo_vmprim_t moo_vmprim_t;
-
 
 /* =========================================================================
  * CALLBACK MANIPULATION
@@ -1597,15 +1608,8 @@ struct moo_t
 	moo_oop_semaphore_t sem_gcfin;
 	int sem_gcfin_sigreq;
 
-	moo_oop_semaphore_t sem_intr;
-
-	int intr_queue[256]; /* TODO: make it dynamic? */
-	int intr_qstart;
-	int intr_qend;
-
 	moo_oop_t* volat_stack[256]; /* stack for temporaries */
 	moo_oow_t volat_count;
-
 
 	moo_oop_t* proc_map;
 	moo_oow_t proc_map_capa;
@@ -2138,11 +2142,6 @@ MOO_EXPORT int moo_invoke (
  */
 MOO_EXPORT void moo_abort (
 	moo_t* moo
-);
-
-MOO_EXPORT void moo_reportintr (
-	moo_t* moo,
-	int    intrno
 );
 
 #if defined(MOO_HAVE_INLINE)

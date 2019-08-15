@@ -335,6 +335,11 @@ struct xtn_t
 
 	struct
 	{
+		int p[2]; /* pipe for signaling */
+	} sigfd;
+
+	struct
+	{
 	#if defined(USE_DEVPOLL)
 		/*TODO: make it dynamically changeable depending on the number of
 		 *      file descriptors added */
@@ -1986,11 +1991,45 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 #endif
 }
 
+static int open_pipe (moo_t* moo, int p[2])
+{
+	int flags;
+
+#if defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
+	if (pipe2(p, O_CLOEXEC | O_NONBLOCK) == -1)
+#else
+	if (pipe(p) == -1)
+#endif
+	{
+		moo_seterrbfmtwithsyserr (moo, 0, errno, "unable to create pipes for iothr management");
+		return -1;
+	}
+
+#if defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
+		/* do nothing */
+#else
+	#if defined(FD_CLOEXEC)
+	flags = fcntl(p[0], F_GETFD);
+	if (flags >= 0) fcntl (p[0], F_SETFD, flags | FD_CLOEXEC);
+	flags = fcntl(p[1], F_GETFD);
+	if (flags >= 0) fcntl (p[1], F_SETFD, flags | FD_CLOEXEC);
+	#endif
+	#if defined(O_NONBLOCK)
+	flags = fcntl(p[0], F_GETFL);
+	if (flags >= 0) fcntl (p[0], F_SETFL, flags | O_NONBLOCK);
+	flags = fcntl(p[1], F_GETFL);
+	if (flags >= 0) fcntl (p[1], F_SETFL, flags | O_NONBLOCK);
+	#endif
+#endif
+
+	return 0;
+}
 
 static int vm_startup (moo_t* moo)
 {
 	xtn_t* xtn = GET_XTN(moo);
-	int pcount = 0, flag;
+	int sigfd_pcount = 0;
+	int iothr_pcount = 0, flags;
 
 #if defined(_WIN32)
 	xtn->waitable_timer = CreateWaitableTimer(MOO_NULL, TRUE, MOO_NULL);
@@ -2006,8 +2045,8 @@ static int vm_startup (moo_t* moo)
 	}
 
 	#if defined(FD_CLOEXEC)
-	flag = fcntl(xtn->ep, F_GETFD);
-	if (flag >= 0) fcntl (xtn->ep, F_SETFD, flag | FD_CLOEXEC);
+	flags = fcntl(xtn->ep, F_GETFD);
+	if (flags >= 0) fcntl (xtn->ep, F_SETFD, flags | FD_CLOEXEC);
 	#endif
 
 #elif defined(USE_EPOLL)
@@ -2025,8 +2064,8 @@ static int vm_startup (moo_t* moo)
 	}
 
 	#if defined(FD_CLOEXEC)
-	flag = fcntl(xtn->ep, F_GETFD);
-	if (flag >= 0 && !(flag & FD_CLOEXEC)) fcntl (xtn->ep, F_SETFD, flag | FD_CLOEXEC);
+	flags = fcntl(xtn->ep, F_GETFD);
+	if (flags >= 0 && !(flags & FD_CLOEXEC)) fcntl (xtn->ep, F_SETFD, flags | FD_CLOEXEC);
 	#endif
 
 #elif defined(USE_POLL)
@@ -2040,34 +2079,12 @@ static int vm_startup (moo_t* moo)
 	MUTEX_INIT (&xtn->ev.reg.smtx);
 #endif /* USE_DEVPOLL */
 
-#if defined(USE_THREAD)
-	#if defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
-	if (pipe2(xtn->iothr.p, O_CLOEXEC | O_NONBLOCK) == -1)
-	#else
-	if (pipe(xtn->iothr.p) == -1)
-	#endif
-	{
-		moo_seterrbfmtwithsyserr (moo, 0, errno, "unable to create pipes for iothr management");
-		goto oops;
-	}
-	pcount = 2;
+	if (open_pipe(moo, xtn->sigfd.p) <= -1) goto oops;
+	sigfd_pcount = 2;
 
-	#if defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
-		/* do nothing */
-	#else
-	#if defined(FD_CLOEXEC)
-	flag = fcntl(xtn->iothr.p[0], F_GETFD);
-	if (flag >= 0) fcntl (xtn->iothr.p[0], F_SETFD, flag | FD_CLOEXEC);
-	flag = fcntl(xtn->iothr.p[1], F_GETFD);
-	if (flag >= 0) fcntl (xtn->iothr.p[1], F_SETFD, flag | FD_CLOEXEC);
-	#endif
-	#if defined(O_NONBLOCK)
-	flag = fcntl(xtn->iothr.p[0], F_GETFL);
-	if (flag >= 0) fcntl (xtn->iothr.p[0], F_SETFL, flag | O_NONBLOCK);
-	flag = fcntl(xtn->iothr.p[1], F_GETFL);
-	if (flag >= 0) fcntl (xtn->iothr.p[1], F_SETFL, flag | O_NONBLOCK);
-	#endif
-	#endif
+#if defined(USE_THREAD)
+	if (open_pipe(moo, xtn->iothr.p) <= -1) goto oops;
+	iothr_pcount = 2;
 
 	if (_add_poll_fd(moo, xtn->iothr.p[0], XPOLLIN) <= -1) goto oops;
 
@@ -2085,14 +2102,19 @@ static int vm_startup (moo_t* moo)
 	return 0;
 
 oops:
-
 #if defined(USE_THREAD)
-	if (pcount > 0)
+	if (iothr_pcount > 0)
 	{
 		close (xtn->iothr.p[0]);
 		close (xtn->iothr.p[1]);
 	}
 #endif
+
+	if (sigfd_pcount > 0)
+	{
+		close (xtn->sigfd.p[0]);
+		close (xtn->sigfd.p[1]);
+	}
 
 #if defined(USE_DEVPOLL) || defined(USE_EPOLL)
 	if (xtn->ep >= 0)
@@ -2136,6 +2158,9 @@ static void vm_cleanup (moo_t* moo)
 	close (xtn->iothr.p[1]);
 	close (xtn->iothr.p[0]);
 #endif /* USE_THREAD */
+
+	close (xtn->sigfd.p[1]);
+	close (xtn->sigfd.p[0]);
 
 #if defined(USE_DEVPOLL) 
 	if (xtn->ep >= 0)
@@ -2337,7 +2362,7 @@ static void* iothr_main (void* arg)
 			dvp.dp_nfds = MOO_COUNTOF(xtn->ev.buf);
 			n = ioctl (xtn->ep, DP_POLL, &dvp);
 		#elif defined(USE_EPOLL)
-			n = epoll_wait (xtn->ep, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), 10000); /* TODO: make this timeout value in the io thread */
+			n = epoll_wait(xtn->ep, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), 10000); /* TODO: make this timeout value in the io thread */
 		#elif defined(USE_POLL)
 			MUTEX_LOCK (&xtn->ev.reg.pmtx);
 			MOO_MEMCPY (xtn->ev.buf, xtn->ev.reg.ptr, xtn->ev.reg.len * MOO_SIZEOF(*xtn->ev.buf));
@@ -2578,9 +2603,9 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	dvp.dp_timeout = tmout; /* milliseconds */
 	dvp.dp_fds = xtn->ev.buf;
 	dvp.dp_nfds = MOO_COUNTOF(xtn->ev.buf);
-	n = ioctl (xtn->ep, DP_POLL, &dvp);
+	n = ioctl(xtn->ep, DP_POLL, &dvp);
 	#elif defined(USE_EPOLL)
-	n = epoll_wait (xtn->ep, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), tmout);
+	n = epoll_wait(xtn->ep, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), tmout);
 	#elif defined(USE_POLL)
 	MOO_MEMCPY (xtn->ev.buf, xtn->ev.reg.ptr, xtn->ev.reg.len * MOO_SIZEOF(*xtn->ev.buf));
 	n = poll(xtn->ev.buf, xtn->ev.reg.len, tmout);
@@ -2770,6 +2795,24 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 #endif
 }
 
+
+static moo_ooi_t vm_getsigfd (moo_t* moo)
+{
+	xtn_t* xtn = GET_XTN(moo);
+	return xtn->sigfd.p[0];
+}
+
+static int vm_getsig (moo_t* moo, moo_uint8_t* u8)
+{
+	xtn_t* xtn = GET_XTN(moo);
+	if (read(xtn->sigfd.p[0], u8, MOO_SIZEOF(*u8)) == -1) 
+	{
+		if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN) return 0;
+		moo_seterrwithsyserr (moo, 0, errno);
+		return -1;
+	}
+	return 1;
+}
 /* ========================================================================= */
 
 #if defined(HAVE_SIGACTION)
@@ -2904,8 +2947,10 @@ static MOO_INLINE void abort_all_moos (int signo)
 		do
 		{
 			xtn_t* xtn = GET_XTN(moo);
+			moo_uint8_t u8;
 			/*moo_abortstd (moo);*/
-			moo_reportintr (moo, signo);
+			u8 = signo & 0xFF;
+			write (xtn->sigfd.p[1], &u8, MOO_SIZEOF(u8));
 			moo = xtn->next;
 		}
 		while (moo);
@@ -3661,6 +3706,8 @@ static void fini_moo (moo_t* moo)
 	vmprim.vm_muxmod = vm_muxmod;
 	vmprim.vm_muxwait = vm_muxwait;
 	vmprim.vm_sleep = vm_sleep;
+	vmprim.vm_getsigfd = vm_getsigfd;
+	vmprim.vm_getsig = vm_getsig;
 
 	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize, ((cfg && cfg->cmgr)? cfg->cmgr: moo_get_utf8_cmgr()), &vmprim, errinfo);
 	if (!moo) return MOO_NULL;

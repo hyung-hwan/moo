@@ -55,7 +55,7 @@ class System(Apex)
 
 		// start the gc finalizer process
 		[ self __gc_finalizer ] fork.
-		[ self __os_intr_handler ] fork.
+		[ self __os_sig_handler ] fork.
 
 		// TODO: change the method signature to variadic and pass extra arguments to perform???
 		ret := class perform: method_name.
@@ -113,21 +113,23 @@ class System(Apex)
 		].
 	}
 
-	method(#class) __os_intr_handler
+	method(#class) __os_sig_handler
 	{
 		| os_intr_sem tmp |
 
 		os_intr_sem := Semaphore new.
-		os_intr_sem signalOnIntr.
+		os_intr_sem signalOnInput: System _getSigfd.
 
 		[
 			while (true)
 			{
-				while ((tmp := self _dequeueIntr) notError)
+				while ((tmp := self _getSig) notError)
 				{
 					// TODO: Do i have to protected this in an exception handler???
 					//TODO: Execute Handler for tmp.
+
 					System logNl: 'Interrupt dectected - signal no - ' & tmp asString.
+					if (tmp == 2) { /* TODO: terminate all processes??? */ }.
 				}.
 
 				if (Processor should_exit)
@@ -145,7 +147,8 @@ class System(Apex)
 		].
 	}
 
-	method(#class,#primitive) _dequeueIntr.
+	method(#class,#primitive) _getSig.
+	method(#class,#primitive) _getSigfd.
 	method(#class,#primitive) _popCollectable.
 	method(#class,#primitive) collectGarbage.
 	method(#class,#primitive) gc.

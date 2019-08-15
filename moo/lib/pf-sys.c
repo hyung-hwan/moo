@@ -64,19 +64,25 @@ moo_pfrc_t moo_pf_system_pop_collectable (moo_t* moo, moo_mod_t* mod, moo_ooi_t 
 }
 
 /* ------------------------------------------------------------------------------------- */
-moo_pfrc_t moo_pf_system_dequeue_intr (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+
+moo_pfrc_t moo_pf_system_get_sigfd (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	if (moo->intr_qstart != moo->intr_qend)
-	{
-		moo_ooi_t intr_no;
-		intr_no = moo->intr_queue[moo->intr_qstart];
-		moo->intr_qstart = (moo->intr_qstart + 1) % MOO_COUNTOF(moo->intr_queue);
-		MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(intr_no));
-	}
-	else
-	{
-		MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
-	}
+	moo_ooi_t fd;
+	fd = moo->vmprim.vm_getsigfd(moo);
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(fd));
+	return MOO_PF_SUCCESS;
+}
+
+moo_pfrc_t moo_pf_system_get_sig (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_uint8_t sig;
+	int n;
+
+	n = moo->vmprim.vm_getsig(moo, &sig);
+	if (n <= -1) return MOO_PF_FAILURE;
+
+	if (n == 0) MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
+	else	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP((moo_ooi_t)sig));
 
 	return MOO_PF_SUCCESS;
 }
