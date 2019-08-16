@@ -215,9 +215,24 @@ what looks better as a shorthand expression for block value?
 
 ```
 	ffi := FFI new: 'libc.so.6'.
-	(ffi call: #printf signature: 's|sl>i' arguments: #("[%s ffi test %ld]\n" "sloppy" 12345678)) dump.
-	(ffi call: #printf signature: 's>i' arguments: #("[%% ffi test %%]\n")) dump.
-	(ffi call: #puts signature: 's>i' arguments: #("this is ffi test")) dump.
-	(ffi call: #time signature: 'p>l' arguments: #(#\p0)) dump.
-	ffi close.
+	[
+		(ffi call: #printf signature: 's|sl>i' arguments: #("[%s ffi test %ld]\n" "sloppy" 12345678)) dump.
+		(ffi call: #printf signature: 's>i' arguments: #("[%% ffi test %%]\n")) dump.
+		(ffi call: #puts signature: 's>i' arguments: #("this is ffi test")) dump.
+		(ffi call: #time signature: 'p>l' arguments: #(#\p0)) dump.
+	]
+	ensure: [
+		ffi close.
+	].
 ```
+
+
+
+
+### Command line options
+
+```
+moo --log /dev/stderr ../kernel/test-001.moo
+moo --log /dev/stderr,warn+ ../kernel/test-001.moo
+```
+

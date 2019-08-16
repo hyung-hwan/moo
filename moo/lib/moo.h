@@ -873,7 +873,7 @@ struct moo_process_scheduler_t
 {
 	MOO_OBJ_HEADER;
 	moo_oop_process_t active; /*  pointer to an active process in the runnable process list */
-	moo_oop_t should_exit; /* Boolean */
+	moo_oop_t gcfin_should_exit; /* Boolean */
 	moo_oop_t total_count; /* SmallIntger, total number of processes - runnable/running/suspended */
 
 	struct
@@ -1216,6 +1216,11 @@ typedef int (*moo_vmprim_getsig_t) (
 	moo_uint8_t*            sig
 );
 
+typedef int (*moo_vmprim_setsig_t) (
+	moo_t*                  moo,
+	moo_uint8_t             sig
+);
+
 struct moo_vmprim_t
 {
 	moo_alloc_heap_t       alloc_heap;
@@ -1243,6 +1248,7 @@ struct moo_vmprim_t
 
 	moo_vmprim_getsigfd_t  vm_getsigfd;
 	moo_vmprim_getsig_t    vm_getsig;
+	moo_vmprim_setsig_t    vm_setsig;
 };
 
 typedef struct moo_vmprim_t moo_vmprim_t;
@@ -1578,8 +1584,7 @@ struct moo_t
 	moo_oop_char_t does_not_understand_sym; /* symbol doesNotUnderstand: */
 	moo_oop_char_t primitive_failed_sym; /* symbol primitiveFailed */
 	moo_oop_char_t unwindto_return_sym; /* symbol unwindTo:return: */
-	
-					
+
 	/* pending asynchronous semaphores */
 	moo_oop_semaphore_t* sem_list;
 	moo_oow_t sem_list_count;

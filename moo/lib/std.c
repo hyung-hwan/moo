@@ -2795,7 +2795,6 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 #endif
 }
 
-
 static moo_ooi_t vm_getsigfd (moo_t* moo)
 {
 	xtn_t* xtn = GET_XTN(moo);
@@ -2806,6 +2805,18 @@ static int vm_getsig (moo_t* moo, moo_uint8_t* u8)
 {
 	xtn_t* xtn = GET_XTN(moo);
 	if (read(xtn->sigfd.p[0], u8, MOO_SIZEOF(*u8)) == -1) 
+	{
+		if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN) return 0;
+		moo_seterrwithsyserr (moo, 0, errno);
+		return -1;
+	}
+	return 1;
+}
+
+static int vm_setsig (moo_t* moo, moo_uint8_t u8)
+{
+	xtn_t* xtn = GET_XTN(moo);
+	if (write(xtn->sigfd.p[1], &u8, MOO_SIZEOF(u8)) == -1) 
 	{
 		if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN) return 0;
 		moo_seterrwithsyserr (moo, 0, errno);
@@ -3708,6 +3719,7 @@ static void fini_moo (moo_t* moo)
 	vmprim.vm_sleep = vm_sleep;
 	vmprim.vm_getsigfd = vm_getsigfd;
 	vmprim.vm_getsig = vm_getsig;
+	vmprim.vm_setsig = vm_setsig;
 
 	moo = moo_open(&sys_mmgr, MOO_SIZEOF(xtn_t) + xtnsize, ((cfg && cfg->cmgr)? cfg->cmgr: moo_get_utf8_cmgr()), &vmprim, errinfo);
 	if (!moo) return MOO_NULL;

@@ -55,11 +55,13 @@ class System(Apex)
 
 		// start the gc finalizer process
 		[ self __gc_finalizer ] fork.
-		[ self __os_sig_handler ] fork.
+		//[ self __os_sig_handler ] fork.
+		[ :caller | self __os_sig_handler: caller ] newProcess(thisProcess) resume.
 
 		// TODO: change the method signature to variadic and pass extra arguments to perform???
 		ret := class perform: method_name.
 
+		self _setSig: 16rFF.
 		//// System logNl: '======= END of startup ==============='.
 		^ret.
 	}
@@ -87,7 +89,7 @@ class System(Apex)
 				}.
 
 				//if (Processor total_count == 1)
-				if (Processor should_exit)
+				if (Processor gcfin_should_exit)
 				{
 					// exit from this loop when there are no other processes running except this finalizer process
 					if (gc) 
@@ -113,9 +115,9 @@ class System(Apex)
 		].
 	}
 
-	method(#class) __os_sig_handler
+	method(#class) __os_sig_handler: caller
 	{
-		| os_intr_sem tmp |
+		| os_intr_sem tmp terminate_process|
 
 		os_intr_sem := Semaphore new.
 		os_intr_sem signalOnInput: System _getSigfd.
@@ -129,26 +131,30 @@ class System(Apex)
 					//TODO: Execute Handler for tmp.
 
 					System logNl: 'Interrupt dectected - signal no - ' & tmp asString.
-					if (tmp == 2) { /* TODO: terminate all processes??? */ }.
-				}.
-
-				if (Processor should_exit)
-				{
-					System logNl: 'Exiting os interrupt handling process ' & (thisProcess id) asString.
-					break.
+					if (tmp == 16rFF or tmp == 2) { /* TODO: terminate all processes??? */  goto done }.
 				}.
 
 				os_intr_sem wait.
-			}
+			}.
+		done:
+			nil.
 		]
 		ensure: [
 			os_intr_sem unsignal.
-			System logNl: 'End of OS signal handler process ' & (thisProcess id) asString.
+
+			System logNl: '>>>>Requesting to terminate the caller process ' & (caller id) asString.
+			// the caller must request to terminate all its child processes..
+			// TODO: to avoid this, this process must enumerate all proceses and terminate them.
+			caller terminate.
+
+			System logNl: '>>>>End of OS signal handler process ' & (thisProcess id) asString.
 		].
 	}
 
 	method(#class,#primitive) _getSig.
 	method(#class,#primitive) _getSigfd.
+	method(#class,#primitive) _setSig: signo.
+
 	method(#class,#primitive) _popCollectable.
 	method(#class,#primitive) collectGarbage.
 	method(#class,#primitive) gc.

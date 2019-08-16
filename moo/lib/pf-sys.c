@@ -87,6 +87,24 @@ moo_pfrc_t moo_pf_system_get_sig (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+moo_pfrc_t moo_pf_system_set_sig (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t tmp;
+	moo_uint8_t sig;
+	int n;
+
+	tmp = MOO_STACK_GETARG(moo, nargs, 0);
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_SMOOI(tmp));
+
+	sig = (moo_uint8_t)MOO_OOP_TO_SMOOI(tmp);
+	n = moo->vmprim.vm_setsig(moo, sig);
+	if (n <= -1) return MOO_PF_FAILURE;
+
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP((moo_ooi_t)sig));
+
+	return MOO_PF_SUCCESS;
+}
+
 /* ------------------------------------------------------------------------------------- */
 
 static MOO_INLINE moo_pfrc_t _system_alloc (moo_t* moo, moo_ooi_t nargs, int clear)

@@ -2180,7 +2180,7 @@ static moo_pfrc_t pf_context_find_exception_handler (moo_t* moo, moo_mod_t* mod,
 	MOO_PF_CHECK_RCV (moo, MOO_CLASSOF(moo,rcv) == moo->_method_context);
 
 	except_class = (moo_oop_class_t)MOO_STACK_GETARG(moo, nargs, 0);
-	MOO_PF_CHECK_ARGS (moo, nargs, MOO_CLASSOF(moo,rcv) == moo->_class);
+	MOO_PF_CHECK_ARGS (moo, nargs, MOO_CLASSOF(moo,except_class) == moo->_class);
 
 	preamble = MOO_OOP_TO_SMOOI(((moo_oop_method_t)rcv->method_or_nargs)->preamble);
 	if (MOO_METHOD_GET_PREAMBLE_CODE(preamble) == MOO_METHOD_PREAMBLE_EXCEPTION)
@@ -4189,6 +4189,7 @@ static pf_t pftab[] =
 	{ "System_putUint64",                      { moo_pf_system_put_uint64,                3, 3 } },
 	{ "System_putUint8",                       { moo_pf_system_put_uint8,                 3, 3 } },
 	{ "System_return:to:",                     { pf_system_return_value_to_context,       2, 2 } },
+	{ "System_setSig:",                        { moo_pf_system_set_sig,                   1, 1 } },
 
 	{ "_dump",                                 { pf_dump,                                 0, MA } },
 
@@ -4621,10 +4622,10 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, i
 			/* this must not happen as long as doesNotUnderstand: is implemented under Apex.
 			 * this check should indicate a very serious internal problem */
 			MOO_LOG4 (moo, MOO_LOG_IC | MOO_LOG_FATAL, 
-				"Fatal error - unable to find a fallback method [%O<<%.*js] for receiver [%O]\n", 
+				"Fatal error - unable to find a fallback method [%O>>%.*js] for receiver [%O]\n", 
 				MOO_CLASSOF(moo, receiver), MOO_OBJ_GET_SIZE(moo->does_not_understand_sym), MOO_OBJ_GET_CHAR_SLOT(moo->does_not_understand_sym), receiver);
 			
-			moo_seterrbfmt (moo, MOO_EMSGSND, "unable to find a fallback method - %O<<%.*js",
+			moo_seterrbfmt (moo, MOO_EMSGSND, "unable to find a fallback method - %O>>%.*js",
 				MOO_CLASSOF(moo, receiver), MOO_OBJ_GET_SIZE(moo->does_not_understand_sym), MOO_OBJ_GET_CHAR_SLOT(moo->does_not_understand_sym));
 			return -1;
 		}
@@ -4825,7 +4826,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				{
 					MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
 					MOO_ASSERT (moo, proc == moo->processor->runnable.first);
-					moo->processor->should_exit = moo->_true; /* prepare to inform the gc finalizer process */
+					moo->processor->gcfin_should_exit = moo->_true; /* prepare to inform the gc finalizer process */
 					switch_to_process_from_nil (moo, proc); /* sechedule the gc finalizer process */
 				}
 			}

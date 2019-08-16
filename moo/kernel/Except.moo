@@ -161,7 +161,7 @@ extend Context
 		// -------------------------------------------------------------------
 		// <<private>>
 		// private: called by VM upon unwinding as well as by 
-		//          Exception<<signal and Error<<signal
+		//          Exception>>signal, Error>>signal, Process>>terminate
 		// -------------------------------------------------------------------
 
 		| ctx stop eb pending_pos |
