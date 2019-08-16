@@ -55,14 +55,20 @@ class System(Apex)
 
 		// start the gc finalizer process
 		[ self __gc_finalizer ] fork.
+
+		// start the os signal handler process
 		//[ self __os_sig_handler ] fork.
 		[ :caller | self __os_sig_handler: caller ] newProcess(thisProcess) resume.
 
-		// TODO: change the method signature to variadic and pass extra arguments to perform???
-		ret := class perform: method_name.
+		[
+			// TODO: change the method signature to variadic and pass extra arguments to perform???
+			ret := class perform: method_name.
+		] 
+		ensure: [
+			self _setSig: 16rFF.
+			//// System logNl: '======= END of startup ==============='.
+		].
 
-		self _setSig: 16rFF.
-		//// System logNl: '======= END of startup ==============='.
 		^ret.
 	}
 
@@ -131,7 +137,7 @@ class System(Apex)
 					//TODO: Execute Handler for tmp.
 
 					System logNl: 'Interrupt dectected - signal no - ' & tmp asString.
-					if (tmp == 16rFF or tmp == 2) { /* TODO: terminate all processes??? */  goto done }.
+					if (tmp == 16rFF or tmp == 2) { /* TODO: terminate all processes except gcfin process??? */  goto done }.
 				}.
 
 				os_intr_sem wait.

@@ -2716,9 +2716,12 @@ static int patch_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oow_t 
 	                 cc->mth.code.ptr[jip] == BCODE_JMPOP_FORWARD_IF_FALSE ||
 	                 cc->mth.code.ptr[jip] == BCODE_JMPOP_FORWARD_IF_TRUE);
 
-	if (jt < jip)
+	if (jt <= jip)
 	{
 		/* backward jump */
+		/* it's also backward jump if jt == jip. when the jump instruction is executed,
+		 * the intruction pointer advances. so it should jump backward to get back to
+		 * the same position */
 		MOO_STATIC_ASSERT (BCODE_JUMP_FORWARD + 10 == BCODE_JUMP_BACKWARD);
 		MOO_STATIC_ASSERT (BCODE_JUMP_FORWARD_IF_TRUE + 10  == BCODE_JUMP_BACKWARD_IF_TRUE);
 		MOO_STATIC_ASSERT (BCODE_JUMP_FORWARD_IF_FALSE + 10 == BCODE_JUMP_BACKWARD_IF_FALSE);
@@ -5684,6 +5687,7 @@ static moo_oob_t send_message_cmd[] =
 
 static int compile_unary_message (moo_t* moo, int to_super)
 {
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_oow_t index;
 	moo_oow_t nargs;
 	moo_ioloc_t sel_loc;
@@ -5706,7 +5710,16 @@ static int compile_unary_message (moo_t* moo, int to_super)
 			{
 				do
 				{
-					if (compile_method_expression(moo, 0) <= -1) return -1;
+					int n;
+					moo_oow_t cur_blk_id;
+
+					/* this argument is not a real block. but change the block id
+					 * to prevent 'goto' from jumping out of the argument expression */
+					cur_blk_id = cc->mth.blk_id;
+					cc->mth.blk_id = cc->mth.blk_idseq++; 
+					n = compile_method_expression(moo, 0);
+					cc->mth.blk_id = cur_blk_id;
+					if (n <= -1) return -1;
 					nargs++;
 
 					if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN) break;
@@ -5752,6 +5765,8 @@ static int compile_binary_message (moo_t* moo, int to_super)
 	moo_oocs_t binsel;
 	moo_oow_t saved_binsels_len, binsel_offset;
 	moo_ioloc_t sel_loc;
+	moo_oow_t cur_blk_id;
+	int n;
 
 	MOO_ASSERT (moo, TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL);
 
@@ -5765,7 +5780,13 @@ static int compile_binary_message (moo_t* moo, int to_super)
 
 		GET_TOKEN (moo);
 
-		if (compile_expression_primary(moo, MOO_NULL, MOO_NULL, 0, &to_super2) <= -1) goto oops;
+		/* this argument expression is not a real block. but change the block id
+		 * to prevent 'goto' from jumping out of the argument expression */
+		cur_blk_id = cc->mth.blk_id;
+		cc->mth.blk_id = cc->mth.blk_idseq++; 
+		n = compile_expression_primary(moo, MOO_NULL, MOO_NULL, 0, &to_super2);
+		cc->mth.blk_id = cur_blk_id;
+		if (n <= -1) goto oops;
 
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && compile_unary_message(moo, to_super2) <= -1) goto oops;
 
@@ -5803,6 +5824,8 @@ static int compile_keyword_message (moo_t* moo, int to_super)
 	moo_oow_t saved_kwsel_len;
 	moo_oow_t kw_offset;
 	moo_oow_t nargs = 0;
+	moo_oow_t cur_blk_id;
+	int n;
 
 	saved_kwsel_loc = moo->c->tok.loc;
 	saved_kwsel_len = cc->mth.kwsels.len;
@@ -5815,7 +5838,13 @@ static int compile_keyword_message (moo_t* moo, int to_super)
 
 		GET_TOKEN (moo);
 
-		if (compile_expression_primary(moo, MOO_NULL, MOO_NULL, 0, &to_super2) <= -1) goto oops;
+		/* this argument expression is not a real block. but change the block id
+		 * to prevent 'goto' from jumping out of the argument expression */
+		cur_blk_id = cc->mth.blk_id;
+		cc->mth.blk_id = cc->mth.blk_idseq++; 
+		n = compile_expression_primary(moo, MOO_NULL, MOO_NULL, 0, &to_super2);
+		cc->mth.blk_id = cur_blk_id;
+		if (n <= -1) goto oops;
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && compile_unary_message(moo, to_super2) <= -1) goto oops;
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_BINSEL && compile_binary_message(moo, to_super2) <= -1) goto oops;
 
@@ -6872,12 +6901,15 @@ static MOO_INLINE int resolve_goto_label (moo_t* moo, moo_goto_t* _goto)
 			if (_goto->blk_id != _label->blk_id || _goto->blk_depth != _label->blk_depth)
 			{
 				gtname.len = moo_count_oocstr(gtname.ptr);
-				moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEUNDEF, &_goto->loc, &gtname, "goto disallowed to different square bracketed block/level");
+				moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEUNDEF, &_goto->loc, &gtname, "goto disallowed to different block level");
 				return -1;
 			}
 
 			MOO_ASSERT (moo, _goto->ip != INVALID_IP);
-			MOO_ASSERT (moo, _goto->ip != _label->ip);
+
+			/*MOO_ASSERT (moo, _goto->ip != _label->ip);
+			in 'label: goto label',  _goto->ip and _label->ip are the same.
+			*/
 
 			if (patch_forward_jump_instruction(moo, _goto->ip, _label->ip) <= -1) 
 			{
