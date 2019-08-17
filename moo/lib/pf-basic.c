@@ -454,7 +454,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 moo_pfrc_t moo_pf_basic_at_test_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	moo_oop_t rcv, pos, oldval, newval;
+	moo_oop_t rcv, pos, oldval, newval, retval;
 	moo_oow_t idx;
 
 	MOO_ASSERT (moo, nargs == 3);
@@ -490,55 +490,76 @@ moo_pfrc_t moo_pf_basic_at_test_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 		return MOO_PF_FAILURE;
 	}
 
+	retval = moo->_false;
 	switch (MOO_OBJ_GET_FLAGS_TYPE(rcv))
 	{
 		case MOO_OBJ_TYPE_BYTE:
-			if (!MOO_OOP_IS_SMOOI(val))
+			if (!MOO_OOP_IS_SMOOI(newval))
 			{
-				moo_seterrbfmt (moo, MOO_EINVAL, "value not a byte - %O", val);
+				moo_seterrbfmt (moo, MOO_EINVAL, "new value not a byte - %O", newval);
 				return MOO_PF_FAILURE;
 			}
-/* TOOD: must I check the range of the value? */
-			MOO_OBJ_SET_BYTE_VAL (rcv, idx, MOO_OOP_TO_SMOOI(val));
+
+/* TOOD: must I check the range of the new value? */
+			if (oldval == MOO_OBJ_GET_BYTE_VAL(rcv, idx))
+			{
+				MOO_OBJ_SET_BYTE_VAL (rcv, idx, MOO_OOP_TO_SMOOI(newval));
+				retval = moo->_true;
+			}
 			break;
 
 		case MOO_OBJ_TYPE_CHAR:
-			if (!MOO_OOP_IS_CHAR(val))
+			if (!MOO_OOP_IS_CHAR(newval))
 			{
-				moo_seterrbfmt (moo, MOO_EINVAL, "value not a character - %O", val);
+				moo_seterrbfmt (moo, MOO_EINVAL, "new value not a character - %O", newval);
 				return MOO_PF_FAILURE;
 			}
-			MOO_OBJ_SET_CHAR_VAL (rcv, idx, MOO_OOP_TO_CHAR(val));
+			if (oldval == MOO_OBJ_GET_CHAR_VAL(rcv, idx))
+			{
+				MOO_OBJ_SET_CHAR_VAL (rcv, idx, MOO_OOP_TO_CHAR(newval));
+				retval = moo->_true;
+			}
 			break;
 
 		case MOO_OBJ_TYPE_HALFWORD:
-			if (!MOO_OOP_IS_SMOOI(val))
+			if (!MOO_OOP_IS_SMOOI(newval))
 			{
-				/* the value is not a number */
-				moo_seterrbfmt (moo, MOO_EINVAL, "value not a half-word integer - %O", val);
+				/* the new value is not a number */
+				moo_seterrbfmt (moo, MOO_EINVAL, "new value not a half-word integer - %O", newval);
 				return MOO_PF_FAILURE;
 			}
-
 			/* if the small integer is too large, it will get truncated */
-			MOO_OBJ_SET_HALFWORD_VAL (rcv, idx, MOO_OOP_TO_SMOOI(val));
+			if (oldval == MOO_OBJ_GET_HALFWORD_VAL(rcv, idx))
+			{
+				MOO_OBJ_SET_HALFWORD_VAL (rcv, idx, MOO_OOP_TO_SMOOI(newval));
+				retval = moo->_true;
+			}
 			break;
 
 		case MOO_OBJ_TYPE_WORD:
 		{
 			moo_oow_t w;
 
-			if (moo_inttooow(moo, val, &w) <= 0)
+			if (moo_inttooow(moo, newval, &w) <= 0)
 			{
-				/* the value is not a number, out of range, or negative */
-				moo_seterrbfmt (moo, MOO_EINVAL, "value not a word integer - %O", val);
+				/* the new value is not a number, out of range, or negative */
+				moo_seterrbfmt (moo, MOO_EINVAL, "new value not a word integer - %O", newval);
 				return MOO_PF_FAILURE;
 			}
-			MOO_OBJ_SET_WORD_VAL (rcv, idx, MOO_OOP_TO_SMOOI(val));
+			if (oldval == MOO_OBJ_GET_WORD_VAL(rcv, idx))
+			{
+				MOO_OBJ_SET_WORD_VAL (rcv, idx, MOO_OOP_TO_SMOOI(newval));
+				retval = moo->_true;
+			}
 			break;
 		}
 
 		case MOO_OBJ_TYPE_OOP:
-			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(rcv, idx), val);
+			if (oldval == MOO_OBJ_GET_OOP_VAL(rcv, idx))
+			{
+				MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(rcv, idx), newval);
+				retval = moo->_true;
+			}
 			break;
 
 		default:
@@ -546,8 +567,8 @@ moo_pfrc_t moo_pf_basic_at_test_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 			return MOO_PF_HARD_FAILURE;
 	}
 
-/* TODO: return receiver or value? */
-	MOO_STACK_SETRET (moo, nargs, val);
+	/* return the old value */
+	MOO_STACK_SETRET (moo, nargs, retval);
 	return MOO_PF_SUCCESS;
 }
 

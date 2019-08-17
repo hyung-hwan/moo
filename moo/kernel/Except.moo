@@ -177,11 +177,13 @@ extend Context
 				 * if the block has been evaluated. see the method BlockContext>>ensure:.
 				 * it is the position of the last temporary variable of the method */
 				pending_pos := ctx basicSize - 1. 
+				/*
 				if (ctx basicAt: pending_pos)
 				{
 					ctx basicAt: pending_pos put: false.
 					eb value.
-				}
+				}*/
+				if (ctx basicAt: pending_pos test: true put: false) { eb value }.
 			}.
 			stop := (ctx == context).
 			ctx := ctx sender.
@@ -392,7 +394,8 @@ thisContext isExceptionContext dump.
 		/* the temporary variable 'pending' may get changed
 		 * during evaluation for exception handling. 
 		 * it gets chagned in Context>>unwindTo:return: */
-		if (pending) { pending := false. aBlock value }.
+		/*if (pending) { pending := false. aBlock value }.*/
+		if (thisContext basicAt: (thisContext basicSize - 1) test: true put: false) { aBlock value }.
 		^retval
 	}
 

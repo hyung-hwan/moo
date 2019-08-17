@@ -121,8 +121,13 @@ extend Apex
 	method(#dual,#primitive) basicSize.
 
 	method(#dual,#primitive) basicAt: index.
-	method(#dual,#primitive) basicAt: index put: value.
-	method(#dual,#primitive) basicAt: index test: test oldvalue put: newvalue.
+
+	// set the slot at the given index to the new value and return the new value.
+	method(#dual,#primitive) basicAt: index put: newvalue.
+
+	// set the slot at the give index to the new value if the existing value is identical to the old value.
+	// return true if the existing value is identical to the old value and false otherwise.
+	method(#dual,#primitive) basicAt: index test: oldvalue put: newvalue.
 
 	method(#dual,#primitive) basicFillFrom: sindex with: value count: count.
 	method(#dual,#primitive) basicShiftFrom: sindex to: dindex count: count.
