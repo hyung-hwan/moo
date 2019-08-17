@@ -51,8 +51,8 @@ TODO: can i convert 'thisProcess primError' to a relevant exception?
 		while (exctx notNil)
 		{
 			exblk := exctx findExceptionHandler: (self class).
-			//if (exblk notNil and: [actpos := exctx basicSize - 1. exctx basicAt: actpos])
-			if ((exblk notNil) and (exctx basicAt: (actpos := exctx basicSize - 1)))
+			//if (exblk notNil and: [actpos := exctx basicLastIndex. exctx basicAt: actpos])
+			if ((exblk notNil) and (exctx basicAt: (actpos := exctx basicLastIndex)))
 			{
 				self.handlerContext := exctx.
 				exctx basicAt: actpos put: false.
@@ -176,7 +176,7 @@ extend Context
 				/* position of the temporary variable in the ensureBlock that indicates
 				 * if the block has been evaluated. see the method BlockContext>>ensure:.
 				 * it is the position of the last temporary variable of the method */
-				pending_pos := ctx basicSize - 1. 
+				pending_pos := ctx basicLastIndex.
 				/*
 				if (ctx basicAt: pending_pos)
 				{
@@ -294,7 +294,8 @@ extend MethodContext
 
 		/* position of the temporary variable 'exception_active' in MethodContext>>on:do.
 		 * for this code to work, it must be the last temporary variable in the method. */
-		actpos := (self basicSize) - 1. 
+		//actpos := (self basicSize) - 1. 
+		actpos := self basicLastIndex.
 
 		excblk := self findExceptionHandler: (exception class).
 		if ((excblk isNil) or ((self basicAt: actpos) not))
@@ -395,7 +396,7 @@ thisContext isExceptionContext dump.
 		 * during evaluation for exception handling. 
 		 * it gets chagned in Context>>unwindTo:return: */
 		/*if (pending) { pending := false. aBlock value }.*/
-		if (thisContext basicAt: (thisContext basicSize - 1) test: true put: false) { aBlock value }.
+		if (thisContext basicAt: (thisContext basicLastIndex) test: true put: false) { aBlock value }.
 		^retval
 	}
 

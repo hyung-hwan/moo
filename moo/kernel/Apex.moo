@@ -314,6 +314,7 @@ class UndefinedObject(Apex)
 		^false.
 	}
 
+/**
 	method handleException: exception
 	{
 		("### EXCEPTION NOT HANDLED #### " &  exception class name & " - " & exception messageText) dump.
@@ -321,6 +322,7 @@ class UndefinedObject(Apex)
 // TODO: ensure to execute ensure blocks as well....
 		////Processor activeProcess terminate.
 	}
+**/
 }
 
 extend Error

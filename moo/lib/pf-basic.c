@@ -292,7 +292,7 @@ moo_pfrc_t moo_pf_basic_size (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-moo_pfrc_t moo_pf_basic_last_index (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_basic_first_index (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	/* return the number of indexable fields */
 
@@ -315,7 +315,7 @@ moo_pfrc_t moo_pf_basic_last_index (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-moo_pfrc_t moo_pf_basic_first_index (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+moo_pfrc_t moo_pf_basic_last_index (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	/* return the number of indexable fields */
 
@@ -492,7 +492,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 				moo_seterrbfmt (moo, MOO_EINVAL, "value not a word integer - %O", val);
 				return MOO_PF_FAILURE;
 			}
-			MOO_OBJ_SET_WORD_VAL (rcv, idx, MOO_OOP_TO_SMOOI(val));
+			MOO_OBJ_SET_WORD_VAL (rcv, idx, w);
 			break;
 		}
 
@@ -552,6 +552,9 @@ moo_pfrc_t moo_pf_basic_at_test_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 	switch (MOO_OBJ_GET_FLAGS_TYPE(rcv))
 	{
 		case MOO_OBJ_TYPE_BYTE:
+		{
+			moo_ooi_t oi;
+
 			if (!MOO_OOP_IS_SMOOI(newval))
 			{
 				moo_seterrbfmt (moo, MOO_EINVAL, "new value not a byte - %O", newval);
@@ -559,12 +562,13 @@ moo_pfrc_t moo_pf_basic_at_test_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 			}
 
 /* TOOD: must I check the range of the new value? */
-			if (oldval == MOO_OBJ_GET_BYTE_VAL(rcv, idx))
+			if (MOO_OOP_IS_SMOOI(oldval) && (oi = MOO_OOP_TO_SMOOI(oldval)) >= 0 && oi == MOO_OBJ_GET_BYTE_VAL(rcv, idx))
 			{
 				MOO_OBJ_SET_BYTE_VAL (rcv, idx, MOO_OOP_TO_SMOOI(newval));
 				retval = moo->_true;
 			}
 			break;
+		}
 
 		case MOO_OBJ_TYPE_CHAR:
 			if (!MOO_OOP_IS_CHAR(newval))
@@ -572,7 +576,7 @@ moo_pfrc_t moo_pf_basic_at_test_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 				moo_seterrbfmt (moo, MOO_EINVAL, "new value not a character - %O", newval);
 				return MOO_PF_FAILURE;
 			}
-			if (oldval == MOO_OBJ_GET_CHAR_VAL(rcv, idx))
+			if (MOO_OOP_IS_CHAR(oldval) && MOO_OOP_TO_CHAR(oldval) == MOO_OBJ_GET_CHAR_VAL(rcv, idx))
 			{
 				MOO_OBJ_SET_CHAR_VAL (rcv, idx, MOO_OOP_TO_CHAR(newval));
 				retval = moo->_true;
@@ -580,6 +584,9 @@ moo_pfrc_t moo_pf_basic_at_test_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 			break;
 
 		case MOO_OBJ_TYPE_HALFWORD:
+		{
+			moo_ooi_t oi;
+
 			if (!MOO_OOP_IS_SMOOI(newval))
 			{
 				/* the new value is not a number */
@@ -587,16 +594,17 @@ moo_pfrc_t moo_pf_basic_at_test_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 				return MOO_PF_FAILURE;
 			}
 			/* if the small integer is too large, it will get truncated */
-			if (oldval == MOO_OBJ_GET_HALFWORD_VAL(rcv, idx))
+			if (MOO_OOP_IS_SMOOI(oldval) && (oi = MOO_OOP_TO_SMOOI(oldval)) >= 0 && oi == MOO_OBJ_GET_HALFWORD_VAL(rcv, idx))
 			{
 				MOO_OBJ_SET_HALFWORD_VAL (rcv, idx, MOO_OOP_TO_SMOOI(newval));
 				retval = moo->_true;
 			}
 			break;
+		}
 
 		case MOO_OBJ_TYPE_WORD:
 		{
-			moo_oow_t w;
+			moo_oow_t w, ow;
 
 			if (moo_inttooow(moo, newval, &w) <= 0)
 			{
@@ -604,9 +612,10 @@ moo_pfrc_t moo_pf_basic_at_test_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 				moo_seterrbfmt (moo, MOO_EINVAL, "new value not a word integer - %O", newval);
 				return MOO_PF_FAILURE;
 			}
-			if (oldval == MOO_OBJ_GET_WORD_VAL(rcv, idx))
+
+			if (moo_inttooow(moo, oldval, &ow) >= 1 && ow == MOO_OBJ_GET_WORD_VAL(rcv, idx))
 			{
-				MOO_OBJ_SET_WORD_VAL (rcv, idx, MOO_OOP_TO_SMOOI(newval));
+				MOO_OBJ_SET_WORD_VAL (rcv, idx, w);
 				retval = moo->_true;
 			}
 			break;
