@@ -1612,6 +1612,8 @@ moo_pfrc_t moo_pf_shallow_copy (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 
 moo_pfrc_t moo_pf_class (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_basic_size (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_basic_first_index (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
+moo_pfrc_t moo_pf_basic_last_index (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_basic_at (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);
 moo_pfrc_t moo_pf_basic_at_test_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs);

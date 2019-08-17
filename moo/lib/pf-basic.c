@@ -292,6 +292,64 @@ moo_pfrc_t moo_pf_basic_size (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+moo_pfrc_t moo_pf_basic_last_index (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	/* return the number of indexable fields */
+
+	moo_oop_t rcv, sz;
+
+	MOO_ASSERT (moo, nargs == 0);
+
+	rcv = MOO_STACK_GETRCV (moo, nargs);
+
+	if (!MOO_OOP_IS_POINTER(rcv) || MOO_OBJ_GET_SIZE(rcv) == 0)
+	{
+		sz = MOO_SMOOI_TO_OOP(-1);
+	}
+	else
+	{
+		sz = MOO_SMOOI_TO_OOP(0);
+	}
+
+	MOO_STACK_SETRET(moo, nargs, sz);
+	return MOO_PF_SUCCESS;
+}
+
+moo_pfrc_t moo_pf_basic_first_index (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	/* return the number of indexable fields */
+
+	moo_oop_t rcv, sz;
+
+	MOO_ASSERT (moo, nargs == 0);
+
+	rcv = MOO_STACK_GETRCV (moo, nargs);
+
+	if (!MOO_OOP_IS_POINTER(rcv))
+	{
+		/* a non-pointer object has the size of 0. 
+		 * such an object doesn't consume object memory space except an OOP word.
+		 * use -1 to indicate that the last index doesn't exist */
+		sz = MOO_SMOOI_TO_OOP(-1);
+	}
+	else
+	{
+		moo_oow_t rcvsize = MOO_OBJ_GET_SIZE(rcv);
+		if (rcvsize == 0)
+		{
+			sz = MOO_SMOOI_TO_OOP(-1);
+		}
+		else
+		{
+			sz = moo_oowtoint(moo, rcvsize - 1);
+			if (!sz) return MOO_PF_FAILURE;
+		}
+	}
+
+	MOO_STACK_SETRET(moo, nargs, sz);
+	return MOO_PF_SUCCESS;
+}
+
 moo_pfrc_t moo_pf_basic_at (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, pos, v;

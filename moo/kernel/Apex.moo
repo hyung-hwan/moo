@@ -119,6 +119,10 @@ extend Apex
 	// -------------------------------------------------------
 	method(#dual,#primitive,#lenient) _basicSize.
 	method(#dual,#primitive) basicSize.
+	method(#dual,#primitive,#lenient) _basicFirstIndex.
+	method(#dual,#primitive) basicFirstIndex.
+	method(#dual,#primitive,#lenient) _basicLastIndex.
+	method(#dual,#primitive) basicLastIndex.
 
 	method(#dual,#primitive) basicAt: index.
 
