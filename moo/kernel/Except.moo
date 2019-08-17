@@ -174,7 +174,8 @@ extend Context
 			if (eb notNil)
 			{
 				/* position of the temporary variable in the ensureBlock that indicates
-				 * if the block has been evaluated */
+				 * if the block has been evaluated. see the method BlockContext>>ensure:.
+				 * it is the position of the last temporary variable of the method */
 				pending_pos := ctx basicSize - 1. 
 				if (ctx basicAt: pending_pos)
 				{

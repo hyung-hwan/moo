@@ -378,7 +378,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	pos = MOO_STACK_GETARG(moo, nargs, 0);
 	val = MOO_STACK_GETARG(moo, nargs, 1);
 
-	if (moo_inttooow (moo, pos, &idx) <= 0)
+	if (moo_inttooow(moo, pos, &idx) <= 0)
 	{
 		/* negative integer or not integer */
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid position - %O", pos);
@@ -428,7 +428,106 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		{
 			moo_oow_t w;
 
-			if (moo_inttooow (moo, val, &w) <= 0)
+			if (moo_inttooow(moo, val, &w) <= 0)
+			{
+				/* the value is not a number, out of range, or negative */
+				moo_seterrbfmt (moo, MOO_EINVAL, "value not a word integer - %O", val);
+				return MOO_PF_FAILURE;
+			}
+			MOO_OBJ_SET_WORD_VAL (rcv, idx, MOO_OOP_TO_SMOOI(val));
+			break;
+		}
+
+		case MOO_OBJ_TYPE_OOP:
+			MOO_STORE_OOP (moo, MOO_OBJ_GET_OOP_PTR(rcv, idx), val);
+			break;
+
+		default:
+			moo_seterrnum (moo, MOO_EINTERN);
+			return MOO_PF_HARD_FAILURE;
+	}
+
+/* TODO: return receiver or value? */
+	MOO_STACK_SETRET (moo, nargs, val);
+	return MOO_PF_SUCCESS;
+}
+
+moo_pfrc_t moo_pf_basic_at_test_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, pos, oldval, newval;
+	moo_oow_t idx;
+
+	MOO_ASSERT (moo, nargs == 3);
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	if (!MOO_OOP_IS_POINTER(rcv))
+	{
+		/* the receiver is a special numeric object, not a normal pointer */
+		moo_seterrbfmt (moo, MOO_EMSGRCV, "receiver not indexable - %O", rcv);
+		return MOO_PF_FAILURE;
+	}
+
+	if (MOO_OBJ_GET_FLAGS_RDONLY(rcv))
+	{
+		moo_seterrbfmt (moo, MOO_EPERM, "not allowed to change a read-only object - %O", rcv);
+		return MOO_PF_FAILURE;
+	}
+
+	pos = MOO_STACK_GETARG(moo, nargs, 0);
+	oldval = MOO_STACK_GETARG(moo, nargs, 1);
+	newval = MOO_STACK_GETARG(moo, nargs, 1);
+
+	if (moo_inttooow(moo, pos, &idx) <= 0)
+	{
+		/* negative integer or not integer */
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid position - %O", pos);
+		return MOO_PF_FAILURE;
+	}
+	if (idx >= MOO_OBJ_GET_SIZE(rcv))
+	{
+		/* index out of range */
+		moo_seterrbfmt (moo, MOO_ERANGE, "position out of bound - %zu", idx);
+		return MOO_PF_FAILURE;
+	}
+
+	switch (MOO_OBJ_GET_FLAGS_TYPE(rcv))
+	{
+		case MOO_OBJ_TYPE_BYTE:
+			if (!MOO_OOP_IS_SMOOI(val))
+			{
+				moo_seterrbfmt (moo, MOO_EINVAL, "value not a byte - %O", val);
+				return MOO_PF_FAILURE;
+			}
+/* TOOD: must I check the range of the value? */
+			MOO_OBJ_SET_BYTE_VAL (rcv, idx, MOO_OOP_TO_SMOOI(val));
+			break;
+
+		case MOO_OBJ_TYPE_CHAR:
+			if (!MOO_OOP_IS_CHAR(val))
+			{
+				moo_seterrbfmt (moo, MOO_EINVAL, "value not a character - %O", val);
+				return MOO_PF_FAILURE;
+			}
+			MOO_OBJ_SET_CHAR_VAL (rcv, idx, MOO_OOP_TO_CHAR(val));
+			break;
+
+		case MOO_OBJ_TYPE_HALFWORD:
+			if (!MOO_OOP_IS_SMOOI(val))
+			{
+				/* the value is not a number */
+				moo_seterrbfmt (moo, MOO_EINVAL, "value not a half-word integer - %O", val);
+				return MOO_PF_FAILURE;
+			}
+
+			/* if the small integer is too large, it will get truncated */
+			MOO_OBJ_SET_HALFWORD_VAL (rcv, idx, MOO_OOP_TO_SMOOI(val));
+			break;
+
+		case MOO_OBJ_TYPE_WORD:
+		{
+			moo_oow_t w;
+
+			if (moo_inttooow(moo, val, &w) <= 0)
 			{
 				/* the value is not a number, out of range, or negative */
 				moo_seterrbfmt (moo, MOO_EINVAL, "value not a word integer - %O", val);

@@ -122,6 +122,7 @@ extend Apex
 
 	method(#dual,#primitive) basicAt: index.
 	method(#dual,#primitive) basicAt: index put: value.
+	method(#dual,#primitive) basicAt: index test: test oldvalue put: newvalue.
 
 	method(#dual,#primitive) basicFillFrom: sindex with: value count: count.
 	method(#dual,#primitive) basicShiftFrom: sindex to: dindex count: count.

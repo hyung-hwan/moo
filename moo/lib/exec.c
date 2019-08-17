@@ -4048,6 +4048,7 @@ static pf_t pftab[] =
 	{ "Apex_addToBeFinalized",                 { pf_add_to_be_finalized,                  0, 0 } },
 	{ "Apex_basicAt:",                         { moo_pf_basic_at,                         1, 1 } },
 	{ "Apex_basicAt:put:",                     { moo_pf_basic_at_put,                     2, 2 } },
+	{ "Apex_basicAt:test:put:",                { moo_pf_basic_at_test_put,                3, 3 } },
 	{ "Apex_basicFillFrom:with:count:",        { moo_pf_basic_fill,                       3, 3 } },
 	{ "Apex_basicNew",                         { moo_pf_basic_new,                        0, 0 } },
 	{ "Apex_basicNew:",                        { moo_pf_basic_new,                        1, 1 } },
