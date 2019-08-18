@@ -467,7 +467,7 @@ class X11.Composite(X11.Widget)
 		| link |
 		if (widget parent ~~ self)
 		{
-			selfns.Exception sinal: "Cannot remove an unknown widget"
+			selfns.Exception signal: "Cannot remove an unknown widget"
 		}.
 
 		link := self.children findIdenticalLink: widget.
@@ -573,6 +573,11 @@ extend X11
 		self.display_base dump.
 	}
 
+	method isConnected
+	{
+		^self.display_base notNil
+	}
+
 	method dispose
 	{
 		if (self.shell_container notNil)
@@ -625,7 +630,6 @@ extend X11
 			self.LLEventType.CLIENT_MESSAGE    -> #__handle_client_message:on:,
 			self.LLEventType.SHELL_CLOSE       -> #__handle_shell_close:on:
 		}.
-
 	}
 
 	method addShell: shell
@@ -653,39 +657,43 @@ extend X11
 			self.event_loop_sem := Semaphore new.
 			self.event_loop_sem signalOnInput: (self _get_fd).
 			self.event_loop_proc := [
-				| llevtbuf llevent ongoing |
 
-				llevtbuf := X11.LLEvent new.
-				ongoing := true.
-				while (self.shell_container childrenCount > 0)
-				{
-'Waiting for X11 event...' dump.
-					self.event_loop_sem wait.
-					if (ongoing not) { break }.
+				[
+					| llevtbuf llevent ongoing |
 
-					while ((llevent := self _get_llevent(llevtbuf)) notNil)
+					llevtbuf := X11.LLEvent new.
+					ongoing := true.
+					while (self.shell_container childrenCount > 0)
 					{
-						if (llevent isError)
+'Waiting for X11 event...' dump.
+						self.event_loop_sem wait.
+						if (ongoing not) { break }.
+
+						while ((llevent := self _get_llevent(llevtbuf)) notNil)
 						{
-							//System logNl: ('Error while getting a event from server ' & self.cid asString).
-							ongoing := false.
-							break.
-						}
-						else
-						{
-							self __dispatch_llevent: llevent.
+							if (llevent isError)
+							{
+								//System logNl: ('Error while getting a event from server ' & self.cid asString).
+								ongoing := false.
+								break.
+							}
+							else
+							{
+								self __dispatch_llevent: llevent.
+							}.
 						}.
 					}.
-				}.
+				] ensure: [
 
 'CLOSING X11 EVENT LOOP' dump.
 
-				self.event_loop_sem unsignal.
-		// TODO: LOOK HERE FOR RACE CONDITION
-				self.event_loop_sem := nil.
-				self.event_loop_proc := nil.
-				
-				self dispose.
+					self.event_loop_sem unsignal.
+			// TODO: LOOK HERE FOR RACE CONDITION with exitEventLoop.
+					self.event_loop_sem := nil.
+					self.event_loop_proc := nil.
+
+					[ self dispose ] on: Exception do: [:ex | ("WARNING: dispose failure...." & ex messageText) dump ].
+				]
 			] fork.
 		}
 	}
@@ -826,10 +834,22 @@ class MyObject(Object)
 		Fx new.
 		comp1 := Fx new.
 		Fx new.
+
+
+		while (self.disp1 isConnected or self.disp2 isConnected) { System sleepForSecs: 1 }.
 	}
+
+/*
+	method exitEventLoops
+	{
+		if (self.disp2 notNil) { self.disp2 exitEventLoop }.
+		if (self.disp1 notNil) { self.disp1 exitEventLoop }.
+	}
+*/
 
 	method(#class) main
 	{
+		// this method returns immediately while having forked two processes with X11 event loops.
 		^self new main1
 	}
 }

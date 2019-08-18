@@ -43,8 +43,15 @@ class(#pointer,#final,#limited) Process(Object)
 		// the process must not be scheduled.
 		// ----------------------------------------------------------------------------------------------------------
 
+		// if the current active process(thisProcess) is not the process to terminate(self),
+		// suspend the target process so that no scheduling wakes the process until this 
+		// termination is completed.
 		//if (Processor activeProcess ~~ self) { self suspend }.
 		if (thisProcess ~~ self) { self suspend }.
+
+		// TODO: what if there is another process that may resume this suspended process.
+		//       should i mark it unresumable?
+
 		self.currentContext unwindTo: self.initialContext return: nil.
 		^self _terminate
 	}
@@ -422,4 +429,7 @@ class(#final,#limited) ProcessScheduler(Object)
 
 	method activeProcess { ^self.active }
 	method resume: aProcess { ^aProcess resume }
+
+	method(#primitive,#lenient) _processById: id.
+	method(#primitive) processById: id.
 }

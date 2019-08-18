@@ -183,7 +183,11 @@ extend Context
 					ctx basicAt: pending_pos put: false.
 					eb value.
 				}*/
-				if (ctx basicAt: pending_pos test: true put: false) { eb value }.
+				if (ctx basicAt: pending_pos test: true put: false) 
+				{
+					// TODO: what is the best way to handle an exception raised in an ensure block?
+					[ eb value ] on: Exception do: [:ex | System logNl: "WARNING: unhandled exception in ensure block - " & ex messageText ].
+				}.
 			}.
 			stop := (ctx == context).
 			ctx := ctx sender.

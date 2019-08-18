@@ -146,12 +146,33 @@ class System(Apex)
 			nil.
 		]
 		ensure: [
+			| pid proc |
 			os_intr_sem unsignal.
 
 			System logNl: '>>>>Requesting to terminate the caller process ' & (caller id) asString.
 			// the caller must request to terminate all its child processes..
-			// TODO: to avoid this, this process must enumerate all proceses and terminate them.
+			// TODO: to avoid this, this process must enumerate all proceses and terminate them except this and gcfin process
+
+/* TODO: redo the following process termination loop.
+         need to write a proper process enumeration methods. 
+           0 -> startup  <--- this should also be stored in the 'caller' variable.
+           1 -> __gc_finalizer
+           2 -> __os_signal_handler 
+           3 -> application main
+         the following loops starts from pid 3 up to 100.  this is POC only. i need to write a proper enumeration methods and use them.
+      */
+			pid := 3.
+			while (pid < 100) 
+			{
+				//proc := Processor processById: pid.
+				proc := Processor _processById: pid.
+				if (proc notError) { System logNl: ("Requesting to terminate process of id - " & pid asString). proc terminate }.
+				pid := pid + 1.
+			}.
+/* TODO: end redo */
+
 			caller terminate.
+			//(Processor _processById: 1) resume. <---- i shouldn't do ths. but, this system causes VM assertion failure. fix it....
 
 			System logNl: '>>>>End of OS signal handler process ' & (thisProcess id) asString.
 		].

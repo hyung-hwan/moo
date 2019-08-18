@@ -615,6 +615,32 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 					MOO_OOP_TO_SMOOI(moo->processor->suspended.count),
 					moo->sem_io_wait_count
 				);
+				if (MOO_OOP_TO_SMOOI(moo->processor->runnable.count) > 0)
+				{
+					moo_oop_process_t p;
+					MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Runnable: ");
+					p = moo->processor->runnable.first;
+					while (p)
+					{
+						MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, " %O", p->id);
+						if (p == moo->processor->runnable.last) break;
+						p = p->ps.next;
+					}
+					MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "\n");
+				}
+				if (MOO_OOP_TO_SMOOI(moo->processor->suspended.count) > 0)
+				{
+					moo_oop_process_t p;
+					MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Suspended: ");
+					p = moo->processor->suspended.first;
+					while (p)
+					{
+						MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, " %O", p->id);
+						if (p == moo->processor->suspended.last) break;
+						p = p->ps.next;
+					}
+					MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "\n");
+				}
 			}
 			else
 			{
@@ -2613,6 +2639,47 @@ static moo_pfrc_t pf_process_suspend (moo_t* moo, moo_mod_t* mod, moo_ooi_t narg
 	return MOO_PF_SUCCESS;
 }
 
+static moo_pfrc_t pf_process_scheduler_process_by_id (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, id;
+	moo_oop_process_t proc;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	id = MOO_STACK_GETARG(moo, nargs, 0);
+
+	MOO_PF_CHECK_RCV (moo, rcv == (moo_oop_t)moo->processor);
+
+	if (MOO_OOP_IS_SMOOI(id))
+	{
+		proc = moo->processor->runnable.first;
+		while (proc)
+		{
+			if (proc->id == id) 
+			{
+				MOO_STACK_SETRET (moo, nargs, (moo_oop_t)proc);
+				return MOO_PF_SUCCESS;
+			}
+			if (proc == moo->processor->runnable.last) break;
+			proc = proc->ps.next;
+		}
+
+		proc = moo->processor->suspended.first;
+		while (proc)
+		{
+			if (proc->id == id) 
+			{
+				MOO_STACK_SETRET (moo, nargs, (moo_oop_t)proc);
+				return MOO_PF_SUCCESS;
+			}
+			if (proc == moo->processor->suspended.last) break;
+			proc = proc->ps.next;
+		}
+	}
+
+	MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
+	return MOO_PF_FAILURE;
+}
+
 /* ------------------------------------------------------------------ */
 static moo_pfrc_t pf_semaphore_signal (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
@@ -4113,6 +4180,8 @@ static pf_t pftab[] =
 
 	{ "MethodContext_findExceptionHandler:",   { pf_context_find_exception_handler,       1, 1 } },
 	{ "MethodContext_goto:",                   { pf_context_goto,                         1, 1 } },
+
+	{ "ProcessScheduler_processById:",         { pf_process_scheduler_process_by_id,      1, 1 } },
 
 	{ "Process_resume",                        { pf_process_resume,                       0, 0 } },
 	{ "Process_sp",                            { pf_process_sp,                           0, 0 } },

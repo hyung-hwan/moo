@@ -215,7 +215,7 @@ static moo_pfrc_t pf_get_llevent (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 // TODO: CHECK if the receiver is an X11 object
 	x11 = (oop_x11_t)MOO_STACK_GETRCV(moo, nargs);
 //MOO_ASSERT (moo, MOO_CLASSOF(moo,x11) == modctx->x11_class);
-	tr = moo_getobjtrailer (moo, (moo_oop_t)x11, MOO_NULL);
+	tr = moo_getobjtrailer(moo, (moo_oop_t)x11, MOO_NULL);
 
 	disp = MOO_OOP_TO_SMPTR(x11->display);
 	event = tr->event;
@@ -254,12 +254,12 @@ static moo_pfrc_t pf_get_llevent (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 				rect.y      = event->xexpose.y;
 				rect.width  = event->xexpose.width;
 				rect.height = event->xexpose.height;
-				if (XCheckWindowEvent (disp, event->xexpose.window, ExposureMask, event))
+				if (XCheckWindowEvent(disp, event->xexpose.window, ExposureMask, event))
 				{
 					Region reg;
 
 					/* merge all expose events in the event queue */
-					reg = XCreateRegion ();
+					reg = XCreateRegion();
 					XUnionRectWithRegion (&rect, reg, reg);
 
 					do
@@ -270,7 +270,7 @@ static moo_pfrc_t pf_get_llevent (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 						rect.height = event->xexpose.height;
 						XUnionRectWithRegion (&rect, reg, reg);
 					}
-					while (XCheckWindowEvent (disp, event->xexpose.window, ExposureMask, event));
+					while (XCheckWindowEvent(disp, event->xexpose.window, ExposureMask, event));
 
 					XClipBox (reg, &rect);
 					XDestroyRegion (reg);
