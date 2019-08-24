@@ -297,7 +297,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			if (_unsigned)
 			{
 			#if defined(USE_DYNCALL)
-				dcArgChar (ffi->dc, v);
+				dcArgChar (ffi->dc, MOO_OOP_TO_CHAR(arg));
 			#elif defined(USE_LIBFFI)
 				ffi->arg_values[ffi->arg_count] = &ffi->arg_svs[ffi->arg_count].uc;
 				ffi->arg_svs[ffi->arg_count].uc = MOO_OOP_TO_CHAR(arg);
@@ -306,7 +306,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			else
 			{
 			#if defined(USE_DYNCALL)
-				dcArgChar (ffi->dc, v);
+				dcArgChar (ffi->dc, MOO_OOP_TO_CHAR(arg));
 			#elif defined(USE_LIBFFI)
 				ffi->arg_values[ffi->arg_count] = &ffi->arg_svs[ffi->arg_count].c;
 				ffi->arg_svs[ffi->arg_count].c = MOO_OOP_TO_CHAR(arg);
@@ -494,7 +494,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			ptr = MOO_OOP_TO_SMPTR(arg);
 
 		#if defined(USE_DYNCALL)
-			dcArgPointer (ffic->dc, ptr);
+			dcArgPointer (ffi->dc, ptr);
 		#elif defined(USE_LIBFFI)
 			ffi->arg_values[ffi->arg_count] = &ffi->arg_svs[ffi->arg_count].p;
 			ffi->arg_svs[ffi->arg_count].p = ptr;
