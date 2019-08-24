@@ -37,7 +37,7 @@ class MyObject(Object)
 
 	method(#class) testBigintDiv2
 	{
-		| ffi i q r divd divr divd_ubound divr_ubound now x |
+		| ffi now |
 
 
 		ffi := FFI new: 'libc.so.6'.
@@ -46,8 +46,10 @@ class MyObject(Object)
 		ffi call: #srandom signature: 'i>' arguments: ##(now).
 
 		[
+			| i q r divd divr divd_ubound divr_ubound x |
 			divr_ubound := 16rFFFFFFFFFFFFFFFFFFFFFFFF.
 			divd_ubound := 16rFFFFFFFFFFFFFFFFFFFFFFFF.
+			i := 0.
 
 			while (true)
 			{
@@ -74,12 +76,14 @@ class MyObject(Object)
 				}.
 				if (divr = 0) { divr := 1 }.
 
+				i := i + 1.
+				ffi call: #printf signature: 's|l>l' arguments: ##("%d\r", i).
+
 				q := divd div: divr.
 				r := divd rem: divr.
 				if (divd ~= (q * divr + r)) 
 				{ 
 					// dump numbers if result is wrong
-					i dump. 
 					divd dump.
 					divr dump.
 					q dump.
