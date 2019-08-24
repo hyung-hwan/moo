@@ -172,7 +172,7 @@ class System(Apex)
 /* TODO: end redo */
 
 			caller terminate.
-			//(Processor _processById: 1) resume. <---- i shouldn't do ths. but, this system causes VM assertion failure. fix it....
+			(Processor _processById: 1) resume. //<---- i shouldn't do ths. but, this system causes VM assertion failure. fix it....
 
 			System logNl: '>>>>End of OS signal handler process ' & (thisProcess id) asString.
 		].

@@ -537,6 +537,8 @@ static MOO_INLINE void chain_into_semaphore (moo_t* moo, moo_oop_process_t proc,
 	/* a process chained to a semaphore cannot get chained to
 	 * a semaphore again. a process can get chained to a single semaphore 
 	 * or a single semaphore group only */
+	if ((moo_oop_t)proc->sem != moo->_nil) return; /* ignore it if it happens anyway. TODO: is it desirable???? */
+
 	MOO_ASSERT (moo, (moo_oop_t)proc->sem == moo->_nil);
 	MOO_ASSERT (moo, (moo_oop_t)proc->sem_wait.prev == moo->_nil);
 	MOO_ASSERT (moo, (moo_oop_t)proc->sem_wait.next == moo->_nil);
