@@ -866,14 +866,13 @@ struct moo_semaphore_group_t
 	moo_oop_t sem_count; /* the total number of semaphores in the group */
 };
 
-#define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 9
+#define MOO_PROCESS_SCHEDULER_NAMED_INSTVARS 8
 typedef struct moo_process_scheduler_t moo_process_scheduler_t;
 typedef struct moo_process_scheduler_t* moo_oop_process_scheduler_t;
 struct moo_process_scheduler_t
 {
 	MOO_OBJ_HEADER;
 	moo_oop_process_t active; /*  pointer to an active process in the runnable process list */
-	moo_oop_t gcfin_should_exit; /* Boolean */
 	moo_oop_t total_count; /* SmallIntger, total number of processes - runnable/running/suspended */
 
 	struct

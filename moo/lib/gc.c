@@ -397,7 +397,7 @@ static kernel_class_info_t kernel_classes[] =
 	{ 6,
 	  { 'S','y','s','t','e','m' },
 	  0,
-	  1, /* asyncsg */
+	  3, /* asyncsg, gcfin_sem, gcfin_should_exit*/
 	  0,
 	  0,
 	  MOO_OBJ_TYPE_OOP,
@@ -552,7 +552,6 @@ static int ignite_2 (moo_t* moo)
 	if (!tmp) return -1;
 	moo->processor = (moo_oop_process_scheduler_t)tmp;
 	moo->processor->active = moo->nil_process;
-	moo->processor->gcfin_should_exit = moo->_false;
 	moo->processor->total_count = MOO_SMOOI_TO_OOP(0);
 	moo->processor->runnable.count = MOO_SMOOI_TO_OOP(0);
 	moo->processor->suspended.count = MOO_SMOOI_TO_OOP(0);

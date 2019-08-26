@@ -11,6 +11,8 @@
 class System(Apex)
 {
 	var(#class) asyncsg.
+	var(#class) gcfin_sem.
+	var(#class) gcfin_should_exit := false.
 
 	pooldic Log
 	{
@@ -74,12 +76,13 @@ class System(Apex)
 
 	method(#class) __gc_finalizer
 	{
-		| tmp gc gcfin_sem |
+		| tmp gc |
 
 		gc := false.
-		gcfin_sem := Semaphore new.
 
-		gcfin_sem signalOnGCFin. // tell VM to signal this semaphore when it schedules gc finalization.
+		self.gcfin_should_exit := false.
+		self.gcfin_sem := Semaphore new.
+		self.gcfin_sem signalOnGCFin. // tell VM to signal this semaphore when it schedules gc finalization.
 
 		[
 			while (true)
@@ -95,7 +98,8 @@ class System(Apex)
 				}.
 
 				//if (Processor total_count == 1)
-				if (Processor gcfin_should_exit)
+				//if (Processor gcfin_should_exit)
+				if (self.gcfin_should_exit)
 				{
 					// exit from this loop when there are no other processes running except this finalizer process
 					if (gc) 
@@ -113,10 +117,10 @@ class System(Apex)
 					gc := false.
 				}.
 
-				gcfin_sem wait.
+				self.gcfin_sem wait.
 			}
 		] ensure: [
-			gcfin_sem unsignal.
+			self.gcfin_sem unsignal.
 			System logNl: 'End of GC finalization process ' & (thisProcess id) asString.
 		].
 	}
@@ -172,9 +176,12 @@ class System(Apex)
 /* TODO: end redo */
 
 			caller terminate.
-			(Processor _processById: 1) resume. //<---- i shouldn't do ths. but, this system causes VM assertion failure. fix it....
 
 			System logNl: '>>>>End of OS signal handler process ' & (thisProcess id) asString.
+
+			//(Processor _processById: 1) resume. //<---- i shouldn't do ths. but, this system causes VM assertion failure. fix it....
+			self.gcfin_should_exit := true.
+			self.gcfin_sem signal. // wake the gcfin process.
 		].
 	}
 

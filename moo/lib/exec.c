@@ -4900,7 +4900,7 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				{
 					MOO_ASSERT (moo, proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNABLE));
 					MOO_ASSERT (moo, proc == moo->processor->runnable.first);
-					moo->processor->gcfin_should_exit = moo->_true; /* prepare to inform the gc finalizer process */
+					moo->_system->cvar[2] = moo->_true; /* set gcfin_should_exit in System to true. if the postion of the class variable changes, the index must get changed, too. */
 					switch_to_process_from_nil (moo, proc); /* sechedule the gc finalizer process */
 				}
 			}
