@@ -850,7 +850,11 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 			/* i should decrement the counter as long as the group being 
 			 * signaled contains an IO semaphore */
-			if (MOO_OOP_TO_SMOOI(sg->sem_io_count) > 0) moo->sem_io_wait_count--;
+			if (MOO_OOP_TO_SMOOI(sg->sem_io_count) > 0) 
+			{
+MOO_DEBUG1 (moo, "decrementing 77 sem_io_wait_count. IO %zd\n", MOO_OOP_TO_SMOOI(sem->u.io.handle));
+				moo->sem_io_wait_count--;
+			}
 			return proc;
 		}
 	}
@@ -895,7 +899,11 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 		unchain_from_semaphore (moo, proc);
 		resume_process (moo, proc);
 
-		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO)) moo->sem_io_wait_count--;
+		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO)) 
+		{
+MOO_DEBUG1 (moo, "decrementing 88 sem_io_wait_count. IO %zd\n", MOO_OOP_TO_SMOOI(sem->u.io.handle));
+			moo->sem_io_wait_count--;
+		}
 
 		/* return the resumed(runnable) process */
 		return proc;
@@ -950,7 +958,11 @@ static MOO_INLINE void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 		MOO_ASSERT (moo, sem->waiting.last == proc);
 
-		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO)) moo->sem_io_wait_count++;
+		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO)) 
+		{
+MOO_DEBUG1 (moo, "incrementing 111 sem_io_wait_count. IO %zd\n", MOO_OOP_TO_SMOOI(sem->u.io.handle));
+			moo->sem_io_wait_count++;
+		}
 
 		MOO_ASSERT (moo, moo->processor->active != proc);
 	}
@@ -1009,6 +1021,7 @@ static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore
 	{
 		/* there might be more than 1 IO semaphores in the group
 		 * but i increment moo->sem_io_wait_count by 1 only */
+MOO_DEBUG0 (moo, "incrementing 222 sem_io_wait_count. IO groupd\n");
 		moo->sem_io_wait_count++; 
 	}
 
@@ -2981,6 +2994,7 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_mod_t* mod, 
 				/* TODO: add sem_wait_count to process. no traversal... */
 				for (wp = sg->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
 				{
+MOO_DEBUG0 (moo, "incrementing 333 sem_io_wait_count. IO\n");
 					moo->sem_io_wait_count++;
 				}
 			}
@@ -3068,6 +3082,7 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_mod_t* mo
 				/* TODO: add sem_wait_count to process. no traversal... */
 				for (wp = rcv->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
 				{
+MOO_DEBUG0 (moo, "decrementing 99 sem_io_wait_count. IO group\n");
 					moo->sem_io_wait_count--;
 				}
 			}
@@ -4818,15 +4833,27 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 		{
 			moo_ntime_t ft;
 
+			MOO_ASSERT (moo, moo->processor->runnable.count == MOO_SMOOI_TO_OOP(0));
+
 			/* no runnable process while there is an io semaphore being waited for */
 			if ((moo_oop_t)moo->sem_gcfin != moo->_nil && moo->sem_gcfin_sigreq) goto signal_sem_gcfin;
 
-			do
+			if (moo->processor->suspended.count == MOO_SMOOI_TO_OOP(0))
 			{
-				MOO_INIT_NTIME (&ft, 3, 0); /* TODO: use a configured time */
-				vm_muxwait (moo, &ft);
+				/* no suspended process. the program is buggy or is probably being
+				 * terminated forcibly. 
+				 * the default signal handler may lead to this situation. */
+				moo->abort_req = 1;
 			}
-			while (moo->processor->active == moo->nil_process && !moo->abort_req);
+			else
+			{
+				do
+				{
+					MOO_INIT_NTIME (&ft, 3, 0); /* TODO: use a configured time */
+					vm_muxwait (moo, &ft);
+				}
+				while (moo->processor->active == moo->nil_process && !moo->abort_req);
+			}
 		}
 		else
 		{
