@@ -620,7 +620,7 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 				if (MOO_OOP_TO_SMOOI(moo->processor->runnable.count) > 0)
 				{
 					moo_oop_process_t p;
-					MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Runnable: ");
+					MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Runnable:");
 					p = moo->processor->runnable.first;
 					while (p)
 					{
@@ -633,13 +633,27 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 				if (MOO_OOP_TO_SMOOI(moo->processor->suspended.count) > 0)
 				{
 					moo_oop_process_t p;
-					MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Suspended: ");
+					MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "Suspended:");
 					p = moo->processor->suspended.first;
 					while (p)
 					{
 						MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, " %O", p->id);
 						if (p == moo->processor->suspended.last) break;
 						p = p->ps.next;
+					}
+					MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "\n");
+				}
+				if (moo->sem_io_wait_count > 0)
+				{
+					moo_ooi_t io_handle;
+
+					MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "IO Semaphores:");
+					for (io_handle = 0; io_handle < moo->sem_io_map_capa; io_handle++)
+					{
+						if (moo->sem_io_map[io_handle] >= 0)
+						{
+							MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, " %zd", io_handle);
+						}
 					}
 					MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "\n");
 				}
@@ -1380,6 +1394,15 @@ static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, in
 	sem->u.io.handle = moo->_nil;
 	sem->u.io.type = moo->_nil;
 	moo->sem_io_count--;
+
+/* ****************************************** */
+	if (sem->waiting.first != moo->_nil) 
+	{
+		/* TODO: debug further.... */
+MOO_DEBUG1 (moo, "decrementing 44 seio_io_wait_count. IO %zd\n", io_handle);
+		moo->sem_io_wait_count--;
+	}
+/* ****************************************** */
 
 	if ((moo_oop_t)sem->group != moo->_nil)
 	{
