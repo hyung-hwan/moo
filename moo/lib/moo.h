@@ -1603,7 +1603,7 @@ struct moo_t
 	moo_oow_t sem_io_tuple_capa;
 
 	moo_oow_t sem_io_count;
-	moo_oow_t sem_io_wait_count;
+	moo_oow_t sem_io_wait_count; /* number of processes waiting on an IO semaphore */
 
 	moo_ooi_t* sem_io_map;
 	moo_oow_t sem_io_map_capa;
