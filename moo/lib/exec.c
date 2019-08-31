@@ -641,7 +641,7 @@ static void dump_process_info (moo_t* moo, moo_bitmask_t log_mask)
 					MOO_LOG0 (moo, log_mask, ":none");
 				}
 
-				/* dump process IDs waiting for output signaling */
+				/* dump process IDs waitingt for output signaling */
 				MOO_LOG0 (moo, log_mask, ",wpo");
 				sem = moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];
 				if (sem) 
@@ -733,8 +733,6 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 
 		if ((moo_oop_t)proc->sem != moo->_nil)
 		{
-			unchain_from_semaphore (moo, proc);
-
 			/* [EXPERIMENTAL] =============================== */
 			if (MOO_CLASSOF(moo, proc->sem) == moo->_semaphore_group)
 			{
@@ -750,10 +748,13 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 				if (((moo_oop_semaphore_t)proc->sem)->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO))
 				{
 					MOO_ASSERT (moo, moo->sem_io_wait_count > 0);
+MOO_DEBUG1 (moo, "decrementing 44 sem_io_wait_count. IO %zd\n",  MOO_OOP_TO_SMOOI(((moo_oop_semaphore_t)proc->sem)->u.io.handle));
 					moo->sem_io_wait_count--;
 				}
 			}
 			/* =============================== */
+
+			unchain_from_semaphore (moo, proc);
 		}
 
 		/* when terminated, clear it from the pid table and set the process id to a negative number */
