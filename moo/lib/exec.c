@@ -734,6 +734,26 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 		if ((moo_oop_t)proc->sem != moo->_nil)
 		{
 			unchain_from_semaphore (moo, proc);
+
+			/* [EXPERIMENTAL] =============================== */
+			if (MOO_CLASSOF(moo, proc->sem) == moo->_semaphore_group)
+			{
+				/* TODO: */
+				if (MOO_OOP_TO_SMOOI((moo_oop_semaphore_group_t)proc->sem) > 0)
+				{
+					MOO_ASSERT (moo, moo->sem_io_wait_count > 0);
+					moo->sem_io_wait_count--;
+				}
+			}
+			else 
+			{
+				if (((moo_oop_semaphore_t)proc->sem)->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO))
+				{
+					MOO_ASSERT (moo, moo->sem_io_wait_count > 0);
+					moo->sem_io_wait_count--;
+				}
+			}
+			/* =============================== */
 		}
 
 		/* when terminated, clear it from the pid table and set the process id to a negative number */
