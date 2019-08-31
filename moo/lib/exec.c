@@ -581,6 +581,89 @@ static MOO_INLINE void unchain_from_semaphore (moo_t* moo, moo_oop_process_t pro
 	proc->sem = moo->_nil;
 }
 
+static void dump_process_info (moo_t* moo, moo_bitmask_t log_mask)
+{
+	if (MOO_OOP_TO_SMOOI(moo->processor->runnable.count) > 0)
+	{
+		moo_oop_process_t p;
+		MOO_LOG0 (moo, log_mask, "> Runnable:");
+		p = moo->processor->runnable.first;
+		while (p)
+		{
+			MOO_LOG1 (moo, log_mask, " %O", p->id);
+			if (p == moo->processor->runnable.last) break;
+			p = p->ps.next;
+		}
+		MOO_LOG0 (moo, log_mask, "\n");
+	}
+	if (MOO_OOP_TO_SMOOI(moo->processor->suspended.count) > 0)
+	{
+		moo_oop_process_t p;
+		MOO_LOG0 (moo, log_mask, "> Suspended:");
+		p = moo->processor->suspended.first;
+		while (p)
+		{
+			MOO_LOG1 (moo, log_mask, " %O", p->id);
+			if (p == moo->processor->suspended.last) break;
+			p = p->ps.next;
+		}
+		MOO_LOG0 (moo, log_mask, "\n");
+	}
+	if (moo->sem_io_wait_count > 0)
+	{
+		moo_ooi_t io_handle;
+
+		MOO_LOG0 (moo, log_mask, "> IO Semaphores:");
+		for (io_handle = 0; io_handle < moo->sem_io_map_capa; io_handle++)
+		{
+			moo_ooi_t index;
+
+			index = moo->sem_io_map[io_handle];
+			if (index >= 0)
+			{
+				moo_oop_semaphore_t sem;
+
+				MOO_LOG1 (moo, log_mask, " h=%zd", io_handle);
+
+				/* dump process IDs waiting for input signaling */
+				MOO_LOG0 (moo, log_mask, "(wpi");
+				sem = moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT];
+				if (sem) 
+				{
+					moo_oop_process_t wp; /* waiting process */
+					for (wp = sem->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
+					{
+						MOO_LOG1 (moo, log_mask, ":%zd", MOO_OOP_TO_SMOOI(wp->id));
+					}
+				}
+				else
+				{
+					MOO_LOG0 (moo, log_mask, ":none");
+				}
+
+				/* dump process IDs waiting for output signaling */
+				MOO_LOG0 (moo, log_mask, ",wpo");
+				sem = moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];
+				if (sem) 
+				{
+					moo_oop_process_t wp; /* waiting process */
+					for (wp = sem->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
+					{
+						MOO_LOG1 (moo, log_mask, ":%zd", MOO_OOP_TO_SMOOI(wp->id));
+					}
+				}
+				else
+				{
+					MOO_LOG0 (moo, log_mask, ":none");
+				}
+
+				MOO_LOG0 (moo, log_mask, ")");
+			}
+		}
+		MOO_LOG0 (moo, log_mask, "\n");
+	}
+}
+
 static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 {
 	if (proc->state == MOO_SMOOI_TO_OOP(PROC_STATE_RUNNING) ||
@@ -620,51 +703,7 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 						moo->sem_io_wait_count
 					);
 
-					if (MOO_OOP_TO_SMOOI(moo->processor->runnable.count) > 0)
-					{
-						moo_oop_process_t p;
-						MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "> Runnable:");
-						p = moo->processor->runnable.first;
-						while (p)
-						{
-							MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, " %O", p->id);
-							if (p == moo->processor->runnable.last) break;
-							p = p->ps.next;
-						}
-						MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "\n");
-					}
-					if (MOO_OOP_TO_SMOOI(moo->processor->suspended.count) > 0)
-					{
-						moo_oop_process_t p;
-						MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "> Suspended:");
-						p = moo->processor->suspended.first;
-						while (p)
-						{
-							MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, " %O", p->id);
-							if (p == moo->processor->suspended.last) break;
-							p = p->ps.next;
-						}
-						MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "\n");
-					}
-					if (moo->sem_io_wait_count > 0)
-					{
-						moo_ooi_t io_handle;
-	
-						MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "> IO Semaphores:");
-						for (io_handle = 0; io_handle < moo->sem_io_map_capa; io_handle++)
-						{
-							moo_ooi_t index;
-
-							index = moo->sem_io_map[io_handle];
-							if (index >= 0)
-							{
-								/*moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_INPUT];
-								moo->sem_io_tuple[index].sem[MOO_SEMAPHORE_IO_TYPE_OUTPUT];*/
-								MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, " %zd", io_handle);
-							}
-						}
-						MOO_LOG0 (moo, MOO_LOG_IC | MOO_LOG_DEBUG, "\n");
-					}
+					dump_process_info (moo, MOO_LOG_IC | MOO_LOG_DEBUG);
 				}
 			}
 			else
@@ -1405,9 +1444,12 @@ static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, in
 	moo->sem_io_count--;
 
 /* ****************************************** */
+#if 0
 	if ((moo_oop_t)sem->waiting.first != moo->_nil) 
 	{
 		/* TODO: debug further.... */
+/* TODO: this should not be done here. instead, something similar should be done in a process termination routine.
+         view this as resource cleanup for a proceses?? if the waiting process dies, it must decrement this counter... */
 		moo_oop_process_t wp = sem->waiting.first;
 		do
 		{
@@ -1417,6 +1459,7 @@ MOO_DEBUG1 (moo, "decrementing 44 seio_io_wait_count. IO %zd\n", io_handle);
 		}
 		while ((moo_oop_t)wp != moo->_nil);
 	}
+#endif
 /* ****************************************** */
 
 	if ((moo_oop_t)sem->group != moo->_nil)

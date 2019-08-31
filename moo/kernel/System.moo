@@ -120,6 +120,7 @@ class System(Apex)
 				self.gcfin_sem wait.
 			}
 		] ensure: [
+			self.gcfin_sem signal. // in case the process is stuck in wait.
 			self.gcfin_sem unsignal.
 			System logNl: 'End of GC finalization process ' & (thisProcess id) asString.
 		].
@@ -151,6 +152,7 @@ class System(Apex)
 		]
 		ensure: [
 			| pid proc |
+			os_intr_sem signal.
 			os_intr_sem unsignal.
 
 			System logNl: '>>>>Requesting to terminate the caller process ' & (caller id) asString.
