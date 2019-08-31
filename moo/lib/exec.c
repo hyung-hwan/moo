@@ -678,7 +678,7 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 		{
 			moo_oop_process_t nrp;
 
-			nrp = find_next_runnable_process (moo);
+			nrp = find_next_runnable_process(moo);
 
 			unchain_from_processor (moo, proc, PROC_STATE_TERMINATED);
 			proc->sp = MOO_SMOOI_TO_OOP(-1); /* invalidate the process stack */
