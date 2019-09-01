@@ -736,11 +736,11 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 			/* [EXPERIMENTAL] =============================== */
 			if (MOO_CLASSOF(moo, proc->sem) == moo->_semaphore_group)
 			{
-				/* TODO: */
-				if (MOO_OOP_TO_SMOOI((moo_oop_semaphore_group_t)proc->sem) > 0)
+				if (MOO_OOP_TO_SMOOI(((moo_oop_semaphore_group_t)proc->sem)->sem_io_count) > 0)
 				{
 					MOO_ASSERT (moo, moo->sem_io_wait_count > 0);
 					moo->sem_io_wait_count--;
+					MOO_DEBUG2 (moo, "terminate_process(sg) - decremented sem_io_wait_count to %zu for handle %zd\n", moo->sem_io_wait_count, MOO_OOP_TO_SMOOI(((moo_oop_semaphore_t)proc->sem)->u.io.handle));
 				}
 			}
 			else 
@@ -748,8 +748,8 @@ static void terminate_process (moo_t* moo, moo_oop_process_t proc)
 				if (((moo_oop_semaphore_t)proc->sem)->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO))
 				{
 					MOO_ASSERT (moo, moo->sem_io_wait_count > 0);
-MOO_DEBUG1 (moo, "decrementing 44 sem_io_wait_count. IO %zd\n",  MOO_OOP_TO_SMOOI(((moo_oop_semaphore_t)proc->sem)->u.io.handle));
 					moo->sem_io_wait_count--;
+					MOO_DEBUG2 (moo, "terminate_process(s) - decremented sem_io_wait_count to %zu for handle %zd\n", moo->sem_io_wait_count, MOO_OOP_TO_SMOOI(((moo_oop_semaphore_t)proc->sem)->u.io.handle));
 				}
 			}
 			/* =============================== */
@@ -935,8 +935,9 @@ static moo_oop_process_t signal_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 			 * signaled contains an IO semaphore */
 			if (MOO_OOP_TO_SMOOI(sg->sem_io_count) > 0) 
 			{
-MOO_DEBUG1 (moo, "decrementing 77 sem_io_wait_count. IO %zd\n", MOO_OOP_TO_SMOOI(sem->u.io.handle));
+				MOO_ASSERT (moo, moo->sem_io_wait_count > 0);
 				moo->sem_io_wait_count--;
+				MOO_DEBUG2 (moo, "signal_semaphore(sg) - decremented sem_io_wait_count to %zu for handle %zd\n", moo->sem_io_wait_count, MOO_OOP_TO_SMOOI(sem->u.io.handle));
 			}
 			return proc;
 		}
@@ -955,6 +956,7 @@ MOO_DEBUG1 (moo, "decrementing 77 sem_io_wait_count. IO %zd\n", MOO_OOP_TO_SMOOI
 	if ((moo_oop_t)sem->waiting.first == moo->_nil)
 	{
 		/* no process is waiting on this semaphore */
+
 		count = MOO_OOP_TO_SMOOI(sem->count);
 		count++;
 		sem->count = MOO_SMOOI_TO_OOP(count);
@@ -984,8 +986,9 @@ MOO_DEBUG1 (moo, "decrementing 77 sem_io_wait_count. IO %zd\n", MOO_OOP_TO_SMOOI
 
 		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO)) 
 		{
-MOO_DEBUG1 (moo, "decrementing 88 sem_io_wait_count. IO %zd\n", MOO_OOP_TO_SMOOI(sem->u.io.handle));
+			MOO_ASSERT (moo, moo->sem_io_wait_count > 0);
 			moo->sem_io_wait_count--;
+			MOO_DEBUG2 (moo, "signal_semaphore(s) - decremented sem_io_wait_count to %zu for handle %zd\n", moo->sem_io_wait_count, MOO_OOP_TO_SMOOI(sem->u.io.handle));
 		}
 
 		/* return the resumed(runnable) process */
@@ -1043,8 +1046,8 @@ static MOO_INLINE void await_semaphore (moo_t* moo, moo_oop_semaphore_t sem)
 
 		if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO)) 
 		{
-MOO_DEBUG1 (moo, "incrementing 111 sem_io_wait_count. IO %zd\n", MOO_OOP_TO_SMOOI(sem->u.io.handle));
 			moo->sem_io_wait_count++;
+			MOO_DEBUG2 (moo, "await_semaphore - incremented sem_io_wait_count to %zu for handle %zd\n", moo->sem_io_wait_count, MOO_OOP_TO_SMOOI(sem->u.io.handle));
 		}
 
 		MOO_ASSERT (moo, moo->processor->active != proc);
@@ -1104,8 +1107,8 @@ static MOO_INLINE moo_oop_t await_semaphore_group (moo_t* moo, moo_oop_semaphore
 	{
 		/* there might be more than 1 IO semaphores in the group
 		 * but i increment moo->sem_io_wait_count by 1 only */
-MOO_DEBUG0 (moo, "incrementing 222 sem_io_wait_count. IO groupd\n");
 		moo->sem_io_wait_count++; 
+		MOO_DEBUG1 (moo, "await_semaphore_group - incremented sem_io_wait_count to %zu\n", moo->sem_io_wait_count);
 	}
 
 	/* the current process will get suspended after the caller (mostly a 
@@ -1463,25 +1466,6 @@ static int delete_sem_from_sem_io_tuple (moo_t* moo, moo_oop_semaphore_t sem, in
 	sem->u.io.handle = moo->_nil;
 	sem->u.io.type = moo->_nil;
 	moo->sem_io_count--;
-
-/* ****************************************** */
-#if 0
-	if ((moo_oop_t)sem->waiting.first != moo->_nil) 
-	{
-		/* TODO: debug further.... */
-/* TODO: this should not be done here. instead, something similar should be done in a process termination routine.
-         view this as resource cleanup for a proceses?? if the waiting process dies, it must decrement this counter... */
-		moo_oop_process_t wp = sem->waiting.first;
-		do
-		{
-MOO_DEBUG1 (moo, "decrementing 44 seio_io_wait_count. IO %zd\n", io_handle);
-			moo->sem_io_wait_count--;
-			wp = wp->sem_wait.next;
-		}
-		while ((moo_oop_t)wp != moo->_nil);
-	}
-#endif
-/* ****************************************** */
 
 	if ((moo_oop_t)sem->group != moo->_nil)
 	{
@@ -3096,8 +3080,8 @@ static moo_pfrc_t pf_semaphore_group_add_semaphore (moo_t* moo, moo_mod_t* mod, 
 				/* TODO: add sem_wait_count to process. no traversal... */
 				for (wp = sg->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
 				{
-MOO_DEBUG0 (moo, "incrementing 333 sem_io_wait_count. IO\n");
 					moo->sem_io_wait_count++;
+					MOO_DEBUG1 (moo, "pf_semaphore_group_add_semaphore - incremented sem_io_wait_count to %zu\n", moo->sem_io_wait_count);
 				}
 			}
 		}
@@ -3184,8 +3168,9 @@ static moo_pfrc_t pf_semaphore_group_remove_semaphore (moo_t* moo, moo_mod_t* mo
 				/* TODO: add sem_wait_count to process. no traversal... */
 				for (wp = rcv->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
 				{
-MOO_DEBUG0 (moo, "decrementing 99 sem_io_wait_count. IO group\n");
+					MOO_ASSERT (moo, moo->sem_io_wait_count > 0);
 					moo->sem_io_wait_count--;
+					MOO_DEBUG1 (moo, "pf_semaphore_group_remove_semaphore - decremented sem_io_wait_count to %zu\n", moo->sem_io_wait_count);
 				}
 			}
 		}
