@@ -380,6 +380,7 @@ struct xtn_t
 		pthread_mutex_t mtx;
 		pthread_cond_t cnd;
 		pthread_cond_t cnd2;
+		int halting;
 	#endif
 	} ev;
 };
@@ -2091,6 +2092,7 @@ static int vm_startup (moo_t* moo)
 	pthread_mutex_init (&xtn->ev.mtx, MOO_NULL);
 	pthread_cond_init (&xtn->ev.cnd, MOO_NULL);
 	pthread_cond_init (&xtn->ev.cnd2, MOO_NULL);
+	xtn->ev.halting = 0;
 
 	xtn->iothr.abort = 0;
 	xtn->iothr.up = 0;
@@ -2509,7 +2511,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 		ts.tv_nsec = ns.nsec;
 
 		pthread_mutex_lock (&xtn->ev.mtx);
-		if (xtn->ev.len <= 0)
+		if (xtn->ev.len <= 0 && !xtn->ev.halting)
 		{
 			/* the event buffer is still empty */
 			pthread_cond_timedwait (&xtn->ev.cnd2, &xtn->ev.mtx, &ts);
@@ -3688,6 +3690,19 @@ static void fini_moo (moo_t* moo)
 	unchain (moo);
 }
 
+static void halting_moo (moo_t* moo)
+{
+#if defined(USE_THREAD)
+	xtn_t* xtn = GET_XTN(moo);
+	xtn->ev.halting = 1;
+	pthread_mutex_unlock (&xtn->ev.mtx);
+	pthread_cond_signal (&xtn->ev.cnd2);
+	pthread_mutex_unlock (&xtn->ev.mtx);
+#else
+#	error NOT IMPLEMENTED YET
+#endif
+}
+
  moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfgstd_t* cfg, moo_errinf_t* errinfo)
 {
 	moo_t* moo;
@@ -3738,6 +3753,7 @@ static void fini_moo (moo_t* moo)
 
 	MOO_MEMSET (&evtcb, 0, MOO_SIZEOF(evtcb));
 	evtcb.fini = fini_moo;
+	evtcb.halting = halting_moo;
 	moo_regevtcb (moo, &evtcb);
 
 

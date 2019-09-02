@@ -3246,6 +3246,18 @@ static moo_pfrc_t pf_system_return_value_to_context (moo_t* moo, moo_mod_t* mod,
 }
 
 /* ------------------------------------------------------------------ */
+static moo_pfrc_t pf_system_halting (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_evtcb_t* cb;
+	for (cb = moo->evtcb_list; cb; cb = cb->next)
+	{
+		if (cb->halting) cb->halting (moo);
+	}
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
+/* ------------------------------------------------------------------ */
 static moo_pfrc_t pf_number_scale (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
@@ -4351,6 +4363,7 @@ static pf_t pftab[] =
 	{ "System_getUint32",                      { moo_pf_system_get_uint32,                2, 2 } },
 	{ "System_getUint64",                      { moo_pf_system_get_uint64,                2, 2 } },
 	{ "System_getUint8",                       { moo_pf_system_get_uint8,                 2, 2 } },
+	{ "System_halting",                        { pf_system_halting,                       0, 0 } },
 	{ "System_log",                            { pf_system_log,                           2, MA } },
 	{ "System_malloc",                         { moo_pf_system_malloc,                    1, 1 } },
 	{ "System_malloc:",                        { moo_pf_system_malloc,                    1, 1 } },

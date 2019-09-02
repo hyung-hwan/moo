@@ -1255,13 +1255,14 @@ typedef struct moo_vmprim_t moo_vmprim_t;
 /* =========================================================================
  * CALLBACK MANIPULATION
  * ========================================================================= */
-typedef void (*moo_cbimpl_t) (moo_t* moo);
+typedef void (*moo_evtcb_impl_t) (moo_t* moo);
 
 typedef struct moo_evtcb_t moo_evtcb_t;
 struct moo_evtcb_t
 {
-	moo_cbimpl_t gc;
-	moo_cbimpl_t fini;
+	moo_evtcb_impl_t gc;
+	moo_evtcb_impl_t halting;
+	moo_evtcb_impl_t fini;
 
 	/* private below */
 	moo_evtcb_t*     prev;

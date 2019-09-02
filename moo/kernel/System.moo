@@ -184,12 +184,15 @@ class System(Apex)
 			//(Processor _processById: 1) resume. //<---- i shouldn't do ths. but, this system causes VM assertion failure. fix it....
 			self.gcfin_should_exit := true.
 			self.gcfin_sem signal. // wake the gcfin process.
+
+			System _halting.
 		].
 	}
 
 	method(#class,#primitive) _getSig.
 	method(#class,#primitive) _getSigfd.
 	method(#class,#primitive) _setSig: signo.
+	method(#class,#primitive) _halting.
 
 	method(#class,#primitive) _popCollectable.
 	method(#class,#primitive) collectGarbage.
