@@ -3009,6 +3009,8 @@ static moo_pfrc_t pf_semaphore_unsignal (moo_t* moo, moo_mod_t* mod, moo_ooi_t n
 	}
 	else if (sem->subtype == MOO_SMOOI_TO_OOP(MOO_SEMAPHORE_SUBTYPE_IO))
 	{
+		moo_oop_process_t wp; /* waiting process */
+
 		/* the semaphore is associated with IO */
 		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.index) && MOO_OOP_TO_SMOOI(sem->u.io.index) >= 0);
 		MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(sem->u.io.type));
@@ -3029,7 +3031,6 @@ static moo_pfrc_t pf_semaphore_unsignal (moo_t* moo, moo_mod_t* mod, moo_ooi_t n
 		 * waiting on this IO semaphore, the process now is treated
 		 * as if it's waiting on a plain semaphore. let's adjust
 		 * the number of processes waiting on IO semaphores */
-		moo_oop_process_t wp; /* waiting process */
 		for (wp = sem->waiting.first; (moo_oop_t)wp != moo->_nil; wp = wp->sem_wait.next)
 		{
 			MOO_ASSERT (moo, moo->sem_io_wait_count > 0);
