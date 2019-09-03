@@ -219,9 +219,9 @@ static MOO_INLINE void vm_gettime (moo_t* moo, moo_ntime_t* now)
 	MOO_SUB_NTIME (now, now, &moo->exec_start_time);  /* now = now - exec_start_time */
 }
 
-static MOO_INLINE void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
+static MOO_INLINE int vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 {
-	moo->vmprim.vm_sleep (moo, dur);
+	return moo->vmprim.vm_sleep(moo, dur);
 }
 
 static MOO_INLINE void vm_muxwait (moo_t* moo, const moo_ntime_t* dur)
@@ -4878,9 +4878,10 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 			{
 				moo_oop_process_t proc;
 
+			signal_timed:
 				/* waited long enough. signal the semaphore */
 
-				proc = signal_semaphore (moo, moo->sem_heap[0]);
+				proc = signal_semaphore(moo, moo->sem_heap[0]);
 				/* [NOTE] no moo_pushvolat() on proc. no GC must occur
 				 *        in the following line until it's used for
 				 *        wake_process() below. */
@@ -4931,9 +4932,17 @@ static MOO_INLINE int switch_process_if_needed (moo_t* moo)
 				}
 				else
 				{
+					int halting;
+
 					/* no running process, no io semaphore */
 					if ((moo_oop_t)moo->sem_gcfin != moo->_nil && moo->sem_gcfin_sigreq) goto signal_sem_gcfin;
-					vm_sleep (moo, &ft);
+					halting = vm_sleep(moo, &ft);
+
+					if (halting)
+					{
+						vm_gettime (moo, &now);
+						goto signal_timed;
+					}
 				}
 				vm_gettime (moo, &now);
 			}

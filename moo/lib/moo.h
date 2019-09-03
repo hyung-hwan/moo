@@ -1201,7 +1201,7 @@ typedef void (*moo_vmprim_muxwait_t) (
 	moo_vmprim_muxwait_cb_t muxwcb
 );
 
-typedef void (*moo_vmprim_sleep_t) (
+typedef int (*moo_vmprim_sleep_t) (
 	moo_t*                  moo,
 	const moo_ntime_t*      duration
 );

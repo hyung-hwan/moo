@@ -380,8 +380,9 @@ struct xtn_t
 		pthread_mutex_t mtx;
 		pthread_cond_t cnd;
 		pthread_cond_t cnd2;
-		int halting;
 	#endif
+
+		int halting;
 	} ev;
 };
 
@@ -2477,7 +2478,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	if (!xtn->iothr.up) 
 	{
 		xtn->iothr.up = 1;
-		if (pthread_create (&xtn->iothr.thr, MOO_NULL, iothr_main, moo) != 0)
+		if (pthread_create(&xtn->iothr.thr, MOO_NULL, iothr_main, moo) != 0)
 		{
 			MOO_LOG2 (moo, MOO_LOG_WARN, "Warning: pthread_create failure - %d, %hs\n", errno, strerror(errno));
 			xtn->iothr.up = 0;
@@ -2511,7 +2512,7 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 		ts.tv_nsec = ns.nsec;
 
 		pthread_mutex_lock (&xtn->ev.mtx);
-		if (xtn->ev.len <= 0 && !xtn->ev.halting)
+		if (xtn->ev.len <= 0)
 		{
 			/* the event buffer is still empty */
 			pthread_cond_timedwait (&xtn->ev.cnd2, &xtn->ev.mtx, &ts);
@@ -2725,10 +2726,13 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 #	endif
 #endif
 
-static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
+static int vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 {
-#if defined(_WIN32)
 	xtn_t* xtn = GET_XTN(moo);
+
+	if (MOO_UNLIKELY(xtn->ev.halting)) return xtn->ev.halting;
+
+#if defined(_WIN32)
 	if (xtn->waitable_timer)
 	{
 		LARGE_INTEGER li;
@@ -2751,50 +2755,56 @@ static void vm_sleep (moo_t* moo, const moo_ntime_t* dur)
 #elif defined(macintosh)
 
 	/* TODO: ... */
+#	error NOT IMPLEMENTED
 
 #elif defined(__DOS__) && (defined(_INTELC32_) || defined(__WATCOMC__))
-
-	clock_t c;
-
-	c = clock ();
-	c += dur->sec * CLOCKS_PER_SEC;
-
-	#if (CLOCKS_PER_SEC == 100)
-		c += MOO_NSEC_TO_MSEC(dur->nsec) / 10;
-	#elif (CLOCKS_PER_SEC == 1000)
-		c += MOO_NSEC_TO_MSEC(dur->nsec);
-	#elif (CLOCKS_PER_SEC == 1000000L)
-		c += MOO_NSEC_TO_USEC(dur->nsec);
-	#elif (CLOCKS_PER_SEC == 1000000000L)
-		c += dur->nsec;
-	#else
-	#	error UNSUPPORTED CLOCKS_PER_SEC
-	#endif
-
-/* TODO: handle clock overvlow */
-/* TODO: check if there is abortion request or interrupt */
-	while (c > clock()) 
 	{
-		_halt_cpu();
-	}
+		clock_t c;
 
-#else
-	#if defined(USE_THREAD)
+		c = clock ();
+		c += dur->sec * CLOCKS_PER_SEC;
+
+		#if (CLOCKS_PER_SEC == 100)
+			c += MOO_NSEC_TO_MSEC(dur->nsec) / 10;
+		#elif (CLOCKS_PER_SEC == 1000)
+			c += MOO_NSEC_TO_MSEC(dur->nsec);
+		#elif (CLOCKS_PER_SEC == 1000000L)
+			c += MOO_NSEC_TO_USEC(dur->nsec);
+		#elif (CLOCKS_PER_SEC == 1000000000L)
+			c += dur->nsec;
+		#else
+		#	error UNSUPPORTED CLOCKS_PER_SEC
+		#endif
+
+	/* TODO: handle clock overvlow */
+	/* TODO: check if there is abortion request or interrupt */
+		while (c > clock()) 
+		{
+			_halt_cpu();
+		}
+	}
+#elif defined(USE_THREAD)
 	/* the sleep callback is called only if there is no IO semaphore 
 	 * waiting. so i can safely call vm_muxwait() without a muxwait callback
 	 * when USE_THREAD is true */
-		vm_muxwait (moo, dur, MOO_NULL);
-	#elif defined(HAVE_NANOSLEEP)
+	vm_muxwait (moo, dur, MOO_NULL);
+
+#elif defined(HAVE_NANOSLEEP)
+	{
 		struct timespec ts;
 		ts.tv_sec = dur->sec;
 		ts.tv_nsec = dur->nsec;
 		nanosleep (&ts, MOO_NULL);
-	#elif defined(HAVE_USLEEP)
-		usleep (MOO_SECNSEC_TO_USEC(dur->sec, dur->nsec));
-	#else
-	#	error UNSUPPORT SLEEP
-	#endif
+	}
+
+#elif defined(HAVE_USLEEP)
+	usleep (MOO_SECNSEC_TO_USEC(dur->sec, dur->nsec));
+
+#else
+#	error UNSUPPORTED SLEEP
 #endif
+
+	return 0;
 }
 
 static moo_ooi_t vm_getsigfd (moo_t* moo)
@@ -3692,18 +3702,11 @@ static void fini_moo (moo_t* moo)
 
 static void halting_moo (moo_t* moo)
 {
-#if defined(USE_THREAD)
 	xtn_t* xtn = GET_XTN(moo);
-	xtn->ev.halting = 1;
-	pthread_mutex_unlock (&xtn->ev.mtx);
-	pthread_cond_signal (&xtn->ev.cnd2);
-	pthread_mutex_unlock (&xtn->ev.mtx);
-#else
-#	error NOT IMPLEMENTED YET
-#endif
+	xtn->ev.halting = 1; /* once set, vm_sleep() is supposed to return without waiting */
 }
 
- moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfgstd_t* cfg, moo_errinf_t* errinfo)
+moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfgstd_t* cfg, moo_errinf_t* errinfo)
 {
 	moo_t* moo;
 	moo_vmprim_t vmprim;
