@@ -3756,7 +3756,6 @@ static void halting_moo (moo_t* moo)
 	evtcb.halting = halting_moo;
 	moo_regevtcb (moo, &evtcb);
 
-
 	{
 		moo_bitmask_t bm = 0;
 

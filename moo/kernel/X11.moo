@@ -687,6 +687,7 @@ extend X11
 
 'CLOSING X11 EVENT LOOP' dump.
 
+					//self.event_loop_sem signal. // in case the process is suspended in self.event_loop_sem wait.
 					self.event_loop_sem unsignal.
 			// TODO: LOOK HERE FOR RACE CONDITION with exitEventLoop.
 					self.event_loop_sem := nil.
