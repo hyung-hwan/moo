@@ -118,6 +118,7 @@ static struct voca_t
 	{  5, { 'c','l','a','s','s'                                           } },
 	{  6, { '#','c','l','a','s','s'                                       } },
 	{ 10, { '#','c','l','a','s','s','i','n','s','t'                       } },
+	{  5, { 'c','o','n','s','t'                                           } },
 	{  8, { 'c','o','n','t','i','n','u','e'                               } },
 	{  2, { 'd','o'                                                       } },
 	{  5, { '#','d','u','a','l'                                           } },
@@ -187,6 +188,7 @@ enum voca_id_t
 	VOCA_CLASS,
 	VOCA_CLASS_S,
 	VOCA_CLASSINST_S,
+	VOCA_CONST,
 	VOCA_CONTINUE,
 	VOCA_DO,
 	VOCA_DUAL_S,
@@ -430,6 +432,7 @@ static int is_restricted_word (const moo_oocs_t* ucs)
 	static int rw[] = 
 	{
 		VOCA_CLASS,
+		VOCA_CONST,
 		VOCA_EXTEND,
 		VOCA_FROM,
 		VOCA_IMPORT,
@@ -4011,6 +4014,12 @@ static int compile_class_level_imports (moo_t* moo)
 	}
 
 	GET_TOKEN (moo);
+	return 0;
+}
+
+static int compile_class_level_consts (moo_t* moo)
+{
+	/* TODO: */
 	return 0;
 }
 
@@ -9068,6 +9077,9 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 			}
 			while (1);
 		}
+
+
+		/* TODO: load constants here? */
 	}
 	else
 	{
@@ -9103,6 +9115,12 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 				/* import declaration */
 				GET_TOKEN (moo);
 				if (compile_class_level_imports(moo) <= -1) return -1;
+			}
+			else if (is_token_word(moo, VOCA_CONST))
+			{
+				/* constant declaration */
+				GET_TOKEN (moo);
+				if (compile_class_level_consts(moo) <= -1) return -1;
 			}
 			else break;
 		}

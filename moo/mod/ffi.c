@@ -30,15 +30,13 @@
 #include <errno.h>
 #include <string.h>
 
-#if defined(HAVE_DYNCALL_LIB) && defined(HAVE_DYNCALL_H)
-#	define USE_DYNCALL
-#elif defined(HAVE_FFI_LIB) && defined(HAVE_FFI_H)
+#if defined(HAVE_FFI_LIB) && defined(HAVE_FFI_H)
 #	define USE_LIBFFI
+#elif defined(HAVE_DYNCALL_LIB) && defined(HAVE_DYNCALL_H)
+#	define USE_DYNCALL
 #endif
 
-#if defined(USE_DYNCALL)
-#	include <dyncall.h>
-#elif defined(USE_LIBFFI)
+#if defined(USE_LIBFFI)
 #	include <ffi.h>
 #	if (MOO_SIZEOF_LONG_LONG > 0) && !defined(ffi_type_ulonglong)
 #		if MOO_SIZEOF_LONG_LONG == MOO_SIZEOF_INT32_T
@@ -49,6 +47,8 @@
 #			define ffi_type_slonglong ffi_type_sint64
 #		endif
 #	endif
+#elif defined(USE_DYNCALL)
+#	include <dyncall.h>
 #endif
 
 #define FMTC_NULL '\0' /* internal use only */
