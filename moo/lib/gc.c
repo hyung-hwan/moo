@@ -387,12 +387,21 @@ static kernel_class_info_t kernel_classes[] =
 
 	{ 12,
 	  { 'S','m','a','l','l','P','o','i','n','t','e','r' },
-	  0,
+	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
 	  0,
 	  0,
 	  0,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _small_pointer) },
+
+	{ 12,
+	  { 'L','a','r','g','e','P','o','i','n','t','e','r' },
+	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
+	  0,
+	  1,  /* #word(1) */
+	  MOO_CLASS_SPEC_FLAG_IMMUTABLE | MOO_CLASS_SPEC_FLAG_INDEXED,
+	  MOO_OBJ_TYPE_WORD,
+	  MOO_OFFSETOF(moo_t, _large_pointer) },
 
 	{ 6,
 	  { 'S','y','s','t','e','m' },

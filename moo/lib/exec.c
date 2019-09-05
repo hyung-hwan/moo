@@ -4085,8 +4085,9 @@ static moo_pfrc_t pf_error_as_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t narg
 	ec = MOO_OOP_TO_ERROR(rcv);
 	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(ec));
 
-/* TODO: error string will be mostly the same.. do i really have to call makestring every time? */
-	s = moo_errnum_to_errstr (ec);
+/* TODO: error string will be mostly the same.. do i really have to call makestring every time? 
+ *       cache the error string object created? */
+	s = moo_errnum_to_errstr(ec);
 	ss = moo_makestring (moo, s, moo_count_oocstr(s));
 	if (!ss) return MOO_PF_FAILURE;
 

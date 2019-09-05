@@ -381,7 +381,7 @@ TODO: how to pass all variadic arguments to another variadic methods???
 }
 
 
-class SmallPointer(Object)
+class(#limited) SmallPointer(Object)
 {
 	method(#primitive) asString.
 
@@ -409,6 +409,6 @@ class SmallPointer(Object)
 	method(#primitive) free.
 }
 
-class LargePointer(Object)
+class(#limited,#immutable,#word(1)) LargePointer(Object)
 {
 }

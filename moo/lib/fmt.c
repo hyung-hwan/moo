@@ -1436,7 +1436,7 @@ int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 
 			for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
 			{
-				ch = MOO_OBJ_GET_CHAR_SLOT(oop)[i];
+				ch = MOO_OBJ_GET_CHAR_VAL(oop, i);
 				if ((ch >= '\0' && ch < ' ') || ch == '\\' || ch == '\"') 
 				{
 					escape = 1;
@@ -1451,7 +1451,7 @@ int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 				if (moo_bfmt_out(fmtout, ((c == moo->_symbol)? "#\"": "\"")) <= -1) return -1;
 				for (i = 0; i < MOO_OBJ_GET_SIZE(oop); i++)
 				{
-					ch = MOO_OBJ_GET_CHAR_SLOT(oop)[i];
+					ch = MOO_OBJ_GET_CHAR_VAL(oop, i);
 					if (ch >= '\0' && ch < ' ') 
 					{
 						switch (ch)

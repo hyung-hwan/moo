@@ -844,6 +844,7 @@ static moo_oop_t string_to_smptr (moo_t* moo, moo_oocs_t* str, moo_ioloc_t* loc)
 {
 	moo_oow_t num = 0;
 	const moo_ooch_t* ptr, * end;
+	moo_oop_t ret;
 
 	ptr = str->ptr,
 	end = str->ptr + str->len;
@@ -873,6 +874,7 @@ static moo_oop_t string_to_smptr (moo_t* moo, moo_oocs_t* str, moo_ioloc_t* loc)
 		ptr++;
 	}
 
+#if 0
 	if (!MOO_IN_SMPTR_RANGE(num))
 	{
 		moo_setsynerr (moo, MOO_SYNERR_SMPTRLITINVAL, loc, str);
@@ -880,6 +882,14 @@ static moo_oop_t string_to_smptr (moo_t* moo, moo_oocs_t* str, moo_ioloc_t* loc)
 	}
 
 	return MOO_SMPTR_TO_OOP(num);
+#else
+	/* TODO: change the function name from string_to_smptr() to string_to_ptr() if this part of code is permanently accepted */
+	if (MOO_IN_SMPTR_RANGE(num)) return MOO_SMPTR_TO_OOP(num);
+	ret = moo_instantiate(moo, moo->_large_pointer, MOO_NULL, 0);
+	if (!ret) return MOO_NULL;
+	MOO_OBJ_SET_WORD_VAL(ret, 0, num);
+	return ret;
+#endif
 }
 
 /* ---------------------------------------------------------------------

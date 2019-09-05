@@ -1562,6 +1562,7 @@ struct moo_t
 	moo_oop_class_t _fixed_point_decimal; /* FixedPointDecimal */
 
 	moo_oop_class_t _small_pointer;
+	moo_oop_class_t _large_pointer;
 	moo_oop_class_t _system;
 	/* =============================================================
 	 * END KERNEL CLASSES 

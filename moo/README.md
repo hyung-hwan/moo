@@ -62,6 +62,27 @@ class MyClass(Object)
 }
 ```
 
+Class attributes
+
+The word class can be followed by attribute list enclosed in parenthesis. e.g.) class(#limited,#immutable)
+ 
+* #limited - not instantiable with new.
+* #immutable - instantiated object to be read-only.
+* #final - disallow subclasses.
+* #byte, #character, #halfword, #word, #liword, #pointer - 
+  specify the type of a non-pointer object. a non-pointer type can have an additional size 
+  enclosed in parenthesis. e.g.) #character(2)
+  a non-pointer object is not allowed to have named instanced variables.
+  a non-pointer object is always variable indexed.
+* #pointer - specify a pointer variable indexed object. an instantiate object can have extra 
+  object pointers in additon to named instance variables.
+
+```
+class(#word(2)) X(Object) { } 
+X new -> create an object with 2 words.
+X new: 4 -> create an object with 6 words.
+```
+
 ### Flow Control
 ```
 k := if (i < 20) { 30 } else { 40 }.
