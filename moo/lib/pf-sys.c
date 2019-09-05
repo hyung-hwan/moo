@@ -282,7 +282,7 @@ static MOO_INLINE moo_oop_t _fetch_raw_uint (moo_t* moo, moo_uint8_t* rawptr, mo
 			return MOO_NULL;
 	}
 
-	return moo_oowtoint (moo, v);
+	return moo_oowtoint(moo, v);
 }
 
 
@@ -1093,7 +1093,7 @@ moo_pfrc_t moo_pf_smptr_as_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	ptr = MOO_OOP_TO_SMPTR(rcv);
 	sprintptr (buf, (moo_oow_t)ptr, &len);
 
-	ss = moo_makestring (moo, buf, len);
+	ss = moo_makestring(moo, buf, len);
 	if (!ss) return MOO_PF_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, ss);

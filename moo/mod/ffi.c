@@ -542,7 +542,8 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	sig = MOO_STACK_GETARG(moo, nargs, 1);
 	args = MOO_STACK_GETARG(moo, nargs, 2);
 
-	if (!MOO_OOP_IS_SMPTR(fun)) goto inval;
+	if (MOO_OOP_IS_SMPTR(fun)) f = MOO_OOP_TO_SMPTR(fun);
+	else if (moo_inttooow(moo, fun, (moo_oow_t*)&f) <= -1) goto softfail;
 
 	/* the signature must not be empty. at least the return type must be
 	 * specified */
@@ -553,9 +554,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	if (MOO_OBJ_GET_SIZE(sig) > 1 && MOO_CLASSOF(moo,args) != moo->_array) goto inval;
 #endif
 
-	f = MOO_OOP_TO_SMPTR(fun); 
 	arr = (moo_oop_oop_t)args;
-
 	/*MOO_DEBUG2 (moo, "<ffi.call> %p in %p\n", f, ffi->handle);*/
 
 #if defined(USE_DYNCALL)
@@ -782,7 +781,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 			if (!MOO_IN_SMPTR_RANGE(r)) 
 			{
 				/* the returned pointer is not aligned */
-				goto softfail;
+				goto inval;
 			}
 
 			MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP(r));
@@ -827,7 +826,7 @@ hardfail:
 static moo_pfrc_t pf_getsym (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	ffi_t* ffi;
-	moo_oop_t name;
+	moo_oop_t name, ret;
 	void* sym;
 
 	MOO_ASSERT (moo, nargs == 1);
@@ -852,8 +851,28 @@ static moo_pfrc_t pf_getsym (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	MOO_DEBUG4 (moo, "<ffi.getsym> %.*js => %p in %p\n", MOO_OBJ_GET_SIZE(name), MOO_OBJ_GET_CHAR_SLOT(name), sym, ffi->handle);
 
-	MOO_ASSERT (moo, MOO_IN_SMPTR_RANGE(sym));
-	MOO_STACK_SETRET (moo, nargs, MOO_SMPTR_TO_OOP(sym));
+#if 0
+	ret = moo_oowtoptr(moo, (moo_oow_t)sym);
+	if (!ret) goto softfail;
+
+#else
+	if (MOO_IN_SMPTR_RANGE(sym))
+	{
+		ret = MOO_SMPTR_TO_OOP(sym);
+	}
+	else
+	{
+		ret = moo_oowtoint(moo, (moo_oow_t)sym);
+		if (!ret) goto softfail;
+		/*
+		MOO_DEBUG1 (moo, "<ffi.getsym> unaligned symbol address - %p\n", sym);
+		moo_seterrnum (moo, MOO_EINVAL);
+		goto softfail;
+		*/
+	}
+#endif
+
+	MOO_STACK_SETRET (moo, nargs, ret);
 	return MOO_PF_SUCCESS;
 
 softfail:

@@ -408,3 +408,7 @@ class SmallPointer(Object)
 
 	method(#primitive) free.
 }
+
+class LargePointer(Object)
+{
+}

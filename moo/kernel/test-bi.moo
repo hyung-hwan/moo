@@ -40,7 +40,8 @@ class MyObject(Object)
 		| ffi now |
 
 
-		ffi := FFI new: 'libc.so.6'.
+		[ ffi := FFI new: 'libc.so.6'. ] on: Exception do: [:ex | ffi := FFI new: 'libc.so' ].
+
 		now := ffi call: #time signature: 'l>i' arguments: #(0).
 		////ffi call: #srand signature: 'i>' arguments: ##(now).
 		ffi call: #srandom signature: 'i>' arguments: ##(now).

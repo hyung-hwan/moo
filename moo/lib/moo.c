@@ -840,7 +840,7 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 		goto oops;
 	}
 
-	mnsym = (moo_oop_char_t)moo_makesymbol (moo, mthname, i);
+	mnsym = (moo_oop_char_t)moo_makesymbol(moo, mthname, i);
 	if (!mnsym) goto oops;
 	moo_pushvolat (moo, (moo_oop_t*)&mnsym); tmp_count++;
 
