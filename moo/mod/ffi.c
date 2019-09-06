@@ -542,8 +542,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	sig = MOO_STACK_GETARG(moo, nargs, 1);
 	args = MOO_STACK_GETARG(moo, nargs, 2);
 
-	if (MOO_OOP_IS_SMPTR(fun)) f = MOO_OOP_TO_SMPTR(fun);
-	else if (moo_inttooow(moo, fun, (moo_oow_t*)&f) <= -1) goto softfail;
+	if (moo_ptrtooow(moo, fun, (moo_oow_t*)&f) <= -1) goto softfail;
 
 	/* the signature must not be empty. at least the return type must be
 	 * specified */
@@ -851,26 +850,8 @@ static moo_pfrc_t pf_getsym (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	MOO_DEBUG4 (moo, "<ffi.getsym> %.*js => %p in %p\n", MOO_OBJ_GET_SIZE(name), MOO_OBJ_GET_CHAR_SLOT(name), sym, ffi->handle);
 
-#if 0
 	ret = moo_oowtoptr(moo, (moo_oow_t)sym);
 	if (!ret) goto softfail;
-
-#else
-	if (MOO_IN_SMPTR_RANGE(sym))
-	{
-		ret = MOO_SMPTR_TO_OOP(sym);
-	}
-	else
-	{
-		ret = moo_oowtoint(moo, (moo_oow_t)sym);
-		if (!ret) goto softfail;
-		/*
-		MOO_DEBUG1 (moo, "<ffi.getsym> unaligned symbol address - %p\n", sym);
-		moo_seterrnum (moo, MOO_EINVAL);
-		goto softfail;
-		*/
-	}
-#endif
 
 	MOO_STACK_SETRET (moo, nargs, ret);
 	return MOO_PF_SUCCESS;

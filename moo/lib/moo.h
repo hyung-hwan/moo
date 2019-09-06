@@ -2173,6 +2173,7 @@ MOO_EXPORT int moo_initdbgi (
 MOO_EXPORT void moo_finidbgi (
 	moo_t* moo
 );
+
 /* =========================================================================
  * COMMON OBJECT MANAGEMENT FUNCTIONS
  * ========================================================================= */
@@ -2253,6 +2254,17 @@ MOO_EXPORT int moo_inttointmax (
 	moo_intmax_t* i
 );
 #endif
+
+MOO_EXPORT moo_oop_t moo_oowtoptr (
+	moo_t*    moo,
+	moo_oow_t num
+);
+
+MOO_EXPORT int moo_ptrtooow (
+	moo_t*      moo,
+	moo_oop_t   ptr,
+	moo_oow_t*  num
+);
 
 MOO_EXPORT moo_oop_t moo_findclass (
 	moo_t*            moo,

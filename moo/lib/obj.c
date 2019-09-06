@@ -387,3 +387,33 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_class_t _class, moo_oo
 	moo_popvolats (moo, tmp_count);
 	return oop;
 }
+
+moo_oop_t moo_oowtoptr (moo_t* moo, moo_oow_t num)
+{
+	moo_oop_t ret;
+
+	if (MOO_IN_SMPTR_RANGE(num)) return MOO_SMPTR_TO_OOP(num);
+	ret = moo_instantiate(moo, moo->_large_pointer, MOO_NULL, 0);
+	if (!ret) return MOO_NULL;
+	MOO_OBJ_SET_WORD_VAL(ret, 0, num);
+	return ret;
+}
+
+int moo_ptrtooow (moo_t* moo, moo_oop_t ptr, moo_oow_t* num)
+{
+	if (MOO_OOP_IS_SMPTR(ptr)) 
+	{
+		*num = (moo_oow_t)MOO_OOP_TO_SMPTR(ptr);
+		return 0;
+	}
+
+	if (MOO_CLASSOF(moo, ptr) == moo->_large_pointer)
+	{
+		MOO_ASSERT (moo, MOO_OBJ_GET_SIZE(ptr) == 1);
+		*num = MOO_OBJ_GET_WORD_VAL(ptr, 0);
+		return 0;
+	}
+
+	moo_seterrnum (moo, MOO_EINVAL);
+	return -1;
+}
