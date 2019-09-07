@@ -409,6 +409,6 @@ class(#limited) SmallPointer(Object)
 	method(#primitive) free.
 }
 
-class(#limited,#immutable,#word(1)) LargePointer(Object)
+class(#limited,#immutable,#word(1)) LargePointer(SmallPointer)
 {
 }

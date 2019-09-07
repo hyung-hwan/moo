@@ -24,27 +24,7 @@
     THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-#define _GNU_SOURCE
-
-
 #include "moo-prv.h"
-
-/* TODO: experimental */
-#include <signal.h>
-#include <sys/ucontext.h>
-
-static int segfault = 0;
-void on_segfault (int sig, siginfo_t* si, void* ctx)
-{
-	ucontext_t* context = (ucontext_t*)ctx;
-
-	printf ("SEG FAULT AT %p instruction at %p\n", si->si_addr, context->uc_mcontext.gregs[REG_RIP]);
-
-	/*printf ("SEG FAULT AT %p instruction at %p\n", si->si_addr, context->uc_mcontext.arm_pc); arm */
-	segfault = 1;
-	context->uc_mcontext.gregs[REG_RIP] += 1; /* very platform and instruction specific... */
-}
 
 moo_pfrc_t moo_pf_system_collect_garbage (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
@@ -138,8 +118,8 @@ static MOO_INLINE moo_pfrc_t _system_alloc (moo_t* moo, moo_ooi_t nargs, int cle
 		return MOO_PF_FAILURE;
 	}
 
-	ptr = clear? moo_callocmem (moo, MOO_OOP_TO_SMOOI(tmp)):
-	             moo_allocmem (moo, MOO_OOP_TO_SMOOI(tmp));
+	ptr = clear? moo_callocmem(moo, MOO_OOP_TO_SMOOI(tmp)):
+	             moo_allocmem(moo, MOO_OOP_TO_SMOOI(tmp));
 	if (!ptr) return MOO_PF_FAILURE;
 
 	if (!MOO_IN_SMPTR_RANGE(ptr))
@@ -156,13 +136,13 @@ static MOO_INLINE moo_pfrc_t _system_alloc (moo_t* moo, moo_ooi_t nargs, int cle
 moo_pfrc_t moo_pf_system_calloc (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->_system);*/
-	return _system_alloc (moo, nargs, 1);
+	return _system_alloc(moo, nargs, 1);
 }
 
 moo_pfrc_t moo_pf_system_malloc (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	/*MOO_PF_CHECK_RCV (moo, MOO_STACK_GETRCV(moo, nargs) == (moo_oop_t)moo->_system);*/
-	return _system_alloc (moo, nargs, 0);
+	return _system_alloc(moo, nargs, 0);
 }
 
 moo_pfrc_t moo_pf_system_free (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
@@ -260,7 +240,7 @@ static MOO_INLINE moo_oop_t _fetch_raw_int (moo_t* moo, moo_int8_t* rawptr, moo_
 			return MOO_NULL;
 	}
 
-	return moo_ooitoint (moo, v);
+	return moo_ooitoint(moo, v);
 }
 
 
@@ -302,13 +282,12 @@ static MOO_INLINE moo_oop_t _fetch_raw_uint (moo_t* moo, moo_uint8_t* rawptr, mo
 	return moo_oowtoint(moo, v);
 }
 
-
-
 static MOO_INLINE int _store_raw_int (moo_t* moo, moo_uint8_t* rawptr, moo_oow_t offset, int size, moo_oop_t voop)
 {
+	int n;
 	moo_ooi_t w, max, min;
 
-	if (moo_inttoooi(moo, voop, &w) == 0) 
+	if ((n = moo_inttoooi(moo, voop, &w)) == 0)  /* not convertable */
 	{
 		moo_seterrbfmt (moo, moo_geterrnum(moo), "invalid value %O for raw signed memory store", voop);
 		return -1;
@@ -324,35 +303,40 @@ static MOO_INLINE int _store_raw_int (moo_t* moo, moo_uint8_t* rawptr, moo_oow_t
 		return -1;
 	}
 
+	n = 0;
 	switch (size)
 	{ 
 		case 1:
 			((struct st_int8_t*)&rawptr[offset])->v = w;
-			return 0;
+			break;
 
 		case 2:
 			((struct st_int16_t*)&rawptr[offset])->v = w;
-			return 0;
+			break;
 
 		case 4:
 			((struct st_int32_t*)&rawptr[offset])->v = w;
-			return 0;
+			break;
 
 	#if defined(MOO_HAVE_INT64_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_INT64_T)
 		case 8:
 			((struct st_int64_t*)&rawptr[offset])->v = w; 
-			return 0;
+			break;
 	#endif
 
 	#if defined(MOO_HAVE_INT128_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_INT128_T)
 		case 16:
 			((struct st_int128_t*)&rawptr[offset])->v = w; 
-			return 0;
+			break;
 	#endif
+
+		default:
+			moo_seterrbfmt (moo, MOO_EINVAL, "unsupported size %d for raw signed memory store",  size);
+			n = -1;
 	}
 
-	moo_seterrbfmt (moo, MOO_EINVAL, "unsupported size %d for raw signed memory store",  size);
-	return -1;
+	
+	return n;
 }
 
 static MOO_INLINE int _store_raw_uint (moo_t* moo, moo_uint8_t* rawptr, moo_oow_t offset, int size, moo_oop_t voop)
@@ -380,21 +364,7 @@ static MOO_INLINE int _store_raw_uint (moo_t* moo, moo_uint8_t* rawptr, moo_oow_
 		return -1;
 	}
 
-#if defined(_WIN32)
-	__try
-	{
-#else
-	struct sigaction sa, oldsa1, oldsa2;
-	MOO_MEMSET (&sa, 0, MOO_SIZEOF(sa));
-	sigemptyset (&sa.sa_mask);
-	sa.sa_sigaction = on_segfault;
-	sa.sa_flags = SA_SIGINFO;
-	sigaction (SIGSEGV, &sa, &oldsa1);
-	sigaction (SIGBUS, &sa, &oldsa2);
-	segfault = 0;
-#endif
-
-	n = 1; /* ok */
+	n = 0;
 	switch (size)
 	{ 
 		case 1:
@@ -422,34 +392,11 @@ static MOO_INLINE int _store_raw_uint (moo_t* moo, moo_uint8_t* rawptr, moo_oow_
 	#endif
 
 		default:
-			n = 0; /* not ok */
-			break;
+			moo_seterrbfmt (moo, MOO_EINVAL, "unsupported size %d for raw unsigned memory store",  size);
+			n = -1;
 	}
 
-#if defined(_WIN32)
-	}
-	__except (EXCEPTION_EXECUTE_HANDLER)
-	{
-		moo_seterrbfmt (moo, MOO_EACCES, "invalid memory access at %p",  (moo_uint8_t*)rawptr + offset);
-		return -1;
-	}
-#else
-	if (n)
-	{
-		sigaction (SIGSEGV, &oldsa1, MOO_NULL);
-		sigaction (SIGBUS, &oldsa2, MOO_NULL);
-		if (segfault)
-		{
-			moo_seterrbfmt (moo, MOO_EACCES, "invalid memory access at %p",  (moo_uint8_t*)rawptr + offset);
-			return -1;
-		}
-
-		return 0;
-	}
-#endif
-
-	moo_seterrbfmt (moo, MOO_EINVAL, "unsupported size %d for raw unsigned memory store",  size);
-	return -1;
+	return n;
 }
 
 /* ------------------------------------------------------------------------------------- */
@@ -518,42 +465,42 @@ static moo_pfrc_t _get_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
 
 moo_pfrc_t moo_pf_system_get_int8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_system_int (moo, nargs, 1);
+	return _get_system_int(moo, nargs, 1);
 }
 
 moo_pfrc_t moo_pf_system_get_int16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_system_int (moo, nargs, 2);
+	return _get_system_int(moo, nargs, 2);
 }
 
 moo_pfrc_t moo_pf_system_get_int32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_system_int (moo, nargs, 4);
+	return _get_system_int(moo, nargs, 4);
 }
 
 moo_pfrc_t moo_pf_system_get_int64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_system_int (moo, nargs, 8);
+	return _get_system_int(moo, nargs, 8);
 }
 
 moo_pfrc_t moo_pf_system_get_uint8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_system_uint (moo, nargs, 1);
+	return _get_system_uint(moo, nargs, 1);
 }
 
 moo_pfrc_t moo_pf_system_get_uint16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_system_uint (moo, nargs, 2);
+	return _get_system_uint(moo, nargs, 2);
 }
 
 moo_pfrc_t moo_pf_system_get_uint32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_system_uint (moo, nargs, 4);
+	return _get_system_uint(moo, nargs, 4);
 }
 
 moo_pfrc_t moo_pf_system_get_uint64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_system_uint (moo, nargs, 8);
+	return _get_system_uint(moo, nargs, 8);
 }
 
 static moo_pfrc_t _put_system_int (moo_t* moo, moo_ooi_t nargs, int size)
@@ -607,11 +554,11 @@ static moo_pfrc_t _put_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
 	tmp = MOO_STACK_GETARG(moo, nargs, 1);
 	if (moo_inttooow(moo, tmp, &offset) <= 0)
 	{
-			moo_seterrbfmt (moo, MOO_EINVAL, "invalid offset %O for raw unsigned memory store", tmp);
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid offset %O for raw unsigned memory store", tmp);
 		return MOO_PF_FAILURE;
 	}
 
-	if (_store_raw_uint (moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 2)) <= -1)
+	if (_store_raw_uint(moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 2)) <= -1)
 	{
 		return MOO_PF_FAILURE;
 	}
@@ -622,42 +569,42 @@ static moo_pfrc_t _put_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
 
 moo_pfrc_t moo_pf_system_put_int8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_system_int (moo, nargs, 1);
+	return _put_system_int(moo, nargs, 1);
 }
 
 moo_pfrc_t moo_pf_system_put_int16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_system_int (moo, nargs, 2);
+	return _put_system_int(moo, nargs, 2);
 }
 
 moo_pfrc_t moo_pf_system_put_int32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_system_int (moo, nargs, 4);
+	return _put_system_int(moo, nargs, 4);
 }
 
 moo_pfrc_t moo_pf_system_put_int64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_system_int (moo, nargs, 8);
+	return _put_system_int(moo, nargs, 8);
 }
 
 moo_pfrc_t moo_pf_system_put_uint8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_system_uint (moo, nargs, 1);
+	return _put_system_uint(moo, nargs, 1);
 }
 
 moo_pfrc_t moo_pf_system_put_uint16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_system_uint (moo, nargs, 2);
+	return _put_system_uint(moo, nargs, 2);
 }
 
 moo_pfrc_t moo_pf_system_put_uint32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_system_uint (moo, nargs, 4);
+	return _put_system_uint(moo, nargs, 4);
 }
 
 moo_pfrc_t moo_pf_system_put_uint64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_system_uint (moo, nargs, 8);
+	return _put_system_uint(moo, nargs, 8);
 }
 
 /* ------------------------------------------------------------------------------------- */
@@ -807,13 +754,13 @@ static moo_pfrc_t _get_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
 	}
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (moo_inttooow (moo, tmp, &offset) <= 0)
+	if (moo_inttooow(moo, tmp, &offset) <= 0)
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid offset %O for raw signed memory fetch", tmp);
 		return MOO_PF_FAILURE;
 	}
 
-	result = _fetch_raw_int (moo, rawptr, offset, size);
+	result = _fetch_raw_int(moo, rawptr, offset, size);
 	if (!result) return MOO_PF_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, result);
@@ -839,13 +786,13 @@ static moo_pfrc_t _get_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 	}
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (moo_inttooow (moo, tmp, &offset) <= 0)
+	if (moo_inttooow(moo, tmp, &offset) <= 0)
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid offset %O for raw unsigned memory fetch", tmp);
 		return MOO_PF_FAILURE;
 	}
 
-	result = _fetch_raw_uint (moo, rawptr, offset, size);
+	result = _fetch_raw_uint(moo, rawptr, offset, size);
 	if (!result) return MOO_PF_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, result);
@@ -854,42 +801,42 @@ static moo_pfrc_t _get_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 
  moo_pfrc_t moo_pf_smptr_get_int8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_smptr_int (moo, nargs, 1);
+	return _get_smptr_int(moo, nargs, 1);
 }
 
  moo_pfrc_t moo_pf_smptr_get_int16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_smptr_int (moo, nargs, 2);
+	return _get_smptr_int(moo, nargs, 2);
 }
 
  moo_pfrc_t moo_pf_smptr_get_int32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_smptr_int (moo, nargs, 4);
+	return _get_smptr_int(moo, nargs, 4);
 }
 
  moo_pfrc_t moo_pf_smptr_get_int64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_smptr_int (moo, nargs, 8);
+	return _get_smptr_int(moo, nargs, 8);
 }
 
  moo_pfrc_t moo_pf_smptr_get_uint8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_smptr_uint (moo, nargs, 1);
+	return _get_smptr_uint(moo, nargs, 1);
 }
 
  moo_pfrc_t moo_pf_smptr_get_uint16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_smptr_uint (moo, nargs, 2);
+	return _get_smptr_uint(moo, nargs, 2);
 }
 
  moo_pfrc_t moo_pf_smptr_get_uint32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_smptr_uint (moo, nargs, 4);
+	return _get_smptr_uint(moo, nargs, 4);
 }
 
  moo_pfrc_t moo_pf_smptr_get_uint64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _get_smptr_uint (moo, nargs, 8);
+	return _get_smptr_uint(moo, nargs, 8);
 }
 
 static moo_pfrc_t _put_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
@@ -916,7 +863,7 @@ static moo_pfrc_t _put_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
 		return MOO_PF_FAILURE;
 	}
 
-	if (_store_raw_int (moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 1)) <= -1)
+	if (_store_raw_int(moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 1)) <= -1)
 	{
 		return MOO_PF_FAILURE;
 	}
@@ -949,7 +896,7 @@ static moo_pfrc_t _put_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 		return MOO_PF_FAILURE;
 	}
 
-	if (_store_raw_uint (moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 1)) <= -1)
+	if (_store_raw_uint(moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 1)) <= -1)
 	{
 		return MOO_PF_FAILURE;
 	}
@@ -960,42 +907,42 @@ static moo_pfrc_t _put_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 
 moo_pfrc_t moo_pf_smptr_put_int8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_smptr_int (moo, nargs, 1);
+	return _put_smptr_int(moo, nargs, 1);
 }
 
 moo_pfrc_t moo_pf_smptr_put_int16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_smptr_int (moo, nargs, 2);
+	return _put_smptr_int(moo, nargs, 2);
 }
 
 moo_pfrc_t moo_pf_smptr_put_int32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_smptr_int (moo, nargs, 4);
+	return _put_smptr_int(moo, nargs, 4);
 }
 
 moo_pfrc_t moo_pf_smptr_put_int64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_smptr_int (moo, nargs, 8);
+	return _put_smptr_int(moo, nargs, 8);
 }
 
 moo_pfrc_t moo_pf_smptr_put_uint8 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_smptr_uint (moo, nargs, 1);
+	return _put_smptr_uint(moo, nargs, 1);
 }
 
 moo_pfrc_t moo_pf_smptr_put_uint16 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_smptr_uint (moo, nargs, 2);
+	return _put_smptr_uint(moo, nargs, 2);
 }
 
 moo_pfrc_t moo_pf_smptr_put_uint32 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_smptr_uint (moo, nargs, 4);
+	return _put_smptr_uint(moo, nargs, 4);
 }
 
 moo_pfrc_t moo_pf_smptr_put_uint64 (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	return _put_smptr_uint (moo, nargs, 8);
+	return _put_smptr_uint(moo, nargs, 8);
 }
 
 
