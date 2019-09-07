@@ -25,9 +25,26 @@
  */
 
 
+#define _GNU_SOURCE
+
+
 #include "moo-prv.h"
 
+/* TODO: experimental */
+#include <signal.h>
+#include <sys/ucontext.h>
 
+static int segfault = 0;
+void on_segfault (int sig, siginfo_t* si, void* ctx)
+{
+	ucontext_t* context = (ucontext_t*)ctx;
+
+	printf ("SEG FAULT AT %p instruction at %p\n", si->si_addr, context->uc_mcontext.gregs[REG_RIP]);
+
+	/*printf ("SEG FAULT AT %p instruction at %p\n", si->si_addr, context->uc_mcontext.arm_pc); arm */
+	segfault = 1;
+	context->uc_mcontext.gregs[REG_RIP] += 1; /* very platform and instruction specific... */
+}
 
 moo_pfrc_t moo_pf_system_collect_garbage (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
@@ -343,7 +360,7 @@ static MOO_INLINE int _store_raw_uint (moo_t* moo, moo_uint8_t* rawptr, moo_oow_
 	int n;
 	moo_oow_t w, max;
 
-	if ((n = moo_inttooow (moo, voop, &w)) <= 0) 
+	if ((n = moo_inttooow(moo, voop, &w)) <= 0) 
 	{
 		if (n <= -1) 
 		{
@@ -363,32 +380,73 @@ static MOO_INLINE int _store_raw_uint (moo_t* moo, moo_uint8_t* rawptr, moo_oow_
 		return -1;
 	}
 
+#if defined(_WIN32)
+	__try
+	{
+#else
+	struct sigaction sa, oldsa1, oldsa2;
+	MOO_MEMSET (&sa, 0, MOO_SIZEOF(sa));
+	sigemptyset (&sa.sa_mask);
+	sa.sa_sigaction = on_segfault;
+	sa.sa_flags = SA_SIGINFO;
+	sigaction (SIGSEGV, &sa, &oldsa1);
+	sigaction (SIGBUS, &sa, &oldsa2);
+	segfault = 0;
+#endif
+
+	n = 1; /* ok */
 	switch (size)
 	{ 
 		case 1:
 			((struct st_uint8_t*)&rawptr[offset])->v = w;
-			return 0;
+			break;
 
 		case 2:
 			((struct st_uint16_t*)&rawptr[offset])->v = w;
-			return 0;
+			break;
 
 		case 4:
 			((struct st_uint32_t*)&rawptr[offset])->v = w;
-			return 0;
+			break;
 
 	#if defined(MOO_HAVE_UINT64_T) &&  (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_UINT64_T)
 		case 8:
 			((struct st_uint64_t*)&rawptr[offset])->v = w;
-			return 0;
+			break;
 	#endif
 
 	#if defined(MOO_HAVE_UINT128_T) && (MOO_SIZEOF_OOW_T >= MOO_SIZEOF_UINT128_T)
 		case 16:
-			((struct st_uint128_t*)&rawptr[offset])->v = w; 
-			return 0;
+			((struct st_uint128_t*)&rawptr[offset])->v = w;
+			break;
 	#endif
+
+		default:
+			n = 0; /* not ok */
+			break;
 	}
+
+#if defined(_WIN32)
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		moo_seterrbfmt (moo, MOO_EACCES, "invalid memory access at %p",  (moo_uint8_t*)rawptr + offset);
+		return -1;
+	}
+#else
+	if (n)
+	{
+		sigaction (SIGSEGV, &oldsa1, MOO_NULL);
+		sigaction (SIGBUS, &oldsa2, MOO_NULL);
+		if (segfault)
+		{
+			moo_seterrbfmt (moo, MOO_EACCES, "invalid memory access at %p",  (moo_uint8_t*)rawptr + offset);
+			return -1;
+		}
+
+		return 0;
+	}
+#endif
 
 	moo_seterrbfmt (moo, MOO_EINVAL, "unsupported size %d for raw unsigned memory store",  size);
 	return -1;
@@ -407,8 +465,7 @@ static moo_pfrc_t _get_system_int (moo_t* moo, moo_ooi_t nargs, int size)
 	MOO_ASSERT (moo, nargs == 2);
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
-	else if (moo_inttooow(moo, tmp, (moo_oow_t*)&rawptr) <= 0) 
+	if (moo_ptrtooow(moo, tmp, (moo_oow_t*)&rawptr) <= -1)
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid pointer %O for raw signed memory fetch", tmp);
 		return MOO_PF_FAILURE;
@@ -438,8 +495,7 @@ static moo_pfrc_t _get_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
 
 	MOO_ASSERT (moo, nargs == 2);
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
-	else if (moo_inttooow (moo, tmp, (moo_oow_t*)&rawptr) <= 0)
+	if (moo_ptrtooow(moo, tmp, (moo_oow_t*)&rawptr) <= -1) 
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid pointer %O for raw unsigned memory fetch", tmp);
 		return MOO_PF_FAILURE;
@@ -452,7 +508,7 @@ static moo_pfrc_t _get_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
 		return MOO_PF_FAILURE;
 	}
 
-	tmp = _fetch_raw_uint (moo, rawptr, offset, size);
+	tmp = _fetch_raw_uint(moo, rawptr, offset, size);
 	if (!tmp) return MOO_PF_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, tmp);
@@ -510,8 +566,7 @@ static moo_pfrc_t _put_system_int (moo_t* moo, moo_ooi_t nargs, int size)
 
 	MOO_ASSERT (moo, nargs == 3);
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
-	else if (moo_inttooow (moo, tmp, (moo_oow_t*)&rawptr) <= 0) 
+	if (moo_ptrtooow(moo, tmp, (moo_oow_t*)&rawptr) <= -1)
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid pointer %O for raw signed memory store", tmp);
 		return MOO_PF_FAILURE;
@@ -524,7 +579,7 @@ static moo_pfrc_t _put_system_int (moo_t* moo, moo_ooi_t nargs, int size)
 		return MOO_PF_FAILURE;
 	}
 
-	if (_store_raw_int (moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 2)) <= -1) 
+	if (_store_raw_int(moo, rawptr, offset, size, MOO_STACK_GETARG(moo, nargs, 2)) <= -1) 
 	{
 		return MOO_PF_FAILURE;
 	}
@@ -543,8 +598,7 @@ static moo_pfrc_t _put_system_uint (moo_t* moo, moo_ooi_t nargs, int size)
 
 	MOO_ASSERT (moo, nargs == 3);
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
-	else if (moo_inttooow (moo, tmp, (moo_oow_t*)&rawptr) <= 0) 
+	if (moo_ptrtooow(moo, tmp, (moo_oow_t*)&rawptr) <= -1)
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid pointer %O for raw unsigned memory store", tmp);
 		return MOO_PF_FAILURE;
@@ -619,8 +673,7 @@ moo_pfrc_t moo_pf_system_get_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	MOO_ASSERT (moo, nargs == 5);
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
-	else if (moo_inttooow(moo, tmp, (moo_oow_t*)&rawptr) <= 0)
+	if (moo_ptrtooow(moo, tmp, (moo_oow_t*)&rawptr) <= -1)
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid pointer %O for raw memory fetch", tmp);
 		return MOO_PF_FAILURE;
@@ -682,8 +735,7 @@ moo_pfrc_t moo_pf_system_put_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	MOO_ASSERT (moo, nargs == 5);
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (MOO_OOP_IS_SMPTR(tmp)) rawptr = MOO_OOP_TO_SMPTR(tmp);
-	else if (moo_inttooow(moo, tmp, (moo_oow_t*)&rawptr) <= 0)
+	if (moo_ptrtooow(moo, tmp, (moo_oow_t*)&rawptr) <= -1)
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid pointer %O for raw memory store", tmp);
 		return MOO_PF_FAILURE;
@@ -738,15 +790,21 @@ moo_pfrc_t moo_pf_system_put_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfrc_t _get_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
 {
-	moo_oop_t rcv, tmp;
+	moo_oop_t tmp;
 	moo_int8_t* rawptr;
 	moo_oow_t offset;
 	moo_oop_t result;
 
 	MOO_ASSERT (moo, nargs == 1);
 
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(rcv));
+	tmp = MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(tmp) || MOO_CLASSOF(moo, tmp) == moo->_large_pointer);
+
+	if (moo_ptrtooow(moo, tmp, (moo_oow_t*)&rawptr) <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid pointer %O for raw memory fetch", tmp);
+		return MOO_PF_FAILURE;
+	}
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
 	if (moo_inttooow (moo, tmp, &offset) <= 0)
@@ -754,8 +812,6 @@ static moo_pfrc_t _get_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid offset %O for raw signed memory fetch", tmp);
 		return MOO_PF_FAILURE;
 	}
-
-	rawptr = MOO_OOP_TO_SMPTR(rcv);
 
 	result = _fetch_raw_int (moo, rawptr, offset, size);
 	if (!result) return MOO_PF_FAILURE;
@@ -766,15 +822,21 @@ static moo_pfrc_t _get_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
 
 static moo_pfrc_t _get_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 {
-	moo_oop_t rcv, tmp;
+	moo_oop_t tmp;
 	moo_uint8_t* rawptr;
 	moo_oow_t offset;
 	moo_oop_t result;
 
 	MOO_ASSERT (moo, nargs == 1);
 
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(rcv));
+	tmp = MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(tmp) || MOO_CLASSOF(moo, tmp) == moo->_large_pointer);
+
+	if (moo_ptrtooow(moo, tmp, (moo_oow_t*)&rawptr) <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid pointer %O for raw memory fetch", tmp);
+		return MOO_PF_FAILURE;
+	}
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
 	if (moo_inttooow (moo, tmp, &offset) <= 0)
@@ -782,8 +844,6 @@ static moo_pfrc_t _get_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid offset %O for raw unsigned memory fetch", tmp);
 		return MOO_PF_FAILURE;
 	}
-
-	rawptr = MOO_OOP_TO_SMPTR(rcv);
 
 	result = _fetch_raw_uint (moo, rawptr, offset, size);
 	if (!result) return MOO_PF_FAILURE;
@@ -841,9 +901,13 @@ static moo_pfrc_t _put_smptr_int (moo_t* moo, moo_ooi_t nargs, int size)
 	MOO_ASSERT (moo, nargs == 2);
 
 	tmp = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(tmp));
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(tmp) || MOO_CLASSOF(moo, tmp) == moo->_large_pointer);
 
-	rawptr = MOO_OOP_TO_SMPTR(tmp);
+	if (moo_ptrtooow(moo, tmp, (moo_oow_t*)&rawptr) <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid pointer %O for raw memory store", tmp);
+		return MOO_PF_FAILURE;
+	}
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
 	if (moo_inttooow(moo, tmp, &offset) <= 0)
@@ -870,9 +934,13 @@ static moo_pfrc_t _put_smptr_uint (moo_t* moo, moo_ooi_t nargs, int size)
 	MOO_ASSERT (moo, nargs == 2);
 
 	tmp = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(tmp));
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(tmp) || MOO_CLASSOF(moo, tmp) == moo->_large_pointer);
 
-	rawptr = MOO_OOP_TO_SMPTR(tmp);
+	if (moo_ptrtooow(moo, tmp, (moo_oow_t*)&rawptr) <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid pointer %O for raw memory store", tmp);
+		return MOO_PF_FAILURE;
+	}
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
 	if (moo_inttooow(moo, tmp, &offset) <= 0)
@@ -937,13 +1005,18 @@ moo_pfrc_t moo_pf_smptr_get_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_uint8_t* rawptr;
 	moo_oow_t offset, offset_in_buffer, len_in_buffer;
-	moo_oop_t rcv, tmp;
+	moo_oop_t tmp;
 
 	MOO_ASSERT (moo, nargs == 4);
 
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(rcv));
-	rawptr = MOO_OOP_TO_SMPTR(rcv);
+	tmp = MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(tmp) || MOO_CLASSOF(moo, tmp) == moo->_large_pointer);
+
+	if (moo_ptrtooow(moo, tmp, (moo_oow_t*)&rawptr) <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid pointer %O for raw memory store", tmp);
+		return MOO_PF_FAILURE;
+	}
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
 	if (moo_inttooow(moo, tmp, &offset) <= 0) 
@@ -995,13 +1068,18 @@ moo_pfrc_t moo_pf_smptr_put_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_uint8_t* rawptr;
 	moo_oow_t offset, offset_in_buffer, len_in_buffer;
-	moo_oop_t rcv, tmp;
+	moo_oop_t tmp;
 
 	MOO_ASSERT (moo, nargs == 4);
 
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(rcv));
-	rawptr = MOO_OOP_TO_SMPTR(rcv);
+	tmp = MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(tmp) || MOO_CLASSOF(moo, tmp) == moo->_large_pointer);
+
+	if (moo_ptrtooow(moo, tmp, (moo_oow_t*)&rawptr) <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid pointer %O for raw memory store", tmp);
+		return MOO_PF_FAILURE;
+	}
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
 	if (moo_inttooow(moo, tmp, &offset) <= 0) 
@@ -1079,19 +1157,24 @@ static void sprintptr (moo_ooch_t* nbuf, moo_oow_t num, moo_oow_t *lenp)
 
 moo_pfrc_t moo_pf_smptr_as_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	moo_oop_t rcv;
-	void* ptr;
+	moo_oop_t tmp;
+	void* rawptr;
 	moo_ooch_t buf[MOO_SIZEOF_OOW_T * 2 + 4];
 	moo_oow_t len;
 	moo_oop_t ss;
 
 	MOO_ASSERT (moo, nargs == 0);
 
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(rcv));
+	tmp = MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, MOO_OOP_IS_SMPTR(tmp) || MOO_CLASSOF(moo, tmp) == moo->_large_pointer);
 
-	ptr = MOO_OOP_TO_SMPTR(rcv);
-	sprintptr (buf, (moo_oow_t)ptr, &len);
+	if (moo_ptrtooow(moo, tmp, (moo_oow_t*)&rawptr) <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid pointer %O for string conversion", tmp);
+		return MOO_PF_FAILURE;
+	}
+
+	sprintptr (buf, (moo_oow_t)rawptr, &len);
 
 	ss = moo_makestring(moo, buf, len);
 	if (!ss) return MOO_PF_FAILURE;
