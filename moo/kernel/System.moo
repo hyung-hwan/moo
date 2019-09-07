@@ -167,6 +167,9 @@ class System(Apex)
            3 -> application main
          the following loops starts from pid 3 up to 100.  this is POC only. i need to write a proper enumeration methods and use them.
       */
+
+			//Processor _suspendAllUserProcesses. <--- keep kernel processes alive.
+
 			pid := 3.
 			while (pid < 100) 
 			{
@@ -381,6 +384,7 @@ TODO: how to pass all variadic arguments to another variadic methods???
 }
 
 
+// TODO: support Pointer arithmetic?
 class(#limited) SmallPointer(Object)
 {
 	method(#primitive) asString.

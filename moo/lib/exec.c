@@ -2786,6 +2786,15 @@ static moo_pfrc_t pf_process_scheduler_process_by_id (moo_t* moo, moo_mod_t* mod
 	return MOO_PF_FAILURE;
 }
 
+static moo_pfrc_t pf_process_scheduler_suspend_all_user_processes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	/* TODO: must exclude special inner processes */
+	while (moo->processor->runnable.first)
+	{
+		suspend_process (moo, moo->processor->runnable.first);
+	}
+}
+
 /* ------------------------------------------------------------------ */
 static moo_pfrc_t pf_semaphore_signal (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
@@ -4318,7 +4327,8 @@ static pf_t pftab[] =
 	{ "MethodContext_findExceptionHandler:",   { pf_context_find_exception_handler,       1, 1 } },
 	{ "MethodContext_goto:",                   { pf_context_goto,                         1, 1 } },
 
-	{ "ProcessScheduler_processById:",         { pf_process_scheduler_process_by_id,      1, 1 } },
+	{ "ProcessScheduler_processById:",             { pf_process_scheduler_process_by_id,      1, 1 } },
+	{ "ProcessScheduler_suspendAllUserProcesses",  { pf_process_scheduler_suspend_all_user_processes, 0, 0 } },
 
 	{ "Process_resume",                        { pf_process_resume,                       0, 0 } },
 	{ "Process_sp",                            { pf_process_sp,                           0, 0 } },
