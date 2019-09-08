@@ -128,7 +128,7 @@ class System(Apex)
 
 	method(#class) __os_sig_handler: caller
 	{
-		| os_intr_sem tmp terminate_process|
+		| os_intr_sem tmp |
 
 		os_intr_sem := Semaphore new.
 		os_intr_sem signalOnInput: System _getSigfd.
@@ -168,27 +168,32 @@ class System(Apex)
          the following loops starts from pid 3 up to 100.  this is POC only. i need to write a proper enumeration methods and use them.
       */
 
-			//Processor _suspendAllUserProcesses. <--- keep kernel processes alive.
+			//Processor _suspendUserProcesses. <--- keep kernel processes alive.
+			pid := 3.
+			while (pid < 100) 
+			{
+				proc := Processor _processById: pid.
+				if (proc notError and proc ~~ caller) { System logNl: ("Requesting to suspend process of id - " & pid asString). proc suspend }.
+				pid := pid + 1.
+			}.
 
 			pid := 3.
 			while (pid < 100) 
 			{
-				//proc := Processor processById: pid.
 				proc := Processor _processById: pid.
-				if (proc notError) { System logNl: ("Requesting to terminate process of id - " & pid asString). proc terminate }.
+				if (proc notError and proc ~~ caller) { System logNl: ("Requesting to terminate process of id - " & pid asString). proc terminate }.
 				pid := pid + 1.
 			}.
 /* TODO: end redo */
 
-			caller terminate.
+			caller terminate.  // terminate the startup process.
 
 			System logNl: '>>>>End of OS signal handler process ' & (thisProcess id) asString.
 
-			//(Processor _processById: 1) resume. //<---- i shouldn't do ths. but, this system causes VM assertion failure. fix it....
 			self.gcfin_should_exit := true.
 			self.gcfin_sem signal. // wake the gcfin process.
 
-			System _halting.
+			System _halting. // inform VM that it should get ready for halting.
 		].
 	}
 

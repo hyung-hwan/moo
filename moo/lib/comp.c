@@ -8567,9 +8567,13 @@ static int process_class_superclass (moo_t* moo)
 			if (MOO_CLASS_SELFSPEC_FLAGS(MOO_OOP_TO_SMOOI(((moo_oop_class_t)cc->super_oop)->selfspec)) & MOO_CLASS_SELFSPEC_FLAG_FINAL)
 			{
 				/* cannot inherit a #final class */
-				moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &cc->fqn_loc, &cc->fqn,
-					"the %.*js class cannot inherit from a final class", cc->fqn.len, cc->fqn.ptr);
-				return -1;
+				if (cc->self_oop == MOO_NULL) /* self_oop is not null if it's a predefined kernel class. */ 
+				{
+					/* the restriction applies to non-kernel classes only */
+					moo_setsynerrbfmt (moo, MOO_SYNERR_INHERITBANNED, &cc->fqn_loc, &cc->fqn,
+						"the %.*js class cannot inherit from a final class", cc->fqn.len, cc->fqn.ptr);
+					return -1;
+				}
 			}
 		}
 		else

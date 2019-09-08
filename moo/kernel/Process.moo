@@ -77,6 +77,12 @@ class(#pointer,#final,#limited) Process(Object)
 	}
 }
 
+class(#pointer,#limited,#final) _KernelProcess(Process)
+{
+	// _KernelProcess is a predefined kernel class. so it can inherit from a final class, Process.
+	// It must be exactly the same as Process other than inheritance and is used internally only.
+}
+
 class Semaphore(Object)
 {
 	var waiting_head  := nil,

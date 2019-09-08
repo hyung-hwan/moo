@@ -742,23 +742,23 @@ typedef struct moo_semaphore_group_t* moo_oop_semaphore_group_t;
 struct moo_process_t
 {
 	MOO_OBJ_HEADER;
-	moo_oop_context_t   initial_context;
-	moo_oop_context_t   current_context;
+	moo_oop_context_t initial_context;
+	moo_oop_context_t current_context;
 
-	moo_oop_t           id;    /* SmallInteger */
-	moo_oop_t           state; /* SmallInteger */
-	moo_oop_t           sp;    /* stack pointer. SmallInteger */
+	moo_oop_t id;    /* SmallInteger */
+	moo_oop_t state; /* SmallInteger */
+	moo_oop_t sp;    /* stack pointer. SmallInteger */
 
 	struct
 	{
-		moo_oop_process_t   prev;
-		moo_oop_process_t   next;
+		moo_oop_process_t prev;
+		moo_oop_process_t next;
 	} ps; /* links to use with the process scheduler */
 
 	struct
 	{
-		moo_oop_process_t   prev;
-		moo_oop_process_t   next;
+		moo_oop_process_t prev;
+		moo_oop_process_t next;
 	} sem_wait; /* links to use with a semaphore */
 
 	moo_oop_t sem; /* nil, semaphore, or semaphore group */
@@ -1547,6 +1547,7 @@ struct moo_t
 	moo_oop_class_t _method_context; /* MethodContext */
 	moo_oop_class_t _block_context; /* BlockContext */
 	moo_oop_class_t _process; /* Process */
+	moo_oop_class_t _kernel_process; /* KernelProcess */
 	moo_oop_class_t _semaphore; /* Semaphore */
 	moo_oop_class_t _semaphore_group; /* SemaphoreGroup */
 	moo_oop_class_t _process_scheduler; /* ProcessScheduler */

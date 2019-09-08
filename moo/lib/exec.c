@@ -1624,8 +1624,9 @@ static moo_oop_process_t start_initial_process (moo_t* moo, moo_oop_context_t c)
 	MOO_ASSERT (moo, moo->processor->runnable.count == MOO_SMOOI_TO_OOP(0));
 	MOO_ASSERT (moo, moo->processor->active == moo->nil_process);
 
-	proc = make_process (moo, c);
+	proc = make_process(moo, c);
 	if (!proc) return MOO_NULL;
+	MOO_OBJ_SET_CLASS(proc, moo->_kernel_process); /* the initial process is special */
 
 	chain_into_processor (moo, proc, PROC_STATE_RUNNING);
 	moo->processor->active = proc;
@@ -2060,7 +2061,7 @@ TODO: overcome this problem - accept parameters....
 	 * let's forcefully set active_context to ctx directly. */
 	moo->active_context = ctx;
 
-	proc = start_initial_process (moo, ctx); 
+	proc = start_initial_process(moo, ctx); 
 	moo_popvolats (moo, tmp_count); tmp_count = 0;
 	if (!proc) goto oops;
 
@@ -2786,13 +2787,18 @@ static moo_pfrc_t pf_process_scheduler_process_by_id (moo_t* moo, moo_mod_t* mod
 	return MOO_PF_FAILURE;
 }
 
-static moo_pfrc_t pf_process_scheduler_suspend_all_user_processes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+static moo_pfrc_t pf_process_scheduler_suspend_user_processes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	/* TODO: must exclude special inner processes */
-	while (moo->processor->runnable.first)
+	moo_oop_process_t proc;
+
+	while ((moo_oop_t)(proc = moo->processor->runnable.first) != moo->_nil)
 	{
-		suspend_process (moo, moo->processor->runnable.first);
+		/* exclude internal kernel classes. suspend user processes only */
+		if (MOO_CLASSOF(moo, proc) == moo->_process) suspend_process (moo, proc);
 	}
+
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
 }
 
 /* ------------------------------------------------------------------ */
@@ -4327,8 +4333,8 @@ static pf_t pftab[] =
 	{ "MethodContext_findExceptionHandler:",   { pf_context_find_exception_handler,       1, 1 } },
 	{ "MethodContext_goto:",                   { pf_context_goto,                         1, 1 } },
 
-	{ "ProcessScheduler_processById:",             { pf_process_scheduler_process_by_id,      1, 1 } },
-	{ "ProcessScheduler_suspendAllUserProcesses",  { pf_process_scheduler_suspend_all_user_processes, 0, 0 } },
+	{ "ProcessScheduler_processById:",         { pf_process_scheduler_process_by_id,      1, 1 } },
+	{ "ProcessScheduler_suspendUserProcesses", { pf_process_scheduler_suspend_user_processes, 0, 0 } },
 
 	{ "Process_resume",                        { pf_process_resume,                       0, 0 } },
 	{ "Process_sp",                            { pf_process_sp,                           0, 0 } },
