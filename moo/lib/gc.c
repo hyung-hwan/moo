@@ -282,15 +282,6 @@ static kernel_class_info_t kernel_classes[] =
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _process) },
 
-	{ 14,
-	  { '_','K','e','r','n','e','l','P','r','o','c','e','s','s' },
-	  MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
-	  0,
-	  MOO_PROCESS_NAMED_INSTVARS,
-	  MOO_CLASS_SPEC_FLAG_INDEXED,
-	  MOO_OBJ_TYPE_OOP,
-	  MOO_OFFSETOF(moo_t, _kernel_process) },
-
 	{ 9,
 	  { 'S','e','m','a','p','h','o','r','e' },
 	  0,

@@ -7,10 +7,9 @@ class(#pointer,#final,#limited) Process(Object)
 	var sem, perr, perrmsg.
 
 	var asyncsg.
-	
+
 	method primError { ^self.perr }
 	method primErrorMessage { ^self.perrmsg }
-
 	method(#primitive) sp.
 
 	method(#primitive) resume.
@@ -75,12 +74,6 @@ class(#pointer,#final,#limited) Process(Object)
 	{
 		^self.asyncsg wait.
 	}
-}
-
-class(#pointer,#limited,#final) _KernelProcess(Process)
-{
-	// _KernelProcess is a predefined kernel class. so it can inherit from a final class, Process.
-	// It must be exactly the same as Process other than inheritance and is used internally only.
 }
 
 class Semaphore(Object)
@@ -434,8 +427,5 @@ class(#final,#limited) ProcessScheduler(Object)
 	var suspended_head, suspended_tail.
 
 	method activeProcess { ^self.active }
-	method resume: aProcess { ^aProcess resume }
-
-	method(#primitive,#lenient) _processById: id.
-	method(#primitive) processById: id.
+	method resume: proc { ^proc resume }
 }

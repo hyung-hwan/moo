@@ -45,7 +45,7 @@ class System(Apex)
 
 	method(#class) startup(class_name, method_name)
 	{
-		| class ret |
+		| class ret gcfin_proc ossig_proc |
 
 		self.asyncsg := SemaphoreGroup new.
 
@@ -55,12 +55,14 @@ class System(Apex)
 			self error: ('Cannot find the class - ' & class_name).
 		}.
 
-		// start the gc finalizer process
-		[ self __gc_finalizer ] fork.
-
-		// start the os signal handler process
+		// start the gc finalizer process and os signal handler process
+		//[ self __gc_finalizer ] fork.
 		//[ self __os_sig_handler ] fork.
-		[ :caller | self __os_sig_handler: caller ] newProcess(thisProcess) resume.
+		gcfin_proc := [ self __gc_finalizer ] newProcess.
+		ossig_proc := [ :caller | self __os_sig_handler: caller ] newProcess(thisProcess).
+
+		gcfin_proc resume.
+		ossig_proc resume.
 
 		[
 			// TODO: change the method signature to variadic and pass extra arguments to perform???
@@ -159,41 +161,36 @@ class System(Apex)
 			// the caller must request to terminate all its child processes..
 			// TODO: to avoid this, this process must enumerate all proceses and terminate them except this and gcfin process
 
-/* TODO: redo the following process termination loop.
-         need to write a proper process enumeration methods. 
-           0 -> startup  <--- this should also be stored in the 'caller' variable.
-           1 -> __gc_finalizer
-           2 -> __os_signal_handler 
-           3 -> application main
-         the following loops starts from pid 3 up to 100.  this is POC only. i need to write a proper enumeration methods and use them.
-      */
+			// this disables autonomous process switching only. 
+			// TODO: check if the ensure block code can trigger process switching?
+			//       whap happens if the ensure block creates new processes? this is likely to affect the termination loop below.
+			//       even the id of the terminated process may get reused.... 
+			self _disableProcessSwitching. 
 
-			//Processor _suspendUserProcesses. <--- keep kernel processes alive.
-			pid := 3.
-			while (pid < 100) 
+			/*
+			 0 -> startup  <--- this should also be stored in the 'caller' variable.
+			 1 -> __gc_finalizer
+			 2 -> __os_signal_handler 
+			 3 ..  -> other processes started by application.
+			*/
+			proc := System _findProcessByIdGreaterThan: 2.
+			while (proc notError)
 			{
-				proc := Processor _processById: pid.
-				if (proc notError and proc ~~ caller) { System logNl: ("Requesting to suspend process of id - " & pid asString). proc suspend }.
-				pid := pid + 1.
+				pid := proc id.
+				System logNl: ("Requesting to terminate process of id - " & pid asString).
+				proc terminate.
+				proc := System _findProcessByIdGreaterThan: pid.
 			}.
-
-			pid := 3.
-			while (pid < 100) 
-			{
-				proc := Processor _processById: pid.
-				if (proc notError and proc ~~ caller) { System logNl: ("Requesting to terminate process of id - " & pid asString). proc terminate }.
-				pid := pid + 1.
-			}.
-/* TODO: end redo */
 
 			caller terminate.  // terminate the startup process.
+			self _enableProcessSwitching.
 
 			System logNl: '>>>>End of OS signal handler process ' & (thisProcess id) asString.
 
 			self.gcfin_should_exit := true.
 			self.gcfin_sem signal. // wake the gcfin process.
 
-			System _halting. // inform VM that it should get ready for halting.
+			self _halting. // inform VM that it should get ready for halting.
 		].
 	}
 
@@ -201,6 +198,10 @@ class System(Apex)
 	method(#class,#primitive) _getSigfd.
 	method(#class,#primitive) _setSig: signo.
 	method(#class,#primitive) _halting.
+	method(#class,#primitive) _enableProcessSwitching.
+	method(#class,#primitive) _disableProcessSwitching.
+	method(#class,#primitive,#lenient) _findProcessById: id.
+	method(#class,#primitive,#lenient) _findProcessByIdGreaterThan: id.
 
 	method(#class,#primitive) _popCollectable.
 	method(#class,#primitive) collectGarbage.

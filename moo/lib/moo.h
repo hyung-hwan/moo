@@ -1547,7 +1547,6 @@ struct moo_t
 	moo_oop_class_t _method_context; /* MethodContext */
 	moo_oop_class_t _block_context; /* BlockContext */
 	moo_oop_class_t _process; /* Process */
-	moo_oop_class_t _kernel_process; /* KernelProcess */
 	moo_oop_class_t _semaphore; /* Semaphore */
 	moo_oop_class_t _semaphore_group; /* SemaphoreGroup */
 	moo_oop_class_t _process_scheduler; /* ProcessScheduler */
@@ -1632,6 +1631,7 @@ struct moo_t
 	moo_oob_t* active_code;
 	moo_ooi_t sp;
 	moo_ooi_t ip;
+	int no_proc_switch; /* process switching disabled */
 	int proc_switched; /* TODO: this is temporary. implement something else to skip immediate context switching */
 	int switch_proc;
 	int abort_req;

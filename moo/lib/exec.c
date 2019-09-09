@@ -255,7 +255,7 @@ static MOO_INLINE int prepare_to_alloc_pid (moo_t* moo)
 		new_capa = MOO_SMOOI_MAX;
 	}
 
-	tmp = moo_reallocmem (moo, moo->proc_map, MOO_SIZEOF(moo_oop_t) * new_capa);
+	tmp = moo_reallocmem(moo, moo->proc_map, MOO_SIZEOF(moo_oop_t) * new_capa);
 	if (!tmp) return -1;
 
 	moo->proc_map_free_first = moo->proc_map_capa;
@@ -1626,7 +1626,6 @@ static moo_oop_process_t start_initial_process (moo_t* moo, moo_oop_context_t c)
 
 	proc = make_process(moo, c);
 	if (!proc) return MOO_NULL;
-	MOO_OBJ_SET_CLASS(proc, moo->_kernel_process); /* the initial process is special */
 
 	chain_into_processor (moo, proc, PROC_STATE_RUNNING);
 	moo->processor->active = proc;
@@ -2746,61 +2745,6 @@ static moo_pfrc_t pf_process_suspend (moo_t* moo, moo_mod_t* mod, moo_ooi_t narg
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_process_scheduler_process_by_id (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
-{
-	moo_oop_t rcv, id;
-	moo_oop_process_t proc;
-
-	rcv = MOO_STACK_GETRCV(moo, nargs);
-	id = MOO_STACK_GETARG(moo, nargs, 0);
-
-	MOO_PF_CHECK_RCV (moo, rcv == (moo_oop_t)moo->processor);
-
-	if (MOO_OOP_IS_SMOOI(id))
-	{
-		proc = moo->processor->runnable.first;
-		while (proc)
-		{
-			if (proc->id == id) 
-			{
-				MOO_STACK_SETRET (moo, nargs, (moo_oop_t)proc);
-				return MOO_PF_SUCCESS;
-			}
-			if (proc == moo->processor->runnable.last) break;
-			proc = proc->ps.next;
-		}
-
-		proc = moo->processor->suspended.first;
-		while (proc)
-		{
-			if (proc->id == id) 
-			{
-				MOO_STACK_SETRET (moo, nargs, (moo_oop_t)proc);
-				return MOO_PF_SUCCESS;
-			}
-			if (proc == moo->processor->suspended.last) break;
-			proc = proc->ps.next;
-		}
-	}
-
-	MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
-	return MOO_PF_FAILURE;
-}
-
-static moo_pfrc_t pf_process_scheduler_suspend_user_processes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
-{
-	moo_oop_process_t proc;
-
-	while ((moo_oop_t)(proc = moo->processor->runnable.first) != moo->_nil)
-	{
-		/* exclude internal kernel classes. suspend user processes only */
-		if (MOO_CLASSOF(moo, proc) == moo->_process) suspend_process (moo, proc);
-	}
-
-	MOO_STACK_SETRETTORCV (moo, nargs);
-	return MOO_PF_SUCCESS;
-}
-
 /* ------------------------------------------------------------------ */
 static moo_pfrc_t pf_semaphore_signal (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
@@ -3281,6 +3225,20 @@ static moo_pfrc_t pf_system_return_value_to_context (moo_t* moo, moo_mod_t* mod,
 }
 
 /* ------------------------------------------------------------------ */
+static moo_pfrc_t pf_system_enable_process_switching (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo->no_proc_switch = 0;
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_system_disable_process_switching (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo->no_proc_switch = 0;
+	MOO_STACK_SETRETTORCV (moo, nargs);
+	return MOO_PF_SUCCESS;
+}
+
 static moo_pfrc_t pf_system_halting (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_evtcb_t* cb;
@@ -3291,6 +3249,71 @@ static moo_pfrc_t pf_system_halting (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 	MOO_STACK_SETRETTORCV (moo, nargs);
 	return MOO_PF_SUCCESS;
 }
+
+static moo_pfrc_t pf_system_find_process_by_id (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, id;
+	moo_oop_process_t proc;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	id = MOO_STACK_GETARG(moo, nargs, 0);
+
+	/*MOO_PF_CHECK_RCV (moo, rcv == (moo_oop_t)moo->processor);*/
+
+	if (MOO_OOP_IS_SMOOI(id))
+	{
+		moo_ooi_t index = MOO_OOP_TO_SMOOI(id);
+		if (index >= 0)
+		{
+			if (MOO_CLASSOF(moo, moo->proc_map[index]) == moo->_process)
+			{
+				MOO_STACK_SETRET (moo, nargs, moo->proc_map[index]);
+				return MOO_PF_SUCCESS;
+			}
+
+			/* it must be in a free list since the pid slot is not allocated. see alloc_pid() and free_pid() */
+			MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->proc_map[index]));
+		}
+	}
+
+	MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
+	return MOO_PF_FAILURE;
+}
+
+static moo_pfrc_t pf_system_find_process_by_id_gt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	moo_oop_t rcv, id;
+	moo_oop_process_t proc;
+
+	rcv = MOO_STACK_GETRCV(moo, nargs);
+	id = MOO_STACK_GETARG(moo, nargs, 0);
+
+	/*MOO_PF_CHECK_RCV (moo, rcv == (moo_oop_t)moo->processor);*/
+
+	if (MOO_OOP_IS_SMOOI(id))
+	{
+		moo_ooi_t index = MOO_OOP_TO_SMOOI(id);
+		if (index >= 0)
+		{
+/* TOOD: enhance alloc_pid() and free_pid() to maintain the hightest pid number so that this loop can stop before reaching proc_map_capa */
+			for (++index; index < moo->proc_map_capa; index++)
+			{
+				if (MOO_CLASSOF(moo, moo->proc_map[index]) == moo->_process)
+				{
+					MOO_STACK_SETRET (moo, nargs, moo->proc_map[index]);
+					return MOO_PF_SUCCESS;
+				}
+
+				/* it must be in a free list since the pid slot is not allocated. see alloc_pid() and free_pid() */
+				MOO_ASSERT (moo, MOO_OOP_IS_SMOOI(moo->proc_map[index]));
+			}
+		}
+	}
+
+	MOO_STACK_SETRETTOERROR (moo, nargs, MOO_ENOENT);
+	return MOO_PF_FAILURE;
+}
+
 
 /* ------------------------------------------------------------------ */
 static moo_pfrc_t pf_number_scale (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
@@ -4333,9 +4356,6 @@ static pf_t pftab[] =
 	{ "MethodContext_findExceptionHandler:",   { pf_context_find_exception_handler,       1, 1 } },
 	{ "MethodContext_goto:",                   { pf_context_goto,                         1, 1 } },
 
-	{ "ProcessScheduler_processById:",         { pf_process_scheduler_process_by_id,      1, 1 } },
-	{ "ProcessScheduler_suspendUserProcesses", { pf_process_scheduler_suspend_user_processes, 0, 0 } },
-
 	{ "Process_resume",                        { pf_process_resume,                       0, 0 } },
 	{ "Process_sp",                            { pf_process_sp,                           0, 0 } },
 	{ "Process_suspend",                       { pf_process_suspend,                      0, 0 } },
@@ -4386,6 +4406,10 @@ static pf_t pftab[] =
 	{ "System_calloc",                         { moo_pf_system_calloc,                    1, 1 } },
 	{ "System_calloc:",                        { moo_pf_system_calloc,                    1, 1 } },
 	{ "System_collectGarbage",                 { moo_pf_system_collect_garbage,           0, 0 } },
+	{ "System_disableProcessSwitching",        { pf_system_disable_process_switching,     0, 0 } },
+	{ "System_enableProcessSwitching",         { pf_system_enable_process_switching,      0, 0 } },
+	{ "System_findProcessById:",               { pf_system_find_process_by_id,            1, 1 } },
+	{ "System_findProcessByIdGreaterThan:",    { pf_system_find_process_by_id_gt,         1, 1 } },
 	{ "System_free",                           { moo_pf_system_free,                      1, 1 } },
 	{ "System_free:",                          { moo_pf_system_free,                      1, 1 } },
 	{ "System_gc",                             { moo_pf_system_collect_garbage,           0, 0 } },
@@ -5472,7 +5496,7 @@ static int __execute (moo_t* moo)
 	BEGIN_DISPATCH_LOOP()
 
 		/* stop requested or no more runnable process */
-		if (moo->abort_req || switch_process_if_needed(moo) == 0) EXIT_DISPATCH_LOOP();
+		if (moo->abort_req || (!moo->no_proc_switch && switch_process_if_needed(moo) == 0)) EXIT_DISPATCH_LOOP();
 
 	#if defined(MOO_DEBUG_VM_EXEC)
 		moo->last_inst_pointer = moo->ip;
