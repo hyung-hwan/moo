@@ -130,7 +130,7 @@ class System(Apex)
 
 	method(#class) __os_sig_handler: caller
 	{
-		| os_intr_sem tmp |
+		| os_intr_sem tmp sh |
 
 		os_intr_sem := Semaphore new.
 		os_intr_sem signalOnInput: System _getSigfd.
@@ -144,9 +144,23 @@ class System(Apex)
 					//TODO: Execute Handler for tmp.
 
 					System logNl: 'Interrupt dectected - signal no - ' & tmp asString.
-					if (tmp == 16rFF or tmp == 2) { /* TODO: terminate all processes except gcfin process??? */  goto done }.
-				}.
 
+					// user-defined signal handler is not allowed for 16rFF
+					if (tmp == 16rFF) { goto done }. 
+
+					/*
+					sh := self.sighandler at: tmp.
+					if (sh isNil)
+					{*/
+						// the default action for sigint(2) is to terminate all processes.
+						if (tmp == 2) { goto done }.
+					/*}
+					else
+					{
+						// invoke a user-defined signal handler if available.
+						sh value: tmp.
+					}*/
+				}.
 				os_intr_sem wait.
 			}.
 		done:
@@ -154,12 +168,12 @@ class System(Apex)
 		]
 		ensure: [
 			| pid proc |
+
+			// stop subscribing to signals.
 			os_intr_sem signal.
 			os_intr_sem unsignal.
 
-			System logNl: '>>>>Requesting to terminate the caller process ' & (caller id) asString.
 			// the caller must request to terminate all its child processes..
-			// TODO: to avoid this, this process must enumerate all proceses and terminate them except this and gcfin process
 
 			// this disables autonomous process switching only. 
 			// TODO: check if the ensure block code can trigger process switching?
@@ -182,6 +196,7 @@ class System(Apex)
 				proc := System _findProcessByIdGreaterThan: pid.
 			}.
 
+			System logNl: 'Requesting to terminate the caller process of id ' & (caller id) asString.
 			caller terminate.  // terminate the startup process.
 			self _enableProcessSwitching.
 

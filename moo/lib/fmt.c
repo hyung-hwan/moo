@@ -1429,6 +1429,11 @@ int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 			if (!moo_numtostr(moo, oop, 10 | MOO_NUMTOSTR_NONEWOBJ)) return -1;
 			if (moo_bfmt_out(fmtout, "%.*js", moo->inttostr.xbuf.len, moo->inttostr.xbuf.ptr) <= -1) return -1;
 		}
+		else if (c == moo->_large_pointer)
+		{
+			if (moo_ptrtooow(moo, oop, &i) <= -1) return -1;
+			if (moo_bfmt_out(fmtout, "#\\p%zX", i) <= -1) return -1;
+		}
 		else if (MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_CHAR)
 		{
 			moo_ooch_t ch;
