@@ -297,7 +297,7 @@ class SemaphoreHeap(Object)
 		| top |
 
 		top := self.arr at: 0.
-		self deleteAt: 0.
+		self removeAt: 0.
 		^top
 	}
 
@@ -314,7 +314,7 @@ class SemaphoreHeap(Object)
 		^if (aSemaphore youngerThan: item) { self siftUp: anIndex } else { self siftDown: anIndex }.
 	}
 
-	method deleteAt: anIndex
+	method removeAt: anIndex
 	{
 		| item xitem |
 

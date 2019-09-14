@@ -227,8 +227,8 @@ class MyObject(TestObject)
 		].
 
 		'--------------------------' dump.
-		sempq deleteAt: 40.
-		sempq deleteAt: 50.
+		sempq removeAt: 40.
+		sempq removeAt: 50.
 
 		[sempq size > 0] whileTrue: [
 			| sem |

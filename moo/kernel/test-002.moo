@@ -77,9 +77,9 @@ class MyObject(Object)
 		].
 
 		'--------------------------' dump.
-		sempq deleteAt: 40.
-		sempq deleteAt: 50.
-		sempq deleteAt: 100.
+		sempq removeAt: 40.
+		sempq removeAt: 50.
+		sempq removeAt: 100.
 
 		a := -100.
 		[sempq size > 0] whileTrue: [

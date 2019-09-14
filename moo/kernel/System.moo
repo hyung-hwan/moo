@@ -13,6 +13,7 @@ class System(Apex)
 	var(#class) asyncsg.
 	var(#class) gcfin_sem.
 	var(#class) gcfin_should_exit := false.
+	var(#class) shr.
 
 	pooldic Log
 	{
@@ -26,6 +27,16 @@ class System(Apex)
 		WARN  := 4.
 		ERROR := 8.
 		FATAL := 16.
+	}
+
+	method(#class) _initialize
+	{
+		self.shr := Dictionary new.
+	}
+
+	method(#class) _cleanup
+	{
+		self.shr := nil.
 	}
 
 	method(#class) addAsyncSemaphore: sem
@@ -55,6 +66,8 @@ class System(Apex)
 			self error: ('Cannot find the class - ' & class_name).
 		}.
 
+		self _initialize.
+
 		// start the gc finalizer process and os signal handler process
 		//[ self __gc_finalizer ] fork.
 		//[ self __os_sig_handler ] fork.
@@ -70,7 +83,6 @@ class System(Apex)
 		] 
 		ensure: [
 			self _setSig: 16rFF.
-			//// System logNl: '======= END of startup ==============='.
 		].
 
 		^ret.
@@ -206,6 +218,7 @@ class System(Apex)
 			self.gcfin_sem signal. // wake the gcfin process.
 
 			self _halting. // inform VM that it should get ready for halting.
+			self _cleanup.
 		].
 	}
 
@@ -224,6 +237,15 @@ class System(Apex)
 	method(#class,#primitive) return: object to: context.
 
 	// =======================================================================================
+	method(#class) registerSignalHandler: block
+	{
+		self.shr add: block.
+	}
+
+	method(#class) removeSignalHandler: block
+	{
+	}
+
 	method(#class) sleepForSecs: secs
 	{
 		// -----------------------------------------------------
