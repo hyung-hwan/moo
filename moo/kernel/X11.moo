@@ -37,10 +37,11 @@ class X11(Object) [X11able,selfns.X11able3] from "x11"
 	// =====================================================================
 
 	var shell_container := nil.
-	var window_registrar. // all windows registered
+	var window_registry. // all windows registered
 
 	var event_loop_sem, event_loop_proc.
 	var llevent_blocks.
+	var event_loop_exit_req := false.
 
 
 method(#dual) abc { ^nil }
@@ -119,7 +120,7 @@ TODO: TODO: compiler enhancement
 	{
 		| w |
 		w := self _create_window(parent_window_handle, x, y, width, height, fgcolor, bgcolor).
-		if (w notError) { self.window_registrar at: w put: owner }.
+		if (w notError) { self.window_registry at: w put: owner }.
 		^w
 	}
 
@@ -128,7 +129,7 @@ TODO: TODO: compiler enhancement
 		| w |
 //#('DESTROY ' & window_handle asString) dump.
 		w := self _destroy_window(window_handle).
-		if (w notError) { self.window_registrar removeKey: window_handle }
+		if (w notError) { self.window_registry removeKey: window_handle }
 	}
 }
 
@@ -598,7 +599,7 @@ extend X11
 		super initialize.
 
 		self.shell_container := self.Composite new.
-		self.window_registrar := System.Dictionary new: 100.
+		self.window_registry := System.Dictionary new: 100.
 
 		/*
 
@@ -654,6 +655,7 @@ extend X11
 	{
 		if (self.event_loop_sem isNil)
 		{
+			
 			self.event_loop_sem := Semaphore new.
 			self.event_loop_sem signalOnInput: (self _get_fd).
 			self.event_loop_proc := [
@@ -661,19 +663,23 @@ extend X11
 				[
 					| llevtbuf llevent ongoing |
 
+					self.event_loop_exit_req := false.
 					llevtbuf := X11.LLEvent new.
 					ongoing := true.
 					while (self.shell_container childrenCount > 0)
 					{
 'Waiting for X11 event...' dump.
+						if  (self.event_loop_exit_req) { break }.
 						self.event_loop_sem wait.
-						if (ongoing not) { break }.
+						if  (self.event_loop_exit_req) { break }.
+						ifnot (ongoing) { break }.
 
 						while ((llevent := self _get_llevent(llevtbuf)) notNil)
 						{
 							if (llevent isError)
 							{
 								//System logNl: ('Error while getting a event from server ' & self.cid asString).
+								self.event_loop_exit_req := true.
 								ongoing := false.
 								break.
 							}
@@ -715,11 +721,17 @@ extend X11
 		self.event_loop_sem signal.
 	}
 
+	method requestToExit 
+	{
+		self.event_loop_exit_req := true.
+		self.event_loop_sem signal.
+	}
+
 	method __dispatch_llevent: llevent
 	{
 		| widget mthname |
 
-		widget := self.window_registrar at: llevent window ifAbsent: [
+		widget := self.window_registry at: llevent window ifAbsent: [
 			System logNl: 'Event on unknown widget - ' & (llevent window asString).
 			^nil
 		].
@@ -793,6 +805,15 @@ class Fx(Object)
 class MyObject(Object)
 {
 	var disp1, disp2, shell1, shell2, shell3.
+	var on_sig.
+
+	method initialize
+	{
+		self.on_sig := [:sig | 
+			self.disp1 requestToExit.
+			self.disp2 requestToExit.
+		].
+	}
 
 	method main1
 	{
@@ -828,6 +849,8 @@ class MyObject(Object)
 		self.shell2 realize.
 		self.shell3 realize.
 
+		System installSignalHandler: self.on_sig.
+
 		self.disp1 enterEventLoop. // this is not a blocking call. it spawns another process.
 		self.disp2 enterEventLoop.
 
@@ -835,7 +858,6 @@ class MyObject(Object)
 		Fx new.
 		comp1 := Fx new.
 		Fx new.
-
 
 		while (self.disp1 isConnected or self.disp2 isConnected) { System sleepForSecs: 1 }.
 	}

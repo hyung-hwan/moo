@@ -405,7 +405,7 @@ static kernel_class_info_t kernel_classes[] =
 	{ 6,
 	  { 'S','y','s','t','e','m' },
 	  0,
-	  3, /* asyncsg, gcfin_sem, gcfin_should_exit*/
+	  4, /* asyncsg, gcfin_sem, gcfin_should_exit, shr */
 	  0,
 	  0,
 	  MOO_OBJ_TYPE_OOP,
@@ -835,9 +835,8 @@ static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t**
 		{
 			moo_oow_t size;
 
-			/* TODO: is it better to use a flag bit in the header to
-			 *       determine that it is an instance of process?
-			 *       for example, if (MOO_OBJ_GET_FLAGS_PROC(oop))... */
+			/* is it really better to use a flag bit in the header to
+			 * determine that it is an instance of process? */
 			if (MOO_UNLIKELY(MOO_OBJ_GET_FLAGS_PROC(oop)))
 			{
 				/* the stack in a process object doesn't need to be 

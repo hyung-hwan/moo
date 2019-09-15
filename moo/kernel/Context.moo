@@ -321,7 +321,7 @@ class(#pointer) CompiledMethod(Object)
 	    preamble_data_2,
 	    ntmprs,
 	    nargs,
-	    //code, <-- only if moo is built with MOO_USE_METHOD_TRAILER disable.
+	    //code, <-- only if moo is built with MOO_USE_METHOD_TRAILER disabled.
 	    dbi_file_offset,
 	    dbi_method_offset.
 

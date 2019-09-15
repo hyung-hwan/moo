@@ -13,7 +13,7 @@ class System(Apex)
 	var(#class) asyncsg.
 	var(#class) gcfin_sem.
 	var(#class) gcfin_should_exit := false.
-	var(#class) shr.
+	var(#class) shr. // signal handler registry
 
 	pooldic Log
 	{
@@ -31,12 +31,8 @@ class System(Apex)
 
 	method(#class) _initialize
 	{
-		self.shr := Dictionary new.
-	}
-
-	method(#class) _cleanup
-	{
-		self.shr := nil.
+		self.shr := Set new.
+		self.asyncsg := SemaphoreGroup new.
 	}
 
 	method(#class) addAsyncSemaphore: sem
@@ -54,11 +50,21 @@ class System(Apex)
 		^self.asyncsg wait.
 	}
 
+	method(#class) installSignalHandler: block
+	{
+		self.shr add: block.
+	}
+
+	method(#class) uninstallSignalHandler: block
+	{
+		self.shr remove: block.
+	}
+
 	method(#class) startup(class_name, method_name)
 	{
 		| class ret gcfin_proc ossig_proc |
 
-		self.asyncsg := SemaphoreGroup new.
+		System gc.
 
 		class := self at: class_name. // System at: class_name.
 		if (class isError)
@@ -150,7 +156,7 @@ class System(Apex)
 		[
 			while (true)
 			{
-				while ((tmp := self _getSig) notError)
+				until ((tmp := self _getSig) isError)
 				{
 					// TODO: Do i have to protected this in an exception handler???
 					//TODO: Execute Handler for tmp.
@@ -160,18 +166,14 @@ class System(Apex)
 					// user-defined signal handler is not allowed for 16rFF
 					if (tmp == 16rFF) { goto done }. 
 
-					/*
-					sh := self.sighandler at: tmp.
-					if (sh isNil)
-					{*/
-						// the default action for sigint(2) is to terminate all processes.
-						if (tmp == 2) { goto done }.
-					/*}
+					ifnot (self.shr isEmpty)
+					{
+						self.shr do: [ :handler | handler value ]
+					}
 					else
 					{
-						// invoke a user-defined signal handler if available.
-						sh value: tmp.
-					}*/
+						if (tmp == 2) { goto done }.
+					}.
 				}.
 				os_intr_sem wait.
 			}.
@@ -218,7 +220,6 @@ class System(Apex)
 			self.gcfin_sem signal. // wake the gcfin process.
 
 			self _halting. // inform VM that it should get ready for halting.
-			self _cleanup.
 		].
 	}
 
@@ -237,14 +238,6 @@ class System(Apex)
 	method(#class,#primitive) return: object to: context.
 
 	// =======================================================================================
-	method(#class) registerSignalHandler: block
-	{
-		self.shr add: block.
-	}
-
-	method(#class) removeSignalHandler: block
-	{
-	}
 
 	method(#class) sleepForSecs: secs
 	{
