@@ -300,17 +300,19 @@ typedef enum moo_gcfin_t moo_gcfin_t;
 #define MOO_OBJ_FLAGS_RDONLY_BITS   1
 #define MOO_OBJ_FLAGS_GCFIN_BITS    4
 #define MOO_OBJ_FLAGS_TRAILER_BITS  1
+#define MOO_OBJ_FLAGS_HASH_BITS     2
 
 #define MOO_OBJ_FLAGS_TYPE_SHIFT    (MOO_OBJ_FLAGS_UNIT_BITS    + MOO_OBJ_FLAGS_UNIT_SHIFT)
 #define MOO_OBJ_FLAGS_UNIT_SHIFT    (MOO_OBJ_FLAGS_EXTRA_BITS   + MOO_OBJ_FLAGS_EXTRA_SHIFT)
 #define MOO_OBJ_FLAGS_EXTRA_SHIFT   (MOO_OBJ_FLAGS_KERNEL_BITS  + MOO_OBJ_FLAGS_KERNEL_SHIFT)
 #define MOO_OBJ_FLAGS_KERNEL_SHIFT  (MOO_OBJ_FLAGS_PERM_BITS    + MOO_OBJ_FLAGS_PERM_SHIFT)
 #define MOO_OBJ_FLAGS_PERM_SHIFT    (MOO_OBJ_FLAGS_MOVED_BITS   + MOO_OBJ_FLAGS_MOVED_SHIFT)
-#define MOO_OBJ_FLAGS_MOVED_SHIFT   (MOO_OBJ_FLAGS_PROC_BITS     + MOO_OBJ_FLAGS_PROC_SHIFT)
-#define MOO_OBJ_FLAGS_PROC_SHIFT     (MOO_OBJ_FLAGS_RDONLY_BITS  + MOO_OBJ_FLAGS_RDONLY_SHIFT)
+#define MOO_OBJ_FLAGS_MOVED_SHIFT   (MOO_OBJ_FLAGS_PROC_BITS    + MOO_OBJ_FLAGS_PROC_SHIFT)
+#define MOO_OBJ_FLAGS_PROC_SHIFT    (MOO_OBJ_FLAGS_RDONLY_BITS  + MOO_OBJ_FLAGS_RDONLY_SHIFT)
 #define MOO_OBJ_FLAGS_RDONLY_SHIFT  (MOO_OBJ_FLAGS_GCFIN_BITS   + MOO_OBJ_FLAGS_GCFIN_SHIFT)
 #define MOO_OBJ_FLAGS_GCFIN_SHIFT   (MOO_OBJ_FLAGS_TRAILER_BITS + MOO_OBJ_FLAGS_TRAILER_SHIFT)
-#define MOO_OBJ_FLAGS_TRAILER_SHIFT (0)
+#define MOO_OBJ_FLAGS_TRAILER_SHIFT (MOO_OBJ_FLAGS_HASH_BITS    + MOO_OBJ_FLAGS_HASH_SHIFT)
+#define MOO_OBJ_FLAGS_HASH_SHIFT    (0)
 
 #define MOO_OBJ_GET_FLAGS_TYPE(oop)       MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_TYPE_SHIFT,    MOO_OBJ_FLAGS_TYPE_BITS)
 #define MOO_OBJ_GET_FLAGS_UNIT(oop)       MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_UNIT_SHIFT,    MOO_OBJ_FLAGS_UNIT_BITS)
@@ -318,10 +320,11 @@ typedef enum moo_gcfin_t moo_gcfin_t;
 #define MOO_OBJ_GET_FLAGS_KERNEL(oop)     MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_KERNEL_SHIFT,  MOO_OBJ_FLAGS_KERNEL_BITS)
 #define MOO_OBJ_GET_FLAGS_PERM(oop)       MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_PERM_SHIFT,    MOO_OBJ_FLAGS_PERM_BITS)
 #define MOO_OBJ_GET_FLAGS_MOVED(oop)      MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_MOVED_SHIFT,   MOO_OBJ_FLAGS_MOVED_BITS)
-#define MOO_OBJ_GET_FLAGS_PROC(oop)        MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_PROC_SHIFT,     MOO_OBJ_FLAGS_PROC_BITS)
+#define MOO_OBJ_GET_FLAGS_PROC(oop)       MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_PROC_SHIFT,    MOO_OBJ_FLAGS_PROC_BITS)
 #define MOO_OBJ_GET_FLAGS_RDONLY(oop)     MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_RDONLY_SHIFT,  MOO_OBJ_FLAGS_RDONLY_BITS)
 #define MOO_OBJ_GET_FLAGS_GCFIN(oop)      MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_GCFIN_SHIFT,   MOO_OBJ_FLAGS_GCFIN_BITS)
 #define MOO_OBJ_GET_FLAGS_TRAILER(oop)    MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_TRAILER_SHIFT, MOO_OBJ_FLAGS_TRAILER_BITS)
+#define MOO_OBJ_GET_FLAGS_HASH(oop)       MOO_GETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_HASH_SHIFT,    MOO_OBJ_FLAGS_HASH_BITS)
 
 #define MOO_OBJ_SET_FLAGS_TYPE(oop,v)     MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_TYPE_SHIFT,    MOO_OBJ_FLAGS_TYPE_BITS,     v)
 #define MOO_OBJ_SET_FLAGS_UNIT(oop,v)     MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_UNIT_SHIFT,    MOO_OBJ_FLAGS_UNIT_BITS,     v)
@@ -333,6 +336,7 @@ typedef enum moo_gcfin_t moo_gcfin_t;
 #define MOO_OBJ_SET_FLAGS_RDONLY(oop,v)   MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_RDONLY_SHIFT,  MOO_OBJ_FLAGS_RDONLY_BITS,   v)
 #define MOO_OBJ_SET_FLAGS_GCFIN(oop,v)    MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_GCFIN_SHIFT,   MOO_OBJ_FLAGS_GCFIN_BITS,    v)
 #define MOO_OBJ_SET_FLAGS_TRAILER(oop,v)  MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_TRAILER_SHIFT, MOO_OBJ_FLAGS_TRAILER_BITS,  v)
+#define MOO_OBJ_SET_FLAGS_HASH(oop,v)     MOO_SETBITS(moo_oow_t, (oop)->_flags, MOO_OBJ_FLAGS_HASH_SHIFT,    MOO_OBJ_FLAGS_HASH_BITS,     v)
 
 #define MOO_OBJ_GET_SIZE(oop) ((oop)->_size)
 #define MOO_OBJ_GET_CLASS(oop) ((moo_oop_class_t)((oop)->_class))
@@ -353,15 +357,16 @@ typedef enum moo_gcfin_t moo_gcfin_t;
 /* [NOTE] this macro doesn't check the range of the actual value.
  *        make sure that the value of each bit fields given falls within the 
  *        possible range of the defined bits */
-#define MOO_OBJ_MAKE_FLAGS(t,u,e,k,p,m,g,r) ( \
-	(((moo_oow_t)(t)) << MOO_OBJ_FLAGS_TYPE_SHIFT) | \
-	(((moo_oow_t)(u)) << MOO_OBJ_FLAGS_UNIT_SHIFT) | \
-	(((moo_oow_t)(e)) << MOO_OBJ_FLAGS_EXTRA_SHIFT) | \
-	(((moo_oow_t)(k)) << MOO_OBJ_FLAGS_KERNEL_SHIFT) | \
-	(((moo_oow_t)(p)) << MOO_OBJ_FLAGS_PERM_SHIFT) | \
-	(((moo_oow_t)(m)) << MOO_OBJ_FLAGS_MOVED_SHIFT) | \
-	(((moo_oow_t)(g)) << MOO_OBJ_FLAGS_PROC_SHIFT) | \
-	(((moo_oow_t)(r)) << MOO_OBJ_FLAGS_TRAILER_SHIFT) \
+#define MOO_OBJ_MAKE_FLAGS(_ty,_u,_e,_k,_p,_m,_g,_tr,_h) ( \
+	(((moo_oow_t)(_ty)) << MOO_OBJ_FLAGS_TYPE_SHIFT) | \
+	(((moo_oow_t)(_u))  << MOO_OBJ_FLAGS_UNIT_SHIFT) | \
+	(((moo_oow_t)(_e))  << MOO_OBJ_FLAGS_EXTRA_SHIFT) | \
+	(((moo_oow_t)(_k))  << MOO_OBJ_FLAGS_KERNEL_SHIFT) | \
+	(((moo_oow_t)(_p))  << MOO_OBJ_FLAGS_PERM_SHIFT) | \
+	(((moo_oow_t)(_m))  << MOO_OBJ_FLAGS_MOVED_SHIFT) | \
+	(((moo_oow_t)(_g))  << MOO_OBJ_FLAGS_PROC_SHIFT) | \
+	(((moo_oow_t)(_tr)) << MOO_OBJ_FLAGS_TRAILER_SHIFT) | \
+	(((moo_oow_t)(_h))  << MOO_OBJ_FLAGS_HASH_SHIFT) \
 )
 
 #define MOO_OBJ_FLAGS_KERNEL_USER     0 

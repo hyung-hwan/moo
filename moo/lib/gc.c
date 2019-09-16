@@ -640,7 +640,7 @@ int moo_ignite (moo_t* moo, moo_oow_t heapsz)
 	moo->_nil = moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t));
 	if (!moo->_nil) goto oops;
 
-	moo->_nil->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 1, moo->igniting, 0, 0, 0);
+	moo->_nil->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 1, moo->igniting, 0, 0, 0, 0);
 	moo->_nil->_size = 0;
 
 	if (ignite_1(moo) <= -1 || ignite_2(moo) <= -1 || ignite_3(moo)) goto oops;;
@@ -728,12 +728,10 @@ static void compact_symbol_table (moo_t* moo, moo_oop_t _nil)
 
 static MOO_INLINE moo_oow_t get_payload_bytes (moo_t* moo, moo_oop_t oop)
 {
-	moo_oow_t nbytes_aligned;
+	moo_oow_t nbytes;
 
 	if (MOO_OBJ_GET_FLAGS_TRAILER(oop))
 	{
-		moo_oow_t nbytes;
-
 		/* only an OOP object can have the trailer. 
 		 *
 		 * | _flags    |
@@ -751,15 +749,17 @@ static MOO_INLINE moo_oow_t get_payload_bytes (moo_t* moo, moo_oop_t oop)
 		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_EXTRA(oop) == 0); /* no 'extra' for an OOP object */
 
 		nbytes = MOO_OBJ_BYTESOF(oop) + MOO_SIZEOF(moo_oow_t) + MOO_OBJ_GET_TRAILER_SIZE(oop);
-		nbytes_aligned = MOO_ALIGN (nbytes, MOO_SIZEOF(moo_oop_t));
+	
 	}
 	else
 	{
 		/* calculate the payload size in bytes */
-		nbytes_aligned = MOO_ALIGN(MOO_OBJ_BYTESOF(oop), MOO_SIZEOF(moo_oop_t));
+		nbytes = MOO_OBJ_BYTESOF(oop);
 	}
 
-	return nbytes_aligned;
+	if (MOO_OBJ_GET_FLAGS_HASH(oop) == 2) nbytes += MOO_SIZEOF(moo_oow_t);
+
+	return MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t));
 }
 
 moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
@@ -828,6 +828,16 @@ static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t**
 
 		nbytes_aligned = get_payload_bytes(moo, oop);
 
+/*
+if (MOO_OBJ_GET_HASH_FLAGS(oop) == 1)
+{
+TODO: use the unaligned bytes and align after this addition 
+	nbytes_aligned += MOO_SIZEOF(moo_oow_t);
+
+change the hash flags to 2.
+store the  existing address to the extra hash field 
+}
+*/
 		tmp = moo_moveoop(moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop));
 		MOO_OBJ_SET_CLASS (oop, tmp);
 
@@ -1096,27 +1106,12 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 {
 	if (MOO_OOP_IS_POINTER(oop) && MOO_OBJ_GET_CLASS(oop) != moo->_symbol)
 	{
-#if 0
-		moo_oop_t z;
-		moo_oop_class_t c;
-
-		c = MOO_OBJ_GET_CLASS(oop);
-		moo_pushvolat (moo, &oop);
-		z = moo_instantiate(moo, (moo_oop_t)c, MOO_NULL, MOO_OBJ_GET_SIZE(oop) - MOO_CLASS_SPEC_NAMED_INSTVARS(MOO_OOP_TO_SMOOI(c->spec)));
-		moo_popvolat(moo);
-
-		if (!z) return z;
-
-		/* copy the payload */
-		MOO_MEMCPY (z + 1, oop + 1, get_payload_bytes(moo, oop));
-		MOO_OBJ_SET_FLAGS_RDONLY (z, 0); /* a copied object is not read-only */
-
-		return z;
-#else
 		moo_oop_t z;
 		moo_oow_t total_bytes;
 
 		total_bytes = MOO_SIZEOF(moo_obj_t) + get_payload_bytes(moo, oop);
+
+/* TODO: exclude trailer and hash space? exclde hash space at least? */
 
 		moo_pushvolat (moo, &oop);
 		z = (moo_oop_t)moo_allocbytes(moo, total_bytes);
@@ -1124,13 +1119,11 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 
 		MOO_MEMCPY (z, oop, total_bytes);
 		MOO_OBJ_SET_FLAGS_RDONLY (z, 0); /* a copied object is not read-only */
-		return z;
-#endif 
+		return z; 
 	}
 
 	return oop;
 }
-
 
 
 int moo_regfinalizable (moo_t* moo, moo_oop_t oop)

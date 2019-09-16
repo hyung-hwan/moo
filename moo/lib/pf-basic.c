@@ -223,7 +223,7 @@ moo_pfrc_t moo_pf_basic_new (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	if (MOO_OOP_IS_SMOOI(((moo_oop_class_t)_class)->trsize)) 
 	{
-		obj = moo_instantiatewithtrailer (moo, _class, size, MOO_NULL, MOO_OOP_TO_SMOOI(((moo_oop_class_t)_class)->trsize));
+		obj = moo_instantiatewithtrailer(moo, _class, size, MOO_NULL, MOO_OOP_TO_SMOOI(((moo_oop_class_t)_class)->trsize));
 	}
 	else 
 	{

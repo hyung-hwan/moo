@@ -969,7 +969,22 @@ int moo_setclasstrsize (moo_t* moo, moo_oop_class_t _class, moo_oow_t size, moo_
 	moo_oow_t spec;
 
 	MOO_ASSERT (moo, MOO_CLASSOF(moo, _class) == moo->_class);
-	MOO_ASSERT (moo, size <= MOO_SMOOI_MAX);	
+	/*MOO_ASSERT (moo, size <= MOO_SMOOI_MAX);
+	MOO_ASSERT (moo, MOO_IN_SMPTR_RANGE(trgc));*/
+
+	if (size > MOO_SMOOI_MAX)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "trailer size %zu too large for the %.*js class",
+			size, MOO_OBJ_GET_SIZE(_class->name), MOO_OBJ_GET_CHAR_SLOT(_class->name));
+		return -1;
+	}
+
+	if (!MOO_IN_SMPTR_RANGE(trgc))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "trailer gc pointer %p not SMPTR compatible for the %.*js class",
+			trgc, MOO_OBJ_GET_SIZE(_class->name), MOO_OBJ_GET_CHAR_SLOT(_class->name));
+		return -1;
+	}
  
 	if (_class == moo->_method) 
 	{

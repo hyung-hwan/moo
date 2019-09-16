@@ -76,7 +76,7 @@ moo_oop_t moo_allocoopobj (moo_t* moo, moo_oow_t size)
 	hdr = (moo_oop_oop_t)moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
 	if (!hdr) return MOO_NULL;
 
-	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, moo->igniting, 0, 0, 0);
+	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, moo->igniting, 0, 0, 0, 0);
 	MOO_OBJ_SET_SIZE (hdr, size);
 	MOO_OBJ_SET_CLASS (hdr, moo->_nil);
 
@@ -102,7 +102,7 @@ moo_oop_t moo_allocoopobjwithtrailer (moo_t* moo, moo_oow_t size, const moo_oob_
 	hdr = (moo_oop_oop_t)moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
 	if (!hdr) return MOO_NULL;
 
-	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, moo->igniting, 0, 0, 1); /* TRAILER bit -> 1 */
+	hdr->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 0, moo->igniting, 0, 0, 1, 0); /* TRAILER bit -> 1 */
 	MOO_OBJ_SET_SIZE (hdr, size);
 	MOO_OBJ_SET_CLASS (hdr, moo->_nil);
 
@@ -149,7 +149,7 @@ static MOO_INLINE moo_oop_t alloc_numeric_array (moo_t* moo, const void* ptr, mo
 	hdr = (moo_oop_t)moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
 	if (!hdr) return MOO_NULL;
 
-	hdr->_flags = MOO_OBJ_MAKE_FLAGS(type, unit, extra, 0, moo->igniting, 0, 0, 0); /* TODO: review. ngc and perm flags seems to conflict with each other ... the diff is that ngc is malloc() and perm is allocated in the perm heap */
+	hdr->_flags = MOO_OBJ_MAKE_FLAGS(type, unit, extra, 0, moo->igniting, 0, 0, 0, 0); /* TODO: review. ngc and perm flags seems to conflict with each other ... the diff is that ngc is malloc() and perm is allocated in the perm heap */
 	hdr->_size = len;
 	MOO_OBJ_SET_SIZE (hdr, len);
 	MOO_OBJ_SET_CLASS (hdr, moo->_nil);
