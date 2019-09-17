@@ -1251,6 +1251,8 @@ int moo_regfinalizable (moo_t* moo, moo_oop_t oop);
 int moo_deregfinalizable (moo_t* moo, moo_oop_t oop);
 void moo_deregallfinalizables (moo_t* moo);
 
+moo_oow_t moo_getobjpayloadbytes (moo_t* moo, moo_oop_t oop);
+
 /* ========================================================================= */
 /* bigint.c                                                                  */
 /* ========================================================================= */

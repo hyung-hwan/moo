@@ -2221,7 +2221,19 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 					default:
 						/* MOO_OBJ_TYPE_OOP, ... */
 						moo_seterrbfmt(moo, MOO_ENOIMPL, "no builtin hash implemented for %O", rcv); /* TODO: better error code? */
-						return MOO_PF_FAILURE;
+						switch (MOO_OBJ_GET_FLAGS_HASH(rcv))
+						{
+							case 0:
+								MOO_OBJ_SET_FLAGS_HASH (rcv, 1);
+								/* fall thru */
+							case 1:
+								hv = (moo_oow_t)rcv;
+								break;
+
+							case 2:
+								hv = *(moo_oow_t*)((moo_uint8_t*)rcv + MOO_SIZEOF(moo_obj_t) + moo_getobjpayloadbytes(moo, rcv) - MOO_SIZEOF(moo_oow_t));
+								break;
+						}
 				}
 			}
 			break;

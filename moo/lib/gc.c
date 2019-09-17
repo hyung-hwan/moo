@@ -726,9 +726,11 @@ static void compact_symbol_table (moo_t* moo, moo_oop_t _nil)
 	moo->symtab->tally = MOO_SMOOI_TO_OOP(tally);
 }
 
-static MOO_INLINE moo_oow_t get_payload_bytes (moo_t* moo, moo_oop_t oop)
+moo_oow_t moo_getobjpayloadbytes (moo_t* moo, moo_oop_t oop)
 {
 	moo_oow_t nbytes;
+
+	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(oop));
 
 	if (MOO_OBJ_GET_FLAGS_TRAILER(oop))
 	{
@@ -749,7 +751,6 @@ static MOO_INLINE moo_oow_t get_payload_bytes (moo_t* moo, moo_oop_t oop)
 		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_EXTRA(oop) == 0); /* no 'extra' for an OOP object */
 
 		nbytes = MOO_OBJ_BYTESOF(oop) + MOO_SIZEOF(moo_oow_t) + MOO_OBJ_GET_TRAILER_SIZE(oop);
-	
 	}
 	else
 	{
@@ -757,9 +758,14 @@ static MOO_INLINE moo_oow_t get_payload_bytes (moo_t* moo, moo_oop_t oop)
 		nbytes = MOO_OBJ_BYTESOF(oop);
 	}
 
-	if (MOO_OBJ_GET_FLAGS_HASH(oop) == 2) nbytes += MOO_SIZEOF(moo_oow_t);
+	nbytes = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t));
+	if (MOO_OBJ_GET_FLAGS_HASH(oop) == 2) 
+	{
+		MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oop_t) == MOO_SIZEOF(moo_oow_t));
+		nbytes += MOO_SIZEOF(moo_oow_t);
+	}
 
-	return MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t));
+	return nbytes;
 }
 
 moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
@@ -782,13 +788,19 @@ moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
 	}
 	else
 	{
-		moo_oow_t nbytes_aligned;
+		moo_oow_t nbytes_aligned, extra_bytes = 0;
 		moo_oop_t tmp;
 
-		nbytes_aligned = get_payload_bytes(moo, oop);
+		nbytes_aligned = moo_getobjpayloadbytes(moo, oop);
+
+		if (MOO_OBJ_GET_FLAGS_HASH(oop) == 1)
+		{
+			MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oop_t) == MOO_SIZEOF(moo_oow_t)); /* don't need explicit alignment */
+			extra_bytes = MOO_SIZEOF(moo_oow_t); /*  MOO_ALIGN(MOO_SIZEOF(moo_oow_t), MOO_SIZEOF(moo_oop_t)); */
+		}
 
 		/* allocate space in the new heap */
-		tmp = moo_allocheapspace(moo, &moo->heap->newspace, MOO_SIZEOF(moo_obj_t) + nbytes_aligned);
+		tmp = moo_allocheapspace(moo, &moo->heap->newspace, MOO_SIZEOF(moo_obj_t) + nbytes_aligned + extra_bytes);
 
 		/* allocation here must not fail because
 		 * i'm allocating the new space in a new heap for 
@@ -810,6 +822,12 @@ moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
 		 * the 'if' block at the top of this function. */
 		MOO_OBJ_SET_CLASS (oop, tmp);
 
+		if (extra_bytes)
+		{
+			MOO_OBJ_SET_FLAGS_HASH (tmp, 2);
+			*(moo_oow_t*)((moo_uint8_t*)tmp + MOO_SIZEOF(moo_obj_t) + nbytes_aligned) = (moo_oow_t)oop;
+		}
+
 		/* return the new object */
 		return tmp;
 	}
@@ -826,18 +844,8 @@ static moo_uint8_t* scan_heap_space (moo_t* moo, moo_uint8_t* ptr, moo_uint8_t**
 		oop = (moo_oop_t)ptr;
 		MOO_ASSERT (moo, MOO_OOP_IS_POINTER(oop));
 
-		nbytes_aligned = get_payload_bytes(moo, oop);
+		nbytes_aligned = moo_getobjpayloadbytes(moo, oop);
 
-/*
-if (MOO_OBJ_GET_HASH_FLAGS(oop) == 1)
-{
-TODO: use the unaligned bytes and align after this addition 
-	nbytes_aligned += MOO_SIZEOF(moo_oow_t);
-
-change the hash flags to 2.
-store the  existing address to the extra hash field 
-}
-*/
 		tmp = moo_moveoop(moo, (moo_oop_t)MOO_OBJ_GET_CLASS(oop));
 		MOO_OBJ_SET_CLASS (oop, tmp);
 
@@ -1109,7 +1117,7 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 		moo_oop_t z;
 		moo_oow_t total_bytes;
 
-		total_bytes = MOO_SIZEOF(moo_obj_t) + get_payload_bytes(moo, oop);
+		total_bytes = MOO_SIZEOF(moo_obj_t) + moo_getobjpayloadbytes(moo, oop);
 
 /* TODO: exclude trailer and hash space? exclde hash space at least? */
 

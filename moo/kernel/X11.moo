@@ -810,6 +810,7 @@ class MyObject(Object)
 	method initialize
 	{
 		self.on_sig := [:sig | 
+'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx' dump.
 			self.disp1 requestToExit.
 			self.disp2 requestToExit.
 		].

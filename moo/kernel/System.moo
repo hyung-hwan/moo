@@ -148,7 +148,7 @@ class System(Apex)
 
 	method(#class) __os_sig_handler: caller
 	{
-		| os_intr_sem tmp sh |
+		| os_intr_sem signo sh |
 
 		os_intr_sem := Semaphore new.
 		os_intr_sem signalOnInput: System _getSigfd.
@@ -156,23 +156,23 @@ class System(Apex)
 		[
 			while (true)
 			{
-				until ((tmp := self _getSig) isError)
+				until ((signo := self _getSig) isError)
 				{
 					// TODO: Do i have to protected this in an exception handler???
-					//TODO: Execute Handler for tmp.
+					//TODO: Execute Handler for signo.
 
-					System logNl: 'Interrupt dectected - signal no - ' & tmp asString.
+					System logNl: 'Interrupt dectected - signal no - ' & signo asString.
 
 					// user-defined signal handler is not allowed for 16rFF
-					if (tmp == 16rFF) { goto done }. 
+					if (signo == 16rFF) { goto done }. 
 
 					ifnot (self.shr isEmpty)
 					{
-						self.shr do: [ :handler | handler value ]
+						self.shr do: [ :handler | handler value: signo ]
 					}
 					else
 					{
-						if (tmp == 2) { goto done }.
+						if (signo == 2) { goto done }.
 					}.
 				}.
 				os_intr_sem wait.
