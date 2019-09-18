@@ -613,7 +613,7 @@ static void dump_process_info (moo_t* moo, moo_bitmask_t log_mask)
 	{
 		moo_ooi_t io_handle;
 
-		MOO_LOG0 (moo, log_mask, "> IO Semaphores:");
+		MOO_LOG0 (moo, log_mask, "> IO semaphores:");
 		for (io_handle = 0; io_handle < moo->sem_io_map_capa; io_handle++)
 		{
 			moo_ooi_t index;

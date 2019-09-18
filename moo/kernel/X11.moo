@@ -277,9 +277,9 @@ widget windowHandle dump.
 	{
 		if (self.gcHandle notNil)
 		{
-			self.widget displayServer _destroy_gc (self).
-			self.gcHandle := nil
-		}
+			self.widget displayServer _destroy_gc(self).
+			self.gcHandle := nil.
+		}.
 	}
 
 	method apply
@@ -466,14 +466,17 @@ class X11.Composite(X11.Widget)
 	method remove: widget
 	{
 		| link |
-		if (widget parent ~~ self)
+		if (widget parent notNil) // TODO: DEBUG. check if this widget is being disposed multiple times. I see this method called with 'widget parent' of nil.
 		{
-			selfns.Exception signal: "Cannot remove an unknown widget"
-		}.
+			if (widget parent ~~ self)
+			{
+				selfns.Exception signal: "Cannot remove an unknown widget"
+			}.
 
-		link := self.children findIdenticalLink: widget.
-		self.children removeLink: link.
-		widget parent: nil.
+			link := self.children findIdenticalLink: widget.
+			self.children removeLink: link.
+			widget parent: nil.
+		}.
 	}
 
 	method childrenCount
@@ -499,7 +502,10 @@ class X11.Composite(X11.Widget)
 			child dispose.
 			self remove: child.
 		].
-		super dispose
+'Composite dispose DONE XXXXXXXXXXXXXX' dump.
+'SUPER SUPER SUPER dispose' dump.
+		super dispose.
+'SUPER SUPER SUPER dispose DONE' dump.
 	}
 
 	method onPaintEvent: event
@@ -655,24 +661,20 @@ extend X11
 	{
 		if (self.event_loop_sem isNil)
 		{
-			
 			self.event_loop_sem := Semaphore new.
 			self.event_loop_sem signalOnInput: (self _get_fd).
 			self.event_loop_proc := [
-
 				[
-					| llevtbuf llevent ongoing |
+					| llevtbuf llevent |
 
 					self.event_loop_exit_req := false.
 					llevtbuf := X11.LLEvent new.
-					ongoing := true.
 					while (self.shell_container childrenCount > 0)
 					{
 'Waiting for X11 event...' dump.
 						if  (self.event_loop_exit_req) { break }.
 						self.event_loop_sem wait.
 						if  (self.event_loop_exit_req) { break }.
-						ifnot (ongoing) { break }.
 
 						while ((llevent := self _get_llevent(llevtbuf)) notNil)
 						{
@@ -680,7 +682,6 @@ extend X11
 							{
 								//System logNl: ('Error while getting a event from server ' & self.cid asString).
 								self.event_loop_exit_req := true.
-								ongoing := false.
 								break.
 							}
 							else
@@ -690,9 +691,7 @@ extend X11
 						}.
 					}.
 				] ensure: [
-
 'CLOSING X11 EVENT LOOP' dump.
-
 					//self.event_loop_sem signal. // in case the process is suspended in self.event_loop_sem wait.
 					self.event_loop_sem unsignal.
 			// TODO: LOOK HERE FOR RACE CONDITION with exitEventLoop.
@@ -701,10 +700,16 @@ extend X11
 
 					[ self dispose ] on: Exception do: [:ex | ("WARNING: dispose failure...." & ex messageText) dump ].
 				]
-			] fork.
+			] newProcess.
+
+			self.event_loop_proc resume.
 		}
 	}
 
+/////////////////////////////////////////
+// TOOD: exitEventLoop to terminate the whole process by force or
+//       requestToExit to signal process after having set a flag?
+//       what is better?
 	method exitEventLoop
 	{
 		if (self.event_loop_sem notNil)
@@ -716,16 +721,12 @@ extend X11
 		}
 	}
 
-	method signal_event_loop_semaphore
-	{
-		self.event_loop_sem signal.
-	}
-
 	method requestToExit 
 	{
 		self.event_loop_exit_req := true.
 		self.event_loop_sem signal.
 	}
+/////////////////////////////////////////
 
 	method __dispatch_llevent: llevent
 	{
@@ -810,7 +811,6 @@ class MyObject(Object)
 	method initialize
 	{
 		self.on_sig := [:sig | 
-'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXx' dump.
 			self.disp1 requestToExit.
 			self.disp2 requestToExit.
 		].

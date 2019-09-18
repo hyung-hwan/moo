@@ -31,7 +31,7 @@ class System(Apex)
 
 	method(#class) _initialize
 	{
-		self.shr := Set new.
+		self.shr := OrderedCollection new.
 		self.asyncsg := SemaphoreGroup new.
 	}
 
@@ -52,7 +52,7 @@ class System(Apex)
 
 	method(#class) installSignalHandler: block
 	{
-		self.shr add: block.
+		self.shr addLast: block.
 	}
 
 	method(#class) uninstallSignalHandler: block
@@ -168,7 +168,7 @@ class System(Apex)
 
 					ifnot (self.shr isEmpty)
 					{
-						self.shr do: [ :handler | handler value: signo ]
+						self.shr do: [ :handler | handler value: signo ].
 					}
 					else
 					{
