@@ -743,8 +743,9 @@ moo_oow_t moo_getobjpayloadbytes (moo_t* moo, moo_oop_t oop)
 		 * |   X       |
 		 * |   X       |
 		 * |   Y       | <-- it may exist if EXTRA is set in _flags.
-		 * |   Z       | <-- if TRAILER is set, it is the number of bytes in the trailer
-		 * |  |  |  |  | 
+		 * |   Z       | <-- if TRAILER is set, it is a word indicating the number of bytes in the trailer
+		 * |  |  |  |  | <-- trailer bytes. it's aligned to a word boundary.
+		 * | hash      | <-- if HASH is set to 2 in _flags, a word is used to store a hash value
 		 */
 		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TYPE(oop) == MOO_OBJ_TYPE_OOP);
 		MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_UNIT(oop) == MOO_SIZEOF(moo_oow_t));
@@ -759,7 +760,7 @@ moo_oow_t moo_getobjpayloadbytes (moo_t* moo, moo_oop_t oop)
 	}
 
 	nbytes = MOO_ALIGN(nbytes, MOO_SIZEOF(moo_oop_t));
-	if (MOO_OBJ_GET_FLAGS_HASH(oop) == 2) 
+	if (MOO_OBJ_GET_FLAGS_HASH(oop) == MOO_OBJ_FLAGS_HASH_STORED) 
 	{
 		MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oop_t) == MOO_SIZEOF(moo_oow_t));
 		nbytes += MOO_SIZEOF(moo_oow_t);
@@ -793,10 +794,12 @@ moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
 
 		nbytes_aligned = moo_getobjpayloadbytes(moo, oop);
 
-		if (MOO_OBJ_GET_FLAGS_HASH(oop) == 1)
+		if (MOO_OBJ_GET_FLAGS_HASH(oop) == MOO_OBJ_FLAGS_HASH_CALLED)
 		{
-			MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oop_t) == MOO_SIZEOF(moo_oow_t)); /* don't need explicit alignment */
-			extra_bytes = MOO_SIZEOF(moo_oow_t); /*  MOO_ALIGN(MOO_SIZEOF(moo_oow_t), MOO_SIZEOF(moo_oop_t)); */
+			MOO_STATIC_ASSERT (MOO_SIZEOF(moo_oop_t) == MOO_SIZEOF(moo_oow_t)); 
+			/* don't need explicit alignment since oop and oow have the same size 
+			extra_bytes = MOO_ALIGN(MOO_SIZEOF(moo_oow_t), MOO_SIZEOF(moo_oop_t)); */
+			extra_bytes = MOO_SIZEOF(moo_oow_t); 
 		}
 
 		/* allocate space in the new heap */
@@ -824,8 +827,8 @@ moo_oop_t moo_moveoop (moo_t* moo, moo_oop_t oop)
 
 		if (extra_bytes)
 		{
-			MOO_OBJ_SET_FLAGS_HASH (tmp, 2);
-			*(moo_oow_t*)((moo_uint8_t*)tmp + MOO_SIZEOF(moo_obj_t) + nbytes_aligned) = (moo_oow_t)oop;
+			MOO_OBJ_SET_FLAGS_HASH (tmp, MOO_OBJ_FLAGS_HASH_STORED);
+			*(moo_oow_t*)((moo_uint8_t*)tmp + MOO_SIZEOF(moo_obj_t) + nbytes_aligned) = (moo_oow_t)oop % (MOO_SMOOI_MAX + 1);
 		}
 
 		/* return the new object */

@@ -244,9 +244,9 @@ moo_pfrc_t moo_pf_shallow_copy (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	moo_oop_t rcv, obj;
 
 	MOO_ASSERT (moo, nargs ==  0);
-	rcv = MOO_STACK_GETRCV (moo, nargs);
+	rcv = MOO_STACK_GETRCV(moo, nargs);
 
-	obj = moo_shallowcopy (moo, rcv);
+	obj = moo_shallowcopy(moo, rcv);
 	if (!obj) return MOO_PF_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, obj);

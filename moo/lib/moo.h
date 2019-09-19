@@ -373,6 +373,10 @@ typedef enum moo_gcfin_t moo_gcfin_t;
 #define MOO_OBJ_FLAGS_KERNEL_IMMATURE 1
 #define MOO_OBJ_FLAGS_KERNEL_MATURE   2
 
+#define MOO_OBJ_FLAGS_HASH_UNUSED 0 /* the hash method has never been invoked */
+#define MOO_OBJ_FLAGS_HASH_CALLED 1 /* the hash method has been invoked for this object  */
+#define MOO_OBJ_FLAGS_HASH_STORED 2 /* the object with hash invoke has been moved by GC  */
+
 #define MOO_OBJ_HEADER \
 	moo_oow_t _flags; \
 	moo_oow_t _size; \

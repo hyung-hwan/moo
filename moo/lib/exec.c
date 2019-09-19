@@ -2196,11 +2196,8 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 			else if (rcv == moo->_false) hv = 2;
 			else
 			{
-				int type;
-
 				MOO_ASSERT (moo, MOO_OOP_IS_POINTER(rcv));
-				type = MOO_OBJ_GET_FLAGS_TYPE(rcv);
-				switch (type)
+				switch (MOO_OBJ_GET_FLAGS_TYPE(rcv))
 				{
 					case MOO_OBJ_TYPE_BYTE:
 						hv = moo_hash_bytes(MOO_OBJ_GET_BYTE_SLOT(rcv), MOO_OBJ_GET_SIZE(rcv));
@@ -2220,17 +2217,18 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 					default:
 						/* MOO_OBJ_TYPE_OOP, ... */
-						moo_seterrbfmt(moo, MOO_ENOIMPL, "no builtin hash implemented for %O", rcv); /* TODO: better error code? */
 						switch (MOO_OBJ_GET_FLAGS_HASH(rcv))
 						{
-							case 0:
-								MOO_OBJ_SET_FLAGS_HASH (rcv, 1);
+							case MOO_OBJ_FLAGS_HASH_UNUSED:
+								/* the object in the permanent space doesn't need this. but never mind */
+								/*if (!MOO_OBJ_GET_FLAGS_PERM(rcv)) */
+								MOO_OBJ_SET_FLAGS_HASH (rcv, MOO_OBJ_FLAGS_HASH_CALLED);
 								/* fall thru */
-							case 1:
-								hv = (moo_oow_t)rcv;
+							case MOO_OBJ_FLAGS_HASH_CALLED:
+								hv = ((moo_oow_t)rcv) % (MOO_SMOOI_MAX + 1);
 								break;
 
-							case 2:
+							case MOO_OBJ_FLAGS_HASH_STORED:
 								hv = *(moo_oow_t*)((moo_uint8_t*)rcv + MOO_SIZEOF(moo_obj_t) + moo_getobjpayloadbytes(moo, rcv) - MOO_SIZEOF(moo_oow_t));
 								break;
 						}
