@@ -1120,9 +1120,15 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 		moo_oop_t z;
 		moo_oow_t total_bytes;
 
-		total_bytes = MOO_SIZEOF(moo_obj_t) + moo_getobjpayloadbytes(moo, oop);
+		if (MOO_OBJ_GET_FLAGS_TRAILER(oop) || MOO_OBJ_GET_FLAGS_PROC(oop))
+		{
+/* TOOD: should i disallow this or return without copying? */
+			moo_seterrbfmt (moo, MOO_EPERM, "not allowed to copy process or object with trailer");
+			return MOO_NULL;
+		}
 
 /* TODO: exclude trailer and hash space? exclde hash space at least? */
+		total_bytes = MOO_SIZEOF(moo_obj_t) + moo_getobjpayloadbytes(moo, oop);
 
 		moo_pushvolat (moo, &oop);
 		z = (moo_oop_t)moo_allocbytes(moo, total_bytes);
