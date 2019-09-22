@@ -69,6 +69,7 @@ The word class can be followed by attribute list enclosed in parenthesis. e.g.) 
 * #limited - not instantiable with new.
 * #immutable - instantiated object to be read-only.
 * #final - disallow subclasses.
+* #uncopyable - instantiated object not to be copied.
 * #byte, #character, #halfword, #word, #liword, #pointer - 
   specify the type of a non-pointer object. a non-pointer type can have an additional size 
   enclosed in parenthesis. e.g.) #character(2)

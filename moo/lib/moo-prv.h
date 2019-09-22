@@ -140,13 +140,13 @@
  * For example, on a platform where sizeof(moo_oow_t) is 4, 
  * the layout of the spec field of a class as an OOP value looks like this:
  * 
- *  31                           11 10 9 8 7 6 5 4  3 2   1 0 
- * |number of named instance variables|indexed-type|flags|oop-tag|
+ *  31                          12 11  10 9 8 7 6 5 4 3 2   1 0 
+ * |number of named instance variables|indexed-type|flags |oop-tag|
  *
- * the number of named instance variables is stored in high 23 bits.
- * the indexed type takes up bit 3 to bit 8 (assuming MOO_OBJ_TYPE_BITS is 6. 
+ * the number of named instance variables is stored in high 21 bits.
+ * the indexed type takes up bit 5 to bit 10 (assuming MOO_OBJ_TYPE_BITS is 6. 
  * MOO_OBJ_TYPE_XXX enumerators are used to represent actual values).
- * and the indexability is stored in bit 2.
+ * and the indexability is stored in the flag bits which span from bit 2 to 4.
  *
  * The maximum number of named(fixed) instance variables for a class is:
  *     2 ^ ((BITS-IN-OOW - MOO_OOP_TAG_BITS_LO) - MOO_OBJ_TYPE_BITS - 1 - 2) - 1
@@ -161,36 +161,40 @@
  * indexed_type is one of the #moo_obj_type_t enumerators.
  */
 
+#define MOO_CLASS_SPEC_FLAG_BITS (3)
+
 /*
  * The MOO_CLASS_SPEC_MAKE() macro creates a class spec value.
  *  _class->spec = MOO_SMOOI_TO_OOP(MOO_CLASS_SPEC_MAKE(0, 1, MOO_OBJ_TYPE_CHAR));
  */
 #define MOO_CLASS_SPEC_MAKE(named_instvar,flags,indexed_type) ( \
-	(((moo_oow_t)(named_instvar)) << (MOO_OBJ_FLAGS_TYPE_BITS + 2)) |  \
-	(((moo_oow_t)(indexed_type)) << 2) | (((moo_oow_t)flags) & 3) )
+	(((moo_oow_t)(named_instvar)) << (MOO_OBJ_FLAGS_TYPE_BITS + MOO_CLASS_SPEC_FLAG_BITS)) |  \
+	(((moo_oow_t)(indexed_type)) << (MOO_CLASS_SPEC_FLAG_BITS)) | (((moo_oow_t)flags) & MOO_LBMASK(moo_oow_t,MOO_CLASS_SPEC_FLAG_BITS)))
 
 /* what is the number of named instance variables? 
  *  MOO_CLASS_SPEC_NAMED_INSTVARS(MOO_OOP_TO_SMOOI(_class->spec)) 
  * ensure to update Class<<specNumInstVars if you change this macro. */
 #define MOO_CLASS_SPEC_NAMED_INSTVARS(spec) \
-	(((moo_oow_t)(spec)) >> (MOO_OBJ_FLAGS_TYPE_BITS + 2))
+	(((moo_oow_t)(spec)) >> (MOO_OBJ_FLAGS_TYPE_BITS + MOO_CLASS_SPEC_FLAG_BITS))
 
 /* is it a user-indexable class? 
  * all objects can be indexed with basicAt:.
  * this indicates if an object can be instantiated with a dynamic size
  * (new: size) and and can be indexed with at:.
  */
-#define MOO_CLASS_SPEC_FLAGS(spec) (((moo_oow_t)(spec)) & 3)
+#define MOO_CLASS_SPEC_FLAGS(spec) (((moo_oow_t)(spec)) & MOO_LBMASK(moo_oow_t,MOO_CLASS_SPEC_FLAG_BITS))
 
 /* if so, what is the indexing type? character? pointer? etc? */
 #define MOO_CLASS_SPEC_INDEXED_TYPE(spec) \
-	((((moo_oow_t)(spec)) >> 2) & MOO_LBMASK(moo_oow_t, MOO_OBJ_FLAGS_TYPE_BITS))
+	((((moo_oow_t)(spec)) >> MOO_CLASS_SPEC_FLAG_BITS) & MOO_LBMASK(moo_oow_t, MOO_OBJ_FLAGS_TYPE_BITS))
 
-#define MOO_CLASS_SPEC_FLAG_INDEXED   (1 << 0)
-#define MOO_CLASS_SPEC_FLAG_IMMUTABLE (1 << 1)
+#define MOO_CLASS_SPEC_FLAG_INDEXED    (1 << 0)
+#define MOO_CLASS_SPEC_FLAG_IMMUTABLE  (1 << 1)
+#define MOO_CLASS_SPEC_FLAG_UNCOPYABLE (1 << 2)
 
 #define MOO_CLASS_SPEC_IS_INDEXED(spec) (MOO_CLASS_SPEC_FLAGS(spec) & MOO_CLASS_SPEC_FLAG_INDEXED)
 #define MOO_CLASS_SPEC_IS_IMMUTABLE(spec) (MOO_CLASS_SPEC_FLAGS(spec) & MOO_CLASS_SPEC_FLAG_IMMUTABLE)
+#define MOO_CLASS_SPEC_IS_UNCOPYABLE(spec) (MOO_CLASS_SPEC_FLAGS(spec) & MOO_CLASS_SPEC_FLAG_UNCOPYABLE)
 
 /* What is the maximum number of named instance variables?
  * This limit is set this way because the number must be encoded into 
@@ -198,7 +202,7 @@
  * the number of named instance variables.
  */
 #define MOO_MAX_NAMED_INSTVARS \
-	MOO_BITS_MAX(moo_oow_t, MOO_SMOOI_ABS_BITS - (MOO_OBJ_FLAGS_TYPE_BITS + 2))
+	MOO_BITS_MAX(moo_oow_t, MOO_SMOOI_ABS_BITS - (MOO_OBJ_FLAGS_TYPE_BITS + MOO_CLASS_SPEC_FLAG_BITS))
 
 /* Given the number of named instance variables, what is the maximum number 
  * of indexed instance variables? The number of indexed instance variables
@@ -208,7 +212,6 @@
  * the number of named instance variables.
  */
 #define MOO_MAX_INDEXED_INSTVARS(named_instvar) (MOO_OBJ_SIZE_MAX - named_instvar)
-
 
 /*
  * self-specification of a class

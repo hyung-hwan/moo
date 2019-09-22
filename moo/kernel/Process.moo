@@ -1,5 +1,5 @@
 
-class(#pointer,#final,#limited) Process(Object)
+class(#pointer,#final,#limited,#uncopyable) Process(Object)
 {
 	var(#get) initialContext, currentContext, id, state.
 	var sp.
@@ -76,7 +76,7 @@ class(#pointer,#final,#limited) Process(Object)
 	}
 }
 
-class Semaphore(Object)
+class(#uncopyable) Semaphore(Object)
 {
 	var waiting_head  := nil,
 	    waiting_tail  := nil.
@@ -152,7 +152,7 @@ class Semaphore(Object)
 	}
 }
 
-class Mutex(Semaphore)
+class(#uncopyable) Mutex(Semaphore)
 {
 	method(#class) new
 	{
@@ -179,7 +179,7 @@ TODO: how to prohibit wait and signal???
 }
  
 
-class SemaphoreGroup(Object)
+class(#uncopyable) SemaphoreGroup(Object)
 {
 	// the first two variables must match those of Semaphore.
 	var waiting_head  := nil,
@@ -252,7 +252,7 @@ method(#class,#abstract) xxx. => method(#class) xxx { self subclassResponsibilit
 	} 
 }
 
-class SemaphoreHeap(Object)
+class(#uncopyable) SemaphoreHeap(Object)
 {
 	var arr, size.
 
@@ -418,7 +418,7 @@ class SemaphoreHeap(Object)
 	}
 }
 
-class(#final,#limited) ProcessScheduler(Object)
+class(#final,#limited,#uncopyable) ProcessScheduler(Object)
 {
 	var(#get) active, total_count := 0.
 	var(#get) runnable_count := 0.

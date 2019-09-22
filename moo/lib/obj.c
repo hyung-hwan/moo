@@ -322,8 +322,11 @@ moo_oop_t moo_instantiate (moo_t* moo, moo_oop_class_t _class, const void* vptr,
 
 	if (oop) 
 	{
+		moo_ooi_t spec;
 		MOO_OBJ_SET_CLASS (oop, (moo_oop_t)_class);
-		if (MOO_CLASS_SPEC_IS_IMMUTABLE(MOO_OOP_TO_SMOOI(_class->spec))) MOO_OBJ_SET_FLAGS_RDONLY (oop, 1);
+		spec = MOO_OOP_TO_SMOOI(_class->spec);
+		if (MOO_CLASS_SPEC_IS_IMMUTABLE(spec)) MOO_OBJ_SET_FLAGS_RDONLY (oop, 1);
+		if (MOO_CLASS_SPEC_IS_UNCOPYABLE(spec)) MOO_OBJ_SET_FLAGS_UNCOPYABLE (oop, 1);
 	}
 	moo_popvolats (moo, tmp_count);
 	return oop;
@@ -381,9 +384,14 @@ moo_oop_t moo_instantiatewithtrailer (moo_t* moo, moo_oop_class_t _class, moo_oo
 
 	if (oop)
 	{
+		moo_ooi_t spec;
 		MOO_OBJ_SET_CLASS (oop, _class);
-		if (MOO_CLASS_SPEC_IS_IMMUTABLE(MOO_OOP_TO_SMOOI(_class->spec))) MOO_OBJ_SET_FLAGS_RDONLY (oop, 1);
+		spec = MOO_OOP_TO_SMOOI(_class->spec);
+		if (MOO_CLASS_SPEC_IS_IMMUTABLE(spec)) MOO_OBJ_SET_FLAGS_RDONLY (oop, 1);
+		/* the object with a trailer is always uncopyable */
+		/*if (MOO_CLASS_SPEC_IS_UNCOPYABLE(spec)) */MOO_OBJ_SET_FLAGS_UNCOPYABLE (oop, 1);
 	}
+
 	moo_popvolats (moo, tmp_count);
 	return oop;
 }

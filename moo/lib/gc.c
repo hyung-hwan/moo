@@ -124,7 +124,7 @@ static kernel_class_info_t kernel_classes[] =
 	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
 	  0,
 	  MOO_CLASS_NAMED_INSTVARS,
-	  1,
+	  MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_UNCOPYABLE,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _class) },
 
@@ -133,7 +133,7 @@ static kernel_class_info_t kernel_classes[] =
 	  MOO_CLASS_SELFSPEC_FLAG_LIMITED,
 	  0,
 	  MOO_INTERFACE_NAMED_INSTVARS,
-	  1,
+	  MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_UNCOPYABLE,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _interface) },
 
@@ -278,7 +278,7 @@ static kernel_class_info_t kernel_classes[] =
 	  MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
 	  0,
 	  MOO_PROCESS_NAMED_INSTVARS,
-	  MOO_CLASS_SPEC_FLAG_INDEXED,
+	  MOO_CLASS_SPEC_FLAG_INDEXED | MOO_CLASS_SPEC_FLAG_UNCOPYABLE,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _process) },
 
@@ -287,7 +287,7 @@ static kernel_class_info_t kernel_classes[] =
 	  0,
 	  0,
 	  MOO_SEMAPHORE_NAMED_INSTVARS,
-	  0,
+	  MOO_CLASS_SPEC_FLAG_UNCOPYABLE,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _semaphore) },
 
@@ -296,7 +296,7 @@ static kernel_class_info_t kernel_classes[] =
 	  0,
 	  0,
 	  MOO_SEMAPHORE_GROUP_NAMED_INSTVARS,
-	  0,
+	  MOO_CLASS_SPEC_FLAG_UNCOPYABLE,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _semaphore_group) },
 
@@ -305,7 +305,7 @@ static kernel_class_info_t kernel_classes[] =
 	  MOO_CLASS_SELFSPEC_FLAG_FINAL | MOO_CLASS_SELFSPEC_FLAG_LIMITED,
 	  0,
 	  MOO_PROCESS_SCHEDULER_NAMED_INSTVARS,
-	  0,
+	  MOO_CLASS_SPEC_FLAG_UNCOPYABLE,
 	  MOO_OBJ_TYPE_OOP,
 	  MOO_OFFSETOF(moo_t, _process_scheduler) },
 
@@ -422,11 +422,17 @@ static moo_oow_t move_finalizable_objects (moo_t* moo);
 static moo_oop_class_t alloc_kernel_class (moo_t* moo, int class_flags, moo_oow_t num_classvars, moo_oow_t spec)
 {
 	moo_oop_class_t c;
+	moo_ooi_t cspec;
 
 	c = (moo_oop_class_t)moo_allocoopobj(moo, MOO_CLASS_NAMED_INSTVARS + num_classvars);
 	if (!c) return MOO_NULL;
 
 	MOO_OBJ_SET_FLAGS_KERNEL (c, MOO_OBJ_FLAGS_KERNEL_IMMATURE);
+
+	cspec = kernel_classes[KCI_CLASS].class_spec_flags;
+	if (MOO_CLASS_SPEC_IS_IMMUTABLE(cspec)) MOO_OBJ_SET_FLAGS_RDONLY (c, 1); /* just for completeness of code. will never be true as it's not defined in the kernel class info table */
+	if (MOO_CLASS_SPEC_IS_UNCOPYABLE(cspec)) MOO_OBJ_SET_FLAGS_UNCOPYABLE (c, 1); /* class itself is uncopyable */
+
 	MOO_OBJ_SET_CLASS (c, (moo_oop_t)moo->_class);
 	c->spec = MOO_SMOOI_TO_OOP(spec); 
 	c->selfspec = MOO_SMOOI_TO_OOP(MOO_CLASS_SELFSPEC_MAKE(num_classvars, 0, class_flags));
@@ -1120,7 +1126,7 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 		moo_oop_t z;
 		moo_oow_t total_bytes;
 
-		if (MOO_OBJ_GET_FLAGS_TRAILER(oop) || MOO_OBJ_GET_FLAGS_PROC(oop))
+		if (MOO_OBJ_GET_FLAGS_UNCOPYABLE(oop) || MOO_OBJ_GET_FLAGS_TRAILER(oop))
 		{
 /* TOOD: should i disallow this or return without copying? */
 			moo_seterrbfmt (moo, MOO_EPERM, "not allowed to copy process or object with trailer");

@@ -59,7 +59,8 @@ enum class_mod_t
 	CLASS_FINAL      = (1 << 0),
 	CLASS_LIMITED    = (1 << 1),
 	CLASS_INDEXED    = (1 << 2),
-	CLASS_IMMUTABLE  = (1 << 3)
+	CLASS_IMMUTABLE  = (1 << 3),
+	CLASS_UNCOPYABLE = (1 << 4)
 };
 
 enum var_type_t
@@ -163,6 +164,7 @@ static struct voca_t
 	{ 11, { 't','h','i','s','C','o','n','t','e','x','t'                   } },
 	{ 11, { 't','h','i','s','P','r','o','c','e','s','s'                   } },
 	{  4, { 't','r','u','e'                                               } },
+	{ 11, { '#','u','n','c','o','p','y','a','b','l','e'                   } },
 	{  5, { 'u','n','t','i','l'                                           } },
 	{  3, { 'v','a','r'                                                   } },
 	{  8, { 'v','a','r','i','a','b','l','e'                               } },
@@ -233,6 +235,7 @@ enum voca_id_t
 	VOCA_THIS_CONTEXT,
 	VOCA_THIS_PROCESS,
 	VOCA_TRUE,
+	VOCA_UNCOPYABLE_S,
 	VOCA_UNTIL,
 	VOCA_VAR,
 	VOCA_VARIABLE,
@@ -8147,6 +8150,7 @@ static int make_defined_class (moo_t* moo)
 	flags = 0;
 	if (cc->flags & CLASS_INDEXED) flags |= MOO_CLASS_SPEC_FLAG_INDEXED;
 	if (cc->flags & CLASS_IMMUTABLE) flags |= MOO_CLASS_SPEC_FLAG_IMMUTABLE;
+	if (cc->flags & CLASS_UNCOPYABLE) flags |= MOO_CLASS_SPEC_FLAG_UNCOPYABLE;
 
 	if (cc->non_pointer_instsize > 0)
 	{
@@ -8413,6 +8417,16 @@ static int process_class_modifiers (moo_t* moo, moo_ioloc_t* type_loc)
 					return -1;
 				}
 				cc->flags |= CLASS_IMMUTABLE;
+				GET_TOKEN(moo);
+			}
+			else if (is_token_symbol(moo, VOCA_UNCOPYABLE_S))
+			{
+				if (cc->flags & CLASS_UNCOPYABLE)
+				{
+					moo_setsynerr (moo, MOO_SYNERR_MODIFIERDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					return -1;
+				}
+				cc->flags |= CLASS_UNCOPYABLE;
 				GET_TOKEN(moo);
 			}
 			else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN)
@@ -9076,7 +9090,6 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 			}
 			while (1);
 		}
-
 
 		/* TODO: load constants here? */
 	}

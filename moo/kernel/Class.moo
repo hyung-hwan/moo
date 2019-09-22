@@ -8,7 +8,7 @@ interface ClassInterface
 // the Class object should be a variable-pointer object because
 // it needs to accomodate class instance variables.
 //
-class(#pointer,#limited) Class(Apex) [ClassInterface]
+class(#pointer,#limited,#uncopyable) Class(Apex) [ClassInterface]
 {
 	var spec, selfspec, superclass, subclasses, name, modname.
 	var instvars, classinstvars, classvars, pooldics.
@@ -44,7 +44,7 @@ class(#pointer,#limited) Class(Apex) [ClassInterface]
 	method nsdic { ^self.nsdic }
 }
 
-class(#pointer,#limited) Interface(Apex)
+class(#pointer,#limited,#uncopyable) Interface(Apex)
 {
 	var name.
 	var instmthdic, classmthdic, nsup.
