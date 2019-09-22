@@ -84,6 +84,16 @@ X new -> create an object with 2 words.
 X new: 4 -> create an object with 6 words.
 ```
 
+if an object is asked to instantiate with trailer in the class defintion, it becomes 
+uncopyable, without the #uncopyable attribute.
+
+```
+class Shader(Object) from 'shader'
+{
+// if the shaer module calls moo_setclasstrsize(), an instance of Shader is uncopyable
+}
+```
+
 ### Flow Control
 ```
 k := if (i < 20) { 30 } else { 40 }.

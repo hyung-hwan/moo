@@ -361,16 +361,17 @@ typedef enum moo_gcfin_t moo_gcfin_t;
 /* [NOTE] this macro doesn't check the range of the actual value.
  *        make sure that the value of each bit fields given falls within the 
  *        possible range of the defined bits */
-#define MOO_OBJ_MAKE_FLAGS(_ty,_u,_e,_k,_p,_m,_g,_tr,_h) ( \
-	(((moo_oow_t)(_ty)) << MOO_OBJ_FLAGS_TYPE_SHIFT) | \
-	(((moo_oow_t)(_u))  << MOO_OBJ_FLAGS_UNIT_SHIFT) | \
-	(((moo_oow_t)(_e))  << MOO_OBJ_FLAGS_EXTRA_SHIFT) | \
-	(((moo_oow_t)(_k))  << MOO_OBJ_FLAGS_KERNEL_SHIFT) | \
-	(((moo_oow_t)(_p))  << MOO_OBJ_FLAGS_PERM_SHIFT) | \
-	(((moo_oow_t)(_m))  << MOO_OBJ_FLAGS_MOVED_SHIFT) | \
-	(((moo_oow_t)(_g))  << MOO_OBJ_FLAGS_PROC_SHIFT) | \
-	(((moo_oow_t)(_tr)) << MOO_OBJ_FLAGS_TRAILER_SHIFT) | \
-	(((moo_oow_t)(_h))  << MOO_OBJ_FLAGS_HASH_SHIFT) \
+#define MOO_OBJ_MAKE_FLAGS(_ty,_u,_e,_k,_p,_m,_g,_tr,_h,_uncp) ( \
+	(((moo_oow_t)(_ty))   << MOO_OBJ_FLAGS_TYPE_SHIFT) | \
+	(((moo_oow_t)(_u))    << MOO_OBJ_FLAGS_UNIT_SHIFT) | \
+	(((moo_oow_t)(_e))    << MOO_OBJ_FLAGS_EXTRA_SHIFT) | \
+	(((moo_oow_t)(_k))    << MOO_OBJ_FLAGS_KERNEL_SHIFT) | \
+	(((moo_oow_t)(_p))    << MOO_OBJ_FLAGS_PERM_SHIFT) | \
+	(((moo_oow_t)(_m))    << MOO_OBJ_FLAGS_MOVED_SHIFT) | \
+	(((moo_oow_t)(_g))    << MOO_OBJ_FLAGS_PROC_SHIFT) | \
+	(((moo_oow_t)(_tr))   << MOO_OBJ_FLAGS_TRAILER_SHIFT) | \
+	(((moo_oow_t)(_h))    << MOO_OBJ_FLAGS_HASH_SHIFT) | \
+	(((moo_oow_t)(_uncp)) << MOO_OBJ_FLAGS_UNCOPYABLE_SHIFT) \
 )
 
 #define MOO_OBJ_FLAGS_KERNEL_USER     0  /* not a kernel object */

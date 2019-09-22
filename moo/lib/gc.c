@@ -646,7 +646,7 @@ int moo_ignite (moo_t* moo, moo_oow_t heapsz)
 	moo->_nil = moo_allocbytes(moo, MOO_SIZEOF(moo_obj_t));
 	if (!moo->_nil) goto oops;
 
-	moo->_nil->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 1, moo->igniting, 0, 0, 0, 0);
+	moo->_nil->_flags = MOO_OBJ_MAKE_FLAGS(MOO_OBJ_TYPE_OOP, MOO_SIZEOF(moo_oop_t), 0, 1, moo->igniting, 0, 0, 0, 0, 0);
 	moo->_nil->_size = 0;
 
 	if (ignite_1(moo) <= -1 || ignite_2(moo) <= -1 || ignite_3(moo)) goto oops;;
@@ -1126,10 +1126,10 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 		moo_oop_t z;
 		moo_oow_t total_bytes;
 
-		if (MOO_OBJ_GET_FLAGS_UNCOPYABLE(oop) || MOO_OBJ_GET_FLAGS_TRAILER(oop))
+		if (MOO_OBJ_GET_FLAGS_UNCOPYABLE(oop))
 		{
 /* TOOD: should i disallow this or return without copying? */
-			moo_seterrbfmt (moo, MOO_EPERM, "not allowed to copy process or object with trailer");
+			moo_seterrbfmt (moo, MOO_EPERM, "uncopyable object");
 			return MOO_NULL;
 		}
 
