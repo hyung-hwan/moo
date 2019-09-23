@@ -1133,8 +1133,12 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 			return MOO_NULL;
 		}
 
-/* TODO: exclude trailer and hash space? exclde hash space at least? */
 		total_bytes = MOO_SIZEOF(moo_obj_t) + moo_getobjpayloadbytes(moo, oop);
+		if (MOO_OBJ_GET_FLAGS_HASH(oop))
+		{
+			/* exclude the hash value field from copying */
+			total_bytes -= MOO_SIZEOF(moo_oow_t);
+		}
 
 		moo_pushvolat (moo, &oop);
 		z = (moo_oop_t)moo_allocbytes(moo, total_bytes);
@@ -1142,6 +1146,7 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 
 		MOO_MEMCPY (z, oop, total_bytes);
 		MOO_OBJ_SET_FLAGS_RDONLY (z, 0); /* a copied object is not read-only */
+		MOO_OBJ_SET_FLAGS_HASH (z, 0); /* no hash field */
 		return z; 
 	}
 
