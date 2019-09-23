@@ -840,9 +840,11 @@ class MyObject(Object)
 		self.shell1 add: comp1.
 
 		comp1 add: (X11.Label new text: '간다'; width: 100; height: 100).
+		//comp1 add: (X11.Label new text: 'Going'; width: 100; height: 100).
 		comp1 add: (X11.Label new text: 'crayon'; x: 90; y: 90; width: 100; height: 100).
 	//	self.shell1 add: (X11.Label new text: 'xxxxxxxx'; width: 100; height: 100).
 		self.shell1 add: (X11.Button new text: '크레용crayon'; x: 90; y: 90; width: 100; height: 100).
+		//self.shell1 add: (X11.Button new text: 'CRAYON crayon'; x: 90; y: 90; width: 100; height: 100).
 
 		self.shell2 add: (X11.Button new text: 'crayon'; x: 90; y: 90; width: 100; height: 100).
 		self.shell3 add: (X11.Button new text: 'crayon'; x: 90; y: 90; width: 100; height: 100).

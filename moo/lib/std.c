@@ -177,7 +177,15 @@
 #		define XPOLLOUT POLLOUT
 #		define XPOLLERR POLLERR
 #		define XPOLLHUP POLLHUP
-#	elif defined(HAVE_SYS_EPOLL_H)
+#	elif defined(HAVE_SYS_EVENT_H) && defined(HAVE_KQUEUE)
+#		include <sys/event.h>
+#		define USE_KQUEUE
+		/* fake XPOLLXXX values */
+#		define XPOLLIN  (1 << 0)
+#		define XPOLLOUT (1 << 1)
+#		define XPOLLERR (1 << 2)
+#		define XPOLLHUP (1 << 3)
+#	elif defined(HAVE_SYS_EPOLL_H) && defined(HAVE_EPOLL_CREATE)
 		/* linux */
 #		include <sys/epoll.h>
 #		define USE_EPOLL
@@ -315,6 +323,8 @@ struct xtn_t
 
 	#if defined(USE_DEVPOLL)
 	int ep; /* /dev/poll */
+	#elif defined(USE_KQUEUE)
+	int ep; /* kqueue */
 	#elif defined(USE_EPOLL)
 	int ep; /* epoll */
 	#elif defined(USE_POLL)
@@ -344,6 +354,8 @@ struct xtn_t
 		/*TODO: make it dynamically changeable depending on the number of
 		 *      file descriptors added */
 		struct pollfd buf[64]; /* buffer for reading events */
+	#elif defined(USE_KQUEUE)
+		struct kevent buf[64]; 
 	#elif defined(USE_EPOLL) 
 		/*TODO: make it dynamically changeable depending on the number of
 		 *      file descriptors added */
@@ -357,7 +369,7 @@ struct xtn_t
 		#if defined(USE_THREAD)
 			pthread_mutex_t pmtx;
 		#endif
-		} reg; /* registrar */
+		} reg; /* registry */
 		struct pollfd* buf;
 
 	#elif defined(USE_SELECT)
@@ -1734,6 +1746,49 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 
 	return 0;
 
+#elif defined(USE_KQUEUE)
+	xtn_t* xtn = GET_XTN(moo);
+	struct kevent ev;
+
+	if (event_mask & XPOLLIN) 
+	{
+		/*EV_SET (&ev, fd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, 0);*/
+		MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
+		ev.ident = fd;
+		ev.flags = EV_ADD | EV_CLEAR; /* EV_CLEAR for edge trigger? */
+		ev.filter = EVFILT_READ;
+		if (kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL) == -1)
+		{
+			moo_seterrwithsyserr (moo, 0, errno);
+			MOO_DEBUG2 (moo, "Cannot add file descriptor %d to kqueue - %hs\n", fd, strerror(errno));
+			return -1;
+		}
+	}
+	if (event_mask & XPOLLOUT)
+	{
+		/*EV_SET (&ev, fd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, 0);*/
+		MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
+		ev.ident = fd;
+		ev.flags = EV_ADD | EV_CLEAR;
+		ev.filter = EVFILT_WRITE;
+		if (kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL) == -1)
+		{
+			moo_seterrwithsyserr (moo, 0, errno);
+			MOO_DEBUG2 (moo, "Cannot add file descriptor %d to kqueue - %hs\n", fd, strerror(errno));
+			
+			if (event_mask & XPOLLIN)
+			{
+				MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
+				ev.ident = fd;
+				ev.flags = EV_DELETE;
+				ev.filter = EVFILT_READ;
+				kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL);
+			}
+			return -1;
+		}
+	}
+
+	return 0;
 #elif defined(USE_EPOLL)
 	xtn_t* xtn = GET_XTN(moo);
 	struct epoll_event ev;
@@ -1829,12 +1884,39 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	ev.fd = fd;
 	ev.events = POLLREMOVE;
 	ev.revents = 0;
-	if (write (xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
+	if (write(xtn->ep, &ev, MOO_SIZEOF(ev)) != MOO_SIZEOF(ev))
 	{
 		moo_seterrwithsyserr (moo, 0, errno);
 		MOO_DEBUG2 (moo, "Cannot remove file descriptor %d from devpoll - %hs\n", fd, strerror(errno));
 		return -1;
 	}
+
+	return 0;
+
+#elif defined(USE_KQUEUE)
+	xtn_t* xtn = GET_XTN(moo);
+	struct kevent ev;
+
+	/* i should keep track of filters(EVFILT_READ/EVFILT_WRITE) associated
+	 * with the file descriptor to know what filter to delete. since no
+	 * tracking has been implemented, i should keep quiet when kevent() 
+	 * returns failure. */
+	
+	/*EV_SET (&ev, fd, EVFILT_READ, EV_DELETE, 0, 0, 0);*/
+	MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
+	ev.ident = fd;
+	ev.flags = EV_DELETE;
+	ev.filter = EVFILT_READ;
+	kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL);
+	/* no error check for now */
+
+	/*EV_SET (&ev, fd, EVFILT_WRITE, EV_DELETE, 0, 0, 0);*/
+	MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
+	ev.ident = fd;
+	ev.flags = EV_DELETE;
+	ev.filter = EVFILT_WRITE;
+	kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL);
+	/* no error check for now */
 
 	return 0;
 
@@ -1844,7 +1926,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 
 	MOO_ASSERT (moo, xtn->ep >= 0);
 	MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
-	if (epoll_ctl (xtn->ep, EPOLL_CTL_DEL, fd, &ev) == -1)
+	if (epoll_ctl(xtn->ep, EPOLL_CTL_DEL, fd, &ev) == -1)
 	{
 		moo_seterrwithsyserr (moo, 0, errno);
 		MOO_DEBUG2 (moo, "Cannot remove file descriptor %d from epoll - %hs\n", fd, strerror(errno));
@@ -1908,6 +1990,22 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 {
 #if defined(USE_DEVPOLL)
 
+	if (_del_poll_fd (moo, fd) <= -1) return -1;
+
+	if (_add_poll_fd (moo, fd, event_mask) <= -1) 
+	{
+		/* TODO: any good way to rollback successful deletion? */
+		return -1;
+	}
+
+	return 0;
+#elif defined(USE_KQUEUE)
+
+/* TODO: filter registration tracking.
+ * the current implementation for kqueue invokes kevent() too frequently...
+ * this modification function doesn't need to delete all and add a new one
+ * if tracking is implemented
+ */
 	if (_del_poll_fd (moo, fd) <= -1) return -1;
 
 	if (_add_poll_fd (moo, fd, event_mask) <= -1) 
@@ -2051,6 +2149,25 @@ static int vm_startup (moo_t* moo)
 	if (flags >= 0) fcntl (xtn->ep, F_SETFD, flags | FD_CLOEXEC);
 	#endif
 
+#elif defined(USE_KQUEUE)
+	#if defined(HAVE_KQUEUE1) && defined(O_CLOEXEC)
+	xtn->ep = kqueue1(O_CLOEXEC);
+	if (xtn->ep == -1) xtn->ep = kqueue();
+	#else
+	xtn->ep = kqueue();
+	#endif
+	if (xtn->ep == -1)
+	{
+		moo_seterrwithsyserr (moo, 0, errno);
+		MOO_DEBUG1 (moo, "Cannot create kqueue - %hs\n", strerror(errno));
+		goto oops;
+	}
+
+	#if defined(FD_CLOEXEC)
+	flags = fcntl(xtn->ep, F_GETFD);
+	if (flags >= 0 && !(flags & FD_CLOEXEC)) fcntl (xtn->ep, F_SETFD, flags | FD_CLOEXEC);
+	#endif
+
 #elif defined(USE_EPOLL)
 	#if defined(HAVE_EPOLL_CREATE1) && defined(EPOLL_CLOEXEC)
 	xtn->ep = epoll_create1(EPOLL_CLOEXEC);
@@ -2172,6 +2289,12 @@ static void vm_cleanup (moo_t* moo)
 		xtn->ep = -1;
 	}
 	/*destroy_poll_data_space (moo);*/
+#elif defined(USE_KQUEUE)
+	if (xtn->ep >= 0)
+	{
+		close (xtn->ep);
+		xtn->ep = -1;
+	}
 #elif defined(USE_EPOLL)
 	if (xtn->ep >= 0)
 	{
@@ -2348,6 +2471,8 @@ static void* iothr_main (void* arg)
 			int n;
 		#if defined(USE_DEVPOLL)
 			struct dvpoll dvp;
+		#elif defined(USE_KQUEUE)
+			struct timespec ts;
 		#elif defined(USE_POLL)
 			moo_oow_t nfds;
 		#elif defined(USE_SELECT)
@@ -2364,6 +2489,12 @@ static void* iothr_main (void* arg)
 			dvp.dp_fds = xtn->ev.buf;
 			dvp.dp_nfds = MOO_COUNTOF(xtn->ev.buf);
 			n = ioctl (xtn->ep, DP_POLL, &dvp);
+		#elif defined(USE_KQUEUE)
+			ts.tv_sec = 10;
+			ts.tv_nsec = 0;
+			n = kevent(xtn->ep, MOO_NULL, 0, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), &ts);
+			/* n == 0: timeout
+			 * n == -1: error */
 		#elif defined(USE_EPOLL)
 			n = epoll_wait(xtn->ep, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), 10000); /* TODO: make this timeout value in the io thread */
 		#elif defined(USE_POLL)
@@ -2530,6 +2661,8 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 
 		#if defined(USE_DEVPOLL)
 			if (xtn->ev.buf[n].fd == xtn->iothr.p[0])
+		#elif defined(USE_KQUEUE)
+			if (xtn->ev.buf[n].ident == xtn->iothr.p[0])
 		#elif defined(USE_EPOLL)
 			/*if (xtn->ev.buf[n].data.ptr == (void*)MOO_TYPE_MAX(moo_oow_t))*/
 			if (xtn->ev.buf[n].data.fd == xtn->iothr.p[0])
@@ -2555,6 +2688,11 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 
 			#if defined(USE_DEVPOLL)
 				revents = xtn->ev.buf[n].revents;
+			#elif defined(USE_KQUEUE)
+				if (xtn->ev.buf[n].filter == EVFILT_READ) mask = MOO_SEMAPHORE_IO_MASK_INPUT;
+				else if (xtn->ev.buf[n].filter == EVFILT_WRITE) mask = MOO_SEMAPHORE_IO_MASK_OUTPUT;
+				else mask = 0;
+				goto call_muxwcb_kqueue;
 			#elif defined(USE_EPOLL)
 				revents = xtn->ev.buf[n].events;
 			#elif defined(USE_POLL)
@@ -2571,6 +2709,9 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 
 			#if defined(USE_DEVPOLL)
 				muxwcb (moo, xtn->ev.buf[n].fd, mask);
+			#elif defined(USE_KQUEUE)
+			call_muxwcb_kqueue:
+				muxwcb (moo, xtn->ev.buf[n].ident, mask);
 			#elif defined(USE_EPOLL)
 				muxwcb (moo, xtn->ev.buf[n].data.fd, mask);
 			#elif defined(USE_POLL)
@@ -2591,25 +2732,54 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 	}
 
 #else /* USE_THREAD */
-	int tmout = 0, n;
+	int n;
 	#if defined(USE_DEVPOLL)
+	int tmout;
 	struct dvpoll dvp;
+	#elif defined(USE_KQUEUE)
+	struct timespec ts;
+	#elif defined(USE_EPOLL)
+	int tmout;
+	#elif defined(USE_POLL)
+	int tmout;
 	#elif defined(USE_SELECT)
 	struct timeval tv;
 	fd_set rfds, wfds;
 	int maxfd;
 	#endif
 
-	if (dur) tmout = MOO_SECNSEC_TO_MSEC(dur->sec, dur->nsec);
 
 	#if defined(USE_DEVPOLL)
+	tmout = dur? MOO_SECNSEC_TO_MSEC(dur->sec, dur->nsec): 0;
+
 	dvp.dp_timeout = tmout; /* milliseconds */
 	dvp.dp_fds = xtn->ev.buf;
 	dvp.dp_nfds = MOO_COUNTOF(xtn->ev.buf);
 	n = ioctl(xtn->ep, DP_POLL, &dvp);
+
+	#elif defined(USE_KQUEUE)
+	
+	if (dur)
+	{
+		ts.tv_sec = dur->sec;
+		ts.tv_nsec = dur->nsec; 
+	}
+	else
+	{
+		ts.tv_sec = 0;
+		ts.tv_nsec = 0;
+	}
+
+	n = kevent(xtn->ep, MOO_NULL, 0, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), &ts);
+	/* n == 0: timeout
+	 * n == -1: error */
+
 	#elif defined(USE_EPOLL)
+	tmout = dur? MOO_SECNSEC_TO_MSEC(dur->sec, dur->nsec): 0;
 	n = epoll_wait(xtn->ep, xtn->ev.buf, MOO_COUNTOF(xtn->ev.buf), tmout);
+
 	#elif defined(USE_POLL)
+	tmout = dur? MOO_SECNSEC_TO_MSEC(dur->sec, dur->nsec): 0;
 	MOO_MEMCPY (xtn->ev.buf, xtn->ev.reg.ptr, xtn->ev.reg.len * MOO_SIZEOF(*xtn->ev.buf));
 	n = poll(xtn->ev.buf, xtn->ev.reg.len, tmout);
 	if (n > 0) 
@@ -2686,6 +2856,11 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 
 	#if defined(USE_DEVPOLL)
 		revents = xtn->ev.buf[n].revents;
+	#elif defined(USE_KQUEUE)
+		if (xtn->ev.buf[n].filter == EVFILT_READ) mask = MOO_SEMAPHORE_IO_MASK_INPUT;
+		else if (xtn->ev.buf[n].filter == EVFILT_WRITE) mask = MOO_SEMAPHORE_IO_MASK_OUTPUT;
+		else mask = 0;
+		goto call_muxwcb_kqueue;
 	#elif defined(USE_EPOLL)
 		revents = xtn->ev.buf[n].events;
 	#elif defined(USE_POLL)
@@ -2704,6 +2879,9 @@ static void vm_muxwait (moo_t* moo, const moo_ntime_t* dur, moo_vmprim_muxwait_c
 
 	#if defined(USE_DEVPOLL)
 		muxwcb (moo, xtn->ev.buf[n].fd, mask);
+	#elif defined(USE_KQUEUE)
+	call_muxwcb_kqueue:
+		muxwcb (moo, xtn->ev.buf[n].ident, mask);
 	#elif defined(USE_EPOLL)
 		muxwcb (moo, xtn->ev.buf[n].data.fd, mask);
 	#elif defined(USE_POLL)
