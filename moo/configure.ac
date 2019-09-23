@@ -135,7 +135,7 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS([stddef.h wchar.h wctype.h errno.h signal.h fcntl.h dirent.h])
 AC_CHECK_HEADERS([time.h sys/time.h utime.h spawn.h execinfo.h ucontext.h])
 AC_CHECK_HEADERS([dlfcn.h ltdl.h sys/mman.h])
-AC_CHECK_HEADERS([sys/devpoll.h sys/epoll.h poll.h])
+AC_CHECK_HEADERS([sys/devpoll.h sys/epoll.h poll.h sys/event.h])
 AC_CHECK_HEADERS([netinet/in.h sys/un.h netpacket/packet.h net/if_dl.h])
 AC_CHECK_HEADERS([xcb/xcb.h])
 AC_CHECK_HEADERS([ffi.h dyncall.h libunwind.h])
@@ -155,7 +155,7 @@ AC_CHECK_FUNCS([clock_nanosleep nanosleep usleep])
 AC_CHECK_FUNCS([localtime_r gmtime_r])
 AC_CHECK_FUNCS([sigaction signal])
 AC_CHECK_FUNCS([snprintf _vsnprintf _vsnwprintf strerror_r])
-AC_CHECK_FUNCS([accept4 pipe2 epoll_create1])
+AC_CHECK_FUNCS([accept4 pipe2 epoll_create epoll_create1 kqueue kqueue1])
 AC_CHECK_FUNCS([isatty mmap munmap])
 
 save_LIBS="$LIBS"
