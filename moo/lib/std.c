@@ -938,7 +938,7 @@ static void log_write (moo_t* moo, moo_bitmask_t mask, const moo_ooch_t* msg, mo
 	#else
 		char ts[32];
 	#endif
-		size_t tslen;
+		moo_oow_t tslen;
 		struct tm tm, *tmp;
 
 		now = time(MOO_NULL);
