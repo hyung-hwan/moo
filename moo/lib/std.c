@@ -1758,8 +1758,8 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 	moo_oow_t rindex, roffset;
 	moo_oow_t rv = 0;
 
-	rindex = fd / (MOO_BITSOF(moo_oow_t) >> 1);
-	roffset = (fd << 1) % MOO_BITSOF(moo_oow_t);
+	rindex = (moo_oow_t)fd / (MOO_BITSOF(moo_oow_t) >> 1);
+	roffset = ((moo_oow_t)fd << 1) % MOO_BITSOF(moo_oow_t);
 
 	if (rindex >= xtn->ev.reg.capa)
 	{
@@ -1946,8 +1946,8 @@ static int _del_poll_fd (moo_t* moo, int fd)
 	int rv;
 	struct kevent ev;
 
-	rindex = fd / (MOO_BITSOF(moo_oow_t) >> 1);
-	roffset = (fd << 1) % MOO_BITSOF(moo_oow_t);
+	rindex = (moo_oow_t)fd / (MOO_BITSOF(moo_oow_t) >> 1);
+	roffset = ((moo_oow_t)fd << 1) % MOO_BITSOF(moo_oow_t);
 
 	if (rindex >= xtn->ev.reg.capa)
 	{
@@ -1980,7 +1980,7 @@ static int _del_poll_fd (moo_t* moo, int fd)
 		/* no error check for now */
 	}
 
-	MOO_SETBITS (moo_oow_t, xtn->ev.reg.ptr[rindex], roffset, 2, rv);
+	MOO_SETBITS (moo_oow_t, xtn->ev.reg.ptr[rindex], roffset, 2, 0);
 	return 0;
 
 #elif defined(USE_EPOLL)
@@ -2068,13 +2068,13 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 	int rv, newrv = 0;
 	struct kevent ev;
 
-	rindex = fd / (MOO_BITSOF(moo_oow_t) >> 1);
-	roffset = (fd << 1) % MOO_BITSOF(moo_oow_t);
+	rindex = (moo_oow_t)fd / (MOO_BITSOF(moo_oow_t) >> 1);
+	roffset = ((moo_oow_t)fd << 1) % MOO_BITSOF(moo_oow_t);
 
 	if (rindex >= xtn->ev.reg.capa)
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "unknown file descriptor %d", fd);
-		MOO_DEBUG2 (moo, "Cannot remove file descriptor %d from kqueue - %js\n", fd, moo_geterrmsg(moo));
+		MOO_DEBUG2 (moo, "Cannot modify file descriptor %d in kqueue - %js\n", fd, moo_geterrmsg(moo));
 		return -1;
 	};
 
@@ -2088,7 +2088,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 			ev.ident = fd;
 			ev.flags = EV_DELETE;
 			ev.filter = EVFILT_READ;
-			kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL);
+			if (kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL) == -1) goto kqueue_syserr;
 
 			newrv &= ~1;
 		}
@@ -2104,7 +2104,7 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 			ev.flags |= EV_CLEAR; /* EV_CLEAR for edge trigger? */
 		#endif
 			ev.filter = EVFILT_READ;
-			kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL);
+			if (kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL) == -1) goto kqueue_syserr;
 
 			newrv |= 1;
 		}
@@ -2118,7 +2118,9 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 			ev.ident = fd;
 			ev.flags = EV_DELETE;
 			ev.filter = EVFILT_WRITE;
-			kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL);
+			/* there is no operation rollback for the (rv & 1) case.
+			 * the rollback action may fail again even if i try it */
+			if (kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL) == -1) goto kqueue_syserr;
 
 			newrv &= ~2;
 		}
@@ -2134,7 +2136,10 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 			ev.flags |= EV_CLEAR; /* EV_CLEAR for edge trigger? */
 		#endif
 			ev.filter = EVFILT_WRITE;
-			kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL);
+
+			/* there is no operation rollback for the (rv & 1) case.
+			 * the rollback action may fail again even if i try it */
+			if (kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL) == -1) goto kqueue_syserr;
 
 			newrv |= 2;
 		}
@@ -2142,6 +2147,11 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 
 	MOO_SETBITS (moo_oow_t, xtn->ev.reg.ptr[rindex], roffset, 2, newrv);
 	return 0;
+
+kqueue_syserr:
+	moo_seterrwithsyserr (moo, 0, errno);
+	MOO_DEBUG2 (moo, "Cannot modify file descriptor %d in kqueue - %hs\n", fd, strerror(errno));
+	return -1;
 
 #elif defined(USE_EPOLL)
 	xtn_t* xtn = GET_XTN(moo);
