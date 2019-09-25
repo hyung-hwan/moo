@@ -178,6 +178,7 @@
 #		define XPOLLERR POLLERR
 #		define XPOLLHUP POLLHUP
 #	elif defined(HAVE_SYS_EVENT_H) && defined(HAVE_KQUEUE)
+		/* netbsd, openbsd, etc */
 #		include <sys/event.h>
 #		define USE_KQUEUE
 		/* fake XPOLLXXX values */
@@ -355,6 +356,11 @@ struct xtn_t
 		 *      file descriptors added */
 		struct pollfd buf[64]; /* buffer for reading events */
 	#elif defined(USE_KQUEUE)
+		struct
+		{
+			moo_oow_t* ptr;
+			moo_oow_t capa;
+		} reg;
 		struct kevent buf[64]; 
 	#elif defined(USE_EPOLL) 
 		/*TODO: make it dynamically changeable depending on the number of
@@ -1749,33 +1755,70 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 #elif defined(USE_KQUEUE)
 	xtn_t* xtn = GET_XTN(moo);
 	struct kevent ev;
+	moo_oow_t rindex, roffset;
+	moo_oow_t rv = 0;
+
+	rindex = fd / (MOO_BITSOF(moo_oow_t) >> 1);
+	roffset = (fd << 1) % MOO_BITSOF(moo_oow_t);
+
+	if (rindex >= xtn->ev.reg.capa)
+	{
+		moo_oow_t* tmp;
+		moo_oow_t newcapa;
+
+		MOO_STATIC_ASSERT (MOO_SIZEOF(*tmp) == MOO_SIZEOF(*xtn->ev.reg.ptr));
+
+		newcapa = rindex + 1;
+		newcapa = MOO_ALIGN_POW2(newcapa, 16);
+
+		tmp = (moo_oow_t*)moo_reallocmem(moo, xtn->ev.reg.ptr, newcapa * MOO_SIZEOF(*tmp));
+		if (!tmp)
+		{
+			const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
+			moo_seterrbfmt (moo, MOO_ESYSERR, "unable to add file descriptor %d to kqueue - %js", fd, oldmsg);
+			MOO_DEBUG1 (moo, "%js", moo_geterrmsg(moo));
+			return -1;
+		}
+
+		MOO_MEMSET (&tmp[xtn->ev.reg.capa], 0, newcapa - xtn->ev.reg.capa);
+		xtn->ev.reg.ptr = tmp;
+		xtn->ev.reg.capa = newcapa;
+	}
 
 	if (event_mask & XPOLLIN) 
 	{
 		/*EV_SET (&ev, fd, EVFILT_READ, EV_ADD | EV_CLEAR, 0, 0, 0);*/
 		MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
 		ev.ident = fd;
-		ev.flags = EV_ADD | EV_CLEAR; /* EV_CLEAR for edge trigger? */
+		ev.flags = EV_ADD;
+	#if defined(USE_THREAD)
+		ev.flags |= EV_CLEAR; /* EV_CLEAR for edge trigger? */
+	#endif
 		ev.filter = EVFILT_READ;
 		if (kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL) == -1)
 		{
 			moo_seterrwithsyserr (moo, 0, errno);
-			MOO_DEBUG2 (moo, "Cannot add file descriptor %d to kqueue - %hs\n", fd, strerror(errno));
+			MOO_DEBUG2 (moo, "Cannot add file descriptor %d to kqueue for read - %hs\n", fd, strerror(errno));
 			return -1;
 		}
+
+		rv |= 1;
 	}
 	if (event_mask & XPOLLOUT)
 	{
 		/*EV_SET (&ev, fd, EVFILT_WRITE, EV_ADD | EV_CLEAR, 0, 0, 0);*/
 		MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
 		ev.ident = fd;
-		ev.flags = EV_ADD | EV_CLEAR;
+		ev.flags = EV_ADD;
+	#if defined(USE_THREAD)
+		ev.flags |= EV_CLEAR; /* EV_CLEAR for edge trigger? */
+	#endif
 		ev.filter = EVFILT_WRITE;
 		if (kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL) == -1)
 		{
 			moo_seterrwithsyserr (moo, 0, errno);
-			MOO_DEBUG2 (moo, "Cannot add file descriptor %d to kqueue - %hs\n", fd, strerror(errno));
-			
+			MOO_DEBUG2 (moo, "Cannot add file descriptor %d to kqueue for write - %hs\n", fd, strerror(errno));
+
 			if (event_mask & XPOLLIN)
 			{
 				MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
@@ -1786,9 +1829,13 @@ static int _add_poll_fd (moo_t* moo, int fd, int event_mask)
 			}
 			return -1;
 		}
+
+		rv |= 2;
 	}
 
+	MOO_SETBITS (moo_oow_t, xtn->ev.reg.ptr[rindex], roffset, 2, rv);
 	return 0;
+
 #elif defined(USE_EPOLL)
 	xtn_t* xtn = GET_XTN(moo);
 	struct epoll_event ev;
@@ -1895,29 +1942,45 @@ static int _del_poll_fd (moo_t* moo, int fd)
 
 #elif defined(USE_KQUEUE)
 	xtn_t* xtn = GET_XTN(moo);
+	moo_oow_t rindex, roffset;
+	int rv;
 	struct kevent ev;
 
-	/* i should keep track of filters(EVFILT_READ/EVFILT_WRITE) associated
-	 * with the file descriptor to know what filter to delete. since no
-	 * tracking has been implemented, i should keep quiet when kevent() 
-	 * returns failure. */
-	
-	/*EV_SET (&ev, fd, EVFILT_READ, EV_DELETE, 0, 0, 0);*/
-	MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
-	ev.ident = fd;
-	ev.flags = EV_DELETE;
-	ev.filter = EVFILT_READ;
-	kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL);
-	/* no error check for now */
+	rindex = fd / (MOO_BITSOF(moo_oow_t) >> 1);
+	roffset = (fd << 1) % MOO_BITSOF(moo_oow_t);
 
-	/*EV_SET (&ev, fd, EVFILT_WRITE, EV_DELETE, 0, 0, 0);*/
-	MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
-	ev.ident = fd;
-	ev.flags = EV_DELETE;
-	ev.filter = EVFILT_WRITE;
-	kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL);
-	/* no error check for now */
+	if (rindex >= xtn->ev.reg.capa)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "unknown file descriptor %d", fd);
+		MOO_DEBUG2 (moo, "Cannot remove file descriptor %d from kqueue - %js\n", fd, moo_geterrmsg(moo));
+		return -1;
+	};
 
+	rv = MOO_GETBITS (moo_oow_t, xtn->ev.reg.ptr[rindex], roffset, 2);
+
+	if (rv & 1)
+	{
+		/*EV_SET (&ev, fd, EVFILT_READ, EV_DELETE, 0, 0, 0);*/
+		MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
+		ev.ident = fd;
+		ev.flags = EV_DELETE;
+		ev.filter = EVFILT_READ;
+		kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL);
+		/* no error check for now */
+	}
+
+	if (rv & 2)
+	{
+		/*EV_SET (&ev, fd, EVFILT_WRITE, EV_DELETE, 0, 0, 0);*/
+		MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
+		ev.ident = fd;
+		ev.flags = EV_DELETE;
+		ev.filter = EVFILT_WRITE;
+		kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL);
+		/* no error check for now */
+	}
+
+	MOO_SETBITS (moo_oow_t, xtn->ev.reg.ptr[rindex], roffset, 2, rv);
 	return 0;
 
 #elif defined(USE_EPOLL)
@@ -2000,20 +2063,84 @@ static int _mod_poll_fd (moo_t* moo, int fd, int event_mask)
 
 	return 0;
 #elif defined(USE_KQUEUE)
+	xtn_t* xtn = GET_XTN(moo);
+	moo_oow_t rindex, roffset;
+	int rv, newrv = 0;
+	struct kevent ev;
 
-/* TODO: filter registration tracking.
- * the current implementation for kqueue invokes kevent() too frequently...
- * this modification function doesn't need to delete all and add a new one
- * if tracking is implemented
- */
-	if (_del_poll_fd (moo, fd) <= -1) return -1;
+	rindex = fd / (MOO_BITSOF(moo_oow_t) >> 1);
+	roffset = (fd << 1) % MOO_BITSOF(moo_oow_t);
 
-	if (_add_poll_fd (moo, fd, event_mask) <= -1) 
+	if (rindex >= xtn->ev.reg.capa)
 	{
-		/* TODO: any good way to rollback successful deletion? */
+		moo_seterrbfmt (moo, MOO_EINVAL, "unknown file descriptor %d", fd);
+		MOO_DEBUG2 (moo, "Cannot remove file descriptor %d from kqueue - %js\n", fd, moo_geterrmsg(moo));
 		return -1;
+	};
+
+	rv = MOO_GETBITS(moo_oow_t, xtn->ev.reg.ptr[rindex], roffset, 2);
+
+	if (rv & 1)
+	{
+		if (!(event_mask & XPOLLIN))
+		{
+			MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
+			ev.ident = fd;
+			ev.flags = EV_DELETE;
+			ev.filter = EVFILT_READ;
+			kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL);
+
+			newrv &= ~1;
+		}
+	}
+	else
+	{
+		if (event_mask & XPOLLIN)
+		{
+			MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
+			ev.ident = fd;
+			ev.flags = EV_ADD;
+		#if defined(USE_THREAD)
+			ev.flags |= EV_CLEAR; /* EV_CLEAR for edge trigger? */
+		#endif
+			ev.filter = EVFILT_READ;
+			kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL);
+
+			newrv |= 1;
+		}
 	}
 
+	if (rv & 2)
+	{
+		if (!(event_mask & XPOLLOUT))
+		{
+			MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
+			ev.ident = fd;
+			ev.flags = EV_DELETE;
+			ev.filter = EVFILT_WRITE;
+			kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL);
+
+			newrv &= ~2;
+		}
+	}
+	else
+	{
+		if (event_mask & XPOLLOUT)
+		{
+			MOO_MEMSET (&ev, 0, MOO_SIZEOF(ev));
+			ev.ident = fd;
+			ev.flags = EV_ADD;
+		#if defined(USE_THREAD)
+			ev.flags |= EV_CLEAR; /* EV_CLEAR for edge trigger? */
+		#endif
+			ev.filter = EVFILT_WRITE;
+			kevent(xtn->ep, &ev, 1, MOO_NULL, 0, MOO_NULL);
+
+			newrv |= 2;
+		}
+	}
+
+	MOO_SETBITS (moo_oow_t, xtn->ev.reg.ptr[rindex], roffset, 2, newrv);
 	return 0;
 
 #elif defined(USE_EPOLL)

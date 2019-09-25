@@ -622,6 +622,7 @@ struct moo_ntime_t
 
 #define MOO_SIZEOF(x) (sizeof(x))
 #define MOO_COUNTOF(x) (sizeof(x) / sizeof((x)[0]))
+#define MOO_BITSOF(x) (sizeof(x) * MOO_BITS_PER_BYTE)
 
 /**
  * The MOO_OFFSETOF() macro returns the offset of a field from the beginning
@@ -648,11 +649,11 @@ struct moo_ntime_t
 
 /* make a bit mask that can mask off low n bits */
 #define MOO_LBMASK(type,n) (~(~((type)0) << (n))) 
-#define MOO_LBMASK_SAFE(type,n) (((n) < MOO_SIZEOF(type) * MOO_BITS_PER_BYTE)? MOO_LBMASK(type,n): ~(type)0)
+#define MOO_LBMASK_SAFE(type,n) (((n) < MOO_BITSOF(type))? MOO_LBMASK(type,n): ~(type)0)
 
 /* make a bit mask that can mask off hig n bits */
 #define MOO_HBMASK(type,n) (~(~((type)0) >> (n)))
-#define MOO_HBMASK_SAFE(type,n) (((n) < MOO_SIZEOF(type) * MOO_BITS_PER_BYTE)? MOO_HBMASK(type,n): ~(type)0)
+#define MOO_HBMASK_SAFE(type,n) (((n) < MOO_BITSOF(type))? MOO_HBMASK(type,n): ~(type)0)
 
 /* get 'length' bits starting from the bit at the 'offset' */
 #define MOO_GETBITS(type,value,offset,length) \
@@ -679,7 +680,7 @@ struct moo_ntime_t
  * \endcode
  */
 /*#define MOO_BITS_MAX(type,nbits) ((((type)1) << (nbits)) - 1)*/
-#define MOO_BITS_MAX(type,nbits) ((~(type)0) >> (MOO_SIZEOF(type) * MOO_BITS_PER_BYTE - (nbits)))
+#define MOO_BITS_MAX(type,nbits) ((~(type)0) >> (MOO_BITSOF(type) - (nbits)))
 
 /* =========================================================================
  * MMGR
@@ -840,11 +841,11 @@ typedef struct moo_t moo_t;
 #define MOO_TYPE_IS_UNSIGNED(type) (((type)0) < ((type)-1))
 
 #define MOO_TYPE_SIGNED_MAX(type) \
-	((type)~((type)1 << ((type)MOO_SIZEOF(type) * MOO_BITS_PER_BYTE - 1)))
+	((type)~((type)1 << ((type)MOO_BITSOF(type) - 1)))
 #define MOO_TYPE_UNSIGNED_MAX(type) ((type)(~(type)0))
 
 #define MOO_TYPE_SIGNED_MIN(type) \
-	((type)((type)1 << ((type)MOO_SIZEOF(type) * MOO_BITS_PER_BYTE - 1)))
+	((type)((type)1 << ((type)MOO_BITSOF(type) - 1)))
 #define MOO_TYPE_UNSIGNED_MIN(type) ((type)0)
 
 #define MOO_TYPE_MAX(type) \
