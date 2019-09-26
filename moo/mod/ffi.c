@@ -49,9 +49,34 @@
 #	endif
 #elif defined(USE_DYNCALL)
 #	include <dyncall.h>
+
+#define __dcArgInt8 dcArgChar
+#define __dcCallInt8 dcCallChar
+
+#define __dcArgInt16 dcArgShort
+#define __dcCallInt16 dcCallShort
+
+#if (MOO_SIZEOF_INT32_T == MOO_SIZEOF_INT)
+#define __dcArgInt32 dcArgInt
+#define __dcCallInt32 dcCallInt
+#elif (MOO_SIZEOF_INT32_T == MOO_SIZEOF_LONG)
+#define __dcArgInt32 dcArgLong
+#define __dcCallInt32 dcCallLong
+#endif
+
+#if (MOO_SIZEOF_INT64_T == MOO_SIZEOF_LONG)
+#define __dcArgInt64 dcArgLong
+#define __dcCallInt64 dcCallLong
+#elif (MOO_SIZEOF_INT64_T == MOO_SIZEOF_LONG_LONG)
+#define __dcArgInt64 dcArgLongLong
+#define __dcCallInt64 dcCallLongLong
+#endif
+
+
 #endif
 
 #define FMTC_NULL '\0' /* internal use only */
+
 #define FMTC_CHAR 'c'
 #define FMTC_SHORT 'h'
 #define FMTC_INT 'i'
@@ -61,6 +86,11 @@
 #define FMTC_UCS 'S'
 #define FMTC_BLOB 'b'
 #define FMTC_POINTER 'p'
+
+#define FMTC_INT8 '1'
+#define FMTC_INT16 '2'
+#define FMTC_INT32 '4'
+#define FMTC_INT64 '8'
 
 typedef struct link_t link_t;
 struct link_t
@@ -84,6 +114,18 @@ union ffi_sv_t
 #if (MOO_SIZEOF_LONG_LONG > 0)
 	unsigned long long int ull;
 	long long int ll;
+#endif
+
+
+	moo_uint8_t ui8;
+	moo_int8_t i8;
+	moo_uint16_t ui16;
+	moo_int16_t i16;
+	moo_uint32_t ui32;
+	moo_int32_t i32;
+#if (MOO_SIZEOF_INT64_T > 0)
+	moo_uint64_t ui64;
+	moo_int64_t i64;
 #endif
 };
 #endif
@@ -194,6 +236,14 @@ static moo_pfrc_t pf_open (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	ffi->fmtc_to_type[0][FMTC_LONGLONG] = &ffi_type_slonglong;
 	ffi->fmtc_to_type[1][FMTC_LONGLONG] = &ffi_type_ulonglong;
 	#endif
+	ffi->fmtc_to_type[0][FMTC_INT8] = &ffi_type_sint8;
+	ffi->fmtc_to_type[1][FMTC_INT8] = &ffi_type_uint8;
+	ffi->fmtc_to_type[0][FMTC_INT16] = &ffi_type_sint16;
+	ffi->fmtc_to_type[1][FMTC_INT16] = &ffi_type_uint16;
+	ffi->fmtc_to_type[0][FMTC_INT32] = &ffi_type_sint32;
+	ffi->fmtc_to_type[1][FMTC_INT32] = &ffi_type_uint32;
+	ffi->fmtc_to_type[0][FMTC_INT64] = &ffi_type_sint64;
+	ffi->fmtc_to_type[1][FMTC_INT64] = &ffi_type_uint64;
 
 	ffi->fmtc_to_type[0][FMTC_POINTER] = &ffi_type_pointer;
 	ffi->fmtc_to_type[1][FMTC_POINTER] = &ffi_type_pointer;
@@ -292,6 +342,112 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 
 	switch (fmtc)
 	{
+		case FMTC_INT8:
+			if (_unsigned)
+			{
+				moo_oow_t v;
+				if (moo_inttooow(moo, arg, &v) == 0) goto oops;
+			#if defined(USE_DYNCALL)
+				__dcArgInt8 (ffi->dc, v);
+			#elif defined(USE_LIBFFI)
+				ffi->arg_values[ffi->arg_count] = &ffi->arg_svs[ffi->arg_count].ui8;
+				ffi->arg_svs[ffi->arg_count].ui8 = v;
+			#endif
+			}
+			else
+			{
+				moo_ooi_t v;
+				if (moo_inttoooi(moo, arg, &v) == 0) goto oops;
+			#if defined(USE_DYNCALL)
+				__dcArgInt8 (ffi->dc, v);
+			#elif defined(USE_LIBFFI)
+				ffi->arg_values[ffi->arg_count] = &ffi->arg_svs[ffi->arg_count].i8;
+				ffi->arg_svs[ffi->arg_count].i8 = v;
+			#endif
+			}
+			break;
+
+		case FMTC_INT16:
+			if (_unsigned)
+			{
+				moo_oow_t v;
+				if (moo_inttooow(moo, arg, &v) == 0) goto oops;
+			#if defined(USE_DYNCALL)
+				__dcArgInt16 (ffi->dc, v);
+			#elif defined(USE_LIBFFI)
+				ffi->arg_values[ffi->arg_count] = &ffi->arg_svs[ffi->arg_count].ui16;
+				ffi->arg_svs[ffi->arg_count].ui16 = v;
+			#endif
+			}
+			else
+			{
+				moo_ooi_t v;
+				if (moo_inttoooi(moo, arg, &v) == 0) goto oops;
+			#if defined(USE_DYNCALL)
+				__dcArgInt16 (ffi->dc, v);
+			#elif defined(USE_LIBFFI)
+				ffi->arg_values[ffi->arg_count] = &ffi->arg_svs[ffi->arg_count].i16;
+				ffi->arg_svs[ffi->arg_count].i16 = v;
+			#endif
+			}
+			break;
+
+
+		case FMTC_INT32:
+			if (_unsigned)
+			{
+				moo_oow_t v;
+				if (moo_inttooow(moo, arg, &v) == 0) goto oops;
+			#if defined(USE_DYNCALL)
+				__dcArgInt32 (ffi->dc, v);
+			#elif defined(USE_LIBFFI)
+				ffi->arg_values[ffi->arg_count] = &ffi->arg_svs[ffi->arg_count].ui32;
+				ffi->arg_svs[ffi->arg_count].ui32 = v;
+			#endif
+			}
+			else
+			{
+				moo_ooi_t v;
+				if (moo_inttoooi(moo, arg, &v) == 0) goto oops;
+			#if defined(USE_DYNCALL)
+				__dcArgInt32 (ffi->dc, v);
+			#elif defined(USE_LIBFFI)
+				ffi->arg_values[ffi->arg_count] = &ffi->arg_svs[ffi->arg_count].i32;
+				ffi->arg_svs[ffi->arg_count].i32 = v;
+			#endif
+			}
+			break;
+
+
+		case FMTC_INT64:
+		#if (MOO_SIZEOF_INT64_T > 0)
+			if (_unsigned)
+			{
+				moo_oow_t v;
+				if (moo_inttooow(moo, arg, &v) == 0) goto oops;
+			#if defined(USE_DYNCALL)
+				__dcArgInt64 (ffi->dc, v);
+			#elif defined(USE_LIBFFI)
+				ffi->arg_values[ffi->arg_count] = &ffi->arg_svs[ffi->arg_count].ui64;
+				ffi->arg_svs[ffi->arg_count].ui64 = v;
+			#endif
+			}
+			else
+			{
+				moo_ooi_t v;
+				if (moo_inttoooi(moo, arg, &v) == 0) goto oops;
+			#if defined(USE_DYNCALL)
+				__dcArgInt64 (ffi->dc, v);
+			#elif defined(USE_LIBFFI)
+				ffi->arg_values[ffi->arg_count] = &ffi->arg_svs[ffi->arg_count].i64;
+				ffi->arg_svs[ffi->arg_count].i64 = v;
+			#endif
+			}
+			break;
+		#else
+			goto inval_sig_ch;
+		#endif
+
 		case FMTC_CHAR:
 			if (!MOO_OOP_IS_CHAR(arg)) goto inval_arg_value;
 			if (_unsigned)
@@ -318,7 +474,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			if (_unsigned)
 			{
 				moo_oow_t v;
-				if (moo_inttooow(moo, arg, &v) == 0) goto inval_arg_value;
+				if (moo_inttooow(moo, arg, &v) == 0) goto oops;
 			#if defined(USE_DYNCALL)
 				dcArgShort (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -503,8 +659,9 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 		}
 
 		default:
+		inval_sig_ch:
 			/* invalid argument signature specifier */
-			moo_seterrbfmt (moo, MOO_EINVAL, "invalid signature character - %jc", fmtc);
+			moo_seterrbfmt (moo, MOO_EINVAL, "invalid argument type signature - %jc", fmtc);
 			goto oops;
 	}
 
@@ -527,7 +684,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 #if defined(USE_DYNCALL) || defined(USE_LIBFFI)
 	ffi_t* ffi;
 	moo_oop_t fun, sig, args;
-	moo_oow_t i, j, nfixedargs;
+	moo_oow_t i, j, nfixedargs, _unsigned;
 	void* f;
 	moo_oop_oop_t arr;
 	int vbar = 0;
@@ -578,7 +735,7 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 #endif
 
 	/* check argument signature */
-	for (i = 0, j = 0, nfixedargs = 0; i < MOO_OBJ_GET_SIZE(sig); i++)
+	for (i = 0, j = 0, nfixedargs = 0, _unsigned = 0; i < MOO_OBJ_GET_SIZE(sig); i++)
 	{
 		fmtc = MOO_OBJ_GET_CHAR_VAL(sig, i);
 		if (fmtc == ' ')
@@ -605,11 +762,17 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 			}
 			continue;
 		}
+		else if (fmtc == 'u')
+		{
+			_unsigned = 1;
+			continue;
+		}
 
 		/* more items in signature than the actual argument */  
 		if (j >= MOO_OBJ_GET_SIZE(arr)) goto inval;
 
-		if (add_ffi_arg(moo, ffi, fmtc, 0, MOO_OBJ_GET_OOP_VAL(arr, j)) <= -1) goto softfail;
+		if (add_ffi_arg(moo, ffi, fmtc, _unsigned, MOO_OBJ_GET_OOP_VAL(arr, j)) <= -1) goto softfail;
+		_unsigned = 0;
 		j++;
 	}
 
@@ -628,19 +791,141 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	ffi_call (&ffi->cif, FFI_FN(f), &ffi->ret_sv, ffi->arg_values);
 #endif
 
+	if (fmtc == 'u') 
+	{
+		_unsigned = 1;
+		fmtc++;
+	}
+	else
+	{
+		_unsigned = 0;
+	}
+
 	/* check the return value type in signature */
 	switch (fmtc)
 	{
 /* TODO: support more types... */
 /* TODO: proper return value conversion */
-/* TODO: handle unsigned */
+		case FMTC_INT8:
+		{
+			moo_oop_t r;
+			if (_unsigned)
+			{
+			#if defined(USE_DYNCALL)
+				r = moo_oowtoint(moo, __dcCallInt8(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_oowtoint(moo, ffi->ret_sv.ui8);
+			#endif
+			}
+			else
+			{
+			#if defined(USE_DYNCALL)
+				r = moo_ooitoint(moo, __dcCallInt8(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_ooitoint(moo, ffi->ret_sv.i8);
+			#endif
+			}
+			if (!r) goto hardfail;
+		
+			MOO_STACK_SETRET (moo, nargs, r);
+			break;
+		}
+
+		case FMTC_INT16:
+		{
+			moo_oop_t r;
+			if (_unsigned)
+			{
+			#if defined(USE_DYNCALL)
+				r = moo_oowtoint(moo, __dcCallInt16(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_oowtoint(moo, ffi->ret_sv.ui16);
+			#endif
+			}
+			else
+			{
+			#if defined(USE_DYNCALL)
+				r = moo_ooitoint(moo, __dcCallInt16(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_ooitoint(moo, ffi->ret_sv.i16);
+			#endif
+			}
+			if (!r) goto hardfail;
+		
+			MOO_STACK_SETRET (moo, nargs, r);
+			break;
+		}
+
+		case FMTC_INT32:
+		{
+			moo_oop_t r;
+			if (_unsigned)
+			{
+			#if defined(USE_DYNCALL)
+				r = moo_oowtoint(moo, __dcCallInt32(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_oowtoint(moo, ffi->ret_sv.ui32);
+			#endif
+			}
+			else
+			{
+			#if defined(USE_DYNCALL)
+				r = moo_ooitoint(moo, __dcCallInt32(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_ooitoint(moo, ffi->ret_sv.i32);
+			#endif
+			}
+			if (!r) goto hardfail;
+		
+			MOO_STACK_SETRET (moo, nargs, r);
+			break;
+		}
+
+		case FMTC_INT64:
+		{
+		#if (MOO_SIZEOF_INT64_T > 0)
+			moo_oop_t r;
+			if (_unsigned)
+			{
+			#if defined(USE_DYNCALL)
+				r = moo_oowtoint(moo, __dcCallInt64(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_oowtoint(moo, ffi->ret_sv.ui64);
+			#endif
+			}
+			else
+			{
+			#if defined(USE_DYNCALL)
+				r = moo_ooitoint(moo, __dcCallInt64(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_ooitoint(moo, ffi->ret_sv.i64);
+			#endif
+			}
+			if (!r) goto hardfail;
+
+			MOO_STACK_SETRET (moo, nargs, r);
+			break;
+		#else
+			moo_seterrbfmt (moo, MOO_EINVAL, "invalid return type signature - %jc", fmtc);
+			goto softfail;
+		#endif
+		}
+
+
 		case FMTC_CHAR:
 		{
 		#if defined(USE_DYNCALL)
 			char r = dcCallChar(ffi->dc, f);
 			MOO_STACK_SETRET (moo, nargs, MOO_CHAR_TO_OOP(r));
 		#elif defined(USE_LIBFFI)
-			MOO_STACK_SETRET (moo, nargs, MOO_CHAR_TO_OOP(ffi->ret_sv.c));
+			if (_unsigned)
+			{
+				MOO_STACK_SETRET (moo, nargs, MOO_CHAR_TO_OOP(ffi->ret_sv.uc));
+			}
+			else
+			{
+				MOO_STACK_SETRET (moo, nargs, MOO_CHAR_TO_OOP(ffi->ret_sv.c));
+			}
 		#endif
 			break;
 		}
@@ -648,13 +933,24 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		case FMTC_SHORT:
 		{
 			moo_oop_t r;
-		#if defined(USE_DYNCALL)
-			r = moo_ooitoint(moo, dcCallShort(ffi->dc, f));
-		#elif defined(USE_LIBFFI)
-			r = moo_ooitoint(moo, ffi->ret_sv.h);
-		#endif
+			if (_unsigned)
+			{
+			#if defined(USE_DYNCALL)
+				r = moo_oowtoint(moo, dcCallShort(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_oowtoint(moo, ffi->ret_sv.uh);
+			#endif
+			}
+			else
+			{
+			#if defined(USE_DYNCALL)
+				r = moo_ooitoint(moo, dcCallShort(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_ooitoint(moo, ffi->ret_sv.h);
+			#endif
+			}
 			if (!r) goto hardfail;
-		
+
 			MOO_STACK_SETRET (moo, nargs, r);
 			break;
 		}
@@ -662,11 +958,22 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		case FMTC_INT:
 		{
 			moo_oop_t r;
-		#if defined(USE_DYNCALL)
-			r = moo_ooitoint(moo, dcCallInt(ffi->dc, f));
-		#elif defined(USE_LIBFFI)
-			r = moo_ooitoint(moo, ffi->ret_sv.i);
-		#endif
+			if (_unsigned)
+			{
+			#if defined(USE_DYNCALL)
+				r = moo_oowtoint(moo, dcCallInt(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_oowtoint(moo, ffi->ret_sv.ui);
+			#endif
+			}
+			else
+			{
+			#if defined(USE_DYNCALL)
+				r = moo_ooitoint(moo, dcCallInt(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_ooitoint(moo, ffi->ret_sv.i);
+			#endif
+			}
 			if (!r) goto hardfail;
 			MOO_STACK_SETRET (moo, nargs, r);
 			break;
@@ -676,11 +983,22 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		{
 			moo_oop_t r;
 		ret_as_long:
-		#if defined(USE_DYNCALL)
-			r = moo_ooitoint(moo, dcCallLong(ffi->dc, f));
-		#elif defined(USE_LIBFFI)
-			r = moo_ooitoint(moo, ffi->ret_sv.l);
-		#endif
+			if (_unsigned)
+			{
+			#if defined(USE_DYNCALL)
+				r = moo_oowtoint(moo, dcCallLong(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_oowtoint(moo, ffi->ret_sv.ul);
+			#endif
+			}
+			else
+			{
+			#if defined(USE_DYNCALL)
+				r = moo_ooitoint(moo, dcCallLong(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_ooitoint(moo, ffi->ret_sv.l);
+			#endif
+			}
 			if (!r) goto hardfail;
 			MOO_STACK_SETRET (moo, nargs, r);
 			break;
@@ -692,12 +1010,22 @@ static moo_pfrc_t pf_call (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 			goto ret_as_long;
 		#else
 			moo_oop_t r;
-		#if defined(USE_DYNCALL)	
-			r = moo_intmaxtoint(moo, dcCallLongLong(ffi->dc, f));
-		#elif defined(USE_LIBFFI)
-			/* TODO: unsigned  */
-			r = moo_intmaxtoint(moo, ffi->ret_sv.ll);
-		#endif
+			if (_unsigned)
+			{
+			#if defined(USE_DYNCALL)	
+				r = moo_uintmaxtoint(moo, dcCallLongLong(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_uintmaxtoint(moo, ffi->ret_sv.ull);
+			#endif
+			}
+			else
+			{
+			#if defined(USE_DYNCALL)	
+				r = moo_intmaxtoint(moo, dcCallLongLong(ffi->dc, f));
+			#elif defined(USE_LIBFFI)
+				r = moo_intmaxtoint(moo, ffi->ret_sv.ll);
+			#endif
+			}
 			if (!r) goto hardfail;
 			MOO_STACK_SETRET (moo, nargs, r);
 			break;
