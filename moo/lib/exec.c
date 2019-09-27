@@ -1866,7 +1866,9 @@ moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t 
 	if (mcitm->receiver_class == c  && mcitm->selector == selector /*&& mcitm->method_type == mth_type*/)
 	{
 		/* cache hit */
-		/* TODO: moo->method_cache_hits++; */
+	#if defined(MOO_PROFILE_VM)
+		moo->stat.method_cache_hits++;
+	#endif
 		return mcitm->method;
 	}
 	
@@ -1874,7 +1876,9 @@ moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t 
 	mth = find_method_in_class_chain(moo, c, mth_type, &message);
 	if (mth) 
 	{
-		/* TODO: moo->method_cache_misses++; */
+	#if defined(MOO_PROFILE_VM)
+		moo->stat.method_cache_misses++;
+	#endif
 		mcitm->receiver_class = c;
 		mcitm->selector = selector;
 		/*mcitm->method_type = mth_type;*/
@@ -1899,14 +1903,18 @@ not_found:
 		if (mcitm->receiver_class == _class  && mcitm->selector == selector /*&& mcitm->method_type == MOO_METHOD_INSTANCE*/)
 		{
 			/* cache  hit */
-			/* TODO: moo->method_cache_hits++; */
+		#if defined(MOO_PROFILE_VM)
+			moo->stat.method_cache_hits++; 
+		#endif
 			return mcitm->method;
 		}
 		
 		mth = find_method_in_class(moo, _class, MOO_METHOD_INSTANCE, &message);
 		if (mth) 
 		{
-			/* TODO: moo->method_cache_misses++; */
+		#if defined(MOO_PROFILE_VM)
+			moo->stat.method_cache_misses++;
+		#endif
 			mcitm->receiver_class = c;
 			mcitm->selector = selector;
 			/*mcitm->method_type = MOO_METHOD_INSTANCE;*/
@@ -2275,7 +2283,7 @@ static moo_pfrc_t pf_perform (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	MOO_STACK_POP (moo);
 
 	/* emulate message sending */
-	if (send_message (moo, (moo_oop_char_t)selector, nargs - 1, 0) <= -1) return MOO_PF_HARD_FAILURE;
+	if (send_message(moo, (moo_oop_char_t)selector, nargs - 1, 0) <= -1) return MOO_PF_HARD_FAILURE;
 	return MOO_PF_SUCCESS;
 }
 
@@ -4873,6 +4881,10 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, i
 
 	receiver = MOO_STACK_GET(moo, moo->sp - nargs);
 
+#if defined(MOO_PROFILE_VM)
+	moo->stat.message_sends++;
+#endif
+
 	method = moo_findmethod(moo, receiver, selector, to_super);
 	if (!method) 
 	{
@@ -4884,7 +4896,7 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, i
 			MOO_LOG4 (moo, MOO_LOG_IC | MOO_LOG_FATAL, 
 				"Fatal error - unable to find a fallback method [%O>>%.*js] for receiver [%O]\n", 
 				MOO_CLASSOF(moo, receiver), MOO_OBJ_GET_SIZE(moo->does_not_understand_sym), MOO_OBJ_GET_CHAR_SLOT(moo->does_not_understand_sym), receiver);
-			
+
 			moo_seterrbfmt (moo, MOO_EMSGSND, "unable to find a fallback method - %O>>%.*js",
 				MOO_CLASSOF(moo, receiver), MOO_OBJ_GET_SIZE(moo->does_not_understand_sym), MOO_OBJ_GET_CHAR_SLOT(moo->does_not_understand_sym));
 			return -1;
@@ -5515,7 +5527,7 @@ static int __execute (moo_t* moo)
 		bcode = FETCH_BYTE_CODE(moo);
 
 	#if defined(MOO_PROFILE_VM)
-		moo->inst_counter++;
+		moo->stat.inst_counter++;
 	#endif
 
 		/* ==== DISPATCH TABLE ==== */
@@ -6381,7 +6393,6 @@ static int __execute (moo_t* moo)
 	return 0;
 }
 
-
 int moo_execute (moo_t* moo)
 {
 	int n;
@@ -6389,10 +6400,6 @@ int moo_execute (moo_t* moo)
 
 	log_default_type_mask = moo->log.default_type_mask;
 	moo->log.default_type_mask |= MOO_LOG_VM;
-
-#if defined(MOO_PROFILE_VM)
-	moo->inst_counter = 0;
-#endif
 
 	if (vm_startup(moo) <= -1) return -1;
 
@@ -6402,10 +6409,6 @@ int moo_execute (moo_t* moo)
 	n = __execute (moo);
 
 	vm_cleanup (moo);
-
-#if defined(MOO_PROFILE_VM)
-	MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_INFO, "TOTAL_INST_COUTNER = %zu\n", moo->inst_counter);
-#endif
 
 	moo->log.default_type_mask = log_default_type_mask;
 	return n;
@@ -6424,6 +6427,13 @@ int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname
 	MOO_ASSERT (moo, moo->active_context == MOO_NULL);
 	MOO_ASSERT (moo, moo->active_method == MOO_NULL);
 
+#if defined(MOO_PROFILE_VM)
+	moo->stat.inst_counter = 0;
+	moo->stat.method_cache_hits = 0;
+	moo->stat.method_cache_misses = 0;
+	moo->stat.message_sends = 0;
+#endif
+
 	moo_clearmethodcache (moo);
 
 	if (start_initial_process_and_context(moo, objname, mthname) <= -1) return -1;
@@ -6435,6 +6445,13 @@ int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname
 	moo->initial_context = MOO_NULL;
 	moo->active_context = MOO_NULL;
 	moo->active_method = MOO_NULL;
+
+#if defined(MOO_PROFILE_VM)
+	MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_INFO, "Total message sends: %zu\n", moo->stat.message_sends);
+	MOO_LOG2 (moo, MOO_LOG_IC | MOO_LOG_INFO, "Method cache - hits: %zu, misses: %zu\n", moo->stat.method_cache_hits, moo->stat.method_cache_misses);
+	MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_INFO, "Total instructions: %zu\n", moo->stat.inst_counter);
+#endif
+
 	return n;
 }
 

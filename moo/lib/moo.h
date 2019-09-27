@@ -1704,8 +1704,14 @@ struct moo_t
 
 	moo_method_cache_item_t method_cache[2][MOO_METHOD_CACHE_SIZE];
 
-	moo_uintmax_t inst_counter;
 	moo_ooi_t last_inst_pointer;
+	struct 
+	{
+		moo_oow_t method_cache_hits;
+		moo_oow_t method_cache_misses;
+		moo_oow_t message_sends;
+		moo_uintmax_t inst_counter;
+	} stat;
 
 #if defined(MOO_INCLUDE_COMPILER)
 	moo_compiler_t* c;
