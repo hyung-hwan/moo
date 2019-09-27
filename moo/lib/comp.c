@@ -3875,7 +3875,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 		else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
 		{
 			/* no variable name is present */
-			moo_setsynerr (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "variable name expected");
 			return -1;
 		}
 		else
@@ -3984,7 +3984,7 @@ static int compile_class_level_imports (moo_t* moo)
 		else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
 		{
 			/* no variable name is present */
-			moo_setsynerr (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "pool dictionary name expected");
 			return -1;
 		}
 		else
@@ -4017,7 +4017,42 @@ static int compile_class_level_imports (moo_t* moo)
 
 static int compile_class_level_consts (moo_t* moo)
 {
-	/* TODO: */
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+
+	do
+	{
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
+		{
+			/* TODO */
+		}
+		else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
+		{
+			/* no constant name is present */
+			moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "constant name expected");
+			return -1;
+		}
+		else
+		{
+			break;
+		}
+
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
+		{
+			moo_setsynerr (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
+		else if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA) break; /* hopefully . */
+		GET_TOKEN (moo);
+	}
+	while (1);
+
+	if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
+	{
+		moo_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		return -1;
+	}
+
+	GET_TOKEN (moo);
 	return 0;
 }
 
