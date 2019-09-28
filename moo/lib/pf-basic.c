@@ -743,7 +743,7 @@ done:
 	else
 	{
 		moo_oop_t v;
-		v = moo_oowtoint (moo, ssz);
+		v = moo_oowtoint(moo, ssz);
 		if (!v) MOO_PF_FAILURE;
 		MOO_STACK_SETRET (moo, nargs, v);
 	}
@@ -949,7 +949,7 @@ done:
 	else
 	{
 		moo_oop_t v;
-		v = moo_oowtoint (moo, ssz);
+		v = moo_oowtoint(moo, ssz);
 		if (!v) MOO_PF_FAILURE;
 		MOO_STACK_SETRET (moo, nargs, v);
 	}

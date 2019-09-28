@@ -4199,7 +4199,7 @@ static moo_pfrc_t pf_strfmt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_strlen (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	moo_oop_t rcv, ret;
+	moo_oop_t rcv, retv;
 	moo_oow_t i, limit;
 	moo_ooch_t* ptr;
 
@@ -4216,10 +4216,10 @@ static moo_pfrc_t pf_strlen (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		if (*ptr == '\0') break;
 		ptr++;
 	}
-	ret = moo_oowtoint (moo, i);
-	if (!ret) return MOO_PF_FAILURE;
+	retv = moo_oowtoint(moo, i);
+	if (!retv) return MOO_PF_FAILURE;
 
-	MOO_STACK_SETRET (moo, nargs, ret);
+	MOO_STACK_SETRET (moo, nargs, retv);
 	return MOO_PF_SUCCESS;
 }
 

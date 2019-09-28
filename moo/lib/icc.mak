@@ -20,9 +20,10 @@ LIBSRCS := \
 	dic.c \
 	err.c \
 	exec.c \
+	fmt.c \
 	gc.c \
 	heap.c \
-	logfmt.c \
+	mb8.c \
 	moo.c \
 	number.c \
 	obj.c \

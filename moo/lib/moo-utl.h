@@ -291,7 +291,7 @@ enum moo_cmgr_id_t
 {
 	MOO_CMGR_UTF8,
 	MOO_CMGR_UTF16,
-	MOO_CMGR_MB8,
+	MOO_CMGR_MB8
 };
 typedef enum moo_cmgr_id_t moo_cmgr_id_t;
 
