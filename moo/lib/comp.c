@@ -3869,7 +3869,7 @@ if super is variable-nonpointer, no instance variable is allowed.
 			{
 				/* this part is to remember the variable access type that indicates
 				 * whether to generate a getter method and a setter method */
-				if (set_class_level_variable_initv (moo, dcl_type, cc->var[dcl_type].count - 1, MOO_NULL, varacc_type) <= -1) return -1;
+				if (set_class_level_variable_initv(moo, dcl_type, cc->var[dcl_type].count - 1, MOO_NULL, varacc_type) <= -1) return -1;
 			}
 		}
 		else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
@@ -4023,7 +4023,33 @@ static int compile_class_level_consts (moo_t* moo)
 	{
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
 		{
-			/* TODO */
+			/* TODO: */
+		#if 0
+			if (add_class_level_const(moo, TOKEN_NAME(moo), TOKEN_LOC(moo)) <= -1) return -1;
+
+			GET_TOKEN (moo);
+
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_ASSIGN)
+			{
+				moo_oop_t lit;
+
+				GET_TOKEN (moo);
+
+				/* only a single literal token is allowed as a value for now.
+				 * TODO: extend to support simple constant expression */
+				lit = token_to_literal(moo, 1);
+				if (!lit) return -1;
+
+				if (set_class_level_const_value(moo, cc->_const.count - 1, lit) <= -1) return -1;
+
+				GET_TOKEN (moo);
+			}
+			else
+			{
+				moo_setsynerr (moo, MOO_SYNERR_ASSIGN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				return -1;
+			}
+		#endif
 		}
 		else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
 		{
