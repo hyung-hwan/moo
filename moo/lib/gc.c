@@ -1134,7 +1134,7 @@ moo_oop_t moo_shallowcopy (moo_t* moo, moo_oop_t oop)
 		}
 
 		total_bytes = MOO_SIZEOF(moo_obj_t) + moo_getobjpayloadbytes(moo, oop);
-		if (MOO_OBJ_GET_FLAGS_HASH(oop))
+		if (MOO_OBJ_GET_FLAGS_HASH(oop) == MOO_OBJ_FLAGS_HASH_STORED)
 		{
 			/* exclude the hash value field from copying */
 			total_bytes -= MOO_SIZEOF(moo_oow_t);
