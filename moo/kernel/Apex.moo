@@ -6,19 +6,19 @@ class(#limited) Error(Apex)
 {
 	pooldic Code
 	{
-		ENOERR   := #\E0.
-		EGENERIC := #\E1.
-		ENOIMPL  := #\E2.
-		ESYSERR  := #\E3.
-		EINTERN  := #\E4.
-		ESYSMEM  := #\E5.
-		EOOMEM   := #\E6.
-		EINVAL   := #\E7.
-		ENOENT   := #\E8.
-		EPERM    := #\E12.
-		ERANGE   := #\E20.
+		ENOERR   := #\E0,
+		EGENERIC := #\E1,
+		ENOIMPL  := #\E2,
+		ESYSERR  := #\E3,
+		EINTERN  := #\E4,
+		ESYSMEM  := #\E5,
+		EOOMEM   := #\E6,
+		EINVAL   := #\E7,
+		ENOENT   := #\E8,
+		EPERM    := #\E12,
+		ERANGE   := #\E20,
 
-		ELIMIT  := #\E9999.
+		ELIMIT  := #\E9999
 		// add more items...
 	}
 }
@@ -26,19 +26,19 @@ class(#limited) Error(Apex)
 /*
 pooldic Error.Code
 {
-	ENOERR   := #\E0.
-	EGENERIC := #\E1.
-	ENOIMPL  := #\E2.
-	ESYSERR  := #\E3.
-	EINTERN  := #\E4.
-	ESYSMEM  := #\E5.
-	EOOMEM   := #\E6.
-	EINVAL   := #\E7.
-	ENOENT   := #\E8.
-	EPERM    := #\E12.
-	ERANGE   := #\E20.
+	ENOERR   := #\E0,
+	EGENERIC := #\E1,
+	ENOIMPL  := #\E2,
+	ESYSERR  := #\E3,
+	EINTERN  := #\E4,
+	ESYSMEM  := #\E5,
+	EOOMEM   := #\E6,
+	EINVAL   := #\E7,
+	ENOENT   := #\E8,
+	EPERM    := #\E12,
+	ERANGE   := #\E20,
 
-	ELIMIT  := #\E9999.
+	ELIMIT  := #\E9999
 // add more items... 
 } */
 
@@ -49,7 +49,7 @@ pooldic Error.Code
 	>> and treat it as if it's a literal like? then even if the defined value changes,
 	>> the definition here won't see the change... what is the best way to tackle this issue?
 
-	EGENERIC := Error.Code2.EGENERIC.
+	EGENERIC := Error.Code2.EGENERIC
 }*/
 
 extend Apex
@@ -332,8 +332,8 @@ extend Error
 
 	pooldic/const
 	{
-		NONE := #\e0.
-		GENERIC := #\e1.
+		NONE := #\e0,
+		GENERIC := #\e1
 	}
 	-------------------------------- */
 

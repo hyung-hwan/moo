@@ -1559,10 +1559,151 @@ int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 			}
 			if (moo_bfmt_out(fmtout, ")") <= -1) return -1;
 		}
+		else if (c == moo->_namespace)
+		{
+			moo_oop_t ns;
+			struct
+			{
+				moo_oop_nsdic_t v;
+				struct node_t* next;
+			}* tmp, * top = MOO_NULL;
+			int ok = 1;
+
+			/* TODO: better memory allocation management? */
+			ns = ((moo_oop_nsdic_t)oop)->nsup;
+			while (/*ns != moo->_system &&*/ ns != moo->_system->nsdic) /* exclude System from the output */
+			{
+				if (MOO_CLASSOF(moo, ns) == moo->_class)
+				{
+					ns = ((moo_oop_class_t)ns)->nsup;
+				}
+				else if (MOO_CLASSOF(moo, ns) == moo->_interface)
+				{
+					ns = ((moo_oop_interface_t)ns)->nsup;
+				}
+				else
+				{
+					/* TODO: better memory allocation management? */
+					tmp = moo_callocmem(moo, MOO_SIZEOF(*tmp));
+					if (!tmp) goto done_namespace;
+					tmp->v = (moo_oop_nsdic_t)ns;
+					tmp->next = top;
+					top = tmp;
+
+					ns = ((moo_oop_nsdic_t)ns)->nsup;
+				}
+			}
+
+		done_namespace:
+			if (ok && moo_bfmt_out(fmtout, "<<namespace:") <= -1) ok = 0;
+			while (top)
+			{
+				tmp = top;
+				top = top->next;
+				if (ok && moo_bfmt_out(fmtout, "%.*js.", MOO_OBJ_GET_SIZE(tmp->v->name), MOO_OBJ_GET_CHAR_SLOT(tmp->v->name)) <= -1) ok = 0;
+				moo_freemem (moo, tmp);
+			}
+			if (ok && moo_bfmt_out(fmtout, "%.*js", MOO_OBJ_GET_SIZE(((moo_oop_nsdic_t)oop)->name), MOO_OBJ_GET_CHAR_SLOT(((moo_oop_nsdic_t)oop)->name)) <= -1) ok = 0;
+			if (ok && moo_bfmt_out(fmtout, ">>") <= -1) ok = 0;
+
+			if (!ok) return -1;
+		}
 		else if (c == moo->_class)
 		{
 			/* print the class name */
-			if (moo_bfmt_out(fmtout, "%.*js", MOO_OBJ_GET_SIZE(((moo_oop_class_t)oop)->name), MOO_OBJ_GET_CHAR_SLOT(((moo_oop_class_t)oop)->name)) <= -1) return -1;
+			moo_oop_t ns;
+			struct
+			{
+				moo_oop_nsdic_t v;
+				struct node_t* next;
+			}* tmp, * top = MOO_NULL;
+			int ok = 1;
+
+/* TODO: collapse many duplicate code among namespace, class, interface name printing */
+			ns = ((moo_oop_class_t)oop)->nsup;
+			while (/*ns != moo->_system &&*/ ns != moo->_system->nsdic) /* exclude System from the output */
+			{
+				if (MOO_CLASSOF(moo, ns) == moo->_class)
+				{
+					ns = ((moo_oop_class_t)ns)->nsup;
+				}
+				else if (MOO_CLASSOF(moo, ns) == moo->_interface)
+				{
+					ns = ((moo_oop_interface_t)ns)->nsup;
+				}
+				else
+				{
+					/* TODO: better memory allocation management? */
+					tmp = moo_callocmem(moo, MOO_SIZEOF(*tmp));
+					if (!tmp) goto done_class;
+					tmp->v = (moo_oop_nsdic_t)ns;
+					tmp->next = top;
+					top = tmp;
+
+					ns = ((moo_oop_nsdic_t)ns)->nsup;
+				}
+			}
+		done_class:
+			if (ok && moo_bfmt_out(fmtout, "<<class:") <= -1) ok = 0;
+			while (top)
+			{
+				tmp = top;
+				top = top->next;
+				if (ok && moo_bfmt_out(fmtout, "%.*js.", MOO_OBJ_GET_SIZE(tmp->v->name), MOO_OBJ_GET_CHAR_SLOT(tmp->v->name)) <= -1) ok = 0;
+				moo_freemem (moo, tmp);
+			}
+			if (ok && moo_bfmt_out(fmtout, "%.*js", MOO_OBJ_GET_SIZE(((moo_oop_class_t)oop)->name), MOO_OBJ_GET_CHAR_SLOT(((moo_oop_class_t)oop)->name)) <= -1) return -1;
+			if (ok && moo_bfmt_out(fmtout, ">>") <= -1) ok = 0;
+
+			if (!ok) return -1;
+		}
+		else if (c == moo->_interface)
+		{
+			moo_oop_t ns;
+			struct
+			{
+				moo_oop_nsdic_t v;
+				struct node_t* next;
+			}* tmp, * top = MOO_NULL;
+			int ok = 1;
+
+			ns = ((moo_oop_interface_t)oop)->nsup;
+			while (/*ns != moo->_system &&*/ ns != moo->_system->nsdic) /* exclude System from the output */
+			{
+				if (MOO_CLASSOF(moo, ns) == moo->_class)
+				{
+					ns = ((moo_oop_class_t)ns)->nsup;
+				}
+				else if (MOO_CLASSOF(moo, ns) == moo->_interface)
+				{
+					ns = ((moo_oop_interface_t)ns)->nsup;
+				}
+				else
+				{
+					/* TODO: better memory allocation management? */
+					tmp = moo_callocmem(moo, MOO_SIZEOF(*tmp));
+					if (!tmp) goto done_interface;
+					tmp->v = (moo_oop_nsdic_t)ns;
+					tmp->next = top;
+					top = tmp;
+
+					ns = ((moo_oop_nsdic_t)ns)->nsup;
+				}
+			}
+
+		done_interface:
+			if (ok && moo_bfmt_out(fmtout, "<<interface:") <= -1) ok = 0;
+			while (top)
+			{
+				tmp = top;
+				top = top->next;
+				if (ok && moo_bfmt_out(fmtout, "%.*js.", MOO_OBJ_GET_SIZE(tmp->v->name), MOO_OBJ_GET_CHAR_SLOT(tmp->v->name)) <= -1) ok = 0;
+				moo_freemem (moo, tmp);
+			}
+			if (ok && moo_bfmt_out(fmtout, "%.*js", MOO_OBJ_GET_SIZE(((moo_oop_interface_t)oop)->name), MOO_OBJ_GET_CHAR_SLOT(((moo_oop_interface_t)oop)->name)) <= -1) return -1;
+			if (ok && moo_bfmt_out(fmtout, ">>") <= -1) ok = 0;
+
+			if (!ok) return -1;
 		}
 		else if (c == moo->_association)
 		{

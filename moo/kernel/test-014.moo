@@ -47,12 +47,12 @@ class B.TestObject(Object)
 
 pooldic ABC 
 {
-	KKK := 20.
+	KKK := 20
 }
 
 pooldic SRX.ABC
 {
-	JJJ := 1000.
+	JJJ := 1000
 }
 class MyConsole(Console)
 {

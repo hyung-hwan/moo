@@ -19,15 +19,15 @@ class FFI(Object)
 	/*
 	pooldic Type
 	{
-		UINT8  := 1.
-		UINT16 := 2.
-		UINT32 := 3.
-		UINT64 := 4.
+		UINT8  := 1,
+		UINT16 := 2,
+		UINT32 := 3,
+		UINT64 := 4
 	}
 	*/
 	/*
-	const UINT8 := 1.
-	const UINT16 := 2.
+	const UINT8 := 1,
+	const UINT16 := 2
 	*/
 
 	method(#class) new: aString

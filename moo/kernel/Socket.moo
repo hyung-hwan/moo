@@ -233,14 +233,14 @@ class Socket(Object) from 'sck'
 	// TODO: generate these family and type from the C header 
 	pooldic Family
 	{
-		INET := 2.
-		INET6 := 10.
+		INET := 2,
+		INET6 := 10
 	}
 
 	pooldic Type
 	{
-		STREAM := 1.
-		DGRAM  := 2.
+		STREAM := 1,
+		DGRAM  := 2
 	}
 
 	method(#primitive) open(family, type, proto).

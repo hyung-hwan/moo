@@ -1048,7 +1048,7 @@ moo_oop_t moo_findclass (moo_t* moo, moo_oop_nsdic_t nsdic, const moo_ooch_t* na
 	n.ptr = (moo_ooch_t*)name;
 	n.len = moo_count_oocstr(name);
 
-	ass = moo_lookupdic (moo, (moo_oop_dic_t)nsdic, &n);
+	ass = moo_lookupdic(moo, (moo_oop_dic_t)nsdic, &n);
 	if (!ass || MOO_CLASSOF(moo,ass->value) != moo->_class) 
 	{
 		moo_seterrnum (moo, MOO_ENOENT);

@@ -203,10 +203,10 @@ extend Context
 pooldic MethodContext.Preamble
 {
 	// this must follow MOO_METHOD_PREAMBLE_EXCEPTION in moo.h
-	EXCEPTION := 13.
+	EXCEPTION := 13,
 
 	// this must follow MOO_METHOD_PREAMBLE_ENSURE in moo.h
-	ENSURE := 14.
+	ENSURE := 14
 }
 
 pooldic MethodContext.Index
@@ -217,10 +217,10 @@ pooldic MethodContext.Index
 	// instance variables of the method context. As MethodContex has
 	// instance variables, the ensure block must be at the 9th position
 	// which translates to index 8 
-	ENSURE := 8.
+	ENSURE := 8,
 
 	// [ ... ] on: Exception: do: [:ex | ... ]
-	FIRST_ON := 8.
+	FIRST_ON := 8
 }
 
 extend MethodContext

@@ -51,7 +51,7 @@ class B.TestObject(Object)
 
 pooldic ABC 
 {
-	KKK := 20.
+	KKK := 20
 }
 
 

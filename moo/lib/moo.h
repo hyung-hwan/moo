@@ -476,7 +476,7 @@ struct moo_dic_t
 typedef struct moo_nsdic_t moo_nsdic_t;
 typedef struct moo_nsdic_t* moo_oop_nsdic_t;
 
-#define MOO_INTERFACE_NAMED_INSTVARS 4
+#define MOO_INTERFACE_NAMED_INSTVARS 5
 typedef struct moo_interface_t moo_interface_t;
 typedef struct moo_interface_t* moo_oop_interface_t;
 
@@ -504,6 +504,7 @@ struct moo_interface_t
 	 * [1] - class methods, MethodDictionary */
 	moo_oop_dic_t  mthdic[2];      
 	moo_oop_nsdic_t nsup; /* pointer to the upper namespace */
+	moo_oop_nsdic_t nsdic; /* dictionary used for namespacing - may be nil when there are no subitems underneath */
 };
 
 struct moo_class_t

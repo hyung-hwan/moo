@@ -571,6 +571,22 @@ static int fetch_word_from_string (const moo_oocs_t* haystack, moo_oow_t xindex,
 	return -1;
 }
 
+static int find_oop_in_oopbuf (moo_t* moo, moo_oopbuf_t* oopbuf, moo_oow_t start, moo_oow_t step, moo_oop_t item, moo_oow_t* index)
+{
+	moo_oow_t i;
+
+	for (i = start; i < oopbuf->count; i += step)
+	{
+		if (oopbuf->ptr[i] == item) 
+		{
+			if (index) *index = i;
+			return 0;
+		}
+	}
+
+	moo_seterrnum (moo, MOO_ENOENT);
+	return -1;
+}
 
 static int add_oop_to_oopbuf (moo_t* moo, moo_oopbuf_t* oopbuf, moo_oop_t item)
 {
@@ -3508,6 +3524,28 @@ oops:
 	return MOO_NULL;
 }
 
+static moo_oop_nsdic_t attach_nsdic_to_interface (moo_t* moo, moo_oop_interface_t c)
+{
+	moo_oow_t tmp_count = 0;
+	moo_oop_nsdic_t nsdic;
+
+	moo_pushvolat (moo, (moo_oop_t*)&c); tmp_count++;
+
+	nsdic = moo_makensdic(moo, moo->_namespace, NAMESPACE_SIZE);
+	if (!nsdic) goto oops;
+
+	MOO_STORE_OOP (moo, &nsdic->nsup, (moo_oop_t)c); /* it points to the owning interface as it belongs to an interface */
+	MOO_STORE_OOP (moo, (moo_oop_t*)&nsdic->name, (moo_oop_t)c->name); /* for convenience only */
+	c->nsdic = nsdic;
+
+	moo_popvolats (moo, tmp_count);
+	return nsdic;
+
+oops:
+	moo_popvolats (moo, tmp_count);
+	return MOO_NULL;
+}
+
 #define PDN_DONT_ADD_NS (1 << 0)
 #define PDN_ACCEPT_POOLDIC_AS_NS (1 << 1)
 
@@ -3561,6 +3599,24 @@ static int preprocess_dotted_name (moo_t* moo, int flags, moo_oop_nsdic_t topdic
 						/* attach a new namespace dictionary to the nsdic field
 						 * of the class */
 						t = attach_nsdic_to_class(moo, (moo_oop_class_t)ass->value);
+						if (!t) return -1;
+
+						dic = t;
+					}
+					else dic = t;
+				}
+				else if (MOO_CLASSOF(moo, ass->value) == moo->_interface)
+				{
+					moo_oop_nsdic_t t;
+
+					t = ((moo_oop_interface_t)ass->value)->nsdic;
+					if ((moo_oop_t)t == moo->_nil)
+					{
+						if (flags & PDN_DONT_ADD_NS) goto wrong_name;
+
+						/* attach a new namespace dictionary to the nsdic field
+						 * of the interface */
+						t = attach_nsdic_to_interface(moo, (moo_oop_interface_t)ass->value);
 						if (!t) return -1;
 
 						dic = t;
@@ -5136,6 +5192,11 @@ static int add_to_byte_array_literal_buffer (moo_t* moo, moo_oob_t b)
 static MOO_INLINE int add_to_array_literal_buffer (moo_t* moo, moo_oop_t item)
 {
 	return add_oop_to_oopbuf(moo, &moo->c->arlit, item);
+}
+
+static MOO_INLINE int find_in_array_literal_buffer (moo_t* moo, moo_oow_t start, moo_oow_t step, moo_oop_t item, moo_oow_t* index)
+{
+	return find_oop_in_oopbuf(moo, &moo->c->arlit, start, step, item, index);
 }
 
 static int read_byte_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
@@ -9771,7 +9832,15 @@ static int __compile_pooldic_definition (moo_t* moo)
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
 	{
 		lit = moo_makesymbol(moo, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
-		if (!lit || add_to_array_literal_buffer(moo, lit) <= -1) goto oops;
+		if (!lit) goto oops;
+
+		if (find_in_array_literal_buffer(moo, 0, 2, lit, MOO_NULL) >= 0)
+		{
+			moo_setsynerr (moo, MOO_SYNERR_NAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			goto oops;
+		}
+
+		if (add_to_array_literal_buffer(moo, lit) <= -1) goto oops;
 
 		GET_TOKEN (moo);
 
@@ -9796,14 +9865,23 @@ static int __compile_pooldic_definition (moo_t* moo)
 
 		GET_TOKEN (moo);
 
-		/*if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) goto done;
-		else*/ if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_RBRACE) goto done;
+
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA)
 		{
-			moo_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			moo_setsynerrbfmt (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo), "comma expected");
 			goto oops;
 		}
 
 		GET_TOKEN (moo);
+
+		/* comment out the following check to allow the last item
+		 * to be followed by a comma. what is better? */
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT)
+		{
+			moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "identifier expected after comma");
+			goto oops;
+		}
 	}
 
 	if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
@@ -9812,7 +9890,7 @@ static int __compile_pooldic_definition (moo_t* moo)
 		goto oops;
 	}
 
-/*done:*/
+done:
 	GET_TOKEN (moo);
 
 	tally = (moo->c->arlit.count - saved_arlit_count) / 2;

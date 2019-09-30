@@ -138,20 +138,20 @@ TODO: TODO: compiler enhancement
 // ---------------------------------------------------------------------------
 pooldic X11.LLEventType
 {
-	KEY_PRESS         := 2.
-	KEY_RELEASE       := 3.
-	BUTTON_PRESS      := 4.
-	BUTTON_RELEASE    := 5.
-	MOTION_NOTIFY     := 6.
-	ENTER_NOTIFY      := 7.
-	LEAVE_NOTIFY      := 8.
-	EXPOSE            := 12.
-	VISIBILITY_NOTIFY := 15.
-	DESTROY_NOTIFY    := 17.
-	CONFIGURE_NOTIFY  := 22.
-	CLIENT_MESSAGE    := 33.
+	KEY_PRESS         := 2,
+	KEY_RELEASE       := 3,
+	BUTTON_PRESS      := 4,
+	BUTTON_RELEASE    := 5,
+	MOTION_NOTIFY     := 6,
+	ENTER_NOTIFY      := 7,
+	LEAVE_NOTIFY      := 8,
+	EXPOSE            := 12,
+	VISIBILITY_NOTIFY := 15,
+	DESTROY_NOTIFY    := 17,
+	CONFIGURE_NOTIFY  := 22,
+	CLIENT_MESSAGE    := 33,
 
-	SHELL_CLOSE       := 65537.
+	SHELL_CLOSE       := 65537
 }
 
 class X11.LLEvent(Object)
@@ -170,9 +170,9 @@ class X11.KeyEvent(X11.Event)
 
 pooldic X11.MouseButton
 {
-	LEFT := 1.
-	MIDDLE := 2.
-	RIGHT := 3.
+	LEFT := 1,
+	MIDDLE := 2,
+	RIGHT := 3
 }
 
 class X11.MouseEvent(X11.Event)
@@ -207,17 +207,17 @@ class X11.ExposeEvent(X11.Event)
 // ---------------------------------------------------------------------------
 pooldic X11.GCLineStyle
 {
-	SOLID       := 0.
-	ON_OFF_DASH := 1.
-	DOUBLE_DASH := 2.
+	SOLID       := 0,
+	ON_OFF_DASH := 1,
+	DOUBLE_DASH := 2
 }
 
 pooldic X11.GCFillStyle
 {
-	SOLID           := 0.
-	TILED           := 1.
-	STIPPLED        := 2.
-	OPAQUE_STIPPLED := 3.
+	SOLID           := 0,
+	TILED           := 1,
+	STIPPLED        := 2,
+	OPAQUE_STIPPLED := 3
 }
 
 class X11.GC(Object)

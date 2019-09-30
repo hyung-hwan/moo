@@ -18,10 +18,10 @@ class MyObject.Donkey (MyObject)
 
 pooldic MyObject.Code
 {
-	FAST := 20.
-	FASTER := 40.
-	FASTER2X := self.FASTER.
-	FASTER3X := #(self.FAST self.FASTER self.FASTER2X #(MyObject.Donkey selfns.Donkey self.FAST FASTER) FASTER2X).
+	FAST := 20,
+	FASTER := 40,
+	FASTER2X := self.FASTER,
+	FASTER3X := #(self.FAST self.FASTER self.FASTER2X #(MyObject.Donkey selfns.Donkey self.FAST FASTER) FASTER2X)
 }
 
 class MyObject.Donkey.Party (MyObject.Donkey)
@@ -65,10 +65,10 @@ class MyObject.System.Horse (Donkey)
 
 pooldic XX
 {
-	Horse := MyObject.System.Horse.
-	Party := MyObject.Donkey.Party.
-	AAAA := 'AAAAAAAAAAAAAAAAAAAAAAAAA'.
-	FFFF := 'FFFFFFFFFFFFFFFFFFFFFFFFF'.
+	Horse := MyObject.System.Horse,
+	Party := MyObject.Donkey.Party,
+	AAAA := 'AAAAAAAAAAAAAAAAAAAAAAAAA',
+	FFFF := 'FFFFFFFFFFFFFFFFFFFFFFFFF'
 }
 
 class MyObject.System.System (selfns.Donkey)

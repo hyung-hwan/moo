@@ -22,11 +22,11 @@ class System(Apex)
 		// these items must follow defintions in moo.h
 		// -----------------------------------------------------------
 
-		DEBUG := 1.
-		INFO  := 2.
-		WARN  := 4.
-		ERROR := 8.
-		FATAL := 16.
+		DEBUG := 1,
+		INFO  := 2,
+		WARN  := 4,
+		ERROR := 8,
+		FATAL := 16
 	}
 
 	method(#class) _initialize

@@ -364,7 +364,7 @@ a free.
 
 /*
 pooldic XXD {
-	#abc := #(1 2 3).
-	#def := ##( 1, 3, 4 ). // syntax error - literal expected where ##( is
+	#abc := #(1 2 3),
+	#def := ##( 1, 3, 4 ) // syntax error - literal expected where ##( is
 }
 */

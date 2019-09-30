@@ -47,5 +47,5 @@ class(#pointer,#limited,#uncopyable) Class(Apex) [ClassInterface]
 class(#pointer,#limited,#uncopyable) Interface(Apex)
 {
 	var name.
-	var instmthdic, classmthdic, nsup.
+	var instmthdic, classmthdic, nsup, nsdic.
 }
