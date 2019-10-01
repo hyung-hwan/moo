@@ -3199,17 +3199,15 @@ static int set_class_level_variable_initv (moo_t* moo, var_type_t var_type, moo_
 	return 0;
 }
 
-static MOO_INLINE int add_pooldic_import (moo_t* moo, const moo_oocs_t* name, moo_oop_dic_t pooldic_oop)
+static MOO_INLINE int add_pooldic_import (moo_t* moo, moo_cunit_class_t* cc, const moo_oocs_t* name, moo_oop_dic_t pooldic_oop)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-
 	if (cc->pdimp.dcl_count >= cc->pdimp.oops_capa)
 	{
 		moo_oow_t new_capa;
 		moo_oop_dic_t* tmp;
 
 		new_capa = MOO_ALIGN(cc->pdimp.oops_capa + 1, POOLDIC_OOP_BUFFER_ALIGN);
-		tmp = moo_reallocmem(moo, cc->pdimp.oops, new_capa * MOO_SIZEOF(moo_oop_dic_t));
+		tmp = (moo_oop_dic_t*)moo_reallocmem(moo, cc->pdimp.oops, new_capa * MOO_SIZEOF(moo_oop_dic_t));
 		if (!tmp) return -1;
 
 		cc->pdimp.oops_capa = new_capa;
@@ -3682,9 +3680,8 @@ wrong_name:
 	return -1;
 }
 
-static int import_pool_dictionary (moo_t* moo, moo_oop_nsdic_t ns_oop, const moo_oocs_t* tok_lastseg, const moo_oocs_t* tok_name, const moo_ioloc_t* tok_loc)
+static int import_pooldic (moo_t* moo, moo_cunit_class_t* cc, moo_oop_nsdic_t ns_oop, const moo_oocs_t* tok_lastseg, const moo_oocs_t* tok_name, const moo_ioloc_t* tok_loc)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	moo_oop_association_t ass;
 	moo_oow_t i;
 
@@ -3706,7 +3703,7 @@ static int import_pool_dictionary (moo_t* moo, moo_oop_nsdic_t ns_oop, const moo
 		}
 	}
 
-	if (add_pooldic_import(moo, tok_name, (moo_oop_dic_t)ass->value) <= -1) return -1;
+	if (add_pooldic_import(moo, cc, tok_name, (moo_oop_dic_t)ass->value) <= -1) return -1;
 	if (copy_string_to(moo, tok_name, &cc->pdimp.dcl, &cc->pdimp.dcl_capa, 1, ' ') <= -1)
 	{
 		cc->pdimp.dcl_count--; /* roll back add_pool_dictionary() */
@@ -4048,7 +4045,7 @@ static int compile_class_level_imports (moo_t* moo)
 			break;
 		}
 
-		if (import_pool_dictionary(moo, ns_oop, &last, TOKEN_NAME(moo), TOKEN_LOC(moo)) <= -1) return -1;
+		if (import_pooldic(moo, cc, ns_oop, &last, TOKEN_NAME(moo), TOKEN_LOC(moo)) <= -1) return -1;
 		GET_TOKEN (moo);
 
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED || TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
@@ -8317,7 +8314,7 @@ static int make_defined_class (moo_t* moo)
 		if (!tmp) return -1;
 
 		just_made = 1;
-		cc->self_oop = (moo_oop_class_t)tmp;
+		MOO_STORE_OOP (moo, (moo_oop_t*)&cc->self_oop, tmp);
 
 		MOO_ASSERT (moo, MOO_CLASSOF(moo, cc->self_oop) == moo->_class);
 
@@ -8331,7 +8328,7 @@ static int make_defined_class (moo_t* moo)
  */
 	MOO_OBJ_SET_FLAGS_KERNEL (cc->self_oop,  MOO_OBJ_FLAGS_KERNEL_MATURE);
 
-	cc->self_oop->superclass = cc->super_oop;
+	MOO_STORE_OOP (moo, &cc->self_oop->superclass, cc->super_oop);
 
 	if (just_made)
 	{
@@ -8340,7 +8337,7 @@ static int make_defined_class (moo_t* moo)
 		 * during ignition phase. See ignite_3() */
 		tmp = moo_makesymbol(moo, cc->name.ptr, cc->name.len);
 		if (!tmp) return -1;
-		cc->self_oop->name = (moo_oop_char_t)tmp;
+		MOO_STORE_OOP (moo, (moo_oop_t*)&cc->self_oop->name, tmp);
 	}
 
 	MOO_ASSERT (moo, (moo_oop_t)cc->self_oop->name != moo->_nil);
@@ -8349,34 +8346,32 @@ static int make_defined_class (moo_t* moo)
 	{
 		tmp = moo_makesymbol(moo, cc->modname.ptr, cc->modname.len);
 		if (!tmp) return -1;
-		cc->self_oop->modname = tmp;
+		MOO_STORE_OOP (moo, (moo_oop_t*)&cc->self_oop->modname, tmp);
 	}
 
 	tmp = moo_makestring(moo, cc->var[VAR_INSTANCE].str.ptr, cc->var[VAR_INSTANCE].str.len);
 	if (!tmp) return -1;
-	cc->self_oop->instvars = (moo_oop_char_t)tmp;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&cc->self_oop->instvars, tmp);
 
 	tmp = moo_makestring(moo, cc->var[VAR_CLASS].str.ptr, cc->var[VAR_CLASS].str.len);
 	if (!tmp) return -1;
-	cc->self_oop->classvars = (moo_oop_char_t)tmp;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&cc->self_oop->classvars, tmp);
 
 	tmp = moo_makestring(moo, cc->var[VAR_CLASSINST].str.ptr, cc->var[VAR_CLASSINST].str.len);
 	if (!tmp) return -1;
-	cc->self_oop->classinstvars = (moo_oop_char_t)tmp;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&cc->self_oop->classinstvars, tmp);
 
 	tmp = moo_makestring(moo, cc->pdimp.dcl.ptr, cc->pdimp.dcl.len);
 	if (!tmp) return -1;
-	cc->self_oop->pooldics = (moo_oop_char_t)tmp;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&cc->self_oop->pooldics, tmp);
 
-/* TOOD: good dictionary size */
 	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
-	cc->self_oop->mthdic[MOO_METHOD_INSTANCE] = (moo_oop_dic_t)tmp;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&cc->self_oop->mthdic[MOO_METHOD_INSTANCE], tmp);
 
-/* TOOD: good dictionary size */
 	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, CLASS_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
-	cc->self_oop->mthdic[MOO_METHOD_CLASS] = (moo_oop_dic_t)tmp;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&cc->self_oop->mthdic[MOO_METHOD_CLASS], tmp);
 
 	/* store the default intial values for instance variables */
 	if (make_default_initial_values(moo, VAR_INSTANCE) <= -1) return -1;
@@ -8435,7 +8430,7 @@ static int make_defined_class (moo_t* moo)
 		/* register the class to the system dictionary. kernel classes have 
 		 * been registered at the ignition phase. */
 		if (!moo_putatdic(moo, (moo_oop_dic_t)cc->ns_oop, (moo_oop_t)cc->self_oop->name, (moo_oop_t)cc->self_oop)) return -1;
-		cc->self_oop->nsup = cc->ns_oop;
+		MOO_STORE_OOP (moo, (moo_oop_t*)&cc->self_oop->nsup, (moo_oop_t)cc->ns_oop);
 	}
 
 	return 0;
@@ -8686,7 +8681,7 @@ static int process_class_superclass (moo_t* moo)
 			 *  1(incomplete kernel object),
 			 *  2(complete kernel object) */
 
-			cc->super_oop = var.u.gbl->value;
+			MOO_STORE_OOP (moo, &cc->super_oop, var.u.gbl->value);
 
 			/* the superclass became known. */
 			if (((moo_oop_class_t)cc->super_oop)->trsize != moo->_nil &&
@@ -8984,7 +8979,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 			/* attach a new namespace dictionary to the nsdic field of the class */
 			if (!attach_nsdic_to_class(moo, c->self_oop)) return -1;
 		}
-		cc->ns_oop = c->self_oop->nsdic; /* TODO: if c->nsdic is nil, create one? */
+		MOO_STORE_OOP (moo, (moo_oop_t*)&cc->ns_oop, (moo_oop_t)c->self_oop->nsdic); /* TODO: if c->nsdic is nil, create one? */
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 	{
@@ -9208,7 +9203,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 					ns_oop = cc->ns_oop; 
 				}
 
-				if (import_pool_dictionary(moo, ns_oop, &last, &tok, &loc) <= -1) return -1;
+				if (import_pooldic(moo, cc, ns_oop, &last, &tok, &loc) <= -1) return -1;
 			}
 			while (1);
 		}
@@ -9751,7 +9746,7 @@ static moo_oop_t find_element_in_compiling_pooldic (moo_t* moo, const moo_oocs_t
 
 static int __compile_pooldic_definition (moo_t* moo)
 {
-	moo_oop_t lit;
+	moo_oop_t tmp;
 	moo_ooi_t tally;
 	moo_oow_t i;
 	moo_oow_t saved_arlit_count;
@@ -9792,13 +9787,14 @@ static int __compile_pooldic_definition (moo_t* moo)
 
 	if (pd->cunit_parent && pd->cunit_parent->cunit_type == MOO_CUNIT_CLASS)
 	{
+		/* nested inside a class */
 		moo_cunit_class_t* c = (moo_cunit_class_t*)pd->cunit_parent;
 		if ((moo_oop_t)c->self_oop->nsdic == moo->_nil)
 		{
 			/* attach a new namespace dictionary to the nsdic field of the class */
 			if (!attach_nsdic_to_class(moo, c->self_oop)) return -1;
 		}
-		pd->ns_oop = c->self_oop->nsdic; /* TODO: if c->nsdic is nil, create one? */
+		MOO_STORE_OOP (moo, (moo_oop_t*)&pd->ns_oop, (moo_oop_t)c->self_oop->nsdic); /* TODO: if c->nsdic is nil, create one? */
 	}
 	else if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT_DOTTED)
 	{
@@ -9806,7 +9802,7 @@ static int __compile_pooldic_definition (moo_t* moo)
 	}
 	else
 	{
-		pd->ns_oop = moo->sysdic;
+		MOO_STORE_OOP (moo, (moo_oop_t*)&pd->ns_oop, (moo_oop_t)moo->sysdic);
 	}
 
 	if (moo_lookupdic(moo, (moo_oop_dic_t)pd->ns_oop, &pd->name))
@@ -9831,16 +9827,16 @@ static int __compile_pooldic_definition (moo_t* moo)
 	pd->end = moo->c->arlit.count;
 	while (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
 	{
-		lit = moo_makesymbol(moo, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
-		if (!lit) goto oops;
+		tmp = moo_makesymbol(moo, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo));
+		if (!tmp) goto oops;
 
-		if (find_in_array_literal_buffer(moo, 0, 2, lit, MOO_NULL) >= 0)
+		if (find_in_array_literal_buffer(moo, 0, 2, tmp, MOO_NULL) >= 0)
 		{
 			moo_setsynerr (moo, MOO_SYNERR_NAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			goto oops;
 		}
 
-		if (add_to_array_literal_buffer(moo, lit) <= -1) goto oops;
+		if (add_to_array_literal_buffer(moo, tmp) <= -1) goto oops;
 
 		GET_TOKEN (moo);
 
@@ -9855,12 +9851,12 @@ static int __compile_pooldic_definition (moo_t* moo)
 		/* [NOTE]
 		 *   values assigned to a pool dictinary member are not read-only
 		 *   unlike the default initial values defined in a class */
-		lit = token_to_literal(moo, 0);
-		if (!lit) goto oops;
+		tmp = token_to_literal(moo, 0);
+		if (!tmp) goto oops;
 
 		/* for this definition, #pooldic MyPoolDic { a := 10. b := 20 },
 		 * arlit_buffer contains (#a 10 #b 20) when the 'while' loop is over. */
-		if (add_to_array_literal_buffer(moo, lit) <= -1) goto oops;
+		if (add_to_array_literal_buffer(moo, tmp) <= -1) goto oops;
 		pd->end = moo->c->arlit.count;
 
 		GET_TOKEN (moo);
@@ -9897,8 +9893,10 @@ done:
 /*TODO: tally and arlit_count range check */
 	/*if (!MOO_IN_SMOOI_RANGE(tally)) ERROR??*/
 
-	pd->pd_oop = moo_makedic(moo, moo->_pool_dictionary, MOO_ALIGN(tally + 10, POOL_DICTIONARY_SIZE_ALIGN));
-	if (!pd->pd_oop) goto oops;
+	tmp = (moo_oop_t)moo_makedic(moo, moo->_pool_dictionary, MOO_ALIGN(tally + 10, POOL_DICTIONARY_SIZE_ALIGN));
+	if (!tmp) goto oops;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&pd->pd_oop, tmp);
+
 	for (i = saved_arlit_count; i < moo->c->arlit.count; i += 2)
 	{
 		/* TODO: handle duplicate keys? */
@@ -9907,8 +9905,14 @@ done:
 
 	/* eveything seems ok. register the pool dictionary to the main
 	 * system dictionary or to the name space it belongs to */
-	lit = moo_makesymbol(moo, pd->name.ptr, pd->name.len);
-	if (!lit || !moo_putatdic(moo, (moo_oop_dic_t)pd->ns_oop, lit, (moo_oop_t)pd->pd_oop)) goto oops;
+	tmp = moo_makesymbol(moo, pd->name.ptr, pd->name.len);
+	if (!tmp || !moo_putatdic(moo, (moo_oop_dic_t)pd->ns_oop, tmp, (moo_oop_t)pd->pd_oop)) goto oops;
+
+	if (pd->cunit_parent && pd->cunit_parent->cunit_type == MOO_CUNIT_CLASS)
+	{
+		/* a pool dictionary nested inside a class is auto-imported */
+		if (import_pooldic(moo, (moo_cunit_class_t*)pd->cunit_parent, pd->ns_oop, &pd->fqn, &pd->fqn, &pd->fqn_loc) <= -1) goto oops;
+	}
 
 	moo->c->arlit.count = saved_arlit_count;
 	return 0;

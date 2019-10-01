@@ -118,13 +118,13 @@ class MyObject(Object)
 			'#include error'
 			'wrong pragma name'
 			'wrong namespace name'
-			'wrong pooldicimport name'
-			'duplicate pooldicimport name'
+			'wrong pooldic import name'
+			'duplicate pooldic import name'
 			'literal expected'
 			'break or continue not within a loop'
 			'break or continue within a block'
 			'while expected'
-			'invalid goto target'	
+			'invalid goto target'
 			'label at end'
 		).
 

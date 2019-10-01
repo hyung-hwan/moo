@@ -94,6 +94,42 @@ class Shader(Object) from 'shader'
 }
 ```
 
+### Pool dictionary
+pooldic MyData
+{
+	A := 20,
+	B := 30,
+	C := 40
+}
+
+class MyClass
+{
+	import MyData.
+
+	method x ()
+	{
+		MyData.A dump.
+		C dump. // if imported, it doesn't require prefixing with MyData.
+	}
+}
+
+
+class MyClass2
+{
+	pooldic Const
+	{
+		A := 20.
+		B := 30.
+	}
+
+	method x()
+	{
+		A dump. // the nested pooldic is auto-imported.
+		Const.A dump.
+		self.Const dump.
+	}
+}
+
 ### Flow Control
 ```
 k := if (i < 20) { 30 } else { 40 }.
