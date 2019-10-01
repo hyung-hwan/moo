@@ -3120,6 +3120,15 @@ static MOO_INLINE int set_pooldic_fqn (moo_t* moo, moo_cunit_pooldic_t* pd, cons
 	return 0;
 }
 
+static MOO_INLINE int prefix_pooldic_fqn (moo_t* moo, moo_cunit_pooldic_t* pd, const moo_oocs_t* prefix)
+{
+	/* implementaion goes by appending and rotation. inefficient but works. */
+	if (copy_string_to(moo, prefix, &pd->fqn, &pd->fqn_capa, 1, '\0') <= -1) return -1;
+	moo_rotate_oochars (pd->fqn.ptr, pd->fqn.len, 1, prefix->len);
+	pd->name.ptr += prefix->len;
+	return 0;
+}
+
 static MOO_INLINE int set_interface_fqn (moo_t* moo, moo_cunit_interface_t* ifce, const moo_oocs_t* name)
 {
 	if (copy_string_to(moo, name, &ifce->fqn, &ifce->fqn_capa, 0, '\0') <= -1) return -1;
@@ -8361,9 +8370,12 @@ static int make_defined_class (moo_t* moo)
 	if (!tmp) return -1;
 	MOO_STORE_OOP (moo, (moo_oop_t*)&cc->self_oop->classinstvars, tmp);
 
+/*
+ * this is done at the end of __compile_class_definition()
 	tmp = moo_makestring(moo, cc->pdimp.dcl.ptr, cc->pdimp.dcl.len);
 	if (!tmp) return -1;
 	MOO_STORE_OOP (moo, (moo_oop_t*)&cc->self_oop->pooldics, tmp);
+*/
 
 	tmp = (moo_oop_t)moo_makedic(moo, moo->_method_dictionary, INSTANCE_METHOD_DICTIONARY_SIZE);
 	if (!tmp) return -1;
@@ -9169,6 +9181,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 			ptr = MOO_OBJ_GET_CHAR_SLOT(pds);
 			end = ptr + MOO_OBJ_GET_SIZE(pds);
 
+MOO_DEBUG2 (moo, "import pooldic... [%.*js]\n", end - ptr, ptr);
 			/* this loop handles the pooldic string as if it's a pooldic import.
 			 * see compile_class_level_variables() for mostly identical code except token handling */
 			do
@@ -9203,6 +9216,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 					ns_oop = cc->ns_oop; 
 				}
 
+MOO_DEBUG2 (moo, "import pooldic... %.*js\n", last.len, last.ptr);
 				if (import_pooldic(moo, cc, ns_oop, &last, &tok, &loc) <= -1) return -1;
 			}
 			while (1);
@@ -9333,6 +9347,16 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 	{
 		/* interface has been specified. */
 		if (check_class_interface_conformance(moo) <= -1) return -1;
+	}
+
+	if (cc->pdimp.dcl.len > 0)
+	{
+		moo_oop_t tmp;
+
+		tmp = moo_makestring(moo, cc->pdimp.dcl.ptr, cc->pdimp.dcl.len);
+		if (!tmp) return -1;
+
+		MOO_STORE_OOP (moo, (moo_oop_t*)&cc->self_oop->pooldics, tmp);
 	}
 
 	GET_TOKEN (moo);
@@ -9910,8 +9934,15 @@ done:
 
 	if (pd->cunit_parent && pd->cunit_parent->cunit_type == MOO_CUNIT_CLASS)
 	{
-		/* a pool dictionary nested inside a class is auto-imported */
-		if (import_pooldic(moo, (moo_cunit_class_t*)pd->cunit_parent, pd->ns_oop, &pd->fqn, &pd->fqn, &pd->fqn_loc) <= -1) goto oops;
+		/* a pool dictionary nested inside a class is auto-imported.
+		 * change pd->fqn to form a fully qualified name for importing.
+		 * the full name is required for restoration upon 'extend'.*/
+		moo_cunit_class_t* cc = (moo_cunit_class_t*)pd->cunit_parent;
+		static moo_ooch_t str_dot[] = { '.' };
+		static const moo_oocs_t oocs_dot = { str_dot, 1 };
+		if (prefix_pooldic_fqn (moo, pd, &oocs_dot) <= -1 ||
+		    prefix_pooldic_fqn (moo, pd, &cc->fqn) <= -1 ||
+		    import_pooldic(moo, cc, pd->ns_oop, &pd->name, &pd->fqn, &pd->fqn_loc) <= -1) goto oops;
 	}
 
 	moo->c->arlit.count = saved_arlit_count;

@@ -539,6 +539,20 @@ MOO_EXPORT moo_bch_t* moo_find_bchar_in_bcstr (
 	moo_bch_t        c
 );
 
+MOO_EXPORT moo_oow_t moo_rotate_uchars (
+	moo_uch_t* str,
+	moo_oow_t  len,
+	int        dir,
+	moo_oow_t  n
+);
+
+MOO_EXPORT moo_oow_t moo_rotate_bchars (
+	moo_bch_t* str,
+	moo_oow_t  len,
+	int        dir,
+	moo_oow_t  n
+);
+
 MOO_EXPORT moo_oow_t moo_count_ucstr (
 	const moo_uch_t* str
 );
@@ -562,6 +576,7 @@ MOO_EXPORT moo_oow_t moo_count_bcstr (
 #	define moo_find_oochar(ptr,len,c) moo_find_uchar(ptr,len,c)
 #	define moo_rfind_oochar(ptr,len,c) moo_rfind_uchar(ptr,len,c)
 #	define moo_find_oochar_in_oocstr(ptr,c) moo_find_uchar_in_ucstr(ptr,c)
+#	define moo_rotate_oochars(str,len,dir,n) moo_rotate_uchars(str,len,dir,n)
 #	define moo_count_oocstr(str) moo_count_ucstr(str)
 #else
 #	define moo_equal_oochars(str1,str2,len) moo_equal_bchars(str1,str2,len)
@@ -578,6 +593,7 @@ MOO_EXPORT moo_oow_t moo_count_bcstr (
 #	define moo_find_oochar(ptr,len,c) moo_find_bchar(ptr,len,c)
 #	define moo_rfind_oochar(ptr,len,c) moo_rfind_bchar(ptr,len,c)
 #	define moo_find_oochar_in_oocstr(ptr,c) moo_find_bchar_in_bcstr(ptr,c)
+#	define moo_rotate_oochars(str,len,dir,n) moo_rotate_bchars(str,len,dir,n)
 #	define moo_count_oocstr(str) moo_count_bcstr(str)
 #endif
 

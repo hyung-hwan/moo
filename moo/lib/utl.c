@@ -400,6 +400,74 @@ moo_bch_t* moo_find_bchar_in_bcstr (const moo_bch_t* ptr, moo_bch_t c)
 	return MOO_NULL;
 }
 
+moo_oow_t moo_rotate_bchars (moo_bch_t* str, moo_oow_t len, int dir, moo_oow_t n)
+{
+	moo_oow_t first, last, count, index, nk;
+	moo_bch_t c;
+
+	if (dir == 0 || len == 0) return len;
+	if ((n %= len) == 0) return len;
+
+	if (dir > 0) n = len - n;
+	first = 0; nk = len - n; count = 0;
+
+	while (count < n)
+	{
+		last = first + nk;
+		index = first;
+		c = str[first];
+		do
+		{
+			count++;
+			while (index < nk)
+			{
+				str[index] = str[index + n];
+				index += n;
+			}
+			if (index == last) break;
+			str[index] = str[index - nk];
+			index -= nk;
+		}
+		while (1);
+		str[last] = c; first++;
+	}
+	return len;
+}
+
+moo_oow_t moo_rotate_uchars (moo_uch_t* str, moo_oow_t len, int dir, moo_oow_t n)
+{
+	moo_oow_t first, last, count, index, nk;
+	moo_uch_t c;
+
+	if (dir == 0 || len == 0) return len;
+	if ((n %= len) == 0) return len;
+
+	if (dir > 0) n = len - n;
+	first = 0; nk = len - n; count = 0;
+
+	while (count < n)
+	{
+		last = first + nk;
+		index = first;
+		c = str[first];
+		do
+		{
+			count++;
+			while (index < nk)
+			{
+				str[index] = str[index + n];
+				index += n;
+			}
+			if (index == last) break;
+			str[index] = str[index - nk];
+			index -= nk;
+		}
+		while (1);
+		str[last] = c; first++;
+	}
+	return len;
+}
+
 /* ----------------------------------------------------------------------- */
 
 moo_oow_t moo_byte_to_bcstr (moo_uint8_t byte, moo_bch_t* buf, moo_oow_t size, int flagged_radix, moo_bch_t fill)
