@@ -95,6 +95,7 @@ class Shader(Object) from 'shader'
 ```
 
 ### Pool dictionary
+```
 pooldic MyData
 {
 	A := 20,
@@ -152,6 +153,7 @@ class MyClass4(MyClass2)
 		// the compiler doesn't recognize the dynamically added item as MyClass2.Const.XXX
 	}
 }
+```
 
 ### Flow Control
 ```
