@@ -102,7 +102,7 @@ pooldic MyData
 	C := 40
 }
 
-class MyClass
+class MyClass(Object)
 {
 	import MyData.
 
@@ -114,12 +114,12 @@ class MyClass
 }
 
 
-class MyClass2
+class MyClass2(Object)
 {
 	pooldic Const
 	{
-		A := 20.
-		B := 30.
+		A := 20,
+		B := 30
 	}
 
 	method x()
@@ -127,6 +127,29 @@ class MyClass2
 		A dump. // the nested pooldic is auto-imported.
 		Const.A dump.
 		self.Const dump.
+	}
+}
+
+class MyClass3(MyClass2)
+{
+	pooldic Const
+	{
+		A := MyClass2.Const.A // pooldic is not inherited. need redefinition for auto-import
+		B := MyClass2.Const.B
+	}
+}
+
+class MyClass4(MyClass2)
+{
+	import MyClass2.Const. // similar to redefinition inside the class. it won't be available MyClass4.Const as such is not available.
+
+
+	method x 
+	{
+		MyClass2.Const at: #XXX put: 'QQQQQQQQQQQQQQ'. // you can add a new item dynamically,
+		(MyClass2.Const at: #XXX) dump. // and can access it.
+
+		// the compiler doesn't recognize the dynamically added item as MyClass2.Const.XXX
 	}
 }
 

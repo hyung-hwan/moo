@@ -119,7 +119,6 @@ static struct voca_t
 	{  5, { 'c','l','a','s','s'                                           } },
 	{  6, { '#','c','l','a','s','s'                                       } },
 	{ 10, { '#','c','l','a','s','s','i','n','s','t'                       } },
-	{  5, { 'c','o','n','s','t'                                           } },
 	{  8, { 'c','o','n','t','i','n','u','e'                               } },
 	{  2, { 'd','o'                                                       } },
 	{  5, { '#','d','u','a','l'                                           } },
@@ -190,7 +189,6 @@ enum voca_id_t
 	VOCA_CLASS,
 	VOCA_CLASS_S,
 	VOCA_CLASSINST_S,
-	VOCA_CONST,
 	VOCA_CONTINUE,
 	VOCA_DO,
 	VOCA_DUAL_S,
@@ -435,7 +433,6 @@ static int is_restricted_word (const moo_oocs_t* ucs)
 	static int rw[] = 
 	{
 		VOCA_CLASS,
-		VOCA_CONST,
 		VOCA_EXTEND,
 		VOCA_FROM,
 		VOCA_IMPORT,
@@ -4077,73 +4074,6 @@ static int compile_class_level_imports (moo_t* moo)
 	return 0;
 }
 
-static int compile_class_level_consts (moo_t* moo)
-{
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-
-	do
-	{
-		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
-		{
-			/* TODO: */
-		#if 0
-			if (add_class_level_const(moo, TOKEN_NAME(moo), TOKEN_LOC(moo)) <= -1) return -1;
-
-			GET_TOKEN (moo);
-
-			if (TOKEN_TYPE(moo) == MOO_IOTOK_ASSIGN)
-			{
-				moo_oop_t lit;
-
-				GET_TOKEN (moo);
-
-				/* only a single literal token is allowed as a value for now.
-				 * TODO: extend to support simple constant expression */
-				lit = token_to_literal(moo, 1);
-				if (!lit) return -1;
-
-				if (set_class_level_const_value(moo, cc->_const.count - 1, lit) <= -1) return -1;
-
-				GET_TOKEN (moo);
-			}
-			else
-			{
-				moo_setsynerr (moo, MOO_SYNERR_ASSIGN, TOKEN_LOC(moo), TOKEN_NAME(moo));
-				return -1;
-			}
-		#endif
-		}
-		else if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
-		{
-			/* no constant name is present */
-			moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "constant name expected");
-			return -1;
-		}
-		else
-		{
-			break;
-		}
-
-		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT)
-		{
-			moo_setsynerr (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
-			return -1;
-		}
-		else if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA) break; /* hopefully . */
-		GET_TOKEN (moo);
-	}
-	while (1);
-
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
-	{
-		moo_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
-		return -1;
-	}
-
-	GET_TOKEN (moo);
-	return 0;
-}
-
 static int compile_unary_method_name (moo_t* moo, moo_method_data_t* mth)
 {
 	MOO_ASSERT (moo, mth->name.len == 0);
@@ -4630,53 +4560,66 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 
 			MOO_ASSERT (moo, moo->c->cunit != MOO_NULL);
 
-			if (moo->c->cunit->cunit_type == MOO_CUNIT_POOLDIC)
+			switch (moo->c->cunit->cunit_type)
 			{
-				moo_oop_t v;
-
-				/* called inside a pooldic definition */
-				MOO_ASSERT (moo, ((moo_cunit_pooldic_t*)moo->c->cunit)->ns_oop != MOO_NULL);
-				MOO_ASSERT (moo, ((moo_cunit_pooldic_t*)moo->c->cunit)->pd_oop == MOO_NULL);
-
-				v = find_element_in_compiling_pooldic(moo, &last);
-				if (!v)
+				case MOO_CUNIT_POOLDIC:
 				{
-					moo_setsynerr (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
-					return -1;
-				}
+					moo_oop_t v;
 
-				var->type = VAR_LITERAL;
-				var->u.lit = v; /* TODO: change this */
-				return 0;
-			}
-			else
-			{
-				moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+					/* called inside a pooldic definition */
+					MOO_ASSERT (moo, ((moo_cunit_pooldic_t*)moo->c->cunit)->ns_oop != MOO_NULL);
+					MOO_ASSERT (moo, ((moo_cunit_pooldic_t*)moo->c->cunit)->pd_oop == MOO_NULL);
 
-				MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_CLASS);
-				/* called inside a class definition */
-
-				if (cc->in_class_body)
-				{
-					/* [NOTE] 
-					 *  cls.ns_oop is set when the class name is enountered.
-					 *  cls.super_oop is set when the parent class name is enountered.
-					 *  cls.super_oop may still be MOO_NULL even if cls.ns_oop is not.
-					 *  on the other hand, cls.ns_oop is not MOO_NULL as long as
-					 *  cls.super_oop is not MOO_NULL.
-					 */
-					MOO_ASSERT (moo, cc->super_oop != MOO_NULL);
-					MOO_ASSERT (moo, cc->ns_oop != MOO_NULL);
-					/* cc->self_oop may still be MOO_NULL if the class has not been instantiated */
-
-					if (find_class_level_variable(moo, cc->self_oop, &last, var) >= 0)
+					v = find_element_in_compiling_pooldic(moo, &last);
+					if (!v)
 					{
-						/* if the current class has not been instantiated, 
-						 * no validation nor adjustment of the var->pos field is performed */
-						if (cc->self_oop && validate_class_level_variable(moo, var, name, name_loc) <= -1) return -1;
-						return 0;
+						moo_setsynerr (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
+						return -1;
 					}
+
+					var->type = VAR_LITERAL;
+					var->u.lit = v; /* TODO: change this */
+					return 0;
 				}
+
+				case MOO_CUNIT_CLASS:
+				{
+					moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+
+					/* called inside a class definition */
+					MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_CLASS);
+
+					if (cc->in_class_body)
+					{
+						/* [NOTE] 
+						 *  cls.ns_oop is set when the class name is enountered.
+						 *  cls.super_oop is set when the parent class name is enountered.
+						 *  cls.super_oop may still be MOO_NULL even if cls.ns_oop is not.
+						 *  on the other hand, cls.ns_oop is not MOO_NULL as long as
+						 *  cls.super_oop is not MOO_NULL.
+						 */
+						MOO_ASSERT (moo, cc->super_oop != MOO_NULL);
+						MOO_ASSERT (moo, cc->ns_oop != MOO_NULL);
+						/* cc->self_oop may still be MOO_NULL if the class has not been instantiated */
+
+						if (find_class_level_variable(moo, cc->self_oop, &last, var) >= 0)
+						{
+							/* if the current class has not been instantiated, 
+							 * no validation nor adjustment of the var->pos field is performed */
+							if (cc->self_oop && validate_class_level_variable(moo, var, name, name_loc) <= -1) return -1;
+							return 0;
+						}
+					}
+
+					break;
+				}
+
+				case MOO_CUNIT_INTERFACE:
+				default:
+					/* interface doesn't support inheritance nor does it allow
+					 * method body. let it flow down to the next check to
+					 * trigger an error(MOO_SYNERR_VARINACC below) */
+					break;
 			}
 		}
 
@@ -4699,17 +4642,29 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 	{
 		/* the first segment is selfns which indicates a namespace that
 		 * the current class belongs to */
-		if (moo->c->cunit->cunit_type == MOO_CUNIT_POOLDIC)
+		switch (moo->c->cunit->cunit_type)
 		{
-			/* compiling in a pooldic definition */
-			top_dic = ((moo_cunit_pooldic_t*)moo->c->cunit)->ns_oop;
-			MOO_ASSERT (moo, top_dic != MOO_NULL);
-		}
-		else if (moo->c->cunit->cunit_type == MOO_CUNIT_CLASS)
-		{
-			/* compiling in a class definition */
-			top_dic = ((moo_cunit_class_t*)moo->c->cunit)->ns_oop;
-			MOO_ASSERT (moo, top_dic != MOO_NULL);
+			case MOO_CUNIT_POOLDIC:
+				/* compiling in a pooldic definition */
+				top_dic = ((moo_cunit_pooldic_t*)moo->c->cunit)->ns_oop;
+				MOO_ASSERT (moo, top_dic != MOO_NULL);
+				break;
+
+			case MOO_CUNIT_CLASS:
+				/* compiling in a class definition */
+				top_dic = ((moo_cunit_class_t*)moo->c->cunit)->ns_oop;
+				MOO_ASSERT (moo, top_dic != MOO_NULL);
+				break;
+
+			case MOO_CUNIT_INTERFACE:
+				/* compiling in an interface definition */
+				top_dic = ((moo_cunit_interface_t*)moo->c->cunit)->ns_oop;
+				MOO_ASSERT (moo, top_dic != MOO_NULL);
+				break;
+
+			default:
+				moo_setsynerr (moo, MOO_SYNERR_VARINACC, name_loc, name);
+				return -1;
 		}
 
 		pxlen++; /* include . into the length */
@@ -9259,12 +9214,6 @@ MOO_DEBUG2 (moo, "import pooldic... %.*js\n", last.len, last.ptr);
 				GET_TOKEN (moo);
 				if (compile_class_level_imports(moo) <= -1) return -1;
 			}
-			else if (is_token_word(moo, VOCA_CONST))
-			{
-				/* constant declaration */
-				GET_TOKEN (moo);
-				if (compile_class_level_consts(moo) <= -1) return -1;
-			}
 			else break;
 		}
 		while (1);
@@ -9872,10 +9821,7 @@ static int __compile_pooldic_definition (moo_t* moo)
 
 		GET_TOKEN (moo);
 
-		/* [NOTE]
-		 *   values assigned to a pool dictinary member are not read-only
-		 *   unlike the default initial values defined in a class */
-		tmp = token_to_literal(moo, 0);
+		tmp = token_to_literal(moo, 1);
 		if (!tmp) goto oops;
 
 		/* for this definition, #pooldic MyPoolDic { a := 10. b := 20 },
@@ -10225,6 +10171,10 @@ static void gc_cunit_chain (moo_t* moo)
 
 				break;
 			}
+
+			default:
+				/* nothing to do */
+				break;
 		}
 	}
 }
