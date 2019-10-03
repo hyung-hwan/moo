@@ -260,7 +260,6 @@ static int compile_class_definition (moo_t* moo, int class_type);
 static int compile_block_statement (moo_t* moo);
 static int compile_method_statement (moo_t* moo);
 static int compile_method_expression (moo_t* moo, int pop);
-static MOO_INLINE int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index);
 static moo_oop_t token_to_literal (moo_t* moo, int rdonly);
 static moo_oop_t find_element_in_compiling_pooldic (moo_t* moo, const moo_oocs_t* name);
 
@@ -2433,6 +2432,94 @@ static int end_include (moo_t* moo)
 }
 
 /* ---------------------------------------------------------------------
+ * Literal
+ * --------------------------------------------------------------------- */
+
+static MOO_INLINE int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index)
+{
+#if 0
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_oow_t i;
+
+	for (i = 0; i < cc->mth.literals.count; i++) 
+	{
+		/* 
+		 * this removes redundancy of symbols, characters, and small integers. 
+		 * more complex redundacy check may be done somewhere else like 
+		 * in add_string_literal().
+		 */
+		if (cc->mth.literals.ptr[i] == lit) 
+		{
+			*index = i;
+			return 0;
+		}
+	}
+
+	if (add_oop_to_oopbuf(moo, &cc->mth.literals, lit) <= -1) return -1;
+	*index = cc->mth.literals.count - 1;
+	return 0;
+#else
+	/* 
+	 * this removes redundancy of symbols, characters, and small integers. 
+	 * more complex redundacy check may be done somewhere else like 
+	 * in add_string_literal().
+	 */
+	return add_oop_to_oopbuf_nodup(moo, &((moo_cunit_class_t*)moo->c->cunit)->mth.literals, lit, index);
+#endif
+}
+
+static int add_string_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* index)
+{
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_oop_t lit;
+	moo_oow_t i;
+
+	for (i = 0; i < cc->mth.literals.count; i++) 
+	{
+		lit = cc->mth.literals.ptr[i];
+
+		if (MOO_CLASSOF(moo, lit) == moo->_string && 
+		    MOO_OBJ_GET_SIZE(lit) == str->len &&
+		    moo_equal_oochars(MOO_OBJ_GET_CHAR_SLOT(lit), str->ptr, str->len)) 
+		{
+			*index = i;
+			return 0;
+		}
+	}
+
+	lit = moo_instantiate(moo, moo->_string, str->ptr, str->len);
+	if (!lit) return -1;
+	MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
+
+	return add_literal(moo, lit, index);
+}
+
+static int add_symbol_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t offset, moo_oow_t* index)
+{
+	moo_oop_t tmp;
+
+	tmp = moo_makesymbol(moo, str->ptr + offset, str->len - offset);
+	if (!tmp) return -1;
+	MOO_OBJ_SET_FLAGS_RDONLY (tmp, 1);
+	
+	return add_literal(moo, tmp, index);
+}
+
+static int add_byte_array_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* index)
+{
+	/* see read_byte_array_literal for comparision */
+	moo_oop_t tmp;
+	moo_oow_t i;
+
+	tmp = moo_instantiate(moo, moo->_byte_array, MOO_NULL, str->len);
+	if (!tmp) return -1;
+	for (i = 0; i < str->len; i++) MOO_OBJ_SET_BYTE_VAL(tmp, i, str->ptr[i]);
+	MOO_OBJ_SET_FLAGS_RDONLY (tmp, 1);
+
+	return add_literal(moo, tmp, index);
+}
+
+/* ---------------------------------------------------------------------
  * Byte-Code Manipulation Functions
  * --------------------------------------------------------------------- */
 
@@ -3005,90 +3092,6 @@ static void eliminate_instructions (moo_t* moo, moo_oow_t start, moo_oow_t end)
 /* ---------------------------------------------------------------------
  * Compiler
  * --------------------------------------------------------------------- */
-
-static MOO_INLINE int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index)
-{
-#if 0
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-	moo_oow_t i;
-
-	for (i = 0; i < cc->mth.literals.count; i++) 
-	{
-		/* 
-		 * this removes redundancy of symbols, characters, and small integers. 
-		 * more complex redundacy check may be done somewhere else like 
-		 * in add_string_literal().
-		 */
-		if (cc->mth.literals.ptr[i] == lit) 
-		{
-			*index = i;
-			return 0;
-		}
-	}
-
-	if (add_oop_to_oopbuf(moo, &cc->mth.literals, lit) <= -1) return -1;
-	*index = cc->mth.literals.count - 1;
-	return 0;
-#else
-	/* 
-	 * this removes redundancy of symbols, characters, and small integers. 
-	 * more complex redundacy check may be done somewhere else like 
-	 * in add_string_literal().
-	 */
-	return add_oop_to_oopbuf_nodup(moo, &((moo_cunit_class_t*)moo->c->cunit)->mth.literals, lit, index);
-#endif
-}
-
-static int add_string_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* index)
-{
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-	moo_oop_t lit;
-	moo_oow_t i;
-
-	for (i = 0; i < cc->mth.literals.count; i++) 
-	{
-		lit = cc->mth.literals.ptr[i];
-
-		if (MOO_CLASSOF(moo, lit) == moo->_string && 
-		    MOO_OBJ_GET_SIZE(lit) == str->len &&
-		    moo_equal_oochars(MOO_OBJ_GET_CHAR_SLOT(lit), str->ptr, str->len)) 
-		{
-			*index = i;
-			return 0;
-		}
-	}
-
-	lit = moo_instantiate(moo, moo->_string, str->ptr, str->len);
-	if (!lit) return -1;
-	MOO_OBJ_SET_FLAGS_RDONLY (lit, 1);
-
-	return add_literal(moo, lit, index);
-}
-
-static int add_symbol_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t offset, moo_oow_t* index)
-{
-	moo_oop_t tmp;
-
-	tmp = moo_makesymbol(moo, str->ptr + offset, str->len - offset);
-	if (!tmp) return -1;
-	MOO_OBJ_SET_FLAGS_RDONLY (tmp, 1);
-	
-	return add_literal(moo, tmp, index);
-}
-
-static int add_byte_array_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* index)
-{
-	/* see read_byte_array_literal for comparision */
-	moo_oop_t tmp;
-	moo_oow_t i;
-
-	tmp = moo_instantiate(moo, moo->_byte_array, MOO_NULL, str->len);
-	if (!tmp) return -1;
-	for (i = 0; i < str->len; i++) MOO_OBJ_SET_BYTE_VAL(tmp, i, str->ptr[i]);
-	MOO_OBJ_SET_FLAGS_RDONLY (tmp, 1);
-
-	return add_literal(moo, tmp, index);
-}
 
 static MOO_INLINE int set_class_fqn (moo_t* moo, moo_cunit_class_t* cc, const moo_oocs_t* name)
 {
@@ -4611,32 +4614,61 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 						}
 					}
 
+					if (!cc->self_oop) goto varinacc;
+					top_dic = cc->self_oop->nsdic; /* namespace that the current interface starts */
+					pxlen++; /* include . into the length */
 					break;
 				}
 
 				case MOO_CUNIT_INTERFACE:
-				default:
-					/* interface doesn't support inheritance nor does it allow
-					 * method body. let it flow down to the next check to
-					 * trigger an error(MOO_SYNERR_VARINACC below) */
+				{
+					moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
+					if (!ifce->self_oop) goto varinacc;
+					top_dic = ifce->self_oop->nsdic; /* namespace that the current interface starts */
+					pxlen++; /* include . into the length */
 					break;
+				}
+
+				default:
+				varinacc:
+					moo_setsynerr (moo, MOO_SYNERR_VARINACC, name_loc, name);
+					return -1;
 			}
 		}
-
-		if (moo->c->cunit->cunit_type != MOO_CUNIT_CLASS || !((moo_cunit_class_t*)moo->c->cunit)->self_oop)
+		else
 		{
-			/* self is not usable when it's not compiling in a class.
-			 * a pooldic definition cannot contain subdictionaries.
-			 * the pooldic is a terminal point and the items inside
-			 * are final nodes. if self is followed by more than 1 
-			 * subsegments, it's an error */
-			moo_setsynerr (moo, MOO_SYNERR_VARINACC, name_loc, name);
-			return -1;
-		}
+			/* more than 3 segments. e.g. self.XXX.YYY */
+			switch (moo->c->cunit->cunit_type)
+			{
+				case MOO_CUNIT_POOLDIC:
+					/* a pooldic definition cannot contain subdictionaries.
+					 * the pooldic is a terminal point and the items inside
+					 * are final nodes. if self is followed by more than 1 
+					 * subsegments, it's an error. */
+					goto varinacc;
 
-		/* namespace that the current class starts */
-		top_dic = ((moo_cunit_class_t*)moo->c->cunit)->self_oop->nsdic;
-		pxlen++; /* include . into the length */
+				case MOO_CUNIT_CLASS:
+				{
+					moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+					if (!cc->self_oop) goto varinacc;
+					top_dic = cc->self_oop->nsdic; /* namespace that the current class starts */
+					pxlen++; /* include . into the length */
+					break;
+				}
+
+				case MOO_CUNIT_INTERFACE:
+				{
+					moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
+					if (!ifce->self_oop) goto varinacc;
+					top_dic = ifce->self_oop->nsdic; /* namespace that the current interface starts */
+					pxlen++; /* include . into the length */
+					break;
+				}
+
+				default:
+					goto varinacc;
+			}
+		}
 	}
 	else if ((pxlen = is_dotted_ident_prefixed(name, VOCA_SELFNS)) > 0)
 	{
@@ -4695,101 +4727,151 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 	moo_oow_t index;
 	moo_oop_association_t ass;
 
-	if (moo->c->cunit->cunit_type == MOO_CUNIT_POOLDIC)
+	switch (moo->c->cunit->cunit_type)
 	{
-		moo_oop_t v;
-
-		/* called inside a pooldic definition */
-		MOO_ASSERT (moo, ((moo_cunit_pooldic_t*)moo->c->cunit)->ns_oop != MOO_NULL);
-		MOO_ASSERT (moo, ((moo_cunit_pooldic_t*)moo->c->cunit)->pd_oop == MOO_NULL);
-
-		v = find_element_in_compiling_pooldic(moo, name);
-		if (!v)
+		case MOO_CUNIT_POOLDIC:
 		{
-			moo_setsynerr (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
-			return -1;
-		}
+			moo_oop_t v;
 
-		var->type = VAR_LITERAL;
-		var->u.lit = v; /* TODO: change this */
-	}
-	else
-	{
-		moo_cunit_class_t* cc = ((moo_cunit_class_t*)moo->c->cunit);
-		MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_CLASS);
+			/* called inside a pooldic definition */
+			MOO_ASSERT (moo, ((moo_cunit_pooldic_t*)moo->c->cunit)->ns_oop != MOO_NULL);
+			MOO_ASSERT (moo, ((moo_cunit_pooldic_t*)moo->c->cunit)->pd_oop == MOO_NULL);
 
-		if (cc->self_oop)
-		{
-			/* the current class being compiled has been instantiated.
-			 * look up in the temporary variable list if compiling in a method */
-			if (cc->mth.active && find_temporary_variable(moo, &cc->mth, name, &index) >= 0)
-			{
-				var->type = (index < cc->mth.tmpr_nargs)? VAR_ARGUMENT: VAR_TEMPORARY;
-				var->pos = index;
-				return 0;
-			}
-		}
-
-		if (cc->in_class_body)
-		{
-			/* called inside a class definition */
-			/* read a comment in find_dotted_ident() for the reason behind
-			 * the 'if' condition above. */
-
-			MOO_ASSERT (moo, cc->super_oop != MOO_NULL);
-			MOO_ASSERT (moo, cc->ns_oop != MOO_NULL);
-
-			if (find_class_level_variable(moo, cc->self_oop, name, var) >= 0)
-			{
-				/* if the current class being compiled has not been instantiated,
-				 * no validation nor adjustment of the var->pos field is performed */
-				return cc->self_oop? validate_class_level_variable(moo, var, name, name_loc): 0;
-			}
-		}
-
-		/* find an undotted identifier in dictionaries */
-		if (cc->ns_oop)
-		{
-			ass = moo_lookupdic(moo, (moo_oop_dic_t)cc->ns_oop, name); /* in the current name space */
-			if (!ass && cc->ns_oop != moo->sysdic) 
-				ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
-		}
-		else
-		{
-			ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
-		}
-
-		if (!ass)
-		{
-			moo_oow_t i;
-			moo_oop_association_t ass2 = MOO_NULL;
-
-			/* attempt to find the variable in pool dictionaries */
-			for (i = 0; i < cc->pdimp.dcl_count; i++)
-			{
-				ass = moo_lookupdic(moo, cc->pdimp.oops[i], name);
-				if (ass)
-				{
-					if (ass2)
-					{
-						/* the variable name has been found at least in 2 dictionaries - ambiguous */
-						moo_setsynerr (moo, MOO_SYNERR_VARAMBIG, name_loc, name);
-						return -1;
-					}
-					ass2 = ass;
-				}
-			}
-
-			ass = ass2;
-			if (!ass) 
+			v = find_element_in_compiling_pooldic(moo, name);
+			if (!v)
 			{
 				moo_setsynerr (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
 				return -1;
 			}
+
+			var->type = VAR_LITERAL;
+			var->u.lit = v; /* TODO: change this */
+			break;
 		}
 
-		var->type = VAR_GLOBAL;
-		var->u.gbl = ass;
+
+		case MOO_CUNIT_CLASS:
+		{
+			moo_cunit_class_t* cc = ((moo_cunit_class_t*)moo->c->cunit);
+
+			if (cc->self_oop)
+			{
+				/* the current class being compiled has been instantiated.
+				 * look up in the temporary variable list if compiling in a method */
+				if (cc->mth.active && find_temporary_variable(moo, &cc->mth, name, &index) >= 0)
+				{
+					var->type = (index < cc->mth.tmpr_nargs)? VAR_ARGUMENT: VAR_TEMPORARY;
+					var->pos = index;
+					return 0;
+				}
+			}
+
+			if (cc->in_class_body)
+			{
+				/* called inside a class definition */
+				/* read a comment in find_dotted_ident() for the reason behind
+				 * the 'if' condition above. */
+
+				MOO_ASSERT (moo, cc->super_oop != MOO_NULL);
+				MOO_ASSERT (moo, cc->ns_oop != MOO_NULL);
+
+				if (find_class_level_variable(moo, cc->self_oop, name, var) >= 0)
+				{
+					/* if the current class being compiled has not been instantiated,
+					 * no validation nor adjustment of the var->pos field is performed */
+					return cc->self_oop? validate_class_level_variable(moo, var, name, name_loc): 0;
+				}
+			}
+
+			/* find an undotted identifier in dictionaries */
+			if (cc->ns_oop)
+			{
+				ass = moo_lookupdic(moo, (moo_oop_dic_t)cc->ns_oop, name); /* in the current name space */
+				if (!ass && cc->ns_oop != moo->sysdic) 
+					ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
+			}
+			else
+			{
+				ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
+			}
+
+			if (!ass)
+			{
+				moo_oow_t i;
+				moo_oop_association_t ass2 = MOO_NULL;
+
+				/* attempt to find the variable in pool dictionaries */
+				for (i = 0; i < cc->pdimp.dcl_count; i++)
+				{
+					ass = moo_lookupdic(moo, cc->pdimp.oops[i], name);
+					if (ass)
+					{
+						if (ass2)
+						{
+							/* the variable name has been found at least in 2 dictionaries - ambiguous */
+							moo_setsynerr (moo, MOO_SYNERR_VARAMBIG, name_loc, name);
+							return -1;
+						}
+						ass2 = ass;
+					}
+				}
+
+				ass = ass2;
+				if (!ass) 
+				{
+					moo_setsynerr (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
+					return -1;
+				}
+			}
+
+			var->type = VAR_GLOBAL;
+			var->u.gbl = ass;
+			break;
+		}
+
+		case MOO_CUNIT_INTERFACE:
+		{
+			/* TODO: */
+			moo_cunit_interface_t* ifce = ((moo_cunit_interface_t*)moo->c->cunit);
+
+			if (ifce->self_oop)
+			{
+				/* the current class being compiled has been instantiated.
+				 * look up in the temporary variable list if compiling in a method */
+				if (ifce->mth.active && find_temporary_variable(moo, &ifce->mth, name, &index) >= 0)
+				{
+					var->type = (index < ifce->mth.tmpr_nargs)? VAR_ARGUMENT: VAR_TEMPORARY;
+					var->pos = index;
+					return 0;
+				}
+			}
+
+			if (ifce->ns_oop)
+			{
+				ass = moo_lookupdic(moo, (moo_oop_dic_t)ifce->ns_oop, name); /* in the current name space */
+				if (!ass && ifce->ns_oop != moo->sysdic) 
+					ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
+			}
+			else
+			{
+				ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
+			}
+
+			if (!ass)
+			{
+				moo_setsynerr (moo, MOO_SYNERR_VARUNDCL, name_loc, name);
+				return -1;
+			}
+
+			var->type = VAR_GLOBAL;
+			var->u.gbl = ass;
+			break;
+		}
+
+		default:
+			/* it must not happen. internal error if it happens */
+			moo_setsynerr (moo, MOO_SYNERR_VARINACC, name_loc, name);
+			return -1;
 	}
 
 	return 0;
