@@ -459,6 +459,8 @@ enum moo_pragma_flag_t
 
 enum moo_cunit_type_t
 {
+	/* [NOTE] get_cunit_method_data() in comp.c depends on the order of the 
+	 *        following enumerators */
 	MOO_CUNIT_BLANK = 0,
 	MOO_CUNIT_POOLDIC,
 	MOO_CUNIT_CLASS,

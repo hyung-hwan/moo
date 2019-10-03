@@ -1583,6 +1583,8 @@ int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 				}
 				else
 				{
+					MOO_ASSERT (moo, MOO_CLASSOF(moo, ns) == moo->_namespace);
+
 					/* TODO: better memory allocation management? */
 					tmp = moo_callocmem(moo, MOO_SIZEOF(*tmp));
 					if (!tmp) goto done_namespace;
@@ -1633,6 +1635,8 @@ int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 				}
 				else
 				{
+					MOO_ASSERT (moo, MOO_CLASSOF(moo, ns) == moo->_namespace);
+
 					/* TODO: better memory allocation management? */
 					tmp = moo_callocmem(moo, MOO_SIZEOF(*tmp));
 					if (!tmp) goto done_class;
@@ -1680,6 +1684,8 @@ int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 				}
 				else
 				{
+					MOO_ASSERT (moo, MOO_CLASSOF(moo, ns) == moo->_namespace);
+
 					/* TODO: better memory allocation management? */
 					tmp = moo_callocmem(moo, MOO_SIZEOF(*tmp));
 					if (!tmp) goto done_interface;

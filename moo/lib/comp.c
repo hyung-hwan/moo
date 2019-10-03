@@ -945,6 +945,20 @@ static int add_to_oow_pool (moo_t* moo, moo_oow_pool_t* pool, moo_oow_t v, const
 	return 0;
 }
 
+static MOO_INLINE moo_method_data_t* get_cunit_method_data (moo_t* moo)
+{
+	static moo_oow_t offset[] = /* [NOTE] this is dependent on moo_cunit_type_t */
+	{
+		0, /* blank */
+		0, /* pooldic */
+		MOO_OFFSETOF(moo_cunit_class_t, mth),
+		MOO_OFFSETOF(moo_cunit_interface_t, mth)
+	};
+
+	MOO_ASSERT (moo, moo->c->cunit && (moo->c->cunit->cunit_type == MOO_CUNIT_CLASS || moo->c->cunit->cunit_type == MOO_CUNIT_INTERFACE));
+	return (moo_method_data_t*)((moo_uint8_t*)moo->c->cunit + offset[moo->c->cunit->cunit_type]);
+}
+
 /* ---------------------------------------------------------------------
  * Tokenizer 
  * --------------------------------------------------------------------- */
@@ -2438,25 +2452,25 @@ static int end_include (moo_t* moo)
 static MOO_INLINE int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index)
 {
 #if 0
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_method_data_t* md = get_cunit_method_data(moo);
 	moo_oow_t i;
 
-	for (i = 0; i < cc->mth.literals.count; i++) 
+	for (i = 0; i < md->literals.count; i++) 
 	{
 		/* 
 		 * this removes redundancy of symbols, characters, and small integers. 
 		 * more complex redundacy check may be done somewhere else like 
 		 * in add_string_literal().
 		 */
-		if (cc->mth.literals.ptr[i] == lit) 
+		if (md->literals.ptr[i] == lit) 
 		{
 			*index = i;
 			return 0;
 		}
 	}
 
-	if (add_oop_to_oopbuf(moo, &cc->mth.literals, lit) <= -1) return -1;
-	*index = cc->mth.literals.count - 1;
+	if (add_oop_to_oopbuf(moo, &md->literals, lit) <= -1) return -1;
+	*index = md->literals.count - 1;
 	return 0;
 #else
 	/* 
@@ -2464,19 +2478,20 @@ static MOO_INLINE int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index)
 	 * more complex redundacy check may be done somewhere else like 
 	 * in add_string_literal().
 	 */
-	return add_oop_to_oopbuf_nodup(moo, &((moo_cunit_class_t*)moo->c->cunit)->mth.literals, lit, index);
+	moo_method_data_t* md = get_cunit_method_data(moo);
+	return add_oop_to_oopbuf_nodup(moo, &md->literals, lit, index);
 #endif
 }
 
 static int add_string_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* index)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_method_data_t* md = get_cunit_method_data(moo);
 	moo_oop_t lit;
 	moo_oow_t i;
 
-	for (i = 0; i < cc->mth.literals.count; i++) 
+	for (i = 0; i < md->literals.count; i++) 
 	{
-		lit = cc->mth.literals.ptr[i];
+		lit = md->literals.ptr[i];
 
 		if (MOO_CLASSOF(moo, lit) == moo->_string && 
 		    MOO_OBJ_GET_SIZE(lit) == str->len &&
@@ -2525,58 +2540,58 @@ static int add_byte_array_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t*
 
 static MOO_INLINE int emit_byte_instruction (moo_t* moo, moo_oob_t code, const moo_ioloc_t* srcloc)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_method_data_t* md = get_cunit_method_data(moo);
 
 	/* the context object has the ip field. it should be representable
 	 * in a small integer. for simplicity, limit the total byte code length
 	 * to fit in a small integer. because 'ip' points to the next instruction
 	 * to execute, he upper bound should be (max - 1) so that i stays
 	 * at the max when incremented */
-	if (cc->mth.code.len == MOO_SMOOI_MAX - 1)
+	if (md->code.len == MOO_SMOOI_MAX - 1)
 	{
 		moo_seterrnum (moo, MOO_EBCFULL); /* byte code too big */
 		return -1;
 	}
 
-	if (cc->mth.code.len >= cc->mth.code.capa)
+	if (md->code.len >= md->code.capa)
 	{
 		moo_oob_t* tmp;
 		moo_oow_t* tmp2;
 		moo_oow_t newcapa;
 
-		newcapa = MOO_ALIGN (cc->mth.code.len + 1, CODE_BUFFER_ALIGN);
+		newcapa = MOO_ALIGN (md->code.len + 1, CODE_BUFFER_ALIGN);
 
-		tmp = (moo_oob_t*)moo_reallocmem(moo, cc->mth.code.ptr, newcapa * MOO_SIZEOF(*tmp));
+		tmp = (moo_oob_t*)moo_reallocmem(moo, md->code.ptr, newcapa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
-		tmp2 = (moo_oow_t*)moo_reallocmem(moo, cc->mth.code.locptr, newcapa * MOO_SIZEOF(*tmp2));
+		tmp2 = (moo_oow_t*)moo_reallocmem(moo, md->code.locptr, newcapa * MOO_SIZEOF(*tmp2));
 		if (!tmp)
 		{
 			moo_freemem (moo, tmp);
 			return -1;
 		}
 
-		cc->mth.code.capa = newcapa;
-		cc->mth.code.ptr = tmp;
-		cc->mth.code.locptr = tmp2;
+		md->code.capa = newcapa;
+		md->code.ptr = tmp;
+		md->code.locptr = tmp2;
 	}
 
-	cc->mth.code.ptr[cc->mth.code.len] = code;
+	md->code.ptr[md->code.len] = code;
 	if (srcloc) 
 	{
-		if (srcloc->file == cc->mth.start_loc.file && srcloc->line >= cc->mth.start_loc.line)
+		if (srcloc->file == md->start_loc.file && srcloc->line >= md->start_loc.line)
 		{
-			/*cc->mth.code.locptr[cc->mth.code.len] = srcloc->line - cc->mth.start_loc.line; // relative within the method? */
-			cc->mth.code.locptr[cc->mth.code.len] = srcloc->line;
+			/*md->code.locptr[md->code.len] = srcloc->line - md->start_loc.line; // relative within the method? */
+			md->code.locptr[md->code.len] = srcloc->line;
 		}
 		else
 		{
 			/* i can't record the distance as the method body is not in the same file */
 			/* TODO: warning, error handling? */
-			cc->mth.code.locptr[cc->mth.code.len] = 0;
+			md->code.locptr[md->code.len] = 0;
 		}
 	}
-	cc->mth.code.len++;
+	md->code.len++;
 
 	return 0;
 }
@@ -2807,15 +2822,15 @@ static MOO_INLINE int emit_backward_jump_instruction (moo_t* moo, int cmd, moo_o
 
 static int patch_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oow_t jt)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_method_data_t* md = get_cunit_method_data(moo);
 	moo_oow_t code_size;
 	moo_oow_t jump_offset;
 
-	MOO_ASSERT (moo, cc->mth.code.ptr[jip] == BCODE_JUMP_FORWARD ||
-	                 cc->mth.code.ptr[jip] == BCODE_JUMP_FORWARD_IF_FALSE ||
-	                 cc->mth.code.ptr[jip] == BCODE_JUMP_FORWARD_IF_TRUE ||
-	                 cc->mth.code.ptr[jip] == BCODE_JMPOP_FORWARD_IF_FALSE ||
-	                 cc->mth.code.ptr[jip] == BCODE_JMPOP_FORWARD_IF_TRUE);
+	MOO_ASSERT (moo, md->code.ptr[jip] == BCODE_JUMP_FORWARD ||
+	                 md->code.ptr[jip] == BCODE_JUMP_FORWARD_IF_FALSE ||
+	                 md->code.ptr[jip] == BCODE_JUMP_FORWARD_IF_TRUE ||
+	                 md->code.ptr[jip] == BCODE_JMPOP_FORWARD_IF_FALSE ||
+	                 md->code.ptr[jip] == BCODE_JMPOP_FORWARD_IF_TRUE);
 
 	if (jt <= jip)
 	{
@@ -2828,7 +2843,7 @@ static int patch_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oow_t 
 		MOO_STATIC_ASSERT (BCODE_JUMP_FORWARD_IF_FALSE + 10 == BCODE_JUMP_BACKWARD_IF_FALSE);
 		MOO_STATIC_ASSERT (BCODE_JMPOP_FORWARD_IF_TRUE + 10 == BCODE_JMPOP_BACKWARD_IF_TRUE);
 		MOO_STATIC_ASSERT (BCODE_JMPOP_FORWARD_IF_FALSE + 10 == BCODE_JMPOP_BACKWARD_IF_FALSE);
-		cc->mth.code.ptr[jip] += 10; /* switch to the backward jump instruction */
+		md->code.ptr[jip] += 10; /* switch to the backward jump instruction */
 		code_size = jip - jt + (MOO_BCODE_LONG_PARAM_SIZE + 1);
 	}
 	else
@@ -2852,7 +2867,7 @@ static int patch_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oow_t 
 	{
 		/* switch to JUMP2 instruction to allow a bigger jump offset.
 		 * up to twice MAX_CODE_JUMP only */
-		cc->mth.code.ptr[jip]++; /* switch to the JUMP2 instruction */
+		md->code.ptr[jip]++; /* switch to the JUMP2 instruction */
 		jump_offset = code_size - MAX_CODE_JUMP;
 	}
 	else
@@ -2861,10 +2876,10 @@ static int patch_forward_jump_instruction (moo_t* moo, moo_oow_t jip, moo_oow_t 
 	}
 
 #if (MOO_BCODE_LONG_PARAM_SIZE == 2)
-	cc->mth.code.ptr[jip + 1] = jump_offset >> 8;
-	cc->mth.code.ptr[jip + 2] = jump_offset & 0xFF;
+	md->code.ptr[jip + 1] = jump_offset >> 8;
+	md->code.ptr[jip + 2] = jump_offset & 0xFF;
 #else
-	cc->mth.code.ptr[jip + 1] = jump_offset;
+	md->code.ptr[jip + 1] = jump_offset;
 #endif
 
 	return 0;
@@ -2953,10 +2968,10 @@ static MOO_INLINE int update_loop_continues (moo_t* moo, moo_oow_t jt)
 
 static MOO_INLINE void adjust_all_loop_jumps_for_elimination (moo_t* moo, moo_oow_t start, moo_oow_t end)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_method_data_t* md = get_cunit_method_data(moo);
 	moo_loop_t* loop;
 
-	loop = cc->mth.loop;
+	loop = md->loop;
 	while (loop)
 	{
 		adjust_loop_jumps_for_elimination (moo, &loop->break_ip_pool, start, end);
@@ -2967,10 +2982,10 @@ static MOO_INLINE void adjust_all_loop_jumps_for_elimination (moo_t* moo, moo_oo
 
 static MOO_INLINE void adjust_all_gotos_for_elimination (moo_t* moo, moo_oow_t start, moo_oow_t end)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_method_data_t* md = get_cunit_method_data(moo);
 	moo_goto_t* _goto;
 
-	_goto = cc->mth._goto;
+	_goto = md->_goto;
 	while (_goto)
 	{
 		if (_goto->ip != INVALID_IP)
@@ -2993,15 +3008,16 @@ static MOO_INLINE void adjust_all_gotos_for_elimination (moo_t* moo, moo_oow_t s
 
 static MOO_INLINE void adjust_all_labels_for_elimination (moo_t* moo, moo_oow_t start, moo_oow_t end)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_method_data_t* md = get_cunit_method_data(moo);
 	moo_label_t* _label;
 
-	_label = cc->mth._label;
+	_label = md->_label;
 	while (_label)
 	{
 		if (_label->ip >= start && _label->ip <= end)
 		{
 			/* TODO: ERROR - cannot eliminate this part. caller must ensure this doesn't happen */
+			MOO_ASSERT (moo, _label->ip < start || _label->ip > end);
 		}
 		else if (_label->ip > end)
 		{
@@ -3013,12 +3029,12 @@ static MOO_INLINE void adjust_all_labels_for_elimination (moo_t* moo, moo_oow_t 
 
 static MOO_INLINE moo_loop_t* unlink_loop (moo_t* moo)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_method_data_t* md = get_cunit_method_data(moo);
 	moo_loop_t* loop;
 
-	MOO_ASSERT (moo, cc->mth.loop != MOO_NULL);
-	loop = cc->mth.loop;
-	cc->mth.loop = loop->next;
+	MOO_ASSERT (moo, md->loop != MOO_NULL);
+	loop = md->loop;
+	md->loop = loop->next;
 
 	return loop;
 }
@@ -3037,18 +3053,18 @@ static MOO_INLINE void pop_loop (moo_t* moo)
 
 static MOO_INLINE int inject_break_to_loop (moo_t* moo, const moo_ioloc_t* srcloc)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-	if (add_to_oow_pool(moo, &cc->mth.loop->break_ip_pool, cc->mth.code.len, srcloc) <= -1 ||
+	moo_method_data_t* md = get_cunit_method_data(moo);
+	if (add_to_oow_pool(moo, &md->loop->break_ip_pool, md->code.len, srcloc) <= -1 ||
 	    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD, MAX_CODE_JUMP, srcloc) <= -1) return -1;
 	return 0;
 }
 
 static MOO_INLINE int inject_continue_to_loop (moo_t* moo, const moo_ioloc_t* srcloc)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_method_data_t* md = get_cunit_method_data(moo);
 	/* used for a do-while loop. jump forward because the conditional 
 	 * is at the end of the do-while loop */
-	if (add_to_oow_pool(moo, &cc->mth.loop->continue_ip_pool, cc->mth.code.len, srcloc) <= -1 ||
+	if (add_to_oow_pool(moo, &md->loop->continue_ip_pool, md->code.len, srcloc) <= -1 ||
 	    emit_single_param_instruction(moo, BCODE_JUMP_FORWARD, MAX_CODE_JUMP, srcloc) <= -1) return -1;
 	return 0;
 }
@@ -3056,11 +3072,11 @@ static MOO_INLINE int inject_continue_to_loop (moo_t* moo, const moo_ioloc_t* sr
 static void eliminate_instructions (moo_t* moo, moo_oow_t start, moo_oow_t end)
 {
 	moo_oow_t last;
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_method_data_t* md = get_cunit_method_data(moo);
 
-	MOO_ASSERT (moo, cc->mth.code.len >= 1);
+	MOO_ASSERT (moo, md->code.len >= 1);
 
-	last = cc->mth.code.len - 1;
+	last = md->code.len - 1;
 
 	if (end >= last)
 	{
@@ -3069,7 +3085,7 @@ static void eliminate_instructions (moo_t* moo, moo_oow_t start, moo_oow_t end)
 		adjust_all_loop_jumps_for_elimination (moo, start, last);
 		adjust_all_gotos_for_elimination (moo, start, last);
 		adjust_all_labels_for_elimination (moo, start, last);
-		cc->mth.code.len = start;
+		md->code.len = start;
 	}
 	else
 	{
@@ -3081,11 +3097,11 @@ static void eliminate_instructions (moo_t* moo, moo_oow_t start, moo_oow_t end)
 		adjust_all_gotos_for_elimination (moo, start, end);
 		adjust_all_labels_for_elimination (moo, start, end);
 
-		tail_len = cc->mth.code.len - end - 1;
-		MOO_MEMMOVE (&cc->mth.code.ptr[start], &cc->mth.code.ptr[end + 1], tail_len * MOO_SIZEOF(cc->mth.code.ptr[0]));
-		MOO_MEMMOVE (&cc->mth.code.locptr[start], &cc->mth.code.locptr[end + 1], tail_len * MOO_SIZEOF(cc->mth.code.locptr[0]));
+		tail_len = md->code.len - end - 1;
+		MOO_MEMMOVE (&md->code.ptr[start], &md->code.ptr[end + 1], tail_len * MOO_SIZEOF(md->code.ptr[0]));
+		MOO_MEMMOVE (&md->code.locptr[start], &md->code.locptr[end + 1], tail_len * MOO_SIZEOF(md->code.locptr[0]));
 
-		cc->mth.code.len -= end - start + 1;
+		md->code.len -= end - start + 1;
 	}
 }
 
@@ -3371,48 +3387,48 @@ done:
 
 static int clone_assignee (moo_t* moo, const moo_oocs_t* name, moo_oow_t* offset)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_method_data_t* md = get_cunit_method_data(moo);
 	int n;
 	moo_oow_t old_len;
 
-	old_len = cc->mth.assignees.len;
-	n = copy_string_to(moo, name, &cc->mth.assignees, &cc->mth.assignees_capa, 1, '\0');
+	old_len = md->assignees.len;
+	n = copy_string_to(moo, name, &md->assignees, &md->assignees_capa, 1, '\0');
 	if (n <= -1) return -1;
 
 	/* update the pointer to of the name. its length is the same. */
-	/*name->ptr = cc->mth.assignees.ptr + old_len;*/
+	/*name->ptr = md->assignees.ptr + old_len;*/
 	*offset = old_len;
 	return 0;
 }
 
 static int clone_binary_selector (moo_t* moo, const moo_oocs_t* name, moo_oow_t* offset)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_method_data_t* md = get_cunit_method_data(moo);
 	int n;
 	moo_oow_t old_len;
 
-	old_len = cc->mth.binsels.len;
-	n = copy_string_to (moo, name, &cc->mth.binsels, &cc->mth.binsels_capa, 1, '\0');
+	old_len = md->binsels.len;
+	n = copy_string_to (moo, name, &md->binsels, &md->binsels_capa, 1, '\0');
 	if (n <= -1) return -1;
 
 	/* update the pointer to of the name. its length is the same. */
-	/*name->ptr = cc->mth.binsels.ptr + old_len;*/
+	/*name->ptr = md->binsels.ptr + old_len;*/
 	*offset = old_len;
 	return 0;
 }
 
 static int clone_keyword (moo_t* moo, const moo_oocs_t* name, moo_oow_t* offset)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_method_data_t* md = get_cunit_method_data(moo);
 	int n;
 	moo_oow_t old_len;
 
-	old_len = cc->mth.kwsels.len;
-	n = copy_string_to (moo, name, &cc->mth.kwsels, &cc->mth.kwsels_capa, 1, '\0');
+	old_len = md->kwsels.len;
+	n = copy_string_to (moo, name, &md->kwsels, &md->kwsels_capa, 1, '\0');
 	if (n <= -1) return -1;
 
 	/* update the pointer to of the name. its length is the same. */
-	/*name->ptr = cc->mth.kwsels.ptr + old_len;*/
+	/*name->ptr = md->kwsels.ptr + old_len;*/
 	*offset = old_len;
 	return 0;
 }
@@ -8471,18 +8487,18 @@ static int make_defined_class (moo_t* moo)
 
 /* TODO: update the subclasses field of the superclass if it's not nil */
 
-
-	if (make_getters_and_setters(moo) <= -1) return -1;
-
 	if (just_made)
 	{
 		/* register the class to the system dictionary. kernel classes have 
 		 * been registered at the ignition phase. */
 		if (!moo_putatdic(moo, (moo_oop_dic_t)cc->ns_oop, (moo_oop_t)cc->self_oop->name, (moo_oop_t)cc->self_oop)) return -1;
 		MOO_STORE_OOP (moo, (moo_oop_t*)&cc->self_oop->nsup, (moo_oop_t)cc->ns_oop);
+		/* the nsup field of the class must be set before a call to make_getters_and_setters().
+		 * the function may print the full qualified name of the class if method dump
+		 * is performed. */
 	}
 
-	return 0;
+	return make_getters_and_setters(moo);
 }
 
 static MOO_INLINE int _set_class_indexed_type (moo_t* moo, moo_obj_type_t type)
