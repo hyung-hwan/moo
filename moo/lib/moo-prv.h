@@ -499,12 +499,8 @@ typedef struct moo_pooldic_import_data_t moo_pooldic_import_data_t;
 struct moo_pooldic_import_data_t
 {
 	moo_oocs_t dcl;
-	moo_oow_t dcl_capa;
-	moo_oow_t dcl_count;
-
-	/* used to hold imported pool dictionarie objects */
-	moo_oop_dic_t* oops; 
-	moo_oow_t oops_capa;
+	moo_oow_t dcl_capa; /* capacity of the dcl string */
+	moo_oopbuf_t dics; /* dictionary objects imported */
 };
 
 /* data kept by compiler to complie a method */
@@ -650,6 +646,7 @@ struct moo_cunit_interface_t
 	moo_oow_t fqn_capa;
 	moo_ioloc_t fqn_loc;
 
+	moo_oow_t dbgi_interface_offset;
 	moo_method_data_t mth;
 };
 
