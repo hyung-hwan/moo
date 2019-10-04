@@ -862,11 +862,7 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 	}
 	moo_pushvolat (moo, (moo_oop_t*)&pfidsym); tmp_count++;
 
-#if defined(MOO_USE_METHOD_TRAILER)
 	mth = (moo_oop_method_t)moo_instantiatewithtrailer (moo, moo->_method, 1, MOO_NULL, 0); 
-#else
-	mth = (moo_oop_method_t)moo_instantiate(moo, moo->_method, MOO_NULL, 1);
-#endif
 	if (!mth)
 	{
 		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - method instantiation failure\n", mthname, _class->name);

@@ -486,16 +486,14 @@ static int ignite_1 (moo_t* moo)
 
 	MOO_OBJ_SET_CLASS (moo->_nil, (moo_oop_t)moo->_undefined_object);
 
-#if defined(MOO_USE_METHOD_TRAILER)
-	/* an instance of a method class stores byte codes in the trailer space
-	 * when compiled with MOO_USE_METHOD_TRAILER. unlike other classes with
-	 * trailer size set, the size of the trailer space is not really determined
-	 * by the traailer size set in the class. the compiler determines the 
-	 * actual size of the trailer space depending on the byte codes generated.
-	 * i should set the following fields to avoid confusion at the GC phase. */
+	/* an instance of a method class stores byte codes in the trailer space.
+	 * unlike other classes with trailer size set, the size of the trailer 
+	 * space is not really determined by the traailer size set in the class.
+	 * the compiler determines the actual size of the trailer space depending
+	 * on the byte codes generated. i should set the following fields to avoid
+	 * confusion at the GC phase. */
 	moo->_method->trsize = MOO_SMOOI_TO_OOP(0);
 	moo->_method->trgc = MOO_SMPTR_TO_OOP(0);
-#endif
 
 	return 0;
 }

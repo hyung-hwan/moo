@@ -4815,12 +4815,8 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 				moo->processor->active->perrmsg = moo->_nil;
 			}
 
-		#if defined(MOO_USE_METHOD_TRAILER)
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TRAILER(method));
 			if (MOO_METHOD_GET_CODE_SIZE(method) == 0) /* this trailer size field is not a small integer */
-		#else
-			if (method->code == moo->_nil)
-		#endif
 			{
 				/* no byte code to execute - invoke 'self primitiveFailed' */
 				moo_oow_t i;

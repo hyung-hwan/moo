@@ -7451,70 +7451,30 @@ static int compile_method_statements (moo_t* moo)
 	return emit_byte_instruction(moo, BCODE_RETURN_RECEIVER, TOKEN_LOC(moo));
 }
 
-static int add_compiled_method_to_class (moo_t* moo)
+static moo_ooi_t compute_preamble (moo_t* moo, moo_method_data_t* md)
 {
-	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-	moo_oop_char_t name; /* selector */
-	moo_oop_method_t mth; /* method */
-#if defined(MOO_USE_METHOD_TRAILER)
-	/* nothing extra */
-#else
-	moo_oop_byte_t code;
-#endif
-	moo_oow_t tmp_count = 0;
-	moo_oow_t i;
 	moo_ooi_t preamble_code, preamble_index, preamble_flags;
-
-	MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_CLASS);
-
-	name = (moo_oop_char_t)moo_makesymbol(moo, cc->mth.name.ptr, cc->mth.name.len);
-	if (!name) goto oops;
-	moo_pushvolat (moo, (moo_oop_t*)&name); tmp_count++;
-
-	/* The variadic data part passed to moo_instantiate() is not GC-safe. 
-	 * let's delay initialization of variadic data a bit. */
-#if defined(MOO_USE_METHOD_TRAILER)
-	mth = (moo_oop_method_t)moo_instantiatewithtrailer(moo, moo->_method, cc->mth.literals.count, cc->mth.code.ptr, cc->mth.code.len);
-#else
-	mth = (moo_oop_method_t)moo_instantiate(moo, moo->_method, MOO_NULL, cc->mth.literals.count);
-#endif
-	if (!mth) goto oops;
-
-	for (i = 0; i < cc->mth.literals.count; i++)
-	{
-		/* let's do the variadic data initialization here */
-		MOO_STORE_OOP (moo, &mth->literal_frame[i], cc->mth.literals.ptr[i]);
-	}
-	moo_pushvolat (moo, (moo_oop_t*)&mth); tmp_count++;
-
-#if defined(MOO_USE_METHOD_TRAILER)
-	/* do nothing */
-#else
-	code = (moo_oop_byte_t)moo_instantiate(moo, moo->_byte_array, cc->mth.code.ptr, cc->mth.code.len);
-	if (!code) goto oops;
-	moo_pushvolat (moo, (moo_oop_t*)&code); tmp_count++;
-#endif
 
 	preamble_code = MOO_METHOD_PREAMBLE_NONE;
 	preamble_index = 0;
 	preamble_flags = 0;
 
-	if (cc->mth.pftype <= 0)
+	if (md->pftype <= 0)
 	{
 		/* no primitive is set - perform some mutation for simplicity and efficiency */
-		if (cc->mth.code.len <= 0)
+		if (md->code.len <= 0)
 		{
 			preamble_code = MOO_METHOD_PREAMBLE_RETURN_RECEIVER;
 		}
 		else
 		{
-			if (cc->mth.code.ptr[0] == BCODE_RETURN_RECEIVER)
+			if (md->code.ptr[0] == BCODE_RETURN_RECEIVER)
 			{
 				preamble_code = MOO_METHOD_PREAMBLE_RETURN_RECEIVER;
 			}
-			else if (cc->mth.code.len > 1 && cc->mth.code.ptr[1] == BCODE_RETURN_STACKTOP)
+			else if (md->code.len > 1 && md->code.ptr[1] == BCODE_RETURN_STACKTOP)
 			{
-				switch (cc->mth.code.ptr[0])
+				switch (md->code.ptr[0])
 				{
 					case BCODE_PUSH_RECEIVER:
 						preamble_code = MOO_METHOD_PREAMBLE_RETURN_RECEIVER;
@@ -7573,15 +7533,15 @@ static int add_compiled_method_to_class (moo_t* moo)
 					case BCODE_PUSH_INSTVAR_6:
 					case BCODE_PUSH_INSTVAR_7:
 						preamble_code = MOO_METHOD_PREAMBLE_RETURN_INSTVAR;
-						preamble_index = cc->mth.code.ptr[0] & 0x7; /* low 3 bits */
+						preamble_index = md->code.ptr[0] & 0x7; /* low 3 bits */
 						break;
 				}
 			}
-			else if (cc->mth.code.len > MOO_BCODE_LONG_PARAM_SIZE + 1 &&
-			         cc->mth.code.ptr[MOO_BCODE_LONG_PARAM_SIZE + 1] == BCODE_RETURN_STACKTOP)
+			else if (md->code.len > MOO_BCODE_LONG_PARAM_SIZE + 1 &&
+			         md->code.ptr[MOO_BCODE_LONG_PARAM_SIZE + 1] == BCODE_RETURN_STACKTOP)
 			{
 				int i;
-				switch (cc->mth.code.ptr[0])
+				switch (md->code.ptr[0])
 				{
 					case BCODE_PUSH_INSTVAR_X:
 						preamble_code = MOO_METHOD_PREAMBLE_RETURN_INSTVAR;
@@ -7599,7 +7559,7 @@ static int add_compiled_method_to_class (moo_t* moo)
 						preamble_index = 0;
 						for (i = 1; i <= MOO_BCODE_LONG_PARAM_SIZE; i++)
 						{
-							preamble_index = (preamble_index << 8) | cc->mth.code.ptr[i];
+							preamble_index = (preamble_index << 8) | md->code.ptr[i];
 						}
 
 						if (!MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index))
@@ -7612,47 +7572,72 @@ static int add_compiled_method_to_class (moo_t* moo)
 			}
 		}
 	}
-	else if (cc->mth.pftype == PFTYPE_NUMBERED)
+	else if (md->pftype == PFTYPE_NUMBERED)
 	{
 		preamble_code = MOO_METHOD_PREAMBLE_PRIMITIVE;
-		preamble_index = cc->mth.pfnum;
+		preamble_index = md->pfnum;
 	}
-	else if (cc->mth.pftype == PFTYPE_NAMED)
+	else if (md->pftype == PFTYPE_NAMED)
 	{
 		preamble_code = MOO_METHOD_PREAMBLE_NAMED_PRIMITIVE;
-		preamble_index = cc->mth.pfnum; /* index to literal frame */
+		preamble_index = md->pfnum; /* index to literal frame */
 	}
-	else if (cc->mth.pftype == PFTYPE_EXCEPTION)
+	else if (md->pftype == PFTYPE_EXCEPTION)
 	{
 		preamble_code = MOO_METHOD_PREAMBLE_EXCEPTION;
 		preamble_index = 0;
 	}
 	else 
 	{
-		MOO_ASSERT (moo, cc->mth.pftype == PFTYPE_ENSURE);
+		MOO_ASSERT (moo, md->pftype == PFTYPE_ENSURE);
 		preamble_code = MOO_METHOD_PREAMBLE_ENSURE;
 		preamble_index = 0;
 	}
 
-	preamble_flags |= cc->mth.variadic; /* MOO_METHOD_PREAMBLE_FLAG_VARIADIC or MOO_METHOD_PREAMBLE_FLAG_LIBERAL */
-	if (cc->mth.type == MOO_METHOD_DUAL) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_DUAL;
-	if (cc->mth.lenient) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_LENIENT;
+	preamble_flags |= md->variadic; /* MOO_METHOD_PREAMBLE_FLAG_VARIADIC or MOO_METHOD_PREAMBLE_FLAG_LIBERAL */
+	if (md->type == MOO_METHOD_DUAL) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_DUAL;
+	if (md->lenient) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_LENIENT;
 
 	MOO_ASSERT (moo, MOO_OOI_IN_METHOD_PREAMBLE_INDEX_RANGE(preamble_index));
+	return MOO_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index, preamble_flags);
+}
+
+static int add_compiled_method_to_class (moo_t* moo)
+{
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
+	moo_oop_char_t name; /* selector */
+	moo_oop_method_t mth; /* method */
+	moo_oow_t tmp_count = 0;
+	moo_oow_t i;
+	moo_ooi_t preamble;
+
+	MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_CLASS);
+
+	name = (moo_oop_char_t)moo_makesymbol(moo, cc->mth.name.ptr, cc->mth.name.len);
+	if (!name) goto oops;
+	moo_pushvolat (moo, (moo_oop_t*)&name); tmp_count++;
+
+	/* The variadic data part passed to moo_instantiate() is not GC-safe. 
+	 * let's delay initialization of variadic data a bit. */
+	mth = (moo_oop_method_t)moo_instantiatewithtrailer(moo, moo->_method, cc->mth.literals.count, cc->mth.code.ptr, cc->mth.code.len);
+	if (!mth) goto oops;
+
+	for (i = 0; i < cc->mth.literals.count; i++)
+	{
+		/* let's do the variadic data initialization here */
+		MOO_STORE_OOP (moo, &mth->literal_frame[i], cc->mth.literals.ptr[i]);
+	}
+	moo_pushvolat (moo, (moo_oop_t*)&mth); tmp_count++;
+
+	preamble = compute_preamble(moo, &cc->mth);
 
 	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->owner, (moo_oop_t)cc->self_oop);
 	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->name, (moo_oop_t)name);
-	mth->preamble = MOO_SMOOI_TO_OOP(MOO_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index, preamble_flags));
+	mth->preamble = MOO_SMOOI_TO_OOP(preamble);
 	mth->preamble_data[0] = MOO_SMPTR_TO_OOP(0);
 	mth->preamble_data[1] = MOO_SMPTR_TO_OOP(0);
 	mth->tmpr_count = MOO_SMOOI_TO_OOP(cc->mth.tmpr_count);
 	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(cc->mth.tmpr_nargs);
-
-#if defined(MOO_USE_METHOD_TRAILER)
-	/* do nothing */
-#else
-	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->code, (moo_oop_t)code);
-#endif
 
 	if (moo->dbgi)
 	{
@@ -7715,6 +7700,12 @@ static int add_compiled_method_to_class (moo_t* moo)
 
 oops:
 	moo_popvolats (moo, tmp_count);
+	return -1;
+}
+
+static int add_compiled_method_to_interface (moo_t* moo)
+{
+	/* TODO: */
 	return -1;
 }
 
@@ -9546,7 +9537,7 @@ oops:
 
 static int __compile_method_signature (moo_t* moo)
 {
-	/*moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;*/
+	moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
 
 	MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_INTERFACE);
 
@@ -9558,17 +9549,42 @@ static int __compile_method_signature (moo_t* moo)
 
 	if (compile_method_name(moo) <= -1) return -1;
 
-	if (TOKEN_TYPE(moo) != MOO_IOTOK_PERIOD)
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_LBRACE)
 	{
-		/* . expected */
-		moo_setsynerr (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo));
-		return -1;
+		/* you can inlcude method body optionally */
+		GET_TOKEN (moo);
+
+		if (compile_method_temporaries(moo) <= -1 ||
+		    compile_method_pragma(moo) <= -1 || /* TODO: disallow pragmas... */
+		    compile_method_statements(moo) <= -1) return -1;
+
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_RBRACE)
+		{
+			/* } expected */
+			moo_setsynerr (moo, MOO_SYNERR_RBRACE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+			return -1;
+		}
+
+		/* end of method has been reached */
+		if (resolve_goto_labels(moo) <= -1) return -1;
+
+		GET_TOKEN (moo);
+
+		/* add a compiled method to the method dictionary */
+		if (add_compiled_method_to_interface(moo) <= -1) return -1;
+
+		return 0;
+	}
+	else if (TOKEN_TYPE(moo) == MOO_IOTOK_PERIOD)
+	{
+		if (add_method_signature(moo) <= -1) return -1;
+		GET_TOKEN (moo);
+		return 0;
 	}
 
-	if (add_method_signature(moo) <= -1) return -1;
-
-	GET_TOKEN (moo);
-	return 0;
+	/* . or { expected */
+	moo_setsynerrbfmt (moo, MOO_SYNERR_PERIOD, TOKEN_LOC(moo), TOKEN_NAME(moo), "period or left brace expected");
+	return -1;
 }
 
 static int compile_method_signature (moo_t* moo)
@@ -10029,7 +10045,7 @@ static int __compile_pooldic_definition (moo_t* moo)
 
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA)
 		{
-			moo_setsynerrbfmt (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo), "comma expected");
+			moo_setsynerrbfmt (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo), ", expected to separate pooldic items");
 			goto oops;
 		}
 
@@ -10039,7 +10055,7 @@ static int __compile_pooldic_definition (moo_t* moo)
 		 * to be followed by a comma. what is better? */
 		if (TOKEN_TYPE(moo) != MOO_IOTOK_IDENT)
 		{
-			moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "identifier expected after comma");
+			moo_setsynerrbfmt (moo, MOO_SYNERR_IDENT, TOKEN_LOC(moo), TOKEN_NAME(moo), "identifier expected after ,");
 			goto oops;
 		}
 	}

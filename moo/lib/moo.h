@@ -34,12 +34,6 @@
 /* TODO: move this macro out to the build files.... */
 #define MOO_INCLUDE_COMPILER
 
-/* define this to allow an pointer(OOP) object to have trailing bytes 
- * this is used to embed bytes codes into the back of a compile method
- * object instead of putting in in a separate byte array. */
-#define MOO_USE_METHOD_TRAILER
-
-
 typedef struct moo_mod_t moo_mod_t;
 
 /* ========================================================================== */
@@ -569,11 +563,8 @@ struct moo_methsig_t
 	moo_oop_t           tmpr_nargs; /* SmallInteger */
 };
 
-#if defined(MOO_USE_METHOD_TRAILER)
-#	define MOO_METHOD_NAMED_INSTVARS 9
-#else
-#	define MOO_METHOD_NAMED_INSTVARS 10
-#endif
+
+#define MOO_METHOD_NAMED_INSTVARS 9
 typedef struct moo_method_t moo_method_t;
 typedef struct moo_method_t* moo_oop_method_t;
 struct moo_method_t
@@ -594,34 +585,24 @@ struct moo_method_t
 	/* number of arguments in temporaries */
 	moo_oop_t       tmpr_nargs; /* SmallInteger */
 
-#if defined(MOO_USE_METHOD_TRAILER)
-	/* no code field is used. it's placed after literal_frame. */
-#else
-	moo_oop_byte_t  code; /* ByteArray */
-#endif
-
 	moo_oop_t       dbgi_file_offset; /* SmallInteger. source file path that contains the definition of this method. offset from moo->dbgi. 0 if unavailable */
 	moo_oop_t       dbgi_method_offset; /* SmallInteger */
 
 	/* == variable indexed part == */
 	moo_oop_t       literal_frame[1]; /* it stores literals */
 
-	/* after the literal frame comes the actual byte code, if MOO_USE_METHOD_TRAILER is defined */
+	/* after the literal frame comes the actual byte code */
 };
 
-#if defined(MOO_USE_METHOD_TRAILER)
-	/* the first byte after the main payload is the trailer size
-	 * the code bytes are placed after the trailer size.
-	 *
-	 * code bytes -> ((moo_oob_t*)&((moo_oop_oop_t)m)->slot[MOO_OBJ_GET_SIZE(m) + 1]) or
-     *               ((moo_oob_t*)&((moo_oop_method_t)m)->literal_frame[MOO_OBJ_GET_SIZE(m) + 1 - MOO_METHOD_NAMED_INSTVARS]) 
-	 * size -> ((moo_oow_t)((moo_oop_oop_t)m)->slot[MOO_OBJ_GET_SIZE(m)])*/
-#	define MOO_METHOD_GET_CODE_BYTE(m) MOO_OBJ_GET_TRAILER_BYTE(m)
-#	define MOO_METHOD_GET_CODE_SIZE(m) MOO_OBJ_GET_TRAILER_SIZE(m) 
-#else
-#	define MOO_METHOD_GET_CODE_BYTE(m) MOO_OBJ_GET_BYTE_SLOT(((m)->code)
-#	define MOO_METHOD_GET_CODE_SIZE(m) MOO_OBJ_GET_SIZE((m)->code)
-#endif
+/* the first byte after the main payload is the trailer size
+ * the code bytes are placed after the trailer size.
+ *
+ * code bytes -> ((moo_oob_t*)&((moo_oop_oop_t)m)->slot[MOO_OBJ_GET_SIZE(m) + 1]) or
+ *               ((moo_oob_t*)&((moo_oop_method_t)m)->literal_frame[MOO_OBJ_GET_SIZE(m) + 1 - MOO_METHOD_NAMED_INSTVARS]) 
+ * size -> ((moo_oow_t)((moo_oop_oop_t)m)->slot[MOO_OBJ_GET_SIZE(m)])*/
+#define MOO_METHOD_GET_CODE_BYTE(m) MOO_OBJ_GET_TRAILER_BYTE(m)
+#define MOO_METHOD_GET_CODE_SIZE(m) MOO_OBJ_GET_TRAILER_SIZE(m) 
+
 
 /* The preamble field is composed of:
  *    4-bit flag
