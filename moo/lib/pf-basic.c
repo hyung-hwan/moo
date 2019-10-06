@@ -162,7 +162,7 @@ moo_pfrc_t moo_pf_equal (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	n = _equal_objects (moo, rcv, arg);
+	n = _equal_objects(moo, rcv, arg);
 	if (n <= -1) return MOO_PF_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, (n? moo->_true: moo->_false));
@@ -177,7 +177,7 @@ moo_pfrc_t moo_pf_not_equal (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
-	n = _equal_objects (moo, rcv, arg);
+	n = _equal_objects(moo, rcv, arg);
 	if (n <= -1) return MOO_PF_FAILURE;
 
 	MOO_STACK_SETRET (moo, nargs, (n? moo->_false: moo->_true));
@@ -213,7 +213,7 @@ moo_pfrc_t moo_pf_basic_new (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	if (nargs >= 1)
 	{
 		szoop = MOO_STACK_GETARG(moo, nargs, 0);
-		if (moo_inttooow (moo, szoop, &size) <= 0)
+		if (moo_inttooow(moo, szoop, &size) <= 0)
 		{
 			/* integer out of range or not integer */
 			moo_seterrbfmt (moo, MOO_EINVAL, "size out of range or not integer - %O", szoop);
@@ -274,7 +274,7 @@ moo_pfrc_t moo_pf_basic_size (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	MOO_ASSERT (moo, nargs == 0);
 
-	rcv = MOO_STACK_GETRCV (moo, nargs);
+	rcv = MOO_STACK_GETRCV(moo, nargs);
 
 	if (!MOO_OOP_IS_POINTER(rcv))
 	{
@@ -288,7 +288,7 @@ moo_pfrc_t moo_pf_basic_size (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		if (!sz) return MOO_PF_FAILURE;
 	}
 
-	MOO_STACK_SETRET(moo, nargs, sz);
+	MOO_STACK_SETRET (moo, nargs, sz);
 	return MOO_PF_SUCCESS;
 }
 
@@ -300,7 +300,7 @@ moo_pfrc_t moo_pf_basic_first_index (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 
 	MOO_ASSERT (moo, nargs == 0);
 
-	rcv = MOO_STACK_GETRCV (moo, nargs);
+	rcv = MOO_STACK_GETRCV(moo, nargs);
 
 	if (!MOO_OOP_IS_POINTER(rcv) || MOO_OBJ_GET_SIZE(rcv) == 0)
 	{
@@ -311,7 +311,7 @@ moo_pfrc_t moo_pf_basic_first_index (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 		sz = MOO_SMOOI_TO_OOP(0);
 	}
 
-	MOO_STACK_SETRET(moo, nargs, sz);
+	MOO_STACK_SETRET (moo, nargs, sz);
 	return MOO_PF_SUCCESS;
 }
 
@@ -323,7 +323,7 @@ moo_pfrc_t moo_pf_basic_last_index (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 	MOO_ASSERT (moo, nargs == 0);
 
-	rcv = MOO_STACK_GETRCV (moo, nargs);
+	rcv = MOO_STACK_GETRCV(moo, nargs);
 
 	if (!MOO_OOP_IS_POINTER(rcv))
 	{
@@ -346,7 +346,7 @@ moo_pfrc_t moo_pf_basic_last_index (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		}
 	}
 
-	MOO_STACK_SETRET(moo, nargs, sz);
+	MOO_STACK_SETRET (moo, nargs, sz);
 	return MOO_PF_SUCCESS;
 }
 

@@ -7602,6 +7602,46 @@ static moo_ooi_t compute_preamble (moo_t* moo, moo_method_data_t* md)
 	return MOO_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index, preamble_flags);
 }
 
+static void add_method_info_to_dbgi (moo_t* moo, moo_method_data_t* md)
+{
+#if 0
+	moo_oow_t file_offset;
+	moo_oow_t method_offset;
+	const moo_ooch_t* file_name;
+
+	MOO_ASSERT (moo, moo->dbgi != MOO_NULL);
+
+	file_name = md->start_loc.file;
+	if (!file_name) file_name = &_nul;
+
+	if (moo_addfiletodbgi(moo, file_name, &file_offset) <= -1) 
+	{
+		/* TODO: warning */
+		file_offset = 0;
+	}
+	else if (file_offset > MOO_SMOOI_MAX) 
+	{
+		/* TODO: warning */
+		file_offset = 0;
+	}
+	mth->dbgi_file_offset = MOO_SMOOI_TO_OOP(file_offset);
+
+/* TODO: preserve source text... */
+	if (moo_addmethodtodbgi(moo, file_offset, cc->dbgi_class_offset, md->name.ptr, md->start_loc.line, md->code.locptr, md->code.len, MOO_NULL, 0, &method_offset) <= -1)
+	{
+		/* TODO: warning. no debug information about this method will be available */
+		method_offset = 0;
+	}
+	else if (method_offset > MOO_SMOOI_MAX)
+	{
+		method_offset = 0;
+	}
+
+	mth->dbgi_method_offset = MOO_SMOOI_TO_OOP(method_offset);
+#endif
+}
+
+
 static int add_compiled_method_to_class (moo_t* moo)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
@@ -7639,7 +7679,8 @@ static int add_compiled_method_to_class (moo_t* moo)
 	mth->tmpr_count = MOO_SMOOI_TO_OOP(cc->mth.tmpr_count);
 	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(cc->mth.tmpr_nargs);
 
-	if (moo->dbgi)
+	if (moo->dbgi) add_method_info_to_dbgi (moo, &cc->mth);
+#if 0
 	{
 		moo_oow_t file_offset;
 		moo_oow_t method_offset;
@@ -7673,6 +7714,7 @@ static int add_compiled_method_to_class (moo_t* moo)
 
 		mth->dbgi_method_offset = MOO_SMOOI_TO_OOP(method_offset);
 	}
+#endif
 
 #if defined(MOO_DEBUG_COMPILER)
 	moo_decode (moo, mth, &cc->fqn);
@@ -7705,9 +7747,112 @@ oops:
 
 static int add_compiled_method_to_interface (moo_t* moo)
 {
-	/* TODO: */
+	moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
+	moo_oop_char_t name; /* selector */
+	moo_oop_method_t mth; /* method signature */
+	moo_ooi_t preamble_flags = 0;
+	moo_oow_t tmp_count = 0;
+
+	MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_INTERFACE);
+
+	name = (moo_oop_char_t)moo_makesymbol(moo, ifce->mth.name.ptr, ifce->mth.name.len);
+	if (!name) goto oops;
+	moo_pushvolat (moo, (moo_oop_t*)&name); tmp_count++;
+
+	/* The variadic data part passed to moo_instantiate() is not GC-safe. 
+	 * let's delay initialization of variadic data a bit. */
+	mth = (moo_oop_method_t)moo_instantiatewithtrailer(moo, moo->_method, ifce->mth.literals.count, ifce->mth.code.ptr, ifce->mth.code.len);
+	if (!mth) goto oops;
+
+	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->owner, (moo_oop_t)ifce->self_oop);
+	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->name, (moo_oop_t)name);
+
+	preamble_flags |= ifce->mth.variadic; /* MOO_METHOD_PREAMBLE_FLAG_VARIADIC or MOO_METHOD_PREAMBLE_FLAG_LIBERAL */
+	if (ifce->mth.lenient) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_LENIENT;
+	if (ifce->mth.type == MOO_METHOD_DUAL) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_DUAL;
+
+	mth->preamble = MOO_SMOOI_TO_OOP(MOO_METHOD_MAKE_PREAMBLE(0,0,preamble_flags));
+	mth->preamble_data[0] = MOO_SMPTR_TO_OOP(0);
+	mth->preamble_data[1] = MOO_SMPTR_TO_OOP(0);
+	mth->tmpr_count = MOO_SMOOI_TO_OOP(ifce->mth.tmpr_count);
+	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(ifce->mth.tmpr_nargs);
+
+	if (ifce->mth.type == MOO_METHOD_DUAL)
+	{
+		if (!moo_putatdic(moo, ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
+		if (!moo_putatdic(moo, ifce->self_oop->mthdic[MOO_METHOD_CLASS], (moo_oop_t)name, (moo_oop_t)mth)) 
+		{
+			/* 'name' is a symbol created of ifce->mth.name. so use it as a key for deletion */
+			moo_deletedic (moo, ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], &ifce->mth.name);
+			goto oops;
+		}
+	}
+	else
+	{
+		MOO_ASSERT (moo, ifce->mth.type < MOO_COUNTOF(ifce->self_oop->mthdic));
+		if (!moo_putatdic(moo, ifce->self_oop->mthdic[ifce->mth.type], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
+	}
+
+	moo_popvolats (moo, tmp_count); tmp_count = 0;
+	return 0;
+
+oops:
+	moo_popvolats (moo, tmp_count);
 	return -1;
 }
+
+static int add_method_signature (moo_t* moo)
+{
+	moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
+	moo_oop_char_t name; /* selector */
+	moo_oop_methsig_t mth; /* method signature */
+	moo_ooi_t preamble_flags = 0;
+	moo_oow_t tmp_count = 0;
+
+	MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_INTERFACE);
+
+	name = (moo_oop_char_t)moo_makesymbol(moo, ifce->mth.name.ptr, ifce->mth.name.len);
+	if (!name) goto oops;
+	moo_pushvolat (moo, (moo_oop_t*)&name); tmp_count++;
+
+	mth = (moo_oop_methsig_t)moo_instantiate(moo, moo->_methsig, MOO_NULL, 0);
+	if (!mth) goto oops;
+	moo_pushvolat (moo, (moo_oop_t*)&mth); tmp_count++;
+
+	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->owner, (moo_oop_t)ifce->self_oop);
+	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->name, (moo_oop_t)name);
+
+	preamble_flags |= ifce->mth.variadic; /* MOO_METHOD_PREAMBLE_FLAG_VARIADIC or MOO_METHOD_PREAMBLE_FLAG_LIBERAL */
+	if (ifce->mth.lenient) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_LENIENT;
+	if (ifce->mth.type == MOO_METHOD_DUAL) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_DUAL;
+
+	mth->preamble = MOO_SMOOI_TO_OOP(MOO_METHOD_MAKE_PREAMBLE(0,0,preamble_flags));
+	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(ifce->mth.tmpr_nargs);
+
+	if (ifce->mth.type == MOO_METHOD_DUAL)
+	{
+		if (!moo_putatdic(moo, ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
+		if (!moo_putatdic(moo, ifce->self_oop->mthdic[MOO_METHOD_CLASS], (moo_oop_t)name, (moo_oop_t)mth)) 
+		{
+			/* 'name' is a symbol created of ifce->mth.name. so use it as a key for deletion */
+			moo_deletedic (moo, ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], &ifce->mth.name);
+			goto oops;
+		}
+	}
+	else
+	{
+		MOO_ASSERT (moo, ifce->mth.type < MOO_COUNTOF(ifce->self_oop->mthdic));
+		if (!moo_putatdic(moo, ifce->self_oop->mthdic[ifce->mth.type], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
+	}
+
+	moo_popvolats (moo, tmp_count); tmp_count = 0;
+	return 0;
+
+oops:
+	moo_popvolats (moo, tmp_count);
+	return -1;
+}
+
 
 static void clear_pooldic_import_data (moo_t* moo, moo_pooldic_import_data_t* pdimp)
 {
@@ -9481,58 +9626,6 @@ static int compile_class_definition (moo_t* moo, int class_type)
 
 	pop_cunit (moo);
 	return n;
-}
-
-static int add_method_signature (moo_t* moo)
-{
-	moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
-	moo_oop_char_t name; /* selector */
-	moo_oop_methsig_t mth; /* method signature */
-	moo_ooi_t preamble_flags = 0;
-	moo_oow_t tmp_count = 0;
-
-	MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_INTERFACE);
-
-	name = (moo_oop_char_t)moo_makesymbol(moo, ifce->mth.name.ptr, ifce->mth.name.len);
-	if (!name) goto oops;
-	moo_pushvolat (moo, (moo_oop_t*)&name); tmp_count++;
-
-	mth = (moo_oop_methsig_t)moo_instantiate(moo, moo->_methsig, MOO_NULL, 0);
-	if (!mth) goto oops;
-	moo_pushvolat (moo, (moo_oop_t*)&mth); tmp_count++;
-
-	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->owner, (moo_oop_t)ifce->self_oop);
-	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->name, (moo_oop_t)name);
-
-	preamble_flags |= ifce->mth.variadic; /* MOO_METHOD_PREAMBLE_FLAG_VARIADIC or MOO_METHOD_PREAMBLE_FLAG_LIBERAL */
-	if (ifce->mth.lenient) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_LENIENT;
-	if (ifce->mth.type == MOO_METHOD_DUAL) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_DUAL;
-
-	mth->preamble = MOO_SMOOI_TO_OOP(MOO_METHOD_MAKE_PREAMBLE(0,0,preamble_flags));
-	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(ifce->mth.tmpr_nargs);
-
-	if (ifce->mth.type == MOO_METHOD_DUAL)
-	{
-		if (!moo_putatdic(moo, ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
-		if (!moo_putatdic(moo, ifce->self_oop->mthdic[MOO_METHOD_CLASS], (moo_oop_t)name, (moo_oop_t)mth)) 
-		{
-			/* 'name' is a symbol created of ifce->mth.name. so use it as a key for deletion */
-			moo_deletedic (moo, ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], &ifce->mth.name);
-			goto oops;
-		}
-	}
-	else
-	{
-		MOO_ASSERT (moo, ifce->mth.type < MOO_COUNTOF(ifce->self_oop->mthdic));
-		if (!moo_putatdic(moo, ifce->self_oop->mthdic[ifce->mth.type], (moo_oop_t)name, (moo_oop_t)mth)) goto oops;
-	}
-
-	moo_popvolats (moo, tmp_count); tmp_count = 0;
-	return 0;
-
-oops:
-	moo_popvolats (moo, tmp_count);
-	return -1;
 }
 
 static int __compile_method_signature (moo_t* moo)
