@@ -7602,11 +7602,8 @@ static moo_ooi_t compute_preamble (moo_t* moo, moo_method_data_t* md)
 	return MOO_METHOD_MAKE_PREAMBLE(preamble_code, preamble_index, preamble_flags);
 }
 
-static void add_method_info_to_dbgi (moo_t* moo, moo_method_data_t* md)
+static void add_method_info_to_dbgi (moo_t* moo, moo_method_data_t* md, moo_oow_t class_offset, moo_oow_t* file_offset, moo_oow_t* method_offset)
 {
-#if 0
-	moo_oow_t file_offset;
-	moo_oow_t method_offset;
 	const moo_ooch_t* file_name;
 
 	MOO_ASSERT (moo, moo->dbgi != MOO_NULL);
@@ -7614,31 +7611,28 @@ static void add_method_info_to_dbgi (moo_t* moo, moo_method_data_t* md)
 	file_name = md->start_loc.file;
 	if (!file_name) file_name = &_nul;
 
-	if (moo_addfiletodbgi(moo, file_name, &file_offset) <= -1) 
+	if (moo_addfiletodbgi(moo, file_name, file_offset) <= -1) 
 	{
 		/* TODO: warning */
-		file_offset = 0;
+		*file_offset = 0;
 	}
-	else if (file_offset > MOO_SMOOI_MAX) 
+	else if (*file_offset > MOO_SMOOI_MAX) 
 	{
 		/* TODO: warning */
-		file_offset = 0;
+		*file_offset = 0;
 	}
-	mth->dbgi_file_offset = MOO_SMOOI_TO_OOP(file_offset);
 
 /* TODO: preserve source text... */
-	if (moo_addmethodtodbgi(moo, file_offset, cc->dbgi_class_offset, md->name.ptr, md->start_loc.line, md->code.locptr, md->code.len, MOO_NULL, 0, &method_offset) <= -1)
+	if (moo_addmethodtodbgi(moo, *file_offset, class_offset, md->name.ptr, md->start_loc.line, md->code.locptr, md->code.len, MOO_NULL, 0, method_offset) <= -1)
 	{
 		/* TODO: warning. no debug information about this method will be available */
-		method_offset = 0;
+		*method_offset = 0;
 	}
-	else if (method_offset > MOO_SMOOI_MAX)
+	else if (*method_offset > MOO_SMOOI_MAX)
 	{
-		method_offset = 0;
+		*method_offset = 0;
 	}
 
-	mth->dbgi_method_offset = MOO_SMOOI_TO_OOP(method_offset);
-#endif
 }
 
 
@@ -7679,42 +7673,14 @@ static int add_compiled_method_to_class (moo_t* moo)
 	mth->tmpr_count = MOO_SMOOI_TO_OOP(cc->mth.tmpr_count);
 	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(cc->mth.tmpr_nargs);
 
-	if (moo->dbgi) add_method_info_to_dbgi (moo, &cc->mth);
-#if 0
+	if (moo->dbgi) 
 	{
 		moo_oow_t file_offset;
 		moo_oow_t method_offset;
-		const moo_ooch_t* file_name;
-
-		file_name = cc->mth.start_loc.file;
-		if (!file_name) file_name = &_nul;
-
-		if (moo_addfiletodbgi(moo, file_name, &file_offset) <= -1) 
-		{
-			/* TODO: warning */
-			file_offset = 0;
-		}
-		else if (file_offset > MOO_SMOOI_MAX) 
-		{
-			/* TODO: warning */
-			file_offset = 0;
-		}
+		add_method_info_to_dbgi (moo, &cc->mth, cc->dbgi_class_offset, &file_offset, &method_offset);
 		mth->dbgi_file_offset = MOO_SMOOI_TO_OOP(file_offset);
-
-/* TODO: preserve source text... */
-		if (moo_addmethodtodbgi(moo, file_offset, cc->dbgi_class_offset, cc->mth.name.ptr, cc->mth.start_loc.line, cc->mth.code.locptr, cc->mth.code.len, MOO_NULL, 0, &method_offset) <= -1)
-		{
-			/* TODO: warning. no debug information about this method will be available */
-			method_offset = 0;
-		}
-		else if (method_offset > MOO_SMOOI_MAX)
-		{
-			method_offset = 0;
-		}
-
 		mth->dbgi_method_offset = MOO_SMOOI_TO_OOP(method_offset);
 	}
-#endif
 
 #if defined(MOO_DEBUG_COMPILER)
 	moo_decode (moo, mth, &cc->fqn);
@@ -7776,6 +7742,19 @@ static int add_compiled_method_to_interface (moo_t* moo)
 	mth->preamble_data[1] = MOO_SMPTR_TO_OOP(0);
 	mth->tmpr_count = MOO_SMOOI_TO_OOP(ifce->mth.tmpr_count);
 	mth->tmpr_nargs = MOO_SMOOI_TO_OOP(ifce->mth.tmpr_nargs);
+
+	if (moo->dbgi) 
+	{
+		moo_oow_t file_offset;
+		moo_oow_t method_offset;
+		add_method_info_to_dbgi (moo, &ifce->mth, ifce->dbgi_interface_offset, &file_offset, &method_offset);
+		mth->dbgi_file_offset = MOO_SMOOI_TO_OOP(file_offset);
+		mth->dbgi_method_offset = MOO_SMOOI_TO_OOP(method_offset);
+	}
+
+#if defined(MOO_DEBUG_COMPILER)
+	moo_decode (moo, mth, &ifce->fqn);
+#endif
 
 	if (ifce->mth.type == MOO_METHOD_DUAL)
 	{
@@ -7852,7 +7831,6 @@ oops:
 	moo_popvolats (moo, tmp_count);
 	return -1;
 }
-
 
 static void clear_pooldic_import_data (moo_t* moo, moo_pooldic_import_data_t* pdimp)
 {
@@ -9100,10 +9078,22 @@ static int ciim_on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_associati
 	name.ptr = MOO_OBJ_GET_CHAR_SLOT(ass->key);
 	name.len = MOO_OBJ_GET_SIZE(ass->key);
 
-	/* [IMPORT] the method lookup logic should be the same as moo_findmethod() in exec.c */
+	/* [IMPORTANT] the method lookup logic should be the same as moo_findmethod() in exec.c */
 	mth = moo_findmethodinclasschain(moo, ciim->_class, ciim->mth_type, &name);
 	if (!mth)
 	{
+		/* TODO: take methods from interface..*/
+		if (MOO_CLASSOF(moo, ass->value) == moo->_method)
+		{
+			mth = (moo_oop_method_t)ass->value;
+			if (!moo_putatdic(moo, ciim->_class->mthdic[ciim->mth_type], (moo_oop_t)mth->name, (moo_oop_t)mth))
+			{
+/* TODO: error handling. GC safety, etc */
+ 			}
+
+			return 0;
+		}
+
 		moo_setsynerrbfmt (moo, MOO_SYNERR_CLASSNCIFCE, MOO_NULL, MOO_NULL, 
 			"%.*js not implementing %.*js>>%.*js",
 			MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
@@ -9111,6 +9101,13 @@ static int ciim_on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_associati
 			name.len, name.ptr
 		);
 		return -1;
+	}
+	else
+	{
+		/* TODO: 
+		 * if the method is found in the class chain, also check if the method found
+		 * has been taken from the interface. if so, multiple interfaces are defining
+		 * the method. it's an error */
 	}
 
 	sig = (moo_oop_methsig_t)ass->value;

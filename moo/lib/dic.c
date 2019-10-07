@@ -345,21 +345,26 @@ int moo_walkdic (moo_t* moo, moo_oop_dic_t dic, moo_dic_walker_t walker, void* c
 	moo_oow_t index, count;
 	moo_oop_association_t ass;
 
+	moo_pushvolat (moo, &dic); /* in case the walker function triggers GC */
 	count = MOO_OBJ_GET_SIZE(dic->bucket);
 	for (index = 0; index < count; index++)
 	{
 		ass = (moo_oop_association_t)MOO_OBJ_GET_OOP_VAL(dic->bucket, index);
 		if ((moo_oop_t)ass != moo->_nil)
 		{
-
 			MOO_ASSERT (moo, MOO_CLASSOF(moo,ass) == moo->_association);
 			/*MOO_ASSERT (moo, MOO_CLASSOF(moo,ass->key) == moo->_symbol);*/
 			MOO_ASSERT (moo, MOO_OBJ_IS_CHAR_POINTER(ass->key));
 
-			if (walker(moo, dic, ass, ctx) <= -1) return -1;
+			if (walker(moo, dic, ass, ctx) <= -1)
+			{
+				moo_popvolat (moo);
+				return -1;
+			}
 		}
 	}
 
+	moo_popvolat (moo);
 	return 0;
 }
 
