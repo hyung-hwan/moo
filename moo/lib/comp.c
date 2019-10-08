@@ -2492,28 +2492,6 @@ static int end_include (moo_t* moo)
 
 static MOO_INLINE int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index)
 {
-#if 0
-	moo_method_data_t* md = get_cunit_method_data(moo);
-	moo_oow_t i;
-
-	for (i = 0; i < md->literals.count; i++) 
-	{
-		/* 
-		 * this removes redundancy of symbols, characters, and small integers. 
-		 * more complex redundacy check may be done somewhere else like 
-		 * in add_string_literal().
-		 */
-		if (md->literals.ptr[i] == lit) 
-		{
-			*index = i;
-			return 0;
-		}
-	}
-
-	if (add_oop_to_oopbuf(moo, &md->literals, lit) <= -1) return -1;
-	*index = md->literals.count - 1;
-	return 0;
-#else
 	/* 
 	 * this removes redundancy of symbols, characters, and small integers. 
 	 * more complex redundacy check may be done somewhere else like 
@@ -2521,7 +2499,6 @@ static MOO_INLINE int add_literal (moo_t* moo, moo_oop_t lit, moo_oow_t* index)
 	 */
 	moo_method_data_t* md = get_cunit_method_data(moo);
 	return add_oop_to_oopbuf_nodup(moo, &md->literals, lit, index);
-#endif
 }
 
 static int add_string_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t* index)
@@ -2557,7 +2534,7 @@ static int add_symbol_literal (moo_t* moo, const moo_oocs_t* str, moo_oow_t offs
 	tmp = moo_makesymbol(moo, str->ptr + offset, str->len - offset);
 	if (!tmp) return -1;
 	MOO_OBJ_SET_FLAGS_RDONLY (tmp, 1);
-	
+
 	return add_literal(moo, tmp, index);
 }
 
@@ -4892,7 +4869,7 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 
 			if (ifce->self_oop)
 			{
-				/* the current class being compiled has been instantiated.
+				/* the current interface being compiled has been instantiated.
 				 * look up in the temporary variable list if compiling in a method */
 				if (ifce->mth.active && find_temporary_variable(moo, name, &index) >= 0)
 				{
@@ -7635,7 +7612,6 @@ static void add_method_info_to_dbgi (moo_t* moo, moo_method_data_t* md, moo_oow_
 
 }
 
-
 static int add_compiled_method_to_class (moo_t* moo)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
@@ -7658,7 +7634,7 @@ static int add_compiled_method_to_class (moo_t* moo)
 
 	for (i = 0; i < cc->mth.literals.count; i++)
 	{
-		/* let's do the variadic data initialization here */
+		/* let's do the variadic data initialization here - fill the literal frame */
 		MOO_STORE_OOP (moo, &mth->literal_frame[i], cc->mth.literals.ptr[i]);
 	}
 	moo_pushvolat (moo, (moo_oop_t*)&mth); tmp_count++;
@@ -7715,9 +7691,10 @@ static int add_compiled_method_to_interface (moo_t* moo)
 {
 	moo_cunit_interface_t* ifce = (moo_cunit_interface_t*)moo->c->cunit;
 	moo_oop_char_t name; /* selector */
-	moo_oop_method_t mth; /* method signature */
+	moo_oop_method_t mth; /* method signature with body */
 	moo_ooi_t preamble_flags = 0;
 	moo_oow_t tmp_count = 0;
+	moo_oow_t i;
 
 	MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_INTERFACE);
 
@@ -7729,6 +7706,13 @@ static int add_compiled_method_to_interface (moo_t* moo)
 	 * let's delay initialization of variadic data a bit. */
 	mth = (moo_oop_method_t)moo_instantiatewithtrailer(moo, moo->_method, ifce->mth.literals.count, ifce->mth.code.ptr, ifce->mth.code.len);
 	if (!mth) goto oops;
+	
+	for (i = 0; i < ifce->mth.literals.count; i++)
+	{
+		/* let's do the variadic data initialization here - fill the literal frame */
+		MOO_STORE_OOP (moo, &mth->literal_frame[i], ifce->mth.literals.ptr[i]);
+	}
+	moo_pushvolat (moo, (moo_oop_t*)&mth); tmp_count++;
 
 	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->owner, (moo_oop_t)ifce->self_oop);
 	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->name, (moo_oop_t)name);
@@ -8228,18 +8212,19 @@ static int __compile_method_definition (moo_t* moo)
 
 static int compile_method_definition (moo_t* moo)
 {
-	moo_method_data_t* md = get_cunit_method_data(moo);
+	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
 	int n;
 
+	MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_CLASS);
 	MOO_ASSERT (moo, moo->c->balit.count == 0);
 	MOO_ASSERT (moo, moo->c->arlit.count == 0);
 
 	/* clear data required to compile a method */
-	md->active = 1;
-	reset_method_data (moo, md);
-	md->start_loc = *TOKEN_LOC(moo);
+	cc->mth.active = 1;
+	reset_method_data (moo, &cc->mth);
+	cc->mth.start_loc = *TOKEN_LOC(moo);
 	n = __compile_method_definition(moo);
-	md->active = 0;
+	cc->mth.active = 0;
 
 	return n;
 }
@@ -10462,6 +10447,7 @@ static void gc_cunit_chain (moo_t* moo)
 					ifce->ns_oop = (moo_oop_nsdic_t)x;
 				}
 
+				gc_oopbuf (moo, &ifce->mth.literals);
 				break;
 			}
 
