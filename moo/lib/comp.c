@@ -5685,6 +5685,18 @@ static int compile_expression_primary (moo_t* moo, const moo_oocs_t* ident, cons
 				break;
 
 			case MOO_IOTOK_SUPER:
+				if (moo->c->cunit->cunit_type == MOO_CUNIT_INTERFACE)
+				{
+					/* i don't allow super in an interface method 
+					 * message sending to super requires the owning class
+					 * of an active method. a method taken by a class from
+					 * an interface points to the interface in the owner field.
+					 * for now, it's best not to allow it.
+					 * see moo_findmethod() in exec.c */
+					moo_setsynerrbfmt (moo, MOO_SYNERR_SUPERINACC, TOKEN_LOC(moo), TOKEN_NAME(moo), "super inaccessible in interface method");
+					return -1;
+				}
+
 				if (emit_byte_instruction(moo, BCODE_PUSH_RECEIVER, TOKEN_LOC(moo)) <= -1) return -1;
 				GET_TOKEN (moo);
 				*to_super = 1;
@@ -9058,7 +9070,6 @@ static int ciim_on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_associati
 	ciim_t* ciim = (ciim_t*)ctx;
 	moo_oocs_t name;
 	moo_oop_method_t mth;
-	moo_oop_methsig_t sig;
 
 	name.ptr = MOO_OBJ_GET_CHAR_SLOT(ass->key);
 	name.len = MOO_OBJ_GET_SIZE(ass->key);
@@ -9095,31 +9106,59 @@ static int ciim_on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_associati
 		 * the method. it's an error */
 	}
 
-	sig = (moo_oop_methsig_t)ass->value;
-	if (MOO_METHOD_GET_PREAMBLE_FLAGS(MOO_OOP_TO_SMOOI(mth->preamble)) != MOO_METHOD_GET_PREAMBLE_FLAGS(MOO_OOP_TO_SMOOI(sig->preamble)))
+	if (MOO_CLASSOF(moo, ass->value) == moo->_methsig)
 	{
-		moo_setsynerrbfmt (moo, MOO_SYNERR_CLASSNCIFCE, MOO_NULL, MOO_NULL, 
-			"%.*js>>%.*js modifiers conficting with %.*js>>%.*js",
-			MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
-			name.len, name.ptr,
-			MOO_OBJ_GET_SIZE(ciim->ifce->name), MOO_OBJ_GET_CHAR_SLOT(ciim->ifce->name),
-			name.len, name.ptr
-		);
-		return -1;
+		/* it's a method signature without body */
+
+		moo_oop_methsig_t sig;
+
+		sig = (moo_oop_methsig_t)ass->value;
+		if (MOO_METHOD_GET_PREAMBLE_FLAGS(MOO_OOP_TO_SMOOI(mth->preamble)) != MOO_METHOD_GET_PREAMBLE_FLAGS(MOO_OOP_TO_SMOOI(sig->preamble)))
+		{
+		modifier_conflict:
+			moo_setsynerrbfmt (moo, MOO_SYNERR_CLASSNCIFCE, MOO_NULL, MOO_NULL, 
+				"%.*js>>%.*js modifiers conficting with %.*js>>%.*js",
+				MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
+				name.len, name.ptr,
+				MOO_OBJ_GET_SIZE(ciim->ifce->name), MOO_OBJ_GET_CHAR_SLOT(ciim->ifce->name),
+				name.len, name.ptr
+			);
+			return -1;
+		}
+
+		if (mth->tmpr_nargs != sig->tmpr_nargs) /* don't need MOO_OOP_TO_SMOOI */
+		{
+		param_conflict:
+			moo_setsynerrbfmt (moo, MOO_SYNERR_CLASSNCIFCE, MOO_NULL, MOO_NULL, 
+				"%.*js>>%.*js parameters conflicting with %.*js>>%.*js",
+				MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
+				name.len, name.ptr,
+				MOO_OBJ_GET_SIZE(ciim->ifce->name), MOO_OBJ_GET_CHAR_SLOT(ciim->ifce->name),
+				name.len, name.ptr
+			);
+			return -1;
+		}
 	}
-	
-	if (mth->tmpr_nargs != sig->tmpr_nargs) /* don't need MOO_OOP_TO_SMOOI */
+	else
 	{
-		moo_setsynerrbfmt (moo, MOO_SYNERR_CLASSNCIFCE, MOO_NULL, MOO_NULL, 
-			"%.*js>>%.*js parameters conflicting with %.*js>>%.*js",
-			MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
-			name.len, name.ptr,
-			MOO_OBJ_GET_SIZE(ciim->ifce->name), MOO_OBJ_GET_CHAR_SLOT(ciim->ifce->name),
-			name.len, name.ptr
-		);
-		return -1;
+		/* it is a full interface method */
+
+		moo_oop_method_t sig;
+
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, ass->value) == moo->_method);
+
+		sig = (moo_oop_method_t)ass->value;
+		if (MOO_METHOD_GET_PREAMBLE_FLAGS(MOO_OOP_TO_SMOOI(mth->preamble)) != MOO_METHOD_GET_PREAMBLE_FLAGS(MOO_OOP_TO_SMOOI(sig->preamble)))
+		{
+			goto modifier_conflict;
+		}
+
+		if (mth->tmpr_nargs != sig->tmpr_nargs) /* don't need MOO_OOP_TO_SMOOI */
+		{
+			goto param_conflict;
+		}
 	}
-	
+
 	return 0;
 }
 

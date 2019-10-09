@@ -1382,13 +1382,12 @@ class SymbolTable(AssociativeCollection)
 class Dictionary(AssociativeCollection)
 {
 	/* [NOTE] 
-	 *  VM require Dictionary to implement new: and __put_assoc
+	 *  VM requires Dictionary to implement new: and __put_assoc
 	 *  for the dictionary expression notation - ##{ }
 	 */
 	
 	// TODO: implement Dictionary as a Hashed List/Table or Red-Black Tree
-	//       Do not inherit Set upon reimplementation
-	//
+
 	method(#class) new: capacity
 	{
 		^super new: (capacity + 10).

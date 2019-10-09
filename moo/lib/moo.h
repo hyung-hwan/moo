@@ -1892,7 +1892,7 @@ enum moo_synerrnum_t
 	MOO_SYNERR_VARINACC,        /* inaccessible variable - e.g. accessing an instance variable from a class method is not allowed. */
 	MOO_SYNERR_VARAMBIG,        /* ambiguious variable - e.g. the variable is found in multiple pool dictionaries imported */
 	MOO_SYNERR_VARFLOOD,        /* too many instance/class variables */
-	MOO_SYNERR_SELFINACC,       /* inaccessible self */
+	MOO_SYNERR_SUPERINACC,      /* inaccessible super */
 	MOO_SYNERR_PRIMARYINVAL,    /* wrong expression primary */
 	MOO_SYNERR_TMPRFLOOD,       /* too many temporaries */
 	MOO_SYNERR_ARGFLOOD,        /* too many arguments */

@@ -1829,7 +1829,7 @@ moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t 
 
 	message.ptr = MOO_OBJ_GET_CHAR_SLOT(selector);
 	message.len = MOO_OBJ_GET_SIZE(selector);
-	
+
 	_class = MOO_CLASSOF(moo, receiver);
 	if (_class == moo->_class)
 	{
@@ -1849,6 +1849,12 @@ moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t 
 	{
 		MOO_ASSERT (moo, moo->active_method);
 		MOO_ASSERT (moo, moo->active_method->owner);
+
+		/* if 'super' is allowed in the interface method, the owner field
+		 * can be an interface. super must not be allowed  in the interface
+		 * method body. */
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, moo->active_method->owner) == moo->_class);
+
 		c = (moo_oop_class_t)((moo_oop_class_t)moo->active_method->owner)->superclass;
 		if ((moo_oop_t)c == moo->_nil) goto not_found;
 		/* c is nil if it reached the top of the hierarchy.
@@ -1863,7 +1869,7 @@ moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t 
 	mcidx = ((moo_oow_t)_class ^ (moo_oow_t)selector) & (MOO_METHOD_CACHE_SIZE - 1);
 	mcitm = &moo->method_cache[mth_type][mcidx];
 	
-	if (mcitm->receiver_class == c  && mcitm->selector == selector /*&& mcitm->method_type == mth_type*/)
+	if (mcitm->receiver_class == c && mcitm->selector == selector /*&& mcitm->method_type == mth_type*/)
 	{
 		/* cache hit */
 	#if defined(MOO_PROFILE_VM)
@@ -1871,7 +1877,7 @@ moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t 
 	#endif
 		return mcitm->method;
 	}
-	
+
 	/* [IMPORT] the method lookup logic should be the same as ciim_on_each_method() in comp.c */
 	mth = find_method_in_class_chain(moo, c, mth_type, &message);
 	if (mth) 

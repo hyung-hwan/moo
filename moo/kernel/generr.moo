@@ -103,7 +103,7 @@ class MyObject(Object)
 			'inaccessible variable'
 			'ambiguous variable'
 			'too many instance/class variables'
-			'inaccessible self'
+			'inaccessible super'
 			'wrong expression primary'
 			'too many temporaries'
 			'too many arguments'

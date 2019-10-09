@@ -88,7 +88,9 @@ class System(Apex)
 			ret := class perform: method_name.
 		] 
 		ensure: [
-			self _setSig: 16rFF.
+			// signal end of the main process.
+			// __os_sig_handler will terminate all running subprocesses.
+			self _setSig: 16rFF. 
 		].
 
 		^ret.
@@ -198,7 +200,7 @@ class System(Apex)
 			/*
 			 0 -> startup  <--- this should also be stored in the 'caller' variable.
 			 1 -> __gc_finalizer
-			 2 -> __os_signal_handler 
+			 2 -> __os_sig_handler 
 			 3 ..  -> other processes started by application.
 			*/
 			proc := System _findProcessByIdGreaterThan: 2.
