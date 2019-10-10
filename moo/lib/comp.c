@@ -613,13 +613,13 @@ static int add_oop_to_oopbuf_nodup (moo_t* moo, moo_oopbuf_t* oopbuf, moo_oop_t 
 		if (oopbuf->ptr[i] == item) 
 		{
 			*index = i;
-			return 0;
+			return 0; /* the same item exists */
 		}
 	}
 
 	if (add_oop_to_oopbuf(moo, oopbuf, item) <= -1) return -1;
 	*index = oopbuf->count - 1;
-	return 0;
+	return 1; /* added a new item */
 }
 
 #define CHAR_TO_NUM(c,base) \
@@ -9059,6 +9059,7 @@ static int process_class_interfaces (moo_t* moo)
 
 struct ciim_t
 {
+	moo_cunit_class_t* cc;
 	moo_oop_interface_t ifce;
 	moo_oop_class_t _class;
 	int mth_type;
@@ -9082,13 +9083,29 @@ static int ciim_on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_associati
 		if (MOO_CLASSOF(moo, ass->value) == moo->_method)
 		{
 			mth = (moo_oop_method_t)ass->value;
+#if 0
 			if (!moo_putatdic(moo, ciim->_class->mthdic[ciim->mth_type], (moo_oop_t)mth->name, (moo_oop_t)mth))
 			{
 /* TODO: error handling. GC safety, etc */
  			}
-
+#else
+			if (add_oop_to_oopbuf(moo, &ciim->cc->ifce_mths[ciim->mth_type], (moo_oop_t)mth) <= -1)
+			{
+				const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
+				moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to take interface method %.*js>>%.*js to %.*js - %js", 
+					MOO_OBJ_GET_SIZE(ciim->ifce->name), MOO_OBJ_GET_CHAR_SLOT(ciim->ifce->name),
+					name.len, name.ptr,
+					MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
+					oldmsg
+				);
+				return -1;
+			}
+#endif
+		
 			return 0;
 		}
+
+		MOO_ASSERT (moo, MOO_CLASSOF(moo, ass->value) == moo->_methsig);
 
 		moo_setsynerrbfmt (moo, MOO_SYNERR_CLASSNCIFCE, MOO_NULL, MOO_NULL, 
 			"%.*js not implementing %.*js>>%.*js",
@@ -9169,11 +9186,13 @@ static int class_implements_interface (moo_t* moo, moo_oop_class_t _class, moo_o
 	ciim.ifce = ifce;
 	ciim._class = _class;
 	ciim.mth_type = MOO_METHOD_INSTANCE;
+	ciim.cc = (moo_cunit_class_t*)moo->c->cunit;
 	if (moo_walkdic(moo, ifce->mthdic[MOO_METHOD_INSTANCE], ciim_on_each_method, &ciim) <= -1) return 0;
 
 	ciim.ifce = ifce;
 	ciim._class = _class;
 	ciim.mth_type = MOO_METHOD_CLASS;
+	ciim.cc = (moo_cunit_class_t*)moo->c->cunit;
 	if (moo_walkdic(moo, ifce->mthdic[MOO_METHOD_CLASS], ciim_on_each_method, &ciim) <= -1) return 0;
 
 	return 1;
@@ -10467,6 +10486,8 @@ static void gc_cunit_chain (moo_t* moo)
 				}
 
 				gc_oopbuf (moo, &cc->ifces);
+				gc_oopbuf (moo, &cc->ifce_mths[0]);
+				gc_oopbuf (moo, &cc->ifce_mths[1]);
 				gc_oopbuf (moo, &cc->pdimp.dics);
 				gc_oopbuf (moo, &cc->mth.literals);
 				break;
@@ -10584,22 +10605,24 @@ static void pop_cunit (moo_t* moo)
 		case MOO_CUNIT_CLASS:
 		{
 			moo_oow_t i;
-			moo_cunit_class_t* c;
-			c = (moo_cunit_class_t*)cunit;
+			moo_cunit_class_t* cc;
+			cc = (moo_cunit_class_t*)cunit;
 
-			if (c->fqn.ptr) moo_freemem (moo, c->fqn.ptr); /* strbuf */
-			if (c->superfqn.ptr) moo_freemem (moo, c->superfqn.ptr); /* strbuf */
-			if (c->modname.ptr) moo_freemem (moo, c->modname.ptr); /* strbuf */
-			if (c->ifces.ptr) moo_freemem (moo, c->ifces.ptr); /* oopbuf */
+			if (cc->fqn.ptr) moo_freemem (moo, cc->fqn.ptr); /* strbuf */
+			if (cc->superfqn.ptr) moo_freemem (moo, cc->superfqn.ptr); /* strbuf */
+			if (cc->modname.ptr) moo_freemem (moo, cc->modname.ptr); /* strbuf */
+			if (cc->ifces.ptr) moo_freemem (moo, cc->ifces.ptr); /* oopbuf */
+			if (cc->ifce_mths[0].ptr) moo_freemem (moo, cc->ifce_mths[0].ptr); /* oopbuf */
+			if (cc->ifce_mths[1].ptr) moo_freemem (moo, cc->ifce_mths[1].ptr); /* oopbuf */
 
-			for (i = 0; i < MOO_COUNTOF(c->var); i++)
+			for (i = 0; i < MOO_COUNTOF(cc->var); i++)
 			{
-				if (c->var[i].str.ptr) moo_freemem (moo, c->var[i].str.ptr);
-				if (c->var[i].initv) moo_freemem (moo, c->var[i].initv);
+				if (cc->var[i].str.ptr) moo_freemem (moo, cc->var[i].str.ptr);
+				if (cc->var[i].initv) moo_freemem (moo, cc->var[i].initv);
 			}
 
-			clear_pooldic_import_data (moo, &c->pdimp);
-			clear_method_data (moo, &c->mth);
+			clear_pooldic_import_data (moo, &cc->pdimp);
+			clear_method_data (moo, &cc->mth);
 
 			break;
 		}

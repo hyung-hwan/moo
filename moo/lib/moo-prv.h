@@ -598,7 +598,8 @@ struct moo_cunit_class_t
 	moo_oow_t modname_capa;
 	moo_ioloc_t modname_loc;
 
-	moo_oopbuf_t ifces;
+	moo_oopbuf_t ifces; /* interfaces that this class implement */
+	moo_oopbuf_t ifce_mths[2]; /* interface methods that this class needs to take */
 	int in_class_body; /* set to non-zero after '{' has been encountered */
 
 	/* instance variable, class variable, class instance variable, constant
