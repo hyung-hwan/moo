@@ -2228,11 +2228,13 @@ kqueue_syserr:
 #endif
 }
 
-static int open_pipe (moo_t* moo, int p[2])
+static int open_pipes (moo_t* moo, int p[2])
 {
 	int flags;
 
-#if defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
+#if defined(_WIN32)
+	if (_pipe(p, 256, _O_BINARY) == -1)
+#elif defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
 	if (pipe2(p, O_CLOEXEC | O_NONBLOCK) == -1)
 #else
 	if (pipe(p) == -1)
@@ -2260,6 +2262,18 @@ static int open_pipe (moo_t* moo, int p[2])
 #endif
 
 	return 0;
+}
+static int close_pipes (moo_t* moo, int p[2])
+{
+#if defined(_WIN32)
+	_close (p[0]);
+	_close (p[1]);
+#else
+	close (p[0]);
+	close (p[1]);
+#endif
+	p[0] = -1;
+	p[1] = -1;
 }
 
 static int vm_startup (moo_t* moo)
@@ -2335,11 +2349,11 @@ static int vm_startup (moo_t* moo)
 	MUTEX_INIT (&xtn->ev.reg.smtx);
 #endif /* USE_DEVPOLL */
 
-	if (open_pipe(moo, xtn->sigfd.p) <= -1) goto oops;
+	if (open_pipes(moo, xtn->sigfd.p) <= -1) goto oops;
 	sigfd_pcount = 2;
 
 #if defined(USE_THREAD)
-	if (open_pipe(moo, xtn->iothr.p) <= -1) goto oops;
+	if (open_pipes(moo, xtn->iothr.p) <= -1) goto oops;
 	iothr_pcount = 2;
 
 	if (_add_poll_fd(moo, xtn->iothr.p[0], XPOLLIN) <= -1) goto oops;
@@ -2412,12 +2426,10 @@ static void vm_cleanup (moo_t* moo)
 	pthread_mutex_destroy (&xtn->ev.mtx);
 
 	_del_poll_fd (moo, xtn->iothr.p[0]);
-	close (xtn->iothr.p[1]);
-	close (xtn->iothr.p[0]);
+	close_pipes (moo, xtn->iothr.p);
 #endif /* USE_THREAD */
 
-	close (xtn->sigfd.p[1]);
-	close (xtn->sigfd.p[0]);
+	close_pipes (moo, xtn->sigfd.p);
 
 #if defined(USE_DEVPOLL) 
 	if (xtn->ep >= 0)
