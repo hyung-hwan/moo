@@ -2263,7 +2263,7 @@ static int open_pipes (moo_t* moo, int p[2])
 
 	return 0;
 }
-static int close_pipes (moo_t* moo, int p[2])
+static void close_pipes (moo_t* moo, int p[2])
 {
 #if defined(_WIN32)
 	_close (p[0]);
