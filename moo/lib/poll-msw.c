@@ -135,7 +135,7 @@ static int windows_compute_revents (HANDLE h, int *p_sought)
 			}
 
 			happened = 0;
-			if (PeekNamedPipe (h, NULL, 0, NULL, &avail, NULL) != 0)
+			if (PeekNamedPipe(h, NULL, 0, NULL, &avail, NULL) != 0)
 			{
 				if (avail)
 					happened |= *p_sought & (POLLIN | POLLRDNORM);

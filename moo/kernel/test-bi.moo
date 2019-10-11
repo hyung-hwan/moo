@@ -40,11 +40,13 @@ class MyObject(Object)
 		| ffi now |
 
 
-		[ ffi := FFI new: "libc.so.6". ] on: Exception do: [:ex | ffi := FFI new: "libc.so" ].
+		[ ffi := FFI new: "libc.so.6". ] on: Exception do: [:ex | 
+			[ ffi := FFI new: "libc.so" ] on: Exception do: [ :ex2 | ffi := FFI new: "msvcrt.dll" ]
+		].
 
 		now := ffi call: #time signature: "l>i" arguments: #(0).
-		////ffi call: #srand signature: "i>" arguments: ##(now).
-		ffi call: #srandom signature: "i>" arguments: ##(now).
+		ffi call: #srand signature: "i>" arguments: ##(now).
+		///ffi call: #srandom signature: "i>" arguments: ##(now).
 
 		[
 			| i q r divd divr divd_ubound divr_ubound x |
@@ -55,25 +57,25 @@ class MyObject(Object)
 
 			while (true)
 			{
-				//x := (ffi call: #rand signature: ">i" arguments: nil) rem: 20.
-				//divd := (ffi call: #rand signature: ">i" arguments: nil).
-				x := (ffi call: #random signature: ">l" arguments: nil) rem: 20.
-				divd := (ffi call: #random signature: ">l" arguments: nil).
+				x := (ffi call: #rand signature: ">i" arguments: nil) rem: 20.
+				divd := (ffi call: #rand signature: ">i" arguments: nil).
+				///x := (ffi call: #random signature: ">l" arguments: nil) rem: 20.
+				///divd := (ffi call: #random signature: ">l" arguments: nil).
 				while (x > 0)
 				{
-					//divd := (divd bitShift: 7) bitOr: (ffi call: #rand signature: ">i" arguments: nil).
-					divd := (divd bitShift: 7) bitOr: (ffi call: #random signature: ">l" arguments: nil).
+					divd := (divd bitShift: 7) bitOr: (ffi call: #rand signature: ">i" arguments: nil).
+					///divd := (divd bitShift: 7) bitOr: (ffi call: #random signature: ">l" arguments: nil).
 					x := x - 1.
 				}.
 
-				//x := (ffi call: #rand signature: ">i" arguments: nil) rem: 20.
-				//divr := (ffi call: #rand signature: ">i" arguments: nil).
-				x := (ffi call: #random signature: ">l" arguments: nil) rem: 20.
-				divr := (ffi call: #random signature: ">l" arguments: nil).
+				x := (ffi call: #rand signature: ">i" arguments: nil) rem: 20.
+				divr := (ffi call: #rand signature: ">i" arguments: nil).
+				///x := (ffi call: #random signature: ">l" arguments: nil) rem: 20.
+				///divr := (ffi call: #random signature: ">l" arguments: nil).
 				while (x > 0)
 				{
-					//divr := (divr bitShift: 7) bitOr: (ffi call: #rand signature: ">i" arguments: nil).
-					divr := (divr bitShift: 7) bitOr: (ffi call: #random signature: ">l" arguments: nil).
+					divr := (divr bitShift: 7) bitOr: (ffi call: #rand signature: ">i" arguments: nil).
+					//divr := (divr bitShift: 7) bitOr: (ffi call: #random signature: ">l" arguments: nil).
 					x := x - 1.
 				}.
 				if (divr = 0) { divr := 1 }.

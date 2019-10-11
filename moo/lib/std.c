@@ -49,6 +49,7 @@
 #	include <time.h>
 #	include <io.h>
 #	include <fcntl.h>
+#	include <signal.h>
 #	include <errno.h>
 #	if defined(MOO_HAVE_CFG_H) && defined(MOO_ENABLE_LIBLTDL)
 #		include <ltdl.h>
@@ -2233,7 +2234,7 @@ static int open_pipes (moo_t* moo, int p[2])
 	int flags;
 
 #if defined(_WIN32)
-	if (_pipe(p, 256, _O_BINARY) == -1)
+	if (_pipe(p, 256, _O_BINARY | _O_NOINHERIT) == -1)
 #elif defined(HAVE_PIPE2) && defined(O_CLOEXEC) && defined(O_NONBLOCK)
 	if (pipe2(p, O_CLOEXEC | O_NONBLOCK) == -1)
 #else
@@ -3143,12 +3144,23 @@ static moo_ooi_t vm_getsigfd (moo_t* moo)
 static int vm_getsig (moo_t* moo, moo_uint8_t* u8)
 {
 	xtn_t* xtn = GET_XTN(moo);
+#if defined(_WIN32)
+	/* TODO: can i make the pipe non-block in win32? */
+	DWORD navail;
+	if (PeekNamedPipe(_get_osfhandle(xtn->sigfd.p[0]), MOO_NULL, 0, MOO_NULL, &navail, MOO_NULL) == 0)
+	{
+		moo_seterrwithsyserr (moo, 1, GetLastError());
+		return -1;
+	}
+	if (navail <= 0) return 0;
+#endif
 	if (read(xtn->sigfd.p[0], u8, MOO_SIZEOF(*u8)) == -1) 
 	{
 		if (errno == EINTR || errno == EWOULDBLOCK || errno == EAGAIN) return 0;
 		moo_seterrwithsyserr (moo, 0, errno);
 		return -1;
 	}
+
 	return 1;
 }
 
@@ -4173,7 +4185,7 @@ static BOOL WINAPI handle_term (DWORD ctrl_type)
 {
 	if (ctrl_type == CTRL_C_EVENT || ctrl_type == CTRL_CLOSE_EVENT)
 	{
-		abort_all_moos (0);
+		abort_all_moos (SIGINT);
 		return TRUE;
 	}
 
@@ -4206,7 +4218,7 @@ static ULONG APIENTRY handle_term (
 		    p1->ExceptionInfo[0] == XCPT_SIGNAL_KILLPROC ||
 		    p1->ExceptionInfo[0] == XCPT_SIGNAL_BREAK)
 		{
-			abort_all_moos (0);
+			abort_all_moos (SIGINT);
 			return (DosAcknowledgeSignalException(p1->ExceptionInfo[0]) != NO_ERROR)? 1: XCPT_CONTINUE_EXECUTION;
 		}
 	}
@@ -4246,7 +4258,7 @@ static void __interrupt dos_int23_handler (void)
 	/* prevent the DOS interrupt handler from being called */
 	_XSTACK* stk = (_XSTACK*)_get_stk_frame();
 	stk->opts |= _STK_NOINT;
-	abort_all_moos (0);
+	abort_all_moos (SIGINT);
 	/* if i call the previous handler, it's likely to kill the application.
 	 * so i don't chain-call the previous handler. but another call could
 	 * have changed the handler already to something else. then it would be
@@ -4279,13 +4291,13 @@ static void __interrupt dos_int23_handler (void)
 			/* key release */ 
 			sc = sc & 0x7F;
 			keyboard[sc] = 0;
-			printf ("%key released ... %x\n", sc);
+			/*printf ("%key released ... %x\n", sc);*/
 		}
 		else
 		{
 			keyboard[sc] = 1;
-			printf ("%key pressed ... %x %c\n", sc, sc);
-			abort_all_moos (0);
+			/*printf ("%key pressed ... %x %c\n", sc, sc);*/
+			abort_all_moos (SIGINT);
 		}
 
 		extended = 0;
@@ -4294,7 +4306,7 @@ static void __interrupt dos_int23_handler (void)
 	/*_chain_intr (dos_prev_int23_handler);*/
 	outp (0x20, 0x20);
 	#else
-	abort_all_moos (0);
+	abort_all_moos (SIGINT);
 	_chain_intr (dos_prev_int23_handler);
 	#endif
 #endif
