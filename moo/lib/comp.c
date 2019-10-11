@@ -9089,6 +9089,7 @@ static int ciim_on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_associati
 /* TODO: error handling. GC safety, etc */
  			}
 #else
+			/* TODO: check duplication */
 			if (add_oop_to_oopbuf(moo, &ciim->cc->ifce_mths[ciim->mth_type], (moo_oop_t)mth) <= -1)
 			{
 				const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
@@ -9183,6 +9184,8 @@ static int class_implements_interface (moo_t* moo, moo_oop_class_t _class, moo_o
 {
 	ciim_t ciim;
 
+	MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_CLASS);
+
 	ciim.ifce = ifce;
 	ciim._class = _class;
 	ciim.mth_type = MOO_METHOD_INSTANCE;
@@ -9201,13 +9204,33 @@ static int class_implements_interface (moo_t* moo, moo_oop_class_t _class, moo_o
 static int check_class_interface_conformance (moo_t* moo)
 {
 	moo_cunit_class_t* cc = (moo_cunit_class_t*)moo->c->cunit;
-	moo_oow_t i;
+	moo_oow_t i, j;
 
 	MOO_ASSERT (moo, moo->c->cunit->cunit_type == MOO_CUNIT_CLASS);
 
 	for (i = 0; i < cc->ifces.count; i++)
 	{
 		if (!class_implements_interface(moo, cc->self_oop, (moo_oop_interface_t)cc->ifces.ptr[i])) return -1;
+	}
+
+	for (j = MOO_METHOD_INSTANCE; j <= MOO_METHOD_CLASS; j++)
+	{
+		for (i = 0; i < cc->ifce_mths[j].count; i++)
+		{
+			moo_oop_method_t mth = (moo_oop_method_t)cc->ifce_mths[j].ptr[i];
+			if (!moo_putatdic(moo, cc->self_oop->mthdic[j], (moo_oop_t)mth->name, (moo_oop_t)mth))
+			{
+				const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
+				mth = (moo_oop_method_t)cc->ifce_mths[j].ptr[i]; /* in case gc has been triggered in moo_putatdic */
+				moo_seterrbfmt (moo, moo_geterrnum(moo), "unable to put interface method %.*js>>%.*js to %.*js - %js", 
+					MOO_OBJ_GET_SIZE(mth->owner->name), MOO_OBJ_GET_CHAR_SLOT(mth->owner->name),
+					MOO_OBJ_GET_SIZE(mth->name), MOO_OBJ_GET_CHAR_SLOT(mth->name),
+					MOO_OBJ_GET_SIZE(cc->self_oop->name), MOO_OBJ_GET_CHAR_SLOT(cc->self_oop->name),
+					oldmsg
+				);
+				return -1;
+			}
+		}
 	}
 
 	return 0;
