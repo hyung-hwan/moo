@@ -3296,6 +3296,10 @@ static int unset_signal_handler (int sig)
 	return 0;
 }
 
+static int is_signal_handler_set (int sig)
+{
+	return !!g_sig_state[sig].handler;
+}
 #endif
 /* ========================================================================= */
 
@@ -3561,7 +3565,24 @@ static MOO_INLINE void start_ticker (void)
 		itv.it_interval.tv_usec = MOO_TICKER_INTERVAL_USECS;
 		itv.it_value.tv_sec = 0;
 		itv.it_value.tv_usec = MOO_TICKER_INTERVAL_USECS;
-		setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
+		if (setitimer(ITIMER_VIRTUAL, &itv, MOO_NULL) == -1)
+		{
+			/* WSL supports ITIMER_VIRTUAL only as of windows 10.0.18362.413.
+			   the following is a fallback which will get */
+			unset_signal_handler (SIGVTALRM);
+
+			if (set_signal_handler(SIGALRM, swproc_all_moos, SA_RESTART) >= 0)
+			{
+				/* i double the interval as ITIMER_REAL is against the wall clock.
+				 * if the underlying system is under heavy load, some signals
+				 * will get lost */
+				itv.it_interval.tv_sec = 0;
+				itv.it_interval.tv_usec = MOO_TICKER_INTERVAL_USECS * 2;
+				itv.it_value.tv_sec = 0;
+				itv.it_value.tv_usec = MOO_TICKER_INTERVAL_USECS * 2;
+				setitimer(ITIMER_REAL, &itv, MOO_NULL);
+			}
+		}
 	}
 }
 
@@ -3569,7 +3590,7 @@ static MOO_INLINE void stop_ticker (void)
 {
 	/* ignore the signal fired by the activated timer.
 	 * unsetting the signal may cause the program to terminate(default action) */
-	if (set_signal_handler(SIGVTALRM, SIG_IGN, 0) >= 0)
+	if (is_signal_handler_set(SIGVTALRM) && set_signal_handler(SIGVTALRM, SIG_IGN, 0) >= 0)
 	{
 		struct itimerval itv;
 		itv.it_interval.tv_sec = 0;
@@ -3577,6 +3598,16 @@ static MOO_INLINE void stop_ticker (void)
 		itv.it_value.tv_sec = 0; /* make setitimer() one-shot only */
 		itv.it_value.tv_usec = 0;
 		setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
+	}
+
+	if (is_signal_handler_set(SIGALRM) && set_signal_handler(SIGALRM, SIG_IGN, 0) >= 0)
+	{
+		struct itimerval itv;
+		itv.it_interval.tv_sec = 0;
+		itv.it_interval.tv_usec = 0;
+		itv.it_value.tv_sec = 0; /* make setitimer() one-shot only */
+		itv.it_value.tv_usec = 0;
+		setitimer (ITIMER_REAL, &itv, MOO_NULL);
 	}
 }
 
