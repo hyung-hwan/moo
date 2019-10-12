@@ -10,9 +10,9 @@ interface ClassInterface
 //
 class(#pointer,#limited,#uncopyable) Class(Apex) [ClassInterface]
 {
-	var spec, selfspec, superclass, subclasses, name, modname.
+	var name, instmthdic, classmthdic, nsup, nsdic.
+	var spec, selfspec, superclass, subclasses, modname.
 	var instvars, classinstvars, classvars, pooldics.
-	var instmthdic, classmthdic, nsup, nsdic.
 	var trsize, trgc, initv, initv_ci.
 
 	method(#class) initialize { ^self }
@@ -46,6 +46,5 @@ class(#pointer,#limited,#uncopyable) Class(Apex) [ClassInterface]
 
 class(#pointer,#limited,#uncopyable) Interface(Apex)
 {
-	var name.
-	var instmthdic, classmthdic, nsup, nsdic.
+	var name, instmthdic, classmthdic, nsup, nsdic.
 }

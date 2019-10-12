@@ -1847,8 +1847,8 @@ moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t 
 
 	if (in_super) 
 	{
-		MOO_ASSERT (moo, moo->active_method);
-		MOO_ASSERT (moo, moo->active_method->owner);
+		MOO_ASSERT (moo, moo->active_method != MOO_NULL);
+		MOO_ASSERT (moo, moo->active_method->owner != MOO_NULL);
 
 		/* if 'super' is allowed in the interface method, the owner field
 		 * can be an interface. super must not be allowed  in the interface

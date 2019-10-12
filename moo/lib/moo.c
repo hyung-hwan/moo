@@ -873,8 +873,8 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 	mth->literal_frame[0] = (moo_oop_t)pfidsym;
 
 	/* premable should contain the index to the literal frame which is always 0 */
-	mth->owner = _class;
-	mth->name = mnsym;
+	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->owner, (moo_oop_t)_class);
+	MOO_STORE_OOP (moo, (moo_oop_t*)&mth->name, (moo_oop_t)mnsym);
 	if (variadic) preamble_flags |= MOO_METHOD_PREAMBLE_FLAG_VARIADIC;
 	mth->preamble = MOO_SMOOI_TO_OOP(MOO_METHOD_MAKE_PREAMBLE(MOO_METHOD_PREAMBLE_NAMED_PRIMITIVE, 0, preamble_flags));
 	mth->preamble_data[0] = MOO_SMPTR_TO_OOP(0);

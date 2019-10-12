@@ -9079,17 +9079,29 @@ static int ciim_on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_associati
 	mth = moo_findmethodinclasschain(moo, ciim->_class, ciim->mth_type, &name);
 	if (!mth)
 	{
-		/* TODO: take methods from interface..*/
 		if (MOO_CLASSOF(moo, ass->value) == moo->_method)
 		{
+			moo_oow_t i;
+			moo_oop_method_t im;
+
 			mth = (moo_oop_method_t)ass->value;
-#if 0
-			if (!moo_putatdic(moo, ciim->_class->mthdic[ciim->mth_type], (moo_oop_t)mth->name, (moo_oop_t)mth))
+			for (i = 0; i < ciim->cc->ifce_mths[ciim->mth_type].count; i++)
 			{
-/* TODO: error handling. GC safety, etc */
- 			}
-#else
-			/* TODO: check duplication */
+				im = (moo_oop_method_t)ciim->cc->ifce_mths[ciim->mth_type].ptr[i];
+				if (mth->name == im->name)
+				{
+					/* duplicate interface method name found */
+					moo_setsynerrbfmt (moo, MOO_SYNERR_MTHNAMEDUPL, MOO_NULL, MOO_NULL,
+						"%.*js defined in multiple interfaces for %.*js - %.*js, %.*js", 
+						name.len, name.ptr,
+						MOO_OBJ_GET_SIZE(ciim->_class->name), MOO_OBJ_GET_CHAR_SLOT(ciim->_class->name),
+						MOO_OBJ_GET_SIZE(im->owner->name), MOO_OBJ_GET_CHAR_SLOT(im->owner->name),
+						MOO_OBJ_GET_SIZE(ciim->ifce->name), MOO_OBJ_GET_CHAR_SLOT(ciim->ifce->name)
+					);
+					return -1;
+				}
+			}
+
 			if (add_oop_to_oopbuf(moo, &ciim->cc->ifce_mths[ciim->mth_type], (moo_oop_t)mth) <= -1)
 			{
 				const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
@@ -9101,8 +9113,7 @@ static int ciim_on_each_method (moo_t* moo, moo_oop_dic_t dic, moo_oop_associati
 				);
 				return -1;
 			}
-#endif
-		
+
 			return 0;
 		}
 
@@ -9213,6 +9224,7 @@ static int check_class_interface_conformance (moo_t* moo)
 		if (!class_implements_interface(moo, cc->self_oop, (moo_oop_interface_t)cc->ifces.ptr[i])) return -1;
 	}
 
+	MOO_STATIC_ASSERT (MOO_METHOD_INSTANCE == 0 && MOO_METHOD_CLASS == 1);
 	for (j = MOO_METHOD_INSTANCE; j <= MOO_METHOD_CLASS; j++)
 	{
 		for (i = 0; i < cc->ifce_mths[j].count; i++)

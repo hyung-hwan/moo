@@ -470,6 +470,10 @@ struct moo_dic_t
 typedef struct moo_nsdic_t moo_nsdic_t;
 typedef struct moo_nsdic_t* moo_oop_nsdic_t;
 
+#define MOO_METHOWNER_NAMED_INSTVARS 5
+typedef struct moo_methowner_t moo_methowner_t;
+typedef struct moo_methowner_t* moo_oop_methowner_t;
+
 #define MOO_INTERFACE_NAMED_INSTVARS 5
 typedef struct moo_interface_t moo_interface_t;
 typedef struct moo_interface_t* moo_oop_interface_t;
@@ -489,21 +493,55 @@ struct moo_nsdic_t
 	moo_oop_t nsup; /* a class if it belongs to the class. another nsdic if it doesn't */
 };
 
-struct moo_interface_t
+struct moo_methowner_t 
 {
+	/* a method can be owned by a class or an interface.
+	 * this structure defines common fields between a class and an interface and
+	 * is for internal VM use only. */
 	MOO_OBJ_HEADER;
+
+	/* === the following five fields must be placed in class and interface === */
 	moo_oop_char_t name;
 
 	/* [0] - instance methods, MethodDictionary
 	 * [1] - class methods, MethodDictionary */
 	moo_oop_dic_t  mthdic[2];      
+
 	moo_oop_nsdic_t nsup; /* pointer to the upper namespace */
 	moo_oop_nsdic_t nsdic; /* dictionary used for namespacing - may be nil when there are no subitems underneath */
+	/* ======================================================================== */
+};
+
+struct moo_interface_t
+{
+	MOO_OBJ_HEADER;
+
+	/* === the following five fields must be in sync with moo_methowner_t === */
+	moo_oop_char_t name;
+
+	/* [0] - instance methods, MethodDictionary
+	 * [1] - class methods, MethodDictionary */
+	moo_oop_dic_t  mthdic[2];      
+
+	moo_oop_nsdic_t nsup; /* pointer to the upper namespace */
+	moo_oop_nsdic_t nsdic; /* dictionary used for namespacing - may be nil when there are no subitems underneath */
+	/* ===================================================================== */
 };
 
 struct moo_class_t
 {
 	MOO_OBJ_HEADER;
+
+	/* === the following five fields must be in sync with moo_methowner_t === */
+	moo_oop_char_t name; /* Symbol */
+
+	/* [0] - instance methods, MethodDictionary
+	 * [1] - class methods, MethodDictionary */
+	moo_oop_dic_t  mthdic[2];      
+
+	moo_oop_nsdic_t nsup; /* pointer to the upper namespace */
+	moo_oop_nsdic_t nsdic; /* dictionary used for namespacing - may be nil when there are no subitems underneath */
+	/* ===================================================================== */
 
 	moo_oop_t      spec;          /* SmallInteger. instance specification */
 	moo_oop_t      selfspec;      /* SmallInteger. specification of the class object itself */
@@ -511,7 +549,6 @@ struct moo_class_t
 	moo_oop_t      superclass;    /* Another class */
 	moo_oop_t      subclasses;    /* Array of subclasses */
 
-	moo_oop_char_t name;          /* Symbol */
 	moo_oop_t      modname;       /* Symbol if importing a module. nil if not. */
 
 	/* == NEVER CHANGE THIS ORDER OF 3 ITEMS BELOW == */
@@ -521,13 +558,6 @@ struct moo_class_t
 	/* == NEVER CHANGE THE ORDER OF 3 ITEMS ABOVE == */
 
 	moo_oop_char_t pooldics;      /* String - pool dictionaries imported */
-
-	/* [0] - instance methods, MethodDictionary
-	 * [1] - class methods, MethodDictionary */
-	moo_oop_dic_t  mthdic[2];      
-
-	moo_oop_nsdic_t nsup; /* pointer to the upper namespace */
-	moo_oop_nsdic_t nsdic; /* dictionary used for namespacing - may be nil when there are no subitems underneath */
 
 	moo_oop_t      trsize; /* trailer size for new instances */
 	moo_oop_t      trgc; /* trailer gc callback */
@@ -571,7 +601,7 @@ struct moo_method_t
 {
 	MOO_OBJ_HEADER;
 
-	moo_oop_class_t owner; /* Class */
+	moo_oop_methowner_t owner;  /* Class or Interface */
 
 	moo_oop_char_t  name; /* Symbol, method name */
 
