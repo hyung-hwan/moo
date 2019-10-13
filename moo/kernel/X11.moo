@@ -466,17 +466,18 @@ class X11.Composite(X11.Widget)
 	method remove: widget
 	{
 		| link |
-		if (widget parent notNil) // TODO: DEBUG. check if this widget is being disposed multiple times. I see this method called with 'widget parent' of nil.
-		{
-			if (widget parent ~~ self)
-			{
-				selfns.Exception signal: "Cannot remove an unknown widget"
-			}.
-
+		// see the dispose: function about the following condition checks
+		// commented out
+		//if (widget parent notNil)
+		//{
+		//	if (widget parent ~~ self)
+		//	{
+		//		selfns.Exception signal: "Cannot remove an unknown widget"
+		//	}.
 			link := self.children findIdenticalLink: widget.
 			self.children removeLink: link.
 			widget parent: nil.
-		}.
+		//}.
 	}
 
 	method childrenCount
@@ -497,15 +498,18 @@ class X11.Composite(X11.Widget)
 
 	method dispose
 	{
-'Composite dispose XXXXXXXXXXXXXX' dump.
 		self.children do: [:child |
 			child dispose.
-			self remove: child.
+
+			// some children(e.g. Shell) may remove itself from the parent.
+			// after disposal, the parent is reset to nil. so make a check
+			// before calling the removal method.
+			// if the check is made here, the remove: method doesn't need
+			// to check if the child is valid. see the lines commented out
+			// in the method.
+			if (child parent == self) { self remove: child }. 
 		].
-'Composite dispose DONE XXXXXXXXXXXXXX' dump.
-'SUPER SUPER SUPER dispose' dump.
 		super dispose.
-'SUPER SUPER SUPER dispose DONE' dump.
 	}
 
 	method onPaintEvent: event
@@ -724,7 +728,7 @@ extend X11
 	method requestToExit 
 	{
 		self.event_loop_exit_req := true.
-		self.event_loop_sem signal.
+		if (self.event_loop_sem notNil) { self.event_loop_sem signal }.
 	}
 /////////////////////////////////////////
 
