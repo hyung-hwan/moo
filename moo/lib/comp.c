@@ -4864,7 +4864,6 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 
 		case MOO_CUNIT_INTERFACE:
 		{
-			/* TODO: */
 			moo_cunit_interface_t* ifce = ((moo_cunit_interface_t*)moo->c->cunit);
 
 			if (ifce->self_oop)
@@ -4987,7 +4986,7 @@ static int store_tmpr_count_for_block (moo_t* moo, moo_oow_t tmpr_count)
 		moo_oow_t* tmp;
 		moo_oow_t new_capa;
 
-		new_capa = MOO_ALIGN (md->blk_depth + 1, BLK_TMPRCNT_BUFFER_ALIGN);
+		new_capa = MOO_ALIGN(md->blk_depth + 1, BLK_TMPRCNT_BUFFER_ALIGN);
 		tmp = (moo_oow_t*)moo_reallocmem(moo, md->blk_tmprcnt, new_capa * MOO_SIZEOF(*tmp));
 		if (!tmp) return -1;
 
@@ -5021,7 +5020,9 @@ static int compile_block_expression (moo_t* moo)
 
 	if (md->loop) 
 	{
-		/* this block is placed inside the {} loop */
+		/* this [] block is placed inside the {} loop.
+		 * this counter is used to check if 'break' or 'countinue' is 
+		 * placed inside [], which is prohibited. */
 		md->loop->blkcount++; 
 	}
 	block_loc = *TOKEN_LOC(moo);
