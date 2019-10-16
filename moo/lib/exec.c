@@ -6392,7 +6392,7 @@ static int __execute (moo_t* moo)
 
 	END_DISPATCH_LOOP()
 
-	return 0;
+	return (moo->abort_req <= -1)? -1: 0;
 }
 
 int moo_execute (moo_t* moo)

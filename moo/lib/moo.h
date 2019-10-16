@@ -113,7 +113,7 @@ enum moo_option_dflval_t
 	MOO_DFL_LOG_MAXCAPA = MOO_LOG_CAPA_ALIGN * 16,
 	MOO_DFL_SYMTAB_SIZE = 5000,
 	MOO_DFL_SYSDIC_SIZE = 5000,
-	MOO_DFL_PROCSTK_SIZE = 5000
+	MOO_DFL_PROCSTK_SIZE = 1000
 };
 typedef enum moo_option_dflval_t moo_option_dflval_t;
 
@@ -1731,11 +1731,19 @@ struct moo_t
 };
 
 /* TODO: proper stack bound check when pushing */
+/*MOO_ASSERT (moo, (moo)->sp < (moo_ooi_t)(MOO_OBJ_GET_SIZE((moo)->processor->active) - MOO_PROCESS_NAMED_INSTVARS)); */
 #define MOO_STACK_PUSH(moo,v) \
 	do { \
 		(moo)->sp = (moo)->sp + 1; \
-		MOO_ASSERT (moo, (moo)->sp < (moo_ooi_t)(MOO_OBJ_GET_SIZE((moo)->processor->active) - MOO_PROCESS_NAMED_INSTVARS)); \
-		MOO_STORE_OOP (moo, &(moo)->processor->active->stack[(moo)->sp], v); \
+		if ((moo)->sp >= (moo_ooi_t)(MOO_OBJ_GET_SIZE((moo)->processor->active) - MOO_PROCESS_NAMED_INSTVARS)) \
+		{ \
+			moo_seterrbfmt (moo, MOO_EOOMEM, "process stack overflow"); \
+			(moo)->abort_req = -1; \
+		} \
+		else \
+		{ \
+			MOO_STORE_OOP (moo, &(moo)->processor->active->stack[(moo)->sp], v); \
+		} \
 	} while(0)
 
 #define MOO_STACK_GET(moo,v_sp) ((moo)->processor->active->stack[v_sp])
