@@ -4143,6 +4143,11 @@ moo_t* moo_openstd (moo_oow_t xtnsize, const moo_cfgstd_t* cfg, moo_errinf_t* er
 		moo_setoption (moo, MOO_OPTION_LOG_MASK, &bm);
 	}
 
+	if (cfg && cfg->proc_stk_size > 0)
+	{
+		moo_setoption (moo, MOO_OPTION_PROCSTK_SIZE, &cfg->proc_stk_size);
+	}
+
 	if (cfg && handle_cfg_options(moo, cfg) <= -1)
 	{
 		if (errinfo) moo_geterrinf (moo, errinfo);

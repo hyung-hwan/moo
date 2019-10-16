@@ -89,6 +89,7 @@ int main (int argc, char* argv[])
 	{
 		{ ":log",              'l' },
 		{ ":memsize",          'm' },
+		{ ":procstksize",      '\0' },
 		{ "large-pages",       '\0' },
 		{ ":base-charset",     '\0' },
 		{ ":input-charset",    '\0' },
@@ -112,7 +113,8 @@ int main (int argc, char* argv[])
 	print_usage:
 		fprintf (stderr, "Usage: %s [options] filename ...\n", argv[0]);
 		fprintf (stderr, " --log filename[,logopts]\n");
-		fprintf (stderr, " --memsize number\n");
+		fprintf (stderr, " --memsize=bytes\n");
+		fprintf (stderr, " --procstksize=number of oops\n");
 		fprintf (stderr, " --large-pages\n");
 		fprintf (stderr, " --base-charset=name\n");
 		fprintf (stderr, " --input-charset=name\n");
@@ -145,7 +147,12 @@ int main (int argc, char* argv[])
 				break;
 
 			case '\0':
-				if (moo_comp_bcstr(opt.lngopt, "large-pages") == 0)
+				if (moo_comp_bcstr(opt.lngopt, "procstksize") == 0)
+				{
+					cfg.proc_stk_size = strtoul(opt.arg, MOO_NULL, 0);
+					break;
+				}
+				else if (moo_comp_bcstr(opt.lngopt, "large-pages") == 0)
 				{
 					cfg.large_pages = 1;
 					break;
@@ -224,13 +231,10 @@ int main (int argc, char* argv[])
 
 	{
 		moo_oow_t tab_size;
-
 		tab_size = 5000;
 		moo_setoption (moo, MOO_OPTION_SYMTAB_SIZE, &tab_size);
 		tab_size = 5000;
 		moo_setoption (moo, MOO_OPTION_SYSDIC_SIZE, &tab_size);
-		tab_size = 600;
-		moo_setoption (moo, MOO_OPTION_PROCSTK_SIZE, &tab_size);
 	}
 
 	if (moo_ignite(moo, memsize) <= -1)
