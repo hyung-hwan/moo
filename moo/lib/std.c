@@ -3571,6 +3571,7 @@ static MOO_INLINE void start_ticker (void)
 			   the following is a fallback which will get */
 			unset_signal_handler (SIGVTALRM);
 
+		#if defined(SIGALRM) && defined(ITIMER_REAL)
 			if (set_signal_handler(SIGALRM, swproc_all_moos, SA_RESTART) >= 0)
 			{
 				/* i double the interval as ITIMER_REAL is against the wall clock.
@@ -3582,6 +3583,7 @@ static MOO_INLINE void start_ticker (void)
 				itv.it_value.tv_usec = MOO_TICKER_INTERVAL_USECS * 2;
 				setitimer(ITIMER_REAL, &itv, MOO_NULL);
 			}
+		#endif
 		}
 	}
 }
@@ -3600,6 +3602,7 @@ static MOO_INLINE void stop_ticker (void)
 		setitimer (ITIMER_VIRTUAL, &itv, MOO_NULL);
 	}
 
+	#if defined(SIGALRM) && defined(ITIMER_REAL)
 	if (is_signal_handler_set(SIGALRM) && set_signal_handler(SIGALRM, SIG_IGN, 0) >= 0)
 	{
 		struct itimerval itv;
@@ -3609,10 +3612,63 @@ static MOO_INLINE void stop_ticker (void)
 		itv.it_value.tv_usec = 0;
 		setitimer (ITIMER_REAL, &itv, MOO_NULL);
 	}
+	#endif
 }
 
 #else
-#	error UNSUPPORTED
+
+static pid_t ticker_pid = -1;
+
+static MOO_INLINE void start_ticker (void)
+{
+	if (set_signal_handler(SIGALRM, swproc_all_moos, SA_RESTART) >= 0)
+	{
+		ticker_pid = fork();
+
+		if (ticker_pid <= -1)
+		{
+			unset_signal_handler (SIGALRM);
+		}
+		else if (ticker_pid == 0)
+		{
+			/* child process - actual ticker */
+			while (1)
+			{
+			#if defined(HAVE_NANOSLEEP)
+				struct timespec ts;
+				ts.tv_sec = 0;
+				ts.tv_nsec = MOO_USEC_TO_NSEC(MOO_TICKER_INTERVAL_USECS) * 2;
+				nanosleep (&ts, MOO_NULL);
+			#elif defined(HAVE_USLEEP)
+				usleep (MOO_TICKER_INTERVAL_USECS * 2);
+
+			#else
+			#	error UNDEFINED SLEEP
+			#endif
+
+				kill (getppid(), SIGALRM);
+			}
+
+			_exit (0);
+		}
+
+		/* parent just carries on. */
+	}
+}
+
+static MOO_INLINE void stop_ticker (void)
+{
+	if (ticker_pid >= 0) 
+	{
+		int wstatus;
+		kill (ticker_pid, SIGKILL);
+		while (waitpid(ticker_pid, &wstatus, 0) != ticker_pid);
+		ticker_pid = -1;
+
+		unset_signal_handler (SIGALRM);
+	}
+}
+
 #endif
 
 /* ========================================================================= */
