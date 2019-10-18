@@ -833,7 +833,7 @@ int moo_genpfmethod (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class, moo_met
 
 	cs.ptr = (moo_ooch_t*)mthname;
 	cs.len = i;
-	if (moo_lookupdic (moo, _class->mthdic[type], &cs) != MOO_NULL)
+	if (moo_lookupdic_noseterr(moo, _class->mthdic[type], &cs) != MOO_NULL)
 	{
 		MOO_DEBUG2 (moo, "Cannot generate primitive function method [%js] in [%O] - duplicate\n", mthname, _class->name);
 		moo_seterrnum (moo, MOO_EEXIST);
@@ -1044,7 +1044,7 @@ moo_oop_t moo_findclass (moo_t* moo, moo_oop_nsdic_t nsdic, const moo_ooch_t* na
 	n.ptr = (moo_ooch_t*)name;
 	n.len = moo_count_oocstr(name);
 
-	ass = moo_lookupdic(moo, (moo_oop_dic_t)nsdic, &n);
+	ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)nsdic, &n);
 	if (!ass || MOO_CLASSOF(moo,ass->value) != moo->_class) 
 	{
 		moo_seterrnum (moo, MOO_ENOENT);

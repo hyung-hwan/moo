@@ -1817,7 +1817,7 @@ moo_oop_method_t moo_findmethodinclasschain (moo_t* moo, moo_oop_class_t _class,
 	return mth;
 }
 
-moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t selector, int in_super)
+moo_oop_method_t moo_findmethod_noseterr (moo_t* moo, moo_oop_t receiver, moo_oop_char_t selector, int in_super)
 {
 	moo_oop_class_t _class;
 	moo_oop_class_t c;
@@ -1929,9 +1929,20 @@ not_found:
 		}
 	}
 
-	MOO_LOG4 (moo, MOO_LOG_DEBUG, "Method '%O>>%.*js' not found in receiver %O\n", _class, message.len, message.ptr, receiver);
-	moo_seterrbfmt (moo, MOO_ENOENT, "unable to find the method '%O>>%.*js' in %O", _class, message.len, message.ptr, receiver);
 	return MOO_NULL;
+}
+
+moo_oop_method_t moo_findmethod (moo_t* moo, moo_oop_t receiver, moo_oop_char_t selector, int in_super)
+{
+	moo_oop_method_t tmp;
+	tmp = moo_findmethod_noseterr(moo, receiver, selector, in_super);
+	if (!tmp)
+	{
+		/*MOO_LOG4 (moo, MOO_LOG_DEBUG, "Method '%O>>%.*js' not found in receiver %O\n", _class, message.len, message.ptr, receiver);*/
+		moo_seterrbfmt (moo, MOO_ENOENT, "unable to find the method '%O>>%.*js' in %O",
+			MOO_CLASSOF(moo, receiver), MOO_OBJ_GET_CHAR_SLOT(selector), MOO_OBJ_GET_SIZE(selector), receiver);
+	}
+	return tmp;
 }
 
 void moo_clearmethodcache (moo_t* moo)
@@ -4887,10 +4898,10 @@ static int send_message (moo_t* moo, moo_oop_char_t selector, moo_ooi_t nargs, i
 	moo->stat.message_sends++;
 #endif
 
-	method = moo_findmethod(moo, receiver, selector, to_super);
+	method = moo_findmethod_noseterr(moo, receiver, selector, to_super);
 	if (!method) 
 	{
-		method = moo_findmethod(moo, receiver, moo->does_not_understand_sym, 0);
+		method = moo_findmethod_noseterr(moo, receiver, moo->does_not_understand_sym, 0);
 		if (!method)
 		{
 			/* this must not happen as long as doesNotUnderstand: is implemented under Apex.

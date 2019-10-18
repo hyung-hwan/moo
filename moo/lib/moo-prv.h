@@ -1548,6 +1548,14 @@ moo_pfbase_t* moo_getpfnum (
 void moo_clearmethodcache (
 	moo_t*            moo
 );
+
+moo_oop_method_t moo_findmethod_noseterr (
+	moo_t*            moo,
+	moo_oop_t         receiver,
+	moo_oop_char_t    selector,
+	int               super
+);
+
 moo_oop_method_t moo_findmethod (
 	moo_t*            moo,
 	moo_oop_t         receiver,

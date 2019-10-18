@@ -3454,7 +3454,7 @@ static int add_method_name_fragment (moo_t* moo, const moo_oocs_t* name)
 	return copy_string_to(moo, name, &md->name, &md->name_capa, 1, '\0');
 }
 
-static int method_exists (moo_t* moo, const moo_oocs_t* name)
+static int method_exists_noseterr (moo_t* moo, const moo_oocs_t* name)
 {
 	if (moo->c->cunit->cunit_type == MOO_CUNIT_INTERFACE)
 	{
@@ -3463,13 +3463,13 @@ static int method_exists (moo_t* moo, const moo_oocs_t* name)
 
 		if (ifce->mth.type == MOO_METHOD_DUAL)
 		{
-			return moo_lookupdic(moo, ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], name) != MOO_NULL ||
-			       moo_lookupdic(moo, ifce->self_oop->mthdic[MOO_METHOD_CLASS], name) != MOO_NULL;
+			return moo_lookupdic_noseterr(moo, ifce->self_oop->mthdic[MOO_METHOD_INSTANCE], name) != MOO_NULL ||
+			       moo_lookupdic_noseterr(moo, ifce->self_oop->mthdic[MOO_METHOD_CLASS], name) != MOO_NULL;
 		}
 		else
 		{
 			MOO_ASSERT (moo, ifce->mth.type < MOO_COUNTOF(ifce->self_oop->mthdic));
-			return moo_lookupdic(moo, ifce->self_oop->mthdic[ifce->mth.type], name) != MOO_NULL;
+			return moo_lookupdic_noseterr(moo, ifce->self_oop->mthdic[ifce->mth.type], name) != MOO_NULL;
 		}
 	}
 	else
@@ -3482,13 +3482,13 @@ static int method_exists (moo_t* moo, const moo_oocs_t* name)
 		/* check if the current class contains a method of the given name */
 		if (cc->mth.type == MOO_METHOD_DUAL)
 		{
-			return moo_lookupdic(moo, cc->self_oop->mthdic[MOO_METHOD_INSTANCE], name) != MOO_NULL ||
-			       moo_lookupdic(moo, cc->self_oop->mthdic[MOO_METHOD_CLASS], name) != MOO_NULL;
+			return moo_lookupdic_noseterr(moo, cc->self_oop->mthdic[MOO_METHOD_INSTANCE], name) != MOO_NULL ||
+			       moo_lookupdic_noseterr(moo, cc->self_oop->mthdic[MOO_METHOD_CLASS], name) != MOO_NULL;
 		}
 		else
 		{
 			MOO_ASSERT (moo, cc->mth.type < MOO_COUNTOF(cc->self_oop->mthdic));
-			return moo_lookupdic(moo, cc->self_oop->mthdic[cc->mth.type], name) != MOO_NULL;
+			return moo_lookupdic_noseterr(moo, cc->self_oop->mthdic[cc->mth.type], name) != MOO_NULL;
 		}
 	}
 }
@@ -3615,7 +3615,7 @@ static int preprocess_dotted_name (moo_t* moo, int flags, moo_oop_nsdic_t topdic
 
 			if (is_reserved_word(&seg, MOO_NULL)) goto wrong_name;
 
-			ass = moo_lookupdic(moo, (moo_oop_dic_t)dic, &seg);
+			ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)dic, &seg);
 			if (ass)
 			{
 				if (MOO_CLASSOF(moo, ass->value) == moo->_namespace)
@@ -3728,7 +3728,7 @@ static int import_pooldic (moo_t* moo, moo_cunit_class_t* cc, moo_oop_nsdic_t ns
 	moo_oow_t i;
 
 	/* check if the name refers to a pool dictionary */
-	ass = moo_lookupdic(moo, (moo_oop_dic_t)ns_oop, tok_lastseg);
+	ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)ns_oop, tok_lastseg);
 	if (!ass || MOO_CLASSOF(moo, ass->value) != moo->_pool_dictionary)
 	{
 		moo_setsynerr (moo, MOO_SYNERR_PDIMPINVAL, tok_loc, tok_name);
@@ -3778,8 +3778,8 @@ if super is variable-nonpointer, no instance variable is allowed.
 			}
 
 			if (find_class_level_variable(moo, MOO_NULL, TOKEN_NAME(moo), &var) >= 0 ||
-			    moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
-			    moo_lookupdic(moo, (moo_oop_dic_t)cc->ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
+			    moo_lookupdic_noseterr(moo, (moo_oop_dic_t)moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
+			    moo_lookupdic_noseterr(moo, (moo_oop_dic_t)cc->ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
 			{
 				moo_setsynerr (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
@@ -3922,8 +3922,8 @@ if super is variable-nonpointer, no instance variable is allowed.
 			}
 
 			if (find_class_level_variable(moo, MOO_NULL, TOKEN_NAME(moo), &var) >= 0 ||
-			    moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
-			    moo_lookupdic(moo, (moo_oop_dic_t)cc->ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
+			    moo_lookupdic_noseterr(moo, (moo_oop_dic_t)moo->sysdic, TOKEN_NAME(moo)) ||  /* conflicts with a top global name */
+			    moo_lookupdic_noseterr(moo, (moo_oop_dic_t)cc->ns_oop, TOKEN_NAME(moo))) /* conflicts with a global name in the class'es name space */
 			{
 				moo_setsynerr (moo, MOO_SYNERR_VARNAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo));
 				return -1;
@@ -4272,7 +4272,7 @@ static int compile_method_name (moo_t* moo)
 
 	if (n <= -1) return -1;
 
-	if (method_exists(moo, &md->name)) 
+	if (method_exists_noseterr(moo, &md->name)) 
 	{
 		moo_setsynerr (moo, MOO_SYNERR_MTHNAMEDUPL, &md->name_loc, &md->name);
 		return -1;
@@ -4742,7 +4742,7 @@ static MOO_INLINE int find_dotted_ident (moo_t* moo, const moo_oocs_t* name, con
 
 	if (preprocess_dotted_name(moo, PDN_DONT_ADD_NS | PDN_ACCEPT_POOLDIC_AS_NS, top_dic, &xname, &xname_loc, &last, &ns_oop) <= -1) return -1;
 
-	ass = moo_lookupdic(moo, (moo_oop_dic_t)ns_oop, &last);
+	ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)ns_oop, &last);
 	if (!ass)
 	{
 		/* undeclared identifier */
@@ -4819,13 +4819,13 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 			/* find an undotted identifier in dictionaries */
 			if (cc->ns_oop)
 			{
-				ass = moo_lookupdic(moo, (moo_oop_dic_t)cc->ns_oop, name); /* in the current name space */
+				ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)cc->ns_oop, name); /* in the current name space */
 				if (!ass && cc->ns_oop != moo->sysdic) 
-					ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
+					ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
 			}
 			else
 			{
-				ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
+				ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
 			}
 
 			if (!ass)
@@ -4836,7 +4836,7 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 				/* attempt to find the variable in pool dictionaries */
 				for (i = 0; i < cc->pdimp.dics.count; i++)
 				{
-					ass = moo_lookupdic(moo, (moo_dic_t*)cc->pdimp.dics.ptr[i], name);
+					ass = moo_lookupdic_noseterr(moo, (moo_dic_t*)cc->pdimp.dics.ptr[i], name);
 					if (ass)
 					{
 						if (ass2)
@@ -4880,13 +4880,13 @@ static MOO_INLINE int find_undotted_ident (moo_t* moo, const moo_oocs_t* name, c
 
 			if (ifce->ns_oop)
 			{
-				ass = moo_lookupdic(moo, (moo_oop_dic_t)ifce->ns_oop, name); /* in the current name space */
+				ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)ifce->ns_oop, name); /* in the current name space */
 				if (!ass && ifce->ns_oop != moo->sysdic) 
-					ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
+					ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
 			}
 			else
 			{
-				ass = moo_lookupdic(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
+				ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)moo->sysdic, name); /* in the top-level system dictionary */
 			}
 
 			if (!ass)
@@ -9341,7 +9341,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 
 		MOO_INFO2 (moo, "Extending a class %.*js\n", cc->fqn.len, cc->fqn.ptr);
 
-		ass = moo_lookupdic(moo, (moo_oop_dic_t)cc->ns_oop, &cc->name);
+		ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)cc->ns_oop, &cc->name);
 		if (ass && MOO_CLASSOF(moo, ass->value) == moo->_class &&
 		    MOO_OBJ_GET_FLAGS_KERNEL(ass->value) != MOO_OBJ_FLAGS_KERNEL_IMMATURE)
 		{
@@ -9369,7 +9369,7 @@ static int __compile_class_definition (moo_t* moo, int class_type)
 	{
 		MOO_INFO2 (moo, "Defining a class %.*js\n", cc->fqn.len, cc->fqn.ptr);
 
-		ass = moo_lookupdic(moo, (moo_oop_dic_t)cc->ns_oop, &cc->name);
+		ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)cc->ns_oop, &cc->name);
 		if (ass)
 		{
 			if (MOO_CLASSOF(moo, ass->value) != moo->_class || 
@@ -9860,7 +9860,7 @@ static int __compile_interface_definition (moo_t* moo)
 
 	MOO_INFO2 (moo, "Defining an interface %.*js\n", ifce->fqn.len, ifce->fqn.ptr);
 
-	ass = moo_lookupdic(moo, (moo_oop_dic_t)ifce->ns_oop, &ifce->name);
+	ass = moo_lookupdic_noseterr(moo, (moo_oop_dic_t)ifce->ns_oop, &ifce->name);
 	if (ass)
 	{
 		/* The interface name already exists. An interface cannot be defined with an existing name */
@@ -10157,7 +10157,7 @@ static int __compile_pooldic_definition (moo_t* moo)
 		MOO_STORE_OOP (moo, (moo_oop_t*)&pd->ns_oop, (moo_oop_t)moo->sysdic);
 	}
 
-	if (moo_lookupdic(moo, (moo_oop_dic_t)pd->ns_oop, &pd->name))
+	if (moo_lookupdic_noseterr(moo, (moo_oop_dic_t)pd->ns_oop, &pd->name))
 	{
 		/* a conflicting entry has been found */
 		moo_setsynerrbfmt (moo, MOO_SYNERR_NAMEDUPL, TOKEN_LOC(moo), TOKEN_NAME(moo), "duplicate pooldic name");
