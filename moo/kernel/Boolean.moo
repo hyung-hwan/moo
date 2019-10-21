@@ -4,7 +4,7 @@ class Boolean(Object)
 	       and call subclassResponsibiltiy?" */
 }
 
-class True(Boolean)
+class(#final, #limited) True(Boolean)
 {
 	method not
 	{
@@ -47,7 +47,7 @@ class True(Boolean)
 	}
 }
 
-class False(Boolean)
+class(#final, #limited) False(Boolean)
 {
 	method not
 	{

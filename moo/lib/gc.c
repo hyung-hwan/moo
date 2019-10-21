@@ -320,7 +320,7 @@ static kernel_class_info_t kernel_classes[] =
 
 	{ 4,
 	  { 'T','r','u','e' },
-	  0,
+	  MOO_CLASS_SELFSPEC_FLAG_LIMITED | MOO_CLASS_SELFSPEC_FLAG_FINAL,
 	  0,
 	  0,
 	  0,
@@ -329,7 +329,7 @@ static kernel_class_info_t kernel_classes[] =
 
 	{ 5,
 	  { 'F','a','l','s','e' },
-	  0,
+	  MOO_CLASS_SELFSPEC_FLAG_LIMITED | MOO_CLASS_SELFSPEC_FLAG_FINAL,
 	  0,
 	  0,
 	  0,
