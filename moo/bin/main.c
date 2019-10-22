@@ -68,7 +68,7 @@ static void print_syntax_error (moo_t* moo, const char* main_src_file)
 
 /* ========================================================================= */
 
-#define MIN_MEMSIZE 2048000ul
+#define MIN_HEAPSIZE 2048000ul
 
 int main (int argc, char* argv[])
 {
@@ -81,14 +81,14 @@ int main (int argc, char* argv[])
 
 	moo_oocs_t objname;
 	moo_oocs_t mthname;
-	moo_oow_t memsize;
+	moo_oow_t heapsize;
 	int i, xret;
 
 	moo_bci_t c;
 	static moo_bopt_lng_t lopt[] =
 	{
 		{ ":log",              'l' },
-		{ ":memsize",          'm' },
+		{ ":heapsize",         '\0' },
 		{ ":procstksize",      '\0' },
 		{ "large-pages",       '\0' },
 		{ ":base-charset",     '\0' },
@@ -113,7 +113,7 @@ int main (int argc, char* argv[])
 	print_usage:
 		fprintf (stderr, "Usage: %s [options] filename ...\n", argv[0]);
 		fprintf (stderr, " --log filename[,logopts]\n");
-		fprintf (stderr, " --memsize=bytes\n");
+		fprintf (stderr, " --heapsize=bytes\n");
 		fprintf (stderr, " --procstksize=number of oops\n");
 		fprintf (stderr, " --large-pages\n");
 		fprintf (stderr, " --base-charset=name\n");
@@ -131,7 +131,7 @@ int main (int argc, char* argv[])
 	cfg.input_cmgr = cfg.cmgr;
 	cfg.log_cmgr = cfg.cmgr;
 
-	memsize = MIN_MEMSIZE;
+	heapsize = MIN_HEAPSIZE;
 
 	while ((c = moo_getbopt(argc, argv, &opt)) != MOO_BCI_EOF)
 	{
@@ -141,12 +141,13 @@ int main (int argc, char* argv[])
 				cfg.u.optb.log = opt.arg;
 				break;
 
-			case 'm':
-				memsize = strtoul(opt.arg, MOO_NULL, 0);
-				if (memsize <= MIN_MEMSIZE) memsize = MIN_MEMSIZE;
-				break;
-
 			case '\0':
+				if (moo_comp_bcstr(opt.lngopt, "heapsize") == 0)
+				{
+					heapsize = strtoul(opt.arg, MOO_NULL, 0);
+					if (heapsize <= MIN_HEAPSIZE) heapsize = MIN_HEAPSIZE;
+					break;
+				}
 				if (moo_comp_bcstr(opt.lngopt, "procstksize") == 0)
 				{
 					cfg.proc_stk_size = strtoul(opt.arg, MOO_NULL, 0);
@@ -237,7 +238,7 @@ int main (int argc, char* argv[])
 		moo_setoption (moo, MOO_OPTION_SYSDIC_SIZE, &tab_size);
 	}
 
-	if (moo_ignite(moo, memsize) <= -1)
+	if (moo_ignite(moo, heapsize) <= -1)
 	{
 		moo_logbfmt (moo, MOO_LOG_STDERR, "ERROR: cannot ignite moo - [%d] %js\n", moo_geterrnum(moo), moo_geterrstr(moo));
 		moo_close (moo);
