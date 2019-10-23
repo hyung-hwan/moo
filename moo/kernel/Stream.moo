@@ -125,69 +125,6 @@ class ExternalStream(ReadWriteStream)
 {
 }
 
-/*
-// mimic java's interface...
-interface ByteStreamable
-{
-	readBytesInto:
-	writeBytesFrom:
-}
-*/
-
-//# TODO: specify interface inside [] 
-/* 
-difficulty: how to ensure that the class implements the defined interface?
-
-1) check when a new instance is created.
-   -> i don't want this runtime overhead.
-
-2) create an empty methods as soon as an interface is encountered.
-   allows the class body or extend to redefine the methods.
-   give a warning that the interface is not fully implemened if
-   it doesn't redefined all inteface methods at the end of the class
-   definition or at the end of the extend defintion.
-   ->
- 
-3) don't allow 'extend' for the class that implements inteface
-   and do the check at the end of class definition. or allow extend
-   but the inteface methods must stay inside the main class definition
-   -> if i support pooldic definition from within the class, it looks more natural
-   -> i use 'extend' more simply because i want to have some constants defined
-   -> before i use them in the methods. if i support 'const' inside the class
-   -> defintion, it looks also ok.
-
-   interface Shoutable
-   {
-      method shout.
-      method shoutWith: number.
-   }
-   class xxx(Object) [Shoutable]  <---- allow multiple intefaces here
-   {
-       const DEFVAL := 10.
-       method shout {}
-       method shoutWith: number {}
-   }
-
-
-<<swift>>
-
-protocol StringConvertible {
-    func toString() -> String
-}
-
-extension String: StringConvertible {
-    func toString() -> String {
-        return self
-    }
-} 
-<<end swift>>
-
-
-4) other methods???
-
-Let me think about it..
-*/ 
-
 class ByteStreamAdapter(Object) //# [ByteStreamable, ByteXXX]
 {
 	var bsobj.
@@ -401,4 +338,3 @@ class TextStream(ByteStream)
 		if (self.seq at: 0) bitAnd: 
 	}
 }*/
-
