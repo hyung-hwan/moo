@@ -233,7 +233,7 @@ class ByteStreamAdapter(Object) //# [ByteStreamable, ByteXXX]
 					// don't rely on the internal buffer if the number of bytes 
 					// needed are equal to or greater than the capacity of the
 					// buffer.
-					v := self.bsobj readBytesInto: byte_array offset: pos length: needed.
+					v := self.bsobj readBytesInto: byte_array at: pos for: needed.
 					if (v isError or v <= 0) { break }.  // <<< TODO: change the error handling
 					pos := pos + v.
 					needed := needed - v.
@@ -275,7 +275,7 @@ class ByteStreamAdapter(Object) //# [ByteStreamable, ByteXXX]
 
 			if (self.outlen <= 0 and rem >= outcapa)
 			{
-				consumed := self.bsobj writeBytesFrom: byte_array offset: pos length: rem.
+				consumed := self.bsobj writeBytesFrom: byte_array at: pos for: rem.
 				if (consumed <= 0) { break }. // TODO: error handling. also handle exceptions
 			}
 			else
@@ -299,7 +299,7 @@ class ByteStreamAdapter(Object) //# [ByteStreamable, ByteXXX]
 		pos := 0.
 		while (pos < self.outlen)
 		{
-			v := self.bsobj writeBytesFrom: self.outbuf offset: pos length: (self.outlen - pos).
+			v := self.bsobj writeBytesFrom: self.outbuf at: pos for: (self.outlen - pos).
 			if (v <= 0) { break }. // TODO: error handling. also handle exceptions
 			pos := pos + v.
 		}.

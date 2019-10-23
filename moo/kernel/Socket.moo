@@ -30,7 +30,7 @@ class(#byte(4)) IP4Address(IPAddress)
 		^self new fromString: str.
 	}
 	
-	method __fromString: str offset: string_offset offset: address_offset
+	method __fromString: str startingAt: string_offset into: address_offset
 	{
 		| dots digits pos size c acc |
 
@@ -84,7 +84,7 @@ class(#byte(4)) IP4Address(IPAddress)
 	
 	method fromString: str
 	{
-		if ((self __fromString: str offset: 0 offset: 0) isError)
+		if ((self __fromString: str startingAt: 0 into: 0) isError)
 		{
 			Exception signal: ('invalid IPv4 address ' & str).
 		}
@@ -169,8 +169,8 @@ class(#byte(16)) IP6Address(IP4Address)
 
 			if ((ch == $.) and (tgpos + 4 <= mysize))
 			{
-				//if ((super __fromString: (str copyFrom: curseg) offset:0  offset: tgpos) isError) { ^Error.Code.EINVAL }.
-				if ((super __fromString: str offset: curseg offset: tgpos) isError) { ^Error.Code.EINVAL }.
+				//if ((super __fromString: (str copyFrom: curseg) startingAt: 0  into: tgpos) isError) { ^Error.Code.EINVAL }.
+				if ((super __fromString: str startingAt: curseg into: tgpos) isError) { ^Error.Code.EINVAL }.
 				tgpos := tgpos + 4.
 				saw_xdigit := false.
 				break.
@@ -256,9 +256,9 @@ class Socket(Object) from 'sck'
 	method(#primitive) _socketError.
 
 	method(#primitive) _readBytesInto: bytes.
-	method(#primitive) _readBytesInto: bytes offset: offset length: length.
+	method(#primitive) _readBytesInto: bytes startingAt: offset for: length.
 	method(#primitive) _writeBytesFrom: bytes.
-	method(#primitive) _writeBytesFrom: bytes offset: offset length: length.
+	method(#primitive) _writeBytesFrom: bytes startingAt: offset for: length.
 
 	method(#class) new { self messageProhibited: #new }
 	method(#class) new: size { self messageProhibited: #new: }
@@ -398,12 +398,12 @@ class SyncSocket(Socket)
 		}
 	}
 
-	method readBytesInto: bytes offset: offset length: length
+	method readBytesInto: bytes startingAt: offset for: length
 	{
 		| n |
 		while (true)
 		{
-			n := super _readBytesInto: bytes offset: offset length: length.
+			n := super _readBytesInto: bytes startingAt: offset for: length.
 			if (n >= 0) { ^n }.
 			self __wait_for_input.
 		}
@@ -420,12 +420,12 @@ class SyncSocket(Socket)
 		}
 	}
 
-	method writeBytesFrom: bytes offset: offset length: length
+	method writeBytesFrom: bytes startingAt: offset for: length
 	{
 		| n |
 		while (true)
 		{
-			n := super _writeBytesFrom: bytes offset: offset length: length.
+			n := super _writeBytesFrom: bytes startingAt: offset for: length.
 			if (n >= 0) { ^n }.
 			self __wait_for_output.
 		}
@@ -468,7 +468,7 @@ class AsyncSocket(Socket)
 
 			while (rem > 0)
 			{
-				nbytes := self _writeBytesFrom: self.pending_bytes offset: pos length: rem.
+				nbytes := self _writeBytesFrom: self.pending_bytes startingAt: pos for: rem.
 				if (nbytes <= -1) { break }.
 				pos := pos + nbytes.
 				rem := rem - nbytes.
@@ -535,12 +535,12 @@ class AsyncSocket(Socket)
 		^super _readBytesInto: bytes.
 	}
 
-	method readBytesInto: bytes offset: offset length: length
+	method readBytesInto: bytes startingAt: offset for: length
 	{
-		^super _readBytesInto: bytes offset: offset length: length.
+		^super _readBytesInto: bytes startingAt: offset for: length.
 	}
 
-	method writeBytesFrom: bytes offset: offset length: length
+	method writeBytesFrom: bytes startingAt: offset for: length
 	{
 		| n pos rem |
 
@@ -558,7 +558,7 @@ class AsyncSocket(Socket)
 
 		while (rem > 0)
 		{
-			n := self _writeBytesFrom: bytes offset: pos length: rem.
+			n := self _writeBytesFrom: bytes startingAt: pos for: rem.
 			if (n <= -1)  { break }.
 			rem := rem - n.
 			pos := pos + n.
@@ -580,7 +580,7 @@ class AsyncSocket(Socket)
 
 	method writeBytesFrom: bytes
 	{
-		^self writeBytesFrom: bytes offset: 0 length: (bytes size)
+		^self writeBytesFrom: bytes startingAt: 0 for: (bytes size)
 	}
 
 	//method onSocketClosed
