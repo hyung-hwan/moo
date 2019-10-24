@@ -4802,14 +4802,6 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			}
 
 		activate_primitive_method_body:
-			if (MOO_METHOD_GET_PREAMBLE_FLAGS(preamble) & MOO_METHOD_PREAMBLE_FLAG_LENIENT)
-			{
-				/* convert soft failure to error return */
-				moo->sp = stack_base;
-				MOO_STACK_PUSH (moo, MOO_ERROR_TO_OOP(moo->errnum));
-				break;
-			}
-
 			/* set the error number in the current process for 'thisProcess primError' */
 			moo->processor->active->perr = MOO_ERROR_TO_OOP(moo->errnum);
 			if (moo->errmsg.len > 0)
@@ -4830,6 +4822,14 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			{
 			no_perrmsg:
 				moo->processor->active->perrmsg = moo->_nil;
+			}
+
+			if (MOO_METHOD_GET_PREAMBLE_FLAGS(preamble) & MOO_METHOD_PREAMBLE_FLAG_LENIENT)
+			{
+				/* convert soft failure to error return */
+				moo->sp = stack_base;
+				MOO_STACK_PUSH (moo, moo->processor->active->perr);
+				break;
 			}
 
 			MOO_ASSERT (moo, MOO_OBJ_GET_FLAGS_TRAILER(method));

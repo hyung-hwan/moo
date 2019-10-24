@@ -9,20 +9,27 @@ class(#limited) InputOutputStud(Object) from "io"
 
 class FileAccessor(InputOutputStud) from "io.file"
 {
+	pooldic Flag
+	{
+		O_RDONLY := 0,
+		O_WRONLY := 1
+		//O_RDONLY from "O_RDONLY",
+		//O_WRONLY from "O_WRONLY"
+	}
+
 	method(#primitive,#lenient) _open: path flags: flags.
 
 	method(#class) on: path for: flags
 	{
 		| fa |
 		fa := self new _open: path flags: flags.
-		if (fa isError) { self error: "unable to open file" }.
-		self addToBeFinalized.
+		if (fa isError) { self error: "Unable to open file %s - %s" strfmt(path, thisProcess primErrorMessage) }.
+		fa addToBeFinalized.
 		^fa.
 	}
 
 	method close
 	{
-"CLOSING HANDLLE>..................." dump.
 		self _close.
 		self removeToBeFinalized.
 	}

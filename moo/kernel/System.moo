@@ -69,7 +69,7 @@ class System(Apex)
 		class := self at: class_name. // System at: class_name.
 		if (class isError)
 		{
-			self error: ('Cannot find the class - ' & class_name).
+			self error: ("Unable to find the class - " & class_name).
 		}.
 
 		self _initialize.

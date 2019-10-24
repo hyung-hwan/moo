@@ -285,16 +285,6 @@ extend Apex
 		<primitive: #Apex_perform>
 		self primitiveFailed
 	}
-
-	/* ------------------------------------------------------------------
-	 * COMMON ERROR/EXCEPTION HANDLERS
-	 * ------------------------------------------------------------------ */
-	method(#dual) error: msgText
-	{
-		/* TODO: implement this
-		  Error signal: msgText. */
-		msgText dump.
-	}
 }
 
 class Object(Apex)

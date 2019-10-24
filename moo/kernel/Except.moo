@@ -489,6 +489,11 @@ class IndexNotFoundException(NotFoundException)
 
 extend Apex
 {
+	method(#dual) error: text
+	{
+		Exception signal: text.
+	}
+
 	method(#dual,#liberal) primitiveFailed(method)
 	{
 		| a b msg ec ex |
