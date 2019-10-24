@@ -31,12 +31,6 @@
 #include <fcntl.h>
 #include <errno.h>
 
-typedef struct io_modctx_t io_modctx_t;
-struct io_modctx_t
-{
-	moo_oop_class_t io_class;
-};
-
 static moo_pfrc_t pf_close_io (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_io_t io;
@@ -53,6 +47,7 @@ static moo_pfrc_t pf_close_io (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	if (fd >= 0)
 	{
 		moo_releaseiohandle (moo, MOO_OOP_TO_SMOOI(io->handle));
+		/* TODO: win32 CloseHandle if handle is HANDLE */
 		if (close(MOO_OOP_TO_SMOOI(io->handle)) == -1)
 		{
 			moo_seterrwithsyserr (moo, 0, errno);
@@ -70,8 +65,7 @@ static moo_pfrc_t pf_close_io (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	return MOO_PF_FAILURE;
 }
 
-#if 0
-static moo_pfrc_t pf_read_io (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+static moo_pfrc_t pf_read_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_io_t io;
 	moo_oop_byte_t buf;
@@ -89,7 +83,80 @@ static moo_pfrc_t pf_read_io (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	fd = MOO_OOP_TO_SMOOI(io->handle);
 	if (fd <= -1)
 	{
-		moo_seterrbfmt (moo, MOO_EINVAL, "bad socket handle - %d", fd);
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad IO handle - %d", fd);
+		return MOO_PF_FAILURE;
+	}
+
+	buf = (moo_oop_byte_t)MOO_STACK_GETARG (moo, nargs, 0);
+	if (!MOO_OBJ_IS_BYTE_POINTER(buf))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "buffer not a byte array - %O", buf);
+		return MOO_PF_FAILURE;
+	}
+
+	offset = 0;
+	maxlen = MOO_OBJ_GET_SIZE(buf);
+	length = maxlen;
+
+	if (nargs >= 2)
+	{
+		moo_oop_t tmp;
+
+		tmp = MOO_STACK_GETARG(moo, nargs, 1);
+		if (moo_inttooow(moo, tmp, &offset) <= 0)
+		{
+			moo_seterrbfmt (moo, MOO_EINVAL, "invalid offset - %O", tmp);
+			return MOO_PF_FAILURE;
+		}
+
+		if (nargs >= 3)
+		{
+			tmp = MOO_STACK_GETARG(moo, nargs, 2);
+			if (moo_inttooow(moo, tmp, &length) <= 0)
+			{
+				moo_seterrbfmt (moo, MOO_EINVAL, "invalid length - %O", tmp);
+				return MOO_PF_FAILURE;
+			}
+		}
+
+		if (offset >= maxlen) offset = maxlen - 1;
+		if (length > maxlen - offset) length = maxlen - offset;
+	}
+
+	n = read(fd, MOO_OBJ_GET_BYTE_PTR(buf, offset), length);
+	if (n <= -1 && errno != EWOULDBLOCK && errno != EAGAIN)
+	{
+		moo_seterrwithsyserr (moo, 0, errno);
+		return MOO_PF_FAILURE;
+	}
+
+	/* [NOTE] on EWOULDBLOCK or EGAIN, -1 is returned  */
+
+	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(n));
+
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_write_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	oop_io_t io;
+	moo_oop_byte_t buf;
+	moo_oow_t offset, length, maxlen;
+	int fd;
+	ssize_t n;
+
+	io = (oop_io_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, 
+		MOO_OOP_IS_POINTER(io) && 
+		MOO_OBJ_BYTESOF(io) >= (MOO_SIZEOF(*io) - MOO_SIZEOF(moo_obj_t)) &&
+		MOO_OOP_IS_SMOOI(io->handle)
+	);
+
+	fd = MOO_OOP_TO_SMOOI(io->handle);
+	if (fd <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad IO handle - %d", fd);
 		return MOO_PF_FAILURE;
 	}
 
@@ -129,80 +196,7 @@ static moo_pfrc_t pf_read_io (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		if (length > maxlen - offset) length = maxlen - offset;
 	}
 
-	n = recv(fd, MOO_OBJ_GET_BYTE_PTR(buf, offset), length, 0);
-	if (n <= -1 && errno != EWOULDBLOCK && errno != EAGAIN)
-	{
-		moo_seterrwithsyserr (moo, 0, errno);
-		return MOO_PF_FAILURE;
-	}
-
-	/* [NOTE] on EWOULDBLOCK or EGAIN, -1 is returned  */
-
-	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(n));
-
-	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
-	return MOO_PF_SUCCESS;
-}
-
-static moo_pfrc_t pf_write_io (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
-{
-	oop_io_t io;
-	moo_oop_byte_t buf;
-	moo_oow_t offset, length, maxlen;
-	int fd;
-	ssize_t n;
-
-	io = (oop_io_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, 
-		MOO_OOP_IS_POINTER(io) && 
-		MOO_OBJ_BYTESOF(io) >= (MOO_SIZEOF(*io) - MOO_SIZEOF(moo_obj_t)) &&
-		MOO_OOP_IS_SMOOI(io->handle)
-	);
-
-	fd = MOO_OOP_TO_SMOOI(io->handle);
-	if (fd <= -1)
-	{
-		moo_seterrbfmt (moo, MOO_EINVAL, "bad socket handle - %d", fd);
-		return MOO_PF_FAILURE;
-	}
-
-	buf = (moo_oop_byte_t)MOO_STACK_GETARG (moo, nargs, 0);
-	if (!MOO_OBJ_IS_BYTE_POINTER(buf))
-	{
-		moo_seterrbfmt (moo, MOO_EINVAL, "buffer not a byte array - %O", buf);
-		return MOO_PF_FAILURE;
-	}
-
-	offset = 0;
-	maxlen = MOO_OBJ_GET_SIZE(buf);
-	length = maxlen;
-
-	if (nargs >= 2)
-	{
-		moo_oop_t tmp;
-
-		tmp = MOO_STACK_GETARG(moo, nargs, 1);
-		if (moo_inttooow (moo, tmp, &offset) <= 0)
-		{
-			moo_seterrbfmt (moo, MOO_EINVAL, "invalid offset - %O", tmp);
-			return MOO_PF_FAILURE;
-		}
-
-		if (nargs >= 3)
-		{
-			tmp = MOO_STACK_GETARG(moo, nargs, 2);
-			if (moo_inttooow(moo, tmp, &length) <= 0)
-			{
-				moo_seterrbfmt (moo, MOO_EINVAL, "invalid length - %O", tmp);
-				return MOO_PF_FAILURE;
-			}
-		}
-
-		if (offset >= maxlen) offset = maxlen - 1;
-		if (length > maxlen - offset) length = maxlen - offset;
-	}
-
-	n = send(fd, MOO_OBJ_GET_BYTE_PTR(buf, offset), length, 0);
+	n = write(fd, MOO_OBJ_GET_BYTE_PTR(buf, offset), length);
 	if (n <= -1 && errno != EWOULDBLOCK && errno != EAGAIN)
 	{
 		moo_seterrwithsyserr (moo, 0, errno);
@@ -215,18 +209,8 @@ static moo_pfrc_t pf_write_io (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
 	return MOO_PF_SUCCESS;
 }
-#endif
 
 /* ------------------------------------------------------------------------ */
- 
-typedef struct fnctab_t fnctab_t;
-struct fnctab_t
-{
-	moo_method_type_t type;
-	moo_ooch_t mthname[15];
-	int variadic;
-	moo_pfimpl_t handler;
-};
 
 #define C MOO_METHOD_CLASS
 #define I MOO_METHOD_INSTANCE
@@ -235,7 +219,11 @@ struct fnctab_t
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, { 'c','l','o','s','e','\0' },                            0, { pf_close_io,     0, 0  }  },
+	{ I, { 'c','l','o','s','e','\0' },                                                                                                     0, { pf_close_io,     0, 0  }  },
+	{ I, { 'r','e','a','d','B','y','t','e','s','I','n','t','o',':','\0' },                                                                 0, { pf_read_bytes,   1, 1  }  },
+	{ I, { 'r','e','a','d','B','y','t','e','s','I','n','t','o',':','s','t','a','r','t','i','n','g','A','t',':','f','o','r',':','\0' },     0, { pf_read_bytes,   3, 3  }  },
+	{ I, { 'w','r','i','t','e','B','y','t','e','s','F','r','o','m',':','\0' },                                                             0, { pf_write_bytes,  1, 1  }  },
+	{ I, { 'w','r','i','t','e','B','y','t','e','s','F','r','o','m',':','s','t','a','r','t','i','n','g','A','t',':','f','o','r',':','\0' }, 0, { pf_write_bytes,  3, 3  }  }
 };
 
 /* ------------------------------------------------------------------------ */

@@ -89,27 +89,23 @@ build_triplet = @build@
 host_triplet = @host@
 @MACOSX_TRUE@@WIN32_FALSE@am__append_1 = -DMOO_DEFAULT_PFMODPOSTFIX=\".dylib\"
 @MACOSX_FALSE@@WIN32_FALSE@am__append_2 = -DMOO_DEFAULT_PFMODPOSTFIX=\".so\"
-@ENABLE_STATIC_MODULE_TRUE@am__append_3 = -lmoo-stdio
-@ENABLE_STATIC_MODULE_FALSE@libmoo_la_DEPENDENCIES =  \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1) \
-@ENABLE_STATIC_MODULE_FALSE@	$(am__DEPENDENCIES_1)
-@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_4 = -lmoo-con
-@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_5 = ../mod/libmoo-con.la
-@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_6 = -lmoo-ffi
-@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_7 = ../mod/libmoo-ffi.la
-@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_8 = -lmoo-sck
-@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_9 = ../mod/libmoo-sck.la
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_10 = -lmoo-x11
-@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_11 = ../mod/libmoo-x11.la
-@WIN32_TRUE@am__append_12 = poll-msw.c poll-msw.h
-@ENABLE_LIBLTDL_TRUE@am__append_13 = $(LTDL_LIBS)
-@ENABLE_LIBLTDL_FALSE@am__append_14 = $(DL_LIBS)
-@ENABLE_LIBUNWIND_TRUE@am__append_15 = $(UNWIND_LIBS)
-@WIN32_TRUE@am__append_16 = -lpsapi $(SOCKET_LIBS)
+@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_3 = -lmoo-con
+@ENABLE_MOD_CON_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_4 = ../mod/libmoo-con.la
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_5 = -lmoo-ffi
+@ENABLE_MOD_FFI_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_6 = ../mod/libmoo-ffi.la
+@ENABLE_STATIC_MODULE_TRUE@am__append_7 = -lmoo-io
+@ENABLE_STATIC_MODULE_TRUE@am__append_8 = ../mod/libmoo-io.la
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_9 = -lmoo-sck
+@ENABLE_MOD_SCK_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_10 = ../mod/libmoo-sck.la
+@ENABLE_STATIC_MODULE_TRUE@am__append_11 = -lmoo-stdio
+@ENABLE_STATIC_MODULE_TRUE@am__append_12 = ../mod/libmoo-stdio.la
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_13 = -lmoo-x11
+@ENABLE_MOD_X11_TRUE@@ENABLE_STATIC_MODULE_TRUE@am__append_14 = ../mod/libmoo-x11.la
+@WIN32_TRUE@am__append_15 = poll-msw.c poll-msw.h
+@ENABLE_LIBLTDL_TRUE@am__append_16 = $(LTDL_LIBS)
+@ENABLE_LIBLTDL_FALSE@am__append_17 = $(DL_LIBS)
+@ENABLE_LIBUNWIND_TRUE@am__append_18 = $(UNWIND_LIBS)
+@WIN32_TRUE@am__append_19 = -lpsapi $(SOCKET_LIBS)
 subdir = lib
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_sign.m4 \
@@ -501,23 +497,22 @@ libmoo_la_SOURCES = \
 libmoo_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) 
 libmoo_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libmoo_la_LIBADD = $(LIBADD_LIB_COMMON) $(am__append_3) \
-	$(am__append_4) $(am__append_6) $(am__append_8) \
-	$(am__append_10)
-@ENABLE_STATIC_MODULE_TRUE@libmoo_la_DEPENDENCIES =  \
-@ENABLE_STATIC_MODULE_TRUE@	../mod/libmoo-stdio.la \
-@ENABLE_STATIC_MODULE_TRUE@	$(am__append_5) $(am__append_7) \
-@ENABLE_STATIC_MODULE_TRUE@	$(am__append_9) $(am__append_11)
+	$(am__append_5) $(am__append_7) $(am__append_9) \
+	$(am__append_11) $(am__append_13)
+libmoo_la_DEPENDENCIES = $(am__append_4) $(am__append_6) \
+	$(am__append_8) $(am__append_10) $(am__append_12) \
+	$(am__append_14)
 
 ##############################################################
 # libmoox
 ##############################################################
 libmoox_la_SOURCES = moo-opt.h moo-std.h opt-impl.h opt.c std.c \
-	$(am__append_12)
+	$(am__append_15)
 libmoox_la_CPPFLAGS = $(CPPFLAGS_LIB_COMMON) $(CPPFLAGS_PFMOD)
 libmoox_la_LDFLAGS = $(LDFLAGS_LIB_COMMON)
 libmoox_la_LIBADD = $(LIBADD_LIB_COMMON) -lmoo $(LIBM) $(PTHREAD_LIBS) \
-	$(am__append_13) $(am__append_14) $(am__append_15) \
-	$(am__append_16)
+	$(am__append_16) $(am__append_17) $(am__append_18) \
+	$(am__append_19)
 libmoox_la_DEPENDENCIES = libmoo.la
 all: moo-cfg.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am

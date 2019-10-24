@@ -1576,7 +1576,7 @@ void moo_releaseiohandle (moo_t* moo, moo_ooi_t io_handle)
 {
 	/* TODO: optimize io semapore unmapping. since i'm to close the handle,
 	 *       i don't need to call delete_sem_from_sem_io_tuple() seperately for input
-	 *        and output. */
+	 *       and output. */
 	if (io_handle < moo->sem_io_map_capa)
 	{
 		moo_ooi_t index;

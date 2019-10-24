@@ -7,6 +7,7 @@
 #include 'Collect.moo'.
 #include 'System.moo'.
 #include 'Process.moo'.
+#include 'IO.moo'.
 #include 'Stream.moo'.
 
 /* -------------------------------------------------------------------------- */

@@ -69,7 +69,6 @@ static moo_pfrc_t pf_open_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	dom = MOO_STACK_GETARG(moo, nargs, 0);
 	type = MOO_STACK_GETARG(moo, nargs, 1);
 	proto = (nargs < 3)? 0: MOO_STACK_GETARG(moo, nargs, 2);
-	
 
 	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OOP_IS_SMOOI(dom) && MOO_OOP_IS_SMOOI(type) && MOO_OOP_IS_SMOOI(proto));
 
@@ -79,7 +78,7 @@ static moo_pfrc_t pf_open_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 create_socket:
 #endif
 
-	fd = socket (MOO_OOP_TO_SMOOI(dom), typev, MOO_OOP_TO_SMOOI(proto));
+	fd = socket(MOO_OOP_TO_SMOOI(dom), typev, MOO_OOP_TO_SMOOI(proto));
 	if (fd == -1) 
 	{
 #if defined(SOCK_NONBLOCK) && defined(SOCK_CLOEXEC)
@@ -569,15 +568,6 @@ static moo_pfrc_t pf_write_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 }
 
 /* ------------------------------------------------------------------------ */
- 
-typedef struct fnctab_t fnctab_t;
-struct fnctab_t
-{
-	moo_method_type_t type;
-	moo_ooch_t mthname[15];
-	int variadic;
-	moo_pfimpl_t handler;
-};
 
 #define C MOO_METHOD_CLASS
 #define I MOO_METHOD_INSTANCE

@@ -1191,15 +1191,6 @@ softfail:
 
 /* ------------------------------------------------------------------------ */
 
-typedef struct fnctab_t fnctab_t;
-struct fnctab_t
-{
-	moo_method_type_t type;
-	moo_ooch_t mthname[15];
-	int variadic;
-	moo_pfimpl_t handler;
-};
-
 #define C MOO_METHOD_CLASS
 #define I MOO_METHOD_INSTANCE
 

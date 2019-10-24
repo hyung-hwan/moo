@@ -514,7 +514,7 @@ static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 	/* change the number of the fixed fields forcibly.
 	 * the check against the superclass is done by the main compiler 
 	 * after this import. so i perform no check about the superclass. */
-	spec = MOO_CLASS_SPEC_MAKE (MOO_SIZEOF(sockaddr_t), MOO_CLASS_SPEC_FLAGS(spec), MOO_CLASS_SPEC_INDEXED_TYPE(spec));
+	spec = MOO_CLASS_SPEC_MAKE(MOO_SIZEOF(sockaddr_t), MOO_CLASS_SPEC_FLAGS(spec), MOO_CLASS_SPEC_INDEXED_TYPE(spec));
 	_class->spec = MOO_SMOOI_TO_OOP(spec);
 	return 0;
 }

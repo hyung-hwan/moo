@@ -466,13 +466,19 @@ void moo_freemem (moo_t* moo, void* ptr)
 #if defined(MOO_ENABLE_MOD_CON)
 #	include "../mod/_con.h"
 #endif
+
 #if defined(MOO_ENABLE_MOD_FFI)
 #	include "../mod/_ffi.h"
 #endif
+
+#include "../mod/_io.h"
+
 #if defined(MOO_ENABLE_MOD_SCK)
 #	include "../mod/_sck.h"
 #endif
+
 #include "../mod/_stdio.h"
+
 #if defined(MOO_ENABLE_MOD_X11)
 #	include "../mod/_x11.h"
 #endif
@@ -490,6 +496,8 @@ static_modtab[] =
 #if defined(MOO_ENABLE_MOD_FFI)
 	{ "ffi",        moo_mod_ffi },
 #endif
+	{ "io",         moo_mod_io },
+	{ "io.file",    moo_mod_io_file },
 #if defined(MOO_ENABLE_MOD_SCK)
 	{ "sck",        moo_mod_sck },
 	{ "sck.addr",   moo_mod_sck_addr },
@@ -500,7 +508,7 @@ static_modtab[] =
 	/*{ "x11.win",    moo_mod_x11_win },*/
 #endif
 };
-#endif
+#endif /* MOO_ENABLE_STATIC_MODULE */
 
 moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namelen, int hints)
 {

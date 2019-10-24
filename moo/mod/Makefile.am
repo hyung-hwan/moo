@@ -27,6 +27,8 @@ if ENABLE_MOD_FFI
 noinst_LTLIBRARIES += libmoo-ffi.la
 endif
 
+noinst_LTLIBRARIES += libmoo-io.la
+
 if ENABLE_MOD_SCK
 noinst_LTLIBRARIES += libmoo-sck.la
 endif
@@ -56,6 +58,8 @@ if ENABLE_MOD_FFI
 pkgmodexec_LTLIBRARIES += libmoo-ffi.la
 endif
 
+pkgmodexec_LTLIBRARIES += libmoo-io.la
+
 if ENABLE_MOD_SCK
 pkgmodexec_LTLIBRARIES += libmoo-sck.la
 endif
@@ -81,6 +85,11 @@ libmoo_ffi_la_CPPFLAGS = $(CPPFLAGS_COMMON)
 libmoo_ffi_la_LDFLAGS = $(LDFLAGS_COMMON)
 libmoo_ffi_la_LIBADD = $(LIBADD_COMMON) $(DYNCALL_LIBS) $(FFI_LIBS)
 endif
+
+libmoo_io_la_SOURCES = io.c io-file.c _io.h
+libmoo_io_la_CPPFLAGS = $(CPPFLAGS_COMMON)
+libmoo_io_la_LDFLAGS = $(LDFLAGS_COMMON)
+libmoo_io_la_LIBADD = $(LIBADD_COMMON)
 
 if ENABLE_MOD_SCK
 libmoo_sck_la_SOURCES = sck.c sck-addr.c _sck.h

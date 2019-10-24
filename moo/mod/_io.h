@@ -33,7 +33,7 @@ typedef struct io_t* oop_io_t;
 struct io_t
 {
 	MOO_OBJ_HEADER;
-	moo_oop_t handle; /* SmallInteger */
+	moo_oop_t handle; /* SmallInteger or SmallPointer/LargePointer depending on operating systems */
 	/* there are more fields in the actual object */
 };
 
@@ -42,8 +42,7 @@ extern "C" {
 #endif
 
 MOO_EXPORT int moo_mod_io (moo_t* moo, moo_mod_t* mod);
-/*MOO_EXPORT int moo_mod_io_file (moo_t* moo, moo_mod_t* mod);*/
-
+MOO_EXPORT int moo_mod_io_file (moo_t* moo, moo_mod_t* mod);
 
 #if defined(__cplusplus)
 }
