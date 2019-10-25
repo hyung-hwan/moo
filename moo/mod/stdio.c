@@ -211,23 +211,23 @@ static moo_pfrc_t pf_puts (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, { 'c','l','o','s','e','\0' },         0, { pf_close,  0,  0  } },
-	{ I, { 'g','e','t','s','\0' },             0, { pf_gets,   0,  0  } },
-	{ I, { 'o','p','e','n','\0' },             0, { pf_open,   2,  2  } },
-	{ I, { 'p','u','t','c','\0' },             1, { pf_putc,   0,  MA } },
-	{ I, { 'p','u','t','s','\0' },             1, { pf_puts,   0,  MA } }
+	{ I, "close",  0, { pf_close,  0,  0  } },
+	{ I, "gets",   0, { pf_gets,   0,  0  } },
+	{ I, "open",   0, { pf_open,   2,  2  } },
+	{ I, "putc",   1, { pf_putc,   0,  MA } },
+	{ I, "puts",   1, { pf_puts,   0,  MA } }
 };
 
 /* ------------------------------------------------------------------------ */
 static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
-	if (moo_setclasstrsize (moo, _class, MOO_SIZEOF(stdio_t), MOO_NULL) <= -1) return -1;
+	if (moo_setclasstrsize(moo, _class, MOO_SIZEOF(stdio_t), MOO_NULL) <= -1) return -1;
 	return 0;
 }
 
 static moo_pfbase_t* query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name, moo_oow_t namelen)
 {
-	return moo_findpfbase (moo, pfinfos, MOO_COUNTOF(pfinfos), name, namelen);
+	return moo_findpfbase(moo, pfinfos, MOO_COUNTOF(pfinfos), name, namelen);
 }
 
 #if 0

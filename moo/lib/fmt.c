@@ -1571,15 +1571,15 @@ int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 
 			/* TODO: better memory allocation management? */
 			ns = ((moo_oop_nsdic_t)oop)->nsup;
-			while (/*ns != moo->_system &&*/ ns != moo->_system->nsdic) /* exclude System from the output */
+			while (/*ns != moo->_system &&*/ ns != (moo_oop_t)moo->_system->nsdic) /* exclude System from the output */
 			{
 				if (MOO_CLASSOF(moo, ns) == moo->_class)
 				{
-					ns = ((moo_oop_class_t)ns)->nsup;
+					ns = (moo_oop_t)((moo_oop_class_t)ns)->nsup;
 				}
 				else if (MOO_CLASSOF(moo, ns) == moo->_interface)
 				{
-					ns = ((moo_oop_interface_t)ns)->nsup;
+					ns = (moo_oop_t)((moo_oop_interface_t)ns)->nsup;
 				}
 				else
 				{
@@ -1622,16 +1622,16 @@ int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 			int ok = 1;
 
 /* TODO: collapse many duplicate code among namespace, class, interface name printing */
-			ns = ((moo_oop_class_t)oop)->nsup;
-			while (/*ns != moo->_system &&*/ ns != moo->_system->nsdic) /* exclude System from the output */
+			ns = (moo_oop_t)((moo_oop_class_t)oop)->nsup;
+			while (/*ns != moo->_system &&*/ ns != (moo_oop_t)moo->_system->nsdic) /* exclude System from the output */
 			{
 				if (MOO_CLASSOF(moo, ns) == moo->_class)
 				{
-					ns = ((moo_oop_class_t)ns)->nsup;
+					ns = (moo_oop_t)((moo_oop_class_t)ns)->nsup;
 				}
 				else if (MOO_CLASSOF(moo, ns) == moo->_interface)
 				{
-					ns = ((moo_oop_interface_t)ns)->nsup;
+					ns = (moo_oop_t)((moo_oop_interface_t)ns)->nsup;
 				}
 				else
 				{
@@ -1671,16 +1671,16 @@ int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 			}* tmp, * top = MOO_NULL;
 			int ok = 1;
 
-			ns = ((moo_oop_interface_t)oop)->nsup;
-			while (/*ns != moo->_system &&*/ ns != moo->_system->nsdic) /* exclude System from the output */
+			ns = (moo_oop_t)((moo_oop_interface_t)oop)->nsup;
+			while (/*ns != moo->_system &&*/ ns != (moo_oop_t)moo->_system->nsdic) /* exclude System from the output */
 			{
 				if (MOO_CLASSOF(moo, ns) == moo->_class)
 				{
-					ns = ((moo_oop_class_t)ns)->nsup;
+					ns = (moo_oop_t)((moo_oop_class_t)ns)->nsup;
 				}
 				else if (MOO_CLASSOF(moo, ns) == moo->_interface)
 				{
-					ns = ((moo_oop_interface_t)ns)->nsup;
+					ns = (moo_oop_t)((moo_oop_interface_t)ns)->nsup;
 				}
 				else
 				{

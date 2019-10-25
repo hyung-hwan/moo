@@ -1322,15 +1322,31 @@ struct moo_pfbase_t
 	moo_oow_t    maxargs;
 };
 
+
 typedef struct moo_pfinfo_t moo_pfinfo_t;
 struct moo_pfinfo_t
 {
 	moo_method_type_t type;
-	moo_ooch_t        mthname[32];
+	const moo_bch_t*  name;
 	int               variadic;
 	moo_pfbase_t      base;
 };
 
+/*
+typedef struct moo_pvbase_t moo_pvbase_t
+{
+	void*     ptr;
+	moo_oow_t len;
+	moo_oow_t type;
+};
+
+typedef struct moo_pvinfo_t moo_pvinfo_t;
+struct moo_pvinfo_t
+{
+	moo_ooch_t        name[32];
+	moo_pvbase_t      base;
+};
+*/
 
 /* receiver check failure leads to hard failure.
  * RATIONAL: the primitive handler should be used by relevant classes and

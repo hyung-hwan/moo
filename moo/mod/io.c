@@ -219,11 +219,11 @@ static moo_pfrc_t pf_write_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, { 'c','l','o','s','e','\0' },                                                                                                     0, { pf_close_io,     0, 0  }  },
-	{ I, { 'r','e','a','d','B','y','t','e','s','I','n','t','o',':','\0' },                                                                 0, { pf_read_bytes,   1, 1  }  },
-	{ I, { 'r','e','a','d','B','y','t','e','s','I','n','t','o',':','s','t','a','r','t','i','n','g','A','t',':','f','o','r',':','\0' },     0, { pf_read_bytes,   3, 3  }  },
-	{ I, { 'w','r','i','t','e','B','y','t','e','s','F','r','o','m',':','\0' },                                                             0, { pf_write_bytes,  1, 1  }  },
-	{ I, { 'w','r','i','t','e','B','y','t','e','s','F','r','o','m',':','s','t','a','r','t','i','n','g','A','t',':','f','o','r',':','\0' }, 0, { pf_write_bytes,  3, 3  }  }
+	{ I, "close",                            0, { pf_close_io,     0, 0  }  },
+	{ I, "readBytesInto:",                   0, { pf_read_bytes,   1, 1  }  },
+	{ I, "readBytesInto:startingAt:for:",    0, { pf_read_bytes,   3, 3  }  },
+	{ I, "writeBytesFrom:",                  0, { pf_write_bytes,  1, 1  }  },
+	{ I, "writeBytesFrom:startingAt:for:",   0, { pf_write_bytes,  3, 3  }  }
 };
 
 /* ------------------------------------------------------------------------ */

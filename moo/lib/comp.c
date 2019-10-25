@@ -8086,7 +8086,7 @@ static int resolve_primitive_method (moo_t* moo)
 			return -1;
 		}
 
-		pfbase = moo_getpfnum (moo, &cc->modname.ptr[savedlen], cc->modname.len - savedlen, &pfnum);
+		pfbase = moo_getpfnum(moo, &cc->modname.ptr[savedlen], cc->modname.len - savedlen, &pfnum);
 		if (!pfbase)
 		{
 			MOO_DEBUG2 (moo, "Cannot find intrinsic primitive function - %.*js\n", 

@@ -576,17 +576,17 @@ static moo_pfrc_t pf_write_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, { 'a','c','c','e','p','t',':','\0' },                    0, { pf_accept_socket,    1, 1  }  },
-	{ I, { 'b','i','n','d',':','\0' },                            0, { pf_bind_socket,      1, 1  }  },
-	{ I, { 'c','l','o','s','e','\0' },                            0, { pf_close_socket,     0, 0  }  },
-	{ I, { 'c','o','n','n','e','c','t',':','\0' },                0, { pf_connect_socket,   1, 1  }  },
-	{ I, { 'l','i','s','t','e','n',':','\0' },                    0, { pf_listen_socket,    1, 1  }  },
-	{ I, { 'o','p','e','n','\0' },                                0, { pf_open_socket,      1, 3  }  },
-	{ I, { 'r','e','a','d','B','y','t','e','s','I','n','t','o',':','\0' },        0, { pf_read_socket,      1, 1  }  },
-	{ I, { 'r','e','a','d','B','y','t','e','s','I','n','t','o',':','s','t','a','r','t','i','n','g','A','t',':','f','o','r',':','\0' },    0, { pf_read_socket,     3, 3  }  },
-	{ I, { 's','o','c','k','e','t','E','r','r','o','r','\0' },    0, { pf_get_socket_error, 0, 0  }  },
-	{ I, { 'w','r','i','t','e','B','y','t','e','s','F','r','o','m',':','\0' },    0, { pf_write_socket,     1, 1  }  },
-	{ I, { 'w','r','i','t','e','B','y','t','e','s','F','r','o','m',':','s','t','a','r','t','i','n','g','A','t',':','f','o','r',':','\0' },    0, { pf_write_socket,     3, 3  }  }
+	{ I, "accept:",                         0, { pf_accept_socket,    1, 1  }  },
+	{ I, "bind:",                           0, { pf_bind_socket,      1, 1  }  },
+	{ I, "close",                           0, { pf_close_socket,     0, 0  }  },
+	{ I, "connect:",                        0, { pf_connect_socket,   1, 1  }  },
+	{ I, "listen:",                         0, { pf_listen_socket,    1, 1  }  },
+	{ I, "open",                            0, { pf_open_socket,      1, 3  }  },
+	{ I, "readBytesInto:",                  0, { pf_read_socket,      1, 1  }  },
+	{ I, "readBytesInto:startingAt:for:",   0, { pf_read_socket,      3, 3  }  },
+	{ I, "socketError",                     0, { pf_get_socket_error, 0, 0  }  },
+	{ I, "writeBytesFrom:",                 0, { pf_write_socket,     1, 1  }  },
+	{ I, "writeBytesFrom:startingAt:for:",  0, { pf_write_socket,     3, 3  }  }
 };
 
 /* ------------------------------------------------------------------------ */

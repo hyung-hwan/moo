@@ -118,8 +118,8 @@ oops:
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, { 'o','p','e','n',':','f','l','a','g','s',':','\0' },                       0, { pf_open_file,     2, 2  }  },
-	{ I, { 'o','p','e','n',':','f','l','a','g','s',':','m','o','d','e',':','\0' },   0, { pf_open_file,     3, 3  }  },
+	{ I, "open:flags:",      0, { pf_open_file,     2, 2  }  },
+	{ I, "open:flags:mode:", 0, { pf_open_file,     3, 3  }  },
 };
 
 /* ------------------------------------------------------------------------ */
@@ -132,7 +132,7 @@ static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 
 static moo_pfbase_t* query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name, moo_oow_t namelen)
 {
-	return moo_findpfbase (moo, pfinfos, MOO_COUNTOF(pfinfos), name, namelen);
+	return moo_findpfbase(moo, pfinfos, MOO_COUNTOF(pfinfos), name, namelen);
 }
 
 static void unload (moo_t* moo, moo_mod_t* mod)

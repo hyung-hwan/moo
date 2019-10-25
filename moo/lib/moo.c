@@ -741,8 +741,8 @@ done2:
 moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen, moo_mod_t** mod)
 {
 	/* primitive function identifier
-	 *   _funcname
-	 *   modname_funcname
+	 *   modname.funcname
+	 *   modname.modname2.funcname
 	 */
 	moo_rbt_pair_t* pair;
 	moo_mod_data_t* mdp;
@@ -943,7 +943,7 @@ moo_pfbase_t* moo_findpfbase (moo_t* moo, moo_pfinfo_t* pfinfo, moo_oow_t pfcoun
 		/*mid = (left + right) / 2;*/
 		mid = left + ((right - left) / 2);
 
-		n = moo_comp_oochars_oocstr (name, namelen, pfinfo[mid].mthname);
+		n = moo_comp_oochars_bcstr(name, namelen, pfinfo[mid].name);
 		if (n < 0) right = mid - 1; /* this substraction can make right negative. so i can't use moo_oow_t for the variable */
 		else if (n > 0) left = mid + 1;
 		else return &pfinfo[mid].base;
@@ -955,7 +955,7 @@ moo_pfbase_t* moo_findpfbase (moo_t* moo, moo_pfinfo_t* pfinfo, moo_oow_t pfcoun
 	for (base = 0, lim = pfcount; lim > 0; lim >>= 1)
 	{
 		mid = base + (lim >> 1);
-		n = moo_comp_oochars_oocstr (name, namelen, pfinfo[mid].mthname);
+		n = moo_comp_oochars_bcstr(name, namelen, pfinfo[mid].name);
 		if (n == 0) return &pfinfo[mid].base;
 		if (n > 0) { base = mid + 1; lim--; }
 	}

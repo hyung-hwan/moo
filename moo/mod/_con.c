@@ -256,11 +256,11 @@ einval:
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, { 'c','l','e','a','r','\0' },                 0, { pf_clear,     0,  0 } },
-	{ I, { 'c','l','o','s','e','\0' },                 0, { pf_close,     0,  0 } },
-	{ I, { 'o','p','e','n','\0' },                     0, { pf_open,      0,  0 } },
-	{ I, { 's','e','t','c','u','r','s','o','r','\0' }, 0, { pf_setcursor, 2,  2 } },
-	{ I, { 'w','r','i','t','e','\0' },                 0, { pf_write,     1,  1 } }
+	{ I, "clear",        0, { pf_clear,     0,  0 } },
+	{ I, "close",        0, { pf_close,     0,  0 } },
+	{ I, "open",         0, { pf_open,      0,  0 } },
+	{ I, "setcursor",    0, { pf_setcursor, 2,  2 } },
+	{ I, "write",        0, { pf_write,     1,  1 } }
 };
 
 /* ------------------------------------------------------------------------ */
