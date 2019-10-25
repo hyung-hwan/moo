@@ -1971,6 +1971,8 @@ enum moo_synerrnum_t
 	MOO_SYNERR_PFNUMINVAL,      /* wrong primitive function number */
 	MOO_SYNERR_PFIDINVAL,       /* wrong primitive function identifier */
 	MOO_SYNERR_PFARGDEFINVAL,   /* wrong primitive function argument definition */
+	MOO_SYNERR_PVIDINVAL,       /* wrong primitive value identifier */
+	MOO_SYNERR_PVIMPBANNED,     /* primitive value load from module not allowed */
 	MOO_SYNERR_MODIMPFAIL,      /* failed to import module */
 	MOO_SYNERR_INCLUDE,         /* #include error */
 	MOO_SYNERR_PRAGMAINVAL,     /* wrong pragma name */

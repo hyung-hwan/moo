@@ -10195,6 +10195,9 @@ static int __compile_pooldic_definition (moo_t* moo)
 		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && is_token_word(moo, VOCA_FROM))
 		{
 			moo_pvbase_t* pvbase;
+			moo_cunit_class_t* pcc;
+			moo_oow_t savedlen;
+
 			/*
 			 * pooldic X {
 			 *    O_RDONLY := 0,
@@ -10202,20 +10205,46 @@ static int __compile_pooldic_definition (moo_t* moo)
 			 * }
 			 */
 
-			/* TODO: check if this pooldic definition is nested inside a class */
-/* TODO: make it more robust */
-			GET_TOKEN (moo);
-			if (TOKEN_TYPE(moo) != MOO_IOTOK_STRLIT)
+			if (!pd->cunit_parent || pd->cunit_parent->cunit_type != MOO_CUNIT_CLASS)
 			{
-				moo_setsynerrbfmt (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo), "primitive value name to import expected");
+				moo_setsynerrbfmt (moo, MOO_SYNERR_PVIMPBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo), "primitive value from module not allowed in non-nested pooldic");
 				goto oops;
 			}
 
-			pvbase = moo_querymodpv(moo, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo), MOO_NULL);
+			pcc = (moo_cunit_class_t*)pd->cunit_parent;
+			if (pcc->modname.len <= 0)
+			{
+				moo_setsynerrbfmt (moo, MOO_SYNERR_PVIMPBANNED, TOKEN_LOC(moo), TOKEN_NAME(moo), "primitive value from module not allowed without module from class");
+				goto oops;
+			}
+
+			GET_TOKEN (moo);
+			if (TOKEN_TYPE(moo) != MOO_IOTOK_STRLIT)
+			{
+				moo_setsynerr (moo, MOO_SYNERR_PVIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				goto oops;
+			}
+
+			if (moo_rfind_oochar(TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo), '.'))
+			{
+				moo_setsynerrbfmt (moo, MOO_SYNERR_PVIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo), "primitive value identifier disallowed to have period");
+				goto oops;
+			}
+
+			/* append the primitive value name to the module name of the parent class.
+			 * it is restored to the saved length after module query for primitive value */
+			savedlen = pcc->modname.len;
+			if (copy_string_to (moo, TOKEN_NAME(moo), &pcc->modname, &pcc->modname_capa, 1, '.') <= -1)
+			{
+				pcc->modname.len = savedlen;
+				goto oops;
+			}
+			pvbase = moo_querymodpv(moo, pcc->modname.ptr, pcc->modname.len, MOO_NULL);
+			pcc->modname.len = savedlen;
 			if (!pvbase)
 			{
-				/* TODO: backup error message and use it */
-				moo_setsynerrbfmt (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo), "primitive value name unknown");
+				const moo_ooch_t* oldmsg = moo_backuperrmsg(moo);
+				moo_setsynerrbfmt (moo, MOO_SYNERR_PVIDINVAL, TOKEN_LOC(moo), TOKEN_NAME(moo), "wrong primitive value identifier - %js", oldmsg);
 				goto oops;
 			}
 
@@ -10234,8 +10263,11 @@ static int __compile_pooldic_definition (moo_t* moo)
 					break;
 				}
 
+			/*	case MOO_PV_STR:
+			*/
+
 				default:
-					moo_setsynerrbfmt (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo), "unsupported pvtype");
+					moo_setsynerrbfmt (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo), "unsupported primitive value type - %d", pvbase->type);
 					goto oops;
 			}
 

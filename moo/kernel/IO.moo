@@ -13,9 +13,9 @@ class FileAccessor(InputOutputStud) from "io.file"
 	{
 		//O_RDONLY := 0,
 		//O_WRONLY := 1
-		O_RDONLY from "io.file.O_RDONLY",
-		O_WRONLY from "io.file.O_WRONLY",
-		O_RDWR   from "io.file.O_RDWR"
+		O_RDONLY from "O_RDONLY",
+		O_WRONLY from "O_WRONLY",
+		O_RDWR   from "O_RDWR"
 	}
 
 	method(#primitive,#lenient) _open: path flags: flags.
