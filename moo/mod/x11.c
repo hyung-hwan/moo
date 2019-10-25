@@ -818,9 +818,9 @@ static int x11_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 	return 0;
 }
 
-static moo_pfbase_t* x11_query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name, moo_oow_t namelen)
+static moo_pfbase_t* x11_querypf (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name, moo_oow_t namelen)
 {
-	return moo_findpfbase (moo, x11_pfinfo, MOO_COUNTOF(x11_pfinfo), name, namelen);
+	return moo_findpfbase(moo, x11_pfinfo, MOO_COUNTOF(x11_pfinfo), name, namelen);
 }
 
 static void x11_unload (moo_t* moo, moo_mod_t* mod)
@@ -869,7 +869,8 @@ int moo_mod_x11 (moo_t* moo, moo_mod_t* mod)
 	}
 
 	mod->import = x11_import;
-	mod->query = x11_query;
+	mod->querypf = x11_querypf;
+	mod->querypv = MOO_NULL;
 	mod->unload = x11_unload; 
 
 	return 0;

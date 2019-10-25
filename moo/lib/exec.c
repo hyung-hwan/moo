@@ -4738,10 +4738,10 @@ static int start_method (moo_t* moo, moo_oop_method_t method, moo_oow_t nargs)
 			if (pfbase) 
 			{
 				mod = MOO_OOP_TO_SMPTR(method->preamble_data[0]);
-				goto exec_handler; /* skip moo_querymod() */
+				goto exec_handler; /* skip moo_querymodpf() */
 			}
 
-			pfbase = moo_querymod(moo, MOO_OBJ_GET_CHAR_SLOT(pfname), MOO_OBJ_GET_SIZE(pfname), &mod);
+			pfbase = moo_querymodpf(moo, MOO_OBJ_GET_CHAR_SLOT(pfname), MOO_OBJ_GET_SIZE(pfname), &mod);
 			if (pfbase)
 			{
 				int n;

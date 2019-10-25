@@ -4416,7 +4416,7 @@ static int compile_method_pragma (moo_t* moo)
 					/* external named primitive containing a period. */
 
 					/* perform some sanity checks. see compile_method_definition() for similar checks */
-					pfbase = moo_querymod(moo, tptr, tlen, MOO_NULL);
+					pfbase = moo_querymodpf(moo, tptr, tlen, MOO_NULL);
 					if (!pfbase)
 					{
 						MOO_DEBUG2 (moo, "Cannot find module primitive function - %.*js\n", tlen, tptr);
@@ -8137,7 +8137,7 @@ static int resolve_primitive_method (moo_t* moo)
 
 		/* check if the primitive function exists at the compile time and perform some checks.
 		 * see compile_method_primitive() for similar checks */
-		pfbase = moo_querymod(moo, &cc->modname.ptr[savedlen], cc->modname.len - savedlen, MOO_NULL);
+		pfbase = moo_querymodpf(moo, &cc->modname.ptr[savedlen], cc->modname.len - savedlen, MOO_NULL);
 		if (!pfbase)
 		{
 			MOO_DEBUG2 (moo, "Cannot find module primitive function - %.*js\n", 
@@ -10192,16 +10192,67 @@ static int __compile_pooldic_definition (moo_t* moo)
 
 		GET_TOKEN (moo);
 
-		if (TOKEN_TYPE(moo) != MOO_IOTOK_ASSIGN)
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_IDENT && is_token_word(moo, VOCA_FROM))
+		{
+			moo_pvbase_t* pvbase;
+			/*
+			 * pooldic X {
+			 *    O_RDONLY := 0,
+			 *    O_WRONLY from "O_WRONLY"
+			 * }
+			 */
+
+			/* TODO: check if this pooldic definition is nested inside a class */
+/* TODO: make it more robust */
+			GET_TOKEN (moo);
+			if (TOKEN_TYPE(moo) != MOO_IOTOK_STRLIT)
+			{
+				moo_setsynerrbfmt (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo), "primitive value name to import expected");
+				goto oops;
+			}
+
+			pvbase = moo_querymodpv(moo, TOKEN_NAME_PTR(moo), TOKEN_NAME_LEN(moo), MOO_NULL);
+			if (!pvbase)
+			{
+				/* TODO: backup error message and use it */
+				moo_setsynerrbfmt (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo), "primitive value name unknown");
+				goto oops;
+			}
+
+			switch (pvbase->type)
+			{
+				case MOO_PV_INT:
+				{
+					moo_oocs_t x;
+
+					x.ptr = moo_dupbtooocstr(moo, pvbase->vstr, &x.len);
+					if (!x.ptr) goto oops;
+
+					tmp = string_to_int(moo, &x, 0);
+					moo_freemem (moo, x.ptr);
+					if (tmp && MOO_OOP_IS_POINTER(tmp)) MOO_OBJ_SET_FLAGS_RDONLY (tmp, 1);
+					break;
+				}
+
+				default:
+					moo_setsynerrbfmt (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo), "unsupported pvtype");
+					goto oops;
+			}
+
+			if (!tmp) goto oops;
+		}
+		else if (TOKEN_TYPE(moo) == MOO_IOTOK_ASSIGN)
+		{
+			GET_TOKEN (moo);
+
+			tmp = token_to_literal(moo, 1);
+			if (!tmp) goto oops;
+		}
+		else
 		{
 			moo_setsynerr (moo, MOO_SYNERR_ASSIGN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			goto oops;
 		}
-
-		GET_TOKEN (moo);
-
-		tmp = token_to_literal(moo, 1);
-		if (!tmp) goto oops;
 
 		/* for this definition, #pooldic MyPoolDic { a := 10. b := 20 },
 		 * arlit_buffer contains (#a 10 #b 20) when the 'while' loop is over. */

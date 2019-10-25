@@ -519,7 +519,7 @@ static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 	return 0;
 }
 
-static moo_pfbase_t* query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name, moo_oow_t namelen)
+static moo_pfbase_t* querypf (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name, moo_oow_t namelen)
 {
 	return moo_findpfbase (moo, pfinfos, MOO_COUNTOF(pfinfos), name, namelen);
 }
@@ -532,7 +532,8 @@ static void unload (moo_t* moo, moo_mod_t* mod)
 int moo_mod_sck_addr (moo_t* moo, moo_mod_t* mod)
 {
 	mod->import = import;
-	mod->query = query;
+	mod->querypf = querypf;
+	mod->querypv = MOO_NULL;
 	mod->unload = unload; 
 	mod->ctx = MOO_NULL;
 	return 0;

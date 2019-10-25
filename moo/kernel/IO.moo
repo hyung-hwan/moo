@@ -1,6 +1,6 @@
 class(#limited) InputOutputStud(Object) from "io"
 {
-	var(#get) handle. // you must keep handle as the first field for consitency with the 'io' module.
+	var(#get) handle. // you must keep handle as the first field for consitency with the io module.
 
 	method(#primitive,#lenient) _close.
 	method(#primitive) _readBytesInto: buffer startingAt: offset for: count.
@@ -11,10 +11,11 @@ class FileAccessor(InputOutputStud) from "io.file"
 {
 	pooldic Flag
 	{
-		O_RDONLY := 0,
-		O_WRONLY := 1
-		//O_RDONLY from "O_RDONLY",
-		//O_WRONLY from "O_WRONLY"
+		//O_RDONLY := 0,
+		//O_WRONLY := 1
+		O_RDONLY from "io.file.O_RDONLY",
+		O_WRONLY from "io.file.O_WRONLY",
+		O_RDWR   from "io.file.O_RDWR"
 	}
 
 	method(#primitive,#lenient) _open: path flags: flags.

@@ -122,6 +122,13 @@ static moo_pfinfo_t pfinfos[] =
 	{ I, "open:flags:mode:", 0, { pf_open_file,     3, 3  }  },
 };
 
+static moo_pvinfo_t pvinfos[] = 
+{
+	{ "O_NONBLOCK", { MOO_PV_INT, MOO_BQ(O_NONBLOCK) } },
+	{ "O_RDONLY",   { MOO_PV_INT, MOO_BQ(O_RDONLY) } },
+	{ "O_RDWR",     { MOO_PV_INT, MOO_BQ(O_RDWR) } },
+	{ "O_WRONLY",   { MOO_PV_INT, MOO_BQ(O_WRONLY) } }
+};
 /* ------------------------------------------------------------------------ */
 
 static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
@@ -130,20 +137,25 @@ static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 	return 0;
 }
 
-static moo_pfbase_t* query (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name, moo_oow_t namelen)
+static moo_pfbase_t* querypf (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name, moo_oow_t namelen)
 {
 	return moo_findpfbase(moo, pfinfos, MOO_COUNTOF(pfinfos), name, namelen);
 }
 
+static moo_pvbase_t* querypv (moo_t* moo, moo_mod_t* mod, const moo_ooch_t* name, moo_oow_t namelen)
+{
+	return moo_findpvbase(moo, pvinfos, MOO_COUNTOF(pvinfos), name, namelen);
+}
+
 static void unload (moo_t* moo, moo_mod_t* mod)
 {
-	/* TODO: anything? close open open dll handles? For that, pf_open must store the value it returns to mod->ctx or somewhere..*/
 }
 
 int moo_mod_io_file (moo_t* moo, moo_mod_t* mod)
 {
 	mod->import = import;
-	mod->query = query;
+	mod->querypf = querypf;
+	mod->querypv = querypv;
 	mod->unload = unload; 
 	mod->ctx = MOO_NULL;
 	return 0;

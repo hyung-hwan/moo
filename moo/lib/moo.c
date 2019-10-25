@@ -658,7 +658,7 @@ moo_mod_data_t* moo_openmod (moo_t* moo, const moo_ooch_t* name, moo_oow_t namel
 	MOO_DEBUG2 (moo, "Opened a module [%js] - %p\n", mdp->mod.name, mdp->handle);
 
 	/* the module loader must ensure to set a proper query handler */
-	MOO_ASSERT (moo, mdp->mod.query != MOO_NULL);
+	MOO_ASSERT (moo, mdp->mod.querypf != MOO_NULL);
 
 	return mdp;
 }
@@ -728,7 +728,7 @@ int moo_importmod (moo_t* moo, moo_oop_class_t _class, const moo_ooch_t* name, m
 
 done:
 	/* close the module opened above.
-	 * [NOTE] if the import callback calls the moo_querymod(), the returned
+	 * [NOTE] if the import callback calls the moo_querymodpf(), the returned
 	 *        function pointers will get all invalidated here. so never do 
 	 *        anything like that */
 	moo_closemod (moo, mdp);
@@ -738,9 +738,9 @@ done2:
 	return r;
 }
 
-moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen, moo_mod_t** mod)
+static void* query_mod (moo_t* moo, const moo_ooch_t* pid, moo_oow_t pidlen, moo_mod_t** mod, int pv)
 {
-	/* primitive function identifier
+	/* primitive function/value identifier
 	 *   modname.funcname
 	 *   modname.modname2.funcname
 	 */
@@ -749,27 +749,33 @@ moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidle
 	const moo_ooch_t* sep;
 
 	moo_oow_t mod_name_len;
-	moo_pfbase_t* pfbase;
+	void* base;
 
-	sep = moo_rfind_oochar(pfid, pfidlen, '.');
+	static const moo_bch_t* tags[] =
+	{
+		"function",
+		"value"
+	};
+
+	sep = moo_rfind_oochar(pid, pidlen, '.');
 	if (!sep)
 	{
 		/* i'm writing a conservative code here. the compiler should 
 		 * guarantee that a period is included in an primitive function identifer.
 		 * what if the compiler is broken? imagine a buggy compiler rewritten
 		 * in moo itself? */
-		MOO_DEBUG2 (moo, "Internal error - no period in a primitive function identifier [%.*js] - buggy compiler?\n", pfidlen, pfid);
-		moo_seterrbfmt (moo, MOO_EINTERN, "no period in a primitive function identifier [%.*js]", pfidlen, pfid);
+		MOO_DEBUG3 (moo, "Internal error - no period in a primitive %hs identifier [%.*js] - buggy compiler?\n", tags[pv], pidlen, pid);
+		moo_seterrbfmt (moo, MOO_EINTERN, "no period in a primitive %hs identifier [%.*js]", tags[pv], pidlen, pid);
 		return MOO_NULL;
 	}
 
-	mod_name_len = sep - pfid;
+	mod_name_len = sep - pid;
 
 	/* the first segment through the segment before the last compose a
 	 * module id. the last segment is the primitive function name.
 	 * for instance, in con.window.open, con.window is a module id and
 	 * open is the primitive function name. */
-	pair = moo_rbt_search(&moo->modtab, pfid, mod_name_len);
+	pair = moo_rbt_search(&moo->modtab, pid, mod_name_len);
 	if (pair)
 	{
 		mdp = (moo_mod_data_t*)MOO_RBT_VPTR(pair);
@@ -778,23 +784,35 @@ moo_pfbase_t* moo_querymod (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidle
 	else
 	{
 		/* open a module using the part before the last period */
-		mdp = moo_openmod(moo, pfid, mod_name_len, 0);
+		mdp = moo_openmod(moo, pid, mod_name_len, 0);
 		if (!mdp) return MOO_NULL;
 	}
 
-	if ((pfbase = mdp->mod.query(moo, &mdp->mod, sep + 1, pfidlen - mod_name_len - 1)) == MOO_NULL) 
+	base = pv? mdp->mod.querypv(moo, &mdp->mod, sep + 1, pidlen - mod_name_len - 1):
+	           mdp->mod.querypf(moo, &mdp->mod, sep + 1, pidlen - mod_name_len - 1);
+	if (!base)
 	{
 		/* the primitive function is not found. but keep the module open even if it's opened above */
-		MOO_DEBUG3 (moo, "Cannot find a primitive function [%.*js] in a module [%js]\n", pfidlen - mod_name_len - 1, sep + 1, mdp->mod.name);
-		moo_seterrbfmt (moo, MOO_ENOENT, "unable to find a primitive function [%.*js] in a module [%js]", pfidlen - mod_name_len - 1, sep + 1, mdp->mod.name); 
+		MOO_DEBUG4 (moo, "Cannot find a primitive %hs [%.*js] in a module [%js]\n", tags[pv], pidlen - mod_name_len - 1, sep + 1, mdp->mod.name);
+		moo_seterrbfmt (moo, MOO_ENOENT, "unable to find a primitive %hs [%.*js] in a module [%js]", tags[pv], pidlen - mod_name_len - 1, sep + 1, mdp->mod.name); 
 		return MOO_NULL;
 	}
 
 	if (mod) *mod = &mdp->mod;
 
-	MOO_DEBUG4 (moo, "Found a primitive function [%.*js] in a module [%js] - %p\n",
-		pfidlen - mod_name_len - 1, sep + 1, mdp->mod.name, pfbase);
-	return pfbase;
+	MOO_DEBUG5 (moo, "Found a primitive %hs [%.*js] in a module [%js] - %p\n",
+		tags[pv], pidlen - mod_name_len - 1, sep + 1, mdp->mod.name, base);
+	return base;
+}
+
+moo_pfbase_t* moo_querymodpf (moo_t* moo, const moo_ooch_t* pfid, moo_oow_t pfidlen, moo_mod_t** mod)
+{
+	return (moo_pfbase_t*)query_mod(moo, pfid, pfidlen, mod, 0);
+}
+
+moo_pvbase_t* moo_querymodpv (moo_t* moo, const moo_ooch_t* pvid, moo_oow_t pvidlen, moo_mod_t** mod)
+{
+	return (moo_pvbase_t*)query_mod(moo, pvid, pvidlen, mod, 1);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -960,6 +978,25 @@ moo_pfbase_t* moo_findpfbase (moo_t* moo, moo_pfinfo_t* pfinfo, moo_oow_t pfcoun
 		if (n > 0) { base = mid + 1; lim--; }
 	}
 #endif
+
+	moo_seterrnum (moo, MOO_ENOENT);
+	return MOO_NULL;
+}
+
+moo_pvbase_t* moo_findpvbase (moo_t* moo, moo_pvinfo_t* pvinfo, moo_oow_t pvcount, const moo_ooch_t* name, moo_oow_t namelen)
+{
+	int n;
+
+	/* binary search */
+	moo_oow_t base, mid, lim;
+
+	for (base = 0, lim = pvcount; lim > 0; lim >>= 1)
+	{
+		mid = base + (lim >> 1);
+		n = moo_comp_oochars_bcstr(name, namelen, pvinfo[mid].name);
+		if (n == 0) return &pvinfo[mid].base;
+		if (n > 0) { base = mid + 1; lim--; }
+	}
 
 	moo_seterrnum (moo, MOO_ENOENT);
 	return MOO_NULL;

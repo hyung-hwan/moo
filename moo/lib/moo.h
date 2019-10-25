@@ -1332,21 +1332,27 @@ struct moo_pfinfo_t
 	moo_pfbase_t      base;
 };
 
-/*
-typedef struct moo_pvbase_t moo_pvbase_t
+enum moo_pvtype_t
 {
-	void*     ptr;
-	moo_oow_t len;
-	moo_oow_t type;
+	MOO_PV_INT,
+	MOO_PV_STR,
+	MOO_PV_SYM
 };
+typedef enum moo_pvtype_t moo_pvtype_t;
+
+struct moo_pvbase_t
+{
+	moo_pvtype_t type;
+	const void*  vstr;
+};
+typedef struct moo_pvbase_t moo_pvbase_t;
 
 typedef struct moo_pvinfo_t moo_pvinfo_t;
 struct moo_pvinfo_t
 {
-	moo_ooch_t        name[32];
+	const moo_bch_t*  name;
 	moo_pvbase_t      base;
 };
-*/
 
 /* receiver check failure leads to hard failure.
  * RATIONAL: the primitive handler should be used by relevant classes and
@@ -1386,7 +1392,14 @@ typedef int (*moo_mod_import_t) (
 	moo_oop_class_t  _class
 );
 
-typedef moo_pfbase_t* (*moo_mod_query_t) (
+typedef moo_pfbase_t* (*moo_mod_querypf_t) (
+	moo_t*            moo,
+	moo_mod_t*        mod,
+	const moo_ooch_t* name,
+	moo_oow_t         namelen
+);
+
+typedef moo_pfbase_t* (*moo_mod_querypv_t) (
 	moo_t*            moo,
 	moo_mod_t*        mod,
 	const moo_ooch_t* name,
@@ -1411,11 +1424,12 @@ struct moo_mod_t
 	unsigned int hints; /* bitwised-ORed of moo_mod_hint_t enumerators */
 
 	/* user-defined data */
-	moo_mod_import_t import;
-	moo_mod_query_t  query;
-	moo_mod_unload_t unload;
-	moo_mod_gc_t     gc;
-	void*            ctx;
+	moo_mod_import_t  import;
+	moo_mod_querypf_t querypf;
+	moo_mod_querypv_t querypv;
+	moo_mod_unload_t  unload;
+	moo_mod_gc_t      gc;
+	void*             ctx;
 };
 
 struct moo_mod_data_t 
@@ -2426,6 +2440,14 @@ MOO_EXPORT moo_pfbase_t* moo_findpfbase (
 	moo_t*              moo,
 	moo_pfinfo_t*       pfinfo,
 	moo_oow_t           pfcount,
+	const moo_ooch_t*   name,
+	moo_oow_t           namelen
+);
+
+MOO_EXPORT moo_pvbase_t* moo_findpvbase (
+	moo_t*              moo,
+	moo_pvinfo_t*       pvinfo,
+	moo_oow_t           pvcount,
 	const moo_ooch_t*   name,
 	moo_oow_t           namelen
 );

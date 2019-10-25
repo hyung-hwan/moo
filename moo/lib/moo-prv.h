@@ -1601,16 +1601,22 @@ int moo_importmod (
 );
 
 /*
- * The moo_querymod() function finds a primitive function in modules
+ * The moo_querymodpf() function finds a primitive function in modules
  * with a full primitive identifier.
  */
-moo_pfbase_t* moo_querymod (
+moo_pfbase_t* moo_querymodpf (
 	moo_t*            moo,
 	const moo_ooch_t* pfid,
 	moo_oow_t         pfidlen,
 	moo_mod_t**       mod
 );
 
+moo_pvbase_t* moo_querymodpv (
+	moo_t*            moo,
+	const moo_ooch_t* pvid,
+	moo_oow_t         pvidlen,
+	moo_mod_t**       mod
+);
 
 /* ========================================================================= */
 /* pf-basic.c                                                                */
