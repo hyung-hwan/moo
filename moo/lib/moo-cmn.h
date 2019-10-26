@@ -1049,11 +1049,4 @@ typedef struct moo_t moo_t;
 
 #define MOO_STATIC_ASSERT_EXPR(expr) ((void)MOO_SIZEOF(char[(expr)? 1: -1]))
 
-
-/* =========================================================================
- * QUOTING
- * =========================================================================*/
-#define MOO_BQ_(val) #val
-#define MOO_BQ(val)  MOO_BQ_(val)
-
 #endif

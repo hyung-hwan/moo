@@ -10296,22 +10296,19 @@ static int __compile_pooldic_definition (moo_t* moo)
 
 			switch (pvbase->type)
 			{
-				case MOO_PV_INT:
+				case MOO_PV_OOI:
 				{
-					moo_oocs_t x;
-
-					x.ptr = moo_dupbtooocstr(moo, pvbase->vstr, &x.len);
-					if (!x.ptr) goto oops;
-
-					tmp = string_to_int(moo, &x, 0);
-					moo_freemem (moo, x.ptr);
-					if (tmp && MOO_OOP_IS_POINTER(tmp)) MOO_OBJ_SET_FLAGS_RDONLY (tmp, 1);
+					tmp = moo_ooitoint(moo, (moo_ooi_t)pvbase->value);
 					break;
 				}
 
-			/*	case MOO_PV_STR:
-			*/
+				case MOO_PV_OOW:
+				{
+					tmp = moo_oowtoint(moo, (moo_oow_t)pvbase->value);
+					break;
+				}
 
+				/* TODO: support more types... MOO_PV_OOI_BCSTR, MOO_PV_OOI_UCSTR, MOO_PV_FPDEC_BCSTR, MOO_PV_BCSTR, MOO_PV_UCSTR, etc */
 				default:
 					moo_setsynerrbfmt (moo, MOO_SYNERR_STRING, TOKEN_LOC(moo), TOKEN_NAME(moo), "unsupported primitive value type - %d", pvbase->type);
 					goto oops;

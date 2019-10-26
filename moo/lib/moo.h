@@ -1334,16 +1334,16 @@ struct moo_pfinfo_t
 
 enum moo_pvtype_t
 {
-	MOO_PV_INT,
-	MOO_PV_STR,
-	MOO_PV_SYM
+	MOO_PV_OOI,
+	MOO_PV_OOW
+	/* TODO: more types */
 };
 typedef enum moo_pvtype_t moo_pvtype_t;
 
 struct moo_pvbase_t
 {
 	moo_pvtype_t type;
-	const void*  vstr;
+	const void*  value;
 };
 typedef struct moo_pvbase_t moo_pvbase_t;
 

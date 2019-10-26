@@ -3273,7 +3273,7 @@ moo_oop_t moo_bitorints (moo_t* moo, moo_oop_t x, moo_oop_t y)
 		v3 = v1 | v2;
 
 		if (MOO_IN_SMOOI_RANGE(v3)) return MOO_SMOOI_TO_OOP(v3);
-		return make_bigint_with_ooi (moo, v3);
+		return make_bigint_with_ooi(moo, v3);
 	}
 	else if (MOO_OOP_IS_SMOOI(x))
 	{

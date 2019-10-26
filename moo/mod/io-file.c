@@ -126,21 +126,20 @@ static moo_pfinfo_t pfinfos[] =
 
 static moo_pvinfo_t pvinfos[] = 
 {
-	{ "O_CLOEXEC",  { MOO_PV_INT, MOO_BQ(O_CLOEXEC) } },
-	{ "O_CREAT",    { MOO_PV_INT, MOO_BQ(O_CREAT) } },
-	{ "O_EXCL",     { MOO_PV_INT, MOO_BQ(O_EXCL) } },
-	{ "O_NOFOLLOW", { MOO_PV_INT, MOO_BQ(O_NOFOLLOW) } },
-	{ "O_NONBLOCK", { MOO_PV_INT, MOO_BQ(O_NONBLOCK) } },
-	{ "O_RDONLY",   { MOO_PV_INT, MOO_BQ(O_RDONLY) } },
-	{ "O_RDWR",     { MOO_PV_INT, MOO_BQ(O_RDWR) } },
-	{ "O_TRUNC",    { MOO_PV_INT, MOO_BQ(O_TRUNC) } },
-	{ "O_WRONLY",   { MOO_PV_INT, MOO_BQ(O_WRONLY) } },
+	{ "O_CLOEXEC",  { MOO_PV_OOI, (const void*)O_CLOEXEC } },
+	{ "O_CREAT",    { MOO_PV_OOI, (const void*)O_CREAT } },
+	{ "O_EXCL",     { MOO_PV_OOI, (const void*)O_EXCL } },
+	{ "O_NOFOLLOW", { MOO_PV_OOI, (const void*)O_NOFOLLOW } },
+	{ "O_NONBLOCK", { MOO_PV_OOI, (const void*)O_NONBLOCK } },
+	{ "O_RDONLY",   { MOO_PV_OOI, (const void*)O_RDONLY } },
+	{ "O_RDWR",     { MOO_PV_OOI, (const void*)O_RDWR } },
+	{ "O_TRUNC",    { MOO_PV_OOI, (const void*)O_TRUNC } },
+	{ "O_WRONLY",   { MOO_PV_OOI, (const void*)O_WRONLY } }
 };
 /* ------------------------------------------------------------------------ */
 
 static int import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)
 {
-	/*if (moo_setclasstrsize(moo, _class, MOO_SIZEOF(io_t), MOO_NULL) <= -1) return -1;*/
 	return 0;
 }
 
