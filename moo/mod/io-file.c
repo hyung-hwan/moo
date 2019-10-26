@@ -59,6 +59,8 @@ static moo_pfrc_t pf_open_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	flags = MOO_STACK_GETARG(moo, nargs, 1);
 	mode = (nargs < 3)? MOO_SMOOI_TO_OOP(0644): MOO_STACK_GETARG(moo, nargs, 2);
 
+/* TODO: always set O_LARGEFILE on flags if necessary */
+
 	MOO_PF_CHECK_ARGS (moo, nargs, MOO_OBJ_IS_CHAR_POINTER(path) && MOO_OOP_IS_SMOOI(flags) && MOO_OOP_IS_SMOOI(mode));
 	MOO_PF_CHECK_ARGS (moo, nargs, moo_count_oocstr(MOO_OBJ_GET_CHAR_SLOT(path)) == MOO_OBJ_GET_SIZE(path));
 
@@ -124,10 +126,15 @@ static moo_pfinfo_t pfinfos[] =
 
 static moo_pvinfo_t pvinfos[] = 
 {
+	{ "O_CLOEXEC",  { MOO_PV_INT, MOO_BQ(O_CLOEXEC) } },
+	{ "O_CREAT",    { MOO_PV_INT, MOO_BQ(O_CREAT) } },
+	{ "O_EXCL",     { MOO_PV_INT, MOO_BQ(O_EXCL) } },
+	{ "O_NOFOLLOW", { MOO_PV_INT, MOO_BQ(O_NOFOLLOW) } },
 	{ "O_NONBLOCK", { MOO_PV_INT, MOO_BQ(O_NONBLOCK) } },
 	{ "O_RDONLY",   { MOO_PV_INT, MOO_BQ(O_RDONLY) } },
 	{ "O_RDWR",     { MOO_PV_INT, MOO_BQ(O_RDWR) } },
-	{ "O_WRONLY",   { MOO_PV_INT, MOO_BQ(O_WRONLY) } }
+	{ "O_TRUNC",    { MOO_PV_INT, MOO_BQ(O_TRUNC) } },
+	{ "O_WRONLY",   { MOO_PV_INT, MOO_BQ(O_WRONLY) } },
 };
 /* ------------------------------------------------------------------------ */
 

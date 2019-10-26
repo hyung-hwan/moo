@@ -5386,26 +5386,72 @@ static int read_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 {
 	moo_oop_t lit, a;
 	moo_oow_t i, j, saved_arlit_count;
+	int comma_used = -1; /* unknown */
 
 	saved_arlit_count = moo->c->arlit.count;
 
 	GET_TOKEN_GOTO (moo, oops); /* skip #( */
 
-	do
+	if (TOKEN_TYPE(moo) == MOO_IOTOK_EOF)
 	{
-		if (TOKEN_TYPE(moo) == MOO_IOTOK_EOF) 
+		moo_setsynerr (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
+		goto oops;
+	}
+	else if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
+	{
+		do
+		{
+			lit = token_to_literal(moo, rdonly);
+			if (!lit || add_to_array_literal_buffer(moo, lit) <= -1) goto oops;
+
+			GET_TOKEN_GOTO (moo, oops);
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_EOF || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN) break;
+
+			if (comma_used == -1)
+			{
+				/* check if a comma has been used after the first element */
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA)
+				{
+					comma_used = 1;
+					goto literal_expected_after_comma;
+				}
+				else
+				{
+					comma_used = 0;
+					if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN || TOKEN_TYPE(moo) == MOO_IOTOK_EOF) break;
+				}
+			}
+			else if (comma_used == 0)
+			{
+				/* a comma is not expected. stop if EOF or ) is encountered */
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN || TOKEN_TYPE(moo) == MOO_IOTOK_EOF) break;
+			}
+			else if (comma_used == 1)
+			{
+				/* a comma is expected */
+				if (TOKEN_TYPE(moo) != MOO_IOTOK_COMMA)
+				{
+					moo_setsynerr (moo, MOO_SYNERR_COMMA, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					goto oops;
+				}
+
+			literal_expected_after_comma:
+				GET_TOKEN_GOTO (moo, oops);
+				if (TOKEN_TYPE(moo) == MOO_IOTOK_COMMA || TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN || TOKEN_TYPE(moo) == MOO_IOTOK_EOF)
+				{
+					moo_setsynerr (moo, MOO_SYNERR_LITERAL, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					goto oops;
+				}
+			}
+		}
+		while (1);
+
+		if (TOKEN_TYPE(moo) != MOO_IOTOK_RPAREN)
 		{
 			moo_setsynerr (moo, MOO_SYNERR_RPAREN, TOKEN_LOC(moo), TOKEN_NAME(moo));
 			goto oops;
 		}
-		else if (TOKEN_TYPE(moo) == MOO_IOTOK_RPAREN) break;
-
-		lit = token_to_literal(moo, rdonly);
-		if (!lit || add_to_array_literal_buffer(moo, lit) <= -1) goto oops;
-
-		GET_TOKEN_GOTO (moo, oops);
 	}
-	while (1);
 
 	a = moo_instantiate(moo, moo->_array, MOO_NULL, moo->c->arlit.count - saved_arlit_count);
 	if (!a) goto oops;

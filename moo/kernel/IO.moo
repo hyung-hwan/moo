@@ -13,9 +13,15 @@ class FileAccessor(InputOutputStud) from "io.file"
 	{
 		//O_RDONLY := 0,
 		//O_WRONLY := 1
-		O_RDONLY from "O_RDONLY",
-		O_WRONLY from "O_WRONLY",
-		O_RDWR   from "O_RDWR"
+		O_CLOEXEC  from "O_CLOEXEC",
+		O_CREAT    from "O_CREAT",
+		O_EXCL     from "O_EXCL",
+		O_NOFOLLOW from "O_NOFOLLOW",
+		O_NONBLOCK from "O_NONBLOCK",
+		O_RDONLY   from "O_RDONLY",
+		O_RDWR     from "O_RDWR",
+		O_TRUNC    from "O_TRUNC",
+		O_WRONLY   from "O_WRONLY"
 	}
 
 	method(#primitive,#lenient) _open: path flags: flags.
