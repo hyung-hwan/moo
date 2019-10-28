@@ -494,8 +494,8 @@ static moo_pfrc_t pf_from_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, "family",       0, { pf_get_family,     0, 0  }  },
-	{ I, "fromString:",  0, { pf_from_string,    1, 1  }  }
+	{ I, "family",       { pf_get_family,     0, 0  }  },
+	{ I, "fromString:",  { pf_from_string,    1, 1  }  }
 };
 
 /* ------------------------------------------------------------------------ */

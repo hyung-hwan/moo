@@ -120,8 +120,8 @@ oops:
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, "open:flags:",      0, { pf_open_file,     2, 2  }  },
-	{ I, "open:flags:mode:", 0, { pf_open_file,     3, 3  }  },
+	{ I, "open:flags:",      { pf_open_file,     2, 2  }  },
+	{ I, "open:flags:mode:", { pf_open_file,     3, 3  }  },
 };
 
 static moo_pvinfo_t pvinfos[] = 

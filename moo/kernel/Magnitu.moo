@@ -219,15 +219,33 @@ class(#limited) Number(Magnitude)
 		^(self bitShift: index negated) bitAnd: 1.
 	}
 
+	method(#variadic) bitAnd(operand)
+	{
+		<primitive: #Integer_bitand>
+		self primitiveFailed.
+	}
+
 	method bitAnd: aNumber
 	{
 		<primitive: #Integer_bitand>
 		self primitiveFailed.
 	}
 
+	method(#variadic) bitOr(operand)
+	{
+		<primitive: #Integer_bitor>
+		self primitiveFailed.
+	}
+
 	method bitOr: aNumber
 	{
 		<primitive: #Integer_bitor>
+		self primitiveFailed.
+	}
+
+	method(#variadic) bitXor(operand)
+	{
+		<primitive: #Integer_bitxor>
 		self primitiveFailed.
 	}
 

@@ -1328,7 +1328,6 @@ struct moo_pfinfo_t
 {
 	moo_method_type_t type;
 	const moo_bch_t*  name;
-	int               variadic;
 	moo_pfbase_t      base;
 };
 

@@ -219,11 +219,11 @@ static moo_pfrc_t pf_write_bytes (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, "close",                            0, { pf_close_io,     0, 0  }  },
-	{ I, "readBytesInto:",                   0, { pf_read_bytes,   1, 1  }  },
-	{ I, "readBytesInto:startingAt:for:",    0, { pf_read_bytes,   3, 3  }  },
-	{ I, "writeBytesFrom:",                  0, { pf_write_bytes,  1, 1  }  },
-	{ I, "writeBytesFrom:startingAt:for:",   0, { pf_write_bytes,  3, 3  }  }
+	{ I, "close",                            { pf_close_io,     0, 0  }  },
+	{ I, "readBytesInto:",                   { pf_read_bytes,   1, 1  }  },
+	{ I, "readBytesInto:startingAt:for:",    { pf_read_bytes,   3, 3  }  },
+	{ I, "writeBytesFrom:",                  { pf_write_bytes,  1, 1  }  },
+	{ I, "writeBytesFrom:startingAt:for:",   { pf_write_bytes,  3, 3  }  }
 };
 
 /* ------------------------------------------------------------------------ */

@@ -576,17 +576,17 @@ static moo_pfrc_t pf_write_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, "accept:",                         0, { pf_accept_socket,    1, 1  }  },
-	{ I, "bind:",                           0, { pf_bind_socket,      1, 1  }  },
-	{ I, "close",                           0, { pf_close_socket,     0, 0  }  },
-	{ I, "connect:",                        0, { pf_connect_socket,   1, 1  }  },
-	{ I, "listen:",                         0, { pf_listen_socket,    1, 1  }  },
-	{ I, "open",                            0, { pf_open_socket,      1, 3  }  },
-	{ I, "readBytesInto:",                  0, { pf_read_socket,      1, 1  }  },
-	{ I, "readBytesInto:startingAt:for:",   0, { pf_read_socket,      3, 3  }  },
-	{ I, "socketError",                     0, { pf_get_socket_error, 0, 0  }  },
-	{ I, "writeBytesFrom:",                 0, { pf_write_socket,     1, 1  }  },
-	{ I, "writeBytesFrom:startingAt:for:",  0, { pf_write_socket,     3, 3  }  }
+	{ I, "accept:",                         { pf_accept_socket,    1, 1  }  },
+	{ I, "bind:",                           { pf_bind_socket,      1, 1  }  },
+	{ I, "close",                           { pf_close_socket,     0, 0  }  },
+	{ I, "connect:",                        { pf_connect_socket,   1, 1  }  },
+	{ I, "listen:",                         { pf_listen_socket,    1, 1  }  },
+	{ I, "open",                            { pf_open_socket,      1, 3  }  },
+	{ I, "readBytesInto:",                  { pf_read_socket,      1, 1  }  },
+	{ I, "readBytesInto:startingAt:for:",   { pf_read_socket,      3, 3  }  },
+	{ I, "socketError",                     { pf_get_socket_error, 0, 0  }  },
+	{ I, "writeBytesFrom:",                 { pf_write_socket,     1, 1  }  },
+	{ I, "writeBytesFrom:startingAt:for:",  { pf_write_socket,     3, 3  }  }
 };
 
 /* ------------------------------------------------------------------------ */

@@ -797,19 +797,19 @@ static moo_pfrc_t pf_draw_string (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfinfo_t x11_pfinfo[] =
 {
-	{ MI, "apply_gc",          0, { pf_apply_gc,        1, 1 } },
-	{ MI, "close_display",     0, { pf_close_display,   0, 0 } },
-	{ MI, "create_gc",         0, { pf_create_gc,       1, 1 } },
-	{ MI, "create_window",     0, { pf_create_window,   7, 7 } },
-	{ MI, "destroy_gc",        0, { pf_destroy_gc,      1, 1 } },
-	{ MI, "destroy_window",    0, { pf_destroy_window,  1, 1 } },
+	{ MI, "apply_gc",          { pf_apply_gc,        1, 1 } },
+	{ MI, "close_display",     { pf_close_display,   0, 0 } },
+	{ MI, "create_gc",         { pf_create_gc,       1, 1 } },
+	{ MI, "create_window",     { pf_create_window,   7, 7 } },
+	{ MI, "destroy_gc",        { pf_destroy_gc,      1, 1 } },
+	{ MI, "destroy_window",    { pf_destroy_window,  1, 1 } },
 
-	{ MI, "draw_rectangle",    0, { pf_draw_rectangle,  6, 6 } },
-	{ MI, "draw_string",       0, { pf_draw_string,     4, 4 } },
-	{ MI, "fill_rectangle",    0, { pf_fill_rectangle,  6, 6 } },
-	{ MI, "get_fd",            0, { pf_get_fd,          0, 0 } },
-	{ MI, "get_llevent",       0, { pf_get_llevent,     1, 1 } },
-	{ MI, "open_display",      0, { pf_open_display,    0, 1 } }
+	{ MI, "draw_rectangle",    { pf_draw_rectangle,  6, 6 } },
+	{ MI, "draw_string",       { pf_draw_string,     4, 4 } },
+	{ MI, "fill_rectangle",    { pf_fill_rectangle,  6, 6 } },
+	{ MI, "get_fd",            { pf_get_fd,          0, 0 } },
+	{ MI, "get_llevent",       { pf_get_llevent,     1, 1 } },
+	{ MI, "open_display",      { pf_open_display,    0, 1 } }
 };
 
 static int x11_import (moo_t* moo, moo_mod_t* mod, moo_oop_class_t _class)

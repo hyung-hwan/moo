@@ -211,11 +211,11 @@ static moo_pfrc_t pf_puts (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, "close",  0, { pf_close,  0,  0  } },
-	{ I, "gets",   0, { pf_gets,   0,  0  } },
-	{ I, "open",   0, { pf_open,   2,  2  } },
-	{ I, "putc",   1, { pf_putc,   0,  MA } },
-	{ I, "puts",   1, { pf_puts,   0,  MA } }
+	{ I, "close",  { pf_close,  0,  0  } },
+	{ I, "gets",   { pf_gets,   0,  0  } },
+	{ I, "open",   { pf_open,   2,  2  } },
+	{ I, "putc",   { pf_putc,   0,  MA } },
+	{ I, "puts",   { pf_puts,   0,  MA } }
 };
 
 /* ------------------------------------------------------------------------ */

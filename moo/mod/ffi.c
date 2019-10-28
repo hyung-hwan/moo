@@ -1198,10 +1198,10 @@ softfail:
 
 static moo_pfinfo_t pfinfos[] =
 {
-	{ I, "call",      0, { pf_call,    3, 3  }  },
-	{ I, "close",     0, { pf_close,   0, 0  }  },
-	{ I, "getsym",    0, { pf_getsym,  1, 1  }  },
-	{ I, "open",      0, { pf_open,    1, 1  }  }
+	{ I, "call",      { pf_call,    3, 3  }  },
+	{ I, "close",     { pf_close,   0, 0  }  },
+	{ I, "getsym",    { pf_getsym,  1, 1  }  },
+	{ I, "open",      { pf_open,    1, 1  }  }
 };
 
 /* ------------------------------------------------------------------------ */

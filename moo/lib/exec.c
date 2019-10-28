@@ -3747,14 +3747,22 @@ static moo_pfrc_t pf_integer_bitat (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 static moo_pfrc_t pf_integer_bitand (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
+	moo_oow_t i;
 
-	MOO_ASSERT (moo, nargs == 1);
+	MOO_ASSERT (moo, nargs >= 1);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
 	res = moo_bitandints(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	for (i = 1; i < nargs; i++)
+	{
+		arg = MOO_STACK_GETARG(moo, nargs, i);
+		res = moo_bitandints(moo, res, arg);
+		if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+	}
 
 	MOO_STACK_SETRET (moo, nargs, res);
 	return MOO_PF_SUCCESS;
@@ -3763,14 +3771,22 @@ static moo_pfrc_t pf_integer_bitand (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 static moo_pfrc_t pf_integer_bitor (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
+	moo_oow_t i;
 
-	MOO_ASSERT (moo, nargs == 1);
+	MOO_ASSERT (moo, nargs >= 1);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
 	res = moo_bitorints(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	for (i = 1; i < nargs; i++)
+	{
+		arg = MOO_STACK_GETARG(moo, nargs, i);
+		res = moo_bitorints(moo, res, arg);
+		if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+	}
 
 	MOO_STACK_SETRET (moo, nargs, res);
 	return MOO_PF_SUCCESS;
@@ -3779,14 +3795,22 @@ static moo_pfrc_t pf_integer_bitor (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 static moo_pfrc_t pf_integer_bitxor (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t rcv, arg, res;
+	moo_oow_t i;
 
-	MOO_ASSERT (moo, nargs == 1);
+	MOO_ASSERT (moo, nargs >= 1);
 
 	rcv = MOO_STACK_GETRCV(moo, nargs);
 	arg = MOO_STACK_GETARG(moo, nargs, 0);
 
 	res = moo_bitxorints(moo, rcv, arg);
 	if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+
+	for (i = 1; i < nargs; i++)
+	{
+		arg = MOO_STACK_GETARG(moo, nargs, i);
+		res = moo_bitxorints(moo, res, arg);
+		if (!res) return (moo->errnum == MOO_EINVAL? MOO_PF_FAILURE: MOO_PF_HARD_FAILURE);
+	}
 
 	MOO_STACK_SETRET (moo, nargs, res);
 	return MOO_PF_SUCCESS;
@@ -4366,12 +4390,12 @@ static pf_t pftab[] =
 	{ "FixedPointDecimal_scale:",              { pf_number_scale,                         1, 1 } },
 
 	{ "Integer_add",                           { pf_integer_add,                          1, 1 } },
-	{ "Integer_bitand",                        { pf_integer_bitand,                       1, 1 } },
+	{ "Integer_bitand",                        { pf_integer_bitand,                       1, MA } },
 	{ "Integer_bitat",                         { pf_integer_bitat,                        1, 1 } },
 	{ "Integer_bitinv",                        { pf_integer_bitinv,                       0, 0 } },
-	{ "Integer_bitor",                         { pf_integer_bitor,                        1, 1 } },
+	{ "Integer_bitor",                         { pf_integer_bitor,                        1, MA } },
 	{ "Integer_bitshift",                      { pf_integer_bitshift,                     1, 1 } },
-	{ "Integer_bitxor",                        { pf_integer_bitxor,                       1, 1 } },
+	{ "Integer_bitxor",                        { pf_integer_bitxor,                       1, MA } },
 	{ "Integer_div",                           { pf_integer_div,                          1, 1 } },
 	{ "Integer_eq",                            { pf_integer_eq,                           1, 1 } },
 	{ "Integer_ge",                            { pf_integer_ge,                           1, 1 } },
