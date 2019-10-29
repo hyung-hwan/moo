@@ -38,8 +38,9 @@
 * #\pB8000000 SmallPointer(smptr) literal
 
 * #() Array. Comma as element delimiter is optional
-* #[] ByteArray. Comma as element delimiter is optional
+* #[] ByteArray. Comma as element delimiter is optional #[ 16r10, 16r20, 16r30 ] #[ "\x10\x20", "\x30" ]
 * #{} Dictionary - not supported yet
+
 
 The followings are not literals. The followings forms expressions.
 

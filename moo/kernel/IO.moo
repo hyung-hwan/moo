@@ -3,7 +3,9 @@ class(#limited) InputOutputStud(Object) from "io"
 	var(#get) handle. // you must keep handle as the first field for consitency with the io module.
 
 	method(#primitive,#lenient) _close.
+	method(#primitive) _readBytesInto: buffer.
 	method(#primitive) _readBytesInto: buffer startingAt: offset for: count.
+	method(#primitive) _writeBytesFrom: buffer.
 	method(#primitive) _writeBytesFrom: buffer startingAt: offset for: count.
 }
 
@@ -21,10 +23,15 @@ class FileAccessor(InputOutputStud) from "io.file"
 		O_RDONLY   from "O_RDONLY",
 		O_RDWR     from "O_RDWR",
 		O_TRUNC    from "O_TRUNC",
-		O_WRONLY   from "O_WRONLY"
+		O_WRONLY   from "O_WRONLY",
+
+		SEEK_CUR   from "SEEK_CUR",
+		SEEK_END   from "SEEK_END",
+		SEEK_SET   from "SEEK_SET"
 	}
 
 	method(#primitive,#lenient) _open: path flags: flags.
+	method(#primitive) _seek: offset whence: whence.
 
 	method(#class) on: path for: flags
 	{

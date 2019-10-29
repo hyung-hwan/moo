@@ -111,6 +111,57 @@ oops:
 }
 
 
+static moo_pfrc_t pf_seek_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	oop_io_t io;
+	moo_oop_t tmp;
+	moo_oow_t offset, whence;
+	int fd;
+	ssize_t n;
+
+	io = (oop_io_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, 
+		MOO_OOP_IS_POINTER(io) && 
+		MOO_OBJ_BYTESOF(io) >= (MOO_SIZEOF(*io) - MOO_SIZEOF(moo_obj_t)) &&
+		MOO_OOP_IS_SMOOI(io->handle)
+	);
+
+	fd = MOO_OOP_TO_SMOOI(io->handle);
+	if (fd <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad IO handle - %d", fd);
+		return MOO_PF_FAILURE;
+	}
+
+	tmp = MOO_STACK_GETARG(moo, nargs, 0);
+	if (moo_inttooow(moo, tmp, &offset) <= 0)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid offset - %O", tmp);
+		return MOO_PF_FAILURE;
+	}
+
+	tmp = MOO_STACK_GETARG(moo, nargs, 1);
+	if (moo_inttooow(moo, tmp, &whence) <= 0)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid whence - %O", tmp);
+		return MOO_PF_FAILURE;
+	}
+
+	n = lseek(fd, offset, whence);
+	if (n <= -1)
+	{
+		moo_seterrwithsyserr (moo, 0, errno);
+		return MOO_PF_FAILURE;
+	}
+
+	/* [NOTE] on EWOULDBLOCK or EGAIN, -1 is returned  */
+	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(n));
+
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
+	return MOO_PF_SUCCESS;
+}
+
+
 /* ------------------------------------------------------------------------ */
 
 #define C MOO_METHOD_CLASS
@@ -122,6 +173,7 @@ static moo_pfinfo_t pfinfos[] =
 {
 	{ I, "open:flags:",      { pf_open_file,     2, 2  }  },
 	{ I, "open:flags:mode:", { pf_open_file,     3, 3  }  },
+	{ I, "seek:whence:",     { pf_seek_file,     2, 2  }  }
 };
 
 static moo_pvinfo_t pvinfos[] = 
@@ -134,7 +186,11 @@ static moo_pvinfo_t pvinfos[] =
 	{ "O_RDONLY",   { MOO_PV_OOI, (const void*)O_RDONLY } },
 	{ "O_RDWR",     { MOO_PV_OOI, (const void*)O_RDWR } },
 	{ "O_TRUNC",    { MOO_PV_OOI, (const void*)O_TRUNC } },
-	{ "O_WRONLY",   { MOO_PV_OOI, (const void*)O_WRONLY } }
+	{ "O_WRONLY",   { MOO_PV_OOI, (const void*)O_WRONLY } },
+
+	{ "SEEK_CUR",   { MOO_PV_OOI, (const void*)SEEK_CUR } },
+	{ "SEEK_END",   { MOO_PV_OOI, (const void*)SEEK_SET } },
+	{ "SEEK_SET",   { MOO_PV_OOI, (const void*)SEEK_SET } }
 };
 /* ------------------------------------------------------------------------ */
 

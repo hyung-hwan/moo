@@ -539,9 +539,7 @@ extend Apex
 		// TODO: implement this properly
 		| class_name ctx |
 		class_name := if (self class == Class) { self name } else { self class name }.
-
-		System backtrace.
-
+//System backtrace.
 		NoSuchMessageException signal: (message_name & " not understood by " & class_name).
 	}
 

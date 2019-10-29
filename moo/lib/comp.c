@@ -5288,34 +5288,53 @@ static int read_byte_array_literal (moo_t* moo, int rdonly, moo_oop_t* xlit)
 
 	GET_TOKEN_GOTO (moo, oops); /* skip #[ and read the next token */
 
-	while (TOKEN_TYPE(moo) == MOO_IOTOK_INTLIT || TOKEN_TYPE(moo) == MOO_IOTOK_RADINTLIT || TOKEN_TYPE(moo) == MOO_IOTOK_CHARLIT)
+	while (TOKEN_TYPE(moo) == MOO_IOTOK_INTLIT || TOKEN_TYPE(moo) == MOO_IOTOK_RADINTLIT || TOKEN_TYPE(moo) == MOO_IOTOK_CHARLIT || TOKEN_TYPE(moo) == MOO_IOTOK_STRLIT)
 	{
 		/* TODO: check if the number is an integer */
 
-		if (TOKEN_TYPE(moo) == MOO_IOTOK_CHARLIT)
+		if (TOKEN_TYPE(moo) == MOO_IOTOK_STRLIT)
 		{
-			/* accept a character literal inside a byte array literal */
-			tmp = TOKEN_NAME_PTR(moo)[0];
+			moo_oow_t i;
+			for (i = 0; i < TOKEN_NAME_LEN(moo); i++)
+			{
+				tmp = TOKEN_NAME_PTR(moo)[i];
+				if (tmp < 0 || tmp > 0xFF)
+				{
+					moo_setsynerr (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+					goto oops;
+				}
+				if (add_to_byte_array_literal_buffer(moo, tmp) <= -1) goto oops;
+			}
 		}
-		else if (string_to_smooi(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADINTLIT, &tmp) <= -1)
+		else
 		{
-			/* the token reader reads a valid token. no other errors
-			 * than the range error must not occur */
-			MOO_ASSERT (moo, moo->errnum == MOO_ERANGE);
+			if (TOKEN_TYPE(moo) == MOO_IOTOK_CHARLIT)
+			{
+				/* accept a character literal inside a byte array literal */
+				tmp = TOKEN_NAME_PTR(moo)[0];
+			}
+			
+			else if (string_to_smooi(moo, TOKEN_NAME(moo), TOKEN_TYPE(moo) == MOO_IOTOK_RADINTLIT, &tmp) <= -1)
+			{
+				/* the token reader reads a valid token. no other errors
+				 * than the range error must not occur */
+				MOO_ASSERT (moo, moo->errnum == MOO_ERANGE);
 
-			/* if the token is out of the SMOOI range, it's too big or 
-			 * to small to be a byte */
-			moo_setsynerr (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo));
-			goto oops;
+				/* if the token is out of the SMOOI range, it's too big or 
+				 * to small to be a byte */
+				moo_setsynerr (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				goto oops;
+			}
+
+			if (tmp < 0 || tmp > 0xFF)
+			{
+				moo_setsynerr (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo));
+				goto oops;
+			}
+
+			if (add_to_byte_array_literal_buffer(moo, tmp) <= -1) goto oops;
 		}
 
-		if (tmp < 0 || tmp > 0xFF)
-		{
-			moo_setsynerr (moo, MOO_SYNERR_BYTERANGE, TOKEN_LOC(moo), TOKEN_NAME(moo));
-			goto oops;
-		}
-
-		if (add_to_byte_array_literal_buffer(moo, tmp) <= -1) goto oops;
 		GET_TOKEN_GOTO (moo, oops);
 
 		if (comma_used == -1)
