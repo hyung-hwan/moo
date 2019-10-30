@@ -1398,7 +1398,7 @@ typedef moo_pfbase_t* (*moo_mod_querypf_t) (
 	moo_oow_t         namelen
 );
 
-typedef moo_pfbase_t* (*moo_mod_querypv_t) (
+typedef moo_pvbase_t* (*moo_mod_querypv_t) (
 	moo_t*            moo,
 	moo_mod_t*        mod,
 	const moo_ooch_t* name,
