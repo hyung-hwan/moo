@@ -339,7 +339,7 @@ TODO: how to pass all variadic arguments to another variadic methods???
 
 	method(#class) backtrace
 	{
-		| ctx |
+		| ctx oldps |
 		// TOOD: IMPROVE THIS EXPERIMENTAL BACKTRACE... MOVE THIS TO  System>>backtrace and skip the first method context for backtrace itself.
 // TODO: make this method atomic? no other process should get scheduled while this function is running?
 //  possible imementation methods:
@@ -349,6 +349,7 @@ TODO: how to pass all variadic arguments to another variadic methods???
 //    4. introduce a new method attribute. e.g. #atomic -> vm disables task switching or uses a lock to achieve atomicity.
 // >>>> i think it should not be atomic as a while. only logging output should be produeced at one go.
 
+		oldps := System _toggleProcessSwitching: false.
 		System logNl: "== BACKTRACE ==".
 
 		//ctx := thisContext.
@@ -375,6 +376,7 @@ TODO: how to pass all variadic arguments to another variadic methods???
 			ctx := ctx sender.
 		}.
 		System logNl: "== END OF BACKTRACE ==".
+		System _toggleProcessSwitching: oldps.
 	}
 
 	/* nsdic access */

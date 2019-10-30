@@ -61,8 +61,7 @@ CFLAGS="$CFLAGS -DMOO_HAVE_CFG_H"
 CXXFLAGS="$CXXFLAGS -DMOO_HAVE_CFG_H"
 
 dnl make visible the 64-bit interface to the file system
-CFLAGS="$CFLAGS -D_LARGEFILE64_SOURCE"
-CXXFLAGS="$CXXFLAGS -D_LARGEFILE64_SOURCE"
+AC_SYS_LARGEFILE()
 
 dnl define the WIN32 conditional if necessary
 case "$host" in

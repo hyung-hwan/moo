@@ -115,9 +115,10 @@ static moo_pfrc_t pf_seek_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_io_t io;
 	moo_oop_t tmp;
-	moo_oow_t offset, whence;
+	moo_intmax_t offset; 
+	moo_ooi_t whence;
 	int fd;
-	ssize_t n;
+	off_t n;
 
 	io = (oop_io_t)MOO_STACK_GETRCV(moo, nargs);
 	MOO_PF_CHECK_RCV (moo, 
@@ -134,14 +135,14 @@ static moo_pfrc_t pf_seek_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	}
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (moo_inttooow(moo, tmp, &offset) <= 0)
+	if (moo_inttointmax(moo, tmp, &offset) <= 0 || offset < MOO_TYPE_MIN(off_t) || offset > MOO_TYPE_MAX(off_t))
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid offset - %O", tmp);
 		return MOO_PF_FAILURE;
 	}
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 1);
-	if (moo_inttooow(moo, tmp, &whence) <= 0)
+	if (moo_inttoooi(moo, tmp, &whence) <= 0)
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid whence - %O", tmp);
 		return MOO_PF_FAILURE;
@@ -154,10 +155,10 @@ static moo_pfrc_t pf_seek_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	/* [NOTE] on EWOULDBLOCK or EGAIN, -1 is returned  */
-	MOO_ASSERT (moo, MOO_IN_SMOOI_RANGE(n));
+	tmp = moo_uintmaxtoint(moo, (moo_uintmax_t)n);
+	if (!tmp) return MOO_PF_FAILURE;
 
-	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
+	MOO_STACK_SETRET (moo, nargs, tmp);
 	return MOO_PF_SUCCESS;
 }
 
