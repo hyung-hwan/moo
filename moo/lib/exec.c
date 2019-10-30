@@ -3260,17 +3260,26 @@ static moo_pfrc_t pf_system_return_value_to_context (moo_t* moo, moo_mod_t* mod,
 }
 
 /* ------------------------------------------------------------------ */
-static moo_pfrc_t pf_system_enable_process_switching (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+static moo_pfrc_t pf_system_toggle_process_switching (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	moo->no_proc_switch = 0;
-	MOO_STACK_SETRETTORCV (moo, nargs);
-	return MOO_PF_SUCCESS;
-}
+	moo_oop_t v;
+	int oldnps;
 
-static moo_pfrc_t pf_system_disable_process_switching (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
-{
-	moo->no_proc_switch = 0;
-	MOO_STACK_SETRETTORCV (moo, nargs);
+	oldnps = moo->no_proc_switch;
+
+	v = MOO_STACK_GETARG(moo, nargs, 0);
+	if (v == moo->_false)
+	{
+		/* disable process switching */
+		moo->no_proc_switch = 1;
+	}
+	else
+	{
+		/* enable process switching */
+		moo->no_proc_switch = 0;
+	}
+
+	MOO_STACK_SETRET (moo, nargs, (oldnps? moo->_false: moo->_true));
 	return MOO_PF_SUCCESS;
 }
 
@@ -4465,8 +4474,6 @@ static pf_t pftab[] =
 	{ "System_calloc",                         { moo_pf_system_calloc,                    1, 1 } },
 	{ "System_calloc:",                        { moo_pf_system_calloc,                    1, 1 } },
 	{ "System_collectGarbage",                 { moo_pf_system_collect_garbage,           0, 0 } },
-	{ "System_disableProcessSwitching",        { pf_system_disable_process_switching,     0, 0 } },
-	{ "System_enableProcessSwitching",         { pf_system_enable_process_switching,      0, 0 } },
 	{ "System_findProcessById:",               { pf_system_find_process_by_id,            1, 1 } },
 	{ "System_findProcessByIdGreaterThan:",    { pf_system_find_process_by_id_gt,         1, 1 } },
 	{ "System_free",                           { moo_pf_system_free,                      1, 1 } },
@@ -4499,6 +4506,7 @@ static pf_t pftab[] =
 	{ "System_putUint8",                       { moo_pf_system_put_uint8,                 3, 3 } },
 	{ "System_return:to:",                     { pf_system_return_value_to_context,       2, 2 } },
 	{ "System_setSig:",                        { moo_pf_system_set_sig,                   1, 1 } },
+	{ "System_toggleProcessSwitching:",        { pf_system_toggle_process_switching,      1, 1 } },
 
 	{ "_dump",                                 { pf_dump,                                 0, MA } },
 

@@ -183,7 +183,7 @@ class System(Apex)
 			nil.
 		]
 		ensure: [
-			| pid proc |
+			| pid proc oldps |
 
 			// stop subscribing to signals.
 			os_intr_sem signal.
@@ -193,9 +193,9 @@ class System(Apex)
 
 			// this disables autonomous process switching only. 
 			// TODO: check if the ensure block code can trigger process switching?
-			//       whap happens if the ensure block creates new processes? this is likely to affect the termination loop below.
+			//       what happens if the ensure block creates new processes? this is likely to affect the termination loop below.
 			//       even the id of the terminated process may get reused.... 
-			self _disableProcessSwitching. 
+			oldps := self _toggleProcessSwitching: false.
 
 			/*
 			 0 -> startup  <--- this should also be stored in the 'caller' variable.
@@ -214,7 +214,7 @@ class System(Apex)
 
 			System logNl: 'Requesting to terminate the caller process of id ' & (caller id) asString.
 			caller terminate.  // terminate the startup process.
-			self _enableProcessSwitching.
+			self _toggleProcessSwitching: oldps.
 
 			System logNl: '>>>>End of OS signal handler process ' & (thisProcess id) asString.
 
@@ -229,8 +229,7 @@ class System(Apex)
 	method(#class,#primitive) _getSigfd.
 	method(#class,#primitive) _setSig: signo.
 	method(#class,#primitive) _halting.
-	method(#class,#primitive) _enableProcessSwitching.
-	method(#class,#primitive) _disableProcessSwitching.
+	method(#class,#primitive) _toggleProcessSwitching: v.
 	method(#class,#primitive,#lenient) _findProcessById: id.
 	method(#class,#primitive,#lenient) _findProcessByIdGreaterThan: id.
 
