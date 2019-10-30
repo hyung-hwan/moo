@@ -1043,8 +1043,10 @@ typedef struct moo_t moo_t;
 #	define MOO_STATIC_ASSERT(expr)  _Static_assert (expr, "invalid assertion")
 #elif defined(__cplusplus) && (__cplusplus >= 201103L)
 #	define MOO_STATIC_ASSERT(expr) static_assert (expr, "invalid assertion")
-#else
+#elif defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
 #	define MOO_STATIC_ASSERT(expr) typedef char MOO_STATIC_JOIN(MOO_STATIC_ASSERT_T_, __LINE__)[(expr)? 1: -1] MOO_UNUSED
+#else
+#	define MOO_STATIC_ASSERT(expr) do { typedef char MOO_STATIC_JOIN(MOO_STATIC_ASSERT_T_, __LINE__)[(expr)? 1: -1] MOO_UNUSED; } while(0)
 #endif
 
 #define MOO_STATIC_ASSERT_EXPR(expr) ((void)MOO_SIZEOF(char[(expr)? 1: -1]))

@@ -34,6 +34,10 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#if !defined(O_CLOEXEC)
+#	define O_CLOEXEC 0 /* since it's not defined, 0 results in no effect when bitwise-ORed. */
+#endif
+
 static moo_pfrc_t pf_open_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	oop_io_t io;
@@ -93,10 +97,7 @@ static moo_pfrc_t pf_open_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		goto oops;
 	}
 
-	fl |= O_NONBLOCK;
-#if defined(O_CLOEXEC)
-	fl |= O_CLOEXEC;
-#endif
+	fl |= O_NONBLOCK | O_CLOEXEC;
 
 	if (fcntl(fd, F_SETFL, fl) == -1) goto fcntl_failure;
 
