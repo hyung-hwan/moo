@@ -29,10 +29,12 @@
 #include "../lib/moo-utl.h"
 
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <fcntl.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/file.h>
+#include <sys/stat.h>
+
 
 #if !defined(O_CLOEXEC)
 #	define O_CLOEXEC 0 /* since it's not defined, 0 results in no effect when bitwise-ORed. */
@@ -111,6 +113,137 @@ oops:
 	return MOO_PF_FAILURE;
 }
 
+static moo_pfrc_t pf_chmod_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	oop_io_t io;
+	moo_oop_t tmp;
+	int fd, n;
+	moo_oow_t mode;
+
+	io = (oop_io_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, 
+		MOO_OOP_IS_POINTER(io) && 
+		MOO_OBJ_BYTESOF(io) >= (MOO_SIZEOF(*io) - MOO_SIZEOF(moo_obj_t)) &&
+		MOO_OOP_IS_SMOOI(io->handle)
+	);
+
+	fd = MOO_OOP_TO_SMOOI(io->handle);
+	if (fd <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad IO handle - %d", fd);
+		return MOO_PF_FAILURE;
+	}
+
+	MOO_STATIC_ASSERT (MOO_TYPE_IS_UNSIGNED(mode_t));
+
+	tmp = MOO_STACK_GETARG(moo, nargs, 0);
+	if (moo_inttooow(moo, tmp, &mode) == 0 || mode > MOO_TYPE_MAX(mode_t))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid mode - %O", tmp);
+		return MOO_PF_FAILURE;
+	}
+
+	n = fchmod(fd, mode);
+	if (n <= -1)
+	{
+		moo_seterrwithsyserr (moo, 0, errno);
+		return MOO_PF_FAILURE;
+	}
+
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_chown_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	oop_io_t io;
+	moo_oop_t tmp;
+	int fd, n;
+	moo_ooi_t uid, gid;
+
+	io = (oop_io_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, 
+		MOO_OOP_IS_POINTER(io) && 
+		MOO_OBJ_BYTESOF(io) >= (MOO_SIZEOF(*io) - MOO_SIZEOF(moo_obj_t)) &&
+		MOO_OOP_IS_SMOOI(io->handle)
+	);
+
+	fd = MOO_OOP_TO_SMOOI(io->handle);
+	if (fd <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad IO handle - %d", fd);
+		return MOO_PF_FAILURE;
+	}
+
+	MOO_STATIC_ASSERT (MOO_TYPE_IS_UNSIGNED(uid_t));
+	MOO_STATIC_ASSERT (MOO_TYPE_IS_UNSIGNED(gid_t));
+
+	tmp = MOO_STACK_GETARG(moo, nargs, 0);
+	if (moo_inttoooi(moo, tmp, &uid) == 0 || uid > MOO_TYPE_MAX(uid_t))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid uid - %O", tmp);
+		return MOO_PF_FAILURE;
+	}
+
+	tmp = MOO_STACK_GETARG(moo, nargs, 1);
+	if (moo_inttoooi(moo, tmp, &gid) == 0 || gid > MOO_TYPE_MAX(gid_t))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid gid - %O", tmp);
+		return MOO_PF_FAILURE;
+	}
+
+	if (uid <= -1) uid = (uid_t)-1;
+	if (gid <= -1) gid = (gid_t)-1;
+
+	n = fchown(fd, uid, gid);
+	if (n <= -1)
+	{
+		moo_seterrwithsyserr (moo, 0, errno);
+		return MOO_PF_FAILURE;
+	}
+
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
+	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_lock_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	oop_io_t io;
+	moo_oop_t tmp;
+	int fd, n;
+
+	io = (oop_io_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, 
+		MOO_OOP_IS_POINTER(io) && 
+		MOO_OBJ_BYTESOF(io) >= (MOO_SIZEOF(*io) - MOO_SIZEOF(moo_obj_t)) &&
+		MOO_OOP_IS_SMOOI(io->handle)
+	);
+
+	fd = MOO_OOP_TO_SMOOI(io->handle);
+	if (fd <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad IO handle - %d", fd);
+		return MOO_PF_FAILURE;
+	}
+
+	tmp = MOO_STACK_GETARG(moo, nargs, 0);
+	if (!MOO_OOP_IS_SMOOI(tmp))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid operation code - %O", tmp);
+		return MOO_PF_FAILURE;
+	}
+
+	n = flock(fd, MOO_OOP_TO_SMOOI(tmp));
+	if (n <= -1)
+	{
+		moo_seterrwithsyserr (moo, 0, errno);
+		return MOO_PF_FAILURE;
+	}
+
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
+	return MOO_PF_SUCCESS;
+}
+
 
 static moo_pfrc_t pf_seek_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
@@ -136,14 +269,14 @@ static moo_pfrc_t pf_seek_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	}
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (moo_inttointmax(moo, tmp, &offset) <= 0 || offset < MOO_TYPE_MIN(off_t) || offset > MOO_TYPE_MAX(off_t))
+	if (moo_inttointmax(moo, tmp, &offset) == 0 || offset < MOO_TYPE_MIN(off_t) || offset > MOO_TYPE_MAX(off_t))
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid offset - %O", tmp);
 		return MOO_PF_FAILURE;
 	}
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 1);
-	if (moo_inttoooi(moo, tmp, &whence) <= 0)
+	if (moo_inttoooi(moo, tmp, &whence) == 0)
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid whence - %O", tmp);
 		return MOO_PF_FAILURE;
@@ -163,6 +296,46 @@ static moo_pfrc_t pf_seek_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
+static moo_pfrc_t pf_truncate_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	oop_io_t io;
+	moo_oop_t tmp;
+	moo_intmax_t size; 
+	int fd, n;
+
+	io = (oop_io_t)MOO_STACK_GETRCV(moo, nargs);
+	MOO_PF_CHECK_RCV (moo, 
+		MOO_OOP_IS_POINTER(io) && 
+		MOO_OBJ_BYTESOF(io) >= (MOO_SIZEOF(*io) - MOO_SIZEOF(moo_obj_t)) &&
+		MOO_OOP_IS_SMOOI(io->handle)
+	);
+
+	fd = MOO_OOP_TO_SMOOI(io->handle);
+	if (fd <= -1)
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "bad IO handle - %d", fd);
+		return MOO_PF_FAILURE;
+	}
+
+	tmp = MOO_STACK_GETARG(moo, nargs, 0);
+	if (moo_inttointmax(moo, tmp, &size) == 0 || size < MOO_TYPE_MIN(off_t) || size > MOO_TYPE_MAX(off_t))
+	{
+		moo_seterrbfmt (moo, MOO_EINVAL, "invalid size - %O", tmp);
+		return MOO_PF_FAILURE;
+	}
+
+	n = ftruncate(fd, size);
+	if (n <= -1)
+	{
+		moo_seterrwithsyserr (moo, 0, errno);
+		return MOO_PF_FAILURE;
+	}
+
+	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
+	return MOO_PF_SUCCESS;
+}
+
+/* TODO: posix_fallocate(), posix_fadvise(), fallocate() */
 
 /* ------------------------------------------------------------------------ */
 
@@ -173,13 +346,28 @@ static moo_pfrc_t pf_seek_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfinfo_t pfinfos[] =
 {
+	{ I, "chmod:",           { pf_chmod_file,    1, 1  }  },
+	{ I, "chown:group:",     { pf_chown_file,    2, 2  }  },
+	{ I, "lock:",            { pf_lock_file,     1, 1  }  },
 	{ I, "open:flags:",      { pf_open_file,     2, 2  }  },
 	{ I, "open:flags:mode:", { pf_open_file,     3, 3  }  },
-	{ I, "seek:whence:",     { pf_seek_file,     2, 2  }  }
+	{ I, "seek:whence:",     { pf_seek_file,     2, 2  }  },
+	{ I, "truncate:",        { pf_truncate_file, 1, 1  }  }
 };
 
 static moo_pvinfo_t pvinfos[] = 
 {
+/*
+	{ "F_RDLCK",    { MOO_PV_OOI, (const void*)F_RDLCK } },
+	{ "F_UNLCK",    { MOO_PV_OOI, (const void*)F_UNLCK } },
+	{ "F_WRLCK",    { MOO_PV_OOI, (const void*)F_WRLCK } },
+*/
+	{ "LOCK_EX",    { MOO_PV_OOI, (const void*)LOCK_EX } },
+	{ "LOCK_NB",    { MOO_PV_OOI, (const void*)LOCK_NB } },
+	{ "LOCK_SH",    { MOO_PV_OOI, (const void*)LOCK_SH } },
+	{ "LOCK_UN",    { MOO_PV_OOI, (const void*)LOCK_UN } },
+
+	{ "O_APPEND",   { MOO_PV_OOI, (const void*)O_APPEND } },
 	{ "O_CLOEXEC",  { MOO_PV_OOI, (const void*)O_CLOEXEC } },
 	{ "O_CREAT",    { MOO_PV_OOI, (const void*)O_CREAT } },
 	{ "O_EXCL",     { MOO_PV_OOI, (const void*)O_EXCL } },

@@ -13,6 +13,11 @@ class FileAccessor(InputOutputStud) from "io.file"
 {
 	pooldic Flag
 	{
+		LOCK_EX    from "LOCK_EX",
+		LOCK_NB    from "LOCK_NB",
+		LOCK_SH    from "LOCK_SH",
+		LOCK_UN    from "LOCK_UN",
+
 		//O_RDONLY := 0,
 		//O_WRONLY := 1
 		O_CLOEXEC  from "O_CLOEXEC",
@@ -31,7 +36,11 @@ class FileAccessor(InputOutputStud) from "io.file"
 	}
 
 	method(#primitive,#lenient) _open: path flags: flags.
+	method(#primitive) _chmod: mode.
+	method(#primitive) _chown: uid group: gid.
+	method(#primitive) _lock: opcode.
 	method(#primitive) _seek: offset whence: whence.
+	method(#primitive) _truncate: size.
 
 	method(#class) on: path for: flags
 	{

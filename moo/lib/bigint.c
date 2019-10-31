@@ -374,13 +374,14 @@ int moo_inttoooi (moo_t* moo, moo_oop_t x, moo_ooi_t* i)
 	n = moo_inttooow(moo, x, &w);
 	if (n < 0) 
 	{
+		/* negative number negated to a positve number */
 		MOO_STATIC_ASSERT (MOO_TYPE_MAX(moo_ooi_t) + MOO_TYPE_MIN(moo_ooi_t) == -1); /* assume 2's complement */
 		if (w > (moo_oow_t)MOO_TYPE_MAX(moo_ooi_t) + 1)
 		{
 			moo_seterrnum (moo, MOO_ERANGE); /* not convertable. number too small */
 			return 0;
 		}
-		*i = -w;
+		*i = -w; /* negate back */
 	}
 	else if (n > 0) 
 	{
@@ -485,13 +486,14 @@ int moo_inttointmax (moo_t* moo, moo_oop_t x, moo_intmax_t* i)
 	n = moo_inttouintmax(moo, x, &w);
 	if (n < 0) 
 	{
+		/* negative number negated to a positve number */
 		MOO_STATIC_ASSERT (MOO_TYPE_MAX(moo_intmax_t) + MOO_TYPE_MIN(moo_intmax_t) == -1); /* assume 2's complement */
 		if (w > (moo_uintmax_t)MOO_TYPE_MAX(moo_intmax_t) + 1)
 		{
 			moo_seterrnum (moo, MOO_ERANGE); /* not convertable. number too small */
 			return 0;
 		}
-		*i = -w;
+		*i = -w; /* negate it back */
 	}
 	else if (n > 0) 
 	{
