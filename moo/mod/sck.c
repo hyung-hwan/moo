@@ -460,7 +460,7 @@ static moo_pfrc_t pf_read_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		moo_oop_t tmp;
 
 		tmp = MOO_STACK_GETARG(moo, nargs, 1);
-		if (moo_inttooow (moo, tmp, &offset) <= 0)
+		if (moo_inttooow_noseterr(moo, tmp, &offset) <= 0)
 		{
 			moo_seterrbfmt (moo, MOO_EINVAL, "invalid offset - %O", tmp);
 			return MOO_PF_FAILURE;
@@ -469,7 +469,7 @@ static moo_pfrc_t pf_read_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		if (nargs >= 3)
 		{
 			tmp = MOO_STACK_GETARG(moo, nargs, 2);
-			if (moo_inttooow(moo, tmp, &length) <= 0)
+			if (moo_inttooow_noseterr(moo, tmp, &length) <= 0)
 			{
 				moo_seterrbfmt (moo, MOO_EINVAL, "invalid length - %O", tmp);
 				return MOO_PF_FAILURE;
@@ -533,7 +533,7 @@ static moo_pfrc_t pf_write_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		moo_oop_t tmp;
 
 		tmp = MOO_STACK_GETARG(moo, nargs, 1);
-		if (moo_inttooow (moo, tmp, &offset) <= 0)
+		if (moo_inttooow_noseterr(moo, tmp, &offset) <= 0)
 		{
 			moo_seterrbfmt (moo, MOO_EINVAL, "invalid offset - %O", tmp);
 			return MOO_PF_FAILURE;
@@ -542,7 +542,7 @@ static moo_pfrc_t pf_write_socket (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		if (nargs >= 3)
 		{
 			tmp = MOO_STACK_GETARG(moo, nargs, 2);
-			if (moo_inttooow(moo, tmp, &length) <= 0)
+			if (moo_inttooow_noseterr(moo, tmp, &length) <= 0)
 			{
 				moo_seterrbfmt (moo, MOO_EINVAL, "invalid length - %O", tmp);
 				return MOO_PF_FAILURE;

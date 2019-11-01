@@ -113,31 +113,37 @@ oops:
 	return MOO_PF_FAILURE;
 }
 
+#define RCV_TO_FD(moo, nargs, fd_) \
+	do \
+	{ \
+		oop_io_t rcv_; \
+		rcv_ = (oop_io_t)MOO_STACK_GETRCV(moo, nargs); \
+		MOO_PF_CHECK_RCV (moo, \
+			MOO_OOP_IS_POINTER(rcv_) &&  \
+			MOO_OBJ_BYTESOF(rcv_) >= (MOO_SIZEOF(*rcv_) - MOO_SIZEOF(moo_obj_t)) && \
+			MOO_OOP_IS_SMOOI(rcv_->handle) \
+		); \
+		fd_ = MOO_OOP_TO_SMOOI(rcv_->handle); \
+		if (fd_ <= -1) \
+		{ \
+			moo_seterrbfmt (moo, MOO_EINVAL, "bad IO handle - %d", fd_); \
+			return MOO_PF_FAILURE; \
+		} \
+	} \
+	while(0)
+
 static moo_pfrc_t pf_chmod_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	oop_io_t io;
 	moo_oop_t tmp;
 	int fd, n;
 	moo_oow_t mode;
 
-	io = (oop_io_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, 
-		MOO_OOP_IS_POINTER(io) && 
-		MOO_OBJ_BYTESOF(io) >= (MOO_SIZEOF(*io) - MOO_SIZEOF(moo_obj_t)) &&
-		MOO_OOP_IS_SMOOI(io->handle)
-	);
-
-	fd = MOO_OOP_TO_SMOOI(io->handle);
-	if (fd <= -1)
-	{
-		moo_seterrbfmt (moo, MOO_EINVAL, "bad IO handle - %d", fd);
-		return MOO_PF_FAILURE;
-	}
+	RCV_TO_FD (moo, nargs, fd);
 
 	MOO_STATIC_ASSERT (MOO_TYPE_IS_UNSIGNED(mode_t));
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (moo_inttooow(moo, tmp, &mode) == 0 || mode > MOO_TYPE_MAX(mode_t))
+	if (moo_inttooow_noseterr(moo, tmp, &mode) == 0 || mode > MOO_TYPE_MAX(mode_t))
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid mode - %O", tmp);
 		return MOO_PF_FAILURE;
@@ -156,37 +162,24 @@ static moo_pfrc_t pf_chmod_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_chown_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	oop_io_t io;
 	moo_oop_t tmp;
 	int fd, n;
 	moo_ooi_t uid, gid;
 
-	io = (oop_io_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, 
-		MOO_OOP_IS_POINTER(io) && 
-		MOO_OBJ_BYTESOF(io) >= (MOO_SIZEOF(*io) - MOO_SIZEOF(moo_obj_t)) &&
-		MOO_OOP_IS_SMOOI(io->handle)
-	);
-
-	fd = MOO_OOP_TO_SMOOI(io->handle);
-	if (fd <= -1)
-	{
-		moo_seterrbfmt (moo, MOO_EINVAL, "bad IO handle - %d", fd);
-		return MOO_PF_FAILURE;
-	}
+	RCV_TO_FD (moo, nargs, fd);
 
 	MOO_STATIC_ASSERT (MOO_TYPE_IS_UNSIGNED(uid_t));
 	MOO_STATIC_ASSERT (MOO_TYPE_IS_UNSIGNED(gid_t));
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (moo_inttoooi(moo, tmp, &uid) == 0 || uid > MOO_TYPE_MAX(uid_t))
+	if (moo_inttoooi_noseterr(moo, tmp, &uid) == 0 || uid > MOO_TYPE_MAX(uid_t))
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid uid - %O", tmp);
 		return MOO_PF_FAILURE;
 	}
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 1);
-	if (moo_inttoooi(moo, tmp, &gid) == 0 || gid > MOO_TYPE_MAX(gid_t))
+	if (moo_inttoooi_noseterr(moo, tmp, &gid) == 0 || gid > MOO_TYPE_MAX(gid_t))
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid gid - %O", tmp);
 		return MOO_PF_FAILURE;
@@ -208,23 +201,10 @@ static moo_pfrc_t pf_chown_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_lock_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	oop_io_t io;
 	moo_oop_t tmp;
 	int fd, n;
 
-	io = (oop_io_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, 
-		MOO_OOP_IS_POINTER(io) && 
-		MOO_OBJ_BYTESOF(io) >= (MOO_SIZEOF(*io) - MOO_SIZEOF(moo_obj_t)) &&
-		MOO_OOP_IS_SMOOI(io->handle)
-	);
-
-	fd = MOO_OOP_TO_SMOOI(io->handle);
-	if (fd <= -1)
-	{
-		moo_seterrbfmt (moo, MOO_EINVAL, "bad IO handle - %d", fd);
-		return MOO_PF_FAILURE;
-	}
+	RCV_TO_FD (moo, nargs, fd);
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
 	if (!MOO_OOP_IS_SMOOI(tmp))
@@ -247,36 +227,23 @@ static moo_pfrc_t pf_lock_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_seek_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	oop_io_t io;
 	moo_oop_t tmp;
 	moo_intmax_t offset; 
 	moo_ooi_t whence;
 	int fd;
 	off_t n;
 
-	io = (oop_io_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, 
-		MOO_OOP_IS_POINTER(io) && 
-		MOO_OBJ_BYTESOF(io) >= (MOO_SIZEOF(*io) - MOO_SIZEOF(moo_obj_t)) &&
-		MOO_OOP_IS_SMOOI(io->handle)
-	);
-
-	fd = MOO_OOP_TO_SMOOI(io->handle);
-	if (fd <= -1)
-	{
-		moo_seterrbfmt (moo, MOO_EINVAL, "bad IO handle - %d", fd);
-		return MOO_PF_FAILURE;
-	}
+	RCV_TO_FD (moo, nargs, fd);
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (moo_inttointmax(moo, tmp, &offset) == 0 || offset < MOO_TYPE_MIN(off_t) || offset > MOO_TYPE_MAX(off_t))
+	if (moo_inttointmax_noseterr(moo, tmp, &offset) == 0 || offset < MOO_TYPE_MIN(off_t) || offset > MOO_TYPE_MAX(off_t))
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid offset - %O", tmp);
 		return MOO_PF_FAILURE;
 	}
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 1);
-	if (moo_inttoooi(moo, tmp, &whence) == 0)
+	if (moo_inttoooi_noseterr(moo, tmp, &whence) == 0)
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid whence - %O", tmp);
 		return MOO_PF_FAILURE;
@@ -298,27 +265,14 @@ static moo_pfrc_t pf_seek_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 
 static moo_pfrc_t pf_truncate_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	oop_io_t io;
 	moo_oop_t tmp;
 	moo_intmax_t size; 
 	int fd, n;
 
-	io = (oop_io_t)MOO_STACK_GETRCV(moo, nargs);
-	MOO_PF_CHECK_RCV (moo, 
-		MOO_OOP_IS_POINTER(io) && 
-		MOO_OBJ_BYTESOF(io) >= (MOO_SIZEOF(*io) - MOO_SIZEOF(moo_obj_t)) &&
-		MOO_OOP_IS_SMOOI(io->handle)
-	);
-
-	fd = MOO_OOP_TO_SMOOI(io->handle);
-	if (fd <= -1)
-	{
-		moo_seterrbfmt (moo, MOO_EINVAL, "bad IO handle - %d", fd);
-		return MOO_PF_FAILURE;
-	}
+	RCV_TO_FD (moo, nargs, fd);
 
 	tmp = MOO_STACK_GETARG(moo, nargs, 0);
-	if (moo_inttointmax(moo, tmp, &size) == 0 || size < MOO_TYPE_MIN(off_t) || size > MOO_TYPE_MAX(off_t))
+	if (moo_inttointmax_noseterr(moo, tmp, &size) == 0 || size < MOO_TYPE_MIN(off_t) || size > MOO_TYPE_MAX(off_t))
 	{
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid size - %O", tmp);
 		return MOO_PF_FAILURE;

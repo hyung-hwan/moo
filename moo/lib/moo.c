@@ -788,8 +788,8 @@ static void* query_mod (moo_t* moo, const moo_ooch_t* pid, moo_oow_t pidlen, moo
 		if (!mdp) return MOO_NULL;
 	}
 
-	base = pv? mdp->mod.querypv(moo, &mdp->mod, sep + 1, pidlen - mod_name_len - 1):
-	           mdp->mod.querypf(moo, &mdp->mod, sep + 1, pidlen - mod_name_len - 1);
+	base = pv? (void*)mdp->mod.querypv(moo, &mdp->mod, sep + 1, pidlen - mod_name_len - 1):
+	           (void*)mdp->mod.querypf(moo, &mdp->mod, sep + 1, pidlen - mod_name_len - 1);
 	if (!base)
 	{
 		/* the primitive function is not found. but keep the module open even if it's opened above */

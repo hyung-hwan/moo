@@ -1562,7 +1562,7 @@ int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 		else if (c == moo->_namespace)
 		{
 			moo_oop_t ns;
-			struct
+			struct node_t
 			{
 				moo_oop_nsdic_t v;
 				struct node_t* next;
@@ -1614,7 +1614,7 @@ int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 		{
 			/* print the class name */
 			moo_oop_t ns;
-			struct
+			struct node_t
 			{
 				moo_oop_nsdic_t v;
 				struct node_t* next;
@@ -1664,7 +1664,7 @@ int moo_fmt_object_ (moo_fmtout_t* fmtout, moo_oop_t oop)
 		else if (c == moo->_interface)
 		{
 			moo_oop_t ns;
-			struct
+			struct node_t
 			{
 				moo_oop_nsdic_t v;
 				struct node_t* next;
@@ -2209,7 +2209,7 @@ static MOO_INLINE int format_stack_args (moo_fmtout_t* fmtout, moo_ooi_t nargs, 
 				flagc |= FLAGC_STAR2;
 
 				GET_NEXT_ARG_TO (moo, nargs, &arg_state, arg);
-				if (moo_inttoooi(moo, arg, &precision) <= -1) goto invalid_format;
+				if (moo_inttoooi_noseterr(moo, arg, &precision) <= -1) goto invalid_format;
 				if (precision < 0) 
 				{
 					/* if precision is less than 0, 
@@ -2224,7 +2224,7 @@ static MOO_INLINE int format_stack_args (moo_fmtout_t* fmtout, moo_ooi_t nargs, 
 				flagc |= FLAGC_STAR1;
 
 				GET_NEXT_ARG_TO (moo, nargs, &arg_state, arg);
-				if (moo_inttoooi(moo, arg, &width) <= -1) goto invalid_format;
+				if (moo_inttoooi_noseterr(moo, arg, &width) <= -1) goto invalid_format;
 				if (width < 0) 
 				{
 					flagc |= FLAGC_LEFTADJ;

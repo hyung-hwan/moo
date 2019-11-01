@@ -346,7 +346,8 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			if (_unsigned)
 			{
 				moo_oow_t v;
-				if (moo_inttooow(moo, arg, &v) == 0) goto oops;
+				if (MOO_OOP_IS_CHAR(arg)) v = MOO_OOP_TO_CHAR(arg);
+				else if (moo_inttooow_noseterr(moo, arg, &v) <= 0) goto inval_arg_value;;
 			#if defined(USE_DYNCALL)
 				__dcArgInt8 (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -357,7 +358,8 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			else
 			{
 				moo_ooi_t v;
-				if (moo_inttoooi(moo, arg, &v) == 0) goto oops;
+				if (MOO_OOP_IS_CHAR(arg)) v = MOO_OOP_TO_CHAR(arg);
+				else if (moo_inttoooi_noseterr(moo, arg, &v) == 0) goto inval_arg_value;;
 			#if defined(USE_DYNCALL)
 				__dcArgInt8 (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -371,7 +373,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			if (_unsigned)
 			{
 				moo_oow_t v;
-				if (moo_inttooow(moo, arg, &v) == 0) goto oops;
+				if (moo_inttooow_noseterr(moo, arg, &v) <= 0) goto inval_arg_value;;
 			#if defined(USE_DYNCALL)
 				__dcArgInt16 (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -382,7 +384,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			else
 			{
 				moo_ooi_t v;
-				if (moo_inttoooi(moo, arg, &v) == 0) goto oops;
+				if (moo_inttoooi_noseterr(moo, arg, &v) == 0) goto inval_arg_value;;
 			#if defined(USE_DYNCALL)
 				__dcArgInt16 (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -397,7 +399,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			if (_unsigned)
 			{
 				moo_oow_t v;
-				if (moo_inttooow(moo, arg, &v) == 0) goto oops;
+				if (moo_inttooow_noseterr(moo, arg, &v) <= 0) goto inval_arg_value;;
 			#if defined(USE_DYNCALL)
 				__dcArgInt32 (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -408,7 +410,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			else
 			{
 				moo_ooi_t v;
-				if (moo_inttoooi(moo, arg, &v) == 0) goto oops;
+				if (moo_inttoooi_noseterr(moo, arg, &v) == 0) goto inval_arg_value;;
 			#if defined(USE_DYNCALL)
 				__dcArgInt32 (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -424,7 +426,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			if (_unsigned)
 			{
 				moo_oow_t v;
-				if (moo_inttooow(moo, arg, &v) == 0) goto oops;
+				if (moo_inttooow_noseterr(moo, arg, &v) <= 0) goto inval_arg_value;
 			#if defined(USE_DYNCALL)
 				__dcArgInt64 (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -435,7 +437,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			else
 			{
 				moo_ooi_t v;
-				if (moo_inttoooi(moo, arg, &v) == 0) goto oops;
+				if (moo_inttoooi_noseterr(moo, arg, &v) == 0) goto inval_arg_value;
 			#if defined(USE_DYNCALL)
 				__dcArgInt64 (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -448,24 +450,29 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			goto inval_sig_ch;
 		#endif
 
-		case FMTC_CHAR:
-			if (!MOO_OOP_IS_CHAR(arg)) goto inval_arg_value;
+		case FMTC_CHAR: /* this is a byte */
 			if (_unsigned)
 			{
+				moo_oow_t v;
+				if (MOO_OOP_IS_CHAR(arg)) v = MOO_OOP_TO_CHAR(arg);
+				else if (moo_inttooow_noseterr(moo, arg, &v) <= 0) goto inval_arg_value;;
 			#if defined(USE_DYNCALL)
-				dcArgChar (ffi->dc, MOO_OOP_TO_CHAR(arg));
+				dcArgChar (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
 				ffi->arg_values[ffi->arg_count] = &ffi->arg_svs[ffi->arg_count].uc;
-				ffi->arg_svs[ffi->arg_count].uc = MOO_OOP_TO_CHAR(arg);
+				ffi->arg_svs[ffi->arg_count].uc = v;
 			#endif
 			}
 			else
 			{
+				moo_ooi_t v;
+				if (MOO_OOP_IS_CHAR(arg)) v = MOO_OOP_TO_CHAR(arg);
+				else if (moo_inttoooi_noseterr(moo, arg, &v) == 0) goto inval_arg_value;;
 			#if defined(USE_DYNCALL)
-				dcArgChar (ffi->dc, MOO_OOP_TO_CHAR(arg));
+				dcArgChar (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
 				ffi->arg_values[ffi->arg_count] = &ffi->arg_svs[ffi->arg_count].c;
-				ffi->arg_svs[ffi->arg_count].c = MOO_OOP_TO_CHAR(arg);
+				ffi->arg_svs[ffi->arg_count].c = v;
 			#endif
 			}
 			break;
@@ -474,7 +481,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			if (_unsigned)
 			{
 				moo_oow_t v;
-				if (moo_inttooow(moo, arg, &v) == 0) goto oops;
+				if (moo_inttooow_noseterr(moo, arg, &v) <= 0) goto inval_arg_value;
 			#if defined(USE_DYNCALL)
 				dcArgShort (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -485,7 +492,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			else
 			{
 				moo_ooi_t v;
-				if (moo_inttoooi(moo, arg, &v) == 0) goto oops;
+				if (moo_inttoooi_noseterr(moo, arg, &v) == 0) goto inval_arg_value;
 			#if defined(USE_DYNCALL)
 				dcArgShort (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -499,7 +506,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			if (_unsigned)
 			{
 				moo_oow_t v;
-				if (moo_inttooow(moo, arg, &v) == 0) goto oops;
+				if (moo_inttooow_noseterr(moo, arg, &v) <= 0) goto inval_arg_value;
 			#if defined(USE_DYNCALL)
 				dcArgInt (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -510,7 +517,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			else
 			{
 				moo_ooi_t v;
-				if (moo_inttoooi(moo, arg, &v) == 0) goto oops;
+				if (moo_inttoooi_noseterr(moo, arg, &v) == 0) goto inval_arg_value;
 			#if defined(USE_DYNCALL)
 				dcArgInt (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -525,7 +532,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			if (_unsigned)
 			{
 				moo_oow_t v;
-				if (moo_inttooow(moo, arg, &v) == 0) goto oops;
+				if (moo_inttooow_noseterr(moo, arg, &v) <= 0) goto inval_arg_value;
 			#if defined(USE_DYNCALL)
 				dcArgLong (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -536,7 +543,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			else 
 			{
 				moo_ooi_t v;
-				if (moo_inttoooi(moo, arg, &v) == 0) goto oops;
+				if (moo_inttoooi_noseterr(moo, arg, &v) == 0) goto inval_arg_value;;
 			#if defined(USE_DYNCALL)
 				dcArgLong (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -553,7 +560,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			if (_unsigned)
 			{
 				moo_uintmax_t v;
-				if (moo_inttouintmax(moo, arg, &v) == 0) goto oops;
+				if (moo_inttouintmax_noseterr(moo, arg, &v) <= 0) goto inval_arg_value;
 			#if defined(USE_DYNCALL)
 				dcArgLongLong (ffi->dc, v);
 			#elif defined(USE_LIBFFI)
@@ -564,7 +571,7 @@ static MOO_INLINE int add_ffi_arg (moo_t* moo, ffi_t* ffi, moo_ooch_t fmtc, int 
 			else
 			{
 				moo_intmax_t v;
-				if (moo_inttointmax(moo, arg, &v) == 0) goto oops;
+				if (moo_inttointmax_noseterr(moo, arg, &v) == 0) goto inval_arg_value;
 			#if defined(USE_DYNCALL)
 				dcArgLongLong (ffi->dc, v);
 			#elif defined(USE_LIBFFI)

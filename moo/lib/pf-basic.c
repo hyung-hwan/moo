@@ -213,7 +213,7 @@ moo_pfrc_t moo_pf_basic_new (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	if (nargs >= 1)
 	{
 		szoop = MOO_STACK_GETARG(moo, nargs, 0);
-		if (moo_inttooow(moo, szoop, &size) <= 0)
+		if (moo_inttooow_noseterr(moo, szoop, &size) <= 0)
 		{
 			/* integer out of range or not integer */
 			moo_seterrbfmt (moo, MOO_EINVAL, "size out of range or not integer - %O", szoop);
@@ -366,7 +366,7 @@ moo_pfrc_t moo_pf_basic_at (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	}
 
 	pos = MOO_STACK_GETARG(moo, nargs, 0);
-	if (moo_inttooow (moo, pos, &idx) <= 0)
+	if (moo_inttooow_noseterr(moo, pos, &idx) <= 0)
 	{
 		/* negative integer or not integer */
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid position - %O", pos);
@@ -436,7 +436,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	pos = MOO_STACK_GETARG(moo, nargs, 0);
 	val = MOO_STACK_GETARG(moo, nargs, 1);
 
-	if (moo_inttooow(moo, pos, &idx) <= 0)
+	if (moo_inttooow_noseterr(moo, pos, &idx) <= 0)
 	{
 		/* negative integer or not integer */
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid position - %O", pos);
@@ -486,7 +486,7 @@ moo_pfrc_t moo_pf_basic_at_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		{
 			moo_oow_t w;
 
-			if (moo_inttooow(moo, val, &w) <= 0)
+			if (moo_inttooow_noseterr(moo, val, &w) <= 0)
 			{
 				/* the value is not a number, out of range, or negative */
 				moo_seterrbfmt (moo, MOO_EINVAL, "value not a word integer - %O", val);
@@ -535,7 +535,7 @@ moo_pfrc_t moo_pf_basic_at_test_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 	oldval = MOO_STACK_GETARG(moo, nargs, 1);
 	newval = MOO_STACK_GETARG(moo, nargs, 1);
 
-	if (moo_inttooow(moo, pos, &idx) <= 0)
+	if (moo_inttooow_noseterr(moo, pos, &idx) <= 0)
 	{
 		/* negative integer or not integer */
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid position - %O", pos);
@@ -606,14 +606,14 @@ moo_pfrc_t moo_pf_basic_at_test_put (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 		{
 			moo_oow_t w, ow;
 
-			if (moo_inttooow(moo, newval, &w) <= 0)
+			if (moo_inttooow_noseterr(moo, newval, &w) <= 0)
 			{
 				/* the new value is not a number, out of range, or negative */
 				moo_seterrbfmt (moo, MOO_EINVAL, "new value not a word integer - %O", newval);
 				return MOO_PF_FAILURE;
 			}
 
-			if (moo_inttooow(moo, oldval, &ow) >= 1 && ow == MOO_OBJ_GET_WORD_VAL(rcv, idx))
+			if (moo_inttooow_noseterr(moo, oldval, &ow) >= 1 && ow == MOO_OBJ_GET_WORD_VAL(rcv, idx))
 			{
 				MOO_OBJ_SET_WORD_VAL (rcv, idx, w);
 				retval = moo->_true;
@@ -664,13 +664,13 @@ moo_pfrc_t moo_pf_basic_fill (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	dval = MOO_STACK_GETARG(moo, nargs, 1);
 	slen = MOO_STACK_GETARG(moo, nargs, 2);
 
-	if (moo_inttooow(moo, spos, &sidx) <= 0)
+	if (moo_inttooow_noseterr(moo, spos, &sidx) <= 0)
 	{
 		/* negative integer or not integer */
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid source position - %O", spos);
 		return MOO_PF_FAILURE;
 	}
-	if (moo_inttooow(moo, slen, &ssz) <= 0)
+	if (moo_inttooow_noseterr(moo, slen, &ssz) <= 0)
 	{
 		/* negative integer or not integer */
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid fill count - %O", slen);
@@ -716,7 +716,7 @@ moo_pfrc_t moo_pf_basic_fill (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		case MOO_OBJ_TYPE_WORD:
 		{
 			moo_oow_t dw;
-			if (moo_inttooow(moo, dval, &dw) <= 0) goto invalid_fill_value;
+			if (moo_inttooow_noseterr(moo, dval, &dw) <= 0) goto invalid_fill_value;
 			for (i = sidx; i < end; i++) MOO_OBJ_SET_WORD_VAL (rcv, i, dw);
 			break;
 		}
@@ -781,19 +781,19 @@ moo_pfrc_t moo_pf_basic_shift (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	dpos = MOO_STACK_GETARG(moo, nargs, 1);
 	slen = MOO_STACK_GETARG(moo, nargs, 2);
 
-	if (moo_inttooow(moo, spos, &sidx) <= 0)
+	if (moo_inttooow_noseterr(moo, spos, &sidx) <= 0)
 	{
 		/* negative integer or not integer */
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid source position - %O", spos);
 		return MOO_PF_FAILURE;
 	}
-	if (moo_inttooow(moo, dpos, &didx) <= 0)
+	if (moo_inttooow_noseterr(moo, dpos, &didx) <= 0)
 	{
 		/* negative integer or not integer */
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid destination position - %O", dpos);
 		return MOO_PF_FAILURE;
 	}
-	if (moo_inttooow(moo, slen, &ssz) <= 0)
+	if (moo_inttooow_noseterr(moo, slen, &ssz) <= 0)
 	{
 		/* negative integer or not integer */
 		moo_seterrbfmt (moo, MOO_EINVAL, "invalid shift count - %O", slen);

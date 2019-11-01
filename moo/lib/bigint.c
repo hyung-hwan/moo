@@ -279,7 +279,7 @@ static int is_normalized_integer (moo_t* moo, moo_oop_t oop)
 	return 0;
 }
 
-static MOO_INLINE int bigint_to_oow (moo_t* moo, moo_oop_t num, moo_oow_t* w)
+static MOO_INLINE int bigint_to_oow_noseterr (moo_t* moo, moo_oop_t num, moo_oow_t* w)
 {
 	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(num));
 	MOO_ASSERT (moo, MOO_POINTER_IS_PBIGINT(moo, num) || MOO_POINTER_IS_NBIGINT(moo, num));
@@ -308,11 +308,10 @@ static MOO_INLINE int bigint_to_oow (moo_t* moo, moo_oop_t num, moo_oow_t* w)
 #	error UNSUPPORTED LIW BIT SIZE
 #endif
 
-	moo_seterrnum (moo, MOO_ERANGE);
 	return 0; /* not convertable */
 }
 
-static MOO_INLINE int integer_to_oow (moo_t* moo, moo_oop_t x, moo_oow_t* w)
+static MOO_INLINE int integer_to_oow_noseterr (moo_t* moo, moo_oop_t x, moo_oow_t* w)
 {
 	/* return value 
 	 *   1 - a positive number including 0 that can fit into moo_oow_t
@@ -338,10 +337,10 @@ static MOO_INLINE int integer_to_oow (moo_t* moo, moo_oop_t x, moo_oow_t* w)
 	}
 
 	MOO_ASSERT (moo, moo_isbigint(moo, x));
-	return bigint_to_oow(moo, x, w);
+	return bigint_to_oow_noseterr(moo, x, w);
 }
 
-int moo_inttooow (moo_t* moo, moo_oop_t x, moo_oow_t* w)
+int moo_inttooow_noseterr (moo_t* moo, moo_oop_t x, moo_oow_t* w)
 {
 	if (MOO_OOP_IS_SMOOI(x))
 	{
@@ -360,40 +359,117 @@ int moo_inttooow (moo_t* moo, moo_oop_t x, moo_oow_t* w)
 		}
 	}
 
-	if (moo_isbigint(moo, x)) return bigint_to_oow(moo, x, w);
+	/* 0 -> too big, too small, or not an integer */
+	return moo_isbigint(moo, x)? bigint_to_oow_noseterr(moo, x, w): 0; 
+}
+
+int moo_inttooow (moo_t* moo, moo_oop_t x, moo_oow_t* w)
+{
+	if (MOO_OOP_IS_SMOOI(x))
+	{
+		moo_ooi_t v;
+
+		v = MOO_OOP_TO_SMOOI(x);
+		if (v < 0)
+		{
+			*w = -v;
+			moo_seterrnum (moo, MOO_ERANGE);
+			return -1; /* negative number negated - kind of an error */
+		}
+		else
+		{
+			*w = v;
+			return 1; /* zero or positive number */
+		}
+	}
+
+	/* 0 -> too big, too small, or not an integer */
+	if (moo_isbigint(moo, x))
+	{
+		int n;
+		if ((n = bigint_to_oow_noseterr(moo, x, w)) <= 0) moo_seterrnum (moo, MOO_ERANGE);
+		return n;
+	}
 
 	moo_seterrbfmt (moo, MOO_EINVAL, "not an integer - %O", x);
-	return 0; /* not convertable - too big, too small, or not an integer */
+	return 0;  /* error. not convertible */
+}
+
+int moo_inttoooi_noseterr (moo_t* moo, moo_oop_t x, moo_ooi_t* i)
+{
+	if (MOO_OOP_IS_SMOOI(x))
+	{
+		*i = MOO_OOP_TO_SMOOI(x);
+		return (*i < 0)? -1: 1;
+	}
+
+	if (moo_isbigint(moo, x))
+	{
+		moo_oow_t w;
+		int n;
+
+		n = bigint_to_oow_noseterr(moo, x, &w);
+		if (n < 0)
+		{
+			MOO_STATIC_ASSERT (MOO_TYPE_MAX(moo_ooi_t) + MOO_TYPE_MIN(moo_ooi_t) == -1); /* assume 2's complement */
+			if (w > (moo_oow_t)MOO_TYPE_MAX(moo_ooi_t) + 1) return 0; /* too small */
+			*i = -w; /* negate back */
+		}
+		else if (n > 0)
+		{
+			if (w > MOO_TYPE_MAX(moo_ooi_t)) return 0; /* too big */
+			*i = w;
+		}
+
+		return n;
+	}
+
+	return 0;  /* not integer */
 }
 
 int moo_inttoooi (moo_t* moo, moo_oop_t x, moo_ooi_t* i)
 {
-	moo_oow_t w;
-	int n;
-
-	n = moo_inttooow(moo, x, &w);
-	if (n < 0) 
+	if (MOO_OOP_IS_SMOOI(x))
 	{
-		/* negative number negated to a positve number */
-		MOO_STATIC_ASSERT (MOO_TYPE_MAX(moo_ooi_t) + MOO_TYPE_MIN(moo_ooi_t) == -1); /* assume 2's complement */
-		if (w > (moo_oow_t)MOO_TYPE_MAX(moo_ooi_t) + 1)
-		{
-			moo_seterrnum (moo, MOO_ERANGE); /* not convertable. number too small */
-			return 0;
-		}
-		*i = -w; /* negate back */
-	}
-	else if (n > 0) 
-	{
-		if (w > MOO_TYPE_MAX(moo_ooi_t)) 
-		{
-			moo_seterrnum (moo, MOO_ERANGE); /* not convertable. number too big */
-			return 0;
-		}
-		*i = w;
+		*i = MOO_OOP_TO_SMOOI(x);
+		return (*i < 0)? -1: 1;
 	}
 
-	return n;
+	if (moo_isbigint(moo, x))
+	{
+		moo_oow_t w;
+		int n;
+
+		n = bigint_to_oow_noseterr(moo, x, &w);
+		if (n < 0)
+		{
+			MOO_STATIC_ASSERT (MOO_TYPE_MAX(moo_ooi_t) + MOO_TYPE_MIN(moo_ooi_t) == -1); /* assume 2's complement */
+			if (w > (moo_oow_t)MOO_TYPE_MAX(moo_ooi_t) + 1)
+			{
+				moo_seterrnum (moo, MOO_ERANGE);
+				return 0; /* too small */
+			}
+			*i = -w; /* negate back */
+		}
+		else if (n > 0)
+		{
+			if (w > MOO_TYPE_MAX(moo_ooi_t)) 
+			{
+				moo_seterrnum (moo, MOO_ERANGE);
+				return 0; /* too big */
+			}
+			*i = w;
+		}
+		else
+		{
+			moo_seterrnum (moo, MOO_ERANGE);
+		}
+
+		return n;
+	}
+
+	moo_seterrbfmt (moo, MOO_EINVAL, "not an integer - %O", x);
+	return 0;  /* not integer */
 }
 
 #if (MOO_SIZEOF_UINTMAX_T == MOO_SIZEOF_OOW_T)
@@ -401,7 +477,7 @@ int moo_inttoooi (moo_t* moo, moo_oop_t x, moo_ooi_t* i)
 	/* do nothing. required macros are defined in moo.h */
 
 #elif (MOO_SIZEOF_UINTMAX_T == MOO_SIZEOF_OOW_T * 2)
-static MOO_INLINE int bigint_to_uintmax (moo_t* moo, moo_oop_t num, moo_uintmax_t* w)
+static MOO_INLINE int bigint_to_uintmax_noseterr (moo_t* moo, moo_oop_t num, moo_uintmax_t* w)
 {
 	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(num));
 	MOO_ASSERT (moo, MOO_POINTER_IS_PBIGINT(moo, num) || MOO_POINTER_IS_NBIGINT(moo, num));
@@ -420,7 +496,7 @@ static MOO_INLINE int bigint_to_uintmax (moo_t* moo, moo_oop_t num, moo_uintmax_
 			goto done;
 
 		default:
-			goto oops_range;
+			return 0; /* not convertable */
 	}
 
 #elif (MOO_LIW_BITS == MOO_OOHW_BITS)
@@ -439,7 +515,7 @@ static MOO_INLINE int bigint_to_uintmax (moo_t* moo, moo_oop_t num, moo_uintmax_
 			goto done;
 
 		default:
-			goto oops_range;
+			return 0; /* not convertable */
 	}
 #else
 #	error UNSUPPORTED LIW BIT SIZE
@@ -447,13 +523,9 @@ static MOO_INLINE int bigint_to_uintmax (moo_t* moo, moo_oop_t num, moo_uintmax_
 
 done:
 	return (MOO_POINTER_IS_NBIGINT(moo, num))? -1: 1;
-
-oops_range:
-	moo_seterrnum (moo, MOO_ERANGE);
-	return 0; /* not convertable */
 }
 
-int moo_inttouintmax (moo_t* moo, moo_oop_t x, moo_uintmax_t* w)
+int moo_inttouintmax_noseterr (moo_t* moo, moo_oop_t x, moo_uintmax_t* w)
 {
 	if (MOO_OOP_IS_SMOOI(x))
 	{
@@ -472,40 +544,118 @@ int moo_inttouintmax (moo_t* moo, moo_oop_t x, moo_uintmax_t* w)
 		}
 	}
 
-	if (moo_isbigint(moo, x)) return bigint_to_uintmax(moo, x, w);
+	if (moo_isbigint(moo, x)) return bigint_to_uintmax_noseterr(moo, x, w);
+	return 0; /* not convertable - too big, too small, or not an integer */
+}
+
+int moo_inttouintmax (moo_t* moo, moo_oop_t x, moo_uintmax_t* w)
+{
+	if (MOO_OOP_IS_SMOOI(x))
+	{
+		moo_ooi_t v;
+
+		v = MOO_OOP_TO_SMOOI(x);
+		if (v < 0)
+		{
+			*w = -v;
+			moo_seterrnum (moo, MOO_ERANGE);
+			return -1; /* negative number negated - kind of an error */
+		}
+		else
+		{
+			*w = v;
+			return 1; /* zero or positive number */
+		}
+	}
+
+	if (moo_isbigint(moo, x)) 
+	{
+		int n;
+		if ((n = bigint_to_uintmax_noseterr(moo, x, w)) <= 0) moo_seterrnum (moo, MOO_ERANGE);
+		return n;
+	}
 
 	moo_seterrbfmt (moo, MOO_EINVAL, "not an integer - %O", x);
 	return 0; /* not convertable - too big, too small, or not an integer */
 }
 
+int moo_inttointmax_noseterr (moo_t* moo, moo_oop_t x, moo_intmax_t* i)
+{
+	if (MOO_OOP_IS_SMOOI(x))
+	{ 
+		*i = MOO_OOP_TO_SMOOI(x);
+		return (*i < 0)? -1: 1;
+	}
+
+	if (moo_isbigint(moo, x)) 
+	{
+		int n;
+		moo_uintmax_t w;
+
+		n = bigint_to_uintmax_noseterr(moo, x, &w);
+		if (n < 0)
+		{
+			/* negative number negated to a positve number */
+			MOO_STATIC_ASSERT (MOO_TYPE_MAX(moo_intmax_t) + MOO_TYPE_MIN(moo_intmax_t) == -1); /* assume 2's complement */
+			if (w > (moo_uintmax_t)MOO_TYPE_MAX(moo_intmax_t) + 1) return 0; /* not convertable - too small */
+			*i = -w; /* negate it back */
+		}
+		else if (n > 0)
+		{
+			if (w > MOO_TYPE_MAX(moo_intmax_t)) return 0; /* not convertable - too big */
+			*i = w;
+		}
+
+		return n;
+	}
+
+	moo_seterrbfmt (moo, MOO_EINVAL, "not an integer - %O", x);
+	return 0; /* not convertable - not an integer */
+}
+
 int moo_inttointmax (moo_t* moo, moo_oop_t x, moo_intmax_t* i)
 {
-	moo_uintmax_t w;
-	int n;
-
-	n = moo_inttouintmax(moo, x, &w);
-	if (n < 0) 
+	if (MOO_OOP_IS_SMOOI(x))
 	{
-		/* negative number negated to a positve number */
-		MOO_STATIC_ASSERT (MOO_TYPE_MAX(moo_intmax_t) + MOO_TYPE_MIN(moo_intmax_t) == -1); /* assume 2's complement */
-		if (w > (moo_uintmax_t)MOO_TYPE_MAX(moo_intmax_t) + 1)
-		{
-			moo_seterrnum (moo, MOO_ERANGE); /* not convertable. number too small */
-			return 0;
-		}
-		*i = -w; /* negate it back */
-	}
-	else if (n > 0) 
-	{
-		if (w > MOO_TYPE_MAX(moo_intmax_t)) 
-		{
-			moo_seterrnum (moo, MOO_ERANGE); /* not convertable. number too big */
-			return 0;
-		}
-		*i = w;
+		*i = MOO_OOP_TO_SMOOI(x);
+		return (*i < 0)? -1: 1;
 	}
 
-	return n;
+	if (moo_isbigint(moo, x)) 
+	{
+		int n;
+		moo_uintmax_t w;
+
+		n = bigint_to_uintmax_noseterr(moo, x, &w);
+		if (n < 0)
+		{
+			/* negative number negated to a positve number */
+			MOO_STATIC_ASSERT (MOO_TYPE_MAX(moo_intmax_t) + MOO_TYPE_MIN(moo_intmax_t) == -1); /* assume 2's complement */
+			if (w > (moo_uintmax_t)MOO_TYPE_MAX(moo_intmax_t) + 1)
+			{
+				moo_seterrnum (moo, MOO_ERANGE);
+				return 0; /* not convertable. too small */
+			}
+			*i = -w; /* negate it back */
+		}
+		else if (n > 0)
+		{
+			if (w > MOO_TYPE_MAX(moo_intmax_t)) 
+			{
+				moo_seterrnum (moo, MOO_ERANGE); 
+				return 0; /* not convertable. too big */
+			}
+			*i = w;
+		}
+		else
+		{
+			moo_seterrnum (moo, MOO_ERANGE);
+		}
+		return n;
+	}
+
+	moo_seterrbfmt (moo, MOO_EINVAL, "not an integer - %O", x);
+	return 0; /* not convertable - too big, too small, or not an integer */
 }
 
 #else
@@ -2989,7 +3139,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 
 		if (MOO_POINTER_IS_NBIGINT(moo, y)) return MOO_SMOOI_TO_OOP(0);
 
-		sign = bigint_to_oow(moo, y, &w);
+		sign = bigint_to_oow_noseterr(moo, y, &w);
 		MOO_ASSERT (moo, sign >= 0);
 		if (sign >= 1)
 		{
@@ -3007,7 +3157,7 @@ moo_oop_t moo_bitatint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			moo_popvolat (moo);
 			if (!quo) return MOO_NULL;
 
-			sign = integer_to_oow(moo, quo, &wp);
+			sign = integer_to_oow_noseterr(moo, quo, &wp);
 			MOO_ASSERT (moo, sign >= 0);
 			if (sign == 0)
 			{
@@ -3892,7 +4042,7 @@ static MOO_INLINE moo_oop_t rshift_negative_bigint_and_normalize (moo_t* moo, mo
 		moo_popvolat (moo);
 		if (!y) return MOO_NULL;
 
-		sign = integer_to_oow(moo, y, &shift);
+		sign = integer_to_oow_noseterr(moo, y, &shift);
 		if (sign == 0) shift = MOO_SMOOI_MAX;
 		else 
 		{
@@ -3980,7 +4130,7 @@ static MOO_INLINE moo_oop_t rshift_positive_bigint_and_normalize (moo_t* moo, mo
 		moo_popvolat (moo);
 		if (!y) return MOO_NULL;
 
-		sign = integer_to_oow(moo, y, &shift);
+		sign = integer_to_oow_noseterr(moo, y, &shift);
 		if (sign == 0) shift = MOO_SMOOI_MAX;
 		else 
 		{
@@ -4033,7 +4183,7 @@ static MOO_INLINE moo_oop_t lshift_bigint_and_normalize (moo_t* moo, moo_oop_t x
 		moo_popvolat (moo);
 		if (!y) return MOO_NULL;
 
-		sign = integer_to_oow(moo, y, &shift);
+		sign = integer_to_oow_noseterr(moo, y, &shift);
 		if (sign == 0) shift = MOO_SMOOI_MAX;
 		else
 		{
@@ -4194,7 +4344,7 @@ moo_oop_t moo_bitshiftint (moo_t* moo, moo_oop_t x, moo_oop_t y)
 			negx = (MOO_POINTER_IS_NBIGINT(moo, x))? 1: 0;
 			negy = (MOO_POINTER_IS_NBIGINT(moo, y))? 1: 0;
 
-			sign = bigint_to_oow(moo, y, &shift);
+			sign = bigint_to_oow_noseterr(moo, y, &shift);
 			if (sign == 0)
 			{
 				/* y is too big or too small */
@@ -4822,7 +4972,7 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 	MOO_ASSERT (moo, radix >= 2 && radix <= 36);
 
 	if (!moo_isint(moo,num)) goto oops_einval;
-	v = integer_to_oow(moo, num, &w);
+	v = integer_to_oow_noseterr(moo, num, &w);
 
 	if (v)
 	{
@@ -4858,6 +5008,8 @@ moo_oop_t moo_inttostr (moo_t* moo, moo_oop_t num, int flagged_radix)
 		return moo_makestring(moo, xbuf, xlen);
 	}
 
+	/* the number can't be represented as a single moo_oow_t value.
+	 * mutli-word conversion begins now */
 	as = MOO_OBJ_GET_SIZE(num);
 
 	reqcapa = as * MOO_LIW_BITS + 1; 
