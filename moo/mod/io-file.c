@@ -132,10 +132,22 @@ oops:
 	} \
 	while(0)
 
+#define SETRET_WITH_SYSCALL(moo, nargs, n) \
+	do { \
+		int x_ = (n); \
+		if (x_ <= -1) \
+		{ \
+			moo_seterrwithsyserr (moo, 0, errno); \
+			return MOO_PF_FAILURE; \
+		} \
+		MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(x_)); \
+	} \
+	while(0)
+
 static moo_pfrc_t pf_chmod_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t tmp;
-	int fd, n;
+	int fd;
 	moo_oow_t mode;
 
 	RCV_TO_FD (moo, nargs, fd);
@@ -149,21 +161,15 @@ static moo_pfrc_t pf_chmod_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	n = fchmod(fd, mode);
-	if (n <= -1)
-	{
-		moo_seterrwithsyserr (moo, 0, errno);
-		return MOO_PF_FAILURE;
-	}
-
-	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
+	SETRET_WITH_SYSCALL (moo, nargs, fchmod(fd, mode));
 	return MOO_PF_SUCCESS;
 }
+
 
 static moo_pfrc_t pf_chown_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t tmp;
-	int fd, n;
+	int fd;
 	moo_ooi_t uid, gid;
 
 	RCV_TO_FD (moo, nargs, fd);
@@ -188,21 +194,14 @@ static moo_pfrc_t pf_chown_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	if (uid <= -1) uid = (uid_t)-1;
 	if (gid <= -1) gid = (gid_t)-1;
 
-	n = fchown(fd, uid, gid);
-	if (n <= -1)
-	{
-		moo_seterrwithsyserr (moo, 0, errno);
-		return MOO_PF_FAILURE;
-	}
-
-	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
+	SETRET_WITH_SYSCALL (moo, nargs, fchown(fd, uid, gid));
 	return MOO_PF_SUCCESS;
 }
 
 static moo_pfrc_t pf_lock_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
 	moo_oop_t tmp;
-	int fd, n;
+	int fd;
 
 	RCV_TO_FD (moo, nargs, fd);
 
@@ -213,17 +212,9 @@ static moo_pfrc_t pf_lock_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	n = flock(fd, MOO_OOP_TO_SMOOI(tmp));
-	if (n <= -1)
-	{
-		moo_seterrwithsyserr (moo, 0, errno);
-		return MOO_PF_FAILURE;
-	}
-
-	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
+	SETRET_WITH_SYSCALL (moo, nargs, flock(fd, MOO_OOP_TO_SMOOI(tmp)));
 	return MOO_PF_SUCCESS;
 }
-
 
 static moo_pfrc_t pf_seek_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
@@ -250,7 +241,7 @@ static moo_pfrc_t pf_seek_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	}
 
 	n = lseek(fd, offset, whence);
-	if (n <= -1)
+	if (n == (off_t)-1)
 	{
 		moo_seterrwithsyserr (moo, 0, errno);
 		return MOO_PF_FAILURE;
@@ -278,14 +269,7 @@ static moo_pfrc_t pf_truncate_file (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 		return MOO_PF_FAILURE;
 	}
 
-	n = ftruncate(fd, size);
-	if (n <= -1)
-	{
-		moo_seterrwithsyserr (moo, 0, errno);
-		return MOO_PF_FAILURE;
-	}
-
-	MOO_STACK_SETRET (moo, nargs, MOO_SMOOI_TO_OOP(n));
+	SETRET_WITH_SYSCALL (moo, nargs, ftruncate(fd, size));
 	return MOO_PF_SUCCESS;
 }
 
