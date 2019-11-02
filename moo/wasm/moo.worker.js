@@ -8,9 +8,14 @@ Module.onRuntimeInitialized = function()
 }
 
 const libmoo = {
-        //open: Module.cwrap('moo_openstd', 'number', ['number', 'number', 'number']),
-        //close: Module.cwrap('moo_close', '', ['number']),
-        open_moo: Module.cwrap('open_moo', '', [''])
+        open: Module.cwrap('moo_openstd', 'number', ['number', 'number', 'number']),
+        close: Module.cwrap('moo_close', '', ['number']),
+	ignite: Module.cwrap('moo_ignite', 'number', ['number', 'number']),
+	initdbgi: Module.cwrap('moo_initdbgi', 'number', ['number', 'number']),
+	compilefile: Module.cwrap('moo_compilefileb', 'number', ['number', 'string']),
+	invoke: Module.cwrap('moo_invokestdb', 'number', ['number', 'string', 'string'])
+
+
 };
 
 //console.log ("QQ %O\n", self);
@@ -27,11 +32,27 @@ self.addEventListener ('message', function (evt) {
 
                 if (self.__ready)
                 {
-                        //var moo = libmoo.open(0, null, null);
-			var moo = libmoo.open_moo();
-                        self.postMessage ('XXXXXXXXXXXXXXXx - ' + moo);
+                        var moo, tmp;
+			var msg = "";
+
+			moo = libmoo.open(0, null, null);
+			msg = msg.concat("open - " + moo);
+
+			tmp = libmoo.ignite(moo, 5000000);
+			msg = msg.concat(" ignite - " + tmp);
+
+			tmp = libmoo.initdbgi(moo, 102400);
+			msg = msg.concat(" initdgbi - " + tmp);
+
+			tmp = libmoo.compilefile(moo, "kernel/test-001.moo");
+			msg = msg.concat(" compilefile - " + tmp);
+
+			tmp = libmoo.invoke(moo, "MyObject", "main");
+			msg = msg.concat(" invoke - " + tmp);
+
+                        self.postMessage (msg);
 			
-                        //libmoo.close (moo);
+                        libmoo.close (moo);
                 }
         } 
 });

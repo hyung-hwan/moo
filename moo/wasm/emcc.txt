@@ -6,16 +6,33 @@ Temporary notes on how to build libmoo to web assembly with emscripten.
 #### How to Build
  mkdir -p bld/emcc
  cd blc/emcc
+
+## run configure and make under emconfigure and emmake respectively
  emconfigure ../../configure --prefix=${HOME}/xxx-emcc --disable-shared --enable-dynamic-module --disable-mod-x11 --disable-mod-con --disable-mod-sck CFLAGS="-Wall -O2 -g"
  emmake make
+
+## convert the library to web assembly - the command produces libmoo.js and  libmoo.wasm
  ##emcc lib/.libs/libmoo.a -s WASM=1 -s EXPORT_ALL=1 -s LINKABLE=1 -o libmoo.js
  #if you have defined MOO_EXPORT as EMSCRIPTEN_KEEPALIVE, the following will do
  ##emcc lib/.libs/libmoo.a -s WASM=1 -s -s LINKABLE=1 -o libmoo.js
- ###emcc lib/.libs/libmoo.a lib/.libs/libmoox.a -s WASM=1 -s -s LINKABLE=1 -o libmoo.js
- emcc lib/.libs/libmoo.a lib/.libs/libmoox.a -s WASM=1 -s -s LINKABLE=1 -s EXTRA_EXPORTED_RUNTIME_METHODS="['ccall','cwrap']" -o libmoo.js
+ ###emcc lib/.libs/libmoo.a lib/.libs/libmoox.a -s WASM=1 -s LINKABLE=1 -o libmoo.js
+
+## -s ALLOW_MEMORY_GROWTH=1
+emcc lib/.libs/libmoo.a lib/.libs/libmoox.a -s WASM=1 -s LINKABLE=1 -s EXTRA_EXPORTED_RUNTIME_METHODS="['ccall','cwrap']" -o libmoo.js  --embed-file ../../kernel/
+ ### --embed-file, if given a directory, includes all files under the directory.
+ ### the result libmoo.js will contain lines like below:
+ ###   Module['FS_createDataFile']('/kernel', 'Apex.moo', fileData35, true, true, false);
+ ###   var fileData36 = [];
+ ###   fileData36.push.apply(fileData36, [35, 105, ...
+ ### 
+
+## when i executed the command above, some versions of wasm-ld complained like below 
+## if the library is compiled with -pthread.
+##   wasm-ld: error: 'atomics' feature is disallowed by atomic_2835fb94.c.o, so --shared-memory must not be used
+## a quick work around was  to remove -pthread before building with 'emmake make'
 
  ## if defined some javascript functions in moo.cb.js...
- emcc -Wall -O2 -g lib/.libs/libmoo.a ws.c -DMOO_HAVE_CFG_H -Ilib -I../../lib -s WASM=1 -s -s LINKABLE=1 -s EXTRA_EXPORTED_RUNTIME_METHODS="['ccall','cwrap']" -o libmoo.js --pre-js moo.cb.js
+ emcc -Wall -O2 -g lib/.libs/libmoo.a ws.c -DMOO_HAVE_CFG_H -Ilib -I../../lib -s WASM=1 -s LINKABLE=1 -s EXTRA_EXPORTED_RUNTIME_METHODS="['ccall','cwrap']" -o libmoo.js --pre-js moo.cb.js
 
 #### moo.worker.js
 

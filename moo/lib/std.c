@@ -4241,7 +4241,60 @@ int moo_compilestd (moo_t* moo, const moo_iostd_t* in, moo_oow_t count)
 
 	return 0;
 }
+
+int moo_compilefileb (moo_t* moo, const moo_bch_t* path)
+{
+	moo_iostd_t in;
+
+	MOO_MEMSET (&in, 0, MOO_SIZEOF(in));
+	in.type = MOO_IOSTD_FILEB;
+	in.u.fileb.path = path;
+
+	return moo_compilestd(moo, &in, 1);
+}
+
+int moo_compilefileu (moo_t* moo, const moo_uch_t* path)
+{
+	moo_iostd_t in;
+
+	MOO_MEMSET (&in, 0, MOO_SIZEOF(in));
+	in.type = MOO_IOSTD_FILEU;
+	in.u.fileu.path = path;
+
+	return moo_compilestd(moo, &in, 1);
+}
+
 #endif
+
+int moo_invokestdb (moo_t* moo, const moo_bch_t* objname, const moo_bch_t* mthname)
+{
+#if defined(MOO_OOCH_IS_UCH)
+	int n = -1;
+	moo_oocs_t o, m;
+
+	o.ptr = moo_dupbtooocstr(moo, objname, &o.len);
+	m.ptr = moo_dupbtooocstr(moo, mthname, &m.len);
+	if (!o.ptr || !m.ptr) goto done;
+
+	n = moo_invoke(moo, &o, &m);
+
+done:
+	if (m.ptr) moo_freemem (moo, m.ptr);
+	if (o.ptr) moo_freemem (moo, o.ptr);
+
+	return n;
+#else
+	moo_oocs_t o, m;
+
+	o.ptr = objname;
+	o.len = moo_count_bcstr(objname);
+
+	m.ptr = objname;
+	m.len = moo_count_bcstr(objname);
+
+	return moo_invoke(moo, &o, &m);
+#endif
+}
 
 void moo_rcvtickstd (moo_t* moo, int v)
 {

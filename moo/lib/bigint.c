@@ -476,7 +476,7 @@ int moo_inttoooi (moo_t* moo, moo_oop_t x, moo_ooi_t* i)
 
 	/* do nothing. required macros are defined in moo.h */
 
-#elif (MOO_SIZEOF_UINTMAX_T == MOO_SIZEOF_OOW_T * 2)
+#elif (MOO_SIZEOF_UINTMAX_T == MOO_SIZEOF_OOW_T * 2) || (MOO_SIZEOF_UINTMAX_T == MOO_SIZEOF_OOW_T * 4)
 static MOO_INLINE int bigint_to_uintmax_noseterr (moo_t* moo, moo_oop_t num, moo_uintmax_t* w)
 {
 	MOO_ASSERT (moo, MOO_OOP_IS_POINTER(num));
@@ -492,8 +492,24 @@ static MOO_INLINE int bigint_to_uintmax_noseterr (moo_t* moo, moo_oop_t num, moo
 			goto done;
 
 		case 2:
-			*w = ((moo_uintmax_t)MOO_OBJ_GET_WORD_VAL(num, 0) << MOO_LIW_BITS) | MOO_OBJ_GET_WORD_VAL(num, 1);
+			*w = ((moo_uintmax_t)MOO_OBJ_GET_WORD_VAL(num, 0) << MOO_LIW_BITS) |
+			     ((moo_uintmax_t)MOO_OBJ_GET_WORD_VAL(num, 1));
 			goto done;
+
+	#if (MOO_SIZEOF_UINTMAX_T >= MOO_SIZEOF_OOW_T * 4)
+		case 3:
+			*w = ((moo_uintmax_t)MOO_OBJ_GET_WORD_VAL(num, 0) << (MOO_LIW_BITS * 2)) | 
+			     ((moo_uintmax_t)MOO_OBJ_GET_WORD_VAL(num, 1) << (MOO_LIW_BITS * 1)) |
+			     ((moo_uintmax_t)MOO_OBJ_GET_WORD_VAL(num, 2))
+			goto done;
+
+		case 4:
+			*w = ((moo_uintmax_t)MOO_OBJ_GET_WORD_VAL(num, 0) << (MOO_LIW_BITS * 3)) | 
+			     ((moo_uintmax_t)MOO_OBJ_GET_WORD_VAL(num, 1) << (MOO_LIW_BITS * 2)) |
+			     ((moo_uintmax_t)MOO_OBJ_GET_WORD_VAL(num, 2) << (MOO_LIW_BITS * 1)) |
+			     ((moo_uintmax_t)MOO_OBJ_GET_WORD_VAL(num, 3))
+			goto done;
+	#endif
 
 		default:
 			return 0; /* not convertable */
@@ -504,15 +520,38 @@ static MOO_INLINE int bigint_to_uintmax_noseterr (moo_t* moo, moo_oop_t num, moo
 	switch (MOO_OBJ_GET_SIZE(num))
 	{
 		case 2:
-			*w = ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 0) << MOO_LIW_BITS) | MOO_OBJ_GET_HALFWORD_VAL(num, 1);
+			*w = ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 0) << MOO_LIW_BITS) | 
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 1));
 			goto done;
 
 		case 4:
 			*w = ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 0) << MOO_LIW_BITS * 3) | 
 			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 1) << MOO_LIW_BITS * 2) |
 			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 2) << MOO_LIW_BITS * 1) |
-			     MOO_OBJ_GET_HALFWORD_VAL(num, 3);
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 3));
 			goto done;
+
+	#if (MOO_SIZEOF_UINTMAX_T >= MOO_SIZEOF_OOW_T * 4)
+		case 6:
+			*w = ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 0) << MOO_LIW_BITS * 5) | 
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 1) << MOO_LIW_BITS * 4) |
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 2) << MOO_LIW_BITS * 3) |
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 3) << MOO_LIW_BITS * 2) |
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 4) << MOO_LIW_BITS * 1) |
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 5));
+			goto done;
+
+		case 8:
+			*w = ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 0) << MOO_LIW_BITS * 7) | 
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 1) << MOO_LIW_BITS * 6) |
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 2) << MOO_LIW_BITS * 5) |
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 3) << MOO_LIW_BITS * 4) |
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 4) << MOO_LIW_BITS * 3) |
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 5) << MOO_LIW_BITS * 2) |
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 6) << MOO_LIW_BITS * 1) |
+			     ((moo_uintmax_t)MOO_OBJ_GET_HALFWORD_VAL(num, 7));
+			goto done;
+	#endif
 
 		default:
 			return 0; /* not convertable */

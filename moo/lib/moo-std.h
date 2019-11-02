@@ -115,7 +115,25 @@ MOO_EXPORT int moo_compilestd(
 	const moo_iostd_t* in,
 	moo_oow_t          count
 );
+
+MOO_EXPORT int moo_compilefileb (
+	moo_t*           moo, 
+	const moo_bch_t* path
+);
+
+MOO_EXPORT int moo_compilefileu (
+	moo_t*           moo, 
+	const moo_uch_t* path
+);
+
 #endif
+
+MOO_EXPORT int moo_invokestdb (
+	moo_t*           moo,
+	const moo_bch_t* objname,
+	const moo_bch_t* mthname
+);
+
 
 MOO_EXPORT void moo_rcvtickstd (
 	moo_t*             moo,
