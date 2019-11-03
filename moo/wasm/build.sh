@@ -13,8 +13,8 @@ emcc -Wall -O2 -g   \
 	-s WASM=1 -s LINKABLE=1 \
 	-s EXTRA_EXPORTED_RUNTIME_METHODS="['ccall','cwrap']" \
 	-o libmoo.js \
+	--embed-file ${topdir}/kernel/ \
 	--pre-js ${topdir}/wasm/moo.cb.js
-
 
 cp -pf ${topdir}/wasm/moo.html .
 cp -pf ${topdir}/wasm/moo.worker.js .

@@ -22,8 +22,6 @@ var log_write = Module.addFunction(function() {
 });
 */
 
-//console.log ("QQ %O\n", self);
-
 //self.onmessage = function (evt) {
 self.addEventListener ('message', function (evt) {
         var objData = evt.data;
@@ -48,7 +46,7 @@ self.addEventListener ('message', function (evt) {
 			tmp = libmoo.initdbgi(moo, 102400);
 			msg = msg.concat(" initdgbi - " + tmp);
 
-			tmp = libmoo.compilefile(moo, "kernel/test-003.moo");
+			tmp = libmoo.compilefile(moo, "kernel/t.moo");
 			msg = msg.concat(" compilefile - " + tmp);
 
 			tmp = libmoo.invoke(moo, "MyObject", "main");

@@ -820,28 +820,26 @@ static void free_heap (moo_t* moo, void* ptr)
 #endif
 }
 
+#if defined(EMSCRIPTEN)
+EM_JS(int, write_all, (int, const moo_bch_t* ptr, moo_oow_t len), {
+	// UTF8ToString() doesn't handle a null byte in the middle of an array.
+	// Use the heap memory and pass the right portion to UTF8Decoder.
+	//console.log ("%s", UTF8ToString(ptr, len));
+	console.log ("%s", UTF8Decoder.decode(HEAPU8.subarray(ptr, ptr + len)));
+	return 0;	
+});
+
+#else
+
 static int write_all (int fd, const moo_bch_t* ptr, moo_oow_t len)
 {
 #if defined(EMSCRIPTEN)
-	while (len > 0)
-	{
-		moo_oow_t slen;
-
-		/* if the output data contains a null byte in the middle,
-		 * UTF8ToString() cuts short before printing all data */
-		slen = moo_count_bcstrl(ptr, len); 
-
-		EM_ASM_ ({
-			console.log ("%s", UTF8ToString($0, $1));
-		}, ptr, slen);
-
-		if (slen < len) slen++; /* skip the null byte */
-
-		len -= slen;
-		ptr += slen;
-
-	}
-
+	EM_ASM_ ({
+		// UTF8ToString() doesn't handle a null byte in the middle of an array.
+		// Use the heap memory and pass the right portion to UTF8Decoder.
+		//console.log ("%s", UTF8ToString($0, $1));
+		console.log ("%s", UTF8Decoder.decode(HEAPU8.subarray($0, $0 + $1)));
+	}, ptr, len);
 #else
 	while (len > 0)
 	{
@@ -875,6 +873,7 @@ static int write_all (int fd, const moo_bch_t* ptr, moo_oow_t len)
 
 	return 0;
 }
+#endif
 
 static int write_log (moo_t* moo, int fd, const moo_bch_t* ptr, moo_oow_t len)
 {

@@ -9,7 +9,7 @@ var _jsGetTime = function(pointer)
 
 var _jsSleep = function(pointer)
 {
-/*
+	/*
 	var pos = pointer / 4;
 	var msec = (HEAP32[POS] * 1000) + (HEAP32[pos + 1] / 1000000);
 
@@ -18,5 +18,6 @@ var _jsSleep = function(pointer)
 	});	
 
 	await prom;
-*/
+	*/
 }
+
