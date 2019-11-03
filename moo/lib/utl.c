@@ -315,11 +315,31 @@ moo_oow_t moo_count_ucstr (const moo_uch_t* str)
 	return ptr - str;
 }
 
+moo_oow_t moo_count_ucstrl (const moo_uch_t* str, moo_oow_t maxlen)
+{
+	moo_oow_t i;
+	for (i = 0; i < maxlen; i++)
+	{
+		if (str[i] == '\0') break;
+	}
+	return i;
+}
+
 moo_oow_t moo_count_bcstr (const moo_bch_t* str)
 {
 	const moo_bch_t* ptr = str;
 	while (*ptr != '\0') ptr++;
 	return ptr - str;
+}
+
+moo_oow_t moo_count_bcstrl (const moo_bch_t* str, moo_oow_t maxlen)
+{
+	moo_oow_t i;
+	for (i = 0; i < maxlen; i++)
+	{
+		if (str[i] == '\0') break;
+	}
+	return i;
 }
 
 moo_uch_t* moo_find_uchar (const moo_uch_t* ptr, moo_oow_t len, moo_uch_t c)

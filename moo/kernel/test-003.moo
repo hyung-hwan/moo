@@ -227,7 +227,7 @@ EXCEPTION_TEST:
 Exception signal: 'experiment with exception signalling'.
 
 		// TODO: 
-		String format("%s", " 나	는\\\"") dump.
+		System logNl: String format("%s", " 나	는\\\"").
 		#"a b\nc" dump.
 	}
 }

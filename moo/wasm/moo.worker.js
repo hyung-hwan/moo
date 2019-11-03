@@ -13,10 +13,14 @@ const libmoo = {
 	ignite: Module.cwrap('moo_ignite', 'number', ['number', 'number']),
 	initdbgi: Module.cwrap('moo_initdbgi', 'number', ['number', 'number']),
 	compilefile: Module.cwrap('moo_compilefileb', 'number', ['number', 'string']),
-	invoke: Module.cwrap('moo_invokestdb', 'number', ['number', 'string', 'string'])
-
-
+	invoke: Module.cwrap('moo_invokebynameb', 'number', ['number', 'string', 'string'])
 };
+
+/*
+var log_write = Module.addFunction(function() {
+
+});
+*/
 
 //console.log ("QQ %O\n", self);
 
@@ -44,7 +48,7 @@ self.addEventListener ('message', function (evt) {
 			tmp = libmoo.initdbgi(moo, 102400);
 			msg = msg.concat(" initdgbi - " + tmp);
 
-			tmp = libmoo.compilefile(moo, "kernel/test-001.moo");
+			tmp = libmoo.compilefile(moo, "kernel/test-003.moo");
 			msg = msg.concat(" compilefile - " + tmp);
 
 			tmp = libmoo.invoke(moo, "MyObject", "main");

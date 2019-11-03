@@ -557,8 +557,18 @@ MOO_EXPORT moo_oow_t moo_count_ucstr (
 	const moo_uch_t* str
 );
 
+MOO_EXPORT moo_oow_t moo_count_ucstrl (
+	const moo_uch_t* str,
+	moo_oow_t        maxlen
+);
+
 MOO_EXPORT moo_oow_t moo_count_bcstr (
 	const moo_bch_t* str
+);
+
+MOO_EXPORT moo_oow_t moo_count_bcstrl (
+	const moo_bch_t* str,
+	moo_oow_t        maxlen
 );
 
 #if defined(MOO_OOCH_IS_UCH)

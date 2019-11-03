@@ -128,7 +128,7 @@ MOO_EXPORT int moo_compilefileu (
 
 #endif
 
-MOO_EXPORT int moo_invokestdb (
+MOO_EXPORT int moo_invokebynameb (
 	moo_t*           moo,
 	const moo_bch_t* objname,
 	const moo_bch_t* mthname
