@@ -110,3 +110,20 @@ EMSCRIPTEN_KEEPALIVE int open_moo (void)
 #endif
 }
 
+EMSCRIPTEN_KEEPALIVE moo_bch_t* get_errmsg_from_moo (moo_t* moo)
+{
+#if defined(MOO_OOCH_IS_UCH)
+/* TODO: no static.... error check... */
+	static moo_bch_t bm[256];
+	moo_oow_t bl = MOO_COUNTOF(bm);
+	moo_convutobcstr (moo, moo_geterrmsg(moo), MOO_NULL, bm, &bl);
+	return bm;
+#else
+	return moo_geterrmsg(moo);
+#endif
+}
+
+EMSCRIPTEN_KEEPALIVE void switch_process_in_moo (moo_t* moo)
+{
+	moo_switchprocess(moo); 
+}

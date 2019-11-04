@@ -6,6 +6,7 @@ blddir=${topdir}/bld/emcc
 
 emcc -Wall -O2 -g   \
 	${blddir}/lib/.libs/libmoo.a \
+	${blddir}/lib/.libs/libmoox.a \
 	${topdir}/wasm/main.c \
 	-DMOO_HAVE_CFG_H \
 	-I${blddir}/lib \
@@ -16,5 +17,7 @@ emcc -Wall -O2 -g   \
 	--embed-file ${topdir}/kernel/ \
 	--pre-js ${topdir}/wasm/moo.cb.js
 
-cp -pf ${topdir}/wasm/moo.html .
-cp -pf ${topdir}/wasm/moo.worker.js .
+##cp -pf ${topdir}/wasm/moo.html .
+##cp -pf ${topdir}/wasm/moo.worker.js .
+ln -sf ${topdir}/wasm/moo.html moo.html
+ln -sf ${topdir}/wasm/moo.worker.js moo.worker.js

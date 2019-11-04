@@ -3,29 +3,51 @@
 <head><meta charset="utf-8" /></head>
 
 <body>
-    <input type="button" value="Test" onclick="do_test();" />
+	<input type="button" value="Open" onclick="do_open();" />
+	<input type="button" value="Run" onclick="do_run();" />
+	<input type="button" value="Close" onclick="do_close();" />
 
-    <script type="text/javascript">
-        var g_WebWorker = new Worker("moo.worker.js");
-        if (typeof(WebAssembly) === 'undefined')
-        {
-              alert ('No web assebly support in this browser');
-        }
+	<script type="text/javascript">
+		var g_WebWorker = new Worker("moo.worker.js");
+		if (typeof(WebAssembly) === 'undefined')
+		{
+		    alert ('No web assebly support in this browser');
+		}
 
+/*
+		window.addEventListener('beforeunload', function(event) {
+			//g_WebWorker.terminate ();
+			//g_WebWorkder = null;
 
-        g_WebWorker.onerror = function (evt) { 
-		console.log(`Error from Web Worker: ${evt.message}`); 
-	};
+			var confirmationMessage = "\o/";
+			(event || window.event).returnValue = confirmationMessage;     //Gecko + IE
+			return confirmationMessage;
+		});
+*/
 
-        g_WebWorker.onmessage = function (evt) { 
-		console.log(`Message from the Web Worker:\n\n ${evt.data}`); 
-	};
+		g_WebWorker.onerror = function (evt) { 
+			console.log(`Error from Web Worker: ${evt.message}`); 
+		};
 
-        function do_test()
-	{
-                g_WebWorker.postMessage({ "cmd": "test-moo", "data": "nothing as of now.." });
-        }
-    </script>
+		g_WebWorker.onmessage = function (evt) { 
+			console.log(`Message from the Web Worker:\n\n ${evt.data}`); 
+		};
+
+		function do_open()
+		{
+			 g_WebWorker.postMessage({ "cmd": "open-moo", "data": "nothing as of now.." });
+		}
+
+		function do_run()
+		{
+			 g_WebWorker.postMessage({ "cmd": "run-moo", "data": "nothing as of now.." });
+		}
+
+		function do_close()
+		{
+			 g_WebWorker.postMessage({ "cmd": "close-moo", "data": "nothing as of now.." });
+		}
+	</script>
 
 
 </body>
