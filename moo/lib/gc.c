@@ -405,7 +405,7 @@ static kernel_class_info_t kernel_classes[] =
 	{ 6,
 	  { 'S','y','s','t','e','m' },
 	  0,
-	  6, /* asyncsg, gcfin_sem, gcfin_should_exit, gcfin_proc, ossig_proc, shr */
+	  5, /* asyncsg, gcfin_sem, gcfin_should_exit, ossig_pid, shr */
 	  0,
 	  0,
 	  MOO_OBJ_TYPE_OOP,

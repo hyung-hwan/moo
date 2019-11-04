@@ -282,6 +282,7 @@ static MOO_INLINE void alloc_pid (moo_t* moo, moo_oop_process_t proc)
 	moo->proc_map_free_first = MOO_OOP_TO_SMOOI(moo->proc_map[pid]);
 	if (moo->proc_map_free_first <= -1) moo->proc_map_free_last = -1;
 	moo->proc_map[pid] = (moo_oop_t)proc;
+	moo->proc_map_used++;
 }
 
 static MOO_INLINE void free_pid (moo_t* moo, moo_oop_process_t proc)
@@ -290,7 +291,9 @@ static MOO_INLINE void free_pid (moo_t* moo, moo_oop_process_t proc)
 
 	pid = MOO_OOP_TO_SMOOI(proc->id);
 	MOO_ASSERT (moo, pid < moo->proc_map_capa);
+	MOO_ASSERT (moo, moo->proc_map_used > 0);
 
+	/* chain the freed slot at the end of the free list */
 	moo->proc_map[pid] = MOO_SMOOI_TO_OOP(-1);
 	if (moo->proc_map_free_last <= -1)
 	{
@@ -302,9 +305,10 @@ static MOO_INLINE void free_pid (moo_t* moo, moo_oop_process_t proc)
 		moo->proc_map[moo->proc_map_free_last] = MOO_SMOOI_TO_OOP(pid);
 	}
 	moo->proc_map_free_last = pid;
+	moo->proc_map_used--;
 }
 
-static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
+static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c, int proc_flags)
 {
 	moo_oop_process_t proc;
 	moo_ooi_t total_count;
@@ -327,7 +331,7 @@ static moo_oop_process_t make_process (moo_t* moo, moo_oop_context_t c)
 	moo_popvolat (moo);
 	if (!proc) return MOO_NULL;
 
-	MOO_OBJ_SET_FLAGS_PROC (proc, 1); /* a special flag to indicate an object is a process instance */
+	MOO_OBJ_SET_FLAGS_PROC (proc, proc_flags); /* a special flag to indicate an object is a process instance */
 	proc->state = MOO_SMOOI_TO_OOP(PROC_STATE_SUSPENDED);
 
 	/* assign a process id to the process */
@@ -1624,7 +1628,7 @@ static moo_oop_process_t start_initial_process (moo_t* moo, moo_oop_context_t c)
 	MOO_ASSERT (moo, moo->processor->runnable.count == MOO_SMOOI_TO_OOP(0));
 	MOO_ASSERT (moo, moo->processor->active == moo->nil_process);
 
-	proc = make_process(moo, c);
+	proc = make_process(moo, c, 2);
 	if (!proc) return MOO_NULL;
 
 	chain_into_processor (moo, proc, PROC_STATE_RUNNING);
@@ -2256,6 +2260,11 @@ static moo_pfrc_t pf_hash (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 							case MOO_OBJ_FLAGS_HASH_STORED:
 								hv = *(moo_oow_t*)((moo_uint8_t*)rcv + MOO_SIZEOF(moo_obj_t) + moo_getobjpayloadbytes(moo, rcv) - MOO_SIZEOF(moo_oow_t));
 								break;
+
+							default:
+								/* this must not happend. internal error */
+								moo_seterrbfmt (moo, MOO_EINTERN, "internal error - unknown hash flags %d in %O", (int)MOO_OBJ_GET_FLAGS_HASH(rcv), rcv);
+								return MOO_PF_HARD_FAILURE;
 						}
 				}
 			}
@@ -2642,7 +2651,7 @@ static moo_pfrc_t pf_block_value (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 	return MOO_PF_SUCCESS;
 }
 
-static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+static MOO_INLINE moo_pfrc_t __block_new_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs, int proc_flags)
 {
 	/* create a new process from a block context.
 	 * the receiver must be be a block.
@@ -2693,13 +2702,23 @@ static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t na
 	 * context of a process. */
 	blkctx->sender = (moo_oop_context_t)moo->_nil;
 
-	proc = make_process(moo, blkctx);
+	proc = make_process(moo, blkctx, proc_flags);
 	if (!proc) return MOO_PF_FAILURE; /* hard failure */ /* TOOD: can't this be treated as a soft failure? throw an exception instead?? */
 
 	/* __block_value() has popped all arguments and the receiver. 
 	 * PUSH the return value instead of changing the stack top */
 	MOO_STACK_PUSH (moo, (moo_oop_t)proc);
 	return MOO_PF_SUCCESS;
+}
+
+static moo_pfrc_t pf_block_new_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	return __block_new_process(moo, mod, nargs, 1);
+}
+
+static moo_pfrc_t pf_block_new_system_process (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
+{
+	return __block_new_process(moo, mod, nargs, 2);
 }
 
 /* ------------------------------------------------------------------ */
@@ -3296,10 +3315,9 @@ static moo_pfrc_t pf_system_halting (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs
 
 static moo_pfrc_t pf_system_find_process_by_id (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	moo_oop_t rcv, id;
-	moo_oop_process_t proc;
+	moo_oop_t /*rcv,*/ id;
 
-	rcv = MOO_STACK_GETRCV(moo, nargs);
+	/*rcv = MOO_STACK_GETRCV(moo, nargs);*/
 	id = MOO_STACK_GETARG(moo, nargs, 0);
 
 	/*MOO_PF_CHECK_RCV (moo, rcv == (moo_oop_t)moo->processor);*/
@@ -3326,10 +3344,9 @@ static moo_pfrc_t pf_system_find_process_by_id (moo_t* moo, moo_mod_t* mod, moo_
 
 static moo_pfrc_t pf_system_find_process_by_id_gt (moo_t* moo, moo_mod_t* mod, moo_ooi_t nargs)
 {
-	moo_oop_t rcv, id;
-	moo_oop_process_t proc;
+	moo_oop_t /*rcv,*/ id;
 
-	rcv = MOO_STACK_GETRCV(moo, nargs);
+	/*rcv = MOO_STACK_GETRCV(moo, nargs);*/
 	id = MOO_STACK_GETARG(moo, nargs, 0);
 
 	/*MOO_PF_CHECK_RCV (moo, rcv == (moo_oop_t)moo->processor);*/
@@ -3337,14 +3354,19 @@ static moo_pfrc_t pf_system_find_process_by_id_gt (moo_t* moo, moo_mod_t* mod, m
 	if (MOO_OOP_IS_SMOOI(id))
 	{
 		moo_ooi_t index = MOO_OOP_TO_SMOOI(id);
-		if (index >= 0)
+		if (index >= -1) /* allow -1 to be able to return pid 0. */
 		{
 /* TOOD: enhance alloc_pid() and free_pid() to maintain the hightest pid number so that this loop can stop before reaching proc_map_capa */
 			for (++index; index < moo->proc_map_capa; index++)
 			{
-				if (MOO_CLASSOF(moo, moo->proc_map[index]) == moo->_process)
+				/* note the free slot contains a small integer which indicate the next slot index in proc_map.
+				 * if the slot it taken, it should point to a process object. read the comment at end of this loop. */
+				moo_oop_t tmp;
+
+				tmp = moo->proc_map[index];
+				if (MOO_CLASSOF(moo, tmp) == moo->_process && MOO_OBJ_GET_FLAGS_PROC(tmp) == 1) /* normal process only. skip a system process	 */
 				{
-					MOO_STACK_SETRET (moo, nargs, moo->proc_map[index]);
+					MOO_STACK_SETRET (moo, nargs, tmp);
 					return MOO_PF_SUCCESS;
 				}
 
@@ -4378,6 +4400,7 @@ static pf_t pftab[] =
 	{ "Apex_~~",                               { moo_pf_not_identical,                    1, 1 } },
 
 	{ "BlockContext_newProcess",               { pf_block_new_process,                    0, MA } },
+	{ "BlockContext_newSystemProcess",         { pf_block_new_system_process,             0, MA } },
 	{ "BlockContext_value",                    { pf_block_value,                          0, MA } },
 
 	{ "Character_<",                           { pf_character_lt,                         1, 1 } },
@@ -6471,6 +6494,7 @@ int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname
 	MOO_ASSERT (moo, moo->initial_context == MOO_NULL);
 	MOO_ASSERT (moo, moo->active_context == MOO_NULL);
 	MOO_ASSERT (moo, moo->active_method == MOO_NULL);
+	
 
 #if defined(MOO_PROFILE_VM)
 	moo->stat.inst_counter = 0;
@@ -6481,6 +6505,31 @@ int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname
 
 	moo_clearmethodcache (moo);
 
+#if 0 
+	/* unless the system is buggy, moo->proc_map_used should be 0.
+	 * the standard library terminates all processes before halting.
+	 *
+	 * [EXPERIMENTAL]
+	 * if you like the process allocation to start from 0, uncomment
+	 * the following 'if' block */
+	if (moo->proc_map_capa > 0 && moo->proc_map_used == 0)
+	{
+		/* rechain the process map. it must be compatible with prepare_to_alloc_pid().
+		 * by placing the low indiced slot at the beginning of the free list, 
+		 * the special processes (main_proc, gcfin_proc, ossig_proc) are allocated
+		 * with low process IDs. */
+		moo_ooi_t i, j;
+
+		moo->proc_map_free_first = 0;
+		for (i = 0, j = 1; j < moo->proc_map_capa; i++, j++)
+		{
+			moo->proc_map[i] = MOO_SMOOI_TO_OOP(j);
+		}
+		moo->proc_map[i] = MOO_SMOOI_TO_OOP(-1);
+		moo->proc_map_free_last = i;
+	}
+#endif
+
 	if (start_initial_process_and_context(moo, objname, mthname) <= -1) return -1;
 	moo->initial_context = moo->processor->active->initial_context;
 
@@ -6490,6 +6539,7 @@ int moo_invoke (moo_t* moo, const moo_oocs_t* objname, const moo_oocs_t* mthname
 	moo->initial_context = MOO_NULL;
 	moo->active_context = MOO_NULL;
 	moo->active_method = MOO_NULL;
+
 
 #if defined(MOO_PROFILE_VM)
 	MOO_LOG1 (moo, MOO_LOG_IC | MOO_LOG_INFO, "Total message sends: %zu\n", moo->stat.message_sends);

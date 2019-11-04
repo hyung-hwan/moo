@@ -290,7 +290,7 @@ typedef enum moo_gcfin_t moo_gcfin_t;
 #define MOO_OBJ_FLAGS_KERNEL_BITS     2
 #define MOO_OBJ_FLAGS_PERM_BITS       1
 #define MOO_OBJ_FLAGS_MOVED_BITS      1
-#define MOO_OBJ_FLAGS_PROC_BITS       1
+#define MOO_OBJ_FLAGS_PROC_BITS       2
 #define MOO_OBJ_FLAGS_RDONLY_BITS     1
 #define MOO_OBJ_FLAGS_GCFIN_BITS      4
 #define MOO_OBJ_FLAGS_TRAILER_BITS    1
@@ -1674,6 +1674,7 @@ struct moo_t
 
 	moo_oop_t* proc_map;
 	moo_oow_t proc_map_capa;
+	moo_oow_t proc_map_used;
 	moo_ooi_t proc_map_free_first;
 	moo_ooi_t proc_map_free_last;
 

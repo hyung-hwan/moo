@@ -121,6 +121,7 @@ class(#pointer,#final,#limited) BlockContext(Context)
 
 	// create a new process in the suspended state
 	method(#variadic,#primitive) newProcess().
+	method(#variadic,#primitive) newSystemProcess(). // this method is for internal use only. never call this.
 
 	// evaluate the block
 	method(#variadic,#primitive) value().

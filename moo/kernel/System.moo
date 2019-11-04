@@ -13,8 +13,7 @@ class System(Apex)
 	var(#class) asyncsg.
 	var(#class) gcfin_sem.
 	var(#class) gcfin_should_exit := false.
-	var(#class) gcfin_proc.
-	var(#class) ossig_proc.
+	var(#class) ossig_pid.
 	var(#class) shr. // signal handler registry
 
 	pooldic Log
@@ -64,7 +63,7 @@ class System(Apex)
 
 	method(#class) startup(class_name, method_name)
 	{
-		| class ret |
+		| class ret gcfin_proc ossig_proc |
 
 		System gc.
 
@@ -79,11 +78,13 @@ class System(Apex)
 		// start the gc finalizer process and os signal handler process
 		//[ self __gc_finalizer ] fork.
 		//[ self __os_sig_handler ] fork.
-		self.gcfin_proc := [ self __gc_finalizer ] newProcess.
-		self.ossig_proc := [ :caller | self __os_sig_handler: caller ] newProcess(thisProcess).
+		gcfin_proc := [ self __gc_finalizer ] newSystemProcess.
+		ossig_proc := [ :caller | self __os_sig_handler: caller ] newSystemProcess(thisProcess).
+		
+		self.ossig_pid := ossig_proc id.
 
-		self.gcfin_proc resume.
-		self.ossig_proc resume.
+		gcfin_proc resume.
+		ossig_proc resume.
 
 		[
 			// TODO: change the method signature to variadic and pass extra arguments to perform???
@@ -147,7 +148,6 @@ class System(Apex)
 			self.gcfin_sem signal. // in case the process is stuck in wait.
 			self.gcfin_sem unsignal.
 			System logNl: 'End of GC finalization process ' & (thisProcess id) asString.
-			self.gcfin_proc := nil.
 		].
 	}
 
@@ -207,7 +207,8 @@ class System(Apex)
 			 3 ..  -> other processes started by application.
 			*/
 /* TODO: this loop is error-prone as it can't handle when the processs id wraps back and the id of gcfin_proc and ossig_proc gets bigger than normal child processes */
-			proc := System _findProcessByIdGreaterThan: (self.ossig_proc id).
+			//proc := System _findProcessByIdGreaterThan: self.ossig_pid.
+			proc := System _findProcessByIdGreaterThan: -1.
 			while (proc notError)
 			{
 				pid := proc id.
@@ -225,7 +226,6 @@ class System(Apex)
 			self.gcfin_should_exit := true.
 			self.gcfin_sem signal. // wake the gcfin process.
 
-			self.ossig_proc := nil.
 			self _halting. // inform VM that it should get ready for halting.
 		].
 	}

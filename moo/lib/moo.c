@@ -239,6 +239,7 @@ void moo_fini (moo_t* moo)
 	{
 		moo_freemem (moo, moo->proc_map);
 		moo->proc_map_capa = 0;
+		moo->proc_map_used = 0;
 		moo->proc_map_free_first = -1;
 		moo->proc_map_free_last = -1;
 	}
